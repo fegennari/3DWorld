@@ -1,8 +1,14 @@
-// stb_rect_pack.h - v0.11 - public domain - rectangle packing
+// stb_rect_pack.h - v1.01 - public domain - rectangle packing
 // Sean Barrett 2014
 //
 // Useful for e.g. packing rectangular textures into an atlas.
 // Does not do rotation.
+//
+// Before #including,
+//
+//    #define STB_RECT_PACK_IMPLEMENTATION
+//
+// in the file that you want to have the implementation.
 //
 // Not necessarily the awesomest packing method, but better than
 // the totally naive one in stb_truetype (which is primarily what
@@ -28,12 +34,16 @@
 //  Minor features
 //    Martins Mozeiko
 //    github:IntellectualKitty
-//    
+//
 //  Bugfixes / warning fixes
 //    Jeremy Jaussaud
+//    Fabian Giesen
 //
 // Version history:
 //
+//     1.01  (2021-07-11)  always use large rect mode, expose STBRP__MAXVAL in public section
+//     1.00  (2019-02-25)  avoid small space waste; gracefully fail too-wide rectangles
+//     0.99  (2019-02-07)  warning fixes
 //     0.11  (2017-03-03)  return packing success/fail result
 //     0.10  (2016-10-25)  remove cast-away-const to avoid warnings
 //     0.09  (2016-08-27)  fix compiler warnings
@@ -72,11 +82,10 @@ typedef struct stbrp_context stbrp_context;
 typedef struct stbrp_node    stbrp_node;
 typedef struct stbrp_rect    stbrp_rect;
 
-#ifdef STBRP_LARGE_RECTS
 typedef int            stbrp_coord;
-#else
-typedef unsigned short stbrp_coord;
-#endif
+
+#define STBRP__MAXVAL  0x7fffffff
+// Mostly for internal use, but this is the maximum supported coordinate value.
 
 STBRP_DEF int stbrp_pack_rects (stbrp_context *context, stbrp_rect *rects, int num_rects);
 // Assign packed locations to rectangles. The rectangles are of type
@@ -206,8 +215,10 @@ struct stbrp_context
 
 #ifdef _MSC_VER
 #define STBRP__NOTUSED(v)  (void)(v)
+#define STBRP__CDECL       __cdecl
 #else
 #define STBRP__NOTUSED(v)  (void)sizeof(v)
+#define STBRP__CDECL
 #endif
 
 enum
@@ -250,9 +261,6 @@ STBRP_DEF void stbrp_setup_allow_out_of_mem(stbrp_context *context, int allow_ou
 STBRP_DEF void stbrp_init_target(stbrp_context *context, int width, int height, stbrp_node *nodes, int num_nodes)
 {
    int i;
-#ifndef STBRP_LARGE_RECTS
-   STBRP_ASSERT(width <= 0xffff && height <= 0xffff);
-#endif
 
    for (i=0; i < num_nodes-1; ++i)
       nodes[i].next = &nodes[i+1];
@@ -271,11 +279,7 @@ STBRP_DEF void stbrp_init_target(stbrp_context *context, int width, int height, 
    context->extra[0].y = 0;
    context->extra[0].next = &context->extra[1];
    context->extra[1].x = (stbrp_coord) width;
-#ifdef STBRP_LARGE_RECTS
    context->extra[1].y = (1<<30);
-#else
-   context->extra[1].y = 65535;
-#endif
    context->extra[1].next = NULL;
 }
 
@@ -347,6 +351,13 @@ static stbrp__findresult stbrp__skyline_find_best_pos(stbrp_context *c, int widt
    width -= width % c->align;
    STBRP_ASSERT(width % c->align == 0);
 
+   // if it can't possibly fit, bail immediately
+   if (width > c->width || height > c->height) {
+      fr.prev_link = NULL;
+      fr.x = fr.y = 0;
+      return fr;
+   }
+
    node = c->active_head;
    prev = &c->active_head;
    while (node->x + width <= c->width) {
@@ -410,7 +421,7 @@ static stbrp__findresult stbrp__skyline_find_best_pos(stbrp_context *c, int widt
          }
          STBRP_ASSERT(node->next->x > xpos && node->x <= xpos);
          y = stbrp__skyline_find_min_y(c, node, xpos, width, &waste);
-         if (y + height < c->height) {
+         if (y + height <= c->height) {
             if (y <= best_y) {
                if (y < best_y || waste < best_waste || (waste==best_waste && xpos < best_x)) {
                   best_x = xpos;
@@ -422,7 +433,7 @@ static stbrp__findresult stbrp__skyline_find_best_pos(stbrp_context *c, int widt
             }
          }
          tail = tail->next;
-      }         
+      }
    }
 
    fr.prev_link = best;
@@ -492,17 +503,14 @@ static stbrp__findresult stbrp__skyline_pack_rectangle(stbrp_context *context, i
    STBRP_ASSERT(cur->next == NULL);
 
    {
-      stbrp_node *L1 = NULL, *L2 = NULL;
       int count=0;
       cur = context->active_head;
       while (cur) {
-         L1 = cur;
          cur = cur->next;
          ++count;
       }
       cur = context->free_head;
       while (cur) {
-         L2 = cur;
          cur = cur->next;
          ++count;
       }
@@ -513,7 +521,7 @@ static stbrp__findresult stbrp__skyline_pack_rectangle(stbrp_context *context, i
    return res;
 }
 
-static int rect_height_compare(const void *a, const void *b)
+static int STBRP__CDECL rect_height_compare(const void *a, const void *b)
 {
    const stbrp_rect *p = (const stbrp_rect *) a;
    const stbrp_rect *q = (const stbrp_rect *) b;
@@ -524,18 +532,12 @@ static int rect_height_compare(const void *a, const void *b)
    return (p->w > q->w) ? -1 : (p->w < q->w);
 }
 
-static int rect_original_order(const void *a, const void *b)
+static int STBRP__CDECL rect_original_order(const void *a, const void *b)
 {
    const stbrp_rect *p = (const stbrp_rect *) a;
    const stbrp_rect *q = (const stbrp_rect *) b;
    return (p->was_packed < q->was_packed) ? -1 : (p->was_packed > q->was_packed);
 }
-
-#ifdef STBRP_LARGE_RECTS
-#define STBRP__MAXVAL  0xffffffff
-#else
-#define STBRP__MAXVAL  0xffff
-#endif
 
 STBRP_DEF int stbrp_pack_rects(stbrp_context *context, stbrp_rect *rects, int num_rects)
 {
@@ -544,9 +546,6 @@ STBRP_DEF int stbrp_pack_rects(stbrp_context *context, stbrp_rect *rects, int nu
    // we use the 'was_packed' field internally to allow sorting/unsorting
    for (i=0; i < num_rects; ++i) {
       rects[i].was_packed = i;
-      #ifndef STBRP_LARGE_RECTS
-      STBRP_ASSERT(rects[i].w <= 0xffff && rects[i].h <= 0xffff);
-      #endif
    }
 
    // sort according to heuristic
@@ -587,38 +586,38 @@ This software is available under 2 licenses -- choose whichever you prefer.
 ------------------------------------------------------------------------------
 ALTERNATIVE A - MIT License
 Copyright (c) 2017 Sean Barrett
-Permission is hereby granted, free of charge, to any person obtaining a copy of 
-this software and associated documentation files (the "Software"), to deal in 
-the Software without restriction, including without limitation the rights to 
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies 
-of the Software, and to permit persons to whom the Software is furnished to do 
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do
 so, subject to the following conditions:
-The above copyright notice and this permission notice shall be included in all 
+The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ------------------------------------------------------------------------------
 ALTERNATIVE B - Public Domain (www.unlicense.org)
 This is free and unencumbered software released into the public domain.
-Anyone is free to copy, modify, publish, use, compile, sell, or distribute this 
-software, either in source code form or as a compiled binary, for any purpose, 
+Anyone is free to copy, modify, publish, use, compile, sell, or distribute this
+software, either in source code form or as a compiled binary, for any purpose,
 commercial or non-commercial, and by any means.
-In jurisdictions that recognize copyright laws, the author or authors of this 
-software dedicate any and all copyright interest in the software to the public 
-domain. We make this dedication for the benefit of the public at large and to 
-the detriment of our heirs and successors. We intend this dedication to be an 
-overt act of relinquishment in perpetuity of all present and future rights to 
+In jurisdictions that recognize copyright laws, the author or authors of this
+software dedicate any and all copyright interest in the software to the public
+domain. We make this dedication for the benefit of the public at large and to
+the detriment of our heirs and successors. We intend this dedication to be an
+overt act of relinquishment in perpetuity of all present and future rights to
 this software under copyright law.
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
-AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN 
-ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ------------------------------------------------------------------------------
 */

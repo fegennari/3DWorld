@@ -3,37 +3,49 @@
 stb
 ===
 
-single-file public domain (or MIT licensed) libraries for C/C++ <a name="stb_libs"></a>
+single-file public domain (or MIT licensed) libraries for C/C++
 
-Most libraries by stb, except: stb_dxt by Fabian "ryg" Giesen, stb_image_resize
-by Jorge L. "VinoBS" Rodriguez, and stb_sprintf by Jeff Roberts.
+# This project discusses security-relevant bugs in public in Github Issues and Pull Requests, and it may take significant time for security fixes to be implemented or merged. If this poses an unreasonable risk to your project, do not use stb libraries.
 
+Noteworthy:
+
+* image loader: [stb_image.h](stb_image.h)
+* image writer: [stb_image_write.h](stb_image_write.h)
+* image resizer: [stb_image_resize2.h](stb_image_resize2.h)
+* font text rasterizer: [stb_truetype.h](stb_truetype.h)
+* typesafe containers: [stb_ds.h](stb_ds.h)
+
+Most libraries by stb, except: stb_dxt by Fabian "ryg" Giesen, original stb_image_resize
+by Jorge L. "VinoBS" Rodriguez, and stb_image_resize2 and stb_sprintf by Jeff Roberts.
+
+<a name="stb_libs"></a>
 
 library    | lastest version | category | LoC | description
 --------------------- | ---- | -------- | --- | --------------------------------
-**[stb_vorbis.c](stb_vorbis.c)** | 1.14 | audio | 5462 | decode ogg vorbis files from file/memory to float/16-bit signed output
-**[stb_image.h](stb_image.h)** | 2.19 | graphics | 7462 | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC
-**[stb_truetype.h](stb_truetype.h)** | 1.19 | graphics | 4853 | parse, decode, and rasterize characters from truetype fonts
-**[stb_image_write.h](stb_image_write.h)** | 1.09 | graphics | 1568 | image writing to disk: PNG, TGA, BMP
-**[stb_image_resize.h](stb_image_resize.h)** | 0.95 | graphics | 2627 | resize images larger/smaller with good quality
-**[stb_rect_pack.h](stb_rect_pack.h)** | 0.11 | graphics | 624 | simple 2D rectangle packer with decent quality
-**[stb_sprintf.h](stb_sprintf.h)** | 1.05 | utility | 1833 | fast sprintf, snprintf for C/C++
-**[stretchy_buffer.h](stretchy_buffer.h)** | 1.03 | utility | 262 | typesafe dynamic array for C (i.e. approximation to vector<>), doesn't compile as C++
-**[stb_textedit.h](stb_textedit.h)** | 1.12 | user&nbsp;interface | 1404 | guts of a text editor for games etc implementing them from scratch
-**[stb_voxel_render.h](stb_voxel_render.h)** | 0.85 | 3D&nbsp;graphics | 3803 | Minecraft-esque voxel rendering "engine" with many more features
-**[stb_dxt.h](stb_dxt.h)** | 1.08b | 3D&nbsp;graphics | 728 | Fabian "ryg" Giesen's real-time DXT compressor
-**[stb_perlin.h](stb_perlin.h)** | 0.3 | 3D&nbsp;graphics | 316 | revised Perlin noise (3D input, 1D output)
-**[stb_easy_font.h](stb_easy_font.h)** | 1.0 | 3D&nbsp;graphics | 303 | quick-and-dirty easy-to-deploy bitmap font for printing frame rate, etc
-**[stb_tilemap_editor.h](stb_tilemap_editor.h)** | 0.38 | game&nbsp;dev | 4172 | embeddable tilemap editor
-**[stb_herringbone_wa...](stb_herringbone_wang_tile.h)** | 0.6 | game&nbsp;dev | 1220 | herringbone Wang tile map generator
-**[stb_c_lexer.h](stb_c_lexer.h)** | 0.09 | parsing | 962 | simplify writing parsers for C-like languages
-**[stb_divide.h](stb_divide.h)** | 0.91 | math | 419 | more useful 32-bit modulus e.g. "euclidean divide"
-**[stb_connected_comp...](stb_connected_components.h)** | 0.95 | misc | 1045 | incrementally compute reachability on grids
-**[stb.h](stb.h)** | 2.31 | misc | 14405 | helper functions for C, mostly redundant in C++; basically author's personal stuff
-**[stb_leakcheck.h](stb_leakcheck.h)** | 0.4 | misc | 186 | quick-and-dirty malloc/free leak-checking
+**[stb_vorbis.c](stb_vorbis.c)** | 1.22 | audio | 5584 | decode ogg vorbis files from file/memory to float/16-bit signed output
+**[stb_hexwave.h](stb_hexwave.h)** | 0.5 | audio | 680 | audio waveform synthesizer
+**[stb_image.h](stb_image.h)** | 2.30 | graphics | 7988 | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC
+**[stb_truetype.h](stb_truetype.h)** | 1.26 | graphics | 5079 | parse, decode, and rasterize characters from truetype fonts
+**[stb_image_write.h](stb_image_write.h)** | 1.16 | graphics | 1724 | image writing to disk: PNG, TGA, BMP
+**[stb_image_resize2.h](stb_image_resize2.h)** | 2.12 | graphics | 10601 | resize images larger/smaller with good quality
+**[stb_rect_pack.h](stb_rect_pack.h)** | 1.01 | graphics | 623 | simple 2D rectangle packer with decent quality
+**[stb_perlin.h](stb_perlin.h)** | 0.5 | graphics | 428 | perlin's revised simplex noise w/ different seeds
+**[stb_ds.h](stb_ds.h)** | 0.67 | utility | 1895 | typesafe dynamic array and hash tables for C, will compile in C++
+**[stb_sprintf.h](stb_sprintf.h)** | 1.10 | utility | 1906 | fast sprintf, snprintf for C/C++
+**[stb_textedit.h](stb_textedit.h)** | 1.14 | user&nbsp;interface | 1429 | guts of a text editor for games etc implementing them from scratch
+**[stb_voxel_render.h](stb_voxel_render.h)** | 0.89 | 3D&nbsp;graphics | 3807 | Minecraft-esque voxel rendering "engine" with many more features
+**[stb_dxt.h](stb_dxt.h)** | 1.12 | 3D&nbsp;graphics | 719 | Fabian "ryg" Giesen's real-time DXT compressor
+**[stb_easy_font.h](stb_easy_font.h)** | 1.1 | 3D&nbsp;graphics | 305 | quick-and-dirty easy-to-deploy bitmap font for printing frame rate, etc
+**[stb_tilemap_editor.h](stb_tilemap_editor.h)** | 0.42 | game&nbsp;dev | 4187 | embeddable tilemap editor
+**[stb_herringbone_wa...](stb_herringbone_wang_tile.h)** | 0.7 | game&nbsp;dev | 1221 | herringbone Wang tile map generator
+**[stb_c_lexer.h](stb_c_lexer.h)** | 0.12 | parsing | 941 | simplify writing parsers for C-like languages
+**[stb_divide.h](stb_divide.h)** | 0.94 | math | 433 | more useful 32-bit modulus e.g. "euclidean divide"
+**[stb_connected_comp...](stb_connected_components.h)** | 0.96 | misc | 1049 | incrementally compute reachability on grids
+**[stb_leakcheck.h](stb_leakcheck.h)** | 0.6 | misc | 194 | quick-and-dirty malloc/free leak-checking
+**[stb_include.h](stb_include.h)** | 0.02 | misc | 295 | implement recursive #include support, particularly for GLSL
 
-Total libraries: 20  
-Total lines of C code: 53654
+Total libraries: 21
+Total lines of C code: 51088
 
 
 FAQ
@@ -48,6 +60,24 @@ to do anything else, although I appreciate attribution.
 They are also licensed under the MIT open source license, if you have lawyers
 who are unhappy with public domain. Every source file includes an explicit
 dual-license for you to choose from.
+
+#### How do I use these libraries?
+
+The idea behind single-header file libraries is that they're easy to distribute and deploy
+because all the code is contained in a single file. By default, the .h files in here act as
+their own header files, i.e. they declare the functions contained in the file but don't
+actually result in any code getting compiled.
+
+So in addition, you should select _exactly one_ C/C++ source file that actually instantiates
+the code, preferably a file you're not editing frequently. This file should define a
+specific macro (this is documented per-library) to actually enable the function definitions.
+For example, to use stb_image, you should have exactly one C/C++ file that doesn't
+include stb_image.h regularly, but instead does
+
+    #define STB_IMAGE_IMPLEMENTATION
+    #include "stb_image.h"
+
+The right macro to define is pointed out right at the top of each of these libraries.
 
 #### <a name="other_libs"></a> Are there other single-file public-domain/open source libraries with minimal dependencies out there?
 
@@ -128,11 +158,10 @@ way of namespacing the filenames and source function names.
 
 #### Will you add more image types to stb_image.h?
 
-If people submit them, I generally add them, but the goal of stb_image
-is less for applications like image viewer apps (which need to support
-every type of image under the sun) and more for things like games which
-can choose what images to use, so I may decline to add them if they're
-too rare or if the size of implementation vs. apparent benefit is too low.
+No. As stb_image use has grown, it has become more important
+for us to focus on security of the codebase. Adding new image
+formats increases the amount of code we need to secure, so it
+is no longer worth adding new formats.
 
 #### Do you have any advice on how to create my own single-file library?
 
@@ -153,6 +182,3 @@ for other people to use them from other languages.
 
 I still use MSVC 6 (1998) as my IDE because it has better human factors
 for me than later versions of MSVC.
-
-
-

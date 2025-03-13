@@ -1,8 +1,11 @@
-// stb_divide.h - v0.91 - public domain - Sean Barrett, Feb 2010
+// stb_divide.h - v0.94 - public domain - Sean Barrett, Feb 2010
 // Three kinds of divide/modulus of signed integers.
 //
 // HISTORY
 //
+//   v0.94              Fix integer overflow issues
+//   v0.93  2020-02-02  Write useful exit() value from main()
+//   v0.92  2019-02-25  Fix warning
 //   v0.91  2010-02-27  Fix euclidean division by INT_MIN for non-truncating C
 //                      Check result with 64-bit math to catch such cases
 //   v0.90  2010-02-24  First public release
@@ -163,20 +166,21 @@ int stb_div_floor(int v1, int v2)
    #ifdef C_INTEGER_DIVISION_FLOORS
    return v1/v2;
    #else
-   if (v1 >= 0 && v2 < 0)
-      if ((-v1)+v2+1 < 0) // check if increasing v1's magnitude overflows
-         return -stb__div(-v1+v2+1,v2); // nope, so just compute it
+   if (v1 >= 0 && v2 < 0) {
+      if (v2 + 1 >= INT_MIN + v1) // check if increasing v1's magnitude overflows
+         return -stb__div((v2+1)-v1,v2); // nope, so just compute it
       else
          return -stb__div(-v1,v2) + ((-v1)%v2 ? -1 : 0);
-   if (v1 < 0 && v2 >= 0)
-      if (v1 != INT_MIN)
-         if (v1-v2+1 < 0) // check if increasing v1's magnitude overflows
-            return -stb__div(v1-v2+1,-v2); // nope, so just compute it
+   }
+   if (v1 < 0 && v2 >= 0) {
+      if (v1 != INT_MIN) {
+         if (v1 + 1 >= INT_MIN + v2) // check if increasing v1's magnitude overflows
+            return -stb__div((v1+1)-v2,-v2); // nope, so just compute it
          else
             return -stb__div(-v1,v2) + (stb__mod(v1,-v2) ? -1 : 0);
-      else // it must be possible to compute -(v1+v2) without overflowing
+      } else // it must be possible to compute -(v1+v2) without overflowing
          return -stb__div(-(v1+v2),v2) + (stb__mod(-(v1+v2),v2) ? -2 : -1);
-   else
+   } else
       return v1/v2;           // same sign, so expect truncation
    #endif
 }
@@ -206,8 +210,10 @@ int stb_div_eucl(int v1, int v2)
    else // if v1 is INT_MIN, we have to move away from overflow place
       if (v2 >= 0)
          q = -stb__div(-(v1+v2),v2)-1, r = -stb__mod(-(v1+v2),v2);
-      else
+      else if (v2 != INT_MIN)
          q = stb__div(-(v1-v2),-v2)+1, r = -stb__mod(-(v1-v2),-v2);
+      else // for INT_MIN / INT_MIN, we need to be extra-careful to avoid overflow
+         q = 1, r = 0;
    #endif
    if (r >= 0)
       return q;
@@ -225,13 +231,13 @@ int stb_mod_trunc(int v1, int v2)
       if (r >= 0)
          return r;
       else
-         return r + (v2 > 0 ? v2 : -v2);
+         return r - (v2 < 0 ? v2 : -v2);
    } else {    // modulus result should always be negative
       int r = stb__mod(v1,v2);
       if (r <= 0)
          return r;
       else
-         return r - (v2 > 0 ? v2 : -v2);
+         return r + (v2 < 0 ? v2 : -v2);
    }
    #endif
 }
@@ -264,7 +270,7 @@ int stb_mod_eucl(int v1, int v2)
    if (r >= 0)
       return r;
    else
-      return r + (v2 > 0 ? v2 : -v2); // abs()
+      return r - (v2 < 0 ? v2 : -v2); // negative abs() [to avoid overflow]
 }
 
 #ifdef STB_DIVIDE_TEST
@@ -273,24 +279,32 @@ int stb_mod_eucl(int v1, int v2)
 #include <limits.h>
 
 int show=0;
+int err=0;
 
 void stbdiv_check(int q, int r, int a, int b, char *type, int dir)
 {
-   if ((dir > 0 && r < 0) || (dir < 0 && r > 0))
+   if ((dir > 0 && r < 0) || (dir < 0 && r > 0)) {
       fprintf(stderr, "FAILED: %s(%d,%d) remainder %d in wrong direction\n", type,a,b,r);
-   else
+      err++;
+   } else
       if (b != INT_MIN) // can't compute abs(), but if b==INT_MIN all remainders are valid
-         if (r <= -abs(b) || r >= abs(b))
+         if (r <= -abs(b) || r >= abs(b)) {
             fprintf(stderr, "FAILED: %s(%d,%d) remainder %d out of range\n", type,a,b,r);
+            err++;
+         }
    #ifdef STB_DIVIDE_TEST_64
    {
       STB_DIVIDE_TEST_64 q64 = q, r64=r, a64=a, b64=b;
-      if (q64*b64+r64 != a64)
+      if (q64*b64+r64 != a64) {
          fprintf(stderr, "FAILED: %s(%d,%d) remainder %d doesn't match quotient %d\n", type,a,b,r,q);
+         err++;
+      }
    }
    #else
-   if (q*b+r != a)
+   if (q*b+r != a) {
       fprintf(stderr, "FAILED: %s(%d,%d) remainder %d doesn't match quotient %d\n", type,a,b,r,q);
+      err++;
+   }
    #endif
 }
 
@@ -300,7 +314,7 @@ void test(int a, int b)
    if (show) printf("(%+11d,%+d) |  ", a,b);
    q = stb_div_trunc(a,b), r = stb_mod_trunc(a,b);
    if (show) printf("(%+11d,%+2d)  ", q,r); stbdiv_check(q,r,a,b, "trunc",a);
-   q = stb_div_floor(a,b), r = stb_mod_floor(a,b); 
+   q = stb_div_floor(a,b), r = stb_mod_floor(a,b);
    if (show) printf("(%+11d,%+2d)  ", q,r); stbdiv_check(q,r,a,b, "floor",b);
    q = stb_div_eucl (a,b), r = stb_mod_eucl (a,b);
    if (show) printf("(%+11d,%+2d)\n", q,r); stbdiv_check(q,r,a,b, "euclidean",1);
@@ -370,7 +384,7 @@ int main(int argc, char **argv)
    testh(INT_MIN  , INT_MAX);
    testh(INT_MIN+1, INT_MAX);
 
-   return 0;
+   return err > 0 ? 1 : 0;
 }
 #endif // STB_DIVIDE_TEST
 #endif // STB_DIVIDE_IMPLEMENTATION
@@ -382,38 +396,38 @@ This software is available under 2 licenses -- choose whichever you prefer.
 ------------------------------------------------------------------------------
 ALTERNATIVE A - MIT License
 Copyright (c) 2017 Sean Barrett
-Permission is hereby granted, free of charge, to any person obtaining a copy of 
-this software and associated documentation files (the "Software"), to deal in 
-the Software without restriction, including without limitation the rights to 
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies 
-of the Software, and to permit persons to whom the Software is furnished to do 
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do
 so, subject to the following conditions:
-The above copyright notice and this permission notice shall be included in all 
+The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ------------------------------------------------------------------------------
 ALTERNATIVE B - Public Domain (www.unlicense.org)
 This is free and unencumbered software released into the public domain.
-Anyone is free to copy, modify, publish, use, compile, sell, or distribute this 
-software, either in source code form or as a compiled binary, for any purpose, 
+Anyone is free to copy, modify, publish, use, compile, sell, or distribute this
+software, either in source code form or as a compiled binary, for any purpose,
 commercial or non-commercial, and by any means.
-In jurisdictions that recognize copyright laws, the author or authors of this 
-software dedicate any and all copyright interest in the software to the public 
-domain. We make this dedication for the benefit of the public at large and to 
-the detriment of our heirs and successors. We intend this dedication to be an 
-overt act of relinquishment in perpetuity of all present and future rights to 
+In jurisdictions that recognize copyright laws, the author or authors of this
+software dedicate any and all copyright interest in the software to the public
+domain. We make this dedication for the benefit of the public at large and to
+the detriment of our heirs and successors. We intend this dedication to be an
+overt act of relinquishment in perpetuity of all present and future rights to
 this software under copyright law.
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
-AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN 
-ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ------------------------------------------------------------------------------
 */

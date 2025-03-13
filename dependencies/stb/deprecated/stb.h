@@ -1,4 +1,4 @@
-/* stb.h - v2.31 - Sean's Tool Box -- public domain -- http://nothings.org/stb.h
+/* stb.h - v2.37 - Sean's Tool Box -- public domain -- http://nothings.org/stb.h
           no warranty is offered or implied; use this code at your own risk
 
    This is a single header file with a bunch of useful utilities
@@ -7,24 +7,27 @@
    Documentation: http://nothings.org/stb/stb_h.html
    Unit tests:    http://nothings.org/stb/stb.c
 
-
  ============================================================================
-   You MUST                                                                  
-                                                                             
-      #define STB_DEFINE                                                     
-                                                                             
+   You MUST
+
+      #define STB_DEFINE
+
    in EXACTLY _one_ C or C++ file that includes this header, BEFORE the
-   include, like this:                                                                
-                                                                             
-      #define STB_DEFINE                                                     
+   include, like this:
+
+      #define STB_DEFINE
       #include "stb.h"
-      
+
    All other files should just #include "stb.h" without the #define.
  ============================================================================
 
-
 Version History
 
+   2.36   various fixes
+   2.35   fix clang-cl issues with swprintf
+   2.34   fix warnings
+   2.33   more fixes to random numbers
+   2.32   stb_intcmprev, stb_uidict, fix random numbers on Linux
    2.31   stb_ucharcmp
    2.30   MinGW fix
    2.29   attempt to fix use of swprintf()
@@ -195,6 +198,9 @@ CREDITS
   Tim Sjostrand
   github:infatum
   Dave Butler (Croepha)
+  Ethan Lee (flibitijibibo)
+  Brian Collins
+  Kyle Langley
 */
 
 #include <stdarg.h>
@@ -303,14 +309,14 @@ CREDITS
    #ifndef rad2deg
    #define rad2deg(a)  ((a)*(180/M_PI))
    #endif
-   
+
    #ifndef swap
    #ifndef __cplusplus
    #define swap(TYPE,a,b)  \
                do { TYPE stb__t; stb__t = (a); (a) = (b); (b) = stb__t; } while (0)
-   #endif              
    #endif
-    
+   #endif
+
    typedef unsigned char  uint8 ;
    typedef   signed char   int8 ;
    typedef unsigned short uint16;
@@ -414,14 +420,78 @@ typedef union
    #include <assert.h>
 #endif
 
+//////////////////////////////////////////////////////////////////////////////
+//
+//                         C library function platform handling
+//
 
-STB_EXTERN void stb_wrapper_malloc(void *newp, int sz, char *file, int line);
+#ifdef STB_DEFINE
+
+#if defined(_WIN32) &&  defined(__STDC_WANT_SECURE_LIB__)
+static FILE * stb_p_fopen(const char *filename, const char *mode)
+{
+   FILE *f;
+   if (0 == fopen_s(&f, filename, mode))
+      return f;
+   else
+      return NULL;
+}
+static FILE * stb_p_wfopen(const wchar_t *filename, const wchar_t *mode)
+{
+   FILE *f;
+   if (0 == _wfopen_s(&f, filename, mode))
+      return f;
+   else
+      return NULL;
+}
+static char *stb_p_strcpy_s(char *a, size_t size, const char *b)
+{
+   strcpy_s(a,size,b);
+   return a;
+}
+static char *stb_p_strncpy_s(char *a, size_t size, const char *b, size_t count)
+{
+   strncpy_s(a,size,b,count);
+   return a;
+}
+#define stb_p_mktemp(s)  (_mktemp_s(s, strlen(s)+1) == 0)
+#define stb_p_sprintf    sprintf_s
+#define stb_p_size(x)    ,(x)
+#else
+#define stb_p_fopen      fopen
+#define stb_p_wfopen     _wfopen
+#define stb_p_strcpy_s(a,s,b)     strcpy(a,b)
+#define stb_p_strncpy_s(a,s,b,c)  strncpy(a,b,c)
+#define stb_p_mktemp(s)  (mktemp(s) != NULL)
+
+#define stb_p_sprintf    sprintf
+#define stb_p_size(x)
+#endif
+
+#if defined(_WIN32)
+#define stb_p_vsnprintf  _vsnprintf
+#else
+#define stb_p_vsnprintf  vsnprintf
+#endif
+#endif // STB_DEFINE
+
+#if defined(_WIN32) && (_MSC_VER >= 1300)
+#define stb_p_stricmp    _stricmp
+#define stb_p_strnicmp   _strnicmp
+#define stb_p_strdup     _strdup
+#else
+#define stb_p_strdup     strdup
+#define stb_p_stricmp    stricmp
+#define stb_p_strnicmp   strnicmp
+#endif
+
+STB_EXTERN void stb_wrapper_malloc(void *newp, size_t sz, char *file, int line);
 STB_EXTERN void stb_wrapper_free(void *oldp, char *file, int line);
-STB_EXTERN void stb_wrapper_realloc(void *oldp, void *newp, int sz, char *file, int line);
+STB_EXTERN void stb_wrapper_realloc(void *oldp, void *newp, size_t sz, char *file, int line);
 STB_EXTERN void stb_wrapper_calloc(size_t num, size_t sz, char *file, int line);
-STB_EXTERN void stb_wrapper_listall(void (*func)(void *ptr, int sz, char *file, int line));
+STB_EXTERN void stb_wrapper_listall(void (*func)(void *ptr, size_t sz, char *file, int line));
 STB_EXTERN void stb_wrapper_dump(char *filename);
-STB_EXTERN int stb_wrapper_allocsize(void *oldp);
+STB_EXTERN size_t stb_wrapper_allocsize(void *oldp);
 STB_EXTERN void stb_wrapper_check(void *oldp);
 
 #ifdef STB_DEFINE
@@ -468,8 +538,8 @@ STB_EXTERN char * stb_sstrdup(char *s);
 #endif
 
 #ifdef STB_MALLOC_WRAPPER
-   STB_EXTERN void * stb__malloc(int, char *, int);
-   STB_EXTERN void * stb__realloc(void *, int, char *, int);
+   STB_EXTERN void * stb__malloc(size_t, char *, int);
+   STB_EXTERN void * stb__realloc(void *, size_t, char *, int);
    STB_EXTERN void * stb__calloc(size_t n, size_t s, char *, int);
    STB_EXTERN void   stb__free(void *, char *file, int);
    STB_EXTERN char * stb__strdup(char *s, char *file, int);
@@ -513,7 +583,7 @@ STB_EXTERN char * stb_sstrdup(char *s);
       return 1;
    }
 
-   static void stb__check2(void *p, int sz, char *file, int line)
+   static void stb__check2(void *p, size_t sz, char *file, int line)
    {
       stb_mcheck(p);
    }
@@ -552,10 +622,10 @@ STB_EXTERN char * stb_sstrdup(char *s);
    #endif
    #endif
 
-   static void *stb__malloc_final(int sz)
+   static void *stb__malloc_final(size_t sz)
    {
       #ifdef STB_MALLOC_WRAPPER_PAGED
-      int aligned = (sz + STB__WINDOWS_PAGE - 1) & ~(STB__WINDOWS_PAGE-1);
+      size_t aligned = (sz + STB__WINDOWS_PAGE - 1) & ~(STB__WINDOWS_PAGE-1);
       char *p = VirtualAlloc(NULL, aligned + STB__WINDOWS_PAGE, 0x2000, 0x04); // RESERVE, READWRITE
       if (p == NULL) return p;
       VirtualAlloc(p, aligned,   0x1000, 0x04); // COMMIT, READWRITE
@@ -575,9 +645,9 @@ STB_EXTERN char * stb_sstrdup(char *s);
    }
 
    int stb__malloc_failure;
-   static void *stb__realloc_final(void *p, int sz, int old_sz)
+   #ifdef STB_MALLOC_WRAPPER_PAGED
+   static void *stb__realloc_final(void *p, size_t sz, size_t old_sz)
    {
-      #ifdef STB_MALLOC_WRAPPER_PAGED
       void *q = stb__malloc_final(sz);
       if (q == NULL)
           return ++stb__malloc_failure, q;
@@ -585,10 +655,8 @@ STB_EXTERN char * stb_sstrdup(char *s);
       memcpy(q, p, sz < old_sz ? sz : old_sz);
       stb__free_final(p);
       return q;
-      #else
-      return realloc(p,sz);
-      #endif
    }
+   #endif
 
    void stb__free(void *p, char *file, int line)
    {
@@ -608,7 +676,7 @@ STB_EXTERN char * stb_sstrdup(char *s);
       stb__free_final(p);
    }
 
-   void * stb__malloc(int sz, char *file, int line)
+   void * stb__malloc(size_t sz, char *file, int line)
    {
       void *p;
       stb_mcheck_all();
@@ -638,7 +706,7 @@ STB_EXTERN char * stb_sstrdup(char *s);
       return p;
    }
 
-   void * stb__realloc(void *p, int sz, char *file, int line)
+   void * stb__realloc(void *p, size_t sz, char *file, int line)
    {
       void *q;
 
@@ -652,7 +720,7 @@ STB_EXTERN char * stb_sstrdup(char *s);
       #endif
       #ifdef STB_MALLOC_WRAPPER_PAGED
       {
-         int n = stb_wrapper_allocsize(STB__ptr(p,STB__BIAS));
+         size_t n = stb_wrapper_allocsize(STB__ptr(p,STB__BIAS));
          if (!n)
             stb_wrapper_check(STB__ptr(p,STB__BIAS));
          q = stb__realloc_final(p, STB__FIXSIZE(sz), STB__FIXSIZE(n));
@@ -679,7 +747,7 @@ STB_EXTERN char * stb_sstrdup(char *s);
       return q;
    }
 
-   STB_EXTERN int stb_log2_ceil(unsigned int);
+   STB_EXTERN int stb_log2_ceil(size_t);
    static void *stb__calloc(size_t n, size_t sz, char *file, int line)
    {
       void *q;
@@ -697,7 +765,7 @@ STB_EXTERN char * stb_sstrdup(char *s);
       stb_mcheck_all();
       p = stb__malloc(strlen(s)+1, file, line);
       if (!p) return p;
-      strcpy(p, s);
+      stb_p_strcpy_s(p, strlen(s)+1, s);
       return p;
    }
    #endif // STB_DEFINE
@@ -720,7 +788,6 @@ STB_EXTERN char * stb_sstrdup(char *s);
    #define calloc(n,s)    stb__calloc (n,s, __FILE__, __LINE__)
    #define free(p)        stb__free   (p,   __FILE__, __LINE__)
    #define strdup(p)      stb__strdup (p,   __FILE__, __LINE__)
-
 #endif
 
 //////////////////////////////////////////////////////////////////////////////
@@ -735,13 +802,15 @@ STB_EXTERN int  stb_snprintf(char *s, size_t n, const char *fmt, ...);
 STB_EXTERN int  stb_vsnprintf(char *s, size_t n, const char *fmt, va_list v);
 
 #ifdef STB_DEFINE
-
 int stb_vsnprintf(char *s, size_t n, const char *fmt, va_list v)
 {
    int res;
    #ifdef _WIN32
-   // Could use "_vsnprintf_s(s, n, _TRUNCATE, fmt, v)" ?
-   res = _vsnprintf(s,n,fmt,v);
+      #ifdef __STDC_WANT_SECURE_LIB__
+      res = _vsnprintf_s(s, n, _TRUNCATE, fmt, v);
+      #else
+      res = stb_p_vsnprintf(s,n,fmt,v);
+      #endif
    #else
    res = vsnprintf(s,n,fmt,v);
    #endif
@@ -777,7 +846,7 @@ char *stb_mprintf(const char *fmt, ...)
    va_start(v,fmt);
    stb_vsnprintf(buffer,1024,fmt,v);
    va_end(v);
-   return strdup(buffer);
+   return stb_p_strdup(buffer);
 }
 
 #ifdef _WIN32
@@ -788,11 +857,13 @@ STB_EXTERN __declspec(dllimport) void * __stdcall GetStdHandle(unsigned int);
 STB_EXTERN __declspec(dllimport) int __stdcall SetConsoleTextAttribute(void *, unsigned short);
 #endif
 
-static void stb__print_one(void *handle, char *s, int len)
+static void stb__print_one(void *handle, char *s, ptrdiff_t  len)
 {
    if (len)
-      if (WriteConsoleA(handle, s, len, NULL,NULL))
-         fwrite(s, 1, len, stdout); // if it fails, maybe redirected, so do normal
+      if (0==WriteConsoleA(handle, s, (unsigned) len, NULL,NULL))
+         // if it fails, maybe redirected, so output normally...
+         // but it's supriously reporting failure now on Win7 and later
+         {}//fwrite(s, 1, (unsigned) len, stdout);
 }
 
 static void stb__print(char *s)
@@ -850,7 +921,7 @@ static void stb__print(char *s)
          t = s+1;
       }
 
-      lpad = (t-s);
+      lpad = (int) (t-s);
       s = t;
       while (*s && *s != '}') ++s;
       if (!*s) break;
@@ -882,7 +953,7 @@ void stbprint(const char *fmt, ...)
    if (res < 0) {
       tbuf = (char *) malloc(16384);
       va_start(v,fmt);
-      res = _vsnprintf(tbuf,16384, fmt, v);
+      res = stb_vsnprintf(tbuf,16384, fmt, v);
       va_end(v);
       tbuf[16383] = 0;
    }
@@ -917,26 +988,26 @@ void stbprint(const char *fmt, ...)
 
 
 #ifdef _WIN32
-   #define stb__fopen(x,y)    _wfopen((const wchar_t *)stb__from_utf8(x), (const wchar_t *)stb__from_utf8_alt(y))
+   #define stb__fopen(x,y)    stb_p_wfopen((const wchar_t *)stb__from_utf8(x), (const wchar_t *)stb__from_utf8_alt(y))
    #define stb__windows(x,y)  x
 #else
-   #define stb__fopen(x,y)    fopen(x,y)
+   #define stb__fopen(x,y)    stb_p_fopen(x,y)
    #define stb__windows(x,y)  y
 #endif
 
 
 typedef unsigned short stb__wchar;
 
-STB_EXTERN stb__wchar * stb_from_utf8(stb__wchar *buffer, char *str, int n);
-STB_EXTERN char       * stb_to_utf8  (char *buffer, stb__wchar *str, int n);
+STB_EXTERN stb__wchar * stb_from_utf8(stb__wchar *buffer, const char *str, int n);
+STB_EXTERN char       * stb_to_utf8  (char *buffer, const stb__wchar *str, int n);
 
-STB_EXTERN stb__wchar *stb__from_utf8(char *str);
-STB_EXTERN stb__wchar *stb__from_utf8_alt(char *str);
-STB_EXTERN char *stb__to_utf8(stb__wchar *str);
+STB_EXTERN stb__wchar *stb__from_utf8(const char *str);
+STB_EXTERN stb__wchar *stb__from_utf8_alt(const char *str);
+STB_EXTERN char *stb__to_utf8(const stb__wchar *str);
 
 
 #ifdef STB_DEFINE
-stb__wchar * stb_from_utf8(stb__wchar *buffer, char *ostr, int n)
+stb__wchar * stb_from_utf8(stb__wchar *buffer, const char *ostr, int n)
 {
    unsigned char *str = (unsigned char *) ostr;
    stb_uint32 c;
@@ -986,7 +1057,7 @@ stb__wchar * stb_from_utf8(stb__wchar *buffer, char *ostr, int n)
    return buffer;
 }
 
-char * stb_to_utf8(char *buffer, stb__wchar *str, int n)
+char * stb_to_utf8(char *buffer, const stb__wchar *str, int n)
 {
    int i=0;
    --n;
@@ -1022,19 +1093,19 @@ char * stb_to_utf8(char *buffer, stb__wchar *str, int n)
    return buffer;
 }
 
-stb__wchar *stb__from_utf8(char *str)
+stb__wchar *stb__from_utf8(const char *str)
 {
    static stb__wchar buffer[4096];
    return stb_from_utf8(buffer, str, 4096);
 }
 
-stb__wchar *stb__from_utf8_alt(char *str)
+stb__wchar *stb__from_utf8_alt(const char *str)
 {
    static stb__wchar buffer[4096];
    return stb_from_utf8(buffer, str, 4096);
 }
 
-char *stb__to_utf8(stb__wchar *str)
+char *stb__to_utf8(const stb__wchar *str)
 {
    static char buffer[4096];
    return stb_to_utf8(buffer, str, 4096);
@@ -1047,7 +1118,7 @@ char *stb__to_utf8(stb__wchar *str)
 //                         Miscellany
 //
 
-STB_EXTERN void stb_fatal(char *fmt, ...);
+STB_EXTERN void stb_fatal(const char *fmt, ...);
 STB_EXTERN void stb_(char *fmt, ...);
 STB_EXTERN void stb_append_to_file(char *file, char *fmt, ...);
 STB_EXTERN void stb_log(int active);
@@ -1062,21 +1133,21 @@ STB_EXTERN void **stb_array_block_alloc(int count, int blocksize);
 #define stb_arrcount(x)   (sizeof(x)/sizeof((x)[0]))
 
 
-STB_EXTERN int  stb__record_fileline(char *f, int n);
+STB_EXTERN int  stb__record_fileline(const char *f, int n);
 
 #ifdef STB_DEFINE
 
 static char *stb__file;
 static int   stb__line;
 
-int  stb__record_fileline(char *f, int n)
+int  stb__record_fileline(const char *f, int n)
 {
-   stb__file = f;
+   stb__file = (char*) f;
    stb__line = n;
    return 0;
 }
 
-void stb_fatal(char *s, ...)
+void stb_fatal(const char *s, ...)
 {
    va_list a;
    if (stb__file)
@@ -1113,9 +1184,9 @@ void stb_log_fileline(int active)
 }
 
 #ifdef STB_NO_STB_STRINGS
-char *stb__log_filename = "temp.log";
+const char *stb__log_filename = "temp.log";
 #else
-char *stb__log_filename = "stb.log";
+const char *stb__log_filename = "stb.log";
 #endif
 
 void stb_log_name(char *s)
@@ -1126,7 +1197,7 @@ void stb_log_name(char *s)
 void stb_(char *s, ...)
 {
    if (stb__log_active) {
-      FILE *f = fopen(stb__log_filename, "a");
+      FILE *f = stb_p_fopen(stb__log_filename, "a");
       if (f) {
          va_list a;
          if (stb__log_fileline && stb__file)
@@ -1142,7 +1213,7 @@ void stb_(char *s, ...)
 
 void stb_append_to_file(char *filename, char *s, ...)
 {
-   FILE *f = fopen(filename, "a");
+   FILE *f = stb_p_fopen(filename, "a");
    if (f) {
       va_list a;
       va_start(a,s);
@@ -1425,9 +1496,9 @@ STB_EXTERN          int stb_bitcount(unsigned int a);
 STB_EXTERN unsigned int stb_bitreverse8(unsigned char n);
 STB_EXTERN unsigned int stb_bitreverse(unsigned int n);
 
-STB_EXTERN          int stb_is_pow2(unsigned int n);
-STB_EXTERN          int stb_log2_ceil(unsigned int n);
-STB_EXTERN          int stb_log2_floor(unsigned int n);
+STB_EXTERN          int stb_is_pow2(size_t);
+STB_EXTERN          int stb_log2_ceil(size_t);
+STB_EXTERN          int stb_log2_floor(size_t);
 
 STB_EXTERN          int stb_lowbit8(unsigned int n);
 STB_EXTERN          int stb_highbit8(unsigned int n);
@@ -1459,7 +1530,7 @@ unsigned int stb_bitreverse(unsigned int n)
   return (n >> 16) | (n << 16);
 }
 
-int stb_is_pow2(unsigned int n)
+int stb_is_pow2(size_t n)
 {
    return (n & (n-1)) == 0;
 }
@@ -1469,11 +1540,15 @@ int stb_is_pow2(unsigned int n)
 #if defined(_WIN32) && !defined(__MINGW32__)
 #pragma warning(push)
 #pragma warning(disable: 4035)  // disable warning about no return value
-int stb_log2_floor(unsigned int n)
+int stb_log2_floor(size_t n)
 {
    #if _MSC_VER > 1700
    unsigned long i;
+   #ifdef STB_PTR64
+   _BitScanReverse64(&i, n);
+   #else
    _BitScanReverse(&i, n);
+   #endif
    return i != 0 ? i : -1;
    #else
    __asm {
@@ -1486,9 +1561,14 @@ int stb_log2_floor(unsigned int n)
 }
 #pragma warning(pop)
 #else
-int stb_log2_floor(unsigned int n)
+int stb_log2_floor(size_t n)
 {
    static signed char log2_4[16] = { -1,0,1,1,2,2,2,2,3,3,3,3,3,3,3,3 };
+
+#ifdef STB_PTR64
+   if (n >= ((size_t) 1u << 32))
+        return stb_log2_floor(n >> 32);
+#endif
 
    // 2 compares if n < 16, 3 compares otherwise
    if (n < (1U << 14))
@@ -1504,7 +1584,7 @@ int stb_log2_floor(unsigned int n)
 #endif
 
 // define ceil from floor
-int stb_log2_ceil(unsigned int n)
+int stb_log2_ceil(size_t n)
 {
    if (stb_is_pow2(n))  return     stb_log2_floor(n);
    else                 return 1 + stb_log2_floor(n);
@@ -1534,8 +1614,8 @@ int stb_lowbit8(unsigned int n)
 //
 
 #ifdef _WIN32
-   #define stb_stricmp(a,b) stricmp(a,b)
-   #define stb_strnicmp(a,b,n) strnicmp(a,b,n)
+   #define stb_stricmp(a,b) stb_p_stricmp(a,b)
+   #define stb_strnicmp(a,b,n) stb_p_strnicmp(a,b,n)
 #else
    #define stb_stricmp(a,b) strcasecmp(a,b)
    #define stb_strnicmp(a,b,n) strncasecmp(a,b,n)
@@ -1543,6 +1623,7 @@ int stb_lowbit8(unsigned int n)
 
 
 STB_EXTERN int (*stb_intcmp(int offset))(const void *a, const void *b);
+STB_EXTERN int (*stb_intcmprev(int offset))(const void *a, const void *b);
 STB_EXTERN int (*stb_qsort_strcmp(int offset))(const void *a, const void *b);
 STB_EXTERN int (*stb_qsort_stricmp(int offset))(const void *a, const void *b);
 STB_EXTERN int (*stb_floatcmp(int offset))(const void *a, const void *b);
@@ -1552,12 +1633,20 @@ STB_EXTERN int (*stb_charcmp(int offset))(const void *a, const void *b);
 #ifdef STB_DEFINE
 static int stb__intcmpoffset, stb__ucharcmpoffset, stb__strcmpoffset;
 static int stb__floatcmpoffset, stb__doublecmpoffset;
+static int stb__memcmpoffset, stb__memcmpsize;
 
 int stb__intcmp(const void *a, const void *b)
 {
    const int p = *(const int *) ((const char *) a + stb__intcmpoffset);
    const int q = *(const int *) ((const char *) b + stb__intcmpoffset);
    return p < q ? -1 : p > q;
+}
+
+int stb__intcmprev(const void *a, const void *b)
+{
+   const int p = *(const int *) ((const char *) a + stb__intcmpoffset);
+   const int q = *(const int *) ((const char *) b + stb__intcmpoffset);
+   return q < p ? -1 : q > p;
 }
 
 int stb__ucharcmp(const void *a, const void *b)
@@ -1595,10 +1684,21 @@ int stb__qsort_stricmp(const void *a, const void *b)
    return stb_stricmp(p,q);
 }
 
+int stb__memcmp(const void *a, const void *b)
+{
+   return memcmp((char *) a + stb__memcmpoffset, (char *) b + stb__memcmpoffset, stb__memcmpsize);
+}
+
 int (*stb_intcmp(int offset))(const void *, const void *)
 {
    stb__intcmpoffset = offset;
    return &stb__intcmp;
+}
+
+int (*stb_intcmprev(int offset))(const void *, const void *)
+{
+   stb__intcmpoffset = offset;
+   return &stb__intcmprev;
 }
 
 int (*stb_ucharcmp(int offset))(const void *, const void *)
@@ -1629,6 +1729,13 @@ int (*stb_doublecmp(int offset))(const void *, const void *)
 {
    stb__doublecmpoffset = offset;
    return &stb__doublecmp;
+}
+
+int (*stb_memcmp(int offset, int size))(const void *, const void *)
+{
+   stb__memcmpoffset = offset;
+   stb__memcmpsize = size;
+   return &stb__memcmp;
 }
 #endif
 
@@ -1819,8 +1926,8 @@ size_t stb_strscpy(char *d, const char *s, size_t n)
       if (n) d[0] = 0;
       return 0;
    }
-   strcpy(d,s);
-   return len + 1;
+   stb_p_strcpy_s(d,n,s);
+   return len;
 }
 
 const char *stb_plural(int n)
@@ -1901,8 +2008,8 @@ char *stb_trimwhite(char *s)
 
 char *stb_strncpy(char *s, char *t, int n)
 {
-   strncpy(s,t,n);
-   s[n-1] = 0;
+   stb_p_strncpy_s(s,n+1,t,n);
+   s[n] = 0;
    return s;
 }
 
@@ -1912,14 +2019,14 @@ char *stb_substr(char *t, int n)
    int z = (int) strlen(t);
    if (z < n) n = z;
    a = (char *) malloc(n+1);
-   strncpy(a,t,n);
+   stb_p_strncpy_s(a,n+1,t,n);
    a[n] = 0;
    return a;
 }
 
 char *stb_duplower(char *s)
 {
-   char *p = strdup(s), *q = p;
+   char *p = stb_p_strdup(s), *q = p;
    while (*q) {
       *q = tolower(*q);
       ++q;
@@ -2059,7 +2166,7 @@ static char **stb_tokens_raw(char *src_, char *delimit, int *count,
                }
             }
          }
-      } else 
+      } else
          while (nested || !stb_tokentable[*s]) {
             if (stable[*s]) {
                if (!*s) break;
@@ -2199,7 +2306,7 @@ char *stb_dupreplace(char *src, char *find, char *replace)
    char *s,*p,*q;
 
    s = strstr(src, find);
-   if (s == NULL) return strdup(src);
+   if (s == NULL) return stb_p_strdup(src);
    do {
       ++count;
       s = strstr(s + len_find, find);
@@ -2212,7 +2319,7 @@ char *stb_dupreplace(char *src, char *find, char *replace)
    for (;;) {
       char *t = strstr(s, find);
       if (t == NULL) {
-         strcpy(q,s);
+         stb_p_strcpy_s(q,strlen(src)+count*(len_replace-len_find)+1,s);
          assert(strlen(p) == strlen(src) + count*(len_replace-len_find));
          return p;
       }
@@ -2232,7 +2339,7 @@ void stb_replaceinplace(char *src, char *find, char *replace)
 
    char *s,*p,*q;
 
-   delta = len_replace - len_find;
+   delta = (int) (len_replace - len_find);
    assert(delta <= 0);
    if (delta > 0) return;
 
@@ -2260,10 +2367,10 @@ void stb_fixpath(char *path)
          *path = '/';
 }
 
-void stb__add_section(char *buffer, char *data, int curlen, int newlen)
+void stb__add_section(char *buffer, char *data, ptrdiff_t curlen, ptrdiff_t newlen)
 {
    if (newlen < curlen) {
-      int z1 = newlen >> 1, z2 = newlen-z1;
+      ptrdiff_t z1 = newlen >> 1, z2 = newlen-z1;
       memcpy(buffer, data, z1-1);
       buffer[z1-1] = '.';
       buffer[z1-0] = '.';
@@ -2275,7 +2382,7 @@ void stb__add_section(char *buffer, char *data, int curlen, int newlen)
 char * stb_shorten_path_readable(char *path, int len)
 {
    static char buffer[1024];
-   int n = strlen(path),n1,n2,r1,r2;
+   ptrdiff_t n = strlen(path),n1,n2,r1,r2;
    char *s;
    if (n <= len) return path;
    if (len > 1024) return path;
@@ -2312,10 +2419,16 @@ char * stb_shorten_path_readable(char *path, int len)
 
 static char *stb__splitpath_raw(char *buffer, char *path, int flag)
 {
-   int len=0,x,y, n = (int) strlen(path), f1,f2;
+   ptrdiff_t len=0,x,y, n = (int) strlen(path), f1,f2;
    char *s = stb_strrchr2(path, '/', '\\');
    char *t = strrchr(path, '.');
    if (s && t && t < s) t = NULL;
+
+   if (!s) {
+      // check for drive
+      if (isalpha(path[0]) && path[1] == ':')
+         s = &path[1];
+   }
    if (s) ++s;
 
    if (flag == STB_EXT_NO_PERIOD)
@@ -2333,7 +2446,7 @@ static char *stb__splitpath_raw(char *buffer, char *path, int flag)
    } else {
       x = f2;
       if (flag & STB_EXT_NO_PERIOD)
-         if (buffer[x] == '.')
+         if (path[x] == '.')
             ++x;
    }
 
@@ -2349,9 +2462,8 @@ static char *stb__splitpath_raw(char *buffer, char *path, int flag)
       if (!buffer) return NULL;
    }
 
-   if (len) { strcpy(buffer, "./"); return buffer; }
-   strncpy(buffer, path+x, y-x);
-   buffer[y-x] = 0;
+   if (len) { stb_p_strcpy_s(buffer, 3, "./"); return buffer; }
+   stb_strncpy(buffer, path+(int)x, (int)(y-x));
    return buffer;
 }
 
@@ -2370,9 +2482,9 @@ char *stb_replacedir(char *output, char *src, char *dir)
    char buffer[4096];
    stb_splitpath(buffer, src, STB_FILE | STB_EXT);
    if (dir)
-      sprintf(output, "%s/%s", dir, buffer);
+      stb_p_sprintf(output stb_p_size(9999), "%s/%s", dir, buffer);
    else
-      strcpy(output, buffer);
+      stb_p_strcpy_s(output, sizeof(buffer),  buffer); // @UNSAFE
    return output;
 }
 
@@ -2381,9 +2493,9 @@ char *stb_replaceext(char *output, char *src, char *ext)
    char buffer[4096];
    stb_splitpath(buffer, src, STB_PATH | STB_FILE);
    if (ext)
-      sprintf(output, "%s.%s", buffer, ext[0] == '.' ? ext+1 : ext);
+      stb_p_sprintf(output stb_p_size(9999), "%s.%s", buffer, ext[0] == '.' ? ext+1 : ext);
    else
-      strcpy(output, buffer);
+      stb_p_strcpy_s(output, sizeof(buffer), buffer); // @UNSAFE
    return output;
 }
 #endif
@@ -2703,7 +2815,7 @@ static void * stb__alloc_chunk(stb__alloc *src, int size, int align, int pre_ali
       if (c->next) {
          p = stb__try_chunk(c->next, size, align, pre_align);
          if (p) { ++c->alloc; return p; }
-   
+
          // put the bigger chunk first, since the second will get buried
          // the upshot of this is that, until it gets allocated from, chunk #2
          // is always the largest remaining chunk. (could formalize
@@ -2796,7 +2908,7 @@ static void * malloc_base(void *context, size_t size, stb__alloc_type t, int ali
    if (align <= 0) {
       // compute worst-case C packed alignment
       // e.g. a 24-byte struct is 8-aligned
-      int align_proposed = 1 << stb_lowbit8(size);
+      int align_proposed = 1 << stb_lowbit8((unsigned int) size);
 
       if (align_proposed < 0)
          align_proposed = 4;
@@ -2846,7 +2958,7 @@ static void * malloc_base(void *context, size_t size, stb__alloc_type t, int ali
       }
 
       case STB__chunk_raw: {
-         p = stb__alloc_chunk(src, size, align, 0);
+         p = stb__alloc_chunk(src, (int) size, align, 0);
          if (p == NULL) return NULL;
          break;
       }
@@ -2854,7 +2966,7 @@ static void * malloc_base(void *context, size_t size, stb__alloc_type t, int ali
       case STB__chunked: {
          stb__chunked *s;
          if (align < sizeof(stb_uintptr)) align = sizeof(stb_uintptr);
-         s = (stb__chunked *) stb__alloc_chunk(src, size, align, sizeof(*s));
+         s = (stb__chunked *) stb__alloc_chunk(src, (int) size, align, sizeof(*s));
          if (s == NULL) return NULL;
          stb__setparent(s, src);
          p = s+1;
@@ -2904,7 +3016,7 @@ void *stb_realloc(void *ptr, size_t newsize)
 
    if (ptr == NULL) return stb_malloc(NULL, newsize);
    if (newsize == 0) { stb_free(ptr); return NULL; }
-   
+
    t = stb__identify(ptr);
    assert(t == STB__alloc || t == STB__nochildren);
 
@@ -3067,7 +3179,7 @@ typedef struct
 #define stb_arr_len2(a)        ((stb__arr *) (a) ? stb_arrhead2(a)->len : 0)
 #define stb_arr_lastn(a)       (stb_arr_len(a)-1)
 
-// check whether a given index is valid -- tests 0 <= i < stb_arr_len(a) 
+// check whether a given index is valid -- tests 0 <= i < stb_arr_len(a)
 #define stb_arr_valid(a,i)     (a ? (int) (i) < stb_arrhead(a)->len : 0)
 
 // change the array length so is is exactly N entries long, creating
@@ -3092,24 +3204,24 @@ typedef struct
 // (internal) change the allocated length of the array
 #define stb_arr__grow(a,n)     (stb_arr_check(a), stb_arrhead(a)->len += (n))
 
-// add N new unitialized elements to the end of the array
+// add N new uninitialized elements to the end of the array
 #define stb_arr__addn(a,n)     /*lint --e(826)*/ \
                                ((stb_arr_len(a)+(n) > stb_arrcurmax(a))      \
                                  ? (stb__arr_addlen((void **) &(a),sizeof(*a),(n)),0) \
                                  : ((stb_arr__grow(a,n), 0)))
 
-// add N new unitialized elements to the end of the array, and return
+// add N new uninitialized elements to the end of the array, and return
 // a pointer to the first new one
 #define stb_arr_addn(a,n)      (stb_arr__addn((a),n),(a)+stb_arr_len(a)-(n))
 
 // add N new uninitialized elements starting at index 'i'
-#define stb_arr_insertn(a,i,n) (stb__arr_insertn((void **) &(a), sizeof(*a), i, n))
+#define stb_arr_insertn(a,i,n) (stb__arr_insertn((void **) &(a), sizeof(*a), (i), (n)))
 
 // insert an element at i
-#define stb_arr_insert(a,i,v)  (stb__arr_insertn((void **) &(a), sizeof(*a), i, 1), ((a)[i] = v))
+#define stb_arr_insert(a,i,v)  (stb__arr_insertn((void **) &(a), sizeof(*a), (i), (1)), ((a)[i] = v))
 
 // delete N elements from the middle starting at index 'i'
-#define stb_arr_deleten(a,i,n) (stb__arr_deleten((void **) &(a), sizeof(*a), i, n))
+#define stb_arr_deleten(a,i,n) (stb__arr_deleten((void **) &(a), sizeof(*a), (i), (n)))
 
 // delete the i'th element
 #define stb_arr_delete(a,i)   stb_arr_deleten(a,i,1)
@@ -3397,12 +3509,7 @@ unsigned int stb_hash2(char *str, unsigned int *hash2_ptr)
 }
 
 // Paul Hsieh hash
-#define stb__get16_slow(p) ((p)[0] + ((p)[1] << 8))
-#if defined(_MSC_VER)
-   #define stb__get16(p) (*((unsigned short *) (p)))
-#else
-   #define stb__get16(p) stb__get16_slow(p)
-#endif
+#define stb__get16(p) ((p)[0] | ((p)[1] << 8))
 
 unsigned int stb_hash_fast(void *p, int len)
 {
@@ -3412,34 +3519,23 @@ unsigned int stb_hash_fast(void *p, int len)
    if (len <= 0 || q == NULL) return 0;
 
    /* Main loop */
-    if (((int)(size_t) q & 1) == 0) {
-      for (;len > 3; len -= 4) {
-         unsigned int val;
-         hash +=  stb__get16(q);
-         val   = (stb__get16(q+2) << 11);
-         hash  = (hash << 16) ^ hash ^ val;
-         q    += 4;
-         hash += hash >> 11;
-      }
-   } else {
-      for (;len > 3; len -= 4) {
-         unsigned int val;
-         hash +=  stb__get16_slow(q);
-         val   = (stb__get16_slow(q+2) << 11);
-         hash  = (hash << 16) ^ hash ^ val;
-         q    += 4;
-         hash += hash >> 11;
-      }
+   for (;len > 3; len -= 4) {
+      unsigned int val;
+      hash +=  stb__get16(q);
+      val   = (stb__get16(q+2) << 11);
+      hash  = (hash << 16) ^ hash ^ val;
+      q    += 4;
+      hash += hash >> 11;
    }
 
    /* Handle end cases */
    switch (len) {
-      case 3: hash += stb__get16_slow(q);
+      case 3: hash += stb__get16(q);
               hash ^= hash << 16;
               hash ^= q[2] << 18;
               hash += hash >> 11;
               break;
-      case 2: hash += stb__get16_slow(q);
+      case 2: hash += stb__get16(q);
               hash ^= hash << 11;
               hash += hash >> 17;
               break;
@@ -3474,6 +3570,7 @@ unsigned int stb_hash_number(unsigned int hash)
 
 #endif
 
+#ifdef STB_PERFECT_HASH
 //////////////////////////////////////////////////////////////////////////////
 //
 //                     Perfect hashing for ints/pointers
@@ -3771,6 +3868,7 @@ int stb_ischar(char c, char *set)
 }
 
 #endif
+#endif
 
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -3816,7 +3914,7 @@ int stb_ischar(char c, char *set)
 
 #define STB_nocopy(x)        (x)
 #define STB_nodelete(x)      0
-#define STB_nofields         
+#define STB_nofields
 #define STB_nonullvalue(x)
 #define STB_nullvalue(x)     x
 #define STB_safecompare(x)   x
@@ -4080,13 +4178,13 @@ static void STB_(N, rehash)(TYPE *a, int count)                               \
 #define STB_equal(a,b)  ((a) == (b))
 
 #define stb_define_hash(TYPE,N,KEY,EMPTY,DEL,HASH,VALUE)                      \
-   stb_define_hash_base(STB_noprefix, TYPE,STB_nofields,N,NC,0.85f,              \
+   stb_define_hash_base(STB_noprefix, TYPE,STB_nofields,N,NC,0.85f,           \
               KEY,EMPTY,DEL,STB_nocopy,STB_nodelete,STB_nosafe,               \
               STB_equal,STB_equal,HASH,                                       \
               VALUE,STB_nonullvalue,0)
 
 #define stb_define_hash_vnull(TYPE,N,KEY,EMPTY,DEL,HASH,VALUE,VNULL)          \
-   stb_define_hash_base(STB_noprefix, TYPE,STB_nofields,N,NC,0.85f,              \
+   stb_define_hash_base(STB_noprefix, TYPE,STB_nofields,N,NC,0.85f,           \
               KEY,EMPTY,DEL,STB_nocopy,STB_nodelete,STB_nosafe,               \
               STB_equal,STB_equal,HASH,                                       \
               VALUE,STB_nullvalue,VNULL)
@@ -4101,12 +4199,14 @@ static void STB_(N, rehash)(TYPE *a, int count)                               \
 
 stb_declare_hash(STB_EXTERN, stb_ptrmap, stb_ptrmap_, void *, void *)
 stb_declare_hash(STB_EXTERN, stb_idict, stb_idict_, stb_int32, stb_int32)
+stb_declare_hash(STB_EXTERN, stb_uidict, stbi_uidict_, stb_uint32, stb_uint32)
 
 STB_EXTERN void        stb_ptrmap_delete(stb_ptrmap *e, void (*free_func)(void *));
 STB_EXTERN stb_ptrmap *stb_ptrmap_new(void);
 
 STB_EXTERN stb_idict * stb_idict_new_size(int size);
 STB_EXTERN void        stb_idict_remove_all(stb_idict *e);
+STB_EXTERN void        stb_uidict_reset(stb_uidict *e);
 
 #ifdef STB_DEFINE
 
@@ -4140,7 +4240,7 @@ void stb_ptrmap_delete(stb_ptrmap *e, void (*free_func)(void *))
 // extra fields needed for stua_dict
 #define STB_IEMPTY  ((int) 1)
 #define STB_IDEL    ((int) 3)
-stb_define_hash_base(STB_noprefix, stb_idict, short type; short gc; STB_nofields, stb_idict_,stb_idict_,0.85f,
+stb_define_hash_base(STB_noprefix, stb_idict, short type; short gc; STB_nofields, stb_idict_,stb_idict_,0.95f,
               stb_int32,STB_IEMPTY,STB_IDEL,STB_nocopy,STB_nodelete,STB_nosafe,
               STB_equal,STB_equal,
               return stb_rehash_improved(k);,stb_int32,STB_nonullvalue,0)
@@ -4163,6 +4263,23 @@ void stb_idict_remove_all(stb_idict *e)
    for (n=0; n < e->limit; ++n)
       e->table[n].k = STB_IEMPTY;
    e->has_empty = e->has_del = 0;
+   e->count = 0;
+   e->deleted = 0;
+}
+
+stb_define_hash_base(STB_noprefix, stb_uidict, STB_nofields, stb_uidict_,stb_uidict_,0.85f,
+              stb_int32,0xffffffff,0xfffffffe,STB_nocopy,STB_nodelete,STB_nosafe,
+              STB_equal,STB_equal,
+              return stb_rehash_improved(k);,stb_uint32,STB_nonullvalue,0)
+
+void stb_uidict_reset(stb_uidict *e)
+{
+   int n;
+   for (n=0; n < e->limit; ++n)
+      e->table[n].k = 0xffffffff;
+   e->has_empty = e->has_del = 0;
+   e->count = 0;
+   e->deleted = 0;
 }
 #endif
 
@@ -4173,7 +4290,7 @@ void stb_idict_remove_all(stb_idict *e)
 // An stb_ptrmap data structure is an O(1) hash table storing an arbitrary
 // block of data for a given pair of pointers.
 //
-// If create=0, returns 
+// If create=0, returns
 
 typedef struct stb__st_stb_spmatrix stb_spmatrix;
 
@@ -4193,7 +4310,7 @@ static stb__ptrpair stb__ptrpair_del   = { (void *) 2, (void *) 2 };
 
 #define STB__equal_ptrpair(x,y) ((x).a == (y).a && (x).b == (y).b)
 
-stb_define_hash_base(static, stb_spmatrix, int val_size; void *arena;, stb__spmatrix_,stb__spmatrix_, 0.85,
+stb_define_hash_base(STB_noprefix, stb_spmatrix, int val_size; void *arena;, stb__spmatrix_,stb__spmatrix_, 0.85,
      stb__ptrpair, stb__ptrpair_empty, stb__ptrpair_del,
      STB_nocopy, STB_nodelete, STB_nosafe,
      STB__equal_ptrpair, STB__equal_ptrpair, return stb_rehash(stb_hashptr(k.a))+stb_hashptr(k.b);,
@@ -4235,13 +4352,13 @@ void *stb_sparse_ptr_matrix_get(stb_spmatrix *z, void *a, void *b, int create)
 //
 //           if "use_arena=1", then strings will be copied
 //           into blocks and never freed until the sdict is freed;
-//           otherwise they're malloc()ed and free()d on the fly. 
+//           otherwise they're malloc()ed and free()d on the fly.
 //           (specify use_arena=1 if you never stb_sdict_remove)
 
 stb_declare_hash(STB_EXTERN, stb_sdict, stb_sdict_, char *, void *)
 
 STB_EXTERN stb_sdict * stb_sdict_new(int use_arena);
-STB_EXTERN stb_sdict * stb_sdict_copy(stb_sdict*); 
+STB_EXTERN stb_sdict * stb_sdict_copy(stb_sdict*);
 STB_EXTERN void        stb_sdict_delete(stb_sdict *);
 STB_EXTERN void *      stb_sdict_change(stb_sdict *, char *str, void *p);
 STB_EXTERN int         stb_sdict_count(stb_sdict *d);
@@ -4265,9 +4382,9 @@ STB_EXTERN void *      stb_sdict_internal_value(stb_sdict *d, int n);
 #define STB_DEL ((void *) 1)
 #define STB_SDEL  ((char *) 1)
 
-#define stb_sdict__copy(x)                                       \
-   strcpy(a->arena ? stb_malloc_string(a->arena, strlen(x)+1)    \
-                   : (char *) malloc(strlen(x)+1), x)
+#define stb_sdict__copy(x)                                             \
+   stb_p_strcpy_s(a->arena ? stb_malloc_string(a->arena, strlen(x)+1)    \
+                         : (char *) malloc(strlen(x)+1), strlen(x)+1, x)
 
 #define stb_sdict__dispose(x)  if (!a->arena) free(x)
 
@@ -4315,7 +4432,7 @@ stb_sdict* stb_sdict_copy(stb_sdict *old)
    else if (new_arena)
       stb_free(new_arena);
    return n;
-} 
+}
 
 
 void stb_sdict_delete(stb_sdict *d)
@@ -4694,7 +4811,7 @@ static stb__memory_leaf *stb__nptr_find_leaf(void *mem)
    if (z)
       return z->children[STB__NPTR_NODE_OFFSET(address)];
    else
-      return NULL;      
+      return NULL;
 }
 
 static void * stb__nptr_alloc(int size)
@@ -4814,7 +4931,7 @@ void stb__nptr_block(void *address, int len, void (*function)(stb__memory_leaf *
    int b0 = start >> STB__NPTR_ROOT_SHIFT;
    int b1 = end >> STB__NPTR_ROOT_SHIFT;
    int b=b0,i,e0,e1;
-   
+
    e0 = STB__NPTR_NODE_OFFSET(start);
 
    if (datum <= 0) {
@@ -5025,11 +5142,9 @@ void stb_nptr_recache(void)
 //
 
 
-#ifdef _MSC_VER
+#ifdef _WIN32
   #define stb_rename(x,y)   _wrename((const wchar_t *)stb__from_utf8(x), (const wchar_t *)stb__from_utf8_alt(y))
-  #define stb_mktemp   _mktemp
 #else
-  #define stb_mktemp   mktemp
   #define stb_rename   rename
 #endif
 
@@ -5055,7 +5170,7 @@ STB_EXTERN int     stb_feq(char *s1, char *s2);
 STB_EXTERN time_t  stb_ftimestamp(char *filename);
 
 STB_EXTERN int     stb_fullpath(char *abs, int abs_size, char *rel);
-STB_EXTERN FILE *  stb_fopen(char *filename, char *mode);
+STB_EXTERN FILE *  stb_fopen(char *filename, const char *mode);
 STB_EXTERN int     stb_fclose(FILE *f, int keep);
 
 enum
@@ -5106,7 +5221,7 @@ STB_EXTERN int stb_tfwrite(void *data, size_t len, size_t count, STBF *f);
 STBF *stb_tfopen(char *filename, char *mode)
 {
    STBF *z;
-   FILE *f = fopen(filename, mode);
+   FILE *f = stb_p_fopen(filename, mode);
    if (!f) return NULL;
    z = (STBF *) malloc(sizeof(*z));
    if (!z) { fclose(f); return NULL; }
@@ -5155,7 +5270,7 @@ void stb_fwrite32(FILE *f, stb_uint32 x)
    fwrite(&x, 4, 1, f);
 }
 
-#if defined(_MSC_VER) || defined(__MINGW32__)
+#if defined(_WIN32)
    #define stb__stat   _stat
 #else
    #define stb__stat   stat
@@ -5186,12 +5301,12 @@ time_t stb_ftimestamp(char *filename)
 
 size_t  stb_filelen(FILE *f)
 {
-   size_t len, pos;
+   long len, pos;
    pos = ftell(f);
    fseek(f, 0, SEEK_END);
    len = ftell(f);
    fseek(f, pos, SEEK_SET);
-   return len;
+   return (size_t) len;
 }
 
 void *stb_file(char *filename, size_t *length)
@@ -5295,7 +5410,7 @@ char ** stb_stringfile(char *filename, int *plen)
          memcpy(&list[count+1], buffer, len+1);
          free(buffer);
          buffer = (char *) &list[count+1];
-         if (plen) *plen = count;
+         if (plen) *plen = (int) count;
       }
    }
    return list;
@@ -5322,7 +5437,7 @@ char * stb_fgets(char *buffer, int buflen, FILE *f)
    buffer[0] = 0;
    p = fgets(buffer, buflen, f);
    if (p) {
-      int n = strlen(p)-1;
+      int n = (int) (strlen(p)-1);
       if (n >= 0)
          if (p[n] == '\n')
             p[n] = 0;
@@ -5339,21 +5454,21 @@ char * stb_fgets_malloc(FILE *f)
       return NULL;
 
    if (quick_buffer[sizeof(quick_buffer)-2] == 0) {
-      int n = strlen(quick_buffer);
+      size_t n = strlen(quick_buffer);
       if (n > 0 && quick_buffer[n-1] == '\n')
          quick_buffer[n-1] = 0;
-      return strdup(quick_buffer);
+      return stb_p_strdup(quick_buffer);
    } else {
       char *p;
-      char *a = strdup(quick_buffer);
-      int len = sizeof(quick_buffer)-1;
+      char *a = stb_p_strdup(quick_buffer);
+      size_t len = sizeof(quick_buffer)-1;
 
       while (!feof(f)) {
          if (a[len-1] == '\n') break;
          a = (char *) realloc(a, len*2);
          p = &a[len];
          p[len-2] = 0;
-         if (!fgets(p, len, f))
+         if (!fgets(p, (int) len, f))
             break;
          if (p[len-2] == 0) {
             len += strlen(p);
@@ -5369,13 +5484,13 @@ char * stb_fgets_malloc(FILE *f)
 
 int stb_fullpath(char *abs, int abs_size, char *rel)
 {
-   #ifdef _MSC_VER
+   #ifdef _WIN32
    return _fullpath(abs, rel, abs_size) != NULL;
    #else
    if (rel[0] == '/' || rel[0] == '~') {
       if ((int) strlen(rel) >= abs_size)
          return 0;
-      strcpy(abs,rel);
+      stb_p_strcpy_s(abs,65536,rel);
       return STB_TRUE;
    } else {
       int n;
@@ -5383,7 +5498,7 @@ int stb_fullpath(char *abs, int abs_size, char *rel)
       n = strlen(abs);
       if (n+(int) strlen(rel)+2 <= abs_size) {
          abs[n] = '/';
-         strcpy(abs+n+1, rel);
+         stb_p_strcpy_s(abs+n+1, 65536,rel);
          return STB_TRUE;
       } else {
          return STB_FALSE;
@@ -5398,8 +5513,8 @@ static int stb_fcmp_core(FILE *f, FILE *g)
    int n1,n2, res=0;
 
    while (1) {
-      n1 = fread(buf1, 1, sizeof(buf1), f);
-      n2 = fread(buf2, 1, sizeof(buf2), g);
+      n1 = (int) fread(buf1, 1, sizeof(buf1), f);
+      n2 = (int) fread(buf2, 1, sizeof(buf2), g);
       res = memcmp(buf1,buf2,stb_min(n1,n2));
       if (res)
          break;
@@ -5463,9 +5578,9 @@ typedef struct
    int   errors;
 } stb__file_data;
 
-static FILE *stb__open_temp_file(char *temp_name, char *src_name, char *mode)
+static FILE *stb__open_temp_file(char *temp_name, char *src_name, const char *mode)
 {
-   int p;
+   size_t p;
 #ifdef _MSC_VER
    int j;
 #endif
@@ -5483,19 +5598,19 @@ static FILE *stb__open_temp_file(char *temp_name, char *src_name, char *mode)
    // try multiple times to make a temp file... just in
    // case some other process makes the name first
    for (j=0; j < 32; ++j) {
-      strcpy(temp_name+p, "stmpXXXXXX");
-      if (stb_mktemp(temp_name) == NULL)
+      stb_p_strcpy_s(temp_name+p, 65536, "stmpXXXXXX");
+      if (!stb_p_mktemp(temp_name))
          return 0;
 
-      f = fopen(temp_name, mode);
+      f = stb_p_fopen(temp_name, mode);
       if (f != NULL)
          break;
    }
    #else
    {
-      strcpy(temp_name+p, "stmpXXXXXX");
+      stb_p_strcpy_s(temp_name+p, 65536, "stmpXXXXXX");
       #ifdef __MINGW32__
-         int fd = open(mktemp(temp_name), O_RDWR);
+         int fd = open(stb_p_mktemp(temp_name), O_RDWR);
       #else
          int fd = mkstemp(temp_name);
       #endif
@@ -5512,7 +5627,7 @@ static FILE *stb__open_temp_file(char *temp_name, char *src_name, char *mode)
 }
 
 
-FILE *  stb_fopen(char *filename, char *mode)
+FILE *  stb_fopen(char *filename, const char *mode)
 {
    FILE *f;
    char name_full[4096];
@@ -5534,8 +5649,8 @@ FILE *  stb_fopen(char *filename, char *mode)
       stb__file_data *d = (stb__file_data *) malloc(sizeof(*d));
       if (!d) { assert(0);  /* NOTREACHED */fclose(f); return NULL; }
       if (stb__files == NULL) stb__files = stb_ptrmap_create();
-      d->temp_name = strdup(temp_full);
-      d->name      = strdup(name_full);
+      d->temp_name = stb_p_strdup(temp_full);
+      d->name      = stb_p_strdup(name_full);
       d->errors    = 0;
       stb_ptrmap_add(stb__files, f, d);
       return f;
@@ -5665,7 +5780,7 @@ int stb_copyfile(char *src, char *dest)
    }
 
    while (!feof(f)) {
-      int n = fread(buffer, 1, buf_size, f);
+      size_t n = fread(buffer, 1, buf_size, f);
       if (n != 0)
          fwrite(buffer, 1, n, g);
    }
@@ -5788,7 +5903,7 @@ int stb_size_varlen64(stb_uint64 v)
    if (v < STB_IMM_UINT64(0x0000000800000000)) return 5;
    if (v < STB_IMM_UINT64(0x0000040000000000)) return 6;
    if (v < STB_IMM_UINT64(0x0002000000000000)) return 7;
-   if (v < STB_IMM_UINT64(0x0100000000000000)) return 8; 
+   if (v < STB_IMM_UINT64(0x0100000000000000)) return 8;
    return 9;
 }
 
@@ -5806,7 +5921,7 @@ void    stb_fput_varlen64(FILE *f, stb_uint64 v)
    if (z >= STB_IMM_UINT64(0x00000010000000)) fputc((first ? 0xF0 : 0)+(char)(z>>32),f), first=0;
    if (z >= STB_IMM_UINT64(0x00000000200000)) fputc((first ? 0xE0 : 0)+(char)(z>>24),f), first=0;
    if (z >= STB_IMM_UINT64(0x00000000004000)) fputc((first ? 0xC0 : 0)+(char)(z>>16),f), first=0;
-   if (z >= STB_IMM_UINT64(0x00000000000080)) fputc((first ? 0x80 : 0)+(char)(z>> 8),f), first=0; 
+   if (z >= STB_IMM_UINT64(0x00000000000080)) fputc((first ? 0x80 : 0)+(char)(z>> 8),f), first=0;
    fputc((char)z,f);
 }
 
@@ -5841,8 +5956,8 @@ int     stb_size_ranged(int b, stb_uint n)
 
 void stb_fput_string(FILE *f, char *s)
 {
-   int len = strlen(s);
-   stb_fput_varlenu(f, len);
+   size_t len = strlen(s);
+   stb_fput_varlenu(f, (unsigned int) len);
    fwrite(s, 1, len, f);
 }
 
@@ -5860,9 +5975,9 @@ char *stb_fget_string(FILE *f, void *p)
 
 char *stb_strdup(char *str, void *pool)
 {
-   int len = strlen(str);
+   size_t len = strlen(str);
    char *p = stb_malloc_string(pool, len+1);
-   strcpy(p, str);
+   stb_p_strcpy_s(p, len+1, str);
    return p;
 }
 
@@ -5918,7 +6033,7 @@ void   stb_getopt_free(char **opts)
 
 char **stb_getopt(int *argc, char **argv)
 {
-   return stb_getopt_param(argc, argv, "");
+   return stb_getopt_param(argc, argv, (char*) "");
 }
 
 char **stb_getopt_param(int *argc, char **argv, char *param)
@@ -5934,6 +6049,9 @@ char **stb_getopt_param(int *argc, char **argv, char *param)
             while (i < *argc)
                argv[j++] = argv[i++];
             break;
+         } else if (argv[i][1] == '-') {
+            // copy argument through including initial '-' for clarity
+            stb_arr_push(opts, stb_p_strdup(argv[i]));
          } else {
             int k;
             char *q = argv[i];  // traverse options list
@@ -5941,7 +6059,7 @@ char **stb_getopt_param(int *argc, char **argv, char *param)
                char *s;
                if (strchr(param, q[k])) {  // does it take a parameter?
                   char *t = &q[k+1], z = q[k];
-                  int len=0;
+                  size_t len=0;
                   if (*t == 0) {
                      if (i == *argc-1) { // takes a parameter, but none found
                         *argc = 0;
@@ -5950,12 +6068,12 @@ char **stb_getopt_param(int *argc, char **argv, char *param)
                      }
                      t = argv[++i];
                   } else
-                     k += strlen(t);
+                     k += (int) strlen(t);
                   len = strlen(t);
                   s = (char *) malloc(len+2);
                   if (!s) return NULL;
                   s[0] = z;
-                  strcpy(s+1, t);
+                  stb_p_strcpy_s(s+1, len+2, t);
                } else {
                   // no parameter
                   s = (char *) malloc(2);
@@ -6020,7 +6138,7 @@ static char **readdir_raw(char *dir, int return_subdirs, char *mask)
    char buffer[4096], with_slash[4096];
    size_t n;
 
-   #ifdef _MSC_VER
+   #ifdef WIN32
       stb__wchar *ws;
       struct _wfinddata_t data;
    #ifdef _WIN64
@@ -6030,7 +6148,7 @@ static char **readdir_raw(char *dir, int return_subdirs, char *mask)
       const long none = -1;
       long z;
    #endif
-   #else // !_MSC_VER
+   #else // !WIN32
       const DIR *none = NULL;
       DIR *z;
    #endif
@@ -6039,7 +6157,6 @@ static char **readdir_raw(char *dir, int return_subdirs, char *mask)
    if (!n || n >= sizeof(buffer))
       return NULL;
    stb_fixpath(buffer);
-   n--;
 
    if (n > 0 && (buffer[n-1] != '/')) {
       buffer[n++] = '/';
@@ -6048,18 +6165,18 @@ static char **readdir_raw(char *dir, int return_subdirs, char *mask)
    if (!stb_strscpy(with_slash,buffer,sizeof(with_slash)))
       return NULL;
 
-   #ifdef _MSC_VER
+   #ifdef WIN32
       if (!stb_strscpy(buffer+n,"*.*",sizeof(buffer)-n))
          return NULL;
       ws = stb__from_utf8(buffer);
-      z = _wfindfirst((const wchar_t *)ws, &data);
+      z = _wfindfirst((wchar_t *)ws, &data);
    #else
       z = opendir(dir);
    #endif
 
    if (z != none) {
       int nonempty = STB_TRUE;
-      #ifndef _MSC_VER
+      #ifndef WIN32
       struct dirent *data = readdir(z);
       nonempty = (data != NULL);
       #endif
@@ -6068,7 +6185,7 @@ static char **readdir_raw(char *dir, int return_subdirs, char *mask)
 
          do {
             int is_subdir;
-            #ifdef _MSC_VER
+            #ifdef WIN32
             char *name = stb__to_utf8((stb__wchar *)data.name);
             if (name == NULL) {
                fprintf(stderr, "%s to convert '%S' to %s!\n", "Unable", data.name, "utf8");
@@ -6091,18 +6208,18 @@ static char **readdir_raw(char *dir, int return_subdirs, char *mask)
                         break;
                      if (buffer[0] == '.' && buffer[1] == '/')
                         p = buffer+2;
-                     stb_arr_push(results, strdup(p));
+                     stb_arr_push(results, stb_p_strdup(p));
                   }
                }
             }
          }
-         #ifdef _MSC_VER
+         #ifdef WIN32
          while (0 == _wfindnext(z, &data));
          #else
          while ((data = readdir(z)) != NULL);
          #endif
       }
-      #ifdef _MSC_VER
+      #ifdef WIN32
          _findclose(z);
       #else
          closedir(z);
@@ -6127,7 +6244,7 @@ static char **stb_readdir_rec(char **sofar, char *dir, char *filespec)
 
    files = stb_readdir_files_mask(dir, filespec);
    stb_arr_for(p, files) {
-      stb_arr_push(sofar, strdup(*p));
+      stb_arr_push(sofar, stb_p_strdup(*p));
       if (stb_arr_len(sofar) >= stb__rec_max) break;
    }
    stb_readdir_free(files);
@@ -6206,7 +6323,7 @@ stb_dirtree2 *stb_dirtree2_from_files_relative(char *src, char **filelist, int c
 {
    char buffer1[1024];
    int i;
-   int dlen = strlen(src), elen;
+   int dlen = (int) strlen(src), elen;
    stb_dirtree2 *d;
    char ** descendents = NULL;
    char ** files = NULL;
@@ -6239,7 +6356,7 @@ stb_dirtree2 *stb_dirtree2_from_files_relative(char *src, char **filelist, int c
    d = (stb_dirtree2 *) malloc(sizeof(*d));
    d->files = files;
    d->subdirs = NULL;
-   d->fullpath = strdup(src);
+   d->fullpath = stb_p_strdup(src);
    s = stb_strrchr2(d->fullpath, '/', '\\');
    if (s)
       ++s;
@@ -6254,11 +6371,11 @@ stb_dirtree2 *stb_dirtree2_from_files_relative(char *src, char **filelist, int c
       char *s = descendents[i] + elen, *t;
       t = stb_strchr2(s, '/', '\\');
       assert(t);
-      stb_strncpy(buffer2, descendents[i], t-descendents[i]+1);
+      stb_strncpy(buffer2, descendents[i], (int) (t-descendents[i]+1));
       if (stb_stricmp(buffer1, buffer2)) {
          stb_dirtree2 *t = stb_dirtree2_from_files_relative(buffer2, descendents, stb_arr_len(descendents));
          assert(t != NULL);
-         strcpy(buffer1, buffer2);
+         stb_p_strcpy_s(buffer1, sizeof(buffer1), buffer2);
          stb_arr_push(d->subdirs, t);
       }
    }
@@ -6269,7 +6386,7 @@ stb_dirtree2 *stb_dirtree2_from_files_relative(char *src, char **filelist, int c
 
 stb_dirtree2 *stb_dirtree2_from_files(char **filelist, int count)
 {
-   return stb_dirtree2_from_files_relative("", filelist, count);
+   return stb_dirtree2_from_files_relative((char*) "", filelist, count);
 }
 #endif
 
@@ -6284,9 +6401,9 @@ stb_dirtree2 *stb_dirtree2_from_files(char **filelist, int count)
 #define STB_ADLER32_SEED   1
 #define STB_CRC32_SEED     0    // note that we logical NOT this in the code
 
-STB_EXTERN stb_uint 
+STB_EXTERN stb_uint
   stb_adler32(stb_uint adler32, stb_uchar *buffer, stb_uint buflen);
-STB_EXTERN stb_uint 
+STB_EXTERN stb_uint
   stb_crc32_block(stb_uint crc32, stb_uchar *buffer, stb_uint len);
 STB_EXTERN stb_uint stb_crc32(unsigned char *buffer, stb_uint len);
 
@@ -6480,7 +6597,7 @@ int stb_sha1_file(stb_uchar output[20], char *file)
    h[4] = 0xc3d2e1f0;
 
    for(;;) {
-      int n = fread(buffer, 1, 64, f);
+      size_t n = fread(buffer, 1, 64, f);
       if (n == 64) {
          stb__sha1(buffer, h);
          length += n;
@@ -6492,7 +6609,7 @@ int stb_sha1_file(stb_uchar output[20], char *file)
          buffer[n++] = 0x80;
 
          // if there isn't enough room for the length, double the block
-         if (n + 8 > 64) 
+         if (n + 8 > 64)
             block = 128;
 
          // pad to end
@@ -6550,7 +6667,7 @@ void stb_sha1_readable(char display[27], unsigned char sha[20])
       num_bits -= 6;
    }
    assert(num_bits == 20*8 - 26*6);
-   display[o++] = encoding[acc];   
+   display[o++] = encoding[acc];
 }
 
 #endif // STB_DEFINE
@@ -6562,12 +6679,12 @@ void stb_sha1_readable(char display[27], unsigned char sha[20])
 
 #if defined(_WIN32)
 
-STB_EXTERN void * stb_reg_open(char *mode, char *where); // mode: "rHKLM" or "rHKCU" or "w.."
+STB_EXTERN void * stb_reg_open(const char *mode, const char *where); // mode: "rHKLM" or "rHKCU" or "w.."
 STB_EXTERN void   stb_reg_close(void *reg);
-STB_EXTERN int    stb_reg_read(void *zreg, char *str, void *data, unsigned long len);
-STB_EXTERN int    stb_reg_read_string(void *zreg, char *str, char *data, int len);
-STB_EXTERN void   stb_reg_write(void *zreg, char *str, void *data, unsigned long len);
-STB_EXTERN void   stb_reg_write_string(void *zreg, char *str, char *data);
+STB_EXTERN int    stb_reg_read(void *zreg, const char *str, void *data, unsigned long len);
+STB_EXTERN int    stb_reg_read_string(void *zreg, const char *str, char *data, int len);
+STB_EXTERN void   stb_reg_write(void *zreg, const char *str, const void *data, unsigned long len);
+STB_EXTERN void   stb_reg_write_string(void *zreg, const char *str, const char *data);
 
 #if defined(STB_DEFINE) && !defined(STB_NO_REGISTRY)
 
@@ -6579,7 +6696,7 @@ STB_EXTERN void   stb_reg_write_string(void *zreg, char *str, char *data);
 
 STB_EXTERN __declspec(dllimport) long __stdcall RegCloseKey ( HKEY hKey );
 STB_EXTERN __declspec(dllimport) long __stdcall RegCreateKeyExA ( HKEY hKey, const char * lpSubKey,
-    int  Reserved, char * lpClass, int  dwOptions, 
+    int  Reserved, char * lpClass, int  dwOptions,
     int samDesired, void *lpSecurityAttributes,     HKEY * phkResult,     int * lpdwDisposition );
 STB_EXTERN __declspec(dllimport) long __stdcall RegDeleteKeyA ( HKEY hKey, const char * lpSubKey );
 STB_EXTERN __declspec(dllimport) long __stdcall RegQueryValueExA ( HKEY hKey, const char * lpValueName,
@@ -6595,15 +6712,23 @@ STB_EXTERN __declspec(dllimport) long __stdcall  RegOpenKeyExA ( HKEY hKey, cons
 #define STB__REG_KEY_ALL_ACCESS       0x000f003f
 #define STB__REG_KEY_READ             0x00020019
 
-void *stb_reg_open(char *mode, char *where)
+#ifdef _M_AMD64
+#define STB__HKEY_CURRENT_USER        0x80000001ull
+#define STB__HKEY_LOCAL_MACHINE       0x80000002ull
+#else
+#define STB__HKEY_CURRENT_USER        0x80000001
+#define STB__HKEY_LOCAL_MACHINE       0x80000002
+#endif
+
+void *stb_reg_open(const char *mode, const char *where)
 {
    long res;
    HKEY base;
    HKEY zreg;
    if (!stb_stricmp(mode+1, "cu") || !stb_stricmp(mode+1, "hkcu"))
-      base = (HKEY) 0x80000001; // HKCU
+      base = (HKEY) STB__HKEY_CURRENT_USER;
    else if (!stb_stricmp(mode+1, "lm") || !stb_stricmp(mode+1, "hklm"))
-      base = (HKEY) 0x80000002; // HKLM
+      base = (HKEY) STB__HKEY_LOCAL_MACHINE;
    else
       return NULL;
 
@@ -6626,7 +6751,7 @@ void stb_reg_close(void *reg)
 #define STB__REG_BINARY     3
 #define STB__REG_DWORD      4
 
-int stb_reg_read(void *zreg, char *str, void *data, unsigned long len)
+int stb_reg_read(void *zreg, const char *str, void *data, unsigned long len)
 {
    unsigned long type;
    unsigned long alen = len;
@@ -6639,23 +6764,23 @@ int stb_reg_read(void *zreg, char *str, void *data, unsigned long len)
    return 0;
 }
 
-void stb_reg_write(void *zreg, char *str, void *data, unsigned long len)
+void stb_reg_write(void *zreg, const char *str, const void *data, unsigned long len)
 {
    if (zreg)
       RegSetValueExA((HKEY) zreg, str, 0, STB__REG_BINARY, (const unsigned char *) data, len);
 }
 
-int stb_reg_read_string(void *zreg, char *str, char *data, int len)
+int stb_reg_read_string(void *zreg, const char *str, char *data, int len)
 {
    if (!stb_reg_read(zreg, str, data, len)) return 0;
    data[len-1] = 0; // force a 0 at the end of the string no matter what
    return 1;
 }
 
-void stb_reg_write_string(void *zreg, char *str, char *data)
+void stb_reg_write_string(void *zreg, const char *str, const char *data)
 {
    if (zreg)
-      RegSetValueExA((HKEY) zreg, str, 0, STB__REG_SZ, (const unsigned char *)  data, strlen(data)+1);
+      RegSetValueExA((HKEY) zreg, str, 0, STB__REG_SZ, (const unsigned char *)  data, (int) strlen(data)+1);
 }
 #endif  // STB_DEFINE
 #endif  // _WIN32
@@ -6671,7 +6796,7 @@ void stb_reg_write_string(void *zreg, char *str, char *data)
 #ifndef STB_NO_STB_STRINGS
 typedef struct stb_cfg_st stb_cfg;
 
-STB_EXTERN stb_cfg * stb_cfg_open(char *config, char *mode); // mode = "r", "w"
+STB_EXTERN stb_cfg * stb_cfg_open(char *config, const char *mode); // mode = "r", "w"
 STB_EXTERN void      stb_cfg_close(stb_cfg *cfg);
 STB_EXTERN int       stb_cfg_read(stb_cfg *cfg, char *key, void *value, int len);
 STB_EXTERN void      stb_cfg_write(stb_cfg *cfg, char *key, void *value, int len);
@@ -6696,14 +6821,14 @@ struct stb_cfg_st
    FILE *f; // write the data to this file on close
 };
 
-static char *stb__cfg_sig = "sTbCoNfIg!\0\0";
+static const char *stb__cfg_sig = "sTbCoNfIg!\0\0";
 static char stb__cfg_dir[512];
 STB_EXTERN void stb_cfg_set_directory(char *dir)
 {
-   strcpy(stb__cfg_dir, dir);
+   stb_p_strcpy_s(stb__cfg_dir, sizeof(stb__cfg_dir), dir);
 }
 
-STB_EXTERN stb_cfg * stb_cfg_open(char *config, char *mode)
+STB_EXTERN stb_cfg * stb_cfg_open(char *config, const char *mode)
 {
    size_t len;
    stb_cfg *z;
@@ -6712,7 +6837,7 @@ STB_EXTERN stb_cfg * stb_cfg_open(char *config, char *mode)
 
    if (!stb__cfg_dir[0]) {
       #ifdef _WIN32
-      strcpy(stb__cfg_dir, "c:/stb");
+      stb_p_strcpy_s(stb__cfg_dir, sizeof(stb__cfg_dir), "c:/stb");
       #else
       strcpy(stb__cfg_dir, "~/.stbconfig");
       #endif
@@ -6728,7 +6853,7 @@ STB_EXTERN stb_cfg * stb_cfg_open(char *config, char *mode)
       #endif
    }
 
-   sprintf(file, "%s/%s.cfg", stb__cfg_dir, config);
+   stb_p_sprintf(file stb_p_size(sizeof(file)), "%s/%s.cfg", stb__cfg_dir, config);
 
    z = (stb_cfg *) stb_malloc(0, sizeof(*z));
    z->data = NULL;
@@ -6754,7 +6879,7 @@ STB_EXTERN stb_cfg * stb_cfg_open(char *config, char *mode)
    }
 
    if (mode[0] == 'w')
-      z->f = fopen(file, "wb");
+      z->f = stb_p_fopen(file, "wb");
    else
       z->f = NULL;
 
@@ -6768,7 +6893,7 @@ void stb_cfg_close(stb_cfg *z)
       // write the file out
       fwrite(stb__cfg_sig, 12, 1, z->f);
       for (i=0; i < stb_arr_len(z->data); ++i) {
-         stb_int16 n = strlen(z->data[i].key)+1;
+         stb_int16 n = (stb_int16) strlen(z->data[i].key)+1;
          fwrite(&n, 2, 1, z->f);
          fwrite(z->data[i].key, n, 1, z->f);
          fwrite(&z->data[i].value_len, 4, 1, z->f);
@@ -6817,7 +6942,7 @@ int stb_cfg_delete(stb_cfg *z, char *key)
 {
    int i;
    for (i=0; i < stb_arr_len(z->data); ++i)
-      if (!stb_stricmp(z->data[i].key, key)) {   
+      if (!stb_stricmp(z->data[i].key, key)) {
          stb_arr_fastdelete(z->data, i);
          return 1;
       }
@@ -6833,7 +6958,7 @@ int stb_cfg_read_string(stb_cfg *z, char *key, char *value, int len)
 
 void stb_cfg_write_string(stb_cfg *z, char *key, char *value)
 {
-   stb_cfg_write(z, key, value, strlen(value)+1);
+   stb_cfg_write(z, key, value, (int) strlen(value)+1);
 }
 #endif
 
@@ -6924,9 +7049,9 @@ static char stb__signature[12] = { 's', 'T', 'b', 'D', 'i', 'R', 't', 'R', 'e', 
 static void stb__dirtree_save_db(char *filename, stb_dirtree *data, char *root)
 {
    int i, num_dirs_final=0, num_files_final;
-   char *info = root ? root : "";
+   char *info = root ? root : (char*)"";
    int *remap;
-   FILE *f = fopen(filename, "wb");
+   FILE *f = stb_p_fopen(filename, "wb");
    if (!f) return;
 
    fwrite(stb__signature, sizeof(stb__signature), 1, f);
@@ -6974,7 +7099,7 @@ static void stb__dirtree_load_db(char *filename, stb_dirtree *data, char *dir)
 {
    char sig[2048];
    int i,n;
-   FILE *f = fopen(filename, "rb");
+   FILE *f = stb_p_fopen(filename, "rb");
 
    if (!f) return;
 
@@ -7011,6 +7136,8 @@ static void stb__dirtree_load_db(char *filename, stb_dirtree *data, char *dir)
    fclose(f);
 }
 
+FILE *hlog;
+
 static int stb__dircount, stb__dircount_mask, stb__showfile;
 static void stb__dirtree_scandir(char *path, time_t last_time, stb_dirtree *active)
 {
@@ -7026,19 +7153,21 @@ static void stb__dirtree_scandir(char *path, time_t last_time, stb_dirtree *acti
    int has_slash;
    if (stb__showfile) printf("<");
 
-   has_slash = (path[0] && path[strlen(path)-1] == '/'); 
+   has_slash = (path[0] && path[strlen(path)-1] == '/');
 
    // @TODO: do this concatenation without using swprintf to avoid this mess:
-#if defined(_MSC_VER) && _MSC_VER < 1400
+#if (defined(_MSC_VER) && _MSC_VER < 1400) // || (defined(__clang__))
+   // confusingly, Windows Kits\10 needs to go down this path?!?
+   // except now it doesn't, I don't know what changed
    if (has_slash)
       swprintf(full_path, L"%s*", stb__from_utf8(path));
    else
       swprintf(full_path, L"%s/*", stb__from_utf8(path));
 #else
    if (has_slash)
-      swprintf(full_path, 1024, L"%s*", stb__from_utf8(path));
+      swprintf((wchar_t *) full_path, (size_t) 1024, L"%s*", (wchar_t *) stb__from_utf8(path));
    else
-      swprintf(full_path, 1024, L"%s/*", stb__from_utf8(path));
+      swprintf((wchar_t *) full_path, (size_t) 1024, L"%s/*", (wchar_t *) stb__from_utf8(path));
 #endif
 
    // it's possible this directory is already present: that means it was in the
@@ -7056,31 +7185,47 @@ static void stb__dirtree_scandir(char *path, time_t last_time, stb_dirtree *acti
    n = stb_arr_lastn(active->dirs);
 
    if (stb__showfile) printf("[");
-   if( (hFile = _wfindfirsti64( full_path, &c_file )) != -1L ) {
+   if( (hFile = (long) _wfindfirsti64( (wchar_t *) full_path, &c_file )) != -1L ) {
       do {
          if (stb__showfile) printf(")");
          if (c_file.attrib & _A_SUBDIR) {
             // ignore subdirectories starting with '.', e.g. "." and ".."
             if (c_file.name[0] != '.') {
                char *new_path = (char *) full_path;
-               char *temp = stb__to_utf8(c_file.name);
+               char *temp = stb__to_utf8((stb__wchar *) c_file.name);
 
                if (has_slash)
-                  sprintf(new_path, "%s%s", path, temp);
+                  stb_p_sprintf(new_path stb_p_size(sizeof(full_path)), "%s%s", path, temp);
                else
-                  sprintf(new_path, "%s/%s", path, temp);
+                  stb_p_sprintf(new_path stb_p_size(sizeof(full_path)), "%s/%s", path, temp);
 
                if (stb__dircount_mask) {
                   ++stb__dircount;
                   if (!(stb__dircount & stb__dircount_mask)) {
-                     printf("%s\r", new_path);
+                     char dummy_path[128], *pad;
+                     stb_strncpy(dummy_path, new_path, sizeof(dummy_path)-1);
+                     if (strlen(dummy_path) > 96) {
+                        stb_p_strcpy_s(dummy_path+96/2-1,128, "...");
+                        stb_p_strcpy_s(dummy_path+96/2+2,128, new_path + strlen(new_path)-96/2+2);
+                     }
+                     pad = dummy_path + strlen(dummy_path);
+                     while (pad < dummy_path+98)
+                        *pad++ = ' ';
+                     *pad = 0;
+                     printf("%s\r", dummy_path);
+                     #if 0
+                     if (hlog == 0) {
+                        hlog = stb_p_fopen("c:/x/temp.log", "w");
+                        fprintf(hlog, "%s\n", dummy_path);
+                     }
+                     #endif
                   }
                }
 
                stb__dirtree_scandir(new_path, c_file.time_write, active);
             }
          } else {
-            char *temp = stb__to_utf8(c_file.name);
+            char *temp = stb__to_utf8((stb__wchar *) c_file.name);
             stb__dirtree_add_file(temp, n, c_file.size, c_file.time_write, active);
          }
          if (stb__showfile) printf("(");
@@ -7113,12 +7258,12 @@ static int stb__dirtree_update_db(stb_dirtree *db, stb_dirtree *active)
       if (0 == _stat(db->dirs[i].path, &info)) {
          if (info.st_mode & _S_IFDIR) {
             // it's still a directory, as expected
-            int n = abs(info.st_mtime - db->dirs[i].last_modified);
+            int n = abs((int) (info.st_mtime - db->dirs[i].last_modified));
             if (n > 1 && n != 3600) {  // the 3600 is a hack because sometimes this jumps for no apparent reason, even when no time zone or DST issues are at play
                // it's changed! force a rescan
                // we don't want to scan it until we've stat()d its
                // subdirs, though, so we queue it
-               if (stb__showfile) printf("Changed: %s - %08x:%08x\n", db->dirs[i].path, db->dirs[i].last_modified, info.st_mtime);
+               if (stb__showfile) printf("Changed: %s - %08x:%08x\n", db->dirs[i].path, (unsigned int) db->dirs[i].last_modified, (unsigned int) info.st_mtime);
                stb_arr_push(rescan, i);
                // update the last_mod time
                db->dirs[i].last_modified = info.st_mtime;
@@ -7192,7 +7337,7 @@ stb_dirtree *stb_dirtree_get_with_file(char *dir, char *cache_file)
    db.files = NULL;
    db.dirs = NULL;
 
-   stripped_dir = stb_strip_final_slash(strdup(dir));
+   stripped_dir = stb_strip_final_slash(stb_p_strdup(dir));
 
    if (cache_file != NULL)
       stb__dirtree_load_db(cache_file, &db, stripped_dir);
@@ -7238,28 +7383,28 @@ stb_dirtree *stb_dirtree_get_dir(char *dir, char *cache_dir)
    char cache_file[1024],*s;
    if (cache_dir == NULL)
       return stb_dirtree_get_with_file(dir, NULL);
-   strcpy(dir_lower, dir);
+   stb_p_strcpy_s(dir_lower, sizeof(dir_lower), dir);
    stb_tolower(dir_lower);
-   stb_sha1(sha, (unsigned char *) dir_lower, strlen(dir_lower));
-   strcpy(cache_file, cache_dir);
+   stb_sha1(sha, (unsigned char *) dir_lower, (unsigned int) strlen(dir_lower));
+   stb_p_strcpy_s(cache_file, sizeof(cache_file), cache_dir);
    s = cache_file + strlen(cache_file);
-   if (s[-1] != '//' && s[-1] != '\\') *s++ = '/';
-   strcpy(s, "dirtree_");
+   if (s[-1] != '/' && s[-1] != '\\') *s++ = '/';
+   stb_p_strcpy_s(s, sizeof(cache_file), "dirtree_");
    s += strlen(s);
    for (i=0; i < 8; ++i) {
-      char *hex = "0123456789abcdef";
+      char *hex = (char*)"0123456789abcdef";
       stb_uint z = sha[i];
       *s++ = hex[z >> 4];
       *s++ = hex[z & 15];
    }
-   strcpy(s, ".bin");
+   stb_p_strcpy_s(s, sizeof(cache_file), ".bin");
    return stb_dirtree_get_with_file(dir, cache_file);
 }
 
 stb_dirtree *stb_dirtree_get(char *dir)
 {
    char cache_dir[256];
-   strcpy(cache_dir, "c:/stb");
+   stb_p_strcpy_s(cache_dir, sizeof(cache_dir), "c:/bindata");
    #ifdef STB_HAS_REGISTRY
    {
       void *reg = stb_reg_open("rHKLM", "Software\\SilverSpaceship\\stb");
@@ -7290,7 +7435,7 @@ void stb_dirtree_db_add_file(stb_dirtree *active, char *name, int dir, stb_int64
 
 void stb_dirtree_db_read(stb_dirtree *target, char *filename, char *dir)
 {
-   char *s = stb_strip_final_slash(strdup(dir));
+   char *s = stb_strip_final_slash(stb_p_strdup(dir));
    target->dirs = 0;
    target->files = 0;
    target->string_pool = 0;
@@ -7325,7 +7470,7 @@ typedef struct
    void *p;
    char *file;
    int  line;
-   int  size;
+   size_t size;
 } stb_malloc_record;
 
 #ifndef STB_MALLOC_HISTORY_COUNT
@@ -7355,7 +7500,7 @@ static int stb__hashfind(void *p)
    }
 }
 
-int stb_wrapper_allocsize(void *p)
+size_t stb_wrapper_allocsize(void *p)
 {
    int n = stb__hashfind(p);
    if (n < 0) return 0;
@@ -7374,7 +7519,7 @@ static int stb__historyfind(void *p)
    return -1;
 }
 
-static void stb__add_alloc(void *p, int sz, char *file, int line);
+static void stb__add_alloc(void *p, size_t sz, char *file, int line);
 static void stb__grow_alloc(void)
 {
    int i,old_num = stb__alloc_size;
@@ -7404,7 +7549,7 @@ static void stb__grow_alloc(void)
    stb__realloc_raw(old, 0);
 }
 
-static void stb__add_alloc(void *p, int sz, char *file, int line)
+static void stb__add_alloc(void *p, size_t sz, char *file, int line)
 {
    stb_uint32 h;
    int n;
@@ -7437,7 +7582,7 @@ static void stb__remove_alloc(int n, char *file, int line)
    --stb__alloc_count;
 }
 
-void stb_wrapper_malloc(void *p, int sz, char *file, int line)
+void stb_wrapper_malloc(void *p, size_t sz, char *file, int line)
 {
    if (!p) return;
    stb__add_alloc(p,sz,file,line);
@@ -7446,7 +7591,7 @@ void stb_wrapper_malloc(void *p, int sz, char *file, int line)
 void stb_wrapper_free(void *p, char *file, int line)
 {
    int n;
-   
+
    if (p == NULL) return;
 
    n = stb__hashfind(p);
@@ -7470,7 +7615,7 @@ void stb_wrapper_free(void *p, char *file, int line)
 void stb_wrapper_check(void *p)
 {
    int n;
-   
+
    if (p == NULL) return;
 
    n = stb__hashfind(p);
@@ -7490,7 +7635,7 @@ void stb_wrapper_check(void *p)
    stb_fatal("Checked unknown block %p");
 }
 
-void stb_wrapper_realloc(void *p, void *q, int sz, char *file, int line)
+void stb_wrapper_realloc(void *p, void *q, size_t sz, char *file, int line)
 {
    int n;
    if (p == NULL) { stb_wrapper_malloc(q, sz, file, line); return; }
@@ -7521,7 +7666,7 @@ void stb_wrapper_realloc(void *p, void *q, int sz, char *file, int line)
    }
 }
 
-void stb_wrapper_listall(void (*func)(void *ptr, int sz, char *file, int line))
+void stb_wrapper_listall(void (*func)(void *ptr, size_t sz, char *file, int line))
 {
    int i;
    for (i=0; i < stb__alloc_size; ++i)
@@ -7533,12 +7678,12 @@ void stb_wrapper_listall(void (*func)(void *ptr, int sz, char *file, int line))
 void stb_wrapper_dump(char *filename)
 {
    int i;
-   FILE *f = fopen(filename, "w");
+   FILE *f = stb_p_fopen(filename, "w");
    if (!f) return;
    for (i=0; i < stb__alloc_size; ++i)
       if (stb__allocations[i].p > STB_DEL)
          fprintf(f, "%p %7d - %4d %s\n",
-            stb__allocations[i].p   , stb__allocations[i].size,
+            stb__allocations[i].p   , (int) stb__allocations[i].size,
             stb__allocations[i].line, stb__allocations[i].file);
 }
 #endif // STB_DEFINE
@@ -7979,7 +8124,7 @@ stb_ps *stb_ps_remove_any(stb_ps *ps, void **value)
          if (count == 2) {
             void *leftover = b->p[slast]; // second to last
             stb_bucket_free(b);
-            return (stb_ps *) leftover; 
+            return (stb_ps *) leftover;
          }
          return ps;
       }
@@ -8206,44 +8351,44 @@ int stb_ps_eq(stb_ps *p0, stb_ps *p1)
 //               Random Numbers via Meresenne Twister or LCG
 //
 
-STB_EXTERN unsigned long stb_srandLCG(unsigned long seed);
-STB_EXTERN unsigned long stb_randLCG(void);
+STB_EXTERN unsigned int  stb_srandLCG(unsigned int seed);
+STB_EXTERN unsigned int  stb_randLCG(void);
 STB_EXTERN double        stb_frandLCG(void);
 
-STB_EXTERN void          stb_srand(unsigned long seed);
-STB_EXTERN unsigned long stb_rand(void);
+STB_EXTERN void          stb_srand(unsigned int seed);
+STB_EXTERN unsigned int  stb_rand(void);
 STB_EXTERN double        stb_frand(void);
 STB_EXTERN void          stb_shuffle(void *p, size_t n, size_t sz,
-                                        unsigned long seed);
+                                        unsigned int seed);
 STB_EXTERN void stb_reverse(void *p, size_t n, size_t sz);
 
-STB_EXTERN unsigned long stb_randLCG_explicit(unsigned long seed);
+STB_EXTERN unsigned int  stb_randLCG_explicit(unsigned int  seed);
 
 #define stb_rand_define(x,y)                                         \
                                                                      \
-   unsigned long x(void)                                             \
+   unsigned int  x(void)                                             \
    {                                                                 \
-      static unsigned long stb__rand = y;                            \
+      static unsigned int  stb__rand = y;                            \
       stb__rand = stb__rand * 2147001325 + 715136305; /* BCPL */     \
       return 0x31415926 ^ ((stb__rand >> 16) + (stb__rand << 16));   \
    }
 
 #ifdef STB_DEFINE
-unsigned long stb_randLCG_explicit(unsigned long seed)
+unsigned int  stb_randLCG_explicit(unsigned int seed)
 {
    return seed * 2147001325 + 715136305;
 }
 
-static unsigned long stb__rand_seed=0;
+static unsigned int  stb__rand_seed=0;
 
-unsigned long stb_srandLCG(unsigned long seed)
+unsigned int  stb_srandLCG(unsigned int seed)
 {
-   unsigned long previous = stb__rand_seed;
+   unsigned int  previous = stb__rand_seed;
    stb__rand_seed = seed;
    return previous;
 }
 
-unsigned long stb_randLCG(void)
+unsigned int  stb_randLCG(void)
 {
    stb__rand_seed = stb__rand_seed * 2147001325 + 715136305; // BCPL generator
    // shuffle non-random bits to the middle, and xor to decorrelate with seed
@@ -8255,16 +8400,16 @@ double stb_frandLCG(void)
    return stb_randLCG() / ((double) (1 << 16) * (1 << 16));
 }
 
-void stb_shuffle(void *p, size_t n, size_t sz, unsigned long seed)
+void stb_shuffle(void *p, size_t n, size_t sz, unsigned int seed)
 {
    char *a;
-   unsigned long old_seed;
+   unsigned int old_seed;
    int i;
    if (seed)
       old_seed = stb_srandLCG(seed);
    a = (char *) p + (n-1) * sz;
 
-   for (i=n; i > 1; --i) {
+   for (i=(int) n; i > 1; --i) {
       int j = stb_randLCG() % i;
       stb_swap(a, (char *) p + j * sz, sz);
       a -= sz;
@@ -8275,7 +8420,7 @@ void stb_shuffle(void *p, size_t n, size_t sz, unsigned long seed)
 
 void stb_reverse(void *p, size_t n, size_t sz)
 {
-   int i,j = n-1;
+   size_t i,j = n-1;
    for (i=0; i < j; ++i,--j) {
       stb_swap((char *) p + i * sz, (char *) p + j * sz, sz);
    }
@@ -8284,17 +8429,16 @@ void stb_reverse(void *p, size_t n, size_t sz)
 // public domain Mersenne Twister by Michael Brundage
 #define STB__MT_LEN       624
 
-int stb__mt_index = STB__MT_LEN*sizeof(unsigned long)+1;
-unsigned long stb__mt_buffer[STB__MT_LEN];
+int stb__mt_index = STB__MT_LEN*sizeof(int)+1;
+unsigned int stb__mt_buffer[STB__MT_LEN];
 
-void stb_srand(unsigned long seed)
+void stb_srand(unsigned int seed)
 {
    int i;
-   unsigned long old = stb_srandLCG(seed);
-   for (i = 0; i < STB__MT_LEN; i++)
-      stb__mt_buffer[i] = stb_randLCG();
-   stb_srandLCG(old);
-   stb__mt_index = STB__MT_LEN*sizeof(unsigned long);
+   stb__mt_buffer[0]= seed & 0xffffffffUL;
+   for (i=1 ; i < STB__MT_LEN; ++i)
+      stb__mt_buffer[i] = (1812433253UL * (stb__mt_buffer[i-1] ^ (stb__mt_buffer[i-1] >> 30)) + i);
+   stb__mt_index = STB__MT_LEN*sizeof(unsigned int);
 }
 
 #define STB__MT_IA           397
@@ -8305,15 +8449,15 @@ void stb_srand(unsigned long seed)
 #define STB__TWIST(b,i,j)    ((b)[i] & STB__UPPER_MASK) | ((b)[j] & STB__LOWER_MASK)
 #define STB__MAGIC(s)        (((s)&1)*STB__MATRIX_A)
 
-unsigned long stb_rand()
+unsigned int stb_rand()
 {
-   unsigned long * b = stb__mt_buffer;
+   unsigned int  * b = stb__mt_buffer;
    int idx = stb__mt_index;
-   unsigned long s,r;
+   unsigned int  s,r;
    int i;
-	
-   if (idx >= STB__MT_LEN*sizeof(unsigned long)) {
-      if (idx > STB__MT_LEN*sizeof(unsigned long))
+
+   if (idx >= STB__MT_LEN*sizeof(unsigned int)) {
+      if (idx > STB__MT_LEN*sizeof(unsigned int))
          stb_srand(0);
       idx = 0;
       i = 0;
@@ -8325,19 +8469,19 @@ unsigned long stb_rand()
          s = STB__TWIST(b, i, i+1);
          b[i] = b[i - STB__MT_IB] ^ (s >> 1) ^ STB__MAGIC(s);
       }
-      
+
       s = STB__TWIST(b, STB__MT_LEN-1, 0);
       b[STB__MT_LEN-1] = b[STB__MT_IA-1] ^ (s >> 1) ^ STB__MAGIC(s);
    }
-   stb__mt_index = idx + sizeof(unsigned long);
-   
-   r = *(unsigned long *)((unsigned char *)b + idx);
-   
+   stb__mt_index = idx + sizeof(unsigned int);
+
+   r = *(unsigned int *)((unsigned char *)b + idx);
+
    r ^= (r >> 11);
    r ^= (r << 7) & 0x9D2C5680;
    r ^= (r << 15) & 0xEFC60000;
    r ^= (r >> 18);
-   
+
    return r;
 }
 
@@ -8500,7 +8644,7 @@ void stb_dupe_finish(stb_dupe *sd)
    assert(sd->dupes == NULL);
    for (i=0; i < sd->hash_size; ++i) {
       void ** list = sd->hash_table[i];
-      if (list != NULL) {                                          
+      if (list != NULL) {
          int n = stb_arr_len(list);
          // @TODO: measure to find good numbers instead of just making them up!
          int thresh = (sd->ineq ? 200 : 20);
@@ -8620,7 +8764,7 @@ static void STB_(FUNCNAME,_ins_sort)(TYPE *p, int n)                          \
                                                                               \
 static void STB_(FUNCNAME,_quicksort)(TYPE *p, int n)                         \
 {                                                                             \
-   /* threshhold for transitioning to insertion sort */                       \
+   /* threshold for transitioning to insertion sort */                       \
    while (n > 12) {                                                           \
       TYPE *a,*b,t;                                                           \
       int c01,c12,c,m,i,j;                                                    \
@@ -8816,7 +8960,7 @@ int stb_wordwrap(int *pairs, int pair_max, int count, char *str)
    int n=0,i=0, start=0,nonwhite=0;
    if (pairs == NULL) pair_max = 0x7ffffff0;
    else pair_max *= 2;
-   // parse 
+   // parse
    for(;;) {
       int s=i; // first whitespace char; last nonwhite+1
       int w;   // word start
@@ -8937,8 +9081,8 @@ STB_EXTERN int stb_matcher_find(stb_matcher *m, char *str);
 STB_EXTERN void stb_matcher_free(stb_matcher *f);
 
 STB_EXTERN stb_matcher *stb_lex_matcher(void);
-STB_EXTERN int stb_lex_item(stb_matcher *m, char *str, int result);
-STB_EXTERN int stb_lex_item_wild(stb_matcher *matcher, char *regex, int result);
+STB_EXTERN int stb_lex_item(stb_matcher *m, const char *str, int result);
+STB_EXTERN int stb_lex_item_wild(stb_matcher *matcher, const char *regex, int result);
 STB_EXTERN int stb_lex(stb_matcher *m, char *str, int *len);
 
 
@@ -8997,7 +9141,7 @@ int stb__wildmatch_raw2(char *expr, char *candidate, int search, int insensitive
 {
    int where=0;
    int start = -1;
-   
+
    if (!search) {
       // parse to first '*'
       if (*expr != '*')
@@ -9011,7 +9155,7 @@ int stb__wildmatch_raw2(char *expr, char *candidate, int search, int insensitive
             if (insensitive) {
                if (tolower(*candidate) != tolower(*expr))
                   return -1;
-            } else 
+            } else
                if (*candidate != *expr)
                   return -1;
          }
@@ -9028,7 +9172,7 @@ int stb__wildmatch_raw2(char *expr, char *candidate, int search, int insensitive
       ++expr;
 
    // implicit '*' at this point
-      
+
    while (*expr) {
       int o=0;
       // combine redundant * characters
@@ -9057,7 +9201,7 @@ int stb__wildmatch_raw2(char *expr, char *candidate, int search, int insensitive
          // ok, now check if they match
          if (stb__match_qstring(candidate+z-o, expr, o, insensitive))
             return start >= 0 ? start : 0;
-         return -1; 
+         return -1;
       } else {
          // if yes '*', then do stb__find_qmatch on the intervening chars
          int n = stb__find_qstring(candidate, expr, o, insensitive);
@@ -9091,7 +9235,8 @@ int stb__wildmatch_raw(char *expr, char *candidate, int search, int insensitive)
       int z;
       // need to allow for non-writeable strings... assume they're small
       if (s - last < 256) {
-         stb_strncpy(buffer, last, s-last+1);
+         stb_strncpy(buffer, last, (int) (s-last+1));
+         buffer[s-last] = 0;
          z = stb__wildmatch_raw2(buffer, candidate, search, insensitive);
       } else {
          *s = 0;
@@ -9247,7 +9392,7 @@ static char *stb__reg_parse(stb_matcher *matcher, int start, char *regex, stb_ui
          case '{':   // not supported!
             // @TODO: given {n,m}, clone last_start to last_end m times,
             // and include epsilons from start to first m-n blocks
-            return NULL; 
+            return NULL;
 
          case '\\':
             ++regex;
@@ -9295,7 +9440,7 @@ static char *stb__reg_parse(stb_matcher *matcher, int start, char *regex, stb_ui
 
             // leading ] is special
             if (*regex == ']') {
-               flags[']'] = 1;
+               flags[(int) ']'] = 1;
                ++regex;
             }
             while (*regex != ']') {
@@ -9534,12 +9679,12 @@ stb_matcher *stb_lex_matcher(void)
    return matcher;
 }
 
-int stb_lex_item(stb_matcher *matcher, char *regex, int result)
+int stb_lex_item(stb_matcher *matcher, const char *regex, int result)
 {
    char *z;
    stb_uint16 end;
 
-   z = stb__reg_parse_alt(matcher, matcher->start_node, regex, &end);
+   z = stb__reg_parse_alt(matcher, matcher->start_node, (char*) regex, &end);
 
    if (z == NULL)
       return 0;
@@ -9550,12 +9695,12 @@ int stb_lex_item(stb_matcher *matcher, char *regex, int result)
    return 1;
 }
 
-int stb_lex_item_wild(stb_matcher *matcher, char *regex, int result)
+int stb_lex_item_wild(stb_matcher *matcher, const char *regex, int result)
 {
    char *z;
    stb_uint16 end;
 
-   z = stb__wild_parse(matcher, matcher->start_node, regex, &end);
+   z = stb__wild_parse(matcher, matcher->start_node, (char*) regex, &end);
 
    if (z == NULL)
       return 0;
@@ -9792,7 +9937,7 @@ static int stb__matcher_dfa(stb_matcher *m, char *str_c, int *len)
       // special case for lex: need _longest_ match, so notice goal
       // state without stopping
       if (node <= STB__DFA_MGOAL) {
-         match_length = str - (stb_uint8 *) str_c;
+         match_length = (int) (str - (stb_uint8 *) str_c);
          node = -(node - STB__DFA_MGOAL);
          match_result = node;
          continue;
@@ -9851,7 +9996,7 @@ static int stb__matcher_dfa(stb_matcher *m, char *str_c, int *len)
          // if it's a goal state, then that's all there is to it
          if (stb__clear_goalcheck(m, newstates)) {
             if (m->does_lex) {
-               match_length = str - (stb_uint8 *) str_c;
+               match_length = (int) (str - (stb_uint8 *) str_c);
                node = stb__get_dfa_node(m,newstates);
                match_result = node;
                node = -node + STB__DFA_MGOAL;
@@ -9900,6 +10045,7 @@ int stb_lex(stb_matcher *m, char *str, int *len)
    return stb__matcher_dfa(m, str, len);
 }
 
+#ifdef STB_PERFECT_HASH
 int stb_regex(char *regex, char *str)
 {
    static stb_perfect p;
@@ -9914,7 +10060,7 @@ int stb_regex(char *regex, char *str)
          stb_matcher_free(matchers[i]);
          free(regexp_cache[i]);
          regexps[i] = regex;
-         regexp_cache[i] = strdup(regex);
+         regexp_cache[i] = stb_p_strdup(regex);
          matchers[i] = stb_regex_matcher(regex);
       }
    } else {
@@ -9932,7 +10078,7 @@ int stb_regex(char *regex, char *str)
          return -1;
       }
       stb_arr_push(regexps, regex);
-      stb_arr_push(regexp_cache, strdup(regex));
+      stb_arr_push(regexp_cache, stb_p_strdup(regex));
       stb_arr_push(matchers, stb_regex_matcher(regex));
       stb_perfect_destroy(&p);
       n = stb_perfect_create(&p, (unsigned int *) (char **) regexps, stb_arr_len(regexps));
@@ -9943,7 +10089,7 @@ int stb_regex(char *regex, char *str)
    }
    return stb_matcher_find(matchers[(int) mapping[z]], str);
 }
-
+#endif
 #endif // STB_DEFINE
 
 
@@ -9974,7 +10120,7 @@ typedef struct
 
 extern stb_info_struct stb_introspect_output[];
 
-// 
+//
 
 STB_EXTERN void stb_introspect_precompiled(stb_info_struct *compiled);
 STB_EXTERN void stb__introspect(char *path, char *file);
@@ -10012,9 +10158,9 @@ void stb_introspect_precompiled(stb_info_struct *compiled)
 static void stb__introspect_filename(char *buffer, char *path)
 {
    #if STB_INTROSPECT_CPP
-   sprintf(buffer, "%s/stb_introspect.cpp", path);
+   stb_p_sprintf(buffer stb_p_size(9999), "%s/stb_introspect.cpp", path);
    #else
-   sprintf(buffer, "%s/stb_introspect.c", path);
+   stb_p_sprintf(buffer stb_p_size(9999), "%s/stb_introspect.c", path);
    #endif
 }
 
@@ -10024,7 +10170,7 @@ static void stb__introspect_compute(char *path, char *file)
    char ** include_list = NULL;
    char ** introspect_list = NULL;
    FILE *f;
-   f = fopen(file, "w");
+   f = stb_p_fopen(file, "w");
    if (!f) return;
 
    fputs("// if you get compiler errors, change the following 0 to a 1:\n", f);
@@ -10076,11 +10222,11 @@ void stb__introspect(char *path, char *file, stb_info_struct *compiled)
       stb__introspect_filename(buffer2, path);
 
       // get source/include files timestamps, compare to output-file timestamp;
-      // if mismatched, regenerate 
+      // if mismatched, regenerate
 
       if (stb__stat(buffer2, &st))
          needs_building = STB_TRUE;
-      
+
       {
          // find any file that contains an introspection command and is newer
          // if needs_building is already true, we don't need to do this test,
@@ -10123,7 +10269,7 @@ void stb__introspect(char *path, char *file, stb_info_struct *compiled)
                   }
                }
                if (found)
-                  stb_arr_push(introspect_h, strdup(all[i]));
+                  stb_arr_push(introspect_h, stb_p_strdup(all[i]));
                free(z);
             }
          }
@@ -10176,7 +10322,7 @@ void stb__introspect(char *filename)
          if (t == NULL) stb_fatal("Error parsing %s", filename);
 
       }
-   }   
+   }
 }
 
 
@@ -10316,7 +10462,7 @@ stb_uint stb_decompress(stb_uchar *output, stb_uchar *i, stb_uint length)
             return 0;
          }
       }
-      assert(stb__dout <= output + olen); 
+      assert(stb__dout <= output + olen);
       if (stb__dout > output + olen)
          return 0;
    }
@@ -10327,7 +10473,7 @@ char *stb_decompress_fromfile(char *filename, unsigned int *len)
    unsigned int n;
    char *q;
    unsigned char *p;
-   FILE *f = fopen(filename, "rb");   if (f == NULL) return NULL;
+   FILE *f = stb_p_fopen(filename, "rb");   if (f == NULL) return NULL;
    fseek(f, 0, SEEK_END);
    n = ftell(f);
    fseek(f, 0, SEEK_SET);
@@ -10445,7 +10591,7 @@ static void stb_out3(stb_uint v) { stb_out(v >> 16); stb_out(v >> 8); stb_out(v)
 static void stb_out4(stb_uint v) { stb_out(v >> 24); stb_out(v >> 16);
                                    stb_out(v >> 8 ); stb_out(v);                  }
 
-static void outliterals(stb_uchar *in, int numlit)
+static void outliterals(stb_uchar *in, ptrdiff_t numlit)
 {
    while (numlit > 65536) {
       outliterals(in,65536);
@@ -10454,9 +10600,9 @@ static void outliterals(stb_uchar *in, int numlit)
    }
 
    if      (numlit ==     0)    ;
-   else if (numlit <=    32)    stb_out (0x000020 + numlit-1);
-   else if (numlit <=  2048)    stb_out2(0x000800 + numlit-1);
-   else /*  numlit <= 65536) */ stb_out3(0x070000 + numlit-1);
+   else if (numlit <=    32)    stb_out (0x000020 + (stb_uint) numlit-1);
+   else if (numlit <=  2048)    stb_out2(0x000800 + (stb_uint) numlit-1);
+   else /*  numlit <= 65536) */ stb_out3(0x070000 + (stb_uint) numlit-1);
 
    if (stb__out) {
       memcpy(stb__out,in,numlit);
@@ -10475,7 +10621,7 @@ void stb_compress_window(int z)
 
 static int stb_not_crap(int best, int dist)
 {
-   return   ((best > 2  &&  dist <= 0x00100)     
+   return   ((best > 2  &&  dist <= 0x00100)
           || (best > 5  &&  dist <= 0x04000)
           || (best > 7  &&  dist <= 0x80000));
 }
@@ -10521,17 +10667,17 @@ static int stb_compress_chunk(stb_uchar *history,
       int best = 2, dist=0;
 
       if (q+65536 > end)
-         match_max = end-q;
+         match_max = (stb_uint) (end-q);
       else
-         match_max = 65536;
+         match_max = 65536u;
 
       #define stb__nc(b,d)  ((d) <= window && ((b) > 9 || stb_not_crap(b,d)))
 
       #define STB__TRY(t,p)  /* avoid retrying a match we already tried */ \
-                      if (p ? dist != q-t : 1)                             \
-                      if ((m = stb_matchlen(t, q, match_max)) > best)     \
-                      if (stb__nc(m,q-(t)))                                \
-                          best = m, dist = q - (t)
+                      if (p ? dist != (int) (q-t) : 1)                     \
+                      if ((m = (int) stb_matchlen(t, q, match_max)) > best)\
+                      if (stb__nc(m,(int) (q-(t))))                        \
+                          best = m, dist = (int) (q - (t))
 
       // rather than search for all matches, only try 4 candidate locations,
       // chosen based on 4 different hash functions of different lengths.
@@ -10562,15 +10708,15 @@ static int stb_compress_chunk(stb_uchar *history,
          stb_out(dist-1);
       } else if (best > 5  &&  best <= 0x100   &&  dist <= 0x4000) {
          outliterals(lit_start, q-lit_start); lit_start = (q += best);
-         stb_out2(0x4000 + dist-1);       
+         stb_out2(0x4000 + dist-1);
          stb_out(best-1);
       } else if (best > 7  &&  best <= 0x100   &&  dist <= 0x80000) {
          outliterals(lit_start, q-lit_start); lit_start = (q += best);
-         stb_out3(0x180000 + dist-1);     
+         stb_out3(0x180000 + dist-1);
          stb_out(best-1);
       } else if (best > 8  &&  best <= 0x10000 &&  dist <= 0x80000) {
          outliterals(lit_start, q-lit_start); lit_start = (q += best);
-         stb_out3(0x100000 + dist-1);     
+         stb_out3(0x100000 + dist-1);
          stb_out2(best-1);
       } else if (best > 9                      &&  dist <= 0x1000000) {
          if (best > 65536) best = 65536;
@@ -10594,10 +10740,10 @@ static int stb_compress_chunk(stb_uchar *history,
       q = start+length;
 
    // the literals are everything from lit_start to q
-   *pending_literals = (q - lit_start);
+   *pending_literals = (int) (q - lit_start);
 
-   stb__running_adler = stb_adler32(stb__running_adler, start, q - start);
-   return q - start;
+   stb__running_adler = stb_adler32(stb__running_adler, start, (int) (q - start));
+   return (int) (q - start);
 }
 
 static int stb_compress_inner(stb_uchar *input, stb_uint length)
@@ -10642,7 +10788,7 @@ stb_uint stb_compress(stb_uchar *out, stb_uchar *input, stb_uint length)
 
    stb_compress_inner(input, length);
 
-   return stb__out - out;
+   return (stb_uint) (stb__out - out);
 }
 
 int stb_compress_tofile(char *filename, char *input, unsigned int length)
@@ -10650,9 +10796,9 @@ int stb_compress_tofile(char *filename, char *input, unsigned int length)
    //int maxlen = length + 512 + (length >> 2); // total guess
    //char *buffer = (char *) malloc(maxlen);
    //int blen = stb_compress((stb_uchar*)buffer, (stb_uchar*)input, length);
-   
+
    stb__out = NULL;
-   stb__outfile = fopen(filename, "wb");
+   stb__outfile = stb_p_fopen(filename, "wb");
    if (!stb__outfile) return 0;
 
    stb__outbytes = 0;
@@ -10670,7 +10816,7 @@ int stb_compress_intofile(FILE *f, char *input, unsigned int length)
    //int maxlen = length + 512 + (length >> 2); // total guess
    //char *buffer = (char*)malloc(maxlen);
    //int blen = stb_compress((stb_uchar*)buffer, (stb_uchar*)input, length);
-   
+
    stb__out = NULL;
    stb__outfile = f;
    if (!stb__outfile) return 0;
@@ -10696,13 +10842,12 @@ static size_t stb_out_backpatch_id(void)
 
 static void stb_out_backpatch(size_t id, stb_uint value)
 {
-    
-    stb_uchar data[4] = { (stb_uchar)(value >> 24), (stb_uchar)(value >> 16), (stb_uchar)(value >> 8), (stb_uchar)(value) };
+   stb_uchar data[4] = { (stb_uchar)(value >> 24), (stb_uchar)(value >> 16), (stb_uchar)(value >> 8), (stb_uchar)(value) };
    if (stb__out) {
       memcpy((void *) id, data, 4);
    } else {
       stb_uint where = ftell(stb__outfile);
-      fseek(stb__outfile, id, SEEK_SET);
+      fseek(stb__outfile, (long) id, SEEK_SET);
       fwrite(data, 4, 1, stb__outfile);
       fseek(stb__outfile, where, SEEK_SET);
    }
@@ -10762,7 +10907,7 @@ static int stb_compress_streaming_start(void)
 
    stb_out4(0);       // 64-bit length requires 32-bit leading 0
 
-   xtb.length_id = stb_out_backpatch_id();
+   xtb.length_id = (int) stb_out_backpatch_id();
    stb_out4(0);       // we don't know the output length yet
 
    stb_out4(stb__window);
@@ -10847,7 +10992,7 @@ void stb_write(char *data, int data_len)
          memmove(xtb.buffer, xtb.buffer + flush, xtb.valid - flush);
          xtb.start -= flush;
          xtb.valid -= flush;
-   
+
          for (i=0; i <= xtb.hashmask; ++i)
             if (xtb.chash[i] < xtb.buffer + flush)
                xtb.chash[i] = NULL;
@@ -10948,10 +11093,10 @@ void stb_backpatch(stbfile *f, unsigned int tell, void *buffer, unsigned int len
 // FILE * implementation
 static int stb__fgetbyte(stbfile *f) { return fgetc(f->f); }
 static int stb__fputbyte(stbfile *f, int ch) { return fputc(ch, f->f)==0; }
-static unsigned int stb__fgetdata(stbfile *f, void *buffer, unsigned int len) { return fread(buffer,1,len,f->f); }
-static unsigned int stb__fputdata(stbfile *f, void *buffer, unsigned int len) { return fwrite(buffer,1,len,f->f); }
-static unsigned int stb__fsize(stbfile *f) { return stb_filelen(f->f); }
-static unsigned int stb__ftell(stbfile *f) { return ftell(f->f); }
+static unsigned int stb__fgetdata(stbfile *f, void *buffer, unsigned int len) { return (unsigned int) fread(buffer,1,len,f->f); }
+static unsigned int stb__fputdata(stbfile *f, void *buffer, unsigned int len) { return (unsigned int) fwrite(buffer,1,len,f->f); }
+static unsigned int stb__fsize(stbfile *f) { return (unsigned int) stb_filelen(f->f); }
+static unsigned int stb__ftell(stbfile *f) { return (unsigned int) ftell(f->f); }
 static void stb__fbackpatch(stbfile *f, unsigned int where, void *buffer, unsigned int len)
 {
    fseek(f->f, where, SEEK_SET);
@@ -10991,13 +11136,13 @@ static int stb__bgetbyte(stbfile *s)
 static unsigned int stb__bgetdata(stbfile *s, void *buffer, unsigned int len)
 {
    if (s->indata + len > s->inend)
-      len = s->inend - s->indata;
+      len = (unsigned int) (s->inend - s->indata);
    memcpy(buffer, s->indata, len);
    s->indata += len;
    return len;
 }
-static unsigned int stb__bsize(stbfile *s) { return s->inend - s->buffer; }
-static unsigned int stb__btell(stbfile *s) { return s->indata - s->buffer; }
+static unsigned int stb__bsize(stbfile *s) { return (unsigned int) (s->inend  - s->buffer); }
+static unsigned int stb__btell(stbfile *s) { return (unsigned int) (s->indata - s->buffer); }
 
 static void stb__bclose(stbfile *s)
 {
@@ -11038,7 +11183,7 @@ static void stb__fclose2(stbfile *f)
 
 stbfile *stb_open(char *filename, char *mode)
 {
-   FILE *f = fopen(filename, mode);
+   FILE *f = stb_p_fopen(filename, mode);
    stbfile *s;
    if (f == NULL) return NULL;
    s = stb_openf(f);
@@ -11289,96 +11434,6 @@ stbfile *stb_arith_encode_close(stb_arith *a)
 stbfile *stb_arith_decode_close(stb_arith *a)
 {
    return a->output;
-}
-
-// this is a simple power-of-two based model -- using
-// power of two means we need one divide per decode,
-// not two.
-#define POW2_LIMIT   12
-stb_arith_symstate *stb_arith_state_create(int num_sym)
-{
-   stb_arith_symstate *s = (stb_arith_symstate *) malloc(sizeof(*s) + (num_sym-1) * sizeof(s->data[0])); 
-   if (s) {
-      int i, cf, cf_next, next;
-      int start_freq, extra;
-      s->num_sym = num_sym;
-      s->pow2 = 4;
-      while (s->pow2 < 15 && (1 << s->pow2) < 3*num_sym) {
-         ++s->pow2;
-      }
-      start_freq = (1 << s->pow2) / num_sym;
-      assert(start_freq >= 1);
-      extra = (1 << s->pow2) % num_sym;
-      // now set up the initial stats
-
-      if (s->pow2 < POW2_LIMIT)
-         next = 0;
-      else
-         next = 1;
-
-      cf = cf_next = 0;
-      for (i=0; i < extra; ++i) {
-         s->data[i].cumfreq = cf;
-         s->data[i].samples = next;
-         cf += start_freq+1;
-         cf_next += next;
-      }
-      for (; i < num_sym; ++i) {
-         s->data[i].cumfreq = cf;
-         s->data[i].samples = next;
-         cf += start_freq;
-         cf_next += next;
-      }
-      assert(cf == (1 << s->pow2));
-      // now, how long should we go until we have 2 << s->pow2 samples?
-      s->countdown = (2 << s->pow2) - cf - cf_next;
-   }
-   return s;
-}
-
-static void stb_arith_state_rescale(stb_arith_symstate *s)
-{
-   if (s->pow2 < POW2_LIMIT) {
-      int pcf, cf, cf_next, next, i;
-      ++s->pow2;
-      if (s->pow2 < POW2_LIMIT)
-         next = 0;
-      else
-         next = 1;
-      cf = cf_next = 0;
-      pcf = 0;
-      for (i=0; i < s->num_sym; ++i) {
-         int sample = s->data[i].cumfreq - pcf + s->data[i].samples;
-         s->data[i].cumfreq = cf;
-         cf += sample;
-         s->data[i].samples = next;
-         cf_next += next;
-      }
-      assert(cf == (1 << s->pow2));
-      s->countdown = (2 << s->pow2) - cf - cf_next;
-   } else {
-      int pcf, cf, cf_next, i;
-      cf = cf_next = 0;
-      pcf = 0;
-      for (i=0; i < s->num_sym; ++i) {
-         int sample = (s->data[i].cumfreq - pcf + s->data[i].samples) >> 1;
-         s->data[i].cumfreq = cf;
-         cf += sample;
-         s->data[i].samples = 1;
-         cf_next += 1;
-      }
-      assert(cf == (1 << s->pow2)); // this isn't necessarily true, due to rounding down!
-      s->countdown = (2 << s->pow2) - cf - cf_next;
-   }
-}
-
-void stb_arith_encode_byte(stb_arith *a, int byte)
-{
-}
-
-int  stb_arith_decode_byte(stb_arith *a)
-{
-   return -1;
 }
 #endif
 
@@ -11662,7 +11717,7 @@ void stb_mutex_end(void *p)
 #endif // _WINDOWS_
 
 #if 0
-// for future reference, 
+// for future reference,
 // InterlockedCompareExchange for x86:
  int cas64_mp(void * dest, void * xcmp, void * xxchg) {
         __asm
@@ -11702,7 +11757,7 @@ inline unsigned __int64 _InterlockedCompareExchange64(volatile unsigned __int64 
         mov ecx,4[edi];
         mov esi,dest;
         lock CMPXCHG8B [esi];
-    } 
+    }
 #endif // #if 0
 
 #endif // _WIN32
@@ -12272,7 +12327,7 @@ static void * stb__io_task(void *p)
    FILE *f;
    stb_uchar *buf;
 
-   if (dc->stat_out) {  
+   if (dc->stat_out) {
       struct _stati64 s;
       if (!_stati64(dc->filename, &s)) {
          dc->stat_out->filesize = s.st_size;
@@ -12307,7 +12362,7 @@ static void * stb__io_task(void *p)
       len = ftell(f) - dc->offset;
    }
 
-   if (fseek(f, dc->offset, SEEK_SET)) { 
+   if (fseek(f, dc->offset, SEEK_SET)) {
       fclose(f);
       return stb__io_error(dc);
    }
@@ -12336,7 +12391,7 @@ int stb__io_add(char *fname, FILE *f, int off, int len, stb_uchar *out, stb_ucha
    int res;
    stb__io_init();
    // do memory allocation outside of mutex
-   if (fname) fname = strdup(fname);
+   if (fname) fname = stb_p_strdup(fname);
    stb_mutex_begin(stb__diskio_mutex);
    {
       stb__disk_command *dc = &stb__dc_queue[stb__dc_offset];
@@ -12401,7 +12456,7 @@ STB_EXTERN int stb_bgio_stat    (char *filename, stb_bgstat *result)
 //   everywhere is 3MB. (That is, if you allocate 1 object of each size,
 //   you'll use 3MB.)
 
-#if defined(STB_DEFINE) && (defined(_WIN32) || defined(STB_FASTMALLOC))
+#if defined(STB_DEFINE) && ((defined(_WIN32) && !defined(_M_AMD64)) || defined(STB_FASTMALLOC))
 
 #ifdef _WIN32
    #ifndef _WINDOWS_
@@ -12579,7 +12634,7 @@ static stb__span *stb__alloc_span(int pagecount)
       if (p == NULL) return 0;
    } else
       stb__spanlist_unlink(p);
-      
+
    if (p->len > pagecount) {
       stb__span *q = stb__span_alloc();
       if (q) {
@@ -12782,7 +12837,7 @@ char *stb_sstrdup(char *s)
 {
    int n = strlen(s);
    char *p = (char *) stb_smalloc(n+1);
-   if (p) strcpy(p,s);
+   if (p) stb_p_strcpy_s(p,n+1,s);
    return p;
 }
 #endif // STB_DEFINE
@@ -12828,16 +12883,16 @@ char *stb__get_sourcefile_path(char *file)
 {
    static char filebuf[512];
    if (stb__source_path) {
-      sprintf(filebuf, "%s/%s", stb__source_path, file);
+      stb_p_sprintf(filebuf stb_p_size(sizeof(filebuf)), "%s/%s", stb__source_path, file);
       if (stb_fexists(filebuf)) return filebuf;
    }
 
    if (stb_fexists(file)) return file;
 
-   sprintf(filebuf, "../%s", file);
+   stb_p_sprintf(filebuf stb_p_size(sizeof(filebuf)), "../%s", file);
    if (!stb_fexists(filebuf)) return filebuf;
 
-   return file;      
+   return file;
 }
 #endif
 
@@ -12922,7 +12977,7 @@ static void stb__constant_parse(stb__FileEntry *f, int i)
       matched_int: {
          int neg=0;
          s = stb_skipwhite(s);
-         while (*s == '-') { neg = !neg; s = stb_skipwhite(s+1); } // handle '- - 5', pointlessly         
+         while (*s == '-') { neg = !neg; s = stb_skipwhite(s+1); } // handle '- - 5', pointlessly
          if (s[0] == '0' && tolower(s[1]) == 'x')
             f->entries[i].ival = strtol(s, NULL, 16);
          else if (s[0] == '0')
@@ -12953,7 +13008,7 @@ stb__Entry *stb__constant_get_entry(char *filename, int line, int type)
       f = (stb__FileEntry *) malloc(sizeof(*f));
       f->timestamp = stb_ftimestamp(s);
       f->file_data = stb_stringfile(s, &f->file_len);
-      f->filename = strdup(s); // cache the full path
+      f->filename = stb_p_strdup(s); // cache the full path
       f->entries = NULL;
       f->line_index = 0;
       stb_arr_setlen(f->line_index, f->file_len);
@@ -13010,1355 +13065,6 @@ char * stb__string_constant(char *file, int line, char *x)
 #endif // STB_DEFINE
 #endif // !STB_DEBUG && !STB_ALWAYS_H
 
-
-#ifdef STB_STUA
-//////////////////////////////////////////////////////////////////////////
-//
-//  stua: little scripting language
-//
-//     define STB_STUA to compile it
-//
-//     see http://nothings.org/stb/stb_stua.html for documentation
-//
-//  basic parsing model:
-//
-//   lexical analysis
-//      use stb_lex() to parse tokens; keywords get their own tokens
-//
-//   parsing:
-//      recursive descent parser. too much of a hassle to make an unambiguous
-//      LR(1) grammar, and one-pass generation is clumsier (recursive descent
-//      makes it easier to e.g. compile nested functions). on the other hand,
-//      dictionary syntax required hackery to get extra lookahead.
-//
-//   codegen:
-//      output into an evaluation tree, using array indices as 'pointers'
-//
-//   run:
-//      traverse the tree; support for 'break/continue/return' is tricky
-//
-//   garbage collection:
-//      stu__mark and sweep; explicit stack with non-stu__compile_global_scope roots
-
-typedef stb_int32 stua_obj;
-
-typedef stb_idict stua_dict;
-
-STB_EXTERN void stua_run_script(char *s);
-STB_EXTERN void stua_uninit(void);
-
-extern stua_obj stua_globals;
-
-STB_EXTERN double   stua_number(stua_obj z);
-
-STB_EXTERN stua_obj stua_getnil(void);
-STB_EXTERN stua_obj stua_getfalse(void);
-STB_EXTERN stua_obj stua_gettrue(void);
-STB_EXTERN stua_obj stua_string(char *z);
-STB_EXTERN stua_obj stua_make_number(double d);
-STB_EXTERN stua_obj stua_box(int type, void *data, int size);
-
-enum
-{
-   STUA_op_negate=129,
-   STUA_op_shl,   STUA_op_ge,
-   STUA_op_shr,   STUA_op_le,
-   STUA_op_shru,
-   STUA_op_last
-};
-
-#define STUA_NO_VALUE   2     // equivalent to a tagged NULL
-STB_EXTERN stua_obj (*stua_overload)(int op, stua_obj a, stua_obj b, stua_obj c);
-
-STB_EXTERN stua_obj stua_error(char *err, ...);
-
-STB_EXTERN stua_obj stua_pushroot(stua_obj o);
-STB_EXTERN void     stua_poproot (   void   );
-
-
-#ifdef STB_DEFINE
-// INTERPRETER
-
-// 31-bit floating point implementation
-//   force the (1 << 30) bit (2nd highest bit) to be zero by re-biasing the exponent;
-//   then shift and set the bottom bit
-
-static stua_obj stu__floatp(float *f)
-{
-   unsigned int n = *(unsigned int *) f;
-   unsigned int e = n & (0xff << 23);
-
-   assert(sizeof(int) == 4 && sizeof(float) == 4);
-
-   if (!e)                    // zero?
-      n = n;                  //   no change
-   else if (e < (64 << 23))   // underflow of the packed encoding?
-      n = (n & 0x80000000);   //   signed 0
-   else if (e > (190 << 23))  // overflow of the encoding? (or INF or NAN)
-      n = (n & 0x80000000) + (127 << 23); // new INF encoding
-   else
-      n -= 0x20000000;
-
-   // now we need to shuffle the bits so that the spare bit is at the bottom
-   assert((n & 0x40000000) == 0);
-   return (n & 0x80000000) + (n << 1) + 1;
-}
-
-static unsigned char stu__getfloat_addend[256];
-static float stu__getfloat(stua_obj v)
-{
-   unsigned int n;
-   unsigned int e = ((unsigned int) v) >> 24;
-
-   n = (int) v >> 1;  // preserve high bit
-   n += stu__getfloat_addend[e] << 24;
-   return *(float *) &n;
-}
-
-stua_obj stua_float(float f) 
-{
-   return stu__floatp(&f);
-}
-
-static void stu__float_init(void)
-{
-   int i;
-   stu__getfloat_addend[0]    = 0;   // do nothing to biased exponent of 0
-   for (i=1; i < 127; ++i)
-      stu__getfloat_addend[i] = 32;  // undo the -0x20000000
-   stu__getfloat_addend[127]  = 64;  // convert packed INF to INF (0x3f -> 0x7f)
-
-   for (i=0; i < 128; ++i) // for signed floats, remove the bit we just shifted down
-      stu__getfloat_addend[128+i] = stu__getfloat_addend[i] - 64;
-}
-
-// Tagged data type implementation
-
-                                                 // TAGS:
-#define stu__int_tag          0  // of 2 bits    //   00   int
-#define stu__float_tag        1  // of 1 bit     //   01   float
-#define stu__ptr_tag          2  // of 2 bits    //   10   boxed
-                                                 //   11   float
-
-#define stu__tag(x)           ((x) & 3)
-#define stu__number(x)        (stu__tag(x) != stu__ptr_tag)
-#define stu__isint(x)         (stu__tag(x) == stu__int_tag)
-
-#define stu__int(x)           ((x) >> 2)
-#define stu__float(x)         (stu__getfloat(x))
-
-#define stu__makeint(v)       ((v)*4+stu__int_tag)
-
-// boxed data, and tag support for boxed data
-
-enum
-{
-   STU___float    = 1,   STU___int      = 2,
-   STU___number   = 3,   STU___string   = 4,
-   STU___function = 5,   STU___dict     = 6,
-   STU___boolean  = 7,   STU___error    = 8,
-};
-
-// boxed data
-#define STU__BOX  short type, stua_gc
-typedef struct stu__box { STU__BOX; } stu__box;
-
-stu__box stu__nil   = { 0, 1 };
-stu__box stu__true  = { STU___boolean, 1, };
-stu__box stu__false = { STU___boolean, 1, };
-
-#define stu__makeptr(v)  ((stua_obj)     (v) + stu__ptr_tag)
-
-#define stua_nil    stu__makeptr(&stu__nil)
-#define stua_true   stu__makeptr(&stu__true)
-#define stua_false  stu__makeptr(&stu__false)
-
-stua_obj stua_getnil(void)   { return stua_nil; }
-stua_obj stua_getfalse(void) { return stua_false; }
-stua_obj stua_gettrue(void)  { return stua_true; }
-
-#define stu__ptr(x)      ((stu__box *) ((x) - stu__ptr_tag))
-
-#define stu__checkt(t,x) ((t) == STU___float  ? ((x) & 1) == stu__float_tag : \
-                          (t) == STU___int    ? stu__isint(x)               : \
-                          (t) == STU___number ? stu__number(x)              : \
-                          stu__tag(x) == stu__ptr_tag && stu__ptr(x)->type == (t))
-
-typedef struct
-{
-   STU__BOX;
-   void *ptr;
-} stu__wrapper;
-
-// implementation of a 'function' or function + closure
-
-typedef struct stu__func
-{
-   STU__BOX;
-   stua_obj closure_source;  // 0 - regular function; 4 - C function
-                             // if closure, pointer to source function
-   union {
-      stua_obj closure_data; // partial-application data
-      void *store;           // pointer to free that holds 'code'
-      stua_obj (*func)(stua_dict *context);
-   } f;
-   // closure ends here
-   short *code;
-   int num_param;
-   stua_obj *param;  // list of parameter strings
-} stu__func;
-
-// apply this to 'short *code' to get at data
-#define stu__const(f)  ((stua_obj *) (f))
-
-static void stu__free_func(stu__func *f)
-{
-   if (f->closure_source == 0)          free(f->f.store);
-   if ((stb_uint) f->closure_source <= 4)   free(f->param);
-   free(f);
-}
-
-#define stu__pd(x)       ((stua_dict *)    stu__ptr(x))
-#define stu__pw(x)       ((stu__wrapper *) stu__ptr(x))
-#define stu__pf(x)       ((stu__func *)    stu__ptr(x))
-
-
-// garbage-collection
-
-
-static stu__box ** stu__gc_ptrlist;
-static stua_obj * stu__gc_root_stack;
-
-stua_obj stua_pushroot(stua_obj o) { stb_arr_push(stu__gc_root_stack, o); return o; }
-void     stua_poproot (   void   ) { stb_arr_pop(stu__gc_root_stack); }
-
-static stb_sdict *stu__strings;
-static void stu__mark(stua_obj z)
-{
-   int i;
-   stu__box *p = stu__ptr(z);
-   if (p->stua_gc == 1) return; // already marked
-   assert(p->stua_gc == 0);
-   p->stua_gc = 1;
-   switch(p->type) {
-      case STU___function: {
-         stu__func *f = (stu__func *) p;
-         if ((stb_uint) f->closure_source <= 4) {
-            if (f->closure_source == 0) {
-               for (i=1; i <= f->code[0]; ++i)
-                  if (!stu__number(((stua_obj *) f->code)[-i]))
-                     stu__mark(((stua_obj *) f->code)[-i]);
-            }
-            for (i=0; i < f->num_param; ++i)
-               stu__mark(f->param[i]);
-         } else {
-            stu__mark(f->closure_source);
-            stu__mark(f->f.closure_data);
-         }
-         break;
-      }
-      case STU___dict: {
-         stua_dict *e = (stua_dict *) p;
-         for (i=0; i < e->limit; ++i)
-            if (e->table[i].k != STB_IEMPTY && e->table[i].k != STB_IDEL) {
-               if (!stu__number(e->table[i].k)) stu__mark((int) e->table[i].k);
-               if (!stu__number(e->table[i].v)) stu__mark((int) e->table[i].v);
-            }
-         break;
-      }
-   }
-}
-
-static int stu__num_allocs, stu__size_allocs;
-static stua_obj stu__flow_val = stua_nil; // used for break & return
-
-static void stua_gc(int force)
-{
-   int i;
-   if (!force && stu__num_allocs == 0 && stu__size_allocs == 0) return;
-   stu__num_allocs = stu__size_allocs = 0;
-   //printf("[gc]\n");
-
-   // clear marks
-   for (i=0; i < stb_arr_len(stu__gc_ptrlist); ++i)
-       stu__gc_ptrlist[i]->stua_gc = 0;
-
-   // stu__mark everything reachable
-   stu__nil.stua_gc = stu__true.stua_gc = stu__false.stua_gc = 1;
-   stu__mark(stua_globals);
-   if (!stu__number(stu__flow_val)) 
-      stu__mark(stu__flow_val);
-   for (i=0; i < stb_arr_len(stu__gc_root_stack); ++i)
-      if (!stu__number(stu__gc_root_stack[i]))
-         stu__mark(stu__gc_root_stack[i]);
-
-   // sweep unreachables
-   for (i=0; i < stb_arr_len(stu__gc_ptrlist);) {
-      stu__box *z = stu__gc_ptrlist[i];         
-      if (!z->stua_gc) {
-         switch (z->type) {
-            case STU___dict:        stb_idict_destroy((stua_dict *) z); break;
-            case STU___error:       free(((stu__wrapper *) z)->ptr); break;
-            case STU___string:      stb_sdict_remove(stu__strings, (char*) ((stu__wrapper *) z)->ptr, NULL); free(z); break;
-            case STU___function:    stu__free_func((stu__func *) z); break;
-         }
-         // swap in the last item over this, and repeat
-         z = stb_arr_pop(stu__gc_ptrlist);
-         stu__gc_ptrlist[i] = z;         
-      } else
-         ++i;
-   }
-}
-
-static void stu__consider_gc(stua_obj x)
-{
-   if (stu__size_allocs < 100000) return;
-   if (stu__num_allocs < 10 && stu__size_allocs < 1000000) return;
-   stb_arr_push(stu__gc_root_stack, x);
-   stua_gc(0);
-   stb_arr_pop(stu__gc_root_stack);
-}
-
-static stua_obj stu__makeobj(int type, void *data, int size, int safe_to_gc)
-{
-   stua_obj x = stu__makeptr(data);
-   ((stu__box *) data)->type = type;
-   stb_arr_push(stu__gc_ptrlist, (stu__box *) data);
-   stu__num_allocs  += 1;
-   stu__size_allocs += size;
-   if (safe_to_gc) stu__consider_gc(x);
-   return x;
-}
-
-stua_obj stua_box(int type, void *data, int size)
-{
-   stu__wrapper *p = (stu__wrapper *) malloc(sizeof(*p));
-   p->ptr = data;
-   return stu__makeobj(type, p, size, 0);
-}
-
-// a stu string can be directly compared for equality, because
-// they go into a hash table
-stua_obj stua_string(char *z)
-{
-   stu__wrapper *b = (stu__wrapper *) stb_sdict_get(stu__strings, z);
-   if (b == NULL) {
-      int o = stua_box(STU___string, NULL, strlen(z) + sizeof(*b));
-      b = stu__pw(o);
-      stb_sdict_add(stu__strings, z, b);
-      stb_sdict_getkey(stu__strings, z, (char **) &b->ptr);
-   }
-   return stu__makeptr(b);
-}
-
-// stb_obj dictionary is just an stb_idict
-static void     stu__set(stua_dict *d, stua_obj k, stua_obj v)
-{ if (stb_idict_set(d, k, v)) stu__size_allocs += 8; }
-
-static stua_obj stu__get(stua_dict *d, stua_obj k, stua_obj res)
-{
-   stb_idict_get_flag(d, k, &res);
-   return res;
-}
-
-static stua_obj make_string(char *z, int len)
-{
-   stua_obj s;
-   char temp[256], *q = (char *) stb_temp(temp, len+1), *p = q;
-   while (len > 0) {
-      if (*z == '\\') {
-              if (z[1] == 'n') *p = '\n';
-         else if (z[1] == 'r') *p = '\r';
-         else if (z[1] == 't') *p = '\t';
-         else                  *p = z[1];
-         p += 1; z += 2; len -= 2;
-      } else {
-         *p++ = *z++; len -= 1;
-      }
-   }
-   *p = 0;
-   s = stua_string(q);
-   stb_tempfree(temp, q);
-   return s;
-}
-
-enum token_names
-{
-   T__none=128,
-   ST_shl = STUA_op_shl,    ST_ge  = STUA_op_ge,
-   ST_shr = STUA_op_shr,    ST_le = STUA_op_le,
-   ST_shru = STUA_op_shru,  STU__negate = STUA_op_negate,
-   ST__reset_numbering = STUA_op_last,
-   ST_white,
-   ST_id, ST_float, ST_decimal, ST_hex, ST_char,ST_string, ST_number,
-   // make sure the keywords come _AFTER_ ST_id, so stb_lex prefer them
-   ST_if,      ST_while,    ST_for,     ST_eq,  ST_nil,
-   ST_then,    ST_do,       ST_in,      ST_ne,  ST_true,
-   ST_else,    ST_break,    ST_let,     ST_and, ST_false,
-   ST_elseif,  ST_continue, ST_into,    ST_or,  ST_repeat,
-   ST_end,     ST_as,       ST_return,  ST_var, ST_func,
-   ST_catch,   ST__frame,
-   ST__max_terminals,
-
-   STU__defaultparm, STU__seq,
-};
-
-static stua_dict  * stu__globaldict;
-       stua_obj     stua_globals;
-
-static enum
-{
-   FLOW_normal,  FLOW_continue,   FLOW_break,  FLOW_return,  FLOW_error,
-} stu__flow;
-
-stua_obj stua_error(char *z, ...)
-{
-   stua_obj a;
-   char temp[4096], *x;
-   va_list v; va_start(v,z); vsprintf(temp, z, v); va_end(v);
-   x = strdup(temp);
-   a = stua_box(STU___error, x, strlen(x));
-   stu__flow = FLOW_error;
-   stu__flow_val = a;
-   return stua_nil;
-}
-
-double stua_number(stua_obj z)
-{
-   return stu__tag(z) == stu__int_tag ? stu__int(z) : stu__float(z);
-}
-
-stua_obj stua_make_number(double d)
-{
-   double e = floor(d);
-   if (e == d && e < (1 << 29) && e >= -(1 << 29))
-      return stu__makeint((int) e);
-   else
-      return stua_float((float) d);
-}
-
-stua_obj (*stua_overload)(int op, stua_obj a, stua_obj b, stua_obj c) = NULL;
-
-static stua_obj stu__op(int op, stua_obj a, stua_obj b, stua_obj c)
-{
-   stua_obj r = STUA_NO_VALUE;
-   if (op == '+') {
-      if (stu__checkt(STU___string, a) && stu__checkt(STU___string, b)) {
-         ;// @TODO: string concatenation
-      } else if (stu__checkt(STU___function, a) && stu__checkt(STU___dict, b)) {
-         stu__func *f = (stu__func *) malloc(12);
-         assert(offsetof(stu__func, code)==12);
-         f->closure_source = a;
-         f->f.closure_data = b;
-         return stu__makeobj(STU___function, f, 16, 1);
-      }
-   }
-   if (stua_overload) r = stua_overload(op,a,b,c);
-   if (stu__flow != FLOW_error && r == STUA_NO_VALUE)
-      stua_error("Typecheck for operator %d", op), r=stua_nil;
-   return r;
-}
-
-#define STU__EVAL2(a,b)             \
-          a = stu__eval(stu__f[n+1]);  if (stu__flow) break; stua_pushroot(a); \
-          b = stu__eval(stu__f[n+2]);  stua_poproot(); if (stu__flow) break;
-
-#define STU__FB(op)              \
-          STU__EVAL2(a,b)           \
-          if (stu__tag(a) == stu__int_tag && stu__tag(b) == stu__int_tag) \
-             return ((a) op (b));                 \
-          if (stu__number(a) && stu__number(b)) \
-             return stua_make_number(stua_number(a) op stua_number(b)); \
-          return stu__op(stu__f[n], a,b, stua_nil)
-
-#define STU__F(op)              \
-          STU__EVAL2(a,b)           \
-          if (stu__number(a) && stu__number(b)) \
-             return stua_make_number(stua_number(a) op stua_number(b)); \
-          return stu__op(stu__f[n], a,b, stua_nil)
-
-#define STU__I(op)               \
-          STU__EVAL2(a,b)           \
-          if (stu__tag(a) == stu__int_tag && stu__tag(b) == stu__int_tag) \
-             return stu__makeint(stu__int(a) op stu__int(b));                 \
-          return stu__op(stu__f[n], a,b, stua_nil)
-
-#define STU__C(op)               \
-          STU__EVAL2(a,b)           \
-          if (stu__number(a) && stu__number(b)) \
-             return (stua_number(a) op stua_number(b)) ? stua_true : stua_false; \
-          return stu__op(stu__f[n], a,b, stua_nil)
-
-#define STU__CE(op)              \
-          STU__EVAL2(a,b)           \
-          return (a op b) ? stua_true : stua_false
-
-static short *stu__f;
-static stua_obj  stu__f_obj;
-static stua_dict       *stu__c;
-static stua_obj stu__funceval(stua_obj fo, stua_obj co);
-
-static int stu__cond(stua_obj x)
-{
-   if (stu__flow) return 0;
-   if (!stu__checkt(STU___boolean, x))
-      x = stu__op('!', x, stua_nil, stua_nil);
-   if (x == stua_true ) return 1;
-   if (x == stua_false) return 0;
-   stu__flow = FLOW_error;
-   return 0;
-}
-
-// had to manually eliminate tailcall recursion for debugging complex stuff
-#define TAILCALL(x)   n = (x); goto top;
-static stua_obj stu__eval(int n)
-{
-top:
-   if (stu__flow >= FLOW_return) return stua_nil; // is this needed?
-   if (n < 0) return stu__const(stu__f)[n];
-   assert(n != 0 && n != 1);
-   switch (stu__f[n]) {
-      stua_obj a,b,c;
-      case ST_catch:   a = stu__eval(stu__f[n+1]);
-                       if (stu__flow == FLOW_error) { a=stu__flow_val; stu__flow = FLOW_normal; }
-                       return a;
-      case ST_var:     b = stu__eval(stu__f[n+2]); if (stu__flow) break;
-                       stu__set(stu__c, stu__const(stu__f)[stu__f[n+1]], b);
-                       return b;
-      case STU__seq:   stu__eval(stu__f[n+1]); if (stu__flow) break;
-                       TAILCALL(stu__f[n+2]);
-      case ST_if:      if (!stu__cond(stu__eval(stu__f[n+1]))) return stua_nil;
-                       TAILCALL(stu__f[n+2]);
-      case ST_else:    a = stu__cond(stu__eval(stu__f[n+1]));
-                       TAILCALL(stu__f[n + 2 + !a]);
-                       #define STU__HANDLE_BREAK            \
-                          if (stu__flow >= FLOW_break) {    \
-                             if (stu__flow == FLOW_break) { \
-                                a = stu__flow_val;          \
-                                stu__flow = FLOW_normal;    \
-                                stu__flow_val = stua_nil;   \
-                                return a;                   \
-                             }                              \
-                             return stua_nil;               \
-                          }
-      case ST_as:      stu__eval(stu__f[n+3]);
-                       STU__HANDLE_BREAK
-                       // fallthrough!
-      case ST_while:   a = stua_nil; stua_pushroot(a);
-                       while (stu__cond(stu__eval(stu__f[n+1]))) {
-                          stua_poproot();
-                          a = stu__eval(stu__f[n+2]);
-                          STU__HANDLE_BREAK
-                          stu__flow = FLOW_normal;  // clear 'continue' flag
-                          stua_pushroot(a);
-                          if (stu__f[n+3]) stu__eval(stu__f[n+3]);
-                          STU__HANDLE_BREAK
-                          stu__flow = FLOW_normal;  // clear 'continue' flag
-                       }
-                       stua_poproot();
-                       return a;
-      case ST_break:   stu__flow = FLOW_break;  stu__flow_val = stu__eval(stu__f[n+1]); break;
-      case ST_continue:stu__flow = FLOW_continue; break;
-      case ST_return:  stu__flow = FLOW_return; stu__flow_val = stu__eval(stu__f[n+1]); break;
-      case ST__frame:  return stu__f_obj;
-      case '[':        STU__EVAL2(a,b);
-                       if (stu__checkt(STU___dict, a))
-                          return stu__get(stu__pd(a), b, stua_nil);
-                       return stu__op(stu__f[n], a, b, stua_nil);
-      case '=':        a = stu__eval(stu__f[n+2]); if (stu__flow) break;
-                       n = stu__f[n+1];
-                       if (stu__f[n] == ST_id) {
-                          if (!stb_idict_update(stu__c, stu__const(stu__f)[stu__f[n+1]], a))
-                             if (!stb_idict_update(stu__globaldict, stu__const(stu__f)[stu__f[n+1]], a))
-                                return stua_error("Assignment to undefined variable");
-                       } else if (stu__f[n] == '[') {
-                          stua_pushroot(a);
-                          b = stu__eval(stu__f[n+1]); if (stu__flow) { stua_poproot(); break; }
-                          stua_pushroot(b);
-                          c = stu__eval(stu__f[n+2]); stua_poproot(); stua_poproot();
-                          if (stu__flow) break;
-                          if (!stu__checkt(STU___dict, b)) return stua_nil;
-                          stu__set(stu__pd(b), c, a);
-                       } else {
-                          return stu__op(stu__f[n], stu__eval(n), a, stua_nil);
-                       }
-                       return a;
-      case STU__defaultparm:
-                       a = stu__eval(stu__f[n+2]);
-                       stu__flow = FLOW_normal;
-                       if (stb_idict_add(stu__c, stu__const(stu__f)[stu__f[n+1]], a))
-                          stu__size_allocs += 8;
-                       return stua_nil;
-      case ST_id:      a = stu__get(stu__c, stu__const(stu__f)[stu__f[n+1]], STUA_NO_VALUE); // try local variable
-                       return a != STUA_NO_VALUE       // else try stu__compile_global_scope variable
-                            ? a : stu__get(stu__globaldict, stu__const(stu__f)[stu__f[n+1]], stua_nil);
-      case STU__negate:a = stu__eval(stu__f[n+1]); if (stu__flow) break;
-                       return stu__isint(a) ? -a : stu__op(stu__f[n], a, stua_nil, stua_nil);
-      case '~':        a = stu__eval(stu__f[n+1]); if (stu__flow) break;
-                       return stu__isint(a) ? (~a)&~3 : stu__op(stu__f[n], a, stua_nil, stua_nil);
-      case '!':        a = stu__eval(stu__f[n+1]); if (stu__flow) break;
-                       a = stu__cond(a); if (stu__flow) break;
-                       return a ? stua_true : stua_false;
-      case ST_eq: STU__CE(==); case ST_le: STU__C(<=); case '<': STU__C(<);
-      case ST_ne: STU__CE(!=); case ST_ge: STU__C(>=); case '>': STU__C(>);
-      case '+' : STU__FB(+);  case '*': STU__F(*);  case '&': STU__I(&); case ST_shl: STU__I(<<);
-      case '-' : STU__FB(-);  case '/': STU__F(/);  case '|': STU__I(|); case ST_shr: STU__I(>>);
-                             case '%': STU__I(%);  case '^': STU__I(^);
-      case ST_shru:    STU__EVAL2(a,b);
-                       if (stu__tag(a) == stu__int_tag && stu__tag(b) == stu__int_tag)
-                          return stu__makeint((unsigned) stu__int(a) >> stu__int(b));
-                       return stu__op(stu__f[n], a,b, stua_nil);
-      case ST_and:      a = stu__eval(stu__f[n+1]); b = stu__cond(a); if (stu__flow) break;
-                       return a ? stu__eval(stu__f[n+2]) : a;
-      case ST_or :      a = stu__eval(stu__f[n+1]); b = stu__cond(a); if (stu__flow) break;
-                       return a ? b : stu__eval(stu__f[n+2]);
-      case'(':case':': STU__EVAL2(a,b);
-                       if (!stu__checkt(STU___function, a))
-                           return stu__op(stu__f[n], a,b, stua_nil);
-                       if (!stu__checkt(STU___dict, b))
-                           return stua_nil;
-                       if (stu__f[n] == ':')
-                          b = stu__makeobj(STU___dict, stb_idict_copy(stu__pd(b)), stb_idict_memory_usage(stu__pd(b)), 0);
-                       a = stu__funceval(a,b);
-                       return a;
-      case '{' :    {
-                       stua_dict *d;
-                       d = stb_idict_new_size(stu__f[n+1] > 40 ? 64 : 16);
-                       if (d == NULL)
-                          return stua_nil; // breakpoint fodder
-                       c = stu__makeobj(STU___dict, d, 32, 1);
-                       stua_pushroot(c);
-                       a = stu__f[n+1];
-                       for (b=0; b < a; ++b) {
-                          stua_obj x = stua_pushroot(stu__eval(stu__f[n+2 + b*2 + 0]));
-                          stua_obj y = stu__eval(stu__f[n+2 + b*2 + 1]);
-                          stua_poproot();
-                          if (stu__flow) { stua_poproot(); return stua_nil; }
-                          stu__set(d, x, y);
-                       }
-                       stua_poproot();
-                       return c;
-                    }
-      default:         if (stu__f[n] < 0) return stu__const(stu__f)[stu__f[n]];
-                       assert(0); /* NOTREACHED */ // internal error!
-   }
-   return stua_nil;
-}
-
-int stb__stua_nesting;
-static stua_obj stu__funceval(stua_obj fo, stua_obj co)
-{
-   stu__func *f = stu__pf(fo);
-   stua_dict *context = stu__pd(co);
-   int i,j;
-   stua_obj p;
-   short *tf = stu__f;     // save previous function
-   stua_dict *tc = stu__c;
-
-   if (stu__flow == FLOW_error) return stua_nil;
-   assert(stu__flow == FLOW_normal);
-
-   stua_pushroot(fo);
-   stua_pushroot(co);
-   stu__consider_gc(stua_nil);
-
-   while ((stb_uint) f->closure_source > 4) {
-      // add data from closure to context
-      stua_dict *e = (stua_dict *) stu__pd(f->f.closure_data);
-      for (i=0; i < e->limit; ++i)
-         if (e->table[i].k != STB_IEMPTY && e->table[i].k != STB_IDEL)
-            if (stb_idict_add(context, e->table[i].k, e->table[i].v))
-               stu__size_allocs += 8;
-            // use add so if it's already defined, we don't override it; that way
-            // explicit parameters win over applied ones, and most recent applications
-            // win over previous ones
-      f = stu__pf(f->closure_source);
-   }
-
-   for (j=0, i=0; i < f->num_param; ++i)
-      // if it doesn't already exist, add it from the numbered parameters
-      if (stb_idict_add(context, f->param[i], stu__get(context, stu__int(j), stua_nil)))
-         ++j;
-
-   // @TODO: if (stu__get(context, stu__int(f->num_param+1)) != STUA_NO_VALUE) // error: too many parameters
-   // @TODO: ditto too few parameters
-
-   if (f->closure_source == 4)
-      p = f->f.func(context);
-   else {
-      stu__f = f->code, stu__c = context;
-      stu__f_obj = co;
-      ++stb__stua_nesting;
-      if (stu__f[1]) 
-         p = stu__eval(stu__f[1]);
-      else
-         p = stua_nil;
-      --stb__stua_nesting;
-      stu__f = tf, stu__c = tc;  // restore previous function
-      if (stu__flow == FLOW_return) {
-         stu__flow = FLOW_normal;
-         p = stu__flow_val;
-         stu__flow_val = stua_nil;
-      }
-   }
-
-   stua_poproot();
-   stua_poproot();
-
-   return p;
-}
-
-// Parser
-
-static int stu__tok;
-static stua_obj stu__tokval;
-
-static char *stu__curbuf, *stu__bufstart;
-
-static stb_matcher *stu__lex_matcher;
-
-static unsigned char stu__prec[ST__max_terminals], stu__end[ST__max_terminals];
-
-static void stu__nexttoken(void)
-{
-   int len;
-
-retry:
-   stu__tok = stb_lex(stu__lex_matcher, stu__curbuf, &len);
-   if (stu__tok == 0)
-      return;
-   switch(stu__tok) {
-      case ST_white  : stu__curbuf += len; goto retry;
-      case T__none  : stu__tok = *stu__curbuf; break;
-      case ST_string:  stu__tokval = make_string(stu__curbuf+1, len-2); break;
-      case ST_id    :  stu__tokval = make_string(stu__curbuf, len); break;
-      case ST_hex    : stu__tokval = stu__makeint(strtol(stu__curbuf+2,NULL,16)); stu__tok = ST_number; break;
-      case ST_decimal: stu__tokval = stu__makeint(strtol(stu__curbuf  ,NULL,10)); stu__tok = ST_number; break;
-      case ST_float  : stu__tokval = stua_float((float) atof(stu__curbuf))       ; stu__tok = ST_number; break;
-      case ST_char   : stu__tokval = stu__curbuf[2] == '\\' ? stu__curbuf[3] : stu__curbuf[2];
-                      if (stu__curbuf[3] == 't') stu__tokval = '\t';
-                      if (stu__curbuf[3] == 'n') stu__tokval = '\n';
-                      if (stu__curbuf[3] == 'r') stu__tokval = '\r';
-                      stu__tokval = stu__makeint(stu__tokval);
-                      stu__tok  = ST_number;
-                      break;
-   }
-   stu__curbuf += len;
-}
-
-static struct { int stu__tok; char *regex; } stu__lexemes[] =
-{
-   ST_white  , "([ \t\n\r]|/\\*(.|\n)*\\*/|//[^\r\n]*([\r\n]|$))+",
-   ST_id     , "[_a-zA-Z][_a-zA-Z0-9]*",
-   ST_hex    , "0x[0-9a-fA-F]+",
-   ST_decimal, "[0-9]+[0-9]*",
-   ST_float  , "[0-9]+\\.?[0-9]*([eE][-+]?[0-9]+)?",
-   ST_float  , "\\.[0-9]+([eE][-+]?[0-9]+)?",
-   ST_char   , "c'(\\\\.|[^\\'])'",
-   ST_string , "\"(\\\\.|[^\\\"\n\r])*\"",
-   ST_string , "\'(\\\\.|[^\\\'\n\r])*\'",
-
-   #define stua_key4(a,b,c,d)  ST_##a, #a, ST_##b, #b, ST_##c, #c, ST_##d, #d,
-   stua_key4(if,then,else,elseif)    stua_key4(while,do,for,in)
-   stua_key4(func,var,let,break)     stua_key4(nil,true,false,end)
-   stua_key4(return,continue,as,repeat) stua_key4(_frame,catch,catch,catch)
-
-   ST_shl, "<<",   ST_and, "&&",  ST_eq,  "==",  ST_ge, ">=", 
-   ST_shr, ">>",   ST_or , "||",  ST_ne,  "!=",  ST_le, "<=",
-   ST_shru,">>>",  ST_into, "=>",
-   T__none, ".",
-};
-
-typedef struct
-{
-   stua_obj  *data;    // constants being compiled
-   short     *code;    // code being compiled
-   stua_dict *locals;
-   short     *non_local_refs;
-} stu__comp_func;
-
-static stu__comp_func stu__pfunc;
-static stu__comp_func *func_stack = NULL;
-static void stu__push_func_comp(void)
-{
-   stb_arr_push(func_stack, stu__pfunc);
-   stu__pfunc.data = NULL;
-   stu__pfunc.code = NULL;
-   stu__pfunc.locals = stb_idict_new_size(16);
-   stu__pfunc.non_local_refs = NULL;
-   stb_arr_push(stu__pfunc.code, 0); // number of data items
-   stb_arr_push(stu__pfunc.code, 1); // starting execution address
-}
-
-static void stu__pop_func_comp(void)
-{
-   stb_arr_free(stu__pfunc.code);
-   stb_arr_free(stu__pfunc.data);   
-   stb_idict_destroy(stu__pfunc.locals);
-   stb_arr_free(stu__pfunc.non_local_refs);
-   stu__pfunc = stb_arr_pop(func_stack);
-}
-
-// if an id is a reference to an outer lexical scope, this
-// function returns the "name" of it, and updates the stack
-// structures to make sure the names are propogated in.
-static int stu__nonlocal_id(stua_obj var_obj)
-{
-   stua_obj dummy, var = var_obj;
-   int i, n = stb_arr_len(func_stack), j,k;
-   if (stb_idict_get_flag(stu__pfunc.locals, var, &dummy)) return 0;
-   for (i=n-1; i > 1; --i) {
-      if (stb_idict_get_flag(func_stack[i].locals, var, &dummy))
-         break;
-   }
-   if (i <= 1) return 0; // stu__compile_global_scope
-   j = i; // need to access variable from j'th frame
-   for (i=0; i < stb_arr_len(stu__pfunc.non_local_refs); ++i)
-      if (stu__pfunc.non_local_refs[i] == j) return j-n;
-   stb_arr_push(stu__pfunc.non_local_refs, j-n);
-   // now make sure all the parents propogate it down
-   for (k=n-1; k > 1; --k) {
-      if (j-k >= 0) return j-n; // comes direct from this parent
-      for(i=0; i < stb_arr_len(func_stack[k].non_local_refs); ++i)
-         if (func_stack[k].non_local_refs[i] == j-k)
-            return j-n;
-      stb_arr_push(func_stack[k].non_local_refs, j-k);
-   }
-   assert (k != 1);
-
-   return j-n;
-}
-
-static int stu__off(void)                { return stb_arr_len(stu__pfunc.code); }
-static void stu__cc(int a)
-{
-   assert(a >= -2000 && a < 5000);
-   stb_arr_push(stu__pfunc.code, a);
-}
-static int stu__cc1(int a)                      { stu__cc(a); return stu__off()-1; }
-static int stu__cc2(int a, int b)               { stu__cc(a); stu__cc(b); return stu__off()-2; }
-static int stu__cc3(int a, int b, int c)        {
- if (a == '=') assert(c != 0);
- stu__cc(a); stu__cc(b); stu__cc(c); return stu__off()-3; }
-static int stu__cc4(int a, int b, int c, int d) { stu__cc(a); stu__cc(b); stu__cc(c); stu__cc(d); return stu__off()-4; }
-
-static int stu__cdv(stua_obj p)
-{
-   int i;
-   assert(p != STUA_NO_VALUE);
-   for (i=0; i < stb_arr_len(stu__pfunc.data); ++i)
-      if (stu__pfunc.data[i] == p)
-         break;
-   if (i == stb_arr_len(stu__pfunc.data))
-      stb_arr_push(stu__pfunc.data, p);
-   return ~i;
-}
-
-static int stu__cdt(void)
-{
-   int z = stu__cdv(stu__tokval);
-   stu__nexttoken();
-   return z;
-}
-
-static int stu__seq(int a, int b)
-{
-   return !a ? b : !b ? a : stu__cc3(STU__seq, a,b);
-}
-
-static char stu__comp_err_str[1024];
-static int stu__comp_err_line;
-static int stu__err(char *str, ...)
-{
-   va_list v;
-   char *s = stu__bufstart;
-   stu__comp_err_line = 1;
-   while (s < stu__curbuf) {
-      if (s[0] == '\n' || s[0] == '\r') {
-         if (s[0]+s[1] == '\n' + '\r') ++s;
-         ++stu__comp_err_line;
-      }
-      ++s;
-   }
-   va_start(v, str);
-   vsprintf(stu__comp_err_str, str, v);
-   va_end(v);
-   return 0;
-}
-
-static int stu__accept(int p)
-{
-   if (stu__tok != p) return 0;
-   stu__nexttoken();
-   return 1;
-}
-
-static int stu__demand(int p)
-{
-   if (stu__accept(p)) return 1;
-   return stu__err("Didn't find expected stu__tok");
-}
-
-static int stu__demandv(int p, stua_obj *val)
-{
-   if (stu__tok == p || p==0) {
-      *val = stu__tokval;
-      stu__nexttoken();
-      return 1;
-   } else
-      return 0;
-}
-
-static int stu__expr(int p);
-int stu__nexpr(int p) { stu__nexttoken(); return stu__expr(p); }
-static int stu__statements(int once, int as);
-
-static int stu__parse_if(void)      // parse both ST_if and ST_elseif
-{
-   int b,c,a;
-   a = stu__nexpr(1);               if (!a) return 0;
-   if (!stu__demand(ST_then))       return stu__err("expecting THEN");
-   b = stu__statements(0,0);        if (!b) return 0;
-   if (b == 1) b = -1;
-
-   if (stu__tok == ST_elseif) {
-      return stu__parse_if();
-   } else if (stu__accept(ST_else)) {
-      c = stu__statements(0,0); if (!c) return 0;
-      if (!stu__demand(ST_end)) return stu__err("expecting END after else clause");
-      return stu__cc4(ST_else, a, b, c);
-   } else {
-      if (!stu__demand(ST_end)) return stu__err("expecting END in if statement");
-      return stu__cc3(ST_if, a, b);
-   }
-}
-
-int stu__varinit(int z, int in_globals)
-{
-   int a,b;
-   stu__nexttoken();
-   while (stu__demandv(ST_id, &b)) {
-      if (!stb_idict_add(stu__pfunc.locals, b, 1))
-         if (!in_globals) return stu__err("Redefined variable %s.", stu__pw(b)->ptr);
-      if (stu__accept('=')) {
-         a = stu__expr(1);       if (!a) return 0;
-      } else
-         a = stu__cdv(stua_nil);
-      z = stu__seq(z, stu__cc3(ST_var, stu__cdv(b), a));
-      if (!stu__accept(',')) break;
-   }
-   return z;
-}
-
-static int stu__compile_unary(int z, int outparm, int require_inparm)
-{
-   int op = stu__tok, a, b;
-   stu__nexttoken();
-   if (outparm) {
-      if (require_inparm || (stu__tok && stu__tok != ST_end && stu__tok != ST_else && stu__tok != ST_elseif && stu__tok !=';')) {
-         a = stu__expr(1); if (!a) return 0;
-      } else
-         a = stu__cdv(stua_nil);
-      b = stu__cc2(op, a);
-   } else
-      b = stu__cc1(op);
-   return stu__seq(z,b);
-}
-
-static int stu__assign(void)
-{
-   int z;
-   stu__accept(ST_let);
-   z = stu__expr(1); if (!z) return 0;
-   if (stu__accept('=')) {
-      int y,p = (z >= 0 ? stu__pfunc.code[z] : 0);
-      if (z < 0 || (p != ST_id && p != '[')) return stu__err("Invalid lvalue in assignment");
-      y = stu__assign();         if (!y) return 0;
-      z = stu__cc3('=', z, y);
-   }
-   return z;
-}
-
-static int stu__statements(int once, int stop_while)
-{
-   int a,b, c, z=0;
-   for(;;) {
-      switch (stu__tok) {
-         case ST_if     : a = stu__parse_if(); if (!a) return 0;
-                          z = stu__seq(z, a);
-                          break;
-         case ST_while  : if (stop_while) return (z ? z:1);
-                          a = stu__nexpr(1); if (!a) return 0;
-                          if (stu__accept(ST_as)) c = stu__statements(0,0); else c = 0;
-                          if (!stu__demand(ST_do)) return stu__err("expecting DO");
-                          b = stu__statements(0,0); if (!b) return 0;
-                          if (!stu__demand(ST_end)) return stu__err("expecting END");
-                          if (b == 1) b = -1;
-                          z = stu__seq(z, stu__cc4(ST_while, a, b, c));
-                          break;
-         case ST_repeat : stu__nexttoken();
-                          c = stu__statements(0,1); if (!c) return 0;
-                          if (!stu__demand(ST_while)) return stu__err("expecting WHILE");
-                          a = stu__expr(1); if (!a) return 0;
-                          if (!stu__demand(ST_do)) return stu__err("expecting DO");
-                          b = stu__statements(0,0); if (!b) return 0;
-                          if (!stu__demand(ST_end)) return stu__err("expecting END");
-                          if (b == 1) b = -1;
-                          z = stu__seq(z, stu__cc4(ST_as, a, b, c));
-                          break;
-         case ST_catch  : a = stu__nexpr(1); if (!a) return 0;
-                          z = stu__seq(z, stu__cc2(ST_catch, a));
-                          break;
-         case ST_var    : z = stu__varinit(z,0); break;
-         case ST_return : z = stu__compile_unary(z,1,1); break;
-         case ST_continue:z = stu__compile_unary(z,0,0); break;
-         case ST_break  : z = stu__compile_unary(z,1,0); break;
-         case ST_into   : if (z == 0 && !once) return stu__err("=> cannot be first statement in block");
-                          a = stu__nexpr(99);
-                          b = (a >= 0? stu__pfunc.code[a] : 0);
-                          if (a < 0 || (b != ST_id && b != '[')) return stu__err("Invalid lvalue on right side of =>");
-                          z = stu__cc3('=', a, z);
-                          break;
-         default        : if (stu__end[stu__tok]) return once ? 0 : (z ? z:1);
-                          a = stu__assign(); if (!a) return 0;
-                          stu__accept(';');
-                          if (stu__tok && !stu__end[stu__tok]) {
-                             if (a < 0)
-                                return stu__err("Constant has no effect");
-                             if (stu__pfunc.code[a] != '(' && stu__pfunc.code[a] != '=')
-                                return stu__err("Expression has no effect");
-                          }
-                          z = stu__seq(z, a);
-                          break;
-      }
-      if (!z) return 0;
-      stu__accept(';');
-      if (once && stu__tok != ST_into) return z;
-   }
-}
-
-static int stu__postexpr(int z, int p);
-static int stu__dictdef(int end, int *count)
-{
-   int z,n=0,i,flags=0;
-   short *dict=NULL;
-   stu__nexttoken();
-   while (stu__tok != end) {
-      if (stu__tok == ST_id) {
-         stua_obj id = stu__tokval;
-         stu__nexttoken();
-         if (stu__tok == '=') {
-            flags |= 1;
-            stb_arr_push(dict, stu__cdv(id));
-            z = stu__nexpr(1); if (!z) return 0;
-         } else {
-            z = stu__cc2(ST_id, stu__cdv(id));
-            z = stu__postexpr(z,1); if (!z) return 0;
-            flags |= 2;
-            stb_arr_push(dict, stu__cdv(stu__makeint(n++)));
-         }
-      } else {
-         z = stu__expr(1); if (!z) return 0;
-         flags |= 2;
-         stb_arr_push(dict, stu__cdv(stu__makeint(n++)));
-      }
-      if (end != ')' && flags == 3) { z=stu__err("can't mix initialized and uninitialized defs"); goto done;}
-      stb_arr_push(dict, z);
-      if (!stu__accept(',')) break;
-   }
-   if (!stu__demand(end))
-      return stu__err(end == ')' ? "Expecting ) at end of function call" 
-                                 : "Expecting } at end of dictionary definition");
-   z = stu__cc2('{', stb_arr_len(dict)/2);
-   for (i=0; i < stb_arr_len(dict); ++i)
-      stu__cc(dict[i]);
-   if (count) *count = n;
-done:
-   stb_arr_free(dict);
-   return z;
-}
-
-static int stu__comp_id(void)
-{
-   int z,d;
-   d = stu__nonlocal_id(stu__tokval);
-   if (d == 0)
-      return z = stu__cc2(ST_id, stu__cdt());
-   // access a non-local frame by naming it with the appropriate int
-   assert(d < 0);
-   z = stu__cdv(d);            // relative frame # is the 'variable' in our local frame
-   z = stu__cc2(ST_id, z);     // now access that dictionary
-   return stu__cc3('[', z, stu__cdt()); // now access the variable from that dir
-}
-
-static stua_obj stu__funcdef(stua_obj *id, stua_obj *func);
-static int stu__expr(int p)
-{
-   int z;
-   // unary
-   switch (stu__tok) {
-      case ST_number: z = stu__cdt(); break;
-      case ST_string: z = stu__cdt(); break;  // @TODO - string concatenation like C
-      case ST_id    : z = stu__comp_id(); break;
-      case ST__frame: z = stu__cc1(ST__frame); stu__nexttoken(); break;
-      case ST_func  : z = stu__funcdef(NULL,NULL); break;
-      case ST_if    : z = stu__parse_if(); break;
-      case ST_nil   : z = stu__cdv(stua_nil); stu__nexttoken(); break;
-      case ST_true  : z = stu__cdv(stua_true); stu__nexttoken(); break;
-      case ST_false : z = stu__cdv(stua_false); stu__nexttoken(); break;
-      case '-'      : z = stu__nexpr(99); if (z) z=stu__cc2(STU__negate,z); else return z; break;
-      case '!'      : z = stu__nexpr(99); if (z) z=stu__cc2('!',z); else return z; break;
-      case '~'      : z = stu__nexpr(99); if (z) z=stu__cc2('~',z); else return z; break;
-      case '{'      : z = stu__dictdef('}', NULL); break;
-      default       : return stu__err("Unexpected token");
-      case '('      : stu__nexttoken(); z = stu__statements(0,0); if (!stu__demand(')')) return stu__err("Expecting )");
-   }
-   return stu__postexpr(z,p);
-}
-
-static int stu__postexpr(int z, int p)
-{
-   int q;
-   // postfix
-   while (stu__tok == '(' || stu__tok == '[' || stu__tok == '.') {
-      if (stu__accept('.')) {
-         // MUST be followed by a plain identifier! use [] for other stuff
-         if (stu__tok != ST_id) return stu__err("Must follow . with plain name; try [] instead");
-         z = stu__cc3('[', z, stu__cdv(stu__tokval));
-         stu__nexttoken();
-      } else if (stu__accept('[')) {
-         while (stu__tok != ']') {
-            int r = stu__expr(1); if (!r) return 0;
-            z = stu__cc3('[', z, r);
-            if (!stu__accept(',')) break;
-         }
-         if (!stu__demand(']')) return stu__err("Expecting ]");
-      } else {
-         int n, p = stu__dictdef(')', &n); if (!p) return 0;
-         #if 0 // this is incorrect!
-         if (z > 0 && stu__pfunc.code[z] == ST_id) {
-            stua_obj q = stu__get(stu__globaldict, stu__pfunc.data[-stu__pfunc.code[z+1]-1], stua_nil);
-            if (stu__checkt(STU___function, q))
-               if ((stu__pf(q))->num_param != n)
-                  return stu__err("Incorrect number of parameters");
-         }
-         #endif
-         z = stu__cc3('(', z, p);
-      }
-   }
-   // binop - this implementation taken from lcc
-   for (q=stu__prec[stu__tok]; q >= p; --q) {
-      while (stu__prec[stu__tok] == q) {
-         int o = stu__tok, y = stu__nexpr(p+1); if (!y) return 0;
-         z = stu__cc3(o,z,y);
-      }
-   }
-   return z;
-}
-
-static stua_obj stu__finish_func(stua_obj *param, int start)
-{
-   int n, size;
-   stu__func *f = (stu__func *) malloc(sizeof(*f));
-   f->closure_source = 0;
-   f->num_param = stb_arr_len(param);
-   f->param = (int *) stb_copy(param, f->num_param * sizeof(*f->param));
-   size = stb_arr_storage(stu__pfunc.code) + stb_arr_storage(stu__pfunc.data) + sizeof(*f) + 8;
-   f->f.store = malloc(stb_arr_storage(stu__pfunc.code) + stb_arr_storage(stu__pfunc.data));
-   f->code = (short *) ((char *) f->f.store + stb_arr_storage(stu__pfunc.data));
-   memcpy(f->code, stu__pfunc.code, stb_arr_storage(stu__pfunc.code));
-   f->code[1] = start;
-   f->code[0] = stb_arr_len(stu__pfunc.data);
-   for (n=0; n < f->code[0]; ++n)
-      ((stua_obj *) f->code)[-1-n] = stu__pfunc.data[n];
-   return stu__makeobj(STU___function, f, size, 0);
-}
-
-static int stu__funcdef(stua_obj *id, stua_obj *result)
-{
-   int n,z=0,i,q;
-   stua_obj *param = NULL;
-   short *nonlocal;
-   stua_obj v,f=stua_nil;
-   assert(stu__tok == ST_func);
-   stu__nexttoken();
-   if (id) { 
-      if (!stu__demandv(ST_id, id)) return stu__err("Expecting function name");
-   } else
-      stu__accept(ST_id);
-   if (!stu__demand('(')) return stu__err("Expecting ( for function parameter");
-   stu__push_func_comp();
-   while (stu__tok != ')') {
-      if (!stu__demandv(ST_id, &v)) { z=stu__err("Expecting parameter name"); goto done; }
-      stb_idict_add(stu__pfunc.locals, v, 1);
-      if (stu__tok == '=') {
-         n = stu__nexpr(1); if (!n) { z=0; goto done; }
-         z = stu__seq(z, stu__cc3(STU__defaultparm, stu__cdv(v), n));
-      } else
-         stb_arr_push(param, v);
-      if (!stu__accept(',')) break;
-   }
-   if (!stu__demand(')'))   { z=stu__err("Expecting ) at end of parameter list"); goto done; }
-   n = stu__statements(0,0);   if (!n) { z=0; goto done; }
-   if (!stu__demand(ST_end)) { z=stu__err("Expecting END at end of function"); goto done; }
-   if (n == 1) n = 0;
-   n = stu__seq(z,n);
-   f = stu__finish_func(param, n);
-   if (result) { *result = f; z=1; stu__pop_func_comp(); }
-   else {
-      nonlocal = stu__pfunc.non_local_refs;
-      stu__pfunc.non_local_refs = NULL;
-      stu__pop_func_comp();
-      z = stu__cdv(f);
-      if (nonlocal) {  // build a closure with references to the needed frames
-         short *initcode = NULL;
-         for (i=0; i < stb_arr_len(nonlocal); ++i) {
-            int k = nonlocal[i], p;
-            stb_arr_push(initcode, stu__cdv(k));
-            if (k == -1) p = stu__cc1(ST__frame);
-            else { p = stu__cdv(stu__makeint(k+1)); p = stu__cc2(ST_id, p); }
-            stb_arr_push(initcode, p);
-         }
-         q = stu__cc2('{', stb_arr_len(nonlocal));
-         for (i=0; i < stb_arr_len(initcode); ++i)
-            stu__cc(initcode[i]);
-         z = stu__cc3('+', z, q);
-         stb_arr_free(initcode);
-      }
-      stb_arr_free(nonlocal);
-   }
-done:
-   stb_arr_free(param);
-   if (!z) stu__pop_func_comp();
-   return z;
-}
-
-static int stu__compile_global_scope(void)
-{
-   stua_obj o;
-   int z=0;
-
-   stu__push_func_comp();
-   while (stu__tok != 0) {
-      if (stu__tok == ST_func) {
-         stua_obj id, f;
-         if (!stu__funcdef(&id,&f))
-            goto error;
-         stu__set(stu__globaldict, id, f);
-      } else if (stu__tok == ST_var) {
-         z = stu__varinit(z,1); if (!z) goto error;
-      } else {
-         int y = stu__statements(1,0); if (!y) goto error;
-         z = stu__seq(z,y);
-      }
-      stu__accept(';');
-   }
-   o = stu__finish_func(NULL, z);
-   stu__pop_func_comp();
-
-   o = stu__funceval(o, stua_globals); // initialize stu__globaldict
-   if (stu__flow == FLOW_error)
-      printf("Error: %s\n", ((stu__wrapper *) stu__ptr(stu__flow_val))->ptr);
-   return 1;
-error:
-   stu__pop_func_comp();
-   return 0;
-}
-
-stua_obj stu__myprint(stua_dict *context)
-{
-   stua_obj x = stu__get(context, stua_string("x"), stua_nil);
-   if ((x & 1) == stu__float_tag) printf("%f", stu__getfloat(x));
-   else if (stu__tag(x) == stu__int_tag) printf("%d", stu__int(x));
-   else {
-       stu__wrapper *s = stu__pw(x);
-       if (s->type == STU___string || s->type == STU___error)
-          printf("%s", s->ptr);
-       else if (s->type == STU___dict) printf("{{dictionary}}");
-       else if (s->type == STU___function) printf("[[function]]");
-       else
-          printf("[[ERROR:%s]]", s->ptr);
-   }
-   return x;
-}
-
-void stua_init(void)
-{
-   if (!stu__globaldict) {
-      int i;
-      stua_obj s;
-      stu__func *f;
-
-      stu__prec[ST_and] = stu__prec[ST_or] =                     1;
-      stu__prec[ST_eq ] = stu__prec[ST_ne] = stu__prec[ST_le] =
-       stu__prec[ST_ge] = stu__prec['>' ]  = stu__prec['<'] =    2;
-      stu__prec[':']    =                                        3;
-      stu__prec['&']    = stu__prec['|']   = stu__prec['^'] =    4;
-      stu__prec['+']    = stu__prec['-']   =                     5;
-      stu__prec['*']    = stu__prec['/']   = stu__prec['%'] =
-       stu__prec[ST_shl]= stu__prec[ST_shr]= stu__prec[ST_shru]= 6;
-
-      stu__end[')']   = stu__end[ST_end] = stu__end[ST_else] = 1;
-      stu__end[ST_do] = stu__end[ST_elseif] = 1;
-
-      stu__float_init();
-      stu__lex_matcher = stb_lex_matcher();
-      for (i=0; i < sizeof(stu__lexemes)/sizeof(stu__lexemes[0]); ++i)
-         stb_lex_item(stu__lex_matcher, stu__lexemes[i].regex, stu__lexemes[i].stu__tok);
-
-      stu__globaldict = stb_idict_new_size(64);
-      stua_globals    = stu__makeobj(STU___dict, stu__globaldict, 0,0);
-      stu__strings    = stb_sdict_new(0);
-
-      stu__curbuf = stu__bufstart = "func _print(x) end\n"
-      "func print()\n  var x=0 while _frame[x] != nil as x=x+1 do _print(_frame[x]) end end\n";
-      stu__nexttoken();
-      if (!stu__compile_global_scope())
-         printf("Compile error in line %d: %s\n", stu__comp_err_line, stu__comp_err_str);
-
-      s = stu__get(stu__globaldict, stua_string("_print"), stua_nil);
-      if (stu__tag(s) == stu__ptr_tag && stu__ptr(s)->type == STU___function) {
-         f = stu__pf(s);
-         free(f->f.store);
-         f->closure_source = 4;
-         f->f.func = stu__myprint;
-         f->code = NULL;
-      }
-   }
-}
-
-void stua_uninit(void)
-{
-   if (stu__globaldict) {
-      stb_idict_remove_all(stu__globaldict);
-      stb_arr_setlen(stu__gc_root_stack, 0);
-      stua_gc(1);
-      stb_idict_destroy(stu__globaldict);
-      stb_sdict_delete(stu__strings);
-      stb_matcher_free(stu__lex_matcher);
-      stb_arr_free(stu__gc_ptrlist);
-      stb_arr_free(func_stack);
-      stb_arr_free(stu__gc_root_stack);
-      stu__globaldict = NULL;
-   }
-}
-
-void stua_run_script(char *s)
-{
-   stua_init();
-
-   stu__curbuf = stu__bufstart = s;
-   stu__nexttoken();
-
-   stu__flow = FLOW_normal;
-
-   if (!stu__compile_global_scope())
-      printf("Compile error in line %d: %s\n", stu__comp_err_line, stu__comp_err_str);
-   stua_gc(1);
-}
-#endif // STB_DEFINE
-#endif // STB_STUA
-
 #undef STB_EXTERN
 #endif // STB_INCLUDE_STB_H
 
@@ -14368,38 +13074,38 @@ This software is available under 2 licenses -- choose whichever you prefer.
 ------------------------------------------------------------------------------
 ALTERNATIVE A - MIT License
 Copyright (c) 2017 Sean Barrett
-Permission is hereby granted, free of charge, to any person obtaining a copy of 
-this software and associated documentation files (the "Software"), to deal in 
-the Software without restriction, including without limitation the rights to 
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies 
-of the Software, and to permit persons to whom the Software is furnished to do 
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do
 so, subject to the following conditions:
-The above copyright notice and this permission notice shall be included in all 
+The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ------------------------------------------------------------------------------
 ALTERNATIVE B - Public Domain (www.unlicense.org)
 This is free and unencumbered software released into the public domain.
-Anyone is free to copy, modify, publish, use, compile, sell, or distribute this 
-software, either in source code form or as a compiled binary, for any purpose, 
+Anyone is free to copy, modify, publish, use, compile, sell, or distribute this
+software, either in source code form or as a compiled binary, for any purpose,
 commercial or non-commercial, and by any means.
-In jurisdictions that recognize copyright laws, the author or authors of this 
-software dedicate any and all copyright interest in the software to the public 
-domain. We make this dedication for the benefit of the public at large and to 
-the detriment of our heirs and successors. We intend this dedication to be an 
-overt act of relinquishment in perpetuity of all present and future rights to 
+In jurisdictions that recognize copyright laws, the author or authors of this
+software dedicate any and all copyright interest in the software to the public
+domain. We make this dedication for the benefit of the public at large and to
+the detriment of our heirs and successors. We intend this dedication to be an
+overt act of relinquishment in perpetuity of all present and future rights to
 this software under copyright law.
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
-AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN 
-ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ------------------------------------------------------------------------------
 */

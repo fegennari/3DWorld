@@ -1,3 +1,5 @@
+#define STBI_WINDOWS_UTF8
+
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
@@ -60,10 +62,14 @@ void dummy_write(void *context, void *data, int len)
    memcpy(dummy, data, len);
 }
 
+extern void image_write_test(void);
+
 int main(int argc, char **argv)
 {
    int w,h;
    //test_ycbcr();
+
+   image_write_test();
 
    #if 0
    // test hdr asserts
@@ -84,7 +90,8 @@ int main(int argc, char **argv)
          int w2,h2,n2;
          unsigned char *data;
          printf("%s\n", argv[i]);
-         res = stbi_info(argv[1], &w2, &h2, &n2);
+         res = stbi_info(argv[i], &w2, &h2, &n2);
+         data = stbi_load(argv[i], &w, &h, &n, 0); if (data) free(data); else printf("Failed &n\n");
          data = stbi_load(argv[i], &w, &h, &n, 4); if (data) free(data); else printf("Failed &n\n");
          data = stbi_load(argv[i], &w, &h,  0, 1); if (data) free(data); else printf("Failed 1\n");
          data = stbi_load(argv[i], &w, &h,  0, 2); if (data) free(data); else printf("Failed 2\n");
@@ -107,7 +114,7 @@ int main(int argc, char **argv)
             printf("FAILED 4\n");
       }
    } else {
-      int i, nope=0;
+      int i;
       #ifdef PNGSUITE_PRIMARY
       char **files = stb_readdir_files("pngsuite/primary");
       #else

@@ -1,11 +1,11 @@
-// stb_connected_components - v0.95 - public domain connected components on grids
+// stb_connected_components - v0.96 - public domain connected components on grids
 //                                                 http://github.com/nothings/stb
 //
 // Finds connected components on 2D grids for testing reachability between
 // two points, with fast updates when changing reachability (e.g. on one machine
 // it was typically 0.2ms w/ 1024x1024 grid). Each grid square must be "open" or
 // "closed" (traversable or untraversable), and grid squares are only connected
-// to their orthogonal neighbors, not diagonally. 
+// to their orthogonal neighbors, not diagonally.
 //
 // In one source file, create the implementation by doing something like this:
 //
@@ -17,7 +17,7 @@
 // The above creates an implementation that can run on maps up to 1024x1024.
 // Map sizes must be a multiple of (1<<(LOG2/2)) on each axis (e.g. 32 if LOG2=10,
 // 16 if LOG2=8, etc.) (You can just pad your map with untraversable space.)
-// 
+//
 // MEMORY USAGE
 //
 //   Uses about 6-7 bytes per grid square (e.g. 7MB for a 1024x1024 grid).
@@ -37,6 +37,7 @@
 //
 // CHANGELOG
 //
+//    0.96  (2019-03-04)  Fix warnings
 //    0.95  (2016-10-16)  Bugfix if multiple clumps in one cluster connect to same clump in another
 //    0.94  (2016-04-17)  Bugfix & optimize worst case (checkerboard & random)
 //    0.93  (2016-04-16)  Reduce memory by 10x for 1Kx1K map; small speedup
@@ -51,7 +52,7 @@
 //    - function for setting a grid of squares at once (just use batching)
 //
 // LICENSE
-// 
+//
 //   See end of file for license information.
 //
 // ALGORITHM
@@ -434,7 +435,7 @@ static void stbcc__build_all_connections_for_cluster(stbcc_grid *g, int cx, int 
             i = 0;
             j = 0;
             step_x = 0;
-            step_y = 1;  
+            step_y = 1;
             n = STBCC__CLUSTER_SIZE_Y;
             break;
          case 2:
@@ -598,7 +599,7 @@ void stbcc_init_grid(stbcc_grid *g, unsigned char *map, int w, int h)
 
    #if 0
    for (j=0; j < STBCC__CLUSTER_COUNT_Y; ++j)
-      for (i=0; i < STBCC__CLUSTER_COUNT_X; ++i) 
+      for (i=0; i < STBCC__CLUSTER_COUNT_X; ++i)
          g->cluster_dirty[j][i] = 0;
    #endif
 
@@ -698,7 +699,7 @@ static void stbcc__remove_clump_connection(stbcc_grid *g, int x1, int y1, int x2
    for (i=0; i < clump->num_adjacent; ++i)
       if (rc.clump_index == adj[i].clump_index &&
           rc.cluster_dx  == adj[i].cluster_dx  &&
-          rc.cluster_dy  == adj[i].cluster_dy) 
+          rc.cluster_dy  == adj[i].cluster_dy)
          break;
 
    if (i < clump->num_adjacent)
@@ -709,7 +710,7 @@ static void stbcc__remove_clump_connection(stbcc_grid *g, int x1, int y1, int x2
 
 static void stbcc__add_connections_to_adjacent_cluster(stbcc_grid *g, int cx, int cy, int dx, int dy)
 {
-   unsigned char connected[STBCC__MAX_EDGE_CLUMPS_PER_CLUSTER][STBCC__MAX_EDGE_CLUMPS_PER_CLUSTER/8] = { 0 };
+   unsigned char connected[STBCC__MAX_EDGE_CLUMPS_PER_CLUSTER][STBCC__MAX_EDGE_CLUMPS_PER_CLUSTER/8] = { { 0 } };
    int x = cx * STBCC__CLUSTER_SIZE_X;
    int y = cy * STBCC__CLUSTER_SIZE_Y;
    int step_x, step_y=0, i, j, k, n;
@@ -735,7 +736,7 @@ static void stbcc__add_connections_to_adjacent_cluster(stbcc_grid *g, int cx, in
       i = 0;
       j = 0;
       step_x = 0;
-      step_y = 1;  
+      step_y = 1;
       n = STBCC__CLUSTER_SIZE_Y;
    } else if (dy == -1) {
       i = 0;
@@ -751,6 +752,7 @@ static void stbcc__add_connections_to_adjacent_cluster(stbcc_grid *g, int cx, in
       n = STBCC__CLUSTER_SIZE_X;
    } else {
       assert(0);
+      return;
    }
 
    for (k=0; k < n; ++k) {
@@ -772,7 +774,7 @@ static void stbcc__add_connections_to_adjacent_cluster(stbcc_grid *g, int cx, in
 
 static void stbcc__remove_connections_to_adjacent_cluster(stbcc_grid *g, int cx, int cy, int dx, int dy)
 {
-   unsigned char disconnected[STBCC__MAX_EDGE_CLUMPS_PER_CLUSTER][STBCC__MAX_EDGE_CLUMPS_PER_CLUSTER/8] = { 0 };
+   unsigned char disconnected[STBCC__MAX_EDGE_CLUMPS_PER_CLUSTER][STBCC__MAX_EDGE_CLUMPS_PER_CLUSTER/8] = { { 0 } };
    int x = cx * STBCC__CLUSTER_SIZE_X;
    int y = cy * STBCC__CLUSTER_SIZE_Y;
    int step_x, step_y=0, i, j, k, n;
@@ -795,7 +797,7 @@ static void stbcc__remove_connections_to_adjacent_cluster(stbcc_grid *g, int cx,
       i = 0;
       j = 0;
       step_x = 0;
-      step_y = 1;  
+      step_y = 1;
       n = STBCC__CLUSTER_SIZE_Y;
    } else if (dy == -1) {
       i = 0;
@@ -811,6 +813,7 @@ static void stbcc__remove_connections_to_adjacent_cluster(stbcc_grid *g, int cx,
       n = STBCC__CLUSTER_SIZE_X;
    } else {
       assert(0);
+      return;
    }
 
    for (k=0; k < n; ++k) {
@@ -954,11 +957,12 @@ static void stbcc__build_clumps_for_cluster(stbcc_grid *g, int cx, int cy)
    for (j=1; j < STBCC__CLUSTER_SIZE_Y-1; ++j) {
       for (i=1; i < STBCC__CLUSTER_SIZE_X-1; ++i) {
          stbcc__tinypoint p = cbi.parent[j][i];
-         if (p.x == i && p.y == j)
+         if (p.x == i && p.y == j) {
             if (STBCC__MAP_OPEN(g,x+i,y+j))
                cbi.label[j][i] = label++;
             else
                cbi.label[j][i] = STBCC__NULL_CLUMPID;
+         }
       }
    }
 
@@ -1008,38 +1012,38 @@ This software is available under 2 licenses -- choose whichever you prefer.
 ------------------------------------------------------------------------------
 ALTERNATIVE A - MIT License
 Copyright (c) 2017 Sean Barrett
-Permission is hereby granted, free of charge, to any person obtaining a copy of 
-this software and associated documentation files (the "Software"), to deal in 
-the Software without restriction, including without limitation the rights to 
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies 
-of the Software, and to permit persons to whom the Software is furnished to do 
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do
 so, subject to the following conditions:
-The above copyright notice and this permission notice shall be included in all 
+The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ------------------------------------------------------------------------------
 ALTERNATIVE B - Public Domain (www.unlicense.org)
 This is free and unencumbered software released into the public domain.
-Anyone is free to copy, modify, publish, use, compile, sell, or distribute this 
-software, either in source code form or as a compiled binary, for any purpose, 
+Anyone is free to copy, modify, publish, use, compile, sell, or distribute this
+software, either in source code form or as a compiled binary, for any purpose,
 commercial or non-commercial, and by any means.
-In jurisdictions that recognize copyright laws, the author or authors of this 
-software dedicate any and all copyright interest in the software to the public 
-domain. We make this dedication for the benefit of the public at large and to 
-the detriment of our heirs and successors. We intend this dedication to be an 
-overt act of relinquishment in perpetuity of all present and future rights to 
+In jurisdictions that recognize copyright laws, the author or authors of this
+software dedicate any and all copyright interest in the software to the public
+domain. We make this dedication for the benefit of the public at large and to
+the detriment of our heirs and successors. We intend this dedication to be an
+overt act of relinquishment in perpetuity of all present and future rights to
 this software under copyright law.
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
-AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN 
-ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ------------------------------------------------------------------------------
 */

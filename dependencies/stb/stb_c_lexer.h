@@ -1,4 +1,4 @@
-// stb_c_lexer.h - v0.09 - public domain Sean Barrett 2013
+// stb_c_lexer.h - v0.12 - public domain Sean Barrett 2013
 // lexer for making little C-like languages with recursive-descent parsers
 //
 // This file provides both the interface and the implementation.
@@ -10,6 +10,9 @@
 // suffixes on integer constants are not handled (you can override this).
 //
 // History:
+//     0.12 fix compilation bug for NUL support; better support separate inclusion
+//     0.11 fix clang static analysis warning
+//     0.10 fix warnings
 //     0.09 hex floats, no-stdlib fixes
 //     0.08 fix bad pointer comparison
 //     0.07 fix mishandling of hexadecimal constants parsed by strtol
@@ -35,16 +38,24 @@
 // Contributors:
 //   Arpad Goretity (bugfix)
 //   Alan Hickman (hex floats)
+//   github:mundusnine (bugfix)
 //
 // LICENSE
 //
 //   See end of file for license information.
 
+#ifdef STB_C_LEXER_IMPLEMENTATION
 #ifndef STB_C_LEXER_DEFINITIONS
 // to change the default parsing rules, copy the following lines
 // into your C/C++ file *before* including this, and then replace
-// the Y's with N's for the ones you don't want.
+// the Y's with N's for the ones you don't want. This needs to be
+// set to the same values for every place in your program where
+// stb_c_lexer.h is included.
 // --BEGIN--
+
+#if defined(Y) || defined(N)
+#error "Can only use stb_c_lexer in contexts where the preprocessor symbols 'Y' and 'N' are not defined"
+#endif
 
 #define STB_C_LEX_C_DECIMAL_INTS    Y   //  "0|[1-9][0-9]*"                        CLEX_intlit
 #define STB_C_LEX_C_HEX_INTS        Y   //  "0x[0-9a-fA-F]+"                       CLEX_intlit
@@ -93,7 +104,7 @@
 
 #define STB_C_LEXER_DEFINITIONS         // This line prevents the header file from replacing your definitions
 // --END--
-
+#endif
 #endif
 
 #ifndef INCLUDE_STB_C_LEXER_H
@@ -163,14 +174,44 @@ extern void stb_c_lexer_get_location(const stb_lexer *lexer, const char *where, 
 }
 #endif
 
+enum
+{
+   CLEX_eof = 256,
+   CLEX_parse_error,
+   CLEX_intlit        ,
+   CLEX_floatlit      ,
+   CLEX_id            ,
+   CLEX_dqstring      ,
+   CLEX_sqstring      ,
+   CLEX_charlit       ,
+   CLEX_eq            ,
+   CLEX_noteq         ,
+   CLEX_lesseq        ,
+   CLEX_greatereq     ,
+   CLEX_andand        ,
+   CLEX_oror          ,
+   CLEX_shl           ,
+   CLEX_shr           ,
+   CLEX_plusplus      ,
+   CLEX_minusminus    ,
+   CLEX_pluseq        ,
+   CLEX_minuseq       ,
+   CLEX_muleq         ,
+   CLEX_diveq         ,
+   CLEX_modeq         ,
+   CLEX_andeq         ,
+   CLEX_oreq          ,
+   CLEX_xoreq         ,
+   CLEX_arrow         ,
+   CLEX_eqarrow       ,
+   CLEX_shleq, CLEX_shreq,
+
+   CLEX_first_unused_token
+
+};
 #endif // INCLUDE_STB_C_LEXER_H
 
 #ifdef STB_C_LEXER_IMPLEMENTATION
-
-   #if defined(Y) || defined(N)
-   #error "Can only use stb_c_lexer in contexts where the preprocessor symbols 'Y' and 'N' are not defined"
-   #endif
-
 
 // Hacky definitions so we can easily #if on them
 #define Y(x) 1
@@ -190,14 +231,6 @@ typedef long       stb__clex_int;
 
 #if STB_C_LEX_PARSE_SUFFIXES(x)
 #define STB__clex_parse_suffixes
-#endif
-
-#if STB_C_LEX_C_DECIMAL_INTS(x) || STB_C_LEX_C_HEX_INTS(x) || STB_C_LEX_DEFINE_ALL_TOKEN_NAMES(x)
-#define STB__clex_define_int
-#endif
-
-#if (STB_C_LEX_C_ARITHEQ(x) && STB_C_LEX_C_SHIFTS(x)) || STB_C_LEX_DEFINE_ALL_TOKEN_NAMES(x)
-#define STB__clex_define_shifts
 #endif
 
 #if STB_C_LEX_C99_HEX_FLOATS(x)
@@ -229,66 +262,10 @@ typedef long       stb__clex_int;
 #include <stdlib.h>
 #endif
 
-// Now pick a definition of Y/N that's conducive to
-// defining the enum of token names.
-#if STB_C_LEX_DEFINE_ALL_TOKEN_NAMES(x) || defined(STB_C_LEXER_SELF_TEST)
-  #undef  N
-  #define N(a) Y(a)
-#else
-  #undef  N
-  #define N(a)
-#endif
-
-#undef  Y
-#define Y(a) a,
-
-enum
-{
-   CLEX_eof = 256,
-   CLEX_parse_error,
-
-#ifdef STB__clex_define_int
-   CLEX_intlit,
-#endif
-
-   STB_C_LEX_C_DECIMAL_FLOATS( CLEX_floatlit    )
-   STB_C_LEX_C_IDENTIFIERS(  CLEX_id            )
-   STB_C_LEX_C_DQ_STRINGS(   CLEX_dqstring      )
-   STB_C_LEX_C_SQ_STRINGS(   CLEX_sqstring      )
-   STB_C_LEX_C_CHARS(        CLEX_charlit       )
-   STB_C_LEX_C_COMPARISONS(  CLEX_eq            )
-   STB_C_LEX_C_COMPARISONS(  CLEX_noteq         )
-   STB_C_LEX_C_COMPARISONS(  CLEX_lesseq        )
-   STB_C_LEX_C_COMPARISONS(  CLEX_greatereq     )
-   STB_C_LEX_C_LOGICAL(      CLEX_andand        )
-   STB_C_LEX_C_LOGICAL(      CLEX_oror          )
-   STB_C_LEX_C_SHIFTS(       CLEX_shl           )
-   STB_C_LEX_C_SHIFTS(       CLEX_shr           )
-   STB_C_LEX_C_INCREMENTS(   CLEX_plusplus      )
-   STB_C_LEX_C_INCREMENTS(   CLEX_minusminus    )
-   STB_C_LEX_C_ARITHEQ(      CLEX_pluseq        )
-   STB_C_LEX_C_ARITHEQ(      CLEX_minuseq       )
-   STB_C_LEX_C_ARITHEQ(      CLEX_muleq         )
-   STB_C_LEX_C_ARITHEQ(      CLEX_diveq         )
-   STB_C_LEX_C_ARITHEQ(      CLEX_modeq         )
-   STB_C_LEX_C_BITWISEEQ(    CLEX_andeq         )
-   STB_C_LEX_C_BITWISEEQ(    CLEX_oreq          )
-   STB_C_LEX_C_BITWISEEQ(    CLEX_xoreq         )
-   STB_C_LEX_C_ARROW(        CLEX_arrow         )
-   STB_C_LEX_EQUAL_ARROW(    CLEX_eqarrow       )
-
-#ifdef STB__clex_define_shifts
-   CLEX_shleq, CLEX_shreq, 
-#endif
-
-   CLEX_first_unused_token
-
-#undef Y
-#define Y(a) a
-};
-
 // Now for the rest of the file we'll use the basic definition where
 // where Y expands to its contents and N expands to nothing
+#undef  Y
+#define Y(a) a
 #undef N
 #define N(a)
 
@@ -346,7 +323,7 @@ static int stb__clex_iswhite(int x)
 
 static const char *stb__strchr(const char *str, int ch)
 {
-   for (; *str; ++str) 
+   for (; *str; ++str)
       if (*str == ch)
          return str;
    return 0;
@@ -514,7 +491,7 @@ static int stb__clex_parse_string(stb_lexer *lexer, char *p, int type)
    }
    *out = 0;
    lexer->string = lexer->string_storage;
-   lexer->string_len = out - lexer->string_storage;
+   lexer->string_len = (int) (out - lexer->string_storage);
    return stb__clex_token(lexer, type, start, p);
 }
 
@@ -586,7 +563,6 @@ int stb_c_lexer_get_token(stb_lexer *lexer)
          {
             int n = 0;
             lexer->string = lexer->string_storage;
-            lexer->string_len = n;
             do {
                if (n+1 >= lexer->string_storage_len)
                   return stb__clex_token(lexer, CLEX_parse_error, p, p+n);
@@ -600,16 +576,17 @@ int stb_c_lexer_get_token(stb_lexer *lexer)
                 STB_C_LEX_DOLLAR_IDENTIFIER( || p[n] == '$' )
             );
             lexer->string[n] = 0;
+            lexer->string_len = n;
             return stb__clex_token(lexer, CLEX_id, p, p+n-1);
          }
- 
+
          // check for EOF
          STB_C_LEX_0_IS_EOF(
             if (*p == 0)
-               return stb__clex_eof(tok);
+               return stb__clex_eof(lexer);
          )
 
-      single_char:         
+      single_char:
          // not an identifier, return the character as itself
          return stb__clex_token(lexer, *p, p, p);
 
@@ -824,7 +801,7 @@ int stb_c_lexer_get_token(stb_lexer *lexer)
 #endif // STB_C_LEXER_IMPLEMENTATION
 
 #ifdef STB_C_LEXER_SELF_TEST
-
+#define _CRT_SECURE_NO_WARNINGS
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -884,11 +861,13 @@ void dummy(void)
 {
    double some_floats[] = {
       1.0501, -10.4e12, 5E+10,
-#if 0   // not support in C++ or C-pre-99, so don't try to compile it
+#if 0   // not supported in C++ or C-pre-99, so don't try to compile it, but let our parser test it
       0x1.0p+24, 0xff.FP-8, 0x1p-23,
 #endif
       4.
    };
+   (void) sizeof(some_floats);
+   (void) some_floats[1];
 
    printf("test %d",1); // https://github.com/nothings/stb/issues/13
 }
@@ -897,7 +876,7 @@ int main(int argc, char **argv)
 {
    FILE *f = fopen("stb_c_lexer.h","rb");
    char *text = (char *) malloc(1 << 20);
-   int len = f ? fread(text, 1, 1<<20, f) : -1;
+   int len = f ? (int) fread(text, 1, 1<<20, f) : -1;
    stb_lexer lex;
    if (len < 0) {
       fprintf(stderr, "Error opening file\n");
@@ -925,38 +904,38 @@ This software is available under 2 licenses -- choose whichever you prefer.
 ------------------------------------------------------------------------------
 ALTERNATIVE A - MIT License
 Copyright (c) 2017 Sean Barrett
-Permission is hereby granted, free of charge, to any person obtaining a copy of 
-this software and associated documentation files (the "Software"), to deal in 
-the Software without restriction, including without limitation the rights to 
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies 
-of the Software, and to permit persons to whom the Software is furnished to do 
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do
 so, subject to the following conditions:
-The above copyright notice and this permission notice shall be included in all 
+The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ------------------------------------------------------------------------------
 ALTERNATIVE B - Public Domain (www.unlicense.org)
 This is free and unencumbered software released into the public domain.
-Anyone is free to copy, modify, publish, use, compile, sell, or distribute this 
-software, either in source code form or as a compiled binary, for any purpose, 
+Anyone is free to copy, modify, publish, use, compile, sell, or distribute this
+software, either in source code form or as a compiled binary, for any purpose,
 commercial or non-commercial, and by any means.
-In jurisdictions that recognize copyright laws, the author or authors of this 
-software dedicate any and all copyright interest in the software to the public 
-domain. We make this dedication for the benefit of the public at large and to 
-the detriment of our heirs and successors. We intend this dedication to be an 
-overt act of relinquishment in perpetuity of all present and future rights to 
+In jurisdictions that recognize copyright laws, the author or authors of this
+software dedicate any and all copyright interest in the software to the public
+domain. We make this dedication for the benefit of the public at large and to
+the detriment of our heirs and successors. We intend this dedication to be an
+overt act of relinquishment in perpetuity of all present and future rights to
 this software under copyright law.
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
-AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN 
-ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ------------------------------------------------------------------------------
 */

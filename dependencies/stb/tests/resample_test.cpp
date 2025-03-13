@@ -1,3 +1,4 @@
+#define _CRT_SECURE_NO_WARNINGS
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -56,11 +57,14 @@ void stbir_progress(float p)
 	STBIR_ASSERT(p >= 0 && p <= 1);
 }
 
-#define STBIR_PROGRESS_REPORT stbir_progress
+#ifdef __clang__
+#define STBIRDEF static inline
+#endif
 
+#define STBIR_PROGRESS_REPORT stbir_progress
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
 #define STB_IMAGE_RESIZE_STATIC
-#include "stb_image_resize.h"
+#include "stb_image_resize2.h"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
@@ -127,7 +131,7 @@ inline float mtfrand()
 	return (float)(mtrand() % ninenine)/ninenine;
 }
 
-static void resizer(int argc, char **argv)
+void resizer(int argc, char **argv)
 {
 	unsigned char* input_pixels;
 	unsigned char* output_pixels;
@@ -139,12 +143,12 @@ static void resizer(int argc, char **argv)
 	out_h = h*3;
 	output_pixels = (unsigned char*) malloc(out_w*out_h*n);
 	//stbir_resize_uint8_srgb(input_pixels, w, h, 0, output_pixels, out_w, out_h, 0, n, -1,0);
-	stbir_resize_uint8(input_pixels, w, h, 0, output_pixels, out_w, out_h, 0, n);
+	stbir_resize_uint8_linear(input_pixels, w, h, 0, output_pixels, out_w, out_h, 0, (stbir_pixel_layout) n);
 	stbi_write_png("output.png", out_w, out_h, n, output_pixels, 0);
 	exit(0);
 }
 
-static void performance(int argc, char **argv)
+void performance(int argc, char **argv)
 {
 	unsigned char* input_pixels;
 	unsigned char* output_pixels;
@@ -167,9 +171,9 @@ static void performance(int argc, char **argv)
 	output_pixels = (unsigned char*) malloc(out_w*out_h*n);
     for (i=0; i < count; ++i)
         if (srgb)
-	        stbir_resize_uint8_srgb(input_pixels, w, h, 0, output_pixels, out_w, out_h, 0, n,-1,0);
+	        stbir_resize_uint8_srgb(input_pixels, w, h, 0, output_pixels, out_w, out_h, 0, (stbir_pixel_layout) n);
         else
-	        stbir_resize(input_pixels, w, h, 0, output_pixels, out_w, out_h, 0, STBIR_TYPE_UINT8, n,-1, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, NULL);
+	        stbir_resize_uint8_linear(input_pixels, w, h, 0, output_pixels, out_w, out_h, 0, (stbir_pixel_layout) n);
 	exit(0);
 }
 
@@ -184,6 +188,7 @@ int main(int argc, char** argv)
 	return 0;
 }
 
+#if 0
 void resize_image(const char* filename, float width_percent, float height_percent, stbir_filter filter, stbir_edge edge, stbir_colorspace colorspace, const char* output_filename)
 {
 	int w, h, n;
@@ -1115,4 +1120,8 @@ void test_suite(int argc, char **argv)
 	resize_image("gamma_colors.jpg", .5f, .5f, STBIR_FILTER_CATMULLROM, STBIR_EDGE_REFLECT, STBIR_COLORSPACE_SRGB, "test-output/gamma_colors.jpg");
 	resize_image("gamma_2.2.jpg", .5f, .5f, STBIR_FILTER_CATMULLROM, STBIR_EDGE_REFLECT, STBIR_COLORSPACE_SRGB, "test-output/gamma_2.2.jpg");
 	resize_image("gamma_dalai_lama_gray.jpg", .5f, .5f, STBIR_FILTER_CATMULLROM, STBIR_EDGE_REFLECT, STBIR_COLORSPACE_SRGB, "test-output/gamma_dalai_lama_gray.jpg");
+}
+#endif
+void test_suite(int argc, char **argv)
+{
 }

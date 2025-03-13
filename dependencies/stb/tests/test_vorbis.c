@@ -1,7 +1,3 @@
-#define STB_IMAGE_STATIC
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
-
 #define STB_VORBIS_HEADER_ONLY
 #include "stb_vorbis.c"
 #include "stb.h"
@@ -12,7 +8,7 @@ extern void stb_vorbis_dumpmem(void);
 int main(int argc, char **argv)
 {
    size_t memlen;
-   unsigned char *mem = stb_fileu("c:/x/sketch008.ogg", &memlen);
+   unsigned char *mem = stb_fileu("../../lib/vorbis/sample/sketch008.ogg", &memlen);
    int chan, samplerate;
    short *output;
    int samples = stb_vorbis_decode_memory(mem, memlen, &chan, &samplerate, &output);
