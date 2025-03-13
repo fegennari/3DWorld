@@ -1898,7 +1898,8 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office 
 	}
 	bool const pref_dim(rgen.rand_bool()), pref_dir(rgen.rand_bool()), bldg_has_windows(has_windows());
 	bool used[4] = {0,0,0,0}; // per-side, not per-base cube
-	unsigned const min_doors((parts.size() > 1) ? 2 : 1); // at least 2 doors unless it's a small rectangle (large rectangle will have a central hallway with doors at each end)
+	// at least 2 doors unless it's a small rectangle (large rectangle will have a central hallway with doors at each end)
+	unsigned const min_doors((parts.size() > 1 || is_industrial()) ? 2 : 1);
 	unsigned const max_doors(bldg_has_windows ? 3 : 4); // buildings with windows have at most 3 doors since they're smaller
 	unsigned const num_doors(min_doors + (rgen.rand() % (max_doors - min_doors + 1)));
 	cube_t const parts_bcube(get_unrotated_parts_bcube());
@@ -1935,16 +1936,21 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office 
 				continue;
 			}
 			if (interior && interior->ind_info) { // industrial building custom doors
+				bool const dim(interior->ind_info->entrance_dim), dir(interior->ind_info->entrance_dir);
+
 				if (num == 0) { // main entrance is in or between the smaller rooms
-					bool const dim(interior->ind_info->entrance_dim), dir(interior->ind_info->entrance_dir);
-				
 					if (add_door(place_door(*b, dim, dir, door_height, interior->ind_info->entrance_pos, 0.0, 0.0, wscale, 0, 0, rgen), part_ix, dim, dir, 1)) {
 						used[2*dim + dir] = 1; // mark used
 						placed = 1;
+						continue;
 					}
 				}
-				if (num == 1 && is_warehouse()) { // second door is warehouse loading garage door
-					// TODO
+				else if (num == 1 && is_warehouse()) { // second door is warehouse loading garage door, opposite the main entrance door
+					if (add_door(place_door(*b, dim, !dir, door_height, 0.0, 0.0, 0.1, 2.0*wscale, 1, 1, rgen), part_ix, dim, !dir, 1)) {
+						doors.back().type = tquad_with_ix_t::TYPE_GDOOR;
+						used[2*dim + (!dir)] = 1; // mark used
+						continue; // not counted as placed
+					}
 				}
 			}
 			for (unsigned n = 0; n < 4; ++n) {
