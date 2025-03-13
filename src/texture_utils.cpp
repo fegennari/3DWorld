@@ -3,13 +3,14 @@
 // 4/3/22
 #include "3DWorld.h"
 #include "function_registry.h"
+//#include "profiler.h"
 
 #define STB_DXT_IMPLEMENTATION
 #include "stb_dxt.h"
 
 
 void dxt_texture_compress(uint8_t const *const data, vector<uint8_t> &comp_data, int width, int height, int ncolors) {
-	//timer_t timer("stb_dxt Texture Compress", 1, 1); // enabled, no loading screen
+	//highres_timer_t timer("stb_dxt Texture Compress", 1, 1); // enabled, no loading screen
 	assert(width > 0 && height > 0);
 	assert(ncolors == 3 || ncolors == 4);
 	assert(data != nullptr);
@@ -40,14 +41,14 @@ void dxt_texture_compress(uint8_t const *const data, vector<uint8_t> &comp_data,
 }
 
 void texture_t::compress_and_send_texture() {
-	//highres_timer_t timer("compress_and_send_texture", 1, 1); // enabled, no loading screen; 2676ms
+	//highres_timer_t timer("compress_and_send_texture", 1, 1); // enabled, no loading screen; 680ms
 	vector<uint8_t> comp_data; // reuse across calls doesn't seem to help much
 	dxt_texture_compress(data, comp_data, width, height, ncolors);
 	GL_CHECK(glCompressedTexImage2D(GL_TEXTURE_2D, 0, calc_internal_format(), width, height, 0, comp_data.size(), comp_data.data());)
 }
 
 void texture_t::create_compressed_mipmaps() {
-	//highres_timer_t timer("create_compressed_mipmaps", 1, 1); // enabled, no loading screen; 1623ms total for city + cars + people
+	//highres_timer_t timer("create_compressed_mipmaps", 1, 1); // enabled, no loading screen; 1350ms total for city + cars + people
 	assert(is_allocated());
 	vector<uint8_t> idatav, odata, comp_data; // reuse across calls doesn't seem to help much
 
@@ -73,8 +74,9 @@ void texture_t::create_compressed_mipmaps() {
 	} // for level
 }
 
-void texture_t::create_custom_mipmaps() { // 558ms total for city + cars + people
+void texture_t::create_custom_mipmaps() { // 350ms total for city + cars + people
 
+	//highres_timer_t timer("Create Custom Mipmaps");
 	assert(is_allocated());
 	vector<uint8_t> idatav, odata, comp_data;
 	color_wrapper cw(color); // for use_mipmaps == 4 with RGBA
@@ -85,7 +87,8 @@ void texture_t::create_custom_mipmaps() { // 558ms total for city + cars + peopl
 		uint8_t const *const idata((level == 1) ? data : idatav.data());
 		odata.resize(ncolors*w2*h2);
 
-		for (unsigned y = 0; y < h2; ++y) {
+#pragma omp parallel for schedule(static)
+		for (int y = 0; y < (int)h2; ++y) {
 			for (unsigned x = 0; x < w2; ++x) {
 				unsigned const ix1(ncolors*(y*w2+x)), ix2(ncolors*((y<<1)*w1+(x<<1)));
 
