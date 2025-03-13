@@ -1123,7 +1123,7 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 	colorRGBA const shelf_color(apply_light_color(c));
 
 	for (unsigned s = 0; s < num_shelves; ++s) {
-		for (unsigned d = 0; d < (in_warehouse ? 2 : 1); ++d) { // {exterior, interior}
+		for (unsigned d = 0; d < (in_warehouse ? 2U : 1U); ++d) { // {exterior, interior}
 			shelf_mat.add_cube_to_verts(shelves[s], shelf_color, shelves[s].get_llc(), skip_faces, !c.dim, 0, 0, bool(d)); // make wood grain horizontal
 		}
 	}

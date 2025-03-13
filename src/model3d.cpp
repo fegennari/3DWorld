@@ -1090,7 +1090,6 @@ template<typename T> void vntc_vect_block_t<T>::free_vbos() {
 }
 
 template<typename T> cube_t vntc_vect_block_t<T>::get_bcube() const {
-
 	if (this->empty()) return all_zeros_cube;
 	cube_t bcube(this->front().get_bcube());
 	for (auto i = begin()+1; i != end(); ++i) {bcube.union_with_cube(i->get_bcube());}
@@ -1104,14 +1103,12 @@ template<typename T> size_t vntc_vect_block_t<T>::get_gpu_mem() const {
 }
 
 template<typename T> unsigned vntc_vect_block_t<T>::num_verts() const {
-
 	unsigned s(0);
 	for (auto i = begin(); i != end(); ++i) {s += i->num_verts();}
 	return s;
 }
 
 template<typename T> unsigned vntc_vect_block_t<T>::num_unique_verts() const {
-
 	unsigned s(0);
 	for (auto i = begin(); i != end(); ++i) {s += (unsigned)i->size();}
 	return s;

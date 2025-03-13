@@ -692,7 +692,7 @@ void texture_t::deferred_load_and_bind() {
 	assert(defer_load());
 
 	switch (defer_load_type) {
-	case DEFER_TYPE_DDS:  deferred_load_dds (); break;
+	case DEFER_TYPE_DDS:  deferred_load_dds(); break;
 	default:
 		cerr << "Unhandled texture defer type " << defer_load_type << endl;
 		exit(1);
