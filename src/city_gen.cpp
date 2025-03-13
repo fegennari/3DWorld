@@ -3406,7 +3406,7 @@ public:
 	void next_ped_animation() {ped_manager.next_animation();}
 	void get_pedestrians_in_area(cube_t const &area, int building_ix, vector<point> &pts) const {ped_manager.get_pedestrians_in_area(area, building_ix, pts);}
 	void free_context() {car_manager.free_context(); ped_manager.free_context();}
-	unsigned get_model_gpu_mem() const {return (ped_manager.get_model_gpu_mem() + car_manager.get_model_gpu_mem());}
+	size_t get_model_gpu_mem() const {return (ped_manager.get_model_gpu_mem() + car_manager.get_model_gpu_mem());}
 }; // city_gen_t
 
 city_gen_t city_gen;
@@ -3563,7 +3563,7 @@ bool tile_contains_tunnel(cube_t const &bcube) {return city_gen.tile_contains_tu
 void destroy_city_in_radius(point const &pos, float radius) {city_gen.destroy_in_radius(pos, radius);}
 bool get_city_color_at_xy(float x, float y, colorRGBA &color) {return city_gen.get_color_at_xy(x, y, color);}
 cube_t get_city_lights_bcube() {return city_gen.get_lights_bcube();}
-unsigned get_city_model_gpu_mem() {return city_gen.get_model_gpu_mem();}
+size_t get_city_model_gpu_mem() {return city_gen.get_model_gpu_mem();}
 void next_pedestrian_animation() {city_gen.next_ped_animation();}
 void get_pedestrians_in_area(cube_t const &area, int building_ix, vector<point> &pts) {city_gen.get_pedestrians_in_area(area, building_ix, pts);}
 void free_city_context() {city_gen.free_context();}

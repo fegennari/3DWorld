@@ -86,7 +86,7 @@ public:
 	tile_smap_data_t new_smap_data(unsigned tu_id, tile_t *tile, unsigned light, unsigned lod_level);
 	void release_smap_data(tile_smap_data_t &smd, unsigned light);
 	void clear_context();
-	unsigned get_free_list_mem_usage() const;
+	size_t get_free_list_mem_usage() const;
 };
 
 
@@ -271,8 +271,8 @@ public:
 	float get_max_xy_dist_to_pt(point const &pt) const;
 	bool contains_point(point const &pos) const {return get_bcube().contains_pt_xy(pos);} // XY only
 	bool contains_camera() const {return contains_point(get_camera_pos());}
-	unsigned get_gpu_mem() const;
-	unsigned get_smap_mem() const;
+	size_t get_gpu_mem () const;
+	size_t get_smap_mem() const;
 	unsigned count_shadow_maps() const;
 
 	unsigned get_tree_mem() const { // only accounts for top-level class memory + palm verts

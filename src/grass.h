@@ -68,7 +68,7 @@ class grass_tile_manager_t : public grass_manager_t {
 public:
 	grass_tile_manager_t() : start_render_ix(0), end_render_ix(0) {}
 	void clear();
-	unsigned get_gpu_mem() const {return (vbo ? 3*size()*sizeof(grass_data_t) : 0);}
+	size_t get_gpu_mem() const {return (vbo ? 3*size()*sizeof(grass_data_t) : 0);}
 	void upload_data();
 	void gen_grass();
 	void update();
@@ -110,7 +110,7 @@ public:
 	void add_flowers(mesh_xy_grid_cache_t const density_gen[2], float grass_den, float hthresh, float dx, float dy, int xpos, int ypos, bool gen_zval);
 	void gen_density_cache(mesh_xy_grid_cache_t density_gen[2], int x1, int y1);
 	void scale_flowers(float lscale, float wscale);
-	unsigned get_gpu_mem() const {return (vbo_valid() ? flowers.size()*sizeof(vert_norm_comp_color) : 0);}
+	size_t get_gpu_mem() const {return (vbo_valid() ? flowers.size()*sizeof(vert_norm_comp_color) : 0);}
 };
 
 

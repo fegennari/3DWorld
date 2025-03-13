@@ -284,8 +284,8 @@ public:
 		mat.tex.tscale_x = mat.tex.tscale_y = 0.0; // map texture to quad
 		bind_2d_texture(camera.tid);
 	}
-	unsigned get_gpu_mem() const {
-		unsigned num_tids(tid_free_list.size());
+	size_t get_gpu_mem() const {
+		size_t num_tids(tid_free_list.size());
 		for (camera_t const &camera : cameras) {num_tids += (camera.tid > 0);}
 		return 3*SEC_CAMERA_XSIZE*SEC_CAMERA_YSIZE*num_tids; // or 4x?
 	}
@@ -307,6 +307,6 @@ void update_security_camera_image() {video_camera_manager.update_cameras();}
 void setup_monitor_screen_draw(room_object_t const &monitor, rgeom_mat_t &mat, std::string &onscreen_text) {
 	video_camera_manager.setup_monitor_screen_draw(monitor, mat, onscreen_text);
 }
-unsigned get_building_textures_gpu_mem() {return video_camera_manager.get_gpu_mem();}
+size_t get_building_textures_gpu_mem() {return video_camera_manager.get_gpu_mem();}
 
 

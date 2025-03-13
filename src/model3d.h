@@ -293,7 +293,7 @@ public:
 	cube_t get_bcube () const {return get_polygon_bbox(*this);}
 	point get_center () const {return bsphere.pos;}
 	float get_bradius() const {return bsphere.radius;}
-	unsigned get_gpu_mem() const {return (vbo_valid() ? size()*sizeof(T) : 0);}
+	size_t get_gpu_mem() const {return (vbo_valid() ? size()*sizeof(T) : 0);}
 	void optimize(unsigned npts) {remove_excess_cap();}
 	void remove_excess_cap() {if (20*vector<T>::size() < 19*vector<T>::capacity()) {vector<T>::shrink_to_fit();}}
 	void write(ostream &out) const;
@@ -368,7 +368,7 @@ public:
 	float get_prim_area(unsigned i, unsigned npts) const;
 	float calc_area(unsigned npts);
 	void get_polygons(get_polygon_args_t &args, unsigned npts) const;
-	unsigned get_gpu_mem() const {return (vntc_vect_t<T>::get_gpu_mem() + (this->ivbo_valid() ? indices.size()*sizeof(unsigned) : 0));}
+	size_t get_gpu_mem() const {return (vntc_vect_t<T>::get_gpu_mem() + (this->ivbo_valid() ? indices.size()*sizeof(unsigned) : 0));}
 	void invert_tcy();
 	void write(ostream &out) const;
 	void read(istream &in, unsigned npts);
@@ -387,7 +387,7 @@ template<typename T> struct vntc_vect_block_t : public deque<indexed_vntc_vect_t
 	void clear() {free_vbos(); deque<indexed_vntc_vect_t<T> >::clear();}
 	void free_vbos();
 	cube_t get_bcube() const;
-	unsigned get_gpu_mem() const;
+	size_t get_gpu_mem() const;
 	float calc_draw_order_score() const;
 	unsigned num_verts() const;
 	unsigned num_unique_verts() const;
@@ -413,7 +413,7 @@ template<typename T> struct geometry_t {
 	void render_blocks(shader_t &shader, bool is_shadow_pass, point const *const xlate, vntc_vect_block_t<T> &blocks, unsigned npts);
 	void render(shader_t &shader, bool is_shadow_pass, point const *const xlate);
 	bool empty() const {return (triangles.empty() && quads.empty());}
-	unsigned get_gpu_mem() const {return (triangles.get_gpu_mem() + quads.get_gpu_mem());}
+	size_t get_gpu_mem() const {return (triangles.get_gpu_mem() + quads.get_gpu_mem());}
 	unsigned add_triangles(vector<vert_norm_tc> const &verts, vector<unsigned> const &indices, bool add_new_block);
 	void add_poly_to_polys(polygon_t const &poly, vntc_vect_block_t<T> &v, vertex_map_t<T> &vmap, unsigned obj_id=0) const;
 	void add_poly(polygon_t const &poly, vertex_map_t<T> vmap[2], unsigned obj_id=0);
@@ -442,6 +442,7 @@ class texture_manager {
 		bool operator< (tex_work_item_t const &w) const {return ((tid == w.tid) ? (is_nm < w.is_nm) : (tid < w.tid));}
 		bool operator==(tex_work_item_t const &w) const {return (tid == w.tid && is_nm == w.is_nm);}
 	};
+	static size_t tot_textures, tot_gpu_mem, tot_cpu_mem; // summed across all texture managers
 protected:
 	deque<texture_t> textures;
 	string_map_t tex_map; // maps texture filenames to texture indexes
@@ -456,9 +457,10 @@ public:
 	void free_client_mem();
 	void remove_last_texture();
 	bool ensure_texture_loaded(int tid, bool is_bump);
+	void post_load_texture_from_memory(int tid);
 	void bind_alpha_channel_to_texture(int tid, int alpha_tid);
 	bool ensure_tid_loaded(int tid, bool is_bump) {return ((tid >= 0) ? ensure_texture_loaded(tid, is_bump) : 0);}
-	void ensure_tid_bound(int tid) {if (tid >= 0) {get_texture(tid).check_init();}} // if allocated
+	void ensure_tid_bound(int tid);
 	void add_work_item(int tid, bool is_nm);
 	void load_work_items_mt();
 	void bind_texture(int tid) const {get_texture(tid).bind_gl();}
@@ -468,8 +470,11 @@ public:
 	bool might_have_alpha_comp(int tid) const {return (tid >= 0 && get_texture(tid).ncolors == 4);}
 	texture_t const &get_texture(int tid) const;
 	texture_t &get_texture(int tid);
-	unsigned get_cpu_mem() const;
-	unsigned get_gpu_mem() const;
+	size_t get_cpu_mem() const;
+	size_t get_gpu_mem() const;
+	static size_t get_tot_textures() {return tot_textures;}
+	static size_t get_tot_gpu_mem () {return tot_gpu_mem ;}
+	static size_t get_tot_cpu_mem () {return tot_cpu_mem ;}
 };
 
 
@@ -607,7 +612,7 @@ public:
 	colorRGBA get_avg_color() const;
 	colorRGBA get_area_weighted_avg_color();
 	colorRGBA get_and_cache_avg_color(bool area_weighted=0);
-	unsigned get_gpu_mem() const;
+	size_t get_gpu_mem() const;
 	int get_material_ix(string const &material_name, string const &fn, bool okay_if_exists=0);
 	int find_material(string const &material_name);
 	void mark_mat_as_used(int mat_id);
@@ -702,7 +707,7 @@ struct model3ds : public deque<model3d> {
 	bool has_any_animations() const;
 	cube_t calc_and_return_bcube(bool only_reflective);
 	void get_all_model_bcubes(vector<cube_t> &bcubes) const;
-	unsigned get_gpu_mem() const;
+	size_t get_gpu_mem() const;
 	void build_cobj_trees(bool verbose);
 	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &color, bool exact, bool build_bvh_if_needed=0);
 	void write_to_cobj_file(std::ostream &out) const;
@@ -731,7 +736,7 @@ void render_models(int shadow_pass, int reflection_pass, int trans_op_mask=3, ve
 void ensure_model_reflection_cube_maps();
 void auto_calc_model_zvals();
 void get_cur_model_polygons(vector<coll_tquad> &ppts, model3d_xform_t const &xf=model3d_xform_t(), unsigned lod_level=0);
-unsigned get_loaded_models_gpu_mem();
+size_t get_loaded_models_gpu_mem();
 void get_cur_model_edges_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf);
 void get_cur_model_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf);
 bool add_transform_for_cur_model(model3d_xform_t const &xf);

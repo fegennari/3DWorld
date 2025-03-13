@@ -678,7 +678,7 @@ void smap_data_t::create_shadow_map_for_light(point const &lpos, cube_t const *c
 
 unsigned get_smap_bytes_per_pixel() {return smap_bytes_per_pixel;}
 
-unsigned smap_data_t::get_gpu_mem() const {
+size_t smap_data_t::get_gpu_mem() const {
 	if (!is_allocated()) return 0;
 	if (tex_arr)         return 0; // not tex_arr->gpu_mem, as this is shared across shadow maps and added once in local_smap_manager_t::get_gpu_mem()
 	return smap_bytes_per_pixel*smap_sz*smap_sz*(is_csm ? NUM_CSM_CASCADES : 1);

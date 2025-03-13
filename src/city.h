@@ -809,7 +809,7 @@ public:
 	bool empty() const {return cars.empty();}
 	void clear() {cars.clear(); car_blocks.clear();}
 	bool has_car_models() const {return !car_model_loader.empty();}
-	unsigned get_model_gpu_mem() const {return (car_model_loader.get_gpu_mem() + helicopter_model_loader.get_gpu_mem());}
+	size_t get_model_gpu_mem() const {return (car_model_loader.get_gpu_mem() + helicopter_model_loader.get_gpu_mem());}
 	void init_cars(unsigned num);
 	void add_parked_cars(vector<car_t> const &new_cars);
 	void finalize_cars();
@@ -952,7 +952,7 @@ public:
 	void next_animation();
 	static float get_ped_radius();
 	void clear() {peds.clear(); by_city.clear();}
-	unsigned get_model_gpu_mem() const {return ped_model_loader.get_gpu_mem();}
+	size_t get_model_gpu_mem() const {return ped_model_loader.get_gpu_mem();}
 	void init(unsigned num_city);
 	void maybe_reassign_models();
 	void maybe_reassign_building_models(building_t &building);

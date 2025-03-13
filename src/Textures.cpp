@@ -7,6 +7,7 @@
 #include "textures.h"
 #include "gl_ext_arb.h"
 #include "shaders.h"
+#include "model3d.h" // for texture_manager_t
 
 
 float const TEXTURE_SMOOTH        = 0.01;
@@ -219,7 +220,7 @@ void gen_wind_texture();
 void gen_noise_texture();
 void regrow_landscape_texture_amt0();
 void update_lt_section(int x1, int y1, int x2, int y2);
-unsigned get_building_textures_gpu_mem();
+size_t get_building_textures_gpu_mem();
 
 
 bool is_tex_disabled(int i) {
@@ -303,13 +304,13 @@ void load_textures() {
 }
 
 
-unsigned get_loaded_textures_cpu_mem() {
-	unsigned mem(0);
+size_t get_loaded_textures_cpu_mem() {
+	size_t mem(texture_manager::get_tot_cpu_mem());
 	for (texture_t const &t : textures) {mem += t.get_cpu_mem();}
 	return mem;
 }
-unsigned get_loaded_textures_gpu_mem() {
-	unsigned mem(get_building_textures_gpu_mem());
+size_t get_loaded_textures_gpu_mem() {
+	size_t mem(get_building_textures_gpu_mem() + texture_manager::get_tot_gpu_mem());
 	for (texture_t const &t : textures) {mem += t.get_gpu_mem();}
 	return mem;
 }
@@ -317,7 +318,7 @@ void print_texture_memory_usage() { // full cities scene: 142MB / 272MB (660MB u
 	cout << "Texture Memory: " << get_loaded_textures_cpu_mem() << " CPU / " << get_loaded_textures_gpu_mem() << " GPU" << endl;
 }
 void print_texture_stats() {
-	cout << "Textures: " << textures.size() << endl;
+	cout << "Textures: " << textures.size() << " shared + " << texture_manager::get_tot_textures() << " model" << endl;
 	print_texture_memory_usage();
 }
 

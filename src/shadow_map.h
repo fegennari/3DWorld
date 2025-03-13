@@ -57,7 +57,7 @@ struct smap_data_t : public smap_data_state_t { // used for all types of lights:
 	bool bind_smap_texture(bool light_valid=1) const;
 	void set_csm_matrices(shader_t &s) const;
 	void create_shadow_map_for_light(point const &lpos, cube_t const *const bounds=nullptr, bool use_world_space=0, bool no_update=0, bool force_update=0);
-	unsigned get_gpu_mem() const;
+	size_t get_gpu_mem() const;
 	virtual void render_scene_shadow_pass(point const &lpos) = 0;
 	virtual bool needs_update(point const &lpos);
 	virtual bool is_local() const {return 0;} // for debugging only

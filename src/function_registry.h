@@ -377,7 +377,7 @@ bool tile_contains_tunnel(cube_t const &bcube);
 void destroy_city_in_radius(point const &pos, float radius);
 bool get_city_color_at_xy(float x, float y, colorRGBA &color);
 void set_city_lighting_shader_opts(shader_t &s, cube_t const &lights_bcube, bool use_dlights, bool use_smap, float pcf_scale=1.0);
-unsigned get_city_model_gpu_mem();
+size_t get_city_model_gpu_mem();
 cube_t get_city_lights_bcube();
 void next_pedestrian_animation();
 void free_city_context();
@@ -609,8 +609,8 @@ void update_water_zval(int x, int y, float old_mh);
 // function prototypes - textures
 void load_texture_names();
 void load_textures();
-unsigned get_loaded_textures_cpu_mem();
-unsigned get_loaded_textures_gpu_mem();
+size_t get_loaded_textures_cpu_mem();
+size_t get_loaded_textures_gpu_mem();
 int texture_lookup(std::string const &name);
 int get_texture_by_name(std::string const &name, bool is_normal_map=0, bool invert_y=0, int wrap_mir=1, float aniso=0.0,
 	bool allow_compress=1, int use_mipmaps=1, unsigned ncolors=3, bool is_alpha_mask=0);
@@ -1025,7 +1025,7 @@ void get_building_bcubes(cube_t const &xy_range, vect_cube_with_ix_t &bcubes);
 void get_building_power_points(cube_t const &xy_range, vector<point> &ppts);
 bool get_buildings_line_hit_color(point const &p1, point const &p2, colorRGBA &color);
 bool have_buildings();
-unsigned get_buildings_gpu_mem_usage();
+size_t get_buildings_gpu_mem_usage();
 vector3d get_buildings_max_extent();
 void clear_building_vbos();
 int create_buildings_tile(int x, int y, bool allow_flatten);

@@ -69,7 +69,7 @@ colorRGBA get_tree_trunk_color(int type, bool modulate_with_texture) {
 	return c;
 }
 
-unsigned get_tree_inst_gpu_mem() {return tree_instances.get_gpu_mem();}
+size_t get_tree_inst_gpu_mem() {return tree_instances.get_gpu_mem();}
 
 
 void small_tree_group::add_tree(small_tree const &st) {

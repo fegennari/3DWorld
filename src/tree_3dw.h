@@ -345,7 +345,7 @@ public:
 	void ensure_init();
 	void clear_context();
 	void on_leaf_color_change();
-	unsigned get_gpu_mem() const;
+	size_t get_gpu_mem() const;
 };
 
 
@@ -380,7 +380,7 @@ public:
 	void calc_bcube();
 	void clear_context();
 	void clear() {delete_all(); vector<tree>::clear();}
-	unsigned get_gpu_mem() const;
+	size_t get_gpu_mem() const;
 	float get_rmax() const;
 	unsigned get_closest_tree_type(point const &pos) const;
 	void update_zmax(float &tzmax) const;

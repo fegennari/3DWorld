@@ -2387,15 +2387,15 @@ void tree_data_manager_t::on_leaf_color_change() {
 	for (iterator i = begin(); i != end(); ++i) {i->on_leaf_color_change();}
 }
 
-unsigned tree_data_manager_t::get_gpu_mem() const {
-	unsigned mem(0);
+size_t tree_data_manager_t::get_gpu_mem() const {
+	size_t mem(0);
 	for (const_iterator i = begin(); i != end(); ++i) {mem += i->get_gpu_mem();}
 	return mem;
 }
 
 
-unsigned tree_cont_t::get_gpu_mem() const {
-	unsigned mem(0);
+size_t tree_cont_t::get_gpu_mem() const {
+	size_t mem(0);
 	for (const_iterator i = begin(); i != end(); ++i) {mem += i->get_gpu_mem();}
 	return mem;
 }

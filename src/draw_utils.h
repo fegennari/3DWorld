@@ -207,7 +207,7 @@ public:
 	void swap_points(vector<vert_type_t> &other_pts) {pts.swap(other_pts);}
 	vector<vert_type_t> &get_pts_vector_for_adding() {return pts;}
 	void clear(bool free_pts_mem=1);
-	unsigned get_gpu_mem() const {return ((vbo_valid() && has_data()) ? offsets.back()*sizeof(vert_type_t) : 0);}
+	size_t get_gpu_mem() const {return ((vbo_valid() && has_data()) ? offsets.back()*sizeof(vert_type_t) : 0);}
 };
 
 

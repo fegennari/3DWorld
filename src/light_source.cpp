@@ -481,8 +481,8 @@ public:
 		smap_data.clear();
 		free_list.clear();
 	}
-	unsigned get_gpu_mem() const {
-		unsigned mem(0);
+	size_t get_gpu_mem() const {
+		size_t mem(0);
 		for (auto &i : smap_data) {mem += i.get_gpu_mem();}
 		return mem + smap_tex_arr.gpu_mem;
 	}
@@ -494,8 +494,8 @@ local_smap_manager_t local_smap_manager[NUM_SMAP_MGRS]; // {normal/city, buildin
 void free_light_source_gl_state() { // free shadow maps
 	for (unsigned i = 0; i < NUM_SMAP_MGRS; ++i) {local_smap_manager[i].free_gl_state();}
 }
-unsigned get_dlights_smap_gpu_mem() {
-	unsigned mem(0);
+size_t get_dlights_smap_gpu_mem() {
+	size_t mem(0);
 	for (unsigned i = 0; i < NUM_SMAP_MGRS; ++i) {mem += local_smap_manager[i].get_gpu_mem();}
 	return mem;
 }

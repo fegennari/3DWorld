@@ -283,11 +283,6 @@ class file_reader_assimp {
 	vector<texture_load_work_item_t> to_load;
 	set<unsigned> unique_tids;
 
-	static void init_texture(texture_t &t) { // called on internal texture formats; what about external textures, do we need expand_grayscale_to_rgb()?
-		t.expand_grayscale_to_rgb();
-		t.fix_word_alignment(); // untested
-		t.init(); // calls calc_color()
-	}
 	void load_embedded_textures() {
 		timer_t timer("Load Embedded Textures", !to_load.empty()); // 1.57s (0.55s) avg across 5 people and 5 zombie models
 
@@ -302,7 +297,7 @@ class file_reader_assimp {
 			}
 			//if (model.get_filename() == "../models/dumpster.glb" && !t.normal_map && t.ncolors == 3) {t.write_to_jpg("embedded_image.jpg");} // TESTING
 			//cout << "*** " << TXT(model.get_filename()) << TXT(t.name) << TXT(t.width) << TXT(t.height) << TXT(t.ncolors) << endl; // TESTING
-			init_texture(t);
+			model.tmgr.post_load_texture_from_memory(wi.tid);
 		} // for i
 		to_load.clear();
 	}
@@ -357,7 +352,7 @@ class file_reader_assimp {
 					tdata[4*i+2] = texture->pcData[i].b;
 					tdata[4*i+3] = texture->pcData[i].a;
 				}
-				init_texture(t);
+				model.tmgr.post_load_texture_from_memory(tid);
 				return tid; // done
 			}
 			// else texture stored compressed

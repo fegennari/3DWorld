@@ -57,6 +57,10 @@ void draw_transparent_city_bldg_geom(int reflection_pass, vector3d const &xlate)
 
 // ************ texture_manager ************
 
+size_t texture_manager::tot_textures = 0;
+size_t texture_manager::tot_gpu_mem  = 0;
+size_t texture_manager::tot_cpu_mem  = 0;
+
 unsigned texture_manager::create_texture(string const &fn, bool is_alpha_mask, bool verbose, bool invert_alpha,
 	bool wrap, bool mirror, bool force_grayscale, bool is_nm, bool invert_y, bool no_cache, bool load_now)
 {
@@ -82,28 +86,35 @@ unsigned texture_manager::create_texture(string const &fn, bool is_alpha_mask, b
 	textures.emplace_back(0, IMG_FMT_AUTO, 0, 0, (mirror ? 2 : (wrap ? 1 : 0)), ncolors, use_mipmaps, fn, invert_y, compress, model3d_texture_anisotropy, 1.0, is_nm);
 	textures.back().invert_alpha = invert_alpha;
 	if (load_now) {ensure_texture_loaded(tid, is_nm);} // must load temp images now
+	++tot_textures;
 	return tid; // can't fail
 }
 
 void texture_manager::clear() {
+	tot_textures -= textures.size();
 	free_textures();
 	textures.clear();
 	tex_map.clear();
 }
-
 void texture_manager::free_tids() {
-	for (auto &t : textures) {t.gl_delete();}
+	for (auto &t : textures) {tot_gpu_mem -= t.get_gpu_mem(); t.gl_delete();}
 }
 void texture_manager::free_textures() {
-	for (auto &t : textures) {t.free_data();}
+	free_tids();
+	free_client_mem();
 }
 void texture_manager::free_client_mem() { // Note: should not be called if model textures can overlap with predefined textures
-	for (auto &t : textures) {t.free_client_mem();}
+	for (auto &t : textures) {tot_cpu_mem -= t.get_cpu_mem(); t.free_client_mem();}
 }
 
 void texture_manager::remove_last_texture() {
 	assert(!textures.empty());
-	tex_map.erase(textures.back().name);
+	texture_t &t(textures.back());
+	assert(!t.is_bound());
+	tot_cpu_mem -= t.get_cpu_mem();
+	--tot_textures;
+	t.free_client_mem(); // should not be allocated?
+	tex_map.erase(t.name);
 	textures.pop_back();
 }
 
@@ -117,6 +128,7 @@ bool texture_manager::ensure_texture_loaded(int tid, bool is_bump) {
 	// but that's okay, do_gl_init() will disable custom mipmaps for textures with color.A == 1.0
 	if (use_model3d_tex_mipmaps && enable_model3d_custom_mipmaps /*&& t.has_alpha()*/) {t.use_mipmaps = 4;}
 	t.load(-1);
+	assert(t.is_loaded());
 		
 	if (t.alpha_tid >= 0 && t.alpha_tid != tid) { // if alpha is the same texture then the alpha channel should already be set
 		ensure_tid_loaded(t.alpha_tid, 0);
@@ -124,8 +136,17 @@ bool texture_manager::ensure_texture_loaded(int tid, bool is_bump) {
 	}
 	if (is_bump && t.ncolors == 1) {t.make_normal_map();} // make RGB normal map from grayscale bump map
 	t.init(); // must be after alpha copy
-	assert(t.is_loaded());
+	tot_cpu_mem += t.get_cpu_mem(); // not thread safe?
 	return 1;
+}
+
+void texture_manager::post_load_texture_from_memory(int tid) { // called on internal texture formats; what about external textures, do we need expand_grayscale_to_rgb()?
+	texture_t &t(get_texture(tid));
+	assert(t.is_loaded());
+	t.expand_grayscale_to_rgb();
+	t.fix_word_alignment(); // untested
+	t.init(); // calls calc_color()
+	tot_cpu_mem += t.get_cpu_mem(); // not thread safe?
 }
 
 void texture_manager::bind_alpha_channel_to_texture(int tid, int alpha_tid) {
@@ -141,6 +162,14 @@ void texture_manager::bind_alpha_channel_to_texture(int tid, int alpha_tid) {
 	t.alpha_tid = alpha_tid;
 	t.ncolors   = 4; // add alpha channel
 	if (t.use_mipmaps) {t.use_mipmaps = 3;} // generate custom alpha mipmaps
+}
+
+void texture_manager::ensure_tid_bound(int tid) { // if allocated
+	if (tid < 0) return; // not setup
+	texture_t &t(get_texture(tid));
+	if (t.is_bound()) return; // already updated
+	t.check_init();
+	tot_gpu_mem += t.get_gpu_mem();
 }
 
 void texture_manager::add_work_item(int tid, bool is_nm) {
@@ -171,13 +200,13 @@ texture_t &texture_manager::get_texture(int tid) {
 	return textures[tid]; // local textures lookup
 }
 
-unsigned texture_manager::get_cpu_mem() const {
-	unsigned mem(0);
+size_t texture_manager::get_cpu_mem() const {
+	size_t mem(0);
 	for (auto t = textures.begin(); t != textures.end(); ++t) {mem += t->get_cpu_mem();}
 	return mem;
 }
-unsigned texture_manager::get_gpu_mem() const {
-	unsigned mem(0);
+size_t texture_manager::get_gpu_mem() const {
+	size_t mem(0);
 	for (auto t = textures.begin(); t != textures.end(); ++t) {mem += t->get_gpu_mem();}
 	return mem;
 }
@@ -1068,8 +1097,8 @@ template<typename T> cube_t vntc_vect_block_t<T>::get_bcube() const {
 	return bcube;
 }
 
-template<typename T> unsigned vntc_vect_block_t<T>::get_gpu_mem() const {
-	unsigned mem(0);
+template<typename T> size_t vntc_vect_block_t<T>::get_gpu_mem() const {
+	size_t mem(0);
 	for (auto i = begin(); i != end(); ++i) {mem += i->get_gpu_mem();}
 	return mem;
 }
@@ -1802,8 +1831,8 @@ colorRGBA model3d::get_and_cache_avg_color(bool area_weighted) {
 	return cached_avg_color;
 }
 
-unsigned model3d::get_gpu_mem() const {
-	unsigned mem(unbound_geom.get_gpu_mem());
+size_t model3d::get_gpu_mem() const {
+	size_t mem(unbound_geom.get_gpu_mem());
 	for (auto m = materials.begin(); m != materials.end(); ++m) {mem += m->get_gpu_mem();}
 	return mem;
 }
@@ -2843,8 +2872,8 @@ void model3ds::get_all_model_bcubes(vector<cube_t> &bcubes) const {
 	for (const_iterator m = begin(); m != end(); ++m) {m->get_transformed_bcubes(bcubes);}
 }
 
-unsigned model3ds::get_gpu_mem() const {
-	unsigned mem(tmgr.get_gpu_mem());
+size_t model3ds::get_gpu_mem() const {
+	size_t mem(tmgr.get_gpu_mem());
 	for (const_iterator m = begin(); m != end(); ++m) {mem += m->get_gpu_mem();}
 	return mem;
 }
@@ -2921,7 +2950,7 @@ void get_cur_model_polygons(vector<coll_tquad> &ppts, model3d_xform_t const &xf,
 	PRINT_TIME("Create and Xform Model3d Polygons");
 }
 
-unsigned get_loaded_models_gpu_mem() {return all_models.get_gpu_mem();}
+size_t get_loaded_models_gpu_mem() {return all_models.get_gpu_mem();}
 
 cube_t get_polygons_bcube(vector<coll_tquad> const &ppts) {
 

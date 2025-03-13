@@ -2737,7 +2737,8 @@ void building_t::write_basement_entrance_depth_pass(shader_t &s) const {
 class building_creator_t {
 
 	bool use_smap_this_frame=0, has_interior_geom=0, is_city=0, vbos_created=0, has_room_geom=0;
-	unsigned grid_sz=1, gpu_mem_usage=0;
+	unsigned grid_sz=1;
+	size_t gpu_mem_usage=0;
 	vector3d range_sz, range_sz_inv, max_extent;
 	cube_t range, buildings_bcube;
 	rand_gen_t rgen, ai_rgen;
@@ -2932,7 +2933,7 @@ public:
 		gpu_mem_usage = 0;
 	}
 	unsigned get_num_buildings() const {return buildings.size();}
-	unsigned get_gpu_mem_usage() const {return gpu_mem_usage;}
+	size_t   get_gpu_mem_usage() const {return gpu_mem_usage;}
 	vector3d const &get_max_extent() const {return max_extent;}
 	building_t const &get_building(unsigned ix) const {assert(ix < buildings.size()); return buildings[ix];}
 	building_t       &get_building(unsigned ix)       {assert(ix < buildings.size()); return buildings[ix];} // non-const version; not intended to be used to change geometry
@@ -5242,8 +5243,8 @@ public:
 		for (auto i = tiles.begin(); i != tiles.end(); ++i) {num += i->second.get_num_buildings();}
 		return num;
 	}
-	unsigned get_gpu_mem_usage() const {
-		unsigned mem(0);
+	size_t get_gpu_mem_usage() const {
+		size_t mem(0);
 		for (auto i = tiles.begin(); i != tiles.end(); ++i) {mem += i->second.get_gpu_mem_usage();}
 		return mem;
 	}
@@ -5380,7 +5381,7 @@ bool have_city_buildings() {return !building_creator_city.empty();}
 bool have_secondary_buildings() {return (global_building_params.add_secondary_buildings && global_building_params.num_place > 0);}
 bool have_buildings() {return (!building_creator.empty() || !building_creator_city.empty() || !building_tiles.empty());} // for postproc effects
 bool no_grass_under_buildings() {return (world_mode == WMODE_INF_TERRAIN && !(building_creator.empty() && building_tiles.empty()) && global_building_params.flatten_mesh);}
-unsigned get_buildings_gpu_mem_usage() {return (building_creator.get_gpu_mem_usage() + building_creator_city.get_gpu_mem_usage() + building_tiles.get_gpu_mem_usage());}
+size_t get_buildings_gpu_mem_usage() {return (building_creator.get_gpu_mem_usage() + building_creator_city.get_gpu_mem_usage() + building_tiles.get_gpu_mem_usage());}
 void add_city_building_signs(cube_t const &region_bcube, vector<sign_t     > &signs) {building_creator_city.add_building_signs(region_bcube, signs);}
 void add_city_building_flags(cube_t const &region_bcube, vector<city_flag_t> &flags) {building_creator_city.add_building_flags(region_bcube, flags);}
 

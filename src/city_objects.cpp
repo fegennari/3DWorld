@@ -19,7 +19,7 @@ unsigned const q2t_ixs[6] = {0,2,1,0,3,2}; // quad => 2 tris
 bool do_line_clip_xy(point &v1, point &v2, float const d[3][2]);
 
 float get_power_pole_offset() {return 0.045*city_params.road_width;}
-unsigned get_building_models_gpu_mem() {return building_obj_model_loader.get_gpu_mem();}
+size_t get_building_models_gpu_mem() {return building_obj_model_loader.get_gpu_mem();}
 int get_solarp_tid();
 bool is_pants_model(unsigned model_id);
 bool is_shirt_model(unsigned model_id);
