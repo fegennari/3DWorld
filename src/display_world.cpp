@@ -51,6 +51,7 @@ extern bool can_do_building_action, enable_tt_model_indir, pre_load_full_tiled_t
 extern unsigned inf_terrain_fire_mode, reflection_tid;
 extern int auto_time_adv, camera_flight, reset_timing, run_forward, window_width, window_height, voxel_editing, UNLIMITED_WEAPONS, player_in_basement;
 extern int advanced, b2down, dynamic_mesh_scroll, spectate, animate2, used_objs, disable_inf_terrain, DISABLE_WATER, can_pickup_bldg_obj, player_in_water;
+extern int program_start_time;
 extern float TIMESTEP, NEAR_CLIP, FAR_CLIP, cloud_cover, univ_sun_rad, atmosphere, vegetation, zmin, zbottom, ztop, ocean_wave_height, brightness;
 extern float def_atmosphere, def_vegetation, clip_plane_z, ambient_scale, sunlight_brightness, moonlight_brightness;
 extern point mesh_origin, surface_pos, univ_sun_pos, orig_cdir, sun_pos, moon_pos, debug_event_pos;
@@ -800,6 +801,7 @@ void display() {
 		start_maximized = 0;
 		return;
 	}
+	if (frame_counter == 2) {cout << "Time to first completed frame: " << (GET_TIME_MS() - program_start_time) << endl;} // 17s for config_heightmap
 	RESET_TIME;
 	static int init(0), tticks(0);
 	static point old_spos(0.0, 0.0, 0.0);
