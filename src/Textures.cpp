@@ -547,15 +547,12 @@ void texture_t::do_gl_init(bool free_after_upload) {
 		assert(width > 0 && height > 0);
 		bool const compressed(is_texture_compressed()), use_custom_compress(USE_STB_DXT && compressed && (ncolors == 3 || ncolors == 4));
 
-		if (use_custom_compress) {compress_and_send_texture();} // compressed RGB or RGBA
+		if (use_custom_compress) {compress_and_send_texture();} // compressed RGB or RGBA + mipmaps
 		else { // font atlas and noise gen texture
-			glTexImage2D(GL_TEXTURE_2D, 0, calc_internal_format(), width, height, 0, calc_format(), get_data_format(), data);
+			glTexImage2D(GL_TEXTURE_2D, 0, calc_internal_format(), width, height, 0, calc_format(), get_data_format(), data); // 44ms
 		}
-		if (use_mipmaps == 1 || use_mipmaps == 2) {
-			if (use_custom_compress) {create_compressed_mipmaps();}
-			else {gen_mipmaps();}
-		}
-		else if (use_mipmaps == 3 || use_mipmaps == 4) {create_custom_mipmaps();}
+		if ((use_mipmaps == 1 || use_mipmaps == 2) && !use_custom_compress) {gen_mipmaps();} // Note: compressed mipmaps are created insie compress_and_send_texture()
+		else if (use_mipmaps == 3 || use_mipmaps == 4) {create_custom_mipmaps();} // for compressed and non-compressed textures
 	}
 	if (free_after_upload) {free_client_mem();}
 }

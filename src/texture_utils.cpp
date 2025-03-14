@@ -41,37 +41,37 @@ void dxt_texture_compress(uint8_t const *const data, vector<uint8_t> &comp_data,
 }
 
 void texture_t::compress_and_send_texture() {
-	//highres_timer_t timer("compress_and_send_texture", 1, 1); // enabled, no loading screen; 680ms
+	//highres_timer_t timer("compress_and_send_texture", 1, 1); // enabled, no loading screen
 	vector<uint8_t> comp_data; // reuse across calls doesn't seem to help much
-	dxt_texture_compress(data, comp_data, width, height, ncolors);
-	GL_CHECK(glCompressedTexImage2D(GL_TEXTURE_2D, 0, calc_internal_format(), width, height, 0, comp_data.size(), comp_data.data());)
-}
+	dxt_texture_compress(data, comp_data, width, height, ncolors); // 640ms
+	GL_CHECK(glCompressedTexImage2D(GL_TEXTURE_2D, 0, calc_internal_format(), width, height, 0, comp_data.size(), comp_data.data());); // 36ms
 
-void texture_t::create_compressed_mipmaps() {
-	//highres_timer_t timer("create_compressed_mipmaps", 1, 1); // enabled, no loading screen; 1350ms total for city + cars + people
-	assert(is_allocated());
-	vector<uint8_t> idatav, odata, comp_data; // reuse across calls doesn't seem to help much
+	if (use_mipmaps == 1 || use_mipmaps == 2) { // normal mipmaps
+		//highres_timer_t timer("create_compressed_mipmaps", 1, 1); // enabled, no loading screen; 1350ms total for city + cars + people
+		assert(is_allocated());
+		vector<uint8_t> idatav, odata; // reuse across calls doesn't seem to help much
 
-	for (unsigned w = width, h = height, level = 1; w > 1 || h > 1; w >>= 1, h >>= 1, ++level) {
-		unsigned const w1(max(w, 1U)), h1(max(h, 1U)), w2(max(w>>1, 1U)), h2(max(h>>1, 1U));
-		unsigned const xinc((w2 < w1) ? ncolors : 0), yinc((h2 < h1) ? ncolors*w1 : 0);
-		uint8_t const *const idata((level == 1) ? data : idatav.data());
-		odata.resize(ncolors*w2*h2);
+		for (unsigned w = width, h = height, level = 1; w > 1 || h > 1; w >>= 1, h >>= 1, ++level) {
+			unsigned const w1(max(w, 1U)), h1(max(h, 1U)), w2(max(w>>1, 1U)), h2(max(h>>1, 1U));
+			unsigned const xinc((w2 < w1) ? ncolors : 0), yinc((h2 < h1) ? ncolors*w1 : 0);
+			uint8_t const *const idata((level == 1) ? data : idatav.data());
+			odata.resize(ncolors*w2*h2);
 
 #pragma omp parallel for schedule(static)
-		for (int y = 0; y < (int)h2; ++y) { // simple 2x2 box filter
-			for (int x = 0; x < (int)w2; ++x) {
-				unsigned const ix1(ncolors*(y*w2+x)), ix2(ncolors*((y<<1)*w1+(x<<1)));
+			for (int y = 0; y < (int)h2; ++y) { // simple 2x2 box filter
+				for (int x = 0; x < (int)w2; ++x) {
+					unsigned const ix1(ncolors*(y*w2+x)), ix2(ncolors*((y<<1)*w1+(x<<1)));
 
-				for (int n = 0; n < ncolors; ++n) {
-					odata[ix1+n] = uint8_t(((unsigned)idata[ix2+n] + idata[ix2+xinc+n] + idata[ix2+yinc+n] + idata[ix2+yinc+xinc+n]) >> 2);
+					for (int n = 0; n < ncolors; ++n) {
+						odata[ix1+n] = uint8_t(((unsigned)idata[ix2+n] + idata[ix2+xinc+n] + idata[ix2+yinc+n] + idata[ix2+yinc+xinc+n]) >> 2);
+					}
 				}
 			}
-		}
-		dxt_texture_compress(odata.data(), comp_data, w2, h2, ncolors);
-		GL_CHECK(glCompressedTexImage2D(GL_TEXTURE_2D, level, calc_internal_format(), w2, h2, 0, comp_data.size(), comp_data.data());)
-		idatav.swap(odata);
-	} // for level
+			dxt_texture_compress(odata.data(), comp_data, w2, h2, ncolors);
+			GL_CHECK(glCompressedTexImage2D(GL_TEXTURE_2D, level, calc_internal_format(), w2, h2, 0, comp_data.size(), comp_data.data());); // 660ms
+			idatav.swap(odata);
+		} // for level
+	}
 }
 
 void texture_t::create_custom_mipmaps() { // 350ms total for city + cars + people
@@ -125,9 +125,9 @@ void texture_t::create_custom_mipmaps() { // 350ms total for city + cars + peopl
 		} // for y
 		if (is_texture_compressed()) { // uses stb
 			dxt_texture_compress(odata.data(), comp_data, w2, h2, ncolors);
-			GL_CHECK(glCompressedTexImage2D(GL_TEXTURE_2D, level, calc_internal_format(), w2, h2, 0, comp_data.size(), comp_data.data());)
+			GL_CHECK(glCompressedTexImage2D(GL_TEXTURE_2D, level, calc_internal_format(), w2, h2, 0, comp_data.size(), comp_data.data());) // 140ms
 		}
-		else {
+		else { // 10ms
 			glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // needed for mipmap levels where width*ncolors is not aligned
 			glTexImage2D(GL_TEXTURE_2D, level, calc_internal_format(), w2, h2, 0, calc_format(), get_data_format(), odata.data());
 			glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
