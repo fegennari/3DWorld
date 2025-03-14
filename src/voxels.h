@@ -14,47 +14,40 @@ enum {VB_SHAPE_CUBE=0, VB_SHAPE_CONSTANT, VB_SHAPE_LINEAR, VB_SHAPE_QUADRATIC, N
 struct voxel_params_t {
 
 	// generation parameters
-	unsigned xsize, ysize, zsize, num_blocks; // num_blocks is in x and y
-	float isolevel, elasticity, mag, freq, atten_thresh, tex_scale, noise_scale, noise_freq, tex_mix_saturate, z_gradient, height_eval_freq, radius_val;
-	float ao_radius, ao_weight_scale, ao_atten_power, spec_mag, spec_exp;
-	bool make_closed_surface, invert, remove_under_mesh, add_cobjs, normalize_to_1, top_tex_used, detail_normal_map;
-	unsigned remove_unconnected; // 0=never, 1=init only, 2=always, 3=always, including interior holes
-	unsigned atten_at_edges; // 0=no atten, 1=top only, 2=all 5 edges (excludes the bottom), 3=sphere (outer), 4=sphere (inner and outer), 5=sphere (inner and outer, excludes the bottom)
-	unsigned keep_at_scene_edge; // 0=don't keep, 1=always keep, 2=only when scrolling
-	unsigned atten_top_mode; // 0=constant, 1=current mesh, 2=2d surface mesh
-	unsigned enable_falling; // 0=never, 1=edit mode only, 2=game mode only, 3=always
-	int geom_rseed;
+	unsigned xsize=0, ysize=0, zsize=0, num_blocks=12; // num_blocks is in x and y
+	float isolevel=0, elasticity=0.5, mag=1.0, freq=1.0, atten_thresh=1.0, tex_scale=1.0, noise_scale=0.1, noise_freq=1.0;
+	float tex_mix_saturate=5.0, z_gradient=0.0, height_eval_freq=1.0, radius_val=0.5;
+	float ao_radius=1.0, ao_weight_scale=2.0, ao_atten_power=1.0, spec_mag=0.0, spec_exp=1.0;
+	bool make_closed_surface=1, invert=0, remove_under_mesh=0, add_cobjs=1, normalize_to_1=1, top_tex_used=0, detail_normal_map=1;
+	unsigned remove_unconnected=1; // 0=never, 1=init only, 2=always, 3=always, including interior holes
+	unsigned atten_at_edges=0; // 0=no atten, 1=top only, 2=all 5 edges (excludes the bottom), 3=sphere (outer), 4=sphere (inner and outer), 5=sphere (inner and outer, excludes the bottom)
+	unsigned keep_at_scene_edge=0; // 0=don't keep, 1=always keep, 2=only when scrolling
+	unsigned atten_top_mode=0; // 0=constant, 1=current mesh, 2=2d surface mesh
+	unsigned enable_falling=1; // 0=never, 1=edit mode only, 2=game mode only, 3=always
+	int geom_rseed=123;
 	
 	// rendering parameters
-	int texture_rseed;
-	unsigned tids[3];
+	int texture_rseed=321;
+	unsigned tids[3]={};
 	colorRGBA colors[2];
-	colorRGBA base_color;
+	colorRGBA base_color=WHITE;
 
-	voxel_params_t() : xsize(0), ysize(0), zsize(0), num_blocks(12), isolevel(0.0), elasticity(0.5), mag(1.0), freq(1.0), atten_thresh(1.0), tex_scale(1.0), noise_scale(0.1),
-		noise_freq(1.0), tex_mix_saturate(5.0), z_gradient(0.0), height_eval_freq(1.0), radius_val(0.5), ao_radius(1.0), ao_weight_scale(2.0), ao_atten_power(1.0),
-		spec_mag(0.0), spec_exp(1.0), make_closed_surface(1), invert(0), remove_under_mesh(0), add_cobjs(1), normalize_to_1(1), top_tex_used(0), detail_normal_map(1),
-		remove_unconnected(1), atten_at_edges(0), keep_at_scene_edge(0), atten_top_mode(0), enable_falling(1), geom_rseed(123), texture_rseed(321), base_color(WHITE)
-	{
-			tids[0] = tids[1] = tids[2] = 0; colors[0] = colors[1] = WHITE;
-	}
+	voxel_params_t() {colors[0] = colors[1] = WHITE;}
 	bool atten_sphere_mode() const {return (atten_at_edges >= 3 && atten_at_edges <= 4);}
 };
 
 
 struct voxel_brush_params_t {
 
-	int shape, weight_exp;
-	unsigned delay, radius;
-	float weight_scale;
+	int shape=VB_SHAPE_LINEAR, weight_exp=0;
+	unsigned delay=0, radius=1;
+	float weight_scale=1.0;
 
-	voxel_brush_params_t() : shape(VB_SHAPE_LINEAR), weight_exp(0), delay(0), radius(1), weight_scale(1.0) {}
 	float get_world_space_radius() const;
 	void draw(point const &pos) const;
 };
 
 struct voxel_brush_t : public voxel_brush_params_t {
-
 	point pos;
 
 	voxel_brush_t() {}
@@ -66,10 +59,8 @@ class voxel_query_tree {
 
 	template <typename T> struct bvh_tree_group : public vector<T> {
 
-		bool bcube_valid;
+		bool bcube_valid=0;
 		cube_t bcube;
-
-		bvh_tree_group() : bcube_valid(0) {}
 		
 		bool get_root_bcube(cube_t &bc) const {
 			if (bcube_valid) {bc = bcube;}
@@ -91,11 +82,9 @@ class voxel_query_tree {
 	struct bvh_tree_row : public bvh_tree_group<cobj_bvh_tree> {
 		void init(coll_obj_group const *cobjs, unsigned sz);
 	};
-
 	struct bvh_tree_matrix : public bvh_tree_group<bvh_tree_row> {
 		void init(coll_obj_group const *cobjs, unsigned sz, unsigned row_sz);
 	};
-
 	coll_obj_group const *cobjs;
 	bvh_tree_matrix tree_matrix;
 
@@ -117,7 +106,7 @@ public:
 template<typename V> class voxel_grid : public vector<V> {
 	void init_grid(unsigned nx_, unsigned ny_, unsigned nz_, V default_val, unsigned num_blocks);
 public:
-	unsigned nx, ny, nz, xblocks, yblocks;
+	unsigned nx=0, ny=0, nz=0, xblocks=0, yblocks=0;
 	vector3d vsz; // size of a voxel in x,y,z
 	point center, lo_pos;
 
@@ -131,7 +120,6 @@ public:
 	using vector<V>::end;
 	using vector<V>::front;
 
-	voxel_grid() : nx(0), ny(0), nz(0), xblocks(0), yblocks(0), vsz(zero_vector) {}
 	void init(unsigned nx_, unsigned ny_, unsigned nz_, vector3d const &vsz_, point const &center_, V const &default_val, unsigned num_blocks=1);
 	void init(unsigned nx_, unsigned ny_, unsigned nz_, cube_t const &bcube, V const &default_val, unsigned num_blocks=1);
 	void init_from_heightmap(float **height, unsigned mesh_nx, unsigned mesh_ny, unsigned zsteps, float mesh_xsize, float mesh_ysize, unsigned num_blocks=1, bool invert=0);
@@ -171,7 +159,7 @@ typedef voxel_grid<float> float_voxel_grid;
 class voxel_manager : public float_voxel_grid {
 
 protected:
-	bool use_mesh;
+	bool use_mesh=0;
 	voxel_params_t params;
 	voxel_grid<unsigned char> outside;
 	vector<unsigned> temp_work; // used in remove_unconnected_outside_range()/flood_fill()
@@ -227,11 +215,9 @@ public:
 
 class noise_texture_manager_t {
 
-	unsigned noise_tid, tsize;
+	unsigned noise_tid=0, tsize=0;
 	voxel_manager voxels;
-
 public:
-	noise_texture_manager_t() : noise_tid(0), tsize(0) {}
 	void make_private_copy() {noise_tid = 0;} // Note: to be called *only* after a deep copy
 	void procedural_gen(unsigned size, int rseed=321, float mag=1.0, float freq=1.0, vector3d const &offset=zero_vector);
 	void ensure_tid();
@@ -244,7 +230,7 @@ public:
 class voxel_model : public voxel_manager {
 
 protected:
-	bool volume_added;
+	bool volume_added=0;
 	vector<tri_data_t> tri_data; // one per LOD level
 	noise_texture_manager_t *noise_tex_gen;
 	std::set<unsigned> modified_blocks, next_frame_modified_blocks;
@@ -260,12 +246,10 @@ protected:
 	vector<vector<pt_ix_t> > pt_to_ix;
 
 	struct merge_vn_t {
-		vertex_type_t *vn[4];
-		unsigned num;
+		vertex_type_t *vn[4]={};
+		unsigned num=0;
 		vector3d normal;
 
-		merge_vn_t() : num(0), normal(zero_vector) {vn[0] = vn[1] = vn[2] = vn[3] = NULL;}
-		//void add   (vertex_type_t &v) {assert(num < 4); vn[num++] = &v;}
 		void add   (vertex_type_t &v) {if (num < 4) {vn[num++] = &v;}} // allow degenerate vertices where more than 4 quads meet
 		void update(vertex_type_t &v) {if (normal == zero_vector) {normal = v.n;} else {v.n = normal;}}
 		void finalize();
@@ -324,7 +308,7 @@ public:
 
 class voxel_model_ground : public voxel_model {
 
-	bool add_cobjs, add_as_fixed;
+	bool add_cobjs=0, add_as_fixed=0;
 	noise_texture_manager_t private_ntg;
 	voxel_query_tree cobj_tree;
 
@@ -358,7 +342,6 @@ public:
 class voxel_model_rock : public voxel_model {
 
 	virtual void calc_ao_lighting_for_block(unsigned block_ix, bool increase_only) {} // do nothing
-
 public:
 	voxel_model_rock(noise_texture_manager_t *ntg, unsigned num_lod_levels) : voxel_model(ntg, 0, num_lod_levels) {}
 	void build(bool verbose) {voxel_model::build(verbose, 0);}
@@ -367,7 +350,7 @@ public:
 
 class voxel_model_space : public voxel_model {
 
-	unsigned ao_tid, shadow_tid;
+	unsigned ao_tid=0, shadow_tid=0;
 	vector<triangle> shadow_edge_tris;
 
 	void free_ao_and_shadow_texture() {free_texture(ao_tid); free_texture(shadow_tid);}
@@ -376,7 +359,7 @@ class voxel_model_space : public voxel_model {
 	void extract_shadow_edges(voxel_grid<unsigned char> const &shadow_data);
 
 public:
-	voxel_model_space(noise_texture_manager_t *ntg, unsigned num_lod_levels) : voxel_model(ntg, 0, num_lod_levels), ao_tid(0), shadow_tid(0) {}
+	voxel_model_space(noise_texture_manager_t *ntg, unsigned num_lod_levels) : voxel_model(ntg, 0, num_lod_levels) {}
 	void clear() {voxel_model::clear(); shadow_edge_tris.clear();}
 	virtual void free_context() {voxel_model::free_context(); free_ao_and_shadow_texture();}
 	virtual void setup_tex_gen_for_rendering(shader_t &s);

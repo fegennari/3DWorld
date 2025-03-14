@@ -611,9 +611,8 @@ void voxel_manager::remove_unconnected_outside() { // check for voxels connected
 
 
 struct block_group_t {
-	unsigned v[2][2]; // {x,y} x {lo,hi}
+	unsigned v[2][2]={}; // {x,y} x {lo,hi}
 
-	block_group_t() {v[0][0] = v[0][1] = v[1][0] = v[1][1] = 0;}
 	unsigned area() const {return (v[0][1] - v[0][0])*(v[1][1] - v[1][0]);}
 
 	void union_with_group(block_group_t const &g) { // not performance critical
@@ -1005,7 +1004,7 @@ unsigned voxel_model::get_block_ix(unsigned voxel_ix) const {
 }
 
 
-voxel_model::voxel_model(noise_texture_manager_t *ntg, bool use_mesh_, unsigned num_lod_levels) : voxel_manager(use_mesh_), volume_added(0), noise_tex_gen(ntg) {
+voxel_model::voxel_model(noise_texture_manager_t *ntg, bool use_mesh_, unsigned num_lod_levels) : voxel_manager(use_mesh_), noise_tex_gen(ntg) {
 
 	assert(num_lod_levels > 0);
 	tri_data.resize(num_lod_levels);
@@ -1014,8 +1013,7 @@ voxel_model::voxel_model(noise_texture_manager_t *ntg, bool use_mesh_, unsigned 
 }
 
 
-voxel_model_ground::voxel_model_ground(unsigned num_lod_levels)
-	: voxel_model(&private_ntg, 1, num_lod_levels), add_cobjs(0), add_as_fixed(0), cobj_tree(&coll_objects) {}
+voxel_model_ground::voxel_model_ground(unsigned num_lod_levels) : voxel_model(&private_ntg, 1, num_lod_levels), cobj_tree(&coll_objects) {}
 
 
 void voxel_model::clear() {
@@ -1288,7 +1286,7 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 	assert(radius > 0.0);
 	if (val_at_center == 0.0 || empty()) return 0;
 	bool const material_removed(val_at_center < 0.0);
-	if (params.invert) val_at_center *= -1.0; // is this correct?
+	if (params.invert) {val_at_center *= -1.0;} // is this correct?
 	unsigned const num[3] = {nx, ny, nz};
 	unsigned bounds[3][2] = {}; // {x,y,z} x {lo,hi}
 	std::set<unsigned> blocks_to_update;
@@ -1336,13 +1334,8 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 	}
 	if (!saw_inside || !saw_outside) return 0; // nothing else to do
 	std::copy(blocks_to_update.begin(), blocks_to_update.end(), inserter(modified_blocks, modified_blocks.begin()));
-
-	if (material_removed) {
-		maybe_create_fragments(center, radius, shooter, num_fragments, 1);
-	}
-	else {
-		volume_added = 1;
-	}
+	if (material_removed) {maybe_create_fragments(center, radius, shooter, num_fragments, 1);}
+	else {volume_added = 1;}
 	return 1;
 }
 
@@ -2117,7 +2110,6 @@ float get_voxel_terrain_ao_lighting_val(point const &pos) {
 }
 
 bool update_voxel_sphere_region(point const &center, float radius, float val_at_center, int shooter, unsigned num_fragments) {
-
 	// optimization/hack to skip the update if the player didn't cause it and the camera can't see it
 	if (shooter != CAMERA_ID && !camera_pdu.sphere_visible_test(center, radius)) return 0;
 	return terrain_voxel_model.update_voxel_sphere_region(center, radius, val_at_center*(voxel_add_remove ? 1.0 : -1.0), 1, 1, NULL, shooter, num_fragments);
@@ -2165,7 +2157,7 @@ public:
 	}
 	void apply_and_add_brush(voxel_brush_t const &brush) {
 		apply_brush(brush);
-		add_brush(brush);
+		add_brush  (brush);
 	}
 	void undo_last_brush() {
 		// Note: approximate, not exact undo; also doesn't undo unconnected voxel removal
