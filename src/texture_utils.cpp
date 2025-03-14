@@ -4,7 +4,6 @@
 #include "3DWorld.h"
 #include "function_registry.h"
 #include "profiler.h"
-#include "gl_ext_arb.h"
 
 #define STB_DXT_IMPLEMENTATION
 #include "stb_dxt.h"
@@ -41,27 +40,13 @@ void dxt_texture_compress(uint8_t const *const data, vector<uint8_t> &comp_data,
 	} // for y
 }
 
-void texture_t::compress_and_send_texture() { // 1850ms / 1000ms with PBO
+void texture_t::compress_and_send_texture() { // 1850ms / 1000ms with PBO (but total load time is not actually faster)
 	//highres_timer_t timer("compress_and_send_texture", 1, 1); // enabled, no loading screen
 	vector<uint8_t> comp_data; // reuse across calls doesn't seem to help much
 	dxt_texture_compress(data, comp_data, width, height, ncolors); // 640ms
-	bool const calc_mipmaps(use_mipmaps == 1 || use_mipmaps == 2), use_pbo(1 && calc_mipmaps);
-	unsigned const data_sz(comp_data.size());
-	unsigned pbo(0);
-
-	if (use_pbo) {
-		glGenBuffers(1, &pbo);
-		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo);
-		glBufferData(GL_PIXEL_UNPACK_BUFFER, data_sz, 0, GL_STREAM_DRAW);
-		GLubyte* ptr = (GLubyte*)glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY); // map the buffer object into client's memory
-		assert(ptr);
-		memcpy(ptr, comp_data.data(), data_sz); // update data directly on the mapped buffer
-		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
-	}
-	else {
-		GL_CHECK(glCompressedTexImage2D(GL_TEXTURE_2D, 0, calc_internal_format(), width, height, 0, data_sz, comp_data.data());); // 36ms
-	}
-	if (calc_mipmaps) { // normal mipmaps
+	GL_CHECK(glCompressedTexImage2D(GL_TEXTURE_2D, 0, calc_internal_format(), width, height, 0, comp_data.size(), comp_data.data());); // 36ms
+	
+	if (use_mipmaps == 1 || use_mipmaps == 2) { // normal mipmaps
 		//highres_timer_t timer("create_compressed_mipmaps", 1, 1); // enabled, no loading screen; 1350ms total for city + cars + people
 		assert(is_allocated());
 		vector<uint8_t> idatav, odata; // reuse across calls doesn't seem to help much
@@ -86,13 +71,6 @@ void texture_t::compress_and_send_texture() { // 1850ms / 1000ms with PBO
 			GL_CHECK(glCompressedTexImage2D(GL_TEXTURE_2D, level, calc_internal_format(), w2, h2, 0, comp_data.size(), comp_data.data());); // 660ms
 			idatav.swap(odata);
 		} // for level
-	}
-	if (use_pbo) {
-		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo);
-		glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER); // release the mapped buffer
-		glCompressedTexImage2D(GL_TEXTURE_2D, 0, calc_internal_format(), width, height, 0, data_sz, 0); // copy pixels from PBO to texture object
-		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
-		glDeleteBuffers(1, &pbo);
 	}
 }
 
