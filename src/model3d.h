@@ -168,7 +168,6 @@ template<typename T> class vertex_map_t : public map<T, unsigned> {
 	int last_mat_id=-1;
 	unsigned last_obj_id=0;
 	bool average_normals=0;
-
 public:
 	vertex_map_t(bool average_normals_=0) : average_normals(average_normals_) {}
 	bool get_average_normals() const {return average_normals;}
@@ -295,7 +294,7 @@ public:
 	float get_bradius() const {return bsphere.radius;}
 	size_t get_gpu_mem() const {return (vbo_valid() ? size()*sizeof(T) : 0);}
 	void optimize(unsigned npts) {remove_excess_cap();}
-	void remove_excess_cap() {if (20*vector<T>::size() < 19*vector<T>::capacity()) {vector<T>::shrink_to_fit();}}
+	void remove_excess_cap() {if (20*size() < 19*capacity()) {vector<T>::shrink_to_fit();}}
 	void write(ostream &out) const;
 	void read(istream &in);
 };
@@ -308,8 +307,8 @@ public:
 	mesh_bone_data_t bone_data;
 	bool has_bones() const {return !bone_data.vertex_to_bones.empty();}
 private:
-	bool need_normalize, optimized, prev_ucc;
-	float avg_area_per_tri, amin, amax;
+	bool need_normalize=0, optimized=0, prev_ucc=0;
+	float avg_area_per_tri=0.0, amin=0.0, amax=0.0;
 
 	struct geom_block_t {
 		unsigned start_ix=0, num=0;
@@ -340,7 +339,7 @@ public:
 	using vntc_vect_t<T>::bcube;
 	using vntc_vect_t<T>::bsphere;
 	
-	indexed_vntc_vect_t(unsigned obj_id_=0) : vntc_vect_t<T>(obj_id_), need_normalize(0), optimized(0), prev_ucc(0), avg_area_per_tri(0.0), amin(0.0), amax(0.0) {}
+	indexed_vntc_vect_t(unsigned obj_id_=0) : vntc_vect_t<T>(obj_id_) {}
 	void calc_tangents(unsigned npts) {assert(0);}
 	void setup_bones(shader_t &shader, bool is_shadow_pass);
 	void unset_bone_attrs();

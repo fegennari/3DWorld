@@ -271,6 +271,8 @@ class file_reader_assimp {
 	model3d &model;
 	geom_xform_t cur_xf;
 	string model_fn, model_dir, anim_name;
+	vector<vert_norm_tc> verts;
+	vector<unsigned> indices;
 	bool load_animations=0, had_vertex_error=0, had_comp_tex_error=0;
 	unsigned temp_image_ix=0;
 
@@ -490,8 +492,8 @@ class file_reader_assimp {
 	void process_mesh(aiMesh const *const mesh, aiScene const *const scene, model_anim_t &model_anim) {
 		assert(mesh != nullptr);
 		if (!(mesh->mPrimitiveTypes & aiPrimitiveType_TRIANGLE)) return; // not a triangle mesh - skip for now (can be removed using options)
-		vector<vert_norm_tc> verts(mesh->mNumVertices);
-		vector<unsigned> indices;
+		verts.resize(mesh->mNumVertices);
+		indices.clear();
 		indices.reserve(3*mesh->mNumFaces);
 		cube_t mesh_bcube;
 
@@ -554,7 +556,7 @@ class file_reader_assimp {
 			float shininess(0.0), strength(0.0), alpha(1.0);
 			
 			if (aiGetMaterialFloat(material, AI_MATKEY_SHININESS,          &shininess) == AI_SUCCESS &&
-				aiGetMaterialFloat(material, AI_MATKEY_SHININESS_STRENGTH, &strength) == AI_SUCCESS)
+				aiGetMaterialFloat(material, AI_MATKEY_SHININESS_STRENGTH, &strength ) == AI_SUCCESS)
 			{
 				mat.ns = shininess * strength;
 			}

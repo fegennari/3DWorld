@@ -1487,9 +1487,14 @@ mesh_bone_data_t &material_t::get_bone_data_for_last_added_tri_mesh() {
 }
 
 template<typename T> unsigned geometry_t<T>::add_triangles(vector<vert_norm_tc> const &verts, vector<unsigned> const &indices, bool add_new_block) {
-	if (add_new_block || triangles.empty()) {triangles.push_back(indexed_vntc_vect_t<T>());}
+	if (add_new_block || triangles.empty()) { // new block; can directly copy indices
+		triangles.push_back(indexed_vntc_vect_t<T>());
+		vector_add_to(verts, triangles.back());
+		triangles.back().indices = indices;
+		return 0;
+	}
 	auto &dest(triangles.back());
-	if (!dest.empty()) {assert(indices.empty() == dest.indices.empty());} // can't mix indexed with non-indexed triangles
+	assert(indices.empty() == dest.indices.empty()); // can't mix indexed with non-indexed triangles
 	unsigned const ixs_off(dest.size());
 	vector_add_to(verts, dest);
 	for (unsigned ix : indices) {dest.indices.push_back(ix + ixs_off);} // adjust indices based on existing vertices
