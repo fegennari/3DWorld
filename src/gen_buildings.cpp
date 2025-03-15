@@ -3408,6 +3408,8 @@ public:
 				occlusion_checker_noncity_t oc(**i);
 				point const lpos(get_camera_pos() - xlate); // Note: camera_pos is actually the light pos
 				bool const light_in_player_building_extb(player_in_basement && player_building && player_building->point_in_extended_basement(lpos));
+				// don't draw the player model in the flashlight shadow
+				bool const no_player_model(flashlight_on && !sec_camera_mode && lpos.z < pre_smap_player_pos.z && dist_less_than(lpos, pre_smap_player_pos, CAMERA_RADIUS));
 				bool found_building(0);
 
 				// draw interior for the building containing the light
@@ -3450,7 +3452,7 @@ public:
 						bool const in_open_room(b.check_pt_in_retail_room(lpos) || b.point_in_mall(lpos) || b.point_in_industrial(lpos)); // retail, industrial, malls, stores
 						float const player_smap_dist((in_open_room ? RETAIL_SMAP_DSCALE : 1.0)*camera_pdu.far_);
 						bool const viewer_close(dist_less_than(lpos, pre_smap_player_pos, player_smap_dist)); // Note: pre_smap_player_pos already in building space
-						bool const add_player_shadow(camera_surf_collide && camera_in_this_building && viewer_close && !sec_camera_mode &&
+						bool const add_player_shadow(camera_surf_collide && camera_in_this_building && viewer_close && !sec_camera_mode && !no_player_model &&
 							(actual_player_pos.z - get_bldg_player_height()) < lpos.z);
 						bool const add_people_shadow((camera_in_this_building || viewer_close) && b.has_people());
 						bool const enable_animations(global_building_params.enable_people_ai);
