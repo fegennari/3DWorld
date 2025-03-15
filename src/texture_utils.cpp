@@ -43,8 +43,6 @@ void dxt_texture_compress(uint8_t const *const data, vector<uint8_t> &comp_data,
 void texture_t::compress_and_send_texture() { // 1850ms / 1000ms with PBO (but total load time is not actually faster)
 	//highres_timer_t timer("compress_and_send_texture", 1, 1); // enabled, no loading screen
 	vector<uint8_t> comp_data; // reuse across calls doesn't seem to help much
-	dxt_texture_compress(data, comp_data, width, height, ncolors); // 640ms
-	GL_CHECK(glCompressedTexImage2D(GL_TEXTURE_2D, 0, calc_internal_format(), width, height, 0, comp_data.size(), comp_data.data());); // 36ms
 	
 	if (use_mipmaps == 1 || use_mipmaps == 2) { // normal mipmaps
 		//highres_timer_t timer("create_compressed_mipmaps", 1, 1); // enabled, no loading screen; 1350ms total for city + cars + people
@@ -68,10 +66,13 @@ void texture_t::compress_and_send_texture() { // 1850ms / 1000ms with PBO (but t
 				}
 			}
 			dxt_texture_compress(odata.data(), comp_data, w2, h2, ncolors);
-			GL_CHECK(glCompressedTexImage2D(GL_TEXTURE_2D, level, calc_internal_format(), w2, h2, 0, comp_data.size(), comp_data.data());); // 660ms
+			GL_CHECK(glCompressedTexImage2D(GL_TEXTURE_2D, level, calc_internal_format(), w2, h2, 0, comp_data.size(), comp_data.data()););
 			idatav.swap(odata);
 		} // for level
 	}
+	// sending the main texture last seems to be slightly faster because it will block on the first mipmap if sent first; if sent last it may overlap with compress
+	dxt_texture_compress(data, comp_data, width, height, ncolors); // 640ms
+	GL_CHECK(glCompressedTexImage2D(GL_TEXTURE_2D, 0, calc_internal_format(), width, height, 0, comp_data.size(), comp_data.data());); // 36ms
 }
 
 void texture_t::create_custom_mipmaps() { // 350ms total for city + cars + people
