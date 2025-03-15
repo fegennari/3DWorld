@@ -295,7 +295,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 	bool parts_swapped(0), is_cylins[2] = {0, 0};
 	unsigned num_parts(0), cylin_dims[2] = {2, 2}; // defaults to Z
 	rand_gen_t rgen(get_machine_info(c, floor_ceil_gap, base, parts, support, is_cylins, cylin_dims, num_parts, parts_swapped));
-	bool const dim(c.dim), dir(c.dir), two_part(num_parts == 2), in_factory(c.in_factory());
+	bool const dim(c.dim), dir(c.dir), two_part(num_parts == 2), in_factory(c.in_factory()), in_box(c.was_expanded());
 	float const pipe_rmax(0.033*min(height, min(width, depth))), back_wall_pos(c.d[dim][!dir]);
 	bool const metal_base(c.flags & RO_FLAG_FROM_SET); // factory machine grid
 	int const base_tid(metal_base ? get_texture_by_name("metals/249_iron_metal_plate.jpg") : get_concrete_tid());
@@ -339,7 +339,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 		}
 		// maybe add a breaker panel if a cube
 		if (!is_cylin && rgen.rand_float() < 0.6) {
-			unsigned const flags((!in_factory && rgen.rand_float() < 0.2) ? RO_FLAG_OPEN : 0); // open 20% of the time; not for factory machines
+			unsigned const flags((!in_factory && !in_box && rgen.rand_float() < 0.2) ? RO_FLAG_OPEN : 0); // open 20% of the time; not for factory or boxed machines
 			float panel_hheight(size_scale*part_sz.z*rgen.rand_uniform(0.15, 0.22)), panel_hwidth(size_scale*part_sz[!dim]*rgen.rand_uniform(0.15, 0.22));
 			min_eq(panel_hheight, 1.5f*panel_hwidth ); // set reasonable aspect ratio
 			min_eq(panel_hwidth,  1.5f*panel_hheight); // set reasonable aspect ratio
@@ -462,8 +462,8 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 			pipe_ends.clear();
 			for (unsigned n = 0; n < num_pipes; ++n) {add_machine_pipe_in_region(c, region, pipe_rmax, dim, pipe_ends, rgen, allow_valve);}
 		}
-		// if there's space and floor_ceil_gap was specified; skip for factories to avoid clipping through lights and beams
-		if (!in_factory && height < floor_ceil_gap) {
+		// if there's space and floor_ceil_gap was specified; skip for factories to avoid clipping through lights and beams; skip for boxed machines
+		if (!in_factory && !in_box && height < floor_ceil_gap) {
 			float const ceil_zval(c.z1() + floor_ceil_gap);
 			// add pipes up to the ceiling
 			unsigned const num_pipes(rgen.rand() % 4); // 0-3
@@ -493,11 +493,12 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 		}
 		// add a duct to the wall
 		if (!is_cylin && has_gap && rgen.rand_float() < 0.65) {
+			bool const two_sided(in_box); // since end is visible
 			float const radius(rgen.rand_uniform(2.0, 4.0)*pipe_rmax); // wider than a pipe
 			point p1, p2;
 			select_pipe_location(p1, p2, region, radius, dim, rgen);
 			rgeom_mat_t &duct_mat(get_material(tid_nm_pair_t(get_cylin_duct_tid(), 1.0, 1), 1, 0, 1)); // shadowed, small
-			duct_mat.add_cylin_to_verts(p1, p2, radius, radius, apply_light_color(c, LT_GRAY), 0, 0, 0, 0, 1.0, 1.0, 0, 32, 1.0, 1); // ndiv=32, swap_txy=1
+			duct_mat.add_cylin_to_verts(p1, p2, radius, radius, apply_light_color(c, LT_GRAY), 0, 0, two_sided, 0, 1.0, 1.0, 0, 32, 1.0, 1); // ndiv=32, swap_txy=1
 			cube_t vent_bc(p1, p2);
 			vent_bc.expand_by(radius); // close enough
 			avoid.push_back(vent_bc);

@@ -1543,6 +1543,7 @@ void building_t::add_box_contents(room_object_t const &box) {
 	cube_t c(box);
 	c.expand_by(-0.01*box.get_size()); // shrink to interior area
 	vector3d const sz(c.get_size());
+	bool const in_warehouse(box.in_warehouse());
 	bool const dim(sz.x < sz.y); // long dim
 	float const light_amt(box.light_amt), floor_spacing(get_window_vspace()), base_height(0.2*floor_spacing); // avg shelf height
 	unsigned const flags(RO_FLAG_WAS_EXP | RO_FLAG_NOCOLL);
@@ -1552,22 +1553,34 @@ void building_t::add_box_contents(room_object_t const &box) {
 
 	// Note: the code below may invalidate the reference to box, so we can't use it after this point
 	for (unsigned n = 0; n < 10; ++n) { // make up to 10 attempts at placing valid item(s) in this box
-		unsigned const obj_type((n == 9) ? 0 : (rgen.rand()%7)); // {book, bottles, ball, paint can, spraypaint, toilet paper, tape, [box]}; place book on last iteration
+		// {book, bottles, ball, paint can, spraypaint, toilet paper, tape, [box]}
+		unsigned const obj_type((n == 9) ? 0 : (rgen.rand()%7)); // place book on last iteration
 
-		if (obj_type == 0) { // books; can always be placed
-			unsigned const num_books(1 + (rgen.rand()&3)); // 1-4 books
-			float cur_zval(c.z1());
+		if (obj_type == 0) {
+			if (in_warehouse) {
+				// TODO: TYPE_COMPUTER, TYPE_MWAVE, TYPE_LAPTOP, TYPE_VASE, TYPE_FOOD_BOX, TYPE_DRINK_CAN, TYPE_BUCKET, TYPE_FISHTANK?, TYPE_LAVALAMP?, TYPE_MACHINE?, TYPE_HVAC_UNIT?
+				unsigned const item_flags(rgen.rand());
+				cube_t obj_bc(box);
+				obj_bc.expand_by(-vector3d(0.1*sz.x, 0.1*sz.y, 0.0));
+				obj_bc.z2() -= 0.1*sz.z;
+				objs.emplace_back(obj_bc, TYPE_MACHINE, room_id, rgen.rand_bool(), rgen.rand_bool(), flags, light_amt, SHAPE_CUBE, WHITE, item_flags);
+				objs.back().obj_id = rgen.rand();
+			}
+			else { // books; can always be placed
+				unsigned const num_books(1 + (rgen.rand()&3)); // 1-4 books
+				float cur_zval(c.z1());
 
-			for (unsigned n = 0; n < num_books; ++n) {
-				float const length(rgen.rand_uniform(0.7, 0.95)*min(sz[dim], 2.0f*sz[!dim])), width(min(rgen.rand_uniform(0.6, 1.0)*length, 0.95f*sz[!dim]));
-				room_object_t obj(c, TYPE_BOOK, room_id, !dim, rgen.rand_bool(), flags, light_amt);
-				set_book_id_and_color(obj, rgen);
-				set_cube_zvals(obj, cur_zval, (cur_zval + min(0.3f*width, rgen.rand_uniform(0.1, 0.2)*sz.z)));
-				if (obj.z2() > c.z2()) break; // book doesn't fit - the stack is too tall; can't fail on the first book
-				set_rand_pos_for_sz(obj, dim, length, width, rgen);
-				objs.push_back(obj);
-				cur_zval = obj.z2();
-			} // for n
+				for (unsigned n = 0; n < num_books; ++n) {
+					float const length(rgen.rand_uniform(0.7, 0.95)*min(sz[dim], 2.0f*sz[!dim])), width(min(rgen.rand_uniform(0.6, 1.0)*length, 0.95f*sz[!dim]));
+					room_object_t obj(c, TYPE_BOOK, room_id, !dim, rgen.rand_bool(), flags, light_amt);
+					set_book_id_and_color(obj, rgen);
+					set_cube_zvals(obj, cur_zval, (cur_zval + min(0.3f*width, rgen.rand_uniform(0.1, 0.2)*sz.z)));
+					if (obj.z2() > c.z2()) break; // book doesn't fit - the stack is too tall; can't fail on the first book
+					set_rand_pos_for_sz(obj, dim, length, width, rgen);
+					objs.push_back(obj);
+					cur_zval = obj.z2();
+				} // for n
+			}
 		}
 		else if (obj_type == 1) { // bottles; not comsumable, as this would make things too easy for the player
 			float const height(base_height*rgen.rand_uniform(0.4, 0.7)), radius(base_height*rgen.rand_uniform(0.07, 0.11));
