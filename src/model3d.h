@@ -294,7 +294,7 @@ public:
 	float get_bradius() const {return bsphere.radius;}
 	size_t get_gpu_mem() const {return (vbo_valid() ? size()*sizeof(T) : 0);}
 	void optimize(unsigned npts) {remove_excess_cap();}
-	void remove_excess_cap() {if (20*size() < 19*capacity()) {vector<T>::shrink_to_fit();}}
+	void remove_excess_cap() {if (20*size() < 19*this->capacity()) {this->shrink_to_fit();}}
 	void write(ostream &out) const;
 	void read(istream &in);
 };
