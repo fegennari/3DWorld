@@ -2528,7 +2528,8 @@ bool building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, 
 	building_draw_t door_draw;
 	door_rotation_t drot; // return value is unused
 	vector3d const normal(door.get_norm());
-	bool const opens_outward(!is_house), dim(fabs(normal.x) < fabs(normal.y)), dir(normal[dim] < 0.0);
+	bool const opens_outward(!is_house && door.type != tquad_with_ix_t::TYPE_GDOOR); // non house, non grarage doors open outward
+	bool const dim(fabs(normal.x) < fabs(normal.y)), dir(normal[dim] < 0.0);
 	add_door_verts(door.get_bcube(), door_draw, drot, door.type, dim, dir, 1.0, opens_outward, 1, 0); // open_amt=1.0, exterior=1, on_stairs=0
 	// draw other exterior doors as closed in case they're visible through the open door; is this needed for pedestrians?
 	if (!only_open) {get_ext_door_verts(door_draw, pos, view_dir, door_ix);}

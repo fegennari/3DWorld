@@ -1726,7 +1726,8 @@ bool building_t::add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir,
 	unsigned const type(for_office_building ? ((doors.size() == 2 && !courtyard && !for_walkway) ?
 		(unsigned)tquad_with_ix_t::TYPE_BDOOR2 : (unsigned)tquad_with_ix_t::TYPE_BDOOR) : (unsigned)tquad_with_ix_t::TYPE_HDOOR);
 	door_rotation_t drot; // return value is unused
-	doors.push_back(set_door_from_cube(c, dim, dir, type, 1.5*get_door_shift_dist(), 1, 0.0, 0, 0, 0, 0, drot)); // exterior=1, open_amt=0.0, opens_out=opens_up=swap_sides=open_min_amt=0
+	// exterior=1, open_amt=0.0, opens_out=opens_up=swap_sides=open_min_amt=0
+	doors.push_back(set_door_from_cube(c, dim, dir, type, 1.5*get_door_shift_dist(), 1, 0.0, 0, 0, 0, 0, drot));
 	if (!roof_access && part_ix < 4) {door_sides[part_ix] |= 1 << (2*dim + dir);}
 	if (roof_access) {doors.back().type = tquad_with_ix_t::TYPE_RDOOR;}
 	return 1;
@@ -1946,9 +1947,16 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office 
 					}
 				}
 				else if (num == 1 && is_warehouse()) { // second door is warehouse loading garage door, opposite the main entrance door
-					if (add_door(place_door(*b, dim, !dir, door_height, 0.0, 0.0, 0.1, 2.0*wscale, 1, 1, rgen), part_ix, dim, !dir, 1)) {
+					cube_t const door(place_door(*b, dim, !dir, door_height, 0.0, 0.0, 0.1, 2.0*wscale, 1, 1, rgen));
+
+					if (add_door(door, part_ix, dim, !dir, 1)) {
 						doors.back().type = tquad_with_ix_t::TYPE_GDOOR;
 						used[2*dim + (!dir)] = 1; // mark used
+						driveway = door;
+						driveway.z1() = ground_floor_z1;
+						driveway.z2() = ground_floor_z1 + 0.005*door_height;
+						driveway.d[dim][ dir] = door.d[dim][!dir];
+						driveway.d[dim][!dir] += (dir ? -1.0 : 1.0)*1.5*door_height;
 						continue; // not counted as placed
 					}
 				}

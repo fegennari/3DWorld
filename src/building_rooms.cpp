@@ -1772,7 +1772,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		trim.expand_in_dim(dim, door_trim_exp);
 		bool dir(0);
 		unsigned ext_flags(flags);
-		colorRGBA const &ext_trim_color(garage_door ? WHITE : (is_house ? door_color : trim_color)); // garage doors are always white
+		colorRGBA const &ext_trim_color(is_house ? (garage_door ? WHITE : door_color) : trim_color); // house garage door trim is always white
 		float trim_width(garage_door ? 0.016*door.get_sz_dim(!dim) : door_trim_width); // garage door trim is based on width
 		if (have_walkway_ext_door && door.zc() > ground_floor_z1 + window_vspacing) {trim_width *= 1.1;} // slight extra inward expand for walkway doors to remove wall slivers
 
