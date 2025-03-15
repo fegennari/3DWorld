@@ -1815,12 +1815,12 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	if (frame_counter < 100 || frame_counter > last_frame) {num_geom_this_frame = 0; last_frame = frame_counter;} // unlimited for the first 100 frames
 	point const camera_bs(camera_pdu.pos - xlate);
 	float const floor_spacing(building.get_window_vspace()), ground_floor_z1(building.ground_floor_z1);
-	bool const draw_ext_only(inc_small == 4), check_occlusion(display_mode & 0x08);
+	bool const draw_ext_only(inc_small == 4), check_occlusion(display_mode & 0x08), is_industrial(building.is_industrial());
 	if (draw_ext_only) {inc_small = 0;}
 	// don't draw ceiling lights when player is above the building unless there's a light placed on a skylight
 	bool const draw_lights(!draw_ext_only && (camera_bs.z < building.bcube.z2() + (building.has_skylight_light ? 20.0*floor_spacing : 0.0)));
 	// only industrial, parking garages, backrooms, and attics have detail objects that cast shadows
-	bool const draw_detail_objs(inc_small >= 2 && (!shadow_only || building.is_industrial() || building.point_in_attic(camera_bs) || building.is_pos_in_pg_or_backrooms(camera_bs)));
+	bool const draw_detail_objs(inc_small >= 2 && (!shadow_only || is_industrial || building.point_in_attic(camera_bs) || building.is_pos_in_pg_or_backrooms(camera_bs)));
 	bool const draw_int_detail_objs(inc_small >= 3 && !shadow_only);
 	// update clocks if moved to next second; only applies to the player's building
 	bool const update_clocks(player_in_building && inc_small >= 2 && !shadow_only && !reflection_pass && have_clock && check_clock_time());
@@ -1924,8 +1924,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		else if (reflection_pass) {
 			mats_amask.draw(nullptr, s, 0, 1); // no brg_batch_draw
 		}
-		// this is expensive: only enable for the main draw pass and skip for buildings the player isn't in
-		else if (inc_small >= 2 && (player_in_building || !camera_in_building)) {
+		// this is expensive: only enable for the main draw pass and skip for buildings the player isn't in, except for industrial building metal grates
+		else if (inc_small >= 2 && (player_in_building || !camera_in_building || is_industrial)) {
 			// without the special shader these won't look correct when drawn through windows
 			// used for both plant/tree leaves and spider webs;
 			// plants are above ground and in malls with high min_alpha; metal stairs are above ground and in basements with high min_alpha;
