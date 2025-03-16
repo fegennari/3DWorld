@@ -453,7 +453,7 @@ bool is_consumable(room_object_t const &obj) {
 	if (is_drink || bottle_type == BOTTLE_TYPE_MEDS) { // healing items
 		if (obj.is_all_zeros()) return 1; // unsized item taken from a car, always consume
 		
-		if (player_at_full_health()) { // if player is at full health, heal is not needed, so add this item to inventory rather than comsume it
+		if (player_at_full_health()) { // if player is at full health, heal is not needed, so add this item to inventory rather than consume it
 			if (is_drink && player_is_thirsty()) return 1; // player needs to drink
 			return 0;
 		}
