@@ -5626,9 +5626,13 @@ void building_room_geom_t::add_camera(room_object_t const &c) { // Note: camera 
 void building_room_geom_t::add_food_box(room_object_t const &c) {
 	int const tid(c.get_food_box_tid());
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(tid, 0.0, 1), 1, 0, 1)); // shadows, small
+	colorRGBA const color(apply_light_color(c));
 	colorRGBA const bkg_color(apply_light_color(c, texture_color(tid))); // use average texture color for the top and edges
 	unsigned const front_back_mask(~get_skip_mask_for_xy(c.dim));
-	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, front_back_mask, !c.dim, (c.dim ^ c.dir ^ 1), 0); // front face only
+
+	for (unsigned d = 0; d < 2; ++d) { // {front, back} face
+		mat.add_cube_to_verts(c, color, zero_vector, get_face_mask(c.dim, (c.dir ^ d)), !c.dim, (c.dim ^ c.dir ^ d ^ 1), 0);
+	}
 	get_untextured_material(1, 0, 1).add_cube_to_verts_untextured(c, bkg_color, (~front_back_mask | EF_Z1)); // sides, shadows, small
 }
 
