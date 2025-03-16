@@ -929,8 +929,8 @@ void add_rows_of_vcylinders(room_object_t const &c, cube_t const &region, float 
 		objc.translate_dim(!c.dim, row_spacing);
 	} // for row
 }
-void add_row_of_cubes(room_object_t const &c, cube_t const &region, float width, float depth, float height, float spacing_factor,
-	unsigned type, unsigned flags, vect_room_object_t &objects, rand_gen_t &rgen, bool dir=0, bool inv_dim=0, unsigned max_stack_height=1)
+void add_row_of_cubes(room_object_t const &c, cube_t const &region, float width, float depth, float height, float spacing_factor, unsigned type,
+	unsigned flags, vect_room_object_t &objects, rand_gen_t &rgen, bool dir=0, bool inv_dim=0, unsigned max_stack_height=1, bool no_empty=0)
 {
 	float const length(region.get_sz_dim(!c.dim)), space(spacing_factor*width), stride(width + space);
 	unsigned const objects_start(objects.size()), num_rows(length/stride); // round down
@@ -945,7 +945,7 @@ void add_row_of_cubes(room_object_t const &c, cube_t const &region, float width,
 	objc.expand_in_dim(!c.dim, 0.5*width);
 
 	for (unsigned row = 0; row < num_rows; ++row) {
-		if (rgen.rand_float() < 0.75) { // 75% chance
+		if (no_empty || rgen.rand_float() < 0.75) { // 75% chance
 			unsigned const stack_height(1 + ((max_stack_height > 1) ? (rgen.rand() % max_stack_height) : 0));
 			cube_t objc_stack(objc);
 			
@@ -1538,51 +1538,63 @@ bool place_objects_in_box(cube_t const &box, vect_cube_t &obj_bcubes, float radi
 	return 1; // success
 }
 
-void building_t::add_box_contents(room_object_t const &box) {
+// shrink c to create {height, depth, length} aspect ratio for dims {2, dim, !dim}
+void shrink_to_fit_fixed_ar(cube_t &c, float height, float depth, float length, bool dim) { // dim => depth
+	float const orig_z1(c.z1());
+	vector3d const sz(c.get_size()), ars((dim ? length : depth), (dim ? depth : length), height);
+	vector3d const scale_ars(ars/sz), scale_xyz(scale_ars/scale_ars.get_max_val()), shrink_xyz(0.5*sz*(vector3d(1.0, 1.0, 1.0) - scale_xyz));
+	c.expand_by(-shrink_xyz);
+	c.translate_dim(2, (orig_z1 - c.z1())); // z1 must remain unchanged
+	assert(c.is_strictly_normalized());
+}
+
+void building_t::add_box_contents(room_object_t const &box_) {
+	room_object_t const box(box_); // deep copy since code below may invalidate box_ reference
 	rand_gen_t rgen(box.create_rgen());
 	cube_t c(box);
 	c.expand_by(-0.01*box.get_size()); // shrink to interior area
-	vector3d const sz(c.get_size());
-	bool const in_warehouse(box.in_warehouse());
-	bool const dim(sz.x < sz.y); // long dim
+	vector3d const sz(c.get_size()), sz_xy(sz.x, sz.y, 0.0);
+	bool const in_warehouse(box.in_warehouse()), dim(sz.x < sz.y); // long dim
 	float const light_amt(box.light_amt), floor_spacing(get_window_vspace()), base_height(0.2*floor_spacing); // avg shelf height
 	unsigned const flags(RO_FLAG_WAS_EXP | RO_FLAG_NOCOLL);
 	uint8_t const room_id(box.room_id);
 	auto &objs(interior->room_geom->expanded_objs);
 	vect_cube_t obj_bcubes;
+	unsigned house_objs [] = {TYPE_BOOK,    TYPE_BOTTLE, TYPE_LG_BALL,   TYPE_PAINTCAN, TYPE_SPRAYCAN, TYPE_TPROLL, TYPE_TAPE};
+	unsigned office_objs[] = {TYPE_BOOK,    TYPE_BOTTLE, TYPE_DRINK_CAN, TYPE_PAINTCAN, TYPE_SPRAYCAN, TYPE_TPROLL, TYPE_TAPE};
+	unsigned whouse_objs[] = {TYPE_MACHINE, TYPE_BOTTLE, TYPE_DRINK_CAN, TYPE_COMPUTER, TYPE_SPRAYCAN, TYPE_TPROLL, TYPE_FOOD_BOX};
 
-	// Note: the code below may invalidate the reference to box, so we can't use it after this point
 	for (unsigned n = 0; n < 10; ++n) { // make up to 10 attempts at placing valid item(s) in this box
-		// {book, bottles, ball, paint can, spraypaint, toilet paper, tape, [box]}
-		unsigned const obj_type((n == 9) ? 0 : (rgen.rand()%7)); // place book on last iteration
+		//unsigned const obj_type((n == 9 && !in_warehouse) ? 0 : (rgen.rand()%7)); // place book on last iteration unless this is a warehouse
+		unsigned obj_type(0);
+		if (is_house)          {obj_type = ((n == 9) ? TYPE_BOOK : house_objs [rgen.rand() % (sizeof(house_objs )/sizeof(unsigned))]);} // place book on last iteration
+		else if (in_warehouse) {obj_type =                         whouse_objs[rgen.rand() % (sizeof(whouse_objs)/sizeof(unsigned))] ;} // warehouse shelf
+		else                   {obj_type =                         office_objs[rgen.rand() % (sizeof(office_objs)/sizeof(unsigned))] ;} // office
 
-		if (obj_type == 0) {
-			if (in_warehouse) {
-				// TODO: TYPE_COMPUTER, TYPE_MWAVE, TYPE_LAPTOP, TYPE_VASE, TYPE_FOOD_BOX, TYPE_DRINK_CAN, TYPE_BUCKET, TYPE_FISHTANK?, TYPE_LAVALAMP?, TYPE_MACHINE?, TYPE_HVAC_UNIT?
-				unsigned const item_flags(rgen.rand());
-				cube_t obj_bc(box);
-				obj_bc.expand_by(-vector3d(0.1*sz.x, 0.1*sz.y, 0.0));
-				obj_bc.z2() -= 0.1*sz.z;
-				objs.emplace_back(obj_bc, TYPE_MACHINE, room_id, rgen.rand_bool(), rgen.rand_bool(), flags, light_amt, SHAPE_CUBE, WHITE, item_flags);
-				objs.back().obj_id = rgen.rand();
-			}
-			else { // books; can always be placed
-				unsigned const num_books(1 + (rgen.rand()&3)); // 1-4 books
-				float cur_zval(c.z1());
-
-				for (unsigned n = 0; n < num_books; ++n) {
-					float const length(rgen.rand_uniform(0.7, 0.95)*min(sz[dim], 2.0f*sz[!dim])), width(min(rgen.rand_uniform(0.6, 1.0)*length, 0.95f*sz[!dim]));
-					room_object_t obj(c, TYPE_BOOK, room_id, !dim, rgen.rand_bool(), flags, light_amt);
-					set_book_id_and_color(obj, rgen);
-					set_cube_zvals(obj, cur_zval, (cur_zval + min(0.3f*width, rgen.rand_uniform(0.1, 0.2)*sz.z)));
-					if (obj.z2() > c.z2()) break; // book doesn't fit - the stack is too tall; can't fail on the first book
-					set_rand_pos_for_sz(obj, dim, length, width, rgen);
-					objs.push_back(obj);
-					cur_zval = obj.z2();
-				} // for n
-			}
+		if (obj_type == TYPE_MACHINE) {
+			unsigned const item_flags(rgen.rand());
+			cube_t obj_bc(c);
+			obj_bc.expand_by(-0.05*sz_xy);
+			obj_bc.z2() -= 0.05*sz.z;
+			objs.emplace_back(obj_bc, TYPE_MACHINE, room_id, rgen.rand_bool(), rgen.rand_bool(), flags, light_amt, SHAPE_CUBE, WHITE, item_flags);
+			objs.back().obj_id = rgen.rand();
 		}
-		else if (obj_type == 1) { // bottles; not comsumable, as this would make things too easy for the player
+		else if (obj_type == TYPE_BOOK) { // stacked books; can always be placed
+			unsigned const num_books(1 + (rgen.rand()&3)); // 1-4 books
+			float cur_zval(c.z1());
+
+			for (unsigned n = 0; n < num_books; ++n) {
+				float const length(rgen.rand_uniform(0.7, 0.95)*min(sz[dim], 2.0f*sz[!dim])), width(min(rgen.rand_uniform(0.6, 1.0)*length, 0.95f*sz[!dim]));
+				room_object_t obj(c, TYPE_BOOK, room_id, !dim, rgen.rand_bool(), flags, light_amt);
+				set_book_id_and_color(obj, rgen);
+				set_cube_zvals(obj, cur_zval, (cur_zval + min(0.3f*width, rgen.rand_uniform(0.1, 0.2)*sz.z)));
+				if (obj.z2() > c.z2()) break; // book doesn't fit - the stack is too tall; can't fail on the first book
+				set_rand_pos_for_sz(obj, dim, length, width, rgen);
+				objs.push_back(obj);
+				cur_zval = obj.z2();
+			} // for n
+		}
+		else if (obj_type == TYPE_BOTTLE) { // bottles; not consumable, as this would make things too easy for the player
 			float const height(base_height*rgen.rand_uniform(0.4, 0.7)), radius(base_height*rgen.rand_uniform(0.07, 0.11));
 			if (!place_objects_in_box(c, obj_bcubes, radius, height)) continue; // can't fit any of this item
 			unsigned const bottle_id(rgen.rand()); // same type for all bottles
@@ -1592,8 +1604,17 @@ void building_t::add_box_contents(room_object_t const &box) {
 				objs.back().set_as_bottle(bottle_id, BOTTLE_TYPE_WINE, 1); // 0-3; excludes poison and medicine; no_empty=1
 			}
 		}
-		else if (obj_type == 2) { // ball - only 1
-			if (!is_house) continue; // balls in houses only, not office buildings
+		else if (obj_type == TYPE_DRINK_CAN) { // cans; not consumable
+			float const height(0.3*base_height), radius(0.08*base_height); // standard height and radius
+			if (!place_objects_in_box(c, obj_bcubes, radius, height)) continue; // can't fit any of this item
+			uint16_t const can_id(rgen.rand() & 127); // strip off empty bit; same type for all cans
+
+			for (auto i = obj_bcubes.begin(); i != obj_bcubes.end(); ++i) {
+				objs.emplace_back(*i, TYPE_DRINK_CAN, room_id, 0, 0, (flags | RO_FLAG_NO_CONS), light_amt, SHAPE_CYLIN);
+				objs.back().obj_id = can_id;
+			}
+		}
+		else if (obj_type == TYPE_LG_BALL) { // ball - only 1
 			unsigned const btype(rgen.rand() % (NUM_BALL_TYPES-2)); // no beach balls or tennis balls
 			float const radius(ball_types[btype].radius*floor_spacing/(12*8)); // assumes 8 foot floor spacing, and bt.radius in inches
 			if (c.min_len() < 2.0*radius) continue; // can't fit any of this item
@@ -1601,7 +1622,14 @@ void building_t::add_box_contents(room_object_t const &box) {
 			cube_t ball; ball.set_from_sphere(center, radius);
 			objs.emplace_back(ball, TYPE_LG_BALL, room_id, 0, 0, flags, light_amt, SHAPE_SPHERE, WHITE, btype);
 		}
-		else if (obj_type == 3) { // paint cans
+		else if (obj_type == TYPE_BUCKET) { // empty bucket - only 1; currently unused
+			cube_t bucket(cube_bot_center(c));
+			bucket.expand_by_xy(min(0.35*sz.z, 0.4*min(sz.x, sz.y))); // set radius
+			bucket.z1() += 0.01*sz.z; // fix for bottom Z-fighting
+			bucket.z2()  = c.z1() + 0.6*sz.z; // set height; leave space for the handle
+			objs.emplace_back(bucket, TYPE_BUCKET, room_id, rgen.rand_bool(), 0, flags, light_amt, SHAPE_CYLIN);
+		}
+		else if (obj_type == TYPE_PAINTCAN) { // paint cans
 			float const height(0.64*base_height), radius(0.28*base_height);
 			if (!place_objects_in_box(c, obj_bcubes, radius, height)) continue; // can't fit any of this item
 			
@@ -1609,7 +1637,7 @@ void building_t::add_box_contents(room_object_t const &box) {
 				objs.emplace_back(*i, TYPE_PAINTCAN, room_id, 0, 0, flags, light_amt, SHAPE_CYLIN);
 			}
 		}
-		else if (obj_type == 4) { // spraypaint cans
+		else if (obj_type == TYPE_SPRAYCAN) { // spraypaint cans
 			float const height(0.55*base_height), radius(0.17*height);
 			if (!place_objects_in_box(c, obj_bcubes, radius, height)) continue; // can't fit any of this item
 			unsigned color_ix(rgen.rand()); // random starting color
@@ -1619,7 +1647,7 @@ void building_t::add_box_contents(room_object_t const &box) {
 				set_spraypaint_color(objs.back(), rgen, &color_ix);
 			}
 		}
-		else if (obj_type == 5) { // toilet paper rolls
+		else if (obj_type == TYPE_TPROLL) { // toilet paper rolls
 			float const height(0.35*0.18*floor_spacing), radius(0.4*height);
 			if (!place_objects_in_box(c, obj_bcubes, radius, height)) continue; // can't fit any of this item
 			
@@ -1627,11 +1655,11 @@ void building_t::add_box_contents(room_object_t const &box) {
 				objs.emplace_back(*i, TYPE_TPROLL, room_id, 0, 0, flags, light_amt, SHAPE_CYLIN);
 			}
 		}
-		else if (obj_type == 6) { // rolls of tape
+		else if (obj_type == TYPE_TAPE) { // rolls of tape
 			float height(0.032*floor_spacing), radius(height/TAPE_HEIGHT_TO_RADIUS);
 
 			for (unsigned m = 0; m < 2; ++m) {
-				if (2.0*radius < 0.95*min(c.dx(), c.dy())) break; // size is okay
+				if (2.0*radius < 0.95*min(sz.x, sz.y)) break; // size is okay
 				height *= 0.9; radius *= 0.9; // can't fit any, try making it smaller
 			}
 			if (!place_objects_in_box(c, obj_bcubes, radius, height)) continue; // can't fit any of this item
@@ -1642,13 +1670,61 @@ void building_t::add_box_contents(room_object_t const &box) {
 				objs.back().color = tape_colors[color_ix % NUM_TAPE_COLORS];
 			}
 		}
-		else if (obj_type == 7) { // nested box (not currently enabled)
-			cube_t box2(box);
-			box2.expand_by(-0.05*box.get_size()); // shrink by 10% in all dims
+		else if (obj_type == TYPE_FOOD_BOX) { // food box
+			if (global_building_params.food_box_tids.empty()) continue; // not available
+			bool const fbdim(!dim); // face in short dim
+			float const height(min(0.95f*sz.z, base_height*rgen.rand_uniform(0.8, 1.2)));
+			float const depth(height*rgen.rand_uniform(0.15, 0.25)), width(height*rgen.rand_uniform(0.6, 0.9));
+			unsigned const nx(round_fp(sz.x/(fbdim ? width : depth))), ny(round_fp(sz.y/(fbdim ? depth : width)));
+			if (nx == 0 || ny == 0) continue; // box is too small to place this object
+			float const xspace(sz.x/nx), yspace(sz.y/ny), xr(0.45*xspace), yr(0.45*yspace);
+			uint16_t const obj_id(rgen.rand()); // set box type
+			cube_t fbox;
+			set_cube_zvals(fbox, c.z1(), c.z1()+height);
+
+			for (unsigned y = 0; y < ny; ++y) {
+				set_wall_width(fbox, (c.y1() + (y+0.5)*yspace), yr, 1);
+
+				for (unsigned x = 0; x < nx; ++x) {
+					set_wall_width(fbox, (c.x1() + (x+0.5)*xspace), xr, 0);
+					objs.emplace_back(fbox, TYPE_FOOD_BOX, room_id, fbdim, 0, flags, light_amt);
+					objs.back().obj_id = obj_id;
+				}
+			} // for y
+		}
+		else if (obj_type == TYPE_COMPUTER) { // placeholder for electronics - fit to box size
+			float const long_sz(sz[dim]), short_sz(sz[!dim]);
+			
+			if (short_sz > 1.3*sz.z && short_sz < 0.24*floor_spacing) { // short and wide, but not too large: laptop
+				cube_t laptop(c);
+				laptop.z2() -= 0.4*sz.z; // add some padding at the top and sides
+				laptop.expand_by(-0.2*sz_xy);
+				shrink_to_fit_fixed_ar(laptop, 0.06, 0.7, 1.0, !dim);
+				objs.emplace_back(laptop, TYPE_LAPTOP, room_id, !dim, rgen.rand_bool(), flags, light_amt);
+			}
+			else if ((long_sz > 1.3*short_sz && sz.z > 1.1*short_sz) || short_sz < 0.26*floor_spacing) { // tall and thin, or small: computer
+				cube_t computer(c);
+				computer.z2() -= 0.1*sz.z; // add some padding at the top and sides
+				computer.expand_by(-0.1*sz_xy);
+				shrink_to_fit_fixed_ar(computer, 0.75, 0.9, 0.44, dim);
+				objs.emplace_back(computer, TYPE_COMPUTER, room_id, dim, rgen.rand_bool(), flags, light_amt);
+			}
+			else { // closer to equal dims: microwave
+				cube_t mwave(c);
+				mwave.z2() -= 0.05*sz.z; // add some padding at the top and sides
+				mwave.expand_by(-0.05*sz_xy);
+				shrink_to_fit_fixed_ar(mwave, 1.0, 1.2, 1.7, !dim);
+				objs.emplace_back(mwave, TYPE_MWAVE, room_id, !dim, rgen.rand_bool(), flags, light_amt);
+			}
+		}
+		else if (obj_type == TYPE_BOX) { // nested box (not currently enabled)
+			cube_t box2(c);
+			box2.expand_by(-0.04*sz); // shrink by 10% in all dims (original 2% + new 8%)
 			objs.emplace_back(box2, TYPE_BOX, room_id, box.dim, box.dir, (flags | (box.flags & ~RO_FLAG_OPEN)), light_amt);
 			objs.back().obj_id += rgen.rand();
 		}
-		else {continue;} // empty box?
+		else if (obj_type == TYPE_NONE) {continue;} // empty box
+		else {assert(0);}
 		interior->room_geom->invalidate_small_geom();
 		break; // if we got here, something was placed in the box
 	} // for n

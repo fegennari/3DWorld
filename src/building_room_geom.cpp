@@ -4108,6 +4108,7 @@ void building_room_geom_t::add_trashcan(room_object_t const &c) {
 }
 
 colorRGBA get_bucket_liquid_info(room_object_t const &c, float &liquid_level) { // returns color and liquid level
+	if (c.obj_id == 0) return ALPHA0; // defaults to empty/no liquid if obj_id is not set
 	rand_gen_t rgen(c.create_rgen());
 	liquid_level = rgen.rand_uniform(-0.25, 0.75);
 	if (liquid_level <= 0.0) return ALPHA0; // no liquid
