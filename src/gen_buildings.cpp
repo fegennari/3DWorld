@@ -2964,7 +2964,7 @@ public:
 		}
 		switch (ret) {
 		case BLDG_COLL_SIDE    : color = b.get_avg_side_color  (); break;
-		case BLDG_COLL_ROOF    : color = b.get_avg_roof_color  (); break;
+		case BLDG_COLL_ROOF    : color = ((display_mode & 0x20) ? btype_colors[b.btype] : b.get_avg_roof_color()); break;
 		case BLDG_COLL_DRIVEWAY: color = LT_GRAY ; break;
 		case BLDG_COLL_FENCE   : color = LT_BROWN; break;
 		case BLDG_COLL_SKYLIGHT: color = LT_BLUE ; break;
