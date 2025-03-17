@@ -3447,7 +3447,7 @@ public:
 							b.get_basement_ext_wall_verts(ext_parts_draw); // draw basement exterior walls to block light from entering ext basement
 							if (b.get_basement().contains_pt(lpos)) {ext_two_sided = 1;} // draw back sides of basement walls to block light from basement to ext basement
 						}
-						b.draw_cars_in_building(s, xlate, 1, 1); // player_in_building=1, shadow_only=1
+						b.draw_cars_in_building(s, xlate, 1, 1); // player_in_this_building=1, shadow_only=1
 						is_house |= b.is_house;
 						bool const in_open_room(b.check_pt_in_retail_room(lpos) || b.point_in_mall(lpos) || b.point_in_industrial(lpos)); // retail, industrial, malls, stores
 						float const player_smap_dist((in_open_room ? RETAIL_SMAP_DSCALE : 1.0)*camera_pdu.far_);
@@ -3645,7 +3645,7 @@ public:
 		vector<vertex_range_t> per_bcs_exclude;
 		building_t const *building_cont_player(nullptr);
 		defer_ped_draw_vars_t defer_ped_draw_vars;
-		vector<building_t *> buildings_with_cars;
+		vector<pair<building_t *, bool>> buildings_with_cars; // {building, player_in_building}
 		vector<point> pts;
 		static brg_batch_draw_t bbd; // allocated memory is reused across building interiors
 		bool const defer_people_draw_for_player_building(global_building_params.people_min_alpha > 0.0);
@@ -3841,7 +3841,7 @@ public:
 						}
 						else {gen_and_draw_people_in_building(ped_draw_vars_t(b, oc, s, xlate, bi->ix, 0, reflection_pass));} // draw people in this building
 						// there currently shouldn't be any parked cars visible in mirrors or security cameras, so skip them in the reflection pass
-						if (!reflection_pass && b.has_cars_to_draw(player_in_building_bcube)) {buildings_with_cars.push_back(&b);}					
+						if (!reflection_pass && b.has_cars_to_draw(player_in_building_bcube)) {buildings_with_cars.emplace_back(&b, player_in_building_bcube);}
 
 						if ((*i)->get_is_city()) { // check for nearby pedestrians in city buildings and open doors for them
 							float const ped_od(0.4*door_open_dist); // smaller than player dist
@@ -4024,7 +4024,7 @@ public:
 				// draw parked cars in building parking garages or house garages
 				if (!buildings_with_cars.empty()) {
 					glDisable(GL_CULL_FACE); // no back face culling for cars
-					for (auto const &b : buildings_with_cars) {b->draw_cars_in_building(s, xlate, camera_in_building, 0);} // shadow_only=0
+					for (auto const &b : buildings_with_cars) {b.first->draw_cars_in_building(s, xlate, b.second, 0);} // shadow_only=0
 					if (s.is_setup()) {reset_interior_lighting_and_end_shader(s);}
 					glEnable(GL_CULL_FACE);
 				}
