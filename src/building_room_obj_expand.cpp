@@ -558,7 +558,7 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 	vector3d const c_sz(c.get_size());
 	float const dz(c_sz.z), width(c_sz[dim]), thickness(0.02*dz), bracket_thickness(0.75*thickness), floor_spacing(1.1*dz);
 	float const z_step(dz/(num_shelves + 1)), shelf_clearance(z_step - thickness - bracket_thickness), sz_scale(is_house ? 0.7 : (in_warehouse ? 0.8 : 1.0));
-	float const box_zscale(shelf_clearance*sz_scale), h_val(0.21*floor_spacing);
+	float const box_zscale(shelf_clearance*sz_scale), h_val(0.21*floor_spacing), length_ratio(c_sz[!dim]/width);
 	rand_gen_t base_rgen(c.create_rgen());
 	bool prev_add_shoe_boxes(0);
 
@@ -704,7 +704,15 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 		unsigned const objs_start(objects.size());
 
 		// add crates/boxes
-		unsigned const num_boxes(rgen.rand() % (is_house ? 8 : (in_warehouse ? 25 : 13))); // 0-7/24/12
+		unsigned num_boxes(0);
+
+		if (in_warehouse) {
+			unsigned const max_boxes(round_fp(1.8*length_ratio));
+			num_boxes = rgen.rand_uniform_uint(max_boxes/2, max_boxes);
+		}
+		else {
+			num_boxes = (rgen.rand() % (is_house ? 8 : 13)); // 0-7/12
+		}
 		cube_t bounds(S);
 		bounds.z1() = S.z2(); // place on top of shelf
 		add_boxes_to_space(c, objects, bounds, cubes, rgen, num_boxes, 0.42*width*sz_scale*(is_house ? 1.5 : 1.0),
@@ -715,7 +723,7 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 
 			if (pwidth < 3.0*s_sz[!dim]) { // don't place on short shelves
 				float const half_width(0.5*pwidth);
-				unsigned const num_pallets((rgen.rand() % 3) + 4); // 4-6
+				unsigned const max_pallets(round_fp(0.6*length_ratio)), num_pallets(rgen.rand_uniform_uint(max_pallets/2, max_pallets));
 				C.dim    = dim; C.dir = 0;
 				C.type   = TYPE_PALLET;
 				C.shape  = SHAPE_CUBE;
