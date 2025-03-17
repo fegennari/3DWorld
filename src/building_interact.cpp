@@ -35,6 +35,7 @@ void refill_thirst();
 colorRGBA get_glow_color(float stime, bool fade);
 void play_hum_sound(point const &pos, float gain, float pitch);
 bool ceiling_fan_is_on(room_object_t &obj, vect_room_object_t const &objs);
+bool object_has_something_on_it(room_object_t const &obj, vect_room_object_t const &objs, vect_room_object_t::const_iterator objs_end);
 
 // Note: pos is in camera space
 void gen_sound_thread_safe(unsigned id, point const &pos, float gain, float pitch, float gain_scale, bool skip_if_already_playing) {
@@ -560,6 +561,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 				//if (check_for_wall_ceil_floor_int(closest_to, query_ray_end)) continue; // skip if it's on the other side of a wall, ceiling, or floor; too strong
 				if (type == TYPE_BUTTON && dot_product_ptv(i->get_dir(), closest_to, center) < 0.0) continue; // can't press from behind
 				if (type == TYPE_SWITCH && dot_product_ptv(i->get_dir(), closest_to, center) > 0.0) continue; // can't press from behind (inverted from button dir)
+				if (type == TYPE_BOX    && object_has_something_on_it(*i, obj_vect, obj_vect_end))  continue; // check for another box or crate stacked on this box
 				closest_dist_sq = dist_sq;
 				obj_ix = (i - obj_vect.begin()) + obj_id_offset;
 				is_obj = found_item = 1;
