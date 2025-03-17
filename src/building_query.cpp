@@ -21,7 +21,7 @@ float get_railing_height(room_object_t const &c);
 cylinder_3dw get_railing_cylinder(room_object_t const &c);
 bool sphere_vert_cylin_intersect_with_ends(point &center, float radius, cylinder_3dw const &c, vector3d *cnorm);
 void register_in_closed_bathroom_stall();
-pair<cube_t, colorRGBA> car_bcube_color_from_parking_space(room_object_t const &o);
+pair<cube_t, colorRGBA> car_bcube_color_from_parking_space(room_object_t const &o, unsigned btype);
 void force_player_height(double height);
 bool is_player_model_female();
 bool get_sphere_poly_int_val(point const &sc, float sr, point const *const points, unsigned npoints, vector3d const &normal, float thickness, float &val, vector3d &cnorm);
@@ -2060,7 +2060,7 @@ public:
 
 				if (obj.type == TYPE_PARK_SPACE) {
 					if (!obj.is_used()) continue; // no car in this space
-					pair<cube_t, colorRGBA> const ret(car_bcube_color_from_parking_space(obj)); // Note: currently always white
+					pair<cube_t, colorRGBA> const ret(car_bcube_color_from_parking_space(obj, building.btype)); // Note: currently always white
 					add_obj(cube_with_color_t(ret.first, ret.second, 0)); // is_round=0
 				}
 				else {add_obj(cube_with_color_t(obj, obj.get_color(), (obj.is_round() && obj.type != TYPE_PIPE)));}

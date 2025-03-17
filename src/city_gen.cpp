@@ -3380,8 +3380,8 @@ public:
 	}
 	void draw_transparent(vector3d const &xlate) {road_gen.draw_transparent(xlate, enable_lights());} // drawn at the very end
 	void draw_roads(int trans_op_mask, vector3d const &xlate) {road_gen.draw(trans_op_mask, xlate, enable_lights(), 0);} // shadow_only=0
-	void draw_car_in_pspace(car_t &car, shader_t &s, vector3d const &xlate, bool shadow_only) {car_manager.draw_car_in_pspace(car, s, xlate, shadow_only);}
-	void set_car_model_color(car_t &car) {car_manager.set_car_model_color(car);}
+	void draw_car_in_pspace(car_t &car, shader_t &s, vector3d const &xlate, bool shadow_only, unsigned btype) {car_manager.draw_car_in_pspace(car, s, xlate, shadow_only, btype);}
+	void set_car_model_color(car_t &car, unsigned btype) {car_manager.set_car_model_color(car, btype);}
 	void gen_and_draw_people_in_building(ped_draw_vars_t const &pdv) {ped_manager.gen_and_draw_people_in_building(pdv);}
 	void draw_player_model(shader_t &s, vector3d const &xlate, bool shadow_only) {ped_manager.draw_player_model(s, xlate, shadow_only);}
 	bool is_player_model_female() {return ped_manager.is_player_model_female();}
@@ -3569,6 +3569,6 @@ void get_pedestrians_in_area(cube_t const &area, int building_ix, vector<point> 
 void free_city_context() {city_gen.free_context();}
 bool has_city_trees() {return (city_params.max_trees_per_plot > 0);}
 vector3d get_nom_car_size() {return city_params.get_nom_car_size();}
-void draw_car_in_pspace(car_t &car, shader_t &s, vector3d const &xlate, bool shadow_only) {city_gen.draw_car_in_pspace(car, s, xlate, shadow_only);}
-void set_car_model_color(car_t &car) {city_gen.set_car_model_color(car);}
+void draw_car_in_pspace(car_t &car, shader_t &s, vector3d const &xlate, bool shadow_only, unsigned btype) {city_gen.draw_car_in_pspace(car, s, xlate, shadow_only, btype);}
+void set_car_model_color(car_t &car, unsigned btype) {city_gen.set_car_model_color(car, btype);}
 

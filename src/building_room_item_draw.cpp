@@ -35,8 +35,8 @@ unsigned get_num_screenshot_tids();
 tid_nm_pair_t get_phone_tex(room_object_t const &c);
 template< typename T > void gen_quad_ixs(vector<T> &ixs, unsigned size, unsigned ix_offset);
 void draw_emissive_billboards(quad_batch_draw &qbd, int tid);
-void draw_car_in_pspace(car_t &car, shader_t &s, vector3d const &xlate, bool shadow_only);
-void set_car_model_color(car_t &car);
+void draw_car_in_pspace(car_t &car, shader_t &s, vector3d const &xlate, bool shadow_only, unsigned btype);
+void set_car_model_color(car_t &car, unsigned btype);
 bldg_obj_type_t get_taken_obj_type(room_object_t const &obj);
 int get_toilet_paper_nm_id();
 void setup_monitor_screen_draw(room_object_t const &monitor, rgeom_mat_t &mat, std::string &onscreen_text);
@@ -2466,9 +2466,9 @@ car_t car_from_parking_space(room_object_t const &o) {
 	car.set_bcube(point(center.x, center.y, o.z1()), get_nom_car_size());
 	return car;
 }
-pair<cube_t, colorRGBA> car_bcube_color_from_parking_space(room_object_t const &o) {
+pair<cube_t, colorRGBA> car_bcube_color_from_parking_space(room_object_t const &o, unsigned btype) {
 	car_t car(car_from_parking_space(o));
-	set_car_model_color(car);
+	set_car_model_color(car, btype);
 	return make_pair(car.bcube, car.get_color());
 }
 bool check_cube_occluded(cube_t const &cube, vect_cube_t const &occluders, point const &viewer) {
@@ -2557,7 +2557,7 @@ void building_t::draw_cars_in_building(shader_t &s, vector3d const &xlate, bool 
 		if (shadow_only) {s.begin_shadow_map_shader();} // this path should be unused
 		else {setup_building_draw_shader(s, 0.0, 1, 0, 0);} // min_alpha=0.0, enable_indir=1, force_tsl=0, use_texgen=0, water_damage=0.0
 	}
-	for (auto &car : cars_to_draw) {draw_car_in_pspace(car, s, xlate, shadow_only);}
+	for (auto &car : cars_to_draw) {draw_car_in_pspace(car, s, xlate, shadow_only, btype);}
 	check_mvm_update(); // needed after popping model transform matrix
 }
 

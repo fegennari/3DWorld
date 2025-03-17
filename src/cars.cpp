@@ -983,7 +983,7 @@ void car_manager_t::add_parked_cars(vector<car_t> const &new_cars) {
 	vector_add_to(new_cars, cars);
 }
 
-void car_manager_t::assign_car_model_size_color(car_t &car, rand_gen_t &local_rgen, bool is_in_garage) {
+void car_manager_t::assign_car_model_size_color(car_t &car, rand_gen_t &local_rgen, bool is_in_garage, unsigned btype) {
 	unsigned const num_models(car_model_loader.num_models());
 	int fixed_color(-1);
 
@@ -995,8 +995,10 @@ void car_manager_t::assign_car_model_size_color(car_t &car, rand_gen_t &local_rg
 			
 			// if there are multiple models to choose from, and this car is in a garage, try for a model that's not scaled up (truck or ambulance) (what about driveways?)
 			if (FORCE_MODEL_ID < 0 && is_in_garage && model.scale > 1.0) {
-				if (num_models > 1 && n+1 < 20) continue; // try a different model
+				if (btype == BTYPE_HOSPITAL && model.scale <= 1.5) {} // ambulance; allow it, scaled down
+				else if (num_models > 1 && n+1 < 20) continue; // try a different model
 				// don't scale the model because it may not fit; instead, add a small truck if we can't place a car
+				car.apply_scale(1.2); // that's about all that can fit
 			}
 			else {
 				car.apply_scale(model.scale);
@@ -1024,7 +1026,7 @@ void car_manager_t::assign_car_model_size_color(car_t &car, rand_gen_t &local_rg
 	}
 	assert(car.is_valid());
 }
-void car_manager_t::finalize_cars() {
+void car_manager_t::finalize_cars() { // city case
 	if (empty()) return;
 	for (auto i = cars.begin(); i != cars.end(); ++i) {assign_car_model_size_color(*i, rgen, 0);} // is_in_garage=0
 	cout << "Total Cars: " << cars.size() << endl; // 4000 on the road + 4372 parked = 8372
@@ -1715,16 +1717,16 @@ void car_manager_t::draw_helicopters(bool shadow_only) {
 }
 
 // for house garages and building parking garages
-void car_manager_t::set_car_model_color(car_t &car) {
+void car_manager_t::set_car_model_color(car_t &car, unsigned btype) {
 	rand_gen_t rgen;
 	rgen.set_state(123*car.cur_seg, car.cur_seg+1); // random seed is stored in car.cur_seg
 	rgen.rand(); // mix it up better
-	assign_car_model_size_color(car, rgen, 1); // is_in_garage=1
+	assign_car_model_size_color(car, rgen, 1, btype); // is_in_garage=1
 }
-void car_manager_t::draw_car_in_pspace(car_t &car, shader_t &s, vector3d const &xlate, bool shadow_only) {
+void car_manager_t::draw_car_in_pspace(car_t &car, shader_t &s, vector3d const &xlate, bool shadow_only, unsigned btype) {
 	float const draw_dist(shadow_only ? camera_pdu.far_ : 0.05*get_draw_tile_dist());
 	if (!dist_less_than(camera_pdu.pos, (car.get_center() + xlate), draw_dist)) return; // distance culling
-	set_car_model_color(car);
+	set_car_model_color(car, btype);
 	
 	if (car_model_loader.is_model_valid(car.model_id)) { // else error?
 		vector3d dir(zero_vector);
