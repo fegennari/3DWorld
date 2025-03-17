@@ -2848,6 +2848,7 @@ private:
 	void get_lights_for_room_and_floor(unsigned room_ix, unsigned floor_ix, vector<unsigned> &light_ids) const;
 	void get_lights_near_door(unsigned door_ix, vector<unsigned> &light_ids) const;
 	bool is_cube_visible_through_door(point const &viewer, cube_t const &c, door_t const &door) const;
+	bool is_cube_visible_through_extb_door(point const &viewer, cube_t const &c) const;
 	void set_rgen_state_for_building(rand_gen_t &rgen) const;
 public:
 	// ray queries

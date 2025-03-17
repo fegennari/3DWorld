@@ -3075,6 +3075,7 @@ void building_t::get_lights_near_door(unsigned door_ix, vector<unsigned> &light_
 // it's up to the caller to check that the door is open or closed (depending on the query)
 bool building_t::is_cube_visible_through_door(point const &viewer, cube_t const &c, door_t const &door) const {
 	cube_t const door_bcube(door.get_true_bcube()); // must be nonzero area for this test to be correct
+	if (c.intersects(door_bcube))       return 1;
 	if (door_bcube.contains_pt(viewer)) return 1; // viewer in doorway
 	float const door_pos(door.get_center_dim(door.dim)), vpos(viewer[door.dim]);
 	if ((c.get_center_dim(door.dim) < door_pos) == (vpos < door_pos)) return 0; // viewer and cube on same side of door - not visible through it (optimization)
@@ -3088,6 +3089,14 @@ bool building_t::is_cube_visible_through_door(point const &viewer, cube_t const 
 		proj_area.assign_or_union_with_pt(proj);
 	}
 	return door_bcube.intersects(proj_area);
+}
+bool building_t::is_cube_visible_through_extb_door(point const &viewer, cube_t const &c) const {
+	if (!has_ext_basement()) return 0; // error?
+	door_t const &extb_door(interior->get_ext_basement_door());
+	if (extb_door.open_amt == 0.0) return 0; // closed door
+	cube_t door_bc(extb_door.get_true_bcube());
+	door_bc.expand_in_dim(extb_door.dim, get_wall_thickness()); // standing in the doorway counts
+	return (door_bc.contains_pt(viewer) || is_cube_visible_through_door(viewer, c, extb_door));
 }
 
 void building_t::print_building_manifest() const { // Note: skips expanded_objs

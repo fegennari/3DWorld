@@ -2532,15 +2532,7 @@ void building_t::draw_cars_in_building(shader_t &s, vector3d const &xlate, bool 
 			if (i->z2() < viewer.z - 2.0*floor_spacing)      continue; // move than a floor below - skip
 			car_t car(car_from_parking_space(*i));
 			if (!shadow_only && check_occlusion && viewer.z > ground_floor_z1 && !line_intersect_stairs_or_ramp(viewer, car.get_center())) continue;
-
-			if (!shadow_only && player_in_basement == 3) { // player in extended basement; cars only visible through door
-				if (!has_ext_basement()) continue; // error?
-				door_t const &extb_door(interior->get_ext_basement_door());
-				if (extb_door.open_amt == 0.0) continue; // closed door
-				cube_t door_bc(extb_door.get_true_bcube());
-				door_bc.expand_in_dim(extb_door.dim, get_wall_thickness()); // standing in the doorway counts
-				if (!door_bc.contains_pt(viewer) && !is_cube_visible_through_door(viewer, car.bcube, extb_door)) continue;
-			}
+			if (!shadow_only && player_in_basement == 3 && !is_cube_visible_through_extb_door(viewer, car.bcube)) continue; // player in extb; cars only visible through door
 			if (camera_pdu.cube_visible(car.bcube + xlate)) {cars_to_draw.push_back(car);}
 		} // for i
 		if (cars_to_draw.empty()) return;

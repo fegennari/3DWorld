@@ -1729,6 +1729,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if (!camera_in_building && ((light_in_basement && !camera_can_see_ext_basement) || is_in_windowless_attic || is_in_elevator)) continue;
 		room_t const &room(get_room(i->room_id));
 		bool const in_ext_basement(room.is_ext_basement()), mall_light_vis(in_ext_basement && player_can_see_mall);
+		bool const sep_by_extb_door((in_ext_basement && !camera_in_ext_basement) || (!in_ext_basement && camera_in_ext_basement));
+		if (sep_by_extb_door && interior->get_ext_basement_door().open_amt == 0.0) continue; // closed door - light not visible
 		// if player above mall looking through skylight, can only see mall and store lights
 		if (player_can_see_mall && !has_windows() && (!in_ext_basement || !room.is_mall_or_store())) continue;
 
@@ -2113,6 +2115,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			bool const is_non_door_floor(!room.is_single_floor && !multi_family && lpos.z > (ground_floor_z1 + window_vspacing));
 			clipped_bc.expand_by_xy((light_in_walkway ? 0.1 : (is_non_door_floor ? 0.65 : 1.0))*room_xy_expand);
 			clipped_bc.intersect_with_cube(sphere_bc); // clip to original light sphere, which still applies (only need to expand at building exterior)
+			if (sep_by_extb_door && !is_cube_visible_through_extb_door(camera_bs, clipped_bc)) continue;
 		}
 		if (!clipped_bc.contains_pt(lpos)) {
 			static bool had_invalid_light_bcube_warning = 0;
