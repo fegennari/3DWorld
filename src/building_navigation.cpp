@@ -7,6 +7,7 @@
 #include "city.h" // for person_t
 #include "profiler.h"
 #include "nav_grid.h"
+#include "openal_wrap.h"
 #include <queue>
 
 
@@ -3111,6 +3112,14 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 
 		if (round_fp(old_anim_time/splash_dist) != round_fp(person.anim_time/splash_dist)) { // update every splash_dist
 			check_for_water_splash(person.pos, 1.0, 1, 0, 0); // full_room_height=1, draw_splash=0, alert_zombies=0
+		}
+	}
+	// maybe play footstep sounds
+	if (!person.in_pool && cur_player_building_loc.building_ix == person.cur_bldg && same_room_and_floor_as_player(person)) {
+		float const anim_scale(1.0/person.radius);
+
+		if (unsigned(anim_scale*person.anim_time) != unsigned(anim_scale*old_anim_time)) {
+			gen_sound_thread_safe(SOUND_FOOTSTEP, local_to_camera_space(person.pos), 0.5, 1.2, 0.1);
 		}
 	}
 	return (person.in_pool ? AI_IN_POOL : AI_MOVING);
