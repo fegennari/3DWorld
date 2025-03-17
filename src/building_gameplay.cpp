@@ -1107,7 +1107,7 @@ public:
 		// handle player fall damage logic
 		point const camera_pos(get_camera_pos());
 		float const player_zval(camera_pos.z), delta_z(prev_player_zval - player_zval);
-		bool const in_respawn_period(frame_counter <= prev_respawn_frame+4);
+		bool const in_respawn_period(frame_counter <= prev_respawn_frame + 120); // allow 120 frames (~2s) for falling to ground on respawn
 		if (in_respawn_period) {accum_fall_damage = 0.0;}
 		if (camera_in_building != prev_in_building) {prev_in_building = camera_in_building;}
 		// Note: fall damage may no longer trigger with slow player fall logic; allow a few extra frames after a raspawn for the player pos to stabilize
