@@ -257,7 +257,7 @@ buildings window_xscale 5.0
 buildings min_levels 1
 buildings max_levels 5
 buildings split_prob 0.60 # 60%
-buildings size_range 0.6 1.2  0.6 1.2  0.6 2.0
+buildings size_range 0.6 1.2  0.6 1.2  0.3 2.0
 
 buildings side_tscale 16.0
 buildings side_tid cblock.png
@@ -310,6 +310,7 @@ buildings side_nm_tid buildings/metal_building_NRM.jpg
 buildings side_tscale_x 4.0
 buildings side_tscale_y 5.0
 buildings side_color 1.0 1.0 1.0 1.0
+buildings size_range 0.6 1.2  0.6 1.2  0.6 2.0
 buildings probability 2 # twice as likely as other materials
 buildings add_material
 
