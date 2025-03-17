@@ -1947,18 +1947,25 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office 
 					}
 				}
 				else if (num == 1 && is_warehouse()) { // second door is warehouse loading garage door, opposite the main entrance door
-					cube_t const door(place_door(*b, dim, !dir, door_height, 0.0, 0.0, 0.1, 2.0*wscale, 1, 1, rgen));
+					bool added(0);
 
-					if (add_door(door, part_ix, dim, !dir, 1)) {
-						doors.back().type = tquad_with_ix_t::TYPE_GDOOR;
-						used[2*dim + (!dir)] = 1; // mark used
-						driveway = door;
-						driveway.z1() = ground_floor_z1;
-						driveway.z2() = ground_floor_z1 + 0.005*door_height;
-						driveway.d[dim][ dir] = door.d[dim][!dir];
-						driveway.d[dim][!dir] += (dir ? -1.0 : 1.0)*1.5*door_height;
-						continue; // not counted as placed
-					}
+					for (unsigned n = 0; n < 2; ++n) { // {centered, non-centered}
+						float const door_center_shift(n ? 0.4 : 0.05); // first pass is (nearly) centered, second pass is non-centered
+						cube_t const door(place_door(*b, dim, !dir, door_height, 0.0, 0.0, door_center_shift, 2.0*wscale, 1, 1, rgen));
+
+						if (add_door(door, part_ix, dim, !dir, 1)) {
+							doors.back().type = tquad_with_ix_t::TYPE_GDOOR;
+							used[2*dim + (!dir)] = 1; // mark used
+							driveway = door;
+							driveway.z1() = ground_floor_z1;
+							driveway.z2() = ground_floor_z1 + 0.005*door_height;
+							driveway.d[dim][ dir] = door.d[dim][!dir];
+							driveway.d[dim][!dir] += (dir ? -1.0 : 1.0)*1.5*door_height;
+							added = 1;
+							break;
+						}
+					} // for n
+					if (added) {continue;} // not counted as placed
 				}
 			}
 			for (unsigned n = 0; n < 4; ++n) {
