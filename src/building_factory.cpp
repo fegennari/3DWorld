@@ -467,7 +467,7 @@ void building_t::add_warehouse_shelves(rand_gen_t &rgen, room_t const &room, flo
 	float light_amt, float support_width, cube_t const &place_area, vect_cube_t const &supports)
 {
 	// add rows of shelves along each side wall, and back-to-back pairs in the center of the room
-	bool const edim(interior->ind_info->entrance_dim);
+	bool const edim(interior->ind_info->entrance_dim), edir(interior->ind_info->entrance_dir);
 	float const window_vspace(get_window_vspace()), fc_thick(get_fc_thickness());
 	float const room_width(room.get_sz_dim(!edim)), shelf_height(0.6*room.dz()), shelf_width(0.5*window_vspace), min_aisle_width(1.2*window_vspace);
 	float const shelf_wall_thick(1.0*get_wall_thickness()), shelf_pair_width(2*shelf_width + shelf_wall_thick), min_spacing(min_aisle_width + shelf_pair_width);
@@ -477,6 +477,7 @@ void building_t::add_warehouse_shelves(rand_gen_t &rgen, room_t const &room, flo
 	shelf_area.z2() = zval + shelf_height;
 	if (num_rows == 0 || shelf_area.get_sz_dim(edim) < min_aisle_width) return; // too short or narrow to place shelves; shouldn't happen
 	unsigned const num_segs = 20;
+	unsigned base_shelf_flags(RO_FLAG_INTERIOR | RO_FLAG_NONEMPTY | RO_FLAG_ADJ_HI | RO_FLAG_IN_WH); // draw tops of brackets
 	float const shelf_spacing(room_width/num_rows), wall_seg_len(shelf_area.get_sz_dim(edim)/num_segs), stairs_pad(0.5*get_doorway_width()); // extra pad for stairs
 	float const windows_z1(min(get_industrial_window_z1(), (room.z2() - 1.5f*window_vspace)) + window_vspace*get_window_v_border()); // leave room for ducts
 	float pos(shelf_area.d[!edim][0]); // starts at left edge
@@ -526,9 +527,8 @@ void building_t::add_warehouse_shelves(rand_gen_t &rgen, room_t const &room, flo
 			}
 			else {shelf_segs.push_back(shelf);} // add entire shelf
 
-			unsigned shelf_flags(RO_FLAG_INTERIOR | RO_FLAG_NONEMPTY | RO_FLAG_ADJ_HI | RO_FLAG_IN_WH); // draw tops of brackets
 			// if shelf is in middle of room, flag as open so that back is drawn; or not needed because there's a wall? draw the ends as well if they're by windows?
-			if (!against_ext_wall) {shelf_flags |= RO_FLAG_OPEN;}
+			unsigned const shelf_flags(base_shelf_flags | (against_ext_wall ? RO_FLAG_OPEN : 0));
 
 			for (cube_t const &S : shelf_segs) {
 				if (against_ext_wall) { // check that shelf is against at least one support beam
@@ -583,6 +583,31 @@ void building_t::add_warehouse_shelves(rand_gen_t &rgen, room_t const &room, flo
 		objs.emplace_back(wall, TYPE_PG_WALL, room_id, !edim, 0, (RO_FLAG_ADJ_TOP | RO_FLAG_IN_WH), light_amt, SHAPE_CUBE, BROWN); // draw top
 		interior->room_geom->shelf_rack_occluders[0].push_back(wall);
 	}
+	// add shelves on top of sub-rooms
+	cube_t upper_shelves_area(place_area);
+	upper_shelves_area.d[edim][edir] = room.d[edim][edir]; // extend to cover sub-rooms
+	upper_shelves_area.expand_in_dim(!edim, -0.1*window_vspace); // small shrink
+	bool added_sr_shelves(0);
+
+	for (cube_t const &r : interior->ind_info->sub_rooms) {
+		cube_t shelf(r);
+		set_cube_zvals(shelf, (r.z2() + fc_thick), shelf_area.z2());
+		if (shelf.dz() < 0.5*window_vspace) continue; // too short; shouldn't happen
+		shelf.d[edim][edir] = shelf.d[edim][!edir] + (edir ? 1.0 : -1.0)*shelf_width;
+		shelf.intersect_with_cube_xy(upper_shelves_area);
+		add_shelves(shelf, edim, edir, room_id, light_amt, (base_shelf_flags | RO_FLAG_OPEN), 0, rgen);
+
+		if (!added_sr_shelves) { // add a metal bar behind sub-room shelves on the first sub-room
+			float const back_pos(shelf.d[edim][edir]), bar_z2(shelf.z2() - fc_thick);
+			cube_t bar(room); // full room width in !edim
+			bar.d[edim][ edir] = back_pos;
+			bar.d[edim][!edir] = back_pos + (edir ? -1.0 : 1.0)*0.3*support_width; // set depth
+			set_cube_zvals(bar, (bar_z2 - 0.6*support_width), bar_z2);
+			// TODO: TYPE_IBEAM
+			objs.emplace_back(bar, TYPE_METAL_BAR, room_id, edim, edir, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, LT_GRAY, get_skip_mask_for_xy(!edim)); // skip end faces
+		}
+		added_sr_shelves = 1;
+	} // for r
 }
 
 void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start_inc_lights) { // ~0.25ms

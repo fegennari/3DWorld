@@ -2808,6 +2808,7 @@ void building_t::add_boxes_and_crates(rand_gen_t &rgen, room_t const &room, floa
 }
 
 void building_t::add_shelves(cube_t const &c, bool dim, bool dir, unsigned room_id, float tot_light_amt, unsigned flags, unsigned item_flags, rand_gen_t &rgen) {
+	assert(c.is_strictly_normalized());
 	vect_room_object_t &objs(interior->room_geom->objs);
 	objs.emplace_back(c, TYPE_SHELVES, room_id, dim, dir, flags, tot_light_amt, SHAPE_CUBE, WHITE, item_flags);
 	set_obj_id(objs);
