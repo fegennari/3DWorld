@@ -538,6 +538,11 @@ void building_t::add_warehouse_shelves(rand_gen_t &rgen, room_t const &room, flo
 					if (!has_bcube_int(test_cube, supports)) continue;
 				}
 				add_shelves(S, !edim, d, room_id, light_amt, shelf_flags, 0, rgen);
+				// add a blocker in front to avoid placing objects that may slightly overlap the front supports, which extend a bit outside the shelves
+				cube_t blocker(S);
+				blocker.d[!edim][ d]  = blocker.d[!edim][!d]; // front edge
+				blocker.d[!edim][!d] += (d ? -1.0 : 1.0)*0.05*shelf_width; // extend out slightly
+				objs.emplace_back(blocker, TYPE_BLOCKER, room_id, !edim, d, RO_FLAG_INVIS);
 				if (!against_ext_wall) continue;
 				// add a metal bar behind the shelves that connects the bracket to the wall beams
 				float const back_pos(S.d[!edim][d]), bar_z2(S.z2() - fc_thick);
@@ -724,7 +729,7 @@ void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float 
 		place_model_along_wall(OBJ_MODEL_FORKLIFT, TYPE_FORKLIFT, room, 0.9, rgen, zval, room_id, light_amt, xfmr_fl_area, objs_start, 0.25, 4, 0, WHITE, 0, 0, 0);
 		
 		if (1) { // scatter some random pallets on the floor
-			unsigned const num_pallets((rgen.rand() % 4) + 2); // 2-5
+			unsigned const num_pallets((rgen.rand() % 3) + 3); // 3-5
 			float const one_inch(window_vspace/(8*12)), length(48*one_inch), width(40*one_inch), height(4.5*one_inch); // 48x40x4.5 inches
 
 			for (unsigned n = 0; n < num_pallets; ++n) {
@@ -737,8 +742,20 @@ void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float 
 					gen_xy_pos_for_cube_obj(pallet, place_area, pallet_sz, height, rgen, 1); // place_at_z1=1
 					if (overlaps_obj_or_placement_blocked(pallet, place_area, objs_start)) continue; // bad placement
 					objs.emplace_back(pallet, TYPE_PALLET, room_id, pdim, 0, 0, light_amt);
+
+					if (rgen.rand_bool()) { // make this a stack
+						unsigned const num_add((rgen.rand() % 7) + 1); // 1-7 additional pallets
+
+						for (unsigned m = 0; m < num_add; ++m) {
+							set_cube_zvals(pallet, pallet.z2(), (pallet.z2() + height)); // move up
+							for (unsigned d = 0; d < 2; ++d) {pallet.translate_dim(d, 0.1*pallet_sz[d]*rgen.signed_rand_float());} // add some random XY shift
+							if (overlaps_obj_or_placement_blocked(pallet, place_area, objs_start)) break; // bad placement, end the stack
+							objs.back().flags |= RO_FLAG_ADJ_TOP; // flag pallet below as having something stack onto it
+							objs.emplace_back(pallet, TYPE_PALLET, room_id, pdim, 0, 0, light_amt);
+						}
+					}
 					break; // success
-				}
+				} // for N
 			} // for n
 		}
 	}

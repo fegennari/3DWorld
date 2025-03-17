@@ -716,9 +716,10 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 			if (pwidth < 3.0*s_sz[!dim]) { // don't place on short shelves
 				float const half_width(0.5*pwidth);
 				unsigned const num_pallets((rgen.rand() % 3) + 4); // 4-6
-				C.dim   = dim; C.dir = 0;
-				C.type  = TYPE_PALLET;
-				C.shape = SHAPE_CUBE;
+				C.dim    = dim; C.dir = 0;
+				C.type   = TYPE_PALLET;
+				C.shape  = SHAPE_CUBE;
+				C.obj_id = objs_start; // store start of shelf objects so that we can more quickly find an object stacked on this pallet (future work)
 				set_cube_zvals(C, S.z2(), (S.z2() + pheight));
 				set_wall_width(C, S.get_center_dim(dim), 0.5*pdepth, dim); // set depth
 				vector<vect_room_object_t::iterator> to_move_up;
@@ -746,6 +747,7 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 						break; // done/success
 					} // for N
 				} // for n
+				C.obj_id = 0; // reset to default
 			}
 		}
 		if (in_warehouse) continue; // done placing objects
