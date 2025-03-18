@@ -21,7 +21,7 @@ void building_t::create_industrial_floorplan(unsigned part_id, float window_hspa
 	bool const dim(part.dx() < part.dy()), dir(rgen.rand_bool()); // long dim
 	float const door_width(get_doorway_width()), door_hwidth(0.5*door_width), floor_spacing(get_window_vspace());
 	float const wall_thick(get_wall_thickness()), wall_hthick(0.5*wall_thick), floor_thick(get_floor_thickness()), fc_thick(get_fc_thickness());
-	float const door_ent_pad(2.0*door_width), room_len(part.get_sz_dim(dim)), room_width(part.get_sz_dim(!dim)), dsign(dir ? -1.0 : 1.0);
+	float const door_ent_pad(2.2*door_width), room_len(part.get_sz_dim(dim)), room_width(part.get_sz_dim(!dim)), dsign(dir ? -1.0 : 1.0);
 	float const sub_room_len(max(1.5*floor_spacing, min(3.0*floor_spacing, 0.2*room_len))*rgen.rand_uniform(0.9, 1.0));
 	float const centerline(part.get_center_dim(!dim) + (rgen.rand_bool() ? 1.0 : -1.0)*rgen.rand_uniform(0.15, 0.25)*room_width); // biased to a random side
 	unsigned const num_floors(calc_num_floors(part, floor_spacing, floor_thick));
@@ -134,25 +134,33 @@ float building_t::gather_room_lights(unsigned objs_start_inc_lights, vect_cube_t
 
 void building_t::add_ladders_to_nested_room_roofs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float light_amt, cube_t const &place_area) {
 	assert(interior->ind_info);
+	bool const add_to_entry(is_warehouse());
 	bool const edim(interior->ind_info->entrance_dim), edir(interior->ind_info->entrance_dir); // long dim
 	float const window_vspace(get_window_vspace()), wall_thick(get_wall_thickness()), fc_thick(get_fc_thickness());
 	float const ladder_extend_up(get_player_height() + CAMERA_RADIUS), clearance(get_min_front_clearance());
 
 	for (cube_t const &r : interior->ind_info->sub_rooms) {
-		float const wall_pos(r.d[edim][!edir] - 0.5*(edir ? 1.0 : -1.0)*wall_thick); // partially inside the wall
-		float const lo(max(r.d[!edim][0], place_area.d[!edim][0])), hi(min(r.d[!edim][1], place_area.d[!edim][1]));
+		bool const dim(edim ^ add_to_entry), dir(add_to_entry ? (r.d[dim][1] == get_industrial_area().d[dim][1]) : edir);
+		float const wall_pos(r.d[dim][!dir] - 0.5*(dir ? 1.0 : -1.0)*wall_thick); // partially inside the wall
+		float const lo(max(r.d[!dim][0], place_area.d[!dim][0])), hi(min(r.d[!dim][1], place_area.d[!dim][1]));
 		float const ladder_hwidth(rgen.rand_uniform(0.1, 0.11)*window_vspace), edge_spacing(2.0*ladder_hwidth);
 		if ((hi - lo) < 4.0*edge_spacing) continue; // too narrow
 		cube_t ladder;
 		set_cube_zvals(ladder, zval, (r.z2() + fc_thick + ladder_extend_up));
-		ladder.d[edim][ edir] = wall_pos;
-		ladder.d[edim][!edir] = wall_pos - (edir ? 1.0 : -1.0)*0.06*window_vspace; // set depth
+		ladder.d[dim][ dir] = wall_pos;
+		ladder.d[dim][!dir] = wall_pos - (dir ? 1.0 : -1.0)*0.06*window_vspace; // set depth
 
-		for (unsigned n = 0; n < 10; ++n) { // 10 attempts to place a ladder that doesn't block the door
-			set_wall_width(ladder, rgen.rand_uniform((lo + edge_spacing), (hi - edge_spacing)), ladder_hwidth, !edim);
-			if (cube_int_ext_door(ladder) || is_obj_placement_blocked(ladder, room, 1)) continue; // blocked
-			add_ladder_with_blocker(ladder, room_id, edim, !edir, light_amt, clearance, interior->room_geom->objs);
-			break; // success
+		if (add_to_entry) { // add next to the entrance exterior wall; shouldn't be blocked by anything
+			set_wall_width(ladder, (place_area.d[edim][edir] + (edir ? -1.0 : 1.0)*edge_spacing), ladder_hwidth, !dim);
+			add_ladder_with_blocker(ladder, room_id, dim, !dir, light_amt, clearance, interior->room_geom->objs);
+		}
+		else { // add at a random position along the wall
+			for (unsigned n = 0; n < 10; ++n) { // 10 attempts to place a ladder that doesn't block the door
+				set_wall_width(ladder, rgen.rand_uniform((lo + edge_spacing), (hi - edge_spacing)), ladder_hwidth, !dim);
+				if (cube_int_ext_door(ladder) || is_obj_placement_blocked(ladder, room, 1)) continue; // blocked
+				add_ladder_with_blocker(ladder, room_id, dim, !dir, light_amt, clearance, interior->room_geom->objs);
+				break; // success
+			}
 		}
 	} // for r
 }
@@ -586,7 +594,7 @@ void building_t::add_warehouse_shelves(rand_gen_t &rgen, room_t const &room, flo
 	// add shelves on top of sub-rooms
 	cube_t upper_shelves_area(place_area);
 	upper_shelves_area.d[edim][edir] = room.d[edim][edir]; // extend to cover sub-rooms
-	upper_shelves_area.expand_in_dim(!edim, -0.1*window_vspace); // small shrink
+	upper_shelves_area.expand_in_dim(!edim, -0.75*shelf_width); // shrink at ends; the player can fit through on the side, which should be okay
 	bool added_sr_shelves(0);
 
 	for (cube_t const &r : interior->ind_info->sub_rooms) {
@@ -597,14 +605,13 @@ void building_t::add_warehouse_shelves(rand_gen_t &rgen, room_t const &room, flo
 		shelf.intersect_with_cube_xy(upper_shelves_area);
 		add_shelves(shelf, edim, edir, room_id, light_amt, (base_shelf_flags | RO_FLAG_OPEN), 0, rgen);
 
-		if (!added_sr_shelves) { // add a metal bar behind sub-room shelves on the first sub-room
-			float const back_pos(shelf.d[edim][edir]), bar_z2(shelf.z2() - fc_thick);
+		if (!added_sr_shelves) { // add a small I-beam behind sub-room shelves on the first sub-room
+			float const back_pos(shelf.d[edim][edir]), bar_z2(shelf.z2() - 0.5*fc_thick);
 			cube_t bar(room); // full room width in !edim
-			bar.d[edim][ edir] = back_pos;
-			bar.d[edim][!edir] = back_pos + (edir ? -1.0 : 1.0)*0.3*support_width; // set depth
+			bar.d[edim][!edir] = back_pos;
+			bar.d[edim][ edir] = back_pos + (edir ? 1.0 : -1.0)*0.4*support_width; // set depth
 			set_cube_zvals(bar, (bar_z2 - 0.6*support_width), bar_z2);
-			// TODO: TYPE_IBEAM
-			objs.emplace_back(bar, TYPE_METAL_BAR, room_id, edim, edir, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, LT_GRAY, get_skip_mask_for_xy(!edim)); // skip end faces
+			objs.emplace_back(bar, TYPE_IBEAM, room_id, !edim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, LT_GRAY, get_skip_mask_for_xy(!edim)); // skip end faces
 		}
 		added_sr_shelves = 1;
 	} // for r
@@ -727,7 +734,7 @@ void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float 
 	xfmr_fl_area.d[edim][edir] -= edir_sign*1.2*doorway_width; // don't place too close to sub-rooms or entrance
 	cube_t const &entry(interior->ind_info->entrance_area);
 	unsigned const objs_start(objs.size());
-	add_ladders_to_nested_room_roofs(rgen, room, zval, room_id, light_amt, place_area); // added for both factories and warehouses
+	add_ladders_to_nested_room_roofs(rgen, room, zval, room_id, light_amt, place_area_upper); // added for both factories and warehouses
 
 	if (room_is_factory) { // add factory-specific objects
 		cube_t const center_ladder(add_factory_ladders_and_catwalks(rgen, room, zval, room_id, light_amt, place_area, place_area_upper,
@@ -785,7 +792,9 @@ void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float 
 		}
 	}
 	// add fire extinguisher
-	add_fire_ext_along_wall(entry, zval, room_id, light_amt, !edim, rgen.rand_bool(), rgen); // choose a random side
+	cube_t fire_ext_area(entry);
+	if (room_is_warehouse) {fire_ext_area.d[edim][edir] -= (edir ? 1.0 : -1.0)*0.5*window_vspace;} // clip off the end near the exterior wall to avoid intersecting ladders
+	add_fire_ext_along_wall(fire_ext_area, zval, room_id, light_amt, !edim, rgen.rand_bool(), rgen); // choose a random side
 	
 	// add breaker panel
 	if (!nested_rooms.empty()) {
