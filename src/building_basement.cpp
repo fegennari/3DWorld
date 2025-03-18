@@ -682,6 +682,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		// note that lights haven't been added yet though, but they're placed on beams, so we can avoid beams instead
 		vect_cube_t walls, beams;
 		add_pg_obstacles(objs, objs_start, objs.size(), walls, beams, obstacles);
+		if (interior->ind_info) {vector_add_to(interior->ind_info->pg_extended_pipes, obstacles);} // must avoid sprinkler pipes coming from above
 		add_basement_electrical(obstacles, walls, beams, room_id, rgen);
 		// get pipe ends (risers) coming in through the ceiling
 		vect_riser_pos_t sewer, cold_water, hot_water, gas_pipes;
@@ -748,7 +749,9 @@ void building_t::add_basement_electrical(vect_cube_t &obstacles, vect_cube_t con
 			add_breaker_panel(rgen, c, ceil_zval, dim, dir, cur_room_id, tot_light_amt);
 			cube_t blocker(c);
 			set_cube_zvals(blocker, ceil_zval-floor_height, ceil_zval); // expand to floor-to-ceiling
-			obstacles.push_back(blocker); // block off from pipes
+			obstacles.push_back(blocker  ); // block off from pipes
+			obstacles.push_back(test_cube); // includes the space in front
+			obstacles.back().z2() = c.z2(); // but only for the Z-range of the breaker
 
 			if (is_house) { // try to reroute outlet conduits that were previously placed on the same wall horizontally to the breaker box
 				float const conn_height(c.z1() + rgen.rand_uniform(0.25, 0.75)*c.dz());

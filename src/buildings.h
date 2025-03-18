@@ -1856,7 +1856,7 @@ struct bldg_industrial_info_t {
 	float entrance_pos;
 	cube_t floor_space, entrance_area;
 	rand_gen_t rgen; // used for generating smoke
-	vect_cube_t sub_rooms;
+	vect_cube_t sub_rooms, pg_extended_pipes;
 
 	// specifically for factories
 	struct smoke_source_t {

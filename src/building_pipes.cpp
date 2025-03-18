@@ -964,7 +964,7 @@ bool building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 		flange.expand_by_xy(flange_expand);
 		bool add_bot_flange(0);
 
-		if (!in_basement && has_parking_garage) { // extend into basement parking garage?
+		if (!in_basement && has_parking_garage) { // extend into basement parking garage; parking garage objects have not yet been placed
 			cube_t const &basement(get_basement());
 
 			if (basement.contains_cube_xy(c)) { // always true?
@@ -974,6 +974,7 @@ bool building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 				if (!is_obj_placement_blocked(c_ext, basement, 1)) {
 					objs.emplace_back(objs.back()); // duplicate the vertical pipe and adjust it's zvals
 					objs.back().copy_from(c_ext);
+					if (interior->ind_info) {interior->ind_info->pg_extended_pipes.push_back(c_ext);} // add as a future blocker for parking garage panels and pipes
 					// add flange (no bolts on bottom)
 					flange.z1() = basement.z1() + 1.00*fc_thickness;
 					flange.z2() = basement.z1() + 1.15*fc_thickness;

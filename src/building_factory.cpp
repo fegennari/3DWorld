@@ -558,7 +558,7 @@ void building_t::add_warehouse_shelves(rand_gen_t &rgen, room_t const &room, flo
 				bar.d[!edim][ d] = back_pos;
 				bar.d[!edim][!d] = back_pos + (d ? -1.0 : 1.0)*0.25*support_width; // set depth
 				set_cube_zvals(bar, (bar_z2 - 0.5*support_width), bar_z2);
-				objs.emplace_back(bar, TYPE_METAL_BAR, room_id, !edim, d, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, LT_GRAY, 0); // draw all faces
+				objs.emplace_back(bar, TYPE_METAL_BAR, room_id, edim, d, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, LT_GRAY, 0); // draw all faces
 			} // for S
 		}
 		if (!last_row) { // add a wall
