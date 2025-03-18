@@ -2456,6 +2456,7 @@ public:
 	bool cube_intersects_basement_or_extb_room(cube_t const &c, bool check_tunnel_pipes=0) const;
 	bool point_in_courtyard(point const &pos_bs) const;
 	bool point_on_basement_stairs(point const &pos_bs) const;
+	bool is_cube_visible_through_extb_door(point const &viewer, cube_t const &c) const;
 	float get_bcube_z1_inc_ext_basement() const {return (has_ext_basement() ? min(bcube.z1(), interior->basement_ext_bcube.z1()) : bcube.z1());}
 	unsigned get_ext_basement_floor_ix(float zval) const;
 	void get_pgbr_wall_ix_for_pos(point const &pos, index_pair_t &start, index_pair_t &end) const;
@@ -2848,7 +2849,6 @@ private:
 	void get_lights_for_room_and_floor(unsigned room_ix, unsigned floor_ix, vector<unsigned> &light_ids) const;
 	void get_lights_near_door(unsigned door_ix, vector<unsigned> &light_ids) const;
 	bool is_cube_visible_through_door(point const &viewer, cube_t const &c, door_t const &door) const;
-	bool is_cube_visible_through_extb_door(point const &viewer, cube_t const &c) const;
 	void set_rgen_state_for_building(rand_gen_t &rgen) const;
 public:
 	// ray queries
