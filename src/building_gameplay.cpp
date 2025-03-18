@@ -204,6 +204,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_WARN_LIGHT] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 50.0,  2.0,   "warning light");
 	bldg_obj_types[TYPE_GAUGE     ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 0,  0.0,  0.0,   "gauge"); // detail object
 	bldg_obj_types[TYPE_PALLET    ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 10.0,  35.0,  "pallet");
+	bldg_obj_types[TYPE_SHELF_WALL] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1, 0.0,   0.0,   "shelf wall");
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");

@@ -2517,6 +2517,10 @@ void building_room_geom_t::add_downspout(room_object_t const &c) {
 	rotate_verts(mat.quad_verts, rot_axis, 30.0*TO_RADIANS, bot.get_cube_center(), qv_start);
 }
 
+bool is_wall_or_pillar_concrete(room_object_t const &c) {
+	// backroom pillars and upper (ADJ_HI) sections of retail room pillars are concrete; other objects are plaster/stucco
+	return (c.flags & (RO_FLAG_BACKROOM | RO_FLAG_ADJ_HI));
+}
 void building_room_geom_t::add_stairs_wall(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex) {
 	unsigned const skip_faces(c.is_hanging() ? 0 : EF_Z1); // skip bottom, unless hanging (non-exit floor)
 	get_material(get_scaled_wall_tex(wall_tex), 1).add_cube_to_verts(c, c.color, tex_origin, skip_faces); // no room lighting color atten
@@ -2524,17 +2528,8 @@ void building_room_geom_t::add_stairs_wall(room_object_t const &c, vector3d cons
 void building_room_geom_t::add_wall_or_pillar(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex) {
 	bool const draw_top(c.flags & RO_FLAG_ADJ_TOP);
 	unsigned const small((c.type == TYPE_PG_WALL) ? 2 : 0); // small=2/detail for parking garage or backrooms wall or pillar
-
-	if (c.shape == SHAPE_CUBE && c.color == BROWN) { // special case for wooden walls in mall store or warehouse
-		int const tid(c.in_warehouse() ? get_plywood_tid() : FENCE_TEX);
-		rgeom_mat_t &mat(get_material(get_tex_auto_nm(tid, 2.0*wall_tex.tscale_x, 1), 1, 0, small)); // shadowed
-		mat.add_cube_to_verts(c, WHITE, tex_origin, (draw_top ? EF_Z1 : EF_Z12), c.dim);
-		return;
-	}
 	if (c.type == TYPE_OFF_PILLAR && c.in_mall()) {} // special case for mall pillar?
-	// backroom pillars and upper (ADJ_HI) sections of retail room pillars are concrete; other objects are plaster/stucco
-	bool const is_concrete(c.flags & (RO_FLAG_BACKROOM | RO_FLAG_ADJ_HI));
-	tid_nm_pair_t const tex(is_concrete ? tid_nm_pair_t(get_concrete_tid(), wall_tex.tscale_x, 1) : get_scaled_wall_tex(wall_tex));
+	tid_nm_pair_t const tex(is_wall_or_pillar_concrete(c) ? tid_nm_pair_t(get_concrete_tid(), wall_tex.tscale_x, 1) : get_scaled_wall_tex(wall_tex));
 	rgeom_mat_t &mat(get_material(tex, 1, 0, small)); // shadowed, no color atten, sides only unless draw_top
 	if      (c.shape == SHAPE_CUBE ) {mat.add_cube_to_verts(c, c.color, tex_origin, (draw_top ? EF_Z1 : EF_Z12));}
 	else if (c.shape == SHAPE_CYLIN) {mat.add_vcylin_to_verts_tscale(c, c.color, 0, draw_top);}
@@ -2549,6 +2544,15 @@ void building_room_geom_t::add_basement_pillar(room_object_t const &c, tid_nm_pa
 void building_room_geom_t::add_basement_beam(room_object_t const &c, tid_nm_pair_t const &wall_tex) {
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_concrete_tid(), wall_tex.tscale_x, 0), 0, 0, 2)); // small=2/detail, unshadowed, no color atten
 	mat.add_cube_to_verts(c, c.color, all_zeros, EF_Z2);
+}
+
+int get_shelf_wall_tid(room_object_t const &c) {
+	return (c.in_warehouse() ? get_plywood_tid() : FENCE_TEX);
+}
+void building_room_geom_t::add_shelf_wall(room_object_t const &c, tid_nm_pair_t const &wall_tex) {
+	bool const draw_top(c.flags & RO_FLAG_ADJ_TOP);
+	rgeom_mat_t &mat(get_material(get_tex_auto_nm(get_shelf_wall_tid(c), 2.0*wall_tex.tscale_x, 1), 1, 0)); // shadowed
+	mat.add_cube_to_verts(c, c.color, tex_origin, (draw_top ? EF_Z1 : EF_Z12), c.dim);
 }
 
 void building_room_geom_t::add_parking_space(room_object_t const &c, float tscale) {
@@ -6144,10 +6148,10 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_CHAIR:    return get_chair_color(*this);
 	case TYPE_STAIR:    return (STAIRS_COLOR_TOP*0.5 + STAIRS_COLOR_BOT*0.5).modulate_with(texture_color(MARBLE_TEX));
 	case TYPE_STAIR_WALL: return texture_color(STUCCO_TEX);
-	case TYPE_PG_WALL:    return texture_color(STUCCO_TEX);
+	case TYPE_PG_WALL: case TYPE_OFF_PILLAR: return texture_color(is_wall_or_pillar_concrete(*this) ? get_concrete_tid() : STUCCO_TEX);
 	case TYPE_PG_PILLAR:  return texture_color(get_concrete_tid());
 	case TYPE_PG_BEAM:    return texture_color(get_concrete_tid());
-	case TYPE_OFF_PILLAR: return texture_color((flags & RO_FLAG_ADJ_HI) ? get_concrete_tid() : STUCCO_TEX);
+	case TYPE_SHELF_WALL: return texture_color(get_shelf_wall_tid(*this));
 	case TYPE_PARK_SPACE: return LT_GRAY; // texture_color(...)?
 	case TYPE_ELEVATOR: return LT_BROWN; // ???
 	case TYPE_RUG:      return texture_color(get_rug_tid());

@@ -968,6 +968,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		case TYPE_CHECKOUT:  add_checkout(*i, tscale); break;
 		case TYPE_FISHTANK:  add_fishtank(*i); break;
 		case TYPE_OFF_PILLAR:add_wall_or_pillar(*i, tex_origin, wall_tex); break;
+		case TYPE_SHELF_WALL:add_shelf_wall(*i, wall_tex); break;
 		case TYPE_CONF_TABLE:add_conference_table(*i, tscale); break;
 		case TYPE_INT_WINDOW:add_int_window(*i); break;
 		case TYPE_BUCKET:    add_bucket(*i, 0, 1); break; // draw_metal=0, draw_liquid=1

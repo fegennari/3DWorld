@@ -207,16 +207,17 @@ void building_t::set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit
 		if (i->room_id != room_id || i->z1() < obj_zmin || i->z1() > light_z2) continue; // wrong room or floor
 		if (i->is_obj_model_type()) continue; // light_amt currently does not apply to 3D models; should it?
 		if (i->is_exterior      ()) continue; // not lit by interior light
+		room_object const type(i->type);
 		bool invalidate(0);
 
-		if (i->type == TYPE_STAIR || i->type == TYPE_STAIR_WALL || i->type == TYPE_ELEVATOR || i->type == TYPE_LIGHT || i->type == TYPE_BLOCKER ||
-			i->type == TYPE_COLLIDER || i->type == TYPE_SIGN || i->type == TYPE_WALL_TRIM || i->type == TYPE_RAILING || i->type == TYPE_BLINDS ||
-			i->type == TYPE_SWITCH || i->type == TYPE_OUTLET || i->type == TYPE_PG_WALL || i->type == TYPE_PG_PILLAR || i->type == TYPE_PG_BEAM ||
-			i->type == TYPE_PARK_SPACE || i->type == TYPE_RAMP || i->type == TYPE_VENT || i->type == TYPE_METAL_BAR || i->type == TYPE_OFF_PILLAR)
+		if (type == TYPE_STAIR || type == TYPE_STAIR_WALL || type == TYPE_ELEVATOR || type == TYPE_LIGHT || type == TYPE_BLOCKER || type == TYPE_COLLIDER ||
+			type == TYPE_SIGN || type == TYPE_WALL_TRIM || type == TYPE_RAILING || type == TYPE_BLINDS || type == TYPE_SWITCH || type == TYPE_OUTLET ||
+			type == TYPE_PG_WALL || type == TYPE_PG_PILLAR || type == TYPE_PG_BEAM || type == TYPE_PARK_SPACE || type == TYPE_RAMP || type == TYPE_VENT ||
+			type == TYPE_METAL_BAR || type == TYPE_OFF_PILLAR || type == TYPE_SHELF_WALL)
 		{
 			continue; // not a type that uses light_amt
 		}
-		else if (i->type == TYPE_WINDOW) {
+		else if (type == TYPE_WINDOW) {
 			if (lit_state) {i->flags |= RO_FLAG_LIT;} else {i->flags &= ~RO_FLAG_LIT;}
 			invalidate = 1;
 		}
