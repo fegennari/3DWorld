@@ -2113,8 +2113,10 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			}
 			// expand so that offset exterior doors are properly handled, but less for walkway lights
 			bool const is_non_door_floor(!room.is_single_floor && !multi_family && lpos.z > (ground_floor_z1 + window_vspacing));
+			bool const fully_in_extb(in_ext_basement && interior->basement_ext_bcube.contains_cube(clipped_bc));
 			clipped_bc.expand_by_xy((light_in_walkway ? 0.1 : (is_non_door_floor ? 0.65 : 1.0))*room_xy_expand);
 			clipped_bc.intersect_with_cube(sphere_bc); // clip to original light sphere, which still applies (only need to expand at building exterior)
+			if (fully_in_extb) {clipped_bc.intersect_with_cube(interior->basement_ext_bcube);} // don't bleed through the parking garage wall
 			if (sep_by_extb_door && !is_cube_visible_through_extb_door(camera_bs, clipped_bc)) continue;
 		}
 		if (!clipped_bc.contains_pt(lpos)) {
