@@ -2678,7 +2678,7 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 	
 	if (!c_is_building_part && !reflection_pass) {
 		// check walls of this building; not valid for reflections because the reflected camera may be on the other side of a wall/mirror
-		if (targ_in_basement && is_pos_in_pg_or_backrooms(viewer)) { // object and pos are both in the parking garage or backrooms
+		if (targ_in_basement && is_pos_in_pg_or_backrooms(viewer) && is_pos_in_pg_or_backrooms(center)) { // object and pos are both in the parking garage or backrooms
 			if (interior->has_backrooms) {
 				// check for occlusion from the wall segments on either side of the extended basement door that separates it from the basement
 				bool const dim(interior->extb_wall_dim), dir(interior->extb_wall_dir);
@@ -2696,7 +2696,7 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 			if (check_pg_br_wall_occlusion(viewer, pts, npts, occ_area, dir)) return 1;
 		}
 		else { // regular walls case, with size check (helps with light bcubes)
-			bool const in_ext_basement(point_in_extended_basement_not_basement(viewer));
+			bool const in_ext_basement(point_in_extended_basement_not_basement(viewer) || point_in_extended_basement_not_basement(center));
 
 			for (unsigned D = 0; D < 2; ++D) {
 				bool const d(bool(D) ^ pri_dim); // try primary dim first
@@ -2724,7 +2724,7 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 		if (fabs(viewer.z - c.zc()) > (reflection_pass ? 1.0 : 0.5)*floor_spacing) { // on different floors
 			float max_sep_dist(floor_spacing);
 			
-			if (point_in_mall(viewer) && point_in_mall(center)) { // taller ceilings in malls
+			if (point_in_mall(viewer) || point_in_mall(center)) { // taller ceilings in malls
 				max_sep_dist = get_mall_floor_spacing();
 			}
 			else if (has_tall_retail()) { // handle ceilings more than one part tall
