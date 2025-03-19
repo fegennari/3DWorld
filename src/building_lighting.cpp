@@ -1432,7 +1432,7 @@ void check_for_dynamic_shadow_casters(vector<person_t> const &people, vect_cube_
 // rat_t/spider_t/snake_t
 template<typename T> void get_animal_shadow_casters(vector<T> &animals, vect_cube_with_ix_t &moving_objs, vector3d const &xlate, unsigned base_ix) {
 	for (auto i = animals.begin(); i != animals.end(); ++i) {
-		if (!i->is_moving()) continue;
+		if (!i->is_moving() || i->no_shadows()) continue;
 		// calculate which animals are visible to the player and consider those for shadow casters;
 		// the shadow_non_visible flag will also be used to cull them in the shadow pass;
 		// assumes non-vertical/hanging animals (such as spiders) may cast a shadow far below them

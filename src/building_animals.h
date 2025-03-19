@@ -20,6 +20,7 @@ struct building_animal_t {
 	bool operator<(building_animal_t const &a) const {return (pos.x < a.pos.x);} // compare only xvals
 	bool is_moving  () const {return (speed     > 0.0);}
 	bool is_sleeping() const {return (wake_time > 0.0);}
+	bool no_shadows () const {return 0;}
 	vector3d get_upv() const {return plus_z;}
 	void sleep_for(float time_secs_min, float time_secs_max);
 	float move(float timestep, bool can_move_forward=1, float anim_time_scale=1.0);
@@ -59,6 +60,7 @@ struct spider_t : public building_animal_t {
 	spider_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_, unsigned tix=0, bool in_tank_=0);
 	static bool allow_in_attic () {return 1;}
 	static bool not_by_ext_door() {return 1;}
+	bool no_shadows    () const {return in_tank;}
 	float get_xy_radius() const {return 2.0*radius;}
 	float get_height   () const {return 2.0*radius;}
 	vector3d get_size  () const;

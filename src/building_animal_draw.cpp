@@ -122,7 +122,8 @@ public:
 					web_mat.add_vcylin_to_verts(strand, WHITE, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 16); // ndiv=16
 				}
 			}
-			if (shadow_only && S.in_tank)            continue; // too small to cast a shadow
+			if (!player_in_mall && S.in_tank)        continue; // player not in mall, likely not visible
+			if (shadow_only     && S.in_tank)        continue; // too small to cast a shadow
 			if (shadow_only && S.shadow_non_visible) continue; // shadow not visible to the camera (player)
 			cube_t const bcube(S.get_bcube());
 			if (check_clip_cube && !smap_light_clip_cube.intersects(bcube + xlate)) continue; // shadow map clip cube test: fast and high rejection ratio, do this first
@@ -491,10 +492,10 @@ public:
 		if (snakes.empty() && pet_snakes.empty()) return; // nothing to draw
 		//highres_timer_t timer("Draw Snakes");
 		point const camera_bs(camera_pdu.pos - xlate);
-		bool const check_occlusion(display_mode & 0x08);
+		bool const check_occlusion(display_mode & 0x08), draw_pet_snakes(!shadow_only && player_in_mall); // skip pet snakes in the shadow pass
 		bool any_drawn(0);
 
-		for (unsigned d = 0; d < (shadow_only ? 1U : 2U); ++d) { // skip pet snakes in the shadow pass
+		for (unsigned d = 0; d < (draw_pet_snakes ? 2U : 1U); ++d) {
 			for (snake_t const &S : (d ? pet_snakes : snakes)) {
 				if (shadow_only && S.shadow_non_visible) continue; // shadow not visible to the camera (player)
 				cube_t const bcube(S.get_bcube());
@@ -586,7 +587,7 @@ void building_room_geom_t::draw_animals(shader_t &s, building_t const &building,
 		bind_default_flat_normal_map();
 		if (rat_drawn) {check_mvm_update();} // needed after popping model transform matrix
 	} // end rats drawing
-	if (!pet_birds.empty() && building_obj_model_loader.is_model_valid(OBJ_MODEL_BIRD_ANIM)) {
+	if (!shadow_only && !pet_birds.empty() && building_obj_model_loader.is_model_valid(OBJ_MODEL_BIRD_ANIM)) {
 		bool const enable_animations(1);
 		animation_state_t anim_state(enable_animations, ANIM_ID_SKELETAL, 0.0, BIRD_STATE_STANDING);
 		bool bird_drawn(0);
