@@ -728,9 +728,10 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 	
 	if (1) { // add a 2D grid of machines to the center of the place area
 		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // used for machines and tanks
-		float const height(max_height*rgen.rand_uniform(0.6, 0.8)), tank_height(0.75*height), tank_z2(zval + tank_height), aisle_spacing(1.25*doorway_width);
+		float const height(max_height*rgen.rand_uniform(0.6, 0.8)), aisle_spacing(1.25*doorway_width);
 		vector2d const machine_sz(max_place_sz*vector2d(rgen.rand_uniform(0.8, 1.0), rgen.rand_uniform(0.8, 1.0)));
 		float const tank_radius(0.5*machine_sz.get_min_val()), pipe_radius(0.04*tank_radius);
+		float const tank_height(max(2.25*tank_radius, 0.75*height)), tank_z2(zval + tank_height);
 		unsigned const item_flags(rgen.rand()), rand_seed(rgen.rand());
 		cube_t center_area(place_area);
 		center_area.expand_by_xy(-(max_place_sz + 0.5*doorway_width)); // space for machines along the wall

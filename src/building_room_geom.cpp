@@ -5826,7 +5826,7 @@ void building_room_geom_t::add_chem_tank(room_object_t const &c) {
 	base.expand_by_xy(-0.5*radius); // half radius
 	base.z2() = mid.z1();
 	mat.add_vcylin_to_verts(base, color, 0, 0); // draw sides only
-	mat.add_vcylin_to_verts(mid,  color, 0, 0, 0, 0, 1.0, 1.0, 2.0*mid.dz()/radius); // draw sides only; side_tscale scaled
+	mat.add_vcylin_to_verts(mid,  color, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, N_CYL_SIDES, 0.0, 0, mid.dz()/(PI*radius)); // draw sides only, with correct length tscale
 	mat.add_sphere_to_verts(bot,  color, 0,  plus_z); // bot hemisphere
 	mat.add_sphere_to_verts(top,  color, 0, -plus_z); // top hemisphere
 	// warning label on side of tank
