@@ -830,6 +830,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				added_obj = no_whiteboard = add_hospital_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, nested_room_ix);
 				if (added_obj) {r->assign_to(RTYPE_HOS_BED, f);}
 			}
+			if (!added_obj && !r->interior && is_school()) { // school classroom with a window
+				added_obj = add_classroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
+				if (added_obj) {r->assign_to(RTYPE_CLASS, f);}
+			}
 			// try to place a desk if there's no table, bed, etc.; this can be an office
 			if (!added_obj && (!is_basement || rgen.rand_bool())) {
 				added_obj = can_place_onto = added_desk = add_office_objs(rgen, *r, blockers, chair_color, room_center.z, room_id, f, tot_light_amt, objs_start, is_basement);

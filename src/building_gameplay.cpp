@@ -423,6 +423,9 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 	else if (otype == TYPE_WBOARD) {
 		wv_factor = 0.5*obj.get_width()/obj.dz(); // longer whiteboards are heavier and higher value
 	}
+	else if (otype == TYPE_MARKER && obj.color == WHITE) {
+		type.name = "chalk";
+	}
 	if (wv_factor != 1.0) { // scale weight and value by this factor, rounded to the nearest pound and dollar
 		type.weight = int(wv_factor*type.weight);
 		type.value  = int(wv_factor*type.value );
@@ -2659,7 +2662,7 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 		ext_paint_manager.get_paint_qbd_for_bldg(this, is_marker, emissive_color_id).add_quad_dirs(p_int, dx, radius*dir2, paint_color, normal);
 	}
 	if (tfticks > next_sound_time) { // play sound if sprayed/marked, but not too frequently; marker has no sound
-		gen_sound_thread_safe_at_player((is_spraypaint ? (int)SOUND_SPRAY : (int)SOUND_SQUEAK), 0.25);
+		gen_sound_thread_safe_at_player((is_spraypaint ? (int)SOUND_SPRAY : ((color == WHITE) ? (int)SOUND_SCRATCH : (int)SOUND_SQUEAK)), 0.25); // spraypaint, chalk, marker
 		if (is_spraypaint) {register_building_sound(pos, 0.1);}
 		next_sound_time = tfticks + double(is_spraypaint ? 0.5 : 0.25)*TICKS_PER_SECOND;
 	}

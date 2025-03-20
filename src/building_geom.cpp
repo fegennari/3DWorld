@@ -252,6 +252,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 		if (is_house)                                       {btype = BTYPE_HOUSE   ;} // may be flatted as BTYPE_MULT_FAM in gen_house()
 		else if (rgen.rand_probability(mat.apartment_prob)) {btype = ((rseed1 & 1) ? BTYPE_HOTEL : BTYPE_APARTMENT);}
 		else if (is_cube() && (rseed1&15) == 0)             {btype = BTYPE_HOSPITAL;} // 1/16 the time
+		else if (is_cube() && (rseed1&15) == 1)             {btype = BTYPE_SCHOOL  ;} // 1/16 the time
 		else                                                {btype = BTYPE_OFFICE  ;} // office is the default for non-residential buildings
 	}
 	assign_name(rgen);

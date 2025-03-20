@@ -2059,6 +2059,7 @@ struct building_t : public building_geom_t {
 	bool is_apt_or_hotel() const {return (is_apartment() || is_hotel());}
 	bool is_factory     () const {return (btype == BTYPE_FACTORY   );}
 	bool is_hospital    () const {return (btype == BTYPE_HOSPITAL  );}
+	bool is_school      () const {return (btype == BTYPE_SCHOOL    );}
 	bool is_parking     () const {return (btype == BTYPE_PARKING   );}
 	bool is_warehouse   () const {return (btype == BTYPE_WAREHOUSE );}
 	bool is_powerplant  () const {return (btype == BTYPE_POWERPLANT);}
@@ -2635,6 +2636,7 @@ private:
 	bool add_ball_to_room    (rand_gen_t &rgen, room_t const &room, cube_t const &place_area, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
 		int force_type=-1, cube_t const &avoid_xy=cube_t(), bool in_pool=0);
 	bool maybe_add_fireplace_to_room(rand_gen_t &rgen, room_t const &room, vect_cube_t &blockers, float zval, unsigned room_id, float tot_light_amt);
+	bool add_classroom_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	bool add_hospital_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, int &nested_room_ix);
 	float add_flooring       (room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned flooring_type);
 	bool add_bathroom_objs   (rand_gen_t rgen, room_t &room, float &zval, unsigned room_id, float tot_light_amt,

@@ -1414,7 +1414,7 @@ bool building_t::add_ball_to_room(rand_gen_t &rgen, room_t const &room, cube_t c
 	return 0;
 }
 
-colorRGBA gen_vase_color(rand_gen_t &rgen) {
+colorRGBA gen_vase_color(rand_gen_t &rgen) { // or urn
 	if (rgen.rand_bool()) return WHITE; // will be textured
 	return colorRGBA(rgen.rand_float(), rgen.rand_float(), rgen.rand_float(), 1.0); // solid pastel color
 }
@@ -1460,6 +1460,11 @@ bool building_t::maybe_add_fireplace_to_room(rand_gen_t &rgen, room_t const &roo
 	}
 	has_int_fplace = 1;
 	return 1;
+}
+
+bool building_t::add_classroom_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	// TODO
+	return 0;
 }
 
 bool building_t::check_if_against_window(cube_t const &c, room_t const &room, bool dim, bool dir) const {
@@ -4320,6 +4325,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t rgen, room_t const &room, floa
 		if (!is_conference && rgen.rand_float() < 0.1) return 0; // skip 10% of the time
 		bool const pref_dim(rgen.rand_bool()), pref_dir(rgen.rand_bool());
 		float const floor_thick(get_floor_thickness());
+		colorRGBA const color(is_school() ? GRAY_BLACK : WHITE); // blackboard for schools, whiteboard for offices
 
 		for (unsigned dim2 = 0; dim2 < 2; ++dim2) {
 			for (unsigned dir2 = 0; dir2 < 2; ++dir2) {
@@ -4347,9 +4353,9 @@ bool building_t::hang_pictures_in_room(rand_gen_t rgen, room_t const &room, floa
 					}
 				}
 				assert(c.is_strictly_normalized());
-				objs.emplace_back(c, TYPE_WBOARD, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt); // whiteboard faces dir opposite the wall
+				objs.emplace_back(c, TYPE_WBOARD, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, color); // whiteboard faces dir opposite the wall
 
-				if (rgen.rand_float() < 0.8) { // add marker and maybe eraser
+				if (rgen.rand_float() < 0.8) { // add marker/chalk and maybe eraser
 					float const marker_hlen(0.5*0.06*floor_height), marker_radius(0.005*floor_height);
 					cube_t const ledge(get_whiteboard_marker_ledge(objs.back()));
 
@@ -4359,7 +4365,8 @@ bool building_t::hang_pictures_in_room(rand_gen_t rgen, room_t const &room, floa
 						set_cube_zvals(marker, ledge.z2(), ledge.z2()+2.0*marker_radius);
 						set_wall_width(marker, rgen.rand_uniform(ledge.d[!dim][0]+end_space,  ledge.d[!dim][1]-end_space ), marker_hlen,  !dim);
 						set_wall_width(marker, rgen.rand_uniform(ledge.d[ dim][0]+side_space, ledge.d[ dim][1]-side_space), marker_radius, dim);
-						objs.emplace_back(marker, TYPE_MARKER, room_id, !dim, rgen.rand_bool(), RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, marker_colors[rgen.rand()&7]);
+						colorRGBA const marker_color(is_school() ? WHITE : marker_colors[rgen.rand() & 7]); // white chalk for school blackboards, colored markers for whiteboards
+						objs.emplace_back(marker, TYPE_MARKER, room_id, !dim, rgen.rand_bool(), RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, marker_color);
 						float const eraser_hlen(0.5*0.055*floor_height), eraser_hwidth(0.5*0.025*floor_height), eraser_height(0.012*floor_height);
 
 						if (eraser_hlen < 0.1*wb_len && eraser_hwidth < 0.48*ledge.get_sz_dim(dim) && rgen.rand_float() < 0.7) { // add eraser
