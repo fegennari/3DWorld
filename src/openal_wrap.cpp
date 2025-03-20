@@ -170,6 +170,7 @@ public:
 		add_new_sound("small_splat.wav"); // SOUND_SM_SPLAT
 		add_new_sound("police.wav"     ); // SOUND_POLICE
 		add_new_sound("alarm.wav"      ); // SOUND_ALARM
+		add_new_sound("scratch.wav"    ); // SOUND_SCRATCH
 		cout << endl;
 
 		// create sources
