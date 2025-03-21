@@ -778,7 +778,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					if (is_bathroom) {r->assign_to(RTYPE_BATH, f);}
 				}
 			}
-			if (!added_obj && is_office) { // add cubicles if this is a large office
+			if (!added_obj && is_office && is_office_bldg()) { // add cubicles if this is a large office
 				added_obj = no_whiteboard = create_office_cubicles(rgen, *r, room_center.z, room_id, tot_light_amt);
 			}
 			if (!added_obj && is_ext_basement && rgen.rand_float() < 0.5) { // machine room
@@ -792,6 +792,23 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					r->assign_to(RTYPE_INTERR, f);
 					added_obj = no_whiteboard = is_inter = 1;
 				}
+			}
+			if (is_industrial() && !is_basement && init_rtype_f0 == RTYPE_OFFICE) { // add industrial office desk, etc.
+				added_desk = add_office_objs(rgen, *r, blockers, chair_color, room_center.z, room_id, f, tot_light_amt, objs_start, is_basement);
+				added_obj |= added_desk;
+			}
+			if (!added_obj && !added_pool_room && is_house && is_basement && add_pool_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt)) { // pool room
+				r->assign_to(RTYPE_POOL, f);
+				added_pool_room = added_obj = 1;
+			}
+			if (!added_obj && !r->interior && is_hospital()) { // hospital room with a window
+				// TODO: make RTYPE_HOS_OR, RTYPE_HOS_EXAM, or other room type with some probability
+				added_obj = no_whiteboard = add_hospital_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, nested_room_ix);
+				if (added_obj) {r->assign_to(RTYPE_HOS_BED, f);}
+			}
+			if (!added_obj && !r->interior && is_school() && !r->has_stairs_on_floor(f)) { // school classroom with a window and no stairs
+				added_obj = add_classroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, chair_color);
+				if (added_obj) {r->assign_to(RTYPE_CLASS, f);}
 			}
 			if (!added_obj && !r->has_subroom() && rgen.rand_float() < (is_basement ? 0.4 : (r->is_office ? (is_hospital() ? 0.2 : 0.6) : (is_house ? 0.95 : 0.5)))) {
 				// place a table and maybe some chairs near the center of the room if it's not a hallway;
@@ -812,27 +829,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					}
 				}
 			}
-			if (is_industrial() && !is_basement && init_rtype_f0 == RTYPE_OFFICE) { // add industrial office desk, etc.
-				added_desk = add_office_objs(rgen, *r, blockers, chair_color, room_center.z, room_id, f, tot_light_amt, objs_start, is_basement);
-				added_obj |= added_desk;
-			}
-			if (!added_obj && !added_pool_room && is_house && is_basement && add_pool_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt)) { // pool room
-				r->assign_to(RTYPE_POOL, f);
-				added_pool_room = added_obj = 1;
-			}
 			// if we haven't added any objects yet, and this room is an interior office on the first floor or basement, make it a storage room 50% of the time; at most 4x
 			if (!added_obj && num_storage_rooms <= 4 && (is_basement || (r->is_office && r->interior && f == 0)) && rgen.rand_bool()) {
 				added_obj = no_whiteboard = is_storage = add_storage_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement, has_stairs);
 				if (added_obj) {r->assign_to(RTYPE_STORAGE, f); ++num_storage_rooms;}
-			}
-			if (!added_obj && !r->interior && is_hospital()) { // hospital room with a window
-				// TODO: make RTYPE_HOS_OR, RTYPE_HOS_EXAM, or other room type with some probability
-				added_obj = no_whiteboard = add_hospital_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, nested_room_ix);
-				if (added_obj) {r->assign_to(RTYPE_HOS_BED, f);}
-			}
-			if (!added_obj && !r->interior && is_school()) { // school classroom with a window
-				added_obj = add_classroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
-				if (added_obj) {r->assign_to(RTYPE_CLASS, f);}
 			}
 			// try to place a desk if there's no table, bed, etc.; this can be an office
 			if (!added_obj && (!is_basement || rgen.rand_bool())) {

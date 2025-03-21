@@ -2054,6 +2054,7 @@ struct building_t : public building_geom_t {
 	bool has_mall       () const {return (interior && interior->has_mall());}
 	bool has_mall_ent_stairs() const {return (interior && interior->has_mall_ent_stairs());}
 	bool has_mall_skylight  () const {return (has_mall() && !interior->mall_info->skylights.empty());}
+	bool is_office_bldg () const {return (btype == BTYPE_OFFICE);}
 	bool is_apartment   () const {return (btype == BTYPE_APARTMENT);}
 	bool is_hotel       () const {return (btype == BTYPE_HOTEL);}
 	bool is_apt_or_hotel() const {return (is_apartment() || is_hotel());}
@@ -2636,7 +2637,7 @@ private:
 	bool add_ball_to_room    (rand_gen_t &rgen, room_t const &room, cube_t const &place_area, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
 		int force_type=-1, cube_t const &avoid_xy=cube_t(), bool in_pool=0);
 	bool maybe_add_fireplace_to_room(rand_gen_t &rgen, room_t const &room, vect_cube_t &blockers, float zval, unsigned room_id, float tot_light_amt);
-	bool add_classroom_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
+	bool add_classroom_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, colorRGBA const &chair_color);
 	bool add_hospital_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, int &nested_room_ix);
 	float add_flooring       (room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned flooring_type);
 	bool add_bathroom_objs   (rand_gen_t rgen, room_t &room, float &zval, unsigned room_id, float tot_light_amt,

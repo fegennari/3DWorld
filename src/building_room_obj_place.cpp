@@ -531,7 +531,7 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 		if (rgen.rand_float() > 0.05) { // 5% chance of no chair
 			point chair_pos;
 			chair_pos.z = zval;
-			chair_pos[dim]  = c.d[dim][!dir];
+			chair_pos[ dim] = c.d[dim][!dir];
 			chair_pos[!dim] = pos + rgen.rand_uniform(-0.1, 0.1)*width; // slightly misaligned
 			// use office chair models when the desk has a computer monitor; now that occlusion culling works well, it's okay to have a ton of these in office buildings
 			bool const office_chair(add_computer);
@@ -1462,9 +1462,61 @@ bool building_t::maybe_add_fireplace_to_room(rand_gen_t &rgen, room_t const &roo
 	return 1;
 }
 
-bool building_t::add_classroom_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+bool building_t::add_classroom_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, colorRGBA const &chair_color) {
+	float const vspace(get_window_vspace()), wall_thickness(get_wall_thickness());
+	vector2d const room_sz(room.get_size_xy());
+	if (room_sz.get_max_val() < 3.0*vspace || room_sz.get_min_val() < 1.8*vspace) return 0; // room is too small
+	bool const dim(room_sz.x < room_sz.y); // long dim
+	// front_dir is the side of the long dim not by the door
+	bool valid_dirs[2] = {0,0};
+	vect_door_stack_t const &doorways(get_doorways_for_room(room, zval)); // get interior doors
+
+	for (unsigned dir = 0; dir < 2; ++dir) {
+		cube_t wall(room);
+		set_wall_width(wall, room.d[dim][dir], wall_thickness, dim);
+		valid_dirs[dir] = !has_bcube_int(wall, doorways); // skip if there's a door on this wall
+	}
+	bool dir(0); // front dir
+	if (!valid_dirs[0] && !valid_dirs[1]) return 0; // no valid door-free walls
+	if ( valid_dirs[0] &&  valid_dirs[1]) { // both ends are valid
+		// TODO: check for exterior walls/windows
+		dir = rgen.rand_bool(); // choose a random end
+	}
+	else {dir = valid_dirs[1];} // only one valid wall
+
+	// place teacher desk at front
+	float const td_width(0.8*vspace*rgen.rand_uniform(1.1, 1.2)), td_depth(0.38*vspace*rgen.rand_uniform(1.1, 1.2)), td_height(0.23*vspace*rgen.rand_uniform(1.12, 1.2));
+	cube_t const room_bounds(get_walkable_room_bounds(room));
+	float const clearance(get_min_front_clearance_inc_people());
+	float const front_wall_pos(room_bounds.d[dim][dir]), room_center(room.get_center_dim(!dim)), dsign(dir ? -1.0 : 1.0);
+	vect_room_object_t &objs(interior->room_geom->objs);
+	cube_t tdesk;
+	set_cube_zvals(tdesk, zval, zval+td_height);
+	float const desk_front_pos(front_wall_pos + rgen.rand_uniform(1.0, 1.25)*dsign*(max(1.33*clearance, 0.25*vspace) + wall_thickness)); // near wall, with space for chair
+	tdesk.d[dim][ dir] = desk_front_pos;
+	tdesk.d[dim][!dir] = desk_front_pos + dsign*td_depth;
+	set_wall_width(tdesk, room_center, 0.5*td_width, !dim);
+	cube_t desk_pad(tdesk);
+	desk_pad.d[dim][dir] = front_wall_pos;
+	if (is_obj_placement_blocked(desk_pad, room, 1)) return 0; // check proximity to doors, etc.
+	room_object_t const desk(tdesk, TYPE_DESK, room_id, dim, dir, 0, tot_light_amt, SHAPE_CUBE); // no tall desks
+	objs.push_back(desk);
+	set_obj_id(objs);
+	// add paper, pens, and pencils
+	add_papers_to_surface      (tdesk, dim,  dir, 7, rgen, room_id, tot_light_amt); // add 0-7 sheet(s) of paper
+	add_pens_pencils_to_surface(tdesk, dim, !dir, 4, rgen, room_id, tot_light_amt); // 0-4 pens/pencils
+	// add chair
+	point chair_pos;
+	chair_pos.z = zval;
+	chair_pos[ dim] = desk_front_pos;
+	chair_pos[!dim] = room_center + rgen.rand_uniform(-0.1, 0.1)*td_width; // slightly misaligned
+	add_chair(rgen, room, vect_cube_t(), room_id, chair_pos, chair_color, dim, !dir, tot_light_amt, 0); // no blockers, office_chair=0
+
+	// place rows and columns of desks
+	float const desk_width(0.6*vspace), desk_depth(0.4*vspace), desk_height(0.25*vspace);
+	float const desk_wspacing(1.2*desk_width + clearance), desk_dspacing(1.2*desk_depth + clearance);
 	// TODO
-	return 0;
+	return 1;
 }
 
 bool building_t::check_if_against_window(cube_t const &c, room_t const &room, bool dim, bool dir) const {
@@ -4324,8 +4376,10 @@ bool building_t::hang_pictures_in_room(rand_gen_t rgen, room_t const &room, floa
 		bool const is_conference(room.get_room_type(floor_ix) == RTYPE_CONF); // conference rooms always have a whiteboard
 		if (!is_conference && rgen.rand_float() < 0.1) return 0; // skip 10% of the time
 		bool const pref_dim(rgen.rand_bool()), pref_dir(rgen.rand_bool());
-		float const floor_thick(get_floor_thickness());
-		colorRGBA const color(is_school() ? GRAY_BLACK : WHITE); // blackboard for schools, whiteboard for offices
+		bool const use_blackboards(is_school());
+		float const floor_thick(get_floor_thickness()); // blackboard for schools, whiteboard for offices
+		colorRGBA const color(use_blackboards ? GRAY_BLACK : WHITE);
+		// TODO: if use_blackboards, should be by the front of the room behind the teacher's desk
 
 		for (unsigned dim2 = 0; dim2 < 2; ++dim2) {
 			for (unsigned dir2 = 0; dir2 < 2; ++dir2) {
@@ -4365,7 +4419,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t rgen, room_t const &room, floa
 						set_cube_zvals(marker, ledge.z2(), ledge.z2()+2.0*marker_radius);
 						set_wall_width(marker, rgen.rand_uniform(ledge.d[!dim][0]+end_space,  ledge.d[!dim][1]-end_space ), marker_hlen,  !dim);
 						set_wall_width(marker, rgen.rand_uniform(ledge.d[ dim][0]+side_space, ledge.d[ dim][1]-side_space), marker_radius, dim);
-						colorRGBA const marker_color(is_school() ? WHITE : marker_colors[rgen.rand() & 7]); // white chalk for school blackboards, colored markers for whiteboards
+						colorRGBA const marker_color(use_blackboards ? WHITE : marker_colors[rgen.rand() & 7]); // white chalk for school blackboards, colored markers for whiteboards
 						objs.emplace_back(marker, TYPE_MARKER, room_id, !dim, rgen.rand_bool(), RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, marker_color);
 						float const eraser_hlen(0.5*0.055*floor_height), eraser_hwidth(0.5*0.025*floor_height), eraser_height(0.012*floor_height);
 
