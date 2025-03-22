@@ -610,8 +610,14 @@ void building_t::add_door_sign(string const &text, room_t const &room, float zva
 			// put the sign toward the outside of the building when the door is centered because there's more space and more light; otherwise, center on the room
 			float const door_offset(i->get_center_dim(!i->dim) - room_center[!i->dim]); // in width dim
 			bool const shift_dir((fabs(door_offset) < wall_thickness) ? (room_center[!i->dim] < part_center[!i->dim]) : (door_offset > 0.0));
+			float const shift_amt((shift_dir ? -1.0 : 1.0)*0.8*door_width);
 			set_cube_zvals(sign, zval+0.55*floor_spacing, zval+0.6*floor_spacing); // high enough that it's not blocked by filing cabinets
-			sign.translate_dim(!i->dim, (shift_dir ? -1.0 : 1.0)*0.8*door_width);
+			sign.translate_dim(!i->dim, shift_amt);
+			
+			if (overlaps_or_adj_int_window(sign)) { // check interior windows for conference room, etc.
+				sign.translate_dim(!i->dim, -2.0*shift_amt); // try the other dir
+				if (overlaps_or_adj_int_window(sign)) continue; // can't place sign here
+			}
 		}
 		unsigned const num_chars(text.size());
 		float const sign_hwidth((0.05 + 0.03*min(num_chars, 6U))*(place_above_door ? 1.5 : 1.0)); // relative to door width
