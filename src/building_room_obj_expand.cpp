@@ -1577,9 +1577,9 @@ void building_t::add_box_contents(room_object_t const &box_) {
 	for (unsigned n = 0; n < 10; ++n) { // make up to 10 attempts at placing valid item(s) in this box
 		//unsigned const obj_type((n == 9 && !in_warehouse) ? 0 : (rgen.rand()%7)); // place book on last iteration unless this is a warehouse
 		unsigned obj_type(0);
-		if (is_house)          {obj_type = ((n == 9) ? TYPE_BOOK : house_objs [rgen.rand() % (sizeof(house_objs )/sizeof(unsigned))]);} // place book on last iteration
-		else if (in_warehouse) {obj_type =                         whouse_objs[rgen.rand() % (sizeof(whouse_objs)/sizeof(unsigned))] ;} // warehouse shelf
-		else                   {obj_type =                         office_objs[rgen.rand() % (sizeof(office_objs)/sizeof(unsigned))] ;} // office
+		if (is_house)          {obj_type = ((n == 9) ? (unsigned)TYPE_BOOK : house_objs [rgen.rand() % (sizeof(house_objs )/sizeof(unsigned))]);} // place book on last iteration
+		else if (in_warehouse) {obj_type =                                   whouse_objs[rgen.rand() % (sizeof(whouse_objs)/sizeof(unsigned))] ;} // warehouse shelf
+		else                   {obj_type =                                   office_objs[rgen.rand() % (sizeof(office_objs)/sizeof(unsigned))] ;} // office
 
 		if (obj_type == TYPE_MACHINE) {
 			unsigned const item_flags(rgen.rand());
