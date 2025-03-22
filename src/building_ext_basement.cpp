@@ -52,7 +52,7 @@ float query_min_height(cube_t const &c, float stop_at) { // c_in is in global bu
 	float hmin(FLT_MAX);
 
 	if (using_tiled_terrain_hmap_tex() && !using_hmap_with_detail()) { // optimized flow when using heightmap texture; not adding xoff2/yoff2
-		float const pad(0.5), step(0.5);
+		float const pad(0.75), step(0.5); // set pad to0.75 rather than 0.5 to handle steep terrain
 		float x1((c.x1() + X_SCENE_SIZE)*DX_VAL_INV + 0.5), x2((c.x2() + X_SCENE_SIZE)*DX_VAL_INV + 0.5);
 		float y1((c.y1() + Y_SCENE_SIZE)*DY_VAL_INV + 0.5), y2((c.y2() + Y_SCENE_SIZE)*DY_VAL_INV + 0.5);
 
