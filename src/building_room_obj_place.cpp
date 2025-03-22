@@ -1462,7 +1462,9 @@ bool building_t::maybe_add_fireplace_to_room(rand_gen_t &rgen, room_t const &roo
 	return 1;
 }
 
-bool building_t::add_classroom_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, colorRGBA const &chair_color) {
+bool building_t::add_classroom_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id,
+	float tot_light_amt, unsigned objs_start, colorRGBA const &chair_color, unsigned &td_orient)
+{
 	float const vspace(get_window_vspace()), wall_thickness(get_wall_thickness());
 	vector2d const room_sz(room.get_size_xy());
 	if (room_sz.get_max_val() < 3.0*vspace || room_sz.get_min_val() < 1.8*vspace) return 0; // room is too small
@@ -1479,8 +1481,9 @@ bool building_t::add_classroom_objs(rand_gen_t rgen, room_t const &room, float z
 	bool dir(0); // front dir
 	if (!valid_dirs[0] && !valid_dirs[1]) return 0; // no valid door-free walls
 	if ( valid_dirs[0] &&  valid_dirs[1]) { // both ends are valid
-		// TODO: check for exterior walls/windows
-		dir = rgen.rand_bool(); // choose a random end
+		bool const ext[2] = {(classify_room_wall(room, zval, dim, 0, 0) == ROOM_WALL_EXT), (classify_room_wall(room, zval, dim, 1, 0) == ROOM_WALL_EXT)};
+		if (ext[0] != ext[1]) {dir = ext[0];} // choose interior wall so that we can place a chalkboard behind the desk
+		else {dir = rgen.rand_bool();} // choose a random end
 	}
 	else {dir = valid_dirs[1];} // only one valid wall
 
@@ -1511,6 +1514,7 @@ bool building_t::add_classroom_objs(rand_gen_t rgen, room_t const &room, float z
 	chair_pos[ dim] = desk_front_pos;
 	chair_pos[!dim] = room_center + rgen.rand_uniform(-0.1, 0.1)*td_width; // slightly misaligned
 	add_chair(rgen, room, vect_cube_t(), room_id, chair_pos, chair_color, dim, !dir, tot_light_amt, 0); // no blockers, office_chair=0
+	td_orient = 2*dim + dir; // place chalkboard behind the teacher desk
 
 	// place rows and columns of desks
 	float const desk_width(0.6*vspace), desk_depth(0.4*vspace), desk_height(0.25*vspace);
@@ -4355,8 +4359,8 @@ int building_t::check_valid_picture_placement(room_t const &room, cube_t const &
 	return 1; // success
 }
 
-bool building_t::hang_pictures_in_room(rand_gen_t rgen, room_t const &room, float zval,
-	unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned floor_ix, bool is_basement)
+bool building_t::hang_pictures_whiteboard_chalkboard_in_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id,
+	float tot_light_amt, unsigned objs_start, unsigned floor_ix, bool is_basement, unsigned pref_orient)
 {
 	if (!room_object_t::enable_pictures()) return 0; // disabled
 	
@@ -4374,12 +4378,11 @@ bool building_t::hang_pictures_in_room(rand_gen_t rgen, room_t const &room, floa
 
 	if (!is_residential() || room.is_office) { // add whiteboards
 		bool const is_conference(room.get_room_type(floor_ix) == RTYPE_CONF); // conference rooms always have a whiteboard
-		if (!is_conference && rgen.rand_float() < 0.1) return 0; // skip 10% of the time
-		bool const pref_dim(rgen.rand_bool()), pref_dir(rgen.rand_bool());
+		if (!is_conference && pref_orient == 4 && rgen.rand_float() < 0.1) return 0; // skip 10% of the time; don't skip if pref_orient was set (classroom)
+		bool const pref_dim((pref_orient < 4) ? (pref_orient >> 1) : rgen.rand_bool()), pref_dir((pref_orient < 4) ? (pref_orient & 1) : rgen.rand_bool());
 		bool const use_blackboards(is_school());
 		float const floor_thick(get_floor_thickness()); // blackboard for schools, whiteboard for offices
 		colorRGBA const color(use_blackboards ? GRAY_BLACK : WHITE);
-		// TODO: if use_blackboards, should be by the front of the room behind the teacher's desk
 
 		for (unsigned dim2 = 0; dim2 < 2; ++dim2) {
 			for (unsigned dir2 = 0; dir2 < 2; ++dir2) {

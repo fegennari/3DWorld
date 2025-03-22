@@ -596,8 +596,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				add_outlets_to_room(rgen, *r, room_center.z, room_id, objs_start, is_ground_floor, is_basement);
 				add_light_switches_to_room(rgen, *r, room_center.z, room_id, objs_start, is_ground_floor, is_basement); // shed, garage, or hallway
 
-				if (is_house && r->is_hallway) { // allow pictures, rugs, and light switches in the hallways of houses
-					hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f, is_basement);
+				if (is_house && r->is_hallway) { // allow pictures, rugs, and light switches in the hallways of houses; no pref orient
+					hang_pictures_whiteboard_chalkboard_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f, is_basement);
 					if (rgen.rand_bool()) {add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);} // 50% of the time; not all rugs will be placed
 				}
 				if (!is_house && r->is_hallway && *r == pri_hall) { // office building primary hallway
@@ -615,7 +615,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			bool const is_tall_room(r->is_single_floor && r->dz() > 1.5*window_vspacing);
 			bool added_tc(0), added_desk(0), added_obj(0), can_place_onto(0), no_whiteboard(0), no_plants(0);
 			bool is_bathroom(0), is_bedroom(0), is_kitchen(0), is_living(0), is_dining(0), is_storage(0), is_utility(0), is_machine(0), is_play_art(0), is_library(0), is_inter(0);
-			unsigned num_chairs(0);
+			unsigned num_chairs(0), pref_hang_orient(4); // no pref orient=4
 			// unset room type if not locked on this floor during floorplanning; required to generate determinstic room geom
 			if (!r->is_rtype_locked(f)) {r->assign_to(RTYPE_NOTSET, f);}
 			if (r->has_subroom()) {no_whiteboard = 1;} // whiteboard placer ingores sub-rooms
@@ -807,7 +807,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				if (added_obj) {r->assign_to(RTYPE_HOS_BED, f);}
 			}
 			if (!added_obj && !r->interior && is_school() && !r->has_stairs_on_floor(f)) { // school classroom with a window and no stairs
-				added_obj = add_classroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, chair_color);
+				added_obj = add_classroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, chair_color, pref_hang_orient);
 				if (added_obj) {r->assign_to(RTYPE_CLASS, f);}
 			}
 			if (!added_obj && !r->has_subroom() && rgen.rand_float() < (is_basement ? 0.4 : (r->is_office ? (is_hospital() ? 0.2 : 0.6) : (is_house ? 0.95 : 0.5)))) {
@@ -961,7 +961,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			}
 			// pictures and whiteboards must not be placed behind anything, excluding trashcans; so we add them here
 			bool const can_hang((is_house || !(is_bathroom || is_kitchen || no_whiteboard)) && !is_storage && !is_utility && !is_machine && !is_inter);
-			bool const was_hung(can_hang && hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f, is_basement));
+			bool const was_hung(can_hang && hang_pictures_whiteboard_chalkboard_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f, is_basement, pref_hang_orient));
 
 			if (is_bathroom || is_kitchen || rgen.rand_float() < 0.8) { // 80% of the time, always in bathrooms and kitchens
 				add_trashcan_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, (was_hung && !is_house)); // no trashcans on same wall as office whiteboard
