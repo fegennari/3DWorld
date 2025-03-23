@@ -425,6 +425,16 @@ struct parking_solar_t : public oriented_city_obj_t {
 	vect_cube_t const &get_legs() const;
 };
 
+struct wind_turbine_t : public model_city_obj_t {
+	float rot_rate=0.0, rot_angle=0.0, base_radius=0.0;
+
+	wind_turbine_t(cube_t const& c, bool dim_, bool dir_, float rr) : model_city_obj_t(c, dim_, dir_), rot_rate(rr), base_radius(0.25*radius) {}
+	void next_frame();
+	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
+	void draw(road_draw_state_t &dstate, bool shadow_only=0) const;
+	virtual unsigned get_model_id() const {return OBJ_MODEL_WIND_TUR;}
+};
+
 struct city_bird_base_t : public city_obj_t {
 	vector3d dir;
 	city_bird_base_t(point const &pos_, float height, vector3d const &dir, unsigned model_id);

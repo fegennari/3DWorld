@@ -2210,6 +2210,7 @@ class city_road_gen_t : public road_gen_base_t {
 	vector<road_network_t> road_networks; // one per city
 	road_network_t global_rn; // connects cities together; no plots
 	vector<transmission_line_t> transmission_lines;
+	vector<wind_turbine_t> wind_turbines;
 	cube_t cities_bcube;
 	road_draw_state_t dstate;
 	rand_gen_t rgen;
@@ -2650,6 +2651,7 @@ public:
 		global_rn.gen_railroad_tracks(city_blockers, hq);
 		global_rn.calc_bcube_from_roads(); // must be after placing tracks
 		global_rn.finalize_bridges_and_tunnels();
+		add_wind_turbines(); // before connecting power grids, in case we want to connect the turbines to them
 		
 		// only connect cities with transmission lines if there are no secondary buildings in the way;
 		// while buildings should now avoid tlines, it still looks a bit odd having them so close to houses, and the endpoints aren't checked;
@@ -2763,6 +2765,9 @@ public:
 		conn_tl->connections.emplace_back(pos, conn_pt);
 		return 1;
 	}
+	void add_wind_turbines() {
+		// TODO
+	}
 	void add_streetlights() {
 		for (auto i = road_networks.begin(); i != road_networks.end(); ++i) {i->add_streetlights();}
 	}
@@ -2821,6 +2826,9 @@ public:
 			for (auto const &t : transmission_lines) {
 				if (t.sphere_intersect_xy(query_pos, radius)) return 1;
 			}
+		}
+		for (wind_turbine_t const& t : wind_turbines) {
+			if (sphere_cube_intersect_xy(query_pos, radius, t.bcube)) return 1; // conservative; should this call proc_sphere_coll()?
 		}
 		return 0;
 	}
@@ -2903,6 +2911,7 @@ public:
 			for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->draw(dstate, shadow_only, 0);}
 			global_rn.draw(dstate, shadow_only, 1); // connector road may have bridges, and therefore needs shadows
 			draw_transmission_lines();
+			draw_wind_turbines();
 			dstate.post_draw();
 			if (!shadow_only) {enable_dlight_bcubes = 0;}
 			set_std_depth_func();
@@ -2928,8 +2937,11 @@ public:
 		if (transmission_lines.empty()) return;
 		//highres_timer_t timer("Draw Transmission Lines"); // 0.12ms
 		dstate.set_untextured_material();
-		for (auto const &i : transmission_lines) {dstate.draw_transmission_line(i);}
+		for (transmission_line_t const &t : transmission_lines) {dstate.draw_transmission_line(t);}
 		dstate.unset_untextured_material();
+	}
+	void draw_wind_turbines() { // non-const because dstate is modified
+		for (wind_turbine_t const &t : wind_turbines) {t.draw(dstate);}
 	}
 	void draw_label() {dstate.show_label_text();}
 
@@ -2940,6 +2952,7 @@ public:
 		//for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {cout << r->get_traffic_density() << " ";} cout << endl;
 		for (road_network_t &r : road_networks) {r.next_frame();}
 		global_rn.next_frame(); // not needed since there are no 3/4-way intersections/stoplights?
+		for (wind_turbine_t &t : wind_turbines) {t.next_frame();}
 	}
 	void register_car_at_city(unsigned city_id) const {get_city(city_id).register_car();} // Note: must be const
 	

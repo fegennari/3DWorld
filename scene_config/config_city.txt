@@ -240,6 +240,7 @@ city hospital_bed_model ../models/interiors/hospital/hospital_bed.glb  0 0 0  -1
 city hospital_bed_model ../models/interiors/hospital/electric_hospital_bed.glb  0 0 0  -1 -1 180  1 1.0 1.0 # textured, low poly
 city hospital_curtain_model ../models/interiors/hospital/low_poly_curtains.glb  0 0 0  -1 -1 0  1 1.0 1.0
 city forklift_model     ../models/forklift.glb                    0 0 0  -1 -1 90  1 1.0 1.0
+city wind_turbine_model ../models/wind_turbine.glb                0 0 0  -1 -1 0   1 1.0 1.0
 
 # closet/clothing objects
 # filename recalc_normals two_sided centered body_material_id fixed_color_id xy_rot swap_xyz scale lod_mult [keywords] [shadow_mat_ids]

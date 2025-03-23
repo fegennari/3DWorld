@@ -1483,6 +1483,24 @@ bool transmission_line_t::cube_intersect_xy(cube_t const &c) const {
 	return 0;
 }
 
+// wind turbines
+
+void wind_turbine_t::next_frame() {
+	rot_angle += fticks*rot_rate;
+	if (rot_angle > TWO_PI) {rot_angle -= TWO_PI;}
+}
+bool wind_turbine_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
+	return sphere_city_obj_cylin_coll(pos, base_radius, pos_, p_last, radius_, xlate, cnorm);
+}
+void wind_turbine_t::draw(road_draw_state_t &dstate, bool shadow_only) const {
+	float const dist_scale = 1.0;
+	//city_draw_qbds_t qbds; // unused
+	//model_city_obj_t::draw(dstate, qbds, dist_scale, shadow_only);
+	if (!dstate.is_visible_and_unoccluded(bcube, dist_scale)) return;
+	// TODO: animate the blades using rot_angle
+	building_obj_model_loader.draw_model(dstate.s, pos, bcube, get_orient_dir(), color, dstate.xlate, get_model_id(), shadow_only);
+}
+
 // handicap spaces
 
 hcap_space_t::hcap_space_t(point const &pos_, float radius_, bool dim_, bool dir_, unsigned psix) : oriented_city_obj_t(pos_, radius_, dim_, dir_), pspace_ix(psix) {
