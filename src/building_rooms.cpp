@@ -403,9 +403,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			unsigned num_lights(r->num_lights), flags(0);
 			float light_z2(z + floor_height - fc_thick + light_delta_z);
 			if (industrial_room) {light_z2 -= CEILING_BEAM_THICK*wall_thickness;} // on the underside of industrial ceiling beams
+			bool const maybe_office_bathroom(is_room_office_bathroom(*r, room_center.z, f));
 
-			// motion detection lights for large office building office and mall bathrooms; limit to interior rooms so that we still have some lit rooms viewed through windows
-			if ((!is_house && has_pri_hall() && is_office && r->interior) || is_mall_bathroom) {flags |= RO_FLAG_IS_ACTIVE;} // leave unlit initially
+			// motion detection lights for large office building office, mall bathrooms, and office bathrooms; limit to interior rooms to have lit rooms viewed through windows
+			if ((!is_house && has_pri_hall() && is_office && r->interior) || is_mall_bathroom || maybe_office_bathroom) {flags |= RO_FLAG_IS_ACTIVE;} // leave unlit initially
 			else if (r->is_sec_bldg) {is_lit = 0;} // garage and shed lights start off
 			else {
 				// 50% of lights are on, 75% for top of stairs, 100% for non-basement hallways, 100% for parking garages, backrooms, and malls
@@ -621,9 +622,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			if (r->has_subroom()) {no_whiteboard = 1;} // whiteboard placer ingores sub-rooms
 
 			// place room objects
-			bool const added_living(added_living_mask & floor_mask);
+			bool const added_living(added_living_mask & floor_mask), is_office_bathroom(!has_walkway && maybe_office_bathroom);
 			bool const allow_br(!is_house || must_be_bathroom || f > 0 || num_floors == 1 || (rgen.rand_float() < 0.33f*(added_living + (added_kitchen_mask&1) + 1))); // bed/bath
-			bool const is_office_bathroom(!has_walkway && is_room_office_bathroom(*r, room_center.z, f));
 			bool has_fireplace(0);
 			if (is_ext_basement) {add_false_door_to_extb_room_if_needed(*r, room_center.z, room_id);}
 			
