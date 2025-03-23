@@ -290,17 +290,6 @@ cube_t building_t::get_hallway_for_part(cube_t const &part, float &num_hall_wind
 	room_width = 0.5f*(part_width - hall_width); // rooms are the same size on each side of the hallway
 	cube_t hall(part);
 	hall.expand_in_dim(min_dim, -room_width); // shink rooms off of each end
-
-	if (is_odd && num_hall_windows > 1.5 && interior) { // walls may intersect windows, so flag them so that we can cover the wall ends with extra window trim
-		float const wall_thickness(get_wall_thickness());
-
-		for (unsigned d = 0; d < 2; ++d) {
-			cube_t sw_wall(hall);
-			set_wall_width(sw_wall, hall.d[min_dim][d], wall_thickness, min_dim); // side of hallway
-			sw_wall.expand_in_dim(!min_dim, wall_thickness); // extend outside of building to include windows
-			interior->split_window_walls.push_back(sw_wall);
-		}
-	}
 	return hall;
 }
 
@@ -471,7 +460,8 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			int const num_rooms((apt_or_hotel ? num_windows : (num_windows+windows_per_room-1))/windows_per_room); // round down for apts/hotels, otherwise round up
 			int const windows_per_side_od((num_windows_od - round_fp(num_hall_windows))/2); // of hallway
 			assert(num_rooms >= 0 && num_rooms < 1000); // sanity check
-			auto &room_walls(interior->walls[!min_dim]), &hall_walls(interior->walls[min_dim]);
+			auto& room_walls(interior->walls[!min_dim]), & hall_walls(interior->walls[min_dim]); // room_walls: perpendicular to hallway; hall_walls: parallel to hallway
+			unsigned const hall_walls_start(hall_walls.size());
 			if (hallway_dim == 2) {hallway_dim = !min_dim;} // cache in building for later use, only for first part (ground floor)
 			
 			// add secondary or ring hallways if there are at least 7 windows (3 on each side of hallway); not for apartments and hotels
@@ -853,6 +843,19 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 					pos = next_pos;
 				} // for i
 			} // end single main hallway case
+
+			if ((num_windows_od & 1) && num_hall_windows > 1.5) {
+				// walls may intersect windows, so flag them so that we can cover the wall ends with extra window trim
+				for (auto w = hall_walls.begin()+hall_walls_start; w != hall_walls.end(); ++w) {
+					for (unsigned d = 0; d < 2; ++d) {
+						if (fabs(w->d[!min_dim][d] - p->d[!min_dim][d]) > wall_thick) continue; // doesn't meet the exterior wall
+						cube_t sw_wall(*w);
+						set_wall_width(sw_wall, w->get_center_dim(min_dim), wall_thick, min_dim); // side of building
+						sw_wall.expand_in_dim(!min_dim, wall_thick); // extend outside of building to include windows
+						interior->split_window_walls.push_back(sw_wall);
+					}
+				} // for w
+			}
 			if (is_hospital()) {add_hospital_bathrooms(rooms_start, rgen);}
 			add_room(hall, part_id, 3, 1, 0); // add primary hallway as room with 3+ lights
 			if (has_sec_hallways) {rooms.back().mark_open_wall_dim(min_dim);} // flag primary hallway as open on sides if there are secondary hallways
