@@ -2002,7 +2002,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			if (obj.type == TYPE_CEIL_FAN) continue; // not shadow casting; would shadow its own light
 			if (obj.is_exterior())         continue; // outdoors; no indoor shadow
 			if (obj.type == TYPE_KEY || obj.type == TYPE_SILVER || obj.type == TYPE_FOLD_SHIRT) continue; // small
-			if (obj.z1() > camera_bs.z || obj.z2() < two_floors_below) continue; // above or more than two floors below the light
+			if (obj.z1() > camera_bs.z || (obj.z2() < two_floors_below && obj.type != TYPE_BLDG_FOUNT)) continue; // above or more than 2 floors below light, except mall fountains
 		}
 		point obj_center(obj.get_cube_center());
 
