@@ -43,10 +43,10 @@ bool building_t::is_obj_placement_blocked(cube_t const &c, cube_t const &room, b
 	if (!check_cube_within_part_sides(c)) return 1; // handle non-cube buildings
 	return 0;
 }
-bool building_t::is_valid_placement_for_room(cube_t const &c, cube_t const &room, vect_cube_t const &blockers, bool inc_open_doors, float room_pad) const {
-	cube_t place_area(room);
-	if (room_pad != 0.0f) {place_area.expand_by_xy(-room_pad);} // shrink by dmin
-	if (!place_area.contains_cube_xy(c))                   return 0; // not contained in interior part of the room
+bool building_t::is_valid_placement_for_room(cube_t const &c, cube_t const &room, vect_cube_t const &blockers, bool inc_open_doors, vector2d const &room_pad) const {
+	cube_t c_exp(c);
+	c_exp.expand_by_xy(room_pad);
+	if (!room.contains_cube_xy(c_exp))                     return 0; // not contained in interior part of the room
 	if (is_obj_placement_blocked(c, room, inc_open_doors)) return 0;
 	if (has_bcube_int(c, blockers))                        return 0; // Note: ignores dmin
 	if (has_attic() && c.intersects_xy(interior->attic_access) && (c.z2() + get_window_vspace()) > interior->attic_access.z1()) return 0; // blocked by attic access door (when open)
@@ -73,7 +73,7 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 	assert(!(office_chair && bar_stool)); // can't ask for both
 	office_chair &= has_office_chair_model();
 	bar_stool    &= building_obj_model_loader.is_model_valid(OBJ_MODEL_BAR_STOOL);
-	float const window_vspacing(get_window_vspace()), room_pad(4.0f*get_wall_thickness()), dir_sign(dir ? -1.0 : 1.0);
+	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness()), dir_sign(dir ? -1.0 : 1.0);
 	float chair_height(0.0), chair_hwidth(0.0), min_push_out(0.0), max_push_out(0.0);
 	point chair_pos(place_pos); // same starting center and z1
 	bool is_plastic(0);
@@ -105,6 +105,9 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 		if (min_push_out >= max_push_out) return 0; // not enough space
 		chair_pos[dim] += dir_sign*rgen.rand_uniform(min_push_out, max_push_out)*chair_hwidth;
 	}
+	vector2d room_pad;
+	room_pad[ dim] = 4.0*wall_thickness; // more space in front and back
+	room_pad[!dim] = 1.0*wall_thickness; // less space to the sides
 	cube_t chair(get_cube_height_radius(chair_pos, chair_hwidth, chair_height));
 	if (!is_valid_placement_for_room(chair, room, blockers, 1, room_pad)) return 0; // check proximity to doors; inc_open_doors=1
 	vect_room_object_t &objs(interior->room_geom->objs);
@@ -164,7 +167,7 @@ unsigned building_t::add_table_and_chairs(rand_gen_t rgen, room_t const &room, v
 	llc.z = table_pos.z; // bottom
 	urc.z = table_pos.z + table_hscale*rgen.rand_uniform(1.0, 1.1)*window_vspacing; // top
 	cube_t table(llc, urc);
-	if (!is_valid_placement_for_room(table, room, blockers, 0, room_pad)) return 0; // check proximity to doors and collision with blockers
+	if (!is_valid_placement_for_room(table, room, blockers, 0, vector2d(room_pad, room_pad))) return 0; // check proximity to doors and collision with blockers
 	//if (door_path_checker_t().check_door_path_blocked(table, get_room(room_id), room_id, table_pos.z, *this)) return 0; // optional, but may want to allow for kitchens/dining
 	unsigned const item_flags(is_plastic ? 1 : 0);
 	unsigned flags(is_house ? RO_FLAG_IS_HOUSE : 0);
@@ -1498,11 +1501,11 @@ bool building_t::add_classroom_objs(rand_gen_t rgen, room_t const &room, float z
 	float const desk_back_pos(desk_front_pos + dsign*td_depth);
 	float const desk_width(0.48*vspace), desk_depth(0.34*vspace), desk_height(0.25*vspace);
 	cube_t student_area(room_bounds);
-	student_area.d[dim][ dir] = desk_back_pos + dsign*1.3*clearance; // front side near teacher
+	student_area.d[dim][ dir]  = desk_back_pos + dsign*1.3*clearance; // front side near teacher
 	student_area.d[dim][!dir] -= dsign*0.5*clearance; // back wall
 
 	for (unsigned dir = 0; dir < 2; ++dir) {
-		student_area.d[!dim][dir] -= (dir ? 1.0 : -1.0)*(door_sides[dir] ? 1.0 : -0.4)*clearance; // leave space for doors but not side walls
+		student_area.d[!dim][dir] -= (dir ? 1.0 : -1.0)*(door_sides[dir] ? 1.0 : -0.45)*clearance; // leave space for doors but not side walls
 	}
 	float desk_wspacing(desk_width + clearance), desk_dspacing(desk_depth + clearance);
 	float const avail_width(student_area.get_sz_dim(!dim)), avail_len(student_area.get_sz_dim(dim));
