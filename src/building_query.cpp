@@ -784,8 +784,10 @@ unsigned check_pool_table_collision(room_object_t const &c, point &pos, point co
 	return check_cubes_collision(cubes, 5, pos, p_last, radius, cnorm);
 }
 cube_t get_shelves_no_bot_gap(room_object_t const &c) {
-	cube_t bcube(c);
-	bcube.z1() += c.dz()/(c.get_num_shelves() + 1); // raise z1 to the bottom of the first shelf
+	cube_t bcube(c), shelves[MAX_SHELVES];
+	unsigned const num_shelves(get_shelves_for_object(c, shelves));
+	assert(num_shelves > 0);
+	bcube.z1() = shelves[0].z1(); // raise z1 to the bottom of the first shelf
 	return bcube;
 }
 
