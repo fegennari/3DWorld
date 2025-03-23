@@ -524,7 +524,8 @@ void building_room_geom_t::unexpand_dishwasher(room_object_t &c, cube_t const &d
 unsigned room_object_t::get_num_shelves() const {
 	assert(type == TYPE_SHELVES);
 	if (in_mall() && item_flags == STORE_PETS) return 2; // pet store shelves always have two levels
-	if (in_warehouse())                        return 4; // warehouse special case, always 4 shelves
+	if (on_warehouse_floor())                  return 4; // warehouse special case, always 4 shelves if on the floor
+	if (in_warehouse())                        return 3; // warehouse special case, always 3 shelves if on a room roof
 	return (2 + (room_id % (in_mall() ? 2 : 3))); // 2-4 shelves, 2-3 for mall clothing stores
 }
 unsigned get_shelves_for_object(room_object_t const &c, cube_t shelves[MAX_SHELVES]) {
@@ -554,7 +555,8 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 	if (!c_in.is_nonempty()) return; // empty - no objects
 	room_object_t c(c_in); // deep copy so that we can set flags and don't invalidate the reference
 	if (!add_models_mode) {c.flags |= RO_FLAG_WAS_EXP;} // only expand for non-models mode
-	bool const dim(c.dim), dir(c.dir), is_house(c.is_house()), in_mall(c.in_mall()), in_warehouse(c.in_warehouse());
+	bool const dim(c.dim), dir(c.dir), is_house(c.is_house()), in_mall(c.in_mall());
+	bool const in_warehouse(c.in_warehouse()), on_warehouse_floor(c.on_warehouse_floor());
 	vector3d const c_sz(c.get_size());
 	float const dz(c_sz.z), width(c_sz[dim]), thickness(0.02*dz), bracket_thickness(0.75*thickness), floor_spacing(1.1*dz);
 	float const z_step(dz/(num_shelves + 1)), shelf_clearance(z_step - thickness - bracket_thickness), sz_scale(is_house ? 0.7 : (in_warehouse ? 0.8 : 1.0));
@@ -718,7 +720,7 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 		add_boxes_to_space(c, objects, bounds, cubes, rgen, num_boxes, 0.42*width*sz_scale*(is_house ? 1.5 : 1.0),
 			0.4*box_zscale, 0.98*box_zscale, 1, ((c.flags & ~RO_FLAG_OPEN) | RO_FLAG_NOCOLL)); // allow_crates=1; copy flags from shelf, except for open flag
 
-		if (in_warehouse) { // add pallets
+		if (on_warehouse_floor) { // add pallets; only for shelves on main warehouse floor
 			float const pdepth(0.96*s_sz[dim]), pwidth(40.0/48*pdepth), pheight(4.5/48*pdepth); // 48x40x4.5 inches, scaled to shelf depth
 
 			if (pwidth < 3.0*s_sz[!dim]) { // don't place on short shelves
@@ -1581,6 +1583,10 @@ void building_t::add_box_contents(room_object_t const &box_) {
 		else if (in_warehouse) {obj_type =                                   whouse_objs[rgen.rand() % (sizeof(whouse_objs)/sizeof(unsigned))] ;} // warehouse shelf
 		else                   {obj_type =                                   office_objs[rgen.rand() % (sizeof(office_objs)/sizeof(unsigned))] ;} // office
 
+		if (sz.z < 0.3*(sz.x + sz.y)) { // food and machines can't fit in short boxes
+			if      (obj_type == TYPE_FOOD_BOX) {obj_type = TYPE_BOTTLE   ;}
+			else if (obj_type == TYPE_MACHINE ) {obj_type = TYPE_DRINK_CAN;}
+		}
 		if (obj_type == TYPE_MACHINE) {
 			unsigned const item_flags(rgen.rand());
 			cube_t obj_bc(c);

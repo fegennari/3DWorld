@@ -485,7 +485,7 @@ void building_t::add_warehouse_shelves(rand_gen_t &rgen, room_t const &room, flo
 	shelf_area.z2() = zval + shelf_height;
 	if (num_rows == 0 || shelf_area.get_sz_dim(edim) < min_aisle_width) return; // too short or narrow to place shelves; shouldn't happen
 	unsigned const num_segs = 20;
-	unsigned base_shelf_flags(RO_FLAG_INTERIOR | RO_FLAG_NONEMPTY | RO_FLAG_ADJ_HI | RO_FLAG_IN_WH); // draw tops of brackets
+	unsigned const base_shelf_flags(RO_FLAG_INTERIOR | RO_FLAG_NONEMPTY | RO_FLAG_ADJ_HI | RO_FLAG_IN_WH); // draw tops of brackets
 	float const shelf_spacing(room_width/num_rows), wall_seg_len(shelf_area.get_sz_dim(edim)/num_segs), stairs_pad(0.5*get_doorway_width()); // extra pad for stairs
 	float const windows_z1(min(get_industrial_window_z1(), (room.z2() - 1.5f*window_vspace)) + window_vspace*get_window_v_border()); // leave room for ducts
 	float pos(shelf_area.d[!edim][0]); // starts at left edge
@@ -536,7 +536,7 @@ void building_t::add_warehouse_shelves(rand_gen_t &rgen, room_t const &room, flo
 			else {shelf_segs.push_back(shelf);} // add entire shelf
 
 			// if shelf is in middle of room, flag as open so that back is drawn; or not needed because there's a wall? draw the ends as well if they're by windows?
-			unsigned const shelf_flags(base_shelf_flags | (against_ext_wall ? RO_FLAG_OPEN : 0));
+			unsigned const shelf_flags(base_shelf_flags | RO_FLAG_ON_FLOOR | (against_ext_wall ? RO_FLAG_OPEN : 0));
 
 			for (cube_t const &S : shelf_segs) {
 				if (against_ext_wall) { // check that shelf is against at least one support beam
@@ -594,19 +594,20 @@ void building_t::add_warehouse_shelves(rand_gen_t &rgen, room_t const &room, flo
 	// add shelves on top of sub-rooms
 	cube_t upper_shelves_area(place_area);
 	upper_shelves_area.d[edim][edir] = room.d[edim][edir]; // extend to cover sub-rooms
-	upper_shelves_area.expand_in_dim(!edim, -0.75*shelf_width); // shrink at ends; the player can fit through on the side, which should be okay
+	upper_shelves_area.expand_in_dim(!edim, -0.25*shelf_width); // shrink at ends; maybe the player can fit through on the side, which should be okay
 	bool added_sr_shelves(0);
 
 	for (cube_t const &r : interior->ind_info->sub_rooms) {
 		cube_t shelf(r);
-		set_cube_zvals(shelf, (r.z2() + fc_thick), shelf_area.z2());
+		set_cube_zvals(shelf, (r.z2() + fc_thick), min(shelf_area.z2(), r.z2()+window_vspace)); // no more than one floor tall
 		if (shelf.dz() < 0.5*window_vspace) continue; // too short; shouldn't happen
-		shelf.d[edim][edir] = shelf.d[edim][!edir] + (edir ? 1.0 : -1.0)*shelf_width;
+		float const back_pos(shelf.d[edim][!edir] + (edir ? 1.0 : -1.0)*0.75*shelf_width); // narrower than main floor shelves
+		shelf.d[edim][edir] = back_pos;
 		shelf.intersect_with_cube_xy(upper_shelves_area);
 		add_shelves(shelf, edim, edir, room_id, light_amt, (base_shelf_flags | RO_FLAG_OPEN), 0, rgen);
 
 		if (!added_sr_shelves) { // add a small I-beam behind sub-room shelves on the first sub-room
-			float const back_pos(shelf.d[edim][edir]), bar_z2(shelf.z2() - 0.5*fc_thick);
+			float const bar_z2(shelf.z2() - 0.5*fc_thick);
 			cube_t bar(room); // full room width in !edim
 			bar.d[edim][!edir] = back_pos;
 			bar.d[edim][ edir] = back_pos + (edir ? 1.0 : -1.0)*0.4*support_width; // set depth

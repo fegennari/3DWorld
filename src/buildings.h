@@ -726,6 +726,7 @@ struct room_object_t : public oriented_cube_t { // size=68
 	bool is_on_floor() const {return  (flags & RO_FLAG_ON_FLOOR);}
 	bool is_nonempty() const {return  (flags & RO_FLAG_NONEMPTY);}
 	bool has_lid    () const {return  (flags & RO_FLAG_ADJ_TOP);} // for fishtanks
+	bool on_warehouse_floor() const {return (in_warehouse() && (flags & RO_FLAG_ON_FLOOR));}
 	bool is_crate_or_box() const {return (type == TYPE_CRATE || type == TYPE_BOX);}
 	bool is_on_srack() const {return (was_expanded() && (flags & RO_FLAG_ON_SRACK));} // Note: RO_FLAG_ON_SRACK is aliased with other flags, so also check was_expanded
 	bool is_floor_clutter() const {return ((is_a_drink() || type == TYPE_TRASH) && is_on_floor());}

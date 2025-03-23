@@ -1072,9 +1072,9 @@ void building_room_geom_t::add_paint_can(room_object_t const &c) {
 }
 
 void get_shelf_brackets(room_object_t const &c, cube_t shelves[MAX_SHELVES], unsigned num_shelves, vect_cube_with_ix_t &brackets) {
-	bool const in_room_center(c.is_open()), in_warehouse(c.in_warehouse());
+	bool const in_room_center(c.is_open()), in_warehouse(c.in_warehouse()), on_warehouse_floor(c.on_warehouse_floor());
 	vector3d const c_sz(c.get_size());
-	float const dz(c_sz.z), length(c_sz[!c.dim]), depth(c_sz[c.dim]), thickness((in_warehouse ? 0.01 : 0.02)*dz), bracket_thickness(0.8*thickness);
+	float const dz(c_sz.z), length(c_sz[!c.dim]), depth(c_sz[c.dim]), thickness((on_warehouse_floor ? 0.01 : 0.02)*dz), bracket_thickness(0.8*thickness);
 	// add a small gap between the back of the bracket and the wall to prevent clipping through building exterior wall, except for shelves in the center of a room
 	float const dsign(c.dir ? -1.0 : 1.0), bracket_wall_offset(in_room_center ? 0.0 : dsign*0.1*bracket_thickness);
 	unsigned const num_brackets(2 + round_fp(0.5*length/dz));
