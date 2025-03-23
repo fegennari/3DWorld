@@ -465,8 +465,8 @@ void building_t::finish_gen_geometry(rand_gen_t &rgen, bool has_overlapping_cube
 	create_per_part_ext_verts();
 	parts_generated = 1;
 
-	// apartments, hotels, and hospitals must have a primary hallway; if we can't add a hallway to the first/bottom part, then make it an office instead
-	if ((is_apt_or_hotel() || is_hospital()) && !can_use_hallway_for_part(0)) {
+	// apartments, hotels, hospitals, and schools must have a primary hallway; if we can't add a hallway to the first/bottom part, then make it an office instead
+	if ((is_apt_or_hotel() || is_hospital() || is_school()) && !can_use_hallway_for_part(0)) {
 		btype = BTYPE_OFFICE;
 		assign_name(rgen); // re-assign a name
 	}

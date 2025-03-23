@@ -439,7 +439,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 		else if (use_hallway) {
 			// building with rectangular slice (no adjacent exterior walls at this level), generate rows of offices
 			// Note: we could probably make these unsigned, but I want to avoid unepected negative numbers in the math;
-			bool const apt_or_hotel(is_apt_or_hotel()); // use a different floorplan for apartments and hotels
+			bool const apt_or_hotel(is_apt_or_hotel()), is_a_school(is_school()); // use a different floorplan for apartments, hotels, and schools
 			int const num_windows   (num_windows_per_side[!min_dim]);
 			int const num_windows_od(num_windows_per_side[ min_dim]); // other dim, for use in hallway width calculation
 			int windows_per_room((num_windows >= 7 && num_windows_od >= 7) ? 2 : 1); // 1-2 windows per room (only assign 2 windows if we can get into the secondary hallway case below)
@@ -450,22 +450,23 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 				++windows_per_room;
 				room_len = wind_hspacing*windows_per_room;
 			}
-			bool const partial_room((num_windows % windows_per_room) != 0 && !apt_or_hotel); // an odd number of windows leaves a small room at the end
+			bool const partial_room((num_windows % windows_per_room) != 0 && !apt_or_hotel && !is_a_school); // an odd number of windows leaves a small room at the end
 			bool const is_ground_floor(is_ground_floor_excluding_retail(p->z1()));
 			float const hwall_extend(0.5f*(room_len - doorway_width - wall_thick));
 			float const wall_pos(p->d[!min_dim][0] + room_len); // pos of first wall separating first from second rooms
 			float num_hall_windows, hall_width, room_width;
 			hall = get_hallway_for_part(*p, num_hall_windows, hall_width, room_width);
 			float const *hall_wall_pos(hall.d[min_dim]);
-			int const num_rooms((apt_or_hotel ? num_windows : (num_windows+windows_per_room-1))/windows_per_room); // round down for apts/hotels, otherwise round up
+			// round down for apts/hotels/schools, otherwise round up
+			int const num_rooms(((apt_or_hotel || is_a_school) ? num_windows : (num_windows+windows_per_room-1))/windows_per_room);
 			int const windows_per_side_od((num_windows_od - round_fp(num_hall_windows))/2); // of hallway
 			assert(num_rooms >= 0 && num_rooms < 1000); // sanity check
 			auto& room_walls(interior->walls[!min_dim]), & hall_walls(interior->walls[min_dim]); // room_walls: perpendicular to hallway; hall_walls: parallel to hallway
 			unsigned const hall_walls_start(hall_walls.size());
 			if (hallway_dim == 2) {hallway_dim = !min_dim;} // cache in building for later use, only for first part (ground floor)
 			
-			// add secondary or ring hallways if there are at least 7 windows (3 on each side of hallway); not for apartments and hotels
-			bool const has_sec_hallways(!apt_or_hotel && num_windows_od >= 7 && num_rooms >= 4);
+			// add secondary or ring hallways if there are at least 7 windows (3 on each side of hallway); not for apartments and hotels; schools must have an even number of windows
+			bool const has_sec_hallways(!apt_or_hotel && num_windows_od >= 7 && num_rooms >= 4 && (!is_a_school || !(windows_per_side_od & 1)));
 
 			if (has_sec_hallways) {
 				float const min_hall_width(1.5f*doorway_width), max_hall_width(2.5f*doorway_width);
@@ -473,8 +474,9 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 				float const ring_hall_room_depth(0.5f*(room_width - sh_width)); // for inner and outer rows of rooms
 				interior->has_sec_hallways = 1;
 
+				// use a ring hallway, if large enough and not a school (because it creates more small and windowless rooms)
 				// Note: the ring_hall_room_depth check can fail for two level retail areas that force wider hallways for U-shaped stairs
-				if (ring_hall_room_depth > 2.0f*doorway_width && hall_len > 12.5*window_vspacing && rgen.rand_bool()) { // ring hallway, if large enough
+				if (ring_hall_room_depth > 2.0f*doorway_width && hall_len > 12.5*window_vspacing && !is_a_school && rgen.rand_bool()) {
 					float const hall_offset(room_len); // outer edge of hallway to building exterior on each end
 					bool const add_doors_to_main_wall(rgen.rand_bool());
 					unsigned const num_cent_rooms(num_rooms - 2); // skip the rooms on each side
@@ -649,7 +651,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 				} // end ring hallways
 
 				else { // secondary hallways with rooms on each side
-					float const sh_len(room_width);
+					float const sh_len(room_width), min_room_width(1.5*doorway_width);
 					int const num_sec_halls(num_rooms/2); // round down if odd
 					int windows_per_room_od((windows_per_side_od & 1) ? 1 : 2), rooms_per_side(0); // rooms along each sec hall
 					float room_sub_width(0.0);
@@ -657,7 +659,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 					while (1) { // increase the number of windows per room until room is large enough
 						rooms_per_side = max(windows_per_side_od/windows_per_room_od, 1);
 						room_sub_width = sh_len/rooms_per_side;
-						if (room_sub_width > 1.5*doorway_width) break; // done
+						if (room_sub_width > min_room_width) break; // done
 						++windows_per_room_od;
 					}
 					float const sh_spacing(hall_len/num_sec_halls - sh_width), end_spacing(0.5*sh_spacing); // half spacing at both ends
