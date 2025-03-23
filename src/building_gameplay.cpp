@@ -293,12 +293,16 @@ string get_pool_ball_name(unsigned number) {
 	if (number == 15) {oss << "cue ball";} else {oss << (number+1) << " ball";}
 	return oss.str();
 }
+bool is_boxed_machine(room_object_t const &obj) {
+	return (obj.type == TYPE_MACHINE && obj.was_expanded());
+}
 bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 	room_object const otype(obj.type);
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
-	if (otype == TYPE_PICTURE && obj.taken_level > 0) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 20.0, 6.0,  "picture frame");} // second item to take from picture
-	if (otype == TYPE_TPROLL  && obj.taken_level > 0) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 6.0,  0.5,  "toilet paper holder");} // second item to take from tproll
-	if (otype == TYPE_TCAN    && obj.in_mall()      ) {return bldg_obj_type_t(0, 1, 1, 1, 0, 0, 2, 80.0, 40.0, "large trashcan");}
+	if (otype == TYPE_PICTURE && obj.taken_level > 0) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1,  20.0,  6.0, "picture frame");} // second item to take from picture
+	if (otype == TYPE_TPROLL  && obj.taken_level > 0) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,   6.0,  0.5, "toilet paper holder");} // second item to take from tproll
+	if (otype == TYPE_TCAN    && obj.in_mall()      ) {return bldg_obj_type_t(0, 1, 1, 1, 0, 0, 2,  80.0, 40.0, "large trashcan");}
+	if (is_boxed_machine(obj))                        {return bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 100.0, 20.0, "small machine");} // taken from a box
 
 	if (otype == TYPE_BED) {
 		if (obj.taken_level > 1) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 250.0, mattress_weight, "mattress"  );} // third item to take from bed
@@ -1524,7 +1528,7 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 		auto other_objs_end((vect_id == 1) ? get_stairs_start() : expanded_objs.end());
 
 		for (auto i = obj_vect.begin(); i != objs_end; ++i) {
-			if (!get_room_obj_type(*i).pickup && !i->is_parked_car()) continue; // this object type can't be picked up
+			if (!get_room_obj_type(*i).pickup && !i->is_parked_car() && !is_boxed_machine(*i)) continue; // this object type can't be picked up
 			cube_t const obj_bcube(get_true_obj_bcube(*i));
 			point p1c(at_pos), p2c(p2);
 			if (!do_line_clip(p1c, p2c, obj_bcube.d)) continue; // test ray intersection vs. bcube
