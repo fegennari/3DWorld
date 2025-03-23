@@ -5636,7 +5636,7 @@ void building_room_geom_t::add_food_box(room_object_t const &c) {
 	unsigned const front_back_mask(~get_skip_mask_for_xy(c.dim));
 
 	for (unsigned d = 0; d < 2; ++d) { // {front, back} face
-		mat.add_cube_to_verts(c, color, zero_vector, get_face_mask(c.dim, (c.dir ^ d)), !c.dim, (c.dim ^ c.dir ^ d ^ 1), 0);
+		mat.add_cube_to_verts(c, color, zero_vector, get_face_mask(c.dim, (c.dir ^ bool(d))), !c.dim, (c.dim ^ c.dir ^ bool(d) ^ 1), 0);
 	}
 	get_untextured_material(1, 0, 1).add_cube_to_verts_untextured(c, bkg_color, (~front_back_mask | EF_Z1)); // sides, shadows, small
 }

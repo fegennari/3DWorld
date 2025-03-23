@@ -1988,7 +1988,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			no_cull_room = 1; // don't need to cull objects in the same store as the player
 		}
 	}
-	// draw object models
+	// draw object models; ~0.4ms average for malls
 	for (auto i = obj_model_insts.begin(); i != obj_model_insts.end(); ++i) {
 		if (i == model_to_cull) continue;
 		if (skip_interior_objs && i->int_vis_only) continue; // interior, not visible
@@ -2616,7 +2616,7 @@ void building_t::debug_people_in_building(shader_t &s, point const &camera_bs) c
 }
 
 // Note: c is in local building space and viewer_in is in non-rotated building space
-bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occlusion_checker_noncity_t &oc,
+bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occlusion_checker_noncity_t const &oc,
 	bool reflection_pass, bool c_is_building_part, bool skip_basement_check) const
 {
 	if (!interior) return 0; // could probably make this an assert
@@ -2807,7 +2807,7 @@ bool building_t::check_warehouse_shelf_occlusion(point const &viewer, point cons
 	return are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, occ_area, interior->room_geom->shelf_rack_occluders[0], !interior->ind_info->entrance_dim);
 }
 
-bool building_t::is_entire_building_occluded(point const &viewer, occlusion_checker_noncity_t &oc) const {
+bool building_t::is_entire_building_occluded(point const &viewer, occlusion_checker_noncity_t const &oc) const {
 	if (is_rotated()) return 0; // not handled (optimization)
 
 	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {

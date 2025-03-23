@@ -1477,7 +1477,7 @@ bool add_dlight_if_visible(point const &pos, float radius, colorRGBA const &colo
 
 // Note: non const because this caches light_bcubes
 void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, bool sec_camera_mode,
-	occlusion_checker_noncity_t &oc, vect_cube_with_ix_t &ped_bcubes, cube_t &lights_bcube)
+	occlusion_checker_noncity_t const &oc, vect_cube_with_ix_t &ped_bcubes, cube_t &lights_bcube)
 {
 	if (!has_room_geom()) return; // error?
 	point const camera_bs(camera_pdu.pos - xlate), building_center(bcube.get_cube_center()); // camera in building space
@@ -2380,14 +2380,14 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	}
 }
 
-bool check_bcube_visible_for_building(cube_t const &bcube, vector3d const &xlate, building_t const &building, occlusion_checker_noncity_t &oc, cube_t &lights_bcube) {
+bool check_bcube_visible_for_building(cube_t const &bcube, vector3d const &xlate, building_t const &building, occlusion_checker_noncity_t const &oc, cube_t &lights_bcube) {
 	if (!lights_bcube.intersects_xy(bcube)) return 0;
 	cube_t const bcube_cs(bcube + xlate); // maybe we should check each parent object separately? but it could be rare if there's more than one
 	if (!camera_pdu.cube_visible(bcube_cs)) return 0; // no particles are visible
 	if ((display_mode & 0x08) && building.check_obj_occluded(bcube_cs, get_camera_pos(), oc)) return 0;
 	return 1;
 }
-void particle_manager_t::add_lights(vector3d const &xlate, building_t const &building, occlusion_checker_noncity_t &oc, cube_t &lights_bcube) const {
+void particle_manager_t::add_lights(vector3d const &xlate, building_t const &building, occlusion_checker_noncity_t const &oc, cube_t &lights_bcube) const {
 	if (particles.empty()) return;
 	if (!check_bcube_visible_for_building(get_bcube(), xlate, building, oc, lights_bcube)) return;
 
@@ -2395,7 +2395,7 @@ void particle_manager_t::add_lights(vector3d const &xlate, building_t const &bui
 		if (p.effect == PART_EFFECT_SPARK) {add_dlight_if_visible(p.pos, 20.0*p.radius, p.color, xlate, lights_bcube);}
 	}
 }
-void fire_manager_t::add_lights(vector3d const &xlate, building_t const &building, occlusion_checker_noncity_t &oc, cube_t &lights_bcube) const {
+void fire_manager_t::add_lights(vector3d const &xlate, building_t const &building, occlusion_checker_noncity_t const &oc, cube_t &lights_bcube) const {
 	if (fires.empty()) return;
 	if (!check_bcube_visible_for_building(get_bcube(), xlate, building, oc, lights_bcube)) return;
 	for (fire_t const &f : fires) {add_dlight_if_visible(f.get_center(), 5.0*f.radius, ORANGE, xlate, lights_bcube);}

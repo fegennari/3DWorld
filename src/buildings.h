@@ -1007,7 +1007,7 @@ public:
 	void add_for_obj(room_object_t &obj, float pradius, vector3d const &dir, float part_vel, unsigned min_parts, unsigned max_parts, unsigned effect, int parent_obj_id);
 	cube_t get_bcube() const;
 	void next_frame(building_t &building);
-	void add_lights(vector3d const &xlate, building_t const &building, occlusion_checker_noncity_t &oc, cube_t &lights_bcube) const;
+	void add_lights(vector3d const &xlate, building_t const &building, occlusion_checker_noncity_t const &oc, cube_t &lights_bcube) const;
 	void draw(shader_t &s, vector3d const &xlate);
 };
 
@@ -1037,7 +1037,7 @@ public:
 	void add_fire_bcubes_for_cube(cube_t const &sel_cube, vect_cube_t &fire_bcubes) const;
 	void put_out_fires(point const &p1, point const &p2, float radius);
 	void next_frame(particle_manager_t &particle_manager);
-	void add_lights(vector3d const &xlate, building_t const &building, occlusion_checker_noncity_t &oc, cube_t &lights_bcube) const;
+	void add_lights(vector3d const &xlate, building_t const &building, occlusion_checker_noncity_t const &oc, cube_t &lights_bcube) const;
 	void draw(shader_t &s, vector3d const &xlate);
 };
 
@@ -1338,7 +1338,7 @@ struct building_room_geom_t {
 	bool add_room_object(room_object_t const &obj, building_t &building, bool set_obj_id=0, vector3d const &velocity=zero_vector);
 	void draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &amask_shader, building_t const &building, occlusion_checker_noncity_t &oc,
 		vector3d const &xlate, unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building);
-	void draw_animals(shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc, vector3d const &xlate,
+	void draw_animals(shader_t &s, building_t const &building, occlusion_checker_noncity_t const &oc, vector3d const &xlate,
 		point const &camera_bs, bool shadow_only, bool reflection_pass, bool check_clip_cube) const;
 	unsigned allocate_dynamic_state();
 	room_obj_dstate_t &get_dstate(room_object_t const &obj);
@@ -2268,7 +2268,7 @@ struct building_t : public building_geom_t {
 	void get_walkway_end_verts(building_draw_t &bdraw, point const &pos) const;
 	void write_basement_entrance_depth_pass(shader_t &s) const;
 	void add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, bool sec_camera_mode,
-		occlusion_checker_noncity_t &oc, vect_cube_with_ix_t &ped_bcubes, cube_t &lights_bcube);
+		occlusion_checker_noncity_t const &oc, vect_cube_with_ix_t &ped_bcubes, cube_t &lights_bcube);
 	colorRGBA get_retail_light_color() const;
 	void run_light_motion_detect_logic(point const &camera_bs);
 	bool toggle_room_light(point const &closest_to, bool sound_from_closest_to=0, int room_id=-1, bool inc_lamps=1, bool closet_light=0, bool known_in_attic=0);
@@ -2442,11 +2442,12 @@ public:
 	bool is_obj_pos_valid(room_object_t const &obj, bool keep_in_room, bool allow_block_door, bool check_stairs) const;
 	bool is_rot_cube_visible(cube_t const &c, vector3d const &xlate, bool inc_mirror_reflections=0) const;
 	bool is_cube_face_visible_from_pt(cube_t const &c, point const &p, unsigned dim, bool dir, bool same_room) const;
-	bool check_obj_occluded(cube_t const &c, point const &viewer, occlusion_checker_noncity_t &oc, bool reflection_pass=0, bool c_is_building_part=0, bool skip_basement_check=0) const;
+	bool check_obj_occluded(cube_t const &c, point const &viewer, occlusion_checker_noncity_t const &oc,
+		bool reflection_pass=0, bool c_is_building_part=0, bool skip_basement_check=0) const;
 	bool check_pg_br_wall_occlusion(point const &viewer, point const *const pts, unsigned npts, cube_t const &occ_area, vector3d const &view_dir) const;
 	bool check_shelfrack_occlusion (point const &viewer, point const *const pts, unsigned npts, cube_t const &occ_area) const;
 	bool check_warehouse_shelf_occlusion(point const &viewer, point const *const pts, unsigned npts, cube_t const &occ_area) const;
-	bool is_entire_building_occluded(point const &viewer, occlusion_checker_noncity_t &oc) const;
+	bool is_entire_building_occluded(point const &viewer, occlusion_checker_noncity_t const &oc) const;
 	bool register_indir_lighting_state_change(unsigned light_ix, bool is_door_change=0) const;
 	bool is_attic_roof(tquad_with_ix_t const &tq, bool type_roof_only) const;
 	bool has_ext_basement() const {return (interior && !interior->basement_ext_bcube.is_all_zeros());}

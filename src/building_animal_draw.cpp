@@ -102,7 +102,7 @@ class spider_draw_t {
 public:
 	void clear() {mats[0].clear(); mats[1].clear(); is_setup = 0;}
 
-	void draw(vect_spider_t const &spiders, shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc,
+	void draw(vect_spider_t const &spiders, shader_t &s, building_t const &building, occlusion_checker_noncity_t const &oc,
 		vector3d const &xlate, bool shadow_only, bool reflection_pass, bool check_clip_cube)
 	{
 		if (spiders.empty()) return; // nothing to draw
@@ -278,7 +278,7 @@ class insect_draw_t {
 public:
 	void clear() {fly_mat.clear(); roach_mat.clear();}
 
-	void draw(vect_insect_t const &insects, shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc, vector3d const &xlate, bool reflection_pass) {
+	void draw(vect_insect_t const &insects, shader_t &s, building_t const &building, occlusion_checker_noncity_t const &oc, vector3d const &xlate, bool reflection_pass) {
 		if (insects.empty()) return; // nothing to draw
 		point const camera_bs(camera_pdu.pos - xlate);
 		bool const check_occlusion(display_mode & 0x08);//, low_detail(shadow_only || reflection_pass);
@@ -486,7 +486,7 @@ class snake_draw_t {
 		}
 	}
 public:
-	void draw(vect_snake_t const &snakes, vect_snake_t const &pet_snakes, shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc,
+	void draw(vect_snake_t const &snakes, vect_snake_t const &pet_snakes, shader_t &s, building_t const &building, occlusion_checker_noncity_t const &oc,
 		vector3d const &xlate, bool shadow_only, bool reflection_pass, bool check_clip_cube)
 	{
 		if (snakes.empty() && pet_snakes.empty()) return; // nothing to draw
@@ -527,7 +527,7 @@ public:
 };
 snake_draw_t snake_draw;
 
-void building_room_geom_t::draw_animals(shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc, vector3d const &xlate,
+void building_room_geom_t::draw_animals(shader_t &s, building_t const &building, occlusion_checker_noncity_t const &oc, vector3d const &xlate,
 	point const &camera_bs, bool shadow_only, bool reflection_pass, bool check_clip_cube) const
 {
 	if ((!rats.empty() || !sewer_rats.empty() || !pet_rats.empty()) && building_obj_model_loader.is_model_valid(OBJ_MODEL_RAT)) {
