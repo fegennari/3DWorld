@@ -1331,6 +1331,8 @@ struct building_room_geom_t {
 	void replace_with_hanging_wires(room_object_t &obj, room_object_t const &old_obj, float wire_radius, bool vertical);
 	void remove_object(unsigned obj_id, building_t &building);
 	bool player_pickup_object(building_t &building, point const &at_pos, vector3d const &in_dir);
+	void set_factory_machine_seed(unsigned rseed1, unsigned rseed2);
+	void set_factory_machine_seed_from_obj(room_object_t const &obj) {set_factory_machine_seed(obj.item_flags, obj.obj_id);}
 	void update_draw_state_for_room_object(room_object_t const &obj, building_t &building, bool was_taken);
 	room_object_t &get_room_object_by_index(unsigned obj_id);
 	float get_combined_obj_weight(room_object_t const &obj) const;

@@ -853,6 +853,7 @@ void building_room_geom_t::invalidate_draw_data_for_obj(room_object_t const &obj
 	if (type.lg_sm & 1)            {invalidate_static_geom();} // large objects and 3D models
 	if (type.is_model )            {invalidate_model_geom ();} // model
 	else if (type.lg_sm == 0)      {invalidate_detail_geom();} // detail object
+	if (obj.type == TYPE_MACHINE)  {invalidate_detail_geom();} // machine details (valves, gauges, vents)
 	if (obj.type == TYPE_CEIL_FAN) {invalidate_lights_geom();} // invalidate the light on the fan as well
 }
 // Note: called when adding, removing, or moving objects

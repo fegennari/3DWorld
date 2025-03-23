@@ -5155,10 +5155,11 @@ void building_room_geom_t::add_breaker(room_object_t const &c) {
 void building_room_geom_t::add_flat_textured_detail_wall_object(room_object_t const &c, colorRGBA const &side_color,
 	int tid, bool skip_z1_face, bool draw_all_faces, bool detail, bool mirror_y)
 {
-	rgeom_mat_t &front_mat(get_material(tid_nm_pair_t(tid, 0.0, 0), 0, 0, (detail ? 2 : 1))); // small=1 or 2/detail
+	unsigned const small(detail ? 2 : 1); // small=1 or 2/detail
+	rgeom_mat_t &front_mat(get_material(tid_nm_pair_t(tid, 0.0, 0), 0, 0, small));
 	front_mat.add_cube_to_verts(c, c.color, zero_vector, get_face_mask(c.dim, !c.dir), !c.dim, 0, mirror_y); // textured front face; always fully lit to match wall
 	unsigned const skip_faces(draw_all_faces ? 0 : (get_skip_mask_for_xy(c.dim) | (skip_z1_face ? EF_Z1 : 0))); // skip front/back and maybe bottom faces
-	get_untextured_material(0, 0, 2).add_cube_to_verts_untextured(c, side_color, skip_faces); // sides: unshadowed, small
+	get_untextured_material(0, 0, small).add_cube_to_verts_untextured(c, side_color, skip_faces); // sides: unshadowed, small
 }
 void building_room_geom_t::add_outlet(room_object_t const &c) {
 	add_flat_textured_detail_wall_object(c, get_outlet_or_switch_box_color(c), get_texture_by_name("interiors/outlet1.jpg"), 1); // skip_z1_face=1 (optimization)

@@ -967,3 +967,14 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 	} // for n
 }
 
+// Note: assumes building is a factory, but has no effect if it's not
+void building_room_geom_t::set_factory_machine_seed(unsigned rseed1, unsigned rseed2) {
+	for (room_object_t& obj : objs) {
+		if (obj.type != TYPE_MACHINE || !obj.in_factory())    continue;
+		if (obj.item_flags == rseed1 && obj.obj_id == rseed2) continue; // already set
+		obj.item_flags = rseed1;
+		obj.obj_id     = rseed2;
+		invalidate_draw_data_for_obj(obj);
+	} // for obj
+}
+

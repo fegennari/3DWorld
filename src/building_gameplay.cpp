@@ -1397,6 +1397,7 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 		if (take_lid) return 1;
 	}
 	if (!register_player_object_pickup(obj, at_pos)) return 0;
+	if (obj.type == TYPE_MACHINE && building.is_factory()) {set_factory_machine_seed_from_obj(obj);} // not yet active
 	remove_object(obj_id, building);
 	return 1;
 }
