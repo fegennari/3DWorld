@@ -1902,7 +1902,7 @@ struct building_interior_t {
 	cube_t basement_ext_bcube, elevator_equip_room;
 	draw_range_t draw_range;
 	unsigned extb_walls_start[2] = {0,0};
-	unsigned gen_room_details_pass=0;
+	unsigned gen_room_details_pass=0, rgen_seed_ix=0;
 	int garage_room=-1, ext_basement_hallway_room_id=-1, ext_basement_door_stack_ix=-1, last_active_door_ix=-1, security_room_ix=-1;
 	uint8_t furnace_type=FTYPE_NONE, attic_type=ATTIC_TYPE_RAFTERS;
 	bool door_state_updated=0, is_unconnected=0, ignore_ramp_placement=0, placed_people=0, elevators_disabled=0, attic_access_open=0, has_backrooms=0;
@@ -2323,6 +2323,7 @@ struct building_t : public building_geom_t {
 	void subtract_stairs_and_elevators_from_cube(cube_t const &c, vect_cube_t &cube_parts, bool inc_stairs=1, bool inc_elevators=1) const;
 	void add_split_roof_shadow_quads(building_draw_t &bdraw) const;
 	void clear_room_geom();
+	void clear_and_regen_new_seed();
 	void update_grass_exclude_at_pos(point const &pos, vector3d const &xlate, bool camera_in_building) const;
 	void add_signs(vector<sign_t> &signs) const;
 	void add_flags(vector<city_flag_t> &flags);

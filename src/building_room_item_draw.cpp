@@ -1665,7 +1665,7 @@ void building_t::gen_and_draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, shad
 		interior->room_geom->init_num_doors   = interior->doors      .size();
 		interior->room_geom->init_num_dstacks = interior->door_stacks.size();
 		rand_gen_t rgen;
-		rgen.set_state(building_ix, parts.size()); // set to something canonical per building
+		rgen.set_state(building_ix, (parts.size() + 17*interior->rgen_seed_ix)); // set to something canonical per building
 		interior->room_geom->decal_manager.rgen = rgen; // copy rgen for use with decals
 		gen_room_details(rgen, building_ix); // generate so that we can draw it
 		assert(has_room_geom());
@@ -1689,6 +1689,10 @@ void building_t::clear_room_geom() {
 	interior->room_geom->clear(); // free VBO data before deleting the room_geom object
 	interior->room_geom.reset();
 	invalidate_nav_graph(); // required since interior doors may be removed
+}
+void building_t::clear_and_regen_new_seed() {
+	clear_room_geom();
+	if (interior) {++interior->rgen_seed_ix;}
 }
 
 void get_stove_burner_locs(room_object_t const &stove, point locs[4]) {

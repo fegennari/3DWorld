@@ -311,7 +311,7 @@ class fish_manager_t {
 	swimming_pool_t swimming_pool;
 	flooded_basement_t flooded_basement;
 	building_t const *prev_building=nullptr;
-	unsigned fishtank_ix=0;
+	unsigned fishtank_ix=0, rseed_ix=0;
 	float anim_time=0.0;
 public:
 	bool empty() const {return (fishtanks.empty() && swimming_pool.empty() && flooded_basement.empty());}
@@ -324,9 +324,12 @@ public:
 		flooded_basement.clear();
 	}
 	void next_frame(building_t const &building) {
-		if (&building != prev_building) { // new building
+		if (!building.interior) return; // error?
+
+		if (&building != prev_building || building.interior->rgen_seed_ix != rseed_ix) { // new building or new seed
 			clear();
 			prev_building = &building;
+			rseed_ix      = building.interior->rgen_seed_ix;
 			anim_time     = 0.0; // reset
 		}
 		for (fishtank_t &ft : fishtanks) {ft.next_frame();}

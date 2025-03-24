@@ -3606,6 +3606,7 @@ public:
 		DebugScope scope("building_multi_draw");
 		bind_default_sun_moon_smap_textures(); // bind default sun/moon smap textures
 		building_t const *new_player_building(nullptr);
+		building_t *building_to_clear(nullptr);
 		//timer_t timer("Draw Buildings"); // 0.57ms (2.6ms with glFinish(), 6.3ms with building interiors)
 		point const camera(get_camera_pos()), camera_bs(camera - xlate);
 		int const use_bmap(global_building_params.has_normal_map);
@@ -3914,6 +3915,7 @@ public:
 						b.run_player_interact_logic(camera_bs);
 						if (teleport_to_screenshot) {b.maybe_teleport_to_screenshot();}
 						building_occluder = b.get_best_occluder(camera_bs);
+						//if (building_action_key == 1) {building_to_clear = &b;} // TESTING: q key
 					} // for bi
 					if (can_break_from_loop) break; // done
 				} // for g
@@ -4089,6 +4091,7 @@ public:
 			glDisable(GL_CULL_FACE);
 		} // end draw_interior
 		draw_candle_flames();
+		if (building_to_clear) {building_to_clear->clear_and_regen_new_seed();}
 
 		// everything after this point is part of the building exteriors and uses city lights rather than building room lights;
 		// when the player is in the extended basement we still need to draw the exterior wall and door
