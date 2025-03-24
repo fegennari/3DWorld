@@ -240,8 +240,8 @@ rand_gen_t get_machine_info(room_object_t const &c, float floor_ceil_gap, cube_t
 	base.z2() = main.z1() = c.z1() + rgen.rand_uniform(0.04, 0.1)*min(height, floor_ceil_gap);
 	parts[0] = parts[1] = main;
 
-	if (two_part) {
-		float const split_pos(main.d[!c.dim][0] + rgen.rand_uniform(0.4, 0.6)*width);
+	if (two_part) { // Note: two_part is not consistent between template and machine
+		float const split_pos(main.d[!c.dim][0] +     rgen.rand_uniform( 0.4, 0.6) *width);
 		parts[0].d[!c.dim][1] = split_pos - max(0.0f, rgen.rand_uniform(-0.1, 0.1))*width; // maybe add a gap
 		parts[1].d[!c.dim][0] = split_pos + max(0.0f, rgen.rand_uniform(-0.1, 0.1))*width; // maybe add a gap
 		if (rgen.rand_bool()) {swap(parts[0], parts[1]); parts_swapped = 1;} // remove any bias toward the left/right
@@ -251,11 +251,12 @@ rand_gen_t get_machine_info(room_object_t const &c, float floor_ceil_gap, cube_t
 		cube_t &part(parts[n]);
 		vector3d const psz(part.get_size());
 		// fewer cylinders in factories; don't place two cylinders
-		bool const is_cylin(!is_cylins[0] && max(psz.x, psz.y) < 1.5*min(psz.x, psz.y) && rgen.rand_float() < (c.in_factory() ? 0.2 : 0.5));
+		bool const is_cylin(!is_cylins[0] && rgen.rand_float() < (c.in_factory() ? 0.2 : 0.5) && max(psz.x, psz.y) < 1.5*min(psz.x, psz.y));
+		bool const rb1(rgen.rand_bool()), rb2(rgen.rand_bool()); // make rgen independent of size
 
 		if (is_cylin) { // 50% chance vert/Z, 25% chance X, 25% chance Y
 			bool const must_be_vert(psz.z > 2.0*min(psz.x, psz.y)); // tall thin cylinders must be vertical
-			cylin_dims[n] = ((must_be_vert || rgen.rand_bool()) ? 2 : rgen.rand_bool());
+			cylin_dims[n] = ((must_be_vert || rb1) ? 2 : rb2);
 		}
 		is_cylins[n] = is_cylin;
 		float const max_shrink_val(is_cylin ? 0.15 : 0.25);

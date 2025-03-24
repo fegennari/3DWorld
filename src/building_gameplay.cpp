@@ -592,6 +592,7 @@ class player_inventory_t { // manages player inventory, health, and other stats
 	float cur_value, cur_weight, tot_value, tot_weight, damage_done, best_value, player_health, drunkenness, bladder, bladder_time, oxygen, thirst;
 	float prev_player_zval, respawn_time=0.0, accum_fall_damage=0.0;
 	unsigned num_doors_unlocked, has_key; // has_key is a bit mask for key colors
+	unsigned machine_rseed1=0, machine_rseed2=0;
 	int prev_respawn_frame=0;
 	bool prev_in_building, has_flashlight, is_poisoned, poison_from_spider, has_pool_cue;
 
@@ -625,6 +626,7 @@ public:
 		player_health = oxygen = thirst = 1.0; // full health, oxygen, and (anti-)thirst
 		num_doors_unlocked = has_key = 0; // num_doors_unlocked not saved on death, but maybe should be?
 		prev_in_building = has_flashlight = is_poisoned = poison_from_spider = has_pool_cue = 0;
+		machine_rseed1 = machine_rseed2 = 0;
 		carried.clear();
 		on_empty_inventory();
 	}
@@ -756,6 +758,10 @@ public:
 			type == TYPE_TOILET || type == TYPE_URINAL || (type == TYPE_RAT && obj.is_broken()))
 		{
 			register_fly_attract(0); // trashcans, toilets, urinals, and dead rats attract flies
+		}
+		if (is_boxed_machine(obj)) {
+			machine_rseed1 = obj.item_flags;
+			machine_rseed2 = obj.obj_id;
 		}
 		damage_done += value;
 		colorRGBA text_color(GREEN);
@@ -1080,6 +1086,7 @@ public:
 		phone_manager.next_frame(); // even if not in gameplay mode?
 		float const fticks_clamped(min(fticks, 0.25f*TICKS_PER_SECOND)); // limit to 250ms so that the player doesn't die when un-paused
 		float const elapsed_time(animate2 ? fticks_clamped : 0.0); // no time elapsed when time is paused
+		
 		// update candle, even when not in gameplay mode
 		if (!carried.empty()) {
 			carried_item_t &obj(carried.back());
@@ -1090,6 +1097,11 @@ public:
 				if (obj.get_remaining_capacity_ratio() <= 0.0) {obj.flags &= ~RO_FLAG_LIT;} // goes out when used up
 				if (player_in_water == 2) {obj.flags &= ~RO_FLAG_LIT;} // goes out under water
 			}
+		}
+		// apply machine template to factory
+		if ((machine_rseed1 > 0 || machine_rseed2 > 0) && player_building && player_building->has_room_geom() && player_building->is_factory()) {
+			player_building->interior->room_geom->set_factory_machine_seed(machine_rseed1, machine_rseed2);
+			machine_rseed1 = machine_rseed2 = 0; // one template per factory
 		}
 		if (!in_building_gameplay_mode()) return;
 		// handle oxygen
