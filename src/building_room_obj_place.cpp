@@ -801,8 +801,8 @@ void building_t::add_tv_to_wall(cube_t const &tv, unsigned room_id, float light_
 	objs.emplace_back(tv, TYPE_TV, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), light_amt, (use_monitor_image ? SHAPE_SHORT : SHAPE_CUBE), BLACK);
 	offset_hanging_tv(objs.back());
 	set_obj_id(objs);
-	if (on_off == 0) {objs.back().obj_id |=  1;} // off; set   LSB
-	else             {objs.back().obj_id &= ~1;} // on ; clear LSB
+	if      (on_off == 0) {objs.back().obj_id |=  1;} // off; set   LSB
+	else if (on_off == 1) {objs.back().obj_id &= ~1;} // on ; clear LSB
 }
 
 void add_lounge_blockers(vect_room_object_t const &objs, unsigned objs_start, vect_cube_t &blockers) {

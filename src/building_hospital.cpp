@@ -93,7 +93,7 @@ bool building_t::maybe_create_nested_bathroom(room_t &room, rand_gen_t &rgen) { 
 bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, int &nested_room_ix) {
 	if (!can_create_hospital_room()) return 0; // no hospital bed
 	float const floor_spacing(get_window_vspace()), clerance(1.25*get_min_front_clearance_inc_people()), wall_thickness(get_wall_thickness());
-	cube_t room_bounds(get_walkable_room_bounds(room)), place_area(room_bounds);
+	cube_t room_bounds(get_walkable_room_bounds(room)), place_area(room_bounds), bathroom;
 	place_area.expand_by(-1.0*wall_thickness); // add extra padding, since bed models are slightly different sizes
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const beds_start(objs.size());
@@ -109,7 +109,8 @@ bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, flo
 			}
 		}
 		if (nested_room_ix >= 0) { // found
-			cube_t blocker(get_room(nested_room_ix));
+			bathroom = get_room(nested_room_ix);
+			cube_t blocker(bathroom);
 			blocker.expand_by_xy(0.5*wall_thickness); // include room walls
 			objs.emplace_back(blocker, TYPE_BLOCKER, room_id, 0, 0, RO_FLAG_INVIS);
 		}
@@ -159,6 +160,29 @@ bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, flo
 			} // for j
 		}
 	} // for i
+	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_TV)) { // add TVs on walls opposite beds
+		for (auto i = objs.begin()+beds_start; i != objs.end(); ++i) {
+			if (i->type != TYPE_HOSP_BED) continue;
+			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TV)); // D, W, H
+			float const tv_height(0.35*floor_spacing*rgen.rand_uniform(1.0, 1.2)), tv_hwidth(0.5*tv_height*sz.y/sz.z), tv_depth(tv_height*sz.x/sz.z);
+			bool const dim(i->dim), dir(i->dir);
+			cube_t tv;
+			tv.z1() = zval    + 0.45*floor_spacing;
+			tv.z2() = tv.z1() + tv_height;
+			set_wall_width(tv, i->get_center_dim(!dim), tv_hwidth, !dim);
+			tv.d[dim][ dir] = room_bounds.d[dim][dir]; // on the wall
+			tv.d[dim][!dir] = tv.d[dim][dir] + (dir ? -1.0 : 1.0)*tv_depth;
+			cube_t test_cube(tv);
+			test_cube.d[dim][!dir] = i->d[dim][!dir]; // extend to the bed; should this ignore open doors?
+			
+			if (!overlaps_obj_or_placement_blocked(test_cube, room, objs_start) && !check_if_against_window(tv, room, dim, dir)) { // valid placement
+				add_tv_to_wall(tv, room_id, tot_light_amt, dim, !dir, 0, 2); // use_monitor_image=0, on_off=2 (random)
+			}
+			else { // check bathroom wall
+				// TODO: bathroom
+			}
+		} // for i
+	}
 	for (cube_with_ix_t const &c : curtains) {objs.emplace_back(c, TYPE_HOSP_CURT, room_id, c.ix, rgen.rand_bool(), 0);}
 	unsigned const table_ix(objs.size());
 
