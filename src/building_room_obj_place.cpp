@@ -68,7 +68,7 @@ vector3d building_t::get_office_chair_size() const {
 	return vector3d(radius, radius, height);
 }
 bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id, point const &place_pos, colorRGBA const &chair_color,
-	bool dim, bool dir, float tot_light_amt, bool office_chair, bool enable_rotation, bool bar_stool, bool no_push_out, int wooden_or_plastic)
+	bool dim, bool dir, float tot_light_amt, bool office_chair, bool enable_rotation, bool bar_stool, bool no_push_out, int wooden_or_plastic, bool reduced_clearance)
 {
 	assert(!(office_chair && bar_stool)); // can't ask for both
 	office_chair &= has_office_chair_model();
@@ -98,7 +98,7 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 		min_push_out = -0.5; // variable amount of pushed in/out
 		max_push_out = 1.2;
 	}
-	float const min_wall_dist(fabs(place_pos[dim] - room.d[dim][!dir]) - 1.33*get_min_front_clearance_inc_people());
+	float const min_wall_dist(fabs(place_pos[dim] - room.d[dim][!dir]) - (reduced_clearance ? 1.0 : 1.33)*get_min_front_clearance_inc_people());
 
 	if (!no_push_out) {
 		min_eq(max_push_out, (min_wall_dist - chair_hwidth)/chair_hwidth);
@@ -1497,7 +1497,7 @@ bool building_t::add_classroom_objs(rand_gen_t rgen, room_t const &room, float z
 	cube_t const room_bounds(get_walkable_room_bounds(room));
 	float const td_width(0.8*vspace*rgen.rand_uniform(1.1, 1.2)), td_depth(0.38*vspace*rgen.rand_uniform(1.1, 1.2)), td_height(0.23*vspace*rgen.rand_uniform(1.12, 1.2));
 	float const front_wall_pos(room_bounds.d[dim][dir]), room_center(room.get_center_dim(!dim)), dsign(dir ? -1.0 : 1.0);
-	float const desk_front_pos(front_wall_pos + dsign*(max(1.33*clearance, 0.25*vspace) + wall_thickness)); // near wall, with space for chair
+	float const desk_front_pos(front_wall_pos + dsign*(max(1.2*clearance, 0.25*vspace) + wall_thickness)); // near wall, with space for chair
 	float const desk_back_pos(desk_front_pos + dsign*td_depth);
 	float const desk_width(0.48*vspace), desk_depth(0.34*vspace), desk_height(0.25*vspace);
 	cube_t student_area(room_bounds);
@@ -1555,7 +1555,7 @@ bool building_t::add_classroom_desk(rand_gen_t &rgen, room_t const &room, cube_t
 	chair_pos.z     = desk.z1();
 	chair_pos[ dim] = desk.d[dim][dir]; // front of desk
 	chair_pos[!dim] = desk.get_center_dim(!dim) + 0.1*rgen.signed_rand_float()*desk.get_sz_dim(dim); // slightly misaligned
-	add_chair(rgen, room, vect_cube_t(), room_id, chair_pos, chair_color, dim, !dir, tot_light_amt, 0); // no blockers, office_chair=0
+	add_chair(rgen, room, vect_cube_t(), room_id, chair_pos, chair_color, dim, !dir, tot_light_amt, 0, 0, 0, 0, 2, 1); // no blockers, reduced_clearance=1
 	return 1;
 }
 
