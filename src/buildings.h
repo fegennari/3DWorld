@@ -1876,6 +1876,7 @@ struct bldg_industrial_info_t {
 	bldg_industrial_info_t(bool dim, bool dir, float epos, cube_t const &fs, cube_t const &ee) :
 		entrance_dim(dim), entrance_dir(dir), entrance_pos(epos), floor_space(fs), entrance_area(ee) {}
 	void next_frame(particle_manager_t &particle_manager);
+	void clear_room_details() {smoke_emitters.clear();}
 };
 
 struct building_interior_t {
@@ -2359,6 +2360,7 @@ struct building_t : public building_geom_t {
 	point get_retail_upper_stairs_landing_center() const;
 	void add_sub_rooms_to_avoid_if_needed(room_t const &room, vect_cube_t &avoid) const;
 private:
+	void clear_existing_room_geom();
 	void build_nav_graph() const;
 	bool is_valid_ai_placement(point const &pos, float radius, bool skip_nocoll, bool no_check_objs=0) const;
 	bool choose_dest_goal(person_t &person, rand_gen_t &rgen) const;

@@ -153,6 +153,18 @@ bool building_t::point_in_courtyard(point const &pos_bs) const {
 	return (has_courtyard && has_room_geom() && interior->room_geom->courtyard.contains_pt(pos_bs));
 }
 
+void building_t::clear_existing_room_geom() {
+	if (!interior) return; // error?
+	interior->create_fc_occluders(); // not really part of room geom, but needed for generating and drawing room geom, so we create them here
+	// remove any retail escalators not in malls (from the back) as they will be re-added below
+	while (!interior->escalators.empty() && !interior->escalators.back().in_mall) {interior->escalators.pop_back();}
+	for (building_walkway_t &w : walkways) {w.has_door = 0;} // reset for each call
+	if (interior->mall_info) {interior->mall_info->clear_room_details();}
+	if (interior->ind_info ) {interior->ind_info ->clear_room_details();}
+	invalidate_nav_graph();
+	has_int_fplace = 0; // reset for this generation
+}
+
 void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 
 	assert(has_room_geom());
@@ -183,13 +195,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	uint64_t is_public_on_floor(0); // 64 bit masks
 	bool added_bedroom(0), added_library(0), added_dining(0), added_laundry(0), added_basement_utility(0), added_fireplace(0), added_pool_room(0);
 	light_ix_assign_t light_ix_assign;
-	interior->create_fc_occluders(); // not really part of room geom, but needed for generating and drawing room geom, so we create them here
-	// remove any retail escalators not in malls (from the back) as they will be re-added below
-	while (!interior->escalators.empty() && !interior->escalators.back().in_mall) {interior->escalators.pop_back();}
-	for (building_walkway_t &w : walkways) {w.has_door = 0;} // reset for each call
-	if (has_mall()) {interior->mall_info->clear_room_details();}
-	invalidate_nav_graph();
-	has_int_fplace = 0; // reset for this generation
+	clear_existing_room_geom();
 
 	if (rooms.size() > 1) { // choose best room assignments for required rooms; if a single room, skip this step
 		float min_score(0.0); // lower is better
