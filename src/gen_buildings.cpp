@@ -785,7 +785,8 @@ public:
 		unsigned const ix(get_to_draw_ix(tex));
 		if (ix >= to_draw.size()) {to_draw.resize(ix+1);}
 		draw_block_t &block(to_draw[ix]);
-		block.register_tile_id(cur_tile_id);
+		if (cur_tile_id >= 0) {block.register_tile_id(cur_tile_id);} // register tile ID if valid
+
 		if (block.empty()) {block.tex = tex;} // copy material first time
 		else {
 			assert(block.tex.tid == tex.tid);
@@ -827,14 +828,13 @@ private:
 	};
 	vector<wall_seg_t> segs;
 	vect_cube_t faces;
-
 public:
-	unsigned cur_tile_id;
+	int cur_tile_id=-1; // starts invalid
 	vect_cube_t temp_cubes, temp_cubes2;
 	vector<float> temp_wall_edges;
 	vect_tquad_with_ix_t temp_tquads;
 
-	building_draw_t(bool is_city_=0) : cur_camera_pos(zero_vector), is_city(is_city_), cur_tile_id(0) {}
+	building_draw_t(bool is_city_=0) : cur_camera_pos(zero_vector), is_city(is_city_) {}
 	void init_draw_frame() {cur_camera_pos = get_camera_pos();} // capture camera pos during non-shadow pass to use for shadow pass
 	bool empty() const {return to_draw.empty();}
 	void reserve_verts(tid_nm_pair_t const &tex, size_t num, bool quads_or_tris=0) {get_verts(tex, quads_or_tris).reserve(num);}
@@ -1376,7 +1376,11 @@ public:
 	void upload_to_vbos() {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->upload_to_vbos();}}
 	void clear_vbos    () {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->clear_vbos    ();}}
 	void clear_drawn   () {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->clear         ();}}
-	void clear         () {clear_drawn(); to_draw.clear();}
+	void clear         () {
+		clear_drawn();
+		to_draw.clear();
+		cur_tile_id = -1; // make invalid
+	}
 	unsigned get_num_draw_blocks() const {return to_draw.size();}
 	void finalize(unsigned num_tiles) {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->finalize(num_tiles);}}
 	
@@ -4313,6 +4317,8 @@ public:
 				}
 			}
 		}
+		building_draw_interior.cur_tile_id = -1; // don't want to register tiles in reserve_verts() call
+
 		for (unsigned i = 0; i < tid_mapper.get_num_slots(); ++i) {
 			unsigned const count(vert_counter.get_count(i));
 			if (count > 0) {building_draw_interior.reserve_verts(tid_nm_pair_t(i), count);}
