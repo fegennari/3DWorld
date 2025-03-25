@@ -472,11 +472,11 @@ struct draw_range_t {
 
 // building types/functions; these are for primary buildings, not basements/rooms (such as malls or parking garages)
 enum {BTYPE_UNSET=0, BTYPE_HOUSE, BTYPE_MULT_FAM, BTYPE_OFFICE, BTYPE_APARTMENT, BTYPE_HOTEL, BTYPE_HOSPITAL, BTYPE_PARKING, BTYPE_MALL, BTYPE_FACTORY,
-	BTYPE_WAREHOUSE, BTYPE_POWERPLANT, BTYPE_SCHOOL, NUM_BUILDING_TYPES};
+	BTYPE_WAREHOUSE, BTYPE_POWERPLANT, BTYPE_SCHOOL, BTYPE_POLICE, BTYPE_FIRE_STAT, NUM_BUILDING_TYPES};
 std::string const btype_names[NUM_BUILDING_TYPES] =
-{"", "House", "Multi-Family House", "Office", "Apartments", "Hotel", "Hospital", "Parking", "Mall", "Factory", "Warehouse", "Power Plant", "School"};
+{"", "House", "Multi-Family House", "Office", "Apartments", "Hotel", "Hospital", "Parking", "Mall", "Factory", "Warehouse", "Power Plant", "School", "Police Station", "Fire Station"};
 colorRGBA const  btype_colors[NUM_BUILDING_TYPES] =
-{WHITE, WHITE, YELLOW,               WHITE,    GREEN,        GREEN,   BLUE,       BROWN,     ORANGE, RED,       RED,         RED,          PURPLE};
+{WHITE, WHITE, YELLOW,               WHITE,    GREEN,        GREEN,   BLUE,       BROWN,     ORANGE, RED,       RED,         RED,           PURPLE,   MAGENTA,          MAGENTA};
 typedef uint8_t building_type_t;
 
 enum { // room object types
@@ -2059,16 +2059,18 @@ struct building_t : public building_geom_t {
 	bool has_mall       () const {return (interior && interior->has_mall());}
 	bool has_mall_ent_stairs() const {return (interior && interior->has_mall_ent_stairs());}
 	bool has_mall_skylight  () const {return (has_mall() && !interior->mall_info->skylights.empty());}
-	bool is_office_bldg () const {return (btype == BTYPE_OFFICE);}
-	bool is_apartment   () const {return (btype == BTYPE_APARTMENT);}
-	bool is_hotel       () const {return (btype == BTYPE_HOTEL);}
-	bool is_apt_or_hotel() const {return (is_apartment() || is_hotel());}
+	bool is_office_bldg () const {return (btype == BTYPE_OFFICE    );}
+	bool is_apartment   () const {return (btype == BTYPE_APARTMENT );}
+	bool is_hotel       () const {return (btype == BTYPE_HOTEL     );}
 	bool is_factory     () const {return (btype == BTYPE_FACTORY   );}
 	bool is_hospital    () const {return (btype == BTYPE_HOSPITAL  );}
 	bool is_school      () const {return (btype == BTYPE_SCHOOL    );}
 	bool is_parking     () const {return (btype == BTYPE_PARKING   );}
 	bool is_warehouse   () const {return (btype == BTYPE_WAREHOUSE );}
 	bool is_powerplant  () const {return (btype == BTYPE_POWERPLANT);}
+	bool is_police_stat () const {return (btype == BTYPE_POLICE    );}
+	bool is_fire_stat   () const {return (btype == BTYPE_FIRE_STAT );}
+	bool is_apt_or_hotel() const {return (is_apartment() || is_hotel());}
 	bool is_residential () const {return (is_house || is_apt_or_hotel());}
 	bool is_industrial  () const {return (is_factory() || is_warehouse() || is_powerplant());}
 	bool is_commercial  () const {return (!is_residential() && !is_industrial());}
