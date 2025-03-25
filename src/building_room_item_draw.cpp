@@ -1673,11 +1673,11 @@ void building_t::gen_and_draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, shad
 	if (has_room_geom() && (inc_small == 2 || inc_small == 3)) {add_wall_and_door_trim_if_needed();} // gen trim (exterior and interior) when close to the player
 	draw_room_geom(bbd, s, amask_shader, oc, xlate, building_ix, shadow_only, reflection_pass, inc_small, player_in_building);
 }
-void building_t::clear_room_geom() {
+void building_t::clear_room_geom(bool even_if_player_modified) {
 	clear_clothing_textures();
 	if (!has_room_geom()) return;
 
-	if (interior->room_geom->modified_by_player) { // keep the player's modifications and don't delete the room geom
+	if (interior->room_geom->modified_by_player && !even_if_player_modified) { // keep the player's modifications and don't delete the room geom
 		interior->room_geom->clear_materials(); // but we can still clear the materials
 		return;
 	}
@@ -1691,7 +1691,7 @@ void building_t::clear_room_geom() {
 	invalidate_nav_graph(); // required since interior doors may be removed
 }
 void building_t::clear_and_regen_new_seed() {
-	clear_room_geom();
+	clear_room_geom(1); // even_if_player_modified=1
 	if (interior) {++interior->rgen_seed_ix;}
 }
 

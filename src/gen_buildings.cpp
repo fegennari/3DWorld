@@ -651,14 +651,13 @@ class building_draw_t {
 		};
 		indexed_vao_manager_with_shadow_t vao_mgr; // Note: not using the indexed part
 		vector<vert_ix_pair> pos_by_tile; // {quads, tris}
-		unsigned tri_vbo_off, vert_vbo_sz;
+		unsigned tri_vbo_off=0, vert_vbo_sz=0;
 		unsigned start_num_verts[2] = {0}; // for quads and triangles
 	public:
-		bool no_shadows;
+		bool no_shadows=0;
 		tid_nm_pair_t tex;
 		vect_vnctcc_t quad_verts, tri_verts;
 
-		draw_block_t() : tri_vbo_off(0), vert_vbo_sz(0), no_shadows(0) {}
 		void record_num_verts() {start_num_verts[0] = num_quad_verts(); start_num_verts[1] = num_tri_verts();}
 
 		void draw_geom_range(tid_nm_pair_dstate_t &state, bool shadow_only, vert_ix_pair const &vstart, vert_ix_pair const &vend) { // use VBO rendering
@@ -770,12 +769,12 @@ class building_draw_t {
 			vert_vbo_sz = 0;
 		}
 		void clear() {clear_vbos(); clear_verts();}
-		bool empty() const {return (quad_verts.empty() && tri_verts.empty());}
+		bool empty    () const {return (quad_verts.empty() && tri_verts.empty());}
 		bool has_drawn() const {return !pos_by_tile.empty();}
-		unsigned num_quad_verts() const {return quad_verts.size();}
-		unsigned num_tri_verts () const {return tri_verts .size();}
-		unsigned num_verts() const {return (num_quad_verts() + num_tri_verts());}
-		unsigned num_tris () const {return (num_quad_verts()/2 + num_tri_verts()/3);} // Note: 1 quad = 4 verts = 2 triangles
+		unsigned num_quad_verts () const {return quad_verts.size();}
+		unsigned num_tri_verts  () const {return tri_verts .size();}
+		unsigned num_verts      () const {return (num_quad_verts() + num_tri_verts());}
+		unsigned num_tris       () const {return (num_quad_verts()/2 + num_tri_verts()/3);} // Note: 1 quad = 4 verts = 2 triangles
 		unsigned start_quad_vert() const {return start_num_verts[0];}
 		unsigned start_tri_vert () const {return start_num_verts[1];}
 	}; // end draw_block_t
@@ -1375,8 +1374,8 @@ public:
 		return num;
 	}
 	void upload_to_vbos() {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->upload_to_vbos();}}
-	void clear_vbos    () {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->clear_vbos();}}
-	void clear_drawn   () {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->clear();}}
+	void clear_vbos    () {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->clear_vbos    ();}}
+	void clear_drawn   () {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->clear         ();}}
 	void clear         () {clear_drawn(); to_draw.clear();}
 	unsigned get_num_draw_blocks() const {return to_draw.size();}
 	void finalize(unsigned num_tiles) {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->finalize(num_tiles);}}
@@ -2746,7 +2745,7 @@ class building_creator_t {
 	vect_building_t buildings;
 	vect_bldg_walkway_t all_walkways; // walkways connecting city buildings
 	vector<vector<unsigned>> bix_by_plot; // cached for use with pedestrian collisions
-	// dynamic verts, static exterior verts, windows, window lights, interior walls/ceilings/floors, interior exterior walls
+	// these hold exterior building vertex data: dynamic verts, static exterior verts, windows, window lights, interior walls/ceilings/floors, interior exterior walls
 	building_draw_t building_draw, building_draw_vbo, building_draw_windows, building_draw_wind_lights, building_draw_interior, building_draw_int_ext_walls;
 	point_sprite_drawer_sized building_lights;
 	vector<point> points; // reused temporary
@@ -2925,13 +2924,13 @@ public:
 	bool has_interior_to_draw() const {return (has_interior_geom && !building_draw_interior.empty());}
 
 	void clear() {
-		buildings.clear();
-		grid.clear();
+		clear_vbos(); // must be called before buildings.clear()
+		buildings   .clear();
+		grid        .clear();
 		grid_by_tile.clear();
-		bix_by_plot.clear();
-		clear_vbos();
-		buildings_bcube = cube_t();
-		gpu_mem_usage = 0;
+		bix_by_plot .clear();
+		buildings_bcube   = cube_t();
+		has_interior_geom = 0;
 	}
 	unsigned get_num_buildings() const {return buildings.size();}
 	size_t   get_gpu_mem_usage() const {return gpu_mem_usage;}
@@ -4389,7 +4388,7 @@ public:
 		tid_mapper.init();
 		timer_t timer("Create Building VBOs", !is_tile);
 		get_all_drawn_verts(is_tile);
-		update_mem_usage(is_tile);
+		update_mem_usage   (is_tile);
 		building_draw_vbo          .upload_to_vbos();
 		building_draw_windows      .upload_to_vbos();
 		building_draw_wind_lights  .upload_to_vbos(); // Note: may be empty if not night time
@@ -4397,7 +4396,7 @@ public:
 		building_draw_int_ext_walls.upload_to_vbos();
 	}
 	void ensure_interior_geom_vbos() { // only for is_tile case
-		if (!has_interior_geom) return; // no interior geom, nothing to do
+		if (!has_interior_geom)              return; // no interior geom, nothing to do
 		if (!building_draw_interior.empty()) return; // already created
 		//timer_t timer("Create Building Interiors VBOs");
 		get_interior_drawn_verts();
@@ -4412,10 +4411,14 @@ public:
 		update_mem_usage(1); // is_tile=1 (assumed - no printout)
 		building_draw_wind_lights.upload_to_vbos();
 	}
-	void clear_room_geom() {
+	void clear_room_geom(bool even_if_player_modified=0) {
 		if (!has_room_geom) return;
-		for (building_t &b : buildings) {b.clear_room_geom();}
 		has_room_geom = 0;
+		
+		for (building_t &b : buildings) {
+			b.clear_room_geom(even_if_player_modified);
+			has_room_geom |= b.has_room_geom(); // may have been kept if modified by player
+		}
 	}
 	void clear_vbos() {
 		building_draw              .clear_vbos();
@@ -4424,7 +4427,8 @@ public:
 		building_draw_wind_lights  .clear_vbos();
 		building_draw_interior     .clear_vbos();
 		building_draw_int_ext_walls.clear_vbos();
-		clear_room_geom();
+		clear_room_geom(1); // even_if_player_modified=1
+		vbos_created  = 0;
 		gpu_mem_usage = 0;
 	}
 	bool check_point_coll_xy(point const &pos) const { // Note: pos is in camera space

@@ -2324,7 +2324,7 @@ struct building_t : public building_geom_t {
 	void debug_people_in_building(shader_t &s, point const &camera_bs) const;
 	void subtract_stairs_and_elevators_from_cube(cube_t const &c, vect_cube_t &cube_parts, bool inc_stairs=1, bool inc_elevators=1) const;
 	void add_split_roof_shadow_quads(building_draw_t &bdraw) const;
-	void clear_room_geom();
+	void clear_room_geom(bool even_if_player_modified=0);
 	void clear_and_regen_new_seed();
 	void update_grass_exclude_at_pos(point const &pos, vector3d const &xlate, bool camera_in_building) const;
 	void add_signs(vector<sign_t> &signs) const;
