@@ -170,16 +170,20 @@ bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, flo
 			tv.z1() = zval    + 0.45*floor_spacing;
 			tv.z2() = tv.z1() + tv_height;
 			set_wall_width(tv, i->get_center_dim(!dim), tv_hwidth, !dim);
-			tv.d[dim][ dir] = room_bounds.d[dim][dir]; // on the wall
+			float wall_pos(room_bounds.d[dim][dir]); // start at opposite room wall
+
+			if (!bathroom.is_all_zeros()) { // check bathoom wall
+				if (tv.d[!dim][0] > bathroom.d[!dim][0] && tv.d[!dim][1] < bathroom.d[!dim][1]) {
+					wall_pos = bathroom.d[dim][!dir] + (dir ? -1.0 : 1.0)*0.5*wall_thickness;
+				}
+			}
+			tv.d[dim][ dir] = wall_pos;
 			tv.d[dim][!dir] = tv.d[dim][dir] + (dir ? -1.0 : 1.0)*tv_depth;
 			cube_t test_cube(tv);
 			test_cube.d[dim][!dir] = i->d[dim][!dir]; // extend to the bed; should this ignore open doors?
 			
 			if (!overlaps_obj_or_placement_blocked(test_cube, room, objs_start) && !check_if_against_window(tv, room, dim, dir)) { // valid placement
 				add_tv_to_wall(tv, room_id, tot_light_amt, dim, !dir, 0, 2); // use_monitor_image=0, on_off=2 (random)
-			}
-			else { // check bathroom wall
-				// TODO: bathroom
 			}
 		} // for i
 	}
