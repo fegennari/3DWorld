@@ -2518,6 +2518,7 @@ bool building_interior_t::is_cube_close_to_doorway(cube_t const &c, cube_t const
 	test_cube.expand_by_xy(1.5*door_width);
 	
 	if (!room.is_all_zeros()) { // don't go outside the original room
+		if (!room.intersects_xy(c)) {cout << "Bad room cube: " << TXT(room.str()) << TXT(c.str()) << endl;}
 		assert(room.intersects_xy(c)); // can't test zval in case of ball in pool
 		cube_t room_exp(room);
 		room_exp.expand_by_xy(0.1*door_width); // small amount to include wall width

@@ -132,6 +132,7 @@ bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, flo
 	if (num_beds == 0) return 0;
 	bool const add_tall_table(rgen.rand_bool());
 	bool const add_curtains(num_beds > 1 && building_obj_model_loader.is_model_valid(OBJ_MODEL_HOSP_CURT));
+	unsigned const beds_end(objs.size());
 	point const table_pos(room.xc(), room.yc(), zval); // approximate
 	vect_cube_t blockers;
 	vect_cube_with_ix_t curtains;
@@ -161,15 +162,16 @@ bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, flo
 		}
 	} // for i
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_TV)) { // add TVs on walls opposite beds
-		for (auto i = objs.begin()+beds_start; i != objs.end(); ++i) {
-			if (i->type != TYPE_HOSP_BED) continue;
+		for (unsigned i = beds_start; i != beds_end; ++i) {
+			room_object_t const& bed(objs[i]);
+			if (bed.type != TYPE_HOSP_BED) continue;
 			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TV)); // D, W, H
 			float const tv_height(0.35*floor_spacing*rgen.rand_uniform(1.0, 1.2)), tv_hwidth(0.5*tv_height*sz.y/sz.z), tv_depth(tv_height*sz.x/sz.z);
-			bool const dim(i->dim), dir(i->dir);
+			bool const dim(bed.dim), dir(bed.dir);
 			cube_t tv;
 			tv.z1() = zval    + 0.45*floor_spacing;
 			tv.z2() = tv.z1() + tv_height;
-			set_wall_width(tv, i->get_center_dim(!dim), tv_hwidth, !dim);
+			set_wall_width(tv, bed.get_center_dim(!dim), tv_hwidth, !dim);
 			float wall_pos(room_bounds.d[dim][dir]); // start at opposite room wall
 
 			if (!bathroom.is_all_zeros()) { // check bathoom wall
@@ -180,10 +182,10 @@ bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, flo
 			tv.d[dim][ dir] = wall_pos;
 			tv.d[dim][!dir] = tv.d[dim][dir] + (dir ? -1.0 : 1.0)*tv_depth;
 			cube_t test_cube(tv);
-			test_cube.d[dim][!dir] = i->d[dim][!dir]; // extend to the bed; should this ignore open doors?
+			test_cube.d[dim][!dir] = bed.d[dim][!dir]; // extend to the bed; should this ignore open doors?
 			
 			if (!overlaps_obj_or_placement_blocked(test_cube, room, objs_start) && !check_if_against_window(tv, room, dim, dir)) { // valid placement
-				add_tv_to_wall(tv, room_id, tot_light_amt, dim, !dir, 0, 2); // use_monitor_image=0, on_off=2 (random)
+				add_tv_to_wall(tv, room_id, tot_light_amt, dim, !dir, 0, 2); // use_monitor_image=0, on_off=2 (random); invalidates bed reference
 			}
 		} // for i
 	}
