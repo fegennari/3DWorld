@@ -46,7 +46,7 @@ extern vector<texture_t> textures;
 model3ds all_models;
 
 
-bool enable_bump_map() {return (ENABLE_BUMP_MAPS && !disable_shader_effects && (display_mode & 0x20) == 0 && enable_model3d_bump_maps);} // enabled by default
+bool enable_bump_map() {return (ENABLE_BUMP_MAPS && !disable_shader_effects && enable_model3d_bump_maps);} // enabled by default
 bool enable_spec_map() {return (ENABLE_SPEC_MAPS && !disable_shader_effects);}
 bool no_sparse_smap_update();
 bool enable_reflection_dynamic_updates();
