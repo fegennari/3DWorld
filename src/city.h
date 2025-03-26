@@ -626,6 +626,7 @@ struct transmission_line_t {
 struct range_pair_t {
 	unsigned s, e; // Note: e is one past the end
 	range_pair_t(unsigned s_=0, unsigned e_=0) : s(s_), e(e_) {}
+	void clear() {s = e = 0;}
 	void update(unsigned v);
 };
 

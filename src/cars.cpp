@@ -978,6 +978,7 @@ void car_manager_t::init_cars(unsigned num) {
 }
 
 void car_manager_t::add_parked_cars(vector<car_t> const &new_cars) {
+	if (first_parked_car > 0) {cars.resize(first_parked_car);} // remove old parked cars if any exist
 	first_parked_car = cars.size(); // Note: sort may invalidate this, but okay for use in finalize_cars()
 	reserve_extra(cars, new_cars.size());
 	vector_add_to(new_cars, cars);
@@ -1040,6 +1041,7 @@ void car_manager_t::add_helicopters(vect_cube_t const &hp_locs) {
 	unsigned const num_models(helicopter_model_loader.num_models());
 	if (num_models == 0) return;
 	helipads.resize(hp_locs.size());
+	helicopters.clear();
 
 	for (auto i = hp_locs.begin(); i != hp_locs.end(); ++i) {
 		unsigned const hp_ix(i - hp_locs.begin());

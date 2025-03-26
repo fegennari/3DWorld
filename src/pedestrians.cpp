@@ -1413,6 +1413,7 @@ void ped_manager_t::expand_cube_for_ped(cube_t &cube) const {
 void ped_manager_t::init(unsigned num_city) {
 	if (num_city == 0) return;
 	timer_t timer("Gen Peds");
+	peds.clear();
 	peds.reserve(num_city);
 	float const radius(get_ped_radius()); // base radius
 

@@ -59,6 +59,7 @@ void register_player_not_in_building();
 bool player_holding_lit_candle();
 bool player_holding_lit_flashlight();
 void parse_universe_name_str_tables();
+void clear_city_building_data();
 void try_join_city_building_ext_basements(vect_building_t &buildings);
 void add_sign_text_verts_both_sides(string const &text, cube_t const &sign, bool dim, bool dir, vect_vnctcc_t &verts);
 void draw_candle_flames();
@@ -2930,6 +2931,7 @@ public:
 	void clear() {
 		clear_vbos(); // must be called before buildings.clear()
 		buildings   .clear();
+		all_walkways.clear();
 		grid        .clear();
 		grid_by_tile.clear();
 		bix_by_plot .clear();
@@ -5306,6 +5308,15 @@ void gen_buildings() {
 		global_building_params.restore_prev_pos_range(); // hack to undo clip to city bounds to allow buildings to extend further out
 		if (global_building_params.add_secondary_buildings) {building_creator.gen(global_building_params, 0, 1, 0, 1);} // non-city secondary buildings
 	} else {building_creator .gen(global_building_params, 0, 0, 0, 1);} // mixed/non-city buildings
+}
+void regen_buildings() {
+	if (world_mode != WMODE_INF_TERRAIN || !have_cities()) return; // no cities/buildings
+	static int regen_rseed = 1000;
+	player_building = nullptr; // no longer valid
+	clear_city_building_data();
+	building_creator_city.gen(global_building_params, 1, 0, 0, 1, regen_rseed++); // city buildings
+	gen_city_details();
+	// FIX: car assert, pedestrians disappear, trees
 }
 void draw_buildings(int shadow_only, int reflection_pass, vector3d const &xlate) {
 	//if (!shadow_only && !reflection_pass && !building_tiles.empty()) {cout << "Building Tiles: " << building_tiles.size() << " Tiled Buildings: " << building_tiles.get_tot_num_buildings() << endl;} // debugging

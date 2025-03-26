@@ -451,7 +451,7 @@ class road_network_t : public streetlights_t { // AKA city center
 	vector<vector<unsigned>> city_to_seg; // maps city_id to set of road segments connecting to that city
 
 	struct tile_block_t { // collection of road parts for a given tile
-		range_pair_t ranges[NUM_RD_TYPES]; // {plot, seg, isec2, isec3, isec4, park_lot, tracks, park, driveway, road_skirt, building}
+		range_pair_t   ranges[NUM_RD_TYPES]; // {plot, seg, isec2, isec3, isec4, park_lot, tracks, park, driveway, road_skirt, building}
 		quad_batch_draw quads[NUM_RD_TYPES];
 		cube_t bcube;
 		tile_block_t(cube_t const &bcube_) : bcube(bcube_) {}
@@ -1071,6 +1071,19 @@ public:
 		city_obj_placer.finalize_streetlights_and_power(*this, plot_colliders);
 		for (auto i = plot_colliders.begin(); i != plot_colliders.end(); ++i) {sort(i->begin(), i->end(), [](cube_t const &a, cube_t const &b) {return (a.x1() < b.x1());});}
 		have_plot_dividers |= !city_obj_placer.has_plot_dividers();
+	}
+	void clear_old_building_data() {
+		plot_cuts.clear();
+		uges.clear();
+		for (vect_cube_t& c : plot_colliders) {c.clear();} // clear all plot colliders
+
+		for (tile_block_t& tb : tile_blocks) { // tile blocks for parking lots and driveways will be regenerated below
+			tb.ranges[TYPE_PARK_LOT].clear();
+			tb.ranges[TYPE_DRIVEWAY].clear();
+			tb.quads [TYPE_PARK_LOT].clear();
+			tb.quads [TYPE_DRIVEWAY].clear();
+			tb.quads [TYPE_PLOT    ].clear(); // clear plot cache in case plot cuts change
+		}
 	}
 	void add_streetlights() {
 		streetlights.clear();
@@ -2782,6 +2795,9 @@ public:
 	void gen_parking_lots_and_place_objects(vector<car_t> &cars, bool have_cars) {
 		for (auto i = road_networks.begin(); i != road_networks.end(); ++i) {i->gen_parking_lots_and_place_objects(cars, have_cars, have_plot_dividers);}
 	}
+	void clear_old_building_data() {
+		for (auto i = road_networks.begin(); i != road_networks.end(); ++i) {i->clear_old_building_data();}
+	}
 	void get_city_bcubes(vect_cube_t &bcubes) const {
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {bcubes.push_back(r->get_bcube());}
 	}
@@ -3308,6 +3324,7 @@ public:
 		car_manager.add_helicopters(hp_locs);
 		ped_manager.init(city_params.num_peds); // must be after buildings are placed
 	}
+	void clear_old_building_data() {road_gen.clear_old_building_data();}
 	cube_t get_city_bcube(unsigned city_id)               const {return road_gen.get_city_bcube(city_id);}
 	cube_t get_city_bcube_at_pt(point const &pos)         const {return road_gen.get_city_bcube_at_pt(pos);}
 	cube_t get_city_bcube_overlapping(cube_t const &c)    const {return road_gen.get_city_bcube_overlapping(c);}
@@ -3443,6 +3460,7 @@ void gen_cities(float *heightmap, unsigned xsize, unsigned ysize) {
 	city_gen.invalidate_heightmap(); // caller holds the reference to heightmap, so it's not valid after this call
 }
 void gen_city_details() {city_gen.gen_details();} // called after gen_buildings()
+void clear_city_building_data() {city_gen.clear_old_building_data();}
 cube_t get_city_bcube(unsigned city_id) {return city_gen.get_city_bcube(city_id);}
 cube_t get_city_bcube_at_pt(point const &pos) {return city_gen.get_city_bcube_at_pt(pos);}
 cube_t get_city_bcube_overlapping(cube_t const &c) {return city_gen.get_city_bcube_overlapping(c);}
