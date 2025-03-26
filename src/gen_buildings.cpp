@@ -4509,12 +4509,12 @@ public:
 			for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {
 				grid_elem_t const &ge(get_grid_elem(x, y));
 				if (ge.empty()) continue; // skip empty grid
-				if (!bcube.intersects_xy(ge.bcube)) continue; // Note: no need to check z-range
+				if (!bcube.intersects_xy(ge.bcube) && !(inc_basement && bcube.intersects_xy(ge.extb_bcube))) continue; // Note: no need to check z-range
 
 				for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) {
 					building_t const &building(get_building(b->ix));
 					if (&building == exclude1 || &building == exclude2) continue;
-					if (inc_basement && building.cube_intersects_extb_room(bcube)) return 1; // extended basement intersection
+					if (inc_basement && building.cube_intersects_basement_or_extb_room(bcube)) return 1; // basement or extended basement intersection
 					if (!bcube.intersects_xy(*b)) continue; // no intersection
 						
 					if (!xy_only) {
