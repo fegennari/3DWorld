@@ -18,7 +18,7 @@ float const ATTIC_LIGHT_RADIUS_SCALE = 2.0; // larger radius in attic, since spa
 
 vector<point> enabled_bldg_lights;
 
-extern bool camera_in_building, player_in_walkway, some_person_has_idle_animation;
+extern bool camera_in_building, player_in_walkway, player_in_uge, some_person_has_idle_animation;
 extern int MESH_Z_SIZE, display_mode, display_framerate, camera_surf_collide, animate2, frame_counter, building_action_key, player_in_basement, player_in_elevator, player_in_attic;
 extern unsigned LOCAL_RAYS, MAX_RAY_BOUNCES, NUM_THREADS;
 extern float indir_light_exp, fticks;
@@ -1729,7 +1729,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if (!camera_in_building && ((light_in_basement && !camera_can_see_ext_basement) || is_in_windowless_attic || is_in_elevator)) continue;
 		room_t const &room(get_room(i->room_id));
 		bool const in_ext_basement(room.is_ext_basement()), mall_light_vis(in_ext_basement && player_can_see_mall);
-		bool const sep_by_extb_door((in_ext_basement && !camera_in_ext_basement) || (!in_ext_basement && camera_in_ext_basement));
+		bool const sep_by_extb_door((in_ext_basement && !camera_in_ext_basement && !camera_can_see_ext_basement && !player_in_uge) || (!in_ext_basement && camera_in_ext_basement));
 		if (sep_by_extb_door && interior->get_ext_basement_door().open_amt == 0.0) continue; // closed door - light not visible
 		// if player above mall looking through skylight, can only see mall and store lights
 		if (player_can_see_mall && !has_windows() && (!in_ext_basement || !room.is_mall_or_store())) continue;
