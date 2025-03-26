@@ -781,11 +781,11 @@ class building_draw_t {
 	vector<draw_block_t> to_draw; // one per texture, assumes tids are dense
 
 public:
-	vect_vnctcc_t &get_verts(tid_nm_pair_t const &tex, bool quads_or_tris=0) { // default is quads
+	vect_vnctcc_t &get_verts(tid_nm_pair_t const &tex, bool quads_or_tris=0, bool no_register_tile=0) { // default is quads
 		unsigned const ix(get_to_draw_ix(tex));
 		if (ix >= to_draw.size()) {to_draw.resize(ix+1);}
 		draw_block_t &block(to_draw[ix]);
-		if (cur_tile_id >= 0) {block.register_tile_id(cur_tile_id);} // register tile ID if valid
+		if (!no_register_tile && cur_tile_id >= 0) {block.register_tile_id(cur_tile_id);} // register tile ID if valid
 
 		if (block.empty()) {block.tex = tex;} // copy material first time
 		else {
@@ -829,7 +829,7 @@ private:
 	vector<wall_seg_t> segs;
 	vect_cube_t faces;
 public:
-	int cur_tile_id=-1; // starts invalid
+	unsigned cur_tile_id=0;
 	vect_cube_t temp_cubes, temp_cubes2;
 	vector<float> temp_wall_edges;
 	vect_tquad_with_ix_t temp_tquads;
@@ -837,7 +837,7 @@ public:
 	building_draw_t(bool is_city_=0) : cur_camera_pos(zero_vector), is_city(is_city_) {}
 	void init_draw_frame() {cur_camera_pos = get_camera_pos();} // capture camera pos during non-shadow pass to use for shadow pass
 	bool empty() const {return to_draw.empty();}
-	void reserve_verts(tid_nm_pair_t const &tex, size_t num, bool quads_or_tris=0) {get_verts(tex, quads_or_tris).reserve(num);}
+	void reserve_verts(tid_nm_pair_t const &tex, size_t num, bool quads_or_tris=0) {get_verts(tex, quads_or_tris, 1).reserve(num);} // no_register_tile=1
 	unsigned get_to_draw_ix(tid_nm_pair_t const &tex) const {return tid_mapper.get_slot_ix(tex.tid);}
 	int      get_to_draw_ix_if_exists(tid_nm_pair_t const &tex) const {return tid_mapper.get_slot_ix_if_exists(tex.tid);} // returns -1 if not found
 	unsigned get_num_verts (tid_nm_pair_t const &tex, bool quads_or_tris=0) {return get_verts(tex, quads_or_tris).size    ();}
@@ -1379,7 +1379,7 @@ public:
 	void clear         () {
 		clear_drawn();
 		to_draw.clear();
-		cur_tile_id = -1; // make invalid
+		cur_tile_id = 0;
 	}
 	unsigned get_num_draw_blocks() const {return to_draw.size();}
 	void finalize(unsigned num_tiles) {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->finalize(num_tiles);}}
@@ -4317,8 +4317,6 @@ public:
 				}
 			}
 		}
-		building_draw_interior.cur_tile_id = -1; // don't want to register tiles in reserve_verts() call
-
 		for (unsigned i = 0; i < tid_mapper.get_num_slots(); ++i) {
 			unsigned const count(vert_counter.get_count(i));
 			if (count > 0) {building_draw_interior.reserve_verts(tid_nm_pair_t(i), count);}
