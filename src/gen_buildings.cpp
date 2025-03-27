@@ -5316,7 +5316,6 @@ void regen_buildings() {
 	clear_city_building_data();
 	building_creator_city.gen(global_building_params, 1, 0, 0, 1, regen_rseed++); // city buildings
 	gen_city_details();
-	// FIX: car assert, pedestrians disappear, trees
 }
 void draw_buildings(int shadow_only, int reflection_pass, vector3d const &xlate) {
 	//if (!shadow_only && !reflection_pass && !building_tiles.empty()) {cout << "Building Tiles: " << building_tiles.size() << " Tiled Buildings: " << building_tiles.get_tot_num_buildings() << endl;} // debugging

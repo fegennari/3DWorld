@@ -890,7 +890,6 @@ class ped_manager_t { // pedestrians
 	vector<unsigned char> need_to_sort_city;
 	car_city_vect_t empty_cars_vect;
 	vector<car_city_vect_t> cars_by_city;
-	vector<point> bldg_ppl_pos;
 	vector<person_t const *> to_draw;
 	rand_gen_t rgen;
 	ao_draw_state_t dstate;
@@ -952,9 +951,9 @@ public:
 	bool choose_dest_parked_car(unsigned city_id, unsigned &plot_id, unsigned &car_ix, point &car_center);
 	void next_animation();
 	static float get_ped_radius();
-	void clear() {peds.clear(); by_city.clear();}
-	size_t get_model_gpu_mem() const {return ped_model_loader.get_gpu_mem();}
+	void clear();
 	void init(unsigned num_city);
+	size_t get_model_gpu_mem() const {return ped_model_loader.get_gpu_mem();}
 	void maybe_reassign_models();
 	void maybe_reassign_building_models(building_t &building);
 	person_t add_person_to_building(point const &pos, unsigned bix, unsigned ssn);

@@ -1410,10 +1410,19 @@ void ped_manager_t::expand_cube_for_ped(cube_t &cube) const {
 	cube.z2() += PED_HEIGHT_SCALE*radius;
 }
 
+void ped_manager_t::clear() {
+	peds.clear();
+	by_city.clear();
+	by_plot.clear();
+	need_to_sort_city.clear();
+	cars_by_city.clear();
+	nav_grid_mgr.reset();
+}
+
 void ped_manager_t::init(unsigned num_city) {
 	if (num_city == 0) return;
 	timer_t timer("Gen Peds");
-	peds.clear();
+	clear();
 	peds.reserve(num_city);
 	float const radius(get_ped_radius()); // base radius
 
