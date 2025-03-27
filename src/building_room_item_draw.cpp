@@ -1931,7 +1931,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			mats_amask.draw(nullptr, s, 0, 1); // no brg_batch_draw
 		}
 		// this is expensive: only enable for the main draw pass and skip for buildings the player isn't in, except for industrial building metal grates
-		else if (inc_small >= 2 && (player_in_building || !player_in_building || is_industrial)) {
+		else if (inc_small >= 2 && (player_in_building || is_industrial)) {
 			// without the special shader these won't look correct when drawn through windows
 			// used for both plant/tree leaves and spider webs;
 			// plants are above ground and in malls with high min_alpha; metal stairs are above ground and in basements with high min_alpha;

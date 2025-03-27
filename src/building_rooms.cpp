@@ -2742,10 +2742,13 @@ void add_button(point const &pos, float button_radius, bool dim, bool dir, unsig
 	expand_to_nonzero_area(c, button_thickness, dim);
 	objs.emplace_back(c, TYPE_BUTTON, function_id, dim, dir, flags, 1.0, SHAPE_CYLIN, colorRGBA(1.0, 0.9, 0.5)); // room_id=function_id (elevator_id, gate_id)
 }
-void add_elevator_button(point const &pos, float button_radius, bool dim, bool dir, unsigned elevator_id, unsigned floor_id, bool inside, bool is_up, vect_room_object_t &objs) {
+void add_elevator_button(point const &pos, float button_radius, bool dim, bool dir, unsigned elevator_id,
+	unsigned floor_id, bool inside, bool is_up, bool exterior, vect_room_object_t &objs)
+{
 	unsigned flags(RO_FLAG_NOCOLL);
-	if (inside) {flags |= RO_FLAG_IN_ELEV;}
-	else        {flags |= (is_up ? RO_FLAG_ADJ_TOP : RO_FLAG_ADJ_BOT);}
+	if (exterior) {flags |= RO_FLAG_EXTERIOR;}
+	if (inside)   {flags |= RO_FLAG_IN_ELEV;}
+	else          {flags |= (is_up ? RO_FLAG_ADJ_TOP : RO_FLAG_ADJ_BOT);}
 	add_button(pos, button_radius, dim, dir, elevator_id, flags, objs);
 	objs.back().obj_id = floor_id; // encode floor index as obj_id
 }
@@ -2923,14 +2926,15 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		// call buttons on each floor outside the elevator
 		for (unsigned f = 0; f < num_floors; ++f) {
 			if (i->skip_floor_ix(f)) continue;
+			bool const top_floor(f == num_floors-1), exterior(i->in_mall == 1 && top_floor); // exterior buttons are only above the mall
 			point pos;
 			pos[ dim] = i->d[ dim][dir]; // front of the elevator
 			pos[!dim] = i->d[!dim][0] + 0.1*ewidth; // to the low side
 
 			for (unsigned d = 0; d < 2; ++d) { // {down, up} call buttons
-				if ((d == 0 && f == 0) || (d == 1 && f == num_floors-1)) continue; // no floor above/below
+				if ((d == 0 && f == 0) || (d == 1 && top_floor)) continue; // no floor above/below
 				pos.z = i->z1() + f*floor_spacing + (0.05*d + 0.45)*window_vspacing;
-				add_elevator_button(pos, button_radius, dim, dir, elevator_id, f, 0, d, objs); // inside=0, is_up=d
+				add_elevator_button(pos, button_radius, dim, dir, elevator_id, f, 0, d, exterior, objs); // inside=0, is_up=d
 			}
 		} // for f
 		// call buttons for each floor inside the elevator car; first find the panel location for the starting elevator car position;
@@ -2947,7 +2951,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			if (i->skip_floor_ix(f)) continue; // also skips cur_z update to avoid a gap in the buttons, but there's still a gap in the floor numbers
 			pos.z  = cur_z;
 			cur_z += button_spacing;
-			add_elevator_button(pos, inner_button_radius, dim, !dir, elevator_id, f, 1, 0, objs); // inside=1, is_up=0, pointing in opposite dir
+			add_elevator_button(pos, inner_button_radius, dim, !dir, elevator_id, f, 1, 0, 0, objs); // inside=1, is_up=0, exterior=0, pointing in opposite dir
 		}
 		i->button_id_end = objs.size();
 	} // for e

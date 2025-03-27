@@ -973,7 +973,7 @@ void building_room_geom_t::add_button(room_object_t const &c, bool inc_geom, boo
 			get_untextured_material(0, 0, 1).add_cube_to_verts_untextured(frame, apply_light_color(c, DK_GRAY), ~get_face_mask(c.dim, !c.dir)); // small
 		}
 	}
-	if (inc_text && !in_elevator) { // add up/down arrows
+	if (inc_text && !in_elevator && !c.is_exterior()) { // add up/down arrows; skip for exterior button above mall since bdd logic leads to incorrect draw order
 		bool const is_up(c.flags & RO_FLAG_ADJ_TOP), is_down(c.flags & RO_FLAG_ADJ_BOT);
 
 		if (is_up || is_down) {
