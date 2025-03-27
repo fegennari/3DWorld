@@ -3306,15 +3306,15 @@ public:
 		road_gen.connect_all_cities(heightmap, xsize, ysize, city_params.road_width, city_params.road_spacing);
 		road_gen.gen_tile_blocks();
 		road_gen.add_streetlights();
-		car_manager.init_cars(city_params.num_cars);
 		init_city_spectate_manager(car_manager, ped_manager);
 	}
 	void gen_details() {
 		if (road_gen.empty()) return; // nothing to do - no roads or cars
 		vector<car_t> parked_cars;
 		vect_cube_t hp_locs;
-		bool const have_cars(!car_manager.empty());
 		highres_timer_t timer("Gen City Details");
+		car_manager.init_cars(city_params.num_cars);
+		bool const have_cars(!car_manager.empty());
 		road_gen.gen_parking_lots_and_place_objects(parked_cars, have_cars);
 		road_gen.connect_power_poles_to_transmission_lines(); // must be after placing power poles
 		if (city_params.has_helicopter_model()) {get_all_city_helipads(hp_locs);}

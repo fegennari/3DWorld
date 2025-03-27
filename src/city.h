@@ -779,7 +779,7 @@ class car_manager_t { // and trucks and helicopters
 	city_road_gen_t const &road_gen;
 	vector<car_t> cars;
 	vector<car_block_t> car_blocks, car_blocks_by_road;
-	vector<cube_with_ix_t> cars_by_road;
+	vector<cube_with_ix_t> cars_by_road; // Note: car_blocks_by_road and cars_by_road are used by map mode
 	vector<helicopter_t> helicopters;
 	vector<helipad_t> helipads;
 	ped_city_vect_t peds_crossing_roads;
@@ -808,9 +808,9 @@ public:
 	friend class city_spectate_manager_t;
 	car_manager_t(city_road_gen_t const &road_gen_) : road_gen(road_gen_), dstate(car_model_loader, helicopter_model_loader) {}
 	bool empty() const {return cars.empty();}
-	void clear() {cars.clear(); car_blocks.clear();}
 	bool has_car_models() const {return !car_model_loader.empty();}
 	size_t get_model_gpu_mem() const {return (car_model_loader.get_gpu_mem() + helicopter_model_loader.get_gpu_mem());}
+	void clear();
 	void init_cars(unsigned num);
 	void add_parked_cars(vector<car_t> const &new_cars);
 	void finalize_cars();

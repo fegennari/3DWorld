@@ -5312,6 +5312,8 @@ void gen_buildings() {
 void regen_buildings() {
 	if (world_mode != WMODE_INF_TERRAIN || !have_cities()) return; // no cities/buildings
 	static int regen_rseed = 1000;
+	cout << "Regen buildings with seed " << regen_rseed << endl;
+	timer_t timer("Regen Buildings");
 	player_building = nullptr; // no longer valid
 	clear_city_building_data();
 	building_creator_city.gen(global_building_params, 1, 0, 0, 1, regen_rseed++); // city buildings

@@ -9,7 +9,7 @@
 float pond_max_depth(0.0);
 
 extern bool enable_model3d_custom_mipmaps, player_in_walkway, player_in_skyway;
-extern int display_mode, animate2, player_in_basement;
+extern int display_mode, animate2, frame_counter, player_in_basement;
 extern unsigned max_unique_trees;
 extern float fticks;
 extern colorRGBA sun_color;
@@ -2049,7 +2049,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	bball_groups   .create_groups(bballs,    all_objs_bcube);
 	pfloat_groups  .create_groups(pfloats,   all_objs_bcube);
 	if (skyway.valid) {all_objs_bcube.assign_or_union_with_cube(skyway.bcube);}
-	if (add_parking_lots) {cout << "parking lots: " << parking_lots.size() << ", spaces: " << num_spaces << ", filled: " << filled_spaces << endl;}
+	if (add_parking_lots && frame_counter <= 1) {cout << "parking lots: " << parking_lots.size() << ", spaces: " << num_spaces << ", filled: " << filled_spaces << endl;}
 }
 
 void city_obj_placer_t::remap_parking_lot_ixs() {

@@ -968,17 +968,20 @@ void car_manager_t::remove_destroyed_cars() {
 	remove_destroyed(cars);
 	car_destroyed = 0;
 }
-
+void car_manager_t::clear() { // Note: only clears cars, not helicopters
+	cars.clear();
+	car_blocks.clear();
+	entering_city.clear();
+}
 void car_manager_t::init_cars(unsigned num) {
+	clear();
 	if (num == 0) return;
 	timer_t timer("Init Cars");
 	cars.reserve(num);
 	for (unsigned n = 0; n < num; ++n) {add_car();}
 	cout << "Dynamic Cars: " << cars.size() << endl;
 }
-
 void car_manager_t::add_parked_cars(vector<car_t> const &new_cars) {
-	if (first_parked_car > 0) {cars.resize(first_parked_car);} // remove old parked cars if any exist
 	first_parked_car = cars.size(); // Note: sort may invalidate this, but okay for use in finalize_cars()
 	reserve_extra(cars, new_cars.size());
 	vector_add_to(new_cars, cars);
@@ -1064,7 +1067,7 @@ void car_manager_t::add_helicopters(vect_cube_t const &hp_locs) {
 		helicopters.push_back(helicopter);
 		helipad.in_use = 1;
 	} // for i
-	cout << TXT(helipads.size()) << TXT(helicopters.size()) << endl; // 55/30
+	//cout << TXT(helipads.size()) << TXT(helicopters.size()) << endl; // 55/30
 }
 
 void car_city_vect_t::clear_cars() { // Note: not clearing parked_car_bcubes()
