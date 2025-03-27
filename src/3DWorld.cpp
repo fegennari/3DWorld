@@ -191,6 +191,7 @@ float get_player_building_speed_mult();
 void toggle_city_spectate_mode();
 
 float get_tt_building_sound_gain();
+void regen_buildings();
 
 
 // all OpenGL error handling goes through these functions
@@ -917,6 +918,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		break;
 
 	case 'X': // change selected UI menu
+		//if (world_mode == WMODE_INF_TERRAIN) {regen_buildings();} // TESTING
 		next_selected_menu_ix();
 		break;
 
