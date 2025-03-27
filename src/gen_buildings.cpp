@@ -37,7 +37,7 @@ building_params_t global_building_params;
 building_t const *player_building(nullptr);
 building_t const *vis_conn_bldg  (nullptr); // non-player building visible through extended basement connector room
 
-extern bool start_in_inf_terrain, draw_building_interiors, flashlight_on, enable_use_temp_vbo, toggle_room_light;
+extern bool start_in_inf_terrain, draw_building_interiors, flashlight_on, enable_use_temp_vbo, toggle_room_light, invalidate_tt_shadows;
 extern bool teleport_to_screenshot, enable_dlight_bcubes, can_do_building_action, mirror_in_ext_basement;
 extern unsigned room_mirror_ref_tid;
 extern int rand_gen_index, display_mode, window_width, window_height, camera_surf_collide, animate2, building_action_key, player_in_elevator, frame_counter;
@@ -5318,6 +5318,7 @@ void regen_buildings() {
 	clear_city_building_data();
 	building_creator_city.gen(global_building_params, 1, 0, 0, 1, regen_rseed++); // city buildings
 	gen_city_details();
+	invalidate_tt_shadows = 1;
 }
 void draw_buildings(int shadow_only, int reflection_pass, vector3d const &xlate) {
 	//if (!shadow_only && !reflection_pass && !building_tiles.empty()) {cout << "Building Tiles: " << building_tiles.size() << " Tiled Buildings: " << building_tiles.get_tot_num_buildings() << endl;} // debugging

@@ -50,7 +50,7 @@ struct clear_area_t : public cube_t {
 };
 
 
-bool tt_lightning_enabled(0), check_tt_mesh_occlusion(1), shadow_maps_disabled(0);
+bool tt_lightning_enabled(0), check_tt_mesh_occlusion(1), shadow_maps_disabled(0), invalidate_tt_shadows(0);
 unsigned inf_terrain_fire_mode(0); // none, increase height, decrease height
 string read_hmap_modmap_fn, write_hmap_modmap_fn("heightmap.mod");
 hmap_brush_param_t cur_brush_param;
@@ -2336,9 +2336,14 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 	bool sun_change (sun_pos  != last_sun  && light_factor >= 0.4);
 	bool moon_change(moon_pos != last_moon && light_factor <= 0.6 && max(moon_pos.z, last_moon.z) > zmin); // only when the moon is up
 	float const toler = 0.9999; // only update when sun/moon has changed significantly
-	sun_change  &= (dot_product(sun_pos.get_norm(),  last_sun.get_norm())  < toler);
+	sun_change  &= (dot_product(sun_pos .get_norm(), last_sun .get_norm()) < toler);
 	moon_change &= (dot_product(moon_pos.get_norm(), last_moon.get_norm()) < toler);
-
+	
+	if (invalidate_tt_shadows) { // force shadow recompute
+		for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->clear_shadow_map(&smap_manager);}
+		sun_change = moon_change = 1;
+		invalidate_tt_shadows = 0;
+	}
 	if (mesh_shadows_enabled() && (sun_change || moon_change) && shadow_recomp_queue.empty()) { // light source change
 		if (auto_time_adv && !moon_change) { // auto time advance shadow map update for sun change only - triger a shadow recompute
 			for (auto i = tiles.begin(); i != tiles.end(); ++i) { // triger a shadow recompute
