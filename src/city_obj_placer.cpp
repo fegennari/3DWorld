@@ -1945,7 +1945,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	rand_gen_t rgen, detail_rgen;
 	rgen.set_state(city_id, 123);
 	detail_rgen.set_state(3145739*(city_id+1), 1572869*(city_id+1));
-	if (city_params.max_trees_per_plot > 0) {tree_placer.begin_block(0); tree_placer.begin_block(1);} // both small and large trees
+	if (city_params.max_trees_per_plot > 0) {tree_placer.begin_block(0, 1); tree_placer.begin_block(1, 1);} // both small and large trees; in_city=1
 	bool const add_parking_lots(/*have_cars &&*/ !is_residential && city_params.min_park_spaces > 0 && city_params.min_park_rows > 0);
 	float const sidewalk_width(get_sidewalk_width());
 	get_building_ext_basement_bcubes(city_bcube, underground_blockers); // used for inground swimming pools and ponds in parks

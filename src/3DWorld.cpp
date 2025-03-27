@@ -1101,9 +1101,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		change_timestep(1.0/D_TIMESTEP); break;
 
 	case 'T': // delete and generate tree(s) and scenery
-		if (world_mode == WMODE_UNIVERSE) {
-			player_ship().reset_ammo();
-		}
+		if (world_mode == WMODE_UNIVERSE) {player_ship().reset_ammo();}
 		else {
 			rand_gen_index = rand(); // Note: doesn't set mesh_rgen_index
 
@@ -1112,9 +1110,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 				//regen_trees(0);
 				gen_scene(0, 1, 1, 0, 1);
 			}
-			else {
-				clear_tiled_terrain();
-			}
+			else {clear_tiled_terrain();}
 		}
 		break;
 

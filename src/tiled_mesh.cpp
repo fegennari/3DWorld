@@ -2179,7 +2179,6 @@ void lightning_strike_t::draw() const {
 }
 
 void lightning_strike_t::end_draw() const {
-
 	disable_light(LIGHTNING_LIGHT); // even if not currently enabled, in case it was enabled before an update
 	tt_lightning_enabled = 0;
 }

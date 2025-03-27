@@ -3352,7 +3352,7 @@ public:
 
 		for (auto p = placements.begin(); p != placements.end(); ++p) {
 			if (p == placements.begin() || p->x > (cur_xval + block_xsize)) {
-				tree_placer.begin_block(is_sm_tree);
+				tree_placer.begin_block(is_sm_tree, 0); // in_city=0
 				cur_xval = p->x;
 				++num_blocks;
 			}
@@ -5316,6 +5316,7 @@ void regen_buildings() {
 	timer_t timer("Regen Buildings");
 	player_building = nullptr; // no longer valid
 	clear_city_building_data();
+	tree_placer.clear_city(); // remove city trees only; Note: doesn't actually clear trees, user must do this with 'T' key
 	building_creator_city.gen(global_building_params, 1, 0, 0, 1, regen_rseed++); // city buildings
 	gen_city_details();
 	invalidate_tt_shadows = 1;

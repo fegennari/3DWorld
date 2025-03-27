@@ -408,15 +408,18 @@ struct tree_placer_t {
 	struct tree_block {
 		vector<tree_ref> trees;
 		cube_t bcube;
+		bool in_city;
+		tree_block(bool in_city_) : in_city(in_city_) {}
 	};
 	vector<tree_block> blocks, sm_blocks;
 	cube_t bcube, sm_bcube;
 
 	bool have_small_trees() const;
 	bool have_decid_trees() const;
-	void begin_block(bool is_sm_tree) {(is_sm_tree ? sm_blocks : blocks).push_back(tree_block());}
+	void begin_block(bool is_sm_tree, bool in_city) {(is_sm_tree ? sm_blocks : blocks).emplace_back(in_city);}
 	void add(point const &pos, float size, int type, bool allow_bush, bool add_bush, bool is_sm_tree, float pine_xy_sz=1.0);
 	void clear() {blocks.clear(); sm_blocks.clear(); bcube = sm_bcube = cube_t();}
+	void clear_city();
 };
 
 
