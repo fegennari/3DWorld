@@ -2861,7 +2861,7 @@ void building_t::add_or_extend_elevator(elevator_t const &elevator, bool add) {
 void building_t::remove_intersecting_roof_cubes(cube_t const &c) {
 	vect_cube_t ac_to_remove;
 
-	for (unsigned i = 0; i < details.size(); ++i) { // remove any existing objects that overlap ecap
+	for (unsigned i = 0; i < details.size(); ++i) { // remove any existing objects that overlap ecap or stairs roof access
 		auto &obj(details[i]);
 		uint8_t const type(obj.type);
 		// only remove blocks, AC units, ducts, antennas, water towers, and smoke stacks; may cause ducts to become disconnected from AC units
@@ -2874,7 +2874,7 @@ void building_t::remove_intersecting_roof_cubes(cube_t const &c) {
 			test_cube.expand_by_xy(get_wall_thickness());
 
 			for (auto j = roof_tquads.begin(); j != roof_tquads.end(); ++j) {
-				if (j->get_bcube().intersects(test_cube)) {roof_tquads.erase(j); break;} // there can be only one
+				if (j->type == tquad_with_ix_t::TYPE_RDOOR2 && j->get_bcube().intersects(test_cube)) {roof_tquads.erase(j); break;} // there can be only one
 			}
 		}
 		swap(obj, details.back());
