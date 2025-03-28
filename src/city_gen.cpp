@@ -26,7 +26,9 @@ extern bool player_in_walkway, player_in_skyway, player_on_moving_ww, player_in_
 extern int rand_gen_index, display_mode, animate2, draw_model, player_in_basement;
 extern unsigned shadow_map_sz, cur_display_iter;
 extern float cobj_z_bias, rain_wetness, NEAR_CLIP;
+extern vector3d wind;
 extern building_params_t global_building_params;
+extern object_model_loader_t building_obj_model_loader;
 extern vector<light_source> dl_sources;
 
 
@@ -436,11 +438,11 @@ class road_network_t : public streetlights_t { // AKA city center
 	map<unsigned, road_isec_t const *> cix_to_isec; // maps city_ix to intersection
 	vector<vect_cube_t> plot_colliders;
 	plot_xy_t plot_xy;
-	unsigned city_id, cluster_id, plot_id_offset;
+	unsigned city_id=0, cluster_id=0, plot_id_offset=0;
 	//string city_name; // future work
-	float tot_road_len;
-	mutable unsigned num_cars; // Note: not counting parked cars; mutable so that car_manager can update this
-	bool is_residential;
+	float tot_road_len=0.0;
+	mutable unsigned num_cars=0; // Note: not counting parked cars; mutable so that car_manager can update this
+	bool is_residential=0;
 
 	// use only for the global road network
 	struct city_id_pair_t {
@@ -487,11 +489,9 @@ class road_network_t : public streetlights_t { // AKA city center
 		return isecs[type_ix][isec_ix];
 	}
 public:
-	road_network_t() : bcube(all_zeros), city_id(CONN_CITY_IX), cluster_id(0), plot_id_offset(0), tot_road_len(0.0), num_cars(0), is_residential(0) {} // global road network ctor
+	road_network_t() : city_id(CONN_CITY_IX) {} // global road network ctor
 		
-	road_network_t(cube_t const &bcube_, unsigned city_id_, bool is_residential_) :
-		bcube(bcube_), city_id(city_id_), cluster_id(0), plot_id_offset(0), tot_road_len(0.0), num_cars(0), is_residential(is_residential_)
-	{
+	road_network_t(cube_t const &bcube_, unsigned city_id_, bool is_residential_) : bcube(bcube_), city_id(city_id_), is_residential(is_residential_) {
 		bcube.z2() += ROAD_HEIGHT; // make it nonzero size
 	}
 	bool get_is_residential() const {return is_residential;}
@@ -1047,6 +1047,62 @@ public:
 	void finalize_bridges_and_tunnels() {
 		for (bridge_t &b : bridges) {b.add_streetlights();}
 		for (tunnel_t &t : tunnels) {t.add_streetlights();}
+	}
+	void place_wind_turbines(vector<wind_turbine_t> &wind_turbines, heightmap_query_t &hq) {
+		wind_turbines.clear();
+		if (wind.x == 0.0 && wind.y == 0.0) return; // no wind
+		if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_WIND_TUR)) return;
+		//timer_t timer("Place Wind turbines"); // 1ms
+		unsigned const num_samples(20000), num_keep(20);
+		bool const dim(fabs(wind.x) < fabs(wind.y)), dir(wind[dim] < 0.0); // face into the wind
+		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_WIND_TUR)); // D, W, H
+		float const height(6.0*city_params.road_width), hwidth(0.5*height*sz.y/sz.z), hdepth(0.5*height*sz.x/sz.z), min_sep(3.5*height);
+		float const min_alt(get_water_z_height() + 0.2*height + global_building_params.max_altitude_all); // place above all buildings
+		rand_gen_t rgen;
+		vector<point> place_pos;
+		cube_t place_region(bcube);
+		place_region.expand_in_dim( dim, -hdepth);
+		place_region.expand_in_dim(!dim, -hwidth);
+		if (place_region.dx() <= 0.0 || place_region.dy() <= 0.0) return;
+
+		for (unsigned n = 0; n < num_samples; ++n) {
+			point pos;
+			for (unsigned d = 0; d < 2; ++d) {pos[d] = rgen.rand_uniform(place_region.d[d][0], place_region.d[d][1]);}
+			pos.z = hq.get_height_at(pos);
+			if (pos.z < min_alt) continue; // too low
+			place_pos.push_back(pos);
+		}
+		if (place_pos.size() > num_keep) {
+			sort(place_pos.begin(), place_pos.end(), [](point const &a, point const &b) {return (a.z > b.z);}); // highest to lowest elevation
+		}
+		for (point &pos : place_pos) {
+			pos.z -= 0.05*height; // make sure it's in the ground
+			cube_t tbc(pos);
+			tbc.z2() += height;
+			tbc.expand_in_dim( dim, hdepth);
+			tbc.expand_in_dim(!dim, hwidth);
+			cube_t test_cube(tbc);
+			test_cube.expand_by_xy(min_sep);
+			bool bad_place(0);
+			
+			// should be above buildings and probably roads, but need to check other wind turbines
+			for (wind_turbine_t const &t : wind_turbines) {
+				if (test_cube.intersects_xy(t.bcube)) {bad_place = 1; break;}
+			}
+			if (bad_place) continue;
+
+			// check that terrain is lower on the two sides so that blades don't clip through it
+			for (unsigned d = 0; d < 2; ++d) {
+				point test_pos(pos);
+				test_pos[!dim] += (d ? 1.0 : -1.0)*hwidth;
+				if (hq.get_height_at(test_pos) > pos.z) {bad_place = 1; break;}
+			}
+			if (bad_place) continue;
+			float const rot_rate(rgen.rand_uniform(0.02, 0.1));
+			wind_turbines.emplace_back(tbc, dim, dir, rot_rate);
+			if (wind_turbines.size() == num_keep) break; // done
+		} // for pos
+		cout << "Placed " << wind_turbines.size() << " wind turbines" << endl;
 	}
 
 	void gen_tile_blocks() {
@@ -2664,7 +2720,7 @@ public:
 		global_rn.gen_railroad_tracks(city_blockers, hq);
 		global_rn.calc_bcube_from_roads(); // must be after placing tracks
 		global_rn.finalize_bridges_and_tunnels();
-		add_wind_turbines(); // before connecting power grids, in case we want to connect the turbines to them
+		global_rn.place_wind_turbines(wind_turbines, hq); // before connecting power grids, in case we want to connect the turbines to them
 		
 		// only connect cities with transmission lines if there are no secondary buildings in the way;
 		// while buildings should now avoid tlines, it still looks a bit odd having them so close to houses, and the endpoints aren't checked;
@@ -2778,9 +2834,6 @@ public:
 		conn_tl->connections.emplace_back(pos, conn_pt);
 		return 1;
 	}
-	void add_wind_turbines() {
-		// TODO
-	}
 	void add_streetlights() {
 		for (auto i = road_networks.begin(); i != road_networks.end(); ++i) {i->add_streetlights();}
 	}
@@ -2874,6 +2927,9 @@ public:
 		for (road_network_t const &r : road_networks) {
 			int const ret(r.get_color_at_xy(pos, color));
 			if (ret) return ret;
+		}
+		for (wind_turbine_t const &t : wind_turbines) {
+			if (t.bcube.contains_pt_xy(pos)) {color = WHITE; return INT_TURBINE;}
 		}
 		return global_rn.get_color_at_xy(pos, color);
 	}

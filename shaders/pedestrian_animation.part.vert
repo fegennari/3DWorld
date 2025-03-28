@@ -5,7 +5,8 @@ uniform float animation_scale    = 1.0;
 uniform float model_delta_height = 0.0;
 uniform float rotate_amount      = 1.0; // for swings
 uniform int   animation_id       = 0;
-// 0=none, 1=walk, 2=bunny hop, 3=flip, 4=twirl, 5=march, 6=alien walk, 7=rat, 8=spider, 9=bones animation, 10=helicopter rotate, 11=swingset, 12=fish tail, 13=flap arms
+// 0=none, 1=walk, 2=bunny hop, 3=flip, 4=twirl, 5=march, 6=alien walk, 7=rat, 8=spider, 9=bones animation,
+// 10=helicopter rotate, 11=swingset, 12=fish tail, 13=flap arms, 14=wind turbine rotate
 
 #ifdef USE_BONE_ANIMATIONS
 layout(location = 4) in uvec4 bone_ids;
@@ -148,6 +149,16 @@ void apply_vertex_animation(inout vec4 vertex, inout vec3 normal, in vec2 tc) {
 		if (vertex.y < pivot_y && abs(vertex.x) < 5.0*model_delta_height) { // swings part
 			float angle = 0.5*rotate_amount*((vertex.x < 0.0) ? -1.0 : 1.0)*sin(anim_val); // each side is 180 degrees out of phase
 			rotate_about(vertex.xyz, normal, pivot_y, vec3(1.0, 0.0, 0.0), angle);
+		}
+	}
+	else if (animation_id == 14) { // wind turbine rotate
+		if (vertex.z > 0.69) {
+			vec3 center = vec3(0.0, 13.16, 0.0);
+			mat3 m      = do_rotation(vec3(0.0, 0.0, -1.0), 0.01*anim_val); // CW
+			vertex.xyz -= center; // rotate about this point
+			vertex.xyz *= m;
+			normal     *= m; // rotate only, no scale - no inverse transpose needed
+			vertex.xyz += center;
 		}
 	}
 	else if (animation_id == 12) { // fish tail

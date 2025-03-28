@@ -443,6 +443,7 @@ void building_params_t::add_cur_mat() {
 	materials.back().finalize();
 	materials.back().update_range(range_translate);
 	has_normal_map |= cur_mat.has_normal_map();
+	max_eq(max_altitude_all, cur_mat.max_alt);
 }
 vector<unsigned> const &building_params_t::get_mat_list(bool city_only, bool non_city_only, bool residential) const {
 	if (residential  ) return mat_gen_ix_res;

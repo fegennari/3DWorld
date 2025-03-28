@@ -85,8 +85,9 @@ model_city_obj_t::model_city_obj_t(point const &pos_, float height, bool dim_, b
 	bcube.expand_by(0.5*expand);
 	set_bsphere_from_bcube(); // recompute bsphere from bcube
 }
-void model_city_obj_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only, animation_state_t *anim_state) const {
+void model_city_obj_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only, animation_state_t *anim_state, bool set_smap_tile) const {
 	if (!dstate.is_visible_and_unoccluded(bcube, dist_scale)) return;
+	if (set_smap_tile) {dstate.begin_tile(pos, 1, 1);}
 	if (min_alpha > 0.0) {dstate.s.add_uniform_float("min_alpha", 0.9);}
 	building_obj_model_loader.draw_model(dstate.s, pos, bcube, get_orient_dir(), color, dstate.xlate, get_model_id(), shadow_only, 0, anim_state);
 	if (min_alpha > 0.0) {dstate.s.add_uniform_float("min_alpha", DEF_CITY_MIN_ALPHA);} // restore to the default
@@ -1487,18 +1488,17 @@ bool transmission_line_t::cube_intersect_xy(cube_t const &c) const {
 
 void wind_turbine_t::next_frame() {
 	rot_angle += fticks*rot_rate;
-	if (rot_angle > TWO_PI) {rot_angle -= TWO_PI;}
+	if (rot_angle > 10000.0) {rot_angle = 0.0;}
 }
 bool wind_turbine_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
 	return sphere_city_obj_cylin_coll(pos, base_radius, pos_, p_last, radius_, xlate, cnorm);
 }
-void wind_turbine_t::draw(road_draw_state_t &dstate, bool shadow_only) const {
-	float const dist_scale = 1.0;
-	//city_draw_qbds_t qbds; // unused
-	//model_city_obj_t::draw(dstate, qbds, dist_scale, shadow_only);
-	if (!dstate.is_visible_and_unoccluded(bcube, dist_scale)) return;
-	// TODO: animate the blades using rot_angle
-	building_obj_model_loader.draw_model(dstate.s, pos, bcube, get_orient_dir(), color, dstate.xlate, get_model_id(), shadow_only);
+void wind_turbine_t::draw(road_draw_state_t &dstate, bool shadow_only) const { // Note: shadows are not dynamically updated
+	float const dist_scale = 0.65;
+	city_draw_qbds_t qbds; // unused
+	animation_state_t anim_state(1, ANIM_ID_WIND_TUR, rot_angle); // enable_animations=1
+	model_city_obj_t::draw(dstate, qbds, dist_scale, shadow_only, &anim_state, 1); // set_smap_tile=1
+	anim_state.clear_animation_id(dstate.s);
 }
 
 // handicap spaces

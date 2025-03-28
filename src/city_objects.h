@@ -79,7 +79,7 @@ struct model_city_obj_t : public oriented_city_obj_t {
 	float get_overlay_radius() const {return model_city_obj_t::get_xy_coll_radius();} // for overhead map mode
 	static void pre_draw (draw_state_t &dstate, bool shadow_only) {disable_hemi_lighting_pre_post(dstate, shadow_only, 0);}
 	static void post_draw(draw_state_t &dstate, bool shadow_only) {disable_hemi_lighting_pre_post(dstate, shadow_only, 1);}
-	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only, animation_state_t *anim_state=nullptr) const;
+	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only, animation_state_t *anim_state=nullptr, bool set_smap_tile=0) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };
 
@@ -428,7 +428,7 @@ struct parking_solar_t : public oriented_city_obj_t {
 struct wind_turbine_t : public model_city_obj_t {
 	float rot_rate=0.0, rot_angle=0.0, base_radius=0.0;
 
-	wind_turbine_t(cube_t const& c, bool dim_, bool dir_, float rr) : model_city_obj_t(c, dim_, dir_), rot_rate(rr), base_radius(0.25*radius) {}
+	wind_turbine_t(cube_t const &c, bool dim_, bool dir_, float rr) : model_city_obj_t(c, dim_, dir_), rot_rate(rr), base_radius(0.25*radius) {}
 	void next_frame();
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 	void draw(road_draw_state_t &dstate, bool shadow_only=0) const;
