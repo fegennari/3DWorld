@@ -2,6 +2,7 @@
 // by Frank Gennari
 // 11/19/18
 #include "city.h"
+#include "city_objects.h" // for wind_turbine_t
 #include "file_utils.h"
 #include "openal_wrap.h"
 #include "explosion.h" // for add_blastr()
@@ -1468,6 +1469,7 @@ void car_manager_t::helicopters_next_frame(float car_speed) {
 	float dmin_sq(0.0);
 	point closest_pos;
 	vector<bridge_t> const &bridges(get_bridges());
+	vector<wind_turbine_t> const &wind_turbines(get_wind_turbines());
 
 	for (auto i = helicopters.begin(); i != helicopters.end(); ++i) {
 		if (i->state == helicopter_t::STATE_WAIT) { // stopped, assumed on a helipad
@@ -1505,6 +1507,11 @@ void car_manager_t::helicopters_next_frame(float car_speed) {
 				cube_t bbc(bridge.get_drawn_bcube());
 				bbc.expand_by_xy(avoid_dist);
 				if (check_line_clip_xy(p1, p2, bbc.d)) {max_eq(i->fly_zval, (bbc.z2() + min_vert_clearance));}
+			}
+			for (wind_turbine_t const &t : wind_turbines) {
+				cube_t tbc(t.bcube);
+				tbc.expand_by_xy(avoid_dist);
+				if (check_line_clip_xy(p1, p2, tbc.d)) {max_eq(i->fly_zval, (tbc.z2() + min_vert_clearance));}
 			}
 			// check if the flight path intersects another helicopter and increase fly_zval to avoid it
 			for (auto j = helicopters.begin(); j != helicopters.end(); ++j) {

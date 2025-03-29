@@ -2955,7 +2955,8 @@ public:
 	void get_occluders(vect_cube_t &occluders) const {
 		for (road_network_t const &r : road_networks) {r.get_occluders(occluders, dstate.xlate);}
 	}
-	vector<bridge_t> const &get_bridges() const {return global_rn.get_bridges();}
+	vector<bridge_t      > const &get_bridges      () const {return global_rn.get_bridges();}
+	vector<wind_turbine_t> const &get_wind_turbines() const {return wind_turbines;}
 
 	bool have_animations() const {
 		for (road_network_t const &r : road_networks) {
@@ -3123,7 +3124,8 @@ void car_manager_t::setup_occluders() {
 	dstate.get_occluders().clear();
 	if ((display_mode & 0x08) && !cars.empty()) {road_gen.get_occluders(dstate.get_occluders());}
 }
-vector<bridge_t> const &car_manager_t::get_bridges() const {return road_gen.get_bridges();}
+vector<bridge_t      > const &car_manager_t::get_bridges      () const {return road_gen.get_bridges      ();}
+vector<wind_turbine_t> const &car_manager_t::get_wind_turbines() const {return road_gen.get_wind_turbines();}
 
 struct cmp_light_source_sz_dist {
 	point const &cpos;

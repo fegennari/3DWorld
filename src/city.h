@@ -107,6 +107,7 @@ private:
 
 struct car_base_t;
 struct driveway_t;
+struct wind_turbine_t;
 class road_draw_state_t;
 
 struct road_gen_base_t {
@@ -802,7 +803,8 @@ class car_manager_t { // and trucks and helicopters
 	int find_next_car_after_turn(car_t &car);
 	void setup_occluders();
 	vector3d get_helicopter_size(unsigned model_id);
-	vector<bridge_t> const &get_bridges() const;
+	vector<bridge_t      > const &get_bridges      () const;
+	vector<wind_turbine_t> const &get_wind_turbines() const;
 	void draw_helicopters(bool shadow_only);
 public:
 	friend class city_spectate_manager_t;
