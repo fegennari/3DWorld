@@ -2338,9 +2338,8 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 	sun_change  &= (dot_product(sun_pos .get_norm(), last_sun .get_norm()) < toler);
 	moon_change &= (dot_product(moon_pos.get_norm(), last_moon.get_norm()) < toler);
 	
-	if (invalidate_tt_shadows) { // force shadow recompute
+	if (invalidate_tt_shadows) { // force shadow map recompute
 		for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->clear_shadow_map(&smap_manager);}
-		sun_change = moon_change = 1;
 		invalidate_tt_shadows = 0;
 	}
 	if (mesh_shadows_enabled() && (sun_change || moon_change) && shadow_recomp_queue.empty()) { // light source change
