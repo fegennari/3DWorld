@@ -37,7 +37,7 @@ building_params_t global_building_params;
 building_t const *player_building(nullptr);
 building_t const *vis_conn_bldg  (nullptr); // non-player building visible through extended basement connector room
 
-extern bool start_in_inf_terrain, draw_building_interiors, flashlight_on, enable_use_temp_vbo, toggle_room_light, invalidate_tt_shadows;
+extern bool start_in_inf_terrain, draw_building_interiors, flashlight_on, enable_use_temp_vbo, toggle_room_light, invalidate_tt_shadows, has_transmission_lines;
 extern bool teleport_to_screenshot, enable_dlight_bcubes, can_do_building_action, mirror_in_ext_basement;
 extern unsigned room_mirror_ref_tid;
 extern int rand_gen_index, display_mode, window_width, window_height, camera_surf_collide, animate2, building_action_key, player_in_elevator, frame_counter;
@@ -3307,14 +3307,17 @@ public:
 			add_to_grid(b->bcube, bix, 0);
 			buildings_bcube.assign_or_union_with_cube(b->bcube);
 			has_interior_geom |= b->has_interior();
-
-			if (!is_tile && !city_only && b->is_industrial()) { // industrial secondary building - can connect to nearby transmission line
-				float const tline_dist(10.0*get_road_max_width());
-				point const bldg_conn_pt(cube_top_center(b->bcube));
-				point tline_conn_pt; // not currently used, but could be used for building intersection query to cancel this connection
-				b->has_tline_conn = connect_to_nearest_transmission_line(bldg_conn_pt, tline_dist, tline_conn_pt);
-			}
 		} // for b
+		if (!is_tile && !city_only && has_transmission_lines) { // connect industrial secondary buildings to transmission lines
+			float const tline_dist(10.0*get_road_max_width());
+
+			for (building_t &b : buildings) {
+				if (!b.is_industrial()) continue;
+				point const bldg_conn_pt(cube_top_center(b.bcube));
+				point tline_conn_pt; // not currently used, but could be used for building intersection query to cancel this connection
+				b.has_tline_conn = connect_to_nearest_transmission_line(bldg_conn_pt, tline_dist, tline_conn_pt);
+			}
+		}
 		if (!is_tile && (!city_only || maybe_residential)) {place_building_trees(rgen);}
 
 		if (!is_tile) {
@@ -4592,9 +4595,8 @@ public:
 			return 0; // no coll
 		}
 		cube_t bcube(p1, p2);
-		unsigned ixr[2][2];
+		unsigned ixr[2][2], coll(BLDG_COLL_NONE);
 		get_grid_range(bcube, ixr);
-		unsigned coll(BLDG_COLL_NONE);
 		point end_pos(p2);
 
 		// for now, just do a slow iteration over every grid element within the line's bbox in XY
@@ -4619,6 +4621,27 @@ public:
 			} // for x
 		} // for y
 		return coll;
+	}
+
+	// used for power/transmission line queries; Note: p1 and p2 are in building space
+	bool check_line_coll(point const &p1, point const &p2) const {
+		if (empty()) return 0;
+		cube_t bcube(p1, p2);
+		unsigned ixr[2][2];
+		get_grid_range(bcube, ixr);
+
+		for (unsigned y = ixr[0][1]; y <= ixr[1][1]; ++y) {
+			for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {
+				grid_elem_t const &ge(get_grid_elem(x, y));
+				if (ge.bc_ixs.empty() || !check_line_clip(p1, p2, ge.bcube.d)) continue; // no intersection - skip this grid
+
+				for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) { // Note: okay to check the same building more than once
+					float t(1.0); // unused
+					if (b->intersects(bcube) && get_building(b->ix).check_line_coll(p1, p2, t, 1)) return 1; // occlusion_only=1
+				}
+			} // for x
+		} // for y
+		return 0;
 	}
 
 	// Note: p1 and p2 are in building space
@@ -5380,6 +5403,9 @@ unsigned check_buildings_line_coll(point const &p1, point const &p2, float &t, u
 	if (coll2 && ret_any_pt) return coll2;
 	unsigned const coll3(building_tiles.check_line_coll(p1x, p2x, t, ret_any_pt, 1)); // Note: does't take/set hit_bix
 	return (coll3 ? coll3 : (coll2 ? coll2 : coll1));
+}
+bool check_building_line_coll(point const &p1, point const &p2, bool city_bldgs) { // p1 and p2 are in building space
+	return (city_bldgs ? building_creator_city : building_creator).check_line_coll(p1, p2);
 }
 bool check_city_building_line_coll_bs(point const &p1, point const &p2, point &p_int) { // Note: p1/p2 are in building space
 	float t(1.0);

@@ -16,7 +16,7 @@ float const CAR_LANE_OFFSET         = 0.15; // in units of road width
 float const CITY_LIGHT_FALLOFF      = 0.2; // smooth falloff for headlights, streetlights, and room lights
 
 
-bool had_building_interior_coll(0), city_lights_custom_bcube(0);
+bool had_building_interior_coll(0), city_lights_custom_bcube(0), has_transmission_lines(0);
 vector2d actual_max_road_seg_len;
 city_params_t city_params;
 point pre_smap_player_pos(all_zeros), actual_player_pos(all_zeros); // Note: pre_smap_player_pos can be security cameras, but actual_player_pos is always the player
@@ -38,6 +38,7 @@ void disable_shadow_maps(shader_t &s);
 vector3d get_tt_xlate_val();
 float get_max_house_size();
 bool proc_buildings_sphere_coll(point &pos, point const &p_last, float radius, vector3d *cnorm=nullptr, bool check_interior=0, bool exclude_city=0);
+bool check_building_line_coll(point const &p1, point const &p2, bool city_bldgs);
 void draw_player_building_transparent(int reflection_pass, vector3d const &xlate);
 bool enable_player_flashlight();
 
@@ -2618,6 +2619,7 @@ public:
 		transmission_line_t tline(city1, city2, tower_height, p1, p2);
 		if (!crc.route_transmission_line(tline, blockers, road_width, road_spacing)) return 0;
 		transmission_lines.push_back(tline);
+		has_transmission_lines = 1;
 		return 1;
 	}
 	bool connect_two_cities_with_power(unsigned city1, unsigned city2, city_road_connector_t &crc, vect_cube_t &blockers, float road_width, float road_spacing) {
@@ -2822,9 +2824,9 @@ public:
 			for (point const &p : t.tower_pts) {
 				float const dist_sq(p2p_dist_sq(p, pos));
 				if (dist_sq >= dmax*dmax) continue;
-				// we should check if this line intersects terrain or another building before adding it; but buildings haven't been placed yet;
-				// I haven't seen any other building intersections yet, since dmax is relatively small, so maybe it's okay?
+				// check if this line intersects terrain or another building before adding it
 				//if (!city_road_connector_t(hq).is_tline_seg_valid(pos, p, 0.1*t.tower_height)) continue; // can't do, don't have access to heightmap here
+				if (check_building_line_coll(pos, p, 0)) continue; // city_bldgs=0
 				conn_pt = p;
 				conn_tl = &t;
 				dmax    = sqrt(dist_sq);
