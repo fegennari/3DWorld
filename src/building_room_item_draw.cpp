@@ -1501,7 +1501,11 @@ void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, 
 		}
 	}
 	else if (c.type == TYPE_ERASER) {
-		mat.add_cube_to_verts_untextured(c, c.color); // simple untextured cube; all sides drawn
+		float const sz_delta(c.get_width() - c.dz()); // rotate vertically
+		cube_t c_rot(c);
+		c_rot.z2() += sz_delta;
+		c_rot.expand_in_dim(!c.dim, -0.5*sz_delta);
+		mat.add_cube_to_verts_untextured(c_rot, c.color); // simple untextured cube; all sides drawn
 	}
 	else if (c.type == TYPE_FLASHLIGHT) {
 		unsigned const dim(get_max_dim(c.get_size()));
