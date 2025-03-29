@@ -639,6 +639,12 @@ void building_t::add_door_sign(string const &text, room_t const &room, float zva
 		if (is_apt_or_hotel() && zval > ground_floor_z1) break; // only add to the first (front) door; applies to above ground rooms, not basement or mall
 	} // for i
 }
+void building_t::add_numbered_door_sign(string const &text, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, bool no_check_adj_walls) {
+	if (room.part_id > 0) return; // only for the main/ground floor part
+	if (floor_ix == 0) {++next_room_num;} // increment room number on starting floor; this means that rooms start at 1
+	unsigned const room_num(100*(floor_ix + 1) + (/*room_id*/next_room_num % 100)); // wrap room number > 99
+	add_door_sign((text + std::to_string(room_num)), room, zval, room_id);
+}
 void building_t::add_office_door_sign(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id) {
 	string const name(gen_random_full_name(rgen));
 	add_door_sign(name, room, zval, room_id); // will cache the name; maybe it shouldn't?

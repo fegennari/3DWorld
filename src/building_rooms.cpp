@@ -809,11 +809,11 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			}
 			if (!added_obj && !r->interior && is_hospital()) { // hospital room with a window
 				// TODO: make RTYPE_HOS_OR, RTYPE_HOS_EXAM, or other room type with some probability
-				added_obj = no_whiteboard = add_hospital_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, nested_room_ix);
+				added_obj = no_whiteboard = add_hospital_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start, nested_room_ix);
 				if (added_obj) {r->assign_to(RTYPE_HOS_BED, f);}
 			}
 			if (!added_obj && !r->interior && is_school() && !r->has_stairs_on_floor(f)) { // school classroom with a window and no stairs
-				added_obj = add_classroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, chair_color, pref_hang_orient);
+				added_obj = add_classroom_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start, chair_color, pref_hang_orient);
 				if (added_obj) {r->assign_to(RTYPE_CLASS, f);}
 			}
 			if (!added_obj && !r->has_subroom() && rgen.rand_float() < (is_basement ? 0.4 : (r->is_office ? (is_hospital() ? 0.2 : 0.6) : (is_house ? 0.95 : 0.5)))) {

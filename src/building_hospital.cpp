@@ -90,7 +90,9 @@ bool building_t::maybe_create_nested_bathroom(room_t &room, rand_gen_t &rgen) { 
 	return 0; // no valid location found
 }
 
-bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, int &nested_room_ix) {
+bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix,
+	float tot_light_amt, unsigned objs_start, int &nested_room_ix)
+{
 	if (!can_create_hospital_room()) return 0; // no hospital bed
 	float const floor_spacing(get_window_vspace()), clerance(1.25*get_min_front_clearance_inc_people()), wall_thickness(get_wall_thickness());
 	cube_t room_bounds(get_walkable_room_bounds(room)), place_area(room_bounds), bathroom;
@@ -203,6 +205,7 @@ bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, flo
 		}
 		break; // done/success
 	} // for n
+	add_numbered_door_sign("Room ", room, zval, room_id, floor_ix);
 	return 1;
 }
 

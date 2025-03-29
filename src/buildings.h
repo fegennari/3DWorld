@@ -2006,6 +2006,7 @@ struct building_t : public building_geom_t {
 	uint8_t city_ix=0; // supports up to 256 cities
 	uint8_t floor_ext_door_mask=0; // used for multi-family houses
 	uint8_t next_unit_id=1; // for apartments and hotels
+	uint8_t next_room_num=0; // room numbers per floor
 	building_type_t btype=BTYPE_UNSET;
 	bool is_house=0, has_garage=0, has_shed=0, has_int_garage=0, has_courtyard=0, has_complex_floorplan=0, has_helipad=0, has_ac=0, has_fake_roof_door=0;
 	bool has_tline_conn=0, has_smokestack=0;
@@ -2647,17 +2648,19 @@ private:
 	bool add_ball_to_room    (rand_gen_t &rgen, room_t const &room, cube_t const &place_area, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
 		int force_type=-1, cube_t const &avoid_xy=cube_t(), bool in_pool=0);
 	bool maybe_add_fireplace_to_room(rand_gen_t &rgen, room_t const &room, vect_cube_t &blockers, float zval, unsigned room_id, float tot_light_amt);
-	bool add_classroom_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, colorRGBA const &chair_color, unsigned &td_orient);
+	bool add_classroom_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start,
+		colorRGBA const &chair_color, unsigned &td_orient);
 	bool add_classroom_desk(rand_gen_t &rgen, room_t const &room, cube_t const &desk, unsigned room_id, float tot_light_amt,
 		colorRGBA const &chair_color, bool dim, bool dir, unsigned desk_ix);
-	bool add_hospital_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, int &nested_room_ix);
+	bool add_hospital_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start, int &nested_room_ix);
 	float add_flooring       (room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned flooring_type);
 	bool add_bathroom_objs   (rand_gen_t rgen, room_t &room, float &zval, unsigned room_id, float tot_light_amt,
 		unsigned objs_start, unsigned floor, bool is_basement, bool add_shower_tub, unsigned &added_bathroom_objs_mask);
 	void add_bathroom_plumbing(room_object_t const &obj);
 	bool add_tp_roll         (cube_t const &room, unsigned room_id, float tot_light_amt, bool dim, bool dir, float length, float zval, float wall_pos, bool check_valid_pos=0);
 	bool divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, float zval, unsigned room_id, float tot_light_amt, unsigned floor);
-	void add_door_sign       (std::string const &text, room_t const &room, float zval, unsigned room_id, bool no_check_adj_walls=0);
+	void add_door_sign                (std::string const &text, room_t const &room, float zval, unsigned room_id, bool no_check_adj_walls=0);
+	void add_numbered_door_sign       (std::string const &text, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, bool no_check_adj_walls=0);
 	void add_door_sign_remove_existing(std::string const &text, room_t const &room, float zval, unsigned room_id, unsigned objs_start);
 	void add_office_door_sign(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id);
 	void add_out_or_order_sign(cube_t const &door_bc, bool dim, bool dir, unsigned room_id);

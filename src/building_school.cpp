@@ -6,7 +6,7 @@
 //#include "city_model.h"
 
 
-bool building_t::add_classroom_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id,
+bool building_t::add_classroom_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix,
 	float tot_light_amt, unsigned objs_start, colorRGBA const &chair_color, unsigned &td_orient)
 {
 	if (room.has_elevator) return 0; // no classroom in an elevator
@@ -76,6 +76,7 @@ bool building_t::add_classroom_objs(rand_gen_t rgen, room_t const &room, float z
 			if (!add_classroom_desk(rgen, room, desk, room_id, tot_light_amt, chair_color, dim, !dir, (1 + col + ncols*row))) continue;
 		} // for col
 	} // for row
+	add_numbered_door_sign("Classroom ", room, zval, room_id, floor_ix);
 	return 1;
 }
 
