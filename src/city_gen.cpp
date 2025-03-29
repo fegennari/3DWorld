@@ -1101,6 +1101,14 @@ public:
 			if (bad_place) continue;
 			float const rot_rate(rgen.rand_uniform(0.02, 0.1));
 			wind_turbines.emplace_back(tbc, dim, dir, rot_rate);
+			
+			if (has_transmission_lines) { // try connecting wind turbine to transmission lines; succeeds once
+				point cpos(pos), conn_pt; // conn_pt is unused
+				cpos.z    += 0.25*height;
+				cpos[dim] += (dir ? -1.0 : 1.0)*0.5*hdepth; // move to the pole
+				float const tline_dmax(4.0*height);
+				connect_to_nearest_transmission_line(cpos, tline_dmax, conn_pt);
+			}
 			if (wind_turbines.size() == num_keep) break; // done
 		} // for pos
 		cout << "Placed " << wind_turbines.size() << " wind turbines" << endl;
@@ -2722,7 +2730,6 @@ public:
 		global_rn.gen_railroad_tracks(city_blockers, hq);
 		global_rn.calc_bcube_from_roads(); // must be after placing tracks
 		global_rn.finalize_bridges_and_tunnels();
-		global_rn.place_wind_turbines(wind_turbines, hq); // before connecting power grids, in case we want to connect the turbines to them
 		
 		// only connect cities with transmission lines if there are no secondary buildings in the way;
 		// while buildings should now avoid tlines, it still looks a bit odd having them so close to houses, and the endpoints aren't checked;
@@ -2731,6 +2738,7 @@ public:
 			for (auto i = blockers.begin(); i != blockers.begin() + city_bcubes_end; ++i) {i->expand_by_xy(-road_spacing);} // undo city expand
 			connect_city_power_grids(crc, blockers, road_width, road_spacing);
 		}
+		global_rn.place_wind_turbines(wind_turbines, hq); // after adding transmission lines
 		timer.end();
 		// old: 8, 12, 7, 19057 ; new: 8, 15, 7, 26085
 		cout << "Cities: " << num_cities << ", connector roads: " << num_conn << ", transmission lines: " << transmission_lines.size() << ", total cost: " << tot_cost << endl;
