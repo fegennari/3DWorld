@@ -786,7 +786,7 @@ public:
 		unsigned const ix(get_to_draw_ix(tex));
 		if (ix >= to_draw.size()) {to_draw.resize(ix+1);}
 		draw_block_t &block(to_draw[ix]);
-		if (!no_register_tile && cur_tile_id >= 0) {block.register_tile_id(cur_tile_id);} // register tile ID if valid
+		if (!no_register_tile) {block.register_tile_id(cur_tile_id);} // register tile ID if valid
 
 		if (block.empty()) {block.tex = tex;} // copy material first time
 		else {
