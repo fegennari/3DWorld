@@ -1184,7 +1184,7 @@ void building_t::assign_special_room_types(vector<unsigned> &utility_room_cands,
 	vector<room_t> &rooms(interior->rooms);
 	vector<unsigned> conf_rooms;
 	
-	if (!is_residential()) { // office building
+	if (!is_residential() && !is_industrial()) { // office building, hospital, school, etc.
 		// try to assign conference room(s); this may be overwritten with a special room on the ground floor;
 		// conference rooms are currently interior and windowless so that we can have glass walls without blending problems with windows
 		float max_area(0.0);
@@ -1213,6 +1213,8 @@ void building_t::assign_special_room_types(vector<unsigned> &utility_room_cands,
 
 	for (unsigned rtype = 0; rtype < NUM_GFLOOR_RTYPES; ++rtype) { // assign round robin
 		unsigned const room_type(GFLOOR_RTYPES[rtype]);
+		if (room_type == RTYPE_SERVER   && !(is_office_bldg() || is_hospital() || is_school())) continue; // building type doesn't have a server   room
+		if (room_type == RTYPE_SECURITY && !(is_office_bldg() || is_hospital()))                continue; // building type doesn't have a security room
 		vector<unsigned> &room_cands((room_type == RTYPE_UTILITY) ? utility_room_cands : special_room_cands);
 
 		for (unsigned n = 0; n < GFLOOR_RTYPE_COUNTS[rtype]; ++n) {

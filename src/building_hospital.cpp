@@ -209,3 +209,18 @@ bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, flo
 	return 1;
 }
 
+bool building_t::add_waiting_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start) {
+	// TODO: add chairs along the walls, maybe couches, etc.
+	return 0;
+}
+
+bool building_t::add_exam_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start) {
+	// TODO: one bed, one small desk with computer and rotating stool
+	return 0;
+}
+
+bool building_t::add_operating_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start) {
+	// TODO: operating table, big light, equipment
+	return 0;
+}
+

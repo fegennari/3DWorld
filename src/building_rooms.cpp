@@ -341,6 +341,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		bool added_bathroom(0), is_numbered_room(0);
 		float z(r->z1());
 		if (!r->interior) {r->interior = (is_basement || is_room_windowless(*r));} // AKA windowless; calculate if not already set
+		bool const has_window(!r->interior);
 		// reset is_public_on_floor when we move to a new apartment/hotel unit
 		if (r->unit_id != last_unit_id) {is_public_on_floor = 0; last_unit_id = r->unit_id;}
 		// make chair colors consistent for each part by using a few variables for a hash
@@ -375,7 +376,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			vect_cube_t rooms_to_light;
 
 			if (is_parking_garage) { // parking garage; added first because this sets the number of lights
-				assert(r->interior == 1);
+				assert(!has_window);
 				add_parking_garage_objs(rgen, *r, room_center.z, room_id, f, num_floors, nx, ny, light_delta_z, light_ix_assign);
 			}
 			else if (is_backrooms) {
@@ -412,7 +413,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			bool const maybe_office_bathroom(is_room_office_bathroom(*r, room_center.z, f));
 
 			// motion detection lights for large office building office, mall bathrooms, and office bathrooms; limit to interior rooms to have lit rooms viewed through windows
-			if ((!is_house && has_pri_hall() && is_office && r->interior) || is_mall_bathroom || maybe_office_bathroom) {flags |= RO_FLAG_IS_ACTIVE;} // leave unlit initially
+			if ((!is_house && has_pri_hall() && is_office && !has_window) || is_mall_bathroom || maybe_office_bathroom) {flags |= RO_FLAG_IS_ACTIVE;} // leave unlit initially
 			else if (r->is_sec_bldg) {is_lit = 0;} // garage and shed lights start off
 			else {
 				// 50% of lights are on, 75% for top of stairs, 100% for non-basement hallways, 100% for parking garages, backrooms, and malls
@@ -807,14 +808,49 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				r->assign_to(RTYPE_POOL, f);
 				added_pool_room = added_obj = 1;
 			}
-			if (!added_obj && !r->interior && is_hospital()) { // hospital room with a window
-				// TODO: make RTYPE_HOS_OR, RTYPE_HOS_EXAM, or other room type with some probability
-				added_obj = no_whiteboard = add_hospital_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start, nested_room_ix);
-				if (added_obj) {r->assign_to(RTYPE_HOS_BED, f);}
+			if (!added_obj && is_hospital()) {
+				if (has_window) { // hospital room with a window
+					if (add_hospital_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start, nested_room_ix)) {
+						added_obj = no_whiteboard = 1;
+						r->assign_to(RTYPE_HOS_BED, f);
+					}
+				}
+				if (!added_obj) { // hospital room without a window, or failed to make a hospital bedroom
+					unsigned const rand_val(rgen.rand() % 5);
+
+					if (rand_val == 0) { // waiting room
+						if (add_waiting_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start)) {
+							added_obj = no_whiteboard = 1;
+							r->assign_to(RTYPE_WAITING, f);
+						}
+					}
+					else if (rand_val == 1) { // exam room
+						if (add_exam_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start)) {
+							added_obj = no_whiteboard = 1;
+							r->assign_to(RTYPE_HOS_EXAM, f);
+						}
+					}
+					else if (rand_val == 2) { // operating room
+						if (add_operating_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start)) {
+							added_obj = no_whiteboard = 1;
+							r->assign_to(RTYPE_HOS_OR, f);
+						}
+					}
+					else if (rand_val == 3) { // classroom (for training)
+						added_obj = add_classroom_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start, chair_color, pref_hang_orient);
+						if (added_obj) {r->assign_to(RTYPE_CLASS, f);}
+					}
+					// else make it an office or something else below
+				}
 			}
-			if (!added_obj && !r->interior && is_school() && !r->has_stairs_on_floor(f)) { // school classroom with a window and no stairs
-				added_obj = add_classroom_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start, chair_color, pref_hang_orient);
-				if (added_obj) {r->assign_to(RTYPE_CLASS, f);}
+			if (!added_obj && is_school() && !r->has_stairs_on_floor(f)) {
+				if (has_window) { // school classroom with a window and no stairs
+					added_obj = add_classroom_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start, chair_color, pref_hang_orient);
+					if (added_obj) {r->assign_to(RTYPE_CLASS, f);}
+				}
+				if (!added_obj) { // no window, or can't make into a classroom
+					// teacher's office, teacher's lounge, principal's office, supply rooms, art/shop, etc.
+				}
 			}
 			if (!added_obj && !r->has_subroom() && rgen.rand_float() < (is_basement ? 0.4 : (r->is_office ? (is_hospital() ? 0.2 : 0.6) : (is_house ? 0.95 : 0.5)))) {
 				// place a table and maybe some chairs near the center of the room if it's not a hallway;
@@ -836,7 +872,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				}
 			}
 			// if we haven't added any objects yet, and this room is an interior office on the first floor or basement, make it a storage room 50% of the time; at most 4x
-			if (!added_obj && num_storage_rooms <= 4 && (is_basement || (r->is_office && r->interior && f == 0)) && rgen.rand_bool()) {
+			if (!added_obj && num_storage_rooms <= 4 && (is_basement || (r->is_office && !has_window && f == 0)) && rgen.rand_bool()) {
 				added_obj = no_whiteboard = is_storage = add_storage_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement, has_stairs);
 				if (added_obj) {r->assign_to(RTYPE_STORAGE, f); ++num_storage_rooms;}
 			}
