@@ -85,6 +85,7 @@ bool building_t::add_classroom_desk(rand_gen_t &rgen, room_t const &room, cube_t
 {
 	vect_room_object_t &objs(interior->room_geom->objs);
 	if (is_obj_placement_blocked(desk, room, 1)) return 0; // check proximity to doors, etc.
+	unsigned const pre_add_obj_id(objs.size());
 	unsigned const flags((desk_ix == 0) ? RO_FLAG_HAS_EXTRA : 0); // teacher's desk always has drawers
 	objs.emplace_back(desk, TYPE_DESK, room_id, dim, dir, flags, tot_light_amt, SHAPE_CUBE); // no tall desks
 	set_obj_id(objs);
@@ -97,7 +98,10 @@ bool building_t::add_classroom_desk(rand_gen_t &rgen, room_t const &room, cube_t
 	chair_pos.z     = desk.z1();
 	chair_pos[ dim] = desk.d[dim][dir]; // front of desk
 	chair_pos[!dim] = desk.get_center_dim(!dim) + 0.1*rgen.signed_rand_float()*desk.get_sz_dim(dim); // slightly misaligned
-	add_chair(rgen, room, vect_cube_t(), room_id, chair_pos, chair_color, dim, !dir, tot_light_amt, 0, 0, 0, 0, 2, 1); // no blockers, reduced_clearance=1
+	
+	if (!add_chair(rgen, room, vect_cube_t(), room_id, chair_pos, chair_color, dim, !dir, tot_light_amt, 0, 0, 0, 0, 2, 1)) { // no blockers, reduced_clearance=1
+		objs.resize(pre_add_obj_id); // no chair; remove the desk as well, since it may be too close to a door
+	}
 	return 1;
 }
 
