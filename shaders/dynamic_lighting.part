@@ -30,7 +30,12 @@ layout (std140, binding = 0) uniform U_smap_matrix_dl {mat4 smap_matrix_dl[MAX_D
 // it may make more sense to clip the shadower to the frustum so that all the area outside the shadow frustum is unshadowed,
 // but it's not clear how to do that cleanly/efficiently or if it would look any better
 float get_shadow_map_weight_dl(in vec4 pos, in vec3 normal, in mat4 matrix, in sampler2DArrayShadow sm_tex, in int layer) {
+
+#ifdef DLIGHT_ADAPTIVE_SMAP_BIAS // helps remove shadow acne for coordinates very far from the origin, but may cause other problems; unused
+	pos.xyz += (norm_bias_scale*z_bias + 0.0001*abs(dot(pos.xyz, normal)))*normal; // world space
+#else
 	pos.xyz += norm_bias_scale*z_bias*normal; // world space
+#endif
 	vec4 shadow_coord = matrix * pos;
 	shadow_coord.xyz /= shadow_coord.w;
 	shadow_coord.z   += -0.1*z_bias; // lower z-bias for local shadow maps
