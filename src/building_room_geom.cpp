@@ -1572,7 +1572,7 @@ void building_room_geom_t::add_mwave(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_vending_machine(room_object_t const &c) {
-	add_obj_with_front_texture(c, "interiors/vending_machine.jpg", BKGRAY, 0); // is_small=0
+	add_obj_with_front_texture(c, /*"interiors/vending_machine.jpg"*/"interiors/microwave.jpg", BKGRAY, 0); // is_small=0
 }
 
 float get_med_cab_wall_thickness(room_object_t const &c) {return 0.15*c.get_length();}
