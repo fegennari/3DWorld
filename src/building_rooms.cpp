@@ -189,10 +189,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	bool const residential(is_residential());
 	float const extra_bathroom_prob((is_house ? 2.0 : 1.0)*0.02*min((int(tot_num_rooms) - 4), 20));
 	unsigned cand_bathroom(rooms.size()); // start at an invalid value
-	unsigned added_kitchen_mask(0), added_living_mask(0), added_bath_mask(0); // per-floor
 	unsigned added_bathroom_objs_mask(0), numbered_rooms_seen(0), store_type_mask(0);
 	uint8_t last_unit_id(0);
-	uint64_t is_public_on_floor(0); // 64 bit masks
+	uint64_t is_public_on_floor(0), library_floor_mask(0), added_kitchen_mask(0), added_living_mask(0), added_bath_mask(0); // 64 bit masks, per floor
 	bool added_bedroom(0), added_library(0), added_dining(0), added_laundry(0), added_basement_utility(0), added_fireplace(0), added_pool_room(0);
 	light_ix_assign_t light_ix_assign;
 	clear_existing_room_geom();
@@ -561,10 +560,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			}
 			if (is_parking_garage || is_retail_room || is_mall_store) continue; // generated above, done; no outlets or light switches
 			if (is_unfinished) continue; // no objects for now; if adding objects later, need to make sure they stay inside the building bounds
-			uint64_t const floor_mask(uint64_t(1) << f);
+			uint64_t const floor_mask(uint64_t(1) << min(63U, f));
 			bool const is_garage_or_shed(r->is_garage_or_shed(f));
 			bool const is_ground_floor_part(!is_basement && r->z1() <= ground_floor_z1);
-			bool const is_ground_floor(is_ground_floor_part && floor_mask & floor_ext_door_mask); // really this is a check for doors on this floor
+			bool const is_ground_floor(is_ground_floor_part && (floor_mask & floor_ext_door_mask)); // really this is a check for doors on this floor
 			bool const is_entry_floor(is_ground_floor || (is_ground_floor_part && multi_family)); // for placing entry level rooms/objs (fireplace, living, dining, kitchen, etc.)
 			unsigned const objs_start(wall_light ? objs_start_inc_lights : objs.size()); // wall light counts as an object since it must be avoided
 			bool has_walkway(0);
@@ -919,11 +918,16 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				r->assign_to(RTYPE_STAIRS, f);
 				no_whiteboard = 1;
 			}
-			if (!is_house && is_office && !no_whiteboard && (rgen.rand() % (pri_hall.is_all_zeros() ? 30U : max(50U, (unsigned)interior->rooms.size()))) == 0) {
-				// office, no cubicles or bathroom - try to make it a library (in rare cases)
-				if (add_library_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement)) {
+			if (is_office && !no_whiteboard && !(library_floor_mask & floor_mask)) {
+				// office, no cubicles or bathroom, no library on this floor - maybe make it a library
+				bool make_library(0);
+				if (is_office_bldg()) {make_library = ((rgen.rand() % (!has_pri_hall() ? 30U : max(50U, (unsigned)rooms.size()))) == 0);} // library is rare
+				else if (is_school()) {make_library = ((rgen.rand() % 5) == 0 && r->get_room_type(f) == RTYPE_OFFICE);} // more common in schools
+
+				if (make_library && add_library_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement)) {
 					r->assign_to(RTYPE_LIBRARY, f);
 					added_library = is_library = 1;
+					library_floor_mask |= floor_mask; // mark this floor as having a library
 				}
 			}
 			if (can_place_onto) { // an object was placed (table, desk, counter, etc.), maybe add a book or bottle on top of it
