@@ -210,7 +210,7 @@ bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, flo
 }
 
 bool building_t::add_waiting_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start) {
-	// TODO: add chairs along the walls, maybe couches, etc.
+	// TODO: add chairs along the walls, maybe TYPE_COUCH, TYPE_VENDING, etc.
 	return 0;
 }
 

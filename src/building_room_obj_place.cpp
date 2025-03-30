@@ -862,6 +862,9 @@ void building_t::add_lounge_objs(rand_gen_t rgen, room_t const &room, float zval
 			}
 		}
 	}
+	// add vending machine
+	// TODO: TYPE_VENDING
+	
 	// add a TV on the wall (not on a table)
 	unsigned const tv_obj_ix(objs.size());
 	float const tv_zval(zval + 0.3*window_vspacing);
