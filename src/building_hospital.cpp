@@ -210,17 +210,26 @@ bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, flo
 }
 
 bool building_t::add_waiting_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start) {
-	// TODO: add chairs along the walls, maybe TYPE_COUCH, TYPE_VENDING, etc.
-	return 0;
+	unsigned const counts[4] = {1, 1, 2, 2}; // 1-2
+	add_couches_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, counts);
+	// TODO: add chairs along the walls, TYPE_VENDING, etc.
+	add_door_sign("Waiting Area", room, zval, room_id);
+	return 1;
 }
 
 bool building_t::add_exam_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start) {
-	// TODO: one bed, one small desk with computer and rotating stool
-	return 0;
+	float const /*floor_spacing(get_window_vspace()),*/ wall_thickness(get_wall_thickness());
+	cube_t room_bounds(get_walkable_room_bounds(room)), place_area(room_bounds);
+	place_area.expand_by(-1.0*wall_thickness); // add extra padding, since bed models are slightly different sizes
+	if (!place_model_along_wall(OBJ_MODEL_HOSP_BED, TYPE_HOSP_BED, room, 0.42, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.5)) return 0;
+	// TODO: one small desk with computer and rotating stool, equipment, etc.
+	add_numbered_door_sign("Exam ", room, zval, room_id, floor_ix);
+	return 1;
 }
 
 bool building_t::add_operating_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start) {
 	// TODO: operating table, big light, equipment
+	//add_numbered_door_sign("OR ", room, zval, room_id, floor_ix);
 	return 0;
 }
 
