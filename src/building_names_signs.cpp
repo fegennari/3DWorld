@@ -338,7 +338,7 @@ void building_t::add_exterior_door_items(rand_gen_t &rgen) { // mostly signs; ad
 				}
 			}
 		}
-		if (pri_hall.is_all_zeros() && rgen.rand_bool()) return; // place exit signs on buildings with primary hallways and 50% of other buildings
+		if (!has_pri_hall() && rgen.rand_bool()) return; // place exit signs on buildings with primary hallways and 50% of other buildings
 		bool const tall_room(is_industrial() || has_tall_retail());
 		colorRGBA const exit_color(rgen.rand_bool() ? RED : GREEN);
 

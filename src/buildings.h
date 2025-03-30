@@ -2054,7 +2054,7 @@ struct building_t : public building_geom_t {
 	bool has_conn_info() const {return (interior && interior->conn_info);}
 	bool has_room_geom() const {return (has_interior() && interior->room_geom);}
 	bool has_sec_bldg () const {return (has_garage || has_shed);}
-	bool has_pri_hall () const {return (hallway_dim <= 1);} // otherwise == 2 (Note: some callers check !pri_hall.is_all_zeros(); should they instead call this function?)
+	bool has_pri_hall () const {return (hallway_dim <= 1);} // otherwise == 2
 	bool has_basement () const {return (basement_part_ix >= 0);}
 	bool has_driveway () const {return !driveway.is_all_zeros();}
 	bool has_a_garage () const {return (has_garage || has_int_garage);} // external or internal

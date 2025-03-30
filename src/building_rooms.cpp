@@ -617,7 +617,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				if (has_stairs_this_floor && r->get_room_type(f) == RTYPE_NOTSET) {r->assign_to(RTYPE_STAIRS, f);}
 				continue; // no other geometry for this room
 			}
-			//if (has_stairs && !pri_hall.is_all_zeros()) continue; // no other geometry in office building base part rooms that have stairs
+			//if (has_stairs && has_pri_hall()) continue; // no other geometry in office building base part rooms that have stairs
 			// must be a BR if cand bathroom, and BR not already placed; applies to all floors of this room; if multi-family, we check for a BR prev placed on this floor
 			bool const must_be_bathroom(room_id == cand_bathroom && (multi_family ? !(added_bath_mask & floor_mask) : (num_bathrooms == 0)));
 			bool const is_tall_room(r->is_single_floor && r->dz() > 1.5*window_vspacing);
@@ -1774,7 +1774,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	unsigned const flags(RO_FLAG_NOCOLL);
 	// ceiling trim disabled for large office buildings with outside corners because there's a lot of trim to add, and outside corners don't join correctly;
 	// ceiling trim also disabled for non-houses (all office buildings), because it doesn't really work with acoustic paneling
-	bool const has_outside_corners((!is_house && !pri_hall.is_all_zeros()) || is_industrial() || is_hospital()); // industrial/hospitals have nested rooms with inside corners
+	bool const has_outside_corners(interior->has_sec_hallways || is_industrial() || is_hospital()); // industrial/hospitals have nested rooms with inside corners
 	bool const has_ceil_trim(!has_outside_corners && is_house);
 	colorRGBA const trim_color(get_trim_color());
 	vect_room_object_t &objs(interior->room_geom->trim_objs);
