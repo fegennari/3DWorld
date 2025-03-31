@@ -2194,7 +2194,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 				if (visible && check_occlusion && building.check_obj_occluded(*i, camera_bs, oc, reflection_pass)) {visible = 0;}
 				register_fishtank(*i, visible);
 			}
-			else if (i->type == TYPE_WARN_LIGHT && is_flashing_light_on()) {
+			else if (i->type == TYPE_WARN_LIGHT && i->is_powered() && is_flashing_light_on()) {
 				float const radius(3.0*i->get_radius());
 				point const light_center(get_warning_light_src_pos(*i));
 				flare_qbd.add_billboard(light_center, camera_bs, plus_x, RED, radius, radius);
