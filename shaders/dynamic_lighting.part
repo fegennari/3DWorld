@@ -31,12 +31,14 @@ layout (std140, binding = 0) uniform U_smap_matrix_dl {mat4 smap_matrix_dl[MAX_D
 // but it's not clear how to do that cleanly/efficiently or if it would look any better
 float get_shadow_map_weight_dl(in vec4 pos, in vec3 normal, in mat4 matrix, in sampler2DArrayShadow sm_tex, in int layer) {
 
-#ifdef DLIGHT_ADAPTIVE_SMAP_BIAS // helps remove shadow acne for coordinates very far from the origin, but may cause other problems; unused
-	pos.xyz += (norm_bias_scale*z_bias + 0.0001*abs(dot(pos.xyz, normal)))*normal; // world space
+#ifdef DLIGHT_SMAP_DOUBLE_PRECISION // helps remove shadow acne for coordinates very far from the origin
+	dvec4 pos_d = pos;
+	pos_d.xyz  += norm_bias_scale*z_bias*normal; // world space
+	vec4 shadow_coord = vec4(matrix * pos_d);
 #else
 	pos.xyz += norm_bias_scale*z_bias*normal; // world space
-#endif
 	vec4 shadow_coord = matrix * pos;
+#endif
 	shadow_coord.xyz /= shadow_coord.w;
 	shadow_coord.z   += -0.1*z_bias; // lower z-bias for local shadow maps
 #if 1
@@ -49,7 +51,7 @@ float get_shadow_map_weight_dl(in vec4 pos, in vec3 normal, in mat4 matrix, in s
 	}
 	return mix(ret/9.0, 1.0, SHADOW_LEAKAGE); // 9-tap PCF; allow a small amount of transmitted light to simulate indirect lighting
 #else
-	shadow_coord.w    = layer;
+	shadow_coord.w = layer;
 	return mix(texture(sm_tex, shadow_coord.xywz), 1.0, SHADOW_LEAKAGE); // allow a small amount of transmitted light to simulate indirect lighting
 #endif
 }
