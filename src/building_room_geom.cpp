@@ -1572,7 +1572,7 @@ void building_room_geom_t::add_mwave(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_vending_machine(room_object_t const &c) {
-	add_obj_with_front_texture(c, /*"interiors/vending_machine.jpg"*/"interiors/microwave.jpg", BKGRAY, 0); // is_small=0
+	add_obj_with_front_texture(c, "interiors/vending_machine.jpg", c.color, 0); // is_small=0
 }
 
 float get_med_cab_wall_thickness(room_object_t const &c) {return 0.15*c.get_length();}
@@ -6199,7 +6199,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_KEYBOARD: return BKGRAY;
 	case TYPE_COMPUTER: return BKGRAY;
 	case TYPE_MWAVE:    return GRAY;
-	case TYPE_VENDING:  return DK_GRAY;
+	case TYPE_VENDING:  return GRAY;
 	case TYPE_SHOWER:   return colorRGBA(WHITE, 0.25); // partially transparent - does this actually work?
 	case TYPE_BLINDS:   return texture_color(get_blinds_tid()).modulate_with(color);
 	case TYPE_LG_BALL:  return texture_color(get_ball_tid(*this));
