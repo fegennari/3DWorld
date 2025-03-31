@@ -316,7 +316,9 @@ void building_t::toggle_circuit_breaker(bool is_on, unsigned zone_id, unsigned n
 			i->obj_id = 1; // turn it off
 			i->flags ^= RO_FLAG_NO_POWER;
 		} // TYPE_VENT_FAN?
-		else if (i->type == TYPE_MWAVE || i->type == TYPE_CEIL_FAN || i->type == TYPE_CAMERA || i->type == TYPE_CLOCK || i->type == TYPE_LAVALAMP || i->type == TYPE_FISHTANK) {
+		else if (i->type == TYPE_MWAVE || i->type == TYPE_CEIL_FAN || i->type == TYPE_CAMERA || i->type == TYPE_CLOCK || i->type == TYPE_LAVALAMP || i->type == TYPE_FISHTANK ||
+			i->type == TYPE_WARN_LIGHT || i->type == TYPE_VENDING)
+		{
 			i->flags ^= RO_FLAG_NO_POWER; // interactive powered devices; stove is gas and not electric powered
 		}
 		// Note: stoves use gas rather than electricity and don't need power; lit exit signs are always on
@@ -522,8 +524,9 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 					else if ((i->is_sink_type() || type == TYPE_TUB) && !i->in_mall()) {keep = 1;} // sink/tub, not in mall appliance/plumbing store
 					else if (i->is_light_type() || type == TYPE_LAVALAMP) {keep = 1;} // room light or lamp
 					else if (type == TYPE_FISHTANK && i->has_lid()) {keep = 1;} // fishtank with a lid and light
-					else if (type == TYPE_PICTURE || type == TYPE_TPROLL || type == TYPE_MWAVE || type == TYPE_TV || type == TYPE_MONITOR || type == TYPE_BLINDS || type == TYPE_SWITCH ||
-						type == TYPE_BOOK || type == TYPE_BRK_PANEL || type == TYPE_BREAKER || type == TYPE_ATTIC_DOOR || type == TYPE_OFF_CHAIR || type == TYPE_WFOUNTAIN) {keep = 1;}
+					else if (type == TYPE_PICTURE || type == TYPE_TPROLL || type == TYPE_MWAVE || type == TYPE_TV || type == TYPE_MONITOR || type == TYPE_BLINDS ||
+						type == TYPE_SWITCH || type == TYPE_BOOK || type == TYPE_BRK_PANEL || type == TYPE_BREAKER || type == TYPE_ATTIC_DOOR || type == TYPE_OFF_CHAIR ||
+						type == TYPE_WFOUNTAIN || type == TYPE_VENDING) {keep = 1;}
 					else if ((type == TYPE_STOVE || type == TYPE_SHOWER || type == TYPE_SHOWERTUB /*|| type == TYPE_FRIDGE*/) && !i->in_mall()) {keep = 1;} // not in plumbing store
 					else if (type == TYPE_LG_BALL && i->has_dstate()) {keep = 1;}
 					else if (type == TYPE_BUTTON && i->in_elevator() == bool(player_in_elevator)) {keep = 1;} // check for buttons inside/outside elevator
@@ -698,6 +701,13 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		}
 		else if (obj.is_powered()) { // pointing at the panel - make it beep
 			gen_sound_thread_safe(SOUND_BEEP, local_center, 0.25);
+			sound_scale = 0.6;
+		}
+	}
+	else if (obj.type == TYPE_VENDING) {
+		if (obj.is_powered()) {
+			// TODO: some sort of action; dispense a can?
+			gen_sound_thread_safe(SOUND_BEEP, local_center, 0.25, 0.75);
 			sound_scale = 0.6;
 		}
 	}
