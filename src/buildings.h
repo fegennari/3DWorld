@@ -3058,6 +3058,7 @@ unsigned get_shelf_rack_cubes(room_object_t const &c, cube_t &back, cube_t &top,
 cube_t get_shower_tub_wall(room_object_t const &c);
 cube_t get_open_closet_door(room_object_t const &obj);
 cube_t get_pool_table_top_surface(room_object_t const &c);
+cube_t get_pan_bcube_inc_handle(room_object_t const &c);
 void get_cabinet_or_counter_doors(room_object_t const &c, vect_cube_t &doors, vect_cube_t &drawers);
 bool get_dishwasher_for_ksink(room_object_t const &c, cube_t &dishwasher);
 room_object_t split_cabinet_at_dishwasher(room_object_t &cabinet, cube_t const &dishwasher);

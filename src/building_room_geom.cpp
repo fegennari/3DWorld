@@ -5034,6 +5034,9 @@ void building_room_geom_t::add_cabinet(room_object_t const &c, float tscale, boo
 				objects.clear();
 				add_cabinet_objects(c, objects); // get cabinet objects; only needed when player opens a door, so not perf critical
 
+				for (room_object_t &i : objects) {
+					if (i.type == TYPE_PAN) {i.copy_from(get_pan_bcube_inc_handle(i));} // include pan handle
+				}
 				for (unsigned n = 0; n+1 < doors.size(); ++n) { // looking at pairs - skip last door
 					float const center(0.5*(doors[n].d[!dim][1] + doors[n+1].d[!dim][0])); // halfway between the doors
 					set_wall_width(divider, center, wall_hthick, !dim);
@@ -5456,6 +5459,11 @@ void building_room_geom_t::add_toy(room_object_t const &c) { // is_small=1
 	} // for n
 }
 
+cube_t get_pan_bcube_inc_handle(room_object_t const &c) {
+	cube_t pan_inc_handle(c);
+	pan_inc_handle.d[!c.dim][ c.dir] = c.d[!c.dim][c.dir] + (c.dir ? 1.0 : -1.0)*0.60*c.get_sz_dim(!c.dim); // outer edge
+	return pan_inc_handle;
+}
 void building_room_geom_t::add_pan(room_object_t const &c) { // is_small=1
 	colorRGBA const color(apply_light_color(c));
 	rgeom_mat_t &mat(get_scratched_metal_material(1.0/c.dz(), 1, 0, 1)); // shadowed, small

@@ -371,8 +371,10 @@ bool add_cabinet_objects(room_object_t const &c, vect_room_object_t &objects) { 
 			pan.translate_dim(2, 0.01*pan_height); // shift in +z to prevent z-fighting with the bottom of the pan
 			bool const dir(pan.get_center_dim(!c.dim) < c.get_center_dim(!c.dim)); // point toward the cabinet center to avoid the handle clipping through the side/end
 			room_object_t obj(pan, TYPE_PAN, c.room_id, c.dim, dir, flags, light_amt, SHAPE_CYLIN, GRAY_BLACK);
-			// Note: the pan's handle extends outside its bcube and may clip through other objects, but this isn't very noticeable when viewed from normal head height
-			add_if_not_intersecting(obj, objects, cubes);
+			cube_t const pan_bc(get_pan_bcube_inc_handle(obj));
+			if (has_bcube_int(pan_bc, cubes)) continue;
+			objects.push_back(obj);
+			cubes.push_back(pan_bc);
 		} // for n
 	}
 	// add bottles
