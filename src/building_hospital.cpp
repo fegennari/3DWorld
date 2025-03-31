@@ -9,6 +9,7 @@ extern object_model_loader_t building_obj_model_loader;
 
 
 void clip_wall_to_ceil_floor(cube_t &wall, float fc_thick);
+colorRGBA get_pastic_chair_color(colorRGBA const &color);
 
 bool can_create_hospital_room() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_HOSP_BED);}
 
@@ -209,10 +210,28 @@ bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, flo
 	return 1;
 }
 
-bool building_t::add_waiting_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start) {
+bool building_t::add_waiting_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix,
+	float tot_light_amt, unsigned objs_start, colorRGBA const &chair_color)
+{
 	unsigned const counts[4] = {1, 1, 2, 2}; // 1-2
 	add_couches_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, counts);
-	// TODO: add chairs along the walls, TYPE_VENDING, etc.
+	unsigned const num_chairs = 20; // up to this many, whatever we can fit
+	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
+	bool const is_plastic(rgen.rand_bool());
+	float const chair_hscale(is_plastic ? 0.44 : 0.4), chair_height(chair_hscale*floor_spacing), chair_xy_scale(0.2/chair_hscale);
+	vector3d const chair_sz(chair_xy_scale, chair_xy_scale, 1.0);
+	colorRGBA const ccolor(is_plastic ? get_pastic_chair_color(chair_color) : chair_color);
+	vect_room_object_t &objs(interior->room_geom->objs);
+	cube_t room_bounds(get_walkable_room_bounds(room)), chair_place_area(room_bounds);
+	chair_place_area.expand_by_xy(-wall_thickness);
+
+	for (unsigned n = 0; n < num_chairs; ++n) {
+		unsigned const chair_obj_ix(objs.size());
+		if (!place_obj_along_wall(TYPE_CHAIR, room, chair_height, chair_sz, rgen, zval, room_id, tot_light_amt, chair_place_area, objs_start,
+			1.0, 0, 4, 0, ccolor, 0, SHAPE_CUBE, 0.25*chair_height)) break; // end when failed to place
+		assert(chair_obj_ix < objs.size());
+		if (is_plastic) {objs[chair_obj_ix].item_flags = 1;} // flag as plastic
+	}
 	add_door_sign("Waiting Area", room, zval, room_id);
 	return 1;
 }

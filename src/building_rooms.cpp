@@ -818,7 +818,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					unsigned const rand_val(rgen.rand() % 5);
 
 					if (rand_val == 0) { // waiting room
-						if (add_waiting_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start)) {
+						if (add_waiting_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start, chair_color)) {
 							added_obj = no_whiteboard = 1;
 							r->assign_to(RTYPE_WAITING, f);
 						}

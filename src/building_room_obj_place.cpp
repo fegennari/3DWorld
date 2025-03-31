@@ -63,6 +63,9 @@ cube_t place_cylin_object(rand_gen_t rgen, cube_t const &place_on, float radius,
 	return c;
 }
 
+colorRGBA get_pastic_chair_color(colorRGBA const &color) { // colored plastic chairs are too bright; convert to mostly grayscale
+	return blend_color(color*0.8, WHITE*color.get_luminance(), 0.2, 0);
+}
 vector3d building_t::get_office_chair_size() const {
 	float const height(0.425*get_window_vspace()), radius(height*get_radius_for_square_model(OBJ_MODEL_OFFICE_CHAIR));
 	return vector3d(radius, radius, height);
@@ -135,8 +138,7 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 			}
 		}
 		colorRGBA color(chair_color);
-		// colored plastic chairs are too bright; convert to mostly grayscale
-		if (is_plastic) {color = blend_color(color*0.8, WHITE*color.get_luminance(), 0.2, 0);}
+		if (is_plastic) {color = get_pastic_chair_color(color);}
 		objs.emplace_back(chair, TYPE_CHAIR, room_id, dim, dir, flags, tot_light_amt, SHAPE_CUBE, color, (is_plastic ? 1 : 0)); // set item_flags to 1 for plastic chair
 	}
 	return 1;
@@ -1478,6 +1480,7 @@ bool building_t::check_if_against_window(cube_t const &c, room_t const &room, bo
 		    is_val_inside_window(part, !dim, c.d[!dim][1], hspacing, border) ||
 		    is_val_inside_window(part, !dim, c.get_center_dim(!dim), hspacing, border));
 }
+// Note: front_clearance is relative to depth, while side_clearance is an absolute distance
 bool building_t::place_obj_along_wall(room_object type, room_t const &room, float height, vector3d const &sz_scale, rand_gen_t &rgen, float zval,
 	unsigned room_id, float tot_light_amt, cube_t const &place_area, unsigned objs_start, float front_clearance, bool add_door_clearance, unsigned pref_orient,
 	bool pref_centered, colorRGBA const &color, bool not_at_window, room_obj_shape shape, float side_clearance, unsigned extra_flags, bool not_ext_wall, bool force_pref)
