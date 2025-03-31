@@ -1980,7 +1980,9 @@ void building_room_geom_t::add_drink_can(room_object_t const &c, bool add_bottom
 	tp.set_specular(0.8, 80.0);
 	rgeom_mat_t &label_mat(get_material(tp, 1, 0, 1)); // shadowed, small
 	label_mat.add_vcylin_to_verts(c, color, 0, 0, 0, 0, 1.0, 1.0, cp.tscale, 1.0, 0, ndiv, tscale_add, 0, (1.0 - cp.tex_clip_y), cp.tex_clip_y); // sides only
-	get_metal_material(1, 0, 1).add_vcylin_to_verts(c, color, add_bottom, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // untextured, shadowed, small=1, top and maybe bottom
+	rgeom_mat_t &top_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/can_lid.jpg"), 0.0, 1), 1, 0, 1)); // shadowed, small
+	top_mat.add_vcylin_to_verts(c, color, 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // top
+	if (add_bottom) {get_metal_material(1, 0, 1).add_vcylin_to_verts(c, apply_light_color(c, LT_GRAY), 1, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 1);} // untextured, shadowed, small, bottom
 }
 
 // functions reused from snake drawing

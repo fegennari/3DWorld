@@ -925,7 +925,7 @@ void add_rows_of_vcylinders(room_object_t const &c, cube_t const &region, float 
 			if (rgen.rand_float() < 0.75) { // 75% chance
 				room_object_t obj(row_obj, type, c.room_id, (c.dim ^ inv_dim), dir, flags, c.light_amt, SHAPE_CYLIN);
 				if      (type == TYPE_BOTTLE    ) {obj.set_as_bottle(rand_id, 3, 1);} // 0-3; excludes poison and medicine; should we include medicine?; no_empty=1
-				else if (type == TYPE_DRINK_CAN ) {obj.obj_id = (uint16_t)(rand_id & 127); obj.color = LT_GRAY;} // strip off empty bit
+				else if (type == TYPE_DRINK_CAN ) {obj.obj_id = (uint16_t)(rand_id & 127); obj.color = WHITE;} // strip off empty bit
 				else if (type == TYPE_VASE      ) {set_vase_id_and_color(obj, rgen);} // randomize the vase
 				else if (type == TYPE_SPRAYCAN  ) {set_spraypaint_color (obj, rgen);}
 				else if (type == TYPE_FLASHLIGHT) {obj.color = BLACK;}
