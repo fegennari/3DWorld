@@ -1325,11 +1325,11 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 	cube_t drawer(drawer_in); // copy so that we can adjust z1
 	float const drawer_dz(drawer.dz());
 	unsigned const type_ix(rgen.rand() % 11); // 0-10
-	unsigned const types_dresser [11] = {TYPE_FOLD_SHIRT, TYPE_PAPER,      TYPE_BOX, TYPE_FOLD_SHIRT, TYPE_BOOK, TYPE_KEY,     TYPE_BOTTLE, TYPE_MONEY,  TYPE_PHONE,  TYPE_SPRAYCAN, TYPE_TAPE};
-	unsigned const types_desk    [11] = {TYPE_FLASHLIGHT, TYPE_PAPER,      TYPE_PEN, TYPE_STAPLER,    TYPE_BOOK, TYPE_KEY,     TYPE_BOTTLE, TYPE_MONEY,  TYPE_PHONE,  TYPE_SPRAYCAN, TYPE_TAPE};
-	unsigned const types_attic   [11] = {TYPE_BOX,        TYPE_PAPER,      TYPE_PEN, TYPE_PEN,        TYPE_BOOK, TYPE_KEY,     TYPE_BOTTLE, TYPE_BOX,    TYPE_BOOK,   TYPE_SPRAYCAN, TYPE_TAPE};
-	unsigned const types_kcabinet[11] = {TYPE_BOX,        TYPE_FLASHLIGHT, TYPE_PEN, TYPE_PEN,        TYPE_BOOK, TYPE_PLATE,   TYPE_BOTTLE, TYPE_BOTTLE, TYPE_SILVER, TYPE_SPRAYCAN, TYPE_TAPE};
-	unsigned const types_fcabinet[11] = {TYPE_BOX,        TYPE_PAPER,      TYPE_PEN, TYPE_PEN,        TYPE_BOOK, TYPE_STAPLER, TYPE_PAPER,  TYPE_BOOK,   TYPE_TAPE,   TYPE_STAPLER,  TYPE_TAPE};
+	unsigned const types_dresser [11] = {TYPE_FOLD_SHIRT, TYPE_PAPER,  TYPE_BOX,       TYPE_FOLD_SHIRT, TYPE_BOOK, TYPE_KEY,     TYPE_BOTTLE, TYPE_MONEY,  TYPE_PHONE,  TYPE_SPRAYCAN, TYPE_TAPE};
+	unsigned const types_desk    [11] = {TYPE_FLASHLIGHT, TYPE_PAPER,  TYPE_DRINK_CAN, TYPE_STAPLER,    TYPE_BOOK, TYPE_KEY,     TYPE_BOTTLE, TYPE_MONEY,  TYPE_PHONE,  TYPE_SPRAYCAN, TYPE_TAPE};
+	unsigned const types_attic   [11] = {TYPE_BOX,        TYPE_PAPER,  TYPE_PEN,       TYPE_PEN,        TYPE_BOOK, TYPE_KEY,     TYPE_BOTTLE, TYPE_BOX,    TYPE_BOOK,   TYPE_SPRAYCAN, TYPE_TAPE};
+	unsigned const types_kcabinet[11] = {TYPE_FLASHLIGHT, TYPE_BOX,    TYPE_PEN,       TYPE_PEN,        TYPE_BOOK, TYPE_PLATE,   TYPE_BOTTLE, TYPE_BOTTLE, TYPE_SILVER, TYPE_SPRAYCAN, TYPE_TAPE};
+	unsigned const types_fcabinet[11] = {TYPE_BOX,        TYPE_PAPER,  TYPE_PEN,       TYPE_PEN,        TYPE_BOOK, TYPE_STAPLER, TYPE_PAPER,  TYPE_BOOK,   TYPE_TAPE,   TYPE_STAPLER,  TYPE_TAPE};
 	unsigned obj_type(0);
 	if (c.in_attic())                 {obj_type = types_attic   [type_ix];} // custom object overrides for attic item drawers
 	else if (c.type == TYPE_DESK)     {obj_type = types_desk    [type_ix];}
@@ -1421,7 +1421,7 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 		}
 		break;
 	}
-	case TYPE_BOTTLE: // bottle
+	case TYPE_BOTTLE: // bottle, on its side
 	{
 		bool const dim(c.dim ^ bool(per_drawer_ix & 1)); // random orient, but consistent across the items in the drawer
 		float const length(rgen.rand_uniform(0.7, 0.9)*min(((c.type == TYPE_COUNTER) ? 2.7f : 1.8f)*drawer_dz, min(sz.x, sz.y)));
@@ -1432,7 +1432,15 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 		set_rand_pos_for_sz(obj, dim, length, diameter, rgen);
 		break;
 	}
-	//case TYPE_DRINK_CAN: {} // drink can - not yet added
+	case TYPE_DRINK_CAN: // drink can, vertical
+	{
+		float const height(min(0.25*c.dz(), 0.9*drawer.dz())), diameter(0.53*height);
+		obj = room_object_t(drawer, TYPE_DRINK_CAN, c.room_id, rgen.rand_bool(), rgen.rand_bool(), 0, 1.0, SHAPE_CYLIN); // random orient
+		obj.obj_id = rgen.rand();
+		obj.z2()   = obj.z1() + height;
+		set_rand_pos_for_sz(obj, 0, diameter, diameter, rgen);
+		break;
+	}
 	case TYPE_MONEY: // money
 	{
 		float const length(0.135*c.dz()), width(2.35*length);
