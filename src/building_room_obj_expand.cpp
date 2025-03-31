@@ -288,14 +288,14 @@ void building_room_geom_t::add_hangers_and_clothing(float window_vspacing, unsig
 bool add_cabinet_objects(room_object_t const &c, vect_room_object_t &objects) { // called on cabinets, counters, kitchen sinks, and bathroom vanities
 	rand_gen_t rgen(c.create_rgen());
 	vect_cube_t &cubes(get_temp_cubes());
-	float const wall_thickness(0.04*0.95*c.dz()); // cabinet height is 95% of total; the other 5% is the top surface
-	float const overhang(0.05*c.get_depth()), light_amt(0.25*c.light_amt);
+	bool const is_vanity(c.type == TYPE_VANITY), in_kitchen(!is_vanity), is_counter(c.type == TYPE_COUNTER || c.type == TYPE_KSINK || is_vanity);
+	float const wall_thickness(0.04*(is_counter ? 0.95 : 1.0)*c.dz()); // cabinet height is 95% of total counter; the other 5% is the top surface
+	float const light_amt(0.25*c.light_amt);
 	cube_t interior(c), dishwasher;
-	interior.d[c.dim][c.dir] -= (c.dir ? 1.0 : -1.0)*overhang; // subtract front overhang
+	if (is_counter) {interior.d[c.dim][c.dir] -= (c.dir ? 1.0 : -1.0)*0.05*c.get_depth();} // subtract front overhang
 	interior.expand_by(-wall_thickness);
 	vector3d const c_sz(interior.get_size());
 	unsigned const sz_ratio(round_fp(c_sz[!c.dim]/c_sz.z));
-	bool const is_vanity(c.type == TYPE_VANITY), in_kitchen(!is_vanity), is_counter(c.type == TYPE_COUNTER || c.type == TYPE_KSINK || is_vanity);
 
 	if (c.type == TYPE_KSINK && get_dishwasher_for_ksink(c, dishwasher)) { // avoid placing objects that overlap the dishwasher
 		dishwasher.d[c.dim][!c.dir] = c.d[c.dim][!c.dir]; // extend to the back of the cabinet
