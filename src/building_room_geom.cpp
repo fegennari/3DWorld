@@ -4777,7 +4777,7 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale, boo
 		room_object_t cabinet(c);
 		cabinet.z2() = top.z1();
 		//cabinet.expand_in_dim(!dim, -overhang); // add side overhang: disable to allow cabinets to be flush with objects
-		cabinet.d[dim][dir] -= dir_sign*overhang; // add front overhang
+		cabinet.d[dim][dir] -= dir_sign*overhang; // subtract front overhang
 		if (has_dishwasher) {add_cabinet(split_cabinet_at_dishwasher(cabinet, dishwasher), tscale, inc_lg, inc_sm);}
 		add_cabinet(cabinet, tscale, inc_lg, inc_sm); // draw the wood part
 
