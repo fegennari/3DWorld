@@ -23,8 +23,12 @@ head_bob_amount 0.04
 #player_start -2.95222 2.68602 -4.79387 # location near a mall
 #player_start -7.52293 -4.31459 -4.96527 # location near a factory
 #player_start -5.40119 -4.19905 -4.77675 # location near a warehouse
+#player_start -5.07721 -3.919 -4.72459 # location near a warehouse V2
 #player_start -11.2919 4.2314 -5.16728 # location near a city hospital
 #player_start -41.8632 -3.30429 -6.1543 # location near a non-city hospital
+#player_start -8.60219 -6.29122 -4.957 # location near a school
+#player_start -38.062 -8.43648 -5.67723 # location near a school
+#player_start 24.0 0.0 0.0 # location near wind turbines
 
 buildings tt_only 1
 #buildings infinite_buildings     1 # enables building tiles
