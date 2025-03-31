@@ -2735,26 +2735,41 @@ void building_room_geom_t::add_warning_light(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_pallet(room_object_t const &c) {
+	tid_nm_pair_t const nail_tex(get_ibeam_tid(), 0.0, 0);
+	get_material(nail_tex, 0, 0, 1); // make sure it's in the map
 	rgeom_mat_t &wood_mat(get_wood_material(2.0/c.get_length(), 1, 0, 1)); // shadowed, small
+	rgeom_mat_t &nail_mat(get_material(nail_tex, 0, 0, 1)); // unshadowed, small
 	point const origin(c.get_llc());
 	colorRGBA const stringer_color(apply_light_color(c)), board_color(apply_light_color(c, colorRGBA(0.8, 0.6, 0.4))); // stringer is lighter than board
+	colorRGBA const nail_color(apply_light_color(c, colorRGBA(0.35, 0.35, 0.35))); // dark-medium gray
 	unsigned const num_stringers(3), num_boards(7);
 	float const length(c.get_length()), width(c.get_width()), height(c.dz());
 	float const board_thick(0.12*height), board_width(0.07*length), board_hwidth(0.5*board_width), stringer_thick(0.03*width), stringer_hthick(0.5*stringer_thick);
-	float const stringer_spacing((width - stringer_thick)/(num_stringers - 1)), board_spacing((length - board_width)/(num_boards - 1));
+	float const stringer_spacing((width - stringer_thick)/(num_stringers - 1)), board_spacing((length - board_width)/(num_boards - 1)), nail_radius(0.25*stringer_thick);
+	float const first_strpinger_pos(c.d[!c.dim][0] + stringer_hthick), first_board_pos(c.d[c.dim][0] + board_hwidth);
 	cube_t stringer(c);
 	stringer.expand_in_z(-board_thick);
 	
 	for (unsigned n = 0; n < num_stringers; ++n) { // stringers
-		set_wall_width(stringer, (c.d[!c.dim][0] + stringer_hthick + n*stringer_spacing), stringer_hthick, !c.dim);
+		set_wall_width(stringer, (first_strpinger_pos + n*stringer_spacing), stringer_hthick, !c.dim);
 		wood_mat.add_cube_to_verts(stringer, stringer_color, origin, EF_Z1); // skip bottom
 	}
 	for (unsigned n = 0; n < num_boards; ++n) { // boards
+		float const pos(first_board_pos + n*board_spacing);
+
 		for (unsigned d = 0; d < 2; ++d) { // {bottom, top}
 			cube_t board(c);
 			board.d[2][!d] = stringer.d[2][d]; // set zval
-			set_wall_width(board, (c.d[c.dim][0] + board_hwidth + n*board_spacing), board_hwidth, c.dim);
+			set_wall_width(board, pos, board_hwidth, c.dim);
 			wood_mat.add_cube_to_verts(board, board_color, origin, (d ? 0 : EF_Z1)); // skip bottom?
+		}
+		// add nails for each stringer to top board; is this too expensive?
+		point nail_center(0.0, 0.0, (c.z2() + 0.01*height));
+		nail_center[c.dim] = pos;
+
+		for (unsigned n = 0; n < num_stringers; ++n) {
+			nail_center[!c.dim] = (first_strpinger_pos + n*stringer_spacing);
+			nail_mat.add_vert_disk_to_verts(nail_center, nail_radius, 0, nail_color, 0, 0, 0, N_CYL_SIDES/2); // low detail (16 sides)
 		}
 	} // for n
 }

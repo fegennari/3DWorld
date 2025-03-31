@@ -239,11 +239,11 @@ void rgeom_mat_t::add_cylin_to_verts(point const &bot, point const &top, float b
 	if (two_sided) {add_inverted_triangles(itri_verts, indices, itris_start, ixs_start);}
 }
 
-void rgeom_mat_t::add_disk_to_verts(point const &pos, float radius, vector3d const &dir, colorRGBA const &color, bool swap_txy, bool inv_ts, bool inv_tt) {
+void rgeom_mat_t::add_disk_to_verts(point const &pos, float radius, vector3d const &dir, colorRGBA const &color, bool swap_txy, bool inv_ts, bool inv_tt, unsigned ndiv) {
 	assert(radius > 0.0);
 	color_wrapper const cw(color);
 	norm_comp const nc(dir);
-	unsigned const ndiv(N_CYL_SIDES), itris_start(itri_verts.size());
+	unsigned const itris_start(itri_verts.size());
 	float const css(-1.0*TWO_PI/(float)ndiv), sin_ds(sin(css)), cos_ds(cos(css));
 	float sin_s(0.0), cos_s(1.0);
 	vector3d const v1(cross_product(dir, (fabs(dir.x) > fabs(dir.y) ? plus_y : plus_x)).get_norm()), v2(cross_product(dir, v1).get_norm());
