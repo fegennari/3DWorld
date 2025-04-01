@@ -381,13 +381,25 @@ bool add_cabinet_objects(room_object_t const &c, vect_room_object_t &objects) { 
 	unsigned const max_bottles(3 + 2*sz_ratio), num_bottles(rgen.rand() % max_bottles); // wider cabinet has more bottles
 
 	for (unsigned n = 0; n < num_bottles; ++n) {
-		float const bottle_height(sz_scale*rgen.rand_uniform(0.4, 0.65)), bottle_radius(sz_scale*rgen.rand_uniform(0.07, 0.1));
+		float const bottle_height(sz_scale*rgen.rand_uniform(0.45, 0.65)), bottle_radius(sz_scale*rgen.rand_uniform(0.075, 0.1));
 		if (min(c_sz.x, c_sz.y) < 3.0*bottle_radius) continue; // cabinet not wide/deep enough to add this bottle
 		cube_t bottle;
 		gen_xy_pos_for_round_obj(bottle, interior, bottle_radius, bottle_height, 1.5*bottle_radius, rgen, 1); // place_at_z1=1
 		room_object_t obj(bottle, TYPE_BOTTLE, c.room_id, 0, 0, flags, light_amt, SHAPE_CYLIN); // vertical
 		bool const allow_medicine(rgen.rand_bool()); // medicine is half as common
 		obj.set_as_bottle(rgen.rand(), (allow_medicine ? (unsigned)NUM_BOTTLE_TYPES : (unsigned)BOTTLE_TYPE_MEDS)-1, 1); // all bottle types, no_empty=1
+		add_if_not_intersecting(obj, objects, cubes);
+	}
+	// add drink cans
+	unsigned const max_cans(2 + 2*sz_ratio), num_cans(rgen.rand() % max_cans); // wider cabinet has more cans
+
+	for (unsigned n = 0; n < num_cans; ++n) {
+		float const can_height(0.4*sz_scale), can_radius(0.26*can_height);
+		if (min(c_sz.x, c_sz.y) < 3.0*can_radius) continue; // cabinet not wide/deep enough to add this can
+		cube_t can;
+		gen_xy_pos_for_round_obj(can, interior, can_radius, can_height, 1.25*can_radius, rgen, 1); // place_at_z1=1
+		room_object_t obj(can, TYPE_DRINK_CAN, c.room_id, 0, 0, flags, light_amt, SHAPE_CYLIN); // vertical
+		obj.obj_id = rgen.rand(); // random can type
 		add_if_not_intersecting(obj, objects, cubes);
 	}
 	return (cubes.size() > start_num_cubes); // returns true if some object was added
