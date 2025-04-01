@@ -2316,6 +2316,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	unsigned draw_parts_mask(0);
 	bool room_with_stairs(0);
 	cube_t cont_part; // part containing the point
+	cube_t door_part_clamp_cube;
 
 	if (only_cont_pt_in) {
 		cont_part        = get_part_containing_pt(only_cont_pt);
@@ -2397,6 +2398,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 						break;
 					} // for d
 					if (skip || clamp_cube == nullptr) continue; // skip if adj in neither dim, always skip (but could check chained adj case)
+					if (clamp_cube) {door_part_clamp_cube = *clamp_cube;} // may need to clamp door as well; likely only have one of these
 				}
 			}
 			// skip windows on sides with doors, but only for buildings with windows
@@ -2466,7 +2468,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	if (bdraw.temp_tquads.empty()) {has_attic_window = 0;}
 	for (tquad_with_ix_t const &window : bdraw.temp_tquads) {bdraw.add_tquad(*this, window, bcube, tex, color);}
 	// if camera is inside this building, cut out holes so that the exterior doors show through
-	if (cut_door_holes) {cut_holes_for_ext_doors(bdraw, only_cont_pt, draw_parts_mask);}
+	if (cut_door_holes) {cut_holes_for_ext_doors(bdraw, only_cont_pt, draw_parts_mask, door_part_clamp_cube);}
 }
 
 void building_t::get_all_drawn_window_verts_as_quads(vect_vnctcc_t &verts) const { // for interior drawing
@@ -2476,7 +2478,7 @@ void building_t::get_all_drawn_window_verts_as_quads(vect_vnctcc_t &verts) const
 	assert((verts.size() & 3) == 0); // must be a multiple of 4
 }
 
-void building_t::cut_holes_for_ext_doors(building_draw_t &bdraw, point const &contain_pt, unsigned draw_parts_mask) const {
+void building_t::cut_holes_for_ext_doors(building_draw_t &bdraw, point const &contain_pt, unsigned draw_parts_mask, cube_t const &clamp_cube) const {
 	if (doors.empty()) return;
 	float const floor_spacing(get_window_vspace());
 	vector3d const xlate(get_camera_coord_space_xlate());
@@ -2490,7 +2492,8 @@ void building_t::cut_holes_for_ext_doors(building_draw_t &bdraw, point const &co
 		bool contained(0);
 
 		for (auto i = parts.begin(); i != parts_end; ++i) {
-			if (!i->intersects(door_bcube)) continue;
+			if (!i->intersects_no_adj(door_bcube)) continue;
+			if (!clamp_cube.is_all_zeros() && i->contains_cube(clamp_cube) && !clamp_cube.intersects(door_bcube)) continue; // door outside clamped part
 			contained = ((draw_parts_mask & (1<<(i-parts.begin()))) != 0);
 			if (contain_pt.z > (door_bcube.z1() + floor_spacing) && !i->contains_pt(contain_pt)) {contained = 0;} // camera in a different part on a floor above the door
 			break;
