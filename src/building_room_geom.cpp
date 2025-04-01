@@ -1410,10 +1410,10 @@ void building_room_geom_t::add_obj_with_top_texture(room_object_t const &c, stri
 	unsigned const skip_faces(c.is_hanging() ? EF_Z2 : EF_Z12); // hanging keyboards nad laptops must draw the Z1 face
 	get_untextured_material(1, 0, is_small).add_cube_to_verts_untextured(c, apply_light_color(c, sides_color), skip_faces); // sides and maybe bottom, shadows
 }
-void building_room_geom_t::add_obj_with_front_texture(room_object_t const &c, string const &texture_name, colorRGBA const &sides_color, bool is_small) {
+void building_room_geom_t::add_obj_with_front_texture(room_object_t const &c, string const &texture_name, colorRGBA const &front_color, colorRGBA const &sides_color, bool is_small) {
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_texture_by_name(texture_name), 0.0, 1), 1, 0, is_small)); // shadows
 	unsigned const front_mask(get_face_mask(c.dim, c.dir));
-	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, front_mask, !c.dim, (c.dim ^ c.dir ^ 1), 0); // front face only
+	mat.add_cube_to_verts(c, apply_light_color(c, front_color), zero_vector, front_mask, !c.dim, (c.dim ^ c.dir ^ 1), 0); // front face only
 	get_untextured_material(1, 0, is_small).add_cube_to_verts_untextured(c, apply_light_color(c, sides_color), ~front_mask); // sides, shadows
 }
 
@@ -1572,7 +1572,9 @@ void building_room_geom_t::add_mwave(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_vending_machine(room_object_t const &c) {
-	add_obj_with_front_texture(c, "interiors/vending_machine.jpg", c.color, 0); // is_small=0
+	bool const is_light(c.color == GRAY);
+	string const tex_fn(is_light ? "interiors/vending_machine_light.jpg" : "interiors/vending_machine_dark.jpg");
+	add_obj_with_front_texture(c, tex_fn, WHITE, c.color, 0); // front is white/textured, sides are gray; is_small=0
 }
 
 float get_med_cab_wall_thickness(room_object_t const &c) {return 0.15*c.get_length();}
@@ -6209,7 +6211,6 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_KEYBOARD: return BKGRAY;
 	case TYPE_COMPUTER: return BKGRAY;
 	case TYPE_MWAVE:    return GRAY;
-	case TYPE_VENDING:  return GRAY;
 	case TYPE_SHOWER:   return colorRGBA(WHITE, 0.25); // partially transparent - does this actually work?
 	case TYPE_BLINDS:   return texture_color(get_blinds_tid()).modulate_with(color);
 	case TYPE_LG_BALL:  return texture_color(get_ball_tid(*this));

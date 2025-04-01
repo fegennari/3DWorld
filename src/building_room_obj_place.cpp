@@ -866,7 +866,8 @@ void building_t::add_lounge_objs(rand_gen_t rgen, room_t const &room, float zval
 	}
 	if (rgen.rand_bool()) { // maybe add a vending machine
 		float const height(0.75*window_vspacing); // HxWxD = 72x39x32
-		place_obj_along_wall(TYPE_VENDING, room, height, vector3d(32, 39, 72), rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 0, 4, 0, GRAY);
+		colorRGBA const color(rgen.rand_bool() ? GRAY : GRAY_BLACK); // select between light and dark textures
+		place_obj_along_wall(TYPE_VENDING, room, height, vector3d(32, 39, 72), rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 0, 4, 0, color);
 	}
 	// add a TV on the wall (not on a table)
 	unsigned const tv_obj_ix(objs.size());

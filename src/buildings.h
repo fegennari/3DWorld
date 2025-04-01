@@ -1249,7 +1249,10 @@ struct building_room_geom_t {
 	void add_machine(room_object_t const &c, float floor_ceil_gap, bldg_industrial_info_t const *ind_info);
 	void add_keyboard(room_object_t const &c);
 	void add_obj_with_top_texture  (room_object_t const &c, std::string const &texture_name, colorRGBA const &sides_color, bool is_small=0);
-	void add_obj_with_front_texture(room_object_t const &c, std::string const &texture_name, colorRGBA const &sides_color, bool is_small=0);
+	void add_obj_with_front_texture(room_object_t const &c, std::string const &texture_name, colorRGBA const &front_color, colorRGBA const &sides_color, bool is_small=0);
+	void add_obj_with_front_texture(room_object_t const &c, std::string const &texture_name, colorRGBA const &sides_color, bool is_small=0) {
+		add_obj_with_front_texture(c, texture_name, c.color, sides_color, is_small); // front_color = c.color
+	}
 	void add_computer(room_object_t const &c);
 	void add_laptop(room_object_t const &c);
 	void add_pizza_box(room_object_t const &c);
