@@ -1630,7 +1630,9 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				if ((s.ix & 2) && s.z2() >= floor_above_z) { // cut above
 					cube_t cut(s);
 					set_cube_zvals(cut, ceil_above_z, floor_above_z);
-					bool const visible(is_rot_cube_visible(cut, xlate) && !(check_occlusion && check_obj_occluded(cut, camera_bs, oc))); // VFC + occlusion culling
+					bool visible(is_rot_cube_visible(cut, xlate) && !(check_occlusion && check_obj_occluded(cut, camera_bs, oc))); // VFC + occlusion culling
+					// light in adjacent room may be visible in player's room through stairs above; more conservative for houses since lights can be close to doors
+					visible |= (is_house && room.contains_cube(cut));
 					(visible ? cuts_above : cuts_above_nonvis).push_back(cut);
 					stairs_or_ramp_visible |= visible;
 				}
