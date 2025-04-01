@@ -228,7 +228,7 @@ bool building_t::add_waiting_room_objs(rand_gen_t rgen, room_t const &room, floa
 	for (unsigned n = 0; n < num_chairs; ++n) {
 		unsigned const chair_obj_ix(objs.size());
 		if (!place_obj_along_wall(TYPE_CHAIR, room, chair_height, chair_sz, rgen, zval, room_id, tot_light_amt, chair_place_area, objs_start,
-			1.0, 0, 4, 0, ccolor, 0, SHAPE_CUBE, 0.25*chair_height)) break; // end when failed to place
+			1.0, 0, 4, 0, ccolor, 0, SHAPE_CUBE, 0.4*chair_height)) break; // end when failed to place
 		assert(chair_obj_ix < objs.size());
 		if (is_plastic) {objs[chair_obj_ix].item_flags = 1;} // flag as plastic
 	}
@@ -236,12 +236,16 @@ bool building_t::add_waiting_room_objs(rand_gen_t rgen, room_t const &room, floa
 	return 1;
 }
 
-bool building_t::add_exam_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start) {
+bool building_t::add_exam_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix,
+	float tot_light_amt, unsigned objs_start, colorRGBA const &chair_color)
+{
 	float const /*floor_spacing(get_window_vspace()),*/ wall_thickness(get_wall_thickness());
 	cube_t room_bounds(get_walkable_room_bounds(room)), place_area(room_bounds);
 	place_area.expand_by(-1.0*wall_thickness); // add extra padding, since bed models are slightly different sizes
 	if (!place_model_along_wall(OBJ_MODEL_HOSP_BED, TYPE_HOSP_BED, room, 0.42, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.5)) return 0;
 	// TODO: one small desk with computer and rotating stool, equipment, etc.
+	add_desk_to_room(rgen, room, vect_cube_t(), chair_color, zval, room_id, tot_light_amt, objs_start, 0, 0, 0, 1); // force_computer=1
+	place_model_along_wall(OBJ_MODEL_BAR_STOOL, TYPE_BAR_STOOL, room, 0.4, rgen, zval, room_id, tot_light_amt, place_area, objs_start);
 	add_numbered_door_sign("Exam ", room, zval, room_id, floor_ix);
 	return 1;
 }

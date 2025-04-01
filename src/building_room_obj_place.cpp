@@ -454,8 +454,8 @@ bool building_t::is_room_office_bathroom(room_t &room, float zval, unsigned floo
 	return 0;
 }
 
-bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube_t const &blockers, colorRGBA const &chair_color,
-	float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement, unsigned desk_ix, bool no_computer)
+bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube_t const &blockers, colorRGBA const &chair_color, float zval,
+	unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement, unsigned desk_ix, bool no_computer, bool force_computer)
 {
 	cube_t const room_bounds(get_walkable_room_bounds(room));
 	float const vspace(get_window_vspace());
@@ -485,7 +485,7 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 		objs.push_back(desk);
 		set_obj_id(objs);
 		objs.back().obj_id += 123*desk_ix; // set even more differently per-desk so that they have different drawer contents
-		bool const add_computer(!no_computer && building_obj_model_loader.is_model_valid(OBJ_MODEL_TV) && rgen.rand_bool());
+		bool const add_computer(!no_computer && building_obj_model_loader.is_model_valid(OBJ_MODEL_TV) && (force_computer || rgen.rand_bool()));
 
 		if (add_computer) {
 			// add a computer monitor using the TV model

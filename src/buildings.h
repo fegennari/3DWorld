@@ -2635,8 +2635,8 @@ private:
 	void shorten_chairs_in_region(cube_t const &region, unsigned objs_start);
 	void add_trashcan_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool check_last_obj);
 	bool add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement);
-	bool add_desk_to_room    (rand_gen_t rgen, room_t const &room, vect_cube_t const &blockers, colorRGBA const &chair_color,
-		float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement, unsigned desk_ix=0, bool no_computer=0);
+	bool add_desk_to_room    (rand_gen_t rgen, room_t const &room, vect_cube_t const &blockers, colorRGBA const &chair_color, float zval,
+		unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement, unsigned desk_ix=0, bool no_computer=0, bool force_computer=0);
 	void add_papers_to_surface(cube_t const &c, bool dim, bool dir, unsigned max_num, rand_gen_t &rgen, unsigned room_id, float tot_light_amt, cube_t const &avoid=cube_t());
 	void add_pens_pencils_to_surface(cube_t const &c, bool dim, bool dir, unsigned max_num, rand_gen_t &rgen, unsigned room_id, float tot_light_amt, cube_t const &avoid=cube_t());
 	void add_filing_cabinet_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
@@ -2664,7 +2664,8 @@ private:
 	bool add_hospital_room_objs (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start, int &nested_room_ix);
 	bool add_waiting_room_objs  (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start,
 		colorRGBA const &chair_color);
-	bool add_exam_room_objs     (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start);
+	bool add_exam_room_objs     (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start,
+		colorRGBA const &chair_color);
 	bool add_operating_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start);
 	float add_flooring       (room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned flooring_type);
 	bool add_bathroom_objs   (rand_gen_t rgen, room_t &room, float &zval, unsigned room_id, float tot_light_amt,
