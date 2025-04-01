@@ -4780,8 +4780,8 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale, boo
 		cabinet.z2() = top.z1();
 		//cabinet.expand_in_dim(!dim, -overhang); // add side overhang: disable to allow cabinets to be flush with objects
 		cabinet.d[dim][dir] -= dir_sign*overhang; // subtract front overhang
-		if (has_dishwasher) {add_cabinet(split_cabinet_at_dishwasher(cabinet, dishwasher), tscale, inc_lg, inc_sm);}
-		add_cabinet(cabinet, tscale, inc_lg, inc_sm); // draw the wood part
+		if (has_dishwasher) {add_cabinet(split_cabinet_at_dishwasher(cabinet, dishwasher), c, tscale, inc_lg, inc_sm);}
+		add_cabinet(cabinet, c, tscale, inc_lg, inc_sm); // draw the wood part
 
 		if (is_vanity) { // add top sides overhang
 			for (unsigned d = 0; d < 2; ++d) {
@@ -4995,7 +4995,8 @@ void get_cabinet_or_counter_doors(room_object_t const &c, vect_cube_t &doors, ve
 	get_cabinet_doors(cabinet, doors, drawers, 0); // front_only=0
 }
 
-void building_room_geom_t::add_cabinet(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm) { // for kitchens
+// parent is the containing object such as the counter or vanity
+void building_room_geom_t::add_cabinet(room_object_t const &c, room_object_t const &parent, float tscale, bool inc_lg, bool inc_sm) { // for kitchens
 	assert(c.is_strictly_normalized());
 	bool const dim(c.dim), dir(c.dir);
 	bool const any_doors_open(c.drawer_flags > 0), is_counter(c.type == TYPE_COUNTER), is_vanity(c.type == TYPE_VANITY); // Note: counter does not include section with sink
@@ -5027,14 +5028,14 @@ void building_room_geom_t::add_cabinet(room_object_t const &c, float tscale, boo
 			
 			if (doors.size() > 1) { // draw drawer dividers
 				bool const has_sink(c.type == TYPE_KSINK || is_vanity);
-				cube_t const sink(has_sink ? get_sink_cube(c) : cube_t());
+				cube_t const sink(has_sink ? get_sink_cube(parent) : cube_t());
 				unsigned const div_skip_faces(get_skip_mask_for_xy(dim) | EF_Z12); // only draw the sides
 				float const wall_hthick(0.02*depth);
 				cube_t divider(c);
 				divider.d[dim][dir] -= (dir ? 1.0 : -1.0)*wall_hthick;
 				static vect_room_object_t objects;
 				objects.clear();
-				add_cabinet_objects(c, objects); // get cabinet objects; only needed when player opens a door, so not perf critical
+				add_cabinet_objects(parent, objects); // get cabinet objects; only needed when player opens a door, so not perf critical
 
 				for (room_object_t &i : objects) {
 					if (i.type == TYPE_PAN) {i.copy_from(get_pan_bcube_inc_handle(i));} // include pan handle

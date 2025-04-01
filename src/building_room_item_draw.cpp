@@ -939,7 +939,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		case TYPE_CUBICLE: add_cubicle (*i, tscale); break;
 		case TYPE_STALL:   add_br_stall(*i); break;
 		case TYPE_COUNTER: add_counter (*i, tscale, 1, 0); break; // lg
-		case TYPE_CABINET: add_cabinet (*i, tscale, 1, 0); break; // lg
+		case TYPE_CABINET: add_cabinet (*i, *i, tscale, 1, 0); break; // parent is self; lg
 		case TYPE_KSINK:   add_counter (*i, tscale, 1, 0); break; // counter with kitchen  sink; lg
 		case TYPE_BRSINK:  add_counter (*i, tscale, 1, 0); break; // counter with bathroom sink; lg
 		case TYPE_VANITY:  add_counter (*i, tscale, 1, 0); break; // counter with bathroom sink; lg
@@ -1083,7 +1083,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_PAN:       add_pan(c); break;
 		case TYPE_COUNTER: add_counter (c, tscale, 0, 1); break; // sm
 		case TYPE_KSINK:   add_counter (c, tscale, 0, 1); break; // sm
-		case TYPE_CABINET: add_cabinet (c, tscale, 0, 1); break; // sm
+		case TYPE_CABINET: add_cabinet (c, c, tscale, 0, 1); break; // parent is self; sm
 		case TYPE_VANITY:  add_counter (c, tscale, 0, 1); break; // sm
 		case TYPE_FCABINET: add_filing_cabinet(c,  0, 1); break; // sm
 		case TYPE_STAPLER: add_stapler(c); break;

@@ -300,6 +300,7 @@ bool add_cabinet_objects(room_object_t const &c, vect_room_object_t &objects) { 
 	if (c.type == TYPE_KSINK && get_dishwasher_for_ksink(c, dishwasher)) { // avoid placing objects that overlap the dishwasher
 		dishwasher.d[c.dim][!c.dir] = c.d[c.dim][!c.dir]; // extend to the back of the cabinet
 		dishwasher.expand_by_xy(wall_thickness);
+		dishwasher.z1() = c.z1(); // no gap at the bottom
 		cubes.push_back(dishwasher);
 	}
 	unsigned const start_num_cubes(cubes.size()), flags(RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_WAS_EXP);
