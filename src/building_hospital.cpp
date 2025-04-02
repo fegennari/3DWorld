@@ -215,14 +215,25 @@ bool building_t::add_waiting_room_objs(rand_gen_t rgen, room_t const &room, floa
 {
 	unsigned const counts[4] = {1, 1, 2, 2}; // 1-2
 	add_couches_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, counts);
-	unsigned const num_chairs = 20; // up to this many, whatever we can fit
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
+	cube_t const room_bounds(get_walkable_room_bounds(room));
+
+	if (rgen.rand_bool()) {
+		add_bookcase_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, 0); // add some reading material; is_basement=0
+	}
+	else { // add some snacks
+		cube_t vm_area(room_bounds);
+		vm_area.expand_by_xy(-0.25*wall_thickness);
+		add_vending_machine(rgen, room, zval, room_id, tot_light_amt, objs_start, vm_area);
+	}
+	add_wall_tv(rgen, room, zval, room_id, tot_light_amt, objs_start);
+	unsigned const num_chairs = 20; // up to this many, whatever we can fit
 	bool const is_plastic(rgen.rand_bool());
 	float const chair_hscale(is_plastic ? 0.44 : 0.4), chair_height(chair_hscale*floor_spacing), chair_xy_scale(0.2/chair_hscale);
 	vector3d const chair_sz(chair_xy_scale, chair_xy_scale, 1.0);
 	colorRGBA const ccolor(is_plastic ? get_pastic_chair_color(chair_color) : chair_color);
 	vect_room_object_t &objs(interior->room_geom->objs);
-	cube_t room_bounds(get_walkable_room_bounds(room)), chair_place_area(room_bounds);
+	cube_t chair_place_area(room_bounds);
 	chair_place_area.expand_by_xy(-wall_thickness);
 
 	for (unsigned n = 0; n < num_chairs; ++n) {
@@ -232,6 +243,8 @@ bool building_t::add_waiting_room_objs(rand_gen_t rgen, room_t const &room, floa
 		assert(chair_obj_ix < objs.size());
 		if (is_plastic) {objs[chair_obj_ix].item_flags = 1;} // flag as plastic
 	}
+	// TYPE_PLANT
+	// TYPE_CLOCK?
 	add_door_sign("Waiting Area", room, zval, room_id);
 	return 1;
 }
@@ -240,18 +253,28 @@ bool building_t::add_exam_room_objs(rand_gen_t rgen, room_t const &room, float z
 	float tot_light_amt, unsigned objs_start, colorRGBA const &chair_color)
 {
 	float const /*floor_spacing(get_window_vspace()),*/ wall_thickness(get_wall_thickness());
-	cube_t room_bounds(get_walkable_room_bounds(room)), place_area(room_bounds);
+	cube_t place_area(get_walkable_room_bounds(room));
 	place_area.expand_by(-1.0*wall_thickness); // add extra padding, since bed models are slightly different sizes
 	if (!place_model_along_wall(OBJ_MODEL_HOSP_BED, TYPE_HOSP_BED, room, 0.42, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.5)) return 0;
-	// TODO: one small desk with computer and rotating stool, equipment, etc.
+	// TODO: should be a small desk, equipment, etc.
 	add_desk_to_room(rgen, room, vect_cube_t(), chair_color, zval, room_id, tot_light_amt, objs_start, 0, 0, 0, 1); // force_computer=1
+	place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, room, 0.45, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.6);
+	// should be a short rotating stool?
 	place_model_along_wall(OBJ_MODEL_BAR_STOOL, TYPE_BAR_STOOL, room, 0.4, rgen, zval, room_id, tot_light_amt, place_area, objs_start);
+	add_filing_cabinet_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);
+	// TYPE_CONF_PHONE?
+	// TYPE_TCAN?
 	add_numbered_door_sign("Exam ", room, zval, room_id, floor_ix);
 	return 1;
 }
 
 bool building_t::add_operating_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start) {
-	// TODO: operating table, big light, equipment
+	// TODO: operating table, big light, equipment (with TYPE_VALVE/TYPE_GAUGE), TYPE_MACHINE?
+	float const wall_thickness(get_wall_thickness());
+	cube_t place_area(get_walkable_room_bounds(room));
+	place_area.expand_by(-1.0*wall_thickness); // add extra padding
+	// placeholder bed; should be in the center of the room; or a table?
+	if (!place_model_along_wall(OBJ_MODEL_HOSP_BED, TYPE_HOSP_BED, room, 0.42, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.5)) return 0;
 	//add_numbered_door_sign("OR ", room, zval, room_id, floor_ix);
 	return 0;
 }

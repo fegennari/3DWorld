@@ -864,20 +864,10 @@ void building_t::add_lounge_objs(rand_gen_t rgen, room_t const &room, float zval
 			}
 		}
 	}
-	if (rgen.rand_bool()) { // maybe add a vending machine
-		float const height(0.75*window_vspacing); // HxWxD = 72x39x32
-		colorRGBA const color(rgen.rand_bool() ? GRAY : GRAY_BLACK); // select between light and dark textures
-		place_obj_along_wall(TYPE_VENDING, room, height, vector3d(32, 39, 72), rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 0, 4, 0, color);
-	}
+	if (rgen.rand_bool()) {add_vending_machine(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area);}
 	// add a TV on the wall (not on a table)
-	unsigned const tv_obj_ix(objs.size());
-	float const tv_zval(zval + 0.3*window_vspacing);
-	
-	if (place_model_along_wall(OBJ_MODEL_TV, TYPE_TV, room, 0.5, rgen, tv_zval, room_id, tot_light_amt, room_area, objs_start, 4.0, 4, 1, BKGRAY, 1, RO_FLAG_HANGING)) {
-		offset_hanging_tv(objs[tv_obj_ix]);
-		assert(objs.back().type == TYPE_BLOCKER);
-		objs.back().z1() = zval; // extend blocker down to the floor so that we don't place objects such as fishtanks under the TV
-	}
+	add_wall_tv(rgen, room, zval, room_id, tot_light_amt, objs_start);
+
 	if (!is_lobby) { // place 1-2 bookcases
 		unsigned const num_bookcases(1 + (rgen.rand() & 1));
 		for (unsigned n = 0; n < num_bookcases; ++n) {add_bookcase_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, 0);} // is_basement=0
@@ -897,6 +887,23 @@ void building_t::add_lounge_objs(rand_gen_t rgen, room_t const &room, float zval
 	// add 1-4 plants
 	unsigned const num_plants(1 + (rgen.rand() & 3));
 	add_plants_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, num_plants);
+}
+
+bool building_t::add_vending_machine(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, cube_t const &place_area) {
+	float const height(0.75*get_window_vspace()); // HxWxD = 72x39x32
+	colorRGBA const color(rgen.rand_bool() ? GRAY : GRAY_BLACK); // select between light and dark textures
+	return place_obj_along_wall(TYPE_VENDING, room, height, vector3d(32, 39, 72), rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 0, 4, 0, color);
+}
+bool building_t::add_wall_tv(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	vect_room_object_t &objs(interior->room_geom->objs);
+	unsigned const tv_obj_ix(objs.size());
+	float const z1(zval + 0.3*get_window_vspace());
+	cube_t const room_area(get_walkable_room_bounds(room)); // right against the wall
+	if (!place_model_along_wall(OBJ_MODEL_TV, TYPE_TV, room, 0.5, rgen, z1, room_id, tot_light_amt, room_area, objs_start, 4.0, 4, 1, BKGRAY, 1, RO_FLAG_HANGING)) return 0;
+	offset_hanging_tv(objs[tv_obj_ix]);
+	assert(objs.back().type == TYPE_BLOCKER);
+	objs.back().z1() = zval; // extend blocker down to the floor so that we don't place objects such as fishtanks under the TV
+	return 1;
 }
 
 bool building_t::check_valid_closet_placement(cube_t const &c, room_t const &room, unsigned objs_start, unsigned bed_ix, float min_bed_space) const {
