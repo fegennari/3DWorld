@@ -1462,6 +1462,13 @@ tid_nm_pair_t building_t::get_attic_texture() const {
 	building_mat_t const &mat(get_material());
 	return tid_nm_pair_t(tid, get_normal_map_for_bldg_tid(tid), 0.25*mat.house_floor_tex.tscale_x, 0.25*mat.house_floor_tex.tscale_y);
 }
+tid_nm_pair_t building_t::get_mall_or_retail_texture() const {
+	float const tscale(get_material().floor_tex.tscale_x);
+	bool const tid_set((mat_ix + real_num_parts + interior->rooms.size()) & 1);
+	if (tid_set) {return tid_nm_pair_t(building_texture_mgr.get_granite_floor_tid(), 0.4*tscale);} // no normal map
+	else         {return tid_nm_pair_t(building_texture_mgr.get_marble_floor_tid (), 0.6*tscale);} // no normal map
+	//return tid_nm_pair_t(building_texture_mgr.get_tile_floor_tid(), building_texture_mgr.get_tile_floor_nm_tid(), 0.125*tscale, 0.125*tscale);
+}
 colorRGBA building_t::get_floor_tex_and_color(cube_t const &floor_cube, tid_nm_pair_t &tex) const {
 	if (has_attic() && floor_cube.z2() > interior->attic_access.z1()) { // attic floor
 		tex = get_attic_texture();
@@ -1477,17 +1484,8 @@ colorRGBA building_t::get_floor_tex_and_color(cube_t const &floor_cube, tid_nm_p
 	}
 	else { // office building
 		bool const in_ext_basement(in_basement && (!get_basement().contains_cube_xy(floor_cube) || floor_cube.z2() < bcube.z1()));
-
-		if ((in_ext_basement && is_inside_mall_stores(floor_cube.get_cube_center())) || (has_retail() && floor_cube.z1() == ground_floor_z1)) { // retail or mall
-			float const tscale(mat.floor_tex.tscale_x);
-			unsigned const tid_set(1 + ((mat_ix + real_num_parts + interior->rooms.size()) & 1)); // select one of case {1, 2}
-			switch (tid_set) {
-			// stretch the texture out for large tiles for tile floors
-			case 0: tex = tid_nm_pair_t(building_texture_mgr.get_tile_floor_tid   (), building_texture_mgr.get_tile_floor_nm_tid(), 0.125*tscale, 0.125*tscale); break;
-			case 1: tex = tid_nm_pair_t(building_texture_mgr.get_marble_floor_tid (), 0.6*tscale); break; // no normal map
-			case 2: tex = tid_nm_pair_t(building_texture_mgr.get_granite_floor_tid(), 0.4*tscale); break; // no normal map
-			}
-		}
+		bool const retail_or_mall((in_ext_basement && is_inside_mall_stores(floor_cube.get_cube_center())) || (has_retail() && floor_cube.z1() == ground_floor_z1));
+		if (retail_or_mall) {tex = get_mall_or_retail_texture();}
 		else if (in_basement && (has_parking_garage || in_ext_basement)) {tex = get_concrete_texture();} // parking garage or extended basement is concrete
 		else if (is_industrial()) {tex = get_concrete_texture();} // industrial floor is always concrete; could also use a dark tile texture
 		else {tex = mat.floor_tex;} // office block

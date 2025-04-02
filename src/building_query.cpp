@@ -2096,23 +2096,48 @@ bool building_t::get_interior_color_at_xy(point const &pos_in, colorRGBA &color)
 	if (!interior || !is_cube() || is_rotated()) return 0; // these cases aren't handled
 	bool const player_in_this_building(camera_in_building && player_building == this);
 	if (!player_in_this_building) return 0; // not currently handled; maybe could allow this if the zoom level is high enough
-	point pos(pos_in); // set zval to the player's height if in this building, otherwise use the ground floor
-	pos.z = (player_in_this_building ? camera_pos.z : (ground_floor_z1 + get_floor_thickness()));
-	bool cont_in_part(0);
+	point const pos(pos_in.x, pos_in.y, camera_pos.z); // set zval to the player's height
+	bool cont_in_part(0), in_basement(0), in_ext_basement(0), in_sec_bldg(0);
 
 	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {
-		if (i->contains_pt(pos)) {cont_in_part = 1; break;} // only check zval if player in building
+		if (!i->contains_pt(pos)) continue;
+		cont_in_part = 1;
+		if (is_basement(i)) {in_basement = 1;}
+		else if (i >= get_real_parts_end()) {in_sec_bldg = 1;}
+		break; // only check zval if player in building
 	}
 	// check the extended basement; note that this doesn't check for the player inside a room, but the player shouldn't really be underground within the bcube otherwise;
 	// also note that we may not even get into this function if the ray doesn't intersect this building's above ground part
 	if (!cont_in_part && has_ext_basement() && interior->basement_ext_bcube.contains_pt(pos)) {
-		if (has_parking_garage) {cont_in_part = 1;} // parking garage + backrooms; fills the entire ext basement area
-		else {cont_in_part = (get_room_containing_pt(pos) >= 0);} // check for actual room containment
+		if (has_parking_garage) {cont_in_part = in_basement = in_ext_basement = 1;} // parking garage + backrooms; fills the entire ext basement area
+		else {cont_in_part = in_basement = in_ext_basement = (get_room_containing_pt(pos) >= 0);} // check for actual room containment
 	}
-	if (!cont_in_part) return 0;
+	if (!cont_in_part) {
+		if (has_attic() && pos.z > interior->attic_access.z1() && get_attic_part().contains_pt_xy(pos)) { // attic floor
+			color = texture_color(get_attic_texture().tid);
+			return 1;
+		}
+		return 0;
+	}
 	float const z1(pos.z - 1.05*CAMERA_RADIUS), z2(z1 + get_floor_ceil_gap()); // approx span of one floor, including objects on the floor
 	if (building_color_query_geom_cache.query_objs(*this, pos, z1, z2, color)) return 1;
-	color = (is_house ? LT_BROWN : GRAY); // floor
+	building_mat_t const &mat(get_material());
+	int tid(-1);
+
+	if (is_house) {
+		color = mat.house_floor_color;
+		if (in_sec_bldg) {tid = get_concrete_tid();} // garage or shed
+		else if (in_basement || in_ext_basement) {tid = mat.basement_floor_tex.tid;} // basement
+		else {tid = mat.house_floor_tex.tid;}
+	}
+	else { // office building
+		color = mat.floor_color;
+		if (in_ext_basement && has_mall()) {tid = get_mall_or_retail_texture().tid;} // mall; marble or granite
+		else if (has_retail() && pos.z < ground_floor_z1 + get_window_vspace()) {tid = get_mall_or_retail_texture().tid;} // retail; marble or granite
+		else if ((in_basement && has_parking_garage) || in_ext_basement || is_industrial()) {tid = get_concrete_tid();} // concrete
+		else {tid = mat.floor_tex.tid;} // office block
+	}
+	if (tid >= 0) {color = color.modulate_with(texture_color(tid));}
 	return 1;
 }
 
