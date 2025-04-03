@@ -218,14 +218,15 @@ bool building_t::add_waiting_room_objs(rand_gen_t rgen, room_t const &room, floa
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	cube_t const room_bounds(get_walkable_room_bounds(room));
 
-	if (rgen.rand_bool()) {
-		add_bookcase_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, 0); // add some reading material; is_basement=0
+	if (rgen.rand_bool()) { // add some reading material
+		add_bookcase_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, 0); // is_basement=0
 	}
 	else { // add some snacks
 		cube_t vm_area(room_bounds);
 		vm_area.expand_by_xy(-0.25*wall_thickness);
 		add_vending_machine(rgen, room, zval, room_id, tot_light_amt, objs_start, vm_area);
 	}
+	// TODO: can this block a door sign in a room with ring hallways?
 	add_wall_tv(rgen, room, zval, room_id, tot_light_amt, objs_start);
 	unsigned const num_chairs = 20; // up to this many, whatever we can fit
 	bool const is_plastic(rgen.rand_bool());
@@ -239,43 +240,91 @@ bool building_t::add_waiting_room_objs(rand_gen_t rgen, room_t const &room, floa
 	for (unsigned n = 0; n < num_chairs; ++n) {
 		unsigned const chair_obj_ix(objs.size());
 		if (!place_obj_along_wall(TYPE_CHAIR, room, chair_height, chair_sz, rgen, zval, room_id, tot_light_amt, chair_place_area, objs_start,
-			1.0, 0, 4, 0, ccolor, 0, SHAPE_CUBE, 0.4*chair_height)) break; // end when failed to place
+			1.0, 0, 4, 0, ccolor, 0, SHAPE_CUBE, 0.35*chair_height)) break; // end when failed to place
 		assert(chair_obj_ix < objs.size());
 		if (is_plastic) {objs[chair_obj_ix].item_flags = 1;} // flag as plastic
 	}
-	// TYPE_PLANT
-	// TYPE_CLOCK?
+	// add some more chairs to the center of the room
+	// TODO
+	add_clock_to_room_wall(rgen, room, zval, room_id, tot_light_amt, objs_start);
+	unsigned const num_plants(1 + rgen.rand_bool()); // add 1-2 plants
+	add_plants_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, num_plants);
 	add_door_sign("Waiting Area", room, zval, room_id);
+
+	// make sure doors start open and unlocked
+	for (door_stack_t const &ds : interior->door_stacks) {
+		if (!ds.is_connected_to_room(room_id)) continue;
+		assert(ds.first_door_ix < interior->doors.size());
+
+		for (unsigned dix = ds.first_door_ix; dix < interior->doors.size(); ++dix) {
+			door_t &door(interior->doors[dix]);
+			if (!ds.is_same_stack(door)) break; // moved to a different stack, done
+			if (door.z1() > zval || door.z2() < zval) continue; // wrong floor
+			door.locked   = 0;
+			door.open     = 1;
+			door.open_amt = 1.0;
+		}
+	} // for ds
 	return 1;
 }
 
 bool building_t::add_exam_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix,
 	float tot_light_amt, unsigned objs_start, colorRGBA const &chair_color)
 {
-	float const /*floor_spacing(get_window_vspace()),*/ wall_thickness(get_wall_thickness());
 	cube_t place_area(get_walkable_room_bounds(room));
-	place_area.expand_by(-1.0*wall_thickness); // add extra padding, since bed models are slightly different sizes
+	place_area.expand_by(-1.0*get_wall_thickness()); // add extra padding, since bed models are slightly different sizes
 	if (!place_model_along_wall(OBJ_MODEL_HOSP_BED, TYPE_HOSP_BED, room, 0.42, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.5)) return 0;
 	// TODO: should be a small desk, equipment, etc.
 	add_desk_to_room(rgen, room, vect_cube_t(), chair_color, zval, room_id, tot_light_amt, objs_start, 0, 0, 0, 1); // force_computer=1
+	//place_phone_on_obj(rgen, place_on, room_id, tot_light_amt, dim, dir); // place on the desk?
 	place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, room, 0.45, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.6);
 	// should be a short rotating stool?
 	place_model_along_wall(OBJ_MODEL_BAR_STOOL, TYPE_BAR_STOOL, room, 0.4, rgen, zval, room_id, tot_light_amt, place_area, objs_start);
 	add_filing_cabinet_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);
-	// TYPE_CONF_PHONE?
-	// TYPE_TCAN?
+	// the room should already have a trashcan, but we can add a second one for medical waste
+	add_trashcan_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, 0); // check_last_obj=0
 	add_numbered_door_sign("Exam ", room, zval, room_id, floor_ix);
 	return 1;
 }
 
 bool building_t::add_operating_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start) {
-	// TODO: operating table, big light, equipment (with TYPE_VALVE/TYPE_GAUGE), TYPE_MACHINE?
-	float const wall_thickness(get_wall_thickness());
+	// TODO: operating table, big light, equipment (with TYPE_VALVE/TYPE_GAUGE)
+	bool const long_dim(room.dx() < room.dy());
+	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_HOSP_BED)) return 0; // don't have a model of this type
+	float const floor_spacing(get_window_vspace()), height(0.42*floor_spacing);
+	vect_room_object_t &objs(interior->room_geom->objs);
+	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_HOSP_BED)); // D, W, H
+	point table_center(room.xc(), room.yc(), zval); // start at the center of the room
+	// determine table_dir based on door pos if in same dim
+	bool table_dir(rgen.rand_bool());
+	vect_door_stack_t doorways;
+	get_doorways_for_room(room, zval, doorways); // get interior doors
+
+	if (!doorways.empty()) { // should always be true
+		door_stack_t const door(doorways.front());
+		bool const door_dir(door.get_center_dim(door.dim) < table_center[door.dim]);
+		if (door.dim == long_dim) {table_dir = door_dir;} // feet facing the door
+		table_center[door.dim] += (door_dir ? 1.0 : -1.0)*0.5*door.get_width(); // move table back from the door
+	}
+	// place table if valid
+	cube_t op_table(table_center);
+	op_table.z2() += height;
+	op_table.expand_in_dim( long_dim, 0.5*height*(sz.x/sz.z));
+	op_table.expand_in_dim(!long_dim, 0.5*height*(sz.y/sz.z));
+	if (is_obj_placement_blocked(op_table, room, 1)) return 0; // inc_open_doors=1; no need to check for other objects since this is first
+	objs.emplace_back(op_table, TYPE_HOSP_BED, room_id, long_dim, table_dir, 0, tot_light_amt);
+	// add 1-2 machines
 	cube_t place_area(get_walkable_room_bounds(room));
-	place_area.expand_by(-1.0*wall_thickness); // add extra padding
-	// placeholder bed; should be in the center of the room; or a table?
-	if (!place_model_along_wall(OBJ_MODEL_HOSP_BED, TYPE_HOSP_BED, room, 0.42, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.5)) return 0;
-	//add_numbered_door_sign("OR ", room, zval, room_id, floor_ix);
-	return 0;
+	unsigned const num_machines(1 + rgen.rand_bool());
+
+	for (unsigned n = 0; n < num_machines; ++n) {
+		float const machine_height(rgen.rand_uniform(0.6, 0.8)*floor_spacing), xy_scale(rgen.rand_uniform(0.4, 0.7));
+		place_obj_along_wall(TYPE_MACHINE, room, machine_height, vector3d(xy_scale, xy_scale, 1.0), rgen, zval, room_id, tot_light_amt,
+			place_area, objs_start, 0.0, 0, 4, 0, WHITE, 1); // not_at_window=1
+	}
+	add_clock_to_room_wall(rgen, room, zval, room_id, tot_light_amt, objs_start);
+	add_numbered_door_sign("OR ", room, zval, room_id, floor_ix);
+	// TODO: make ceiling lights larger and round; if that's not possible, then add new lights
+	return 1;
 }
 
