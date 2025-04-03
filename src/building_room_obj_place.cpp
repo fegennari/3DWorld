@@ -533,7 +533,7 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 			drawers.d[dim][!dir] += dsign*0.55*drawers.get_sz_dim(dim); // apply approximate drawer extend
 			objs.emplace_back(drawers, TYPE_BLOCKER, room_id, dim, !dir, RO_FLAG_INVIS);
 		}
-		if (rgen.rand_float() > 0.05) { // 5% chance of no chair
+		if (!(is_house || is_office_bldg()) || rgen.rand_float() > 0.05) { // 5% chance of no chair for office buildings and houses
 			point chair_pos;
 			chair_pos.z = zval;
 			chair_pos[ dim] = c.d[dim][!dir];
