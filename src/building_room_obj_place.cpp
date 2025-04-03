@@ -1524,6 +1524,7 @@ bool building_t::place_obj_along_wall(room_object type, room_t const &room, floa
 		c2b.expand_in_dim(!dim, side_clearance); // side_clearance applies to other objects, stairs, and elevators; used with boxes
 		if (overlaps_other_room_obj(c2b, objs_start) || interior->is_blocked_by_stairs_or_elevator(c2b)) continue; // bad placement (Note: not using is_obj_placement_blocked())
 		c3.d[dim][!dir] += (dir ? -1.0 : 1.0)*obj_clearance; // smaller clearance value (without player diameter)
+		if (!place_area.contains_cube_xy(c3)) continue; // not enough clearance in place area
 
 		if (add_door_clearance) {
 			if (is_cube_close_to_doorway(c3, room, 0.0, 1)) continue; // bad placement
