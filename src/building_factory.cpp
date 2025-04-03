@@ -956,18 +956,26 @@ void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float 
 	add_floor_stains(rgen, place_area, zval, room_id, light_amt, objs_start, num_floor_stains, stain_rmax);
 } // end add_industrial_objs
 
-void building_t::add_industrial_office_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, unsigned floor, float tot_light_amt, unsigned objs_start) {
-	// add a clock on the wall
+void building_t::add_clock_to_room_wall(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	bool const digital(rgen.rand_bool());
 	float const floor_spacing(get_window_vspace()), clock_height((digital ? 0.08 : 0.16)*floor_spacing), clock_z1(zval + get_floor_ceil_gap() - 1.4*clock_height);
 	float const clock_width((digital ? 4.0 : 1.0)*clock_height), clock_depth((digital ? 0.05 : 0.08)*clock_width);
 	cube_t const place_area(get_walkable_room_bounds(room));
-	cube_t const &floor_area(get_industrial_area());
 	cube_t clock;
 	set_cube_zvals(clock, clock_z1, clock_z1+clock_height);
 
 	for (unsigned n = 0; n < 10; ++n) { // 10 attempts
-		bool const dim(rgen.rand_bool()), dir(room.d[dim][0] == floor_area.d[dim][0]); // interior wall
+		bool const dim(rgen.rand_bool());
+		bool dir(0);
+
+		if (is_industrial()) {
+			dir = (room.d[dim][0] == get_industrial_area().d[dim][0]); // interior wall
+		}
+		else {
+			dir = rgen.rand_bool();
+			if (classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT) {dir ^= 1;}
+			if (classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT) continue; // shouldn't happen
+		}
 		float const edge_space(max(1.5*clock_width, 0.25*room.get_sz_dim(!dim))); // somewhat centered
 		float const lo(place_area.d[!dim][0] + edge_space), hi(place_area.d[!dim][1] - edge_space);
 		if (lo >= hi) continue; // wall too short
@@ -981,6 +989,9 @@ void building_t::add_industrial_office_objs(rand_gen_t &rgen, room_t const &room
 		add_clock(clock, room_id, tot_light_amt, dim, !dir, digital);
 		break; // success
 	} // for n
+}
+void building_t::add_industrial_office_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	add_clock_to_room_wall(rgen, room, zval, room_id, tot_light_amt, objs_start);
 	// add boxes and crates
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const objs_pre(objs.size());

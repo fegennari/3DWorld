@@ -624,7 +624,7 @@ bool building_t::add_office_objs(rand_gen_t rgen, room_t const &room, vect_cube_
 	if (rgen.rand_float() < (is_house ? 0.25 : 0.75)) { // maybe place a filing cabinet along a wall; more likely for office buildings than houses
 		add_filing_cabinet_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);
 	}
-	if (!is_basement && is_industrial()) {add_industrial_office_objs(rgen, room, zval, room_id, floor, tot_light_amt, objs_start);} // industrial office
+	if (!is_basement && is_industrial()) {add_industrial_office_objs(rgen, room, zval, room_id, tot_light_amt, objs_start);} // industrial office
 	return 1;
 }
 
