@@ -585,7 +585,7 @@ void add_sign_outside_door(vect_room_object_t &objs, cube_t const &sign, string 
 	objs.emplace_back(sign, TYPE_SIGN, room_id, dim, dir, flags, sign_light_amt, SHAPE_CUBE, color); // technically should use hallway room_id
 	objs.back().obj_id = register_sign_text(text);
 }
-void building_t::add_door_sign(string const &text, room_t const &room, float zval, unsigned room_id, bool no_check_adj_walls) {
+void building_t::add_door_sign(string const &text, room_t const &room, float zval, unsigned room_id, bool no_check_adj_walls, cube_t const &avoid) {
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness()), half_wt(0.5*wall_thickness);
 	point const part_center(get_part_for_room(room).get_cube_center()), room_center(room.get_cube_center());
 	cube_t c(room);
@@ -619,6 +619,7 @@ void building_t::add_door_sign(string const &text, room_t const &room, float zva
 				if (overlaps_or_adj_int_window(sign)) continue; // can't place sign here
 			}
 		}
+		if (!avoid.is_all_zeros() && sign.intersects(avoid)) continue; // blocked - skip
 		unsigned const num_chars(text.size());
 		float const sign_hwidth((0.05 + 0.03*min(num_chars, 6U))*(place_above_door ? 1.5 : 1.0)); // relative to door width
 		sign.expand_in_dim(!i->dim, -(0.5 - sign_hwidth)*door_width); // shrink a bit

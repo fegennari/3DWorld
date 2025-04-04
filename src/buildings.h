@@ -2677,7 +2677,7 @@ private:
 	void add_bathroom_plumbing(room_object_t const &obj);
 	bool add_tp_roll         (cube_t const &room, unsigned room_id, float tot_light_amt, bool dim, bool dir, float length, float zval, float wall_pos, bool check_valid_pos=0);
 	bool divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, float zval, unsigned room_id, float tot_light_amt, unsigned floor);
-	void add_door_sign                (std::string const &text, room_t const &room, float zval, unsigned room_id, bool no_check_adj_walls=0);
+	void add_door_sign                (std::string const &text, room_t const &room, float zval, unsigned room_id, bool no_check_adj_walls=0, cube_t const &avoid=cube_t());
 	void add_numbered_door_sign       (std::string const &text, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, bool no_check_adj_walls=0);
 	void add_door_sign_remove_existing(std::string const &text, room_t const &room, float zval, unsigned room_id, unsigned objs_start);
 	void add_office_door_sign(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id);

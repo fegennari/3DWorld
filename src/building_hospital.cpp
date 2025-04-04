@@ -226,7 +226,8 @@ bool building_t::add_waiting_room_objs(rand_gen_t rgen, room_t const &room, floa
 		vm_area.expand_by_xy(-0.25*wall_thickness);
 		add_vending_machine(rgen, room, zval, room_id, tot_light_amt, objs_start, vm_area);
 	}
-	// TODO: can this block a door sign in a room with ring hallways?
+	// can this block a door sign in a room with ring hallways?
+	// there's not much we can do about that here, since the sign is part of another room that may either be before or after this one
 	add_wall_tv(rgen, room, zval, room_id, tot_light_amt, objs_start);
 	unsigned const num_chairs = 20; // up to this many, whatever we can fit
 	bool const is_plastic(rgen.rand_bool());
@@ -290,7 +291,7 @@ bool building_t::add_exam_room_objs(rand_gen_t rgen, room_t const &room, float z
 bool building_t::add_operating_room_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id,
 	unsigned floor_ix, float &tot_light_amt, unsigned objs_start, unsigned lights_start)
 {
-	// TODO: operating table, big light, equipment (with TYPE_VALVE/TYPE_GAUGE)
+	// TODO: operating table, equipment (with TYPE_VALVE/TYPE_GAUGE)
 	assert(lights_start <= objs_start);
 	bool const long_dim(room.dx() < room.dy());
 	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_HOSP_BED)) return 0; // don't have a model of this type
