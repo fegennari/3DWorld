@@ -231,7 +231,7 @@ bool building_t::add_waiting_room_objs(rand_gen_t rgen, room_t const &room, floa
 	add_wall_tv(rgen, room, zval, room_id, tot_light_amt, objs_start);
 	unsigned const num_chairs = 20; // up to this many, whatever we can fit
 	bool const is_plastic(rgen.rand_bool());
-	float const chair_hscale(is_plastic ? 0.44 : 0.4), chair_height(chair_hscale*floor_spacing), chair_xy_scale(0.2/chair_hscale);
+	float const chair_hscale(is_plastic ? 0.44 : 0.4), chair_height(chair_hscale*floor_spacing), chair_xy_scale(0.2/chair_hscale), chair_gap(0.35*chair_height);
 	vector3d const chair_sz(chair_xy_scale, chair_xy_scale, 1.0);
 	colorRGBA const ccolor(is_plastic ? get_pastic_chair_color(chair_color) : chair_color);
 	vect_room_object_t &objs(interior->room_geom->objs);
@@ -241,12 +241,43 @@ bool building_t::add_waiting_room_objs(rand_gen_t rgen, room_t const &room, floa
 	for (unsigned n = 0; n < num_chairs; ++n) {
 		unsigned const chair_obj_ix(objs.size());
 		if (!place_obj_along_wall(TYPE_CHAIR, room, chair_height, chair_sz, rgen, zval, room_id, tot_light_amt, chair_place_area, objs_start,
-			1.0, 0, 4, 0, ccolor, 0, SHAPE_CUBE, 0.35*chair_height)) break; // end when failed to place
+			1.0, 0, 4, 0, ccolor, 0, SHAPE_CUBE, chair_gap)) break; // end when failed to place
 		assert(chair_obj_ix < objs.size());
 		if (is_plastic) {objs[chair_obj_ix].item_flags = 1;} // flag as plastic
 	}
-	// add some more chairs to the center of the room
-	// TODO
+	// maybe add some more chairs to the center of the room
+	vector2d const room_sz(chair_place_area.get_size_xy());
+	bool const long_dim(room_sz.x < room_sz.y);
+	float const length(room_sz[long_dim]), width(room_sz[!long_dim]);
+	float const chair_width(chair_height*chair_xy_scale), chair_hwidth(0.5*chair_width), min_chair_spacing(chair_width + chair_gap);
+	float const clearance(get_min_front_clearance_inc_people()), chair_back_space(2.0*wall_thickness);
+	float const path_clearance(2.0*clearance + 2.0*chair_width + chair_back_space), room_min_sz(2.0*path_clearance);
+	float const chair_place_len(length - room_min_sz);
+
+	if (chair_place_len > 2.0*min_chair_spacing && width > (room_min_sz + chair_width + wall_thickness)) { // space for at least two chairs
+		float const centerline(room.get_center_dim(!long_dim));
+		unsigned const num_chairs(chair_place_len/min_chair_spacing); // take the floor
+		float const chair_spacing(chair_place_len/num_chairs), chair_start(chair_place_area.d[long_dim][0] + path_clearance + 0.5*chair_spacing);
+		cube_t chair0;
+		set_cube_zvals(chair0, zval, zval+chair_height);
+
+		for (unsigned d = 0; d < 2; ++d) { // each side
+			float const dsign(d ? 1.0 : -1.0), back_pos(centerline + dsign*0.5*chair_back_space);
+			chair0.d[!long_dim][!d] = back_pos;
+			chair0.d[!long_dim][ d] = back_pos + dsign*chair_width;
+
+			for (unsigned n = 0; n < num_chairs; ++n) {
+				set_wall_width(chair0, (chair_start + n*chair_spacing), chair_hwidth, long_dim);
+				cube_t chair(chair0);
+				for (unsigned e = 0; e < 2; ++e) {chair.translate_dim(e, 0.5*wall_thickness*rgen.signed_rand_float());} // add a bit of misalignment
+				cube_t chair_pad(chair);
+				chair_pad.d[!long_dim][d] += dsign*clearance; // extend further outward
+				if (overlaps_obj_or_placement_blocked(chair_pad, chair_place_area, objs_start)) continue; // bad placement
+				objs.emplace_back(chair, TYPE_CHAIR, room_id, !long_dim, d, 0, tot_light_amt, SHAPE_CUBE, ccolor);
+				if (is_plastic) {objs.back().item_flags = 1;} // flag as plastic
+			} // for n
+		} // for d
+	}
 	add_clock_to_room_wall(rgen, room, zval, room_id, tot_light_amt, objs_start);
 	unsigned const num_plants(1 + rgen.rand_bool()); // add 1-2 plants
 	add_plants_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, num_plants);
