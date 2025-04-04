@@ -2995,7 +2995,7 @@ public:
 			for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->draw(dstate, shadow_only, 0);}
 			global_rn.draw(dstate, shadow_only, 1); // connector road may have bridges, and therefore needs shadows
 			draw_transmission_lines();
-			draw_wind_turbines();
+			draw_wind_turbines(shadow_only);
 			dstate.post_draw();
 			if (!shadow_only) {enable_dlight_bcubes = 0;}
 			set_std_depth_func();
@@ -3024,8 +3024,8 @@ public:
 		for (transmission_line_t const &t : transmission_lines) {dstate.draw_transmission_line(t);}
 		dstate.unset_untextured_material();
 	}
-	void draw_wind_turbines() { // non-const because dstate is modified
-		for (wind_turbine_t const &t : wind_turbines) {t.draw(dstate);}
+	void draw_wind_turbines(bool shadow_only) { // non-const because dstate is modified
+		for (wind_turbine_t const &t : wind_turbines) {t.draw(dstate, shadow_only);}
 	}
 	void draw_label() {dstate.show_label_text();}
 

@@ -1496,7 +1496,7 @@ bool wind_turbine_t::proc_sphere_coll(point &pos_, point const &p_last, float ra
 void wind_turbine_t::draw(road_draw_state_t &dstate, bool shadow_only) const { // Note: shadows are not dynamically updated
 	float const dist_scale = 0.65;
 	city_draw_qbds_t qbds; // unused
-	animation_state_t anim_state(1, ANIM_ID_WIND_TUR, rot_angle); // enable_animations=1
+	animation_state_t anim_state(!shadow_only, ANIM_ID_WIND_TUR, rot_angle); // enable animations if not in shadow pass
 	model_city_obj_t::draw(dstate, qbds, dist_scale, shadow_only, &anim_state, 1); // set_smap_tile=1
 	anim_state.clear_animation_id(dstate.s);
 }
