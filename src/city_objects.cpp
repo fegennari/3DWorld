@@ -6,7 +6,7 @@
 #include "lightmap.h" // for light_source
 #include "openal_wrap.h"
 
-extern bool player_in_walkway, player_in_ww_elevator;
+extern bool player_in_walkway, player_in_ww_elevator, enable_hcopter_shadows;
 extern int animate2, display_mode;
 extern float fticks;
 extern double camera_zh;
@@ -1486,17 +1486,28 @@ bool transmission_line_t::cube_intersect_xy(cube_t const &c) const {
 
 // wind turbines
 
-void wind_turbine_t::next_frame() {
+bool enable_wind_turbine_shadows() {return enable_hcopter_shadows;} // for now, use the same backslash key for wind turbines
+
+void wind_turbine_t::next_frame(point const &camera_bs) {
+	if (rot_rate == 0.0) return; // not rotating
 	rot_angle += fticks*rot_rate;
 	if (rot_angle > 10000.0) {rot_angle = 0.0;}
+	// maybe update shadow maps
+	if (!enable_wind_turbine_shadows()) return;
+	point const center(bcube.get_cube_center());
+	if (p2p_dist(center, camera_bs) > 1.0f*(X_SCENE_SIZE + Y_SCENE_SIZE)) return; // the player is too far (~1 tile) (optimization)
+	// TODO: stretch shadow in light dir
+	//vector3d const shadow_dir(-get_light_pos().get_norm()); // primary light direction (sun/moon)
+	invalidate_tile_smap_at_pt(center, radius, 0); // repeat_next_frame=0
 }
 bool wind_turbine_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
 	return sphere_city_obj_cylin_coll(pos, base_radius, pos_, p_last, radius_, xlate, cnorm);
 }
 void wind_turbine_t::draw(road_draw_state_t &dstate, bool shadow_only) const { // Note: shadows are not dynamically updated
 	float const dist_scale = 0.65;
+	bool const animate(!shadow_only || enable_wind_turbine_shadows()); // enable animations if not in shadow pass or if shadows are updated
 	city_draw_qbds_t qbds; // unused
-	animation_state_t anim_state(!shadow_only, ANIM_ID_WIND_TUR, rot_angle); // enable animations if not in shadow pass
+	animation_state_t anim_state(animate, ANIM_ID_WIND_TUR, rot_angle);
 	model_city_obj_t::draw(dstate, qbds, dist_scale, shadow_only, &anim_state, 1); // set_smap_tile=1
 	anim_state.clear_animation_id(dstate.s);
 }

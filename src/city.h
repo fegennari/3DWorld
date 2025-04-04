@@ -993,6 +993,7 @@ float get_sidewalk_width();
 float get_inner_sidewalk_width();
 void        set_z_plane_rect_pts  (point const &center, float rx, float ry, point pts[4]);
 inline void set_z_plane_square_pts(point const &center, float radius,       point pts[4]) {set_z_plane_rect_pts(center, radius, radius, pts);}
+point get_player_pos_bs();
 // from gen_buildings.cpp
 bool have_city_buildings();
 bool enable_building_people_ai();
