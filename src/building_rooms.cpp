@@ -449,7 +449,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					float const delta((offsets[num_lights-1] + d*steps[num_lights-1])*hallway_len);
 					cube_t hall_light(light);
 					hall_light.translate_dim(light_dim, delta);
-					try_place_light_on_ceiling(hall_light, *r, room_dim, fc_thick, 0, 0, num[0], num[1], lcheck_start_ix, valid_lights, rgen); // allow_rot=0, allow_mult=0
+					try_place_light_on_ceiling(hall_light, *r, room_id, room_dim, fc_thick, 0, 0, num[0], num[1], lcheck_start_ix, valid_lights, rgen); // allow_rot=0, allow_mult=0
 				}
 				if (r->is_hallway && has_pri_hall()) { // make sure to place lights between all stairs and elevators
 					float const light_len(light.get_sz_dim(room_dim));
@@ -497,7 +497,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 						cube_t cur_light(light);
 						cur_light.expand_by_xy(-shrink);
 						cur_light.translate(point((xs + x*xstep), (ys + y*ystep), 0.0));
-						try_place_light_on_ceiling(cur_light, *r, room_dim, fc_thick, 0, 0, nx, ny, lcheck_start_ix, valid_lights, rgen); // allow_rot=0, allow_mult=0
+						try_place_light_on_ceiling(cur_light, *r, room_id, room_dim, fc_thick, 0, 0, nx, ny, lcheck_start_ix, valid_lights, rgen); // allow_rot=0, allow_mult=0
 					}
 				} // for y
 			}
@@ -508,7 +508,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 						wall_light = !valid_lights.empty(); // if this fails, fall back to a ceiling light
 					}
 				}
-				if (!wall_light) {try_place_light_on_ceiling(light, *r, room_dim, fc_thick, 1, 1, 1, 1, lcheck_start_ix, valid_lights, rgen);} // allow_rot=1, allow_mult=1
+				if (!wall_light) {try_place_light_on_ceiling(light, *r, room_id, room_dim, fc_thick, 1, 1, 1, 1, lcheck_start_ix, valid_lights, rgen);} // allow_rot=1, allow_mult=1
 			}
 			rand_gen_t rgen_lights(rgen); // copy state so that we don't modify rgen
 			unsigned const objs_start_inc_lights(objs.size());

@@ -611,12 +611,14 @@ void building_t::add_missing_backrooms_lights(rand_gen_t rgen, float zval, unsig
 		room_object_t light(ref_light); // what if this is a short light that was blocked by a doorway? use a different light?
 		light += vector3d((r.xc() - ref_light_center.x), (r.yc() - ref_light_center.y), 0.0);
 		bool const room_dim(r.dx() < r.dy()); // longer room dim
-		add_sub_room_light(light, room_t(room, r), room_dim, objs_start, light_ix_assign, rgen);
+		add_sub_room_light(light, room_t(room, r), room_id, room_dim, objs_start, light_ix_assign, rgen);
 	} // for r
 }
-void building_t::add_sub_room_light(room_object_t light, room_t const &room, bool dim, unsigned objs_start, light_ix_assign_t &light_ix_assign, rand_gen_t &rgen) {
+void building_t::add_sub_room_light(room_object_t light, room_t const &room, unsigned room_id, bool dim, unsigned objs_start,
+	light_ix_assign_t &light_ix_assign, rand_gen_t &rgen)
+{
 	vect_cube_t to_add;
-	try_place_light_on_ceiling(light, room, dim, get_fc_thickness(), 1, 0, 1, 1, objs_start, to_add, rgen); // or wall light?
+	try_place_light_on_ceiling(light, room, room_id, dim, get_fc_thickness(), 1, 0, 1, 1, objs_start, to_add, rgen); // or wall light?
 
 	for (cube_t const &L : to_add) { // should be size 1
 		light.copy_from(L);

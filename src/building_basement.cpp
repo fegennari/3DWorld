@@ -453,7 +453,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 			set_cube_zvals(light, (ceil_zval - light_dz), ceil_zval);
 			colorRGBA const light_color(get_light_color_temp_range(0.2, 0.5, rgen));
 			room_object_t light_obj(light, TYPE_LIGHT, room_id, !dim, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, light_color);
-			add_sub_room_light(light_obj, equipment_room, !dim, objs.size(), light_ix_assign, rgen);
+			add_sub_room_light(light_obj, equipment_room, room_id, !dim, objs.size(), light_ix_assign, rgen);
 			// add machines
 			unsigned const machines_start_ix(objs.size());
 			add_machines_to_room(rgen, equipment_room, zval, room_id, tot_light_amt, machines_start_ix, 1); // objs_start at end; less_clearance=1

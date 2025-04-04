@@ -5144,13 +5144,23 @@ bool building_t::is_light_placement_valid(cube_t const &light, room_t const &roo
 	return 0;
 }
 
-void building_t::try_place_light_on_ceiling(cube_t const &light, room_t const &room, bool room_dim, float pad, bool allow_rot, bool allow_mult,
-	unsigned nx, unsigned ny, unsigned check_coll_start, vect_cube_t &lights, rand_gen_t &rgen) const
+void building_t::try_place_light_on_ceiling(cube_t const &light, room_t const &room, unsigned room_id, bool room_dim, float pad,
+	bool allow_rot, bool allow_mult, unsigned nx, unsigned ny, unsigned check_coll_start, vect_cube_t &lights, rand_gen_t &rgen) const
 {
 	assert(has_room_geom());
 	float const window_vspacing(get_window_vspace());
 	int light_placed(0); // 0=no, 1=at center, 2=at alternate location
 
+	if (is_hospital() && room.has_subroom()) { // avoid placing light inside bathroom
+		// hopefully a quadratic iteration over rooms is okay here, since this is only for the main building; there should be less than 100 rooms in total
+		for (auto r = interior->rooms.begin(); r != interior->rooms.begin()+room_id; ++r) {
+			if (!r->is_nested() || !room.contains_cube(*r)) continue;
+			cube_t sub_room_inc_walls(*r);
+			sub_room_inc_walls.expand_by_xy(0.5*get_wall_thickness());
+			if (light.intersects_xy(sub_room_inc_walls)) return; // skip this light
+			break; // okay for now, since there's only one nested room
+		}
+	}
 	if (is_light_placement_valid(light, room, pad) && !overlaps_other_room_obj(light, check_coll_start)) {
 		lights.push_back(light); // valid placement, done
 		light_placed = 1;
