@@ -830,7 +830,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 						}
 					}
 					else if (rand_val == 2) { // operating room
-						if (add_operating_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start)) {
+						if (add_operating_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start, objs_start_inc_lights)) {
 							added_obj = no_whiteboard = 1;
 							r->assign_to(RTYPE_HOS_OR, f);
 						}

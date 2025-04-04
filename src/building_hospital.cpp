@@ -287,10 +287,16 @@ bool building_t::add_exam_room_objs(rand_gen_t rgen, room_t const &room, float z
 	return 1;
 }
 
-bool building_t::add_operating_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start) {
+bool building_t::add_operating_room_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id,
+	unsigned floor_ix, float &tot_light_amt, unsigned objs_start, unsigned lights_start)
+{
 	// TODO: operating table, big light, equipment (with TYPE_VALVE/TYPE_GAUGE)
+	assert(lights_start <= objs_start);
 	bool const long_dim(room.dx() < room.dy());
 	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_HOSP_BED)) return 0; // don't have a model of this type
+	// brighter lights in OR
+	room.light_intensity *= 2.0;
+	tot_light_amt        *= 2.0;
 	float const floor_spacing(get_window_vspace()), height(0.42*floor_spacing);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_HOSP_BED)); // D, W, H
@@ -324,7 +330,15 @@ bool building_t::add_operating_room_objs(rand_gen_t rgen, room_t const &room, fl
 	}
 	add_clock_to_room_wall(rgen, room, zval, room_id, tot_light_amt, objs_start);
 	add_numbered_door_sign("OR ", room, zval, room_id, floor_ix);
-	// TODO: make ceiling lights larger and round; if that's not possible, then add new lights
+
+	// make ceiling lights larger and round
+	for (auto i = objs.begin()+lights_start; i != objs.begin()+objs_start; ++i) {
+		if (i->type != TYPE_LIGHT) continue;
+		float const dx(i->dx()), dy(i->dy()); // make square
+		if      (dx < dy) {i->expand_in_x(0.5*(dy - dx));}
+		else if (dy < dx) {i->expand_in_y(0.5*(dx - dy));}
+		i->shape = SHAPE_CYLIN;
+	} // for i
 	return 1;
 }
 
