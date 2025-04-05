@@ -5098,7 +5098,7 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 			case 6: placed = (rgen.rand_probability(toy_prob)    && place_toy_on_obj   (rgen, surface, room_id, tot_light_amt, avoid)); break;
 			}
 		} // for n
-		if (placed && obj.type == TYPE_RDESK) {objs[i].item_flags |= (1 << sel_ix);} // mark this surface of the reception desk as occupied
+		if (placed && objs[i].type == TYPE_RDESK) {objs[i].item_flags |= (1 << sel_ix);} // mark this surface of the reception desk as occupied
 	} // for i
 }
 
