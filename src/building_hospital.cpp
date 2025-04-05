@@ -250,14 +250,20 @@ bool building_t::add_waiting_room_objs(rand_gen_t rgen, room_t const &room, floa
 	bool const long_dim(room_sz.x < room_sz.y);
 	float const length(room_sz[long_dim]), width(room_sz[!long_dim]);
 	float const chair_width(chair_height*chair_xy_scale), chair_hwidth(0.5*chair_width), min_chair_spacing(chair_width + chair_gap);
-	float const clearance(get_min_front_clearance_inc_people()), chair_back_space(2.0*wall_thickness);
-	float const path_clearance(2.0*clearance + 2.0*chair_width + chair_back_space), room_min_sz(2.0*path_clearance);
-	float const chair_place_len(length - room_min_sz);
+	float const clearance(get_min_front_clearance_inc_people()), chair_back_space(3.0*wall_thickness);
+	float const path_clearance(2.0*clearance + 2.0*chair_width), room_min_sz(2.0*path_clearance), chair_place_len(length - room_min_sz);
 
 	if (chair_place_len > 2.0*min_chair_spacing && width > (room_min_sz + chair_width + wall_thickness)) { // space for at least two chairs
 		float const centerline(room.get_center_dim(!long_dim));
 		unsigned const num_chairs(chair_place_len/min_chair_spacing); // take the floor
 		float const chair_spacing(chair_place_len/num_chairs), chair_start(chair_place_area.d[long_dim][0] + path_clearance + 0.5*chair_spacing);
+		// add a wall between the rows of chairs
+		cube_t wall;
+		set_cube_zvals(wall, zval, zval+0.8*chair_height);
+		set_wall_width(wall, centerline, 0.45*wall_thickness, !long_dim); // set width
+		set_wall_width(wall, room.get_center_dim(long_dim), 0.5*chair_place_len, long_dim); // set length
+		objs.emplace_back(wall, TYPE_STAIR_WALL, room_id, !long_dim, 0, RO_FLAG_ADJ_TOP, tot_light_amt, SHAPE_CUBE); // draw top
+		// add chairs
 		cube_t chair0;
 		set_cube_zvals(chair0, zval, zval+chair_height);
 
