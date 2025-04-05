@@ -172,10 +172,11 @@ bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, flo
 			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TV)); // D, W, H
 			float const tv_height(0.35*floor_spacing*rgen.rand_uniform(1.0, 1.2)), tv_hwidth(0.5*tv_height*sz.y/sz.z), tv_depth(tv_height*sz.x/sz.z);
 			bool const dim(bed.dim), dir(bed.dir);
+			float const center(max((place_area.d[!dim][0] + tv_hwidth), min((place_area.d[!dim][1] - tv_hwidth), bed.get_center_dim(!dim)))); // clamp to place area
 			cube_t tv;
 			tv.z1() = zval    + 0.45*floor_spacing;
 			tv.z2() = tv.z1() + tv_height;
-			set_wall_width(tv, bed.get_center_dim(!dim), tv_hwidth, !dim);
+			set_wall_width(tv, center, tv_hwidth, !dim);
 			float wall_pos(room_bounds.d[dim][dir]); // start at opposite room wall
 
 			if (!bathroom.is_all_zeros()) { // check bathoom wall
