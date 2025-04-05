@@ -43,6 +43,7 @@ int DISABLE_SCENERY(0), has_scenery(0), has_scenery2(0);
 
 extern bool underwater, has_snow;
 extern int num_trees, xoff2, yoff2, rand_gen_index, window_width, do_zoom, display_mode, tree_mode, draw_model, DISABLE_WATER, animate2, frame_counter, use_voxel_rocks;
+extern unsigned shadow_map_sz;
 extern float zmin, zmax_est, water_plane_z, tree_scale, vegetation, fticks, ocean_wave_height;
 extern pt_line_drawer tree_scenery_pld; // we can use this for plant trunks
 extern voxel_params_t global_voxel_params;
@@ -54,10 +55,17 @@ bool is_pine_tree_type(int type);
 void get_ponds_in_xy_range(cube_t const &range, vect_cube_t &ponds);
 bool point_in_ellipse(point const &p, cube_t const &c);
 vector3d get_tt_xlate_val();
+unsigned get_active_smap_size();
 
 
 inline float get_pt_line_thresh   () {return PT_LINE_THRESH*(do_zoom ? ZOOM_FACTOR : 1.0);}
 inline float get_min_water_plane_z() {return (get_water_z_height() - ocean_wave_height);}
+
+bool can_skip_small_shadow_objs() { // true if using tiled terrain shadows less than max resolution
+	if (world_mode != WMODE_INF_TERRAIN) return 0;
+	unsigned const smap_sz(get_active_smap_size());
+	return (smap_sz > 0 && smap_sz < shadow_map_sz);
+}
 
 
 bool skip_uw_draw(point const &pos, float radius) {
@@ -1452,8 +1460,10 @@ void scenery_group::draw_opaque_objects(shader_t &s, shader_t &vrs, bool shadow_
 		draw_scenery_vector(rocks, sscale, shadow_only, reflection_pass, xlate, scale_val);
 		end_sphere_draw();
 	}
-	draw_scenery_vector(logs,   sscale, shadow_only, reflection_pass, xlate, scale_val);
-	draw_scenery_vector(stumps, sscale, shadow_only, reflection_pass, xlate, scale_val);
+	if (!shadow_only || !can_skip_small_shadow_objs()) {
+		draw_scenery_vector(logs,   sscale, shadow_only, reflection_pass, xlate, scale_val);
+		draw_scenery_vector(stumps, sscale, shadow_only, reflection_pass, xlate, scale_val);
+	}
 	if (!shadow_only) {select_texture(WOOD_TEX);} // plant stems use wood texture
 	for (unsigned i = 0; i < plants.size(); ++i) {plants[i].draw_stem(sscale, shadow_only, reflection_pass, xlate);}
 

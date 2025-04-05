@@ -581,7 +581,8 @@ glm::mat4 setup_csm_matrix(pos_dir_up const &frustum, point const &lpos) {
 // hack to send a vector of matrices from CSM setup to rendering without passing it down the entire call tree
 smap_data_t const *active_smap_data = nullptr;
 
-bool is_csm_active() {return (active_smap_data != nullptr && active_smap_data->is_csm);}
+bool is_csm_active           () {return (active_smap_data != nullptr && active_smap_data->is_csm);}
+unsigned get_active_smap_size() {return (active_smap_data ? active_smap_data->smap_sz : 0);}
 
 void shader_csm_render_setup(shader_t &s) {
 	assert(active_smap_data != nullptr);
