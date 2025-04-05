@@ -274,10 +274,8 @@ public:
 	size_t get_gpu_mem () const;
 	size_t get_smap_mem() const;
 	unsigned count_shadow_maps() const;
-
-	unsigned get_tree_mem() const { // only accounts for top-level class memory + palm verts
-		return (get_cont_mem_usage(pine_trees) + get_cont_mem_usage(decid_trees) + pine_trees.palm_vbo_mem);
-	}
+	unsigned get_tree_cpu_mem () const;
+	unsigned get_tree_gpu_mem () const;
 	void clear();
 	void clear_flowers() {flowers.clear();}
 	void clear_shadows(bool clear_sun=1, bool clear_moon=1, bool no_clear_adj=0);

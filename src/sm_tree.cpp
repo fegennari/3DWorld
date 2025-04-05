@@ -93,7 +93,7 @@ void small_tree_group::finalize(bool low_detail) {
 #pragma omp parallel for schedule(static,1) num_threads(4) if (!low_detail)
 	for (int i = 0; i < (int)size(); ++i) {operator[](i).calc_points(vbo_mgr, low_detail);}
 
-	if (num_pine_trees > 0) {
+	if (num_palm_trees > 0) {
 		for (const_iterator i = begin(); i != end(); ++i) {palm_vbo_mem += i->get_palm_mem();}
 	}
 }

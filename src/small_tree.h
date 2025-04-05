@@ -25,9 +25,9 @@ class small_tree { // size = 116
 		vector<vert_norm_comp_color> v;
 		vector<int> coll_id;
 		mutable vbo_wrap_t vbo; // created dynamically during drawing
-		unsigned get_gpu_mem() const {return v.size()*sizeof(vert_norm_comp_color);}
+		unsigned get_gpu_mem() const {return v.size()*sizeof(vert_norm_comp_color);} // same as cpu_mem for vertex data; assumes vbo is allocated
 	};
-	std::shared_ptr<palm_verts_t> palm_verts; // for palm trees only
+	std::shared_ptr<palm_verts_t> palm_verts; // for palm trees only; must be copyable/shared
 
 public:
 	small_tree() {init();}

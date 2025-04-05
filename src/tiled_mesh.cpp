@@ -386,11 +386,17 @@ size_t tile_t::get_smap_mem() const {
 	for (unsigned i = 0; i < smap_data.size(); ++i) {mem += smap_data[i].get_gpu_mem();}
 	return mem;
 }
-
 unsigned tile_t::count_shadow_maps() const {
 	unsigned num(0);
 	for (unsigned i = 0; i < smap_data.size(); ++i) {num += smap_data[i].is_allocated();}
 	return num;
+}
+
+unsigned tile_t::get_tree_cpu_mem() const { // only accounts for top-level class memory + palm verts
+	return (get_cont_mem_usage(pine_trees) + get_cont_mem_usage(decid_trees) + pine_trees.palm_vbo_mem);
+}
+unsigned tile_t::get_tree_gpu_mem() const { // Note: decid_trees instances are already accounted for by tree_data_manager
+	return (pine_trees.get_gpu_mem() /*+ decid_trees.get_gpu_mem()*/ + pine_trees.palm_vbo_mem);
 }
 
 
@@ -2592,17 +2598,18 @@ unsigned get_quad_ix_buffer_size();
 
 uint64_t tile_draw_t::show_debug_stats(bool calc_mem_only) const {
 	unsigned num_trees(0), num_smaps(0);
-	uint64_t mem(0), tree_mem(0), smap_mem(0);
+	uint64_t mem(0), tcpu_mem(0), tgpu_mem(0), smap_mem(0);
 
 	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
 		tile_t *const tile(i->second.get());
-		mem       += tile->get_gpu_mem (); // Note: includes smap_mem
-		tree_mem  += tile->get_tree_mem();
-		smap_mem  += tile->get_smap_mem();
+		mem       += tile->get_gpu_mem      (); // Note: includes smap_mem
+		tcpu_mem  += tile->get_tree_cpu_mem ();
+		tgpu_mem  += tile->get_tree_gpu_mem ();
+		smap_mem  += tile->get_smap_mem     ();
 		num_smaps += tile->count_shadow_maps();
 		num_trees += tile->num_pine_trees() + tile->num_decid_trees();
 	}
-	uint64_t const dtree_mem(tree_data_manager.get_gpu_mem()), ptree_mem(get_tree_inst_gpu_mem()), grass_mem(grass_tile_manager.get_gpu_mem());
+	uint64_t const dtree_mem(tree_data_manager.get_gpu_mem()), ptree_mem(tgpu_mem + get_tree_inst_gpu_mem()), grass_mem(grass_tile_manager.get_gpu_mem());
 	uint64_t const smap_free_list_mem(smap_manager.get_free_list_mem_usage()), dlights_smap_mem(get_dlights_smap_gpu_mem());
 	uint64_t const texture_mem( get_loaded_textures_gpu_mem()), building_mem(get_buildings_gpu_mem_usage());
 	uint64_t const models_mem(get_city_model_gpu_mem() + get_loaded_models_gpu_mem() + get_building_models_gpu_mem());
@@ -2620,7 +2627,7 @@ uint64_t tile_draw_t::show_debug_stats(bool calc_mem_only) const {
 
 	cout << "tiles drawn: " << to_draw.size() << " of " << tiles.size() << ", trees drawn: " << num_trees << ", shadow maps: " << num_smaps
 		<< ", GPU MB: " << in_mb(tot_mem)
-		<< ", tile MB: " << in_mb(mem - smap_mem) << ", tree CPU MB: " << in_mb(tree_mem) << ", tree GPU MB: " << in_mb((uint64_t)dtree_mem + ptree_mem)
+		<< ", tile MB: " << in_mb(mem - smap_mem) << ", tree CPU MB: " << in_mb(tcpu_mem) << ", tree GPU MB: " << in_mb(dtree_mem + ptree_mem)
 		<< ", grass MB: " << in_mb(grass_mem) << ", smap MB: " << in_mb(smap_mem) << ", smap free list MB: " << in_mb(smap_free_list_mem)
 		<< ", dlights smap mem MB: " << in_mb(dlights_smap_mem) << ", frame buf MB: " << in_mb(frame_buf_mem) << ", texture MB: " << in_mb(texture_mem)
 		<< ", building MB: " << in_mb(building_mem) << ", room_geom MB: " << in_mb(room_geom_mem) << ", model MB: " << in_mb(models_mem) << endl;
