@@ -1160,13 +1160,26 @@ bool small_tree::draw_trunk(bool shadow_only, bool all_visible, bool skip_lines,
 		tree_scenery_pld.add_textured_line(trunk_cylin.p1+xlate, p2+xlate, bark_color, stt[type].bark_tid);
 	}
 	else { // draw as cylinder
-		int const nsides(max(3, min(N_CYL_SIDES, int(0.25*size_scale/dist))));
+		int const nsides(shadow_only ? 4 : max(4, min(N_CYL_SIDES, int(0.25*size_scale/dist))));
 
 		if (cylin_verts && is_pine_tree()) { // flatten the tip (truncated cone)?
 			assert(trunk_cylin.r2 == 0.0); // cone
 			point const ce[2] = {trunk_cylin.p1, trunk_cylin.p2};
 			vector3d v12;
-			gen_cone_triangles(*cylin_verts, gen_cylinder_data(ce, trunk_cylin.r1, trunk_cylin.r2, nsides, v12));
+			vector_point_norm const &vpn(gen_cylinder_data(ce, trunk_cylin.r1, trunk_cylin.r2, nsides, v12));
+
+			if (shadow_only) { // optimized case with no normals or texture coordinates
+				unsigned const ixoff(cylin_verts->size());
+				cylin_verts->resize(3*nsides + ixoff);
+
+				for (unsigned s = 0; s < (unsigned)nsides; ++s) {
+					unsigned const sn((s+1)%nsides), vix(3*s + ixoff);
+					(*cylin_verts)[vix+0].v = vpn.p[(s <<1)+1];
+					(*cylin_verts)[vix+1].v = vpn.p[(sn<<1)+0];
+					(*cylin_verts)[vix+2].v = vpn.p[(s <<1)+0];
+				}
+			}
+			else {gen_cone_triangles(*cylin_verts, vpn);}
 		}
 		else {
 			if (!shadow_only) {
