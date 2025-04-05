@@ -241,7 +241,7 @@ bool building_t::add_waiting_room_objs(rand_gen_t rgen, room_t const &room, floa
 	for (unsigned n = 0; n < num_chairs; ++n) {
 		unsigned const chair_obj_ix(objs.size());
 		if (!place_obj_along_wall(TYPE_CHAIR, room, chair_height, chair_sz, rgen, zval, room_id, tot_light_amt, chair_place_area, objs_start,
-			1.0, 0, 4, 0, ccolor, 0, SHAPE_CUBE, chair_gap)) break; // end when failed to place
+			1.0, 0, 4, 0, ccolor, 0, SHAPE_CUBE, chair_gap, RO_FLAG_PLCOLL)) break; // end when failed to place
 		assert(chair_obj_ix < objs.size());
 		if (is_plastic) {objs[chair_obj_ix].item_flags = 1;} // flag as plastic
 	}
@@ -279,7 +279,7 @@ bool building_t::add_waiting_room_objs(rand_gen_t rgen, room_t const &room, floa
 				cube_t chair_pad(chair);
 				chair_pad.d[!long_dim][d] += dsign*clearance; // extend further outward
 				if (overlaps_obj_or_placement_blocked(chair_pad, chair_place_area, objs_start)) continue; // bad placement
-				objs.emplace_back(chair, TYPE_CHAIR, room_id, !long_dim, d, 0, tot_light_amt, SHAPE_CUBE, ccolor);
+				objs.emplace_back(chair, TYPE_CHAIR, room_id, !long_dim, d, RO_FLAG_PLCOLL, tot_light_amt, SHAPE_CUBE, ccolor);
 				if (is_plastic) {objs.back().item_flags = 1;} // flag as plastic
 			} // for n
 		} // for d

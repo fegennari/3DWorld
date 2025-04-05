@@ -905,7 +905,7 @@ cube_t get_true_room_obj_bcube(room_object_t const &c) { // for collisions, etc.
 
 bool room_object_t::is_player_collidable() const {
 	// chairs are player collidable only when in attics or backrooms; trashcans are only player collidable in malls
-	return (!no_coll() && (bldg_obj_types[type].player_coll || (type == TYPE_CHAIR && (in_attic() || (flags & RO_FLAG_BACKROOM))) ||
+	return (!no_coll() && (bldg_obj_types[type].player_coll || (type == TYPE_CHAIR && (flags & RO_FLAG_PLCOLL)) ||
 		(type == TYPE_TCAN && (in_mall() || in_hallway()))));
 }
 

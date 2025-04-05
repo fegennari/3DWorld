@@ -406,7 +406,7 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 			if (i->type == TYPE_CHAIR) {chair_color = i->color; break;} // use the color of the first chair added to this building
 		}
 		for (unsigned n = 0; n < num_chairs; ++n) {
-			if (!add_obj_to_closet(objs[attic_door_ix], place_area, objs, avoid_cubes, rgen, sz, TYPE_CHAIR, obj_flags)) continue;
+			if (!add_obj_to_closet(objs[attic_door_ix], place_area, objs, avoid_cubes, rgen, sz, TYPE_CHAIR, (obj_flags | RO_FLAG_PLCOLL))) continue;
 			if (!cube_in_attic(objs.back())) {objs.pop_back(); continue;} // too tall, skip
 			objs.back().dim   = rgen.rand_bool(); // random orient
 			objs.back().dir   = rgen.rand_bool();

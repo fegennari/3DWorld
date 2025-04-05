@@ -563,7 +563,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 				if (check_vect_cube_contains_pt_xy(unreachable_rooms, chair_pos)) continue; // don't place in an unreachable room
 				
 				if (add_chair(rgen, true_room, blockers, room_id, chair_pos, chair_color, dim, dir, tot_light_amt, office_chair, 1)) {
-					objs.back().flags |= RO_FLAG_BACKROOM; // flag so that player collisions are enabled
+					objs.back().flags |= (RO_FLAG_BACKROOM | RO_FLAG_PLCOLL); // flag so that player collisions are enabled
 					blockers.push_back(objs.back());
 					break;
 				}

@@ -2875,7 +2875,10 @@ bool building_t::add_interrogation_objs(rand_gen_t rgen, room_t const &room, flo
 		chair_pos[1][!dim] += chair_offset;
 	}
 	for (unsigned n = 0; n < num_chairs; ++n) {
-		added_chair |= add_chair(rgen, room, vect_cube_t(), room_id, chair_pos[n], chair_color, dim, dir, tot_light_amt, 0, 0, 0, 1); // no_push_out=1
+		if (add_chair(rgen, room, vect_cube_t(), room_id, chair_pos[n], chair_color, dim, dir, tot_light_amt, 0, 0, 0, 1)) { // no_push_out=1
+			interior->room_geom->objs.back().flags |= RO_FLAG_PLCOLL; // flag so that player collisions are enabled
+			added_chair = 1;
+		}
 	}
 	if (!added_chair) return 0;
 	// add bucket(s)
