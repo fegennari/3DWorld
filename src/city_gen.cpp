@@ -3036,8 +3036,8 @@ public:
 		//for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {cout << r->get_traffic_density() << " ";} cout << endl;
 		for (road_network_t &r : road_networks) {r.next_frame();}
 		global_rn.next_frame(); // not needed since there are no 3/4-way intersections/stoplights?
-		point const camera_bs(get_player_pos_bs());
-		for (wind_turbine_t &t : wind_turbines) {t.next_frame(camera_bs);}
+		vector3d const &xlate(get_tiled_terrain_model_xlate());
+		for (wind_turbine_t &t : wind_turbines) {t.next_frame(xlate);}
 	}
 	void register_car_at_city(unsigned city_id) const {get_city(city_id).register_car();} // Note: must be const
 	

@@ -8,7 +8,7 @@
 
 extern bool player_in_walkway, player_in_ww_elevator, enable_hcopter_shadows;
 extern int animate2, display_mode;
-extern float fticks;
+extern float fticks, water_plane_z;
 extern double camera_zh;
 extern city_params_t city_params;
 extern object_model_loader_t building_obj_model_loader;
@@ -25,6 +25,7 @@ bool is_pants_model(unsigned model_id);
 bool is_shirt_model(unsigned model_id);
 int select_tid_from_list(vector<unsigned> const &tids, unsigned ix);
 colorRGBA get_bed_sheet_color(int tid, rand_gen_t &rgen);
+void invalidate_tile_smap_in_region(cube_t const &region, bool repeat_next_frame);
 
 
 void textured_mat_t::pre_draw(bool shadow_only) {
@@ -1488,17 +1489,25 @@ bool transmission_line_t::cube_intersect_xy(cube_t const &c) const {
 
 bool enable_wind_turbine_shadows() {return enable_hcopter_shadows;} // for now, use the same backslash key for wind turbines
 
-void wind_turbine_t::next_frame(point const &camera_bs) {
+void wind_turbine_t::next_frame(vector3d const &xlate) {
 	if (rot_rate == 0.0) return; // not rotating
 	rot_angle += fticks*rot_rate;
 	if (rot_angle > 10000.0) {rot_angle = 0.0;}
 	// maybe update shadow maps
 	if (!enable_wind_turbine_shadows()) return;
-	point const center(bcube.get_cube_center());
-	if (p2p_dist(center, camera_bs) > 1.0f*(X_SCENE_SIZE + Y_SCENE_SIZE)) return; // the player is too far (~1 tile) (optimization)
-	// TODO: stretch shadow in light dir
-	//vector3d const shadow_dir(-get_light_pos().get_norm()); // primary light direction (sun/moon)
-	invalidate_tile_smap_at_pt(center, radius, 0); // repeat_next_frame=0
+	float const tile_size(X_SCENE_SIZE + Y_SCENE_SIZE), xy_radius(0.5*bcube.get_size_xy().mag());
+	point const camera_pos(get_camera_pos());
+	if (p2p_dist(pos, (camera_pos - xlate)) > 1.33f*tile_size) return; // the player is too far (optimization)
+	// stretch shadow in light dir
+	vector3d const shadow_dir(-get_light_pos().get_norm()), step((0.5*tile_size)*shadow_dir); // primary light direction (sun/moon)
+	unsigned const num_steps = 3; // half tile per step
+	cube_t region(bcube + xlate); // in camera space
+
+	for (unsigned n = 0; n < num_steps; ++n) {
+		region.z1() = water_plane_z; // shadows may reach down to the water level
+		if (camera_pdu.cube_visible(region)) {invalidate_tile_smap_in_region(region, 0);} // repeat_next_frame=0
+		region += step;
+	}
 }
 bool wind_turbine_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
 	return sphere_city_obj_cylin_coll(pos, base_radius, pos_, p_last, radius_, xlate, cnorm);

@@ -429,7 +429,7 @@ struct wind_turbine_t : public model_city_obj_t {
 	float rot_rate=0.0, rot_angle=0.0, base_radius=0.0;
 
 	wind_turbine_t(cube_t const &c, bool dim_, bool dir_, float rr) : model_city_obj_t(c, dim_, dir_), rot_rate(rr), base_radius(0.25*radius) {}
-	void next_frame(point const &camera_bs);
+	void next_frame(vector3d const &xlate);
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 	void draw(road_draw_state_t &dstate, bool shadow_only=0) const;
 	virtual unsigned get_model_id() const {return OBJ_MODEL_WIND_TUR;}
