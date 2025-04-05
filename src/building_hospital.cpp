@@ -160,6 +160,7 @@ bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, flo
 				curtain.z1() = curtain.z2() - height; // hanging down near the floor
 				set_wall_width(curtain, merged.get_center_dim(!i->dim), 0.5*height*sz.x/sz.z, !i->dim); // between the beds
 				set_wall_width(curtain, merged.get_center_dim( i->dim), 0.5*height*sz.y/sz.z,  i->dim);
+				if (is_obj_placement_blocked(curtain, room, 1, 0)) continue; // in particular, check for doors
 				curtains.emplace_back(curtain, !i->dim); // don't invalidate references
 			} // for j
 		}
