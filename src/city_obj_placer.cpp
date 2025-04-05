@@ -645,7 +645,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 				// maybe place a bike next to the picnic table
 				if (building_obj_model_loader.is_model_valid(OBJ_MODEL_BICYCLE) && rgen.rand_float() < 0.35) {
 					vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_BICYCLE)); // L, W, H
-					float const bike_height(0.078*city_params.road_width), bike_len(bike_height*sz.x/sz.z), bike_width(bike_height*sz.y/sz.z), wall_extend(0.5*bike_len);
+					float const bike_height(0.078*city_params.road_width), bike_width(bike_height*sz.y/sz.z);
 					bool const dim(pt.dim), dir(rgen.rand_bool()); // choose a random end of the picnic table
 					pos[ dim] = pt.bcube.d[dim][dir] + (dir ? 1.0 : -1.0)*0.25*bike_width;
 					pos[!dim] = pt.bcube.get_center_dim(!dim);
