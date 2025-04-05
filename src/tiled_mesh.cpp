@@ -1299,7 +1299,7 @@ void tile_t::calc_avg_mesh_color() {
 
 bool tile_t::update_range(tile_shadow_map_manager &smap_manager) { // if returns 0, tile will be deleted
 
-	update_pine_tree_state(0); // can free pine tree vbos
+	update_pine_tree_state(0, 0); // can free pine tree vbos
 	update_animals(); // if any were generated
 	float const dist(get_rel_dist_to_camera());
 	
@@ -1331,6 +1331,7 @@ void tile_t::init_pine_tree_draw() {
 	postproc_trees(pine_trees, ptzmax);
 }
 
+// upload_if_needed=0 => clear only
 void tile_t::update_pine_tree_state(bool upload_if_needed, bool force_high_detail) {
 
 	if (!pine_trees_enabled() || pine_trees.empty()) return;
@@ -1340,9 +1341,10 @@ void tile_t::update_pine_tree_state(bool upload_if_needed, bool force_high_detai
 
 	for (unsigned d = 0; d < 2; ++d) {
 		if (weights[d] > 0.0) { // needed
+			pine_trees.last_used_frame = frame_counter;
 			if (upload_if_needed) {pine_trees.finalize_upload_and_clear_pts(d != 0);} // needed for drawing
 		}
-		else { // not needed
+		else if (pine_trees.last_used_frame+1 < frame_counter) { // not needed, and not needed the previous frame (not a shadow update)
 			pine_trees.clear_vbo_and_ids_if_needed(d != 0);
 		}
 	}
@@ -2711,7 +2713,7 @@ void tile_draw_t::pre_draw() { // view-dependent updates/GPU uploads
 		(*i)->pre_draw(height_gens[0]);
 
 		if ((*i)->can_have_trees()) {
-			(*i)->update_pine_tree_state(1);
+			(*i)->update_pine_tree_state(1, 0);
 			(*i)->update_decid_trees();
 		}
 		(*i)->update_scenery();

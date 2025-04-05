@@ -98,7 +98,6 @@ void small_tree_group::finalize(bool low_detail) {
 	}
 }
 
-
 void small_tree_group::finalize_upload_and_clear_pts(bool low_detail) { // called in tiled terrain mode
 
 	if (empty() || is_uploaded(low_detail)) return;
@@ -154,7 +153,7 @@ void small_tree_group::clear_vbo_manager(int which) {
 }
 
 void small_tree_group::clear_vbo_manager_and_ids(int which) {
-	
+
 	if (which & 1) { // high detail
 		for (iterator i = begin(); i != end(); ++i) {i->clear_vbo_mgr_ix();}
 	}

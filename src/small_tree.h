@@ -96,6 +96,7 @@ struct small_tree_group : public vector<small_tree> {
 	vector<point> inst_pts;
 	rand_gen_t rgen;
 	bool generated=0, instanced=0;
+	int last_used_frame=0;
 	unsigned num_pine_trees=0, num_palm_trees=0, num_trunk_pts=0, palm_vbo_mem=0;
 	float max_tree_radius=0.0;
 	point last_cpos;
