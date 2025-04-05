@@ -102,6 +102,7 @@ void small_tree_group::finalize(bool low_detail) {
 void small_tree_group::finalize_upload_and_clear_pts(bool low_detail) { // called in tiled terrain mode
 
 	if (empty() || is_uploaded(low_detail)) return;
+	if (num_pine_trees == 0 && (num_palm_trees == 0 || palm_vbo_mem > 0)) return; // no trees to update
 	//timer_t timer("Tree Finalize");
 
 	if (instanced && !low_detail) {
@@ -929,7 +930,7 @@ bool small_tree::line_intersect(point const &p1, point const &p2, float *t) cons
 
 void small_tree::calc_palm_tree_points() {
 
-	if (palm_verts != nullptr) return;
+	if (palm_verts != nullptr) return; // already calculated
 	unsigned const num_fronds = 20;
 	float const frond_l(0.3*height), frond_hw(0.2*width), frond_dz(-0.2*width);
 	vector3d const trunk_dir(get_rot_dir());
