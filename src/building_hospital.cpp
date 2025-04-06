@@ -137,7 +137,8 @@ bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, flo
 	bool const add_curtains(num_beds > 1 && building_obj_model_loader.is_model_valid(OBJ_MODEL_HOSP_CURT));
 	unsigned const beds_end(objs.size());
 	point const table_pos(room.xc(), room.yc(), zval); // approximate
-	vect_cube_t blockers;
+	// add curtains between beds
+	vect_cube_t blockers, tv_blockers;
 	vect_cube_with_ix_t curtains;
 
 	for (auto i = objs.begin()+beds_start; i != objs.end(); ++i) {
@@ -162,6 +163,8 @@ bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, flo
 				set_wall_width(curtain, merged.get_center_dim( i->dim), 0.5*height*sz.y/sz.z,  i->dim);
 				if (is_obj_placement_blocked(curtain, room, 1, 0)) continue; // in particular, check for doors
 				curtains.emplace_back(curtain, !i->dim); // don't invalidate references
+				curtain.d[i->dim][!i->dir] = room.d[i->dim][!i->dir]; // extend to the wall
+				tv_blockers.push_back(curtain);
 			} // for j
 		}
 	} // for i
@@ -188,10 +191,8 @@ bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, flo
 			tv.d[dim][!dir] = tv.d[dim][dir] + (dir ? -1.0 : 1.0)*tv_depth;
 			cube_t test_cube(tv);
 			test_cube.d[dim][!dir] = bed.d[dim][!dir]; // extend to the bed; should this ignore open doors?
-			
-			if (!overlaps_obj_or_placement_blocked(test_cube, room, objs_start) && !check_if_against_window(tv, room, dim, dir)) { // valid placement
-				add_tv_to_wall(tv, room_id, tot_light_amt, dim, !dir, 0, 2); // use_monitor_image=0, on_off=2 (random); invalidates bed reference
-			}
+			if (has_bcube_int(tv, tv_blockers) || overlaps_obj_or_placement_blocked(test_cube, room, objs_start) || check_if_against_window(tv, room, dim, dir)) continue;
+			add_tv_to_wall(tv, room_id, tot_light_amt, dim, !dir, 0, 2); // use_monitor_image=0, on_off=2 (random); invalidates bed reference
 		} // for i
 	}
 	for (cube_with_ix_t const &c : curtains) {objs.emplace_back(c, TYPE_HOSP_CURT, room_id, c.ix, rgen.rand_bool(), 0);}
