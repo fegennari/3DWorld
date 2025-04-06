@@ -218,10 +218,11 @@ bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, flo
 		place_plant_on_obj(rgen, objs[table_ix], room_id, tot_light_amt, 0.7, avoid);
 		break; // done/success
 	} // for n
-	if (rgen.rand_float() < 0.75) { // maybe add a chair
+	if (1) { // maybe add chairs
+		unsigned const num_chairs(rgen.rand() % (num_beds+1)); // up to 1 per bed
 		bool const is_plastic(rgen.rand_bool());
 		colorRGBA const &chair_color(chair_colors[rgen.rand() % NUM_CHAIR_COLORS]);
-		place_chairs_along_walls(rgen, room, zval, room_id, tot_light_amt, objs_start, chair_color, is_plastic, 1); // 1 chair
+		place_chairs_along_walls(rgen, room, zval, room_id, tot_light_amt, objs_start, chair_color, is_plastic, num_chairs);
 	}
 	add_numbered_door_sign("Room ", room, zval, room_id, floor_ix);
 	return 1;
