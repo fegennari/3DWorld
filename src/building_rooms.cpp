@@ -2680,7 +2680,7 @@ void building_t::add_window_coverings(cube_t const &window, bool dim, bool dir) 
 	unsigned floor_ix(0);
 
 	switch (get_room_type_and_floor(room_id, window.zc(), floor_ix)) {
-	case RTYPE_BED : case RTYPE_MASTER_BED: add_window_blinds(window, dim, dir, room_id, floor_ix); break; // bedroom
+	case RTYPE_BED : case RTYPE_MASTER_BED: case RTYPE_HOS_BED: add_window_blinds(window, dim, dir, room_id, floor_ix); break; // bedroom
 	case RTYPE_BATH: case RTYPE_MENS: case RTYPE_WOMENS: add_bathroom_window(window, dim, dir, room_id, floor_ix); break; // bathroom
 	} // end switch
 }
