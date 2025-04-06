@@ -439,7 +439,7 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 			}
 			else {had_coll |= sphere_cube_int_update_pos(pos2, radius, c, p_last2, xy_only, cnorm_ptr);} // check collision with sides
 		} // for i
-		if (!ladder.is_all_zeros() && sphere_cube_intersect(pos2, radius, ladder)) {
+		if (!ladder.is_all_zeros() && sphere_cube_intersect((pos2 - xlate), radius, ladder)) {
 			//had_coll = sphere_cube_int_update_pos(pos2, radius, ladder, p_last2, xy_only, cnorm_ptr); // no, don't want to collide when player is on the roof
 			pos2.z   = p_last2.z + 0.5*get_player_move_dist()*cview_dir.z; // move up/down based on player vertical view (looking up vs. down)
 			pos2.z   = min((ladder.z2() + radius), max((ladder.z1() + radius), pos2.z)); // clamp to ladder height range
