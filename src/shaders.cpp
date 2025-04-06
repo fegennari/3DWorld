@@ -327,7 +327,7 @@ void shader_t::setup_enabled_lights(unsigned num, unsigned shaders_enabled) {
 		bool const enabled(is_light_enabled(i));
 		prog_name_prefix.push_back(enabled ? '1' : '0');
 		char *name(enabled ? name_1 : name_0);
-		name[23] = char('0'+i);
+		name[23] = char('0'+i); // enable_light<N>
 
 		for (unsigned s = 0; s < NUM_SHADER_TYPES; ++s) { // put into correct shader(s): V, F, G, TC, TE, C
 			if (shaders_enabled & (1<<s)) {set_prefix(name, s);}
@@ -425,16 +425,14 @@ void shader_t::set_int_prefix(char const *const name, int val, unsigned shader_t
 		set_prefix_str((string("const int ") + name + '=' + char('0' + val) + ';'), shader_type);
 	}
 	else {
-		ostringstream oss;
-		oss << val;
-		set_prefix_str((string("const int ") + name + '=' + oss.str() + ';'), shader_type);
+		set_prefix_str((string("const int ") + name + '=' + std::to_string(val) + ';'), shader_type);
 	}
 }
 
 
 void shader_t::set_color_e(colorRGBA const &color) {
 	ensure_uniform_loc(emission_loc, "emission");
-	set_uniform_color(emission_loc, color);
+	set_uniform_color (emission_loc, color);
 }
 
 void shader_t::set_black_diffuse_emissive_color(colorRGBA const &color) {
@@ -503,10 +501,7 @@ public:
 		map<string, ix_valid_t>::clear();
 	}
 	void free_data() {
-		for (const_iterator i = begin(); i != end(); ++i) {
-			//assert(glIsShader(i->second.ix));
-			glDeleteShader(i->second.ix);
-		}
+		for (const_iterator i = begin(); i != end(); ++i) {glDeleteShader(i->second.ix);} // not necessary/already deleted?
 	}
 	// can't free in the destructor because the gl context may be destroyed before this point
 	//~string_shad_map() {free_data();}
@@ -898,11 +893,11 @@ void shader_t::clear() {
 	
 	for (unsigned i = 0; i < NUM_SHADER_TYPES; ++i) {
 		prepend_string[i].clear();
-		shader_names[i].clear();
+		shader_names  [i].clear();
 	}
 	for (unsigned i = 0; i < MAX_SHADER_LIGHTS; ++i) {
 		light_locs[i].invalidate();
-		prev_lps[i] = gl_light_params_t(); // reset
+		prev_lps  [i] = gl_light_params_t(); // reset
 	}
 	prog_name_prefix.clear();
 	attrib_locs.clear();
