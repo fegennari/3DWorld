@@ -2483,6 +2483,7 @@ void building_t::cut_holes_for_ext_doors(building_draw_t &bdraw, point const &co
 	auto const parts_end(get_real_parts_end_inc_sec());
 
 	for (auto d = doors.begin(); d != doors.end(); ++d) { // cut a hole for each door
+		if (d->type == tquad_with_ix_t::TYPE_RDOOR)           continue; // not needed and not correct for rooftop doors
 		if (!camera_pdu.cube_visible(d->get_bcube() + xlate)) continue; // VFC
 		tquad_with_ix_t door(*d);
 		move_door_to_other_side_of_wall(door, 0.3, 0); // move a bit in front of the normal interior door (0.3 vs. 0.2)
