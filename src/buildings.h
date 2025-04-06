@@ -57,7 +57,7 @@ float const MALL_FLOOR_HEIGHT      = 2.0; // as a multiple of normal building fl
 float const CEILING_BEAM_THICK     = 2.5; // as a multiple of wall thickness
 float const BACKSPLASH_HEIGHT      = 0.33; // relative to cabinet height
 
-unsigned const NUM_CHAIR_COLORS = 12;
+unsigned const NUM_CHAIR_COLORS = 13;
 unsigned const MAX_BCASE_BOOKS  = 48; // limited by available bit flags
 unsigned const NUM_BOOK_COLORS  = 16;
 unsigned const NUM_PAPER_COLORS = 6;
@@ -73,7 +73,7 @@ unsigned const NUM_TRASH_COLORS   = 8;
 unsigned const NUM_PFLOAT_COLORS  = 6;
 unsigned const NUM_SP_EMISSIVE_COLORS = 2;
 colorRGBA const GD_SP_COLOR(0.5, 1.0, 1.0); // used for glow-in-the-dark spraypaint
-colorRGBA const chair_colors[NUM_CHAIR_COLORS] = {WHITE, WHITE, GRAY, DK_GRAY, LT_GRAY, BLUE, DK_BLUE, LT_BLUE, YELLOW, RED, DK_GREEN, LT_BROWN};
+colorRGBA const chair_colors[NUM_CHAIR_COLORS] = {WHITE, WHITE, GRAY, DK_GRAY, LT_GRAY, BLUE, DK_BLUE, LT_BLUE, YELLOW, RED, DK_GREEN, LT_BROWN, DK_BROWN};
 colorRGBA const book_colors [NUM_BOOK_COLORS ] = {GRAY_BLACK, WHITE, LT_GRAY, GRAY, DK_GRAY, DK_BLUE, BLUE, LT_BLUE, DK_RED, RED, ORANGE, YELLOW, DK_GREEN, LT_BROWN, BROWN, DK_BROWN};
 colorRGBA const spcan_colors[NUM_SPCAN_COLORS] = {GD_SP_COLOR, WHITE, RED, GREEN, BLUE, YELLOW, PINK, ORANGE, PURPLE, BROWN, BLACK};
 colorRGBA const sp_emissive_colors[NUM_SP_EMISSIVE_COLORS] = {colorRGBA(0.2, 1.0, 0.2), colorRGBA(0.2, 0.5, 1.0)}; // light green, greenish blue
@@ -2667,10 +2667,10 @@ private:
 	bool add_classroom_desk(rand_gen_t &rgen, room_t const &room, cube_t const &desk, unsigned room_id, float tot_light_amt,
 		colorRGBA const &chair_color, bool dim, bool dir, unsigned desk_ix);
 	bool add_hospital_room_objs (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start, int &nested_room_ix);
-	bool add_waiting_room_objs  (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start,
-		colorRGBA const &chair_color);
-	bool add_exam_room_objs     (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start,
-		colorRGBA const &chair_color);
+	bool add_waiting_room_objs  (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start);
+	void place_chairs_along_walls(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
+		colorRGBA const &chair_color, bool is_plastic, unsigned num);
+	bool add_exam_room_objs     (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start);
 	bool add_operating_room_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, unsigned floor_ix, float &tot_light_amt, unsigned objs_start, unsigned lights_start);
 	float add_flooring       (room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned flooring_type);
 	bool add_bathroom_objs   (rand_gen_t rgen, room_t &room, float &zval, unsigned room_id, float tot_light_amt,

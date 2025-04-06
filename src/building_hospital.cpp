@@ -208,13 +208,16 @@ bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, flo
 		}
 		break; // done/success
 	} // for n
+	if (rgen.rand_float() < 0.75) { // maybe add a chair
+		bool const is_plastic(rgen.rand_bool());
+		colorRGBA const &chair_color(chair_colors[rgen.rand() % NUM_CHAIR_COLORS]);
+		place_chairs_along_walls(rgen, room, zval, room_id, tot_light_amt, objs_start, chair_color, is_plastic, 1); // 1 chair
+	}
 	add_numbered_door_sign("Room ", room, zval, room_id, floor_ix);
 	return 1;
 }
 
-bool building_t::add_waiting_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix,
-	float tot_light_amt, unsigned objs_start, colorRGBA const &chair_color)
-{
+bool building_t::add_waiting_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start) {
 	unsigned const counts[4] = {1, 1, 2, 2}; // 1-2
 	add_couches_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, counts);
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
@@ -231,27 +234,19 @@ bool building_t::add_waiting_room_objs(rand_gen_t rgen, room_t const &room, floa
 	// can this block a door sign in a room with ring hallways?
 	// there's not much we can do about that here, since the sign is part of another room that may either be before or after this one
 	add_wall_tv(rgen, room, zval, room_id, tot_light_amt, objs_start);
+	// add chairs along walls
 	unsigned const num_chairs = 20; // up to this many, whatever we can fit
-	bool const is_plastic(rgen.rand_bool());
-	float const chair_hscale(is_plastic ? 0.44 : 0.4), chair_height(chair_hscale*floor_spacing), chair_xy_scale(0.2/chair_hscale), chair_gap(0.35*chair_height);
-	vector3d const chair_sz(chair_xy_scale, chair_xy_scale, 1.0);
-	colorRGBA const ccolor(is_plastic ? get_pastic_chair_color(chair_color) : chair_color);
-	vect_room_object_t &objs(interior->room_geom->objs);
+	bool const is_plastic(1);
+	colorRGBA const &chair_color(chair_colors[rgen.rand() % NUM_CHAIR_COLORS]);
+	place_chairs_along_walls(rgen, room, zval, room_id, tot_light_amt, objs_start, chair_color, is_plastic, num_chairs);
+	// maybe add some more chairs to the center of the room
 	cube_t chair_place_area(room_bounds);
 	chair_place_area.expand_by_xy(-wall_thickness);
-
-	for (unsigned n = 0; n < num_chairs; ++n) {
-		unsigned const chair_obj_ix(objs.size());
-		if (!place_obj_along_wall(TYPE_CHAIR, room, chair_height, chair_sz, rgen, zval, room_id, tot_light_amt, chair_place_area, objs_start,
-			1.0, 0, 4, 0, ccolor, 0, SHAPE_CUBE, chair_gap, RO_FLAG_PLCOLL)) break; // end when failed to place
-		assert(chair_obj_ix < objs.size());
-		if (is_plastic) {objs[chair_obj_ix].item_flags = 1;} // flag as plastic
-	}
-	// maybe add some more chairs to the center of the room
 	vector2d const room_sz(chair_place_area.get_size_xy());
 	bool const long_dim(room_sz.x < room_sz.y);
 	float const length(room_sz[long_dim]), width(room_sz[!long_dim]);
-	float const chair_width(chair_height*chair_xy_scale), chair_hwidth(0.5*chair_width), min_chair_spacing(chair_width + chair_gap);
+	float const chair_hscale(is_plastic ? 0.44 : 0.4), chair_height(chair_hscale*floor_spacing), chair_gap(0.35*chair_height);
+	float const chair_width(0.2*chair_height/chair_hscale), chair_hwidth(0.5*chair_width), min_chair_spacing(chair_width + chair_gap);
 	float const clearance(get_min_front_clearance_inc_people()), chair_back_space(3.0*wall_thickness);
 	float const path_clearance(2.0*clearance + 2.0*chair_width), room_min_sz(2.0*path_clearance), chair_place_len(length - room_min_sz);
 
@@ -259,6 +254,7 @@ bool building_t::add_waiting_room_objs(rand_gen_t rgen, room_t const &room, floa
 		float const centerline(room.get_center_dim(!long_dim));
 		unsigned const num_chairs(chair_place_len/min_chair_spacing); // take the floor
 		float const chair_spacing(chair_place_len/num_chairs), chair_start(chair_place_area.d[long_dim][0] + path_clearance + 0.5*chair_spacing);
+		vect_room_object_t &objs(interior->room_geom->objs);
 		// add a wall between the rows of chairs
 		cube_t wall;
 		set_cube_zvals(wall, zval, zval+0.8*chair_height);
@@ -266,6 +262,7 @@ bool building_t::add_waiting_room_objs(rand_gen_t rgen, room_t const &room, floa
 		set_wall_width(wall, room.get_center_dim(long_dim), 0.5*chair_place_len, long_dim); // set length
 		objs.emplace_back(wall, TYPE_STAIR_WALL, room_id, !long_dim, 0, RO_FLAG_ADJ_TOP, tot_light_amt, SHAPE_CUBE); // draw top
 		// add chairs
+		colorRGBA const ccolor(is_plastic ? get_pastic_chair_color(chair_color) : chair_color);
 		cube_t chair0;
 		set_cube_zvals(chair0, zval, zval+chair_height);
 
@@ -308,13 +305,32 @@ bool building_t::add_waiting_room_objs(rand_gen_t rgen, room_t const &room, floa
 	return 1;
 }
 
-bool building_t::add_exam_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix,
-	float tot_light_amt, unsigned objs_start, colorRGBA const &chair_color)
+void building_t::place_chairs_along_walls(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt,
+	unsigned objs_start, colorRGBA const &chair_color, bool is_plastic, unsigned num)
 {
+	if (num == 0) return; // error?
+	float const chair_hscale(is_plastic ? 0.44 : 0.4), chair_height(chair_hscale*get_window_vspace()), chair_xy_scale(0.2/chair_hscale), chair_gap(0.35*chair_height);
+	vector3d const chair_sz(chair_xy_scale, chair_xy_scale, 1.0);
+	colorRGBA const ccolor(is_plastic ? get_pastic_chair_color(chair_color) : chair_color);
+	vect_room_object_t &objs(interior->room_geom->objs);
+	cube_t chair_place_area(get_walkable_room_bounds(room));
+	chair_place_area.expand_by_xy(-get_wall_thickness());
+
+	for (unsigned n = 0; n < num; ++n) {
+		unsigned const chair_obj_ix(objs.size());
+		if (!place_obj_along_wall(TYPE_CHAIR, room, chair_height, chair_sz, rgen, zval, room_id, tot_light_amt, chair_place_area, objs_start,
+			1.0, 0, 4, 0, ccolor, 0, SHAPE_CUBE, chair_gap, RO_FLAG_PLCOLL)) break; // end when failed to place
+		assert(chair_obj_ix < objs.size());
+		if (is_plastic) {objs[chair_obj_ix].item_flags = 1;} // flag as plastic
+	}
+}
+
+bool building_t::add_exam_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start) {
 	cube_t place_area(get_walkable_room_bounds(room));
 	place_area.expand_by(-1.0*get_wall_thickness()); // add extra padding, since bed models are slightly different sizes
 	if (!place_model_along_wall(OBJ_MODEL_HOSP_BED, TYPE_HOSP_BED, room, 0.42, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.5)) return 0;
 	// TODO: should be a small desk, equipment, etc.
+	colorRGBA const &chair_color(chair_colors[rgen.rand() % NUM_CHAIR_COLORS]);
 	add_desk_to_room(rgen, room, vect_cube_t(), chair_color, zval, room_id, tot_light_amt, objs_start, 0, 0, 0, 1); // force_computer=1
 	//place_phone_on_obj(rgen, place_on, room_id, tot_light_amt, dim, dir); // place on the desk?
 	place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, room, 0.45, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.6);

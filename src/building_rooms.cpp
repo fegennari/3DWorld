@@ -187,6 +187,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	++interior->gen_room_details_pass;
 	objs.reserve(tot_num_rooms); // placeholder - there will be more than this many
 	bool const residential(is_residential());
+	bool const chair_color_per_floor(is_school());
 	float const extra_bathroom_prob((is_house ? 2.0 : 1.0)*0.02*min((int(tot_num_rooms) - 4), 20));
 	unsigned cand_bathroom(rooms.size()); // start at an invalid value
 	unsigned added_bathroom_objs_mask(0), numbered_rooms_seen(0), store_type_mask(0);
@@ -344,7 +345,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		// reset is_public_on_floor when we move to a new apartment/hotel unit
 		if (r->unit_id != last_unit_id) {is_public_on_floor = 0; last_unit_id = r->unit_id;}
 		// make chair colors consistent for each part by using a few variables for a hash
-		colorRGBA const &chair_color(chair_colors[(13*r->part_id + 123*tot_num_rooms + 617*mat_ix + 1367*num_floors) % NUM_CHAIR_COLORS]);
+		unsigned const chair_color_ix((13*r->part_id + 123*tot_num_rooms + 617*mat_ix + 1367*num_floors));
+		colorRGBA const &base_chair_color(chair_colors[chair_color_ix % NUM_CHAIR_COLORS]);
 		light_ix_assign.next_room();
 		rand_gen_t room_rgen(rgen); // shared across all floors of this room
 		int nested_room_ix(-1);
@@ -373,6 +375,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			bool is_lit(0), light_dim(room_dim), wall_light(0), has_stairs(has_stairs_this_floor), top_of_stairs(has_stairs && top_floor);
 			float light_delta_z(0.0);
 			vect_cube_t rooms_to_light;
+			colorRGBA const chair_color(chair_color_per_floor ? (chair_colors[(chair_color_ix + f*(mat_ix + 1)) % NUM_CHAIR_COLORS]) : base_chair_color);
 
 			if (is_parking_garage) { // parking garage; added first because this sets the number of lights
 				assert(!has_window);
@@ -818,13 +821,13 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					unsigned const rand_val(rgen.rand() % ((f == 0) ? 2 : 5)); // first floor is always waiting or exam room
 
 					if (rand_val == 0) { // waiting room; should there be at most one per floor?
-						if (add_waiting_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start, chair_color)) {
+						if (add_waiting_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start)) {
 							added_obj = no_whiteboard = 1;
 							r->assign_to(RTYPE_WAITING, f);
 						}
 					}
 					else if (rand_val == 1 || rand_val == 4) { // exam room; twice as likely
-						if (add_exam_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start, chair_color)) {
+						if (add_exam_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start)) {
 							added_obj = no_whiteboard = 1;
 							r->assign_to(RTYPE_HOS_EXAM, f);
 						}
