@@ -1710,7 +1710,8 @@ void play_camera_footstep_sound() { // tiled terrain mode
 	if (dist_xy_less_than(pos, last_pos, 0.5*CAMERA_RADIUS)) return;
 	last_pos = pos;
 	fs_time  = tfticks;
-	bool const not_in_building(!camera_in_building && !player_in_walkway && !player_in_skyway && !player_in_ww_elevator);
+	bool not_in_building(!camera_in_building && !player_in_walkway && !player_in_skyway && !player_in_ww_elevator);
+	not_in_building &= (pos.z < get_max_mesh_height_within_radius(pos, CAMERA_RADIUS, 1) + 2.0*(CAMERA_RADIUS + camera_zh)); // on a building roof, bridge, etc.
 	if (player_in_water) {register_building_water_splash((pos - get_bldg_player_height()*plus_z), 1.0, 1);} // water splash at player feet; alert_zombies=1
 	else if (player_in_tunnel      ) {gen_sound_random_var(get_sound_id_for_file("footsteps/footstep_splash.wav"), pos, 0.2);}
 	//else if (player_in_water       ) {gen_sound_random_var(get_sound_id_for_file("footsteps/footstep_splash.wav"), pos, 0.2);}
