@@ -27,7 +27,7 @@ cobj_groups_t cobj_groups;
 cobj_draw_groups cdraw_groups;
 
 extern bool lm_alloc, has_snow, player_wait_respawn, camera_in_building, player_on_house_stairs, player_in_walkway, player_in_skyway, player_in_ww_elevator;
-extern bool player_on_moving_ww, player_in_tunnel, player_on_escalator;
+extern bool player_on_moving_ww, player_in_tunnel, player_on_escalator, player_on_road, player_in_city;
 extern int camera_coll_smooth, game_mode, world_mode, xoff, yoff, camera_change, display_mode, scrolling, animate2;
 extern int camera_in_air, mesh_scale_change, camera_invincible, camera_flight, num_smileys, iticks, frame_counter, player_in_water, player_in_basement;
 extern unsigned snow_coverage_resolution;
@@ -1710,12 +1710,14 @@ void play_camera_footstep_sound() { // tiled terrain mode
 	if (dist_xy_less_than(pos, last_pos, 0.5*CAMERA_RADIUS)) return;
 	last_pos = pos;
 	fs_time  = tfticks;
-	bool not_in_building(!camera_in_building && !player_in_walkway && !player_in_skyway && !player_in_ww_elevator);
-	not_in_building &= (pos.z < get_max_mesh_height_within_radius(pos, CAMERA_RADIUS, 1) + 2.0*(CAMERA_RADIUS + camera_zh)); // on a building roof, bridge, etc.
+	bool in_building(camera_in_building || player_in_walkway || player_in_skyway || player_in_ww_elevator);
+	in_building |= (pos.z > get_max_mesh_height_within_radius(pos, CAMERA_RADIUS, 1) + 2.0*(CAMERA_RADIUS + camera_zh)); // on a building roof, bridge, etc.
+	// Note: not tracking player on road vs. concrete vs. grass plots, so assume player_in_city means not on grass
+	bool const on_terrain(!in_building && !player_on_road && !player_in_city);
 	if (player_in_water) {register_building_water_splash((pos - get_bldg_player_height()*plus_z), 1.0, 1);} // water splash at player feet; alert_zombies=1
 	else if (player_in_tunnel      ) {gen_sound_random_var(get_sound_id_for_file("footsteps/footstep_splash.wav"), pos, 0.2);}
 	//else if (player_in_water       ) {gen_sound_random_var(get_sound_id_for_file("footsteps/footstep_splash.wav"), pos, 0.2);}
-	else if (not_in_building       ) {gen_sound_random_var(get_sound_id_for_file("footsteps/footstep_grass.wav" ), pos, 0.2);}
+	else if (on_terrain            ) {gen_sound_random_var(get_sound_id_for_file("footsteps/footstep_grass.wav" ), pos, 0.2);}
 	else if (player_in_basement > 1) {gen_sound_random_var(get_sound_id_for_file("footsteps/footstep_knock2.wav"), pos, 0.2);}
 	else if (player_on_house_stairs) {gen_sound_random_var(get_sound_id_for_file("footsteps/footstep_hollow.wav"), pos, 0.2);}
 	else {gen_sound_random_var(get_sound_id_for_file("footsteps/footstep_knock.wav"), pos, 0.2);} // was SOUND_SNOW_STEP with pitch=1.25

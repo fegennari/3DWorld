@@ -16,7 +16,7 @@ float const CAR_LANE_OFFSET         = 0.15; // in units of road width
 float const CITY_LIGHT_FALLOFF      = 0.2; // smooth falloff for headlights, streetlights, and room lights
 
 
-bool had_building_interior_coll(0), city_lights_custom_bcube(0), has_transmission_lines(0);
+bool had_building_interior_coll(0), city_lights_custom_bcube(0), has_transmission_lines(0), player_on_road(0), player_in_city(0);
 vector2d actual_max_road_seg_len;
 city_params_t city_params;
 point pre_smap_player_pos(all_zeros), actual_player_pos(all_zeros); // Note: pre_smap_player_pos can be security cameras, but actual_player_pos is always the player
@@ -1241,6 +1241,7 @@ public:
 		if (!is_global_connector) { // normal city
 			float const max_obj_z(bcube.z1() + radius);
 			if (pos.z < max_obj_z) {pos.z = max_obj_z; plot_coll = 1;} // make sure the sphere is above the city road/plot surface
+			if (for_player) {player_in_city = 1;}
 		}
 		else if (for_player) { // global connector road network: place player on top of sloped roads
 			point const pos_bs(pos - xlate);
@@ -1260,6 +1261,7 @@ public:
 				break;
 			}
 			if (road_coll && cnorm) {*cnorm = plus_z;}
+			player_on_road |= road_coll;
 		}
 		for (unsigned n = 1; n < 3; ++n) { // intersections, possibly with stoplights (3-way, 4-way); skip 2-way because they're empty
 			for (road_isec_t const &i : isecs[n]) {
@@ -3442,6 +3444,7 @@ public:
 		get_road_segs_in_region((region - get_camera_coord_space_xlate()), out); // convert region from camera space to city/building space
 	}
 	bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, bool inc_cars, vector3d *cnorm, bool for_player) const { // pos in camera space
+		if (for_player) {player_on_road = player_in_city = 0;} // reset for this frame
 		if (road_gen.proc_sphere_coll(pos, p_last, radius, prev_frame_zval, cnorm, for_player)) return 1;
 		if (!inc_cars) return 0;
 		return car_manager.proc_sphere_coll(pos, p_last, radius, cnorm); // Note: doesn't really work well, at least for player collisions
