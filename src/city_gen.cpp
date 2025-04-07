@@ -1232,17 +1232,38 @@ public:
 		get_bcubes_region_coll_xy(tunnels, out_bt, query_region, xlate);
 		get_bcubes_region_coll_xy(tracks,  out,    query_region, xlate);
 	}
-	bool proc_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float dist, float radius, float prev_frame_zval, vector3d *cnorm) const { // pos in camera space
+	// pos is in camera space
+	bool proc_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float dist, float radius, float prev_frame_zval, vector3d *cnorm, bool for_player) const {
 		if (!moving_sphere_cube_intersect_xy(pos, p_last, (bcube + xlate), dist, radius)) return 0;
-		bool plot_coll(0);
+		bool const is_global_connector(plots.empty());
+		bool plot_coll(0), road_coll(0);
 			
-		if (!plots.empty()) {
+		if (!is_global_connector) { // normal city
 			float const max_obj_z(bcube.z1() + radius);
 			if (pos.z < max_obj_z) {pos.z = max_obj_z; plot_coll = 1;} // make sure the sphere is above the city road/plot surface
 		}
-		for (unsigned n = 1; n < 3; ++n) { // intersections, possibly with stoplights (3-way, 4-way)
-			for (auto i = isecs[n].begin(); i != isecs[n].end(); ++i) {
-				if (i->proc_sphere_coll(pos, p_last, radius, xlate, dist, cnorm)) return 1;
+		else if (for_player) { // global connector road network: place player on top of sloped roads
+			point const pos_bs(pos - xlate);
+
+			for (road_t const &r : roads) {
+				if (!r.contains_pt_xy(pos_bs)) continue;
+				float const t((pos_bs[r.dim] - r.d[r.dim][0])/r.get_length()); // pos along road in (0.0, 1.0)
+				float const road_z(t*r.d[2][!r.slope] + (1.0 - t)*r.d[2][r.slope]);
+				max_eq(pos.z, float(road_z + radius));
+				road_coll = 1; // only if pos.z is below road?
+				break;
+			}
+			for (road_isec_t const &i : isecs[0]) { // 2-way intersections (90 degree turns)
+				if (!i.contains_pt_xy(pos_bs)) continue;
+				max_eq(pos.z, float(i.z2() + radius));
+				road_coll = 1; // only if pos.z is below isec?
+				break;
+			}
+			if (road_coll && cnorm) {*cnorm = plus_z;}
+		}
+		for (unsigned n = 1; n < 3; ++n) { // intersections, possibly with stoplights (3-way, 4-way); skip 2-way because they're empty
+			for (road_isec_t const &i : isecs[n]) {
+				if (i.proc_sphere_coll(pos, p_last, radius, xlate, dist, cnorm)) return 1;
 			}
 		}
 		for (auto i = bridges.begin(); i != bridges.end(); ++i) {
@@ -1261,7 +1282,7 @@ public:
 			if (cnorm) {*cnorm = plus_z;}
 			return 1;
 		}
-		return 0;
+		return road_coll;
 	}
 	bool line_intersect(point const &p1, point const &p2, float &t) const { // Note: xlate has already been applied
 		bool ret(0);
@@ -2944,14 +2965,14 @@ public:
 		}
 		return global_rn.get_color_at_xy(pos, color);
 	}
-	bool proc_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, vector3d *cnorm) const { // pos is in camera space
+	bool proc_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, vector3d *cnorm, bool for_player) const { // pos is in camera space
 		vector3d const xlate(get_camera_coord_space_xlate());
 		float const dist(p2p_dist(pos, p_last));
 
 		for (road_network_t const &r : road_networks) {
-			if (r.proc_sphere_coll(pos, p_last, xlate, dist, radius, prev_frame_zval, cnorm)) return 1;
+			if (r.proc_sphere_coll(pos, p_last, xlate, dist, radius, prev_frame_zval, cnorm, for_player)) return 1;
 		}
-		return global_rn.proc_sphere_coll(pos, p_last, xlate, dist, radius, prev_frame_zval, cnorm); // needed for bridges and tunnels
+		return global_rn.proc_sphere_coll(pos, p_last, xlate, dist, radius, prev_frame_zval, cnorm, for_player); // needed for bridges and tunnels
 	}
 	bool line_intersect(point const &p1, point const &p2, float &t) const {
 		bool ret(0);
@@ -3420,8 +3441,8 @@ public:
 		road_gen.get_roads_in_region(region, out, out_bt);
 		get_road_segs_in_region((region - get_camera_coord_space_xlate()), out); // convert region from camera space to city/building space
 	}
-	bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, bool inc_cars, vector3d *cnorm) const { // pos is in camera space
-		if (road_gen.proc_sphere_coll(pos, p_last, radius, prev_frame_zval, cnorm)) return 1;
+	bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, bool inc_cars, vector3d *cnorm, bool for_player) const { // pos in camera space
+		if (road_gen.proc_sphere_coll(pos, p_last, radius, prev_frame_zval, cnorm, for_player)) return 1;
 		if (!inc_cars) return 0;
 		return car_manager.proc_sphere_coll(pos, p_last, radius, cnorm); // Note: doesn't really work well, at least for player collisions
 	}
@@ -3568,7 +3589,7 @@ bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float 
 	had_building_interior_coll = 0;
 	bool ret(proc_buildings_sphere_coll(pos, p_last, radius, cnorm, check_interior));
 	if (ret && had_building_interior_coll) return ret; // skip city coll if player is in a building
-	ret |= city_gen.proc_city_sphere_coll(pos, p_last, radius, prev_frame_zval, inc_cars, cnorm); // check city as well
+	ret |= city_gen.proc_city_sphere_coll(pos, p_last, radius, prev_frame_zval, inc_cars, cnorm, check_interior); // check city as well
 	return ret;
 }
 bool line_intersect_city(point const &p1, point const &p2, float &t, bool ret_any_pt) {

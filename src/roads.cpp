@@ -955,7 +955,7 @@ void road_isec_t::draw_stoplights_and_street_signs(road_draw_state_t &dstate, ve
 float road_connector_t::get_player_zval(point const &center, cube_t const &c) const {
 	float const t((center[dim] - c.d[dim][0])/c.get_sz_dim(dim));
 	float const za(slope ? c.z2() : c.z1()), zb(slope ? c.z1() : c.z2()), zval(za + (zb - za)*t); // z-value at x/y location
-	return zval - src_road.get_z_adj() - ROAD_HEIGHT; // place exactly on mesh under the road/bridge/tunnel surface
+	return zval - src_road.get_z_adj(); // place exactly on bridge/tunnel road surface
 }
 
 void road_connector_t::add_streetlights(unsigned num_per_side, bool staggered, float dn_shift_mult, float za, float zb) {
