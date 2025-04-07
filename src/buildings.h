@@ -582,7 +582,7 @@ enum {/*building models*/ OBJ_MODEL_TOILET=0, OBJ_MODEL_SINK, OBJ_MODEL_TUB, OBJ
 	OBJ_MODEL_BICYCLE, OBJ_MODEL_SWINGSET, OBJ_MODEL_TRAMPOLINE, OBJ_MODEL_DUMPSTER, OBJ_MODEL_BIG_UMBRELLA, OBJ_MODEL_FLOWER, OBJ_MODEL_DECK_CHAIR, OBJ_MODEL_PICNIC,
 	OBJ_MODEL_WIND_TUR, NUM_OBJ_MODELS};
 
-enum {PART_EFFECT_NONE=0, PART_EFFECT_SPARK, PART_EFFECT_CLOUD, PART_EFFECT_SMOKE, PART_EFFECT_SPLASH, PART_EFFECT_BUBBLE, NUM_PART_EFFECTS};
+enum {PART_EFFECT_NONE=0, PART_EFFECT_SPARK, PART_EFFECT_CLOUD, PART_EFFECT_SMOKE, PART_EFFECT_SPLASH, PART_EFFECT_BUBBLE, PART_EFFECT_DROPLET, NUM_PART_EFFECTS};
 enum {PIPE_TYPE_SEWER=0, PIPE_TYPE_CW, PIPE_TYPE_HW, PIPE_TYPE_GAS, NUM_PIPE_TYPES};
 
 enum {BIRD_STATE_FLYING=0, BIRD_STATE_GLIDING, BIRD_STATE_LANDING, BIRD_STATE_STANDING, BIRD_STATE_TAKEOFF, NUM_BIRD_STATES};
@@ -1048,6 +1048,12 @@ public:
 	void draw(shader_t &s, vector3d const &xlate);
 };
 
+struct droplet_spawner_t {
+	point pos;
+	float radius, period, last_spawned=0.0;
+	droplet_spawner_t(point const &pos_, float radius_, float period_) : pos(pos_), radius(radius_), period(period_) {}
+};
+
 struct index_pair_t {
 	unsigned ix[2] = {};
 	index_pair_t() {}
@@ -1100,6 +1106,7 @@ struct building_room_geom_t {
 	building_decal_manager_t decal_manager;
 	particle_manager_t particle_manager;
 	fire_manager_t fire_manager;
+	vector<droplet_spawner_t> droplet_spanwers; // for flooded basements
 
 	building_room_geom_t(point const &tex_origin_=all_zeros) : tex_origin(tex_origin_), wood_color(WHITE) {}
 	bool empty() const {return objs.empty();}
@@ -2551,6 +2558,8 @@ private:
 	void maybe_assign_extb_room_as_swimming(rand_gen_t &rgen);
 	void add_wall_section_above_pool_room_door(door_stack_t &ds, room_t const &room);
 	unsigned setup_multi_floor_room(extb_room_t &room, door_t const &door, bool wall_dim, bool wall_dir, rand_gen_t &rgen);
+	void add_backrooms_droplet_spawners(rand_gen_t rgen);
+	void update_droplet_spawners();
 	bool add_ext_basement_rooms_recur(extb_room_t &parent_room, ext_basement_room_params_t &P, float door_width, bool dim, unsigned depth, rand_gen_t &rgen);
 	unsigned max_expand_underground_room(cube_t &room, bool dim, bool dir, bool is_mall, rand_gen_t &rgen) const;
 	void add_mall_se_landing(cube_t const &c, bool is_escalator, bool se_dim, bool se_dir, bool ww_dir);
@@ -3161,6 +3170,7 @@ void register_building_sound(point const &pos, float volume);
 void register_building_sound_at_player(float volume);
 bldg_obj_type_t const &get_room_obj_type(room_object_t const &obj);
 void register_building_water_splash(point const &pos, float size=1.0, bool alert_zombies=1);
+bool add_water_splash(point const &pos, float radius, float size);
 // functions in city_gen.cc
 void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights, int use_smap, int use_bmap,
 	float min_alpha=0.0, bool force_tsl=0, float pcf_scale=1.0, int use_texgen=0, bool indir_lighting=0, bool is_outside=1);

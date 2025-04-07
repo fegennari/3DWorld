@@ -1730,6 +1730,7 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 	interior->room_geom->particle_manager.next_frame(*this);
 	interior->room_geom->fire_manager.next_frame(interior->room_geom->particle_manager);
 	if (is_factory()) {interior->ind_info->next_frame(interior->room_geom->particle_manager);} // update factory smoke
+	update_droplet_spawners();
 }
 
 // particle_manager_t
@@ -1754,17 +1755,19 @@ void particle_manager_t::add_for_obj(room_object_t &obj, float pradius, vector3d
 		particles.emplace_back(pos, v, WHITE, pradius*rgen.rand_uniform(0.8, 1.25), effect, parent_obj_id);
 	}
 }
+
 cube_t particle_manager_t::get_bcube() const {
 	cube_t bcube;
 	for (particle_t const &p : particles) {bcube.assign_or_union_with_sphere(p.pos, p.radius);}
 	return bcube;
 }
+
 void particle_manager_t::next_frame(building_t &building) {
 	if (particles.empty()) return;
 	float const fticks_stable(min(fticks, 4.0f)); // clamp to 0.1s
 	auto const &objs(building.interior->room_geom->objs);
-	//                                        none sparks clouds smoke splash bubble
-	float const lifetimes[NUM_PART_EFFECTS] = {0.0, 2.5,   3.0,   2.0,  0.25,  2.0};
+	//                                        none sparks clouds smoke splash bubble, droplet
+	float const lifetimes[NUM_PART_EFFECTS] = {0.0, 2.5,   3.0,   2.0,  0.25,  2.0,    1.0};
 
 	for (particle_t &p : particles) {
 		point const p_last(p.pos);
@@ -1798,6 +1801,21 @@ void particle_manager_t::next_frame(building_t &building) {
 			if (p.pos.z > building.interior->water_zval) {p.effect = PART_EFFECT_NONE;} // remove when it hits the water line
 			continue; // done - no other collisions
 		}
+		else if (p.effect == PART_EFFECT_DROPLET) {
+			if (building.has_water() && p.pos.z < building.interior->water_zval) { // splash and die
+				p.effect = PART_EFFECT_SPLASH; // turn into a spash
+				p.radius = 8.0*p.radius;
+				p.pos.z  = building.interior->water_zval + 1.6*p.radius; // above the water surface (final radius is 2x original)
+				p.vel    = zero_vector;
+				p.color  = WHITE;
+				add_water_splash(p.pos, 1.5*p.radius, 0.25);
+				point const pos_cs(p.pos + get_camera_coord_space_xlate());
+				if (dist_less_than(pos_cs, get_camera_pos(), 2.0*building.get_window_vspace())) {gen_sound_thread_safe(SOUND_WATER_DROP, pos_cs, 0.1);}
+				continue;
+			}
+			p.color = DK_BROWN;
+			apply_building_gravity(p.vel.z, fticks_stable); // full gravity
+		}
 		else {assert(0);}
 		// check for collisions and apply bounce, similar to balls
 		float const bounce_scale = 0.5;
@@ -1808,7 +1826,7 @@ void particle_manager_t::next_frame(building_t &building) {
 		if (p.parent_obj_id >= 0) {assert((unsigned)p.parent_obj_id < objs.size()); self = objs.begin() + p.parent_obj_id;}
 
 		if (building.interior->check_sphere_coll(building, p.pos, p_last, p.radius*p.coll_radius, self, cnorm, hardness, obj_ix)) {
-			if (p.effect == PART_EFFECT_CLOUD || p.effect == PART_EFFECT_SMOKE) {p.effect = PART_EFFECT_NONE; continue;} // no bounce
+			if (p.effect == PART_EFFECT_CLOUD || p.effect == PART_EFFECT_SMOKE || p.effect == PART_EFFECT_DROPLET) {p.effect = PART_EFFECT_NONE; continue;} // no bounce
 			apply_floor_vel_thresh(p.vel, cnorm);
 			bool const bounced(apply_object_bounce(p.vel, cnorm, bounce_scale*hardness, 0)); // on_floor=0
 			

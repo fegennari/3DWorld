@@ -2374,8 +2374,9 @@ void draw_emissive_billboards(quad_batch_draw &qbd, int tid) {
 }
 
 class particle_texture_manager_t {
-	string const fns[NUM_PART_EFFECTS] = {"", "", "", "", "water_splash.png", "white_circle.png"}; // none, sparks, clouds, smoke, splash, bubble
-	int tids[NUM_PART_EFFECTS] = {-1, BLUR_CENT_TEX, BLUR_TEX, BLUR_TEX, -1, -1}; // none, sparks, clouds, smoke, splash, bubble
+	// none, sparks, clouds, smoke, splash, bubble, droplet
+	string const fns[NUM_PART_EFFECTS] = {"", "", "", "", "water_splash.png", "white_circle.png", "white_circle.png"};
+	int         tids[NUM_PART_EFFECTS] = {-1, BLUR_CENT_TEX, BLUR_TEX, BLUR_TEX, -1, -1, -1};
 public:
 	int get_tid(unsigned effect) {
 		assert(effect < NUM_PART_EFFECTS);
@@ -2397,7 +2398,8 @@ void particle_manager_t::draw(shader_t &s, vector3d const &xlate) { // non-const
 		vector3d v1(cross_product(vdir, up_dir).get_norm()*p.radius);
 		vector3d v2(cross_product(v1,   vdir  ).get_norm()*p.radius);
 		assert(p.effect < NUM_PART_EFFECTS);
-		if (p.effect == PART_EFFECT_SPARK) {v2 *= (1.0 + 1500.0*p.vel.mag());} // stretch in velocity dir
+		if      (p.effect == PART_EFFECT_SPARK  ) {v2 *= (1.0 + 1500.0*p.vel.mag());} // stretch in velocity dir
+		else if (p.effect == PART_EFFECT_DROPLET) {v2 *= 3.0;} // stretch vertically
 		if (p.effect == PART_EFFECT_BUBBLE) {bubbles.emplace_back(p.pos, p.radius);}
 		else {qbds[p.effect].add_quad_dirs(p.pos, v1, v2, p.color, plus_z);} // use +z form the normal
 	} // for p

@@ -11,7 +11,6 @@ extern int animate2, frame_counter, player_in_water;
 extern float fticks;
 
 bool check_ramp_collision(room_object_t const &c, point &pos, float radius, vector3d *cnorm);
-bool add_water_splash(point const &pos, float radius, float size);
 void draw_animated_fish_model(shader_t &s, vector3d const &pos, float radius, vector3d const &dir, float anim_time, colorRGBA const &color);
 bool play_attack_sound(point const &pos, float gain, float pitch, rand_gen_t &rgen);
 

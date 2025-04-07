@@ -226,6 +226,38 @@ bool building_t::water_visible_to_player() const { // applies to backrooms and p
 	return 0;
 }
 
+void building_t::add_backrooms_droplet_spawners(rand_gen_t rgen) {
+	assert(has_room_geom());
+	assert(interior->has_backrooms);
+	if (!has_water()) return;
+	if (interior->water_zval - interior->basement_ext_bcube.z1() > 0.7*get_window_vspace()) return; // water too deep, player head underwater
+	float const wall_thickness(get_wall_thickness()), rmax(0.1*wall_thickness);
+	float const zval(get_floor_below_water_level() + get_floor_ceil_gap()); // ceiling above water level
+	unsigned const num_spawners(3 + (rgen.rand() & 15)); // 3-18
+	cube_t spawn_bounds(interior->basement_ext_bcube);
+	spawn_bounds.expand_by_xy(-wall_thickness);
+
+	for (unsigned n = 0; n < num_spawners; ++n) {
+		float const radius(rgen.rand_uniform(0.5, 1.0)*rmax), period(rgen.rand_uniform(1.0, 4.0)*TICKS_PER_SECOND);
+		point pos(0.0, 0.0, zval);
+		for (unsigned d = 0; d < 2; ++d) {pos[d] = rgen.rand_uniform(spawn_bounds.d[d][0], spawn_bounds.d[d][1]);}
+		cube_t spawner_bc(pos);
+		spawner_bc.expand_by(radius);
+		if (interior->is_blocked_by_stairs_or_elevator(spawner_bc)) continue;
+		interior->room_geom->droplet_spanwers.emplace_back(pos, radius, period);
+	} // for n
+}
+void building_t::update_droplet_spawners() {
+	assert(has_room_geom());
+
+	for (droplet_spawner_t &s : interior->room_geom->droplet_spanwers) {
+		if ((tfticks - s.last_spawned) < s.period) continue;
+		point const pos(s.pos.x, s.pos.y, (s.pos.z - 1.2*s.radius)); // under the ceiling so as not to collide
+		interior->room_geom->particle_manager.add_particle(pos, zero_vector, WHITE, s.radius, PART_EFFECT_DROPLET);
+		s.last_spawned = tfticks;
+	}
+}
+
 void building_t::draw_water(vector3d const &xlate) const {
 	if (!(display_mode & 0x04)) return; // water disabled
 	
