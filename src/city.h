@@ -17,13 +17,14 @@ using std::string;
 unsigned const CONN_CITY_IX((1<<16)-1); // uint16_t max
 unsigned const NO_CITY_IX(CONN_CITY_IX-1); // used for cars not in any city (in house garages)
 
-enum {TID_SIDEWLAK=0, TID_STRAIGHT, TID_BEND_90, TID_3WAY,   TID_4WAY,   TID_PARK_LOT,  TID_TRACKS,  TID_PARK,  TID_DRIVEWAY,  TID_ROAD_SKIRT, /*none for bldg*/ NUM_RD_TIDS };
-enum {TYPE_PLOT   =0, TYPE_RSEG,    TYPE_ISEC2,  TYPE_ISEC3, TYPE_ISEC4, TYPE_PARK_LOT, TYPE_TRACKS, TYPE_PARK, TYPE_DRIVEWAY, TYPE_ROAD_SKIRT, TYPE_BUILDING,   NUM_RD_TYPES};
+// Note: when addint to this list, must also update road_mat_mgr_t::ensure_road_textures()
+enum {TID_SIDEWLAK=0, TID_STRAIGHT, TID_BEND_90, TID_3WAY,   TID_4WAY,   TID_PARK_LOT,  TID_TRACKS,  TID_PARK,  TID_DRIVEWAY,  TID_ROAD_SKIRT,  TID_TURN_SKIRT, /*none for bldg*/ NUM_RD_TIDS };
+enum {TYPE_PLOT   =0, TYPE_RSEG,    TYPE_ISEC2,  TYPE_ISEC3, TYPE_ISEC4, TYPE_PARK_LOT, TYPE_TRACKS, TYPE_PARK, TYPE_DRIVEWAY, TYPE_ROAD_SKIRT, TYPE_TURN_SKIRT, TYPE_BUILDING,   NUM_RD_TYPES};
 enum {TURN_NONE=0, TURN_LEFT, TURN_RIGHT, TURN_UNSPEC};
 enum {INT_NONE=0, INT_ROAD, INT_PLOT, INT_PARKING, INT_PARK, INT_TRACK, INT_BUILDING, INT_TURBINE};
 enum {RTYPE_ROAD=0, RTYPE_TRACKS};
 unsigned const CONN_TYPE_NONE = 0;
-colorRGBA const road_colors[NUM_RD_TYPES] = {WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, LT_GRAY, LT_GRAY, GRAY, WHITE}; // white except for parks, driveways, and skirts
+colorRGBA const road_colors[NUM_RD_TYPES] = {WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, LT_GRAY, LT_GRAY, GRAY, GRAY, WHITE}; // white except for parks, driveways, and skirts
 
 int       const FORCE_MODEL_ID = -1; // -1 disables
 unsigned  const NUM_CAR_COLORS = 10;
@@ -566,6 +567,7 @@ struct road_isec_t : public cube_t {
 	bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d const &xlate, float dist, vector3d *cnorm) const;
 	bool line_intersect(point const &p1, point const &p2, float &t) const;
 	void draw_stoplights_and_street_signs(road_draw_state_t &dstate, vector<road_t> const &roads, unsigned cur_city, bool shadow_only) const;
+	void add_road_quad(quad_batch_draw &qbd, colorRGBA const &color, float ar, bool add_skirt=0) const;
 private:
 	void draw_sl_block(quad_batch_draw &qbd, draw_state_t &dstate, point p[4], float h, unsigned state,
 		bool draw_unlit, float flare_alpha, vector3d const &n, tex_range_t const &tr) const;
@@ -649,6 +651,7 @@ public:
 	virtual void post_draw();
 	void end_cur_tile();
 	void add_city_quad(road_seg_t  const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix, bool);
+	void add_city_quad(road_isec_t const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix, bool);
 	void add_city_quad(road_t      const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix, bool);
 	void add_city_quad(road_plot_t const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix, bool draw_all);
 	void draw_city_skirt(cube_t const &bcube, bool shadow_only);

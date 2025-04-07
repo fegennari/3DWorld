@@ -79,9 +79,9 @@ string road_t::get_name(unsigned city_ix) const {return road_name_gen.gen_name(*
 void road_mat_mgr_t::ensure_road_textures() {
 	if (inited) return;
 	string const img_names[NUM_RD_TIDS] = {"sidewalk.jpg", "straight_road.jpg", "bend_90.jpg", "int_3_way.jpg", "int_4_way.jpg",
-		                                   "parking_lot.png", "rail_tracks.jpg", "grass_park.jpg", "concrete.jpg", "asphalt.jpg"};
-	float const aniso   [NUM_RD_TIDS] = {4.0, 16.0, 8.0, 8.0, 8.0, 4.0, 16.0, 16.0};
-	int   const wrap_mir[NUM_RD_TIDS] = {1, 1, 0, 0, 0, 1, 1, 1, 1, 1}; // bend and intersections are clamped, and the others are wrapped
+		                                   "parking_lot.png", "rail_tracks.jpg", "grass_park.jpg", "concrete.jpg", "asphalt.jpg", "asphalt.jpg"};
+	float const aniso   [NUM_RD_TIDS] = {4.0, 16.0, 8.0, 8.0, 8.0, 4.0, 16.0, 4.0, 4.0, 16.0, 16.0};
+	int   const wrap_mir[NUM_RD_TIDS] = {1,   1,    0,   0,   0,   1,   1,    1,   1,   1,    1}; // bend and intersections are clamped, and the others are wrapped
 	for (unsigned i = 0; i < NUM_RD_TIDS; ++i) {tids[i] = get_texture_by_name(("roads/" + img_names[i]), 0, 0, wrap_mir[i], aniso[i]);}
 	sl_tid = get_texture_by_name("roads/traffic_light.png");
 	inited = 1;
@@ -117,6 +117,21 @@ void road_t::register_bridge_or_tunnel(cube_t const &bc, bool is_bridge) {
 	bt_hi = bc.d[dim][1];
 }
 
+void add_road_skirt(quad_batch_draw &qbd, colorRGBA const &color, point const pts[4], float length, float width, bool dim, bool d) { // d is road side
+	float const skirt_width(0.2*width), skirt_height(1.0*skirt_width);
+	point skirt[4];
+	if (dim) {skirt[0] = skirt[3] = pts[d ? 1 : 0]; skirt[1] = skirt[2] = pts[d ? 2 : 3];} // y
+	else     {skirt[0] = skirt[3] = pts[d ? 2 : 0]; skirt[1] = skirt[2] = pts[d ? 3 : 1];} // x
+
+	for (unsigned e = 0; e < 2; ++e) {
+		skirt[e+2][!dim] += (d ? 1.0 : -1.0)*skirt_width; // expand outward
+		skirt[e+2].z     -= skirt_height; // move downward
+	}
+	vector3d normal(cross_product((skirt[2] - skirt[1]), (skirt[0] - skirt[1])).get_norm());
+	if (normal.z < 0.0) {reverse(skirt, skirt+4); normal.negate();} // make CCW
+	qbd.add_quad_pts(skirt, color, normal, get_uniform_tscale_ar(length, skirt_width, 1.0, 0));
+}
+
 // specialized here for sloped roads (road segments and railroad tracks)
 void road_t::add_road_quad(quad_batch_draw &qbd, colorRGBA const &color, float ar, bool add_skirt) const {
 	if (z1() == z2()) {
@@ -140,26 +155,20 @@ void road_t::add_road_quad(quad_batch_draw &qbd, colorRGBA const &color, float a
 	if (!dim) {swap(pts[0].z, pts[2].z);}
 
 	if (add_skirt) {
-		float const road_length(get_length()), skirt_width(0.2*get_width()), skirt_height(1.0*skirt_width);
-
-		for (unsigned d = 0; d < 2; ++d) { // each side
-			point skirt[4];
-			if (dim) {skirt[0] = skirt[3] = pts[d ? 1 : 0]; skirt[1] = skirt[2] = pts[d ? 2 : 3];} // y
-			else     {skirt[0] = skirt[3] = pts[d ? 2 : 0]; skirt[1] = skirt[2] = pts[d ? 3 : 1];} // x
-
-			for (unsigned e = 0; e < 2; ++e) {
-				skirt[e+2][!dim] += (d ? 1.0 : -1.0)*skirt_width; // expand outward
-				skirt[e+2].z     -= skirt_height; // move downward
-			}
-			vector3d normal(cross_product((skirt[2] - skirt[1]), (skirt[0] - skirt[1])).get_norm());
-			if (normal.z < 0.0) {reverse(skirt, skirt+4); normal.negate();} // make CCW
-			qbd.add_quad_pts(skirt, color, normal, get_uniform_tscale_ar(road_length, skirt_width, 1.0, 0));
-		} // for d
+		for (unsigned d = 0; d < 2; ++d) {add_road_skirt(qbd, color, pts, get_length(), get_width(), dim, d);} // each side
 	}
 	else { // add road quad
 		vector3d const normal(cross_product((pts[2] - pts[1]), (pts[0] - pts[1])).get_norm());
 		qbd.add_quad_pts(pts, color, normal, get_tex_range(ar));
 	}
+}
+
+void road_isec_t::add_road_quad(quad_batch_draw &qbd, colorRGBA const &color, float ar, bool add_skirt) const {
+	if (!add_skirt) {add_flat_city_quad(*this, qbd, color, ar); return;}
+	float const width(dx()); // should be square
+	point const pts[4] = {point(x1(), y1(), z2()), point(x2(), y1(), z2()), point(x2(), y2(), z2()), point(x1(), y2(), z2())};
+	bool const dirs[2] = {(conn == 5 || conn == 6), (conn == 5 || conn == 9)};
+	for (unsigned dim = 0; dim < 2; ++dim) {add_road_skirt(qbd, color, pts, width, width, dim, dirs[dim]);} // each dim
 }
 
 
@@ -1137,7 +1146,7 @@ void road_draw_state_t::draw_city_skirt(cube_t const &bcube, bool shadow_only) {
 		skirt.z1() -= 0.2*city_params.road_width; // extend into the ground
 		draw_cube(qbd_skirt, skirt, WHITE, 1, 16.0, 4); // skip zvals
 		for (auto &v : qbd_skirt.verts) {v.set_norm(-plus_z);} // hack to avoid shadow artifacts: point the normal downward so that there is no light
-		road_mat_mgr.set_texture(TYPE_ROAD_SKIRT);
+		road_mat_mgr.set_texture(TID_ROAD_SKIRT);
 	}
 	qbd_skirt.draw_and_clear();
 }
@@ -1213,6 +1222,10 @@ struct plot_region_t : public cube_t {
 
 void road_draw_state_t::add_city_quad(road_seg_t  const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix, bool) { // road segment or skirt
 	bool const add_skirt(type_ix == TYPE_ROAD_SKIRT);
+	r.add_road_quad(qbd, color, ar, add_skirt);
+}
+void road_draw_state_t::add_city_quad(road_isec_t const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix, bool) { // road turn or skirt
+	bool const add_skirt(type_ix == TYPE_TURN_SKIRT);
 	r.add_road_quad(qbd, color, ar, add_skirt);
 }
 void road_draw_state_t::add_city_quad(road_t      const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix, bool) { // tracks
