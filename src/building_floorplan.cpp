@@ -2762,7 +2762,7 @@ void building_t::create_two_story_tall_rooms(rand_gen_t &rgen) {
 			dixs_to_remove.push_back(dix_to_remove);
 
 			for (auto &s : interior->stairwells) { // fix up basement stairs door index
-				if (s.stairs_door_ix >= 0 && s.stairs_door_ix > dix_to_remove) {--s.stairs_door_ix;}
+				if (s.stairs_door_ix >= 0 && s.stairs_door_ix > (int)dix_to_remove) {--s.stairs_door_ix;}
 			}
 		} // for i
 		// remove doors in reverse order since later indices will change; ext basement conn should be added later, so those door_ix values don't need to be updated
