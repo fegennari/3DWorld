@@ -2679,11 +2679,12 @@ private:
 	bool add_waiting_room_objs  (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start);
 	void place_chairs_along_walls(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
 		colorRGBA const &chair_color, bool is_plastic, unsigned num);
-	bool add_exam_room_objs     (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start);
+	bool add_exam_room_objs     (rand_gen_t rgen, room_t &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start);
 	bool add_operating_room_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, unsigned floor_ix, float &tot_light_amt, unsigned objs_start, unsigned lights_start);
 	float add_flooring       (room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned flooring_type);
 	bool add_bathroom_objs   (rand_gen_t rgen, room_t &room, float &zval, unsigned room_id, float tot_light_amt,
 		unsigned objs_start, unsigned floor, bool is_basement, bool add_shower_tub, unsigned &added_bathroom_objs_mask);
+	bool add_vanity_to_room  (rand_gen_t &rgen, room_t &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	void add_bathroom_plumbing(room_object_t const &obj);
 	bool add_tp_roll         (cube_t const &room, unsigned room_id, float tot_light_amt, bool dim, bool dir, float length, float zval, float wall_pos, bool check_valid_pos=0);
 	bool divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, float zval, unsigned room_id, float tot_light_amt, unsigned floor);
@@ -3104,6 +3105,7 @@ void resize_around_center_xy(cube_t &c, float radius);
 bool is_val_inside_window(cube_t const &c, bool dim, float val, float window_spacing, float window_border);
 bool get_fire_ext_height_and_radius(float window_vspacing, float &height, float &radius);
 point get_warning_light_src_pos(room_object_t const &c);
+void offset_hanging_tv(room_object_t &obj);
 template<typename T> void subtract_cube_from_cube(T const &c, cube_t const &s, vector<T> &out, bool clear_out=0);
 template<typename T> void subtract_cube_from_cube_inplace(cube_t const &s, vector<T> &cubes, unsigned &ix, unsigned &iter_end);
 template<typename T> void subtract_cubes_from_cube(cube_t const &c, vector<T> const &sub, vect_cube_t &out, vect_cube_t &out2, int zval_mode=0);

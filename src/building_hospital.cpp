@@ -262,7 +262,7 @@ bool building_t::add_waiting_room_objs(rand_gen_t rgen, room_t const &room, floa
 	add_wall_tv(rgen, room, zval, room_id, tot_light_amt, objs_start);
 	// add chairs along walls
 	unsigned const num_chairs = 20; // up to this many, whatever we can fit
-	bool const is_plastic(1);
+	bool const is_plastic(1); // always plastic
 	colorRGBA const &chair_color(chair_colors[rgen.rand() % NUM_CHAIR_COLORS]);
 	place_chairs_along_walls(rgen, room, zval, room_id, tot_light_amt, objs_start, chair_color, is_plastic, num_chairs);
 	// maybe add some more chairs to the center of the room
@@ -351,18 +351,37 @@ void building_t::place_chairs_along_walls(rand_gen_t &rgen, room_t const &room, 
 	}
 }
 
-bool building_t::add_exam_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start) {
-	cube_t place_area(get_walkable_room_bounds(room));
+bool building_t::add_exam_room_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start) {
+	cube_t const room_area(get_walkable_room_bounds(room));
+	cube_t place_area(room_area);
 	place_area.expand_by(-1.0*get_wall_thickness()); // add extra padding, since bed models are slightly different sizes
 	if (!place_model_along_wall(OBJ_MODEL_HOSP_BED, TYPE_HOSP_BED, room, 0.42, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.5)) return 0;
+	vect_room_object_t &objs(interior->room_geom->objs);
 	// TODO: should be a small desk, equipment, etc.
 	colorRGBA const &chair_color(chair_colors[rgen.rand() % NUM_CHAIR_COLORS]);
 	add_desk_to_room(rgen, room, vect_cube_t(), chair_color, zval, room_id, tot_light_amt, objs_start, 0, 0, 0, 1); // force_computer=1
 	//place_phone_on_obj(rgen, place_on, room_id, tot_light_amt, dim, dir); // place on the desk?
-	place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, room, 0.45, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.6);
+
+	if (rgen.rand_bool()) { // add a simple sink
+		place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, room, 0.45, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.6);
+	}
+	else { // add a vanity
+		add_vanity_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);
+	}
+	place_chairs_along_walls(rgen, room, zval, room_id, tot_light_amt, objs_start, chair_color, 1, 1); // is_plastic=1, num_chairs=1
 	// should be a short rotating stool?
 	place_model_along_wall(OBJ_MODEL_BAR_STOOL, TYPE_BAR_STOOL, room, 0.4, rgen, zval, room_id, tot_light_amt, place_area, objs_start);
 	add_filing_cabinet_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);
+
+	if (1) { // add a small wall mounted computer monitor
+		unsigned const tv_obj_ix(objs.size());
+		float const z1(zval + 0.5*get_window_vspace());
+		
+		if (place_model_along_wall(OBJ_MODEL_TV, TYPE_MONITOR, room, 0.25, rgen, z1, room_id, tot_light_amt, room_area, objs_start, 4.0, 4, 1, BKGRAY, 1, RO_FLAG_HANGING)) {
+			offset_hanging_tv(objs[tv_obj_ix]);
+			objs[tv_obj_ix].obj_id |= 1; // make it turned off
+		}
+	}
 	// the room should already have a trashcan, but we can add a second one for medical waste
 	add_trashcan_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, 0); // check_last_obj=0
 	add_numbered_door_sign("Exam ", room, zval, room_id, floor_ix);
