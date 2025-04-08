@@ -246,8 +246,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		bool const is_office(r->is_office && (!is_hospital() || r->interior)); // hospital offices are converted to patient rooms, etc. if they have windows
 		bool const is_ext_basement(r->is_ext_basement()), is_backrooms(r->is_backrooms()), is_apt_or_hotel_room(r->is_apt_or_hotel_room());
 		bool const residential_room(is_house || (residential && !r->is_hallway && !is_basement && !is_retail_room)), industrial_room(r->is_industrial());
-		bool const is_mall_room(is_ext_basement && has_mall()), is_mall_bathroom(is_mall_room && is_bathroom(init_rtype_f0));
-		unsigned const num_floors((is_mall || industrial_room) ? 1 : calc_num_floors_room(*r, floor_height, floor_thickness)); // consider mall and factory a single floor
+		bool const is_mall_room(is_ext_basement && has_mall()), is_mall_bathroom(is_mall_room && is_bathroom(init_rtype_f0)), single_floor(is_mall || industrial_room);
+		unsigned const num_floors(single_floor ? 1 : calc_num_floors_room(*r, floor_height, floor_thickness)); // consider mall and factory a single floor
 		unsigned const room_id(r - rooms.begin());
 		unsigned const min_br(multi_family ? num_floors : 1); // multi-family house requires one per floor; can apply to both bedrooms and bathrooms
 		room_obj_shape const light_shape((residential_room || industrial_room) ? SHAPE_CYLIN : SHAPE_CUBE);
@@ -403,8 +403,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				for (auto s = interior->stairwells.begin(); s != interior->stairwells.end(); ++s) {
 					if (!r->contains_cube_xy(*s)) continue; // stairs not in this room
 					// Note: here we adjust stairs zval by floor_thickness to include stairs in the floor but not in the room above
-					if (s->z1() + floor_thickness > r->z2()) continue; // stairs above the room
-					if (s->z2() + floor_thickness < r->z1()) continue; // stairs below the room
+					if (s->z1() + floor_thickness > (single_floor ? r->z2() : (z + floor_height))) continue; // stairs above the room
+					if (s->z2() + floor_thickness < z) continue; // stairs below the room
 					if (s->roof_access) {top_of_stairs = 0;}
 					has_stairs = 1;
 				} // for s
@@ -847,7 +847,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					// else make it an office or something else below
 				}
 			}
-			if (!added_obj && is_school() && !r->has_stairs_on_floor(f)) {
+			if (!added_obj && is_school() && !has_stairs) {
 				if (has_window) { // school classroom with a window and no stairs
 					added_obj = add_classroom_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start, chair_color, pref_hang_orient);
 					if (added_obj) {r->assign_to(RTYPE_CLASS, f);}
