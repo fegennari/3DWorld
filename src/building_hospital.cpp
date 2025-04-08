@@ -10,6 +10,7 @@ extern object_model_loader_t building_obj_model_loader;
 
 void clip_wall_to_ceil_floor(cube_t &wall, float fc_thick);
 colorRGBA get_pastic_chair_color(colorRGBA const &color);
+colorRGBA get_couch_color(rand_gen_t &rgen);
 
 bool can_create_hospital_room() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_HOSP_BED);}
 
@@ -193,6 +194,10 @@ bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, flo
 			test_cube.d[dim][!dir] = bed.d[dim][!dir]; // extend to the bed; should this ignore open doors?
 			if (has_bcube_int(tv, tv_blockers) || overlaps_obj_or_placement_blocked(test_cube, room, objs_start) || check_if_against_window(tv, room, dim, dir)) continue;
 			add_tv_to_wall(tv, room_id, tot_light_amt, dim, !dir, 0, 2); // use_monitor_image=0, on_off=2 (random); invalidates bed reference
+			// add a blocker in front of the TV to avoid placing objects such as plants there
+			cube_t blocker(tv);
+			blocker.d[dim][!dir] += (dir ? -1.0 : 1.0)*floor_spacing;
+			objs.emplace_back(blocker, TYPE_BLOCKER, room_id, dim, !dir, RO_FLAG_INVIS);
 		} // for i
 	}
 	for (cube_with_ix_t const &c : curtains) {objs.emplace_back(c, TYPE_HOSP_CURT, room_id, c.ix, rgen.rand_bool(), 0);}
@@ -224,6 +229,16 @@ bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, flo
 		colorRGBA const &chair_color(chair_colors[rgen.rand() % NUM_CHAIR_COLORS]);
 		place_chairs_along_walls(rgen, room, zval, room_id, tot_light_amt, objs_start, chair_color, is_plastic, num_chairs);
 	}
+	bool placed_couch(0);
+
+	if (num_beds > 1 && rgen.rand_bool()) { // maybe add a couch
+		colorRGBA const color(get_couch_color(rgen));
+		placed_couch = place_model_along_wall(OBJ_MODEL_COUCH, TYPE_COUCH, room, 0.40, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 4, 0, color);
+	}
+	if (!placed_couch && rgen.rand_bool()) {
+		place_model_along_wall(OBJ_MODEL_RCHAIR, TYPE_RCHAIR, room, 0.5, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0);
+	}
+	add_plants_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, 1); // add 1 plant
 	add_numbered_door_sign("Room ", room, zval, room_id, floor_ix);
 	return 1;
 }
