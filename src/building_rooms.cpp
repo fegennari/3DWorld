@@ -811,14 +811,16 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				added_pool_room = added_obj = 1;
 			}
 			if (!added_obj && is_hospital()) {
-				if (has_window) { // hospital room with a window
+				bool const must_be_waiting(has_stairs || r->has_elevator);
+
+				if (has_window && !must_be_waiting) { // hospital room with a window
 					if (add_hospital_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start, nested_room_ix)) {
 						added_obj = no_whiteboard = 1;
 						r->assign_to(RTYPE_HOS_BED, f);
 					}
 				}
 				if (!added_obj) { // hospital room without a window, or failed to make a hospital bedroom
-					unsigned const rand_val(rgen.rand() % ((f == 0) ? 2 : 5)); // first floor is always waiting or exam room
+					unsigned const rand_val(must_be_waiting ? 0 : (rgen.rand() % ((f == 0) ? 2 : 5))); // first floor is always waiting or exam room
 
 					if (rand_val == 0) { // waiting room; should there be at most one per floor?
 						if (add_waiting_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start)) {
