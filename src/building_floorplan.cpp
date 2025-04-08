@@ -2126,19 +2126,20 @@ bool building_t::is_valid_stairs_elevator_placement(cube_t const &c, cube_t cons
 			if (max((c.d[!dim][0] - r.d[!dim][0]), (r.d[!dim][1] - c.d[!dim][1])) < pad) return 0;
 		}
 	}
-	if (!is_house && has_pri_hall()) { // office building with primary hallway
-		// add extra padding around exterior doors to avoid blocking them with stairs/elevator
-		float const floor_spacing(get_window_vspace()), door_width(DOOR_WIDTH_SCALE_OFFICE*get_office_bldg_door_height());
-		point end_pt;
-		end_pt[!hallway_dim] = pri_hall.get_center_dim(!hallway_dim); // assumes door is centered in the hallway
+	if (!is_house && has_pri_hall() && c.z2() > ground_floor_z1) { // office building with primary hallway; not in basement
+		if (c.z1() < ground_floor_z1 + get_window_vspace()) { // overlaps the ground floor
+			// add extra padding around exterior doors to avoid blocking them with stairs/elevator
+			float const door_width(DOOR_WIDTH_SCALE_OFFICE*get_office_bldg_door_height());
+			point end_pt;
+			end_pt[!hallway_dim] = pri_hall.get_center_dim(!hallway_dim); // assumes door is centered in the hallway
 
-		for (unsigned d = 0; d < 2; ++d) { // check both hallway ends
-			end_pt[hallway_dim] = pri_hall.d[hallway_dim][d];
-			cube_t blocked(end_pt);
-			blocked.expand_by_xy(door_width); // ensure at least one door width of spacing around the door
-			set_cube_zvals(blocked, ground_floor_z1, (ground_floor_z1 + floor_spacing)); // clip to ground floor
-			blocked.intersect_with_cube_xy(pri_hall);
-			if (blocked.intersects(c)) return 0;
+			for (unsigned d = 0; d < 2; ++d) { // check both hallway ends
+				end_pt[hallway_dim] = pri_hall.d[hallway_dim][d];
+				cube_t blocked(end_pt);
+				blocked.expand_by_xy(door_width); // ensure at least one door width of spacing around the door
+				blocked.intersect_with_cube_xy(pri_hall);
+				if (blocked.intersects_xy(c)) return 0;
+			}
 		}
 	}
 	if (check_private_rooms && is_apt_or_hotel()) {
