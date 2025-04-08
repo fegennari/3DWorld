@@ -92,6 +92,22 @@ bool building_t::maybe_create_nested_bathroom(room_t &room, rand_gen_t &rgen) { 
 	return 0; // no valid location found
 }
 
+bool building_t::get_hospital_room_bathroom(room_t const &room, unsigned room_id, int &nested_room_ix, cube_t &bathroom) const {
+	if (!room.has_subroom()) return 0;
+	assert(has_room_geom());
+
+	// first, determine if this room has a nested bathroom, and add a blocker over the entire room;
+	// bathroom objects should have been placed already, so the blocker won't cause problems, and we can stop iterating at the current room
+	if (nested_room_ix < 0) { // not yet found; find for the first floor
+		for (unsigned r = 0; r < room_id; ++r) {
+			if (room.contains_cube(get_room(r))) {nested_room_ix = r; break;} // there should only be one
+		}
+	}
+	if (nested_room_ix < 0) return 0; // not found
+	bathroom = get_room(nested_room_ix);
+	return 1;
+}
+
 bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix,
 	float tot_light_amt, unsigned objs_start, int &nested_room_ix)
 {
@@ -100,24 +116,14 @@ bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, flo
 	cube_t room_bounds(get_walkable_room_bounds(room)), place_area(room_bounds), bathroom;
 	place_area.expand_by(-1.0*wall_thickness); // add extra padding, since bed models are slightly different sizes
 	vect_room_object_t &objs(interior->room_geom->objs);
+	bool const has_bathroom(get_hospital_room_bathroom(room, room_id, nested_room_ix, bathroom));
 	unsigned const beds_start(objs.size());
 	unsigned const max_beds(max(1U, unsigned(0.25*room_bounds.get_area_xy()/(floor_spacing*floor_spacing))));
 	unsigned num_beds(0), pref_orient(4);
 
-	if (room.has_subroom()) {
-		// first, determine if this room has a nested bathroom, and add a blocker over the entire room;
-		// bathroom objects should have been placed already, so the blocker won't cause problems, and we can stop iterating at the current room
-		if (nested_room_ix < 0) { // not yet found; find for the first floor
-			for (unsigned r = 0; r < room_id; ++r) {
-				if (room.contains_cube(get_room(r))) {nested_room_ix = r; break;} // there should only be one
-			}
-		}
-		if (nested_room_ix >= 0) { // found
-			bathroom = get_room(nested_room_ix);
-			cube_t blocker(bathroom);
-			blocker.expand_by_xy(0.5*wall_thickness); // include room walls
-			objs.emplace_back(blocker, TYPE_BLOCKER, room_id, 0, 0, RO_FLAG_INVIS);
-		}
+	if (has_bathroom) { // add blocker for bathroom
+		objs.emplace_back(bathroom, TYPE_BLOCKER, room_id, 0, 0, RO_FLAG_INVIS);
+		objs.back().expand_by_xy(0.5*wall_thickness); // include room walls
 	}
 	for (unsigned n = 0; n < max_beds; ++n) {
 		unsigned const bed_ix(objs.size());
@@ -243,11 +249,21 @@ bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, flo
 	return 1;
 }
 
-bool building_t::add_waiting_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start) {
-	unsigned const counts[4] = {1, 1, 2, 2}; // 1-2
-	add_couches_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, counts);
+bool building_t::add_waiting_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix,
+	float tot_light_amt, unsigned objs_start, int &nested_room_ix)
+{
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	cube_t const room_bounds(get_walkable_room_bounds(room));
+	vect_room_object_t &objs(interior->room_geom->objs);
+	cube_t bathroom;
+
+	// add blocker for bathroom, in case this room has stairs and was assigned to a waiting room
+	if (get_hospital_room_bathroom(room, room_id, nested_room_ix, bathroom)) {
+		objs.emplace_back(bathroom, TYPE_BLOCKER, room_id, 0, 0, RO_FLAG_INVIS);
+		objs.back().expand_by_xy(0.5*wall_thickness); // include room walls
+	}
+	unsigned const counts[4] = {1, 1, 2, 2}; // 1-2
+	add_couches_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, counts);
 
 	if (rgen.rand_bool()) { // add some reading material
 		add_bookcase_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, 0); // is_basement=0
@@ -280,7 +296,6 @@ bool building_t::add_waiting_room_objs(rand_gen_t rgen, room_t const &room, floa
 		float const centerline(room.get_center_dim(!long_dim));
 		unsigned const num_chairs(chair_place_len/min_chair_spacing); // take the floor
 		float const chair_spacing(chair_place_len/num_chairs), chair_start(chair_place_area.d[long_dim][0] + path_clearance + 0.5*chair_spacing);
-		vect_room_object_t &objs(interior->room_geom->objs);
 		// add a wall between the rows of chairs
 		cube_t wall;
 		set_cube_zvals(wall, zval, zval+0.8*chair_height);

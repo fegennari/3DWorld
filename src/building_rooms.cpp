@@ -823,7 +823,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					unsigned const rand_val(must_be_waiting ? 0 : (rgen.rand() % ((f == 0) ? 2 : 5))); // first floor is always waiting or exam room
 
 					if (rand_val == 0) { // waiting room; should there be at most one per floor?
-						if (add_waiting_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start)) {
+						if (add_waiting_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start, nested_room_ix)) {
 							added_obj = no_whiteboard = 1;
 							r->assign_to(RTYPE_WAITING, f);
 						}
