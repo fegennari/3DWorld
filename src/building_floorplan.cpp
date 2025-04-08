@@ -2352,7 +2352,8 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 
 			if (!cand_is_valid) {
 				for (stairwell_t const &s: interior->stairwells) {
-					if (s.z1() <= cand_z1 && s.z2() >= cand_z2) {have_spanning_stairs = 1; break;}
+					float const stairs_z2(s.z2() - (s.roof_access ? window_vspacing : 0.0)); // roof access flight doesn't count
+					if (s.z1() <= cand_z1 && stairs_z2 >= cand_z2) {have_spanning_stairs = 1; break;}
 				}
 			}
 			unsigned const cur_num_iters(have_spanning_stairs ? num_iters/2 : num_iters); // fewer iterations and no compact/cut stairs if we have existing spanning stairs
