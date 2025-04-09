@@ -2246,7 +2246,7 @@ struct building_t : public building_geom_t {
 		unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned objs_start_inc_beams, cube_t const &ladder);
 	void add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part, cube_t const &hall, unsigned part_ix, unsigned num_floors,
 		unsigned rooms_start, bool use_hallway, bool first_part_this_stack, float window_hspacing[2], float window_border, bool is_single_floor);
-	void connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t const &part);
+	void connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t const &part, unsigned lower_part_ix);
 	void create_two_story_tall_rooms(rand_gen_t &rgen);
 	void setup_courtyard();
 	void gen_room_details(rand_gen_t &rgen, unsigned building_ix);

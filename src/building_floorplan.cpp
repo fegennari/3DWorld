@@ -1168,7 +1168,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 	reverse_door_hinges_if_needed();
 
 	// add stairs to connect together stacked parts for office buildings; must be done last after all walls/ceilings/floors have been assigned
-	for (auto p = parts.begin(); p != parts_end; ++p) {connect_stacked_parts_with_stairs(rgen, *p);}
+	for (unsigned p = 0; p < real_num_parts; ++p) {connect_stacked_parts_with_stairs(rgen, parts[p], p);}
 	if (has_parking_garage) {add_parking_garage_ramp(rgen);}
 
 	// furnace logic
@@ -2116,7 +2116,7 @@ bool building_t::is_valid_stairs_elevator_placement(cube_t const &c, cube_t cons
 	assert(interior);
 	// check if any previously placed walls intersect this cand stairs/elevator; we really only need to check the walls from <part> and *p though
 	if (interior->is_blocked_by_stairs_or_elevator(c_nopad, pad)) return 0;
-	if (check_walls && check_cube_intersect_walls(c))             return 0;
+	if (check_walls && check_cube_intersect_walls(c))             return 0; // Note: extb_walls_start may not yet be set because extended basement has not been added
 	if (is_cube_close_to_doorway(c, cube_t(), pad, 1))            return 0; // check for open doors to avoid having the stairs intersect an open door
 	if (check_skylight_intersection(c))                           return 0;
 
@@ -2143,7 +2143,7 @@ bool building_t::is_valid_stairs_elevator_placement(cube_t const &c, cube_t cons
 			}
 		}
 	}
-	if (check_private_rooms && is_apt_or_hotel()) {
+	if (check_private_rooms && is_apt_or_hotel()) { // Note: may not yet be assigned
 		for (room_t const &r : interior->rooms) {
 			if (r.is_ext_basement()) break; // no need to check extended basement rooms
 			if (r.is_apt_or_hotel_room() && r.intersects(c)) return 0;
@@ -2253,11 +2253,25 @@ void subtract_cube_from_floor_ceil(cube_t const &c, vect_cube_t &fs) {
 	}
 }
 
-void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t const &part) { // and extend elevators vertically; part is on the bottom
+void get_room_cands(vector<room_t> const &rooms, unsigned part_ix, cube_t const &place_region, vector2d const &min_sz, bool check_private_rooms, vect_cube_t &room_cands) {
+	room_cands.clear();
 
-	//highres_timer_t timer("Connect Stairs"); // 72ms (serial)
+	for (room_t const &r : rooms) {
+		if (r.part_id != part_ix || !r.intersects(place_region)) continue;
+		if (check_private_rooms && r.is_apt_or_hotel_room())     continue;
+		cube_t cand(r);
+		cand.intersect_with_cube_xy(place_region);
+		vector2d const room_sz(cand.get_size_xy());
+		if (room_sz[0] < min_sz[0] || room_sz[1] < min_sz[1]) continue; // room too small
+		room_cands.push_back(cand);
+	} // for r
+}
+
+void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t const &part, unsigned lower_part_ix) { // and extend elevators vertically; part is lower
+
+	//highres_timer_t timer("Connect Stairs", 1, 1, 1); // track_not_print=1; 239ms total
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness), wall_thickness(get_wall_thickness());
-	float const doorway_width(get_nominal_doorway_width()), stairs_len(4.0*doorway_width);
+	float const doorway_width(get_nominal_doorway_width()), stairs_len(4.0*doorway_width), railing_pad(0.5*wall_thickness);
 	bool const is_basement(has_basement() && part == get_basement()), use_basement_stairs(is_basement && is_house); // office basement has regular stairs
 	bool const is_retail(is_retail_part(part));
 	bool const check_private_rooms = 0; // this could go either way; which is worse - an unconnected stacked part, or public stairs in a hotel room or apartment?
@@ -2268,14 +2282,16 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 
 	if (part.z2() < bcube.z2()) { // if this is the top floor, there is nothing above it (but roof geom may get us into this case anyway)
 		vect_door_stack_t doorways;
+		vect_cube_t room_cands[2];
 		bool connected(0);
 
-		for (auto p = parts.begin(); p != get_real_parts_end(); ++p) { // find the part on the top
-			if (*p == part)              continue; // skip self
-			if (p->z1() != part.z2())    continue; // *p not on top of part
-			if (!part.intersects_xy(*p)) continue; // no XY overlap
+		for (unsigned upper_part_ix = 0; upper_part_ix < real_num_parts; ++upper_part_ix) { // find the part on the top
+			cube_t const &p(parts[upper_part_ix]);
+			if (upper_part_ix == lower_part_ix) continue; // skip self
+			if (p.z1() != part.z2())            continue; // *p not on top of part
+			if (!part.intersects_xy(p))         continue; // no XY overlap
 			cube_t shared(part);
-			shared.intersect_with_cube(*p); // dz() == 0
+			shared.intersect_with_cube(p); // dz() == 0
 			cube_t pref_shared(shared);
 			// Note: office building parts are sorted top to bottom, so any part above <part> should be before it in parts - but we don't want to rely on that here;
 			// however, this does mean that the part above this one has already been processed; except for stacked houses, which are ordered {bottom, top}
@@ -2311,7 +2327,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			}
 			else if (!is_basement && is_cube()) { // try to extend an existing stairwell on the part above or below upward/downward; not for basements or non-cube buildings
 				for (unsigned ab = 0; ab < 2 && !cand_is_valid; ++ab) { // extend {below, above}
-					cube_t const &targ_part(ab ? part : *p);
+					cube_t const &targ_part(ab ? part : p);
 
 					for (stairwell_t &s : interior->stairwells) {
 						if (s.in_ext_basement) continue; // not stacked/stackable, skip (also should skip basement stairs themselves?)
@@ -2362,10 +2378,12 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 
 			// iterations: 0-19: place in pri hallway, 20-39: place anywhere, 40-159: shrink size, 150-179: compact stairs, 180-199: allow cut walls
 			for (unsigned n = 0; n < cur_num_iters && !cand_is_valid; ++n) { // make up to 200 tries to add stairs
-				cube_t place_region((n < 2*iter_mult_factor) ? pref_shared : shared); // use preferred shared area from primary hallway for first 20 iterations
+				// clipped walls don't look right in some cases and may block hallways and rooms, use as a last resort; disable for houses since basement is optional anyway
+				bool const allow_clip_walls(n >= 180 && !is_house), use_pref_shared(n < 2*iter_mult_factor);
+				cube_t place_region(use_pref_shared ? pref_shared : shared); // use preferred shared area from primary hallway for bottom part for first 20 iterations
 
 				if (n >= 4*iter_mult_factor && n < 16*iter_mult_factor && (n%iter_mult_factor) == 0) { // decrease stairs size slightly every 10 iterations, 12 times
-					stairs_width -= 0.025*doorway_width; // 1.2*DW => 0.9*DW
+					stairs_width -= 0.025*doorway_width; // 1.2*DW => 0.90*DW
 					stairs_pad   -= 0.030*doorway_width; // 1.0*WD => 0.64*DW
 					len_with_pad -= 0.230*doorway_width*(use_basement_stairs ? 1.2 : 1.0); // 6.0*DW => 3.24*DW / 2.689*DW ; basement can have steeper stairs
 					// should this be get_min_front_clearance_inc_people()? that makes more sense, but using this value creates very steep stairs
@@ -2377,12 +2395,28 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				else {dim  = rgen.rand_bool();}
 				stairs_dir = rgen.rand_bool(); // the direction we move in when going up the stairs
 				// shrink place_region sides slightly to allow for the railing in office buildings and avoid z-fighting with the walls in houses
-				place_region.expand_in_dim(!dim, -0.5*wall_thickness);
+				place_region.expand_in_dim(!dim, -railing_pad);
+				vector2d min_sz;
+				min_sz[ dim] = len_with_pad;
+				min_sz[!dim] = stairs_width;
 				bool too_small(0);
 
+				if (!allow_clip_walls) { // select rooms above and below to constrain the place region
+					get_room_cands(interior->rooms, upper_part_ix, place_region, min_sz, check_private_rooms, room_cands[0]);
+					if (room_cands[0].empty()) continue; // no valid upper room
+					std::shuffle(room_cands[0].begin(), room_cands[0].end(), rand_gen_wrap_t(rgen));
+					bool success(0);
+
+					for (cube_t const &rc : room_cands[0]) {
+						get_room_cands(interior->rooms, lower_part_ix, rc, min_sz, check_private_rooms, room_cands[1]); // set place_region=rc for use_pref_shared?
+						if (room_cands[1].empty()) continue; // not a valid lower room
+						place_region = room_cands[1][rgen.rand()%room_cands[1].size()];
+						success = 1; break; // success/done
+					}
+					if (!success) continue;
+				}
 				for (unsigned d = 0; d < 2; ++d) {
-					float const stairs_sz((bool(d) == dim) ? len_with_pad : stairs_width);
-					float const v1(place_region.d[d][0]), v2(place_region.d[d][1] - stairs_sz);
+					float const stairs_sz(min_sz[d]), v1(place_region.d[d][0]), v2(place_region.d[d][1] - stairs_sz);
 					if (v2 <= v1) {too_small = 1; break;}
 					// basement stairs prefer to align to a basement wall on one side; should we be setting against_wall?
 					if (is_basement && bool(d) != dim && !(n&1)) {cand.d[d][0] = (rgen.rand_bool() ? v2 : v1);} // choose edge of the region, against a wall
@@ -2391,8 +2425,6 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				} // for d
 				if (too_small) continue;
 				assert(place_region.contains_cube_xy(cand));
-				// clipped walls don't look right in some cases and may block hallways and rooms, use as a last resort; disable for houses since basement is optional anyway
-				bool const allow_clip_walls(n >= 180 && !is_house);
 				bool const pri_hall_stairs(is_basement && !is_house && has_pri_hall() && pri_hall.z1() == ground_floor_z1 && dim == (hallway_dim == 1));
 
 				if (pri_hall_stairs) { // basement stairs placed in a first floor office building primary hallway should face the door
@@ -2436,16 +2468,17 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 
 				for (unsigned d = 0; d < 2; ++d) {
 					if (has_bcube_int(cand_test[d], interior->exclusion)) {bad_place = 1; break;} // bad placement
-					cube_t cand_nopad(cand_test[d]);
-					cand_nopad.expand_in_dim(dim, -stairs_pad); // subtract off padding
-					// should we at least check for bathroom intersections when allow_clip_walls=1
-					if (!is_valid_stairs_elevator_placement(cand_test[d], cand_nopad, stairs_pad, dim, !allow_clip_walls, check_private_rooms)) {bad_place = 1; break;} // bad placement
+					cube_t cand_nopad(cand_test[d]), cand_pad(cand_nopad);
+					cand_nopad.expand_in_dim( dim, -stairs_pad); // subtract off padding
+					cand_pad  .expand_in_dim(!dim, railing_pad); // extra space at sides for railing
+					// Note: check_walls is still needed to handle nested subrooms such as hospital room bathrooms
+					if (!is_valid_stairs_elevator_placement(cand_pad, cand_nopad, stairs_pad, dim, !allow_clip_walls, check_private_rooms)) {bad_place = 1; break;} // bad place
 					// what about stairs intersecting bathrooms when allow_clip_walls=1? I've seen that happen once
 					if (is_cube()) continue;
 					// handle non-cube building; need to check both parts above and below, so clip our test cube to each part
 					cube_t tb[2] = {cand_test[d], cand_test[d]};
 					copy_zvals(tb[0], part);
-					copy_zvals(tb[1], *p  );
+					copy_zvals(tb[1], p   );
 					if (!check_cube_within_part_sides(tb[0]) || !check_cube_within_part_sides(tb[1])) {bad_place = 1; break;} // check both top/bot parts
 				} // for d
 				if (bad_place) continue;
@@ -2507,11 +2540,11 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 					test_pt[dim] = stairwell.d[dim][!stairs_dir];
 					if (r->contains_pt_xy(test_pt)) {r->has_stairs |= (1U << min(num_floors-1U, 7U));} // top floor (clamp to 7 to avoid 8-bit overflow)
 				}
-				else if (p->contains_cube(*r)) { // top of stairs
+				else if (p.contains_cube(*r)) { // top of stairs
 					test_pt[dim] = stairwell.d[dim][stairs_dir];
 					if (r->contains_pt_xy(test_pt)) {r->has_stairs |= 1;} // bottom floor
 				}
-				else {cout << TXT(stairwell.str()) << TXT(r->str()) << TXT(part.str()) << TXT(p->str()) << endl; assert(0);} // something bad happened
+				else {cout << TXT(stairwell.str()) << TXT(r->str()) << TXT(part.str()) << TXT(p.str()) << endl; assert(0);} // something bad happened
 			} // for r
 			if (use_basement_stairs) { // add a basement door at the bottom of the stairs
 				float const pos_shift((stairs_dir ? 1.0 : -1.0)*0.8*wall_thickness);
