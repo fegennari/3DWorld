@@ -2269,7 +2269,7 @@ void get_room_cands(vector<room_t> const &rooms, unsigned part_ix, cube_t const 
 
 void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t const &part, unsigned lower_part_ix) { // and extend elevators vertically; part is lower
 
-	//highres_timer_t timer("Connect Stairs", 1, 1, 1); // track_not_print=1; 239ms total
+	//highres_timer_t timer("Connect Stairs", 1, 1, 1); // track_not_print=1; 256ms total
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness), wall_thickness(get_wall_thickness());
 	float const doorway_width(get_nominal_doorway_width()), stairs_len(4.0*doorway_width), railing_pad(0.5*wall_thickness);
 	bool const is_basement(has_basement() && part == get_basement()), use_basement_stairs(is_basement && is_house); // office basement has regular stairs
@@ -2375,11 +2375,12 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				}
 			}
 			unsigned const cur_num_iters(have_spanning_stairs ? num_iters/2 : num_iters); // fewer iterations and no compact/cut stairs if we have existing spanning stairs
+			std::set<pair<cube_t, unsigned>> edges_used;
 
 			// iterations: 0-19: place in pri hallway, 20-39: place anywhere, 40-159: shrink size, 150-179: compact stairs, 180-199: allow cut walls
 			for (unsigned n = 0; n < cur_num_iters && !cand_is_valid; ++n) { // make up to 200 tries to add stairs
 				// clipped walls don't look right in some cases and may block hallways and rooms, use as a last resort; disable for houses since basement is optional anyway
-				bool const allow_clip_walls(n >= 180 && !is_house), use_pref_shared(n < 2*iter_mult_factor);
+				bool const allow_clip_walls(n >= 180 && !is_house), use_pref_shared(n <= 2*iter_mult_factor);
 				cube_t place_region(use_pref_shared ? pref_shared : shared); // use preferred shared area from primary hallway for bottom part for first 20 iterations
 
 				if (n >= 4*iter_mult_factor && n < 16*iter_mult_factor && (n%iter_mult_factor) == 0) { // decrease stairs size slightly every 10 iterations, 12 times
@@ -2392,8 +2393,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 					max_eq(stairs_pad,   min_clearance);
 				}
 				if (min(place_region.dx(), place_region.dy()) < 1.5*len_with_pad) {dim = (place_region.dx() < place_region.dy());} // use larger dim
-				else {dim  = rgen.rand_bool();}
-				stairs_dir = rgen.rand_bool(); // the direction we move in when going up the stairs
+				else {dim = rgen.rand_bool();}
 				// shrink place_region sides slightly to allow for the railing in office buildings and avoid z-fighting with the walls in houses
 				place_region.expand_in_dim(!dim, -railing_pad);
 				vector2d min_sz;
@@ -2418,18 +2418,26 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				for (unsigned d = 0; d < 2; ++d) {
 					float const stairs_sz(min_sz[d]), v1(place_region.d[d][0]), v2(place_region.d[d][1] - stairs_sz);
 					if (v2 <= v1) {too_small = 1; break;}
-					// basement stairs prefer to align to a basement wall on one side; should we be setting against_wall?
-					if (is_basement && bool(d) != dim && !(n&1)) {cand.d[d][0] = (rgen.rand_bool() ? v2 : v1);} // choose edge of the region, against a wall
-					else {cand.d[d][0] = rgen.rand_uniform(v1, v2);} // LLC
-					cand.d[d][1] = min((cand.d[d][0] + stairs_sz), place_region.d[d][1]); // URC; clamp to avoid assert due to FP error
+					float &lo_edge(cand.d[d][0]);
+					bool val_set(0);
+					if (is_basement && bool(d) != dim && !(n&1)) {lo_edge = (rgen.rand_bool() ? v2 : v1); val_set = 1;} // choose edge of region, against a wall
+					else if (!allow_clip_walls && bool(d) != dim) { // width dim
+						bool edge(rgen.rand_bool());
+
+						for (unsigned e = 0; e < 2; ++e) { // choose a side edge; if already tried, try the opposite edge
+							if (edges_used.insert(make_pair(place_region, (2*dim + edge))).second) {lo_edge = (edge ? v2 : v1); val_set = 1; break;}
+							edge ^= 1;
+						}
+					}
+					if (!val_set) {lo_edge = rgen.rand_uniform(v1, v2);} // LLC
+					cand.d[d][1] = min((lo_edge + stairs_sz), place_region.d[d][1]); // URC; clamp to avoid assert due to FP error
 				} // for d
 				if (too_small) continue;
 				assert(place_region.contains_cube_xy(cand));
 				bool const pri_hall_stairs(is_basement && !is_house && has_pri_hall() && pri_hall.z1() == ground_floor_z1 && dim == (hallway_dim == 1));
-
-				if (pri_hall_stairs) { // basement stairs placed in a first floor office building primary hallway should face the door
-					if (pri_hall.contains_cube_xy(cand)) {stairs_dir = (pri_hall.get_center_dim(dim) < cand.get_center_dim(dim));}
-				}
+				// basement stairs placed in a first floor office building primary hallway should face the door
+				if (pri_hall_stairs && pri_hall.contains_cube_xy(cand)) {stairs_dir = (pri_hall.get_center_dim(dim) < cand.get_center_dim(dim));}
+				else {stairs_dir = rgen.rand_bool();} // the direction we move in when going up the stairs
 				cube_t cand_test[2] = {cand, cand}; // {lower, upper} parts, starts on lower floor
 				cand_test[0].z1() += 0.1*window_vspacing; cand_test[0].z2() -= 0.1*window_vspacing; // shrink to lower part
 				cand_test[1].z1() += 1.1*window_vspacing; cand_test[1].z2() += 0.9*window_vspacing; // move to upper part
