@@ -4462,10 +4462,9 @@ public:
 		return check_road_seg_sphere_coll(ge, pos2, p_last, xlate, 0.0, xy_only, nullptr);
 	}
 	// Note: pos is in camera space; assumes only player collision queries set check_interior=1
-	bool check_sphere_coll(point &pos, point const &p_last, float radius, vector3d *cnorm=nullptr, bool check_interior=0) const {
+	bool check_sphere_coll(point &pos, point const &p_last, float radius, vector3d const &xlate, vector3d *cnorm=nullptr, bool check_interior=0) const {
 		if (empty()) return 0;
 		bool const xy_only = 0;
-		vector3d const xlate(get_camera_coord_space_xlate());
 		cube_t bcube;
 		bcube.set_from_sphere((pos - xlate), (radius + building_bcube_expand)); // expand to handle AC units, balconies, fire escapes, etc.
 		bool saw_player_building(0);
@@ -5196,11 +5195,11 @@ public:
 		if (it == tiles.end()) return 0;
 		return it->second.check_point_coll_xy(pos);
 	}
-	bool check_sphere_coll(point &pos, point const &p_last, float radius, vector3d *cnorm=nullptr, bool check_interior=0) const { // Note: pos is in camera space
+	bool check_sphere_coll(point &pos, point const &p_last, float radius, vector3d const &xlate, vector3d *cnorm=nullptr, bool check_interior=0) const { // pos in camera space
 		if (empty()) return 0;
 
 		for (auto const &t : tiles) {
-			if (t.second.check_sphere_coll(pos, p_last, radius, cnorm, check_interior)) return 1;
+			if (t.second.check_sphere_coll(pos, p_last, radius, xlate, cnorm, check_interior)) return 1;
 		}
 		return 0;
 	}
@@ -5378,9 +5377,10 @@ bool proc_buildings_sphere_coll(point &pos, point const &p_int, float radius, ve
 		player_on_house_stairs = 0;
 	}
 	// we generally won't intersect more than one of these categories, so we can return true without checking all cases
-	return ((!exclude_city && building_creator_city.check_sphere_coll(pos, p_int, radius, cnorm, check_interior)) ||
-		                           building_creator.check_sphere_coll(pos, p_int, radius, cnorm, check_interior) ||
-		                             building_tiles.check_sphere_coll(pos, p_int, radius, cnorm, check_interior));
+	vector3d const xlate(get_camera_coord_space_xlate());
+	return ((!exclude_city && building_creator_city.check_sphere_coll(pos, p_int, radius, xlate, cnorm, check_interior)) ||
+		                           building_creator.check_sphere_coll(pos, p_int, radius, xlate, cnorm, check_interior) ||
+		                             building_tiles.check_sphere_coll(pos, p_int, radius, xlate, cnorm, check_interior));
 }
 bool check_buildings_no_grass(point const &pos) { // for tiled terrain mode; pos is in camera
 	if (building_creator.check_point_coll_xy(pos)) return 1; // secondary buildings only

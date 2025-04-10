@@ -3660,8 +3660,11 @@ model_bcube_checker_t model_bcube_checker;
 
 bool check_valid_scenery_pos(point const &pos, float radius, bool is_tall) {
 	point const pos_cs(pos + get_tt_xlate_val()); // convert from city/building space to camera space
-	point center(pos_cs); // make a copy; not actually modified
-	if (proc_buildings_sphere_coll(center, pos_cs, radius, nullptr, 0, 1)) return 0; // check_interior=0, exclude_city=1 (since we're checking plots below)
+
+	if (have_buildings()) {
+		point center(pos_cs); // make a copy; not actually modified
+		if (proc_buildings_sphere_coll(center, pos_cs, radius, nullptr, 0, 1)) return 0; // check_interior=0, exclude_city=1 (since we're checking plots below)
+	}
 	if (world_mode != WMODE_INF_TERRAIN) return 1; // the checks below are for tiled terrain mode only
 
 	if (have_cities()) {
