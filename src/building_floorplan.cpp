@@ -2276,7 +2276,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 	bool const is_retail(is_retail_part(part));
 	bool const check_private_rooms = 0; // this could go either way; which is worse - an unconnected stacked part, or public stairs in a hotel room or apartment?
 	// use fewer iterations on tiled buildings to reduce the frame spikes when new tiles are generated
-	unsigned const iter_mult_factor(global_building_params.gen_inf_buildings() ? 1 : 10), num_iters(20*iter_mult_factor);
+	unsigned const iter_mult_factor(global_building_params.gen_inf_buildings() ? 5 : 10), num_iters(20*iter_mult_factor);
 	unsigned const num_floors(is_retail ? 1 : calc_num_floors(part, window_vspacing, floor_thickness)); // retail area is always one floor
 	assert(num_floors > 0);
 
@@ -2404,7 +2404,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				if (!allow_clip_walls) { // select rooms above and below to constrain the place region
 					get_room_cands(interior->rooms, upper_part_ix, place_region, min_sz, check_private_rooms, room_cands[0]);
 					if (room_cands[0].empty()) continue; // no valid upper room
-					std::shuffle(room_cands[0].begin(), room_cands[0].end(), rand_gen_wrap_t(rgen));
+					if (room_cands[0].size() > 1) {std::shuffle(room_cands[0].begin(), room_cands[0].end(), rand_gen_wrap_t(rgen));}
 					bool success(0);
 
 					for (cube_t const &rc : room_cands[0]) {
