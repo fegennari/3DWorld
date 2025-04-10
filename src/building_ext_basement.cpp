@@ -366,6 +366,7 @@ void building_t::maybe_assign_extb_room_as_swimming(rand_gen_t &rgen) {
 			set_cube_zvals(slice, room.z2(), (room.z2() + z_exp_step));
 			if (!check_pool_room_slice_valid(slice, largest_valid_room)) break;
 			room.z2() = slice.z2(); // extend upward
+			if (room.z2() > ground_floor_z1) {room.z2() = ground_floor_z1; break;} // stop and clamp if too tall
 		}
 		if (room.z2() > orig_room.z2()) { // was extended vertically; add missing wall sections above doors
 			cube_t room_exp(room);
@@ -727,8 +728,8 @@ void building_t::get_pgbr_wall_ix_for_pos(point const &pos, index_pair_t &start,
 	}
 }
 bool building_t::point_in_extended_basement(point const &pos) const {
-	if (!has_basement() || !interior)                  return 0;
-	if (interior->basement_ext_bcube.contains_pt(pos)) return 1;
+	if (!has_basement() || pos.z > ground_floor_z1 || !interior) return 0;
+	if (interior->basement_ext_bcube.contains_pt(pos))           return 1;
 	return 0;
 }
 cube_t building_t::get_bcube_inc_extensions() const {
