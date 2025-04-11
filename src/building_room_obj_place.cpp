@@ -455,7 +455,7 @@ bool building_t::is_room_office_bathroom(room_t &room, float zval, unsigned floo
 }
 
 bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube_t const &blockers, colorRGBA const &chair_color, float zval,
-	unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement, unsigned desk_ix, bool no_computer, bool force_computer)
+	unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement, unsigned desk_ix, bool no_computer, bool force_computer, bool add_phone)
 {
 	cube_t const room_bounds(get_walkable_room_bounds(room));
 	float const vspace(get_window_vspace());
@@ -526,6 +526,19 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 			bool const is_big_office(!is_house && room.is_office && interior->rooms.size() > 40);
 			unsigned const max_num_pp(is_big_office ? 2 : 3); // 0-3 for houses, 0-2 for big office buildings
 			add_pens_pencils_to_surface(c, dim, dir, max_num_pp, rgen, room_id, tot_light_amt);
+		}
+		if (add_phone) {
+			for (unsigned N = 0; N < 10; ++N) { // N tries to place a phone on the desk
+				if (!place_phone_on_obj(rgen, desk, room_id, tot_light_amt, desk.dim, desk.dir)) break;
+				room_object_t const &phone(objs.back());
+				bool valid(1);
+
+				for (unsigned i = desk_obj_ix+1; i+1 < objs.size(); ++i) {
+					if (objs[i].intersects(phone)) {valid = 0; break;}
+				}
+				if (valid) break; // success
+				objs.pop_back(); // remove the phone and maybe try again
+			} // for N
 		}
 		if (desk.desk_has_drawers()) { // place blocker in front of drawers so that they have room to open
 			room_object_t &desk_obj(objs[desk_obj_ix]);
