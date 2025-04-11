@@ -1794,7 +1794,7 @@ room_obj_or_custom_item_t steal_from_car(room_object_t const &car, float floor_s
 
 	if (rgen.rand_bool()) { // select a custom item; most of these are of little value and added for humor
 		switch (rgen.rand()%10) {
-		case 0: ret.item = custom_item_t("bag of chips",              0.5,  0.1); break;
+		case 0: ret.item = custom_item_t("bag of chips",              0.5,  0.1, 0.1); break; // +10% health
 		case 1: ret.item = custom_item_t("sweaty gym clothes",        2.0,  0.4); break;
 		case 2: ret.item = custom_item_t("day old pizza",             0.0,  0.6); break;
 		case 3: ret.item = custom_item_t("case of CDs",               5.0,  0.2); break;
@@ -1803,7 +1803,7 @@ room_obj_or_custom_item_t steal_from_car(room_object_t const &car, float floor_s
 		case 6: ret.item = custom_item_t("stuffed animal",            5.0,  0.3); break;
 		case 7: ret.item = custom_item_t("pair of shoes",            40.0,  2.0); break;
 		case 8: ret.item = custom_item_t("cooler full of beer",      60.0, 20.0); break;
-		case 9: ret.item = custom_item_t("box of Girl Scout cookies", 8.0,  1.0); break;
+		case 9: ret.item = custom_item_t("box of Girl Scout cookies", 8.0,  1.0, 0.2); break; // +20% health
 		}
 	}
 	else { // select a standard room item

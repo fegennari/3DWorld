@@ -30,6 +30,7 @@ bool player_has_pool_cue();
 bool was_room_stolen_from(unsigned room_id);
 void register_broken_object(room_object_t const &obj);
 void record_building_damage(float damage);
+bool use_vending_machine(room_object_t &obj);
 void pool_ball_in_pocket(unsigned ball_number);
 void refill_thirst();
 colorRGBA get_glow_color(float stime, bool fade);
@@ -706,7 +707,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 	}
 	else if (obj.type == TYPE_VENDING) {
 		if (obj.is_powered()) {
-			// TODO: some sort of action; dispense a can?
+			if (!use_vending_machine(obj)) return 0;
 			gen_sound_thread_safe(SOUND_BEEP, local_center, 0.25, 0.75);
 			sound_scale = 0.6;
 		}

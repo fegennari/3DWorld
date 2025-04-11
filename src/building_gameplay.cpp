@@ -617,6 +617,20 @@ class player_inventory_t { // manages player inventory, health, and other stats
 		rooms_stolen_from.clear();
 		player_attracts_flies = 0; // even if items remain in the player's inventory
 	}
+	void adjust_health(float health, std::ostringstream &oss, colorRGBA &text_color) {
+		if (health > 0.0) { // heal
+			player_health = min(1.0f, (player_health + health));
+			oss << ": +" << round_fp(100.0*health) << "% Health";
+		}
+		if (health < 0.0) { // take damage
+			player_health += health;
+			oss << ": " << round_fp(100.0*health) << "% Health";
+			text_color = RED;
+			add_camera_filter(colorRGBA(RED, 0.25), 4, -1, CAM_FILT_DAMAGE); // 4 ticks of red damage
+			gen_sound_thread_safe_at_player(SOUND_DOH, 0.5);
+			if (player_is_dead()) {register_achievement("Mr. Yuck");}
+		}
+	}
 public:
 	player_inventory_t() {clear_all();}
 
@@ -653,6 +667,11 @@ public:
 		if (PLAYER_RESPAWN > 0.0) {print_text_onscreen("You Have Been Reborn", RED, 2.0, 2*TICKS_PER_SECOND, 10);}
 		prev_respawn_frame  = frame_counter;
 		player_wait_respawn = 0;
+	}
+	bool deduct_money(float amt) {
+		if (amt > cur_value) return 0;
+		cur_value -= amt;
+		return 1;
 	}
 	void take_damage(float amt, int poison_type=0) { // poison_type: 0=none, 1=spider, 2=snake
 		player_health -= amt*(1.0f - 0.75f*min(drunkenness, 1.0f)); // up to 75% damage reduction when drunk
@@ -796,18 +815,8 @@ public:
 			else if (obj.type == TYPE_BANANA   ) {health = 0.20;}
 			else {assert(0);}
 		}
-		if (health > 0.0) { // heal
-			player_health = min(1.0f, (player_health + health));
-			oss << ": +" << round_fp(100.0*health) << "% Health";
-		}
-		if (health < 0.0) { // take damage
-			player_health += health;
-			oss << ": " << round_fp(100.0*health) << "% Health";
-			text_color = RED;
-			add_camera_filter(colorRGBA(RED, 0.25), 4, -1, CAM_FILT_DAMAGE); // 4 ticks of red damage
-			gen_sound_thread_safe_at_player(SOUND_DOH, 0.5);
-			if (player_is_dead()) {register_achievement("Mr. Yuck");}
-		}
+		adjust_health(health, oss, text_color);
+
 		if (liquid > 0.0) {
 			oss << ": -" << round_fp(100.0*liquid) << "% Thirst";
 			thirst = min(1.0f, (thirst + liquid));
@@ -882,10 +891,12 @@ public:
 		cur_value   += item.value;
 		cur_weight  += item.weight;
 		damage_done += item.value;
+		colorRGBA text_color(GREEN);
 		std::ostringstream oss;
 		oss << item.name;
+		adjust_health(item.health, oss, text_color);
 		print_value_and_weight(oss, item.value, item.weight);
-		print_text_onscreen(oss.str(), GREEN, 1.0, 3*TICKS_PER_SECOND, 0);
+		print_text_onscreen(oss.str(), text_color, 1.0, 3*TICKS_PER_SECOND, 0);
 	}
 	bool take_person(uint8_t &person_has_key, float person_height) {
 		if (drunkenness < 1.5) { // not drunk enough
@@ -1208,6 +1219,46 @@ bool was_room_stolen_from(unsigned room_id) {return player_inventory.was_room_st
 void refill_thirst() {player_inventory.refill_thirst();}
 void apply_building_fall_damage(float delta_z) {player_inventory.apply_fall_damage(delta_z, 0.5);} // dscale=0.5
 void get_dead_players_in_building(vector<dead_person_t> &dead_players, building_t const &building) {player_inventory.get_dead_players_in_building(dead_players, building);}
+
+bool use_vending_machine(room_object_t &obj) {
+	float const price = 2.0; // currently all vending machines are $2; should be whole dollars
+	unsigned const rand_ix(7*obj.room_id + 3*int(obj.z1()/obj.dz())); // a mix of room and floor index
+	unsigned const max_uses(rand_ix % 9); // 0-8 uses
+	uint16_t &use_count(obj.item_flags);
+	
+	if (!player_inventory.check_weight_limit(1.0)) { // must have one lb free
+		print_text_onscreen("No Inventory Space", RED, 1.0, 3*TICKS_PER_SECOND, 0);
+		return 0;
+	}
+	if (use_count >= max_uses) {
+		print_text_onscreen("Vending Machine is Empty", RED, 1.0, 3*TICKS_PER_SECOND, 0);
+		return 0;
+	}
+	if (!player_inventory.deduct_money(price)) {
+		print_text_onscreen(("Need $" + std::to_string(int(price)) + ".00"), RED, 1.0, 3*TICKS_PER_SECOND, 0);
+		return 0;
+	}
+	rand_gen_t rgen;
+	rgen.set_state(rand_ix+1, use_count+1);
+	rgen.rand_mix();
+	++use_count;
+
+	if (obj.color == GRAY) { // light color, drink vending machine; yes, you can get wine and beer from these
+		room_object_t bottle(obj, TYPE_BOTTLE, obj.room_id, 0, 0, 0, obj.light_amt, SHAPE_CYLIN);
+		bottle.set_as_bottle(rgen.rand(), 3, 1); // 0-3; excludes poison and medicine; no_empty=1
+		player_inventory.add_item(bottle);
+	}
+	else { // dark color, snack food vending machine; no value or weight, but adds health
+		custom_item_t item;
+		switch (rgen.rand()%3) {
+		case 0: item = custom_item_t("bag of chips",    0.0, 0.0, 0.1); break;
+		case 1: item = custom_item_t("bag of pretzels", 0.0, 0.0, 0.1); break;
+		case 2: item = custom_item_t("candy bar",       0.0, 0.0, 0.2); break;
+		}
+		player_inventory.add_custom_item(item);
+	}
+	return 1;
+}
 
 void pool_ball_in_pocket(unsigned ball_number) {
 	if (ball_number == 15) return; // scratch on the cue ball doesn't count

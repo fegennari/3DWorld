@@ -802,9 +802,9 @@ struct carried_item_t : public room_object_t {
 
 struct custom_item_t {
 	std::string name;
-	float value, weight;
-	custom_item_t() : value(0.0), weight(0.0) {}
-	custom_item_t(std::string const &n, float v, float w) : name(n), value(v), weight(w) {}
+	float value=0.0, weight=0.0, health=0.0;
+	custom_item_t() {}
+	custom_item_t(std::string const &n, float v, float w, float h=0.0) : name(n), value(v), weight(w), health(h) {}
 	bool valid() const {return !name.empty();}
 };
 struct room_obj_or_custom_item_t {
