@@ -1220,6 +1220,14 @@ void refill_thirst() {player_inventory.refill_thirst();}
 void apply_building_fall_damage(float delta_z) {player_inventory.apply_fall_damage(delta_z, 0.5);} // dscale=0.5
 void get_dead_players_in_building(vector<dead_person_t> &dead_players, building_t const &building) {player_inventory.get_dead_players_in_building(dead_players, building);}
 
+void record_building_damage(float damage) {
+	player_inventory.record_damage_done(damage);
+}
+void register_broken_object(room_object_t const &obj) {
+	float const damage(obj.is_parked_car() ? 250.0 : get_obj_value(obj)); // broken car window is $250
+	player_inventory.record_damage_done(damage);
+}
+
 bool use_vending_machine(room_object_t &obj) {
 	float const price = 2.0; // currently all vending machines are $2; should be whole dollars
 	unsigned const rand_ix(7*obj.room_id + 3*int(obj.z1()/obj.dz())); // a mix of room and floor index
@@ -1238,6 +1246,7 @@ bool use_vending_machine(room_object_t &obj) {
 		print_text_onscreen(("Need $" + std::to_string(int(price)) + ".00"), RED, 1.0, 3*TICKS_PER_SECOND, 0);
 		return 0;
 	}
+	record_building_damage(-price);
 	rand_gen_t rgen;
 	rgen.set_state(rand_ix+1, use_count+1);
 	rgen.rand_mix();
@@ -1270,14 +1279,6 @@ void pool_ball_in_pocket(unsigned ball_number) {
 void register_building_sound_for_obj(room_object_t const &obj, point const &pos) {
 	float const weight(get_obj_weight(obj)), volume((weight <= 1.0) ? 0.0 : min(1.0f, 0.01f*weight)); // heavier objects make more sound
 	register_building_sound(pos, volume);
-}
-
-void record_building_damage(float damage) {
-	player_inventory.record_damage_done(damage);
-}
-void register_broken_object(room_object_t const &obj) {
-	float const damage(obj.is_parked_car() ? 250.0 : get_obj_value(obj)); // broken car window is $250
-	player_inventory.record_damage_done(damage);
 }
 
 bool register_player_object_pickup(room_object_t const &obj, point const &at_pos) {
