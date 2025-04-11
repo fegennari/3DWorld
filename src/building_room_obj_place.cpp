@@ -57,7 +57,7 @@ float get_radius_for_square_model(unsigned model_id) {
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(model_id));
 	return 0.5f*0.5f*(sz.x + sz.y)/sz.z; // assume square and take average of xsize and ysize
 }
-cube_t place_cylin_object(rand_gen_t rgen, cube_t const &place_on, float radius, float height, float dist_from_edge, bool place_at_z1=0) {
+cube_t place_cylin_object(rand_gen_t &rgen, cube_t const &place_on, float radius, float height, float dist_from_edge, bool place_at_z1=0) {
 	cube_t c;
 	gen_xy_pos_for_round_obj(c, place_on, radius, height, dist_from_edge, rgen, place_at_z1); // place at dist_from_edge from edge
 	return c;
