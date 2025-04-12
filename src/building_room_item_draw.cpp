@@ -1638,7 +1638,6 @@ void building_t::draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		for (colored_cube_t const &c : cc) {s.set_cur_color(c.color); draw_simple_cube(c);}
 		return;
 	}
-	if (ENABLE_MIRROR_REFLECTIONS && !shadow_only && !reflection_pass && player_in_building) {find_mirror_needing_reflection(xlate);}
 	interior->room_geom->draw(bbd, s, amask_shader, *this, oc, xlate, building_ix, shadow_only, reflection_pass, inc_small, player_in_building);
 	//enable_blend();
 	//glDisable(GL_CULL_FACE);

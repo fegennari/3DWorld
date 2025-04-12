@@ -116,6 +116,7 @@ void draw_scene_for_building_reflection(unsigned &ref_tid, unsigned dim, bool di
 void create_mirror_reflection_if_needed(building_t const *vis_conn_bldg, vector3d const &xlate) {
 	point const camera_bs(get_camera_pos() - xlate);
 	building_t const *buildings[2] = {player_building, vis_conn_bldg};
+	if (player_building) {player_building->find_mirror_needing_reflection(xlate);}
 
 	for (unsigned n = 0; n < 2; ++n) { // check player building, then visible connected building
 		building_t const *bldg(buildings[n]);
@@ -229,8 +230,9 @@ bool building_t::find_mirror_in_room(unsigned room_id, vector3d const &xlate, fl
 }
 
 bool building_t::find_mirror_needing_reflection(vector3d const &xlate) const {
-	if (!has_room_geom()) return 0; // can't have mirrors; maybe interior wasn't generated yet
-	if (is_rotated())     return 0; // mirrors don't yet work in rotated buildings, so disable for now
+	if (!ENABLE_MIRROR_REFLECTIONS) return 0;
+	if (!has_room_geom())           return 0; // can't have mirrors; maybe interior wasn't generated yet
+	if (is_rotated())               return 0; // mirrors don't yet work in rotated buildings, so disable for now
 	point const camera_bs(camera_pdu.pos - xlate);
 	vector<point> points;
 	if (!check_point_or_cylin_contained(camera_bs, 0.0, points, 0, 1, 0)) return 0; // camera not in the building; inc_attic=0, inc_ext_basement=1, inc_roof_acc=0

@@ -2534,6 +2534,7 @@ public:
 	bool point_in_water_area(point const &p, bool full_room_height=1) const;
 	bool point_in_or_above_pool(point const &pt) const;
 	bool set_float_height(point &pos, float radius, float ceil_zval, float density=0.5) const;
+	bool find_mirror_needing_reflection(vector3d const &xlate) const;
 	float get_elevator_floor_spacing(elevator_t            const &e) const {return ( e.in_mall       ? get_mall_floor_spacing() : get_window_vspace());}
 	float get_stairs_floor_spacing  (stairs_landing_base_t const &s) const {return ((s.in_mall == 1) ? get_mall_floor_spacing() : get_window_vspace());}
 	float get_room_floor_spacing    (room_t                const &r) const {return ( r.is_mall()     ? get_mall_floor_spacing() : get_window_vspace());}
@@ -2828,7 +2829,6 @@ private:
 	bool can_be_bedroom_or_bathroom(room_t const &room, unsigned floor_ix, bool skip_conn_check=0) const;
 	bool can_be_bathroom(room_t const &room) const;
 	bool find_mirror_in_room(unsigned room_id, vector3d const &xlate, float &dmin_sq, bool same_room) const;
-	bool find_mirror_needing_reflection(vector3d const &xlate) const;
 	int find_main_roof_tquad_ix(rand_gen_t &rgen, bool skip_if_has_other_obj) const;
 	void add_chimney_cap(rand_gen_t &rgen);
 	void maybe_add_fire_escape(rand_gen_t &rgen);
