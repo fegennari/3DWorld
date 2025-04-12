@@ -1495,7 +1495,7 @@ void wind_turbine_t::next_frame(vector3d const &xlate) {
 	if (rot_angle > 10000.0) {rot_angle = 0.0;}
 	// maybe update shadow maps
 	if (!enable_wind_turbine_shadows()) return;
-	float const tile_size(X_SCENE_SIZE + Y_SCENE_SIZE), xy_radius(0.5*bcube.get_size_xy().mag());
+	float const tile_size(X_SCENE_SIZE + Y_SCENE_SIZE);
 	point const camera_pos(get_camera_pos());
 	if (p2p_dist(pos, (camera_pos - xlate)) > 1.33f*tile_size) return; // the player is too far (optimization)
 	// stretch shadow in light dir
