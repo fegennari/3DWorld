@@ -387,11 +387,11 @@ bool building_t::add_exam_room_objs(rand_gen_t rgen, room_t &room, float zval, u
 	place_model_along_wall(OBJ_MODEL_BAR_STOOL, TYPE_BAR_STOOL, room, 0.4, rgen, zval, room_id, tot_light_amt, place_area, objs_start);
 	add_filing_cabinet_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);
 
-	if (1) { // add a small wall mounted computer monitor
+	if (1) { // add a small wall mounted computer monitor, with large front clearance
 		unsigned const tv_obj_ix(objs.size());
 		float const z1(zval + 0.5*get_window_vspace());
 		
-		if (place_model_along_wall(OBJ_MODEL_TV, TYPE_MONITOR, room, 0.25, rgen, z1, room_id, tot_light_amt, room_area, objs_start, 4.0, 4, 1, BKGRAY, 1, RO_FLAG_HANGING)) {
+		if (place_model_along_wall(OBJ_MODEL_TV, TYPE_MONITOR, room, 0.25, rgen, z1, room_id, tot_light_amt, room_area, objs_start, 20.0, 4, 1, BKGRAY, 1, RO_FLAG_HANGING)) {
 			offset_hanging_tv(objs[tv_obj_ix]);
 			objs[tv_obj_ix].obj_id |= 1; // make it turned off
 		}
