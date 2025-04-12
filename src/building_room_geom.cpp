@@ -1613,7 +1613,10 @@ void building_room_geom_t::add_mirror(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_med_cab(room_object_t const &c) {
-	colorRGBA const side_color(apply_light_color(c));
+	bool is_mirror(c.is_mirror());
+	int const front_tid(is_mirror ? -1 : get_texture_by_name("interiors/med_cross.png"));
+	tid_nm_pair_t const front_tex(front_tid, 0.0, 1); // half the double cross texture
+	colorRGBA const side_color(apply_light_color(c)), front_color(apply_light_color(c, WHITE));
 
 	if (c.is_open()) { // open medicine cabinet
 		cube_t const mirror(get_mirror_surface(c));
@@ -1622,11 +1625,12 @@ void building_room_geom_t::add_med_cab(room_object_t const &c) {
 		inside.expand_by(-wall_thickness); // shrink sides by wall thickness
 		outside.d[c.dim][c.dir] = inside.d[c.dim][c.dir]; // shift front side in slightly
 		unsigned const mirror_face_mask(get_face_mask(!c.dim, 1)); // always +dir
-		unsigned skip_faces(0);
 
-		if (c.is_mirror()) {
+		if (is_mirror) {
 			draw_mirror_surface(c, mirror, !c.dim, 1, 1); // shadowed, always +dir
-			skip_faces = ~mirror_face_mask;
+		}
+		else { // draw front face
+			get_material(front_tex, 1).add_cube_to_verts(mirror, front_color, mirror.get_llc(), mirror_face_mask, c.dim);
 		}
 		vect_cube_t &cubes(get_temp_cubes());
 		subtract_cube_from_cube(outside, inside, cubes); // should always be 3 cubes (sides + back) since this subtract is XY only
@@ -1637,7 +1641,7 @@ void building_room_geom_t::add_med_cab(room_object_t const &c) {
 		cubes.push_back(inside);
 		set_wall_width(cubes.back(), inside.zc(), 0.5*wall_thickness, 2); // middle shelf
 		rgeom_mat_t &mat(get_untextured_material(1)); // shadowed
-		mat.add_cube_to_verts(mirror, side_color, zero_vector, skip_faces); // non-front sides of mirror
+		mat.add_cube_to_verts(mirror, side_color, zero_vector, ~mirror_face_mask); // non-front sides of mirror
 
 		for (auto i = cubes.begin(); i != cubes.end(); ++i) {
 			unsigned sf(~get_face_mask(c.dim, !c.dir));
@@ -1646,16 +1650,13 @@ void building_room_geom_t::add_med_cab(room_object_t const &c) {
 		}
 	}
 	else { // closed medicine cabinet
-		unsigned skip_faces(0);
-
-		if (c.is_mirror()) {
+		if (is_mirror) {
 			draw_mirror_surface(c, c, c.dim, c.dir, 1); // shadowed
-			skip_faces = get_skip_mask_for_xy(c.dim);
 		}
-		else { // skip back face
-			skip_faces = ~get_face_mask(c.dim, !c.dir);
+		else { // draw front face
+			get_material(front_tex, 1).add_cube_to_verts(c, front_color, c.get_llc(), get_face_mask(c.dim, c.dir), !c.dim);
 		}
-		get_untextured_material(1).add_cube_to_verts_untextured(c, side_color, skip_faces); // draw only the exterior sides, shadowed, untextured
+		get_untextured_material(1).add_cube_to_verts_untextured(c, side_color, get_skip_mask_for_xy(c.dim)); // draw only the exterior sides, shadowed, untextured
 	}
 }
 
