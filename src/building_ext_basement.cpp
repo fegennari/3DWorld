@@ -535,9 +535,9 @@ unsigned building_t::max_expand_underground_room(cube_t &room, bool dim, bool di
 			bool valid(0);
 
 			if (max_shift_up > get_floor_thickness()) {
-				cube_t cand_shift(cand);
-				cand_shift.translate_dim(2, max_shift_up); // Z
-				float const ceiling_zval(room.z2() + max_shift_up - get_fc_thickness());
+				cube_t cand_shift(room);
+				set_cube_zvals(cand_shift, room.z2(), (room.z2() + max_shift_up)); // old to new ceiling
+				float const ceiling_zval(cand_shift.z2() - get_fc_thickness());
 
 				if (!check_buildings_cube_coll(cand_shift, 0, 1, this) && query_min_height(room, ceiling_zval) > ceiling_zval) { // can shift up
 					room.z2()    += max_shift_up;
