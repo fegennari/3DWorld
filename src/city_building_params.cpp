@@ -22,6 +22,13 @@ string const model_opt_names[NUM_OBJ_MODELS] =
 /*city models*/ "fire_hydrant_model", "substation_model", "mailbox_model", "umbrella_model", "pigeon_model", "fountain_model", "bird_animated_model", "flag_model",
 "bicycle_model", "swingset_model", "trampoline_model", "dumpster_model", "big_umbrella_model", "flower_model", "deck_chair_model", "picnic_table_model", "wind_turbine_model"};
 
+void read_to_newline(FILE *fp) {
+	while (1) {
+		int const c(getc(fp));
+		if (is_EOF(c) || c == '\n') return;
+	}
+}
+
 void city_params_t::init_kw_maps() {
 	kwmu.add("num_cities",     num_cities);
 	kwmu.add("num_rr_tracks",  num_rr_tracks);
@@ -131,8 +138,8 @@ bool city_params_t::read_option(FILE *fp) {
 			if (!add_model(i, fp)) {return read_error(str);}
 			return 1; // done
 		}
-		cout << "Unrecognized city keyword in input file: " << str << endl;
-		return 0;
+		cout << "Error: Unrecognized city keyword in input file: " << str << "; ignoring line" << endl;
+		read_to_newline(fp);
 	}
 	return 1;
 }
@@ -424,8 +431,8 @@ bool building_params_t::parse_buildings_option(FILE *fp) {
 	// special commands
 	else if (str == "add_material") {add_cur_mat();}
 	else {
-		cout << "Unrecognized buildings keyword in input file: " << str << endl;
-		read_error = 1;
+		cout << "Error: Unrecognized buildings keyword in input file: " << str << "; ignoring line" << endl;
+		read_to_newline(fp);
 	}
 	return !read_error;
 }
