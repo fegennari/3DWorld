@@ -1923,7 +1923,7 @@ void building_room_geom_t::add_shower_tub(room_object_t const &c, tid_nm_pair_t 
 	} // end inc_sm
 }
 
-void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom) {
+void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom, float label_rot_angle) {
 	// obj_id: bits 1-3 for type, bits 6-7 for emptiness, bit 6 for cap color
 	unsigned const bottle_ndiv(get_rgeom_sphere_ndiv(1)); // use smaller ndiv (16) to reduce vertex count
 	bool const cap_color_ix(c.obj_id & 64);
@@ -1949,7 +1949,7 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom) {
 	neck.d[dim][!c.dir] = cap.d[dim][c.dir] = c.d[dim][!c.dir] - dir_sign*0.08*length; // set cap thickness
 	cap.expand_in_dim(dim1, -0.006*sz[dim1]); // slightly larger radius than narrow end of neck
 	cap.expand_in_dim(dim2, -0.006*sz[dim2]); // slightly larger radius than narrow end of neck
-	float const rot_angle(c.get_bottle_rot_angle());
+	float const rot_angle(c.get_bottle_rot_angle() + label_rot_angle);
 	unsigned const verts_start(mat.itri_verts.size());
 
 	if (c.is_on_srack()) { // shelf rack bottle; draw middle as a cone as an optimization
@@ -1983,7 +1983,7 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom) {
 	body.d[dim][c.dir] += dir_sign*0.24*length; body.d[dim][!c.dir] -= dir_sign*0.12*length; // shrink in length
 	bottle_params_t const &bp(bottle_params[c.get_bottle_type()]);
 	float const tscale(bp.label_tscale); // some labels are more square and scaled 2x to repeat as they're more stretched out; should we use a partial cylinder instead?
-	float const tscale_add(0.123*c.obj_id + get_obj_rand_tscale_add(c)); // add a pseudo-random rotation to the label texture
+	float const tscale_add((label_rot_angle == 0.0) ? 0.123*c.obj_id + get_obj_rand_tscale_add(c) : 0.0); // add a pseudo-random rotation to the label texture if no custom rot
 	string const &texture_fn(bp.texture_fn); // select the custom label texture for each bottle type
 	rgeom_mat_t &label_mat(get_material(tid_nm_pair_t(texture_fn.empty() ? -1 : get_texture_by_name(texture_fn)), 0, 0, 1)); // unshadowed, small
 	unsigned const label_verts_start(label_mat.itri_verts.size());

@@ -1471,7 +1471,7 @@ void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, 
 			bottle.expand_in_dim(d, -val);
 			break;
 		}
-		tmp_rgeom.add_bottle(bottle, 1); // add_bottom=1
+		tmp_rgeom.add_bottle(bottle, 1, get_camera_z_rotate()); // add_bottom=1
 		tmp_rgeom.mats_small.upload_draw_and_clear(s);
 	}
 	else if (c.type == TYPE_FIRE_EXT) {
