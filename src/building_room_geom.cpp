@@ -1590,7 +1590,29 @@ cube_t get_mirror_surface(room_object_t const &c) {
 	return mirror;
 }
 void building_room_geom_t::add_mirror(room_object_t const &c) {
-	bool const shadowed(c.get_sz_dim(c.dim) > 0.05*c.dz()); // medicine cabinets cast shadows, while bathroom mirrors do not
+	colorRGBA const side_color(apply_light_color(c));
+	draw_mirror_surface(c, c, c.dim, c.dir, 0); // shadowed=0
+	rgeom_mat_t &mat(get_untextured_material(0)); // shadowed=0
+
+	if (c.in_mall()) { // mall store mirror; draw frame, which extends a bit outside the mirror
+		unsigned const skip_faces(~get_face_mask(c.dim, !c.dir)); // skip back face
+		float const frame_thick(0.05*min(c.get_width(), c.dz()));
+		cube_t ce(c);
+		ce.d[c.dim][c.dir] += (c.dir ? 1.0 : -1.0)*0.25*frame_thick;
+		cube_t l(ce), r(ce), b(ce), t(ce);
+		l.z1() = r.z1() = b.z2() = c.z1() + frame_thick;
+		l.z2() = r.z2() = t.z1() = c.z2() - frame_thick;
+		l.d[!c.dim][1] = c.d[!c.dim][0]   + frame_thick;
+		r.d[!c.dim][0] = c.d[!c.dim][1]   - frame_thick;
+		mat.add_cube_to_verts_untextured(l, side_color, (skip_faces | EF_Z12));
+		mat.add_cube_to_verts_untextured(r, side_color, (skip_faces | EF_Z12));
+		mat.add_cube_to_verts_untextured(b, side_color,  skip_faces);
+		mat.add_cube_to_verts_untextured(t, side_color,  skip_faces);
+	}
+	else {mat.add_cube_to_verts_untextured(c, side_color, get_skip_mask_for_xy(c.dim));} // draw only the exterior sides, untextured
+}
+
+void building_room_geom_t::add_med_cab(room_object_t const &c) {
 	colorRGBA const side_color(apply_light_color(c));
 
 	if (c.is_open()) { // open medicine cabinet
@@ -1600,7 +1622,12 @@ void building_room_geom_t::add_mirror(room_object_t const &c) {
 		inside.expand_by(-wall_thickness); // shrink sides by wall thickness
 		outside.d[c.dim][c.dir] = inside.d[c.dim][c.dir]; // shift front side in slightly
 		unsigned const mirror_face_mask(get_face_mask(!c.dim, 1)); // always +dir
-		draw_mirror_surface(c, mirror, !c.dim, 1, shadowed); // always +dir
+		unsigned skip_faces(0);
+
+		if (c.is_mirror()) {
+			draw_mirror_surface(c, mirror, !c.dim, 1, 1); // shadowed, always +dir
+			skip_faces = ~mirror_face_mask;
+		}
 		vect_cube_t &cubes(get_temp_cubes());
 		subtract_cube_from_cube(outside, inside, cubes); // should always be 3 cubes (sides + back) since this subtract is XY only
 		cubes.push_back(inside);
@@ -1609,35 +1636,26 @@ void building_room_geom_t::add_mirror(room_object_t const &c) {
 		set_cube_zvals(cubes.back(), inside.z2(), outside.z2()); // top
 		cubes.push_back(inside);
 		set_wall_width(cubes.back(), inside.zc(), 0.5*wall_thickness, 2); // middle shelf
-		rgeom_mat_t &mat(get_untextured_material(shadowed));
-		mat.add_cube_to_verts(mirror, side_color, zero_vector, ~mirror_face_mask); // non-front sides of mirror
-		
+		rgeom_mat_t &mat(get_untextured_material(1)); // shadowed
+		mat.add_cube_to_verts(mirror, side_color, zero_vector, skip_faces); // non-front sides of mirror
+
 		for (auto i = cubes.begin(); i != cubes.end(); ++i) {
 			unsigned sf(~get_face_mask(c.dim, !c.dir));
 			if (i - cubes.begin() > 3) {sf |= get_skip_mask_for_xy(!c.dim);} // sip side faces
 			mat.add_cube_to_verts(*i, side_color, zero_vector, sf); // skip back face
 		}
 	}
-	else { // closed medicine cabinet, or bathroom mirror
-		draw_mirror_surface(c, c, c.dim, c.dir, shadowed);
-		rgeom_mat_t &mat(get_untextured_material(shadowed));
+	else { // closed medicine cabinet
+		unsigned skip_faces(0);
 
-		if (c.in_mall()) { // mall store mirror; draw frame, which extends a bit outside the mirror
-			unsigned const skip_faces(~get_face_mask(c.dim, !c.dir)); // skip back face
-			float const frame_thick(0.05*min(c.get_width(), c.dz()));
-			cube_t ce(c);
-			ce.d[c.dim][c.dir] += (c.dir ? 1.0 : -1.0)*0.25*frame_thick;
-			cube_t l(ce), r(ce), b(ce), t(ce);
-			l.z1() = r.z1() = b.z2() = c.z1() + frame_thick;
-			l.z2() = r.z2() = t.z1() = c.z2() - frame_thick;
-			l.d[!c.dim][1] = c.d[!c.dim][0]   + frame_thick;
-			r.d[!c.dim][0] = c.d[!c.dim][1]   - frame_thick;
-			mat.add_cube_to_verts_untextured(l, side_color, (skip_faces | EF_Z12));
-			mat.add_cube_to_verts_untextured(r, side_color, (skip_faces | EF_Z12));
-			mat.add_cube_to_verts_untextured(b, side_color,  skip_faces);
-			mat.add_cube_to_verts_untextured(t, side_color,  skip_faces);
+		if (c.is_mirror()) {
+			draw_mirror_surface(c, c, c.dim, c.dir, 1); // shadowed
+			skip_faces = get_skip_mask_for_xy(c.dim);
 		}
-		else {mat.add_cube_to_verts_untextured(c, side_color, get_skip_mask_for_xy(c.dim));} // draw only the exterior sides, untextured
+		else { // skip back face
+			skip_faces = ~get_face_mask(c.dim, !c.dir);
+		}
+		get_untextured_material(1).add_cube_to_verts_untextured(c, side_color, skip_faces); // draw only the exterior sides, shadowed, untextured
 	}
 }
 

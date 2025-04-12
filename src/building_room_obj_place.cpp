@@ -1830,7 +1830,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 					// this mirror is actually 3D, so we enable collision detection; treat as a house even if it's in an office building
 					unsigned flags(RO_FLAG_IS_HOUSE); // Note: not necessarily a house
 					if (count_ext_walls_for_room(room, mirror.z1()) == 1) {flags |= RO_FLAG_INTERIOR;} // flag as interior if windows are opaque glass blocks
-					objs.emplace_back(mirror, TYPE_MIRROR, room_id, sink.dim, sink.dir, flags, tot_light_amt);
+					objs.emplace_back(mirror, TYPE_MED_CAB, room_id, sink.dim, sink.dir, flags, tot_light_amt);
 					set_obj_id(objs); // for crack texture selection/orient
 					room.set_has_mirror();
 				}
@@ -1901,7 +1901,7 @@ bool building_t::add_vanity_to_room(rand_gen_t &rgen, room_t &room, float &zval,
 		set_wall_width(mirror, vanity.get_center_dim(!dim), 0.13*floor_spacing, !dim);
 		mirror.d[dim][!dir] = wall_edge + dsign*wall_thickness; // thickness
 		unsigned const mirror_flags(RO_FLAG_IS_HOUSE | ((num_ext_walls == 1) ? RO_FLAG_INTERIOR : 0)); // flag as interior if windows are opaque glass blocks
-		objs.emplace_back(mirror, TYPE_MIRROR, room_id, dim, !dir, mirror_flags, tot_light_amt);
+		objs.emplace_back(mirror, TYPE_MED_CAB, room_id, dim, !dir, mirror_flags, tot_light_amt);
 		set_obj_id(objs); // for crack texture selection/orient
 		room.set_has_mirror();
 		return 1; // success/done

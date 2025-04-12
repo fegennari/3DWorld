@@ -494,7 +494,7 @@ enum { // room object types
 	TYPE_CAMERA, TYPE_CLOCK, TYPE_DOWNSPOUT, TYPE_SHELFRACK, TYPE_CHIM_CAP, TYPE_FOOD_BOX, TYPE_SAFE, TYPE_LADDER, TYPE_CHECKOUT, TYPE_FISHTANK,
 	TYPE_LAVALAMP, TYPE_SHOWERTUB, TYPE_TRASH, TYPE_VALVE, TYPE_METAL_BAR, TYPE_OFF_PILLAR, TYPE_DRINK_CAN, TYPE_CONF_TABLE, TYPE_INT_WINDOW, TYPE_INT_LADDER,
 	TYPE_MACHINE, TYPE_BUCKET, TYPE_SPIWEB, TYPE_TREE, TYPE_THEFT_SENS, TYPE_ELEC_WIRE, TYPE_ERASER, TYPE_DWASHER, TYPE_PET_CAGE, TYPE_IBEAM,
-	TYPE_CATWALK, TYPE_VANITY, TYPE_CHEM_TANK, TYPE_HVAC_UNIT, TYPE_WARN_LIGHT, TYPE_GAUGE, TYPE_PALLET, TYPE_SHELF_WALL, TYPE_VENDING,
+	TYPE_CATWALK, TYPE_VANITY, TYPE_CHEM_TANK, TYPE_HVAC_UNIT, TYPE_WARN_LIGHT, TYPE_GAUGE, TYPE_PALLET, TYPE_SHELF_WALL, TYPE_VENDING, TYPE_MED_CAB,
 	/* these next ones are all 3D models - see logic in room_object_t::is_obj_model_type() */
 	TYPE_TOILET, TYPE_SINK, TYPE_TUB, TYPE_FRIDGE, TYPE_STOVE, TYPE_TV, TYPE_MONITOR, TYPE_COUCH, TYPE_OFF_CHAIR, TYPE_URINAL,
 	TYPE_LAMP, TYPE_WASHER, TYPE_DRYER, TYPE_KEY, TYPE_HANGER, TYPE_CLOTHES, TYPE_FESCAPE, TYPE_WALL_LAMP, TYPE_CUP, TYPE_TOASTER,
@@ -747,6 +747,7 @@ struct room_object_t : public oriented_cube_t { // size=68
 	bool is_parked_car  () const {return (type == TYPE_COLLIDER && (flags & RO_FLAG_FOR_CAR));}
 	bool is_sloped_ramp () const {return (type == TYPE_RAMP || (type == TYPE_POOL_TILE && shape == SHAPE_ANGLED));}
 	bool light_is_out   () const {return ((is_broken() || is_broken2()) && !is_open());} // only makes sense to call on lights
+	bool is_mirror      () const {return (type == TYPE_MIRROR || type == TYPE_DRESS_MIR || (type == TYPE_MED_CAB && !(flags & RO_FLAG_HAS_EXTRA)));}
 	bool is_player_collidable() const;
 	bool can_use        () const;
 	bool is_interactive () const {return (has_dstate() || can_use());}
@@ -1267,7 +1268,8 @@ struct building_room_geom_t {
 	void add_pizza_top(room_object_t const &c);
 	void add_mwave(room_object_t const &c);
 	void add_vending_machine(room_object_t const &c);
-	void add_mirror(room_object_t const &c);
+	void add_mirror (room_object_t const &c);
+	void add_med_cab(room_object_t const &c);
 	rgeom_mat_t &get_shower_tile_mat(room_object_t const &c, float tscale, colorRGBA &color);
 	void draw_shower_head(room_object_t const &shower, float radius, float wall_pos, float extent_amt, bool head_dim);
 	void add_shower(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm);

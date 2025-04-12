@@ -951,6 +951,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		case TYPE_FLOORING:add_flooring(*i, tscale); break;
 		case TYPE_CLOSET:  add_closet  (*i, wall_tex, building.get_trim_color(), 1, 0); break; // inc_lg=1, inc_sm=0
 		case TYPE_MIRROR:  add_mirror  (*i); break;
+		case TYPE_MED_CAB: add_med_cab (*i); break;
 		case TYPE_SHOWER:  add_shower  (*i, tscale, 1, 0); break; // inc_lg=1, inc_sm=0
 		case TYPE_SHOWERTUB: add_shower_tub(*i, wall_tex, building.get_trim_color(), tscale, 1, 0); break; // inc_lg=1, inc_sm=0
 		case TYPE_BLINDS:  add_blinds  (*i); break;

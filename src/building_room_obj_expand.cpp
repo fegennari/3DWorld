@@ -1844,7 +1844,7 @@ bool building_room_geom_t::expand_object(room_object_t &c, building_t const &bui
 	case TYPE_SHELFRACK: expand_shelfrack(c); break;
 	case TYPE_WINE_RACK: expand_wine_rack(c); break;
 	case TYPE_CABINET: case TYPE_COUNTER: case TYPE_KSINK: case TYPE_VANITY: expand_cabinet(c); break;
-	case TYPE_MIRROR:    expand_med_cab(c); break;
+	case TYPE_MED_CAB:   expand_med_cab(c); break;
 	case TYPE_BRK_PANEL: expand_breaker_panel(c, building); break;
 	//case TYPE_TCAN:      expand_trashcan(c); break;
 	default: assert(0); // not a supported expand type

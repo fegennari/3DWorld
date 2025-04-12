@@ -21,10 +21,8 @@ void draw_sun_moon_stars(bool no_update);
 cube_t get_mirror_surface(room_object_t const &c);
 void draw_ortho_screen_space_triangle();
 
-bool is_mirror(room_object_t const &obj) {return (obj.type == TYPE_MIRROR || obj.type == TYPE_DRESS_MIR);}
-
 bool cube_visible_in_building_mirror_reflection(cube_t const &c) {
-	if (!is_mirror(cur_room_mirror)) return 0;
+	if (!cur_room_mirror.is_mirror()) return 0;
 	pos_dir_up pdu(camera_pdu);
 	// below code is duplicated with create_mirror_reflection_if_needed()/draw_scene_for_building_reflection(), but not easy to factor out and share
 	bool const is_open(cur_room_mirror.is_open()), dim(cur_room_mirror.dim ^ is_open), dir(is_open ? 1 : cur_room_mirror.dir);
@@ -122,7 +120,7 @@ void create_mirror_reflection_if_needed(building_t const *vis_conn_bldg, vector3
 	for (unsigned n = 0; n < 2; ++n) { // check player building, then visible connected building
 		building_t const *bldg(buildings[n]);
 		if (bldg == nullptr) continue;
-		bool const have_mirror(is_mirror(cur_room_mirror));
+		bool const have_mirror(cur_room_mirror.is_mirror());
 		bool draw_water_reflect(bldg->water_visible_to_player());
 	
 		if (n == 0 && draw_water_reflect && have_mirror && bldg->has_pool()) { // both a pool and a mirror are visible
@@ -196,7 +194,7 @@ bool building_t::find_mirror_in_room(unsigned room_id, vector3d const &xlate, fl
 	float const camera_z1(camera_bs.z - CAMERA_RADIUS), camera_z2(camera_bs.z + CAMERA_RADIUS);
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) { // see if that room contains a mirror
-		if (i->room_id != room_id || !is_mirror(*i))      continue; // wrong room, or not a mirror
+		if (i->room_id != room_id || !i->is_mirror())     continue; // wrong room, or not a mirror
 		if (i->z1() > camera_z2   || i->z2() < camera_z1) continue; // wrong floor
 		// Note: we could probably return 0 rather than continuing after this point, but that may change if rooms with multiple mirrors are enabled
 		if (((camera_bs[i->dim] - i->get_center_dim(i->dim)) < 0.0f) ^ i->dir ^ 1) continue; // back facing

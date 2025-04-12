@@ -521,13 +521,12 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 				else if (!player_in_closet) {
 					if      ((type == TYPE_TOILET || type == TYPE_URINAL) && !i->is_broken() && !i->in_mall()) {keep = 1;} // toilet/urinal can be flushed unless broken or in store
 					else if (type == TYPE_STALL && i->shape == SHAPE_CUBE && can_open_bathroom_stall_or_shower(*i, closest_to, in_dir)) {keep = 1;} // bathroom stall can be opened
-					else if (type == TYPE_MIRROR && i->is_house())  {keep = 1;} // medicine cabinet
 					else if ((i->is_sink_type() || type == TYPE_TUB) && !i->in_mall()) {keep = 1;} // sink/tub, not in mall appliance/plumbing store
 					else if (i->is_light_type() || type == TYPE_LAVALAMP) {keep = 1;} // room light or lamp
 					else if (type == TYPE_FISHTANK && i->has_lid()) {keep = 1;} // fishtank with a lid and light
 					else if (type == TYPE_PICTURE || type == TYPE_TPROLL || type == TYPE_MWAVE || type == TYPE_TV || type == TYPE_MONITOR || type == TYPE_BLINDS ||
 						type == TYPE_SWITCH || type == TYPE_BOOK || type == TYPE_BRK_PANEL || type == TYPE_BREAKER || type == TYPE_ATTIC_DOOR || type == TYPE_OFF_CHAIR ||
-						type == TYPE_WFOUNTAIN || type == TYPE_VENDING) {keep = 1;}
+						type == TYPE_WFOUNTAIN || type == TYPE_VENDING || type == TYPE_MED_CAB) {keep = 1;}
 					else if ((type == TYPE_STOVE || type == TYPE_SHOWER || type == TYPE_SHOWERTUB /*|| type == TYPE_FRIDGE*/) && !i->in_mall()) {keep = 1;} // not in plumbing store
 					else if (type == TYPE_LG_BALL && i->has_dstate()) {keep = 1;}
 					else if (type == TYPE_BUTTON && i->in_elevator() == bool(player_in_elevator)) {keep = 1;} // check for buttons inside/outside elevator
@@ -879,7 +878,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		register_indir_lighting_geom_change();
 		update_draw_data = 1;
 	}
-	else if (obj.type == TYPE_MIRROR && obj.is_house()) { // medicine cabinet
+	else if (obj.type == TYPE_MED_CAB) { // medicine cabinet
 		obj.flags ^= RO_FLAG_OPEN; // toggle open/close
 		interior->room_geom->expand_object(obj, *this);
 		play_open_close_sound(obj, sound_origin);
@@ -1159,7 +1158,7 @@ void building_t::play_open_close_sound(room_object_t const &obj, point const &so
 	}
 	else if (obj.type == TYPE_CLOSET   ) {gen_sound_thread_safe_at_player(SOUND_SLIDING);}
 	else if (obj.type == TYPE_SHOWER   ) {gen_sound_thread_safe_at_player((obj.is_open() ? (unsigned)SOUND_DOOR_OPEN : (unsigned)SOUND_METAL_DOOR));}
-	else if (obj.type == TYPE_MIRROR   ) {play_door_open_close_sound(sound_origin, obj.is_open(), 0.4, 1.6);} // medicine cabinet
+	else if (obj.type == TYPE_MED_CAB  ) {play_door_open_close_sound(sound_origin, obj.is_open(), 0.4, 1.6);} // medicine cabinet
 	else if (obj.type == TYPE_BRK_PANEL) {play_door_open_close_sound(sound_origin, obj.is_open(), 0.6, 1.8);} // breaker panel
 	else {assert(0);} // not implemented
 }
@@ -1321,7 +1320,7 @@ void building_t::run_ball_update(vect_room_object_t::iterator ball_it, point con
 			bool handled(0);
 
 			// break the glass if not already broken; should windows get broken as well?
-			if (bt.breaks_glass && (obj.type == TYPE_TV || obj.type == TYPE_MONITOR || obj.type == TYPE_DRESS_MIR || (obj.type == TYPE_MIRROR && !obj.is_open())) &&
+			if (bt.breaks_glass && (obj.type == TYPE_TV || obj.type == TYPE_MONITOR || (obj.is_mirror() && !obj.is_open())) &&
 				velocity.mag() > 2.0*MIN_VELOCITY && !obj.is_broken())
 			{
 				vector3d front_dir(all_zeros);
@@ -1337,7 +1336,7 @@ void building_t::run_ball_update(vect_room_object_t::iterator ball_it, point con
 						register_building_sound(sound_origin, 0.7);
 						interior->room_geom->update_draw_state_for_room_object(obj, *this, 0);
 						
-						if (obj.type == TYPE_DRESS_MIR || obj.type == TYPE_MIRROR) {register_achievement("7 Years of Bad Luck");}
+						if (obj.is_mirror()) {register_achievement("7 Years of Bad Luck");}
 						else if ((obj.type == TYPE_TV || obj.type == TYPE_MONITOR) && obj.is_powered()/*!(obj.obj_id & 1)*/) { // only if turned on?
 							unsigned const obj_id(ball_it - interior->room_geom->objs.begin());
 							interior->room_geom->particle_manager.add_for_obj(ball, 0.06*radius, front_dir, 1.0*KICK_VELOCITY, 50, 60, PART_EFFECT_SPARK, obj_id);

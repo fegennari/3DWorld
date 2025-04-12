@@ -96,7 +96,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_RAILING   ] = bldg_obj_type_t(1, 1, 0, 0, 1, 0, 2, 0.0,   0.0,   "railing"); // Note: ai_coll logic is custom, but ai_coll flag has been set for consistency
 	bldg_obj_types[TYPE_CRATE     ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 10.0,  12.0,  "crate"); // should be random value
 	bldg_obj_types[TYPE_BOX       ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 5.0,   8.0,   "box");   // should be random value
-	bldg_obj_types[TYPE_MIRROR    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 40.0,  15.0,  "mirror"); // house medicine cabinet, office building bathroom mirror, or clothing store mirror
+	bldg_obj_types[TYPE_MIRROR    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 80.0,  15.0,  "mirror"); // office building bathroom mirror or clothing store mirror
 	bldg_obj_types[TYPE_SHELVES   ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 0.0,   0.0,   "shelves");
 	bldg_obj_types[TYPE_KEYBOARD  ] = bldg_obj_type_t(0, 0, 1, 1, 0, 0, 2, 15.0,  2.0,   "keyboard");
 	bldg_obj_types[TYPE_SHOWER    ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1, 0.0,   0.0,   "shower"); // technically large + small, but only large objects are dynamically updated
@@ -206,6 +206,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_PALLET    ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 10.0,  35.0,  "pallet");
 	bldg_obj_types[TYPE_SHELF_WALL] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1, 0.0,   0.0,   "shelf wall");
 	bldg_obj_types[TYPE_VENDING   ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 1, 8000.0,545.0, "vending machine"); // specs from https://vendtek.com/product/crane-bevmax-classic-model-3800/
+	bldg_obj_types[TYPE_MED_CAB   ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 40.0,  10.0,  "medicine cabinet");
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");
@@ -391,9 +392,6 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 	else if (otype == TYPE_CLOTHES) {
 		if      (is_shirt_model(obj)) {type.name = "shirt";}
 		else if (is_pants_model(obj)) {type.name = "pants";}
-	}
-	else if (otype == TYPE_MIRROR && (obj.flags & RO_FLAG_IS_HOUSE)) {
-		type.name = "medicine cabinet";
 	}
 	else if (otype == TYPE_PAPER) {
 		float const value(get_paper_value(obj));
@@ -1656,7 +1654,7 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 			if (type == TYPE_TABLE   && i->shape == SHAPE_CUBE) continue; // can only pick up short (TV) tables and cylindrical tables
 			if (type == TYPE_BED     && i->taken_level > 2)     continue; // can only take pillow, sheets, and mattress - not the frame
 			if (type == TYPE_SHELVES && i->obj_expanded())      continue; // shelves are   already expanded, can no longer select this object
-			if (type == TYPE_MIRROR  && i->is_open())           continue; // can't take mirror/medicine cabinet until it's closed
+			if (type == TYPE_MED_CAB && i->is_open())           continue; // can't take medicine cabinet until it's closed
 			if (type == TYPE_LIGHT   && !i->is_visible())       continue; // can't take light attached to a ceiling fan as a separate object
 			if (type == TYPE_MWAVE   && i->is_nonempty())       continue; // can't take a microwave with something inside it
 			if (type == TYPE_PADLOCK && i->is_active())         continue; // padlock in locked onto a door, can't take
@@ -1932,7 +1930,7 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 	else { // replace it with an invisible blocker that won't collide with anything
 		obj.remove();
 	}
-	if (type == TYPE_MIRROR && old_obj.obj_expanded()) {
+	if (type == TYPE_MED_CAB && old_obj.obj_expanded()) {
 		remove_objs_contained_in(old_obj, expanded_objs, building); // search for and remove any contained medicine or other objects
 	}
 	if (type == TYPE_WBOARD || type == TYPE_PICTURE || type == TYPE_MIRROR) {
