@@ -256,6 +256,9 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_XFORMER   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 1, 0, 0.0,   0.0,   "transformer");
 	bldg_obj_types[TYPE_US_FLAG   ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 30.0,  1.0,   "American Flag");
 	bldg_obj_types[TYPE_BLDG_FOUNT] = bldg_obj_type_t(1, 1, 1, 0, 1, 1, 0, 0.0,   0.0,   "fountain"); // mall fountain
+	bldg_obj_types[TYPE_WHEELCHAIR] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 0, 300,   40,    "wheelchair");
+	bldg_obj_types[TYPE_OP_TABLE  ] = bldg_obj_type_t(1, 1, 1, 0, 1, 1, 0, 1000,  100,   "operating table");
+	bldg_obj_types[TYPE_TROLLEY   ] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 0, 100,   20,    "hospital trolley");
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// animals; not room objects
 	bldg_obj_types[TYPE_RAT       ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 8.99,  1.0,   "rat"); // can be picked up

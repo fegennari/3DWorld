@@ -408,14 +408,19 @@ bool building_t::add_operating_room_objs(rand_gen_t rgen, room_t &room, float zv
 {
 	// TODO: operating table, equipment (with TYPE_VALVE/TYPE_GAUGE)
 	assert(lights_start <= objs_start);
-	bool const long_dim(room.dx() < room.dy());
-	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_HOSP_BED)) return 0; // don't have a model of this type
+	// TODO: TYPE_WHEELCHAIR, TYPE_HOS_TROLLEY
+	float table_hscale(0.0);
+	unsigned table_obj_type(TYPE_NONE), table_model_type(0); // prefer operating table, default to hospital bed if not present
+	if      (building_obj_model_loader.is_model_valid(OBJ_MODEL_OP_TABLE)) {table_obj_type = TYPE_OP_TABLE; table_model_type = OBJ_MODEL_OP_TABLE; table_hscale = 0.38;}
+	else if (building_obj_model_loader.is_model_valid(OBJ_MODEL_HOSP_BED)) {table_obj_type = TYPE_HOSP_BED; table_model_type = OBJ_MODEL_HOSP_BED; table_hscale = 0.42;}
+	else {return 0;} // neither operating table or hospital bed model is present, can't be an operating room
 	// brighter lights in OR
 	room.light_intensity *= 2.0;
 	tot_light_amt        *= 2.0;
-	float const floor_spacing(get_window_vspace()), height(0.42*floor_spacing);
+	float const floor_spacing(get_window_vspace()), table_height(table_hscale*floor_spacing);
+	bool const long_dim(room.dx() < room.dy());
 	vect_room_object_t &objs(interior->room_geom->objs);
-	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_HOSP_BED)); // D, W, H
+	vector3d const sz(building_obj_model_loader.get_model_world_space_size(table_model_type)); // D, W, H
 	point table_center(room.xc(), room.yc(), zval); // start at the center of the room
 	// determine table_dir based on door pos if in same dim
 	bool table_dir(rgen.rand_bool());
@@ -428,13 +433,13 @@ bool building_t::add_operating_room_objs(rand_gen_t rgen, room_t &room, float zv
 		if (door.dim == long_dim) {table_dir = door_dir;} // feet facing the door
 		table_center[door.dim] += (door_dir ? 1.0 : -1.0)*0.5*door.get_width(); // move table back from the door
 	}
-	// place table if valid
+	// place table or bed if valid
 	cube_t op_table(table_center);
-	op_table.z2() += height;
-	op_table.expand_in_dim( long_dim, 0.5*height*(sz.x/sz.z));
-	op_table.expand_in_dim(!long_dim, 0.5*height*(sz.y/sz.z));
+	op_table.z2() += table_height;
+	op_table.expand_in_dim( long_dim, 0.5*table_height*(sz.x/sz.z));
+	op_table.expand_in_dim(!long_dim, 0.5*table_height*(sz.y/sz.z));
 	if (is_obj_placement_blocked(op_table, room, 1)) return 0; // inc_open_doors=1; no need to check for other objects since this is first
-	objs.emplace_back(op_table, TYPE_HOSP_BED, room_id, long_dim, table_dir, 0, tot_light_amt);
+	objs.emplace_back(op_table, table_obj_type, room_id, long_dim, table_dir, 0, tot_light_amt);
 	// add 1-2 machines
 	cube_t place_area(get_walkable_room_bounds(room));
 	unsigned const num_machines(1 + rgen.rand_bool());
