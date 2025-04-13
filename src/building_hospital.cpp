@@ -244,6 +244,9 @@ bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, flo
 	if (!placed_couch && rgen.rand_bool()) {
 		place_model_along_wall(OBJ_MODEL_RCHAIR, TYPE_RCHAIR, room, 0.5, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0);
 	}
+	if (rgen.rand_float() < ((num_beds > 1) ? 0.5 : 0.25)) { // maybe add a wheelchair; more likely if there are multiple beds
+		place_model_along_wall(OBJ_MODEL_WHEELCHAIR, TYPE_WHEELCHAIR, room, 0.45, rgen, zval, room_id, tot_light_amt, place_area, objs_start);
+	}
 	add_plants_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, 1); // add 1 plant
 	add_numbered_door_sign("Room ", room, zval, room_id, floor_ix);
 	return 1;
@@ -377,7 +380,7 @@ bool building_t::add_exam_room_objs(rand_gen_t rgen, room_t &room, float zval, u
 	add_desk_to_room(rgen, room, vect_cube_t(), chair_color, zval, room_id, tot_light_amt, objs_start, 0, 0, 0, 1, 1); // force_computer=1, add_phone=1
 
 	if (rgen.rand_bool()) { // add a simple sink
-		place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, room, 0.45, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.6);
+		place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, room, 0.45, rgen, zval, room_id, tot_light_amt, room_area, objs_start, 0.6);
 	}
 	else { // add a vanity
 		add_vanity_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);
@@ -387,6 +390,7 @@ bool building_t::add_exam_room_objs(rand_gen_t rgen, room_t &room, float zval, u
 	// should be a short rotating stool?
 	place_model_along_wall(OBJ_MODEL_BAR_STOOL, TYPE_BAR_STOOL, room, 0.4, rgen, zval, room_id, tot_light_amt, place_area, objs_start);
 	add_filing_cabinet_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);
+	if (rgen.rand_bool()) {place_model_along_wall(OBJ_MODEL_WHEELCHAIR, TYPE_WHEELCHAIR, room, 0.45, rgen, zval, room_id, tot_light_amt, place_area, objs_start);}
 
 	if (1) { // add a small wall mounted computer monitor, with large front clearance
 		unsigned const tv_obj_ix(objs.size());
@@ -449,6 +453,33 @@ bool building_t::add_operating_room_objs(rand_gen_t rgen, room_t &room, float zv
 		place_obj_along_wall(TYPE_MACHINE, room, machine_height, vector3d(xy_scale, xy_scale, 1.0), rgen, zval, room_id, tot_light_amt,
 			place_area, objs_start, 0.0, 0, 4, 0, WHITE, 1); // not_at_window=1
 	}
+	place_area.expand_by_xy(-get_trim_thickness());
+
+	// add hospital trolley
+	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_TROLLEY)) {
+		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TROLLEY)); // L, W, H
+		float const height(0.38*floor_spacing), hwidth(0.5*height*sz.y/sz.z), hlength(0.5*height*sz.x/sz.z);
+
+		if (max(hwidth, hlength) < 6.0*max(place_area.dx(), place_area.dy())) { // should generally be true
+			bool const trolley_dim(rgen.rand_bool()); // same for all iterations
+			cube_t trolley_place_area(place_area);
+			trolley_place_area.expand_in_dim( trolley_dim, -hlength);
+			trolley_place_area.expand_in_dim(!trolley_dim, -hwidth );
+
+			for (unsigned n = 0; n < 10; ++n) { // 10 attempts to place
+				point center(0.0, 0.0, zval);
+				gen_xy_pos_in_cube(center, trolley_place_area, rgen);
+				cube_t trolley(center);
+				trolley.expand_in_dim( trolley_dim, hlength);
+				trolley.expand_in_dim(!trolley_dim, hwidth );
+				trolley.z2() += height;
+				if (trolley.intersects(op_table) || overlaps_obj_or_placement_blocked(trolley, trolley_place_area, objs_start)) continue; // bad placement
+				objs.emplace_back(trolley, TYPE_TROLLEY, room_id, trolley_dim, rgen.rand_bool(), 0, tot_light_amt);
+				break;
+			} // for n
+		}
+	}
+	if (rgen.rand_bool()) {place_model_along_wall(OBJ_MODEL_WHEELCHAIR, TYPE_WHEELCHAIR, room, 0.45, rgen, zval, room_id, tot_light_amt, place_area, objs_start);}
 	add_clock_to_room_wall(rgen, room, zval, room_id, tot_light_amt, objs_start);
 	add_hospital_medicine_cabinet(rgen, room, zval, room_id, tot_light_amt, objs_start);
 	add_numbered_door_sign("OR ", room, zval, room_id, floor_ix);
@@ -467,7 +498,7 @@ bool building_t::add_operating_room_objs(rand_gen_t rgen, room_t &room, float zv
 void building_t::add_hospital_medicine_cabinet(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	float const floor_spacing(get_window_vspace());
 	// add a medicine cabinet along a wall; not_at_window=1; flag as not a mirror
-	float const cabinet_height(rgen.rand_uniform(0.25, 0.35)*floor_spacing), cabinet_depth(rgen.rand_uniform(0.2, 0.3)), cabinet_width(rgen.rand_uniform(0.8, 1.2));
+	float const cabinet_height(rgen.rand_uniform(0.25, 0.35)*floor_spacing), cabinet_depth(rgen.rand_uniform(0.18, 0.22)), cabinet_width(rgen.rand_uniform(0.8, 1.2));
 	place_obj_along_wall(TYPE_MED_CAB, room, cabinet_height, vector3d(cabinet_depth, cabinet_width, 1.0), rgen, (zval + 0.5*floor_spacing - 0.2*cabinet_height),
 		room_id, tot_light_amt, get_walkable_room_bounds(room), objs_start, 4.0, 0, 4, 0, WHITE, 1, SHAPE_CUBE, get_wall_thickness(), RO_FLAG_HAS_EXTRA);
 }
