@@ -3142,7 +3142,7 @@ public:
 				++num_tries;
 
 				for (unsigned m = 0; m < params.num_tries; ++m) {
-					for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform(pos_range.d[d][0], pos_range.d[d][1]);} // x,y
+					gen_xy_pos_in_cube(center, pos_range, rgen);
 					// place residential buildings around the edges of the plot (pos_range) unless the street dir has already been assigned (individual house plot) / keep out of the center
 					if (min_center_dist > 0.0 && dist_xy_less_than(center, place_center, min_center_dist)) continue;
 					if (is_tile || mat.place_radius == 0.0 || dist_xy_less_than(center, place_center, mat.place_radius)) {keep = 1; break;} // place_radius ignored for tiles

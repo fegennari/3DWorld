@@ -1070,7 +1070,7 @@ public:
 
 		for (unsigned n = 0; n < num_samples; ++n) {
 			point pos;
-			for (unsigned d = 0; d < 2; ++d) {pos[d] = rgen.rand_uniform(place_region.d[d][0], place_region.d[d][1]);}
+			gen_xy_pos_in_cube(pos, place_region, rgen);
 			pos.z = hq.get_height_at(pos);
 			if (pos.z < min_alt) continue; // too low
 			place_pos.push_back(pos);

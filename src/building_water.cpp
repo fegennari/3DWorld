@@ -240,7 +240,7 @@ void building_t::add_backrooms_droplet_spawners(rand_gen_t rgen) {
 	for (unsigned n = 0; n < num_spawners; ++n) {
 		float const radius(rgen.rand_uniform(0.5, 1.0)*rmax), period(rgen.rand_uniform(1.0, 4.0)*TICKS_PER_SECOND);
 		point pos(0.0, 0.0, zval);
-		for (unsigned d = 0; d < 2; ++d) {pos[d] = rgen.rand_uniform(spawn_bounds.d[d][0], spawn_bounds.d[d][1]);}
+		gen_xy_pos_in_cube(pos, spawn_bounds, rgen);
 		cube_t spawner_bc(pos);
 		spawner_bc.expand_by(radius);
 		if (interior->is_blocked_by_stairs_or_elevator(spawner_bc)) continue;

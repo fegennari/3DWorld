@@ -459,9 +459,6 @@ public:
 		if (!building.check_cube_within_part_sides(c)) return 0; // outside non-cube building - will try again with a new pos next time
 		return 1;
 	}
-	static void choose_pt_xy_in_room(point &pos, cube_t const &c, rand_gen_t &rgen) {
-		for (unsigned d = 0; d < 2; ++d) {pos[d] = rgen.rand_uniform(c.d[d][0], c.d[d][1]);}
-	}
 	point get_stairs_entrance_pt(float zval, unsigned node_ix, bool up_or_down) const {
 		// should we always move to the right side on wide stairs such as in malls so that other people can pass by going the other direction?
 		node_t const &node(get_node(node_ix));
@@ -481,14 +478,14 @@ public:
 		if (!place_area.is_strictly_normalized()) return 0; // should generally not be true
 
 		if (no_use_init) { // chose a new initial point
-			choose_pt_xy_in_room(pos, place_area, rgen);
+			gen_xy_pos_in_cube(pos, place_area, rgen);
 			if (avoid.empty() && building.is_cube()) return 1; // no collision checks needed
 		}
 		point orig_pos(pos);
 
 		for (unsigned n = 0; n < 100; ++n) { // 100 random tries to find a valid dest_pos
 			if (is_valid_pos(avoid, building, pos, radius)) return 1; // success
-			choose_pt_xy_in_room(pos, place_area, rgen); // choose a random new point in the room
+			gen_xy_pos_in_cube(pos, place_area, rgen); // choose a random new point in the room
 		}
 		pos = orig_pos; // use orig value as failed point
 		return 0;
@@ -540,7 +537,7 @@ public:
 				}
 			}
 		}
-		for (unsigned d = 0; d < 2; ++d) {pos[d] = rgen.rand_uniform(c.d[d][0], c.d[d][1]);}
+		gen_xy_pos_in_cube(pos, c, rgen);
 	}
 	static bool maybe_shorten_path(point const &p1, point const &p2, point &p, vect_cube_t const &keepout) {
 		float const t(get_closest_pt_on_line_t(p1, p, p2));

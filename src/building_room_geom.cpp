@@ -1436,7 +1436,7 @@ void place_pizza_toppings(cube_t const &pizza, float rmin, float rmax, float hei
 	for (unsigned n = 0; n < num; ++n) {
 		for (unsigned N = 0; N < 10; ++N) { // make up to 10 attempts
 			point pos(0.0, 0.0, pizza.z2());
-			for (unsigned d = 0; d < 2; ++d) {pos[d] = rgen.rand_uniform(area.d[d][0], area.d[d][1]);} // or use gen_xy_pos_in_area()?
+			gen_xy_pos_in_cube(pos, area, rgen); // or gen_xy_pos_in_area()?
 			if (!dist_xy_less_than(pos, center, place_radius)) continue;
 			float const radius((rmin == rmax) ? rmin : rgen.rand_uniform(rmin, rmax));
 
