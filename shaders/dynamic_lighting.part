@@ -31,7 +31,7 @@ layout (std140, binding = 0) uniform U_smap_matrix_dl {mat4 smap_matrix_dl[MAX_D
 // but it's not clear how to do that cleanly/efficiently or if it would look any better
 float get_shadow_map_weight_dl(in vec4 pos, in vec3 normal, in mat4 matrix, in sampler2DArrayShadow sm_tex, in int layer) {
 
-#ifdef DLIGHT_SMAP_DOUBLE_PRECISION // helps remove shadow acne for coordinates very far from the origin
+#ifdef DLIGHT_SMAP_DOUBLE_PRECISION // helps remove shadow acne for coordinates very far from the origin, but much slower
 	dvec4 pos_d = pos;
 	pos_d.xyz  += norm_bias_scale*z_bias*normal; // world space
 	vec4 shadow_coord = vec4(matrix * pos_d);

@@ -1101,7 +1101,7 @@ light_source get_player_flashlight_light_source(float radius_scale) {
 void add_player_flashlight_light_source(float radius_scale) { // for buildings
 	dl_sources.push_back(get_player_flashlight_light_source(radius_scale));
 	// flashlight shadows have problems with shadow acne when far from the origin, so disable them in this case
-	bool const enable_shadows(camera_in_building && (camera_pos - get_camera_coord_space_xlate()).mag() < 50.0);
+	bool const enable_shadows(camera_in_building && (camera_pos - get_camera_coord_space_xlate()).mag() < 25.0);
 	if (enable_shadows) {dl_sources.back().assign_smap_mgr_id(1);} // needed for building interiors
 	else {dl_sources.back().disable_shadows();} // shadows not needed
 }
