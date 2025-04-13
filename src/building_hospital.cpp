@@ -382,10 +382,7 @@ bool building_t::add_exam_room_objs(rand_gen_t rgen, room_t &room, float zval, u
 	else { // add a vanity
 		add_vanity_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);
 	}
-	// add a medicine cabinet along a wall
-	float const cabinet_height(rgen.rand_uniform(0.25, 0.35)*floor_spacing), cabinet_depth(rgen.rand_uniform(0.2, 0.3)), cabinet_width(rgen.rand_uniform(0.8, 1.2));
-	place_obj_along_wall(TYPE_MED_CAB, room, cabinet_height, vector3d(cabinet_depth, cabinet_width, 1.0), rgen, (zval + 0.5*floor_spacing - 0.2*cabinet_height),
-		room_id, tot_light_amt, room_area, objs_start, 4.0, 0, 4, 0, WHITE, 1, SHAPE_CUBE, wall_thickness, RO_FLAG_HAS_EXTRA); // not_at_window=1; flag as not a mirror
+	add_hospital_medicine_cabinet(rgen, room, zval, room_id, tot_light_amt, objs_start);
 	place_chairs_along_walls(rgen, room, zval, room_id, tot_light_amt, objs_start, chair_color, 1, 1); // is_plastic=1, num_chairs=1
 	// should be a short rotating stool?
 	place_model_along_wall(OBJ_MODEL_BAR_STOOL, TYPE_BAR_STOOL, room, 0.4, rgen, zval, room_id, tot_light_amt, place_area, objs_start);
@@ -448,6 +445,7 @@ bool building_t::add_operating_room_objs(rand_gen_t rgen, room_t &room, float zv
 			place_area, objs_start, 0.0, 0, 4, 0, WHITE, 1); // not_at_window=1
 	}
 	add_clock_to_room_wall(rgen, room, zval, room_id, tot_light_amt, objs_start);
+	add_hospital_medicine_cabinet(rgen, room, zval, room_id, tot_light_amt, objs_start);
 	add_numbered_door_sign("OR ", room, zval, room_id, floor_ix);
 
 	// make ceiling lights larger and round
@@ -459,5 +457,13 @@ bool building_t::add_operating_room_objs(rand_gen_t rgen, room_t &room, float zv
 		i->shape = SHAPE_CYLIN;
 	} // for i
 	return 1;
+}
+
+void building_t::add_hospital_medicine_cabinet(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	float const floor_spacing(get_window_vspace());
+	// add a medicine cabinet along a wall; not_at_window=1; flag as not a mirror
+	float const cabinet_height(rgen.rand_uniform(0.25, 0.35)*floor_spacing), cabinet_depth(rgen.rand_uniform(0.2, 0.3)), cabinet_width(rgen.rand_uniform(0.8, 1.2));
+	place_obj_along_wall(TYPE_MED_CAB, room, cabinet_height, vector3d(cabinet_depth, cabinet_width, 1.0), rgen, (zval + 0.5*floor_spacing - 0.2*cabinet_height),
+		room_id, tot_light_amt, get_walkable_room_bounds(room), objs_start, 4.0, 0, 4, 0, WHITE, 1, SHAPE_CUBE, get_wall_thickness(), RO_FLAG_HAS_EXTRA);
 }
 
