@@ -1339,6 +1339,7 @@ bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &
 		return 0; // lit by a room light, including one in a closet (Note that closets are only in house bedrooms, which should always have windows anyway)
 	}
 	rooms_visited.insert(room_id); // mark this room as visited before making recursive calls
+	unsigned num_doors(0);
 
 	// check for a light path through a series of open doors
 	for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) {
@@ -1350,6 +1351,7 @@ bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &
 		if ( i->not_a_room_separator())        continue; // skip non room separating doors
 		if (!i->is_connected_to_room(room_id)) continue;
 		assert(i->first_door_ix < interior->doors.size());
+		++num_doors;
 
 		for (unsigned dix = i->first_door_ix; dix < interior->doors.size(); ++dix) {
 			door_t const &door(interior->doors[dix]);
@@ -1360,6 +1362,8 @@ bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &
 			if (!check_pos_in_unlit_room_recur(pos, rooms_visited, i->get_conn_room(room_id))) return 0; // if adjacent room is lit, return false
 		} // for dix
 	} // for i
+	if (num_doors == 0 && has_complex_floorplan) return 0; // possible degenerate room with no doors or walls; assume lit, since this is a safer guess
+
 	if (room.has_stairs && room.is_ext_basement()) {
 		// extended basement room - check for stairs (should all be straight)
 		for (stairwell_t const &s : interior->stairwells) {
