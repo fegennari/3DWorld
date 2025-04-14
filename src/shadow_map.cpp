@@ -38,6 +38,7 @@ extern bool snow_shadows, enable_depth_clamp, flashlight_on, interior_shadow_map
 extern int window_width, window_height, animate2, display_mode, tree_mode, ground_effects_level, num_trees, camera_coll_id;
 extern unsigned enabled_lights;
 extern float NEAR_CLIP, tree_deadness, vegetation;
+extern point cur_camera_pos_xlate;
 extern vector<shadow_sphere> shadow_objs;
 extern set<unsigned> moving_cobjs;
 extern coll_obj_group coll_objects;
@@ -64,7 +65,6 @@ int get_def_smap_ndiv(float radius) {return get_smap_ndiv(radius, shadow_map_sz)
 
 
 struct ground_mode_smap_data_t : public cached_dynamic_smap_data_t { // used for ground mode sun and moon directional lights
-
 	ground_mode_smap_data_t(unsigned tu_id_) : cached_dynamic_smap_data_t(tu_id_, shadow_map_sz) {}
 	virtual void render_scene_shadow_pass(point const &lpos);
 	virtual bool needs_update(point const &lpos);
@@ -358,7 +358,8 @@ bool local_smap_data_t::set_smap_shader_for_light(shader_t &s, bool &arr_tex_set
 		assert(tex_ret); // Note: we can assert this returns true, though it makes shader debugging harder
 	}
 	assert(layer_id < MAX_DLIGHT_SMAPS);
-	upload_ubo_sub_data(texture_matrix.get_ptr(), layer_id*MAT4x4_SIZE, MAT4x4_SIZE); // shadow_matrix_ubo should be bound
+	xform_matrix const tm((cur_camera_pos_xlate == all_zeros) ? texture_matrix : glm::translate(texture_matrix, vec3_from_vector3d(-cur_camera_pos_xlate)));
+	upload_ubo_sub_data(tm.get_ptr(), layer_id*MAT4x4_SIZE, MAT4x4_SIZE); // shadow_matrix_ubo should be bound
 	return 1;
 }
 

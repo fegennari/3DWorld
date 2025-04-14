@@ -1,6 +1,7 @@
 uniform float dlight_intensity_scale = 1.0;
 uniform vec3 scene_llc, scene_scale; // scene bounds (world space)
 uniform vec3 camera_pos; // world space
+uniform vec3 dlight_smap_xlate = vec3(0.0);
 uniform sampler2D dlight_tex;
 uniform usampler2D dlelm_tex, dlgb_tex;
 
@@ -29,7 +30,7 @@ float get_shadow_map_weight_dl(in vec4 pos, in vec3 normal, in mat4 matrix, in s
 	pos.xyz += norm_bias_scale*z_bias*normal; // world space
 	vec4 shadow_coord = matrix * pos;
 	shadow_coord.xyz /= shadow_coord.w;
-	shadow_coord.z   += -0.1*z_bias; // lower z-bias for local shadow maps
+	shadow_coord.z   -= 0.1*z_bias; // increase z-bias for local shadow maps
 #if 1
 	float ret = 0.0;
 	vec2 offset_scale = 1.0 / vec2(textureSize(sm_tex, 0));
@@ -105,8 +106,9 @@ void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec4 epos, in vec
 	mat3 TBN = get_tbn(1.0, eye_norm);
 #endif
 	const float gamma = 2.2;
-	vec3 dl_color = vec3(0.0);
-	vec2 norm_pos = clamp((dlpos.xy - scene_llc.xy)/scene_scale.xy, 0.0, 1.0); // should be in [0.0, 1.0] range
+	vec3 dl_color   = vec3(0.0);
+	vec2 norm_pos   = clamp((dlpos.xy - scene_llc.xy)/scene_scale.xy, 0.0, 1.0); // should be in [0.0, 1.0] range
+	vec4 smap_dlpos = vec4((dlpos + dlight_smap_xlate), 1.0);
 	uint gb_ix  = texture(dlgb_tex, norm_pos).r; // get grid bag element index range (uint32)
 	uint st_ix  = (gb_ix & 0xFFFFFFU); // 24 low bits
 	uint num_ix = ((gb_ix >> 24U) & 0xFFFFFFU); // 8 high bits
@@ -193,7 +195,7 @@ void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec4 epos, in vec
 #endif
 			// Note: we can use either lnorm or normal for the smap offset, but normal seems to have less artifacts
 			smap_index = smap_index & 127; // mask off 7 LSB bits / strip off is_cube_face flag bit
-			if (smap_index > 0) {intensity *= get_shadow_map_weight_dl(vec4(dlpos, 1.0), normal, smap_matrix_dl[smap_index-1], smap_tex_arr_dl, smap_index-1);}
+			if (smap_index > 0) {intensity *= get_shadow_map_weight_dl(smap_dlpos, normal, smap_matrix_dl[smap_index-1], smap_tex_arr_dl, smap_index-1);}
 		}
 #endif // HAS_DLIGHT_SMAP
 

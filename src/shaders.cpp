@@ -382,7 +382,8 @@ void shader_t::upload_light_sources_range(unsigned start, unsigned end) {
 
 void shader_t::setup_scene_bounds() const {
 	setup_scene_bounds_from_bcube(get_scene_bounds_bcube());
-	add_uniform_vector3d("camera_pos", (get_camera_pos() - cur_camera_pos_xlate));
+	add_uniform_vector3d("camera_pos", (get_camera_pos() - cur_camera_pos_xlate)); // in world space
+	add_uniform_vector3d("dlight_smap_xlate", cur_camera_pos_xlate); // used in city/buildings drawing; helps with shadow artifacts when far from the origin
 }
 void shader_t::setup_scene_bounds_from_bcube(cube_t const &bcube) const {
 	add_uniform_vector3d("scene_llc",   bcube.get_llc());
