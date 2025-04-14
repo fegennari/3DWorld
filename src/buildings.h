@@ -2679,6 +2679,7 @@ private:
 		colorRGBA const &chair_color, unsigned &td_orient);
 	bool add_classroom_desk(rand_gen_t &rgen, room_t const &room, cube_t const &desk, unsigned room_id, float tot_light_amt,
 		colorRGBA const &chair_color, bool dim, bool dir, unsigned desk_ix);
+	void add_objects_next_to_classroom_chalkboard(rand_gen_t &rgen, room_object_t const &cb, room_t const &room, float zval, unsigned objs_start);
 	bool get_hospital_room_bathroom(room_t const &room, unsigned room_id, int &nested_room_ix, cube_t &bathroom) const;
 	bool add_hospital_room_objs (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start, int &nested_room_ix);
 	bool add_waiting_room_objs  (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start, int &nested_room_ix);
@@ -2754,6 +2755,7 @@ private:
 		unsigned room_id, float tot_light_amt, bool dim, bool dir, bool center_mount=0);
 	bool is_contained_in_wall_range(float wall_pos, float cov_lo, float cov_hi, float zval, bool dim) const;
 	void add_pri_hall_objs   (rand_gen_t rgen, rand_gen_t room_rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned floor_ix, unsigned objs_start);
+	void add_wall_us_flag    (float wall_pos, float flag_pos, float zval, bool dim, bool dir, unsigned room_id, float tot_light_amt);
 	bool add_reception_desk  (rand_gen_t &rgen, cube_t const &desk, bool dim, bool dir, unsigned room_id, float tot_light_amt);
 	void add_cameras_to_room (rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	void assign_attic_type   (rand_gen_t rgen);

@@ -3746,7 +3746,7 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 			} // for dir
 		} // end reception desk
 	}
-	// maybe add a clock on the back of the stairs, if this is the lobby or the floor directly above the retail area
+	// maybe add a clock and US flag on the back of the stairs, if this is the lobby or the floor directly above the retail area
 	if (first_floor && is_ground_floor_excluding_retail(room.z1()) && room.has_stairs) {
 		for (stairwell_t const &s : interior->stairwells) {
 			if (!s.is_u_shape() && s.shape != SHAPE_WALLED_SIDES) continue;
@@ -3757,21 +3757,13 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 			bool const digital(rgen.rand_bool());
 			add_clock_to_cube(place_cube, zval, room_id, tot_light_amt, s.dim, s.dir, digital);
 
-			if (building_obj_model_loader.is_model_valid(OBJ_MODEL_FLAG) && rgen.rand_float() < 0.75) { // place US flag
+			if (rgen.rand_float() < 0.75) { // place US flag
 				// Note: flags are two sided, so lighting doesn't look correct on the unlit side
 				bool const side(s.dir ^ s.dim); // side of clock; always place on the right because the left side is lit with correct normals
-				vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_FLAG)); // W, D, H
-				float const flag_height(0.3*window_vspacing), flag_hwidth(0.5*flag_height*sz.x/sz.z), flag_depth(flag_height*sz.y/sz.z);
-				float const flag_pos(s.d[!s.dim][side] + (side ? -1.0 : 1.0)*max(1.5*flag_hwidth, 0.1*s.get_width())), wall_pos(place_cube.d[s.dim][s.dir]);
-				cube_t flag;
-				flag.z1() = zval + 0.53*window_vspacing;
-				flag.z2() = flag.z1() + flag_height;
-				flag.d[s.dim][!s.dir] = wall_pos;
-				flag.d[s.dim][ s.dir] = wall_pos + (s.dir ? 1.0 : -1.0)*flag_depth;
-				set_wall_width(flag, flag_pos, flag_hwidth, !s.dim);
-				objs.emplace_back(flag, TYPE_US_FLAG, room_id, !s.dim, (s.dim ^ s.dir), RO_FLAG_NOCOLL, tot_light_amt);
+				float const flag_pos(s.d[!s.dim][side] + (side ? -1.0 : 1.0)*max(0.1*window_vspacing, 0.1*s.get_width())), wall_pos(place_cube.d[s.dim][s.dir]);
+				add_wall_us_flag(wall_pos, flag_pos, zval, s.dim, s.dir, room_id, tot_light_amt);
 			}
-		} // for s
+		} // for sb
 	}
 	// add a fire extinguisher on the wall
 	bool const pri_dir(room_rgen.rand_bool()); // random, but the same across all floors
@@ -3826,6 +3818,21 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 	} // for d
 	// add cameras to each end of the hallway
 	add_cameras_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);
+}
+
+void building_t::add_wall_us_flag(float wall_pos, float flag_pos, float zval, bool dim, bool dir, unsigned room_id, float tot_light_amt) {
+	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_FLAG)) return;
+	// Note: flags are two sided, so lighting doesn't look correct on the unlit side
+	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_FLAG)); // W, D, H
+	float const window_vspacing(get_window_vspace());
+	float const flag_height(0.3*window_vspacing), flag_hwidth(0.5*flag_height*sz.x/sz.z), flag_depth(flag_height*sz.y/sz.z);
+	cube_t flag;
+	flag.z1() = zval + 0.53*window_vspacing;
+	flag.z2() = flag.z1() + flag_height;
+	flag.d[dim][!dir] = wall_pos;
+	flag.d[dim][ dir] = wall_pos + (dir ? 1.0 : -1.0)*flag_depth;
+	set_wall_width(flag, flag_pos, flag_hwidth, !dim);
+	interior->room_geom->objs.emplace_back(flag, TYPE_US_FLAG, room_id, !dim, (dim ^ dir), RO_FLAG_NOCOLL, tot_light_amt);
 }
 
 bool building_t::add_reception_desk(rand_gen_t &rgen, cube_t const &desk, bool dim, bool dir, unsigned room_id, float tot_light_amt) {
@@ -4361,7 +4368,8 @@ bool building_t::hang_pictures_whiteboard_chalkboard_in_room(rand_gen_t rgen, ro
 	bool was_hung(0);
 
 	if (!is_residential() || room.is_office) { // add whiteboards
-		bool const is_conference(room.get_room_type(floor_ix) == RTYPE_CONF); // conference rooms always have a whiteboard
+		room_type const rtype(room.get_room_type(floor_ix));
+		bool const is_conference(rtype == RTYPE_CONF); // conference rooms always have a whiteboard
 		if (!is_conference && pref_orient == 4 && rgen.rand_float() < 0.1) return 0; // skip 10% of the time; don't skip if pref_orient was set (classroom)
 		bool const pref_dim((pref_orient < 4) ? (pref_orient >> 1) : rgen.rand_bool()), pref_dir((pref_orient < 4) ? (pref_orient & 1) : rgen.rand_bool());
 		bool const use_blackboards(is_school());
@@ -4394,11 +4402,15 @@ bool building_t::hang_pictures_whiteboard_chalkboard_in_room(rand_gen_t rgen, ro
 					}
 				}
 				assert(c.is_strictly_normalized());
-				objs.emplace_back(c, TYPE_WBOARD, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, color); // whiteboard faces dir opposite the wall
+				room_object_t const wboard(c, TYPE_WBOARD, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, color); // whiteboard faces dir opposite the wall
+				objs.push_back(wboard);
+				cube_t blocker(wboard);
+				blocker.d[dim][!dir] += (dir ? -1.0 : 1.0)*get_min_front_clearance_inc_people();
+				objs.emplace_back(blocker, TYPE_BLOCKER, room_id, dim, !dir, RO_FLAG_INVIS);
 
 				if (rgen.rand_float() < 0.8) { // add marker/chalk and maybe eraser
 					float const marker_hlen(0.5*0.06*floor_height), marker_radius(0.005*floor_height);
-					cube_t const ledge(get_whiteboard_marker_ledge(objs.back()));
+					cube_t const ledge(get_whiteboard_marker_ledge(wboard));
 
 					if (marker_hlen < 0.1*wb_len && marker_radius < 0.4*ledge.get_sz_dim(dim)) { // have space for a marker
 						float const end_space(1.1*marker_hlen), side_space(1.1*marker_radius);
@@ -4422,6 +4434,7 @@ bool building_t::hang_pictures_whiteboard_chalkboard_in_room(rand_gen_t rgen, ro
 						}
 					}
 				}
+				if (use_blackboards && rtype == RTYPE_CLASS) {add_objects_next_to_classroom_chalkboard(rgen, wboard, room, zval, objs_start);} // add classroom flag, clock, etc.
 				if (!is_conference || rgen.rand_bool()) return 1; // only need to add one, except for conference rooms
 			} // for dir
 		} // for dim

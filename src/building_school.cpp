@@ -105,3 +105,25 @@ bool building_t::add_classroom_desk(rand_gen_t &rgen, room_t const &room, cube_t
 	return 1;
 }
 
+void building_t::add_objects_next_to_classroom_chalkboard(rand_gen_t &rgen, room_object_t const &cb, room_t const &room, float zval, unsigned objs_start) {
+	// add US flag; flags are two sided, so lighting doesn't look correct on the unlit side
+	bool const dim(cb.dim), dir(cb.dir), side(dir ^ dim); // side of clock; always place on the right because the left side is lit with correct normals
+	float const flag_pos(0.5*(cb.d[!dim][side] + room.d[!dim][side])), wall_pos(cb.d[dim][dir]); // halfway between edge of chalkboard and edge of room
+	add_wall_us_flag(wall_pos, flag_pos, zval, dim, dir, cb.room_id, cb.light_amt);
+	if (is_obj_placement_blocked(interior->room_geom->objs.back(), room, 1)) {interior->room_geom->objs.pop_back();} // remove if invalid placement; inc_open_doors=1
+	// add clock to the left side
+	float const floor_spacing(get_window_vspace()), clock_sz(0.16*floor_spacing), clock_z1(zval + get_floor_ceil_gap() - 1.4*clock_sz), clock_depth(0.08*clock_sz);
+	cube_t clock;
+	set_cube_zvals(clock, clock_z1, clock_z1+clock_sz);
+	set_wall_width(clock, 0.5*(cb.d[!dim][!side] + room.d[!dim][!side]), 0.5*clock_sz, !dim);
+	clock.d[dim][!dir] = wall_pos;
+	clock.d[dim][ dir] = wall_pos + (dir ? 1.0 : -1.0)*clock_depth;
+	cube_t tc(clock);
+	tc.d[dim][dir] += (dir ? 1.0 : -1.0)*0.25*floor_spacing; // add clearance
+	if (is_obj_placement_blocked(tc, room, 1)) return; // inc_open_doors=1
+	add_clock(clock, cb.room_id, cb.light_amt, dim, dir, 0); // digital=0
+	// add plants after chalkboard to avoid blocking it
+	unsigned const num_plants(rgen.rand() % 30); // 0-2
+	add_plants_to_room(rgen, room, zval, cb.room_id, cb.light_amt, objs_start, num_plants);
+}
+

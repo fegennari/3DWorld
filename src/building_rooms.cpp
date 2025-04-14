@@ -841,7 +841,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 						}
 					}
 					else if (rand_val == 3) { // classroom (for training); should there be at most one per floor?
-						added_obj = add_classroom_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start, chair_color, pref_hang_orient);
+						added_obj = no_plants = add_classroom_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start, chair_color, pref_hang_orient);
 						if (added_obj) {r->assign_to(RTYPE_CLASS, f);}
 					}
 					// else make it an office or something else below
@@ -849,7 +849,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			}
 			if (!added_obj && is_school() && !has_stairs) {
 				if (has_window) { // school classroom with a window and no stairs
-					added_obj = add_classroom_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start, chair_color, pref_hang_orient);
+					added_obj = no_plants = add_classroom_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start, chair_color, pref_hang_orient);
 					if (added_obj) {r->assign_to(RTYPE_CLASS, f);}
 				}
 				if (!added_obj) { // no window, or can't make into a classroom
@@ -998,7 +998,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				added_basement_utility = is_utility = no_plants = add_basement_utility_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 				if (added_basement_utility) {r->assign_to(RTYPE_UTILITY, f);}
 			}
-			if (!is_bathroom && !is_bedroom && !is_kitchen && !is_storage && !is_utility && !no_plants && !is_basement && !is_hospital()) { // add potted plants to some room types
+			// add potted plants to some room types
+			if (!is_bathroom && !is_bedroom && !is_kitchen && !is_storage && !is_utility && !no_plants && !is_basement && !is_hospital()) {
 				// 0-2 for living/dining rooms, 50% chance for houses, 25% (first floor) / 10% (other floors) chance for offices
 				unsigned const num(is_house ? (rgen.rand() % ((is_living || is_dining) ? 3 : 2)) : ((rgen.rand()%((f == 0) ? 4 : 10)) == 0));
 				if (num > 0) {add_plants_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, num);}
@@ -1012,7 +1013,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			}
 			// pictures and whiteboards must not be placed behind anything, excluding trashcans; so we add them here
 			bool const can_hang((is_house || !(is_bathroom || is_kitchen || no_whiteboard)) && !is_storage && !is_utility && !is_machine && !is_inter);
-			bool const was_hung(can_hang && hang_pictures_whiteboard_chalkboard_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f, is_basement, pref_hang_orient));
+			bool const was_hung(can_hang && hang_pictures_whiteboard_chalkboard_in_room(rgen, *r, room_center.z,
+				room_id, tot_light_amt, objs_start, f, is_basement, pref_hang_orient));
 
 			if (is_bathroom || is_kitchen || is_hospital() || rgen.rand_float() < 0.8) { // 80% of the time, always in bathrooms, kitchens, and hospitals
 				add_trashcan_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, (was_hung && !is_house)); // no trashcans on same wall as office whiteboard
