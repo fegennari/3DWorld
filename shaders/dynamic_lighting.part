@@ -8,10 +8,6 @@ uniform usampler2D dlelm_tex, dlgb_tex;
 uniform sampler2D dlbcube_tex;
 #endif
 
-#ifdef SCREEN_SPACE_DLIGHTS
-uniform vec2 resolution; // for screen space tiles
-#endif
-
 const   float SPOTLIGHT_LEAKAGE = 0.0;  // simulates indirect lighting - however, doesn't match dlights XY grid, so has artifacts, and doesn't look right
 uniform float SHADOW_LEAKAGE    = 0.05; // simulates indirect lighting, but indir may already be enabled for this light
 uniform float LT_DIR_FALLOFF    = 0.005;
@@ -22,7 +18,6 @@ uniform float LDIR_FALL_THRESH  = 0.0;
 // must be >= the value used in shadow_map.h (Note: up to ~220 is okay for uniform array, and up to 256+ for UBO), but real cap is 127 due to bit mask logic
 const int MAX_DLIGHT_SMAPS = 120;
 uniform sampler2DArrayShadow smap_tex_arr_dl;
-//uniform mat4 smap_matrix_dl[MAX_DLIGHT_SMAPS];
 layout (std140, binding = 0) uniform U_smap_matrix_dl {mat4 smap_matrix_dl[MAX_DLIGHT_SMAPS];};
 
 // Note: for non-spotlights where the shadow frustum doesn't cover the entire light angle,
@@ -31,14 +26,8 @@ layout (std140, binding = 0) uniform U_smap_matrix_dl {mat4 smap_matrix_dl[MAX_D
 // but it's not clear how to do that cleanly/efficiently or if it would look any better
 float get_shadow_map_weight_dl(in vec4 pos, in vec3 normal, in mat4 matrix, in sampler2DArrayShadow sm_tex, in int layer) {
 
-#ifdef DLIGHT_SMAP_DOUBLE_PRECISION // helps remove shadow acne for coordinates very far from the origin, but much slower
-	dvec4 pos_d = pos;
-	pos_d.xyz  += norm_bias_scale*z_bias*normal; // world space
-	vec4 shadow_coord = vec4(matrix * pos_d);
-#else
 	pos.xyz += norm_bias_scale*z_bias*normal; // world space
 	vec4 shadow_coord = matrix * pos;
-#endif
 	shadow_coord.xyz /= shadow_coord.w;
 	shadow_coord.z   += -0.1*z_bias; // lower z-bias for local shadow maps
 #if 1
@@ -116,12 +105,8 @@ void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec4 epos, in vec
 	mat3 TBN = get_tbn(1.0, eye_norm);
 #endif
 	const float gamma = 2.2;
-	vec3 dl_color     = vec3(0.0);
-#ifdef SCREEN_SPACE_DLIGHTS
-	vec2 norm_pos = gl_FragCoord.xy / resolution; // screen space in [0.0, 1.0] range
-#else
+	vec3 dl_color = vec3(0.0);
 	vec2 norm_pos = clamp((dlpos.xy - scene_llc.xy)/scene_scale.xy, 0.0, 1.0); // should be in [0.0, 1.0] range
-#endif
 	uint gb_ix  = texture(dlgb_tex, norm_pos).r; // get grid bag element index range (uint32)
 	uint st_ix  = (gb_ix & 0xFFFFFFU); // 24 low bits
 	uint num_ix = ((gb_ix >> 24U) & 0xFFFFFFU); // 8 high bits
