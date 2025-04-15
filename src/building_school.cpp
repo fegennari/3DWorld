@@ -123,7 +123,7 @@ void building_t::add_objects_next_to_classroom_chalkboard(rand_gen_t &rgen, room
 	if (is_obj_placement_blocked(tc, room, 1)) return; // inc_open_doors=1
 	add_clock(clock, cb.room_id, cb.light_amt, dim, dir, 0); // digital=0
 	// add plants after chalkboard to avoid blocking it
-	unsigned const num_plants(rgen.rand() % 30); // 0-2
+	unsigned const num_plants(rgen.rand() % 3); // 0-2
 	add_plants_to_room(rgen, room, zval, cb.room_id, cb.light_amt, objs_start, num_plants);
 }
 
