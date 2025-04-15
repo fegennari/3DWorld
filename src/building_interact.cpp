@@ -526,7 +526,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 					else if (type == TYPE_FISHTANK && i->has_lid()) {keep = 1;} // fishtank with a lid and light
 					else if (type == TYPE_PICTURE || type == TYPE_TPROLL || type == TYPE_MWAVE || type == TYPE_TV || type == TYPE_MONITOR || type == TYPE_BLINDS ||
 						type == TYPE_SWITCH || type == TYPE_BOOK || type == TYPE_BRK_PANEL || type == TYPE_BREAKER || type == TYPE_ATTIC_DOOR || type == TYPE_OFF_CHAIR ||
-						type == TYPE_WFOUNTAIN || type == TYPE_VENDING || type == TYPE_MED_CAB) {keep = 1;}
+						type == TYPE_WFOUNTAIN || type == TYPE_VENDING || type == TYPE_MED_CAB || type == TYPE_LOCKER) {keep = 1;}
 					else if ((type == TYPE_STOVE || type == TYPE_SHOWER || type == TYPE_SHOWERTUB /*|| type == TYPE_FRIDGE*/) && !i->in_mall()) {keep = 1;} // not in plumbing store
 					else if (type == TYPE_LG_BALL && i->has_dstate()) {keep = 1;}
 					else if (type == TYPE_BUTTON && i->in_elevator() == bool(player_in_elevator)) {keep = 1;} // check for buttons inside/outside elevator
@@ -710,6 +710,12 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 			gen_sound_thread_safe(SOUND_BEEP, local_center, 0.25, 0.75);
 			sound_scale = 0.6;
 		}
+	}
+	else if (obj.type == TYPE_LOCKER) {
+		gen_sound_thread_safe_at_player(SOUND_METAL_DOOR, 0.75);
+		obj.flags       ^= RO_FLAG_OPEN; // toggle open/closed
+		sound_scale      = 0.75;
+		update_draw_data = 1;
 	}
 	else if (obj.type == TYPE_STOVE) { // toggle burners; doesn't need power
 		float const height(obj.dz());
