@@ -1836,10 +1836,13 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 							for (unsigned M = 0; M < 5; ++M) { // 5 expansion attempts (50% reduction max)
 								cube_t cutout_l(cutout);
 								cutout_l.d[!stairs_dim][bdir] += dscale*expand_l; // extend out for the L
-								cube_t cutout_l_pad(cutout_l);
+								cube_t cutout_l_pad(cutout_l), cutout_with_wall(cutout_l);
+								// expand on ends to include space for landing support wall to not intersect doors; expand in both dirs since dir hasn't been determined yet;
+								// only needed for stairs spanning more than 2 floors since the bottom landing support wall is under the landing rather than beside it
+								if (num_floors > 2) {cutout_with_wall.expand_in_dim(stairs_dim, wall_thickness);}
 								cutout_l_pad.d[!stairs_dim][bdir] += dscale*room_edge_min_space; // extend out for the stairs exit
 
-								if (room.contains_cube_xy(cutout_l_pad) && !is_cube_close_to_doorway(cutout_l, room)) {
+								if (room.contains_cube_xy(cutout_l_pad) && !is_cube_close_to_doorway(cutout_with_wall, room)) {
 									sshape   = SHAPE_L;
 									cutout   = cutout_l;
 									bend_dir = bdir;

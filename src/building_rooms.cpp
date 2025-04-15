@@ -3082,7 +3082,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			objs.emplace_back(stair, TYPE_STAIR, 0, !dim, !dir, stair_flags); // place in !dim but use first dir, so that player coll is enabled since we don't have a wall here
 			objs.back().shape = SHAPE_STAIRS_L; // only the landing needs a tag because it can be entered from right angle sides
 			landing = stair;
-			z += stair_dz;
+			z      += stair_dz;
 			// add wall supporting landing
 			cube_t wall(stair);
 
