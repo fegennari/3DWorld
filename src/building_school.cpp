@@ -127,3 +127,38 @@ void building_t::add_objects_next_to_classroom_chalkboard(rand_gen_t &rgen, room
 	add_plants_to_room(rgen, room, zval, cb.room_id, cb.light_amt, objs_start, num_plants);
 }
 
+void building_t::add_hallway_lockers(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	bool const dim(room.dx() < room.dy()); // hallway dim
+	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
+	cube_t place_area(get_walkable_room_bounds(room));
+	place_area.expand_in_dim(dim, -0.5*wall_thickness); // leave a small gap at the ends
+	float const hall_len(place_area.get_sz_dim(dim)), locker_height(0.75*floor_spacing), locker_depth(0.25*locker_height), locker_width(0.2*locker_height);
+	vect_room_object_t &objs(interior->room_geom->objs);
+	unsigned const lockers_start(objs.size()), num_lockers(hall_len/locker_width); // floor
+	cube_t locker;
+	set_cube_zvals(locker, zval, zval+locker_height);
+
+	for (unsigned d = 0; d < 2; ++d) { // for each side of the hallway
+		float const wall_edge(place_area.d[!dim][d]);
+		locker.d[!dim][ d] = wall_edge;
+		locker.d[!dim][!d] = wall_edge + (d ? -1.0 : 1.0)*locker_depth;
+
+		for (unsigned n = 0; n < num_lockers; ++n) {
+			float const pos(place_area.d[dim][0] + n*locker_width);
+			locker.d[dim][0] = pos;
+			locker.d[dim][1] = pos + locker_width;
+			cube_t test_cube(locker);
+			test_cube.expand_in_dim(dim, 0.5*locker_width); // add some padding
+			// TODO: check for wall/hallway
+			bool invalid(0);
+
+			for (auto i = objs.begin()+objs_start; i != objs.begin()+lockers_start; ++i) { // can skip other lockers
+				if (i->intersects(test_cube)) {invalid = 1; break;}
+			}
+			if (invalid || is_obj_placement_blocked(test_cube, room, 1, 0)) continue;
+			if (!check_if_placed_on_interior_wall  (locker, room, !dim, d)) continue; // ensure the vent is on a wall
+			objs.emplace_back(locker, TYPE_LOCKER, room_id, !dim, !d, 0, tot_light_amt, SHAPE_CUBE, colorRGBA(0.4, 0.6, 0.6));
+		} // for n
+	} // for d
+}
+

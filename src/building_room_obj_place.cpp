@@ -3818,6 +3818,7 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 	} // for d
 	// add cameras to each end of the hallway
 	add_cameras_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);
+	if (is_school()) {add_hallway_lockers(rgen, room, zval, room_id, tot_light_amt, objs_start);}
 }
 
 void building_t::add_wall_us_flag(float wall_pos, float flag_pos, float zval, bool dim, bool dir, unsigned room_id, float tot_light_amt) {
@@ -4864,7 +4865,7 @@ bool building_t::add_wall_vent_to_room(rand_gen_t rgen, room_t const &room, floa
 			if (d.get_open_door_bcube_for_room(room).intersects(door_test_cube)) {bad_place = 1; break;}
 		}
 		if (bad_place) continue;
-		if (!check_if_placed_on_interior_wall(c, room, dim, dir)) continue; // ensure the vent is on a wall; is this really needed?
+		if (!check_if_placed_on_interior_wall(c, room, dim, dir)) continue; // ensure the vent is on a wall
 		if (!check_cube_within_part_sides(c)) continue; // handle non-cube buildings
 
 		if (check_for_ducts) { // if this is a utility room, check to see if we can connect the vent to a furnace with a duct

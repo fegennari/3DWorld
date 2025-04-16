@@ -1578,10 +1578,12 @@ void building_room_geom_t::add_vending_machine(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_locker(room_object_t const &c) {
+	colorRGBA const side_color(c.color.modulate_with(LT_GRAY));
+
 	if (c.is_open()) {
 		// TODO: draw open door
 	}
-	add_obj_with_front_texture(c, "interiors/locker_door.jpg", WHITE, c.color, 0); // light gray; should side color be set from texture color?
+	add_obj_with_front_texture(c, "interiors/locker_door.jpg", c.color, side_color, 0); // texture is light gray
 }
 
 float get_med_cab_wall_thickness(room_object_t const &c) {return 0.15*c.get_length();}
