@@ -712,10 +712,13 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		}
 	}
 	else if (obj.type == TYPE_LOCKER) {
-		gen_sound_thread_safe_at_player(SOUND_METAL_DOOR, 0.75);
-		obj.flags       ^= RO_FLAG_OPEN; // toggle open/closed
-		sound_scale      = 0.75;
-		update_draw_data = 1;
+		if (obj.is_open() || !(obj.flags & RO_FLAG_NONEMPTY)) { // if not locked, where RO_FLAG_NONEMPTY indicates locked
+			gen_sound_thread_safe_at_player(SOUND_METAL_DOOR, 0.75);
+			interior->room_geom->expand_object(obj, *this);
+			obj.flags       ^= RO_FLAG_OPEN; // toggle open/closed
+			sound_scale      = 0.75;
+			update_draw_data = 1;
+		}
 	}
 	else if (obj.type == TYPE_STOVE) { // toggle burners; doesn't need power
 		float const height(obj.dz());

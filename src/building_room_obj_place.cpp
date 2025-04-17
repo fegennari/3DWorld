@@ -1872,7 +1872,7 @@ bool building_t::add_vanity_to_room(rand_gen_t &rgen, room_t &room, float &zval,
 		bool const dim(cand.second >> 1), dir(cand.second & 1);
 		float const wall_len(room_sz[!dim]), wall_edge(room_bounds.d[dim][dir]); // no trim padding
 		float const height(0.34*floor_spacing), depth(0.74*height), length(rgen.rand_uniform(0.8, 1.0)*floor_spacing), dsign(dir ? -1.0 : 1.0);
-		unsigned flags(0);
+		unsigned flags(is_house ? RO_FLAG_IS_HOUSE : 0);
 		cube_t vanity(room_bounds);
 		vanity.expand_in_dim(!dim, -get_trim_thickness()); // avoid Z-fighting with exterior wall
 		set_cube_zvals(vanity, zval, zval+height);

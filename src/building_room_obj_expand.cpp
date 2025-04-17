@@ -381,6 +381,9 @@ bool add_cabinet_objects(room_object_t const &c, vect_room_object_t &objects) { 
 			cubes.push_back(pan_bc);
 		} // for n
 	}
+	if (is_vanity && !c.is_house()) {
+		// TODO: hospital specific items such as bottles of medicine
+	}
 	// add bottles
 	unsigned const max_bottles(3 + 2*sz_ratio), num_bottles(rgen.rand() % max_bottles); // wider cabinet has more bottles
 
@@ -413,7 +416,7 @@ void building_room_geom_t::expand_cabinet(room_object_t const &c) { // called on
 	if (any_objs_added) {invalidate_small_geom();} // some object was added
 }
 
-void building_room_geom_t::expand_med_cab(room_object_t const &c) { // aka house "mirrors"
+void building_room_geom_t::expand_med_cab(room_object_t const &c) {
 	rand_gen_t rgen(c.create_rgen());
 	// add medicine bottle
 	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_WAS_EXP);
@@ -427,6 +430,10 @@ void building_room_geom_t::expand_med_cab(room_object_t const &c) { // aka house
 	obj.set_as_bottle(BOTTLE_TYPE_MEDS, BOTTLE_TYPE_MEDS, 1); // medicine, no_empty=1
 	expanded_objs.push_back(obj);
 	invalidate_small_geom();
+}
+
+void building_room_geom_t::expand_locker(room_object_t const &c) {
+	// TODO: place TYPE_BOOK, maybe TYPE_BOTTLE, TYPE_DRINK_CAN, TYPE_PAPER, TYPE_PEN, TYPE_PENCIL, TYPE_MARKER, TYPE_MONEY, TYPE_PHONE, TYPE_LAPTOP, TYPE_TRASH
 }
 
 void building_room_geom_t::expand_breaker_panel(room_object_t const &c, building_t const &building) {
@@ -1848,6 +1855,7 @@ bool building_room_geom_t::expand_object(room_object_t &c, building_t const &bui
 	case TYPE_WINE_RACK: expand_wine_rack(c); break;
 	case TYPE_CABINET: case TYPE_COUNTER: case TYPE_KSINK: case TYPE_VANITY: expand_cabinet(c); break;
 	case TYPE_MED_CAB:   expand_med_cab(c); break;
+	case TYPE_LOCKER:    expand_locker (c); break;
 	case TYPE_BRK_PANEL: expand_breaker_panel(c, building); break;
 	//case TYPE_TCAN:      expand_trashcan(c); break;
 	default: assert(0); // not a supported expand type

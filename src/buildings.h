@@ -1338,6 +1338,7 @@ struct building_room_geom_t {
 	void expand_cabinet(room_object_t const &c);
 	void expand_wine_rack(room_object_t const &c) {add_wine_rack_bottles(c, expanded_objs);}
 	void expand_med_cab(room_object_t const &c);
+	void expand_locker (room_object_t const &c);
 	void expand_breaker_panel(room_object_t const &c, building_t const &building);
 	void expand_dishwasher(room_object_t &c, cube_t const &dishwasher);
 	void unexpand_dishwasher(room_object_t &c, cube_t const &dishwasher);
