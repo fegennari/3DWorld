@@ -602,19 +602,30 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					assert(is_ext_basement); // for now, only in extended basements
 					add_swimming_pool_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt);
 				}
-				if (r->is_hallway && is_ext_basement) {add_false_door_to_extb_room_if_needed(*r, room_center.z, room_id);}
+				if (r->is_hallway) { // add special hallway objects
+					if (is_ext_basement) {add_false_door_to_extb_room_if_needed(*r, room_center.z, room_id);}
+
+					if (is_house) { // allow pictures, rugs, and light switches in the hallways of houses; no pref orient
+						hang_pictures_whiteboard_chalkboard_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f, is_basement);
+						if (rgen.rand_bool()) {add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);} // 50% of the time; not all rugs will be placed
+					}
+					else if (*r == pri_hall) { // office building/school/hospital primary hallway
+						add_pri_hall_objs(rgen, room_rgen, *r, room_center.z, room_id, tot_light_amt, f, objs_start);
+						if (is_school()) {add_hallway_lockers(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);}
+						if (is_ground_floor) {r->assign_to(RTYPE_LOBBY, f);} // first floor primary hallway, make it the lobby
+						if (f == 0) {place_objects_onto_surfaces(rgen, *r, room_id, tot_light_amt, objs_start, f, is_basement, 1);} // first floor reception desks; not_private=1
+					}
+					else if (is_school()) { // add lockers on upper parts
+						bool const hall_dim(r->dx() < r->dy());
+						cube_t const &part(get_part_for_room(*r));
+
+						if (r->d[hall_dim][0] == part.d[hall_dim][0] && r->d[hall_dim][1] == part.d[hall_dim][1]) {
+							add_hallway_lockers(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
+						}
+					}
+				}
 				add_outlets_to_room(rgen, *r, room_center.z, room_id, objs_start, is_ground_floor, is_basement);
 				add_light_switches_to_room(rgen, *r, room_center.z, room_id, objs_start, is_ground_floor, is_basement); // shed, garage, or hallway
-
-				if (is_house && r->is_hallway) { // allow pictures, rugs, and light switches in the hallways of houses; no pref orient
-					hang_pictures_whiteboard_chalkboard_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f, is_basement);
-					if (rgen.rand_bool()) {add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);} // 50% of the time; not all rugs will be placed
-				}
-				if (!is_house && r->is_hallway && *r == pri_hall) { // office building primary hallway
-					add_pri_hall_objs(rgen, room_rgen, *r, room_center.z, room_id, tot_light_amt, f, objs_start);
-					if (is_ground_floor) {r->assign_to(RTYPE_LOBBY, f);} // first floor primary hallway, make it the lobby
-					if (f == 0) {place_objects_onto_surfaces(rgen, *r, room_id, tot_light_amt, objs_start, f, is_basement, 1);} // first floor reception desks; not_private=1
-				}
 				if (is_basement && !is_swim_pool_room) {add_stains_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);}
 				if (has_stairs_this_floor && r->get_room_type(f) == RTYPE_NOTSET) {r->assign_to(RTYPE_STAIRS, f);}
 				continue; // no other geometry for this room

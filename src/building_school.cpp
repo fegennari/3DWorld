@@ -130,11 +130,23 @@ void building_t::add_objects_next_to_classroom_chalkboard(rand_gen_t &rgen, room
 void building_t::add_hallway_lockers(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	bool const dim(room.dx() < room.dy()); // hallway dim
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
+	float const locker_height(0.75*floor_spacing), locker_depth(0.25*locker_height), locker_width(0.22*locker_height);
 	cube_t place_area(get_walkable_room_bounds(room));
-	place_area.expand_in_dim(dim, -0.5*wall_thickness); // leave a small gap at the ends
-	float const hall_len(place_area.get_sz_dim(dim)), locker_height(0.75*floor_spacing), locker_depth(0.25*locker_height), locker_width(0.2*locker_height);
+	place_area.expand_in_dim(dim, -4.0*locker_width); // leave 4 locker's worth of space at the ends for windows, etc.
 	vect_room_object_t &objs(interior->room_geom->objs);
+	float const hall_len(place_area.get_sz_dim(dim));
 	unsigned const lockers_start(objs.size()), num_lockers(hall_len/locker_width); // floor
+	// add expanded blockers for stairs and elevators in this hallway to ensure there's space for the player and people to walk on the sides
+	float const se_clearance(2.0*get_min_front_clearance_inc_people());
+	vect_cube_t blockers;
+	
+	for (stairwell_t const &s : interior->stairwells) {
+		if (room.contains_cube_xy_overlaps_z(s)) {blockers.push_back(s);}
+	}
+	for (elevator_t const &e : interior->elevators) {
+		if (room.contains_cube_xy_overlaps_z(e)) {blockers.push_back(e);}
+	}
+	for (cube_t &c : blockers) {c.expand_by_xy(se_clearance);}
 	cube_t locker;
 	set_cube_zvals(locker, zval, zval+locker_height);
 
@@ -147,16 +159,17 @@ void building_t::add_hallway_lockers(rand_gen_t &rgen, room_t const &room, float
 			float const pos(place_area.d[dim][0] + n*locker_width);
 			locker.d[dim][0] = pos;
 			locker.d[dim][1] = pos + locker_width;
+			if (has_bcube_int(locker, blockers)) continue;
 			cube_t test_cube(locker);
-			test_cube.expand_in_dim(dim, 0.5*locker_width); // add some padding
-			// TODO: check for wall/hallway
+			test_cube.expand_in_dim(dim, 2.0*locker_width); // add some padding to the sides
+			test_cube.d[!dim][!d] += (d ? -1.0 : 1.0)*locker_width; // add space in front for the door to open
 			bool invalid(0);
 
 			for (auto i = objs.begin()+objs_start; i != objs.begin()+lockers_start; ++i) { // can skip other lockers
 				if (i->intersects(test_cube)) {invalid = 1; break;}
 			}
-			if (invalid || is_obj_placement_blocked(test_cube, room, 1, 0)) continue;
-			if (!check_if_placed_on_interior_wall  (locker, room, !dim, d)) continue; // ensure the vent is on a wall
+			if (invalid || is_obj_placement_blocked(test_cube, room, 1,    0)) continue;
+			if (!check_if_placed_on_interior_wall  (test_cube, room, !dim, d)) continue; // ensure the vent is on a wall
 			objs.emplace_back(locker, TYPE_LOCKER, room_id, !dim, !d, 0, tot_light_amt, SHAPE_CUBE, colorRGBA(0.4, 0.6, 0.6));
 		} // for n
 	} // for d

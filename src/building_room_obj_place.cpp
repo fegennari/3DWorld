@@ -3714,8 +3714,8 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 	float const hall_side_clearance(max(get_doorway_width(), get_min_front_clearance_inc_people())); // front clearance is generally slightly larger
 	vect_room_object_t &objs(interior->room_geom->objs);
 
-	// place ground floor/lobby objects + hospital per-floor desks
-	if ((first_floor && room.z1() == ground_floor_z1) || is_hospital()) {
+	// place ground floor/lobby objects + hospital per-floor desks; not for schools
+	if ((first_floor && room.z1() == ground_floor_z1 && !is_school()) || is_hospital()) {
 		// add lobby reception desks
 		float const nom_desk_width(0.9*window_vspacing);
 		
@@ -3818,7 +3818,6 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 	} // for d
 	// add cameras to each end of the hallway
 	add_cameras_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);
-	if (is_school()) {add_hallway_lockers(rgen, room, zval, room_id, tot_light_amt, objs_start);}
 }
 
 void building_t::add_wall_us_flag(float wall_pos, float flag_pos, float zval, bool dim, bool dir, unsigned room_id, float tot_light_amt) {
