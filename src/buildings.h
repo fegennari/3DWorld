@@ -1270,6 +1270,8 @@ struct building_room_geom_t {
 	void add_pizza_top(room_object_t const &c);
 	void add_mwave(room_object_t const &c);
 	void add_vending_machine(room_object_t const &c);
+	void add_cabinet_with_open_door(room_object_t const &c, cube_t const &door, colorRGBA const &color,
+		float wall_thickness, unsigned front_face_mask, float z1_adj=0.0, float back_adj=0.0);
 	void add_locker(room_object_t const &c);
 	void add_mirror (room_object_t const &c);
 	void add_med_cab(room_object_t const &c);

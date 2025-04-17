@@ -1577,27 +1577,57 @@ void building_room_geom_t::add_vending_machine(room_object_t const &c) {
 	add_obj_with_front_texture(c, tex_fn, WHITE, c.color, 0); // front is white/textured, sides are gray; is_small=0
 }
 
+cube_t get_open_door_bcube(room_object_t const &c, float thickness, bool hinge_side=0) {
+	cube_t bc(c);
+	bc.d[!c.dim][ hinge_side]  = bc.d[!c.dim][!hinge_side]; // shrink to zero area
+	bc.d[!c.dim][!hinge_side] += (hinge_side ? -1.0 : 1.0)*thickness; // shift outward by thickness
+	bc.d[ c.dim][!c.dir     ] += (c.dir ? 1.0 : -1.0)*(c.get_depth() - thickness); // move to front
+	bc.d[ c.dim][ c.dir     ] += (c.dir ? 1.0 : -1.0)*(c.get_width() - thickness); // expand outward
+	return bc;
+}
+void building_room_geom_t::add_cabinet_with_open_door(room_object_t const &c, cube_t const &door, colorRGBA const &color,
+	float wall_thickness, unsigned front_face_mask, float z1_adj, float back_adj)
+{
+	cube_t outside(c), inside(c);
+	inside.expand_by(-wall_thickness); // shrink sides by wall thickness
+	inside.z1() += z1_adj;
+	inside .d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*back_adj;
+	outside.d[c.dim][ c.dir]  = inside.d[c.dim][c.dir]; // shift front side in slightly
+	vect_cube_t &cubes(get_temp_cubes());
+	subtract_cube_from_cube(outside, inside, cubes); // should always be 3 cubes (sides + back) since this subtract is XY only
+	cubes.push_back(inside);
+	set_cube_zvals(cubes.back(), outside.z1(), inside.z1()); // bottom
+	cubes.push_back(inside);
+	set_cube_zvals(cubes.back(), inside.z2(), outside.z2()); // top
+	cubes.push_back(inside);
+	set_wall_width(cubes.back(), inside.zc(), 0.5*wall_thickness, 2); // middle shelf
+	rgeom_mat_t &mat(get_untextured_material(1)); // shadowed
+	mat.add_cube_to_verts(door, color, zero_vector, ~front_face_mask); // non-front sides of door; always +dir
+
+	for (auto i = cubes.begin(); i != cubes.end(); ++i) {
+		unsigned sf(~get_face_mask(c.dim, !c.dir));
+		if (i - cubes.begin() > 3) {sf |= get_skip_mask_for_xy(!c.dim);} // sip side faces
+		mat.add_cube_to_verts(*i, color, zero_vector, sf); // skip back face
+	}
+}
+
 void building_room_geom_t::add_locker(room_object_t const &c) {
-	colorRGBA const side_color(c.color.modulate_with(LT_GRAY));
+	string const tex_fn("interiors/locker_door.jpg");
+	colorRGBA side_color(c.color.modulate_with(LT_GRAY));
 
 	if (c.is_open()) {
-		// TODO: draw open door
+		side_color = apply_light_color(c, side_color);
+		bool const hinge_side(c.dim ^ c.dir ^ 1);
+		unsigned const front_face_mask(get_face_mask(!c.dim, !hinge_side));
+		float const wall_thickness(0.02*c.get_width());
+		cube_t const door(get_open_door_bcube(c, wall_thickness, hinge_side));
+		rgeom_mat_t &front_mat(get_material(tid_nm_pair_t(get_texture_by_name(tex_fn), 0.0), 1));
+		front_mat.add_cube_to_verts(door, apply_light_color(c), all_zeros, front_face_mask, c.dim, c.dir);
+		add_cabinet_with_open_door(c, door, side_color, wall_thickness, front_face_mask, 0.02*c.dz(), 1.5*wall_thickness); // inside slightly higher and shifted toward the front
 	}
-	add_obj_with_front_texture(c, "interiors/locker_door.jpg", c.color, side_color, 0); // texture is light gray
+	else {add_obj_with_front_texture(c, tex_fn, c.color, side_color, 0);} // closed; texture is light gray
 }
 
-float get_med_cab_wall_thickness(room_object_t const &c) {return 0.15*c.get_length();}
-
-cube_t get_mirror_surface(room_object_t const &c) {
-	if (!c.is_open()) return c;
-	float const thickness(get_med_cab_wall_thickness(c));
-	cube_t mirror(c);
-	mirror.d[!c.dim][0]       = mirror.d[!c.dim][1]; // shrink to zero area
-	mirror.d[!c.dim][1]      += thickness; // shift outward by thickness
-	mirror.d[ c.dim][!c.dir] -= (c.dir ? 1.0 : -1.0)*thickness; // move to front
-	mirror.d[ c.dim][ c.dir] += (c.dir ? 1.0 : -1.0)*(c.get_width() - thickness); // expand outward
-	return mirror;
-}
 void building_room_geom_t::add_mirror(room_object_t const &c) {
 	colorRGBA const side_color(apply_light_color(c));
 	draw_mirror_surface(c, c, c.dim, c.dir, 0); // shadowed=0
@@ -1621,6 +1651,11 @@ void building_room_geom_t::add_mirror(room_object_t const &c) {
 	else {mat.add_cube_to_verts_untextured(c, side_color, get_skip_mask_for_xy(c.dim));} // draw only the exterior sides, untextured
 }
 
+float get_med_cab_wall_thickness(room_object_t const &c) {return 0.15*c.get_length();}
+
+cube_t get_mirror_surface(room_object_t const &c) {
+	return (c.is_open() ? get_open_door_bcube(c, get_med_cab_wall_thickness(c)) : c);
+}
 void building_room_geom_t::add_med_cab(room_object_t const &c) {
 	bool is_mirror(c.is_mirror());
 	int const front_tid(is_mirror ? -1 : get_texture_by_name("interiors/med_cross.png"));
@@ -1628,35 +1663,16 @@ void building_room_geom_t::add_med_cab(room_object_t const &c) {
 	colorRGBA const side_color(apply_light_color(c)), front_color(apply_light_color(c, WHITE));
 
 	if (c.is_open()) { // open medicine cabinet
+		unsigned const front_face_mask(get_face_mask(!c.dim, 1));
 		cube_t const mirror(get_mirror_surface(c));
-		float const wall_thickness(get_med_cab_wall_thickness(c));
-		cube_t outside(c), inside(c);
-		inside.expand_by(-wall_thickness); // shrink sides by wall thickness
-		outside.d[c.dim][c.dir] = inside.d[c.dim][c.dir]; // shift front side in slightly
-		unsigned const mirror_face_mask(get_face_mask(!c.dim, 1)); // always +dir
 
 		if (is_mirror) {
 			draw_mirror_surface(c, mirror, !c.dim, 1, 1); // shadowed, always +dir
 		}
 		else { // draw front face
-			get_material(front_tex, 1).add_cube_to_verts(mirror, front_color, mirror.get_llc(), mirror_face_mask, c.dim);
+			get_material(front_tex, 1).add_cube_to_verts(mirror, front_color, mirror.get_llc(), front_face_mask, c.dim); // always +dir
 		}
-		vect_cube_t &cubes(get_temp_cubes());
-		subtract_cube_from_cube(outside, inside, cubes); // should always be 3 cubes (sides + back) since this subtract is XY only
-		cubes.push_back(inside);
-		set_cube_zvals(cubes.back(), outside.z1(), inside.z1()); // bottom
-		cubes.push_back(inside);
-		set_cube_zvals(cubes.back(), inside.z2(), outside.z2()); // top
-		cubes.push_back(inside);
-		set_wall_width(cubes.back(), inside.zc(), 0.5*wall_thickness, 2); // middle shelf
-		rgeom_mat_t &mat(get_untextured_material(1)); // shadowed
-		mat.add_cube_to_verts(mirror, side_color, zero_vector, ~mirror_face_mask); // non-front sides of mirror
-
-		for (auto i = cubes.begin(); i != cubes.end(); ++i) {
-			unsigned sf(~get_face_mask(c.dim, !c.dir));
-			if (i - cubes.begin() > 3) {sf |= get_skip_mask_for_xy(!c.dim);} // sip side faces
-			mat.add_cube_to_verts(*i, side_color, zero_vector, sf); // skip back face
-		}
+		add_cabinet_with_open_door(c, mirror, side_color, get_med_cab_wall_thickness(c), front_face_mask);
 	}
 	else { // closed medicine cabinet
 		if (is_mirror) {
