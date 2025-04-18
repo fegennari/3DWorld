@@ -292,12 +292,13 @@ bool add_cabinet_objects(room_object_t const &c, vect_room_object_t &objects) { 
 	rand_gen_t rgen(c.create_rgen());
 	vect_cube_t &cubes(get_temp_cubes());
 	bool const is_vanity(c.type == TYPE_VANITY), in_kitchen(!is_vanity), is_counter(c.type == TYPE_COUNTER || c.type == TYPE_KSINK || is_vanity);
+	bool const in_hospital(is_vanity && !c.is_house());
 	float const wall_thickness(0.04*(is_counter ? 0.95 : 1.0)*c.dz()); // cabinet height is 95% of total counter; the other 5% is the top surface
-	float const light_amt(0.25*c.light_amt);
 	cube_t interior(c), dishwasher;
 	if (is_counter) {interior.d[c.dim][c.dir] -= (c.dir ? 1.0 : -1.0)*0.05*c.get_depth();} // subtract front overhang
 	interior.expand_by(-wall_thickness);
 	vector3d const c_sz(interior.get_size());
+	float const light_amt(0.25*c.light_amt), c_min_xy(min(c_sz.x, c_sz.y));
 	unsigned const sz_ratio(round_fp(c_sz[!c.dim]/c_sz.z));
 
 	if (c.type == TYPE_KSINK && get_dishwasher_for_ksink(c, dishwasher)) { // avoid placing objects that overlap the dishwasher
@@ -308,8 +309,8 @@ bool add_cabinet_objects(room_object_t const &c, vect_room_object_t &objects) { 
 	}
 	unsigned const start_num_cubes(cubes.size()), flags(RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_WAS_EXP);
 
-	if (is_counter && rgen.rand_bool()) { // maybe add a trashcan
-		float const tcan_height(c_sz.z*rgen.rand_uniform(0.35, 0.55)), tcan_radius(min(tcan_height/rgen.rand_uniform(1.6, 2.8), 0.4f*min(c_sz.x, c_sz.y)));
+	if (is_counter && rgen.rand_float() < (is_vanity ? 0.25 : 0.5)) { // maybe add a trashcan
+		float const tcan_height(c_sz.z*rgen.rand_uniform(0.35, 0.55)), tcan_radius(min(tcan_height/rgen.rand_uniform(1.6, 2.8), 0.4f*c_min_xy));
 		cube_t tcan;
 		gen_xy_pos_for_round_obj(tcan, interior, tcan_radius, tcan_height, 1.1*tcan_radius, rgen, 1); // place_at_z1=1
 		room_object_t obj(tcan, TYPE_TCAN, c.room_id, c.dim, c.dir, flags, light_amt, (rgen.rand_bool() ? SHAPE_CYLIN : SHAPE_CUBE), tcan_colors[rgen.rand()%NUM_TCAN_COLORS]);
@@ -320,7 +321,7 @@ bool add_cabinet_objects(room_object_t const &c, vect_room_object_t &objects) { 
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_FIRE_EXT)); // D, W, H
 		float const fe_height(0.38*c.dz()), fe_radius(fe_height*(0.5*(sz.x + sz.y)/sz.z));
 
-		if (2.2*fe_radius < min(c_sz.x, c_sz.y)) {
+		if (2.2*fe_radius < c_min_xy) {
 			cube_t fire_ext;
 			gen_xy_pos_for_round_obj(fire_ext, interior, fe_radius, fe_height, 1.05*fe_radius, rgen, 1); // place_at_z1=1
 			room_object_t obj(fire_ext, TYPE_FIRE_EXT, c.room_id, rgen.rand_bool(), rgen.rand_bool(), flags, light_amt, SHAPE_CYLIN);
@@ -329,28 +330,29 @@ bool add_cabinet_objects(room_object_t const &c, vect_room_object_t &objects) { 
 	}
 	// add boxes
 	unsigned const num_boxes(rgen.rand()%4); // 0-3
-	float const box_sz(0.3*c.get_length());
+	float const box_sz(0.3*c.get_length()), sz_scale(0.7*c_sz.z);
 	room_object_t cb(c);
 	cb.light_amt = light_amt;
 	add_boxes_to_space(cb, objects, interior, cubes, rgen, num_boxes, box_sz, 0.8*box_sz, 1.5*box_sz, 0, (flags | RO_FLAG_NOCOLL)); // allow_crates=0
 
-	// add paint cans (slightly smaller than normal); even for bathroom vanity?
-	float const sz_scale(0.7*c_sz.z), pc_height(0.6*sz_scale), pc_radius(0.24*sz_scale);
+	if (!in_hospital && !is_vanity) { // add paint cans (slightly smaller than normal)
+		float const pc_height(0.6*sz_scale), pc_radius(0.24*sz_scale);
 
-	if (3*pc_radius < min(c_sz.x, c_sz.y)) { // have enough space for for paint cans
-		unsigned const num_pcans(rgen.rand()%3); // 0-2
+		if (3*pc_radius < c_min_xy) { // have enough space for for paint cans
+			unsigned const num_pcans(rgen.rand()%3); // 0-2
 
-		for (unsigned n = 0; n < num_pcans; ++n) {
-			cube_t pcan;
-			gen_xy_pos_for_round_obj(pcan, interior, pc_radius, pc_height, 1.2*pc_radius, rgen, 1); // place_at_z1=1
-			room_object_t obj(pcan, TYPE_PAINTCAN, c.room_id, 0, 0, flags, light_amt, SHAPE_CYLIN);
-			add_if_not_intersecting(obj, objects, cubes);
+			for (unsigned n = 0; n < num_pcans; ++n) {
+				cube_t pcan;
+				gen_xy_pos_for_round_obj(pcan, interior, pc_radius, pc_height, 1.2*pc_radius, rgen, 1); // place_at_z1=1
+				room_object_t obj(pcan, TYPE_PAINTCAN, c.room_id, 0, 0, flags, light_amt, SHAPE_CYLIN);
+				add_if_not_intersecting(obj, objects, cubes);
+			}
 		}
 	}
 	if (in_kitchen) {
 		// add plates
 		unsigned const max_plates(0 + 1*sz_ratio), num_plates(rgen.rand() % max_plates); // wider cabinet has more plates
-		float const plate_radius(min(sz_scale*rgen.rand_uniform(0.30, 0.35), 0.45f*min(c_sz.x, c_sz.y))), plate_height(0.1*plate_radius);
+		float const plate_radius(min(sz_scale*rgen.rand_uniform(0.30, 0.35), 0.45f*c_min_xy)), plate_height(0.1*plate_radius);
 
 		for (unsigned n = 0; n < num_plates; ++n) {
 			cube_t plate;
@@ -367,7 +369,7 @@ bool add_cabinet_objects(room_object_t const &c, vect_room_object_t &objects) { 
 		} // for n
 		// add pans
 		unsigned const num_pans(rgen.rand()%3); // 0-2
-		float const pan_radius(min(sz_scale*rgen.rand_uniform(0.40, 0.45), 0.45f*min(c_sz.x, c_sz.y))), pan_height(rgen.rand_uniform(0.4, 0.5)*pan_radius);
+		float const pan_radius(min(sz_scale*rgen.rand_uniform(0.40, 0.45), 0.45f*c_min_xy)), pan_height(rgen.rand_uniform(0.4, 0.5)*pan_radius);
 
 		for (unsigned n = 0; n < num_pans; ++n) {
 			cube_t pan;
@@ -381,33 +383,63 @@ bool add_cabinet_objects(room_object_t const &c, vect_room_object_t &objects) { 
 			cubes.push_back(pan_bc);
 		} // for n
 	}
-	if (is_vanity && !c.is_house()) {
-		// TODO: hospital specific items such as bottles of medicine
-	}
-	// add bottles
-	unsigned const max_bottles(3 + 2*sz_ratio), num_bottles(rgen.rand() % max_bottles); // wider cabinet has more bottles
+	// add bottles; wider cabinet has more; fewer medicine bottles in hospitals
+	unsigned const max_bottles(3 + (in_hospital ? 1 : 2)*sz_ratio), num_bottles(rgen.rand() % max_bottles);
 
 	for (unsigned n = 0; n < num_bottles; ++n) {
 		float const bottle_height(sz_scale*rgen.rand_uniform(0.45, 0.65)), bottle_radius(sz_scale*rgen.rand_uniform(0.075, 0.1));
-		if (min(c_sz.x, c_sz.y) < 3.0*bottle_radius) continue; // cabinet not wide/deep enough to add this bottle
+		if (c_min_xy < 3.0*bottle_radius) continue; // cabinet not wide/deep enough to add this bottle
 		cube_t bottle;
 		gen_xy_pos_for_round_obj(bottle, interior, bottle_radius, bottle_height, 1.5*bottle_radius, rgen, 1); // place_at_z1=1
 		room_object_t obj(bottle, TYPE_BOTTLE, c.room_id, 0, 0, flags, light_amt, SHAPE_CYLIN); // vertical
-		bool const allow_medicine(rgen.rand_bool()); // medicine is half as common
-		obj.set_as_bottle(rgen.rand(), (allow_medicine ? (unsigned)NUM_BOTTLE_TYPES : (unsigned)BOTTLE_TYPE_MEDS)-1, 1); // all bottle types, no_empty=1
+
+		if (in_hospital) {obj.set_as_bottle(rgen.rand(), BOTTLE_TYPE_MEDS, 0, ~(1 << BOTTLE_TYPE_MEDS));} // medicine only
+		else {
+			bool const allow_medicine(rgen.rand_bool()); // medicine is half as common
+			obj.set_as_bottle(rgen.rand(), (allow_medicine ? (unsigned)NUM_BOTTLE_TYPES : (unsigned)BOTTLE_TYPE_MEDS)-1, 1); // all bottle types, no_empty=1
+		}
 		add_if_not_intersecting(obj, objects, cubes);
 	}
-	// add drink cans
-	unsigned const max_cans(2 + 2*sz_ratio), num_cans(rgen.rand() % max_cans); // wider cabinet has more cans
+	if (in_hospital) {
+		// add tape rolls
+		unsigned const num_tape_rolls(rgen.rand()%6); // 0-5
+		colorRGBA const h_tape_colors[3] = {WHITE, WHITE, BLUE};
 
-	for (unsigned n = 0; n < num_cans; ++n) {
-		float const can_height(0.4*sz_scale), can_radius(0.26*can_height);
-		if (min(c_sz.x, c_sz.y) < 3.0*can_radius) continue; // cabinet not wide/deep enough to add this can
-		cube_t can;
-		gen_xy_pos_for_round_obj(can, interior, can_radius, can_height, 1.25*can_radius, rgen, 1); // place_at_z1=1
-		room_object_t obj(can, TYPE_DRINK_CAN, c.room_id, 0, 0, flags, light_amt, SHAPE_CYLIN); // vertical
-		obj.obj_id = rgen.rand(); // random can type
-		add_if_not_intersecting(obj, objects, cubes);
+		for (unsigned n = 0; n < num_tape_rolls; ++n) {
+			float const tape_height(sz_scale*rgen.rand_uniform(0.08, 0.15)), tape_radius(min(0.4f*c_min_xy, sz_scale*rgen.rand_uniform(0.14, 0.22)));
+			cube_t tape;
+			gen_xy_pos_for_round_obj(tape, interior, tape_radius, tape_height, 1.2*tape_radius, rgen, 1); // place_at_z1=1
+			room_object_t const obj(tape, TYPE_TAPE, c.room_id, 0, 0, flags, light_amt, SHAPE_CYLIN, h_tape_colors[rgen.rand()%3]); // vertical
+			add_if_not_intersecting(obj, objects, cubes);
+		}
+	}
+	else { // non-hospital
+		// add drink cans
+		unsigned const max_cans(2 + 2*sz_ratio), num_cans(rgen.rand() % max_cans); // wider cabinet has more cans
+		float const can_height(0.34*sz_scale), can_radius(0.26*can_height);
+
+		if (c_min_xy > 3.0*can_radius) { // cabinet wide/deep enough to add a can
+			for (unsigned n = 0; n < num_cans; ++n) {
+				cube_t can;
+				gen_xy_pos_for_round_obj(can, interior, can_radius, can_height, 1.25*can_radius, rgen, 1); // place_at_z1=1
+				room_object_t obj(can, TYPE_DRINK_CAN, c.room_id, 0, 0, flags, light_amt, SHAPE_CYLIN); // vertical
+				obj.obj_id = rgen.rand(); // random can type
+				add_if_not_intersecting(obj, objects, cubes);
+			}
+		}
+		if (is_vanity) { // add toilet paper rolls
+			unsigned const num_tp_rolls(rgen.rand()%3); // 0-2
+			float const tp_height(0.38*sz_scale), tp_radius(0.4f*tp_height);
+
+			if (c_min_xy > 3.0*tp_radius) { // cabinet wide/deep enough to add a TP roll
+				for (unsigned n = 0; n < num_tp_rolls; ++n) {
+					cube_t tp;
+					gen_xy_pos_for_round_obj(tp, interior, tp_radius, tp_height, 1.1*tp_radius, rgen, 1); // place_at_z1=1
+					room_object_t const obj(tp, TYPE_TPROLL, c.room_id, 0, 0, flags, light_amt, SHAPE_CYLIN); // vertical
+					add_if_not_intersecting(obj, objects, cubes);
+				}
+			}
+		}
 	}
 	return (cubes.size() > start_num_cubes); // returns true if some object was added
 }
@@ -889,7 +921,7 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 
 		if (s_sz_min_xy > 2.5*tape_radius) { // add if shelf wide/deep enough
 			unsigned const num_tapes(((rgen.rand()%4) < 3) ? (rgen.rand() % 4) : 0); // 0-3, 75% chance
-			C.dir   = C.dim = 0;
+			C.dir   = C.dim = 0; // vertical
 			C.type  = TYPE_TAPE;
 			C.shape = SHAPE_CYLIN;
 

@@ -7,7 +7,6 @@
 extern double tfticks;
 
 float query_min_height(cube_t const &c, float stop_at);
-colorRGBA choose_pipe_color(rand_gen_t &rgen);
 room_object_t get_open_false_door(room_object_t const &c);
 void add_city_manhole(point const &pos, float radius);
 

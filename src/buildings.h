@@ -3105,6 +3105,7 @@ cube_t get_sink_cube(room_object_t const &c);
 cube_t get_mwave_panel_bcube(room_object_t const &c);
 tquad_t get_ramp_tquad(room_object_t const &c);
 colorRGBA gen_vase_color(rand_gen_t &rgen);
+colorRGBA choose_pipe_color(rand_gen_t &rgen);
 void gen_crate_sz(vector3d &sz, rand_gen_t &rgen, float window_vspacing);
 void get_balcony_cubes(room_object_t const &c, cube_t cubes[4]);
 void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_gen_t &rgen);
