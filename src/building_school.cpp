@@ -172,6 +172,7 @@ void building_t::add_hallway_lockers(rand_gen_t &rgen, room_t const &room, float
 			if (!check_if_placed_on_interior_wall  (test_cube, room, !dim, d)) continue; // ensure the vent is on a wall
 			// TODO: some locked with padlocks; set RO_FLAG_NONEMPTY
 			objs.emplace_back(locker, TYPE_LOCKER, room_id, !dim, !d, 0, tot_light_amt, SHAPE_CUBE, colorRGBA(0.4, 0.6, 0.6));
+			set_obj_id(objs); // for random contents
 		} // for n
 	} // for d
 }

@@ -1610,6 +1610,8 @@ void building_room_geom_t::add_cabinet_with_open_door(room_object_t const &c, cu
 		mat.add_cube_to_verts(*i, color, zero_vector, sf); // skip back face
 	}
 }
+float get_med_cab_wall_thickness(room_object_t const &c) {return 0.15*c.get_length();}
+float get_locker_wall_thickness (room_object_t const &c) {return 0.02*c.get_length();}
 
 void building_room_geom_t::add_locker(room_object_t const &c) {
 	string const tex_fn("interiors/locker_door.jpg");
@@ -1619,7 +1621,7 @@ void building_room_geom_t::add_locker(room_object_t const &c) {
 		side_color = apply_light_color(c, side_color);
 		bool const hinge_side(c.dim ^ c.dir ^ 1);
 		unsigned const front_face_mask(get_face_mask(!c.dim, !hinge_side));
-		float const wall_thickness(0.02*c.get_width());
+		float const wall_thickness(get_locker_wall_thickness(c));
 		cube_t const door(get_open_door_bcube(c, wall_thickness, hinge_side));
 		rgeom_mat_t &front_mat(get_material(tid_nm_pair_t(get_texture_by_name(tex_fn), 0.0), 1));
 		front_mat.add_cube_to_verts(door, apply_light_color(c), all_zeros, front_face_mask, c.dim, c.dir);
@@ -1650,8 +1652,6 @@ void building_room_geom_t::add_mirror(room_object_t const &c) {
 	}
 	else {mat.add_cube_to_verts_untextured(c, side_color, get_skip_mask_for_xy(c.dim));} // draw only the exterior sides, untextured
 }
-
-float get_med_cab_wall_thickness(room_object_t const &c) {return 0.15*c.get_length();}
 
 cube_t get_mirror_surface(room_object_t const &c) {
 	return (c.is_open() ? get_open_door_bcube(c, get_med_cab_wall_thickness(c)) : c);

@@ -15,6 +15,7 @@ vect_cube_t &get_temp_cubes();
 bool get_dishwasher_for_ksink(room_object_t const &c, cube_t &dishwasher);
 void set_wall_width(cube_t &wall, float pos, float half_thick, unsigned dim);
 float get_med_cab_wall_thickness(room_object_t const &c);
+float get_locker_wall_thickness (room_object_t const &c);
 float get_radius_for_square_model(unsigned model_id);
 
 void resize_model_cube_xy(cube_t &cube, float dim_pos, float not_dim_pos, unsigned id, bool dim) {
@@ -462,10 +463,6 @@ void building_room_geom_t::expand_med_cab(room_object_t const &c) {
 	obj.set_as_bottle(BOTTLE_TYPE_MEDS, BOTTLE_TYPE_MEDS, 1); // medicine, no_empty=1
 	expanded_objs.push_back(obj);
 	invalidate_small_geom();
-}
-
-void building_room_geom_t::expand_locker(room_object_t const &c) {
-	// TODO: place TYPE_BOOK, maybe TYPE_BOTTLE, TYPE_DRINK_CAN, TYPE_PAPER, TYPE_PEN, TYPE_PENCIL, TYPE_MARKER, TYPE_MONEY, TYPE_PHONE, TYPE_LAPTOP, TYPE_TRASH
 }
 
 void building_room_geom_t::expand_breaker_panel(room_object_t const &c, building_t const &building) {
@@ -1305,6 +1302,26 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 }
 
 void building_room_geom_t::expand_shelfrack(room_object_t const &c) {get_shelfrack_objects(c, expanded_objs);}
+
+void building_room_geom_t::expand_locker(room_object_t const &c) {
+	rand_gen_t rgen(c.create_rgen());
+	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_WAS_EXP);
+	float const wall_thickness(get_locker_wall_thickness(c));
+	cube_t interior(c);
+	interior.expand_by(-wall_thickness);
+	interior.z1() += 0.02*c.dz();
+	interior.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*1.5*wall_thickness;
+	float const width(interior.get_sz_dim(!c.dim)), depth(interior.get_sz_dim(c.dim));
+	unsigned const init_objs_sz(expanded_objs.size());
+
+	for (unsigned level = 0; level < 2; ++level) { // {bottom, top}
+		if (level == 1) {interior.z1() += 0.5*(interior.dz() + wall_thickness);} // upper level
+		// add books
+		add_row_of_cubes(c, interior, width, depth, 0.15*depth, 0.0, TYPE_BOOK, flags, expanded_objs, rgen, !c.dir, 1, 4); // stacked up to 4 high
+		// TODO: place TYPE_BOTTLE, TYPE_DRINK_CAN, TYPE_PAPER, TYPE_PEN, TYPE_PENCIL, TYPE_MARKER, TYPE_MONEY, TYPE_PHONE, TYPE_LAPTOP, TYPE_TRASH
+	} // for level
+	if (expanded_objs.size() > init_objs_sz) {invalidate_small_geom();}
+}
 
 void building_room_geom_t::add_wine_rack_bottles(room_object_t const &c, vect_room_object_t &objects) {
 	float const height(c.dz()), width(c.get_width()), depth(c.get_depth()), shelf_thick(0.1*depth);
