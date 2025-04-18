@@ -740,7 +740,7 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 		center_area.expand_by_xy(-(max_place_sz + 0.5*doorway_width)); // space for machines along the wall
 		vector2d const center_sz(center_area.get_size_xy());
 		bool const tank_dim(rgen.rand_bool()), tank_dir(rgen.rand_bool()); // side of grid the tank is on
-		colorRGBA const pipe_color(COPPER_C), fitting_color(BRASS_C), gauge_color(BRASS_C);
+		colorRGBA const pipe_color(COPPER_C), fitting_color(BRASS_C);
 		vector2d &spacing(interior->ind_info->machine_row_spacing);
 		unsigned num_xy[2]={};
 
@@ -770,17 +770,11 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 					cube_t tank(c);
 					tank.z2() = tank_z2;
 					tank.expand_by_xy(-0.1*tank_radius);
-					objs.emplace_back(tank, TYPE_CHEM_TANK, room_id, dim, dir, RO_FLAG_IN_FACTORY, tot_light_amt, SHAPE_CYLIN, WHITE, item_flags);
+					room_object_t const tank_obj(tank, TYPE_CHEM_TANK, room_id, dim, dir, RO_FLAG_IN_FACTORY, tot_light_amt, SHAPE_CYLIN, WHITE, item_flags);
+					objs.push_back(tank_obj);
 					// add a gauge to the side of the tank
-					bool gdim(dim), gdir(dir);
-					if (gdim == 1 && gdir == 1) {gdir ^= 1;} // swap to avoid placing over label
-					float const gauge_radius(0.08*tank_radius), gauge_depth(0.25*gauge_radius), tank_side(tank.d[gdim][gdir]);
-					cube_t gauge;
-					set_wall_width(gauge, (tank.z1() + 1.25*tank_radius), gauge_radius, 2); // Z
-					set_wall_width(gauge, center[!gdim], gauge_radius, !gdim);
-					gauge.d[gdim][!gdir] = tank_side;
-					gauge.d[gdim][ gdir] = tank_side + (gdir ? 1.0 : -1.0)*gauge_depth;
-					objs.emplace_back(gauge, TYPE_GAUGE, room_id, gdim, gdir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, gauge_color);
+					float const gauge_radius(0.08*tank_radius), gauge_height(1.25*tank_radius);
+					add_chem_tank_gauge(tank_obj, gauge_radius, gauge_height);
 					// add a pipe to the top; the tank itself has a pipe going down to the floor
 					cube_t pipe(center);
 					set_cube_zvals(pipe, (tank_z2 - pipe_radius), (tank_z2 + 0.15*height - pipe_radius));
@@ -968,6 +962,18 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 			break; // done
 		} // for i
 	} // for n
+}
+
+void building_t::add_chem_tank_gauge(room_object_t const &tank, float radius, float height) {
+	bool gdim(tank.dim), gdir(tank.dir);
+	if (gdim == 1 && gdir == 1) {gdir ^= 1;} // swap to avoid placing over label
+	float const gauge_depth(0.25*radius), tank_side(tank.d[gdim][gdir]);
+	cube_t gauge;
+	set_wall_width(gauge, (tank.z1() + height), radius, 2); // Z
+	set_wall_width(gauge, tank.get_center_dim(!gdim), radius, !gdim);
+	gauge.d[gdim][!gdir] = tank_side;
+	gauge.d[gdim][ gdir] = tank_side + (gdir ? 1.0 : -1.0)*gauge_depth;
+	interior->room_geom->objs.emplace_back(gauge, TYPE_GAUGE, tank.room_id, gdim, gdir, RO_FLAG_NOCOLL, tank.light_amt, SHAPE_CYLIN, BRASS_C);
 }
 
 // Note: assumes building is a factory, but has no effect if it's not

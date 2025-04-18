@@ -410,9 +410,7 @@ bool building_t::add_exam_room_objs(rand_gen_t rgen, room_t &room, float zval, u
 bool building_t::add_operating_room_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id,
 	unsigned floor_ix, float &tot_light_amt, unsigned objs_start, unsigned lights_start)
 {
-	// TODO: operating table, equipment (with TYPE_VALVE/TYPE_GAUGE)
 	assert(lights_start <= objs_start);
-	// TODO: TYPE_WHEELCHAIR, TYPE_HOS_TROLLEY
 	float table_hscale(0.0);
 	unsigned table_obj_type(TYPE_NONE), table_model_type(0); // prefer operating table, default to hospital bed if not present
 	if      (building_obj_model_loader.is_model_valid(OBJ_MODEL_OP_TABLE)) {table_obj_type = TYPE_OP_TABLE; table_model_type = OBJ_MODEL_OP_TABLE; table_hscale = 0.38;}
@@ -479,9 +477,17 @@ bool building_t::add_operating_room_objs(rand_gen_t rgen, room_t &room, float zv
 			} // for n
 		}
 	}
+	// add a gas tank along a wall
+	float const tank_height(floor_spacing*rgen.rand_uniform(0.5, 0.7)), tank_rscale(rgen.rand_uniform(0.2, 0.3));
+	place_obj_along_wall(TYPE_CHEM_TANK, room, tank_height, vector3d(tank_rscale, tank_rscale, 1.0), rgen, zval, room_id, tot_light_amt, place_area, objs_start,
+		0.0, 1, 4, 0, WHITE, 0, SHAPE_CYLIN);
+	objs.back().item_flags = rgen.rand(); // random tank texture
+	float const gauge_radius(0.035*tank_height), gauge_height(0.76*tank_height);
+	add_chem_tank_gauge(objs.back(), gauge_radius, gauge_height);
 	if (rgen.rand_bool()) {place_model_along_wall(OBJ_MODEL_WHEELCHAIR, TYPE_WHEELCHAIR, room, 0.45, rgen, zval, room_id, tot_light_amt, place_area, objs_start);}
 	add_clock_to_room_wall(rgen, room, zval, room_id, tot_light_amt, objs_start);
 	add_hospital_medicine_cabinet(rgen, room, zval, room_id, tot_light_amt, objs_start);
+	// TODO: row of TYPE_VALVE or TYPE_GAUGE
 	add_numbered_door_sign("OR ", room, zval, room_id, floor_ix);
 
 	// make ceiling lights larger and round

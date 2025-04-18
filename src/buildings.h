@@ -2252,6 +2252,7 @@ struct building_t : public building_geom_t {
 	bool add_machines_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool less_clearance=0);
 	void add_machines_to_factory(rand_gen_t rgen, room_t const &room, cube_t const &place_area, float zval,
 		unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned objs_start_inc_beams, cube_t const &ladder);
+	void add_chem_tank_gauge(room_object_t const &tank, float radius, float height);
 	void add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part, cube_t const &hall, unsigned part_ix, unsigned num_floors,
 		unsigned rooms_start, bool use_hallway, bool first_part_this_stack, float window_hspacing[2], float window_border, bool is_single_floor);
 	void connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t const &part, unsigned lower_part_ix);
