@@ -2150,10 +2150,12 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 			set_cube_zvals(sep_wall, zval+0.15*uheight, zval+1.25*uheight);
 			sep_wall.d[br_dim][!dir] = u_wall;
 			sep_wall.d[br_dim][ dir] = u_wall - dir_sign*0.25*floor_spacing;
+			// school bathrooms have a short urinal at one end if there is more than one urinal
+			unsigned const short_urinal_ix((is_school() && num_sinks > 1) ? ((room_id & 1) ? 0 : num_sinks-1) : num_sinks);
 
 			for (unsigned n = 0; n < num_sinks; ++n, u_pos += sink_step) {
 				set_wall_width(sep_wall, (u_pos - 0.5*sink_step), 0.2*wall_thickness, !br_dim);
-				point center(u_from_wall, u_pos, (zval + 0.2*uheight));
+				point center(u_from_wall, u_pos, (zval + ((n == short_urinal_ix) ? 0.125 : 0.25)*uheight));
 				if (br_dim) {swap(center.x, center.y);} // R90 about z
 				cube_t urinal(center);
 				urinal.expand_in_dim( br_dim, 0.5*ulength);
@@ -2164,9 +2166,9 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 				if (!avoid.is_all_zeros() && urinal.intersects(avoid))        continue;
 				
 				if (!interior->is_cube_close_to_doorway(sep_wall, room, 0.0, 1)) { // check for doors, when the bathroom door is not centered on the room
-					objs.emplace_back(sep_wall, TYPE_STALL,  room_id, br_dim, !dir, 0, tot_light_amt, SHAPE_SHORT, stall_color);
+					objs.emplace_back(sep_wall, TYPE_STALL, room_id, br_dim, !dir, 0, tot_light_amt, SHAPE_SHORT, stall_color);
 				}
-				objs.emplace_back(urinal,   TYPE_URINAL, room_id, br_dim,  dir, 0, tot_light_amt);
+				objs.emplace_back(urinal, TYPE_URINAL, room_id, br_dim,  dir, 0, tot_light_amt);
 				add_bathroom_plumbing(objs.back());
 			} // for n
 			if (!two_rows) { // skip first wall if adjacent to a stall
