@@ -358,7 +358,8 @@ bool local_smap_data_t::set_smap_shader_for_light(shader_t &s, bool &arr_tex_set
 		assert(tex_ret); // Note: we can assert this returns true, though it makes shader debugging harder
 	}
 	assert(layer_id < MAX_DLIGHT_SMAPS);
-	xform_matrix const tm((cur_camera_pos_xlate == all_zeros) ? texture_matrix : glm::translate(texture_matrix, vec3_from_vector3d(-cur_camera_pos_xlate)));
+	xform_matrix tm(texture_matrix);
+	if (cur_camera_pos_xlate != all_zeros) {tm = glm::translate(tm, vec3_from_vector3d(-cur_camera_pos_xlate));}
 	upload_ubo_sub_data(tm.get_ptr(), layer_id*MAT4x4_SIZE, MAT4x4_SIZE); // shadow_matrix_ubo should be bound
 	return 1;
 }

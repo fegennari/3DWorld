@@ -1654,7 +1654,7 @@ void building_room_geom_t::add_mirror(room_object_t const &c) {
 }
 
 cube_t get_mirror_surface(room_object_t const &c) {
-	return (c.is_open() ? get_open_door_bcube(c, get_med_cab_wall_thickness(c)) : c);
+	return (c.is_open() ? get_open_door_bcube(c, get_med_cab_wall_thickness(c)) : (cube_t)c);
 }
 void building_room_geom_t::add_med_cab(room_object_t const &c) {
 	bool is_mirror(c.is_mirror());

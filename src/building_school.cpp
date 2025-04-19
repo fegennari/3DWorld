@@ -129,8 +129,7 @@ void building_t::add_objects_next_to_classroom_chalkboard(rand_gen_t &rgen, room
 
 void building_t::add_hallway_lockers(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	bool const dim(room.dx() < room.dy()); // hallway dim
-	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
-	float const locker_height(0.75*floor_spacing), locker_depth(0.25*locker_height), locker_width(0.22*locker_height);
+	float const floor_spacing(get_window_vspace()), locker_height(0.75*floor_spacing), locker_depth(0.25*locker_height), locker_width(0.22*locker_height);
 	cube_t place_area(get_walkable_room_bounds(room));
 	place_area.expand_in_dim(dim, -4.0*locker_width); // leave 4 locker's worth of space at the ends for windows, etc.
 	vect_room_object_t &objs(interior->room_geom->objs);

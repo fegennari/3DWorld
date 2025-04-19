@@ -370,7 +370,7 @@ void building_t::place_chairs_along_walls(rand_gen_t &rgen, room_t const &room, 
 }
 
 bool building_t::add_exam_room_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start) {
-	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
+	float const wall_thickness(get_wall_thickness());
 	cube_t const room_area(get_walkable_room_bounds(room));
 	cube_t place_area(room_area);
 	place_area.expand_by(-1.0*wall_thickness); // add extra padding, since bed models are slightly different sizes
