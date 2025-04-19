@@ -977,7 +977,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		case TYPE_BUCKET:    add_bucket(*i, 0, 1); break; // draw_metal=0, draw_liquid=1
 		case TYPE_DWASHER:   add_dishwasher(*i); break;
 		case TYPE_IBEAM:     add_ibeam(*i); break;
-		case TYPE_CHEM_TANK: add_chem_tank(*i); break;
+		case TYPE_CHEM_TANK: add_chem_tank(*i, 0); break; // draw_label=0
 		case TYPE_HVAC_UNIT: add_hvac_unit(*i); break;
 		case TYPE_VENT_FAN:  add_vent_fan_frame(*i); break;
 		case TYPE_VENDING:   add_vending_machine(*i); break;
@@ -1122,6 +1122,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_DUCT:       add_duct(c); break;
 		case TYPE_WARN_LIGHT: add_warning_light(c); break;
 		case TYPE_PALLET:     add_pallet(c); break;
+		case TYPE_CHEM_TANK:  add_chem_tank(c, 1); break; // draw_label=1
 		case TYPE_DBG_SHAPE:  add_debug_shape(c); break;
 		default: break;
 		} // end switch

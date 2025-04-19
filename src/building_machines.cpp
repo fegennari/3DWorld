@@ -966,7 +966,7 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 
 void building_t::add_chem_tank_gauge(room_object_t const &tank, float radius, float height) {
 	bool gdim(tank.dim), gdir(tank.dir);
-	if (gdim == 1 && gdir == 1) {gdir ^= 1;} // swap to avoid placing over label
+	if (gdim == 1 && gdir == 1 && height < 0.5*tank.dz()) {gdir ^= 1;} // swap gauge if in the bottom half to avoid placing over label
 	float const gauge_depth(0.25*radius), tank_side(tank.d[gdim][gdir]);
 	cube_t gauge;
 	set_wall_width(gauge, (tank.z1() + height), radius, 2); // Z

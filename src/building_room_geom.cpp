@@ -5887,32 +5887,36 @@ int get_chem_tank_tid(room_object_t const &c) {
 	string const tex_name(tex_names[c.item_flags & 3]); // select a random texture
 	return (tex_name.empty() ? -1 : get_texture_by_name(tex_name));
 }
-void building_room_geom_t::add_chem_tank(room_object_t const &c) {
+void building_room_geom_t::add_chem_tank(room_object_t const &c, bool draw_label) {
 	float const height(c.dz()), radius(c.get_radius());
 	assert(height > 2.0*radius);
+	cube_t mid(c);
+	set_cube_zvals(mid, (c.z1() + radius), (c.z2() - radius));
+
+	if (draw_label) { // add warning label on side of tank
+		cube_t label(mid);
+		label.expand_by_xy(0.001*radius);
+		set_wall_width(label, (mid.z1() + 0.35*mid.dz()), radius/PI, 2);
+		string const tex_fn((c.dim ^ c.dir) ? "interiors/flammable_sign.png" : "interiors/hazardous_chemicals.png"); // select one of two textures
+		rgeom_mat_t &label_mat(mats_amask.get_material(tid_nm_pair_t(get_texture_by_name(tex_fn)), 0)); // unshadowed
+		label_mat.add_vcylin_to_verts(label, apply_light_color(c, WHITE), 0, 0, 0, 0, 1.0, 1.0, 8.0, 1.0, 0, N_CYL_SIDES, 0.0, 0, 1.0, 0.0, 4); // sides, eighth
+		return;
+	}
 	colorRGBA const color(apply_light_color(c));
 	int const tid(get_chem_tank_tid(c));
 	tid_nm_pair_t tex(tid);
 	tex.set_specular_color(WHITE, 0.5, 40.0); // applies to textured case
 	rgeom_mat_t &mat((tid < 0) ? get_metal_material(1) : get_material(tex, 1)); // shadowed
 	// capsule shape
-	cube_t bot(c), mid(c), top(c), base(c);
+	cube_t bot(c), top(c), base(c);
 	bot.z2() = c.z1() + 2.0*radius;
 	top.z1() = c.z2() - 2.0*radius;
-	set_cube_zvals(mid, (c.z1() + radius), (c.z2() - radius));
 	base.expand_by_xy(-0.5*radius); // half radius
 	base.z2() = mid.z1();
 	mat.add_vcylin_to_verts(base, color, 0, 0); // draw sides only
 	mat.add_vcylin_to_verts(mid,  color, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, N_CYL_SIDES, 0.0, 0, mid.dz()/(PI*radius)); // draw sides only, with correct length tscale
 	mat.add_sphere_to_verts(bot,  color, 0,  plus_z); // bot hemisphere
 	mat.add_sphere_to_verts(top,  color, 0, -plus_z); // top hemisphere
-	// warning label on side of tank
-	cube_t label(mid);
-	label.expand_by_xy(0.001*radius);
-	set_wall_width(label, (mid.z1() + 0.35*mid.dz()), radius/PI, 2);
-	string const tex_fn((c.dim ^ c.dir) ? "interiors/flammable_sign.png" : "interiors/hazardous_chemicals.png"); // select one of two textures
-	rgeom_mat_t &label_mat(get_material(tid_nm_pair_t(get_texture_by_name(tex_fn)), 0)); // unshadowed
-	label_mat.add_vcylin_to_verts(label, apply_light_color(c, WHITE), 0, 0, 0, 0, 1.0, 1.0, 8.0, 1.0, 0, N_CYL_SIDES, 0.0, 0, 1.0, 0.0, 4); // sides, eighth
 	// add pipes to floor
 	unsigned const pipe_ndiv(get_rgeom_sphere_ndiv(1)); // low_detail=1
 	rgeom_mat_t &pipe_mat(get_metal_material(1, 0, 1, 0, COPPER_C)); // small=1

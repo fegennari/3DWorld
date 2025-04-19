@@ -1320,7 +1320,7 @@ struct building_room_geom_t {
 	void add_fishtank(room_object_t const &c);
 	void add_metal_bar(room_object_t const &c);
 	void add_ibeam(room_object_t const &c);
-	void add_chem_tank(room_object_t const &c);
+	void add_chem_tank(room_object_t const &c, bool draw_label);
 	void add_hvac_unit(room_object_t const &c);
 	void add_vent_fan_frame(room_object_t const &c);
 	void add_store_gate(cube_t const &c, bool dim, float open_amt);
