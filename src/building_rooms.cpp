@@ -822,7 +822,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				added_pool_room = added_obj = 1;
 			}
 			if (!added_obj && is_hospital()) {
-				bool const must_be_waiting(has_stairs || r->has_elevator);
+				bool must_be_waiting(has_stairs || r->has_elevator);
 				if (num_int_doors < 0) {num_int_doors = count_num_int_doors(*r);} // count itertior doors the first time we get here
 
 				// hospital room with a window and either a subroom (bathroom) or no more than one interior door
@@ -833,6 +833,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					}
 				}
 				if (!added_obj) { // hospital room without a window, multiple doors, or failed to make a hospital bedroom
+					if (r->has_subroom()) {must_be_waiting = 1;} // only waiting rooms have logic to handle placement around bathrooms
 					unsigned const rand_val(must_be_waiting ? 0 : (rgen.rand() % ((f == 0) ? 2 : 5))); // first floor is always waiting or exam room
 
 					if (rand_val == 0) { // waiting room; should there be at most one per floor?
