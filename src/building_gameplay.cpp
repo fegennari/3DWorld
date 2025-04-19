@@ -596,7 +596,7 @@ class player_inventory_t { // manages player inventory, health, and other stats
 	float prev_player_zval, respawn_time=0.0, accum_fall_damage=0.0;
 	unsigned num_doors_unlocked, has_key; // has_key is a bit mask for key colors
 	unsigned machine_rseed1=0, machine_rseed2=0;
-	int prev_respawn_frame=0;
+	int prev_respawn_frame=0, last_meds_frame=0;
 	bool prev_in_building, has_flashlight, is_poisoned, poison_from_spider, has_pool_cue;
 
 	void register_player_death(unsigned sound_id, string const &why) {
@@ -735,10 +735,19 @@ public:
 		}
 	}
 	void use_medicine() {
-		player_health = 1.0;
-		is_poisoned   = 0;
+		last_meds_frame = frame_counter;
+		player_health   = 1.0;
+		is_poisoned     = 0;
+	}
+	bool maybe_use_medicine() {
+		if (last_meds_frame > 0 && (frame_counter - last_meds_frame) < 60.0*TICKS_PER_SECOND) {
+			print_text_onscreen("Must wait for another dose of medicine", RED, 0.8, 2.5*TICKS_PER_SECOND, 0);
+			return 0;
+		}
+		use_medicine();
 		print_text_onscreen("Used Medicine", CYAN, 0.8, 1.5*TICKS_PER_SECOND, 0);
 		gen_sound_thread_safe_at_player(SOUND_GULP, 1.0);
+		return 1;
 	}
 	void register_reward(float value) {
 		assert(value > 0.0);
@@ -799,7 +808,7 @@ public:
 				case BOTTLE_TYPE_BEER  : drunk  =  0.25; liquid = 0.5; break; // beer
 				case BOTTLE_TYPE_WINE  : drunk  =  0.50; liquid = 0.5; break; // wine (entire bottle)
 				case BOTTLE_TYPE_POISON: health = -0.50; break; // poison - take damage
-				case BOTTLE_TYPE_MEDS  : health =  1.00; is_poisoned = 0; break; // medicine, restore full health and cure poisoning
+				case BOTTLE_TYPE_MEDS  : use_medicine(); break; // medicine, restore full health and cure poisoning
 				default: assert(0);
 				}
 			}
@@ -2301,8 +2310,7 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos, bool
 		}
 		else if (obj.is_medicine()) {
 			if (!player_at_full_health()) { // don't use if not needed
-				player_inventory.use_medicine();
-				player_inventory.mark_last_item_used(); // will remove it
+				if (player_inventory.maybe_use_medicine()) {player_inventory.mark_last_item_used();} // will remove it
 			}
 		}
 		else if (obj.type == TYPE_FIRE_EXT) {
