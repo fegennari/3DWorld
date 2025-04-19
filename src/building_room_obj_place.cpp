@@ -2249,11 +2249,11 @@ int building_t::gather_room_placement_blockers(cube_t const &room, unsigned objs
 			blockers.push_back(*i);
 		}
 	}
-	for (auto i = doors.begin(); i != doors.end(); ++i) { // exterior doors
-		add_door_if_blocker(i->get_bcube(), room, 0, 0, 0, 1, blockers);
+	for (auto const &door : doors) { // exterior doors
+		add_door_if_blocker(door.get_bcube(), room, 0, 0, 0, 1, blockers);
 	}
-	for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) { // interior doors
-		add_door_if_blocker(*i, room, door_opens_inward(*i, room), i->open_dir, i->hinge_side, 0, blockers);
+	for (door_stack_t const &ds : interior->door_stacks) { // interior doors
+		add_door_if_blocker(ds, room, door_opens_inward(ds, room), ds.open_dir, ds.hinge_side, 0, blockers);
 	}
 	// Note: caller must call is_blocked_by_stairs_or_elevator() to handle stairs and elevators
 	return table_blocker_ix;

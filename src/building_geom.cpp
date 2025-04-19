@@ -558,8 +558,8 @@ bool building_t::is_valid_door_pos(cube_t const &door, float door_width, bool di
 	cube_t test_cube(door);
 	test_cube.expand_by_xy(2.0*door_width); // must have at least two door widths of space
 
-	for (auto d = doors.begin(); d != doors.end(); ++d) { // check other exterior doors
-		if (test_cube.intersects(d->get_bcube())) return 0;
+	for (auto const &door : doors) { // check other exterior doors
+		if (test_cube.intersects(door.get_bcube())) return 0;
 	}
 	if (has_chimney == 2 && test_cube.intersects(get_fireplace())) return 0; // too close to fireplace (Note: door is actually placed first, likely has no effect)
 	return 1;
@@ -2524,9 +2524,9 @@ bool building_interior_t::is_cube_close_to_doorway(cube_t const &c, cube_t const
 		room_exp.expand_by_xy(0.1*door_width); // small amount to include wall width
 		test_cube.intersect_with_cube_xy(room_exp);
 	}
-	for (auto i = door_stacks.begin(); i != door_stacks.end(); ++i) { // interior doors
-		if (!test_cube.intersects(*i)) continue; // optimization
-		if (is_cube_close_to_door(c, dmin, (inc_open && door_opens_inward(*i, room)), *i, i->get_check_dirs(), (check_open_dir ? i->open_dir : 2))) return 1;
+	for (door_stack_t const &ds : door_stacks) { // interior doors
+		if (!test_cube.intersects(ds)) continue; // optimization
+		if (is_cube_close_to_door(c, dmin, (inc_open && door_opens_inward(ds, room)), ds, ds.get_check_dirs(), (check_open_dir ? ds.open_dir : 2))) return 1;
 	}
 	for (cube_t const &w : open_walls) { // open walls count as doorways, even though there's no door
 		cube_t wall_exp(w);

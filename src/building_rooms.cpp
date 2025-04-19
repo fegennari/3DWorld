@@ -97,7 +97,7 @@ unsigned building_t::count_num_int_doors(room_t const &room) const {
 	float const wall_thickness(get_wall_thickness());
 	room_exp.expand_by(wall_thickness, wall_thickness, -wall_thickness); // expand in XY and shrink in Z
 	unsigned num(0);
-	for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) {num += i->intersects(room_exp);}
+	for (door_stack_t const &ds : interior->door_stacks) {num += ds.intersects(room_exp);}
 	return num;
 }
 
@@ -1814,9 +1814,9 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		}
 	}
 	// add vertical strips on each side + strip on top of interior doors
-	for (auto d = interior->door_stacks.begin(); d != interior->door_stacks.end(); ++d) {
-		if (d->on_stairs) continue; // no frame for stairs door, skip
-		add_trim_for_door_or_int_window(*d, d->dim, d->get_mult_floor(), 0, door_trim_width, trim_thickness, door_trim_exp, window_vspacing); // draw_bot_trim=0
+	for (door_stack_t const &ds : interior->door_stacks) {
+		if (ds.on_stairs) continue; // no frame for stairs door, skip
+		add_trim_for_door_or_int_window(ds, ds.dim, ds.get_mult_floor(), 0, door_trim_width, trim_thickness, door_trim_exp, window_vspacing); // draw_bot_trim=0
 	}
 	// handle interior windows similar to interior doors, except we also draw bottom trim
 	for (cube_t const &w : interior->int_windows) {

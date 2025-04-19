@@ -1543,21 +1543,21 @@ bool building_t::maybe_assign_interior_garage(bool &gdim, bool &gdir) {
 	room_exp.expand_by_xy(wall_thickness);
 
 	// ensure all doors connected to the garage open outward from the garage so that they won't clip through cars (though it's generally the opposite for real houses)
-	for (auto d = interior->door_stacks.begin(); d != interior->door_stacks.end(); ++d) {
-		if (!d->intersects(room_exp)) continue;
+	for (door_stack_t &ds : interior->door_stacks) {
+		if (!ds.intersects(room_exp)) continue;
 
 		for (unsigned dim = 0; dim < 2; ++dim) {
 			for (unsigned dir = 0; dir < 2; ++dir) {
 				cube_t wall(room);
 				wall.d[dim][!dir] = wall.d[dim][dir]; // shrink to zero width
 				wall.expand_in_dim(dim, wall_thickness); // expand wall outward
-				if (!d->intersects(wall)) continue;
-				d->open_dir = dir; // update the door stack
-				assert(d->first_door_ix < interior->doors.size());
+				if (!ds.intersects(wall)) continue;
+				ds.open_dir = dir; // update the door stack
+				assert(ds.first_door_ix < interior->doors.size());
 
-				for (unsigned dix = d->first_door_ix; dix < interior->doors.size(); ++dix) {
+				for (unsigned dix = ds.first_door_ix; dix < interior->doors.size(); ++dix) {
 					door_t &door(interior->doors[dix]);
-					if (!d->is_same_stack(door)) break; // moved to a different stack, done
+					if (!ds.is_same_stack(door)) break; // moved to a different stack, done
 					door.open_dir = dir; // update the doors themselves
 				}
 			} // for dir

@@ -2570,12 +2570,12 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 	if (line_int_cubes_get_t(pos, pos2, interior->ceilings, tmin, target)) {normal = -plus_z;}
 	
 	// check closed interior doors
-	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
-		if (i->open_amt > 0.0) continue;
-		cube_t door(i->get_true_bcube());
+	for (door_t const &d : interior->doors) {
+		if (d.open_amt > 0.0) continue;
+		cube_t door(d.get_true_bcube());
 		if (!line_int_cube_get_t(pos, pos2, door, tmin)) continue;
 		target = door;
-		normal = get_coll_normal(i->dim, dir);
+		normal = get_coll_normal(d.dim, dir);
 	}
 	// check for rugs, pictures, and whiteboards, which can all be painted over; also check for walls from closets
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators

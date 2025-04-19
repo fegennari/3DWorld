@@ -2511,12 +2511,12 @@ bool building_t::get_zval_for_obj_placement(point const &pos, float radius, floa
 		if (i->is_round() && !dist_xy_less_than(pos, i->get_cube_center(), (i->get_radius() + radius))) continue; // round object (approx)
 		return 0; // object in the way, can't place here
 	} // for i
-	for (auto i = interior->room_geom->expanded_objs.begin(); i != interior->room_geom->expanded_objs.end(); ++i) { // check books, etc.
-		if (!i->can_place_onto() || !i->contains_pt_xy(pos) || i->z2() < zval || i->z2() > start_zval) continue; // not a valid placement
-		zval = i->z2() + z_bias; // place on top of this object
+	for (room_object_t const &o : interior->room_geom->expanded_objs) { // check books, etc.
+		if (!o.can_place_onto() || !o.contains_pt_xy(pos) || o.z2() < zval || o.z2() > start_zval) continue; // not a valid placement
+		zval = o.z2() + z_bias; // place on top of this object
 	}
-	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) { // check for door intersection
-		if (!i->open && sphere_cube_intersect(pos, radius, i->get_true_bcube())) return 0; // blocked by closed door (open doors are more difficult)
+	for (door_t const &door : interior->doors) { // check for door intersection
+		if (!door.open && sphere_cube_intersect(pos, radius, door.get_true_bcube())) return 0; // blocked by closed door (open doors are more difficult)
 	}
 	return 1;
 }
