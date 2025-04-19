@@ -349,7 +349,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		colorRGBA const &base_chair_color(chair_colors[chair_color_ix % NUM_CHAIR_COLORS]);
 		light_ix_assign.next_room();
 		rand_gen_t room_rgen(rgen); // shared across all floors of this room
-		int nested_room_ix(-1);
+		int nested_room_ix(-1), num_int_doors(-1);
 		// select light color for this room
 		colorRGBA color;
 		if (r->is_ext_basement_conn()) {color = RED;}
@@ -823,14 +823,16 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			}
 			if (!added_obj && is_hospital()) {
 				bool const must_be_waiting(has_stairs || r->has_elevator);
+				if (num_int_doors < 0) {num_int_doors = count_num_int_doors(*r);} // count itertior doors the first time we get here
 
-				if (has_window && !must_be_waiting) { // hospital room with a window
+				// hospital room with a window and either a subroom (bathroom) or no more than one interior door
+				if (has_window && !must_be_waiting && (r->has_subroom() || num_int_doors <= 1)) {
 					if (add_hospital_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start, nested_room_ix)) {
 						added_obj = no_whiteboard = 1;
 						r->assign_to(RTYPE_HOS_BED, f);
 					}
 				}
-				if (!added_obj) { // hospital room without a window, or failed to make a hospital bedroom
+				if (!added_obj) { // hospital room without a window, multiple doors, or failed to make a hospital bedroom
 					unsigned const rand_val(must_be_waiting ? 0 : (rgen.rand() % ((f == 0) ? 2 : 5))); // first floor is always waiting or exam room
 
 					if (rand_val == 0) { // waiting room; should there be at most one per floor?

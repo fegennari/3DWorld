@@ -27,6 +27,7 @@ void building_t::add_hospital_bathrooms(unsigned rooms_start, rand_gen_t &rgen) 
 bool building_t::maybe_create_nested_bathroom(room_t &room, rand_gen_t &rgen) { // for hospital rooms
 	if (is_room_windowless         (room)) return 0; // windowless room can't be a hospital bedroom, but it can be a bathroom, storage, office, etc.
 	if (check_skylight_intersection(room)) return 0; // unlikely, but not handled here
+	if (count_num_int_doors(room) > 1)     return 0; // one door only
 	float const floor_spacing(get_window_vspace()), rdx(room.dx()), rdy(room.dy());
 	if (min(rdx, rdy) < 2.0*floor_spacing || max(rdx, rdy) < 2.5*floor_spacing) return 0; // too small
 	float const door_width(get_doorway_width()), door_hwidth(0.5*door_width), wall_thick(get_wall_thickness()), wall_hthick(0.5*wall_thick);
