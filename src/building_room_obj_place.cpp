@@ -4100,26 +4100,36 @@ void building_t::place_book_on_obj(rand_gen_t &rgen, room_object_t const &place_
 	set_obj_id(objs);
 }
 
-bool building_t::place_bottle_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid) {
-	float const window_vspacing(get_window_vspace());
-	float const height(window_vspacing*rgen.rand_uniform(0.075, 0.12)), radius(window_vspacing*rgen.rand_uniform(0.012, 0.018));
-	if (min(place_on.dx(), place_on.dy()) < 6.0*radius) return 0; // surface is too small to place this bottle
-	cube_t const bottle(place_cylin_object(rgen, place_on, radius, height, 2.0*radius));
+bool place_bottle_on_obj(rand_gen_t &rgen, cube_t const &place_on, vect_room_object_t &objs, float vspace,
+	unsigned rid, float lamt, unsigned max_type, vect_cube_t const &avoid, bool at_z1)
+{
+	float const height(vspace*rgen.rand_uniform(0.075, 0.12)), radius(vspace*rgen.rand_uniform(0.012, 0.018));
+	if (min(place_on.dx(), place_on.dy()) < 5.0*radius) return 0; // surface is too small to place this bottle
+	if (at_z1 && height > place_on.dz())                return 0; // too tall to place in object
+	cube_t const bottle(place_cylin_object(rgen, place_on, radius, height, 2.0*radius, at_z1));
 	if (has_bcube_int(bottle, avoid)) return 0; // only make one attempt
-	vect_room_object_t &objs(interior->room_geom->objs);
-	objs.emplace_back(bottle, TYPE_BOTTLE, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN);
-	objs.back().set_as_bottle(rgen.rand(), 3); // 0-3; excludes poison and medicine
+	objs.emplace_back(bottle, TYPE_BOTTLE, rid, 0, 0, RO_FLAG_NOCOLL, lamt, SHAPE_CYLIN);
+	objs.back().set_as_bottle(rgen.rand(), max_type);
 	return 1;
 }
-bool building_t::place_dcan_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid) { // drink can
-	float const window_vspacing(get_window_vspace()), height(0.06*window_vspacing), radius(0.016*window_vspacing);
-	if (min(place_on.dx(), place_on.dy()) < 6.0*radius) return 0; // surface is too small to place this can
-	cube_t const can(place_cylin_object(rgen, place_on, radius, height, 2.0*radius));
+bool place_dcan_on_obj(rand_gen_t &rgen, cube_t const &place_on, vect_room_object_t &objs, float vspace,
+	unsigned rid, float lamt, unsigned max_type, vect_cube_t const &avoid, bool at_z1)
+{
+	float const height(0.06*vspace), radius(0.016*vspace);
+	if (min(place_on.dx(), place_on.dy()) < 5.0*radius) return 0; // surface is too small to place this can
+	if (at_z1 && height > place_on.dz())                return 0; // too tall to place in object
+	cube_t const can(place_cylin_object(rgen, place_on, radius, height, 2.0*radius, at_z1));
 	if (has_bcube_int(can, avoid)) return 0; // only make one attempt
-	vect_room_object_t &objs(interior->room_geom->objs);
-	objs.emplace_back(can, TYPE_DRINK_CAN, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, LT_GRAY);
+	objs.emplace_back(can, TYPE_DRINK_CAN, rid, 0, 0, RO_FLAG_NOCOLL, lamt, SHAPE_CYLIN, LT_GRAY);
 	objs.back().obj_id = (uint16_t)(rgen.rand() & 127); // strip off empty bit
+	if (objs.back().get_drink_can_type() > max_type) {objs.back().obj_id = max_type;} // clamp to max_type
 	return 1;
+}
+bool building_t::place_bottle_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid, bool place_at_z1) {
+	return ::place_bottle_on_obj(rgen, place_on, interior->room_geom->objs, get_window_vspace(), room_id, tot_light_amt, BOTTLE_TYPE_WINE, avoid, place_at_z1);
+}
+bool building_t::place_dcan_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid, bool place_at_z1) { // drink can
+	return ::place_dcan_on_obj(rgen, place_on, interior->room_geom->objs, get_window_vspace(), room_id, tot_light_amt, DRINK_CAN_TYPE_BEER, avoid, place_at_z1);
 }
 
 colorRGBA choose_pot_color(rand_gen_t &rgen) {

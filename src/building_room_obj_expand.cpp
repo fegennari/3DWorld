@@ -17,6 +17,10 @@ void set_wall_width(cube_t &wall, float pos, float half_thick, unsigned dim);
 float get_med_cab_wall_thickness(room_object_t const &c);
 float get_locker_wall_thickness (room_object_t const &c);
 float get_radius_for_square_model(unsigned model_id);
+bool place_bottle_on_obj(rand_gen_t &rgen, cube_t const &place_on, vect_room_object_t &objs, float vspace,
+	unsigned rid, float lamt, unsigned max_type, vect_cube_t const &avoid, bool at_z1);
+bool place_dcan_on_obj  (rand_gen_t &rgen, cube_t const &place_on, vect_room_object_t &objs, float vspace,
+	unsigned rid, float lamt, unsigned max_type, vect_cube_t const &avoid, bool at_z1);
 
 void resize_model_cube_xy(cube_t &cube, float dim_pos, float not_dim_pos, unsigned id, bool dim) {
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(id)); // L, W, H
@@ -998,12 +1002,13 @@ void add_rows_of_vcylinders(room_object_t const &c, cube_t const &region, float 
 		objc.translate_dim(!c.dim, row_spacing);
 	} // for row
 }
-void add_row_of_cubes(room_object_t const &c, cube_t const &region, float width, float depth, float height, float spacing_factor, unsigned type,
+unsigned add_row_of_cubes(room_object_t const &c, cube_t const &region, float width, float depth, float height, float spacing_factor, unsigned type,
 	unsigned flags, vect_room_object_t &objects, rand_gen_t &rgen, bool dir=0, bool inv_dim=0, unsigned max_stack_height=1, bool no_empty=0)
 {
 	float const length(region.get_sz_dim(!c.dim)), space(spacing_factor*width), stride(width + space);
 	unsigned const objects_start(objects.size()), num_rows(length/stride); // round down
 	float const row_spacing(length/num_rows), shelf_depth(region.get_sz_dim(c.dim));
+	unsigned num_items(0);
 	point pos;
 	pos[ c.dim] = region.d[ c.dim][0] + 0.5*shelf_depth;
 	pos[!c.dim] = region.d[!c.dim][0] + 0.5*row_spacing;
@@ -1032,6 +1037,7 @@ void add_row_of_cubes(room_object_t const &c, cube_t const &region, float width,
 				else if (type == TYPE_FOLD_SHIRT) {obj.color   = TSHIRT_COLORS [rgen.rand()%NUM_TSHIRT_COLORS ];} // random color
 				else if (type == TYPE_MONITOR   ) {obj.obj_id |= 1;} // off by default; set LSB
 				objects.push_back(obj);
+				++num_items;
 				if (stack+1 == stack_height) break; // done with stack
 				objc_stack.translate_dim(2, obj.dz()); // shift stack up
 				if (objc_stack.z2() > region.z2()) break; // stack is too tall
@@ -1043,6 +1049,7 @@ void add_row_of_cubes(room_object_t const &c, cube_t const &region, float width,
 		}
 		objc.translate_dim(!c.dim, row_spacing);
 	} // for row
+	return num_items;
 }
 void add_row_of_balls(room_object_t const &c, cube_t const &region, float spacing_factor,
 	float floor_spacing, unsigned flags, vect_room_object_t &objects, rand_gen_t &rgen)
@@ -1311,14 +1318,31 @@ void building_room_geom_t::expand_locker(room_object_t const &c) {
 	interior.expand_by(-wall_thickness);
 	interior.z1() += 0.02*c.dz();
 	interior.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*1.5*wall_thickness;
-	float const width(interior.get_sz_dim(!c.dim)), depth(interior.get_sz_dim(c.dim));
+	float const width(interior.get_sz_dim(!c.dim)), depth(interior.get_sz_dim(c.dim)), height(interior.dz()), vspace(c.dz()/0.75);
 	unsigned const init_objs_sz(expanded_objs.size());
 
 	for (unsigned level = 0; level < 2; ++level) { // {bottom, top}
-		if (level == 1) {interior.z1() += 0.5*(interior.dz() + wall_thickness);} // upper level
+		cube_t place_area(interior);
+		if (level == 0) {place_area.z2() -= 0.5*(height + wall_thickness);} // lower level
+		else            {place_area.z1() += 0.5*(height + wall_thickness);} // upper level
 		// add books
-		add_row_of_cubes(c, interior, width, depth, 0.15*depth, 0.0, TYPE_BOOK, flags, expanded_objs, rgen, !c.dir, 1, 4); // stacked up to 4 high
-		// TODO: place TYPE_BOTTLE, TYPE_DRINK_CAN, TYPE_PAPER, TYPE_PEN, TYPE_PENCIL, TYPE_MARKER, TYPE_MONEY, TYPE_PHONE, TYPE_LAPTOP, TYPE_TRASH, TYPE_SHOE
+		if (add_row_of_cubes(c, place_area, width, depth, 0.15*depth, 0.0, TYPE_BOOK, flags, expanded_objs, rgen, !c.dir, 1, 4) > 0) { // stacked up to 4 high
+			float const orig_z2(interior.z2());
+			place_area = expanded_objs.back(); // top book
+			set_cube_zvals(place_area, place_area.z2(), orig_z2); // space above the book
+		}
+		unsigned const num_obj_types = 5;
+		unsigned const obj_types[num_obj_types] = {TYPE_NONE, TYPE_BOTTLE, TYPE_DRINK_CAN, TYPE_PHONE, TYPE_TRASH};
+		// TODO: TYPE_SHOE?
+
+		switch (obj_types[rgen.rand()%num_obj_types]) {
+		case TYPE_NONE:      break; // empty
+		case TYPE_BOTTLE:    place_bottle_on_obj(rgen, place_area, expanded_objs, vspace, c.room_id, c.light_amt, BOTTLE_TYPE_COKE,    vect_cube_t(), 1); break; // at_z1=1
+		case TYPE_DRINK_CAN: place_dcan_on_obj  (rgen, place_area, expanded_objs, vspace, c.room_id, c.light_amt, DRINK_CAN_TYPE_COKE, vect_cube_t(), 1); break; // at_z1=1
+		case TYPE_PHONE:     break; // TODO
+		case TYPE_TRASH:     break; // TODO
+		default: assert(0);
+		}
 	} // for level
 	if (expanded_objs.size() > init_objs_sz) {invalidate_small_geom();}
 }
