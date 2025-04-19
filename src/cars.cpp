@@ -1000,7 +1000,7 @@ void car_manager_t::assign_car_model_size_color(car_t &car, rand_gen_t &local_rg
 			
 			// if there are multiple models to choose from, and this car is in a garage, try for a model that's not scaled up (truck or ambulance) (what about driveways?)
 			if (FORCE_MODEL_ID < 0 && is_in_garage && model.scale > 1.0) {
-				if (btype == BTYPE_HOSPITAL && model.scale <= 1.5) {} // ambulance; allow it, scaled down
+				if (btype == BTYPE_HOSPITAL && model.scale <= 1.5) {} // ambulance; allow it, scaled down; can we add a school bus to school parking garages?
 				else if (num_models > 1 && n+1 < 20) continue; // try a different model
 				// don't scale the model because it may not fit; instead, add a small truck if we can't place a car
 				car.apply_scale(1.2); // that's about all that can fit
@@ -1027,6 +1027,7 @@ void car_manager_t::assign_car_model_size_color(car_t &car, rand_gen_t &local_rg
 		string const &fn(car_model_loader.get_model(car.model_id).fn);
 		if      (fn.find("Police"   ) != string::npos || fn.find("police"   ) != string::npos) {car.is_police    = 1;}
 		else if (fn.find("Ambulance") != string::npos || fn.find("ambulance") != string::npos) {car.is_ambulance = 1;}
+		//else if (fn.find("Bus"      ) != string::npos || fn.find("bus"      ) != string::npos) {car.is_bus       = 1;} // future work
 		car.is_emergency = is_active_emergency_vehicle(car_model_loader, car, 1, 1); // both lights and siren
 	}
 	assert(car.is_valid());

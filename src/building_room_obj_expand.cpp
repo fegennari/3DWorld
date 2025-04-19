@@ -1318,7 +1318,7 @@ void building_room_geom_t::expand_locker(room_object_t const &c) {
 		if (level == 1) {interior.z1() += 0.5*(interior.dz() + wall_thickness);} // upper level
 		// add books
 		add_row_of_cubes(c, interior, width, depth, 0.15*depth, 0.0, TYPE_BOOK, flags, expanded_objs, rgen, !c.dir, 1, 4); // stacked up to 4 high
-		// TODO: place TYPE_BOTTLE, TYPE_DRINK_CAN, TYPE_PAPER, TYPE_PEN, TYPE_PENCIL, TYPE_MARKER, TYPE_MONEY, TYPE_PHONE, TYPE_LAPTOP, TYPE_TRASH
+		// TODO: place TYPE_BOTTLE, TYPE_DRINK_CAN, TYPE_PAPER, TYPE_PEN, TYPE_PENCIL, TYPE_MARKER, TYPE_MONEY, TYPE_PHONE, TYPE_LAPTOP, TYPE_TRASH, TYPE_SHOE
 	} // for level
 	if (expanded_objs.size() > init_objs_sz) {invalidate_small_geom();}
 }
