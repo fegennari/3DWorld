@@ -76,6 +76,8 @@ bool building_t::add_classroom_objs(rand_gen_t rgen, room_t const &room, float z
 			if (!add_classroom_desk(rgen, room, desk, room_id, tot_light_amt, chair_color, dim, !dir, (1 + col + ncols*row))) continue;
 		} // for col
 	} // for row
+	bool const add_bottles(0), add_trash(rgen.rand_float() < 0.4), add_papers(rgen.rand_float() < 0.4), add_glass(0);
+	add_floor_clutter_objs(rgen, room, room_bounds, zval, room_id, tot_light_amt, objs_start, add_bottles, add_trash, add_papers, add_glass);
 	add_numbered_door_sign("Classroom ", room, zval, room_id, floor_ix);
 	return 1;
 }
@@ -130,7 +132,8 @@ void building_t::add_objects_next_to_classroom_chalkboard(rand_gen_t &rgen, room
 void building_t::add_hallway_lockers(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	bool const dim(room.dx() < room.dy()); // hallway dim
 	float const floor_spacing(get_window_vspace()), locker_height(0.75*floor_spacing), locker_depth(0.25*locker_height), locker_width(0.22*locker_height);
-	cube_t place_area(get_walkable_room_bounds(room));
+	cube_t room_bounds(get_walkable_room_bounds(room));
+	cube_t place_area(room_bounds);
 	place_area.expand_in_dim(dim, -4.0*locker_width); // leave 4 locker's worth of space at the ends for windows, etc.
 	vect_room_object_t &objs(interior->room_geom->objs);
 	float const hall_len(place_area.get_sz_dim(dim));
@@ -174,5 +177,7 @@ void building_t::add_hallway_lockers(rand_gen_t &rgen, room_t const &room, float
 			set_obj_id(objs); // for random contents
 		} // for n
 	} // for d
+	bool const add_bottles(0), add_trash(rgen.rand_float() < 0.75), add_papers(rgen.rand_float() < 0.5), add_glass(0);
+	add_floor_clutter_objs(rgen, room, room_bounds, zval, room_id, tot_light_amt, objs_start, add_bottles, add_trash, add_papers, add_glass);
 }
 

@@ -3043,14 +3043,14 @@ void building_t::add_basement_clutter_objs(rand_gen_t rgen, room_t const &room, 
 	bool const add_glass  (rgen.rand_float() < 0.65); // 65% of the time
 	cube_t place_area(get_walkable_room_bounds(room));
 	place_area.expand_by(-get_trim_thickness()); // add some extra padding
-	place_area.z1() = zval;
 	add_floor_clutter_objs(rgen, room, place_area, zval, room_id, tot_light_amt, objs_start, add_bottles, add_trash, add_papers, add_glass);
 }
-void building_t::add_floor_clutter_objs(rand_gen_t &rgen, room_t const &room, cube_t const &place_area, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
-	bool add_bottles, bool add_trash, bool add_papers, bool add_glass)
+void building_t::add_floor_clutter_objs(rand_gen_t &rgen, room_t const &room, cube_t place_area, float zval, unsigned room_id,
+	float tot_light_amt, unsigned objs_start, bool add_bottles, bool add_trash, bool add_papers, bool add_glass)
 {
 	vect_room_object_t &objs(interior->room_geom->objs);
 	float const floor_spacing(get_window_vspace()), min_place_sz(min(place_area.dx(), place_area.dy()));
+	place_area.z1() = zval;
 	vect_cube_t avoid;
 
 	if (add_bottles) { // add bottles on the floor
