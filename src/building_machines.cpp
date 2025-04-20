@@ -176,7 +176,12 @@ cube_t place_obj_on_cube_side(cube_t const &c, bool dim, bool dir, float hheight
 	return obj;
 }
 
-tid_nm_pair_t get_machine_part_texture(bool is_cylin, vector3d const sz, float &tscale, rand_gen_t &rgen) {
+tid_nm_pair_t get_machine_part_texture(bool is_cylin, vector3d const sz, float &tscale, bool untextured, rand_gen_t &rgen) {
+	if (untextured) { // for hospitals
+		tid_nm_pair_t tex(WHITE_TEX, 0.0, 1); // shadowed
+		tex.set_specular(0.5, 40.0);
+		return tex;
+	}
 	if (!is_cylin) {tscale /= sz.get_max_val();} // scale to fit the cube largest dim; cylinder tscale is unused in drawing
 	int tid(-1), nm_tid(-1);
 	
@@ -186,7 +191,7 @@ tid_nm_pair_t get_machine_part_texture(bool is_cylin, vector3d const sz, float &
 		tscale *= 2.0;
 	}
 	else {tid = get_metal_texture(rgen.rand());}
-	tid_nm_pair_t tex(tid, nm_tid, tscale, tscale, 0.0, 0.0, 1);
+	tid_nm_pair_t tex(tid, nm_tid, tscale, tscale, 0.0, 0.0, 1); // shadowed
 	tex.set_specular(0.1, 20.0);
 	return tex;
 }
@@ -298,7 +303,8 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 	rand_gen_t rgen(get_machine_info(c, floor_ceil_gap, base, parts, support, is_cylins, cylin_dims, num_parts, parts_swapped));
 	bool const dim(c.dim), dir(c.dir), two_part(num_parts == 2), in_factory(c.in_factory()), in_box(c.was_expanded());
 	float const pipe_rmax(0.033*min(height, min(width, depth))), back_wall_pos(c.d[dim][!dir]);
-	bool const metal_base(c.flags & RO_FLAG_FROM_SET); // factory machine grid
+	bool const metal_base( in_factory && (c.flags & RO_FLAG_FROM_SET  )); // factory machine grid
+	bool const untextured(!in_factory && (c.flags & RO_FLAG_UNTEXTURED)); // for hospitals
 	unsigned base_skip_faces(EF_Z1); // skip bottom
 	if (!in_factory) {base_skip_faces |= ~get_face_mask(c.dim, !c.dir);} // skip back face of base against wall for non-factory machines
 	int const base_tid(metal_base ? get_texture_by_name("metals/249_iron_metal_plate.jpg") : get_concrete_tid());
@@ -323,7 +329,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 		// draw main part and horizontal cylinder support
 		if (1) { // create a new scope for local variables
 			float tscale(1.0);
-			tid_nm_pair_t const part_tex(get_machine_part_texture(is_cylin, part_sz, tscale, rgen));
+			tid_nm_pair_t const part_tex(get_machine_part_texture(is_cylin, part_sz, tscale, untextured, rgen));
 			rgeom_mat_t &part_mat(get_material(part_tex, 1, 0, 1)); // shadowed, small
 			colorRGBA const part_color(apply_light_color(c, choose_machine_part_color(rgen, (part_tex.tid >= 0))));
 			
@@ -332,7 +338,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 				part_mat.add_ortho_cylin_to_verts(part, part_color, cylin_dim, (cylin_dim < 2), 1, 0, 0, 1.0, 1.0, ts.x, ts.y, 0, 32, 0.0, 0, ts.z); // draw sides and top
 
 				if (!support.is_all_zeros()) { // add/draw cylinder support; should only be for the first part
-					tid_nm_pair_t const tex(get_machine_part_texture(0, support.get_size(), tscale, rgen)); // is_cylin=0
+					tid_nm_pair_t const tex(get_machine_part_texture(0, support.get_size(), tscale, untextured, rgen)); // is_cylin=0
 					rgeom_mat_t &support_mat(get_material(tex, 1, 0, 1)); // shadowed, small
 					colorRGBA const support_color(apply_light_color(c, choose_machine_part_color(rgen, (part_tex.tid >= 0))));
 					support_mat.add_cube_to_verts(support, support_color, part.get_llc(), EF_Z12); // skip top and bottom
@@ -571,7 +577,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 				}
 				if (bad_place) continue;
 				float tscale(1.0);
-				tid_nm_pair_t const tex(get_machine_part_texture(add_cylin, 2.0*half_sz, tscale, rgen));
+				tid_nm_pair_t const tex(get_machine_part_texture(add_cylin, 2.0*half_sz, tscale, untextured, rgen));
 				rgeom_mat_t &mat(get_material(tex, 1, 0, 1)); // shadowed, small
 				colorRGBA const pcolor(choose_machine_part_color(rgen, (tex.tid >= 0))), spec_color(get_specular_color(pcolor)), lcolor(apply_light_color(c, pcolor));
 				

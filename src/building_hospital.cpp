@@ -452,7 +452,7 @@ bool building_t::add_operating_room_objs(rand_gen_t rgen, room_t &room, float zv
 	for (unsigned n = 0; n < num_machines; ++n) {
 		float const machine_height(rgen.rand_uniform(0.6, 0.8)*floor_spacing), xy_scale(rgen.rand_uniform(0.4, 0.7));
 		place_obj_along_wall(TYPE_MACHINE, room, machine_height, vector3d(xy_scale, xy_scale, 1.0), rgen, zval, room_id, tot_light_amt,
-			place_area, objs_start, 0.0, 0, 4, 0, WHITE, 1); // not_at_window=1
+			place_area, objs_start, 0.0, 0, 4, 0, WHITE, 1, SHAPE_CUBE, 0.0, RO_FLAG_UNTEXTURED); // not_at_window=1
 	}
 	place_area.expand_by_xy(-get_trim_thickness());
 
@@ -481,10 +481,12 @@ bool building_t::add_operating_room_objs(rand_gen_t rgen, room_t &room, float zv
 		}
 	}
 	// add a gas tank along a wall
+	unsigned const num_tank_colors = 3;
+	colorRGBA const tank_colors[num_tank_colors] = {WHITE, LT_GREEN, LT_BLUE};
 	float const tank_height(floor_spacing*rgen.rand_uniform(0.5, 0.7)), tank_rscale(rgen.rand_uniform(0.2, 0.3));
 	place_obj_along_wall(TYPE_CHEM_TANK, room, tank_height, vector3d(tank_rscale, tank_rscale, 1.0), rgen, zval, room_id, tot_light_amt, place_area, objs_start,
-		0.0, 1, 4, 0, WHITE, 0, SHAPE_CYLIN);
-	objs.back().item_flags = rgen.rand(); // random tank texture
+		0.0, 1, 4, 0, tank_colors[rgen.rand()%num_tank_colors], 0, SHAPE_CYLIN);
+	//objs.back().item_flags = rgen.rand(); // random tank texture
 	float const gauge_radius(0.035*tank_height), gauge_height(0.76*tank_height);
 	add_chem_tank_gauge(objs.back(), gauge_radius, gauge_height);
 	if (rgen.rand_bool()) {place_model_along_wall(OBJ_MODEL_WHEELCHAIR, TYPE_WHEELCHAIR, room, 0.45, rgen, zval, room_id, tot_light_amt, place_area, objs_start);}
