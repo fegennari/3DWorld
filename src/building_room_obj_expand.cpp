@@ -318,6 +318,7 @@ bool add_cabinet_objects(room_object_t const &c, vect_room_object_t &objects) { 
 		float const tcan_height(c_sz.z*rgen.rand_uniform(0.35, 0.55)), tcan_radius(min(tcan_height/rgen.rand_uniform(1.6, 2.8), 0.4f*c_min_xy));
 		cube_t tcan;
 		gen_xy_pos_for_round_obj(tcan, interior, tcan_radius, tcan_height, 1.1*tcan_radius, rgen, 1); // place_at_z1=1
+		tcan.translate_dim(2, 0.01*tcan_height); // move up slightly to prevent Z-fighting
 		room_object_t obj(tcan, TYPE_TCAN, c.room_id, c.dim, c.dir, flags, light_amt, (rgen.rand_bool() ? SHAPE_CYLIN : SHAPE_CUBE), tcan_colors[rgen.rand()%NUM_TCAN_COLORS]);
 		add_if_not_intersecting(obj, objects, cubes);
 	}
