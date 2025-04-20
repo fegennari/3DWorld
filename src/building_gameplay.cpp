@@ -275,8 +275,10 @@ bldg_obj_type_t const &get_room_obj_type(room_object_t const &obj) {
 	assert(obj.type < NUM_ROBJ_TYPES);
 	return bldg_obj_types[obj.type];
 }
+bldg_obj_type_t get_taken_obj_type(room_object_t const &obj);
+
 float carried_item_t::get_remaining_capacity_ratio() const {
-	unsigned const capacity(get_room_obj_type(*this).capacity);
+	unsigned const capacity(get_taken_obj_type(*this).capacity);
 	return ((capacity == 0) ? 1.0 : (1.0 - float(min(use_count, capacity))/float(capacity))); // Note: zero capacity is unlimited and ratio returned is always 1.0
 }
 
@@ -309,6 +311,7 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 	if (otype == TYPE_TPROLL  && obj.taken_level > 0) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,   6.0,  0.5, "toilet paper holder");} // second item to take from tproll
 	if (otype == TYPE_TCAN    && obj.in_mall()      ) {return bldg_obj_type_t(0, 1, 1, 1, 0, 0, 2,  80.0, 40.0, "large trashcan");}
 	if (is_boxed_machine(obj))                        {return bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 100.0, 20.0, "small machine");} // taken from a box
+	if (otype == TYPE_TPROLL  && (obj.flags & RO_FLAG_HAS_EXTRA)) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 0.5, 0.2, "paper towels", 50);}
 
 	if (otype == TYPE_BED) {
 		if (obj.taken_level > 1) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 250.0, mattress_weight, "mattress"  );} // third item to take from bed
@@ -949,7 +952,7 @@ public:
 		if (val == 0) return 1; // no change
 		assert(!carried.empty());
 		carried_item_t &obj(carried.back());
-		unsigned const capacity(get_room_obj_type(obj).capacity);
+		unsigned const capacity(get_taken_obj_type(obj).capacity);
 
 		if (capacity > 0) {
 			max_eq(val, -int(obj.use_count)); // can't go negative
@@ -1042,8 +1045,9 @@ public:
 					<< " lbs  Best $" << best_value << "  Damage $" << round_fp(damage_done); // print damage to nearest dollar
 				
 				if (!carried.empty()) {
-					unsigned const capacity(get_room_obj_type(player_held_object).capacity);
-					oss << "  [" << get_taken_obj_type(player_held_object).name; // print the name of the throwable object
+					bldg_obj_type_t const otype(get_taken_obj_type(player_held_object));
+					unsigned const capacity(otype.capacity);
+					oss << "  [" << otype.name; // print the name of the throwable object
 					if (capacity > 0 && !player_held_object.is_broken()) {oss << " " << (capacity - carried.back().use_count) << "/" << capacity;} // print use/capacity if nonempty
 					oss << "]";
 				}
@@ -1116,7 +1120,7 @@ public:
 
 			if (obj.type == TYPE_CANDLE && obj.is_lit()) { // apply lit candle use and water effect
 				if ((frame_counter % 10) == 0) {obj.use_count += 10.0*elapsed_time;} // special logic for integer incrementing
-				min_eq(obj.use_count, get_room_obj_type(obj).capacity); // use_count can't be > capacity
+				min_eq(obj.use_count, get_taken_obj_type(obj).capacity); // use_count can't be > capacity
 				if (obj.get_remaining_capacity_ratio() <= 0.0) {obj.flags &= ~RO_FLAG_LIT;} // goes out when used up
 				if (player_in_water == 2) {obj.flags &= ~RO_FLAG_LIT;} // goes out under water
 			}
@@ -1549,7 +1553,7 @@ float get_combined_stacked_obj_weights(room_object_t const &obj, vect_room_objec
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (i->type == TYPE_BLOCKER) continue; // ignore blockers (from removed objects)
 		if (*i == obj)               continue; // skip self (bcube check)
-		if (is_obj_in_or_on_obj(obj, *i)) {weight += get_room_obj_type(*i).weight;}
+		if (is_obj_in_or_on_obj(obj, *i)) {weight += get_room_obj_type(*i).weight;} // get_taken_obj_type()?
 	}
 	return weight;
 }

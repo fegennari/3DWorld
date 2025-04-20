@@ -388,22 +388,23 @@ bool add_cabinet_objects(room_object_t const &c, vect_room_object_t &objects) { 
 			cubes.push_back(pan_bc);
 		} // for n
 	}
-	// add bottles; wider cabinet has more; fewer medicine bottles in hospitals
-	unsigned const max_bottles(3 + (in_hospital ? 1 : 2)*sz_ratio), num_bottles(rgen.rand() % max_bottles);
+	if (in_hospital || !is_vanity) { // add bottles; wider cabinet has more; fewer medicine bottles in hospitals
+		unsigned const max_bottles(3 + (in_hospital ? 1 : 2)*sz_ratio), num_bottles(rgen.rand() % max_bottles);
 
-	for (unsigned n = 0; n < num_bottles; ++n) {
-		float const bottle_height(sz_scale*rgen.rand_uniform(0.45, 0.65)), bottle_radius(sz_scale*rgen.rand_uniform(0.075, 0.1));
-		if (c_min_xy < 3.0*bottle_radius) continue; // cabinet not wide/deep enough to add this bottle
-		cube_t bottle;
-		gen_xy_pos_for_round_obj(bottle, interior, bottle_radius, bottle_height, 1.5*bottle_radius, rgen, 1); // place_at_z1=1
-		room_object_t obj(bottle, TYPE_BOTTLE, c.room_id, 0, 0, flags, light_amt, SHAPE_CYLIN); // vertical
+		for (unsigned n = 0; n < num_bottles; ++n) {
+			float const bottle_height(sz_scale*rgen.rand_uniform(0.45, 0.65)), bottle_radius(sz_scale*rgen.rand_uniform(0.075, 0.1));
+			if (c_min_xy < 3.0*bottle_radius) continue; // cabinet not wide/deep enough to add this bottle
+			cube_t bottle;
+			gen_xy_pos_for_round_obj(bottle, interior, bottle_radius, bottle_height, 1.5*bottle_radius, rgen, 1); // place_at_z1=1
+			room_object_t obj(bottle, TYPE_BOTTLE, c.room_id, 0, 0, flags, light_amt, SHAPE_CYLIN); // vertical
 
-		if (in_hospital) {obj.set_as_bottle(rgen.rand(), BOTTLE_TYPE_MEDS, 0, ~(1 << BOTTLE_TYPE_MEDS));} // medicine only
-		else {
-			bool const allow_medicine(rgen.rand_bool()); // medicine is half as common
-			obj.set_as_bottle(rgen.rand(), (allow_medicine ? (unsigned)NUM_BOTTLE_TYPES : (unsigned)BOTTLE_TYPE_MEDS)-1, 1); // all bottle types, no_empty=1
+			if (in_hospital) {obj.set_as_bottle(rgen.rand(), BOTTLE_TYPE_MEDS, 0, ~(1 << BOTTLE_TYPE_MEDS));} // medicine only
+			else {
+				bool const allow_medicine(rgen.rand_bool()); // medicine is half as common
+				obj.set_as_bottle(rgen.rand(), (allow_medicine ? (unsigned)NUM_BOTTLE_TYPES : (unsigned)BOTTLE_TYPE_MEDS)-1, 1); // all bottle types, no_empty=1
+			}
+			add_if_not_intersecting(obj, objects, cubes);
 		}
-		add_if_not_intersecting(obj, objects, cubes);
 	}
 	if (in_hospital) {
 		// add tape rolls
@@ -419,28 +420,29 @@ bool add_cabinet_objects(room_object_t const &c, vect_room_object_t &objects) { 
 		}
 	}
 	else { // non-hospital
-		// add drink cans
-		unsigned const max_cans(2 + 2*sz_ratio), num_cans(rgen.rand() % max_cans); // wider cabinet has more cans
-		float const can_height(0.32*sz_scale), can_radius(0.26*can_height);
+		if (is_vanity) { // add toilet paper rolls and paper towels
+			unsigned const num_rolls(rgen.rand()%3); // 0-2
 
-		if (c_min_xy > 3.0*can_radius) { // cabinet wide/deep enough to add a can
-			for (unsigned n = 0; n < num_cans; ++n) {
-				cube_t can;
-				gen_xy_pos_for_round_obj(can, interior, can_radius, can_height, 1.25*can_radius, rgen, 1); // place_at_z1=1
-				room_object_t obj(can, TYPE_DRINK_CAN, c.room_id, 0, 0, flags, light_amt, SHAPE_CYLIN); // vertical
-				obj.obj_id = rgen.rand(); // random can type
+			for (unsigned n = 0; n < num_rolls; ++n) {
+				bool const paper_towel(rgen.rand_bool());
+				float const height((paper_towel ? 0.64 : 0.3)*sz_scale), radius((paper_towel ? 0.25 : 0.5)*height);
+				if (3.0*radius > c_min_xy) continue; // cabinet not wide/deep enough to add a roll
+				cube_t roll;
+				gen_xy_pos_for_round_obj(roll, interior, radius, height, 1.1*radius, rgen, 1); // place_at_z1=1
+				room_object_t const obj(roll, TYPE_TPROLL, c.room_id, 0, 0, (flags | (paper_towel ? RO_FLAG_HAS_EXTRA : 0)), light_amt, SHAPE_CYLIN); // vertical
 				add_if_not_intersecting(obj, objects, cubes);
-			}
+			} // for n
 		}
-		if (is_vanity) { // add toilet paper rolls
-			unsigned const num_tp_rolls(rgen.rand()%3); // 0-2
-			float const tp_height(0.32*sz_scale), tp_radius(0.4f*tp_height);
+		else { // add drink cans
+			unsigned const max_cans(2 + 2*sz_ratio), num_cans(rgen.rand() % max_cans); // wider cabinet has more cans
+			float const can_height(0.32*sz_scale), can_radius(0.26*can_height);
 
-			if (c_min_xy > 3.0*tp_radius) { // cabinet wide/deep enough to add a TP roll
-				for (unsigned n = 0; n < num_tp_rolls; ++n) {
-					cube_t tp;
-					gen_xy_pos_for_round_obj(tp, interior, tp_radius, tp_height, 1.1*tp_radius, rgen, 1); // place_at_z1=1
-					room_object_t const obj(tp, TYPE_TPROLL, c.room_id, 0, 0, flags, light_amt, SHAPE_CYLIN); // vertical
+			if (c_min_xy > 3.0*can_radius) { // cabinet wide/deep enough to add a can
+				for (unsigned n = 0; n < num_cans; ++n) {
+					cube_t can;
+					gen_xy_pos_for_round_obj(can, interior, can_radius, can_height, 1.25*can_radius, rgen, 1); // place_at_z1=1
+					room_object_t obj(can, TYPE_DRINK_CAN, c.room_id, 0, 0, flags, light_amt, SHAPE_CYLIN); // vertical
+					obj.obj_id = rgen.rand(); // random can type
 					add_if_not_intersecting(obj, objects, cubes);
 				}
 			}
@@ -1192,9 +1194,15 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 						float const oheight(height_val*rgen2.rand_uniform(0.6, 0.8)), radius(min(0.4f*depth, 0.44f*oheight));
 						add_rows_of_vcylinders(c, section, radius, oheight, 0.1, TYPE_PAINTCAN, 2, flags, objects, rgen2); // 1-2 columns
 					}
-					else if (type_ix == 1) { // toilet paper rolls
-						float const oheight(0.48*height_val), radius(min(0.4f*depth, 0.4f*oheight));
-						add_rows_of_vcylinders(c, section, radius, oheight, 0.2, TYPE_TPROLL, 3, flags, objects, rgen2); // 1-3 columns
+					else if (type_ix == 1) { // toilet paper rolls or paper towels
+						if (rgen2.rand_bool()) { // paper towels
+							float const oheight(1.3*height_val), radius(min(0.4f*depth, 0.25f*oheight));
+							add_rows_of_vcylinders(c, section, radius, oheight, 0.2, TYPE_TPROLL, 2, (flags | RO_FLAG_HAS_EXTRA), objects, rgen2); // 1-2 columns
+						}
+						else { // TP rolls
+							float const oheight(0.48*height_val), radius(min(0.4f*depth, 0.5f*oheight));
+							add_rows_of_vcylinders(c, section, radius, oheight, 0.2, TYPE_TPROLL, 3, flags, objects, rgen2); // 1-3 columns
+						}
 					}
 					else if (type_ix == 2) { // spray paint cans
 						float const oheight(height_val*rgen2.rand_uniform(0.75, 0.8)), radius(min(0.25f*depth, 0.17f*oheight));
@@ -1772,8 +1780,8 @@ void building_t::add_box_contents(room_object_t const &box_) {
 				set_spraypaint_color(objs.back(), rgen, &color_ix);
 			}
 		}
-		else if (obj_type == TYPE_TPROLL) { // toilet paper rolls
-			float const height(0.35*0.18*floor_spacing), radius(0.4*height);
+		else if (obj_type == TYPE_TPROLL) { // toilet paper rolls; should we add paper towels as well?
+			float const height(0.35*0.18*floor_spacing), radius(0.5*height);
 			if (!place_objects_in_box(c, obj_bcubes, radius, height)) continue; // can't fit any of this item
 			
 			for (auto i = obj_bcubes.begin(); i != obj_bcubes.end(); ++i) {
