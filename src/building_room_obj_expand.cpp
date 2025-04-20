@@ -421,7 +421,7 @@ bool add_cabinet_objects(room_object_t const &c, vect_room_object_t &objects) { 
 	else { // non-hospital
 		// add drink cans
 		unsigned const max_cans(2 + 2*sz_ratio), num_cans(rgen.rand() % max_cans); // wider cabinet has more cans
-		float const can_height(0.34*sz_scale), can_radius(0.26*can_height);
+		float const can_height(0.3*sz_scale), can_radius(0.26*can_height);
 
 		if (c_min_xy > 3.0*can_radius) { // cabinet wide/deep enough to add a can
 			for (unsigned n = 0; n < num_cans; ++n) {
@@ -434,7 +434,7 @@ bool add_cabinet_objects(room_object_t const &c, vect_room_object_t &objects) { 
 		}
 		if (is_vanity) { // add toilet paper rolls
 			unsigned const num_tp_rolls(rgen.rand()%3); // 0-2
-			float const tp_height(0.38*sz_scale), tp_radius(0.4f*tp_height);
+			float const tp_height(0.35*sz_scale), tp_radius(0.4f*tp_height);
 
 			if (c_min_xy > 3.0*tp_radius) { // cabinet wide/deep enough to add a TP roll
 				for (unsigned n = 0; n < num_tp_rolls; ++n) {
