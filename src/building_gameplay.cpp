@@ -738,6 +738,11 @@ public:
 		}
 	}
 	void use_medicine() {
+		// overdose if used two medicines within 30s in a hospital; doesn't apply to inventory items, only pickup items
+		if (player_building && player_building->is_hospital() && last_meds_frame > 0 && (frame_counter - last_meds_frame) < 30.0*TICKS_PER_SECOND) {
+			register_player_death(SOUND_AGONY, " of an overdose");
+			return;
+		}
 		last_meds_frame = frame_counter;
 		player_health   = 1.0;
 		is_poisoned     = 0;
@@ -811,7 +816,7 @@ public:
 				case BOTTLE_TYPE_BEER  : drunk  =  0.25; liquid = 0.5; break; // beer
 				case BOTTLE_TYPE_WINE  : drunk  =  0.50; liquid = 0.5; break; // wine (entire bottle)
 				case BOTTLE_TYPE_POISON: health = -0.50; break; // poison - take damage
-				case BOTTLE_TYPE_MEDS  : use_medicine(); break; // medicine, restore full health and cure poisoning
+				case BOTTLE_TYPE_MEDS  : health =  1.00; use_medicine(); break; // medicine, restore full health and cure poisoning
 				default: assert(0);
 				}
 			}
