@@ -876,7 +876,7 @@ void building_room_geom_t::add_vert_roll_to_material(room_object_t const &c, rge
 	mat.add_vcylin_to_verts(roll, apply_light_color(c), 1, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv, 0.0, swap_txy); // paper/plastic roll
 }
 void building_room_geom_t::add_tproll(room_object_t const &c) { // is_small=1
-	if (c.was_expanded()) { // bare TP roll from a box or shelf rack
+	if (c.was_expanded() || c.has_extra()) { // bare TP roll from a box or shelf rack, or paper towel roll
 		rgeom_mat_t &mat(get_material(tid_nm_pair_t(WHITE_TEX, get_toilet_paper_nm_id(), 0.0, 0.0, 0.0, 0.0, 1), 1, 0, 1)); // shadowed, small
 		add_vert_roll_to_material(c, mat);
 		return;

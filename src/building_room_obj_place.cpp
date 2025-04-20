@@ -2329,6 +2329,7 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 		bool const have_toaster(building_obj_model_loader.is_model_valid(OBJ_MODEL_TOASTER));
 		vector3d const toaster_sz(have_toaster ? building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TOASTER) : zero_vector); // L, D, H
 		bool is_sink(1), placed_mwave(0), placed_toaster(0), had_counter(0);
+		unsigned num_paper_towels(0);
 		cube_t mwave, toaster;
 
 		for (unsigned n = 0; n < (had_counter ? 50U : 60U); ++n) { // 50 attempts, plus an extra 10 if no counters were placed
@@ -2402,6 +2403,7 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 				set_obj_id(objs);
 			}
 			blockers.push_back(c); // add to blockers so that later counters don't intersect this one
+			bool added_obj(0);
 
 			// place a microwave on a counter 50% of the time
 			if (!is_sink && !placed_mwave && c.get_sz_dim(!dim) > 0.5*vspace && rgen.rand_bool()) {
@@ -2413,7 +2415,7 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 				mwave.d[dim][!dir] = mwave.d[dim][dir] + dir_sign*mdepth;
 				objs.emplace_back(mwave, TYPE_MWAVE, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt);
 				objs[cabinet_id].flags |= RO_FLAG_ADJ_TOP; // flag as having a microwave so that we don't add a book or bottle that could overlap it
-				placed_mwave = 1;
+				placed_mwave = added_obj = 1;
 			}
 			// place a toaster on a counter 90% of the time
 			if (!is_sink && !placed_toaster && have_toaster && rgen.rand_float() < 0.9) {
@@ -2429,9 +2431,21 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 					if (!placed_mwave || !mwave.intersects(toaster)) { // don't overlap the microwave
 						objs.emplace_back(toaster, TYPE_TOASTER, room_id, !dim, rgen.rand_bool(), RO_FLAG_NOCOLL, tot_light_amt); // random dir
 						objs.back().color = toaster_colors[rgen.rand()%NUM_TOASTER_COLORS];
-						objs[cabinet_id].flags |= RO_FLAG_ADJ_TOP; // flag as having a toaster so that we don't add a book or bottle that could overlap it
-						placed_toaster = 1;
+						objs[cabinet_id].flags |= RO_FLAG_ADJ_TOP; // flag as having an object so that we don't add a book or bottle that could overlap it
+						placed_toaster = added_obj = 1;
 					}
+				}
+			}
+			// place a paper towel roll on the counter 75% of the time if there's no toaster, microwave, or sink; max 2 per kitchen
+			if (!is_sink && !added_obj && num_paper_towels < 2 && rgen.rand_float() < 0.75) {
+				float const ptheight(0.115*vspace), ptradius(0.25*ptheight);
+
+				if (min(c.dx(), c.dy()) > 2.5*ptradius) { // add if it fits
+					cube_t ptroll;
+					gen_xy_pos_for_round_obj(ptroll, c, ptradius, ptheight, 1.2*ptradius, rgen);
+					objs.emplace_back(ptroll, TYPE_TPROLL, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_HAS_EXTRA), tot_light_amt);
+					objs[cabinet_id].flags |= RO_FLAG_ADJ_TOP; // flag as having an object so that we don't add a book or bottle that could overlap it
+					++num_paper_towels;
 				}
 			}
 			if (is_sink) { // kitchen sink; add cups, plates, and cockroaches
