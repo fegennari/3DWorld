@@ -258,6 +258,8 @@ bool building_t::add_waiting_room_objs(rand_gen_t rgen, room_t const &room, floa
 {
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	cube_t const room_bounds(get_walkable_room_bounds(room));
+	cube_t place_area(room_bounds);
+	place_area.expand_by_xy(-0.25*wall_thickness);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t bathroom;
 
@@ -273,13 +275,13 @@ bool building_t::add_waiting_room_objs(rand_gen_t rgen, room_t const &room, floa
 		add_bookcase_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, 0); // is_basement=0
 	}
 	else { // add some snacks
-		cube_t vm_area(room_bounds);
-		vm_area.expand_by_xy(-0.25*wall_thickness);
-		add_vending_machine(rgen, room, zval, room_id, tot_light_amt, objs_start, vm_area);
+		add_vending_machine(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area);
 	}
 	// can this block a door sign in a room with ring hallways?
 	// there's not much we can do about that here, since the sign is part of another room that may either be before or after this one
 	add_wall_tv(rgen, room, zval, room_id, tot_light_amt, objs_start);
+	// add fishtank to some ground floor waiting rooms
+	if (floor_ix == 0 && rgen.rand_bool()) {add_fishtank_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area);}
 	// add chairs along walls
 	unsigned const num_chairs = 20; // up to this many, whatever we can fit
 	bool const is_plastic(1); // always plastic
@@ -287,7 +289,7 @@ bool building_t::add_waiting_room_objs(rand_gen_t rgen, room_t const &room, floa
 	place_chairs_along_walls(rgen, room, zval, room_id, tot_light_amt, objs_start, chair_color, is_plastic, num_chairs);
 	// maybe add some more chairs to the center of the room
 	cube_t chair_place_area(room_bounds);
-	chair_place_area.expand_by_xy(-wall_thickness);
+	chair_place_area.expand_by_xy(-wall_thickness); // more space from wall than place_area
 	vector2d const room_sz(chair_place_area.get_size_xy());
 	bool const long_dim(room_sz.x < room_sz.y);
 	float const length(room_sz[long_dim]), width(room_sz[!long_dim]);
