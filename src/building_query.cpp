@@ -2123,6 +2123,7 @@ bool building_t::get_interior_color_at_xy(point const &pos_in, colorRGBA &color)
 		}
 		return 0;
 	}
+	// Note: similar to building_t::get_floor_tex_and_color()
 	float const z1(pos.z - 1.05*CAMERA_RADIUS), z2(z1 + get_floor_ceil_gap()); // approx span of one floor, including objects on the floor
 	if (building_color_query_geom_cache.query_objs(*this, pos, z1, z2, color)) return 1;
 	building_mat_t const &mat(get_material());
@@ -2136,9 +2137,10 @@ bool building_t::get_interior_color_at_xy(point const &pos_in, colorRGBA &color)
 	}
 	else { // office building
 		color = mat.floor_color;
-		if (in_ext_basement && has_mall()) {tid = get_mall_or_retail_texture().tid;} // mall; marble or granite
-		else if (has_retail() && pos.z < ground_floor_z1 + get_window_vspace()) {tid = get_mall_or_retail_texture().tid;} // retail; marble or granite
+		if (in_ext_basement && has_mall()) {tid = get_tile_floor_texture().tid;} // mall; marble or granite
+		else if (has_retail() && pos.z < ground_floor_z1 + get_window_vspace()) {tid = get_tile_floor_texture().tid;} // retail; marble or granite
 		else if ((in_basement && has_parking_garage) || in_ext_basement || is_industrial()) {tid = get_concrete_tid();} // concrete
+		else if (has_tile_floor()) {tid = get_tile_floor_texture().tid;}
 		else {tid = mat.floor_tex.tid;} // office block
 	}
 	if (tid >= 0) {color = color.modulate_with(texture_color(tid));}
