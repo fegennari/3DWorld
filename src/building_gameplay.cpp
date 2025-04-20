@@ -1598,6 +1598,16 @@ cube_t get_true_obj_bcube(room_object_t const &obj) { // for player object picku
 	return obj; // unmodified
 }
 
+bool building_room_geom_t::is_inside_closed_locker(room_object_t const &obj) const {
+	auto objs_end(get_placed_objs_end()); // skip buttons/stairs/elevators
+
+	for (auto i = objs.begin(); i != objs_end; ++i) {
+		if (i->type != TYPE_LOCKER || !i->contains_cube(obj)) continue;
+		return !i->is_open();
+	}
+	return 0;
+}
+
 bool obj_has_open_drawers(room_object_t const &obj) {
 	return ((obj.type == TYPE_NIGHTSTAND || obj.type == TYPE_DRESSER || obj.type == TYPE_DESK || obj.type == TYPE_FCABINET) && obj.drawer_flags);
 }
@@ -1607,10 +1617,11 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 	point const p2(at_pos + in_dir*range);
 
 	for (unsigned vect_id = 0; vect_id < 2; ++vect_id) {
-		auto const &obj_vect((vect_id == 1) ? expanded_objs : objs), &other_obj_vect((vect_id == 1) ? objs : expanded_objs);
-		unsigned const obj_id_offset((vect_id == 1) ? objs.size() : 0);
-		auto objs_end((vect_id == 1) ? expanded_objs.end() : get_stairs_start()); // skip stairs and elevators
-		auto other_objs_end((vect_id == 1) ? get_stairs_start() : expanded_objs.end());
+		bool const was_expanded(vect_id == 1);
+		auto const &obj_vect(was_expanded ? expanded_objs : objs), &other_obj_vect(was_expanded ? objs : expanded_objs);
+		unsigned const obj_id_offset(was_expanded ? objs.size() : 0);
+		auto objs_end(was_expanded ? expanded_objs.end() : get_stairs_start()); // skip stairs and elevators
+		auto other_objs_end(was_expanded ? get_stairs_start() : expanded_objs.end());
 
 		for (auto i = obj_vect.begin(); i != objs_end; ++i) {
 			if (!get_room_obj_type(*i).pickup && !i->is_parked_car() && !is_boxed_machine(*i)) continue; // this object type can't be picked up
@@ -1696,6 +1707,7 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 			if (object_has_something_on_it(*i,       obj_vect, objs_end)) continue; // can't remove a table, etc. that has something on it
 			if (object_has_something_on_it(*i, other_obj_vect, other_objs_end)) continue; // check the other one as well
 			if (building.check_for_wall_ceil_floor_int(at_pos, p1c))      continue; // skip if it's on the other side of a wall, ceiling, or floor
+			if (was_expanded && building.is_school() && is_inside_closed_locker(*i)) continue;
 			closest_obj_id = (i - obj_vect.begin()) + obj_id_offset; // valid pickup object
 			dmin_sq = dsq; // this object is the closest, even if it can't be picked up
 		} // for i
@@ -1906,7 +1918,7 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 
 	if      (type == TYPE_PICTURE   && obj.taken_level == 0) {++obj.taken_level;} // take picture, leave frame
 	else if (type == TYPE_PIZZA_BOX && obj.taken_level == 0 && obj.is_open()) {++obj.taken_level;} // take pizza, leave box
-	else if (type == TYPE_TPROLL    && !obj.has_extra() && !(obj.taken_level > 0 || (obj.flags & RO_FLAG_WAS_EXP))) {++obj.taken_level;} // take roll, leave holder; not for exp
+	else if (type == TYPE_TPROLL    && !obj.has_extra() && !(obj.taken_level > 0 || obj.was_expanded())) {++obj.taken_level;} // take roll, leave holder; not for exp
 	else if (type == TYPE_BED) {++obj.taken_level;} // take pillow(s), then sheets, then mattress
 	else if (type == TYPE_PLANT && !(obj.flags & RO_FLAG_ADJ_BOT)) { // plant not on a table/desk
 		if (obj.taken_level > 1) {obj.remove();} // take pot - gone

@@ -1351,6 +1351,7 @@ struct building_room_geom_t {
 	bool maybe_spawn_spider_in_drawer(room_object_t const &c, cube_t const &drawer, unsigned drawer_id, float floor_spacing, bool is_door);
 	// other functions
 	bool closet_light_is_on(cube_t const &closet) const;
+	bool is_inside_closed_locker(room_object_t const &obj) const;
 	int find_nearest_pickup_object(building_t const &building, point const &at_pos, vector3d const &in_dir, float range, float &obj_dist) const;
 	bool cube_intersects_moved_obj(cube_t const &c, int ignore_obj_id=-1) const;
 	bool open_nearest_drawer(building_t &building, point const &at_pos, vector3d const &in_dir, float range, bool pickup_item, bool check_only);
