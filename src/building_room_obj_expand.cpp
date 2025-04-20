@@ -176,7 +176,7 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vect_room_
 	float const depth(interior.get_sz_dim(c.dim)), box_sz(0.25*depth), window_vspacing(c.dz()*(1.0 + FLOOR_THICK_VAL_HOUSE));
 	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_WAS_EXP);
 	unsigned const num_boxes((rgen.rand()%3) + (rgen.rand()%4)); // 0-5
-	bool const is_hotel(c.flags & RO_FLAG_HAS_EXTRA);
+	bool const is_hotel(c.has_extra());
 	vect_cube_t &cubes(get_temp_cubes());
 	add_boxes_to_space(c, objects, interior, cubes, rgen, num_boxes, box_sz, 0.8*box_sz, 1.5*box_sz, 0, flags); // allow_crates=0
 

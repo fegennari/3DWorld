@@ -735,6 +735,7 @@ struct room_object_t : public oriented_cube_t { // size=68
 	bool is_on_floor() const {return  (flags & RO_FLAG_ON_FLOOR);}
 	bool is_nonempty() const {return  (flags & RO_FLAG_NONEMPTY);}
 	bool has_lid    () const {return  (flags & RO_FLAG_ADJ_TOP);} // for fishtanks
+	bool has_extra  () const {return  (flags & RO_FLAG_HAS_EXTRA);}
 	bool on_warehouse_floor() const {return (in_warehouse() && (flags & RO_FLAG_ON_FLOOR));}
 	bool is_crate_or_box() const {return (type == TYPE_CRATE || type == TYPE_BOX);}
 	bool is_on_srack() const {return (was_expanded() && (flags & RO_FLAG_ON_SRACK));} // Note: RO_FLAG_ON_SRACK is aliased with other flags, so also check was_expanded
@@ -744,12 +745,12 @@ struct room_object_t : public oriented_cube_t { // size=68
 	bool is_obj_model_type() const {return (type >= TYPE_TOILET && type < NUM_ROBJ_TYPES);}
 	bool is_small_closet() const {return (type == TYPE_CLOSET && get_width() < 1.2*dz());}
 	bool is_bottle_empty() const {return ((obj_id & 192) == 192);} // empty if both bits 6 and 7 are set; also applies to drink cans
-	bool desk_has_drawers()const {return (((room_id & 3) || (flags & RO_FLAG_HAS_EXTRA)) && get_width() > 1.5*get_depth());} // 75% of the time, if wide enough
+	bool desk_has_drawers()const {return (((room_id & 3) || has_extra()) && get_width() > 1.5*get_depth());} // 75% of the time, if wide enough
 	bool is_glass_table () const {return (type == TYPE_TABLE && is_house() && (obj_id & 1));} // 50% chance if in a house
 	bool is_parked_car  () const {return (type == TYPE_COLLIDER && (flags & RO_FLAG_FOR_CAR));}
 	bool is_sloped_ramp () const {return (type == TYPE_RAMP || (type == TYPE_POOL_TILE && shape == SHAPE_ANGLED));}
 	bool light_is_out   () const {return ((is_broken() || is_broken2()) && !is_open());} // only makes sense to call on lights
-	bool is_mirror      () const {return (type == TYPE_MIRROR || type == TYPE_DRESS_MIR || (type == TYPE_MED_CAB && !(flags & RO_FLAG_HAS_EXTRA)));}
+	bool is_mirror      () const {return (type == TYPE_MIRROR || type == TYPE_DRESS_MIR || (type == TYPE_MED_CAB && !has_extra()));}
 	bool is_player_collidable() const;
 	bool can_use        () const;
 	bool is_interactive () const {return (has_dstate() || can_use());}

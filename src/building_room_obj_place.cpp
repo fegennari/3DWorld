@@ -4780,7 +4780,7 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 					if (!i->intersects(c_exp)) continue;
 					if (i->type == TYPE_KSINK && get_sink_cube(*i).intersects_xy(c_exp)) break; // don't place behind the kitchen sink
 					float new_zval(i->z2());
-					if ((i->flags & RO_FLAG_HAS_EXTRA) && (i->flags & RO_FLAG_ADJ_BOT)) {new_zval += BACKSPLASH_HEIGHT*i->dz();} // place above the backsplash if present
+					if (i->has_extra() && (i->flags & RO_FLAG_ADJ_BOT)) {new_zval += BACKSPLASH_HEIGHT*i->dz();} // place above the backsplash if present
 					c.z1() = c_exp.z1() = new_zval + 0.1*plate_height; // slightly above counter
 					c.z2() = c_exp.z2() = c.z1() + plate_height;
 					hit_cabinet = 1;

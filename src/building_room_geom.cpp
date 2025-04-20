@@ -2262,7 +2262,7 @@ void building_room_geom_t::add_wall_trim(room_object_t const &c, bool for_closet
 		if (c.flags & RO_FLAG_ADJ_HI)    {skip_faces |= ~get_face_mask(c.dim, 1);}
 		skip_faces |= ((c.flags & RO_FLAG_ADJ_BOT) ? EF_Z1 : 0) | ((c.flags & RO_FLAG_ADJ_TOP) ? EF_Z2 : 0);
 
-		if (is_exterior && (c.flags & RO_FLAG_HAS_EXTRA)) { // fully exterior
+		if (is_exterior && c.has_extra()) { // fully exterior
 			get_untextured_material(0, 0, 2, 0, 1).add_cube_to_verts_untextured(c, c.color, skip_faces); // is_small, untextured, no shadows
 		}
 		else if (is_exterior) { // half exterior half interior
@@ -2446,7 +2446,7 @@ void building_room_geom_t::add_ceiling_fan_light(room_object_t const &fan, room_
 }
 
 float get_railing_height(room_object_t const &c) {
-	bool const is_tall(c.flags & RO_FLAG_HAS_EXTRA);
+	bool const is_tall(c.has_extra());
 	unsigned const num_floors(c.item_flags + 1), num_stairs(c.state_flags);
 	float height((is_tall ? 0.70 : 0.35)*c.dz()/num_floors); // use a larger relative height for lo/hi railings on U/L-shaped stairs
 	if (num_stairs > 0) {height *= float(NUM_STAIRS_PER_FLOOR_L)/float(num_stairs);} // adjust height for shorter railings used in L-shaped stairs
@@ -3359,7 +3359,7 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 	bool const from_book_set(c.flags & RO_FLAG_FROM_SET);
 	bool const tdir((upright && !from_book_set) ? (c.dim ^ c.dir ^ bool(c.obj_id%7)) : 1); // sometimes upside down when upright and not from a set
 	bool const ldir(!tdir), cdir(c.dim ^ c.dir ^ upright ^ ldir); // colum and line directions (left/right/top/bot) + mirror flags for front cover
-	bool const on_glass_table(c.flags & RO_FLAG_HAS_EXTRA), was_dropped(c.taken_level > 0); // or held
+	bool const on_glass_table(c.has_extra()), was_dropped(c.taken_level > 0); // or held
 	// only shadowed if dropped by the player or on a glass table, since otherwise shadows are too small to have much effect; skip held objects (don't work)
 	bool const shadowed((was_dropped || on_glass_table) && !is_held);
 	unsigned const tdim(upright ? !c.dim : 2), hdim(upright ? 2 : !c.dim); // thickness dim, height dim (c.dim is width dim)
@@ -4530,7 +4530,7 @@ void building_room_geom_t::add_sign(room_object_t const &c, bool inc_back, bool 
 		rgeom_mat_t &mat(get_untextured_material(0, 0, small, 0, exterior));
 		mat.add_cube_to_verts_untextured(c, apply_light_color(c, (dark_mode ? BKGRAY : WHITE)), skip_faces);
 
-		if (c.flags & RO_FLAG_HAS_EXTRA) { // add a black-ish frame (or white in dark mode)
+		if (c.has_extra()) { // add a black-ish frame (or white in dark mode)
 			unsigned const skip_faces_frame(hanging ? 0 : skip_back_face);
 			colorRGBA const frame_color(apply_light_color(c, (dark_mode ? WHITE : BKGRAY)));
 			float const frame_width(0.1*c.dz()), frame_thickness(0.5*c.get_sz_dim(c.dim)); // actual thickness is 2x
@@ -4729,7 +4729,7 @@ void building_room_geom_t::add_false_door_int(room_object_t const &c) {
 		if (exterior && interior) continue; // interior only; no exterior side to this door
 		bool const front_dir(c.dir ^ bool(exterior) ^ 1);
 		
-		if (c.flags & RO_FLAG_HAS_EXTRA) { // vault door
+		if (c.has_extra()) { // vault door
 			float const width(c.get_width()), depth(c.get_depth());
 			unsigned const front_skip(two_side_interior ? 0 : ~get_face_mask(c.dim, !front_dir)); // skip front if not 2 sided
 			tid_nm_pair_t const door_tex(get_metal_plate_tex(2.0/width, shadowed));
@@ -4897,7 +4897,7 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale, boo
 	else { // regular counter top
 		top_mat.add_cube_to_verts(top, top_color, tex_origin); // top surface, all faces
 	}
-	if (c.flags & RO_FLAG_HAS_EXTRA) { // add backsplash, 50% chance of tile vs. matching marble
+	if (c.has_extra()) { // add backsplash, 50% chance of tile vs. matching marble
 		tid_nm_pair_t const bs_tex((c.room_id & 1) ? marble_tex : tid_nm_pair_t(get_texture_by_name("bathroom_tile.jpg"), 2.5*tscale));
 		rgeom_mat_t &bs_mat(get_material(bs_tex, 0)); // no shadows
 		cube_t bsz(c);
@@ -5169,7 +5169,7 @@ void building_room_geom_t::add_window(room_object_t const &c, float tscale) { //
 	if (c.is_light_on()) {tex.emissive = 0.33;} // one third emissive
 	get_material(tex, 0, 0, 0, 0, 0).add_cube_to_verts(window, c.color, c.get_llc(), get_face_mask(c.dim, !c.dir)); // interior face, no apply_light_color()
 
-	if (c.flags & RO_FLAG_HAS_EXTRA) { // only draw exterior for buildings with exterior windows
+	if (c.has_extra()) { // only draw exterior for buildings with exterior windows
 		get_material(tex, 0, 0, 0, 0, 1).add_cube_to_verts(window, c.color, c.get_llc(), get_face_mask(c.dim,  c.dir)); // exterior face, no apply_light_color()
 	}
 }
@@ -5389,7 +5389,7 @@ void building_room_geom_t::add_potted_plant(room_object_t const &c, bool inc_pot
 		float const ts[4] = {0,1,1,0}, tt[4] = {0,0,1,1};
 		for (unsigned i = 0; i < points.size(); ++i) {leaf_verts.emplace_back(vert_norm_comp_tc(points[i], ts[i&3], tt[i&3]), leaf_cw);}
 		// if on upper floor of mall, visible from below; duplicate and reverse leaf verts to draw back surfaces
-		if (c.flags & RO_FLAG_HAS_EXTRA) {add_inverted_quads(leaf_verts, leaf_verts_start);}
+		if (c.has_extra()) {add_inverted_quads(leaf_verts, leaf_verts_start);}
 		// draw plant stem
 		colorRGBA const stem_color(plant.get_stem_color());
 		mats_amask.get_material(get_tex_auto_nm(WOOD2_TEX), 1).add_cylin_to_verts(point(cx, cy, base_pos.z), point(cx, cy, c.z2()), stem_radius, 0.0f, stem_color, 0, 0); // stem

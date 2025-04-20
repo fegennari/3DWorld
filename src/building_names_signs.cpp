@@ -845,7 +845,7 @@ public:
 };
 
 bool building_t::bind_custom_clothing_texure(room_object_t const &obj) const { // technically not const because this modifies a nested pointer
-	if (obj.type == TYPE_CLOTHES && (obj.flags & RO_FLAG_HAS_EXTRA) && has_mall() && is_shirt_model(obj) && get_room(obj.room_id).is_store()) {
+	if (obj.type == TYPE_CLOTHES && obj.has_extra() && has_mall() && is_shirt_model(obj) && get_room(obj.room_id).is_store()) {
 		for (store_info_t const &s : interior->mall_info->stores) {
 			if (s.room_id != obj.room_id) continue;
 			if (!interior->mall_info->tmgr) {interior->mall_info->tmgr.reset(new store_texture_manager_t);}
