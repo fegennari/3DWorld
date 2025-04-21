@@ -1060,11 +1060,15 @@ void building_t::handle_items_intersecting_closed_door(door_t const &door) {
 
 	for (room_object_t &obj : interior->room_geom->expanded_objs) { // currently only expanded objects such as books
 		if (!obj.intersects(door_bcube)) continue;
-		float const door_center(door_bcube.get_center_dim(door.dim)), obj_center(obj.get_center_dim(door.dim));
-		bool const move_dir(door_center < obj_center);
+		bool const move_dir(!door.open_dir); // door pushes object out
 		float const move_dist(door_bcube.d[door.dim][move_dir] - obj.d[door.dim][!move_dir]);
 		obj.translate_dim(door.dim, move_dist);
 		interior->room_geom->invalidate_draw_data_for_obj(obj);
+		point const center(obj.get_cube_center());
+
+		for (unsigned i = 0; i < 2; ++i) { // maybe re-assign object to a new room on one side of the door
+			if (get_room(door.conn_room[i]).contains_pt(center)) {obj.room_id = door.conn_room[i]; break;}
+		}
 	} // for obj
 }
 
@@ -1130,9 +1134,7 @@ void building_t::doors_next_frame(point const &player_pos) {
 				}
 			}
 			if (is_blocked) {d->open = 1;} // push open
-			else if (d->open_amt == 1.0) { // auto close
-				toggle_door_state((d - interior->doors.begin()), 1, 1, d->get_cube_center());
-			}
+			else if (d->open_amt == 1.0) {toggle_door_state((d - interior->doors.begin()), 1, 1, d->get_cube_center());} // auto close
 		}
 		if (!d->next_frame()) continue;
 		handle_items_intersecting_closed_door(*d);
