@@ -480,6 +480,9 @@ bool building_t::add_operating_room_objs(rand_gen_t rgen, room_t &room, float zv
 			} // for n
 		}
 	}
+	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_STRETCHER)) {
+		// TODO
+	}
 	// add a gas tank along a wall
 	unsigned const num_tank_colors = 3;
 	colorRGBA const tank_colors[num_tank_colors] = {WHITE, LT_GREEN, LT_BLUE};

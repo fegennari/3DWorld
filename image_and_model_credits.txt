@@ -29,3 +29,4 @@ Wind Turbine: https://sketchfab.com/3d-models/wind-turbine-285032402a8543ae8bf3e
 Hospital Operating Table: https://sketchfab.com/3d-models/hospital-bed-02ab679ff3f24018a8bcaf30b3b2cd47
 Hospital Trolley: https://sketchfab.com/3d-models/hospital-trolley-6fa14ba57e324d288b5a42632f19d97f
 Wheelchair: https://sketchfab.com/3d-models/wheelchair-f0ef4adc17ee4929b40e894c608061ea
+Stretcher: https://sketchfab.com/3d-models/gurney-medevac-patient-stretcher-rescue-litter-40c85d5457a144d3b5dc1b328a2425a3

@@ -242,6 +242,7 @@ city hospital_curtain_model ../models/interiors/hospital/low_poly_curtains.glb  
 city wheelchair_model       ../models/interiors/hospital/wheelchair2.glb        0 0 0  -1 -1 90   1 1.0 1.0
 city operating_table_model  ../models/interiors/hospital/operating_table.glb    0 0 0  -1 -1 0    1 1.0 1.0
 city hospital_trolley_model ../models/interiors/hospital/hospital_trolley.glb   0 0 0  -1 -1 0    1 1.0 1.0 # would look better with environment reflections
+city stretcher_model        ../models/stretcher.glb               0 0 0  -1 -1  0  1 1.0 1.0
 city forklift_model     ../models/forklift.glb                    0 0 0  -1 -1 90  1 1.0 1.0
 city wind_turbine_model ../models/wind_turbine.glb                0 0 0  -1 -1 90  1 1.0 1.0
 
