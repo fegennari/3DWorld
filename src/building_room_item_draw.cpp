@@ -1508,8 +1508,14 @@ void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, 
 	else if (c.type == TYPE_ERASER) {
 		float const sz_delta(c.get_width() - c.dz()); // rotate vertically
 		cube_t c_rot(c);
+		
+		if (c.dim) { // swap XY
+			float const resize_amt(0.5*(c.dx() - c.dy()));
+			c_rot.expand_in_x(-resize_amt);
+			c_rot.expand_in_y( resize_amt);
+		}
 		c_rot.z2() += sz_delta;
-		c_rot.expand_in_dim(!c.dim, -0.5*sz_delta);
+		c_rot.expand_in_y(-0.5*sz_delta);
 		mat.add_cube_to_verts_untextured(c_rot, c.color); // simple untextured cube; all sides drawn
 		rotate_verts(mat.quad_verts, plus_z, (get_camera_z_rotate() + PI_TWO), c.get_cube_center(), 0); // rotate all itri verts about Z axis
 	}
