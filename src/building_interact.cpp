@@ -31,6 +31,7 @@ bool was_room_stolen_from(unsigned room_id);
 void register_broken_object(room_object_t const &obj);
 void record_building_damage(float damage);
 bool use_vending_machine(room_object_t &obj);
+bool trash_held_object(room_object_t &trashcan);
 void pool_ball_in_pocket(unsigned ball_number);
 void refill_thirst();
 colorRGBA get_glow_color(float stime, bool fade);
@@ -526,7 +527,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 					else if (type == TYPE_FISHTANK && i->has_lid()) {keep = 1;} // fishtank with a lid and light
 					else if (type == TYPE_PICTURE || type == TYPE_TPROLL || type == TYPE_MWAVE || type == TYPE_TV || type == TYPE_MONITOR || type == TYPE_BLINDS ||
 						type == TYPE_SWITCH || type == TYPE_BOOK || type == TYPE_BRK_PANEL || type == TYPE_BREAKER || type == TYPE_ATTIC_DOOR || type == TYPE_OFF_CHAIR ||
-						type == TYPE_WFOUNTAIN || type == TYPE_VENDING || type == TYPE_MED_CAB || type == TYPE_LOCKER) {keep = 1;}
+						type == TYPE_WFOUNTAIN || type == TYPE_VENDING || type == TYPE_MED_CAB || type == TYPE_LOCKER || type == TYPE_TCAN) {keep = 1;}
 					else if ((type == TYPE_STOVE || type == TYPE_SHOWER || type == TYPE_SHOWERTUB /*|| type == TYPE_FRIDGE*/) && !i->in_mall()) {keep = 1;} // not in plumbing store
 					else if (type == TYPE_LG_BALL && i->has_dstate()) {keep = 1;}
 					else if (type == TYPE_BUTTON && i->in_elevator() == bool(player_in_elevator)) {keep = 1;} // check for buttons inside/outside elevator
@@ -722,7 +723,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		}
 	}
 	else if (type == TYPE_TCAN) {
-
+		trash_held_object(obj); // sounds are handled inside this call
 	}
 	else if (type == TYPE_STOVE) { // toggle burners; doesn't need power
 		float const height(obj.dz());
