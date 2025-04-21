@@ -36,6 +36,7 @@ void rotate_verts(point *verts, unsigned num_verts, vector3d const &axis, float 
 void add_pipe_with_bend(rgeom_mat_t &mat, colorRGBA const &color, point const &bot_pt, point const &top_pt, point const &bend, unsigned ndiv, float radius, bool draw_ends);
 void draw_metal_handle_wheel(cube_t const &c, unsigned dim, colorRGBA const &color, colorRGBA const &shaft_color, rgeom_mat_t &mat, rgeom_mat_t &shaft_mat);
 bool add_cabinet_objects(room_object_t const &c, vect_room_object_t &objects);
+vector3d get_obj_model_rotated_dir(room_object_t const &obj, building_t const *const building);
 
 unsigned get_face_mask(unsigned dim, bool dir) {return ~(1 << (2*(2-dim) + dir));} // draw only these faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2
 unsigned get_skip_mask_for_xy (bool       dim) {return (dim ? EF_Y12 : EF_X12);} // skip these faces
@@ -5341,6 +5342,17 @@ void building_room_geom_t::add_tv_picture(room_object_t const &c) {
 	tid_nm_pair_t tex(((c.shape == SHAPE_SHORT) ? c.get_comp_monitor_tid() : c.get_tv_tid()), 0.0); // computer monitor vs. TV
 	tex.emissive = 1.0;
 	add_tv_or_monitor_screen(c, get_material(tex));
+}
+
+void building_room_geom_t::add_cup_liquid(room_object_t const &c) {
+	if (!c.is_nonempty()) return; // empty
+	float const radius(c.get_radius());
+	vector3d dir(get_obj_model_rotated_dir(c, nullptr)); // building not needed for cups
+	swap(dir.x, dir.y); // R90
+	dir.x *= -1.0;
+	point center(c.xc(), c.yc(), (c.z1() + 0.85*c.dz()));
+	center -= 0.3*radius*dir; // recenter by translating away from the handle
+	get_untextured_material(0, 0, 1).add_vert_disk_to_verts(center, 0.8*radius, 0, apply_light_color(c, colorRGBA(0.2, 0.1, 0.05))); // unshadowed, small
 }
 
 void add_inverted_quads(rgeom_storage_t::vect_vertex_t &verts, unsigned verts_start) {

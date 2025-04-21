@@ -438,6 +438,9 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 	else if (otype == TYPE_MARKER) {
 		if (obj.color == WHITE) {type.name = "chalk";}
 	}
+	else if (otype == TYPE_CUP) {
+		type.name = (obj.is_nonempty() ? "cup of coffee" : "empty cup");
+	}
 	if (wv_factor != 1.0) { // scale weight and value by this factor, rounded to the nearest pound and dollar
 		type.weight = int(wv_factor*type.weight);
 		type.value  = int(wv_factor*type.value );

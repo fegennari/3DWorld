@@ -856,6 +856,7 @@ void building_room_geom_t::invalidate_draw_data_for_obj(room_object_t const &obj
 	if (obj.type == TYPE_MACHINE)  {invalidate_detail_geom();} // machine details (valves, gauges, vents)
 	if (obj.type == TYPE_CEIL_FAN) {invalidate_lights_geom();} // invalidate the light on the fan as well
 	if (obj.type == TYPE_CLOCK)    {update_dynamic_draw_data();}
+	if (obj.type == TYPE_CUP && obj.is_nonempty()) {invalidate_small_geom();} // cup with coffee
 }
 // Note: called when adding, removing, or moving objects
 void building_room_geom_t::update_draw_state_for_room_object(room_object_t const &obj, building_t &building, bool was_taken) {
@@ -1123,6 +1124,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_WARN_LIGHT: add_warning_light(c); break;
 		case TYPE_PALLET:     add_pallet(c); break;
 		case TYPE_CHEM_TANK:  add_chem_tank(c, 1); break; // draw_label=1
+		case TYPE_CUP:        add_cup_liquid(c); break;
 		case TYPE_DBG_SHAPE:  add_debug_shape(c); break;
 		default: break;
 		} // end switch
@@ -1183,6 +1185,21 @@ void building_room_geom_t::create_detail_vbos(building_t const &building) {
 	mats_ext_detail.create_vbos(building);
 }
 
+vector3d get_obj_model_rotated_dir(room_object_t const &obj, building_t const *const building) {
+	vector3d dir(obj.get_dir());
+	if (!obj.rotates()) return dir;
+	float const angle(123.4*obj.x1() + 456.7*obj.y1() + 567.8*obj.z1()); // random rotation angle based on position
+	vector3d const rand_dir(vector3d(sin(angle), cos(angle), 0.0).get_norm());
+	dir = ((dot_product(rand_dir, dir) < 0.0) ? -rand_dir : rand_dir); // random, but facing in the correct general direction
+
+	if (obj.type == TYPE_RCHAIR && building) { // rotate to face the center of the room
+		vector3d const center_dir(building->get_room(obj.room_id).get_cube_center() - obj.get_cube_center());
+		if (SIGN(dir.x) != SIGN(center_dir.x)) {dir.x *= -1.0;}
+		if (SIGN(dir.y) != SIGN(center_dir.y)) {dir.y *= -1.0;}
+	}
+	return dir;
+}
+
 void building_room_geom_t::create_obj_model_insts(building_t const &building) { // handle drawing of 3D models
 	//highres_timer_t timer("Gen Room Model Insts");
 	map<unsigned, vector3d> saved_office_chair_dirs;
@@ -1202,19 +1219,7 @@ void building_room_geom_t::create_obj_model_insts(building_t const &building) { 
 		for (auto i = obj_vect.begin(); i != objs_end; ++i) {
 			if (!i->is_visible() || !i->is_obj_model_type()) continue;
 			if (i->type == TYPE_KEY || (i->type == TYPE_SILVER && i->was_expanded())) continue; // drawn as small object model
-			vector3d dir(i->get_dir());
-
-			if (i->rotates()) {
-				float const angle(123.4*i->x1() + 456.7*i->y1() + 567.8*i->z1()); // random rotation angle based on position
-				vector3d const rand_dir(vector3d(sin(angle), cos(angle), 0.0).get_norm());
-				dir = ((dot_product(rand_dir, dir) < 0.0) ? -rand_dir : rand_dir); // random, but facing in the correct general direction
-
-				if (i->type == TYPE_RCHAIR) { // rotate to face the center of the room
-					vector3d const center_dir(building.get_room(i->room_id).get_cube_center() - i->get_cube_center());
-					if (SIGN(dir.x) != SIGN(center_dir.x)) {dir.x *= -1.0;}
-					if (SIGN(dir.y) != SIGN(center_dir.y)) {dir.y *= -1.0;}
-				}
-			}
+			vector3d dir(get_obj_model_rotated_dir(*i, &building));
 			if (building.is_rotated()) {building.do_xy_rotate_normal(dir);}
 			unsigned const obj_id(i - obj_vect.begin() + obj_id_offset);
 			// don't draw objects in interior rooms if the player is outside the building (useful for office bathrooms);

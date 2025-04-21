@@ -2460,7 +2460,7 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 					if (objs.size() > objs_start) {avoid.push_back(objs.back());} // avoid the last object that was placed, if there was one
 
 					if      (obj_type == 0) {place_plate_on_obj(rgen, sink, room_id, tot_light_amt, avoid);} // add a plate
-					else if (obj_type == 1) {place_cup_on_obj  (rgen, sink, room_id, tot_light_amt, avoid);} // add a cup
+					else if (obj_type == 1) {place_cup_on_obj  (rgen, sink, room_id, tot_light_amt, avoid, 1);} // add a cup; make_empty=1
 					else if (obj_type == 2 && building_obj_model_loader.is_model_valid(OBJ_MODEL_ROACH)) { // add a cockroach (upside down?)
 						sink.d[dim][!dir] = sink.get_center_dim(dim); // use the half area near the back wall to make sure the roach is visible to the player
 						cube_t roach;
@@ -4221,14 +4221,16 @@ bool building_t::place_plate_on_obj(rand_gen_t &rgen, cube_t const &place_on, un
 	return 1;
 }
 
-bool building_t::place_cup_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid) {
+bool building_t::place_cup_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid, bool make_empty) {
 	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_CUP)) return 0;
 	float const height(0.06*get_window_vspace()), radius(height*get_radius_for_square_model(OBJ_MODEL_CUP)); // almost square
 	if (min(place_on.dx(), place_on.dy()) < 2.5*radius) return 0; // surface is too small to place this cup
 	cube_t const cup(place_cylin_object(rgen, place_on, radius, height, 1.2*radius));
 	if (has_bcube_int(cup, avoid)) return 0; // only make one attempt
+	unsigned flags(RO_FLAG_NOCOLL | RO_FLAG_RAND_ROT);
+	if (!make_empty && rgen.rand_bool()) {flags |= RO_FLAG_NONEMPTY;} // add coffee to the cup
 	// random dim/dir, plus more randomness on top
-	interior->room_geom->objs.emplace_back(cup, TYPE_CUP, room_id, rgen.rand_bool(), rgen.rand_bool(), (RO_FLAG_NOCOLL | RO_FLAG_RAND_ROT), tot_light_amt, SHAPE_CYLIN);
+	interior->room_geom->objs.emplace_back(cup, TYPE_CUP, room_id, rgen.rand_bool(), rgen.rand_bool(), flags, tot_light_amt, SHAPE_CYLIN);
 	return 1;
 }
 

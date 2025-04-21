@@ -625,7 +625,7 @@ unsigned const RO_FLAG_WAS_EXP   = 0x200000; // for objects in/on shelves, close
 unsigned const RO_FLAG_ROTATING  = 0x400000; // for office chairs and clothes on hangers
 unsigned const RO_FLAG_IN_CLOSET = 0x800000; // for closet lights and light switches
 unsigned const RO_FLAG_ON_SRACK  = 0x800000; // on shelf rack; aliased with RO_FLAG_IN_CLOSET/RO_FLAG_ON_FLOOR
-unsigned const RO_FLAG_NONEMPTY  = 0x040000; // for microwaves, shelves, and shelfracks, aliased with RO_FLAG_HAS_EXTRA
+unsigned const RO_FLAG_NONEMPTY  = 0x040000; // for microwaves, shelves, shelfracks, and cups, aliased with RO_FLAG_HAS_EXTRA
 unsigned const RO_FLAG_ON_FLOOR  = 0x800000; // for books, fallen objects, upper floor shelfracks, etc., aliased with RO_FLAG_IN_CLOSET/RO_FLAG_ON_SRACK
 unsigned const RO_FLAG_BROKEN2   = 0x040000; // for lights that are completely broken, aliased with RO_FLAG_HAS_EXTRA and RO_FLAG_NONEMPTY
 unsigned const RO_FLAG_PLCOLL    = 0x040000; // player collidable, for chairs, aliased with RO_FLAG_HAS_EXTRA
@@ -1210,6 +1210,7 @@ struct building_room_geom_t {
 	void add_tub_outer (room_object_t const &c);
 	void add_sink_water(room_object_t const &c);
 	void add_tv_picture(room_object_t const &c);
+	void add_cup_liquid(room_object_t const &c);
 	void add_trashcan(room_object_t const &c);
 	void add_bucket(room_object_t const &c, bool draw_metal, bool draw_liquid);
 	void add_laundry_basket(room_object_t const &c);
@@ -2822,7 +2823,7 @@ private:
 	bool place_laptop_on_obj (rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid=vect_cube_t(), bool use_dim_dir=0);
 	bool place_pizza_on_obj  (rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid=vect_cube_t());
 	bool place_plate_on_obj  (rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid=vect_cube_t());
-	bool place_cup_on_obj    (rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid=vect_cube_t());
+	bool place_cup_on_obj    (rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid=vect_cube_t(), bool make_empty=0);
 	bool place_toy_on_obj    (rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid=vect_cube_t());
 	bool place_banana_on_obj (rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid=vect_cube_t());
 	bool place_phone_on_obj  (rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, bool dim, bool dir, float overhang_amt=0.0);
