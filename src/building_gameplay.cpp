@@ -2000,7 +2000,7 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 		}
 	}
 	// in-elevator buttons don't leave wires since they don't move with the elevator, so this must be an 'else if'
-	else if (type == TYPE_BUTTON || type == TYPE_SWITCH || type == TYPE_CLOCK || ((type == TYPE_MONITOR || type == TYPE_TV) && old_obj.is_hanging())) {
+	else if (type == TYPE_BUTTON || type == TYPE_SWITCH || type == TYPE_CLOCK || (obj.is_tv_or_monitor() && old_obj.is_hanging())) {
 		float const wire_thickness(min(0.5f*building.get_trim_thickness(), 0.25f*old_obj.get_depth()));
 		replace_with_hanging_wires(obj, old_obj, wire_thickness, 0); // vertical=0
 	}

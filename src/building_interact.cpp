@@ -312,7 +312,7 @@ void building_t::toggle_circuit_breaker(bool is_on, unsigned zone_id, unsigned n
 			updated  |= state_change;
 			if (state_change) {register_indir_lighting_state_change(i - objs_start);} // Note: could be slow
 		}
-		else if (i->type == TYPE_MONITOR || i->type == TYPE_TV) { // interactive + drawn powered devices
+		else if (i->is_tv_or_monitor()) { // interactive + drawn powered devices
 			if (i->obj_id != 1) {interior->room_geom->invalidate_draw_data_for_obj(*i);}
 			i->obj_id = 1; // turn it off
 			i->flags ^= RO_FLAG_NO_POWER;
@@ -617,23 +617,24 @@ void obj_dynamic_to_static(room_object_t &obj, building_interior_t &interior) {
 bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, point const &query_ray_end, vector3d const &int_dir) {
 	auto &obj(interior->room_geom->get_room_object_by_index(obj_ix));
 	point const sound_origin(obj.xc(), obj.yc(), int_pos.z), local_center(local_to_camera_space(sound_origin)); // generate sound from the player height
+	room_object const type(obj.type);
 	float sound_scale(0.0); // for building sound level
 	bool update_draw_data(0);
 	cube_t dishwasher;
 
-	if (obj.type == TYPE_TOILET || obj.type == TYPE_URINAL) { // toilet/urinal can be flushed, but otherwise is not modified
-		bool const is_urinal(obj.type == TYPE_URINAL); // urinal is quieter and higher pitch
+	if (type == TYPE_TOILET || type == TYPE_URINAL) { // toilet/urinal can be flushed, but otherwise is not modified
+		bool const is_urinal(type == TYPE_URINAL); // urinal is quieter and higher pitch
 		gen_sound_thread_safe(SOUND_FLUSH, local_center, (is_urinal ? 0.5 : 1.0), (is_urinal ? 1.25 : 1.0));
 		sound_scale = 0.5;
 		//refill_thirst(); // player can drink from toilet?
 	}
-	else if ((obj.type == TYPE_KSINK && get_dishwasher_for_ksink(obj, dishwasher) && dishwasher.line_intersects(int_pos, query_ray_end)) || obj.type == TYPE_DWASHER) { // dishwasher
+	else if ((type == TYPE_KSINK && get_dishwasher_for_ksink(obj, dishwasher) && dishwasher.line_intersects(int_pos, query_ray_end)) || type == TYPE_DWASHER) { // dishwasher
 		gen_sound_thread_safe_at_player(SOUND_METAL_DOOR, 0.2, 0.75);
 		obj.flags       ^= RO_FLAG_OPEN; // toggle open/closed
 		sound_scale      = 0.5;
 		update_draw_data = 1;
 
-		if (obj.type == TYPE_DWASHER) {} // no dishes in bare dishwasher
+		if (type == TYPE_DWASHER) {} // no dishes in bare dishwasher
 		// since TYPE_KSINK already uses the RO_FLAG_EXPANDED flag for cabinet doors, we have to use the RO_FLAG_USED for dishwasher expansion
 		else if (obj.is_open() && !obj.is_used()) { // newly opened
 			interior->room_geom->expand_dishwasher(obj, dishwasher);
@@ -644,8 +645,8 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 			obj.flags &= ~RO_FLAG_USED; // can now expand again
 		}
 	}
-	else if (obj.is_sink_type() || obj.type == TYPE_TUB) { // sink or tub
-		if (!obj.is_active() && obj.type == TYPE_TUB) {
+	else if (obj.is_sink_type() || type == TYPE_TUB) { // sink or tub
+		if (!obj.is_active() && type == TYPE_TUB) {
 			gen_sound_thread_safe(SOUND_SINK, local_center); // play sound when turning the tub on
 			
 			if (obj.state_flags < 4) { // water level is 0-4
@@ -669,7 +670,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		toggle_light_object(obj, obj.get_cube_center());
 		sound_scale = 0.0; // sound has already been registered above
 	}
-	else if (obj.type == TYPE_TPROLL) {
+	else if (type == TYPE_TPROLL) {
 		if (!obj.is_hanging() && !obj.was_expanded()) {
 			gen_sound_thread_safe(SOUND_FOOTSTEP, local_center, 0.5, 1.5); // could be better
 			obj.flags |= RO_FLAG_HANGING; // pull down the roll
@@ -677,20 +678,20 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		}
 		sound_scale = 0.0; // no sound
 	}
-	else if (obj.type == TYPE_PICTURE) { // tilt the picture
+	else if (type == TYPE_PICTURE) { // tilt the picture
 		obj.flags |= RO_FLAG_RAND_ROT;
 		++obj.item_flags; // choose a different random rotation
 		gen_sound_thread_safe(SOUND_SLIDING, local_center, 0.25, 2.0); // higher pitch
 		sound_scale      = 0.0; // no sound
 		update_draw_data = 1;
 	}
-	else if (obj.type == TYPE_OFF_CHAIR) { // handle rotate of office chair
+	else if (type == TYPE_OFF_CHAIR) { // handle rotate of office chair
 		office_chair_rot_rate += 0.1;
 		obj.flags |= RO_FLAG_ROTATING; // Note: this is a model, no need to regen vertex data
 		gen_sound_thread_safe(SOUND_SQUEAK, local_center, 0.25, 0.5); // lower pitch
 		sound_scale = 0.2;
 	}
-	else if (obj.type == TYPE_MWAVE) {
+	else if (type == TYPE_MWAVE) {
 		cube_t const panel(get_mwave_panel_bcube(obj));
 		float cur_tmin(0.0), cur_tmax(1.0);
 
@@ -704,14 +705,14 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 			sound_scale = 0.6;
 		}
 	}
-	else if (obj.type == TYPE_VENDING) {
+	else if (type == TYPE_VENDING) {
 		if (obj.is_powered()) {
 			if (!use_vending_machine(obj)) return 0;
 			gen_sound_thread_safe(SOUND_BEEP, local_center, 0.25, 0.75);
 			sound_scale = 0.6;
 		}
 	}
-	else if (obj.type == TYPE_LOCKER) {
+	else if (type == TYPE_LOCKER) {
 		if (obj.is_open() || !(obj.flags & RO_FLAG_NONEMPTY)) { // if not locked, where RO_FLAG_NONEMPTY indicates locked
 			gen_sound_thread_safe_at_player(SOUND_METAL_DOOR, 0.75);
 			interior->room_geom->expand_object(obj, *this);
@@ -720,7 +721,10 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 			update_draw_data = 1;
 		}
 	}
-	else if (obj.type == TYPE_STOVE) { // toggle burners; doesn't need power
+	else if (type == TYPE_TCAN) {
+
+	}
+	else if (type == TYPE_STOVE) { // toggle burners; doesn't need power
 		float const height(obj.dz());
 		bool const dim(obj.dim), dir(obj.dir);
 		unsigned burner_id(0);
@@ -755,22 +759,22 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 			}
 		}
 	}
-	else if (obj.type == TYPE_FRIDGE) {
+	else if (type == TYPE_FRIDGE) {
 		obj.flags       ^= RO_FLAG_OPEN; // toggle open/closed
 		update_draw_data = 1;
 		gen_sound_thread_safe((obj.is_open() ? (unsigned)SOUND_DOOR_OPEN : (unsigned)SOUND_DOOR_CLOSE), local_center, 0.4, 0.67);
 	}
-	else if (obj.type == TYPE_TV || obj.type == TYPE_MONITOR) {
+	else if (obj.is_tv_or_monitor()) {
 		if (obj.is_powered()) {
 			if (!obj.is_broken()) { // no visual effect if broken, but still clicks
-				if (obj.type == TYPE_MONITOR && (obj.obj_id & 1)) {--obj.obj_id;} // toggle on and off, but don't change the desktop
+				if (type == TYPE_MONITOR && (obj.obj_id & 1)) {--obj.obj_id;} // toggle on and off, but don't change the desktop
 				else {++obj.obj_id;} // toggle on/off, and also change the picture
 				update_draw_data = 1;
 			}
 			gen_sound_thread_safe(SOUND_CLICK, local_center, 0.5);
 		}
 	}
-	else if (obj.type == TYPE_BUTTON) { // Note: currently, buttons are only used for elevators and mall store gates
+	else if (type == TYPE_BUTTON) { // Note: currently, buttons are only used for elevators and mall store gates
 		sound_scale = 0.05; // very quiet, unless set in gate opening/closing case below
 
 		if (obj.in_mall()) { // mall store gate
@@ -797,7 +801,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		}
 		gen_sound_thread_safe_at_player(SOUND_CLICK, 0.5);
 	}
-	else if (obj.type == TYPE_SWITCH) {
+	else if (type == TYPE_SWITCH) {
 		// should select the correct light(s) for the room containing the switch
 		toggle_room_light(obj.get_cube_center(), 1, obj.room_id, 0, obj.in_closet(), obj.in_attic()); // exclude lamps; select closet lights if a closet light switch
 		gen_sound_thread_safe_at_player(SOUND_CLICK, 0.7);
@@ -805,20 +809,20 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		sound_scale      = 0.1;
 		update_draw_data = 1;
 	}
-	else if (obj.type == TYPE_BREAKER) {
+	else if (type == TYPE_BREAKER) {
 		gen_sound_thread_safe_at_player(SOUND_CLICK, 1.0);
 		obj.flags       ^= RO_FLAG_OPEN; // toggle on/off
 		toggle_circuit_breaker(obj.is_open(), obj.obj_id, obj.item_flags);
 		sound_scale      = 0.25;
 		update_draw_data = 1;
 	}
-	else if (obj.type == TYPE_BLINDS) { // see building_t::add_window_blinds()
+	else if (type == TYPE_BLINDS) { // see building_t::add_window_blinds()
 		if (!adjust_blinds_state(obj_ix)) return 0;
 		gen_sound_thread_safe_at_player(SOUND_SLIDING, 0.5);
 		sound_scale      = 0.3;
 		update_draw_data = 1;
 	}
-	else if (obj.type == TYPE_BOOK) {
+	else if (type == TYPE_BOOK) {
 		if (!obj.is_open()) { // check if there's space to open the book
 			room_object_t open_area(obj); // the area that must be clear if we want to open this book
 			open_area.z1() += 0.75*obj.dz(); // shift the bottom up to keep it from intersecting whatever this book is resting on
@@ -831,7 +835,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		sound_scale      = 0.1; // very little sound
 		update_draw_data = 1;
 	}
-	else if (obj.type == TYPE_SHOWER) { // shower
+	else if (type == TYPE_SHOWER) { // shower
 		// if (interior->room_geom->cube_intersects_moved_obj(c_test)) continue; // not yet needed
 		if (can_open_bathroom_stall_or_shower(obj, int_pos, int_dir)) { // open/close shower door
 			obj.flags       ^= RO_FLAG_OPEN; // toggle open/close
@@ -850,7 +854,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 			}
 		}
 	}
-	else if (obj.type == TYPE_SHOWERTUB) { // open/close curtains
+	else if (type == TYPE_SHOWERTUB) { // open/close curtains
 		bool const side(query_ray_end[!obj.dim] > obj.get_center_dim(!obj.dim));
 		if (obj.taken_level & (1 << unsigned(side))) return 0; // already taken
 		obj.flags ^= (side ? RO_FLAG_IS_ACTIVE : RO_FLAG_OPEN); // toggle open/close using two different flags for the left vs. right curtains
@@ -858,19 +862,19 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		sound_scale      = 0.4;
 		update_draw_data = 1;
 	}
-	else if (obj.type == TYPE_BOX) {
+	else if (type == TYPE_BOX) {
 		if (!check_for_water_splash(sound_origin, 0.6)) {gen_sound_thread_safe_at_player(SOUND_OBJ_FALL, 0.5);}
 		obj.flags       |= RO_FLAG_OPEN; // mark as open
 		sound_scale      = 0.2;
 		update_draw_data = 1;
 	}
-	else if (obj.type == TYPE_PIZZA_BOX) {
+	else if (type == TYPE_PIZZA_BOX) {
 		gen_sound_thread_safe_at_player(SOUND_SLIDING, 0.1);
 		obj.flags       ^= RO_FLAG_OPEN; // toggle open/close
 		sound_scale      = 0.0; // no sound
 		update_draw_data = 1;
 	}
-	else if (obj.type == TYPE_CLOSET || obj.type == TYPE_STALL) {
+	else if (type == TYPE_CLOSET || type == TYPE_STALL) {
 		if (!obj.is_open()) { // not yet open
 			// remove any spraypaint or marker that's on the door; would be better if we could move it with the door, or add it back when the door is closed
 			cube_t door(get_open_closet_door(obj));
@@ -879,7 +883,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		}
 		obj.flags ^= RO_FLAG_OPEN; // toggle open/close
 
-		if (obj.type == TYPE_CLOSET) {
+		if (type == TYPE_CLOSET) {
 			interior->room_geom->expand_object(obj, *this); // expand any boxes so that the player can pick them up
 			sound_scale = 0.25; // closets are quieter, to allow players to more easily hide
 		}
@@ -887,21 +891,21 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		register_indir_lighting_geom_change();
 		update_draw_data = 1;
 	}
-	else if (obj.type == TYPE_MED_CAB) { // medicine cabinet
+	else if (type == TYPE_MED_CAB) { // medicine cabinet
 		obj.flags ^= RO_FLAG_OPEN; // toggle open/close
 		interior->room_geom->expand_object(obj, *this);
 		play_open_close_sound(obj, sound_origin);
 		sound_scale      = 0.4;
 		update_draw_data = 1;
 	}
-	else if (obj.type == TYPE_BRK_PANEL) { // breaker panel
+	else if (type == TYPE_BRK_PANEL) { // breaker panel
 		obj.flags ^= RO_FLAG_OPEN; // toggle open/close
 		interior->room_geom->expand_object(obj, *this);
 		play_open_close_sound(obj, sound_origin);
 		sound_scale      = 0.6;
 		update_draw_data = 1;
 	}
-	else if (obj.type == TYPE_ATTIC_DOOR) {
+	else if (type == TYPE_ATTIC_DOOR) {
 		gen_sound_thread_safe_at_player(SOUND_SLIDING, 1.0); // better sound?
 		obj.flags       ^= RO_FLAG_OPEN; // open/close
 		sound_scale      = 0.5;
@@ -915,29 +919,29 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 			if (i->is_lit() != obj.is_open()) {toggle_light_object(*i, sound_origin);}
 		}
 	}
-	else if (obj.type == TYPE_LAVALAMP) {
+	else if (type == TYPE_LAVALAMP) {
 		obj.flags       ^= RO_FLAG_LIT; // toggle lit
 		update_draw_data = 1;
 		gen_sound_thread_safe(SOUND_CLICK, local_center, 0.4);
 	}
-	else if (obj.type == TYPE_FISHTANK) {
+	else if (type == TYPE_FISHTANK) {
 		obj.flags       ^= RO_FLAG_LIT; // toggle the light on the lid; no draw data update
 		gen_sound_thread_safe(SOUND_CLICK, local_center, 0.5);
 	}
-	else if (obj.type == TYPE_WFOUNTAIN) {
+	else if (type == TYPE_WFOUNTAIN) {
 		refill_thirst();
 		gen_sound_thread_safe(SOUND_GULP, local_center, 0.5);
 		sound_scale = 0.1; // very little sound
 	}
-	else if (obj.type == TYPE_FALSE_DOOR) { // locked, can't open
+	else if (type == TYPE_FALSE_DOOR) { // locked, can't open
 		print_text_onscreen("Door is locked", RED, 1.0, 2.0*TICKS_PER_SECOND, 0);
 		gen_sound_thread_safe_at_player(SOUND_CLICK, 1.0, 0.6);
 		return 0;
 	}
-	else if (obj.type == TYPE_SHELFRACK) { // expand shelfrack
+	else if (type == TYPE_SHELFRACK) { // expand shelfrack
 		interior->room_geom->expand_object(obj, *this);
 	}
-	else if (is_ball_type(obj.type)) { // push the ball
+	else if (is_ball_type(type)) { // push the ball
 		assert(obj.has_dstate());
 		room_obj_dstate_t &dstate(interior->room_geom->get_dstate(obj));
 		dstate.velocity.x += 0.5*KICK_VELOCITY*int_dir.x;
@@ -956,7 +960,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 	else {assert(0);} // unhandled type
 	if (update_draw_data) {interior->room_geom->update_draw_state_for_room_object(obj, *this, 0);}
 	if (sound_scale > 0.0) {register_building_sound(sound_origin, sound_scale);}
-	if (obj.type == TYPE_BOX) {add_box_contents(obj);} // must be done last to avoid reference invalidation
+	if (type == TYPE_BOX) {add_box_contents(obj);} // must be done last to avoid reference invalidation
 	return 1;
 }
 
@@ -1329,7 +1333,7 @@ void building_t::run_ball_update(vect_room_object_t::iterator ball_it, point con
 			bool handled(0);
 
 			// break the glass if not already broken; should windows get broken as well?
-			if (bt.breaks_glass && (obj.type == TYPE_TV || obj.type == TYPE_MONITOR || (obj.is_mirror() && !obj.is_open())) &&
+			if (bt.breaks_glass && (obj.is_tv_or_monitor() || (obj.is_mirror() && !obj.is_open())) &&
 				velocity.mag() > 2.0*MIN_VELOCITY && !obj.is_broken())
 			{
 				vector3d front_dir(all_zeros);
@@ -1346,7 +1350,7 @@ void building_t::run_ball_update(vect_room_object_t::iterator ball_it, point con
 						interior->room_geom->update_draw_state_for_room_object(obj, *this, 0);
 						
 						if (obj.is_mirror()) {register_achievement("7 Years of Bad Luck");}
-						else if ((obj.type == TYPE_TV || obj.type == TYPE_MONITOR) && obj.is_powered()/*!(obj.obj_id & 1)*/) { // only if turned on?
+						else if (obj.is_tv_or_monitor() && obj.is_powered()/*!(obj.obj_id & 1)*/) { // only if turned on?
 							unsigned const obj_id(ball_it - interior->room_geom->objs.begin());
 							interior->room_geom->particle_manager.add_for_obj(ball, 0.06*radius, front_dir, 1.0*KICK_VELOCITY, 50, 60, PART_EFFECT_SPARK, obj_id);
 						}
@@ -1367,7 +1371,7 @@ void building_t::run_ball_update(vect_room_object_t::iterator ball_it, point con
 					}
 				}
 			}
-			if (obj.type == TYPE_PICTURE || obj.type == TYPE_TV || obj.type == TYPE_MONITOR || obj.type == TYPE_BUTTON || obj.type == TYPE_SWITCH ||
+			if (obj.type == TYPE_PICTURE || obj.is_tv_or_monitor() || obj.type == TYPE_BUTTON || obj.type == TYPE_SWITCH ||
 				obj.type == TYPE_BREAKER || (obj.type == TYPE_OFF_CHAIR && obj.rotates()))
 			{
 				if (!handled) {interact_with_object(obj_ix, new_center, new_center, velocity.get_norm());}
