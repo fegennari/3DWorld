@@ -2473,16 +2473,22 @@ bool building_t::get_zval_of_floor(point const &pos, float radius, float &zval) 
 	cur_bcube.set_from_sphere(pos, radius);
 	if (!bcube.contains_cube_xy(cur_bcube) && !interior->basement_ext_bcube.contains_cube(cur_bcube)) return 0; // not contained/too close to walls
 	if (get_zval_for_pool_bottom(pos, zval)) return 1; // on the bottom of the pool
-	float const floor_spacing(get_window_vspace());
+	float const floor_spacing(get_window_vspace()), z2_test_val(pos.z - floor_spacing);
+	float floor_zval(0.0), cont_area(0.0);
 
-	for (cube_t const &f : interior->floors) { // blood can only be placed on floors
-		if (pos.z < f.z2() || pos.z > (f.z2() + floor_spacing) || !f.contains_cube_xy(cur_bcube)) continue; // wrong floor, or not contained
-		zval = (f.z2() + 1.5*get_flooring_thick()); // slightly above rugs and flooring
-		return 1;
-	}
-	if (has_room_geom()) { // check glass floors as well
+	for (cube_t const &f : interior->floors) { // blood/rats/books/etc. can only be placed on floors
+		if (pos.z < f.z2() || z2_test_val > f.z2() || !f.intersects_xy(cur_bcube)) continue; // wrong floor, or no overlap
+		float const z(f.z2() + 1.5*get_flooring_thick()); // slightly above rugs and flooring
+		if (f.contains_cube_xy(cur_bcube)) {zval = z; return 1;} // contained, done
+		if (cont_area > 0.0 && z != floor_zval) continue; // different height, skip (or fail?)
+		accumulate_shared_xy_area(cur_bcube, f, cont_area);
+		floor_zval = z;
+	} // for f
+	if (cont_area > 0.99*cur_bcube.get_area_xy()) {zval = floor_zval; return 1;} // contained, done
+
+	if (has_room_geom()) { // check glass floors as well; no cont_area logic here
 		for (cube_t const &f : interior->room_geom->glass_floors) {
-			if (pos.z < f.z2() || pos.z > (f.z2() + floor_spacing) || !f.contains_cube_xy(cur_bcube)) continue; // wrong floor, or not contained
+			if (pos.z < f.z2() || z2_test_val > f.z2() || !f.contains_cube_xy(cur_bcube)) continue; // wrong floor, or not contained
 			zval = (f.z2() + 0.5*get_flooring_thick()); // no rugs or flooring
 			return 1;
 		}
