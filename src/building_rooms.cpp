@@ -611,7 +611,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					}
 					else if (*r == pri_hall) { // office building/school/hospital primary hallway
 						add_pri_hall_objs(rgen, room_rgen, *r, room_center.z, room_id, tot_light_amt, f, objs_start);
-						if (is_school()) {add_hallway_lockers(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);}
+						if (is_school()) {add_hallway_lockers(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start);}
 						if (is_ground_floor) {r->assign_to(RTYPE_LOBBY, f);} // first floor primary hallway, make it the lobby
 						if (f == 0) {place_objects_onto_surfaces(rgen, *r, room_id, tot_light_amt, objs_start, f, is_basement, 1);} // first floor reception desks; not_private=1
 					}
@@ -620,7 +620,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 						cube_t const &part(get_part_for_room(*r));
 
 						if (r->d[hall_dim][0] == part.d[hall_dim][0] && r->d[hall_dim][1] == part.d[hall_dim][1]) {
-							add_hallway_lockers(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
+							add_hallway_lockers(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start);
 						}
 					}
 				}

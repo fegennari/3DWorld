@@ -3,7 +3,9 @@
 
 #include "function_registry.h"
 #include "buildings.h"
-//#include "city_model.h"
+#include "city_model.h"
+
+extern object_model_loader_t building_obj_model_loader;
 
 
 bool building_t::add_classroom_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix,
@@ -134,7 +136,7 @@ void building_t::add_objects_next_to_classroom_chalkboard(rand_gen_t &rgen, room
 	add_plants_to_room(rgen, room, zval, cb.room_id, cb.light_amt, objs_start, num_plants);
 }
 
-void building_t::add_hallway_lockers(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+void building_t::add_hallway_lockers(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start) {
 	bool const dim(room.dx() < room.dy()); // hallway dim
 	float const floor_spacing(get_window_vspace()), locker_height(0.75*floor_spacing), locker_depth(0.25*locker_height), locker_width(0.22*locker_height);
 	cube_t room_bounds(get_walkable_room_bounds(room));
@@ -145,6 +147,8 @@ void building_t::add_hallway_lockers(rand_gen_t &rgen, room_t const &room, float
 	unsigned const lockers_start(objs.size()), num_lockers(hall_len/locker_width); // floor
 	// add expanded blockers for stairs and elevators in this hallway to ensure there's space for the player and people to walk on the sides
 	float const se_clearance(2.0*get_min_front_clearance_inc_people());
+	bool const add_padlocks(floor_ix == 0 && building_obj_model_loader.is_model_valid(OBJ_MODEL_PADLOCK));
+	vector3d const sz(add_padlocks ? building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_PADLOCK) : zero_vector); // D, W, H
 	vect_cube_t blockers;
 	
 	for (stairwell_t const &s : interior->stairwells) {
@@ -177,8 +181,22 @@ void building_t::add_hallway_lockers(rand_gen_t &rgen, room_t const &room, float
 			}
 			if (invalid || is_obj_placement_blocked(test_cube, room, 1,    0)) continue;
 			if (!check_if_placed_on_interior_wall  (test_cube, room, !dim, d)) continue; // ensure the vent is on a wall
-			// TODO: some locked with padlocks; set RO_FLAG_NONEMPTY
-			objs.emplace_back(locker, TYPE_LOCKER, room_id, !dim, !d, 0, tot_light_amt, SHAPE_CUBE, colorRGBA(0.4, 0.6, 0.6));
+			unsigned flags(0);
+
+			// add padlocks to some lockers; first floor only, to avoid having too many model objects (but may be added to stacked parts)
+			if (floor_ix == 0 && rgen.rand_float() < 0.25) {
+				float const height(0.04*floor_spacing), hwidth(0.5*height*sz.y/sz.z), depth(height*sz.x/sz.z);
+				cube_t lock;
+				lock.z1() = zval + 0.365*floor_spacing;
+				lock.z2() = lock.z1() + height;
+				set_wall_width(lock, (locker.d[dim][0] + ((dim ^ d) ? 0.175 : 0.825)*locker_width), hwidth, dim);
+				float const pos(locker.d[!dim][!d]);
+				lock.d[!dim][ d] = pos;
+				lock.d[!dim][!d] = pos + (d ? -1.0 : 1.0)*depth;
+				objs.emplace_back(lock, TYPE_PADLOCK, room_id, !dim, d, (RO_FLAG_NOCOLL | RO_FLAG_IS_ACTIVE), 1.0, SHAPE_CUBE, colorRGBA(0.4, 0.4, 0.4)); // attached
+				flags |= RO_FLAG_NONEMPTY; // flag as locked
+			}
+			objs.emplace_back(locker, TYPE_LOCKER, room_id, !dim, !d, flags, tot_light_amt, SHAPE_CUBE, colorRGBA(0.4, 0.6, 0.6));
 			set_obj_id(objs); // for random contents
 		} // for n
 	} // for d
