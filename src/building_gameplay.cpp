@@ -2224,7 +2224,9 @@ void play_obj_fall_sound(room_object_t const &obj, point const &player_pos) {
 }
 
 void building_t::assign_correct_room_to_object(room_object_t &obj) const {
-	int const room_id(get_room_containing_pt(obj.get_cube_center()));
+	point const center(obj.get_cube_center());
+	if (interior && obj.room_id < interior->rooms.size() && get_room(obj.room_id).contains_pt(center)) return; // already has the correct room
+	int const room_id(get_room_containing_pt(center));
 
 	if (room_id >= 0 && room_id != obj.room_id) { // room should be valid, but okay if not; don't update lighting if it's the same room
 		obj.room_id   = room_id;
