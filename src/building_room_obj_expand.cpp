@@ -1479,7 +1479,7 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 		float const length(2.0*drawer_dz), width(0.77*length);
 
 		if (length < 0.9*sz[c.dim] && width < 0.9*sz[!c.dim]) { // if it can fit
-			obj = room_object_t(drawer, TYPE_PAPER, c.room_id, c.dim, c.dir);
+			obj = room_object_t(drawer, TYPE_PAPER, c.room_id, c.dim, c.dir); // Note: item_flags/btype not set
 			obj.obj_id = rgen.rand();
 			obj.color  = paper_colors[rgen.rand()%NUM_PAPER_COLORS];
 			obj.z2()   = obj.z1() + 0.01*sz.z;

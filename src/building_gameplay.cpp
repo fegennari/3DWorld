@@ -400,7 +400,8 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 		if      (is_shirt_model(obj)) {type.name = "shirt";}
 		else if (is_pants_model(obj)) {type.name = "pants";}
 	}
-	else if (otype == TYPE_PAPER) {
+	// school desk and floor papers have no value; papers in drawers don't have btype assigned and have the same value independent of building type
+	else if (otype == TYPE_PAPER && obj.item_flags != BTYPE_SCHOOL) {
 		float const value(get_paper_value(obj));
 		if      (value >= 500.0) {type.name = "top secret document";}
 		else if (value >= 100.0) {type.name = "confidential document";}

@@ -577,7 +577,7 @@ void building_t::add_papers_to_surface(cube_t const &c, bool dim, bool dir, unsi
 			set_wall_width(paper, rgen.rand_uniform(c.d[ dim][0]+plen,   c.d[ dim][1]-plen  ), 0.5*plen,    dim);
 			set_wall_width(paper, rgen.rand_uniform(c.d[!dim][0]+pwidth, c.d[!dim][1]-pwidth), 0.5*pwidth, !dim);
 			if (!avoid.is_all_zeros() && paper.intersects_xy(avoid)) continue; // skip this paper
-			objs.emplace_back(paper, TYPE_PAPER, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_RAND_ROT), tot_light_amt, SHAPE_CUBE, select_paper_color(rgen));
+			objs.emplace_back(paper, TYPE_PAPER, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_RAND_ROT), tot_light_amt, SHAPE_CUBE, select_paper_color(rgen), btype);
 			set_obj_id(objs);
 			paper.z2() += thickness; // to avoid Z-fighting if different colors
 		} // for n
@@ -3117,6 +3117,7 @@ void building_t::add_floor_clutter_objs(rand_gen_t &rgen, room_t const &room, cu
 	if (add_papers) { // add sheets of paper on the floor
 		// similar to add_papers_to_surface()
 		unsigned const num_papers((rgen.rand() % 5) + 1); // 1-5
+		unsigned const paper_flags(RO_FLAG_NOCOLL | RO_FLAG_RAND_ROT | RO_FLAG_ON_FLOOR);
 		float const plen(0.115*floor_spacing), pwidth(0.77*plen), thickness(0.00025*floor_spacing); // 8.5x11
 		point prev_pos;
 		cube_t paper;
@@ -3127,7 +3128,7 @@ void building_t::add_floor_clutter_objs(rand_gen_t &rgen, room_t const &room, cu
 			set_wall_width(paper, rgen.rand_uniform(place_area.d[ dim][0]+plen,   place_area.d[ dim][1]-plen  ), 0.5*plen,    dim);
 			set_wall_width(paper, rgen.rand_uniform(place_area.d[!dim][0]+pwidth, place_area.d[!dim][1]-pwidth), 0.5*pwidth, !dim);
 			if (is_obj_placement_blocked(paper, room, 1) || overlaps_other_room_obj(paper, objs_start) || has_bcube_int(paper, avoid)) continue; // bad placement
-			objs.emplace_back(paper, TYPE_PAPER, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_RAND_ROT | RO_FLAG_ON_FLOOR), tot_light_amt, SHAPE_CUBE, select_paper_color(rgen));
+			objs.emplace_back(paper, TYPE_PAPER, room_id, dim, dir, paper_flags, tot_light_amt, SHAPE_CUBE, select_paper_color(rgen), btype);
 			set_obj_id(objs);
 			paper.z2() += thickness; // to avoid Z-fighting if different colors
 		} // for n
