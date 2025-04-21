@@ -3182,6 +3182,9 @@ bool building_t::add_laundry_objs(rand_gen_t rgen, room_t const &room, float zva
 		objs.emplace_back(blocker, TYPE_BLOCKER, room_id, i->dim, i->dir, RO_FLAG_INVIS); // add blocker cube
 		break; // there should only be one, and we've invalidated the reference
 	}
+	if (!is_house) { // commercial laundry room
+		// TODO
+	}
 	for (unsigned n = 0; n < 10; ++n) { // 10 attempts to place washer and dryer along the same wall
 		unsigned const washer_ix(objs.size());
 		bool const placed_washer(place_model_along_wall(OBJ_MODEL_WASHER, TYPE_WASHER, room, 0.42, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.8));
