@@ -21,7 +21,7 @@ carried_item_t player_held_object;
 bldg_obj_type_t bldg_obj_types[NUM_ROBJ_TYPES];
 vector<sphere_t> cur_sounds; // radius = sound volume
 
-extern bool camera_in_building, player_is_hiding, player_in_unlit_room, player_in_tunnel, player_in_mall, disable_blood;
+extern bool camera_in_building, player_is_hiding, player_in_unlit_room, player_in_tunnel, player_in_mall, disable_blood, flashlight_on;
 extern int window_width, window_height, display_framerate, display_mode, game_mode, building_action_key, frame_counter, player_in_basement, player_in_water;
 extern int animate2, camera_surf_collide;
 extern float fticks, CAMERA_RADIUS;
@@ -1033,10 +1033,19 @@ public:
 		cur_value  = keep_value;
 		cur_weight = keep_weight;
 	}
-	void show_stats() const {
+	void show_stats() { // non-const because it may reorder inventory items
 		if (!carried.empty()) {
 			player_held_object = carried.back(); // deep copy last pickup object if usable
 			
+			if (has_flashlight && flashlight_on && player_held_object.type != TYPE_FLASHLIGHT) { // select flashlight from inventory
+				for (auto i = carried.begin(); i != carried.end(); ++i) {
+					if (i->type != TYPE_FLASHLIGHT) continue;
+					player_held_object = *i;
+					carried.erase(i);
+					carried.push_back(player_held_object);
+					break;
+				}
+			}
 			if (player_held_object.type == TYPE_PHONE) {
 				if (phone_manager.is_phone_ringing()) {player_held_object.flags |= RO_FLAG_EMISSIVE;} // show ring screen
 				else if (phone_manager.is_phone_on()) {player_held_object.flags |= RO_FLAG_OPEN    ;} // show lock screen
