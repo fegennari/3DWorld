@@ -1019,16 +1019,17 @@ public:
 		float const sz_scale((trashcan.is_round() && !obj.is_round()) ? SQRT2 : 1.0); // square object in round trashcan needs more space
 		vector3d obj_sz(obj.get_size()), tc_sz(trashcan.get_size());
 		tc_sz.x /= sz_scale; tc_sz.y /= sz_scale; // cylinder
+		string const name(get_taken_obj_type(obj).name);
 		
 		if      (obj_sz.x < tc_sz.x && obj_sz.y < tc_sz.y && obj_sz.z < tc_sz.z) {} // fits
 		else if (obj_sz.y < tc_sz.x && obj_sz.x < tc_sz.y && obj_sz.z < tc_sz.z) {} // fits, x/y swapped
 		else if (obj_sz.z < tc_sz.x && obj_sz.y < tc_sz.y && obj_sz.x < tc_sz.z) {} // fits, x/z swapped
 		else if (obj_sz.x < tc_sz.x && obj_sz.z < tc_sz.y && obj_sz.y < tc_sz.z) {} // fits, y/z swapped
 		else {
-			print_text_onscreen("It Doesn't Fit", RED, 1.0, 1.5*TICKS_PER_SECOND, 0);
+			print_text_onscreen((name + " Doesn't Fit"), RED, 1.0, 1.5*TICKS_PER_SECOND, 0);
 			return 0;
 		}
-		print_text_onscreen("Object Discarded", YELLOW, 0.8, 2.0*TICKS_PER_SECOND, 0);
+		print_text_onscreen((name + " Discarded"), YELLOW, 0.8, 2.0*TICKS_PER_SECOND, 0);
 		remove_last_item();
 		point const tc_pos(trashcan.get_cube_center());
 		gen_sound_thread_safe(SOUND_OBJ_FALL, (tc_pos + get_tiled_terrain_model_xlate()));
