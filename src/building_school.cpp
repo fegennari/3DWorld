@@ -87,14 +87,19 @@ bool building_t::add_classroom_desk(rand_gen_t &rgen, room_t const &room, cube_t
 {
 	vect_room_object_t &objs(interior->room_geom->objs);
 	if (is_obj_placement_blocked(desk, room, 1)) return 0; // check proximity to doors, etc.
-	unsigned const pre_add_obj_id(objs.size());
-	unsigned const flags((desk_ix == 0) ? RO_FLAG_HAS_EXTRA : 0); // teacher's desk always has drawers
+	bool const teacher_desk(desk_ix == 0);
+	unsigned const pre_add_obj_id(objs.size()), flags(teacher_desk ? RO_FLAG_HAS_EXTRA : 0); // teacher's desk always has drawers
 	objs.emplace_back(desk, TYPE_DESK, room_id, dim, dir, flags, tot_light_amt, SHAPE_CUBE); // no tall desks
 	set_obj_id(objs);
 	objs.back().obj_id += 123*desk_ix; // more random variation
 	// add paper, pens, and pencils
 	add_papers_to_surface      (desk, dim,  dir, 7, rgen, room_id, tot_light_amt); // add 0-7 sheet(s) of paper
 	add_pens_pencils_to_surface(desk, dim, !dir, 4, rgen, room_id, tot_light_amt); // 0-4 pens/pencils
+
+	if (teacher_desk && rgen.rand_float() < 0.33) { // add a cup on the desk 33% of the time
+		vect_cube_t const avoid(objs.begin()+pre_add_obj_id+1, objs.end()); // add all papers, pens, and pencils
+		place_cup_on_obj(rgen, desk, room_id, tot_light_amt, avoid);
+	}
 	// add chair
 	point chair_pos;
 	chair_pos.z     = desk.z1();
