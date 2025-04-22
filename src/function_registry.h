@@ -237,6 +237,7 @@ int get_line_as_quad_pts(point const &p1, point const &p2, float w1, float w2, p
 void draw_simple_cube(cube_t const &c, bool texture=0, unsigned dim_mask=0xFF, vector3d const *const view_dir=nullptr);
 void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, float texture_scale=1.0,
 	bool proportional_texture=0, vector3d const *const view_dir=NULL, unsigned dim_mask=0xFF, bool swap_y_st=0);
+void draw_cube_verts_only(cube_t const &c);
 void gen_quad_tex_coords(float *tdata, unsigned num, unsigned stride);
 void gen_quad_tri_tex_coords(float *tdata, unsigned num, unsigned stride);
 void free_sphere_vbos();

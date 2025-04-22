@@ -1839,7 +1839,7 @@ void end_sphere_draw(bool &in_sphere_draw) {
 
 void draw_colored_cube(cube_t const &c, colorRGBA const &color, shader_t &s) {
 	s.set_cur_color(color);
-	draw_simple_cube(c);
+	draw_cube_verts_only(c);
 }
 void add_line(point const &p1, point const &p2, colorRGBA const &color, vector<vert_color> &line_pts) {
 	line_pts.emplace_back(p1, color);
@@ -1888,7 +1888,7 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 
 	if (ret == 0) { // no path found, show line to dest
 		s.set_cur_color(RED);
-		draw_simple_cube(union_plot_bcube);
+		draw_cube_verts_only(union_plot_bcube);
 		add_line(pos, dest_pos, BROWN, line_pts);
 	}
 	else if (ret == 2) { // show segment from current pos to edge of building/car
@@ -1913,7 +1913,7 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 
 	for (auto i = dbg_cubes.begin(); i != dbg_cubes.end(); ++i) {
 		s.set_cur_color((!safe_to_cross && i+1 == dbg_cubes.end()) ? RED : GREEN);
-		draw_simple_cube(*i);
+		draw_cube_verts_only(*i);
 	}
 	ensure_outlined_polygons();
 
@@ -1922,7 +1922,7 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 		s.set_cur_color(is_plot_avoid ? WHITE : CYAN); // show plot avoid bcube as white
 		cube_t c(i);
 		max_eq(c.z2(), (c.z1() + radius)); // make sure it's nonzero area
-		draw_simple_cube(c);
+		draw_cube_verts_only(c);
 		if (is_plot_avoid) {s.set_cur_color(CYAN);}
 	}
 	if (has_dest_bldg   ) {draw_colored_cube(get_building_bcube(dest_bldg), PURPLE, s);} // draw dest building bcube

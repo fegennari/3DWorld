@@ -1198,6 +1198,29 @@ void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, flo
 	if (vix > 0) {draw_quad_verts_as_tris(verts, vix);}
 }
 
+void draw_cube_verts_only(cube_t const &c) { // simplified version of draw_cube() with no normals, texture coordinates, or culling
+	point const scale(c.get_size());
+	vector3d const xlate(c.get_cube_center() - 0.5*scale); // move origin from center to min corner
+	vert_wrap_t verts[24];
+
+	for (unsigned i = 0, vix = 0; i < 3; ++i) { // iterate over dimensions
+		unsigned const d[2] = {i, ((i+1)%3)}, n((i+2)%3);
+
+		for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
+			for (unsigned s1 = 0; s1 < 2; ++s1) {
+				point pt;
+				pt[n]    = j;
+				pt[d[1]] = s1;
+
+				for (unsigned k = 0; k < 2; ++k) { // iterate over vertices
+					pt[d[0]] = k^j^s1^1; // need to orient the vertices differently for each side
+					verts[vix++] = pt*scale + xlate;
+				}
+			} // for s1
+		} // for j
+	} // for i
+	draw_quad_verts_as_tris(verts, 24);
+}
 
 
 void gen_quad_tex_coords(float *tdata, unsigned num, unsigned stride) { // stride is in floats

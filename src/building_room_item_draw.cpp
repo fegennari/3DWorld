@@ -552,11 +552,11 @@ void rgeom_mat_t::clear_vbos() {
 void rotate_verts(vector<rgeom_mat_t::vertex_t> &verts, building_t const &building) {
 	point const center(building.bcube.get_cube_center());
 
-	for (auto i = verts.begin(); i != verts.end(); ++i) {
-		building.do_xy_rotate(center, i->v);
-		vector3d n(i->get_norm());
+	for (auto &v : verts) {
+		building.do_xy_rotate(center, v.v);
+		vector3d n(v.get_norm());
 		building.do_xy_rotate_normal(n);
-		i->set_norm(n);
+		v.set_norm(n);
 	}
 }
 void rgeom_mat_t::create_vbo(building_t const &building) {

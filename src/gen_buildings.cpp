@@ -3783,12 +3783,12 @@ public:
 							if (debug_color == WHITE && b.has_retail()) {debug_color = PINK;}
 							
 							if (debug_color != WHITE) { // special building type
-								cube_t debug_cube(b.bcube);
+								cube_t debug_cube(b.bcube); // Note: if b.is_rotated(), this will be the AABB of the rotated building
 								set_cube_zvals(debug_cube, b.bcube.z2(), (b.bcube.z2() + 4.0*b.get_window_vspace()));
 								select_texture(WHITE_TEX);
 								s.set_cur_color(debug_color);
 								s.set_color_e(debug_color);
-								draw_simple_cube(debug_cube);
+								draw_cube_verts_only(debug_cube);
 								s.clear_color_e();
 							}
 						}

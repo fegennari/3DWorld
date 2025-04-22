@@ -1678,34 +1678,34 @@ void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlig
 				shader_t s;
 				s.begin_color_only_shader(YELLOW);
 				ensure_outlined_polygons();
-				draw_simple_cube(sel_car->bcube + xlate);
+				draw_cube_verts_only(sel_car->bcube + xlate);
 
 				if (!sel_car->is_parked() && sel_car->dest_valid) { // draw destination of moving car
 					if (sel_car->cur_city != sel_car->dest_city) { // dest is in a different city
 						s.set_cur_color(RED);
 						cube_t city_bcube(get_city_bcube(sel_car->dest_city));
 						city_bcube.z2() += 10.0*city_params.road_width; // increase height to make it more easily visible
-						draw_simple_cube(city_bcube + xlate);
+						draw_cube_verts_only(city_bcube + xlate);
 					}
 					if (sel_car->dest_driveway >= 0) {
 						s.set_cur_color(CYAN);
 						cube_t dw_bcube(get_car_dest_bcube(*sel_car, 0)); // driveway
 						dw_bcube.z2() += 4.0*city_params.road_width; // increase height to make it more easily visible
-						draw_simple_cube(dw_bcube + xlate);
+						draw_cube_verts_only(dw_bcube + xlate);
 
 						if (sel_car->park_space_cent != vector2d()) { // have a dest parking space
 							s.set_cur_color(RED);
-							draw_simple_cube(sel_car->get_parking_space_debug_marker() + xlate);
+							draw_cube_verts_only(sel_car->get_parking_space_debug_marker() + xlate);
 						}
 					}
 					if (sel_car->in_parking_lot) {
 						s.set_cur_color(BLUE);
-						draw_simple_cube(sel_car->get_ped_coll_check_area() + xlate);
+						draw_cube_verts_only(sel_car->get_ped_coll_check_area() + xlate);
 					}
 					s.set_cur_color(PURPLE);
 					cube_t isec_bcube(get_car_dest_bcube(*sel_car, 1)); // isec
 					isec_bcube.z2() += 4.0*city_params.road_width; // increase height to make it more easily visible
-					draw_simple_cube(isec_bcube + xlate);
+					draw_cube_verts_only(isec_bcube + xlate);
 				}
 				set_fill_mode(); // reset
 				s.end_shader();
