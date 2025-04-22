@@ -3,7 +3,7 @@ Money by Martin Amis
 The Information by Martin Amis
 The Bottle Factory Outing by Beryl Bainbridge
 According to Queeney by Beryl Bainbridge
-Flaubert’s Parrot by Julian Barnes
+Flaubert's Parrot by Julian Barnes
 A History of the World in 10 1/2 Chapters by Julian Barnes
 Augustus Carp, Esq. by Himself: Being the Autobiography of a Really Good Man by Henry Howarth Bashford
 Molloy by Samuel Beckett
@@ -20,7 +20,7 @@ A Season in Sinji by JL Carr
 The Harpole Report by JL Carr
 The Hearing Trumpet by Leonora Carrington
 Mister Johnson by Joyce Cary
-The Horse’s Mouth by Joyce Cary
+The Horse's Mouth by Joyce Cary
 Don Quixote by Miguel de Cervantes
 The Case of the Gilded Fly by Edmund Crispin
 Just William by Richmal Crompton
@@ -33,7 +33,7 @@ A Fairy Tale of New York by JP Donleavy
 The Commitments by Roddy Doyle
 Ennui by Maria Edgeworth
 Cheese by Willem Elsschot
-Bridget Jones’s Diary by Helen Fielding
+Bridget Jones's Diary by Helen Fielding
 Joseph Andrews by Henry Fielding
 Tom Jones by Henry Fielding
 Caprice by Ronald Firbank
@@ -44,8 +44,8 @@ Cold Comfort Farm by Stella Gibbons
 Dead Souls by Nikolai Gogol
 Oblomov by Ivan Goncharov
 The Wind in the Willows by Kenneth Grahame
-Brewster’s Millions by Richard Greaves (George Barr McCutcheon)
-Squire Haggard’s Journal by Michael Green
+Brewster's Millions by Richard Greaves (George Barr McCutcheon)
+Squire Haggard's Journal by Michael Green
 Our Man in Havana by Graham Greene
 Travels with My Aunt by Graham Greene
 Diary of a Nobody by George Grossmith
@@ -55,7 +55,7 @@ Catch-22 by Joseph Heller
 Mr Blandings Builds His Dream House by Eric Hodgkins
 High Fidelity by Nick Hornby
 I Served the King of England by Bohumil Hrabal
-The Lecturer’s Tale by James Hynes
+The Lecturer's Tale by James Hynes
 Mr Norris Changes Trains by Christopher Isherwood
 The Mighty Walzer Howard by Jacobson
 Pictures from an Institution by Randall Jarrell
@@ -65,7 +65,7 @@ The Castle by Franz Kafka
 Lake Wobegon Days by Garrison Keillor
 Death and the Penguin by Andrey Kurkov
 The Debt to Pleasure by John Lanchester
-L’Histoire de Gil Blas de Santillane (Gil Blas) Alain-René Lesage
+L'Histoire de Gil Blas de Santillane (Gil Blas) Alain-René Lesage
 Changing Places by David Lodge
 Nice Work by David Lodge
 The Towers of Trebizond by Rose Macaulay
@@ -86,7 +86,7 @@ Fireflies by Shiva Naipaul
 The Sacred Book of the Werewolf by Victor Pelevin
 La Disparition by Georges Perec
 Les Revenentes by Georges Perec
-La Vie Mode d’Emploi by Georges Perec
+La Vie Mode d'Emploi by Georges Perec
 My Search for Warren Harding by Robert Plunkett
 A Dance to the Music of Time by Anthony Powell
 A Time to be Born by Dawn Powell
@@ -95,10 +95,10 @@ Less Than Angels by Barbara Pym
 Zazie in the Metro by Raymond Queneau
 Solomon Gursky Was Here by Mordecai Richler
 Alms for Oblivion by Simon Raven
-Portnoy’s Complaint by Philip Roth
+Portnoy's Complaint by Philip Roth
 The Westminster Alice by Saki
 The Unbearable Bassington by Saki
-Hurrah for St Trinian’s by Ronald Searle
+Hurrah for St Trinian's by Ronald Searle
 Great Apes by Will Self
 Porterhouse Blue by Tom Sharpe
 Blott on the Landscape by Tom Sharpe
@@ -112,7 +112,7 @@ The Adventures of Peregrine Pickle by Tobias Smollett
 The Expedition of Humphry Clinker by Tobias Smollett
 The Prime of Miss Jean Brodie by Muriel Spark
 The Girls of Slender Means by Muriel Spark
-The Driver’s Seat by Muriel Spark
+The Driver's Seat by Muriel Spark
 Loitering with Intent by Muriel Spark
 A Far Cry from Kensington by Muriel Spark
 The Life and Opinions of Tristram Shandy, Gentleman by Laurence Sterne
@@ -153,10 +153,10 @@ The Mask of Dimitrios by Eric Ambler
 Epitaph for a Spy by Eric Ambler
 Journey into Fear by Eric Ambler
 The New York Trilogy by Paul Auster
-Trent’s Last Case by EC Bentley
+Trent's Last Case by EC Bentley
 The Poisoned Chocolates Case by Anthony Berkeley
 The Beast Must Die by Nicholas Blake
-Lady Audley’s Secret by Mary E Braddon
+Lady Audley's Secret by Mary E Braddon
 The Neon Rain by James Lee Burke
 The Tin Roof Blowdown by James Lee Burke
 The Thirty-Nine Steps by John Buchan
@@ -231,11 +231,11 @@ Strangers on a Train by Patricia Highsmith
 The Talented Mr Ripley by Patricia Highsmith
 Bones and Silence by Reginald Hill
 A Rage in Harlem by Chester Himes
-Miss Smilla’s Feeling for Snow by Peter Hoeg
+Miss Smilla's Feeling for Snow by Peter Hoeg
 Rogue Male by Geoffrey Household
 Malice Aforethought by Francis Iles
 Silence of the Grave by Arnadur Indridason
-Death at the President’s Lodging by Michael Innes
+Death at the President's Lodging by Michael Innes
 Cover Her Face by PD James
 A Taste for Death by PD James
 Friday the Rabbi Slept Late by Harry Kemelman
@@ -286,10 +286,10 @@ Perfume by Patrick Suskind
 The Secret History by Donna Tartt
 The Daughter of Time by Josephine Tey
 The Getaway by Jim Thompson
-Pudd’nhead Wilson by Mark Twain
+Pudd'nhead Wilson by Mark Twain
 A Dark-Adapted Eye by Barbara Vine
 A Fatal inversion by Barbara Vine
-King Solomon’s Carpet by Barbara Vine
+King Solomon's Carpet by Barbara Vine
 The Four Just Men by Edgar Wallace
 Fingersmith by Sarah Waters
 Native Son by Richard Wright
@@ -297,7 +297,7 @@ Therese Raquin by Emile Zola
 The Face of Another by Kobo Abe
 Little Women by Louisa May Alcott
 Behind the Scenes at the Museum by Kate Atkinson
-Cat’s Eye by Margaret Atwood
+Cat's Eye by Margaret Atwood
 Epileptic by David B
 Room Temperature by Nicholson Baker
 Eugenie Grandet by Honore de Balzac
@@ -308,8 +308,8 @@ Fun Home by Alison Bechdel
 Malone Dies by Samuel Beckett
 A Legacy by Sybille Bedford
 Herzog by Saul Bellow
-Humboldt’s Gift by Saul Bellow
-The Old Wives’ Tale by Arnold Bennett
+Humboldt's Gift by Saul Bellow
+The Old Wives' Tale by Arnold Bennett
 G by John Berger
 Extinction by Thomas Bernhard
 Two Serious Ladies by Jane Bowles
@@ -320,7 +320,7 @@ The Way of All Flesh by Samuel Butler
 The Sound of my Voice by Ron Butlin
 The Outsider by Albert Camus
 Wise Children by Angela Carter
-The Professor’s House by Willa Cather
+The Professor's House by Willa Cather
 The Wapshot Chronicle by John Cheever
 The Awakening by Kate Chopin
 Les Enfants Terrible by Jean Cocteau
@@ -356,7 +356,7 @@ The Old Man and the Sea by Ernest Hemingway
 Steppenwolf by Herman Hesse
 Narziss and Goldmund by Hermann Hesse
 The Three Paradoxes by Paul Hornschemeier
-Tom Brown’s Schooldays by Thomas Hughes
+Tom Brown's Schooldays by Thomas Hughes
 A Prayer for Owen Meany by John Irving
 The Ambassadors by Henry James
 Washington Square by Henry James
@@ -366,7 +366,7 @@ A Portrait of the Artist as a Young Man by James Joyce
 Ulysses by James Joyce
 Good Behaviour by Molly Keane
 Memet my Hawk by Yasar Kemal
-One Flew Over the Cuckoo’s Nest by Ken Kesey
+One Flew Over the Cuckoo's Nest by Ken Kesey
 The Buddha of Suburbia by Hanif Kureishi
 Sons and Lovers by DH Lawrence
 Cider with Rosie by Laurie Lee
@@ -380,7 +380,7 @@ Palace Walk by Naguib Mahfouz
 The Assistant by Bernard Malamud
 Buddenbrooks by Thomas Mann
 The Chateau by William Maxwell
-The Rector’s Daughter by FM Mayor
+The Rector's Daughter by FM Mayor
 The Ordeal of Richard Feverek by George Meredith
 Family Matters by Rohinton Mistry
 Sour Sweet by Timothy Mo
@@ -391,7 +391,7 @@ Who Do You Think You Are? by Alice Munro
 The Black Prince by Iris Murdoch
 The Man Without Qualities by Robert Musil
 A House for Mr Biswas by VS Naipaul
-At-Swim-Two-Birds by Flann O’Brien
+At-Swim-Two-Birds by Flann O'Brien
 Teach Us to Outgrow Our Madness by Kezaburo Oe
 The Moviegoer by Walker Percy
 The Bell Jar by Sylvia Plath
@@ -436,7 +436,7 @@ Frost in May by Antonia White
 The Tree of Man by Patrick White
 The Picture of Dorian Gray by Oscar Wilde
 Oranges Are Not the Only Fruit by Jeanette Winterson
-I’ll Go to Bed at Noon by Gerard Woodward
+I'll Go to Bed at Noon by Gerard Woodward
 To the Lighthouse by Virginia Woolf
 Mrs Dalloway by Virginia Woolf
 Swiss Family Robinson by Johann David Wyss
@@ -448,7 +448,7 @@ Pride and Prejudice by Jane Austen
 Mansfield Park by Jane Austen
 Emma by Jane Austen
 Persuasion by Jane Austen
-Giovanni’s Room by James Baldwin
+Giovanni's Room by James Baldwin
 Nightwood by Djuna Barnes
 The Garden of the Finzi-Cortinis by Giorgio Bassani
 Love for Lydia by HE Bates
@@ -462,12 +462,12 @@ Wuthering Heights by Emily Bronte
 Look At Me by Anita Brookner
 Rubyfruit Jungle by Rita Mae Brown
 Possession by AS Byatt
-Breakfast at Tiffany’s by Truman Capote
+Breakfast at Tiffany's by Truman Capote
 Oscar and Lucinda by Peter Carey
 A Month in the Country by JL Carr
 My Antonia by Willa Cather
 A Lost Lady by Willa Cather
-Claudine a l’ecole by Sidonie-Gabrielle Colette
+Claudine a l'ecole by Sidonie-Gabrielle Colette
 Cheri by Sidonie-Gabrielle Collette
 Victory: An Island Tale by Joseph Conrad
 The Princess of Cleves by Madame de Lafayette
@@ -484,7 +484,7 @@ The Blue Flower by Penelope Fitzgerald
 Madame Bovary by Gustave Flaubert
 The Good Soldier by Ford Madox Ford
 A Room with a View by EM Forster
-The French Lieutenant’s Woman by John Fowles
+The French Lieutenant's Woman by John Fowles
 The Snow Goose by Paul Gallico
 Ruth by Elizabeth Gaskell
 Strait is the Gate by Andre Gide
@@ -495,7 +495,7 @@ The End of the Affair by Graham Greene
 The Well of Loneliness by Radclyffe Hall
 Far From the Madding Crowd by Thomas Hardy
 Jude the Obscure by Thomas Hardy
-Tess of the D’Urbervilles by Thomas Hardy
+Tess of the D'Urbervilles by Thomas Hardy
 The Woodlanders by Thomas Hardy
 The Go-Between by LP Hartley
 The Scarlet Letter by Nathaniel Hawthorne
@@ -518,7 +518,7 @@ Moon over Africa by Pamela Kent
 The Book of Laughter and Forgetting by Milan Kundera
 The Unbearable Lightness of Being by Milan Kundera
 Les Liaisons Dangereuses by Pierre-Ambroise-Francois Choderlos de Laclos
-Lady Chatterley’s Lover by DH Lawrence
+Lady Chatterley's Lover by DH Lawrence
 The Rainbow by DH Lawrence
 Women in Love by DH Lawrence
 The Echoing Grove by Rosamond Lehmann
@@ -542,7 +542,7 @@ Patience and Sarah by Isabel Miller
 Gone With the Wind by Margaret Mitchell
 The Pursuit of Love by Nancy Mitford
 Love in a Cold Climate by Nancy Mitford
-Arturo’s Island by Elsa Morante
+Arturo's Island by Elsa Morante
 Norwegian Wood by Haruki Murakami
 Lolita, or the Confessions of a White Widowed Male by Vladimir Nabokov
 The Painter of Signs by RK Narayan
@@ -585,7 +585,7 @@ The Hitchhikers Guide to the Galaxy by Douglas Adams
 Non-Stop by Brian W Aldiss
 Foundation by Isaac Asimov
 The Blind Assassin by Margaret Atwood
-The Handmaid’s Tale by Margaret Atwood
+The Handmaid's Tale by Margaret Atwood
 In the Country of Last Things by Paul Auster
 The Drowned World by JG Ballard
 Crash by JG Ballard
@@ -595,7 +595,7 @@ Consider Phlebas by Iain M Banks
 Weaveworld by Clive Barker
 Darkmans by Nicola Barker
 The Time Ships by Stephen Baxter
-Darwin’s Radio by Greg Bear
+Darwin's Radio by Greg Bear
 Vathek by William Beckford
 The Stars My Destination by Alfred Bester
 Fahrenheit 451 by Ray Bradbury
@@ -612,13 +612,13 @@ Kindred by Octavia Butler
 Erewhon by Samuel Butler
 The Baron in the Trees by Italo Calvino
 The Influence by Ramsey Campbell
-Alice’s Adventures in Wonderland by Lewis Carroll
+Alice's Adventures in Wonderland by Lewis Carroll
 Through the Looking Glass and What Alice Found There by Lewis Carroll
 Nights at the Circus by Angela Carter
 The Passion of New Eve by Angela Carter
 The Amazing Adventures of Kavalier and Clay by Michael Chabon
 The Man who was Thursday by GK Chesterton
-Childhood’s End by Arthur C Clarke
+Childhood's End by Arthur C Clarke
 Jonathan Strange & Mr Norrell by Susanna Clarke
 Hello Summer, Goodbye by Michael G Coney
 Girlfriend in a Coma by Douglas Coupland
@@ -628,7 +628,7 @@ The Einstein Intersection by Samuel R Delaney
 Do Androids Dream of Electric Sheep? by Philip K Dick
 The Man in the High Castle by Philip K Dick
 Camp Concentration by Thomas M Disch
-Foucault’s Pendulum by Umberto Eco
+Foucault's Pendulum by Umberto Eco
 Under the Skin by Michel Faber
 The Magus by John Fowles
 American Gods by Neil Gaiman
@@ -681,10 +681,10 @@ News from Nowhere by William Morris
 Beloved by Toni Morrison
 The Wind-Up Bird Chronicle by Haruki Murakami
 Ada or Ardor by Vladimir Nabokov
-The Time Traveler’s Wife by Audrey Niffenegger
+The Time Traveler's Wife by Audrey Niffenegger
 Ringworld by Larry Niven
 Vurt by Jeff Noon
-The Third Policeman by Flann O’Brien
+The Third Policeman by Flann O'Brien
 The Famished Road by Ben Okri
 Nineteen Eighty-Four by George Orwell
 Fight Club by Chuck Palahniuk
@@ -699,7 +699,7 @@ Gargantua and Pantagruel by Francois Rabelais
 The Mysteries of Udolpho by Ann Radcliffe
 Revelation Space by Alastair Reynolds
 The Years of Rice and Salt by Kim Stanley Robinson
-Harry Potter and the Philosopher’s Stone by JK Rowling
+Harry Potter and the Philosopher's Stone by JK Rowling
 Satanic Verses by Salman Rushdie
 The Female Man by Joanna Russ
 Air by Geoff Ryman
@@ -715,7 +715,7 @@ Dracula by Bram Stoker
 The Insult by Rupert Thomson
 The Hobbit by JRR Tolkien
 The Lord of the Rings by JRR Tolkien
-A Connecticut Yankee in King Arthur’s Court by Mark Twain
+A Connecticut Yankee in King Arthur's Court by Mark Twain
 Sirens of Titan by Kurt Vonnegut
 The Castle of Otranto by Horace Walpole
 Institute Benjamenta by Robert Walser
@@ -738,7 +738,7 @@ Go Tell it on the Mountain by James Baldwin
 La Comedie Humaine by Honore de Balzac
 They Were Counted by Miklos Banffy
 A Kind of Loving by Stan Barstow
-Uncle Tom’s Cabin by Harriet Beecher Stowe
+Uncle Tom's Cabin by Harriet Beecher Stowe
 Oroonoko, or The Royal Slave by Aphra Behn
 Clayhanger by Arnold Bennett
 The Last September by Elizabeth Bowen
@@ -786,7 +786,7 @@ North and South by Elizabeth Gaskell
 The Counterfeiters by Andre Gide
 The Odd Women by George Gissing
 New Grub Street by George Gissing
-July’s People by Nadine Gordimer
+July's People by Nadine Gordimer
 Mother by Maxim Gorky
 Lanark by Alastair Gray
 Love on the Dole by Walter Greenwood
@@ -818,7 +818,7 @@ A Fine Balance by Rohinton Mistry
 The Time of Indifference by Alberto Moravia
 A Bend in the River by VS Naipaul
 McTeague by Frank Norris
-Personality by Andrew O’Hagan
+Personality by Andrew O'Hagan
 Animal Farm by George Orwell
 The Ragazzi Pier by Paolo Pasolini
 Cry, the Beloved Country by Alan Paton
@@ -830,13 +830,13 @@ Vineland by Thomas Pynchon
 The Radetzky March by Joseph Roth
 American Pastoral by Philip Roth
 The Human Stain by Philip Roth
-Midnight’s Children by Salman Rushdie
+Midnight's Children by Salman Rushdie
 Shame by Salman Rushdie
 To Each his Own by Leonardo Sciascia
 Staying On by Paul Scott
 Last Exit to Brooklyn by Hubert Selby Jr
 The Lonely Londoners by Samuel Selvon
-God’s Bit of Wood by Ousmane Sembene
+God's Bit of Wood by Ousmane Sembene
 The Case of Comrade Tulayev by Victor Serge
 Richshaw Boy by Lao She
 Saturday Night and Sunday Morning by Alan Sillitoe
@@ -872,7 +872,7 @@ Empire of the Sun by JG Ballard
 Regeneration by Pat Barker
 A Long Long Way by Sebastian Barry
 Fair Stood the Wind for France by HE Bates
-Carrie’s War by Nina Bawden
+Carrie's War by Nina Bawden
 The Savage Detectives by Roberto Bolano
 The Sheltering Sky by Paul Bowles
 An Ice-Cream War by William Boyd
@@ -881,11 +881,11 @@ Invisible Cities by Italo Calvino
 Auto-da-Fe by Elias Canetti
 One of Ours by Willa Cather
 Journey to the End of the Night by Louis-Ferdinand Celine
-Monkey by Wu Ch’eng-en
+Monkey by Wu Ch'eng-en
 Heart of Darkness by Joseph Conrad
 Lord Jim by Joseph Conrad
 Nostromo by Joseph Conrad
-Sharpe’s Eagle by Bernard Cornwell
+Sharpe's Eagle by Bernard Cornwell
 The History of Pompey the Little by Francis Coventry
 The Red Badge of Courage by Stephen Crane
 Robinson Crusoe by Daniel Defoe
@@ -898,7 +898,7 @@ Justine by Lawrence Durrell
 The Bamboo Bed by William Eastlake
 The Siege of Krishnapur by JG Farrell
 Birdsong by Sebastian Faulks
-Parade’s End by Ford Madox Ford
+Parade's End by Ford Madox Ford
 The African Queen by CS Forester
 The Ship by CS Forester
 Flashman by George MacDonald Fraser
@@ -909,8 +909,8 @@ Asterix the Gaul by Rene Goscinny
 The Tin Drum by Gunter Grass
 Count Belisarius by Robert Graves
 Life and Fate by Vassily Grossman
-De Niro’s Game by Rawi Hage
-King Solomon’s Mines by H Rider Haggard
+De Niro's Game by Rawi Hage
+King Solomon's Mines by H Rider Haggard
 She: A History of Adventure by H Rider Haggard
 The Slaves of Solitude by Patrick Hamilton
 Covenant with Death by John Harris
@@ -924,7 +924,7 @@ Rasselas by Samuel Johnson
 From Here to Eternity by James Jones
 Andersonville by MacKinlay Kantor
 Confederates by Thomas Keneally
-Schindler’s Ark by Thomas Keneally
+Schindler's Ark by Thomas Keneally
 Day by AL Kennedy
 On the Road by Jack Kerouac
 Darkness at Noon by Arthur Koestler
@@ -947,15 +947,15 @@ The Cruel Sea by Nicholas Monsarrat
 History by Elsa Morante
 Suite Francaise by Irene Nemirovsky
 The Sorrow of War by Bao Ninh
-Master and Commander by Patrick O’Brian
-The Things They Carried by Tim O’Brien
+Master and Commander by Patrick O'Brian
+The Things They Carried by Tim O'Brien
 The Scarlet Pimpernel by Baroness Emmuska Orczy
 Burmese Days by George Orwell
 Zen and the Art of Motorcycle Maintenance by Robert Pirsig
 The Valley of Bones by Anthony Powell
-The Soldier’s Art by Anthony Powell
+The Soldier's Art by Anthony Powell
 The Military Philosophers by Anthony Powell
-Gravity’s Rainbow by Thomas Pynchon
+Gravity's Rainbow by Thomas Pynchon
 The Surprising Adventures of Baron Munchausen by Rudolp Erich Raspe
 All Quiet on the Western Front by Erich Maria Remarque
 The Crab with the Golden Claws by Georges Remi Herge
@@ -979,8 +979,8 @@ A Sentimental Journey by Lawrence Sterne
 Kidnapped by Robert Louis Stevenson
 Treasure Island by Robert Louis Stevenson
 A Flag for Sunrise by Robert Stone
-Sophie’s Choice by William Styron
-Gulliver’s Travels by Jonathan Swift
+Sophie's Choice by William Styron
+Gulliver's Travels by Jonathan Swift
 War and Peace by Leo Tolstoy
 The Adventures of Huckleberry Finn by Mark Twain
 Around the World in Eighty Days by Jules Verne
