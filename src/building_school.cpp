@@ -149,6 +149,11 @@ void building_t::add_hallway_lockers(rand_gen_t &rgen, room_t const &room, float
 	float const se_clearance(2.0*get_min_front_clearance_inc_people());
 	bool const add_padlocks(floor_ix == 0 && building_obj_model_loader.is_model_valid(OBJ_MODEL_PADLOCK));
 	vector3d const sz(add_padlocks ? building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_PADLOCK) : zero_vector); // D, W, H
+	colorRGBA const lock_color(0.4, 0.4, 0.4);
+	unsigned const num_locker_colors = 6;
+	colorRGBA const locker_colors[num_locker_colors] =
+	{colorRGBA(0.4, 0.6, 0.7), colorRGBA(0.4, 0.7, 0.6), colorRGBA(0.2, 0.5, 0.8), colorRGBA(0.7, 0.05, 0.05), colorRGBA(0.6, 0.45, 0.25), GRAY};
+	colorRGBA const locker_color(locker_colors[(7*mat_ix + 11*room_id + 13*interior->rooms.size())%num_locker_colors]); // random per part/room
 	vect_cube_t blockers;
 	
 	for (stairwell_t const &s : interior->stairwells) {
@@ -193,10 +198,10 @@ void building_t::add_hallway_lockers(rand_gen_t &rgen, room_t const &room, float
 				float const pos(locker.d[!dim][!d]);
 				lock.d[!dim][ d] = pos;
 				lock.d[!dim][!d] = pos + (d ? -1.0 : 1.0)*depth;
-				objs.emplace_back(lock, TYPE_PADLOCK, room_id, !dim, d, (RO_FLAG_NOCOLL | RO_FLAG_IS_ACTIVE), 1.0, SHAPE_CUBE, colorRGBA(0.4, 0.4, 0.4)); // attached
+				objs.emplace_back(lock, TYPE_PADLOCK, room_id, !dim, d, (RO_FLAG_NOCOLL | RO_FLAG_IS_ACTIVE), 1.0, SHAPE_CUBE, lock_color); // attached
 				flags |= RO_FLAG_NONEMPTY; // flag as locked
 			}
-			objs.emplace_back(locker, TYPE_LOCKER, room_id, !dim, !d, flags, tot_light_amt, SHAPE_CUBE, colorRGBA(0.4, 0.6, 0.6));
+			objs.emplace_back(locker, TYPE_LOCKER, room_id, !dim, !d, flags, tot_light_amt, SHAPE_CUBE, locker_color);
 			set_obj_id(objs); // for random contents
 		} // for n
 	} // for d
