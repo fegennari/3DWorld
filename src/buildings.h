@@ -684,7 +684,7 @@ uint16_t const sink_water_state_bit(1 << 15); // MSB of uint16_t; hopefully does
 
 struct room_object_t : public oriented_cube_t { // size=68
 	uint8_t taken_level=0;
-	// Note: state_flags is used for drawer was_opened state, railing num_stairs, pool balls, and sink/tub/shower water
+	// Note: state_flags is used for drawer was_opened state, railing num_stairs, pool balls, sink/tub/shower water, and vending machine use count
 	uint16_t room_id=0, obj_id=0, drawer_flags=0, item_flags=0, state_flags=0;
 	room_object type=TYPE_NONE; // 8-bit
 	room_obj_shape shape=SHAPE_CUBE; // 8-bit
@@ -1766,6 +1766,16 @@ struct indoor_pool_t : cube_t {
 	int room_ix=-1;
 	float shallow_zval=0.0, orig_z1=0.0;
 };
+
+enum {VEND_DRINK=0, VEND_SNACK, VEND_ANY_OBJ, NUM_VEND_TYPES};
+
+struct vending_info_t {
+	std::string name, tex_fn; // Note: could cache loaded tex_fn in tid, but caller takes the string
+	vector3d size; // in inches
+	colorRGBA color; // of sides
+	vending_info_t(std::string const &n, std::string const &fn, vector3d const sz, colorRGBA const &c) : name(n), tex_fn(fn), size(sz), color(c) {}
+};
+vending_info_t const &get_vending_type(unsigned vtype);
 
 
 // building AI

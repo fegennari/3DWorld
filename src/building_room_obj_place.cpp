@@ -903,9 +903,13 @@ void building_t::add_lounge_objs(rand_gen_t rgen, room_t const &room, float zval
 }
 
 bool building_t::add_vending_machine(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, cube_t const &place_area) {
-	float const height(0.75*get_window_vspace()); // HxWxD = 72x39x32
-	colorRGBA const color(rgen.rand_bool() ? GRAY : GRAY_BLACK); // select between light and dark textures
-	return place_obj_along_wall(TYPE_VENDING, room, height, vector3d(32, 39, 72), rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 0, 4, 0, color);
+	if (NUM_VEND_TYPES == 0) return 0; // disabled
+	float const height(0.75*get_window_vspace()); // HxWxD
+	unsigned const vtype_id(rgen.rand() % NUM_VEND_TYPES), obj_id(interior->room_geom->objs.size());
+	vending_info_t const &vtype(get_vending_type(vtype_id));
+	if (!place_obj_along_wall(TYPE_VENDING, room, height, vtype.size, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 0, 4, 0, vtype.color)) return 0;
+	interior->room_geom->objs[obj_id].item_flags = vtype_id;
+	return 1;
 }
 bool building_t::add_wall_tv(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	vect_room_object_t &objs(interior->room_geom->objs);

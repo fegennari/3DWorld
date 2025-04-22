@@ -551,6 +551,8 @@ public:
 
 phone_manager_t phone_manager;
 
+bool phone_is_ringing() {return phone_manager.is_phone_ringing();}
+
 struct tape_manager_t {
 	bool in_use;
 	float last_toggle_time;
@@ -576,9 +578,18 @@ struct tape_manager_t {
 	}
 };
 
-bool phone_is_ringing() {return phone_manager.is_phone_ringing();}
-
 tape_manager_t tape_manager;
+
+vector<vending_info_t> vend_types;
+
+vending_info_t const &get_vending_type(unsigned vtype) {
+	if (vend_types.empty()) { // initialize
+		vend_types.emplace_back("drink", "interiors/vending_machine_light.jpg", vector3d(32, 39, 72), GRAY);
+		vend_types.emplace_back("snack", "interiors/vending_machine_dark.jpg",  vector3d(35, 39, 72), GRAY_BLACK);
+		vend_types.emplace_back("any",   "interiors/any_object.jpg",            vector3d(36, 44, 66), colorRGBA(1.0, 0.945, 0.8));
+	}
+	return vend_types[vtype % vend_types.size()]; // wrap if overflows
+}
 
 unsigned const NUM_ACHIEVEMENTS = 20;
 
@@ -1305,7 +1316,7 @@ bool use_vending_machine(room_object_t &obj) {
 	float const price = 2.0; // currently all vending machines are $2; should be whole dollars
 	unsigned const rand_ix(7*obj.room_id + 3*int(obj.z1()/obj.dz())); // a mix of room and floor index
 	unsigned const max_uses(rand_ix % 9); // 0-8 uses
-	uint16_t &use_count(obj.item_flags);
+	uint16_t &use_count(obj.state_flags);
 	
 	if (!player_inventory.check_weight_limit(1.0)) { // must have one lb free
 		print_text_onscreen("No Inventory Space", RED, 1.0, 3*TICKS_PER_SECOND, 0);
@@ -1325,12 +1336,12 @@ bool use_vending_machine(room_object_t &obj) {
 	rgen.rand_mix();
 	++use_count;
 
-	if (obj.color == GRAY) { // light color, drink vending machine; yes, you can get wine and beer from these
+	if (obj.item_flags == VEND_DRINK) { // drink vending machine; yes, you can get wine and beer from these
 		room_object_t bottle(obj, TYPE_BOTTLE, obj.room_id, 0, 0, 0, obj.light_amt, SHAPE_CYLIN);
 		bottle.set_as_bottle(rgen.rand(), 3, 1); // 0-3; excludes poison and medicine; no_empty=1
 		player_inventory.add_item(bottle);
 	}
-	else { // dark color, snack food vending machine; no value or weight, but adds health
+	else if (obj.item_flags == VEND_SNACK) { // snack food vending machine; no value or weight, but adds health
 		custom_item_t item;
 		switch (rgen.rand()%3) {
 		case 0: item = custom_item_t("bag of chips",    0.0, 0.0, 0.1); break;
@@ -1339,6 +1350,21 @@ bool use_vending_machine(room_object_t &obj) {
 		}
 		player_inventory.add_custom_item(item);
 	}
+	else if (obj.item_flags == VEND_ANY_OBJ) { // any object vending machine
+		for (unsigned n = 0; n < 100; ++n) { // 100 attempts to find a valid item
+			unsigned const type(rgen.rand() % NUM_ROBJ_TYPES);
+			bldg_obj_type_t const &otype(bldg_obj_types[type]);
+			if (!otype.pickup || otype.attached) continue;
+			if (otype.value >= 100.0) continue; // no easy money
+			if (otype.weight > min(0.1*bldg_obj_types[TYPE_VENDING].weight, 0.25*global_building_params.player_weight_limit)) continue;
+			if (!player_inventory.check_weight_limit(otype.weight)) continue;
+			// Note: we can't give the player a real object because we don't know the size/color/flags/etc., so it can't be drawn held by the player
+			player_inventory.add_custom_item(custom_item_t(otype.name, otype.value, otype.weight, 0.0)); // can't heal
+			return 1; // success
+		} // for n
+		return 0; // no valid object type found
+	}
+	else {assert(0);}
 	return 1;
 }
 
