@@ -546,6 +546,7 @@ public:
 		}
 		gen_sound_thread_safe_at_player(SOUND_CLICK, 0.5);
 	}
+	void hide_phone() {is_on = 0;}
 }; // phone_manager_t
 
 phone_manager_t phone_manager;
@@ -786,6 +787,7 @@ public:
 		else     {std::rotate(carried.begin(), carried.end  ()-1, carried.end());}
 		gen_sound_thread_safe_at_player(SOUND_CLICK, 0.5);
 		tape_manager.clear();
+		if (!phone_is_ringing()) {phone_manager.hide_phone();} // auto close when put away
 	}
 	void add_item(room_object_t const &obj) {
 		float health(0.0), drunk(0.0), liquid(0.0);
