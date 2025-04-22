@@ -1319,23 +1319,54 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 
 void building_room_geom_t::expand_shelfrack(room_object_t const &c) {get_shelfrack_objects(c, expanded_objs);}
 
+void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_gen_t &rgen) {
+	assert(c.get_sz_dim( dim) >= length);
+	assert(c.get_sz_dim(!dim) >= width );
+	c.d[ dim][0] = rgen.rand_uniform(c.d[ dim][0], (c.d[ dim][1] - length));
+	c.d[ dim][1] = c.d[ dim][0] + length;
+	c.d[!dim][0] = rgen.rand_uniform(c.d[!dim][0], (c.d[!dim][1] - width));
+	c.d[!dim][1] = c.d[!dim][0] + width;
+}
+void place_money(room_object_t &obj, cube_t const &parent, float length, float width, unsigned room_id, bool dim, bool dir, rand_gen_t &rgen, unsigned max_bills=20) {
+	obj = room_object_t(parent, TYPE_MONEY, room_id, dim, dir);
+	obj.z2() = obj.z1() + 0.01f*length*((rgen.rand()%max_bills) + 1); // 1-20 bills
+	set_rand_pos_for_sz(obj, dim, length, width, rgen);
+}
+void place_phone(room_object_t &obj, cube_t const &parent, float length, float width, unsigned room_id, bool dim, bool dir, rand_gen_t &rgen) {
+	unsigned const NUM_PHONE_COLORS = 7; // for the case
+	colorRGBA const phone_colors[NUM_PHONE_COLORS] = {WHITE, GRAY, DK_GRAY, GRAY_BLACK, BLUE, RED, PINK};
+	obj = room_object_t(parent, TYPE_PHONE, room_id, dim, dir);
+	obj.color = phone_colors[rgen.rand() % NUM_PHONE_COLORS];
+	obj.z2()  = obj.z1() + 0.045*length;
+	set_rand_pos_for_sz(obj, dim, length, width, rgen);
+}
+void place_book(room_object_t &obj, cube_t const &parent, float length, float max_height, unsigned room_id, bool dim, bool dir, rand_gen_t &rgen) {
+	float const width(rgen.rand_uniform(0.6, 1.0)*length);
+	obj = room_object_t(parent, TYPE_BOOK, room_id, dim, dir);
+	set_book_id_and_color(obj, rgen);
+	obj.z2() = obj.z1() + min(0.3f*width, rgen.rand_uniform(0.3, 1.0)*max_height);
+	set_rand_pos_for_sz(obj, !dim, length, width, rgen);
+}
+
 void building_room_geom_t::expand_locker(room_object_t const &c) {
-	rand_gen_t rgen(c.create_rgen());
+	bool const dim(c.dim), dir(c.dir);
 	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_WAS_EXP);
 	float const wall_thickness(get_locker_wall_thickness(c));
 	cube_t interior(c);
 	interior.expand_by(-wall_thickness);
 	interior.z1() += 0.02*c.dz();
-	interior.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*1.5*wall_thickness;
-	float const width(interior.get_sz_dim(!c.dim)), depth(interior.get_sz_dim(c.dim)), height(interior.dz()), vspace(c.dz()/0.75);
+	interior.d[dim][!dir] += (dir ? 1.0 : -1.0)*1.5*wall_thickness;
+	float const width(interior.get_sz_dim(!dim)), depth(interior.get_sz_dim(dim)), height(interior.dz()), vspace(c.dz()/0.75);
 	unsigned const init_objs_sz(expanded_objs.size());
+	rand_gen_t rgen(c.create_rgen());
+	bool added_phone(0);
 
 	for (unsigned level = 0; level < 2; ++level) { // {bottom, top}
 		cube_t place_area(interior);
 		if (level == 0) {place_area.z2() -= 0.33*height + 0.5*wall_thickness;} // lower level; matches drawing code
 		else            {place_area.z1() += 0.67*height + 0.5*wall_thickness;} // upper level; matches drawing code
 		// add books; stacked up to 4 high; tag with RO_FLAG_USED to indicate school subject books
-		if (add_row_of_cubes(c, place_area, width, depth, 0.15*depth, 0.0, TYPE_BOOK, (flags | RO_FLAG_USED), expanded_objs, rgen, !c.dir, 1, 4) > 0) {
+		if (add_row_of_cubes(c, place_area, width, depth, 0.15*depth, 0.0, TYPE_BOOK, (flags | RO_FLAG_USED), expanded_objs, rgen, !dir, 1, 4) > 0) {
 			float const orig_z2(interior.z2());
 			place_area = expanded_objs.back(); // top book
 			set_cube_zvals(place_area, place_area.z2(), orig_z2); // space above the book
@@ -1347,8 +1378,26 @@ void building_room_geom_t::expand_locker(room_object_t const &c) {
 		case TYPE_NONE:      break; // empty
 		case TYPE_BOTTLE:    place_bottle_on_obj(rgen, place_area, expanded_objs, vspace, c.room_id, c.light_amt, BOTTLE_TYPE_COKE,    vect_cube_t(), 1); break; // at_z1=1
 		case TYPE_DRINK_CAN: place_dcan_on_obj  (rgen, place_area, expanded_objs, vspace, c.room_id, c.light_amt, DRINK_CAN_TYPE_COKE, vect_cube_t(), 1); break; // at_z1=1
-		case TYPE_PHONE:     break; // TODO
-		case TYPE_TRASH:     break; // TODO
+		case TYPE_PHONE: {
+			if (added_phone) break; // one phone per locker
+			float const phone_length(0.085*height), phone_width(0.45*phone_length);
+			if (phone_length > 0.9*place_area.get_sz_dim(dim) || phone_width > 0.9*place_area.get_sz_dim(!dim)) break; // doesn't fit
+			room_object_t phone;
+			place_phone(phone, place_area, phone_length, phone_width, c.room_id, dim, dir, rgen);
+			if (phone.z2() < place_area.z2()) {expanded_objs.push_back(phone);} // add if not too tall
+			added_phone = 1;
+			break;
+		}
+		case TYPE_TRASH: {
+			float const trash_radius(rgen.rand_uniform(0.15, 0.2)*min(place_area.dx(), place_area.dy()));
+			if (place_area.dz() < 2.0*trash_radius) break; // too tall
+			cube_t trash;
+			gen_xy_pos_for_round_obj(trash, place_area, trash_radius, 2.0*trash_radius, trash_radius, rgen, 1); // place_at_z1=1
+			colorRGBA const color(trash_colors[rgen.rand() % NUM_TRASH_COLORS]);
+			expanded_objs.emplace_back(trash, TYPE_TRASH, c.room_id, rgen.rand_bool(), rgen.rand_bool(), RO_FLAG_NOCOLL, c.light_amt, SHAPE_SPHERE, color);
+			set_obj_id(expanded_objs);
+			break;
+		}
 		default: assert(0);
 		}
 	} // for level
@@ -1380,35 +1429,6 @@ void building_room_geom_t::add_wine_rack_bottles(room_object_t const &c, vect_ro
 		}
 		bottle.translate_dim(!c.dim, col_step); // translate in !dim
 	} // for i
-}
-
-void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_gen_t &rgen) {
-	assert(c.get_sz_dim( dim) >= length);
-	assert(c.get_sz_dim(!dim) >= width );
-	c.d[ dim][0] = rgen.rand_uniform(c.d[ dim][0], (c.d[ dim][1] - length));
-	c.d[ dim][1] = c.d[ dim][0] + length;
-	c.d[!dim][0] = rgen.rand_uniform(c.d[!dim][0], (c.d[!dim][1] - width));
-	c.d[!dim][1] = c.d[!dim][0] + width;
-}
-void place_money(room_object_t &obj, cube_t const &parent, float length, float width, unsigned room_id, bool dim, bool dir, rand_gen_t &rgen, unsigned max_bills=20) {
-	obj = room_object_t(parent, TYPE_MONEY, room_id, dim, dir);
-	obj.z2() = obj.z1() + 0.01f*length*((rgen.rand()%max_bills) + 1); // 1-20 bills
-	set_rand_pos_for_sz(obj, dim, length, width, rgen);
-}
-void place_phone(room_object_t &obj, cube_t const &parent, float length, float width, unsigned room_id, bool dim, bool dir, rand_gen_t &rgen) {
-	unsigned const NUM_PHONE_COLORS = 7; // for the case
-	colorRGBA const phone_colors[NUM_PHONE_COLORS] = {WHITE, GRAY, DK_GRAY, GRAY_BLACK, BLUE, RED, PINK};
-	obj = room_object_t(parent, TYPE_PHONE, room_id, dim, dir);
-	obj.color = phone_colors[rgen.rand() % NUM_PHONE_COLORS];
-	obj.z2()  = obj.z1() + 0.045*length;
-	set_rand_pos_for_sz(obj, dim, length, width, rgen);
-}
-void place_book(room_object_t &obj, cube_t const &parent, float length, float max_height, unsigned room_id, bool dim, bool dir, rand_gen_t &rgen) {
-	float const width(rgen.rand_uniform(0.6, 1.0)*length);
-	obj = room_object_t(parent, TYPE_BOOK, room_id, dim, dir);
-	set_book_id_and_color(obj, rgen);
-	obj.z2() = obj.z1() + min(0.3f*width, rgen.rand_uniform(0.3, 1.0)*max_height);
-	set_rand_pos_for_sz(obj, !dim, length, width, rgen);
 }
 
 /*static*/ room_object_t building_room_geom_t::get_item_in_drawer(room_object_t const &c, cube_t const &drawer_in, unsigned drawer_ix, unsigned item_ix, float &stack_z1) {

@@ -3461,9 +3461,10 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 				"English", "Literature", "Language Arts", "Social Studies", "History", "Geography", "Government", "Sociology", "Visual Arts"};
 			title = subjects[title_rand_id % (sizeof(subjects)/sizeof(string))];
 		}
-		else {title = gen_book_title(title_rand_id, (USE_REAL_AUTHOR ? &author : nullptr), SPLIT_LINE_SZ);} // select our title text
-		if (title.empty()) return; // no title (error?)
-
+		else {
+			title = gen_book_title(title_rand_id, (USE_REAL_AUTHOR ? &author : nullptr), SPLIT_LINE_SZ); // select our title text
+			if (title.empty()) return; // no title (error?)
+	}
 		if (add_volume_index) { // add book set volume index numbers
 			unsigned const vol_ix(c.drawer_flags);
 			title.push_back(' ');
