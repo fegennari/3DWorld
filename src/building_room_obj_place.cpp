@@ -4094,7 +4094,9 @@ bool building_t::add_security_room_objs(rand_gen_t rgen, room_t const &room, flo
 	return 1;
 }
 
-void building_t::place_book_on_obj(rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, unsigned objs_start, bool use_dim_dir) {
+void building_t::place_book_on_obj(rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id,
+	float tot_light_amt, unsigned objs_start, bool use_dim_dir, unsigned extra_flags)
+{
 	point center(place_on.get_cube_center());
 	for (unsigned d = 0; d < 2; ++d) {center[d] += 0.1*place_on.get_sz_dim(d)*rgen.rand_uniform(-1.0, 1.0);} // add a slight random shift
 	cube_t const room_bounds(get_walkable_room_bounds(get_room(room_id)));
@@ -4112,7 +4114,7 @@ void building_t::place_book_on_obj(rand_gen_t &rgen, room_object_t const &place_
 		set_cube_zvals(book, i->z2(), i->z2()+book.dz()); // place book on top of object; maybe the book should be tilted?
 	}
 	colorRGBA const color(book_colors[rgen.rand() % NUM_BOOK_COLORS]);
-	unsigned flags(RO_FLAG_NOCOLL | RO_FLAG_RAND_ROT);
+	unsigned flags(RO_FLAG_NOCOLL | RO_FLAG_RAND_ROT | extra_flags);
 	if (place_on.is_glass_table()) {flags |= RO_FLAG_HAS_EXTRA;} // flag so that shadows are enabled
 	objs.emplace_back(book, TYPE_BOOK, room_id, dim, dir, flags, tot_light_amt, SHAPE_CUBE, color); // Note: invalidates place_on reference
 	set_obj_id(objs);

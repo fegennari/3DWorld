@@ -635,7 +635,7 @@ unsigned const RO_FLAG_DSTATE   = 0x02000000; // this object has dynamic state
 unsigned const RO_FLAG_NO_CONS  = 0x04000000; // this object is not consumable (bottles)
 unsigned const RO_FLAG_NO_POWER = 0x04000000; // unpowered; related to circuit breakers, aliased with RO_FLAG_NO_CONS
 unsigned const RO_FLAG_IS_ACTIVE= 0x08000000; // active, for sinks, tubs, buttons, pool balls, shower curtains, etc.
-unsigned const RO_FLAG_USED     = 0x10000000; // used by the player (spraypaint, marker, etc.); used by parking spaces to indicate cars
+unsigned const RO_FLAG_USED     = 0x10000000; // used by the player (spraypaint, marker, etc.); used by parking spaces to indicate cars; used by school books
 unsigned const RO_FLAG_IN_ELEV  = 0x20000000; // for elevator lights, buttons, and flooring; aliased with RO_FLAG_BACKROOM and RO_FLAG_IN_POOL
 unsigned const RO_FLAG_BACKROOM = 0x20000000; // in backrooms, for walls and pillars; aliased with RO_FLAG_IN_ELEV and RO_FLAG_IN_POOL
 unsigned const RO_FLAG_IN_POOL  = 0x20000000; // for stairs, railings, and drains; aliased with RO_FLAG_IN_ELEV and RO_FLAG_BACKROOM
@@ -2817,7 +2817,7 @@ private:
 	void add_basement_electrical(vect_cube_t &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, int room_id, rand_gen_t &rgen);
 	void add_basement_electrical_house(rand_gen_t &rgen);
 	void add_house_basement_pipes(rand_gen_t &rgen);
-	void place_book_on_obj   (rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, unsigned objs_start, bool use_dim_dir);
+	void place_book_on_obj   (rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, unsigned objs_start, bool use_dim_dir, unsigned extra_flags=0);
 	bool place_bottle_on_obj (rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid=vect_cube_t(), bool place_at_z1=0);
 	bool place_dcan_on_obj   (rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid=vect_cube_t(), bool place_at_z1=0);
 	bool place_plant_on_obj  (rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, float sz_scale, vect_cube_t const &avoid=vect_cube_t());

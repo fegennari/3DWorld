@@ -90,17 +90,21 @@ bool building_t::add_classroom_desk(rand_gen_t &rgen, room_t const &room, cube_t
 	vect_room_object_t &objs(interior->room_geom->objs);
 	if (is_obj_placement_blocked(desk, room, 1)) return 0; // check proximity to doors, etc.
 	bool const teacher_desk(desk_ix == 0);
-	unsigned const pre_add_obj_id(objs.size()), flags(teacher_desk ? RO_FLAG_HAS_EXTRA : 0); // teacher's desk always has drawers
+	unsigned const desk_obj_ix(objs.size()), flags(teacher_desk ? RO_FLAG_HAS_EXTRA : 0); // teacher's desk always has drawers
 	objs.emplace_back(desk, TYPE_DESK, room_id, dim, dir, flags, tot_light_amt, SHAPE_CUBE); // no tall desks
 	set_obj_id(objs);
 	objs.back().obj_id += 123*desk_ix; // more random variation
 	// add paper, pens, and pencils
+	unsigned const objs_start(objs.size()); // excludes the desk
 	add_papers_to_surface      (desk, dim,  dir, 7, rgen, room_id, tot_light_amt); // add 0-7 sheet(s) of paper
 	add_pens_pencils_to_surface(desk, dim, !dir, 4, rgen, room_id, tot_light_amt); // 0-4 pens/pencils
 
 	if (teacher_desk && rgen.rand_float() < 0.33) { // add a cup on the desk 33% of the time
-		vect_cube_t const avoid(objs.begin()+pre_add_obj_id+1, objs.end()); // add all papers, pens, and pencils
+		vect_cube_t const avoid(objs.begin()+objs_start, objs.end()); // add all papers, pens, and pencils
 		place_cup_on_obj(rgen, desk, room_id, tot_light_amt, avoid);
+	}
+	if (rgen.rand_float() < 0.33) { // maybe add a book on the desk
+		place_book_on_obj(rgen, objs[desk_obj_ix], room_id, tot_light_amt, objs_start, 1, RO_FLAG_USED); // use_dim_dir=1
 	}
 	// add chair
 	point chair_pos;
@@ -109,7 +113,7 @@ bool building_t::add_classroom_desk(rand_gen_t &rgen, room_t const &room, cube_t
 	chair_pos[!dim] = desk.get_center_dim(!dim) + 0.1*rgen.signed_rand_float()*desk.get_sz_dim(dim); // slightly misaligned
 	
 	if (!add_chair(rgen, room, vect_cube_t(), room_id, chair_pos, chair_color, dim, !dir, tot_light_amt, 0, 0, 0, 0, 2, 1)) { // no blockers, reduced_clearance=1
-		objs.resize(pre_add_obj_id); // no chair; remove the desk as well, since it may be too close to a door
+		objs.resize(desk_obj_ix); // no chair; remove the desk as well, and any objects placed on it, since it may be too close to a door
 	}
 	return 1;
 }

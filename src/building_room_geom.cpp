@@ -3357,7 +3357,7 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 	bool const draw_cover_as_small(c.was_expanded() || is_held); // books in drawers, held, or dropped are always drawn as small objects
 	if (draw_cover_as_small && !inc_sm && !inc_text) return; // nothing to draw
 	bool const is_open(c.is_open()), upright(c.get_width() < c.dz()); // on a bookcase
-	bool const from_book_set(c.flags & RO_FLAG_FROM_SET);
+	bool const from_book_set(c.flags & RO_FLAG_FROM_SET), in_school(c.flags & RO_FLAG_USED);
 	bool const tdir((upright && !from_book_set) ? (c.dim ^ c.dir ^ bool(c.obj_id%7)) : 1); // sometimes upside down when upright and not from a set
 	bool const ldir(!tdir), cdir(c.dim ^ c.dir ^ upright ^ ldir); // colum and line directions (left/right/top/bot) + mirror flags for front cover
 	bool const on_glass_table(c.has_extra()), was_dropped(c.taken_level > 0); // or held
@@ -3449,12 +3449,19 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 		bool const is_set_volume(from_book_set && c.drawer_flags > 0), add_volume_index(c.drawer_flags <= 20 && (c.flags & RO_FLAG_HAS_VOL_IX));
 		// if this is a set, but not a numbered volume, include the volume index in the title random seed so that the title is unique
 		unsigned const title_rand_id(c.obj_id + ((is_set_volume && !add_volume_index) ? (unsigned(c.drawer_flags) << 16) : 0));
-		string author;
-		string title(gen_book_title(title_rand_id, (USE_REAL_AUTHOR ? &author : nullptr), SPLIT_LINE_SZ)); // select our title text
-		if (title.empty()) return; // no title (error?)
 		rand_gen_t rgen;
 		rgen.set_state(c.obj_id+1, c.obj_id+123);
 		rgen.rand_mix();
+		string title, author;
+
+		if (rgen.rand_float() < (in_school ? 0.9 : 0.1)) { // school books: 90% of the time in schools, 10% of the time otherwise; image does not match the subject
+			string const subjects[] = {
+				"Math", "Mathematics", "Algebra", "Geometry", "Trigonometry", "Calculus", "Science", "Biology", "Chemistry", "Physics", "Economics", "Computer Science",
+				"English", "Literature", "Language Arts", "Social Studies", "History", "Geography", "Government", "Sociology", "Visual Arts"};
+			title = subjects[title_rand_id % (sizeof(subjects)/sizeof(string))];
+		}
+		else {title = gen_book_title(title_rand_id, (USE_REAL_AUTHOR ? &author : nullptr), SPLIT_LINE_SZ);} // select our title text
+		if (title.empty()) return; // no title (error?)
 
 		if (add_volume_index) { // add book set volume index numbers
 			unsigned const vol_ix(c.drawer_flags);
