@@ -1332,8 +1332,8 @@ void building_room_geom_t::expand_locker(room_object_t const &c) {
 
 	for (unsigned level = 0; level < 2; ++level) { // {bottom, top}
 		cube_t place_area(interior);
-		if (level == 0) {place_area.z2() -= 0.5*(height + wall_thickness);} // lower level
-		else            {place_area.z1() += 0.5*(height + wall_thickness);} // upper level
+		if (level == 0) {place_area.z2() -= 0.33*height + 0.5*wall_thickness;} // lower level; matches drawing code
+		else            {place_area.z1() += 0.67*height + 0.5*wall_thickness;} // upper level; matches drawing code
 		// add books; stacked up to 4 high; tag with RO_FLAG_USED to indicate school subject books
 		if (add_row_of_cubes(c, place_area, width, depth, 0.15*depth, 0.0, TYPE_BOOK, (flags | RO_FLAG_USED), expanded_objs, rgen, !c.dir, 1, 4) > 0) {
 			float const orig_z2(interior.z2());
@@ -1341,8 +1341,7 @@ void building_room_geom_t::expand_locker(room_object_t const &c) {
 			set_cube_zvals(place_area, place_area.z2(), orig_z2); // space above the book
 		}
 		unsigned const num_obj_types = 5;
-		unsigned const obj_types[num_obj_types] = {TYPE_NONE, TYPE_BOTTLE, TYPE_DRINK_CAN, TYPE_PHONE, TYPE_TRASH};
-		// TODO: TYPE_SHOE?
+		unsigned const obj_types[num_obj_types] = {TYPE_NONE, TYPE_BOTTLE, TYPE_DRINK_CAN, TYPE_PHONE, TYPE_TRASH}; // TYPE_SHOE?
 
 		switch (obj_types[rgen.rand()%num_obj_types]) {
 		case TYPE_NONE:      break; // empty
