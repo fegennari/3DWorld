@@ -798,7 +798,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					if (is_bathroom) {r->assign_to(RTYPE_BATH, f);}
 				}
 			}
-			if (!added_obj && is_office && is_office_bldg()) { // add cubicles if this is a large office
+			if (!added_obj && is_office && is_office_bldg()) { // add cubicles if this is a large office building office
 				added_obj = no_whiteboard = create_office_cubicles(rgen, *r, room_center.z, room_id, tot_light_amt);
 			}
 			if (!added_obj && is_ext_basement && rgen.rand_float() < 0.5) { // machine room
@@ -869,6 +869,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				if (!added_obj) { // no window, or can't make into a classroom
 					// teacher's office, teacher's lounge, principal's office, supply rooms, art/shop, etc.
 				}
+			}
+			// add cubicles if this is a large office; allowed in schools and hospitals if not assigned as a special room
+			if (!added_obj && is_office && (f > 0 || rgen.rand_float() < 0.4)) { // allow for storage and utility rooms on ground floor
+				added_obj = no_whiteboard = create_office_cubicles(rgen, *r, room_center.z, room_id, tot_light_amt);
 			}
 			if (!added_obj && !r->has_subroom() && rgen.rand_float() < (is_basement ? 0.4 : (r->is_office ? (is_hospital() ? 0.2 : 0.6) : (is_house ? 0.95 : 0.5)))) {
 				// place a table and maybe some chairs near the center of the room if it's not a hallway;
