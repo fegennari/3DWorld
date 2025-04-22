@@ -821,7 +821,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				r->assign_to(RTYPE_POOL, f);
 				added_pool_room = added_obj = 1;
 			}
-			if (!added_obj && is_hospital()) {
+			if (!added_obj && is_hospital()) { // hospital; no_plants=1
 				bool must_be_waiting(has_stairs || r->has_elevator);
 				if (num_int_doors < 0) {num_int_doors = count_num_int_doors(*r);} // count itertior doors the first time we get here
 
@@ -855,8 +855,14 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 						}
 					}
 					else if (rand_val == 3) { // classroom (for training); should there be at most one per floor?
-						added_obj = no_plants = add_classroom_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start, chair_color, pref_hang_orient);
+						added_obj = add_classroom_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start, chair_color, pref_hang_orient);
 						if (added_obj) {r->assign_to(RTYPE_CLASS, f);}
+					}
+					else if (rand_val == 6) { // Note: currently unreachable
+						if (add_lab_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start)) {
+							added_obj = no_whiteboard = 1;
+							r->assign_to(RTYPE_LAB, f);
+						}
 					}
 					// else make it an office or something else below
 				}

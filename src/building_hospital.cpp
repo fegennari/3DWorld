@@ -507,6 +507,11 @@ bool building_t::add_operating_room_objs(rand_gen_t rgen, room_t &room, float zv
 	return 1;
 }
 
+bool building_t::add_lab_room_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start) {
+	// TODO
+	return 0;
+}
+
 void building_t::add_hospital_medicine_cabinet(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	float const floor_spacing(get_window_vspace());
 	// add a medicine cabinet along a wall; not_at_window=1; flag as not a mirror
