@@ -193,7 +193,7 @@ void building_t::add_hallway_lockers(rand_gen_t &rgen, room_t const &room, float
 			unsigned flags(0);
 
 			// add padlocks to some lockers; first floor only, to avoid having too many model objects (but may be added to stacked parts)
-			if (floor_ix == 0 && rgen.rand_float() < 0.25) {
+			if (add_padlocks && rgen.rand_float() < 0.25) {
 				float const height(0.04*floor_spacing), hwidth(0.5*height*sz.y/sz.z), depth(height*sz.x/sz.z);
 				cube_t lock;
 				lock.z1() = zval + 0.365*floor_spacing;
