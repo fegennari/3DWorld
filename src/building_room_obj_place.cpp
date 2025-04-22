@@ -1532,11 +1532,12 @@ bool building_t::place_obj_along_wall(room_object type, room_t const &room, floa
 		c.d[dim][ dir] = place_area.d[dim][dir];
 		c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*depth;
 		set_wall_width(c, center, hwidth, !dim);
+		if (!room.contains_cube(c)) continue; // larger than room width?
 		if (not_ext_wall  && classify_room_wall(room, c.zc(), dim, dir, 0) == ROOM_WALL_EXT) continue;
 		if (not_at_window && check_if_against_window(c, room, dim, dir)) continue;
-		if (!room.contains_cube(c)) continue; // larger than room width?
 		cube_t c2(c), c3(c); // used for collision tests
-		c2.d[dim][!dir] += (dir ? -1.0 : 1.0)*clearance;
+		c2.d[dim][!dir] += (dir ? -1.0 : 1.0)*clearance; // add front clearance
+		if (!room.contains_cube(c2)) continue; // not enough clearance
 		cube_t c2b(c2);
 		c2b.expand_in_dim(!dim, side_clearance); // side_clearance applies to other objects, stairs, and elevators; used with boxes, medicine cabinets, etc.
 		if (overlaps_other_room_obj(c2b, objs_start) || interior->is_blocked_by_stairs_or_elevator(c2b)) continue; // bad placement (Note: not using is_obj_placement_blocked())
