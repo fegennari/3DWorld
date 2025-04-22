@@ -986,7 +986,7 @@ void building_t::add_clock_to_room_wall(rand_gen_t &rgen, room_t const &room, fl
 		clock.d[dim][!dir] = wall_pos + dsign*clock_depth;
 		cube_t tc(clock);
 		tc.d[dim][!dir] += dsign*0.25*floor_spacing; // add clearance
-		if (is_cube_close_to_doorway(tc, room, 0.0, 1) || overlaps_other_room_obj(tc, objs_start)) continue;
+		if (is_obj_placement_blocked(tc, room, 1) || overlaps_other_room_obj(tc, objs_start)) continue;
 		add_clock(clock, room_id, tot_light_amt, dim, !dir, digital);
 		break; // success
 	} // for n
