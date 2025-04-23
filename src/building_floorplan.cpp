@@ -158,11 +158,13 @@ bool is_val_inside_window(cube_t const &c, bool dim, float val, float window_spa
 	float const uv(fract((val - c.d[dim][0])/window_spacing));
 	return (uv > window_border && uv < 1.0f-window_border);
 }
-float shift_val_to_not_intersect_window(cube_t const &c, float val, float hspace, float window_border, bool dim) {
+// shift_edges_mode: 0=normal, 1=opposite dir, 2=none
+float shift_val_to_not_intersect_window(cube_t const &c, float val, float hspace, float window_border, bool dim, int shift_edges_mode=0) {
+	if (shift_edges_mode == 2) return val; // no shift
 	window_border *= 0.9; // adjust based on window frame so that wall doesn't end right at the edge
 	float const uv(fract((val - c.d[dim][0])/hspace));
 	if (!(uv > window_border && uv < 1.0f-window_border)) return val; // okay as is
-	float const uv_target((uv < 0.5) ? window_border : 1.0f-window_border);
+	float const uv_target(((uv < 0.5) ^ bool(shift_edges_mode)) ? window_border : 1.0f-window_border); // move to the closer edge, unless shift_other_dir=1
 	return val + (uv_target - uv)*hspace; // shift val exactly to the window border in the closer direction
 }
 
@@ -530,6 +532,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 						room_outer.d[min_dim][!d] = hall_outer; // other dim stays at wall_edge
 						room_inner.d[min_dim][ d] = hall_inner;
 						room_inner.d[min_dim][!d] = hall_wall_pos[d];
+						int shift_edges_mode[2] = {0,0}; // shift: 0=normal, 1=opposite, 2=none
 
 						for (unsigned e = 0; e < 2; ++e) { // for each end of building in long dim
 							float const esign(e ? -1.0 : 1.0); // Note: offset_inner == (rooms_range[e] + esign*wall_half_thick)
@@ -568,7 +571,23 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 
 							// add 2x end of hall, corner, and side rooms
 							// Note: this should be the same as the shifted room_pos below so that the room bounds align with the wall positions
-							float const shifted_offset_inner(shift_val_to_not_intersect_window(*p, rooms_range[e], hspace, window_border, !min_dim));
+							float const nom_wall_edge(rooms_range[e]), min_room_width(1.6*doorway_width);
+							float shifted_offset_inner(shift_val_to_not_intersect_window(*p, nom_wall_edge, hspace, window_border, !min_dim));
+
+							if (fabs(shifted_offset_inner - offset_outer) < min_room_width) { // end room is too narrow, shift in other dir
+								shifted_offset_inner = shift_val_to_not_intersect_window(*p, nom_wall_edge, hspace, window_border, !min_dim, 1);
+								shift_edges_mode[e]  = 1; // opposite shift
+
+								if (cent_room_width - fabs(shifted_offset_inner - nom_wall_edge) - 0.5*window_hspacing[!min_dim] < min_room_width) {
+									// center room is now too narrow (assuming half window width shift on opposite wall), split the window
+									cube_t unshifted_wall(room_outer);
+									set_wall_width(unshifted_wall, nom_wall_edge, wall_thick, !min_dim); // side of building
+									unshifted_wall.expand_in_dim(min_dim, wall_thick); // extend outside of building to include windows
+									interior->split_window_walls.push_back(unshifted_wall);
+									shifted_offset_inner = nom_wall_edge;
+									shift_edges_mode[e]  = 2; // no shift
+								}
+							}
 							cube_t end_room(room_outer), cor_room(room_outer); // z and min_dim vals are the same as the outer room
 							cor_room.d[!min_dim][ e] = other_edge; // corner of building
 							cor_room.d[!min_dim][!e] = offset_outer;
@@ -599,15 +618,19 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 						float room_pos(rooms_range[0]);
 
 						for (unsigned n = 0; n <= num_cent_rooms; ++n) { // center rooms, inside and outside
-							float const start_pos(shift_val_to_not_intersect_window(*p, room_pos, hspace, window_border, !min_dim));
+							// this iteration includes both end walls of outer rooms, so it must check for shift_edges_other_dir at both ends
+							bool const is_first(n == 0), is_last(n+1 == num_cent_rooms);
+							int const sem_lo(is_first ? shift_edges_mode[0] : ((n == num_cent_rooms) ? shift_edges_mode[1] : 0));
+							float const start_pos(shift_val_to_not_intersect_window(*p, room_pos, hspace, window_border, !min_dim, sem_lo));
 
 							if (n < num_cent_rooms) { // add a room
-								float const next_pos(shift_val_to_not_intersect_window(*p, (room_pos + cent_room_width), hspace, window_border, !min_dim));
 								room_pos += cent_room_width; // move to next row
+								int const sem_hi(is_last ? shift_edges_mode[1] : 0);
+								float const next_pos(shift_val_to_not_intersect_window(*p, room_pos, hspace, window_border, !min_dim, sem_hi)); // start_pos of next n
 								room_outer.d[!min_dim][0] = start_pos;
 								room_outer.d[!min_dim][1] = next_pos;
-								room_inner.d[!min_dim][0] = ((n == 0) ? (rooms_range[0] + wall_half_thick) : start_pos); // first inner room is relative to the sec hallway
-								room_inner.d[!min_dim][1] = ((n+1 == num_cent_rooms) ? (rooms_range[1] - wall_half_thick) : next_pos); // last inner room is relative to sec hallway
+								room_inner.d[!min_dim][0] = (is_first ? (rooms_range[0] + wall_half_thick) : start_pos); // first inner room is relative to the sec hallway
+								room_inner.d[!min_dim][1] = (is_last  ? (rooms_range[1] - wall_half_thick) : next_pos ); // last inner room is relative to sec hallway
 								add_room(room_outer, part_id, 1, 0, 1); // office
 								add_room(room_inner, part_id, 1, 0, 1); // office or bathroom
 								bool const is_bathroom(n == bathroom_ix);
