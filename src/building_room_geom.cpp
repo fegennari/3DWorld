@@ -4474,54 +4474,55 @@ void building_room_geom_t::add_br_stall(room_object_t const &c) {
 
 int get_cubicle_tid(room_object_t const &c) {return get_texture_by_name((c.obj_id & 1) ? "carpet/carpet1.jpg" : "carpet/carpet2.jpg");} // select from one of 2 textures
 
+void get_cubicle_parts(room_object_t const &c, cube_t sides[2], cube_t fronts[2], cube_t &back, cube_t surfaces[3]) {
+	float const dz(c.dz()), wall_thick(0.07*dz), frame_thick(8.0*wall_thick), dir_sign(c.dir ? 1.0 : -1.0);
+	cube_t side(c), front(c);
+	back = c;
+	if (c.shape == SHAPE_SHORT) {back.z2() -= 0.4*dz;}
+	side.d[c.dim][!c.dir] += dir_sign*wall_thick; // front
+	side.d[c.dim][ c.dir] -= dir_sign*wall_thick; // back
+	front.d[c.dim][ c.dir] = side.d[c.dim][!c.dir];
+	back .d[c.dim][!c.dir] = side.d[c.dim][ c.dir];
+	sides [0] = sides [1]  = side;
+	fronts[0] = fronts[1]  = front;
+	sides [0].d[!c.dim][1] = sides[0].d[!c.dim][0] + wall_thick;
+	sides [1].d[!c.dim][0] = sides[1].d[!c.dim][1] - wall_thick;
+	fronts[0].d[!c.dim][1] = front   .d[!c.dim][0] + frame_thick;
+	fronts[1].d[!c.dim][0] = front   .d[!c.dim][1] - frame_thick;
+	cube_t surface(side);
+	set_cube_zvals(surface, (c.z1() + 0.45*dz), (c.z1() + 0.50*dz));
+	for (unsigned n = 0; n < 3; ++n) {surfaces[n] = surface;} // left, right, back
+	surfaces[0].d[!c.dim][0] = side.d[!c.dim][0] + wall_thick;
+	surfaces[0].d[!c.dim][1] = surfaces[2].d[!c.dim][0] = c.d[!c.dim][0] + frame_thick;
+	surfaces[1].d[!c.dim][0] = surfaces[2].d[!c.dim][1] = c.d[!c.dim][1] - frame_thick;
+	surfaces[1].d[!c.dim][1] = side.d[!c.dim][1] - wall_thick;
+	surfaces[2].d[ c.dim][!c.dir] = surface.d[c.dim][c.dir] - dir_sign*frame_thick;
+}
+
 void building_room_geom_t::add_cubicle(room_object_t const &c, float tscale) {
+	cube_t sides[2], fronts[2], back, surfaces[3];
+	get_cubicle_parts(c, sides, fronts, back, surfaces);
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_cubicle_tid(c), tscale), 1));
 	colorRGBA const color(apply_light_color(c));
 	point const tex_origin(c.get_llc());
-	float const dz(c.dz()), wall_thick(0.07*dz), frame_thick(8.0*wall_thick), dir_sign(c.dir ? 1.0 : -1.0);
-	bool const is_short(c.shape == SHAPE_SHORT);
-	cube_t sides(c), front(c), back(c);
-	if (is_short) {back.z2() -= 0.4*dz;}
-	sides.d[c.dim][!c.dir] += dir_sign*wall_thick; // front
-	sides.d[c.dim][ c.dir] -= dir_sign*wall_thick; // back
-	front.d[c.dim][ c.dir] = sides.d[c.dim][!c.dir];
-	back .d[c.dim][!c.dir] = sides.d[c.dim][ c.dir];
-	cube_t side1(sides), side2(sides), front1(front), front2(front);
-	side1 .d[!c.dim][1] = side1.d[!c.dim][0] + wall_thick;
-	side2 .d[!c.dim][0] = side2.d[!c.dim][1] - wall_thick;
-	front1.d[!c.dim][1] = front.d[!c.dim][0] + frame_thick;
-	front2.d[!c.dim][0] = front.d[!c.dim][1] - frame_thick;
 	unsigned const side_skip_mask (EF_Z12 | get_skip_mask_for_xy( c.dim));
 	unsigned const front_skip_mask(EF_Z12 | get_skip_mask_for_xy(!c.dim));
-	mat.add_cube_to_verts(side1,  color, tex_origin, side_skip_mask);
-	mat.add_cube_to_verts(side2,  color, tex_origin, side_skip_mask);
-	mat.add_cube_to_verts(front1, color, tex_origin, front_skip_mask);
-	mat.add_cube_to_verts(front2, color, tex_origin, front_skip_mask);
-	mat.add_cube_to_verts(back,   color, tex_origin, EF_Z12);
+	for (unsigned d = 0; d < 2; ++d) {mat.add_cube_to_verts(sides[d], color, tex_origin, side_skip_mask);}
+	for (unsigned d = 0; d < 2; ++d) {mat.add_cube_to_verts(fronts[d], color, tex_origin, front_skip_mask);}
+	mat.add_cube_to_verts(back, color, tex_origin, EF_Z12);
 	// black edges on walls
 	rgeom_mat_t &edge_mat(get_untextured_material(0)); // unshadowed
-	unsigned const side_edge_skip_mask (~(EF_Z2 | (is_short ? ~get_face_mask(c.dim, c.dir) : 0)));
+	unsigned const side_edge_skip_mask (~(EF_Z2 | ((c.shape == SHAPE_SHORT) ? ~get_face_mask(c.dim, c.dir) : 0)));
 	unsigned const front_edge_skip_mask(~(EF_Z2 | get_skip_mask_for_xy(!c.dim)));
 	colorRGBA const edge_color(apply_light_color(c, BKGRAY));
-	edge_mat.add_cube_to_verts_untextured(side1,  edge_color, side_edge_skip_mask);
-	edge_mat.add_cube_to_verts_untextured(side2,  edge_color, side_edge_skip_mask);
-	edge_mat.add_cube_to_verts_untextured(front1, edge_color, front_edge_skip_mask);
-	edge_mat.add_cube_to_verts_untextured(front2, edge_color, front_edge_skip_mask);
-	edge_mat.add_cube_to_verts_untextured(back,   edge_color, ~EF_Z2);
+	for (unsigned d = 0; d < 2; ++d) {edge_mat.add_cube_to_verts_untextured(sides[d], edge_color, side_edge_skip_mask);}
+	for (unsigned d = 0; d < 2; ++d) {edge_mat.add_cube_to_verts_untextured(fronts[d], edge_color, front_edge_skip_mask);}
+	edge_mat.add_cube_to_verts_untextured(back, edge_color, ~EF_Z2);
 	// desk surface
 	rgeom_mat_t &surf_mat(get_material(tid_nm_pair_t(MARBLE_TEX, 4.0*tscale, 1), 1));
 	colorRGBA const surf_color(apply_light_color(c, LT_GRAY));
-	cube_t surface(sides);
-	set_cube_zvals(surface, (c.z1() + 0.45*dz), (c.z1() + 0.50*dz));
-	cube_t surf1(surface), surf2(surface), surf3(surface); // left, right, back
-	surf1.d[!c.dim][0] = side1.d[!c.dim][1];
-	surf1.d[!c.dim][1] = surf3.d[!c.dim][0] = front1.d[!c.dim][1];
-	surf2.d[!c.dim][0] = surf3.d[!c.dim][1] = front2.d[!c.dim][0];
-	surf2.d[!c.dim][1] = side2.d[!c.dim][0];
-	surf3.d[ c.dim][!c.dir] = surface.d[c.dim][c.dir] - dir_sign*frame_thick;
-	surf_mat.add_cube_to_verts(surf1, surf_color, tex_origin, get_skip_mask_for_xy( c.dim));
-	surf_mat.add_cube_to_verts(surf2, surf_color, tex_origin, get_skip_mask_for_xy( c.dim));
-	surf_mat.add_cube_to_verts(surf3, surf_color, tex_origin, get_skip_mask_for_xy(!c.dim));
+	for (unsigned d = 0; d < 2; ++d) {surf_mat.add_cube_to_verts(surfaces[d], surf_color, tex_origin, get_skip_mask_for_xy(c.dim));}
+	surf_mat.add_cube_to_verts(surfaces[2], surf_color, tex_origin, get_skip_mask_for_xy(!c.dim));
 }
 
 void add_room_obj_sign_text_verts(room_object_t const &c, colorRGBA const &color, vector<vert_norm_comp_tc_color> &verts_out);
