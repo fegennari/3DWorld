@@ -104,7 +104,7 @@ bool building_t::add_classroom_desk(rand_gen_t &rgen, room_t const &room, cube_t
 		place_cup_on_obj(rgen, desk, room_id, tot_light_amt, avoid);
 	}
 	if (rgen.rand_float() < 0.33) { // maybe add a book on the desk
-		place_book_on_obj(rgen, objs[desk_obj_ix], room_id, tot_light_amt, objs_start, 1, RO_FLAG_USED); // use_dim_dir=1
+		place_book_on_obj(rgen, objs[desk_obj_ix], room_id, tot_light_amt, objs_start, 1, RO_FLAG_USED, 1); // use_dim_dir=1; skip_if_overlaps=1
 	}
 	// add chair
 	point chair_pos;

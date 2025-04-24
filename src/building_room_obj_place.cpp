@@ -566,47 +566,43 @@ colorRGBA select_paper_color(rand_gen_t &rgen) {
 }
 void building_t::add_papers_to_surface(cube_t const &c, bool dim, bool dir, unsigned max_num, rand_gen_t &rgen, unsigned room_id, float tot_light_amt, cube_t const &avoid) {
 	float const floor_spacing(get_window_vspace());
-	float const plen(0.115*floor_spacing), pwidth(0.77*plen), thickness(0.00025*floor_spacing); // 8.5x11
+	float const plen(0.115*floor_spacing), pwidth(0.77*plen), espace(0.75*plen), thickness(0.00025*floor_spacing); // 8.5x11
 	vect_room_object_t &objs(interior->room_geom->objs);
+	if (espace > 0.51*c.get_sz_dim(dim) || pwidth > 0.51*c.get_sz_dim(!dim)) return; // desk/table is too small for papers
+	cube_t paper;
+	set_cube_zvals(paper, c.z2(), c.z2()+thickness); // very thin
+	unsigned const num_papers(rgen.rand() % (max_num+1)); // 0 - max_num
 
-	if (plen < 0.5*c.get_sz_dim(dim) && pwidth < 0.5*c.get_sz_dim(!dim)) { // desk/table is large enough for papers
-		cube_t paper;
-		set_cube_zvals(paper, c.z2(), c.z2()+thickness); // very thin
-		unsigned const num_papers(rgen.rand() % (max_num+1)); // 0 - max_num
-
-		for (unsigned n = 0; n < num_papers; ++n) { // okay if they overlap
-			set_wall_width(paper, rgen.rand_uniform(c.d[ dim][0]+plen,   c.d[ dim][1]-plen  ), 0.5*plen,    dim);
-			set_wall_width(paper, rgen.rand_uniform(c.d[!dim][0]+pwidth, c.d[!dim][1]-pwidth), 0.5*pwidth, !dim);
-			if (!avoid.is_all_zeros() && paper.intersects_xy(avoid)) continue; // skip this paper
-			objs.emplace_back(paper, TYPE_PAPER, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_RAND_ROT), tot_light_amt, SHAPE_CUBE, select_paper_color(rgen), btype);
-			set_obj_id(objs);
-			paper.z2() += thickness; // to avoid Z-fighting if different colors
-		} // for n
-	}
+	for (unsigned n = 0; n < num_papers; ++n) { // okay if they overlap
+		set_wall_width(paper, rgen.rand_uniform(c.d[ dim][0]+espace, c.d[ dim][1]-espace), 0.5*plen,    dim);
+		set_wall_width(paper, rgen.rand_uniform(c.d[!dim][0]+pwidth, c.d[!dim][1]-pwidth), 0.5*pwidth, !dim);
+		if (!avoid.is_all_zeros() && paper.intersects_xy(avoid)) continue; // skip this paper
+		objs.emplace_back(paper, TYPE_PAPER, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_RAND_ROT), tot_light_amt, SHAPE_CUBE, select_paper_color(rgen), btype);
+		set_obj_id(objs);
+		paper.z2() += thickness; // to avoid Z-fighting if different colors
+	} // for n
 }
 void building_t::add_pens_pencils_to_surface(cube_t const &c, bool dim, bool dir, unsigned max_num, rand_gen_t &rgen, unsigned room_id, float tot_light_amt, cube_t const &avoid) {
 	float const floor_spacing(get_window_vspace());
 	float const pp_len(0.077*floor_spacing), pp_dia(0.0028*floor_spacing), edge_space(0.75*pp_len); // ~7.5 inches long
 	vect_room_object_t &objs(interior->room_geom->objs);
+	if (min(c.dx(), c.dy()) < 2.0*edge_space) return; // desk is too small for pens/pencils
+	float const pp_z1(c.z2() + 0.3f*pp_dia); // move above papers, and avoid self shadow from the desk
+	cube_t pp_bcube;
+	set_cube_zvals(pp_bcube, pp_z1, pp_z1+pp_dia);
+	unsigned const num_pp(rgen.rand() % (max_num+1)); // 0 - max_num
 
-	if (edge_space < 0.25*min(c.dx(), c.dy())) { // desk is large enough for pens/pencils
-		float const pp_z1(c.z2() + 0.3f*pp_dia); // move above papers, and avoid self shadow from the desk
-		cube_t pp_bcube;
-		set_cube_zvals(pp_bcube, pp_z1, pp_z1+pp_dia);
-		unsigned const num_pp(rgen.rand() % (max_num+1)); // 0 - max_num
-
-		for (unsigned n = 0; n < num_pp; ++n) {
-			bool const is_pen(rgen.rand_bool());
-			colorRGBA const color(is_pen ? pen_colors[rgen.rand()&3] : pencil_colors[rgen.rand()&1]);
-			set_wall_width(pp_bcube, rgen.rand_uniform(c.d[ dim][0]+edge_space, c.d[ dim][1]-edge_space), 0.5*pp_len,  dim);
-			set_wall_width(pp_bcube, rgen.rand_uniform(c.d[!dim][0]+edge_space, c.d[!dim][1]-edge_space), 0.5*pp_dia, !dim);
-			if (!avoid.is_all_zeros() && pp_bcube.intersects_xy(avoid)) continue; // skip this paper
-			// Note: no check for overlap with books and potted plants, but that would be complex to add and this case is rare;
-			//       computer monitors/keyboards aren't added in this case, and pencils should float above papers, so we don't need to check those
-			if (!pp_bcube.is_strictly_normalized()) continue; // too small, likely due to FP error when far from the origin
-			objs.emplace_back(pp_bcube, (is_pen ? TYPE_PEN : TYPE_PENCIL), room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, color);
-		} // for n
-	}
+	for (unsigned n = 0; n < num_pp; ++n) {
+		bool const is_pen(rgen.rand_bool());
+		colorRGBA const color(is_pen ? pen_colors[rgen.rand()&3] : pencil_colors[rgen.rand()&1]);
+		set_wall_width(pp_bcube, rgen.rand_uniform(c.d[ dim][0]+edge_space, c.d[ dim][1]-edge_space), 0.5*pp_len,  dim);
+		set_wall_width(pp_bcube, rgen.rand_uniform(c.d[!dim][0]+edge_space, c.d[!dim][1]-edge_space), 0.5*pp_dia, !dim);
+		if (!avoid.is_all_zeros() && pp_bcube.intersects_xy(avoid)) continue; // skip this paper
+		// Note: no check for overlap with books and potted plants, but that would be complex to add and this case is rare;
+		//       computer monitors/keyboards aren't added in this case, and pencils should float above papers, so we don't need to check those
+		if (!pp_bcube.is_strictly_normalized()) continue; // too small, likely due to FP error when far from the origin
+		objs.emplace_back(pp_bcube, (is_pen ? TYPE_PEN : TYPE_PENCIL), room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, color);
+	} // for n
 }
 
 void building_t::add_filing_cabinet_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
@@ -688,14 +684,34 @@ bool building_t::create_office_cubicles(rand_gen_t rgen, room_t const &room, flo
 				// technically we should check for pillar coll if (num_sides > 4), but in all the cases I've seen the pillar is between rows of cubicles and looks okay
 				if (is_obj_placement_blocked(test_cube, room, 1)) continue; // inc_open_doors=1
 				bool const against_window(room.d[!long_dim][dir] == part.d[!long_dim][dir]);
+				unsigned const cubicle_obj_id(objs.size());
 				objs.emplace_back(c, TYPE_CUBICLE, room_id, !long_dim, dir, 0, tot_light_amt, ((against_window && !is_middle) ? SHAPE_SHORT : SHAPE_CUBE));
 				objs.back().obj_id = bldg_id;
 				added_cube = 1;
-				// add colliders to allow the player to enter the cubicle but not cross the side walls
 				cube_t sides[2], fronts[2], back, surfaces[3];
 				get_cubicle_parts(objs[cubicle_obj_id], sides, fronts, back, surfaces);
-				for (unsigned n = 0; n < 3; ++n) {objs.emplace_back(surfaces[n], TYPE_COLLIDER, room_id, !long_dim, dir, RO_FLAG_INVIS, tot_light_amt);}
+				bool has_cup(0);
 
+				for (unsigned n = 0; n < 3; ++n) {
+					// add colliders to allow the player to enter the cubicle but not cross the side walls
+					bool const sdim(long_dim ^ (n == 2)), sdir((n == 2) ? !dir : bool(!n));
+					cube_t const &surface(surfaces[n]);
+					objs.emplace_back(surface, TYPE_COLLIDER, room_id, sdim, sdir, RO_FLAG_INVIS, tot_light_amt);
+					// add objects to cubicle desk surfaces
+					unsigned const pp_start(objs.size());
+					if (rgen.rand_float() < 0.6) {add_papers_to_surface      (surface, sdim,  sdir, 4, rgen, room_id, tot_light_amt);} // 0-4
+					if (rgen.rand_float() < 0.6) {add_pens_pencils_to_surface(surface, sdim, !sdir, 2, rgen, room_id, tot_light_amt);} // 0-2
+
+					if (!has_cup && rgen.rand_float() < 0.25) { // maybe add a cup; at most one per cubicle
+						vect_cube_t const avoid(objs.begin()+pp_start, objs.end()); // add all papers, pens, and pencils
+						place_cup_on_obj(rgen, surface, room_id, tot_light_amt, avoid);
+						has_cup = 1;
+					}
+					if (rgen.rand_float() < 0.4) { // maybe add a book
+						room_object_t const desk(surface, TYPE_DESK, room_id, sdim, sdir, RO_FLAG_INVIS, tot_light_amt); // fake desk for this surface
+						place_book_on_obj(rgen, desk, room_id, tot_light_amt, pp_start, 1, 0, 1); // use_dim_dir=1; skip_if_overlaps=1
+					}
+				} // for n
 				if (has_office_chair && (rgen.rand()&3)) { // add office chair 75% of the time
 					point center(c.get_cube_center());
 					center[!long_dim] += dir_sign*0.2*cube_depth;
@@ -4098,8 +4114,8 @@ bool building_t::add_security_room_objs(rand_gen_t rgen, room_t const &room, flo
 	return 1;
 }
 
-void building_t::place_book_on_obj(rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id,
-	float tot_light_amt, unsigned objs_start, bool use_dim_dir, unsigned extra_flags)
+bool building_t::place_book_on_obj(rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id,
+	float tot_light_amt, unsigned objs_start, bool use_dim_dir, unsigned extra_flags, bool skip_if_overlaps)
 {
 	point center(place_on.get_cube_center());
 	for (unsigned d = 0; d < 2; ++d) {center[d] += 0.1*place_on.get_sz_dim(d)*rgen.rand_uniform(-1.0, 1.0);} // add a slight random shift
@@ -4113,7 +4129,10 @@ void building_t::place_book_on_obj(rand_gen_t &rgen, room_object_t const &place_
 
 	// check if there's anything in the way; only handling pens and pencils here; paper is ignored, and larger objects should already be handled
 	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
-		if (i->type != TYPE_PEN && i->type != TYPE_PENCIL) continue;
+		if (i->type != TYPE_PEN && i->type != TYPE_PENCIL) {
+			if (skip_if_overlaps && *i != place_on) return 0; // something else like a cup
+			continue;
+		}
 		if (!i->intersects(book)) continue;
 		set_cube_zvals(book, i->z2(), i->z2()+book.dz()); // place book on top of object; maybe the book should be tilted?
 	}
@@ -4122,6 +4141,7 @@ void building_t::place_book_on_obj(rand_gen_t &rgen, room_object_t const &place_
 	if (place_on.is_glass_table()) {flags |= RO_FLAG_HAS_EXTRA;} // flag so that shadows are enabled
 	objs.emplace_back(book, TYPE_BOOK, room_id, dim, dir, flags, tot_light_amt, SHAPE_CUBE, color); // Note: invalidates place_on reference
 	set_obj_id(objs);
+	return 1;
 }
 
 bool place_bottle_on_obj(rand_gen_t &rgen, cube_t const &place_on, vect_room_object_t &objs, float vspace,
