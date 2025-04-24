@@ -18,6 +18,7 @@ void get_pool_ball_rot_matrix(room_object_t const &c, xform_matrix &rot_matrix);
 float get_cockroach_height_from_radius(float radius);
 void rotate_obj_cube(cube_t &c, cube_t const &bc, bool in_dim, bool dir);
 cube_t get_whiteboard_marker_ledge(room_object_t const &c);
+void get_cubicle_parts(room_object_t const &c, cube_t sides[2], cube_t fronts[2], cube_t &back, cube_t surfaces[3]);
 
 
 class door_path_checker_t {
@@ -651,8 +652,10 @@ bool building_t::create_office_cubicles(rand_gen_t rgen, room_t const &room, flo
 	bool const long_dim(room.dx() < room.dy());
 	float const rlength(room_bounds.get_sz_dim(long_dim)), rwidth(room_bounds.get_sz_dim(!long_dim)), midpoint(room_bounds.get_center_dim(!long_dim));
 	if (rwidth < 2.5*floor_spacing || rlength < 3.5*floor_spacing) return 0; // not large enough
-	unsigned const num_cubes(round_fp(rlength/(rgen.rand_uniform(0.8, 0.9)*floor_spacing))); // >= 4
-	float const cube_width(rlength/num_cubes), cube_depth(cube_width*rgen.rand_uniform(0.8, 1.2)); // not quite square
+	float const front_clearance(get_min_front_clearance_inc_people());
+	float const target_width(rgen.rand_uniform(0.8, 0.88)*floor_spacing), max_depth(0.5*(rwidth - 1.2*front_clearance));
+	unsigned const num_cubes(floor(rlength/target_width)); // >= 3, but usually >= 4
+	float const cube_width(rlength/num_cubes), cube_depth(min(cube_width*rgen.rand_uniform(0.8, 1.2), min(1.2f*target_width, max_depth))); // not quite square
 	bool const add_middle_col(rwidth > 4.0*cube_depth + 2.0*get_doorway_width()); // enough to fit 4 rows of cubes and 2 hallways in between
 	uint16_t const bldg_id(uint16_t(mat_ix + interior->rooms.size())); // some value that's per-building
 	cube_t const &part(get_part_for_room(room));
@@ -681,7 +684,7 @@ bool building_t::create_office_cubicles(rand_gen_t rgen, room_t const &room, flo
 				c.d[!long_dim][ dir] = wall_pos;
 				c.d[!long_dim][!dir] = wall_pos + dir_sign*cube_depth;
 				cube_t test_cube(c);
-				test_cube.d[!long_dim][!dir] += dir_sign*0.5*cube_depth; // allow space for people to enter the cubicle
+				test_cube.d[!long_dim][!dir] += 1.1*dir_sign*front_clearance; // allow space for people to enter the cubicle
 				// technically we should check for pillar coll if (num_sides > 4), but in all the cases I've seen the pillar is between rows of cubicles and looks okay
 				if (is_obj_placement_blocked(test_cube, room, 1)) continue; // inc_open_doors=1
 				bool const against_window(room.d[!long_dim][dir] == part.d[!long_dim][dir]);
@@ -689,13 +692,9 @@ bool building_t::create_office_cubicles(rand_gen_t rgen, room_t const &room, flo
 				objs.back().obj_id = bldg_id;
 				added_cube = 1;
 				// add colliders to allow the player to enter the cubicle but not cross the side walls
-				cube_t c2(c), c3(c), c4(c);
-				c2.d[long_dim][0] = hi_pos - 0.06*cube_width;
-				c3.d[long_dim][1] = lo_pos + 0.06*cube_width;
-				c4.d[!long_dim][!dir] = wall_pos + dir_sign*0.12*cube_depth;
-				objs.emplace_back(c2, TYPE_COLLIDER, room_id, !long_dim, dir, RO_FLAG_INVIS, tot_light_amt); // side1
-				objs.emplace_back(c3, TYPE_COLLIDER, room_id, !long_dim, dir, RO_FLAG_INVIS, tot_light_amt); // side2
-				objs.emplace_back(c4, TYPE_COLLIDER, room_id, !long_dim, dir, RO_FLAG_INVIS, tot_light_amt); // back (against wall)
+				cube_t sides[2], fronts[2], back, surfaces[3];
+				get_cubicle_parts(objs[cubicle_obj_id], sides, fronts, back, surfaces);
+				for (unsigned n = 0; n < 3; ++n) {objs.emplace_back(surfaces[n], TYPE_COLLIDER, room_id, !long_dim, dir, RO_FLAG_INVIS, tot_light_amt);}
 
 				if (has_office_chair && (rgen.rand()&3)) { // add office chair 75% of the time
 					point center(c.get_cube_center());
