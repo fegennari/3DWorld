@@ -654,7 +654,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				added_obj = is_bathroom = added_bathroom = no_whiteboard =
 					add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f, is_basement, 0, added_bathroom_objs_mask); // add_shower_tub=0
 			}
-			else if (!residential && f == 0) { // office building special pre-assigned first floor rooms; can be in a stacked part
+			else if (f == 0 && init_rtype_f0 == RTYPE_LAUNDRY) {
+				added_obj = no_whiteboard = no_plants = added_laundry = add_laundry_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, added_bathroom_objs_mask);
+			}
+			else if (!residential && f == 0) { // commercial building special pre-assigned first floor rooms; can be in a stacked part
 				if (init_rtype_f0 == RTYPE_UTILITY) {
 					added_obj = no_whiteboard = no_plants = is_utility = add_office_utility_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 				}

@@ -3204,6 +3204,7 @@ bool building_t::add_laundry_objs(rand_gen_t rgen, room_t const &room, float zva
 	}
 	if (!is_house) { // commercial laundry room
 		// TODO
+		add_door_sign("Laundry", room, zval, room_id);
 	}
 	for (unsigned n = 0; n < 10; ++n) { // 10 attempts to place washer and dryer along the same wall
 		unsigned const washer_ix(objs.size());

@@ -1230,26 +1230,26 @@ void building_t::assign_special_room_types(vector<unsigned> &utility_room_cands,
 		}
 	}
 	// add special ground floor room types
-	unsigned const NUM_GFLOOR_RTYPES = 3;
-	unsigned const GFLOOR_RTYPES      [NUM_GFLOOR_RTYPES] = {RTYPE_UTILITY, RTYPE_SERVER, RTYPE_SECURITY}; // placed in this priority order
-	unsigned const GFLOOR_RTYPE_COUNTS[NUM_GFLOOR_RTYPES] = {MAX_OFFICE_UTILITY_ROOMS, 1, 1};
+	vector<unsigned> special_room_types; // placed in this priority order
+	special_room_types.push_back(RTYPE_UTILITY);
+	if (is_hotel() || is_hospital()) {special_room_types.push_back(RTYPE_LAUNDRY);}
+	if (is_office_bldg() || is_hospital()) {special_room_types.push_back(RTYPE_SECURITY);}
+	if (is_office_bldg() || is_hospital() || is_school()) {special_room_types.push_back(RTYPE_SERVER);}
 
-	for (unsigned rtype = 0; rtype < NUM_GFLOOR_RTYPES; ++rtype) { // assign round robin
-		unsigned const room_type(GFLOOR_RTYPES[rtype]);
-		if (room_type == RTYPE_SERVER   && !(is_office_bldg() || is_hospital() || is_school())) continue; // building type doesn't have a server   room
-		if (room_type == RTYPE_SECURITY && !(is_office_bldg() || is_hospital()))                continue; // building type doesn't have a security room
-		vector<unsigned> &room_cands((room_type == RTYPE_UTILITY) ? utility_room_cands : special_room_cands);
+	for (unsigned rtype : special_room_types) {
+		bool const is_utility(rtype == RTYPE_UTILITY);
+		vector<unsigned> &room_cands(is_utility ? utility_room_cands : special_room_cands);
 
-		for (unsigned n = 0; n < GFLOOR_RTYPE_COUNTS[rtype]; ++n) {
+		for (unsigned n = 0; n < (is_utility ? MAX_OFFICE_UTILITY_ROOMS : 1); ++n) {
 			if (room_cands.empty()) break; // no more rooms to assign
 			unsigned &room_ix(room_cands[rgen.rand() % room_cands.size()]);
 			room_t &room(get_room(room_ix));
-			room.assign_to(room_type, 0, 1); // assign this room on floor 0; locked=1
+			room.assign_to(rtype, 0, 1); // assign this room on floor 0; locked=1
 			bool const ensure_locked(0); // probably should be locked, but unlocked makes these rooms easier to explore
 			ensure_doors_to_room_are_closed(room, doors_start, ensure_locked);
 
-			if (room.is_apt_or_hotel_room()) { // make other rooms in this unit the same type; should be RTYPE_UTILITY
-				for (auto r = rooms.begin()+room_ix+1; r != rooms.end() && r->unit_id == room.unit_id; ++r) {r->assign_to(room_type, 0, 1);} // locked=1
+			if (room.is_apt_or_hotel_room()) { // make other rooms in this unit the same type; should be RTYPE_UTILITY or RTYPE_LAUNDRY
+				for (auto r = rooms.begin()+room_ix+1; r != rooms.end() && r->unit_id == room.unit_id; ++r) {r->assign_to(rtype, 0, 1);} // locked=1
 			}
 			room_ix = room_cands.back();
 			room_cands.pop_back(); // remove this room from consideration
