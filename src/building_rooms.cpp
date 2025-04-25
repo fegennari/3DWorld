@@ -100,6 +100,10 @@ unsigned building_t::count_num_int_doors(room_t const &room) const {
 	for (door_stack_t const &ds : interior->door_stacks) {num += ds.intersects(room_exp);}
 	return num;
 }
+bool building_t::is_corner_room(room_t const &room) const { // corner room with windows/exterior walls on both X and Y
+	if (room.z1() < ground_floor_z1) return 0;
+	return ((room.ext_sides & 3) && (room.ext_sides & 12));
+}
 
 void expand_to_nonzero_area(cube_t &c, float exp_amt, bool dim) {
 	while (c.get_sz_dim(dim) == 0.0) {
@@ -833,7 +837,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				if (num_int_doors < 0) {num_int_doors = count_num_int_doors(*r);} // count itertior doors the first time we get here
 
 				// hospital room with a window and either a subroom (bathroom) or no more than one interior door
-				if (has_window && !must_be_waiting && (r->has_subroom() || num_int_doors <= 1)) {
+				if ((has_window && (interior->has_sec_hallways || /*is_corner_room(*r)*/r->has_subroom())) && !must_be_waiting && (r->has_subroom() || num_int_doors <= 1)) {
 					if (add_hospital_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start, nested_room_ix)) {
 						added_obj = no_whiteboard = 1;
 						r->assign_to(RTYPE_HOS_BED, f);

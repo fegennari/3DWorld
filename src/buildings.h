@@ -2872,6 +2872,7 @@ private:
 	bool check_ext_step_valid(cube_t const &c, unsigned ext_objs_start, unsigned exclude_ix, float head_clearance) const;
 	void add_ext_door_steps(unsigned ext_objs_start);
 	unsigned count_num_int_doors(room_t const &room) const;
+	bool is_corner_room(room_t const &room) const;
 	bool check_bcube_overlap_xy_one_dir(building_t const &b, float expand_rel, float expand_abs) const;
 	void split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen);
 	bool test_coll_with_sides(point &pos, point const &p_last, float radius, vector3d const &xlate, cube_t const &part, unsigned part_id, vector3d *cnorm) const;
