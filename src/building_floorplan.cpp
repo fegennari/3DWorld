@@ -1237,8 +1237,9 @@ void building_t::assign_special_room_types(vector<unsigned> &utility_room_cands,
 	if (is_office_bldg() || is_hospital() || is_school()) {special_room_types.push_back(RTYPE_SERVER);}
 
 	for (unsigned rtype : special_room_types) {
+		// allow special rooms to use utility room cands when all utitility rooms have been assigned and there are no special rooms (no secondary hallways)
 		bool const is_utility(rtype == RTYPE_UTILITY);
-		vector<unsigned> &room_cands(is_utility ? utility_room_cands : special_room_cands);
+		vector<unsigned> &room_cands((is_utility || special_room_cands.empty()) ? utility_room_cands : special_room_cands);
 
 		for (unsigned n = 0; n < (is_utility ? MAX_OFFICE_UTILITY_ROOMS : 1); ++n) {
 			if (room_cands.empty()) break; // no more rooms to assign

@@ -692,7 +692,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 						if (has_stairs_bcube_int(unit_bounds, interior->stairwells, doorway_width, 1)) {make_public = 1;} // no_check_enter_exit=1 (check with no expand)
 					}
 					for (auto r2 = r; r2 != rooms.end() && r2->unit_id == r->unit_id; ++r2) {
-						if (r2->get_room_type(f) == RTYPE_UTILITY) {make_public = 1;} // utility rooms are public
+						room_type const rtype(r2->get_room_type(f));
+						if (rtype == RTYPE_UTILITY || rtype == RTYPE_LAUNDRY) {make_public = 1;} // utility and laundry rooms are public
 					}
 				}
 				if (make_public && is_apt_or_hotel_room) {is_public_on_floor |= floor_mask;} // if was an apt or hotel room, flag this floor as being non-res for this unit
@@ -740,6 +741,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				}
 				else if (rtype == RTYPE_COMMON) { // common room
 					is_living = add_livingroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start); // similar to living room, but without a table
+				}
+				else if (rtype == RTYPE_LAUNDRY) { // commercial laundry room
+					add_laundry_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, added_bathroom_objs_mask);
 				}
 				else if (rtype == RTYPE_ENTRY) { // entryway
 					// too small to place anything larger than a rug, trashcan, or pictures
