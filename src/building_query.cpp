@@ -2308,9 +2308,9 @@ bool building_t::overlaps_other_room_obj(cube_t const &c, unsigned objs_start, b
 		if (i->is_a_drink() && i->is_on_floor() && i->intersects_no_adj(c)) return 1; // bottles and cans on the floor do count
 		// Note: light switches/outlets/vents/pipes/TVs/monitors don't collide with the player or AI, but they collide with other placed objects to avoid blocking them;
 		// however, it's okay to block outlets with furniture
-		if ((check_all || !i->no_coll() || type == TYPE_SWITCH || type == TYPE_OUTLET || type == TYPE_VENT || type == TYPE_PIPE || type == TYPE_FALSE_DOOR ||
-			type == TYPE_FIRE_EXT || type == TYPE_TV || type == TYPE_MONITOR || type == TYPE_US_FLAG || type == TYPE_CLOCK || i->is_pet_container()) &&
-			i->intersects_no_adj(c)) return 1;
+		if ((type == TYPE_SWITCH || type == TYPE_OUTLET || type == TYPE_VENT) && i->intersects(c)) return 1; // inc adj as these objects may shrink to zero area far from origin
+		if ((check_all || !i->no_coll() || type == TYPE_PIPE || type == TYPE_FALSE_DOOR || type == TYPE_FIRE_EXT || type == TYPE_TV ||
+			type == TYPE_MONITOR || type == TYPE_US_FLAG || type == TYPE_CLOCK || i->is_pet_container()) && i->intersects_no_adj(c)) return 1;
 		if (type == TYPE_DESK && i->shape == SHAPE_TALL && i->intersects_xy_no_adj(c) && c.intersects_no_adj(get_desk_top_back(*i))) return 1; // check tall desk back
 		if (type == TYPE_BOOK && (i->flags & RO_FLAG_ON_FLOOR) && i->intersects_no_adj(c)) return 1; // books on floors count
 	} // for i
