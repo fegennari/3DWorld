@@ -1911,7 +1911,8 @@ bool building_t::add_vanity_to_room(rand_gen_t &rgen, room_t &room, float &zval,
 		}
 		cube_t blocker(vanity);
 		blocker.d[dim][!dir] += 0.9*dsign*depth;
-		if (overlaps_other_room_obj(blocker, objs_start) || is_cube_close_to_doorway(blocker, room, 0.0, 1)) continue; // bad placement; don't need to check for stairs
+		blocker.expand_in_dim(!dim, 0.05*depth); // include overhang on sides
+		if (overlaps_obj_or_placement_blocked(blocker, room, objs_start)) continue; // bad placement; need to check elevators for hospitals
 		// Note: has doors but no drawers
 		objs.emplace_back(vanity,  TYPE_VANITY,  room_id, dim, !dir, flags, tot_light_amt);
 		objs.emplace_back(blocker, TYPE_BLOCKER, room_id, 0, 0, RO_FLAG_INVIS); // add blocker in front
