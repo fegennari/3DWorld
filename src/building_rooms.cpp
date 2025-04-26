@@ -638,7 +638,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			// must be a BR if cand bathroom, and BR not already placed; applies to all floors of this room; if multi-family, we check for a BR prev placed on this floor
 			bool const must_be_bathroom(room_id == cand_bathroom && (multi_family ? !(added_bath_mask & floor_mask) : (num_bathrooms == 0)));
 			bool const is_tall_room(r->is_single_floor && r->dz() > 1.5*window_vspacing);
-			bool added_tc(0), added_desk(0), added_obj(0), can_place_onto(0), no_whiteboard(0), no_plants(0);
+			bool added_tc(0), added_desk(0), added_obj(0), can_place_onto(0), no_whiteboard(0), no_plants(0), is_laundry(0);
 			bool is_bathroom(0), is_bedroom(0), is_kitchen(0), is_living(0), is_dining(0), is_storage(0), is_utility(0), is_machine(0), is_play_art(0), is_library(0), is_inter(0);
 			unsigned num_chairs(0), pref_hang_orient(4); // no pref orient=4
 			// unset room type if not locked on this floor during floorplanning; required to generate determinstic room geom
@@ -659,7 +659,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f, is_basement, 0, added_bathroom_objs_mask); // add_shower_tub=0
 			}
 			else if (f == 0 && init_rtype_f0 == RTYPE_LAUNDRY) {
-				added_obj = no_whiteboard = no_plants = added_laundry = add_laundry_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, added_bathroom_objs_mask);
+				added_obj = no_whiteboard = no_plants = is_laundry = added_laundry =
+					add_laundry_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, added_bathroom_objs_mask);
 			}
 			else if (!residential && f == 0) { // commercial building special pre-assigned first floor rooms; can be in a stacked part
 				if (init_rtype_f0 == RTYPE_UTILITY) {
@@ -747,7 +748,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					is_living = add_livingroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start); // similar to living room, but without a table
 				}
 				else if (rtype == RTYPE_LAUNDRY) { // commercial laundry room
-					add_laundry_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, added_bathroom_objs_mask);
+					is_laundry = add_laundry_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, added_bathroom_objs_mask);
 				}
 				else if (rtype == RTYPE_ENTRY) { // entryway
 					// too small to place anything larger than a rug, trashcan, or pictures
@@ -973,7 +974,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			if (can_place_onto) { // an object was placed (table, desk, counter, etc.), maybe add a book or bottle on top of it
 				place_objects_onto_surfaces(rgen, *r, room_id, tot_light_amt, objs_start, f, is_basement, not_private_room);
 			}
-			if (residential_room && !is_utility && !is_inter && !is_machine) { // place house/apartment/hotel-specific items
+			if (residential_room && !is_utility && !is_inter && !is_machine && !(is_laundry && !is_house)) { // place house/apartment/hotel-specific items
 				if (!is_bathroom && !is_kitchen && !is_library && rgen.rand_float() < (is_basement ? 0.25 : 0.8)) {
 					// place bookcase 80% of the time, but not in bathrooms, kitchens, or utlity rooms
 					rand_gen_t rgen2(rgen); // copy so that rgen isn't updated in the call below

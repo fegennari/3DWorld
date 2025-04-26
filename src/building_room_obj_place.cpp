@@ -3194,6 +3194,7 @@ bool building_t::add_laundry_objs(rand_gen_t rgen, room_t const &room, float zva
 	place_area.expand_by(-0.25*get_wall_thickness()); // common spacing to wall for appliances
 	vector2d const place_area_sz(place_area.get_size_xy());
 	vect_room_object_t &objs(interior->room_geom->objs);
+	bool success(0);
 
 	// check for bookcase and add blocker, since it's possible to have both a bookcase and laundry objects placed in the same room
 	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
@@ -3204,38 +3205,74 @@ bool building_t::add_laundry_objs(rand_gen_t rgen, room_t const &room, float zva
 		break; // there should only be one, and we've invalidated the reference
 	}
 	if (!is_house) { // commercial laundry room
-		// TODO
-		add_door_sign("Laundry", room, zval, room_id);
-	}
-	for (unsigned n = 0; n < 10; ++n) { // 10 attempts to place washer and dryer along the same wall
-		unsigned const washer_ix(objs.size());
-		bool const placed_washer(place_model_along_wall(OBJ_MODEL_WASHER, TYPE_WASHER, room, 0.42, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.8));
-		unsigned pref_orient(4); // if washer was placed, prefer to place dryer along the same wall
-		if (placed_washer) {pref_orient = objs[washer_ix].get_orient();}
-		unsigned const dryer_ix(objs.size());
-		bool const placed_dryer(place_model_along_wall(OBJ_MODEL_DRYER, TYPE_DRYER, room, 0.38, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.8, pref_orient));
-		bool success(0);
-		if (placed_dryer) {objs[dryer_ix].obj_id = (uint16_t)objs.size();} // set dryer obj_id; will determine whether this is gas or electric
+		unsigned const num_floors(round_fp(room.dz()/get_window_vspace())), max_place(num_floors*interior->rooms.size()/8);
+		bool const wd_first(rgen.rand_bool());
+		bool any_placed(0);
 
-		if (placed_washer && placed_dryer && objs[dryer_ix].get_orient() == pref_orient) {success = 1;} // placed both washer and dryer along the same wall
-		else if (n+1 == 10) { // last attempt
-			if (!(placed_washer || placed_dryer)) return 0; // placed neither washer nor dryer, failed
-			if (placed_washer != placed_dryer) {success = 1;} // placed only one of the washer or dryer, allow it
-			else if (objs[washer_ix].dim != objs[dryer_ix].dim) {success = 1;} // placed on two adjacent walls, allow it
-			// placed on opposite walls; check that there's space for the player to walk between the washer and dryer
-			else if (objs[washer_ix].get_sz_dim(objs[washer_ix].dim) + objs[dryer_ix].get_sz_dim(objs[dryer_ix].dim) + front_clearance < place_area_sz[objs[washer_ix].dim]) {success = 1;}
-		}
-		if (success) {
-			// if we've placed a washer and/or dryer and made this into a laundry room, try to place a sink as well; should this use a different sink model from bathrooms?
-			if (place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, room, 0.45, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.6)) {
-				added_bathroom_objs_mask |= PLACED_SINK;
+		for (unsigned e = 0; e < 2; ++e) {
+			bool const wd(bool(e) ^ wd_first); // {washer, dryer}
+			unsigned const obj_ix(objs.size()), model_id(wd ? OBJ_MODEL_DRYER : OBJ_MODEL_WASHER);
+			room_object const type(wd ? TYPE_DRYER : TYPE_WASHER);
+			float const height(wd ? 0.38 : 0.42);
+			if (!place_model_along_wall(model_id, type, room, height, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.8)) continue;
+			// try to place more objects of this type along the same wall
+			room_object_t const obj(objs[obj_ix]); // deep copy
+			float const shift_amt(rgen.rand_uniform(1.25, 2.0)*obj.get_width()), clearance(0.8*obj.get_depth());
+			unsigned num_place(1);
+
+			for (unsigned dir = 0; dir < 2; ++dir) { // {left, right} of obj
+				room_object_t obj2(obj);
+
+				for (unsigned n = 1; n < max_place; ++n) {
+					obj2.translate_dim(!obj.dim, (dir ? 1.0 : -1.0)*shift_amt);
+					if (!room.contains_cube(obj2)) break; // done
+					cube_t blocker(obj2); // used for collision tests
+					blocker.d[obj.dim][obj.dir] += (obj.dir ? 1.0 : -1.0)*clearance; // add front clearance
+					if (overlaps_obj_or_placement_blocked(blocker, room, objs_start)) continue;
+					objs.push_back(obj2);
+					objs.emplace_back(blocker, TYPE_BLOCKER, room_id, obj.dim, obj.dir, RO_FLAG_INVIS);
+					++num_place;
+				} // for n
+			} // for dir
+			// if no extra objects were placed, try a different wall/pos
+			if (num_place == 1) {place_model_along_wall(model_id, type, room, height, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.8);}
+			any_placed = 1;
+		} // for wed
+		if (!any_placed) return 0; // failed
+		add_door_sign("Laundry", room, zval, room_id);
+		success = 1;
+	}
+	else { // house laundry room
+		for (unsigned n = 0; n < 10; ++n) { // 10 attempts to place washer and dryer along the same wall
+			unsigned const washer_ix(objs.size());
+			bool const placed_washer(place_model_along_wall(OBJ_MODEL_WASHER, TYPE_WASHER, room, 0.42, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.8));
+			unsigned pref_orient(4); // if washer was placed, prefer to place dryer along the same wall
+			if (placed_washer) {pref_orient = objs[washer_ix].get_orient();}
+			unsigned const dryer_ix(objs.size());
+			bool const placed_dryer(place_model_along_wall(OBJ_MODEL_DRYER, TYPE_DRYER, room, 0.38, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.8, pref_orient));
+			if (placed_dryer) {objs[dryer_ix].obj_id = (uint16_t)objs.size();} // set dryer obj_id; will determine whether this is gas or electric
+
+			if (placed_washer && placed_dryer && objs[dryer_ix].get_orient() == pref_orient) {success = 1;} // placed both washer and dryer along the same wall
+			else if (n+1 == 10) { // last attempt
+				if (!(placed_washer || placed_dryer)) return 0; // placed neither washer nor dryer, failed
+				if (placed_washer != placed_dryer) {success = 1;} // placed only one of the washer or dryer, allow it
+				else if (objs[washer_ix].dim != objs[dryer_ix].dim) {success = 1;} // placed on two adjacent walls, allow it
+				// placed on opposite walls; check that there's space for the player to walk between the washer and dryer
+				else if (objs[washer_ix].get_sz_dim(objs[washer_ix].dim) + objs[dryer_ix].get_sz_dim(objs[dryer_ix].dim) +
+					front_clearance < place_area_sz[objs[washer_ix].dim]) {success = 1;}
 			}
-			add_laundry_basket(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area); // try to place a laundry basket
-			return 1; // done
-		}
-		objs.resize(objs_start); // remove washer and dryer and try again
-	} // for n
-	return 0; // failed
+			if (success) break;
+			objs.resize(objs_start); // remove washer and dryer and try again
+		} // for n
+	}
+	if (!success) return 0; // failed
+
+	// if we've placed at least washer and/or dryer and made this into a laundry room, try to place a sink as well; should this use a different sink model from bathrooms?
+	if (place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, room, 0.45, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.6)) {
+		added_bathroom_objs_mask |= PLACED_SINK;
+	}
+	add_laundry_basket(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area); // try to place a laundry basket
+	return 1; // done
 }
 
 void building_t::add_couches_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned const counts[4]) {
