@@ -1653,6 +1653,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			elevator.d[!long_dim][ dir] = wall_pos + (dir ? 1.0 : -1.0)*ewidth; // cuts into rooms
 			float const stairs_spacing(0.5*stairs_len), end_spacing(max((stairs_len + stairs_spacing), 0.2f*hall_len));
 			float const place_lo(room.d[long_dim][0] + end_spacing), place_hi(room.d[long_dim][1] - end_spacing);
+			cube_t const room_bc(interior->has_sec_hallways ? cube_t() : room); // for door coll test; use an empty room because the door may open to a side hallway
 			
 			if (place_lo < place_hi) { // hallway should be long enough
 				vect_cube_t avoid; // avoid bathrooms; what about utility rooms?
@@ -1665,7 +1666,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 					set_wall_width(elevator, rgen.rand_uniform(place_lo, place_hi), ehwidth, long_dim);
 					assert(part.contains_cube(elevator));
 					if (has_bcube_int(elevator, avoid))               continue;
-					if (is_cube_close_to_doorway(elevator, room))     continue; // try again
+					if (is_cube_close_to_doorway(elevator, room_bc))  continue; // try again
 					if (has_bcube_int(elevator, interior->exclusion)) continue; // try again
 					if (check_skylight_intersection(elevator))        continue; // check skylights; is this necessary?
 					add_or_extend_elevator(elevator, 1);
