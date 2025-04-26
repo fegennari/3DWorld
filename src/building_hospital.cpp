@@ -25,16 +25,17 @@ void building_t::add_hospital_bathrooms(unsigned rooms_start, rand_gen_t &rgen) 
 }
 
 bool building_t::maybe_create_nested_bathroom(room_t &room, rand_gen_t &rgen) { // for hospital rooms
-	if (is_room_windowless         (room)) return 0; // windowless room can't be a hospital bedroom, but it can be a bathroom, storage, office, etc.
-	if (check_skylight_intersection(room)) return 0; // unlikely, but not handled here
-	if (count_num_int_doors(room) > 1)     return 0; // one door only
+	if (is_room_windowless         (room))  return 0; // windowless room can't be a hospital bedroom, but it can be a bathroom, storage, office, etc.
+	if (is_bathroom(room.get_room_type(0))) return 0; // no bathroom inside bathroom
+	if (check_skylight_intersection(room))  return 0; // unlikely, but not handled here
+	if (count_num_int_doors(room) > 1)      return 0; // one door only
 	float const floor_spacing(get_window_vspace()), rdx(room.dx()), rdy(room.dy());
 	if (min(rdx, rdy) < 2.0*floor_spacing || max(rdx, rdy) < 2.5*floor_spacing) return 0; // too small
 	float const door_width(get_doorway_width()), door_hwidth(0.5*door_width), wall_thick(get_wall_thickness()), wall_hthick(0.5*wall_thick);
 	float const min_sz(2.0*door_width), max_sz(4.0*door_width), rzc(room.zc());
 	bool const pref_dx(rgen.rand_bool()), pref_dy(rgen.rand_bool());
 
-	// choose a valid dir in each dim, not along an exterior wall
+	// choose a valid dir in each dim, not along an exterior wall; often next to a doorway
 	for (unsigned DX = 0; DX < 2; ++DX) {
 		bool const dx(bool(DX) ^ pref_dx);
 		if (classify_room_wall(room, rzc, 0, dx, 0) == ROOM_WALL_EXT) continue; // skip if exterior wall
@@ -63,7 +64,7 @@ bool building_t::maybe_create_nested_bathroom(room_t &room, rand_gen_t &rgen) { 
 			bool door_dim(0);
 			cube_t walls[2] = {bathroom, bathroom};
 			vect_door_stack_t doorways;
-			get_doorways_for_room(orig_room, orig_room.zc(), doorways, 1); // get interior doors; all_floors=1
+			get_doorways_for_room(orig_room, orig_room.zc(), doorways, 1); // get interior doors; all_floors=1; should be one door
 			
 			for (unsigned d = 0; d < 2; ++d) { // wall dim
 				cube_t &wall(walls[d]);
