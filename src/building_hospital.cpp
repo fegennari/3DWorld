@@ -110,17 +110,28 @@ bool building_t::get_hospital_room_bathroom(room_t const &room, unsigned room_id
 	return 1;
 }
 
+bool building_t::try_place_hospital_bed(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id,
+	float tot_light_amt, unsigned objs_start, unsigned pref_orient, cube_t const &place_area)
+{
+	for (unsigned sideways = 0; sideways < 2; ++sideways) { // try head against wall, then side along wall
+		// should the bed face the doorway if along a wall? if there any easy way to do this?
+		if (place_model_along_wall(OBJ_MODEL_HOSP_BED, TYPE_HOSP_BED, room, 0.42, rgen, zval, room_id, tot_light_amt, place_area,
+			objs_start, 0.45, pref_orient, 0, WHITE, 0, 0, 0, sideways)) return 1;
+	}
+	return 0;
+}
+
 bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix,
 	float tot_light_amt, unsigned objs_start, int &nested_room_ix)
 {
 	if (!can_create_hospital_room()) return 0; // no hospital bed
-	float const floor_spacing(get_window_vspace()), clerance(1.25*get_min_front_clearance_inc_people()), wall_thickness(get_wall_thickness());
+	float const floor_spacing(get_window_vspace()), clearance(1.25*get_min_front_clearance_inc_people()), wall_thickness(get_wall_thickness());
 	cube_t room_bounds(get_walkable_room_bounds(room)), place_area(room_bounds), bathroom;
 	place_area.expand_by(-1.0*wall_thickness); // add extra padding, since bed models are slightly different sizes
 	vect_room_object_t &objs(interior->room_geom->objs);
 	bool const has_bathroom(get_hospital_room_bathroom(room, room_id, nested_room_ix, bathroom));
 	unsigned const beds_start(objs.size());
-	unsigned const max_beds(max(1U, unsigned(0.25*room_bounds.get_area_xy()/(floor_spacing*floor_spacing))));
+	unsigned const max_beds(max(1U, min(16U, unsigned(0.25*room_bounds.get_area_xy()/(floor_spacing*floor_spacing)))));
 	unsigned num_beds(0), pref_orient(4);
 
 	if (has_bathroom) { // add blocker for bathroom
@@ -129,14 +140,14 @@ bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, flo
 	}
 	for (unsigned n = 0; n < max_beds; ++n) {
 		unsigned const bed_ix(objs.size());
-		if (!place_model_along_wall(OBJ_MODEL_HOSP_BED, TYPE_HOSP_BED, room, 0.42, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.5, pref_orient)) continue;
+		if (!try_place_hospital_bed(rgen, room, zval, room_id, tot_light_amt, objs_start, pref_orient, place_area)) continue;
 		assert(bed_ix < objs.size());
 		room_object_t &bed(objs[bed_ix]);
 		assert(bed.type == TYPE_HOSP_BED);
 		bed.item_flags = (7U*mat_ix + 11U*room.part_id + interior->rooms.size()); // select a random sub-model per building part
 		room_object_t &blocker(objs.back());
 		assert(blocker.type == TYPE_BLOCKER);
-		blocker.expand_in_dim(!blocker.dim, clerance); // add extra clearance to the sides of the bed
+		blocker.expand_in_dim(!bed.dim, clearance); // add extra clearance to the sides of the bed
 		blocker.intersect_with_cube(room); // but don't go outside the room if near a wall
 		pref_orient = 2*bed.dim + bed.dir; // try to place later beds along the same wall
 		++num_beds;
@@ -154,6 +165,8 @@ bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, flo
 		if (i->type == TYPE_BLOCKER) {blockers.push_back(*i);}
 
 		if (add_curtains && i->type == TYPE_HOSP_BED) { // place curtains between adjacent beds
+			if (i->d[i->dim][!i->dir] != place_area.d[i->dim][!i->dir]) continue; // head of bed not against a wall
+
 			for (auto j = i+1; j != objs.end(); ++j) {
 				if (j->type != TYPE_HOSP_BED || j->dim != i->dim || j->dir != i->dir) continue; // not a bed along the same wall
 				vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_HOSP_CURT)); // D, W, H
@@ -179,11 +192,12 @@ bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, flo
 	} // for i
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_TV)) { // add TVs on walls opposite beds
 		for (unsigned i = beds_start; i != beds_end; ++i) {
-			room_object_t const& bed(objs[i]);
+			room_object_t const &bed(objs[i]);
 			if (bed.type != TYPE_HOSP_BED) continue;
+			bool const dim(bed.dim), dir(bed.dir);
+			if (bed.d[dim][!dir] != place_area.d[dim][!dir]) continue; // head of bed not against a wall
 			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TV)); // D, W, H
 			float const tv_height(0.35*floor_spacing*rgen.rand_uniform(1.0, 1.2)), tv_hwidth(0.5*tv_height*sz.y/sz.z), tv_depth(tv_height*sz.x/sz.z);
-			bool const dim(bed.dim), dir(bed.dir);
 			float const center(max((place_area.d[!dim][0] + tv_hwidth), min((place_area.d[!dim][1] - tv_hwidth), bed.get_center_dim(!dim)))); // clamp to place area
 			cube_t tv;
 			tv.z1() = zval    + 0.45*floor_spacing;
@@ -198,6 +212,7 @@ bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, flo
 			}
 			tv.d[dim][ dir] = wall_pos;
 			tv.d[dim][!dir] = tv.d[dim][dir] + (dir ? -1.0 : 1.0)*tv_depth;
+			if (!room.contains_cube(tv)) continue; // bad placement/bed orient (error?)
 			cube_t test_cube(tv);
 			test_cube.d[dim][!dir] = bed.d[dim][!dir]; // extend to the bed; should this ignore open doors?
 			if (has_bcube_int(tv, tv_blockers) || overlaps_obj_or_placement_blocked(test_cube, room, objs_start) || check_if_against_window(tv, room, dim, dir)) continue;
@@ -378,9 +393,10 @@ bool building_t::add_exam_room_objs(rand_gen_t rgen, room_t &room, float zval, u
 	cube_t const room_area(get_walkable_room_bounds(room));
 	cube_t place_area(room_area);
 	place_area.expand_by(-1.0*wall_thickness); // add extra padding, since bed models are slightly different sizes
-	if (!place_model_along_wall(OBJ_MODEL_HOSP_BED, TYPE_HOSP_BED, room, 0.42, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.5)) return 0;
+	if (!try_place_hospital_bed(rgen, room, zval, room_id, tot_light_amt, objs_start, 4, place_area)) return 0; // pref_orient=4 (unset)
 	vect_room_object_t &objs(interior->room_geom->objs);
 	colorRGBA const &chair_color(chair_colors[rgen.rand() % NUM_CHAIR_COLORS]);
+	// should the room be re-assigned if we can't fit a desk? this would require removing the bed
 	add_desk_to_room(rgen, room, vect_cube_t(), chair_color, zval, room_id, tot_light_amt, objs_start, 0, 0, 0, 1, 1); // force_computer=1, add_phone=1
 
 	if (rgen.rand_bool()) { // add a simple sink
