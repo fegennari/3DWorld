@@ -890,11 +890,28 @@ cube_t get_true_room_obj_bcube(room_object_t const &c) { // for collisions, etc.
 		c_pot.expand_by_xy(-(1.0 - PLANT_POT_RADIUS)*c.get_radius()); // use XY radius of the pot; better for AI coll
 		return c_pot;
 	}
+	if (c.type == TYPE_FORKLIFT) {
+		cube_t C(c);
+		C.d[c.dim][c.dir] -= (c.dir ? 1.0 : -1.0)*0.2*c.get_depth(); // clip off front fork
+		return C;
+	}
 	if (c.type == TYPE_HOSP_CURT) {
 		cube_t C(c);
 		C.z2() -= 0.135*c.dz(); // remove the bars from the top
 		C.expand_in_dim( c.dim, -0.25*c.get_depth()); // make half depth
 		C.expand_in_dim(!c.dim, -0.03*c.get_width()); // slightly narrower
+		return C;
+	}
+	if (c.type == TYPE_WHEELCHAIR) {
+		cube_t C(c);
+		C.d[c.dim][c.dir] -= (c.dir ? 1.0 : -1.0)*0.22*c.get_depth(); // clip off front footrest
+		C.expand_in_dim(!c.dim, -0.05*c.get_width()); // clip off wheel handles
+		C.z2() -= 0.05*c.dz(); // shorten
+		return C;
+	}
+	if (c.type == TYPE_STRETCHER) {
+		cube_t C(c);
+		C.expand_in_dim(!c.dim, -0.08*c.get_width()); // clip off handles
 		return C;
 	}
 	if (c.type == TYPE_TREE)      {} // bcubes are not a good fit for trees; cube covers the pot and trunk, but not leaves; should not be colliding with leaves anyway
