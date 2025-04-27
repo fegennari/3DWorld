@@ -218,3 +218,15 @@ void building_t::add_hallway_lockers(rand_gen_t &rgen, room_t const &room, float
 	add_floor_clutter_objs(rgen, room, room_bounds, zval, room_id, tot_light_amt, objs_start, add_bottles, add_trash, add_papers, add_glass);
 }
 
+bool building_t::add_cafeteria_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	float const floor_spacing(get_window_vspace());
+	cube_t const room_bounds(get_walkable_room_bounds(room));
+	vector2d const room_sz(room_bounds.get_size_xy());
+	if (min(room_sz.x, room_sz.y) < 3.0*floor_spacing || max(room_sz.x, room_sz.y) < 3.5*floor_spacing) return 0; // too small to be a cafeteria
+	//bool const dim(room_sz.x < room_sz.y); // long dim
+	// TODO: flooring
+	// TODO: long tables with chairs or benches, similar to mall food courts
+	add_door_sign("Cafeteria", room, zval, room_id);
+	return 1;
+}
+

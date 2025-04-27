@@ -197,7 +197,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	unsigned added_bathroom_objs_mask(0), numbered_rooms_seen(0), store_type_mask(0);
 	uint8_t last_unit_id(0);
 	uint64_t is_public_on_floor(0), library_floor_mask(0), added_kitchen_mask(0), added_living_mask(0), added_bath_mask(0); // 64 bit masks, per floor
-	bool added_bedroom(0), added_library(0), added_dining(0), added_laundry(0), added_basement_utility(0), added_fireplace(0), added_pool_room(0);
+	bool added_bedroom(0), added_library(0), added_dining(0), added_laundry(0), added_basement_utility(0), added_fireplace(0), added_pool_room(0), added_cafeteria(0);
 	light_ix_assign_t light_ix_assign;
 	clear_existing_room_geom();
 
@@ -884,8 +884,16 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					added_obj = no_plants = add_classroom_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start, chair_color, pref_hang_orient);
 					if (added_obj) {r->assign_to(RTYPE_CLASS, f);}
 				}
-				if (!added_obj) { // no window, or can't make into a classroom
-					// teacher's office, teacher's lounge, principal's office, supply rooms, art/shop, etc.
+				// else if no window, or can't make into a classroom
+				if (!added_obj && f == 0 && !added_cafeteria && rgen.rand_bool()) {
+					added_obj = no_plants = no_whiteboard = added_cafeteria = add_cafeteria_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
+				}
+				if (!added_obj && rgen.rand_float() < 0.25) { // maybe make teacher's lounge
+					add_lounge_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, 0); // is_lobby=0
+					added_obj = no_plants = no_whiteboard = 1;
+				}
+				if (!added_obj) {
+					// teacher's office, principal's office, supply rooms, art/shop, etc.
 				}
 			}
 			// add cubicles if this is a large office; allowed in schools and hospitals if not assigned as a special room

@@ -911,6 +911,7 @@ void building_t::add_lounge_objs(rand_gen_t rgen, room_t const &room, float zval
 	// add 1-4 plants
 	unsigned const num_plants(1 + (rgen.rand() & 3));
 	add_plants_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, num_plants);
+	if (is_school()) {add_door_sign("Teacher Lounge", room, zval, room_id);}
 }
 
 bool building_t::add_vending_machine(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, cube_t const &place_area) {
