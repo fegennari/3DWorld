@@ -694,19 +694,19 @@ bool s_stump::check_sphere_coll(point &center, float sphere_radius) const {
 void s_stump::draw(float sscale, bool shadow_only, bool reflection_pass, vector3d const &xlate, float scale_val) const {
 
 	if (type < 0) return;
-	point const center(pos + point(0.0, 0.0, 0.5*height) + xlate);
+	point const pos_cs(pos + xlate), center(pos_cs + point(0.0, 0.0, 0.5*height));
 	if (!check_visible(shadow_only, get_bsphere_radius(), center)) return;
 	if (reflection_pass && pos.z < water_plane_z) return;
 	colorRGBA const color(shadow_only ? WHITE : get_bark_color(xlate));
 	float const dist(distance_to_camera(center));
 
 	if (!shadow_only && get_pt_line_thresh()*(radius + radius2) < dist) { // draw as line
-		tree_scenery_pld.add_textured_line((pos+xlate - point(0.0, 0.0, 0.2*height)), (pos+xlate + point(0.0, 0.0, height)), color, get_tid());
+		tree_scenery_pld.add_textured_line((pos_cs - point(0.0, 0.0, 0.2*height)), (pos_cs + point(0.0, 0.0, height)), color, get_tid());
 		return;
 	}
 	color.set_for_cur_shader();
 	int const ndiv(max(3, min(N_CYL_SIDES, (shadow_only ? get_def_smap_ndiv(2.2*radius) : int(2.2*sscale*radius/dist)))));
-	vector3d const camera_delta(get_camera_pos() - pos);
+	vector3d const camera_delta(get_camera_pos() - pos_cs);
 
 	if (camera_delta.z > height && camera_delta.z > 0.1*(abs(camera_delta.x) + abs(camera_delta.y))) { // only draw top if visible and not too shallow of an angle
 		if (!shadow_only) {select_texture(TREE_END_TEX);}
@@ -882,15 +882,15 @@ bool s_plant::is_water_plant() const {return (type >= (int)NUM_LAND_PLANT_TYPES)
 void s_plant::draw_stem(float sscale, bool shadow_only, bool reflection_pass, vector3d const &xlate) const {
 
 	if (world_mode == WMODE_INF_TERRAIN && is_water_plant() && (reflection_pass || (!shadow_only && pos.z < water_plane_z && get_camera_pos().z > water_plane_z))) return; // underwater, skip
-	point const pos2(pos + xlate + point(0.0, 0.0, 0.5*height));
+	point const pos_cs(pos + xlate), pos2(pos_cs + point(0.0, 0.0, 0.5*height));
 	if (!check_visible(shadow_only, (height + radius), pos2)) return;
 	bool const shadowed(shadow_only ? 0 : is_shadowed());
 	colorRGBA color(get_stem_color()*(shadowed ? SHADOW_VAL : 1.0));
-	if (is_water_plant() && !shadow_only) {water_color_atten_at_pos(color, pos+xlate);}
+	if (is_water_plant() && !shadow_only) {water_color_atten_at_pos(color, pos_cs);}
 	float const dist(distance_to_camera(pos2));
 
 	if (!shadow_only && 2*get_pt_line_thresh()*radius < dist) { // draw as line
-		tree_scenery_pld.add_textured_line((pos+xlate - point(0.0, 0.0, 0.1*height)), (pos+xlate + point(0.0, 0.0, 0.75*height)), color, WOOD_TEX);
+		tree_scenery_pld.add_textured_line((pos_cs - point(0.0, 0.0, 0.1*height)), (pos_cs + point(0.0, 0.0, 0.75*height)), color, WOOD_TEX);
 	}
 	else {
 		int const ndiv(max(3, min(N_CYL_SIDES, (shadow_only ? get_def_smap_ndiv(2.0*radius) : int(2.0*sscale*radius/dist)))));
