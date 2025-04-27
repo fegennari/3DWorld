@@ -16,7 +16,7 @@ void expand_convex_polygon_xy(vect_point &points, point const &center, float exp
 bool is_pool_tile_floor(room_object_t const &obj);
 void invalidate_tile_smap_in_region(cube_t const &region, bool repeat_next_frame=0);
 void get_obj_drawers_or_doors(room_object_t const &obj, vect_cube_t &drawers, room_object_t &drawers_part, float &drawer_extend);
-bool has_stairs_bcube_int(cube_t const &bcube, vect_stairwell_t const &stairs, float doorway_width, int no_check_enter_exit);
+bool has_stairs_bcube_int(cube_t const &bcube, vect_stairwell_t const &stairs, float doorway_width, float pad_added_to_bcube, int no_check_enter_exit);
 
 
 unsigned light_ix_assign_t::get_ix_for_light(cube_t const &c, bool walls_not_shared) {
@@ -694,7 +694,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					else { // check for stairs in this room
 						unit_bounds.expand_in_z (-fc_thick); // floor to ceiling
 						unit_bounds.expand_by_xy(-wall_thickness); // subtract off walls to avoid including stairs in adjacent rooms
-						if (has_stairs_bcube_int(unit_bounds, interior->stairwells, doorway_width, 1)) {make_public = 1;} // no_check_enter_exit=1 (check with no expand)
+						if (has_stairs_bcube_int(unit_bounds, interior->stairwells, doorway_width, 0.0, 1)) {make_public = 1;} // no_check_enter_exit=1 (check with no expand)
 					}
 					for (auto r2 = r; r2 != rooms.end() && r2->unit_id == r->unit_id; ++r2) {
 						room_type const rtype(r2->get_room_type(f));
