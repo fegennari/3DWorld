@@ -4515,7 +4515,7 @@ void building_room_geom_t::add_cubicle(room_object_t const &c, float tscale) {
 	unsigned const side_edge_skip_mask (~(EF_Z2 | ((c.shape == SHAPE_SHORT) ? ~get_face_mask(c.dim, c.dir) : 0)));
 	unsigned const front_edge_skip_mask(~(EF_Z2 | get_skip_mask_for_xy(!c.dim)));
 	colorRGBA const edge_color(apply_light_color(c, BKGRAY));
-	for (unsigned d = 0; d < 2; ++d) {edge_mat.add_cube_to_verts_untextured(sides[d], edge_color, side_edge_skip_mask);}
+	for (unsigned d = 0; d < 2; ++d) {edge_mat.add_cube_to_verts_untextured(sides [d], edge_color, side_edge_skip_mask );}
 	for (unsigned d = 0; d < 2; ++d) {edge_mat.add_cube_to_verts_untextured(fronts[d], edge_color, front_edge_skip_mask);}
 	edge_mat.add_cube_to_verts_untextured(back, edge_color, ~EF_Z2);
 	// desk surface

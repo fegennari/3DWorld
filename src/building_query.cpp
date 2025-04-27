@@ -748,6 +748,11 @@ bool check_stall_collision(room_object_t const &c, point &pos, point const &p_la
 	unsigned const num_cubes(get_stall_cubes(c, sides));
 	return check_cubes_collision(sides, num_cubes, pos, p_last, radius, cnorm);
 }
+bool check_cubicle_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
+	cube_t cubes[8];
+	get_cubicle_parts(c, cubes, cubes+2, cubes[4], cubes+5);
+	return check_cubes_collision(cubes, 8, pos, p_last, radius, cnorm);
+}
 
 unsigned get_shower_cubes(room_object_t const &c, cube_t sides[2]) {
 	sides[0] = sides[1] = c;
@@ -1227,6 +1232,9 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 				// shower is open and intersecting player, or player is inside shower; perform collision test with side only
 				had_coll |= check_shower_collision(*c, pos, p_last, xy_radius, cnorm);
 			}
+			else if (type == TYPE_CUBICLE) {
+				had_coll |= check_cubicle_collision(*c, pos, p_last, xy_radius, cnorm);
+			}
 			else if (type == TYPE_BALCONY) {
 				had_coll |= check_balcony_collision(*c, pos, p_last, xy_radius, cnorm);
 			}
@@ -1534,7 +1542,7 @@ bool building_interior_t::check_sphere_coll_room_objects(building_t const &build
 		if (!sphere_cube_intersect(pos, radius, bc)) continue; // no intersection (optimization)
 		if (is_ball && type == TYPE_BOOK && c->dz() < 0.2*radius) continue; // large ball vs. small book on the floor: unstable, skip
 		unsigned coll_ret(0);
-		// add special handling for things like elevators and cubicles? right now these are only in office buildings, where there are no dynamic objects
+		// add special handling for things like elevators? right now these are only in office buildings, where there are no dynamic objects
 
 		if (c->is_vert_cylinder()) { // vertical cylinder (including table)
 			cylinder_3dw const cylin(c->get_cylinder());
@@ -1591,6 +1599,7 @@ bool building_interior_t::check_sphere_coll_room_objects(building_t const &build
 			else if (type == TYPE_SHELFRACK ) {coll_ret |= check_shelf_rack_collision(*c, pos, p_last, radius, &cnorm);}
 			else if (type == TYPE_COUCH     ) {coll_ret |= check_couch_collision     (*c, pos, p_last, radius, &cnorm);}
 			else if (type == TYPE_CASHREG   ) {coll_ret |= check_cashreg_collision   (*c, pos, p_last, radius, &cnorm);}
+			else if (type == TYPE_CUBICLE   ) {coll_ret |= (unsigned)check_cubicle_collision (*c, pos, p_last, radius, &cnorm);}
 			else if (type == TYPE_STALL  && maybe_inside_room_object(*c, pos, radius)) {coll_ret |= (unsigned)check_stall_collision (*c, pos, p_last, radius, &cnorm);}
 			else if (type == TYPE_SHOWER && maybe_inside_room_object(*c, pos, radius)) {coll_ret |= (unsigned)check_shower_collision(*c, pos, p_last, radius, &cnorm);}
 			else {coll_ret |= (unsigned)sphere_cube_int_update_pos(pos, radius, bc, p_last, 0, &cnorm);} // skip_z=0
@@ -2619,7 +2628,9 @@ void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, ve
 		non_cubes.push_back(cubes[1]); // avoid the screen
 	}
 	else if (type == TYPE_CUBICLE) {
-		//non_cubes.push_back(c); // using the colliders around the cubicles somewhat works
+		cube_t cubes[8];
+		get_cubicle_parts(c, cubes, cubes+2, cubes[4], cubes+5);
+		lg_cubes.insert(lg_cubes.end(), cubes, cubes+8); // add all cubes
 	}
 	else if (type == TYPE_ATTIC_DOOR) {lg_cubes.push_back(get_true_room_obj_bcube(c));}
 	else if (type == TYPE_CATWALK   ) {lg_cubes.push_back(get_catwalk_bottom(c));}
@@ -2824,6 +2835,11 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 				cube_t cubes[4]; // seat, lo side, hi side, [back]
 				unsigned const num(get_bench_cubes(*c, cubes));
 				if (line_int_cubes_exp(p1, p2, cubes, num, expand)) return 9;
+			}
+			else if (c->type == TYPE_CUBICLE) {
+				cube_t cubes[8];
+				get_cubicle_parts(*c, cubes, cubes+2, cubes[4], cubes+5);
+				if (line_int_cubes_exp(p1, p2, cubes, 8, expand)) return 9; // check all surfaces
 			}
 			else if (c->is_parked_car()) { // parked car
 				cube_t cubes[5];

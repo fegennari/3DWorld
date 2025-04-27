@@ -36,6 +36,7 @@ colorRGBA get_textured_wood_color();
 bool bed_has_canopy_mat(room_object_t const &c);
 int get_canopy_texture();
 int get_counter_tid   ();
+int get_cubicle_tid(room_object_t const &c);
 colorRGBA get_canopy_base_color(room_object_t const &c);
 void get_water_heater_cubes(room_object_t const &wh, cube_t cubes[2]);
 bool line_int_polygon_sides(point const &p1, point const &p2, cube_t const &bcube, vect_point const &points, float &t);
@@ -400,23 +401,26 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 				add_colored_cubes(leg_cubes, 4, wood_color, cc);
 			}
 		}
-		else if (type == TYPE_CUBICLE || (type == TYPE_STALL && c->shape != SHAPE_SHORT)) { // cubicle or bathroom stall - hollow
-			bool const is_stall(type != TYPE_CUBICLE);
+		else if (type == TYPE_CUBICLE) { // cubicle - use actual drawn cubes
+			cube_t all_sides[5], surfaces[3];
+			get_cubicle_parts(*c, all_sides, all_sides+2, all_sides[4], surfaces);
+			add_colored_cubes(all_sides, 5, texture_color(get_cubicle_tid(*c)).modulate_with(c->color), cc); // sides + fronts + back
+			add_colored_cubes(surfaces,  3, texture_color(MARBLE_TEX         ).modulate_with(LT_GRAY ), cc);
+		}
+		else if (type == TYPE_STALL && c->shape != SHAPE_SHORT) { // bathroom stall - hollow
 			cube_t sides(*c);
 			float const dz(c->dz());
-			
-			if (is_stall) { // set halfway between sides and door height for simplicity; cubicle ls already the correct height
-				sides.z2() -= 0.365*dz;
-				sides.z1() += 0.165*dz;
-			}
+			// set halfway between sides and door height for simplicity
+			sides.z2() -= 0.365*dz;
+			sides.z1() += 0.165*dz;
 			cube_t inside(sides);
-			inside.expand_by_xy(-(is_stall ? 0.0125 : 0.07)*dz); // shrink by wall thickness
+			inside.expand_by_xy(-0.0125*dz); // shrink by wall thickness
 			subtract_cube_from_cube(sides, inside, temp, 1); // clear_out=1
 			assert(temp.size() == 4); // -y, +y, -x, +x
 			unsigned const front_ix(3 - (2*c->dim + c->dir)); // dim|dir:front_ix: 00:3, 01:2, 10:1, 11:0
 
 			for (unsigned n = 0; n < 4; ++n) { // front at dim,!dir
-				if ((!is_stall || c->is_open()) && n == front_ix) continue; // open front, skip
+				if (c->is_open() && n == front_ix) continue; // open front, skip
 				cc.emplace_back(temp[n], color);
 			}
 		}

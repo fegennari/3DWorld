@@ -1650,15 +1650,21 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 				if (!avoid.empty() && c->contains_cube(avoid.back())) {avoid.pop_back();}
 				cube_t sides[3];
 				unsigned const num_cubes(get_stall_cubes(*c, sides));
-				for (unsigned i = 0; i < num_cubes; ++i) {avoid.push_back(sides[i]);}
+				avoid.insert(avoid.end(), sides, sides+num_cubes);
 				continue;
 			}
 			else if (c->type == TYPE_SHOWER) {
 				cube_t sides[2];
 				unsigned const num_cubes(get_shower_cubes(*c, sides));
-				for (unsigned i = 0; i < num_cubes; ++i) {avoid.push_back(sides[i]);}
+				avoid.insert(avoid.end(), sides, sides+num_cubes);
 				continue;
 			}
+		}
+		if (c->type == TYPE_CUBICLE) {
+			cube_t cubes[8];
+			get_cubicle_parts(*c, cubes, cubes+3, cubes[2], cubes+5);
+			avoid.insert(avoid.end(), cubes, cubes+(same_as_player ? 3 : 8)); // add all cubes, but sides and back only if chasing player
+			continue;
 		}
 		if (r_shrink_if_low > 0.0 && c->z2() < z_thresh && c->shape == SHAPE_CUBE) { // shrink cube if it's low; applies to boxes and crates on the floor
 			bc.expand_by_xy(-min(0.95f*0.5f*min(c->dx(), c->dy()), r_shrink_if_low)); // make sure it doesn't shrink to zero area

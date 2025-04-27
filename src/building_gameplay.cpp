@@ -79,7 +79,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_WINDOW    ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 1, 0.0,   0.0,   "window");
 	bldg_obj_types[TYPE_BLOCKER   ] = bldg_obj_type_t(0, 0, 0, 0, 0, 0, 0, 0.0,   0.0,   "<blocker>");  // not a drawn object; block other objects, but not the player or AI
 	bldg_obj_types[TYPE_COLLIDER  ] = bldg_obj_type_t(1, 1, 1, 0, 0, 0, 0, 0.0,   0.0,   "<collider>"); // not a drawn object; block the player and AI
-	bldg_obj_types[TYPE_CUBICLE   ] = bldg_obj_type_t(0, 0, 1, 0, 1, 0, 1, 500.0, 250.0, "cubicle"); // skip collisions because they have their own colliders, but include rat coll
+	bldg_obj_types[TYPE_CUBICLE   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1, 500.0, 250.0, "cubicle");
 	bldg_obj_types[TYPE_STALL     ] = bldg_obj_type_t(1, 1, 1, 1, 1, 0, 1, 40.0,  20.0,  "bathroom divider"); // can pick up short sections of bathroom stalls (urinal dividers)
 	bldg_obj_types[TYPE_SIGN      ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 3, 10.0,  1.0,   "sign");
 	bldg_obj_types[TYPE_COUNTER   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 3, 0.0,   0.0,   "kitchen counter");

@@ -18,7 +18,6 @@ void get_pool_ball_rot_matrix(room_object_t const &c, xform_matrix &rot_matrix);
 float get_cockroach_height_from_radius(float radius);
 void rotate_obj_cube(cube_t &c, cube_t const &bc, bool in_dim, bool dir);
 cube_t get_whiteboard_marker_ledge(room_object_t const &c);
-void get_cubicle_parts(room_object_t const &c, cube_t sides[2], cube_t fronts[2], cube_t &back, cube_t surfaces[3]);
 
 
 class door_path_checker_t {
@@ -692,12 +691,9 @@ bool building_t::create_office_cubicles(rand_gen_t rgen, room_t const &room, flo
 				get_cubicle_parts(objs[cubicle_obj_id], sides, fronts, back, surfaces);
 				bool has_cup(0);
 
-				for (unsigned n = 0; n < 3; ++n) {
-					// add colliders to allow the player to enter the cubicle but not cross the side walls
+				for (unsigned n = 0; n < 3; ++n) { // add objects to cubicle desk surfaces
 					bool const sdim(long_dim ^ (n == 2)), sdir((n == 2) ? !dir : bool(!n));
 					cube_t const &surface(surfaces[n]);
-					objs.emplace_back(surface, TYPE_COLLIDER, room_id, sdim, sdir, RO_FLAG_INVIS, tot_light_amt);
-					// add objects to cubicle desk surfaces
 					unsigned const pp_start(objs.size());
 					if (rgen.rand_float() < 0.6) {add_papers_to_surface      (surface, sdim,  sdir, 4, rgen, room_id, tot_light_amt);} // 0-4
 					if (rgen.rand_float() < 0.6) {add_pens_pencils_to_surface(surface, sdim, !sdir, 2, rgen, room_id, tot_light_amt);} // 0-2
