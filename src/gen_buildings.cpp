@@ -3758,7 +3758,7 @@ public:
 					float const gdist_sq(p2p_dist_sq(camera_bs, grid_bcube.closest_pt(camera_bs)));
 
 					if (!reflection_pass && gdist_sq > rgeom_clear_dist_sq && g->has_room_geom) { // need to clear room geom
-						for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {(*i)->get_building(bi->ix).clear_room_geom();}
+						for (cube_with_ix_t const &bi : g->bc_ixs) {(*i)->get_building(bi.ix).clear_room_geom();}
 						g->has_room_geom = 0;
 					}
 					if (gdist_sq > int_draw_dist_sq)               continue; // too far
@@ -3774,8 +3774,8 @@ public:
 					if (!ref_pass_interior) {bbd.next_tile(g->bcube);} // only needed for exterior geom; always uses main/exterior bcube
 					is_first_tile = 0;
 
-					for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {
-						building_t &b((*i)->get_building(bi->ix));
+					for (cube_with_ix_t const &bi : g->bc_ixs) {
+						building_t &b((*i)->get_building(bi.ix));
 						if (!b.interior) continue; // no interior, skip
 
 						if (draw_debug_vis) {
@@ -3834,7 +3834,7 @@ public:
 						if (debug_draw) {inc_small = 3;} // TESTING
 						bool const player_in_bldg(debug_draw || player_in_building_bcube);
 						if (ext_basement_conn_visible) {s.add_uniform_float("wet_effect", 0.0);} // disable for non-player building
-						b.gen_and_draw_room_geom(&bbd, s, amask_shader, oc, xlate, bi->ix, 0, reflection_pass,
+						b.gen_and_draw_room_geom(&bbd, s, amask_shader, oc, xlate, bi.ix, 0, reflection_pass,
 							inc_small, player_in_bldg, ext_basement_conn_visible, mall_visible); // shadow_only=0
 						if (ext_basement_conn_visible) {s.add_uniform_float("wet_effect", water_damage);}
 						g->has_room_geom = 1;
@@ -3853,9 +3853,9 @@ public:
 						}
 						// when player is in the building (not attic or ext basement), draw people later so that alpha blending of hair against ext walls and windows works properly
 						if (defer_people_draw_for_player_building && player_in_building_bcube && b.has_people() && b.check_point_or_cylin_contained(camera_bs, 0.0, points, 0, 0, 0)) {
-							defer_ped_draw_vars.assign(&b, *i, bi->ix);
+							defer_ped_draw_vars.assign(&b, *i, bi.ix);
 						}
-						else {gen_and_draw_people_in_building(ped_draw_vars_t(b, oc, s, xlate, bi->ix, 0, reflection_pass));} // draw people in this building
+						else {gen_and_draw_people_in_building(ped_draw_vars_t(b, oc, s, xlate, bi.ix, 0, reflection_pass));} // draw people in this building
 						// there currently shouldn't be any parked cars visible in mirrors or security cameras, so skip them in the reflection pass
 						if (!reflection_pass && b.has_cars_to_draw(player_in_building_bcube)) {buildings_with_cars.emplace_back(&b, player_in_building_bcube);}
 
@@ -3864,7 +3864,7 @@ public:
 							pts.clear();
 							cube_t door_test_cube(b.bcube);
 							door_test_cube.expand_by_xy(ped_od);
-							get_pedestrians_in_area(door_test_cube, bi->ix, pts); // is this thread safe?
+							get_pedestrians_in_area(door_test_cube, bi.ix, pts); // is this thread safe?
 							b.get_all_nearby_ext_door_verts(ext_door_draw, s, pts, ped_od);
 						}
 						// check the bcube rather than check_point_or_cylin_contained() so that it works with roof doors that are outside any part?
@@ -3882,7 +3882,7 @@ public:
 							// disable grass in building part(s) containing the player
 							b.update_grass_exclude_at_pos(camera_bs, xlate, camera_in_this_building);
 						}
-						if (!reflection_pass && player_in_bldg_bc_or_door) {b.update_animals(camera_bs, bi->ix);}
+						if (!reflection_pass && player_in_bldg_bc_or_door) {b.update_animals(camera_bs, bi.ix);}
 						
 						// Note: if we skip this check and treat all walls/windows as front/containing part, this almost works, but will skip front faces of other buildings
 						if (!camera_in_this_building) { // camera not in building
@@ -3924,8 +3924,8 @@ public:
 						// be conservative and don't break if the player is in the basement and this building has any connections to other basements
 						can_break_from_loop |= ((this_frame_player_in_basement >= 2 && !b.has_conn_info()) || this_frame_player_in_attic == 2);
 						new_player_building = &b;
-						b.register_player_in_building(camera_bs, bi->ix); // required for AI following logic
-						if (enable_building_indir_lighting()) {indir_bcs_ix = bcs_ix; indir_bix = bi->ix;} // compute indirect lighting for this building
+						b.register_player_in_building(camera_bs, bi.ix); // required for AI following logic
+						if (enable_building_indir_lighting()) {indir_bcs_ix = bcs_ix; indir_bix = bi.ix;} // compute indirect lighting for this building
 						// run any player interaction logic here
 						b.run_player_interact_logic(camera_bs);
 						if (teleport_to_screenshot) {b.maybe_teleport_to_screenshot();}

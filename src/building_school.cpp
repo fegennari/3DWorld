@@ -203,7 +203,7 @@ void building_t::add_hallway_lockers(rand_gen_t &rgen, room_t const &room, float
 				cube_t lock;
 				lock.z1() = zval + 0.365*floor_spacing;
 				lock.z2() = lock.z1() + height;
-				set_wall_width(lock, (locker.d[dim][0] + ((dim ^ d) ? 0.175 : 0.825)*locker_width), hwidth, dim);
+				set_wall_width(lock, (locker.d[dim][0] + ((dim ^ bool(d)) ? 0.175 : 0.825)*locker_width), hwidth, dim);
 				float const pos(locker.d[!dim][!d]);
 				lock.d[!dim][ d] = pos;
 				lock.d[!dim][!d] = pos + (d ? -1.0 : 1.0)*depth;
