@@ -100,6 +100,7 @@ city_bird_t::city_bird_t(point const &pos_, float height_, vector3d const &init_
 }
 
 void city_bird_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
+	if (!shadow_only && dist_scale > 0.0 && !dist_less_than(dstate.camera_bs, pos, dist_scale*dstate.draw_tile_dist)) return;
 	cube_t draw_bcube(bcube);
 	draw_bcube.translate_dim(2, -0.28*radius); // required for GLB bird model
 
@@ -109,7 +110,7 @@ void city_bird_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_
 		animation_state_t anim_state(1, ANIM_ID_SKELETAL, model_anim_time, get_model_anim_id()); // enabled=1
 		building_obj_model_loader.draw_model(dstate.s, pos, draw_bcube, dir, color, dstate.xlate, OBJ_MODEL_BIRD_ANIM, shadow_only, 0, &anim_state);
 	}
-	if (0 && dest_valid() && is_close_to_player()) { // debug drawing, even if bcube not visible
+	if (0 && !shadow_only && dest_valid() && is_close_to_player()) { // debug drawing, even if bcube not visible
 		post_draw(dstate, shadow_only); // clear animations
 		vector<vert_color> pts;
 		pts.emplace_back(pos,  BLUE);
