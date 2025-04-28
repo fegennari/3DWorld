@@ -2596,6 +2596,8 @@ size_t get_building_models_gpu_mem();
 size_t get_dlights_smap_gpu_mem();
 unsigned get_vbo_ring_buffers_size();
 unsigned get_quad_ix_buffer_size();
+void print_building_rgeom_stats();
+void print_rgeom_vbo_cache_stats();
 
 uint64_t tile_draw_t::show_debug_stats(bool calc_mem_only) const {
 	unsigned num_trees(0), num_smaps(0);
@@ -2632,7 +2634,9 @@ uint64_t tile_draw_t::show_debug_stats(bool calc_mem_only) const {
 		<< ", grass MB: " << in_mb(grass_mem) << ", smap MB: " << in_mb(smap_mem) << ", smap free list MB: " << in_mb(smap_free_list_mem)
 		<< ", dlights smap mem MB: " << in_mb(dlights_smap_mem) << ", frame buf MB: " << in_mb(frame_buf_mem) << ", texture MB: " << in_mb(texture_mem)
 		<< ", building MB: " << in_mb(building_mem) << ", room_geom MB: " << in_mb(room_geom_mem) << ", model MB: " << in_mb(models_mem) << endl;
-	//show_gpu_mem_info(); // shows total and available video memory
+	print_building_rgeom_stats ();
+	print_rgeom_vbo_cache_stats();
+	show_gpu_mem_info(); // shows total and available video memory
 	return tot_mem;
 }
 

@@ -454,23 +454,29 @@ public:
 		free_list.push_back(rgeom_storage_t(s.tex)); // record tex of incoming element
 		s.swap_vectors(free_list.back()); // transfer existing capacity to free list; clear capacity from s
 	}
-	unsigned get_mem_usage() const {
-		unsigned mem(free_list.size()*sizeof(rgeom_storage_t));
+	size_t get_mem_usage() const {
+		size_t mem(free_list.size()*sizeof(rgeom_storage_t));
 		for (auto i = free_list.begin(); i != free_list.end(); ++i) {
-			//cout << i->tex.tid << "\t" << i->tex.shadowed << "\t" << (i->quad_verts.capacity() + i->itri_verts.capacity()) << "\t" << i->get_mem_usage() << endl; // TESTING
+			//cout << i->tex.tid << "\t" << i->tex.shadowed << "\t" << i->get_tot_vert_capacity() << "\t" << i->get_mem_usage() << endl; // TESTING
 			mem += i->get_mem_usage();
 		}
 		return mem;
 	}
-	unsigned size() const {return free_list.size();}
+	size_t size() const {return free_list.size();}
+	void clear_free_list() {free_list.clear();}
 };
 rgeom_alloc_t rgeom_alloc; // static allocator with free list, shared across all buildings; not thread safe
+
+void print_building_rgeom_stats() {
+	size_t const size(rgeom_alloc.size());
+	if (size > 0) {cout << "rgeom_alloc: size: " << size << " mem: " << rgeom_alloc.get_mem_usage() << endl;} // start=462MB
+}
+void clear_building_rgeom_free_list() {rgeom_alloc.clear_free_list();} // unused, but may be useful for testing
 
 
 vbo_cache_t::vbo_cache_entry_t vbo_cache_t::alloc(unsigned size, bool is_index) {
 	assert(size > 0); // not required, but a good sanity check
 	auto &e(entries[is_index]);
-	//if ((v_used % 1000) == 0) {print_stats();} // TESTING
 	unsigned const max_size(size + size/5); // no more than 20% wasted cap
 	auto best_fit(e.end());
 	unsigned target_sz(size);
@@ -517,10 +523,15 @@ void vbo_cache_t::print_stats() const {
 	// v_reuse / s_reuse: number of VBOs / size reused, cumulative
 	// v_free  / s_free : number of VBOs / size in free list
 	cout << "VBOs: A " << v_alloc << " U " << v_used << " R " << v_reuse << " F " << v_free
-		 << "  SZ: A " << (s_alloc>>20) << " U " << (s_used>>20) << " R " << (s_reuse>>20) << " F " << (s_free>>20) << endl; // in MB
+		 << " | SZ MB: A " << (s_alloc>>20) << " U " << (s_used>>20) << " R " << (s_reuse>>20) << " F " << (s_free>>20) << endl; // in MB
 }
 
 /*static*/ vbo_cache_t rgeom_mat_t::vbo_cache;
+
+/*static*/ void rgeom_mat_t::print_vbo_cache_stats() {
+	if (vbo_cache.in_use()) {vbo_cache.print_stats();}
+}
+void print_rgeom_vbo_cache_stats() {rgeom_mat_t::print_vbo_cache_stats();}
 
 void rgeom_storage_t::clear(bool free_memory) {
 	if (free_memory) {clear_container(quad_verts);} else {quad_verts.clear();}
@@ -565,7 +576,7 @@ void rgeom_mat_t::create_vbo(building_t const &building) {
 		rotate_verts(itri_verts, building);
 	}
 	create_vbo_inner();
-	rgeom_alloc.free(*this); // vertex and index data is no longer needed and can be cleared
+	rgeom_alloc.free(*this); // vertex and index data is no longer needed and can be returned to the free list
 }
 void rgeom_mat_t::create_vbo_inner() {
 	assert(itri_verts.empty() == indices.empty());
@@ -808,7 +819,7 @@ void building_room_geom_t::clear() {
 	objs.clear();
 	light_bcubes.clear();
 }
-void building_room_geom_t::clear_materials() { // clears all materials
+void building_room_geom_t::clear_materials() { // clears material VBOs
 	mats_static .clear();
 	mats_alpha  .clear();
 	mats_small  .clear();
@@ -998,7 +1009,6 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 	mats_static  .create_vbos(building);
 	mats_alpha   .create_vbos(building);
 	mats_exterior.create_vbos(building); // Note: ideally we want to include window dividers from trim_objs, but that may not have been created yet
-	//cout << "static: size: " << rgeom_alloc.size() << " mem: " << rgeom_alloc.get_mem_usage() << endl; // start=47MB, peak=132MB
 }
 
 void building_room_geom_t::create_small_static_vbos(building_t const &building) {

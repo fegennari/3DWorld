@@ -833,6 +833,7 @@ private:
 	size_t s_alloc=0, s_used=0, s_reuse=0, s_free=0;
 public:
 	vbo_cache_entry_t alloc( unsigned size, bool is_index=0);
+	bool in_use() const {return (v_alloc > 0);}
 	void free(unsigned &vbo, unsigned size, bool is_index=0);
 	void clear(); // unused
 	unsigned size() const {return (entries[0].size() + entries[1].size());}
@@ -852,8 +853,8 @@ struct rgeom_storage_t {
 	void clear(bool free_memory=0);
 	void swap_vectors(rgeom_storage_t &s);
 	void swap(rgeom_storage_t &s);
-	unsigned get_tot_vert_capacity() const {return (quad_verts.capacity() + itri_verts.capacity());}
-	unsigned get_mem_usage() const {return (get_cont_mem_usage(quad_verts) + get_cont_mem_usage(itri_verts) + get_cont_mem_usage(indices));}
+	size_t get_tot_vert_capacity() const {return (quad_verts.capacity() + itri_verts.capacity());}
+	size_t get_mem_usage() const {return (get_cont_mem_usage(quad_verts) + get_cont_mem_usage(itri_verts) + get_cont_mem_usage(indices));} // CPU mem
 };
 
 class rgeom_mat_t : public rgeom_storage_t { // simplified version of building_draw_t::draw_block_t
@@ -868,6 +869,7 @@ public:
 
 	rgeom_mat_t(tid_nm_pair_t const &tex_=tid_nm_pair_t()) : rgeom_storage_t(tex_) {}
 	//~rgeom_mat_t() {assert(vao_mgr.vbo == 0); assert(vao_mgr.ivbo == 0);} // VBOs should be freed before destruction
+	static void print_vbo_cache_stats();
 	void enable_shadows() {en_shadows = 1;}
 	void clear();
 	void clear_vbos();
