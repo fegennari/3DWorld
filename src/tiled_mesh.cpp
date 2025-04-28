@@ -577,7 +577,7 @@ float tile_t::get_zval_at(float x, float y, bool in_global_space) const {
 
 void tile_t::calc_mesh_ao_lighting() {
 
-	//timer_t timer("Calc Tile AO Lighting");
+	//highres_timer_t timer("Calc Tile AO Lighting"); // 160ms for 281 calls
 	// caclulate ray step directions
 	tile_xy_pair ao_dirs[NUM_AO_DIRS]; // 0  1  2  3  4  5  6  7
 	unsigned ix(0);
@@ -589,7 +589,6 @@ void tile_t::calc_mesh_ao_lighting() {
 	}
 	assert(ix == NUM_AO_DIRS);
 	assert(AO_RAY_LEN <= size);
-
 	// create context zvals, which may overlap with other tiles (that need not be created at this point)
 	unsigned const context_sz(stride + 2*AO_RAY_LEN);
 	bool const using_hmap(using_tiled_terrain_hmap_tex()), add_detail(using_hmap_with_detail()), use_ao_zvals(!ao_zvals.empty());
@@ -604,7 +603,7 @@ void tile_t::calc_mesh_ao_lighting() {
 	float const dz(0.5*HALF_DXY);
 	ao_lighting.resize(stride*stride);
 
-#pragma omp parallel
+#pragma omp parallel num_threads(4)
 	{
 		if (!use_ao_zvals) {
 #pragma omp for schedule(static,1)
