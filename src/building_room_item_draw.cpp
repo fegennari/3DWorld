@@ -822,18 +822,23 @@ void building_room_geom_t::clear() {
 void building_room_geom_t::clear_materials() { // clears material VBOs
 	mats_static .clear();
 	mats_alpha  .clear();
-	mats_small  .clear();
-	mats_text   .clear();
-	mats_amask  .clear();
 	mats_dynamic.clear();
 	mats_doors  .clear();
 	mats_lights .clear();
-	mats_detail .clear();
 	mats_exterior.clear();
 	mats_ext_detail.clear();
 	obj_model_insts.clear(); // these are associated with static VBOs
 	door_handles   .clear();
 	for (unsigned d = 0; d < 2; ++d) {mats_glass[d].clear();}
+	clear_small_materials();
+}
+void building_room_geom_t::clear_small_materials() { // clears small material VBOs
+	unsigned const pre_verts(mats_small.count_all_verts() + mats_text.count_all_verts() + mats_amask.count_all_verts() + mats_detail.count_all_verts());
+	mats_small .clear();
+	mats_text  .clear();
+	mats_amask .clear();
+	mats_detail.clear();
+	unsigned const post_verts(mats_small.count_all_verts() + mats_text.count_all_verts() + mats_amask.count_all_verts() + mats_detail.count_all_verts());
 }
 // Note: used for room lighting changes; detail object changes are not supported
 void building_room_geom_t::check_invalid_draw_data() {
@@ -1719,6 +1724,10 @@ void building_t::clear_room_geom(bool even_if_player_modified) {
 	interior->room_geom->clear(); // free VBO data before deleting the room_geom object
 	interior->room_geom.reset();
 	invalidate_nav_graph(); // required since interior doors may be removed
+}
+void building_t::clear_small_room_geom_vbos() {
+	if (this == player_building) return; // not for the player building
+	if (has_room_geom()) {interior->room_geom->clear_small_materials();}
 }
 void building_t::clear_and_regen_new_seed() {
 	clear_room_geom(1); // even_if_player_modified=1

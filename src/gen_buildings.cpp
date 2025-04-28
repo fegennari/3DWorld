@@ -3671,7 +3671,8 @@ public:
 		if (have_interior) {
 			//timer_t timer2("Draw Building Interiors");
 			float const interior_draw_dist(get_interior_draw_dist());
-			float const room_geom_draw_dist(0.4*interior_draw_dist), room_geom_clear_dist(1.05*room_geom_draw_dist), room_geom_sm_draw_dist(0.14*interior_draw_dist);
+			float const room_geom_draw_dist   (0.40*interior_draw_dist), room_geom_clear_dist   (1.05*room_geom_draw_dist   );
+			float const room_geom_sm_draw_dist(0.14*interior_draw_dist), room_geom_sm_clear_dist(1.20*room_geom_sm_draw_dist);
 			float const room_geom_int_detail_draw_dist(0.045*interior_draw_dist), room_geom_ext_detail_draw_dist(0.08*interior_draw_dist), z_prepass_dist(0.25*interior_draw_dist);
 			glEnable(GL_CULL_FACE); // back face culling optimization, helps with expensive lighting shaders
 			glCullFace(swap_front_back ? GL_FRONT : GL_BACK);
@@ -3744,6 +3745,7 @@ public:
 				float const ddist_scale(int_not_visible ? (camera_surf_collide ? 0.1 : 0.05) : 1.0), ddist_scale_sq(ddist_scale*ddist_scale);
 				float const int_draw_dist_sq(ddist_scale_sq*interior_draw_dist*interior_draw_dist);
 				float const rgeom_clear_dist_sq(ddist_scale_sq*room_geom_clear_dist*room_geom_clear_dist);
+				float const rgeom_sm_clear_dist_sq(ddist_scale_sq*room_geom_sm_clear_dist*room_geom_sm_clear_dist);
 				float const rgeom_draw_dist_sq(ddist_scale_sq*room_geom_draw_dist*room_geom_draw_dist);
 				float const rgeom_sm_draw_dist_sq(ddist_scale_sq*room_geom_sm_draw_dist*room_geom_sm_draw_dist);
 				float const rgeom_int_detail_dist_sq(ddist_scale_sq*room_geom_int_detail_draw_dist*room_geom_int_detail_draw_dist);
@@ -3756,17 +3758,23 @@ public:
 					// for the reflection pass, we only need to look at the grid containing the building with the mirror, which must be the player's building
 					if (reflection_pass && !grid_bcube.contains_pt_xy(camera_bs)) continue; // not the correct tile
 					float const gdist_sq(p2p_dist_sq(camera_bs, grid_bcube.closest_pt(camera_bs)));
+					unsigned const gix(g - (*i)->grid_by_tile.begin());
 
-					if (!reflection_pass && gdist_sq > rgeom_clear_dist_sq && g->has_room_geom) { // need to clear room geom
-						for (cube_with_ix_t const &bi : g->bc_ixs) {(*i)->get_building(bi.ix).clear_room_geom();}
-						g->has_room_geom = 0;
+					if (!reflection_pass && g->has_room_geom) { // maybe clear room geom (optimization)
+						if (gdist_sq > rgeom_clear_dist_sq) {
+							for (cube_with_ix_t const &bi : g->bc_ixs) {(*i)->get_building(bi.ix).clear_room_geom();}
+							g->has_room_geom = 0;
+						}
+						else if (!camera_in_building && gdist_sq > rgeom_sm_clear_dist_sq && ((frame_counter + gix) & 15) == 0) { // clear small room geom every 16 frames
+							for (cube_with_ix_t const &bi : g->bc_ixs) {(*i)->get_building(bi.ix).clear_small_room_geom_vbos();}
+						}
 					}
 					if (gdist_sq > int_draw_dist_sq)               continue; // too far
 					if (!building_grid_visible(xlate, grid_bcube)) continue; // VFC
 					if (is_first_tile) {(*i)->ensure_interior_geom_vbos();} // we need the interior geom at this point, even if it's the reflection pass
 					if (crack_damage > 0.0) {s.add_uniform_float("crack_weight", crack_damage);} // crack damage for interior
 					// Note: in cases where another building's extended basement is visible, we can't set crack_weight and wet_effect per-building, only per-tile
-					(*i)->building_draw_interior.draw_tile(s, (g - (*i)->grid_by_tile.begin()), 0, crack_damage); // shadow_only=0
+					(*i)->building_draw_interior.draw_tile(s, gix, 0, crack_damage); // shadow_only=0
 					// iterate over nearby buildings in this tile and draw interior room geom, generating it if needed
 					if (gdist_sq > rgeom_draw_dist_sq) continue; // too far
 					if (crack_damage > 0.0) {s.add_uniform_float("crack_weight", 0.0);} // no crack damage for room objects
@@ -3793,7 +3801,8 @@ public:
 							}
 						}
 						float const bdist_sq(p2p_dist_sq(camera_bs, b.bcube.closest_pt(camera_bs)));
-						//if (bdist_sq > rgeom_clear_dist_sq) {b.clear_room_geom(); continue;} // too far away - is this useful?
+						if (bdist_sq > rgeom_clear_dist_sq) {b.clear_room_geom();} // optimization
+						else if (!camera_in_building && bdist_sq > rgeom_sm_clear_dist_sq) {b.clear_small_room_geom_vbos();} // optimization
 						if (bdist_sq > rgeom_draw_dist_sq) continue; // too far away
 						bool const has_mall(b.has_mall());
 						float const ddist_scale(has_mall ? 0.5 : 1.0); // reduced draw distance for malls, since they have so much geom
@@ -5256,7 +5265,7 @@ public:
 		return ((it == tiles.end()) ? cube_t() : it->second.get_grid_bcube_for_building(b));
 	}
 	void add_drawn(vector3d const &xlate, vector<building_creator_t *> &bcs) {
-		float const draw_dist(get_draw_tile_dist()), rgeom_draw_dist(0.5*get_interior_draw_dist()); // a bit larger than the 0.4*1.05 in multi_draw()
+		float const draw_dist(get_draw_tile_dist()), rgeom_draw_dist(0.45*get_interior_draw_dist()); // a bit larger than the 0.4*1.05 in multi_draw()
 		point const camera_bs(get_camera_pos() - xlate);
 
 		for (auto i = tiles.begin(); i != tiles.end(); ++i) {
