@@ -1794,7 +1794,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 						bool const is_pet_store(store_type == STORE_PETS);
 						float const shelf_height((is_pet_store ? 0.85 : 0.60)*window_vspace);
 						float const shelf_depth ((is_pet_store ? 0.22 : 0.18)*window_vspace);
-						room_object const obj_type(is_pet_store ? TYPE_PG_WALL : TYPE_SHELF_WALL); // stucco wall for pet store, wood shelf wall for shoe store
+						room_object const obj_type(is_pet_store ? TYPE_OFF_PILLAR : TYPE_SHELF_WALL); // stucco wall for pet store, wood shelf wall for shoe store
 						cube_t center_wall(rack);
 						center_wall.z2() = zval + shelf_height + (is_pet_store ? 1.0 : 0.5)*fc_thick; // increase height above top of shelf wall anchors
 						set_wall_width(center_wall, rack_center, 0.38*wall_thickness, !dim);
@@ -1916,7 +1916,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 
 							// only if interior; skip if overlaps the room wall; check for back hallway doorway
 							if (wall_area.contains_cube_xy_exp(wall, wall_thickness) && !is_cube_close_to_doorway(wall, sub_room, 0.0, 1, 1)) {
-								objs.emplace_back(wall, TYPE_PG_WALL, room_id, wdim, wdir, (RO_FLAG_IN_MALL | RO_FLAG_ADJ_TOP), light_amt); // draw top
+								objs.emplace_back(wall, TYPE_OFF_PILLAR, room_id, wdim, wdir, (RO_FLAG_IN_MALL | RO_FLAG_ADJ_TOP), light_amt); // draw top
 							
 								if (rgen.rand_float() < 0.67) { // add a picture on the wall 67% of the time
 									float const height(window_vspace*rgen.rand_uniform(0.28, 0.42));
@@ -2099,7 +2099,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 							} // for n
 							for (unsigned d = 0; d < 2; ++d) {
 								if (walls[d].is_all_zeros()) continue;
-								objs.emplace_back(walls[d], TYPE_PG_WALL, room_id, !sdim, d, (RO_FLAG_IN_MALL | RO_FLAG_ADJ_TOP), light_amt); // draw top
+								objs.emplace_back(walls[d], TYPE_OFF_PILLAR, room_id, !sdim, d, (RO_FLAG_IN_MALL | RO_FLAG_ADJ_TOP), light_amt); // draw top
 								blockers.push_back(walls[d]);
 							}
 						} // for sdim
