@@ -642,7 +642,7 @@ void build_lightmap(bool verbose) {
 		ldynamic.resize(get_grid_xsize()*get_grid_ysize());
 		ldynamic_enabled.resize(ldynamic.size(), 0);
 	}
-	if (MESH_Z_SIZE == 0) return;
+	if (world_mode != WMODE_GROUND || MESH_Z_SIZE == 0) return;
 
 	RESET_TIME;
 	unsigned nonempty(0);
@@ -959,10 +959,11 @@ void upload_dlights_textures(cube_t const &bounds, float &dlight_add_thresh) { /
 	static vector<unsigned short> elem_data;
 	unsigned const elem_tex_x = (1<<8); // must agree with value in shader
 	unsigned const elem_tex_y = (1<<12); // larger = slower, but more lights/higher quality; 1<<10 is too low for building malls
-	unsigned const max_gb_entries(elem_tex_x*elem_tex_y), gbx(get_grid_xsize()), gby(get_grid_ysize());
+	unsigned const max_gb_entries(elem_tex_x*elem_tex_y), gbx(get_grid_xsize()), gby(get_grid_ysize()), num_grids(gbx*gby);
 	assert(max_gb_entries <= (1<<24)); // gb_data low bits allocation
+	assert(num_grids <= ldynamic_enabled.size() && num_grids <= ldynamic.size());
 	elem_data.clear();
-	gb_data.resize(gbx*gby, 0);
+	gb_data.resize(num_grids, 0);
 
 	for (unsigned y = 0; y < gby; ++y) {
 		for (unsigned x = 0; x < gbx; ++x) {
