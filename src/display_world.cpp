@@ -1298,8 +1298,8 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	draw_sun_flare();
 	if (TIMETEST) PRINT_TIME("3.2");
 	if (show_lightning) {draw_tiled_terrain_lightning(0);}
-	// load all tiles/buildings around the player; since there's a cap on data generated per frame, we use the first 20 frames
-	bool const disable_vfc(pre_load_full_tiled_terrain && frame_counter <= 20), prev_pdu_valid(camera_pdu.valid);
+	// load all tiles/buildings around the player on the first frame
+	bool const disable_vfc(pre_load_full_tiled_terrain && frame_counter <= 1), prev_pdu_valid(camera_pdu.valid);
 	if (disable_vfc) {camera_pdu.valid = 0;} // disable view frustum culling
 	pre_draw_tiled_terrain(); // must be before render_tt_models()
 	if (in_loading_screen) {glutSwapBuffers();} // show our cloud background
