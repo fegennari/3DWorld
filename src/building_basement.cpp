@@ -175,10 +175,11 @@ bool connect_furnace_to_breaker_panel(room_object_t const &furnace, cube_t const
 	bool const pipe_dir(furnace.get_center_dim(!dim) < bp.get_center_dim(!dim));
 	set_wall_width(conn, conn_height, radius, 2);
 	float const wall_pos(bp.d[dim][dir]);
-	conn.d[dim][ dir] = wall_pos;
-	conn.d[dim][!dir] = wall_pos + (dir ? -1.0 : 1.0)*2.0*radius; // extend outward from wall
+	conn.d[ dim][ dir] = wall_pos;
+	conn.d[ dim][!dir] = wall_pos + (dir ? -1.0 : 1.0)*2.0*radius; // extend outward from wall
 	conn.d[!dim][!pipe_dir] = furnace.d[!dim][ pipe_dir];
 	conn.d[!dim][ pipe_dir] = bp     .d[!dim][!pipe_dir];
+	if (conn.get_sz_dim(!dim) < radius) return 0; // too short
 	return 1;
 }
 
