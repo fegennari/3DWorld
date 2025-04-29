@@ -198,6 +198,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	uint8_t last_unit_id(0);
 	uint64_t is_public_on_floor(0), library_floor_mask(0), added_kitchen_mask(0), added_living_mask(0), added_bath_mask(0); // 64 bit masks, per floor
 	bool added_bedroom(0), added_library(0), added_dining(0), added_laundry(0), added_basement_utility(0), added_fireplace(0), added_pool_room(0), added_cafeteria(0);
+	bool saw_mall(0);
 	light_ix_assign_t light_ix_assign;
 	clear_existing_room_geom();
 
@@ -237,6 +238,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		if (r->is_sec_bldg) {
 			if    (has_garage) {r->assign_all_to(RTYPE_GARAGE);}
 			else if (has_shed) {r->assign_all_to(RTYPE_SHED  );}
+		}
+		if (is_mall && !saw_mall) { // first mall rooom
+			interior->room_geom->first_mall_obj_ix = objs.size();
+			saw_mall = 1;
 		}
 		// determine light pos and size for this stack of rooms
 		float const dx(r->dx()), dy(r->dy());
@@ -1080,6 +1085,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			for (auto i = objs.begin() + room_objs_start; i != objs.end(); ++i) {i->flags |= RO_FLAG_INTERIOR;}
 		}
 	} // for r (room)
+	if (saw_mall) {interior->room_geom->last_mall_obj_ix = objs.size();}
 	if (is_house) {interior->assign_master_bedroom(window_vspacing, floor_thickness);}
 	add_tunnel_objects(rgen);
 	add_interior_window_objects();

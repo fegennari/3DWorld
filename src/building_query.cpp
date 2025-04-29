@@ -95,6 +95,15 @@ bool building_t::player_can_see_in_mall_skylight(vector3d const &xlate) const { 
 	point const cbs(camera_pos - xlate);
 	return (cbs.z > ground_floor_z1 && point_in_mall(point(cbs.x, cbs.y, (ground_floor_z1 - 0.5*get_window_vspace()))) && player_can_see_mall_skylight(xlate));
 }
+bool building_t::player_can_see_inside_mall(vector3d const &xlate) const {
+	if (!camera_in_building || !player_in_basement || player_building != this || !has_mall()) return 0;
+	if (point_in_extended_basement_not_basement(camera_pos - xlate)) return 1; // player in the mall
+	if (interior_visible_from_other_building_ext_basement(xlate))    return 1;
+	door_t const &extb_door(interior->get_ext_basement_door()); // player must be in basement/parking garage, and mall is only visible through an open door
+	if (extb_door.open_amt == 0.0) return 0; // closed door
+	if (camera_pos.z > extb_door.zc() + get_window_vspace()) return 0; // on floor above the mall entrance
+	return camera_pdu.cube_visible(extb_door.get_true_bcube() + xlate);
+}
 bool player_in_windowless_building() {return (player_building != nullptr && !player_building->player_can_see_outside());}
 
 bool player_cant_see_outside_building() {

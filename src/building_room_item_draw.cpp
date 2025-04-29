@@ -1016,12 +1016,21 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 	mats_exterior.create_vbos(building); // Note: ideally we want to include window dividers from trim_objs, but that may not have been created yet
 }
 
-void building_room_geom_t::create_small_static_vbos(building_t const &building) {
+void building_room_geom_t::create_small_static_vbos(building_t const &building, bool skip_mall_objs) {
 	//highres_timer_t timer("Gen Room Geom Small"); // up to 36ms on new computer for buildings with large retail areas
 	float const floor_ceil_gap(building.get_floor_ceil_gap());
+	colorRGBA const &trim_color(building.get_trim_color());
+	bldg_industrial_info_t const *ind_info(building.interior->ind_info.get());
 	model_objs.clear(); // currently model_objs are only created for small objects in drawers, so we clear this here
-	add_small_static_objs_to_verts(expanded_objs, building.get_trim_color(), 0, floor_ceil_gap, building.interior->ind_info.get()); // inc_text=0
-	add_small_static_objs_to_verts(objs,          building.get_trim_color(), 0, floor_ceil_gap, building.interior->ind_info.get()); // inc_text=0
+	add_small_static_objs_to_verts(expanded_objs, 0, 0, trim_color, 0, floor_ceil_gap, ind_info); // inc_text=0
+
+	if (skip_mall_objs && first_mall_obj_ix > 0) { // draw pre-mall objects and then elevator buttons, etc.
+		add_small_static_objs_to_verts(objs, 0, first_mall_obj_ix,          trim_color, 0, floor_ceil_gap, ind_info); // inc_text=0
+		add_small_static_objs_to_verts(objs, last_mall_obj_ix, objs.size(), trim_color, 0, floor_ceil_gap, ind_info); // inc_text=0
+	}
+	else { // draw full range
+		add_small_static_objs_to_verts(objs, 0, 0, trim_color, 0, floor_ceil_gap, ind_info); // inc_text=0
+	}
 	add_attic_interior_and_rafters(building, 2.0/obj_scale, 0); // only if there's an attic; detail_pass=0
 	for (tunnel_seg_t const &t : building.interior->tunnels) {add_tunnel(t);}
 }
@@ -1029,13 +1038,14 @@ void building_room_geom_t::create_small_static_vbos(building_t const &building) 
 void building_room_geom_t::add_nested_objs_to_verts(vect_room_object_t const &objs_to_add) {
 	vector_add_to(objs_to_add, pending_objs); // nested objects are added at the end so that small and text materials are thread safe
 }
-void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t const &objs_to_add, colorRGBA const &trim_color,
+void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t const &objs_to_add, unsigned six, unsigned eix, colorRGBA const &trim_color,
 	bool inc_text, float floor_ceil_gap, bldg_industrial_info_t const *ind_info)
 {
 	if (objs_to_add.empty()) return; // don't add untextured material, otherwise we may fail the (num_verts > 0) assert
 	float const tscale(2.0/obj_scale);
+	if (eix == 0) {eix = objs_to_add.size();}
 
-	for (unsigned i = 0; i < objs_to_add.size(); ++i) { // Note: iterating with indices to avoid invalid ref when add_nested_objs_to_verts() is called
+	for (unsigned i = six; i < eix; ++i) { // Note: iterating with indices to avoid invalid ref when add_nested_objs_to_verts() is called
 		room_object_t const &c(objs_to_add[i]);
 		if (!c.is_visible() || c.is_dynamic()) continue; // skip invisible and dynamic objects
 		if (!c.is_strictly_normalized()) {cerr << "Denormalized object of type " << int(c.type) << ": " << c.str() << endl; assert(0);}
@@ -1146,13 +1156,22 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 	} // for i
 }
 
-void building_room_geom_t::create_text_vbos() {
+void building_room_geom_t::create_text_vbos(bool skip_mall_objs) {
 	//highres_timer_t timer("Gen Room Geom Text");
-	add_text_objs_to_verts(objs);
+	if (skip_mall_objs && first_mall_obj_ix > 0) { // draw pre-mall objects and then elevator buttons, etc.
+		add_text_objs_to_verts(objs, 0, first_mall_obj_ix);
+		add_text_objs_to_verts(objs, last_mall_obj_ix, objs.size());
+	}
+	else { // draw full range
+		add_text_objs_to_verts(objs);
+	}
 	add_text_objs_to_verts(expanded_objs);
 }
-void building_room_geom_t::add_text_objs_to_verts(vect_room_object_t const &objs_to_add) {
-	for (room_object_t const &c : objs_to_add) {
+void building_room_geom_t::add_text_objs_to_verts(vect_room_object_t const &objs_to_add, unsigned six, unsigned eix) {
+	if (eix == 0) {eix = objs_to_add.size();}
+
+	for (unsigned i = six; i < eix; ++i) { // Note: iterating with indices to avoid invalid ref when add_nested_objs_to_verts() is called
+		room_object_t const &c(objs_to_add[i]);
 		if (!c.is_visible()) continue; // skip invisible objects
 		switch (c.type) {
 		case TYPE_BOOK:   add_book    (c, 0, 0, 1); break; // text only
@@ -1655,7 +1674,7 @@ int room_object_t::get_model_id() const { // Note: first 8 bits is model ID, las
 }
 
 void building_t::draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, shader_t &amask_shader, occlusion_checker_noncity_t &oc, vector3d const &xlate,
-	unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building)
+	unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building, bool mall_visible)
 {
 	if (!has_room_geom()) return;
 
@@ -1666,7 +1685,7 @@ void building_t::draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		for (colored_cube_t const &c : cc) {s.set_cur_color(c.color); draw_simple_cube(c);}
 		return;
 	}
-	interior->room_geom->draw(bbd, s, amask_shader, *this, oc, xlate, building_ix, shadow_only, reflection_pass, inc_small, player_in_building);
+	interior->room_geom->draw(bbd, s, amask_shader, *this, oc, xlate, building_ix, shadow_only, reflection_pass, inc_small, player_in_building, mall_visible);
 	//enable_blend();
 	//glDisable(GL_CULL_FACE);
 	//s.set_cur_color(colorRGBA(1.0, 0.0, 0.0, 0.5)); // for use with debug visualization
@@ -1706,7 +1725,7 @@ void building_t::gen_and_draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, shad
 		assert(has_room_geom());
 	}
 	if (has_room_geom() && (inc_small == 2 || inc_small == 3)) {add_wall_and_door_trim_if_needed();} // gen trim (exterior and interior) when close to the player
-	draw_room_geom(bbd, s, amask_shader, oc, xlate, building_ix, shadow_only, reflection_pass, inc_small, player_in_building);
+	draw_room_geom(bbd, s, amask_shader, oc, xlate, building_ix, shadow_only, reflection_pass, inc_small, player_in_building, mall_visible);
 }
 void building_t::clear_room_geom(bool even_if_player_modified) {
 	clear_clothing_textures();
@@ -1853,7 +1872,7 @@ quad_batch_draw flare_qbd; // resed across/between frames
 
 // Note: non-const because it creates the VBO; inc_small: 0=large only, 1=large+small, 2=large+small+ext detail, 3=large+small+ext detail+int detail, 4=ext only
 void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &amask_shader, building_t const &building, occlusion_checker_noncity_t &oc,
-	vector3d const &xlate, unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building)
+	vector3d const &xlate, unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building, bool mall_visible)
 {
 	if (empty()) return; // no geom
 	unsigned const num_screenshot_tids(get_num_screenshot_tids());
@@ -1911,19 +1930,28 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			create_static_vbos    (building);
 			if (!shadow_only) {++num_geom_this_frame;}
 		}
+		// as an optimization, we can skip drawing mall objects if not visible and the mall has not yet been drawn
+		bool const has_mall(building.has_mall());
+		bool const skip_mall_objs(!mall_geom_drawn && has_mall && (shadow_only || !(mall_visible || building.player_can_see_inside_mall(xlate))));
+
+		if (has_mall && !skip_mall_objs && !mall_geom_drawn) { // first draw of mall geom requires clearing existing mats_small and mats_text
+			mats_small.clear();
+			mats_text .clear();
+			mall_geom_drawn = 1; // once we've drawn the mall geom we must always draw it so that shadows are updated and objects can be moved out of the mall
+		}
 		bool const create_small(inc_small && !mats_small.valid), create_text(draw_int_detail_objs && !mats_text.valid);
 		//highres_timer_t timer("Create Small + Text VBOs", (create_small || create_text));
 
 		// Note: shelf rack book text is drawn in the text pass to make it thread safe
 		if (create_small && create_text) { // MT case
 #pragma omp parallel num_threads(2)
-			if (omp_get_thread_num_3dw() == 0) {create_small_static_vbos(building);} else {create_text_vbos();}
+			if (omp_get_thread_num_3dw() == 0) {create_small_static_vbos(building, skip_mall_objs);} else {create_text_vbos(skip_mall_objs);}
 		}
 		else { // serial case
-			if (create_small) {create_small_static_vbos(building);}
-			if (create_text ) {create_text_vbos();}
+			if (create_small) {create_small_static_vbos(building, skip_mall_objs);}
+			if (create_text ) {create_text_vbos(skip_mall_objs);}
 		}
-		add_small_static_objs_to_verts(pending_objs, building.get_trim_color(), create_text, building.get_floor_ceil_gap(), building.interior->ind_info.get());
+		add_small_static_objs_to_verts(pending_objs, 0, 0, building.get_trim_color(), create_text, building.get_floor_ceil_gap(), building.interior->ind_info.get());
 		pending_objs.clear();
 
 		// upload VBO data serially

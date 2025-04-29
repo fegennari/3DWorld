@@ -1148,7 +1148,7 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 	if (c.obj_expanded()) return; // shelves have already been expanded, don't need to create contained objects below
 	vect_room_object_t &objects(get_temp_objects());
 	get_shelf_objects(c, shelves, num_shelves, objects);
-	add_small_static_objs_to_verts(objects, WHITE, 1); // trim_color=WHITE (unused), inc_text=1
+	add_small_static_objs_to_verts(objects, 0, 0, WHITE, 1); // trim_color=WHITE (unused), inc_text=1
 }
 
 // returns num_shelves; all cubes passed in should start as zeros
@@ -1215,7 +1215,7 @@ void building_room_geom_t::add_rack(room_object_t const &c, bool add_rack, bool 
 		vect_room_object_t &objects(get_temp_objects(obj_text_pass)); // select second vector for text pass
 		get_shelfrack_objects(c, objects, 0, obj_text_pass); // add_models_mode=0, books_only=obj_text_pass
 		if (obj_text_pass) {add_text_objs_to_verts(objects);}
-		else {add_small_static_objs_to_verts(objects, WHITE, 0);} // trim_color=WHITE(unused), inc_text=0
+		else {add_small_static_objs_to_verts(objects, 0, 0, WHITE, 0);} // trim_color=WHITE(unused), inc_text=0
 	}
 }
 

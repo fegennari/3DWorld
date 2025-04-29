@@ -1084,12 +1084,12 @@ struct door_handle_t {
 
 struct building_room_geom_t {
 
-	bool has_pictures=0, has_garage_car=0, modified_by_player=0, have_clock=0, glass_floor_split=0;
+	bool has_pictures=0, has_garage_car=0, modified_by_player=0, have_clock=0, glass_floor_split=0, mall_geom_drawn=0;
 	unsigned char num_pic_tids=0, invalidate_mats_mask=0;
 	float obj_scale=1.0;
 	unsigned wall_ps_start=0, buttons_start=0, stairs_start=0, backrooms_start=0, retail_start=0; // index of first object of {TYPE_PG_*|TYPE_PSPACE, TYPE_BUTTON, TYPE_STAIR, retail}
 	unsigned init_num_doors=0, init_num_dstacks=0; // required for removing doors added by backrooms generation when room_geom is deleted
-	unsigned pool_ramp_obj_ix=0, pool_stairs_start_ix=0, last_animal_update_frame=0;
+	unsigned pool_ramp_obj_ix=0, pool_stairs_start_ix=0, last_animal_update_frame=0, first_mall_obj_ix=0, last_mall_obj_ix=0;
 	point tex_origin;
 	colorRGBA wood_color;
 	courtyard_t courtyard;
@@ -1372,7 +1372,7 @@ struct building_room_geom_t {
 	void add_expanded_object(room_object_t const &obj);
 	bool add_room_object(room_object_t const &obj, building_t &building, bool set_obj_id=0, vector3d const &velocity=zero_vector);
 	void draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &amask_shader, building_t const &building, occlusion_checker_noncity_t &oc,
-		vector3d const &xlate, unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building);
+		vector3d const &xlate, unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building, bool mall_visible);
 	void draw_animals(shader_t &s, building_t const &building, occlusion_checker_noncity_t const &oc, vector3d const &xlate,
 		point const &camera_bs, bool shadow_only, bool reflection_pass, bool check_clip_cube) const;
 	unsigned allocate_dynamic_state();
@@ -1380,12 +1380,12 @@ struct building_room_geom_t {
 private:
 	building_materials_t &get_building_mat(tid_nm_pair_t const &tex, bool dynamic, unsigned small, bool transparent, bool exterior);
 	void create_static_vbos(building_t const &building);
-	void create_small_static_vbos(building_t const &building);
-	void create_text_vbos();
-	void add_text_objs_to_verts(vect_room_object_t const &objs_to_add);
+	void create_small_static_vbos(building_t const &building, bool skip_mall_objs);
+	void create_text_vbos(bool skip_mall_objs);
+	void add_text_objs_to_verts(vect_room_object_t const &objs_to_add, unsigned six=0, unsigned eix=0);
 	void create_detail_vbos(building_t const &building);
 	void add_nested_objs_to_verts(vect_room_object_t const &objs_to_add);
-	void add_small_static_objs_to_verts(vect_room_object_t const &objs_to_add, colorRGBA const &trim_color,
+	void add_small_static_objs_to_verts(vect_room_object_t const &objs_to_add, unsigned six, unsigned eix, colorRGBA const &trim_color,
 		bool inc_text=0, float floor_ceil_gap=0.0, bldg_industrial_info_t const *ind_info=nullptr);
 	void create_obj_model_insts(building_t const &building);
 	void create_lights_vbos(building_t const &building);
@@ -2219,6 +2219,7 @@ struct building_t : public building_geom_t {
 	bool player_can_see_mall_skylight(vector3d const &xlate) const;
 	bool player_can_see_out_mall_skylight(vector3d const &xlate) const;
 	bool player_can_see_in_mall_skylight(vector3d const &xlate) const;
+	bool player_can_see_inside_mall(vector3d const &xlate) const;
 	void set_building_colors(building_colors_t &bcolors) const;
 	bool ray_cast_exterior_walls(point const &p1, point const &p2, vector3d &cnorm, float &t) const;
 	bool ray_cast_interior(point const &pos, vector3d const &dir, cube_t const &valid_area, cube_bvh_t const &bvh, bool in_attic, bool in_ext_basement,
@@ -2296,7 +2297,7 @@ struct building_t : public building_geom_t {
 	tid_nm_pair_t get_tile_floor_texture       () const;
 	colorRGBA get_floor_tex_and_color(cube_t const &floor_cube, tid_nm_pair_t &tex) const;
 	colorRGBA get_ceil_tex_and_color (cube_t const &ceil_cube,  tid_nm_pair_t &tex) const;
-	colorRGBA get_trim_color() const {return (is_house ? WHITE : DK_GRAY);}
+	colorRGBA const &get_trim_color() const {return (is_house ? WHITE : DK_GRAY);}
 	bool has_tile_floor() const;
 	void get_all_drawn_exterior_verts(building_draw_t &bdraw);
 	void get_detail_shadow_casters   (building_draw_t &bdraw);
@@ -2354,7 +2355,7 @@ struct building_t : public building_geom_t {
 	bool maybe_update_tape(point const &player_pos, bool end_of_tape);
 	void handle_vert_cylin_tape_collision(point &cur_pos, point const &prev_pos, float z1, float z2, float radius, bool is_player) const;
 	void draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, shader_t &amask_shader, occlusion_checker_noncity_t &oc, vector3d const &xlate,
-		unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building);
+		unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building, bool mall_visible);
 	void gen_and_draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, shader_t &amask_shader, occlusion_checker_noncity_t &oc, vector3d const &xlate, unsigned building_ix,
 		bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building, bool ext_basement_conn_visible, bool mall_visible);
 	bool has_glass_floor() const {return (has_room_geom() && !interior->room_geom->glass_floors.empty());}

@@ -3450,7 +3450,7 @@ public:
 						// generate interior detail objects during the shadow pass when the player is in the building so that it can be done in parallel with small static geom gen
 						// skip drawing small object shadows for secondary camera (security camera) as an optimization
 						int const inc_small(sec_camera_shadow_mode ? 0 : (camera_in_this_building ? 3 : 1));
-						b.draw_room_geom(nullptr, s, amask_shader, oc, xlate, bi->ix, 1, 0, inc_small, 1); // shadow_only=1, player_in_building=1
+						b.draw_room_geom(nullptr, s, amask_shader, oc, xlate, bi->ix, 1, 0, inc_small, 1, 0); // shadow_only=1, player_in_building=1, mall_visible=0
 						bool const basement_light(lpos.z < b.ground_floor_z1);
 
 						if (!basement_light) { // above ground light
