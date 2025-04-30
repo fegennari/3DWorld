@@ -362,7 +362,9 @@ public:
 		if (has_flooded_basement()) {flooded_basement.register_doors_state(door_stacks, doors);}
 	}
 	void end_objs() { // remove any fishtanks that are no longer present
+		unsigned const pre_num_fishtanks(fishtanks.size());
 		fishtanks.erase(remove_if(fishtanks.begin(), fishtanks.end(), [](fishtank_t const &ft) {return !ft.present;}), fishtanks.end());
+		if (fishtank_ix != fishtanks.size()) {cout << TXT(pre_num_fishtanks) << TXT(fishtanks.size()) << TXT(fishtank_ix) << endl;}
 		assert(fishtank_ix == fishtanks.size());
 	}
 	void draw_fish(shader_t &s, bool inc_pools_and_fb) const {

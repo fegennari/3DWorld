@@ -2252,15 +2252,19 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 				if (!(is_rotated ? building.is_rot_cube_visible(*i, xlate) : camera_pdu.cube_visible(*i + xlate))) continue; // VFC
 				lava_lamp_draw.add_lava_lamp(*i, camera_bs, building);
 			}
-			else if (i->type == TYPE_FISHTANK && draw_fish && i->item_flags == TYPE_FISH) { // fishtank with fish
-				bool visible(is_rotated ? building.is_rot_cube_visible(*i, xlate) : camera_pdu.cube_visible(*i + xlate)); // VFC
-				if (visible && check_occlusion && building.check_obj_occluded(*i, camera_bs, oc, reflection_pass)) {visible = 0;}
-				register_fishtank(*i, visible);
+			else if (i->type == TYPE_FISHTANK) {
+				if (draw_fish && i->item_flags == TYPE_FISH) { // fishtank with fish
+					bool visible(is_rotated ? building.is_rot_cube_visible(*i, xlate) : camera_pdu.cube_visible(*i + xlate)); // VFC
+					if (visible && check_occlusion && building.check_obj_occluded(*i, camera_bs, oc, reflection_pass)) {visible = 0;}
+					register_fishtank(*i, visible);
+				}
 			}
-			else if (i->type == TYPE_WARN_LIGHT && i->is_powered() && is_flashing_light_on()) {
-				float const radius(3.0*i->get_radius());
-				point const light_center(get_warning_light_src_pos(*i));
-				flare_qbd.add_billboard(light_center, camera_bs, plus_x, RED, radius, radius);
+			else if (i->type == TYPE_WARN_LIGHT) {
+				if (i->is_powered() && is_flashing_light_on()) {
+					float const radius(3.0*i->get_radius());
+					point const light_center(get_warning_light_src_pos(*i));
+					flare_qbd.add_billboard(light_center, camera_bs, plus_x, RED, radius, radius);
+				}
 			}
 			if (i->z1() < camera_bs.z && i->z1() > ao_zmin - max(0.0f, (i->dz() - floor_spacing))) { // camera not below or too far above this object; handle tall objects
 				float const ao_shadow(get_ao_shadow(*i, enable_indir));
@@ -2289,7 +2293,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		// Note: animals are generally too small to have AO shadows
 		lava_lamp_draw.draw_and_clear(s);
 		if (!reflection_pass) {lava_lamp_draw.next_frame();}
-		end_fish_draw(s, inc_pools_and_fb);
+		if (draw_fish) {end_fish_draw(s, inc_pools_and_fb);}
 		draw_and_clear_blur_qbd(ao_qbd);
 		if (!building.is_factory()) {draw_and_clear_flares(flare_qbd, s, RED);} // factory flares are drawn later
 	}
