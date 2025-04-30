@@ -1014,7 +1014,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		pause_frame = !pause_frame;
 		break;
 	case 'G': // toggle show framerate/universe stats / voxel add/remove (used to be z)
-		stats_display_mode = (stats_display_mode + 1) % 4;
+		stats_display_mode = (stats_display_mode + 1) % 4; // {FPS, ms, stats, off}
 		display_framerate  = (stats_display_mode != 3);
 		break;
 

@@ -23,7 +23,7 @@ vector<sphere_t> cur_sounds; // radius = sound volume
 
 extern bool camera_in_building, player_is_hiding, player_in_unlit_room, player_in_tunnel, player_in_mall, disable_blood, flashlight_on;
 extern int window_width, window_height, display_framerate, display_mode, game_mode, building_action_key, frame_counter, player_in_basement, player_in_water;
-extern int animate2, camera_surf_collide;
+extern int animate2, camera_surf_collide, stats_display_mode;
 extern float fticks, CAMERA_RADIUS;
 extern double tfticks, camera_zh;
 extern colorRGBA vignette_color;
@@ -1120,7 +1120,8 @@ public:
 					if (capacity > 0 && !player_held_object.is_broken()) {oss << " " << (capacity - carried.back().use_count) << "/" << capacity;} // print use/capacity if nonempty
 					oss << "]";
 				}
-				draw_text(GREEN, -0.010*aspect_ratio, -0.011, -0.02, oss.str(), 0.8); // size=0.8
+				float const yval((stats_display_mode == 2) ? -0.0104 : -0.011); // move above stats display if enabled
+				draw_text(GREEN, -0.010*aspect_ratio, yval, -0.02, oss.str(), 0.8); // size=0.8
 			}
 			if (phone_manager.is_phone_ringing() && player_held_object.type == TYPE_PHONE) { // player is holding a ringing phone, give them a hint
 				draw_text(LT_BLUE, -0.001*aspect_ratio, -0.009, -0.02, "[Press space to silence phone]");
