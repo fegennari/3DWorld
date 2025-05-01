@@ -37,17 +37,18 @@ bool is_long_shirt_model(room_object_t const &obj) {return is_long_shirt_model(o
 bool is_pants_model     (room_object_t const &obj) {return is_pants_model     (obj.get_model_id());}
 bool is_bar_hanger_model(room_object_t const &obj) {return is_bar_hanger_model(obj.get_model_id());}
 
-bool add_if_not_intersecting(room_object_t const &obj, vect_room_object_t &objects, vect_cube_t &cubes, bool add_obj=1, bool is_pair=0, bool mirrored=0) {
+void add_obj_pair(room_object_t const &obj, vect_room_object_t &objects) { // shoes, etc.
+	bool const dim(!obj.dim), mirrored(building_obj_model_loader.get_model(obj.get_model_id()).mirrored);
+	room_object_t o1(obj), o2(obj);
+	o1.d[dim][1] = o2.d[dim][0] = obj.get_center_dim(dim); // abutting
+	((obj.dim ^ obj.dir ^ mirrored) ? o2 : o1).flags |= RO_FLAG_ADJ_TOP; // flag as mirrored; use for shoes; flag either o1 or o2 based on whether the shoe is left/right
+	objects.push_back(o1);
+	objects.push_back(o2);
+}
+bool add_if_not_intersecting(room_object_t const &obj, vect_room_object_t &objects, vect_cube_t &cubes, bool add_obj=1, bool is_pair=0) {
 	if (has_bcube_int(obj, cubes)) return 0;
 	if (!add_obj) {} // nothing
-	else if (is_pair) {
-		bool const dim(!obj.dim);
-		room_object_t o1(obj), o2(obj);
-		o1.d[dim][1] = o2.d[dim][0] = obj.get_center_dim(dim); // abutting
-		((obj.dim ^ obj.dir ^ mirrored) ? o2 : o1).flags |= RO_FLAG_ADJ_TOP; // flag as mirrored; use for shoes; flag either o1 or o2 based on whether the shoe is left/right
-		objects.push_back(o1);
-		objects.push_back(o2);
-	}
+	else if (is_pair) {add_obj_pair(obj, objects);}
 	else {objects.push_back(obj);} // single object
 	cubes.push_back(obj);
 	return 1;
@@ -742,8 +743,7 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 						C.z2() = C.z1() + scale*height; // set height
 						set_wall_width(C, c.get_center_dim(dim), 0.5*scale*width, dim);
 						set_wall_width(C, (c.d[!dim][0] + (n + 0.5 + 0.05*rgen.signed_rand_float())*slot_spacing), 0.5*scale*length, !dim);
-						bool const mirrored(add_pairs ? building_obj_model_loader.get_model(C.get_model_id()).mirrored : 0);
-						add_if_not_intersecting(C, objects, cubes, add_models_mode, add_pairs, mirrored);
+						add_if_not_intersecting(C, objects, cubes, add_models_mode, add_pairs);
 					} // for n
 				}
 			}

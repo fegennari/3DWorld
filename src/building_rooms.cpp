@@ -756,7 +756,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					is_laundry = add_laundry_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, added_bathroom_objs_mask);
 				}
 				else if (rtype == RTYPE_ENTRY) { // entryway
-					// too small to place anything larger than a rug, trashcan, or pictures
+					add_entryway_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start); // too small to place any other than a rug, trashcan, or pictures?
 				}
 				else if (rtype == RTYPE_LOUNGE) { // lounge, possibly on a floor above the walkway above NUM_RTYPE_SLOTS
 					cerr << "Error: Unexpected empty lounge room in hotel or apartment at " << r->str() << endl;
@@ -1009,6 +1009,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			if (room_type_was_not_set) { // attempt to assign it with an optional room type
 				if (is_ground_floor && is_room_adjacent_to_ext_door(*r)) { // entryway/lobby if on ground floor, has exterior door, and unassigned
 					if (is_house) {
+						add_entryway_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 						r->assign_to(RTYPE_ENTRY, f); // entryway; even if at the back door?
 					}
 					else { // office; office building lobby can have a whiteboard - is that okay?
