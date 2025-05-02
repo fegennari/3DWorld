@@ -2108,7 +2108,8 @@ void building_t::add_wall_and_door_trim() { // and window trim
 			add_trim_for_door_or_int_window(door_bc, i->dim, 0, 0, 0.5*door_trim_width, top_trim_width, 0.5*door_trim_exp, window_vspacing); // draw_top_edge=0, draw_bot_trim=0
 			continue;
 		}
-		if (i->type == TYPE_FLOORING && (i->item_flags == FLOORING_TILE || i->item_flags == FLOORING_MARBLE || i->item_flags == FLOORING_CONCRETE)) {} // bath/server room flooring
+		if (i->type == TYPE_FLOORING && (i->item_flags == FLOORING_TILE || i->item_flags == FLOORING_MARBLE ||
+			i->item_flags == FLOORING_CONCRETE || i->item_flags == FLOORING_LGTILE)) {} // bath/server/cafeteria/etc. room flooring
 		else if (is_pool_tile_floor(*i)) {} // pool tile
 		else {continue;} // no trim
 		cube_t flooring_exp(*i);

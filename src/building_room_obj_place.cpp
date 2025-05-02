@@ -1597,7 +1597,7 @@ bool building_t::place_model_along_wall(unsigned model_id, room_object type, roo
 	return 1;
 }
 
-float building_t::add_flooring(room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned flooring_type) {
+float building_t::add_flooring(room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned flooring_type) {
 	float const new_zval(zval + get_flooring_thick());
 	cube_t flooring(get_walkable_room_bounds(room));
 	// expand flooring to include half of the walls so that it meets the door and trim is added; not for garages and sheds

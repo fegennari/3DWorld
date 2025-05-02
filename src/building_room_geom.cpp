@@ -37,6 +37,7 @@ void add_pipe_with_bend(rgeom_mat_t &mat, colorRGBA const &color, point const &b
 void draw_metal_handle_wheel(cube_t const &c, unsigned dim, colorRGBA const &color, colorRGBA const &shaft_color, rgeom_mat_t &mat, rgeom_mat_t &shaft_mat);
 bool add_cabinet_objects(room_object_t const &c, vect_room_object_t &objects);
 vector3d get_obj_model_rotated_dir(room_object_t const &obj, building_t const *const building);
+tid_nm_pair_t select_tile_floor_texture(bool use_granite, float tscale);
 
 unsigned get_face_mask(unsigned dim, bool dir) {return ~(1 << (2*(2-dim) + dir));} // draw only these faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2
 unsigned get_skip_mask_for_xy (bool       dim) {return (dim ? EF_Y12 : EF_X12);} // skip these faces
@@ -2146,6 +2147,7 @@ int get_flooring_texture(room_object_t const &c) {
 	case FLOORING_CONCRETE: return get_concrete_tid();
 	case FLOORING_CARPET:   return get_texture_by_name((c.obj_id & 1) ? "carpet/carpet1.jpg" : "carpet/carpet2.jpg"); // select between two textures
 	case FLOORING_WOOD:     return ((c.obj_id & 1) ? (int)FENCE_TEX : (int)PANELING_TEX); // select between two textures
+	case FLOORING_LGTILE:   return select_tile_floor_texture((c.room_id & 1), 1.0).tid;
 	default: assert(0);
 	}
 	return -1; // shouldn't get here

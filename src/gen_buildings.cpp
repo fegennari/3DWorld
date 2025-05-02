@@ -1462,11 +1462,13 @@ tid_nm_pair_t building_t::get_attic_texture() const {
 	building_mat_t const &mat(get_material());
 	return tid_nm_pair_t(tid, get_normal_map_for_bldg_tid(tid), 0.25*mat.house_floor_tex.tscale_x, 0.25*mat.house_floor_tex.tscale_y);
 }
+tid_nm_pair_t select_tile_floor_texture(bool use_granite, float tscale) {
+	if (use_granite) {return tid_nm_pair_t(building_texture_mgr.get_granite_floor_tid(), 0.4*tscale);} // no normal map
+	else             {return tid_nm_pair_t(building_texture_mgr.get_marble_floor_tid (), 0.6*tscale);} // no normal map
+}
 tid_nm_pair_t building_t::get_tile_floor_texture() const {
-	float const tscale(get_material().floor_tex.tscale_x);
 	bool const tid_set((mat_ix + real_num_parts + interior->rooms.size()) & 1);
-	if (tid_set) {return tid_nm_pair_t(building_texture_mgr.get_granite_floor_tid(), 0.4*tscale);} // no normal map
-	else         {return tid_nm_pair_t(building_texture_mgr.get_marble_floor_tid (), 0.6*tscale);} // no normal map
+	return select_tile_floor_texture(tid_set, get_material().floor_tex.tscale_x);
 	//return tid_nm_pair_t(building_texture_mgr.get_tile_floor_tid(), building_texture_mgr.get_tile_floor_nm_tid(), 0.125*tscale, 0.125*tscale);
 }
 bool building_t::has_tile_floor() const { // all hospitals and 50% of schools
@@ -1491,7 +1493,7 @@ colorRGBA building_t::get_floor_tex_and_color(cube_t const &floor_cube, tid_nm_p
 		bool const retail_or_mall((in_ext_basement && is_inside_mall_stores(floor_cube.get_cube_center())) || (has_retail() && floor_cube.z1() == ground_floor_z1));
 		if (retail_or_mall) {tex = get_tile_floor_texture();}
 		else if (in_basement && (has_parking_garage || in_ext_basement)) {tex = get_concrete_texture();} // parking garage or extended basement is concrete
-		else if (is_industrial()) {tex = get_concrete_texture();} // industrial floor is always concrete; could also use a dark tile texture
+		else if (is_industrial ()) {tex = get_concrete_texture  ();} // industrial floor is always concrete; could also use a dark tile texture
 		else if (has_tile_floor()) {tex = get_tile_floor_texture();}
 		else {tex = mat.floor_tex;} // office block
 	}
