@@ -891,7 +891,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				}
 				// else if no window, or can't make into a classroom
 				if (!added_obj && f == 0 && !added_cafeteria && rgen.rand_bool()) {
-					added_obj = no_plants = no_whiteboard = added_cafeteria = add_cafeteria_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
+					added_obj = no_plants = no_whiteboard = added_cafeteria = add_cafeteria_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start);
 				}
 				if (!added_obj && rgen.rand_float() < 0.25) { // maybe make teacher's lounge
 					add_lounge_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, 0); // is_lobby=0

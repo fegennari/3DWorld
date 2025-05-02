@@ -71,6 +71,7 @@ unsigned const NUM_TSHIRT_COLORS  = 9;
 unsigned const NUM_TOASTER_COLORS = 7;
 unsigned const NUM_TRASH_COLORS   = 8;
 unsigned const NUM_PFLOAT_COLORS  = 6;
+unsigned const NUM_MALL_CHAIR_COLORS  = 5;
 unsigned const NUM_SP_EMISSIVE_COLORS = 2;
 colorRGBA const GD_SP_COLOR(0.5, 1.0, 1.0); // used for glow-in-the-dark spraypaint
 colorRGBA const chair_colors[NUM_CHAIR_COLORS] = {WHITE, WHITE, GRAY, DK_GRAY, LT_GRAY, BLUE, DK_BLUE, LT_BLUE, YELLOW, RED, DK_GREEN, LT_BROWN, DK_BROWN};
@@ -91,7 +92,8 @@ colorRGBA const stapler_colors[NUM_STAPLER_COLORS] = {BLACK, RED, BLACK, BLUE, B
 colorRGBA const TSHIRT_COLORS [NUM_TSHIRT_COLORS ] = {WHITE, BKGRAY, GRAY, RED, GREEN, BLUE, YELLOW, ORANGE, WHITE};
 colorRGBA const toaster_colors[NUM_TOASTER_COLORS] = {WHITE, LT_GRAY, GRAY, DK_GRAY, GRAY_BLACK, colorRGBA(0.0, 0.0, 0.5), colorRGBA(0.5, 0.0, 0.0)};
 colorRGBA const trash_colors  [NUM_TRASH_COLORS  ] = {WHITE, WHITE, WHITE, WHITE, cream, vlt_yellow, LT_GRAY, colorRGBA(0.8, 0.6, 0.4)};
-colorRGBA const pfloat_colors [NUM_PFLOAT_COLORS] = {WHITE, YELLOW, PINK, GREEN, ORANGE, LT_BLUE};
+colorRGBA const pfloat_colors [NUM_PFLOAT_COLORS ] = {WHITE, YELLOW, PINK, GREEN, ORANGE, LT_BLUE};
+colorRGBA const mall_chair_colors[NUM_MALL_CHAIR_COLORS] = {WHITE, LT_GRAY, GRAY, ORANGE, LT_BROWN};
 colorRGBA const LAMP_COLOR(1.0, 0.8, 0.6); // soft white
 colorRGBA const WALL_LAMP_COLOR(1.0, 0.9, 0.8);
 colorRGBA const WOOD_COLOR(0.9, 0.7, 0.5); // light brown, multiplies wood texture color; typical value to use
@@ -2707,7 +2709,7 @@ private:
 		colorRGBA const &chair_color, bool dim, bool dir, unsigned desk_ix);
 	void add_objects_next_to_classroom_chalkboard(rand_gen_t &rgen, room_object_t const &cb, room_t const &room, float zval, unsigned objs_start);
 	void add_hallway_lockers(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start);
-	bool add_cafeteria_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
+	bool add_cafeteria_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start);
 	bool get_hospital_room_bathroom(room_t const &room, unsigned room_id, int &nested_room_ix, cube_t &bathroom) const;
 	bool try_place_hospital_bed (rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id,
 		float tot_light_amt, unsigned objs_start, unsigned pref_orient, cube_t const &place_area);

@@ -218,14 +218,56 @@ void building_t::add_hallway_lockers(rand_gen_t &rgen, room_t const &room, float
 	add_floor_clutter_objs(rgen, room, room_bounds, zval, room_id, tot_light_amt, objs_start, add_bottles, add_trash, add_papers, add_glass);
 }
 
-bool building_t::add_cafeteria_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+bool building_t::add_cafeteria_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start) {
+	if (room_has_stairs_or_elevator(room, zval, floor_ix)) return 0;
 	float const floor_spacing(get_window_vspace());
 	cube_t const room_bounds(get_walkable_room_bounds(room));
 	vector2d const room_sz(room_bounds.get_size_xy());
 	if (min(room_sz.x, room_sz.y) < 3.0*floor_spacing || max(room_sz.x, room_sz.y) < 3.5*floor_spacing) return 0; // too small to be a cafeteria
-	//bool const dim(room_sz.x < room_sz.y); // long dim
-	// TODO: flooring
-	// TODO: long tables with chairs or benches, similar to mall food courts
+	if (!has_tile_floor()) {zval = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_LGTILE);}
+	bool const dim(room_sz.y < room_sz.x); // short dim
+	unsigned const num_cols((room_sz[dim] > 3.5*floor_spacing) ? 2 : 1);
+	float const clearance(get_min_front_clearance_inc_people()), col_space(1.25*clearance), trim_thick(get_trim_thickness());
+	cube_t place_area(room_bounds);
+	place_area.expand_by_xy(-1.1*clearance);
+	float const row_span(place_area.get_sz_dim(!dim)), col_span(place_area.get_sz_dim(dim)), col_start(place_area.d[dim][0]);
+	float const table_height(0.3*floor_spacing), table_width(0.4*floor_spacing), table_len((col_span + col_space)/num_cols - col_space);
+	float row_spacing(2.5*table_width);
+	unsigned const num_rows(max(1U, unsigned(row_span/row_spacing))); // floor
+	row_spacing = row_span/num_rows;
+	colorRGBA const &chair_color(mall_chair_colors[rgen.rand() % NUM_MALL_CHAIR_COLORS]);
+	unsigned const tid_tag(rgen.rand() + 1); // sets table texture; make nonzero to flag as a textured surface table
+	vect_door_stack_t const &doorways(get_doorways_for_room(room, zval));
+	cube_t table;
+	set_cube_zvals(table, zval, zval+table_height);
+	vect_cube_t blockers;
+	blockers.reserve(doorways.size());
+
+	for (door_stack_t const &d : doorways) {
+		float const width(d.get_width());
+		blockers.push_back(d.get_true_bcube());
+		blockers.back().expand_in_dim( d.dim, 1.5*width); // more space in front of door
+		blockers.back().expand_in_dim(!d.dim, 1.0*width); // less space to the side
+	}
+	for (unsigned r = 0; r < num_rows; ++r) {
+		float const row_pos(place_area.d[!dim][0] + (r + 0.5)*row_spacing);
+		set_wall_width(table, row_pos, 0.5*table_width, !dim);
+		float pos(col_start); // starting point
+
+		for (unsigned c = 0; c < num_cols; ++c) {
+			table.d[dim][0] = pos;
+			table.d[dim][1] = pos + table_len;
+			
+			for (cube_t const &b : blockers) {
+				if (!b.intersects(table)) continue;
+				if      (b.d[dim][0] <= table.d[dim][0]) {table.d[dim][0] = b.d[dim][1] + trim_thick;} // clip lo
+				else if (b.d[dim][1] >= table.d[dim][1]) {table.d[dim][1] = b.d[dim][0] - trim_thick;} // clip hi
+			}
+			if (table.get_sz_dim(dim) > table_width) {add_mall_table_with_chairs(rgen, table, place_area, chair_color, room_id, tot_light_amt, dim, tid_tag, blockers);}
+			pos += table_len + col_space;
+		} // for c
+	} // for r
+	add_clock_to_room_wall(rgen, room, zval, room_id, tot_light_amt, objs_start);
 	add_door_sign("Cafeteria", room, zval, room_id);
 	return 1;
 }
