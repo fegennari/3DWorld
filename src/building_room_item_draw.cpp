@@ -833,12 +833,10 @@ void building_room_geom_t::clear_materials() { // clears material VBOs
 	clear_small_materials();
 }
 void building_room_geom_t::clear_small_materials() { // clears small material VBOs
-	unsigned const pre_verts(mats_small.count_all_verts() + mats_text.count_all_verts() + mats_amask.count_all_verts() + mats_detail.count_all_verts());
 	mats_small .clear();
 	mats_text  .clear();
 	mats_amask .clear();
 	mats_detail.clear();
-	unsigned const post_verts(mats_small.count_all_verts() + mats_text.count_all_verts() + mats_amask.count_all_verts() + mats_detail.count_all_verts());
 }
 // Note: used for room lighting changes; detail object changes are not supported
 void building_room_geom_t::check_invalid_draw_data() {
