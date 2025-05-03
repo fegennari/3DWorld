@@ -755,6 +755,16 @@ void building_t::add_mall_lower_floor_lights(room_t const &room, unsigned room_i
 	}
 }
 
+void building_t::maybe_place_obj_on_bench(room_object_t const &bench, rand_gen_t rgen, float prob) {
+	if (rgen.rand_float() > prob) return; // no objects on this bench
+	cube_t cubes[4]; // seat, lo side, hi side, [back]
+	unsigned const num(get_bench_cubes(bench, cubes));
+	cube_t &seat(cubes[0]);
+	if (num == 4) {seat.d[bench.dim][!bench.dir] = cubes[3].d[bench.dim][bench.dir];} // remove back from seat
+	if (rgen.rand_bool()) {place_bottle_on_obj(rgen, seat, bench.room_id, bench.light_amt);} // bottle
+	else                  {place_dcan_on_obj  (rgen, seat, bench.room_id, bench.light_amt);} // drink can
+}
+
 struct plant_loc_t : public sphere_t {
 	bool upper_floor;
 	colorRGBA color;
@@ -1124,6 +1134,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 			set_wall_width(bench, fbc.get_center_dim(!mall_dim), 0.5*radius, !mall_dim);
 			objs.emplace_back(bench, TYPE_BENCH, room_id, mall_dim, d, RO_FLAG_IN_MALL, light_amt, SHAPE_CUBE, bench_color);
 			blockers.push_back(bench);
+			maybe_place_obj_on_bench(objs.back(), rgen, 0.4);
 		} // for d
 	}
 	// trashcan setup for trashcans along walls and food court pillars
@@ -1349,6 +1360,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 					wall_blockers.push_back(bench);
 					wall_blockers.back().expand_by_xy(0.1*window_vspace); // don't place too close to other benches or trashcans
 					objs.emplace_back(bench, TYPE_BENCH, room_id, !mall_dim, !d, RO_FLAG_IN_MALL, light_amt, SHAPE_CUBE, bench_color);
+					maybe_place_obj_on_bench(objs.back(), rgen, 0.5);
 					break;
 				} // for N
 			} // for n

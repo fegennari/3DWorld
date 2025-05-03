@@ -5585,13 +5585,13 @@ unsigned get_bench_cubes(room_object_t const &c, cube_t cubes[4]) { // seat, lo 
 		back.d[c.dim][c.dir] -= (c.dir ? 1.0 : -1.0)*0.88*depth; // push front edge toward back
 		cubes[3] = back;
 	}
-	cube_t top(base);
-	top.z1() += 0.8*base.dz();
-	cubes[0]  = top;
+	cube_t seat(base);
+	seat.z1() += 0.8*base.dz();
+	cubes[0]  = seat;
 
 	for (unsigned d = 0; d < 2; ++d) { // add legs on each side
 		cube_t leg(base);
-		leg.z2() = top.z1();
+		leg.z2() = seat.z1();
 		leg.expand_in_dim(c.dim, -(has_back ? 0.25 : 0.1)*depth); // shrink depth
 		set_wall_width(leg, (c.d[!c.dim][d] + (d ? -1.0 : 1.0)*0.03*width), 0.02*width, !c.dim);
 		cubes[d+1] = leg;

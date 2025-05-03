@@ -3596,8 +3596,9 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 		bool pref_dir(rgen.rand_bool()); // random first dir
 
 		for (unsigned n = 0; n < num_benches; ++n) {
-			unsigned const pref_orient(2*(!pool.dim) + pref_dir);
+			unsigned const pref_orient(2*(!pool.dim) + pref_dir), bench_obj_id(objs.size());
 			if (!place_obj_along_wall(TYPE_BENCH, room, bench_height, bench_sz, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 1, pref_orient)) break;
+			maybe_place_obj_on_bench(objs[bench_obj_id], rgen, 0.3);
 			pref_dir ^= 1; // alternate sides
 		}
 	}
