@@ -1613,6 +1613,36 @@ void traffic_cone_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float di
 	add_cylin_as_tris(qbds.untex_qbd.verts, ce, 1.02*(cone_r1 - 0.5*cone_dr), 1.02*(cone_r2 + 0.2*cone_dr), color_wrapper(WHITE), ndiv, 0); // stripe
 }
 
+// sculptures
+
+sculpture_t::sculpture_t(cube_t const &bcube_, int rseed_) : city_obj_t(bcube_), rseed(rseed_) {
+	rand_gen_t rgen;
+	rgen.set_state(rseed, 3*rseed+1);
+	unsigned const num_colors = 10;
+	colorRGBA const colors[num_colors] = {RED, GREEN, BLUE, LT_RED, LT_GREEN, LT_BLUE, YELLOW, MAGENTA, CYAN, PURPLE};
+	unsigned const color_ix(rgen.rand() % (num_colors+1));
+	if (color_ix < num_colors) {color = colors[color_ix];}
+	else {color = colorRGBA(rgen.rand_float(), rgen.rand_float(), rgen.rand_float());} // random pastel color
+}
+/*static*/ void sculpture_t::pre_draw (draw_state_t &dstate, bool shadow_only) {
+	begin_sphere_draw(0); // textured=0
+	dstate.s.add_uniform_float("emissive_scale", 1.0); // 100% emissive
+	if (!shadow_only) {select_texture(WHITE_TEX);}
+}
+/*static*/ void sculpture_t::post_draw(draw_state_t &dstate, bool shadow_only) {
+	end_sphere_draw(); // textured=0
+	dstate.s.add_uniform_float("emissive_scale", 0.0); // reset
+}
+void sculpture_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
+	unsigned const ndiv(shadow_only ? 16 : max(4U, min(32U, unsigned(2.5f*dist_scale*dstate.get_lod_factor(pos)))));
+	float const radius(0.5*bcube.get_size().get_min_val());
+	dstate.s.set_cur_color(color);
+	draw_sphere_vbo(pos, radius, ndiv, 0); // textured=0
+}
+bool sculpture_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
+	return city_obj_t::proc_sphere_coll(pos_, p_last, radius_, xlate, cnorm); // use bcube coll for now
+}
+
 // ponds
 
 pond_t::pond_t(point const &pos_, float x_radius, float y_radius, float depth) : city_obj_t(pos_, max(x_radius, y_radius)) {

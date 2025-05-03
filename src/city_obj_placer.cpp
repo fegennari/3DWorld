@@ -851,6 +851,22 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			planter_groups.add_obj(tree_planter_t(*i, planter_radius, planter_height), planters); // no colliders for planters; pedestrians avoid the trees instead
 		}
 	}
+	// place commercial sculptures
+	if (plot.is_commercial()) {
+		unsigned const num_sculptures(rgen.rand() % 3); // 0-2
+
+		for (unsigned n = 0; n < num_sculptures; ++n) {
+			float const radius(car_length*rgen.rand_uniform(0.15, 0.3));
+			point pos;
+			if (!try_place_obj(plot, blockers, rgen, radius, 1.5*min_obj_spacing, 10, pos, 0)) continue; // 10 tries
+			cube_t bc(pos);
+			bc.expand_by_xy(radius);
+			bc.z2() += radius*rgen.rand_uniform(2.0, 4.0); // set height
+			sculpture_t const sculpture(bc, rgen.rand());
+			sculpt_groups.add_obj(sculpture, sculptures);
+			add_cube_to_colliders_and_blockers(bc, colliders, blockers);
+		} // for n
+	}
 	// place power poles if there are houses or streetlights
 	point corner_pole_pos(all_zeros);
 
@@ -2036,6 +2052,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	sewer_groups   .create_groups(sewers,    all_objs_bcube);
 	mbox_groups    .create_groups(mboxes,    all_objs_bcube);
 	tcone_groups   .create_groups(tcones,    all_objs_bcube);
+	sculpt_groups  .create_groups(sculptures,all_objs_bcube);
 	pigeon_groups  .create_groups(pigeons,   all_objs_bcube);
 	bird_groups    .create_groups(birds,     all_objs_bcube);
 	sign_groups    .create_groups(signs,     all_objs_bcube);
@@ -2306,6 +2323,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(flags,     flag_groups,     dstate, 0.18, shadow_only, 1);
 	draw_objects(newsracks, nrack_groups,    dstate, 0.10, shadow_only, 0);
 	draw_objects(tcones,    tcone_groups,    dstate, 0.08, shadow_only, 1);
+	draw_objects(sculptures,sculpt_groups,   dstate, 0.20, shadow_only, 1);
 	draw_objects(swings,    swing_groups,    dstate, 0.06, shadow_only, 1);
 	draw_objects(tramps,    tramp_groups,    dstate, 0.10, shadow_only, 1);
 	draw_objects(umbrellas, umbrella_groups, dstate, 0.18, shadow_only, 1);
@@ -2481,6 +2499,7 @@ bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, vector
 	if (proc_vector_sphere_coll(pdecks,    pdeck_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(p_solars,  p_solar_groups,  pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(clines,    cline_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
+	if (proc_vector_sphere_coll(sculptures,sculpt_groups,   pos, p_last, radius, xlate, cnorm)) return 1;
 	// Note: no coll with tree_planters because the tree coll should take care of it;
 	// no coll with hcaps, manholes, sewers, tcones, flowers, pladders, bballs, pfloats, pigeons, ppaths, or birds
 	return 0;
@@ -2517,7 +2536,8 @@ bool city_obj_placer_t::line_intersect(point const &p1, point const &p2, float &
 	check_vector_line_intersect(ug_elevs,  uge_groups,      p1, p2, t, ret);
 	check_vector_line_intersect(dumpsters, dumpster_groups, p1, p2, t, ret);
 	check_vector_line_intersect(picnics,   picnic_groups,   p1, p2, t, ret);
-	// Note: nothing to do for parking lots, tree_planters, hcaps, manholes, sewers, tcones, flowers, pladders, chairs, pdecks, bballs, pfloats, clines, pigeons, ppaths, or birds;
+	// Note: nothing to do for parking lots, tree_planters, hcaps, manholes, sewers, tcones, sculptures, flowers, pladders, chairs, pdecks, bballs, pfloats,
+	// clines, pigeons, ppaths, or birds;
 	// mboxes, swings, tramps, umbrellas, bikes, plants, ponds, p_solars, and momorail are ignored because they're small or not simple shapes
 	return ret;
 }
@@ -2623,8 +2643,8 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, vect_cube_t const &plo
 	if (check_city_obj_pt_xy_contains(wwe_groups,      elevators, pos, obj_ix, 0)) {color = colorRGBA(0.8, 1.0, 0.8, 1.0); return 1;} // slightly blue-green glass; transparent?
 	if (check_city_obj_pt_xy_contains(uge_groups,      ug_elevs,  pos, obj_ix, 0)) {color = LT_GRAY; return 1;}
 	if (check_vect_cube_contains_pt_xy(plot_cuts, pos)) {color = colorRGBA(0.7, 0.7, 1.0); return 1;} // mall skylight; very light blue
-	// Note: ppoles, hcaps, manholes, sewers, mboxes, tcones, flowers, pladders, chairs, stopsigns, flags, clines, pigeons, birds, swings, umbrellas, bikes, and plants are skipped;
-	// pillars aren't visible under walkways;
+	// Note: ppoles, hcaps, manholes, sewers, mboxes, tcones, sculptures, flowers, pladders, chairs, stopsigns, flags, clines, pigeons, birds, swings,
+	// umbrellas, bikes, and plants are skipped; pillars aren't visible under walkways;
 	// free standing signs can be added, but they're small and expensive to iterate over and won't contribute much
 	return 0;
 }
