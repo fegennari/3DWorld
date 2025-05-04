@@ -174,6 +174,7 @@ void building_t::add_hallway_lockers(rand_gen_t &rgen, room_t const &room, float
 	for (cube_t &c : blockers) {c.expand_by_xy(se_clearance);}
 	cube_t locker;
 	set_cube_zvals(locker, zval, zval+locker_height);
+	unsigned lix(0);
 
 	for (unsigned d = 0; d < 2; ++d) { // for each side of the hallway
 		float const wall_edge(place_area.d[!dim][d]);
@@ -210,7 +211,7 @@ void building_t::add_hallway_lockers(rand_gen_t &rgen, room_t const &room, float
 				objs.emplace_back(lock, TYPE_PADLOCK, room_id, !dim, d, (RO_FLAG_NOCOLL | RO_FLAG_IS_ACTIVE), 1.0, SHAPE_CUBE, lock_color); // attached
 				flags |= RO_FLAG_NONEMPTY; // flag as locked
 			}
-			objs.emplace_back(locker, TYPE_LOCKER, room_id, !dim, !d, flags, tot_light_amt, SHAPE_CUBE, locker_color);
+			objs.emplace_back(locker, TYPE_LOCKER, room_id, !dim, !d, flags, tot_light_amt, SHAPE_CUBE, locker_color, lix++);
 			set_obj_id(objs); // for random contents
 		} // for n
 	} // for d

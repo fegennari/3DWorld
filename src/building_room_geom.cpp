@@ -1628,6 +1628,16 @@ void building_room_geom_t::add_locker(room_object_t const &c) {
 		front_mat.add_cube_to_verts(door, apply_light_color(c), all_zeros, front_face_mask, c.dim, c.dir);
 		// inside slightly higher and shifted toward the front, and shelf more than halfway up
 		add_cabinet_with_open_door(c, door, side_color, wall_thickness, front_face_mask, 0.02*c.dz(), 1.5*wall_thickness, 0.67);
+		
+		if (((3*c.obj_id + 7*c.item_flags + 11*c.room_id + c.dir) & 3) == 0) { // add a paper inside the door 25% of the time
+			float const locker_width(c.get_width()), width(0.71*locker_width), height(0.92*locker_width); // assumes locker is 12 inches wide
+			cube_t paper(door);
+			paper.expand_in_dim(!c.dim, 0.5*wall_thickness); // set paper thickness
+			set_wall_width(paper, (door.z1() + 0.75*door.dz()), 0.5*height, 2);
+			set_wall_width(paper, door.get_center_dim(c.dim),  0.5*width , c.dim);
+			rgeom_mat_t &mat(get_material(tid_nm_pair_t(c.get_paper_tid(), 0.0), 0)); // unshadowed; map texture to quad; not small
+			mat.add_cube_to_verts(paper, apply_light_color(c, WHITE), zero_vector, get_face_mask(!c.dim, hinge_side), c.dim, !c.dir, 0); // front only
+		}
 	}
 	else {add_obj_with_front_texture(c, tex_fn, c.color, side_color, 0);} // closed; texture is light gray
 }
