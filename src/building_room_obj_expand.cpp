@@ -56,6 +56,9 @@ bool add_if_not_intersecting(room_object_t const &obj, vect_room_object_t &objec
 void gen_xy_pos_in_cube(point &pos, cube_t const &c, rand_gen_t &rgen) {
 	for (unsigned d = 0; d < 2; ++d) {pos[d] = rgen.rand_uniform(c.d[d][0], c.d[d][1]);}
 }
+void gen_xyz_pos_in_cube(point &pos, cube_t const &c, rand_gen_t &rgen) {
+	for (unsigned d = 0; d < 3; ++d) {pos[d] = rgen.rand_uniform(c.d[d][0], c.d[d][1]);}
+}
 point gen_xy_pos_in_area(cube_t const &S, vector3d const &sz, rand_gen_t &rgen, float zval) {
 	point center(0.0, 0.0, zval);
 	

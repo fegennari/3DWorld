@@ -81,7 +81,7 @@ class fish_manager_t {
 				cube_t const valid_area(get_valid_area(1.05*f.radius)); // slightly larger radius so that we don't start out intersecting
 
 				for (unsigned n = 0; n < 100; ++n) { // 100 tries
-					for (unsigned d = 0; d < 3; ++d) {f.pos[d] = rgen.rand_uniform(valid_area.d[d][0], valid_area.d[d][1]);}
+					gen_xyz_pos_in_cube(f.pos, valid_area, rgen);
 					point coll_pos; // unused
 					if (!check_fish_coll(f.pos, f.radius, f.id, coll_pos)) break; // success
 				}

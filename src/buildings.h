@@ -3204,7 +3204,8 @@ unsigned get_skip_mask_for_xy(bool dim);
 // functions in building_room_obj_expand.cc
 point gen_xy_pos_in_area(cube_t const &S, vector3d const &sz, rand_gen_t &rgen, float zval=0.0);
 point gen_xy_pos_in_area(cube_t const &S, float radius, rand_gen_t &rgen, float zval=0.0);
-void gen_xy_pos_in_cube(point &pos, cube_t const &c, rand_gen_t &rgen);
+void gen_xy_pos_in_cube (point &pos, cube_t const &c, rand_gen_t &rgen);
+void gen_xyz_pos_in_cube(point &pos, cube_t const &c, rand_gen_t &rgen);
 void gen_xy_pos_for_cube_obj(cube_t &C, cube_t const &S, vector3d const &sz, float height, rand_gen_t &rgen, bool place_at_z1=0);
 void gen_xy_pos_for_round_obj(cube_t &C, cube_t const &S, float radius, float height, float spacing, rand_gen_t &rgen, bool place_at_z1=0);
 // functions in building_interact.cc and building_gameplay.cc
