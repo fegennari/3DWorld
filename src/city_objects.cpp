@@ -1624,23 +1624,80 @@ sculpture_t::sculpture_t(cube_t const &bcube_, int rseed_) : city_obj_t(bcube_),
 	if (color_ix < num_colors) {color = colors[color_ix];}
 	else {color = colorRGBA(rgen.rand_float(), rgen.rand_float(), rgen.rand_float());} // random pastel color
 }
-/*static*/ void sculpture_t::pre_draw (draw_state_t &dstate, bool shadow_only) {
-	begin_sphere_draw(0); // textured=0
-	dstate.s.add_uniform_float("emissive_scale", 1.0); // 100% emissive
+/*static*/ void sculpture_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {select_texture(WHITE_TEX);}
+	if (!shadow_only) {bind_default_flat_normal_map();}
 }
-/*static*/ void sculpture_t::post_draw(draw_state_t &dstate, bool shadow_only) {
-	end_sphere_draw(); // textured=0
-	dstate.s.add_uniform_float("emissive_scale", 0.0); // reset
+float closest_dist_to_cube_edge(point const &p, cube_t const &c) {
+	float dist(FLT_MAX);
+	for (unsigned d = 0; d < 3; ++d) {min_eq(dist, min(fabs(p[d] - c.d[d][0]), fabs(p[d] - c.d[d][1])));}
+	return dist;
 }
 void sculpture_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
+	rand_gen_t rgen;
+	rgen.set_state(rseed, 3*rseed+1);
 	unsigned const ndiv(shadow_only ? 16 : max(4U, min(32U, unsigned(2.5f*dist_scale*dstate.get_lod_factor(pos)))));
-	float const radius(0.5*bcube.get_size().get_min_val());
+	// draw the spheres; may not fill the entire bcube; some spheres may be contained in others
+	bool const emissive(!shadow_only && is_night()), textured(1); // for some reason, there is lighting noise without texturing
+	unsigned const num_spheres(3 + (rgen.rand() % 3)); // 3-5
+	vector3d const bcsz(bcube.get_size());
+	cube_t sphere_area(bcube);
+	sphere_area.expand_by(-0.25*bcsz.get_min_val()); // center 50%
 	dstate.s.set_cur_color(color);
-	draw_sphere_vbo(pos, radius, ndiv, 0); // textured=0
-}
-bool sculpture_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
-	return city_obj_t::proc_sphere_coll(pos_, p_last, radius_, xlate, cnorm); // use bcube coll for now
+	if (emissive) {dstate.s.add_uniform_float("emissive_scale", 1.0);} // 100% emissive
+	begin_sphere_draw(textured);
+	float zmax(bcube.z1()), rmin(bcsz.z);
+	sphere_t spheres[5];
+
+	for (unsigned n = 0; n < num_spheres; ++n) {
+		point sc;
+		gen_xyz_pos_in_cube(sc, sphere_area, rgen);
+		float const sr(closest_dist_to_cube_edge(sc, bcube)*rgen.rand_uniform(0.5, 1.0)); // keep inside bcube
+		if (n == 0) {sc.z = bcube.z2() - sr;} // first sphere touches the top of the bcube
+		draw_sphere_vbo(sc, sr, ndiv, textured);
+		max_eq(zmax, sc.z);
+		min_eq(rmin, sr);
+		spheres[n] = sphere_t(sc, sr);
+	} // for n
+	end_sphere_draw();
+	// maybe add a horizontal torus
+	bool const add_torus(rgen.rand_bool());
+	point tc(pos); // torus center; centered in X and Y
+	float ro(0.0);
+
+	if (add_torus) {
+		float const xy_radius(0.5*min(bcsz.x, bcsz.y)), ri(xy_radius*rgen.rand_uniform(0.1, 0.2));
+		ro   = xy_radius*rgen.rand_uniform(0.5, 1.0) - ri;
+		tc.z = rgen.rand_uniform(bcube.z1()+ri, bcube.z2()-ri);
+		draw_torus(tc, ri, ro, max(4U, ndiv/2), ndiv);
+	}
+	if (emissive) {dstate.s.add_uniform_float("emissive_scale", 0.0);} // reset
+	// draw the base and support posts
+	unsigned const num_colors = 4;
+	colorRGBA const colors[num_colors] = {LT_GRAY, DK_GRAY, BKGRAY, BRASS_C};
+	colorRGBA const &base_color(colors[rgen.rand() % num_colors]);
+	dstate.s.set_cur_color(base_color);
+	cube_t base(bcube);
+	base.z2() = bcube.z1() + 0.025*bcsz.z;
+	base.expand_by_xy(-0.25*bcsz); // shrink
+	float const cylin_radius(rmin*rgen.rand_uniform(0.15, 0.2));
+	unsigned const cylin_ndiv(max(4U, ndiv/2));
+	draw_fast_cylinder(point(pos.x, pos.y, base.z2()), point(pos.x, pos.y, zmax+cylin_radius), cylin_radius, cylin_radius, cylin_ndiv, 0, 4); // untextured, sides and top
+	dstate.draw_cube(qbds.untex_qbd, base, base_color, 1); // base; skip_bottom=1
+
+	if (add_torus) { // horizontal bar connecting torus
+		bool const dim(rgen.rand_bool());
+		float const cylin_radius2(cylin_radius*rgen.rand_uniform(0.4, 0.6));
+		point p1(tc), p2(tc);
+		p1[dim] -= ro; p2[dim] += ro;
+		draw_fast_cylinder(p1, p2, cylin_radius2, cylin_radius2, cylin_ndiv, 0, 4); // untextured, sides only
+	}
+	for (unsigned n = 0; n < num_spheres; ++n) { // add horizontal bars conecting floating spheres
+		point const &p1(spheres[n].pos);
+		if (dist_xy_less_than(p1, pos, spheres[n].radius)) continue;
+		float const cylin_radius2(cylin_radius*rgen.rand_uniform(0.3, 0.5));
+		draw_fast_cylinder(p1, point(pos.x, pos.y, p1.z), cylin_radius2, cylin_radius2, cylin_ndiv, 0, 4); // untextured, sides only
+	}
 }
 
 // ponds

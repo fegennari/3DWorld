@@ -4,6 +4,7 @@
 
 #include "city_objects.h"
 #include "tree_3dw.h" // for tree_placer_t
+#include "lightmap.h" // for light_source
 //#include "profiler.h"
 
 float pond_max_depth(0.0);
@@ -18,6 +19,7 @@ extern city_params_t city_params;
 extern object_model_loader_t building_obj_model_loader;
 extern plot_divider_type_t plot_divider_types[];
 extern textured_mat_t pool_deck_mats[];
+extern vector<light_source> dl_sources;
 
 city_flag_t create_flag(bool dim, bool dir, point const &base_pt, float height, float length, int flag_id=-1);
 void get_building_ext_basement_bcubes(cube_t const &city_bcube, vect_cube_t &bcubes);
@@ -853,7 +855,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 	}
 	// place commercial sculptures
 	if (plot.is_commercial()) {
-		unsigned const num_sculptures(rgen.rand() % 3); // 0-2
+		unsigned const num_sculptures(rgen.rand_uniform(0.0, 2.5)); // 0-2
 
 		for (unsigned n = 0; n < num_sculptures; ++n) {
 			float const radius(car_length*rgen.rand_uniform(0.15, 0.3));
@@ -2323,7 +2325,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(flags,     flag_groups,     dstate, 0.18, shadow_only, 1);
 	draw_objects(newsracks, nrack_groups,    dstate, 0.10, shadow_only, 0);
 	draw_objects(tcones,    tcone_groups,    dstate, 0.08, shadow_only, 1);
-	draw_objects(sculptures,sculpt_groups,   dstate, 0.20, shadow_only, 1);
+	draw_objects(sculptures,sculpt_groups,   dstate, 0.18, shadow_only, 1);
 	draw_objects(swings,    swing_groups,    dstate, 0.06, shadow_only, 1);
 	draw_objects(tramps,    tramp_groups,    dstate, 0.10, shadow_only, 1);
 	draw_objects(umbrellas, umbrella_groups, dstate, 0.18, shadow_only, 1);
@@ -2442,6 +2444,25 @@ void city_obj_placer_t::draw_transparent_objects(draw_state_t &dstate) {
 
 void city_obj_placer_t::add_lights(vector3d const &xlate, cube_t &lights_bcube) const {
 	skyway.add_lights(xlate, lights_bcube);
+
+	// add sculpture lights if night time
+	if (is_night() && !sculpt_groups.empty() && sculpt_groups.get_bcube().intersects_xy(lights_bcube)) {
+		unsigned start_ix(0);
+
+		for (auto i = sculpt_groups.begin(); i != sculpt_groups.end(); start_ix = i->ix, ++i) {
+			if (!i->intersects_xy(lights_bcube)) continue;
+			assert(start_ix <= i->ix && i->ix <= sculptures.size());
+
+			for (auto p = sculptures.begin()+start_ix; p != sculptures.begin()+i->ix; ++p) {
+				if (!p->bcube.intersects_xy(lights_bcube)) continue;
+				point const lpos(p->pos + 0.25*p->bcube.dz()*plus_z); // 75% of the way up
+				float const ldist(4.0*p->radius);
+				min_eq(lights_bcube.z1(), lpos.z-ldist);
+				max_eq(lights_bcube.z2(), lpos.z-ldist);
+				dl_sources.emplace_back(ldist, lpos, lpos, p->color, 0); // omnidirectional point light, no shadows
+			}
+		} // for i
+	}
 }
 
 template<typename T> bool proc_vector_sphere_coll(vector<T> const &objs, city_obj_groups_t const &groups, point &pos,

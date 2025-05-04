@@ -1327,12 +1327,8 @@ void draw_sphere_vbo(point const &pos, float radius, int ndiv, bool textured, bo
 		draw_sphere_vbo_raw(ndiv, textured, half);
 		if (has_xform) {fgPopMatrix();}
 	}
-	else if (half) {
-		draw_subdiv_sphere_section(pos, radius, ndiv, textured, 0.0, 1.0, 0.0, 0.5);
-	}
-	else {
-		draw_subdiv_sphere(pos, radius, ndiv, textured, !bfc);
-	}
+	else if (half) {draw_subdiv_sphere_section(pos, radius, ndiv, textured, 0.0, 1.0, 0.0, 0.5);}
+	else {draw_subdiv_sphere(pos, radius, ndiv, textured, !bfc);}
 }
 
 
