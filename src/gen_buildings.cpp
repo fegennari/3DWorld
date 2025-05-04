@@ -101,6 +101,11 @@ void tid_nm_pair_t::set_specular_color(colorRGB const &color, float mag, float s
 	shininess = (unsigned char)max(1, min(255, round_fp(shine)));
 }
 void tid_nm_pair_t::set_gl(tid_nm_pair_dstate_t &state) const {
+	// Note: normal map bind must be done first because it will bind to TU=0 on first load, which will overwrite the bound diffuse texture
+	bool const has_normal_map(get_nm_tid() != FLAT_NMAP_TEX);
+	if (has_normal_map) {select_texture(get_nm_tid(), 5);} // else we set bump_map_mag=0.0
+	state.set_for_shader(has_normal_map ? 1.0 : 0.0); // enable or disable normal map (only ~25% of calls have a normal map)
+
 	if (state.no_set_texture) {} // nothing to do
 	else if (tid == FONT_TEXTURE_ID) {text_drawer::bind_font_texture();}
 	else if (tid == REFLECTION_TEXTURE_ID) {
@@ -108,9 +113,6 @@ void tid_nm_pair_t::set_gl(tid_nm_pair_dstate_t &state) const {
 	}
 	else if (tid == NO_SHADOW_WHITE_TEX || tid == SHADOW_ONLY_TEX) {select_texture(WHITE_TEX);}
 	else {select_texture(tid);}
-	bool const has_normal_map(get_nm_tid() != FLAT_NMAP_TEX);
-	if (has_normal_map) {select_texture(get_nm_tid(), 5);} // else we set bump_map_mag=0.0
-	state.set_for_shader(has_normal_map ? 1.0 : 0.0); // enable or disable normal map (only ~25% of calls have a normal map)
 	float const e_val(get_emissive_val());
 	if (e_val     > 0.0) {state.s.add_uniform_float("emissive_scale", e_val);} // enable emissive
 	if (shininess > 0  ) {state.s.set_specular_color(spec_color.get_c3(), shininess);} // colored specular
