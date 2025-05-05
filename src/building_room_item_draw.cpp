@@ -2198,7 +2198,13 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			if (player_in_this_basement    && obj_center.z > ground_floor_z1) continue; // player in basement, obj not
 			if (player_above_this_basement && obj_center.z < ground_floor_z1) continue; // obj in basement, player not
 			if (!(is_rotated ? building.is_rot_cube_visible(bc, xlate) : camera_pdu.cube_visible(bc + xlate))) continue; // VFC
-			if (check_occlusion && building.check_obj_occluded(bc, camera_bs, oc, reflection_pass))            continue;
+
+			if (!h.closed) { // check if blocked by open door
+				float const dp(dot_product_ptv(vector3d(-h.dir.y, h.dir.x, 0.0), camera_bs, obj_center)*(h.mirror ? 1.0 : -1.0));
+				if (dp < -0.5*p2p_dist(camera_bs, obj_center)) continue; // rotate h.dir by 90 degrees
+			}
+			if (check_occlusion && building.check_obj_occluded(bc, camera_bs, oc, reflection_pass)) continue;
+			// can door handles (and models in general) be drawn with instancing? requires custom shader setup and many control flow changes
 			building_obj_model_loader.draw_model(s, obj_center, bc, h.dir, handle_color, xlate, OBJ_MODEL_DOOR_HANDLE, shadow_only, 0, nullptr, 0, 0, 0, h.mirror);
 			obj_drawn = 1;
 		} // for h
