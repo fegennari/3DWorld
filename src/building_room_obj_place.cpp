@@ -5121,10 +5121,11 @@ bool building_t::place_eating_items_on_table(rand_gen_t &rgen, unsigned table_ob
 			place_bounds.expand_by_xy(-spacing);
 			pos = place_bounds.closest_pt(chair_center);
 		}
+		unsigned const plate_flags(RO_FLAG_NOCOLL | (table.is_glass_table() ? RO_FLAG_ADJ_BOT : 0)); // flag for bottom to be drawn if on a glass table
 		cube_t plate;
 		plate.set_from_sphere(pos, plate_radius);
 		set_cube_zvals(plate, table.z2(), table.z2()+plate_height); // place on the table
-		objs.emplace_back(plate, TYPE_PLATE, table.room_id, 0, 0, RO_FLAG_NOCOLL, table.light_amt, SHAPE_CYLIN);
+		objs.emplace_back(plate, TYPE_PLATE, table.room_id, 0, 0, plate_flags, table.light_amt, SHAPE_CYLIN);
 		set_obj_id(objs);
 
 		if (building_obj_model_loader.is_model_valid(OBJ_MODEL_SILVER)) {

@@ -5283,8 +5283,9 @@ void building_room_geom_t::add_plate(room_object_t const &c) { // is_small=1
 	UNROLL_3X(min_eq(color[i_], 0.9f);); // clamp color to 90% max to avoid over saturation
 	top_mat.add_ortho_cylin_to_verts(c, color, cylin_dim, !top_dir, top_dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // top surface, skip sides
 	rgeom_mat_t &untex_mat(get_untextured_material(shadowed, 0, 1)); // untextured, small
-	// truncated cone, sloped sides, bottom if vertical
-	untex_mat.add_ortho_cylin_to_verts(c, color, cylin_dim, (vertical && top_dir), (vertical && !top_dir), 0, 0, (top_dir ? 0.8 : 1.0), (top_dir ? 1.0 : 0.8));
+	// truncated cone, sloped sides, bottom if vertical on on a glass table (ADJ_BOT)
+	bool const draw_bot(vertical || (c.flags & RO_FLAG_ADJ_BOT));
+	untex_mat.add_ortho_cylin_to_verts(c, color, cylin_dim, (draw_bot && top_dir), (draw_bot && !top_dir), 0, 0, (top_dir ? 0.8 : 1.0), (top_dir ? 1.0 : 0.8));
 }
 
 void building_room_geom_t::add_water_plane(room_object_t const &c, cube_t const &water_area, float water_level) {
