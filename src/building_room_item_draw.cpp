@@ -2240,7 +2240,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		// only update and draw fish in the player building (since two extended basement bcubes can overlap); skip in reflection pass
 		bool const draw_fish(!reflection_pass && have_fish_model() && (player_in_doorway || (is_player_building && building.point_in_building_or_basement_bcube(camera_bs))));
 		float const ao_z_off(1.1*building.get_flooring_thick()); // slightly above rugs and flooring
-		float const ao_zmin(camera_bs.z - 2.0*floor_spacing);
+		float const ao_zmin(camera_bs.z - 2.0*floor_spacing), ao_max_ext(0.5*floor_spacing);
 		static quad_batch_draw ao_qbd;
 		bool const inc_pools_and_fb(draw_fish && building.begin_fish_draw());
 		auto objs_end(get_placed_objs_end()); // skip buttons/stairs/elevators
@@ -2278,7 +2278,9 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 					if (!is_rotated && !camera_pdu.cube_visible(*i + xlate)) continue; // VFC - may not help much
 					float rscale(0.5 + 0.5*(1.0 - ao_shadow)); // 0.5 will be the size of the object; dense shadow is sharper/smaller radius
 					if (i->type == TYPE_CASHREG || i->type == TYPE_PARK_SPACE) {rscale *= 0.75;} // bcube is larger than it should be for cash registers and parked cars
-					set_z_plane_rect_pts(point(i->xc(), i->yc(), (i->z1() + ao_z_off)), rscale*i->dx(), rscale*i->dy(), pts);
+					float const dx(i->dx()), dy(i->dy()), rx(min(rscale*dx, 0.5f*dx+ao_max_ext)), ry(min(rscale*dy, 0.5f*dy+ao_max_ext));
+
+					set_z_plane_rect_pts(point(i->xc(), i->yc(), (i->z1() + ao_z_off)), rx, ry, pts);
 
 					if (is_rotated) {
 						for (unsigned n = 0; n < 4; ++n) {building.do_xy_rotate(building_center, pts[n]);}
