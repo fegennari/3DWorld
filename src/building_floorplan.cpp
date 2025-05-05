@@ -1121,23 +1121,24 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 						for (unsigned s = 0; s < 2; ++s) { // check both wall segments
 							bool contained[2] = {0,0};
 
-							for (unsigned e = 0; e < 2; ++e) { // check both directions from the wall
-								for (auto r = rooms.begin(); r != rooms.end(); ++r) {
-									if (r->z1() >= wall.z2() || r->z2() <= wall.z1()) continue; // no overlap in Z
+							for (room_t const &r : rooms) {
+								if (r.z1() >= wall.z2() || r.z2() <= wall.z1()) continue; // no overlap in Z
+
+								for (unsigned e = 0; e < 2; ++e) { // check both directions from the wall
 									// skip wall edges co-incident with room edges where the entire wall is contained in the room; this can happen at part boundaries
-									if (wall.d[d][e] == r->d[d][e] && wall.d[d][!e] < r->d[d][1] && wall.d[d][!e] > r->d[d][0]) continue;
-									if (wall.d[d][e] < r->d[d][0] || wall.d[d][e] > r->d[d][1]) continue; // wall not inside room in dim d/dir e
-									if (lo[s] > r->d[!d][0] && hi[s] < r->d[!d][1]) {contained[e] = 1; break;} // entire wall contained in span of room
+									if (wall.d[d][e] == r.d[d][e] && wall.d[d][!e] < r.d[d][1] && wall.d[d][!e] > r.d[d][0]) continue;
+									if (wall.d[d][e] <  r.d[d][0] || wall.d[d][ e] > r.d[d][1]) continue; // wall not inside room in dim d/dir e
+									if (lo[s] > r.d[!d][0] && hi[s] < r.d[!d][1]) {contained[e] = 1; break;} // entire wall contained in span of room
 								}
 							}
 							if (contained[0] && contained[1]) {valid = 0; break;} // wall seg contained in rooms on both sides => two doors in same wall between rooms => drop
 						} // for s
 					}
 					if (!valid) continue;
-					// if the wall must be split, and we've failed after 20 tries, reduce the stairs and elevator padding; this happens to a building near the player start
-					if (pref_split && ntries >= 20 && (ntries%10) == 0) {stairs_elev_pad *= 0.5;} // 1.0 for n=0-19, 0.5 for n=20-29, 0.25 for n=30-39
 					cube_t cand(wall); // sub-section of wall that will become a doorway
 					cand.d[!d][0] = lo_pos; cand.d[!d][1] = hi_pos;
+					// if the wall must be split, and we've failed after 20 tries, reduce the stairs and elevator padding; this happens to a building near the player start
+					if (pref_split && ntries >= 20 && (ntries%10) == 0) {stairs_elev_pad *= 0.5;} // 1.0 for n=0-19, 0.5 for n=20-29, 0.25 for n=30-39
 					bool const elevators_only(pref_split && ntries > 20); // allow blocking stairs if there's no other way to insert a door
 					int  const no_check_enter_exit((ntries > 5) ? (pref_conn ? 2 : 1) : 0); // no stairs enter/exit pad after first 5 tries, no enter/exit at all if pref_conn
 					if (interior->is_blocked_by_stairs_or_elevator(cand, stairs_elev_pad, elevators_only, no_check_enter_exit)) continue; // should we assert !pref_split?
@@ -1617,7 +1618,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	bool stairs_against_wall[2] = {0, 0};
 	stairs_shape sshape(SHAPE_STRAIGHT); // straight by default
 	bool must_add_stairs(first_part_this_stack);
-	bool const is_basement((int)part_ix == basement_part_ix);
+	bool const is_basement_room((int)part_ix == basement_part_ix);
 	int force_stairs_dir(2); // 2=unset
 	unsigned stairs_ix(0);
 
@@ -1730,7 +1731,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		stairs_cut = stairs;
 		stairs_dim = long_dim;
 	}
-	else if (is_basement && part.contains_cube_xy(pri_hall) && can_extend_stairs_to_pg(stairs_ix)) { // multi-floor parking garage case
+	else if (is_basement_room && part.contains_cube_xy(pri_hall) && can_extend_stairs_to_pg(stairs_ix)) { // multi-floor parking garage case
 		stairwell_t &s(interior->stairwells[stairs_ix]);
 		s.extends_below = 1;
 		// copy fields from these stairs and extend down
