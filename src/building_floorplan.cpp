@@ -905,8 +905,10 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 				interior->door_stacks.reserve(num_doors_est);
 				interior->doors.reserve(num_doors_per_stack*num_doors_est);
 			}
+			unsigned const ds_start(interior->door_stacks.size());
 			// see if we have a skylight to work with
 			vect_cube_t part_skylights; // should be at most size 1 with currently skylight addition code
+			bool added_whirl(0);
 
 			for (cube_t const &skylight : skylights) {
 				if (skylight.intersects(*p)) {part_skylights.push_back(skylight);}
@@ -919,11 +921,73 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 				if      (csz.y > min_wall_len2 && csz.x > 1.25*csz.y) {wall_dim = 0;} // split long room in x
 				else if (csz.x > min_wall_len2 && csz.y > 1.25*csz.x) {wall_dim = 1;} // split long room in y
 				else {wall_dim = rgen.rand_bool();} // choose a random split dim for nearly square rooms
-				
+
 				if (min(csz.x, csz.y) < min_wall_len2) {
 					add_room(c, part_id, 1);
 					continue; // not enough space to add a wall
 				}
+				// add central hallway if wall/hall len is at least enough to place 2-3 rooms; 50% chance if part is a basement; houses and small office buildings
+				bool const is_basement_room(has_basement() && part_id == (unsigned)basement_part_ix);
+				bool const add_hallway(is_first_split && csz[!wall_dim] > 1.5*min_split_len && (!is_basement_room || rgen.rand_bool()));
+				float const cur_split_thresh(min(min_split_len, max(min_wall_len, 0.9f*bcube.get_sz_dim(wall_dim))));
+
+				if (0 && !add_hallway && min(csz.x, csz.y) > 3.0*min_wall_len && rgen.rand_bool()) { // create a whirl pattern
+					cube_t cr(c), sr[4] = {c, c, c, c}; // center room and 4 side rooms (in CCW order)
+					bool is_valid(1);
+
+					for (unsigned d = 0; d < 2 && is_valid; ++d) { // {x, y}
+						bool const on_edge(c.d[!d][0] == p->d[!d][0] || c.d[!d][1] == p->d[!d][1]); // at edge of the building
+						float const cc(c.get_center_dim(d));
+
+						for (unsigned e = 0; e < 2 && is_valid; ++e) { // {lo, hi}
+							float const lo(e ? (cc+0.5*min_wall_len) : (c.d[d][0]+min_wall_len2)), hi(e ? (c.d[d][1]-min_wall_len2) : (cc-0.5*min_wall_len));
+							is_valid = 0;
+
+							for (unsigned n = 0; n < 10; ++n) {
+								cr.d[d][e] = rgen.rand_uniform(lo, hi);
+								if (on_edge && is_val_inside_window(*p, d, cr.d[d][e], window_hspacing[d], window_border)) continue; // check for windows
+								is_valid = 1; break;
+							}
+						} // for e
+					} // for d
+					if (is_valid) {
+						for (cube_t const &sl : part_skylights) { // center room must contain all skylights
+							if (!cr.contains_cube_xy(sl)) {is_valid = 0; break;}
+						}
+					}
+					if (is_valid) { // walls added successfully
+						bool const ccw(rgen.rand_bool()); // CCW whirl
+						sr[0].x2() = sr[1].x1() = cr.d[0][ ccw];
+						sr[2].x1() = sr[3].x2() = cr.d[0][!ccw];
+						sr[0].y2() = sr[3].y1() = cr.d[1][!ccw];
+						sr[1].y2() = sr[2].y1() = cr.d[1][ ccw];
+						float const edges[4] = {cr.y1(), cr.x2(), cr.y2(), cr.x1()};
+					
+						for (unsigned d = 0; d < 4; ++d) {
+							bool const wdim(bool(d&1) ^ ccw);
+							float const wall_pos(edges[(d + (ccw ? 0 : 3)) & 3]);
+							cube_t wall(sr[d]), wall2;
+							create_wall(wall, wdim, wall_pos, fc_thick, wall_half_thick, wall_edge_spacing);
+							float const doorway_pos(cube_rand_side_pos(cr, !wdim, 0.25, doorway_width, rgen, 1)); // for_door=1
+							bool const open_dir(wall_pos > part_door_open_dir_tp[wdim]); // doors open away from the building center
+							remove_section_from_cube_and_add_door(wall, wall2, (doorway_pos - doorway_hwidth), (doorway_pos + doorway_hwidth), !wdim, open_dir);
+							interior->walls[wdim].push_back(wall );
+							interior->walls[wdim].push_back(wall2);
+						} // for d
+						for (unsigned r = 0; r < 5; ++r) {
+							cube_t &room(r ? sr[r-1] : cr);
+
+							for (unsigned d = 0; d < 2; ++d) { // subtract interior wall thickness from rooms
+								if (room.d[d][0] > c.d[d][0]) {room.d[d][0] += wall_half_thick;}
+								if (room.d[d][1] < c.d[d][1]) {room.d[d][1] -= wall_half_thick;}
+							}
+							if (max(room.dx(), room.dy()) > 0.8*cur_split_thresh) {to_split.push_back(room);} // split sub-room
+							else {add_room(room, part_id);} // add whole sub-room
+						}
+						added_whirl = 1;
+						continue;
+					}
+				} // end whirl pattern
 				float const min_dist_abs(1.5*doorway_width + wall_thick);
 				bool const on_edge(c.d[!wall_dim][0] == p->d[!wall_dim][0] || c.d[!wall_dim][1] == p->d[!wall_dim][1]); // at edge of the building - walls don't intersect windows
 				// create a wall to split up this room
@@ -933,7 +997,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 				bool pos_valid(0);
 				cube_t wall, wall2; // copy from cube; shared zvals, but X/Y will be overwritten per wall
 
-				for (unsigned num = 0; num < 20; ++num) { // 20 tries to choose a wall pos that's not inside a window or skylight
+				for (unsigned num = 0; num < 20; ++num) { // 20 tries to choose a wall pos that's not inside a window or skylight or intersecting a wall
 					wall_pos = cube_rand_side_pos(c, wall_dim, min_dist_param, min_dist_abs, rgen, 0); // for_door=0
 					if (on_edge && is_val_inside_window(*p, wall_dim, wall_pos, window_hspacing[wall_dim], window_border)) continue; // try a new wall_pos
 					if (c.bad_pos(wall_pos, wall_dim)) continue; // intersects doorway from prev wall, try a new wall_pos
@@ -945,7 +1009,16 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 						continue;
 					}
 					pos_valid = 1;
-					break; // done, keep wall_pos
+
+					if (added_whirl) { // check for wall intersection with center room door of whirl
+						cube_t test_cube(wall);
+						test_cube.expand_by_xy(wall_thick);
+
+						for (auto ds = interior->door_stacks.begin()+ds_start; ds != interior->door_stacks.end(); ++ds) {
+							if (ds->get_true_bcube().intersects(test_cube)) {pos_valid = 0; break;}
+						}
+					}
+					if (pos_valid) break; // done, keep wall_pos
 				} // for num
 				if (!pos_valid) { // no valid pos, skip this split
 					add_room(c, part_id, 1);
@@ -960,12 +1033,8 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 				walls.push_back(wall );
 				walls.push_back(wall2);
 				float door_lo[2] = {lo_pos, lo_pos}, door_hi[2] = {hi_pos, hi_pos}; // passed to next split step to avoid placing a wall that intersects this doorway
-				// split into two smaller rooms; ensure we can split at least once per dim
-				bool const do_split(csz[wall_dim] > min(min_split_len, max(min_wall_len, 0.9f*bcube.get_sz_dim(wall_dim))));
-				bool const is_basement(has_basement() && part_id == (unsigned)basement_part_ix);
 
-				// add central hallway if wall/hall len is at least enough to place 2-3 rooms; 50% chance if part is a basement; houses and small office buildings
-				if (is_first_split && csz[!wall_dim] > 1.5*min_split_len && (!is_basement || rgen.rand_bool())) {
+				if (add_hallway) { // add central hallway
 					// maybe create a hallway: create another split parallel to this one offset a bit and make the room in between a hallway
 					bool const dir((wall_pos - c.d[wall_dim][0]) < (c.d[wall_dim][1] - wall_pos)); // further part edge
 					float other_wall_pos(0.0);
@@ -1005,6 +1074,9 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 						if (real_num_parts == 1) {bldg_door_open_dir_tp[wall_dim] = part_door_open_dir_tp[wall_dim];} // this is also the test point for the entire building
 					}
 				}
+				// split into two smaller rooms; ensure we can split at least once per dim
+				bool const do_split(csz[wall_dim] > cur_split_thresh);
+
 				for (unsigned d = 0; d < 2; ++d) { // still have space to split in other dim, add the two parts to the stack
 					split_cube_t c_sub(c);
 					c_sub.d[wall_dim][d] = wall.d[wall_dim][!d]; // clip to wall pos
