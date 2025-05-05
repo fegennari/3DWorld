@@ -2076,6 +2076,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			if (obj.type == TYPE_KEY || obj.type == TYPE_SILVER || obj.type == TYPE_FOLD_SHIRT) continue; // small
 			if (obj.z1() > camera_bs.z || (obj.z2() < two_floors_below && obj.type != TYPE_BLDG_FOUNT)) continue; // above or more than 2 floors below light, except mall fountains
 		}
+		else if ((obj.type == TYPE_SILVER /*|| obj.type == TYPE_FOLD_SHIRT*/) && camera_bs.z < obj.z1()) continue; // not visible from below (except on glass table?)
 		point obj_center(obj.get_cube_center());
 
 		if (!shadow_only && !building.is_house && !has_windows && !building.point_in_mall(obj_center)) { // windowless building
