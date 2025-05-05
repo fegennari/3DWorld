@@ -1097,6 +1097,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 
 			for (unsigned nsplits = 0; nsplits < 4; ++nsplits) { // at most 4 splits
 				cube_t &wall(walls[w]); // take a reference here because a prev iteration push_back() may have invalidated it
+				if (is_industrial() && wall.z1() >= ground_floor_z1) break; // don't split warehouse/factory walls as they already have doors
 				float const len(wall.get_sz_dim(!d)), min_split_len((pref_split ? 0.5 : 1.5)*min_wall_len); // = 2.0/6.0 * doorway_width
 				if (len < min_split_len) break; // not long enough to split - done
 				float const min_dist_abs(min(1.5f*doorway_width, max(0.5f*doorway_width, 0.5f*min_split_len)));
