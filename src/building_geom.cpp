@@ -1678,7 +1678,14 @@ tquad_with_ix_t building_t::set_door_from_cube(cube_t const &c, bool dim, bool d
 					// open doors don't really block the player from entering or exiting stairs since they can be walked through or closed
 					if (interior->is_blocked_by_stairs_or_elevator(test_bcube, 0.0, 0, 1)) continue; // hits stairs or elevator; dmin=0, elevators_only=0, no_check_enter_exit=1
 					if (check_backroom_walls && interior->room_geom->cube_int_backrooms_walls(walls_test_bcube)) continue;
+					bool int_other_door(0);
 					
+					for (door_stack_t const &ds : interior->door_stacks) {
+						if (ds.get_true_bcube().intersects(c)) continue; // skip self
+						if (ds.get_open_door_path_bcube().intersects(test_bcube)) {int_other_door = 1; break;}
+					}
+					if (int_other_door) continue;
+
 					if (have_walkway_ext_door) { // check if too close to a walkway exit door or its exit sign
 						bool close_to_exit(0);
 
