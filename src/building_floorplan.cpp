@@ -929,9 +929,8 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 				// add central hallway if wall/hall len is at least enough to place 2-3 rooms; 50% chance if part is a basement; houses and small office buildings
 				bool const is_basement_room(has_basement() && part_id == (unsigned)basement_part_ix);
 				bool const add_hallway(is_first_split && csz[!wall_dim] > 1.5*min_split_len && (!is_basement_room || rgen.rand_bool()));
-				float const cur_split_thresh(min(min_split_len, max(min_wall_len, 0.9f*bcube.get_sz_dim(wall_dim))));
 
-				if (0 && !add_hallway && min(csz.x, csz.y) > 3.0*min_wall_len && rgen.rand_bool()) { // create a whirl pattern
+				if (!add_hallway && min(csz.x, csz.y) > 3.0*min_wall_len && rgen.rand_bool()) { // create a whirl pattern
 					cube_t cr(c), sr[4] = {c, c, c, c}; // center room and 4 side rooms (in CCW order)
 					bool is_valid(1);
 
@@ -981,7 +980,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 								if (room.d[d][0] > c.d[d][0]) {room.d[d][0] += wall_half_thick;}
 								if (room.d[d][1] < c.d[d][1]) {room.d[d][1] -= wall_half_thick;}
 							}
-							if (max(room.dx(), room.dy()) > 0.8*cur_split_thresh) {to_split.push_back(room);} // split sub-room
+							if (max(room.dx(), room.dy()) > min_split_len) {to_split.push_back(room);} // split sub-room
 							else {add_room(room, part_id);} // add whole sub-room
 						}
 						added_whirl = 1;
@@ -1075,7 +1074,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 					}
 				}
 				// split into two smaller rooms; ensure we can split at least once per dim
-				bool const do_split(csz[wall_dim] > cur_split_thresh);
+				bool const do_split(csz[wall_dim] > min(min_split_len, max(min_wall_len, 0.9f*bcube.get_sz_dim(wall_dim))));
 
 				for (unsigned d = 0; d < 2; ++d) { // still have space to split in other dim, add the two parts to the stack
 					split_cube_t c_sub(c);
@@ -1214,6 +1213,13 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 					bool const elevators_only(pref_split && ntries > 20); // allow blocking stairs if there's no other way to insert a door
 					int  const no_check_enter_exit((ntries > 5) ? (pref_conn ? 2 : 1) : 0); // no stairs enter/exit pad after first 5 tries, no enter/exit at all if pref_conn
 					if (interior->is_blocked_by_stairs_or_elevator(cand, stairs_elev_pad, elevators_only, no_check_enter_exit)) continue; // should we assert !pref_split?
+					// check for other nearby doorways
+					bool pos_valid(1);
+
+					for (door_stack_t const &ds : interior->door_stacks) {
+						if (ds.z1() < cand.z2() && ds.z2() > cand.z1() && ds.get_open_door_path_bcube().intersects(cand)) {pos_valid = 0; break;}
+					}
+					if (!pos_valid) continue;
 					was_split = 1;
 
 					// Note: this code doesn't work for multiple reasons but is left in for reference in case I figure this out later
