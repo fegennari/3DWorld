@@ -264,7 +264,7 @@
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <AdditionalIncludeDirectories>dependencies\meshoptimizer\src;dependencies\glew-2.0.0\include;Targa;dependencies\openal-soft\include\AL;dependencies\freealut\include;dependencies\libpng-1.2.20;dependencies\zlib-1.2.1;dependencies\tiff-4.3.0\libtiff;dependencies\glm;dependencies\freeglut-2.8.1\include\GL;dependencies\gli;src;dependencies\openal-soft\include;dependencies\stb;..\vcpkg\packages\assimp_x64-windows\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>dependencies\meshoptimizer\src;dependencies\glew-2.0.0\include;Targa;dependencies\openal-soft\include\AL;dependencies\freealut\include;dependencies\libpng-1.2.20;dependencies\zlib-1.2.11;dependencies\tiff-4.3.0\libtiff;dependencies\glm;dependencies\freeglut-2.8.1\include\GL;dependencies\gli;src;dependencies\openal-soft\include;dependencies\stb;..\vcpkg\packages\assimp_x64-windows\include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;ENABLE_PNG;ENABLE_TIFF;ENABLE_DDS;ENABLE_STB_IMAGE;ENABLE_ASSIMP;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -315,7 +315,7 @@
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <AdditionalIncludeDirectories>dependencies\meshoptimizer\src;dependencies\glew-2.0.0\include;Targa;dependencies\openal-soft\include\AL;dependencies\freealut\include;dependencies\libpng-1.2.20;dependencies\zlib-1.2.1;dependencies\tiff-4.3.0\libtiff;dependencies\glm;dependencies\freeglut-2.8.1\include\GL;dependencies\gli;src;dependencies\openal-soft\include;dependencies\stb;dependencies\assimp\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>dependencies\meshoptimizer\src;dependencies\glew-2.0.0\include;Targa;dependencies\openal-soft\include\AL;dependencies\freealut\include;dependencies\libpng-1.2.20;dependencies\zlib-1.2.11;dependencies\tiff-4.3.0\libtiff;dependencies\glm;dependencies\freeglut-2.8.1\include\GL;dependencies\gli;src;dependencies\openal-soft\include;dependencies\stb;dependencies\assimp\include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;ENABLE_JPEG;ENABLE_PNG;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -419,7 +419,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <WholeProgramOptimization>true</WholeProgramOptimization>
-      <AdditionalIncludeDirectories>dependencies\meshoptimizer\src;dependencies\glew-2.0.0\include;Targa;dependencies\openal-soft\include\AL;dependencies\freealut\include;dependencies\libpng-1.2.20;dependencies\zlib-1.2.1;dependencies\tiff-4.3.0\libtiff;dependencies\glm;dependencies\freeglut-2.8.1\include\GL;dependencies\gli;src;dependencies\openal-soft\include;dependencies\stb;..\vcpkg\packages\assimp_x64-windows\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>dependencies\meshoptimizer\src;dependencies\glew-2.0.0\include;Targa;dependencies\openal-soft\include\AL;dependencies\freealut\include;dependencies\libpng-1.2.20;dependencies\zlib-1.2.11;dependencies\tiff-4.3.0\libtiff;dependencies\glm;dependencies\freeglut-2.8.1\include\GL;dependencies\gli;src;dependencies\openal-soft\include;dependencies\stb;..\vcpkg\packages\assimp_x64-windows\include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_CONSOLE;ENABLE_PNG;ENABLE_TIFF;ENABLE_DDS;ENABLE_STB_IMAGE;ENABLE_ASSIMP;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
