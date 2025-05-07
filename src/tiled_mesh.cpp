@@ -2874,7 +2874,7 @@ void tile_draw_t::draw_tiles(int reflection_pass, bool enable_shadow_map) const 
 
 	if ((display_mode & 0x01) && !enable_shadow_map && !reflection_pass && draw_distant_water() && water_plane_z > terrain_zmin) {
 		bind_2d_texture(BLACK_TEX); // all snow? at least it's set to something valid
-		bind_texture_tu(WHITE_TEX, 15); // shadow_map texture, use something determinsitic (not that it matters visually)
+		select_texture(WHITE_TEX,    15); // shadow_map texture, use something determinsitic (not that it matters visually)
 		select_texture(FLAT_NMAP_TEX, 7); // normal_map texture
 		disable_shadow_maps(s);
 		int const loc(s.get_uniform_loc("htex_scale"));
