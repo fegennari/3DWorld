@@ -1487,6 +1487,9 @@ void tile_t::draw_scenery(shader_t &s, shader_t &vrs, bool draw_opaque, bool dra
 
 void tile_t::pre_draw_grass_flowers(shader_t &s, bool use_cloud_shadows) const {
 
+	assert(height_tid > 0);
+	assert(normal_tid > 0);
+	assert(shadow_tid > 0);
 	bind_texture_tu(height_tid, 2);
 	bind_texture_tu(normal_tid, 4);
 	bind_texture_tu(shadow_tid, 6);
@@ -1502,6 +1505,7 @@ unsigned tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool 
 	point const camera(get_camera_pos());
 	if (get_min_dist_to_pt(camera) > grass_thresh) return 0; // too far away to draw
 	pre_draw_grass_flowers(s, use_cloud_shadows);
+	assert(weight_tid > 0);
 	bind_texture_tu(weight_tid, 3);
 	unsigned const grass_block_dim(get_grass_block_dim());
 	assert(grass_blocks.size() == grass_block_dim*grass_block_dim);
@@ -2026,6 +2030,7 @@ void tile_t::draw_water(shader_t &s, float z) const {
 
 	if (!is_water_visible()) return;
 	float const xv1(get_xval(x1 + xoff - xoff2)), yv1(get_yval(y1 + yoff - yoff2)), xv2(xv1+(x2-x1)*deltax), yv2(yv1+(y2-y1)*deltay);
+	assert(height_tid > 0);
 	bind_texture_tu(height_tid, 2);
 	//bind_texture_tu(shadow_tid, 6); // Note: only needed if ENABLE_WATER_SHADOWS is enabled in the water plane shader
 	bind_and_setup_shadow_map(s); // okay if shadow maps haven't been created yet

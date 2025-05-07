@@ -37,6 +37,7 @@ extern gl_light_params_t gl_light_params[MAX_SHADER_LIGHTS];
 
 
 void set_one_texture(shader_t &s, unsigned tid, unsigned tu_id, const char *const name) {
+	assert(tid);
 	bind_texture_tu(tid, tu_id);
 	s.add_uniform_int(name, tu_id);
 }

@@ -371,6 +371,7 @@ unsigned get_empty_smap_tid(bool is_csm) {
 		char const zero_data[16] = {0}; // large enough for any type
 		if (is_csm) {glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, SMAP_INTERNAL_FORMAT, 1, 1, NUM_CSM_CASCADES, 0, GL_DEPTH_COMPONENT, SHADOW_MAP_DATATYPE, zero_data);} // 1x1 texel
 		else        {glTexImage2D(GL_TEXTURE_2D,       0, SMAP_INTERNAL_FORMAT, 1, 1,                   0, GL_DEPTH_COMPONENT, SHADOW_MAP_DATATYPE, zero_data);} // 1x1 texel
+		assert(empty_smap_tid > 0);
 	}
 	return empty_smap_tid;
 }

@@ -346,9 +346,8 @@ public:
 
 
 class indir_tex_mgr_t {
-	unsigned tid; // Note: owned by building_indir_light_mgr, not us
+	unsigned tid=0; // Note: owned by building_indir_light_mgr, not us
 public:
-	indir_tex_mgr_t() : tid(0) {}
 	bool enabled() const {return (tid > 0);}
 
 	bool create_for_building(building_t const &b, unsigned bix, point const &target) {

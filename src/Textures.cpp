@@ -1952,13 +1952,11 @@ void build_texture_mipmaps(unsigned tid, unsigned dim) {
 
 
 void texture_pair_t::free_context() {
-	free_texture(tids[0]);
-	free_texture(tids[1]);
+	for (unsigned d = 0; d < 2; ++d) {free_texture(tids[d]);}
 }
 void texture_pair_t::bind_texture() const {
 	assert(is_valid());
-	bind_texture_tu(tids[0], 0);
-	bind_texture_tu(tids[1], 1);
+	for (unsigned d = 0; d < 2; ++d) {bind_texture_tu(tids[d], d);}
 }
 void texture_pair_t::ensure_tid(unsigned tsize, bool mipmap) {
 	ensure_texture_loaded(tids[0], tsize, tsize, mipmap, 0, multisample); // color
