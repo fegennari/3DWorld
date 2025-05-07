@@ -275,7 +275,7 @@ void building_t::get_all_door_centers_for_room(room_t const &room, unsigned room
 }
 
 bool building_t::is_room_an_exit(cube_t const &room, int room_ix, float zval) const { // for living rooms, etc.
-	if (is_room_adjacent_to_ext_door(room, 1)) return 1; // front_door_only=1
+	if (is_room_adjacent_to_ext_door(room, zval, 1)) return 1; // front_door_only=1
 	if (!multi_family) return 0; // stairs check is only for multi-family houses
 	int const has_stairs(room_or_adj_room_has_stairs(room_ix, zval, 1, 0)); // inc_adj_rooms=1, check_door_open=0
 	return (has_stairs == 2); // only if adjacent to stairs
@@ -2284,7 +2284,7 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 	if (room.is_hallway || room.is_sec_bldg || room.is_office) return 0; // these can't be kitchens
 	if (!residential && rgen.rand_bool()) return 0; // some office buildings have kitchens, allow it half the time
 	// if it has an external door then reject the room half the time; most houses don't have a front door to the kitchen
-	if (is_room_adjacent_to_ext_door(room, 1) && (!allow_adj_ext_door || rgen.rand_bool())) return 0; // front_door_only=1
+	if (is_room_adjacent_to_ext_door(room, zval, 1) && (!allow_adj_ext_door || rgen.rand_bool())) return 0; // front_door_only=1
 	float const wall_thickness(get_wall_thickness());
 	cube_t room_bounds(get_walkable_room_bounds(room)), place_area(room_bounds);
 	place_area.expand_by(-0.25*wall_thickness); // common spacing to wall for appliances
@@ -2662,7 +2662,7 @@ bool building_t::add_livingroom_objs(rand_gen_t rgen, room_t const &room, float 
 	if ((is_house || is_apartment()) && (rgen.rand()%3) == 0) { // add fishtank on a tall table 33% of the time
 		add_fishtank_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area);
 	}
-	if (is_house && rgen.rand_float() < 0.75 && is_room_adjacent_to_ext_door(room)) {add_shoes_by_door(rgen, room, zval, room_id, tot_light_amt, objs_start);}
+	if (is_house && rgen.rand_float() < 0.75 && is_room_adjacent_to_ext_door(room, zval)) {add_shoes_by_door(rgen, room, zval, room_id, tot_light_amt, objs_start);}
 	if (room.is_single_floor && objs_start > 0) {replace_light_with_ceiling_fan(rgen, room, cube_t(), room_id, tot_light_amt, objs_start-1);} // light is prev placed object
 	return 1;
 }
@@ -2768,7 +2768,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 				// garage or shed - don't place shelves in front of door, but allow them against windows; basement - don't place against basement door
 				cube_t room_wall(room);
 				room_wall.d[dim][!dir] = room.d[dim][dir]; // shrink room to zero width along this wall
-				if (is_room_adjacent_to_ext_door(room_wall)) continue;
+				if (is_room_adjacent_to_ext_door(room_wall)) continue; // no zval needed
 			}
 			else if (is_house && !is_basement && has_int_windows() && classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT) {
 				// don't place shelves against exterior house walls in case there are windows
@@ -3681,7 +3681,7 @@ bool building_t::maybe_add_walkway_room_objs(rand_gen_t rgen, room_t const &room
 		if (w.conn_bldg != nullptr && w.conn_bldg->get_window_vspace() != floor_spacing) continue; // floors not aligned (shouldn't happen?)
 		float const door_width(get_office_ext_doorway_width());
 		bool const dir(room.get_center_dim(dim) < w.bcube.get_center_dim(dim)), has_door(w.has_ext_door(!dir));
-		if (has_door && !is_room_adjacent_to_ext_door(room)) continue; // not the room connected to the walkway
+		if (has_door && !is_room_adjacent_to_ext_door(room, zval)) continue; // not the room connected to the walkway
 		// update bcube_inc_rooms to include this room's length, so that lights and trim will be drawn when the player is in this room
 		// (and possibly other rooms bordering the walkway); applies to both rooms, even if there is no door
 		w.bcube_inc_rooms.union_with_cube_xy(room);

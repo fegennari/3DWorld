@@ -2866,7 +2866,7 @@ void building_t::create_two_story_tall_rooms(rand_gen_t &rgen) {
 		if (calc_num_floors(room, floor_spacing, floor_thickness) != 2)   continue; // two story rooms only
 		if (has_attic() && room.contains_cube_xy(interior->attic_access)) continue; // don't make the attic access unreachable
 		if (min(room.dx(), room.dy()) < min_tall_room_sz)                 continue; // room too small
-		if (!is_room_adjacent_to_ext_door(room)) continue; // only consider entrance rooms that may become living rooms
+		if (!is_room_adjacent_to_ext_door(room))                          continue; // only consider entrance rooms that may become living rooms
 		
 		// gather list of all connected doors on the upper floor
 		float const upper_floor_zval_thresh(room.z1() + 1.5*floor_spacing); // anything above this is definitely on the second floor

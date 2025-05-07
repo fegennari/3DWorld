@@ -1360,7 +1360,8 @@ bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &
 	if (room.has_elevator || (!room.is_ext_basement() && room.has_stairs_on_floor(floor_ix))) return 0; // assume light can come from stairs (not in ext basement) or open elevator
 
 	if (pos.z > ground_floor_z1 && (pos.z < ground_floor_z1 + floor_spacing || !walkways.empty())) { // on the ground floor or have walkways
-		if (is_room_adjacent_to_ext_door(room) && point_near_ext_door(pos, get_door_open_dist())) return 0; // handle windowless office building open exterior doors
+		// handle windowless office building open exterior doors; we don't really have a floor zval to pass into the first query
+		if (is_room_adjacent_to_ext_door(room) && point_near_ext_door(pos, get_door_open_dist())) return 0;
 	}
 	// check if all lights are off
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
@@ -3091,9 +3092,11 @@ bool building_t::is_room_above_ramp(cube_t const &room, float zval) const {
 	if (!has_pg_ramp()) return 0;
 	return (interior->pg_ramp.intersects_xy(room) && zval >= interior->pg_ramp.z2() && (zval - interior->pg_ramp.z2()) <= get_window_vspace());
 }
-bool building_t::is_room_adjacent_to_ext_door(cube_t const &room, bool front_door_only) const {
+bool building_t::is_room_adjacent_to_ext_door(cube_t const &room, float zval, bool front_door_only) const {
 	cube_t room_exp(room);
 	room_exp.expand_by_xy(get_wall_thickness());
+	// if zval was specified as nonzero, use it as the floor of the room, and calculate the ceiling
+	if (zval != 0.0) {set_cube_zvals(room_exp, zval, zval+get_floor_ceil_gap());}
 
 	for (tquad_with_ix_t const &d : doors) { // exterior doors
 		if (!d.is_exterior_door() || d.type == tquad_with_ix_t::TYPE_RDOOR) continue;

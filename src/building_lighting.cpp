@@ -2146,7 +2146,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			// if this light is in a room connected to a walkway door, use the part containing the room rather than the building bcube;
 			// that way a walkway connnecting to a recessed door (part edge inside bcube) will have a door that's properly lit
 			bool const ground_floor(lpos.z < ground_floor_z1 + window_vspacing);
-			maybe_walkway = (!ground_floor && check_pt_in_or_near_walkway(lpos, 0, 0, 1) && is_room_adjacent_to_ext_door(room));
+			maybe_walkway = (!ground_floor && check_pt_in_or_near_walkway(lpos, 0, 0, 1) && is_room_adjacent_to_ext_door(room, floor_z));
 			cube_t const &test_cube(maybe_walkway ? parts[room.part_id] : bcube);
 
 			for (unsigned d = 0; d < 2; ++d) {

@@ -49,9 +49,10 @@ bool building_t::can_be_bedroom_or_bathroom(room_t const &room, unsigned floor_i
 	
 	if (maybe_has_ext_door_this_floor(room.z1(), floor_ix)) {
 		// run special logic for bedrooms and bathrooms (private rooms) on the first floor (or office building walkway floor)
-		if (is_room_adjacent_to_ext_door(room)) return 0; // exterior door does not open into a bedroom/bathroom
+		float const floor_spacing(get_window_vspace()), zval(room.z1() + floor_ix*floor_spacing);
+		if (is_room_adjacent_to_ext_door(room, zval)) return 0; // exterior door does not open into a bedroom/bathroom
 		if (skip_conn_check) return 1;
-		bool const is_multi_floor(room.dz() > 1.5*get_window_vspace());
+		bool const is_multi_floor(room.dz() > 1.5*floor_spacing);
 		bool const has_stairs(is_multi_floor && !interior->stairwells.empty()); // more than one floor and stairs placement didn't fail
 
 		// check paths if there are stairs or an interior garage; skip for single floor houses since there may be no valid bed/bath placement with these constraints
@@ -68,8 +69,8 @@ bool building_t::can_be_bedroom_or_bathroom(room_t const &room, unsigned floor_i
 				room_t const &r(interior->rooms[i]);
 				if (r == room) {cur_room = i; continue;} // this room; we know it can't have stairs or an exterior door
 				if (r.is_sec_bldg || r.z2() <= ground_floor_z1) continue; // skip basement rooms, garages, and sheds
-				if (r.has_stairs_on_floor(floor_ix))  {stairs_rooms.push_back(i);}
-				if (is_room_adjacent_to_ext_door(r))  {door_rooms  .push_back(i);}
+				if (r.has_stairs_on_floor(floor_ix))       {stairs_rooms.push_back(i);}
+				if (is_room_adjacent_to_ext_door(r, zval)) {door_rooms  .push_back(i);}
 			}
 			if (is_multi_floor && stairs_rooms.empty()) {
 				if (!has_missing_stairs) {cout << "Building with missing stairs: " << bcube.str() << endl;}
@@ -680,11 +681,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			}
 			// check if this room is adjacent to an exterior/walkway door, and if so, make it a lounge
 			if (is_apt_or_hotel_room || r->is_office || (has_walkway && r->get_room_type(f) == RTYPE_NOTSET)) {
-				cube_t room_this_floor(*r);
-				set_cube_zvals(room_this_floor, z, (z + floor_height));
 				bool make_public(0);
 
-				if (has_walkway && is_room_adjacent_to_ext_door(room_this_floor)) { // connected to walkway door
+				if (has_walkway && is_room_adjacent_to_ext_door(*r, room_center.z)) { // connected to walkway door
 					// make this a lounge; but if this is a sub-room of an apartment or hotel room, then shouldn't we remove the walls and make the entire unit a lounge?
 					add_lounge_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, 0); // is_lobby=0
 					r->assign_to(RTYPE_LOUNGE, f);
@@ -1007,14 +1006,14 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			bool const room_type_was_not_set(r->get_room_type(f) == RTYPE_NOTSET);
 
 			if (room_type_was_not_set) { // attempt to assign it with an optional room type
-				if (is_ground_floor && is_room_adjacent_to_ext_door(*r)) { // entryway/lobby if on ground floor, has exterior door, and unassigned
+				if (is_ground_floor && is_room_adjacent_to_ext_door(*r, room_center.z)) { // entryway/lobby if on ground floor, has exterior door, and unassigned
 					if (is_house) {
 						add_entryway_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 						r->assign_to(RTYPE_ENTRY, f); // entryway; even if at the back door?
 					}
 					else { // office; office building lobby can have a whiteboard - is that okay?
 						// front door = lobby, back door = lounge, but both cases have lounge objects
-						bool const is_lobby(is_room_adjacent_to_ext_door(*r, 1));
+						bool const is_lobby(is_room_adjacent_to_ext_door(*r, room_center.z, 1));
 						r->assign_to((is_lobby ? (room_type)RTYPE_LOBBY : (room_type)RTYPE_LOUNGE), f);
 						if (!is_house) {add_lounge_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_lobby);}
 					}
