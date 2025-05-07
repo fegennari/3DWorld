@@ -1198,8 +1198,9 @@ void building_t::maybe_add_fire_escape(rand_gen_t &rgen) { // or ladder
 			} // for d
 		} // for p
 	}
-	// if no fire escape was added, maybe add a TYPE_LADDER to the roof between windows; only for hipped roofs, to avoid the gutter; skip houses with stacked parts
-	if (roof_type == ROOF_TYPE_HIPPED && rgen.rand_bool()) {
+	// if no fire escape was added, maybe add a TYPE_LADDER to the roof between windows; only for hipped roofs, to avoid the gutter;
+	// skip houses with stacked parts and multi-family houses as ladders may block exterior stairs
+	if (roof_type == ROOF_TYPE_HIPPED && !multi_family && rgen.rand_float() < 0.75) {
 		cube_t const &part(parts[0]); // add to first/primary part
 		unsigned const pref_dim_dir(rgen.rand() & 3);
 		float const window_h_border(get_window_h_border()), hwidth(0.3*get_doorway_width()), depth(0.3*hwidth);
@@ -2562,7 +2563,7 @@ bool building_t::check_ext_step_valid(cube_t const &c, unsigned ext_objs_start, 
 	check_cube.z2() += head_clearance;
 	vect_room_object_t &objs(interior->room_geom->objs);
 
-	// check for collisions with previous steps, balconies, and fire escapes
+	// check for collisions with previous steps, balconies, fire escapes, and ladders
 	for (auto i = objs.begin()+ext_objs_start; i != objs.end(); ++i) {
 		if ((i - objs.begin()) == exclude_ix) continue; // skip our starting step
 		cube_t no_block(*i);
