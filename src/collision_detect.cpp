@@ -19,7 +19,7 @@ float const CAMERA_MESH_DZ   = 0.1; // max dz on mesh
 
 // Global Variables
 bool camera_on_snow(0);
-int camera_coll_id(-1);
+int camera_coll_id(-1), last_fall_frame(0);
 float czmin(FAR_DISTANCE), czmax(-FAR_DISTANCE), coll_rmax(0.0);
 point camera_last_pos(all_zeros); // not sure about this, need to reset sometimes
 coll_obj_group coll_objects;
@@ -1699,6 +1699,7 @@ void play_camera_footstep_sound() { // tiled terrain mode
 	if (!(display_mode & 0x0100)) return;
 	if (player_in_water == 2)     return; // no footsteps when underwater
 	if (player_on_moving_ww || player_on_escalator) return; // player is moving, but may not be walking - no footsteps
+	if (last_fall_frame == frame_counter) return; // no footsteps when falling
 	static double fs_time(0.0);
 	static point last_pos(all_zeros), prev_frame_pos(all_zeros);
 	point const pos(get_camera_pos());
@@ -1794,7 +1795,7 @@ void force_onto_surface_mesh(point &pos) { // for camera
 				float const MAX_FALL_RATE = 2.0; // distance per tick in units of camera radius
 				float const fall_rate_mod(MAX_FALL_RATE*((player_in_water == 2) ? 0.05 : ((player_in_water == 1) ? 0.1 : 1.0))); // fall slower in water
 				float const fall_rate(-delta_rate);
-				if (fall_rate > fall_rate_mod) {pos.z -= delta_z*(fall_rate - fall_rate_mod)/fall_rate;}
+				if (fall_rate > fall_rate_mod) {pos.z -= delta_z*(fall_rate - fall_rate_mod)/fall_rate; last_fall_frame = frame_counter;}
 			}
 			else if (delta_z > 0.0 && pos.z != prev_zval) { // rising; only update when building coll changed zval
 				float const MAX_RISE_RATE = 2.0; // distance per tick in units of camera radius
