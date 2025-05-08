@@ -800,11 +800,12 @@ public:
 		tape_manager.clear();
 		if (!phone_is_ringing()) {phone_manager.hide_phone();} // auto close when put away
 	}
-	void add_item(room_object_t const &obj) {
+	bool add_item(room_object_t const &obj) { // returns true if item was added, and false if it was consumed
 		float health(0.0), drunk(0.0), liquid(0.0);
 		bool const bladder_was_full(bladder >= 0.9);
 		float const value(get_obj_value(obj));
 		room_object const type(obj.type);
+		bool added(0);
 
 		// items that are low value, small, or too strange/random don't count as being stolen
 		if (type != TYPE_BOOK && type != TYPE_FIRE_EXT && type != TYPE_LG_BALL && type != TYPE_TRASH && type !=TYPE_BOTTLE && type != TYPE_PAPER && type != TYPE_PEN &&
@@ -868,11 +869,13 @@ public:
 
 		if (type == TYPE_KEY) {
 			has_key |= (1 << obj.obj_id); // mark as having the key and record the color, but it doesn't go into the inventory or contribute to weight or value
+			added    = 1; // I guess?
 		}
-		else if (health == 0.0 && drunk == 0.0) { // print value and weight if item is not consumed
+		else if (health == 0.0 && drunk == 0.0) { // add + print value and weight if item is not consumed
 			float const weight(get_obj_weight(obj));
 			cur_value  += value;
 			cur_weight += weight;
+			added       = 1;
 			
 			if (obj.is_interactive()) {
 				carried.push_back(obj);
@@ -928,6 +931,7 @@ public:
 		}
 		if (!bladder_was_full && bladder >= 0.9f) {oss << "\nYou need to use the bathroom"; text_color = YELLOW;}
 		print_text_onscreen(oss.str(), text_color, 1.0, 3*TICKS_PER_SECOND, 0);
+		return added;
 	}
 	void add_custom_item(custom_item_t const &item) { // Note: no support for consumables, health, drunk, or interactive items
 		cur_value   += item.value;
@@ -1562,7 +1566,7 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 	}
 	if (!register_player_object_pickup(obj, at_pos)) return 0;
 	if (obj.type == TYPE_MACHINE && building.is_factory()) {set_factory_machine_seed_from_obj(obj);} // not yet active
-	remove_object(obj_id, building);
+	remove_object(obj_id, at_pos, building);
 	return 1;
 }
 
@@ -1983,13 +1987,12 @@ void building_room_geom_t::replace_with_hanging_wires(room_object_t &obj, room_o
 	obj = room_object_t(wire, TYPE_ELEC_WIRE, obj.room_id, dim, dir, wire_flags, obj.light_amt, SHAPE_CYLIN);
 	invalidate_draw_data_for_obj(obj);
 }
-void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) {
+void building_room_geom_t::remove_object(unsigned obj_id, point const &at_pos, building_t &building) {
 	room_object_t &obj(get_room_object_by_index(obj_id));
 	room_object_t const old_obj(obj); // deep copy
 	room_object const type(obj.type);
 	assert(type != TYPE_ELEVATOR); // elevators require special updates for drawing logic and cannot be removed at this time
-	player_inventory.add_item(obj);
-	bool const is_light(type == TYPE_LIGHT);
+	bool const added(player_inventory.add_item(obj)), is_light(type == TYPE_LIGHT);
 
 	if      (type == TYPE_PICTURE   && obj.taken_level == 0) {++obj.taken_level;} // take picture, leave frame
 	else if (type == TYPE_PIZZA_BOX && obj.taken_level == 0 && obj.is_open()) {++obj.taken_level;} // take pizza, leave box
@@ -2035,6 +2038,21 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 		room_object_t &light_obj(get_room_object_by_index(obj.obj_id));
 		if (light_obj.type == TYPE_LIGHT) {light_obj.remove();}
 		replace_with_hanging_wires(obj, old_obj, 0.6*building.get_trim_thickness(), 1); // vertical=1
+	}
+	else if (type == TYPE_BOTTLE && !added) { // consumed bottle
+		point dest(at_pos);
+		
+		if (building.get_zval_for_obj_placement(dest, 0.5*obj.get_max_dim_sz(), dest.z, 0)) {
+			obj.translate(dest - cube_bot_center(obj));
+			obj.obj_id |= BOTTLE_EMPTY_MASK; // now empty
+			obj.flags  |= RO_FLAG_ON_FLOOR | RO_FLAG_RAND_ROT; // on the floor, with a random orientation
+			obj.dim = (obj.obj_id & 1);
+			obj.dir = (obj.obj_id & 2);
+			float const delta(obj.dz() - 2.0*obj.get_radius()), xy_shift((obj.dir ? 1.0 : -1.0)*delta);
+			obj.z2() -= delta;
+			obj.d[obj.dim][obj.dir] += xy_shift;
+		}
+		else {obj.remove();}
 	}
 	else { // replace it with an invisible blocker that won't collide with anything
 		obj.remove();

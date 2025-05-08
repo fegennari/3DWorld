@@ -1364,7 +1364,7 @@ struct building_room_geom_t {
 	bool cube_intersects_moved_obj(cube_t const &c, int ignore_obj_id=-1) const;
 	bool open_nearest_drawer(building_t &building, point const &at_pos, vector3d const &in_dir, float range, bool pickup_item, bool check_only);
 	void replace_with_hanging_wires(room_object_t &obj, room_object_t const &old_obj, float wire_radius, bool vertical);
-	void remove_object(unsigned obj_id, building_t &building);
+	void remove_object(unsigned obj_id, point const &at_pos, building_t &building);
 	bool player_pickup_object(building_t &building, point const &at_pos, vector3d const &in_dir);
 	void set_factory_machine_seed(unsigned rseed1, unsigned rseed2);
 	void set_factory_machine_seed_from_obj(room_object_t const &obj) {set_factory_machine_seed(obj.item_flags, obj.obj_id);}
@@ -2565,6 +2565,7 @@ public:
 	bool point_in_or_above_pool(point const &pt) const;
 	bool set_float_height(point &pos, float radius, float ceil_zval, float density=0.5) const;
 	bool find_mirror_needing_reflection(vector3d const &xlate) const;
+	bool get_zval_for_obj_placement(point const &pos, float radius, float &zval, bool add_z_bias) const;
 	float get_elevator_floor_spacing(elevator_t            const &e) const {return ( e.in_mall       ? get_mall_floor_spacing() : get_window_vspace());}
 	float get_stairs_floor_spacing  (stairs_landing_base_t const &s) const {return ((s.in_mall == 1) ? get_mall_floor_spacing() : get_window_vspace());}
 	float get_room_floor_spacing    (room_t                const &r) const {return ( r.is_mall()     ? get_mall_floor_spacing() : get_window_vspace());}
@@ -2931,7 +2932,6 @@ private:
 	void update_pool_table(room_object_t &ball);
 	bool get_zval_for_pool_bottom(point const &pos, float &zval) const;
 	bool get_zval_of_floor(point const &pos, float radius, float &zval) const;
-	bool get_zval_for_obj_placement(point const &pos, float radius, float &zval, bool add_z_bias) const;
 	void register_player_death(point const &camera_bs);
 	void add_blood_decal(point const &pos, float radius, colorRGBA const &color=WHITE);
 	void add_broken_glass_to_floor(point const &pos, float radius);
