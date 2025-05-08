@@ -2211,7 +2211,7 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 
 	if (has_helipad) { // add helipad
 		tquad_t helipad(4); // quad
-		float const z(top.z2() + 0.01*window_vspacing); // slightly above the roof to avoid Z-fighting
+		float const z(top.z2() + 0.02*window_vspacing); // slightly above the roof to avoid Z-fighting
 		float const x1(top_center.x - helipad_radius), x2(top_center.x + helipad_radius), y1(top_center.y - helipad_radius), y2(top_center.y + helipad_radius);
 		bool const dir(rgen.rand_bool()); // R90 50% of the time
 		helipad.pts[ dir+0   ].assign(x1, y1, z);

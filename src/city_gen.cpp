@@ -1514,16 +1514,16 @@ public:
 					}
 					if (use_road_normal_maps) {set_road_normal_map();} // set normal maps for roads, parking lots, and driveways
 					dstate.draw_city_region(segs, b->ranges[TYPE_RSEG], b->quads[TYPE_RSEG], TYPE_RSEG); // road segments
-					dstate.draw_city_region(city_obj_placer.parking_lots, b->ranges[TYPE_PARK_LOT], b->quads[TYPE_PARK_LOT], TYPE_PARK_LOT); // parking lots
 
 					if (is_connector_road) { // draw road skirts
 						dstate.draw_city_region(segs,     b->ranges[TYPE_RSEG ], b->quads[TYPE_ROAD_SKIRT], TYPE_ROAD_SKIRT); // same ranges as the road, but a different type
 						dstate.draw_city_region(isecs[0], b->ranges[TYPE_ISEC2], b->quads[TYPE_TURN_SKIRT], TYPE_TURN_SKIRT);
 					}
-					if (!city_obj_placer.driveways.empty()) {
-						glPolygonOffset(-1.0, -1.0); // useful for avoiding z-fighting with grassy ground under driveways
+					if (!city_obj_placer.driveways.empty() || !city_obj_placer.parking_lots.empty()) {
+						glPolygonOffset(-1.0, -1.0); // useful for avoiding z-fighting with grassy ground under driveways and concrete under parking lots
 						glEnable(GL_POLYGON_OFFSET_FILL);
-						dstate.draw_city_region(city_obj_placer.driveways, b->ranges[TYPE_DRIVEWAY], b->quads[TYPE_DRIVEWAY], TYPE_DRIVEWAY); // driveways
+						dstate.draw_city_region(city_obj_placer.parking_lots, b->ranges[TYPE_PARK_LOT], b->quads[TYPE_PARK_LOT], TYPE_PARK_LOT); // parking lots
+						dstate.draw_city_region(city_obj_placer.driveways,    b->ranges[TYPE_DRIVEWAY], b->quads[TYPE_DRIVEWAY], TYPE_DRIVEWAY); // driveways
 						glDisable(GL_POLYGON_OFFSET_FILL);
 					}
 					if (use_road_normal_maps) {reset_road_normal_map();}

@@ -1530,6 +1530,11 @@ hcap_space_t::hcap_space_t(point const &pos_, float radius_, bool dim_, bool dir
 /*static*/ void hcap_space_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	assert(!shadow_only); // not drawn in the shadow pass
 	select_texture(get_texture_by_name("roads/handicap_parking.jpg"));
+	glPolygonOffset(-2.0, -2.0); // double the offset to put on top of parking lots
+	glEnable(GL_POLYGON_OFFSET_FILL);
+}
+/*static*/ void hcap_space_t::post_draw(draw_state_t &dstate, bool shadow_only) {
+	glDisable(GL_POLYGON_OFFSET_FILL);
 }
 void draw_textured_quad_plus_z(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, cube_t const &bcube, bool dim, bool dir) {
 	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
@@ -2258,14 +2263,17 @@ parking_solar_t::parking_solar_t(cube_t const &c, bool dim_, bool dir_, unsigned
 }
 void parking_solar_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	// draw roof and solar panel
+	unsigned const vs1(qbds.qbd.verts.size()), vs2(qbds.untex_qbd.verts.size());
 	float const height(bcube.dz());
 	cube_t roof(bcube);
 	roof.z1() = bcube.z2() - 0.05*height;
-	cube_t panel(roof);
-	panel.z2() += 0.01*height; // slightly above the roof to prevent Z-fighting
-	panel.expand_by_xy(-0.04*height); // small shrink to create a border
-	unsigned const vs1(qbds.qbd.verts.size()), vs2(qbds.untex_qbd.verts.size());
-	dstate.draw_cube(qbds.qbd,       panel, WHITE,   1, 1.0/height, 3, 0, 0, 0, 1.0, 1.0, 1.0, 0, 1); // top surface only; no_cull=1 since it's rotated
+
+	if (!shadow_only) { // panel is not shadow casting
+		cube_t panel(roof);
+		panel.z2() += 0.005*height + 1.0E-4*p2p_dist(pos, dstate.camera_bs); // slightly above the roof to prevent Z-fighting, more when the player is far away
+		panel.expand_by_xy(-0.04*height); // small shrink to create a border
+		dstate.draw_cube(qbds.qbd,   panel, WHITE,   1, 1.0/height, 3, 0, 0, 0, 1.0, 1.0, 1.0, 0, 1); // top surface only; no_cull=1 since it's rotated
+	}
 	dstate.draw_cube(qbds.untex_qbd, roof,  LT_GRAY, 0, 0.0,        0, 0, 0, 0, 1.0, 1.0, 1.0, 0, 1); // draw all sides; no_cull=1 since it's rotated
 	// rotate into place
 	float const angle(0.25*(dim ? -1.0 : 1.0)*(height/get_length()));
@@ -2598,8 +2606,9 @@ void park_path_t::calc_bcube_bsphere() {
 	select_texture(get_texture_by_name("roads/concrete.jpg"));
 }
 void park_path_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
+	assert(!shadow_only);
 	assert(pts.size() >= 2);
-	float const tscale(0.5/hwidth);
+	float const tscale(0.5/hwidth), z_offset(1.0E-4*p2p_dist(pos, dstate.camera_bs));
 	vector3d prev_ortho;
 	point prev_lo, prev_hi;
 	vert_norm_tc_color vert;
@@ -2607,7 +2616,8 @@ void park_path_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_
 	vert.set_c4(color);
 
 	for (unsigned i = 0; i < pts.size(); ++i) {
-		point const &cur(pts[i]);
+		point cur(pts[i]);
+		cur.z += z_offset; // to reduce Z-fighting
 		vector3d const ortho((i+1 == pts.size()) ? prev_ortho : cross_product((pts[i+1] - cur), plus_z).get_norm());
 		vector3d const v_side(hwidth*((i == 0) ? ortho : (ortho + prev_ortho).get_norm()));
 		point const lo(cur - v_side), hi(cur + v_side);
