@@ -57,6 +57,7 @@ float const MALL_FLOOR_HEIGHT      = 2.0; // as a multiple of normal building fl
 float const CEILING_BEAM_THICK     = 2.5; // as a multiple of wall thickness
 float const BACKSPLASH_HEIGHT      = 0.33; // relative to cabinet height
 
+unsigned const BOTTLE_EMPTY_MASK= 192; // empty if both bits 6 and 7 are set
 unsigned const NUM_CHAIR_COLORS = 13;
 unsigned const MAX_BCASE_BOOKS  = 48; // limited by available bit flags
 unsigned const NUM_BOOK_COLORS  = 16;
@@ -131,20 +132,20 @@ typedef vector<sphere_t> vect_sphere_t;
 
 struct bottle_params_t {
 	std::string name, texture_fn;
-	colorRGBA glass_color, liquid_color;
+	colorRGBA glass_color, empty_color, liquid_color; // glass_color is filled glass or plastic, while empty_color is for empty bottles
 	float value, label_tscale;
-	bottle_params_t(std::string const &n, std::string const &fn, colorRGBA const &gc, colorRGBA const &lc, float v, float ts) :
-		name(n), texture_fn(fn), glass_color(gc), liquid_color(lc), value(v), label_tscale(ts) {}
+	bottle_params_t(std::string const &n, std::string const &fn, colorRGBA const &gc, colorRGBA const &ec, colorRGBA const &lc, float v, float ts) :
+		name(n), texture_fn(fn), glass_color(gc), empty_color(ec), liquid_color(lc), value(v), label_tscale(ts) {}
 };
 enum {BOTTLE_TYPE_WATER=0, BOTTLE_TYPE_COKE, BOTTLE_TYPE_BEER, BOTTLE_TYPE_WINE, BOTTLE_TYPE_POISON, BOTTLE_TYPE_MEDS, NUM_BOTTLE_TYPES};
 // Note: we could add colorRGBA(0.8, 0.9, 1.0, 0.4) for water bottles, but transparent objects require removing interior faces such as half of the sphere
 bottle_params_t const bottle_params[NUM_BOTTLE_TYPES] = {
-	bottle_params_t("bottle of water",    "interiors/arrowhead_logo.jpg", colorRGBA(0.4, 0.7, 1.0 ), colorRGBA(0.0,  0.5,  1.0, 0.0), 1.0,  1.0),
-	bottle_params_t("bottle of Coke",     "interiors/coke_label.jpg",     colorRGBA(0.2, 0.1, 0.05), colorRGBA(0.22, 0.11, 0.06),     1.0,  1.0),
-	bottle_params_t("bottle of beer",     "interiors/heineken_label.jpg", colorRGBA(0.1, 0.4, 0.1 ), colorRGBA(0.5,  0.4,  0.1 ),     3.0,  2.0),
-	bottle_params_t("bottle of wine",     "interiors/wine_label.jpg",     BLACK,                     colorRGBA(0.4,  0.0,  0.1 ),     10.0, 2.0),
-	bottle_params_t("bottle of poison",   "yuck.png",                     BLACK,                     BLACK,                           5.0,  2.0),
-	bottle_params_t("bottle of medicine", "interiors/magenta_cross.png",  LT_BLUE,                   colorRGBA(0.2,  0.0,  0.7 ),     20.0, 1.0),
+	bottle_params_t("bottle of water",    "interiors/arrowhead_logo.jpg", colorRGBA(0.4, 0.7, 1.0 ), colorRGBA(0.8,  0.9, 1.0 ), colorRGBA(0.0,  0.5,  1.0, 0.0), 1.0,  1.0),
+	bottle_params_t("bottle of Coke",     "interiors/coke_label.jpg",     colorRGBA(0.2, 0.1, 0.05), colorRGBA(1.0,  0.9, 0.8 ), colorRGBA(0.22, 0.11, 0.06),     1.0,  1.0),
+	bottle_params_t("bottle of beer",     "interiors/heineken_label.jpg", colorRGBA(0.1, 0.4, 0.1 ), colorRGBA(0.05, 0.4, 0.05), colorRGBA(0.5,  0.4,  0.1 ),     3.0,  2.0),
+	bottle_params_t("bottle of wine",     "interiors/wine_label.jpg",     BLACK,                     BLACK,                      colorRGBA(0.4,  0.0,  0.1 ),     10.0, 2.0),
+	bottle_params_t("bottle of poison",   "yuck.png",                     BLACK,                     BLACK,                      BLACK,                           5.0,  2.0),
+	bottle_params_t("bottle of medicine", "interiors/magenta_cross.png",  colorRGBA(0.5, 0.4, 0.85), LT_BLUE,                    colorRGBA(0.2,  0.0,  0.7 ),     20.0, 1.0),
 };
 
 struct drink_can_params_t {
@@ -746,7 +747,7 @@ struct room_object_t : public oriented_cube_t { // size=68
 	bool is_sink_type () const {return (type == TYPE_SINK || type == TYPE_KSINK || type == TYPE_BRSINK || type == TYPE_VANITY);}
 	bool is_obj_model_type() const {return (type >= TYPE_TOILET && type < NUM_ROBJ_TYPES);}
 	bool is_small_closet() const {return (type == TYPE_CLOSET && get_width() < 1.2*dz());}
-	bool is_bottle_empty() const {return ((obj_id & 192) == 192);} // empty if both bits 6 and 7 are set; also applies to drink cans
+	bool is_bottle_empty() const {return ((obj_id & BOTTLE_EMPTY_MASK) == BOTTLE_EMPTY_MASK);} // also applies to drink cans
 	bool desk_has_drawers()const {return (((room_id & 3) || has_extra()) && get_width() > 1.5*get_depth());} // 75% of the time, if wide enough
 	bool is_glass_table () const {return (type == TYPE_TABLE && is_house() && (obj_id & 1));} // 50% chance if in a house
 	bool is_parked_car  () const {return (type == TYPE_COLLIDER && (flags & RO_FLAG_FOR_CAR));}
@@ -788,7 +789,7 @@ struct room_object_t : public oriented_cube_t { // size=68
 	int get_food_box_tid() const;
 	std::string const &get_food_box_name() const;
 	int get_model_id() const;
-	void set_as_bottle(unsigned rand_id, unsigned max_type=NUM_BOTTLE_TYPES-1, bool no_empty=0, unsigned exclude_mask=0);
+	void set_as_bottle(unsigned rand_id, unsigned max_type=NUM_BOTTLE_TYPES-1, bool no_empty=0, unsigned exclude_mask=0, bool make_empty=0);
 	void remove() {type = TYPE_BLOCKER; flags = (RO_FLAG_NOCOLL | RO_FLAG_INVIS);} // replace it with an invisible blocker that won't collide with anything
 	colorRGBA get_color() const;
 	colorRGBA get_model_color() const;

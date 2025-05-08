@@ -3102,8 +3102,7 @@ void building_t::add_floor_clutter_objs(rand_gen_t &rgen, room_t const &room, cu
 			avoid.push_back(bc);
 			objs.emplace_back(bottle, TYPE_BOTTLE, room_id, dim, dir, flags, tot_light_amt, SHAPE_CYLIN);
 			room_object_t &bottle_obj(objs.back());
-			bottle_obj.set_as_bottle(rgen.rand()); // all bottle types
-			bottle_obj.obj_id |= 192; // always empty - set both empty bits
+			bottle_obj.set_as_bottle(rgen.rand(), NUM_BOTTLE_TYPES-1, 0, 0, 1); // all bottle types; make_empty=1
 
 			if (fallen_over && rgen.rand_bool()) { // maybe add a stain the same color as the liquid in the bottle
 				colorRGBA const color(bottle_params[bottle_obj.get_bottle_type()].liquid_color);

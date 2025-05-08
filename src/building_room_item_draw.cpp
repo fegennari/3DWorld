@@ -914,13 +914,15 @@ rgeom_mat_t &building_room_geom_t::get_scratched_metal_material(float tscale, bo
 	return get_material(tex, inc_shadows, dynamic, small, 0, exterior);
 }
 
-void room_object_t::set_as_bottle(unsigned rand_id, unsigned max_type, bool no_empty, unsigned exclude_mask) {
+void room_object_t::set_as_bottle(unsigned rand_id, unsigned max_type, bool no_empty, unsigned exclude_mask, bool make_empty) {
 	assert(max_type > 0 && max_type < NUM_BOTTLE_TYPES);
 	obj_id = (uint16_t)rand_id;
 	// cycle with a prime number until a valid type is selected; it's up to the caller to not exclude everything and make this infinite loop
 	while (get_bottle_type() > max_type || ((1 << get_bottle_type()) & exclude_mask)) {obj_id += 13;}
-	if (no_empty) {obj_id &= 127;} // strip off second empty bit
-	color  = bottle_params[get_bottle_type()].glass_color;
+	if      (no_empty  ) {obj_id &= 127;} // strip off second empty bit
+	else if (make_empty) {obj_id |= BOTTLE_EMPTY_MASK;}
+	bottle_params_t const &bp(bottle_params[get_bottle_type()]);
+	color = (is_bottle_empty() ? bp.empty_color : bp.glass_color);
 }
 
 void building_room_geom_t::create_static_vbos(building_t const &building) {
