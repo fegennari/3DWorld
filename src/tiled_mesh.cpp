@@ -100,11 +100,12 @@ void interpolate_over_time(float &val, float target_val, float transition_secs, 
 
 
 float get_tt_fog_scale() {
-	// lower fog distance when rainy/cloudy; very low when player is in the extended basement
+	// lower fog distance when rainy/cloudy; very low when player is in the extended basement but not mall;
+	// changes exponentially when inside a building basement
 	static float fog_scale(1.0); // lower is denser fog
 	static int last_update_frame(0);
 	float const target_fog_scale((player_in_basement == 3 && !player_in_mall) ? 0.01 : (is_cloudy ? 0.25 : 1.0));
-	float const change_rate(camera_in_building ? 0.1/(fog_scale*fog_scale) : 1.0); // change exponentially when inside a building
+	float const change_rate(camera_in_building ? (player_in_basement ? 0.1/(fog_scale*fog_scale) : 0.1) : 1.0);
 	interpolate_over_time(fog_scale, target_fog_scale, change_rate, last_update_frame);
 	return fog_scale;
 }
