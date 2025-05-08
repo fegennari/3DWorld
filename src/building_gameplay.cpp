@@ -921,7 +921,7 @@ public:
 			}
 			print_value_and_weight(oss, value, get_obj_weight(obj));
 		}
-		else { // add one drink to the bladder, 25% of capacity
+		else if (liquid > 0.0) { // add one drink to the bladder, 25% of capacity
 			bladder = min(1.0f, (bladder + 0.25f));
 		}
 		if (drunk > 0.0) {
