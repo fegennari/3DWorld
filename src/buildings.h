@@ -56,6 +56,7 @@ float const ESCALATOR_SPEED        = 1.0/TICKS_PER_SECOND; // in steps per tick
 float const MALL_FLOOR_HEIGHT      = 2.0; // as a multiple of normal building floor height
 float const CEILING_BEAM_THICK     = 2.5; // as a multiple of wall thickness
 float const BACKSPLASH_HEIGHT      = 0.33; // relative to cabinet height
+float const LOCKER_BOT_SHELF_HEIGHT= 0.67; // relative to full height
 
 unsigned const BOTTLE_EMPTY_MASK= 192; // empty if both bits 6 and 7 are set
 unsigned const NUM_CHAIR_COLORS = 13;

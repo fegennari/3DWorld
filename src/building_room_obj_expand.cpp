@@ -1366,18 +1366,19 @@ void building_room_geom_t::expand_locker(room_object_t const &c) {
 
 	for (unsigned level = 0; level < 2; ++level) { // {bottom, top}
 		cube_t place_area(interior);
-		if (level == 0) {place_area.z2() -= 0.33*height + 0.5*wall_thickness;} // lower level; matches drawing code
-		else            {place_area.z1() += 0.67*height + 0.5*wall_thickness;} // upper level; matches drawing code
+		if (level == 0) {place_area.z2() -= (1.0 - LOCKER_BOT_SHELF_HEIGHT)*height + 0.5*wall_thickness;} // lower level; matches drawing code
+		else            {place_area.z1() +=        LOCKER_BOT_SHELF_HEIGHT *height + 0.5*wall_thickness;} // upper level; matches drawing code
+
 		// add books; stacked up to 4 high; tag with RO_FLAG_USED to indicate school subject books
 		if (add_row_of_cubes(c, place_area, width, depth, 0.15*depth, 0.0, TYPE_BOOK, (flags | RO_FLAG_USED), expanded_objs, rgen, !dir, 1, 4) > 0) {
-			float const orig_z2(interior.z2());
+			float const orig_z2(place_area.z2());
 			place_area = expanded_objs.back(); // top book
 			set_cube_zvals(place_area, place_area.z2(), orig_z2); // space above the book
 		}
-		unsigned const num_obj_types = 5;
-		unsigned const obj_types[num_obj_types] = {TYPE_NONE, TYPE_BOTTLE, TYPE_DRINK_CAN, TYPE_PHONE, TYPE_TRASH}; // TYPE_SHOE?
+		unsigned const num_obj_types(6), num_sel_obj_types(level ? 5 : 6); // teeshirts only on the (larger) bottom
+		unsigned const obj_types[num_obj_types] = {TYPE_NONE, TYPE_BOTTLE, TYPE_DRINK_CAN, TYPE_PHONE, TYPE_TRASH, TYPE_TEESHIRT};
 
-		switch (obj_types[rgen.rand()%num_obj_types]) {
+		switch (obj_types[rgen.rand()%num_sel_obj_types]) {
 		case TYPE_NONE:      break; // empty
 		case TYPE_BOTTLE:    place_bottle_on_obj(rgen, place_area, expanded_objs, vspace, c.room_id, c.light_amt, BOTTLE_TYPE_COKE,    vect_cube_t(), 1); break; // at_z1=1
 		case TYPE_DRINK_CAN: place_dcan_on_obj  (rgen, place_area, expanded_objs, vspace, c.room_id, c.light_amt, DRINK_CAN_TYPE_COKE, vect_cube_t(), 1); break; // at_z1=1
@@ -1399,6 +1400,17 @@ void building_room_geom_t::expand_locker(room_object_t const &c) {
 			colorRGBA const color(trash_colors[rgen.rand() % NUM_TRASH_COLORS]);
 			expanded_objs.emplace_back(trash, TYPE_TRASH, c.room_id, rgen.rand_bool(), rgen.rand_bool(), RO_FLAG_NOCOLL, c.light_amt, SHAPE_SPHERE, color);
 			set_obj_id(expanded_objs);
+			break;
+		}
+		case TYPE_TEESHIRT: { // vertical
+			float const shirt_width(sqrt(width*width + depth*depth)*rgen.rand_uniform(0.9, 0.95)), shirt_len(shirt_width*rgen.rand_uniform(1.1, 1.3));
+			if (place_area.dz() < shirt_len) break; // not enough vertical space for a shirt
+			cube_t shirt;
+			set_cube_zvals(shirt, place_area.z2()-shirt_len, place_area.z2());
+			set_wall_width(shirt, c.get_center_dim( dim), 0.01*shirt_width,  dim); // set thickness
+			set_wall_width(shirt, c.get_center_dim(!dim), 0.50*shirt_width, !dim); // set width
+			colorRGBA const &color(TSHIRT_COLORS[rgen.rand()%NUM_TSHIRT_COLORS]);
+			expanded_objs.emplace_back(shirt, TYPE_TEESHIRT, c.room_id, c.dim, c.dir, RO_FLAG_HANGING, c.light_amt, SHAPE_CUBE, color, rgen.rand());
 			break;
 		}
 		default: assert(0);
