@@ -46,6 +46,9 @@ unsigned get_couch_cubes(room_object_t const &c, cube_t cubes[4]);
 unsigned get_cashreg_cubes(room_object_t const &c, cube_t cubes[2]);
 void get_fishtank_cubes(room_object_t const &c, cube_t sides[4], cube_t &substrate, cube_t &lid, cube_t &light);
 unsigned get_machine_part_cubes(room_object_t const &c, float floor_ceil_gap, cube_t cubes[4]);
+vect_cube_t const &get_cabinet_interior_cubes(room_object_t const &c, float wall_thickness, float z1_adj, float back_adj, float shelf_height);
+float get_med_cab_wall_thickness(room_object_t const &c);
+float get_locker_wall_thickness (room_object_t const &c);
 
 bool check_indir_enabled(bool in_basement, bool in_attic) {
 	if (in_basement) return INDIR_BASEMENT_EN;
@@ -489,6 +492,16 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			cube_t C(get_true_room_obj_bcube(*c));
 			C.expand_in_dim(c->dim, -0.25*C.get_sz_dim(c->dim)); // very narrow
 			cc.emplace_back(C, color);
+		}
+		// handle open medicine cabinets and lockers; should they always be treated as open? should the open doors be included?
+		else if (type == TYPE_MED_CAB && c->is_open()) {
+			vect_cube_t const &cubes(get_cabinet_interior_cubes(*c, get_med_cab_wall_thickness(*c), 0.0, 0.0, 0.5));
+			add_colored_cubes(cubes, color, ext_bcube, cc);
+		}
+		else if (type == TYPE_LOCKER && c->is_open()) {
+			float const wall_thickness(get_locker_wall_thickness(*c));
+			vect_cube_t const &cubes(get_cabinet_interior_cubes(*c, wall_thickness, 0.02*c->dz(), 1.5*wall_thickness, LOCKER_BOT_SHELF_HEIGHT));
+			add_colored_cubes(cubes, color, ext_bcube, cc);
 		}
 		else { // single cube
 			cube_t bc(*c); // handle 3D models that don't fill the entire cube

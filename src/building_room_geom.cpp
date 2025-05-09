@@ -1586,9 +1586,7 @@ cube_t get_open_door_bcube(room_object_t const &c, float thickness, bool hinge_s
 	bc.d[ c.dim][ c.dir     ] += (c.dir ? 1.0 : -1.0)*(c.get_width() - thickness); // expand outward
 	return bc;
 }
-void building_room_geom_t::add_cabinet_with_open_door(room_object_t const &c, cube_t const &door, colorRGBA const &color,
-	float wall_thickness, unsigned front_face_mask, float z1_adj, float back_adj, float shelf_height)
-{
+vect_cube_t const &get_cabinet_interior_cubes(room_object_t const &c, float wall_thickness, float z1_adj, float back_adj, float shelf_height) {
 	cube_t outside(c), inside(c);
 	inside.expand_by(-wall_thickness); // shrink sides by wall thickness
 	inside.z1() += z1_adj;
@@ -1602,6 +1600,12 @@ void building_room_geom_t::add_cabinet_with_open_door(room_object_t const &c, cu
 	set_cube_zvals(cubes.back(), inside.z2(), outside.z2()); // top
 	cubes.push_back(inside);
 	set_wall_width(cubes.back(), (inside.z1() + shelf_height*inside.dz()), 0.5*wall_thickness, 2); // middle shelf
+	return cubes;
+}
+void building_room_geom_t::add_cabinet_with_open_door(room_object_t const &c, cube_t const &door, colorRGBA const &color,
+	float wall_thickness, unsigned front_face_mask, float z1_adj, float back_adj, float shelf_height)
+{
+	vect_cube_t const &cubes(get_cabinet_interior_cubes(c, wall_thickness, z1_adj, back_adj, shelf_height));
 	rgeom_mat_t &mat(get_untextured_material(1)); // shadowed
 	mat.add_cube_to_verts(door, color, zero_vector, ~front_face_mask); // non-front sides of door; always +dir
 
