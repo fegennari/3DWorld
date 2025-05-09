@@ -2154,6 +2154,10 @@ void building_room_geom_t::add_pen_pencil_marker(room_object_t const &c) {
 	add_pen_pencil_marker_to_material(c, get_untextured_material(0, 0, 1)); // unshadowed, small
 }
 
+void building_room_geom_t::add_test_tube(room_object_t const &c) {
+	// TODO: liquid (blood) in a cylinder with a rounded end and a colored cap
+}
+
 int get_flooring_texture(room_object_t const &c) {
 	switch (c.item_flags) { // select texture for flooring type
 	case FLOORING_MARBLE:   return MARBLE_TEX;

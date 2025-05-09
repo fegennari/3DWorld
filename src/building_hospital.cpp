@@ -396,9 +396,11 @@ bool building_t::add_exam_room_objs(rand_gen_t rgen, room_t &room, float zval, u
 	if (!try_place_hospital_bed(rgen, room, zval, room_id, tot_light_amt, objs_start, 4, place_area)) return 0; // pref_orient=4 (unset)
 	vect_room_object_t &objs(interior->room_geom->objs);
 	colorRGBA const &chair_color(chair_colors[rgen.rand() % NUM_CHAIR_COLORS]);
+	
 	// should the room be re-assigned if we can't fit a desk? this would require removing the bed
-	add_desk_to_room(rgen, room, vect_cube_t(), chair_color, zval, room_id, tot_light_amt, objs_start, 0, 0, 0, 1, 1); // force_computer=1, add_phone=1
-
+	if (add_desk_to_room(rgen, room, vect_cube_t(), chair_color, zval, room_id, tot_light_amt, objs_start, 0, 0, 0, 1, 1)) { // force_computer=1, add_phone=1
+		// TODO: maybe add TYPE_TESTTUBE
+	}
 	if (rgen.rand_bool()) { // add a simple sink
 		place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, room, 0.45, rgen, zval, room_id, tot_light_amt, room_area, objs_start, 0.6);
 	}

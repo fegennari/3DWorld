@@ -208,6 +208,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_VENDING   ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 1, 8000.0,545.0, "vending machine"); // specs from https://vendtek.com/product/crane-bevmax-classic-model-3800/
 	bldg_obj_types[TYPE_MED_CAB   ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 40.0,  10.0,  "medicine cabinet");
 	bldg_obj_types[TYPE_LOCKER    ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1, 100.0, 50.0,  "locker");
+	bldg_obj_types[TYPE_TESTTUBE  ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 10.0,  0.05,  "tube of blood"); // blood, until we have different liquids
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");
@@ -811,7 +812,8 @@ public:
 		if (type != TYPE_BOOK && type != TYPE_FIRE_EXT && type != TYPE_LG_BALL && type != TYPE_TRASH && type !=TYPE_BOTTLE && type != TYPE_PAPER && type != TYPE_PEN &&
 			type != TYPE_PENCIL && type != TYPE_HANGER_ROD && type != TYPE_TPROLL && type != TYPE_MARKER && type != TYPE_BUTTON && type != TYPE_PLATE && type != TYPE_TAPE &&
 			type != TYPE_FEXT_MOUNT && type != TYPE_FEXT_SIGN && type != TYPE_PIZZA_BOX && type != TYPE_PIZZA_TOP && type != TYPE_POOL_BALL && type != TYPE_DRINK_CAN &&
-			type != TYPE_KEY && type != TYPE_HANGER && type != TYPE_PADLOCK && type != TYPE_BANANA && type != TYPE_BAN_PEEL && type != TYPE_ELEC_WIRE && type != TYPE_ERASER)
+			type != TYPE_KEY && type != TYPE_HANGER && type != TYPE_PADLOCK && type != TYPE_BANANA && type != TYPE_BAN_PEEL && type != TYPE_ELEC_WIRE && type != TYPE_ERASER &&
+			type != TYPE_TESTTUBE)
 		{
 			rooms_stolen_from.insert(obj.room_id); // only if was_expanded?
 		}

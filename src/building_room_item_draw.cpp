@@ -1082,6 +1082,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_PAPER:     add_paper    (c); break;
 		case TYPE_PAINTCAN:  add_paint_can(c); break;
 		case TYPE_PEN: case TYPE_PENCIL: case TYPE_MARKER: add_pen_pencil_marker(c); break;
+		case TYPE_TESTTUBE:  add_test_tube (c); break;
 		case TYPE_LG_BALL:   add_lg_ball   (c); break;
 		case TYPE_HANGER_ROD:add_hanger_rod(c); break;
 		case TYPE_DRAIN:     add_drain_pipe(c); break;
