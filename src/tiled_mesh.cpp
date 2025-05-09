@@ -2335,11 +2335,11 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 
 		if (rel_dist <= DRAW_DIST_TILES) {
 			min_eq(terrain_zmin, i->second->get_zmin());
-			if (!camera_surf_collide) {min_camera_dist = min(min_camera_dist, i->second->get_min_dist_to_pt(cpos, 0, 0));}
+			if (!camera_surf_collide) {min_eq(min_camera_dist, i->second->get_min_dist_to_pt(cpos, 0, 0));} // xy_only=0, mesh_only=0
 			create_buildings_tile(i->first.x, i->first.y, 0); // create, or re-create if create_buildings_first; should already be flat
 		}
 		else if (rel_dist > CLEAR_DIST_TILES) {remove_buildings_tile(i->first.x, i->first.y);}
-	}
+	} // for i
 	if (DEBUG_TILES && (tiles.size() != init_tiles || num_erased > 0)) {
 		cout << "update: tiles: " << init_tiles << " to " << tiles.size() << ", erased: " << num_erased << endl;
 	}

@@ -47,7 +47,7 @@ string lighting_update_text;
 
 extern bool combined_gu, have_sun, clear_landscape_vbo, show_lightning, spraypaint_mode, enable_depth_clamp, enable_multisample, water_is_lava;
 extern bool user_action_key, flashlight_on, enable_clip_plane_z, begin_motion, config_unlimited_weapons, start_maximized, show_bldg_pickup_crosshair;
-extern bool can_do_building_action, enable_tt_model_indir, pre_load_full_tiled_terrain, player_custom_start_pos, player_in_tunnel;
+extern bool can_do_building_action, enable_tt_model_indir, pre_load_full_tiled_terrain, player_custom_start_pos, player_in_tunnel, camera_in_building;
 extern unsigned inf_terrain_fire_mode, reflection_tid;
 extern int auto_time_adv, camera_flight, reset_timing, run_forward, window_width, window_height, voxel_editing, UNLIMITED_WEAPONS, player_in_basement;
 extern int advanced, b2down, dynamic_mesh_scroll, spectate, animate2, used_objs, disable_inf_terrain, DISABLE_WATER, can_pickup_bldg_obj, player_in_water;
@@ -1262,7 +1262,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	camera_mode   = 1; // walking on ground
 	float min_camera_dist(0.0);
 	float const terrain_zmin(update_tiled_terrain(min_camera_dist));
-	bool const change_near_far_clip(!camera_surf_collide && min_camera_dist > 0.0 && !do_zoom);
+	bool const change_near_far_clip(!camera_surf_collide && min_camera_dist > 0.0 && !do_zoom && !camera_in_building);
 	bool const draw_water(water_enabled && water_plane_z >= terrain_zmin && !player_in_basement); // not correct if the basement is below the water line
 	if (show_fog || underwater) {set_inf_terrain_fog(underwater, terrain_zmin);}
 	unsigned tt_reflection_tid(0);
