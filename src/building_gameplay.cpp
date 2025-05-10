@@ -308,6 +308,7 @@ bool is_boxed_machine(room_object_t const &obj) {
 }
 bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 	room_object const otype(obj.type);
+	bool const broken(obj.is_broken());
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	if (otype == TYPE_PICTURE && obj.taken_level > 0) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1,  20.0,  6.0, "picture frame");} // second item to take from picture
 	if (otype == TYPE_TPROLL  && obj.has_extra()    ) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,   0.5,  0.2, "paper towels", 50);}
@@ -333,8 +334,14 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 		if (obj.has_lid()) return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 10.0, 1.0, "tank lid and light"); // take the lid and light
 		bldg_obj_type_t type(get_room_obj_type(obj));
 		switch (obj.item_flags) {
-		case TYPE_FISH  : type.value = 100.0; type.weight = 160.0; type.name = "fish tank";        break;
-		case TYPE_RAT   : type.value =  50.0; type.weight =  30.0; type.name = "rat tank";         break;
+		case TYPE_FISH:
+			if (broken) {type.value =  10.0; type.weight =  20.0; type.name = "broken fish tank";}
+			else        {type.value = 100.0; type.weight = 160.0; type.name = "fish tank";}
+			break;
+		case TYPE_RAT:
+			if (otype == TYPE_PET_CAGE) {type.value =  45.0; type.weight =   8.0; type.name = "rat cage";}
+			else                        {type.value =  50.0; type.weight =  30.0; type.name = "rat tank";}
+			break;
 		case TYPE_SNAKE : type.value =  60.0; type.weight =  35.0; type.name = "snake terrarium";  break;
 		case TYPE_SPIDER: type.value =  40.0; type.weight =  25.0; type.name = "spider terrarium"; break;
 		case TYPE_BIRD  : type.value =  50.0; type.weight =  10.0; type.name = "bird cage";        break;
@@ -343,26 +350,27 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 		return type;
 	}
 	if (otype == TYPE_SHOWERTUB) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 20.0, 2.0, "shower curtain");} // only the curtains can be taken
-	if (otype == TYPE_TABLE    && obj.is_broken ()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 0, 1,  25.0, 40.0, "broken table");} // glass tables only
-	if (otype == TYPE_COMPUTER && obj.is_broken ()) {return bldg_obj_type_t(0, 0, 1, 1, 0, 0, 2, 100.0, 20.0, "old computer");}
-	if (otype == TYPE_BOX      && obj.is_open   ()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2,   0.0, 0.05, "opened box"  );}
-	if (otype == TYPE_CRATE    && obj.is_open   ()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2,   2.0, 0.5,  "opened crate");}
-	if (otype == TYPE_TV       && obj.is_broken ()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 1, 1,  20.0, 70.0, "broken TV"   );}
-	if (otype == TYPE_MONITOR  && obj.is_broken ()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 1, 1,  10.0, 15.0, "broken computer monitor");}
-	if (otype == TYPE_LIGHT    && obj.is_broken ()) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 0,  20.0,  5.0, "flickering light");}
-	if (otype == TYPE_LIGHT    && obj.is_broken2()) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 0,  10.0,  5.0, "broken light");}
-	if (otype == TYPE_RAT      && obj.is_broken ()) {return bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0,   0.0,  1.0, "cooked/dead rat");}
-	if (otype == TYPE_ROACH    && obj.is_broken ()) {return bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0,   0.0, 0.01, "dead cockroach");} // same stats as live cockroach
-	if (otype == TYPE_FIRE_EXT && obj.is_broken ()) {return bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0,  20.0, 10.0, "empty fire extinguisher");}
-	if (otype == TYPE_CANDLE   && obj.is_used   ()) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,   0.5,  0.4, "used candle");}
-	if (otype == TYPE_POOL_FLOAT&&obj.is_broken ()) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,   5.0,  1.0, "deflated pool float");} // half value, no player coll
-	if (otype == TYPE_VASE     && obj.in_mall   ()) {return bldg_obj_type_t(1, 1, 0, 1, 0, 0, 2,  500.0,250.0,"sculpture");}
-	if (otype == TYPE_BENCH    && obj.in_mall   ()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2,  150.0,100.0,"mall bench");}
-	if (otype == TYPE_SHOEBOX  && obj.is_broken ()) {return bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0,   0.0,  0.1, "empty shoebox");}
+	if (otype == TYPE_TABLE    && broken)        {return bldg_obj_type_t(1, 1, 1, 1, 0, 0, 1,  25.0, 40.0, "broken table");} // glass tables only
+	if (otype == TYPE_COMPUTER && broken)        {return bldg_obj_type_t(0, 0, 1, 1, 0, 0, 2, 100.0, 20.0, "old computer");}
+	if (otype == TYPE_BOX      && obj.is_open()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2,   0.0, 0.05, "opened box"  );}
+	if (otype == TYPE_CRATE    && obj.is_open()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2,   2.0, 0.5,  "opened crate");}
+	if (otype == TYPE_TV       && broken)        {return bldg_obj_type_t(1, 1, 1, 1, 0, 1, 1,  20.0, 70.0, "broken TV"   );}
+	if (otype == TYPE_MONITOR  && broken)        {return bldg_obj_type_t(1, 1, 1, 1, 0, 1, 1,  10.0, 15.0, "broken computer monitor");}
+	if (otype == TYPE_LIGHT    && broken)        {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 0,  20.0,  5.0, "flickering light");}
+	if (otype == TYPE_LIGHT && obj.is_broken2()) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 0,  10.0,  5.0, "broken light");}
+	if (otype == TYPE_RAT      && broken)        {return bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0,   0.0,  1.0, "cooked/dead rat");}
+	if (otype == TYPE_ROACH    && broken)        {return bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0,   0.0, 0.01, "dead cockroach");} // same stats as live cockroach
+	if (otype == TYPE_FIRE_EXT && broken)        {return bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0,  20.0, 10.0, "empty fire extinguisher");}
+	if (otype == TYPE_CANDLE   && obj.is_used()) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,   0.5,  0.4, "used candle");}
+	if (otype == TYPE_POOL_FLOAT&&broken)        {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,   5.0,  1.0, "deflated pool float");} // half value, no player coll
+	if (otype == TYPE_VASE     && obj.in_mall()) {return bldg_obj_type_t(1, 1, 0, 1, 0, 0, 2,  500.0,250.0,"sculpture");}
+	if (otype == TYPE_BENCH    && obj.in_mall()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2,  150.0,100.0,"mall bench");}
+	if (otype == TYPE_SHOEBOX  && broken)        {return bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0,   0.0,  0.1, "empty shoebox");}
+	if (otype == TYPE_MIRROR   && broken)        {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 20.0,  15.0, "broken mirror");}
 
 	if (otype == TYPE_INSECT) { // unused
 		bool const is_fly(obj.is_hanging());
-		string const name(string(obj.is_broken() ? "dead " : "") + (is_fly ? "fly" : "cockroach"));
+		string const name(string(broken ? "dead " : "") + (is_fly ? "fly" : "cockroach"));
 		return bldg_obj_type_t(0, 0, 0, 1, 0, !is_fly, (is_fly ? 2 : 0), 0.0, 0.01, name);
 	}
 	if (obj.is_a_drink()) {
