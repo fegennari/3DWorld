@@ -1992,13 +1992,14 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom, f
 	cap.expand_in_dim(dim1, -0.006*sz[dim1]); // slightly larger radius than narrow end of neck
 	cap.expand_in_dim(dim2, -0.006*sz[dim2]); // slightly larger radius than narrow end of neck
 	float const rot_angle(c.get_bottle_rot_angle() + label_rot_angle);
+	point const center(c.get_cube_center());
 	unsigned const verts_start(mat.itri_verts.size());
 
 	if (c.is_on_srack()) { // shelf rack bottle; draw middle as a cone as an optimization
 		mid.d[dim][c.dir] = body.d[dim][!c.dir];
 		mat.add_ortho_cylin_to_verts(mid, color, dim, 0, 0, 0, 0, (c.dir ? 0.38 : 1.0), (c.dir ? 1.0 : 0.38), 1.0, 1.0, 0, bottle_ndiv);
 	}
-	else { // normal bottle; draw as a sphere
+	else { // normal bottle; draw middle as a sphere
 		vector3d skip_hemi_dir(zero_vector);
 		skip_hemi_dir[dim] = -dir_sign;
 		mat.add_sphere_to_verts(mid, color, 1, skip_hemi_dir); // low_detail=1
@@ -2006,7 +2007,7 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom, f
 	mat.add_ortho_cylin_to_verts(body, color, dim, (add_bottom && !c.dir), (add_bottom && c.dir), 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bottle_ndiv); // bottom
 	// draw neck of bottle as a truncated cone; draw as two sided if empty
 	mat.add_ortho_cylin_to_verts(neck, color, dim, 0, 0, is_empty, 0, (c.dir ? 0.85 : 1.0), (c.dir ? 1.0 : 0.85), 1.0, 1.0, 0, bottle_ndiv); // neck
-	if (rot_angle != 0.0) {rotate_verts(mat.itri_verts, plus_z, rot_angle, c.get_cube_center(), verts_start);}
+	if (rot_angle != 0.0) {rotate_verts(mat.itri_verts, plus_z, rot_angle, center, verts_start);}
 
 	if (!is_empty) { // draw cap if nonempty
 		bool const draw_bot(c.was_expanded() && !c.is_on_srack());
@@ -2016,7 +2017,7 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom, f
 		unsigned const cap_verts_start(cap_mat.itri_verts.size());
 		cap_mat.add_ortho_cylin_to_verts(cap, apply_light_color(c, cap_colors[cap_color_ix]), dim,
 			(draw_bot || c.dir), (draw_bot || !c.dir), 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bottle_ndiv);
-		if (rot_angle != 0.0) {rotate_verts(cap_mat.itri_verts, plus_z, rot_angle, c.get_cube_center(), cap_verts_start);}
+		if (rot_angle != 0.0) {rotate_verts(cap_mat.itri_verts, plus_z, rot_angle, center, cap_verts_start);}
 	}
 	// add the label
 	// Note: we could add a bottom sphere to make it a capsule, then translate below the surface in -z to flatten the bottom; it wouldn't work for hoizontal bottles though
@@ -2030,21 +2031,36 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom, f
 	rgeom_mat_t &label_mat(get_material(tid_nm_pair_t(texture_fn.empty() ? -1 : get_texture_by_name(texture_fn)), 0, 0, 1)); // unshadowed, small
 	unsigned const label_verts_start(label_mat.itri_verts.size());
 	label_mat.add_ortho_cylin_to_verts(body, apply_light_color(c, WHITE), dim, 0, 0, 0, 0, 1.0, 1.0, tscale, 1.0, 0, bottle_ndiv, tscale_add); // draw label
-	if (rot_angle != 0.0) {rotate_verts(label_mat.itri_verts, plus_z, rot_angle, c.get_cube_center(), label_verts_start);}
+	if (rot_angle != 0.0) {rotate_verts(label_mat.itri_verts, plus_z, rot_angle, center, label_verts_start);}
 }
 
-void building_room_geom_t::add_drink_can(room_object_t const &c, bool add_bottom) {
+void building_room_geom_t::add_drink_can(room_object_t const &c) {
 	unsigned const ndiv(get_rgeom_sphere_ndiv(1)); // use smaller ndiv (16) to reduce vertex count
+	unsigned const dim(get_max_dim(c.get_size()));
+	bool const add_bottom(dim != 2); // draw bottom if not vertical
 	drink_can_params_t const &cp(drink_can_params[c.get_drink_can_type()]);
 	float const tscale_add(0.123*c.obj_id + get_obj_rand_tscale_add(c)); // add a pseudo-random rotation to the texture
+	float const rot_angle(c.get_bottle_rot_angle());
+	point const center(c.get_cube_center());
 	colorRGBA const color(apply_light_color(c));
 	tid_nm_pair_t tp(get_texture_by_name(cp.texture_fn), 1);
 	tp.set_specular(0.8, 80.0);
 	rgeom_mat_t &label_mat(get_material(tp, 1, 0, 1)); // shadowed, small
-	label_mat.add_vcylin_to_verts(c, color, 0, 0, 0, 0, 1.0, 1.0, cp.tscale, 1.0, 0, ndiv, tscale_add, 0, (1.0 - cp.tex_clip_y), cp.tex_clip_y); // sides only
+	float const tscale(cp.tscale*((dim == 2) ? 1.0 : -1.0)); // invert texture if horizontal/fallen
+	unsigned const label_verts_start(label_mat.itri_verts.size());
+	label_mat.add_ortho_cylin_to_verts(c, color, dim, 0, 0, 0, 0, 1.0, 1.0, tscale, 1.0, 0, ndiv, tscale_add, 0, (1.0 - cp.tex_clip_y), cp.tex_clip_y); // sides only
+	if (rot_angle != 0.0) {rotate_verts(label_mat.itri_verts, plus_z, rot_angle, center, label_verts_start);}
 	rgeom_mat_t &top_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/can_lid.jpg"), 0.0, 1), 1, 0, 1)); // shadowed, small
-	top_mat.add_vcylin_to_verts(c, color, 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // top
-	if (add_bottom) {get_metal_material(1, 0, 1).add_vcylin_to_verts(c, apply_light_color(c, LT_GRAY), 1, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 1);} // untextured, shadowed, small, bottom
+	unsigned const top_verts_start(top_mat.itri_verts.size());
+	top_mat.add_ortho_cylin_to_verts(c, color, dim, c.dir, !c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // top
+	if (rot_angle != 0.0) {rotate_verts(top_mat.itri_verts, plus_z, rot_angle, center, top_verts_start);}
+	
+	if (add_bottom) {
+		rgeom_mat_t &bot_mat(get_metal_material(1, 0, 1));
+		unsigned const bot_verts_start(bot_mat.itri_verts.size());
+		bot_mat.add_ortho_cylin_to_verts(c, apply_light_color(c, LT_GRAY), dim, !c.dir, c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // untextured, shadowed, small, bottom
+		if (rot_angle != 0.0) {rotate_verts(bot_mat.itri_verts, plus_z, rot_angle, center, bot_verts_start);}
+	}
 }
 
 // functions reused from snake drawing

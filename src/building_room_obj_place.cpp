@@ -3073,14 +3073,16 @@ void building_t::add_floor_clutter_objs(rand_gen_t &rgen, room_t const &room, cu
 	place_area.z1() = zval;
 	vect_cube_t avoid;
 
-	if (add_bottles) { // add bottles on the floor
+	if (add_bottles) { // add bottles and cans on the floor
 		unsigned const num_bottles((rgen.rand() % 12) + 1); // 1-12
 		float const near_prob(0.75), near_dist(0.3*floor_spacing);
 		point prev_pos;
 
 		for (unsigned n = 0; n < num_bottles; ++n) {
-			float const height(floor_spacing*rgen.rand_uniform(0.075, 0.12)), radius(floor_spacing*rgen.rand_uniform(0.012, 0.018)), stain_height(1.5*get_flooring_thick());
+			float const radius(floor_spacing*rgen.rand_uniform(0.012, 0.018));
 			if (min_place_sz < 6.0*radius) return; // room is too small to place this bottle; shouldn't get here
+			bool const is_can(rgen.rand_float() < 0.33); // 33% cans, 67% bottles
+			float const height(is_can ? 3.77*radius : floor_spacing*rgen.rand_uniform(0.075, 0.12)), stain_height(1.5*get_flooring_thick());
 			cube_t bottle(place_cylin_object_maybe_near(rgen, place_area, prev_pos, radius, height, max(2.0f*radius, height), near_prob, 2.0*height, near_dist));
 			cube_t bc(bottle);
 			bool const fallen_over(rgen.rand_float() < 0.75); // make the bottle fallen over 75% of the time
@@ -3100,21 +3102,26 @@ void building_t::add_floor_clutter_objs(rand_gen_t &rgen, room_t const &room, cu
 			}
 			if (is_obj_placement_blocked(bc, room, 1) || overlaps_other_room_obj(bc, objs_start) || has_bcube_int(bc, avoid)) continue; // bad placement
 			avoid.push_back(bc);
-			objs.emplace_back(bottle, TYPE_BOTTLE, room_id, dim, dir, flags, tot_light_amt, SHAPE_CYLIN);
-			room_object_t &bottle_obj(objs.back());
-			bottle_obj.set_as_bottle(rgen.rand(), NUM_BOTTLE_TYPES-1, 0, 0, 1); // all bottle types; make_empty=1
+			bool const add_stain(fallen_over && rgen.rand_bool());
+			colorRGBA stain_color(ALPHA0); // maybe add a stain the same color as the liquid in the bottle
 
-			if (fallen_over && rgen.rand_bool()) { // maybe add a stain the same color as the liquid in the bottle
-				colorRGBA const color(bottle_params[bottle_obj.get_bottle_type()].liquid_color);
-
-				if (color.alpha > 0.0) { // not transparent (water)
-					float const stain_radius(10.0*radius*rgen.rand_uniform(0.5, 1.0));
-					// stain should be near the open end of the bottle
-					point const center(bottle.xc(), bottle.yc(), zval+stain_height);
-					vector3d rot_dir(bottle_obj.get_dir());
-					rotate_vector3d(plus_z, bottle_obj.get_bottle_rot_angle(), rot_dir);
-					interior->room_geom->decal_manager.add_blood_or_stain((center - (0.5*height)*rot_dir), stain_radius, color, 0); // is_blood=0
-				}
+			if (is_can) { // can
+				objs.emplace_back(bottle, TYPE_DRINK_CAN, room_id, dim, dir, flags, tot_light_amt, SHAPE_CYLIN);
+				objs.back().obj_id = rgen.rand();
+				if (add_stain) {stain_color = drink_can_params[objs.back().get_drink_can_type()].liquid_color;}
+			}
+			else { // bottle
+				objs.emplace_back(bottle, TYPE_BOTTLE, room_id, dim, dir, flags, tot_light_amt, SHAPE_CYLIN);
+				objs.back().set_as_bottle(rgen.rand(), NUM_BOTTLE_TYPES-1, 0, 0, 1); // all bottle types; make_empty=1
+				if (add_stain) {stain_color = bottle_params[objs.back().get_bottle_type()].liquid_color;}
+			}
+			if (stain_color.alpha > 0.0) { // not transparent (water)
+				float const stain_radius(10.0*radius*rgen.rand_uniform(0.5, 1.0));
+				// stain should be near the open end of the bottle
+				point const center(bottle.xc(), bottle.yc(), zval+stain_height);
+				vector3d rot_dir(objs.back().get_dir());
+				rotate_vector3d(plus_z, objs.back().get_bottle_rot_angle(), rot_dir);
+				interior->room_geom->decal_manager.add_blood_or_stain((center - (0.5*height)*rot_dir), stain_radius, stain_color, 0); // is_blood=0
 			}
 		} // for n
 	}

@@ -1290,7 +1290,7 @@ struct building_room_geom_t {
 	void add_shower(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm);
 	void add_shower_tub(room_object_t const &c, tid_nm_pair_t const &wall_tex, colorRGBA const &trim_color, float tscale, bool inc_lg, bool inc_sm);
 	void add_bottle(room_object_t const &c, bool add_bottom=0, float label_rot_angle=0.0);
-	void add_drink_can(room_object_t const &c, bool add_bottom=0);
+	void add_drink_can(room_object_t const &c);
 	void add_vase(room_object_t const &c);
 	void add_paper(room_object_t const &c);
 	static void add_pen_pencil_marker_to_material(room_object_t const &c_, rgeom_mat_t &mat);
