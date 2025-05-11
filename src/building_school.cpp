@@ -96,14 +96,14 @@ bool building_t::add_classroom_desk(rand_gen_t &rgen, room_t const &room, cube_t
 	objs.back().obj_id += 123*desk_ix; // more random variation
 	// add paper, pens, and pencils
 	unsigned const objs_start(objs.size()); // excludes the desk
-	add_papers_to_surface      (desk, dim,  dir, 7, rgen, room_id, tot_light_amt); // add 0-7 sheet(s) of paper
-	add_pens_pencils_to_surface(desk, dim, !dir, 4, rgen, room_id, tot_light_amt); // 0-4 pens/pencils
+	if (rgen.rand_float() < 0.7) {add_papers_to_surface      (desk, dim,  dir, 7, rgen, room_id, tot_light_amt);} // add 0-7 sheet(s) of paper
+	if (rgen.rand_float() < 0.7) {add_pens_pencils_to_surface(desk, dim, !dir, 4, rgen, room_id, tot_light_amt);} // 0-4 pens/pencils
 
 	if (teacher_desk && rgen.rand_float() < 0.33) { // add a cup on the desk 33% of the time
 		vect_cube_t const avoid(objs.begin()+objs_start, objs.end()); // add all papers, pens, and pencils
 		place_cup_on_obj(rgen, desk, room_id, tot_light_amt, avoid);
 	}
-	if (rgen.rand_float() < 0.33) { // maybe add a book on the desk
+	if (rgen.rand_float() < 0.67) { // maybe add a book on the desk; often skipped due to overlaps
 		place_book_on_obj(rgen, objs[desk_obj_ix], room_id, tot_light_amt, objs_start, 1, RO_FLAG_USED, 1); // use_dim_dir=1; skip_if_overlaps=1
 	}
 	// add chair

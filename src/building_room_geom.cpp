@@ -3498,11 +3498,12 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 		rgen.rand_mix();
 		string title, author;
 
-		if (rgen.rand_float() < (in_school ? 0.9 : 0.1)) { // school books: 90% of the time in schools, 10% of the time otherwise; image does not match the subject
+		if (rgen.rand_float() < (in_school ? 0.9 : 0.1)) { // school textbooks: 90% of the time in schools, 10% of the time otherwise; image does not match the subject
 			string const subjects[] = {
 				"Math", "Mathematics", "Algebra", "Geometry", "Trigonometry", "Calculus", "Science", "Biology", "Chemistry", "Physics", "Economics", "Computer Science",
 				"English", "Literature", "Language Arts", "Social Studies", "History", "Geography", "Government", "Sociology", "Visual Arts"};
 			title = subjects[title_rand_id % (sizeof(subjects)/sizeof(string))];
+			if (rgen.rand_float() < 0.25) {title += (rgen.rand_bool() ? " II" : " I");} // sometimes version numbered
 		}
 		else {
 			title = gen_book_title(title_rand_id, (USE_REAL_AUTHOR ? &author : nullptr), SPLIT_LINE_SZ); // select our title text
