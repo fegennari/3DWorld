@@ -2431,6 +2431,25 @@ void building_t::draw_factory_alpha(vector3d const &xlate) const { // smoke and 
 	draw_and_clear_flares(flare_qbd, s, RED);
 }
 
+void building_t::draw_z_prepass(point const &camera_bs) const {
+	if (!has_room_geom()) return;
+	if (camera_bs.z < ground_floor_z1) return; // underground, no special occluders
+	bool check_shelfracks(0);
+	if      (has_retail  () && get_retail_part().contains_pt(camera_bs)) {check_shelfracks = 1;} // player in retail
+	else if (is_warehouse() && point_in_industrial          (camera_bs)) {check_shelfracks = 1;} // player in the warehouse
+	if (!check_shelfracks) return;
+	quad_batch_draw qbd;
+
+	for (cube_t const &c : interior->room_geom->shelf_rack_occluders[0]) { // use shelfrack backs
+		bool const dim(c.dy() < c.dx()); // wall dim
+		float const center(c.get_center_dim(dim));
+		point pts[4] = {point(c.x1(), c.y1(), c.z1()), point(c.x2(), c.y2(), c.z1()), point(c.x2(), c.y2(), c.z2()), point(c.x1(), c.y1(), c.z2())};
+		for (unsigned n = 0; n < 4; ++n) {pts[n][dim] = center;} // shrink to zero area in dim
+		qbd.add_quad_pts(pts, WHITE);
+	} // for c
+	qbd.draw();
+}
+
 void draw_billboards(quad_batch_draw &qbd, int tid, bool no_depth_write=1, bool do_blend=1) {
 	if (qbd.empty()) return;
 	if (no_depth_write) {glDepthMask(GL_FALSE);} // disable depth write

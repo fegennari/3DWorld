@@ -2368,6 +2368,7 @@ struct building_t : public building_geom_t {
 	bool point_over_glass_floor(point const &pos, bool inc_escalator=0) const;
 	void draw_glass_surfaces(vector3d const &xlate) const;
 	void draw_factory_alpha (vector3d const &xlate) const;
+	void draw_z_prepass(point const &camera_bs) const;
 	bool has_cars_to_draw(bool player_in_building) const;
 	void draw_cars_in_building(shader_t &s, vector3d const &xlate, bool player_in_this_building, bool shadow_only) const;
 	bool check_for_water_splash(point const &pos_bs, float size=1.0, bool full_room_height=0, bool draw_splash=0, bool alert_zombies=1) const;

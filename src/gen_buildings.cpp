@@ -3677,14 +3677,15 @@ public:
 			float const room_geom_draw_dist   (0.40*interior_draw_dist), room_geom_clear_dist   (1.05*room_geom_draw_dist   );
 			float const room_geom_sm_draw_dist(0.14*interior_draw_dist), room_geom_sm_clear_dist(1.20*room_geom_sm_draw_dist);
 			float const room_geom_int_detail_draw_dist(0.045*interior_draw_dist), room_geom_ext_detail_draw_dist(0.08*interior_draw_dist), z_prepass_dist(0.25*interior_draw_dist);
-			glEnable(GL_CULL_FACE); // back face culling optimization, helps with expensive lighting shaders
-			glCullFace(swap_front_back ? GL_FRONT : GL_BACK);
 
 			// draw lit interiors; use z-prepass to reduce time taken for shading
 			setup_smoke_shaders(s, 0.0, 0, 0, 0, 0, 0, 0); // everything disabled, but same shader so that vertex transforms are identical
 			glPolygonOffset(1.0, 1.0);
 			if (swap_front_back) {glEnable(GL_POLYGON_OFFSET_FILL);} // not sure why, but a polygon offset is required for the mirror reflection pass
 			glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color rendering, we only want to write to the Z-Buffer
+			if (player_building) {player_building->draw_z_prepass(camera_bs);}
+			glEnable(GL_CULL_FACE); // back face culling optimization, helps with expensive lighting shaders; after draw_z_prepass()
+			glCullFace(swap_front_back ? GL_FRONT : GL_BACK);
 				
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) { // draw interior for the tile containing the camera
 				float const ddist_scale((*i)->building_draw_windows.empty() ? 0.1 : 1.0), zpp_dist_scale(ddist_scale*z_prepass_dist);
