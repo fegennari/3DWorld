@@ -2795,6 +2795,7 @@ private:
 		unsigned room_id, float tot_light_amt, bool dim, bool dir, bool center_mount=0);
 	bool is_contained_in_wall_range(float wall_pos, float cov_lo, float cov_hi, float zval, bool dim) const;
 	void add_pri_hall_objs   (rand_gen_t rgen, rand_gen_t room_rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned floor_ix, unsigned objs_start);
+	void add_corner_trashcans(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool dim, bool both_ends);
 	void add_wall_us_flag    (float wall_pos, float flag_pos, float zval, bool dim, bool dir, unsigned room_id, float tot_light_amt);
 	bool add_reception_desk  (rand_gen_t &rgen, cube_t const &desk, bool dim, bool dir, unsigned room_id, float tot_light_amt);
 	void add_cameras_to_room (rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);

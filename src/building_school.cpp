@@ -268,6 +268,7 @@ bool building_t::add_cafeteria_objs(rand_gen_t rgen, room_t const &room, float &
 			pos += table_len + col_space;
 		} // for c
 	} // for r
+	add_corner_trashcans  (rgen, room, zval, room_id, tot_light_amt, rgen.rand_bool(), 1); // random dim, both_ends=1
 	add_clock_to_room_wall(rgen, room, zval, room_id, tot_light_amt, objs_start);
 	add_door_sign("Cafeteria", room, zval, room_id);
 	return 1;

@@ -3929,26 +3929,33 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 			} // for n
 		}
 	}
+	// add trashcans
+	bool const both_ends(floor_ix == 0); // floors above the ground floor have only one trashcan
+	add_corner_trashcans(rgen, room, zval, room_id, tot_light_amt, long_dim, both_ends);
+	// add cameras to each end of the hallway
+	add_cameras_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);
+}
+
+void building_t::add_corner_trashcans(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool dim, bool both_ends) {
 	// add one or more trashcan to a corner; use a large cylinder, the same as a mall trashcan
+	float const window_vspacing(get_window_vspace());
 	float const tcan_height(0.26*window_vspacing), tcan_radius(0.1*window_vspacing), wall_spacing(1.2*tcan_radius);
 	cube_t tcan;
 	set_cube_zvals(tcan, zval, zval+tcan_height); // set height
 	bool add_to_ends[2] = {1, 1}; // defaults to both ends
-	if (floor_ix > 0) {add_to_ends[rgen.rand_bool()] = 0;} // floors above the ground floor have only one trashcan
+	if (!both_ends) {add_to_ends[rgen.rand_bool()] = 0;} // add only one trashcan
 
 	for (unsigned end_dir = 0; end_dir < 2; ++end_dir) {
 		if (!add_to_ends[end_dir]) continue;
 		bool const side_dir(rgen.rand_bool());
-		float const side_pos(room.d[!long_dim][side_dir] + (side_dir ? -1.0 : 1.0)*wall_spacing);
-		float const end_pos (room.d[ long_dim][end_dir ] + (end_dir  ? -1.0 : 1.0)*wall_spacing);
-		set_wall_width(tcan, side_pos, tcan_radius, !long_dim);
-		set_wall_width(tcan, end_pos,  tcan_radius,  long_dim);
-		room_object_t const tcan_obj(tcan, TYPE_TCAN, room_id, long_dim, end_dir, RO_FLAG_IN_HALLWAY, tot_light_amt, SHAPE_CYLIN, LT_GRAY);
-		objs.push_back(tcan_obj);
+		float const side_pos(room.d[!dim][side_dir] + (side_dir ? -1.0 : 1.0)*wall_spacing);
+		float const end_pos (room.d[ dim][end_dir ] + (end_dir  ? -1.0 : 1.0)*wall_spacing);
+		set_wall_width(tcan, side_pos, tcan_radius, !dim);
+		set_wall_width(tcan, end_pos,  tcan_radius,  dim);
+		room_object_t const tcan_obj(tcan, TYPE_TCAN, room_id, dim, end_dir, RO_FLAG_IN_HALLWAY, tot_light_amt, SHAPE_CYLIN, LT_GRAY);
+		interior->room_geom->objs.push_back(tcan_obj);
 		add_large_trashcan_contents(rgen, tcan_obj, room_id, tot_light_amt);
 	} // for d
-	// add cameras to each end of the hallway
-	add_cameras_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);
 }
 
 void building_t::add_wall_us_flag(float wall_pos, float flag_pos, float zval, bool dim, bool dir, unsigned room_id, float tot_light_amt) {
