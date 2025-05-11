@@ -2000,9 +2000,7 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom, f
 		mat.add_ortho_cylin_to_verts(mid, color, dim, 0, 0, 0, 0, (c.dir ? 0.38 : 1.0), (c.dir ? 1.0 : 0.38), 1.0, 1.0, 0, bottle_ndiv);
 	}
 	else { // normal bottle; draw middle as a sphere
-		vector3d skip_hemi_dir(zero_vector);
-		skip_hemi_dir[dim] = -dir_sign;
-		mat.add_sphere_to_verts(mid, color, 1, skip_hemi_dir); // low_detail=1
+		mat.add_sphere_to_verts(mid, color, 1, vector_from_dim_dir(dim, c.dir)); // low_detail=1
 	}
 	mat.add_ortho_cylin_to_verts(body, color, dim, (add_bottom && !c.dir), (add_bottom && c.dir), 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bottle_ndiv); // bottom
 	// draw neck of bottle as a truncated cone; draw as two sided if empty
@@ -2025,12 +2023,15 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom, f
 	body.expand_in_dim(dim2, 0.03*radius); // expand slightly in radius
 	body.d[dim][c.dir] += dir_sign*0.24*length; body.d[dim][!c.dir] -= dir_sign*0.12*length; // shrink in length
 	bottle_params_t const &bp(bottle_params[c.get_bottle_type()]);
-	float const tscale(bp.label_tscale); // some labels are more square and scaled 2x to repeat as they're more stretched out; should we use a partial cylinder instead?
+	// some labels are more square and scaled 2x to repeat as they're more stretched out; should we use a partial cylinder instead?
+	float const side_tscale(bp.label_tscale*((dim == 2 || c.dir) ? 1.0 : -1.0)); // invert texture if horizontal/fallen
 	float const tscale_add((label_rot_angle == 0.0) ? 0.123*c.obj_id + get_obj_rand_tscale_add(c) : 0.0); // add a pseudo-random rotation to the label texture if no custom rot
+	bool const flip(dim != 2 && c.dir);
 	string const &texture_fn(bp.texture_fn); // select the custom label texture for each bottle type
 	rgeom_mat_t &label_mat(get_material(tid_nm_pair_t(texture_fn.empty() ? -1 : get_texture_by_name(texture_fn)), 0, 0, 1)); // unshadowed, small
 	unsigned const label_verts_start(label_mat.itri_verts.size());
-	label_mat.add_ortho_cylin_to_verts(body, apply_light_color(c, WHITE), dim, 0, 0, 0, 0, 1.0, 1.0, tscale, 1.0, 0, bottle_ndiv, tscale_add); // draw label
+	label_mat.add_ortho_cylin_to_verts(body, apply_light_color(c, WHITE), dim, 0, 0, 0, 0, 1.0, 1.0, side_tscale,
+		1.0, 0, bottle_ndiv, tscale_add, 0, (flip ? 0.0 : 1.0), (flip ? 1.0 : 0.0)); // draw label
 	if (rot_angle != 0.0) {rotate_verts(label_mat.itri_verts, plus_z, rot_angle, center, label_verts_start);}
 }
 
@@ -2046,9 +2047,11 @@ void building_room_geom_t::add_drink_can(room_object_t const &c) {
 	tid_nm_pair_t tp(get_texture_by_name(cp.texture_fn), 1);
 	tp.set_specular(0.8, 80.0);
 	rgeom_mat_t &label_mat(get_material(tp, 1, 0, 1)); // shadowed, small
-	float const tscale(cp.tscale*((dim == 2) ? 1.0 : -1.0)); // invert texture if horizontal/fallen
+	float const tscale(cp.tscale*((dim == 2 || c.dir) ? 1.0 : -1.0)); // invert texture if horizontal/fallen
+	float ltc1(cp.tex_clip_y), ltc2(1.0 - cp.tex_clip_y);
+	if (dim != 2 && c.dir) {swap(ltc1, ltc2);} // invert label
 	unsigned const label_verts_start(label_mat.itri_verts.size());
-	label_mat.add_ortho_cylin_to_verts(c, color, dim, 0, 0, 0, 0, 1.0, 1.0, tscale, 1.0, 0, ndiv, tscale_add, 0, (1.0 - cp.tex_clip_y), cp.tex_clip_y); // sides only
+	label_mat.add_ortho_cylin_to_verts(c, color, dim, 0, 0, 0, 0, 1.0, 1.0, tscale, 1.0, 0, ndiv, tscale_add, 0, ltc2, ltc1); // sides only
 	if (rot_angle != 0.0) {rotate_verts(label_mat.itri_verts, plus_z, rot_angle, center, label_verts_start);}
 	rgeom_mat_t &top_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/can_lid.jpg"), 0.0, 1), 1, 0, 1)); // shadowed, small
 	unsigned const top_verts_start(top_mat.itri_verts.size());
