@@ -389,17 +389,40 @@ void building_t::place_chairs_along_walls(rand_gen_t &rgen, room_t const &room, 
 }
 
 bool building_t::add_exam_room_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start) {
-	float const wall_thickness(get_wall_thickness());
+	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	cube_t const room_area(get_walkable_room_bounds(room));
 	cube_t place_area(room_area);
 	place_area.expand_by(-1.0*wall_thickness); // add extra padding, since bed models are slightly different sizes
 	if (!try_place_hospital_bed(rgen, room, zval, room_id, tot_light_amt, objs_start, 4, place_area)) return 0; // pref_orient=4 (unset)
 	vect_room_object_t &objs(interior->room_geom->objs);
 	colorRGBA const &chair_color(chair_colors[rgen.rand() % NUM_CHAIR_COLORS]);
+	unsigned const desk_obj_ix(objs.size());
 	
 	// should the room be re-assigned if we can't fit a desk? this would require removing the bed
 	if (add_desk_to_room(rgen, room, vect_cube_t(), chair_color, zval, room_id, tot_light_amt, objs_start, 0, 0, 0, 1, 1)) { // force_computer=1, add_phone=1
-		// TODO: maybe add TYPE_TESTTUBE
+		assert(desk_obj_ix < objs.size());
+		room_object_t const &desk(objs[desk_obj_ix]);
+		unsigned const num_tubes(rgen.rand() % 3); // 0-2
+
+		if (num_tubes > 0) {
+			float const radius(rgen.rand_uniform(0.0025, 0.003)*floor_spacing), length(rgen.rand_uniform(0.03, 0.04)*floor_spacing); // ~13-16mm x ~75-100mm
+
+			if (length < 0.5*min(desk.dx(), desk.dy())) { // it fits on the desk; should always be true
+				bool const dim(rgen.rand_bool()), dir(rgen.rand_bool());
+
+				for (unsigned n = 0; n < num_tubes; ++n) {
+					for (unsigned N = 0; N < 10; ++N) { // 10 attempts to place test tube on the desk
+						cube_t ttube;
+						set_cube_zvals(ttube, desk.z2(), desk.z2()+2.0*radius);
+						set_wall_width(ttube, rgen.rand_uniform((desk.d[ dim][0] + 0.75*length), (desk.d[ dim][1] - 0.75*length)), 0.5*length, dim);
+						set_wall_width(ttube, rgen.rand_uniform((desk.d[!dim][0] + 2.50*radius), (desk.d[!dim][1] - 2.50*radius)), radius,    !dim);
+						if (overlaps_other_room_obj(ttube, desk_obj_ix+1, 1)) continue; // check objects placed after the desk; check_all=1
+						objs.emplace_back(ttube, TYPE_TESTTUBE, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, DK_RED, rgen.rand()); // blood, random cap color
+						break; // success/done
+					} // for N
+				} // for n
+			}
+		}
 	}
 	if (rgen.rand_bool()) { // add a simple sink
 		place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, room, 0.45, rgen, zval, room_id, tot_light_amt, room_area, objs_start, 0.6);
@@ -416,7 +439,7 @@ bool building_t::add_exam_room_objs(rand_gen_t rgen, room_t &room, float zval, u
 
 	if (1) { // add a small wall mounted computer monitor, with large front clearance
 		unsigned const tv_obj_ix(objs.size());
-		float const z1(zval + 0.5*get_window_vspace());
+		float const z1(zval + 0.5*floor_spacing);
 		
 		if (place_model_along_wall(OBJ_MODEL_TV, TYPE_MONITOR, room, 0.25, rgen, z1, room_id, tot_light_amt, room_area, objs_start, 20.0, 4, 1, BKGRAY, 1, RO_FLAG_HANGING)) {
 			offset_hanging_tv(objs[tv_obj_ix]);

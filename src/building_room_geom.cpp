@@ -2171,7 +2171,26 @@ void building_room_geom_t::add_pen_pencil_marker(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_test_tube(room_object_t const &c) {
-	// TODO: liquid (blood) in a cylinder with a rounded end and a colored cap
+	// liquid (blood) in a cylinder with a rounded end and a colored cap
+	unsigned const ndiv(get_rgeom_sphere_ndiv(1)); // use smaller ndiv (16) to reduce vertex count
+	vector3d const sz(c.get_size());
+	unsigned const dim(get_max_dim(sz)), dims[2] = {(dim+1)%3, (dim+2)%3};
+	float const dir_sign(c.dir ? -1.0 : 1.0), length(sz[dim]), radius(0.25f*(sz[dims[0]] + sz[dims[1]]));
+	tid_nm_pair_t tex(-1, 1.0, 1); // shadowed
+	tex.set_specular(0.5, 80.0);
+	rgeom_mat_t &mat(get_material(tex, 1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
+	unsigned const num_cap_colors = 7;
+	colorRGBA const cap_colors[num_cap_colors] = {YELLOW, LT_BLUE, GRAY, LT_GREEN, ORANGE, PURPLE, BROWN};
+	colorRGBA const tube_color(apply_light_color(c)), cap_color(apply_light_color(c, cap_colors[c.item_flags % num_cap_colors]));
+	cube_t body(c), cap(c);
+	body.d[dim][!c.dir] = cap.d[dim][c.dir] = c.d[dim][!c.dir] - dir_sign*0.18*length;
+	for (unsigned d = 0; d < 2; ++d) {body.expand_in_dim(dims[d], -0.06*sz[dims[d]]);} // small shrink
+	cube_t end(body);
+	body.d[dim][c.dir] = c.d[dim][c.dir] +     dir_sign*radius;
+	end.d[dim][!c.dir] = c.d[dim][c.dir] + 2.0*dir_sign*radius;
+	mat.add_ortho_cylin_to_verts(body, tube_color, dim, 0, 0); // body, sides only
+	mat.add_ortho_cylin_to_verts(cap,  cap_color,  dim, 1, 1); // cap, sides and both ends
+	mat.add_sphere_to_verts(end, tube_color, 0, vector_from_dim_dir(dim, !c.dir)); // low_detail=0
 }
 
 int get_flooring_texture(room_object_t const &c) {
