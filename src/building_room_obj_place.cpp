@@ -1548,6 +1548,7 @@ bool building_t::place_obj_along_wall(room_object type, room_t const &room, floa
 		if (!room.contains_cube(c)) continue; // larger than room width?
 		if (not_ext_wall  && classify_room_wall(room, c.zc(), dim, dir, 0) == ROOM_WALL_EXT) continue;
 		if (not_at_window && check_if_against_window(c, room, dim, dir)) continue;
+		if (not_at_window && overlaps_or_adj_int_window(c))              continue; // check interior windows as well, in case this is a conference room
 		cube_t c2(c), c3(c); // used for collision tests
 		c2.d[dim][!dir] += (dir ? -1.0 : 1.0)*clearance; // add front clearance
 		if (!room.contains_cube(c2)) continue; // not enough clearance
