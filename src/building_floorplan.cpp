@@ -702,19 +702,33 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 						// shift the position of the hallway walls to avoid intersecting windows;
 						// this may make halls either larger (contain a window) or smaller (fit between two windows);
 						// as long as the space between windows is large enough (> doorway_width) this should be okay
+						float target_hall_end_pos(wall_pos + sh_width); // use post-shifted wall for better fit to orig hall width
 						float hall_start_pos(shift_val_to_not_intersect_window(*p, wall_pos,            hspace, window_border, !min_dim));
-						float const target_hall_end_pos(wall_pos + sh_width); // use post-shifted wall for better fit to orig hall width
 						float hall_end_pos  (shift_val_to_not_intersect_window(*p, target_hall_end_pos, hspace, window_border, !min_dim));
-						float const sec_hall_width(hall_end_pos - hall_start_pos);
+						float sec_hall_width(hall_end_pos - hall_start_pos);
 						bool const div_room(i > 0 && i < num_sec_halls), add_sec_hall(i < num_sec_halls);
 
-						if (add_sec_hall && sec_hall_width < min_hall_width) { // hall is too narrow, try shifting start pos
-							float const target_hall_start_pos(hall_start_pos - (min_hall_width - sec_hall_width));
-							hall_start_pos = shift_val_to_not_intersect_window(*p, target_hall_start_pos, hspace, window_border, !min_dim);
-						}
+						// handle hallways that are too wide or too narrow; do narrow check last because it's more important
 						if (add_sec_hall && sec_hall_width > max_hall_width) { // hall is too wide, try shifting start pos
 							float const target_hall_start_pos(hall_start_pos - (max_hall_width - sec_hall_width));
 							hall_start_pos = shift_val_to_not_intersect_window(*p, target_hall_start_pos, hspace, window_border, !min_dim);
+							sec_hall_width = hall_end_pos - hall_start_pos;
+							
+							if (sec_hall_width > 1.01*max_hall_width) { // still too large; try shifting to the other side of the window
+								target_hall_end_pos = hall_end_pos + (max_hall_width - sec_hall_width);
+								hall_end_pos   = shift_val_to_not_intersect_window(*p, target_hall_end_pos, hspace, window_border, !min_dim);
+								sec_hall_width = hall_end_pos - hall_start_pos;
+							}
+						}
+						if (add_sec_hall && sec_hall_width < min_hall_width) { // hall is too narrow, try shifting start pos
+							float const target_hall_start_pos(hall_start_pos - (min_hall_width - sec_hall_width));
+							hall_start_pos = shift_val_to_not_intersect_window(*p, target_hall_start_pos, hspace, window_border, !min_dim);
+							sec_hall_width = hall_end_pos - hall_start_pos;
+
+							if (sec_hall_width < 0.99*min_hall_width) { // still too small; try shifting to the other side of the window
+								hall_start_pos = shift_val_to_not_intersect_window(*p, target_hall_start_pos, hspace, window_border, !min_dim, 1); // shift_edges_mode=1
+								sec_hall_width = hall_end_pos - hall_start_pos;
+							}
 						}
 						for (unsigned d = 0; d < 2; ++d) { // left, right of main hall
 							float const dsign(d ? -1.0 : 1.0);
