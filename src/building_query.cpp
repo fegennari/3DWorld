@@ -9,7 +9,7 @@
 extern bool draw_building_interiors, camera_in_building, player_near_toilet, player_in_unlit_room, building_has_open_ext_door, player_on_escalator, ctrl_key_pressed;
 extern bool player_is_hiding, player_wait_respawn, had_building_interior_coll, player_in_int_elevator, player_in_walkway, player_on_house_stairs, player_on_moving_ww;
 extern bool player_in_tunnel;
-extern int camera_surf_collide, frame_counter, animate2, player_in_closet, player_in_elevator, player_in_basement, player_in_attic, player_in_water;
+extern int camera_surf_collide, frame_counter, animate2, player_in_closet, player_in_elevator, player_in_basement, player_in_attic, player_in_water, display_mode;
 extern float CAMERA_RADIUS, C_STEP_HEIGHT, NEAR_CLIP, fticks, building_bcube_expand;
 extern double camera_zh;
 extern building_params_t global_building_params;
@@ -31,18 +31,21 @@ void get_catwalk_cubes(room_object_t const &c, cube_t cubes[5]);
 unsigned get_machine_part_cubes(room_object_t const &c, float floor_ceil_gap, cube_t cubes[4]);
 
 
-// assumes player is in this building; handles windows and exterior doors but not attics and basements
+// called by player_in_windowless_building(); assumes player is in this building; handles windows and exterior doors but not attics and basements
 bool building_t::player_can_see_outside() const {
 	vector3d const xlate(get_tiled_terrain_model_xlate());
 	point const camera_pos(get_camera_pos()), camera_bs(camera_pos - xlate);
 	float const floor_spacing(get_window_vspace());
 
 	if (!has_int_windows()) { // no windows looking out
-		// should we check if the door is visible?
 		if (building_has_open_ext_door && !doors.empty()) { // maybe can see out a door
 			// maybe can see out open door on first floor or a walkway
-			if (have_walkway_ext_door || (camera_pos.z < (ground_floor_z1 + floor_spacing) && camera_pos.z > ground_floor_z1)) return 1;
-
+			if (have_walkway_ext_door || (camera_pos.z < (ground_floor_z1 + floor_spacing) && camera_pos.z > ground_floor_z1)) {
+				for (auto const &door : doors) {
+					cube_t const &bc(door.get_bcube());
+					if (bc.z1() < camera_bs.z && bc.z2() > camera_bs.z && camera_pdu.cube_visible(bc + xlate)) return 1;
+				}
+			}
 			if (interior) { // check roof access stairs
 				point camera_bot_bs(camera_bs);
 				camera_bot_bs.z -= get_bldg_player_height();
@@ -62,7 +65,27 @@ bool building_t::player_can_see_outside() const {
 		return 0;
 	}
 	// maybe can see out a window
-	if (!interior || !has_basement() || camera_pos.z > ground_floor_z1) return 1; // no interior, or not in the basement
+	if (!interior || !has_basement() || camera_pos.z > ground_floor_z1) { // no interior, or not in the basement
+		// check for interior room such as the security room, where this helps the most
+		int const room_id(get_room_containing_pt(camera_bs));
+		if (room_id < 0)                 return 1; // error? if player's not in a room, assume outside is visible
+		if (!get_room(room_id).interior) return 1; // exterior room, likely has windows
+		auto ds_end(has_ext_basement() ? (interior->door_stacks.begin() + interior->ext_basement_door_stack_ix) : interior->door_stacks.end());
+		float const door_expand(get_wall_thickness());
+
+		for (auto ds = interior->door_stacks.begin(); ds < ds_end; ++ds) { // skip extended basement doors
+			if (!ds->is_connected_to_room(room_id)) continue; // wrong room
+			
+			for (unsigned dix = ds->first_door_ix; dix < interior->doors.size(); ++dix) {
+				door_t const &door(interior->doors[dix]);
+				if (!ds->is_same_stack(door)) break; // moved to a different stack, done
+				if (door.open_amt == 0.0 || door.z1() > camera_pos.z || door.z2() < camera_pos.z) continue; // fully closed, or wrong floor
+				cube_t dbc(door.get_true_bcube());
+				dbc.expand_in_dim(door.dim, door_expand);
+				if (dbc.contains_pt_xy(camera_bs) || camera_pdu.cube_visible(dbc + xlate)) return 1;
+			} // for dix
+		} // for ds
+	}
 	if (camera_pos.z < ground_floor_z1 - floor_spacing)     return 0; // on lower level of parking garage or extended basement
 	if (point_in_extended_basement_not_basement(camera_bs)) return 0; // not visible from extended basement; not for rotated buildings
 
@@ -104,8 +127,18 @@ bool building_t::player_can_see_inside_mall(vector3d const &xlate) const {
 	if (camera_pos.z > extb_door.zc() + get_window_vspace()) return 0; // on floor above the mall entrance
 	return camera_pdu.cube_visible(extb_door.get_true_bcube() + xlate);
 }
-bool player_in_windowless_building() {return (player_building != nullptr && !player_building->player_can_see_outside());}
-
+bool player_in_windowless_building() {
+	if (player_building == nullptr) return 0;
+	static bool last_ret(0);
+	static int last_frame(-1);
+	static point last_cpos;
+	if (frame_counter == last_frame && camera_pos == last_cpos) return last_ret; // constant per frame, use cached value
+	bool const ret(!player_building->player_can_see_outside());
+	last_ret   = ret;
+	last_frame = frame_counter;
+	last_cpos  = camera_pos; // needed for reflections and security cameras
+	return ret;
+}
 bool player_cant_see_outside_building() {
 	if (player_in_basement >= 3) { // player in extended basement; only outside view is through mall skylight
 		return (!player_building || !player_building->player_can_see_out_mall_skylight(get_tiled_terrain_model_xlate()));
