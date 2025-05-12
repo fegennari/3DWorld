@@ -1971,6 +1971,8 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom, f
 	bool const cap_color_ix(c.obj_id & 64);
 	colorRGBA const color(apply_light_color(c));
 	colorRGBA const cap_colors[2] = {LT_GRAY, GOLD}, cap_spec_colors[2] = {WHITE, GOLD};
+	// setup the untextured plastic/glass material; empty bottles should be transparent,
+	// but mats_alpha isn't supported for small objects, it won't blend with other transparent objects like tables, and won't work against windows
 	tid_nm_pair_t tex(-1, 1.0, 1); // shadowed
 	tex.set_specular(0.5, 80.0);
 	rgeom_mat_t &mat(get_material(tex, 1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
@@ -2191,6 +2193,15 @@ void building_room_geom_t::add_test_tube(room_object_t const &c) {
 	cube_t end(body);
 	body.d[dim][c.dir] = c.d[dim][c.dir] +     dir_sign*radius;
 	end.d[dim][!c.dir] = c.d[dim][c.dir] + 2.0*dir_sign*radius;
+
+	if (dim == 2) { // vertical, add empty top section; this case is not yet used
+		cube_t empty(body);
+		body.d[dim][!c.dir] = empty.d[dim][c.dir] = body.d[dim][!c.dir] - dir_sign*1.5*radius;
+		mat.add_ortho_cylin_to_verts(empty, apply_light_color(c, WHITE), dim, 0, 0); // empty section at top, sides only
+	}
+	else { // horizontal
+		// currently there's no easy way to draw 3/4 of a cylinder with a flat top side, and this requires drawing the glass as transparent, which also isn't supported
+	}
 	mat.add_ortho_cylin_to_verts(body, tube_color, dim, 0, 0); // body, sides only
 	mat.add_ortho_cylin_to_verts(cap,  cap_color,  dim, 1, 1); // cap, sides and both ends
 	mat.add_sphere_to_verts(end, tube_color, 0, vector_from_dim_dir(dim, !c.dir)); // low_detail=0
