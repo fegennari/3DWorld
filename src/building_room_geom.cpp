@@ -3357,8 +3357,9 @@ cube_t get_whiteboard_marker_ledge(room_object_t const &c) {
 	return ledge;
 }
 void building_room_geom_t::add_picture(room_object_t const &c) { // also whiteboards; not affected by room color
-	bool const whiteboard(c.type == TYPE_WBOARD);
+	bool const whiteboard(c.type == TYPE_WBOARD); // or blackboard
 	int picture_tid(WHITE_TEX);
+	colorRGBA color(c.color);
 
 	if (!whiteboard && c.taken_level == 0) { // picture, not taken/frame only
 		int const user_tid(get_rand_screenshot_texture(c.obj_id));
@@ -3366,13 +3367,17 @@ void building_room_geom_t::add_picture(room_object_t const &c) { // also whitebo
 		num_pic_tids = get_num_screenshot_tids();
 		has_pictures = 1;
 	}
+	if (whiteboard && c.item_flags == 1 && c.color.get_luminance() < 0.5) { // school blackboard with math
+		picture_tid = get_texture_by_name("interiors/blackboard_math.jpg");
+		color       = WHITE;
+	}
 	unsigned skip_faces(get_face_mask(c.dim, c.dir)); // only the face oriented outward
-	bool const mirror_x(!whiteboard && !(c.dim ^ c.dir));
+	bool const mirror_x(c.dim ^ c.dir ^ 1);
 	point const tex_origin(c.get_llc());
 	get_untextured_material(); // ensure frame material is valid
 	rgeom_mat_t &picture_mat(get_material(tid_nm_pair_t(picture_tid, 0.0)));
 	unsigned const picture_qv_start(picture_mat.quad_verts.size());
-	picture_mat.add_cube_to_verts(c, c.color, tex_origin, skip_faces, !c.dim, mirror_x);
+	picture_mat.add_cube_to_verts(c, color, tex_origin, skip_faces, !c.dim, mirror_x);
 	// add a frame
 	cube_t frame(c);
 	vector3d exp;

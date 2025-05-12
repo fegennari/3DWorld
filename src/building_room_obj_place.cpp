@@ -4558,7 +4558,8 @@ bool building_t::hang_pictures_whiteboard_chalkboard_in_room(rand_gen_t rgen, ro
 					}
 				}
 				assert(c.is_strictly_normalized());
-				room_object_t const wboard(c, TYPE_WBOARD, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, color); // whiteboard faces dir opposite the wall
+				room_object_t wboard(c, TYPE_WBOARD, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, color); // whiteboard faces dir opposite the wall
+				if (use_blackboards && rgen.rand_float() < 0.25) {wboard.item_flags = 1;} // flag as having math writing
 				objs.push_back(wboard);
 				cube_t blocker(wboard);
 				blocker.d[dim][!dir] += (dir ? -1.0 : 1.0)*get_min_front_clearance_inc_people();
