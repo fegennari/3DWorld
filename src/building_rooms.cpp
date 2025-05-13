@@ -649,7 +649,6 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			unsigned num_chairs(0), pref_hang_orient(4); // no pref orient=4
 			// unset room type if not locked on this floor during floorplanning; required to generate determinstic room geom
 			if (!r->is_rtype_locked(f)) {r->assign_to(RTYPE_NOTSET, f);}
-			if (r->has_subroom()) {no_whiteboard = 1;} // whiteboard placer ingores sub-rooms
 
 			// place room objects
 			bool const added_living(added_living_mask & floor_mask), is_office_bathroom(!has_walkway && maybe_office_bathroom);
@@ -853,38 +852,32 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					unsigned const rand_val(must_be_waiting ? 0 : (rgen.rand() % ((f == 0) ? 2 : 5))); // first floor is always waiting or exam room
 
 					if (rand_val == 0) { // waiting room; should there be at most one per floor?
-						if (add_waiting_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start, nested_room_ix)) {
-							added_obj = no_whiteboard = 1;
-							r->assign_to(RTYPE_WAITING, f);
-						}
+						added_obj = no_whiteboard = add_waiting_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start, nested_room_ix);
+						if (added_obj) {r->assign_to(RTYPE_WAITING, f);}
 					}
 					else if (rand_val == 1 || rand_val == 4) { // exam room; twice as likely
-						if (add_exam_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start)) {
-							added_obj = no_whiteboard = 1;
-							r->assign_to(RTYPE_HOS_EXAM, f);
-						}
+						added_obj = no_whiteboard = add_exam_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start);
+						if (added_obj) {r->assign_to(RTYPE_HOS_EXAM, f);}
 					}
 					else if (rand_val == 2) { // operating room
-						if (add_operating_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start, objs_start_inc_lights)) {
-							added_obj = no_whiteboard = 1;
-							r->assign_to(RTYPE_HOS_OR, f);
-						}
+						added_obj = no_whiteboard = add_operating_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start, objs_start_inc_lights);
+						if (added_obj) {r->assign_to(RTYPE_HOS_OR, f);}
 					}
 					else if (rand_val == 3) { // classroom (for training); should there be at most one per floor?
 						added_obj = add_classroom_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start, chair_color, pref_hang_orient);
 						if (added_obj) {r->assign_to(RTYPE_CLASS, f);}
 					}
-					else if (rand_val == 6) { // Note: currently unreachable
-						if (add_locker_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start)) {
-							added_obj = no_whiteboard = 1;
-							r->assign_to(RTYPE_LOCKER, f);
-						}
+					else if (rand_val == 5 && num_locker_rooms < 2) { // Note: currently unreachable
+						added_obj = no_whiteboard = add_locker_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
+						if (added_obj) {r->assign_to(RTYPE_LOCKER, f); ++num_locker_rooms;}
+					}
+					else if (rand_val == 6 && !added_cafeteria) { // Note: currently unreachable
+						added_obj = no_whiteboard = added_cafeteria = add_cafeteria_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start);
+						if (added_obj) {r->assign_to(RTYPE_CAFETERIA, f);}
 					}
 					else if (rand_val == 7) { // Note: currently unreachable
-						if (add_lab_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start)) {
-							added_obj = no_whiteboard = 1;
-							r->assign_to(RTYPE_LAB, f);
-						}
+						added_obj = no_whiteboard = add_lab_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start);
+						if (added_obj) {r->assign_to(RTYPE_LAB, f);}
 					}
 					// else make it an office or something else below
 				}
@@ -902,9 +895,11 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				if (!added_obj && rgen.rand_float() < 0.25) { // maybe make teacher's lounge
 					add_lounge_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, 0); // is_lobby=0
 					added_obj = no_plants = no_whiteboard = 1;
+					if (added_obj) {r->assign_to(RTYPE_LOUNGE, f);}
 				}
 				if (!added_obj && num_locker_rooms < 2 && rgen.rand_float() < 0.25) { // maybe make locker room
 					added_obj = no_plants = no_whiteboard = add_locker_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
+					if (added_obj) {r->assign_to(RTYPE_LOCKER, f); ++num_locker_rooms;}
 				}
 				if (!added_obj) {
 					// teacher's office, principal's office, supply rooms, art/shop, etc.
@@ -986,6 +981,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				r->assign_to(RTYPE_STAIRS, f);
 				no_whiteboard = 1;
 			}
+			if (r->has_subroom()) {no_whiteboard = 1;} // whiteboard placer ingores sub-rooms
+
 			if (is_office && !no_whiteboard && !(library_floor_mask & floor_mask)) {
 				// office, no cubicles or bathroom, no library on this floor - maybe make it a library
 				bool make_library(0);
