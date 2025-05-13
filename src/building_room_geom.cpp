@@ -4510,15 +4510,25 @@ void building_room_geom_t::add_toaster_proxy(room_object_t const &c) { // draw a
 
 void building_room_geom_t::add_laundry_basket(room_object_t const &c) {
 	// Note: no alpha test is enabled in the shader when drawing this, so the holes in the material may not be drawn correctly against objects such as exterior walls
-	rgeom_mat_t &tex_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/plastic_mesh.png")), 1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
+	rgeom_mat_t &tex_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/plastic_mesh.png"), 0.0), 1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
 	cube_t bot(c), mid(c), top(c);
 	bot.z2() = mid.z1() = c.z1() + 0.12*c.dz();
 	mid.z2() = top.z1() = c.z2() - 0.12*c.dz();
 	colorRGBA const color(apply_light_color(c));
-	tex_mat  .add_vcylin_to_verts(mid, color, 0, 0, 1, 1); // two_sided cylinder
-	rgeom_mat_t &solid_mat(get_untextured_material(0, 0, 1)); // inc_shadows=0, dynamic=0, small=1
-	solid_mat.add_vcylin_to_verts(bot, color, 1, 0, 1, 1); // two_sided cylinder with bottom
-	solid_mat.add_vcylin_to_verts(top, color, 0, 0, 1, 1); // two_sided cylinder
+
+	if (c.shape == SHAPE_CYLIN) {
+		tex_mat  .add_vcylin_to_verts(mid, color, 0, 0, 1, 1); // two sided cylinder
+		rgeom_mat_t &solid_mat(get_untextured_material(0, 0, 1)); // inc_shadows=0, dynamic=0, small=1
+		solid_mat.add_vcylin_to_verts(bot, color, 1, 0, 1, 1); // two sided cylinder with bottom
+		solid_mat.add_vcylin_to_verts(top, color, 0, 0, 1, 1); // two sided cylinder
+	}
+	else if (c.shape == SHAPE_CUBE) {
+		tex_mat  .add_cube_to_verts_two_sided(mid, color, c.get_llc(), EF_Z12); // two sided cube
+		rgeom_mat_t &solid_mat(get_untextured_material(0, 0, 1)); // inc_shadows=0, dynamic=0, small=1
+		solid_mat.add_cube_to_verts_two_sided(bot, color, all_zeros,   EF_Z2 ); // two sided cube with bottom
+		solid_mat.add_cube_to_verts_two_sided(top, color, all_zeros,   EF_Z12); // two sided cube
+	}
+	else {assert(0);}
 }
 
 void building_room_geom_t::add_br_stall(room_object_t const &c) {

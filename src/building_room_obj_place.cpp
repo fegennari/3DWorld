@@ -3173,7 +3173,7 @@ void building_t::add_floor_clutter_objs(rand_gen_t &rgen, room_t const &room, cu
 }
 
 void building_t::add_laundry_basket(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, cube_t place_area) {
-	float const floor_spacing(get_window_vspace()), radius(rgen.rand_uniform(0.1, 0.12)*floor_spacing), height(rgen.rand_uniform(1.5, 2.2)*radius);
+	float const floor_spacing(get_window_vspace()), radius(rgen.rand_uniform(0.1, 0.12)*floor_spacing), height(rgen.rand_uniform(1.5, 2.25)*radius);
 	place_area.expand_by_xy(-radius); // leave a slight gap between laundry basket and wall
 	if (!place_area.is_strictly_normalized()) return; // no space for laundry basket (likely can't happen)
 	cube_t legal_area(get_part_for_room(room));
@@ -3189,7 +3189,8 @@ void building_t::add_laundry_basket(rand_gen_t &rgen, room_t const &room, float 
 		cube_t const c(get_cube_height_radius(center, radius, height));
 		if (is_obj_placement_blocked(c, room, !room.is_hallway) || overlaps_other_room_obj(c, objs_start)) continue; // bad placement
 		colorRGBA const colors[4] = {WHITE, LT_BLUE, LT_GREEN, LT_BROWN};
-		interior->room_geom->objs.emplace_back(c, TYPE_LBASKET, room_id, dim, dir, 0, tot_light_amt, SHAPE_CYLIN, colors[rgen.rand()%4]);
+		room_obj_shape const shape(rgen.rand_bool() ? SHAPE_CUBE : SHAPE_CYLIN);
+		interior->room_geom->objs.emplace_back(c, TYPE_LBASKET, room_id, dim, dir, 0, tot_light_amt, shape, colors[rgen.rand()%4]);
 		break; // done
 	} // for n
 }
