@@ -2691,7 +2691,7 @@ private:
 		unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement, unsigned desk_ix=0, bool no_computer=0, bool force_computer=0, bool add_phone=0);
 	void add_papers_to_surface(cube_t const &c, bool dim, bool dir, unsigned max_num, rand_gen_t &rgen, unsigned room_id, float tot_light_amt, cube_t const &avoid=cube_t());
 	void add_pens_pencils_to_surface(cube_t const &c, bool dim, bool dir, unsigned max_num, rand_gen_t &rgen, unsigned room_id, float tot_light_amt, cube_t const &avoid=cube_t());
-	void add_filing_cabinet_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
+	bool add_filing_cabinet_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	bool add_office_objs     (rand_gen_t rgen, room_t const &room, vect_cube_t &blockers, colorRGBA const &chair_color,
 		float zval, unsigned room_id, unsigned floor, float tot_light_amt, unsigned objs_start, bool is_basement);
 	void add_clock_to_room_wall(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, int type=2);

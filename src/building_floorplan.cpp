@@ -1894,7 +1894,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 					} // for y
 					if (!placed) continue; // try another room
 					room.has_elevator = 1;
-					room.set_no_geom();
+					//room.set_no_geom();
 				}
 				else { // stairs
 					cube_t cutout(room);

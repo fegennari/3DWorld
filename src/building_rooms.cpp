@@ -904,7 +904,12 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			if (!added_obj && is_office && (f > 0 || rgen.rand_float() < 0.4)) { // allow for storage and utility rooms on ground floor
 				added_obj = no_whiteboard = create_office_cubicles(rgen, *r, room_center.z, room_id, tot_light_amt);
 			}
-			if (!added_obj && !r->has_subroom() && rgen.rand_float() < (is_basement ? 0.4 : (r->is_office ? (is_hospital() ? 0.2 : 0.6) : (is_house ? 0.95 : 0.5)))) {
+			float tc_prob(0.0);
+			if (is_basement)       {tc_prob = 0.4;}
+			else if (r->is_office) {tc_prob = (is_hospital() ? 0.2 : 0.6);}
+			else                   {tc_prob = (is_house ? 0.95 : 0.5);}
+
+			if (!added_obj && !r->has_subroom() && rgen.rand_float() < tc_prob) {
 				// place a table and maybe some chairs near the center of the room if it's not a hallway;
 				// 60% of the time for offices, 95% of the time for houses, and 50% for other buildings
 				unsigned const num_tcs(add_table_and_chairs(rgen, *r, blockers, room_id, room_center, chair_color, 0.1, tot_light_amt));
