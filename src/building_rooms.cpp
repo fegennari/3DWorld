@@ -2249,9 +2249,11 @@ void building_t::add_wall_and_door_trim() { // and window trim
 			cube_t trim(c);
 			trim.expand_in_dim(!ww.dim, 4.0*trim_thickness); // expand further to fill the gap
 			bool const is_vert(c.dz() > max(c.dx(), c.dy()));
-			unsigned const flags(RO_FLAG_NOCOLL | (is_vert ? (RO_FLAG_ADJ_BOT | RO_FLAG_ADJ_TOP) : 0));
+			unsigned flags(RO_FLAG_NOCOLL);
+			if (is_vert || c.z1() < (ww.bcube.z1() + 0.5*window_vspacing)) {flags |= RO_FLAG_ADJ_BOT;} // vertical or bottom trim
+			if (is_vert || c.z2() > (ww.bcube.z2() - 0.5*window_vspacing)) {flags |= RO_FLAG_ADJ_TOP;} // vertical or top    trim
 			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, !ww.dim, 0, flags, 1.0, (is_vert ? SHAPE_TALL : SHAPE_SHORT), trim_color);
-		}
+		} // for c
 	} // for ww
 	if (!is_cube() || is_rotated()) return; // window trim is not yet working for non-cube and rotated buildings
 	add_window_trim_and_coverings(1, 0, 0); // add_trim=1, add_coverings=0, add_ext_sills=0
