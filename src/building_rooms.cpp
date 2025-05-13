@@ -195,7 +195,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	bool const chair_color_per_floor(is_school());
 	float const extra_bathroom_prob((is_house ? 2.0 : 1.0)*0.02*min((int(tot_num_rooms) - 4), 20));
 	unsigned cand_bathroom(rooms.size()); // start at an invalid value
-	unsigned added_bathroom_objs_mask(0), numbered_rooms_seen(0), store_type_mask(0);
+	unsigned added_bathroom_objs_mask(0), numbered_rooms_seen(0), store_type_mask(0), num_locker_rooms(0);
 	uint8_t last_unit_id(0);
 	uint64_t is_public_on_floor(0), library_floor_mask(0), added_kitchen_mask(0), added_living_mask(0), added_bath_mask(0); // 64 bit masks, per floor
 	bool added_bedroom(0), added_library(0), added_dining(0), added_laundry(0), added_basement_utility(0), added_fireplace(0), added_pool_room(0), added_cafeteria(0);
@@ -875,6 +875,12 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 						if (added_obj) {r->assign_to(RTYPE_CLASS, f);}
 					}
 					else if (rand_val == 6) { // Note: currently unreachable
+						if (add_locker_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start)) {
+							added_obj = no_whiteboard = 1;
+							r->assign_to(RTYPE_LOCKER, f);
+						}
+					}
+					else if (rand_val == 7) { // Note: currently unreachable
 						if (add_lab_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start)) {
 							added_obj = no_whiteboard = 1;
 							r->assign_to(RTYPE_LAB, f);
@@ -891,10 +897,14 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				// else if no window, or can't make into a classroom
 				if (!added_obj && f == 0 && !added_cafeteria && rgen.rand_bool()) {
 					added_obj = no_plants = no_whiteboard = added_cafeteria = add_cafeteria_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start);
+					if (added_obj) {r->assign_to(RTYPE_CAFETERIA, f);}
 				}
 				if (!added_obj && rgen.rand_float() < 0.25) { // maybe make teacher's lounge
 					add_lounge_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, 0); // is_lobby=0
 					added_obj = no_plants = no_whiteboard = 1;
+				}
+				if (!added_obj && num_locker_rooms < 2 && rgen.rand_float() < 0.25) { // maybe make locker room
+					added_obj = no_plants = no_whiteboard = add_locker_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 				}
 				if (!added_obj) {
 					// teacher's office, principal's office, supply rooms, art/shop, etc.

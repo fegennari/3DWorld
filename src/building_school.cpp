@@ -219,6 +219,10 @@ void building_t::add_hallway_lockers(rand_gen_t &rgen, room_t const &room, float
 	add_floor_clutter_objs(rgen, room, room_bounds, zval, room_id, tot_light_amt, objs_start, add_bottles, add_trash, add_papers, add_glass);
 }
 
+bool building_t::add_locker_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	return 0; // TODO
+}
+
 bool building_t::add_cafeteria_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start) {
 	if (room_has_stairs_or_elevator(room, zval, floor_ix)) return 0;
 	float const floor_spacing(get_window_vspace());
