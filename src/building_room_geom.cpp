@@ -3541,7 +3541,12 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 				"Math", "Mathematics", "Algebra", "Geometry", "Trigonometry", "Calculus", "Science", "Biology", "Chemistry", "Physics", "Economics", "Computer Science",
 				"English", "Literature", "Language Arts", "Social Studies", "History", "Geography", "Government", "Sociology", "Visual Arts"};
 			title = subjects[title_rand_id % (sizeof(subjects)/sizeof(string))];
-			if (rgen.rand_float() < 0.25) {title += (rgen.rand_bool() ? " II" : " I");} // sometimes version numbered
+			
+			if (rgen.rand_float() < 0.25) { // sometimes version numbered
+				string const nums[3] = {" I", " II", " III"};
+				title += nums[int(2.5*rgen.rand_float())]; // 40% I, 40% II, 20% III
+			}
+			else if (rgen.rand_float() < 0.25) {title = (rgen.rand_bool() ? "Introductory " : "Advanced ") + title;}
 		}
 		else {
 			title = gen_book_title(title_rand_id, (USE_REAL_AUTHOR ? &author : nullptr), SPLIT_LINE_SZ); // select our title text
