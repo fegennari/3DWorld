@@ -2060,9 +2060,9 @@ struct building_t : public building_geom_t {
 	mutable bool has_attic_window=0; // make mutable so that drawing code can update/cache this value
 	bool multi_family=0; // apartments, multi-family house, duplex, etc. - split by floor
 	bool has_int_fplace=0, has_parking_garage=0, has_small_part=0, has_basement_door=0, has_basement_pipes=0, parts_generated=0, is_in_city=0, has_skylight_light=0;
-	bool pri_hall_stairs_to_pg=0, have_walkway_ext_door=0, has_clipped_wall=0;
+	bool pri_hall_stairs_to_pg=0, have_walkway_ext_door=0;
 	mutable bool has_missing_stairs=0; // only used for printing a warning
-	uint8_t retail_floor_levels=0;
+	uint8_t retail_floor_levels=0, has_clipped_wall=0; // has_clipped_wall: 1 bit for stairs, 2 bit for elevator
 	int8_t courtyard_door_ix=-1;
 	mutable bool player_visited=0; // for stats tracking
 	colorRGBA side_color=WHITE, roof_color=WHITE, detail_color=BLACK, door_color=WHITE, wall_color=WHITE;
@@ -2209,6 +2209,8 @@ struct building_t : public building_geom_t {
 	bool is_room_windowless(room_t const &room) const;
 	bool are_rooms_connected(room_t const &r1, room_t const &r2, float zval, bool check_door_open) const;
 	bool all_room_int_doors_closed(unsigned room_ix, float zval) const;
+	bool room_might_have_clipped_wall(room_t const &room) const {return (((has_clipped_wall & 1) && room.has_stairs) || ((has_clipped_wall & 2) && room.has_elevator));}
+	bool room_has_non_door_vis       (room_t const &room) const {return room.open_wall_mask || room.has_interior_window() || room_might_have_clipped_wall(room);}
 	unsigned check_line_coll(point const &p1, point const &p2, float &t, bool occlusion_only=0, bool ret_any_pt=0, bool no_coll_pt=0, bool check_non_coll=0) const;
 	bool get_interior_color_at_xy(point const &pos, colorRGBA &color) const;
 	bool point_in_mall_elevator_entrance(point const &pos, bool inc_front_space) const;

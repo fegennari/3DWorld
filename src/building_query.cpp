@@ -66,10 +66,13 @@ bool building_t::player_can_see_outside() const {
 	}
 	// maybe can see out a window
 	if (!interior || !has_basement() || camera_pos.z > ground_floor_z1) { // no interior, or not in the basement
+		if (has_complex_floorplan) return 1; // too complex to handle
 		// check for interior room such as the security room, where this helps the most
 		int const room_id(get_room_containing_pt(camera_bs));
-		if (room_id < 0)                 return 1; // error? if player's not in a room, assume outside is visible
-		if (!get_room(room_id).interior) return 1; // exterior room, likely has windows
+		if (room_id < 0) return 1; // error? if player's not in a room, assume outside is visible
+		room_t const &room(get_room(room_id));
+		if (!room.interior || room_has_non_door_vis(room)) return 1; // exterior room, likely has windows; or can see out of room
+
 		auto ds_end(has_ext_basement() ? (interior->door_stacks.begin() + interior->ext_basement_door_stack_ix) : interior->door_stacks.end());
 		float const door_expand(get_wall_thickness());
 
@@ -1390,7 +1393,8 @@ bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &
 	if (room.is_backrooms() && room.dz() > 1.5*floor_spacing) return 0; // multi-floor backrooms: assume lit as this is too difficult to determine
 	unsigned const floor_ix(room.is_single_floor ? 0 : max(0.0f, (pos.z - room.z1()))/floor_spacing);
 	if (room.get_has_skylight() && pos.z > (room.z2() - floor_spacing)) return 0; // top floor of room with a skylight
-	if (room.has_elevator || (!room.is_ext_basement() && room.has_stairs_on_floor(floor_ix))) return 0; // assume light can come from stairs (not in ext basement) or open elevator
+	// assume light can come from stairs (not in ext basement) or open elevator; also handles the has_clipped_wall case
+	if (room.has_elevator || (!room.is_ext_basement() && room.has_stairs_on_floor(floor_ix))) return 0;
 
 	if (pos.z > ground_floor_z1 && (pos.z < ground_floor_z1 + floor_spacing || !walkways.empty())) { // on the ground floor or have walkways
 		// handle windowless office building open exterior doors; we don't really have a floor zval to pass into the first query
@@ -1501,15 +1505,14 @@ bool building_t::are_rooms_connected(room_t const &r1, room_t const &r2, float z
 	return 0;
 }
 
-bool building_t::all_room_int_doors_closed(unsigned room_ix, float zval) const {
+bool building_t::all_room_int_doors_closed(unsigned room_ix, float zval) const { // AKA can't see into/out of room
 	if (has_complex_floorplan) return 0; // not supported, as there may be missing walls
 	room_t const &room(get_room(room_ix));
 	if (room.is_sec_bldg)                         return 0; // garages and sheds don't count because objects can be seen through the windows
-	if (room.open_wall_mask)                      return 0; // office hallways and open wall rooms can connect to other hallways with no doors
 	if (room.is_parking() || room.is_backrooms()) return 0; // these cases are excluded because they have interior doors or ramps
 	if (room.is_retail())                         return 0; // retail doesn't work because objects may be visible through stairs (similar to office hallway)
 	if (room.is_mall_or_store())                  return 0; // malls and stores have gated doorways rather than doors that can be seen through
-	if (room.has_interior_window())               return 0; // can see through the window (conference rooms, mall stores)
+	if (room_has_non_door_vis(room))              return 0; // can see through the window, open wall, or clipped wall
 	min_eq(zval, room.z2()); max_eq(zval, room.z1()); // clamp to room bounds - is this needed?
 	if (room.has_stairs_on_floor(room.get_floor_containing_zval(zval, get_window_vspace()))) return 0; // might be visible through stairs
 	// if the room is a single floor, check doors within the full Z span; otherwise, only consider doors overlapping zval

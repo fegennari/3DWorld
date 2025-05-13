@@ -2736,7 +2736,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 
 				for (unsigned d = 0; d < 2; ++d) {
 					holes.clear();
-					has_clipped_wall |= subtract_cube_from_cubes(clip_cube, interior->walls[d], (((bool)d == e->dim) ? &holes : nullptr));
+					has_clipped_wall |= (subtract_cube_from_cubes(clip_cube, interior->walls[d], (((bool)d == e->dim) ? &holes : nullptr)) << 1);
 
 					// see if we need to add any walls to close gaps created between the front of the elevator and a removed wall section
 					for (auto h = holes.begin(); h != holes.end(); ++h) {
