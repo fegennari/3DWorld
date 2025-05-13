@@ -714,13 +714,17 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		}
 	}
 	else if (type == TYPE_LOCKER) {
-		if (obj.is_open() || !(obj.flags & RO_FLAG_NONEMPTY)) { // if not locked, where RO_FLAG_NONEMPTY indicates locked
-			gen_sound_thread_safe_at_player(SOUND_METAL_DOOR, 0.75);
-			interior->room_geom->expand_object(obj, *this);
-			obj.flags       ^= RO_FLAG_OPEN; // toggle open/closed
-			sound_scale      = 0.75;
-			update_draw_data = 1;
+		if (!obj.is_open() && (obj.flags & RO_FLAG_NONEMPTY)) { // RO_FLAG_NONEMPTY indicates locked
+			// TODO: unlock with a key?
+			print_text_onscreen("It's locked", RED, 1.0, 1.5*TICKS_PER_SECOND, 0);
+			gen_sound_thread_safe_at_player(SOUND_METAL_DOOR, 0.25, 2.5);
+			return 0;
 		}
+		gen_sound_thread_safe_at_player(SOUND_METAL_DOOR, 0.75);
+		if (!obj.is_open()) {interior->room_geom->expand_object(obj, *this);}
+		obj.flags       ^= RO_FLAG_OPEN; // toggle open/closed
+		sound_scale      = 0.75;
+		update_draw_data = 1;
 	}
 	else if (type == TYPE_TCAN) {
 		trash_held_object(obj); // sounds are handled inside this call
