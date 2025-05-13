@@ -880,6 +880,8 @@ public:
 	void clear_vectors(bool free_memory=0) {rgeom_storage_t::clear(free_memory);}
 	void add_cube_to_verts(cube_t const &c, colorRGBA const &color, point const &tex_origin=all_zeros, unsigned skip_faces=0,
 		bool swap_tex_st=0, bool mirror_x=0, bool mirror_y=0, bool inverted=0, bool z_dim_uses_ty=0, float tx_add=0.0, float ty_add=0.0);
+	void add_cube_to_verts_two_sided(cube_t const &c, colorRGBA const &color, point const &tex_origin=all_zeros, unsigned skip_faces=0,
+		bool swap_tex_st=0, bool mirror_x=0, bool mirror_y=0);
 	void add_cube_to_verts_untextured(cube_t const &c, colorRGBA const &color, unsigned skip_faces=0);
 	void add_ortho_cylin_to_verts(cube_t const &c, colorRGBA const &color, int dim, bool draw_bot, bool draw_top, bool two_sided=0, bool inv_tb=0,
 		float rs_bot=1.0, float rs_top=1.0, float side_tscale=1.0, float end_tscale=1.0, bool skip_sides=0, unsigned ndiv=N_CYL_SIDES, float side_tscale_add=0.0,

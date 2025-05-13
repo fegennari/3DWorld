@@ -90,6 +90,11 @@ void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, poi
 		} // for j
 	} // for i
 }
+void rgeom_mat_t::add_cube_to_verts_two_sided(cube_t const &c, colorRGBA const &color, point const &tex_origin,
+unsigned skip_faces, bool swap_tex_st, bool mirror_x, bool mirror_y)
+{
+	for (unsigned s = 0; s < 2; ++s) {add_cube_to_verts(c, color, tex_origin, skip_faces, swap_tex_st, mirror_x, mirror_y, bool(s));}
+}
 // untextured version of the above function
 void rgeom_mat_t::add_cube_to_verts_untextured(cube_t const &c, colorRGBA const &color, unsigned skip_faces) { // add an inverted flag?
 	vertex_t v;

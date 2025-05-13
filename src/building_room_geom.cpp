@@ -3005,8 +3005,7 @@ void building_room_geom_t::add_breaker_panel(room_object_t const &c) {
 		door.d[!c.dim][!open_dir] += (open_dir ? -1.0 : 1.0)*thickness; // shift outward by thickness
 		door.d[ c.dim][ c.dir   ]  = door.d[ c.dim][!c.dir]; // front of box
 		door.d[ c.dim][!c.dir   ] += dir_sign*(box_width - box_depth); // expand outward, subtract depth to make it artificially shorter
-		mat.add_cube_to_verts(door, color, all_zeros, door_face_mask); // outside
-		mat.add_cube_to_verts(door, color, all_zeros, door_face_mask, 0, 0, 0, 1); // inside, inverted=1
+		mat.add_cube_to_verts_two_sided(door, color, all_zeros, door_face_mask); // outside
 	}
 }
 
