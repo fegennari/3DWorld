@@ -2628,7 +2628,7 @@ bool has_stairs_bcube_int(cube_t const &bcube, vect_stairwell_t const &stairs, f
 }
 bool has_elevator_bcube_int(cube_t const &bcube, vector<elevator_t> const &elevators, float doorway_width, float trim_thickness) {
 	for (elevator_t const &e : elevators) {
-		if (e.get_bcube_padded(doorway_width, trim_thickness).intersects(bcube)) return 1;
+		if (e.get_bcube_padded(1.5*doorway_width, trim_thickness).intersects(bcube)) return 1; // front pad matches wall clip logic
 	}
 	return 0;
 }
