@@ -1353,6 +1353,7 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 
 void building_room_geom_t::expand_locker(room_object_t const &c) {
 	bool const dim(c.dim), dir(c.dir);
+	bool const in_hallway(c.state_flags == RTYPE_HALL), in_locker_room(c.state_flags == RTYPE_LOCKER), in_industrial(c.state_flags == RTYPE_OFFICE);
 	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_WAS_EXP);
 	float const wall_thickness(get_locker_wall_thickness(c));
 	cube_t interior(c);
@@ -1369,15 +1370,23 @@ void building_room_geom_t::expand_locker(room_object_t const &c) {
 		if (level == 0) {place_area.z2() -= (1.0 - LOCKER_BOT_SHELF_HEIGHT)*height + 0.5*wall_thickness;} // lower level; matches drawing code
 		else            {place_area.z1() +=        LOCKER_BOT_SHELF_HEIGHT *height + 0.5*wall_thickness;} // upper level; matches drawing code
 
-		// add books; stacked up to 4 high; tag with RO_FLAG_USED to indicate school subject books
-		if (add_row_of_cubes(c, place_area, width, depth, 0.15*depth, 0.0, TYPE_BOOK, (flags | RO_FLAG_USED), expanded_objs, rgen, !dir, 1, 4) > 0) {
-			float const orig_z2(place_area.z2());
-			place_area = expanded_objs.back(); // top book
-			set_cube_zvals(place_area, place_area.z2(), orig_z2); // space above the book
+		if (in_hallway) { // add books; stacked up to 4 high; tag with RO_FLAG_USED to indicate school subject books
+			if (add_row_of_cubes(c, place_area, width, depth, 0.15*depth, 0.0, TYPE_BOOK, (flags | RO_FLAG_USED), expanded_objs, rgen, !dir, 1, 4) > 0) {
+				float const orig_z2(place_area.z2());
+				place_area = expanded_objs.back(); // top book
+				set_cube_zvals(place_area, place_area.z2(), orig_z2); // space above the book
+			}
 		}
-		unsigned const num_obj_types(6), num_sel_obj_types(level ? 5 : 6); // teeshirts only on the (larger) bottom
-		unsigned const obj_types[num_obj_types] = {TYPE_NONE, TYPE_BOTTLE, TYPE_DRINK_CAN, TYPE_PHONE, TYPE_TRASH, TYPE_TEESHIRT};
+		unsigned const num_obj_types(6);
+		unsigned const obj_types_hall [num_obj_types] = {TYPE_NONE, TYPE_BOTTLE, TYPE_DRINK_CAN, TYPE_PHONE,    TYPE_TRASH,    TYPE_TEESHIRT};
+		unsigned const obj_types_lroom[num_obj_types] = {TYPE_NONE, TYPE_BOTTLE, TYPE_DRINK_CAN, TYPE_PHONE,    TYPE_TEESHIRT, TYPE_TEESHIRT};
+		unsigned const obj_types_ind  [num_obj_types] = {TYPE_NONE, TYPE_BOTTLE, TYPE_DRINK_CAN, TYPE_TEESHIRT, TYPE_TEESHIRT, TYPE_TEESHIRT}; // hard hat?
+		unsigned const *const obj_types(in_hallway ? obj_types_hall : (in_locker_room ? obj_types_lroom : obj_types_ind));
+		unsigned num_sel_obj_types(6);
 
+		if (level == 1) { // teeshirts only on the (larger) bottom level
+			while (obj_types[num_sel_obj_types-1] == TYPE_TEESHIRT) {--num_sel_obj_types;}
+		}
 		switch (obj_types[rgen.rand()%num_sel_obj_types]) {
 		case TYPE_NONE:      break; // empty
 		case TYPE_BOTTLE:    place_bottle_on_obj(rgen, place_area, expanded_objs, vspace, c.room_id, c.light_amt, BOTTLE_TYPE_COKE,    vect_cube_t(), 1); break; // at_z1=1

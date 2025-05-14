@@ -2718,6 +2718,8 @@ private:
 		colorRGBA const &chair_color, bool dim, bool dir, unsigned desk_ix);
 	void add_objects_next_to_classroom_chalkboard(rand_gen_t &rgen, room_object_t const &cb, room_t const &room, float zval, unsigned objs_start);
 	void add_hallway_lockers(rand_gen_t &rgen, room_t const &room, float  zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start);
+	bool add_room_lockers(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
+		cube_t const &place_area, room_type rtype, bool dim, int dir_skip_mask, bool add_padlocks);
 	bool add_locker_room_objs(rand_gen_t rgen, room_t const &room, float  zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	bool add_cafeteria_objs  (rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start);
 	bool get_hospital_room_bathroom(room_t const &room, unsigned room_id, int &nested_room_ix, cube_t &bathroom) const;

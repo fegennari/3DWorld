@@ -993,6 +993,17 @@ void building_t::add_clock_to_room_wall(rand_gen_t &rgen, room_t const &room, fl
 	} // for n
 }
 void building_t::add_industrial_office_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	cube_t const room_bounds(get_walkable_room_bounds(room));
+
+	if (1) { // add lockers along a wall
+		assert(interior->ind_info);
+		bool const edim(interior->ind_info->entrance_dim), edir(interior->ind_info->entrance_dir), place_end(rgen.rand_bool());
+		int const dir_skip_mask(1 << edir); // along the interior wall only, to avoid blocking windows
+		float const floor_spacing(get_window_vspace()), locker_area_width(rgen.rand_uniform(2.0, 2.5)*floor_spacing);
+		cube_t place_area(room_bounds);
+		place_area.d[!edim][!place_end] = room_bounds.d[!edim][place_end] + (place_end ? -1.0 : 1.0)*locker_area_width;
+		add_room_lockers(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area, RTYPE_OFFICE, !edim, dir_skip_mask, 1); // add_padlocks=1
+	}
 	add_clock_to_room_wall(rgen, room, zval, room_id, tot_light_amt, objs_start);
 	// add boxes and crates
 	vect_room_object_t &objs(interior->room_geom->objs);
@@ -1000,13 +1011,12 @@ void building_t::add_industrial_office_objs(rand_gen_t &rgen, room_t const &room
 	add_boxes_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, 8); // up to 8 boxes along walls
 
 	if (objs_pre == objs.size() || rgen.rand_bool()) { // no boxes were added; try adding to the middle of the room; also try half the time
-		cube_t const room_bounds(get_walkable_room_bounds(room)), crate_bounds(room_bounds);
 		vect_cube_t exclude;
 	
 		for (door_stack_t const &ds : interior->door_stacks) {
 			if (ds.is_connected_to_room(room_id)) {exclude.push_back(ds.get_open_door_bcube_for_room(room));}
 		}
-		add_boxes_and_crates(rgen, room, zval, room_id, tot_light_amt, objs_start, 3, 0, room_bounds, crate_bounds, exclude); // 4-6; is_basement=0
+		add_boxes_and_crates(rgen, room, zval, room_id, tot_light_amt, objs_start, 3, 0, room_bounds, room_bounds, exclude); // 4-6; is_basement=0
 	}
 }
 

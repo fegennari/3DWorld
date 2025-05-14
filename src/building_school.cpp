@@ -147,16 +147,25 @@ void building_t::add_objects_next_to_classroom_chalkboard(rand_gen_t &rgen, room
 
 void building_t::add_hallway_lockers(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start) {
 	bool const dim(room.dx() < room.dy()); // hallway dim
-	float const floor_spacing(get_window_vspace()), locker_height(0.75*floor_spacing), locker_depth(0.25*locker_height), locker_width(0.22*locker_height);
-	cube_t room_bounds(get_walkable_room_bounds(room));
+	cube_t const room_bounds(get_walkable_room_bounds(room));
 	cube_t place_area(room_bounds);
-	place_area.expand_in_dim(dim, -4.0*locker_width); // leave 4 locker's worth of space at the ends for windows, etc.
+	place_area.expand_in_dim(dim, -0.75*get_window_vspace()); // leave space at the ends for windows, etc.
+	bool const add_padlocks(floor_ix == 0); // first floor only, to avoid having too many model objects (but may be added to stacked parts)
+	add_room_lockers(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area, RTYPE_HALL, dim, 0, add_padlocks); // dir_skip_mask=0
+	bool const add_bottles(0), add_trash(rgen.rand_float() < 0.75), add_papers(rgen.rand_float() < 0.5), add_glass(0);
+	add_floor_clutter_objs(rgen, room, room_bounds, zval, room_id, tot_light_amt, objs_start, add_bottles, add_trash, add_papers, add_glass);
+}
+
+bool building_t::add_room_lockers(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
+	cube_t const &place_area, room_type rtype, bool dim, int dir_skip_mask, bool add_padlocks)
+{
+	float const floor_spacing(get_window_vspace()), locker_height(0.75*floor_spacing), locker_depth(0.25*locker_height), locker_width(0.22*locker_height);
 	vect_room_object_t &objs(interior->room_geom->objs);
-	float const hall_len(place_area.get_sz_dim(dim));
-	unsigned const lockers_start(objs.size()), num_lockers(hall_len/locker_width); // floor
-	// add expanded blockers for stairs and elevators in this hallway to ensure there's space for the player and people to walk on the sides
-	float const se_clearance(2.0*get_min_front_clearance_inc_people());
-	bool const add_padlocks(floor_ix == 0 && building_obj_model_loader.is_model_valid(OBJ_MODEL_PADLOCK));
+	float const room_len(place_area.get_sz_dim(dim));
+	unsigned const lockers_start(objs.size()), num_lockers(room_len/locker_width); // floor
+	// add expanded blockers for stairs, elevators, etc. to ensure there's space for the player and people to walk on the sides
+	float const clearance(2.0*get_min_front_clearance_inc_people());
+	add_padlocks &= building_obj_model_loader.is_model_valid(OBJ_MODEL_PADLOCK);
 	vector3d const sz(add_padlocks ? building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_PADLOCK) : zero_vector); // D, W, H
 	colorRGBA const lock_color(0.4, 0.4, 0.4);
 	unsigned const num_locker_colors = 6;
@@ -164,19 +173,20 @@ void building_t::add_hallway_lockers(rand_gen_t &rgen, room_t const &room, float
 	{colorRGBA(0.4, 0.6, 0.7), colorRGBA(0.4, 0.7, 0.6), colorRGBA(0.2, 0.5, 0.8), colorRGBA(0.7, 0.05, 0.05), colorRGBA(0.6, 0.45, 0.25), GRAY};
 	colorRGBA const locker_color(locker_colors[(7*mat_ix + 11*room_id + 13*interior->rooms.size())%num_locker_colors]); // random per part/room
 	vect_cube_t blockers;
-	
+
 	for (stairwell_t const &s : interior->stairwells) {
 		if (room.contains_cube_xy_overlaps_z(s)) {blockers.push_back(s);}
 	}
 	for (elevator_t const &e : interior->elevators) {
 		if (room.contains_cube_xy_overlaps_z(e)) {blockers.push_back(e);}
 	}
-	for (cube_t &c : blockers) {c.expand_by_xy(se_clearance);}
+	for (cube_t &c : blockers) {c.expand_by_xy(clearance);}
 	cube_t locker;
 	set_cube_zvals(locker, zval, zval+locker_height);
 	unsigned lix(0);
 
-	for (unsigned d = 0; d < 2; ++d) { // for each side of the hallway
+	for (unsigned d = 0; d < 2; ++d) { // for each side of the room
+		if (dir_skip_mask & (1 << d)) continue;
 		float const wall_edge(place_area.d[!dim][d]);
 		locker.d[!dim][ d] = wall_edge;
 		locker.d[!dim][!d] = wall_edge + (d ? -1.0 : 1.0)*locker_depth;
@@ -195,11 +205,10 @@ void building_t::add_hallway_lockers(rand_gen_t &rgen, room_t const &room, float
 				if (i->intersects(test_cube)) {invalid = 1; break;}
 			}
 			if (invalid || is_obj_placement_blocked(test_cube, room, 1,    0)) continue;
-			if (!check_if_placed_on_interior_wall  (test_cube, room, !dim, d)) continue; // ensure the vent is on a wall
+			if (!check_if_placed_on_interior_wall  (test_cube, room, !dim, d)) continue; // ensure the locker is against a wall
 			unsigned flags(0);
 
-			// add padlocks to some lockers; first floor only, to avoid having too many model objects (but may be added to stacked parts)
-			if (add_padlocks && rgen.rand_float() < 0.25) {
+			if (add_padlocks && rgen.rand_float() < 0.25) { // add padlocks to some lockers
 				float const height(0.04*floor_spacing), hwidth(0.5*height*sz.y/sz.z), depth(height*sz.x/sz.z);
 				cube_t lock;
 				lock.z1() = zval + 0.365*floor_spacing;
@@ -213,14 +222,19 @@ void building_t::add_hallway_lockers(rand_gen_t &rgen, room_t const &room, float
 			}
 			objs.emplace_back(locker, TYPE_LOCKER, room_id, !dim, !d, flags, tot_light_amt, SHAPE_CUBE, locker_color, lix++);
 			set_obj_id(objs); // for random contents
+			objs.back().state_flags = rtype; // store room type for correct object type addtion
 		} // for n
 	} // for d
-	bool const add_bottles(0), add_trash(rgen.rand_float() < 0.75), add_papers(rgen.rand_float() < 0.5), add_glass(0);
-	add_floor_clutter_objs(rgen, room, room_bounds, zval, room_id, tot_light_amt, objs_start, add_bottles, add_trash, add_papers, add_glass);
+	return (objs.size() > lockers_start); // true if at least one locker was added
 }
 
 bool building_t::add_locker_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
-	return 0; // TODO
+	bool const dim(room.dx() < room.dy()); // long dim
+	cube_t const room_bounds(get_walkable_room_bounds(room));
+	if (!add_room_lockers(rgen, room, zval, room_id, tot_light_amt, objs_start, room_bounds, RTYPE_LOCKER, dim, 0, 1)) return 0; // dir_skip_mask=0, add_padlocks=1
+	// TODO: add benches on opposite walls
+	add_door_sign("Locker Room", room, zval, room_id);
+	return 1;
 }
 
 bool building_t::add_cafeteria_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start) {
