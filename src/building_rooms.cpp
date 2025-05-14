@@ -849,36 +849,39 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				}
 				if (!added_obj) { // hospital room without a window, multiple doors, or failed to make a hospital bedroom
 					if (r->has_subroom()) {must_be_waiting = 1;} // only waiting rooms have logic to handle placement around bathrooms
-					unsigned const rand_val(must_be_waiting ? 0 : (rgen.rand() % ((f == 0) ? 2 : 5))); // first floor is always waiting or exam room
 
-					if (rand_val == 0) { // waiting room; should there be at most one per floor?
-						added_obj = no_whiteboard = add_waiting_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start, nested_room_ix);
-						if (added_obj) {r->assign_to(RTYPE_WAITING, f);}
-					}
-					else if (rand_val == 1 || rand_val == 4) { // exam room; twice as likely
-						added_obj = no_whiteboard = add_exam_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start);
-						if (added_obj) {r->assign_to(RTYPE_HOS_EXAM, f);}
-					}
-					else if (rand_val == 2) { // operating room
-						added_obj = no_whiteboard = add_operating_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start, objs_start_inc_lights);
-						if (added_obj) {r->assign_to(RTYPE_HOS_OR, f);}
-					}
-					else if (rand_val == 3) { // classroom (for training); should there be at most one per floor?
-						added_obj = add_classroom_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start, chair_color, pref_hang_orient);
-						if (added_obj) {r->assign_to(RTYPE_CLASS, f);}
-					}
-					else if (rand_val == 5 && num_locker_rooms < 2) { // Note: currently unreachable
-						added_obj = no_whiteboard = add_locker_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
-						if (added_obj) {r->assign_to(RTYPE_LOCKER, f); ++num_locker_rooms;}
-					}
-					else if (rand_val == 6 && !added_cafeteria) { // Note: currently unreachable
-						added_obj = no_whiteboard = added_cafeteria = add_cafeteria_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start);
-						if (added_obj) {r->assign_to(RTYPE_CAFETERIA, f);}
-					}
-					else if (rand_val == 7) { // Note: currently unreachable
-						added_obj = no_whiteboard = add_lab_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start);
-						if (added_obj) {r->assign_to(RTYPE_LAB, f);}
-					}
+					for (unsigned N = 0; N < 10 && !added_obj; ++N) { // 10 tries to select a valid room type
+						unsigned const rand_val(must_be_waiting ? 0 : (rgen.rand() % 7));
+
+						if (rand_val == 0) { // waiting room; should there be at most one per floor?
+							added_obj = no_whiteboard = add_waiting_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start, nested_room_ix);
+							if (added_obj) {r->assign_to(RTYPE_WAITING, f);}
+						}
+						else if (rand_val == 1 || rand_val == 4) { // exam room; twice as likely
+							added_obj = no_whiteboard = add_exam_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start);
+							if (added_obj) {r->assign_to(RTYPE_HOS_EXAM, f);}
+						}
+						else if (rand_val == 2 && f > 0) { // operating room; not on the first floor
+							added_obj = no_whiteboard = add_operating_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start, objs_start_inc_lights);
+							if (added_obj) {r->assign_to(RTYPE_HOS_OR, f);}
+						}
+						else if (rand_val == 3 && f > 0) { // classroom (for training); not on the first floor; should there be at most one per floor?
+							added_obj = add_classroom_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start, chair_color, pref_hang_orient);
+							if (added_obj) {r->assign_to(RTYPE_CLASS, f);}
+						}
+						else if (rand_val == 5 && num_locker_rooms < 2 && f > 0 && r->interior) { // locker room; not on the first floor, only windowless rooms
+							added_obj = no_whiteboard = add_locker_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
+							if (added_obj) {r->assign_to(RTYPE_LOCKER, f); ++num_locker_rooms;}
+						}
+						else if (rand_val == 6 && !added_cafeteria) { // cafeteria
+							added_obj = no_whiteboard = added_cafeteria = add_cafeteria_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start);
+							if (added_obj) {r->assign_to(RTYPE_CAFETERIA, f);}
+						}
+						else if (rand_val == 7 && f > 0) { // lab; not on the first floor; currently unreachable
+							added_obj = no_whiteboard = add_lab_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start);
+							if (added_obj) {r->assign_to(RTYPE_LAB, f);}
+						}
+					} // for N
 					// else make it an office or something else below
 				}
 			}
