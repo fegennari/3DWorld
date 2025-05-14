@@ -1981,7 +1981,21 @@ void building_t::add_wall_and_door_trim() { // and window trim
 			// snap to the nearest floor to handle short walls due to cut out stairs
 			float const ground_wall_z1(ref_z1 + fc_thick);
 			float z(ground_wall_z1 + floor_spacing*round_fp((w->z1() - ground_wall_z1)/floor_spacing));
+			bool add_end_trim[2] = {0, 0};
+			if (has_clipped_wall & 1) {} // wall clipped by stairs; I don't have a test case for this, and it's more difficult to handle than elevators
 
+			if (has_clipped_wall & 2) { // wall clipped by elevator
+				float const front_pad(1.5*get_doorway_width());
+
+				for (elevator_t const &e : interior->elevators) {
+					if (dim == e.dim) continue; // skip parallel case
+					float const clip_edge(e.d[e.dim][e.dir] + front_pad*(e.dir ? 1.0 : -1.0));
+
+					for (unsigned dir = 0; dir < 2; ++dir) {
+						if (fabs(w->d[e.dim][dir] - clip_edge) < wall_thickness) {add_end_trim[dir] = 1;}
+					}
+				} // for e
+			}
 			for (unsigned f = 0; f < num_floors; ++f, z += floor_spacing) {
 				if (z+trim_height < w->z1() || z > w->z2()) continue; // above or below wall; applies to short/clipped walls
 				set_cube_zvals(trim, z, z+trim_height); // starts at floor height
@@ -2006,6 +2020,14 @@ void building_t::add_wall_and_door_trim() { // and window trim
 					clip_trim_cube(trim, trim_exclude, trim_parts);
 					for (cube_t const &t : trim_parts) {objs.emplace_back(t, TYPE_WALL_TRIM, 0, dim, 0, trim_flags, 1.0, SHAPE_CUBE, trim_color);} // floor trim
 				}
+				for (unsigned dir = 0; dir < 2; ++dir) { // for each end of wall
+					if (!add_end_trim[dir]) continue; // skip
+					cube_t end_trim(trim);
+					end_trim.d[!dim][!dir]  = trim.d[!dim][dir]; // flush with wall
+					end_trim.d[!dim][ dir] += (dir ? 1.0 : -1.0)*trim_thickness;
+					unsigned const flags(flags | RO_FLAG_ADJ_BOT | (dir ? RO_FLAG_ADJ_LO : RO_FLAG_ADJ_HI)); // skip back and bottom but draw ends
+					objs.emplace_back(end_trim, TYPE_WALL_TRIM, 0, !dim, 0, flags, 1.0, SHAPE_TALL, trim_color); // floor trim
+				} // for dir
 				if (!has_ceil_trim) continue;
 				// add ceiling trim
 				trim.z2() = z + floor_to_ceil_height; // ceil height
