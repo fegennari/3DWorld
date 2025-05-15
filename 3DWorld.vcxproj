@@ -1012,6 +1012,7 @@
     <ClInclude Include="src\fast_atof.h" />
     <ClInclude Include="src\file_reader.h" />
     <ClInclude Include="src\file_utils.h" />
+    <ClInclude Include="src\format_text.h" />
     <ClInclude Include="src\function_registry.h" />
     <ClInclude Include="src\gameplay.h" />
     <ClInclude Include="src\globals.h" />

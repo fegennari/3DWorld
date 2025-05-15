@@ -743,6 +743,9 @@
     <ClInclude Include="src\nav_grid.h">
       <Filter>Source Files\City</Filter>
     </ClInclude>
+    <ClInclude Include="src\format_text.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="icon1.ico">
