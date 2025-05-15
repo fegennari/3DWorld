@@ -229,10 +229,28 @@ bool building_t::add_room_lockers(rand_gen_t &rgen, room_t const &room, float zv
 }
 
 bool building_t::add_locker_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	// TODO: gaps at ends same chance at both ends
 	bool const dim(room.dx() < room.dy()); // long dim
 	cube_t const room_bounds(get_walkable_room_bounds(room));
 	if (!add_room_lockers(rgen, room, zval, room_id, tot_light_amt, objs_start, room_bounds, RTYPE_LOCKER, dim, 0, 1)) return 0; // dir_skip_mask=0, add_padlocks=1
-	// TODO: add benches on opposite walls
+	float floor_spacing(get_window_vspace());
+	
+	if (room_bounds.get_sz_dim(!dim) > 1.0*floor_spacing) { // add benches in the center of the room if room is wide enough
+		float const bench_height(0.22*floor_spacing), bench_width(rgen.rand_uniform(0.7, 0.9)*bench_height), bench_len(rgen.rand_uniform(4.0, 6.0)*bench_height);
+		float const clearance(get_min_front_clearance_inc_people());
+		cube_t bench;
+		set_cube_zvals(bench, zval, zval + bench_height);
+		set_wall_width(bench, room_bounds.get_center_dim( dim), 0.5*bench_len,    dim); // long  dim
+		set_wall_width(bench, room_bounds.get_center_dim(!dim), 0.5*bench_width, !dim); // short dim
+		cube_t test_cube(bench);
+		test_cube.expand_by_xy(1.1*clearance);
+		vect_room_object_t &objs(interior->room_geom->objs);
+
+		if (!is_obj_placement_blocked(test_cube, room, 1)) {
+			unsigned const flags(0);
+			objs.emplace_back(bench, TYPE_BENCH, room_id, !dim, 0, flags, tot_light_amt, SHAPE_CUBE);
+		}
+	}
 	add_door_sign("Locker Room", room, zval, room_id);
 	return 1;
 }

@@ -627,7 +627,7 @@ public:
 				cerr << format_red("AssImp Import Error (incomplete scene): " + string(importer.GetErrorString())) << endl;
 				return 0; // nonfatal?
 			}
-			cerr << format_yellow("Warning: AssImp flagged incomplete scene") << endl; // nonfatal
+			cerr << "Warning: AssImp flagged incomplete scene" << endl; // nonfatal
 		}
 		if (load_animations && scene->mNumAnimations == 0) { // no animations to load
 			load_animations = 0;
