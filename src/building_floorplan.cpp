@@ -2271,6 +2271,15 @@ bool building_t::is_valid_stairs_elevator_placement(cube_t const &c, cube_t cons
 			if (r.is_apt_or_hotel_room() && r.intersects(c)) return 0;
 		}
 	}
+	if (is_industrial() && c.z1() > ground_floor_z1) { // check entrance door
+		bool const dim(interior->ind_info->entrance_dim), dir(interior->ind_info->entrance_dir);
+		float const doorway_width(get_doorway_width());
+		cube_t door;
+		set_cube_zvals(door, ground_floor_z1+get_fc_thickness(), ground_floor_z1+get_floor_ceil_gap());
+		set_wall_width(door, interior->ind_info->entrance_pos,  doorway_width, !dim); // 2x total width for double office door
+		set_wall_width(door, get_industrial_area().d[dim][dir], doorway_width,  dim);
+		if (c.intersects(door)) return 0;
+	}
 	return 1;
 }
 
