@@ -10,6 +10,7 @@
 #include <algorithm> // for transform()
 #include <cctype> // for tolower()
 #include "fast_atof.h"
+#include "format_text.h"
 
 
 extern bool use_obj_file_bump_grayscale, model_calc_tan_vect, enable_model_animations, enable_spec_map, enable_shine_map;
@@ -450,7 +451,7 @@ public:
 
 	bool load_from_model3d_file(bool verbose) {
 		if (!model.read_from_disk(filename)) {
-			cerr << "Error reading model3d file " << filename << endl;
+			cerr << format_red("Error reading model3d file " + filename) << endl;
 			return 0;
 		}
 		{ // open a scope

@@ -14,6 +14,7 @@
 #include <queue>
 #include "meshoptimizer.h"
 #include "profiler.h"
+#include "format_text.h"
 
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -657,7 +658,7 @@ class model_error_logger_t {
 	set<string> errors_printed;
 public:
 	void log_error(string const &error_str) {
-		if (errors_printed.insert(error_str).second) {cerr << error_str << endl;} // print if unique
+		if (errors_printed.insert(error_str).second) {cerr << format_red(error_str) << endl;} // print if unique
 	}
 };
 model_error_logger_t model_error_logger;
@@ -2586,7 +2587,7 @@ bool model3d::write_to_disk(string const &fn) const { // as model3d file; Note: 
 	ofstream out(fn, ios::out | ios::binary);
 	
 	if (!out.good()) {
-		cerr << "Error opening model3d file for write: " << fn << endl;
+		cerr << format_red("Error opening model3d file for write: " + fn) << endl;
 		return 0;
 	}
 	cout << "Writing model3d file " << fn << endl;
@@ -2611,7 +2612,7 @@ bool model3d::read_from_disk(string const &fn) { // as model3d file; Note: trans
 	ifstream in(fn, ios::in | ios::binary);
 	
 	if (!in.good()) {
-		cerr << "Error opening model3d file for read: " << fn << endl;
+		cerr << format_red("Error opening model3d file for read: " + fn) << endl;
 		return 0;
 	}
 	clear(); // may not be needed

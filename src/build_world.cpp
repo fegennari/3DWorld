@@ -14,6 +14,7 @@
 #include "player_state.h"
 #include "file_utils.h"
 #include "openal_wrap.h"
+#include "format_text.h"
 #include <fstream>
 
 
@@ -1471,7 +1472,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 					model_lod_scale, use_model3d, recalc_normals, model_xf2.group_cobjs_level, (write_file != 0), 1))
 				{
 					//return read_error(fp, "model file data", coll_obj_file);
-					cerr << "Error reading model file data from file " << fn << "; Model will be skipped" << endl; // make it nonfatal
+					cerr << format_red("Error reading model file data from file " + fn + "; Model will be skipped") << endl; // make it nonfatal
 					skip_cur_model = 1;
 					break;
 				}

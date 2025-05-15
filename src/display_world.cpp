@@ -8,6 +8,7 @@
 #include "physics_objects.h"
 #include "profiler.h"
 #include "model3d.h"
+#include "format_text.h"
 #include <fstream>
 
 
@@ -801,7 +802,7 @@ void display() {
 		start_maximized = 0;
 		return;
 	}
-	if (frame_counter == 2) {cout << "Time to first completed frame: " << (GET_TIME_MS() - program_start_time) << endl;} // 16s for config_heightmap
+	if (frame_counter == 2) {cout << format_green("Time to first completed frame: " + to_string(GET_TIME_MS() - program_start_time)) << endl;} // 16s for config_heightmap
 	RESET_TIME;
 	static int init(0), tticks(0);
 	static point old_spos(0.0, 0.0, 0.0);

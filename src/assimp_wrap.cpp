@@ -6,6 +6,7 @@
 #include "3DWorld.h"
 #include "model3d.h"
 #include "profiler.h"
+#include "format_text.h"
 
 extern bool enable_spec_map, enable_shine_map;
 extern int display_mode;
@@ -616,21 +617,21 @@ public:
 		aiScene const* const scene(importer.ReadFile(fn, flags));
 		
 		if (scene == nullptr) {
-			cerr << "AssImp Import Error (null scene): " << importer.GetErrorString() << endl;
+			cerr << format_red("AssImp Import Error (null scene): " + string(importer.GetErrorString())) << endl;
 			return 0; // always fatal, even if there's no error string
 		}
 		if (scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE) {
 			string const error_str(importer.GetErrorString());
 
 			if (!error_str.empty()) { // we have an error message
-				cerr << "AssImp Import Error (incomplete scene): " << importer.GetErrorString() << endl;
+				cerr << format_red("AssImp Import Error (incomplete scene): " + string(importer.GetErrorString())) << endl;
 				return 0; // nonfatal?
 			}
-			cerr << "Warning: AssImp flagged incomplete scene" << endl; // nonfatal
+			cerr << format_yellow("Warning: AssImp flagged incomplete scene") << endl; // nonfatal
 		}
 		if (load_animations && scene->mNumAnimations == 0) { // no animations to load
 			load_animations = 0;
-			cerr << "Warning: load_animations=1 was specified, but model contains no animations; Reloading without animations" << endl;
+			cerr << format_yellow("Warning: load_animations=1 was specified, but model contains no animations; Reloading without animations") << endl;
 			return read(fn, xf, recalc_normals, verbose); // must reread the file with aiProcess_PreTransformVertices flag
 		}
 		if (scene->mRootNode == nullptr) {cout << "Warning: No root node for model" << endl;}

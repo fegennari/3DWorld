@@ -7,6 +7,7 @@
 #include "gl_ext_arb.h"
 #include "model3d.h"
 #include "tiled_mesh.h"
+#include "format_text.h"
 
 float const FISH_RADIUS = 0.05;
 float const BIRD_RADIUS = 0.1;
@@ -52,7 +53,7 @@ class animal_model_loader_t : public model3ds { // currently for fish only
 		int const recalc_normals = 0; // okay for loading model3d
 
 		if (!load_model_file(fn, *this, geom_xform_t(), "", def_tid, def_color, 0, 0.0, 1.0, recalc_normals, 0, write_file, 1)) { // no animations in this model
-			cerr << "Error: Failed to read model file '" << fn << "'" << endl;
+			cerr << format_red("Error: Failed to read model file '" + fn + "'") << endl;
 			return 0;
 		}
 		return id + 1;

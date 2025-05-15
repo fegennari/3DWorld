@@ -4,6 +4,7 @@
 
 #include "city.h"
 #include "buildings.h"
+#include "format_text.h"
 
 
 extern building_params_t global_building_params;
@@ -105,26 +106,26 @@ bool city_params_t::read_option(FILE *fp) {
 	else if (str == "car_model") { // multiple car models
 		city_model_t car_model;
 		if (!car_model.read(fp)) {return read_error(str);}
-		if (!car_model.check_filename()) {cerr << "Error: car_model file '" << car_model.fn << "' does not exist; skipping" << endl; return 1;} // nonfatal
+		if (!car_model.check_filename()) {cerr << format_red("Error: car_model file '" + car_model.fn + "' does not exist; skipping") << endl; return 1;} // nonfatal
 		car_model_files.push_back(car_model);
 		max_eq(max_car_scale, car_model.scale);
 	}
 	else if (str == "helicopter_model") { // multiple helicopter models
 		city_model_t hc_model;
 		if (!hc_model.read(fp, 1)) {return read_error(str);} // is_helicopter=1
-		if (!hc_model.check_filename()) {cerr << "Error: helicopter_model file '" << hc_model.fn << "' does not exist; skipping" << endl; return 1;} // nonfatal
+		if (!hc_model.check_filename()) {cerr << format_red("Error: helicopter_model file '" + hc_model.fn + "' does not exist; skipping") << endl; return 1;} // nonfatal
 		hc_model_files.push_back(hc_model);
 	}
 	else if (str == "ped_model") {
 		city_model_t ped_model;
 		if (!ped_model.read(fp, 0, 1)) {return read_error(str);} // is_helicopter=0, is_person=1
-		if (!ped_model.check_filename()) {cerr << "Error: ped_model file '" << ped_model.fn << "' does not exist; skipping" << endl; return 1;} // nonfatal
+		if (!ped_model.check_filename()) {cerr << format_red("Error: ped_model file '" + ped_model.fn + "' does not exist; skipping") << endl; return 1;} // nonfatal
 		ped_model.default_anim_name = default_anim_name;
 		ped_model_files.push_back(ped_model); // Note: no ped_model_scale
 	}
 	else if (str == "ped_model_add_anim") { // city ped_model_add_anim <filename> <animation name>
 		string const fn(read_quoted_string(fp)), anim_name(read_quoted_string(fp));
-		if (ped_model_files.empty()) {cerr << "Error: Can't use ped_model_add_anim without first declaring a ped_model" << endl; return 1;} // nonfatal
+		if (ped_model_files.empty()) {cerr << format_red("Error: Can't use ped_model_add_anim without first declaring a ped_model") << endl; return 1;} // nonfatal
 		if (!fn.empty()) {ped_model_files.back().anim_fns.emplace_back(fn, anim_name);} // ignore if empty filename, but I guess an empty anim_name is valid?
 	}
 	else if (str == "default_anim_name") {default_anim_name = read_quoted_string(fp);} // applies to all models loaded after this point
@@ -155,7 +156,7 @@ int building_params_t::read_building_texture(FILE *fp, string const &str, bool i
 	if (!read_str(fp, strc)) {buildings_file_err(str, error);}
 
 	if (check_filename && !check_texture_file_exists(strc)) {
-		std::cerr << "Warning: Skipping texture '" << strc << "' that can't be loaded" << endl;
+		std::cerr << format_yellow("Warning: Skipping texture '" + string(strc) + "' that can't be loaded") << endl;
 		return -1; // texture filename doesn't exist
 	}
 	string const name(strc);

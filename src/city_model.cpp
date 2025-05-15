@@ -3,6 +3,7 @@
 // 6/5/2020
 #include "city.h"
 #include "file_utils.h"
+#include "format_text.h"
 
 extern city_params_t city_params;
 
@@ -151,7 +152,7 @@ void city_model_loader_t::load_model_id(unsigned id) { // currently up to 72 mod
 		if (!load_model_file(model.fn, *this, geom_xform_t(), model.default_anim_name, def_tid, def_color, 0, 0.0,
 			lod_scale, model.recalc_normals, 0, city_params.convert_model_files, verbose, model.rev_winding_mask))
 		{
-			cerr << "Error: Failed to read model file '" << model.fn << "'; Skipping this model";
+			cerr << format_red("Error: Failed to read model file '" + model.fn + "'; Skipping this model");
 			if (has_low_poly_model()) {cerr << " (will use default low poly model)";}
 			cerr << "." << endl;
 			model.model3d_id = -1; // invalid
@@ -168,7 +169,7 @@ void city_model_loader_t::load_model_id(unsigned id) { // currently up to 72 mod
 			model3d anim_data(anim.fn, tmgr); // Note: texture manager is passed in, even though there should be no loaded textures; however, this isn't checked
 			
 			if (!read_assimp_model(anim.fn, anim_data, geom_xform_t(), anim.anim_name, model.recalc_normals, verbose)) {
-				cerr << "Error: Failed to read model animation file '" << anim.fn << "'; Skipping this animation" << endl;
+				cerr << format_red("Error: Failed to read model animation file '" + anim.fn + "'; Skipping this animation") << endl;
 			}
 			else {cur_model.merge_animation_from(anim_data);}
 		} // for anim
@@ -406,7 +407,7 @@ bool city_params_t::add_model(unsigned id, FILE *fp) {
 	model.default_anim_name = default_anim_name; // needed for birds
 	model.model_anim_scale  = model_anim_scale ; // needed for birds
 	bool const filename_valid(model.check_filename());
-	if (!filename_valid) {cerr << "Error: model file '" << model.fn << "' does not exist; skipping" << endl;} // nonfatal
+	if (!filename_valid) {cerr << format_red("Error: model file '" + model.fn + "' does not exist; skipping") << endl;} // nonfatal
 	if (filename_valid || building_models[id].empty()) {building_models[id].push_back(model);} // add if valid or the first model
 	return 1;
 }
