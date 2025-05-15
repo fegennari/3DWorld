@@ -968,6 +968,7 @@ bool coll_obj::subtract_from_cobj(coll_obj_group &new_cobjs, csg_cube const &cub
 
 void coll_obj_group::process_negative_shapes() { // negtive shapes should be non-overlapping
 
+	if (empty()) return;
 	RESET_TIME;
 	unsigned const orig_ncobjs((unsigned)size());
 	unsigned neg(0);

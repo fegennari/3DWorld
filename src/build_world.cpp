@@ -861,7 +861,7 @@ void add_all_coll_objects(const char *filename, bool re_add) {
 					fixed_cobjs[i].add_as_fixed_cobj(); // don't need to remove it
 				}
 			}
-			PRINT_TIME(" Add Fixed Cobjs");
+			if (ncobjs > 0) {PRINT_TIME(" Add Fixed Cobjs");}
 			clear_container(fixed_cobjs); // clear and free the memory
 			if (!cobjs_out_fn.empty()) {write_coll_objects_file(coll_objects, cobjs_out_fn);} // after fixed cobjs processing
 		}
