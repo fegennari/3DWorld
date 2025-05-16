@@ -715,10 +715,21 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 	}
 	else if (type == TYPE_LOCKER) {
 		if (!obj.is_open() && (obj.flags & RO_FLAG_NONEMPTY)) { // RO_FLAG_NONEMPTY indicates locked
-			// TODO: unlock with a key?
-			print_text_onscreen("It's locked", RED, 1.0, 1.5*TICKS_PER_SECOND, 0);
-			gen_sound_thread_safe_at_player(SOUND_METAL_DOOR, 0.25, 2.5);
-			return 0;
+			
+			if (player_has_room_key()) { // unlock with a key; TODO: special locker key, or colored key?
+				print_text_onscreen("Unlocked", GREEN, 1.0, 1.5*TICKS_PER_SECOND, 0);
+				assert(obj_ix > 0);
+				auto& padlock(interior->room_geom->get_room_object_by_index(obj_ix - 1)); // padlock should be the previous object
+				obj    .flags &= ~RO_FLAG_NONEMPTY ; // locker is unlocked
+				padlock.flags &= ~RO_FLAG_IS_ACTIVE; // no longer attached
+				padlock.translate_dim(2, (obj.z1() - padlock.z1())); // move to the floor at the base of the door
+				interior->room_geom->invalidate_model_geom();
+			}
+			else {
+				print_text_onscreen("It's locked", RED, 1.0, 1.5*TICKS_PER_SECOND, 0);
+				gen_sound_thread_safe_at_player(SOUND_METAL_DOOR, 0.25, 2.5);
+				return 0;
+			}
 		}
 		gen_sound_thread_safe_at_player(SOUND_METAL_DOOR, 0.75);
 		if (!obj.is_open()) {interior->room_geom->expand_object(obj, *this);}
