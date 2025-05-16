@@ -663,7 +663,7 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 
 					for (unsigned n = 0; n < num_items; ++n) {
 						// should folded shirts be stacked? this will increase drawing/culling time
-						C.color = TSHIRT_COLORS[rgen.rand()%NUM_TSHIRT_COLORS];
+						C.color = gen_teeshirt_color(rgen);
 						gen_xy_pos_for_cube_obj(C, S, sz, height, rgen);
 						add_if_not_intersecting(C, objects, cubes, add_models_mode);
 					}
@@ -678,7 +678,7 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 				sz[!dim] = 0.5*min(0.98f*length, 0.5f*shelf_len); // width
 
 				for (unsigned n = 0; n < num_items; ++n) {
-					C.color = (is_teeshirt ? TSHIRT_COLORS[rgen.rand()%NUM_TSHIRT_COLORS] : WHITE); // T-shirts are colored, jeans are always white
+					C.color = gen_shirt_pants_color(C.type, rgen);
 					gen_xy_pos_for_cube_obj(C, S, sz, height, rgen);
 					add_if_not_intersecting(C, objects, cubes);
 				}
@@ -1418,8 +1418,7 @@ void building_room_geom_t::expand_locker(room_object_t const &c) {
 			set_cube_zvals(shirt, place_area.z2()-shirt_len, place_area.z2());
 			set_wall_width(shirt, c.get_center_dim( dim), 0.01*shirt_width,  dim); // set thickness
 			set_wall_width(shirt, c.get_center_dim(!dim), 0.50*shirt_width, !dim); // set width
-			colorRGBA const &color(TSHIRT_COLORS[rgen.rand()%NUM_TSHIRT_COLORS]);
-			expanded_objs.emplace_back(shirt, TYPE_TEESHIRT, c.room_id, c.dim, c.dir, RO_FLAG_HANGING, c.light_amt, SHAPE_CUBE, color, rgen.rand());
+			expanded_objs.emplace_back(shirt, TYPE_TEESHIRT, c.room_id, c.dim, c.dir, RO_FLAG_HANGING, c.light_amt, SHAPE_CUBE, gen_teeshirt_color(rgen), rgen.rand());
 			break;
 		}
 		default: assert(0);
@@ -1662,14 +1661,14 @@ void building_room_geom_t::add_wine_rack_bottles(room_object_t const &c, vect_ro
 		cube_t shirt(drawer);
 		set_rand_pos_for_sz(shirt, c.dim, length, width, rgen);
 		shirt.z2() = shirt.z1() + 0.1*drawer.dz(); // set height
-		obj = room_object_t(shirt, TYPE_TEESHIRT, c.room_id, c.dim, c.dir, 0, 1.0, SHAPE_CUBE, TSHIRT_COLORS[rgen.rand()%NUM_TSHIRT_COLORS]);
+		obj = room_object_t(shirt, TYPE_TEESHIRT, c.room_id, c.dim, c.dir, 0, 1.0, SHAPE_CUBE, gen_teeshirt_color(rgen));
 		break;
 	}
 	case TYPE_FOLD_SHIRT: // folded shirt
 	{
 		vector3d const ssz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_FOLD_SHIRT)); // D, W, H
 		float const fs_width(0.75*min(sz[!c.dim], (ssz.y/ssz.x)*sz[c.dim])), fs_length(fs_width*ssz.x/ssz.y), fs_height(fs_width*ssz.z/ssz.y);
-		obj = room_object_t(drawer, TYPE_FOLD_SHIRT, c.room_id, c.dim, c.dir, 0, 1.0, SHAPE_CUBE, TSHIRT_COLORS[rgen.rand()%NUM_TSHIRT_COLORS]);
+		obj = room_object_t(drawer, TYPE_FOLD_SHIRT, c.room_id, c.dim, c.dir, 0, 1.0, SHAPE_CUBE, gen_teeshirt_color(rgen));
 		obj.z2() = obj.z1() + fs_height; // set height
 		set_rand_pos_for_sz(obj, c.dim, fs_length, fs_width, rgen);
 		break;

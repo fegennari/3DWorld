@@ -1257,8 +1257,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t &bl
 					c.expand_by_xy(size);
 					c.z2() += height;
 					if (overlaps_other_room_obj(c, objs_start) || is_obj_placement_blocked(c, room, 1)) continue; // bad placement
-					colorRGBA const &color((type == TYPE_TEESHIRT) ? TSHIRT_COLORS[rgen.rand()%NUM_TSHIRT_COLORS] : WHITE); // T-shirts are colored, jeans are always white
-					objs.emplace_back(c, type, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, color);
+					objs.emplace_back(c, type, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, gen_shirt_pants_color(type, rgen));
 					break; // done
 				} // for n
 			}
@@ -1408,12 +1407,10 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 			if (dim2) {std::swap(size.x, size.y);}
 
 			if (valid_area.dx() > 2.0*size.x && valid_area.dy() > 2.0*size.y) {
-				point const pos(gen_xy_pos_in_area(valid_area, size, rgen, mattress.z2()));
-				cube_t c(pos);
+				cube_t c(gen_xy_pos_in_area(valid_area, size, rgen, mattress.z2()));
 				c.expand_by_xy(size);
 				c.z2() += size.z;
-				colorRGBA const &color((type == TYPE_TEESHIRT) ? TSHIRT_COLORS[rgen.rand()%NUM_TSHIRT_COLORS] : WHITE); // T-shirts are colored, jeans are always white
-				objs.emplace_back(c, type, room_id, dim2, dir2, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, color);
+				objs.emplace_back(c, type, room_id, dim2, dir2, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, gen_shirt_pants_color(type, rgen));
 			}
 		}
 		bed_size_ix = size_ix;

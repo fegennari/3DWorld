@@ -529,6 +529,10 @@ typedef uint8_t room_type;
 inline bool is_bathroom (room_type   const rtype) {return (rtype == RTYPE_BATH || rtype == RTYPE_MENS || rtype == RTYPE_WOMENS);}
 inline bool is_ball_type(room_object const type ) {return (type == TYPE_LG_BALL || type == TYPE_POOL_BALL);}
 
+// T-shirts are colored, jeans are always white
+inline colorRGBA const &gen_teeshirt_color(rand_gen_t &rgen) {return TSHIRT_COLORS[rgen.rand()%NUM_TSHIRT_COLORS];}
+inline colorRGBA const &gen_shirt_pants_color(unsigned type, rand_gen_t &rgen) {return ((type == TYPE_TEESHIRT) ? gen_teeshirt_color(rgen) : WHITE);}
+
 // full room names for UI display
 std::string const room_names[NUM_RTYPES] =
 	{"Unset", "Hallway", "Stairs", "Office", "Bathroom", "Men's Restroom", "Women's Restroom", "Bedroom", "Kitchen", "Living Room",
