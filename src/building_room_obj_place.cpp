@@ -1238,33 +1238,37 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t &bl
 
 	if (rgen.rand_float() < 0.3) { // maybe add a t-shirt or jeans on the floor
 		unsigned const type(rgen.rand_bool() ? TYPE_PANTS : TYPE_TEESHIRT);
-		bool already_on_bed(0);
+		bool already_on_bed(0); // if shirt/pants are already on the bed, don't put them on the floor
 
 		for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
 			if (i->type == type) {already_on_bed = 1; break;}
 		}
-		if (!already_on_bed) { // if shirt/pants are already on the bed, don't put them on the floor
-			float const length(((type == TYPE_TEESHIRT) ? 0.26 : 0.2)*window_vspacing), width(0.98*length), height(0.002*window_vspacing);
-			cube_t valid_area(place_area);
-			valid_area.expand_by_xy(-0.25*window_vspacing); // not too close to a wall to avoid bookcases, dressers, and nightstands
-			bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random orientation
-			vector3d size(0.5*length, 0.5*width, height);
-			if (dim) {swap(size.x, size.y);}
-
-			if (valid_area.dx() > 2.0*size.x && valid_area.dy() > 2.0*size.y) { // should always be true
-				for (unsigned n = 0; n < 10; ++n) { // make 10 attempts to place the object
-					cube_t c(gen_xy_pos_in_area(valid_area, size, rgen, zval));
-					c.expand_by_xy(size);
-					c.z2() += height;
-					if (overlaps_other_room_obj(c, objs_start) || is_obj_placement_blocked(c, room, 1)) continue; // bad placement
-					objs.emplace_back(c, type, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, gen_shirt_pants_color(type, rgen));
-					break; // done
-				} // for n
-			}
-		}
+		if (!already_on_bed) {place_shirt_pants_on_floor(rgen, room, zval, room_id, tot_light_amt, place_area, objs_start, type);}
 	}
 	return 1; // success
 } // end add_bedroom_objs()
+
+void building_t::place_shirt_pants_on_floor(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt,
+	cube_t const &place_area, unsigned objs_start, unsigned type)
+{
+	float const floor_spacing(get_window_vspace());
+	float const length(((type == TYPE_TEESHIRT) ? 0.26 : 0.2)*floor_spacing), width(0.98*length), height(0.002*floor_spacing);
+	cube_t valid_area(place_area);
+	valid_area.expand_by_xy(-0.25*floor_spacing); // not too close to a wall to avoid bookcases, dressers, and nightstands
+	bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random orientation
+	vector3d size(0.5*length, 0.5*width, height);
+	if (dim) {swap(size.x, size.y);}
+
+	if (valid_area.dx() < 2.0*size.x || valid_area.dy() < 2.0*size.y) return; // too small to place; should never be true
+	for (unsigned n = 0; n < 10; ++n) { // make 10 attempts to place the object
+		cube_t c(gen_xy_pos_in_area(valid_area, size, rgen, zval));
+		c.expand_by_xy(size);
+		c.z2() += height;
+		if (overlaps_other_room_obj(c, objs_start) || is_obj_placement_blocked(c, room, 1)) continue; // bad placement
+		interior->room_geom->objs.emplace_back(c, type, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, gen_shirt_pants_color(type, rgen));
+		break; // done
+	} // for n
+}
 
 bool building_t::replace_light_with_ceiling_fan(rand_gen_t &rgen, cube_t const &room, cube_t const &avoid, unsigned room_id, float tot_light_amt, unsigned light_obj_ix) {
 	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_CEIL_FAN)) return 0;

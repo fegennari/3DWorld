@@ -255,9 +255,26 @@ bool building_t::add_locker_room_objs(rand_gen_t rgen, room_t const &room, float
 				if (is_obj_placement_blocked(test_cube, room, 1)) continue;
 				unsigned const flags(0), item_flags(1); // flag as metal mesh
 				objs.emplace_back(bench, TYPE_BENCH, room_id, !dim, 0, flags, tot_light_amt, SHAPE_CUBE, WHITE, item_flags);
+#if 0
+				// can't add teeshirt or pants because alpha mask conflicts (wrong blend order)
+				unsigned const type(rgen.rand_bool() ? TYPE_PANTS : TYPE_TEESHIRT);
+				float const length(((type == TYPE_TEESHIRT) ? 1.0 : 0.8)*bench_width), width(0.98*length), height(0.01*length);
+				vector3d size(0.5*length, 0.5*width, height);
+				bool const dim2(rgen.rand_bool()), dir2(rgen.rand_bool()); // choose a random orientation
+				if (dim2) {std::swap(size.x, size.y);}
+				cube_t c(gen_xy_pos_in_area(bench, size, rgen, bench.z2()));
+				c.expand_by_xy(size);
+				c.z2() += size.z;
+				objs.emplace_back(c, type, room_id, dim2, dir2, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, gen_shirt_pants_color(type, rgen));
+#endif
 			} // for n
 		}
 	}
+	// add shirt on pants on the floor
+	cube_t place_area(room_bounds);
+	place_area.expand_by(-get_trim_thickness()); // shrink to leave a small gap
+	unsigned const type(rgen.rand_bool() ? TYPE_PANTS : TYPE_TEESHIRT);
+	place_shirt_pants_on_floor(rgen, room, zval, room_id, tot_light_amt, place_area, objs_start, type);
 	add_door_sign("Locker Room", room, zval, room_id);
 	return 1;
 }
