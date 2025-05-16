@@ -236,19 +236,26 @@ bool building_t::add_locker_room_objs(rand_gen_t rgen, room_t const &room, float
 	float floor_spacing(get_window_vspace());
 	
 	if (room_bounds.get_sz_dim(!dim) > 1.0*floor_spacing) { // add benches in the center of the room if room is wide enough
-		float const bench_height(0.22*floor_spacing), bench_width(rgen.rand_uniform(0.7, 0.9)*bench_height), bench_len(rgen.rand_uniform(4.0, 6.0)*bench_height);
-		float const clearance(get_min_front_clearance_inc_people());
-		cube_t bench;
-		set_cube_zvals(bench, zval, zval + bench_height);
-		set_wall_width(bench, room_bounds.get_center_dim( dim), 0.5*bench_len,    dim); // long  dim
-		set_wall_width(bench, room_bounds.get_center_dim(!dim), 0.5*bench_width, !dim); // short dim
-		cube_t test_cube(bench);
-		test_cube.expand_by_xy(1.1*clearance);
-		vect_room_object_t &objs(interior->room_geom->objs);
+		float const bench_height(0.22*floor_spacing), bench_width(rgen.rand_uniform(0.7, 0.9)*bench_height), bench_len(rgen.rand_uniform(4.0, 5.0)*bench_height);
+		float const clearance(1.1*get_min_front_clearance_inc_people());
+		float const lo_end(room_bounds.d[dim][0] + clearance), hi_end(room_bounds.d[dim][1] - clearance), gap(hi_end - lo_end);
+		unsigned const num_benches(gap/(bench_len + 0.5*bench_width)); // floor, with some min space in between (but maybe not enough for the player to walk)
 
-		if (!is_obj_placement_blocked(test_cube, room, 1)) {
-			unsigned const flags(0);
-			objs.emplace_back(bench, TYPE_BENCH, room_id, !dim, 0, flags, tot_light_amt, SHAPE_CUBE);
+		if (num_benches > 0) { // always true?
+			float const bench_spacing(gap/num_benches);
+			cube_t bench;
+			set_cube_zvals(bench, zval, zval + bench_height);
+			set_wall_width(bench, room_bounds.get_center_dim(!dim), 0.5*bench_width, !dim); // short dim
+
+			for (unsigned n = 0; n < num_benches; ++n) {
+				set_wall_width(bench, (lo_end + (n + 0.5)*bench_spacing), 0.5*bench_len, dim); // long  dim
+				cube_t test_cube(bench);
+				test_cube.expand_by_xy(clearance);
+				vect_room_object_t &objs(interior->room_geom->objs);
+				if (is_obj_placement_blocked(test_cube, room, 1)) continue;
+				unsigned const flags(0), item_flags(1); // flag as metal mesh
+				objs.emplace_back(bench, TYPE_BENCH, room_id, !dim, 0, flags, tot_light_amt, SHAPE_CUBE, WHITE, item_flags);
+			} // for n
 		}
 	}
 	add_door_sign("Locker Room", room, zval, room_id);

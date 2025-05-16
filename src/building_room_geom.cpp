@@ -5698,12 +5698,19 @@ void building_room_geom_t::add_bench(room_object_t const &c) {
 	cube_t cubes[4]; // seat, lo side, hi side, [back]
 	unsigned const num(get_bench_cubes(c, cubes));
 	assert(num == 3 || num == 4);
+	bool const use_mesh(c.item_flags == 1);
 	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // shadowed, small
 	// add legs on each side; draw sides of legs, always light gray or black
 	colorRGBA const legs_color(apply_light_color(c, (c.in_mall() ? BKGRAY : LT_GRAY)));
-	for (unsigned d = 0; d < 2; ++d) {mat.add_cube_to_verts_untextured(cubes[d+1], legs_color, EF_Z12);}
+	for (unsigned d = 0; d < 2; ++d) {mat.add_cube_to_verts_untextured(cubes[d+1], legs_color, (use_mesh ? EF_Z1 : EF_Z12));}
 
-	if (c.color == LT_BROWN) { // wood material
+	if (use_mesh) { // metal mesh material
+		colorRGBA const color(apply_light_color(c));
+		rgeom_mat_t &metal_mat(mats_amask.get_material(get_metal_grate_tex(1.0/c.get_depth(), c.room_id), 1));
+		metal_mat.add_cube_to_verts_two_sided(cubes[0], color, cubes[0].get_llc(), 0, c.dim); // top
+		if (num == 4) {metal_mat.add_cube_to_verts_two_sided(cubes[3], color, cubes[3].get_llc(), EF_Z1, c.dim);} // back; skip bottom
+	}
+	else if (c.color == LT_BROWN) { // wood material
 		tid_nm_pair_t tex(get_tex_auto_nm(FENCE_TEX, 2.0/c.get_width(), 1)); // shadowed=1
 		tex.set_specular(0.2, 50.0);
 		rgeom_mat_t &wood_mat(get_material(tex, 1, 0, 1)); // shadowed, small
