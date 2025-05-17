@@ -220,11 +220,12 @@ struct model_anim_t {
 	mutable bool had_anim_id_error=0;
 
 	struct anim_node_t {
-		int bone_index; // cached to avoid bone_name_to_index_map lookup; -1 is no bone
+		int bone_index=-1; // cached to avoid bone_name_to_index_map lookup; -1 is no bone
 		mutable bool no_anim_data=0;
 		string name;
 		xform_matrix transform;
 		vector<unsigned> children; // indexes into anim_nodes
+		anim_node_t() {} // for read()
 		anim_node_t(string const &name_, xform_matrix const &transform_, unsigned bone_index_) : bone_index(bone_index_), name(name_), transform(transform_) {}
 	};
 	vector<anim_node_t> anim_nodes;
@@ -270,7 +271,9 @@ public:
 	void merge_anim_transforms();
 	void merge_from(model_anim_t const &anim);
 	int get_animation_id_by_name(string const &anim_name) const;
-};
+	bool write(ostream &out) const;
+	bool read (istream &in);
+}; // model_anim_t
 
 
 template<typename T> class vntc_vect_t : public vector<T>, public indexed_vao_manager_with_shadow_t {
@@ -369,12 +372,12 @@ public:
 	void get_polygons(get_polygon_args_t &args, unsigned npts) const;
 	size_t get_gpu_mem() const {return (vntc_vect_t<T>::get_gpu_mem() + (this->ivbo_valid() ? indices.size()*sizeof(unsigned) : 0));}
 	void invert_tcy();
-	void write(ostream &out) const;
-	void read(istream &in, unsigned npts);
+	void write(ostream &out, bool inc_animations) const;
+	void read (istream &in, unsigned npts, bool inc_animations);
 	void write_to_obj_file(ostream &out, unsigned &cur_vert_ix, unsigned npts) const;
 	bool indexing_enabled() const {return !indices.empty();}
 	void mark_need_normalize() {need_normalize = 1;}
-};
+}; // indexed_vntc_vect_t
 
 
 template<typename T> struct vntc_vect_block_t : public deque<indexed_vntc_vect_t<T> > {
@@ -397,8 +400,8 @@ template<typename T> struct vntc_vect_block_t : public deque<indexed_vntc_vect_t
 	void simplify_indices(float reduce_target);
 	void reverse_winding_order(unsigned npts);
 	void merge_into_single_vector();
-	bool write(ostream &out) const;
-	bool read(istream &in, unsigned npts);
+	bool write(ostream &out, bool inc_animations) const;
+	bool read (istream &in, unsigned npts, bool inc_animations);
 	bool write_to_obj_file(ostream &out, unsigned &cur_vert_ix, unsigned npts) const;
 };
 
@@ -426,8 +429,8 @@ template<typename T> struct geometry_t {
 	void calc_area(float &area, unsigned &ntris);
 	void simplify_indices(float reduce_target);
 	void reverse_winding_order();
-	bool write(ostream &out) const {return (triangles.write(out)  && quads.write(out)) ;}
-	bool read(istream &in)         {return (triangles.read(in, 3) && quads.read(in, 4));}
+	bool write(ostream &out, bool inc_animations) const {return (triangles.write(out,  inc_animations) && quads.write(out,  inc_animations));}
+	bool read (istream &in,  bool inc_animations)       {return (triangles.read(in, 3, inc_animations) && quads.read(in, 4, inc_animations));}
 	bool write_to_obj_file(ostream &out, unsigned &cur_vert_ix) const {return (triangles.write_to_obj_file(out, cur_vert_ix, 3) && quads.write_to_obj_file(out, cur_vert_ix, 4));}
 };
 
@@ -523,8 +526,8 @@ struct material_t : public material_params_t {
 		int enable_alpha_mask, bool is_bmap_pass, point const *const xlate, bool no_set_min_alpha=0);
 	colorRGBA get_ad_color() const;
 	colorRGBA get_avg_color(texture_manager const &tmgr, int default_tid=-1) const;
-	bool write(ostream &out) const;
-	bool read(istream &in);
+	bool write(ostream &out, bool inc_animations) const;
+	bool read (istream &in,  bool inc_animations);
 	bool write_to_obj_file(ostream &out, unsigned &cur_vert_ix) const;
 	void write_mtllib_entry(ostream &out, texture_manager const &tmgr) const;
 };
@@ -691,7 +694,7 @@ protected:
 	unsigned get_anim_id(shader_t &shader, string const &prop_name, int anim_id=-1) const;
 	void add_bone_transforms_to_shader(shader_t &shader, vector<xform_matrix> const &bone_transforms) const;
 	void add_bone_transforms_to_shader(shader_t &shader) const {add_bone_transforms_to_shader(shader, model_anim_data.bone_transforms);}
-};
+}; // model3d
 
 
 struct model3ds : public deque<model3d> {

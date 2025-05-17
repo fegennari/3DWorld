@@ -24,10 +24,11 @@ bool const ENABLE_INTER_REFLECTIONS = 1;
 bool const SHOW_MODEL_BCUBE_CENTER  = 0;
 bool const ENABLE_ANIMATION_SHADOWS = 1;
 bool const USE_ANIM_MODEL_TANGENTS  = 1;
-unsigned const MAGIC_NUMBER  = 42987143; // arbitrary file signature
-unsigned const BLOCK_SIZE    = 32768; // in vertex indices
-unsigned const BONE_IDS_LOC     = 4;
-unsigned const BONE_WEIGHTS_LOC = 5;
+unsigned const MAGIC_NUMBER      = 42987143; // arbitrary file signature; no   animations
+unsigned const MAGIC_NUMBER_ANIM = 42987144; // arbitrary file signature; with animations
+unsigned const BLOCK_SIZE        = 32768; // in vertex indices
+unsigned const BONE_IDS_LOC      = 4;
+unsigned const BONE_WEIGHTS_LOC  = 5;
 
 bool model_calc_tan_vect(1); // slower and more memory but sometimes better quality/smoother transitions
 
@@ -218,7 +219,6 @@ size_t texture_manager::get_gpu_mem() const {
 void write_uint(ostream &out, unsigned val) {
 	out.write((const char *)&val, sizeof(unsigned));
 }
-
 unsigned read_uint(istream &in) {
 	unsigned val(0);
 	in.read((char *)&val, sizeof(unsigned));
@@ -229,11 +229,20 @@ template<typename V> void write_vector(ostream &out, V const &v) {
 	write_uint(out, (unsigned)v.size());
 	out.write((const char *)&v.front(), (std::streamsize)v.size()*sizeof(typename V::value_type));
 }
-
 template<typename V> void read_vector(istream &in, V &v) {
 	v.clear();
 	v.resize(read_uint(in));
 	in.read((char *)&v.front(), (std::streamsize)v.size()*sizeof(typename V::value_type));
+}
+
+void write_string(ostream &out, string const &s) {
+	write_uint(out, (unsigned)s.size());
+	out.write(s.c_str(), s.size());
+}
+void read_string(istream &in, string &s) {
+	vector<char> str;
+	read_vector(in, str);
+	s = string(str.begin(), str.end());
 }
 
 
@@ -993,15 +1002,16 @@ template<typename T> void indexed_vntc_vect_t<T>::invert_tcy() {
 	for (auto i = begin(); i != end(); ++i) {invert_vert_tcy(*i);}
 }
 
-template<typename T> void indexed_vntc_vect_t<T>::write(ostream &out) const {
+template<typename T> void indexed_vntc_vect_t<T>::write(ostream &out, bool inc_animations) const {
 	vntc_vect_t<T>::write(out);
 	write_vector(out, indices);
+	if (inc_animations) {write_vector(out, bone_data.vertex_to_bones);}
 }
-
-template<typename T> void indexed_vntc_vect_t<T>::read(istream &in, unsigned npts) {
+template<typename T> void indexed_vntc_vect_t<T>::read(istream &in, unsigned npts, bool inc_animations) {
 	vntc_vect_t<T>::read(in);
 	read_vector(in, indices);
 	finalize_lod_blocks(npts);
+	if (inc_animations) {read_vector(in, bone_data.vertex_to_bones);}
 }
 
 // Note: will also match vert_norm_tc_tan, but we don't write the tangent
@@ -1172,23 +1182,22 @@ template<typename T> void vntc_vect_block_t<T>::merge_into_single_vector() {
 	this->resize(1); // remove all but the first block
 }
 
-template<typename T> bool vntc_vect_block_t<T>::write(ostream &out) const {
+template<typename T> bool vntc_vect_block_t<T>::write(ostream &out, bool inc_animations) const {
 	write_uint(out, (unsigned)this->size());
-	for (auto i = begin(); i != end(); ++i) {i->write(out);}
-	return 1;
+	for (auto i = begin(); i != end(); ++i) {i->write(out, inc_animations);}
+	return out.good();
 }
-
-template<typename T> bool vntc_vect_block_t<T>::read(istream &in, unsigned npts) {
+template<typename T> bool vntc_vect_block_t<T>::read(istream &in, unsigned npts, bool inc_animations) {
 	this->clear();
 	this->resize(read_uint(in));
-	for (auto i = begin(); i != end(); ++i) {i->read(in, npts);}
+	for (auto i = begin(); i != end(); ++i) {i->read(in, npts, inc_animations);}
 	if (merge_model_objects) {merge_into_single_vector();} // model was split per object, and we don't want that; merge into a single vector
-	return 1;
+	return in.good();
 }
 
 template<typename T> bool vntc_vect_block_t<T>::write_to_obj_file(ostream &out, unsigned &cur_vert_ix, unsigned npts) const {
 	for (auto i = begin(); i != end(); ++i) {i->write_to_obj_file(out, cur_vert_ix, npts);}
-	return 1;
+	return out.good();
 }
 
 
@@ -1519,18 +1528,17 @@ bool material_t::add_poly(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t
 }
 
 
-bool material_t::write(ostream &out) const {
+bool material_t::write(ostream &out, bool inc_animations) const {
 	out.write((char const *)this, sizeof(material_params_t));
 	write_vector(out, name);
 	write_vector(out, filename);
-	return (geom.write(out) && geom_tan.write(out));
+	return (geom.write(out, inc_animations) && geom_tan.write(out, inc_animations));
 }
-
-bool material_t::read(istream &in) {
+bool material_t::read(istream &in, bool inc_animations) {
 	in.read((char *)this, sizeof(material_params_t));
 	read_vector(in, name);
 	read_vector(in, filename);
-	return (geom.read(in) && geom_tan.read(in));
+	return (geom.read(in, inc_animations) && geom_tan.read(in, inc_animations));
 }
 
 bool material_t::write_to_obj_file(ostream &out, unsigned &cur_vert_ix) const {
@@ -2582,6 +2590,83 @@ void model3d::show_stats() const {
 }
 
 
+bool model_anim_t::write(ostream &out) const {
+	// bone_name_to_index_map
+	write_uint(out, bone_name_to_index_map.size());
+
+	for (auto const &kv : bone_name_to_index_map) {
+		write_string(out, kv.first );
+		write_uint  (out, kv.second);
+	}
+	if (!out.good()) return 0;
+	// transforms
+	write_vector(out, bone_transforms); // better be packed
+	write_vector(out, bone_offset_matrices);
+	out.write((const char *)&global_inverse_transform, sizeof(xform_matrix));
+	out.write((const char *)&root_transform,           sizeof(xform_matrix));
+	write_string(out, model_name);
+	if (!out.good()) return 0;
+	// anim_nodes
+	write_uint(out, anim_nodes.size());
+
+	for (anim_node_t const &n : anim_nodes) { // Note: no_anim_data is not written
+		/*
+		int bone_index;
+		string name;
+		xform_matrix transform;
+		vector<unsigned> children;
+		*/
+		// TODO
+	}
+	// animations
+	if (!out.good()) return 0;
+	write_uint(out, animations.size());
+
+	for (animation_t const &a : animations) {
+		/*
+		float ticks_per_sec=25.0, duration=1.0;
+		string name;
+		unordered_map<string, anim_data_t> anim_data;
+		*/
+		// TODO
+	}
+	return out.good();
+}
+
+bool model_anim_t::read(istream &in) {
+	// bone_name_to_index_map
+	unsigned const bone_name_to_index_map_sz(read_uint(in));
+	string str;
+
+	for (unsigned i = 0; i < bone_name_to_index_map_sz; ++i) {
+		read_string(in, str);
+		bool const did_ins(bone_name_to_index_map.insert(make_pair(str, read_uint(in))).second);
+		assert(did_ins);
+	}
+	if (!in.good()) return 0;
+	// transforms
+	read_vector(in, bone_transforms);
+	read_vector(in, bone_offset_matrices);
+	in.read((char *)&global_inverse_transform, sizeof(xform_matrix));
+	in.read((char *)&root_transform,           sizeof(xform_matrix));
+	read_string(in, model_name);
+	if (!in.good()) return 0;
+	// anim_nodes
+	anim_nodes.resize(read_uint(in));
+
+	for (anim_node_t &n : anim_nodes) {
+		// TODO
+	}
+	// animations
+	animations.resize(read_uint(in));
+
+	for (animation_t &a : animations) {
+		// TODO
+	}
+	return in.good();
+}
+
+
 bool model3d::write_to_disk(string const &fn) const { // as model3d file; Note: transforms not written
 
 	ofstream out(fn, ios::out | ios::binary);
@@ -2591,21 +2676,21 @@ bool model3d::write_to_disk(string const &fn) const { // as model3d file; Note: 
 		return 0;
 	}
 	cout << "Writing model3d file " << fn << endl;
-	write_uint(out, MAGIC_NUMBER);
+	bool const inc_animations(has_animations());
+	write_uint(out, (inc_animations ? MAGIC_NUMBER_ANIM : MAGIC_NUMBER));
 	out.write((char const *)&bcube, sizeof(cube_t));
-	if (!unbound_geom.write(out)) return 0;
+	if (!unbound_geom.write(out, inc_animations)) return 0;
 	write_uint(out, (unsigned)materials.size());
 	
 	for (material_t const &m : materials) {
-		if (!m.write(out)) {
+		if (!m.write(out, inc_animations)) {
 			cerr << "Error writing material " << m.name << endl;
 			return 0;
 		}
 	}
-	//if (!model_anim_data.write(out)) {cerr << "Error writing animation data" << endl; return 0;}
+	if (inc_animations && !model_anim_data.write(out)) {cerr << "Error writing animation data" << endl; return 0;}
 	return out.good();
 }
-
 
 bool model3d::read_from_disk(string const &fn) { // as model3d file; Note: transforms not read
 
@@ -2617,25 +2702,26 @@ bool model3d::read_from_disk(string const &fn) { // as model3d file; Note: trans
 	}
 	clear(); // may not be needed
 	unsigned const magic_number_comp(read_uint(in));
+	bool const inc_animations(magic_number_comp == MAGIC_NUMBER_ANIM);
 
-	if (magic_number_comp != MAGIC_NUMBER) {
+	if (!inc_animations && magic_number_comp != MAGIC_NUMBER) {
 		cerr << "Error reading model3d file " << fn << ": Invalid file format (magic number check failed)." << endl;
 		return 0;
 	}
 	cout << "Reading model3d file " << fn << endl;
 	from_model3d_file = 1;
 	in.read((char *)&bcube, sizeof(cube_t));
-	if (!unbound_geom.read(in)) return 0;
+	if (!unbound_geom.read(in, inc_animations)) return 0;
 	materials.resize(read_uint(in));
 	
 	for (deque<material_t>::iterator m = materials.begin(); m != materials.end(); ++m) {
-		if (!m->read(in)) {
+		if (!m->read(in, inc_animations)) {
 			cerr << "Error reading material" << endl;
 			return 0;
 		}
 		mat_map[m->name] = (m - materials.begin());
 	}
-	//if (!model_anim_data.read(in) {cerr << "Error reading animation data" << endl; return 0;}
+	if (inc_animations && !model_anim_data.read(in)) {cerr << "Error reading animation data" << endl; return 0;}
 	//simplify_indices(0.1); // TESTING
 	return in.good();
 }

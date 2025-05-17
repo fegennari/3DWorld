@@ -466,8 +466,8 @@ class file_reader_assimp {
 			unsigned const bone_id(model_anim.get_bone_id(anim->mChannels[i]->mNodeName.C_Str()));
 
 			if (bone_id == model_anim.bone_transforms.size()) { // maybe add a new bone with identity transforms
-				model_anim.bone_transforms.push_back(xform_matrix());
-				model_anim.bone_offset_matrices.push_back(xform_matrix());
+				model_anim.bone_transforms     .emplace_back();
+				model_anim.bone_offset_matrices.emplace_back();
 			}
 		}
 	}
@@ -476,7 +476,7 @@ class file_reader_assimp {
 		unsigned const bone_id(model_anim.get_bone_id(pBone->mName.C_Str()));
 
 		if (bone_id == model_anim.bone_transforms.size()) { // maybe add a new bone
-			model_anim.bone_transforms.push_back(xform_matrix());
+			model_anim.bone_transforms.emplace_back();
 			model_anim.bone_offset_matrices.push_back(aiMatrix4x4_to_xform_matrix(pBone->mOffsetMatrix));
 		}
 		for (unsigned i = 0; i < pBone->mNumWeights; i++) {
