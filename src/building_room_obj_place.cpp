@@ -3957,6 +3957,7 @@ void building_t::add_corner_trashcans(rand_gen_t &rgen, room_t const &room, floa
 		float const end_pos (room.d[ dim][end_dir ] + (end_dir  ? -1.0 : 1.0)*wall_spacing);
 		set_wall_width(tcan, side_pos, tcan_radius, !dim);
 		set_wall_width(tcan, end_pos,  tcan_radius,  dim);
+		if (is_obj_placement_blocked(tcan, room, 1)) continue; // inc_open=1
 		room_object_t const tcan_obj(tcan, TYPE_TCAN, room_id, dim, end_dir, RO_FLAG_IN_HALLWAY, tot_light_amt, SHAPE_CYLIN, LT_GRAY);
 		interior->room_geom->objs.push_back(tcan_obj);
 		add_large_trashcan_contents(rgen, tcan_obj, room_id, tot_light_amt);
