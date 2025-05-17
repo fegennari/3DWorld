@@ -2033,8 +2033,8 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 		mens_room = ((part_center.x < room_center.x) ^ (part_center.y < room_center.y));
 
 		if (!is_cube()) { // alternate between men's and women's restrooms
-			if (interior->mens_count < interior->womens_count) {mens_room = 1;}
-			if (interior->mens_count > interior->womens_count) {mens_room = 0;}
+			if      (interior->room_geom->mens_count < interior->room_geom->womens_count) {mens_room = 1;}
+			else if (interior->room_geom->mens_count > interior->room_geom->womens_count) {mens_room = 0;}
 		}
 		else {
 			bool has_second_bathroom(0);
@@ -2094,7 +2094,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 	colorRGBA const stall_color(stall_colors[interior->doors.size() % NUM_STALL_COLORS]); // random, but constant for each building
 	vect_room_object_t &objs(interior->room_geom->objs);
 	room_object_t mirrors[2]; // candidate mirrors for each dir
-	++(mens_room ? interior->mens_count : interior->womens_count);
+	++(mens_room ? interior->room_geom->mens_count : interior->room_geom->womens_count);
 
 	for (unsigned dir = 0; dir < 2; ++dir) { // each side of the wall
 		if (!two_rows && dir == (unsigned)skip_stalls_side) continue; // no stalls/sinks on this side

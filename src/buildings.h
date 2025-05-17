@@ -1095,7 +1095,8 @@ struct door_handle_t {
 struct building_room_geom_t {
 
 	bool has_pictures=0, has_garage_car=0, modified_by_player=0, have_clock=0, glass_floor_split=0, mall_geom_drawn=0;
-	unsigned char num_pic_tids=0, invalidate_mats_mask=0;
+	uint8_t num_pic_tids=0, invalidate_mats_mask=0;
+	uint8_t mens_count=0, womens_count=0; // bathrooms and locker rooms
 	float obj_scale=1.0;
 	unsigned wall_ps_start=0, buttons_start=0, stairs_start=0, backrooms_start=0, retail_start=0; // index of first object of {TYPE_PG_*|TYPE_PSPACE, TYPE_BUTTON, TYPE_STAIR, retail}
 	unsigned init_num_doors=0, init_num_dstacks=0; // required for removing doors added by backrooms generation when room_geom is deleted
@@ -1961,7 +1962,6 @@ struct building_interior_t {
 	bool door_state_updated=0, is_unconnected=0, ignore_ramp_placement=0, placed_people=0, elevators_disabled=0, attic_access_open=0, has_backrooms=0;
 	bool elevator_dir=0, extb_wall_dim=0, extb_wall_dir=0, conn_room_in_extb_hallway=0, has_sec_hallways=0;
 	uint8_t num_extb_floors=0; // for malls and backrooms
-	uint8_t mens_count=0, womens_count=0; // bathrooms
 	float water_zval=0.0; // for multilevel backrooms and swimming pools
 
 	building_interior_t();

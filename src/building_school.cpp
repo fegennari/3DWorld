@@ -301,7 +301,17 @@ bool building_t::add_locker_room_objs(rand_gen_t rgen, room_t const &room, float
 		unsigned const type(rgen.rand_bool() ? TYPE_PANTS : TYPE_TEESHIRT);
 		place_shirt_pants_on_floor(rgen, room, zval, room_id, tot_light_amt, place_area, objs_start, type);
 	}
-	add_door_sign("Locker Room", room, zval, room_id);
+	string sign_text("Locker Room");
+
+	if (is_school()) { // girls vs. boys
+		bool boys(0);
+		if      (interior->room_geom->mens_count < interior->room_geom->womens_count) {boys = 1;}
+		else if (interior->room_geom->mens_count > interior->room_geom->womens_count) {boys = 0;}
+		else {boys = rgen.rand_bool();} // tied
+		++(boys ? interior->room_geom->mens_count : interior->room_geom->womens_count);
+		sign_text = (boys ? "Boys Locker" : "Girls Locker");
+	}
+	add_door_sign(sign_text, room, zval, room_id);
 	return 1;
 }
 
