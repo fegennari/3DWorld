@@ -2097,6 +2097,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			float cull_dist(32.0*(obj.dx() + obj.dy() + obj.dz()));
 			if (building.check_pt_in_retail_room(obj_center)) {cull_dist *= 2.5;} // increased culling distance for retail areas
 			else if (building.point_in_mall     (obj_center)) {cull_dist *= 2.0;} // increased culling distance for malls
+			if (obj.type == TYPE_PADLOCK)                     {cull_dist *= 3.0;} // padlocks are small but can be seen from far away
 			if (!dist_less_than(camera_bs, obj_center, cull_dist)) continue; // too far
 		}
 		bool cull(0);
