@@ -1994,7 +1994,6 @@ bool building_t::add_tp_roll(cube_t const &room, unsigned room_id, float tot_lig
 
 bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, float zval, unsigned room_id, float tot_light_amt, unsigned floor) {
 	// Note: assumes no prior placed objects
-	//bool const use_sink_model(building_obj_model_loader.is_model_valid(OBJ_MODEL_SINK)); // not using sink models
 	bool const use_sink_model(0);
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	vector3d const tsz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TOILET)); // L, W, H
@@ -2011,7 +2010,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 	}
 	float stall_width(2.0*twidth), sink_spacing(1.75*swidth);
 	bool br_dim(room.dy() < room.dx()), sink_side(0), sink_side_set(0), mens_room(0); // br_dim is the smaller dim
-	cube_t place_area(room), br_door, avoid;
+	cube_t place_area(room), avoid;
 	place_area.expand_by(-0.5*wall_thickness);
 	unsigned br_door_stack_ix(0);
 
@@ -2070,7 +2069,6 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 				if (!i->is_connected_to_room(room_id) || !is_cube_close_to_door(c, 0.0, 0, *i, 2)) continue; // check both dirs
 				sink_side = side; sink_side_set = 1;
 				place_area.d[!br_dim][side] += (sink_side ? -1.0 : 1.0)*(i->get_sz_dim(br_dim) - 0.25*swidth); // add sink clearance for the door to close
-				br_door = *i;
 				br_door_stack_ix = (i - interior->door_stacks.begin());
 				break; // sinks are on the side closest to the door
 			}
@@ -2220,7 +2218,8 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 	room_type const rtype(mens_room ? RTYPE_MENS : RTYPE_WOMENS);
 	room.assign_to(rtype, floor);
 	
-	// make sure doors start closed and unlocked, and flag them as auto_close
+	// make sure doors start closed and unlocked, and flag them as auto_close;
+	// if (!is_cube()) we also want to make sure the door opens inward, but we can't change it for only one door in the stack
 	for (door_stack_t const &ds : interior->door_stacks) {
 		if (!ds.is_connected_to_room(room_id)) continue;
 		assert(ds.first_door_ix < interior->doors.size());
@@ -2232,7 +2231,8 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 			door.rtype  = rtype; // tag type so that the correct sign is added
 			door.locked = 0; // only needed for non-cube buildings
 			door.make_auto_close();
-		}
+			if (!is_cube() && !door_opens_inward(ds, room)) {door.opens_out_of_br = 1;}
+		} // for ds
 	} // for ds
 	// add a sign outside the bathroom door
 	add_door_sign((mens_room ? "Men" : "Women"), room, zval, room_id, 1); // no_check_adj_walls=1

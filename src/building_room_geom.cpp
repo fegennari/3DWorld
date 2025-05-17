@@ -6323,7 +6323,7 @@ void building_room_geom_t::maybe_add_door_sign(door_t const &door, door_rotation
 	if      (door.rtype == RTYPE_MENS  ) {tid = get_texture_by_name("interiors/men_restroom.png"  );}
 	else if (door.rtype == RTYPE_WOMENS) {tid = get_texture_by_name("interiors/women_restroom.png");}
 	if (tid == -1) return; // no sign for this door type
-	bool const dim(door.dim), dir(!door.open_dir); // door opens inward; sign is on the outside
+	bool const dim(door.dim), dir(door.open_dir ^ door.opens_out_of_br ^ 1); // door opens inward unless opens_out_of_br=1; sign is on the outside
 	float const ar(get_tex_ar(tid)), width(0.25*door.get_width()), height(width/ar);
 	float const dsign(dir ? 1.0 : -1.0), door_edge(door.d[dim][dir] + 0.5*dsign*door.get_thickness());
 	cube_t sign;

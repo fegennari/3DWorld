@@ -1738,7 +1738,7 @@ struct door_stack_t : public door_base_t {
 	door_stack_t(door_base_t const &db, unsigned fdix) : door_base_t(db), first_door_ix(fdix) {}
 };
 struct door_t : public door_base_t {
-	bool open=0, blocked=0;
+	bool open=0, blocked=0, opens_out_of_br=0;
 	uint8_t locked=0; // 1=regular lock, >= 2=padlock, where color index is locked-2
 	room_type rtype=RTYPE_NOTSET; // room type connected to door, if special; for example a bathroom
 	int obj_ix=-1; // for closets, etc.
