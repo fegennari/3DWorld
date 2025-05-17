@@ -1991,7 +1991,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 				float const front_pad(1.5*get_doorway_width());
 
 				for (elevator_t const &e : interior->elevators) {
-					if (dim == e.dim) continue; // skip parallel case
+					if (bool(dim) == e.dim) continue; // skip parallel case
 					float const clip_edge(e.d[e.dim][e.dir] + front_pad*(e.dir ? 1.0 : -1.0));
 
 					for (unsigned dir = 0; dir < 2; ++dir) {

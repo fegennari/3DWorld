@@ -2177,7 +2177,6 @@ void building_room_geom_t::add_pen_pencil_marker(room_object_t const &c) {
 
 void building_room_geom_t::add_test_tube(room_object_t const &c) {
 	// liquid (blood) in a cylinder with a rounded end and a colored cap
-	unsigned const ndiv(get_rgeom_sphere_ndiv(1)); // use smaller ndiv (16) to reduce vertex count
 	vector3d const sz(c.get_size());
 	unsigned const dim(get_max_dim(sz)), dims[2] = {(dim+1)%3, (dim+2)%3};
 	float const dir_sign(c.dir ? -1.0 : 1.0), length(sz[dim]), radius(0.25f*(sz[dims[0]] + sz[dims[1]]));

@@ -2489,7 +2489,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 							cube_t clip_cube(cand);
 							if (ab) {clip_cube.z2() += window_vspacing;} else {clip_cube.z1() -= window_vspacing;}
 							for (unsigned d = 0; d < 2; ++d) {clip_cube.d[s.dim][d] = ext_cube.d[s.dim][d];} // include padding
-							for (unsigned d = 0; d < 2; ++d) {has_clipped_wall |= subtract_cube_from_cubes(clip_cube, interior->walls[d], nullptr, 1);}
+							for (unsigned d = 0; d < 2; ++d) {has_clipped_wall |= (uint8_t)subtract_cube_from_cubes(clip_cube, interior->walls[d], nullptr, 1);}
 						}
 						break; // done
 					} // for s
@@ -2631,7 +2631,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 					for (unsigned e = 0; e < 2; ++e) {
 						for (unsigned d = 0; d < 2; ++d) {wall_clipped |= subtract_cube_from_cubes(cand_test[e], interior->walls[d], nullptr, 1);} // clip_in_z=1
 					}
-					has_clipped_wall |= wall_clipped;
+					has_clipped_wall |= (uint8_t)wall_clipped;
 				}
 				// add walls around stairs if room walls were clipped or this is the basement; otherwise, make stairs straight with railings;
 				// basement stairs only have walls on the bottom floor, so we set is_at_top=0; skip basement back stairs wall to prevent the player from getting stuck
