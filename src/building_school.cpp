@@ -198,6 +198,7 @@ bool building_t::add_room_lockers(rand_gen_t &rgen, room_t const &room, float zv
 			if (has_bcube_int(locker, blockers)) continue;
 			cube_t test_cube(locker);
 			test_cube.expand_in_dim(dim, 2.0*locker_width); // add some padding to the sides
+			test_cube.intersect_with_cube(room); // not blocked by objects in an adjacent room
 			test_cube.d[!dim][!d] += (d ? -1.0 : 1.0)*locker_width; // add space in front for the door to open
 			bool invalid(0);
 
