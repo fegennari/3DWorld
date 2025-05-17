@@ -253,28 +253,53 @@ bool building_t::add_locker_room_objs(rand_gen_t rgen, room_t const &room, float
 				test_cube.expand_by_xy(clearance);
 				vect_room_object_t &objs(interior->room_geom->objs);
 				if (is_obj_placement_blocked(test_cube, room, 1)) continue;
-				unsigned const flags(0), item_flags(1); // flag as metal mesh
-				objs.emplace_back(bench, TYPE_BENCH, room_id, !dim, 0, flags, tot_light_amt, SHAPE_CUBE, WHITE, item_flags);
-#if 0
-				// can't add teeshirt or pants because alpha mask conflicts (wrong blend order)
-				unsigned const type(rgen.rand_bool() ? TYPE_PANTS : TYPE_TEESHIRT);
-				float const length(((type == TYPE_TEESHIRT) ? 1.0 : 0.8)*bench_width), width(0.98*length), height(0.01*length);
-				vector3d size(0.5*length, 0.5*width, height);
-				bool const dim2(rgen.rand_bool()), dir2(rgen.rand_bool()); // choose a random orientation
-				if (dim2) {std::swap(size.x, size.y);}
-				cube_t c(gen_xy_pos_in_area(bench, size, rgen, bench.z2()));
-				c.expand_by_xy(size);
-				c.z2() += size.z;
-				objs.emplace_back(c, type, room_id, dim2, dir2, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, gen_shirt_pants_color(type, rgen));
-#endif
+				unsigned const item_flags(1); // flag as metal mesh
+				objs.emplace_back(bench, TYPE_BENCH, room_id, !dim, 0, 0, tot_light_amt, SHAPE_CUBE, WHITE, item_flags); // dir=0, flags=0
+
+				if (rgen.rand_float() < 0.65) { // add teeshirt or pants on the bench
+					unsigned const type(rgen.rand_bool() ? TYPE_PANTS : TYPE_TEESHIRT);
+					float const length(((type == TYPE_TEESHIRT) ? 1.0 : 0.8)*bench_width), width(0.98*length), height(0.01*length);
+					vector3d size(0.5*length, 0.5*width, height);
+					bool const dim2(rgen.rand_bool()), dir2(rgen.rand_bool()); // choose a random orientation
+					if (dim2) {std::swap(size.x, size.y);}
+					cube_t c(gen_xy_pos_in_area(bench, size, rgen, bench.z2()));
+					c.expand_by_xy(size);
+					c.z2() += size.z;
+					unsigned const sp_flags(RO_FLAG_NOCOLL | RO_FLAG_HAS_EXTRA); // flag as extra to indicate alpha mask material
+					objs.emplace_back(c, type, room_id, dim2, dir2, sp_flags, tot_light_amt, SHAPE_CUBE, gen_shirt_pants_color(type, rgen));
+				}
 			} // for n
 		}
 	}
-	// add shirt on pants on the floor
 	cube_t place_area(room_bounds);
 	place_area.expand_by(-get_trim_thickness()); // shrink to leave a small gap
-	unsigned const type(rgen.rand_bool() ? TYPE_PANTS : TYPE_TEESHIRT);
-	place_shirt_pants_on_floor(rgen, room, zval, room_id, tot_light_amt, place_area, objs_start, type);
+
+	// add shoes on the floor
+	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_SHOE)) {
+		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SHOE)); // L, W, H
+		float const length(0.2*floor_spacing*rgen.rand_uniform(0.75, 1.0)), width(length*sz.y/sz.x), height(length*sz.z/sz.x), hlen(0.5*length), pair_hw(width);
+		unsigned const num_shoes(1 + (rgen.rand() % 3)); // 1-3
+		vect_room_object_t &objs(interior->room_geom->objs);
+		cube_t shoes;
+		set_cube_zvals(shoes, zval, zval+height);
+
+		for (unsigned n = 0, num_added = 0; n < 20 && num_added < num_shoes; ++n) { // try to place shoes
+			bool const rdir(rgen.rand_bool()); // wall dir
+			cube_t shoe_area(place_area);
+			shoe_area.d[dim][!rdir] = place_area.d[dim][rdir] + (rdir ? -1.0 : 1.0)*1.5*length; // shrink area to near the short wall
+			set_wall_width(shoes, rgen.rand_uniform((shoe_area.d[ dim][0] + hlen   ), (shoe_area.d[ dim][1] - hlen   )), hlen,     dim);
+			set_wall_width(shoes, rgen.rand_uniform((shoe_area.d[!dim][0] + pair_hw), (shoe_area.d[!dim][1] - pair_hw)), pair_hw, !dim);
+			if (is_obj_placement_blocked(shoes, room, 1) || overlaps_other_room_obj(shoes, objs_start)) continue;
+			bool const sdir(rgen.rand_bool()); // shoe dir
+			unsigned const item_flags(rgen.rand()); // random shoe sub-model
+			add_obj_pair(room_object_t(shoes, TYPE_SHOE, room_id, dim, sdir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, WHITE, item_flags), objs);
+			++num_added;
+		} // for n
+	}
+	if (is_school() && rgen.rand_float() < 0.75) { // add shirt on pants on the floor of school locker rooms
+		unsigned const type(rgen.rand_bool() ? TYPE_PANTS : TYPE_TEESHIRT);
+		place_shirt_pants_on_floor(rgen, room, zval, room_id, tot_light_amt, place_area, objs_start, type);
+	}
 	add_door_sign("Locker Room", room, zval, room_id);
 	return 1;
 }

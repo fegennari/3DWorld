@@ -18,7 +18,6 @@ void get_pool_ball_rot_matrix(room_object_t const &c, xform_matrix &rot_matrix);
 float get_cockroach_height_from_radius(float radius);
 void rotate_obj_cube(cube_t &c, cube_t const &bc, bool in_dim, bool dir);
 cube_t get_whiteboard_marker_ledge(room_object_t const &c);
-void add_obj_pair(room_object_t const &obj, vect_room_object_t &objects);
 
 
 class door_path_checker_t {

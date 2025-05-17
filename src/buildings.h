@@ -609,7 +609,7 @@ unsigned const RO_FLAG_NODYNAM = 0x40; // for light shadow maps
 unsigned const RO_FLAG_INTERIOR= 0x80; // applies to containing room
 // object flags, second byte
 unsigned const RO_FLAG_EMISSIVE= 0x0100; // for signs, lights, and phones
-unsigned const RO_FLAG_HANGING = 0x0200; // for signs, blinds, hangers, shirts, beams, walls, and balconies; treated as "folding" for closet doors
+unsigned const RO_FLAG_HANGING = 0x0200; // for signs, blinds, hangers, shirts, teeshirts, beams, walls, and balconies; treated as "folding" for closet doors
 unsigned const RO_FLAG_ADJ_LO  = 0x0400; // for kitchen counters/closets/door trim/blinds/railings
 unsigned const RO_FLAG_ADJ_HI  = 0x0800; // for kitchen counters/closets/door trim/blinds/railings
 unsigned const RO_FLAG_ADJ_BOT = 0x1000; // for door trim/railings/ext steps/etc.
@@ -626,7 +626,7 @@ unsigned const RO_FLAG_IN_HALLWAY= 0x010000; // for attic doors and trashcans
 unsigned const RO_FLAG_IN_MALL   = 0x010000; // for mall chairs, tables, benches, trashcans, etc.; aliased with RO_FLAG_IN_HALLWAY and RO_FLAG_IN_FACTORY
 unsigned const RO_FLAG_IN_FACTORY= 0x010000; // for machines, ladders, etc.; aliased with RO_FLAG_IN_HALLWAY and RO_FLAG_IN_MALL
 unsigned const RO_FLAG_IN_ATTIC  = 0x020000; // in attic
-unsigned const RO_FLAG_HAS_EXTRA = 0x040000; // used for counter backsplash, ext wall trim, desks with comp monitors and kbds, books on glass tables, hotel closets, paper towels
+unsigned const RO_FLAG_HAS_EXTRA = 0x040000; // used for counter backsplash, ext wall trim, desks with comp monitors and kbds, books on glass tables, hotel closets, paper towels, teeshirts, pants
 unsigned const RO_FLAG_EXTERIOR  = 0x080000; // for signs, window trim, etc.
 unsigned const RO_FLAG_EXPANDED  = 0x100000; // for shelves, closets, boxes, and mirrors
 unsigned const RO_FLAG_WAS_EXP   = 0x200000; // for objects in/on shelves, closets, drawers, cabinets, shelfracks, and books
@@ -1114,7 +1114,7 @@ struct building_room_geom_t {
 	vect_snake_t  snakes, pet_snakes;
 	vect_bird_t   pet_birds;
 	vect_insect_t insects;
-	// {large static, small static, dynamic, lights, alpha mask, transparent, door} materials
+	// {large static, small static, dynamic, lights, alpha mask, transparent, door, exterior, exterior detail} materials
 	building_materials_t mats_static, mats_small, mats_text, mats_detail, mats_dynamic, mats_lights, mats_amask, mats_alpha, mats_doors, mats_exterior, mats_ext_detail;
 	rgeom_mat_t mats_glass[2]; // {viewed from below, viewed from above}
 	vect_cube_t light_bcubes, shelf_rack_occluders[2], glass_floors; // shelf_rack_occluders: {back, top}
@@ -3226,6 +3226,7 @@ void gen_xy_pos_in_cube (point &pos, cube_t const &c, rand_gen_t &rgen);
 void gen_xyz_pos_in_cube(point &pos, cube_t const &c, rand_gen_t &rgen);
 void gen_xy_pos_for_cube_obj(cube_t &C, cube_t const &S, vector3d const &sz, float height, rand_gen_t &rgen, bool place_at_z1=0);
 void gen_xy_pos_for_round_obj(cube_t &C, cube_t const &S, float radius, float height, float spacing, rand_gen_t &rgen, bool place_at_z1=0);
+void add_obj_pair(room_object_t const &obj, vect_room_object_t &objects);
 // functions in building_interact.cc and building_gameplay.cc
 void gen_sound_thread_safe(unsigned id, point const &pos, float gain=1.0, float pitch=1.0, float gain_scale=1.0, bool skip_if_already_playing=0);
 // from building_room_geom.cpp
