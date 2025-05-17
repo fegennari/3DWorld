@@ -4273,10 +4273,14 @@ bool place_dcan_on_obj(rand_gen_t &rgen, cube_t const &place_on, vect_room_objec
 	if (objs.back().get_drink_can_type() > max_type) {objs.back().obj_id = max_type;} // clamp to max_type
 	return 1;
 }
-bool building_t::place_bottle_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid, bool place_at_z1) {
+bool building_t::place_bottle_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt,
+	vect_cube_t const &avoid, bool place_at_z1, unsigned max_type)
+{
 	return ::place_bottle_on_obj(rgen, place_on, interior->room_geom->objs, get_window_vspace(), room_id, tot_light_amt, BOTTLE_TYPE_WINE, avoid, place_at_z1);
 }
-bool building_t::place_dcan_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid, bool place_at_z1) { // drink can
+bool building_t::place_dcan_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt,
+	vect_cube_t const &avoid, bool place_at_z1, unsigned max_type) // drink can
+{
 	return ::place_dcan_on_obj(rgen, place_on, interior->room_geom->objs, get_window_vspace(), room_id, tot_light_amt, DRINK_CAN_TYPE_BEER, avoid, place_at_z1);
 }
 

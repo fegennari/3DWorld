@@ -1633,7 +1633,8 @@ void building_room_geom_t::add_locker(room_object_t const &c) {
 		// inside slightly higher and shifted toward the front, and shelf more than halfway up
 		add_cabinet_with_open_door(c, door, side_color, wall_thickness, front_face_mask, 0.02*c.dz(), 1.5*wall_thickness, LOCKER_BOT_SHELF_HEIGHT);
 		
-		if (((3*c.obj_id + 7*c.item_flags + 11*c.room_id + c.dir) & 3) == 0) { // add a paper inside the door 25% of the time
+		// add a paper inside the door 25% of the time; not for industrial lockers
+		if (!(c.flags & RO_FLAG_IN_FACTORY) && ((3*c.obj_id + 7*c.item_flags + 11*c.room_id + c.dir) & 3) == 0) {
 			float const locker_width(c.get_width()), width(0.71*locker_width), height(0.92*locker_width); // assumes locker is 12 inches wide
 			cube_t paper(door);
 			paper.expand_in_dim(!c.dim, 0.5*wall_thickness); // set paper thickness

@@ -1353,7 +1353,7 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 
 void building_room_geom_t::expand_locker(room_object_t const &c) {
 	bool const dim(c.dim), dir(c.dir);
-	bool const in_hallway(c.state_flags == RTYPE_HALL), in_locker_room(c.state_flags == RTYPE_LOCKER);
+	bool const in_hallway(c.state_flags == RTYPE_HALL), in_locker_room(c.state_flags == RTYPE_LOCKER), in_industrial(c.state_flags == RTYPE_OFFICE);
 	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_WAS_EXP);
 	float const wall_thickness(get_locker_wall_thickness(c));
 	cube_t interior(c);
@@ -1362,6 +1362,8 @@ void building_room_geom_t::expand_locker(room_object_t const &c) {
 	interior.d[dim][!dir] += (dir ? 1.0 : -1.0)*1.5*wall_thickness;
 	float const width(interior.get_sz_dim(!dim)), depth(interior.get_sz_dim(dim)), height(interior.dz()), vspace(c.dz()/0.75);
 	unsigned const init_objs_sz(expanded_objs.size());
+	// only industrial lockers can have beer
+	unsigned const max_bottle_type(in_industrial ? BOTTLE_TYPE_BEER : BOTTLE_TYPE_COKE), max_can_type(in_industrial ? DRINK_CAN_TYPE_BEER : DRINK_CAN_TYPE_COKE);
 	rand_gen_t rgen(c.create_rgen());
 	bool added_phone(0);
 
@@ -1381,7 +1383,7 @@ void building_room_geom_t::expand_locker(room_object_t const &c) {
 		unsigned const obj_types_hall [num_obj_types] = {TYPE_NONE, TYPE_BOTTLE, TYPE_DRINK_CAN, TYPE_PHONE,    TYPE_TRASH,    TYPE_TEESHIRT};
 		unsigned const obj_types_lroom[num_obj_types] = {TYPE_NONE, TYPE_BOTTLE, TYPE_DRINK_CAN, TYPE_PHONE,    TYPE_TEESHIRT, TYPE_TEESHIRT};
 		unsigned const obj_types_ind  [num_obj_types] = {TYPE_NONE, TYPE_BOTTLE, TYPE_DRINK_CAN, TYPE_TEESHIRT, TYPE_TEESHIRT, TYPE_TEESHIRT}; // hard hat?
-		unsigned const *const obj_types(in_hallway ? obj_types_hall : (in_locker_room ? obj_types_lroom : obj_types_ind)); // RTYPE_OFFICE => industrial
+		unsigned const *const obj_types(in_hallway ? obj_types_hall : (in_locker_room ? obj_types_lroom : obj_types_ind));
 		unsigned num_sel_obj_types(6);
 
 		if (level == 1) { // teeshirts only on the (larger) bottom level
@@ -1389,8 +1391,8 @@ void building_room_geom_t::expand_locker(room_object_t const &c) {
 		}
 		switch (obj_types[rgen.rand()%num_sel_obj_types]) {
 		case TYPE_NONE:      break; // empty
-		case TYPE_BOTTLE:    place_bottle_on_obj(rgen, place_area, expanded_objs, vspace, c.room_id, c.light_amt, BOTTLE_TYPE_COKE,    vect_cube_t(), 1); break; // at_z1=1
-		case TYPE_DRINK_CAN: place_dcan_on_obj  (rgen, place_area, expanded_objs, vspace, c.room_id, c.light_amt, DRINK_CAN_TYPE_COKE, vect_cube_t(), 1); break; // at_z1=1
+		case TYPE_BOTTLE:    place_bottle_on_obj(rgen, place_area, expanded_objs, vspace, c.room_id, c.light_amt, max_bottle_type, vect_cube_t(), 1); break; // at_z1=1
+		case TYPE_DRINK_CAN: place_dcan_on_obj  (rgen, place_area, expanded_objs, vspace, c.room_id, c.light_amt, max_can_type,    vect_cube_t(), 1); break; // at_z1=1
 		case TYPE_PHONE: {
 			if (added_phone) break; // one phone per locker
 			float const phone_length(0.085*height), phone_width(0.45*phone_length);

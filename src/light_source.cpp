@@ -109,6 +109,7 @@ cube_t light_source::calc_bcube(bool add_pad, float sqrt_thresh, bool clip_to_sc
 	}
 	if (has_custom_bcube()) {
 		//assert(bcube.contains_cube(custom_bcube)); // too strong?
+		if (!bcube.intersects(custom_bcube)) {cout << TXT(pos.str()) << TXT(pos2.str()) << TXT(radius) << TXT(bcube.str()) << TXT(custom_bcube.str()) << endl;}
 		assert(bcube.intersects(custom_bcube));
 		bcube.intersect_with_cube(custom_bcube);
 	}
