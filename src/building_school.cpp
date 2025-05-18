@@ -163,6 +163,7 @@ bool building_t::add_room_lockers(rand_gen_t &rgen, room_t const &room, float zv
 	vect_room_object_t &objs(interior->room_geom->objs);
 	float const room_len(place_area.get_sz_dim(dim));
 	unsigned const lockers_start(objs.size()), num_lockers(room_len/locker_width); // floor
+	bool const add_blockers(rtype != RTYPE_HALL); // add blockers in front of rows of lockers, except for school hallways (which have splits for secondary hallways, etc.)
 	// add expanded blockers for stairs, elevators, etc. to ensure there's space for the player and people to walk on the sides
 	float const clearance(2.0*get_min_front_clearance_inc_people());
 	add_padlocks &= building_obj_model_loader.is_model_valid(OBJ_MODEL_PADLOCK);
@@ -187,9 +188,10 @@ bool building_t::add_room_lockers(rand_gen_t &rgen, room_t const &room, float zv
 
 	for (unsigned d = 0; d < 2; ++d) { // for each side of the room
 		if (dir_skip_mask & (1 << d)) continue;
-		float const wall_edge(place_area.d[!dim][d]);
+		float const dsign(d ? -1.0 : 1.0), wall_edge(place_area.d[!dim][d]), locker_front(wall_edge + dsign*locker_depth);
 		locker.d[!dim][ d] = wall_edge;
-		locker.d[!dim][!d] = wall_edge + (d ? -1.0 : 1.0)*locker_depth;
+		locker.d[!dim][!d] = locker_front;
+		cube_t row_bc;
 
 		for (unsigned n = 0; n < num_lockers; ++n) {
 			float const pos(place_area.d[dim][0] + n*locker_width);
@@ -199,7 +201,7 @@ bool building_t::add_room_lockers(rand_gen_t &rgen, room_t const &room, float zv
 			cube_t test_cube(locker);
 			test_cube.expand_in_dim(dim, 2.0*locker_width); // add some padding to the sides
 			test_cube.intersect_with_cube(room); // not blocked by objects in an adjacent room
-			test_cube.d[!dim][!d] += (d ? -1.0 : 1.0)*locker_width; // add space in front for the door to open
+			test_cube.d[!dim][!d] += dsign*locker_width; // add space in front for the door to open
 			bool invalid(0);
 
 			for (auto i = objs.begin()+objs_start; i != objs.begin()+lockers_start; ++i) { // can skip other lockers
@@ -217,14 +219,20 @@ bool building_t::add_room_lockers(rand_gen_t &rgen, room_t const &room, float zv
 				set_wall_width(lock, (locker.d[dim][0] + ((dim ^ bool(d)) ? 0.175 : 0.825)*locker_width), hwidth, dim);
 				float const pos(locker.d[!dim][!d]);
 				lock.d[!dim][ d] = pos;
-				lock.d[!dim][!d] = pos + (d ? -1.0 : 1.0)*depth;
+				lock.d[!dim][!d] = pos + dsign*depth;
 				objs.emplace_back(lock, TYPE_PADLOCK, room_id, !dim, d, (RO_FLAG_NOCOLL | RO_FLAG_IS_ACTIVE), 1.0, SHAPE_CUBE, lock_color); // attached
 				flags |= RO_FLAG_NONEMPTY; // flag as locked
 			}
 			objs.emplace_back(locker, TYPE_LOCKER, room_id, !dim, !d, flags, tot_light_amt, SHAPE_CUBE, locker_color, lix++);
 			set_obj_id(objs); // for random contents
 			objs.back().state_flags = rtype; // store room type for correct object type addtion
+			if (add_blockers) {row_bc.assign_or_union_with_cube(locker);}
 		} // for n
+		if (!row_bc.is_all_zeros()) {
+			row_bc.d[!dim][ d] = locker_front;
+			row_bc.d[!dim][!d] = locker_front + dsign*locker_width;
+			objs.emplace_back(row_bc, TYPE_BLOCKER, room_id, !dim, !d, RO_FLAG_INVIS);
+		}
 	} // for d
 	return (objs.size() > lockers_start); // true if at least one locker was added
 }
