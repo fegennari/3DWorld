@@ -2234,8 +2234,9 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 			if (!is_cube() && !door_opens_inward(ds, room)) {door.opens_out_of_br = 1;}
 		} // for ds
 	} // for ds
-	// add a sign outside the bathroom door
-	add_door_sign((mens_room ? "Men" : "Women"), room, zval, room_id, 1); // no_check_adj_walls=1
+	// add a sign outside the bathroom door; should schools use boys/girls? but it doesn't match the text on the signs placed on the doors
+	string const sign_text(/*is_school() ? (mens_room ? "Boys" : "Girls") :*/ (mens_room ? "Men" : "Women"));
+	add_door_sign(sign_text, room, zval, room_id, 1); // no_check_adj_walls=1
 
 	// make this door/room out of order 10% of the time; only for cube buildings (others need the connectivity), and not for mall bathrooms
 	if (is_cube() && !(has_mall() && room.is_ext_basement()) && rgen.rand_float() < 0.1) {
