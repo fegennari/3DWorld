@@ -214,14 +214,21 @@ size_t texture_manager::get_gpu_mem() const {
 }
 
 
-// ************ read/write code ************
+// ************ read/write helpers ************
+
+template<typename T> void write_val(ostream &out, T val) {
+	out.write((const char *)&val, sizeof(T));
+}
+template<typename T> void read_val(istream &in, T &val) {
+	in.read((char *)&val, sizeof(T));
+}
 
 void write_uint(ostream &out, unsigned val) {
-	out.write((const char *)&val, sizeof(unsigned));
+	write_val(out, val);
 }
-unsigned read_uint(istream &in) {
+unsigned read_uint(istream &in ) {
 	unsigned val(0);
-	in.read((char *)&val, sizeof(unsigned));
+	read_val(in, val);
 	return val;
 }
 
@@ -2590,6 +2597,8 @@ void model3d::show_stats() const {
 }
 
 
+// ************ read/write of animations and models ************
+
 bool model_anim_t::write(ostream &out) const {
 	// bone_name_to_index_map
 	write_uint(out, bone_name_to_index_map.size());
@@ -2602,34 +2611,39 @@ bool model_anim_t::write(ostream &out) const {
 	// transforms
 	write_vector(out, bone_transforms); // better be packed
 	write_vector(out, bone_offset_matrices);
-	out.write((const char *)&global_inverse_transform, sizeof(xform_matrix));
-	out.write((const char *)&root_transform,           sizeof(xform_matrix));
+	write_val   (out, global_inverse_transform);
+	write_val   (out, root_transform);
 	write_string(out, model_name);
 	if (!out.good()) return 0;
 	// anim_nodes
 	write_uint(out, anim_nodes.size());
 
 	for (anim_node_t const &n : anim_nodes) { // Note: no_anim_data is not written
-		/*
-		int bone_index;
-		string name;
-		xform_matrix transform;
-		vector<unsigned> children;
-		*/
-		// TODO
+		write_val   (out, n.bone_index);
+		write_string(out, n.name);
+		write_val   (out, n.transform);
+		write_vector(out, n.children);
 	}
-	// animations
 	if (!out.good()) return 0;
+	// animations
 	write_uint(out, animations.size());
 
 	for (animation_t const &a : animations) {
-		/*
-		float ticks_per_sec=25.0, duration=1.0;
-		string name;
-		unordered_map<string, anim_data_t> anim_data;
-		*/
-		// TODO
-	}
+		write_val   (out, a.ticks_per_sec);
+		write_val   (out, a.duration);
+		write_string(out, a.name);
+		write_uint  (out, a.anim_data.size());
+
+		for (auto const &kv : a.anim_data) {
+			write_string(out, kv.first );
+			anim_data_t const &d(kv.second);
+			write_val   (out, d.uses_scale);
+			write_vector(out, d.pos);
+			write_vector(out, d.scale); // if (uses_scale)?
+			write_vector(out, d.rot);
+			// Note: not writing d.merged
+		} // for kv
+	} // for a
 	return out.good();
 }
 
@@ -2647,22 +2661,41 @@ bool model_anim_t::read(istream &in) {
 	// transforms
 	read_vector(in, bone_transforms);
 	read_vector(in, bone_offset_matrices);
-	in.read((char *)&global_inverse_transform, sizeof(xform_matrix));
-	in.read((char *)&root_transform,           sizeof(xform_matrix));
+	read_val   (in, global_inverse_transform);
+	read_val   (in, root_transform);
 	read_string(in, model_name);
 	if (!in.good()) return 0;
 	// anim_nodes
 	anim_nodes.resize(read_uint(in));
 
 	for (anim_node_t &n : anim_nodes) {
-		// TODO
+		read_val   (in, n.bone_index);
+		read_string(in, n.name);
+		read_val   (in, n.transform);
+		read_vector(in, n.children);
 	}
+	if (!in.good()) return 0;
 	// animations
 	animations.resize(read_uint(in));
 
 	for (animation_t &a : animations) {
-		// TODO
-	}
+		read_val   (in, a.ticks_per_sec);
+		read_val   (in, a.duration);
+		read_string(in, a.name);
+		unsigned const anim_data_sz(read_uint(in));
+
+		for (unsigned i = 0; i < anim_data_sz; ++i) {
+			read_string(in, str);
+			anim_data_t &d(a.anim_data[str]);
+			assert(d.pos.empty() && d.scale.empty() && d.rot.empty()); // must be a new entry
+			read_val   (in, d.uses_scale); // or calculate from scale?
+			read_vector(in, d.pos);
+			read_vector(in, d.scale); // if (uses_scale)?
+			read_vector(in, d.rot);
+			// Note: not reading d.merged
+		} // for i
+	} // for a
+	merge_anim_transforms(); // need to recalculate merged because it's not written or read
 	return in.good();
 }
 
