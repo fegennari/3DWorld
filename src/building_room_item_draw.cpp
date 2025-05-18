@@ -838,17 +838,19 @@ void building_room_geom_t::clear_materials() { // clears material VBOs
 	clear_small_materials();
 }
 void building_room_geom_t::clear_small_materials() { // clears small material VBOs
-	mats_small .clear();
-	mats_text  .clear();
-	mats_amask .clear();
-	mats_detail.clear();
+	mats_small   .clear();
+	mats_text    .clear();
+	mats_amask   .clear();
+	mats_detail  .clear();
+	mats_alpha_sm.clear();
 }
 // Note: used for room lighting changes; detail object changes are not supported
 void building_room_geom_t::check_invalid_draw_data() {
 	if (invalidate_mats_mask & (1 << MAT_TYPE_SMALL  )) { // small objects
-		mats_small.invalidate();
-		mats_amask.invalidate();
-		mats_text .invalidate(); // Note: for now text is assigned to type MAT_TYPE_SMALL since it's always drawn with small objects
+		mats_small   .invalidate();
+		mats_amask   .invalidate();
+		mats_text    .invalidate(); // Note: for now text is assigned to type MAT_TYPE_SMALL since it's always drawn with small objects
+		mats_alpha_sm.invalidate();
 	}
 	if (invalidate_mats_mask & (1 << MAT_TYPE_STATIC )) { // large objects and 3D models
 		mats_static  .invalidate(); // obj_model_insts will also be recreated
@@ -884,29 +886,31 @@ void building_room_geom_t::update_draw_state_for_room_object(room_object_t const
 	modified_by_player = 1; // flag so that we avoid re-generating room geom if the player leaves and comes back
 }
 unsigned building_room_geom_t::get_num_verts() const {
-	return (mats_static.count_all_verts() +
-		mats_small.count_all_verts() +
-		mats_text.count_all_verts() +
-		mats_detail.count_all_verts() +
-		mats_dynamic.count_all_verts() +
-		mats_lights.count_all_verts() +
-		mats_amask.count_all_verts() +
-		mats_alpha.count_all_verts() +
-		mats_doors.count_all_verts() +
-		mats_exterior.count_all_verts()) +
+	return mats_static .count_all_verts() +
+		mats_small     .count_all_verts() +
+		mats_text      .count_all_verts() +
+		mats_detail    .count_all_verts() +
+		mats_dynamic   .count_all_verts() +
+		mats_lights    .count_all_verts() +
+		mats_amask     .count_all_verts() +
+		mats_alpha     .count_all_verts() +
+		mats_alpha_sm  .count_all_verts() +
+		mats_doors     .count_all_verts() +
+		mats_exterior  .count_all_verts() +
 		mats_ext_detail.count_all_verts();
 }
 
 building_materials_t &building_room_geom_t::get_building_mat(tid_nm_pair_t const &tex, bool dynamic, unsigned small, bool transparent, bool exterior) {
 	assert(!(dynamic && exterior));
 	assert(small <= 3); // 0=mats_static, 1=mats_small, 2=mats_detail, 3=doors
-	if (transparent) {assert(!small && !dynamic && !exterior);} // transparent objects must be static and can't be small
-	if (exterior)   return (small ? mats_ext_detail : mats_exterior);
-	if (dynamic)    return mats_dynamic;
-	if (small == 2) return mats_detail;
-	if (small == 3) return mats_doors; // treated as a door
-	if (small)      return ((tex.tid == FONT_TEXTURE_ID) ? mats_text : mats_small);
-	return (transparent ? mats_alpha : mats_static);
+	if (transparent) {assert(!dynamic && !exterior);} // transparent objects must be static and can't be exterior
+	if (transparent) return (small ? mats_alpha_sm   : mats_alpha);
+	if (exterior)    return (small ? mats_ext_detail : mats_exterior);
+	if (dynamic)     return mats_dynamic;
+	if (small == 2)  return mats_detail;
+	if (small == 3)  return mats_doors; // treated as a door
+	if (small)       return ((tex.tid == FONT_TEXTURE_ID) ? mats_text : mats_small);
+	return mats_static;
 }
 rgeom_mat_t &building_room_geom_t::get_metal_material(bool inc_shadows, bool dynamic, unsigned small, bool exterior, colorRGBA const &spec_color) {
 	tid_nm_pair_t tex(-1, 1.0, inc_shadows);
@@ -919,7 +923,7 @@ rgeom_mat_t &building_room_geom_t::get_scratched_metal_material(float tscale, bo
 	return get_material(tex, inc_shadows, dynamic, small, 0, exterior);
 }
 
-void room_object_t::set_as_bottle(unsigned rand_id, unsigned max_type, bool no_empty, unsigned exclude_mask, bool make_empty) {
+void room_object_t::set_as_bottle(unsigned rand_id, unsigned max_type, bool no_empty, unsigned exclude_mask, bool make_empty, bool allow_transparent) {
 	assert(max_type > 0 && max_type < NUM_BOTTLE_TYPES);
 	obj_id = (uint16_t)rand_id;
 	// cycle with a prime number until a valid type is selected; it's up to the caller to not exclude everything and make this infinite loop
@@ -928,6 +932,7 @@ void room_object_t::set_as_bottle(unsigned rand_id, unsigned max_type, bool no_e
 	else if (make_empty) {obj_id |= BOTTLE_EMPTY_MASK;}
 	bottle_params_t const &bp(bottle_params[get_bottle_type()]);
 	color = (is_bottle_empty() ? bp.empty_color : bp.glass_color);
+	if (allow_transparent && bp.transparent && is_bottle_empty()) {color.A = 0.33;} // make transparent
 }
 
 void building_room_geom_t::create_static_vbos(building_t const &building) {
@@ -1962,8 +1967,9 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 
 		// upload VBO data serially
 		if (create_small) {
-			mats_small.create_vbos(building);
-			mats_amask.create_vbos(building);
+			mats_small   .create_vbos(building);
+			mats_amask   .create_vbos(building);
+			mats_alpha_sm.create_vbos(building);
 		}
 		if (create_text) {mats_text.create_vbos(building);}
 		if (!shadow_only) {num_geom_this_frame += (unsigned(create_small) + unsigned(create_text));}
@@ -1980,7 +1986,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	if (!mats_doors.valid) {create_door_vbos(building);} // create door materials if needed (no limit)
 	if (!shadow_only) {enable_blend();} // needed for rugs and book text
 	assert(s.is_setup());
-	if (!draw_ext_only) {mats_static .draw(bbd, s, shadow_only, reflection_pass);} // this is the slowest call
+	if (!draw_ext_only) {mats_static .draw(bbd, s, shadow_only, reflection_pass);}
 	if (draw_lights)    {mats_lights .draw(bbd, s, shadow_only, reflection_pass);}
 	if (inc_small  )    {mats_dynamic.draw(bbd, s, shadow_only, reflection_pass);}
 	if (draw_detail_objs && inc_small >= 3) {mats_detail.draw(bbd, s, shadow_only, reflection_pass);} // now included in the shadow pass
@@ -2334,10 +2340,11 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		if (!building.is_factory()) {particle_manager.draw(s, xlate);} // factory smoke is drawn later
 		fire_manager.draw(s, xlate);
 	}
-	if (!shadow_only && !mats_alpha.empty()) { // draw last; not shadow casters; for shower glass, etc.
+	if (!shadow_only && (!mats_alpha.empty() || (inc_small && !mats_alpha_sm.empty()))) { // draw last; not shadow casters; for shower glass, etc.
 		enable_blend();
 		glDepthMask(GL_FALSE); // disable depth writing
 		mats_alpha.draw(bbd, s, shadow_only, reflection_pass);
+		if (inc_small) {mats_alpha_sm.draw(bbd, s, shadow_only, reflection_pass);}
 		glDepthMask(GL_TRUE);
 		disable_blend();
 		indexed_vao_manager_with_shadow_t::post_render();

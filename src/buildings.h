@@ -135,18 +135,19 @@ struct bottle_params_t {
 	std::string name, texture_fn;
 	colorRGBA glass_color, empty_color, liquid_color; // glass_color is filled glass or plastic, while empty_color is for empty bottles
 	float value, label_tscale;
-	bottle_params_t(std::string const &n, std::string const &fn, colorRGBA const &gc, colorRGBA const &ec, colorRGBA const &lc, float v, float ts) :
-		name(n), texture_fn(fn), glass_color(gc), empty_color(ec), liquid_color(lc), value(v), label_tscale(ts) {}
+	bool transparent;
+	bottle_params_t(std::string const &n, std::string const &fn, colorRGBA const &gc, colorRGBA const &ec, colorRGBA const &lc, float v, float ts, bool t) :
+		name(n), texture_fn(fn), glass_color(gc), empty_color(ec), liquid_color(lc), value(v), label_tscale(ts), transparent(t) {}
 };
 enum {BOTTLE_TYPE_WATER=0, BOTTLE_TYPE_COKE, BOTTLE_TYPE_BEER, BOTTLE_TYPE_WINE, BOTTLE_TYPE_POISON, BOTTLE_TYPE_MEDS, NUM_BOTTLE_TYPES};
 // Note: we could add colorRGBA(0.8, 0.9, 1.0, 0.4) for water bottles, but transparent objects require removing interior faces such as half of the sphere
 bottle_params_t const bottle_params[NUM_BOTTLE_TYPES] = {
-	bottle_params_t("bottle of water",    "interiors/arrowhead_logo.jpg", colorRGBA(0.4, 0.7, 1.0 ), colorRGBA(0.8,  0.9, 1.0 ), colorRGBA(0.0,  0.5,  1.0, 0.0), 1.0,  1.0),
-	bottle_params_t("bottle of Coke",     "interiors/coke_label.jpg",     colorRGBA(0.2, 0.1, 0.05), colorRGBA(1.0,  0.9, 0.8 ), colorRGBA(0.22, 0.11, 0.06),     1.0,  1.0),
-	bottle_params_t("bottle of beer",     "interiors/heineken_label.jpg", colorRGBA(0.1, 0.4, 0.1 ), colorRGBA(0.05, 0.4, 0.05), colorRGBA(0.5,  0.4,  0.1 ),     3.0,  2.0),
-	bottle_params_t("bottle of wine",     "interiors/wine_label.jpg",     BLACK,                     BLACK,                      colorRGBA(0.4,  0.0,  0.1 ),     10.0, 2.0),
-	bottle_params_t("bottle of poison",   "yuck.png",                     BLACK,                     BLACK,                      BLACK,                           5.0,  2.0),
-	bottle_params_t("bottle of medicine", "interiors/magenta_cross.png",  colorRGBA(0.5, 0.4, 0.85), LT_BLUE,                    colorRGBA(0.2,  0.0,  0.7 ),     20.0, 1.0),
+	bottle_params_t("bottle of water",    "interiors/arrowhead_logo.jpg", colorRGBA(0.4, 0.7, 1.0 ), colorRGBA(0.8,  0.9, 1.0 ), colorRGBA(0.0,  0.5,  1.0, 0.0), 1.0,  1.0, 1),
+	bottle_params_t("bottle of Coke",     "interiors/coke_label.jpg",     colorRGBA(0.2, 0.1, 0.05), colorRGBA(1.0,  0.9, 0.8 ), colorRGBA(0.22, 0.11, 0.06),     1.0,  1.0, 1),
+	bottle_params_t("bottle of beer",     "interiors/heineken_label.jpg", colorRGBA(0.1, 0.4, 0.1 ), colorRGBA(0.05, 0.4, 0.05), colorRGBA(0.5,  0.4,  0.1 ),     3.0,  2.0, 0),
+	bottle_params_t("bottle of wine",     "interiors/wine_label.jpg",     BLACK,                     BLACK,                      colorRGBA(0.4,  0.0,  0.1 ),     10.0, 2.0, 0),
+	bottle_params_t("bottle of poison",   "yuck.png",                     BLACK,                     BLACK,                      BLACK,                           5.0,  2.0, 0),
+	bottle_params_t("bottle of medicine", "interiors/magenta_cross.png",  colorRGBA(0.5, 0.4, 0.85), LT_BLUE,                    colorRGBA(0.2,  0.0,  0.7 ),     20.0, 1.0, 0),
 };
 
 struct drink_can_params_t {
@@ -794,7 +795,7 @@ struct room_object_t : public oriented_cube_t { // size=68
 	int get_food_box_tid() const;
 	std::string const &get_food_box_name() const;
 	int get_model_id() const;
-	void set_as_bottle(unsigned rand_id, unsigned max_type=NUM_BOTTLE_TYPES-1, bool no_empty=0, unsigned exclude_mask=0, bool make_empty=0);
+	void set_as_bottle(unsigned rand_id, unsigned max_type=NUM_BOTTLE_TYPES-1, bool no_empty=0, unsigned exclude_mask=0, bool make_empty=0, bool allow_transparent=0);
 	void remove() {type = TYPE_BLOCKER; flags = (RO_FLAG_NOCOLL | RO_FLAG_INVIS);} // replace it with an invisible blocker that won't collide with anything
 	colorRGBA get_color() const;
 	colorRGBA get_model_color() const;
@@ -1116,7 +1117,8 @@ struct building_room_geom_t {
 	vect_bird_t   pet_birds;
 	vect_insect_t insects;
 	// {large static, small static, dynamic, lights, alpha mask, transparent, door, exterior, exterior detail} materials
-	building_materials_t mats_static, mats_small, mats_text, mats_detail, mats_dynamic, mats_lights, mats_amask, mats_alpha, mats_doors, mats_exterior, mats_ext_detail;
+	building_materials_t mats_static, mats_small, mats_text, mats_detail, mats_dynamic, mats_lights, mats_amask, mats_alpha, mats_alpha_sm,
+		mats_doors, mats_exterior, mats_ext_detail;
 	rgeom_mat_t mats_glass[2]; // {viewed from below, viewed from above}
 	vect_cube_t light_bcubes, shelf_rack_occluders[2], glass_floors; // shelf_rack_occluders: {back, top}
 	vect_cube_t pgbr_walls[2]; // parking garage and backrooms walls, in each dim

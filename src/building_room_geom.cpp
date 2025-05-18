@@ -1970,16 +1970,15 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom, f
 	// obj_id: bits 1-3 for type, bits 6-7 for emptiness, bit 6 for cap color
 	unsigned const bottle_ndiv(get_rgeom_sphere_ndiv(1)); // use smaller ndiv (16) to reduce vertex count
 	bool const cap_color_ix(c.obj_id & 64);
+	bool const is_empty(c.is_bottle_empty()), transparent(c.color.A < 1.0), shadowed(c.color.A > 0.5);
 	colorRGBA const color(apply_light_color(c));
 	colorRGBA const cap_colors[2] = {LT_GRAY, GOLD}, cap_spec_colors[2] = {WHITE, GOLD};
-	// setup the untextured plastic/glass material; empty bottles should be transparent,
-	// but mats_alpha isn't supported for small objects, it won't blend with other transparent objects like tables, and won't work against windows
-	tid_nm_pair_t tex(-1, 1.0, 1); // shadowed
+	// setup the untextured plastic/glass material
+	tid_nm_pair_t tex(-1, 1.0, shadowed);
 	tex.set_specular(0.5, 80.0);
-	rgeom_mat_t &mat(get_material(tex, 1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
+	rgeom_mat_t &mat(get_material(tex, shadowed, 0, 1, transparent)); // dynamic=0, small=1
 	vector3d const sz(c.get_size());
 	unsigned const dim(get_max_dim(sz)), dim1((dim+1)%3), dim2((dim+2)%3);
-	bool const is_empty(c.is_bottle_empty());
 	add_bottom |= (dim != 2); // add bottom if bottle is on its side
 	float const dir_sign(c.dir ? -1.0 : 1.0), radius(0.25f*(sz[dim1] + sz[dim2])); // base should be square (default/avg radius is 0.15*height)
 	float const length(sz[dim]); // AKA height, if standing up
@@ -1987,7 +1986,7 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom, f
 	mid .d[dim][ c.dir] = c   .d[dim][ c.dir] + dir_sign*0.50*length;
 	mid .d[dim][!c.dir] = mid .d[dim][ c.dir] + dir_sign*0.30*length;
 	body.d[dim][!c.dir] = mid .d[dim][ c.dir] + dir_sign*0.15*length;
-	neck.d[dim][ c.dir] = body.d[dim][!c.dir]; // there will be some intersection, but that should be okay
+	neck.d[dim][ c.dir] = mid .d[dim][!c.dir] - dir_sign*0.02*length; // close to lining up with the top of the sphere or cone
 	neck.expand_in_dim(dim1, -0.29*sz[dim1]); // smaller radius
 	neck.expand_in_dim(dim2, -0.29*sz[dim2]); // smaller radius
 	cube_t cap(neck);
@@ -2031,10 +2030,12 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom, f
 	float const tscale_add((label_rot_angle == 0.0) ? 0.123*c.obj_id + get_obj_rand_tscale_add(c) : 0.0); // add a pseudo-random rotation to the label texture if no custom rot
 	bool const flip(dim != 2 && c.dir);
 	string const &texture_fn(bp.texture_fn); // select the custom label texture for each bottle type
-	rgeom_mat_t &label_mat(get_material(tid_nm_pair_t(texture_fn.empty() ? -1 : get_texture_by_name(texture_fn)), 0, 0, 1)); // unshadowed, small
+	int const tid(texture_fn.empty() ? -1 : get_texture_by_name(texture_fn));
+	rgeom_mat_t &label_mat(get_material(tid_nm_pair_t(tid, 1.0, !shadowed), !shadowed, 0, 1)); // shadowed if plastic unshadowed, small
 	unsigned const label_verts_start(label_mat.itri_verts.size());
-	label_mat.add_ortho_cylin_to_verts(body, apply_light_color(c, WHITE), dim, 0, 0, 0, 0, 1.0, 1.0, side_tscale,
-		1.0, 0, bottle_ndiv, tscale_add, 0, (flip ? 0.0 : 1.0), (flip ? 1.0 : 0.0)); // draw label
+	// draw label; two sided if plastic is transparent; maybe the inside surface should always be white?
+	label_mat.add_ortho_cylin_to_verts(body, apply_light_color(c, WHITE), dim, 0, 0, transparent, 0, 1.0, 1.0, side_tscale,
+		1.0, 0, bottle_ndiv, tscale_add, 0, (flip ? 0.0 : 1.0), (flip ? 1.0 : 0.0));
 	if (rot_angle != 0.0) {rotate_verts(label_mat.itri_verts, plus_z, rot_angle, center, label_verts_start);}
 }
 

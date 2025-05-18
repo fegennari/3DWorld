@@ -3117,7 +3117,7 @@ void building_t::add_floor_clutter_objs(rand_gen_t &rgen, room_t const &room, cu
 			}
 			else { // bottle
 				objs.emplace_back(bottle, TYPE_BOTTLE, room_id, dim, dir, flags, tot_light_amt, SHAPE_CYLIN);
-				objs.back().set_as_bottle(rgen.rand(), NUM_BOTTLE_TYPES-1, 0, 0, 1); // all bottle types; make_empty=1
+				objs.back().set_as_bottle(rgen.rand(), NUM_BOTTLE_TYPES-1, 0, 0, 1, 1); // all bottle types; make_empty=1, allow_transparent=1
 				if (add_stain) {stain_color = bottle_params[objs.back().get_bottle_type()].liquid_color;}
 			}
 			if (stain_color.alpha > 0.0) { // not transparent (water)
@@ -4250,7 +4250,7 @@ bool building_t::place_book_on_obj(rand_gen_t &rgen, room_object_t const &place_
 }
 
 bool place_bottle_on_obj(rand_gen_t &rgen, cube_t const &place_on, vect_room_object_t &objs, float vspace,
-	unsigned rid, float lamt, unsigned max_type, vect_cube_t const &avoid, bool at_z1)
+	unsigned rid, float lamt, unsigned max_type, vect_cube_t const &avoid, bool at_z1, bool allow_transparent=0)
 {
 	float const height(vspace*rgen.rand_uniform(0.075, 0.12)), radius(vspace*rgen.rand_uniform(0.012, 0.018));
 	if (min(place_on.dx(), place_on.dy()) < 5.0*radius) return 0; // surface is too small to place this bottle
@@ -4258,7 +4258,7 @@ bool place_bottle_on_obj(rand_gen_t &rgen, cube_t const &place_on, vect_room_obj
 	cube_t const bottle(place_cylin_object(rgen, place_on, radius, height, 2.0*radius, at_z1));
 	if (has_bcube_int(bottle, avoid)) return 0; // only make one attempt
 	objs.emplace_back(bottle, TYPE_BOTTLE, rid, 0, 0, RO_FLAG_NOCOLL, lamt, SHAPE_CYLIN);
-	objs.back().set_as_bottle(rgen.rand(), max_type);
+	objs.back().set_as_bottle(rgen.rand(), max_type, 0, 0, 0, allow_transparent); // can be empty
 	return 1;
 }
 bool place_dcan_on_obj(rand_gen_t &rgen, cube_t const &place_on, vect_room_object_t &objs, float vspace,

@@ -18,7 +18,7 @@ float get_med_cab_wall_thickness(room_object_t const &c);
 float get_locker_wall_thickness (room_object_t const &c);
 float get_radius_for_square_model(unsigned model_id);
 bool place_bottle_on_obj(rand_gen_t &rgen, cube_t const &place_on, vect_room_object_t &objs, float vspace,
-	unsigned rid, float lamt, unsigned max_type, vect_cube_t const &avoid, bool at_z1);
+	unsigned rid, float lamt, unsigned max_type, vect_cube_t const &avoid, bool at_z1, bool allow_transparent=0);
 bool place_dcan_on_obj  (rand_gen_t &rgen, cube_t const &place_on, vect_room_object_t &objs, float vspace,
 	unsigned rid, float lamt, unsigned max_type, vect_cube_t const &avoid, bool at_z1);
 
@@ -1391,8 +1391,8 @@ void building_room_geom_t::expand_locker(room_object_t const &c) {
 		}
 		switch (obj_types[rgen.rand()%num_sel_obj_types]) {
 		case TYPE_NONE:      break; // empty
-		case TYPE_BOTTLE:    place_bottle_on_obj(rgen, place_area, expanded_objs, vspace, c.room_id, c.light_amt, max_bottle_type, vect_cube_t(), 1); break; // at_z1=1
-		case TYPE_DRINK_CAN: place_dcan_on_obj  (rgen, place_area, expanded_objs, vspace, c.room_id, c.light_amt, max_can_type,    vect_cube_t(), 1); break; // at_z1=1
+		case TYPE_BOTTLE:    place_bottle_on_obj(rgen, place_area, expanded_objs, vspace, c.room_id, c.light_amt, max_bottle_type, vect_cube_t(), 1, 1); break; // at_z1=1; trans=1
+		case TYPE_DRINK_CAN: place_dcan_on_obj  (rgen, place_area, expanded_objs, vspace, c.room_id, c.light_amt, max_can_type,    vect_cube_t(), 1   ); break; // at_z1=1
 		case TYPE_PHONE: {
 			if (added_phone) break; // one phone per locker
 			float const phone_length(0.085*height), phone_width(0.45*phone_length);
@@ -1580,7 +1580,7 @@ void building_room_geom_t::add_wine_rack_bottles(room_object_t const &c, vect_ro
 		float const length(rgen.rand_uniform(0.7, 0.9)*min(((c.type == TYPE_COUNTER) ? 2.7f : 1.8f)*drawer_dz, min(sz.x, sz.y)));
 		float const diameter(min(0.8f*sz.z, length*rgen.rand_uniform(0.26, 0.34)));
 		obj = room_object_t(drawer, TYPE_BOTTLE, c.room_id, dim, rgen.rand_bool(), 0, 1.0, SHAPE_CYLIN);
-		obj.set_as_bottle(rgen.rand()); // can be empty
+		obj.set_as_bottle(rgen.rand(), NUM_BOTTLE_TYPES-1, 0, 0, 0, 1); // can be empty; allow_transparent=1
 		obj.z2() = obj.z1() + diameter;
 		set_rand_pos_for_sz(obj, dim, length, diameter, rgen);
 		break;
