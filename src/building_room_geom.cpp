@@ -1627,7 +1627,8 @@ void building_room_geom_t::add_locker(room_object_t const &c) {
 		bool const hinge_side(c.dim ^ c.dir ^ 1);
 		unsigned const front_face_mask(get_face_mask(!c.dim, !hinge_side));
 		float const wall_thickness(get_locker_wall_thickness(c));
-		cube_t const door(get_open_door_bcube(c, wall_thickness, hinge_side));
+		cube_t door(get_open_door_bcube(c, wall_thickness, hinge_side));
+		door.translate_dim(!c.dim, (hinge_side ? 1.0 : -1.0)*0.5*wall_thickness); // prevent Z-fighting with wall trim
 		rgeom_mat_t &front_mat(get_material(tid_nm_pair_t(get_texture_by_name(tex_fn), 0.0), 1));
 		front_mat.add_cube_to_verts(door, apply_light_color(c), all_zeros, front_face_mask, c.dim, c.dir);
 		// inside slightly higher and shifted toward the front, and shelf more than halfway up

@@ -233,26 +233,28 @@ bool building_t::add_locker_room_objs(rand_gen_t rgen, room_t const &room, float
 	// TODO: gaps at ends same chance at both ends
 	bool const dim(room.dx() < room.dy()); // long dim
 	cube_t const room_bounds(get_walkable_room_bounds(room));
-	if (!add_room_lockers(rgen, room, zval, room_id, tot_light_amt, objs_start, room_bounds, RTYPE_LOCKER, dim, 0, 1)) return 0; // dir_skip_mask=0, add_padlocks=1
+	cube_t place_area(room_bounds);
+	place_area.expand_by(-get_trim_thickness()); // shrink to leave a small gap
+	if (!add_room_lockers(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area, RTYPE_LOCKER, dim, 0, 1)) return 0; // dir_skip_mask=0, add_padlocks=1
 	float floor_spacing(get_window_vspace());
+	vect_room_object_t &objs(interior->room_geom->objs);
 	
-	if (room_bounds.get_sz_dim(!dim) > 1.0*floor_spacing) { // add benches in the center of the room if room is wide enough
+	if (place_area.get_sz_dim(!dim) > 1.0*floor_spacing) { // add benches in the center of the room if room is wide enough
 		float const bench_height(0.22*floor_spacing), bench_width(rgen.rand_uniform(0.7, 0.9)*bench_height), bench_len(rgen.rand_uniform(4.0, 5.0)*bench_height);
 		float const clearance(1.1*get_min_front_clearance_inc_people());
-		float const lo_end(room_bounds.d[dim][0] + clearance), hi_end(room_bounds.d[dim][1] - clearance), gap(hi_end - lo_end);
+		float const lo_end(place_area.d[dim][0] + clearance), hi_end(place_area.d[dim][1] - clearance), gap(hi_end - lo_end);
 		unsigned const num_benches(gap/(bench_len + 0.5*bench_width)); // floor, with some min space in between (but maybe not enough for the player to walk)
 
 		if (num_benches > 0) { // always true?
 			float const bench_spacing(gap/num_benches);
 			cube_t bench;
 			set_cube_zvals(bench, zval, zval + bench_height);
-			set_wall_width(bench, room_bounds.get_center_dim(!dim), 0.5*bench_width, !dim); // short dim
+			set_wall_width(bench, place_area.get_center_dim(!dim), 0.5*bench_width, !dim); // short dim
 
 			for (unsigned n = 0; n < num_benches; ++n) {
 				set_wall_width(bench, (lo_end + (n + 0.5)*bench_spacing), 0.5*bench_len, dim); // long  dim
 				cube_t test_cube(bench);
 				test_cube.expand_by_xy(clearance);
-				vect_room_object_t &objs(interior->room_geom->objs);
 				if (is_obj_placement_blocked(test_cube, room, 1)) continue;
 				unsigned const item_flags(1); // flag as metal mesh
 				objs.emplace_back(bench, TYPE_BENCH, room_id, !dim, 0, 0, tot_light_amt, SHAPE_CUBE, WHITE, item_flags); // dir=0, flags=0
@@ -272,15 +274,15 @@ bool building_t::add_locker_room_objs(rand_gen_t rgen, room_t const &room, float
 			} // for n
 		}
 	}
-	cube_t place_area(room_bounds);
-	place_area.expand_by(-get_trim_thickness()); // shrink to leave a small gap
-
+	// maybe add a water fountain
+	if (place_model_along_wall(OBJ_MODEL_WFOUNTAIN, TYPE_WFOUNTAIN, room, 0.25, rgen, (zval+0.18*floor_spacing), room_id, tot_light_amt, room_bounds, objs_start)) {
+		objs.back().dir ^= 1; // placed dir was backwards
+	}
 	// add shoes on the floor
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_SHOE)) {
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SHOE)); // L, W, H
 		float const length(0.2*floor_spacing*rgen.rand_uniform(0.75, 1.0)), width(length*sz.y/sz.x), height(length*sz.z/sz.x), hlen(0.5*length), pair_hw(width);
 		unsigned const num_shoes(1 + (rgen.rand() % 3)); // 1-3
-		vect_room_object_t &objs(interior->room_geom->objs);
 		cube_t shoes;
 		set_cube_zvals(shoes, zval, zval+height);
 
