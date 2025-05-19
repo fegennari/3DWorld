@@ -5166,7 +5166,7 @@ bool building_t::place_eating_items_on_table(rand_gen_t &rgen, unsigned table_ob
 		}
 		added_obj = 1;
 	} // for i
-	if (added_obj) { // place a vase in the center of the table
+	if (added_obj && !is_school()) { // place a vase in the center of the table, but not for schools
 		float const vase_radius(rgen.rand_uniform(0.35, 0.6)*plate_radius), vase_height(rgen.rand_uniform(2.0, 6.0)*vase_radius);
 		cube_t vase;
 		vase.set_from_sphere(table.get_cube_center(), vase_radius);

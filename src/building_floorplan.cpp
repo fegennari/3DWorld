@@ -1326,8 +1326,8 @@ void building_t::assign_special_room_types(vector<unsigned> &utility_room_cands,
 	// add special ground floor room types
 	vector<unsigned> special_room_types; // placed in this priority order
 	special_room_types.push_back(RTYPE_UTILITY);
-	if (is_hotel() || is_hospital()) {special_room_types.push_back(RTYPE_LAUNDRY);}
-	if (is_office_bldg() || is_hospital()) {special_room_types.push_back(RTYPE_SECURITY);}
+	if (is_hotel()       || is_hospital()) {special_room_types.push_back(RTYPE_LAUNDRY );}
+	if (is_office_bldg() || is_hospital()) {special_room_types.push_back(RTYPE_SECURITY);} // add for some schools as well?
 	if (is_office_bldg() || is_hospital() || is_school()) {special_room_types.push_back(RTYPE_SERVER);}
 
 	for (unsigned rtype : special_room_types) {
