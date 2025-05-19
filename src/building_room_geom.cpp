@@ -5488,6 +5488,17 @@ void building_room_geom_t::add_cup_liquid(room_object_t const &c) {
 	get_untextured_material(0, 0, 1).add_vert_disk_to_verts(center, 0.8*radius, 0, apply_light_color(c, colorRGBA(0.2, 0.1, 0.05))); // unshadowed, small
 }
 
+void building_room_geom_t::add_hard_hat(room_object_t const &c) {
+	tid_nm_pair_t tex(-1, 1.0, 1); // shadowed=1
+	tex.set_specular(0.6, 70.0);
+	rgeom_mat_t &mat(get_material(tex, 1, 0, 1)); // shadowed=1, dynamic=0, small=1
+	// elongated top hemisphere + flattened bottom sphere
+	cube_t top(c);
+	top.z1() -= c.dz(); // if it was a full sphere, it would extend below
+	mat.add_sphere_to_verts(c, apply_light_color(c), 0, -plus_z); // low_detail=0, top half
+	// TODO: brim
+}
+
 void add_inverted_quads(rgeom_storage_t::vect_vertex_t &verts, unsigned verts_start) {
 	unsigned const verts_end(verts.size());
 

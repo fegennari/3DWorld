@@ -1380,9 +1380,9 @@ void building_room_geom_t::expand_locker(room_object_t const &c) {
 			}
 		}
 		unsigned const num_obj_types(6);
-		unsigned const obj_types_hall [num_obj_types] = {TYPE_NONE, TYPE_BOTTLE, TYPE_DRINK_CAN, TYPE_PHONE,    TYPE_TRASH,    TYPE_TEESHIRT};
-		unsigned const obj_types_lroom[num_obj_types] = {TYPE_NONE, TYPE_BOTTLE, TYPE_DRINK_CAN, TYPE_PHONE,    TYPE_TEESHIRT, TYPE_TEESHIRT};
-		unsigned const obj_types_ind  [num_obj_types] = {TYPE_NONE, TYPE_BOTTLE, TYPE_DRINK_CAN, TYPE_TEESHIRT, TYPE_TEESHIRT, TYPE_TEESHIRT}; // hard hat?
+		unsigned const obj_types_hall [num_obj_types] = {TYPE_NONE,    TYPE_BOTTLE, TYPE_DRINK_CAN, TYPE_PHONE,   TYPE_TRASH,    TYPE_TEESHIRT};
+		unsigned const obj_types_lroom[num_obj_types] = {TYPE_NONE,    TYPE_BOTTLE, TYPE_DRINK_CAN, TYPE_PHONE,   TYPE_TEESHIRT, TYPE_TEESHIRT};
+		unsigned const obj_types_ind  [num_obj_types] = {TYPE_HARDHAT, TYPE_BOTTLE, TYPE_DRINK_CAN, TYPE_HARDHAT, TYPE_TEESHIRT, TYPE_TEESHIRT}; // hard hat?
 		unsigned const *const obj_types(in_hallway ? obj_types_hall : (in_locker_room ? obj_types_lroom : obj_types_ind));
 		unsigned num_sel_obj_types(6);
 
@@ -1421,6 +1421,10 @@ void building_room_geom_t::expand_locker(room_object_t const &c) {
 			set_wall_width(shirt, c.get_center_dim( dim), 0.01*shirt_width,  dim); // set thickness
 			set_wall_width(shirt, c.get_center_dim(!dim), 0.50*shirt_width, !dim); // set width
 			expanded_objs.emplace_back(shirt, TYPE_TEESHIRT, c.room_id, c.dim, c.dir, RO_FLAG_HANGING, c.light_amt, SHAPE_CUBE, gen_teeshirt_color(rgen), rgen.rand());
+			break;
+		}
+		case TYPE_HARDHAT: {
+			// TODO
 			break;
 		}
 		default: assert(0);
