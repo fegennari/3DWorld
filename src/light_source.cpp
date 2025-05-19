@@ -530,7 +530,8 @@ pos_dir_up light_source::calc_pdu(bool dynamic_cobj, bool is_cube_face, float fa
 		point const start_pos(pos + dir*radius);
 		if (coll_objects[cindex].line_int_exact(start_pos, pos, t, cnorm)) {nclip += (1.0 - t)*radius;}
 	}
-	float const fclip((far_clip == 0.0) ? radius : far_clip);
+	float fclip((far_clip == 0.0) ? radius : far_clip);
+	if (has_custom_bcube()) {min_eq(fclip, custom_bcube.furthest_dist_to_pt(pos));} // optimization? gets here in rare cases
 	return pos_dir_up(pos, dir, up_dir, angle, nclip, max(fclip, nclip+0.01f*radius), 1.0, 1); // force near_clip < far_clip; AR=1.0
 }
 
