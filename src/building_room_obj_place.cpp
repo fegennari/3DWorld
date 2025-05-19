@@ -1269,8 +1269,8 @@ void building_t::place_shirt_pants_on_floor(rand_gen_t &rgen, room_t const &room
 	bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random orientation
 	vector3d size(0.5*length, 0.5*width, height);
 	if (dim) {swap(size.x, size.y);}
-
 	if (valid_area.dx() < 2.0*size.x || valid_area.dy() < 2.0*size.y) return; // too small to place; should never be true
+
 	for (unsigned n = 0; n < 10; ++n) { // make 10 attempts to place the object
 		cube_t c(gen_xy_pos_in_area(valid_area, size, rgen, zval));
 		c.expand_by_xy(size);
@@ -3216,6 +3216,7 @@ void building_t::add_laundry_basket(rand_gen_t &rgen, room_t const &room, float 
 		colorRGBA const colors[4] = {WHITE, LT_BLUE, LT_GREEN, LT_BROWN};
 		room_obj_shape const shape(rgen.rand_bool() ? SHAPE_CUBE : SHAPE_CYLIN);
 		interior->room_geom->objs.emplace_back(c, TYPE_LBASKET, room_id, dim, dir, 0, tot_light_amt, shape, colors[rgen.rand()%4]);
+		set_obj_id(interior->room_geom->objs); // for clothing type and orient
 		break; // done
 	} // for n
 }

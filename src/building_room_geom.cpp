@@ -4524,9 +4524,10 @@ void building_room_geom_t::add_toaster_proxy(room_object_t const &c) { // draw a
 void building_room_geom_t::add_laundry_basket(room_object_t const &c) {
 	// Note: no alpha test is enabled in the shader when drawing this, so the holes in the material may not be drawn correctly against objects such as exterior walls
 	rgeom_mat_t &tex_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/plastic_mesh.png"), 0.0), 1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
+	float const height(c.dz());
 	cube_t bot(c), mid(c), top(c);
-	bot.z2() = mid.z1() = c.z1() + 0.12*c.dz();
-	mid.z2() = top.z1() = c.z2() - 0.12*c.dz();
+	bot.z2() = mid.z1() = c.z1() + 0.12*height;
+	mid.z2() = top.z1() = c.z2() - 0.12*height;
 	colorRGBA const color(apply_light_color(c));
 
 	if (c.shape == SHAPE_CYLIN) {
@@ -4540,6 +4541,18 @@ void building_room_geom_t::add_laundry_basket(room_object_t const &c) {
 		rgeom_mat_t &solid_mat(get_untextured_material(0, 0, 1)); // inc_shadows=0, dynamic=0, small=1
 		solid_mat.add_cube_to_verts_two_sided(bot, color, all_zeros,   EF_Z2 ); // two sided cube with bottom
 		solid_mat.add_cube_to_verts_two_sided(top, color, all_zeros,   EF_Z12); // two sided cube
+		rand_gen_t rgen(c.create_rgen());
+
+		if (rgen.rand_float() < 0.75) { // maybe add clothes at the bottom
+			cube_t clothes(c);
+			clothes.expand_by_xy(-0.05*min(c.dx(), c.dy()));
+			set_cube_zvals(clothes, c.z1()+0.02*height, c.z1()+0.04*height);
+			room_object const type(rgen.rand_bool() ? TYPE_TEESHIRT : TYPE_PANTS);
+			string const fn((type == TYPE_TEESHIRT) ? "interiors/teeshirt.png" : (rgen.rand_bool() ? "interiors/folded_jeans.png" : "interiors/folded_jeans2.png"));
+			rgeom_mat_t& mat(get_material(tid_nm_pair_t(get_texture_by_name(fn), 0.0), 0, 0, 1)); // unshadowed, small
+			colorRGBA const ccolor(apply_light_color(c, gen_shirt_pants_color(type, rgen)));
+			mat.add_cube_to_verts(clothes, ccolor, zero_vector, ~EF_Z2, rgen.rand_bool(), rgen.rand_bool(), rgen.rand_bool()); // top face only
+		}
 	}
 	else {assert(0);}
 }
