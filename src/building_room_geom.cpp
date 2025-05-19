@@ -120,6 +120,11 @@ rgeom_mat_t &building_room_geom_t::get_wood_material(float tscale, bool inc_shad
 		3.0*tscale, 3.0*tscale, 0.0, 0.0, inc_shadows), inc_shadows, dynamic, small, 0, exterior); // hard-coded for common material
 }
 
+void invert_triangles(rgeom_mat_t &mat, unsigned verts_start, unsigned ixs_start) {
+	for (auto i = mat.itri_verts.begin()+verts_start; i != mat.itri_verts.end(); ++i) {i->invert_normal();}
+	reverse(mat.indices.begin()+ixs_start, mat.indices.end());
+}
+
 void rotate_obj_cube(cube_t &c, cube_t const &bc, bool in_dim, bool dir) { // 90 degree rotations about X or Y axis; okay if c == bc
 	point pts[2] = {c.get_llc(), c.get_urc()};
 	vector3d axis;
@@ -2034,9 +2039,16 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom, f
 	int const tid(texture_fn.empty() ? -1 : get_texture_by_name(texture_fn));
 	rgeom_mat_t &label_mat(get_material(tid_nm_pair_t(tid, 1.0, !shadowed), !shadowed, 0, 1)); // shadowed if plastic unshadowed, small
 	unsigned const label_verts_start(label_mat.itri_verts.size());
-	// draw label; two sided if plastic is transparent; maybe the inside surface should always be white?
-	label_mat.add_ortho_cylin_to_verts(body, apply_light_color(c, WHITE), dim, 0, 0, transparent, 0, 1.0, 1.0, side_tscale,
+	// draw label
+	label_mat.add_ortho_cylin_to_verts(body, apply_light_color(c, WHITE), dim, 0, 0, 0, 0, 1.0, 1.0, side_tscale,
 		1.0, 0, bottle_ndiv, tscale_add, 0, (flip ? 0.0 : 1.0), (flip ? 1.0 : 0.0));
+
+	if (transparent) { // draw inside if plastic is transparent; not rotated
+		rgeom_mat_t &imat(get_untextured_material(0, 0, 1));
+		unsigned const verts_start(imat.itri_verts.size()), ixs_start(imat.indices.size());
+		imat.add_ortho_cylin_to_verts(body, apply_light_color(c, WHITE), dim, 0, 0); // sides only
+		invert_triangles(imat, verts_start, ixs_start); // invert inner surface
+	}
 	if (rot_angle != 0.0) {rotate_verts(label_mat.itri_verts, plus_z, rot_angle, center, label_verts_start);}
 }
 
@@ -4196,9 +4208,7 @@ void building_room_geom_t::add_trashcan(room_object_t const &c) {
 			mat.add_vert_torus_to_verts(point(c.xc(), c.yc(), c.z2()), torus_ri, torus_ro, apply_light_color(c, BKGRAY), 1.0, 0, 3);
 			unsigned const verts_start(mat.itri_verts.size()), ixs_start(mat.indices.size());
 			mat.add_vcylin_to_verts(inner, apply_light_color(c, GRAY_BLACK), 1, 0); // inner, sides + bottom, untextured
-			// invert inner surface
-			for (auto i = mat.itri_verts.begin()+verts_start; i != mat.itri_verts.end(); ++i) {i->invert_normal();}
-			reverse(mat.indices.begin()+ixs_start, mat.indices.end());
+			invert_triangles(mat, verts_start, ixs_start); // invert inner surface
 		}
 		else { // SHAPE_CUBE; exterior cube with hole cut into top front
 			float const dz(c.dz()), width(c.get_width()), wall_thickness(0.01*dz), border_thickness(0.1*width);
