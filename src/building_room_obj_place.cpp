@@ -5458,6 +5458,8 @@ void building_t::try_place_light_on_wall(cube_t const &light, room_t const &room
 	cube_t const room_bounds(get_walkable_room_bounds(room));
 	if (min(room_bounds.dx(), room_bounds.dy()) < 3.0*min_wall_spacing) return; // room is too small; shouldn't happen
 	bool const pref_dim(!room_dim); // shorter dim
+	float const light_ws_dmax = 20.0; // max distance in world space from the origin; used to prevent shadow acne when values are large
+	point const lpos(light.get_cube_center());
 	vect_door_stack_t const &doorways(get_doorways_for_room(room, zval)); // must use floor zval
 	cube_t c;
 	c.z2() = light.z2() - 0.1*window_vspacing;
@@ -5465,6 +5467,7 @@ void building_t::try_place_light_on_wall(cube_t const &light, room_t const &room
 
 	for (unsigned n = 0; n < 100; ++n) { // 100 tries
 		bool const dim((n < 10) ? pref_dim : rgen.rand_bool()), dir(rgen.rand_bool());
+		if (dir ? (lpos[dim] < -light_ws_dmax) : (lpos[dim] > light_ws_dmax)) continue; // too far from the origin
 		float const wall_edge_spacing(max(min_wall_spacing, 0.25f*room_bounds.get_sz_dim(!dim))); // not near a corner of the room
 		float const wall_pos(rgen.rand_uniform((room_bounds.d[!dim][0] + wall_edge_spacing), (room_bounds.d[!dim][1] - wall_edge_spacing)));
 		float const wall_face(room_bounds.d[dim][dir]);
