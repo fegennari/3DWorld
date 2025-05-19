@@ -152,23 +152,28 @@ void building_t::add_hallway_lockers(rand_gen_t &rgen, room_t const &room, float
 	place_area.expand_in_dim(dim, -0.75*get_window_vspace()); // leave space at the ends for windows, etc.
 	bool const add_padlocks(floor_ix == 0); // first floor only, to avoid having too many model objects (but may be added to stacked parts)
 	add_room_lockers(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area, RTYPE_HALL, dim, 0, add_padlocks); // dir_skip_mask=0
-	bool const add_bottles(0), add_trash(rgen.rand_float() < 0.75), add_papers(rgen.rand_float() < 0.5), add_glass(0);
+	bool const add_bottles(1), add_trash(rgen.rand_float() < 0.75), add_papers(rgen.rand_float() < 0.5), add_glass(0);
 	add_floor_clutter_objs(rgen, room, room_bounds, zval, room_id, tot_light_amt, objs_start, add_bottles, add_trash, add_papers, add_glass);
 }
 
 bool building_t::add_room_lockers(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
 	cube_t const &place_area, room_type rtype, bool dim, int dir_skip_mask, bool add_padlocks)
 {
-	float const floor_spacing(get_window_vspace()), locker_height(0.75*floor_spacing), locker_depth(0.25*locker_height), locker_width(0.22*locker_height);
+	float const floor_spacing(get_window_vspace()), locker_height(0.75*floor_spacing), locker_depth(0.25*locker_height);
+	float locker_width(0.22*locker_height);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	float const room_len(place_area.get_sz_dim(dim));
 	unsigned const lockers_start(objs.size()), num_lockers(room_len/locker_width); // floor
+
+	if (num_lockers >= 10) { // if there are enough lockers, increase their width slightly so that lockers tile to fill the exact wall length
+		locker_width = room_len/num_lockers;
+	}
 	bool const add_blockers(rtype != RTYPE_HALL); // add blockers in front of rows of lockers, except for school hallways (which have splits for secondary hallways, etc.)
 	// add expanded blockers for stairs, elevators, etc. to ensure there's space for the player and people to walk on the sides
 	float const clearance(2.0*get_min_front_clearance_inc_people());
 	add_padlocks &= building_obj_model_loader.is_model_valid(OBJ_MODEL_PADLOCK);
 	vector3d const sz(add_padlocks ? building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_PADLOCK) : zero_vector); // D, W, H
-	colorRGBA const lock_color(0.4, 0.4, 0.4);
+	colorRGBA const lock_color(0.4, 0.4, 0.4); // gray
 	unsigned const num_locker_colors = 6;
 	colorRGBA const locker_colors[num_locker_colors] =
 	{colorRGBA(0.4, 0.6, 0.7), colorRGBA(0.4, 0.7, 0.6), colorRGBA(0.2, 0.5, 0.8), colorRGBA(0.7, 0.05, 0.05), colorRGBA(0.6, 0.45, 0.25), GRAY};
