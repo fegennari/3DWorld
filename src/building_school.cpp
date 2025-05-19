@@ -243,7 +243,6 @@ bool building_t::add_room_lockers(rand_gen_t &rgen, room_t const &room, float zv
 }
 
 bool building_t::add_locker_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
-	// TODO: gaps at ends same chance at both ends
 	bool const dim(room.dx() < room.dy()); // long dim
 	cube_t const room_bounds(get_walkable_room_bounds(room));
 	cube_t place_area(room_bounds);

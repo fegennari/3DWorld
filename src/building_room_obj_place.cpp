@@ -200,7 +200,7 @@ unsigned building_t::add_table_and_chairs(rand_gen_t rgen, room_t const &room, v
 	}
 	else {
 		bool const two_chairs_long_side(use_long_table && long_edge_len > 3.0*0.2*window_vspacing);
-		if (two_chairs_long_side && max_chairs == 4) {max_chairs = 6;}
+		if (two_chairs_long_side && max_chairs >= 4) {max_chairs = 6;}
 
 		for (unsigned orient = 0; orient < 4; ++orient) {
 			bool const dim(bool(orient >> 1) ^ pri_dim), dir(bool(orient & 1) ^ pri_dir);
@@ -876,11 +876,16 @@ void building_t::add_lounge_objs(rand_gen_t rgen, room_t const &room, float zval
 	float const window_vspacing(get_window_vspace());
 	vect_cube_t blockers;
 	add_lounge_blockers(objs, objs_start, blockers); // add any previously places tables, chairs, etc.
-	bool const add_tall_table(!is_lobby && min(place_area.dx(), place_area.dy()) > 1.4*window_vspacing && rgen.rand_float() < 0.75); // 75% of the time if a lounge
+	bool const teacher(is_school());
+	bool const add_tall_table(!teacher && !is_lobby && min(place_area.dx(), place_area.dy()) > 1.4*window_vspacing && rgen.rand_float() < 0.75); // 75% if non-teacher lounge
+	point const table_pos(room.xc(), room.yc(), zval); // approximate; can be placed 10% away from the room center
 
-	if (add_tall_table) { // add tall table with two bar stools
-		point const table_pos(room.xc(), room.yc(), zval); // approximate; can be placed 10% away from the room center
-		add_table_and_chairs(rgen, room, blockers, room_id, table_pos, WHITE, 0.1, tot_light_amt, 2, add_tall_table);
+	if (teacher || add_tall_table) { // add tall table with two bar stools, or a normal table with chairs for a teacher lounge
+		unsigned const max_chairs(add_tall_table ? 2 : 4);
+		add_table_and_chairs(rgen, room, blockers, room_id, table_pos, WHITE, 0.1, tot_light_amt, max_chairs, add_tall_table);
+	}
+	if (teacher) {
+		// TODO: add microwave on a table, or kitchen counter
 	}
 	cube_t const table_blocker(get_table_blocker(objs, objs_start));
 	if (!table_blocker.is_all_zeros()) {objs.emplace_back(table_blocker, TYPE_BLOCKER, room_id);} // add as an actual blocker for placement of chairs, fridge, etc.
@@ -909,7 +914,7 @@ void building_t::add_lounge_objs(rand_gen_t rgen, room_t const &room, float zval
 			}
 		}
 	}
-	if (rgen.rand_bool()) {add_vending_machine(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area);}
+	if (teacher || rgen.rand_bool()) {add_vending_machine(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area);}
 	// add a TV on the wall (not on a table)
 	add_wall_tv(rgen, room, zval, room_id, tot_light_amt, objs_start);
 
@@ -932,7 +937,7 @@ void building_t::add_lounge_objs(rand_gen_t rgen, room_t const &room, float zval
 	// add 1-4 plants
 	unsigned const num_plants(1 + (rgen.rand() & 3));
 	add_plants_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, num_plants);
-	if (is_school()) {add_door_sign("Teacher Lounge", room, zval, room_id);}
+	if (teacher) {add_door_sign("Teacher Lounge", room, zval, room_id);}
 }
 
 bool building_t::add_vending_machine(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, cube_t const &place_area) {
