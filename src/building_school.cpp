@@ -152,7 +152,7 @@ void building_t::add_hallway_lockers(rand_gen_t &rgen, room_t const &room, float
 	place_area.expand_in_dim(dim, -0.75*get_window_vspace()); // leave space at the ends for windows, etc.
 	bool const add_padlocks(floor_ix == 0); // first floor only, to avoid having too many model objects (but may be added to stacked parts)
 	add_room_lockers(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area, RTYPE_HALL, dim, 0, add_padlocks); // dir_skip_mask=0
-	bool const add_bottles(1), add_trash(rgen.rand_float() < 0.75), add_papers(rgen.rand_float() < 0.5), add_glass(0);
+	bool const add_bottles(rgen.rand_float() < 0.35), add_trash(rgen.rand_float() < 0.75), add_papers(rgen.rand_float() < 0.5), add_glass(0);
 	add_floor_clutter_objs(rgen, room, room_bounds, zval, room_id, tot_light_amt, objs_start, add_bottles, add_trash, add_papers, add_glass);
 }
 

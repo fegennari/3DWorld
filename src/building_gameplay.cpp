@@ -381,7 +381,7 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 
 		if (obj.is_bottle_empty()) {
 			type.name    = "empty " + type.name;
-			type.weight *= (is_bottle ? 0.25 : 0.05);
+			type.weight *= (is_bottle ? (bottle_params[obj.get_bottle_type()].transparent ? 0.05 : 0.25) : 0.05); // assumes transparent = plastic
 			type.value   = 0.0;
 		}
 		else if (!(obj.flags & RO_FLAG_NO_CONS)) {

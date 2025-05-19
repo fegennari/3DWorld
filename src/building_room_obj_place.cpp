@@ -3070,6 +3070,9 @@ void building_t::add_basement_clutter_objs(rand_gen_t rgen, room_t const &room, 
 	place_area.expand_by(-get_trim_thickness()); // add some extra padding
 	add_floor_clutter_objs(rgen, room, place_area, zval, room_id, tot_light_amt, objs_start, add_bottles, add_trash, add_papers, add_glass);
 }
+void set_max_drink_can_type(room_object_t &obj, unsigned max_type) {
+	if (obj.get_drink_can_type() > max_type) {obj.obj_id = max_type;} // clamp to max_type
+}
 void building_t::add_floor_clutter_objs(rand_gen_t &rgen, room_t const &room, cube_t place_area, float zval, unsigned room_id,
 	float tot_light_amt, unsigned objs_start, bool add_bottles, bool add_trash, bool add_papers, bool add_glass)
 {
@@ -3081,6 +3084,8 @@ void building_t::add_floor_clutter_objs(rand_gen_t &rgen, room_t const &room, cu
 	if (add_bottles) { // add bottles and cans on the floor
 		unsigned const num_bottles((rgen.rand() % 12) + 1); // 1-12
 		float const near_prob(0.75), near_dist(0.3*floor_spacing);
+		bool const no_alcohol(is_school() && zval >= ground_floor_z1); // alcohol is only allowed in school basements
+		unsigned const max_bottle_type(no_alcohol ? BOTTLE_TYPE_COKE : NUM_BOTTLE_TYPES-1);
 		point prev_pos;
 
 		for (unsigned n = 0; n < num_bottles; ++n) {
@@ -3111,14 +3116,18 @@ void building_t::add_floor_clutter_objs(rand_gen_t &rgen, room_t const &room, cu
 			colorRGBA stain_color(ALPHA0); // maybe add a stain the same color as the liquid in the bottle
 
 			if (is_can) { // can
-				objs.emplace_back(bottle, TYPE_DRINK_CAN, room_id, dim, dir, flags, tot_light_amt, SHAPE_CYLIN);
-				objs.back().obj_id = rgen.rand();
-				if (add_stain) {stain_color = drink_can_params[objs.back().get_drink_can_type()].liquid_color;}
+				room_object_t obj(bottle, TYPE_DRINK_CAN, room_id, dim, dir, flags, tot_light_amt, SHAPE_CYLIN);
+				obj.obj_id = rgen.rand();
+				if (no_alcohol) {set_max_drink_can_type(obj, DRINK_CAN_TYPE_COKE);}
+				obj.obj_id |= BOTTLE_EMPTY_MASK; // make empty
+				if (add_stain ) {stain_color = drink_can_params[obj.get_drink_can_type()].liquid_color;}
+				objs.emplace_back(obj);
 			}
 			else { // bottle
-				objs.emplace_back(bottle, TYPE_BOTTLE, room_id, dim, dir, flags, tot_light_amt, SHAPE_CYLIN);
-				objs.back().set_as_bottle(rgen.rand(), NUM_BOTTLE_TYPES-1, 0, 0, 1, 1); // all bottle types; make_empty=1, allow_transparent=1
-				if (add_stain) {stain_color = bottle_params[objs.back().get_bottle_type()].liquid_color;}
+				room_object_t obj(bottle, TYPE_BOTTLE, room_id, dim, dir, flags, tot_light_amt, SHAPE_CYLIN);
+				obj.set_as_bottle(rgen.rand(), max_bottle_type, 0, 0, 1, 1); // make_empty=1, allow_transparent=1
+				if (add_stain) {stain_color = bottle_params[obj.get_bottle_type()].liquid_color;}
+				objs.emplace_back(obj);
 			}
 			if (stain_color.alpha > 0.0) { // not transparent (water)
 				float const stain_radius(10.0*radius*rgen.rand_uniform(0.5, 1.0));
@@ -4271,7 +4280,7 @@ bool place_dcan_on_obj(rand_gen_t &rgen, cube_t const &place_on, vect_room_objec
 	if (has_bcube_int(can, avoid)) return 0; // only make one attempt
 	objs.emplace_back(can, TYPE_DRINK_CAN, rid, 0, 0, RO_FLAG_NOCOLL, lamt, SHAPE_CYLIN, LT_GRAY);
 	objs.back().obj_id = (uint16_t)(rgen.rand() & 127); // strip off empty bit
-	if (objs.back().get_drink_can_type() > max_type) {objs.back().obj_id = max_type;} // clamp to max_type
+	set_max_drink_can_type(objs.back(), max_type);
 	return 1;
 }
 bool building_t::place_bottle_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt,
