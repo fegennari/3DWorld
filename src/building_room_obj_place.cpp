@@ -481,7 +481,12 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 		bool const is_tall(!room.is_office && !has_complex_floorplan && !room.has_open_wall(dim, dir) && rgen.rand_float() < 0.5 &&
 			(is_basement || classify_room_wall(room, zval, dim, dir, 0) != ROOM_WALL_EXT));
 		room_object_t desk(c, TYPE_DESK, room_id, dim, !dir, (is_house ? RO_FLAG_IS_HOUSE : 0), tot_light_amt, (is_tall ? SHAPE_TALL : SHAPE_CUBE));
-		if (is_tall && overlaps_other_room_obj(get_desk_top_back(desk), objs_start)) {desk.shape = SHAPE_CUBE;} // back is blocked, maybe be a wall light
+		
+		if (is_tall) {
+			cube_t back(get_desk_top_back(desk));
+			back.d[dim][dir] = room_bounds.d[dim][dir]; // against the wall
+			if (overlaps_other_room_obj(back, objs_start)) {desk.shape = SHAPE_CUBE;} // back is blocked, maybe be a wall light
+		}
 		unsigned const desk_obj_ix(objs.size());
 		objs.push_back(desk);
 		set_obj_id(objs);
