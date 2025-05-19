@@ -654,6 +654,7 @@ bool building_t::create_office_cubicles(rand_gen_t rgen, room_t const &room, flo
 	float const target_width(rgen.rand_uniform(0.8, 0.88)*floor_spacing), max_depth(0.5*(rwidth - 1.2*front_clearance));
 	unsigned const num_cubes(floor(rlength/target_width)); // >= 3, but usually >= 4
 	float const cube_width(rlength/num_cubes), cube_depth(min(cube_width*rgen.rand_uniform(0.8, 1.2), min(1.2f*target_width, max_depth))); // not quite square
+	float const trashcan_z1(zval + 1.1*get_flooring_thick()); // slightly above the flooring/rug to avoid z-fighting
 	bool const add_middle_col(rwidth > 4.0*cube_depth + 2.0*get_doorway_width()); // enough to fit 4 rows of cubes and 2 hallways in between
 	uint16_t const bldg_id(uint16_t(mat_ix + interior->rooms.size())); // some value that's per-building
 	cube_t const &part(get_part_for_room(room));
@@ -692,9 +693,9 @@ bool building_t::create_office_cubicles(rand_gen_t rgen, room_t const &room, flo
 				added_cube = 1;
 				cube_t sides[2], fronts[2], back, surfaces[3];
 				get_cubicle_parts(objs[cubicle_obj_id], sides, fronts, back, surfaces);
-				bool has_cup(0);
+				bool has_cup(0), has_trashcan(0);
 
-				for (unsigned n = 0; n < 3; ++n) { // add objects to cubicle desk surfaces
+				for (unsigned n = 0; n < 3; ++n) { // add objects to/under cubicle desk surfaces
 					bool const sdim(long_dim ^ (n == 2)), sdir((n == 2) ? !dir : bool(!n));
 					cube_t const &surface(surfaces[n]);
 					unsigned const pp_start(objs.size());
@@ -709,6 +710,17 @@ bool building_t::create_office_cubicles(rand_gen_t rgen, room_t const &room, flo
 					if (rgen.rand_float() < 0.4) { // maybe add a book
 						room_object_t const desk(surface, TYPE_DESK, room_id, sdim, sdir, RO_FLAG_INVIS, tot_light_amt); // fake desk for this surface
 						place_book_on_obj(rgen, desk, room_id, tot_light_amt, pp_start, 1, 0, 1); // use_dim_dir=1; skip_if_overlaps=1
+					}
+					if (!has_trashcan && rgen.rand_float() < 0.25) { // maybe add a trashcan under the cubicle
+						float const radius(0.5*rgen.rand_uniform(0.6, 0.8)*min(surface.dx(), surface.dy()));
+						cube_t tc;
+						tc.set_from_point(gen_xy_pos_in_area(surface, radius, rgen));
+						set_cube_zvals(tc, trashcan_z1, zval+rgen.rand_uniform(0.5, 0.75)*(surface.z1() - zval));
+						tc.expand_by_xy(radius);
+						// no trash, no objects to intersect with
+						objs.emplace_back(tc, TYPE_TCAN, room_id, sdim, sdir, RO_FLAG_NOCOLL, tot_light_amt,
+							(rgen.rand_bool() ? SHAPE_CYLIN : SHAPE_CUBE), tcan_colors[rgen.rand() % NUM_TCAN_COLORS]);
+						has_trashcan = 1;
 					}
 				} // for n
 				if (has_office_chair && (rgen.rand()&3)) { // add office chair 75% of the time
