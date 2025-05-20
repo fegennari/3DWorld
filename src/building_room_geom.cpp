@@ -5495,7 +5495,7 @@ void building_room_geom_t::add_hard_hat(room_object_t const &c) {
 	// elongated top hemisphere + flattened bottom sphere
 	cube_t top(c);
 	top.z1() -= c.dz(); // if it was a full sphere, it would extend below
-	mat.add_sphere_to_verts(c, apply_light_color(c), 0, -plus_z); // low_detail=0, top half
+	mat.add_sphere_to_verts(top, apply_light_color(c), 0, -plus_z); // low_detail=0, top half
 	// TODO: brim
 }
 

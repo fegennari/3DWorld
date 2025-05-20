@@ -1424,7 +1424,13 @@ void building_room_geom_t::expand_locker(room_object_t const &c) {
 			break;
 		}
 		case TYPE_HARDHAT: {
-			// TODO
+			if (level == 0) break; // only on the top level
+			float const hh_depth(depth*rgen.rand_uniform(0.75, 0.9)), hh_width(0.75*hh_depth), hh_height(0.55*hh_depth);
+			cube_t hhat;
+			set_cube_zvals(hhat, place_area.z1(), place_area.z1()+hh_height);
+			set_wall_width(hhat, c.get_center_dim( dim), 0.5*hh_depth,  dim); // set thickness
+			set_wall_width(hhat, c.get_center_dim(!dim), 0.5*hh_width, !dim); // set width
+			expanded_objs.emplace_back(hhat, TYPE_HARDHAT, c.room_id, c.dim, c.dir, 0, c.light_amt, SHAPE_CUBE, YELLOW);
 			break;
 		}
 		default: assert(0);
