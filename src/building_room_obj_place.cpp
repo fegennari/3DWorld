@@ -490,43 +490,9 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 		objs.push_back(desk);
 		set_obj_id(objs);
 		objs.back().obj_id += 123*desk_ix; // set even more differently per-desk so that they have different drawer contents
-		bool const add_computer(!no_computer && building_obj_model_loader.is_model_valid(OBJ_MODEL_TV) && (force_computer || rgen.rand_bool()));
+		bool const add_computer(!no_computer && (force_computer || rgen.rand_bool()) && add_computer_to_desk(desk, desk_obj_ix, dim, dir, rgen, room_id, tot_light_amt));
 
-		if (add_computer) {
-			// add a computer monitor using the TV model
-			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TV)); // D, W, H
-			float const tv_height(1.1*height), tv_hwidth(0.5*tv_height*sz.y/sz.z), tv_depth(tv_height*sz.x/sz.z), center(c.get_center_dim(!dim));
-			cube_t tv;
-			set_cube_zvals(tv, c.z2(), c.z2()+tv_height);
-			tv.d[dim][ dir] = c. d[dim][dir] + dsign*0.25*depth; // 25% of the way from the wall
-			tv.d[dim][!dir] = tv.d[dim][dir] + dsign*tv_depth;
-			set_wall_width(tv, center, tv_hwidth, !dim);
-			objs.emplace_back(tv, TYPE_MONITOR, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_SHORT, BLACK); // monitors are shorter than TVs
-			set_obj_id(objs);
-			// add a keyboard as well
-			float const kbd_hwidth(0.7*tv_hwidth), kbd_depth(0.6*kbd_hwidth), kbd_height(0.06*kbd_hwidth);
-			cube_t keyboard;
-			set_cube_zvals(keyboard, c.z2(), c.z2()+kbd_height);
-			keyboard.d[dim][!dir] = c.d[dim][!dir] - dsign*0.06*depth; // close to front edge
-			keyboard.d[dim][ dir] = keyboard.d[dim][!dir] - dsign*kbd_depth;
-			set_wall_width(keyboard, center, kbd_hwidth, !dim);
-			objs.emplace_back(keyboard, TYPE_KEYBOARD, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt); // add as white, will be drawn with gray/black texture
-			// add a computer tower under the desk
-			float const cheight(0.75*height), cwidth(0.44*cheight), cdepth(0.9*cheight); // fixed AR=0.44 to match the texture
-			bool const comp_side(rgen.rand_bool());
-			float const pos(c.d[!dim][comp_side] + (comp_side ? -1.0 : 1.0)*0.8*cwidth);
-			cube_t computer;
-			set_cube_zvals(computer, c.z1(), c.z1()+cheight);
-			set_wall_width(computer, pos, 0.5*cwidth, !dim);
-			computer.d[dim][ dir] = c.d[dim][dir] + dsign*0.5*cdepth;
-			computer.d[dim][!dir] = computer.d[dim][dir] + dsign*cdepth;
-			objs.emplace_back(computer, TYPE_COMPUTER, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt);
-			room_object_t &desk_obj(objs[desk_obj_ix]);
-			desk_obj.flags |= RO_FLAG_ADJ_TOP; // flag so that we don't place other objects on this desk
-			// force even/odd-ness of obj_id based on comp_side so that we know what side to put the drawers on so that they don't intersect the computer
-			if (bool(desk_obj.obj_id & 1) == comp_side) {++desk_obj.obj_id;}
-		}
-		else if (!room.is_store()) { // no computer; add paper, pens, and pencils; not for furniture stores
+		if (!add_computer && !room.is_store()) { // no computer; add paper, pens, and pencils; not for furniture stores
 			if (rgen.rand_float() < 0.75) {add_papers_to_surface(c, dim, !dir, 7, rgen, room_id, tot_light_amt);} // add 0-7 sheet(s) of paper 75% of the time
 			bool const is_big_office(!is_house && room.is_office && interior->rooms.size() > 40);
 			unsigned const max_num_pp(is_big_office ? 2 : 3); // 0-3 for houses, 0-2 for big office buildings
@@ -563,6 +529,46 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 		return 1; // done/success
 	} // for n
 	return 0; // failed
+}
+
+bool building_t::add_computer_to_desk(cube_t const &desk, unsigned desk_obj_ix, bool dim, bool dir, rand_gen_t &rgen, unsigned room_id, float tot_light_amt, float sz_scale) {
+	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_TV)) return 0;
+	// add a computer monitor using the TV model
+	vect_room_object_t &objs(interior->room_geom->objs);
+	assert(desk_obj_ix < objs.size());
+	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TV)); // D, W, H
+	float const desk_height(desk.dz()), desk_depth(desk.get_sz_dim(dim)), dsign(dir ? -1.0 : 1.0);
+	float const tv_height(1.1*sz_scale*desk_height), tv_hwidth(0.5*tv_height*sz.y/sz.z), tv_depth(tv_height*sz.x/sz.z), center(desk.get_center_dim(!dim));
+	cube_t tv;
+	set_cube_zvals(tv, desk.z2(), desk.z2()+tv_height);
+	tv.d[dim][ dir] = desk.d[dim][dir] + dsign*0.25*desk_depth; // 25% of the way from the wall
+	tv.d[dim][!dir] = tv  .d[dim][dir] + dsign*tv_depth;
+	set_wall_width(tv, center, tv_hwidth, !dim);
+	objs.emplace_back(tv, TYPE_MONITOR, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_SHORT, BLACK); // monitors are shorter than TVs
+	set_obj_id(objs);
+	// add a keyboard as well
+	float const kbd_hwidth(0.7*tv_hwidth), kbd_depth(0.6*kbd_hwidth), kbd_height(0.06*kbd_hwidth);
+	cube_t keyboard;
+	set_cube_zvals(keyboard, desk.z2(), desk.z2()+kbd_height);
+	keyboard.d[dim][!dir] = desk    .d[dim][!dir] - dsign*0.06*desk_depth; // close to front edge
+	keyboard.d[dim][ dir] = keyboard.d[dim][!dir] - dsign*kbd_depth;
+	set_wall_width(keyboard, center, kbd_hwidth, !dim);
+	objs.emplace_back(keyboard, TYPE_KEYBOARD, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt); // add as white, will be drawn with gray/black texture
+	// add a computer tower under the desk
+	float const cheight(0.75*sz_scale*desk_height), cwidth(0.44*cheight), cdepth(0.9*cheight); // fixed AR=0.44 to match the texture
+	bool const comp_side(rgen.rand_bool());
+	float const pos(desk.d[!dim][comp_side] + (comp_side ? -1.0 : 1.0)*0.8*cwidth);
+	cube_t computer;
+	set_cube_zvals(computer, desk.z1(), desk.z1()+cheight);
+	set_wall_width(computer, pos, 0.5*cwidth, !dim);
+	computer.d[dim][ dir] = desk    .d[dim][dir] + dsign*0.5*cdepth;
+	computer.d[dim][!dir] = computer.d[dim][dir] + dsign*cdepth;
+	objs.emplace_back(computer, TYPE_COMPUTER, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt);
+	room_object_t &desk_obj(objs[desk_obj_ix]);
+	desk_obj.flags |= RO_FLAG_ADJ_TOP; // flag so that we don't place other objects on this desk
+	// force even/odd-ness of obj_id based on comp_side so that we know what side to put the drawers on so that they don't intersect the computer
+	if (bool(desk_obj.obj_id & 1) == comp_side) {++desk_obj.obj_id;}
+	return 1;
 }
 
 colorRGBA select_paper_color(rand_gen_t &rgen) {
@@ -2739,13 +2745,33 @@ void building_t::add_diningroom_objs(rand_gen_t rgen, room_t const &room, float 
 
 bool building_t::add_library_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement) {
 	if (room.is_hallway || room.is_sec_bldg) return 0; // these can't be libraries
-	unsigned num_added(0);
 
 	for (unsigned n = 0; n < 8; ++n) { // place up to 8 bookcases
-		bool const added(add_bookcase_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, is_basement));
-		if (added) {++num_added;} else {break;}
-	}
-	if (num_added == 0) return 0;
+		if (add_bookcase_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, is_basement)) {
+			if (n == 0 && is_school()) { // add a row of computers on a long table after the first bookcase
+				float const window_vspacing(get_window_vspace()), table_height(rgen.rand_uniform(0.4, 0.42)*window_vspacing);
+				vector3d const sz_scale(rgen.rand_uniform(0.75, 0.8), rgen.rand_uniform(2.8, 3.2), 1.0); // depth, width, height
+				cube_t const place_area(get_room_bounds_inside_trim(room));
+				vect_room_object_t &objs(interior->room_geom->objs);
+				unsigned const table_obj_ix(objs.size());
+				if (!place_obj_along_wall(TYPE_TABLE, room, table_height, sz_scale, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 1)) return 0;
+				room_object_t const table(objs[table_obj_ix]); // deep copy to avoid reference invalidation
+				unsigned const num_computers(3);
+				float const comp_spacing(table.get_sz_dim(!table.dim)/num_computers);
+
+				for (unsigned n = 0; n < num_computers; ++n) {
+					cube_t sub_table(table);
+					sub_table.d[!table.dim][0] += n*comp_spacing;
+					sub_table.d[!table.dim][1]  = sub_table.d[!table.dim][0] + comp_spacing;
+					add_computer_to_desk(sub_table, table_obj_ix, table.dim, !table.dir, rgen, room_id, tot_light_amt, 0.5); // sz_scale=0.5
+				}
+			}
+		}
+		else { // failed to add
+			if (n == 0) return 0; // can't add a single bookcase
+			break;
+		}
+	} // for n
 	if (!is_house) {add_door_sign_remove_existing("Library", room, zval, room_id, objs_start);} // add office building library sign
 	return 1;
 }
