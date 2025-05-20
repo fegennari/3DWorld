@@ -2653,6 +2653,7 @@ private:
 	void try_place_light_on_wall   (cube_t const &light, room_t const &room, bool room_dim, float zval, vect_cube_t &lights, rand_gen_t &rgen) const;
 	bool clip_cube_to_parts(cube_t &c, vect_cube_t &cubes) const;
 	cube_t get_walkable_room_bounds(room_t const &room, bool floor_space_only=0) const;
+	cube_t get_room_bounds_inside_trim(room_t const &room) const;
 	bool is_cube_contained_in_parts(cube_t const &c) const;
 	void expand_ground_floor_cube(cube_t &cube, cube_t const &skip=cube_t()) const;
 	void get_exclude_cube(point const &pos, cube_t const &skip, cube_t &exclude, bool camera_in_building) const;

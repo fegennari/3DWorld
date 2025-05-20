@@ -365,8 +365,7 @@ cube_t get_book_bcube(rand_gen_t &rgen, point const &pos, float floor_spacing, b
 // Note: no blockers, but does check existing objects
 bool building_t::add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement) {
 	bool const is_store(room.is_store()); // bookstore or furniture store
-	cube_t room_bounds(get_walkable_room_bounds(room));
-	room_bounds.expand_by_xy(-get_trim_thickness());
+	cube_t const room_bounds(get_room_bounds_inside_trim(room));
 	float const vspace(get_window_vspace()), wall_thickness(get_wall_thickness());
 	if (min(room_bounds.dx(), room_bounds.dy()) < 1.0*vspace) return 0; // room is too small
 	rand_gen_t rgen2;
@@ -649,8 +648,7 @@ bool building_t::add_office_objs(rand_gen_t rgen, room_t const &room, vect_cube_
 bool building_t::create_office_cubicles(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt) { // assumes no prior placed objects
 	if (!room.is_office) return 0; // offices only
 	if (!room.interior && (rgen.rand()%3) == 0) return 0; // 66.7% chance for non-interior rooms
-	cube_t room_bounds(get_walkable_room_bounds(room));
-	room_bounds.expand_by_xy(-get_trim_thickness()); // fix for Z-fighting of cubicles with exterior walls, and also avoids clipping through wall trim
+	cube_t const room_bounds(get_room_bounds_inside_trim(room)); // fix for Z-fighting of cubicles with exterior walls, and avoids clipping through wall trim
 	float const floor_spacing(get_window_vspace());
 	// Note: we could choose the primary dim based on door placement like in office building bathrooms, but it seems easier to not place cubes by doors
 	bool const long_dim(room.dx() < room.dy());
@@ -2716,8 +2714,7 @@ bool building_t::add_livingroom_objs(rand_gen_t rgen, room_t const &room, float 
 void building_t::add_diningroom_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	//if (!is_house || room.is_hallway || room.is_sec_bldg || room.is_office) return; // still applies, but unnecessary
 	if ((rgen.rand()&3) == 0) return; // no additional objects 25% of the time
-	cube_t room_bounds(get_walkable_room_bounds(room));
-	room_bounds.expand_by_xy(-get_trim_thickness());
+	cube_t const room_bounds(get_room_bounds_inside_trim(room));
 	float const vspace(get_window_vspace()), clearance(max(0.2f*vspace, get_min_front_clearance_inc_people()));
 	vect_room_object_t &objs(interior->room_geom->objs);
 	// add a wine rack

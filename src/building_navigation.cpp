@@ -936,6 +936,11 @@ cube_t building_t::get_walkable_room_bounds(room_t const &room, bool floor_space
 	else {c.expand_by_xy(-half_wall_thick);} // shrink on all sides; not exact, but we don't know which walls are interior vs. exterior
 	return c;
 }
+cube_t building_t::get_room_bounds_inside_trim(room_t const &room) const {
+	cube_t bounds(get_walkable_room_bounds(room));
+	bounds.expand_by_xy(-get_trim_thickness());
+	return bounds;
+}
 
 void building_t::build_nav_graph() const { // Note: does not depend on room geom
 
