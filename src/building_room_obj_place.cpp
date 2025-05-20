@@ -884,9 +884,7 @@ void building_t::add_lounge_objs(rand_gen_t rgen, room_t const &room, float zval
 		unsigned const max_chairs(add_tall_table ? 2 : 4);
 		add_table_and_chairs(rgen, room, blockers, room_id, table_pos, WHITE, 0.1, tot_light_amt, max_chairs, add_tall_table);
 	}
-	if (teacher) {
-		// TODO: add microwave on a table, or kitchen counter
-	}
+	if (teacher) {add_mwave_on_table(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area);} // add microwave on a table
 	cube_t const table_blocker(get_table_blocker(objs, objs_start));
 	if (!table_blocker.is_all_zeros()) {objs.emplace_back(table_blocker, TYPE_BLOCKER, room_id);} // add as an actual blocker for placement of chairs, fridge, etc.
 
@@ -940,6 +938,25 @@ void building_t::add_lounge_objs(rand_gen_t rgen, room_t const &room, float zval
 	if (teacher) {add_door_sign("Teacher Lounge", room, zval, room_id);}
 }
 
+bool building_t::add_mwave_on_table(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, cube_t const &place_area) {
+	float const window_vspacing(get_window_vspace()), table_height(rgen.rand_uniform(0.33, 0.36)*window_vspacing);
+	float const mheight(rgen.rand_uniform(1.0, 1.2)*0.14*window_vspacing), mwidth(1.7*mheight), mdepth(1.2*mheight); // fixed AR=1.7 to match the texture
+	vector3d const sz_scale(rgen.rand_uniform(1.5, 1.8)*mdepth, rgen.rand_uniform(1.5, 1.8)*mwidth, table_height); // depth, width, height
+	vect_room_object_t &objs(interior->room_geom->objs);
+	unsigned const table_obj_ix(objs.size());
+	if (!place_obj_along_wall(TYPE_TABLE, room, table_height, sz_scale, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 1)) return 0;
+	room_object_t &table(objs[table_obj_ix]);
+	bool const dim(table.dim), dir(table.dir);
+	float const pos(rgen.rand_uniform((table.d[!dim][0] + 0.6*mwidth), (table.d[!dim][1] - 0.6*mwidth)));
+	table.flags |= RO_FLAG_ADJ_TOP; // flag as having a microwave so that we don't add a book or bottle that could overlap it
+	cube_t mwave;
+	set_cube_zvals(mwave, table.z2(), table.z2()+mheight);
+	set_wall_width(mwave, pos, 0.5*mwidth, !dim);
+	mwave.d[dim][!dir] = table.d[dim][!dir] + (dir ? 1.0 : -1.0)*0.05*mdepth;
+	mwave.d[dim][ dir] = mwave.d[dim][!dir] + (dir ? 1.0 : -1.0)*mdepth;
+	objs.emplace_back(mwave, TYPE_MWAVE, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt);
+	return 1;
+}
 bool building_t::add_vending_machine(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, cube_t const &place_area) {
 	if (NUM_VEND_TYPES == 0) return 0; // disabled
 	float const height(0.75*get_window_vspace()); // HxWxD
