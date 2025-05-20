@@ -5499,6 +5499,16 @@ void building_room_geom_t::add_hard_hat(room_object_t const &c) {
 	// TODO: brim
 }
 
+void building_room_geom_t::add_comp_mouse(room_object_t const &c) {
+	rgeom_mat_t &mat(get_untextured_material(0, 0, 1)); // unshadowed, small
+	cube_t pad(c), mouse(c);
+	// draw mouse pad as a flat rectangle at the bottom
+	pad.z2() = c.z1() + 0.1*c.dz();
+	mat.add_cube_to_verts_untextured(pad, apply_light_color(c), EF_Z1); // skip bottom face
+	// draw mouse itself as a stretched sphere
+	// TODO
+}
+
 void add_inverted_quads(rgeom_storage_t::vect_vertex_t &verts, unsigned verts_start) {
 	unsigned const verts_end(verts.size());
 

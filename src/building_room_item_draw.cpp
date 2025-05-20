@@ -1162,6 +1162,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_CHEM_TANK:  add_chem_tank(c, 1); break; // draw_label=1
 		case TYPE_CUP:        add_cup_liquid(c); break;
 		case TYPE_HARDHAT:    add_hard_hat(c); break;
+		case TYPE_COMP_MOUSE: add_comp_mouse(c); break;
 		case TYPE_DBG_SHAPE:  add_debug_shape(c); break;
 		default: break;
 		} // end switch
