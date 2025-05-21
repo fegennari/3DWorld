@@ -895,14 +895,20 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					added_obj = no_plants = no_whiteboard = added_cafeteria = add_cafeteria_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start);
 					if (added_obj) {r->assign_to(RTYPE_CAFETERIA, f);}
 				}
-				if (!added_obj && rgen.rand_float() < 0.25) { // maybe make teacher's lounge
+				if (!added_obj && rgen.rand_float() < 0.2) { // maybe make teacher's lounge
 					add_lounge_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, 0); // is_lobby=0
 					added_obj = no_plants = no_whiteboard = 1;
-					if (added_obj) {r->assign_to(RTYPE_LOUNGE, f);}
+					r->assign_to(RTYPE_LOUNGE, f);
 				}
 				if (!added_obj && num_locker_rooms < 2 && rgen.rand_float() < 0.25) { // maybe make locker room
 					added_obj = no_plants = no_whiteboard = add_locker_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 					if (added_obj) {r->assign_to(RTYPE_LOCKER, f); ++num_locker_rooms;}
+				}
+				if (!added_obj && rgen.rand_float() < 0.25) { // maybe make library
+					if (add_library_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement)) {
+						r->assign_to(RTYPE_LIBRARY, f);
+						added_library = is_library = added_obj = no_plants = no_whiteboard = 1;
+					}
 				}
 				if (!added_obj) {
 					// teacher's office, principal's office, supply rooms, art/shop, etc.
