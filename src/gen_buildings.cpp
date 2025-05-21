@@ -2777,9 +2777,12 @@ class building_creator_t {
 			bcube.assign_or_union_with_cube(c);
 			if (is_road_seg) {road_segs.push_back(c);} else {bc_ixs.emplace_back(c, ix);}
 		}
-		void add_building(building_t const &b, unsigned ix) {
-			add_bcube(b.bcube, ix);
+		void update_extb_bcube(building_t const &b) {
 			if (b.has_ext_basement()) {extb_bcube.assign_or_union_with_cube(b.interior->basement_ext_bcube);}
+		}
+		void add_building(building_t const &b, unsigned ix) { // for drawing with grid_by_tile
+			add_bcube(b.bcube, ix);
+			update_extb_bcube(b);
 			ext_vis_bcube.assign_or_union_with_cube(b.get_ext_vis_bcube());
 
 			if (DRAW_WALKWAY_INTERIORS) {
@@ -2790,7 +2793,7 @@ class building_creator_t {
 		}
 		cube_t const &get_vis_bcube() const {return ((player_in_ext_basement() || player_in_uge) ? extb_bcube : ext_vis_bcube);}
 	};
-	vector<grid_elem_t> grid, grid_by_tile;
+	vector<grid_elem_t> grid, grid_by_tile; // grid is used for building placement, while grid_by_tile is used for drawing
 
 	grid_elem_t &get_grid_elem(unsigned gx, unsigned gy) {
 		assert(gx < grid_sz && gy < grid_sz && !grid.empty());
@@ -3276,6 +3279,7 @@ public:
 				building_t &b(buildings[i]);
 				unsigned const rs_ix(city_prob.get(i).same_geom_per_mat[b.is_house] ? b.mat_ix : i); // same material, maybe from same block/city; could also use city_ix
 				b.gen_geometry(rs_ix, 1337*rs_ix+rseed);
+				grid[get_grid_ix(b.bcube.get_cube_center())].update_extb_bcube(b); // required to avoid overlapping extended basements
 			}
 			if (city_only && gen_interiors && global_building_params.max_ext_basement_room_depth > 0) {try_join_city_building_ext_basements(buildings);}
 		} // close the scope

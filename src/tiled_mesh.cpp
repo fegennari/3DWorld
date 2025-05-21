@@ -2776,6 +2776,7 @@ void tile_draw_t::draw(int reflection_pass) { // reflection_pass: 0=none, 1=wate
 	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
 		tile_t *const tile(i->second.get());
 		float const dist(tile->get_rel_dist_to_camera());
+		//if ((i->first.x + i->first.y) & 1) continue; // TESTING: draw checkerboard
 		if (dist > DRAW_DIST_TILES || !tile->is_visible()) continue;
 		if (tile->was_last_occluded()) continue; // occluded in the shadow pass
 		if (reflection_pass == 1 && !can_have_reflection(tile)) continue; // check for water plane Z reflections only
