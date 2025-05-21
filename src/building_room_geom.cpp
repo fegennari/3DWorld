@@ -5489,14 +5489,24 @@ void building_room_geom_t::add_cup_liquid(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_hard_hat(room_object_t const &c) {
+	float const height(c.dz()), width(c.get_width()), depth(c.get_depth());
+	colorRGBA const color(apply_light_color(c));
 	tid_nm_pair_t tex(-1, 1.0, 1); // shadowed=1
 	tex.set_specular(0.6, 70.0);
 	rgeom_mat_t &mat(get_material(tex, 1, 0, 1)); // shadowed=1, dynamic=0, small=1
-	// elongated top hemisphere + flattened bottom sphere
+	// elongated top hemisphere + horizontal cylinder + flattened bottom sphere
 	cube_t top(c);
-	top.z1() -= c.dz(); // if it was a full sphere, it would extend below
-	mat.add_sphere_to_verts(top, apply_light_color(c), 0, -plus_z); // low_detail=0, top half
-	// TODO: brim
+	top.d[c.dim][c.dir] -= (c.dir ? 1.0 : -1.0)*0.2*depth; // shift front back
+	cube_t cylin(top);
+	top.z2() -= 0.04*height;
+	top.z1() -= height; // if it was a full sphere, it would extend below
+	top.expand_in_dim(!c.dim, -0.05*width); // shrink sides
+	mat.add_sphere_to_verts(top, color, 0, -plus_z); // low_detail=0, top half
+	cylin.expand_in_dim(!c.dim, -0.4*width); // shrink sides/ends
+	mat.add_ortho_cylin_to_verts(cylin, color, !c.dim, 1, 1); // draw sides and ends
+	cube_t brim(c);
+	brim.z2() -= 0.92*height; // flatten
+	mat.add_sphere_to_verts(brim, color);
 }
 
 void building_room_geom_t::add_comp_mouse(room_object_t const &c) {

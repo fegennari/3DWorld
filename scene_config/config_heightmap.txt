@@ -21,7 +21,7 @@ player_speed 0.2 # default is 1.0
 head_bob_amount 0.04
 
 #player_start -2.95222 2.68602 -4.79387 # location near a mall
-#player_start -7.52293 -4.31459 -4.96527 # location near a factory
+#player_start -7.87386 -4.6337 -4.98461 # location near a factory
 #player_start -5.40119 -4.19905 -4.77675 # location near a warehouse
 #player_start -5.07721 -3.919 -4.72459 # location near a warehouse V2
 #player_start -11.2919 4.2314 -5.16728 # location near a city hospital
