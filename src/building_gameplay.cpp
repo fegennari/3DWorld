@@ -313,10 +313,11 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 	room_object const otype(obj.type);
 	bool const broken(obj.is_broken());
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
-	if (otype == TYPE_PICTURE && obj.taken_level > 0) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1,  20.0,  6.0, "picture frame");} // second item to take from picture
-	if (otype == TYPE_TPROLL  && obj.has_extra()    ) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,   0.5,  0.2, "paper towels", 50);}
-	if (otype == TYPE_TPROLL  && obj.taken_level > 0) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,   6.0,  0.5, "toilet paper holder");} // second item to take from tproll
-	if (otype == TYPE_TCAN    && obj.in_mall()      ) {return bldg_obj_type_t(0, 1, 1, 1, 0, 0, 2,  80.0, 40.0, "large trashcan");}
+	if (otype == TYPE_PICTURE    && obj.taken_level > 0) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1,  20.0,  6.0, "picture frame");} // second item to take from picture
+	if (otype == TYPE_TPROLL     && obj.has_extra()    ) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,   0.5,  0.2, "paper towels", 50);}
+	if (otype == TYPE_TPROLL     && obj.taken_level > 0) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,   6.0,  0.5, "toilet paper holder");} // second item to take from tproll
+	if (otype == TYPE_COMP_MOUSE && obj.taken_level > 0) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,   4.0,  0.1, "mouse pad");} // second item to take
+	if (otype == TYPE_TCAN       && obj.in_mall()      ) {return bldg_obj_type_t(0, 1, 1, 1, 0, 0, 2,  80.0, 40.0, "large trashcan");}
 	if (is_boxed_machine(obj))                        {return bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 100.0, 20.0, "small machine");} // taken from a box
 
 	if (otype == TYPE_BED) {
@@ -2008,11 +2009,12 @@ void building_room_geom_t::remove_object(unsigned obj_id, point const &at_pos, b
 	assert(type != TYPE_ELEVATOR); // elevators require special updates for drawing logic and cannot be removed at this time
 	bool const added(player_inventory.add_item(obj)), is_light(type == TYPE_LIGHT);
 
-	if      (type == TYPE_PICTURE   && obj.taken_level == 0) {++obj.taken_level;} // take picture, leave frame
-	else if (type == TYPE_PIZZA_BOX && obj.taken_level == 0 && obj.is_open()) {++obj.taken_level;} // take pizza, leave box
-	else if (type == TYPE_TPROLL    && !obj.has_extra() && !(obj.taken_level > 0 || obj.was_expanded())) {++obj.taken_level;} // take roll, leave holder; not for exp
+	if      (type == TYPE_PICTURE    && obj.taken_level == 0) {++obj.taken_level;} // take picture, leave frame
+	else if (type == TYPE_PIZZA_BOX  && obj.taken_level == 0 && obj.is_open()) {++obj.taken_level;} // take pizza, leave box
+	else if (type == TYPE_COMP_MOUSE && obj.taken_level == 0) {++obj.taken_level;} // take mouse, leave mouse pad
+	else if (type == TYPE_TPROLL     && !obj.has_extra() && !(obj.taken_level > 0 || obj.was_expanded())) {++obj.taken_level;} // take roll, leave holder; not for exp
 	else if (type == TYPE_BED) {++obj.taken_level;} // take pillow(s), then sheets, then mattress
-	else if (type == TYPE_PLANT && !(obj.flags & RO_FLAG_ADJ_BOT)) { // plant not on a table/desk
+	else if (type == TYPE_PLANT      && !(obj.flags & RO_FLAG_ADJ_BOT)) { // plant not on a table/desk
 		if (obj.taken_level > 1) {obj.remove();} // take pot - gone
 		else {++obj.taken_level;} // take plant then dirt
 	}

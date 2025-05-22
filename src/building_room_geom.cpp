@@ -5510,13 +5510,20 @@ void building_room_geom_t::add_hard_hat(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_comp_mouse(room_object_t const &c) {
-	rgeom_mat_t &mat(get_untextured_material(0, 0, 1)); // unshadowed, small
-	cube_t pad(c), mouse(c);
+	cube_t pad(c);
 	// draw mouse pad as a flat rectangle at the bottom
 	pad.z2() = c.z1() + 0.1*c.dz();
-	mat.add_cube_to_verts_untextured(pad, apply_light_color(c), EF_Z1); // skip bottom face
-	// draw mouse itself as a stretched sphere
-	// TODO
+	get_untextured_material(0, 0, 1).add_cube_to_verts_untextured(pad, apply_light_color(c), EF_Z1); // unshadowed, small; skip bottom face
+	
+	if (c.taken_level == 0) { // draw mouse itself as a stretched sphere if not taken
+		float const depth(c.get_depth());
+		cube_t mouse(c);
+		set_wall_width(mouse, c.get_center_dim( c.dim), 0.30*depth,  c.dim); // length
+		set_wall_width(mouse, c.get_center_dim(!c.dim), 0.16*depth, !c.dim); // width
+		tid_nm_pair_t tex(-1, 1.0, 1); // shadowed
+		tex.set_specular(0.4, 75.0);
+		get_material(tex, 1, 0, 1).add_sphere_to_verts(mouse, apply_light_color(c, BKGRAY), 0); // shadowed, small, low detail=0
+	}
 }
 
 void add_inverted_quads(rgeom_storage_t::vect_vertex_t &verts, unsigned verts_start) {

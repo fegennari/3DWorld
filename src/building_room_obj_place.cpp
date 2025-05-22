@@ -554,6 +554,25 @@ bool building_t::add_computer_to_desk(cube_t const &desk, unsigned desk_obj_ix, 
 	keyboard.d[dim][ dir] = keyboard.d[dim][!dir] - dsign*kbd_depth;
 	set_wall_width(keyboard, center, kbd_hwidth, !dim);
 	objs.emplace_back(keyboard, TYPE_KEYBOARD, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt); // add as white, will be drawn with gray/black texture
+	
+	if (rgen.rand_float() < 0.75) { // add a mouse on the right side of the desk 75% of the time, if there's space
+		bool const  mp_dir(dim ^ dir ^ 1);
+		float const mp_width(1.6*kbd_depth), mp_depth(1.25*kbd_depth), mp_height(1.8*kbd_height); // height includes the mouse
+		float const end_space(fabs(keyboard.d[!dim][mp_dir] - desk.d[!dim][mp_dir])), slack(end_space - mp_width);
+
+		if (slack > 0.2*mp_width) { // we have the space
+			cube_t mp;
+			set_cube_zvals(mp, desk.z2(), desk.z2()+mp_height);
+			set_wall_width(mp, keyboard.get_center_dim(dim), 0.5*mp_depth, dim);
+			mp.d[!dim][!mp_dir] = keyboard.d[!dim][mp_dir] + (mp_dir ? 1.0 : -1.0)*min(0.1f*mp_width, max(0.5f*mp_width, 0.5f*slack));
+			mp.d[!dim][ mp_dir] = mp.d[!dim][!mp_dir] + (mp_dir ? 1.0 : -1.0)*mp_width;
+			mp.intersect_with_cube_xy(desk); // don't hang off the front of the desk
+			unsigned const NUM_MP_COLORS = 5;
+			colorRGBA const mp_colors[NUM_MP_COLORS] = {BKGRAY, GRAY_BLACK, DK_GRAY, DK_BLUE, DK_RED};
+			objs.emplace_back(mp, TYPE_COMP_MOUSE, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, mp_colors[rgen.rand() % NUM_MP_COLORS]);
+			if (rgen.rand_float() < 0.1) {objs.back().taken_level = 1;} // 10% chance of no mouse
+		}
+	}
 	// add a computer tower under the desk
 	float const cheight(0.75*sz_scale*desk_height), cwidth(0.44*cheight), cdepth(0.9*cheight); // fixed AR=0.44 to match the texture
 	bool const comp_side(rgen.rand_bool());
