@@ -2743,39 +2743,6 @@ void building_t::add_diningroom_objs(rand_gen_t rgen, room_t const &room, float 
 	} // for n
 }
 
-bool building_t::add_library_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement) {
-	if (room.is_hallway || room.is_sec_bldg) return 0; // these can't be libraries
-
-	for (unsigned n = 0; n < 8; ++n) { // place up to 8 bookcases
-		if (add_bookcase_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, is_basement)) {
-			if (n == 0 && is_school()) { // add a row of computers on a long table after the first bookcase
-				float const window_vspacing(get_window_vspace()), table_height(rgen.rand_uniform(0.4, 0.42)*window_vspacing);
-				vector3d const sz_scale(rgen.rand_uniform(0.75, 0.8), rgen.rand_uniform(2.8, 3.2), 1.0); // depth, width, height
-				cube_t const place_area(get_room_bounds_inside_trim(room));
-				vect_room_object_t &objs(interior->room_geom->objs);
-				unsigned const table_obj_ix(objs.size());
-				if (!place_obj_along_wall(TYPE_TABLE, room, table_height, sz_scale, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 1)) return 0;
-				room_object_t const table(objs[table_obj_ix]); // deep copy to avoid reference invalidation
-				unsigned const num_computers(3);
-				float const comp_spacing(table.get_sz_dim(!table.dim)/num_computers);
-
-				for (unsigned n = 0; n < num_computers; ++n) {
-					cube_t sub_table(table);
-					sub_table.d[!table.dim][0] += n*comp_spacing;
-					sub_table.d[!table.dim][1]  = sub_table.d[!table.dim][0] + comp_spacing;
-					add_computer_to_desk(sub_table, table_obj_ix, table.dim, !table.dir, rgen, room_id, tot_light_amt, 0.5); // sz_scale=0.5
-				}
-			}
-		}
-		else { // failed to add
-			if (n == 0) return 0; // can't add a single bookcase
-			break;
-		}
-	} // for n
-	if (!is_house) {add_door_sign_remove_existing("Library", room, zval, room_id, objs_start);} // add office building library sign
-	return 1;
-}
-
 void gen_crate_sz(vector3d &sz, rand_gen_t &rgen, float window_vspacing) {
 	for (unsigned d = 0; d < 3; ++d) {sz[d] = 0.06*window_vspacing*(1.0 + ((d == 2) ? 1.2 : 2.0)*rgen.rand_float());} // slightly more variation in XY
 }
