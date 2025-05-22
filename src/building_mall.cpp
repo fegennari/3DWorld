@@ -1513,7 +1513,7 @@ bool building_t::add_mall_table_with_chairs(rand_gen_t &rgen, cube_t const &tabl
 		} // for n
 	} // for D
 	blockers.push_back(table); // add the table last, so that it doesn't block its own chairs
-	unsigned const place_obj_id(rgen.rand() & 7);
+	unsigned const place_obj_id(rgen.rand() % 9);
 	float const base_prob((table.z2() > ground_floor_z1) ? 1.0 : 0.5); // more likely in above ground cafeterias (with larger tables) then undergound malls
 
 	switch (place_obj_id) { // TYPE_PHONE, TYPE_FOOD_BOX, TYPE_TRASH?
@@ -1523,8 +1523,9 @@ bool building_t::add_mall_table_with_chairs(rand_gen_t &rgen, cube_t const &tabl
 	case 3: place_plate_on_obj (rgen, table_obj, room_id, tot_light_amt); break;
 	case 4: if (rgen.rand_float() < 1.0*base_prob) {place_pizza_on_obj (rgen, table_obj, room_id, tot_light_amt);} break; // less common
 	case 5: if (rgen.rand_float() < 1.0*base_prob) {place_banana_on_obj(rgen, table_obj, room_id, tot_light_amt);} break; // less common
-	case 6: if (rgen.rand_float() < 0.2*base_prob) {place_laptop_on_obj(rgen, table_obj, room_id, tot_light_amt);} break; // very rare
-	case 7: if (rgen.rand_float() < 0.8*base_prob) {place_eating_items_on_table(rgen, table_obj_id); break;} // less common
+	case 6: if (rgen.rand_float() < 1.0*base_prob) {place_apple_on_obj (rgen, table_obj, room_id, tot_light_amt);} break; // less common
+	case 7: if (rgen.rand_float() < 0.2*base_prob) {place_laptop_on_obj(rgen, table_obj, room_id, tot_light_amt);} break; // very rare
+	case 8: if (rgen.rand_float() < 0.8*base_prob) {place_eating_items_on_table(rgen, table_obj_id); break;} // less common
 	} // default = place nothing
 	return 1;
 }

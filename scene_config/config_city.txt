@@ -195,7 +195,7 @@ city ped_model ../models/people/animated/zombies/zombie_woman.fbx    0 0 0  0 -1
 city ped_model_add_anim ../models/people/animated/zombies/zombie_woman_idle_anim.fbx idle
 city default_anim_name "" # clear to empty string
 
-# filename recalc_normals two_sided centered body_material_id fixed_color_id xy_rot swap_xyz scale lod_mult [keywords] [shadow_mat_ids]
+# filename  recalc_normals two_sided centered  body_material_id fixed_color_id xy_rot  swap_xyz scale lod_mult  [keywords] [shadow_mat_ids]
 city toilet_model ../models/interiors/toilet/toilet.model3d     1 0 0  -1 -1 0  1 1.0 1.0  0
 city urinal_model ../models/interiors/urinal/urinal4.model3d    1 0 0  -1 -1 0  1 1.0 1.0  0
 city sink_model   ../models/interiors/simple_sink.model3d       1 0 0   0  0 90  0 1.0 1.0 # always white
@@ -231,6 +231,8 @@ city cash_register_model   ../models/interiors/cash_register/checkout_conv/scene
 city water_fountain_model  ../models/interiors/drinking_fountain/scene.gltf 0 0 0  0 0 270  1 1.0 1.0
 city banana_model       ../models/interiors/banana.glb            0 0 0  0 0 0  0 1.0 1.0
 city banana_peel_model  ../models/interiors/banana_peel.glb       0 0 0  0 0 0  1 1.0 1.0 # ../models/interiors/banana_peel2.glb is too brown
+city apple_model        ../models/interiors/apple.glb             0 0 0  0 0 0  1 1.0 1.0
+city apple_model        ../models/interiors/delicious_red_apple.glb  0 0 0  0 0 0  1 1.0 1.0
 #city toy_model          ../models/interiors/toys/Stacking_Toy.model3d 0 0 0  0 -1 90   1 1.0 1.0  reverse_winding=1 # two sided; center white part has wrong winding order
 city door_handle_model  ../models/interiors/door_handle.fbx       0 0 0  0 0 0  1 1.0 1.0
 city phone_model        ../models/interiors/landline_phone.glb    0 0 0  0 0 90 1 1.0 1.0

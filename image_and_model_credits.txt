@@ -30,3 +30,5 @@ Hospital Operating Table: https://sketchfab.com/3d-models/hospital-bed-02ab679ff
 Hospital Trolley: https://sketchfab.com/3d-models/hospital-trolley-6fa14ba57e324d288b5a42632f19d97f
 Wheelchair: https://sketchfab.com/3d-models/wheelchair-f0ef4adc17ee4929b40e894c608061ea
 Stretcher: https://sketchfab.com/3d-models/gurney-medevac-patient-stretcher-rescue-litter-40c85d5457a144d3b5dc1b328a2425a3
+Apple: https://sketchfab.com/3d-models/delicious-red-apple-dc5a0c0c439942d58d038a10d7064c91
+Apple: https://sketchfab.com/3d-models/apple-152ca55383b2491e816f5ed5ac127677

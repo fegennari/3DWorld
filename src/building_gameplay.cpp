@@ -247,8 +247,9 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_PADLOCK   ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 10.0,  0.2,   "padlock");
 	bldg_obj_types[TYPE_CASHREG   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 1, 0, 1000,  200,   "cash register");
 	bldg_obj_types[TYPE_WFOUNTAIN ] = bldg_obj_type_t(1, 1, 1, 0, 1, 1, 0, 200,   80,    "water fountain");
-	bldg_obj_types[TYPE_BANANA    ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 0.25,  0.3,   "banana");
+	bldg_obj_types[TYPE_BANANA    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 0.25,  0.3,   "banana");
 	bldg_obj_types[TYPE_BAN_PEEL  ] = bldg_obj_type_t(1, 0, 1, 1, 0, 1, 0, 0.0,   0.05,  "banana peel");
+	bldg_obj_types[TYPE_APPLE     ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 0.25,  0.4,   "apple");
 	bldg_obj_types[TYPE_CONF_PHONE] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 40.0,  2.0,   "phone");
 	bldg_obj_types[TYPE_SHOE      ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 40.0,  1.0,   "shoe"); // one shoe
 	bldg_obj_types[TYPE_SHOEBOX   ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 80.0,  2.1,   "shoebox"); // assumed to contain a pair of shoes
@@ -494,7 +495,7 @@ bool is_consumable(room_object_t const &obj) {
 bool is_healing_food(room_object_t const &obj) {
 	if (!in_building_gameplay_mode() || player_at_full_health()) return 0; // heal not needed
 	if (obj.type == TYPE_PIZZA_BOX && obj.is_open() && obj.taken_level == 0) return 1; // pizza
-	if (obj.type == TYPE_BANANA) return 1;
+	if (obj.type == TYPE_BANANA || obj.type == TYPE_APPLE) return 1;
 	return 0;
 }
 
@@ -823,7 +824,7 @@ public:
 			type != TYPE_PENCIL && type != TYPE_HANGER_ROD && type != TYPE_TPROLL && type != TYPE_MARKER && type != TYPE_BUTTON && type != TYPE_PLATE && type != TYPE_TAPE &&
 			type != TYPE_FEXT_MOUNT && type != TYPE_FEXT_SIGN && type != TYPE_PIZZA_BOX && type != TYPE_PIZZA_TOP && type != TYPE_POOL_BALL && type != TYPE_DRINK_CAN &&
 			type != TYPE_KEY && type != TYPE_HANGER && type != TYPE_PADLOCK && type != TYPE_BANANA && type != TYPE_BAN_PEEL && type != TYPE_ELEC_WIRE && type != TYPE_ERASER &&
-			type != TYPE_TESTTUBE)
+			type != TYPE_TESTTUBE && type != TYPE_APPLE)
 		{
 			rooms_stolen_from.insert(obj.room_id); // only if was_expanded?
 		}
@@ -868,6 +869,7 @@ public:
 		else if (is_healing_food(obj)) {
 			if      (obj.type == TYPE_PIZZA_BOX) {health = 0.50;}
 			else if (obj.type == TYPE_BANANA   ) {health = 0.20;}
+			else if (obj.type == TYPE_APPLE    ) {health = 0.20;}
 			else {assert(0);}
 		}
 		adjust_health(health, oss, text_color);

@@ -103,6 +103,10 @@ bool building_t::add_classroom_desk(rand_gen_t &rgen, room_t const &room, cube_t
 		vect_cube_t const avoid(objs.begin()+objs_start, objs.end()); // add all papers, pens, and pencils
 		place_cup_on_obj(rgen, desk, room_id, tot_light_amt, avoid);
 	}
+	if (teacher_desk && rgen.rand_float() < 0.5) { // place an apple on the desk
+		vect_cube_t const avoid(objs.begin()+objs_start, objs.end()); // add all papers, pens, pencils, and cups
+		place_apple_on_obj(rgen, desk, room_id, tot_light_amt, avoid);
+	}
 	if (rgen.rand_float() < 0.67) { // maybe add a book on the desk; often skipped due to overlaps
 		place_book_on_obj(rgen, objs[desk_obj_ix], room_id, tot_light_amt, objs_start, 1, RO_FLAG_USED, 1); // use_dim_dir=1; skip_if_overlaps=1
 	}

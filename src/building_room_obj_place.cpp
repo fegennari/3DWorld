@@ -4466,6 +4466,18 @@ bool building_t::place_banana_on_obj(rand_gen_t &rgen, cube_t const &place_on, u
 	interior->room_geom->objs.emplace_back(bbc, TYPE_BANANA, room_id, dim, rgen.rand_bool(), RO_FLAG_NOCOLL, tot_light_amt);
 	return 1;
 }
+bool building_t::place_apple_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid) {
+	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_APPLE)) return 0;
+	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_APPLE));
+	float const radius(rgen.rand_uniform(0.02, 0.025)*get_window_vspace()), height(4.0*radius*sz.z/(sz.x + sz.y)); // assumes xsize == ysize
+	if (min(place_on.dx(), place_on.dy()) < 2.5*radius) return 0; // surface is too small to place this apple
+	cube_t bbc;
+	gen_xy_pos_for_round_obj(bbc, place_on, radius, height, 1.2*radius, rgen);
+	if (has_bcube_int(bbc, avoid)) return 0; // only make one attempt
+	unsigned const item_flags(rgen.rand()); // random apple sub-model
+	interior->room_geom->objs.emplace_back(bbc, TYPE_APPLE, room_id, rgen.rand_bool(), rgen.rand_bool(), RO_FLAG_NOCOLL, tot_light_amt, SHAPE_SPHERE, WHITE, item_flags);
+	return 1;
+}
 
 bool building_t::place_phone_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, bool dim, bool dir, float overhang_amt) {
 	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_PHONE)) return 0;
