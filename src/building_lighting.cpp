@@ -2298,7 +2298,6 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 
 	// add skylight lights; mall skylights are not added here
 	for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) { // {sun, moon}
-		if (skylights.empty() || camera_in_basement) continue;
 		point sun_moon_pos;
 		if (!light_valid_and_enabled(l) || !get_light_pos(sun_moon_pos, l)) continue;
 		float const camera_zval_check((camera_somewhat_by_stairs ? 2.0 : 1.0)*window_vspacing); // allow two floors below if player can see skylight from stairs
@@ -2306,6 +2305,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		bool const add_sky_lighting = 1;
 
 		for (cube_with_ix_t &sl : skylights) { // add virtual spotlights for each skylight to simulate sun light
+			if (camera_in_basement)                     continue; // not drawn
 			if (!lights_bcube.intersects_xy(sl))        continue; // not contained within the light volume
 			if (camera_z < sl.z1() - camera_zval_check) continue; // player below the floor with the skylight or the one below; invalid when flying outside the building?
 			cube_t lit_area(sl);
@@ -2338,8 +2338,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			cube_t clipped_area(lit_area);
 			clipped_area.intersect_with_cube_xy(proj_bcube);
 			colorRGBA const outdoor_color(get_outdoor_light_color()); // required to calculate cur_ambient and cur_diffuse
-			float const dx(sl.dx()), dy(sl.dy()), diag_sz(sqrt(dx*dx + dy*dy));
-			float const light_radius(1.2*diag_sz + 1.5*light_dist); // determined experimentally
+			float const diag_sz(sl.get_size().xy_mag()), light_radius(1.2*diag_sz + 1.5*light_dist); // determined experimentally
 			unsigned const dlights_start(dl_sources.size());
 
 			if (!is_rot_cube_visible(clipped_area, xlate, 1)) {} // VFC, again; inc_mirror_reflections=1
@@ -2394,6 +2393,27 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				expand_cube_zvals(lights_bcube, lit_area.z1(), lpos.z); // must include the light
 			}
 		} // for skylight sl
+		if (camera_in_building && camera_in_basement && has_mall()) { // mall skylights
+			for (cube_t const &sl : interior->mall_info->skylights) {
+				// only add an ambient light because the skylight is likely shadowed by buildings above
+				cube_t lit_area(sl);
+				cube_t const mall_concourse(get_mall_concourse());
+				float const light_radius(max(mall_concourse.dz(), 0.5f*mall_concourse.get_sz_dim(!interior->extb_wall_dim))); // max of height and concourse half width
+				lit_area.z1() = mall_concourse.z1();
+				lit_area.expand_by_xy(light_radius);
+				lit_area.intersect_with_cube_xy(mall_concourse);
+
+				if (!is_rot_cube_visible(lit_area, xlate, 1)) {} // VFC; inc_mirror_reflections=1
+				else if (check_occlusion && !lit_area.contains_pt(camera_rot) && check_obj_occluded(lit_area, camera_bs, oc)) {} // occlusion culling
+				else { // add the light
+					point const lpos(sl.get_cube_center());
+					dl_sources.emplace_back(2.0*light_radius, lpos, lpos, cur_ambient, 0, -plus_z, 0.3); // increase light radius for stronger effect
+					dl_sources.back().set_custom_bcube(lit_area);
+					dl_sources.back().disable_shadows();
+					expand_cube_zvals(lights_bcube, lit_area.z1(), lpos.z); // must include the light
+				}
+			} // for sl
+		}
 	} // for l
 	if (camera_in_building) {
 		interior->room_geom->particle_manager.add_lights(xlate, *this, oc, lights_bcube);
