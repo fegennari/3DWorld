@@ -2407,7 +2407,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				else if (check_occlusion && !lit_area.contains_pt(camera_rot) && check_obj_occluded(lit_area, camera_bs, oc)) {} // occlusion culling
 				else { // add the light
 					point const lpos(sl.get_cube_center());
-					dl_sources.emplace_back(2.0*light_radius, lpos, lpos, cur_ambient, 0, -plus_z, 0.3); // increase light radius for stronger effect
+					dl_sources.emplace_back(1.3*light_radius, lpos, lpos, get_outdoor_light_color(), 0, -plus_z, 0.3); // increase light radius for stronger effect
 					dl_sources.back().set_custom_bcube(lit_area);
 					dl_sources.back().disable_shadows();
 					expand_cube_zvals(lights_bcube, lit_area.z1(), lpos.z); // must include the light
