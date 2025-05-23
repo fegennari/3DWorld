@@ -1686,7 +1686,7 @@ float building_t::add_flooring(room_t const &room, float zval, unsigned room_id,
 }
 
 bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, unsigned room_id, float tot_light_amt,
-	unsigned objs_start, unsigned floor, bool is_basement, bool add_shower_tub, unsigned &added_bathroom_objs_mask)
+	unsigned lights_start, unsigned objs_start, unsigned floor, bool is_basement, bool add_shower_tub, unsigned &added_bathroom_objs_mask)
 {
 	// Note: zval passed by reference
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
@@ -1713,7 +1713,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 	}
 	if (have_toilet && room.is_office) { // office bathroom
 		if (min(place_area_sz.x, place_area_sz.y) > 1.5*floor_spacing && max(place_area_sz.x, place_area_sz.y) > 2.0*floor_spacing) {
-			if (divide_bathroom_into_stalls(rgen, room, zval, room_id, tot_light_amt, floor)) { // large enough, try to divide into bathroom stalls
+			if (divide_bathroom_into_stalls(rgen, room, zval, room_id, tot_light_amt, floor, lights_start, objs_start)) { // large enough, divide into bathroom stalls
 				added_bathroom_objs_mask |= (PLACED_TOILET | PLACED_SINK);
 				return 1;
 			}
@@ -2055,7 +2055,9 @@ bool building_t::add_tp_roll(cube_t const &room, unsigned room_id, float tot_lig
 	return 1;
 }
 
-bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, float zval, unsigned room_id, float tot_light_amt, unsigned floor) {
+bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, float zval, unsigned room_id,
+	float tot_light_amt, unsigned floor, unsigned lights_start, unsigned lights_end)
+{
 	// Note: assumes no prior placed objects
 	bool const use_sink_model(0);
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
@@ -2198,6 +2200,13 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 			cube_t stall_inner(stall);
 			stall_inner.expand_in_dim(!br_dim, -0.0125*stall.dz()); // subtract off stall wall thickness
 			add_tp_roll(stall_inner, room_id, tot_light_amt, !br_dim, dir, tp_length, (zval + 0.7*theight), wall_pos);
+
+			// move any lights that intersect stalls, since stalls extend to the ceiling
+			for (auto i = objs.begin()+lights_start; i < objs.begin()+lights_end; ++i) {
+				if (i->type != TYPE_LIGHT || !i->intersects(stall)) continue;
+				float const move_amt(stall.d[br_dim][!dir] - i->d[br_dim][dir] + dir_sign*wall_thickness);
+				i->translate_dim(br_dim, move_amt); // shouldn't intersect anything else
+			}
 		} // for n
 		if (add_urinals && dir == (unsigned)skip_stalls_side) continue; // no urinals and sinks are each on one side
 		// add sinks

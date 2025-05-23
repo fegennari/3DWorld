@@ -495,7 +495,8 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 			float floor_zval(zval); // may be modified below, but otherwise unused
 			unsigned const floor_ix(0); // pass this in, or always zero?
 			unsigned added_bathroom_objs_mask(0); // unused
-			objs_added = no_boxes = add_bathroom_objs(rgen, sub_room, floor_zval, room_id, tot_light_amt, sub_objs_start, floor_ix, 1, 0, added_bathroom_objs_mask); // is_basement=1
+			objs_added = no_boxes = add_bathroom_objs(rgen, sub_room, floor_zval, room_id, tot_light_amt,
+				sub_objs_start, sub_objs_start, floor_ix, 1, 0, added_bathroom_objs_mask); // is_basement=1
 			if (sub_room.get_has_mirror()) {room.set_has_mirror();}
 		}
 		// 2 or more rooms
