@@ -8,6 +8,8 @@
 #include <zlib.h>
 
 using std::string;
+using std::istream;
+using std::ostream;
 
 class binary_file_io {
 protected:
@@ -62,4 +64,42 @@ struct binary_file_writer : public binary_file_io {
 		return 0;
 	}
 };
+
+// ************ read/write helpers ************
+
+template<typename T> void write_val(ostream &out, T val) {
+	out.write((const char *)&val, sizeof(T));
+}
+template<typename T> void read_val(istream &in, T &val) {
+	in.read((char *)&val, sizeof(T));
+}
+
+inline void write_uint(ostream &out, unsigned val) {
+	write_val(out, val);
+}
+inline unsigned read_uint(istream &in ) {
+	unsigned val(0);
+	read_val(in, val);
+	return val;
+}
+
+template<typename V> void write_vector(ostream &out, V const &v) {
+	write_uint(out, (unsigned)v.size());
+	out.write((const char *)&v.front(), (std::streamsize)v.size()*sizeof(typename V::value_type));
+}
+template<typename V> void read_vector(istream &in, V &v) {
+	v.clear();
+	v.resize(read_uint(in));
+	in.read((char *)&v.front(), (std::streamsize)v.size()*sizeof(typename V::value_type));
+}
+
+inline void write_string(ostream &out, string const &s) {
+	write_uint(out, (unsigned)s.size());
+	out.write(s.c_str(), s.size());
+}
+inline void read_string(istream &in, string &s) {
+	vector<char> str;
+	read_vector(in, str);
+	s = string(str.begin(), str.end());
+}
 

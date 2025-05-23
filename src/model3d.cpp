@@ -15,6 +15,7 @@
 #include "meshoptimizer.h"
 #include "profiler.h"
 #include "format_text.h"
+#include "binary_file_io.h"
 
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -211,45 +212,6 @@ size_t texture_manager::get_gpu_mem() const {
 	size_t mem(0);
 	for (auto t = textures.begin(); t != textures.end(); ++t) {mem += t->get_gpu_mem();}
 	return mem;
-}
-
-
-// ************ read/write helpers ************
-
-template<typename T> void write_val(ostream &out, T val) {
-	out.write((const char *)&val, sizeof(T));
-}
-template<typename T> void read_val(istream &in, T &val) {
-	in.read((char *)&val, sizeof(T));
-}
-
-void write_uint(ostream &out, unsigned val) {
-	write_val(out, val);
-}
-unsigned read_uint(istream &in ) {
-	unsigned val(0);
-	read_val(in, val);
-	return val;
-}
-
-template<typename V> void write_vector(ostream &out, V const &v) {
-	write_uint(out, (unsigned)v.size());
-	out.write((const char *)&v.front(), (std::streamsize)v.size()*sizeof(typename V::value_type));
-}
-template<typename V> void read_vector(istream &in, V &v) {
-	v.clear();
-	v.resize(read_uint(in));
-	in.read((char *)&v.front(), (std::streamsize)v.size()*sizeof(typename V::value_type));
-}
-
-void write_string(ostream &out, string const &s) {
-	write_uint(out, (unsigned)s.size());
-	out.write(s.c_str(), s.size());
-}
-void read_string(istream &in, string &s) {
-	vector<char> str;
-	read_vector(in, str);
-	s = string(str.begin(), str.end());
 }
 
 

@@ -232,7 +232,7 @@ struct model_anim_t {
 
 	template<typename T> struct anim_val_t {
 		float time=0.0;
-		T v;
+		T v={};
 		anim_val_t() {} // for merged resize()
 		anim_val_t(float time_, T const &v_) : time(time_), v(v_) {}
 	};
