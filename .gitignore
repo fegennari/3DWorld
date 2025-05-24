@@ -23,6 +23,7 @@ textures/skybox/craterlake
 textures/pictures
 textures/papers
 textures/food_boxes
+textures/*/*.tex2d
 dependencies/freeglut-2.8.1/progs/demos/x64
 dependencies/meshoptimizer/src/*.o
 dependencies/openal-soft/CMakeFiles

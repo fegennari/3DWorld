@@ -151,16 +151,19 @@ void texture_t::compress_and_send_texture_with_mipmaps() {
 unsigned const TEX3D_MAGIC_NUMBER = 68743459; // arbitrary file signature
 string const tex2d_ext = "tex2d";
 
+string get_tex2d_fn_for_image_fn(string const &fn) {
+	assert(!fn.empty());
+	string const file_ext(get_file_extension(fn, 0, 1));
+	string tex2d_fn;
+	if (file_ext == tex2d_ext) {tex2d_fn = fn;} // already has correct extension
+	else {tex2d_fn = string(fn.begin(), fn.begin()+fn.size()-file_ext.size()) + tex2d_ext;} // change extension
+	if (fn[0] != '.') {tex2d_fn = prepend_texture_dir(tex2d_fn);} // assume it's in the texture directory, for now, unless it starts with "."
+	return tex2d_fn;
+}
+
 void texture_t::write_texture2d_binary(string const &fn) const {
 	string wfn(fn);
-
-	if (wfn.empty()) { // defaults to name if fn is empty, but may need to change the extension
-		assert(!name.empty());
-		string const file_ext(get_file_extension(name, 0, 1));
-		if (file_ext == tex2d_ext) {wfn = name;} // already has correct extension
-		else {wfn = string(name.begin(), name.begin()+name.size()-file_ext.size()) + tex2d_ext;} // change extension
-		wfn = prepend_texture_dir(wfn);
-	}
+	if (wfn.empty()) {wfn = get_tex2d_fn_for_image_fn(name);} // defaults to name if fn is empty, but may need to change the extension
 	cout << format_blue("Writing " + wfn) << endl;
 	ofstream out(wfn, (ios::out | ios::binary));
 
@@ -184,7 +187,6 @@ void texture_t::write_texture2d_binary(string const &fn) const {
 	// write compressed RGB or RGBA + mipmaps
 	vector<uint8_t> comp_data, idatav, odata; // reused across calls
 	dxt_texture_compress(data, comp_data, width, height, ncolors); // uses stb
-	//cout << TXT(width) << TXT(height) << TXT(ncolors) << TXT(calc_internal_format()) << TXT(comp_data.size()) << endl; // TESTING
 	write_vector(out, comp_data);
 
 	if (use_mipmaps) { // write mipmaps
@@ -210,6 +212,7 @@ void texture_t::write_texture2d_binary(string const &fn) const {
 void texture_t::read_texture2d_binary() {
 	ifstream in(name, (ios::in | ios::binary));
 	if (!in.good()) {in.open(prepend_texture_dir(name), (ios::in | ios::binary));}
+	//cout << format_blue("Reading " + name) << endl;
 
 	if (!in.good()) {
 		cerr << format_red("Error opening texture file for read: " + name) << endl;
@@ -235,7 +238,6 @@ void texture_t::read_texture2d_binary() {
 	vector<uint8_t> comp_data;
 	read_vector(in, comp_data);
 	assert(!comp_data.empty());
-	//cout << TXT(width) << TXT(height) << TXT(ncolors) << TXT(calc_internal_format()) << TXT(comp_data.size()) << endl; // TESTING
 	GL_CHECK(glCompressedTexImage2D(GL_TEXTURE_2D, 0, calc_internal_format(), width, height, 0, comp_data.size(), comp_data.data()););
 
 	if (use_mipmaps) { // read mipmaps

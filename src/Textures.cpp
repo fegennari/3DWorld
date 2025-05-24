@@ -293,7 +293,6 @@ void load_textures() {
 		if (is_tex_disabled(i)) continue; // skip
 		if (i == BLDG_WINDOW_TEX || i == BLDG_WIND_TRANS_TEX || i == LANDSCAPE_TEX) continue; // not yet generated
 		textures[i].init();
-		//if (startswith(textures[i].name, "pictures")) {textures[i].write_texture2d_binary();}
 	}
 	textures[TREE_HEMI_TEX].set_color_alpha_to_one();
 	textures_inited = 1;

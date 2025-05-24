@@ -40,6 +40,8 @@ void wrap_png_error(png_structp, png_const_charp) {cerr << "Error reading PNG im
 string const texture_dir("textures");
 
 string prepend_texture_dir(string const &filename) {return (texture_dir + "/" + filename);}
+bool startswith(string const &str, string const &prefix);
+string get_tex2d_fn_for_image_fn(string const &fn);
 
 
 size_t get_last_slash_pos(string const &filename) {
@@ -139,6 +141,11 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 					exit(1);
 				}
 			}
+			if (format != IMG_FMT_TEX2D) { // auto detect tex2d cached textures
+				string const tex2d_fn(get_tex2d_fn_for_image_fn(name));
+				ifstream in(tex2d_fn);
+				if (in.good()) {name = tex2d_fn; format = IMG_FMT_TEX2D;}
+			}
 		}
 		unsigned const want_alpha_channel(ncolors == 4), want_luminance(ncolors == 1);
 		//highres_timer_t timer("Load " + get_file_extension(name, 0, 1)); // 0.1s bmp, 6.3s jpeg, 4.4s png, 0.3s tga, 0.2s tiff
@@ -198,6 +205,7 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 		write_to_bmp(fn);
 	}
 #endif
+	//if (startswith(name, "metals")) {write_texture2d_binary();} // TESTING
 }
 
 void texture_t::set_image_size(int w, int h, bool allow_diff_width_height) {
