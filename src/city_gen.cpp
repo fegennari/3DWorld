@@ -3295,7 +3295,7 @@ void city_lights_manager_t::clamp_to_max_lights(vector3d const &xlate, vector<li
 
 bool city_lights_manager_t::begin_lights_setup(vector3d const &xlate, float light_radius, vector<light_source> &lights) {
 	assert(light_radius > 0.0);
-	for (auto i = lights.begin(); i != lights.end(); ++i) {i->release_smap();} // must be done before clearing dlights
+	for (light_source &ls : lights) {ls.release_smap();} // must be done before clearing dlights
 	clear_dynamic_lights();
 	lights_bcube.set_to_zeros();
 	dl_smap_enabled = 0; // here for safety, needed for buildings flow
@@ -3521,7 +3521,7 @@ public:
 		float const light_radius(1.0*light_radius_scale*get_tile_smap_dist()); // distance from the camera where headlights and streetlights are drawn
 		if (!begin_lights_setup(xlate, light_radius, dl_sources)) return;
 		car_manager.add_car_headlights(xlate, lights_bcube);
-		road_gen.add_city_lights(xlate, lights_bcube);
+		road_gen   .add_city_lights   (xlate, lights_bcube);
 		if (is_night()) {add_buildings_exterior_lights(xlate, lights_bcube);} // currently building lights are only on at night
 		if (flashlight_on && !camera_in_building) {add_player_flashlight(0.25);} // add player flashlight
 		clamp_to_max_lights(xlate, dl_sources);

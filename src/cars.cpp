@@ -601,7 +601,7 @@ void car_draw_state_t::draw_unshadowed() {
 
 void car_draw_state_t::add_car_headlights(vector<car_t> const &cars, vector3d const &xlate_, cube_t &lights_bcube) {
 	xlate = xlate_; // needed earlier in the flow
-	for (auto i = cars.begin(); i != cars.end(); ++i) {add_car_headlights(*i, lights_bcube);}
+	for (car_t const &car : cars) {add_car_headlights(car, lights_bcube);}
 }
 
 /*static*/ void car_draw_state_t::gen_car_pts(car_t const &car, bool include_top, point pb[8], point pt[8]) {
@@ -680,7 +680,7 @@ unsigned get_ambulance_flashing_lights(car_model_loader_t const &car_model_loade
 		// 0=top middle, 1=top left, 2=top right, 3=front left, 4=front right, 5=back top middle, 6=back top left, 7=back top right
 		// 8=left front, 9=left back, 10=left bottom, 11=right front, 12=right back, 13=right bottom
 		unsigned const lix((cycle_ix + 3*n) % 14);
-		point &pos(lpos[n]);
+		point    &pos(lpos[n]);
 		vector3d &dir(ldir[n]);
 		pos = car.get_center();
 		if      (lix == 1 || lix == 3 || lix == 6) {pos -= 0.34*side_delta;} // left  front/back

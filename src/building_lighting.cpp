@@ -1486,6 +1486,7 @@ bool check_cube_visible_through_cut(vect_cube_t const &cuts, cube_t const &light
 }
 
 bool add_dlight_if_visible(point const &pos, float radius, colorRGBA const &color, vector3d const &xlate, cube_t &lights_bcube, vector3d const &dir=zero_vector, float bwidth=1.0) {
+	assert(radius > 0.0);
 	if (!lights_bcube.contains_pt_xy(pos)) return 0;
 	if (!camera_pdu.sphere_visible_test((pos + xlate), radius)) return 0; // VFC
 	dl_sources.emplace_back(radius, pos, pos, color, 0, dir, bwidth); // is_dynamic=0
@@ -1724,6 +1725,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 					if (!is_flashing_light_on()) continue; // not on
 					if (!add_dlight_if_visible(get_warning_light_src_pos(*i), 25.0*i->get_radius(), RED, xlate, lights_bcube)) continue; // point light
 				}
+				else {assert(0);}
 				assert(room.contains_pt(dl_sources.back().get_pos()));
 				cube_t clip_cube(room);
 				// expand slightly less than half wall thickness to avoid leaking through a wall for pet stores, but a full wall width to get exterior doors for houses
@@ -1939,6 +1941,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			} // end camera on different floor case
 		} // end !camera_in_elevator
 		float const light_radius(get_radius_for_room_light(*i)), cull_radius(0.95*light_radius);
+		assert(light_radius > 0.0);
 		// note that the same lights are used for the reflection pass, so a light behind the player won't be active in a mirror reflection
 		if (!camera_pdu.sphere_visible_test((lpos_rot + xlate), cull_radius)) continue; // VFC
 		// ext basement connector room must include the other building's ext basement, and it's simplest to just expand it by the max length of that room plus approx hallway width
@@ -2399,6 +2402,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				cube_t lit_area(sl);
 				cube_t const mall_concourse(get_mall_concourse());
 				float const light_radius(max(mall_concourse.dz(), 0.5f*mall_concourse.get_sz_dim(!interior->extb_wall_dim))); // max of height and concourse half width
+				assert(light_radius > 0.0);
 				lit_area.z1() = mall_concourse.z1();
 				lit_area.expand_by_xy(light_radius);
 				lit_area.intersect_with_cube_xy(mall_concourse);

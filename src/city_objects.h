@@ -45,7 +45,7 @@ struct city_obj_t : public sphere_t {
 	cube_t const &get_outer_bcube() const {return bcube;}
 	float get_bsphere_radius(bool shadow_only) const {return radius;}
 	float get_overlay_radius() const {return radius;} // for overhead map mode
-	void set_bsphere_from_bcube() {*((sphere_t *)this) = bcube.get_bsphere();}
+	void set_bsphere_from_bcube() {*((sphere_t *)this) = bcube.get_bsphere(); assert(radius > 0.0);}
 	void set_bcube_from_vcylin(point const &base, float height, float xy_radius);
 	static void pre_draw (draw_state_t &dstate, bool shadow_only) {} // nothing to do
 	static void post_draw(draw_state_t &dstate, bool shadow_only) {} // nothing to do
