@@ -44,7 +44,7 @@ void dxt_texture_compress(uint8_t const *const data, vector<uint8_t> &comp_data,
 }
 
 void create_one_mipmap(uint8_t const *const idata, vector<uint8_t> &odata, unsigned w1, unsigned h1, unsigned w2, unsigned h2,
-	unsigned ncolors, unsigned use_mipmaps, colorRGBA const &color, float mipmap_alpha_weight)
+	int ncolors, unsigned use_mipmaps, colorRGBA const &color, float mipmap_alpha_weight)
 {
 	unsigned const xinc((w2 < w1) ? ncolors : 0), yinc((h2 < h1) ? ncolors*w1 : 0);
 	odata.resize(ncolors*w2*h2);

@@ -14,9 +14,9 @@ struct ttex {
 
 extern ttex lttex_dirt[];
 
-#define RGB_BLOCK_COPY(dst, src)           {dst[0] = src[0]; dst[1] = src[1]; dst[2] = src[2];            }
-#define RGB_BLOCK_ASSIGN(dst, R, G, B)     {dst[0] = R;      dst[1] = G;      dst[2] = B;                 }
-#define RGBA_BLOCK_ASSIGN(dst, R, G, B, A) {dst[0] = R;      dst[1] = G;      dst[2] = B;      dst[3] = A;}
+#define RGB_BLOCK_COPY(dst, src)           {dst[0] = src[0]; dst[1] = src[1]; dst[2] = src[2];       }
+#define RGB_BLOCK_ASSIGN(dst, R, G, B)     {dst[0] = R;      dst[1] = G;      dst[2] = B;            }
+#define RGBA_BLOCK_ASSIGN(dst, R, G, B, A) {dst[0] = R;      dst[1] = G;      dst[2] = B; dst[3] = A;}
 
 // fixed-point math
 #define BLEND_COLOR(dst, s1, s2, bv) \

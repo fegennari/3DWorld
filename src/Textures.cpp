@@ -1009,12 +1009,8 @@ void texture_t::gen_rand_texture(unsigned char val, unsigned char a_add, unsigne
 	assert(ncolors == 1 || ncolors == 4);
 
 	for (unsigned i = 0; i < size; ++i) {
-		if (ncolors == 1) { // alpha/luminance
-			data[i] = (a_add + (unsigned char)(rand() % a_rand));
-		}
-		else {
-			RGBA_BLOCK_ASSIGN((data+(i<<2)), val, val, val, (a_add + (unsigned char)(rand() % a_rand)));
-		}
+		if (ncolors == 1) {data[i] = (a_add + (unsigned char)(rand() % a_rand));} // alpha/luminance
+		else {RGBA_BLOCK_ASSIGN((data+(i<<2)), val, val, val, (unsigned char)(a_add + (unsigned char)(rand() % a_rand)));}
 	}
 }
 
