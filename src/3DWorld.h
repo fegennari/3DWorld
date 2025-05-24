@@ -37,6 +37,7 @@ using std::cout;
 using std::endl;
 using std::min;
 using std::max;
+using std::string;
 
 #ifndef PI
 #define PI 3.141592654f
@@ -231,8 +232,8 @@ template<typename T> struct pointT { // size = 12 (float), 24(double)
 	pointT(pointT const &p1, pointT const &p2) : x(p1.x-p2.x), y(p1.y-p2.y), z(p1.z-p2.z) {} // take the difference (vector)
 	template<typename S> pointT(pointT<S> const &p) : x(p.x), y(p.y), z(p.z) {}
 
-	std::string str() const {std::ostringstream oss; oss << x << ", " << y << ", " << z; return oss.str();}
-	std::string raw_str() const {std::ostringstream oss; oss << x << " " << y << " " << z; return oss.str();}
+	string str() const {std::ostringstream oss; oss << x << ", " << y << ", " << z; return oss.str();}
+	string raw_str() const {std::ostringstream oss; oss << x << " " << y << " " << z; return oss.str();}
 	template<typename S> void operator=(pointT<S> const &p) {x = p.x; y = p.y; z = p.z;}
 	bool operator==(const pointT &p) const {return (p.x == x && p.y == y && p.z == z);}
 	bool operator!=(const pointT &p) const {return !operator==(p);}
@@ -391,7 +392,7 @@ struct vector4d : public vector3d { // size = 16
 	vector4d(float x_, float y_, float z_, float w_) : vector3d(x_, y_, z_), w(w_) {}
 	vector4d(vector3d const &v, float w_) : vector3d(v), w(w_) {}
 	void assign(float x_, float y_, float z_, float w_)    {x = x_; y = y_; z = z_; w = w_;}
-	std::string str() const {std::ostringstream oss; oss << x << ", " << y << ", " << z << ", " << w; return oss.str();}
+	string str() const {std::ostringstream oss; oss << x << ", " << y << ", " << z << ", " << w; return oss.str();}
 	vector4d operator+ (vector4d const &p) const {return vector4d((x+p.x), (y+p.y), (z+p.z), (w+p.w));}
 	vector4d operator- (vector4d const &p) const {return vector4d((x-p.x), (y-p.y), (z-p.z), (w-p.w));}
 	void     operator+=(vector4d const &p) {x += p.x; y += p.y; z += p.z; w += p.w;}
@@ -483,8 +484,8 @@ struct cube_t { // size = 24; Note: AABB, not actually a cube
 	void swap_dims(unsigned d1, unsigned d2) {assert(d1 < 3 && d2 < 3); swap(d[d1][0], d[d2][0]); swap(d[d1][1], d[d2][1]);}
 	void set_from_points(point const *const pts, unsigned npts);
 	void set_from_points(vector<point> const &pts) {set_from_points(pts.data(), pts.size());}
-	std::string str() const;
-	std::string raw_str() const;
+	string str() const;
+	string raw_str() const;
 	bool is_near_zero_area() const;
 	bool is_all_zeros() const {return (x1() == 0 && x2() == 0 && y1() == 0 && y2() == 0 && z1() == 0 && z2() == 0);}
 
@@ -641,7 +642,7 @@ struct cube_t { // size = 24; Note: AABB, not actually a cube
 		UNROLL_3X(mextent = max(mextent, max(-d[i_][0], d[i_][1]));)
 		return mextent;
 	}
-	float get_max_dim_sz() const {return std::max(dz(), std::max(dx(), dy()));}
+	float get_max_dim_sz() const {return max(dz(), max(dx(), dy()));}
 
 	float furthest_dist_to_pt(point const &pos) const {
 		vector3d dmax;
@@ -808,8 +809,8 @@ struct colorRGB { // size = 12
 		float const max_comp(get_max_component());
 		if (max_comp > TOLERANCE) {R /= max_comp; G /= max_comp; B /= max_comp;}
 	}
-	std::string str() const {std::ostringstream oss; oss << "R: " << R << ", G: " << G << ", B: " << B; return oss.str();}
-	std::string raw_str() const {std::ostringstream oss; oss << R << " " << G << " " << B; return oss.str();}
+	string str    () const {std::ostringstream oss; oss << "R: " << R << ", G: " << G << ", B: " << B; return oss.str();}
+	string raw_str() const {std::ostringstream oss; oss << R << " " << G << " " << B; return oss.str();}
 	float get_luminance() const {return (R + G + B)/3.0f;}
 	float get_weighted_luminance() const {return (0.2126*R + 0.7152*G + 0.0722*B);} // see https://www.w3.org/WAI/GL/wiki/Relative_luminance
 	float get_max_component() const {return max(R, max(G, B));}
@@ -875,8 +876,8 @@ struct colorRGBA : public colorRGB { // size = 16
 		return ((fabs(R-c.R) + fabs(G-c.G) + fabs(B-c.B) + fabs(A-c.A)) < thresh);
 	}
 	bool is_valid() const {return (R >= 0 && G >= 0 && B >= 0 && A >= 0 && R <= 1 && G <= 1 && B <= 1 && A <= 1);}
-	std::string str() const {std::ostringstream oss; oss << "R: " << R << ", G: " << G << ", B: " << B << ", A: " << A; return oss.str();}
-	std::string raw_str() const {std::ostringstream oss; oss << R << " " << G << " " << B << " " << A; return oss.str();}
+	string str    () const {std::ostringstream oss; oss << "R: " << R << ", G: " << G << ", B: " << B << ", A: " << A; return oss.str();}
+	string raw_str() const {std::ostringstream oss; oss << R << " " << G << " " << B << " " << A; return oss.str();}
 	void set_for_cur_shader() const;
 };
 
@@ -970,10 +971,10 @@ template <typename T> void tri_strip_push(vector<T> &v) {
 
 
 class draw_call_counter {
-	std::string name;
+	string name;
 	unsigned start_num_draw_calls;
 public:
-	draw_call_counter(std::string const &name_) : name(name_), start_num_draw_calls(num_frame_draw_calls) {}
+	draw_call_counter(string const &name_) : name(name_), start_num_draw_calls(num_frame_draw_calls) {}
 	~draw_call_counter() {std::cout << name << ": " << (num_frame_draw_calls - start_num_draw_calls) << std::endl;}
 };
 
@@ -1053,7 +1054,7 @@ public:
 	bool wrap=0, mirror=0, invert_y=0, do_compress=0, has_binary_alpha=0, is_16_bit_gray=0, no_avg_color_alpha_fill=0, invert_alpha=0, normal_map=0;
 	int width=0, height=0, ncolors=0, bump_tid=-1, alpha_tid=-1;
 	float anisotropy=1.0, mipmap_alpha_weight=1.0;
-	std::string name;
+	string name;
 
 protected:
 	unsigned char *data=nullptr, *orig_data=nullptr, *colored_data=nullptr;
@@ -1065,7 +1066,7 @@ protected:
 
 public:
 	texture_t() {}
-	texture_t(char t, char f, int w, int h, int wrap_mir, int nc, char um, std::string const &n, bool inv=0, bool do_comp=1, float a=1.0, float maw=1.0, bool nm=0)
+	texture_t(char t, char f, int w, int h, int wrap_mir, int nc, char um, string const &n, bool inv=0, bool do_comp=1, float a=1.0, float maw=1.0, bool nm=0)
 		: type(t), format(f), use_mipmaps(um), wrap(wrap_mir != 0), mirror(wrap_mir == 2), invert_y(inv), do_compress(do_comp),
 		normal_map(nm), width(w), height(h), ncolors(nc), anisotropy(a), mipmap_alpha_weight(maw), name(n) {}
 	bool is_inverted_y_type() const {return (defer_load_type == DEFER_TYPE_DDS);}
@@ -1115,9 +1116,9 @@ public:
 	void load_from_gl();
 	void deferred_load_and_bind();
 	void update_texture_data(int x1, int y1, int x2, int y2);
-	int write_to_jpg(std::string const &fn) const;
-	int write_to_bmp(std::string const &fn) const;
-	int write_to_png(std::string const &fn) const;
+	int write_to_jpg(string const &fn) const;
+	int write_to_bmp(string const &fn) const;
+	int write_to_png(string const &fn) const;
 	unsigned get_texel_ix(float u, float v) const;
 	// assumes width and height are a power of 2
 	unsigned get_texel_ix_fast_pow2(float u, float v) const {return (width*(int(height*v) & (height-1)) + (int(width*u) & (width-1)));}
@@ -1220,13 +1221,13 @@ struct water_params_t {
 
 struct text_string_t {
 
-	std::string str;
+	string str;
 	point pos;
 	float size;
 	colorRGBA color;
 
 	text_string_t() : size(0.0), color(0,0,0,0) {}
-	text_string_t(std::string const &s, point const &p, float sz, colorRGBA const &c) : str(s), pos(p), size(sz), color(c) {}
+	text_string_t(string const &s, point const &p, float sz, colorRGBA const &c) : str(s), pos(p), size(sz), color(c) {}
 };
 
 class popup_text_t : public text_string_t {
@@ -1335,12 +1336,12 @@ void timing_profiler_stats();
 #endif
 
 class timer_t {
-	std::string name;
+	string name;
 	int timer1;
 	bool enabled, no_loading_screen;
 public:
-	timer_t(char const *const name_,  bool enabled_=1, bool nls=0) : name(name_), timer1(GET_TIME_MS()), enabled(enabled_), no_loading_screen(nls) {}
-	timer_t(std::string const &name_, bool enabled_=1, bool nls=0) : name(name_), timer1(GET_TIME_MS()), enabled(enabled_), no_loading_screen(nls) {}
+	timer_t(char const *const  name_, bool enabled_=1, bool nls=0) : name(name_), timer1(GET_TIME_MS()), enabled(enabled_), no_loading_screen(nls) {}
+	timer_t(string      const &name_, bool enabled_=1, bool nls=0) : name(name_), timer1(GET_TIME_MS()), enabled(enabled_), no_loading_screen(nls) {}
 	~timer_t() {end();}
 	void end() {if (enabled && !name.empty()) {register_timing_value(name.c_str(), GET_DELTA_TIME, no_loading_screen); name.clear();}}
 };
