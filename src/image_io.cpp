@@ -116,14 +116,15 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 			string const ext(get_file_extension(name, 0, 1));
 		
 			if (0) {}
-			else if (ext == "raw") {format = ((ncolors == 4) ? IMG_FMT_RAW_RGBA : IMG_FMT_RAW_RGB);}
-			else if (ext == "bmp") {format = IMG_FMT_BMP;}
+			else if (ext == "raw")   {format = ((ncolors == 4) ? IMG_FMT_RAW_RGBA : IMG_FMT_RAW_RGB);}
+			else if (ext == "bmp")   {format = IMG_FMT_BMP;}
 			else if (ext == "tga" || ext == "targa") {format = IMG_FMT_TGA;}
 			else if (ext == "jpg" || ext == "jpeg" ) {format = IMG_FMT_JPG;}
-			else if (ext == "png") {format = IMG_FMT_PNG;}
+			else if (ext == "png")   {format = IMG_FMT_PNG;}
 			else if (ext == "tif" || ext == "tiff") {format = IMG_FMT_TIFF;}
-			else if (ext == "dds") {format = IMG_FMT_DDS;}
-			else if (ext == "ppm") {format = IMG_FMT_PPM;}
+			else if (ext == "dds")   {format = IMG_FMT_DDS;}
+			else if (ext == "ppm")   {format = IMG_FMT_PPM;}
+			else if (ext == "tex2d") {format = IMG_FMT_TEX2D;}
 			else if (ext == "hdr") {
 				cerr << "Error: HDR texture format is not yet supported: " << name << endl;
 				exit(1);
@@ -151,12 +152,13 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 		else {
 			switch (format) {
 			case IMG_FMT_RAW_RGB: case IMG_FMT_BMP: case IMG_FMT_RAW_INVY: case IMG_FMT_RAW_RGBA: load_raw_bmp(index, allow_diff_width_height, allow_two_byte_grayscale); break; // raw or BMP
-			case IMG_FMT_TGA: load_targa(index, allow_diff_width_height); break;
-			case IMG_FMT_JPG: load_jpeg (index, allow_diff_width_height); break;
-			case IMG_FMT_PNG: load_png  (index, allow_diff_width_height, allow_two_byte_grayscale); break;
+			case IMG_FMT_TGA:  load_targa(index, allow_diff_width_height); break;
+			case IMG_FMT_JPG:  load_jpeg (index, allow_diff_width_height); break;
+			case IMG_FMT_PNG:  load_png  (index, allow_diff_width_height, allow_two_byte_grayscale); break;
 			case IMG_FMT_TIFF: load_tiff (index, allow_diff_width_height, allow_two_byte_grayscale); break;
-			case IMG_FMT_DDS: load_dds (index); break;
-			case IMG_FMT_PPM: load_ppm (index, allow_diff_width_height); break;
+			case IMG_FMT_PPM:  load_ppm  (index, allow_diff_width_height); break;
+			case IMG_FMT_DDS:  load_dds  (); break;
+			case IMG_FMT_TEX2D: defer_load_type = DEFER_TYPE_TEX2D; break;
 			case IMG_FMT_OTHER: break; // already loaded by stb_image
 			default:
 				cerr << "Unsupported image format: " << int(format) << endl;
@@ -692,14 +694,15 @@ void texture_t::deferred_load_and_bind() {
 	assert(defer_load());
 
 	switch (defer_load_type) {
-	case DEFER_TYPE_DDS:  deferred_load_dds(); break;
+	case DEFER_TYPE_DDS  : deferred_load_dds    (); break;
+	case DEFER_TYPE_TEX2D: read_texture2d_binary(); break;
 	default:
 		cerr << "Unhandled texture defer type " << defer_load_type << endl;
 		exit(1);
 	}
 }
 
-void texture_t::load_dds(int index) {
+void texture_t::load_dds() {
 #ifdef ENABLE_DDS
 	defer_load_type = DEFER_TYPE_DDS;
 #else

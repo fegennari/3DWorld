@@ -10,7 +10,6 @@
 #include "voxels.h" // for get_cur_model_edges_as_cubes
 #include "csg.h" // for clip_polygon_to_cube
 #include "lightmap.h" // for lmap_manager_t
-#include <fstream>
 #include <queue>
 #include "meshoptimizer.h"
 #include "profiler.h"

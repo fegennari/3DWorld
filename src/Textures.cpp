@@ -30,7 +30,7 @@ float const SMOOTH_SKY_POLES   = 0.2;
 
 texture_t def_textures[NUM_PREDEF_TEXTURES] = { // 4 colors without wrap sometimes has a bad transparent strip on spheres
 // type: 0 = read from file, 1 = generated, 2 generated and dynamically updated
-// format: 0: RGB RAW, 1: BMP, 2: RGB RAW, 3: RGBA RAW, 4: targa (*tga), 5: jpeg, 6: png, 7: auto, 8: tiff, 9: generated (not loaded from file), 10: DDS, 11:ppm
+// format: 0: RGB RAW, 1: BMP, 2: RGB RAW, 3: RGBA RAW, 4: targa (*tga), 5: jpeg, 6: png, 7: auto, 8: tiff, 9: generated (not loaded from file), 10: DDS, 11:ppm, 12: tex2d
 // use_mipmaps: 0 = none, 1 = standard OpenGL, 2 = openGL + CPU data, 3 = custom alpha OpenGL, 4 = custom alpha OpenGL using average texture color for transparent pixels
 // wrap_mir: 0 = clamp, 1 = wrap, 2 = mirror
 // type format width height wrap_mir ncolors use_mipmaps name [invert_y=0 [do_compress=1 [anisotropy=1.0 [mipmap_alpha_weight=1.0 [normal_map=0]]]]]

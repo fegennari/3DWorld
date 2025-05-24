@@ -6,6 +6,7 @@
 
 #include "3DWorld.h"
 #include <zlib.h>
+#include <fstream>
 
 using std::string;
 using std::istream;

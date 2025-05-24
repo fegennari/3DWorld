@@ -1042,9 +1042,9 @@ public:
 
 colorRGBA const DEF_TEX_COLOR(0.0, 0.0, 0.0, 0.0); // black with alpha of 0.0
 
-// format: 0: RAW, 1: BMP, 2: RAW (upside down), 3: RAW (alpha channel), 4: targa (*tga), 5: jpeg, 6: png, 7: auto, 8: tiff, 10: DDS, 11:ppm
+// format: 0: RAW, 1: BMP, 2: RAW (upside down), 3: RAW (alpha channel), 4: targa (*tga), 5: jpeg, 6: png, 7: auto, 8: tiff, 10: DDS, 11:ppm, 12: tex2d
 enum {IMG_FMT_RAW_RGB=0, IMG_FMT_BMP, IMG_FMT_RAW_INVY, IMG_FMT_RAW_RGBA, IMG_FMT_TGA, IMG_FMT_JPG, IMG_FMT_PNG, IMG_FMT_AUTO,
-	IMG_FMT_TIFF, IMG_FMT_GEN, IMG_FMT_DDS, IMG_FMT_PPM, IMG_FMT_OTHER};
+	IMG_FMT_TIFF, IMG_FMT_GEN, IMG_FMT_DDS, IMG_FMT_PPM, IMG_FMT_TEX2D, IMG_FMT_OTHER};
 
 
 class texture_t { // size >= 116
@@ -1060,7 +1060,7 @@ protected:
 	unsigned char *data=nullptr, *orig_data=nullptr, *colored_data=nullptr;
 	unsigned tid=0;
 	colorRGBA color=DEF_TEX_COLOR;
-	enum {DEFER_TYPE_NONE=0, DEFER_TYPE_DDS, NUM_DEFER_TYPE};
+	enum {DEFER_TYPE_NONE=0, DEFER_TYPE_DDS, DEFER_TYPE_TEX2D, NUM_DEFER_TYPE};
 
 	void maybe_swap_rb(unsigned char *ptr) const;
 
@@ -1075,6 +1075,8 @@ public:
 	void init() {calc_color();}
 	void do_gl_init(bool free_after_upload=0);
 	void compress_and_send_texture_with_mipmaps();
+	void write_texture2d_binary(string const &fn) const;
+	void read_texture2d_binary();
 	void upload_cube_map_face(unsigned ix);
 	bool is_texture_compressed() const;
 	GLenum calc_internal_format() const;
@@ -1099,7 +1101,7 @@ public:
 	void load_png(int index, bool allow_diff_width_height, bool allow_two_byte_grayscale);
 	void load_tiff(int index, bool allow_diff_width_height, bool allow_two_byte_grayscale);
 	bool load_stb_image(int index, bool allow_diff_width_height, bool allow_two_byte_grayscale=0, unsigned char const *const load_from_data=nullptr, unsigned load_from_size=0);
-	void load_dds(int index);
+	void load_dds();
 	void deferred_load_dds();
 	void load_ppm(int index, bool allow_diff_width_height);
 	void auto_insert_alpha_channel(int index);

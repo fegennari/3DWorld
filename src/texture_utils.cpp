@@ -4,10 +4,14 @@
 #include "3DWorld.h"
 #include "function_registry.h"
 #include "profiler.h"
+#include "binary_file_io.h"
+#include "format_text.h"
 
 #define STB_DXT_IMPLEMENTATION
 #include "stb_dxt.h"
 bool const USE_STB_DXT = 1;
+
+using namespace std;
 
 bool gen_mipmaps(unsigned dim=2);
 
@@ -139,6 +143,100 @@ void texture_t::compress_and_send_texture_with_mipmaps() {
 	else { // font atlas and noise gen texture
 		glTexImage2D(GL_TEXTURE_2D, 0, calc_internal_format(), width, height, 0, calc_format(), get_data_format(), data); // 44ms
 		if (use_normal_mipmaps) {gen_mipmaps();} // Note: compressed mipmaps are created inside compress_and_send_texture()
+	}
+}
+
+// these functions read and write the native "tex2d" binary file format, which contains compressed texture data with mipmaps
+unsigned const TEX3D_MAGIC_NUMBER = 68743459; // arbitrary file signature
+
+void texture_t::write_texture2d_binary(string const &fn) const {
+	string const wfn(fn.empty() ? name : fn); // defaults to name if fn is empty
+	ofstream out(wfn, ios::out | ios::binary);
+
+	if (!out.good()) {
+		cerr << format_red("Error opening texture file for write: " + wfn) << endl;
+		exit(1);
+	}
+	assert(is_allocated());
+	assert(width > 0 && height > 0);
+	assert(USE_STB_DXT);
+	assert(is_texture_compressed()); // only compressed formats are supported
+	assert(!is_16_bit_gray);
+	assert(ncolors == 3 || ncolors == 4);
+	write_uint(out, TEX3D_MAGIC_NUMBER);
+	// write texture metadata
+	write_val(out, width);
+	write_val(out, height);
+	write_val(out, ncolors);
+	write_val(out, color);
+	write_val(out, use_mipmaps);
+	// write compressed RGB or RGBA + mipmaps
+	vector<uint8_t> comp_data, idatav, odata; // reused across calls
+	dxt_texture_compress(data, comp_data, width, height, ncolors); // uses stb
+	write_vector(out, comp_data);
+
+	if (use_mipmaps) { // write mipmaps
+		for (unsigned w = width, h = height, level = 1; w > 1 || h > 1; w >>= 1, h >>= 1, ++level) {
+			unsigned const w1(max(w, 1U)), h1(max(h, 1U)), w2(max(w>>1, 1U)), h2(max(h>>1, 1U));
+			uint8_t const *const idata((level == 1) ? data : idatav.data());
+			create_one_mipmap(idata, odata, w1, h1, w2, h2, ncolors, use_mipmaps, color, mipmap_alpha_weight);
+			dxt_texture_compress(odata.data(), comp_data, w2, h2, ncolors); // uses stb
+			write_val(out, w2);
+			write_val(out, h2);
+			write_vector(out, comp_data);
+			idatav.swap(odata);
+		} // for level
+		unsigned terminator(0);
+		write_val(out, terminator);
+	}
+	if (!out.good()) {
+		cerr << format_red("Error writing texture file: " + wfn) << endl;
+		exit(1);
+	}
+}
+
+void texture_t::read_texture2d_binary() {
+	ifstream in(name, ios::in | ios::binary);
+
+	if (!in.good()) {
+		cerr << format_red("Error opening texture file for read: " + name) << endl;
+		exit(1);
+	}
+	unsigned const magic_number_comp(read_uint(in));
+
+	if (magic_number_comp != TEX3D_MAGIC_NUMBER) {
+		cerr << "Error reading tex2d file " << name << ": Invalid file format (magic number check failed)." << endl;
+		exit(1);
+	}
+	assert(!is_allocated());
+	do_compress = 1;
+	// read texture metadata
+	read_val(in, width);
+	read_val(in, height);
+	read_val(in, ncolors);
+	read_val(in, color);
+	assert(width > 0 && height > 0);
+	assert(ncolors == 3 || ncolors == 4);
+	// read compressed RGB or RGBA + mipmaps
+	vector<uint8_t> comp_data;
+	read_vector(in, comp_data);
+	assert(!comp_data.empty());
+	GL_CHECK(glCompressedTexImage2D(GL_TEXTURE_2D, 0, calc_internal_format(), width, height, 0, comp_data.size(), comp_data.data()););
+
+	if (use_mipmaps) { // read mipmaps
+		for (unsigned level = 1; ; ++level) { // Note: no test
+			unsigned const w2(read_uint(in));
+			if (w2 == 0) break; // terminator; done
+			unsigned const h2(read_uint(in));
+			assert(h2 > 0);
+			read_vector(in, comp_data);
+			assert(!comp_data.empty());
+			GL_CHECK(glCompressedTexImage2D(GL_TEXTURE_2D, level, calc_internal_format(), w2, h2, 0, comp_data.size(), comp_data.data());)
+		} // end while()
+	}
+	if (!in.good()) {
+		cerr << format_red("Error reading texture file: " + name) << endl;
+		exit(1);
 	}
 }
 
