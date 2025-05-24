@@ -44,9 +44,9 @@ void move_camera_pos(vector3d const &v, float dist);
 double get_player_height();
 void update_cpos();
 void advance_camera(int dir);
-bool open_file(FILE *&fp, char const *const fn, std::string const &file_type, char const *const mode="r");
+bool open_file(FILE *&fp, char const *const fn, string const &file_type, char const *const mode="r");
 void fire_weapon();
-bool has_extension(std::string const &ext);
+bool has_extension(string const &ext);
 
 // function prototypes - visibility
 void calc_mesh_shadows(unsigned l, point const &lpos, float const *const mh, unsigned char *smask, int xsize, int ysize,
@@ -176,7 +176,7 @@ void draw_framerate(float val);
 void draw_compass_and_alt();
 void draw_health_bar(float health, float shields, float pu_time=0.0, colorRGBA const &pu_color=BLACK, float poisoned=0,
 	vector<status_bar_t> const &extra_bars=vector<status_bar_t>());
-void exec_universe_text(std::string const &text);
+void exec_universe_text(string const &text);
 void set_silver_material(shader_t &shader, float alpha=1.0, float brightness=1.0);
 void set_gold_material  (shader_t &shader, float alpha=1.0, float brightness=1.0);
 void set_copper_material(shader_t &shader, float alpha=1.0, float brightness=1.0);
@@ -299,7 +299,7 @@ void change_inf_terrain_fire_mode(int val, bool mouse_wheel);
 void inf_terrain_fire_weapon();
 void inf_terrain_undo_hmap_mod();
 void flatten_hmap_region(cube_t const &cube);
-void write_heightmap_png(std::string const &fn);
+void write_heightmap_png(string const &fn);
 void setup_tt_fog_pre(shader_t &s);
 void setup_tt_fog_post(shader_t &s);
 void setup_tile_shader_shadow_map(shader_t &s);
@@ -612,10 +612,10 @@ void load_texture_names();
 void load_textures();
 size_t get_loaded_textures_cpu_mem();
 size_t get_loaded_textures_gpu_mem();
-int texture_lookup(std::string const &name);
-int get_texture_by_name(std::string const &name, bool is_normal_map=0, bool invert_y=0, int wrap_mir=1, float aniso=0.0,
+int texture_lookup(string const &name);
+int get_texture_by_name(string const &name, bool is_normal_map=0, bool invert_y=0, int wrap_mir=1, float aniso=0.0,
 	bool allow_compress=1, int use_mipmaps=1, unsigned ncolors=3, bool is_alpha_mask=0);
-unsigned load_cube_map_texture(std::string const &name);
+unsigned load_cube_map_texture(string const &name);
 bool select_texture(int id, unsigned tu_id=0);
 void update_player_bbb_texture(float extra_blood, bool recreate);
 float get_tex_ar(int id);
@@ -636,8 +636,8 @@ void setup_landscape_tex_colors(colorRGBA const &c1, colorRGBA const &c2);
 colorRGBA texture_color(int tid);
 unsigned get_texture_size(int tid, bool dim);
 void get_lum_alpha(colorRGBA const &color, int tid, float &luminance, float &alpha);
-bool check_texture_file_exists(std::string const &filename);
-std::string get_file_extension(std::string const &filename, unsigned level=0, bool make_lower=0);
+bool check_texture_file_exists(string const &filename);
+string get_file_extension(string const &filename, unsigned level=0, bool make_lower=0);
 void gen_building_window_texture(float width_frac, float height_frac);
 unsigned get_noise_tex_3d(unsigned tsize, unsigned ncomp, unsigned bytes_per_pixel=1);
 colorRGBA get_landscape_texture_color(int xpos, int ypos);
@@ -710,8 +710,8 @@ void draw_inventory();
 void show_player_keycards();
 void show_user_stats();
 void show_other_messages();
-void print_text_onscreen(std::string const &text, colorRGBA const &color, float size, int time, int priority=0, float yval=0.0);
-void print_debug_text(std::string const &text, int priority=100);
+void print_text_onscreen(string const &text, colorRGBA const &color, float size, int time, int priority=0, float yval=0.0);
+void print_debug_text(string const &text, int priority=100);
 inline void print_debug_text(std::ostringstream const &oss, int priority=100) {print_debug_text(oss.str(), priority);}
 void print_weapon(int weapon_id);
 bool check_underwater(int who, float &depth);
@@ -859,7 +859,7 @@ void draw_spotlight_cones();
 void split_polygon_to_cobjs(coll_obj const &cobj, coll_obj_group &split_polygons, vector<point> const &poly_pt);
 
 // function prototypes - shaders
-char const *append_ix(std::string &s, unsigned i, bool as_array);
+char const *append_ix(string &s, unsigned i, bool as_array);
 bool setup_shaders();
 void clear_shaders();
 void reload_all_shaders();
@@ -936,8 +936,8 @@ void spray_paint(bool mode);
 void spraypaint_tree_leaves(point const &pos, float radius, colorRGBA const &color); // from Tree.cpp
 
 // function prototypes - sphere materials
-bool read_sphere_materials_file(std::string const &fn);
-bool write_sphere_materials_file(std::string const &fn);
+bool read_sphere_materials_file (string const &fn);
+bool write_sphere_materials_file(string const &fn);
 void toggle_sphere_mode();
 void change_sphere_material(int val, bool quiet);
 bool throw_sphere(bool mode);
@@ -975,10 +975,10 @@ void deform_obj(dwobject &obj, vector3d const &norm, vector3d const &v0);
 void update_deformation(dwobject &obj);
 
 // function prototypes - draw_text
-void load_font_texture_atlas(std::string const &fn="");
+void load_font_texture_atlas(string const &fn="");
 void free_font_texture_atlas();
 void draw_text(colorRGBA const &color, float x, float y, float z, char const *text, float tsize=1.0);
-inline void draw_text(colorRGBA const &color, float x, float y, float z, std::string const &s, float tsize=1.0) {draw_text(color, x, y, z, s.c_str(), tsize);}
+inline void draw_text(colorRGBA const &color, float x, float y, float z, string const &s, float tsize=1.0) {draw_text(color, x, y, z, s.c_str(), tsize);}
 void check_popup_text();
 
 // function prototypes - postproc_effects
@@ -1042,7 +1042,8 @@ bool remove_cube_if_contains_pt_xy(vect_cube_t &cubes, vector3d const &pos, unsi
 
 void sleep_for_ms(unsigned milliseconds);
 void checked_fclose(FILE *fp);
-bool endswith(std::string const &value, std::string const &ending);
+bool startswith(string const &str, string const &prefix);
+bool endswith  (string const &str, string const &suffix);
 
 #include "inlines.h"
 

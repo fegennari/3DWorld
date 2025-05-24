@@ -242,10 +242,13 @@ void model_from_file_t::check_and_bind(int &tid, string const &tfn, bool is_alph
 }
 
 
-
-bool endswith(string const &value, string const &ending) {
-	if (ending.size() > value.size()) return 0;
-	return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
+bool startswith(string const &str, string const &prefix) {
+	if (prefix.size() > str.size()) return 0;
+	return std::equal(prefix.begin(), prefix.end(), str.begin());
+}
+bool endswith(string const &str, string const &suffix) {
+	if (suffix.size() > str.size()) return 0;
+	return std::equal(suffix.rbegin(), suffix.rend(), str.rbegin());
 }
 
 class object_file_reader_model : public object_file_reader, public model_from_file_t {
