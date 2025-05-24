@@ -24,7 +24,6 @@ bool const LANDSCAPE_MIPMAP    = 1; // looks better, but texture update requires
 bool const SHOW_TEXTURE_MEMORY = 0;
 bool const COMPRESS_TEXTURES   = 1;
 bool const ALLOW_SLOW_COMPRESS = 1;
-bool const USE_STB_DXT         = 1;
 bool const CHECK_FOR_LUM       = 1;
 float const SMOOTH_SKY_POLES   = 0.2;
 
@@ -542,18 +541,7 @@ void texture_t::do_gl_init(bool free_after_upload) {
 		cout << "tex vmem = " << tmem << endl;
 	}
 	if (defer_load()) {deferred_load_and_bind();} // Note: mipmaps are stored in the DDS file and aren't controlled by the use_mipmaps option
-	else {
-		assert(is_allocated());
-		assert(width > 0 && height > 0);
-		bool const compressed(is_texture_compressed()), use_custom_compress(USE_STB_DXT && compressed && (ncolors == 3 || ncolors == 4));
-
-		if (use_custom_compress) {compress_and_send_texture();} // compressed RGB or RGBA + mipmaps
-		else { // font atlas and noise gen texture
-			glTexImage2D(GL_TEXTURE_2D, 0, calc_internal_format(), width, height, 0, calc_format(), get_data_format(), data); // 44ms
-		}
-		if ((use_mipmaps == 1 || use_mipmaps == 2) && !use_custom_compress) {gen_mipmaps();} // Note: compressed mipmaps are created insie compress_and_send_texture()
-		else if (use_mipmaps == 3 || use_mipmaps == 4) {create_custom_mipmaps();} // for compressed and non-compressed textures
-	}
+	else {compress_and_send_texture_with_mipmaps();}
 	if (free_after_upload) {free_client_mem();}
 }
 

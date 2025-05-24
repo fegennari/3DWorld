@@ -1073,7 +1073,7 @@ public:
 	void set_16_bit_grayscale();
 	void init() {calc_color();}
 	void do_gl_init(bool free_after_upload=0);
-	void compress_and_send_texture();
+	void compress_and_send_texture_with_mipmaps();
 	void upload_cube_map_face(unsigned ix);
 	bool is_texture_compressed() const;
 	GLenum calc_internal_format() const;
@@ -1082,7 +1082,6 @@ public:
 	void calc_color();
 	void copy_alpha_from_texture(texture_t const &at, bool alpha_in_red_comp);
 	void merge_in_alpha_channel(texture_t const &at);
-	void create_custom_mipmaps();
 	void set_to_color(colorRGBA const &c);
 	void maybe_assign_normal_map_tid(int nm_tid) {if (nm_tid >= 0 && bump_tid < 0) {bump_tid = nm_tid;}}
 	void alloc();

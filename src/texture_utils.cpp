@@ -7,6 +7,9 @@
 
 #define STB_DXT_IMPLEMENTATION
 #include "stb_dxt.h"
+bool const USE_STB_DXT = 1;
+
+bool gen_mipmaps(unsigned dim=2);
 
 
 void dxt_texture_compress(uint8_t const *const data, vector<uint8_t> &comp_data, int width, int height, int ncolors) {
@@ -40,53 +43,14 @@ void dxt_texture_compress(uint8_t const *const data, vector<uint8_t> &comp_data,
 	} // for y
 }
 
-void texture_t::compress_and_send_texture() { // 1850ms / 1000ms with PBO (but total load time is not actually faster)
-	//highres_timer_t timer("compress_and_send_texture", 1, 1); // enabled, no loading screen
-	vector<uint8_t> comp_data; // reuse across calls doesn't seem to help much
-	
-	if (use_mipmaps == 1 || use_mipmaps == 2) { // normal mipmaps
-		//highres_timer_t timer("create_compressed_mipmaps", 1, 1); // enabled, no loading screen; 1350ms total for city + cars + people
-		assert(is_allocated());
-		vector<uint8_t> idatav, odata; // reuse across calls doesn't seem to help much
+void create_one_mipmap(uint8_t const *const idata, vector<uint8_t> &odata, unsigned w1, unsigned h1, unsigned w2, unsigned h2,
+	unsigned ncolors, unsigned use_mipmaps, colorRGBA const &color, float mipmap_alpha_weight)
+{
+	unsigned const xinc((w2 < w1) ? ncolors : 0), yinc((h2 < h1) ? ncolors*w1 : 0);
+	odata.resize(ncolors*w2*h2);
 
-		for (unsigned w = width, h = height, level = 1; w > 1 || h > 1; w >>= 1, h >>= 1, ++level) {
-			unsigned const w1(max(w, 1U)), h1(max(h, 1U)), w2(max(w>>1, 1U)), h2(max(h>>1, 1U));
-			unsigned const xinc((w2 < w1) ? ncolors : 0), yinc((h2 < h1) ? ncolors*w1 : 0);
-			uint8_t const *const idata((level == 1) ? data : idatav.data());
-			odata.resize(ncolors*w2*h2);
-
-#pragma omp parallel for schedule(static)
-			for (int y = 0; y < (int)h2; ++y) { // simple 2x2 box filter
-				for (int x = 0; x < (int)w2; ++x) {
-					unsigned const ix1(ncolors*(y*w2+x)), ix2(ncolors*((y<<1)*w1+(x<<1)));
-
-					for (int n = 0; n < ncolors; ++n) {
-						odata[ix1+n] = uint8_t(((unsigned)idata[ix2+n] + idata[ix2+xinc+n] + idata[ix2+yinc+n] + idata[ix2+yinc+xinc+n]) >> 2);
-					}
-				}
-			}
-			dxt_texture_compress(odata.data(), comp_data, w2, h2, ncolors);
-			GL_CHECK(glCompressedTexImage2D(GL_TEXTURE_2D, level, calc_internal_format(), w2, h2, 0, comp_data.size(), comp_data.data()););
-			idatav.swap(odata);
-		} // for level
-	}
-	// sending the main texture last seems to be slightly faster because it will block on the first mipmap if sent first; if sent last it may overlap with compress
-	dxt_texture_compress(data, comp_data, width, height, ncolors); // 640ms
-	GL_CHECK(glCompressedTexImage2D(GL_TEXTURE_2D, 0, calc_internal_format(), width, height, 0, comp_data.size(), comp_data.data());); // 36ms
-}
-
-void texture_t::create_custom_mipmaps() { // 350ms total for city + cars + people
-
-	//highres_timer_t timer("Create Custom Mipmaps");
-	assert(is_allocated());
-	vector<uint8_t> idatav, odata, comp_data;
-	color_wrapper cw(color); // for use_mipmaps == 4 with RGBA
-
-	for (unsigned w = width, h = height, level = 1; w > 1 || h > 1; w >>= 1, h >>= 1, ++level) {
-		unsigned const w1(max(w, 1U)), h1(max(h, 1U)), w2(max(w>>1, 1U)), h2(max(h>>1, 1U));
-		unsigned const xinc((w2 < w1) ? ncolors : 0), yinc((h2 < h1) ? ncolors*w1 : 0);
-		uint8_t const *const idata((level == 1) ? data : idatav.data());
-		odata.resize(ncolors*w2*h2);
+	if (use_mipmaps == 3 || use_mipmaps == 4) { // custom mipmap path
+		color_wrapper cw(color); // for use_mipmaps == 4 with RGBA
 
 #pragma omp parallel for schedule(static)
 		for (int y = 0; y < (int)h2; ++y) {
@@ -124,17 +88,69 @@ void texture_t::create_custom_mipmaps() { // 350ms total for city + cars + peopl
 				}
 			} // for x
 		} // for y
-		if (is_texture_compressed()) { // uses stb
-			dxt_texture_compress(odata.data(), comp_data, w2, h2, ncolors);
-			GL_CHECK(glCompressedTexImage2D(GL_TEXTURE_2D, level, calc_internal_format(), w2, h2, 0, comp_data.size(), comp_data.data());) // 140ms
-		}
-		else { // 10ms
-			glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // needed for mipmap levels where width*ncolors is not aligned
-			glTexImage2D(GL_TEXTURE_2D, level, calc_internal_format(), w2, h2, 0, calc_format(), get_data_format(), odata.data());
-			glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-		}
-		idatav.swap(odata);
-	} // for level
+	}
+	else { // simple 2x2 box filter path
+#pragma omp parallel for schedule(static)
+		for (int y = 0; y < (int)h2; ++y) { // simple 2x2 box filter
+			for (int x = 0; x < (int)w2; ++x) {
+				unsigned const ix1(ncolors*(y*w2+x)), ix2(ncolors*((y<<1)*w1+(x<<1)));
+
+				for (int n = 0; n < ncolors; ++n) {
+					odata[ix1+n] = uint8_t(((unsigned)idata[ix2+n] + idata[ix2+xinc+n] + idata[ix2+yinc+n] + idata[ix2+yinc+xinc+n]) >> 2);
+				}
+			}
+		} // for y
+	}
 }
 
+void texture_t::compress_and_send_texture_with_mipmaps() {
+	assert(is_allocated());
+	assert(width > 0 && height > 0);
+	bool const compressed(is_texture_compressed()), use_custom_compress(USE_STB_DXT && compressed && (ncolors == 3 || ncolors == 4));
+	bool const use_normal_mipmaps(use_mipmaps == 1 || use_mipmaps == 2), use_custom_mipmaps(use_mipmaps == 3 || use_mipmaps == 4);
+	vector<uint8_t> comp_data, idatav, odata; // reused across calls; doesn't seem to help much
+
+	if (use_custom_compress) { // compressed RGB or RGBA + mipmaps
+		//highres_timer_t timer("compress_and_send_texture", 1, 1); // enabled, no loading screen; 1850ms / 1000ms with PBO (but total load time is not actually faster)
+		if (use_normal_mipmaps) {
+			//highres_timer_t timer("create_compressed_mipmaps", 1, 1); // enabled, no loading screen; 1350ms total for city + cars + people
+
+			for (unsigned w = width, h = height, level = 1; w > 1 || h > 1; w >>= 1, h >>= 1, ++level) {
+				unsigned const w1(max(w, 1U)), h1(max(h, 1U)), w2(max(w>>1, 1U)), h2(max(h>>1, 1U));
+				uint8_t const *const idata((level == 1) ? data : idatav.data());
+				create_one_mipmap(idata, odata, w1, h1, w2, h2, ncolors, use_mipmaps, color, mipmap_alpha_weight);
+				dxt_texture_compress(odata.data(), comp_data, w2, h2, ncolors);
+				GL_CHECK(glCompressedTexImage2D(GL_TEXTURE_2D, level, calc_internal_format(), w2, h2, 0, comp_data.size(), comp_data.data()););
+				idatav.swap(odata);
+			} // for level
+		}
+		// sending the main texture last seems to be slightly faster because it will block on the first mipmap if sent first; if sent last it may overlap with compress
+		dxt_texture_compress(data, comp_data, width, height, ncolors); // 640ms
+		GL_CHECK(glCompressedTexImage2D(GL_TEXTURE_2D, 0, calc_internal_format(), width, height, 0, comp_data.size(), comp_data.data());); // 36ms
+	}
+	else { // font atlas and noise gen texture
+		glTexImage2D(GL_TEXTURE_2D, 0, calc_internal_format(), width, height, 0, calc_format(), get_data_format(), data); // 44ms
+		if (use_normal_mipmaps) {gen_mipmaps();} // Note: compressed mipmaps are created inside compress_and_send_texture()
+	}
+	if (use_custom_mipmaps) { // custom mipmap creation for compressed and non-compressed textures
+		//highres_timer_t timer("Create Custom Mipmaps"); // 350ms total for city + cars + people
+
+		for (unsigned w = width, h = height, level = 1; w > 1 || h > 1; w >>= 1, h >>= 1, ++level) {
+			unsigned const w1(max(w, 1U)), h1(max(h, 1U)), w2(max(w>>1, 1U)), h2(max(h>>1, 1U));
+			uint8_t const *const idata((level == 1) ? data : idatav.data());
+			create_one_mipmap(idata, odata, w1, h1, w2, h2, ncolors, use_mipmaps, color, mipmap_alpha_weight);
+
+			if (compressed) { // uses stb
+				dxt_texture_compress(odata.data(), comp_data, w2, h2, ncolors);
+				GL_CHECK(glCompressedTexImage2D(GL_TEXTURE_2D, level, calc_internal_format(), w2, h2, 0, comp_data.size(), comp_data.data());) // 140ms
+			}
+			else { // 10ms
+				glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // needed for mipmap levels where width*ncolors is not aligned
+				glTexImage2D(GL_TEXTURE_2D, level, calc_internal_format(), w2, h2, 0, calc_format(), get_data_format(), odata.data());
+				glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+			}
+			idatav.swap(odata);
+		} // for level
+	}
+}
 
