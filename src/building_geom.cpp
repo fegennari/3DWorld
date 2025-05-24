@@ -2381,6 +2381,7 @@ void building_t::maybe_add_special_roof(rand_gen_t &rgen) {
 	}
 	if      (roof_type == ROOF_TYPE_DOME ) {max_eq(bcube.z2(), (top.z2() + 0.5f*max(sz.x, sz.y)));}
 	else if (roof_type == ROOF_TYPE_ONION) {max_eq(bcube.z2(), (top.z2() + 1.0f*max(sz.x, sz.y)));}
+	//else if (roof_type == ROOF_TYPE_CURVED) {}
 }
 void building_t::gen_sloped_roof(rand_gen_t &rgen, cube_t const &top) { // Note: currently not supported for rotated buildings
 

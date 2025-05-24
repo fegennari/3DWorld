@@ -1535,7 +1535,7 @@ void draw_building_ext_door(building_draw_t &bdraw, tquad_with_ix_t const &door,
 void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exterior building parts
 	if (!is_valid()) return; // invalid building
 	building_mat_t const &mat(get_material());
-	bool const need_top_roof(roof_type == ROOF_TYPE_FLAT || roof_type == ROOF_TYPE_DOME || roof_type == ROOF_TYPE_ONION);
+	bool const need_top_roof(roof_type == ROOF_TYPE_FLAT || roof_type == ROOF_TYPE_DOME || roof_type == ROOF_TYPE_ONION || roof_type == ROOF_TYPE_CURVED);
 	if (detail_color == BLACK) {detail_color = roof_color;} // use roof color if not set
 		
 	for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels - no AO for houses
@@ -1863,6 +1863,9 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 		tid_nm_pair_t tex(mat.roof_tex); // use a different dome texture?
 		tex.tscale_x *= tscale; tex.tscale_y *= tscale;
 		bdraw.add_roof_dome(point(center.x, center.y, top.z2()), 0.5*dx, 0.5*dy, tex, roof_color*1.5, (roof_type == ROOF_TYPE_ONION));
+	}
+	else if (roof_type == ROOF_TYPE_CURVED) {
+		// TODO: cylindrical section on the top and a partial circle/disk on the side
 	}
 }
 
