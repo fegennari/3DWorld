@@ -1075,7 +1075,7 @@ public:
 	void init() {calc_color();}
 	void do_gl_init(bool free_after_upload=0);
 	void compress_and_send_texture_with_mipmaps();
-	void write_texture2d_binary(string const &fn) const;
+	void write_texture2d_binary(string const &fn="") const;
 	void read_texture2d_binary();
 	void upload_cube_map_face(unsigned ix);
 	bool is_texture_compressed() const;
