@@ -43,8 +43,11 @@ vec4 apply_fog_ffc(in vec4 color, in float ffc, in vec4 fog_color) {
 	fog = 1.0 - (1.0-fog)*(1.0-fog); // quadratic term
 #endif
 	float fog_mix_val = mix(1.0, fog, fog_scale);
-	//vec4 fin_color = vec4(mix(fog_color.rgb, color.rgb, fog_mix_val), color.a);
+#ifdef FOG_PRESERVE_ALPHA
+	vec4 fin_color = vec4(mix(fog_color.rgb, color.rgb, fog_mix_val), color.a);
+#else
 	vec4 fin_color = mix(fog_color, color, fog_mix_val); // fog_mix_val=0 => fog_color, fog_mix_val=1 => color
+#endif // FOG_PRESERVE_ALPHA
 #ifdef FOG_FADE_TO_TRANSPARENT
 	fin_color.a *= min(fog_fade_val*fog_mix_val, 1.0);
 #endif

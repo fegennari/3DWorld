@@ -374,9 +374,8 @@ namespace streetlight_ns {
 		else {
 			// draw an emissive circular blur texture area on the ground below the streetlight if it's on but outside our city lights bcube
 			if (is_on && !get_city_lights_bcube().contains_pt_xy(lpos)) {
-				point below_pos(lpos);
+				point below_pos(lpos), pts[4];
 				below_pos.z = pos.z + 0.01*height; // shift up slightly to prevent Z-fighting
-				point pts[4];
 				set_z_plane_square_pts(below_pos, 1.2*city_params.road_width, pts);
 				dstate.qbd_emissive.add_quad_pts(pts, colorRGBA(light_color, 0.25), plus_z);
 			}
@@ -1172,21 +1171,24 @@ void road_draw_state_t::post_draw() {
 	else {
 		s.set_vert_shader("no_lighting_tc_fog");
 		s.set_frag_shader("linear_fog.part+textured_with_fog");
+		s.set_prefix("#define FOG_PRESERVE_ALPHA", 1); // FS
 		s.begin_shader();
 		s.add_uniform_float("min_alpha", 0.0);
 		s.add_uniform_int("tex0", 0);
 		s.setup_fog_scale();
-		road_mat_mgr.set_stoplight_texture();
 	}
 	if (!qbd_sl.empty()) { // have stoplights to draw
+		road_mat_mgr.set_stoplight_texture();
 		set_std_depth_func_with_eq(); // helps prevent Z-fighting
 		qbd_sl.draw_and_clear();
 		set_std_depth_func();
 	}
 	if (!qbd_emissive.empty()) { // have streetlight emissive light spots to draw
 		assert(!shadow_only);
+		set_additive_blend_mode();
 		s.set_color_e(streetlight_ns::light_color);
 		draw_and_clear_blur_qbd(qbd_emissive);
+		set_std_blend_mode();
 		s.clear_color_e();
 	}
 	s.end_shader();
