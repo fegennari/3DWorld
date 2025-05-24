@@ -39,7 +39,7 @@ void wrap_png_error(png_structp, png_const_charp) {cerr << "Error reading PNG im
 
 string const texture_dir("textures");
 
-string append_texture_dir(string const &filename) {return (texture_dir + "/" + filename);}
+string prepend_texture_dir(string const &filename) {return (texture_dir + "/" + filename);}
 
 
 size_t get_last_slash_pos(string const &filename) {
@@ -82,7 +82,7 @@ void checked_fclose(FILE *fp) {
 }
 
 FILE *open_texture_file_no_check(string const &filename) {
-	FILE *fp = fopen(append_texture_dir(filename).c_str(), "rb");
+	FILE *fp = fopen(prepend_texture_dir(filename).c_str(), "rb");
 	if (fp != nullptr) return fp; // found
 	// if not in the texture directory, look in the current directory
 	return fopen(filename.c_str(), "rb");
@@ -412,7 +412,7 @@ void texture_t::load_targa(int index, bool allow_diff_width_height) {
 
 	assert(!is_allocated());
 	tga_image img;
-	tga_result ret(tga_read(&img, append_texture_dir(name).c_str())); // try textures directory
+	tga_result ret(tga_read(&img, prepend_texture_dir(name).c_str())); // try textures directory
 
 	if (ret != TGA_NOERR) {
 		ret = tga_read(&img, name.c_str()); // try current directory
@@ -627,7 +627,7 @@ int texture_t::write_to_png(string const &fn) const {
 void texture_t::load_tiff(int index, bool allow_diff_width_height, bool allow_two_byte_grayscale) {
 
 #ifdef ENABLE_TIFF
-	TIFF* tif = TIFFOpen(append_texture_dir(name).c_str(), "r"); // first try texture directory
+	TIFF* tif = TIFFOpen(prepend_texture_dir(name).c_str(), "r"); // first try texture directory
 	if (tif == NULL) {tif = TIFFOpen(name.c_str(), "r");} // not found, try current directory
 
 	if (tif == NULL) {
@@ -753,7 +753,7 @@ string read_string_ignore_comment_line(istream &in) {
 }
 
 bool open_texture_filebuf(filebuf &fb, string const &name) {
-	return (fb.open(name, (ios::in | ios::binary)) || fb.open(append_texture_dir(name), (ios::in | ios::binary)));
+	return (fb.open(name, (ios::in | ios::binary)) || fb.open(prepend_texture_dir(name), (ios::in | ios::binary)));
 }
 
 // from Deliot2019
@@ -825,7 +825,7 @@ bool texture_t::load_stb_image(int index, bool allow_diff_width_height, bool all
 		file_data = stbi_load_from_memory(load_from_data, load_from_size, &w, &h, &nc, 0);
 	}
 	else { // load from file on disk
-		string filename(append_texture_dir(name)); // first, try looking in the texture directory
+		string filename(prepend_texture_dir(name)); // first, try looking in the texture directory
 		FILE *const fp(fopen(filename.c_str(), "rb")); // see if we can open the file
 		if (fp == nullptr) {filename = name;} // if not in the texture directory, look in the current directory
 		else {checked_fclose(fp);}
