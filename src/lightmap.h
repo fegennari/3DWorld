@@ -163,7 +163,7 @@ class light_source { // size = 116
 protected:
 	bool dynamic=0, enabled=0, user_placed=0, is_cube_face=0, is_cube_light=0, no_shadows=0;
 	unsigned smap_index=0, user_smap_id=0, smap_mgr_id=0, cube_eflags=0, num_dlight_rays=0; // smap_index = index of shadow map texture/data
-	float radius=0.0, radius_inv=0.0, r_inner=0.0, bwidth=0.0, near_clip=0.0, far_clip=0.0;
+	float radius=0.0, radius_inv=0.0, r_inner=0.0, bwidth=0.0, near_clip=0.0, far_clip=0.0, eff_bright=0.0;
 	point pos, pos2; // point/sphere light: use pos; line/cylinder light: use pos and pos2
 	vector3d dir;
 	colorRGBA color=BLACK;
@@ -185,10 +185,12 @@ public:
 	float get_r_inner()          const {return r_inner;} // > 0.0 for sphere light
 	float get_near_clip()        const {return near_clip;}
 	float get_beamwidth()        const {return bwidth;}
+	float get_eff_bright()       const {return eff_bright;}
 	point const &get_pos()       const {return pos;}
 	point const &get_pos2()      const {return pos2;}
 	vector3d const &get_dir()    const {return dir;}
 	sphere_t get_bsphere()       const {return sphere_t(pos, radius);}
+	void calc_effective_brightness(point const &cpos);
 	float get_intensity_at(point const &p, point &updated_lpos) const;
 	float get_dir_intensity(vector3d const &obj_dir) const;
 	void get_bounds(cube_t &bcube, int bnds[3][2], float sqrt_thresh, bool clip_to_scene_bcube=0, vector3d const &bounds_offset=zero_vector) const;

@@ -59,13 +59,14 @@ light_source::light_source(float sz, point const &p, point const &p2, colorRGBA 
 	assert(!(is_directional() && is_line_light())); // can't be both
 }
 
-
 void light_source::add_color(colorRGBA const &c) {
-
 	color = color*color.alpha + c*c.alpha;
 	color.alpha = 1.0;
 }
 
+void light_source::calc_effective_brightness(point const &cpos) {
+	eff_bright = get_beamwidth()*get_radius()*get_radius()/p2p_dist_sq(get_pos(), cpos);
+}
 
 float light_source::get_intensity_at(point const &p, point &updated_lpos) const {
 
@@ -83,9 +84,7 @@ float light_source::get_intensity_at(point const &p, point &updated_lpos) const 
 	return rscale*rscale*color[3]; // quadratic 1/r^2 attenuation
 }
 
-
 float light_source::get_dir_intensity(vector3d const &obj_dir) const {
-
 	if (!is_directional()) return 1.0;
 	float const dp(dot_product(obj_dir, dir));
 	if (dp >= 0.0f && (bwidth + LT_DIR_FALLOFF) < 0.5f) return 0.0;
@@ -93,10 +92,9 @@ float light_source::get_dir_intensity(vector3d const &obj_dir) const {
 	return CLIP_TO_01(2.0f*(dp_norm + bwidth + LT_DIR_FALLOFF - 1.0f)*LT_DIR_FALLOFF_INV);
 }
 
-
 cube_t light_source::calc_bcube(bool add_pad, float sqrt_thresh, bool clip_to_scene_bcube, float falloff) const {
 
-	assert(radius > 0.0);
+	assert(radius      > 0.0);
 	assert(sqrt_thresh < 1.0);
 	cube_t bcube(pos, pos2);
 	bcube.expand_by(radius*(1.0 - sqrt_thresh));

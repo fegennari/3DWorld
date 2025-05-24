@@ -3164,17 +3164,10 @@ void car_manager_t::setup_occluders() {
 vector<bridge_t      > const &car_manager_t::get_bridges      () const {return road_gen.get_bridges      ();}
 vector<wind_turbine_t> const &car_manager_t::get_wind_turbines() const {return road_gen.get_wind_turbines();}
 
-struct cmp_light_source_sz_dist {
-	point const &cpos;
-	cmp_light_source_sz_dist(point const &p) : cpos(p) {}
-	float get_value(light_source const &s) const {return s.get_beamwidth()*s.get_radius()*s.get_radius()/p2p_dist_sq(s.get_pos(), cpos);}
-	bool operator()(light_source const &a, light_source const &b) const {return (get_value(a) > get_value(b));} // sort largest/closest to smallest/furthest
-};
-
 void sort_lights_by_dist_size(vector<light_source> &lights, point const &cpos) {
-	stable_sort(lights.begin(), lights.end(), cmp_light_source_sz_dist(cpos));
+	for (light_source &ls : lights) {ls.calc_effective_brightness(cpos);}
+	stable_sort(lights.begin(), lights.end(), [](light_source const &a, light_source const &b) {return (a.get_eff_bright() > b.get_eff_bright());});
 }
-
 void filter_dlights_to(vector<light_source> &lights, unsigned max_num, point const &cpos) {
 	if (lights.size() <= max_num) return;
 	sort_lights_by_dist_size(lights, cpos);
@@ -3324,7 +3317,6 @@ void city_lights_manager_t::setup_shadow_maps(vector<light_source> &light_source
 	dl_smap_enabled = 0;
 	if (!enable_dlight_shadows || shadow_map_sz == 0 || num_smaps == 0) return;
 	sort_lights_by_dist_size(light_sources, cpos); // Note: may already be sorted for enabled lights selection, but okay to sort again
-	cmp_light_source_sz_dist sz_cmp(cpos);
 	unsigned const smap_size(city_params.smap_size); // 0 = use default shadow map resolution
 	// capture player pos in global coordinate space before replacing with light pos so it can be used for LOD during model drawing
 	pre_smap_player_pos = cpos; // player or security camera (or maybe reflected pos in the future)
@@ -3338,9 +3330,9 @@ void city_lights_manager_t::setup_shadow_maps(vector<light_source> &light_source
 	selected.reserve(num_smaps);
 
 	for (auto i = light_sources.begin(); i != light_sources.end() && selected.size() < num_smaps; ++i) {
-		if (i->has_no_shadows())       continue; // shadows not enabled for this light
-		if (!i->is_very_directional()) continue; // not a spotlight
-		if (sz_cmp.get_value(*i) < 0.002) break; // light influence is too low, skip even though we have enough shadow maps; can break because sort means all later lights also fail
+		if (i->has_no_shadows())         continue; // shadows not enabled for this light
+		if (!i->is_very_directional())   continue; // not a spotlight
+		if (i->get_eff_bright() < 0.002) break; // light influence too low, skip even though we have enough shadow maps; can break because sort means all later lights also fail
 		bool matched_smap_id(0);
 		if (!i->alloc_shadow_map(matched_smap_id, smap_size)) break; // out of shadow maps, done
 		selected.emplace_back((i - light_sources.begin()), matched_smap_id);
