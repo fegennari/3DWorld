@@ -110,30 +110,8 @@ void texture_t::compress_and_send_texture_with_mipmaps() {
 	bool const use_normal_mipmaps(use_mipmaps == 1 || use_mipmaps == 2), use_custom_mipmaps(use_mipmaps == 3 || use_mipmaps == 4);
 	vector<uint8_t> comp_data, idatav, odata; // reused across calls; doesn't seem to help much
 
-	if (use_custom_compress) { // compressed RGB or RGBA + mipmaps
-		//highres_timer_t timer("compress_and_send_texture", 1, 1); // enabled, no loading screen; 1850ms / 1000ms with PBO (but total load time is not actually faster)
-		if (use_normal_mipmaps) {
-			//highres_timer_t timer("create_compressed_mipmaps", 1, 1); // enabled, no loading screen; 1350ms total for city + cars + people
-
-			for (unsigned w = width, h = height, level = 1; w > 1 || h > 1; w >>= 1, h >>= 1, ++level) {
-				unsigned const w1(max(w, 1U)), h1(max(h, 1U)), w2(max(w>>1, 1U)), h2(max(h>>1, 1U));
-				uint8_t const *const idata((level == 1) ? data : idatav.data());
-				create_one_mipmap(idata, odata, w1, h1, w2, h2, ncolors, use_mipmaps, color, mipmap_alpha_weight);
-				dxt_texture_compress(odata.data(), comp_data, w2, h2, ncolors);
-				GL_CHECK(glCompressedTexImage2D(GL_TEXTURE_2D, level, calc_internal_format(), w2, h2, 0, comp_data.size(), comp_data.data()););
-				idatav.swap(odata);
-			} // for level
-		}
-		// sending the main texture last seems to be slightly faster because it will block on the first mipmap if sent first; if sent last it may overlap with compress
-		dxt_texture_compress(data, comp_data, width, height, ncolors); // 640ms
-		GL_CHECK(glCompressedTexImage2D(GL_TEXTURE_2D, 0, calc_internal_format(), width, height, 0, comp_data.size(), comp_data.data());); // 36ms
-	}
-	else { // font atlas and noise gen texture
-		glTexImage2D(GL_TEXTURE_2D, 0, calc_internal_format(), width, height, 0, calc_format(), get_data_format(), data); // 44ms
-		if (use_normal_mipmaps) {gen_mipmaps();} // Note: compressed mipmaps are created inside compress_and_send_texture()
-	}
-	if (use_custom_mipmaps) { // custom mipmap creation for compressed and non-compressed textures
-		//highres_timer_t timer("Create Custom Mipmaps"); // 350ms total for city + cars + people
+	if ((use_custom_compress && use_normal_mipmaps) || use_custom_mipmaps) { // mipmap creation for compressed and non-compressed textures
+		//highres_timer_t timer("create_mipmaps", 1, 1); // enabled, no loading screen; 1500ms total for city + cars + people
 
 		for (unsigned w = width, h = height, level = 1; w > 1 || h > 1; w >>= 1, h >>= 1, ++level) {
 			unsigned const w1(max(w, 1U)), h1(max(h, 1U)), w2(max(w>>1, 1U)), h2(max(h>>1, 1U));
@@ -142,7 +120,7 @@ void texture_t::compress_and_send_texture_with_mipmaps() {
 
 			if (compressed) { // uses stb
 				dxt_texture_compress(odata.data(), comp_data, w2, h2, ncolors);
-				GL_CHECK(glCompressedTexImage2D(GL_TEXTURE_2D, level, calc_internal_format(), w2, h2, 0, comp_data.size(), comp_data.data());) // 140ms
+				GL_CHECK(glCompressedTexImage2D(GL_TEXTURE_2D, level, calc_internal_format(), w2, h2, 0, comp_data.size(), comp_data.data());)
 			}
 			else { // 10ms
 				glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // needed for mipmap levels where width*ncolors is not aligned
@@ -151,6 +129,16 @@ void texture_t::compress_and_send_texture_with_mipmaps() {
 			}
 			idatav.swap(odata);
 		} // for level
+	}
+	if (use_custom_compress) { // compressed RGB or RGBA + mipmaps
+		//highres_timer_t timer("compress_and_send_texture", 1, 1); // enabled, no loading screen; 500ms; less with PBO (but total load time is not actually faster)
+		// sending the main texture last seems to be slightly faster because it will block on the first mipmap if sent first; if sent last it may overlap with compress
+		dxt_texture_compress(data, comp_data, width, height, ncolors); // 640ms
+		GL_CHECK(glCompressedTexImage2D(GL_TEXTURE_2D, 0, calc_internal_format(), width, height, 0, comp_data.size(), comp_data.data());); // 36ms
+	}
+	else { // font atlas and noise gen texture
+		glTexImage2D(GL_TEXTURE_2D, 0, calc_internal_format(), width, height, 0, calc_format(), get_data_format(), data); // 44ms
+		if (use_normal_mipmaps) {gen_mipmaps();} // Note: compressed mipmaps are created inside compress_and_send_texture()
 	}
 }
 
