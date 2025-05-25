@@ -1199,7 +1199,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		float extend_to(0.0), max_dz(i->dz());
 
 		if (has_sec_bldg() && ix == real_num_parts) { // garage or shed
-			if (has_shed) {} // use ROOF_TYPE_SHED? need to add triangle wall sections for this
+			if (has_shed) {} // use ROOF_TYPE_SHED? need to add triangle wall sections for this; currently we can't have a per-part roof type either
 		}
 		if (type == 1 && ix == 1 && dim != other_dim && parts[0].z2() == parts[1].z2()) { // L-shape, same z2, opposite dim T-junction
 			max_dz    = peak_height*parts[0].get_sz_dim(!other_dim); // clamp roof zval to other roof's peak
@@ -2377,11 +2377,15 @@ void building_t::maybe_add_special_roof(rand_gen_t &rgen) {
 	}
 	else if (is_cube()) { // only simple cubes are handled
 		if (global_building_params.dome_roof && sz.x < 1.2*sz.y && sz.y < 1.2*sz.x && sz.z > max(sz.x, sz.y)) {roof_type = ROOF_TYPE_DOME;} // roughly square, not too short
+		else if (parts.size() == 1 && bcube.dz() < 4.5*get_window_vspace() && rgen.rand_bool()) { // shorter single cube building; likely to become factory or warehouse
+			cube_t const &top(parts[0]);
+			roof_type = ROOF_TYPE_CURVED;
+			max_eq(bcube.z2(), (top.z2() + 0.125f*min(top.dx(), top.dy()))); // should curve in the short dim by 25% of radius
+		}
 		else {gen_sloped_roof(rgen, top);} // sloped roof
 	}
 	if      (roof_type == ROOF_TYPE_DOME ) {max_eq(bcube.z2(), (top.z2() + 0.5f*max(sz.x, sz.y)));}
 	else if (roof_type == ROOF_TYPE_ONION) {max_eq(bcube.z2(), (top.z2() + 1.0f*max(sz.x, sz.y)));}
-	//else if (roof_type == ROOF_TYPE_CURVED) {}
 }
 void building_t::gen_sloped_roof(rand_gen_t &rgen, cube_t const &top) { // Note: currently not supported for rotated buildings
 

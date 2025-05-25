@@ -783,7 +783,7 @@ class building_draw_t {
 	vector<draw_block_t> to_draw; // one per texture, assumes tids are dense
 
 public:
-	vect_vnctcc_t &get_verts(tid_nm_pair_t const &tex, bool quads_or_tris=0, bool no_register_tile=0) { // default is quads
+	vect_vnctcc_t &get_verts(tid_nm_pair_t const &tex, bool quads_or_tris=0, bool no_register_tile=0) { // 0=quads, 1=triangles
 		unsigned const ix(get_to_draw_ix(tex));
 		if (ix >= to_draw.size()) {to_draw.resize(ix+1);}
 		draw_block_t &block(to_draw[ix]);
@@ -1300,8 +1300,67 @@ public:
 		}
 	}
 
+	void add_roof_curve(cube_t const &c, cube_t const &bcube, tid_nm_pair_t const &roof_tex, tid_nm_pair_t const &side_tex,
+		colorRGBA const &roof_color, colorRGBA const &side_color)
+	{
+		// add a squished cylindrical section on the top
+		bool const dim(c.dx() < c.dy()); // long dim
+		unsigned const ndiv(32); // more/smoother sides; only half are drawn
+		float const ndiv_inv(1.0/ndiv), radius(0.5*c.get_sz_dim(!dim)), roof_z(c.z2()), hscale(0.25);
+		color_wrapper const cwr(roof_color), cws(side_color);
+		auto &qverts(get_verts(roof_tex, 0));
+		point ce[2];
+		ce[0].z     = ce[1].z     = roof_z;
+		ce[0][!dim] = ce[1][!dim] = c.get_center_dim(!dim);
+		for (unsigned d = 0; d < 2; ++d) {ce[d][dim] = c.d[dim][d];}
+		vector3d v12;
+		vector_point_norm const &vpn(gen_cylinder_data(ce, radius, radius, ndiv, v12));
+
+		for (unsigned i = 0; i < ndiv; ++i) {
+			if (vpn.n[i].z < -0.01) continue; // skip bottom half of cylinder (with some tolerance)
+
+			for (unsigned j = 0; j < 2; ++j) {
+				unsigned const S(i + j), s(S%ndiv), vix(qverts.size());
+				norm_comp const normal((vpn.n[s] + vpn.n[(S+ndiv-1)%ndiv]).get_norm());
+				float const ts(4.0*S*roof_tex.tscale_x*ndiv_inv);
+				qverts.emplace_back(vpn.p[(s<<1)+ j], normal, ts, (1.0-j)*roof_tex.tscale_y, cwr);
+				qverts.emplace_back(vpn.p[(s<<1)+!j], normal, ts, j      *roof_tex.tscale_y, cwr);
+				if (hscale == 1.0) continue;
+
+				for (unsigned k = 0; k < 2; ++k) { // scale the height
+					auto &v(qverts[vix+k]);
+					v.v.z = roof_z + hscale*(v.v.z - roof_z);
+					vector3d n(v.get_norm());
+					n.z /= hscale;
+					v.set_norm(n.get_norm());
+				} // for k
+			} // for j
+		} // for i
+		// add partial circle/disk on both sides
+		float const tscale_x(side_tex.get_drawn_tscale_x()), tscale_y(side_tex.get_drawn_tscale_y());
+		auto &tverts(get_verts(side_tex, 1));
+
+		for (unsigned d = 0; d < 2; ++d) {
+			vector3d const normal(vector_from_dim_dir(dim, d));
+			vert_norm_comp_tc_color const center(ce[d], normal, radius*tscale_x, (roof_z - bcube.z1())*tscale_y, cws);
+
+			for (unsigned i = 0; i < ndiv; ++i) {
+				if (vpn.n[i].z < -0.01) continue; // skip bottom half of cylinder (with some tolerance)
+				tverts.push_back(center);
+
+				for (unsigned j = 0; j < 2; ++j) {
+					unsigned const s((i + (bool(j) ^ bool(d)))%ndiv); // use the correct winding order
+					point pt(vpn.p[(s<<1) + d]);
+					if (hscale != 1.0) {pt.z = roof_z + hscale*(pt.z - roof_z);} // scale the height
+					tverts.emplace_back(pt, normal, (pt[!dim] - c.d[!dim][0])*tscale_x, (pt.z - bcube.z1())*tscale_y, cws);
+				} // for j
+			} // for i
+		} // for d
+	}
+
 	void add_vert_cylinder(point const &center, float z1, float z2, float radius, float tscale_x, float tscale_y,
-		unsigned ndiv, colorRGBA const &color, vect_vnctcc_t &qverts, float rscale1=1.0, float rscale2=1.0) {
+		unsigned ndiv, colorRGBA const &color, vect_vnctcc_t &qverts, float rscale1=1.0, float rscale2=1.0)
+	{
 		float const ndiv_inv(1.0/ndiv);
 		color_wrapper const cw(color);
 		point const ce[2] = {point(center.x, center.y, z1), point(center.x, center.y, z2)};
@@ -1855,9 +1914,9 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 	bool const skip_bottom(is_in_city); // skip_bottom=0, since it may be visible when extended over the terrain; okay to skip bottom for city driveways
 	add_driveway_or_porch(bdraw, *this, driveway, LT_GRAY, skip_bottom);
 	add_driveway_or_porch(bdraw, *this, porch,    LT_GRAY, 1); // skip_bottom=1
+	cube_t const &top(has_basement() ? parts[basement_part_ix-1] : parts.back()); // top/last part
 
 	if (roof_type == ROOF_TYPE_DOME || roof_type == ROOF_TYPE_ONION) {
-		cube_t const &top(parts.back()); // top/last part
 		point const center(top.get_cube_center());
 		float const dx(top.dx()), dy(top.dy()), tscale(4.0f/(dx + dy));
 		tid_nm_pair_t tex(mat.roof_tex); // use a different dome texture?
@@ -1865,7 +1924,7 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 		bdraw.add_roof_dome(point(center.x, center.y, top.z2()), 0.5*dx, 0.5*dy, tex, roof_color*1.5, (roof_type == ROOF_TYPE_ONION));
 	}
 	else if (roof_type == ROOF_TYPE_CURVED) {
-		// TODO: cylindrical section on the top and a partial circle/disk on the side
+		bdraw.add_roof_curve(top, bcube, mat.roof_tex, mat.side_tex, roof_color, side_color);
 	}
 }
 
