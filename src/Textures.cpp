@@ -530,18 +530,17 @@ GLenum texture_t::calc_format() const {
 
 
 void texture_t::do_gl_init(bool free_after_upload) {
-
 	//cout << "bind texture " << name << " size " << width << "x" << height << endl;
 	//timer_t timer(("Load and Upload Texture " + name), 1, 1);
 	setup_texture(tid, (use_mipmaps != 0 && !defer_load()), wrap, wrap, mirror, mirror, 0, anisotropy);
+	if (defer_load()) {deferred_load_and_bind();} // Note: mipmaps are stored in the file and aren't controlled by the use_mipmaps option
+	else {compress_and_send_texture_with_mipmaps();}
 
 	if (SHOW_TEXTURE_MEMORY) {
 		static unsigned tmem(0);
 		tmem += get_gpu_mem();
 		cout << "tex vmem = " << tmem << endl;
 	}
-	if (defer_load()) {deferred_load_and_bind();} // Note: mipmaps are stored in the DDS file and aren't controlled by the use_mipmaps option
-	else {compress_and_send_texture_with_mipmaps();}
 	if (free_after_upload) {free_client_mem();}
 }
 

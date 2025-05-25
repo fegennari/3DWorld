@@ -721,7 +721,6 @@ void texture_t::load_dds() {
 
 void texture_t::deferred_load_dds() {
 #ifdef ENABLE_DDS
-	//cout << "Loading DDS image " << name << endl;
 	gli::texture2d Texture(gli::load_dds(name.c_str()));
 	bool const compressed(gli::is_compressed(Texture.format()));
 	// here we assume the texture is upside down and flip it, if it's uncompressed and flippable
@@ -733,13 +732,15 @@ void texture_t::deferred_load_dds() {
 	assert(width > 0 && height > 0);
 	gli::gl GL(gli::gl::PROFILE_GL33);
 	gli::gl::format const Format(GL.translate(Texture.format(), Texture.swizzles()));
-	glBindTexture(GL_TEXTURE_2D, tid);
+	auto const num_levels(Texture.levels());
+	glBindTexture  (GL_TEXTURE_2D, tid);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, ((num_levels > 1) ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR)); // use mipmaps if there are multiple levels
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, GLint(Texture.levels() - 1));
-	glTexStorage2D(GL_TEXTURE_2D, Texture.levels(), Format.Internal, width, height);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, GLint(num_levels - 1));
+	glTexStorage2D (GL_TEXTURE_2D, num_levels, Format.Internal, width, height);
 
 	// handle mipmaps; the value of use_mipmaps is ignored here
-	for (gli::texture2d::size_type Level = 0; Level < Texture.levels(); ++Level) {
+	for (auto Level = 0; Level < num_levels; ++Level) {
 		auto const &t(Texture[Level]);
 		if (compressed) {glCompressedTexSubImage2D(GL_TEXTURE_2D, Level, 0, 0, t.extent().x, t.extent().y, Format.Internal, t.size(), t.data());}
 		else {glTexSubImage2D(GL_TEXTURE_2D, Level, 0, 0, t.extent().x, t.extent().y, Format.External, Format.Type, t.data());}

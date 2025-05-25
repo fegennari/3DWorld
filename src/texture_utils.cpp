@@ -113,6 +113,7 @@ void texture_t::compress_and_send_texture_with_mipmaps() {
 	assert(width > 0 && height > 0);
 	bool const compressed(is_texture_compressed()), use_custom_compress(USE_STB_DXT && compressed && (ncolors == 3 || ncolors == 4));
 	bool const use_normal_mipmaps(use_mipmaps == 1 || use_mipmaps == 2), use_custom_mipmaps(use_mipmaps == 3 || use_mipmaps == 4);
+	GLenum const format(calc_internal_format());
 	vector<uint8_t> comp_data, idatav, odata; // reused across calls; doesn't seem to help much
 
 	if ((use_custom_compress && use_normal_mipmaps) || use_custom_mipmaps) { // mipmap creation for compressed and non-compressed textures
@@ -125,11 +126,11 @@ void texture_t::compress_and_send_texture_with_mipmaps() {
 
 			if (compressed) { // uses stb
 				dxt_texture_compress(odata.data(), comp_data, w2, h2, ncolors);
-				GL_CHECK(glCompressedTexImage2D(GL_TEXTURE_2D, level, calc_internal_format(), w2, h2, 0, comp_data.size(), comp_data.data());)
+				GL_CHECK(glCompressedTexImage2D(GL_TEXTURE_2D, level, format, w2, h2, 0, comp_data.size(), comp_data.data());)
 			}
 			else { // 10ms
 				glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // needed for mipmap levels where width*ncolors is not aligned
-				glTexImage2D(GL_TEXTURE_2D, level, calc_internal_format(), w2, h2, 0, calc_format(), get_data_format(), odata.data());
+				glTexImage2D(GL_TEXTURE_2D, level, format, w2, h2, 0, calc_format(), get_data_format(), odata.data());
 				glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 			}
 			idatav.swap(odata);
@@ -139,10 +140,10 @@ void texture_t::compress_and_send_texture_with_mipmaps() {
 		//highres_timer_t timer("compress_and_send_texture", 1, 1); // enabled, no loading screen; 500ms; less with PBO (but total load time is not actually faster)
 		// sending the main texture last seems to be slightly faster because it will block on the first mipmap if sent first; if sent last it may overlap with compress
 		dxt_texture_compress(data, comp_data, width, height, ncolors); // 640ms
-		GL_CHECK(glCompressedTexImage2D(GL_TEXTURE_2D, 0, calc_internal_format(), width, height, 0, comp_data.size(), comp_data.data());); // 36ms
+		GL_CHECK(glCompressedTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, comp_data.size(), comp_data.data());); // 36ms
 	}
 	else { // font atlas and noise gen texture
-		glTexImage2D(GL_TEXTURE_2D, 0, calc_internal_format(), width, height, 0, calc_format(), get_data_format(), data); // 44ms
+		glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, calc_format(), get_data_format(), data); // 44ms
 		if (use_normal_mipmaps) {gen_mipmaps();} // Note: compressed mipmaps are created inside compress_and_send_texture()
 	}
 }
@@ -238,17 +239,24 @@ void texture_t::read_texture2d_binary() {
 	vector<uint8_t> comp_data;
 	read_vector(in, comp_data);
 	assert(!comp_data.empty());
-	GL_CHECK(glCompressedTexImage2D(GL_TEXTURE_2D, 0, calc_internal_format(), width, height, 0, comp_data.size(), comp_data.data()););
+	GLenum const format(calc_internal_format());
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (use_mipmaps ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR));
+	GL_CHECK(glCompressedTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, comp_data.size(), comp_data.data()););
 
 	if (use_mipmaps) { // read mipmaps
 		for (unsigned level = 1; ; ++level) { // Note: no test
 			unsigned const w2(read_uint(in));
-			if (w2 == 0) break; // terminator; done
+			
+			if (w2 == 0) { // terminator; done
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, GLint(level - 1));
+				break;
+			}
 			unsigned const h2(read_uint(in));
 			assert(h2 > 0);
 			read_vector(in, comp_data);
 			assert(!comp_data.empty());
-			GL_CHECK(glCompressedTexImage2D(GL_TEXTURE_2D, level, calc_internal_format(), w2, h2, 0, comp_data.size(), comp_data.data());)
+			GL_CHECK(glCompressedTexImage2D(GL_TEXTURE_2D, level, format, w2, h2, 0, comp_data.size(), comp_data.data());)
 		} // end while()
 	}
 	if (!in.good()) {
