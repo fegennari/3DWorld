@@ -63,9 +63,8 @@ void light_source::add_color(colorRGBA const &c) {
 	color = color*color.alpha + c*c.alpha;
 	color.alpha = 1.0;
 }
-
 void light_source::calc_effective_brightness(point const &cpos) {
-	eff_bright = get_beamwidth()*get_radius()*get_radius()/p2p_dist_sq(get_pos(), cpos);
+	eff_bright = bwidth*radius*radius/p2p_dist_sq(pos, cpos);
 }
 
 float light_source::get_intensity_at(point const &p, point &updated_lpos) const {

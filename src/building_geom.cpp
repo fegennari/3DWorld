@@ -2319,8 +2319,8 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 		for (unsigned i = 0; i < 4; ++i) {details.emplace_back(cubes[i], (uint8_t)ROOF_OBJ_WALL);}
 	}
 	if (is_factory() || is_powerplant()) {add_smokestack(rgen);}
-	for (auto i = details.begin(); i != details.end(); ++i) {assert(i->is_strictly_normalized()); max_eq(bcube.z2(), i->z2());} // extend bcube z2 to contain details
-	if (roof_type == ROOF_TYPE_FLAT) {gen_grayscale_detail_color(rgen, 0.2, 0.6);} // for antenna and roof
+	for (roof_obj_t const &o : details) {assert(o.is_strictly_normalized()); max_eq(bcube.z2(), o.z2());} // extend bcube z2 to contain details
+	if (flat_roof) {gen_grayscale_detail_color(rgen, 0.2, 0.6);} // for antenna and roof
 }
 
 void building_t::maybe_add_skylight(rand_gen_t &rgen) {
