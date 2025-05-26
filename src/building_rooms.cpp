@@ -885,7 +885,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					// else make it an office or something else below
 				}
 			}
-			if (!added_obj && is_school() && !has_stairs) {
+			if (!added_obj && is_school() && !has_stairs) { // school
 				if (has_window) { // school classroom with a window and no stairs
 					added_obj = no_plants = add_classroom_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start, chair_color, pref_hang_orient);
 					if (added_obj) {r->assign_to(RTYPE_CLASS, f);}
@@ -910,9 +910,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 						added_library = is_library = added_obj = no_plants = no_whiteboard = 1;
 					}
 				}
-				if (!added_obj) {
-					// teacher's office, principal's office, supply rooms, art/shop, etc.
-				}
+				//if (!added_obj && rgen.rand_float() < 0.25) {r->assign_to(RTYPE_ART, f);} // maybe make art room
+				//if (!added_obj) {} // teacher's office, principal's office, supply rooms, art/shop, etc.
 			}
 			// add cubicles if this is a large office; allowed in schools and hospitals if not assigned as a special room
 			if (!added_obj && is_office && (f > 0 || rgen.rand_float() < 0.4)) { // allow for storage and utility rooms on ground floor
