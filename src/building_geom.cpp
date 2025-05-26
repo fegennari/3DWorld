@@ -2299,11 +2299,14 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 		details.push_back(c);
 	} // for i
 	if (add_antenna) { // add antenna
-		float const radius(0.003f*rgen.rand_uniform(1.0, 2.0)*(tsz.x + tsz.y)), height(rgen.rand_uniform(0.25, 0.5)*tsz.z);
+		float const radius(0.003f*rgen.rand_uniform(1.0, 2.0)*(tsz.x + tsz.y));
+		float const height(max(2.0f*window_vspacing, rgen.rand_uniform(0.25, 0.5)*tsz.z));
 		roof_obj_t antenna(ROOF_OBJ_ANT);
 		antenna.set_from_point(top_center); // always in the center of the roof
 		antenna.expand_by_xy(radius);
-		set_cube_zvals(antenna, top.z2(), (bcube.z2() + height)); // z2 uses bcube to include sloped roof
+		cube_t const flat_roof(get_flat_roof_section_bcube());
+		float const ant_z1(flat_roof.is_all_zeros() ? top.z2() : flat_roof.z2()); // place on top of roof
+		set_cube_zvals(antenna, ant_z1, (bcube.z2() + height)); // z2 uses bcube to include sloped roof
 		details.push_back(antenna);
 	}
 	if (num_ac_units > 0) {
