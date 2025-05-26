@@ -41,7 +41,7 @@ struct complex_num {
 	complex_num(double r_, double i_) : r(r_), i(i_) {}
 	complex_num operator+ (complex_num const &n) const {return complex_num((r+n.r), (i+n.i));}
 	complex_num operator* (complex_num const &n) const {return complex_num((r*n.r - i*n.i), (r*n.i + i*n.r));}
-	complex_num conjugaqte(complex_num const &n) const {return complex_num((r*n.r - i*n.i), -2.0*r*n.i);}
+	complex_num conjugate(complex_num const &n) const {return complex_num((r*n.r - i*n.i), -2.0*r*n.i);}
 	complex_num abs() const {return complex_num(fabs(r), fabs(i));}
 	double mag_sq()   const {return (r*r + i*i);}
 	double mag   ()   const {return sqrt(mag_sq());}
@@ -64,7 +64,7 @@ double eval_fractal_set(complex_num const &c) {
 	case 2: // tricorn
 		for (; val < 200; ++val) {
 			if (z.mag_sq() > 4.0) break;
-			z = z.conjugaqte(z) + c;
+			z = z.conjugate(z) + c;
 		}
 		break;
 	case 3: // burning ship
@@ -142,6 +142,7 @@ void draw_overhead_map() {
 		double const y_scale(10.0*map_zoom), x_scale(window_ar*y_scale);
 		double const i_scale(2.0*y_scale/ny), j_scale(2.0*x_scale/nx);
 		double const x_off(-x_scale + 0.05*map_x), y_off(-y_scale + 0.05*map_y);
+		//cout << "pos: (" << 0.05*map_x << ", " << 0.05*map_y << "), scale: " << y_scale << endl; // TESTING
 		//timer_t timer("Mandelbrot");
 
 #pragma omp parallel for schedule(dynamic,1)
