@@ -2240,7 +2240,7 @@ void expand_convex_polygon_xy(vect_point &points, point const &center, float exp
 // attic and basement queries only work with points; the xy_radius != 0 and coll_cube cases are only used with pedestrians
 // return value: 0=no cont, 1=part, 2=attic, 3=ext basement, 4=roof access, 5=detail
 int building_t::check_point_or_cylin_contained(point const &pos, float xy_radius, vector<point> &points,
-	bool inc_attic, bool inc_ext_basement, bool inc_roof_acc, bool inc_details, cube_t *coll_cube) const
+	bool inc_attic, bool inc_ext_basement, bool inc_roof_acc, bool inc_details, bool for_pedestrian, cube_t *coll_cube) const
 {
 	if (coll_cube) {assert(!inc_attic && !inc_ext_basement && !inc_roof_acc);} // not supported
 	point const pr(get_inv_rot_pos(pos));
@@ -2277,7 +2277,7 @@ int building_t::check_point_or_cylin_contained(point const &pos, float xy_radius
 			return 1;
 		} // for i
 	}
-	if (has_porch()) { // check porch pillar
+	if (for_pedestrian && has_porch()) { // check porch pillar for pedestrians
 		assert(real_num_parts+1U < parts.size()); // must have {porch roof, porch support pillar}
 		cube_t const &porch_pillar(parts[real_num_parts+1]);
 		

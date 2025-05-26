@@ -4777,10 +4777,10 @@ public:
 		assert(building_id < buildings.size());
 		return buildings[building_id].check_sphere_coll(pos, radius, xy_only);
 	}
-	bool check_building_point_or_cylin_contained(point const &pos, float radius, bool inc_details, unsigned building_id) const {
+	bool check_building_point_or_cylin_contained(point const &pos, float radius, bool inc_details, unsigned building_id) const { // for pedestrian grid
 		static vector<point> points; // reused across calls
 		assert(building_id < buildings.size());
-		return buildings[building_id].check_point_or_cylin_contained(pos, radius, points, 0, 0, 0, inc_details); // attic=0, extb=0, roof=0
+		return buildings[building_id].check_point_or_cylin_contained(pos, radius, points, 0, 0, 0, inc_details, 1); // attic=0, extb=0, roof=0, for_pedestrian=1
 	}
 
 	int get_building_bcube_contains_pos(point const &pos) { // Note: not thread safe due to static points
@@ -4815,8 +4815,8 @@ public:
 			building_t const &building(get_building(*b));
 			if (building.bcube.x1() > bcube.x2())     break; // no further buildings can intersect (sorted by x1)
 			if (!building.bcube.intersects_xy(bcube)) continue;
-			// inc_attic=0, inc_ext_basement=0, inc_roof_acc=0, inc_details=1
-			int const ret(building.check_point_or_cylin_contained(pos, detail_radius, points, 0, 0, 0, 1, coll_cube));
+			// inc_attic=0, inc_ext_basement=0, inc_roof_acc=0, inc_details=1, for_pedestrian=1
+			int const ret(building.check_point_or_cylin_contained(pos, detail_radius, points, 0, 0, 0, 1, 1, coll_cube));
 			if (ret) {building_id = *b; return ret;}
 		}
 		return 0;
@@ -5583,7 +5583,7 @@ cube_t register_deck_and_get_part_bounds(unsigned building_id, cube_t const &dec
 bool check_sphere_coll_building(point const &pos, float radius, bool xy_only, unsigned building_id) {
 	return building_creator_city.check_sphere_coll_building(pos, radius, xy_only, building_id);
 }
-bool check_building_point_or_cylin_contained(point const &pos, float radius, bool inc_details, unsigned building_id) {
+bool check_building_point_or_cylin_contained(point const &pos, float radius, bool inc_details, unsigned building_id) { // for pedestrian grid
 	return building_creator_city.check_building_point_or_cylin_contained(pos, radius, inc_details, building_id);
 }
 int check_buildings_ped_coll(point const &pos, float bcube_radius, float detail_radius, unsigned plot_id, unsigned &building_id, cube_t *coll_cube) {
@@ -5606,7 +5606,7 @@ void update_building_ai_state(float delta_dir) { // Note: each creator will mana
 
 void get_all_city_helipads(vect_cube_t &helipads) {building_creator_city.get_all_helipads(helipads);} // city only for now
 
-bool is_pos_in_player_building(point const &pos) { // pos is in global space
+bool is_pos_in_player_building(point const &pos) { // pos is in global space; used for precipitation
 	if (!camera_in_building || player_building == nullptr) return 0;
 	//static vector<point> points; // reused across calls
 	//return player_building->check_point_or_cylin_contained(pos, 0.0, points);
