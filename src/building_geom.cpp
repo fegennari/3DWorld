@@ -2304,8 +2304,8 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 		details.push_back(c);
 	} // for i
 	if (add_antenna) { // add antenna
-		float const radius(0.003f*rgen.rand_uniform(1.0, 2.0)*(tsz.x + tsz.y));
 		float const height(max(2.0f*window_vspacing, rgen.rand_uniform(0.25, 0.5)*tsz.z));
+		float const radius(min(0.025f*height, 0.003f*rgen.rand_uniform(1.0, 2.0)*(tsz.x + tsz.y)));
 		roof_obj_t antenna(ROOF_OBJ_ANT);
 		antenna.set_from_point(top_center); // always in the center of the roof
 		antenna.expand_by_xy(radius);
