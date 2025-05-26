@@ -5498,12 +5498,9 @@ void building_room_geom_t::add_cup_liquid(room_object_t const &c) {
 	get_untextured_material(0, 0, 1).add_vert_disk_to_verts(center, 0.8*radius, 0, apply_light_color(c, colorRGBA(0.2, 0.1, 0.05))); // unshadowed, small
 }
 
-void building_room_geom_t::add_hard_hat(room_object_t const &c) {
+void building_room_geom_t::add_hard_hat_to_material(room_object_t const &c, rgeom_mat_t &mat) {
 	float const height(c.dz()), width(c.get_width()), depth(c.get_depth());
 	colorRGBA const color(apply_light_color(c));
-	tid_nm_pair_t tex(-1, 1.0, 1); // shadowed=1
-	tex.set_specular(0.6, 70.0);
-	rgeom_mat_t &mat(get_material(tex, 1, 0, 1)); // shadowed=1, dynamic=0, small=1
 	// elongated top hemisphere + horizontal cylinder + flattened bottom sphere
 	cube_t top(c);
 	top.d[c.dim][c.dir] -= (c.dir ? 1.0 : -1.0)*0.2*depth; // shift front back
@@ -5517,6 +5514,11 @@ void building_room_geom_t::add_hard_hat(room_object_t const &c) {
 	cube_t brim(c);
 	brim.z2() -= 0.92*height; // flatten
 	mat.add_sphere_to_verts(brim, color);
+}
+void building_room_geom_t::add_hard_hat(room_object_t const &c) {
+	tid_nm_pair_t tex(-1, 1.0, 1); // shadowed=1
+	tex.set_specular(0.6, 70.0);
+	add_hard_hat_to_material(c, get_material(tex, 1, 0, 1)); // shadowed=1, dynamic=0, small=1
 }
 
 void building_room_geom_t::add_comp_mouse(room_object_t const &c) {

@@ -10,7 +10,8 @@
 #include "openal_wrap.h"
 
 
-bool const DEBUG_AI_COLLIDERS = 0;
+bool const DEBUG_AI_COLLIDERS  = 0;
+bool const ADD_WORKER_HARDHATS = 0; // doesn't look corret yet
 
 unsigned room_geom_mem(0);
 quad_batch_draw candle_qbd;
@@ -2250,6 +2251,29 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		// draw animals; skip animal shadows for industrial areas, retail rooms, and malls/stores as an optimization (must agree with lighting code)
 		if (shadow_only && (player_in_industrial || (building.has_retail() && building.get_retail_part().contains_pt(camera_bs)) || building.point_in_mall(camera_bs))) {}
 		else {draw_animals(s, building, oc, xlate, camera_bs, shadow_only, reflection_pass, check_clip_cube);}
+	}
+	if (ADD_WORKER_HARDHATS && player_in_building_or_doorway && is_industrial && !building.interior->people.empty()) {
+		// draw hard hats on industrial building people; this doesn't look correct because the hat clips through the models when animated
+		static rgeom_mat_t mat;
+		mat.tex.set_specular(0.6, 70.0);
+
+		for (person_t const &p : building.interior->people) {
+			if (p.is_zombie) continue; // doesn't look correct on zombies
+			if (p.pos.z < ground_floor_z1) continue; // hard hat not needed in parking garage, mall, backrooms, or extended basement
+			bool const dim(0), dir(1);
+			float const hh_depth(0.42*p.radius), hh_width(0.8*hh_depth), hh_height(0.56*hh_depth), top_of_heat(p.get_z2());
+			point const pos(p.pos + 0.15*hh_depth*p.dir); // center of hardhat is slighly forward
+			cube_t hhat;
+			set_cube_zvals(hhat, top_of_heat-0.75*hh_height, top_of_heat+0.25*hh_height);
+			set_wall_width(hhat, pos[ dim], 0.5*hh_depth,  dim); // set thickness
+			set_wall_width(hhat, pos[!dim], 0.5*hh_width, !dim); // set width
+			room_object_t const hh(hhat, TYPE_HARDHAT, 0, dim, dir, 0, 1.0, SHAPE_CUBE, hardhat_colors[p.ssn%NUM_HARDHAT_COLORS]);
+			unsigned const verts_start(mat.itri_verts.size());
+			add_hard_hat_to_material(hh, mat);
+			rotate_verts(mat.itri_verts, plus_z, -atan2(p.dir.y, p.dir.x), pos, verts_start);
+		} // for p
+		tid_nm_pair_dstate_t state(s);
+		mat.upload_draw_and_clear(state);
 	}
 	if (disable_cull_face) {glEnable(GL_CULL_FACE);} // re-enable face culling
 	if (obj_drawn) {check_mvm_update();} // needed after popping model transform matrix

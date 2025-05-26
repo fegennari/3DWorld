@@ -73,6 +73,7 @@ unsigned const NUM_TSHIRT_COLORS  = 9;
 unsigned const NUM_TOASTER_COLORS = 7;
 unsigned const NUM_TRASH_COLORS   = 8;
 unsigned const NUM_PFLOAT_COLORS  = 6;
+unsigned const NUM_HARDHAT_COLORS = 9;
 unsigned const NUM_MALL_CHAIR_COLORS  = 5;
 unsigned const NUM_SP_EMISSIVE_COLORS = 2;
 colorRGBA const GD_SP_COLOR(0.5, 1.0, 1.0); // used for glow-in-the-dark spraypaint
@@ -95,6 +96,7 @@ colorRGBA const TSHIRT_COLORS [NUM_TSHIRT_COLORS ] = {WHITE, BKGRAY, GRAY, RED, 
 colorRGBA const toaster_colors[NUM_TOASTER_COLORS] = {WHITE, LT_GRAY, GRAY, DK_GRAY, GRAY_BLACK, colorRGBA(0.0, 0.0, 0.5), colorRGBA(0.5, 0.0, 0.0)};
 colorRGBA const trash_colors  [NUM_TRASH_COLORS  ] = {WHITE, WHITE, WHITE, WHITE, cream, vlt_yellow, LT_GRAY, colorRGBA(0.8, 0.6, 0.4)};
 colorRGBA const pfloat_colors [NUM_PFLOAT_COLORS ] = {WHITE, YELLOW, PINK, GREEN, ORANGE, LT_BLUE};
+colorRGBA const hardhat_colors[NUM_HARDHAT_COLORS] = {YELLOW, YELLOW, YELLOW, YELLOW, ORANGE, ORANGE, RED, WHITE, colorRGBA(0.25, 0.25, 1.0, 1.0)};
 colorRGBA const mall_chair_colors[NUM_MALL_CHAIR_COLORS] = {WHITE, LT_GRAY, GRAY, ORANGE, LT_BROWN};
 colorRGBA const LAMP_COLOR(1.0, 0.8, 0.6); // soft white
 colorRGBA const WALL_LAMP_COLOR(1.0, 0.9, 0.8);
@@ -1227,6 +1229,7 @@ struct building_room_geom_t {
 	void add_sink_water(room_object_t const &c);
 	void add_tv_picture(room_object_t const &c);
 	void add_cup_liquid(room_object_t const &c);
+	void add_hard_hat_to_material(room_object_t const &c, rgeom_mat_t &mat);
 	void add_hard_hat  (room_object_t const &c);
 	void add_comp_mouse(room_object_t const &c);
 	void add_trashcan  (room_object_t const &c);
