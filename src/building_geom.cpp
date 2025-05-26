@@ -2151,8 +2151,10 @@ void merge_cubes_xy(vect_cube_t &cubes) {
 void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the roof; office buildings, not houses
 
 	bool const flat_roof(roof_type == ROOF_TYPE_FLAT), add_walls(is_cube() && flat_roof); // simple cube buildings with flat roofs
+	cube_t flat_roof_area(get_flat_roof_section_bcube());
+	bool const has_flat_upper_roof(!flat_roof_area.is_all_zeros()), has_flat_top(flat_roof || has_flat_upper_roof);
 	unsigned num_ac_units(0);
-	if (flat_roof && is_cube()) {num_ac_units = (rgen.rand() % (is_industrial() ? 9 : 7));} // cube buildings only for now; 0-8 for industrial, otherwise 0-6
+	if (has_flat_top && is_cube()) {num_ac_units = (rgen.rand() % (is_industrial() ? 9 : 7));} // cube buildings only for now; 0-8 for industrial, otherwise 0-6
 	float const window_vspacing(get_window_vspace()), wall_width(0.049*window_vspacing); // slightly narrower than interior wall width to avoid z-fighting with roof access
 	assert(!parts.empty());
 	create_per_part_ext_verts(); // needed for roof containment queries
@@ -2200,8 +2202,10 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 		details.shrink_to_fit();
 		return;
 	}
-	cube_t const &top(parts.back()); // top/last part
-	vector3d const tsz(top.get_size());
+	cube_t const top_part(parts.back()); // top/last part
+	cube_t top(has_flat_upper_roof ? flat_roof_area : top_part); // top/last part
+	top.z1() = top_part.z1();
+	vector3d const tsz(top.get_size()), tpsz(top_part.get_size());
 	point top_center(top.get_cube_center());
 	if (is_rotated() && !is_cube()) {do_xy_rotate_inv(bcube.get_cube_center(), top_center);} // put top_center in building bcube coordinate space
 	float const helipad_radius(2.0*window_vspacing);
@@ -2232,17 +2236,18 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 		if (add_rooftop_door) {max_eq(num_blocks, 1U);} // at least one for the door
 	}
 	bool const add_antenna((flat_roof || roof_type == ROOF_TYPE_SLOPE) && !has_helipad && skylights.empty() && rgen.rand_bool());
-	bool const add_water_tower(flat_roof && !has_helipad && !add_antenna && skylights.empty() && (tsz.x < 2.0*tsz.y && tsz.y < 2.0*tsz.x) && rgen.rand_bool());
+	bool const add_water_tower(has_flat_top && !has_helipad && !add_antenna && skylights.empty() &&
+		(tsz.x < 2.0*tsz.y && tsz.y < 2.0*tsz.x) && (tsz.x > 0.5*tpsz.x && tsz.y > 0.5*tpsz.y) && rgen.rand_bool());
 	unsigned const num_details(num_blocks + num_ac_units + 4*add_walls + add_antenna + add_water_tower);
 	if (num_details == 0) return; // nothing to do
 	if (add_walls && min(tsz.x, tsz.y) < 4.0*wall_width) return; // too small
-	float const xy_sz(tsz.xy_mag()); // better to use bcube for size?
+	float const xy_sz(tpsz.xy_mag()); // better to use bcube for size?
 	cube_t bounds(top);
 	if (add_walls) {bounds.expand_by_xy(-wall_width);}
 	reserve_extra(details, num_details);
 
 	if (add_water_tower) {
-		float const radius(rgen.rand_uniform(0.04, 0.06)*(tsz.x + tsz.y)), height(rgen.rand_uniform(3.0, 5.0)*radius);
+		float const radius(rgen.rand_uniform(0.04, 0.06)*(tpsz.x + tpsz.y)), height(rgen.rand_uniform(3.0, 5.0)*radius);
 		roof_obj_t wtower(ROOF_OBJ_WTOWER);
 		point wt_center(top_center);
 		for (unsigned d = 0; d < 2; ++d) {wt_center[d] += rgen.rand_uniform(-1.0, 1.0)*0.25*tsz[d];} // apply a random shift
@@ -2304,9 +2309,7 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 		roof_obj_t antenna(ROOF_OBJ_ANT);
 		antenna.set_from_point(top_center); // always in the center of the roof
 		antenna.expand_by_xy(radius);
-		cube_t const flat_roof(get_flat_roof_section_bcube());
-		float const ant_z1(flat_roof.is_all_zeros() ? top.z2() : flat_roof.z2()); // place on top of roof
-		set_cube_zvals(antenna, ant_z1, (bcube.z2() + height)); // z2 uses bcube to include sloped roof
+		set_cube_zvals(antenna, top.z2(), (bcube.z2() + height)); // z2 uses bcube to include sloped roof
 		details.push_back(antenna);
 	}
 	if (num_ac_units > 0) {
@@ -2323,7 +2326,7 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 	}
 	if (is_factory() || is_powerplant()) {add_smokestack(rgen);}
 	for (roof_obj_t const &o : details) {assert(o.is_strictly_normalized()); max_eq(bcube.z2(), o.z2());} // extend bcube z2 to contain details
-	if (flat_roof) {gen_grayscale_detail_color(rgen, 0.2, 0.6);} // for antenna and roof
+	if (has_flat_top) {gen_grayscale_detail_color(rgen, 0.2, 0.6);} // for antenna and roof
 }
 
 void building_t::maybe_add_skylight(rand_gen_t &rgen) {

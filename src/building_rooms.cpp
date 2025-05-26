@@ -1531,6 +1531,7 @@ void building_t::add_exterior_ac_pipes(rand_gen_t rgen) {
 	colorRGBA const colors[3] = {BLACK, COPPER_C, GRAY }; // insulated, non-insulated, power
 	float    const radius [3] = {0.06,  0.025,    0.035}; // relative to height
 	float    const offsets[3] = {0.2,   0.32,     0.85 }; // from end
+	cube_t flat_roof_area(get_flat_roof_section_bcube());
 	vect_cube_t avoid_pipes;
 
 	for (roof_obj_t const &ac : details) {
@@ -1558,10 +1559,13 @@ void building_t::add_exterior_ac_pipes(rand_gen_t rgen) {
 				}
 			}
 			else { // AC on roof (office); find part whose roof contains the unit
-				if (p->z2() != ac.z1() || !p->contains_cube_xy(ac)) continue; // wrong part
+				if (!p->contains_cube_xy(ac)) continue; // wrong part
+				cube_t roof_area(flat_roof_area.is_all_zeros() ? *p : flat_roof_area);
+				roof_area.z1() = p->z1();
+				if (roof_area.z2() != ac.z1()) continue; // wrong part
 				bool const pref_dir(rgen.rand_bool());
-				float const pipe_ext_z1(p->z1() - get_fc_thickness()), pipe_len(max(4.0f*radius[0]*height, rgen.rand_uniform(0.25, 1.0)*depth));
-				cube_t valid_area(*p);
+				float const pipe_ext_z1(roof_area.z1() - get_fc_thickness()), pipe_len(max(4.0f*radius[0]*height, rgen.rand_uniform(0.25, 1.0)*depth));
+				cube_t valid_area(roof_area);
 				valid_area.expand_by_xy(-get_wall_thickness()); // shrink to account for any roof wall
 
 				for (unsigned d = 0; d < 2; ++d) { // try both dirs
@@ -1597,7 +1601,7 @@ void building_t::add_exterior_ac_pipes(rand_gen_t rgen) {
 							vpipe.d[min_dim][!dir] = pipe_end - dsign*r;
 							vpipe.d[min_dim][ dir] = vert_ext;
 							vpipe.z2() -= r;
-							vpipe.z1()  = p->z2();
+							vpipe.z1()  = roof_area.z2();
 							interior->room_geom->objs.emplace_back(vpipe, TYPE_PIPE, 0, 0, 1, (flags | RO_FLAG_ADJ_HI), 1.0, SHAPE_CYLIN, colors[n]); // round top end
 							break;
 						} // for m
