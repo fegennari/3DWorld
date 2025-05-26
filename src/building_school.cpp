@@ -168,13 +168,11 @@ bool building_t::add_room_lockers(rand_gen_t &rgen, room_t const &room, float zv
 	vect_room_object_t &objs(interior->room_geom->objs);
 	float const room_len(place_area.get_sz_dim(dim));
 	unsigned const lockers_start(objs.size()), num_lockers(room_len/locker_width); // floor
-
-	if (num_lockers >= 10) { // if there are enough lockers, increase their width slightly so that lockers tile to fill the exact wall length
-		locker_width = room_len/num_lockers;
-	}
+	// if there are enough lockers, increase their width slightly so that lockers tile to fill the exact wall length
+	if (num_lockers >= 10) {locker_width = room_len/num_lockers;}
 	bool const add_blockers(rtype != RTYPE_HALL); // add blockers in front of rows of lockers, except for school hallways (which have splits for secondary hallways, etc.)
 	// add expanded blockers for stairs, elevators, etc. to ensure there's space for the player and people to walk on the sides
-	float const clearance(2.0*get_min_front_clearance_inc_people());
+	float const clearance(get_min_front_clearance_inc_people()), se_clearance(2.0*clearance);
 	add_padlocks &= building_obj_model_loader.is_model_valid(OBJ_MODEL_PADLOCK);
 	vector3d const sz(add_padlocks ? building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_PADLOCK) : zero_vector); // D, W, H
 	colorRGBA const lock_color(0.4, 0.4, 0.4); // gray
@@ -190,7 +188,7 @@ bool building_t::add_room_lockers(rand_gen_t &rgen, room_t const &room, float zv
 	for (elevator_t const &e : interior->elevators) {
 		if (room.contains_cube_xy_overlaps_z(e)) {blockers.push_back(e);}
 	}
-	for (cube_t &c : blockers) {c.expand_by_xy(clearance);}
+	for (cube_t &c : blockers) {c.expand_by_xy(se_clearance);}
 	cube_t locker;
 	set_cube_zvals(locker, zval, zval+locker_height);
 	unsigned lix(0);
@@ -210,7 +208,7 @@ bool building_t::add_room_lockers(rand_gen_t &rgen, room_t const &room, float zv
 			cube_t test_cube(locker);
 			test_cube.expand_in_dim(dim, 2.0*locker_width); // add some padding to the sides
 			test_cube.intersect_with_cube(room); // not blocked by objects in an adjacent room
-			test_cube.d[!dim][!d] += dsign*locker_width; // add space in front for the door to open
+			test_cube.d[!dim][!d] += dsign*max(locker_width, clearance); // add space in front for the door to open and the player to walk by
 			bool invalid(0);
 
 			for (auto i = objs.begin()+objs_start; i != objs.begin()+lockers_start; ++i) { // can skip other lockers
