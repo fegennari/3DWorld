@@ -1382,7 +1382,7 @@ void building_room_geom_t::expand_locker(room_object_t const &c) {
 		unsigned const num_obj_types(6);
 		unsigned const obj_types_hall [num_obj_types] = {TYPE_NONE,    TYPE_BOTTLE, TYPE_DRINK_CAN, TYPE_PHONE,   TYPE_TRASH,    TYPE_TEESHIRT};
 		unsigned const obj_types_lroom[num_obj_types] = {TYPE_NONE,    TYPE_BOTTLE, TYPE_DRINK_CAN, TYPE_PHONE,   TYPE_TEESHIRT, TYPE_TEESHIRT};
-		unsigned const obj_types_ind  [num_obj_types] = {TYPE_HARDHAT, TYPE_BOTTLE, TYPE_DRINK_CAN, TYPE_HARDHAT, TYPE_TEESHIRT, TYPE_TEESHIRT}; // hard hat?
+		unsigned const obj_types_ind  [num_obj_types] = {TYPE_HARDHAT, TYPE_BOTTLE, TYPE_DRINK_CAN, TYPE_HARDHAT, TYPE_TEESHIRT, TYPE_TEESHIRT};
 		unsigned const *const obj_types(in_hallway ? obj_types_hall : (in_locker_room ? obj_types_lroom : obj_types_ind));
 		unsigned num_sel_obj_types(6);
 
@@ -1430,7 +1430,9 @@ void building_room_geom_t::expand_locker(room_object_t const &c) {
 			set_cube_zvals(hhat, place_area.z1(), place_area.z1()+hh_height);
 			set_wall_width(hhat, c.get_center_dim( dim), 0.5*hh_depth,  dim); // set thickness
 			set_wall_width(hhat, c.get_center_dim(!dim), 0.5*hh_width, !dim); // set width
-			expanded_objs.emplace_back(hhat, TYPE_HARDHAT, c.room_id, c.dim, c.dir, 0, c.light_amt, SHAPE_CUBE, YELLOW);
+			unsigned const NUM_HARDHAT_COLORS = 9;
+			colorRGBA const hardhat_colors[NUM_HARDHAT_COLORS] = {YELLOW, YELLOW, YELLOW, YELLOW, ORANGE, ORANGE, RED, WHITE, colorRGBA(0.25, 0.25, 1.0, 1.0)};
+			expanded_objs.emplace_back(hhat, TYPE_HARDHAT, c.room_id, c.dim, c.dir, 0, c.light_amt, SHAPE_CUBE, hardhat_colors[rgen.rand()%NUM_HARDHAT_COLORS]);
 			break;
 		}
 		default: assert(0);
