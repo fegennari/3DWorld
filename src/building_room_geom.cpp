@@ -5506,11 +5506,15 @@ void building_room_geom_t::add_hard_hat_to_material(room_object_t const &c, rgeo
 	top.d[c.dim][c.dir] -= (c.dir ? 1.0 : -1.0)*0.2*depth; // shift front back
 	cube_t cylin(top);
 	top.z2() -= 0.04*height;
-	top.z1() -= height; // if it was a full sphere, it would extend below
+	top.z1() -= 0.90*height; // if it was a full sphere, it would extend below; shift center up slightly to line up with the bottom of the brim
 	top.expand_in_dim(!c.dim, -0.05*width); // shrink sides
 	mat.add_sphere_to_verts(top, color, 0, -plus_z); // low_detail=0, top half
 	cylin.expand_in_dim(!c.dim, -0.4*width); // shrink sides/ends
+	unsigned const verts_start(mat.itri_verts.size());
 	mat.add_ortho_cylin_to_verts(cylin, color, !c.dim, 1, 1); // draw sides and ends
+	// lengthen slightly; normals will be a bit off
+	float const center(cylin.get_center_dim(c.dim));
+	for (auto i = mat.itri_verts.begin()+verts_start; i != mat.itri_verts.end(); ++i) {i->v[c.dim] = 1.1*(i->v[c.dim] - center) + center;}
 	cube_t brim(c);
 	brim.z2() -= 0.92*height; // flatten
 	mat.add_sphere_to_verts(brim, color);
