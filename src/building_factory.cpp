@@ -1020,6 +1020,17 @@ void building_t::add_industrial_office_objs(rand_gen_t &rgen, room_t const &room
 	}
 }
 
+cube_t building_t::get_flat_roof_section_bcube() const {
+	if (roof_type != ROOF_TYPE_SLOPE) return cube_t();
+
+	for (tquad_with_ix_t const &t : roof_tquads) {
+		if (t.type != tquad_with_ix_t::TYPE_ROOF_OFFICE || t.npts != 4) continue; // not roof quad
+		cube_t const bc(t.get_bcube());
+		if (bc.z1() < bc.z2()) continue; // not flat
+		return bc;
+	}
+	return cube_t(); // not found
+}
 void building_t::add_smokestack(rand_gen_t &rgen) { // factory or power plant
 	assert(!parts.empty());
 	cube_t const &base(parts[0]);
@@ -1031,8 +1042,11 @@ void building_t::add_smokestack(rand_gen_t &rgen) { // factory or power plant
 			point const ss_center(gen_xy_pos_in_area(base, 2.5*ss_radius, rgen, base.z2()));
 			cube_t smokestack(ss_center);
 			smokestack.expand_by_xy(ss_radius);
+			cube_t const flat_roof(get_flat_roof_section_bcube());
+			if (!flat_roof.is_all_zeros()) {smokestack.z1() = smokestack.z2() = flat_roof.z2();} // place on top of roof
 			smokestack.z2() += rgen.rand_uniform(0.75, 1.0)*base.dz(); // set height; should be above roof peak
-			if (!has_bcube_int(smokestack, details)) {details.emplace_back(smokestack, (uint8_t)ROOF_OBJ_SMOKESTACK);}
+			if (has_bcube_int(smokestack, details)) continue;
+			details.emplace_back(smokestack, (uint8_t)ROOF_OBJ_SMOKESTACK);
 			has_smokestack = 1;
 			break; // success/done
 		} // for m
