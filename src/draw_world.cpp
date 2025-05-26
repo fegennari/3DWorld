@@ -361,6 +361,7 @@ void setup_puddles_texture(shader_t &s) {
 // use_texgen: 0 = use texture coords, 1 = use standard texture gen matrix, 2 = use custom shader tex0_s/tex0_t,
 //             3 = use vertex id for texture, 4 = use bent quad vertex id for texture, 5 = mix between tc and texgen using tc_texgen_mix
 //             6 = similar to 5, except ensure X and Y have opposite signs so that they don't cancel on near 45 degree edges
+//             7 = abstract art mode
 // use_bmap  : 0 = none, 1 = auto generate tangent vector, 2 = tangent vector in vertex attribute
 // is_outside: 0 = inside, 1 = outside, 2 = use snow coverage mask
 // enable_reflect: 0 = none, 1 = planar, 2 = cube map
@@ -377,6 +378,8 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	bool const enable_puddles(ground_mode && enable_rain_snow && is_wet && !is_rain_enabled()); // enable puddles when the ground is wet but it's not raining
 	bool use_smap(ground_mode ? (use_smap_in != 0) : (use_smap_in == 2)); // TT shadow maps are only enabled when use_smap_in == 2
 	bool const use_clip_plane(clip_plane != vector4d());
+	bool const abstract_art(use_texgen == 7);
+	if (abstract_art) {use_texgen = 0;}
 	smoke_en &= (ground_mode && have_indir_smoke_tex && smoke_tid > 0 && is_smoke_in_use());
 	if (disable_dlights) {dlights = 0;}
 	string const &anim_shader(s.get_property("animation_shader")); // Note: if it exists, it should end with a '+'
@@ -387,6 +390,7 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	if (enable_reflect ==2) {s.set_prefix("#define ENABLE_CUBE_MAP_REFLECT",1);} // FS
 	if (enable_puddles    ) {s.set_prefix("#define ENABLE_PUDDLES",         1);} // FS
 	if (is_snowy          ) {s.set_prefix("#define ENABLE_SNOW_COVERAGE",   1);} // FS
+	if (abstract_art      ) {s.set_prefix("#define ENABLE_ABSTRACT_ART",    1);} // FS
 	if (use_smap && enable_ground_csm) {s.set_prefix("#define ENABLE_CASCADED_SHADOW_MAPS", 1);} // FS
 	if (!anim_shader.empty()) {s.set_prefix("#define ENABLE_VERTEX_ANIMATION", 0);} // VS
 	if (use_clip_plane    ) {s.set_prefix("#define ENABLE_CLIP_PLANE",      0);} // VS
@@ -402,6 +406,7 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	if (enable_reflect == 1) {fstr += "water_ripples.part+";}
 	if (triplanar_tex      ) {fstr += "triplanar_texture.part+";}
 	if (use_depth_trans    ) {fstr += "depth_utils.part+";}
+	if (abstract_art       ) {fstr += "abstract_art.part+";}
 	s.set_frag_shader(fstr + "textured_with_smoke");
 	s.begin_shader();
 	s.add_uniform_float("water_depth", water_depth);

@@ -33,6 +33,7 @@ float building_bcube_expand(0.0), building_ambient_scale(0.0);
 point player_candle_pos;
 vector3d cur_camera_pos_xlate;
 cube_t building_occluder;
+shader_t abstract_art_shader;
 building_params_t global_building_params;
 building_t const *player_building(nullptr);
 building_t const *vis_conn_bldg  (nullptr); // non-player building visible through extended basement connector room
@@ -111,6 +112,12 @@ void tid_nm_pair_t::set_gl(tid_nm_pair_dstate_t &state) const {
 	else if (tid == REFLECTION_TEXTURE_ID) {
 		if (bind_reflection_shader()) return;
 	}
+	else if (tid == ABST_ART_TEXTURE_ID) {
+		if (abstract_art_shader.is_setup()) {abstract_art_shader.make_current();}
+		else {setup_building_draw_shader(abstract_art_shader, 0.0, 1, 0, 3);} // enable_indir=1, force_tsl=0, use_texgen=3 (abstract art)
+		select_texture(WHITE_TEX); // probably not needed, but just to be safe
+		bind_default_flat_normal_map(); // for some reason, this one is needed
+	}
 	else if (tid == NO_SHADOW_WHITE_TEX || tid == SHADOW_ONLY_TEX) {select_texture(WHITE_TEX);}
 	else {select_texture(tid);}
 	float const e_val(get_emissive_val());
@@ -120,6 +127,7 @@ void tid_nm_pair_t::set_gl(tid_nm_pair_dstate_t &state) const {
 }
 void tid_nm_pair_t::unset_gl(tid_nm_pair_dstate_t &state) const {
 	if (tid == REFLECTION_TEXTURE_ID && room_mirror_ref_tid != 0) {state.s.make_current(); return;}
+	if (tid == ABST_ART_TEXTURE_ID) {state.s.make_current(); return;}
 	bool const has_normal_map(get_nm_tid() != FLAT_NMAP_TEX);
 	if (has_normal_map) {bind_default_flat_normal_map();} // reset back to flat normal map
 	if (get_emissive_val() > 0.0) {state.s.add_uniform_float("emissive_scale", 0.0);} // disable emissive
@@ -4035,7 +4043,8 @@ public:
 				building_has_open_ext_door = !ext_door_draw.empty();
 			}
 			reset_interior_lighting_and_end_shader(s);
-			reflection_shader.clear();
+			reflection_shader  .clear();
+			abstract_art_shader.clear();
 
 			// update indir lighting using ray casting
 			if (indir_bcs_ix >= 0 && indir_bix >= 0) {indir_tex_mgr.create_for_building(bcs[indir_bcs_ix]->get_building(indir_bix), indir_bix, camera_bs);}

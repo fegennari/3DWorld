@@ -3376,9 +3376,19 @@ void building_room_geom_t::add_picture(room_object_t const &c) { // also whitebo
 	colorRGBA color(c.color);
 
 	if (!whiteboard && c.taken_level == 0) { // picture, not taken/frame only
+		bool const is_abstract_art(c.has_extra());
 		int const user_tid(get_rand_screenshot_texture(c.obj_id));
-		picture_tid  = ((user_tid >= 0) ? (unsigned)user_tid : c.get_picture_tid()); // if user texture is valid, use that instead
-		num_pic_tids = get_num_screenshot_tids();
+		if (user_tid >= 0) {picture_tid = (unsigned)user_tid;} // if user texture is valid, use that instead
+		else if (is_abstract_art) {
+			picture_tid = ABST_ART_TEXTURE_ID;
+			rand_gen_t rgen(c.create_rgen());
+			rgen.rseed1 += 1000*c.x1(); // mix it up some more
+			rgen.rseed2 += 1000*c.y1();
+			rgen.rand_mix();
+			color = colorRGBA(rgen.rand_float(), rgen.rand_float(), rgen.rand_float()); // sets abstract art random seed
+		}
+		else {picture_tid = c.get_picture_tid();}
+		num_pic_tids = get_num_screenshot_tids(); // record on VBO creation so that we know to regenerate when a new picture is taken
 		has_pictures = 1;
 	}
 	if (whiteboard && c.item_flags == 1 && c.color.get_luminance() < 0.5) { // school blackboard with math
@@ -6426,7 +6436,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_PARK_SPACE: return LT_GRAY; // texture_color(...)?
 	case TYPE_ELEVATOR: return LT_BROWN; // ???
 	case TYPE_RUG:      return texture_color(get_rug_tid());
-	case TYPE_PICTURE:  return texture_color(get_picture_tid());
+	case TYPE_PICTURE:  return (has_extra() ? GRAY : texture_color(get_picture_tid())); // set abstract art to gray since color is unknown; incorrect for user screenshots
 	case TYPE_BCASE:    return get_textured_wood_color();
 	case TYPE_WINE_RACK:return get_textured_wood_color();
 	case TYPE_DESK:     return get_textured_wood_color();

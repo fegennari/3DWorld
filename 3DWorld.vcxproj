@@ -1104,6 +1104,7 @@
     <None Include="house\placements.TXT" />
     <None Include="README.defaults" />
     <None Include="README.md" />
+    <None Include="shaders\abstract_art.part.frag" />
     <None Include="shaders\alpha_mask.frag" />
     <None Include="shaders\alpha_mask_shadow.frag" />
     <None Include="shaders\asteroid.frag" />

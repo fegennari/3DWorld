@@ -4723,7 +4723,9 @@ bool building_t::hang_pictures_whiteboard_chalkboard_in_room(rand_gen_t rgen, ro
 			} // for n
 			if (best_pos.is_all_zeros()) continue; // failed placement
 			assert(best_pos.is_strictly_normalized());
-			objs.emplace_back(best_pos, TYPE_PICTURE, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt); // picture faces dir opposite the wall
+			unsigned flags(RO_FLAG_NOCOLL);
+			if (rgen.rand_bool()) {flags |= RO_FLAG_HAS_EXTRA;} // flag as being abstract (shader) art
+			objs.emplace_back(best_pos, TYPE_PICTURE, room_id, dim, !dir, flags, tot_light_amt); // picture faces dir opposite the wall
 			objs.back().obj_id = uint16_t(objs.size() + 13*room_id + 17*floor_ix + 31*mat_ix + 61*dim + 123*dir); // determines picture texture
 			was_hung = 1;
 		} // for dir

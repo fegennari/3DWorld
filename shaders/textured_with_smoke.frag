@@ -278,9 +278,12 @@ vec3 cube_map_reflect_texture_filter(in vec3 ref_dir, in int mip_bias, in int fi
 
 // Note: This may seem like it can go into the vertex shader as well,
 //       but we don't have the tex0 value there and can't determine the full init color
-void main()
-{
+void main() {
+
 	if (enable_clip_plane_z && vpos.z < clip_plane_z) discard;
+#ifdef ENABLE_ABSTRACT_ART
+	vec4 texel = gen_abstract_art(tc, gl_Color.rgb); // color RGB is the seed
+#else
 #ifdef TRIPLANAR_TEXTURE
 	vec4 texel = lookup_triplanar_texture(vpos, normal, tex0, tex0, tex0);
 #else
@@ -291,6 +294,7 @@ void main()
 	//texel = mix(vec4(1.0), texel, 0.001); // for debugging untextured
 #endif // ENABLE_PARALLAX_MAP
 #endif // TRIPLANAR_TEXTURE
+#endif // ENABLE_ABSTRACT_ART
 
 #ifdef ENABLE_GAMMA_CORRECTION
 	texel.rgb = pow(texel.rgb, vec3(2.2)); // gamma correction
@@ -368,7 +372,14 @@ void main()
 #else
 	float wet_surf_val = wetness*max(normal.z, 0.0); // only +z surfaces are wet; doesn't apply to spec shininess though
 #endif
-	vec4 base_color    = mix(1.0, 0.25, wet_surf_val)*gl_Color; // unlit material color (albedo)
+	
+#ifdef ENABLE_ABSTRACT_ART
+	vec4 base_color    = vec4(1.0); // white
+#else
+	vec4 base_color    = gl_Color; // unlit material color (albedo)
+#endif // ENABLE_ABSTRACT_ART
+
+	base_color        *= mix(1.0, 0.25, wet_surf_val); // apply wet surface darkening
 	base_color.rgb    *= texel.rgb; // maybe gamma correction is wrong when the texture is added this way? but it's not actually used in any scenes
 	vec3 lit_color     = emission.rgb*texel.rgb + emissive_scale*base_color.rgb;
 

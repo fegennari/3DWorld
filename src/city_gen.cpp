@@ -78,7 +78,7 @@ void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights
 	// Note: here use_texgen mode 5 is used as a hack so that the shader still has binding points for tex coords (can't optimize it out)
 	// and we can share the same VAO between texgen and texcoords modes without having to worry about which mode we were in when the VAO was created;
 	// use texgen mode 6 instead for cylinder buildings
-	int const use_texgen_val(use_texgen ? ((use_texgen == 2) ? 6 : 5) : 0);
+	int const use_texgen_val(use_texgen ? (use_texgen + 4) : 0);
 	bool const keep_alpha = 1; // required for fog on windows
 	setup_smoke_shaders(s, min_alpha, use_texgen_val, keep_alpha, indir_lighting, 1, use_dlights, 0, 0,
 		((use_smap == 1) ? 2 : 0), use_bmap, 0, (use_dlights || indir_lighting), force_tsl, 0.0, 0.0, 0, 0, is_outside); // use_spec_map=0

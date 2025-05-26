@@ -296,8 +296,10 @@ public:
 	}
 };
 
+// add some special texture ID enums, used in buildings
 unsigned const FONT_TEXTURE_ID = (1<<16); // some large number that will never be a valid texture ID
-unsigned const REFLECTION_TEXTURE_ID = FONT_TEXTURE_ID + 1; // another special texture ID
+unsigned const REFLECTION_TEXTURE_ID = FONT_TEXTURE_ID + 1;
+unsigned const ABST_ART_TEXTURE_ID   = FONT_TEXTURE_ID + 2;
 
 struct tile_blend_tex_data_t {
 	unsigned tid_tinput=0, tid_lut=0, context_count=0;
