@@ -1043,7 +1043,7 @@ void building_t::add_smokestack(rand_gen_t &rgen) { // factory or power plant
 			cube_t smokestack(ss_center);
 			smokestack.expand_by_xy(ss_radius);
 			cube_t const flat_roof(get_flat_roof_section_bcube());
-			if (!flat_roof.is_all_zeros()) {smokestack.z1() = smokestack.z2() = flat_roof.z2();} // place on top of roof
+			if (!flat_roof.is_all_zeros() && flat_roof.contains_cube_xy(smokestack)) {smokestack.z1() = smokestack.z2() = flat_roof.z2();} // place on top of roof
 			smokestack.z2() += rgen.rand_uniform(0.75, 1.0)*base.dz(); // set height; should be above roof peak
 			if (has_bcube_int(smokestack, details)) continue;
 			details.emplace_back(smokestack, (uint8_t)ROOF_OBJ_SMOKESTACK);
