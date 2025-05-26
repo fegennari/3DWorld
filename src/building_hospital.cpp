@@ -401,7 +401,7 @@ bool building_t::add_exam_room_objs(rand_gen_t rgen, room_t &room, float zval, u
 	// should the room be re-assigned if we can't fit a desk? this would require removing the bed
 	if (add_desk_to_room(rgen, room, vect_cube_t(), chair_color, zval, room_id, tot_light_amt, objs_start, 0, 0, 0, 1, 1)) { // force_computer=1, add_phone=1
 		assert(desk_obj_ix < objs.size());
-		room_object_t const &desk(objs[desk_obj_ix]);
+		room_object_t const desk(objs[desk_obj_ix]); // deep copy
 		unsigned const num_tubes(rgen.rand() % 3); // 0-2
 
 		if (num_tubes > 0) {
