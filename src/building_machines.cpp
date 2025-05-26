@@ -146,8 +146,6 @@ void building_room_geom_t::add_machine_pipe_in_region(room_object_t const &c, cu
 	else { // valve
 		vg.d[vdim][!vdir] = attach_pt[vdim];
 		vg.d[vdim][ vdir] = attach_pt[vdim] + (vdir ? 1.0 : -1.0)*vg_radius*rgen.rand_uniform(0.4, 0.5); // set depth
-		unsigned const NUM_HANDLE_COLORS = 4;
-		colorRGBA const handle_colors[NUM_HANDLE_COLORS] = {DK_RED, colorRGBA(0.1, 0.2, 0.4), colorRGBA(0.05, 0.3, 0.05), BKGRAY};
 		colorRGBA const handle_color(handle_colors[rgen.rand() % NUM_HANDLE_COLORS]), shaft_color(choose_pipe_color(rgen));
 		rgeom_mat_t &handle_mat(get_metal_material(1, 0, 1)); // shadowed
 		draw_metal_handle_wheel(vg, vdim, apply_light_color(c, handle_color), apply_light_color(c, shaft_color), handle_mat, handle_mat);

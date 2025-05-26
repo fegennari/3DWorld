@@ -535,7 +535,44 @@ bool building_t::add_operating_room_objs(rand_gen_t rgen, room_t &room, float zv
 	if (rgen.rand_bool()) {place_model_along_wall(OBJ_MODEL_WHEELCHAIR, TYPE_WHEELCHAIR, room, 0.45, rgen, zval, room_id, tot_light_amt, place_area, objs_start);}
 	add_clock_to_room_wall(rgen, room, zval, room_id, tot_light_amt, objs_start);
 	add_hospital_medicine_cabinet(rgen, room, zval, room_id, tot_light_amt, objs_start);
-	// TODO: row of TYPE_VALVE or TYPE_GAUGE
+
+	if (1) { // add a row of valves and guages along a wall
+		float const bar_z1(zval + floor_spacing*rgen.rand_uniform(0.24, 0.36)), bar_height(floor_spacing*rgen.rand_uniform(0.24, 0.32));
+		vector3d const bar_sz(0.05*floor_spacing*rgen.rand_uniform(0.5, 1.0), floor_spacing*rgen.rand_uniform(0.5, 0.8), bar_height); // D, W, H
+		float const gray_val(rgen.rand_uniform(0.5, 0.8));
+		colorRGBA const color(gray_val, gray_val, gray_val, 1.0);
+		unsigned const bar_ix(objs.size());
+		
+		if (place_obj_along_wall(TYPE_METAL_BAR, room, bar_height, bar_sz, rgen, bar_z1, room_id, tot_light_amt, place_area, objs_start, 4.0, 1, 4, 0, color, 1, SHAPE_CUBE)) {
+			assert(bar_ix < objs.size());
+			room_object_t const bar(objs[bar_ix]); // deep copy
+			bool const dim(bar.dim), dir(bar.dir);
+			float const width(bar_sz.y), valve_radius(0.05*floor_spacing*rgen.rand_uniform(0.7, 1.0)), gauge_radius(0.025*floor_spacing*rgen.rand_uniform(0.7, 1.0));
+			unsigned const num_valves(max(1U, min(8U, unsigned(width/(2.8*valve_radius)))));
+			float const valve_spacing(width/num_valves);
+			colorRGBA const handle_color(handle_colors[rgen.rand() % NUM_HANDLE_COLORS]);
+
+			for (unsigned n = 0; n < num_valves; ++n) {
+				// valves on the bottom
+				point pos;
+				pos[ dim] = bar.d[ dim][dir]; // inside edge of the bar
+				pos[!dim] = bar.d[!dim][0] + (n + 0.5)*valve_spacing;
+				pos.z = bar.z1() + 0.25*bar_height;
+				cube_t valve(pos);
+				valve.expand_in_dim(!dim, valve_radius);
+				valve.expand_in_dim(2,    valve_radius);
+				valve.d[dim][dir] += (dir ? 1.0 : -1.0)*rgen.rand_uniform(0.4, 0.5)*valve_radius;
+				objs.emplace_back(valve, TYPE_VALVE, room_id, dim, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, handle_color); // dir=0 (horizontal)
+				// gauges on the top
+				pos.z = bar.z1() + 0.75*bar_height;
+				cube_t gauge(pos);
+				gauge.expand_in_dim(!dim, gauge_radius);
+				gauge.expand_in_dim(2,    gauge_radius);
+				gauge.d[dim][dir] += (dir ? 1.0 : -1.0)*rgen.rand_uniform(0.25, 0.35)*gauge_radius;
+				objs.emplace_back(gauge, TYPE_GAUGE, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, BRASS_C);
+			} // for n
+		}
+	}
 	add_numbered_door_sign("OR ", room, zval, room_id, floor_ix);
 
 	// make ceiling lights larger and round
