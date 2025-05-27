@@ -969,7 +969,7 @@ public:
 				// create an intersection if blocker is a road, and happens to be the same elevation?
 				if (b->intersects_xy(road)) return -1.0; // bad intersection, fail
 			}
-			if (hq.any_underwater(x1, y1, x2+1, y2+1)) return -1.0; // underwater (Note: bounds check is done here)
+			if (!ADD_BRIDGES_OVER_WATER && hq.any_underwater(x1, y1, x2+1, y2+1)) return -1.0; // underwater (Note: bounds check is done here)
 		}
 		if (!check_only) { // create intersections and add blocker
 			unsigned const grn_rix(roads.size()); // may be wrong end of connector, but doesn't matter?
@@ -3661,7 +3661,9 @@ bool check_valid_scenery_pos(point const &pos, float radius, bool is_tall) {
 	if (world_mode != WMODE_INF_TERRAIN) return 1; // the checks below are for tiled terrain mode only
 
 	if (have_cities()) {
-		if (city_gen.check_city_sphere_coll(pos_cs, radius, 1, !is_tall, 1, 3)) return 0; // check_mask=3 to include both plots and roads
+		// allow short objects such as grass over tunnels and under bridges; doesn't really work for bridges over water
+		bool const exclude_bridges_and_tunnels(!is_tall);
+		if (city_gen.check_city_sphere_coll(pos_cs, radius, 1, exclude_bridges_and_tunnels, 1, 3)) return 0; // check_mask=3 to include both plots and roads
 		if (city_gen.check_mesh_disable(pos_cs, radius)) return 0;
 	}
 	if (model_bcube_checker.check_sphere_coll((pos_cs - get_tiled_terrain_model_xlate()), radius, 1)) return 0; // xy_only=1

@@ -1505,6 +1505,7 @@ void car_manager_t::helicopters_next_frame(float car_speed) {
 			i->invalidate_tile_shadow_map(xlate, 0); // update static shadows for this tile to remove the helicopter shadow; resting on roof, no need to compute shadow_offset
 
 			for (bridge_t const &bridge : bridges) {
+				if (bridge.over_water) continue; // no arches; should never be low enough to collide
 				cube_t bbc(bridge.get_drawn_bcube());
 				bbc.expand_by_xy(avoid_dist);
 				if (check_line_clip_xy(p1, p2, bbc.d)) {max_eq(i->fly_zval, (bbc.z2() + min_vert_clearance));}

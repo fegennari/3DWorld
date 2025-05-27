@@ -76,9 +76,10 @@ float heightmap_query_t::flatten_sloped_region(unsigned x1, unsigned y1, unsigne
 	float const run_len(dim ? (y2 - y1) : (x2 - x1)), denom(1.0f/max(run_len, 1.0f)), dz(z2 - z1), border_inv(1.0/border);
 	int const pad(border + 1U); // pad an extra 1 texel to handle roads misaligned with the texture
 	unsigned px1(x1), py1(y1), px2(x2), py2(y2), six(dim ? ysize : xsize), eix(0);
-	float tot_dz(0.0), seg_min_dh(0.0);
 	float const bridge_cost(0.0), bridge_dist_cost(0.0), tunnel_cost(0.0), tunnel_dist_cost(0.0); // Note: currently set to zero, but could be used
 	unsigned const min_bridge_len(12), min_tunnel_len(12); // in mesh texels
+	float tot_dz(0.0), seg_min_dh(0.0), bridge_zmin_below(FLT_MAX);
+	int add_bridge(0); // 0=none, 1=land, 2=water
 
 	if (dim) {
 		px1 = max((int)x1-pad, 0);
@@ -92,6 +93,23 @@ float heightmap_query_t::flatten_sloped_region(unsigned x1, unsigned y1, unsigne
 		px1 = max((int)x1-1, 0);
 		px2 = min(x2+1, xsize);
 	}
+	if (!stats_only && bridge != nullptr && ADD_BRIDGES_OVER_WATER) { // add a water bridge; only happens for some rand_gen_index values
+		bool end_bridge(0);
+
+		for (unsigned y = y1; y < y2; ++y) { // Note: not padded
+			for (unsigned x = x1; x < x2; ++x) {
+				float const height(get_height(x, y));
+
+				if (height < water_plane_z) { // underwater
+					min_eq(six, (dim ? y : x));
+					max_eq(eix, (dim ? y : x));
+					min_eq(bridge_zmin_below, height);
+				}
+				else if (eix > 0) {end_bridge = 1;} // done with bridge - don't create bridge past high point
+			} // for x
+		} // for y
+		if (eix > six+min_bridge_len) {add_bridge = 2;}
+	}
 	if (!stats_only && !decrease_only && bridge != nullptr && fabs(bridge->get_slope_val()) < 0.1) { // determine if we should add a bridge here
 		float added(0.0), removed(0.0), total(0.0);
 		bool end_bridge(0);
@@ -101,12 +119,13 @@ float heightmap_query_t::flatten_sloped_region(unsigned x1, unsigned y1, unsigne
 				float const t(((dim ? int(y - y1) : int(x - x1)) + ((dz < 0.0) ? 1 : -1))*denom); // bias toward the lower zval
 				float const road_z(z1 + dz*t - ROAD_HEIGHT), h(get_height(x, y));
 
-				if (road_z > h) {
+				if (h < road_z) {
 					added += (road_z - h);
 
 					if (!end_bridge && road_z > h + 1.0*city_params.road_width) { // higher than terrain by a significant amount
 						min_eq(six, (dim ? y : x));
 						max_eq(eix, (dim ? y : x));
+						min_eq(bridge_zmin_below, h);
 					}
 				}
 				else {
@@ -116,21 +135,27 @@ float heightmap_query_t::flatten_sloped_region(unsigned x1, unsigned y1, unsigne
 				total += 1.0;
 			} // for x
 		} // for y
+		if (eix > six+min_bridge_len && added > 1.5*city_params.road_width*total && added > 2.0*removed) {add_bridge = 1;}
+	} // end bridge logic
+	if (add_bridge) {
 		max_eq(six, (dim ? y1+border : x1+border)); // keep away from segment end points (especially connector road jogs)
 		min_eq(eix, (dim ? y2-border : x2-border));
 
-		if (eix > six+min_bridge_len && added > 1.5*city_params.road_width*total && added > 2.0*removed) {
+		if (eix > six+min_bridge_len) { // still long enough after clamp
 			point ps, pe;
 			get_segment_end_pts(bridge->src_road, six, eix, ps, pe);
 			bridge->d[dim][0] = ps[dim];
 			bridge->d[dim][1] = pe[dim];
 			bridge->z1() = min(ps.z, pe.z);
 			bridge->z2() = max(ps.z, pe.z);
+			bridge->zmin_below  = bridge_zmin_below;
 			bridge->make_bridge = 1;
-			skip_six = six; skip_eix = eix; // mark so that mesh height isn't updated in this region
+			bridge->over_water  = (add_bridge == 2);
+			if (bridge->over_water) {decrease_only = 1;} // may need to decrease terran near the edge of the water
+			else {skip_six = six; skip_eix = eix;} // mark so that mesh height isn't updated in this region
 			tot_dz += bridge_cost + bridge_dist_cost*bridge->get_length();
 		}
-	} // end bridge logic
+	}
 	if (!stats_only && tunnel != nullptr && skip_eix == 0 && fabs(tunnel->get_slope_val()) < 0.2) { // determine if we should add a tunnel here
 		float const radius(1.0*city_params.road_width), min_height((1.0 + TUNNEL_WALL_THICK)*radius);
 		float added(0.0), removed(0.0), total(0.0);

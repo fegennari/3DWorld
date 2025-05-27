@@ -1258,7 +1258,7 @@ cube_t bridge_t::get_drawn_bcube() const {
 	bcube.d[!dim][0] -= w_expand; bcube.d[!dim][1] += w_expand;
 	max_eq(bcube.d[dim][0], src_road.d[dim][0]); // clamp to orig road segment length
 	min_eq(bcube.d[dim][1], src_road.d[dim][1]);
-	bcube.z2() += BRIDGE_HEIGHT_TO_LEN*bcube.get_sz_dim(dim); // make it higher
+	if (!over_water) {bcube.z2() += BRIDGE_HEIGHT_TO_LEN*bcube.get_sz_dim(dim);} // make it higher
 	return bcube; // approximate
 }
 
@@ -1266,10 +1266,8 @@ void road_draw_state_t::draw_bridge(bridge_t const &bridge, bool shadow_only) { 
 	//timer_t timer("Draw Bridge"); // 0.065ms - 0.11ms
 	cube_t const bcube(bridge.get_drawn_bcube());
 	if (!check_cube_visible(bcube, 1.0)) return; // VFC/too far
-	float const scale(1.0*city_params.road_width), w_expand(0.25*scale);
-	unsigned const d(bridge.dim);
-	point const cpos(camera_pdu.pos - xlate);
-	float const center(bcube.get_center_dim(!d)), len(bcube.get_sz_dim(d)), peak_height(BRIDGE_HEIGHT_TO_LEN*len);
+	unsigned const d(bridge.dim), dir(bridge.slope);
+	float const scale(1.0*city_params.road_width), w_expand(0.25*scale), center(bcube.get_center_dim(!d)), len(bcube.get_sz_dim(d));
 	point p1, p2; // centerline end points
 	p1.z = bridge.get_start_z();
 	p2.z = bridge.get_end_z();
@@ -1279,98 +1277,133 @@ void road_draw_state_t::draw_bridge(bridge_t const &bridge, bool shadow_only) { 
 	vector3d const delta(p2 - p1);
 	colorRGBA const main_color(WHITE), cables_color(LT_GRAY), concrete_color(LT_GRAY);
 	color_wrapper const cw_main(main_color), cw_cables(cables_color), cw_concrete(concrete_color);
-	float const thickness(0.2*scale), conn_thick(0.25*thickness), cable_thick(0.1*thickness), wall_width(0.25*thickness), wall_height(0.5*thickness);
-	point const closest_pt((bridge + xlate).closest_pt(camera_pdu.pos));
-	float const dist_val(shadow_only ? 1.0 : p2p_dist(camera_pdu.pos, closest_pt)/draw_tile_dist);
-	int const cable_ndiv(min(24, max(4, int(0.4/dist_val))));
-	unsigned const num_segs(max(16U, min(48U, unsigned(ceil(2.5*len/scale))))); // scale to fit the gap, with reasonable ranges
-	float const step_sz(1.0/num_segs), delta_d(step_sz*delta[d]), delta_z(step_sz*delta.z);
-	float zvals[48+1] = {}, cur_zpos(p1.z), cur_dval(p1[d]); // resize zvals based on max num_segs
+	float const thickness(0.2*scale), conn_thick(0.25*thickness), wall_width(0.25*thickness), wall_height(0.5*thickness);
+	unsigned num_segs(max(16U, min(48U, unsigned(ceil(2.5*len/scale))))); // scale to fit the gap, with reasonable ranges
+	if (bridge.over_water) {num_segs /= 6;} // fewer pylons
+	float const step_sz(1.0/num_segs), delta_d(step_sz*delta[d]), delta_z(step_sz*delta.z), dz_scale(bridge.dz()/(bridge.get_sz_dim(d)));
+	float cur_dval(p1[d]); // resize zvals based on max num_segs
 	vector<float> sm_split_pos;
 	uint64_t prev_tile_id(0);
 	point query_pt(bridge.get_cube_center());
 	ensure_shader_active(); // needed for use_smap=0 case
 	if (!shadow_only) {select_texture(WHITE_TEX);}
 
-	for (unsigned n = 0; n <= num_segs; ++n) { // populate zvals and dvals
-		float const t(n*step_sz), v(2.0f*fabs(t - 0.5f)), zpos(p1.z + delta.z*t);
-		zvals[n] = zpos + peak_height*(1.0f - v*v) - 0.5f*scale;
-	}
-	for (unsigned n = 0; n < num_segs; ++n) { // add arches
-		float const zval(zvals[n+1]), next_dval(cur_dval + delta_d);
-		point pts[4], conn_pts[2];
-		pts[0][d] = pts[3][d] = cur_dval;
-		pts[1][d] = pts[2][d] = next_dval;
+	if (bridge.over_water) {
+		float const pylon_hwidth(0.3*scale), pylon_hdepth(0.1*scale);
+		if (!shadow_only) {select_texture(get_texture_by_name("roads/concrete.jpg"));}
 
-		if (!shadow_only) {
+		for (unsigned n = 0; n < num_segs; ++n) { // add pylons
+			float const next_dval(cur_dval + delta_d);
 			query_pt[d] = 0.5f*(cur_dval + next_dval); // center point of this segment
-			uint64_t const tile_id(get_tile_id_containing_point(query_pt + xlate));
 
-			if (n == 0 || tile_id != prev_tile_id) { // first segment, or new tile for this segment
-				qbd_bridge.draw_and_clear(); // flush
-				begin_tile(query_pt, 1); // will_emit_now=1
-				prev_tile_id = tile_id;
-				if (n > 0) {sm_split_pos.push_back(query_pt[d]);} // record split point for splitting road surface and guardrails
+			if (!shadow_only) {
+				uint64_t const tile_id(get_tile_id_containing_point(query_pt + xlate));
+
+				if (n == 0 || tile_id != prev_tile_id) { // first segment, or new tile for this segment
+					qbd_bridge.draw_and_clear(); // flush
+					begin_tile(query_pt, 1); // will_emit_now=1
+					prev_tile_id = tile_id;
+					if (n > 0) {sm_split_pos.push_back(query_pt[d]);} // record split point for splitting road surface and guardrails
+				}
 			}
+			// draw pylons under bridge
+			float const extend_dz((dir ? -1.0 : 1.0)*dz_scale*(bridge.d[d][dir] - query_pt[d]));
+			cube_t c(query_pt);
+			c.z1() = bridge.zmin_below;
+			c.z2() = bridge.z1() - extend_dz - 1.05*pylon_hdepth*dz_scale; // interpolate zval of road surface and set to of pylon just under it
+			c.expand_in_dim( d, pylon_hdepth);
+			c.expand_in_dim(!d, pylon_hwidth);
+			draw_cube(qbd_bridge, c, cw_concrete, 1); // skip_bottom=1
+			cur_dval = next_dval;
+		} // for n
+	}
+	else { // not over water, draw arches
+		point const cpos(camera_pdu.pos - xlate), closest_pt((bridge + xlate).closest_pt(camera_pdu.pos));
+		float const dist_val(shadow_only ? 1.0 : p2p_dist(camera_pdu.pos, closest_pt)/draw_tile_dist), peak_height(BRIDGE_HEIGHT_TO_LEN*len), cable_thick(0.1*thickness);
+		int const cable_ndiv(min(24, max(4, int(0.4/dist_val))));
+		float zvals[48+1] = {}, cur_zpos(p1.z);
+
+		for (unsigned n = 0; n <= num_segs; ++n) { // populate zvals
+			float const t(n*step_sz), v(2.0f*fabs(t - 0.5f)), zpos(p1.z + delta.z*t);
+			zvals[n] = zpos + peak_height*(1.0f - v*v) - 0.5f*scale;
 		}
-		for (unsigned e = 0; e < 2; ++e) { // two sides
-			float const ndv(bcube.d[!d][e]);
-			pts[0][!d] = pts[1][!d] = (e ? ndv-w_expand : ndv);
-			pts[2][!d] = pts[3][!d] = (e ? ndv : ndv+w_expand);
+		for (unsigned n = 0; n < num_segs; ++n) { // add arches
+			float const zval(zvals[n+1]), next_dval(cur_dval + delta_d);
+			point pts[4], conn_pts[2];
+			pts[0][d] = pts[3][d] = cur_dval;
+			pts[1][d] = pts[2][d] = next_dval;
 
-			for (unsigned f = 0; f < 2; ++f) { // top/bottom surfaces
-				float const dz(f ? 0.0 : thickness);
-				pts[0].z = pts[3].z = zvals[n] + dz;
-				pts[1].z = pts[2].z = zval + dz;
-				// construct previous and next pts in order to calculate the face normals below
-				point prev_pt(pts[0]); prev_pt[d] -= delta_d; if (n   > 0       ) {prev_pt.z = zvals[n-1] + dz;}
-				point next_pt(pts[1]); next_pt[d] += delta_d; if (n+1 < num_segs) {next_pt.z = zvals[n+2] + dz;}
-				vector3d const v_shared((pts[2] - pts[1])*((f^d) ? -1.0 : 1.0));
-				vector3d const fn(cross_product((pts[1] - pts[0]), v_shared));
+			if (!shadow_only) {
+				query_pt[d] = 0.5f*(cur_dval + next_dval); // center point of this segment
+				uint64_t const tile_id(get_tile_id_containing_point(query_pt + xlate));
 
-				if (dot_product((cpos - pts[0]), fn) > 0) { // BFC
-					vector3d const fn_prev(cross_product((pts[0] - prev_pt), v_shared)), fn_next(cross_product((next_pt - pts[1]), v_shared));
-					vector3d const vn_prev((fn + fn_prev).get_norm()), vn_next((fn + fn_next).get_norm()); // average of both face normals
-					vector3d const normals[4] = {vn_prev, vn_next, vn_next, vn_prev};
-					qbd_bridge.add_quad_pts_vert_norms(pts, normals, cw_main);
+				if (n == 0 || tile_id != prev_tile_id) { // first segment, or new tile for this segment
+					qbd_bridge.draw_and_clear(); // flush
+					begin_tile(query_pt, 1); // will_emit_now=1
+					prev_tile_id = tile_id;
+					if (n > 0) {sm_split_pos.push_back(query_pt[d]);} // record split point for splitting road surface and guardrails
 				}
 			}
-			for (unsigned f = 0; f < 2; ++f) { // side surfaces
-				unsigned const i0(f ? 3 : 0), i1(f ? 2 : 1);
-				point pts2[4] = {pts[i0], pts[i1], pts[i1], pts[i0]};
-				pts2[2].z += thickness; pts2[3].z += thickness; // top surface
-				add_bridge_quad(pts2, cw_main, ((f^d) ? -1.0 : 1.0));
-			}
-			if (zval > cur_zpos) { // vertical cables
-				conn_pts[e] = 0.5*(pts[1] + pts[2]);
-				conn_pts[e].z += 0.5*thickness;
+			for (unsigned e = 0; e < 2; ++e) { // two sides
+				float const ndv(bcube.d[!d][e]);
+				pts[0][!d] = pts[1][!d] = (e ? ndv-w_expand : ndv);
+				pts[2][!d] = pts[3][!d] = (e ? ndv : ndv+w_expand);
 
-				if (!shadow_only && dist_val < 0.1) { // use high detail vertical cylinders
-					s.set_cur_color(cables_color);
-					point const &p(conn_pts[e]);
-					draw_fast_cylinder(point(p.x, p.y, cur_zpos+0.15*thickness), point(p.x, p.y, zval), cable_thick, cable_thick, cable_ndiv, 0); // no ends
+				for (unsigned f = 0; f < 2; ++f) { // top/bottom surfaces
+					float const dz(f ? 0.0 : thickness);
+					pts[0].z = pts[3].z = zvals[n] + dz;
+					pts[1].z = pts[2].z = zval + dz;
+					// construct previous and next pts in order to calculate the face normals below
+					point prev_pt(pts[0]); prev_pt[d] -= delta_d; if (n   > 0       ) {prev_pt.z = zvals[n-1] + dz;}
+					point next_pt(pts[1]); next_pt[d] += delta_d; if (n+1 < num_segs) {next_pt.z = zvals[n+2] + dz;}
+					vector3d const v_shared((pts[2] - pts[1])*((f^d) ? -1.0 : 1.0));
+					vector3d const fn(cross_product((pts[1] - pts[0]), v_shared));
+
+					if (dot_product((cpos - pts[0]), fn) > 0) { // BFC
+						vector3d const fn_prev(cross_product((pts[0] - prev_pt), v_shared)), fn_next(cross_product((next_pt - pts[1]), v_shared));
+						vector3d const vn_prev((fn + fn_prev).get_norm()), vn_next((fn + fn_next).get_norm()); // average of both face normals
+						vector3d const normals[4] = {vn_prev, vn_next, vn_next, vn_prev};
+						qbd_bridge.add_quad_pts_vert_norms(pts, normals, cw_main);
+					}
 				}
-				else { // use lower detail cubes; okay for shadow pass
-					cube_t c(conn_pts[e]);
-					c.z1() = cur_zpos;
-					c.z2() = zval;
-					c.expand_by(cable_thick);
-					draw_cube(qbd_bridge, c, cw_cables, 1); // skip_bottom=1
+				for (unsigned f = 0; f < 2; ++f) { // side surfaces
+					unsigned const i0(f ? 3 : 0), i1(f ? 2 : 1);
+					point pts2[4] = {pts[i0], pts[i1], pts[i1], pts[i0]};
+					pts2[2].z += thickness; pts2[3].z += thickness; // top surface
+					add_bridge_quad(pts2, cw_main, ((f^d) ? -1.0 : 1.0));
 				}
+				if (zval > cur_zpos) { // vertical cables
+					conn_pts[e] = 0.5*(pts[1] + pts[2]);
+					conn_pts[e].z += 0.5*thickness;
+
+					if (!shadow_only && dist_val < 0.1) { // use high detail vertical cylinders
+						s.set_cur_color(cables_color);
+						point const &p(conn_pts[e]);
+						draw_fast_cylinder(point(p.x, p.y, cur_zpos+0.15*thickness), point(p.x, p.y, zval), cable_thick, cable_thick, cable_ndiv, 0); // no ends
+					}
+					else { // use lower detail cubes; okay for shadow pass
+						cube_t c(conn_pts[e]);
+						c.z1() = cur_zpos;
+						c.z2() = zval;
+						c.expand_by(cable_thick);
+						draw_cube(qbd_bridge, c, cw_cables, 1); // skip_bottom=1
+					}
+				}
+			} // for e
+			if (zval > cur_zpos + 0.5*scale) { // add horizontal connectors if high enough
+				cube_t c(conn_pts[0], conn_pts[1]);
+				vector3d exp(zero_vector);
+				exp.z  = 0.75*conn_thick;
+				exp[d] = conn_thick;
+				c.expand_by(exp);
+				draw_cube(qbd_bridge, c, cw_main, 0); // skip_bottom=0
 			}
-		} // for e
-		if (zval > cur_zpos + 0.5*scale) { // add horizontal connectors if high enough
-			cube_t c(conn_pts[0], conn_pts[1]);
-			vector3d exp(zero_vector);
-			exp.z  = 0.75*conn_thick;
-			exp[d] = conn_thick;
-			c.expand_by(exp);
-			draw_cube(qbd_bridge, c, cw_main, 0); // skip_bottom=0
-		}
-		cur_dval  = next_dval;
-		cur_zpos += delta_z;
-	} // for s
-	// bottom surface
+			cur_dval  = next_dval;
+			cur_zpos += delta_z;
+		} // for n
+	} // end not over water case
+
+	// draw bottom surface
 	float tscale(0.0);
 
 	if (!shadow_only) {
@@ -1378,8 +1411,7 @@ void road_draw_state_t::draw_bridge(bridge_t const &bridge, bool shadow_only) { 
 		select_texture(get_texture_by_name("roads/asphalt.jpg"));
 		tscale = 1.0/scale; // scale texture to match road width
 	}
-	bool const dir(bridge.slope), invert_normals((d!=0) ^ dir);
-	float const dz_scale(bridge.dz()/(bridge.get_sz_dim(d)));
+	bool const invert_normals((d!=0) ^ dir);
 	cur_dval = bcube.d[d][0]; // reset to start
 	point pts[8];
 

@@ -7,7 +7,8 @@
 #include "city.h"
 #include "mesh.h"
 
-float const OUTSIDE_TERRAIN_HEIGHT  = 0.0;
+bool const ADD_BRIDGES_OVER_WATER  = 1;
+float const OUTSIDE_TERRAIN_HEIGHT = 0.0;
 
 struct rect_t {
 	unsigned x1, y1, x2, y2;

@@ -585,7 +585,8 @@ struct road_connector_t : public road_t, public streetlights_t {
 };
 
 struct bridge_t : public road_connector_t {
-	bool make_bridge=0;
+	bool make_bridge=0, over_water=0;
+	float zmin_below=0.0; // for terrain below the bridge
 
 	bridge_t(road_t const &road) : road_connector_t(road) {}
 	cube_t get_drawn_bcube() const;
