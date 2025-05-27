@@ -336,6 +336,7 @@ bool city_road_connector_t::segment_road(road_t const &road, bool check_only) {
 	segments.clear();
 	if (num_segs == 1) {segments.push_back(road); return (fabs(road.get_slope_val()) < city_params.max_road_slope);} // single segment optimization
 	float const seg_len(road_len/num_segs);
+	float const min_zval(water_plane_z + 0.3*road.get_width()); // water_plane_z doesn't take into account tessellated waves; shift further up
 	assert(seg_len <= city_params.conn_road_seg_len);
 	road_t rs(road); // keep d[!dim][0], d[!dim][1], dim, and road_ix
 	rs.z1() = road.d[2][road.slope];
@@ -345,7 +346,7 @@ bool city_road_connector_t::segment_road(road_t const &road, bool check_only) {
 		point pos;
 		pos[ dim] = rs.d[dim][1];
 		pos[!dim] = conn_pos;
-		rs.z2()   = hq.get_road_zval_at_pt(pos); // terrain height at end of segment
+		rs.z2()   = max(hq.get_road_zval_at_pt(pos), min_zval); // terrain height at end of segment; don't go below water level
 		rs.slope  = (rs.z2() < rs.z1());
 
 		if (fabs(rs.get_slope_val()) > city_params.max_road_slope) { // slope is too high, clamp z2 to max allowed value

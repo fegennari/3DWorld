@@ -13,7 +13,7 @@ struct rect_t {
 	unsigned x1, y1, x2, y2;
 	rect_t() : x1(0), y1(0), x2(0), y2(0) {}
 	rect_t(unsigned x1_, unsigned y1_, unsigned x2_, unsigned y2_) : x1(x1_), y1(y1_), x2(x2_), y2(y2_) {}
-	bool is_valid() const {return (x1 < x2 && y1 < y2);}
+	bool     is_valid() const {return (x1 < x2 && y1 < y2);}
 	unsigned get_area() const {return (x2 - x1)*(y2 - y1);}
 	bool operator== (rect_t const &r) const {return (x1 == r.x1 && y1 == r.y1 && x2 == r.x2 && y2 == r.y2);}
 	bool has_overlap(rect_t const &r) const {return (x1 < r.x2 && y1 < r.y2 && r.x1 < x2 && r.y1 < y2);}
