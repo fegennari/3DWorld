@@ -1892,6 +1892,7 @@ int load_config(string const &config_file) {
 	kwmi.add("init_num_balls", init_num_balls);
 	kwmi.add("use_voxel_rocks", use_voxel_rocks); // 0=never, 1=always, 2=only when no vegetation
 	kwmi.add("default_anim_id", default_anim_id);
+	kwmi.add("rand_gen_index", rand_gen_index);
 
 	kw_to_val_map_t<unsigned> kwmu(error);
 	kwmu.add("grass_density", grass_density);

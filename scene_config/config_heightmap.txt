@@ -38,6 +38,7 @@ buildings tt_only 1
 buildings add_city_interiors     1
 buildings gen_building_interiors 1
 #buildings rand_seed              456
+#rand_gen_index 2 # affects cities
 shadow_map_sz 8192
 
 #sun_rot 2.0
