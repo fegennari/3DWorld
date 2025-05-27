@@ -39,6 +39,7 @@ namespace pixel_city {
 
 string choose_business_name(rand_gen_t rgen, building_type_t btype) {
 	assert(btype < NUM_BUILDING_TYPES);
+	if (btype  == BTYPE_PARKING ) {return "Parking";} // for now, parking structures only have "Parking" signs
 	if (btype >= BTYPE_APARTMENT) {return gen_random_name(rgen, 4) + " " + btype_names[btype];} // specialized building type
 	if (rgen.rand_bool())         {return pixel_city::gen_company_name(rgen);}
 	int const v(rgen.rand()%10);
@@ -474,7 +475,7 @@ void building_t::add_signs(vector<sign_t> &signs) const { // added as exterior c
 	}
 	bool sign_both_sides(rgen.rand_bool());
 	bool const two_sided(!sign_both_sides && 0);
-	bool const emissive(is_in_city && (is_hospital() || rgen.rand_float() < 0.65)); // city hospital signs are always emissive
+	bool const emissive(is_in_city && (is_hospital() ||  rgen.rand_float() < 0.65)); // city hospital signs are always emissive
 	bool const scrolling(emissive && name.size() >= 8 && rgen.rand_float() < 0.75);
 	// non-cube buildings can have signs tangent to a point or curve and need proper connectors; also, only cube buildings have roof walls that connectors may clip through
 	bool const add_connector(!is_cube());
@@ -523,9 +524,9 @@ void building_t::add_signs(vector<sign_t> &signs) const { // added as exterior c
 }
 
 void building_t::add_company_sign(rand_gen_t &rgen) {
-	if (is_house || name.empty())           return; // shouldn't be called?
-	if (is_in_city)                         return; // already has a sign added as a city object
-	if (!is_hospital() && rgen.rand_bool()) return; // only add sign 50% of the time
+	if (is_house || name.empty()) return; // shouldn't be called?
+	if (is_in_city)               return; // already has a sign added as a city object
+	if (!is_hospital() && !is_parking() && rgen.rand_bool()) return; // only add sign 50% of the time
 	vector<sign_t> signs;
 	add_signs(signs); // should add office building rooftop signs only
 

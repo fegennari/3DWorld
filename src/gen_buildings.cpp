@@ -1603,9 +1603,11 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 	if (!is_valid()) return; // invalid building
 	building_mat_t const &mat(get_material());
 	bool const need_top_roof(roof_type == ROOF_TYPE_FLAT || roof_type == ROOF_TYPE_DOME || roof_type == ROOF_TYPE_ONION || roof_type == ROOF_TYPE_CURVED);
-	bool const metal_roof(is_industrial());
-	if (metal_roof) {roof_color = blend_color(roof_color, WHITE, 0.5, 0);} // lighten roof color; not reflected in overhead map mode; should this be set earlier?
-	tid_nm_pair_t const roof_tex(metal_roof ? get_corr_metal_texture(0.25*mat.roof_tex.tscale_x) : mat.roof_tex);
+	bool const metal_roof(is_industrial()), concrete_walls(is_parking());
+	if (metal_roof    ) {roof_color = blend_color(roof_color, WHITE, 0.5, 0);} // lighten roof color; not reflected in overhead map mode; should this be set earlier?
+	if (concrete_walls) {side_color = blend_color(side_color, WHITE, 0.5, 0);} // lighten side color; should this be set earlier?
+	tid_nm_pair_t const roof_tex(metal_roof     ? get_corr_metal_texture(0.25*mat.roof_tex.tscale_x) : mat.roof_tex); // concrete if is_parking()?
+	tid_nm_pair_t const side_tex(concrete_walls ? get_concrete_texture  (1.5 *mat.side_tex.tscale_x) : mat.side_tex); // side_color=WHITE if is_parking()?
 	if (detail_color == BLACK) {detail_color = roof_color;} // use roof color if not set
 	
 	for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels - no AO for houses
@@ -1618,13 +1620,13 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 			else if (i->x2() >= bcube.x2()) {dim_mask |=  8;}
 			else if (i->y1() <= bcube.y1()) {dim_mask |= 64;}
 			else if (i->y2() >= bcube.y2()) {dim_mask |= 32;}
-			tid_nm_pair_t const tp(mat.side_tex.get_scaled_version(chimney_tscale));
+			tid_nm_pair_t const tp(side_tex.get_scaled_version(chimney_tscale));
 			bdraw.add_section(*this, 0, *i, tp, side_color, dim_mask, 0, 0, is_house, 0); // XY exterior walls
 			bdraw.add_section(*this, 0, *i, tp, side_color, 4, 1, 0, 1, 0); // draw top of fireplace exterior, even if not wider than the chimney - should it be sloped?
 			continue;
 		}
 		else if (has_chimney && (i+1 == parts.end())) { // chimney
-			tid_nm_pair_t const tp(mat.side_tex.get_scaled_version(chimney_tscale));
+			tid_nm_pair_t const tp(side_tex.get_scaled_version(chimney_tscale));
 			auto &verts(bdraw.get_verts(tp));
 			unsigned const verts_start(verts.size());
 			bdraw.add_section(*this, 0, *i, tp, side_color, 3, 0, 0, is_house, 0); // XY exterior walls
@@ -1656,7 +1658,7 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 			}
 			continue;
 		}
-		bdraw.add_section(*this, 1, *i, mat.side_tex, side_color, 3, 0, 0, is_house, 0); // XY exterior walls
+		bdraw.add_section(*this, 1, *i, side_tex, side_color, 3, 0, 0, is_house, 0); // XY exterior walls
 		bool skip_top((!need_top_roof && (is_house || i+1 == parts.end())) || is_basement(i)); // don't add the flat roof for the top part in this case
 		skip_top |= (has_retail() && i == parts.begin()); // skip drawing the roof between the retail area and the office above
 		// skip the bottom of stacked cubes (not using ground_floor_z1); need to draw the porch roof, so test i->dz()
@@ -1831,10 +1833,10 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 			bdraw.add_tquad(*this, *i, bcube, building_texture_mgr.get_bdoor2_tid(), WHITE);
 		}
 		else if (i->type == tquad_with_ix_t::TYPE_WALL) { // use wall texture
-			bdraw.add_tquad(*this, *i, bcube, mat.side_tex, side_color);
+			bdraw.add_tquad(*this, *i, bcube, side_tex, side_color);
 		}
 		else {assert(0);} // unsupported type
-	} // for i
+	} // for i (roof_tquads)
 	for (auto i = details.begin(); i != details.end(); ++i) { // draw roof details
 		if (i->type == DETAIL_OBJ_COLLIDER || i->type == DETAIL_OBJ_COLL_SHAD || i->type == DETAIL_OBJ_SHAD_ONLY) continue; // only drawn in the shadow pass
 
@@ -1864,7 +1866,7 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 			continue;
 		}
 		if (i->type == ROOF_OBJ_SMOKESTACK) { // truncated cone
-			auto &qverts(bdraw.get_verts(mat.side_tex, 0));
+			auto &qverts(bdraw.get_verts(side_tex, 0));
 			float const radius(0.25*(i->dx() + i->dy()));
 			bdraw.add_vert_cylinder(i->get_cube_center(), i->z1(), i->z2(), radius, 1.0, 4.0, N_CYL_SIDES, side_color, qverts, 1.0, 0.7);
 			// add inner surface as an inverted cone
@@ -1882,7 +1884,7 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 		colorRGBA color;
 
 		if (i->type == ROOF_OBJ_WALL && mat.add_windows) { // wall of brick/block building, use side color
-			tex   = mat.side_tex;
+			tex   = side_tex;
 			color = side_color;
 		}
 		else if (i->type == ROOF_OBJ_SIGN || i->type == ROOF_OBJ_SIGN_CONN) {
@@ -1935,7 +1937,7 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 		bdraw.add_roof_dome(point(center.x, center.y, top.z2()), 0.5*dx, 0.5*dy, tex, roof_color*1.5, (roof_type == ROOF_TYPE_ONION));
 	}
 	else if (roof_type == ROOF_TYPE_CURVED) {
-		bdraw.add_roof_curve(top, bcube, roof_tex, mat.side_tex, roof_color, side_color);
+		bdraw.add_roof_curve(top, bcube, roof_tex, side_tex, roof_color, side_color);
 	}
 }
 
@@ -2365,7 +2367,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 
 	// Note: city office buildings don't have add_windows set because windows don't align with their interior rooms/floors,
 	// which means the player currently can't see into or out of the building; but we can still cut out window holes on the interior side
-	if (!global_building_params.windows_enabled() || (lights_pass ? !mat.add_wind_lights : !draw_windows)) {
+	if (!global_building_params.windows_enabled() || (lights_pass ? !mat.add_wind_lights : !draw_windows) || is_parking()) {
 		// no windows for this material (set in building_materials.txt)
 		if (cut_door_holes) {cut_holes_for_ext_doors(bdraw, only_cont_pt, 0xFFFF);} // still need to draw holes for doors
 		return;
@@ -2722,7 +2724,7 @@ void building_t::get_ext_wall_verts_no_sec(building_draw_t &bdraw) const { // us
 		} // for d
 		if (!draw_any) continue; // nothing to draw (optimization)
 		// Note: this can cause shadows over walkway doors for buildings with walkways connecting to recessed part edges, which is rare
-		bdraw.add_section(*this, 1, *p, mat.side_tex, side_color, dim_mask, 0, 0, 1, 0); // Note: ignores windows and door cutouts
+		bdraw.add_section(*this, 1, *p, mat.side_tex, side_color, dim_mask, 0, 0, 1, 0); // Note: ignores windows and door cutouts; texturing is not actually needed
 	} // for p
 }
 
