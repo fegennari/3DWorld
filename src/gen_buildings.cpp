@@ -1504,7 +1504,8 @@ int get_building_door_tid(unsigned type) { // exterior doors, and interior doors
 	return -1; // never gets here
 }
 
-tid_nm_pair_t get_concrete_texture(float tscale=16.0) {return tid_nm_pair_t(get_concrete_tid(), tscale);}
+tid_nm_pair_t get_concrete_texture  (float tscale=16.0) {return tid_nm_pair_t(get_concrete_tid(), tscale);}
+tid_nm_pair_t get_corr_metal_texture(float tscale) {return tid_nm_pair_t(building_texture_mgr.get_corr_metal_tid(), building_texture_mgr.get_corr_metal_nm_tid(), tscale, tscale);}
 
 void add_driveway_or_porch(building_draw_t &bdraw, building_t const &building, cube_t const &c, colorRGBA const &color, bool skip_bottom) {
 	if (c.is_all_zeros()) return;
@@ -1585,8 +1586,7 @@ colorRGBA building_t::get_ceil_tex_and_color(cube_t const &ceil_cube, tid_nm_pai
 		return WHITE; // basement walls are always white
 	}
 	if (is_industrial() && ceil_cube.z1() > ground_floor_z1 + get_window_vspace()) { // industrial upper ceiling, not office or bathroom ceiling
-		float const txy(0.5*mat.ceil_tex.tscale_x);
-		tex = tid_nm_pair_t(building_texture_mgr.get_corr_metal_tid(), building_texture_mgr.get_corr_metal_nm_tid(), txy, txy);
+		tex = get_corr_metal_texture(0.5*mat.ceil_tex.tscale_x);
 		return WHITE;
 	}
 	// normal ceiling texture
@@ -1603,8 +1603,11 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 	if (!is_valid()) return; // invalid building
 	building_mat_t const &mat(get_material());
 	bool const need_top_roof(roof_type == ROOF_TYPE_FLAT || roof_type == ROOF_TYPE_DOME || roof_type == ROOF_TYPE_ONION || roof_type == ROOF_TYPE_CURVED);
+	bool const metal_roof(is_industrial());
+	if (metal_roof) {roof_color = blend_color(roof_color, WHITE, 0.5, 0);} // lighten roof color; not reflected in overhead map mode; should this be set earlier?
+	tid_nm_pair_t const roof_tex(metal_roof ? get_corr_metal_texture(0.25*mat.roof_tex.tscale_x) : mat.roof_tex);
 	if (detail_color == BLACK) {detail_color = roof_color;} // use roof color if not set
-		
+	
 	for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels - no AO for houses
 		if (is_basement(i)) continue; // don't need to draw the basement exterior walls since they should be underground
 		float const chimney_tscale = 1.0; // smaller bricks?
@@ -1663,7 +1666,7 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 		// add roof quads
 		if (!is_house && !skip_top && interior && clip_part_ceiling_for_stairs(*i, bdraw.temp_cubes, bdraw.temp_cubes2)) {
 			for (auto c = bdraw.temp_cubes.begin(); c != bdraw.temp_cubes.end(); ++c) { // add floors after removing stairwells
-				bdraw.add_section(*this, 0, *c, mat.roof_tex, roof_color, 4, 1, 0, is_house, 0); // only top surface
+				bdraw.add_section(*this, 0, *c, roof_tex, roof_color, 4, 1, 0, is_house, 0); // only top surface
 			}
 			// still need to draw in shadow pass
 			tid_nm_pair_t shadow_mat(SHADOW_ONLY_TEX);
@@ -1680,12 +1683,12 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 			if (clip_part_ceiling_for_stairs(test_cube, bdraw.temp_cubes, bdraw.temp_cubes2)) {
 				for (auto c = bdraw.temp_cubes.begin(); c != bdraw.temp_cubes.end(); ++c) { // add floors after removing stairwells
 					set_cube_zvals(*c, i->z1(), i->z2()); // set back to the correct zvals
-					bdraw.add_section(*this, 0, *c, mat.roof_tex, roof_color, 4, 0, 1, is_house, 0); // only bottom surface
+					bdraw.add_section(*this, 0, *c, roof_tex, roof_color, 4, 0, 1, is_house, 0); // only bottom surface
 				}
 				continue;
 			}
 		}
-		bdraw.add_section(*this, 1, *i, mat.roof_tex, roof_color, 4, is_stacked_cube, skip_top, is_house, 0); // only Z dim
+		bdraw.add_section(*this, 1, *i, roof_tex, roof_color, 4, is_stacked_cube, skip_top, is_house, 0); // only Z dim
 	} // for i
 	for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {
 		if (i->type == tquad_with_ix_t::TYPE_HELIPAD) {
@@ -1819,10 +1822,10 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 					} // for d
 				} // end is_above_part
 			} // end peaked roof
-			bdraw.add_tquad(*this, tq, bcube, mat.roof_tex.get_scaled_version(2.0), roof_color); // use roof texture
+			bdraw.add_tquad(*this, tq, bcube, roof_tex.get_scaled_version(2.0), roof_color); // use roof texture
 		} // end house roof quad
 		else if (i->is_roof() || i->type == tquad_with_ix_t::TYPE_ROOF_ACC) {
-			bdraw.add_tquad(*this, *i, bcube, mat.roof_tex.get_scaled_version(2.0), roof_color); // use roof texture
+			bdraw.add_tquad(*this, *i, bcube, roof_tex.get_scaled_version(2.0), roof_color); // use roof texture
 		}
 		else if (i->type == tquad_with_ix_t::TYPE_BDOOR2 || i->type == tquad_with_ix_t::TYPE_RDOOR2) {
 			bdraw.add_tquad(*this, *i, bcube, building_texture_mgr.get_bdoor2_tid(), WHITE);
@@ -1886,7 +1889,7 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 			color = WHITE; // also untextured, but casts shadows
 		}
 		else { // otherwise use roof color
-			tex   = mat.roof_tex.get_scaled_version(1.5);
+			tex   = roof_tex.get_scaled_version(1.5);
 			color = detail_color*(pointed ? 0.5 : 1.0);
 		}
 		bdraw.add_section(b, 0, *i, tex, color, 7, skip_bot, 0, 1, 0); // all dims, no AO
@@ -1927,12 +1930,12 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 	if (roof_type == ROOF_TYPE_DOME || roof_type == ROOF_TYPE_ONION) {
 		point const center(top.get_cube_center());
 		float const dx(top.dx()), dy(top.dy()), tscale(4.0f/(dx + dy));
-		tid_nm_pair_t tex(mat.roof_tex); // use a different dome texture?
+		tid_nm_pair_t tex(roof_tex); // use a different dome texture?
 		tex.tscale_x *= tscale; tex.tscale_y *= tscale;
 		bdraw.add_roof_dome(point(center.x, center.y, top.z2()), 0.5*dx, 0.5*dy, tex, roof_color*1.5, (roof_type == ROOF_TYPE_ONION));
 	}
 	else if (roof_type == ROOF_TYPE_CURVED) {
-		bdraw.add_roof_curve(top, bcube, mat.roof_tex, mat.side_tex, roof_color, side_color);
+		bdraw.add_roof_curve(top, bcube, roof_tex, mat.side_tex, roof_color, side_color);
 	}
 }
 
