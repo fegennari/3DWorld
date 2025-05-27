@@ -3875,8 +3875,9 @@ public:
 								cube_t debug_cube(b.bcube); // Note: if b.is_rotated(), this will be the AABB of the rotated building
 								set_cube_zvals(debug_cube, b.bcube.z2(), (b.bcube.z2() + 4.0*b.get_window_vspace()));
 								select_texture(WHITE_TEX);
+								bind_default_flat_normal_map();
 								s.set_cur_color(debug_color);
-								s.set_color_e(debug_color);
+								s.set_color_e  (debug_color);
 								draw_cube_verts_only(debug_cube);
 								s.clear_color_e();
 							}
