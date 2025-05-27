@@ -39,8 +39,9 @@ struct complex_num {
 	double r, i;
 	complex_num() : r(0), i(0) {}
 	complex_num(double r_, double i_) : r(r_), i(i_) {}
-	complex_num operator+ (complex_num const &n) const {return complex_num((r+n.r), (i+n.i));}
-	complex_num operator* (complex_num const &n) const {return complex_num((r*n.r - i*n.i), (r*n.i + i*n.r));}
+	complex_num operator+(complex_num const &n) const {return complex_num((r+n.r), (i+n.i));}
+	complex_num operator*(complex_num const &n) const {return complex_num((r*n.r - i*n.i), (r*n.i + i*n.r));}
+	complex_num operator*(double v            ) const {return complex_num(r*v, i*v);}
 	complex_num conjugate(complex_num const &n) const {return complex_num((r*n.r - i*n.i), -2.0*r*n.i);}
 	complex_num abs() const {return complex_num(fabs(r), fabs(i));}
 	double mag_sq()   const {return (r*r + i*i);}
@@ -74,6 +75,19 @@ double eval_fractal_set(complex_num const &c) {
 			z = z*z + c;
 		}
 		break;
+	case 4: // mandelbox; monochrome blue-gray
+		for (; val < 200; ++val) {
+			for (unsigned d = 0; d < 2; ++d) {
+				double &v(d ? z.i : z.r);
+				if      (v >  1.0) {v =  2.0 - v;}
+				else if (v < -1.0) {v = -2.0 - v;}
+			}
+			float const mag(z.mag());
+			if (mag > 40.0) break;
+			if      (mag < 0.5) {z = z*4.0;}
+			else if (mag < 1.0) {z = z*(1.0/(mag*mag));}
+			z = z*3.0 + c;
+		} // for val
 	} // end switch
 	return (double(val) - log2(log2(z.mag_sq())) + 1.0)/200.0; // from http://www.iquilezles.org/www/articles/mset_smooth/mset_smooth.htm
 	//return val/200.0;

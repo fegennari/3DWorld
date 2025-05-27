@@ -16,5 +16,5 @@ tt_grass_scale_factor 1.0
 #unlimited_weapons 1
 #game_mode_disable_mask 2
 
-show_map_view_fractal 0 # 0=off, 1=Mandelbrot, 2=Tricorn, 3=Burning Ship
+show_map_view_fractal 0 # 0=off, 1=Mandelbrot, 2=Tricorn, 3=Burning Ship, 4=Mandelbox
 

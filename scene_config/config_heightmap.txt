@@ -13,7 +13,7 @@ game_mode_disable_mask 2 # disable FPS gameplay mode; only building gameplay and
 #game_mode_disable_mask 3 # only building gameplay mode is enabled
 play_gameplay_alert 0 # disable the alert sound
 vsync_enabled 1
-show_map_view_fractal 0 # 0=off, 1=Mandelbrot, 2=Tricorn, 3=Burning Ship
+show_map_view_fractal 0 # 0=off, 1=Mandelbrot, 2=Tricorn, 3=Burning Ship, 4=Mandelbox
 
 # smaller/slower, good for entering buildings
 camera_radius 0.012 # default is 0.06
