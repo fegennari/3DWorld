@@ -1531,6 +1531,11 @@ tid_nm_pair_t building_t::get_attic_texture() const {
 	building_mat_t const &mat(get_material());
 	return tid_nm_pair_t(tid, get_normal_map_for_bldg_tid(tid), 0.25*mat.house_floor_tex.tscale_x, 0.25*mat.house_floor_tex.tscale_y);
 }
+tid_nm_pair_t building_t::get_interior_ext_wall_texture() const {
+	if (is_industrial()) return get_industrial_wall_texture();
+	if (is_parking   ()) return get_concrete_texture       ();
+	return get_material().wall_tex;
+}
 tid_nm_pair_t select_tile_floor_texture(bool use_granite, float tscale) {
 	if (use_granite) {return tid_nm_pair_t(building_texture_mgr.get_granite_floor_tid(), 0.4*tscale);} // no normal map
 	else             {return tid_nm_pair_t(building_texture_mgr.get_marble_floor_tid (), 0.6*tscale);} // no normal map
@@ -1557,6 +1562,10 @@ colorRGBA building_t::get_floor_tex_and_color(cube_t const &floor_cube, tid_nm_p
 		else if (in_basement) {tex = mat.basement_floor_tex;} // basement
 		else {tex = mat.house_floor_tex;}
 	}
+	else if (!in_basement && is_parking()) {
+		tex = get_concrete_texture();
+		return WHITE;
+	}
 	else { // office building
 		bool const in_ext_basement(in_basement && (!get_basement().contains_cube_xy(floor_cube) || floor_cube.z2() < bcube.z1()));
 		bool const retail_or_mall((in_ext_basement && is_inside_mall_stores(floor_cube.get_cube_center())) || (has_retail() && floor_cube.z1() == ground_floor_z1));
@@ -1581,6 +1590,10 @@ colorRGBA building_t::get_ceil_tex_and_color(cube_t const &ceil_cube, tid_nm_pai
 		tex = get_concrete_texture();
 		return WHITE;
 	}
+	if (!in_basement && is_parking()) {
+		tex = get_concrete_texture();
+		return WHITE;
+	}
 	if (in_basement && (is_house || (has_parking_garage && !in_ext_basement))) { // use wall texture for basement/parking garage ceilings, not ceiling texture
 		tex = mat.wall_tex;
 		return WHITE; // basement walls are always white
@@ -1602,12 +1615,16 @@ void draw_building_ext_door(building_draw_t &bdraw, tquad_with_ix_t const &door,
 void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exterior building parts
 	if (!is_valid()) return; // invalid building
 	building_mat_t const &mat(get_material());
+	tid_nm_pair_t roof_tex(mat.roof_tex), side_tex(mat.side_tex);
 	bool const need_top_roof(roof_type == ROOF_TYPE_FLAT || roof_type == ROOF_TYPE_DOME || roof_type == ROOF_TYPE_ONION || roof_type == ROOF_TYPE_CURVED);
-	bool const metal_roof(is_industrial()), concrete_walls(is_parking());
-	if (metal_roof    ) {roof_color = blend_color(roof_color, WHITE, 0.5, 0);} // lighten roof color; not reflected in overhead map mode; should this be set earlier?
-	if (concrete_walls) {side_color = blend_color(side_color, WHITE, 0.5, 0);} // lighten side color; should this be set earlier?
-	tid_nm_pair_t const roof_tex(metal_roof     ? get_corr_metal_texture(0.25*mat.roof_tex.tscale_x) : mat.roof_tex); // concrete if is_parking()?
-	tid_nm_pair_t const side_tex(concrete_walls ? get_concrete_texture  (1.5 *mat.side_tex.tscale_x) : mat.side_tex); // side_color=WHITE if is_parking()?
+	bool const metal_roof(is_industrial()), concrete_roof(is_parking()), concrete_walls(is_parking());
+	// apply special building roof and wall colors; should this be set earlier?
+	if (metal_roof    ) {roof_color = blend_color(roof_color, WHITE, 0.5, 0);} // lighten roof color; not reflected in overhead map mode
+	if (concrete_roof ) {roof_color = blend_color(roof_color, WHITE, 0.5, 0);} // lighten side color
+	if (concrete_walls) {side_color = blend_color(side_color, WHITE, 0.5, 0);} // lighten side color
+	if (metal_roof    ) {roof_tex = get_corr_metal_texture(0.25 * mat.roof_tex.tscale_x);}
+	if (concrete_roof ) {roof_tex = get_concrete_texture  (1.50 * mat.roof_tex.tscale_x);}
+	if (concrete_walls) {side_tex = get_concrete_texture  (1.50 * mat.side_tex.tscale_x);}
 	if (detail_color == BLACK) {detail_color = roof_color;} // use roof color if not set
 	
 	for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels - no AO for houses
@@ -1633,10 +1650,10 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 			float const wall_width(0.25*min(i->dx(), i->dy()));
 			cube_t hole(*i);
 			hole.expand_by_xy(-wall_width);
-			cube_t sides[4]; // {-y, +y, -x, +x}
+			cube_t sides[4]; // {-y, +y, center -x, center +x}
 			subtract_cube_xy(*i, hole, sides);
-			unsigned const face_masks[4] = {127-64, 127-32, 127-16, 127-8}; // enable XYZ but skip all but {+y, -y, +x, -x} in XY
-			for (unsigned n = 0; n < 4; ++n) {bdraw.add_section(*this, 0, sides[n], tp, side_color, face_masks[n], 1, 0, 1, 0);} // skip bottom
+			unsigned const face_masks[4] = {127-64, 127-32, 127-16, 127-8}; // enable XYZ but skip all XY but {+y, -y, +x, -x} in XY
+			for (unsigned n = 0; n < 4; ++n) {bdraw.add_section(*this, 0, sides[n], tp, side_color, face_masks[n], 1, 0, 1, 0);} // draw interior walls; skip bottom
 
 			if (has_chimney == 1 && has_attic()) { // clip interior chimney verts to top of roof
 				for (auto v = verts.begin()+verts_start; v != verts.end(); ++v) {
@@ -1658,7 +1675,7 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 			}
 			continue;
 		}
-		bdraw.add_section(*this, 1, *i, side_tex, side_color, 3, 0, 0, is_house, 0); // XY exterior walls
+		if (!is_parking()) {bdraw.add_section(*this, 1, *i, side_tex, side_color, 3, 0, 0, is_house, 0);} // XY exterior walls; parking structures are special
 		bool skip_top((!need_top_roof && (is_house || i+1 == parts.end())) || is_basement(i)); // don't add the flat roof for the top part in this case
 		skip_top |= (has_retail() && i == parts.begin()); // skip drawing the roof between the retail area and the office above
 		// skip the bottom of stacked cubes (not using ground_floor_z1); need to draw the porch roof, so test i->dz()
@@ -1667,9 +1684,8 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 
 		// add roof quads
 		if (!is_house && !skip_top && interior && clip_part_ceiling_for_stairs(*i, bdraw.temp_cubes, bdraw.temp_cubes2)) {
-			for (auto c = bdraw.temp_cubes.begin(); c != bdraw.temp_cubes.end(); ++c) { // add floors after removing stairwells
-				bdraw.add_section(*this, 0, *c, roof_tex, roof_color, 4, 1, 0, is_house, 0); // only top surface
-			}
+			// add floors after removing stairwells
+			for (cube_t const &c : bdraw.temp_cubes) {bdraw.add_section(*this, 0, c, roof_tex, roof_color, 4, 1, 0, is_house, 0);} // only top surface
 			// still need to draw in shadow pass
 			tid_nm_pair_t shadow_mat(SHADOW_ONLY_TEX);
 			shadow_mat.shadow_only = 1;
@@ -1692,6 +1708,11 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 		}
 		bdraw.add_section(*this, 1, *i, roof_tex, roof_color, 4, is_stacked_cube, skip_top, is_house, 0); // only Z dim
 	} // for i
+	if (is_parking()) {
+		vect_cube_with_ix_t walls;
+		get_parking_garage_ext_walls(walls, 1); // exterior_surfaces=1
+		for (cube_with_ix_t const &w : walls) {bdraw.add_section(*this, 0, w, side_tex, side_color, w.ix, 0, 0, 0, 0);} // draw top and bottom; dim_mask from cube ix
+	}
 	for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {
 		if (i->type == tquad_with_ix_t::TYPE_HELIPAD) {
 			bdraw.add_tquad(*this, *i, bcube, building_texture_mgr.get_helipad_tid(), WHITE);
@@ -1947,15 +1968,23 @@ void building_t::get_detail_shadow_casters(building_draw_t &bdraw) {
 	}
 }
 
-void building_t::get_all_drawn_ext_wall_verts(building_draw_t &bdraw) {
+void building_t::get_all_drawn_ext_wall_verts(building_draw_t &bdraw) { // interior sides of exterior walls
 	//if (interior == nullptr) return; // only needed if building has an interior?
 	if (!is_valid()) return; // invalid building
 	tid_nm_pair_t const wall_tex(get_interior_ext_wall_texture());
 	ext_side_qv_range.draw_ix = bdraw.get_to_draw_ix(wall_tex);
 	ext_side_qv_range.start   = bdraw.get_num_verts (wall_tex);
 
-	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) { // multiple cubes/parts/levels, room parts only, no AO
-		if (!is_basement(i)) {bdraw.add_section(*this, 1, *i, wall_tex, wall_color, 3, 0, 0, 1, 0);} // XY
+	if (is_parking()) { // parking structure has custom walls
+		tid_nm_pair_t const tex(get_concrete_texture(1.50 * get_material().side_tex.tscale_x));
+		vect_cube_with_ix_t walls;
+		get_parking_garage_ext_walls(walls, 0); // exterior_surfaces=0
+		for (cube_with_ix_t const &w : walls) {bdraw.add_section(*this, 0, w, tex, WHITE, w.ix, 1, 1, 1, 0);} // dim_mask from cube ix
+	}
+	else {
+		for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) { // multiple cubes/parts/levels, room parts only, no AO
+			if (!is_basement(i)) {bdraw.add_section(*this, 1, *i, wall_tex, wall_color, 3, 0, 0, 1, 0);} // XY
+		}
 	}
 	ext_side_qv_range.end = bdraw.get_num_verts(wall_tex);
 	get_basement_ext_wall_verts(bdraw); // Note: not visible from outside building, so not needed in ext_side_qv_range

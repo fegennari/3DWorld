@@ -133,6 +133,7 @@ building_factory.o
 building_retail.o
 building_hospital.o
 building_school.o
+building_parking.o
 simplifier.o
 city_model.o
 city_building_params.o

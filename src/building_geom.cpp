@@ -2157,8 +2157,8 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 	bool const flat_roof(roof_type == ROOF_TYPE_FLAT), add_walls(is_cube() && flat_roof); // simple cube buildings with flat roofs
 	cube_t flat_roof_area(get_flat_roof_section_bcube());
 	bool const has_flat_upper_roof(!flat_roof_area.is_all_zeros()), has_flat_top(flat_roof || has_flat_upper_roof);
-	unsigned num_ac_units(0);
-	if (has_flat_top && is_cube()) {num_ac_units = (rgen.rand() % (is_industrial() ? 9 : 7));} // cube buildings only for now; 0-8 for industrial, otherwise 0-6
+	unsigned num_ac_units(0); // cube buildings only for now, no parking structures; 0-8 for industrial, otherwise 0-6
+	if (has_flat_top && is_cube() && !is_parking()) {num_ac_units = (rgen.rand() % (is_industrial() ? 9 : 7));}
 	float const window_vspacing(get_window_vspace()), wall_width(0.049*window_vspacing); // slightly narrower than interior wall width to avoid z-fighting with roof access
 	assert(!parts.empty());
 	create_per_part_ext_verts(); // needed for roof containment queries
@@ -2213,7 +2213,7 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 	point top_center(top.get_cube_center());
 	if (is_rotated() && !is_cube()) {do_xy_rotate_inv(bcube.get_cube_center(), top_center);} // put top_center in building bcube coordinate space
 	float const helipad_radius(2.0*window_vspacing);
-	bool const can_have_hp_or_sl(flat_roof && num_sides >= 4 && flat_side_amt == 0.0 && !is_house);
+	bool const can_have_hp_or_sl(flat_roof && num_sides >= 4 && flat_side_amt == 0.0 && !is_house && !is_parking());
 	has_helipad = (can_have_hp_or_sl && min(tsz.x, tsz.y) > (is_cube() ? 3.2 : 4.0)*helipad_radius && bcube.dz() > 8.0*window_vspacing && (rgen.rand() % 12) == 0);
 	cube_t avoid_bcube, door_blocker;
 
@@ -2235,12 +2235,12 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 	bool const add_rooftop_door(!is_cube() && has_complex_floorplan /*&& has_helipad*/); // add if there's no interior/stairs to the roof
 	unsigned num_blocks(0);
 	
-	if (flat_roof && skylights.empty()) { // no roof blocks if there are roof quads (houses, etc.) or skylights
+	if (flat_roof && !is_parking() && skylights.empty()) { // no roof blocks if there are roof quads (houses, etc.), skylights, or this is a parking garage
 		num_blocks = (rgen.rand() % 9); // 0-8
 		if (add_rooftop_door) {max_eq(num_blocks, 1U);} // at least one for the door
 	}
-	bool const add_antenna((flat_roof || roof_type == ROOF_TYPE_SLOPE) && !has_helipad && skylights.empty() && rgen.rand_bool());
-	bool const add_water_tower(has_flat_top && !has_helipad && !add_antenna && skylights.empty() &&
+	bool const add_antenna((flat_roof || roof_type == ROOF_TYPE_SLOPE) && !has_helipad && !is_parking() && skylights.empty() && rgen.rand_bool());
+	bool const add_water_tower(has_flat_top && !has_helipad && !add_antenna && !is_parking() && skylights.empty() &&
 		(tsz.x < 2.0*tsz.y && tsz.y < 2.0*tsz.x) && (tsz.x > 0.5*tpsz.x && tsz.y > 0.5*tpsz.y) && rgen.rand_bool());
 	unsigned const num_details(num_blocks + num_ac_units + 4*add_walls + add_antenna + add_water_tower);
 	if (num_details == 0) return; // nothing to do
@@ -2335,7 +2335,7 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 
 void building_t::maybe_add_skylight(rand_gen_t &rgen) {
 	if (is_industrial()) return; // no industrial building skylights; they work, but factories, etc. have enough windows already
-	if (is_parking   ()) return; // not needed for parking garages
+	if (is_parking   ()) return; // not needed for parking structures
 	// maybe add skylights; cube roofs only for now, since we can't cut holes in other shapes; only for office buildings with interiors;
 	// could add skylights to house rooms such as bathrooms, but they haven't been assigned and we would need to cut holes in the roof and possibly attic
 	// note that at this point there has been no floorplanning, so we don't know where primary hallways, etc. will be

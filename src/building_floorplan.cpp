@@ -270,7 +270,7 @@ float building_t::get_min_hallway_width() const {
 	return ((has_tall_retail() ? 5.4 : 3.6)*get_nominal_doorway_width());
 }
 bool building_t::can_use_hallway_for_part(unsigned part_id) const {
-	if (is_house || has_complex_floorplan || !is_cube() || (int)part_id == basement_part_ix) return 0;
+	if (is_house || has_complex_floorplan || !is_cube() || is_parking() || (int)part_id == basement_part_ix) return 0;
 	assert(part_id < parts.size());
 	cube_t const &p(parts[part_id]);
 	bool const first_part_this_stack(part_id == 0 || parts[part_id-1].z1() < p.z1());
@@ -437,6 +437,10 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			add_room(*p, part_id); // add entire part as a room; num_lights will be calculated later
 			rooms.back().assign_all_to(RTYPE_RETAIL);
 			rooms.back().is_single_floor = 1;
+		}
+		else if (is_parking() && part_id == 0) { // parking structure
+			add_room(*p, part_id, 2); // add entire part as a room; num_lights is a placeholder and will be calculated later
+			rooms.back().assign_all_to(RTYPE_PARKING);
 		}
 		else if (use_hallway) {
 			// building with rectangular slice (no adjacent exterior walls at this level), generate rows of offices
@@ -1853,11 +1857,12 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	// only add stairs to first part of a house unless we haven't added stairs yet, or if it's the top floor of a stacked part
 	else if (!is_house || interior->stairwells.empty() || (first_part_this_stack && part.z1() > ground_floor_z1)) {
 		bool add_elevator(0);
-		
+		if (is_parking() && !is_basement_room) {add_elevator = 1;} // always add an elevator to parking structures
+
 		// sometimes add an elevator to building parts, but not the first part in a stack (to guarantee we have at least one set of stairs)
 		// it might not be possible to place an elevator a part with no interior rooms, but that should be okay, because some other part will still have stairs
 		// do we need support for multiple floor cutouts stairs + elevator in this case as well?
-		if (!is_house && !must_add_stairs) {
+		else if (!is_house && !must_add_stairs) {
 			float const elevator_prob[4] = {0.9, 0.5, 0.3, 0.1}; // higher chance of adding an elevator if there are more existing elevators
 			add_elevator = (rgen.rand_float() < elevator_prob[min(interior->elevators.size(), size_t(3))]);
 		}
@@ -1866,7 +1871,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		float stairs_scale(1.0);
 
 		for (unsigned N = 0; N < 4; ++N) {
-			unsigned const rand_ix(rgen.rand()); // choose a random starting room to make into a stairwell
+			unsigned const rand_ix(rgen.rand()); // choose a random starting room to make into a stairwell or add an elevator to
 
 			for (unsigned n = 0; n < num_avail_rooms; ++n) { // try all available rooms starting with the selected one to see if we can fit a stairwell/elevator in any of them
 				unsigned const stairs_room(rooms_start + (rand_ix + n)%num_avail_rooms);

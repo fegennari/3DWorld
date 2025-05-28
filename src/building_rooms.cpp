@@ -388,7 +388,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			colorRGBA const chair_color(chair_color_per_floor ? (chair_colors[(chair_color_ix + f*(mat_ix + 1)) % NUM_CHAIR_COLORS]) : base_chair_color);
 
 			if (is_parking_garage) { // parking garage; added first because this sets the number of lights
-				assert(!has_window);
+				assert(!is_basement || !has_window); // basement/underground parking garages can't have windows
 				add_parking_garage_objs(rgen, *r, room_center.z, room_id, f, num_floors, nx, ny, light_delta_z, light_ix_assign);
 			}
 			else if (is_backrooms) {
@@ -1961,6 +1961,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	for (unsigned dim = 0; dim < 2; ++dim) {
 		for (auto w = interior->walls[dim].begin(); w != interior->walls[dim].end(); ++w) {
 			bool const in_basement(w->zc() < ground_floor_z1);
+			if (!in_basement && is_parking()) continue; // skip trim for parking structures
 			float floor_spacing(window_vspacing), ref_z1(bcube.z1());
 			
 			if (in_basement && !get_basement().intersects_no_adj(*w)) {
