@@ -1753,7 +1753,8 @@ void building_t::add_extra_obj_slots() {
 // *** Wall and Door Trim ***
 
 void building_t::add_wall_and_door_trim_if_needed() {
-	if (!has_room_geom() || (interior->walls[0].empty() && interior->walls[1].empty() && !is_industrial())) return; // no interior or walls, except for industrial
+	// no interior or walls, except for industrial and parking structures
+	if (!has_room_geom() || (interior->walls[0].empty() && interior->walls[1].empty() && !is_industrial() && !is_parking())) return;
 	if (!interior->room_geom->trim_objs.empty()) return; // trim already generated
 	add_wall_and_door_trim();
 	interior->room_geom->trim_objs.shrink_to_fit();
@@ -1854,8 +1855,9 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	assert(has_room_geom());
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness), wall_thickness(get_wall_thickness());
 	float const trim_height(get_trim_height()), trim_thickness(get_trim_thickness()), expand_val(2.0*trim_thickness), door_trim_offset(0.025*window_vspacing);
-	float const door_trim_width(0.5*wall_thickness), door_trim_exp(2.0*trim_thickness + door_trim_width), floor_to_ceil_height(window_vspacing - floor_thickness);
-	float const fc_gap(get_floor_ceil_gap());
+	float const door_trim_width(0.5*wall_thickness), door_trim_exp(2.0*trim_thickness + door_trim_width);
+	float const ext_door_trim_exp(2.0*trim_thickness + (is_parking() ? 1.5*wall_thickness : door_trim_width)); // parking garages have thick exterior walls
+	float const fc_gap(get_floor_ceil_gap()), floor_to_ceil_height(window_vspacing - floor_thickness);
 	float const trim_toler(0.1*trim_thickness); // required to handle wall intersections that were calculated with FP math and may misalign due to FP rounding error
 	float const ext_wall_toler(0.01*trim_thickness); // required to prevent z-fighting when AA is disabled
 	unsigned const flags(RO_FLAG_NOCOLL);
@@ -1903,7 +1905,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		if (d->type == tquad_with_ix_t::TYPE_RDOOR) continue; // roof access door - requires completely different approach to trim and has not been implemented
 		cube_t door(d->get_bcube()), trim(door);
 		bool const dim(door.dy() < door.dx()), garage_door(d->type == tquad_with_ix_t::TYPE_GDOOR);
-		trim.expand_in_dim(dim, door_trim_exp);
+		trim.expand_in_dim(dim, ext_door_trim_exp);
 		bool dir(0);
 		unsigned ext_flags(flags);
 		colorRGBA const &ext_trim_color(is_house ? (garage_door ? WHITE : door_color) : trim_color); // house garage door trim is always white
