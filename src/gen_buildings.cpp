@@ -2642,7 +2642,6 @@ bool building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, 
 	if (door_ix < 0) return 0; // no nearby door
 	move_door_to_other_side_of_wall(door, -1.01, 0); // move a bit further away from the outside of the building to make it in front of the orig door
 	clip_door_to_interior(door);
-	bdraw.add_tquad(*this, door, bcube, tid_nm_pair_t(WHITE_TEX), WHITE);
 	// draw the opened door
 	building_draw_t door_draw;
 	door_rotation_t drot; // return value is unused
@@ -2653,6 +2652,7 @@ bool building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, 
 	// draw other exterior doors as closed in case they're visible through the open door; is this needed for pedestrians?
 	if (!only_open) {get_ext_door_verts(door_draw, pos, view_dir, door_ix);}
 	door_draw.draw(s, 0, 1); // direct_draw_no_vbo=1
+	bdraw.add_tquad(*this, door, bcube, tid_nm_pair_t(WHITE_TEX), WHITE);
 	return 1;
 }
 void building_t::get_ext_door_verts(building_draw_t &bdraw, point const &viewer, vector3d const &view_dir, int skip_door_ix) const {
@@ -4678,6 +4678,24 @@ public:
 		} // for y
 		return 0;
 	}
+	void get_grass_coll_cubes(cube_t const &region, vect_cube_t &out) const {
+		if (empty() || !range.intersects_xy(region)) return; // no buildings, or outside buildings bcube
+		unsigned ixr[2][2];
+		get_grid_range(region, ixr);
+
+		for (unsigned y = ixr[0][1]; y <= ixr[1][1]; ++y) {
+			for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {
+				grid_elem_t const &ge(get_grid_elem(x, y));
+				if (ge.empty()) continue; // skip empty grid
+				if (!region.intersects_xy(ge.bcube)) continue;
+
+				for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) {
+					if (!region.intersects_xy(*b)) continue; // no intersection
+					if (get_building(b->ix).is_parking()) {out.push_back(*b);} // only need to include parking garages
+				}
+			} // for x
+		} // for y
+	}
 	bool check_road_seg_sphere_coll(grid_elem_t const &ge, point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only, vector3d *cnorm) const {
 		for (auto r = ge.road_segs.begin(); r != ge.road_segs.end(); ++r) {
 			cube_t const cube(*r + xlate); // convert to camera space to agree with pos
@@ -5343,6 +5361,9 @@ public:
 		}
 		return 0;
 	}
+	void get_grass_coll_cubes(cube_t const &region, vect_cube_t &out) const {
+		for (auto i = tiles.begin(); i != tiles.end(); ++i) {i->second.get_grass_coll_cubes(region, out);}
+	}
 	void get_road_segs_in_region(cube_t const &region, vect_cube_t &out) const {
 		for (auto i = tiles.begin(); i != tiles.end(); ++i) {i->second.get_road_segs_in_region(region, out);}
 	}
@@ -5520,6 +5541,10 @@ bool check_buildings_no_grass(point const &pos) { // for tiled terrain mode; pos
 	if (building_creator.check_point_coll_xy(pos)) return 1; // secondary buildings only
 	if (building_tiles  .check_point_coll_xy(pos)) return 1;
 	return 0;
+}
+void get_building_grass_coll_cubes(cube_t const &region, vect_cube_t &out) {
+	building_creator.get_grass_coll_cubes(region, out);
+	building_tiles  .get_grass_coll_cubes(region, out);
 }
 bool check_buildings_cube_coll(cube_t const &c, bool xy_only, bool inc_basement, building_t const *exclude1, building_t const *exclude2) {
 	return (building_creator_city.check_cube_coll(c, xy_only, inc_basement, exclude1, exclude2) ||

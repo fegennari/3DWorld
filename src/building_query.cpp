@@ -36,6 +36,7 @@ bool building_t::player_can_see_outside() const {
 	vector3d const xlate(get_tiled_terrain_model_xlate());
 	point const camera_pos(get_camera_pos()), camera_bs(camera_pos - xlate);
 	float const floor_spacing(get_window_vspace());
+	if (is_parking() && camera_bs.z > ground_floor_z1) return 1; // open walls
 
 	if (!has_int_windows()) { // no windows looking out
 		if (building_has_open_ext_door && !doors.empty()) { // maybe can see out a door

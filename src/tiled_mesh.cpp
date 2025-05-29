@@ -92,6 +92,7 @@ void building_gameplay_action_key(int mode, bool mouse_wheel);
 bool player_cant_see_outside_building();
 bool check_cube_occluded(cube_t const &cube, vect_cube_t const &occluders, point const &viewer);
 void get_city_grass_coll_cubes(cube_t const &region, vect_cube_t &out, vect_cube_t &out_bt);
+void get_building_grass_coll_cubes(cube_t const &region, vect_cube_t &out);
 int check_city_contains_overlaps(cube_t const &query);
 bool check_inside_city(point const &pos, float radius);
 cube_t get_city_bcube_overlapping(cube_t const &c);
@@ -1096,6 +1097,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 		vect_cube_t exclude_cubes, row_exclude_cubes, allow_cubes; // in camera space
 		cube_t const mesh_bcube(get_mesh_bcube());
 		get_city_grass_coll_cubes(mesh_bcube, exclude_cubes, allow_cubes);
+		get_building_grass_coll_cubes(mesh_bcube, exclude_cubes);
 		has_tunnel |= tile_contains_tunnel(mesh_bcube);
 
 #pragma omp parallel for schedule(static,1) num_threads(2)
