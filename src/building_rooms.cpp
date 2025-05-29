@@ -388,8 +388,13 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			colorRGBA const chair_color(chair_color_per_floor ? (chair_colors[(chair_color_ix + f*(mat_ix + 1)) % NUM_CHAIR_COLORS]) : base_chair_color);
 
 			if (is_parking_garage) { // parking garage; added first because this sets the number of lights
-				assert(!is_basement || !has_window); // basement/underground parking garages can't have windows
-				add_parking_garage_objs(rgen, *r, room_center.z, room_id, f, num_floors, nx, ny, light_delta_z, light_ix_assign);
+				if (is_parking() && !is_basement) { // parking structure
+					add_parking_struct_objs(rgen, *r, room_center.z, room_id, f, num_floors, nx, ny, light_delta_z, light_ix_assign);
+				}
+				else { // underground parking garage
+					assert(!has_window); // can't have windows
+					add_parking_garage_objs(rgen, *r, room_center.z, room_id, f, num_floors, nx, ny, light_delta_z, light_ix_assign);
+				}
 			}
 			else if (is_backrooms) {
 				add_backrooms_objs(rgen, *r, room_center.z, room_id, f, rooms_to_light);

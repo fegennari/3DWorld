@@ -1710,7 +1710,7 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 	} // for i
 	if (is_parking()) {
 		vect_cube_with_ix_t walls;
-		get_parking_garage_ext_walls(walls, 1); // exterior_surfaces=1
+		get_parking_struct_ext_walls(walls, 1); // exterior_surfaces=1
 		for (cube_with_ix_t const &w : walls) {bdraw.add_section(*this, 0, w, side_tex, side_color, w.ix, 0, 0, 0, 0);} // draw top and bottom; dim_mask from cube ix
 	}
 	for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {
@@ -1971,7 +1971,7 @@ void building_t::get_detail_shadow_casters(building_draw_t &bdraw) {
 void building_t::get_parking_str_wall_verts(building_draw_t &bdraw) const {
 	tid_nm_pair_t const tex(get_concrete_texture(1.50 * get_material().side_tex.tscale_x));
 	vect_cube_with_ix_t walls;
-	get_parking_garage_ext_walls(walls, 0); // exterior_surfaces=0
+	get_parking_struct_ext_walls(walls, 0); // exterior_surfaces=0
 	for (cube_with_ix_t const &w : walls) {bdraw.add_section(*this, 0, w, tex, WHITE, w.ix, 1, 1, 1, 0, 0.0, 0, 1.0, 1);} // dim_mask from cube ix; invert_normals=1
 }
 void building_t::get_all_drawn_ext_wall_verts(building_draw_t &bdraw) { // interior sides of exterior walls

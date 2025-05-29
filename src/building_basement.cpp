@@ -308,10 +308,6 @@ cube_t building_t::get_ext_basement_door_blocker() const {
 void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix,
 	unsigned num_floors, unsigned &nlights_x, unsigned &nlights_y, float &light_delta_z, light_ix_assign_t &light_ix_assign)
 {
-	if (zval >= ground_floor_z1) { // above ground parking garage
-		// TODO: requires custom logic that will be added later
-		return;
-	}
 	assert(has_room_geom());
 	rgen.rseed1 += 123*floor_ix; // make it unique per floor
 	rgen.rseed2 += room_id;

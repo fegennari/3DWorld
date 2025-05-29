@@ -7,7 +7,7 @@
 
 
 // index bits: enable dims: 1=x, 2=y, 4=z | disable cube faces: 8=x1, 16=x2, 32=y1, 64=y2, 128=z1, 256=z2
-void building_t::get_parking_garage_ext_walls(vect_cube_with_ix_t &walls, bool exterior_surfaces) const {
+void building_t::get_parking_struct_ext_walls(vect_cube_with_ix_t &walls, bool exterior_surfaces) const {
 	assert(is_parking());
 	assert(real_num_parts == (1 + has_basement()));
 	cube_t const &part(parts.front()); // above ground part
@@ -69,4 +69,14 @@ void building_t::get_parking_garage_ext_walls(vect_cube_with_ix_t &walls, bool e
 			else {walls.emplace_back(sides[n], (exterior_surfaces ? 4 : face_masks[n]));} // add entire wall
 		} // for n
 	} // for f
+}
+
+void building_t::add_parking_struct_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix,
+	unsigned num_floors, unsigned &nlights_x, unsigned &nlights_y, float &light_delta_z, light_ix_assign_t &light_ix_assign)
+{
+	assert(has_room_geom());
+	cube_t const &part(parts.front()); // above ground part
+	vect_room_object_t &objs(interior->room_geom->objs);
+	// add vertical support pillars spanning all floors
+	// TODO
 }
