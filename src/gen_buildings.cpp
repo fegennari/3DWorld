@@ -719,7 +719,7 @@ class building_draw_t {
 				if (pos_by_tile.empty()) return; // nothing to draw for this block/texture
 				vert_ix_pair const &start(pos_by_tile.front()), end(pos_by_tile.back());
 				if (!exclude) {draw_geom_range(state, shadow_only, start, end); return;} // non-exclude case
-				assert(exclude->start >= start.qix && exclude->start < exclude->end && exclude->end <= end.qix); // exclude (start, end) must be a subset of (start.qix, end.qix)
+				assert(exclude->start >= start.qix && exclude->start <= exclude->end && exclude->end <= end.qix); // exclude (start, end) must be a subset of (start.qix, end.qix)
 				draw_geom_range(state, shadow_only, start, vert_ix_pair(exclude->start, end.tix)); // first block of quads and all tris
 				draw_geom_range(state, shadow_only, vert_ix_pair(exclude->end, end.tix), end); // second block of quads and no tris
 			}
@@ -1968,6 +1968,12 @@ void building_t::get_detail_shadow_casters(building_draw_t &bdraw) {
 	}
 }
 
+void building_t::get_parking_str_wall_verts(building_draw_t &bdraw) const {
+	tid_nm_pair_t const tex(get_concrete_texture(1.50 * get_material().side_tex.tscale_x));
+	vect_cube_with_ix_t walls;
+	get_parking_garage_ext_walls(walls, 0); // exterior_surfaces=0
+	for (cube_with_ix_t const &w : walls) {bdraw.add_section(*this, 0, w, tex, WHITE, w.ix, 1, 1, 1, 0, 0.0, 0, 1.0, 1);} // dim_mask from cube ix; invert_normals=1
+}
 void building_t::get_all_drawn_ext_wall_verts(building_draw_t &bdraw) { // interior sides of exterior walls
 	//if (interior == nullptr) return; // only needed if building has an interior?
 	if (!is_valid()) return; // invalid building
@@ -1975,12 +1981,7 @@ void building_t::get_all_drawn_ext_wall_verts(building_draw_t &bdraw) { // inter
 	ext_side_qv_range.draw_ix = bdraw.get_to_draw_ix(wall_tex);
 	ext_side_qv_range.start   = bdraw.get_num_verts (wall_tex);
 
-	if (is_parking()) { // parking structure has custom walls
-		tid_nm_pair_t const tex(get_concrete_texture(1.50 * get_material().side_tex.tscale_x));
-		vect_cube_with_ix_t walls;
-		get_parking_garage_ext_walls(walls, 0); // exterior_surfaces=0
-		for (cube_with_ix_t const &w : walls) {bdraw.add_section(*this, 0, w, tex, WHITE, w.ix, 1, 1, 1, 0);} // dim_mask from cube ix
-	}
+	if (is_parking()) {get_parking_str_wall_verts(bdraw);} // parking structure has custom walls
 	else {
 		for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) { // multiple cubes/parts/levels, room parts only, no AO
 			if (!is_basement(i)) {bdraw.add_section(*this, 1, *i, wall_tex, wall_color, 3, 0, 0, 1, 0);} // XY
@@ -2676,6 +2677,11 @@ bool building_t::get_all_nearby_ext_door_verts(building_draw_t &bdraw, shader_t 
 
 void building_t::get_split_int_window_wall_verts(building_draw_t &bdraw_front, building_draw_t &bdraw_back, point const &only_cont_pt_in, bool make_all_front) const {
 	if (!is_valid()) return; // invalid building
+
+	if (is_parking()) { // treat all walls as front
+		get_parking_str_wall_verts(bdraw_front);
+		return;
+	}
 	point const only_cont_pt(get_inv_rot_pos(only_cont_pt_in));
 	tid_nm_pair_t const wall_tex(get_interior_ext_wall_texture());
 	cube_t const cont_part(get_part_containing_pt(only_cont_pt)); // part containing the point
