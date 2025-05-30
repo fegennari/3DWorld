@@ -2137,10 +2137,10 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 		if (i->in_mall == 1) continue; // mall concourse stairs are open; skip drawing of landing interior faces
 		unsigned dim_mask(3); // disable faces: 8=x1, 16=x2, 32=y1, 64=y2
 		if (i->for_elevator) {dim_mask |= (120 - (1 << (i->get_face_id() + 3)));} // disable all but the open side of the elevator
-		else if (i->for_ramp) {
-			cube_t const &basement(get_basement());
-			if (i->dim == 0) {dim_mask |= ((i->yc() < basement.yc()) ? 32 : 64);} // X, skip Y face closest to building wall
-			else             {dim_mask |= ((i->xc() < basement.xc()) ?  8 : 16);} // Y, skip X face closest to building wall
+		else if (i->for_ramp && !is_parking()) {
+			bool const dir(interior->pg_ramp.ix & 1);
+			if (i->dim == 0) {dim_mask |= (dir ? 32 : 64);} // X, skip Y face closest to building wall
+			else             {dim_mask |= (dir ?  8 : 16);} // Y, skip X face closest to building wall
 		}
 		if (!is_house && has_ext_basement() && point_in_extended_basement_not_basement(i->get_cube_center())) { // concrete edges for office ext basements
 			bdraw.add_section(*this, 0, *i, get_concrete_texture(), WHITE, dim_mask, 0, 0, 1, 0, 0.0, 0, 1.0, 1); // no AO; X/Y dims only, inverted normals

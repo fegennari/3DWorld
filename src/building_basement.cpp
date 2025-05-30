@@ -296,13 +296,16 @@ void add_pg_obstacles(vect_room_object_t const &objs, unsigned objs_start, unsig
 	} // for i
 }
 
+void building_t::expand_door_blocker(cube_t &blocker) const {
+	bool const dim(blocker.dy() < blocker.dx());
+	blocker.expand_in_dim( dim, get_doorway_width ());
+	blocker.expand_in_dim(!dim, get_wall_thickness());
+}
 cube_t building_t::get_ext_basement_door_blocker() const {
 	if (!has_ext_basement()) return cube_t();
-	door_t const &eb_door(interior->get_ext_basement_door());
-	cube_t avoid(eb_door.get_true_bcube());
-	avoid.expand_in_dim( eb_door.dim, get_doorway_width ());
-	avoid.expand_in_dim(!eb_door.dim, get_wall_thickness());
-	return avoid;
+	cube_t blocker(interior->get_ext_basement_door().get_true_bcube());
+	expand_door_blocker(blocker);
+	return blocker;
 }
 
 void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix,
@@ -314,6 +317,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	// rows are separated by walls and run in dim, with a road and parking spaces on either side of it;
 	// spaces are arranged in !dim, with roads along the edges of the building that connect to the roads of each row
 	bool const dim(room.dx() < room.dy()); // long/primary dim; cars are lined up along this dim, oriented along the other dim
+	bool const in_basement(zval < ground_floor_z1);
 	vector3d const car_sz(get_parked_car_size()), parking_sz(1.1*car_sz.x, 1.4*car_sz.y, 1.5*car_sz.z); // space is somewhat larger than a car; car length:width = 2.3
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness());
 	float const int_wall_thick(get_wall_thickness()), wall_thickness(1.2*int_wall_thick), wall_hc(0.5*wall_thickness); // thicker
@@ -362,11 +366,21 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	interior->get_stairs_and_elevators_bcubes_intersecting_cube(room_floor_cube, obstacles,         wall_thickness ); // with small clearance in front, for beams and pipes
 	interior->get_stairs_and_elevators_bcubes_intersecting_cube(room_floor_cube, obstacles_exp, 0.9*window_vspacing); // with more  clearance in front, for walls and pillars
 
-	if (has_ext_basement()) { // everything should avoid the extended basement door
-		cube_t const &avoid(get_ext_basement_door_blocker());
-		obstacles    .push_back(avoid);
-		obstacles_exp.push_back(avoid);
-		obstacles_ps .push_back(avoid);
+	if (in_basement && has_ext_basement()) { // everything should avoid the extended basement door
+		cube_t const blocker(get_ext_basement_door_blocker());
+		obstacles    .push_back(blocker);
+		obstacles_exp.push_back(blocker);
+		obstacles_ps .push_back(blocker);
+	}
+	if (!in_basement && floor_ix == 0) { // above ground parking structure, first floor: avoid exterior doors
+		for (tquad_with_ix_t const &d : doors) { // find all doors on the ground floor
+			if (d.type == tquad_with_ix_t::TYPE_RDOOR) continue; // roof access door - skip
+			cube_t blocker(d.get_bcube());
+			expand_door_blocker(blocker);
+			obstacles    .push_back(blocker);
+			obstacles_exp.push_back(blocker);
+			obstacles_ps .push_back(blocker);
+		} // for d
 	}
 	cube_with_ix_t const &ramp(interior->pg_ramp);
 	bool const is_top_floor(floor_ix+1 == num_floors);
@@ -414,7 +428,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		}
 	}
 	// add equipment room for first elevator extending to parking garage, only on the lowest floor
-	if (floor_ix == 0) {
+	if (in_basement && floor_ix == 0) {
 		for (elevator_t const &e : interior->elevators) {
 			if (e.z1() > zval || !room.contains_cube_xy(e)) continue;
 			bool const dim(!e.dim), dir(rgen.rand_bool());
@@ -545,11 +559,26 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		for (unsigned p = 0; p < num_pillars; ++p) { // add support pillars
 			float const ppos(pillar_start + p*pillar_spacing);
 			set_wall_width(pillar, ppos, pillar_hwidth, dim);
-			if (has_bcube_int_xy(pillar, obstacles_exp)) continue; // skip entire pillar if it intersects stairs or an elevator
+			
+			if (has_bcube_int_xy(pillar, obstacles_exp)) { // skip or move entire pillar if it intersects stairs, elevator, or ramp
+				if (in_basement) continue; // skip
+				// parking structure, try to move the pillar
+				float shift_amt((rgen.rand_bool() ? 1.0 : -1.0)*max(pillar_hwidth, 0.1f*pillar_spacing));
+				bool valid(0);
+
+				for (unsigned n = 0; n < 4; ++n) { // two attempts to shift in each direction
+					set_wall_width(pillar, (ppos + shift_amt), pillar_hwidth, dim);
+					if (!has_bcube_int_xy(pillar, obstacles_exp)) {valid = 1; break;}
+					shift_amt *= -1.0; // try the other dir
+					if (n&1) {shift_amt *= 2.0;} // use a larger shift for every second iteration
+				} // for n
+				if (!valid) continue;
+			}
 			pillars.push_back(pillar);
 		} // for p
 	} // for n
 	for (auto const &p : pillars) {objs.emplace_back(p, TYPE_PG_PILLAR, room_id, !dim, 0, 0, tot_light_amt, SHAPE_CUBE, wall_color);}
+	// TODO: add a fire extinguisher to a random pillar
 
 	// add beams in !dim, at and between pillars
 	unsigned const beam_flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING);
@@ -684,7 +713,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		vect_cube_t walls, beams;
 		add_pg_obstacles(objs, objs_start, objs.size(), walls, beams, obstacles);
 		if (interior->ind_info) {vector_add_to(interior->ind_info->pg_extended_pipes, obstacles);} // must avoid sprinkler pipes coming from above
-		add_basement_electrical(obstacles, walls, beams, room_id, rgen);
+		if (in_basement) {add_basement_electrical(obstacles, walls, beams, room_id, rgen);} // not for parking structures
 		// get pipe ends (risers) coming in through the ceiling
 		vect_riser_pos_t sewer, cold_water, hot_water, gas_pipes;
 		get_pipe_basement_water_connections(sewer, cold_water, hot_water, rgen);
@@ -853,15 +882,17 @@ void building_t::add_basement_electrical_house(rand_gen_t &rgen) {
 }
 
 void building_t::add_parking_garage_ramp(rand_gen_t &rgen) {
-	assert(interior && !is_house && has_parking_garage);
+	bool const is_parking_str(is_parking());
+	assert(interior && !is_house && (has_parking_garage || is_parking_str));
 	cube_with_ix_t &ramp(interior->pg_ramp);
 	assert(ramp.is_all_zeros()); // must not have been set
-	cube_t const &basement(get_basement());
-	bool const dim(basement.dx() < basement.dy()); // long/primary dim
+	cube_t room(has_basement() ? get_basement() : parts.front()); // basement parking garage or above ground parking structure
+	if (is_parking_str) {room.z2() = parts.front().z2();} // extend from basement to top of parking structure
+	bool const dim(room.dx() < room.dy()); // long/primary dim
 	// see building_t::add_parking_garage_objs(); make sure there's space for a ramp plus both exit dirs within the building width
-	float const width(basement.get_sz_dim(!dim)), road_width(min(0.25f*width, 2.3f*get_parked_car_size().y));
+	float const width(room.get_sz_dim(!dim)), road_width(min(0.25f*width, 2.3f*get_parked_car_size().y));
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness);
-	float const z1(basement.z1() + fc_thick), z2(basement.z2() + fc_thick); // bottom level basement floor to first floor floor
+	float const z1(room.z1() + fc_thick), z2(room.z2() + fc_thick); // bottom level room floor to first floor floor
 	bool const ramp_pref_xdir(rgen.rand_bool()), ramp_pref_ydir(rgen.rand_bool());
 	bool added_ramp(0), dir(0);
 
@@ -870,10 +901,10 @@ void building_t::add_parking_garage_ramp(rand_gen_t &rgen) {
 			for (unsigned yd = 0; yd < 2; ++yd) {
 				bool const xdir(bool(xd) ^ ramp_pref_xdir), ydir(bool(yd) ^ ramp_pref_ydir);
 				float const xsz((dim ? 2.0 : 1.0)*road_width), ysz((dim ? 1.0 : 2.0)*road_width); // longer in !dim
-				unsigned const num_ext(unsigned(basement.d[0][xdir] == bcube.d[0][xdir]) + unsigned(basement.d[1][ydir] == bcube.d[1][ydir]));
+				unsigned const num_ext(unsigned(room.d[0][xdir] == bcube.d[0][xdir]) + unsigned(room.d[1][ydir] == bcube.d[1][ydir]));
 				if (num_ext < 2-pass) continue; // must be on the exterior edge of the building in both dims for pass 0, and one dim for pass 1
 				dir = (dim ? xdir : ydir);
-				point corner(basement.d[0][xdir], basement.d[1][ydir], z1);
+				point corner(room.d[0][xdir], room.d[1][ydir], z1);
 				corner[!dim] += (dir ? -1.0 : 1.0)*road_width; // shift away from the wall so that cars have space to turn onto the level floor
 				point const c1((corner.x - 0.001*(xdir ? 1.0 : -1.0)*xsz), (corner.y - 0.001*(ydir ? 1.0 : -1.0)*ysz), z1); // slight inward shift to prevent z-fighting
 				point const c2((corner.x + (xdir ? -1.0 : 1.0)*xsz), (corner.y + (ydir ? -1.0 : 1.0)*ysz), z2);
@@ -892,10 +923,11 @@ void building_t::add_parking_garage_ramp(rand_gen_t &rgen) {
 	} // for pass
 	if (!added_ramp) return; // what if none of the 4 corners work for a ramp?
 	// add landings, which are used to draw the vertical edges of the cutout
-	unsigned num_floors(calc_num_floors(basement, window_vspacing, floor_thickness));
-	float z(basement.z1() + window_vspacing); // start at upper floor rather than lower floor
+	unsigned num_floors(calc_num_floors(room, window_vspacing, floor_thickness));
+	float z(room.z1() + window_vspacing); // start at upper floor rather than lower floor
 
-	if (1) { // FIXME: rooms on the ground floor above ramps aren't yet handled, so clip ramps to avoid disrupting their floors until this is fixed
+	if (!is_parking()) {
+		// FIXME: rooms on the ground floor above ramps aren't yet handled (except for parking structures), so clip ramps to avoid disrupting their floors until this is fixed
 		ramp.z2() -= 2.0*floor_thickness;
 		--num_floors;
 		interior->ignore_ramp_placement = 1; // okay to place room objects over ramps because the floor has not been removed

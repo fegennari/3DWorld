@@ -11,8 +11,8 @@ void building_t::get_parking_struct_ext_walls(vect_cube_with_ix_t &walls, bool e
 	assert(is_parking());
 	assert(real_num_parts == (1 + has_basement()));
 	cube_t const &part(parts.front()); // above ground part
-	float const floor_spacing(get_window_vspace()), floor_thick(get_floor_thickness()), wall_thick(get_wall_thickness());
-	float const lower_wall_height(0.35*floor_spacing), upper_wall_height(0.15*floor_spacing);
+	float const floor_spacing(get_window_vspace()), floor_thick(get_floor_thickness()), wall_thick(get_park_struct_wall_thick());
+	float const lower_wall_height(0.35*floor_spacing), upper_wall_height(0.15*floor_spacing), int_ext_wall_fc_gap(0.5*floor_thick);
 	unsigned num_floors(calc_num_floors(part, floor_spacing, floor_thick));
 	assert(num_floors > 0);
 	vect_cube_t wall_parts, door_cuts, temp;
@@ -58,8 +58,8 @@ void building_t::get_parking_struct_ext_walls(vect_cube_with_ix_t &walls, bool e
 				for (unsigned lu = 0; lu < 2; ++lu) { // split into lower and upper sections
 					if (f == (lu ? num_floors : 0)) continue; // no lower/upper section for this floor
 					cube_t wall(sides[n]);
-					if (lu) {wall.z1() = zval + 0.5*floor_thick;} // upper wall
-					else    {wall.z2() = zval - 0.5*floor_thick;} // lower wall
+					if (lu) {wall.z1() = zval + int_ext_wall_fc_gap;} // upper wall
+					else    {wall.z2() = zval - int_ext_wall_fc_gap;} // lower wall
 					wall_parts.clear();
 					subtract_cubes_from_cube(wall, door_cuts, wall_parts, temp, 2); // check zval overlap
 					unsigned const face_mask(exterior_surfaces ? 4 : face_masks[n]);
@@ -74,9 +74,8 @@ void building_t::get_parking_struct_ext_walls(vect_cube_with_ix_t &walls, bool e
 void building_t::add_parking_struct_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix,
 	unsigned num_floors, unsigned &nlights_x, unsigned &nlights_y, float &light_delta_z, light_ix_assign_t &light_ix_assign)
 {
-	assert(has_room_geom());
-	cube_t const &part(parts.front()); // above ground part
-	vect_room_object_t &objs(interior->room_geom->objs);
-	// add vertical support pillars spanning all floors
-	// TODO
+	add_parking_garage_objs(rgen, room, zval, room_id, floor_ix, num_floors, nlights_x, nlights_y, light_delta_z, light_ix_assign);
+	//cube_t const &part(parts.front()); // above ground part
+	//vect_room_object_t &objs(interior->room_geom->objs);
+	// TODO: anything else to add?
 }

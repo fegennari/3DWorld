@@ -190,8 +190,10 @@ unsigned calc_num_floors(cube_t const &c, float window_vspacing, float floor_thi
 	return num_floors;
 }
 
-void subtract_cube_xy(cube_t const &c, cube_t const &r, cube_t *out) { // subtract r from c; ignores zvals
-	assert(c.contains_cube_xy(r));
+void subtract_cube_xy(cube_t const &c, cube_t const &ri, cube_t *out) { // subtract r from c; ignores zvals
+	//assert(c.contains_cube_xy(ri));
+	cube_t r(ri);
+	r.intersect_with_cube_xy(c);
 	for (unsigned i = 0; i < 4; ++i) {out[i] = c;}
 	out[0].y2() = r.y1(); // bottom -y
 	out[1].y1() = r.y2(); // top    +y
@@ -439,7 +441,9 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			rooms.back().is_single_floor = 1;
 		}
 		else if (is_parking() && part_id == 0) { // parking structure
-			add_room(*p, part_id, 2); // add entire part as a room; num_lights is a placeholder and will be calculated later
+			cube_t room(*p); // start with full part
+			room.expand_by_xy(-get_park_struct_wall_thick()); // shrink off exterior walls
+			add_room(room, part_id); // add entire part as a room; num_lights will be calculated later
 			rooms.back().assign_all_to(RTYPE_PARKING);
 		}
 		else if (use_hallway) {
@@ -1300,7 +1304,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 
 	// add stairs to connect together stacked parts for office buildings; must be done last after all walls/ceilings/floors have been assigned
 	for (unsigned p = 0; p < real_num_parts; ++p) {connect_stacked_parts_with_stairs(rgen, parts[p], p);}
-	if (has_parking_garage) {add_parking_garage_ramp(rgen);}
+	if (has_parking_garage || is_parking()) {add_parking_garage_ramp(rgen);}
 
 	// furnace logic
 	if (has_attic()) {
@@ -1717,7 +1721,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	// increase floor thickness if !is_house? but then we would probably have to increase the space between floors as well, which involves changing the texture scale
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness);
 	float const doorway_width(get_nominal_doorway_width()), wall_thickness(get_wall_thickness());
-	float min_ewidth(1.5*doorway_width), ewidth(min_ewidth); // for elevators
+	float min_ewidth(1.5*doorway_width), ewidth(min_ewidth); // square; for elevators
 	float z(part.z1());
 	cube_t stairs_cut, elevator_cut;
 	bool stairs_dim(0), bend_dir(0), stairs_have_railing(1), extended_from_above(0);
@@ -1856,13 +1860,12 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	}
 	// only add stairs to first part of a house unless we haven't added stairs yet, or if it's the top floor of a stacked part
 	else if (!is_house || interior->stairwells.empty() || (first_part_this_stack && part.z1() > ground_floor_z1)) {
+		bool const is_parking_str(is_parking() && !is_basement_room);
 		bool add_elevator(0);
-		if (is_parking() && !is_basement_room) {add_elevator = 1;} // always add an elevator to parking structures
-
 		// sometimes add an elevator to building parts, but not the first part in a stack (to guarantee we have at least one set of stairs)
 		// it might not be possible to place an elevator a part with no interior rooms, but that should be okay, because some other part will still have stairs
 		// do we need support for multiple floor cutouts stairs + elevator in this case as well?
-		else if (!is_house && !must_add_stairs) {
+		if (!is_house && !is_parking_str && !must_add_stairs) {
 			float const elevator_prob[4] = {0.9, 0.5, 0.3, 0.1}; // higher chance of adding an elevator if there are more existing elevators
 			add_elevator = (rgen.rand_float() < elevator_prob[min(interior->elevators.size(), size_t(3))]);
 		}
@@ -1878,6 +1881,20 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 				room_t &room(interior->rooms[stairs_room]);
 				assert(room.part_id == part_ix); // sanity check
 
+				if (is_parking_str) {
+					// always add an elevator to parking structures; place against a wall;
+					// it should be by the main exterior door, but that hasn't been placed yet, and it may be far from the building center
+					bool const dim(rgen.rand_bool()), dir(rgen.rand_bool());
+					float const end_spacing(0.25*room.get_sz_dim(!dim)); // center 50% of wall
+					elevator_t elevator(room, stairs_room, dim, !dir, 1, 0); // at_edge=1, interior=0
+					//elevator.d[dim][ dir] += (dir ? -1.0 : 1.0)*get_park_struct_wall_thick(); // against inside of exterior wall
+					elevator.d[dim][!dir]  = elevator.d[dim][dir] + (dir ? -1.0 : 1.0)*ewidth;
+					float const center_pos(rgen.rand_uniform((room.d[!dim][0] + end_spacing), (room.d[!dim][1] - end_spacing)));
+					set_wall_width(elevator, center_pos, 0.5*ewidth, !dim);
+					// can't be blocked by anything?
+					add_or_extend_elevator(elevator, 1); // add=1
+					elevator_cut = elevator;
+				}
 				if (add_elevator) {
 					if (min(room.dx(), room.dy()) < 2.0*ewidth) continue; // room is too small to place an elevator
 					bool placed(0);
@@ -1902,7 +1919,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 							if (is_cube_close_to_doorway(elevator, room))     continue; // try again
 							if (check_skylight_intersection(elevator))        continue; // check skylights; is this necessary?
 							if (!check_cube_within_part_sides(elevator))      continue; // outside building; do we need to check for clearance?
-							add_or_extend_elevator(elevator, 1);
+							add_or_extend_elevator(elevator, 1); // add=1
 							elevator_cut = elevator;
 							placed       = 1; // successfully placed
 						} // for x

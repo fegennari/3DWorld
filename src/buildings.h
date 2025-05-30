@@ -2166,6 +2166,7 @@ struct building_t : public building_geom_t {
 	float get_floor_thickness() const {return get_floor_thick_val()*get_window_vspace();}
 	float get_fc_thickness   () const {return 0.5*get_floor_thickness();} // floor/ceiling thickness
 	float get_wall_thickness () const {return WALL_THICK_VAL*get_window_vspace();}
+	float get_park_struct_wall_thick() const {return get_wall_thickness();}
 	float get_wind_trim_thick() const {return 0.75*get_wall_thickness();}
 	float get_trim_thickness () const {return 0.1 *get_wall_thickness();}
 	float get_trim_height    () const {return 0.04*get_window_vspace ();}
@@ -2840,6 +2841,7 @@ private:
 	bool add_padlock_to_door     (unsigned door_ix, unsigned lock_color_mask, rand_gen_t &rgen);
 	bool remove_padlock_from_door(unsigned door_ix, point const &remove_pos);
 	vector3d get_parked_car_size() const;
+	void expand_door_blocker(cube_t &blocker) const;
 	cube_t get_ext_basement_door_blocker() const;
 	void add_parking_garage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix,
 		unsigned num_floors, unsigned &nlights_x, unsigned &nlights_y, float &light_delta_z, light_ix_assign_t &light_ix_assign);
