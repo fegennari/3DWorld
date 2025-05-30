@@ -1122,6 +1122,7 @@ bool building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 // find all plumbing fixtures such as toilets, urinals, sinks, and showers; these should have all been placed in rooms by now
 void building_t::get_pipe_basement_water_connections(vect_riser_pos_t &sewer, vect_riser_pos_t &cold_water, vect_riser_pos_t &hot_water, rand_gen_t &rgen) const {
 	assert(has_room_geom());
+	if (!has_basement()) {assert(is_parking()); return;} // no water connections in parking garages
 	cube_t const &basement(get_basement());
 	float const merge_dist = 4.0; // merge two pipes if their combined radius is within this distance
 	// use reduced pipe radius for apartments and hotels since they have so many plumbing fixtures
@@ -1275,6 +1276,7 @@ void building_t::get_pipe_basement_water_connections(vect_riser_pos_t &sewer, ve
 }
 
 void building_t::get_pipe_basement_gas_connections(vect_riser_pos_t &pipes) const {
+	if (!has_basement()) {assert(is_parking()); return;} // no water connections in parking garages
 	float const pipe_radius(0.005*get_window_vspace()), ceil_zval(get_basement().z2() - get_fc_thickness());
 
 	for (room_object_t const &i : interior->room_geom->objs) { // check all objects placed so far

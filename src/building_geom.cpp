@@ -322,7 +322,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 				btype = (rgen.rand_bool() ? BTYPE_WAREHOUSE : BTYPE_FACTORY); // make this a factory or warehouse
 				assign_name(rgen); // re-assign a name
 			}
-			else if (0 && btype == BTYPE_OFFICE && is_cube() && num_floors <= 6 && roof_type == ROOF_TYPE_FLAT) { // <= 6 floors
+			else if (btype == BTYPE_OFFICE && is_cube() && num_floors <= 6 && roof_type == ROOF_TYPE_FLAT) { // <= 6 floors
 				btype = BTYPE_PARKING; // make a parking garage
 				assign_name(rgen); // re-assign a name
 			}
