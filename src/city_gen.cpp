@@ -272,8 +272,8 @@ cube_t get_bcube(bridge_t const &bridge) {
 	return bcube;
 }
 template<typename T> bool check_bcubes_sphere_coll(vector<T> const &bcubes, point const &sc, float radius, bool xy_only) {
-	for (auto i = bcubes.begin(); i != bcubes.end(); ++i) {
-		if (check_bcube_sphere_coll(get_bcube(*i), sc, radius, xy_only)) return 1;
+	for (auto const &c : bcubes) {
+		if (check_bcube_sphere_coll(get_bcube(c), sc, radius, xy_only)) return 1;
 	}
 	return 0;
 }
@@ -1229,9 +1229,12 @@ public:
 		get_bcubes_region_coll_xy(roads, out, query_region, xlate);	
 		// include global road network intersections
 		for (unsigned i = 0; i < 3; ++i) {get_bcubes_region_coll_xy(isecs[i], out, query_region, xlate);} // {2-way, 3-way, 4-way}
-		get_bcubes_region_coll_xy(bridges, out_bt, query_region, xlate);
 		get_bcubes_region_coll_xy(tunnels, out_bt, query_region, xlate);
 		get_bcubes_region_coll_xy(tracks,  out,    query_region, xlate);
+
+		for (bridge_t const &b : bridges) { // only bridges over land count
+			if (!b.over_water && b.intersects_xy(query_region)) {out_bt.push_back(b + xlate);}
+		}
 	}
 	// pos is in camera space
 	bool proc_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float dist, float radius, float prev_frame_zval, vector3d *cnorm, bool for_player) const {
