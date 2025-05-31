@@ -443,12 +443,28 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 		if (!is_interior) { // not interior to a part - check roof access
 			float const floor_thickness(get_floor_thickness());
 
-			for (auto i = interior->stairwells.begin(); i != interior->stairwells.end(); ++i) {
-				if (!i->roof_access) continue;
-				cube_t test_cube(*i);
+			for (stairwell_t const &s : interior->stairwells) {
+				if (!s.roof_access) continue;
+				cube_t test_cube(s);
 				test_cube.expand_by_xy(-0.5f*radius);
 				if (!test_cube.contains_pt_xy(pos2 - xlate)) continue; // pos not over stairs
-				if (zval < i->z2() + radius + floor_thickness) {is_interior = 1; break;} // Note: don't have to check zval > i->z2() because we know that !is_interior
+				if (zval < s.z2() + radius + floor_thickness) {is_interior = 1; break;} // Note: don't have to check zval > i->z2() because we know that !is_interior
+			}
+			if (!is_interior && is_parking() && has_pg_ramp()) { // check parking garage ramp
+				cube_t ramp(interior->pg_ramp);
+				// handle ramp railings
+				bool const dim(interior->pg_ramp.ix >> 1), dir(interior->pg_ramp.ix & 1), side(ramp.get_center_dim(!dim) < parts.front().get_center_dim(!dim));
+				float const railing_height(0.5*get_window_vspace()), railing_hwidth(get_wall_thickness()); // conservative
+				cube_t end_railing(ramp);
+				set_cube_zvals(end_railing, ramp.z2(), (ramp.z2() + railing_height));
+				cube_t side_railing(end_railing);
+				set_wall_width(end_railing,  ramp.d[ dim][!dir], railing_hwidth,  dim);
+				set_wall_width(side_railing, ramp.d[!dim][side], railing_hwidth, !dim);
+				had_coll |= sphere_cube_int_update_pos(pos2, radius, (end_railing  + xlate), p_last2, xy_only, cnorm_ptr);
+				had_coll |= sphere_cube_int_update_pos(pos2, radius, (side_railing + xlate), p_last2, xy_only, cnorm_ptr);
+				// handle walking down ramp into building
+				ramp.expand_by_xy(-0.5f*radius);
+				is_interior |= (ramp.contains_pt_xy(pos2 - xlate) && zval < ramp.z2() + radius);
 			}
 		}
 	}
