@@ -585,8 +585,17 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	room_object const pillar_type (in_basement ? TYPE_PG_PILLAR : TYPE_OFF_PILLAR); // PG pillar is a detail object and culled early
 	unsigned    const pillar_flags(in_basement ? 0 : RO_FLAG_ADJ_HI); // flag as concrete office pillar
 	for (auto const &p : pillars) {objs.emplace_back(p, pillar_type, room_id, !dim, 0, pillar_flags, tot_light_amt, SHAPE_CUBE, wall_color);}
-	// TODO: add a fire extinguisher to a random pillar
 
+	// add a fire extinguisher to a random pillar
+	float fe_height(0.0), fe_radius(0.0);
+	
+	if (!pillars.empty() && get_fire_ext_height_and_radius(window_vspacing, fe_height, fe_radius)) {
+		rand_gen_t rgen2(rgen); // to avoid changing rgen for existing buildings
+		cube_t const &pillar(pillars[rgen2.rand()%pillars.size()]);
+		bool const dir(room.get_center_dim(!dim) < pillar.get_center_dim(!dim)); // place on side facing the room center
+		// is placement always valid? what about cars parked too close?
+		add_fire_ext(fe_height, fe_radius, zval, pillar.d[!dim][!dir], pillar.get_center_dim(dim), room_id, tot_light_amt, !dim, dir, 1); // center_mount=1
+	}
 	// add beams in !dim, at and between pillars
 	unsigned const beam_flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING);
 
