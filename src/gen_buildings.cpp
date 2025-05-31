@@ -1966,6 +1966,11 @@ void building_t::get_detail_shadow_casters(building_draw_t &bdraw) {
 	for (auto const &i : details) {
 		if (i.type == DETAIL_OBJ_COLL_SHAD || i.type == DETAIL_OBJ_SHAD_ONLY) {bdraw.add_cube(*this, i, tid_nm_pair_t(), WHITE);} // always a cube
 	}
+	if (interior && is_parking()) { // floors are shadow casters
+		for (cube_t const &f : interior->floors) {
+			if (f.z2() > ground_floor_z1) {bdraw.add_cube(*this, f, tid_nm_pair_t(), WHITE);}
+		}
+	}
 }
 
 void building_t::get_parking_str_wall_verts(building_draw_t &bdraw) const {

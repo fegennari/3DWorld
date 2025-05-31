@@ -412,20 +412,23 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		objs.emplace_back(ramp_railing, TYPE_RAILING, room_id, dim, dir, RO_FLAG_OPEN, tot_light_amt, SHAPE_CUBE, railing_color); // lower railing
 		set_cube_zvals(railing, rc.z2(), (rc.z2() + window_vspacing));
 		railing.translate_dim(!dim, side_sign*railing_thickness); // shift off the ramp and onto the ajdacent floor
+		unsigned railing_flags(RO_FLAG_OPEN | RO_FLAG_TOS);
 
 		if (!is_top_floor_of_stack) { // add side railing for lower level
 			railing.d[dim][!dir] += dir_sign*shorten_factor*ramp_length; // shorten length to only the upper part
-			objs.emplace_back(railing, TYPE_RAILING, room_id, dim, 0, (RO_FLAG_OPEN | RO_FLAG_TOS), tot_light_amt, SHAPE_CUBE, railing_color);
+			objs.emplace_back(railing, TYPE_RAILING, room_id, dim, 0, railing_flags, tot_light_amt, SHAPE_CUBE, railing_color);
 		}
 		else if (!is_blocked) { // add upper railings at the top for the full length
+			if (is_parking()) {railing_flags |= RO_FLAG_EXTERIOR;} // these railings will be exterior/on the roof
+			if (is_parking()) {railing.translate_dim(2, -0.5*floor_thickness);} // railings are on the roof, not the floor above
 			railing.translate_dim( dim, -0.5*dir_sign*railing_thickness); // shift down the ramp a bit
-			objs.emplace_back(railing, TYPE_RAILING, room_id, dim, 0, (RO_FLAG_OPEN | RO_FLAG_TOS), tot_light_amt, SHAPE_CUBE, railing_color);
+			objs.emplace_back(railing, TYPE_RAILING, room_id, dim, 0, railing_flags, tot_light_amt, SHAPE_CUBE, railing_color);
 			cube_t back_railing(rc);
 			copy_zvals(back_railing, railing);
 			back_railing.translate_dim( dim, -dir_sign*railing_thickness); // shift onto the ajdacent floor
 			back_railing.translate_dim(!dim, 0.5*side_sign*railing_thickness); // shift away from the exterior wall
 			back_railing.d[dim][dir] = back_railing.d[dim][!dir] + dir_sign*railing_thickness;
-			objs.emplace_back(back_railing, TYPE_RAILING, room_id, !dim, 0, (RO_FLAG_OPEN | RO_FLAG_TOS), tot_light_amt, SHAPE_CUBE, railing_color);
+			objs.emplace_back(back_railing, TYPE_RAILING, room_id, !dim, 0, railing_flags, tot_light_amt, SHAPE_CUBE, railing_color);
 		}
 	}
 	// add equipment room for first elevator extending to parking garage, only on the lowest floor
@@ -936,6 +939,7 @@ void building_t::add_parking_garage_ramp(rand_gen_t &rgen) {
 	for (unsigned f = 0; f < num_floors; ++f, z += window_vspacing) { // skip first floor - draw pairs of floors and ceilings
 		landing_t landing(ramp, 0, f, !dim, dir, 0, SHAPE_RAMP, 0, (f+1 == num_floors), 0, 1); // for_ramp=1
 		set_cube_zvals(landing, (z - fc_thick), (z + fc_thick));
+		if (is_parking() && f+1 == num_floors) {landing.z2() -= fc_thick;} // parking structure top floor is on the roof and doesn't include a floor above
 		interior->landings.push_back(landing);
 	}
 	// cut out spaces from floors and ceilings
