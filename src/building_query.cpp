@@ -36,12 +36,13 @@ bool building_t::player_can_see_outside() const {
 	vector3d const xlate(get_tiled_terrain_model_xlate());
 	point const camera_pos(get_camera_pos()), camera_bs(camera_pos - xlate);
 	float const floor_spacing(get_window_vspace());
-	if (is_parking() && camera_bs.z > ground_floor_z1) return 1; // open walls
+	bool const in_basement(camera_bs.z < ground_floor_z1);
+	if (is_parking() && !in_basement) return 1; // open walls
 
 	if (!has_int_windows()) { // no windows looking out
 		if (building_has_open_ext_door && !doors.empty()) { // maybe can see out a door
 			// maybe can see out open door on first floor or a walkway
-			if (have_walkway_ext_door || (camera_pos.z < (ground_floor_z1 + floor_spacing) && camera_pos.z > ground_floor_z1)) {
+			if (have_walkway_ext_door || (camera_pos.z < (ground_floor_z1 + floor_spacing) && !in_basement)) {
 				for (auto const &door : doors) {
 					cube_t const &bc(door.get_bcube());
 					if (bc.z1() < camera_bs.z && bc.z2() > camera_bs.z && camera_pdu.cube_visible(bc + xlate)) return 1;
@@ -66,7 +67,7 @@ bool building_t::player_can_see_outside() const {
 		return 0;
 	}
 	// maybe can see out a window
-	if (!interior || !has_basement() || camera_pos.z > ground_floor_z1) { // no interior, or not in the basement
+	if (!interior || !has_basement() || !in_basement) { // no interior, or not in the basement
 		if (has_complex_floorplan) return 1; // too complex to handle
 		// check for interior room such as the security room, where this helps the most
 		int const room_id(get_room_containing_pt(camera_bs));
@@ -105,7 +106,9 @@ bool building_t::player_can_see_outside() const {
 		stairs_exp.expand_by_xy(floor_spacing);
 		if (!get_basement().contains_cube_xy(stairs_exp)) return 1; // stairs near the edge of the building basement - window may be visible
 	} // for s
-	if (has_pg_ramp() && !interior->ignore_ramp_placement) {} // what about ramp?
+	if (has_pg_ramp() && !interior->ignore_ramp_placement && in_basement) { // check ramp
+		if (is_rot_cube_visible(interior->pg_ramp, xlate)) return 1; // ramp visible
+	}
 	return 0;
 }
 bool building_t::player_can_see_mall_skylight(vector3d const &xlate) const { // looking in or out
