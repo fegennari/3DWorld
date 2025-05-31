@@ -549,7 +549,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				room_object_t light_obj(l, TYPE_LIGHT, room_id, dim, dir, l_flags, light_amt, light_shape, color);
 				light_obj.obj_id = light_ix_assign.get_ix_for_light(l, walls_not_shared);
 				// flicker 2% chance parking garage, 5% chance ext basement/backrooms except for mall and its stores
-				unsigned const flicker_mod(is_parking_garage ? 50 : ((is_ext_basement && !is_mall_room) ? 20 : 0));
+				unsigned const flicker_mod((is_parking_garage && is_basement) ? 50 : ((is_ext_basement && !is_mall_room) ? 20 : 0));
 				
 				if (flicker_mod > 0 && (((rgen_lights.rand() + 3*f)%flicker_mod) == 13)) {light_obj.flags |= RO_FLAG_BROKEN;} // maybe make this a flickering light
 				else if (is_ext_basement && valid_lights.size() == 1 && (rgen_lights.rand() & 7) == 0) { // broken ext basement light; not for hallways with multiple lights

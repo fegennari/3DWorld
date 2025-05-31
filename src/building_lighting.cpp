@@ -1629,19 +1629,25 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			if (saw_open_stairs) {floor_above_region.set_to_zeros(); floor_below_region.set_to_zeros();}
 
 			if (has_pg_ramp()) { // check ramp if player is in the parking garage or the backrooms doorway
-				if (room.contains_pt(interior->pg_ramp.get_cube_center()) ||
-					(has_ext_basement() && interior->get_ext_basement_door().get_clearance_bcube().contains_pt(camera_rot)))
-				{
+				cube_t ramp_clipped(interior->pg_ramp);
+				if (interior->ignore_ramp_placement) {ramp_clipped.expand_in_dim(2, -0.5*window_vspacing);} // ignore top of ramp reaching part above
+
+				if (room.intersects(ramp_clipped) || (has_ext_basement() && interior->get_ext_basement_door().get_clearance_bcube().contains_pt(camera_rot))) {
 					stair_ramp_cuts.emplace_back(interior->pg_ramp, 3); // both dirs
-					cube_t &region((camera_floor == 0) ? floor_above_region : floor_below_region); // lights on PG level above or below may be visible through ramp opening
-					//region.set_to_zeros(); // conservative
+
+					for (unsigned lu = 0; lu < 2; ++lu) { // lights on PG level above or below may be visible through ramp opening; {below, above}
+						if (lu == 0 && camera_bs.z < interior->pg_ramp.z1() + window_vspacing) continue; // don't need to check below if player is on the bottom floor
+						if (lu == 1 && camera_bs.z > interior->pg_ramp.z2() - window_vspacing) continue; // don't need to check above if player is on the top    floor
+						cube_t &region(lu ? floor_above_region : floor_below_region);
+						//region.set_to_zeros(); // conservative
 					
-					if (!region.is_all_zeros()) {
-						bool const rdim(interior->pg_ramp.ix >> 1);
-						cube_t ramp_ext(interior->pg_ramp);
-						ramp_ext.expand_in_dim(rdim, interior->pg_ramp.get_sz_dim(rdim)); // expand to capture lights off the ends of the ramp
-						region.union_with_cube_xy(ramp_ext); // close enough?
-					}
+						if (!region.is_all_zeros()) {
+							bool const rdim(interior->pg_ramp.ix >> 1);
+							cube_t ramp_ext(interior->pg_ramp);
+							ramp_ext.expand_in_dim(rdim, interior->pg_ramp.get_sz_dim(rdim)); // expand to capture lights off the ends of the ramp
+							region.union_with_cube_xy(ramp_ext); // close enough?
+						}
+					} // for lu
 				}
 			}
 			for (cube_with_ix_t const &s : stair_ramp_cuts) {
@@ -1777,7 +1783,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if (camera_in_ext_basement && !light_vis_from_basement) continue; // camera in extended basement, and light not in basement
 		bool const in_retail_room(room.is_retail());
 		
-		// if the player is in the parking garage, retail lights may not be visible through stairs; this check may not be valid if ramps extend to the first floor in the future
+		// if the player is in the parking garage, retail lights may not be visible through stairs
 		if (camera_in_basement && !camera_on_stairs && in_retail_room && !interior->stairwells.empty()) {
 			stairwell_t const &s(interior->stairwells.front()); // assume first stairs placed are the ones connecting retail to parking garage, and no other stairs
 			if (s.is_u_shape()) continue; // U-shaped stairs - light is never visible
@@ -1786,6 +1792,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			cube_t opening(s);
 			set_wall_width(opening, entrance_plane, wall_thickness, s.dim); // shrink to a narrow strip
 			set_cube_zvals(opening, room.z1()-window_vspacing, room.z1()); // limit to upper floor of parking garage
+			//if (!interior->ignore_ramp_placement) {} // must check ramp as well; not currently possible
 			if (!is_rot_cube_visible(opening, xlate)) continue; // stairs opening not visible; can't test upper floor opening because walls may be lit
 		}
 		//if (is_light_occluded(lpos_rot, camera_bs))  continue; // too strong a test in general, but may be useful for selecting high importance lights
@@ -1871,8 +1878,9 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 					stairs_light = (light_room_has_stairs_or_ramp || camera_somewhat_by_stairs); // either the light or the camera is by the stairs
 				}
 			}
-			// include lights above or near the parking garage ramp
-			stairs_light |= (light_in_basement && has_pg_ramp() && interior->pg_ramp.contains_pt_xy_exp(i->get_cube_center(), window_vspacing));
+			// include lights above or near the parking garage ramp, including in the parking structure
+			stairs_light |= (!in_ext_basement && (light_in_basement || is_parking()) && has_pg_ramp() &&
+				interior->pg_ramp.contains_pt_xy_exp(i->get_cube_center(), window_vspacing));
 
 			if (player_in_pool && is_over_pool) {
 				// camera and light both in pool room - keep it
@@ -1895,7 +1903,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			else if (floor_is_above || (floor_is_below && !camera_room_tall)) { // light is on a different floor from the camera
 				bool const parts_are_stacked(camera_part < real_num_parts && (parts[camera_part].z2() <= room.z1() || parts[camera_part].z1() >= room.z2()));
 
-				// the basement is a different part, but it's still the same vertical stack; consider this the same effective part if the camera is in the basement above the room's part
+				// basement is a different part, but it's still the same vertical stack; consider this the same effective part if camera is in basement above the room's part
 				if (camera_in_ext_basement && !in_camera_room && has_stairs_this_floor && in_ext_basement &&
 					(camera_by_stairs || (light_room_has_stairs_or_ramp && camera_somewhat_by_stairs)))
 				{
