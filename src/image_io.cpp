@@ -740,7 +740,7 @@ void texture_t::deferred_load_dds() {
 	glTexStorage2D (GL_TEXTURE_2D, num_levels, Format.Internal, width, height);
 
 	// handle mipmaps; the value of use_mipmaps is ignored here
-	for (auto Level = 0; Level < num_levels; ++Level) {
+	for (unsigned Level = 0; Level < (unsigned)num_levels; ++Level) {
 		auto const &t(Texture[Level]);
 		if (compressed) {glCompressedTexSubImage2D(GL_TEXTURE_2D, Level, 0, 0, t.extent().x, t.extent().y, Format.Internal, t.size(), t.data());}
 		else {glTexSubImage2D(GL_TEXTURE_2D, Level, 0, 0, t.extent().x, t.extent().y, Format.External, Format.Type, t.data());}

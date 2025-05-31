@@ -94,18 +94,15 @@ float heightmap_query_t::flatten_sloped_region(unsigned x1, unsigned y1, unsigne
 		px2 = min(x2+1, xsize);
 	}
 	if (!stats_only && bridge != nullptr && ADD_BRIDGES_OVER_WATER) { // add a water bridge; only happens for some rand_gen_index values
-		bool end_bridge(0);
-
 		for (unsigned y = y1; y < y2; ++y) { // Note: not padded
 			for (unsigned x = x1; x < x2; ++x) {
 				float const height(get_height(x, y));
 
-				if (height < water_plane_z) { // underwater
+				if (height < water_plane_z) { // underwater; will merge across multiple underwater segments
 					min_eq(six, (dim ? y : x));
 					max_eq(eix, (dim ? y : x));
 					min_eq(bridge_zmin_below, height);
 				}
-				else if (eix > 0) {end_bridge = 1;} // done with bridge - don't create bridge past high point
 			} // for x
 		} // for y
 		if (eix > six+min_bridge_len) {add_bridge = 2;}
