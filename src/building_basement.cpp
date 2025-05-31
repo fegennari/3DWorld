@@ -385,6 +385,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	cube_with_ix_t const &ramp(interior->pg_ramp);
 	bool const is_top_floor(floor_ix+1 == num_floors);
 	bool const is_top_floor_of_stack(is_top_floor && !(in_basement && is_parking())); // top floor of basement is not the top if this is a parking structure
+	room_object const wall_type(in_basement ? TYPE_PG_WALL : TYPE_STAIR_WALL); // PG wall is a detail object and culled early
 	
 	// add ramp if one was placed during floorplanning, before adding parking spaces
 	// Note: lights can be very close to ramps, but I haven't actually seen them touch; do we need to check for and handle that case?
@@ -503,8 +504,8 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 				door_wall.d[!dim][ d  ] = side_wall.d[!dim][!d] = side_wall.d[!dim][d] - (d ? 1.0 : -1.0)*int_wall_thick;
 				door_wall.d[!dim][!d  ] = door.d[!dim][d];
 				door_wall.d[ dim][!dir] = sub_room.d[dim][dir] - dir_sign*int_wall_thick;
-				objs.emplace_back(side_wall, TYPE_PG_WALL, room_id, !dim, d,   0, tot_light_amt, SHAPE_CUBE, wall_color);
-				objs.emplace_back(door_wall, TYPE_PG_WALL, room_id,  dim, dir, 0, tot_light_amt, SHAPE_CUBE, wall_color);
+				objs.emplace_back(side_wall, wall_type, room_id, !dim, d,   0, tot_light_amt, SHAPE_CUBE, wall_color);
+				objs.emplace_back(door_wall, wall_type, room_id,  dim, dir, 0, tot_light_amt, SHAPE_CUBE, wall_color);
 			} // d
 			obstacles    .push_back(avoid);
 			obstacles_exp.push_back(avoid);
@@ -548,7 +549,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 			
 					for (auto const &w : wall_parts) {
 						if (w.get_sz_dim(dim) < 2.0*window_vspacing) continue; // too short, skip
-						objs.emplace_back(w, TYPE_PG_WALL, room_id, !dim, 0, 0, tot_light_amt, SHAPE_CUBE, wall_color);
+						objs.emplace_back(w, wall_type, room_id, !dim, 0, 0, tot_light_amt, SHAPE_CUBE, wall_color);
 						interior->room_geom->pgbr_walls[!dim].push_back(w); // save for occlusion culling
 						sep_walls.push_back(w);
 					}
@@ -581,7 +582,9 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 			pillars.push_back(pillar);
 		} // for p
 	} // for n
-	for (auto const &p : pillars) {objs.emplace_back(p, TYPE_PG_PILLAR, room_id, !dim, 0, 0, tot_light_amt, SHAPE_CUBE, wall_color);}
+	room_object const pillar_type (in_basement ? TYPE_PG_PILLAR : TYPE_OFF_PILLAR); // PG pillar is a detail object and culled early
+	unsigned    const pillar_flags(in_basement ? 0 : RO_FLAG_ADJ_HI); // flag as concrete office pillar
+	for (auto const &p : pillars) {objs.emplace_back(p, pillar_type, room_id, !dim, 0, pillar_flags, tot_light_amt, SHAPE_CUBE, wall_color);}
 	// TODO: add a fire extinguisher to a random pillar
 
 	// add beams in !dim, at and between pillars
