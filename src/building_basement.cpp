@@ -384,11 +384,12 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	}
 	cube_with_ix_t const &ramp(interior->pg_ramp);
 	bool const is_top_floor(floor_ix+1 == num_floors);
+	bool const is_top_floor_of_stack(is_top_floor && !(in_basement && is_parking())); // top floor of basement is not the top if this is a parking structure
 	
 	// add ramp if one was placed during floorplanning, before adding parking spaces
 	// Note: lights can be very close to ramps, but I haven't actually seen them touch; do we need to check for and handle that case?
 	if (!ramp.is_all_zeros()) {
-		bool const dim(ramp.ix >> 1), dir(ramp.ix & 1), is_blocked(is_top_floor && interior->ignore_ramp_placement);
+		bool const dim(ramp.ix >> 1), dir(ramp.ix & 1), is_blocked(is_top_floor_of_stack && interior->ignore_ramp_placement);
 		cube_t rc(ramp); // ramp clipped to this parking garage floor
 		set_cube_zvals(rc, zval, (zval + window_vspacing));
 		unsigned const flags(is_blocked ? 0 : RO_FLAG_OPEN); // ramp is open if the top exit is open
@@ -412,7 +413,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		set_cube_zvals(railing, rc.z2(), (rc.z2() + window_vspacing));
 		railing.translate_dim(!dim, side_sign*railing_thickness); // shift off the ramp and onto the ajdacent floor
 
-		if (!is_top_floor) { // add side railing for lower level
+		if (!is_top_floor_of_stack) { // add side railing for lower level
 			railing.d[dim][!dir] += dir_sign*shorten_factor*ramp_length; // shorten length to only the upper part
 			objs.emplace_back(railing, TYPE_RAILING, room_id, dim, 0, (RO_FLAG_OPEN | RO_FLAG_TOS), tot_light_amt, SHAPE_CUBE, railing_color);
 		}

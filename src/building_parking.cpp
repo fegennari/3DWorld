@@ -12,7 +12,7 @@ void building_t::get_parking_struct_ext_walls(vect_cube_with_ix_t &walls, bool e
 	assert(real_num_parts == (1 + has_basement()));
 	cube_t const &part(parts.front()); // above ground part
 	float const floor_spacing(get_window_vspace()), floor_thick(get_floor_thickness()), wall_thick(get_park_struct_wall_thick());
-	float const lower_wall_height(0.35*floor_spacing), upper_wall_height(0.15*floor_spacing), int_ext_wall_fc_gap(0.5*floor_thick);
+	float const lower_wall_height(0.35*floor_spacing), upper_wall_height(0.15*floor_spacing), int_ext_wall_fc_gap(0.0);
 	unsigned num_floors(calc_num_floors(part, floor_spacing, floor_thick));
 	assert(num_floors > 0);
 	vect_cube_t wall_parts, door_cuts, temp;

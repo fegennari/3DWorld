@@ -1958,6 +1958,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 								float const shift((cand.d[dim][dir] - room.d[dim][dir]) - (dir ? -1.0 : 1.0)*wall_thickness); // negative if dir==1
 								cand.translate_dim(dim, -shift); // close the gap - flush with the wall
 								if (is_cube_close_to_doorway(cand, room)) continue;
+								if (!elevator_cut.is_all_zeros() && cand.intersects(elevator_cut)) continue; // too close to parking structure elevator
 
 								if (!is_cube()) { // check for stairs outside or too close to building walls
 									cube_t stairs_ext(cand);
@@ -2223,7 +2224,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 }
 
 bool building_t::can_extend_stairs_to_pg(unsigned &stairs_ix) const {
-	if (!has_parking_garage || !has_pri_hall()) return 0;
+	if (!has_parking_garage || (!has_pri_hall() && !is_parking())) return 0; // no parking garage or primary hall, except for parking structure (but it doesn't help?)
 	float stairs_zmax(ground_floor_z1 + get_floor_thickness());
 
 	// check ground floor stairs, then possibly stairs above the retail floor; prefer stairs on the ground floor when there are both
@@ -2574,6 +2575,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 						get_room_cands(interior->rooms, lower_part_ix, rc, min_sz, check_private_rooms, room_cands[1]); // set place_region=rc for use_pref_shared?
 						if (room_cands[1].empty()) continue; // not a valid lower room
 						place_region = room_cands[1][rgen.rand()%room_cands[1].size()];
+						if (is_parking()) {place_region.expand_by_xy(-0.5*wall_thickness);} // shrink to prevent Z-fighting with inside surface of ext wall
 						success = 1; break; // success/done
 					}
 					if (!success) continue;

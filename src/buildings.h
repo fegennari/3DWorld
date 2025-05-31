@@ -2166,7 +2166,7 @@ struct building_t : public building_geom_t {
 	float get_floor_thickness() const {return get_floor_thick_val()*get_window_vspace();}
 	float get_fc_thickness   () const {return 0.5*get_floor_thickness();} // floor/ceiling thickness
 	float get_wall_thickness () const {return WALL_THICK_VAL*get_window_vspace();}
-	float get_park_struct_wall_thick() const {return get_wall_thickness();}
+	float get_park_struct_wall_thick() const {return 1.2*get_wall_thickness();} // slightly wider than interior walls, to prevent Z-fighting
 	float get_wind_trim_thick() const {return 0.75*get_wall_thickness();}
 	float get_trim_thickness () const {return 0.1 *get_wall_thickness();}
 	float get_trim_height    () const {return 0.04*get_window_vspace ();}
