@@ -971,8 +971,16 @@ bool building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 			if (basement.contains_cube_xy(c)) { // always true?
 				cube_t c_ext(c);
 				set_cube_zvals(c_ext, (basement.z1() + fc_thickness), (basement.z2() - fc_thickness));
+				bool is_blocked(is_obj_placement_blocked(c_ext, basement, 1));
 
-				if (!is_obj_placement_blocked(c_ext, basement, 1)) {
+				if (!is_blocked && is_parking()) { // check for and avoid elevator equipment rooms
+					for (elevator_t const &e : interior->elevators) {
+						cube_t equip_room_area(e);
+						equip_room_area.expand_in_dim(!e.dim, 1.25*e.get_width());
+						if (c_ext.intersects(equip_room_area)) {is_blocked = 1; break;}
+					}
+				}
+				if (!is_blocked) {
 					objs.emplace_back(objs.back()); // duplicate the vertical pipe and adjust it's zvals
 					objs.back().copy_from(c_ext);
 					if (interior->ind_info) {interior->ind_info->pg_extended_pipes.push_back(c_ext);} // add as a future blocker for parking garage panels and pipes
