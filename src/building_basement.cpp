@@ -737,26 +737,27 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	if (is_top_floor) { // place pipes on the top level parking garage ceiling (except for sprinkler pipes, which go on every floor)
 		// avoid intersecting lights, pillars, walls, stairs, elevators, and ramps;
 		// note that lights haven't been added yet though, but they're placed on beams, so we can avoid beams instead
-		vect_cube_t walls, beams;
+		vect_cube_t walls, beams, pipe_cubes;
 		add_pg_obstacles(objs, objs_start, objs.size(), walls, beams, obstacles);
 		if (interior->ind_info) {vector_add_to(interior->ind_info->pg_extended_pipes, obstacles);} // must avoid sprinkler pipes coming from above
-		if (in_basement) {add_basement_electrical(obstacles, walls, beams, room_id, rgen);} // not for parking structures
-		// get pipe ends (risers) coming in through the ceiling
-		vect_riser_pos_t sewer, cold_water, hot_water, gas_pipes;
-		get_pipe_basement_water_connections(sewer, cold_water, hot_water, rgen);
-		vect_cube_t pipe_cubes;
-		// hang sewer pipes under the ceiling beams; hang water pipes from the ceiling, above sewer pipes and through the beams
-		float const ceil_zval(beam.z1()), water_ceil_zval(beam.z2());
-		add_basement_pipes(obstacles, walls, beams, sewer,      pipe_cubes, room_id, num_floors, objs_start, ceil_zval,      rgen, PIPE_TYPE_SEWER, 0); // sewer
-		add_to_and_clear(pipe_cubes, obstacles); // add sewer pipes to obstacles
-		add_basement_pipes(obstacles, walls, beams, cold_water, pipe_cubes, room_id, num_floors, objs_start, water_ceil_zval, rgen, PIPE_TYPE_CW,   0); // cold water
-		add_to_and_clear(pipe_cubes, obstacles); // add cold water pipes to obstacles
-		add_basement_pipes(obstacles, walls, beams, hot_water,  pipe_cubes, room_id, num_floors, objs_start, water_ceil_zval, rgen, PIPE_TYPE_HW,   1); // hot water
-		add_to_and_clear(pipe_cubes, obstacles); // add hot water pipes to obstacles
-		get_pipe_basement_gas_connections(gas_pipes);
-		add_basement_pipes(obstacles, walls, beams, gas_pipes,  pipe_cubes, room_id, num_floors, objs_start, water_ceil_zval, rgen, PIPE_TYPE_GAS,  1); // gas
-		add_to_and_clear(pipe_cubes, obstacles); // add gas pipes to obstacles
-
+		
+		if (in_basement) { // pipes and electrical are not for parking structures
+			add_basement_electrical(obstacles, walls, beams, room_id, rgen);
+			// get pipe ends (risers) coming in through the ceiling
+			vect_riser_pos_t sewer, cold_water, hot_water, gas_pipes;
+			get_pipe_basement_water_connections(sewer, cold_water, hot_water, rgen);
+			// hang sewer pipes under the ceiling beams; hang water pipes from the ceiling, above sewer pipes and through the beams
+			float const ceil_zval(beam.z1()), water_ceil_zval(beam.z2());
+			add_basement_pipes(obstacles, walls, beams, sewer,      pipe_cubes, room_id, num_floors, objs_start, ceil_zval,      rgen, PIPE_TYPE_SEWER, 0); // sewer
+			add_to_and_clear(pipe_cubes, obstacles); // add sewer pipes to obstacles
+			add_basement_pipes(obstacles, walls, beams, cold_water, pipe_cubes, room_id, num_floors, objs_start, water_ceil_zval, rgen, PIPE_TYPE_CW,   0); // cold water
+			add_to_and_clear(pipe_cubes, obstacles); // add cold water pipes to obstacles
+			add_basement_pipes(obstacles, walls, beams, hot_water,  pipe_cubes, room_id, num_floors, objs_start, water_ceil_zval, rgen, PIPE_TYPE_HW,   1); // hot water
+			add_to_and_clear(pipe_cubes, obstacles); // add hot water pipes to obstacles
+			get_pipe_basement_gas_connections(gas_pipes);
+			add_basement_pipes(obstacles, walls, beams, gas_pipes,  pipe_cubes, room_id, num_floors, objs_start, water_ceil_zval, rgen, PIPE_TYPE_GAS,  1); // gas
+			add_to_and_clear(pipe_cubes, obstacles); // add gas pipes to obstacles
+		}
 		// if there are multiple parking garage floors, lights have already been added on the floor(s) below; add them as occluders for sprinkler pipes;
 		// lights on the top floor will be added later and will check for pipe intersections; elevator equipment room lights are ignored as the entire room is an obstacle
 		for (auto i = objs.begin()+interior->room_geom->wall_ps_start; i < objs.begin()+objs_start; ++i) {
