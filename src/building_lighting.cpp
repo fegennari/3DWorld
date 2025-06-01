@@ -2307,7 +2307,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	} // for i (objs)
 	//if (camera_in_building) {cout << name << ": " << num_add << endl;} // TESTING
 
-	// add skylight lights; mall skylights are not added here
+	// add skylight and parking structure roof lights
 	for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) { // {sun, moon}
 		point sun_moon_pos;
 		if (!light_valid_and_enabled(l) || !get_light_pos(sun_moon_pos, l)) continue;
@@ -2315,7 +2315,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		bool const dir_always_vert  = 1;
 		bool const add_sky_lighting = 1;
 
-		for (cube_with_ix_t &sl : skylights) { // add virtual spotlights for each skylight to simulate sun light
+		// add virtual spotlights for each skylight to simulate sun light
+		for (cube_with_ix_t &sl : skylights) {
 			if (camera_in_basement)                     continue; // not drawn
 			if (!lights_bcube.intersects_xy(sl))        continue; // not contained within the light volume
 			if (camera_z < sl.z1() - camera_zval_check) continue; // player below the floor with the skylight or the one below; invalid when flying outside the building?
@@ -2404,7 +2405,9 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				expand_cube_zvals(lights_bcube, lit_area.z1(), lpos.z); // must include the light
 			}
 		} // for skylight sl
-		if (camera_in_building && camera_in_basement && has_mall()) { // mall skylights
+
+		// add mall skylights
+		if (camera_in_building && camera_in_basement && has_mall()) {
 			for (cube_t const &sl : interior->mall_info->skylights) {
 				// only add an ambient light because the skylight is likely shadowed by buildings above
 				cube_t lit_area(sl);
@@ -2425,6 +2428,24 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 					expand_cube_zvals(lights_bcube, lit_area.z1(), lpos.z); // must include the light
 				}
 			} // for sl
+		}
+		// add parking structure roof light
+		if (is_parking() && has_pg_ramp()) {
+			float const light_height(3.0*window_vspacing);
+			cube_t const &ramp(interior->pg_ramp);
+			point const lpos(ramp.xc(), ramp.yc(), (ramp.z2() + light_height));
+			cube_t lit_area(ramp); // area over the ramp extending not quite down to the floor below the roof
+			lit_area.expand_by_xy(wall_thickness); // include landing interior edges
+			set_cube_zvals(lit_area, (ramp.z2() - window_vspacing + 0.1*fc_thick), lpos.z);
+
+			if (camera_bs.z > lit_area.z1() && is_rot_cube_visible(lit_area, xlate)) {
+				vector3d const dmax(0.5*ramp.dx(), 0.5*ramp.dy(), light_height);
+				float const dmax_mag(dmax.mag()), light_radius(2.0*dmax_mag), dp(light_height/dmax_mag), bwidth(0.5*(1.0 - dp));
+				dl_sources.emplace_back(light_radius, lpos, lpos, get_outdoor_light_color(), 0, -plus_z, bwidth);
+				dl_sources.back().set_custom_bcube(lit_area);
+				dl_sources.back().disable_shadows(); // no shadows, since they don't work properly as the roof is not a shadow caster, and they're not needed
+				expand_cube_zvals(lights_bcube, lit_area.z1(), lpos.z);
+			}
 		}
 	} // for l
 	if (camera_in_building) {

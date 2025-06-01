@@ -2759,7 +2759,7 @@ void building_room_geom_t::add_ramp(room_object_t const &c, float thickness, boo
 	} // for s
 }
 void building_room_geom_t::add_pg_ramp(room_object_t const &c, float tscale) {
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_concrete_tid(), tscale, 1), 1, 0, 2)); // small=2/detail
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_concrete_tid(), tscale, 1), 1, 0, 1)); // small
 	float const thickness(RAMP_THICKNESS_SCALE*c.dz());
 	add_ramp(c, thickness, 0, mat); // skip_bottom=0
 }

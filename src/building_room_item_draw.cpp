@@ -1120,6 +1120,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_FURNACE:   add_furnace       (c); break;
 		case TYPE_BRK_PANEL: add_breaker_panel (c); break; // only added to basements
 		case TYPE_ATTIC_DOOR:add_attic_door(c, tscale); break;
+		case TYPE_RAMP:      add_pg_ramp   (c, tscale); break;
 		case TYPE_TOY:       add_toy(c); break;
 		case TYPE_PAN:       add_pan(c); break;
 		case TYPE_COUNTER: add_counter (c, tscale, 0, 1); break; // sm
@@ -1213,7 +1214,6 @@ void building_room_geom_t::create_detail_vbos(building_t const &building) {
 		case TYPE_PG_WALL:    add_wall_or_pillar (*i, tex_origin, wall_tex); break;
 		case TYPE_PG_PILLAR:  add_basement_pillar(*i, wall_tex); break;
 		case TYPE_PG_BEAM:    add_basement_beam  (*i, wall_tex); break;
-		case TYPE_RAMP:       add_pg_ramp        (*i, wall_tex.tscale_x); break;
 		case TYPE_PARK_SPACE: add_parking_space  (*i, wall_tex.tscale_x); break;
 		case TYPE_PIPE:       add_pipe(*i, 0); break; // add_exterior=0
 		case TYPE_SPRINKLER:  add_sprinkler(*i); break;
