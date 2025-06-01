@@ -1876,7 +1876,8 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		for (unsigned N = 0; N < 4; ++N) {
 			unsigned const rand_ix(rgen.rand()); // choose a random starting room to make into a stairwell or add an elevator to
 
-			for (unsigned n = 0; n < num_avail_rooms; ++n) { // try all available rooms starting with the selected one to see if we can fit a stairwell/elevator in any of them
+			// try all available rooms starting with the selected one to see if we can fit a stairwell/elevator in any of them
+			for (unsigned n = 0; n < num_avail_rooms; ++n) {
 				unsigned const stairs_room(rooms_start + (rand_ix + n)%num_avail_rooms);
 				room_t &room(interior->rooms[stairs_room]);
 				assert(room.part_id == part_ix); // sanity check
@@ -1885,15 +1886,37 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 					// always add an elevator to parking structures; place against a wall;
 					// it should be by the main exterior door, but that hasn't been placed yet, and it may be far from the building center
 					bool const dim(rgen.rand_bool()), dir(rgen.rand_bool());
-					float const end_spacing(0.25*room.get_sz_dim(!dim)); // center 50% of wall
+					float const dsign(dir ? -1.0 : 1.0), wall_pos(room.d[dim][dir]), end_spacing(0.35*room.get_sz_dim(!dim)); // center 50% of wall to avoid ramps
 					elevator_t elevator(room, stairs_room, dim, !dir, 1, 0); // at_edge=1, interior=0
-					//elevator.d[dim][ dir] += (dir ? -1.0 : 1.0)*get_park_struct_wall_thick(); // against inside of exterior wall
-					elevator.d[dim][!dir]  = elevator.d[dim][dir] + (dir ? -1.0 : 1.0)*ewidth;
+					elevator.d[dim][!dir] = wall_pos + dsign*ewidth;
 					float const center_pos(rgen.rand_uniform((room.d[!dim][0] + end_spacing), (room.d[!dim][1] - end_spacing)));
 					set_wall_width(elevator, center_pos, 0.5*ewidth, !dim);
 					// can't be blocked by anything?
 					add_or_extend_elevator(elevator, 1); // add=1
 					elevator_cut = elevator;
+					// maybe add U-shaped stairs to the side of the elevator
+					int const stairs_mode(rgen.rand_bool() ? 1 : 2); // 0=straight side stairs, 1=U-shaped stairs parallel to elevator, 2=U shaped stairs perpendicular
+
+					if (stairs_mode > 0) {
+						bool const perp(stairs_mode == 2), sdir(center_pos < room.get_center_dim(!dim)); // closer to the center
+						float const elevator_side(elevator.d[!dim][sdir] + (sdir ? 1.0 : -1.0)*0.25*wall_thickness); // account for ecap width
+						float const width(2.0*doorway_width), depth(3.2*doorway_width);
+						cube_t stairs(room);
+						stairs.d[!dim][!sdir] = elevator_side; // abuts elevator
+						stairs.d[!dim][ sdir] = elevator_side + (sdir ? 1.0 : -1.0)*(perp ? depth : width);
+						stairs.d[ dim][  dir] = wall_pos + dsign*0.3*wall_thickness; // shift slightly away from wall so that exterior of stairs wall matches elevator
+						stairs.d[ dim][! dir] = wall_pos + dsign*(perp ? width : depth);
+						assert(stairs.is_strictly_normalized());
+						
+						if (room.contains_cube_xy(stairs)) { // can this ever fail?
+							sshape     = SHAPE_U;
+							stairs_cut = stairs;
+							stairs_dim = (dim ^ perp);
+							force_stairs_dir = (perp ? !sdir : dir);
+							room.has_stairs  = 255; // stairs on all floors
+							break; // done - no need to add stairs below
+						}
+					}
 				}
 				if (add_elevator) {
 					if (min(room.dx(), room.dy()) < 2.0*ewidth) continue; // room is too small to place an elevator
@@ -1926,6 +1949,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 					} // for y
 					if (!placed) continue; // try another room
 					room.has_elevator = 1;
+					add_elevator      = 0;
 					//room.set_no_geom();
 				}
 				else { // stairs
@@ -2236,7 +2260,7 @@ bool building_t::can_extend_stairs_to_pg(unsigned &stairs_ix) const {
 		for (unsigned i = 0; i < interior->stairwells.size(); ++i) {
 			stairwell_t const &s(interior->stairwells[i]);
 			if (s.z1() < ground_floor_z1 || s.z1() > stairs_zmax) continue; // not ground floor stairs (or just above ground floor if retail)
-			if (!pri_hall.contains_cube_xy(s)) continue; // not in primary hall or the retail room below
+			if (has_pri_hall() && !pri_hall.contains_cube_xy(s))  continue; // not in primary hall or the retail room below
 			stairs_ix = i; // can be primary hall stairs or stairs extended into retail area below
 			return 1;
 		}
@@ -2476,8 +2500,9 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			float const cand_z1(cand_z2 - stairs_height); // top of top floor for this/lower part
 			unsigned stairs_ix(0);
 			
-			// try to extend primary hallway stairs down to parking garage below; should this apply to all ground floor stairwells?
-			if (is_basement && part.contains_cube_xy(pri_hall) && can_extend_stairs_to_pg(stairs_ix)) { // single floor parking garage, or upper floor connect only
+			// try to extend primary hallway or parking structure stairs down to parking garage below; should this apply to all ground floor stairwells?
+			// single floor parking garage, or upper floor connect only
+			if (is_basement && (is_parking() || part.contains_cube_xy(pri_hall)) && can_extend_stairs_to_pg(stairs_ix)) {
 				stairwell_t &s(interior->stairwells[stairs_ix]);
 				s.extends_below       = 1;
 				pri_hall_stairs_to_pg = 1;
