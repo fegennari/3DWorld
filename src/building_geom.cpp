@@ -2442,7 +2442,8 @@ void building_t::add_roof_to_bcube() {
 	} // for tq
 }
 void building_t::gen_grayscale_detail_color(rand_gen_t &rgen, float imin, float imax) {
-	float const cscale(rgen.rand_uniform(imin, imax));
+	float cscale(rgen.rand_uniform(imin, imax));
+	if (is_parking() || is_industrial()) {cscale = 0.5 + 0.5*cscale;} // lighten for parking structures and industrial since they use metal and concrete
 	detail_color = colorRGBA(cscale, cscale, cscale, 1.0);
 }
 

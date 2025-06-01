@@ -1618,19 +1618,28 @@ void draw_building_ext_door(building_draw_t &bdraw, tquad_with_ix_t const &door,
 void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exterior building parts
 	if (!is_valid()) return; // invalid building
 	building_mat_t const &mat(get_material());
-	tid_nm_pair_t roof_tex(mat.roof_tex), side_tex(mat.side_tex);
+	tid_nm_pair_t roof_tex(mat.roof_tex), roof_acc_tex(mat.roof_tex), side_tex(mat.side_tex);
 	bool const need_top_roof(roof_type == ROOF_TYPE_FLAT || roof_type == ROOF_TYPE_DOME || roof_type == ROOF_TYPE_ONION || roof_type == ROOF_TYPE_CURVED);
 	bool const metal_roof(is_industrial()), concrete_roof(is_parking()), concrete_walls(is_parking());
+	
 	// apply special building roof and wall colors; should this be set earlier?
-	if (metal_roof    ) {roof_color = blend_color(roof_color, WHITE, 0.5, 0);} // lighten roof color; not reflected in overhead map mode
-	if (concrete_roof ) {roof_color = blend_color(roof_color, WHITE, 0.5, 0);} // lighten side color
-	if (concrete_walls) {side_color = blend_color(side_color, WHITE, 0.5, 0);} // lighten side color
-	if (metal_roof    ) {roof_tex = get_corr_metal_texture(0.25 * mat.roof_tex.tscale_x);}
-	if (concrete_roof ) {roof_tex = get_concrete_texture  (1.50 * mat.roof_tex.tscale_x);}
-	if (concrete_walls) {side_tex = get_concrete_texture  (1.50 * mat.side_tex.tscale_x);}
+	if (metal_roof    ) {
+		roof_color = blend_color(roof_color, WHITE, 0.5, 0); // lighten roof color; not reflected in overhead map mode
+		roof_tex   = roof_acc_tex = get_corr_metal_texture(0.25 * mat.roof_tex.tscale_x);
+		tid_mapper.register_roof_texture(roof_tex.tid);
+	}
+	if (concrete_roof ) {
+		roof_color   = blend_color(roof_color, WHITE, 0.5, 0); // lighten roof color
+		roof_tex     = get_concrete_texture  (1.5 * mat.side_tex.tscale_x);
+		roof_acc_tex = get_corr_metal_texture(1.0 * mat.side_tex.tscale_x);
+		tid_mapper.register_roof_texture(roof_acc_tex.tid); // Note: can't register concrete as a roof texture, so we must use another texture
+	}
+	if (concrete_walls) {
+		side_color = blend_color(side_color, WHITE, 0.5, 0); // lighten side color
+		side_tex   = get_concrete_texture  (1.5 * mat.side_tex.tscale_x);
+		tid_mapper.register_side_texture(side_tex.tid); // is this needed?
+	}
 	if (detail_color == BLACK) {detail_color = roof_color;} // use roof color if not set
-	tid_mapper.register_roof_texture(roof_tex.tid); // needed for custom textures applied above
-	tid_mapper.register_side_texture(side_tex.tid);
 	
 	for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels - no AO for houses
 		if (is_basement(i)) continue; // don't need to draw the basement exterior walls since they should be underground
@@ -1852,8 +1861,11 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 			} // end peaked roof
 			bdraw.add_tquad(*this, tq, bcube, roof_tex.get_scaled_version(2.0), roof_color); // use roof texture
 		} // end house roof quad
-		else if (i->is_roof() || i->type == tquad_with_ix_t::TYPE_ROOF_ACC) {
+		else if (i->is_roof()) {
 			bdraw.add_tquad(*this, *i, bcube, roof_tex.get_scaled_version(2.0), roof_color); // use roof texture
+		}
+		else if (i->type == tquad_with_ix_t::TYPE_ROOF_ACC) {
+			bdraw.add_tquad(*this, *i, bcube, roof_acc_tex.get_scaled_version(2.0), roof_color); // use roof texture
 		}
 		else if (i->type == tquad_with_ix_t::TYPE_BDOOR2 || i->type == tquad_with_ix_t::TYPE_RDOOR2) {
 			bdraw.add_tquad(*this, *i, bcube, building_texture_mgr.get_bdoor2_tid(), WHITE);
@@ -1903,7 +1915,7 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 			continue;
 		}
 		bool const skip_bot(i->type != ROOF_OBJ_SCAP && i->type != ROOF_OBJ_SIGN && i->type != ROOF_OBJ_SIGN_CONN);
-		bool const pointed(i->type == ROOF_OBJ_ANT); // draw antenna as a point
+		bool const pointed (i->type == ROOF_OBJ_ANT); // draw antenna as a point
 		building_t b(building_geom_t(4, rot_sin, rot_cos, pointed)); // cube
 		b.bcube = bcube;
 		tid_nm_pair_t tex;
@@ -1917,7 +1929,7 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 			color = WHITE; // also untextured, but casts shadows
 		}
 		else { // otherwise use roof color
-			tex   = roof_tex.get_scaled_version(1.5);
+			tex   = ((i->type == ROOF_OBJ_SCAP) ? roof_acc_tex : roof_tex).get_scaled_version(1.5);
 			color = detail_color*(pointed ? 0.5 : 1.0);
 		}
 		bdraw.add_section(b, 0, *i, tex, color, 7, skip_bot, 0, 1, 0); // all dims, no AO
