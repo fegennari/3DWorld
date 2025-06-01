@@ -1905,6 +1905,12 @@ void building_t::add_wall_and_door_trim() { // and window trim
 			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, 0, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_BOT), 1.0, SHAPE_SHORT, GRAY);
 		}
 	}
+	if (!interior->parking_entrance.is_all_zeros()) { // add trim around parking structure entrance
+		cube_with_ix_t entrance(interior->parking_entrance);
+		bool const dim(entrance.ix >> 1), dir(entrance.ix & 1);
+		entrance.d[dim][!dir] = entrance.d[dim][dir] + (dir ? -1.0 : 1.0)*get_park_struct_wall_thick(); // shrink to only exterior wall
+		add_trim_for_door_or_int_window(entrance, dim, 1, 0, door_trim_width, door_trim_width, door_trim_exp, window_vspacing); // draw_top_edge=1, draw_bot_trim=0
+	}
 	// add trim around exterior doors
 	for (auto d = doors.begin(); d != doors.end(); ++d) {
 		if (d->type == tquad_with_ix_t::TYPE_RDOOR) continue; // roof access door - requires completely different approach to trim and has not been implemented

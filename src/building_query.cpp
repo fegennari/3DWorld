@@ -349,6 +349,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 	if (other_bldg == nullptr) return 0; // no connected building at this location
 	return other_bldg->check_sphere_coll_inner(pos, p_last, xlate, radius, xy_only, cnorm_ptr, check_interior); // check connected building
 }
+
 bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only, vector3d *cnorm_ptr, bool check_interior) const {
 	float const xy_radius(radius*global_building_params.player_coll_radius_scale);
 	point pos2(pos), p_last2(p_last), center;
@@ -380,11 +381,23 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 					bool const door_dim(bc.dy() < bc.dx());
 					bc.expand_in_dim( door_dim, 1.1*radius); // expand by radius plus some tolerance in door dim
 					bc.expand_in_dim(!door_dim, -0.5*xy_radius); // shrink slightly in the other dim to prevent the player from clipping through the wall next to the door
-					bc.z1() -= max(radius, (float)camera_zh); // account for player on steep slope up to door - require player head above doorframe bottom
+					bc.z1() -= max(radius, (float)camera_zh); // account for player on steep slope up to door - require player head above door frame bottom
 					if (!bc.contains_pt(point(pos2_bs.x, pos2_bs.y, zval))) continue; // check if door can be used
 					//if (floor_ix == 0) return 0; // ground floor, disable collsion to allow the player to walk through
 					allow_outside_building = 1; // allow the player to exit, but for now still in the building
 				} // for d
+			}
+			if (!interior->parking_entrance.is_all_zeros()) { // check parking structure entrance
+				cube_with_ix_t const &entrance(interior->parking_entrance);
+
+				if (zval > entrance.z1() || zval < entrance.z2()) { // Z overlaps
+					bool const dim(entrance.ix >> 1), dir(entrance.ix & 1);
+					cube_t bc(entrance);
+					set_wall_width(bc, entrance.d[dim][dir], 1.1*radius, dim); // expand by radius plus some tolerance
+					bc.expand_in_dim(!dim, -0.5*xy_radius); // shrink slightly in the other dim
+					bc.z1() -= max(radius, (float)camera_zh);
+					allow_outside_building |= bc.contains_pt(point(pos2_bs.x, pos2_bs.y, zval));
+				}
 			}
 		}
 		// check for sphere contained in parts and maybe clamp to parts

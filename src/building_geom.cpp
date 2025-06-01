@@ -1917,7 +1917,7 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office 
 	bool used[4] = {0,0,0,0}; // per-side, not per-base cube
 	// at least 2 doors unless it's a small rectangle (large rectangle will have a central hallway with doors at each end)
 	unsigned const min_doors((parts.size() > 1 || is_industrial()) ? 2 : 1);
-	unsigned const max_doors(bldg_has_windows ? 3 : 4); // buildings with windows have at most 3 doors since they're smaller
+	unsigned const max_doors(is_parking() ? 2 : (bldg_has_windows ? 3 : 4)); // buildings with windows have at most 3 doors since they're smaller
 	unsigned const num_doors(min_doors + (rgen.rand() % (max_doors - min_doors + 1)));
 	cube_t const parts_bcube(get_unrotated_parts_bcube());
 

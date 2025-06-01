@@ -1175,7 +1175,10 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			for (unsigned d = 0; d < 2; ++d) {first_wall_to_split[d] = interior->walls[d].size();}
 		}
 	} // for p (parts)
-
+	if (is_parking()) {
+		add_parking_structure_entrance(rgen);
+		add_parking_structure_bathroom(rgen);
+	}
 	if (has_sec_bldg()) { // add garage/shed floor and ceiling
 		assert(parts_end < parts.end());
 		cube_t const &garage(*parts_end);
