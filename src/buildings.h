@@ -1130,7 +1130,7 @@ struct building_room_geom_t {
 	building_decal_manager_t decal_manager;
 	particle_manager_t particle_manager;
 	fire_manager_t fire_manager;
-	vector<droplet_spawner_t> droplet_spanwers; // for flooded basements
+	vector<droplet_spawner_t> droplet_spawners; // for flooded basements
 
 	building_room_geom_t(point const &tex_origin_=all_zeros) : tex_origin(tex_origin_), wood_color(WHITE) {}
 	bool empty() const {return objs.empty();}

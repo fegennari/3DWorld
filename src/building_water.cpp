@@ -244,13 +244,14 @@ void building_t::add_backrooms_droplet_spawners(rand_gen_t rgen) {
 		cube_t spawner_bc(pos);
 		spawner_bc.expand_by(radius);
 		if (interior->is_blocked_by_stairs_or_elevator(spawner_bc)) continue;
-		interior->room_geom->droplet_spanwers.emplace_back(pos, radius, period);
+		interior->room_geom->droplet_spawners.emplace_back(pos, radius, period);
 	} // for n
 }
 void building_t::update_droplet_spawners() {
 	assert(has_room_geom());
 
-	for (droplet_spawner_t &s : interior->room_geom->droplet_spanwers) {
+	for (droplet_spawner_t &s : interior->room_geom->droplet_spawners) {
+		if (s.pos.z < camera_pos.z) continue; // skip if player is on a floor above
 		if ((tfticks - s.last_spawned) < s.period) continue;
 		point const pos(s.pos.x, s.pos.y, (s.pos.z - 1.2*s.radius)); // under the ceiling so as not to collide
 		interior->room_geom->particle_manager.add_particle(pos, zero_vector, WHITE, s.radius, PART_EFFECT_DROPLET);
