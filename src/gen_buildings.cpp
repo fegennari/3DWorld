@@ -299,19 +299,22 @@ public:
 		register_tid(FONT_TEXTURE_ID); // for roof signs
 		for (unsigned i = 0; i < num_special_tids; ++i) {register_tid(special_tids[i]);}
 
-		for (auto i = global_building_params.materials.begin(); i != global_building_params.materials.end(); ++i) {
-			register_tex(i->side_tex);
-			register_tex(i->roof_tex);
-			register_tex(i->wall_tex);
-			register_tex(i->ceil_tex);
-			register_tex(i->floor_tex);
-			register_tex(i->house_ceil_tex);
-			register_tex(i->house_floor_tex);
-			ext_wall_tids.insert(i->side_tex.tid);
-			roof_tids    .insert(i->roof_tex.tid);
+		for (building_mat_t const &m : global_building_params.materials) {
+			register_tex(m.side_tex);
+			register_tex(m.roof_tex);
+			register_tex(m.wall_tex);
+			register_tex(m.ceil_tex);
+			register_tex(m.floor_tex);
+			register_tex(m.house_ceil_tex);
+			register_tex(m.house_floor_tex);
+			ext_wall_tids.insert(m.side_tex.tid);
+			roof_tids    .insert(m.roof_tex.tid);
 		} // for i
 		cout << "Used " << (next_slot_ix-1) << " slots for texture IDs up to " << (tid_to_slot_ix.size()-1) << endl;
 	}
+	void register_roof_texture(int tid) {roof_tids    .insert(tid);}
+	void register_side_texture(int tid) {ext_wall_tids.insert(tid);}
+
 	unsigned get_slot_ix(int tid) const {
 		if (tid < 0) return 0; // untextured - slot 0
 		assert(tid < (int)get_num_slots());
@@ -1458,7 +1461,7 @@ public:
 		tid_nm_pair_dstate_t state(s);
 
 		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {
-			if (tex_filt_mode == 1 && !tid_mapper.is_ext_wall_tid(i->tex.tid)) continue; // exterior walls only
+			if (tex_filt_mode == 1 && !tid_mapper.is_ext_wall_tid(i->tex.tid)) continue; // exterior walls only; unused
 			if (tex_filt_mode == 2 && !tid_mapper.is_roof_tid    (i->tex.tid) && !building_texture_mgr.is_door_tid(i->tex.tid)) continue; // roofs and exterior doors only
 			if (tex_filt_mode == 3 && !tid_mapper.is_roof_tid    (i->tex.tid)) continue; // roofs only
 			bool const use_exclude(exclude && exclude->draw_ix == int(i - to_draw.begin()));
@@ -1626,6 +1629,8 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 	if (concrete_roof ) {roof_tex = get_concrete_texture  (1.50 * mat.roof_tex.tscale_x);}
 	if (concrete_walls) {side_tex = get_concrete_texture  (1.50 * mat.side_tex.tscale_x);}
 	if (detail_color == BLACK) {detail_color = roof_color;} // use roof color if not set
+	tid_mapper.register_roof_texture(roof_tex.tid); // needed for custom textures applied above
+	tid_mapper.register_side_texture(side_tex.tid);
 	
 	for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels - no AO for houses
 		if (is_basement(i)) continue; // don't need to draw the basement exterior walls since they should be underground
