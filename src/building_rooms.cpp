@@ -2066,7 +2066,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	} // for d
 	// add trim for exterior walls
 	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {
-		if (is_basement(i)) continue; // skip basement walls because they're bare concrete
+		if (is_basement(i) || is_parking()) continue; // skip basement and parking structure walls because they're bare concrete
 		bool const is_sec_bldg(i == get_real_parts_end());
 		unsigned const num_floors(is_sec_bldg ? 1 : calc_num_floors(*i, window_vspacing, floor_thickness));
 
