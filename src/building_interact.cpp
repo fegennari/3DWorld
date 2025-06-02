@@ -345,7 +345,7 @@ int building_t::find_ext_door_close_to_point(tquad_with_ix_t &door, point const 
 
 	if (room_id >= 0) { // pos is inside a room
 		room_exp = get_room(room_id);
-		room_exp.expand_by(get_wall_thickness()); // make sure it contains the door
+		room_exp.expand_by(is_parking() ? 2.0*get_park_struct_wall_thick() : get_wall_thickness()); // make sure it contains the door
 	}
 	// Note: returns the first exterior door found, assuming there can be at most one within dist of pos
 	for (auto d = doors.begin(); d != doors.end(); ++d) {
