@@ -52,7 +52,54 @@ bool building_t::add_parking_structure_entrance(rand_gen_t rgen) {
 bool building_t::add_parking_structure_bathroom(rand_gen_t rgen) {
 	assert(interior && !interior->rooms.empty());
 	room_t &room(interior->rooms.front()); // main above ground room is first
-	// TODO
+	bool xside(rgen.rand_bool()), yside(rgen.rand_bool()), door_dim(rgen.rand_bool()); // perferred starting corner/side
+	float const floor_spacing(get_window_vspace()), door_width(get_doorway_width()), wall_thick(get_wall_thickness()), bathroom_sz(3.2*door_width);
+
+	for (unsigned xv = 0; xv < 2; ++xv, xside ^= 1) {
+		for (unsigned yv = 0; yv < 2; ++yv, yside ^= 1) {
+			point const corner(room.d[0][xside], room.d[1][yside], room.z1());
+			cube_t bathroom(corner);
+			bathroom.z2() += floor_spacing;
+			bathroom.d[0][!xside] += (xside ? -1.0 : 1.0)*bathroom_sz;
+			bathroom.d[1][!yside] += (yside ? -1.0 : 1.0)*bathroom_sz;
+
+			for (unsigned dd = 0; dd < 2; ++dd, door_dim ^= 1) { // try door on both sides
+				bool const door_dir(!(door_dim ? yside : xside));
+				cube_t br_with_door(bathroom);
+				br_with_door.d[door_dim][door_dir] += (door_dir ? 1.0 : -1.0)*door_width; // add space for door to open
+				if (interior->is_blocked_by_stairs_or_elevator(br_with_door, 0.0)) continue; // blocked by stairs, elevator, or ramp
+				if (!interior->parking_entrance.is_all_zeros() && br_with_door.intersects(interior->parking_entrance)) continue; // too close to entrance
+				room_t orig_room(room); // copy as room reference may be invalidated below
+				room.copy_from(bathroom); // first (contained) room must be the bathroom
+				room.expand_by_xy(-wall_thick); // subtract off the walls
+				calc_room_ext_sides(room);
+				room.assign_all_to(RTYPE_BATH);
+				room.set_is_nested();
+				room.is_office = 1; // hack to treat this as an office bathroom
+				orig_room.set_has_subroom();
+				interior->rooms.push_back(orig_room); // re-add full room; invalidates room reference
+				// add wall sections and door
+				float const fc_thick(get_fc_thickness()), door_hwidth(0.5*door_width);
+
+				for (unsigned wdim = 0; wdim < 2; ++wdim) {
+					for (unsigned wdir = 0; wdir < 2; ++wdir) {
+						cube_t wall(bathroom);
+						clip_wall_to_ceil_floor(wall, fc_thick);
+						wall.d[wdim][!wdir] = wall.d[wdim][wdir] + (wdir ? -1.0 : 1.0)*wall_thick; // set wall width
+
+						if (bool(wdim) == door_dim && bool(wdir) == door_dir) { // add door in this wall
+							float const door_center(bathroom.get_center_dim(!door_dim));
+							// opens into bathroom; keep_high_side=0, is_bathroom=0 (not always closed), make_unlocked=1, make_closed=0
+							insert_door_in_wall_and_add_seg(wall, (door_center - door_hwidth), (door_center + door_hwidth), !wdim, !door_dir, 0, 0, 1, 0);
+						}
+						interior->walls[wdim].push_back(wall);
+					} // for wdir
+				} // for wdim
+				interior->ps_bathroom = br_with_door; // includes space for door
+				return 1; // done/success
+			} // for dd
+		} // for yv
+	} // for xv
 	return 0;
 }
 

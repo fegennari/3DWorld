@@ -8,7 +8,6 @@
 extern object_model_loader_t building_obj_model_loader;
 
 
-void clip_wall_to_ceil_floor(cube_t &wall, float fc_thick);
 colorRGBA get_pastic_chair_color(colorRGBA const &color);
 colorRGBA get_couch_color(rand_gen_t &rgen);
 

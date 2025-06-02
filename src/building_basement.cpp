@@ -308,8 +308,9 @@ cube_t building_t::get_ext_basement_door_blocker() const {
 	return blocker;
 }
 
-void add_blocker(cube_t const &blocker, vect_cube_t &obstacles, vect_cube_t &obstacles_exp, vect_cube_t &obstacles_ps) {
+void add_blocker(cube_t const &blocker, vect_cube_t &obstacles, vect_cube_t &obstacles_exp, vect_cube_t &obstacles_ps, bool obstacles_only=0) {
 	obstacles    .push_back(blocker);
+	if (obstacles_only) return;
 	obstacles_exp.push_back(blocker);
 	obstacles_ps .push_back(blocker);
 }
@@ -376,18 +377,21 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	if (in_basement && has_ext_basement()) { // everything should avoid the extended basement door
 		add_blocker(get_ext_basement_door_blocker(), obstacles, obstacles_exp, obstacles_ps);
 	}
-	// don't block parking structure entrance; include this for both the ground floor and the top floor for the sprinkler pipes
-	if (!in_basement && !interior->parking_entrance.is_all_zeros() && (is_top_floor || (zval >= interior->parking_entrance.z1() && zval < interior->parking_entrance.z2()))) {
-		cube_t entrance(interior->parking_entrance);
-		entrance.expand_in_dim(!bool(interior->parking_entrance.ix >> 1), -get_trim_thickness()); // shrink slightly to allow pillar just inside the entrance
-		add_blocker(entrance, obstacles, obstacles_exp, obstacles_ps);
-	}
-	if (!in_basement && floor_ix == 0) { // above ground parking structure, first floor: avoid exterior doors
+	// don't block parking structure entrance, bathroom, or exterior doors; include this for both the ground floor and the top floor for the sprinkler pipes
+	if (!in_basement && (floor_ix == 0 || is_top_floor)) {
+		if (!interior->parking_entrance.is_all_zeros()) {
+			cube_t entrance(interior->parking_entrance);
+			entrance.expand_in_dim(!bool(interior->parking_entrance.ix >> 1), -get_trim_thickness()); // shrink slightly to allow pillar just inside the entrance
+			add_blocker(entrance, obstacles, obstacles_exp, obstacles_ps, is_top_floor); // obstacles_only=is_top_floor
+		}
+		if (!interior->ps_bathroom.is_all_zeros()) { // check for and avoid parking structure bathroom
+			add_blocker(interior->ps_bathroom, obstacles, obstacles_exp, obstacles_ps, is_top_floor); // obstacles_only=is_top_floor
+		}
 		for (tquad_with_ix_t const &d : doors) { // find all doors on the ground floor
 			if (d.type == tquad_with_ix_t::TYPE_RDOOR) continue; // roof access door - skip
 			cube_t blocker(d.get_bcube());
 			expand_door_blocker(blocker);
-			add_blocker(blocker, obstacles, obstacles_exp, obstacles_ps);
+			add_blocker(blocker, obstacles, obstacles_exp, obstacles_ps, is_top_floor); // obstacles_only=is_top_floor
 		}
 	}
 	cube_with_ix_t const &ramp(interior->pg_ramp);

@@ -1900,6 +1900,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 			room_object_t const &sink(objs[sink_obj_ix]); // sink, not blocker
 		
 			if (point_in_water_area(sink.get_cube_center())) {} // no medicine cabinet, because the reflection system doesn't support both a mirror and water reflection
+			else if (is_parking() && !is_basement) {} // no mirror in parking structure since reflections don't work there
 			else if (is_basement || classify_room_wall(room, zval, sink.dim, !sink.dir, 0) != ROOM_WALL_EXT) { // interior wall only
 				// add a mirror/medicine cabinet above the sink
 				float const mirror_expand(0.1*sink.get_sz_dim(!sink.dim));
@@ -5428,6 +5429,8 @@ bool building_t::is_light_placement_valid(cube_t const &light, room_t const &roo
 			if (stairs_ext.intersects(light)) return 0;
 		} // for s
 	}
+	// handle parking structure bathroom; skip if this room is the bathroom
+	if (!interior->ps_bathroom.is_all_zeros() && light_ext.intersects(interior->ps_bathroom) && !interior->ps_bathroom.contains_cube(room)) return 0;
 	light_ext.z1() = light_ext.z1() = light.z2() + get_fc_thickness(); // shift in between the ceiling and floor so that we can do a cube contains check
 	if (any_cube_contains(light_ext, interior->fc_occluders)) return 1; // Note: don't need to check skylights because fc_occluders excludes skylights
 	if (PLACE_LIGHTS_ON_SKYLIGHTS && any_cube_contains(light_ext, skylights)) return 1; // place on a skylight

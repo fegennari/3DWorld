@@ -1963,7 +1963,7 @@ struct building_interior_t {
 	std::unique_ptr<bldg_industrial_info_t> ind_info ;
 	cube_with_ix_t pg_ramp, attic_access, parking_entrance; // ix stores {2*dim + dir}
 	indoor_pool_t pool;
-	cube_t basement_ext_bcube, elevator_equip_room;
+	cube_t basement_ext_bcube, elevator_equip_room, ps_bathroom;
 	draw_range_t draw_range;
 	unsigned extb_walls_start[2] = {0,0};
 	unsigned gen_room_details_pass=0, rgen_seed_ix=0;
@@ -3192,6 +3192,7 @@ unsigned calc_num_floors(cube_t const &c, float window_vspacing, float floor_thi
 unsigned calc_num_floors_room(room_t const &r, float window_vspacing, float floor_thickness);
 void set_wall_width(cube_t &wall, float pos, float half_thick, unsigned dim);
 void resize_around_center_xy(cube_t &c, float radius);
+void clip_wall_to_ceil_floor(cube_t &wall, float fc_thick);
 bool is_val_inside_window(cube_t const &c, bool dim, float val, float window_spacing, float window_border);
 bool get_fire_ext_height_and_radius(float window_vspacing, float &height, float &radius);
 point get_warning_light_src_pos(room_object_t const &c);
