@@ -58,6 +58,10 @@ bool building_t::add_parking_structure_bathroom(rand_gen_t rgen) {
 
 // index bits: enable dims: 1=x, 2=y, 4=z | disable cube faces: 8=x1, 16=x2, 32=y1, 64=y2, 128=z1, 256=z2
 void building_t::get_parking_struct_ext_walls(vect_cube_with_ix_t &walls, bool exterior_surfaces) const {
+	if (!exterior_surfaces && interior && !interior->parking_str_walls.empty()) { // use cached value
+		walls = interior->parking_str_walls;
+		return;
+	}
 	assert(is_parking());
 	assert(real_num_parts == (1 + has_basement()));
 	cube_t const &part(parts.front()); // above ground part
@@ -152,6 +156,7 @@ void building_t::get_parking_struct_ext_walls(vect_cube_with_ix_t &walls, bool e
 			else {walls.emplace_back(sides[n], (exterior_surfaces ? 4 : face_masks[n]));} // add entire wall
 		} // for n
 	} // for f
+	if (!exterior_surfaces && interior) {interior->parking_str_walls = walls;} // cache for future use
 }
 
 void building_t::add_parking_struct_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix,

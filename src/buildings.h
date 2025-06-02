@@ -1946,6 +1946,7 @@ struct building_interior_t {
 	vect_cube_t floors, ceilings, fc_occluders, exclusion, open_walls, split_window_walls;
 	vect_cube_t walls[2]; // walls are split by dim, which is the separating dimension of the wall
 	vect_cube_with_ix_t int_windows; // ix stores room index
+	vect_cube_with_ix_t parking_str_walls; // interior of exterior walls; ix stores draw flags
 	vect_stairwell_t stairwells;
 	vect_tunnel_seg_t tunnels;
 	vect_door_t doors;

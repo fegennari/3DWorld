@@ -1242,12 +1242,18 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 		else if (!is_cube()) {
 			// not cube walls, skip exterior
 		}
-		else { // check exterior walls; the spider can walk on them, but only if they're closed
+		else { // check exterior walls; the spider can walk on them (including windows), but only if they're closed
 			float const wall_thickness(get_wall_thickness()), door_open_dist(get_door_open_dist());
 			auto const parts_end(get_real_parts_end_inc_sec());
 			point const query_pt(get_inv_rot_pos(camera_bs)); // for open exterior door tests
 
 			for (auto i = parts.begin(); i != parts_end; ++i) {
+				if (is_parking() && i->z1() >= ground_floor_z1) { // parking structure exterior walls have no windows; use cached wall sections
+					for (cube_t const &wall : interior->parking_str_walls) {
+						if (wall.z1() < tc.z2() && wall.z2() > tc.z1()) {surface_orienter.register_cube(wall);}
+					}
+					continue;
+				}
 				for (unsigned dim = 0; dim < 2; ++dim) {
 					for (unsigned dir = 0; dir < 2; ++dir) {
 						cube_t cube(*i);
