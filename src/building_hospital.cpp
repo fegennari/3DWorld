@@ -32,7 +32,7 @@ bool building_t::maybe_create_nested_bathroom(room_t &room, rand_gen_t &rgen) { 
 	float const floor_spacing(get_window_vspace()), rdx(room.dx()), rdy(room.dy());
 	if (min(rdx, rdy) < 2.0*floor_spacing || max(rdx, rdy) < 2.5*floor_spacing) return 0; // too small
 	float const door_width(get_doorway_width()), door_hwidth(0.5*door_width), wall_thick(get_wall_thickness()), wall_hthick(0.5*wall_thick);
-	float const min_sz(2.0*door_width), max_sz(4.0*door_width), rzc(room.zc());
+	float const min_sz(2.5*door_width), max_sz(4.0*door_width), rzc(room.zc()), fc_thick(get_fc_thickness());
 	bool const pref_dx(rgen.rand_bool()), pref_dy(rgen.rand_bool());
 
 	// choose a valid dir in each dim, not along an exterior wall; often next to a doorway
@@ -60,7 +60,6 @@ bool building_t::maybe_create_nested_bathroom(room_t &room, rand_gen_t &rgen) { 
 			orig_room.set_has_subroom();
 			interior->rooms.push_back(orig_room); // re-add full room; invalidates room reference
 			// add wall sections and door
-			float const fc_thick(get_fc_thickness());
 			bool door_dim(0);
 			cube_t walls[2] = {bathroom, bathroom};
 			vect_door_stack_t doorways;
