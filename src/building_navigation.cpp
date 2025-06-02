@@ -1005,7 +1005,7 @@ void building_t::build_nav_graph() const { // Note: does not depend on room geom
 				ng.connect_rooms(r, r2, -1, conn_cube);
 			}
 		}
-		if (room.is_parking() && has_ramp && room.intersects_no_adj(interior->pg_ramp)) { // include parking garage ramp
+		if ((room.is_parking() || is_parking()) && has_ramp && room.intersects_no_adj(interior->pg_ramp)) { // include parking garage ramp
 			bool const dim(interior->pg_ramp.ix >> 1), dir(interior->pg_ramp.ix & 1);
 			ng.connect_ramp(r, dim, dir);
 		}
@@ -1207,7 +1207,7 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const { //
 	// else if floors differ by more than 1, we'll end up visiting the room on the wrong floor
 	
 	if (global_building_params.ai_target_player) { // ensure target is a valid location in this building; this must be done *after* adjacent floor zval adjustment
-		// handle the case where the player is standing on the stairs on the same floor by moving zval to a different floor to force this person to use the stairs; what about pg_ramp?
+		// handle case where player is standing on stairs on same floor by moving zval to a different floor to force this person to use stairs; what about pg_ramp?
 		if (person.goal_type == GOAL_TYPE_PLAYER && loc.floor_ix == goal.floor_ix && goal.stairs_ix >= 0) {
 			float const person_z1(person.get_z1()), player_z1(cur_player_building_loc.pos.z - get_bldg_player_height()), fc_thick(get_fc_thickness());
 			// make destination exactly one floor above or below of where we currently are; some hysteresis is required to handle the case where the player is at the same zval
@@ -1740,7 +1740,7 @@ void building_t::find_nearest_stairs_ramp_esc(point const &p1, point const &p2, 
 		//if (no_stairs_exit_on_floor(stairs, p2.z))    continue; // not an exit; now handled in path reconstruction by pathing to the floor above or below through this point
 		sorted.emplace_back(get_dist_xy_through_pt(p1, stairs.get_cube_center(), p2), s);
 	}
-	if (maybe_in_basement && has_pg_ramp() && zmax < ground_floor_z1) { // parking garage ramp
+	if (has_pg_ramp() && ((maybe_in_basement && zmax < ground_floor_z1) || is_parking())) { // parking garage ramp
 		if (zmin > interior->pg_ramp.z1() && zmax < interior->pg_ramp.z2()) { // ramp is within vertical range
 			sorted.emplace_back(get_dist_xy_through_pt(p1, interior->pg_ramp.get_cube_center(), p2), stairs_end); // ix=stairs_end
 		}
