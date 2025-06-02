@@ -378,7 +378,9 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	}
 	// don't block parking structure entrance; include this for both the ground floor and the top floor for the sprinkler pipes
 	if (!in_basement && !interior->parking_entrance.is_all_zeros() && (is_top_floor || (zval >= interior->parking_entrance.z1() && zval < interior->parking_entrance.z2()))) {
-		add_blocker(interior->parking_entrance, obstacles, obstacles_exp, obstacles_ps);
+		cube_t entrance(interior->parking_entrance);
+		entrance.expand_in_dim(!bool(interior->parking_entrance.ix >> 1), -get_trim_thickness()); // shrink slightly to allow pillar just inside the entrance
+		add_blocker(entrance, obstacles, obstacles_exp, obstacles_ps);
 	}
 	if (!in_basement && floor_ix == 0) { // above ground parking structure, first floor: avoid exterior doors
 		for (tquad_with_ix_t const &d : doors) { // find all doors on the ground floor

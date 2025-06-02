@@ -93,15 +93,24 @@ void building_t::get_parking_struct_ext_walls(vect_cube_with_ix_t &walls, bool e
 		wall.d[dim][!dir] = wall.d[dim][dir] + (dir ? -1.0 : 1.0)*wall_thick; // set wall thickness
 
 		for (unsigned side = 0; side < 2; ++side) {
+			unsigned const sf[2][2] = {{8, 16}, {32, 64}}; // {dim x dir}
+			unsigned face_mask(0);
 			float const door_edge(c.d[!dim][side]);
 			cube_t w(wall);
 			w.d[!dim][!side] = door_edge;
 			w.d[!dim][ side] = door_edge + (side ? 1.0 : -1.0)*0.75*floor_spacing;
 			w.intersect_with_cube(part); // don't extend outside the part
-			unsigned const sf[2][2] = {{8, 16}, {32, 64}}; // {dim x dir}
-			unsigned face_mask(0);
-			if (exterior_surfaces) {face_mask = 3 + sf[dim][!dir] + sf[!dim][!side];} // outside and exposed end
-			else                   {face_mask = (1 << dim) + sf[dim][dir];} // inside only
+
+			if (w.get_sz_dim(!dim) < 1.1*wall_thick) { // entrance corner wall - expand in the other dim
+				w.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.50*floor_spacing;
+				w.intersect_with_cube(part); // clamp again, just in case
+				if (exterior_surfaces) {face_mask = 3 + sf[!dim][!side];} // outside and both ends
+				else                   {face_mask = (1 << (!dim)) + sf[!dim][side];} // inside only
+			}
+			else {
+				if (exterior_surfaces) {face_mask = 3 + sf[dim][!dir] + sf[!dim][!side];} // outside and exposed end
+				else                   {face_mask = (1 << dim) + sf[dim][dir];} // inside only
+			}
 			walls.emplace_back(w, face_mask);
 		} // for side
 	} // for c
