@@ -160,5 +160,9 @@ void building_t::add_parking_struct_objs(rand_gen_t rgen, room_t const &room, fl
 	add_parking_garage_objs(rgen, room, zval, room_id, floor_ix, num_floors, nlights_x, nlights_y, light_delta_z, light_ix_assign);
 	//cube_t const &part(parts.front()); // above ground part
 	//vect_room_object_t &objs(interior->room_geom->objs);
+	
+	if (!interior->parking_entrance.is_all_zeros()) {
+		// add ticket booth, barrier, etc.
+	}
 	// TODO: anything else to add?
 }

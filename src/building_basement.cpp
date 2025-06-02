@@ -308,6 +308,11 @@ cube_t building_t::get_ext_basement_door_blocker() const {
 	return blocker;
 }
 
+void add_blocker(cube_t const &blocker, vect_cube_t &obstacles, vect_cube_t &obstacles_exp, vect_cube_t &obstacles_ps) {
+	obstacles    .push_back(blocker);
+	obstacles_exp.push_back(blocker);
+	obstacles_ps .push_back(blocker);
+}
 void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix,
 	unsigned num_floors, unsigned &nlights_x, unsigned &nlights_y, float &light_delta_z, light_ix_assign_t &light_ix_assign)
 {
@@ -352,6 +357,8 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	float const row_width(wall_spacing - wall_thickness), space_length(0.5f*(row_width - road_width)), beam_spacing(len_sz/num_rows);
 	unsigned const num_pillars(max(2U, unsigned(round_fp(0.25*wall_len/parking_sz.y)))); // every 4 spaces, at least 2 at the ends of the wall
 	float const pillar_spacing((wall_len - pillar_width)/(num_pillars - 1)), beam_delta_z(0.95*wall.dz()), tot_light_amt(room.light_intensity);
+	bool const is_top_floor(floor_ix+1 == num_floors);
+	bool const is_top_floor_of_stack(is_top_floor && !(in_basement && is_parking())); // top floor of basement is not the top if this is a parking structure
 	bool short_sides[2] = {0,0};
 
 	if (half_strip) {
@@ -367,24 +374,21 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	interior->get_stairs_and_elevators_bcubes_intersecting_cube(room_floor_cube, obstacles_exp, 0.9*window_vspacing); // with more  clearance in front, for walls and pillars
 
 	if (in_basement && has_ext_basement()) { // everything should avoid the extended basement door
-		cube_t const blocker(get_ext_basement_door_blocker());
-		obstacles    .push_back(blocker);
-		obstacles_exp.push_back(blocker);
-		obstacles_ps .push_back(blocker);
+		add_blocker(get_ext_basement_door_blocker(), obstacles, obstacles_exp, obstacles_ps);
+	}
+	// don't block parking structure entrance; include this for both the ground floor and the top floor for the sprinkler pipes
+	if (!in_basement && !interior->parking_entrance.is_all_zeros() && (is_top_floor || (zval >= interior->parking_entrance.z1() && zval < interior->parking_entrance.z2()))) {
+		add_blocker(interior->parking_entrance, obstacles, obstacles_exp, obstacles_ps);
 	}
 	if (!in_basement && floor_ix == 0) { // above ground parking structure, first floor: avoid exterior doors
 		for (tquad_with_ix_t const &d : doors) { // find all doors on the ground floor
 			if (d.type == tquad_with_ix_t::TYPE_RDOOR) continue; // roof access door - skip
 			cube_t blocker(d.get_bcube());
 			expand_door_blocker(blocker);
-			obstacles    .push_back(blocker);
-			obstacles_exp.push_back(blocker);
-			obstacles_ps .push_back(blocker);
-		} // for d
+			add_blocker(blocker, obstacles, obstacles_exp, obstacles_ps);
+		}
 	}
 	cube_with_ix_t const &ramp(interior->pg_ramp);
-	bool const is_top_floor(floor_ix+1 == num_floors);
-	bool const is_top_floor_of_stack(is_top_floor && !(in_basement && is_parking())); // top floor of basement is not the top if this is a parking structure
 	room_object const wall_type(in_basement ? TYPE_PG_WALL : TYPE_STAIR_WALL); // PG wall is a detail object and culled early
 	
 	// add ramp if one was placed during floorplanning, before adding parking spaces
@@ -507,9 +511,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 				objs.emplace_back(side_wall, wall_type, room_id, !dim, d,   0, tot_light_amt, SHAPE_CUBE, wall_color);
 				objs.emplace_back(door_wall, wall_type, room_id,  dim, dir, 0, tot_light_amt, SHAPE_CUBE, wall_color);
 			} // d
-			obstacles    .push_back(avoid);
-			obstacles_exp.push_back(avoid);
-			obstacles_ps .push_back(avoid);
+			add_blocker(avoid, obstacles, obstacles_exp, obstacles_ps); // avoid equipment room
 			interior->elevator_equip_room = sub_room; // needed for parking garage light placement, and may be useful in other situations
 			break; // done
 		} // for e
