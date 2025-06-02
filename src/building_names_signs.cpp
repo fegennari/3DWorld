@@ -589,8 +589,8 @@ void add_sign_outside_door(vect_room_object_t &objs, cube_t const &sign, string 
 void building_t::add_door_sign(string const &text, room_t const &room, float zval, unsigned room_id, bool no_check_adj_walls, cube_t const &avoid) {
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness()), half_wt(0.5*wall_thickness);
 	point const part_center(get_part_for_room(room).get_cube_center()), room_center(room.get_cube_center());
-	cube_t c(room);
-	set_cube_zvals(c, zval, zval+wall_thickness); // reduce to a small z strip for this floor to avoid picking up doors on floors above or below
+	cube_t room_inner(room);
+	room_inner.expand_by_xy(-2.0*wall_thickness);
 	bool const dark_mode((interior->rooms.size() + interior->walls[0].size() + mat_ix) & 1); // random per-building; doors.size() can change as closets are added
 	colorRGBA const text_color(dark_mode ? WHITE : DK_BLUE);
 	bool const check_contained_in_room(!is_residential()); // apartment buildings and hotels always need room numbers
@@ -598,6 +598,7 @@ void building_t::add_door_sign(string const &text, room_t const &room, float zva
 
 	for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) {
 		if (!i->is_connected_to_room(room_id)) continue;
+		if (room_inner.contains_cube(*i))      continue; // skip interior door such as nested bathroom
 		bool const side(room_center[i->dim] < i->get_center_dim(i->dim));
 		float const door_width(i->get_width()), side_sign(side ? 1.0 : -1.0);
 		cube_t sign(*i);
