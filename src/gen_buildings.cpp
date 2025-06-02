@@ -5564,9 +5564,13 @@ bool check_buildings_no_grass(point const &pos) { // for tiled terrain mode; pos
 	if (building_tiles  .check_point_coll_xy(pos)) return 1;
 	return 0;
 }
-void get_building_grass_coll_cubes(cube_t const &region, vect_cube_t &out) {
-	building_creator.get_grass_coll_cubes(region, out);
-	building_tiles  .get_grass_coll_cubes(region, out);
+void get_building_grass_coll_cubes(cube_t const &region, vect_cube_t &out) { // Note: region is in camera space
+	unsigned const out_start(out.size());
+	vector3d const xlate(get_camera_coord_space_xlate());
+	cube_t region_bs(region - xlate); // convert to buildings space
+	building_creator.get_grass_coll_cubes(region_bs, out);
+	building_tiles  .get_grass_coll_cubes(region_bs, out);
+	for (auto c = out.begin()+out_start; c != out.end(); ++c) {*c += xlate;} // convert back to camera space
 }
 bool check_buildings_cube_coll(cube_t const &c, bool xy_only, bool inc_basement, building_t const *exclude1, building_t const *exclude2) {
 	return (building_creator_city.check_cube_coll(c, xy_only, inc_basement, exclude1, exclude2) ||
