@@ -2676,7 +2676,17 @@ void building_room_geom_t::add_wall_or_pillar(room_object_t const &c, vector3d c
 	if (c.type == TYPE_OFF_PILLAR && c.in_mall()) {} // special case for mall pillar?
 	tid_nm_pair_t const tex(is_wall_or_pillar_concrete(c) ? tid_nm_pair_t(get_concrete_tid(), wall_tex.tscale_x, 1) : get_scaled_wall_tex(wall_tex));
 	rgeom_mat_t &mat(get_material(tex, 1, 0, small)); // shadowed, no color atten, sides only unless draw_top
-	if      (c.shape == SHAPE_CUBE ) {mat.add_cube_to_verts(c, c.color, tex_origin, (draw_top ? EF_Z1 : EF_Z12));}
+	
+	if (c.shape == SHAPE_CUBE) {
+		unsigned skip_faces(draw_top ? EF_Z1 : EF_Z12);
+
+		if (c.is_exterior()) { // exterior visible parking garage pillar; draw the back side
+			unsigned ext_faces(c.item_flags);
+			if (ext_faces > 0) {get_material(tex, 0, 0, 0, 0, 1).add_cube_to_verts(c, c.color, tex_origin, ~ext_faces);} // unshadowed; exterior=1
+			skip_faces |= ext_faces;
+		}
+		mat.add_cube_to_verts(c, c.color, tex_origin, skip_faces);
+	}
 	else if (c.shape == SHAPE_CYLIN) {mat.add_vcylin_to_verts_tscale(c, c.color, 0, draw_top);}
 	else {assert(0);} // unsupported shape
 }

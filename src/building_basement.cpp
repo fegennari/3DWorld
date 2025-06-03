@@ -607,9 +607,23 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 			}
 		}
 	} // for n
+	// add pillar objects
 	room_object const pillar_type (in_basement ? TYPE_PG_PILLAR : TYPE_OFF_PILLAR); // PG pillar is a detail object and culled early
 	unsigned    const pillar_flags(in_basement ? 0 : RO_FLAG_ADJ_HI); // flag as concrete office pillar
-	for (auto const &p : pillars) {objs.emplace_back(p, pillar_type, room_id, !dim, 0, pillar_flags, tot_light_amt, SHAPE_CUBE, wall_color);}
+	
+	for (auto const &p : pillars) {
+		unsigned pflags(pillar_flags), ext_faces(0);
+
+		if (!in_basement) { // set exterior faces
+			for (unsigned dim = 0; dim < 2; ++dim) {
+				for (unsigned dir = 0; dir < 2; ++dir) {
+					if (fabs(p.d[dim][dir] - room.d[dim][dir]) < pillar_hwidth) {ext_faces |= EFLAGS[dim][dir];}
+				}
+			}
+			if (ext_faces > 0) {pflags |= RO_FLAG_EXTERIOR;}
+		}
+		objs.emplace_back(p, pillar_type, room_id, !dim, 0, pflags, tot_light_amt, SHAPE_CUBE, wall_color, ext_faces);
+	} // for p
 
 	// add a fire extinguisher to a random pillar
 	float fe_height(0.0), fe_radius(0.0);
