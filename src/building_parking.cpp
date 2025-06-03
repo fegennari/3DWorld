@@ -72,6 +72,7 @@ bool building_t::add_parking_structure_bathroom(rand_gen_t rgen) {
 				room_t orig_room(room); // copy as room reference may be invalidated below
 				room.copy_from(bathroom); // first (contained) room must be the bathroom
 				room.expand_by_xy(-wall_thick); // subtract off the walls
+				room.has_stairs = room.has_elevator = 0; // clear flags for bathroom
 				calc_room_ext_sides(room);
 				room.assign_all_to(RTYPE_BATH);
 				room.set_is_nested();

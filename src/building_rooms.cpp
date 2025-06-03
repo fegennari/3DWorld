@@ -430,7 +430,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			bool const maybe_office_bathroom(is_room_office_bathroom(*r, room_center.z, f));
 
 			// motion detection lights for large office building office, mall bathrooms, and office bathrooms; limit to interior rooms to have lit rooms viewed through windows
-			if ((!is_house && has_pri_hall() && r->is_office && !has_window) || is_mall_bathroom || maybe_office_bathroom) {flags |= RO_FLAG_IS_ACTIVE;} // leave unlit initially
+			if ((!is_house && has_pri_hall() && r->is_office && !has_window) || is_mall_bathroom || (maybe_office_bathroom && !is_parking())) {flags |= RO_FLAG_IS_ACTIVE;}
 			else if (r->is_sec_bldg) {is_lit = 0;} // garage and shed lights start off
 			else {
 				// 50% of lights are on, 75% for top of stairs, 100% for non-basement hallways, 100% for parking garages, backrooms, and malls

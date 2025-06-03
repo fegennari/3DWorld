@@ -435,9 +435,11 @@ void interpolate_over_time(float &val, float target_val, float transition_secs, 
 void set_interior_lighting(shader_t &s, bool have_indir) {
 	bool const is_in_mall(player_in_basement == 3 && player_building && player_building->has_mall());
 	bool const has_mall_skylight(is_in_mall && player_building->has_mall_skylight());
+	bool const is_in_parking_str(player_building && player_building->is_parking()); // increased ambient light since there are open walls
 	// if the player is in the basement or attic, ambient light should be a constant color rather than the color of the sun or moon;
 	// but this is set elsewhere and we have no control over it, and some areas such as malls require ambient light, so we can't leave it at zero
-	float const target_blscale((player_in_basement || player_in_attic) ? (is_in_mall ? (has_mall_skylight ? 1.0 : 0.8) : 0.0) : (player_in_walkway ? 2.0 : 1.0));
+	float const target_blscale((player_in_basement || player_in_attic) ? (is_in_mall ? (has_mall_skylight ? 1.0 : 0.8) : 0.0) :
+		(player_in_walkway ? 2.0 : (is_in_parking_str ? 1.5 : 1.0)));
 	float const light_scale(0.5), target_ascale(player_in_tunnel ? 0.0 : 1.0); // brighter ambient unless in tunnel
 	static float blscale(1.0), ascale(1.0);
 	static int lu_frame1(0), lu_frame2(0);
@@ -5269,7 +5271,8 @@ public:
 					building_t const &bldg(get_building(b->ix));
 					if (bldg.has_int_windows() || bldg.point_near_ext_door((state.pos - state.xlate), get_door_open_dist())) continue;
 				}
-				if (dist_less_than(pdu.pos, c.closest_pt(pdu.pos), pdu.far_) && pdu.cube_visible(c)) {state.building_ids.push_back(*b);}
+				// skip parking structure because it doesn't have solid exterior walls
+				if (dist_less_than(pdu.pos, c.closest_pt(pdu.pos), pdu.far_) && pdu.cube_visible(c) && !get_building(b->ix).is_parking()) {state.building_ids.push_back(*b);}
 			} // for b
 		} // for g
 	}
