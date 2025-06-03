@@ -2861,8 +2861,9 @@ void building_t::write_basement_entrance_depth_pass(shader_t &s) const {
 	if (!interior || !has_basement()) return;
 	float const zval(get_basement().z2()), camera_z(get_camera_pos().z);
 	if (camera_z < zval) return; // below upper basement level
-	// floor 3+ of office building; skip industrial buildings; skip houses because entrance can be visible through L-shaped stairs
-	if (!is_house && !is_industrial() && camera_z > ground_floor_z1 + 2.0*get_window_vspace()) return;
+	// floor 3+ of office building; skip industrial buildings and parking structures since they are multiple floors tall;
+	// skip houses because entrance can be visible through L-shaped stairs
+	if (!is_house && !is_industrial() && !is_parking() && camera_z > ground_floor_z1 + 2.0*get_window_vspace()) return;
 	float const z(zval + BASEMENT_ENTRANCE_SCALE*get_floor_thickness()); // offset is required to prevent Z-fighting
 	bool const depth_clamp_enabled(glIsEnabled(GL_DEPTH_CLAMP));
 	s.set_cur_color(ALPHA0); // fully transparent
@@ -3794,11 +3795,11 @@ public:
 		float const min_alpha = 0.0; // 0.0 to avoid alpha test
 		enable_dlight_bcubes  = 1; // using light bcubes is both faster and more correct when shadow maps are not enabled
 		push_scene_xlate(xlate);
-		float water_damage(0.0), crack_damage(0.0);
+		float water_damage(0.0), crack_damage(0.0), parking_structure_dmin_sq(FLT_MAX);
 		building_draw_t interior_wind_draw, ext_door_draw;
 		vector<building_draw_t> int_wall_draw_front, int_wall_draw_back;
 		vector<vertex_range_t> per_bcs_exclude;
-		building_t const *building_cont_player(nullptr);
+		building_t const *building_cont_player(nullptr), *closest_parking_structure(nullptr);
 		defer_ped_draw_vars_t defer_ped_draw_vars;
 		vector<pair<building_t *, bool>> buildings_with_cars; // {building, player_in_building}
 		vector<point> pts;
@@ -3990,7 +3991,18 @@ public:
 						g->has_room_geom = 1;
 						(*i)->flag_has_room_geom();
 						if (!draw_interior) continue;
-
+						
+						if (b.is_parking()) { // special handling of parking structures to disable terrain visible through stairs and ramp cutouts
+							cube_t ground_bcube(b.bcube);
+							ground_bcube.z1() = ground_bcube.z2() = b.ground_floor_z1;
+							ground_bcube.expand_in_dim(2, b.get_fc_thickness());
+							float const dist_sq(p2p_dist_sq(camera_bs, ground_bcube.get_cube_center()));
+							
+							if (dist_sq < parking_structure_dmin_sq && camera_pdu.cube_visible(b.bcube + xlate)) {
+								closest_parking_structure = &b;
+								parking_structure_dmin_sq = dist_sq;
+							}
+						}
 						if (!player_in_building_bcube && mall_elevator_visible) { // above the mall in the elevator
 							if (b.point_in_mall_elevator_entrance(camera_bs, 1)) {
 								b.run_player_interact_logic(camera_bs); // still need to update the elevator and buttons
@@ -4309,7 +4321,8 @@ public:
 		glDisable(GL_CULL_FACE);
 		bool const use_smap_pass(use_tt_smap && !reflection_pass);
 		if (!use_smap_pass) {bbd.draw_obj_models(s, xlate, 0);} // draw models here if the code below won't be run; shadow_only=0
-		if (building_cont_player) {building_cont_player->write_basement_entrance_depth_pass(s);} // drawn last
+		building_t const *const entrance_draw_target(building_cont_player ? building_cont_player : closest_parking_structure);
+		if (entrance_draw_target) {entrance_draw_target->write_basement_entrance_depth_pass(s);} // drawn last
 		s.end_shader();
 
 		// post-pass to render building exteriors in nearby tiles that have shadow maps; shadow maps don't work right when using reflections
