@@ -334,7 +334,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	assert(car_sz.z < (window_vspacing - floor_thickness)); // sanity check; may fail for some user parameters, but it's unclear what we do in that case
 	unsigned const num_space_wid(wid_sz_spaces/parking_sz.y), num_full_strips(max(1U, unsigned(len_sz/min_strip_sz))); // take the floor
 	bool const half_strip((num_full_strips*min_strip_sz + parking_sz.x + road_width + wall_thickness) < len_sz); // no space for a full row, add a half row
-	bool const half_row_side(half_strip ? rgen.rand_bool() : 0); // pick a random side
+	bool const half_row_side(half_strip ? ((mat_ix + num_floors + room_id + dim) & 1) : 0); // pick a random side, consistent across floors
 	unsigned const num_rows(2*num_full_strips + half_strip), num_strips(num_full_strips + half_strip), num_walls(num_strips - 1);
 	unsigned const capacity(num_rows*num_space_wid); // ignoring space blocked by stairs and elevators
 	unsigned &nlights_len(dim ? nlights_x : nlights_y), &nlights_wid(dim ? nlights_y : nlights_x);
