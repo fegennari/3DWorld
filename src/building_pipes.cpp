@@ -848,6 +848,12 @@ int add_sprinkler_pipe(building_t const &b, point const &p1, float end_val, floa
 		// Note: pipe should touch the bottom of beams (or lower), so we don't need to check intersections with beams (and it may fail due to FP error)
 		if (has_bcube_int(h_pipe, obstacles) || has_bcube_int(h_pipe, pipe_cubes)) continue; // no need to check walls here
 		if (!ramp.is_all_zeros() && h_pipe.intersects(ramp)) continue; // check ramps as well, since they won't be included for lower floors
+		bool inside_wall(0);
+
+		for (cube_t const &wall : walls) { // pipes can pass through walls, but not run inside them
+			if (h_pipe.intersects(wall) && dim == (wall.dx() < wall.dy())) {inside_wall = 1; break;}
+		}
+		if (inside_wall) continue;
 		if (n > 0) {conn_flags |= (dir ? RO_FLAG_ADJ_LO : RO_FLAG_ADJ_HI);} // shortened pipe, draw the connector end caps
 		ret = ((n > 0) ? 2 : 1);
 		break;
