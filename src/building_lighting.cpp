@@ -652,6 +652,10 @@ class building_indir_light_mgr_t {
 					base_num_rays /= 8; // faster indir lighting, since there are many windows
 					surface_area  *= 0.25; // less indir light, since there are many windows and we want industrial buildings to be darker than retail areas
 				}
+				else if (b.is_parking()) {
+					base_num_rays *= 2; // more rays to reduce noise, since windows are large and few
+					surface_area  *= 0.5; // less indir light
+				}
 			}
 			// light intensity scales with surface area, since incoming light is a constant per unit area (large windows = more light)
 			weight *= surface_area/0.0016f; // a fraction the surface area weight of lights
@@ -1091,6 +1095,11 @@ bool get_wall_quad_window_area(vect_vnctcc_t const &wall_quad_verts, unsigned i,
 void building_t::get_all_windows(vect_cube_with_ix_t &windows) const { // Note: ix encodes 2*dim+dir
 	windows.clear();
 	if (!has_int_windows() || is_rotated() || !is_cube()) return; // no windows; rotated and non-cube buildings are not handled
+
+	if (is_parking()) { // parking structures have wall gaps rather than windows
+		get_parking_garage_wall_openings(windows);
+		return;
+	}
 	float const window_h_border(WINDOW_BORDER_MULT*get_window_h_border()), window_v_border(WINDOW_BORDER_MULT*get_window_v_border()); // (0, 1) range
 	float const wall_thickness(get_wall_thickness());
 	vect_room_object_t blinds;

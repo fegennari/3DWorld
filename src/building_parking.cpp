@@ -104,6 +104,16 @@ bool building_t::add_parking_structure_bathroom(rand_gen_t rgen) {
 	return 0;
 }
 
+void get_door_cuts(vect_tquad_with_ix_t const &doors, float wall_thick, vect_cube_t &door_cuts) {
+	for (tquad_with_ix_t const &d : doors) { // find all doors on the ground floor
+		if (d.type == tquad_with_ix_t::TYPE_RDOOR) continue; // roof access door - skip
+		cube_t dbc(d.get_bcube());
+		bool const dim(dbc.dy() < dbc.dx());
+		dbc.expand_in_dim(dim, 2.0*wall_thick);
+		door_cuts.push_back(dbc);
+	}
+}
+
 // index bits: enable dims: 1=x, 2=y, 4=z | disable cube faces: 8=x1, 16=x2, 32=y1, 64=y2, 128=z1, 256=z2
 void building_t::get_parking_struct_ext_walls(vect_cube_with_ix_t &walls, bool exterior_surfaces) const {
 	if (!exterior_surfaces && interior && !interior->parking_str_walls.empty()) { // use cached value
@@ -113,21 +123,17 @@ void building_t::get_parking_struct_ext_walls(vect_cube_with_ix_t &walls, bool e
 	assert(is_parking());
 	assert(real_num_parts == (1 + has_basement()));
 	cube_t const &part(parts.front()); // above ground part
-	float const floor_spacing(get_window_vspace()), floor_thick(get_floor_thickness()), wall_thick(get_park_struct_wall_thick());
+	float const floor_spacing(get_window_vspace()), wall_thick(get_park_struct_wall_thick());
 	float const lower_wall_height(0.35*floor_spacing), upper_wall_height(0.15*floor_spacing), int_ext_wall_fc_gap(0.0);
 	float const gap_z1(part.z1() + lower_wall_height), gap_z2(part.z1() + floor_spacing - upper_wall_height);
-	unsigned num_floors(calc_num_floors(part, floor_spacing, floor_thick));
+	unsigned num_floors(calc_num_floors(part, floor_spacing, get_floor_thickness()));
 	assert(num_floors > 0);
+	cube_t inner(part);
+	inner.expand_by_xy(-wall_thick);
 	vect_cube_t wall_parts, door_cuts, temp;
 	bool has_entrance(0);
+	get_door_cuts(doors, wall_thick, door_cuts);
 
-	for (tquad_with_ix_t const &d : doors) { // find all doors on the ground floor
-		if (d.type == tquad_with_ix_t::TYPE_RDOOR) continue; // roof access door - skip
-		cube_t dbc(d.get_bcube());
-		bool const dim(dbc.dy() < dbc.dx());
-		dbc.expand_in_dim(dim, 2.0*wall_thick);
-		door_cuts.push_back(dbc);
-	}
 	if (interior && !interior->parking_entrance.is_all_zeros()) { // handle entrance opening
 		door_cuts.push_back(interior->parking_entrance);
 		has_entrance = 1;
@@ -191,10 +197,8 @@ void building_t::get_parking_struct_ext_walls(vect_cube_with_ix_t &walls, bool e
 			}
 			walls.emplace_back(slice, face_mask);
 		}
-		cube_t hole(slice);
-		hole.expand_by_xy(-wall_thick);
 		cube_t sides[4]; // {-y, +y, center -x, center +x}
-		subtract_cube_xy(slice, hole, sides);
+		subtract_cube_xy(slice, inner, sides);
 		unsigned const face_masks[4] = {127-64, 127-32, 127-16, 127-8}; // enable XYZ but skip all XY but {+y, -y, +x, -x} in XY
 
 		for (unsigned n = 0; n < 4; ++n) { // exterior: top and bottom; interior: inside faces
@@ -214,6 +218,48 @@ void building_t::get_parking_struct_ext_walls(vect_cube_with_ix_t &walls, bool e
 		} // for n
 	} // for f
 	if (!exterior_surfaces && interior) {interior->parking_str_walls = walls;} // cache for future use
+}
+
+void building_t::get_parking_garage_wall_openings(vect_cube_with_ix_t &openings) const {
+	assert(is_parking());
+	cube_t const &part(parts.front()); // above ground part
+	float const floor_spacing(get_window_vspace()), wall_thick(get_park_struct_wall_thick());
+	float const lower_wall_height(0.35*floor_spacing), upper_wall_height(0.15*floor_spacing);
+	unsigned num_floors(calc_num_floors(part, floor_spacing, get_floor_thickness()));
+	assert(num_floors > 0);
+	cube_t inner(part);
+	inner.expand_by_xy(-wall_thick);
+	vect_cube_t wall_parts, door_cuts, temp;
+	get_door_cuts(doors, wall_thick, door_cuts);
+
+	if (interior && !interior->parking_entrance.is_all_zeros()) { // handle entrance opening
+		cube_with_ix_t entrance(interior->parking_entrance);
+		bool const dim(entrance.ix >> 1), dir(entrance.ix & 1);
+		entrance.d[dim][!dir] = inner.d[dim][dir];
+		openings.push_back(entrance);
+		entrance.d[dim][!dir] += (dim ? -1.0 : 1.0)*0.5*floor_spacing; // extend back
+		door_cuts.push_back(entrance);
+	}
+	for (cube_t &c : door_cuts) {c.expand_in_dim(!(c.dy() < c.dx()), 0.75*floor_spacing);} // widen
+
+	for (unsigned f = 0; f < num_floors; ++f) {
+		float const zval(part.z1() + f*floor_spacing);
+		cube_t slice(part);
+		set_cube_zvals(slice, (zval + lower_wall_height), (zval + floor_spacing - upper_wall_height));
+		cube_t sides[4]; // {-y, +y, center -x, center +x}
+		unsigned const ixs[4] = {2, 3, 0, 1};
+		subtract_cube_xy(slice, inner, sides);
+
+		for (unsigned n = 0; n < 4; ++n) { // exterior: top and bottom; interior: inside faces
+			if (f == 0) { // cut out slots for doors on the ground floor lower wall and second floor upper wall
+				cube_t wall(sides[n]);
+				wall_parts.clear();
+				subtract_cubes_from_cube(wall, door_cuts, wall_parts, temp, 2); // check zval overlap
+				for (cube_t const &w : wall_parts) {openings.emplace_back(w, ixs[n]);}
+			}
+			else {openings.emplace_back(sides[n], ixs[n]);} // add entire wall
+		} // for n
+	} // for f
 }
 
 void building_t::add_parking_struct_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix,

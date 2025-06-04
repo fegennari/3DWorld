@@ -2936,6 +2936,7 @@ private:
 	void gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ext_bcube) const;
 	void get_lights_with_priorities(point const &target, cube_t const &valid_area, vector<pair<float, unsigned>> &lights_to_sort) const;
 	void get_all_windows(vect_cube_with_ix_t &windows) const;
+	void get_parking_garage_wall_openings(vect_cube_with_ix_t &openings) const;
 	void register_indir_lighting_geom_change() const;
 	void register_blinds_state_change() const;
 	bool is_light_occluded(point const &lpos, point const &camera_bs) const;
