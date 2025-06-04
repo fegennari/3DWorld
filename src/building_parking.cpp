@@ -79,6 +79,8 @@ bool building_t::add_parking_structure_bathroom(rand_gen_t rgen) {
 				room.is_office = 1; // hack to treat this as an office bathroom
 				orig_room.set_has_subroom();
 				interior->rooms.push_back(orig_room); // re-add full room; invalidates room reference
+				// update elevator with the new room; required for elevator light room_id
+				if (!interior->elevators.empty() && interior->elevators.front().room_id == 0) {++interior->elevators.front().room_id;}
 				// add wall sections and door
 				float const fc_thick(get_fc_thickness()), door_hwidth(0.5*door_width);
 

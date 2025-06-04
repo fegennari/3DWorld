@@ -1890,7 +1890,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 					// it should be by the main exterior door, but that hasn't been placed yet, and it may be far from the building center
 					bool const dim(rgen.rand_bool()), dir(rgen.rand_bool());
 					float const dsign(dir ? -1.0 : 1.0), wall_pos(room.d[dim][dir]), end_spacing(0.35*room.get_sz_dim(!dim)); // center 50% of wall to avoid ramps
-					elevator_t elevator(room, stairs_room, dim, !dir, 1, 0); // at_edge=1, interior=0
+					elevator_t elevator(room, stairs_room, dim, !dir, 1, 1); // at_edge=1, interior=1 (needed for terrain culling)
 					elevator.d[dim][!dir] = wall_pos + dsign*ewidth;
 					float const center_pos(rgen.rand_uniform((room.d[!dim][0] + end_spacing), (room.d[!dim][1] - end_spacing)));
 					set_wall_width(elevator, center_pos, 0.5*ewidth, !dim);
