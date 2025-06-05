@@ -2644,6 +2644,7 @@ struct comp_car_by_dist {
 
 bool building_t::has_cars_to_draw(bool player_in_building) const {
 	if (!has_room_geom()) return 0;
+	if (is_parking())     return 1; // parking structure
 	if (player_in_building && has_parking_garage) return 1; // parking garage cars are drawn if the player is in the building
 	if (interior->room_geom->has_garage_car)      return 1; // have car in a garage
 	return 0;
@@ -2651,7 +2652,7 @@ bool building_t::has_cars_to_draw(bool player_in_building) const {
 void building_t::draw_cars_in_building(shader_t &s, vector3d const &xlate, bool player_in_this_building, bool shadow_only) const {
 	if (!has_room_geom()) return; // can get here in rare cases, maybe only shadow_only pass
 	point viewer(camera_pdu.pos - xlate); // building space
-	bool const check_occlusion(display_mode & 0x08);
+	bool const check_occlusion(display_mode & 0x08), is_parking_str(is_parking());
 	float const floor_spacing(get_window_vspace());
 	vect_room_object_t const &objs(interior->room_geom->objs);
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
@@ -2672,28 +2673,41 @@ void building_t::draw_cars_in_building(shader_t &s, vector3d const &xlate, bool 
 			if (camera_pdu.cube_visible(car.bcube + xlate)) {cars_to_draw.push_back(car);}
 		}
 	}
-	else if (player_in_this_building && has_parking_garage) { // cars in parking garage that the player is in
-		// only draw if the player or light is in the basement, or the player is on the first floor where a car may be visible through the stairs
+	else if ((player_in_this_building && has_parking_garage) || is_parking_str) { // cars in parking garage that the player is in, or in parking structure
+		int const camera_floor(get_floor_for_zval(viewer.z));
 		float max_vis_zval(ground_floor_z1);
-		if (!shadow_only) {max_vis_zval += floor_spacing;} // player on first floor?
-		if (viewer.z > max_vis_zval) return;
+
+		if (is_parking_str) {max_vis_zval = bcube.z2();}
+		else { // underground parking garage
+			// only draw if the player or light is in the basement, or the player is on the first floor where a car may be visible through the stairs
+			if (!shadow_only) {max_vis_zval += floor_spacing;} // player on first floor?
+			if (viewer.z > max_vis_zval) return;
+		}
 		viewer = get_inv_rot_pos(viewer); // not needed because there are no cars in rotated buildings?
 		vect_cube_t occluders; // should this be split out per PG level?
 
 		// start at walls, since parking spaces are added after those; breaking is incorrect for multiple PG levels
 		for (auto i = (objs.begin() + pg_wall_start); i != objs_end; ++i) {
-			if (check_occlusion && i->type == TYPE_PG_WALL) {occluders.push_back(*i);}
+			if (check_occlusion && (i->type == TYPE_PG_WALL || (is_parking_str && i->type == TYPE_STAIR_WALL))) {occluders.push_back(*i);}
 			if (i->type != TYPE_PARK_SPACE || !i->is_used()) continue; // not a space, or no car in this space
 			if (i->z2() < viewer.z - 2.0*floor_spacing)      continue; // move than a floor below - skip
 			car_t car(car_from_parking_space(*i));
-			if (!shadow_only && check_occlusion && viewer.z > ground_floor_z1 && !line_intersect_stairs_or_ramp(viewer, car.get_center())) continue;
+			int const car_floor(get_floor_for_zval(car.bcube.zc())), num_floors_apart(abs(camera_floor - car_floor));
+
+			if (shadow_only) {
+				if (num_floors_apart > 0) continue; // different floors
+			}
+			else if (check_occlusion && player_in_this_building) { // FIXME: draw below when player is outside the building
+				if (num_floors_apart > 1) continue; // more than one floor apart
+				if (num_floors_apart > 0 && !line_intersect_stairs_or_ramp(viewer, car.get_center())) continue; // TODO: skip U-shaped stairs
+			}
 			if (!shadow_only && player_in_basement == 3 && !is_cube_visible_through_extb_door(viewer, car.bcube)) continue; // player in extb; cars only visible through door
 			if (camera_pdu.cube_visible(car.bcube + xlate)) {cars_to_draw.push_back(car);}
 		} // for i
 		if (cars_to_draw.empty()) return;
 
 		if (check_occlusion) {
-			// gather occluders from parking garage ceilings and floors (below ground floor)
+			// gather occluders from parking garage ceilings and floors (below ground floor or in parking structure)
 			for (auto const &ceiling : interior->fc_occluders) {
 				if (ceiling.z1() <= max_vis_zval) {occluders.push_back(ceiling);}
 			}

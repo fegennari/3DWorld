@@ -4206,7 +4206,11 @@ public:
 				// draw parked cars in building parking garages or house garages
 				if (!buildings_with_cars.empty()) {
 					glDisable(GL_CULL_FACE); // no back face culling for cars
-					for (auto const &b : buildings_with_cars) {b.first->draw_cars_in_building(s, xlate, b.second, 0);} // shadow_only=0
+					
+					for (auto const &b : buildings_with_cars) {
+						if (player_in_basement && !b.second) continue; // player in another building's basement
+						b.first->draw_cars_in_building(s, xlate, b.second, 0); // shadow_only=0
+					}
 					if (s.is_setup()) {reset_interior_lighting_and_end_shader(s);}
 					glEnable(GL_CULL_FACE);
 				}
