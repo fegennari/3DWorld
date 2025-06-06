@@ -282,10 +282,11 @@ vector3d building_t::get_parked_car_size() const {
 	return get_window_vspace()*vector3d(1.67, 0.73, 0.45); // no cars, use size relative to building floor spacing
 }
 
-void add_pg_obstacles(vect_room_object_t const &objs, unsigned objs_start, unsigned objs_end, vect_cube_t &walls, vect_cube_t &beams, vect_cube_t &obstacles) {
+void add_pg_obstacles(vect_room_object_t const &objs, unsigned objs_start, unsigned objs_end, cube_t const &room, vect_cube_t &walls, vect_cube_t &beams, vect_cube_t &obstacles) {
 	assert(objs_start <= objs_end);
 
 	for (auto i = objs.begin()+objs_start; i != objs.begin()+objs_end; ++i) {
+		if (i->z1() > room.z2() || i->z2() < room.z1()) continue; // wrong room (underground parking garage vs. above ground parking structure)
 		if (i->type == TYPE_PG_WALL || i->type == TYPE_STAIR_WALL) {walls.push_back(*i);} // wall in parking garage/structure
 		else if (i->type == TYPE_PG_PILLAR || i->type == TYPE_OFF_PILLAR) { // pillar in parking garage/structure
 			walls    .push_back(*i); // included in walls
@@ -769,7 +770,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		// avoid intersecting lights, pillars, walls, stairs, elevators, and ramps;
 		// note that lights haven't been added yet though, but they're placed on beams, so we can avoid beams instead
 		vect_cube_t walls, beams, pipe_cubes;
-		add_pg_obstacles(objs, objs_start, objs.size(), walls, beams, obstacles);
+		add_pg_obstacles(objs, objs_start, objs.size(), room, walls, beams, obstacles);
 		if (interior->ind_info) {vector_add_to(interior->ind_info->pg_extended_pipes, obstacles);} // must avoid sprinkler pipes coming from above
 		
 		if (in_basement) { // pipes and electrical are not for parking structures

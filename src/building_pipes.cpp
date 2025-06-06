@@ -7,7 +7,7 @@
 
 
 bool line_int_cubes_exp(point const &p1, point const &p2, vect_cube_t const &cubes, vector3d const &expand);
-void add_pg_obstacles(vect_room_object_t const &objs, unsigned objs_start, unsigned objs_end, vect_cube_t &walls, vect_cube_t &beams, vect_cube_t &obstacles);
+void add_pg_obstacles(vect_room_object_t const &objs, unsigned objs_start, unsigned objs_end, cube_t const &room, vect_cube_t &walls, vect_cube_t &beams, vect_cube_t &obstacles);
 void subtract_cubes_from_cube_split_in_dim(cube_t const &c, vect_cube_t const &sub, vect_cube_t &out, vect_cube_t &out2, unsigned dim);
 
 
@@ -915,6 +915,7 @@ int add_sprinkler_pipe(building_t const &b, point const &p1, float end_val, floa
 	}
 	if (h_pipe.z2() < ceiling_zval) { // add hangers for each beam the pipe passes under; ignores beam zval (assumes beams stack on each floor)
 		for (cube_t const &beam : beams) {
+			if (beam.z1() < p1.z || beam.z1() > ceiling_zval) continue; // wrong floor
 			if (beam.get_sz_dim(!dim) < beam.get_sz_dim(dim)) continue; // beam runs in the wrong dim (parallel, not perpendicular)
 			if (beam.d[!dim][0] > h_pipe.d[!dim][0] || beam.d[!dim][1] < h_pipe.d[!dim][1]) continue; // beam length doesn't contain pipe
 			if (beam.d[ dim][0] < h_pipe.d[ dim][0] || beam.d[ dim][1] > h_pipe.d[ dim][1]) continue; // pipe length doesn't contain beam
@@ -1048,7 +1049,7 @@ bool building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 
 			if (lf) { // query walls/beams/obstacles added to lower floors in previous PG placement steps
 				obstacles2 = obstacles; // copy existing obstacles, since the stairs, elevators, ramps, etc. that aren't objects or per-floor are needed
-				add_pg_obstacles(objs, interior->room_geom->wall_ps_start, objs_start, walls2, beams2, obstacles2);
+				add_pg_obstacles(objs, interior->room_geom->wall_ps_start, objs_start, room, walls2, beams2, obstacles2);
 			}
 			vect_cube_t const &walls_(lf ? walls2 : walls), &beams_(lf ? beams2 : beams), &obstacles_(lf ? obstacles2 : obstacles);
 			float const ceiling_zval(room.z1() + (f+1)*floor_spacing - fc_thickness);
