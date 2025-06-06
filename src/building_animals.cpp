@@ -171,7 +171,10 @@ bool building_t::is_pos_inside_building(point const &pos, float xy_pad, float hh
 		}
 		else if (!basement.contains_pt_xy_exp(pos, -bcube_pad)) return 0; // check the basement
 	}
-	else if (!bcube.contains_pt_xy_exp(pos, -bcube_pad)) return 0; // check for end point inside building bcube
+	else {
+		if (is_parking()) {bcube_pad += get_park_struct_wall_thick();} // add extra spacing for parking structure walls
+		if (!bcube.contains_pt_xy_exp(pos, -bcube_pad)) return 0; // check for end point inside building bcube
+	}
 	cube_t req_area(pos);
 	req_area.expand_by_xy(xy_pad);
 	req_area.z2() += hheight;
@@ -624,7 +627,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, float timestep, 
 	float const line_project_dist(max(1.1f*(hlength - coll_radius), 0.0f)); // extra space in front of the target destination
 	// set dist_thresh based on the distance we can move this frame; if set too low, we may spin in circles trying to turn to stop on the right spot
 	float const dist_thresh(2.0f*timestep*max(rat.speed, global_building_params.rat_speed));
-	float const xy_pad(hlength + trim_thickness);
+	float const xy_pad(hlength + (is_parking() ? 0.0 : trim_thickness));
 	vector3d const center_dz(0.0, 0.0, hheight); // or squish_hheight?
 	bool update_path(0);
 	vector3d coll_dir;
@@ -1363,32 +1366,32 @@ void building_t::update_spider(spider_t &spider, point const &camera_bs, float t
 	
 	if (spider.squished || spider.is_sleeping()) return; // horribly squished or peacefully sleeping
 	float const radius(spider.radius), height(2.0*radius), coll_radius(2.0f*radius);
-	float const spider_z1(spider.pos.z - height), spider_z2(spider.pos.z + height);
+	float const spider_z1(spider.pos.z - height), spider_z2(spider.pos.z + height), xy_pad(0.5*radius);
 
 	if (spider.is_jumping()) { // jumping
 		spider.jump_dist += p2p_dist_xy(spider.pos, spider.last_pos);
 		spider.pos.z     += timestep*spider.jump_vel_z;
 		apply_building_gravity(spider.jump_vel_z, timestep);
 		// if we're still in the initial phase of our jump, skip collision and movement logic below to avoid initial coll with our starting object
-		if (spider.jump_dist < 2.0*spider.radius && is_pos_inside_building(spider.pos, radius, radius)) return;
+		if (spider.jump_dist < 2.0*spider.radius && is_pos_inside_building(spider.pos, xy_pad, radius)) return;
 	}
 	rgen.rand_mix(); // make sure it's different per spider
 	// Note: we use a small xy_pad to allow the spider to climb on exterior walls
 	if (spider.speed == 0.0) {set_spider_speed(spider, rgen, get_window_vspace());} // random speed
 
-	if (!is_pos_inside_building(spider.pos, radius, radius)) {
+	if (!is_pos_inside_building(spider.pos, xy_pad, radius)) {
 		spider.end_jump();
 		spider.pos    = spider.last_pos; // restore previous pos before collision
 		spider.on_web = 0;
 
-		if (!is_pos_inside_building(spider.pos, radius, radius)) { // still not valid
+		if (!is_pos_inside_building(spider.pos, xy_pad, radius)) { // still not valid
 			if (spider.last_valid_pos == all_zeros) { // bad spawn pos - retry
 				spider.pos = gen_animal_floor_pos(radius, spider_t::allow_in_attic(), 1, 0, 1, rgen); // not_player_visible=1, pref_dark_room=0, not_by_ext_door=1
 				return;
 			}
 			spider.pos = spider.last_valid_pos; // restore to prev frame pos
 		}
-		assert(is_pos_inside_building(spider.pos, radius, radius));
+		assert(is_pos_inside_building(spider.pos, xy_pad, radius));
 		spider.choose_new_dir(rgen);
 		return; // or could continue below?
 	}
@@ -1427,7 +1430,7 @@ void building_t::update_spider(spider_t &spider, point const &camera_bs, float t
 		coll_dir = (prev_pos - spider.pos).get_norm(); // points toward the collider in the XY plane
 
 		// check if new pos is valid, and has a path to dest
-		if (!is_pos_inside_building(spider.pos, radius, radius)) {
+		if (!is_pos_inside_building(spider.pos, xy_pad, radius)) {
 			spider.pos = prev_pos; // restore previous pos before collision
 			spider.sleep_for(0.1, 0.2); // wait 0.1-0.2s so that we don't immediately collide and get pushed out again
 		}
