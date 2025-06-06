@@ -1104,6 +1104,7 @@ struct building_room_geom_t {
 	uint8_t mens_count=0, womens_count=0; // bathrooms and locker rooms
 	float obj_scale=1.0;
 	unsigned wall_ps_start=0, buttons_start=0, stairs_start=0, backrooms_start=0, retail_start=0; // index of first object of {TYPE_PG_*|TYPE_PSPACE, TYPE_BUTTON, TYPE_STAIR, retail}
+	unsigned wall_ps_end=0;
 	unsigned init_num_doors=0, init_num_dstacks=0; // required for removing doors added by backrooms generation when room_geom is deleted
 	unsigned pool_ramp_obj_ix=0, pool_stairs_start_ix=0, last_animal_update_frame=0, first_mall_obj_ix=0, last_mall_obj_ix=0;
 	point tex_origin;
@@ -2377,7 +2378,7 @@ struct building_t : public building_geom_t {
 	void register_player_enter_building() const;
 	void register_player_exit_building (bool entered_another_building) const;
 	bool check_for_wall_ceil_floor_int(point const &p1, point const &p2, bool inc_pg_br_walls=1) const;
-	bool line_intersect_stairs_or_ramp(point const &p1, point const &p2) const;
+	bool line_intersect_stairs_or_ramp(point const &p1, point const &p2, bool skip_u_stairs=0) const;
 	bool check_cube_on_or_near_stairs(cube_t const &c) const;
 	bool drop_room_object(room_object_t &obj, point const &dest, point const &player_pos, bool dim, bool dir);
 	bool maybe_use_last_pickup_room_object(point const &player_pos, bool no_time_check=0, bool random_dir=0);

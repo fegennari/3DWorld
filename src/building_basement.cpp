@@ -763,6 +763,8 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 			} // for s
 		} // for d
 	} // for n
+	max_eq(interior->room_geom->wall_ps_end, (unsigned)objs.size()); // max across all levels
+
 	if (is_top_floor) { // place pipes on the top level parking garage ceiling (except for sprinkler pipes, which go on every floor)
 		// avoid intersecting lights, pillars, walls, stairs, elevators, and ramps;
 		// note that lights haven't been added yet though, but they're placed on beams, so we can avoid beams instead

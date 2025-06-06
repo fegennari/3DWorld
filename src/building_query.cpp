@@ -2352,8 +2352,8 @@ bool building_t::check_point_xy_in_part(point const &pos) const { // simpler/fas
 }
 
 template <typename T> bool has_cube_line_coll(point const &p1, point const &p2, vector<T> const &cubes) {
-	for (auto i = cubes.begin(); i != cubes.end(); ++i) {
-		if (i->line_intersects(p1, p2)) return 1;
+	for (auto const &c : cubes) {
+		if (c.line_intersects(p1, p2)) return 1;
 	}
 	return 0;
 }
@@ -2384,10 +2384,15 @@ bool building_t::check_for_wall_ceil_floor_int(point const &p1, point const &p2,
 	}
 	return 0;
 }
-bool building_t::line_intersect_stairs_or_ramp(point const &p1, point const &p2) const {
+bool building_t::line_intersect_stairs_or_ramp(point const &p1, point const &p2, bool skip_u_stairs) const {
 	if (!interior) return 0;
 	if (has_pg_ramp() && interior->pg_ramp.line_intersects(p1, p2)) return 1;
-	return has_cube_line_coll(p1, p2, interior->stairwells);
+
+	for (stairwell_t const &s : interior->stairwells) {
+		if (skip_u_stairs && s.is_u_shape()) continue;
+		if (s.line_intersects(p1, p2)) return 1;
+	}
+	return 0;
 }
 
 bool building_t::check_cube_on_or_near_stairs(cube_t const &c) const {

@@ -5416,7 +5416,7 @@ bool building_t::is_light_placement_valid(cube_t const &light, room_t const &roo
 		vect_room_object_t const &objs(interior->room_geom->objs);
 		assert(pg_wall_start < objs.size());
 
-		for (auto i = (objs.begin() + pg_wall_start); i != objs.end(); ++i) {
+		for (auto i = objs.begin()+pg_wall_start; i != objs.end(); ++i) {
 			if (i->type == TYPE_PIPE && i->intersects(light)) return 0; // check for pipe intersections (in particular horizontal sprinkler pipes)
 		}
 	}
