@@ -286,8 +286,8 @@ void add_pg_obstacles(vect_room_object_t const &objs, unsigned objs_start, unsig
 	assert(objs_start <= objs_end);
 
 	for (auto i = objs.begin()+objs_start; i != objs.begin()+objs_end; ++i) {
-		if (i->type == TYPE_PG_WALL) {walls.push_back(*i);} // wall
-		else if (i->type == TYPE_PG_PILLAR) { // pillar
+		if (i->type == TYPE_PG_WALL || i->type == TYPE_STAIR_WALL) {walls.push_back(*i);} // wall in parking garage/structure
+		else if (i->type == TYPE_PG_PILLAR || i->type == TYPE_OFF_PILLAR) { // pillar in parking garage/structure
 			walls    .push_back(*i); // included in walls
 			obstacles.push_back(*i); // pillars also count as obstacles
 		}

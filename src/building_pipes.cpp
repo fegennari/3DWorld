@@ -963,7 +963,7 @@ bool building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 		
 		for (cube_t const &wall : walls) { // includes both walls and pillars
 			if (wall.dx() > 2.0*wall.dy() || wall.dy() > 2.0*wall.dx()) continue; // skip walls since they have pillars intersecting them as well
-			if ((wall.x2() > c.x1() && wall.x1() < c.x2()) || (wall.y2() > c.y1() && wall.y1() < c.y2())) {is_blocked = 1; break;} // X or Y projection
+			if (wall.d[!dim][1] > c.d[!dim][0] && wall.d[!dim][0] < c.d[!dim][1]) {is_blocked = 1; break;} // projection perpendicular to wall
 		}
 		if (is_blocked) continue;
 		objs.emplace_back(c, TYPE_PIPE, room_id, 0, 1, RO_FLAG_LIT, tot_light_amt, SHAPE_CYLIN, pcolor); // dir=1 for vertical; casts shadows; add to pipe_cubes?
