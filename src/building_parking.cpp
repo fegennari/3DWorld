@@ -288,5 +288,6 @@ void building_t::add_parking_struct_objs(rand_gen_t rgen, room_t const &room, fl
 			if (d == 0) {space.translate_dim(!dim, -0.04*entrance.get_sz_dim(!dim));}
 		}
 		// add ticket booth, barrier, etc.
+		// TODO: TYPE_PARK_GATE
 	}
 }

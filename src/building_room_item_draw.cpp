@@ -1010,6 +1010,8 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		case TYPE_VENT_FAN:  add_vent_fan_frame(*i); break;
 		case TYPE_VENDING:   add_vending_machine(*i); break;
 		case TYPE_LOCKER:    add_locker(*i); break;
+		case TYPE_PARK_GATE: add_parking_gate (*i); break;
+		case TYPE_CONV_BELT: add_conveyor_belt(*i); break;
 		//case TYPE_FRIDGE: if (i->is_open()) {} break; // draw open fridge?
 		case TYPE_ELEVATOR: break; // not handled here
 		case TYPE_BLOCKER:  break; // not drawn

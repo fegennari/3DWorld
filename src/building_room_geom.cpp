@@ -6182,6 +6182,14 @@ void building_room_geom_t::add_vent_fan_frame(room_object_t const &c) {
 	get_untextured_material(0).add_disk_to_verts(motor_back, radius, vector_from_dim_dir(c.dim, !c.dir), WHITE); // unshadowed, facing the back
 }
 
+void building_room_geom_t::add_parking_gate(room_object_t const &c) {
+	// TODO
+}
+
+void building_room_geom_t::add_conveyor_belt(room_object_t const &c) {
+	// TODO
+}
+
 void add_grid_of_bars(rgeom_mat_t &mat, colorRGBA const &color, cube_t const &c, unsigned num_vbars, unsigned num_hbars,
 	float vbar_hthick, float hbar_hthick, unsigned vdim, unsigned hdim, unsigned adj_dim=0, float h_adj_val=0.0)
 {
