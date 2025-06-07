@@ -181,7 +181,7 @@ void building_t::get_parking_struct_ext_walls(vect_cube_with_ix_t &walls, bool e
 			
 			if (has_entrance && f < 2) { // clip out entrance on lower two floors
 				cube_with_ix_t const &entrance(interior->parking_entrance);
-				bool const dim(entrance.ix >> 1), dir(entrance.ix & 1);
+				bool const dim(entrance.ix >> 1);
 				unsigned const entrance_face(8 << entrance.ix), front_face_mask(123 - entrance_face);
 				face_mask += entrance_face; // disable entrance face
 				

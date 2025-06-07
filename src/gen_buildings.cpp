@@ -12,6 +12,7 @@
 #include "tree_3dw.h" // for tree_placer_t
 #include "profiler.h"
 #include "lightmap.h" // for light_source
+#include <cfloat>
 
 using std::string;
 
