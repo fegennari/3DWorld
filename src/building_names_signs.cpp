@@ -308,12 +308,13 @@ void building_t::add_exterior_door_items(rand_gen_t &rgen) { // mostly signs; ad
 		}
 	}
 	else { // office building; add signs
+		float const floor_spacing(get_window_vspace());
 		vect_room_object_t &objs(interior->room_geom->objs);
 
 		if (!name.empty()) {
 			// Note: these will only appear when the player is close to city office building exterior doors
 			colorRGBA const &sign_color(choose_sign_color(rgen));
-			float const z1_max(ground_floor_z1 + 0.5*get_window_vspace());
+			float const z1_max(ground_floor_z1 + 0.5*floor_spacing);
 
 			for (auto d = doors.begin(); d != doors.end(); ++d) {
 				if (int(d - doors.begin()) == courtyard_door_ix) break; // courtyard door is not an exit
@@ -322,7 +323,7 @@ void building_t::add_exterior_door_items(rand_gen_t &rgen) { // mostly signs; ad
 				add_sign_by_door(*d, 1, name, sign_color, 0); // outside name plate sign, not emissive
 			}
 			if (has_mall() && interior->mall_info->city_elevator_ix >= 0) { // add sign above the exterior elevator entrance
-				float const floor_spacing(get_window_vspace()), mall_floor_spacing(get_mall_floor_spacing());
+				float const mall_floor_spacing(get_mall_floor_spacing());
 
 				if (mall_floor_spacing > 1.4*floor_spacing) { // we have space for a sign
 					elevator_t const &e(get_elevator(interior->mall_info->city_elevator_ix));
@@ -338,6 +339,33 @@ void building_t::add_exterior_door_items(rand_gen_t &rgen) { // mostly signs; ad
 					objs.back().obj_id = register_sign_text("MALL");
 				}
 			}
+		}
+		if (is_parking() && !interior->parking_entrance.is_all_zeros()) { // add parking structure entrance signs
+			cube_with_ix_t const &entrance(interior->parking_entrance);
+			bool const dim(entrance.ix >> 1), dir(entrance.ix & 1);
+			float const wall_face(entrance.d[dim][dir]), center(entrance.get_center_dim(!dim));
+			float const sign_z1(entrance.z2() + 0.04*floor_spacing), sign_height(0.2*floor_spacing), sign_depth(0.1*sign_height);
+			cube_t signs(entrance);
+			set_cube_zvals(signs, sign_z1, sign_z1+sign_height);
+			signs.d[dim][!dir] = wall_face;
+			signs.d[dim][ dir] = wall_face + (dir ? 1.0 : -1.0)*sign_depth;
+			unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_EXTERIOR);
+			colorRGBA const &sign_color(choose_sign_color(rgen));
+
+			for (unsigned d = 0; d < 2; ++d) {
+				cube_t sign(signs);
+				sign.d[!dim][!d] = center;
+				sign.expand_in_dim(!dim, -0.25*sign.get_sz_dim(!dim)); // shrink
+				objs.emplace_back(sign, TYPE_SIGN, 1, dim, dir, flags, 1.0, SHAPE_CUBE, sign_color); // room_id=1
+				objs.back().obj_id = register_sign_text((d ^ dim ^ dir) ? "Exit" : "Enter");
+			} // for d
+			// add a clearance sign
+			cube_t sign(entrance);
+			sign.z1() = entrance.z2() - 0.65*sign_height;
+			sign.d[dim][!dir] = wall_face - (dir ? 1.0 : -1.0)*sign_depth;
+			sign.expand_in_dim(!dim, -0.25*sign.get_sz_dim(!dim)); // shrink
+			objs.emplace_back(sign, TYPE_SIGN, 1, dim, dir, (flags | RO_FLAG_HANGING), 1.0, SHAPE_CUBE, DK_RED); // room_id=1
+			objs.back().obj_id = register_sign_text("Clearance 7\'-0\"");
 		}
 		if (!has_pri_hall() && rgen.rand_bool()) return; // place exit signs on buildings with primary hallways and 50% of other buildings
 		bool const tall_room(is_industrial() || has_tall_retail());
