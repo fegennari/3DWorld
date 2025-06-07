@@ -272,11 +272,21 @@ void building_t::add_parking_struct_objs(rand_gen_t rgen, room_t const &room, fl
 	unsigned num_floors, unsigned &nlights_x, unsigned &nlights_y, float &light_delta_z, light_ix_assign_t &light_ix_assign)
 {
 	add_parking_garage_objs(rgen, room, zval, room_id, floor_ix, num_floors, nlights_x, nlights_y, light_delta_z, light_ix_assign);
-	//cube_t const &part(parts.front()); // above ground part
-	//vect_room_object_t &objs(interior->room_geom->objs);
 	
-	if (!interior->parking_entrance.is_all_zeros()) {
+	if (floor_ix == 0 && !interior->parking_entrance.is_all_zeros()) { // ground floor entrance
+		//cube_t const &part(parts.front()); // above ground part
+		vect_room_object_t &objs(interior->room_geom->objs);
+		cube_with_ix_t const &entrance(interior->parking_entrance);
+		bool const dim(entrance.ix >> 1), dir(entrance.ix & 1);
+		// add a double entrance/exit divider line
+		cube_t space(entrance);
+		set_cube_zvals(space, zval, zval+get_rug_thickness());
+		space.d[!dim][0] = entrance.get_center_dim(!dim); // half the entrance width
+
+		for (unsigned d = 0; d < 2; ++d) {
+			objs.emplace_back(space, TYPE_PARK_SPACE, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_HI), 1.0, SHAPE_CUBE, wall_color);
+			if (d == 0) {space.translate_dim(!dim, -0.04*entrance.get_sz_dim(!dim));}
+		}
 		// add ticket booth, barrier, etc.
 	}
-	// TODO: anything else to add?
 }
