@@ -6,11 +6,15 @@
 //#include "city_model.h"
 
 
+float building_t::get_parking_ramp_width() const {
+	return (is_parking() ? 3.0f : 2.3f)*get_parked_car_size().y; // wider for parking structure so two cars can pass
+}
+
 bool building_t::add_parking_structure_entrance(rand_gen_t rgen) {
 	assert(interior && !interior->rooms.empty());
 	cube_t const &part(parts.front()); // sets the exterior space
 	room_t const &room(interior->rooms.front()); // main above ground room is first; sets the interior space
-	float const entrance_width(2.3*get_parked_car_size().y), extend_len(1.0*get_parked_car_size().x), door_width(get_doorway_width());
+	float const entrance_width(get_parking_ramp_width()), extend_len(1.0*get_parked_car_size().x), door_width(get_doorway_width());
 	bool const wdim(rgen.rand_bool()), wdir(rgen.rand_bool()), wside(rgen.rand_bool()); // choose a random wall + end to try first
 	cube_t entrance;
 	entrance.z1() = room    .z1() + get_fc_thickness();

@@ -329,7 +329,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness());
 	float const int_wall_thick(get_wall_thickness()), wall_thickness(1.2*int_wall_thick), wall_hc(0.5*wall_thickness); // thicker
 	float const ceiling_z(zval + window_vspacing - floor_thickness); // Note: zval is at floor level, not at the bottom of the room
-	float const pillar_width(0.5*car_sz.y), pillar_hwidth(0.5*pillar_width), beam_hwidth(0.5*pillar_hwidth), road_width(2.3*car_sz.y); // road wide enough for two cars
+	float const pillar_width(0.5*car_sz.y), pillar_hwidth(0.5*pillar_width), beam_hwidth(0.5*pillar_hwidth), road_width(get_parking_ramp_width()); // wide enough for two cars
 	float const wid_sz(room.get_sz_dim(dim)), len_sz(room.get_sz_dim(!dim)), wid_sz_spaces(wid_sz - 2.0*road_width);
 	float const min_strip_sz(2.0*parking_sz.x + road_width + max(wall_thickness, pillar_width)); // road + parking spaces on each side + wall/pillar
 	assert(car_sz.z < (window_vspacing - floor_thickness)); // sanity check; may fail for some user parameters, but it's unclear what we do in that case
@@ -950,7 +950,7 @@ void building_t::add_parking_garage_ramp(rand_gen_t &rgen) {
 	if (is_parking_str) {room.z2() = parts.front().z2();} // extend from basement to top of parking structure
 	bool const dim(room.dx() < room.dy()); // long/primary dim
 	// see building_t::add_parking_garage_objs(); make sure there's space for a ramp plus both exit dirs within the building width
-	float const width(room.get_sz_dim(!dim)), road_width(min(0.25f*width, 2.3f*get_parked_car_size().y));
+	float const room_width(room.get_sz_dim(!dim)), road_width(min(0.25f*room_width, get_parking_ramp_width())), wall_space((is_parking_str ? 1.2 : 1.0)*road_width);
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness);
 	float const z1(room.z1() + fc_thick), z2(room.z2() + fc_thick); // bottom level room floor to first floor floor
 	bool const ramp_pref_xdir(rgen.rand_bool()), ramp_pref_ydir(rgen.rand_bool());
@@ -965,7 +965,7 @@ void building_t::add_parking_garage_ramp(rand_gen_t &rgen) {
 				if (num_ext < 2-pass) continue; // must be on the exterior edge of the building in both dims for pass 0, and one dim for pass 1
 				dir = (dim ? xdir : ydir);
 				point corner(room.d[0][xdir], room.d[1][ydir], z1);
-				corner[!dim] += (dir ? -1.0 : 1.0)*road_width; // shift away from the wall so that cars have space to turn onto the level floor
+				corner[!dim] += (dir ? -1.0 : 1.0)*wall_space; // shift away from the wall so that cars have space to turn onto the level floor
 				point const c1((corner.x - 0.001*(xdir ? 1.0 : -1.0)*xsz), (corner.y - 0.001*(ydir ? 1.0 : -1.0)*ysz), z1); // slight inward shift to prevent z-fighting
 				point const c2((corner.x + (xdir ? -1.0 : 1.0)*xsz), (corner.y + (ydir ? -1.0 : 1.0)*ysz), z2);
 				cube_t const ramp_cand(c1, c2);
