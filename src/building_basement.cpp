@@ -587,7 +587,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 				float shift_amt((rgen.rand_bool() ? 1.0 : -1.0)*max(pillar_hwidth, 0.1f*pillar_spacing));
 				bool valid(0);
 
-				for (unsigned n = 0; n < 4; ++n) { // two attempts to shift in each direction
+				for (unsigned n = 0; n < 6; ++n) { // three attempts to shift in each direction
 					set_wall_width(pillar, (ppos + shift_amt), pillar_hwidth, dim);
 					if (!has_bcube_int_xy(pillar, obstacles_exp)) {valid = 1; break;}
 					shift_amt *= -1.0; // try the other dir
