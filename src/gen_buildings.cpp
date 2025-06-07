@@ -1960,11 +1960,8 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 			}
 		}
 	} // for i
-	for (auto d = doors.begin(); d != doors.end(); ++d) {draw_building_ext_door(bdraw, *d, *this);} // draw exterior doors
-
-	for (auto i = fences.begin(); i != fences.end(); ++i) {
-		bdraw.add_fence(*this, *i, tid_nm_pair_t(WOOD_TEX, 0.4f/min(i->dx(), i->dy())), WHITE, (fences.size() > 1));
-	}
+	for (tquad_with_ix_t const &d : doors) {draw_building_ext_door(bdraw, d, *this);} // draw exterior doors
+	for (cube_t const &f : fences) {bdraw.add_fence(*this, f, tid_nm_pair_t(WOOD_TEX, 0.4f/min(f.dx(), f.dy())), WHITE, (fences.size() > 1));}
 	bool const skip_bottom(is_in_city); // skip_bottom=0, since it may be visible when extended over the terrain; okay to skip bottom for city driveways
 	add_driveway_or_porch(bdraw, *this, driveway, LT_GRAY, skip_bottom);
 	add_driveway_or_porch(bdraw, *this, porch,    LT_GRAY, 1); // skip_bottom=1
@@ -2677,6 +2674,7 @@ bool building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, 
 	// draw other exterior doors as closed in case they're visible through the open door; is this needed for pedestrians?
 	if (!only_open) {get_ext_door_verts(door_draw, pos, view_dir, door_ix);}
 	door_draw.draw(s, 0, 1); // direct_draw_no_vbo=1
+	//if (is_parking()) return 1; // this line will avoid culling of objects visible through parking garage door, but also draw the closed door when it should be open
 	bdraw.add_tquad(*this, door, bcube, tid_nm_pair_t(WHITE_TEX), WHITE);
 	return 1;
 }
@@ -2690,7 +2688,7 @@ void building_t::get_ext_door_verts(building_draw_t &bdraw, point const &viewer,
 		std::swap(door_rev.pts[0], door_rev.pts[1]); // reverse winding order
 		std::swap(door_rev.pts[2], door_rev.pts[3]);
 		draw_building_ext_door(bdraw, door_rev, *this);
-	}
+	} // for d
 }
 bool building_t::get_all_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, vector<point> const &pts, float dist) { // for pedestrians
 	for (auto const &p : pts) {
@@ -2875,8 +2873,8 @@ void building_t::write_basement_entrance_depth_pass(shader_t &s) const {
 	glEnable(GL_CULL_FACE);
 	if (!depth_clamp_enabled) {glEnable(GL_DEPTH_CLAMP);}
 
-	for (auto i = interior->stairwells.begin(); i != interior->stairwells.end(); ++i) {
-		if (i->z1() < zval && !i->in_ext_basement) {draw_basement_entrance_cap(*i, z);} // draw if this is a basement stairwell (not extended basement stairs)
+	for (stairwell_t const &s : interior->stairwells) {
+		if (s.z1() < zval && !s.in_ext_basement) {draw_basement_entrance_cap(s, z);} // draw if this is a basement stairwell (not extended basement stairs)
 	}
 	if (has_pg_ramp() && !interior->ignore_ramp_placement) {draw_basement_entrance_cap(interior->pg_ramp, z);} // add opening for ramp onto ground floor
 	if (!depth_clamp_enabled) {glDisable(GL_DEPTH_CLAMP);}
@@ -3561,9 +3559,9 @@ public:
 		bool const sec_camera_mode(pre_smap_player_pos != actual_player_pos); // hack to determine if this is the shadow for a security camera light
 		bool is_house(0), ext_two_sided(0);
 
-		for (auto i = bcs.begin(); i != bcs.end(); ++i) {
+		for (building_creator_t *const bc : bcs) {
 			if (interior_shadow_maps) { // draw interior shadow maps
-				occlusion_checker_noncity_t oc(**i);
+				occlusion_checker_noncity_t oc(*bc);
 				point const lpos(get_camera_pos() - xlate); // Note: camera_pos is actually the light pos
 				bool const light_in_player_building_extb(player_in_basement && player_building && player_building->point_in_extended_basement(lpos));
 				// don't draw the player model in the flashlight shadow
@@ -3571,21 +3569,21 @@ public:
 				bool found_building(0);
 
 				// draw interior for the building containing the light
-				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) {
+				for (auto g = bc->grid_by_tile.begin(); g != bc->grid_by_tile.end(); ++g) {
 					if (!g->get_vis_bcube().contains_pt_xy(lpos)) { // wrong tile (note that z test is skipped to handle skylights)
 						// handle light in extended basement visible from player in basement of same building where extended basement is outside the building's grid
 						if (light_in_player_building_extb && g->bcube.contains_cube(player_building->bcube)) {} // draw tile
 						else {continue;} // not visible
 					}
 					for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {
-						building_t &b((*i)->get_building(bi->ix));
+						building_t &b(bc->get_building(bi->ix));
 						if (!b.interior) continue; // no interior
 						point lpos_clamped(lpos);
 						// include skylight light sources, which are above the building; buildings can't stack vertically, so the light can't belong to a different building
 						if (!b.skylights.empty()) {min_eq(lpos_clamped.z, b.bcube.z2());}
 						bool const camera_in_walkway(b.check_pt_in_or_near_walkway(pre_smap_player_pos, 1, 0, 0)); // owned_only=1, inc_open_door=0, inc_conn_room=0
 						if (!b.point_in_building_or_basement_bcube(lpos_clamped) && !camera_in_walkway) continue; // wrong building
-						(*i)->building_draw_interior.draw_for_draw_range(s, b.interior->draw_range, 1); // shadow_only=1
+						bc->building_draw_interior.draw_for_draw_range(s, b.interior->draw_range, 1); // shadow_only=1
 						// no batch draw for shadow pass since textures aren't used; draw everything, since shadow may be cached
 						bool camera_in_this_building(b.check_point_or_cylin_contained(pre_smap_player_pos, 0.0, points, 1, 1, 0)); // inc_attic=1, inc_ext_basement=1, inc_roof_acc=0
 						camera_in_this_building |= b.interior_visible_from_other_building_ext_basement(xlate, 1); // check conn building as well; expand_for_light=1
@@ -3630,20 +3628,20 @@ public:
 				} // for g
 			}
 			else { // draw exterior shadow maps
-				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) { // draw only visible tiles
+				for (auto g = bc->grid_by_tile.begin(); g != bc->grid_by_tile.end(); ++g) { // draw only visible tiles
 					if (!building_grid_visible(xlate, g->bcube)) continue; // VFC; use exterior bcube
-					(*i)->building_draw_vbo.draw_tile(s, (g - (*i)->grid_by_tile.begin()), 1);
+					bc->building_draw_vbo.draw_tile(s, (g - bc->grid_by_tile.begin()), 1);
 
 					// draw shadow casters such as balconies that are added later as buildings come into view; won't show up until shadow map is regenerated
 					for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {
-						building_t &b((*i)->get_building(bi->ix));
+						building_t &b(bc->get_building(bi->ix));
 						if (!b.interior || !camera_pdu.cube_visible(b.bcube + xlate)) continue; // no interior or not visible
 						b.get_detail_shadow_casters(ext_parts_draw);
 					}
 				}
 				//(*i)->building_draw_vbo.draw(s, 1); // less CPU time but more GPU work, in general seems to be slower
 			}
-		} // for i
+		} // for bc
 		// need to draw back faces of exterior parts to handle shadows on blinds; only needed for houses, and causes problems with walkway doors
 		bool const enable_back_faces((interior_shadow_maps && is_house) || ext_two_sided);
 		if ( enable_back_faces) {glDisable(GL_CULL_FACE);}
@@ -3781,18 +3779,18 @@ public:
 		unsigned max_draw_ix(0);
 		shader_t s, amask_shader, holes_shader, city_shader;
 
-		for (auto i = bcs.begin(); i != bcs.end(); ++i) {
-			assert(*i);
-			have_windows     |= !(*i)->building_draw_windows.empty();
-			have_wind_lights |= !(*i)->building_draw_wind_lights.empty();
-			have_interior    |= (draw_building_interiors && (*i)->has_interior_geom);
-			max_eq(max_draw_ix, (*i)->building_draw_vbo.get_num_draw_blocks());
-			if (night) {(*i)->ensure_window_lights_vbos();}
+		for (building_creator_t *const bc : bcs) {
+			assert(bc);
+			have_windows     |= !bc->building_draw_windows.empty();
+			have_wind_lights |= !bc->building_draw_wind_lights.empty();
+			have_interior    |= (draw_building_interiors && bc->has_interior_geom);
+			max_eq(max_draw_ix, bc->building_draw_vbo.get_num_draw_blocks());
+			if (night) {bc->ensure_window_lights_vbos();}
 			
-			if ((*i)->is_single_tile()) { // only for tiled buildings
-				(*i)->use_smap_this_frame = (use_tt_smap && try_bind_tile_smap_at_point(((*i)->grid_by_tile[0].bcube.get_cube_center() + xlate), s, 1)); // check_only=1
+			if (bc->is_single_tile()) { // only for tiled buildings
+				bc->use_smap_this_frame = (use_tt_smap && try_bind_tile_smap_at_point((bc->grid_by_tile[0].bcube.get_cube_center() + xlate), s, 1)); // check_only=1
 			}
-		}
+		} // for bc
 		bool const draw_interior((have_windows || global_building_params.add_city_interiors) && draw_building_interiors);
 		bool const v(world_mode == WMODE_GROUND), indir(v), dlights(v), use_smap(v);
 		float const min_alpha = 0.0; // 0.0 to avoid alpha test
@@ -3827,18 +3825,18 @@ public:
 			glEnable(GL_CULL_FACE); // back face culling optimization, helps with expensive lighting shaders; after draw_z_prepass()
 			glCullFace(swap_front_back ? GL_FRONT : GL_BACK);
 				
-			for (auto i = bcs.begin(); i != bcs.end(); ++i) { // draw interior for the tile containing the camera
-				float const ddist_scale((*i)->building_draw_windows.empty() ? 0.1 : 1.0), zpp_dist_scale(ddist_scale*z_prepass_dist);
+			for (building_creator_t *const bc : bcs) { // draw interior for the tile containing the camera
+				float const ddist_scale(bc->building_draw_windows.empty() ? 0.1 : 1.0), zpp_dist_scale(ddist_scale*z_prepass_dist);
 
-				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) {
+				for (auto g = bc->grid_by_tile.begin(); g != bc->grid_by_tile.end(); ++g) {
 					cube_t const &grid_bcube(g->get_vis_bcube());
 
 					if (reflection_pass ? grid_bcube.contains_pt_xy(camera_bs) : grid_bcube.closest_dist_xy_less_than(camera_bs, zpp_dist_scale)) {
 						if (!building_grid_visible(xlate, grid_bcube)) continue; // VFC
-						(*i)->building_draw_interior.draw_tile(s, (g - (*i)->grid_by_tile.begin()));
+						bc->building_draw_interior.draw_tile(s, (g - bc->grid_by_tile.begin()));
 					}
 				}
-			}
+			} // for bc
 			if (swap_front_back) {glDisable(GL_POLYGON_OFFSET_FILL);}
 			glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 			s.end_shader();
@@ -4221,7 +4219,7 @@ public:
 					int const tex_filt_mode(ext_door_draw.empty() ? 2 : 3);
 					bool const enable_indir(camera_in_building); // need to enable indir lighting when drawing the back sides of exterior doors
 					setup_building_draw_shader(s, min_alpha, enable_indir, 1, 0); // force_tsl=1, use_texgen=0, damage=0.0
-					for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_vbo.draw(s, 0, 0, tex_filt_mode);}
+					for (building_creator_t *const bc : bcs) {bc->building_draw_vbo.draw(s, 0, 0, tex_filt_mode);}
 					reset_interior_lighting_and_end_shader(s);
 				}
 			} // end !ref_pass_extb
@@ -4266,7 +4264,7 @@ public:
 				enable_holes_shader(holes_shader); // need same shader to avoid z-fighting
 				glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color writing, we only want to write to the Z-Buffer
 				if (!ext_door_draw.empty()) {glDisable(GL_DEPTH_CLAMP);}
-				for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_windows.draw(holes_shader, 0);} // draw windows on top of other buildings
+				for (building_creator_t *const bc : bcs) {bc->building_draw_windows.draw(holes_shader, 0);} // draw windows on top of other buildings
 				glEnable(GL_DEPTH_CLAMP); // make sure holes are not clipped by the near plane
 				ext_door_draw.draw(holes_shader, 0, 1); // direct_draw_no_vbo=1
 				setup_depth_clamp(); // restore
@@ -4293,7 +4291,7 @@ public:
 		setup_smoke_shaders(s, min_alpha, 0, keep_alpha, indir, 1, dlights, 0, 0, (use_smap ? 2 : 1), use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
 
 		if (!reflection_pass) { // don't want to do this in the reflection pass
-			for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw.init_draw_frame();}
+			for (building_creator_t *const bc : bcs) {bc->building_draw.init_draw_frame();}
 		}
 		glEnable(GL_CULL_FACE);
 		glCullFace(swap_front_back ? GL_FRONT : GL_BACK);
@@ -4301,8 +4299,8 @@ public:
 
 		// draw front faces of buildings, even in the reflection pass; nearby shadowed buildings will be drawn later
 		for (unsigned ix = 0; ix < max_draw_ix; ++ix) {
-			for (auto i = bcs.begin(); i != bcs.end(); ++i) {
-				if (!(*i)->use_smap_this_frame) {(*i)->building_draw_vbo.draw_block(s, ix, 0);}
+			for (building_creator_t *const bc : bcs) {
+				if (!bc->use_smap_this_frame) {bc->building_draw_vbo.draw_block(s, ix, 0);}
 			}
 		}
 		set_std_depth_func_with_eq();
@@ -4313,12 +4311,12 @@ public:
 			glDepthMask(GL_FALSE); // disable depth writing
 			glEnable(GL_POLYGON_OFFSET_FILL);
 
-			for (auto i = bcs.begin(); i != bcs.end(); ++i) { // draw windows on top of other buildings
+			for (building_creator_t *const bc : bcs) { // draw windows on top of other buildings
 				// need to swap opaque window texture with transparent texture for this draw pass
-				bool const transparent_windows(draw_interior && (*i)->has_interior_to_draw() && !reflection_pass);
-				if (transparent_windows) {(*i)->building_draw_windows.toggle_transparent_windows_mode();}
-				(*i)->building_draw_windows.draw(s, 0);
-				if (transparent_windows) {(*i)->building_draw_windows.toggle_transparent_windows_mode();}
+				bool const transparent_windows(draw_interior && bc->has_interior_to_draw() && !reflection_pass);
+				if (transparent_windows) {bc->building_draw_windows.toggle_transparent_windows_mode();}
+				bc->building_draw_windows.draw(s, 0);
+				if (transparent_windows) {bc->building_draw_windows.toggle_transparent_windows_mode();}
 			}
 			//interior_wind_draw.draw(s, 0, 1); // draw opaque front facing windows of building the player is in; direct_draw_no_vbo=1
 			glDisable(GL_POLYGON_OFFSET_FILL);
@@ -4343,30 +4341,30 @@ public:
 			// disable when there are no interiors so that the bottom surfaces of roof overhangs/gutters are drawn
 			if (draw_interior) {glEnable(GL_CULL_FACE);}
 
-			for (auto i = bcs.begin(); i != bcs.end(); ++i) {
-				bool const single_tile((*i)->is_single_tile()), no_depth_write(!single_tile), transparent_windows(draw_interior && (*i)->has_interior_to_draw());
-				if (single_tile && !(*i)->use_smap_this_frame) continue; // optimization
+			for (building_creator_t *const bc : bcs) {
+				bool const single_tile(bc->is_single_tile()), no_depth_write(!single_tile), transparent_windows(draw_interior && bc->has_interior_to_draw());
+				if (single_tile && !bc->use_smap_this_frame) continue; // optimization
 				if (no_depth_write) {glDepthMask(GL_FALSE);} // disable depth writing
 
-				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
-					if (single_tile && (*i)->use_smap_this_frame) {} // not drawn in main/nonshadow pass, so must be drawn here
+				for (auto g = bc->grid_by_tile.begin(); g != bc->grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
+					if (single_tile && bc->use_smap_this_frame) {} // not drawn in main/nonshadow pass, so must be drawn here
 					else if (!g->bcube.closest_dist_less_than(camera_bs, draw_dist)) continue; // too far; uses exterior bcube
 					if (!building_grid_visible(xlate, g->bcube)) continue; // VFC; use exterior bcube
 					unsigned lod_level(0);
 					if (!try_bind_tile_smap_at_point((g->bcube.get_cube_center() + xlate), city_shader, 0, &lod_level)) continue; // no shadow maps - not drawn in this pass
 					// increase bias with smap texture LOD to make it constant per texel to avoid artifacts on distant tiles using low resolution smaps
 					city_shader.set_uniform_float(norm_bias_scale_loc, DEF_NORM_BIAS_SCALE*(1.0 + max(0, ((int)lod_level-1))));
-					unsigned const tile_id(g - (*i)->grid_by_tile.begin());
+					unsigned const tile_id(g - bc->grid_by_tile.begin());
 					// Note: we could skip detail materials like trim for tiles that are further, but it's unclear if that would make much difference
-					(*i)->building_draw_vbo.draw_tile(city_shader, tile_id);
+					bc->building_draw_vbo.draw_tile(city_shader, tile_id);
 
-					if (!(*i)->building_draw_windows.empty()) {
+					if (!bc->building_draw_windows.empty()) {
 						enable_blend();
 						glEnable(GL_POLYGON_OFFSET_FILL);
 						if (!no_depth_write) {glDepthMask(GL_FALSE);} // always disable depth writing
-						if (transparent_windows) {(*i)->building_draw_windows.toggle_transparent_windows_mode();}
-						(*i)->building_draw_windows.draw_tile(city_shader, tile_id); // draw windows on top of other buildings
-						if (transparent_windows) {(*i)->building_draw_windows.toggle_transparent_windows_mode();}
+						if (transparent_windows) {bc->building_draw_windows.toggle_transparent_windows_mode();}
+						bc->building_draw_windows.draw_tile(city_shader, tile_id); // draw windows on top of other buildings
+						if (transparent_windows) {bc->building_draw_windows.toggle_transparent_windows_mode();}
 						if (!no_depth_write) {glDepthMask(GL_TRUE);} // always re-enable depth writing
 						glDisable(GL_POLYGON_OFFSET_FILL);
 						disable_blend();
@@ -4390,7 +4388,7 @@ public:
 			s.begin_shader();
 			s.add_uniform_float("lit_thresh_mult", lit_thresh_mult); // gradual transition of lit window probability around sunset
 			setup_tt_fog_post(s);
-			for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_wind_lights.draw(s, 0);} // add bloom?
+			for (building_creator_t *const bc : bcs) {bc->building_draw_wind_lights.draw(s, 0);} // add bloom?
 			glDepthMask(GL_TRUE); // re-enable depth writing
 			disable_blend();
 		}
