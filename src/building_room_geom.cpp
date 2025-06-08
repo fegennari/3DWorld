@@ -1411,14 +1411,14 @@ void building_room_geom_t::add_catwalk(room_object_t const &c) {
 	} // for end
 }
 
-void building_room_geom_t::add_obj_with_top_texture(room_object_t const &c, string const &texture_name, colorRGBA const &sides_color, bool is_small) {
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_texture_by_name(texture_name), 0.0), 1, 0, is_small)); // shadows
+void building_room_geom_t::add_obj_with_top_texture(room_object_t const &c, string const &text_name, colorRGBA const &sides_color, bool is_small) {
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_texture_by_name(text_name), 0.0), 1, 0, is_small)); // shadows
 	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, ~EF_Z2, c.dim, (c.dim ^ c.dir ^ 1), c.dir); // top face only
 	unsigned const skip_faces(c.is_hanging() ? EF_Z2 : EF_Z12); // hanging keyboards nad laptops must draw the Z1 face
 	get_untextured_material(1, 0, is_small).add_cube_to_verts_untextured(c, apply_light_color(c, sides_color), skip_faces); // sides and maybe bottom, shadows
 }
-void building_room_geom_t::add_obj_with_front_texture(room_object_t const &c, string const &texture_name, colorRGBA const &front_color, colorRGBA const &sides_color, bool is_small) {
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_texture_by_name(texture_name), 0.0, 1), 1, 0, is_small)); // shadows
+void building_room_geom_t::add_obj_with_front_texture(room_object_t const &c, string const &text_name, colorRGBA const &front_color, colorRGBA const &sides_color, bool is_small) {
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_texture_by_name(text_name), 0.0, 1), 1, 0, is_small)); // shadows
 	unsigned const front_mask(get_face_mask(c.dim, c.dir));
 	mat.add_cube_to_verts(c, apply_light_color(c, front_color), zero_vector, front_mask, !c.dim, (c.dim ^ c.dir ^ 1), 0); // front face only
 	get_untextured_material(1, 0, is_small).add_cube_to_verts_untextured(c, apply_light_color(c, sides_color), ~front_mask); // sides, shadows
@@ -6182,8 +6182,31 @@ void building_room_geom_t::add_vent_fan_frame(room_object_t const &c) {
 	get_untextured_material(0).add_disk_to_verts(motor_back, radius, vector_from_dim_dir(c.dim, !c.dir), WHITE); // unshadowed, facing the back
 }
 
+cube_t get_parking_gate_arm(room_object_t const &c) {
+	bool const arm_side(c.item_flags & 1);
+	float const height(c.dz()), arm_len(1.25*height), arm_width(0.08*arm_len), arm_depth(0.4*arm_width), arm_short_len(1.0*arm_width);
+	float const arm_face(c.d[!c.dim][arm_side]), arm_pivot_xy(c.get_center_dim(c.dim)), arm_pivot_z(c.z1() + 0.65*height);
+	cube_t arm;
+	arm.d[!c.dim][!arm_side] = arm_face;
+	arm.d[!c.dim][ arm_side] = arm_face + (arm_side ? 1.0 : -1.0)*arm_depth;
+
+	if (c.is_open()) { // up position
+		set_wall_width(arm, arm_pivot_xy, 0.5*arm_width, c.dim);
+		set_cube_zvals(arm, arm_pivot_z-arm_short_len, arm_pivot_z+arm_len);
+	}
+	else { // down position
+		set_wall_width(arm, arm_pivot_z, 0.5*arm_width, 2); // z
+		arm.d[c.dim][ c.dir] = arm_pivot_xy + (c.dir ? 1.0 : -1.0)*arm_len      ; // long dir
+		arm.d[c.dim][!c.dir] = arm_pivot_xy - (c.dir ? 1.0 : -1.0)*arm_short_len; // short dir
+	}
+	assert(arm.is_strictly_normalized());
+	return arm;
+}
 void building_room_geom_t::add_parking_gate(room_object_t const &c) {
-	// TODO
+	add_obj_with_front_texture(c, "interiors/parking_ticket_machine.png", WHITE, c.color, 0);
+	// draw barrier arm; extends outside the object bcube
+	cube_t const arm(get_parking_gate_arm(c));
+	get_material(tid_nm_pair_t(HAZARD_TEX, 1.0/c.dz(), 1), 1).add_cube_to_verts(arm, apply_light_color(c, WHITE)); // shadowed; draw all faces
 }
 
 void building_room_geom_t::add_conveyor_belt(room_object_t const &c) {

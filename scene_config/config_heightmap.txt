@@ -32,6 +32,7 @@ head_bob_amount 0.04
 #player_start -8.60219 -6.29122 -4.957 # location near a school
 #player_start -38.062 -8.43648 -5.67723 # location near a school
 #player_start -29.7123 -16.5783 -3.93496 # location near a parking structure
+#player_start -22.4411 -20.3029 -5.95434 # location near a parking structure entrance
 #player_start 24.0 0.0 0.0 # location near wind turbines
 
 buildings tt_only 1

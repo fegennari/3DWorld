@@ -278,16 +278,30 @@ void building_t::add_parking_struct_objs(rand_gen_t rgen, room_t const &room, fl
 		vect_room_object_t &objs(interior->room_geom->objs);
 		cube_with_ix_t const &entrance(interior->parking_entrance);
 		bool const dim(entrance.ix >> 1), dir(entrance.ix & 1);
+		float const front_pos(entrance.d[dim][dir]), centerline(entrance.get_center_dim(!dim)), entrance_width(entrance.get_sz_dim(!dim));
 		// add a double entrance/exit divider line
 		cube_t space(entrance);
 		set_cube_zvals(space, zval, zval+get_rug_thickness());
-		space.d[!dim][0] = entrance.get_center_dim(!dim); // half the entrance width
+		space.d[!dim][0] = centerline + 0.01*entrance_width; // close to half the entrance width
 
 		for (unsigned d = 0; d < 2; ++d) {
 			objs.emplace_back(space, TYPE_PARK_SPACE, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_HI), 1.0, SHAPE_CUBE, wall_color);
-			if (d == 0) {space.translate_dim(!dim, -0.04*entrance.get_sz_dim(!dim));}
+			if (d == 0) {space.translate_dim(!dim, -0.04*entrance_width);}
 		}
-		// add ticket booth, barrier, etc.
-		// TODO: TYPE_PARK_GATE
+		// add parking gate/ticket machine/barrier for each side
+		float const floor_spacing(get_window_vspace()), dsign(dir ? -1.0 : 1.0);
+		float const gate_height(0.42*floor_spacing), gate_width(0.1*floor_spacing), gate_depth(0.16*floor_spacing);
+		bool const first_is_open(rgen.rand_bool());
+		cube_t gate;
+		set_cube_zvals(gate, zval, zval+gate_height);
+		set_wall_width(gate, centerline, 0.5*gate_width, !dim);
+		gate.d[dim][ dir] = front_pos        + dsign*0.2*floor_spacing;
+		gate.d[dim][!dir] = gate.d[dim][dir] + dsign*gate_depth;
+
+		for (unsigned d = 0; d < 2; ++d) { // shift back and alternate sides
+			bool const gdir(bool(d) ^ dim ^ dir), is_open(first_is_open ^ bool(d)); // one is open, the other is closed
+			objs.emplace_back(gate, TYPE_PARK_GATE, room_id, !dim, gdir, (is_open ? RO_FLAG_OPEN : 0), 1.0, SHAPE_CUBE, colorRGBA(0.9, 0.6, 0.0), unsigned(gdir ^ dim));
+			if (d == 0) {gate.translate_dim(dim, 1.5*dsign*gate_depth);}
+		}
 	}
 }

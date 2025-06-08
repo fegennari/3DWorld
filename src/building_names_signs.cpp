@@ -357,7 +357,7 @@ void building_t::add_exterior_door_items(rand_gen_t &rgen) { // mostly signs; ad
 				sign.d[!dim][!d] = center;
 				sign.expand_in_dim(!dim, -0.25*sign.get_sz_dim(!dim)); // shrink
 				objs.emplace_back(sign, TYPE_SIGN, 1, dim, dir, flags, 1.0, SHAPE_CUBE, sign_color); // room_id=1
-				objs.back().obj_id = register_sign_text((d ^ dim ^ dir) ? "Exit" : "Enter");
+				objs.back().obj_id = register_sign_text((bool(d) ^ dim ^ dir) ? "Exit" : "Enter");
 			} // for d
 			// add a clearance sign
 			cube_t sign(entrance);

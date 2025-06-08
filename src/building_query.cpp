@@ -29,6 +29,7 @@ float get_player_move_dist();
 void get_shelf_brackets(room_object_t const &c, cube_t shelves[MAX_SHELVES], unsigned num_shelves, vect_cube_with_ix_t &brackets);
 void get_catwalk_cubes(room_object_t const &c, cube_t cubes[5]);
 unsigned get_machine_part_cubes(room_object_t const &c, float floor_ceil_gap, cube_t cubes[4]);
+cube_t get_parking_gate_arm(room_object_t const &c);
 
 
 // called by player_in_windowless_building(); assumes player is in this building; handles windows and exterior doors but not attics and basements
@@ -1243,7 +1244,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 				apply_speed_factor(pos, p_last, 2.0); // player slips; doesn't have much of an effect
 				continue;
 			}
-			if (type == TYPE_CATWALK) {
+			else if (type == TYPE_CATWALK) {
 				if (!sphere_cube_intersect_xy(pos, xy_radius, *c)) continue;
 				if (obj_z - radius > c->z2()) continue; // above the catwalk
 				cube_t cubes[5];
@@ -1260,6 +1261,10 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 					if (!cubes[n].is_all_zeros()) {had_coll |= sphere_cube_int_update_pos(pos, xy_radius, cubes[n], p_last, 0, cnorm);}
 				}
 				continue;
+			}
+			else if (type == TYPE_PARK_GATE) { // handle arm, which extends outside the bcube
+				had_coll |= sphere_cube_int_update_pos(pos, xy_radius, get_parking_gate_arm(*c), p_last, 0, cnorm);
+				// continue below to check the main gate machine body
 			}
 			if (!sphere_cube_intersect(pos, xy_radius, c_extended)) continue; // optimization
 
