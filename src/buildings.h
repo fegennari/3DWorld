@@ -820,9 +820,9 @@ struct carried_item_t : public room_object_t {
 
 struct custom_item_t {
 	std::string name;
-	float value=0.0, weight=0.0, health=0.0;
+	float value=0.0, weight=0.0, health=0.0, liquid=0.0, alcohol=0.0;
 	custom_item_t() {}
-	custom_item_t(std::string const &n, float v, float w, float h=0.0) : name(n), value(v), weight(w), health(h) {}
+	custom_item_t(std::string const &n, float v, float w, float h=0.0, float l=0.0, float a=0.0) : name(n), value(v), weight(w), health(h), liquid(l), alcohol(a) {}
 	bool valid() const {return !name.empty();}
 };
 struct room_obj_or_custom_item_t {
@@ -1794,13 +1794,15 @@ struct indoor_pool_t : cube_t {
 	float shallow_zval=0.0, orig_z1=0.0;
 };
 
-enum {VEND_DRINK=0, VEND_SNACK, VEND_ANY_OBJ, NUM_VEND_TYPES};
+enum {VEND_DRINK=0, VEND_SNACK, VEND_ANY_OBJ, VEND_COFFEE, NUM_VEND_TYPES};
 
 struct vending_info_t {
 	std::string name, tex_fn; // Note: could cache loaded tex_fn in tid, but caller takes the string
 	vector3d size; // {D, W, H} in inches
+	float value, weight;
 	colorRGBA color; // of sides
-	vending_info_t(std::string const &n, std::string const &fn, vector3d const sz, colorRGBA const &c) : name(n), tex_fn(fn), size(sz), color(c) {}
+	vending_info_t(std::string const &n, std::string const &fn, vector3d const sz, float v, float w, colorRGBA const &c) :
+		name(n), tex_fn(fn), size(sz), value(v), weight(w), color(c) {}
 };
 vending_info_t const &get_vending_type(unsigned vtype);
 

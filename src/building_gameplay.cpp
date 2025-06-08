@@ -205,7 +205,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_GAUGE     ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 0,  0.0,  0.0,   "gauge"); // detail object
 	bldg_obj_types[TYPE_PALLET    ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 10.0,  35.0,  "pallet");
 	bldg_obj_types[TYPE_SHELF_WALL] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1, 0.0,   0.0,   "shelf wall");
-	bldg_obj_types[TYPE_VENDING   ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 1, 8000.0,545.0, "vending machine"); // specs from https://vendtek.com/product/crane-bevmax-classic-model-3800/
+	bldg_obj_types[TYPE_VENDING   ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 1, 8000.0,500.0, "vending machine");
 	bldg_obj_types[TYPE_MED_CAB   ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 40.0,  10.0,  "medicine cabinet");
 	bldg_obj_types[TYPE_LOCKER    ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1, 100.0, 50.0,  "locker");
 	bldg_obj_types[TYPE_TESTTUBE  ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 10.0,  0.05,  "tube of blood"); // blood, until we have different liquids
@@ -457,6 +457,12 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 	else if (otype == TYPE_CUP) {
 		type.name = (obj.is_nonempty() ? "cup of coffee" : "empty cup");
 	}
+	else if (otype == TYPE_VENDING) {
+		vending_info_t const &vi(get_vending_type(obj.item_flags));
+		type.weight = vi.weight;
+		type.value  = vi.value;
+		type.name   = vi.name + " machine";
+	}
 	if (wv_factor != 1.0) { // scale weight and value by this factor, rounded to the nearest pound and dollar
 		type.weight = int(wv_factor*type.weight);
 		type.value  = int(wv_factor*type.value );
@@ -598,12 +604,14 @@ tape_manager_t tape_manager;
 vector<vending_info_t> vend_types;
 
 vending_info_t const &get_vending_type(unsigned vtype) {
-	if (vend_types.empty()) { // initialize
-		vend_types.emplace_back("drink",  "interiors/vending_machine_light.jpg", vector3d(32, 39, 72), GRAY);
-		vend_types.emplace_back("snack",  "interiors/vending_machine_dark.jpg",  vector3d(35, 39, 72), GRAY_BLACK);
-		vend_types.emplace_back("any",    "interiors/any_object.jpg",            vector3d(36, 44, 66), colorRGBA(1.0, 0.945, 0.8));
-		vend_types.emplace_back("coffee", "interiors/coffee_machine.png",        vector3d(20, 24, 32), GRAY_BLACK);
+	if (vend_types.empty()) { // initialize: name, texture_fn, size D,W,H, value, weight, color
+		// specs from https://vendtek.com/product/crane-bevmax-classic-model-3800/
+		vend_types.emplace_back("drink",      "interiors/vending_machine_light.jpg", vector3d(32, 39, 72), 9000, 545, GRAY);
+		vend_types.emplace_back("snack",      "interiors/vending_machine_dark.jpg",  vector3d(35, 39, 72), 4000, 640, GRAY_BLACK);
+		vend_types.emplace_back("any object", "interiors/any_object.jpg",            vector3d(36, 44, 66), 8000, 800, colorRGBA(1.0, 0.945, 0.8));
+		vend_types.emplace_back("coffee",     "interiors/coffee_machine.png",        vector3d(24, 22, 29), 3000,  80, GRAY_BLACK); // real price is ~$11K
 	}
+	assert(vend_types.size() == NUM_VEND_TYPES);
 	return vend_types[vtype % vend_types.size()]; // wrap if overflows
 }
 
@@ -818,7 +826,6 @@ public:
 	}
 	bool add_item(room_object_t const &obj) { // returns true if item was added, and false if it was consumed
 		float health(0.0), drunk(0.0), liquid(0.0);
-		bool const bladder_was_full(bladder >= 0.9);
 		float const value(get_obj_value(obj));
 		room_object const type(obj.type);
 		bool added(0);
@@ -877,11 +884,6 @@ public:
 			else {assert(0);}
 		}
 		adjust_health(health, oss, text_color);
-
-		if (liquid > 0.0) {
-			oss << ": -" << round_fp(100.0*liquid) << "% Thirst";
-			thirst = min(1.0f, (thirst + liquid));
-		}
 		if (type == TYPE_FLASHLIGHT) {has_flashlight = 1;} // also goes in inventory
 		if (type == TYPE_POOL_CUE  ) {has_pool_cue   = 1;} // also goes in inventory
 
@@ -939,7 +941,18 @@ public:
 			}
 			print_value_and_weight(oss, value, get_obj_weight(obj));
 		}
-		else if (liquid > 0.0) { // add one drink to the bladder, 25% of capacity
+		else {
+			consume_object(liquid, drunk, oss, text_color);
+		}
+		print_text_onscreen(oss.str(), text_color, 1.0, 3*TICKS_PER_SECOND, 0);
+		return added;
+	}
+	void consume_object(float liquid, float drunk, std::ostringstream &oss, colorRGBA &text_color) {
+		bool const bladder_was_full(bladder >= 0.9);
+
+		if (liquid > 0.0) { // add one drink to the bladder, 25% of capacity
+			oss << ": -" << round_fp(100.0*liquid) << "% Thirst";
+			thirst  = min(1.0f, (thirst + liquid));
 			bladder = min(1.0f, (bladder + 0.25f));
 		}
 		if (drunk > 0.0) {
@@ -948,18 +961,22 @@ public:
 			if (drunkenness > 0.99f && (drunkenness - drunk) <= 0.99f) {oss << "\nYou are drunk"; text_color = DK_GREEN;}
 		}
 		if (!bladder_was_full && bladder >= 0.9f) {oss << "\nYou need to use the bathroom"; text_color = YELLOW;}
-		print_text_onscreen(oss.str(), text_color, 1.0, 3*TICKS_PER_SECOND, 0);
-		return added;
 	}
-	void add_custom_item(custom_item_t const &item) { // Note: no support for consumables, health, drunk, or interactive items
-		cur_value   += item.value;
-		cur_weight  += item.weight;
+	void add_custom_item(custom_item_t const &item) { // Note: no support for interactive items
 		damage_done += item.value;
 		colorRGBA text_color(GREEN);
 		std::ostringstream oss;
 		oss << item.name;
 		adjust_health(item.health, oss, text_color);
-		print_value_and_weight(oss, item.value, item.weight);
+
+		if (item.health == 0.0 && item.alcohol == 0.0) { // add + print value and weight if item is not consumed
+			cur_value  += item.value;
+			cur_weight += item.weight;
+			print_value_and_weight(oss, item.value, item.weight);
+		}
+		else {
+			consume_object(item.liquid, item.alcohol, oss, text_color);
+		}
 		print_text_onscreen(oss.str(), text_color, 1.0, 3*TICKS_PER_SECOND, 0);
 	}
 	bool take_person(uint8_t &person_has_key, float person_height) {
@@ -1367,9 +1384,9 @@ bool use_vending_machine(room_object_t &obj) {
 	else if (obj.item_flags == VEND_SNACK) { // snack food vending machine; no value or weight, but adds health
 		custom_item_t item;
 		switch (rgen.rand()%3) {
-		case 0: item = custom_item_t("bag of chips",    0.0, 0.0, 0.1); break;
-		case 1: item = custom_item_t("bag of pretzels", 0.0, 0.0, 0.1); break;
-		case 2: item = custom_item_t("candy bar",       0.0, 0.0, 0.2); break;
+		case 0: item = custom_item_t("bag of chips",    0.0, 0.0, 0.1); break; // +10% health
+		case 1: item = custom_item_t("bag of pretzels", 0.0, 0.0, 0.1); break; // +10% health
+		case 2: item = custom_item_t("candy bar",       0.0, 0.0, 0.2); break; // +20% health
 		}
 		player_inventory.add_custom_item(item);
 	}
@@ -1386,6 +1403,12 @@ bool use_vending_machine(room_object_t &obj) {
 			return 1; // success
 		} // for n
 		return 0; // no valid object type found
+	}
+	else if (obj.item_flags == VEND_COFFEE) {
+		custom_item_t item;
+		if (rgen.rand() & 3) {item = custom_item_t("cup of coffee",        0.0, 0.0, 0.2, 0.5);} // 75% of the time; +20% health, +0.5 liquid
+		else                 {item = custom_item_t("cup of hot chocolate", 0.0, 0.0, 0.5, 0.5);} // 25% of the time; +50% health, +0.5 liquid
+		player_inventory.add_custom_item(item);
 	}
 	else {assert(0);}
 	return 1;
