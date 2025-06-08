@@ -321,7 +321,10 @@ bool building_t::add_waiting_room_objs(rand_gen_t rgen, room_t const &room, floa
 		set_cube_zvals(wall, zval, zval+0.8*chair_height);
 		set_wall_width(wall, centerline, 0.45*wall_thickness, !long_dim); // set width
 		set_wall_width(wall, room.get_center_dim(long_dim), 0.5*chair_place_len, long_dim); // set length
-		objs.emplace_back(wall, TYPE_STAIR_WALL, room_id, !long_dim, 0, RO_FLAG_ADJ_TOP, tot_light_amt, SHAPE_CUBE); // draw top
+
+		if (!is_obj_placement_blocked(wall, room, 1, 0)) {
+			objs.emplace_back(wall, TYPE_STAIR_WALL, room_id, !long_dim, 0, RO_FLAG_ADJ_TOP, tot_light_amt, SHAPE_CUBE); // draw top
+		}
 		// add chairs
 		colorRGBA const ccolor(is_plastic ? get_pastic_chair_color(chair_color) : chair_color);
 		cube_t chair0;
