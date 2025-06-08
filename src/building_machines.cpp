@@ -734,6 +734,7 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 	avoid.expand_in_dim(edim, doorway_width); // don't block entrance area
 	
 	if (1) { // add a 2D grid of machines to the center of the place area
+		bool const add_tanks(1), add_cbelt(0);
 		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // used for machines and tanks
 		float const height(max_height*rgen.rand_uniform(0.6, 0.8)), aisle_spacing(1.25*doorway_width);
 		vector2d const machine_sz(max_place_sz*vector2d(rgen.rand_uniform(0.8, 1.0), rgen.rand_uniform(0.8, 1.0)));
@@ -743,7 +744,7 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 		cube_t center_area(place_area);
 		center_area.expand_by_xy(-(max_place_sz + 0.5*doorway_width)); // space for machines along the wall
 		vector2d const center_sz(center_area.get_size_xy());
-		bool const tank_dim(rgen.rand_bool()), tank_dir(rgen.rand_bool()); // side of grid the tank is on
+		bool const tank_dim(rgen.rand_bool()), tank_dir(rgen.rand_bool()), cbelt_dir(!tank_dir); // side of grid the tank is on
 		colorRGBA const pipe_color(COPPER_C), fitting_color(BRASS_C);
 		vector2d &spacing(interior->ind_info->machine_row_spacing);
 		unsigned num_xy[2]={};
@@ -761,7 +762,8 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 
 		for (unsigned ny = 0; ny < num_xy[1]; ++ny) {
 			for (unsigned nx = 0; nx < num_xy[0]; ++nx) {
-				bool const is_tank((tank_dim ? ny : nx) == (tank_dir ? num_xy[tank_dim]-1 : 0));
+				bool const is_tank (add_tanks && (tank_dim ? ny : nx) == (tank_dir  ? num_xy[tank_dim]-1 : 0));
+				bool const is_cbelt(add_cbelt && (tank_dim ? ny : nx) == (cbelt_dir ? num_xy[tank_dim]-1 : 0));
 				point const center((center_area.x1() + (nx + 0.5)*spacing.x), (center_area.y1() + (ny + 0.5)*spacing.y), zval);
 				cube_t c(center);
 				c.z2() += height;
@@ -787,6 +789,9 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 					tank_conn_pipe.assign_or_union_with_cube(pipe);
 					merged_pipe_radius = get_merged_pipe_radius(merged_pipe_radius, pipe_radius, 3.0);
 					tank_conn_pts.emplace_back(center.x, center.y, pipe.z2());
+				}
+				else if (is_cbelt) { // make it a conveyor belt
+					// TODO
 				}
 				else { // make it a machine
 					unsigned flags(RO_FLAG_IN_FACTORY | RO_FLAG_FROM_SET); // tag as part of a group
