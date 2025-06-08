@@ -599,9 +599,10 @@ vector<vending_info_t> vend_types;
 
 vending_info_t const &get_vending_type(unsigned vtype) {
 	if (vend_types.empty()) { // initialize
-		vend_types.emplace_back("drink", "interiors/vending_machine_light.jpg", vector3d(32, 39, 72), GRAY);
-		vend_types.emplace_back("snack", "interiors/vending_machine_dark.jpg",  vector3d(35, 39, 72), GRAY_BLACK);
-		vend_types.emplace_back("any",   "interiors/any_object.jpg",            vector3d(36, 44, 66), colorRGBA(1.0, 0.945, 0.8));
+		vend_types.emplace_back("drink",  "interiors/vending_machine_light.jpg", vector3d(32, 39, 72), GRAY);
+		vend_types.emplace_back("snack",  "interiors/vending_machine_dark.jpg",  vector3d(35, 39, 72), GRAY_BLACK);
+		vend_types.emplace_back("any",    "interiors/any_object.jpg",            vector3d(36, 44, 66), colorRGBA(1.0, 0.945, 0.8));
+		vend_types.emplace_back("coffee", "interiors/coffee_machine.png",        vector3d(20, 24, 32), GRAY_BLACK);
 	}
 	return vend_types[vtype % vend_types.size()]; // wrap if overflows
 }
