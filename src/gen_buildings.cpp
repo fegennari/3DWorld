@@ -73,6 +73,11 @@ float get_door_open_dist    () {return 3.5*CAMERA_RADIUS;}
 float get_interior_draw_dist() {return global_building_params.interior_view_dist_scale*2.0f*(X_SCENE_SIZE + Y_SCENE_SIZE);}
 bool player_in_ext_basement () {return (player_in_basement == 3 && player_building != nullptr);}
 
+void update_lights_bcube_zvals(cube_t &lights_bcube, point const &lpos, float radius) {
+	min_eq(lights_bcube.z1(), (lpos.z - radius));
+	max_eq(lights_bcube.z2(), (lpos.z + radius));
+}
+
 void tid_nm_pair_dstate_t::set_for_shader(float new_bump_map_mag) {
 	if (new_bump_map_mag == bump_map_mag) return; // no change
 	bump_map_mag = new_bump_map_mag;
@@ -410,8 +415,7 @@ struct building_lights_manager_t : public city_lights_manager_t {
 		point const pos((player_candle_pos == all_zeros) ? (camera_pdu.pos - xlate) : player_candle_pos); // use player_candle_pos if valid, otherwise camera pos
 		dl_sources.emplace_back(inten*radius, pos, pos, gen_fire_color(cval, inten, 1.0));
 		dl_sources.back().disable_shadows(); // shadows not needed / not valid for point lights
-		min_eq(lights_bcube.z1(), (pos.z - radius));
-		max_eq(lights_bcube.z2(), (pos.z + radius));
+		update_lights_bcube_zvals(lights_bcube, pos, radius);
 	}
 	virtual bool enable_lights() const {return (draw_building_interiors || enable_player_flashlight());}
 };
@@ -1437,13 +1441,18 @@ public:
 		// draw pipe through the center going down into the roof
 		add_vert_cylinder(center, wtc.z1(), base_z1, 0.1*radius, 1.0, 4.0, ndiv/2, WHITE, qverts); // tscale=1.0/4.0
 	}
-	void add_rooftop_light(building_t const &bg, cube_t const &pole, bool dim, bool dir) {
+	static cube_t get_roof_light_from_pole(cube_with_ix_t const &pole) {
+		bool const dim(pole.ix >> 1), dir(pole.ix & 1);
 		float const pole_sz(0.5*(pole.dx() + pole.dy())), light_hwidth(1.2*pole_sz), light_len(4.0*light_hwidth), light_height(0.6*light_hwidth);
 		cube_t light(pole);
 		set_cube_zvals(light, pole.z2(), pole.z2()+light_height);
 		light.expand_in_dim(!dim, light_hwidth);
 		light.d[dim][ dir] += (dir ? 1.0 : -1.0)*light_len;
 		light.d[dim][!dir] -= (dir ? 1.0 : -1.0)*light_hwidth;
+		return light;
+	}
+	void add_rooftop_light(building_t const &bg, cube_with_ix_t const &pole) {
+		cube_t const light(get_roof_light_from_pole(pole));
 		tid_nm_pair_t const no_tex(WHITE_TEX); // untextured
 		add_cube(bg, pole,  no_tex, BKGRAY, 0, 3, 0, 0); // skip top and bottom
 		add_cube(bg, light, no_tex, BKGRAY, 0, 7, 1, 0); // skip bottom
@@ -1974,7 +1983,7 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 	} // for i
 	for (tquad_with_ix_t const &d : doors) {draw_building_ext_door(bdraw, d, *this);} // draw exterior doors
 	for (cube_t const &f : fences) {bdraw.add_fence(*this, f, tid_nm_pair_t(WOOD_TEX, 0.4f/min(f.dx(), f.dy())), WHITE, (fences.size() > 1));}
-	for (cube_with_ix_t const &l : roof_lights) {bdraw.add_rooftop_light(*this, l, (l.ix >> 1), (l.ix & 1));}
+	for (cube_with_ix_t const &l : roof_lights) {bdraw.add_rooftop_light(*this, l);}
 	bool const skip_bottom(is_in_city); // skip_bottom=0, since it may be visible when extended over the terrain; okay to skip bottom for city driveways
 	add_driveway_or_porch(bdraw, *this, driveway, LT_GRAY, skip_bottom);
 	add_driveway_or_porch(bdraw, *this, porch,    LT_GRAY, 1); // skip_bottom=1
@@ -3703,22 +3712,27 @@ public:
 		} // for g
 	}
 
-	void add_exterior_lights(vector3d const &xlate, cube_t &lights_bcube) const {
-		for (auto g = grid_by_tile.begin(); g != grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
-			if (!lights_bcube.intersects_xy  (g->bcube)) continue; // not within light volume (too far from camera)
-			if (!building_grid_visible(xlate, g->bcube)) continue; // VFC; use exterior bcube
+	void add_exterior_lights(vector3d const &xlate, cube_t &lights_bcube) const { // Note: no shadows
+		for (grid_elem_t const &g : grid_by_tile) { // Note: all grids should be nonempty
+			if (!lights_bcube.intersects_xy  (g.bcube)) continue; // not within light volume (too far from camera)
+			if (!building_grid_visible(xlate, g.bcube)) continue; // VFC; use exterior bcube
 
-			for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {
-				building_t const &b(get_building(bi->ix));
-				if (b.ext_lights.empty()) continue;
-				if (!lights_bcube.intersects_xy(b.bcube)) continue; // not within light volume (too far from camera)
+			for (cube_with_ix_t const &b : g.bc_ixs) {
+				if (!lights_bcube.intersects_xy(b)) continue; // not within light volume (too far from camera)
+				building_t const &b(get_building(b.ix));
 				
 				for (colored_sphere_t const &light : b.ext_lights) {
 					if (!lights_bcube.contains_pt_xy(light.pos)) continue; // not within light volume (too far from camera)
 					if (!camera_pdu.sphere_visible_test((light.pos + xlate), light.radius)) continue; // VFC
-					min_eq(lights_bcube.z1(), light.pos.z - light.radius);
-					max_eq(lights_bcube.z2(), light.pos.z + light.radius);
+					update_lights_bcube_zvals(lights_bcube, light.pos, light.radius);
 					dl_sources.push_back(light_source(light.radius, light.pos, light.pos, light.color));
+				}
+				for (cube_with_ix_t const &l : b.roof_lights) {
+					cube_t const light(building_draw_t::get_roof_light_from_pole(l));
+					point const lpos(light.xc(), light.yc(), (light.z1() - 2.0*light.dz())); // slightly below the light head
+					float const radius(5.0*l.dz());
+					update_lights_bcube_zvals(lights_bcube, lpos, radius);
+					dl_sources.push_back(light_source(radius, lpos, lpos, colorRGBA(1.0, 1.0, 0.8, 1.0)));
 				}
 			} // for bi
 		} // for g
@@ -5472,6 +5486,14 @@ public:
 			else if (!tile_bcube.closest_dist_less_than(camera_bs, rgeom_draw_dist)) {i->second.clear_room_geom();} // mem opt: clear room geom when far
 		}
 	}
+	void add_exterior_lights(vector3d const &xlate, cube_t &lights_bcube) const {
+		for (auto i = tiles.begin(); i != tiles.end(); ++i) {
+			cube_t const &bcube(i->second.get_bcube());
+			if (!lights_bcube.intersects_xy(bcube))      continue; // not within light volume (too far from camera)
+			if (!camera_pdu.cube_visible(bcube + xlate)) continue; // VFC
+			i->second.add_exterior_lights(xlate, lights_bcube);
+		}
+	}
 	void add_interior_lights(vector3d const &xlate, cube_t &lights_bcube, bool sec_camera_mode) {
 		for (auto i = tiles.begin(); i != tiles.end(); ++i) {
 			cube_t const &bcube(i->second.get_bcube());
@@ -5685,7 +5707,12 @@ void get_building_ext_basement_bcubes(cube_t const &city_bcube, vect_cube_t &bcu
 void get_walkways_for_city(cube_t const &city_bcube, vect_bldg_walkway_t &walkways ) {building_creator_city.get_walkways_for_city(city_bcube, walkways);}
 void get_building_power_points(cube_t const &xy_range, vector<point> &ppts    ) {building_creator_city.get_power_points(xy_range, ppts);}
 void add_house_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways  ) {building_creator_city.add_house_driveways_for_plot(plot, driveways);}
-void add_buildings_exterior_lights(vector3d const &xlate, cube_t &lights_bcube) {building_creator_city.add_exterior_lights(xlate, lights_bcube);}
+
+void add_buildings_exterior_lights(vector3d const &xlate, cube_t &lights_bcube) {
+	building_creator     .add_exterior_lights(xlate, lights_bcube);
+	building_creator_city.add_exterior_lights(xlate, lights_bcube);
+	building_tiles       .add_exterior_lights(xlate, lights_bcube);
+}
 float get_max_house_size() {return global_building_params.get_max_house_size();}
 
 bool connect_buildings_to_skyway(cube_t &m_bcube, bool m_dim, cube_t const &city_bcube, vector<skyway_conn_t> &ww_conns) {
