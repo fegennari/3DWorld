@@ -604,12 +604,12 @@ tape_manager_t tape_manager;
 vector<vending_info_t> vend_types;
 
 vending_info_t const &get_vending_type(unsigned vtype) {
-	if (vend_types.empty()) { // initialize: name, texture_fn, size D,W,H, value, weight, color
+	if (vend_types.empty()) { // initialize: name, texture_fn, size D,W,H, value, weight, price, color
 		// specs from https://vendtek.com/product/crane-bevmax-classic-model-3800/
-		vend_types.emplace_back("drink",      "interiors/vending_machine_light.jpg", vector3d(32, 39, 72), 9000, 545, GRAY);
-		vend_types.emplace_back("snack",      "interiors/vending_machine_dark.jpg",  vector3d(35, 39, 72), 4000, 640, GRAY_BLACK);
-		vend_types.emplace_back("any object", "interiors/any_object.jpg",            vector3d(36, 44, 66), 8000, 800, colorRGBA(1.0, 0.945, 0.8));
-		vend_types.emplace_back("coffee",     "interiors/coffee_machine.png",        vector3d(24, 22, 29), 3000,  80, GRAY_BLACK); // real price is ~$11K
+		vend_types.emplace_back("drink",      "interiors/vending_machine_light.jpg", vector3d(32, 39, 72), 9000, 545,  2.0, GRAY);
+		vend_types.emplace_back("snack",      "interiors/vending_machine_dark.jpg",  vector3d(35, 39, 72), 4000, 640,  2.0, GRAY_BLACK);
+		vend_types.emplace_back("any object", "interiors/any_object.jpg",            vector3d(36, 44, 66), 8000, 800, 10.0, colorRGBA(1.0, 0.945, 0.8));
+		vend_types.emplace_back("coffee",     "interiors/coffee_machine.png",        vector3d(24, 22, 29), 3000,  80,  0.0, GRAY_BLACK); // real cost is ~$11K
 	}
 	assert(vend_types.size() == NUM_VEND_TYPES);
 	return vend_types[vtype % vend_types.size()]; // wrap if overflows
@@ -1353,7 +1353,6 @@ void register_broken_object(room_object_t const &obj) {
 }
 
 bool use_vending_machine(room_object_t &obj) {
-	float const price = 2.0; // currently all vending machines are $2; should be whole dollars
 	unsigned const rand_ix(7*obj.room_id + 3*int(obj.z1()/obj.dz())); // a mix of room and floor index
 	unsigned const max_uses(rand_ix % 9); // 0-8 uses
 	uint16_t &use_count(obj.state_flags);
@@ -1366,7 +1365,9 @@ bool use_vending_machine(room_object_t &obj) {
 		print_text_onscreen("Vending Machine is Empty", RED, 1.0, 3*TICKS_PER_SECOND, 0);
 		return 0;
 	}
-	if (!player_inventory.deduct_money(price)) {
+	float const price(get_vending_type(obj.item_flags).price);
+
+	if (price > 0.0 && !player_inventory.deduct_money(price)) {
 		print_text_onscreen(("Need $" + std::to_string(int(price)) + ".00"), RED, 1.0, 3*TICKS_PER_SECOND, 0);
 		return 0;
 	}

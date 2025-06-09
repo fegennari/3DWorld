@@ -1799,10 +1799,10 @@ enum {VEND_DRINK=0, VEND_SNACK, VEND_ANY_OBJ, VEND_COFFEE, NUM_VEND_TYPES};
 struct vending_info_t {
 	std::string name, tex_fn; // Note: could cache loaded tex_fn in tid, but caller takes the string
 	vector3d size; // {D, W, H} in inches
-	float value, weight;
+	float value, weight, price;
 	colorRGBA color; // of sides
-	vending_info_t(std::string const &n, std::string const &fn, vector3d const sz, float v, float w, colorRGBA const &c) :
-		name(n), tex_fn(fn), size(sz), value(v), weight(w), color(c) {}
+	vending_info_t(std::string const &n, std::string const &fn, vector3d const sz, float v, float w, float p, colorRGBA const &c) :
+		name(n), tex_fn(fn), size(sz), value(v), weight(w), price(p), color(c) {}
 };
 vending_info_t const &get_vending_type(unsigned vtype);
 
