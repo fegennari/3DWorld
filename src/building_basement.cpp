@@ -397,6 +397,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	}
 	cube_with_ix_t const &ramp(interior->pg_ramp);
 	room_object const wall_type(in_basement ? TYPE_PG_WALL : TYPE_STAIR_WALL); // PG wall is a detail object and culled early
+	bool ramp_side(0);
 	
 	// add ramp if one was placed during floorplanning, before adding parking spaces
 	// Note: lights can be very close to ramps, but I haven't actually seen them touch; do we need to check for and handle that case?
@@ -412,10 +413,10 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		obstacles_exp.back().expand_in_dim(!dim, 0.75*road_width); // keep walls and pillars away from the sides of ramps
 		obstacles_ps .push_back(obstacles_exp.back()); // also keep parking spaces away from ramp
 		// add ramp railings
-		bool const side(ramp.get_center_dim(!dim) < room.get_center_dim(!dim)); // which side of the ramp the railing is on (opposite the wall the ramp is against)
-		float const railing_thickness(0.4*wall_thickness), ramp_length(rc.get_sz_dim(dim)), dir_sign(dir ? 1.0 : -1.0), side_sign(side ? 1.0 : -1.0), shorten_factor(0.35);
+		ramp_side = (ramp.get_center_dim(!dim) < room.get_center_dim(!dim)); // which side of the ramp the railing is on (opposite the wall the ramp is against)
+		float const railing_thickness(0.4*wall_thickness), ramp_length(rc.get_sz_dim(dim)), dir_sign(dir ? 1.0 : -1.0), side_sign(ramp_side ? 1.0 : -1.0), shorten_factor(0.35);
 		cube_t railing(rc);
-		railing.d[!dim][!side] = railing.d[!dim][side] - side_sign*railing_thickness;
+		railing.d[!dim][!ramp_side] = railing.d[!dim][ramp_side] - side_sign*railing_thickness;
 		railing.z1() += 0.5*railing_thickness; // place bottom of bar along ramp/floor
 		cube_t ramp_railing(railing);
 		ramp_railing.d[dim][dir] -= dir_sign*shorten_factor*ramp_length; // shorten length to only the lower part
@@ -609,6 +610,14 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 			}
 		}
 	} // for n
+	if (is_parking_str && !ramp.is_all_zeros()) { // add pillar on the inside of the ramp; pos should always be valid
+		bool const ramp_dim(ramp.ix >> 1);
+		float const inner_edge(ramp.d[!ramp_dim][ramp_side]);
+		set_wall_width(pillar, ramp.get_center_dim(ramp_dim), pillar_hwidth, !dim);
+		pillar.d[!ramp_dim][!ramp_side] = inner_edge;
+		pillar.d[!ramp_dim][ ramp_side] = inner_edge + (ramp_side ? 1.0 : -1.0)*0.65*pillar_hwidth; // narrower, to avoid blocking lights, etc.
+		pillars.push_back(pillar);
+	}
 	// add pillar objects
 	room_object const pillar_type (in_basement ? TYPE_PG_PILLAR : TYPE_OFF_PILLAR); // PG pillar is a detail object and culled early
 	unsigned    const pillar_flags(in_basement ? 0 : RO_FLAG_ADJ_HI); // flag as concrete office pillar
