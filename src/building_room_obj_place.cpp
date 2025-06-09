@@ -4790,7 +4790,7 @@ colorRGBA get_stain_color(rand_gen_t &rgen) {
 void building_t::add_stains_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	assert(has_room_geom());
 	bool const backrooms(room.is_backrooms()), parking_garage(room.is_parking());
-	unsigned const max_stains((backrooms ? 20 : (parking_garage ? 10 : 2))); // 2 for regular rooms, 20 for backrooms, and 10 for parking garages
+	unsigned const max_stains((backrooms ? 20 : (parking_garage ? 5 : 2))); // 2 for regular rooms, 20 for backrooms, and 5 for parking garages
 	unsigned const num_floor_stains(rgen.rand() % (max_stains+1));
 	unsigned const num_wall_stains((backrooms || parking_garage) ? 0 : (rgen.rand() % (2*max_stains+1))); // no backrooms or parking garage wall stains - no interior walls
 	if (num_floor_stains == 0 && num_wall_stains == 0) return;
