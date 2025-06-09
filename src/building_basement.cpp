@@ -531,7 +531,8 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		} // for e
 	}
 	// add walls and pillars
-	bool const no_sep_wall(num_walls == 0 || (capacity < 100 && (room_id & 1))); // use room_id rather than rgen so that this agrees between floors
+	// use room_id, etc. rather than rgen so that this agrees between floors
+	bool const no_sep_wall(num_walls == 0 || ((capacity < 100 && !in_basement) && ((room_id + mat_ix + dim) & 1)));
 	bool const split_sep_wall(!no_sep_wall && (num_pillars >= 5 || (num_pillars >= 4 && rgen.rand_bool())));
 	float sp_const(0.0);
 	if      (no_sep_wall)           {sp_const = 0.25;} // no separator wall, minimal clearance around stairs
