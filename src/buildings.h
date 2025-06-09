@@ -2090,7 +2090,7 @@ struct building_t : public building_geom_t {
 	cube_t bcube, coll_bcube, pri_hall, driveway, porch, assigned_plot, exterior_flag, ladder, deck_bounds;
 	mutable cube_t city_driveway; // set by city gen, which only has a const ref to the building; technically this is cached city state, and not directly used by the building
 	vect_cube_t parts, fences;
-	vect_cube_with_ix_t skylights, gutters;
+	vect_cube_with_ix_t skylights, gutters, roof_lights;
 	vect_roof_obj_t details; // cubes on the roof - antennas, AC units, etc.
 	vect_tquad_with_ix_t roof_tquads, doors;
 	vector<colored_sphere_t> ext_lights;
@@ -2943,6 +2943,7 @@ private:
 	void get_lights_with_priorities(point const &target, cube_t const &valid_area, vector<pair<float, unsigned>> &lights_to_sort) const;
 	void get_all_windows(vect_cube_with_ix_t &windows) const;
 	void get_parking_garage_wall_openings(vect_cube_with_ix_t &openings) const;
+	void add_parking_roof_lights();
 	void register_indir_lighting_geom_change() const;
 	void register_blinds_state_change() const;
 	bool is_light_occluded(point const &lpos, point const &camera_bs) const;

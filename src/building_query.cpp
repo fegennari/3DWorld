@@ -651,6 +651,7 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 					}
 				}
 			} // for i
+			for (cube_t const &l : roof_lights) {had_coll |= sphere_cube_int_update_pos(pos2, radius, (l + xlate), p_last2, xy_only, cnorm_ptr);}
 		}
 		if (is_house && has_porch() && sphere_cube_int_update_pos(pos2, radius, (porch + xlate), p_last2, xy_only, cnorm_ptr)) {had_coll = 1;} // porch
 	} // end !is_interior case

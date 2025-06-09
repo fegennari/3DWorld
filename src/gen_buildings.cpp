@@ -1437,6 +1437,18 @@ public:
 		// draw pipe through the center going down into the roof
 		add_vert_cylinder(center, wtc.z1(), base_z1, 0.1*radius, 1.0, 4.0, ndiv/2, WHITE, qverts); // tscale=1.0/4.0
 	}
+	void add_rooftop_light(building_t const &bg, cube_t const &pole, bool dim, bool dir) {
+		float const pole_sz(0.5*(pole.dx() + pole.dy())), light_hwidth(1.2*pole_sz), light_len(4.0*light_hwidth), light_height(0.6*light_hwidth);
+		cube_t light(pole);
+		set_cube_zvals(light, pole.z2(), pole.z2()+light_height);
+		light.expand_in_dim(!dim, light_hwidth);
+		light.d[dim][ dir] += (dir ? 1.0 : -1.0)*light_len;
+		light.d[dim][!dir] -= (dir ? 1.0 : -1.0)*light_hwidth;
+		tid_nm_pair_t const no_tex(WHITE_TEX); // untextured
+		add_cube(bg, pole,  no_tex, BKGRAY, 0, 3, 0, 0); // skip top and bottom
+		add_cube(bg, light, no_tex, BKGRAY, 0, 7, 1, 0); // skip bottom
+		add_cube(bg, light, no_tex, WHITE,  0, 4, 0, 1); //bottom only
+	}
 
 	unsigned num_verts() const {
 		unsigned num(0);
@@ -1962,6 +1974,7 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 	} // for i
 	for (tquad_with_ix_t const &d : doors) {draw_building_ext_door(bdraw, d, *this);} // draw exterior doors
 	for (cube_t const &f : fences) {bdraw.add_fence(*this, f, tid_nm_pair_t(WOOD_TEX, 0.4f/min(f.dx(), f.dy())), WHITE, (fences.size() > 1));}
+	for (cube_with_ix_t const &l : roof_lights) {bdraw.add_rooftop_light(*this, l, (l.ix >> 1), (l.ix & 1));}
 	bool const skip_bottom(is_in_city); // skip_bottom=0, since it may be visible when extended over the terrain; okay to skip bottom for city driveways
 	add_driveway_or_porch(bdraw, *this, driveway, LT_GRAY, skip_bottom);
 	add_driveway_or_porch(bdraw, *this, porch,    LT_GRAY, 1); // skip_bottom=1

@@ -268,6 +268,63 @@ void building_t::get_parking_garage_wall_openings(vect_cube_with_ix_t &openings)
 	} // for f
 }
 
+void building_t::add_parking_roof_lights() {
+	assert(interior);
+	assert(!parts.empty());
+	roof_lights.clear();
+	float const floor_spacing(get_window_vspace()), doorway_width(get_doorway_width());
+	cube_t roof(parts[0]); // roof is on the first part
+	set_cube_zvals(roof, roof.z1()-get_floor_thickness(), roof.z1()+floor_spacing); // assume one floor tall
+	roof.expand_by_xy(-get_park_struct_wall_thick());
+	// currently there are no parking spaces or on the roof, so we only need to avoid the ramp, stairs, and elevator
+	vect_cube_t avoid;
+
+	if (!interior->pg_ramp.is_all_zeros()) {
+		cube_with_ix_t ramp(interior->pg_ramp);
+		bool const dim(ramp.ix >> 1), dir(ramp.ix & 1);
+		ramp.d[dim][dir] += (dir ? 1.0 : -1.0)*ramp.get_sz_dim(!dim); // extend a ramp width on the exit for clearance
+		avoid.push_back(ramp);
+	}
+	for (stairwell_t const &s : interior->stairwells) {
+		if (s.intersects(roof)) {avoid.push_back(get_stairs_bcube_expanded(s, 2.0*doorway_width, 0.0, doorway_width));}
+	}
+	for (elevator_t const &e : interior->elevators) {
+		if (e.intersects(roof)) {avoid.push_back(e.get_bcube_padded(2.0*doorway_width));}
+	}
+	// add roof lights
+	float const pole_radius(0.025*floor_spacing), pole_height(1.5*floor_spacing), light_radius(4.0*floor_spacing), zval(parts[0].z2());
+	cube_t place_area(roof);
+	place_area.expand_by_xy(-2.0*pole_radius);
+	bool const rdim(roof.dx() < roof.dy()); // long dim
+	unsigned num[2]={};
+	float space [2]={};
+
+	for (unsigned d = 0; d < 2; ++d) {
+		float const sz(place_area.get_sz_dim(d));
+		num  [d] = max(2U, (unsigned)ceil(sz/light_radius));
+		space[d] = sz/(num[d] - (bool(d) != rdim));
+	}
+	unsigned const nrows(num[!rdim]), ncols(num[rdim]); // rows are longer than columns
+	float const col_center(place_area.get_center_dim(!rdim));
+	cube_t light;
+	set_cube_zvals(light, zval, zval+pole_height);
+
+	for (unsigned r = 0; r < nrows; ++r) {
+		float const rpos(place_area.d[!rdim][0] + r*space[!rdim]); // along the edges
+		bool const ldir(rpos < col_center); // facing toward the center
+		unsigned const ix(2*(!rdim) + ldir);
+		set_wall_width(light, rpos, pole_radius, !rdim);
+
+		for (unsigned c = 0; c < ncols; ++c) {
+			float const cpos(place_area.d[rdim][0] + (c + 0.5)*space[rdim]); // centered
+			set_wall_width(light, cpos, pole_radius, rdim);
+			if (has_bcube_int(light, avoid)) continue;
+			roof_lights.emplace_back(light, ix);
+		}
+	} // for r
+	max_eq(bcube.z2(), light.z2());
+}
+
 void building_t::add_parking_struct_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix,
 	unsigned num_floors, unsigned &nlights_x, unsigned &nlights_y, float &light_delta_z, light_ix_assign_t &light_ix_assign)
 {
