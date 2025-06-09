@@ -324,7 +324,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	// rows are separated by walls and run in dim, with a road and parking spaces on either side of it;
 	// spaces are arranged in !dim, with roads along the edges of the building that connect to the roads of each row
 	bool const dim(room.dx() < room.dy()); // long/primary dim; cars are lined up along this dim, oriented along the other dim
-	bool const in_basement(zval < ground_floor_z1);
+	bool const in_basement(zval < ground_floor_z1), is_parking_str(is_parking());
 	vector3d const car_sz(get_parked_car_size()), parking_sz(1.1*car_sz.x, 1.4*car_sz.y, 1.5*car_sz.z); // space is somewhat larger than a car; car length:width = 2.3
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness());
 	float const int_wall_thick(get_wall_thickness()), wall_thickness(1.2*int_wall_thick), wall_hc(0.5*wall_thickness); // thicker
@@ -360,7 +360,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	unsigned const num_pillars(max(2U, unsigned(round_fp(0.25*wall_len/parking_sz.y)))); // every 4 spaces, at least 2 at the ends of the wall
 	float const pillar_spacing((wall_len - pillar_width)/(num_pillars - 1)), beam_delta_z(0.95*wall.dz()), tot_light_amt(room.light_intensity);
 	bool const is_top_floor(floor_ix+1 == num_floors);
-	bool const is_top_floor_of_stack(is_top_floor && !(in_basement && is_parking())); // top floor of basement is not the top if this is a parking structure
+	bool const is_top_floor_of_stack(is_top_floor && !(in_basement && is_parking_str)); // top floor of basement is not the top if this is a parking structure
 	bool short_sides[2] = {0,0};
 
 	if (half_strip) {
@@ -431,8 +431,8 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 			objs.emplace_back(railing, TYPE_RAILING, room_id, dim, 0, railing_flags, tot_light_amt, SHAPE_CUBE, railing_color);
 		}
 		else if (!is_blocked) { // add upper railings at the top for the full length
-			if (is_parking()) {railing_flags |= RO_FLAG_EXTERIOR;} // these railings will be exterior/on the roof
-			if (is_parking()) {railing.translate_dim(2, -0.5*floor_thickness);} // railings are on the roof, not the floor above
+			if (is_parking_str) {railing_flags |= RO_FLAG_EXTERIOR;} // these railings will be exterior/on the roof
+			if (is_parking_str) {railing.translate_dim(2, -0.5*floor_thickness);} // railings are on the roof, not the floor above
 			railing.translate_dim( dim, -0.5*dir_sign*railing_thickness); // shift down the ramp a bit
 			objs.emplace_back(railing, TYPE_RAILING, room_id, dim, 0, railing_flags, tot_light_amt, SHAPE_CUBE, railing_color);
 			cube_t back_railing(rc);
@@ -667,6 +667,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	cube_t row(wall); // same length as the wall; includes the width of the pillars
 	row.z2() = row.z1() + get_rug_thickness(); // slightly above the floor
 	float const space_width(row.get_sz_dim(dim)/num_space_wid), strips_start(virt_room_for_wall.d[!dim][0]), wall_half_gap(2.0*wall_hc), space_shrink(row_width - space_length);
+	float const hcap_dist((is_parking_str ? 3.0 : 1.5)*space_width); // increase distance for parking structures since elevators are off to the side rather than centered
 	bool const add_cars(enable_parked_cars() && !is_rotated()); // skip cars for rotated buildings
 	unsigned const max_handicap_spots(capacity/20 + 1);
 	unsigned num_handicap_spots(0);
@@ -732,8 +733,8 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 					// make it a handicap spot if near an elevator and there aren't already too many
 					if (num_handicap_spots < max_handicap_spots) {
 						cube_t hc_area(space);
-						hc_area.expand_by(1.5*space_width);
-						if (!no_sep_wall) {hc_area.intersect_with_cube_xy(row);} // keep within the current row if there are walls in between rows
+						hc_area.expand_by(hcap_dist);
+						if (!no_sep_wall && !is_parking_str) {hc_area.intersect_with_cube_xy(row);} // keep within the current row if there are walls in between rows
 
 						for (elevator_t const &e : interior->elevators) {
 							if (e.z1() > space.z2()) continue; // doesn't extend down to this level
