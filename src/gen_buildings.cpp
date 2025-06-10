@@ -4456,14 +4456,14 @@ public:
 
 		for (auto g = grid_by_tile.begin(); g != grid_by_tile.end(); ++g) {
 			if (!g->bcube.closest_dist_less_than(camera, draw_dist)) continue; // too far away; use exterior bcube
-			if (!camera_pdu.cube_visible(g->bcube + xlate)) continue;
+			if (!camera_pdu.cube_visible(g->bcube + xlate))          continue;
 
 			for (auto i = g->bc_ixs.begin(); i != g->bc_ixs.end(); ++i) {
 				building_t const &b(get_building(i->ix));
-				if (b.details.empty()) continue;
+				if (!b.has_antenna) continue;
 				if (!is_night((((321*i->ix) & 7)/7.0)*WIND_LIGHT_ON_RAND)) continue; // gradually turn on
-				if (!b.bcube.closest_dist_less_than(camera, draw_dist)) continue; // too far away
-				if (!camera_pdu.cube_visible(b.bcube + xlate)) continue;
+				if (!b.bcube.closest_dist_less_than(camera, draw_dist))    continue; // too far away
+				if (!camera_pdu.cube_visible(b.bcube + xlate))             continue;
 				
 				for (auto j = b.details.begin(); j != b.details.end(); ++j) {
 					if (j->type != ROOF_OBJ_ANT) continue; // not an antenna
