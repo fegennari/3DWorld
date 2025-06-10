@@ -1699,11 +1699,6 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		bcube_exp.expand_by_xy(2.0*window_vspacing);
 		camera_near_building = bcube_exp.contains_pt(camera_bs) || camera_can_see_ext_basement;
 	}
-	if (camera_near_building) { // build moving objects vector
-		for (auto i = objs.begin(); i != objs_end; ++i) {
-			if (i->is_moving() && i->is_visible()) {moving_objs.emplace_back(*i, (i - objs.begin() + 1));}
-		}
-	}
 	if (has_room_geom() && frame_counter <= (int)interior->room_geom->last_animal_update_frame+1) { // animals were updated this frame or the previous frame
 		if (has_retail() && get_retail_part().contains_pt(camera_rot)) {} // optimization: no dynamic animal shadows in retail area
 		else if (point_in_mall(camera_rot) || point_in_industrial(camera_rot)) {} // optimization: no dynamic animal shadows in malls or industrial areas
@@ -1720,7 +1715,10 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	bool last_room_closed(0);
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
-		if (camera_near_building && !walkway_only) { // handle light emitting objects in the player's building
+		if (camera_near_building && !walkway_only) {
+			// build moving objects vector
+			if (i->is_moving() && i->is_visible()) {moving_objs.emplace_back(*i, (i - objs.begin() + 1));}
+			// handle light emitting objects in the player's building
 			room_object const type(i->type);
 
 			// should we do an occlusion query?
