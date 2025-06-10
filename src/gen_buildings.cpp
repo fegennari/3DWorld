@@ -2950,7 +2950,7 @@ class building_creator_t {
 		}
 		cube_t const &get_vis_bcube() const {return ((player_in_ext_basement() || player_in_uge) ? extb_bcube : ext_vis_bcube);}
 	};
-	vector<grid_elem_t> grid, grid_by_tile; // grid is used for building placement, while grid_by_tile is used for drawing
+	vector<grid_elem_t> grid, grid_by_tile; // grid is used for building placement, while grid_by_tile is used for drawing; gbt size 64 (city) / 240 (non-city)
 
 	grid_elem_t &get_grid_elem(unsigned gx, unsigned gy) {
 		assert(gx < grid_sz && gy < grid_sz && !grid.empty());
@@ -3730,7 +3730,7 @@ public:
 				for (cube_with_ix_t const &l : b.roof_lights) {
 					cube_t const light(building_draw_t::get_roof_light_from_pole(l));
 					point const lpos(light.xc(), light.yc(), (light.z1() - 2.0*light.dz())); // slightly below the light head
-					float const radius(5.0*l.dz());
+					float const radius(6.0*l.dz());
 					update_lights_bcube_zvals(lights_bcube, lpos, radius);
 					dl_sources.push_back(light_source(radius, lpos, lpos, colorRGBA(1.0, 1.0, 0.8, 1.0)));
 				}
