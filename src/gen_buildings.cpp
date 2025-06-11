@@ -3743,6 +3743,10 @@ public:
 		} // for g
 	}
 
+	void get_rooftop_cars(vector<car_t> &cars) const { // called once at the beginning
+		for (building_t const &b : buildings) {b.get_rooftop_cars(cars);}
+	}
+
 	struct defer_ped_draw_vars_t {
 		building_t *building=nullptr;
 		building_creator_t const *bc=nullptr;
@@ -5717,6 +5721,11 @@ void add_buildings_exterior_lights(vector3d const &xlate, cube_t &lights_bcube) 
 	building_creator     .add_exterior_lights(xlate, lights_bcube);
 	building_creator_city.add_exterior_lights(xlate, lights_bcube);
 	building_tiles       .add_exterior_lights(xlate, lights_bcube);
+}
+void get_building_rooftop_cars(vector<car_t> &cars) {
+	building_creator     .get_rooftop_cars(cars);
+	building_creator_city.get_rooftop_cars(cars);
+	// Note: building_tiles is skipped because this is only called once at the beginning rather than each frame
 }
 float get_max_house_size() {return global_building_params.get_max_house_size();}
 

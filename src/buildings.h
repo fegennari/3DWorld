@@ -132,6 +132,7 @@ struct door_t;
 struct pipe_t;
 struct tunnel_seg_t;
 struct bldg_industrial_info_t;
+struct car_t;
 typedef vector<point> vect_point;
 typedef vector<sphere_t> vect_sphere_t;
 
@@ -2598,6 +2599,7 @@ public:
 	bool point_in_or_above_pool(point const &pt) const;
 	bool set_float_height(point &pos, float radius, float ceil_zval, float density=0.5) const;
 	bool find_mirror_needing_reflection(vector3d const &xlate) const;
+	void get_rooftop_cars(vector<car_t> &cars) const;
 	bool get_zval_for_obj_placement(point const &pos, float radius, float &zval, bool add_z_bias) const;
 	float get_elevator_floor_spacing(elevator_t            const &e) const {return ( e.in_mall       ? get_mall_floor_spacing() : get_window_vspace());}
 	float get_stairs_floor_spacing  (stairs_landing_base_t const &s) const {return ((s.in_mall == 1) ? get_mall_floor_spacing() : get_window_vspace());}
@@ -2944,6 +2946,7 @@ private:
 	void get_all_windows(vect_cube_with_ix_t &windows) const;
 	void get_parking_garage_wall_openings(vect_cube_with_ix_t &openings) const;
 	cube_t get_parking_structure_roof() const;
+	void get_parking_rooftop_avoid(vect_cube_t &avoid) const;
 	void add_parking_roof_lights();
 	void register_indir_lighting_geom_change() const;
 	void register_blinds_state_change() const;

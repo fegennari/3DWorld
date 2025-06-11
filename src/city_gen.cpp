@@ -34,6 +34,7 @@ extern vector<light_source> dl_sources;
 
 void add_dynamic_lights_city(cube_t const &scene_bcube, float &dlight_add_thresh, float falloff);
 void add_buildings_exterior_lights(vector3d const &xlate, cube_t &lights_bcube);
+void get_building_rooftop_cars(vector<car_t> &cars);
 void disable_shadow_maps(shader_t &s);
 vector3d get_tt_xlate_val();
 float get_max_house_size();
@@ -3155,6 +3156,7 @@ void car_manager_t::update_cars() {
 void car_manager_t::get_car_ix_range_for_cube(vector<car_block_t>::const_iterator cb, cube_t const &bc, unsigned &start, unsigned &end) const {
 	start = cb->start; end = (cb+1)->start;
 	assert(end <= cars.size());
+	if (cb->cur_city >= CITY_BIX_START) return; // not a real city (connector road or building); return the full range
 	if (!road_gen.cube_overlaps_pl_or_dw_xy(bc, cb->cur_city)) {end   = cb->first_parked;} // moving cars only (beginning of range)
 	if (!road_gen.cube_overlaps_road_xy    (bc, cb->cur_city)) {start = cb->first_parked;} // parked cars only (end of range)
 	assert(start <= end);
@@ -3406,6 +3408,7 @@ public:
 		bool const have_cars(!car_manager.empty());
 		road_gen.gen_parking_lots_and_place_objects(parked_cars, have_cars);
 		road_gen.connect_power_poles_to_transmission_lines(); // must be after placing power poles
+		get_building_rooftop_cars(parked_cars);
 		if (city_params.has_helicopter_model()) {get_all_city_helipads(hp_locs);}
 		timer.end(); // exclude the steps below, which are dominated by model load time
 		car_manager.add_parked_cars(parked_cars);

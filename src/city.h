@@ -16,6 +16,7 @@ using std::string;
 
 unsigned const CONN_CITY_IX((1<<16)-1); // uint16_t max
 unsigned const NO_CITY_IX(CONN_CITY_IX-1); // used for cars not in any city (in house garages)
+unsigned const CITY_BIX_START((1<<15)); // start of building rooftop indices
 
 // Note: when addint to this list, must also update road_mat_mgr_t::ensure_road_textures()
 enum {TID_SIDEWLAK=0, TID_STRAIGHT, TID_BEND_90, TID_3WAY,   TID_4WAY,   TID_PARK_LOT,  TID_TRACKS,  TID_PARK,  TID_DRIVEWAY,  TID_ROAD_SKIRT,  TID_TURN_SKIRT, /*none for bldg*/ NUM_RD_TIDS };

@@ -3,7 +3,10 @@
 
 #include "function_registry.h"
 #include "buildings.h"
-//#include "city_model.h"
+#include "city.h" // for car_t
+
+
+void set_car_model_color(car_t &car, unsigned btype);
 
 
 float building_t::get_parking_ramp_width() const {
@@ -274,16 +277,12 @@ cube_t building_t::get_parking_structure_roof() const {
 	roof.expand_by_xy(-get_park_struct_wall_thick());
 	return roof;
 }
-
-void building_t::add_parking_roof_lights() {
-	assert(interior);
-	roof_lights.clear(); // in case the interior was regenerated
+void building_t::get_parking_rooftop_avoid(vect_cube_t &avoid) const {
 	float const floor_spacing(get_window_vspace()), doorway_width(get_doorway_width());
 	cube_t roof(get_parking_structure_roof());
 	set_cube_zvals(roof, roof.z1()-get_floor_thickness(), roof.z1()+floor_spacing); // assume one floor tall
-	// currently there are no parking spaces or on the roof, so we only need to avoid the ramp, stairs, and elevator
-	vect_cube_t avoid;
 
+	// currently there are no parking spaces or on the roof, so we only need to avoid the ramp, stairs, and elevator
 	if (!interior->pg_ramp.is_all_zeros()) {
 		cube_with_ix_t ramp(interior->pg_ramp);
 		bool const dim(ramp.ix >> 1), dir(ramp.ix & 1);
@@ -296,11 +295,18 @@ void building_t::add_parking_roof_lights() {
 	for (elevator_t const &e : interior->elevators) {
 		if (e.intersects(roof)) {avoid.push_back(e.get_bcube_padded(2.0*doorway_width));}
 	}
-	// add roof lights
-	float const pole_radius(0.025*floor_spacing), pole_height(1.5*floor_spacing), light_radius(6.0*floor_spacing), zval(parts[0].z2());
+}
+
+void building_t::add_parking_roof_lights() {
+	assert(interior);
+	roof_lights.clear(); // in case the interior was regenerated
+	vect_cube_t avoid;
+	get_parking_rooftop_avoid(avoid);
+	cube_t const roof(get_parking_structure_roof());
+	float const floor_spacing(get_window_vspace()), pole_radius(0.025*floor_spacing), pole_height(1.5*floor_spacing), light_radius(6.0*floor_spacing), zval(roof.z2());
+	bool const rdim(roof.dx() < roof.dy()); // long dim
 	cube_t place_area(roof);
 	place_area.expand_by_xy(-3.2*pole_radius);
-	bool const rdim(roof.dx() < roof.dy()); // long dim
 	unsigned num[2]={};
 	float space [2]={};
 
@@ -328,6 +334,35 @@ void building_t::add_parking_roof_lights() {
 		}
 	} // for r
 	max_eq(bcube.z2(), light.z2());
+}
+
+void building_t::get_rooftop_cars(vector<car_t> &cars) const {
+	if (!interior || !is_parking()) return;
+	vector3d const nom_car_sz(get_nom_car_size());
+	if (nom_car_sz.x == 0.0) return; // no car models loaded
+	cube_t const roof(get_parking_structure_roof());
+	float const zval(roof.z2());
+	vect_cube_t avoid;
+	get_parking_rooftop_avoid(avoid);
+	rand_gen_t rgen;
+	rgen.set_state(mat_ix, interior->floors.size());
+	car_t car;
+	// encode building index in cur_city, starting with CITY_BIX_START and incrementing with each new building
+	car.cur_city = ((cars.empty() || cars.back().cur_city < CITY_BIX_START) ? CITY_BIX_START : cars.back().cur_city+1);
+	car.cur_road_type = TYPE_BUILDING;
+	// add cars in rows with some spaces empty; can't use parking spaces as they haven't been placed yet
+	// TODO: for now this is a placeholder single car in the center
+	car.dim     = rgen.rand_bool();
+	car.dir     = rgen.rand_bool(); // or random?
+	car.cur_seg = rgen.rand(); // sets the model and color
+	point center(roof.xc(), roof.yc(), zval);
+	center[ car.dim] += 0.02*nom_car_sz.x*rgen.signed_rand_float(); // small random misalign front/back
+	center[!car.dim] += 0.03*nom_car_sz.y*rgen.signed_rand_float(); // small random misalign side
+	vector3d car_sz(nom_car_sz);
+	if (car.dim) {swap(car_sz.x, car_sz.y);}
+	car.set_bcube(point(center.x, center.y, zval), car_sz);
+	set_car_model_color(car, btype);
+	cars.push_back(car);
 }
 
 void building_t::add_parking_struct_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix,
