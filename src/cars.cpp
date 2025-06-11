@@ -1087,6 +1087,7 @@ void car_manager_t::extract_car_data(vector<car_city_vect_t> &cars_by_city) cons
 	for (auto i = cars_by_city.begin(); i != cars_by_city.end(); ++i) {i->clear_cars();} // clear prev frame's state
 
 	for (auto i = cars.begin(); i != cars.end(); ++i) {
+		if (i->cur_road_type == TYPE_BUILDING) continue;
 		if (i->cur_city >= cars_by_city.size()) {cars_by_city.resize(i->cur_city+1);}
 		auto &dest(cars_by_city[i->cur_city]);
 		
@@ -1109,9 +1110,7 @@ bool car_manager_t::proc_sphere_coll(point &pos, point const &p_last, float radi
 	float const dist(p2p_dist(pos, p_last));
 
 	for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
-		cube_t const city_bcube(get_cb_bcube(*cb) + xlate);
-		if (pos.z - radius > city_bcube.z2() + city_params.get_max_car_size().z) continue; // above the cars
-		if (!sphere_cube_intersect_xy(pos, (radius + dist), city_bcube)) continue;
+		if (!sphere_cube_intersect(pos, (radius + dist), (cb->bcube + xlate))) continue;
 		cube_t sphere_bc; sphere_bc.set_from_sphere((pos - xlate), radius);
 		unsigned start(0), end(0);
 		get_car_ix_range_for_cube(cb, sphere_bc, start, end);
@@ -1133,9 +1132,7 @@ void car_manager_t::destroy_cars_in_radius(point const &pos_in, float radius) {
 	bool const is_pt(radius == 0.0);
 
 	for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
-		cube_t const city_bcube(get_cb_bcube(*cb));
-		if (pos.z - radius > city_bcube.z2() + city_params.get_max_car_size().z) continue; // above the cars
-		if (is_pt ? !city_bcube.contains_pt_xy(pos) : !sphere_cube_intersect_xy(pos, radius, city_bcube)) continue;
+		if (is_pt ? !cb->bcube.contains_pt(pos) : !sphere_cube_intersect(pos, radius, cb->bcube)) continue;
 		unsigned const start(cb->start), end((cb+1)->start); // Note: shouldnt be called frequently enough to need road/parking lot acceleration
 		assert(end <= cars.size() && start <= end);
 
@@ -1156,7 +1153,7 @@ bool car_manager_t::get_color_at_xy(point const &pos, colorRGBA &color, int int_
 	if (int_ret != INT_ROAD && int_ret != INT_PARKING) return 0; // not a road or a parking lot - no car intersections
 
 	for (auto cb = car_blocks_by_road.begin(); cb+1 < car_blocks_by_road.end(); ++cb) { // use cars_by_road to accelerate query
-		if (!get_cb_bcube(*cb).contains_pt_xy(pos)) continue; // skip
+		if (!cb->bcube.contains_pt_xy(pos)) continue; // skip
 		unsigned start(cb->start), end((cb+1)->start);
 		if      (int_ret == INT_ROAD)    {end   = cb->first_parked;} // moving cars only (beginning of range)
 		else if (int_ret == INT_PARKING) {start = cb->first_parked;} // parked cars only (end of range)
@@ -1182,7 +1179,7 @@ bool car_manager_t::get_color_at_xy(point const &pos, colorRGBA &color, int int_
 
 car_t const *car_manager_t::get_car_at_pt(point const &pos, bool is_parked) const {
 	for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
-		if (!get_cb_bcube(*cb).contains_pt_xy(pos)) continue; // skip
+		if (!cb->bcube.contains_pt_xy(pos)) continue; // skip
 		unsigned start(cb->start), end((cb+1)->start);
 		if (!is_parked) {end   = cb->first_parked;} // moving cars only (beginning of range)
 		else            {start = cb->first_parked;} // parked cars only (end of range)
@@ -1198,7 +1195,7 @@ car_t const *car_manager_t::get_car_at_pt(point const &pos, bool is_parked) cons
 
 car_t const *car_manager_t::get_car_at(point const &p1, point const &p2) const { // Note: p1/p2 in local TT space
 	for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
-		if (!get_cb_bcube(*cb).line_intersects(p1, p2)) continue; // skip
+		if (!cb->bcube.line_intersects(p1, p2)) continue; // skip
 		unsigned start(cb->start), end((cb+1)->start);
 		assert(start <= end && end <= cars.size());
 
@@ -1217,7 +1214,7 @@ bool car_manager_t::line_intersect_cars(point const &p1, point const &p2, float 
 	bool ret(0);
 
 	for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
-		if (!get_cb_bcube(*cb).line_intersects(p1, p2)) continue; // skip
+		if (!cb->bcube.line_intersects(p1, p2)) continue; // skip
 		unsigned start(cb->start), end((cb+1)->start);
 		assert(start <= end && end <= cars.size());
 
@@ -1324,7 +1321,7 @@ void car_manager_t::next_frame(ped_manager_t const &ped_manager, float car_speed
 	if (cars.empty()) return;
 	// Warning: not really thread safe, but should be okay; the ped state should valid at all points (thought maybe inconsistent) and we don't need it to be exact every frame
 	ped_manager.get_peds_crossing_roads(peds_crossing_roads);
-	//timer_t timer("Update Cars"); // 4K cars = 0.7ms / 2.1ms with destinations + navigation
+	//timer_t timer("Update Cars"); // 3K cars = 0.7ms
 	comp_car_road_then_pos const sort_func(dstate.camera_bs);
 #pragma omp critical(modify_car_data)
 	{
@@ -1343,7 +1340,10 @@ void car_manager_t::next_frame(ped_manager_t const &ped_manager, float car_speed
 		if (car_blocks.empty() || i->cur_city != car_blocks.back().cur_city) {
 			if (!saw_parked && !car_blocks.empty()) {car_blocks.back().first_parked = cix;} // no parked cars in prev city
 			saw_parked = 0; // reset for next city
-			car_blocks.emplace_back(cix, i->cur_city);
+			car_blocks.emplace_back(cix, i->cur_city, i->bcube);
+		}
+		else {
+			car_blocks.back().bcube.union_with_cube(i->bcube);
 		}
 		if (i->is_parked()) {
 			if (!saw_parked) {car_blocks.back().first_parked = cix; saw_parked = 1;}
@@ -1357,7 +1357,7 @@ void car_manager_t::next_frame(ped_manager_t const &ped_manager, float car_speed
 		if (is_active_emergency_vehicle(car_model_loader, *i, 0, 1)) {play_car_sound_if_close(i->get_center(), SOUND_POLICE);} // lights=0, siren=1
 	} // for i
 	if (!saw_parked && !car_blocks.empty()) {car_blocks.back().first_parked = cars.size();} // no parked cars in final city
-	car_blocks.emplace_back(cars.size(), 0); // add terminator
+	car_blocks.emplace_back(cars.size(), 0, cube_t()); // add terminator
 
 	for (auto i = cars.begin(); i != cars.end(); ++i) { // collision detection; cars are sorted by city => road => front end
 		if (i->is_parked()) continue; // no collisions for parked cars
@@ -1405,16 +1405,17 @@ void car_manager_t::next_frame(ped_manager_t const &ped_manager, float car_speed
 				if (new_city) { // new city
 					if (!saw_parked && !car_blocks_by_road.empty()) {car_blocks_by_road.back().first_parked = cbr_ix;} // no parked cars in prev city
 					saw_parked = 0; // reset for next city
-					car_blocks_by_road.emplace_back(cbr_ix, i->cur_city);
+					car_blocks_by_road.emplace_back(cbr_ix, i->cur_city, i->bcube);
 				}
 				cars_by_road.emplace_back(i->bcube, (i - cars.begin())); // start a new block
 				cur_city = i->cur_city;
 				cur_road = i->cur_road;
 			}
 			else {cars_by_road.back().union_with_cube(i->bcube);}
+			car_blocks_by_road.back().bcube.union_with_cube(i->bcube);
 		} // for i
 		if (!saw_parked && !car_blocks_by_road.empty()) {car_blocks_by_road.back().first_parked = cars_by_road.size();} // no parked cars in final city
-		car_blocks_by_road.emplace_back(cars_by_road.size(), 0); // add terminator
+		car_blocks_by_road.emplace_back(cars_by_road.size(), 0, cube_t()); // add terminator
 		cars_by_road.emplace_back(cube_t(), cars.size()); // add terminator
 	}
 	//cout << TXT(cars.size()) << TXT(entering_city.size()) << TXT(in_isects.size()) << endl; // TESTING
@@ -1651,7 +1652,7 @@ void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlig
 		float const draw_tile_dist(dstate.draw_tile_dist), block_draw_dist(0.5*draw_tile_dist); // dist_scale=0.5
 
 		for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
-			cube_t const block_bcube(get_cb_bcube(*cb) + xlate);
+			cube_t const block_bcube(cb->bcube + xlate);
 			if (!shadow_only && !block_bcube.closest_dist_less_than(camera_pdu.pos, block_draw_dist)) continue; // check draw distance
 			if (!camera_pdu.cube_visible(block_bcube)) continue; // city not visible - skip
 			unsigned const end((cb+1)->start);

@@ -772,8 +772,9 @@ class car_manager_t { // and trucks and helicopters
 	helicopter_model_loader_t helicopter_model_loader;
 
 	struct car_block_t {
-		unsigned start, cur_city, first_parked;
-		car_block_t(unsigned s, unsigned c) : start(s), cur_city(c), first_parked(0) {}
+		unsigned start, cur_city, first_parked=0;
+		cube_t bcube;
+		car_block_t(unsigned s, unsigned c, cube_t const &bc) : start(s), cur_city(c), bcube(bc) {}
 	};
 	struct helipad_t {
 		cube_t bcube;
@@ -794,7 +795,6 @@ class car_manager_t { // and trucks and helicopters
 	unsigned first_parked_car=0;
 	bool car_destroyed=0;
 
-	cube_t get_cb_bcube(car_block_t const &cb ) const;
 	road_isec_t const &get_car_isec(car_t const &car) const;
 	bool check_collision(car_t &c1, car_t &c2) const;
 	void register_car_at_city(car_t const &car);

@@ -3122,7 +3122,7 @@ public:
 	road_network_t const &get_car_rn(car_base_t const &car) const {return road_network_t::get_car_rn(car, road_networks, global_rn);}
 	
 	void update_car(car_t &car, vector<car_t> const &cars, rand_gen_t &rgen) const {
-		if (car.cur_city == NO_CITY_IX) return; // not in a city (in a garage), nothing to update
+		if (car.cur_city == NO_CITY_IX || car.cur_road_type == TYPE_BUILDING || car.destroyed) return; // not in a city (in a garage/roof), or destroyed; nothing to update
 		//update_car_seg_stats(car); // not needed - stats not yet used
 		get_car_rn(car).update_car(car, cars, rgen, road_networks, global_rn);
 		if (city_params.enable_car_path_finding) {update_car_dest(car);}
@@ -3139,7 +3139,6 @@ public:
 
 
 // Note: the car_manager_t member functions that use road_gen are here rather than in cars.cpp
-cube_t car_manager_t::get_cb_bcube(car_block_t const &cb )       const {return road_gen.get_city_bcube_for_cars(cb.cur_city);}
 road_isec_t const &car_manager_t::get_car_isec(car_t const &car) const {return road_gen.get_car_isec(car);}
 bool car_manager_t::check_collision(car_t &c1, car_t &c2)        const {return c1.check_collision(c2, road_gen);}
 void car_manager_t::register_car_at_city(car_t const &car) {road_gen.register_car_at_city(car.cur_city);}
