@@ -165,11 +165,11 @@ void building_t::get_parking_struct_ext_walls(vect_cube_with_ix_t &walls, bool e
 				w.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.50*floor_spacing;
 				w.intersect_with_cube(part); // clamp again, just in case
 				if (exterior_surfaces) {face_mask = 3 + sf[!dim][!side];} // outside and both ends
-				else                   {face_mask = (1 << (!dim)) + sf[!dim][side];} // inside only
+				else                   {face_mask = (1 << unsigned(!dim)) + sf[!dim][side];} // inside only
 			}
 			else {
 				if (exterior_surfaces) {face_mask = 3 + sf[dim][!dir] + sf[!dim][!side];} // outside and exposed end
-				else                   {face_mask = (1 << dim) + sf[dim][dir];} // inside only
+				else                   {face_mask = (1 << unsigned(dim)) + sf[dim][dir];} // inside only
 			}
 			walls.emplace_back(w, face_mask);
 		} // for side
