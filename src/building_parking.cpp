@@ -294,7 +294,7 @@ void building_t::add_parking_roof_lights() {
 	// add roof lights
 	float const pole_radius(0.025*floor_spacing), pole_height(1.5*floor_spacing), light_radius(6.0*floor_spacing), zval(parts[0].z2());
 	cube_t place_area(roof);
-	place_area.expand_by_xy(-2.0*pole_radius);
+	place_area.expand_by_xy(-3.2*pole_radius);
 	bool const rdim(roof.dx() < roof.dy()); // long dim
 	unsigned num[2]={};
 	float space [2]={};

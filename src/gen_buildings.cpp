@@ -1453,10 +1453,15 @@ public:
 	}
 	void add_rooftop_light(building_t const &bg, cube_with_ix_t const &pole) {
 		cube_t const light(get_roof_light_from_pole(pole));
+		float const pole_sz(0.5*(pole.dx() + pole.dy()));
+		cube_t base(pole);
+		base.z2() = pole.z1() + 0.5*pole_sz;
+		base.expand_by_xy(1.1*pole_sz);
 		tid_nm_pair_t const no_tex(WHITE_TEX); // untextured
 		add_cube(bg, pole,  no_tex, BKGRAY, 0, 3, 0, 0); // skip top and bottom
+		add_cube(bg, base,  no_tex, BKGRAY, 0, 7, 1, 0); // skip bottom
 		add_cube(bg, light, no_tex, BKGRAY, 0, 7, 1, 0); // skip bottom
-		add_cube(bg, light, no_tex, WHITE,  0, 4, 0, 1); //bottom only
+		add_cube(bg, light, no_tex, WHITE,  0, 4, 0, 1); // bottom only
 	}
 
 	unsigned num_verts() const {
