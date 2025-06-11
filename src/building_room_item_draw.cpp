@@ -2670,7 +2670,7 @@ void building_t::draw_cars_in_building(shader_t &s, vector3d const &xlate, bool 
 		if (obj.is_used() && (!player_in_this_building || !check_occlusion || !has_int_garage ||
 			int((viewer.z - bcube.z1())/floor_spacing) == int((obj.z2() - bcube.z1())/floor_spacing)))
 		{
-			car_t car(car_from_parking_space(obj));
+			car_t const car(car_from_parking_space(obj));
 			if (camera_pdu.cube_visible(car.bcube + xlate)) {cars_to_draw.push_back(car);}
 		}
 	}

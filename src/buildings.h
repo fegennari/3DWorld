@@ -2943,6 +2943,7 @@ private:
 	void get_lights_with_priorities(point const &target, cube_t const &valid_area, vector<pair<float, unsigned>> &lights_to_sort) const;
 	void get_all_windows(vect_cube_with_ix_t &windows) const;
 	void get_parking_garage_wall_openings(vect_cube_with_ix_t &openings) const;
+	cube_t get_parking_structure_roof() const;
 	void add_parking_roof_lights();
 	void register_indir_lighting_geom_change() const;
 	void register_blinds_state_change() const;

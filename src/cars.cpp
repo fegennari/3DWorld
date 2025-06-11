@@ -1635,24 +1635,24 @@ bool car_manager_t::check_helicopter_coll(cube_t const &bc) const {
 }
 
 void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows) {
-	if (cars.empty()  && helicopters.empty()) return; // nothing to draw
+	if (cars.empty() && helicopters.empty()) return; // nothing to draw
 
 	if (trans_op_mask & 1) { // opaque pass, should be first
 		if (is_dlight_shadows && !city_params.car_shadows) return;
 		//timer_t timer(string("Draw Cars") + (shadow_only ? " Shadow" : "")); // 10K cars = 1.5ms / 2K cars = 0.33ms
 		bool const only_parked(shadow_only && !is_dlight_shadows); // sun/moon shadows are precomputed and cached, so only include static objects such as parked cars
 		setup_occluders();
-		dstate.xlate = xlate;
 		fgPushMatrix();
 		translate_to(xlate);
+		dstate.xlate = xlate;
 		dstate.pre_draw(xlate, use_dlights, shadow_only);
 		// disable hemispherical lighting normal because the transforms make it incorrect
 		if (!shadow_only) {dstate.s.add_uniform_float("hemi_lighting_normal_scale", 0.0);}
-		float const draw_tile_dist(dstate.draw_tile_dist);
+		float const draw_tile_dist(dstate.draw_tile_dist), block_draw_dist(0.5*draw_tile_dist); // dist_scale=0.5
 
 		for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
 			cube_t const block_bcube(get_cb_bcube(*cb) + xlate);
-			if (!shadow_only && !block_bcube.closest_dist_less_than(camera_pdu.pos, 0.5*draw_tile_dist)) continue; // check draw distance, dist_scale=0.5
+			if (!shadow_only && !block_bcube.closest_dist_less_than(camera_pdu.pos, block_draw_dist)) continue; // check draw distance
 			if (!camera_pdu.cube_visible(block_bcube)) continue; // city not visible - skip
 			unsigned const end((cb+1)->start);
 			assert(end <= cars.size());

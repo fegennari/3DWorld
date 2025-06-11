@@ -268,14 +268,19 @@ void building_t::get_parking_garage_wall_openings(vect_cube_with_ix_t &openings)
 	} // for f
 }
 
+cube_t building_t::get_parking_structure_roof() const {
+	assert(!parts.empty());
+	cube_t roof(parts[0]); // roof is on the first part
+	roof.expand_by_xy(-get_park_struct_wall_thick());
+	return roof;
+}
+
 void building_t::add_parking_roof_lights() {
 	assert(interior);
-	assert(!parts.empty());
-	roof_lights.clear();
+	roof_lights.clear(); // in case the interior was regenerated
 	float const floor_spacing(get_window_vspace()), doorway_width(get_doorway_width());
-	cube_t roof(parts[0]); // roof is on the first part
+	cube_t roof(get_parking_structure_roof());
 	set_cube_zvals(roof, roof.z1()-get_floor_thickness(), roof.z1()+floor_spacing); // assume one floor tall
-	roof.expand_by_xy(-get_park_struct_wall_thick());
 	// currently there are no parking spaces or on the roof, so we only need to avoid the ramp, stairs, and elevator
 	vect_cube_t avoid;
 
