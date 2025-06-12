@@ -329,8 +329,9 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness());
 	float const int_wall_thick(get_wall_thickness()), wall_thickness(1.2*int_wall_thick), wall_hc(0.5*wall_thickness); // thicker
 	float const ceiling_z(zval + window_vspacing - floor_thickness); // Note: zval is at floor level, not at the bottom of the room
-	float const pillar_width(0.5*car_sz.y), pillar_hwidth(0.5*pillar_width), beam_hwidth(0.5*pillar_hwidth), road_width(get_parking_ramp_width()); // wide enough for two cars
-	float const wid_sz(room.get_sz_dim(dim)), len_sz(room.get_sz_dim(!dim)), wid_sz_spaces(wid_sz - 2.0*road_width);
+	float const pillar_width(0.5*car_sz.y), pillar_hwidth(0.5*pillar_width), beam_hwidth(0.5*pillar_hwidth);
+	float const road_width(get_parking_road_width()), ramp_width(get_parking_ramp_width()); // wide enough for two cars; ramp may be wider than rows and sets the side road width
+	float const wid_sz(room.get_sz_dim(dim)), len_sz(room.get_sz_dim(!dim)), wid_sz_spaces(wid_sz - 2.0*ramp_width);
 	float const min_strip_sz(2.0*parking_sz.x + road_width + max(wall_thickness, pillar_width)); // road + parking spaces on each side + wall/pillar
 	assert(car_sz.z < (window_vspacing - floor_thickness)); // sanity check; may fail for some user parameters, but it's unclear what we do in that case
 	unsigned const num_space_wid(wid_sz_spaces/parking_sz.y), num_full_strips(max(1U, unsigned(len_sz/min_strip_sz))); // take the floor
@@ -351,7 +352,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	cube_t room_floor_cube(room), virt_room_for_wall(room);
 	set_cube_zvals(room_floor_cube, zval, ceiling_z);
 	cube_t wall(room_floor_cube), pillar(room_floor_cube), beam(room_floor_cube);
-	wall.expand_in_dim(dim, -road_width); // wall ends at roads that line the sides of the room; include pillar for better occluder and in case the pillar is skipped
+	wall.expand_in_dim(dim, -ramp_width); // wall ends at roads or ramp that line the sides of the room; include pillar for better occluder and in case the pillar is skipped
 	assert(wall.is_strictly_normalized());
 	float wall_spacing(len_sz/(num_walls + 1));
 	float const pillar_shift(0.01*pillar_width); // small value to avoid z-fighting
@@ -409,8 +410,8 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		objs.emplace_back(rc, TYPE_RAMP, room_id, dim, dir, flags, tot_light_amt, SHAPE_ANGLED, wall_color);
 		obstacles    .push_back(rc); // don't place parking spaces next to the ramp
 		obstacles_exp.push_back(rc); // clip beams to ramp
-		obstacles_exp.back().expand_in_dim( dim,      road_width); // keep entrance and exit areas clear of parking spaces, even the ones against exterior walls
-		obstacles_exp.back().expand_in_dim(!dim, 0.75*road_width); // keep walls and pillars away from the sides of ramps
+		obstacles_exp.back().expand_in_dim( dim,      ramp_width); // keep entrance and exit areas clear of parking spaces, even the ones against exterior walls
+		obstacles_exp.back().expand_in_dim(!dim, 0.75*ramp_width); // keep walls and pillars away from the sides of ramps
 		obstacles_ps .push_back(obstacles_exp.back()); // also keep parking spaces away from ramp
 		// add ramp railings
 		ramp_side = (ramp.get_center_dim(!dim) < room.get_center_dim(!dim)); // which side of the ramp the railing is on (opposite the wall the ramp is against)
@@ -969,7 +970,7 @@ void building_t::add_parking_garage_ramp(rand_gen_t &rgen) {
 	if (is_parking_str) {room.z2() = parts.front().z2();} // extend from basement to top of parking structure
 	bool const dim(room.dx() < room.dy()); // long/primary dim
 	// see building_t::add_parking_garage_objs(); make sure there's space for a ramp plus both exit dirs within the building width
-	float const room_width(room.get_sz_dim(!dim)), road_width(min(0.25f*room_width, get_parking_ramp_width())), wall_space((is_parking_str ? 1.2 : 1.0)*road_width);
+	float const room_width(room.get_sz_dim(!dim)), ramp_width(min(0.25f*room_width, get_parking_ramp_width())), wall_space((is_parking_str ? 1.2 : 1.0)*ramp_width);
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness);
 	float const z1(room.z1() + fc_thick), z2(room.z2() + fc_thick); // bottom level room floor to first floor floor
 	bool const ramp_pref_xdir(rgen.rand_bool()), ramp_pref_ydir(rgen.rand_bool());
@@ -979,7 +980,7 @@ void building_t::add_parking_garage_ramp(rand_gen_t &rgen) {
 		for (unsigned xd = 0; xd < 2 && !added_ramp; ++xd) {
 			for (unsigned yd = 0; yd < 2; ++yd) {
 				bool const xdir(bool(xd) ^ ramp_pref_xdir), ydir(bool(yd) ^ ramp_pref_ydir);
-				float const xsz((dim ? 2.0 : 1.0)*road_width), ysz((dim ? 1.0 : 2.0)*road_width); // longer in !dim
+				float const xsz((dim ? 2.0 : 1.0)*ramp_width), ysz((dim ? 1.0 : 2.0)*ramp_width); // longer in !dim
 				unsigned const num_ext(unsigned(room.d[0][xdir] == bcube.d[0][xdir]) + unsigned(room.d[1][ydir] == bcube.d[1][ydir]));
 				if (num_ext < 2-pass) continue; // must be on the exterior edge of the building in both dims for pass 0, and one dim for pass 1
 				dir = (dim ? xdir : ydir);
@@ -990,7 +991,7 @@ void building_t::add_parking_garage_ramp(rand_gen_t &rgen) {
 				cube_t const ramp_cand(c1, c2);
 				assert(ramp_cand.is_strictly_normalized());
 				cube_t test_cube(ramp_cand);
-				test_cube.expand_in_dim(!dim, road_width); // extend outward for clearance to enter/exit the ramp (ramp dim is actually !dim)
+				test_cube.expand_in_dim(!dim, ramp_width); // extend outward for clearance to enter/exit the ramp (ramp dim is actually !dim)
 				if (interior->is_blocked_by_stairs_or_elevator(test_cube)) continue;
 				// check for backrooms door, in case it was placed already (but currently it's not)
 				if (has_ext_basement() && get_ext_basement_door_blocker().intersects(test_cube)) continue; // blocked by extended basement door

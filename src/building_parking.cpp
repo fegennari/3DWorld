@@ -9,6 +9,9 @@
 void set_car_model_color(car_t &car, unsigned btype);
 
 
+float building_t::get_parking_road_width() const {
+	return 2.3f*get_parked_car_size().y;
+}
 float building_t::get_parking_ramp_width() const {
 	return (is_parking() ? 3.0f : 2.3f)*get_parked_car_size().y; // wider for parking structure so two cars can pass
 }
