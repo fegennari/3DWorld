@@ -991,6 +991,7 @@ void car_manager_t::add_parked_cars(vector<car_t> const &new_cars) {
 void car_manager_t::assign_car_model_size_color(car_t &car, rand_gen_t &local_rgen, bool is_in_garage, unsigned btype) {
 	unsigned const num_models(car_model_loader.num_models());
 	int fixed_color(-1);
+	is_in_garage |= (car.cur_road_type == TYPE_BUILDING); // also applies to cars on parking structure roofs
 
 	if (num_models > 0) {
 		for (unsigned n = 0; n < 20; ++n) {
@@ -1008,7 +1009,9 @@ void car_manager_t::assign_car_model_size_color(car_t &car, rand_gen_t &local_rg
 			else {
 				car.apply_scale(model.scale);
 				// set correct bcube that matches the model; needed for pedestrians; can't modify cars in garages
-				if (!is_in_garage && car_model_loader.is_model_valid(car.model_id)) {car.set_correct_len_width_from_model(car_model_loader.get_model_world_space_size(car.model_id));}
+				if (!is_in_garage && car_model_loader.is_model_valid(car.model_id)) {
+					car.set_correct_len_width_from_model(car_model_loader.get_model_world_space_size(car.model_id));
+				}
 			}
 			fixed_color = model.fixed_color_id;
 			break; // done
@@ -1731,7 +1734,7 @@ void car_manager_t::draw_helicopters(bool shadow_only) {
 	dstate.s.add_uniform_float("min_alpha", DEF_CITY_MIN_ALPHA);
 }
 
-// for house garages and building parking garages
+// for house garages and building parking garages/structures
 void car_manager_t::set_car_model_color(car_t &car, unsigned btype) {
 	rand_gen_t rgen;
 	rgen.set_state(123*car.cur_seg, car.cur_seg+1); // random seed is stored in car.cur_seg
