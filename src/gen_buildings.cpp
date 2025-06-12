@@ -3717,7 +3717,7 @@ public:
 		} // for g
 	}
 
-	void add_exterior_lights(vector3d const &xlate, cube_t &lights_bcube) const { // Note: no shadows
+	void add_exterior_lights(vector3d const &xlate, cube_t &lights_bcube) const {
 		for (grid_elem_t const &g : grid_by_tile) { // Note: all grids should be nonempty
 			if (!lights_bcube.intersects_xy  (g.bcube)) continue; // not within light volume (too far from camera)
 			if (!building_grid_visible(xlate, g.bcube)) continue; // VFC; use exterior bcube
@@ -3726,18 +3726,19 @@ public:
 				if (!lights_bcube.intersects_xy(b)) continue; // not within light volume (too far from camera)
 				building_t const &b(get_building(b.ix));
 				
-				for (colored_sphere_t const &light : b.ext_lights) {
+				for (colored_sphere_t const &light : b.ext_lights) { // Note: no shadows
 					if (!lights_bcube.contains_pt_xy(light.pos)) continue; // not within light volume (too far from camera)
 					if (!camera_pdu.sphere_visible_test((light.pos + xlate), light.radius)) continue; // VFC
 					update_lights_bcube_zvals(lights_bcube, light.pos, light.radius);
 					dl_sources.push_back(light_source(light.radius, light.pos, light.pos, light.color));
+					dl_sources.back().disable_shadows();
 				}
-				for (cube_with_ix_t const &l : b.roof_lights) {
+				for (cube_with_ix_t const &l : b.roof_lights) { // with shadows
 					cube_t const light(building_draw_t::get_roof_light_from_pole(l));
 					point const lpos(light.xc(), light.yc(), (light.z1() - 2.0*light.dz())); // slightly below the light head
 					float const radius(6.0*l.dz());
 					update_lights_bcube_zvals(lights_bcube, lpos, radius);
-					dl_sources.push_back(light_source(radius, lpos, lpos, colorRGBA(1.0, 1.0, 0.8, 1.0)));
+					dl_sources.push_back(light_source(radius, lpos, lpos, colorRGBA(1.0, 1.0, 0.8, 1.0), 0, -plus_z, 0.3));
 				}
 			} // for bi
 		} // for g
