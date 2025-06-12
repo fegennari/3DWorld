@@ -283,17 +283,19 @@ cube_t building_t::get_parking_structure_roof() const {
 void building_t::get_parking_rooftop_avoid(vect_cube_t &avoid) const {
 	float const floor_spacing(get_window_vspace()), doorway_width(get_doorway_width());
 	cube_t roof(get_parking_structure_roof());
-	set_cube_zvals(roof, roof.z1()-get_floor_thickness(), roof.z1()+floor_spacing); // assume one floor tall
+	set_cube_zvals(roof, roof.z2()-get_floor_thickness(), roof.z2()+floor_spacing); // assume one floor tall
 
 	// currently there are no parking spaces or on the roof, so we only need to avoid the ramp, stairs, and elevator
 	if (!interior->pg_ramp.is_all_zeros()) {
 		cube_with_ix_t ramp(interior->pg_ramp);
-		bool const dim(ramp.ix >> 1), dir(ramp.ix & 1);
-		ramp.d[dim][dir] += (dir ? 1.0 : -1.0)*ramp.get_sz_dim(!dim); // extend a ramp width on the exit for clearance
+		bool const dim(ramp.ix >> 1), dir(ramp.ix & 1), side(roof.get_center_dim(!dim) < ramp.get_center_dim(!dim));
+		// extend to cover most of the width of the roof so that cars can access all parking space rows
+		for (unsigned d = 0; d < 2; ++d) {ramp.d[dim][d] = roof.d[dim][d] - (d ? 1.0 : -1.0)*doorway_width;}
+		ramp.d[!dim][!side] -= (side ? 1.0 : -1.0)*get_parking_road_width(); // add space alongside the ramp
 		avoid.push_back(ramp);
 	}
 	for (stairwell_t const &s : interior->stairwells) {
-		if (s.intersects(roof)) {avoid.push_back(get_stairs_bcube_expanded(s, 2.0*doorway_width, 0.0, doorway_width));}
+		if (s.intersects(roof)) {avoid.push_back(get_stairs_bcube_expanded(s, 2.0*doorway_width, 0.1*doorway_width, doorway_width));}
 	}
 	for (elevator_t const &e : interior->elevators) {
 		if (e.intersects(roof)) {avoid.push_back(e.get_bcube_padded(2.0*doorway_width));}
