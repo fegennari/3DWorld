@@ -1989,7 +1989,9 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 					// add 2 extra points on mid-level landing and possibly more for non-exit landings; entrance and exit will be on the same side
 					bool const dim(stairs.dim), dir(stairs.dir); // Note: see code in add_stairs_and_elevators()
 					float const window_vspace(get_window_vspace());
-					float const turn_pt(stairs.d[dim][dir] - 0.1*(dir ? 1.0 : -1.0)*stairs.get_length()), seg_delta_z(0.45f*SIGN(to.z - from.z)*window_vspace);
+					// make sure we can reach the turning point; should this be 1.0/NUM_STAIRS_PER_FLOOR rather than 0.1?
+					float const turn_pt(stairs.d[dim][dir] - (dir ? 1.0 : -1.0)*max(radius, 0.1f*stairs.get_length()));
+					float const seg_delta_z(0.45f*SIGN(to.z - from.z)*window_vspace);
 					bool const going_up(exit_pt.z > enter_pt.z);
 					point const next_floor_delta(0.0, 0.0, (going_up ? 1.0 : -1.0)*window_vspace); // dz
 					point exit_turn (exit_pt .x, exit_pt .y, (to  .z - seg_delta_z));
@@ -2014,7 +2016,7 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 						person.last_used_stairs = 1; // don't immediately go back up/down the stairs
 						// Note: person.dest_room can be wrong when exiting in the hallway above the retail room, but it should be unused
 					}
-					path.add(exit_turn,  1); // turning point for exit side of stairs
+					path.add(exit_turn, 1); // turning point for exit side of stairs
 
 					if (stairs.in_mall == 2) { // two floor tall mall back hallway stairs
 						// two floors of separation; create another loop around the stairs to connect the upper and lower segments

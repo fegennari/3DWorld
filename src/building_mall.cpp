@@ -612,7 +612,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 			cube_t stairs(hall_span);
 			set_wall_width(stairs, (hall_center - hall_offset), 1.0*doorway_width, !dim); // shift opposite the elevator dir
 			stairs.d[dim][!d] = wall_pos;
-			stairs.d[dim][ d] = wall_pos + dsign*3.2*doorway_width; // depth
+			stairs.d[dim][ d] = wall_pos + dsign*2.6*doorway_width; // depth
 			assert(stairs.is_strictly_normalized());
 
 			if (!is_store_placement_invalid(stairs)) {

@@ -1904,7 +1904,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 					if (stairs_mode > 0) {
 						bool const perp(stairs_mode == 2), sdir(center_pos < room.get_center_dim(!dim)); // closer to the center
 						float const elevator_side(elevator.d[!dim][sdir] + (sdir ? 1.0 : -1.0)*0.25*wall_thickness); // account for ecap width
-						float const width(2.0*doorway_width), depth(3.2*doorway_width);
+						float const width(2.0*doorway_width), depth(2.2*doorway_width);
 						cube_t stairs(room);
 						stairs.d[!dim][!sdir] = elevator_side; // abuts elevator
 						stairs.d[!dim][ sdir] = elevator_side + (sdir ? 1.0 : -1.0)*(perp ? depth : width);
