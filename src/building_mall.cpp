@@ -585,6 +585,15 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 			vector<unsigned> const &stack(hall_stacks[d]);
 			unsigned const stack_height(stack.size());
 			if (stack_height < 2) continue; // need at least two floors to connect with elevator or stairs
+			bool has_gap(0);
+			float zval(get_room(stack[0]).z1());
+
+			for (auto i = 1; i < stack.size(); ++i) {
+				float const new_zval(get_room(stack[i]).z1());
+				has_gap |= (new_zval - zval > 1.5*floor_spacing);
+				zval = new_zval;
+			}
+			if (has_gap) continue; // skip if there are any gaps in floors (rare)
 			cube_t hall_span(get_room(stack.front())); // lowest level
 			hall_span.union_with_cube(get_room(stack.back())); // highest level
 			float const hall_center(hall_span.get_center_dim(!dim));
