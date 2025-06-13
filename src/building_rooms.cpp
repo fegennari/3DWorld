@@ -3318,6 +3318,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 				objs.emplace_back(wall_clipped, TYPE_STAIR_WALL, 0, dim, dir);
 			}
 			if (i->has_railing) { // add railings
+				bool const hi_side(bool(d) == side);
 				bool railing_dir(dir);
 				cube_t railing(wall);
 				unsigned flags(base_rflags | (add_wall ? RO_FLAG_NOCOLL : 0));
@@ -3331,14 +3332,34 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 				if (is_U) { // adjust railing height/angle to match stairs
 					flags |= RO_FLAG_HAS_EXTRA; // make it taller
 					float const z_split(railing.zc());
-					if (bool(d) == side) {railing.z1() = z_split + railing_side_dz; flags |= RO_FLAG_ADJ_HI; railing_dir ^= 1;}
-					else                 {railing.z2() = z_split - railing_side_dz; flags |= RO_FLAG_ADJ_LO;}
+					if (hi_side) {railing.z1() = z_split + railing_side_dz; flags |= RO_FLAG_ADJ_HI; railing_dir ^= 1;}
+					else         {railing.z2() = z_split - railing_side_dz; flags |= RO_FLAG_ADJ_LO;}
 				}
 				else {
 					railing.z1() += 0.15*stair_height; // shift up slightly so that the bottom doesn't clip through the bottom stair
 				}
 				objs.emplace_back(railing, TYPE_RAILING, 0, dim, railing_dir, flags, 1.0, SHAPE_CUBE, railing_color);
 				if (i->in_mall == 1) {objs.back().state_flags = num_stairs;} // encode num_stairs in state_flags so that railing height can be drawn correctly
+
+				if (is_U) { // add center railings on each side
+					float const dz(railing.dz());
+					railing.z1() += 0.20*dz;
+					railing.z2() -= 0.06*dz;
+					if (hi_side) {railing.translate_dim(2, 0.17*dz);}
+					railing.d[dim][dir] -= (dir ? 1.0 : -1.0)*0.4*railing.get_sz_dim(dim); // shorten the length
+					set_wall_width(railing, i->get_center_dim(!dim), wall_hw, !dim);
+					if (hi_side && i->is_at_top && !i->roof_access) {railing.d[dim][!dir] -= (dir ? 1.0 : -1.0)*1.5*wall_hw;} // move slightly to meet the top railing
+					flags &= ~RO_FLAG_NOCOLL; // do collide with this railing
+					if (hi_side) {flags &= ~(RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI);} // only need vertical poles on one half
+					objs.emplace_back(railing, TYPE_RAILING, 0, dim, railing_dir, flags, 1.0, SHAPE_CUBE, railing_color);
+
+					if (!hi_side && i->floor_ix <= 1) { // bottom floor needs a single vertical bar
+						set_wall_width(railing, railing.d[dim][!dir], wall_hw, dim);
+						railing.z1()  = wall.z1(); // down to the floor
+						railing.z2() -= 0.22*dz;
+						objs.emplace_back(railing, TYPE_METAL_BAR, 0, 0, 1, RO_FLAG_NOCOLL, 1.0, SHAPE_CYLIN, railing_color); // vertical
+					}
+				}
 			}
 		} // for d
 		if (i->has_railing && is_U) { // add a railing for the back wall of U-shaped stairs
