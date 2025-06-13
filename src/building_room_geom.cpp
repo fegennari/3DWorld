@@ -5535,6 +5535,10 @@ void building_room_geom_t::add_hard_hat(room_object_t const &c) {
 	add_hard_hat_to_material(c, get_material(tex, 1, 0, 1)); // shadowed=1, dynamic=0, small=1
 }
 
+void building_room_geom_t::add_tophat(room_object_t const &c) {
+	// TODO: tall cylinder with short cylinder brim
+}
+
 void building_room_geom_t::add_comp_mouse(room_object_t const &c) {
 	cube_t pad(c);
 	// draw mouse pad as a flat rectangle at the bottom

@@ -210,6 +210,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_LOCKER    ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1, 100.0, 50.0,  "locker");
 	bldg_obj_types[TYPE_TESTTUBE  ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 10.0,  0.05,  "tube of blood"); // blood, until we have different liquids
 	bldg_obj_types[TYPE_HARDHAT   ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 30.0,  1.0,   "hard hat");
+	bldg_obj_types[TYPE_TOPHAT    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 40.0,  0.5,   "tophat");
 	bldg_obj_types[TYPE_COMP_MOUSE] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 10.0,  0.25,  "computer mouse");
 	bldg_obj_types[TYPE_PARK_GATE ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1, 400.0, 100.0, "parking garage gate");
 	bldg_obj_types[TYPE_CONV_BELT ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1, 500.0, 100.0, "conveyor belt");
