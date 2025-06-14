@@ -500,6 +500,7 @@ bool can_hide_under(room_object_t const &c, cube_t &hide_area) {
 		return 1;
 	}
 	else if (c.type == TYPE_BED) {
+		if (c.flags & RO_FLAG_ADJ_TOP) return 0; // skip top bunk beds
 		cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube
 		get_bed_cubes(c, cubes);
 		hide_area = cubes[0]; // frame

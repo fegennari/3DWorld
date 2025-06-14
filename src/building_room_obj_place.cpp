@@ -1306,8 +1306,10 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t &bl
 		}
 	}
 	cube_t const avoid(placed_closet ? objs[closet_obj_id] : cube_t()); // avoid intersecting the closet, since it meets the ceiling
-	if (objs_start > 0) {replace_light_with_ceiling_fan(rgen, room, avoid, room_id, tot_light_amt, objs_start-1);} // light is prev placed object; should always be true
-
+	
+	if (objs_start > 0) { // light is prev placed object; should always be true
+		if (!(bed.flags & RO_FLAG_ADJ_BOT)) {replace_light_with_ceiling_fan(rgen, room, avoid, room_id, tot_light_amt, objs_start-1);} // add if no bunk bed
+	}
 	if (rgen.rand_float() < 0.3) { // maybe add a t-shirt or jeans on the floor
 		unsigned const type(rgen.rand_bool() ? TYPE_PANTS : TYPE_TEESHIRT);
 		bool already_on_bed(0); // if shirt/pants are already on the bed, don't put them on the floor
@@ -1423,10 +1425,11 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 		bed_sz[!dim] = 0.01f*vspace*(sizes[size_ix][0] + 4.0f); // width  (mattress + small gaps)
 		if (room_bounds.dx() < 1.5*bed_sz.x || room_bounds.dy() < 1.5*bed_sz.y) continue; // room is too small for a bed of this size
 		bool const always_against_wall(room_bounds.dx() < 2.0*bed_sz.x || room_bounds.dy() < 2.0*bed_sz.y); // if room is narrow
+		bool against_wall(0), wall_dir(0);
 		bed_sz.z = (have_other_bed ? other_bed.dz() : 0.3*vspace*rgen.rand_uniform(1.0, 1.2)); // height
 		c.z2()   = zval + bed_sz.z;
 
-		for (unsigned d = 0; d < 2; ++d) {
+		for (unsigned d = 0; d < 2; ++d) { // dim
 			float const min_val(room_bounds.d[d][0]), max_val(room_bounds.d[d][1] - bed_sz[d]);
 
 			if (bool(d) == dim && n < 5) { // in the first few iterations, try to place the head of the bed against the wall (maybe not for exterior wall facing window?)
@@ -1435,7 +1438,9 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 				c.d[d][0] = (head_dir ? min_val : max_val);
 			}
 			else if (bool(d) != dim && (always_against_wall || rgen.rand_bool())) { // try to place the bed against the wall sometimes
-				c.d[d][0] = ((first_wall_dir ^ bool(n&1)) ? (min_val - 0.25*vspace) : (max_val + 0.25*vspace));
+				wall_dir  = (first_wall_dir ^ bool(n&1) ^ 1);
+				c.d[d][0] = (wall_dir ? (max_val + 0.25*vspace) : (min_val - 0.25*vspace));
+				against_wall = 1;
 			}
 			else {
 				c.d[d][0] = rgen.rand_uniform(min_val, max_val);
@@ -1446,49 +1451,76 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 		// prefer not to block the path between doors in the first half of iterations
 		if (n < 10 && door_path_checker.check_door_path_blocked(c, room, room_id, zval, *this)) continue;
 		bool const dir((room_bounds.d[dim][1] - c.d[dim][1]) < (c.d[dim][0] - room_bounds.d[dim][0])); // head of the bed is closer to the wall; opposite first_head_dir
+		unsigned const bed_ix(objs.size());
 		objs.emplace_back(c, TYPE_BED, room_id, dim, dir, (is_house ? RO_FLAG_IS_HOUSE : 0), tot_light_amt);
 		set_obj_id(objs);
 		room_object_t &bed(objs.back());
 		// use white color if a texture is assigned that's not close to white
 		int const sheet_tid(bed.get_sheet_tid());
 		bed.color = get_bed_sheet_color(sheet_tid, rgen);
-		cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube
-		get_bed_cubes(bed, cubes);
-		cube_t const &mattress(cubes[3]), &pillow(cubes[4]);
-		float const rand_val(rgen.rand_float());
+		unsigned num_beds(1);
 
-		if (rand_val < 0.4) { // add a blanket on the bed 40% of the time
-			vector3d const mattress_sz(mattress.get_size());
-			cube_t blanket(mattress);
-			set_cube_zvals(blanket, mattress.z2(), (mattress.z2() + 0.02*mattress_sz.z)); // on top of mattress; set height
-			blanket.d[dim][ dir] = pillow.d[dim][!dir] - (dir ? 1.0 : -1.0)*rgen.rand_uniform(0.01, 0.06)*mattress_sz[dim]; // shrink at head
-			blanket.d[dim][!dir] += (dir ? 1.0 : -1.0)*rgen.rand_uniform(0.03, 0.08)*mattress_sz[dim]; // shrink at foot
-			blanket.expand_in_dim(!dim, -rgen.rand_uniform(0.08, 0.16)*mattress_sz[!dim]); // shrink width
-			objs.emplace_back(blanket, TYPE_BLANKET, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt);
-			set_obj_id(objs);
+		if (is_house && against_wall && size_ix <= 2 && rgen.rand_bool()) { // maybe add a bunk bed if against a wall and <= twin XL size
+			room_object_t bed2(bed);
+			bed2.translate_dim(2, c.dz());
+
+			if (is_valid_placement_for_room(bed2, room, blockers, 1)) { // always true?
+				bed .flags |= RO_FLAG_ADJ_BOT; // flag as bottom bunk
+				bed2.flags |= RO_FLAG_ADJ_TOP; // flag as top    bunk
+				objs.push_back(bed2); // same options and style; invalidates bed reference
+				++num_beds;
+				// add a small ladder; hopefully it shouldn't intersect anything since it's on the inside edge
+				float const bed_edge(bed2.d[!dim][!wall_dir]);
+				cube_t ladder(bed2);
+				ladder.z1()  = zval; // down to the floor
+				ladder.z2() -= 0.2*bed2.dz(); // lower to just above mattress level
+				ladder.d[!dim][ wall_dir] = bed_edge;
+				ladder.d[!dim][!wall_dir] = bed_edge + (wall_dir ? -1.0 : 1.0)*0.75*wall_thick; // set depth
+				ladder.d[ dim][ dir]  = bed2.d[dim][!dir] + (dir ? 1.0 : -1.0)*0.22*vspace;
+				ladder.d[ dim][!dir] += (dir ? 1.0 : -1.0)*0.25*wall_thick; // move away from footboard
+				objs.emplace_back(ladder, TYPE_INT_LADDER, room_id, !dim, wall_dir, (RO_FLAG_IS_HOUSE | RO_FLAG_HANGING), tot_light_amt);
+			}
 		}
-		else if (!is_store && rand_val < 0.7) { // add teeshirt or jeans on the bed 30% of the time
-			unsigned const type(rgen.rand_bool() ? TYPE_PANTS : TYPE_TEESHIRT);
-			float const length(((type == TYPE_TEESHIRT) ? 0.26 : 0.2)*vspace), width(0.98*length), height(0.002*vspace);
-			float const clearance(get_min_front_clearance_inc_people());
-			cube_t valid_area(mattress);
-			valid_area.d[dim][dir] = pillow.d[dim][!dir]; // don't place under the pillow
-			vector3d size(0.5*length, 0.5*width, height);
+		for (unsigned bix = 0; bix < num_beds; ++bix) {
+			room_object_t const &bed(objs[bed_ix + bix]);
+			cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube
+			get_bed_cubes(bed, cubes);
+			cube_t const &mattress(cubes[3]), &pillow(cubes[4]);
+			float const rand_val(rgen.rand_float());
+
+			if (rand_val < 0.4) { // add a blanket on the bed 40% of the time
+				vector3d const mattress_sz(mattress.get_size());
+				cube_t blanket(mattress);
+				set_cube_zvals(blanket, mattress.z2(), (mattress.z2() + 0.02*mattress_sz.z)); // on top of mattress; set height
+				blanket.d[dim][ dir] = pillow.d[dim][!dir] - (dir ? 1.0 : -1.0)*rgen.rand_uniform(0.01, 0.06)*mattress_sz[dim]; // shrink at head
+				blanket.d[dim][!dir] += (dir ? 1.0 : -1.0)*rgen.rand_uniform(0.03, 0.08)*mattress_sz[dim]; // shrink at foot
+				blanket.expand_in_dim(!dim, -rgen.rand_uniform(0.08, 0.16)*mattress_sz[!dim]); // shrink width
+				objs.emplace_back(blanket, TYPE_BLANKET, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt);
+				set_obj_id(objs);
+			}
+			else if (!is_store && rand_val < 0.7) { // add teeshirt or jeans on the bed 30% of the time
+				unsigned const type(rgen.rand_bool() ? TYPE_PANTS : TYPE_TEESHIRT);
+				float const length(((type == TYPE_TEESHIRT) ? 0.26 : 0.2)*vspace), width(0.98*length), height(0.002*vspace);
+				float const clearance(get_min_front_clearance_inc_people());
+				cube_t valid_area(mattress);
+				valid_area.d[dim][dir] = pillow.d[dim][!dir]; // don't place under the pillow
+				vector3d size(0.5*length, 0.5*width, height);
 			
-			if (valid_area.get_sz_dim(!dim) > 4.0*size[!dim]) { // don't place on the side near a wall if the bed is wide
-				if (bed .d[!dim][0] - room.d[!dim][0] < clearance) {valid_area.d[!dim][0] = bed.get_center_dim(!dim);}
-				if (room.d[!dim][1] - bed .d[!dim][1] < clearance) {valid_area.d[!dim][1] = bed.get_center_dim(!dim);}
-			}
-			bool const dim2(rgen.rand_bool()), dir2(rgen.rand_bool()); // choose a random orientation
-			if (dim2) {std::swap(size.x, size.y);}
+				if (valid_area.get_sz_dim(!dim) > 4.0*size[!dim]) { // don't place on the side near a wall if the bed is wide
+					if (bed .d[!dim][0] - room.d[!dim][0] < clearance) {valid_area.d[!dim][0] = bed.get_center_dim(!dim);}
+					if (room.d[!dim][1] - bed .d[!dim][1] < clearance) {valid_area.d[!dim][1] = bed.get_center_dim(!dim);}
+				}
+				bool const dim2(rgen.rand_bool()), dir2(rgen.rand_bool()); // choose a random orientation
+				if (dim2) {std::swap(size.x, size.y);}
 
-			if (valid_area.dx() > 2.0*size.x && valid_area.dy() > 2.0*size.y) {
-				cube_t c(gen_xy_pos_in_area(valid_area, size, rgen, mattress.z2()));
-				c.expand_by_xy(size);
-				c.z2() += size.z;
-				objs.emplace_back(c, type, room_id, dim2, dir2, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, gen_shirt_pants_color(type, rgen));
+				if (valid_area.dx() > 2.0*size.x && valid_area.dy() > 2.0*size.y) {
+					cube_t c(gen_xy_pos_in_area(valid_area, size, rgen, mattress.z2()));
+					c.expand_by_xy(size);
+					c.z2() += size.z;
+					objs.emplace_back(c, type, room_id, dim2, dir2, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, gen_shirt_pants_color(type, rgen));
+				}
 			}
-		}
+		} // for bix
 		bed_size_ix = size_ix;
 		return 1; // done/success
 	} // for n

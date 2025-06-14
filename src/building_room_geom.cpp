@@ -1276,8 +1276,8 @@ void building_room_geom_t::add_chimney_cap(room_object_t const &c) {
 
 void add_ladder_geom(rgeom_mat_t &mat, room_object_t const &c, colorRGBA const &color, unsigned sides_dim_mask) {
 	float const height(c.get_height()), depth(c.get_depth()), width(c.get_width());
-	float const side_width(0.06*width), rung_spacing(0.8*width), rung_height(0.08*rung_spacing), rung_inset(0.05*depth);
-	unsigned const num_rungs((height - rung_height)/rung_spacing); // round down
+	float const side_width(0.06*width), rung_spacing(min(0.8*width, 0.2*height)), rung_height(0.08*rung_spacing), rung_inset(0.05*depth);
+	unsigned const num_rungs((height - rung_height)/rung_spacing); // round down; should be at least 4
 	point const llc(c.get_llc());
 
 	for (unsigned d = 0; d < 2; ++d) { // left/right side verticals
@@ -1307,8 +1307,13 @@ void building_room_geom_t::add_ext_ladder(room_object_t const &c) {
 	add_ladder_geom(mat, c, c.color, sides_dim_mask); // no apply_light_color()
 }
 void building_room_geom_t::add_int_ladder(room_object_t const &c) {
-	rgeom_mat_t &mat(get_material(get_ladder_tex(c.get_width(), 1), 1, 0, 1)); // shadowed, small, specular metal
+	if (c.is_house() && c.is_hanging()) { // bunk bed ladder
+		rgeom_mat_t &mat(get_wood_material(2.0/c.dz(), 1, 0, 1)); // shadowed, small
+		add_ladder_geom(mat, c, apply_wood_light_color(c), EF_Z1); // skip bottom
+		return;
+	}
 	colorRGBA const color(apply_light_color(c));
+	rgeom_mat_t &mat(get_material(get_ladder_tex(c.get_width(), 1), 1, 0, 1)); // shadowed, small, specular metal
 
 	if (c.in_factory()) { // no rotation
 		add_ladder_geom(mat, c, color, EF_Z1); // skip bottom
@@ -4055,8 +4060,9 @@ void add_pillow(cube_t const &c, rgeom_mat_t &mat, colorRGBA const &color, point
 	} // for y
 }
 
+bool is_bunk_bed       (room_object_t const &c) {return (c.flags & (RO_FLAG_ADJ_TOP | RO_FLAG_ADJ_BOT));}
 bool bed_is_wide       (room_object_t const &c) {return (c.get_width() > 0.7*c.get_length());}
-bool bed_has_posts     (room_object_t const &c) {return (bed_is_wide   (c) && (c.obj_id & 1 ) && c.is_house());} // no posts for twin beds or hotel/apartment beds
+bool bed_has_posts     (room_object_t const &c) {return (!is_bunk_bed(c) && bed_is_wide(c) && (c.obj_id & 1 ) && c.is_house());} // no posts for twin beds or hotel/apt beds
 bool bed_has_canopy    (room_object_t const &c) {return (bed_has_posts (c) && (c.obj_id & 2 ));}
 bool bed_has_canopy_mat(room_object_t const &c) {return (bed_has_canopy(c) && (c.obj_id & 12) != 0);} // 75% of the time
 int get_canopy_texture() {return get_texture_by_name("fabrics/wool.jpg");}
@@ -4089,11 +4095,11 @@ void get_bed_cubes(room_object_t const &c, cube_t cubes[6]) { // frame, head, fo
 	cubes[0] = frame; cubes[1] = head; cubes[2] = foot; cubes[3] = mattress; cubes[4] = pillow; cubes[5] = legs_bcube;
 }
 void building_room_geom_t::add_bed(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale) {
-	bool const add_posts(bed_has_posts(c));
+	bool const is_bot_bunk(c.flags & RO_FLAG_ADJ_BOT), is_top_bunk(c.flags & RO_FLAG_ADJ_TOP), add_posts(bed_has_posts(c));
 	float const length(c.get_length()), head_width(0.04), foot_width(add_posts ? head_width : 0.03f); // relative to length
 	cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube; no posts or canopy
 	get_bed_cubes(c, cubes);
-	cube_t const &frame(cubes[0]), &head(cubes[1]), &foot(cubes[2]), &mattress(cubes[3]), &pillow(cubes[4]), &legs_bcube(cubes[5]);
+	cube_t const &frame(cubes[0]), &head(cubes[1]), &foot(cubes[2]), &mattress(cubes[3]), &pillow(cubes[4]);
 	colorRGBA const sheet_color(apply_light_color(c));
 	tid_nm_pair_t const sheet_tex(c.get_sheet_tid(), tscale, 1); // shadowed
 	point const tex_origin(c.get_llc());
@@ -4101,7 +4107,9 @@ void building_room_geom_t::add_bed(room_object_t const &c, bool inc_lg, bool inc
 	if (inc_lg) {
 		bool const no_mattress(c.taken_level > 2);
 		colorRGBA const color(apply_wood_light_color(c));
-		add_tc_legs(legs_bcube, c, color, max(head_width, foot_width), 0, tscale);
+		cube_t legs_bcube(cubes[5]);
+		if (is_bot_bunk || is_top_bunk) {legs_bcube.z2() = c.z2();} // extend legs up to meet bottom of legs of upper bunk; extend top as well so that width matches
+		add_tc_legs(legs_bcube, c, color, max(head_width, foot_width), 0, tscale, 0, is_top_bunk); // recessed=0, use_metal_mat=0
 		if (no_mattress) {get_wood_material(4.0*tscale);} // pre-allocate slats material if needed
 		rgeom_mat_t &wood_mat(get_wood_material(tscale));
 
@@ -4197,7 +4205,7 @@ void building_room_geom_t::add_bed(room_object_t const &c, bool inc_lg, bool inc
 			if (c.taken_level > 1) {get_untextured_material(1).add_cube_to_verts_untextured(mattress, sheet_color, mattress_skip_faces);} // sheets taken, bare mattress
 			else {get_material(sheet_tex, 1).add_cube_to_verts(mattress, sheet_color, tex_origin, mattress_skip_faces);} // draw mattress with sheets, shadowed
 		}
-	}
+	} // end include_lg
 	if (inc_sm && c.taken_level == 0) { // draw pillows if not taken
 		rgeom_mat_t &pillow_mat(get_material(sheet_tex, 1, 0, 1)); // shadowed, small=1
 
