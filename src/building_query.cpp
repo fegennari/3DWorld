@@ -306,9 +306,12 @@ cube_t building_t::get_interior_bcube(bool inc_ext_basement) const { // Note: ca
 	return int_bcube;
 }
 cube_t building_t::get_ext_vis_bcube() const {
-	if (!has_mall_skylight()) return bcube;
 	cube_t ext_vis_bc(bcube);
-	for (cube_t const &s : interior->mall_info->skylights) {ext_vis_bc.union_with_cube(s);}
+	for (building_walkway_t const &ww : walkways) {ext_vis_bc.union_with_cube(ww.bcube);} // needed for player in walkway facing away from building
+	
+	if (has_mall()) {
+		for (cube_t const &s : interior->mall_info->skylights) {ext_vis_bc.union_with_cube(s);}
+	}
 	return ext_vis_bc;
 }
 void building_t::union_with_coll_bcube(cube_t const &c) {
