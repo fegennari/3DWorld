@@ -352,6 +352,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 	float const floor_spacing(get_mall_floor_spacing(room)), window_vspace(get_window_vspace()), wall_thickness(get_wall_thickness());
 	float const min_width(4.0*window_vspace), max_width(9.0*window_vspace), min_depth(6.0*window_vspace), max_depth(8.0*window_vspace);
 	float const fc_thick(get_fc_thickness()), doorway_width(get_doorway_width()), bathroom_width(4.0*window_vspace);
+	float const mall_center(room.get_center_dim(!dim));
 	unsigned const num_floors(interior->num_extb_floors);
 	unsigned const max_bathrooms(max(1, round_fp(0.1*num_floors*room.get_sz_dim(dim)/room.get_sz_dim(!dim)))); // scale with number of stores
 	unsigned num_bathrooms(0);
@@ -543,16 +544,25 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 				interior->doors.back().rtype = rtype; // flag door (in particular if bathroom) so that the correct sign is added
 			}
 		} // for d
-		if (!side_halls[0].is_all_zeros() && !side_halls[1].is_all_zeros()) {
-			// both side hallways are valid, try to add perpendicular hallways connecting them along the ends of the mall
-			cube_t hall_union(side_halls[0]);
-			hall_union.union_with_cube(side_halls[1]);
+		bool const has_side[2] = {!side_halls[0].is_all_zeros(), !side_halls[1].is_all_zeros()};
 
-			for (unsigned d = 0; d < 2; ++d) { // each end
+		if (has_side[0] || has_side[1]) {
+			// at least one side hallway is valid, try to add perpendicular hallways connecting it/them along the ends of the mall
+			cube_t hall_union;
+
+			for (unsigned d = 0; d < 2; ++d) {
+				if (has_side[d]) {hall_union.assign_or_union_with_cube(side_halls[d]);}
+			}
+			cube_t hall_center(hall_union);
+			set_wall_width(hall_center, mall_center, 4.0*doorway_width, !dim); // set width enough to include elevator, stairs, and end store door
+			hall_union.union_with_cube(hall_center);
+
+			for (unsigned d = 0; d < 2; ++d) { // each end of the mall
 				float const dsign(d ? 1.0 : -1.0), wall_pos(hall_union.d[dim][d]);
 				cube_t hall(hall_union);
 				hall.d[dim][!d] = wall_pos;
 				hall.d[dim][ d] = wall_pos + dsign*hall_width;
+				for (unsigned e = 0; e < 2; ++e) {hall_center.d[dim][e] = hall.d[dim][e];} // update hall_center as well so that the end store door is placed correctly
 				if (basement.intersects_no_adj(hall)) continue; // intersects basement
 				if (is_store_placement_invalid(hall)) continue;
 				unsigned const hall_room_ix(rooms.size()), end_walls_start(end_walls.size());
@@ -560,17 +570,18 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 				add_extb_room_floor_and_ceil(hall);
 				bool has_adj_store(0); // unused
 				add_mall_room_walls(hall, wall_thickness, dim, d, 1, has_adj_store, interior->walls); // at_mall_end=1 (to cover missing stores)
-				
+
 				for (auto w = end_walls.begin(); w != end_walls.end(); ++w) {
 					if (!w->intersects(hall) || w->d[dim][0] >= wall_pos || w->d[dim][1] <= wall_pos) continue; // not the wall between the store and the hall
 					w->d[dim][bool(d) ^ (w < end_walls.begin()+end_walls_start) ^ 1] = wall_pos; // set to half width
 				}
 				for (unsigned e = 0; e < 2; ++e) { // add doors to each end connecting to the other hallways
+					if (!has_side[e]) continue;
 					cube_t const door_cut(add_ext_basement_door(side_halls[e], doorway_width, dim, d, 0, 0, rgen)); // is_end_room=0 (unlocked), is_tall_room=0
 					subtract_cube_from_cubes(door_cut, end_walls, nullptr, 1); // no holes; clip_in_z=1
 				}
 				if (added_end_store[d]) { // if there's an end store, add a door connecting to it that opens into the store
-					cube_t const door_cut(add_ext_basement_door(hall, doorway_width, dim, !d, 1, is_tall_room, rgen, 1)); // is_end_room=1 (may be locked); opens_other_side=1
+					cube_t const door_cut(add_ext_basement_door(hall_center, doorway_width, dim, !d, 1, is_tall_room, rgen, 1)); // is_end_room=1 (maybe locked); opens_other_side=1
 					subtract_cube_from_cubes(door_cut, end_walls, nullptr, 1); // no holes; clip_in_z=1
 				}
 				if (at_stack_end[d]) continue; // done with this stack
@@ -596,13 +607,12 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 			if (has_gap) continue; // skip if there are any gaps in floors (rare)
 			cube_t hall_span(get_room(stack.front())); // lowest level
 			hall_span.union_with_cube(get_room(stack.back())); // highest level
-			float const hall_center(hall_span.get_center_dim(!dim));
 			// add an elevator connected to hall_span
 			bool const elevator_side(rgen.rand_bool());
 			float const hall_offset((elevator_side ? 1.0 : -1.0)*1.4*doorway_width), dsign(d ? 1.0 : -1.0), wall_pos(hall_span.d[dim][d]);
 			cube_t elevator_bc;
 			set_cube_zvals(elevator_bc, hall_span.z1(), (hall_span.z2() + floor_spacing - window_vspace)); // extend a full mall floor on the top
-			set_wall_width(elevator_bc, (hall_center + hall_offset), 0.8*doorway_width, !dim);
+			set_wall_width(elevator_bc, (mall_center + hall_offset), 0.8*doorway_width, !dim);
 			elevator_bc.d[dim][!d] = wall_pos;
 			elevator_bc.d[dim][ d] = wall_pos + dsign*1.5*doorway_width; // depth
 			assert(elevator_bc.is_strictly_normalized());
@@ -619,7 +629,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 			}
 			// add U-shaped stairs connected to hall_span
 			cube_t stairs(hall_span);
-			set_wall_width(stairs, (hall_center - hall_offset), 1.0*doorway_width, !dim); // shift opposite the elevator dir
+			set_wall_width(stairs, (mall_center - hall_offset), 1.0*doorway_width, !dim); // shift opposite the elevator dir
 			stairs.d[dim][!d] = wall_pos;
 			stairs.d[dim][ d] = wall_pos + dsign*2.6*doorway_width; // depth
 			assert(stairs.is_strictly_normalized());
