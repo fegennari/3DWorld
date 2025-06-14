@@ -5536,7 +5536,18 @@ void building_room_geom_t::add_hard_hat(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_tophat(room_object_t const &c) {
-	// TODO: tall cylinder with short cylinder brim
+	// tall cylinder with short cylinder brim and red band
+	colorRGBA const color(apply_light_color(c));
+	float const height(c.dz()), radius(c.get_radius());
+	cube_t top(c), brim(c), band(c);
+	brim.z2() = top.z1() = band.z1() = c.z1() + 0.03*height;
+	band.z2() = band.z1() + 0.25*height;
+	top .expand_by_xy(-0.30*radius);
+	band.expand_by_xy(-0.28*radius);
+	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // shadowed, small
+	mat.add_vcylin_to_verts(top,  color, 0, 1); // skip bottom
+	mat.add_vcylin_to_verts(brim, color, 0, 1); // skip bottom
+	mat.add_vcylin_to_verts(band, apply_light_color(c, RED), 0, 1); // skip bottom; always red
 }
 
 void building_room_geom_t::add_comp_mouse(room_object_t const &c) {

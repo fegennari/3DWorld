@@ -1389,52 +1389,67 @@ void building_room_geom_t::expand_locker(room_object_t const &c) {
 		if (level == 1) { // teeshirts only on the (larger) bottom level
 			while (obj_types[num_sel_obj_types-1] == TYPE_TEESHIRT) {--num_sel_obj_types;}
 		}
-		switch (obj_types[rgen.rand()%num_sel_obj_types]) {
-		case TYPE_NONE:      break; // empty
-		case TYPE_BOTTLE:    place_bottle_on_obj(rgen, place_area, expanded_objs, vspace, c.room_id, c.light_amt, max_bottle_type, vect_cube_t(), 1, 1); break; // at_z1=1; trans=1
-		case TYPE_DRINK_CAN: place_dcan_on_obj  (rgen, place_area, expanded_objs, vspace, c.room_id, c.light_amt, max_can_type,    vect_cube_t(), 1   ); break; // at_z1=1
-		case TYPE_PHONE: {
-			if (added_phone) break; // one phone per locker
-			float const phone_length(0.085*height), phone_width(0.45*phone_length);
-			if (phone_length > 0.9*place_area.get_sz_dim(dim) || phone_width > 0.9*place_area.get_sz_dim(!dim)) break; // doesn't fit
-			room_object_t phone;
-			place_phone(phone, place_area, phone_length, phone_width, c.room_id, dim, dir, rgen);
-			if (phone.z2() < place_area.z2()) {expanded_objs.push_back(phone);} // add if not too tall
-			added_phone = 1;
-			break;
-		}
-		case TYPE_TRASH: {
-			float const trash_radius(rgen.rand_uniform(0.15, 0.2)*min(place_area.dx(), place_area.dy()));
-			if (place_area.dz() < 2.0*trash_radius) break; // too tall
-			cube_t trash;
-			gen_xy_pos_for_round_obj(trash, place_area, trash_radius, 2.0*trash_radius, trash_radius, rgen, 1); // place_at_z1=1
-			colorRGBA const color(trash_colors[rgen.rand() % NUM_TRASH_COLORS]);
-			expanded_objs.emplace_back(trash, TYPE_TRASH, c.room_id, rgen.rand_bool(), rgen.rand_bool(), RO_FLAG_NOCOLL, c.light_amt, SHAPE_SPHERE, color);
-			set_obj_id(expanded_objs);
-			break;
-		}
-		case TYPE_TEESHIRT: { // vertical
-			float const shirt_width(sqrt(width*width + depth*depth)*rgen.rand_uniform(0.9, 0.95)), shirt_len(shirt_width*rgen.rand_uniform(1.1, 1.3));
-			if (place_area.dz() < shirt_len) break; // not enough vertical space for a shirt
-			cube_t shirt;
-			set_cube_zvals(shirt, place_area.z2()-shirt_len, place_area.z2());
-			set_wall_width(shirt, c.get_center_dim( dim), 0.01*shirt_width,  dim); // set thickness
-			set_wall_width(shirt, c.get_center_dim(!dim), 0.50*shirt_width, !dim); // set width
-			expanded_objs.emplace_back(shirt, TYPE_TEESHIRT, c.room_id, c.dim, c.dir, RO_FLAG_HANGING, c.light_amt, SHAPE_CUBE, gen_teeshirt_color(rgen), rgen.rand());
-			break;
-		}
-		case TYPE_HARDHAT: {
-			if (level == 0) break; // only on the top level
-			float const hh_depth(depth*rgen.rand_uniform(0.75, 0.9)), hh_width(0.8*hh_depth), hh_height(0.56*hh_depth);
-			cube_t hhat;
-			set_cube_zvals(hhat, place_area.z1(), place_area.z1()+hh_height);
-			set_wall_width(hhat, c.get_center_dim( dim), 0.5*hh_depth,  dim); // set thickness
-			set_wall_width(hhat, c.get_center_dim(!dim), 0.5*hh_width, !dim); // set width
-			expanded_objs.emplace_back(hhat, TYPE_HARDHAT, c.room_id, c.dim, c.dir, RO_FLAG_NOCOLL, c.light_amt, SHAPE_CUBE, hardhat_colors[rgen.rand()%NUM_HARDHAT_COLORS]);
-			break;
-		}
-		default: assert(0);
-		}
+		for (unsigned n = 0; n < 4; ++n) { // 4 tries for valid placement
+			bool bad_item(0);
+
+			switch (obj_types[rgen.rand()%num_sel_obj_types]) {
+			case TYPE_NONE:      break; // empty
+			case TYPE_BOTTLE:    place_bottle_on_obj(rgen, place_area, expanded_objs, vspace, c.room_id, c.light_amt, max_bottle_type, vect_cube_t(), 1, 1); break; // at_z1=1; trans=1
+			case TYPE_DRINK_CAN: place_dcan_on_obj  (rgen, place_area, expanded_objs, vspace, c.room_id, c.light_amt, max_can_type,    vect_cube_t(), 1   ); break; // at_z1=1
+			case TYPE_PHONE: {
+				if (added_phone) {bad_item = 1; break;} // one phone per locker
+				float const phone_length(0.085*height), phone_width(0.45*phone_length);
+				if (phone_length > 0.9*place_area.get_sz_dim(dim) || phone_width > 0.9*place_area.get_sz_dim(!dim)) break; // doesn't fit
+				room_object_t phone;
+				place_phone(phone, place_area, phone_length, phone_width, c.room_id, dim, dir, rgen);
+				if (phone.z2() < place_area.z2()) {expanded_objs.push_back(phone);} // add if not too tall
+				added_phone = 1;
+				break;
+			}
+			case TYPE_TRASH: {
+				float const trash_radius(rgen.rand_uniform(0.15, 0.2)*min(place_area.dx(), place_area.dy()));
+				if (place_area.dz() < 2.0*trash_radius) {bad_item = 1; break;} // too tall
+				cube_t trash;
+				gen_xy_pos_for_round_obj(trash, place_area, trash_radius, 2.0*trash_radius, trash_radius, rgen, 1); // place_at_z1=1
+				colorRGBA const color(trash_colors[rgen.rand() % NUM_TRASH_COLORS]);
+				expanded_objs.emplace_back(trash, TYPE_TRASH, c.room_id, rgen.rand_bool(), rgen.rand_bool(), RO_FLAG_NOCOLL, c.light_amt, SHAPE_SPHERE, color);
+				set_obj_id(expanded_objs);
+				break;
+			}
+			case TYPE_TEESHIRT: { // vertical
+				float const shirt_width(sqrt(width*width + depth*depth)*rgen.rand_uniform(0.9, 0.95)), shirt_len(shirt_width*rgen.rand_uniform(1.1, 1.3));
+				if (place_area.dz() < shirt_len) {bad_item = 1; break;} // not enough vertical space for a shirt
+				cube_t shirt;
+				set_cube_zvals(shirt, place_area.z2()-shirt_len, place_area.z2());
+				set_wall_width(shirt, c.get_center_dim( dim), 0.01*shirt_width,  dim); // set thickness
+				set_wall_width(shirt, c.get_center_dim(!dim), 0.50*shirt_width, !dim); // set width
+				expanded_objs.emplace_back(shirt, TYPE_TEESHIRT, c.room_id, c.dim, c.dir, RO_FLAG_HANGING, c.light_amt, SHAPE_CUBE, gen_teeshirt_color(rgen), rgen.rand());
+				break;
+			}
+			case TYPE_HARDHAT: {
+				if (level == 0) {bad_item = 1; break;} // only on the top level
+
+				if (rgen.rand_float() < 0.2) { // tophat 20% of the time
+					float const th_radius(min(width, depth)*0.5*rgen.rand_uniform(0.65, 0.8)), th_height(rgen.rand_uniform(1.0, 1.8)*th_radius);
+					cube_t that(point(c.xc(), c.yc(), place_area.z1()));
+					that.z2() += th_height;
+					that.expand_by_xy(th_radius);
+					expanded_objs.emplace_back(that, TYPE_TOPHAT, c.room_id, c.dim, c.dir, RO_FLAG_NOCOLL, c.light_amt, SHAPE_CYLIN, BKGRAY);
+				}
+				else { // hard hat
+					float const hh_depth(depth*rgen.rand_uniform(0.75, 0.9)), hh_width(0.8*hh_depth), hh_height(0.56*hh_depth);
+					cube_t hhat;
+					set_cube_zvals(hhat, place_area.z1(), place_area.z1()+hh_height);
+					set_wall_width(hhat, c.get_center_dim( dim), 0.5*hh_depth,  dim); // set thickness
+					set_wall_width(hhat, c.get_center_dim(!dim), 0.5*hh_width, !dim); // set width
+					expanded_objs.emplace_back(hhat, TYPE_HARDHAT, c.room_id, c.dim, c.dir, RO_FLAG_NOCOLL, c.light_amt, SHAPE_CUBE, hardhat_colors[rgen.rand()%NUM_HARDHAT_COLORS]);
+				}
+				break;
+			}
+			default: assert(0);
+			} // end switch
+			if (!bad_item) break; // success
+		} // for n
 	} // for level
 	if (expanded_objs.size() > init_objs_sz) {invalidate_small_geom();}
 }
