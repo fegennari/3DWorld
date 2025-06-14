@@ -588,7 +588,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 			bool has_gap(0);
 			float zval(get_room(stack[0]).z1());
 
-			for (auto i = 1; i < stack.size(); ++i) {
+			for (unsigned i = 1; i < stack.size(); ++i) {
 				float const new_zval(get_room(stack[i]).z1());
 				has_gap |= (new_zval - zval > 1.5*floor_spacing);
 				zval = new_zval;

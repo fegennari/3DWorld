@@ -3722,9 +3722,9 @@ public:
 			if (!lights_bcube.intersects_xy  (g.bcube)) continue; // not within light volume (too far from camera)
 			if (!building_grid_visible(xlate, g.bcube)) continue; // VFC; use exterior bcube
 
-			for (cube_with_ix_t const &b : g.bc_ixs) {
-				if (!lights_bcube.intersects_xy(b)) continue; // not within light volume (too far from camera)
-				building_t const &b(get_building(b.ix));
+			for (cube_with_ix_t const &bi : g.bc_ixs) {
+				if (!lights_bcube.intersects_xy(bi)) continue; // not within light volume (too far from camera)
+				building_t const &b(get_building(bi.ix));
 				
 				for (colored_sphere_t const &light : b.ext_lights) { // Note: no shadows
 					if (!lights_bcube.contains_pt_xy(light.pos)) continue; // not within light volume (too far from camera)
