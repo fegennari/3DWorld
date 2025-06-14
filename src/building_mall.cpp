@@ -2018,7 +2018,10 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 						add_bookcase_to_room(rgen, sub_room, zval, room_id, light_amt, start_ix, 0);
 					}
 					if (rtype == RTYPE_BED || rtype == RTYPE_LIVING || rtype == RTYPE_DINING) { // maybe add a rug
-						if (rgen.rand_float() < 0.75) {add_rug_to_room(rgen, sub_room, zval, room_id, light_amt, start_ix);} // 75% of the time
+						if (rgen.rand_float() < 0.75) { // 75% of the time
+							sub_room.intersect_with_cube(room); // keep rug inside of room walls
+							add_rug_to_room(rgen, sub_room, zval, room_id, light_amt, start_ix);
+						}
 					}
 				} // end STORE_FURNITURE
 				else if (store_type == STORE_APPLIANCE) {

@@ -169,7 +169,7 @@ unsigned building_t::add_table_and_chairs(rand_gen_t rgen, room_t const &room, v
 	llc.z = table_pos.z; // bottom
 	urc.z = table_pos.z + table_hscale*rgen.rand_uniform(1.0, 1.1)*window_vspacing; // top
 	cube_t table(llc, urc);
-	if (!is_valid_placement_for_room(table, room, blockers, 0, vector2d(room_pad, room_pad))) return 0; // check proximity to doors and collision with blockers
+	if (!is_valid_placement_for_room(table, room, blockers, 1, vector2d(room_pad, room_pad))) return 0; // check proximity to doors and collision with blockers
 	//if (door_path_checker_t().check_door_path_blocked(table, get_room(room_id), room_id, table_pos.z, *this)) return 0; // optional, but may want to allow for kitchens/dining
 	unsigned const item_flags(is_plastic ? 1 : 0);
 	unsigned flags(is_house ? RO_FLAG_IS_HOUSE : 0);
@@ -927,12 +927,12 @@ void building_t::add_lounge_objs(rand_gen_t rgen, room_t const &room, float zval
 				cube_t table(c);
 				table.z2() = zval + 0.18*rgen.rand_uniform(1.0, 1.1)*window_vspacing; // top
 				table.translate_dim( c.dim, (c.dir ? 1.0 : -1.0)*1.1*c.get_depth());
-				if (!is_valid_placement_for_room(table, room, blockers, 0)) continue; // check proximity to doors and collision with blockers
+				if (!is_valid_placement_for_room(table, room, blockers, 1)) continue; // check proximity to doors and collision with blockers
 				table.expand_in_dim(!c.dim, -0.25*c.get_width()); // shrink table length
 				table.expand_in_dim( c.dim, -0.20*c.get_depth()); // shrink table width
 				objs.emplace_back(table, TYPE_TABLE, room_id, 0, 0, 0, tot_light_amt, SHAPE_CUBE);
 				set_obj_id(objs);
-			}
+			} // for i
 		}
 	}
 	if (teacher || rgen.rand_bool()) {add_vending_machine(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area);}
