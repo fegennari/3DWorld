@@ -529,7 +529,7 @@ enum {RTYPE_NOTSET=0, RTYPE_HALL, RTYPE_STAIRS, RTYPE_OFFICE, RTYPE_BATH, RTYPE_
 	  RTYPE_PLAY, RTYPE_ART, RTYPE_UTILITY, RTYPE_PARKING, RTYPE_RAMP_EXIT, RTYPE_ATTIC, RTYPE_MASTER_BED, RTYPE_UNFINISHED, RTYPE_SERVER, RTYPE_POOL,
 	  RTYPE_SWIM, RTYPE_SECURITY, RTYPE_LOUNGE, RTYPE_COMMON, RTYPE_BACKROOMS, RTYPE_RETAIL, RTYPE_ELEVATOR, RTYPE_CONF, RTYPE_MACHINE, RTYPE_INTERR,
 	  RTYPE_ELEV_EQUIP, RTYPE_STORE, RTYPE_MALL, RTYPE_RESTAURANT, RTYPE_FACTORY, RTYPE_WAREHOUSE, RTYPE_HOS_BED, RTYPE_HOS_OR, RTYPE_HOS_EXAM, RTYPE_CLASS,
-	  RTYPE_WAITING, RTYPE_LAB, RTYPE_CAFETERIA, RTYPE_LOCKER, NUM_RTYPES};
+	  RTYPE_WAITING, RTYPE_LAB, RTYPE_CAFETERIA, RTYPE_LOCKER, RTYPE_JAIL, NUM_RTYPES};
 typedef uint8_t room_type;
 
 inline bool is_bathroom (room_type   const rtype) {return (rtype == RTYPE_BATH || rtype == RTYPE_MENS || rtype == RTYPE_WOMENS);}
@@ -546,7 +546,7 @@ std::string const room_names[NUM_RTYPES] =
 	 "Play Room", "Art Room", "Utility Room", "Parking Garage", "Ramp Exit", "Attic", "Master Bedroom", "Unfinished Room", "Server Room", "Pool Room",
 	 "Swimming Pool Room", "Security Room", "Lounge", "Common Room", "Backrooms", "Retail", "Elevator", "Conference Room", "Machine Room", "Interrogation Room",
 	 "Elev Equip Room", "Store", "Mall Concourse", "Restaurant", "Factory Floor", "Warehouse", "Hospital Bedroom", "Operating Room", "Exam Room", "Classroom",
-	 "Waiting Room", "Laboratory", "Cafeteria", "Locker Room"
+	 "Waiting Room", "Laboratory", "Cafeteria", "Locker Room", "Jailroom"
 };
 // short room names for elevator buttons (should be <= 8 characters)
 std::string const room_names_short[NUM_RTYPES] =
@@ -555,7 +555,7 @@ std::string const room_names_short[NUM_RTYPES] =
 	"Play", "Art", "Utility", "Garage", "Ramp", "Attic", "Bed", "", "Server", "Pool",
 	"Swim", "Security", "Lounge", "Common", "Basement", "Retail", "Elevator", "Conference", "Machine", "Dungeon",
 	"Equipment", "Store", "Mall", "Restaurant", "Factory", "Warehouse", "Bedroom", "OR", "Exam", "Class",
-	"Waiting", "Lab", "Cafeteria", "Locker"
+	"Waiting", "Lab", "Cafeteria", "Locker", "Jail"
 };
 
 unsigned const room_priorities[NUM_RTYPES] = { // for breaker labels; higher values have higher priority
@@ -564,7 +564,7 @@ unsigned const room_priorities[NUM_RTYPES] = { // for breaker labels; higher val
 	2, 2, 3, 3, 0, 3, 3, 0, 4, 3,
 	4, 4, 4, 0, 1, 2, 1, 3, 2, 2,
 	1, 3, 4, 3, 1, 1, 2, 3, 3, 2,
-	2, 3, 4, 3
+	2, 3, 4, 3, 2
 };
 
 // store types, for use with object placement and naming
