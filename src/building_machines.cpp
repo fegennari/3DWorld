@@ -679,12 +679,13 @@ vector2d get_machine_max_sz(cube_t const &place_area, float min_gap, float max_p
 	for (unsigned d = 0; d < 2; ++d) {max_sz  [d] = min(avail_sz[d], 2.0f*avail_sz[!d]);} // keep aspect ratio <= 2:1
 	return max_sz;
 }
-bool building_t::add_machines_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool less_clearance) {
+bool building_t::add_machines_to_room(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool less_clearance) {
 	float const floor_spacing(get_window_vspace()), fc_gap(get_floor_ceil_gap());
 	float const clearance_factor(less_clearance ? 0.2 : 1.0), min_place_sz((less_clearance ? 0.25 : 0.5)*floor_spacing), max_place_sz(1.5*floor_spacing);
 	float const min_clearance(clearance_factor*get_min_front_clearance_inc_people()), min_gap(max(clearance_factor*get_doorway_width(), min_clearance));
 	unsigned const num_machines((rgen.rand() % 5) + 1); // 1-5
 	cube_t const place_area(get_walkable_room_bounds(room)); // ignore trim?
+	if (is_house) {zval = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_CONCRETE);} // add concrete over the carpet for houses
 	cube_t avoid;
 	avoid.set_from_sphere(point(place_area.xc(), place_area.yc(), zval), min_clearance);
 	bool any_placed(0), no_opposite_sides(0), used_orients[4] = {};

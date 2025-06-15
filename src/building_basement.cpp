@@ -195,7 +195,7 @@ bool building_t::add_basement_utility_objs(rand_gen_t rgen, room_t const &room, 
 
 // Note: this function is here rather than in building_rooms.cpp because utility rooms are connected to utilities in the basement, and it's similar to the code above
 bool building_t::add_office_utility_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
-	zval       = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_CONCRETE); // add concreate and move the effective floor up
+	zval       = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_CONCRETE); // add concrete and move the effective floor up
 	objs_start = interior->room_geom->objs.size(); // exclude this from collision checks
 	unsigned const num_water_heaters(add_water_heaters(rgen, room, zval, room_id, tot_light_amt, objs_start));
 	if (num_water_heaters == 0 && !is_apt_or_hotel()) return 0; // apartments and hotels have utility rooms even if there's no water heater

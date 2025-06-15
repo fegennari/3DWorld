@@ -2302,7 +2302,7 @@ struct building_t : public building_geom_t {
 	void create_industrial_floorplan(unsigned part_id, float window_hspacing[2], float window_border, rand_gen_t &rgen);
 	bool maybe_assign_interior_garage(bool &gdim, bool &gdir);
 	void add_parking_garage_ramp(rand_gen_t &rgen);
-	bool add_machines_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool less_clearance=0);
+	bool add_machines_to_room(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool less_clearance=0);
 	void add_machines_to_factory(rand_gen_t rgen, room_t const &room, cube_t const &place_area, float zval,
 		unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned objs_start_inc_beams, cube_t const &ladder);
 	void add_chem_tank_gauge(room_object_t const &tank, float radius, float height);

@@ -4182,7 +4182,7 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 	bool const long_dim(room.dx() < room.dy());
 	cube_t place_area(get_walkable_room_bounds(room));
 	place_area.expand_by(-0.25*get_wall_thickness()); // server spacing from walls
-	zval = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_CONCRETE); // add concreate and move the effective floor up
+	zval = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_CONCRETE); // add concrete and move the effective floor up
 	cube_t server, computer;
 	set_cube_zvals(server,   zval, (zval + server_height));
 	set_cube_zvals(computer, zval, (zval + comp_height  ));
