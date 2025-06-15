@@ -3074,6 +3074,10 @@ void building_t::add_buckets_to_room(rand_gen_t &rgen, cube_t place_area, float 
 	} // for n
 }
 
+bool building_t::add_jail_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	return 0; // TODO
+}
+
 void building_t::add_garage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt) {
 	vect_room_object_t &objs(interior->room_geom->objs);
 

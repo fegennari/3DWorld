@@ -833,6 +833,12 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					added_obj = no_whiteboard = is_inter = 1;
 				}
 			}
+			if (!added_obj && is_ext_basement && rgen.rand_float() < 0.25) { // jail room
+				if (add_jail_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start)) {
+					r->assign_to(RTYPE_JAIL, f);
+					added_obj = no_whiteboard = 1;
+				}
+			}
 			if (is_industrial() && !is_basement && init_rtype_f0 == RTYPE_OFFICE) { // add industrial office desk, etc.
 				added_desk = add_office_objs(rgen, *r, blockers, chair_color, room_center.z, room_id, f, tot_light_amt, objs_start, is_basement);
 				added_obj |= added_desk;
