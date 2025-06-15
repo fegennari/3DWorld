@@ -144,31 +144,50 @@ bool building_t::add_attic_access_door(cube_t const &ceiling, unsigned part_ix, 
 	valid_area.expand_in_dim( long_dim, -1.2*half_len); // add sufficient clearance
 	valid_area.expand_in_dim(!long_dim, -1.2*half_wid); // add sufficient clearance
 	if (!valid_area.is_strictly_normalized()) return 0; // not enough space for the door (shouldn't be the case)
-	rand_gen_t rgen2(rgen); // deep copy to avoid disrupting rgen state
 	point access_pos;
+	bool hdir_l(0), hdir_s(0); // hallway shift dirs in long and short dims
 
 	if (in_hallway) {
-		access_pos = best_room.get_cube_center();
-		// place off center to avoid blocking center light
-		access_pos[ long_dim] += (rgen2.rand_bool() ? -1.0 : 1.0)*0.1*best_room.get_sz_dim(long_dim);
-		// place on the side of the hallway to avoid blocking the player and people from walking by
-		access_pos[!long_dim]  = (rgen2.rand_bool() ? (best_room.d[!long_dim][0] + 1.1*half_wid) : (best_room.d[!long_dim][1] - 1.1*half_wid));
+		rand_gen_t rgen2(rgen); // deep copy to avoid disrupting rgen state
+		hdir_l = rgen2.rand_bool();
+		hdir_s = rgen2.rand_bool();
 	}
-	else {
-		cube_t const &part(get_part_for_room(best_room));
-		// if the room spans the entire part, make the attic access in the center so that the stairs have proper clearance
-		bool const span_x(best_room.x1() == part.x1() && best_room.x2() == part.x2()), span_y(best_room.y1() == part.y1() && best_room.y2() == part.y2());
-		bool const xd(best_room.xc() < part.xc()), yd(best_room.yc() < part.yc()); // closer to the center of the part to maximize head space
-		access_pos.x = (span_x ? best_room.xc() : (0.7*best_room.d[0][xd] + 0.3*best_room.d[0][!xd]));
-		access_pos.y = (span_y ? best_room.yc() : (0.7*best_room.d[1][yd] + 0.3*best_room.d[1][!yd]));
-	}
-	valid_area.clamp_pt_xy(access_pos);
-	interior->attic_access.set_from_point(access_pos);
-	interior->attic_access.expand_in_dim( long_dim, half_len); // long dim
-	interior->attic_access.expand_in_dim(!long_dim, half_wid); // short dim
-	copy_zvals(interior->attic_access, ceiling); // same zvals as ceiling
-	bool const dir(best_room.get_center_dim(long_dim) < interior->attic_access.get_center_dim(long_dim));
-	interior->attic_access.ix = 2*long_dim + dir;
+	for (unsigned n = 0; n < (in_hallway ? 4 : 1); ++n) { // try all 4 shifts for hallway
+		if (in_hallway) {
+			access_pos = best_room.get_cube_center();
+			// place off center to avoid blocking center light
+			access_pos[ long_dim] += (hdir_l ? -1.0 : 1.0)*0.1*best_room.get_sz_dim(long_dim);
+			// place on the side of the hallway to avoid blocking the player and people from walking by
+			access_pos[!long_dim]  = (hdir_s ? (best_room.d[!long_dim][0] + 1.1*half_wid) : (best_room.d[!long_dim][1] - 1.1*half_wid));
+		}
+		else {
+			cube_t const &part(get_part_for_room(best_room)); // also the part containing the attic
+			// if the room spans the entire part, make the attic access in the center so that the stairs have proper clearance
+			bool const span_x(best_room.x1() == part.x1() && best_room.x2() == part.x2()), span_y(best_room.y1() == part.y1() && best_room.y2() == part.y2());
+			bool const xd(best_room.xc() < part.xc()), yd(best_room.yc() < part.yc()); // closer to the center of the part to maximize head space
+			access_pos.x = (span_x ? best_room.xc() : (0.7*best_room.d[0][xd] + 0.3*best_room.d[0][!xd]));
+			access_pos.y = (span_y ? best_room.yc() : (0.7*best_room.d[1][yd] + 0.3*best_room.d[1][!yd]));
+			// here we want to call point_under_attic_roof() to check clearance above the attic access stairs, but the roof hasn't been created yet
+			// so instead, clamp to the interior of the part
+			cube_t pre_clamp(part);
+			pre_clamp.expand_by_xy(-1.0*floor_spacing);
+			pre_clamp.clamp_pt_xy(access_pos); // may be re-clamped to valid_area below
+		}
+		valid_area.clamp_pt_xy(access_pos);
+		interior->attic_access.set_from_point(access_pos);
+		interior->attic_access.expand_in_dim( long_dim, half_len); // long dim
+		interior->attic_access.expand_in_dim(!long_dim, half_wid); // short dim
+		copy_zvals(interior->attic_access, ceiling); // same zvals as ceiling
+		bool const dir(best_room.get_center_dim(long_dim) < interior->attic_access.get_center_dim(long_dim));
+		interior->attic_access.ix = 2*long_dim + dir;
+
+		if (in_hallway && n < 3) { // check for doors blocked if hallway; there's no easy way to avoid doors for non-hallway rooms
+			cube_t test_cube(interior->attic_access);
+			test_cube.z1() -= get_floor_ceil_gap();
+			if (!is_cube_close_to_doorway(test_cube, best_room, 0.0, 1)) break; // done
+			((n & 1) ? hdir_l : hdir_s) ^= 1; // try the other dir
+		}
+	} // for n
 	return 1;
 }
 
