@@ -6188,21 +6188,28 @@ void building_room_geom_t::add_hvac_unit(room_object_t const &c) {
 
 void building_room_geom_t::add_vent_fan_frame(room_object_t const &c) {
 	// draw sides of fan housing
+	bool const extends_outside(c.in_factory()); // visible from outside the building
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_ibeam_tid(), 0.0, 1), 1)); // shadowed; same material as I-Beam
 	cube_t housing(c);
-	housing.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*0.36*c.get_depth(); // part inside the building
+	if (extends_outside) {housing.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*0.36*c.get_depth();} // part inside the building
 	colorRGBA const color(apply_light_color(c));
 	point const llc(c.get_llc());
 
 	for (unsigned inv = 0; inv < 2; ++inv) { // draw two sided
 		mat.add_cube_to_verts(housing, color, llc, get_skip_mask_for_xy(c.dim), 0, 0, 0, bool(inv)); // skip front and back
 	}
-	// draw the missing circular back of the motor
-	float const radius(0.073*c.dz());
-	point motor_back(0.0, 0.0, c.zc());
-	motor_back[ c.dim] = c.d[c.dim][!c.dir];
-	motor_back[!c.dim] = c.get_center_dim(!c.dim);
-	get_untextured_material(0).add_disk_to_verts(motor_back, radius, vector_from_dim_dir(c.dim, !c.dir), WHITE); // unshadowed, facing the back
+	if (extends_outside) { // draw the missing circular back of the motor
+		float const radius(0.073*c.dz());
+		point motor_back(0.0, 0.0, c.zc());
+		motor_back[ c.dim] = c.d[c.dim][!c.dir];
+		motor_back[!c.dim] = c.get_center_dim(!c.dim);
+		get_untextured_material(0).add_disk_to_verts(motor_back, radius, vector_from_dim_dir(c.dim, !c.dir), WHITE); // unshadowed, facing the back
+	}
+	else { // basement fan; draw the black void behind it
+		cube_t back(c);
+		back.d[c.dim][c.dir] = c.d[c.dim][!c.dir] + (c.dir ? 1.0 : -1.0)*0.05*c.get_depth(); // shrink to near zero area
+		get_untextured_material(0).add_cube_to_verts_untextured(back, BLACK, get_face_mask(c.dim, c.dir)); // unshadowed, draw only the front
+	}
 }
 
 cube_t get_parking_gate_arm(room_object_t const &c) {

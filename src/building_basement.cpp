@@ -7,6 +7,7 @@
 
 
 extern city_params_t city_params; // for num_cars
+extern object_model_loader_t building_obj_model_loader; // for vent fans
 
 car_t car_from_parking_space(room_object_t const &o);
 void subtract_cube_from_floor_ceil(cube_t const &c, vect_cube_t &fs);
@@ -833,9 +834,41 @@ void building_t::add_basement_electrical(vect_cube_t &obstacles, vect_cube_t con
 	float const tot_light_amt = 1.0; // to offset the darkness of the basement
 	cube_t const &basement(get_basement());
 	float const floor_spacing(get_window_vspace()), fc_thickness(get_fc_thickness()), floor_height(floor_spacing - 2.0*fc_thickness), ceil_zval(basement.z2() - fc_thickness);
-	unsigned const num_panels(is_house ? 1 : (2 + (rgen.rand()&3))); // 1 for houses, 2-4 for office buildings
 	auto &objs(interior->room_geom->objs);
 	unsigned const objs_start(objs.size());
+
+	// add ventilation fans for office building parking garages; this is only called for the top floor
+	if (!is_house && building_obj_model_loader.is_model_valid(OBJ_MODEL_VENT_FAN)) {
+		unsigned const num_fans(1 + (rgen.rand()&3)); // 1-3
+		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_VENT_FAN)); // D, W, H
+		float const height(0.5*floor_spacing), hwidth(0.5*height*sz.y/sz.z), depth(height*sz.x/sz.z), pad(2.0*hwidth);
+		cube_t c;
+		c.z2() = ceil_zval - 0.15*floor_spacing;
+		c.z1() = c.z2() - height;
+
+		for (unsigned n = 0; n < num_fans; ++n) {
+			for (unsigned t = 0; t < ((n == 0) ? 100U : 1U); ++t) { // 100 tries for the first fan, one try after that
+				bool const dim(rgen.rand_bool()), dir(rgen.rand_bool());
+				float const v1(basement.d[!dim][0] + pad), v2(basement.d[!dim][1] - pad);
+				if (v2 <= v1) continue; // doesn't fit; shouldn't happen
+				float const dir_sign(dir ? -1.0 : 1.0), wall_pos(basement.d[dim][dir]), fan_center(rgen.rand_uniform(v1, v2));
+				set_wall_width(c, fan_center, hwidth, !dim);
+				c.d[dim][ dir] = wall_pos;
+				c.d[dim][!dir] = wall_pos + dir_sign*depth; // extend outward from wall
+				cube_t test_cube(c);
+				test_cube.d[dim][!dir] += dir_sign*4.0*depth; // add 4*depth worth of clearance in the front to avoid blocking airflow
+				if (has_bcube_int(test_cube, obstacles) || has_bcube_int(test_cube, walls) || has_bcube_int(test_cube, beams)) continue; // bad pos
+				if (is_cube_close_to_doorway(test_cube, basement, 0.0, 1)) continue; // needed for ext basement doorways; inc_open=1
+				unsigned cur_room_id((room_id < 0) ? get_room_containing_pt(c.get_cube_center()) : (unsigned)room_id); // calculate room_id if needed; should already be set
+				// can fans intersect cars in parking spaces? not that I've seen, but maybe hospital ambulances?
+				objs.emplace_back(c, TYPE_VENT_FAN, cur_room_id, dim, !dir, RO_FLAG_INTERIOR, tot_light_amt, SHAPE_CUBE);
+				obstacles.push_back(test_cube); // includes the space in front
+				break; // done
+			} // for t
+		} // for n
+	} // end fans
+	// add breaker panels
+	unsigned const num_panels(is_house ? 1 : (2 + (rgen.rand()&3))); // 1 for houses, 2-4 for office building parking garages
 
 	for (unsigned n = 0; n < num_panels; ++n) {
 		float const bp_hwidth(rgen.rand_uniform(0.15, 0.25)*(is_house ? 0.7 : 1.0)*floor_height), bp_hdepth(rgen.rand_uniform(0.05, 0.07)*(is_house ? 0.5 : 1.0)*floor_height);
@@ -849,7 +882,6 @@ void building_t::add_basement_electrical(vect_cube_t &obstacles, vect_cube_t con
 			set_wall_width(c, bp_center, bp_hwidth, !dim);
 			c.d[dim][ dir] = wall_pos;
 			c.d[dim][!dir] = wall_pos + dir_sign*2.0*bp_hdepth; // extend outward from wall
-			assert(c.is_strictly_normalized());
 			cube_t test_cube(c);
 			test_cube.d[dim][!dir] += dir_sign*2.0*bp_hwidth; // add a width worth of clearance in the front so that the door can be opened
 			test_cube.z2() = ceil_zval; // extend up to ceiling to ensure space for the conduit

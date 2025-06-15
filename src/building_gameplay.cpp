@@ -256,7 +256,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_CONF_PHONE] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 40.0,  2.0,   "phone");
 	bldg_obj_types[TYPE_SHOE      ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 40.0,  1.0,   "shoe"); // one shoe
 	bldg_obj_types[TYPE_SHOEBOX   ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 80.0,  2.1,   "shoebox"); // assumed to contain a pair of shoes
-	bldg_obj_types[TYPE_VENT_FAN  ] = bldg_obj_type_t(0, 0, 0, 0, 1, 1, 1, 200.0, 40.0,  "ventilation fan"); // mixed model and object geom
+	bldg_obj_types[TYPE_VENT_FAN  ] = bldg_obj_type_t(1, 1, 0, 0, 1, 1, 1, 200.0, 40.0,  "ventilation fan"); // mixed model and object geom; player and AI collide when in basement
 	bldg_obj_types[TYPE_HOSP_BED  ] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 0, 300.0, 200.0, "hospital bed");
 	bldg_obj_types[TYPE_HOSP_CURT ] = bldg_obj_type_t(1, 1, 0, 1, 0, 1, 0, 50.0,  20.0,  "hospital curtain");
 	bldg_obj_types[TYPE_FORKLIFT  ] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 0, 10000, 9000,  "forklift");
