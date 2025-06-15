@@ -3,6 +3,7 @@
 
 #include "function_registry.h"
 #include "buildings.h"
+#include "city_model.h"
 
 
 int get_cylin_duct_tid();
@@ -12,6 +13,8 @@ int get_metal_texture (unsigned id);
 tid_nm_pair_t get_metal_plate_tex(float tscale, bool shadowed);
 colorRGBA apply_light_color(room_object_t const &o, colorRGBA const &c);
 float get_merged_pipe_radius(float r1, float r2, float exponent);
+
+extern object_model_loader_t building_obj_model_loader; // for vent fans
 
 
 colorRGBA choose_pipe_color(rand_gen_t &rgen) {
@@ -716,6 +719,29 @@ bool building_t::add_machines_to_room(rand_gen_t rgen, room_t const &room, float
 			break; // done
 		} // for i
 	} // for n
+	// maybe add a ventilation fan on the wall
+	if (any_placed && building_obj_model_loader.is_model_valid(OBJ_MODEL_VENT_FAN)) {
+		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_VENT_FAN)); // D, W, H
+		float const height(0.5*floor_spacing), hwidth(0.5*height*sz.y/sz.z), depth(height*sz.x/sz.z), pad(1.5*hwidth);
+		cube_t c;
+		c.z1() = zval + 0.2*floor_spacing;
+		c.z2() = c.z1() + height;
+
+		for (unsigned t = 0; t < 4; ++t) { // make 4 placement tries
+			bool const dim(rgen.rand_bool()), dir(rgen.rand_bool());
+			float const v1(place_area.d[!dim][0] + pad), v2(place_area.d[!dim][1] - pad);
+			if (v2 <= v1) continue; // doesn't fit
+			float const dir_sign(dir ? -1.0 : 1.0), wall_pos(place_area.d[dim][dir]), fan_center(rgen.rand_uniform(v1, v2));
+			set_wall_width(c, fan_center, hwidth, !dim);
+			c.d[dim][ dir] = wall_pos;
+			c.d[dim][!dir] = wall_pos + dir_sign*depth; // extend outward from wall
+			cube_t tc(c);
+			tc.d[dim][!dir] += dir_sign*4.0*depth; // add 4*depth worth of clearance in the front to avoid blocking airflow
+			if (tc.intersects(avoid) || overlaps_other_room_obj(tc, objs_start) || is_obj_placement_blocked(tc, room, 1)) continue; // inc_open_doors=1
+			objs.emplace_back(c, TYPE_VENT_FAN, room_id, dim, !dir, RO_FLAG_INTERIOR, tot_light_amt, SHAPE_CUBE);
+			break; // done
+		} // for t
+	} // end fans
 	return any_placed;
 }
 
