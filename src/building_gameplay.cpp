@@ -1906,6 +1906,7 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 	for (auto i = drawers.begin(); i != drawers.end(); ++i) {
 		point p1c(at_pos), p2c(p2);
 		if (!do_line_clip(p1c, p2c, i->d)) continue; // test ray intersection vs. drawer
+		//if (i->intersects(get_ladder_bcube_from_open_attic_door(attic_door, get_attic_access_door_cube(attic_door)))) continue; // maybe a good check, but no attic door
 		float const dsq(p2p_dist_sq(at_pos, p1c)); // use closest intersection point
 		if (dmin_sq == 0.0 || dsq < dmin_sq) {closest_drawer_id = (i - drawers.begin()); dmin_sq = dsq;} // update if closest
 	}

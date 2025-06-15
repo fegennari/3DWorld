@@ -40,6 +40,7 @@ public:
 bool building_t::is_obj_placement_blocked(cube_t const &c, cube_t const &room, bool inc_open_doors, bool check_open_dir, float dmin) const {
 	if (is_cube_close_to_doorway(c, room, 0.0, inc_open_doors, check_open_dir)) return 1; // too close to a doorway
 	if (interior && interior->is_blocked_by_stairs_or_elevator(c, dmin))        return 1; // faster to check only one per stairwell, but then we need to store another vector?
+	if (is_blocked_by_open_attic_door(c)) return 1; // blocked by attic ladder when open
 	if (!check_cube_within_part_sides(c)) return 1; // handle non-cube buildings
 	return 0;
 }
@@ -1674,7 +1675,8 @@ bool building_t::place_obj_along_wall(room_object type, room_t const &room, floa
 			if (is_cube_close_to_doorway(c,  room, 0.0, 1)) continue; // bad placement
 			if (is_cube_close_to_doorway(c3, room, 0.0, 0)) continue; // bad placement
 		}
-		if (!check_cube_within_part_sides(c)) continue; // handle non-cube buildings
+		if (!check_cube_within_part_sides(c )) continue; // handle non-cube buildings
+		if (is_blocked_by_open_attic_door(c3)) continue; // blocked by attic ladder when open
 		unsigned flags(extra_flags);
 		if (type == TYPE_BOX) {flags |= (RO_FLAG_ADJ_LO << orient);} // set wall edge bit for boxes (what about other dim bit if place in room corner?)
 		objs.emplace_back(c, type, room_id, dim, !dir, flags, tot_light_amt, shape, color);

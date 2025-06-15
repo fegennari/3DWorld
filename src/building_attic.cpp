@@ -36,6 +36,12 @@ bool building_t::point_under_attic_roof(point const &pos, vector3d *const cnorm)
 	}
 	return 0;
 }
+bool building_t::is_blocked_by_open_attic_door(cube_t const &c) const {
+	if (!has_attic()) return 0;
+	cube_t attic_door(interior->attic_access);
+	attic_door.z1() -= get_floor_ceil_gap();
+	return attic_door.intersects(c); // will be blocked by attic ladder when open
+}
 bool building_t::point_in_attic(point const &pos, vector3d *const cnorm) const {
 	if (!has_attic() || pos.z < interior->attic_access.z2() || pos.z > interior_z2) return 0; // test attic floor zval
 	return point_under_attic_roof(pos, cnorm);
