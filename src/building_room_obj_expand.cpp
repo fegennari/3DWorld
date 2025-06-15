@@ -1521,7 +1521,8 @@ void building_room_geom_t::add_wine_rack_bottles(room_object_t const &c, vect_ro
 	if (obj_type == TYPE_KEY && item_ix > 0) {obj_type = TYPE_BOTTLE;} // key must be first item/no two kes in one drawer
 	// object stacking logic
 	bool const is_stackable(obj_type == TYPE_BOX || obj_type == TYPE_PAPER || obj_type == TYPE_BOOK || obj_type == TYPE_PLATE || obj_type == TYPE_TAPE || obj_type == TYPE_FOLD_SHIRT);
-	bool const is_single_item(obj_type == TYPE_BOTTLE || obj_type == TYPE_SPRAYCAN || obj_type == TYPE_FLASHLIGHT); // don't combine well with others since they're large horiz cylinders
+	// these don't combine well with others since they're large horiz cylinders
+	bool const is_single_item(obj_type == TYPE_BOTTLE || obj_type == TYPE_DRINK_CAN || obj_type == TYPE_SPRAYCAN || obj_type == TYPE_FLASHLIGHT);
 	
 	if (item_ix == 0) {stack_z1 = drawer.z1();} // base case
 	else if (1 || is_stackable) { // any object can be placed on top of a stackable object
@@ -1613,7 +1614,7 @@ void building_room_geom_t::add_wine_rack_bottles(room_object_t const &c, vect_ro
 	case TYPE_DRINK_CAN: // drink can, vertical
 	{
 		float const height(min(0.25*c.dz(), 0.9*drawer.dz())), diameter(0.53*height);
-		obj = room_object_t(drawer, TYPE_DRINK_CAN, c.room_id, rgen.rand_bool(), rgen.rand_bool(), 0, 1.0, SHAPE_CYLIN); // random orient
+		obj = room_object_t(drawer, TYPE_DRINK_CAN, c.room_id, 0, 0, RO_FLAG_RAND_ROT, 1.0, SHAPE_CYLIN); // random orient
 		obj.obj_id = rgen.rand();
 		obj.z2()   = obj.z1() + height;
 		set_rand_pos_for_sz(obj, 0, diameter, diameter, rgen);
