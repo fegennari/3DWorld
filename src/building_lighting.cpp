@@ -465,7 +465,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			unsigned const num_cubes(get_machine_part_cubes(*c, get_floor_ceil_gap(), cubes));
 			add_colored_cubes(cubes, num_cubes, color.modulate_with(GRAY), cc); // use light gray, since we don't have the actual metal textures used
 		}
-		else if (type == TYPE_VENT_FAN) { // modeled as sides + center
+		else if (type == TYPE_VENT_FAN && c->in_factory()) { // exterior fan: modeled as sides + center
 			float const radius(0.5*c->dz()), side_thick(0.2*radius), center_radius(0.2*radius);
 			unsigned dims[2] = {!c->dim, 2};
 
