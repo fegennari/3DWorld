@@ -2104,7 +2104,7 @@ struct room_cand_t {
 	room_cand_t(unsigned r, unsigned f) : room_ix(r), floor_ix(f) {}
 };
 
-bool building_t::place_people_if_needed(unsigned building_ix, float radius, vect_point &locs) const {
+bool building_t::place_people_if_needed(unsigned building_ix, float radius) const {
 	if (!interior || interior->rooms.empty() || is_rotated()) return 0; // no people in these cases
 	if (interior->placed_people) return 0; // already placed
 	interior->placed_people = 1; // set, even if no people are placed below
@@ -2169,6 +2169,7 @@ bool building_t::place_people_if_needed(unsigned building_ix, float radius, vect
 		} // for f
 	} // for r
 	min_eq(num_people, (unsigned)room_cands.size()); // don't place more people than we have rooms (notably for factories with 3 single floor rooms total)
+	person_t person(radius);
 
 	for (unsigned N = 0; N < num_people; ++N) {
 		unsigned const max_cand_ix((N == 0 && first_basement_room > 0) ? first_basement_room : room_cands.size()); // place the first person in a non-basement room
@@ -2181,9 +2182,10 @@ bool building_t::place_people_if_needed(unsigned building_ix, float radius, vect
 			bool success(0);
 
 			for (unsigned m = 0; m < 100; ++m) { // make 100 attempts at choosing a position in this room
-				point const pos(gen_xy_pos_in_area(room, radius, rgen, zval)); // random XY point inside this room
-				if (!is_valid_ai_placement(pos, radius, 1)) continue; // skip_nocoll=1
-				locs.push_back(pos);
+				person.pos = gen_xy_pos_in_area(room, radius, rgen, zval); // random XY point inside this room
+				if (!is_valid_ai_placement(person.pos, radius, 1)) continue; // skip_nocoll=1
+				person.ssn = interior->people.size();
+				interior->people.push_back(person); // other params will be filled in later
 				success = 1;
 				break; // done/success
 			} // for n

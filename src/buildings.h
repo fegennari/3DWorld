@@ -2434,7 +2434,7 @@ struct building_t : public building_geom_t {
 
 	// building AI people
 	unsigned count_connected_room_components();
-	bool place_people_if_needed(unsigned building_ix, float radius, vect_point &locs) const;
+	bool place_people_if_needed(unsigned building_ix, float radius) const;
 	void all_ai_room_update(rand_gen_t &rgen, float delta_dir);
 	int ai_room_update(person_t &person, float delta_dir, unsigned person_ix, rand_gen_t &rgen);
 	int run_ai_elevator_logic(person_t &person, float delta_dir, rand_gen_t &rgen);

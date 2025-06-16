@@ -962,8 +962,6 @@ public:
 	void init(unsigned num_city);
 	size_t get_model_gpu_mem() const {return ped_model_loader.get_gpu_mem();}
 	void maybe_reassign_models();
-	void maybe_reassign_building_models(building_t &building);
-	person_t add_person_to_building(point const &pos, unsigned bix, unsigned ssn);
 	bool proc_sphere_coll(point &pos, float radius, vector3d *cnorm) const;
 	bool line_intersect_peds(point const &p1, point const &p2, float &t) const;
 	void destroy_peds_in_radius(point const &pos_in, float radius);

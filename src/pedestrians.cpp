@@ -1476,10 +1476,6 @@ void ped_manager_t::maybe_reassign_models() { // called when switching between n
 	prev_choose_zombie = choose_zombie;
 	for (pedestrian_t &ped : peds) {maybe_reassign_ped_model(ped);}
 }
-void ped_manager_t::maybe_reassign_building_models(building_t &building) {
-	if (!ped_model_loader.has_mix_of_model_types()) return;
-	for (person_t &person : building.interior->people) {maybe_reassign_ped_model(person);}
-}
 
 void ped_manager_t::sort_by_city_and_plot() {
 	//timer_t timer("Ped Sort"); // 0.12ms
@@ -2087,25 +2083,23 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 	dstate.show_label_text();
 }
 
-person_t ped_manager_t::add_person_to_building(point const &pos, unsigned bix, unsigned ssn) {
-	person_t per(get_ped_radius());
-	assign_ped_model(per);
-	float const angle(rgen.rand_uniform(0.0, TWO_PI));
-	per.pos   = pos + vector3d(0.0, 0.0, per.radius);
-	per.dir   = vector3d(cosf(angle), sinf(angle), 0.0);
-	per.speed = (enable_building_people_ai() ? city_params.ped_speed*rgen.rand_uniform(0.5, 0.75) : 0.0f); // small range, slower than outdoor city pedestrians
-	per.ssn   = ssn; // may wrap
-	per.cur_bldg = bix; // store building index in dest_bldg field
-	return per;
-}
-
 void ped_manager_t::gen_and_draw_people_in_building(ped_draw_vars_t const &pdv) {
 	if (!pdv.building.interior) return;
 	auto &people(pdv.building.interior->people);
-	vector<point> locs;
-	pdv.building.place_people_if_needed(pdv.bix, get_ped_radius(), locs);
-	maybe_reassign_building_models(pdv.building);
-	for (point const &p : locs) {people.push_back(add_person_to_building(p, pdv.bix, people.size()));}
+	
+	if (pdv.building.place_people_if_needed(pdv.bix, get_ped_radius())) {
+		for (person_t &p : people) { // people were added - set up their params
+			assign_ped_model(p);
+			float const angle(rgen.rand_uniform(0.0, TWO_PI));
+			p.pos.z   += p.radius; // must be done after the model has been assigned, since men and women have different radii
+			p.dir      = vector3d(cosf(angle), sinf(angle), 0.0);
+			p.speed    = (enable_building_people_ai() ? city_params.ped_speed*rgen.rand_uniform(0.5, 0.75) : 0.0f); // small range, slower than outdoor city pedestrians
+			p.cur_bldg = pdv.bix; // store building index in dest_bldg field
+		} // for p
+	}
+	if (ped_model_loader.has_mix_of_model_types()) { // handle person <=> zombie transitions
+		for (person_t &person : people) {maybe_reassign_ped_model(person);}
+	}
 	draw_people_in_building(people, pdv);
 }
 
