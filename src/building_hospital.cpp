@@ -113,7 +113,7 @@ bool building_t::try_place_hospital_bed(rand_gen_t &rgen, room_t const &room, fl
 {
 	for (unsigned sideways = 0; sideways < 2; ++sideways) { // try head against wall, then side along wall
 		// should the bed face the doorway if along a wall? if there any easy way to do this?
-		if (place_model_along_wall(OBJ_MODEL_HOSP_BED, TYPE_HOSP_BED, room, 0.42, rgen, zval, room_id, tot_light_amt, place_area,
+		if (place_model_along_wall(OBJ_MODEL_HOSP_BED, TYPE_HOSP_BED, room, 0.38, rgen, zval, room_id, tot_light_amt, place_area,
 			objs_start, 0.45, pref_orient, 0, WHITE, 0, 0, 0, sideways)) return 1;
 	}
 	return 0;
@@ -398,6 +398,7 @@ bool building_t::add_exam_room_objs(rand_gen_t rgen, room_t &room, float zval, u
 	vect_room_object_t &objs(interior->room_geom->objs);
 	colorRGBA const &chair_color(chair_colors[rgen.rand() % NUM_CHAIR_COLORS]);
 	unsigned const desk_obj_ix(objs.size());
+	//objs[bed_ix].item_flags = rgen.rand(); // choose a random model?
 	
 	// should the room be re-assigned if we can't fit a desk? this would require removing the bed
 	if (add_desk_to_room(rgen, room, vect_cube_t(), chair_color, zval, room_id, tot_light_amt, objs_start, 0, 0, 0, 1, 1)) { // force_computer=1, add_phone=1
@@ -459,8 +460,8 @@ bool building_t::add_operating_room_objs(rand_gen_t rgen, room_t &room, float zv
 	assert(lights_start <= objs_start);
 	float table_hscale(0.0);
 	unsigned table_obj_type(TYPE_NONE), table_model_type(0); // prefer operating table, default to hospital bed if not present
-	if      (building_obj_model_loader.is_model_valid(OBJ_MODEL_OP_TABLE)) {table_obj_type = TYPE_OP_TABLE; table_model_type = OBJ_MODEL_OP_TABLE; table_hscale = 0.38;}
-	else if (building_obj_model_loader.is_model_valid(OBJ_MODEL_HOSP_BED)) {table_obj_type = TYPE_HOSP_BED; table_model_type = OBJ_MODEL_HOSP_BED; table_hscale = 0.42;}
+	if      (building_obj_model_loader.is_model_valid(OBJ_MODEL_OP_TABLE)) {table_obj_type = TYPE_OP_TABLE; table_model_type = OBJ_MODEL_OP_TABLE; table_hscale = 0.32;}
+	else if (building_obj_model_loader.is_model_valid(OBJ_MODEL_HOSP_BED)) {table_obj_type = TYPE_HOSP_BED; table_model_type = OBJ_MODEL_HOSP_BED; table_hscale = 0.38;}
 	else {return 0;} // neither operating table or hospital bed model is present, can't be an operating room
 	// brighter lights in OR
 	room.light_intensity *= 2.0;
