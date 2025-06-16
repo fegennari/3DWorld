@@ -293,9 +293,21 @@ float person_base_t::get_idle_anim_time() const { // in animation units
 	return (in_building ? idle_time : get_wait_time_ticks())*speed; // will count up for city pedestrians and count down for building people
 }
 cube_t person_base_t::get_bcube() const {
-	cube_t c;
-	c.set_from_sphere(pos, get_hwidth());
-	set_cube_zvals(c, get_z1(), get_z2());
+	float const hwidth(get_hwidth()); // and also hdepth
+	cube_t c(pos);
+
+	if (lying_down) {
+		bool const dim(fabs(dir.x) < fabs(dir.y)), dir(dir[dim] > 0);
+		float const hmr(get_height() - radius); // head
+		c.expand_in_dim(!dim, hwidth);
+		c.expand_in_dim(2,    hwidth);
+		c.d[dim][0] -= (dir ? radius : hmr);
+		c.d[dim][1] += (dir ? hmr : radius);
+	}
+	else { // standing up
+		c.expand_by_xy(hwidth);
+		set_cube_zvals(c, get_z1(), get_z2());
+	}
 	return c;
 }
 
@@ -2090,11 +2102,17 @@ void ped_manager_t::gen_and_draw_people_in_building(ped_draw_vars_t const &pdv) 
 	if (pdv.building.place_people_if_needed(pdv.bix, get_ped_radius())) {
 		for (person_t &p : people) { // people were added - set up their params
 			assign_ped_model(p);
-			float const angle(rgen.rand_uniform(0.0, TWO_PI));
-			p.pos.z   += p.radius; // must be done after the model has been assigned, since men and women have different radii
-			p.dir      = vector3d(cosf(angle), sinf(angle), 0.0);
-			p.speed    = (enable_building_people_ai() ? city_params.ped_speed*rgen.rand_uniform(0.5, 0.75) : 0.0f); // small range, slower than outdoor city pedestrians
 			p.cur_bldg = pdv.bix; // store building index in dest_bldg field
+
+			if (p.lying_down) { // person lying in a bed: direction is already set and speed is 0
+				p.pos.z += 0.35*p.get_hwidth(); // somewhat sunk into the bed; better than floating above it
+			}
+			else { // person standing/walking: assign a random direction and speed and shift up by radius
+				float const angle(rgen.rand_uniform(0.0, TWO_PI));
+				p.dir    = vector3d(cosf(angle), sinf(angle), 0.0);
+				p.speed  = (enable_building_people_ai() ? city_params.ped_speed*rgen.rand_uniform(0.5, 0.75) : 0.0f); // small range, slower than outdoor city pedestrians
+				p.pos.z += p.radius; // must be done after the model has been assigned, since men and women have different radii
+			}
 		} // for p
 	}
 	if (ped_model_loader.has_mix_of_model_types()) { // handle person <=> zombie transitions
@@ -2114,7 +2132,7 @@ void ped_manager_t::draw_people_in_building(vector<person_t> const &people, ped_
 	if (ped_model_loader.num_models() > 0) {get_dead_players_in_building(dead_players, pdv.building);} // get dead players if there's a model to draw
 	if (people.empty() && dead_players.empty()) return;
 	float const def_draw_dist(120.0*get_ped_radius()); // smaller than city peds
-	float const draw_dist(pdv.shadow_only ? (pdv.in_retail_room ? RETAIL_SMAP_DSCALE : PERSON_INT_SMAP_DSCALE)*camera_pdu.far_ : def_draw_dist), draw_dist_sq(draw_dist*draw_dist);
+	float const draw_dist(pdv.shadow_only ? (pdv.in_retail_room ? RETAIL_SMAP_DSCALE : PERSON_INT_SMAP_DSCALE)*camera_pdu.far_ : def_draw_dist), ddist_sq(draw_dist*draw_dist);
 	bool const enable_occ_cull((display_mode & 0x08) && !city_params.ped_model_files.empty()); // occlusion culling, if using models
 	pos_dir_up pdu(camera_pdu); // decrease the far clipping plane for pedestrians
 	pdu.pos -= pdv.xlate; // adjust for local translate
@@ -2139,7 +2157,7 @@ void ped_manager_t::draw_people_in_building(vector<person_t> const &people, ped_
 	animation_state_t anim_state(enable_building_people_ai(), animation_id);
 	bool in_sphere_draw(0);
 	// animations for building peds aren't cached; should they be? only if the player is in the building?
-	for (person_t const *p : to_draw) {draw_ped(*p, pdv.s, pdu, pdv.xlate, def_draw_dist, draw_dist_sq, in_sphere_draw, pdv.shadow_only, pdv.shadow_only, &anim_state, 1);}
+	for (person_t const *p : to_draw) {draw_ped(*p, pdv.s, pdu, pdv.xlate, def_draw_dist, ddist_sq, in_sphere_draw, pdv.shadow_only, pdv.shadow_only, &anim_state, 1);}
 	end_sphere_draw(in_sphere_draw);
 	anim_state.clear_animation_id(pdv.s); // make sure to leave animations disabled so that they don't apply to buildings and dead players
 
@@ -2240,9 +2258,9 @@ bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up c
 		// maybe cache transforms and reuse for shadow passes and main draw pass
 		if (anim_state && anim_state->cache_animations) {anim_state->cached = &ped.cached_bone_transforms;}
 		else {ped.cached_bone_transforms.clear();}
-		vector3d dir_horiz(ped.dir);
-		dir_horiz.z = 0.0; // always face a horizontal direction, even if walking on a slope
-		dir_horiz.normalize();
+		vector3d draw_dir(ped.dir.x, ped.dir.y, 0.0); // always face a horizontal direction, even if walking on a slope
+		draw_dir.normalize();
+		int const swap_xy_mode(ped.lying_down ? (unsigned(fabs(ped.dir.x) < fabs(ped.dir.y)) + 1) : 0);
 		// A=0.0, leave unchanged
 		//colorRGBA const &color(ped.following_player ? RED : WHITE); // force red when following player, for debugging purposes
 		//colorRGBA const &color(ped.on_stairs() ? RED : ALPHA0);
@@ -2250,13 +2268,16 @@ bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up c
 		// color applies to the skin of the Katie model (ID 3), but all of the other models since they're only one material; disable this since we now have separate zombie models
 		//colorRGBA const &color(((!ped.is_zombie && ped.model_id == 3) && is_in_building && in_building_gameplay_mode()) ? OLIVE : ALPHA0);
 		colorRGBA const &color(ALPHA0);
-		ped_model_loader.draw_model(s, ped.pos, bcube, dir_horiz, color, xlate, ped.model_id, shadow_only, low_detail, anim_state);
+		ped_model_loader.draw_model(s, ped.pos, bcube, draw_dir, color, xlate, ped.model_id, shadow_only, low_detail, anim_state, 0, 0, 0, 0, 0, 0, 3, 0, swap_xy_mode);
+		//s.set_cur_color(RED); draw_simple_cube(bcube); // debugging; need to comment out the call above
 
 		// draw umbrella 75% of the time if pedestrian is outside and in the rain
-		if (!ped.in_building && !ped.is_zombie && is_rain_enabled() && !shadow_only && (ped.ssn & 3) != 0 && building_obj_model_loader.is_model_valid(OBJ_MODEL_UMBRELLA)) {
+		if (!ped.in_building && !ped.lying_down && !ped.is_zombie && is_rain_enabled() && !shadow_only && (ped.ssn & 3) != 0 &&
+			building_obj_model_loader.is_model_valid(OBJ_MODEL_UMBRELLA))
+		{
 			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_UMBRELLA));
 			float const ped_sz_scale(ped_model_loader.get_model(ped.model_id).scale), radius(0.5*bcube.dz()/ped_sz_scale);
-			cube_t u_bcube(bcube.get_cube_center() + (0.25*radius)*dir_horiz);
+			cube_t u_bcube(bcube.get_cube_center() + (0.25*radius)*draw_dir);
 			u_bcube.expand_by_xy(radius);
 			u_bcube.z1() -= 0.35*radius;
 			u_bcube.z2() += 0.85*radius;

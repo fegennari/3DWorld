@@ -82,8 +82,8 @@ public:
 	bool check_anim_wrapped(unsigned model_id, unsigned model_anim_id, float old_time, float new_time);
 	float get_anim_duration(unsigned model_id, unsigned model_anim_id);
 	void draw_model(shader_t &s, vector3d const &pos, cube_t const &obj_bcube, vector3d const &dir, colorRGBA const &color, vector3d const &xlate,
-		unsigned model_id, bool is_shadow_pass=0, bool low_detail=0, animation_state_t *anim_state=nullptr, unsigned skip_mat_mask=0,
-		bool untextured=0, bool force_high_detail=0, bool upside_down=0, bool emissive=0, bool do_local_rotate=0, int mirror_dim=3, bool using_custom_tid=0);
+		unsigned model_id, bool is_shadow_pass=0, bool low_detail=0, animation_state_t *anim_state=nullptr, unsigned skip_mat_mask=0, bool untextured=0,
+		bool force_high_detail=0, bool upside_down=0, bool emissive=0, bool do_local_rotate=0, int mirror_dim=3, bool using_custom_tid=0, int swap_xy_mode=0);
 	static void rotate_model_from_plus_x_to_dir(vector3d const &dir);
 };
 

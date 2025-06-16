@@ -38,6 +38,7 @@ void resize_cubes_xy(vect_cube_t &cubes, float val);
 void get_sphere_boundary_pts(point const &center, float radius, point *pts, bool skip_z=0);
 unsigned get_L_stairs_first_flight_count(stairs_landing_base_t const &s, float landing_width);
 void get_L_stairs_entrances(stairs_landing_base_t const &s, float doorway_width, bool for_placement, cube_t entrances[2]);
+bool bed_is_wide(room_object_t const &c);
 
 point get_cube_center_zval(cube_t const &c, float zval) {return point(c.xc(), c.yc(), zval);}
 float get_ped_coll_radius() {return COLL_RADIUS_SCALE*ped_manager_t::get_ped_radius();}
@@ -2196,6 +2197,40 @@ bool building_t::place_people_if_needed(unsigned building_ix, float radius) cons
 			}
 		} // for n
 	} // for N
+	if (has_room_geom() && (is_residential() || is_hospital())) { // add people to beds; has_room_geom() is usually true
+		auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
+
+		for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
+			if (i->type == TYPE_BED) {
+				if (rgen.rand_float() > 0.1) continue; // 10% chance
+				cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube
+				get_bed_cubes(*i, cubes);
+				person.pos = cube_top_center(cubes[3]); // center of the mattress
+				// if there are two pillows, move to a random side
+				if (bed_is_wide(*i)) {person.pos[!i->dim] += (rgen.rand_bool() ? -1.0 : 1.0)*0.265*cubes[4].get_sz_dim(!i->dim);}
+			}
+			else if (i->type == TYPE_HOSP_BED) {
+				if (rgen.rand_float() > 0.2) continue; // 20% chance
+				person.pos = cube_top_center(*i);
+				switch (i->item_flags % 3) {
+				case 0: person.pos.z -= 0.16*i->dz(); break; // flat bed used in patient rooms and exam rooms
+				case 1: person.pos.z -= 0.10*i->dz(); break; // flat bed used in patient rooms
+				case 2: continue; // electric bed; skip since it's inclined rather than flat
+				}
+			}
+			else if (i->type == TYPE_OP_TABLE) {
+				if (rgen.rand_float() > 0.1) continue; // 25% chance
+				person.pos.assign(i->xc(), i->yc(), (i->z2() - 0.03*i->dz()));
+				person.pos[i->dim] += (i->dir ? 1.0 : -1.0)*0.05*i->get_length(); // move up a bit
+			}
+			else {continue;}
+			person.dir = vector_from_dim_dir(i->dim, (i->dir ^ (i->type != TYPE_HOSP_BED))); // hospital bed dir is backwards from bed/OR table
+			person.ssn = interior->people.size();
+			person.lying_down = 1;
+			interior->people.push_back(person);
+			i->flags |= RO_FLAG_USED; // mark bed as occupied
+		} // for i
+	}
 	return 1;
 }
 
@@ -2666,7 +2701,7 @@ void clamp_person_to_building_bcube(point &pos, cube_t bcube, float radius, floa
 // Note: non-const because this updates room light and door state
 int building_t::ai_room_update(person_t &person, float delta_dir, unsigned person_ix, rand_gen_t &rgen) {
 
-	if (person.speed == 0.0) {person.anim_time = 0.0; return AI_STOP;} // stopped
+	if (person.speed == 0.0 || person.lying_down) {person.anim_time = 0.0; return AI_STOP;} // stopped
 	assert(interior);
 	if (!interior->room_geom && frame_counter < 60) {person.anim_time = 0.0; return AI_WAITING;} // wait until room geom is generated for this building
 	float const radius(person.radius), coll_dist(COLL_RADIUS_SCALE*radius), floor_spacing(get_window_vspace()), fc_thick(get_fc_thickness());

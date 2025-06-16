@@ -230,8 +230,8 @@ float city_model_loader_t::get_anim_duration(unsigned model_id, unsigned model_a
 }
 
 void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t const &obj_bcube, vector3d const &dir, colorRGBA const &color,
-	vector3d const &xlate, unsigned model_id, bool is_shadow_pass, bool low_detail, animation_state_t *anim_state, unsigned skip_mat_mask,
-	bool untextured, bool force_high_detail, bool upside_down, bool emissive, bool do_local_rotate, int mirror_dim, bool using_custom_tid)
+	vector3d const &xlate, unsigned model_id, bool is_shadow_pass, bool low_detail, animation_state_t *anim_state, unsigned skip_mat_mask, bool untextured,
+	bool force_high_detail, bool upside_down, bool emissive, bool do_local_rotate, int mirror_dim, bool using_custom_tid, int swap_xy_mode)
 {
 	assert(!(low_detail && force_high_detail));
 	bool const is_valid(is_model_valid(model_id)); // first 8 bits is model ID, last 8 bits is sub-model ID
@@ -246,10 +246,10 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	bool const use_custom_texture (!is_shadow_pass && have_body_mat && (untextured || using_custom_tid));
 	colorRGBA orig_color;
 	int orig_tid(-1);
-	if (use_custom_color   ) {orig_color = model.set_color_for_material  (model_file.body_mat_id, color    );} // use custom color for body material
+	if (use_custom_color   ) {orig_color = model.set_color_for_material(model_file.body_mat_id, color);} // use custom color for body material
 	if (use_custom_emissive) {model.set_material_emissive_color(model_file.body_mat_id, color);} // use custom color for body material
 
-	if (use_custom_texture ) {
+	if (use_custom_texture) {
 		// Note: this indexes into the model's texture_manager textures vector; it's not a global texture ID
 		int const untex_tid(using_custom_tid ? -2 : -1); // -2: texture is pre-bound, don't set; -1: use white texture
 		if (using_custom_tid) {assert(model_file.body_mat_id == 0);} // caller must bind the texture to TU0; only works when body_mat_id is the first material
@@ -262,13 +262,16 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	bool const camera_pdu_valid(camera_pdu.valid);
 	camera_pdu.valid = 0; // disable VFC, since we're doing custom transforms here
 	// Note: in model space, front-back=z, left-right=x, top-bot=y (for model_file.swap_yz=1)
-	float const height(model_file.swap_xz ? bcube.dx() : (model_file.swap_yz ? bcube.dy() : bcube.dz()));
+	bool const swap_draw_xz(swap_xy_mode == 1), swap_draw_yz(swap_xy_mode == 2);
+	float const model_height(model_file.swap_xz ? bcube    .dx() : (model_file.swap_yz ? bcube    .dy() : bcube    .dz()));
+	float const obj_height  (swap_draw_xz       ? obj_bcube.dx() : (swap_draw_yz       ? obj_bcube.dy() : obj_bcube.dz()));
 	// animated models don't have valid bcubes because they sometimes start in a bind pose, so use the height as the size scale since it's more likely to be accurate
 	assert(obj_bcube.is_strictly_normalized());
 	float sz_scale(0.0);
-	if (is_animated) {sz_scale = (obj_bcube.dz() / height);} // use zsize only for scale
+	if (is_animated) {sz_scale = (obj_height / model_height);} // use zsize only for scale
 	else             {sz_scale = (obj_bcube.get_size().sum() / bcube.get_size().sum());} // use average XYZ size for scale
-	float const z_offset(0.5*height - (pos.z - obj_bcube.z1())/sz_scale); // translate required to map bottom of model to bottom of obj_bcube post transform
+	// translate required to map bottom of model to bottom of obj_bcube post transform; up to the caller to handle this for swap_xy_mode > 0
+	float const z_offset(swap_xy_mode ? 0.0 : (0.5*model_height - (pos.z - obj_bcube.z1())/sz_scale));
 	
 	if (anim_state && anim_state->enabled) {
 		// skip expensive animations if low detail; may cause the model to T-pose, but it should be far enough that the user can't tell
@@ -294,7 +297,7 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 		}
 		else {
 			s.add_uniform_float("animation_scale",    model_file.scale/sz_scale); // Note: determined somewhat experimentally
-			s.add_uniform_float("model_delta_height", (0.1*height + (model_file.swap_xz ? bcube.x1() : (model_file.swap_yz ? bcube.y1() : bcube.z1()))));
+			s.add_uniform_float("model_delta_height", (0.1*model_height + (model_file.swap_xz ? bcube.x1() : (model_file.swap_yz ? bcube.y1() : bcube.z1()))));
 		}
 	}
 	bool const do_mirror(mirror_dim < 3);
@@ -306,6 +309,7 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	if (dir.z != 0.0) {fgRotate(TO_DEG*asinf(-dir.z), 0.0, 1.0, 0.0);} // handle cars on a slope
 	if (do_mirror         ) {fgScale(((mirror_dim == 0) ? -1.0 : 1.0), ((mirror_dim == 1) ? -1.0 : 1.0), ((mirror_dim == 2) ? -1.0 : 1.0));}
 	if (model_file.xy_rot != 0.0) {fgRotate(model_file.xy_rot, 0.0, 0.0, 1.0);} // apply model rotation about z/up axis (in degrees)
+	if (swap_xy_mode      ) {fgRotate(-90.0, 1.0, 0.0, 0.0);} // swap Y and Z dirs - in both cases?
 	if (model_file.swap_xz) {fgRotate( 90.0, 0.0, 1.0, 0.0);} // swap X and Z dirs; models have up=X, but we want up=Z
 	if (model_file.swap_yz) {fgRotate( 90.0, 1.0, 0.0, 0.0);} // swap Y and Z dirs; models have up=Y, but we want up=Z
 	if (upside_down       ) {fgRotate(180.0, 1.0, 0.0, 0.0);} // R180 about X to flip over

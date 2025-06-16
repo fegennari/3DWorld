@@ -1810,6 +1810,7 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 			if (type == TYPE_MIRROR  && !i->is_house() && !i->in_mall()) continue; // can only pick up mirrors from houses and clothing stores, not office buildings
 			if (type == TYPE_TABLE   && i->shape == SHAPE_CUBE) continue; // can only pick up short (TV) tables and cylindrical tables
 			if (type == TYPE_BED     && i->taken_level > 2)     continue; // can only take pillow, sheets, and mattress - not the frame
+			if (type == TYPE_BED     && i->is_used())           continue; // can't take pillow/sheets/mattress from an occupied bed
 			if (type == TYPE_SHELVES && i->obj_expanded())      continue; // shelves are   already expanded, can no longer select this object
 			if (type == TYPE_MED_CAB && i->is_open())           continue; // can't take medicine cabinet until it's closed
 			if (type == TYPE_LIGHT   && !i->is_visible())       continue; // can't take light attached to a ceiling fan as a separate object
@@ -2234,6 +2235,7 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (i->no_coll() || i->type == TYPE_BLOCKER) continue; // not interactive
 		if (i->type == TYPE_BCASE && i->in_mall())   continue; // can't move bookstore bookcase, since the adjacent bookcase's back isn't drawn
+		if ((i->type == TYPE_BED || i-> type == TYPE_HOSP_BED || i->type == TYPE_OP_TABLE) && i->is_used()) continue; // can't move occupied bed/table
 		
 		if (i->type == TYPE_POOL_TABLE) {
 			// don't push pool table if there are balls on it, since it's too easily to accidentally do this when trying to hit a pool ball
