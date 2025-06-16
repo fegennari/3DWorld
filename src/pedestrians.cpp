@@ -1471,7 +1471,7 @@ void ped_manager_t::assign_ped_model(person_base_t &ped) { // Note: non-const, m
 	assert(ped.radius > 0.0); // no zero/negative model scales
 }
 void ped_manager_t::maybe_reassign_ped_model(person_base_t &ped) {
-	bool const choose_zombie(in_building_gameplay_mode());
+	bool const choose_zombie(in_building_gameplay_mode() && !ped.lying_down); // no lying down zombies, since their poses are wrong
 	city_model_t const &cur_model(ped_model_loader.get_model(ped.model_id));
 	
 	if (cur_model.is_zombie != choose_zombie) {
