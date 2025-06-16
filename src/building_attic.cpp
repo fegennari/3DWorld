@@ -152,7 +152,7 @@ bool building_t::add_attic_access_door(cube_t const &ceiling, unsigned part_ix, 
 		hdir_l = rgen2.rand_bool();
 		hdir_s = rgen2.rand_bool();
 	}
-	for (unsigned n = 0; n < (in_hallway ? 4 : 1); ++n) { // try all 4 shifts for hallway
+	for (unsigned n = 0; n < (in_hallway ? 4U : 1U); ++n) { // try all 4 shifts for hallway
 		if (in_hallway) {
 			access_pos = best_room.get_cube_center();
 			// place off center to avoid blocking center light
