@@ -37,7 +37,7 @@ struct person_base_t : public waiting_obj_t {
 	std::string get_name() const;
 	unsigned get_unique_id() const {return ssn;} // technically only unique if there are <= 65536 people
 	float get_height () const {return PED_HEIGHT_SCALE*radius;}
-	float get_width  () const {return PED_WIDTH_SCALE *radius;}
+	float get_hwidth () const {return PED_WIDTH_SCALE *radius;} // half-width/half-depth
 	float get_z1     () const {return (pos.z - radius);}
 	float get_z2     () const {return (get_z1() + get_height());}
 	cube_t get_bcube () const;

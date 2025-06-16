@@ -1344,7 +1344,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 	} // end interior->room_geom
 	if (!player_wait_respawn) { // zombies push player, but not when player is dead
 		for (person_t const &p : interior->people) {
-			float const dist(p2p_dist(pos, p.pos)), r_sum(xy_radius + 0.5*p.get_width()); // ped_radius is a bit too large, multiply it by 0.5
+			float const dist(p2p_dist(pos, p.pos)), r_sum(xy_radius + 0.5*p.get_hwidth()); // ped_radius is a bit too large, multiply it by 0.5
 			if (dist >= r_sum) continue; // no intersection
 			vector3d const normal(vector3d(pos.x-p.pos.x, pos.y-p.pos.y, 0.0).get_norm()); // XY direction
 			if (cnorm) {*cnorm = normal;}
@@ -3101,7 +3101,7 @@ bool building_t::check_and_handle_dynamic_obj_coll(point &pos, point const &cur_
 	// check for collisions of people, at least for snakes (since rats will generally avoid people)
 	for (person_t const &p : interior->people) {
 		float const pz1(p.get_z1()), pz2(p.get_z2());
-		if (z1 < pz2 && z2 > pz1 && handle_vcylin_vcylin_int(pos, p.pos, (radius + p.get_width()))) return 1;
+		if (z1 < pz2 && z2 > pz1 && handle_vcylin_vcylin_int(pos, p.pos, (radius + p.get_hwidth()))) return 1;
 	}
 	assert(has_room_geom());
 	// check dynamic objects such as balls; currently, we only check this for houses because they have balls on the floor;

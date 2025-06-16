@@ -1281,7 +1281,7 @@ void building_t::run_ball_update(vect_room_object_t::iterator ball_it, point con
 			}
 		}
 		else if (can_kick) { // treat collision as a kick
-			kicked |= check_ball_kick(ball, velocity, new_center, p->pos, p->get_z1(), p->get_z2(), 0.6*p->get_width());
+			kicked |= check_ball_kick(ball, velocity, new_center, p->pos, p->get_z1(), p->get_z2(), 0.6*p->get_hwidth());
 		}
 	} // for p
 	if (kicked) {

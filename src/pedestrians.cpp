@@ -294,7 +294,7 @@ float person_base_t::get_idle_anim_time() const { // in animation units
 }
 cube_t person_base_t::get_bcube() const {
 	cube_t c;
-	c.set_from_sphere(pos, get_width());
+	c.set_from_sphere(pos, get_hwidth());
 	set_cube_zvals(c, get_z1(), get_z2());
 	return c;
 }
