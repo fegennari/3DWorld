@@ -2041,6 +2041,7 @@ void building_room_geom_t::remove_object(unsigned obj_id, point const &at_pos, b
 	room_object const type(obj.type);
 	assert(type != TYPE_ELEVATOR); // elevators require special updates for drawing logic and cannot be removed at this time
 	bool const added(player_inventory.add_item(obj)), is_light(type == TYPE_LIGHT);
+	bool must_keep_light(0);
 
 	if      (type == TYPE_PICTURE    && obj.taken_level == 0) {++obj.taken_level;} // take picture, leave frame
 	else if (type == TYPE_PIZZA_BOX  && obj.taken_level == 0 && obj.is_open()) {++obj.taken_level;} // take pizza, leave box
@@ -2085,7 +2086,14 @@ void building_room_geom_t::remove_object(unsigned obj_id, point const &at_pos, b
 	else if (type == TYPE_CEIL_FAN && obj_id > 0) { // Note: currently can't be picked up
 		// find and remove the light assigned to this ceiling fan; should be a few objects before this one
 		room_object_t &light_obj(get_room_object_by_index(obj.obj_id));
-		if (light_obj.type == TYPE_LIGHT) {light_obj.remove();}
+		
+		if (light_obj.type == TYPE_LIGHT) {
+			if (light_obj.is_light_on()) {
+				light_obj.flags &= ~RO_FLAG_LIT; // remove the lit flag so that it's indir light is removed
+				building.register_indir_lighting_state_change(obj.obj_id);
+			}
+			light_obj.remove();
+		}
 		replace_with_hanging_wires(obj, old_obj, 0.6*building.get_trim_thickness(), 1); // vertical=1
 	}
 	else if (type == TYPE_BOTTLE && !added) { // consumed bottle
@@ -2104,6 +2112,10 @@ void building_room_geom_t::remove_object(unsigned obj_id, point const &at_pos, b
 		else {obj.remove();}
 	}
 	else { // replace it with an invisible blocker that won't collide with anything
+		if (is_light && obj.is_light_on()) {
+			obj.flags &= ~RO_FLAG_LIT; // remove the lit flag so that it's indir light is removed
+			must_keep_light = building.register_indir_lighting_state_change(obj_id);
+		}
 		obj.remove();
 	}
 	if (type == TYPE_MED_CAB && old_obj.obj_expanded()) {
@@ -2155,7 +2167,9 @@ void building_room_geom_t::remove_object(unsigned obj_id, point const &at_pos, b
 		}
 	}
 	if (is_light) {
-		replace_with_hanging_wires(obj, old_obj, 0.5*building.get_trim_thickness(), !(old_obj.flags & RO_FLAG_ADJ_HI));
+		int new_obj_id(-1);
+		room_object_t &to_replace((must_keep_light && (new_obj_id = find_avail_obj_slot()) > 0) ? objs[new_obj_id] : obj);
+		replace_with_hanging_wires(to_replace, old_obj, 0.5*building.get_trim_thickness(), !(old_obj.flags & RO_FLAG_ADJ_HI));
 		invalidate_lights_geom();
 	}
 	update_draw_state_for_room_object(old_obj, building, 1);
