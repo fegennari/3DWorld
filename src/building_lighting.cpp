@@ -1411,7 +1411,7 @@ bool check_for_shadow_caster(vect_cube_with_ix_t const &cubes, cube_t const &lig
 	bool ret(0);
 
 	for (auto c = cubes.begin(); c != cubes.end(); ++c) {
-		if (lpos.z < c->z1()) continue; // light is below the object's bottom; assumes lights are spotlights pointed downward
+		if (lpos.z < c->z1())            continue; // light is below the object's bottom; assumes lights are spotlights pointed downward
 		if (!c->intersects(light_bcube)) continue; // object not within light area of effect
 		point const center(c->get_cube_center());
 		if (dmax > 0.0 && !dist_less_than(lpos, center, dmax)) continue; // too far from light to cast a visible shadow
@@ -1446,6 +1446,7 @@ void check_for_dynamic_shadow_casters(vector<person_t> const &people, vect_cube_
 	if (check_people && animate2) { // update shadow_caster_hash for moving people, but not for lamps, because their light points toward the floor
 		if (ped_bcubes.empty()) { // get all cubes on first light
 			for (person_t const &p : people) {
+				if (p.lying_down) continue; // people who are lying down don't cast dynamic shadows
 				// if this person is waiting and their location isn't changing,
 				// assume they have an idle animation playing and use the frame counter to make sure their shadows are updated each frame
 				unsigned const ix((some_person_has_idle_animation && p.waiting_start > 0) ? frame_counter : 0);

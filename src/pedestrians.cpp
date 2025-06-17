@@ -2208,6 +2208,7 @@ bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up c
 		end_sphere_draw(in_sphere_draw);
 		bool const low_detail(!shadow_only && !is_in_building && dist_sq > 0.25*draw_dist_sq); // low detail for non-shadow pass at half draw dist, if not in building
 
+		// note that animations apply even when ped.lying_down=1 because we don't want people lying in a T-pose
 		if (!is_in_building && is_dlight_shadows && !dist_less_than(pre_smap_player_pos, ped.pos, 0.3*def_draw_dist)) {
 			if (anim_state) {anim_state->clear_animation_id(s);} // optimization - disable shadow animations when far from the player
 			anim_state = nullptr;
@@ -2216,7 +2217,7 @@ bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up c
 			// only consider the person as idle if there's an idle animation;
 			// otherwise will always use walk animation, which is assumed to exist, but anim_time won't be updated while idle
 			unsigned non_idle_anim(MODEL_ANIM_WALK);
-			bool const is_idle(ped.is_waiting_or_stopped() && ped_model_loader.get_model(ped.model_id).has_animation(animation_names[MODEL_ANIM_IDLE]));
+			bool const is_idle(ped.is_waiting_or_stopped() && ped_model_loader.get_model(ped.model_id).has_animation(animation_names[MODEL_ANIM_IDLE])); // inc lying down
 
 			if (ped.is_on_stairs) {
 				if      (ped.target_pos.z < ped.pos.z) {
@@ -2229,7 +2230,7 @@ bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up c
 			}
 			// we need to know if there are idle animations for light/shadow updates in building_t::add_room_lights(),
 			// where we don't have access to ped_model_loader, so the only solution I can come up with is using a global variable
-			some_person_has_idle_animation |= is_idle;
+			some_person_has_idle_animation |= is_idle; // should this apply to people who are lying down?
 			float state_change_elapsed(0.0), blend_factor(0.0); // [0.0, 1.0] where 0.0 => anim1 and 1.0 => anim2
 
 			if (ped.last_anim_state_change_time > 0.0) { // if there was an animation state change
