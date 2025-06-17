@@ -48,7 +48,7 @@ int get_counter_tid  () {return get_texture_by_name("marble2.jpg");}
 int get_blinds_tid   () {return get_texture_by_name("interiors/blinds.jpg",    0, 0, 1, 8.0);} // use high aniso
 int get_blinds_nm_tid() {return get_texture_by_name("interiors/blinds_hn.jpg", 1, 0, 1, 8.0);} // use high aniso
 int get_money_tid    () {return get_texture_by_name("interiors/dollar20.jpg");}
-int get_ibeam_tid    () {return get_texture_by_name("metals/67_rusty_dirty_metal.jpg");}
+int get_rust_met_tid () {return get_texture_by_name("metals/67_rusty_dirty_metal.jpg");}
 
 tid_nm_pair_t get_metal_plate_tex(float tscale, bool shadowed) {
 	return tid_nm_pair_t(get_met_plate_tid(), get_mplate_nm_tid(), tscale, tscale, 0.0, 0.0, shadowed);
@@ -2891,7 +2891,7 @@ void building_room_geom_t::add_warning_light(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_pallet(room_object_t const &c) {
-	tid_nm_pair_t const nail_tex(get_ibeam_tid(), 0.0, 0);
+	tid_nm_pair_t const nail_tex(get_rust_met_tid(), 0.0, 0);
 	get_material(nail_tex, 0, 0, 1); // make sure it's in the map
 	rgeom_mat_t &wood_mat(get_wood_material(2.0/c.get_length(), 1, 0, 1)); // shadowed, small
 	rgeom_mat_t &nail_mat(get_material(nail_tex, 0, 0, 1)); // unshadowed, small
@@ -6103,7 +6103,7 @@ void building_room_geom_t::add_ibeam(room_object_t const &c) {
 	bot.d[idim][1] = mid.d[idim][0] = c.d[idim][0] + tb_thick;
 	mid.d[idim][1] = top.d[idim][0] = c.d[idim][1] - tb_thick;
 	mid.expand_in_dim(wdim, -0.4*c.get_sz_dim(wdim));
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_ibeam_tid(), 1.0/thickness, 1), 1)); // shadowed
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_rust_met_tid(), 1.0/thickness, 1), 1)); // shadowed
 	colorRGBA const color(apply_light_color(c));
 	mat.add_cube_to_verts(mid, color, all_zeros, (skip_ends | get_skip_mask_for_dim(idim))); // skip edges
 
@@ -6189,7 +6189,7 @@ void building_room_geom_t::add_hvac_unit(room_object_t const &c) {
 void building_room_geom_t::add_vent_fan_frame(room_object_t const &c) {
 	// draw sides of fan housing
 	bool const extends_outside(c.in_factory()); // visible from outside the building
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_ibeam_tid(), 0.0, 1), 1)); // shadowed; same material as I-Beam
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_rust_met_tid(), 0.0, 1), 1)); // shadowed; same material as I-Beam
 	cube_t housing(c);
 	if (extends_outside) {housing.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*0.36*c.get_depth();} // part inside the building
 	colorRGBA const color(apply_light_color(c));
@@ -6563,10 +6563,10 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_FOOD_BOX:  return texture_color(get_food_box_tid());
 	case TYPE_FISHTANK:  return table_glass_color; // glass; black lid is ignored
 	case TYPE_PET_CAGE:  return colorRGBA(color, 0.1); // mostly transparent
-	case TYPE_IBEAM:     return texture_color(get_ibeam_tid()).modulate_with(color);
+	case TYPE_IBEAM:     return texture_color(get_rust_met_tid()).modulate_with(color);
 	case TYPE_CHEM_TANK: return texture_color(get_chem_tank_tid(*this)).modulate_with(color);
 	case TYPE_HVAC_UNIT: return texture_color(get_hvac_tid(*this)).modulate_with(color);
-	case TYPE_VENT_FAN:  return texture_color(get_ibeam_tid()).modulate_with(color);
+	case TYPE_VENT_FAN:  return texture_color(get_rust_met_tid()).modulate_with(color);
 	case TYPE_HOSP_BED:  return GRAY; // approximate, since it varies across models
 	case TYPE_HOSP_CURT: return LT_BLUE;
 	case TYPE_MIRROR:    return WHITE; // should be reflecting
