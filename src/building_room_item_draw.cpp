@@ -1168,6 +1168,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_HARDHAT:    add_hard_hat(c); break;
 		case TYPE_TOPHAT:     add_tophat(c); break;
 		case TYPE_COMP_MOUSE: add_comp_mouse(c); break;
+		case TYPE_JAIL_BARS:  add_jail_bars(c); break;
 		case TYPE_DBG_SHAPE:  add_debug_shape(c); break;
 		default: break;
 		} // end switch

@@ -649,8 +649,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			// must be a BR if cand bathroom, and BR not already placed; applies to all floors of this room; if multi-family, we check for a BR prev placed on this floor
 			bool const must_be_bathroom(room_id == cand_bathroom && (multi_family ? !(added_bath_mask & floor_mask) : (num_bathrooms == 0)));
 			bool const is_tall_room(r->is_single_floor && r->dz() > 1.5*window_vspacing);
-			bool added_tc(0), added_desk(0), added_obj(0), can_place_onto(0), no_whiteboard(0), no_plants(0), is_laundry(0);
-			bool is_bathroom(0), is_bedroom(0), is_kitchen(0), is_living(0), is_dining(0), is_storage(0), is_utility(0), is_machine(0), is_play_art(0), is_library(0), is_inter(0);
+			bool added_tc(0), added_desk(0), added_obj(0), can_place_onto(0), no_whiteboard(0), no_plants(0), is_laundry(0), is_bathroom(0), is_bedroom(0);
+			bool is_kitchen(0), is_living(0), is_dining(0), is_storage(0), is_utility(0), is_machine(0), is_play_art(0), is_library(0), is_inter(0), is_jail(0);
 			unsigned num_chairs(0), pref_hang_orient(4); // no pref orient=4
 			// unset room type if not locked on this floor during floorplanning; required to generate determinstic room geom
 			if (!r->is_rtype_locked(f)) {r->assign_to(RTYPE_NOTSET, f);}
@@ -833,10 +833,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					added_obj = no_whiteboard = is_inter = 1;
 				}
 			}
-			if (!added_obj && is_ext_basement && rgen.rand_float() < 0.25) { // jail room
-				if (add_jail_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start)) {
+			if (!added_obj && is_ext_basement /*&& rgen.rand_float() < 0.25*/) { // jail room
+				if (add_jail_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, color, light_ix_assign)) {
 					r->assign_to(RTYPE_JAIL, f);
-					added_obj = no_whiteboard = 1;
+					added_obj = no_whiteboard = is_jail = 1;
 				}
 			}
 			if (is_industrial() && !is_basement && init_rtype_f0 == RTYPE_OFFICE) { // add industrial office desk, etc.
@@ -1092,7 +1092,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				else          {add_wall_vent_to_room(rgen, *r, floor_zval, room_id, objs_start, is_utility);} // office building vents
 			}
 			// pictures and whiteboards must not be placed behind anything, excluding trashcans; so we add them here
-			bool const can_hang((is_house || !(is_bathroom || is_kitchen || no_whiteboard)) && !is_storage && !is_utility && !is_machine && !is_inter);
+			bool const can_hang((is_house || !(is_bathroom || is_kitchen || no_whiteboard)) && !is_storage && !is_utility && !is_machine && !is_inter && !is_jail);
 			bool const was_hung(can_hang && hang_pictures_whiteboard_chalkboard_in_room(rgen, *r, room_center.z,
 				room_id, tot_light_amt, objs_start, f, is_basement, pref_hang_orient));
 

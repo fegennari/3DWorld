@@ -3074,8 +3074,72 @@ void building_t::add_buckets_to_room(rand_gen_t &rgen, cube_t place_area, float 
 	} // for n
 }
 
-bool building_t::add_jail_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
-	return 0; // TODO
+bool building_t::add_jail_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
+	colorRGBA const &light_color, light_ix_assign_t &light_ix_assign)
+{
+	float const floor_spacing(get_window_vspace()), dx(room.dx()), dy(room.dy());
+	if (min(dx, dy) < 2.0*floor_spacing || max(dx, dy) < 2.4*floor_spacing) return 0; // too small
+	bool const dim(dx < dy); // long dim
+	vect_door_stack_t const &doorways(get_doorways_for_room(room, zval)); // don't need to handle individual doors here
+	if (doorways.empty()) return 0; // error?
+	cube_t end_doors_span;
+
+	for (door_stack_t const &ds : doorways) {
+		if (ds.dim != dim) return 0; // not handling doors in long sides of the room yet
+		end_doors_span.assign_or_union_with_cube(ds.get_true_bcube());
+	}
+	assert(!end_doors_span.is_all_zeros()); // no doors for this room?
+	float const door_width(get_doorway_width()), wall_thickness(get_wall_thickness()), wall_hthick(0.5*wall_thickness), floor_thickness(get_floor_thickness());
+	cube_t room_bounds(get_walkable_room_bounds(room));
+	set_cube_zvals(room_bounds, zval, (zval + get_floor_ceil_gap()));
+	float const room_len(room_bounds.get_sz_dim(dim)), min_cell_len(1.2*floor_spacing);
+	unsigned const num_cells(room_len/min_cell_len);
+	assert(num_cells > 0);
+	float const cell_len(room_len/num_cells); // includes walls between cells
+	float const bar_lum(rgen.rand_uniform(0.1, 0.5));
+	colorRGBA const bar_color(bar_lum, bar_lum, bar_lum);
+	vect_room_object_t &objs(interior->room_geom->objs);
+	end_doors_span.expand_in_dim(!dim, 0.35*door_width); // add side padding for door frame, etc.
+	if (is_house) {zval = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_CONCRETE);} // add concrete over the carpet (even if we don't make it a jail)
+	bool added_cell(0);
+
+	for (unsigned dir = 0; dir < 2; ++dir) { // for each side of the room
+		float const wall_pos(end_doors_span.d[!dim][dir]);
+		cube_t cell_area(room_bounds);
+		cell_area.d[!dim][!dir] = wall_pos; // clip off the hallway
+		if (cell_area.get_sz_dim(!dim) < 0.75*floor_spacing) continue; // too narrow
+		cube_t cell(cell_area);
+
+		for (unsigned n = 0; n < num_cells; ++n) {
+			float const lo_edge(room_bounds.d[dim][0] + n*cell_len);
+			cell.d[dim][0] = lo_edge;
+			cell.d[dim][1] = lo_edge + cell_len;
+			if (n   > 0        ) {cell.d[dim][0] += wall_hthick;} // reserve space for walls
+			if (n+1 < num_cells) {cell.d[dim][1] -= wall_hthick;}
+			cube_t bars(cell);
+			set_wall_width(bars, (wall_pos + (dir ? 1.0 : -1.0)*wall_hthick), 0.2*wall_thickness, !dim);
+			objs.emplace_back(bars, TYPE_JAIL_BARS, room_id, !dim, dir, 0, tot_light_amt, SHAPE_CUBE, bar_color); // dir is facing outside the cell
+			// cut a hole for a door and add a metal bar door
+			// TODO
+
+			if (n > 0) { // add divider wall
+				cube_t wall(cell);
+				set_wall_width(wall, lo_edge, wall_hthick, dim);
+				objs.emplace_back(wall, TYPE_PG_WALL, room_id, dim, 0, 0, tot_light_amt, SHAPE_CUBE, WHITE);
+			}
+			// add a small light in each cell
+			cube_t light(cube_top_center(cell));
+			light.z1() -= 0.01*floor_spacing;
+			light.expand_by_xy(0.06*floor_spacing);
+			objs.emplace_back(light, TYPE_LIGHT, room_id, dim, 0, RO_FLAG_NOCOLL, 0.0, SHAPE_CYLIN, light_color, 1); // dir=0 (unused), item_flags=1 for jail lights
+			objs.back().obj_id = light_ix_assign.get_next_ix();
+			// add bed (possibly bunk) and toilet + sink if there's space
+			// TODO
+		} // for n
+		added_cell = 1;
+	} // for dir
+	if (added_cell) {interior->room_geom->jails.push_back(room);} // needed for door open logic
+	return added_cell;
 }
 
 void building_t::add_garage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt) {

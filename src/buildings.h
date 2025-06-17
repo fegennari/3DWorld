@@ -505,7 +505,7 @@ enum { // room object types
 	TYPE_LAVALAMP, TYPE_SHOWERTUB, TYPE_TRASH, TYPE_VALVE, TYPE_METAL_BAR, TYPE_OFF_PILLAR, TYPE_DRINK_CAN, TYPE_CONF_TABLE, TYPE_INT_WINDOW, TYPE_INT_LADDER,
 	TYPE_MACHINE, TYPE_BUCKET, TYPE_SPIWEB, TYPE_TREE, TYPE_THEFT_SENS, TYPE_ELEC_WIRE, TYPE_ERASER, TYPE_DWASHER, TYPE_PET_CAGE, TYPE_IBEAM,
 	TYPE_CATWALK, TYPE_VANITY, TYPE_CHEM_TANK, TYPE_HVAC_UNIT, TYPE_WARN_LIGHT, TYPE_GAUGE, TYPE_PALLET, TYPE_SHELF_WALL, TYPE_VENDING, TYPE_MED_CAB,
-	TYPE_LOCKER, TYPE_TESTTUBE, TYPE_HARDHAT, TYPE_TOPHAT, TYPE_COMP_MOUSE, TYPE_PARK_GATE, TYPE_CONV_BELT,
+	TYPE_LOCKER, TYPE_TESTTUBE, TYPE_HARDHAT, TYPE_TOPHAT, TYPE_COMP_MOUSE, TYPE_PARK_GATE, TYPE_CONV_BELT, TYPE_JAIL_BARS,
 	/* these next ones are all 3D models - see logic in room_object_t::is_obj_model_type() */
 	TYPE_TOILET, TYPE_SINK, TYPE_TUB, TYPE_FRIDGE, TYPE_STOVE, TYPE_TV, TYPE_MONITOR, TYPE_COUCH, TYPE_OFF_CHAIR, TYPE_URINAL,
 	TYPE_LAMP, TYPE_WASHER, TYPE_DRYER, TYPE_KEY, TYPE_HANGER, TYPE_CLOTHES, TYPE_FESCAPE, TYPE_WALL_LAMP, TYPE_CUP, TYPE_TOASTER,
@@ -1126,7 +1126,7 @@ struct building_room_geom_t {
 	building_materials_t mats_static, mats_small, mats_text, mats_detail, mats_dynamic, mats_lights, mats_amask, mats_alpha, mats_alpha_sm,
 		mats_doors, mats_exterior, mats_ext_detail;
 	rgeom_mat_t mats_glass[2]; // {viewed from below, viewed from above}
-	vect_cube_t light_bcubes, shelf_rack_occluders[2], glass_floors; // shelf_rack_occluders: {back, top}
+	vect_cube_t light_bcubes, shelf_rack_occluders[2], glass_floors, jails; // shelf_rack_occluders: {back, top}
 	vect_cube_t pgbr_walls[2]; // parking garage and backrooms walls, in each dim
 	vector<index_pair_t> pgbr_wall_ixs; // indexes into pgbr_walls
 	building_decal_manager_t decal_manager;
@@ -1356,6 +1356,7 @@ struct building_room_geom_t {
 	void add_parking_gate (room_object_t const &c);
 	void add_conveyor_belt(room_object_t const &c);
 	void add_store_gate(cube_t const &c, bool dim, float open_amt);
+	void add_jail_bars(room_object_t const &c);
 	void add_theft_sensor(room_object_t const &c, bool alarm_mode=0);
 	void add_lava_lamp(room_object_t const &c);
 	void add_trash(room_object_t const &c);
@@ -2793,7 +2794,8 @@ private:
 	bool add_interrogation_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	void add_buckets_to_room (rand_gen_t &rgen, cube_t place_area, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned num);
 	bool add_ladder_to_room  (rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
-	bool add_jail_objs       (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
+	bool add_jail_objs       (rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
+		colorRGBA const &light_color, light_ix_assign_t &light_ix_assign);
 	void add_garage_objs     (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
 	void add_floor_clutter_objs(rand_gen_t  rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	void add_floor_clutter_objs(rand_gen_t &rgen, room_t const &room, cube_t place_area, float zval, unsigned room_id,

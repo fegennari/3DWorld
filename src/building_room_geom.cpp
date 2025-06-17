@@ -6274,6 +6274,15 @@ void building_room_geom_t::add_store_gate(cube_t const &c, bool dim, float open_
 	add_grid_of_bars(mat, LT_GRAY, c, 6, num_hbars, vbar_hthick, hbar_hthick, 2, !dim, dim, -0.1*thickness); // h-bars slightly thinner
 }
 
+void building_room_geom_t::add_jail_bars(room_object_t const &c) {
+	bool const rusty(c.room_id & 1); // 50% chance
+	float const tscale(4.0/c.dz());
+	rgeom_mat_t &mat(rusty ? get_material(tid_nm_pair_t(get_rust_met_tid(), tscale, 1), 1, 0, 1) : get_scratched_metal_material(tscale, 1, 0, 1)); // shadowed, small
+	float const thickness(c.get_sz_dim(c.dim)), vbar_hthick(0.2*thickness), hbar_hthick(0.15*thickness);
+	unsigned const num_vbars(max(2U, unsigned(10*c.get_width()/c.get_height())));
+	add_grid_of_bars(mat, LT_GRAY, c, num_vbars, 5, vbar_hthick, hbar_hthick, 2, !c.dim, c.dim, -0.2*thickness); // h-bars thinner
+}
+
 void building_room_geom_t::add_theft_sensor(room_object_t const &c, bool alarm_mode) {
 	float const z1(c.z1()), height(c.dz()), depth(c.get_depth());
 	cube_t body(c);

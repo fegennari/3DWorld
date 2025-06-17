@@ -323,7 +323,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			type == TYPE_SPIWEB || type == TYPE_TREE || type == TYPE_THEFT_SENS || type == TYPE_ELEC_WIRE || type == TYPE_ERASER || type == TYPE_PET_CAGE || type == TYPE_SHOE ||
 			type == TYPE_SHOEBOX || type == TYPE_LADDER || type == TYPE_CATWALK || type == TYPE_WARN_LIGHT || type == TYPE_GAUGE || type == TYPE_FORKLIFT || type == TYPE_TESTTUBE ||
 			type == TYPE_US_FLAG || type == TYPE_BLDG_FOUNT || type == TYPE_WHEELCHAIR || type == TYPE_OP_TABLE || type == TYPE_TROLLEY || type == TYPE_STRETCHER ||
-			type == TYPE_HARDHAT || type == TYPE_TOPHAT || type == TYPE_COMP_MOUSE || type == TYPE_APPLE) continue;
+			type == TYPE_HARDHAT || type == TYPE_TOPHAT || type == TYPE_COMP_MOUSE || type == TYPE_APPLE || type == TYPE_JAIL_BARS) continue;
 		bool const is_stairs(type == TYPE_STAIR || type == TYPE_STAIR_WALL);
 		if (c->z1() > (is_stairs ? stairs_z2 : z2) || c->z2() < (is_stairs ? stairs_z1 : z1)) continue;
 		if (!c->intersects_xy(ext_bcube)) continue;
@@ -664,7 +664,7 @@ class building_indir_light_mgr_t {
 			vect_room_object_t const &objs(b.interior->room_geom->objs);
 			assert((unsigned)cur_light < objs.size());
 			room_object_t const &ro(objs[cur_light]);
-			bool const light_in_basement(ro.z1() < b.ground_floor_z1), is_lamp(ro.type == TYPE_LAMP);
+			bool const light_in_basement(ro.z1() < b.ground_floor_z1), is_lamp(ro.type == TYPE_LAMP), in_jail_cell(ro.item_flags == 1);
 			light_cube      = ro;
 			light_cube.z1() = light_cube.z2() = (ro.z1() - 0.01*ro.dz()); // set slightly below bottom of light
 			light_center    = light_cube.get_cube_center();
@@ -680,6 +680,7 @@ class building_indir_light_mgr_t {
 			if (b.has_pri_hall())     {weight *= 0.70;} // floorplan is open and well lit, indir lighting value seems too high
 			if (ro.type == TYPE_LAMP) {weight *= 0.33;} // lamps are less bright
 			if (ro.is_round())        {light_radius = ro.get_radius();}
+			if (in_jail_cell)         {weight *= 0.25;} // lower weight for jail cell lights since there are so many
 			if (in_attic)             {weight *= ATTIC_LIGHT_RADIUS_SCALE*ATTIC_LIGHT_RADIUS_SCALE;} // based on surface area rather than radius
 			else if (b.point_in_industrial(light_center)) {base_num_rays /= 4;} // many lights in industrial areas, fewer rays needed
 			else if (light_in_basement) {

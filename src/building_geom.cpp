@@ -1669,6 +1669,11 @@ tquad_with_ix_t building_t::set_door_from_cube(cube_t const &c, bool dim, bool d
 				unsigned max_angle(75); // in degrees
 				drot.shift = 0.07*signed_width*open_amt;
 
+				if (in_ext_basement && has_room_geom()) { // only open 105 degrees if door opens to a jail
+					cube_t tc(c);
+					tc.translate_dim(dim, signed_width); // move into the room on the side it opens to
+					if (has_bcube_int(tc, interior->room_geom->jails)) {max_angle = 15.0;}
+				}
 				for (; max_angle > 0; max_angle -= 15) { // try to open door as much as 75 degrees in steps of 15 degrees
 					if (open_min_amt) continue;
 					tquad_with_ix_t door_rot(door); // cache orig 90 degree open door in case we need to revert it
