@@ -507,25 +507,21 @@ bool has_fixed_cobjs(int x, int y) {
 	assert(!point_outside_mesh(x, y));
 	vector<int> const &cvals(v_collision_matrix[y][x].cvals);
 
-	for (vector<int>::const_iterator i = cvals.begin(); i != cvals.end(); ++i) {
-		if (coll_objects[*i].fixed && coll_objects[*i].status == COLL_STATIC) {return 1;}
+	for (int i : cvals) {
+		if (coll_objects[i].fixed && coll_objects[i].status == COLL_STATIC) {return 1;}
 	}
 	return 0;
 }
 
 void regen_lightmap() {
-
-	if (MESH_Z_SIZE == 0) return; // not using lmap
+	if (world_mode != WMODE_GROUND || MESH_Z_SIZE == 0) return; // not using lmap
 	assert(lmap_manager.is_allocated());
 	clear_lightmap();
 	assert(!lmap_manager.is_allocated());
 	build_lightmap(0);
 	assert(lmap_manager.is_allocated());
 }
-
-
 void clear_lightmap() {
-
 	if (!lmap_manager.is_allocated()) return;
 	kill_current_raytrace_threads(); // kill raytrace threads and wait for them to finish since they are using the current lightmap
 	lmap_manager.clear_cells();
