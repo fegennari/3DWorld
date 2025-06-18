@@ -3089,7 +3089,8 @@ bool building_t::add_jail_objs(rand_gen_t rgen, room_t const &room, float &zval,
 		end_doors_span.assign_or_union_with_cube(ds.get_true_bcube());
 	}
 	assert(!end_doors_span.is_all_zeros()); // no doors for this room?
-	float const door_width(get_doorway_width()), wall_thickness(get_wall_thickness()), wall_hthick(0.5*wall_thickness), floor_thickness(get_floor_thickness());
+	if (is_house) {zval = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_CONCRETE);} // add concrete over the carpet (even if we don't make it a jail)
+	float const door_width(get_doorway_width()), wall_thickness(get_wall_thickness()), wall_hthick(0.5*wall_thickness), trim_thick(get_trim_thickness());
 	cube_t room_bounds(get_walkable_room_bounds(room));
 	set_cube_zvals(room_bounds, zval, (zval + get_floor_ceil_gap()));
 	float const room_len(room_bounds.get_sz_dim(dim)), min_cell_len(1.2*floor_spacing);
@@ -3100,14 +3101,16 @@ bool building_t::add_jail_objs(rand_gen_t rgen, room_t const &room, float &zval,
 	colorRGBA const bar_color(bar_lum, bar_lum, bar_lum);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	end_doors_span.expand_in_dim(!dim, 0.35*door_width); // add side padding for door frame, etc.
-	if (is_house) {zval = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_CONCRETE);} // add concrete over the carpet (even if we don't make it a jail)
 	bool added_cell(0);
 
 	for (unsigned dir = 0; dir < 2; ++dir) { // for each side of the room
 		float const wall_pos(end_doors_span.d[!dim][dir]);
 		cube_t cell_area(room_bounds);
 		cell_area.d[!dim][!dir] = wall_pos; // clip off the hallway
-		if (cell_area.get_sz_dim(!dim) < 0.75*floor_spacing) continue; // too narrow
+		float const cell_depth(cell_area.get_sz_dim(!dim));
+		if (cell_depth < 0.75*floor_spacing) continue; // too narrow
+		float const bars_depth((wall_pos + (dir ? 1.0 : -1.0)*wall_hthick)), bars_hthick(0.2*wall_thickness);
+		bool const bed_side(rgen.rand_bool());
 		cube_t cell(cell_area);
 
 		for (unsigned n = 0; n < num_cells; ++n) {
@@ -3117,7 +3120,7 @@ bool building_t::add_jail_objs(rand_gen_t rgen, room_t const &room, float &zval,
 			if (n   > 0        ) {cell.d[dim][0] += wall_hthick;} // reserve space for walls
 			if (n+1 < num_cells) {cell.d[dim][1] -= wall_hthick;}
 			cube_t bars(cell);
-			set_wall_width(bars, (wall_pos + (dir ? 1.0 : -1.0)*wall_hthick), 0.2*wall_thickness, !dim);
+			set_wall_width(bars, bars_depth, bars_hthick, !dim);
 			objs.emplace_back(bars, TYPE_JAIL_BARS, room_id, !dim, dir, 0, tot_light_amt, SHAPE_CUBE, bar_color); // dir is facing outside the cell
 			// cut a hole for a door and add a metal bar door
 			// TODO
@@ -3134,7 +3137,13 @@ bool building_t::add_jail_objs(rand_gen_t rgen, room_t const &room, float &zval,
 			objs.emplace_back(light, TYPE_LIGHT, room_id, dim, 0, RO_FLAG_NOCOLL, 0.0, SHAPE_CYLIN, light_color, 1); // dir=0 (unused), item_flags=1 for jail lights
 			objs.back().obj_id = light_ix_assign.get_next_ix();
 			// add bed (possibly bunk) and toilet + sink if there's space
-			// TODO
+			cube_t bed(cell);
+			bed.expand_by_xy(-trim_thick); // add a bit of space around the bed
+			bed.z2() = zval + 0.32*floor_spacing; // set height
+			float const gap_len(bed.get_sz_dim(!dim)), bed_to_bars_gap(max((gap_len - 0.9*floor_spacing), (bars_hthick + 0.5*wall_thickness)));
+			bed.d[!dim][!dir] = bars_depth + (dir ? 1.0 : -1.0)*bed_to_bars_gap; // set length
+			bed.d[ dim][!bed_side] = bed.d[dim][bed_side] + (bed_side ? -1.0 : 1.0)*0.5*bed.get_sz_dim(!dim); // set width to half length
+			objs.emplace_back(bed, TYPE_BED, room_id, !dim, dir, RO_FLAG_IN_JAIL, tot_light_amt);
 		} // for n
 		added_cell = 1;
 	} // for dir

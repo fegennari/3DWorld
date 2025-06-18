@@ -1084,7 +1084,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				unsigned const num(is_house ? (rgen.rand() % ((is_living || is_dining) ? 3 : 2)) : ((rgen.rand()%((f == 0) ? 4 : 10)) == 0));
 				if (num > 0) {add_plants_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, num);}
 			}
-			add_outlets_to_room(rgen, *r, room_center.z, room_id, objs_start, is_ground_floor, is_basement, is_kitchen);
+			if (!is_jail) {add_outlets_to_room(rgen, *r, room_center.z, room_id, objs_start, is_ground_floor, is_basement, is_kitchen);}
 			add_light_switches_to_room(rgen, *r, room_center.z, room_id, objs_start, is_ground_floor, is_basement); // add light switches
 			
 			if (!r->is_hallway) { // no vents in hallways; vents use orig floor zval, not adjusted for bathroom tile floor
@@ -1096,13 +1096,14 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			bool const was_hung(can_hang && hang_pictures_whiteboard_chalkboard_in_room(rgen, *r, room_center.z,
 				room_id, tot_light_amt, objs_start, f, is_basement, pref_hang_orient));
 
-			if (is_bathroom || is_kitchen || is_hospital() || rgen.rand_float() < 0.8) { // 80% of the time, always in bathrooms, kitchens, and hospitals
+			if (is_jail) {} // no trashcan
+			else if (is_bathroom || is_kitchen || is_hospital() || rgen.rand_float() < 0.8) { // 80% of the time, always in bathrooms, kitchens, and hospitals
 				add_trashcan_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, (was_hung && !is_house)); // no trashcans on same wall as office whiteboard
 			}
 			if (is_bedroom || is_living || is_dining || is_play_art) {add_floor_clutter_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);}
 			else if (is_basement && !is_mall_room) {add_basement_clutter_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);}
 
-			if (is_house && !(is_bathroom || is_kitchen || is_storage) && rgen.rand_float() < ((f > 0) ? 0.15 : 0.25)) {
+			if (is_house && !(is_bathroom || is_kitchen || is_storage || is_jail) && rgen.rand_float() < ((f > 0) ? 0.15 : 0.25)) {
 				unsigned const max_num(is_bedroom ? 1 : 2);
 				add_boxes_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, max_num); // place boxes in this room
 			}
