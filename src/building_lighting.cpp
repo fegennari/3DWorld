@@ -664,7 +664,8 @@ class building_indir_light_mgr_t {
 			vect_room_object_t const &objs(b.interior->room_geom->objs);
 			assert((unsigned)cur_light < objs.size());
 			room_object_t const &ro(objs[cur_light]);
-			//if (!ro.is_light_type()) {is_running = 0; return;} // maybe light was removed by the player - nothing to do? add/remove it as if it was previously a light?
+			// maybe light was removed by the player and re-assigned as another object
+			if (!ro.is_light_type() && ro.type != TYPE_BLOCKER) {is_running = 0; return;} // nothing to do?
 			bool const light_in_basement(ro.z1() < b.ground_floor_z1), is_lamp(ro.type == TYPE_LAMP), in_jail_cell(ro.item_flags == 1);
 			light_cube      = ro;
 			light_cube.z1() = light_cube.z2() = (ro.z1() - 0.01*ro.dz()); // set slightly below bottom of light

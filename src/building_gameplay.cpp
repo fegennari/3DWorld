@@ -2167,6 +2167,7 @@ void building_room_geom_t::remove_object(unsigned obj_id, point const &at_pos, b
 		}
 	}
 	if (is_light) {
+		// if indir lighting is enabled, attempt to create a new object for the wires while the old light is being removed; otherwise, replace the light with wires
 		int new_obj_id(-1);
 		room_object_t &to_replace((must_keep_light && (new_obj_id = find_avail_obj_slot()) > 0) ? objs[new_obj_id] : obj);
 		replace_with_hanging_wires(to_replace, old_obj, 0.5*building.get_trim_thickness(), !(old_obj.flags & RO_FLAG_ADJ_HI));
