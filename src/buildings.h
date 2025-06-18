@@ -637,12 +637,13 @@ unsigned const RO_FLAG_EXTERIOR  = 0x080000; // for signs, window trim, etc.
 unsigned const RO_FLAG_EXPANDED  = 0x100000; // for shelves, closets, boxes, and mirrors
 unsigned const RO_FLAG_WAS_EXP   = 0x200000; // for objects in/on shelves, closets, drawers, cabinets, shelfracks, and books
 unsigned const RO_FLAG_ROTATING  = 0x400000; // for office chairs and clothes on hangers
-unsigned const RO_FLAG_IN_CLOSET = 0x800000; // for closet lights and light switches
+unsigned const RO_FLAG_IN_CLOSET = 0x800000; // for closet lights and light switches, aliased with RO_FLAG_ON_FLOOR/RO_FLAG_ON_SRACK
 unsigned const RO_FLAG_ON_SRACK  = 0x800000; // on shelf rack; aliased with RO_FLAG_IN_CLOSET/RO_FLAG_ON_FLOOR
 unsigned const RO_FLAG_NONEMPTY  = 0x040000; // for microwaves, shelves, shelfracks, and cups, aliased with RO_FLAG_HAS_EXTRA
 unsigned const RO_FLAG_ON_FLOOR  = 0x800000; // for books, fallen objects, upper floor shelfracks, etc., aliased with RO_FLAG_IN_CLOSET/RO_FLAG_ON_SRACK
 unsigned const RO_FLAG_BROKEN2   = 0x040000; // for lights that are completely broken, aliased with RO_FLAG_HAS_EXTRA and RO_FLAG_NONEMPTY
 unsigned const RO_FLAG_PLCOLL    = 0x040000; // player collidable, for chairs, aliased with RO_FLAG_HAS_EXTRA
+unsigned const RO_FLAG_IN_JAIL   = 0x040000; // for jail cell objects such as bed; aliased with RO_FLAG_HAS_EXTRA
 // object flags, fourth byte
 unsigned const RO_FLAG_DYNAMIC  = 0x01000000; // dynamic object (balls, elevators, etc.)
 unsigned const RO_FLAG_DSTATE   = 0x02000000; // this object has dynamic state
@@ -1167,7 +1168,7 @@ struct building_room_geom_t {
 	bool cube_int_backrooms_walls(cube_t const &c) const;
 	// Note: these functions are all for drawing objects / adding them to the vertex list
 	void add_tc_legs(cube_t const &c, room_object_t const &obj, colorRGBA const &color, float width, bool recessed, float tscale,
-		bool use_metal_mat=0, bool draw_tops=0, float frame_height=0.0);
+		bool use_metal_mat=0, bool draw_tops=0, float frame_height=0.0, bool abs_width=0);
 	void add_table(room_object_t const &c, float tscale, float top_dz, float leg_width);
 	void add_chair(room_object_t const &c, float tscale);
 	void add_dresser(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm);
@@ -3172,7 +3173,7 @@ void get_cubes_for_plastic_table(room_object_t const &c, float top_dz, cube_t cu
 void get_conf_table_cubes(room_object_t const &c, cube_t cubes[2]);
 unsigned get_table_like_object_cubes(room_object_t const &c, cube_t cubes[7]);
 void get_chair_cubes (room_object_t const &c, cube_t cubes[3]);
-void get_tc_leg_cubes(cube_t const &c, room_object_t const &obj, float width, bool recessed, cube_t cubes[4]);
+void get_tc_leg_cubes(cube_t const &c, room_object_t const &obj, float width, bool recessed, cube_t cubes[4], bool abs_width=0);
 void get_reception_desk_cubes(room_object_t const &c, cube_t cubes[3]);
 void get_bookcase_cubes(room_object_t const &c, cube_t &top, cube_t &middle, cube_t &back, cube_t lr[2], bool no_shelves=0, float sides_scale=1.0);
 float get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_only, bool inside_only);

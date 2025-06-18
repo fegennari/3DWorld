@@ -150,8 +150,8 @@ void get_tc_leg_cubes_abs_width(cube_t const &c, float leg_width, bool recessed,
 		} // for x
 	} // for y
 }
-void get_tc_leg_cubes(cube_t const &c, room_object_t const &obj, float width, bool recessed, cube_t cubes[4]) {
-	get_tc_leg_cubes_abs_width(c, get_tc_leg_width(c, width), recessed, cubes);
+void get_tc_leg_cubes(cube_t const &c, room_object_t const &obj, float width, bool recessed, cube_t cubes[4], bool abs_width) {
+	get_tc_leg_cubes_abs_width(c, (abs_width ? width : get_tc_leg_width(c, width)), recessed, cubes);
 
 	if (obj.is_on_floor()) { // handle legs of fallen over furniture
 		point const center(c.get_cube_center());
@@ -166,11 +166,11 @@ void get_tc_leg_cubes(cube_t const &c, room_object_t const &obj, float width, bo
 	}
 }
 void building_room_geom_t::add_tc_legs(cube_t const &c, room_object_t const &obj, colorRGBA const &color,
-	float width, bool recessed, float tscale, bool use_metal_mat, bool draw_tops, float frame_height)
+	float width, bool recessed, float tscale, bool use_metal_mat, bool draw_tops, float frame_height, bool abs_width)
 {
 	rgeom_mat_t &mat(use_metal_mat ? get_metal_material(1) : get_wood_material(tscale)); // shadowed=1, dynamic=0, small=0
 	cube_t cubes[4];
-	get_tc_leg_cubes(c, obj, width, recessed, cubes);
+	get_tc_leg_cubes(c, obj, width, recessed, cubes, abs_width);
 	unsigned skip_faces(draw_tops ? EF_Z1 : EF_Z12);
 
 	if (obj.is_on_floor()) { // handle legs of fallen over furniture
@@ -181,7 +181,7 @@ void building_room_geom_t::add_tc_legs(cube_t const &c, room_object_t const &obj
 	for (unsigned i = 0; i < 4; ++i) {mat.add_cube_to_verts(cubes[i], color, llc, skip_faces);} // skip top and bottom faces
 
 	if (frame_height > 0.0) { // draw frame for glass table with the same material as the legs
-		float const leg_width(get_tc_leg_width(c, width));
+		float const leg_width(abs_width ? width : get_tc_leg_width(c, width));
 
 		for (unsigned dim = 0; dim < 2; ++dim) {
 			for (unsigned dir = 0; dir < 2; ++dir) {
@@ -4062,7 +4062,7 @@ void add_pillow(cube_t const &c, rgeom_mat_t &mat, colorRGBA const &color, point
 
 bool is_bunk_bed       (room_object_t const &c) {return (c.flags & (RO_FLAG_ADJ_TOP | RO_FLAG_ADJ_BOT));}
 bool bed_is_wide       (room_object_t const &c) {return (c.get_width() > 0.7*c.get_length());}
-bool bed_has_posts     (room_object_t const &c) {return (!is_bunk_bed(c) && bed_is_wide(c) && (c.obj_id & 1 ) && c.is_house());} // no posts for twin beds or hotel/apt beds
+bool bed_has_posts     (room_object_t const &c) {return (!is_bunk_bed(c) && bed_is_wide(c) && (c.obj_id & 1) && c.is_house());} // no posts for twin beds or hotel/apt beds
 bool bed_has_canopy    (room_object_t const &c) {return (bed_has_posts (c) && (c.obj_id & 2 ));}
 bool bed_has_canopy_mat(room_object_t const &c) {return (bed_has_canopy(c) && (c.obj_id & 12) != 0);} // 75% of the time
 int get_canopy_texture() {return get_texture_by_name("fabrics/wool.jpg");}
@@ -4072,64 +4072,72 @@ colorRGBA get_canopy_base_color(room_object_t const &c) {
 }
 
 void get_bed_cubes(room_object_t const &c, cube_t cubes[6]) { // frame, head, foot, mattress, pillow, legs_bcube; no posts or canopy
-	bool const is_wide(bed_is_wide(c));
+	bool const is_wide(bed_is_wide(c)), in_jail(c.flags & RO_FLAG_IN_JAIL);
 	float const height(c.dz()), length(c.get_length()), width(c.get_width());
-	float const head_width(0.04), foot_width(bed_has_posts(c) ? head_width : 0.03f); // relative to length
+	float const head_width(in_jail ? 0.02 : 0.04), foot_width(bed_has_posts(c) ? head_width : (in_jail ? 0.02f : 0.03f)); // relative to length
 	cube_t frame(c), head(c), foot(c), mattress(c), legs_bcube(c), pillow(c);
 	head.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*(1.0 - head_width)*length;
 	foot.d[c.dim][ c.dir] -= (c.dir ? 1.0 : -1.0)*(1.0 - foot_width)*length;
 	mattress.d[c.dim][ c.dir] = head.d[c.dim][!c.dir];
 	mattress.d[c.dim][!c.dir] = foot.d[c.dim][ c.dir];
-	frame.z1() += 0.3*height;
-	frame.z2() -= 0.65*height;
-	foot.z2()  -= 0.2*height;
+
+	if (in_jail) {
+		frame.z1() += 0.55*height;
+		frame.z2() -= 0.38*height;
+	}
+	else {
+		frame.z1() += 0.30*height;
+		frame.z2() -= 0.65*height;
+		foot .z2() -= 0.20*height; // footer is shorter than header
+	}
 	mattress.z1()   = head.z1()   = foot.z1() = frame.z2();
 	mattress.z2()   = pillow.z1() = mattress.z1() + 0.2*height;
 	pillow.z2()     = pillow.z1() + 0.13*height;
 	legs_bcube.z2() = frame.z1();
 	mattress.expand_in_dim(!c.dim, -0.02*width); // shrink slightly
-	float const pillow_space((is_wide ? 0.08 : 0.23)*width);
+	float const pillow_space((is_wide ? 0.08 : (in_jail ? 0.13 : 0.23))*width);
 	pillow.expand_in_dim(!c.dim, -pillow_space); // shrink on sides
 	pillow.d[c.dim][ c.dir] = mattress.d[c.dim][ c.dir] + (c.dir ? -1.0 : 1.0)*0.02*length; // head
 	pillow.d[c.dim][!c.dir] = pillow  .d[c.dim][ c.dir] + (c.dir ? -1.0 : 1.0)*(is_wide ? 0.25 : 0.6)*pillow.get_sz_dim(!c.dim);
 	cubes[0] = frame; cubes[1] = head; cubes[2] = foot; cubes[3] = mattress; cubes[4] = pillow; cubes[5] = legs_bcube;
 }
+
 void building_room_geom_t::add_bed(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale) {
-	bool const is_bot_bunk(c.flags & RO_FLAG_ADJ_BOT), is_top_bunk(c.flags & RO_FLAG_ADJ_TOP), add_posts(bed_has_posts(c));
-	float const length(c.get_length()), head_width(0.04), foot_width(add_posts ? head_width : 0.03f); // relative to length
+	bool const is_bot_bunk(c.flags & RO_FLAG_ADJ_BOT), is_top_bunk(c.flags & RO_FLAG_ADJ_TOP), in_jail(c.flags & RO_FLAG_IN_JAIL), add_posts(bed_has_posts(c));
 	cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube; no posts or canopy
 	get_bed_cubes(c, cubes);
 	cube_t const &frame(cubes[0]), &head(cubes[1]), &foot(cubes[2]), &mattress(cubes[3]), &pillow(cubes[4]);
 	colorRGBA const sheet_color(apply_light_color(c));
-	tid_nm_pair_t const sheet_tex(c.get_sheet_tid(), tscale, 1); // shadowed
+	tid_nm_pair_t const sheet_tex((in_jail ? WHITE_TEX : c.get_sheet_tid()), tscale, 1); // shadowed
 	point const tex_origin(c.get_llc());
 
 	if (inc_lg) {
 		bool const no_mattress(c.taken_level > 2);
-		colorRGBA const color(apply_wood_light_color(c));
+		float const length(c.get_length()), width(c.get_width());
+		float const head_width(head.get_sz_dim(c.dim)), foot_width(foot.get_sz_dim(c.dim)), leg_width(0.5*(head_width + foot_width));
+		colorRGBA const color(in_jail ? apply_light_color(c, BKGRAY) : apply_wood_light_color(c)); // jail is black metal frame; otherwise wood
 		cube_t legs_bcube(cubes[5]);
-		if (is_bot_bunk || is_top_bunk) {legs_bcube.z2() = c.z2();} // extend legs up to meet bottom of legs of upper bunk; extend top as well so that width matches
-		add_tc_legs(legs_bcube, c, color, max(head_width, foot_width), 0, tscale, 0, is_top_bunk); // recessed=0, use_metal_mat=0
-		if (no_mattress) {get_wood_material(4.0*tscale);} // pre-allocate slats material if needed
-		rgeom_mat_t &wood_mat(get_wood_material(tscale));
+		if (is_bot_bunk) {legs_bcube.z2() = c.z2();} // extend legs up to meet bottom of legs of upper bunk
+		add_tc_legs(legs_bcube, c, color, leg_width, 0, tscale, in_jail, is_top_bunk, 0.0, 1); // recessed=0, use_metal_mat=in_jail, frame_height=0.0, abs_width=1
+		rgeom_mat_t &frame_mat(in_jail ? get_metal_material(1) : get_wood_material(tscale)); // shadowed
 
 		if (no_mattress) { // mattress is gone, draw the slats on the bottom of the bed
 			unsigned const num_slats = 12;
 			unsigned const slat_skip_faces(get_skip_mask_for_xy(!c.dim));
-			float const width(c.get_width()), side_width(0.08*width), slat_spacing(length/num_slats), slat_width(0.45*slat_spacing), slat_gap(0.5f*(slat_spacing - slat_width));
+			float const side_width(0.08*width), slat_spacing(length/num_slats), slat_width(0.45*slat_spacing), slat_gap(0.5f*(slat_spacing - slat_width));
 			cube_t sides[2] = {frame, frame}, slat(frame);
 			sides[0].d[!c.dim][1] -= (width - side_width);
 			sides[1].d[!c.dim][0] += (width - side_width);
-			for (unsigned d = 0; d < 2; ++d) {wood_mat.add_cube_to_verts(sides[d], color, tex_origin);}
+			for (unsigned d = 0; d < 2; ++d) {frame_mat.add_cube_to_verts(sides[d], color, tex_origin);}
 			slat.expand_in_dim(!c.dim, -side_width); // flush with sides
 			cube_t ends[2] = {slat, slat};
 			ends[0].d[c.dim][1] = frame.d[c.dim][0] + slat_gap;
 			ends[1].d[c.dim][0] = frame.d[c.dim][1] - slat_gap;
-			for (unsigned d = 0; d < 2; ++d) {wood_mat.add_cube_to_verts(ends[d], color, tex_origin, slat_skip_faces);}
+			for (unsigned d = 0; d < 2; ++d) {frame_mat.add_cube_to_verts(ends[d], color, tex_origin, slat_skip_faces);}
 			slat.d[c.dim][1] = slat.d[c.dim][0] + slat_spacing;
 			slat.expand_in_dim(c.dim, -slat_gap); // add gap between slats to each side
 			slat.expand_in_dim(2,     -0.25*frame.dz()); // make thinner in Z
-			rgeom_mat_t &slat_mat(get_wood_material(4.0*tscale));
+			rgeom_mat_t &slat_mat(in_jail ? get_metal_material(1) : get_wood_material(4.0*tscale)); // shadowed
 			colorRGBA const slat_color(color*1.5); // make them lighter in color
 
 			for (unsigned n = 0; n < num_slats; ++n) {
@@ -4138,25 +4146,25 @@ void building_room_geom_t::add_bed(room_object_t const &c, bool inc_lg, bool inc
 			}
 		}
 		else {
-			wood_mat.add_cube_to_verts(frame, color, tex_origin);
+			frame_mat.add_cube_to_verts(frame, color, tex_origin);
 		}
-		wood_mat.add_cube_to_verts(head, color, tex_origin, EF_Z1);
-		wood_mat.add_cube_to_verts(foot, color, tex_origin, EF_Z1);
+		frame_mat.add_cube_to_verts(head, color, tex_origin, EF_Z1);
+		frame_mat.add_cube_to_verts(foot, color, tex_origin, EF_Z1);
 		
 		if (add_posts) { // maybe add bed posts and canopy; these extend outside of the bed bcube, but that probably doesn't matter
 			bool const add_canopy(bed_has_canopy(c));
-			float const post_width(min(head_width, foot_width)*length);
+			float const post_width(min(head_width, foot_width));
 			cube_t posts_area(c);
 			posts_area.z1() = foot.z2(); // start at the foot
 			posts_area.z2() = posts_area.z1() + (add_canopy ? 1.4 : 0.6)*c.dz(); // higher posts for canopy bed
 			cube_t posts[4];
 			get_tc_leg_cubes_abs_width(posts_area, post_width, 0, posts); // recessed=0
-			bool const use_cylinders(!add_canopy && (c.obj_id & 4));
+			bool const use_cylinders(!add_canopy && (c.obj_id & 16));
 
 			for (unsigned i = 0; i < 4; ++i) {
 				if (!add_canopy && posts[i].d[c.dim][!c.dir] == c.d[c.dim][!c.dir]) {posts[i].translate_dim(2, -(head.z2() - foot.z2()));} // make footboard posts shorter
-				if (use_cylinders) {wood_mat.add_vcylin_to_verts(posts[i], color, 0, 1);}
-				else {wood_mat.add_cube_to_verts(posts[i], color, tex_origin, EF_Z1);} // skip bottom face
+				if (use_cylinders) {frame_mat.add_vcylin_to_verts(posts[i], color, 0, 1);}
+				else {frame_mat.add_cube_to_verts(posts[i], color, tex_origin, EF_Z1);} // skip bottom face
 			}
 			if (add_canopy) {
 				for (unsigned i = 0; i < 4; ++i) { // add 4 horizontal cube bars along the top of the bed connecting each adjacent pair of posts
@@ -4166,7 +4174,7 @@ void building_room_geom_t::add_bed(room_object_t const &c, bool inc_lg, bool inc
 					top.z1() = top.z2() - post_width; // height = width
 					bool const dim(top.dx() < top.dy());
 					top.expand_in_dim(dim, -post_width); // remove overlaps with the post
-					wood_mat.add_cube_to_verts(top, color, tex_origin, get_skip_mask_for_xy(dim));
+					frame_mat.add_cube_to_verts(top, color, tex_origin, get_skip_mask_for_xy(dim));
 				}
 				if (bed_has_canopy_mat(c)) { // 75% of the time
 					// add material to the top; it would be great if this could be partially transparent, but I can't figure out how to make that draw properly

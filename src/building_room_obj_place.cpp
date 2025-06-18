@@ -1461,7 +1461,7 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 		bed.color = get_bed_sheet_color(sheet_tid, rgen);
 		unsigned num_beds(1);
 
-		if (is_house && against_wall && size_ix <= 2 && rgen.rand_bool()) { // maybe add a bunk bed if against a wall and <= twin XL size
+		if (is_house && against_wall && size_ix <= 2 && rgen.rand_float() < 0.4) { // maybe add a bunk bed if against a wall and <= twin XL size
 			room_object_t bed2(bed);
 			bed2.translate_dim(2, c.dz());
 
@@ -1474,7 +1474,7 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 				float const bed_edge(bed2.d[!dim][!wall_dir]);
 				cube_t ladder(bed2);
 				ladder.z1()  = zval; // down to the floor
-				ladder.z2() -= 0.2*bed2.dz(); // lower to just above mattress level
+				ladder.z2() -= 0.25*bed2.dz(); // lower to just above mattress level
 				ladder.d[!dim][ wall_dir] = bed_edge;
 				ladder.d[!dim][!wall_dir] = bed_edge + (wall_dir ? -1.0 : 1.0)*0.75*wall_thick; // set depth
 				ladder.d[ dim][ dir]  = bed2.d[dim][!dir] + (dir ? 1.0 : -1.0)*0.22*vspace;
