@@ -38,6 +38,7 @@ void draw_metal_handle_wheel(cube_t const &c, unsigned dim, colorRGBA const &col
 bool add_cabinet_objects(room_object_t const &c, vect_room_object_t &objects);
 vector3d get_obj_model_rotated_dir(room_object_t const &obj, building_t const *const building);
 tid_nm_pair_t select_tile_floor_texture(bool use_granite, float tscale);
+tid_nm_pair_t get_scratched_metal_tex(float tscale, bool inc_shadows);
 
 unsigned get_face_mask(unsigned dim, bool dir) {return ~(1 << (2*(2-dim) + dir));} // draw only these faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2
 unsigned get_skip_mask_for_xy (bool       dim) {return (dim ? EF_Y12 : EF_X12);} // skip these faces
@@ -6284,10 +6285,10 @@ void building_room_geom_t::add_store_gate(cube_t const &c, bool dim, float open_
 
 void building_room_geom_t::add_jail_bars(room_object_t const &c) {
 	bool const rusty(c.room_id & 1); // 50% chance
-	float const tscale(4.0/c.dz());
+	float const height(c.dz()), tscale(4.0/height);
 	rgeom_mat_t &mat(rusty ? get_material(tid_nm_pair_t(get_rust_met_tid(), tscale, 1), 1, 0, 1) : get_scratched_metal_material(tscale, 1, 0, 1)); // shadowed, small
-	float const thickness(c.get_sz_dim(c.dim)), vbar_hthick(0.2*thickness), hbar_hthick(0.15*thickness);
-	unsigned const num_vbars(max(2U, unsigned(10*c.get_width()/c.get_height())));
+	float const thickness(c.get_depth()), vbar_hthick(0.2*thickness), hbar_hthick(0.15*thickness);
+	unsigned const num_vbars(max(2U, unsigned(10*c.get_width()/height)));
 	add_grid_of_bars(mat, LT_GRAY, c, num_vbars, 5, vbar_hthick, hbar_hthick, 2, !c.dim, c.dim, -0.2*thickness); // h-bars thinner
 }
 
@@ -6484,6 +6485,23 @@ void building_room_geom_t::add_door_handle(door_t const &door, door_rotation_t c
 		mat.add_cube_to_verts_untextured(handle, color); // all faces
 	}
 	maybe_rotate_door_verts(mat.quad_verts, qv_start, door, drot);
+}
+
+void building_room_geom_t::add_jail_cell_door(door_t const &D) {
+	bool const rusty(D.conn_room[0] & 1); // 50% chance; same as jail bars
+	float const height(D.dz()), tscale(4.0/height);
+	rgeom_mat_t &mat(mats_doors.get_material((rusty ? tid_nm_pair_t(get_rust_met_tid(), tscale, 1) : get_scratched_metal_tex(tscale, 1)), 1)); // shadowed
+	float const thickness(D.get_thickness()), vbar_hthick(0.2*thickness), hbar_hthick(0.15*thickness);
+	unsigned const num_vbars(max(2U, unsigned(10*D.get_width()/height))), qv_start(mat.quad_verts.size());
+	assert(thickness > 0.0);
+	add_grid_of_bars(mat, LT_GRAY, D.get_true_bcube(), num_vbars, 5, vbar_hthick, hbar_hthick, 2, !D.dim, D.dim, -0.2*thickness); // h-bars thinner
+	// add lock plate
+	// TODO
+	// rotate door if open
+	door_rotation_t drot;
+	//drot.shift = 0.07*signed_width*D.open_amt;
+	drot.angle = 135.0*D.open_amt; // opens 135 degrees
+	maybe_rotate_door_verts(mat.quad_verts, qv_start, D, drot);
 }
 
 void building_room_geom_t::maybe_add_door_sign(door_t const &door, door_rotation_t const &drot) {

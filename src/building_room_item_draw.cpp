@@ -918,10 +918,13 @@ rgeom_mat_t &building_room_geom_t::get_metal_material(bool inc_shadows, bool dyn
 	tex.set_metal_specular(spec_color);
 	return get_material(tex, inc_shadows, dynamic, small, 0, exterior);
 }
-rgeom_mat_t &building_room_geom_t::get_scratched_metal_material(float tscale, bool inc_shadows, bool dynamic, unsigned small, bool exterior) {
+tid_nm_pair_t get_scratched_metal_tex(float tscale, bool inc_shadows) {
 	tid_nm_pair_t tex(get_texture_by_name("metals/60_scratch_metal.jpg"), tscale, inc_shadows);
 	tex.set_metal_specular(WHITE);
-	return get_material(tex, inc_shadows, dynamic, small, 0, exterior);
+	return tex;
+}
+rgeom_mat_t &building_room_geom_t::get_scratched_metal_material(float tscale, bool inc_shadows, bool dynamic, unsigned small, bool exterior) {
+	return get_material(get_scratched_metal_tex(tscale, inc_shadows), inc_shadows, dynamic, small, 0, exterior);
 }
 
 void room_object_t::set_as_bottle(unsigned rand_id, unsigned max_type, bool no_empty, unsigned exclude_mask, bool make_empty, bool allow_transparent) {
@@ -1374,13 +1377,20 @@ void building_room_geom_t::create_door_vbos(building_t const &building) {
 
 	for (door_t const &d : doors) { // interior doors; opens_out=0, exterior=0
 		door_rotation_t drot;
-		building.add_door_verts(d, *this, drot, door_type, d.dim, d.open_dir, d.open_amt, 0, 0,
-			d.on_stairs, d.hinge_side, d.use_min_open_amt(), d.get_mult_floor()); // opens_out=0, exterior=0
+
+		if (d.for_jail) { // jail cell metal door
+			add_jail_cell_door(d);
+		}
+		else { // normal interior door
+			building.add_door_verts(d, *this, drot, door_type, d.dim, d.open_dir, d.open_amt, 0, 0,
+				d.on_stairs, d.hinge_side, d.use_min_open_amt(), d.get_mult_floor()); // opens_out=0, exterior=0
+		}
 		maybe_add_door_sign(d, drot);
 		if (!global_building_params.add_door_handles) continue;
 		if (d.on_stairs) continue; // skip basement stairs doors since they're not drawn when open anyway
 		
-		if (have_door_handle_model) { // add model to door_handles
+		if (d.for_jail) {} // no handle?
+		else if (have_door_handle_model) { // add model to door_handles
 			bool const handle_side(d.get_handle_side());
 			float const handle_height(0.04*d.dz());
 			point const door_center(d.get_cube_center());

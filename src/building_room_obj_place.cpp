@@ -3093,7 +3093,7 @@ bool building_t::add_jail_objs(rand_gen_t rgen, room_t const &room, float &zval,
 	float const door_width(get_doorway_width()), wall_thick(get_wall_thickness()), wall_hthick(0.5*wall_thick), trim_thick(get_trim_thickness());
 	cube_t room_bounds(get_walkable_room_bounds(room));
 	set_cube_zvals(room_bounds, zval, (zval + get_floor_ceil_gap()));
-	float const room_len(room_bounds.get_sz_dim(dim)), min_cell_len(1.2*floor_spacing);
+	float const room_len(room_bounds.get_sz_dim(dim)), room_center(room.get_center_dim(dim)), min_cell_len(1.2*floor_spacing), jail_door_width(0.8*door_width);
 	unsigned const num_cells(room_len/min_cell_len);
 	assert(num_cells > 0);
 	float const cell_len(room_len/num_cells); // includes walls between cells
@@ -3119,13 +3119,27 @@ bool building_t::add_jail_objs(rand_gen_t rgen, room_t const &room, float &zval,
 			cell.d[dim][1] = lo_edge + cell_len;
 			if (n   > 0        ) {cell.d[dim][0] += wall_hthick;} // reserve space for walls
 			if (n+1 < num_cells) {cell.d[dim][1] -= wall_hthick;}
+			// add bars and door
+			float const cell_center(cell.get_center_dim(dim));
+			bool const hinge_side((room_center < cell_center) ^ bool(dir) ^ 1);
 			cube_t bars(cell);
 			set_wall_width(bars, bars_depth, bars_hthick, !dim);
-			objs.emplace_back(bars, TYPE_JAIL_BARS, room_id, !dim, dir, 0, tot_light_amt, SHAPE_CUBE, bar_color); // dir is facing outside the cell
-			// cut a hole for a door and add a metal bar door
-			// TODO
+			door_t door(bars, !dim, !dir, 0, 0, hinge_side); // open=0, on_stairs=0
+			door.for_jail = 1;
+			door.conn_room[0] = door.conn_room[1] = room_id; // both sides connect to the same room
+			set_wall_width(door, cell_center, 0.5*jail_door_width, dim);
+			cube_t bar_segs[2] = {bars, bars};
+			bar_segs[0].d[dim][1] = door.d[dim][0]; // lo side
+			bar_segs[1].d[dim][0] = door.d[dim][1]; // hi side
 
-			if (n > 0) { // add divider wall
+			for (unsigned d = 0; d < 2; ++d) { // add bars on both sides of the door
+				objs.emplace_back(bar_segs[d], TYPE_JAIL_BARS, room_id, !dim, dir, 0, tot_light_amt, SHAPE_CUBE, bar_color); // dir is facing outside the cell
+			}
+			door.d[!dim][0] = door.d[!dim][1] = bars_depth; // shrink to zero width
+			door.set_for_closet(); // flag so that we don't try to add a light switch by this door, etc.
+			add_interior_door(door, 0, 1, 1); // is_bathroom=0, make_unlocked=1, make_closed=1
+			// maybe add divider wall
+			if (n > 0) {
 				cube_t wall(cell);
 				set_wall_width(wall, lo_edge, wall_hthick, dim);
 				objs.emplace_back(wall, TYPE_PG_WALL, room_id, dim, 0, 0, tot_light_amt, SHAPE_CUBE, WHITE);

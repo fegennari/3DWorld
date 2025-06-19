@@ -1420,6 +1420,7 @@ private:
 	void create_dynamic_vbos(building_t const &building, point const &camera_bs, vector3d const &xlate, bool play_clock_tick);
 	void create_door_vbos(building_t const &building);
 	void add_door_handle(door_t const &door, door_rotation_t const &drot, colorRGBA const &color, bool residential);
+	void add_jail_cell_door(door_t const &D);
 	void maybe_add_door_sign(door_t const &door, door_rotation_t const &drot);
 	static void add_closet_objects(room_object_t const &c, vect_room_object_t &objects);
 	static void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[MAX_SHELVES], unsigned num_shelves, vect_room_object_t &objects, bool add_models_mode=0);
@@ -1709,7 +1710,7 @@ unsigned const DOOR_FLAG_SMALL_ROOM = 0x10; // door for a small room such as an 
 unsigned const DOOR_FLAG_AUTO_CLOSE = 0x20; // door automatically closes (office bathroom)
 
 struct door_base_t : public cube_t {
-	bool dim=0, open_dir=0, hinge_side=0, on_stairs=0;
+	bool dim=0, open_dir=0, hinge_side=0, on_stairs=0, for_jail=0;
 	uint8_t flags=0;
 	uint16_t conn_room[2]={}; // on each side of the door
 	// is it useful to store the two rooms in the door/door_stack? this will speed up connectivity searches for navigation and room assignment,
@@ -2587,7 +2588,7 @@ public:
 	void invalidate_nav_graph();
 	void invalidate_nav_grid (unsigned floor_ix);
 	point local_to_camera_space(point const &pos) const;
-	void play_door_open_close_sound(point const &pos, bool open, float gain=1.0, float pitch=1.0) const;
+	void play_door_open_close_sound(point const &pos, bool open, float gain=1.0, float pitch=1.0, bool is_metal=0) const;
 	void play_open_close_sound(room_object_t const &obj, point const &sound_origin) const;
 	void maybe_gen_chimney_smoke() const;
 	int get_part_ix_containing_cube(cube_t const &c) const;
