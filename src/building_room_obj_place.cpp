@@ -3090,7 +3090,7 @@ bool building_t::add_jail_objs(rand_gen_t rgen, room_t const &room, float &zval,
 	}
 	assert(!end_doors_span.is_all_zeros()); // no doors for this room?
 	if (is_house) {zval = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_CONCRETE);} // add concrete over the carpet (even if we don't make it a jail)
-	float const door_width(get_doorway_width()), wall_thickness(get_wall_thickness()), wall_hthick(0.5*wall_thickness), trim_thick(get_trim_thickness());
+	float const door_width(get_doorway_width()), wall_thick(get_wall_thickness()), wall_hthick(0.5*wall_thick), trim_thick(get_trim_thickness());
 	cube_t room_bounds(get_walkable_room_bounds(room));
 	set_cube_zvals(room_bounds, zval, (zval + get_floor_ceil_gap()));
 	float const room_len(room_bounds.get_sz_dim(dim)), min_cell_len(1.2*floor_spacing);
@@ -3109,7 +3109,7 @@ bool building_t::add_jail_objs(rand_gen_t rgen, room_t const &room, float &zval,
 		cell_area.d[!dim][!dir] = wall_pos; // clip off the hallway
 		float const cell_depth(cell_area.get_sz_dim(!dim));
 		if (cell_depth < 0.75*floor_spacing) continue; // too narrow
-		float const dsign(dir ? 1.0 : -1.0), bars_depth((wall_pos + dsign*wall_hthick)), bars_hthick(0.2*wall_thickness);
+		float const dsign(dir ? 1.0 : -1.0), bars_depth((wall_pos + dsign*wall_hthick)), bars_hthick(0.2*wall_thick);
 		bool const bed_side(rgen.rand_bool());
 		cube_t cell(cell_area);
 
@@ -3140,7 +3140,7 @@ bool building_t::add_jail_objs(rand_gen_t rgen, room_t const &room, float &zval,
 			cube_t bed(cell);
 			bed.expand_by_xy(-trim_thick); // add a bit of space around the bed
 			bed.z2() = zval + 0.32*floor_spacing; // set height
-			float const gap_len(bed.get_sz_dim(!dim)), bed_to_bars_gap(max((gap_len - 0.9*floor_spacing), (bars_hthick + 0.5*wall_thickness)));
+			float const gap_len(bed.get_sz_dim(!dim)), bed_to_bars_gap(max((gap_len - 0.9*floor_spacing), (bars_hthick + 0.5*wall_thick)));
 			bed.d[!dim][!dir] = bars_depth + dsign*bed_to_bars_gap; // set length
 			bed.d[ dim][!bed_side] = bed.d[dim][bed_side] + (bed_side ? -1.0 : 1.0)*0.5*bed.get_sz_dim(!dim); // set width to half length
 			objs.emplace_back(bed, TYPE_BED, room_id, !dim, dir, RO_FLAG_IN_JAIL, tot_light_amt);
@@ -3151,8 +3151,17 @@ bool building_t::add_jail_objs(rand_gen_t rgen, room_t const &room, float &zval,
 				bed2.translate_dim(2, bed.dz());
 				bed .flags |= RO_FLAG_ADJ_BOT; // flag as bottom bunk
 				bed2.flags |= RO_FLAG_ADJ_TOP; // flag as top    bunk
-				objs.push_back(bed2);
-				// any ladder?
+				objs.push_back(bed2); // Note: bed reference is invalidated here
+				// add a small ladder
+				float const bed_edge(bed2.d[dim][!bed_side]);
+				cube_t ladder(bed2);
+				ladder.z1()  = zval; // down to the floor
+				ladder.z2() -= 0.05*bed2.dz(); // lower to just above mattress level
+				ladder.d[ dim][ bed_side] = bed_edge;
+				ladder.d[ dim][!bed_side] = bed_edge + (bed_side ? -1.0 : 1.0)*0.4*wall_thick; // set depth
+				ladder.d[!dim][ dir]  = bed2.d[!dim][!dir] + dsign*0.2*bed2.get_sz_dim(!dim);
+				ladder.d[!dim][!dir] += dsign*0.25*wall_thick; // move away from footboard
+				objs.emplace_back(ladder, TYPE_INT_LADDER, room_id, dim, bed_side, (RO_FLAG_IN_FACTORY | RO_FLAG_NOCOLL), tot_light_amt); // metal, like factory ladder
 			}
 			// add toilet on the far wall and sink to the side
 			cube_t ts_space(cell);
