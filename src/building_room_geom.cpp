@@ -6252,8 +6252,8 @@ void building_room_geom_t::add_conveyor_belt(room_object_t const &c) {
 	// TODO
 }
 
-void add_grid_of_bars(rgeom_mat_t &mat, colorRGBA const &color, cube_t const &c, unsigned num_vbars, unsigned num_hbars,
-	float vbar_hthick, float hbar_hthick, unsigned vdim, unsigned hdim, unsigned adj_dim=0, float h_adj_val=0.0)
+void add_grid_of_bars(rgeom_mat_t &mat, colorRGBA const &color, cube_t const &c, unsigned num_vbars, unsigned num_hbars, float vbar_hthick,
+	float hbar_hthick, unsigned vdim, unsigned hdim, unsigned adj_dim=0, float h_adj_val=0.0, bool cylin_vbars=0, float tscale=1.0)
 {
 	max_eq(num_vbars, 2U);
 	max_eq(num_hbars, 2U);
@@ -6266,7 +6266,11 @@ void add_grid_of_bars(rgeom_mat_t &mat, colorRGBA const &color, cube_t const &c,
 
 	for (unsigned n = 0; n < num_vbars; ++n) { // vertical
 		set_wall_width(bar, (c.d[hdim][0] + vbar_hthick + n*v_step), vbar_hthick, hdim);
-		mat.add_cube_to_verts(bar, color, origin, skip_faces[0]);
+		
+		if (cylin_vbars && n > 0 && n+1 < num_vbars) { // draw interior bars as cylinders
+			mat.add_ortho_cylin_to_verts(bar, color, vdim, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, N_CYL_SIDES/2, 0.0, 0, tscale); // ends, low detail
+		}
+		else {mat.add_cube_to_verts(bar, color, origin, skip_faces[0]);}
 	}
 	bar = c;
 	if (h_adj_val != 0.0) {bar.expand_in_dim(adj_dim, h_adj_val);}
@@ -6287,9 +6291,9 @@ void building_room_geom_t::add_jail_bars(room_object_t const &c) {
 	bool const rusty(c.room_id & 1); // 50% chance
 	float const height(c.dz()), tscale(4.0/height);
 	rgeom_mat_t &mat(rusty ? get_material(tid_nm_pair_t(get_rust_met_tid(), tscale, 1), 1, 0, 1) : get_scratched_metal_material(tscale, 1, 0, 1)); // shadowed, small
-	float const thickness(c.get_depth()), vbar_hthick(0.2*thickness), hbar_hthick(0.15*thickness);
+	float const thickness(c.get_depth()), vbar_hthick(0.25*thickness), hbar_hthick(0.15*thickness);
 	unsigned const num_vbars(max(2U, unsigned(10*c.get_width()/height)));
-	add_grid_of_bars(mat, LT_GRAY, c, num_vbars, 5, vbar_hthick, hbar_hthick, 2, !c.dim, c.dim, -0.2*thickness); // h-bars thinner
+	add_grid_of_bars(mat, LT_GRAY, c, num_vbars, 5, vbar_hthick, hbar_hthick, 2, !c.dim, c.dim, 0.1*thickness, 1, 8.0); // h-bars thinner, cylin_vbars=1
 }
 
 void building_room_geom_t::add_theft_sensor(room_object_t const &c, bool alarm_mode) {
@@ -6491,18 +6495,18 @@ void building_room_geom_t::add_jail_cell_door(door_t const &D, door_rotation_t &
 	bool const dim(D.dim), rusty(D.conn_room[0] & 1); // 50% chance; same as jail bars
 	float const height(D.dz()), width(D.get_width()), tscale(4.0/height);
 	rgeom_mat_t &mat(mats_doors.get_material((rusty ? tid_nm_pair_t(get_rust_met_tid(), tscale, 1) : get_scratched_metal_tex(tscale, 1)), 1)); // shadowed
-	float const thickness(D.get_thickness()), vbar_hthick(0.2*thickness), hbar_hthick(0.15*thickness);
-	unsigned const num_vbars(max(2U, unsigned(10*width/height))), qv_start(mat.quad_verts.size());
+	float const thickness(D.get_thickness()), vbar_hthick(0.25*thickness), hbar_hthick(0.15*thickness);
+	unsigned const num_vbars(max(2U, unsigned(10*width/height))), qv_start(mat.quad_verts.size()), tv_start(mat.itri_verts.size());
 	assert(thickness > 0.0);
 	cube_t const c(D.get_true_bcube());
 	colorRGBA const color(LT_GRAY);
-	add_grid_of_bars(mat, color, c, num_vbars, 5, vbar_hthick, hbar_hthick, 2, !dim, dim, -0.2*thickness); // h-bars thinner
+	add_grid_of_bars(mat, color, c, num_vbars, 5, vbar_hthick, hbar_hthick, 2, !dim, dim, 0.1*thickness, 1, 8.0); // h-bars thinner, cylin_vbars=1
 	// add lock plate
 	bool const handle_side(D.get_handle_side());
 	point const origin(c.get_llc());
 	cube_t plate(c);
 	plate.expand_in_dim(2,  -0.43*height); // shrink in Z
-	plate.expand_in_dim(dim, 0.15*thickness); // expand outside door
+	plate.expand_in_dim(dim, 0.18*thickness); // expand outside door
 	plate.d[!dim][!handle_side] = c.d[!dim][handle_side] - (handle_side ? 1.0 : -1.0)*0.28*width;
 	mat.add_cube_to_verts(plate, color, origin, 0); // draw all faces
 	// add door handle
@@ -6524,6 +6528,7 @@ void building_room_geom_t::add_jail_cell_door(door_t const &D, door_rotation_t &
 	// rotate door if open
 	drot.angle = 135.0*D.open_amt; // opens 135 degrees
 	maybe_rotate_door_verts(mat.quad_verts, qv_start, D, drot);
+	maybe_rotate_door_verts(mat.itri_verts, tv_start, D, drot);
 }
 
 void building_room_geom_t::maybe_add_door_sign(door_t const &door, door_rotation_t const &drot) {
