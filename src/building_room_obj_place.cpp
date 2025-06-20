@@ -3205,6 +3205,7 @@ bool building_t::add_jail_objs(rand_gen_t rgen, room_t const &room, float &zval,
 		added_cell = 1;
 	} // for dir
 	if (added_cell) {interior->room_geom->jails.push_back(room);} // needed for door open logic
+	interior->has_jail |= added_cell;
 	return added_cell;
 }
 

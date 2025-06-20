@@ -1980,7 +1980,7 @@ struct building_interior_t {
 	int garage_room=-1, ext_basement_hallway_room_id=-1, ext_basement_door_stack_ix=-1, last_active_door_ix=-1, security_room_ix=-1;
 	uint8_t furnace_type=FTYPE_NONE, attic_type=ATTIC_TYPE_RAFTERS;
 	bool door_state_updated=0, is_unconnected=0, ignore_ramp_placement=0, placed_people=0, elevators_disabled=0, attic_access_open=0, has_backrooms=0;
-	bool elevator_dir=0, extb_wall_dim=0, extb_wall_dir=0, conn_room_in_extb_hallway=0, has_sec_hallways=0;
+	bool elevator_dir=0, extb_wall_dim=0, extb_wall_dir=0, conn_room_in_extb_hallway=0, has_sec_hallways=0, has_jail=0;
 	uint8_t num_extb_floors=0; // for malls and backrooms
 	float water_zval=0.0; // for multilevel backrooms and swimming pools
 
@@ -2390,6 +2390,7 @@ struct building_t : public building_geom_t {
 	void register_player_enter_building() const;
 	void register_player_exit_building (bool entered_another_building) const;
 	bool check_for_wall_ceil_floor_int(point const &p1, point const &p2, bool inc_pg_br_walls=1) const;
+	bool line_intersect_jail_bars(point const &p1, point const &p2) const;
 	bool line_intersect_stairs_or_ramp(point const &p1, point const &p2, bool skip_u_stairs=0) const;
 	bool check_cube_on_or_near_stairs(cube_t const &c) const;
 	bool drop_room_object(room_object_t &obj, point const &dest, point const &player_pos, bool dim, bool dir);
