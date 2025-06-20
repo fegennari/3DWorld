@@ -3111,7 +3111,6 @@ bool building_t::add_jail_objs(rand_gen_t rgen, room_t const &room, float &zval,
 		float const cell_depth(cell_area.get_sz_dim(!dim));
 		if (cell_depth < 0.9*floor_spacing) continue; // too narrow
 		float const dsign(dir ? 1.0 : -1.0), bars_depth((wall_pos + dsign*wall_hthick)), bars_hthick(0.2*wall_thick);
-		bool const bed_side(rgen.rand_bool());
 		cube_t cell(cell_area);
 
 		for (unsigned n = 0; n < num_cells; ++n) {
@@ -3122,13 +3121,14 @@ bool building_t::add_jail_objs(rand_gen_t rgen, room_t const &room, float &zval,
 			if (n+1 < num_cells) {cell.d[dim][1] -= wall_hthick;}
 			// add bars and door
 			float const cell_center(cell.get_center_dim(dim));
-			bool const hinge_side((room_center < cell_center) ^ bool(dir) ^ 1);
+			bool const hinge_side((room_center < cell_center) ^ bool(dir) ^ 1), bed_side(!hinge_side); // door opens toward hallway center
+			float const door_center(cell_center + (bed_side ? -1.0 : 1.0)*0.1*door_width); // slightly away from bed and room door
 			cube_t bars(cell);
 			set_wall_width(bars, bars_depth, bars_hthick, !dim);
 			door_t door(bars, !dim, !dir, 0, 0, hinge_side); // open=0, on_stairs=0
 			door.for_jail = 1;
 			door.conn_room[0] = door.conn_room[1] = room_id; // both sides connect to the same room
-			set_wall_width(door, cell_center, 0.5*jail_door_width, dim);
+			set_wall_width(door, door_center, 0.5*jail_door_width, dim);
 			cube_t bar_segs[2] = {bars, bars};
 			bar_segs[0].d[dim][1] = door.d[dim][0]; // lo side
 			bar_segs[1].d[dim][0] = door.d[dim][1]; // hi side
