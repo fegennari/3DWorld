@@ -2389,9 +2389,9 @@ struct building_t : public building_geom_t {
 	void register_player_change_floor(unsigned old_floor, unsigned new_floor) const;
 	void register_player_enter_building() const;
 	void register_player_exit_building (bool entered_another_building) const;
-	bool check_for_wall_ceil_floor_int(point const &p1, point const &p2, bool inc_pg_br_walls=1) const;
-	bool line_intersect_jail_bars(point const &p1, point const &p2) const;
-	bool line_intersect_stairs_or_ramp(point const &p1, point const &p2, bool skip_u_stairs=0) const;
+	bool check_for_wall_ceil_floor_int (point const &p1, point const &p2, bool inc_pg_br_walls=1) const;
+	bool line_intersect_jail_walls_bars(point const &p1, point const &p2) const;
+	bool line_intersect_stairs_or_ramp (point const &p1, point const &p2, bool skip_u_stairs=0) const;
 	bool check_cube_on_or_near_stairs(cube_t const &c) const;
 	bool drop_room_object(room_object_t &obj, point const &dest, point const &player_pos, bool dim, bool dir);
 	bool maybe_use_last_pickup_room_object(point const &player_pos, bool no_time_check=0, bool random_dir=0);

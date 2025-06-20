@@ -2382,7 +2382,7 @@ bool building_t::check_for_wall_ceil_floor_int(point const &p1, point const &p2,
 		}
 	}
 	if (check_line_int_interior_window(p1, p2)) return 1;
-	if (line_intersect_jail_bars      (p1, p2)) return 1;
+	if (line_intersect_jail_walls_bars(p1, p2)) return 1;
 
 	if (has_mall()) { // check closed mall store gates
 		for (store_doorway_t const &d : interior->mall_info->store_doorways) {
@@ -2394,12 +2394,12 @@ bool building_t::check_for_wall_ceil_floor_int(point const &p1, point const &p2,
 	}
 	return 0;
 }
-bool building_t::line_intersect_jail_bars(point const &p1, point const &p2) const {
+bool building_t::line_intersect_jail_walls_bars(point const &p1, point const &p2) const {
 	if (!has_room_geom() || !interior->has_jail) return 0;
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
-		if (i->type == TYPE_JAIL_BARS && i->line_intersects(p1, p2)) return 1;
+		if ((i->type == TYPE_JAIL_BARS || i->type == TYPE_PG_WALL) && i->line_intersects(p1, p2)) return 1;
 	}
 	return 0;
 }
