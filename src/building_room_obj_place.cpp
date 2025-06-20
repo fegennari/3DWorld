@@ -3102,7 +3102,7 @@ bool building_t::add_jail_objs(rand_gen_t rgen, room_t const &room, float &zval,
 	colorRGBA const bar_color(bar_lum, bar_lum, bar_lum);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	end_doors_span.expand_in_dim(!dim, 0.35*door_width); // add side padding for door frame, etc.
-	bool added_cell(0);
+	bool added_cell(0), added_lock(0);
 
 	for (unsigned dir = 0; dir < 2; ++dir) { // for each side of the room
 		float const wall_pos(end_doors_span.d[!dim][dir]);
@@ -3138,7 +3138,13 @@ bool building_t::add_jail_objs(rand_gen_t rgen, room_t const &room, float &zval,
 			}
 			door.d[!dim][0] = door.d[!dim][1] = bars_depth; // shrink to zero width
 			door.set_for_closet(); // flag so that we don't try to add a light switch by this door, etc.
+			unsigned const door_ix(interior->doors.size());
 			add_interior_door(door, 0, 1, 1); // is_bathroom=0, make_unlocked=1, make_closed=1
+
+			if (rgen.rand_bool()) {
+				add_padlock_to_door(door_ix, 1, rgen); // lock_color_mask=1 => only silver color
+				added_lock = 1;
+			}
 			// maybe add divider wall
 			if (n > 0) {
 				cube_t wall(cell);
@@ -3206,6 +3212,9 @@ bool building_t::add_jail_objs(rand_gen_t rgen, room_t const &room, float &zval,
 		} // for n
 		added_cell = 1;
 	} // for dir
+	if (added_lock) { // a door lock was added; add a key hanging on the wall
+		// TODO: TYPE_KEY
+	}
 	if (added_cell) {interior->room_geom->jails.push_back(room);} // needed for door open logic
 	interior->has_jail |= added_cell;
 	return added_cell;
@@ -5747,7 +5756,7 @@ bool building_t::add_padlock_to_door(unsigned door_ix, unsigned lock_color_mask,
 		for (unsigned n = 0; n < NUM_LOCK_COLORS; ++n) {
 			if (lock_color_mask & (1 << n)) {avail_colors.push_back(n);}
 		}
-		color_ix = avail_colors[rgen.rand() % avail_colors.size()];
+		color_ix = avail_colors[(avail_colors.size() == 1) ? 0 : (rgen.rand() % avail_colors.size())];
 	}
 	door.obj_ix = objs.size();
 	door.set_padlock_color_ix(color_ix); // padlocked
@@ -5755,16 +5764,18 @@ bool building_t::add_padlock_to_door(unsigned door_ix, unsigned lock_color_mask,
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_PADLOCK)); // D, W, H
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	float const door_width(door_bc.get_sz_dim(!door.dim)), door_height(door_bc.dz());
-	float const height(0.078*door_height), hwidth(0.5*height*sz.y/sz.z), depth(height*sz.x/sz.z);
+	float const height((door.for_jail ? 0.09 : 0.078)*door_height), hwidth(0.5*height*sz.y/sz.z), depth(height*sz.x/sz.z);
+	float const edge_dist(door.for_jail ? 0.088 : 0.062);
 	bool const side(door.get_check_dirs());
 	cube_t lock;
-	lock.z1() = door.z1() + 0.41*door_height;
+	lock.z1() = door.z1() + (door.for_jail ? 0.38 : 0.41)*door_height;
 	lock.z2() = lock.z1() + height;
-	set_wall_width(lock, (door_bc.d[!door.dim][0] + (side ? 0.062 : 0.938)*door_width), hwidth, !door.dim);
+	set_wall_width(lock, (door_bc.d[!door.dim][0] + (side ? edge_dist : (1.0 - edge_dist))*door_width), hwidth, !door.dim);
 	colorRGBA const color(lock_colors[color_ix]);
 
 	// since we don't know which side of the door the player will be on, add the padlock to both sides
 	for (unsigned d = 0; d < 2; ++d) {
+		if (door.for_jail && bool(d) == door.open_dir) continue; // no padlock on the inside/cell side of the door
 		float const pos(door_bc.d[door.dim][!d]);
 		lock.d[door.dim][ d] = pos;
 		lock.d[door.dim][!d] = pos + (d ? -1.0 : 1.0)*depth;
