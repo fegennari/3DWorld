@@ -1379,7 +1379,7 @@ void building_room_geom_t::create_door_vbos(building_t const &building) {
 		door_rotation_t drot;
 
 		if (d.for_jail) { // jail cell metal door
-			add_jail_cell_door(d);
+			add_jail_cell_door(d, drot);
 		}
 		else { // normal interior door
 			building.add_door_verts(d, *this, drot, door_type, d.dim, d.open_dir, d.open_amt, 0, 0,
@@ -1389,7 +1389,7 @@ void building_room_geom_t::create_door_vbos(building_t const &building) {
 		if (!global_building_params.add_door_handles) continue;
 		if (d.on_stairs) continue; // skip basement stairs doors since they're not drawn when open anyway
 		
-		if (d.for_jail) {} // no handle?
+		if (d.for_jail) {} // handle drawn inside add_jail_cell_door
 		else if (have_door_handle_model) { // add model to door_handles
 			bool const handle_side(d.get_handle_side());
 			float const handle_height(0.04*d.dz());
@@ -1412,6 +1412,7 @@ void building_room_geom_t::create_door_vbos(building_t const &building) {
 				do_xy_rotate_normal(sin_term, cos_term, handle_dir);
 			}
 			for (unsigned side = 0; side < 2; ++side) {
+				//if (d.for_jail && bool(side) != d.open_dir) continue; // no handle on the inside/cell side of the door
 				point side_pos(handle_center);
 				side_pos[d.dim] += (side ? 1.0 : -1.0)*0.68*handle_height;
 

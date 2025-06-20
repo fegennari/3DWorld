@@ -3078,7 +3078,7 @@ bool building_t::add_jail_objs(rand_gen_t rgen, room_t const &room, float &zval,
 	colorRGBA const &light_color, light_ix_assign_t &light_ix_assign)
 {
 	float const floor_spacing(get_window_vspace()), dx(room.dx()), dy(room.dy());
-	if (min(dx, dy) < 2.0*floor_spacing || max(dx, dy) < 2.4*floor_spacing) return 0; // too small
+	if (min(dx, dy) < 2.4*floor_spacing || max(dx, dy) < 3.0*floor_spacing) return 0; // too small
 	bool const dim(dx < dy); // long dim
 	vect_door_stack_t const &doorways(get_doorways_for_room(room, zval)); // don't need to handle individual doors here
 	if (doorways.empty()) return 0; // error?
@@ -3093,7 +3093,8 @@ bool building_t::add_jail_objs(rand_gen_t rgen, room_t const &room, float &zval,
 	float const door_width(get_doorway_width()), wall_thick(get_wall_thickness()), wall_hthick(0.5*wall_thick), trim_thick(get_trim_thickness());
 	cube_t room_bounds(get_walkable_room_bounds(room));
 	set_cube_zvals(room_bounds, zval, (zval + get_floor_ceil_gap()));
-	float const room_len(room_bounds.get_sz_dim(dim)), room_center(room.get_center_dim(dim)), min_cell_len(1.2*floor_spacing), jail_door_width(0.8*door_width);
+	float const room_len(room_bounds.get_sz_dim(dim)), room_center(room.get_center_dim(dim)), min_cell_len(1.25*floor_spacing);
+	float const jail_door_width(0.9*door_width); // about the min size that male people/zombies can fit through
 	unsigned const num_cells(room_len/min_cell_len);
 	assert(num_cells > 0);
 	float const cell_len(room_len/num_cells); // includes walls between cells
@@ -3108,7 +3109,7 @@ bool building_t::add_jail_objs(rand_gen_t rgen, room_t const &room, float &zval,
 		cube_t cell_area(room_bounds);
 		cell_area.d[!dim][!dir] = wall_pos; // clip off the hallway
 		float const cell_depth(cell_area.get_sz_dim(!dim));
-		if (cell_depth < 0.75*floor_spacing) continue; // too narrow
+		if (cell_depth < 0.9*floor_spacing) continue; // too narrow
 		float const dsign(dir ? 1.0 : -1.0), bars_depth((wall_pos + dsign*wall_hthick)), bars_hthick(0.2*wall_thick);
 		bool const bed_side(rgen.rand_bool());
 		cube_t cell(cell_area);
@@ -3175,7 +3176,8 @@ bool building_t::add_jail_objs(rand_gen_t rgen, room_t const &room, float &zval,
 				ladder.d[ dim][!bed_side] = bed_edge + (bed_side ? -1.0 : 1.0)*0.4*wall_thick; // set depth
 				ladder.d[!dim][ dir]  = bed2.d[!dim][!dir] + dsign*0.2*bed2.get_sz_dim(!dim);
 				ladder.d[!dim][!dir] += dsign*0.25*wall_thick; // move away from footboard
-				objs.emplace_back(ladder, TYPE_INT_LADDER, room_id, dim, bed_side, (RO_FLAG_IN_FACTORY | RO_FLAG_NOCOLL), tot_light_amt); // metal, like factory ladder
+				unsigned const flags(RO_FLAG_IN_FACTORY | RO_FLAG_NOCOLL);
+				objs.emplace_back(ladder, TYPE_INT_LADDER, room_id, dim, bed_side, flags, tot_light_amt, SHAPE_CUBE, GRAY); // metal, like factory ladder
 			}
 			// add toilet on the far wall and sink to the side
 			cube_t ts_space(cell);

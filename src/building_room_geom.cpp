@@ -6487,19 +6487,41 @@ void building_room_geom_t::add_door_handle(door_t const &door, door_rotation_t c
 	maybe_rotate_door_verts(mat.quad_verts, qv_start, door, drot);
 }
 
-void building_room_geom_t::add_jail_cell_door(door_t const &D) {
-	bool const rusty(D.conn_room[0] & 1); // 50% chance; same as jail bars
-	float const height(D.dz()), tscale(4.0/height);
+void building_room_geom_t::add_jail_cell_door(door_t const &D, door_rotation_t &drot) {
+	bool const dim(D.dim), rusty(D.conn_room[0] & 1); // 50% chance; same as jail bars
+	float const height(D.dz()), width(D.get_width()), tscale(4.0/height);
 	rgeom_mat_t &mat(mats_doors.get_material((rusty ? tid_nm_pair_t(get_rust_met_tid(), tscale, 1) : get_scratched_metal_tex(tscale, 1)), 1)); // shadowed
 	float const thickness(D.get_thickness()), vbar_hthick(0.2*thickness), hbar_hthick(0.15*thickness);
-	unsigned const num_vbars(max(2U, unsigned(10*D.get_width()/height))), qv_start(mat.quad_verts.size());
+	unsigned const num_vbars(max(2U, unsigned(10*width/height))), qv_start(mat.quad_verts.size());
 	assert(thickness > 0.0);
-	add_grid_of_bars(mat, LT_GRAY, D.get_true_bcube(), num_vbars, 5, vbar_hthick, hbar_hthick, 2, !D.dim, D.dim, -0.2*thickness); // h-bars thinner
+	cube_t const c(D.get_true_bcube());
+	colorRGBA const color(LT_GRAY);
+	add_grid_of_bars(mat, color, c, num_vbars, 5, vbar_hthick, hbar_hthick, 2, !dim, dim, -0.2*thickness); // h-bars thinner
 	// add lock plate
-	// TODO
+	bool const handle_side(D.get_handle_side());
+	point const origin(c.get_llc());
+	cube_t plate(c);
+	plate.expand_in_dim(2,  -0.43*height); // shrink in Z
+	plate.expand_in_dim(dim, 0.15*thickness); // expand outside door
+	plate.d[!dim][!handle_side] = c.d[!dim][handle_side] - (handle_side ? 1.0 : -1.0)*0.28*width;
+	mat.add_cube_to_verts(plate, color, origin, 0); // draw all faces
+	// add door handle
+	float const plate_front(c.d[dim][D.open_dir]);
+	cube_t handle(plate);
+	handle.d[dim][!D.open_dir] = plate_front;
+	handle.d[dim][ D.open_dir] = plate_front + (D.open_dir ? 1.0 : -1.0)*0.07*width; // extend outward
+	handle.expand_in_dim(2,    -0.2*plate.dz()); // shrink in Z
+	handle.expand_in_dim(!dim, -0.435*plate.get_sz_dim(!dim)); // shrink width
+	handle.translate_dim(!dim, (handle_side ? 1.0 : -1.0)*0.05*width); // closer to the outside edge
+	float const handle_thick(0.4*handle.get_sz_dim(!dim));
+	cube_t hbot(handle), htop(handle), hext(handle);
+	hbot.z2() = hext.z1()    = handle.z1() + handle_thick;
+	htop.z1() = hext.z2()    = handle.z2() - handle_thick;
+	hext.d[dim][!D.open_dir] = handle.d[dim][D.open_dir] - (D.open_dir ? 1.0 : -1.0)*handle_thick;
+	unsigned const skip_inner(~get_face_mask(dim, !D.open_dir));
+	for (unsigned bt = 0; bt < 2; ++bt) {mat.add_cube_to_verts((bt ? htop : hbot), color, origin, skip_inner);}
+	mat.add_cube_to_verts(hext, color, origin, EF_Z12);
 	// rotate door if open
-	door_rotation_t drot;
-	//drot.shift = 0.07*signed_width*D.open_amt;
 	drot.angle = 135.0*D.open_amt; // opens 135 degrees
 	maybe_rotate_door_verts(mat.quad_verts, qv_start, D, drot);
 }
