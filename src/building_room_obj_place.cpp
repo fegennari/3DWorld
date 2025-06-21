@@ -3111,18 +3111,20 @@ bool building_t::add_jail_objs(rand_gen_t rgen, room_t const &room, float &zval,
 		float const cell_depth(cell_area.get_sz_dim(!dim));
 		if (cell_depth < 0.9*floor_spacing) continue; // too narrow
 		float const dsign(dir ? 1.0 : -1.0), bars_depth((wall_pos + dsign*wall_hthick)), bars_hthick(0.2*wall_thick);
+		bool const sink_on_back_wall(cell_depth < 0.67*cell_len); // wide and shallow cell
 		cube_t cell(cell_area);
 
 		for (unsigned n = 0; n < num_cells; ++n) {
-			float const lo_edge(room_bounds.d[dim][0] + n*cell_len);
+			float const lo_edge(room_bounds.d[dim][0] + n*cell_len), div_wall_hwidth(sink_on_back_wall ? bars_hthick : wall_hthick);
 			cell.d[dim][0] = lo_edge;
 			cell.d[dim][1] = lo_edge + cell_len;
-			if (n   > 0        ) {cell.d[dim][0] += wall_hthick;} // reserve space for walls
-			if (n+1 < num_cells) {cell.d[dim][1] -= wall_hthick;}
+			if (n   > 0        ) {cell.d[dim][0] += div_wall_hwidth;} // reserve space for walls/bars
+			if (n+1 < num_cells) {cell.d[dim][1] -= div_wall_hwidth;}
 			// add bars and door
 			float const cell_center(cell.get_center_dim(dim));
 			bool const hinge_side((room_center < cell_center) ^ bool(dir) ^ 1), bed_side(!hinge_side); // door opens toward hallway center
-			float const door_center(cell_center + (bed_side ? -1.0 : 1.0)*0.1*door_width); // slightly away from bed and room door
+			float const bss(bed_side ? 1.0 : -1.0);
+			float const door_center(cell_center - bss*0.1*door_width); // slightly away from bed and room door
 			cube_t bars(cell);
 			set_wall_width(bars, bars_depth, bars_hthick, !dim);
 			door_t door(bars, !dim, !dir, 0, 0, hinge_side); // open=0, on_stairs=0
@@ -3147,10 +3149,17 @@ bool building_t::add_jail_objs(rand_gen_t rgen, room_t const &room, float &zval,
 			}
 			// maybe add divider wall
 			if (n > 0) {
-				unsigned const flags(is_house ? 0 : RO_FLAG_BACKROOM); // flag as backroom for concrete texture in office buildings
 				cube_t wall(cell);
-				set_wall_width(wall, lo_edge, wall_hthick, dim);
-				objs.emplace_back(wall, TYPE_PG_WALL, room_id, dim, 0, flags, tot_light_amt, SHAPE_CUBE, WHITE); // dir=0
+				set_wall_width(wall, lo_edge, div_wall_hwidth, dim);
+
+				if (sink_on_back_wall) { // add bars between the cells
+					wall.d[!dim][!dir] = bars.d[!dim][!dir]; // flush with the bars
+					objs.emplace_back(wall, TYPE_JAIL_BARS, room_id, dim, 0, 0, tot_light_amt, SHAPE_CUBE, bar_color); // dir=0
+				}
+				else { // sink on side wall; must place a wall to hold the pipes
+					unsigned const flags(is_house ? 0 : RO_FLAG_BACKROOM); // flag as backroom for concrete texture in office buildings
+					objs.emplace_back(wall, TYPE_PG_WALL, room_id, dim, 0, flags, tot_light_amt, SHAPE_CUBE, WHITE); // dir=0
+				}
 			}
 			// add a small light in each cell
 			cube_t light(cube_top_center(cell));
@@ -3164,7 +3173,7 @@ bool building_t::add_jail_objs(rand_gen_t rgen, room_t const &room, float &zval,
 			bed.z2() = zval + 0.32*floor_spacing; // set height
 			float const gap_len(bed.get_sz_dim(!dim)), bed_to_bars_gap(max((gap_len - 0.9*floor_spacing), (bars_hthick + 0.5*wall_thick)));
 			bed.d[!dim][!dir] = bars_depth + dsign*bed_to_bars_gap; // set length
-			bed.d[ dim][!bed_side] = bed.d[dim][bed_side] + (bed_side ? -1.0 : 1.0)*0.5*bed.get_sz_dim(!dim); // set width to half length
+			bed.d[ dim][!bed_side] = bed.d[dim][bed_side] - bss*0.5*bed.get_sz_dim(!dim); // set width to half length
 			objs.emplace_back(bed, TYPE_BED, room_id, !dim, dir, RO_FLAG_IN_JAIL, tot_light_amt);
 
 			if (rgen.rand_bool()) { // make this a bunk bed; set per-room/row?
@@ -3180,22 +3189,24 @@ bool building_t::add_jail_objs(rand_gen_t rgen, room_t const &room, float &zval,
 				ladder.z1()  = zval; // down to the floor
 				ladder.z2() -= 0.05*bed2.dz(); // lower to just above mattress level
 				ladder.d[ dim][ bed_side] = bed_edge;
-				ladder.d[ dim][!bed_side] = bed_edge + (bed_side ? -1.0 : 1.0)*0.4*wall_thick; // set depth
+				ladder.d[ dim][!bed_side] = bed_edge - bss*0.4*wall_thick; // set depth
 				ladder.d[!dim][ dir]  = bed2.d[!dim][!dir] + dsign*0.2*bed2.get_sz_dim(!dim);
 				ladder.d[!dim][!dir] += dsign*0.25*wall_thick; // move away from footboard
 				unsigned const flags(RO_FLAG_IN_FACTORY | RO_FLAG_NOCOLL);
 				objs.emplace_back(ladder, TYPE_INT_LADDER, room_id, dim, bed_side, flags, tot_light_amt, SHAPE_CUBE, GRAY); // metal, like factory ladder
 			}
-			// add toilet on the far wall and sink to the side
-			cube_t ts_space(cell);
+			// add toilet on the far wall and sink to the side or next to the toilet
+			cube_t ts_space(cell); // toilet and sink space
 			ts_space.d[dim][bed_side] = bed.d[dim][!bed_side]; // the part not occupied by the bed
+			float const space_width(ts_space.get_sz_dim(dim));
 
 			if (building_obj_model_loader.is_model_valid(OBJ_MODEL_TOILET)) {
 				vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TOILET)); // L, W, H
 				float const height(0.35*floor_spacing), width(height*sz.y/sz.z), length(height*sz.x/sz.z);
+				float const center_pos(ts_space.d[dim][bed_side] - (sink_on_back_wall ? 0.7 : 0.5)*bss*space_width); // further from the bed if there's a sink on the wall
 				cube_t toilet(ts_space);
 				toilet.z2() = zval + height;
-				set_wall_width(toilet, ts_space.get_center_dim(dim), 0.5*width, dim);
+				set_wall_width(toilet, center_pos, 0.5*width, dim);
 				toilet.d[!dim][!dir] = ts_space.d[!dim][dir] - dsign*length;
 				objs.emplace_back(toilet, TYPE_TOILET, room_id, !dim, !dir, 0, tot_light_amt);
 				add_bathroom_plumbing(objs.back());
@@ -3205,9 +3216,18 @@ bool building_t::add_jail_objs(rand_gen_t rgen, room_t const &room, float &zval,
 				float const height(0.45*floor_spacing), width(height*sz.y/sz.z), depth(height*sz.x/sz.z);
 				cube_t sink(ts_space);
 				sink.z2() = zval + height;
-				set_wall_width(sink, ts_space.get_center_dim(!dim), 0.5*width, !dim);
-				sink.d[dim][bed_side] = ts_space.d[dim][!bed_side] + (bed_side ? 1.0 : -1.0)*depth;
-				objs.emplace_back(sink, TYPE_SINK, room_id, dim, bed_side, 0, tot_light_amt);
+
+				if (sink_on_back_wall) {
+					float const center_pos(ts_space.d[dim][bed_side] - 0.3*bss*space_width); // closer to the bed
+					set_wall_width(sink, center_pos, 0.5*width, dim);
+					sink.d[!dim][!dir] = ts_space.d[!dim][dir] - dsign*depth;
+					objs.emplace_back(sink, TYPE_SINK, room_id, !dim, !dir, 0, tot_light_amt);
+				}
+				else { // sink on side wall
+					set_wall_width(sink, ts_space.get_center_dim(!dim), 0.5*width, !dim);
+					sink.d[dim][bed_side] = ts_space.d[dim][!bed_side] + bss*depth;
+					objs.emplace_back(sink, TYPE_SINK, room_id, dim, bed_side, 0, tot_light_amt);
+				}
 				add_bathroom_plumbing(objs.back());
 			}
 		} // for n
