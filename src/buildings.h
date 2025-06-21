@@ -482,11 +482,13 @@ struct draw_range_t {
 
 // building types/functions; these are for primary buildings, not basements/rooms (such as malls or parking garages)
 enum {BTYPE_UNSET=0, BTYPE_HOUSE, BTYPE_MULT_FAM, BTYPE_OFFICE, BTYPE_APARTMENT, BTYPE_HOTEL, BTYPE_HOSPITAL, BTYPE_PARKING, BTYPE_MALL, BTYPE_FACTORY,
-	BTYPE_WAREHOUSE, BTYPE_POWERPLANT, BTYPE_SCHOOL, BTYPE_POLICE, BTYPE_FIRE_STAT, NUM_BUILDING_TYPES};
+	BTYPE_WAREHOUSE, BTYPE_POWERPLANT, BTYPE_SCHOOL, BTYPE_POLICE, BTYPE_FIRE_STAT, BTYPE_PRISON, NUM_BUILDING_TYPES};
 std::string const btype_names[NUM_BUILDING_TYPES] =
-{"", "House", "Multi-Family House", "Office", "Apartments", "Hotel", "Hospital", "Parking", "Mall", "Factory", "Warehouse", "Power Plant", "School", "Police Station", "Fire Station"};
+{"", "House", "Multi-Family House", "Office", "Apartments", "Hotel", "Hospital", "Parking", "Mall", "Factory", "Warehouse", "Power Plant",
+ "School", "Police Station", "Fire Station", "Prison"};
 colorRGBA const  btype_colors[NUM_BUILDING_TYPES] =
-{WHITE, WHITE, YELLOW,               WHITE,    GREEN,        GREEN,   BLUE,       BROWN,     ORANGE, RED,       RED,         RED,           PURPLE,   MAGENTA,          MAGENTA};
+{WHITE, WHITE, YELLOW,               WHITE,    GREEN,        GREEN,   BLUE,       BROWN,     ORANGE, RED,       RED,         RED,
+ PURPLE,   MAGENTA,          MAGENTA,        BLACK};
 typedef uint8_t building_type_t;
 
 enum { // room object types
