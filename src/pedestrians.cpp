@@ -297,12 +297,12 @@ cube_t person_base_t::get_bcube() const {
 	cube_t c(pos);
 
 	if (lying_down) {
-		bool const dim(fabs(dir.x) < fabs(dir.y)), dir(dir[dim] > 0);
+		bool const dim(fabs(dir.x) < fabs(dir.y)), pdir(dir[dim] > 0);
 		float const hmr(get_height() - radius); // head
 		c.expand_in_dim(!dim, hwidth);
 		c.expand_in_dim(2,    hwidth);
-		c.d[dim][0] -= (dir ? radius : hmr);
-		c.d[dim][1] += (dir ? hmr : radius);
+		c.d[dim][0] -= (pdir ? radius : hmr);
+		c.d[dim][1] += (pdir ? hmr : radius);
 	}
 	else { // standing up
 		c.expand_by_xy(hwidth);
