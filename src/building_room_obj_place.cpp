@@ -3147,9 +3147,10 @@ bool building_t::add_jail_objs(rand_gen_t rgen, room_t const &room, float &zval,
 			}
 			// maybe add divider wall
 			if (n > 0) {
+				unsigned const flags(is_house ? 0 : RO_FLAG_BACKROOM); // flag as backroom for concrete texture in office buildings
 				cube_t wall(cell);
 				set_wall_width(wall, lo_edge, wall_hthick, dim);
-				objs.emplace_back(wall, TYPE_PG_WALL, room_id, dim, 0, 0, tot_light_amt, SHAPE_CUBE, WHITE);
+				objs.emplace_back(wall, TYPE_PG_WALL, room_id, dim, 0, flags, tot_light_amt, SHAPE_CUBE, WHITE); // dir=0
 			}
 			// add a small light in each cell
 			cube_t light(cube_top_center(cell));
