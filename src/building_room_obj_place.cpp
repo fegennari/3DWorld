@@ -12,6 +12,7 @@ extern object_model_loader_t building_obj_model_loader;
 extern bldg_obj_type_t bldg_obj_types[];
 
 bool enable_parked_cars();
+bool has_key_3d_model();
 car_t car_from_parking_space(room_object_t const &o);
 void get_stove_burner_locs(room_object_t const &stove, point locs[4]);
 void get_pool_ball_rot_matrix(room_object_t const &c, xform_matrix &rot_matrix);
@@ -3082,18 +3083,21 @@ bool building_t::add_jail_objs(rand_gen_t rgen, room_t const &room, float &zval,
 	bool const dim(dx < dy); // long dim
 	vect_door_stack_t const &doorways(get_doorways_for_room(room, zval)); // don't need to handle individual doors here
 	if (doorways.empty()) return 0; // error?
+	float const room_center(room.get_center_dim(dim));
 	cube_t end_doors_span;
+	bool door_at_end[2] = {0,0};
 
 	for (door_stack_t const &ds : doorways) {
 		if (ds.dim != dim) return 0; // not handling doors in long sides of the room yet
 		end_doors_span.assign_or_union_with_cube(ds.get_true_bcube());
+		door_at_end[room_center < ds.get_center_dim(dim)] = 1; // assumes one door per room end
 	}
 	assert(!end_doors_span.is_all_zeros()); // no doors for this room?
 	if (is_house) {zval = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_CONCRETE);} // add concrete over the carpet (even if we don't make it a jail)
 	float const door_width(get_doorway_width()), wall_thick(get_wall_thickness()), wall_hthick(0.5*wall_thick), trim_thick(get_trim_thickness());
 	cube_t room_bounds(get_walkable_room_bounds(room));
 	set_cube_zvals(room_bounds, zval, (zval + get_floor_ceil_gap()));
-	float const room_len(room_bounds.get_sz_dim(dim)), room_center(room.get_center_dim(dim)), min_cell_len(1.25*floor_spacing);
+	float const room_len(room_bounds.get_sz_dim(dim)), min_cell_len(1.25*floor_spacing);
 	float const jail_door_width(0.9*door_width); // about the min size that male people/zombies can fit through
 	unsigned const num_cells(room_len/min_cell_len);
 	assert(num_cells > 0);
@@ -3102,6 +3106,7 @@ bool building_t::add_jail_objs(rand_gen_t rgen, room_t const &room, float &zval,
 	colorRGBA const bar_color(bar_lum, bar_lum, bar_lum);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	end_doors_span.expand_in_dim(!dim, 0.35*door_width); // add side padding for door frame, etc.
+	unsigned const lock_color_ix(rgen.rand_bool() ? 7 : 1); // black or brown, since they look good on walls and cell doors
 	bool added_cell(0), added_lock(0);
 
 	for (unsigned dir = 0; dir < 2; ++dir) { // for each side of the room
@@ -3144,7 +3149,7 @@ bool building_t::add_jail_objs(rand_gen_t rgen, room_t const &room, float &zval,
 			add_interior_door(door, 0, 1, 1); // is_bathroom=0, make_unlocked=1, make_closed=1
 
 			if (rgen.rand_bool()) {
-				add_padlock_to_door(door_ix, 1, rgen); // lock_color_mask=1 => only silver color
+				add_padlock_to_door(door_ix, (1 << lock_color_ix), rgen); // force lock_color_ix
 				added_lock = 1;
 			}
 			// maybe add divider wall
@@ -3243,8 +3248,28 @@ bool building_t::add_jail_objs(rand_gen_t rgen, room_t const &room, float &zval,
 	} // for dir
 	if (!added_cell) return 0; // not a jail
 
-	if (added_lock) { // a door lock was added; add a key hanging on the wall
-		// TODO: TYPE_KEY
+	if (added_lock && has_key_3d_model()) { // a door lock was added; add a key hanging on the wall opposite the door if there's a single door
+		for (unsigned d = 0; d < 2; ++d) {
+			if (door_at_end[d]) continue; // blocked by the door; there should be at least one end door
+			float const key_sz(0.018*floor_spacing), xlate((d ? -1.0 : 1.0)*0.4*key_sz);
+			point key_pos;
+			key_pos.z = zval + 0.55*floor_spacing;
+			key_pos[ dim] = room_bounds.d[dim][d];
+			key_pos[!dim] = end_doors_span.get_center_dim(!dim);
+			cube_t key(key_pos);
+			key.expand_by(key_sz); // make it square since it's small, to avoid all of the orient logic
+			key.translate_dim(dim, xlate); // move inside the wall
+			objs.emplace_back(key, TYPE_KEY, room_id, dim, d, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), tot_light_amt, SHAPE_CUBE, lock_colors[lock_color_ix]);
+			objs.back().obj_id = lock_color_ix;
+			// add nail to place the key on
+			float const nail_radius(0.14*key_sz);
+			key_pos.z += 1.7*key_sz;
+			cube_t nail(key_pos);
+			nail.expand_in_dim(2,    nail_radius);
+			nail.expand_in_dim(!dim, nail_radius);
+			nail.d[dim][!d] += 2.5*xlate;
+			objs.emplace_back(nail, TYPE_METAL_BAR, room_id, dim, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, DK_GRAY);
+		} // for d
 	}
 	interior->room_geom->jails.push_back(room); // needed for door open logic
 	interior->has_jail = 1;

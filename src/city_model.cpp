@@ -306,7 +306,7 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	translate_to(pos + z_offset*sz_scale*plus_z - local_rotate); // z_offset is in model space, scale to world space
 	rotate_model_from_plus_x_to_dir(dir); // typically rotated about the Z axis
 	if (local_rotate != all_zeros) {translate_to(local_rotate);}
-	if (dir.z != 0.0) {fgRotate(TO_DEG*asinf(-dir.z), 0.0, 1.0, 0.0);} // handle cars on a slope
+	if (dir.z != 0.0      ) {fgRotate(TO_DEG*asinf(-dir.z), 0.0, 1.0, 0.0);} // handle cars on a slope
 	if (do_mirror         ) {fgScale(((mirror_dim == 0) ? -1.0 : 1.0), ((mirror_dim == 1) ? -1.0 : 1.0), ((mirror_dim == 2) ? -1.0 : 1.0));}
 	if (model_file.xy_rot != 0.0) {fgRotate(model_file.xy_rot, 0.0, 0.0, 1.0);} // apply model rotation about z/up axis (in degrees)
 	if (swap_xy_mode      ) {fgRotate(-90.0, 1.0, 0.0, 0.0);} // swap Y and Z dirs - in both cases?

@@ -2107,7 +2107,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		if (shadow_only) {
 			if (obj.type == TYPE_CEIL_FAN) continue; // not shadow casting; would shadow its own light
 			if (obj.is_exterior())         continue; // outdoors; no indoor shadow
-			if (obj.type == TYPE_KEY || obj.type == TYPE_SILVER || obj.type == TYPE_FOLD_SHIRT) continue; // small
+			if (obj.type == TYPE_KEY || obj.type == TYPE_SILVER || obj.type == TYPE_FOLD_SHIRT)         continue; // small
 			if (obj.z1() > camera_bs.z || (obj.z2() < two_floors_below && obj.type != TYPE_BLDG_FOUNT)) continue; // above or more than 2 floors below light, except mall fountains
 		}
 		else if ((obj.type == TYPE_SILVER /*|| obj.type == TYPE_FOLD_SHIRT*/) && camera_bs.z < obj.z1()) continue; // not visible from below (except on glass table?)
@@ -2246,18 +2246,26 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		} // for h
 	}
 	if (player_in_building) { // only drawn for the player building
-		if (!shadow_only && !reflection_pass) { // keys/silverware/folded shirt: not drawn in the shadow or reflection passes; no emissive or rotated objects
+		if (!shadow_only && !reflection_pass) {
+			// key/silverware/folded shirt: not drawn in the shadow or reflection passes; no emissive or rotated objects; no animations
 			for (auto i = model_objs.begin(); i != model_objs.end(); ++i) {
+				float const cull_dist(((i->type == TYPE_KEY) ? 200.0 : 100.0)*i->max_len());
 				point obj_center(i->get_cube_center());
 				if (is_rotated) {building.do_xy_rotate(building_center, obj_center);}
-				if (!shadow_only && !dist_less_than(camera_bs, obj_center, 100.0*i->max_len()))                    continue; // too far away
+				if (!shadow_only && !dist_less_than(camera_bs, obj_center, cull_dist))                             continue; // too far away
 				if (player_in_this_basement    && obj_center.z > ground_floor_z1)                                  continue; // player in basement, obj not
 				if (player_above_this_basement && obj_center.z < ground_floor_z1)                                  continue; // obj in basement, player not
 				if (!(is_rotated ? building.is_rot_cube_visible(*i, xlate) : camera_pdu.cube_visible(*i + xlate))) continue; // VFC
 				if (check_occlusion && building.check_obj_occluded(*i, camera_bs, oc, reflection_pass))            continue;
 				vector3d dir(i->get_dir());
 				if (is_rotated) {building.do_xy_rotate_normal(dir);}
-				building_obj_model_loader.draw_model(s, obj_center, *i, dir, i->color, xlate, i->get_model_id(), shadow_only, 0); // animations disabled
+				int swap_xy_mode(0);
+
+				if (i->type == TYPE_KEY && i->is_hanging()) { // make hanging key vertical
+					if (i->dim) {swap_xy_mode = 1;}
+					dir = plus_z;
+				}
+				building_obj_model_loader.draw_model(s, obj_center, *i, dir, i->color, xlate, i->get_model_id(), shadow_only, 0, nullptr, 0, 0, 0, 0, 0, 0, 3, 0, swap_xy_mode);
 				obj_drawn = 1;
 			} // for model_objs
 		}
