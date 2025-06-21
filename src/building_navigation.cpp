@@ -2856,9 +2856,14 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 			return AI_STOP;
 		}
 		if (!find_route_to_point(person, coll_dist, person.is_first_path, 0, person.path)) { // following_player=0
-			float const wait_time(is_single_large_room(person.cur_room) ? 0.1 : 0.5);
-			person.wait_for(wait_time); // stop for 0.5 second (0.1s for parking garage/backrooms/retail/mall), then try again
-			person.goal_type = GOAL_TYPE_NONE; // reset just to be safe
+			if (zombie_attack_mode && same_room_and_floor_as_player(person)) {
+				// don't wait if in the room with the player because this creates animation transition jitter
+			}
+			else {
+				float const wait_time(is_single_large_room(person.cur_room) ? 0.1 : 0.5);
+				person.wait_for(wait_time); // stop for 0.5 second (0.1s for parking garage/backrooms/retail/mall), then try again
+				person.goal_type = GOAL_TYPE_NONE; // reset just to be safe
+			}
 			return AI_WAITING;
 		}
 		if (has_rgeom) {person.is_first_path = 0;} // treat the path as the first path until room geom is generated
