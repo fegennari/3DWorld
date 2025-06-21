@@ -3210,6 +3210,14 @@ bool building_t::add_jail_objs(rand_gen_t rgen, room_t const &room, float &zval,
 				toilet.d[!dim][!dir] = ts_space.d[!dim][dir] - dsign*length;
 				objs.emplace_back(toilet, TYPE_TOILET, room_id, !dim, !dir, 0, tot_light_amt);
 				add_bathroom_plumbing(objs.back());
+				float const tp_zval(zval + 0.7*height), tp_length(0.18*height);
+
+				if (sink_on_back_wall) { // on the back wall, not on bars
+					add_tp_roll(cell, room_id, tot_light_amt, !dim, dir, tp_length, tp_zval, (toilet.d[dim][!bed_side] - bss*0.4*width));
+				}
+				else { // on the side wall next to the toilet
+					add_tp_roll(cell, room_id, tot_light_amt, dim, !bed_side, tp_length, tp_zval, toilet.get_center_dim(!dim));
+				}
 			}
 			if (building_obj_model_loader.is_model_valid(OBJ_MODEL_SINK)) {
 				vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SINK)); // L, W, H
