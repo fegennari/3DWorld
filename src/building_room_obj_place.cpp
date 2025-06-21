@@ -3155,7 +3155,7 @@ bool building_t::add_jail_objs(rand_gen_t rgen, room_t const &room, float &zval,
 			cube_t light(cube_top_center(cell));
 			light.z1() -= 0.01*floor_spacing;
 			light.expand_by_xy(0.06*floor_spacing);
-			objs.emplace_back(light, TYPE_LIGHT, room_id, dim, 0, RO_FLAG_NOCOLL, 0.0, SHAPE_CYLIN, light_color, 1); // dir=0 (unused), item_flags=1 for jail lights
+			objs.emplace_back(light, TYPE_LIGHT, room_id, dim, 0, RO_FLAG_NOCOLL, 0.0, SHAPE_CYLIN, light_color); // dir=0 (unused)
 			objs.back().obj_id = light_ix_assign.get_next_ix();
 			// add bed
 			cube_t bed(cell);
@@ -3212,12 +3212,14 @@ bool building_t::add_jail_objs(rand_gen_t rgen, room_t const &room, float &zval,
 		} // for n
 		added_cell = 1;
 	} // for dir
+	if (!added_cell) return 0; // not a jail
+
 	if (added_lock) { // a door lock was added; add a key hanging on the wall
 		// TODO: TYPE_KEY
 	}
-	if (added_cell) {interior->room_geom->jails.push_back(room);} // needed for door open logic
-	interior->has_jail |= added_cell;
-	return added_cell;
+	interior->room_geom->jails.push_back(room); // needed for door open logic
+	interior->has_jail = 1;
+	return 1;
 }
 
 void building_t::add_garage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt) {
