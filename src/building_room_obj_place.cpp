@@ -3075,7 +3075,7 @@ void building_t::add_buckets_to_room(rand_gen_t &rgen, cube_t place_area, float 
 }
 
 bool building_t::add_jail_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
-	colorRGBA const &light_color, light_ix_assign_t &light_ix_assign)
+	bool is_lit, colorRGBA const &light_color, light_ix_assign_t &light_ix_assign)
 {
 	float const floor_spacing(get_window_vspace()), dx(room.dx()), dy(room.dy());
 	if (min(dx, dy) < 2.4*floor_spacing || max(dx, dy) < 3.0*floor_spacing) return 0; // too small
@@ -3155,7 +3155,7 @@ bool building_t::add_jail_objs(rand_gen_t rgen, room_t const &room, float &zval,
 			cube_t light(cube_top_center(cell));
 			light.z1() -= 0.01*floor_spacing;
 			light.expand_by_xy(0.06*floor_spacing);
-			objs.emplace_back(light, TYPE_LIGHT, room_id, dim, 0, RO_FLAG_NOCOLL, 0.0, SHAPE_CYLIN, light_color); // dir=0 (unused)
+			objs.emplace_back(light, TYPE_LIGHT, room_id, dim, 0, (RO_FLAG_NOCOLL | (is_lit ? RO_FLAG_LIT : 0)), 0.0, SHAPE_CYLIN, light_color); // dir=0 (unused)
 			objs.back().obj_id = light_ix_assign.get_next_ix();
 			// add bed
 			cube_t bed(cell);

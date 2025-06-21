@@ -834,7 +834,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				}
 			}
 			if (!added_obj && is_ext_basement && rgen.rand_bool()) { // jail room
-				if (add_jail_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, color, light_ix_assign)) {
+				if (add_jail_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_lit, color, light_ix_assign)) {
 					r->assign_to(RTYPE_JAIL, f);
 					added_obj = no_whiteboard = is_jail = 1;
 				}

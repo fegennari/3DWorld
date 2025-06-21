@@ -113,7 +113,7 @@ bool building_t::toggle_room_light(point const &closest_to, bool sound_from_clos
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (!i->is_light_type() || (!inc_lamps && i->type == TYPE_LAMP)) continue; // not a light
 		if ( in_attic && !i->in_attic())        continue;
-		if (!in_attic && i->room_id != room_id) continue; // wrong room
+		if (!in_attic && i->room_id != room_id) continue; // wrong room; can we break once we've passed the room?
 		if (i->in_closet() != in_closet)        continue;
 		if (i->in_elevator())                   continue; // can't toggle elevator light
 		if (i->z2() < closest_to.z)             continue; // below the query pos; needed for malls
@@ -151,13 +151,14 @@ bool building_t::toggle_walkway_lights(point const &pos) {
 
 void building_t::toggle_light_object(room_object_t const &light, point const &sound_pos) { // called by the player
 	assert(has_room_geom());
+	bool const in_jail(light.z1() < ground_floor_z1 && get_room(light.room_id).get_room_type(0) == RTYPE_JAIL);
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 	bool updated(0), is_lamp(1);
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) { // toggle all lights on this floor of this room
-		if (!i->is_light_type() || i->room_id != light.room_id || !i->is_powered()) continue;
+		if (!i->is_light_type() || i->room_id != light.room_id || !i->is_powered()) continue; // can we break here if we passed the room?
 		if (light.in_closet() != i->in_closet()) continue; // closet + room light are toggled independently
-		if (i->z2() != light.z2()) continue; // Note: uses light z2 rather than z1 so that thin lights near doors are handled correctly
+		if (i->z2() != light.z2() && !in_jail)   continue; // Note: uses light z2 rather than z1 so that thin lights near doors are handled correctly, except for jails
 		i->toggle_lit_state(); // Note: doesn't update indir lighting
 		i->flags &= ~RO_FLAG_IS_ACTIVE; // disable motion detection feature if the player manually switches lights off
 		register_indir_lighting_state_change(i - interior->room_geom->objs.begin());
