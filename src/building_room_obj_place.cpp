@@ -3225,7 +3225,7 @@ bool building_t::add_jail_objs(rand_gen_t rgen, room_t const &room, float &zval,
 				}
 			}
 			if (building_obj_model_loader.is_model_valid(OBJ_MODEL_SINK)) {
-				vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SINK)); // L, W, H
+				vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SINK)); // D, W, H
 				float const height(0.45*floor_spacing), width(height*sz.y/sz.z), depth(height*sz.x/sz.z);
 				cube_t sink(ts_space);
 				sink.z2() = zval + height;
@@ -3257,13 +3257,13 @@ bool building_t::add_jail_objs(rand_gen_t rgen, room_t const &room, float &zval,
 			key_pos[ dim] = room_bounds.d[dim][d];
 			key_pos[!dim] = end_doors_span.get_center_dim(!dim);
 			cube_t key(key_pos);
-			key.expand_by(key_sz); // make it square since it's small, to avoid all of the orient logic
+			key.expand_by(key_sz*vector3d(0.7, 0.7, 2.0)); // make it square in XY since it's small, to avoid all of the orient logic, but make it larger in Z
 			key.translate_dim(dim, xlate); // move inside the wall
 			objs.emplace_back(key, TYPE_KEY, room_id, dim, d, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), tot_light_amt, SHAPE_CUBE, lock_colors[lock_color_ix]);
 			objs.back().obj_id = lock_color_ix;
 			// add nail to place the key on
 			float const nail_radius(0.14*key_sz);
-			key_pos.z += 1.7*key_sz;
+			key_pos.z += 1.96*key_sz;
 			cube_t nail(key_pos);
 			nail.expand_in_dim(2,    nail_radius);
 			nail.expand_in_dim(!dim, nail_radius);
