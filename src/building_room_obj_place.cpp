@@ -5055,7 +5055,9 @@ cube_t building_t::get_light_switch_bounds(float floor_zval, float wall_edge, fl
 	set_wall_width(c, wall_pos, 0.5*wall_thickness, !dim);
 	return c;
 }
-void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start, bool is_ground_floor, bool is_basement) {
+void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start,
+	bool is_ground_floor, bool is_basement, bool is_jail)
+{
 	float const wall_thickness(get_wall_thickness()), switch_hwidth(0.5*wall_thickness);
 	cube_t const room_bounds(get_walkable_room_bounds(room));
 	if (min(room_bounds.dx(), room_bounds.dy()) < 8.0*switch_hwidth) return; // room is too small; shouldn't happen
@@ -5095,7 +5097,7 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 			float const dir_sign(dir ? -1.0 : 1.0), door_width(i->get_width());
 			assert(door_width > 0.0);
 			bool const is_gdoor(ei == 0 && (garage_door_mask & (1 << (i - cands.begin()))));
-			float const nom_width(is_gdoor ? 0.25*get_doorway_width() : door_width); // use small door width for garage doors
+			float const nom_width(is_gdoor ? 0.25*get_doorway_width() : (is_jail ? 0.75 : 1.0)*door_width); // use small door width for garage doors and closer dist for jails
 			float const near_spacing(0.25*nom_width), far_spacing(1.25*nom_width); // off to side of door when open
 			float const min_wall_spacing(switch_hwidth + (is_gdoor ? 0.5 : 2.0)*wall_thickness); // reduced spacing for garage doors
 			cube_t const &wall_bounds(ei ? room_bounds : room); // exterior door should use the original room, not room_bounds
