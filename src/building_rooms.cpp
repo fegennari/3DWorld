@@ -1684,7 +1684,7 @@ void building_t::add_padlocks(rand_gen_t rgen) {
 		return;
 	}
 	for (auto d = interior->doors.begin(); d != interior->doors.end(); ++d) {
-		if (d->open || !d->locked || rgen.rand_bool()) continue;
+		if (d->open || !d->locked || d->for_jail || rgen.rand_bool()) continue;
 		unsigned const door_ix(d - interior->doors.begin());
 		unsigned key_color_mask(0);
 
