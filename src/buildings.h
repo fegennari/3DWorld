@@ -1725,7 +1725,7 @@ struct door_base_t : public cube_t {
 	bool get_check_dirs  () const {return (dim ^ open_dir ^ hinge_side ^ 1);}
 	bool get_handle_side () const {return (get_check_dirs() ^ 1);} // 0: handle on left; 1: handle on right
 	float get_width      () const {return get_sz_dim(!dim);}
-	float get_thickness  () const {return DOOR_THICK_TO_WIDTH*(for_jail ? 1.1 : 1.0)*get_width();}
+	float get_thickness  () const {return DOOR_THICK_TO_WIDTH*(for_jail ? 1.25 : 1.0)*get_width();}
 	cube_t get_true_bcube     () const {cube_t bc(*this); bc.expand_in_dim(dim, 0.5*get_thickness()); return bc;}
 	cube_t get_clearance_bcube() const {cube_t bc(*this); bc.expand_in_dim(dim,     get_width    ()); return bc;}
 	cube_t get_open_door_path_bcube() const;

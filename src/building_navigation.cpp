@@ -1675,6 +1675,8 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 		if (r_shrink_if_low > 0.0 && c->z2() < z_thresh && c->shape == SHAPE_CUBE) { // shrink cube if it's low; applies to boxes and crates on the floor
 			bc.expand_by_xy(-min(0.95f*0.5f*min(c->dx(), c->dy()), r_shrink_if_low)); // make sure it doesn't shrink to zero area
 		}
+		// since jail cell doors are narrower than regular doors, shrink the ends of the bars a bit so that the AI can fit
+		if (c->type == TYPE_JAIL_BARS) {bc.expand_in_dim(!c->dim, -0.1*get_doorway_width());}
 		avoid.push_back(bc);
 		
 		if (same_as_player && c->type == TYPE_TABLE && c->shape == SHAPE_CYLIN) {

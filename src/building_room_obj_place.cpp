@@ -3098,7 +3098,7 @@ bool building_t::add_jail_objs(rand_gen_t rgen, room_t const &room, float &zval,
 	cube_t room_bounds(get_walkable_room_bounds(room));
 	set_cube_zvals(room_bounds, zval, (zval + get_floor_ceil_gap()));
 	float const room_len(room_bounds.get_sz_dim(dim)), min_cell_len(1.25*floor_spacing);
-	float const jail_door_width(0.9*door_width); // about the min size that male people/zombies can fit through
+	float const jail_door_width(0.8*door_width); // about the min size that male people/zombies can fit through
 	unsigned const num_cells(room_len/min_cell_len);
 	assert(num_cells > 0);
 	float const cell_len(room_len/num_cells); // includes walls between cells
