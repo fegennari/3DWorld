@@ -1879,7 +1879,7 @@ void brg_batch_draw_t::draw_obj_models(shader_t &s, vector3d const &xlate, bool 
 float get_ao_shadow(room_object_t const &c, bool enable_indir) {
 	room_object const type(c.type);
 	// include types that don't contribute to indir lighting; these always contribute AO shadows
-	if (type == TYPE_BAR_STOOL || type == TYPE_SHELVES) return 0.25; // light shadow
+	if (type == TYPE_BAR_STOOL || type == TYPE_SHELVES || type == TYPE_CONV_BELT) return 0.25; // light shadow
 	if (type == TYPE_OFF_CHAIR || type == TYPE_BENCH || type == TYPE_RCHAIR || type == TYPE_CASHREG || type == TYPE_CHEM_TANK || type == TYPE_HOSP_BED) return 0.5; // medium shadow
 	if (type == TYPE_WHEELCHAIR || type == TYPE_OP_TABLE || type == TYPE_TROLLEY) return 0.5; // medium shadow
 	if (type == TYPE_PARK_SPACE && c.is_used()) return 0.75; // parked car; dense shadow
@@ -1953,7 +1953,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		invalidate_static_geom(); // user created a new screenshot texture, and this building has pictures - recreate room geom
 		num_pic_tids = num_screenshot_tids;
 	}
-	if (update_clocks || update_escalators || update_tunnel_water || (player_in_bldg_normal_pass && have_conv_belt)) {update_dynamic_draw_data();}
+	if (animate2 && (update_clocks || update_escalators || update_tunnel_water || (player_in_bldg_normal_pass && have_conv_belt))) {update_dynamic_draw_data();}
 	check_invalid_draw_data();
 
 	// generate vertex data in the shadow pass or if we haven't hit our generation limit unless this is the first frame; must be consistent for static and small geom

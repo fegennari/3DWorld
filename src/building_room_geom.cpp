@@ -6251,20 +6251,61 @@ void building_room_geom_t::add_parking_gate(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_conveyor_belt(room_object_t const &c, bool draw_dynamic) {
-	if (draw_dynamic) { // draw the moving belt
-		float const CONV_BELT_SPEED = 1.0/TICKS_PER_SECOND; // in units per tick
+	bool const dim(c.dim);
+	float const height(c.dz()), width(c.get_width()), edge_width(0.1*width), roller_dia(0.2*height);
+
+	if (draw_dynamic) { // draw the moving belt; the rollers are stationary
+		float const CONV_BELT_SPEED = 1.0/TICKS_PER_SECOND; // in units per tick; same as escalators
 		static float last_pos(0.0); // cahed for most recently drawn conveyor belt
 		float cur_pos(last_pos);
 		if (!c.is_powered()) {cur_pos = 0.0;} // stop only this escalator
-		else if (animate2) {last_pos = cur_pos = (c.dir ? 1.0 : -1.0)*fract(CONV_BELT_SPEED*tfticks);}
-		rgeom_mat_t &belt_mat(get_material(tid_nm_pair_t(get_walkway_track_tid(), 1.0/c.get_width(), 1), 1, 1)); // shadowed, dynamic
-		belt_mat.add_cube_to_verts(c, apply_light_color(c, WHITE), all_zeros, ~EF_Z2, c.dim, 0, 0, 0, 0, 0.0, cur_pos); // draw top surface, shifted in Y
+		else if (animate2) {last_pos = cur_pos = fract(CONV_BELT_SPEED*(c.dir ? 1.0 : -1.0)*tfticks);}
+		cube_t belt(c);
+		belt.expand_in_dim(!dim, -    edge_width); // shrink the width
+		belt.expand_in_dim( dim, -0.5*roller_dia); // shrink the length
+		rgeom_mat_t &belt_mat(get_material(tid_nm_pair_t(get_walkway_track_tid(), 1.0/width, 1), 1, 1)); // shadowed, dynamic
+		belt_mat.add_cube_to_verts(belt, apply_light_color(c, WHITE), all_zeros, ~EF_Z2, dim, 0, 0, 0, 0, (dim ? cur_pos : 0.0), (dim ? 0.0 : cur_pos)); // draw top surface
 	}
-	else { // draw the static frame
+	else { // draw the static frame and legs
+		float const length(c.get_length());
+		cube_t base(c), legs(c);
+		legs.z2() = base.z1() = c.z2() - roller_dia;
+		cube_t platform(base);
+		platform.expand_in_dim(!dim, -edge_width); // shrink the width to match the belt
+		platform.expand_in_dim( dim, -roller_dia); // add space for the rollers
 		colorRGBA const color(apply_light_color(c));
 		rgeom_mat_t &metal_mat(get_metal_material(1)); // shadowed
-		metal_mat.add_cube_to_verts_untextured(c, color, EF_Z12); // draw sides
-		// TODO: more detailed legs, etc.
+		metal_mat.add_cube_to_verts_untextured(platform, color, ~EF_Z1); // draw bottom face only
+
+		for (unsigned d = 0; d < 2; ++d) { // draw sides
+			cube_t side(base);
+			side.d[!dim][!d] = platform.d[!dim][d]; // meets platform inside edge
+			metal_mat.add_cube_to_verts_untextured(side, color, 0); // draw all faces
+		}
+		// draw the legs
+		unsigned const num_legs(max(2U, unsigned(0.4*length/width)));
+		float const leg_depth(0.5*edge_width), leg_width(0.08*width), leg_hwidth(0.5*leg_width), edge_gap(0.25*leg_depth);
+		float const leg_spacing((length - 2.0*(edge_gap + leg_hwidth))/(num_legs - 1));
+		legs.expand_in_dim(!dim, -edge_gap); // shrink the width
+
+		for (unsigned d = 0; d < 2; ++d) { // each side
+			cube_t leg(legs);
+			leg.d[!dim][!d] = legs.d[!dim][d] + (d ? -1.0 : 1.0)*leg_depth;
+
+			for (unsigned n = 0; n < num_legs; ++n) {
+				set_wall_width(leg, (legs.d[dim][0] + edge_gap + leg_hwidth + n*leg_spacing), leg_hwidth, dim);
+				metal_mat.add_cube_to_verts_untextured(leg, color, EF_Z12); // skip top and bottom
+			}
+		} // for d
+		// draw the rollers
+		colorRGBA const roller_color(apply_light_color(c, colorRGBA(0.063, 0.063, 0.067))); // same color as the belt, but no stripe
+		rgeom_mat_t &roller_mat(get_untextured_material(1)); // shadowed
+
+		for (unsigned d = 0; d < 2; ++d) { // draw rollers at ends
+			cube_t roller(base);
+			roller.d[dim][!d] = platform.d[dim][d];
+			roller_mat.add_ortho_cylin_to_verts(roller, roller_color, !dim, 0, 0); // draw sides only
+		}
 	}
 }
 

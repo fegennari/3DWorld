@@ -538,6 +538,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			else if (type == TYPE_BRSINK    ) {bc.z1() += 0.60*bc.dz();}
 			else if (type == TYPE_ATTIC_DOOR) {bc = get_attic_access_door_cube(*c, 0);} // inc_ladder=0: includes door but not ladder
 			else if (type == TYPE_SHOWERTUB ) {bc = get_shower_tub_wall(*c);}
+			else if (type == TYPE_CONV_BELT ) {bc = get_true_room_obj_bcube(*c);}
 			// what about open microwaves and dishwashers?
 			cc.emplace_back(bc, color);
 		}

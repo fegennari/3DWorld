@@ -761,14 +761,13 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 	avoid.expand_in_dim(edim, doorway_width); // don't block entrance area
 	
 	if (1) { // add a 2D grid of machines to the center of the place area
-		bool add_tanks(1), add_cbelt(1);
 		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // used for machines and tanks
 		float const height(max_height*rgen.rand_uniform(0.6, 0.8)), aisle_spacing(1.25*doorway_width);
 		vector2d const machine_sz(max_place_sz*vector2d(rgen.rand_uniform(0.8, 1.0), rgen.rand_uniform(0.8, 1.0)));
 		float const tank_radius(0.5*machine_sz.get_min_val()), pipe_radius(0.04*tank_radius);
 		float const tank_height(max(2.25*tank_radius, 0.75*height)), tank_z2(zval + tank_height);
 		unsigned const item_flags(rgen.rand()), rand_seed(rgen.rand());
-		cube_t center_area(place_area);
+		cube_t center_area(place_area), conveyor_belt;
 		center_area.expand_by_xy(-(max_place_sz + 0.5*doorway_width)); // space for machines along the wall
 		vector2d const center_sz(center_area.get_size_xy());
 		bool const tank_dim(rgen.rand_bool());
@@ -781,6 +780,8 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 			num_xy [d] = center_sz[d]/(machine_sz[d] + aisle_spacing);
 			spacing[d] = center_sz[d]/num_xy[d];
 		}
+		bool add_tanks(num_xy[tank_dim] >= 3), add_cbelt(num_xy[tank_dim] >= 5);
+
 		if (add_cbelt) { // add conveyor belt
 			float const cb_height(0.35*floor_spacing), cb_hwidth(0.25*machine_sz[tank_dim]);
 			add_cbelt = 0; // will be reset below if valid
@@ -797,7 +798,8 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 					continue;
 				}
 				bool const move_dir(rgen.rand_bool());
-				objs.emplace_back(cb, TYPE_CONV_BELT, room_id, !tank_dim, move_dir, 0, tot_light_amt, SHAPE_CUBE, GRAY);
+				objs.emplace_back(cb, TYPE_CONV_BELT, room_id, !tank_dim, move_dir, 0, tot_light_amt, SHAPE_CUBE, LT_GRAY);
+				conveyor_belt = cb;
 				interior->room_geom->have_conv_belt = 1;
 				add_cbelt = 1;
 				break; // done/success
@@ -847,7 +849,8 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 					tank_conn_pts.emplace_back(center.x, center.y, pipe.z2());
 					obj_grid[gix] = TYPE_CHEM_TANK;
 				}
-				else if (is_cbelt) { // make it a conveyor belt; added later
+				else if (is_cbelt) { // make it a conveyor belt
+					// TODO: add conveyor belt connecting end machine to main CB
 					obj_grid[gix] = TYPE_CONV_BELT;
 				}
 				else { // make it a machine
@@ -903,7 +906,7 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 						} // for xdir
 					} // for ydir
 					obj_grid[gix] = TYPE_MACHINE;
-				}
+				} // end machine case
 			} // for nx
 		} // for ny
 		if (merged_pipe_radius > 0.0) { // create horizontal pipe connecting tanks
