@@ -3232,15 +3232,14 @@ void draw_sloped_top_and_sides(rgeom_mat_t &mat, point const bot_pts[4], float h
 	std::reverse(top_pts, top_pts+4); // reverse normal and winding order
 	mat.add_quad_to_verts(top_pts, color); // top
 }
-void building_room_geom_t::add_escalator(escalator_t const &e, float floor_spacing, bool draw_static, bool draw_dynamic) {
-	assert(draw_static != draw_dynamic); // must be one or the other
+void building_room_geom_t::add_escalator(escalator_t const &e, float floor_spacing, bool draw_dynamic) {
 	bool const dim(e.dim), dir(e.dir);
 	float const floor_height(e.get_floor_thick());
 	cube_t const ramp(e.get_ramp_bcube(draw_dynamic));
 	cube_t lo_end, hi_end;
 	e.get_ends_bcube(lo_end, hi_end, draw_dynamic);
 
-	if (draw_static) {
+	if (!draw_dynamic) { // static
 		unsigned const sides_skip(get_skip_mask_for_xy(!dim));
 		float const side_height(e.get_side_height()), side_width(e.get_side_width()), get_side_deltaz(e.get_side_deltaz());
 		float const rail_shrink(0.2*side_width), rail_height(0.5*side_width);
@@ -3295,11 +3294,13 @@ void building_room_geom_t::add_escalator(escalator_t const &e, float floor_spaci
 			metal_mat.add_cube_to_verts_untextured(e.get_support_pillar(), WHITE, EF_Z12); // skip top and bottom
 		}
 	}
-	if (draw_dynamic) { // draw moving steps
+	else { // dynamic; draw moving steps
 		static float last_step_pos(0.0); // cahed for most recently drawn escalator
-		float const step_pos(animate2 ? fract(ESCALATOR_SPEED*tfticks) : last_step_pos), ramp_height(ramp.dz());
-		last_step_pos = step_pos;
+		float step_pos(last_step_pos);
+		if (!e.is_powered) {step_pos = 0.0;} // stop only this escalator
+		else if (animate2) {last_step_pos = step_pos = fract(ESCALATOR_SPEED*tfticks);}
 		// draw steps
+		float const ramp_height(ramp.dz());
 		unsigned const num_steps(round_fp(NUM_STAIRS_PER_FLOOR_ESC*ramp_height/floor_spacing)), front_face(get_face_mask(dim, !dir));
 		float const step_len(ramp.get_sz_dim(dim)/num_steps), step_delta((dir ? 1.0 : -1.0)*step_len), step_height(ramp_height/num_steps);
 		float const belt_height(1.2*floor_height), stripe_height(0.2*step_height), tscale(0.5/step_len);

@@ -1203,7 +1203,7 @@ struct building_room_geom_t {
 	void add_skylight_details(cube_t const &skylight, bool has_skylight_light);
 	void add_elevator(room_object_t const &c, elevator_t const &e, float tscale, float fc_thick_scale,
 		unsigned floor_offset, float floor_spacing, float window_vspace, bool has_parking_garage, bool is_powered);
-	void add_escalator(escalator_t const &e, float floor_spacing, bool draw_static, bool draw_dynamic);
+	void add_escalator(escalator_t const &e, float floor_spacing, bool draw_dynamic);
 	void add_tunnel(tunnel_seg_t const &t);
 	void add_tunnel_water(tunnel_seg_t const &t);
 	void add_elevator_doors(elevator_t const &e, float fc_thick_scale);
@@ -1630,6 +1630,7 @@ struct breaker_zone_t {
 	breaker_zone_t() : rtype(RTYPE_NOTSET) {} // invalid room
 	breaker_zone_t(unsigned t, unsigned s, unsigned e, int pr, bool dup) : rtype(t), room_start(s), room_end(e), pri_room(pr), is_dup(dup) {}
 	bool invalid() const {return (rtype != RTYPE_ELEVATOR && room_start == room_end);}
+	bool matches_room(unsigned room_id) const {return (room_id >= room_start && room_id < room_end);}
 };
 
 struct stairs_landing_base_t : public oriented_cube_t {
@@ -1683,12 +1684,13 @@ struct stairs_place_t : public cube_t { // for extended basements
 };
 
 struct escalator_t : public oriented_cube_t { // Note: not yet used
-	bool move_dir=0, in_mall=0; // move_dir points upward
+	bool move_dir=0, in_mall=0, is_powered=1; // move_dir points upward
+	unsigned room_id=0;
 	float end_ext=0.0, delta_z=0.0, bot_edge_shift=0.0;
 
 	escalator_t() {}
-	escalator_t(cube_t const &c, bool dim_, bool dir_, bool mdir, float ext, float dz, float brz, bool in_mall_=0) :
-		oriented_cube_t(c, dim_, dir_), move_dir(mdir), in_mall(in_mall_), end_ext(ext), delta_z(dz), bot_edge_shift(brz) {}
+	escalator_t(cube_t const &c, bool dim_, bool dir_, bool mdir, float ext, float dz, float brz, unsigned rid, bool in_mall_) :
+		oriented_cube_t(c, dim_, dir_), move_dir(mdir), in_mall(in_mall_), room_id(rid), end_ext(ext), delta_z(dz), bot_edge_shift(brz) {}
 	bool  is_going_up    () const {return move_dir;}
 	float get_side_width () const {return 0.10*get_width();}
 	float get_side_height() const {return 0.80*get_width();} // ramp/steps to top edge

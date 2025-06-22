@@ -105,7 +105,7 @@ void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, ra
 		}
 	}
 	// handle upper floors
-	unsigned const num_floors(interior->num_extb_floors);
+	unsigned const num_floors(interior->num_extb_floors), room_id(interior->ext_basement_hallway_room_id);
 	if (num_floors == 1) return; // single floor; nothing else to do
 	vect_cube_t openings;
 	get_mall_open_areas(room, openings);
@@ -177,7 +177,7 @@ void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, ra
 			
 			for (unsigned s = 0; s < 2; ++s) { // place two side-by-side escalators with opposite directions
 				// extend 90% of floor thickness below; enough to hide building people animated feet, but not enough to clip through the ceiling below
-				escalator_t e(epair, dim, !run_dir, (bool(s) ^ dim ^ run_dir ^ 1), door_width, delta_z, 0.9*floor_thickness, 1); // in_mall=1
+				escalator_t e(epair, dim, !run_dir, (bool(s) ^ dim ^ run_dir ^ 1), door_width, delta_z, 0.9*floor_thickness, room_id, 1); // in_mall=1
 				e.d[!dim][!s] = epair.d[!dim][s] + (s ? -1.0 : 1.0)*e_width;
 				interior->escalators.push_back(e);
 			}
@@ -200,7 +200,7 @@ void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, ra
 		cube_t const opening(openings[opening_ix]);
 		bool edir((num_openings & 1) ? rgen.rand_bool() : (opening_ix == num_openings/2)); // prefer closer to center; random if tied
 		float const width(1.6*door_width), depth(width);
-		elevator_t elevator(room, interior->ext_basement_hallway_room_id, dim, !edir, 0, 1, 1); // at_edge=0, interior_room=1, in_mall=1
+		elevator_t elevator(room, room_id, dim, !edir, 0, 1, 1); // at_edge=0, interior_room=1, in_mall=1
 		set_wall_width(elevator, opening.get_center_dim(!dim), 0.5*width, !dim); // set width
 
 		for (unsigned d = 0; d < 3; ++d) { // try both sides, then wrap around to the first side again if both can't extend

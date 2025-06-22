@@ -298,13 +298,13 @@ void building_t::toggle_circuit_breaker(bool is_on, unsigned zone_id, unsigned n
 		}
 		return;
 	}
-	//for (unsigned r = zone.room_start; r < zone.room_end; ++r) {interior->rooms[r].unpowered = !is_on;} // update room unpowered flags
+	//for (unsigned r = zone.room_start; r < zone.room_end; ++r) {interior->rooms[r].set_powered(is_on);} // update room unpowered flags
 	bool updated(0);
 	auto objs_start(interior->room_geom->objs.begin());
 	auto objs_end  (interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 
 	for (auto i = objs_start; i != objs_end; ++i) {
-		if ((i->is_powered() == is_on) || i->room_id < zone.room_start || i->room_id >= zone.room_end) continue; // no state change, or wrong zone
+		if ((i->is_powered() == is_on) || !zone.matches_room(i->room_id)) continue; // no state change, or wrong zone
 
 		if (i->is_light_type()) { // light
 			if (i->in_elevator()) continue; // handled above
@@ -326,6 +326,9 @@ void building_t::toggle_circuit_breaker(bool is_on, unsigned zone_id, unsigned n
 		}
 		// Note: stoves use gas rather than electricity and don't need power; lit exit signs are always on
 	} // for i
+	for (escalator_t &e : interior->escalators) { // check escalators
+		if (zone.matches_room(e.room_id)) {e.is_powered = is_on;}
+	}
 	interior->room_geom->modified_by_player = 1; // I guess we need to set this, to be safe, as this breaker will likely have some effect
 	if (!updated) return; // that's it, don't need to update geom
 	// since the state of at least one light has changed, it's likely that other geom has been invalidated, so just update it all

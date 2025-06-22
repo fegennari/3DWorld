@@ -1752,6 +1752,7 @@ void building_t::find_nearest_stairs_ramp_esc(point const &p1, point const &p2, 
 		if (point_in_extended_basement_not_basement(p1) && point_in_extended_basement_not_basement(p2)) { // both points in mall area
 			for (unsigned i = 0; i < interior->escalators.size(); ++i) {
 				escalator_t const &e(interior->escalators[i]);
+				//if (!e.is_powered) continue; // don't use if unpowered?
 				if (!e.in_mall) continue; // only consider mall escalators
 				if (zmin < e.z1() || zmax > e.z2())   continue; // escalator doesn't span the correct floors
 				if (e.is_going_up() != (p2.z > p1.z)) continue; // wrong direction

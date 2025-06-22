@@ -1811,7 +1811,7 @@ bool building_interior_t::check_sphere_coll_walls_elevators_doors(building_t con
 						pos.z = ztop + reff; // use reff rather than radius to prevent jitter when stepping onto the upper edge of the ramp
 						apply_speed_factor(pos, p_last, 0.5); // slower when walking on escalator
 
-						if (animate2) { // apply escalator movement
+						if (animate2 && e.is_powered) { // apply escalator movement
 							float const delta((e.move_dir ? 1.0 : -1.0)*fticks*ESCALATOR_SPEED/NUM_STAIRS_PER_FLOOR_ESC);
 							pos.z += delta*height;
 							pos[e.dim] += (e.dir ? 1.0 : -1.0)*delta*length;

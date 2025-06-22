@@ -136,7 +136,7 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 
 					for (unsigned s = 0; s < 2; ++s) { // place two side-by-side escalators with opposite directions
 						// extend 90% of floor thickness below; enough to hide building people animated feet, but not enough to clip through the ceiling below
-						escalator_t e(cand, dim, dir, (bool(s) ^ dim ^ dir), door_width, delta_z, 0.9*floor_thickness);
+						escalator_t e(cand, dim, dir, (bool(s) ^ dim ^ dir), door_width, delta_z, 0.9*floor_thickness, room_id, 0); // in_mall=0
 						e.expand_in_dim(dim, -end_pad);
 						e.d[!dim][!s] = cand.d[!dim][s] + (s ? -1.0 : 1.0)*e_width;
 						interior->escalators.push_back(e);
