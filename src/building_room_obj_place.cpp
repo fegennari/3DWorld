@@ -3263,7 +3263,7 @@ bool building_t::add_jail_objs(rand_gen_t rgen, room_t const &room, float &zval,
 			objs.back().obj_id = lock_color_ix;
 			// add nail to place the key on
 			float const nail_radius(0.14*key_sz);
-			key_pos.z += 1.96*key_sz;
+			key_pos.z += (dim ? 1.96 : 0.06)*key_sz; // offset correctly based on dim, since the swap of dims used in drawing doesn't rotate about the key hole
 			cube_t nail(key_pos);
 			nail.expand_in_dim(2,    nail_radius);
 			nail.expand_in_dim(!dim, nail_radius);
