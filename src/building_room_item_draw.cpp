@@ -1919,8 +1919,9 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	// only industrial, parking garages, backrooms, and attics have detail objects that cast shadows
 	bool const draw_detail_objs(inc_small >= 2 && (!shadow_only || is_industrial || building.point_in_attic(camera_bs) || building.is_pos_in_pg_or_backrooms(camera_bs)));
 	bool const draw_int_detail_objs(inc_small >= 3 && !shadow_only);
+	bool player_in_bldg_normal_pass(player_in_building && !shadow_only && !reflection_pass);
 	// update clocks if moved to next second; only applies to the player's building
-	bool const update_clocks(player_in_building && inc_small >= 2 && !shadow_only && !reflection_pass && have_clock && check_clock_time());
+	bool const update_clocks(player_in_bldg_normal_pass && inc_small >= 2 && have_clock && check_clock_time());
 	bool const player_in_doorway(building.point_near_ext_door(camera_bs, get_door_open_dist()));
 	bool const player_in_building_or_doorway(player_in_building || player_in_doorway);
 	if (bbd != nullptr) {bbd->set_camera_dir_mask(camera_bs, ((camera_bs.z < ground_floor_z1) ? building.get_bcube_inc_extensions() : building.bcube));}
@@ -1929,7 +1930,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	bool const update_tunnel_water(animate2 && player_in_building && !shadow_only && (player_in_tunnel || building.interior->point_near_tunnel_entrance(camera_bs)));
 	bool enable_indir(0), update_escalators(0);
 
-	if (animate2 && player_in_building && !shadow_only && !reflection_pass) { // maybe update escalators
+	if (animate2 && player_in_bldg_normal_pass) { // maybe update escalators
 		for (escalator_t const &e : building.interior->escalators) {
 			cube_t const bc(e.get_ramp_bcube(1)); // exclude_sides=1
 			if (!building.is_rot_cube_visible(bc, xlate)) continue; // VFC
@@ -1938,7 +1939,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			break;
 		}
 	}
-	if (player_in_building && !shadow_only && !reflection_pass) { // indir lighting auto update logic
+	if (player_in_bldg_normal_pass) { // indir lighting auto update logic
 		static bool last_enable_indir(0);
 		enable_indir = enable_building_indir_lighting_no_cib();
 		if (enable_indir != last_enable_indir) {invalidate_mats_mask |= 0xFF;} // update all geom when material lighting changes due to indir
@@ -2245,30 +2246,28 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			obj_drawn = 1;
 		} // for h
 	}
-	if (player_in_building) { // only drawn for the player building
-		if (!shadow_only && !reflection_pass) {
-			// key/silverware/folded shirt: not drawn in the shadow or reflection passes; no emissive or rotated objects; no animations
-			for (auto i = model_objs.begin(); i != model_objs.end(); ++i) {
-				float const cull_dist(((i->type == TYPE_KEY) ? 200.0 : 100.0)*i->max_len());
-				point obj_center(i->get_cube_center());
-				if (is_rotated) {building.do_xy_rotate(building_center, obj_center);}
-				if (!shadow_only && !dist_less_than(camera_bs, obj_center, cull_dist))                             continue; // too far away
-				if (player_in_this_basement    && obj_center.z > ground_floor_z1)                                  continue; // player in basement, obj not
-				if (player_above_this_basement && obj_center.z < ground_floor_z1)                                  continue; // obj in basement, player not
-				if (!(is_rotated ? building.is_rot_cube_visible(*i, xlate) : camera_pdu.cube_visible(*i + xlate))) continue; // VFC
-				if (check_occlusion && building.check_obj_occluded(*i, camera_bs, oc, reflection_pass))            continue;
-				vector3d dir(i->get_dir());
-				if (is_rotated) {building.do_xy_rotate_normal(dir);}
-				int swap_xy_mode(0);
+	if (player_in_bldg_normal_pass) { // only drawn for the player building
+		// key/silverware/folded shirt: not drawn in the shadow or reflection passes; no emissive or rotated objects; no animations
+		for (room_object_t const &c : model_objs) {
+			float const cull_dist(((c.type == TYPE_KEY) ? 200.0 : 100.0)*c.max_len());
+			point obj_center(c.get_cube_center());
+			if (is_rotated) {building.do_xy_rotate(building_center, obj_center);}
+			if (!shadow_only && !dist_less_than(camera_bs, obj_center, cull_dist))                           continue; // too far away
+			if (player_in_this_basement    && obj_center.z > ground_floor_z1)                                continue; // player in basement, obj not
+			if (player_above_this_basement && obj_center.z < ground_floor_z1)                                continue; // obj in basement, player not
+			if (!(is_rotated ? building.is_rot_cube_visible(c, xlate) : camera_pdu.cube_visible(c + xlate))) continue; // VFC
+			if (check_occlusion && building.check_obj_occluded(c, camera_bs, oc, reflection_pass))           continue;
+			vector3d dir(c.get_dir());
+			if (is_rotated) {building.do_xy_rotate_normal(dir);}
+			int swap_xy_mode(0);
 
-				if (i->type == TYPE_KEY && i->is_hanging()) { // make hanging key vertical
-					if (i->dim) {swap_xy_mode = 1;}
-					dir = plus_z;
-				}
-				building_obj_model_loader.draw_model(s, obj_center, *i, dir, i->color, xlate, i->get_model_id(), shadow_only, 0, nullptr, 0, 0, 0, 0, 0, 0, 3, 0, swap_xy_mode);
-				obj_drawn = 1;
-			} // for model_objs
-		}
+			if (c.type == TYPE_KEY && c.is_hanging()) { // make hanging key vertical
+				if (c.dim) {swap_xy_mode = 1;}
+				dir = plus_z;
+			}
+			building_obj_model_loader.draw_model(s, obj_center, c, dir, c.color, xlate, c.get_model_id(), shadow_only, 0, nullptr, 0, 0, 0, 0, 0, 0, 3, 0, swap_xy_mode);
+			obj_drawn = 1;
+		} // for c
 	}
 	if (player_in_building_or_doorway) {
 		// draw animals; skip animal shadows for industrial areas, retail rooms, and malls/stores as an optimization (must agree with lighting code)
