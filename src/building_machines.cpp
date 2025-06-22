@@ -761,7 +761,7 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 	avoid.expand_in_dim(edim, doorway_width); // don't block entrance area
 	
 	if (1) { // add a 2D grid of machines to the center of the place area
-		bool const add_tanks(1), add_cbelt(0);
+		bool add_tanks(1), add_cbelt(1);
 		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // used for machines and tanks
 		float const height(max_height*rgen.rand_uniform(0.6, 0.8)), aisle_spacing(1.25*doorway_width);
 		vector2d const machine_sz(max_place_sz*vector2d(rgen.rand_uniform(0.8, 1.0), rgen.rand_uniform(0.8, 1.0)));
@@ -771,7 +771,8 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 		cube_t center_area(place_area);
 		center_area.expand_by_xy(-(max_place_sz + 0.5*doorway_width)); // space for machines along the wall
 		vector2d const center_sz(center_area.get_size_xy());
-		bool const tank_dim(rgen.rand_bool()), tank_dir(rgen.rand_bool()), cbelt_dir(!tank_dir); // side of grid the tank is on
+		bool const tank_dim(rgen.rand_bool());
+		bool tank_dir(rgen.rand_bool()), cbelt_dir(!tank_dir); // side of grid the tank/conveyor belt is on
 		colorRGBA const pipe_color(COPPER_C), fitting_color(BRASS_C);
 		vector2d &spacing(interior->ind_info->machine_row_spacing);
 		unsigned num_xy[2]={};
@@ -780,8 +781,36 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 			num_xy [d] = center_sz[d]/(machine_sz[d] + aisle_spacing);
 			spacing[d] = center_sz[d]/num_xy[d];
 		}
+		if (add_cbelt) { // add conveyor belt
+			float const cb_height(0.35*floor_spacing), cb_hwidth(0.25*machine_sz[tank_dim]);
+			add_cbelt = 0; // will be reset below if valid
+
+			for (unsigned d = 0; d < 2; ++d) { // try both sides
+				float const centerline(center_area.d[tank_dim][cbelt_dir] - 0.5*(cbelt_dir ? 1.0 : -1.0)*spacing[tank_dim]);
+				cube_t cb(center_area); // sets the length
+				set_cube_zvals(cb, zval, (zval + cb_height));
+				set_wall_width(cb, centerline, cb_hwidth, tank_dim);
+				cb.expand_in_dim(!tank_dim, -doorway_width); // add space for the player and AI to walk
+				
+				if (cb.intersects(avoid) || (check_ladder && cb.intersects(ladder)) || overlaps_obj_or_placement_blocked(cb, room, objs_start)) {
+					swap(tank_dir, cbelt_dir); // try the other side
+					continue;
+				}
+				bool const move_dir(rgen.rand_bool());
+				objs.emplace_back(cb, TYPE_CONV_BELT, room_id, !tank_dim, move_dir, 0, tot_light_amt, SHAPE_CUBE, GRAY);
+				interior->room_geom->have_conv_belt = 1;
+				add_cbelt = 1;
+				break; // done/success
+			} // for d
+		}
 		unsigned machine_range[2][2] = {{0, num_xy[0]-1}, {0, num_xy[1]-1}};
-		if (tank_dir) {--machine_range[tank_dim][1];} else {++machine_range[tank_dim][0];} // clip off tank row/column
+
+		if (add_tanks) {
+			if (tank_dir ) {--machine_range[tank_dim][1];} else {++machine_range[tank_dim][0];} // clip off tank row/column
+		}
+		if (add_cbelt) {
+			if (cbelt_dir) {--machine_range[tank_dim][1];} else {++machine_range[tank_dim][0];} // clip off conveyor belt row/column
+		}
 		vector<room_object> obj_grid(num_xy[0]*num_xy[1], TYPE_NONE);
 		vector<point> tank_conn_pts;
 		float merged_pipe_radius(0.0);
@@ -816,9 +845,10 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 					tank_conn_pipe.assign_or_union_with_cube(pipe);
 					merged_pipe_radius = get_merged_pipe_radius(merged_pipe_radius, pipe_radius, 3.0);
 					tank_conn_pts.emplace_back(center.x, center.y, pipe.z2());
+					obj_grid[gix] = TYPE_CHEM_TANK;
 				}
-				else if (is_cbelt) { // make it a conveyor belt
-					// TODO
+				else if (is_cbelt) { // make it a conveyor belt; added later
+					obj_grid[gix] = TYPE_CONV_BELT;
 				}
 				else { // make it a machine
 					unsigned flags(RO_FLAG_IN_FACTORY | RO_FLAG_FROM_SET); // tag as part of a group
@@ -872,8 +902,8 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 							added_light = 1;
 						} // for xdir
 					} // for ydir
+					obj_grid[gix] = TYPE_MACHINE;
 				}
-				obj_grid[gix] = (is_tank ? TYPE_CHEM_TANK : TYPE_MACHINE);
 			} // for nx
 		} // for ny
 		if (merged_pipe_radius > 0.0) { // create horizontal pipe connecting tanks
@@ -917,6 +947,7 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 					} // for e
 				} // for D
 			} // for n
+			// what about h_pipe.intersects(ladder)? this is rare but possible
 			objs.emplace_back(h_pipe, TYPE_PIPE, room_id, !tank_dim, 0, h_pipe_flags, tot_light_amt, SHAPE_CYLIN, pipe_color); // horizontal
 			// add pipe fittings
 			unsigned const fittings_flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING);

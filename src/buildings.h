@@ -1103,7 +1103,7 @@ struct door_handle_t {
 
 struct building_room_geom_t {
 
-	bool has_pictures=0, has_garage_car=0, modified_by_player=0, have_clock=0, glass_floor_split=0, mall_geom_drawn=0;
+	bool has_pictures=0, has_garage_car=0, modified_by_player=0, have_clock=0, have_conv_belt=0, glass_floor_split=0, mall_geom_drawn=0;
 	uint8_t num_pic_tids=0, invalidate_mats_mask=0;
 	uint8_t mens_count=0, womens_count=0; // bathrooms and locker rooms
 	float obj_scale=1.0;
@@ -1357,7 +1357,7 @@ struct building_room_geom_t {
 	void add_hvac_unit(room_object_t const &c);
 	void add_vent_fan_frame(room_object_t const &c);
 	void add_parking_gate (room_object_t const &c);
-	void add_conveyor_belt(room_object_t const &c);
+	void add_conveyor_belt(room_object_t const &c, bool draw_dynamic);
 	void add_store_gate(cube_t const &c, bool dim, float open_amt);
 	void add_jail_bars(room_object_t const &c);
 	void add_theft_sensor(room_object_t const &c, bool alarm_mode=0);

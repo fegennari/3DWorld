@@ -25,6 +25,7 @@ extern int display_mode, player_in_closet, frame_counter, animate2;
 
 int get_rand_screenshot_texture(unsigned rand_ix);
 int get_ac_unit_tid(unsigned ix);
+int get_walkway_track_tid();
 unsigned get_num_screenshot_tids();
 string gen_random_full_name(rand_gen_t &rgen);
 void gen_text_verts(vector<vert_tc_t> &verts, point const &pos, string const &text, float tsize,
@@ -6249,8 +6250,22 @@ void building_room_geom_t::add_parking_gate(room_object_t const &c) {
 	get_material(tid_nm_pair_t(HAZARD_TEX, 1.0/c.dz(), 1), 1).add_cube_to_verts(arm, apply_light_color(c, WHITE)); // shadowed; draw all faces
 }
 
-void building_room_geom_t::add_conveyor_belt(room_object_t const &c) {
-	// TODO
+void building_room_geom_t::add_conveyor_belt(room_object_t const &c, bool draw_dynamic) {
+	if (draw_dynamic) { // draw the moving belt
+		float const CONV_BELT_SPEED = 1.0/TICKS_PER_SECOND; // in units per tick
+		static float last_pos(0.0); // cahed for most recently drawn conveyor belt
+		float cur_pos(last_pos);
+		if (!c.is_powered()) {cur_pos = 0.0;} // stop only this escalator
+		else if (animate2) {last_pos = cur_pos = (c.dir ? 1.0 : -1.0)*fract(CONV_BELT_SPEED*tfticks);}
+		rgeom_mat_t &belt_mat(get_material(tid_nm_pair_t(get_walkway_track_tid(), 1.0/c.get_width(), 1), 1, 1)); // shadowed, dynamic
+		belt_mat.add_cube_to_verts(c, apply_light_color(c, WHITE), all_zeros, ~EF_Z2, c.dim, 0, 0, 0, 0, 0.0, cur_pos); // draw top surface, shifted in Y
+	}
+	else { // draw the static frame
+		colorRGBA const color(apply_light_color(c));
+		rgeom_mat_t &metal_mat(get_metal_material(1)); // shadowed
+		metal_mat.add_cube_to_verts_untextured(c, color, EF_Z12); // draw sides
+		// TODO: more detailed legs, etc.
+	}
 }
 
 void add_grid_of_bars(rgeom_mat_t &mat, colorRGBA const &color, cube_t const &c, unsigned num_vbars, unsigned num_hbars, float vbar_hthick,
