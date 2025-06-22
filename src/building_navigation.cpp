@@ -2199,12 +2199,14 @@ bool building_t::place_people_if_needed(unsigned building_ix, float radius) cons
 			}
 		} // for n
 	} // for N
-	if (has_room_geom() && (is_residential() || is_hospital())) { // add people to beds; has_room_geom() is usually true
+	// add people to beds; has_room_geom() is usually true; this adds people to jail cell beds as well, but only for houses, apartments, and hotels
+	if (has_room_geom() && (is_residential() || is_hospital() /*|| interior->has_jail*/)) {
 		auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 
 		for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
 			if (i->type == TYPE_BED) {
-				if (rgen.rand_float() > 0.1) continue; // 10% chance
+				bool const in_jail(i->flags & RO_FLAG_IN_JAIL);
+				if (rgen.rand_float() > (in_jail ? 0.15 : 0.1)) continue; // 10% chance for residential beds, 15% for jail beds
 				cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube
 				get_bed_cubes(*i, cubes);
 				person.pos = cube_top_center(cubes[3]); // center of the mattress
