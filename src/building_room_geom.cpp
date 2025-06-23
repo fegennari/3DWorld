@@ -6182,7 +6182,7 @@ void building_room_geom_t::add_chem_tank(room_object_t const &c, bool draw_label
 	mat.add_sphere_to_verts(top,  color, 0, -plus_z); // top hemisphere
 	// add pipes to floor
 	unsigned const pipe_ndiv(get_rgeom_sphere_ndiv(1)); // low_detail=1
-	rgeom_mat_t &pipe_mat(get_metal_material(1, 0, 1, 0, COPPER_C)); // small=1
+	rgeom_mat_t &pipe_mat(get_metal_material(1, 0, 0, 0, COPPER_C)); // not small
 	colorRGBA const pipe_color(apply_light_color(c, COPPER_C));
 	float const pipe_radius(0.04*radius);
 	point entry_pos(c.get_cube_center());
