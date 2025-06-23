@@ -6259,7 +6259,7 @@ void building_room_geom_t::add_conveyor_belt(room_object_t const &c, bool draw_d
 		static float last_pos(0.0); // cahed for most recently drawn conveyor belt
 		float cur_pos(last_pos);
 		if (!c.is_powered()) {cur_pos = 0.0;} // stop only this escalator
-		else if (animate2) {last_pos = cur_pos = fract(CONV_BELT_SPEED*(c.dir ? 1.0 : -1.0)*tfticks);}
+		else if (animate2) {last_pos = cur_pos = fract(CONV_BELT_SPEED*(c.dir ? -1.0 : 1.0)*tfticks);}
 		cube_t belt(c);
 		belt.expand_in_dim(!dim, -    edge_width); // shrink the width
 		belt.expand_in_dim( dim, -0.5*roller_dia); // shrink the length

@@ -746,6 +746,8 @@ bool building_t::add_machines_to_room(rand_gen_t rgen, room_t const &room, float
 	return any_placed;
 }
 
+bool cube_int_if_nonzero(cube_t const &c, cube_t const &C) {return (!C.is_all_zeros() && c.intersects(C));}
+
 void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cube_t const &place_area, float zval,
 	unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned objs_start_inc_beams, cube_t const &ladder)
 {
@@ -754,7 +756,6 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 	float const floor_spacing(get_window_vspace()), fc_gap(room.dz()), max_place_sz(1.0*floor_spacing), max_height(fc_gap - floor_spacing);
 	float const doorway_width(get_doorway_width()), min_gap(max(doorway_width, get_min_front_clearance_inc_people())), ceil_zval(room.z2() - get_fc_thickness());
 	if (max_height <= 0.0) return; // should never happen
-	bool const check_ladder(!ladder.is_all_zeros());
 	vect_room_object_t &objs(interior->room_geom->objs);
 	vector2d max_sz(get_machine_max_sz(place_area, min_gap, max_place_sz, 0.5));
 	cube_t avoid(interior->ind_info->entrance_area);
@@ -770,8 +771,9 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 		cube_t center_area(place_area), conveyor_belt;
 		center_area.expand_by_xy(-(max_place_sz + 0.5*doorway_width)); // space for machines along the wall
 		vector2d const center_sz(center_area.get_size_xy());
-		bool const tank_dim(rgen.rand_bool());
+		bool const tank_dim(rgen.rand_bool()), cb_dim(tank_dim);
 		bool tank_dir(rgen.rand_bool()), cbelt_dir(!tank_dir); // side of grid the tank/conveyor belt is on
+		float const cb_height(0.35*floor_spacing), cb_hwidth(0.25*machine_sz[cb_dim]); // half the machine's width
 		colorRGBA const pipe_color(COPPER_C), fitting_color(BRASS_C);
 		vector2d &spacing(interior->ind_info->machine_row_spacing);
 		unsigned num_xy[2]={};
@@ -780,28 +782,28 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 			num_xy [d] = center_sz[d]/(machine_sz[d] + aisle_spacing);
 			spacing[d] = center_sz[d]/num_xy[d];
 		}
-		bool add_tanks(num_xy[tank_dim] >= 3), add_cbelt(num_xy[tank_dim] >= 5);
+		bool add_tanks(num_xy[tank_dim] >= 3), add_cbelt(num_xy[cb_dim] >= 5);
 
 		if (add_cbelt) { // add conveyor belt
-			float const cb_height(0.35*floor_spacing), cb_hwidth(0.25*machine_sz[tank_dim]);
 			add_cbelt = 0; // will be reset below if valid
 
 			for (unsigned d = 0; d < 2; ++d) { // try both sides
-				float const centerline(center_area.d[tank_dim][cbelt_dir] - 0.5*(cbelt_dir ? 1.0 : -1.0)*spacing[tank_dim]);
+				float const centerline(center_area.d[cb_dim][cbelt_dir] - 0.5*(cbelt_dir ? 1.0 : -1.0)*spacing[cb_dim]);
 				cube_t cb(center_area); // sets the length
 				set_cube_zvals(cb, zval, (zval + cb_height));
-				set_wall_width(cb, centerline, cb_hwidth, tank_dim);
-				cb.expand_in_dim(!tank_dim, -doorway_width); // add space for the player and AI to walk
+				set_wall_width(cb, centerline, cb_hwidth, cb_dim);
+				cb.expand_in_dim(!cb_dim, -doorway_width); // add space for the player and AI to walk
 				
-				if (cb.intersects(avoid) || (check_ladder && cb.intersects(ladder)) || overlaps_obj_or_placement_blocked(cb, room, objs_start)) {
+				if (cube_int_if_nonzero(cb, ladder) || overlaps_obj_or_placement_blocked(cb, room, objs_start)) {
 					swap(tank_dir, cbelt_dir); // try the other side
 					continue;
 				}
 				bool const move_dir(rgen.rand_bool());
-				objs.emplace_back(cb, TYPE_CONV_BELT, room_id, !tank_dim, move_dir, 0, tot_light_amt, SHAPE_CUBE, LT_GRAY);
-				conveyor_belt = cb;
+				objs.emplace_back(cb, TYPE_CONV_BELT, room_id, !cb_dim, move_dir, 0, tot_light_amt, SHAPE_CUBE, LT_GRAY);
+				// TODO: add something for the conveyor belt to empty into? a box? An opening in the floor?
 				interior->room_geom->have_conv_belt = 1;
-				add_cbelt = 1;
+				conveyor_belt = cb;
+				add_cbelt     = 1;
 				break; // done/success
 			} // for d
 		}
@@ -811,7 +813,7 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 			if (tank_dir ) {--machine_range[tank_dim][1];} else {++machine_range[tank_dim][0];} // clip off tank row/column
 		}
 		if (add_cbelt) {
-			if (cbelt_dir) {--machine_range[tank_dim][1];} else {++machine_range[tank_dim][0];} // clip off conveyor belt row/column
+			if (cbelt_dir) {--machine_range[cb_dim  ][1];} else {++machine_range[cb_dim  ][0];} // clip off conveyor belt row/column
 		}
 		vector<room_object> obj_grid(num_xy[0]*num_xy[1], TYPE_NONE);
 		vector<point> tank_conn_pts;
@@ -821,18 +823,15 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 		for (unsigned ny = 0; ny < num_xy[1]; ++ny) {
 			for (unsigned nx = 0; nx < num_xy[0]; ++nx) {
 				bool const is_tank (add_tanks && (tank_dim ? ny : nx) == (tank_dir  ? num_xy[tank_dim]-1 : 0));
-				bool const is_cbelt(add_cbelt && (tank_dim ? ny : nx) == (cbelt_dir ? num_xy[tank_dim]-1 : 0));
+				bool const is_cbelt(add_cbelt && (cb_dim   ? ny : nx) == (cbelt_dir ? num_xy[cb_dim  ]-1 : 0));
 				point const center((center_area.x1() + (nx + 0.5)*spacing.x), (center_area.y1() + (ny + 0.5)*spacing.y), zval);
-				cube_t c(center);
-				c.z2() += height;
-				if (is_tank) {c.expand_by_xy(tank_radius);} // tank is square
-				else         {c.expand_by_xy(0.5*machine_sz);}
-				if (c.intersects(avoid) || (check_ladder && c.intersects(ladder)) || overlaps_obj_or_placement_blocked(c, room, objs_start)) continue;
 				unsigned const gix(ny*num_xy[0] + nx);
 
 				if (is_tank) { // make it a chemical tank; the tank itself is smaller to make room for pipes
-					cube_t tank(c);
+					cube_t tank(center);
 					tank.z2() = tank_z2;
+					tank.expand_by_xy(tank_radius); // tank is square
+					if (tank.intersects(avoid) || cube_int_if_nonzero(tank, ladder) || overlaps_obj_or_placement_blocked(tank, room, objs_start)) continue;
 					tank.expand_by_xy(-0.1*tank_radius);
 					room_object_t const tank_obj(tank, TYPE_CHEM_TANK, room_id, dim, dir, RO_FLAG_IN_FACTORY, tot_light_amt, SHAPE_CYLIN, WHITE, item_flags);
 					objs.push_back(tank_obj);
@@ -849,21 +848,34 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 					tank_conn_pts.emplace_back(center.x, center.y, pipe.z2());
 					obj_grid[gix] = TYPE_CHEM_TANK;
 				}
-				else if (is_cbelt) { // make it a conveyor belt
-					// TODO: add conveyor belt connecting end machine to main CB
+				else if (is_cbelt) { // make it a conveyor belt connecting the end machine to main CB
+					assert(conveyor_belt.is_strictly_normalized());
+					cube_t cb(conveyor_belt); // copy zvals
+					cb.z2() += 0.2*conveyor_belt.dz(); // increase height
+					set_wall_width(cb, center[!cb_dim], cb_hwidth, !cb_dim);
+					cb.d[cb_dim][ cbelt_dir] = conveyor_belt.d[cb_dim][!cbelt_dir]; // adjacent to side of main conveyor belt
+					// adjacent to side of machine in next row; or at least adjacent to the side of it's bcube, since there may be detail objects extending to here
+					cb.d[cb_dim][!cbelt_dir] = center[cb_dim] + (cbelt_dir ? 1.0 : -1.0)*(0.5*machine_sz[cb_dim] - spacing[cb_dim]);
+					assert(cb.is_strictly_normalized());
+					if (cb.intersects(avoid) || cube_int_if_nonzero(cb, ladder) || overlaps_obj_or_placement_blocked(cb, room, objs_start)) continue;
+					objs.emplace_back(cb, TYPE_CONV_BELT, room_id, cb_dim, cbelt_dir, 0, tot_light_amt, SHAPE_CUBE, LT_GRAY);
 					obj_grid[gix] = TYPE_CONV_BELT;
 				}
 				else { // make it a machine
 					unsigned flags(RO_FLAG_IN_FACTORY | RO_FLAG_FROM_SET); // tag as part of a group
+					cube_t c(center);
+					c.z2() += height;
+					c.expand_by_xy(0.5*machine_sz);
+					if (c.intersects(avoid) || cube_int_if_nonzero(c, ladder) || overlaps_obj_or_placement_blocked(c, room, objs_start)) continue;
 					cube_t space_x(c), space_y(c);
 					space_x.x1() -= spacing.x;
 					space_y.y1() -= spacing.y;
 					
 					if (nx > 0 && obj_grid[gix - 1        ] == TYPE_MACHINE) { // has prev X neighbor	
-						if (!check_ladder || !space_x.intersects(ladder)) {flags |= RO_FLAG_ADJ_LO;} // add pipes if not blocked by a ladder
+						if (!cube_int_if_nonzero(space_x, ladder)) {flags |= RO_FLAG_ADJ_LO;} // add pipes if not blocked by a ladder
 					}
 					if (ny > 0 && obj_grid[gix - num_xy[0]] == TYPE_MACHINE) { // has prev Y neighbor
-						if (!check_ladder || !space_y.intersects(ladder)) {flags |= RO_FLAG_ADJ_HI;} // add pipes if not blocked by a ladder
+						if (!cube_int_if_nonzero(space_y, ladder)) {flags |= RO_FLAG_ADJ_HI;} // add pipes if not blocked by a ladder
 					}
 					objs.emplace_back(c, TYPE_MACHINE, room_id, dim, dir, flags, tot_light_amt, SHAPE_CUBE, LT_GRAY, item_flags);
 					room_object_t &machine(objs.back());
@@ -913,6 +925,7 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 			float const conn_pipe_center(tank_conn_pipe.get_center_dim(tank_dim));
 			set_wall_width(tank_conn_pipe, tank_conn_pipe.z2(), merged_pipe_radius, 2); // set zvals
 			set_wall_width(tank_conn_pipe, conn_pipe_center,    merged_pipe_radius, tank_dim);
+			//if (cube_int_if_nonzero(tank_conn_pipe, ladder)) {} // what to do if pipe intersects ladder? it's possible, but I've never seen this happen
 			// add a bend and another segment to the ceiling, floor, or wall
 			bool const pri_ext_dir(rgen.rand_bool());
 			float const tank_gap(tank_radius + merged_pipe_radius), wall_gap(merged_pipe_radius + 0.26*floor_spacing); // leave wall gap for duct width
@@ -950,7 +963,6 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 					} // for e
 				} // for D
 			} // for n
-			// what about h_pipe.intersects(ladder)? this is rare but possible
 			objs.emplace_back(h_pipe, TYPE_PIPE, room_id, !tank_dim, 0, h_pipe_flags, tot_light_amt, SHAPE_CYLIN, pipe_color); // horizontal
 			// add pipe fittings
 			unsigned const fittings_flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING);
