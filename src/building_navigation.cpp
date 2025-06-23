@@ -2876,7 +2876,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		person.next_path_pt(1);
 		return AI_BEGIN_PATH;
 	}
-	if (person.on_stairs()) {speed_mult *= (person.on_escalator() ? 0.8 : 0.9);} // slow down slightly on stairs and escalator
+	if (person.on_stairs()) {speed_mult *= (person.on_escalator() ? 0.8 : 0.9);} // slow down slightly on stairs and escalator; even if escalator is stopped?
 	float const max_dist(get_person_max_move_dist(person, speed_mult));
 	float goal_dist(1.1f*max_dist);
 	if (dot_product((person.target_pos - person.pos), person.dir) < 0.0) {max_eq(goal_dist, coll_dist);} // don't turn in place if dest is behind us and we're close
