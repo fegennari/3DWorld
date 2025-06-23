@@ -358,6 +358,7 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 		return type;
 	}
 	if (otype == TYPE_SHOWERTUB) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 20.0, 2.0, "shower curtain");} // only the curtains can be taken
+	if (otype == TYPE_CRATE    && obj.shape == SHAPE_TALL) {return bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 20.0, 20.0, "large crate");} // factory conveyor belt crate
 	if (otype == TYPE_TABLE    && broken)        {return bldg_obj_type_t(1, 1, 1, 1, 0, 0, 1,  25.0, 40.0, "broken table");} // glass tables only
 	if (otype == TYPE_COMPUTER && broken)        {return bldg_obj_type_t(0, 0, 1, 1, 0, 0, 2, 100.0, 20.0, "old computer");}
 	if (otype == TYPE_BOX      && obj.is_open()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2,   0.0, 0.05, "opened box"  );}
@@ -475,8 +476,8 @@ bool is_refillable(room_object_t const &obj) {return (obj.type == TYPE_FIRE_EXT)
 
 float get_obj_value(room_object_t const &obj) {
 	float value(get_taken_obj_type(obj).value);
-	if (obj.is_crate_or_box())       {value *= (1 + (rgen_from_obj(obj).rand() % 20));}
-	else if (obj.type == TYPE_PAPER) {value = get_paper_value(obj);}
+	if (obj.is_crate_or_box() && !obj.is_open()) {value *= (1 + (rgen_from_obj(obj).rand() % 20));}
+	else if (obj.type == TYPE_PAPER)             {value  = get_paper_value(obj);}
 	else if (obj.type == TYPE_MONEY) {
 		unsigned const num_bills(round_fp(obj.dz()/(0.01*obj.get_length())));
 		value *= num_bills;

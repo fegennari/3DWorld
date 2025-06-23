@@ -792,7 +792,7 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 				cube_t cb(center_area); // sets the length
 				set_cube_zvals(cb, zval, (zval + cb_height));
 				set_wall_width(cb, centerline, cb_hwidth, cb_dim);
-				cb.expand_in_dim(!cb_dim, -doorway_width); // add space for the player and AI to walk
+				cb.expand_in_dim(!cb_dim, -(0.5*spacing[!cb_dim] - cb_hwidth)); // reduce to the span of connecting conveyor belts so player and AI can walk around it
 				
 				if (cube_int_if_nonzero(cb, ladder) || overlaps_obj_or_placement_blocked(cb, room, objs_start)) {
 					swap(tank_dir, cbelt_dir); // try the other side
@@ -800,7 +800,16 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 				}
 				bool const move_dir(rgen.rand_bool());
 				objs.emplace_back(cb, TYPE_CONV_BELT, room_id, !cb_dim, move_dir, 0, tot_light_amt, SHAPE_CUBE, LT_GRAY);
-				// TODO: add something for the conveyor belt to empty into? a box? An opening in the floor?
+				// add a crate on the floor for the conveyor belt to empty into
+				float const cb_end(cb.d[!cb_dim][move_dir]);
+				cube_t crate(cb);
+				crate.z2() -= 0.2*cb.dz(); // shorten to below the end roller
+				crate.d[!cb_dim][!move_dir] = cb_end; // flush with conveyor belt
+				crate.d[!cb_dim][ move_dir] = cb_end + (move_dir ? 1.0 : -1.0)*1.5*cb_hwidth;
+
+				if (!cube_int_if_nonzero(crate, ladder) && !overlaps_obj_or_placement_blocked(crate, room, objs_start)) {
+					objs.emplace_back(crate, TYPE_CRATE, room_id, !cb_dim, move_dir, RO_FLAG_OPEN, tot_light_amt, SHAPE_TALL);
+				}
 				interior->room_geom->have_conv_belt = 1;
 				conveyor_belt = cb;
 				add_cbelt     = 1;

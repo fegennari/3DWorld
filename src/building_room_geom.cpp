@@ -996,7 +996,20 @@ void building_room_geom_t::add_button(room_object_t const &c, bool inc_geom, boo
 
 void building_room_geom_t::add_crate(room_object_t const &c) { // is_small=1
 	// Note: draw as "small", not because crates are small, but because they're only added to windowless rooms and can't be easily seen from outside a building
-	get_material(tid_nm_pair_t(get_crate_tid(c), 0.0), 1, 0, 1).add_cube_to_verts(c, apply_light_color(c), zero_vector, EF_Z1); // skip bottom face (even for stacked crate?)
+	unsigned skip_faces(c.is_open() ? EF_Z12 : EF_Z1); // skip bottom face (even for stacked crate?); skip top if opened
+	colorRGBA const color(apply_light_color(c));
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_crate_tid(c), 0.0), 1, 0, 1));
+	mat.add_cube_to_verts(c, color, zero_vector, skip_faces);
+	
+	if (c.is_open()) { // draw inside faces of open crate
+		cube_t c2(c), sides[4];
+		c2.expand_by(-0.05*c.dz()); // shrink to avoid Z-fighting with the floor
+		c2.z2() = c.z2(); // but z2 remains the same so that it meets the top of the sides
+		mat.add_cube_to_verts(c2, color, zero_vector, EF_Z2, 0, 0, 0, 1); // inverted=1
+		mat.tex.tscale_x = mat.tex.tscale_y = 0.1/c.dz(); // don't stretch texture across the quad
+		subtract_cube_xy(c, c2, sides);
+		for (unsigned n = 0; n < 4; ++n) {mat.add_cube_to_verts(sides[n], color, zero_vector, ~EF_Z2);} // draw tops of sides
+	}
 }
 
 void building_room_geom_t::add_box(room_object_t const &c) { // is_small=1
