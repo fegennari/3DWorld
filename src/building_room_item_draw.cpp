@@ -2506,12 +2506,17 @@ void building_t::draw_z_prepass(point const &camera_bs) const {
 	else if (is_warehouse() && point_in_industrial          (camera_bs)) {check_shelfracks = 1;} // player in the warehouse
 	if (!check_shelfracks) return;
 	quad_batch_draw qbd;
+	point const rot_center(bcube.get_cube_center());
 
 	for (cube_t const &c : interior->room_geom->shelf_rack_occluders[0]) { // use shelfrack backs
 		bool const dim(c.dy() < c.dx()); // wall dim
 		float const center(c.get_center_dim(dim));
 		point pts[4] = {point(c.x1(), c.y1(), c.z1()), point(c.x2(), c.y2(), c.z1()), point(c.x2(), c.y2(), c.z2()), point(c.x1(), c.y1(), c.z2())};
-		for (unsigned n = 0; n < 4; ++n) {pts[n][dim] = center;} // shrink to zero area in dim
+		
+		for (unsigned n = 0; n < 4; ++n) {
+			pts[n][dim] = center; // shrink to zero area in dim
+			if (is_rotated()) {do_xy_rotate(rot_center, pts[n]);}
+		}
 		qbd.add_quad_pts(pts, WHITE);
 	} // for c
 	qbd.draw();
