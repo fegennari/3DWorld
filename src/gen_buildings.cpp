@@ -184,6 +184,16 @@ void building_geom_t::do_xy_rotate_inv(point const &center, point &pos) const {:
 void building_geom_t::do_xy_rotate_normal    (point &n) const {::do_xy_rotate_normal( rot_sin, rot_cos, n);}
 void building_geom_t::do_xy_rotate_normal_inv(point &n) const {::do_xy_rotate_normal(-rot_sin, rot_cos, n);}
 
+void rotate_verts_range(building_t const &b, vect_vnctcc_t &verts, unsigned verts_start) {
+	point const center(b.bcube.get_cube_center());
+	
+	for (auto i = verts.begin()+verts_start; i != verts.end(); ++i) {
+		b.do_xy_rotate(center, i->v);
+		vector3d normal(i->get_norm()); // decompress the norm_comp
+		b.do_xy_rotate_normal(normal);
+		i->set_norm(normal); // normalize not needed?
+	}
+}
 
 class building_texture_mgr_t {
 	int window_tid=-1, hdoor_tid=-1, odoor_tid=-1, bdoor_tid=-1, bdoor2_tid=-1, gdoor_tid=-1, mdoor_tid=-1, ac_unit_tid1=-1, ac_unit_tid2=-1, bath_wind_tid=-1;
@@ -1264,10 +1274,7 @@ public:
 				EMIT_VERTEX_SIMPLE(); // 1 !j
 			} // for j
 		} // for i
-		if (is_rotated) {
-			point const center(bg.bcube.get_cube_center());
-			for (auto i = (verts.begin() + verts_start); i != verts.end(); ++i) {bg.do_xy_rotate(center, i->v);}
-		}
+		if (is_rotated) {rotate_verts_range(bg, verts, verts_start);}
 	}
 
 	void add_fence(building_t const &bg, cube_t const &fence, tid_nm_pair_t const &tex, colorRGBA const &color, bool mult_sections) {
@@ -1318,8 +1325,8 @@ public:
 		}
 	}
 
-	void add_roof_curve(cube_t const &c, cube_t const &bcube, tid_nm_pair_t const &roof_tex, tid_nm_pair_t const &side_tex,
-		colorRGBA const &roof_color, colorRGBA const &side_color)
+	void add_roof_curve(building_t const &b, cube_t const &c, cube_t const &bcube, tid_nm_pair_t const &roof_tex,
+		tid_nm_pair_t const &side_tex, colorRGBA const &roof_color, colorRGBA const &side_color)
 	{
 		// add a squished cylindrical section on the top
 		bool const dim(c.dx() < c.dy()); // long dim
@@ -1327,6 +1334,7 @@ public:
 		float const ndiv_inv(1.0/ndiv), radius(0.5*c.get_sz_dim(!dim)), roof_z(c.z2()), hscale(0.25);
 		color_wrapper const cwr(roof_color), cws(side_color);
 		auto &qverts(get_verts(roof_tex, 0));
+		unsigned const qverts_start(qverts.size());
 		point ce[2];
 		ce[0].z     = ce[1].z     = roof_z;
 		ce[0][!dim] = ce[1][!dim] = c.get_center_dim(!dim);
@@ -1357,6 +1365,7 @@ public:
 		// add partial circle/disk on both sides
 		float const tscale_x(side_tex.get_drawn_tscale_x()), tscale_y(side_tex.get_drawn_tscale_y());
 		auto &tverts(get_verts(side_tex, 1));
+		unsigned const tverts_start(tverts.size());
 
 		for (unsigned d = 0; d < 2; ++d) {
 			vector3d const normal(vector_from_dim_dir(dim, d));
@@ -1374,6 +1383,10 @@ public:
 				} // for j
 			} // for i
 		} // for d
+		if (b.is_rotated()) {
+			rotate_verts_range(b, qverts, qverts_start);
+			rotate_verts_range(b, tverts, tverts_start);
+		}
 	}
 
 	void add_vert_cylinder(point const &center, float z1, float z2, float radius, float tscale_x, float tscale_y,
@@ -1978,12 +1991,7 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 			cube_t text_bcube(*i);
 			text_bcube.expand_in_dim(dim, 0.1*i->get_sz_dim(dim)); // expand outward a bit to reduce Z-fighting; doesn't seem to help much
 			add_sign_text_verts_both_sides(name, text_bcube, dim, dir, text_verts);
-
-			if (is_rotated()) {
-				point const center(bcube.get_cube_center());
-				// what about rotating the normal? seems difficult since normals are compressed, and maybe not very noticeable for sign text?
-				for (auto i = text_verts.begin()+text_verts_start; i != text_verts.end(); ++i) {do_xy_rotate(center, i->v);}
-			}
+			if (is_rotated()) {rotate_verts_range(*this, text_verts, text_verts_start);}
 		}
 	} // for i
 	for (tquad_with_ix_t const &d : doors) {draw_building_ext_door(bdraw, d, *this);} // draw exterior doors
@@ -2002,7 +2010,7 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 		bdraw.add_roof_dome(point(center.x, center.y, top.z2()), 0.5*dx, 0.5*dy, tex, roof_color*1.5, (roof_type == ROOF_TYPE_ONION));
 	}
 	else if (roof_type == ROOF_TYPE_CURVED) {
-		bdraw.add_roof_curve(top, bcube, roof_tex, side_tex, roof_color, side_color);
+		bdraw.add_roof_curve(*this, top, bcube, roof_tex, side_tex, roof_color, side_color);
 	}
 }
 

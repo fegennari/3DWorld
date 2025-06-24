@@ -204,6 +204,7 @@ bool building_t::add_room_lockers(rand_gen_t &rgen, room_t const &room, float zv
 			float const pos(place_area.d[dim][0] + n*locker_width);
 			locker.d[dim][0] = pos;
 			locker.d[dim][1] = pos + locker_width;
+			assert(locker.intersects(room));
 			if (has_bcube_int(locker, blockers)) continue;
 			cube_t test_cube(locker);
 			test_cube.expand_in_dim(dim, 2.0*locker_width); // add some padding to the sides
