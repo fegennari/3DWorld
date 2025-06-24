@@ -771,7 +771,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 						objs.emplace_back(curb, TYPE_CURB, room_id, dim, 0, 0, 1.0, SHAPE_CUBE, colorRGBA(1.0, 0.8, 0.3)); // dir=0
 					}
 					if (rgen.rand_float() < 0.3) { // maybe add a black oil stain
-						float const stain_height(1.5*get_flooring_thick()), stain_rmax(0.3*space_width);
+						float const stain_height(1.5*get_flooring_thick()), stain_rmax(0.3*min(space.dx(), space.dy()));
 						float const radius(stain_rmax*rgen.rand_uniform(0.5, 1.0));
 						point const pos(gen_xy_pos_in_area(pspace, radius, rgen, zval));
 						cube_t const c(get_cube_height_radius(pos, radius, stain_height));
