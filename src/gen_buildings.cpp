@@ -3989,14 +3989,15 @@ public:
 								s.clear_color_e();
 							}
 						}
+						bool player_in_building_bcube(b.bcube.contains_pt_xy(camera_bs));
 						float const bdist_sq(p2p_dist_sq(camera_bs, b.bcube.closest_pt(camera_bs)));
 						if (bdist_sq > rgeom_clear_dist_sq) {b.clear_room_geom();} // optimization
-						else if (!camera_in_building && bdist_sq > rgeom_sm_clear_dist_sq) {b.clear_small_room_geom_vbos();} // optimization
+						else if (!camera_in_building && !player_in_building_bcube && bdist_sq > rgeom_sm_clear_dist_sq) {b.clear_small_room_geom_vbos();} // memory optimization
 						if (bdist_sq > rgeom_draw_dist_sq) continue; // too far away
 						bool const has_mall(b.has_mall());
 						float const ddist_scale(has_mall ? 0.5 : 1.0); // reduced draw distance for malls, since they have so much geom
 						if (has_mall && bdist_sq > ddist_scale*rgeom_draw_dist_sq) continue; // too far away (for a mall)
-						bool player_in_building_bcube(b.bcube.contains_pt_xy(camera_bs) || b.point_in_extended_basement(camera_bs)); // player within building's bcube
+						player_in_building_bcube |= b.point_in_extended_basement(camera_bs); // included extended basement
 						bool const ext_basement_conn_visible(b.interior_visible_from_other_building_ext_basement(xlate));
 						if (reflection_pass && !player_in_building_bcube && !ext_basement_conn_visible) continue; // not the correct building
 						bool const mall_elevator_visible(b.top_of_mall_elevator_visible(camera_bs, xlate));
