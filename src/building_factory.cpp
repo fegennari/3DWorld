@@ -999,7 +999,7 @@ void building_t::add_industrial_office_objs(rand_gen_t &rgen, room_t const &room
 		assert(interior->ind_info);
 		bool const edim(interior->ind_info->entrance_dim), edir(interior->ind_info->entrance_dir), place_end(rgen.rand_bool());
 		int const dir_skip_mask(1 << (unsigned)edir); // along the interior wall only, to avoid blocking windows
-		float const floor_spacing(get_window_vspace()), locker_area_width(rgen.rand_uniform(2.0, 2.5)*floor_spacing);
+		float const floor_spacing(get_window_vspace()), locker_area_width(rgen.rand_uniform(2.0, 2.5)*min(floor_spacing, 0.35f*room_bounds.get_sz_dim(!edim)));
 		cube_t place_area(room_bounds);
 		place_area.d[!edim][!place_end] = room_bounds.d[!edim][place_end] + (place_end ? -1.0 : 1.0)*locker_area_width;
 		add_room_lockers(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area, RTYPE_OFFICE, !edim, dir_skip_mask, 1); // add_padlocks=1
