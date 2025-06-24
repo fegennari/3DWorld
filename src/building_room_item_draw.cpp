@@ -2722,16 +2722,16 @@ void building_t::draw_cars_in_building(shader_t &s, vector3d const &xlate, bool 
 		for (auto i = objs.begin()+pg_wall_start; i != objs_ps_end; ++i) {
 			if (check_occlusion && (i->type == TYPE_PG_WALL || (is_parking_str && i->type == TYPE_STAIR_WALL))) {occluders.push_back(*i);}
 			if (i->type != TYPE_PARK_SPACE || !i->is_used())                       continue; // not a space, or no car in this space
-			if (player_in_this_building && i->z2() < viewer.z - 2.0*floor_spacing) continue; // move than a floor below - skip
+			if (player_in_this_building && i->z2() < viewer.z - 2.0*floor_spacing) continue; // more than a floor below - skip
 			car_t car(car_from_parking_space(*i));
 			int const car_floor(get_floor_for_zval(car.bcube.zc())), num_floors_apart(abs(camera_floor - car_floor));
 
 			if (shadow_only) {
 				if (num_floors_apart > 0) continue; // different floors
 			}
-			else if (check_occlusion && player_in_this_building) { // FIXME: draw below when player is outside the building
+			else if (check_occlusion && player_in_this_building) {
 				if (num_floors_apart > 1) continue; // more than one floor apart
-				if (num_floors_apart > 0 && !line_intersect_stairs_or_ramp(viewer, car.get_center(), 1)) continue; // skip_u_stairs=1
+				if (num_floors_apart > 0 && !player_in_mall && !line_intersect_stairs_or_ramp(viewer, car.get_center(), 1)) continue; // skip_u_stairs=1
 			}
 			if (!shadow_only && player_in_basement == 3 && !is_cube_visible_through_extb_door(viewer, car.bcube)) continue; // player in extb; cars only visible through door
 			if (camera_pdu.cube_visible(car.bcube + xlate)) {cars_to_draw.push_back(car);}
