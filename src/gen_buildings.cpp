@@ -3989,7 +3989,7 @@ public:
 								s.clear_color_e();
 							}
 						}
-						bool player_in_building_bcube(b.bcube.contains_pt_xy(camera_bs));
+						bool player_in_building_bcube(b.bcube.contains_pt_xy(camera_bs) && camera_bs.z < b.bcube.z2() + 2.0*b.get_window_vspace());
 						float const bdist_sq(p2p_dist_sq(camera_bs, b.bcube.closest_pt(camera_bs)));
 						if (bdist_sq > rgeom_clear_dist_sq) {b.clear_room_geom();} // optimization
 						else if (!camera_in_building && !player_in_building_bcube && bdist_sq > rgeom_sm_clear_dist_sq) {b.clear_small_room_geom_vbos();} // memory optimization
