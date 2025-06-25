@@ -4713,7 +4713,8 @@ void building_room_geom_t::add_sign(room_object_t const &c, bool inc_back, bool 
 		unsigned const skip_faces(hanging ? (draw_top ? 0 : EF_Z2) : skip_back_face); // skip back face, top face if hanging and !draw_top
 		// back of the sign, always white (for now); unshadowed; what about transparent plastic back for hanging signs?
 		rgeom_mat_t &mat(get_untextured_material(0, 0, small, 0, exterior));
-		mat.add_cube_to_verts_untextured(c, apply_light_color(c, (dark_mode ? BKGRAY : WHITE)), skip_faces);
+		colorRGBA const color(apply_light_color(c, (dark_mode ? (c.is_exterior() ? colorRGBA(0.2, 0.2, 0.8) : BKGRAY) : WHITE))); // blue background for exterior parking sign
+		mat.add_cube_to_verts_untextured(c, color, skip_faces);
 
 		if (c.has_extra()) { // add a black-ish frame (or white in dark mode)
 			unsigned const skip_faces_frame(hanging ? 0 : skip_back_face);

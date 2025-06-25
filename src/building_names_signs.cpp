@@ -366,6 +366,18 @@ void building_t::add_exterior_door_items(rand_gen_t &rgen) { // mostly signs; ad
 			sign.expand_in_dim(!dim, -0.25*sign.get_sz_dim(!dim)); // shrink
 			objs.emplace_back(sign, TYPE_SIGN, 1, dim, dir, (flags | RO_FLAG_HANGING), 1.0, SHAPE_CUBE, DK_RED); // room_id=1
 			objs.back().obj_id = register_sign_text("Clearance 7\'-0\"");
+			// add vertical parking sign
+			bool const side(center < bcube.get_center_dim(!dim));
+			set_cube_zvals(sign, (entrance.z1() + 0.45*floor_spacing), (entrance.z2() + 0.35*floor_spacing));
+			set_wall_width(sign, (entrance.d[!dim][side] + (side ? 1.0 : -1.0)*0.25*floor_spacing), 0.006*floor_spacing, !dim);
+			sign.d[dim][!dir] = wall_face;
+			sign.d[dim][ dir] = wall_face + (dir ? 1.0 : -1.0)*0.1*floor_spacing; // extend out
+			unsigned const obj_id(register_sign_text("P\nA\nR\nK\nI\nN\nG")); // Note: 'I' is not centered
+
+			for (unsigned d = 0; d < 2; ++d) { // add twice for text on both sides
+				objs.emplace_back(sign, TYPE_SIGN, 1, !dim, d, (flags | RO_FLAG_HANGING | RO_FLAG_ADJ_TOP), 1.0, SHAPE_CUBE, WHITE); // room_id=1
+				objs.back().obj_id = obj_id;
+			}
 		}
 		if (!has_pri_hall() && rgen.rand_bool()) return; // place exit signs on buildings with primary hallways and 50% of other buildings
 		bool const tall_room(is_industrial() || has_tall_retail());
@@ -468,9 +480,6 @@ void building_t::add_signs(vector<sign_t> &signs) const { // added as exterior c
 		} // for d
 		// what about placing hospital signs with arrows at intersections?
 	} // end hospital
-	else if (is_parking()) {
-		// add parking signs
-	}
 	if (name.empty())  return; // no company name; shouldn't get here
 	if (num_sides & 1) return; // odd number of sides, may not be able to place a sign correctly (but maybe we can check this with a collision test with conn?)
 	if (half_offset || flat_side_amt != 0.0 || alt_step_factor != 0.0 || start_angle != 0.0) return; // not a shape that's guanrateed to reach the bcube edge
