@@ -1835,11 +1835,11 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 				dsq = p2p_dist(at_pos, p1c2); // use closest intersection point
 				if (dmin_sq > 0.0 && dsq > dmin_sq)    continue; // not the closest
 			}
-			if (obj_has_open_drawers(*i))                                 continue; // can't take if any drawers are open
-			if (object_has_something_on_it(*i,       obj_vect, objs_end)) continue; // can't remove a table, etc. that has something on it
+			if (obj_has_open_drawers(*i))                                  continue; // can't take if any drawers are open
+			if (object_has_something_on_it(*i,       obj_vect, objs_end))  continue; // can't remove a table, etc. that has something on it
 			if (object_has_something_on_it(*i, other_obj_vect, other_objs_end)) continue; // check the other one as well
-			if (building.check_for_wall_ceil_floor_int(at_pos, p1c))      continue; // skip if it's on the other side of a wall, ceiling, or floor
-			if (was_expanded && building.is_school() && is_inside_closed_locker(*i)) continue;
+			if (building.check_for_wall_ceil_floor_int(at_pos, p1c))       continue; // skip if it's on the other side of a wall, ceiling, or floor
+			if (was_expanded && has_locker && is_inside_closed_locker(*i)) continue;
 			closest_obj_id = (i - obj_vect.begin()) + obj_id_offset; // valid pickup object
 			dmin_sq = dsq; // this object is the closest, even if it can't be picked up
 		} // for i

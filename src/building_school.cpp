@@ -235,6 +235,7 @@ bool building_t::add_room_lockers(rand_gen_t &rgen, room_t const &room, float zv
 			set_obj_id(objs); // for random contents
 			objs.back().state_flags = rtype; // store room type for correct object type addtion
 			if (add_blockers) {row_bc.assign_or_union_with_cube(locker);}
+			interior->room_geom->has_locker = 1;
 		} // for n
 		if (!row_bc.is_all_zeros()) {
 			row_bc.d[!dim][ d] = locker_front;
