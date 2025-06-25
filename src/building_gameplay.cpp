@@ -1443,14 +1443,14 @@ bool register_player_object_pickup(room_object_t const &obj, point const &at_pos
 	return 1;
 }
 
-bool building_t::player_pickup_object(point const &at_pos, vector3d const &in_dir) {
+bool building_t::player_pickup_object(point const &at_pos, vector3d const &in_dir) { // Note: at_pos/in_dir are in camera building space
 	if (!has_room_geom()) return 0;
-	return interior->room_geom->player_pickup_object(*this, at_pos, in_dir);
-}
-bool building_room_geom_t::player_pickup_object(building_t &building, point const &at_pos, vector3d const &in_dir) {
 	point at_pos_rot(at_pos);
 	vector3d in_dir_rot(in_dir);
-	building.maybe_inv_rotate_pos_dir(at_pos_rot, in_dir_rot);
+	maybe_inv_rotate_pos_dir(at_pos_rot, in_dir_rot);
+	return interior->room_geom->player_pickup_object(*this, at_pos_rot, in_dir_rot);
+}
+bool building_room_geom_t::player_pickup_object(building_t &building, point const &at_pos, vector3d const &in_dir) { // Note: at_pos/in_dir are in rotated building space
 	float const range_max(3.0*CAMERA_RADIUS), drawer_range_max(2.5*CAMERA_RADIUS);
 	float range(range_max), obj_dist(0.0);
 	int rat_ix(-1);
@@ -1470,10 +1470,10 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 	}
 	//if (bldg_obj_types[TYPE_SPIDER].pickup) {} // check spiders (future work)
 	//if (bldg_obj_types[TYPE_SNAKE ].pickup) {} // check snakes  (future work)
-	int const obj_id(find_nearest_pickup_object(building, at_pos_rot, in_dir_rot, range, obj_dist));
+	int const obj_id(find_nearest_pickup_object(building, at_pos, in_dir, range, obj_dist));
 	float drawer_range(min(range, drawer_range_max));
 	if (obj_id >= 0) {min_eq(drawer_range, obj_dist);} // only include drawers that are closer than the pickup object
-	if (open_nearest_drawer(building, at_pos_rot, in_dir_rot, drawer_range_max, 1, 0)) return 1; // try objects in drawers; pickup_item=1
+	if (open_nearest_drawer(building, at_pos, in_dir, drawer_range_max, 1, 0)) return 1; // try objects in drawers; pickup_item=1
 	
 	if (obj_id < 0) { // no room object to pick up
 		if (rat_ix >= 0) { // can pick up a rat

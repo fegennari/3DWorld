@@ -1101,7 +1101,7 @@ void building_t::register_player_in_building(point const &camera_bs, unsigned bu
 	bool const prev_was_valid(cur_player_building_loc.is_valid());
 	unsigned const old_floor_ix(cur_player_building_loc.floor_ix);
 	if (animate2) {prev_player_building_loc = cur_player_building_loc;} // only update previous pos when AI is running so that it doesn's miss a floor or room change
-	cur_player_building_loc = building_dest_t(get_building_loc_for_pt(camera_bs), camera_bs, building_id);
+	cur_player_building_loc = building_dest_t(get_building_loc_for_pt(get_inv_rot_pos(camera_bs)), camera_bs, building_id);
 	unsigned const new_floor_ix(cur_player_building_loc.floor_ix);
 	if (prev_was_valid && old_floor_ix != new_floor_ix) {register_player_change_floor(old_floor_ix, new_floor_ix);}
 }
