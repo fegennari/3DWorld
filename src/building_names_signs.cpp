@@ -474,6 +474,8 @@ void building_t::add_signs(vector<sign_t> &signs) const { // added as exterior c
 	if (name.empty())  return; // no company name; shouldn't get here
 	if (num_sides & 1) return; // odd number of sides, may not be able to place a sign correctly (but maybe we can check this with a collision test with conn?)
 	if (half_offset || flat_side_amt != 0.0 || alt_step_factor != 0.0 || start_angle != 0.0) return; // not a shape that's guanrateed to reach the bcube edge
+	bool const is_rotated_non_cube(is_rotated() && !is_cube());
+	if (is_rotated_non_cube && has_complex_floorplan) return; // this case doesn't work
 	rand_gen_t rgen;
 	set_rgen_state_for_building(rgen);
 	// find the highest part, widest if tied, and place the sign on top of it
@@ -483,6 +485,8 @@ void building_t::add_signs(vector<sign_t> &signs) const { // added as exterior c
 	auto parts_end((real_num_parts > 0) ? get_real_parts_end() : parts.end()); // if real_num_parts hasn't been set yet, assume it includes all parts (for non-city office buildings)
 
 	for (auto i = parts.begin(); i != parts_end; ++i) {
+		// skip non-square upper stacked parts of non-cube rotated buildings as they don't work correctly (require custom offset direction)
+		if (is_rotated_non_cube && i->z1() > ground_floor_z1 && fabs(i->dx() - i->dy()) > get_wall_thickness()) continue;
 		// choose max dim; or should we use dim from street_dir if set? but that would limit us for corner buildings
 		bool const dmax(i->dx() < i->dy());
 		float const width(i->get_sz_dim(dmax));
