@@ -230,9 +230,10 @@ void building_t::add_backrooms_droplet_spawners(rand_gen_t rgen) {
 	assert(has_room_geom());
 	assert(interior->has_backrooms);
 	if (!has_water()) return;
-	if (interior->water_zval - interior->basement_ext_bcube.z1() > 0.7*get_window_vspace()) return; // water too deep, player head underwater
+	float const water_floor(get_floor_below_water_level());
+	if (interior->water_zval - water_floor > 0.7*get_window_vspace()) return; // water too deep, player head underwater
 	float const wall_thickness(get_wall_thickness()), rmax(0.1*wall_thickness);
-	float const zval(get_floor_below_water_level() + get_floor_ceil_gap()); // ceiling above water level
+	float const zval(water_floor + get_floor_ceil_gap()); // ceiling above water level
 	unsigned const num_spawners(3 + (rgen.rand() & 15)); // 3-18
 	cube_t spawn_bounds(interior->basement_ext_bcube);
 	spawn_bounds.expand_by_xy(-wall_thickness);
