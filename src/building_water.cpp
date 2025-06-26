@@ -282,12 +282,10 @@ void building_t::draw_water(vector3d const &xlate) const {
 	float const mud_amt  (CLIP_TO_01(is_pool ? rgen.rand_uniform(-0.2, 0.2) : rgen.rand_uniform( 0.2, 0.8)));
 	float const algae_amt(CLIP_TO_01(is_pool ? rgen.rand_uniform(-2.0, 1.5) : rgen.rand_uniform(-0.5, 1.5)));
 	float const atten_scale((1.0 + mud_amt + algae_amt)*(is_pool ? 0.3 : 0.7)/floor_spacing);
-	point const camera_pos(get_camera_pos());
+	point const camera_pos(get_camera_pos()), camera_bs(camera_pos - xlate);
 	if (animate2) {building_splash_manager.next_frame(floor_spacing, is_pool);} // maybe should do this somewhere else? or update even if water isn't visible?
 
 	if (camera_pos.z < interior->water_zval) { // player under the water; could also check (player_in_water == 2)
-		point const camera_bs(camera_pos - get_tiled_terrain_model_xlate());
-
 		if (animate2 && has_room_geom()) { // add bubbles
 			static float next_bubble_time(0.0);
 
@@ -345,7 +343,8 @@ void building_t::draw_water(vector3d const &xlate) const {
 	if (use_dlights) {setup_dlight_textures(s);} // must be before set_city_lighting_shader_opts()
 	set_city_lighting_shader_opts(s, lights_bcube, use_dlights, use_smap, pcf_scale);
 	setup_building_draw_shader_post(s, have_indir);
-	s.add_uniform_vector3d("camera_pos", camera_pos);
+	s.add_uniform_vector3d("camera_pos", camera_bs);
+	s.add_uniform_vector3d("vert_xlate", xlate);
 	s.add_uniform_float("water_depth",   water_depth);
 	s.add_uniform_float("droplet_scale", 0.1*floor_spacing);
 	s.add_uniform_float("foam_scale",    min(1.0f, 0.1f*floor_spacing/water_depth)); // higher with shallow water, lower with deep water
