@@ -3291,7 +3291,7 @@ void register_building_sound(point const &pos, float volume);
 void register_building_sound_at_player(float volume);
 bldg_obj_type_t const &get_room_obj_type(room_object_t const &obj);
 void register_building_water_splash(point const &pos, float size=1.0, bool alert_zombies=1);
-bool add_water_splash(point const &pos, float radius, float size);
+bool add_water_splash(point const &pos, float radius, float size, bool is_droplet=0);
 // functions in city_gen.cc
 void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights, int use_smap, int use_bmap,
 	float min_alpha=0.0, bool force_tsl=0, float pcf_scale=1.0, int use_texgen=0, bool indir_lighting=0, bool is_outside=1);

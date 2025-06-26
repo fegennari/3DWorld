@@ -1845,7 +1845,7 @@ void particle_manager_t::next_frame(building_t &building) {
 				p.pos.z  = building.interior->water_zval + 1.6*p.radius; // above the water surface (final radius is 2x original)
 				p.vel    = zero_vector;
 				p.color  = WHITE;
-				add_water_splash(p.pos, 1.5*p.radius, 0.25);
+				add_water_splash(p.pos, 1.5*p.radius, 0.25, 1); // is_droplet=1
 				point const pos_cs(p.pos + get_camera_coord_space_xlate());
 				if (dist_less_than(pos_cs, get_camera_pos(), 2.0*building.get_window_vspace())) {gen_sound_thread_safe(SOUND_WATER_DROP, pos_cs, 0.1);}
 				continue;

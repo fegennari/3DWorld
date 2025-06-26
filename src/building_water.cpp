@@ -36,10 +36,11 @@ class building_splash_manager_t {
 		vector4d get_bounds_as_vec4() const {return vector4d(bounds.x1(), bounds.y1(), bounds.x2(), bounds.y2());}
 	};
 	vector<splash_t> splashes;
+	point closest_droplet;
 	unsigned last_size=0;
 	float time=0.0;
 public:
-	void add_splash(point const &pos, float radius, float height, cube_t const &bounds) {
+	void add_splash(point const &pos, float radius, float height, cube_t const &bounds, bool is_droplet=0) {
 		assert(splashes.size() <= MAX_SPLASHES);
 
 		if (!splashes.empty()) {
@@ -53,6 +54,11 @@ public:
 		}
 		splashes.emplace_back(pos.x, pos.y, radius, height, bounds);
 		if (splashes.size() > MAX_SPLASHES) {splashes.erase(min_element(splashes.begin(), splashes.end()));} // limit size to MAX_SPLASHES
+		
+		if (is_droplet) {
+			point const camera_bs(get_camera_building_space());
+			if (closest_droplet == all_zeros || p2p_dist_sq(pos, camera_bs) < p2p_dist_sq(closest_droplet, camera_bs)) {closest_droplet = pos;}
+		}
 	}
 	void next_frame(float ref_dist, bool is_pool) { // floor_spacing can be used
 		if (splashes.empty()) return;
@@ -83,6 +89,7 @@ public:
 		}
 		s.add_uniform_float("time", time/TICKS_PER_SECOND);
 		s.add_uniform_float("ripple_freq", (is_pool ? 20.0 : 10.0)); // higher frequency ripples in pools
+		s.add_uniform_vector3d("closest_droplet", closest_droplet);
 		last_size = splashes.size();
 	}
 	void clear() {splashes.clear();} // Note: last_size is not reset
@@ -97,11 +104,11 @@ building_splash_manager_t building_splash_manager;
 void clear_building_water_splashes() {
 	building_splash_manager.clear();
 }
-bool add_water_splash(point const &pos, float radius, float size) { // Note: pos is in building space
+bool add_water_splash(point const &pos, float radius, float size, bool is_droplet) { // Note: pos is in building space
 	if (player_building == nullptr) return 0; // shouldn't happen?
 	cube_t const bounds(player_building->calc_splash_bounds(pos));
 	if (bounds == cube_t()) return 0; // shouldn't happen?
-	building_splash_manager.add_splash(pos, radius, size, bounds);
+	building_splash_manager.add_splash(pos, radius, size, bounds, is_droplet);
 	return 1;
 }
 // Note: player steps call this function directly; all others go through building_t::check_for_water_splash()
@@ -340,6 +347,7 @@ void building_t::draw_water(vector3d const &xlate) const {
 	setup_building_draw_shader_post(s, have_indir);
 	s.add_uniform_vector3d("camera_pos", camera_pos);
 	s.add_uniform_float("water_depth",   water_depth);
+	s.add_uniform_float("droplet_scale", 0.1*floor_spacing);
 	s.add_uniform_float("foam_scale",    min(1.0f, 0.1f*floor_spacing/water_depth)); // higher with shallow water, lower with deep water
 	setup_shader_underwater_atten(s, atten_scale, mud_amt, algae_amt); // attenuates to dark blue (or brown for mud)/opaque around this distance
 	building_splash_manager.set_shader_uniforms(s, is_pool);

@@ -2,9 +2,9 @@
 
 const float PI = 3.14159;
 
-uniform float water_depth, water_atten, foam_scale, time;
+uniform float water_depth, water_atten, foam_scale, droplet_scale, time;
 uniform float ripple_freq = 10.0;
-uniform vec3 uw_atten_max, uw_atten_scale;
+uniform vec3 uw_atten_max, uw_atten_scale, closest_droplet;
 uniform sampler2D reflection_tex, frame_buffer;
 
 struct splash_t {
@@ -119,6 +119,10 @@ void main() {
 	float camera_path  = eye_to_floor - eye_to_water; // camera=>fragment through water
 	float light_path   = water_depth + camera_path; // light=>floor + camera=>floor; may be approximate if water_depth isn't accurate
 	float alpha        = min((0.3 + 0.6*sqrt(water_atten*camera_path)), 1.0); // short path is transparent, long path is opaque
+
+	if (closest_droplet != vec3(0.0)) { // darken/more opaque around droplets
+		alpha += max(0.0, 0.33*(droplet_scale - distance(vpos, closest_droplet))/droplet_scale);
+	}
 	vec4 uw_color      = vec4(light_color, alpha);
 	atten_color(uw_color.rgb, 1.5*water_atten*light_path); // apply scattering and absorption
 	vec4 water_color   = mix(uw_color, vec4(light_color, 1.0), foam);
