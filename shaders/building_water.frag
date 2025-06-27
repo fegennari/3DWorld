@@ -4,7 +4,7 @@ const float PI = 3.14159;
 
 uniform float water_depth, water_atten, foam_scale, droplet_scale, time;
 uniform float ripple_freq = 10.0;
-uniform vec3 uw_atten_max, uw_atten_scale, closest_droplet, vert_xlate;
+uniform vec3 uw_atten_max, uw_atten_scale, closest_droplet;
 uniform sampler2D reflection_tex, frame_buffer;
 
 struct splash_t {
@@ -111,7 +111,7 @@ void main() {
 	// apply lighting
 	vec3 light_color = vec3(0.0);
 	//add_indir_lighting(light_color, 1.0); // indir lighting is disabled as it has little effect and is difficult to setup
-	if (enable_dlights) {add_dlights(light_color, (vpos + vert_xlate), epos, ws_normal, vec3(0.5));} // add dynamic lighting; if disabled, water will be black
+	if (enable_dlights) {add_dlights(light_color, vpos, epos, ws_normal, vec3(0.5));} // add dynamic lighting; if disabled, water will be black
 	
 	// attenuate based on depth/distance, assuming a constant water depth and average light coming from above in +Z;
 	float eye_to_floor = get_linear_depth_zval(uv); // floor, wall, object, etc.

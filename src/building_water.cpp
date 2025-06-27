@@ -344,7 +344,7 @@ void building_t::draw_water(vector3d const &xlate) const {
 	set_city_lighting_shader_opts(s, lights_bcube, use_dlights, use_smap, pcf_scale);
 	setup_building_draw_shader_post(s, have_indir);
 	s.add_uniform_vector3d("camera_pos", camera_bs);
-	s.add_uniform_vector3d("vert_xlate", xlate);
+	s.add_uniform_vector3d("dlight_smap_xlate", xlate);
 	s.add_uniform_float("water_depth",   water_depth);
 	s.add_uniform_float("droplet_scale", 0.1*floor_spacing);
 	s.add_uniform_float("foam_scale",    min(1.0f, 0.1f*floor_spacing/water_depth)); // higher with shallow water, lower with deep water
