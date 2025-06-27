@@ -34,6 +34,8 @@ head_bob_amount 0.04
 #player_start -29.7123 -16.5783 -3.93496 # location near a parking structure
 #player_start -22.4411 -20.3029 -5.95434 # location near a parking structure entrance
 #player_start 24.0 0.0 0.0 # location near wind turbines
+#player_start -36.2597 -6.37245 -5.97871 # location near flooded backrooms
+#player_start -37.3612 -12.7353 -6.07392 # location near flooded backrooms
 
 buildings tt_only 1
 #buildings infinite_buildings     1 # enables building tiles
