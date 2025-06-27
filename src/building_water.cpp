@@ -256,6 +256,7 @@ void building_t::add_backrooms_droplet_spawners(rand_gen_t rgen) {
 	} // for n
 }
 void building_t::update_droplet_spawners() {
+	if (player_in_water == 2) return; // no droplets if the player is underwater
 	assert(has_room_geom());
 
 	for (droplet_spawner_t &s : interior->room_geom->droplet_spawners) {
