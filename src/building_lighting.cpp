@@ -78,7 +78,6 @@ class cube_bvh_t : public cobj_tree_simple_type_t<colored_cube_t> {
 	}
 public:
 	vect_tquad_with_ix_t roof_tquads; // these aren't cubes, so they don't go into the BVH; should only be 2-4 of these
-
 	vect_colored_cube_t &get_objs() {return objects;}
 
 	void clear() {
@@ -588,7 +587,7 @@ class building_indir_light_mgr_t {
 		}
 		else {
 			// per-light time for large office building: orig: 194ms, per-floor BVH: 96ms, clip rays to floor: 44ms, now 37ms
-			highres_timer_t timer("Ray Cast Building Light");
+			highres_timer_t timer("Ray Cast Building Light"); // 5800ms / 11000ms bkg in mall with 471 lights
 			cast_light_rays(b);
 		}
 	}
@@ -784,7 +783,7 @@ class building_indir_light_mgr_t {
 	}
 	void update_volume_light_texture() { // full update, 6.6ms for z=128
 		init_lmgr(0); // init on first call; clear_lighting=0
-		//highres_timer_t timer("Lighting Tex Create");
+		//highres_timer_t timer("Lighting Tex Create"); // 1400ms in mall with 4 threads and 471 lights
 		indir_light_tex_from_lmap(cur_tid, lmgr, tex_data, MESH_X_SIZE, MESH_Y_SIZE, MESH_SIZE[2], indir_light_exp, 1); // local_only=1
 	}
 	void maybe_join_thread() {
