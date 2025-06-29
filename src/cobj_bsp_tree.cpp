@@ -66,7 +66,6 @@ bool cobj_tree_base::get_root_bcube(cube_t &bc) const {
 	bc = nodes[0];
 	return 1;
 }
-
 bool cobj_tree_base::check_for_leaf(unsigned num, unsigned skip_dims) {
 	if (num <= MAX_LEAF_SIZE || skip_dims == 7) { // base case
 		register_leaf(num);
@@ -78,22 +77,10 @@ bool cobj_tree_base::check_for_leaf(unsigned num, unsigned skip_dims) {
 
 // performance critical
 template<bool xneg, bool yneg, bool zneg> bool get_line_clip(point const &p1, vector3d const &dinv, float const d[3][2]) {
-
-	float tmin(0.0), tmax(1.0);
-	float const t1((d[0][xneg] - p1.x)*dinv.x), t2((d[0][!xneg] - p1.x)*dinv.x);
-	if (t2 < tmax) {tmax = t2;} if (t1 > tmin) {tmin = t1;}
-
-	if (tmin < tmax) {
-		float const t1((d[1][yneg] - p1.y)*dinv.y), t2((d[1][!yneg] - p1.y)*dinv.y);
-		if (t2 < tmax) {tmax = t2;} if (t1 > tmin) {tmin = t1;}
-
-		if (tmin < tmax) {
-			float const t1((d[2][zneg] - p1.z)*dinv.z), t2((d[2][!zneg] - p1.z)*dinv.z);
-			if (t2 < tmax) {tmax = t2;} if (t1 > tmin) {tmin = t1;}
-			if (tmin < tmax) {return 1;}
-		}
-	}
-	return 0;
+	float const tx0((d[0][xneg] - p1.x)*dinv.x), tx1((d[0][!xneg] - p1.x)*dinv.x);
+	float const ty0((d[1][yneg] - p1.y)*dinv.y), ty1((d[1][!yneg] - p1.y)*dinv.y);
+	float const tz0((d[2][zneg] - p1.z)*dinv.z), tz1((d[2][!zneg] - p1.z)*dinv.z);
+	return (max(max(tx0, ty0), max(tz0, 0.0f)) < min(min(tx1, ty1), min(tz1, 1.0f)));
 }
 
 cobj_tree_base::node_ix_mgr::node_ix_mgr(vector<tree_node> const &nodes_, point const &p1_, point const &p2_)
@@ -112,9 +99,7 @@ cobj_tree_base::node_ix_mgr::node_ix_mgr(vector<tree_node> const &nodes_, point 
 			if (dinv.z < 0.0) {get_line_clip_func = get_line_clip<0,0,1>;}
 			else              {get_line_clip_func = get_line_clip<0,0,0>;}}}
 }
-
 bool cobj_tree_base::node_ix_mgr::check_node(unsigned &nix) const {
-
 	tree_node const &n(nodes[nix]);
 
 	if (!get_line_clip_func(p1, dinv, n.d)) {

@@ -587,7 +587,7 @@ class building_indir_light_mgr_t {
 		}
 		else {
 			// per-light time for large office building: orig: 194ms, per-floor BVH: 96ms, clip rays to floor: 44ms, now 37ms
-			highres_timer_t timer("Ray Cast Building Light"); // 5800ms / 11000ms bkg in mall with 471 lights
+			highres_timer_t timer("Ray Cast Building Light"); // 5600ms / 11000ms bkg in mall with 471 lights
 			cast_light_rays(b);
 		}
 	}
