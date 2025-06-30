@@ -83,9 +83,7 @@ template<bool xneg, bool yneg, bool zneg> bool get_line_clip(point const &p1, ve
 	return (max(max(tx0, ty0), max(tz0, 0.0f)) < min(min(tx1, ty1), min(tz1, 1.0f)));
 }
 
-cobj_tree_base::node_ix_mgr::node_ix_mgr(vector<tree_node> const &nodes_, point const &p1_, point const &p2_)
-  : p1(p1_), p2(p2_), dinv(p2 - p1), nodes(nodes_)
-{
+cobj_tree_base::node_ix_mgr::node_ix_mgr(vector<tree_node> const &nodes_, point const &p1_, point const &p2_) : p1(p1_), dinv(p2_ - p1_), nodes(nodes_) {
 	dinv.invert();
 	if (dinv.x < 0.0) {
 		if (dinv.y < 0.0) {

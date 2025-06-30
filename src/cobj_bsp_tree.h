@@ -30,7 +30,7 @@ protected:
 	unsigned get_conservative_num_nodes(unsigned num) const {return (3*num/2 + 8);}
 
 	struct node_ix_mgr {
-		point const p1, p2;
+		point p1;
 		vector3d dinv;
 		vector<tree_node> const &nodes;
 
