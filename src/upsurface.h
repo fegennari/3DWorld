@@ -82,7 +82,7 @@ public:
 	void setup_draw_sphere(point const &pos, float radius, float dp, int ndiv, float const *const pmap);
 	void calc_rmax() {rmax = sd.get_rmax();}
 	void free_context() {sd.clear_vbos();}
-	void clear_cache() {vector<cache_entry>().swap(val_cache);}
+	void clear_cache() {clear_cont(val_cache);}
 	bool has_heightmap() const {return (!heightmap.empty());}
 	void make_faceted() {sd.make_faceted();}
 };

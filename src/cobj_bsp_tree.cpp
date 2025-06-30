@@ -198,7 +198,7 @@ template<typename T> void cobj_tree_simple_type_t<T>::build_tree_top(bool verbos
 	max_depth = max_leaf_count = num_leaf_nodes = 0;
 	if (!objects.empty()) {build_tree(0, 0, 0);}
 	nodes[0].next_node_id = (unsigned)nodes.size();
-	for (unsigned i = 0; i < 3; ++i) {vector<T>().swap(temp_bins[i]);}
+	for (unsigned i = 0; i < 3; ++i) {clear_cont(temp_bins[i]);}
 
 	if (verbose) {
 		cout << "objects: " << objects.size() << ", cap: " << objects.capacity() << ", nodes: " << nodes.size() << ", cap: " << nodes.capacity()

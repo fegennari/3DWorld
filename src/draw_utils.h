@@ -28,8 +28,8 @@ public:
 		lines.resize(0);
 	}
 	void free_mem() {
-		vector<vert_norm_color>().swap(points);
-		vector<vert_norm_color>().swap(lines);
+		clear_cont(points);
+		clear_cont(lines);
 	}
 	void add_pt(point const &v, vector3d const &n, colorRGBA const &c) {
 		points.emplace_back(v, n, c);
@@ -203,7 +203,7 @@ public:
 	}
 	void begin_render() const;
 	void end_render() const {post_render();}
-	void clear_points() {vector<vert_type_t>().swap(pts);}
+	void clear_points() {clear_cont(pts);}
 	void swap_points(vector<vert_type_t> &other_pts) {pts.swap(other_pts);}
 	vector<vert_type_t> &get_pts_vector_for_adding() {return pts;}
 	void clear(bool free_pts_mem=1);
