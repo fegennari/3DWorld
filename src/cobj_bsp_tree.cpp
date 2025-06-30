@@ -149,35 +149,6 @@ template<typename T> void cobj_tree_simple_type_t<T>::build_tree(unsigned nix, u
 	if (check_for_leaf(num, skip_dims)) return; // base case
 
 	// determine split dimension and value
-#if 0
-	unsigned dim(3); // starts invalid
-	float sval(0), best_cost(FLT_MAX);
-
-	for (int axis = 0; axis < 3; ++axis) {
-		if (skip_dims & (1 << axis)) continue;
-
-		for (unsigned i = n.start; i < n.end; ++i) {
-			T const &obj(objects[i]);
-			float const pos(obj.get_center_dim(axis));
-			// determine object counts and bounds for this split candidate using SAH
-			cube_t left_box, right_box;
-			unsigned left_count(0), right_count(0);
-
-			for (unsigned j = n.start; j < n.end; ++j) {
-				T const &obj2(objects[j]);
-				if (obj2.get_center_dim(axis) < pos) {++left_count;  assign_or_union_with(left_box,  obj2);}
-				else                                 {++right_count; assign_or_union_with(right_box, obj2);}
-			}
-			float const cost(left_count * left_box.get_area() + right_count * right_box.get_area());
-			if (cost < best_cost) {sval = pos; dim = axis; best_cost = cost;}
-		} // for i
-	} // for axis
-	if (dim == 3) { // can't split
-		register_leaf(num);
-		return;
-	}
-	float const sval_lo(sval), sval_hi(sval);
-#else
 	float max_sz(0), sval(0);
 	unsigned const dim(n.get_split_dim(max_sz, sval, skip_dims));
 
@@ -186,7 +157,6 @@ template<typename T> void cobj_tree_simple_type_t<T>::build_tree(unsigned nix, u
 		return;
 	}
 	float const sval_lo(sval+OVERLAP_AMT*max_sz), sval_hi(sval-OVERLAP_AMT*max_sz);
-#endif
 	unsigned pos(n.start), bin_count[3];
 	if (temp_bins[1].capacity() == 0) {temp_bins[1].reserve(11*num/20);} // reserve to 55% to hopefully avoid vector doubling
 
