@@ -188,7 +188,7 @@ unsigned cube_t::get_split_dim(float &max_sz, float &sval, unsigned skip_dims) c
 		}
 	}
 	if (max_sz > 0.0) {
-		sval = get_cube_center()[dim]; // center point (mean seems to work better than median)
+		sval = get_center_dim(dim); // center point (mean seems to work better than median)
 		assert(!(skip_dims & (1 << dim)));
 	}
 	return dim;

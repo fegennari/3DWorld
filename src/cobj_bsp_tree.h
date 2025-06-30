@@ -94,12 +94,9 @@ struct sphere_with_id_t : public sphere_t {
 
 
 class cobj_tree_sphere_t : public cobj_tree_simple_type_t<sphere_with_id_t> {
-
 	virtual void calc_node_bbox(tree_node &n) const;
-
 public:
 	vector<unsigned> ids; // for using in get_ids_int_sphere()
-	void add_spheres(vector<sphere_with_id_t> &spheres_, bool verbose);
 	void get_ids_int_sphere(point const &center, float radius, vector<unsigned> &ids) const;
 };
 
@@ -134,7 +131,6 @@ class cobj_bvh_tree : public cobj_tree_base {
 			(!occluders_only || c.is_occluder()) && !(c.cp.flags & COBJ_NO_COLL) && (!cubes_only || c.type == COLL_CUBE) &&
 			(inc_voxel_cobjs || c.cp.cobj_type != COBJ_TYPE_VOX_TERRAIN));
 	}
-
 public:
 	cobj_bvh_tree(coll_obj_group const *cobjs_, bool s, bool d, bool o, bool c, bool v)
 		: cobjs(cobjs_), is_static(s), is_dynamic(d), occluders_only(o), cubes_only(c), inc_voxel_cobjs(v) {assert(cobjs);}

@@ -296,15 +296,6 @@ void cobj_tree_sphere_t::calc_node_bbox(tree_node &n) const {
 	}
 }
 
-
-void cobj_tree_sphere_t::add_spheres(vector<sphere_with_id_t> &spheres_, bool verbose) {
-
-	clear();
-	objects.swap(spheres_); // copy, destroy input
-	build_tree_top(verbose);
-}
-
-
 void cobj_tree_sphere_t::get_ids_int_sphere(point const &center, float radius, vector<unsigned> &ids) const {
 
 	if (objects.empty()) return;
@@ -347,7 +338,6 @@ bool cobj_bvh_tree::create_cixs() {
 	return !cixs.empty();
 }
 
-
 void cobj_bvh_tree::calc_node_bbox(tree_node &n) const {
 
 	// Note: can call get_cobj(i).get_platform_max_bcube() to include entire platform range instead of rebuilding the BVH when platforms move
@@ -356,13 +346,10 @@ void cobj_bvh_tree::calc_node_bbox(tree_node &n) const {
 	for (unsigned i = n.start+1; i < n.end; ++i) {n.union_with_cube(get_cobj(i));} // bbox union
 }
 
-
 void cobj_bvh_tree::clear() {
-
 	cobj_tree_base::clear();
 	cixs.resize(0);
 }
-
 
 void cobj_bvh_tree::add_cobjs(bool verbose) {
 
@@ -378,7 +365,6 @@ void cobj_bvh_tree::add_cobjs(bool verbose) {
 				<< ", depth: " << max_depth << ", max_leaves: " << max_leaf_count << ", leaf_nodes: " << num_leaf_nodes << endl;
 	}
 }
-
 
 // to be called from within add_cobjs() or after a call to add_cobj_ids()
 void cobj_bvh_tree::build_tree_from_cixs(bool do_mt_build) {
@@ -398,7 +384,6 @@ void cobj_bvh_tree::build_tree_from_cixs(bool do_mt_build) {
 	}
 	nodes[root].next_node_id = (unsigned)nodes.size();
 }
-
 
 // test_alpha: 0 = allow any alpha value, 1 = require alpha = 1.0, 2 = get intersected cobj with max alpha, 3 = require alpha >= MIN_SHADOW_ALPHA
 bool cobj_bvh_tree::check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex,
@@ -441,7 +426,6 @@ bool cobj_bvh_tree::check_coll_line(point const &p1, point const &p2, point &cpo
 	return ret;
 }
 
-
 bool cobj_bvh_tree::check_point_contained(point const &p, int &cindex) const {
 
 	unsigned const num_nodes((unsigned)nodes.size());
@@ -462,7 +446,6 @@ bool cobj_bvh_tree::check_point_contained(point const &p, int &cindex) const {
 	}
 	return 0;
 }
-
 
 void cobj_bvh_tree::get_intersecting_cobjs(cube_t const &cube, vector<unsigned> &cobjs,
 	int ignore_cobj, float toler, bool check_ccounter, int id_for_cobj_int) const
@@ -490,7 +473,6 @@ void cobj_bvh_tree::get_intersecting_cobjs(cube_t const &cube, vector<unsigned> 
 	}
 }
 
-
 bool cobj_bvh_tree::is_cobj_contained(point const &viewer, point const *const pts, unsigned npts, int ignore_cobj, int &cobj) const {
 
 	assert(npts > 0);
@@ -514,7 +496,6 @@ bool cobj_bvh_tree::is_cobj_contained(point const &viewer, point const *const pt
 	}
 	return 0;
 }
-
 
 void cobj_bvh_tree::get_coll_line_cobjs(point const &pos1, point const &pos2, int ignore_cobj, vector<int> *cobjs, cobj_query_callback *cqc, bool do_expand) const {
 
@@ -548,7 +529,6 @@ void cobj_bvh_tree::get_coll_line_cobjs(point const &pos1, point const &pos2, in
 	}
 }
 
-
 // Note: actually, this only returns sphere intersection candidates
 void cobj_bvh_tree::get_coll_sphere_cobjs(point const &center, float radius, int ignore_cobj, vert_coll_detector &vcd) const {
 
@@ -572,7 +552,6 @@ void cobj_bvh_tree::get_coll_sphere_cobjs(point const &center, float radius, int
 		}
 	}
 }
-
 
 void cobj_bvh_tree::build_tree_top_level_omp() { // single octtree level
 
@@ -637,7 +616,6 @@ void cobj_bvh_tree::build_tree_top_level_omp() { // single octtree level
 	assert(cur == n.end);
 	n.start = n.end = 0; // branch node has no leaves
 }
-
 
 // BVH (left, right, mid) kids
 void cobj_bvh_tree::build_tree(unsigned nix, unsigned skip_dims, unsigned depth, per_thread_data &ptd) {
