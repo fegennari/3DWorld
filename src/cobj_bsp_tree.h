@@ -90,6 +90,7 @@ struct sphere_with_id_t : public sphere_t {
 	unsigned id;
 	sphere_with_id_t() : id(0) {}
 	sphere_with_id_t(point const &p, float r, unsigned id_) : sphere_t(p, r), id(id_) {}
+	float get_center_dim(unsigned dim) const {return pos[dim];}
 };
 
 

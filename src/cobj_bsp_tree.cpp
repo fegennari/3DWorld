@@ -39,6 +39,14 @@ coll_tquad::coll_tquad(triangle const &t, colorRGBA const &c) : color(c) {
 	UNROLL_3X(pts[i_] = t.pts[i_];);
 	update_normal();
 }
+float coll_tquad::get_center_dim(unsigned dim) const {
+	float lo(pts[0][dim]), hi(lo);
+	for (unsigned n = 1; n < npts; ++n) {
+		min_eq(lo, pts[n][dim]);
+		max_eq(hi, pts[n][dim]);
+	}
+	return 0.5*(lo + hi);
+}
 
 bool tquad_t::is_valid() const {return (npts >= 3 && is_triangle_valid(pts[0], pts[1], pts[2]));}
 
@@ -123,12 +131,13 @@ inline float get_vhi(coll_tquad const &t, unsigned dim) {
 	if (t.npts == 4) {vhi = max(vhi, t.pts[3][dim]);}
 	return vhi;
 }
-
 inline float get_vlo(sphere_t const &s, unsigned dim) {return (s.pos[dim] - s.radius);}
 inline float get_vhi(sphere_t const &s, unsigned dim) {return (s.pos[dim] + s.radius);}
 inline float get_vlo(cube_t const &c,   unsigned dim) {return c.d[dim][0];}
 inline float get_vhi(cube_t const &c,   unsigned dim) {return c.d[dim][1];}
-
+inline void assign_or_union_with(cube_t &c1, cube_t     const &c2) {c1.assign_or_union_with_cube(c2);}
+inline void assign_or_union_with(cube_t &c1, sphere_t   const &s ) {c1.assign_or_union_with_sphere(s.pos, s.radius);}
+inline void assign_or_union_with(cube_t &c1, coll_tquad const &t ) {c1.assign_or_union_with_cube(t.get_bcube());}
 
 template<typename T> void cobj_tree_simple_type_t<T>::build_tree(unsigned nix, unsigned skip_dims, unsigned depth) {
 
@@ -140,6 +149,35 @@ template<typename T> void cobj_tree_simple_type_t<T>::build_tree(unsigned nix, u
 	if (check_for_leaf(num, skip_dims)) return; // base case
 
 	// determine split dimension and value
+#if 0
+	unsigned dim(3); // starts invalid
+	float sval(0), best_cost(FLT_MAX);
+
+	for (int axis = 0; axis < 3; ++axis) {
+		if (skip_dims & (1 << axis)) continue;
+
+		for (unsigned i = n.start; i < n.end; ++i) {
+			T const &obj(objects[i]);
+			float const pos(obj.get_center_dim(axis));
+			// determine object counts and bounds for this split candidate using SAH
+			cube_t left_box, right_box;
+			unsigned left_count(0), right_count(0);
+
+			for (unsigned j = n.start; j < n.end; ++j) {
+				T const &obj2(objects[j]);
+				if (obj2.get_center_dim(axis) < pos) {++left_count;  assign_or_union_with(left_box,  obj2);}
+				else                                 {++right_count; assign_or_union_with(right_box, obj2);}
+			}
+			float const cost(left_count * left_box.get_area() + right_count * right_box.get_area());
+			if (cost < best_cost) {sval = pos; dim = axis; best_cost = cost;}
+		} // for i
+	} // for axis
+	if (dim == 3) { // can't split
+		register_leaf(num);
+		return;
+	}
+	float const sval_lo(sval), sval_hi(sval);
+#else
 	float max_sz(0), sval(0);
 	unsigned const dim(n.get_split_dim(max_sz, sval, skip_dims));
 
@@ -148,6 +186,7 @@ template<typename T> void cobj_tree_simple_type_t<T>::build_tree(unsigned nix, u
 		return;
 	}
 	float const sval_lo(sval+OVERLAP_AMT*max_sz), sval_hi(sval-OVERLAP_AMT*max_sz);
+#endif
 	unsigned pos(n.start), bin_count[3];
 	if (temp_bins[1].capacity() == 0) {temp_bins[1].reserve(11*num/20);} // reserve to 55% to hopefully avoid vector doubling
 
