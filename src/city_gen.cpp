@@ -3408,7 +3408,7 @@ public:
 		bool const have_cars(!car_manager.empty());
 		road_gen.gen_parking_lots_and_place_objects(parked_cars, have_cars);
 		road_gen.connect_power_poles_to_transmission_lines(); // must be after placing power poles
-		get_building_rooftop_cars(parked_cars);
+		if (city_params.num_cars > 0) {get_building_rooftop_cars(parked_cars);}
 		if (city_params.has_helicopter_model()) {get_all_city_helipads(hp_locs);}
 		timer.end(); // exclude the steps below, which are dominated by model load time
 		car_manager.add_parked_cars(parked_cars);
