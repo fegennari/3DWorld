@@ -21,7 +21,7 @@ vector<point> enabled_bldg_lights;
 extern bool camera_in_building, player_in_walkway, player_in_uge, some_person_has_idle_animation;
 extern int MESH_Z_SIZE, display_mode, display_framerate, camera_surf_collide, animate2, frame_counter, building_action_key, player_in_basement, player_in_elevator, player_in_attic;
 extern unsigned LOCAL_RAYS, MAX_RAY_BOUNCES, NUM_THREADS;
-extern float indir_light_exp, fticks;
+extern float indir_light_exp, fticks, DZ_VAL;
 extern double tfticks;
 extern colorRGB cur_ambient, cur_diffuse;
 extern std::string lighting_update_text;
@@ -603,6 +603,18 @@ class building_indir_light_mgr_t {
 		if (dot_product(dir, cnorm) < 0.0) {dir.negate();} // make sure it points away from the surface (is this needed?)
 		pos = cpos + tolerance*dir; // move slightly away from the surface
 	}
+	void add_path_to_lmcs(point p1, point const &p2, float weight, colorRGBA const &color, float step_sz_inv) {
+		colorRGBA const cw(color*weight);
+		unsigned const nsteps(1 + unsigned(p2p_dist(p1, p2)*step_sz_inv)); // round up (dist can be 0)
+		vector3d const step((p2 - p1)/nsteps); // at least two points
+		
+		for (unsigned s = 0; s < nsteps; ++s) {
+			p1 += step; // don't double count the first step
+			lmcell *lmc(lmgr.get_lmcell_round_down(p1));
+			if (lmc != NULL) {ADD_LIGHT_CONTRIB(cw, lmc->lc);}
+		}
+		lmgr.was_updated = 1;
+	}
 	void cast_light_rays(building_t const &b) {
 		// Note: modifies lmgr, but otherwise thread safe
 		unsigned const num_rt_threads(max(1U, (NUM_THREADS - (USE_BKG_THREAD ? 1 : 0)))); // reserve a thread for the main thread if running in the background
@@ -705,6 +717,7 @@ class building_indir_light_mgr_t {
 		unsigned NUM_PRI_SPLITS(is_window ? 4 : 16); // we're counting primary rays for windows, use fewer primary splits to reduce noise at the cost of increased time
 		max_eq(base_num_rays, NUM_PRI_SPLITS);
 		int const num_rays(base_num_rays/NUM_PRI_SPLITS);
+		float const step_sz_inv(1.0/(0.3f*(DX_VAL + DY_VAL + DZ_VAL)));
 		building_colors_t bcolors;
 		b.set_building_colors(bcolors);
 		
@@ -745,7 +758,7 @@ class building_indir_light_mgr_t {
 			// room lights already contribute direct lighting, so we skip this ray; however, windows don't, so we add their primary ray contribution
 			if (is_window && /*!is_skylight_dir*/!is_skylight && init_cpos != origin) {
 				point const p1(origin*ray_scale + llc_shift), p2(init_cpos*ray_scale + llc_shift); // transform building space to global scene space
-				add_path_to_lmcs(&lmgr, nullptr, p1, p2, weight, ray_lcolor*NUM_PRI_SPLITS, LIGHTING_LOCAL, 0); // local light, no bcube; scale color based on splits
+				add_path_to_lmcs(p1, p2, weight, ray_lcolor*NUM_PRI_SPLITS, step_sz_inv); // scale color based on splits
 			}
 			if (!hit) continue; // done
 			colorRGBA const init_color(ray_lcolor.modulate_with(ccolor));
@@ -764,7 +777,7 @@ class building_indir_light_mgr_t {
 
 					if (cpos != pos) { // accumulate light along the ray from pos to cpos (which is always valid) with color cur_color
 						point const p1(pos*ray_scale + llc_shift), p2(cpos*ray_scale + llc_shift); // transform building space to global scene space
-						add_path_to_lmcs(&lmgr, nullptr, p1, p2, weight, cur_color, LIGHTING_LOCAL, 0); // local light, no bcube
+						add_path_to_lmcs(p1, p2, weight, cur_color, step_sz_inv);
 					}
 					if (!hit) break; // done
 					cur_color = cur_color.modulate_with(ccolor);
