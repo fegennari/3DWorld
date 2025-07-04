@@ -716,7 +716,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			if (is_apt_or_hotel_room) {
 				int rtype(init_rtype_f0);
 				
-				if (rtype == RTYPE_UTILITY && f > 0) { // ground floor utility room
+				if ((rtype == RTYPE_UTILITY || rtype == RTYPE_LAUNDRY) && f > 0) { // non-ground floor utility or laundry room
 					rtype = r->get_room_type(f); // get room type for this particular floor
 					// if rtype is a lounge without objects added, this likely means it's a floor > NUM_RTYPE_SLOTS above a walkway lounge;
 					// while we can't get the rtype correct, we can at least place the correct set of objects by looking at the second floor room assignment,

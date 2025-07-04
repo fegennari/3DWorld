@@ -134,6 +134,7 @@ building_retail.o
 building_hospital.o
 building_school.o
 building_parking.o
+building_jail.o
 simplifier.o
 city_model.o
 city_building_params.o

@@ -2398,6 +2398,11 @@ int main(int argc, char** argv) {
 #endif
 		);
 	}
+	// init_core_context is not always respected or may just be a hint; query the context bit to set the flag correctly
+	int cp_mask(0);
+	glGetIntegerv(GL_CONTEXT_PROFILE_MASK, &cp_mask);
+	init_core_context = use_core_context = (cp_mask & GL_CONTEXT_CORE_PROFILE_BIT);
+
 	program_start_time = GET_TIME_MS(); // must be after glut init
 	if (enable_timing_profiler) {toggle_timing_profiler();} // enable profiler logging on init without using the 'u' key
 	progress();

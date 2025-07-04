@@ -1923,10 +1923,11 @@ unsigned crack_ibuf_t::get_index(unsigned dim, unsigned dir, unsigned cur_lod, u
 void tile_t::draw_mesh_vbo(indexed_vbo_manager_t const &vbo_mgr, unsigned const ivbo_ixs[NUM_LODS+1], unsigned lod_level) const {
 
 	assert(size > 0);
-	unsigned const num_ixs(ivbo_ixs[lod_level+1] - ivbo_ixs[lod_level]);
+	unsigned const start_ix(ivbo_ixs[lod_level]), end_ix(ivbo_ixs[lod_level+1]), num_ixs(end_ix - start_ix);
+	assert(start_ix < end_ix);
 	vbo_mgr.pre_render();
 	vert_wrap_t::set_vbo_arrays(0); // normals are stored in normal_tid, tex coords come from texgen, color is constant
-	glDrawRangeElements(GL_TRIANGLE_STRIP, 0, stride*stride, num_ixs, GL_UNSIGNED_INT, (void *)(ivbo_ixs[lod_level]*sizeof(unsigned)));
+	glDrawRangeElements(GL_TRIANGLE_STRIP, 0, stride*stride, num_ixs, GL_UNSIGNED_INT, (void *)(start_ix*sizeof(unsigned)));
 	++num_frame_draw_calls;
 }
 
