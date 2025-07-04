@@ -8,6 +8,7 @@
 #include "cobj_bsp_tree.h"
 #include "profiler.h"
 #include <thread>
+#include <omp.h>
 
 bool  const USE_BKG_THREAD      = 1;
 bool  const INDIR_BASEMENT_EN   = 1;
@@ -617,7 +618,8 @@ class building_indir_light_mgr_t {
 	}
 	void cast_light_rays(building_t const &b) {
 		// Note: modifies lmgr, but otherwise thread safe
-		unsigned const num_rt_threads(max(1U, (NUM_THREADS - (USE_BKG_THREAD ? 1 : 0)))); // reserve a thread for the main thread if running in the background
+		bool const reserve_draw_thread(USE_BKG_THREAD && (int)NUM_THREADS >= omp_get_max_threads()); // reserve a thread for drawing if needed
+		unsigned const num_rt_threads(max(1U, (NUM_THREADS - reserve_draw_thread)));
 		unsigned base_num_rays(LOCAL_RAYS), dim(2), dir(0); // default dim is z; dir=2 is omnidirectional
 		cube_t const scene_bounds(get_scene_bounds_bcube()); // expected by lmap update code
 		vector3d const ray_scale(scene_bounds.get_size()/light_bounds.get_size()), llc_shift(scene_bounds.get_llc() - light_bounds.get_llc()*ray_scale);

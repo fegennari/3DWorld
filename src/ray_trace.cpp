@@ -8,6 +8,7 @@
 #include "binary_file_io.h"
 #include <atomic>
 #include <thread>
+#include <omp.h>
 
 
 bool const COLOR_FROM_COBJ_TEX = 0; // 0 = fast/average color, 1 = true color
@@ -1100,7 +1101,8 @@ void check_update_global_lighting(unsigned lights) {
 	// Note: we could check if the sun/moon is visible, but it might have been visible previously and now is not, and in that case we still need to update lighting
 	no_stat_moving = 1; // disable static moving cobjs for async updates, which aren't thread safe because the BVH is rebuilt every frame; no need to set back after first frame
 	lmap_manager.clear_lighting_values(LIGHTING_GLOBAL);
-	launch_threaded_job(max(1U, NUM_THREADS-1), rt_funcs[LIGHTING_GLOBAL], 0, 0, lighting_update_offline, 0, LIGHTING_GLOBAL); // reserve a thread for rendering
+	bool const reserve_thread((int)NUM_THREADS >= omp_get_max_threads()); // reserve a thread for rendering if needed
+	launch_threaded_job(max(1U, NUM_THREADS-reserve_thread), rt_funcs[LIGHTING_GLOBAL], 0, 0, lighting_update_offline, 0, LIGHTING_GLOBAL);
 }
 
 void check_all_platform_cobj_lighting_update() {
