@@ -1200,11 +1200,11 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 					}
 					else if (type_ix == 1) { // toilet paper rolls or paper towels
 						if (rgen2.rand_bool()) { // paper towels
-							float const oheight(1.3*height_val), radius(min(0.4f*depth, 0.25f*oheight));
+							float const oheight(min(0.9*height, 1.3*height_val)), radius(min(0.4f*depth, 0.25f*oheight));
 							add_rows_of_vcylinders(c, section, radius, oheight, 0.2, TYPE_TPROLL, 2, (flags | RO_FLAG_HAS_EXTRA), objects, rgen2); // 1-2 columns
 						}
 						else { // TP rolls
-							float const oheight(0.48*height_val), radius(min(0.4f*depth, 0.5f*oheight));
+							float const oheight(min(0.9*height, 0.48*height_val)), radius(min(0.4f*depth, 0.5f*oheight));
 							add_rows_of_vcylinders(c, section, radius, oheight, 0.2, TYPE_TPROLL, 3, flags, objects, rgen2); // 1-3 columns
 						}
 					}
