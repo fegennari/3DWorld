@@ -2398,11 +2398,6 @@ int main(int argc, char** argv) {
 #endif
 		);
 	}
-	// init_core_context is not always respected or may just be a hint; query the context bit to set the flag correctly
-	int cp_mask(0);
-	glGetIntegerv(GL_CONTEXT_PROFILE_MASK, &cp_mask);
-	init_core_context = use_core_context = (cp_mask & GL_CONTEXT_CORE_PROFILE_BIT);
-
 	program_start_time = GET_TIME_MS(); // must be after glut init
 	if (enable_timing_profiler) {toggle_timing_profiler();} // enable profiler logging on init without using the 'u' key
 	progress();
@@ -2414,6 +2409,11 @@ int main(int argc, char** argv) {
 	progress();
 	init_window();
 	check_gl_error(7770);
+	// init_core_context is not always respected or may just be a hint; query the context bit to set the flag correctly
+	int cp_mask(0);
+	glGetIntegerv(GL_CONTEXT_PROFILE_MASK, &cp_mask);
+	init_core_context = use_core_context = (cp_mask & GL_CONTEXT_CORE_PROFILE_BIT);
+
 	if (init_core_context) {init_debug_callback();}
 	//glEnable(GL_FRAMEBUFFER_SRGB);
 	cout << ".GL Initialized." << endl;
