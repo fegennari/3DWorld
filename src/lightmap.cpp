@@ -204,8 +204,6 @@ void lmcell::set_outside_colors() {
 	UNROLL_3X(sc[i_] = gc[i_] = 1.0; lc[i_] = 0.0;)
 }
 
-
-inline bool is_inside_lmap(int x, int y, int z) {return (z >= 0 && z < MESH_SIZE[2] && !point_outside_mesh(x, y));}
 bool lmap_manager_t::is_valid_cell(int x, int y, int z) const {return (is_inside_lmap(x, y, z) && vlmap[y][x] != NULL);}
 
 // Note: only intended to work in ground mode where sizes are MESH_X_SIZE and MESH_Y_SIZE

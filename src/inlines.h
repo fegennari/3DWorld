@@ -10,7 +10,7 @@
 #include "gl_includes.h"
 
 
-extern int MESH_X_SIZE, MESH_Y_SIZE, XY_MULT_SIZE, world_mode, do_zoom, xoff, yoff, xoff2, yoff2;
+extern int MESH_X_SIZE, MESH_Y_SIZE, MESH_SIZE[3], XY_MULT_SIZE, world_mode, do_zoom, xoff, yoff, xoff2, yoff2;
 extern float X_SCENE_SIZE, Y_SCENE_SIZE, Z_SCENE_SIZE, DX_VAL, DY_VAL;
 extern float light_factor, relh_adj_tex, glaciate_exp_inv, cview_radius, czmin, czmax, zbottom, ztop;
 extern point cview_dir, camera_origin, camera_pos;
@@ -507,6 +507,7 @@ inline bool point_interior_to_mesh(int xpos, int ypos) {
 inline bool is_over_mesh(point const &pos) { // always over mesh in tiled terrain mode
 	return (world_mode == WMODE_INF_TERRAIN || (pos.x > -X_SCENE_SIZE && pos.x < X_SCENE_SIZE && pos.y > -Y_SCENE_SIZE && pos.y < Y_SCENE_SIZE));
 }
+inline bool is_inside_lmap(int x, int y, int z) {return (z >= 0 && z < MESH_SIZE[2] && !point_outside_mesh(x, y));}
 
 inline bool check_line_clip(point const &v1, point const &v2, float const d[3][2]) {
 	float tmin, tmax;

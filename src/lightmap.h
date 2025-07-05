@@ -12,11 +12,11 @@ extern int MESH_X_SIZE, MESH_Y_SIZE, MESH_SIZE[3];
 #define ADD_LIGHT_CONTRIB(c, C) {C[0] += c[0]; C[1] += c[1]; C[2] += c[2];}
 
 unsigned const FLASHLIGHT_LIGHT_ID = 0;
-float const LT_DIR_FALLOFF   = 0.005;
+float const LT_DIR_FALLOFF = 0.005;
 float const LT_DIR_FALLOFF_INV(1.0/LT_DIR_FALLOFF);
-float const CTHRESH          = 0.025;
-float const SQRT_CTHRESH     = sqrt(CTHRESH);
-float const FLASHLIGHT_BW    = 0.02;
+float const CTHRESH        = 0.025;
+float const SQRT_CTHRESH   = sqrt(CTHRESH);
+float const FLASHLIGHT_BW  = 0.02;
 
 
 class light_grid_base {
@@ -45,14 +45,13 @@ struct lmcell { // size = 52
 
 
 class lmap_manager_t {
-
+protected:
 	vector<lmcell> vldata_alloc;
 	unsigned lm_xsize, lm_ysize, lm_zsize;
 	lmcell ***vlmap; // y, x, z (size is determined by {MESH_Y_SIZE, MESH_X_SIZE, MESH_Z_SIZE}
-
+private:
 	lmap_manager_t(lmap_manager_t const &) = delete; // forbidden
 	void operator=(lmap_manager_t const &) = delete; // forbidden
-
 public:
 	bool was_updated;
 	cube_t update_bcube;
@@ -62,12 +61,12 @@ public:
 	bool is_allocated() const {return (vlmap != NULL && !vldata_alloc.empty());}
 	size_t size() const {return vldata_alloc.size();}
 	bool read_data_from_file(char const *const fn, int ltype);
-	bool write_data_to_file(char const *const fn, int ltype) const;
+	bool write_data_to_file (char const *const fn, int ltype) const;
 	void clear_lighting_values(int ltype);
 	bool is_valid_cell(int x, int y, int z) const;
 	lmcell const *get_column(int x, int y) const {return vlmap[y][x];} // Note: no bounds checking
 	lmcell *get_column(int x, int y) {return vlmap[y][x];} // Note: no bounds checking
-	lmcell &get_lmcell(int x, int y, int z) {return get_column(x, y)[z];} // Note: no bounds checking
+	lmcell &get_lmcell(int x, int y, int z) {return vlmap[y][x][z];} // Note: no bounds checking
 	lmcell *get_lmcell_round_down(point const &p);
 	lmcell *get_lmcell(point const &p);
 	void reset_all(lmcell const &init_lmcell=lmcell());
