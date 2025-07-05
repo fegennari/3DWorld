@@ -3110,8 +3110,9 @@ void building_t::remove_intersecting_roof_cubes(cube_t const &c) {
 	for (unsigned i = 0; i < details.size(); ++i) { // remove any existing objects that overlap ecap or stairs roof access
 		auto &obj(details[i]);
 		uint8_t const type(obj.type);
-		// only remove blocks, AC units, ducts, antennas, water towers, and smoke stacks; may cause ducts to become disconnected from AC units
-		if (type != ROOF_OBJ_BLOCK && type != ROOF_OBJ_AC && type != ROOF_OBJ_DUCT && type != ROOF_OBJ_ANT && type != ROOF_OBJ_WTOWER && type != ROOF_OBJ_SMOKESTACK) continue;
+		// only remove some object types; may cause ducts to become disconnected from AC units
+		if (type != ROOF_OBJ_BLOCK && type != ROOF_OBJ_AC && type != ROOF_OBJ_DUCT && type != ROOF_OBJ_ANT && type != ROOF_OBJ_WTOWER && type != ROOF_OBJ_SMOKESTACK &&
+			type != ROOF_OBJ_SAT_DISH && type != ROOF_OBJ_TV_ANT) continue;
 		if (!obj.intersects(c)) continue;
 		if (type == ROOF_OBJ_AC) {ac_to_remove.push_back(obj);} // need to remove ducts connected to this AC unit
 

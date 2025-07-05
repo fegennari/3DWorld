@@ -1787,7 +1787,7 @@ typedef vector<door_t> vect_door_t;
 
 // Note: some of these roof objects are actually on the ground next to houses
 enum {ROOF_OBJ_BLOCK=0, ROOF_OBJ_ANT, ROOF_OBJ_WALL, ROOF_OBJ_ECAP, ROOF_OBJ_AC, ROOF_OBJ_SCAP, ROOF_OBJ_SIGN, ROOF_OBJ_SIGN_CONN, ROOF_OBJ_WTOWER, ROOF_OBJ_DUCT,
-	ROOF_OBJ_SMOKESTACK, DETAIL_OBJ_COLLIDER, DETAIL_OBJ_COLL_SHAD, DETAIL_OBJ_SHAD_ONLY};
+	ROOF_OBJ_SMOKESTACK, ROOF_OBJ_SAT_DISH, ROOF_OBJ_TV_ANT, DETAIL_OBJ_COLLIDER, DETAIL_OBJ_COLL_SHAD, DETAIL_OBJ_SHAD_ONLY};
 enum {ROOF_TYPE_FLAT=0, ROOF_TYPE_SLOPE, ROOF_TYPE_PEAK, ROOF_TYPE_HIPPED, ROOF_TYPE_DOME, ROOF_TYPE_ONION, ROOF_TYPE_SHED, ROOF_TYPE_CURVED};
 
 struct roof_obj_t : public cube_t {
@@ -2281,6 +2281,7 @@ struct building_t : public building_geom_t {
 	bool maybe_add_house_driveway(cube_t const &plot, unsigned building_ix) const;
 	bool get_power_point(vector<point> &ppts) const;
 	void add_solar_panels(rand_gen_t &rgen);
+	void add_tv_antenna  (rand_gen_t &rgen);
 	bool add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir, bool for_office_building, bool roof_access=0, bool courtyard=0, bool for_walkway=0);
 	float gen_peaked_roof(cube_t const &top_, float peak_height, bool dim, float extend_to, float max_dz, unsigned skip_side_tri);
 	float gen_hipped_roof(cube_t const &top_, float peak_height, float extend_to);

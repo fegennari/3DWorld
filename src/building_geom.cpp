@@ -1256,6 +1256,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	colorRGBA const wall_colors[8] = {WHITE, WHITE, WHITE, WHITE, colorRGBA(1.0, 0.85, 0.85), colorRGBA(1.0, 0.85, 0.75), colorRGBA(0.85, 1.0, 0.85), colorRGBA(0.85, 0.85, 1.0)};
 	wall_color = wall_color.modulate_with(wall_colors[rgen.rand()%8]);
 	if (rgen.rand_bool()) {add_solar_panels   (rgen);} // maybe add solar panels
+	//if (rgen.rand_bool()) {add_tv_antenna     (rgen);} // maybe add a TV antenna
 	if (rgen.rand_bool()) {add_outdoor_ac_unit(rgen);} // place an outdoor AC unit against an exterior wall 50% of the time, not actually on the roof
 	if (has_basement()) {has_basement_pipes = rgen.rand_bool();}
 	if (interior) {interior->finalize();}
@@ -1603,6 +1604,10 @@ void building_t::add_solar_panels(rand_gen_t &rgen) { // for houses
 		side[3] = panel [inext];
 		roof_tquads.push_back(side);
 	}
+}
+
+void building_t::add_tv_antenna(rand_gen_t &rgen) { // for houses
+	// TODO
 }
 
 void building_t::maybe_inv_rotate_pos_dir(point &pos, vector3d &dir) const {
@@ -2246,9 +2251,10 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 		if (add_rooftop_door) {max_eq(num_blocks, 1U);} // at least one for the door
 	}
 	bool const add_antenna((flat_roof || roof_type == ROOF_TYPE_SLOPE) && !has_helipad && !is_parking() && skylights.empty() && rgen.rand_bool());
-	bool const add_water_tower(has_flat_top && !has_helipad && !add_antenna && !is_parking() && skylights.empty() &&
-		(tsz.x < 2.0*tsz.y && tsz.y < 2.0*tsz.x) && (tsz.x > 0.5*tpsz.x && tsz.y > 0.5*tpsz.y) && rgen.rand_bool());
-	unsigned const num_details(num_blocks + num_ac_units + 4*add_walls + add_antenna + add_water_tower);
+	bool const can_add_special_obj(has_flat_top && !has_helipad && !add_antenna && !is_parking() && skylights.empty()); // open roof space with no blocker
+	bool const add_water_tower(can_add_special_obj && (tsz.x < 2.0*tsz.y && tsz.y < 2.0*tsz.x) && (tsz.x > 0.5*tpsz.x && tsz.y > 0.5*tpsz.y) && rgen.rand_bool());
+	bool const add_sat_dish(can_add_special_obj && !add_water_tower /*&& rgen.rand_bool()*/);
+	unsigned const num_details(num_blocks + num_ac_units + 4*add_walls + add_antenna + add_water_tower + add_sat_dish);
 	if (num_details == 0) return; // nothing to do
 	if (add_walls && min(tsz.x, tsz.y) < 4.0*wall_width) return; // too small
 	float const xy_sz(tpsz.xy_mag()); // better to use bcube for size?
@@ -2269,6 +2275,9 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 			details.push_back(wtower);
 			avoid_bcube = wtower;
 		}
+	}
+	if (add_sat_dish) {
+		// TODO: random pos; orient is chosen later since there's no dim/dir in roof objects
 	}
 	for (unsigned i = 0; i < num_blocks; ++i) {
 		roof_obj_t c(ROOF_OBJ_BLOCK); // generic block

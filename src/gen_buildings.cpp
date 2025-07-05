@@ -1454,6 +1454,17 @@ public:
 		// draw pipe through the center going down into the roof
 		add_vert_cylinder(center, wtc.z1(), base_z1, 0.1*radius, 1.0, 4.0, ndiv/2, WHITE, qverts); // tscale=1.0/4.0
 	}
+
+	void add_sat_dish(building_t const &bg, cube_t const &sd) {
+		vector3d dir((point(sd.xc(), sd.yc(), 0.0) - point(bg.bcube.xc(), bg.bcube.yc(), 0.0)).get_norm()); // XY vector away from building center
+		dir.z = 1.0; // angled upward
+		dir.normalize();
+		// TODO: thin vertical cylinder with wide cone
+	}
+	void add_tv_antenna(building_t const &bg, cube_t const &ant) {
+		// TODO: grid of cubes
+	}
+
 	static cube_t get_roof_light_from_pole(cube_with_ix_t const &pole) {
 		bool const dim(pole.ix >> 1), dir(pole.ix & 1);
 		float const pole_sz(0.5*(pole.dx() + pole.dy())), light_hwidth(1.2*pole_sz), light_len(4.0*light_hwidth), light_height(0.6*light_hwidth);
@@ -1943,6 +1954,14 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 		}
 		if (i->type == ROOF_OBJ_WTOWER) {
 			bdraw.add_water_tower(*this, *i);
+			continue;
+		}
+		if (i->type == ROOF_OBJ_SAT_DISH) {
+			bdraw.add_sat_dish(*this, *i);
+			continue;
+		}
+		if (i->type == ROOF_OBJ_TV_ANT) {
+			bdraw.add_tv_antenna(*this, *i);
 			continue;
 		}
 		if (i->type == ROOF_OBJ_SMOKESTACK) { // truncated cone
