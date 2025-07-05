@@ -1178,7 +1178,7 @@ unsigned get_shelf_rack_cubes(room_object_t const &c, cube_t &back, cube_t &top,
 	unsigned const num_shelves(3 + (c.obj_id%3)); // 3-5
 	bool const add_top(c.obj_id & 4), add_sides(c.obj_id & 2);
 	float const height(c.get_height()), length(c.get_width()), depth(c.get_depth());
-	float const shelf_thickness(0.015*height), bot_gap(1.0*shelf_thickness), back_thickness(0.05*depth);
+	float const shelf_thickness(0.015*height), bot_gap(1.8*shelf_thickness), back_thickness(0.05*depth);
 	float const side_thickness(min(0.1f*length, 0.75f*shelf_thickness)), top_thickness(add_top ? side_thickness : 0.0);
 	float const shelf_spacing((height - bot_gap - top_thickness)/num_shelves);
 	back = c; // pegboard
