@@ -1468,10 +1468,24 @@ public:
 	}
 
 	void add_sat_dish(building_t const &bg, cube_t const &sd) {
+		float const dish_radius(0.25*(sd.dx() + sd.dy())), pole_radius(0.04*dish_radius), cone_len(0.4*dish_radius);
+		vector3d center(sd.xc(), sd.yc(), (sd.z2() - dish_radius));
+		if (bg.is_rotated()) {bg.do_xy_rotate(bg.bcube.get_cube_center(), center);}
 		vector3d dir((point(sd.xc(), sd.yc(), 0.0) - point(bg.bcube.xc(), bg.bcube.yc(), 0.0)).get_norm()); // XY vector away from building center
 		dir.z = 1.0; // angled upward
 		dir.normalize();
-		// TODO: thin vertical cylinder with wide cone
+		tid_nm_pair_t const tex(WHITE_TEX, 1.0, 1); // untextured, shadowed
+		auto &tverts(get_verts(tex, 1)), &qverts(get_verts(tex, 0)); // triangle and quad verts
+		colorRGBA const color(GRAY);
+		color_wrapper const cw(color);
+		// draw cone triangles
+		unsigned const ndiv(N_CYL_SIDES);
+		point const ce[2] = {(center + cone_len*dir), center};
+		vector_point_norm const &vpn(gen_cylinder_data(ce, dish_radius, 0.0, ndiv)); // slightly wider at the bottom
+		add_cone_tri_verts(vpn, tverts, ndiv, color, 1); // two_sided=1
+		// draw pole
+		add_vert_cylinder(center, sd.z1(), center.z, pole_radius, 1.0, 1.0, ndiv/2, color, qverts); // pole
+		// draw collector at front center or bottom?
 	}
 	void add_tv_antenna(building_t const &bg, cube_t const &ant) {
 		// TODO: grid of cubes

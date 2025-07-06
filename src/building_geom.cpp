@@ -2253,7 +2253,7 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 	bool const add_antenna((flat_roof || roof_type == ROOF_TYPE_SLOPE) && !has_helipad && !is_parking() && skylights.empty() && rgen.rand_bool());
 	bool const can_add_special_obj(has_flat_top && !has_helipad && !add_antenna && !is_parking() && skylights.empty()); // open roof space with no blocker
 	bool const add_water_tower(can_add_special_obj && (tsz.x < 2.0*tsz.y && tsz.y < 2.0*tsz.x) && (tsz.x > 0.5*tpsz.x && tsz.y > 0.5*tpsz.y) && rgen.rand_bool());
-	bool const add_sat_dish(can_add_special_obj && !add_water_tower /*&& rgen.rand_bool()*/);
+	bool const add_sat_dish(can_add_special_obj && !add_water_tower && !is_industrial() /*&& rgen.rand_bool()*/);
 	unsigned const num_details(num_blocks + num_ac_units + 4*add_walls + add_antenna + add_water_tower + add_sat_dish);
 	if (num_details == 0) return; // nothing to do
 	if (add_walls && min(tsz.x, tsz.y) < 4.0*wall_width) return; // too small
@@ -2277,7 +2277,20 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 		}
 	}
 	if (add_sat_dish) {
-		// TODO: random pos; orient is chosen later since there's no dim/dir in roof objects
+		float const radius(rgen.rand_uniform(0.015, 0.025)*(tpsz.x + tpsz.y));
+		point dish_center;
+
+		for (unsigned d = 0; d < 2; ++d) {
+			bool const ddir(rgen.rand_bool());
+			dish_center[d] = top.d[d][ddir] + (ddir ? -1.0 : 1.0)*1.5*radius;
+		}
+		roof_obj_t dish(ROOF_OBJ_SAT_DISH);
+		dish.set_from_point(dish_center);
+		dish.expand_by_xy(radius);
+		set_cube_zvals(dish, top.z2(), (top.z2() + 2.0*radius));
+		details.push_back(dish);
+		avoid_bcube = dish;
+		// Note: orient is chosen to point away from the roof later later since there's no dim/dir in roof objects
 	}
 	for (unsigned i = 0; i < num_blocks; ++i) {
 		roof_obj_t c(ROOF_OBJ_BLOCK); // generic block
