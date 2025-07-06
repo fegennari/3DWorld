@@ -2804,6 +2804,8 @@ private:
 	bool add_ladder_to_room  (rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	bool add_jail_objs       (rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
 		bool is_lit, colorRGBA const &light_color, light_ix_assign_t &light_ix_assign);
+	void populate_jail_cell(rand_gen_t &rgen, cube_t const &cell, float zval, unsigned room_id, float tot_light_amt, bool dim, bool dir, bool bed_side,
+		bool sink_on_back_wall, bool is_lit, float bars_hthick, float bars_depth_pos, colorRGBA const &light_color, light_ix_assign_t &light_ix_assign);
 	void add_garage_objs     (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
 	void add_floor_clutter_objs(rand_gen_t  rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	void add_floor_clutter_objs(rand_gen_t &rgen, room_t const &room, cube_t place_area, float zval, unsigned room_id,
