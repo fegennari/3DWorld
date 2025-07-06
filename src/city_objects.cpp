@@ -1136,8 +1136,7 @@ void add_cylin_as_tris(vector<vert_norm_tc_color> &verts, point const ce[2], flo
 	} // for i
 }
 void draw_wire(point const *const pts, float radius, color_wrapper const &cw, quad_batch_draw &untex_qbd, unsigned ndiv=4) { // pts is size 2
-	vector3d v12;
-	vector_point_norm const &vpn(gen_cylinder_data(pts, radius, radius, ndiv, v12));
+	vector_point_norm const &vpn(gen_cylinder_data(pts, radius, radius, ndiv));
 
 	for (unsigned i = 0; i < ndiv; ++i) { // similar to gen_cylinder_quads()
 		unsigned const in((i+1)%ndiv);
@@ -1740,8 +1739,7 @@ void pond_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale
 		draw_circle_normal(0.0, bot_radius, ndiv, 0, bot_center, tscale, tscale); // invert_normals=0
 		// sloped sides
 		point const ce[2] = {bot_center, all_zeros};
-		vector3d v12;
-		vector_point_norm const &vpn(gen_cylinder_data(ce, bot_radius, 0.5, ndiv, v12));
+		vector_point_norm const &vpn(gen_cylinder_data(ce, bot_radius, 0.5, ndiv));
 		static vector<vert_norm_tc_color> verts;
 		verts.resize(2U*(ndiv+1U));
 		color_wrapper const cw_outer(GRAY), cw_inner(GRAY_BLACK);

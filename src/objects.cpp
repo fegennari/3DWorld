@@ -647,8 +647,7 @@ void get_cylinder_triangles(vector<vert_wrap_t> &verts, point const &p1, point c
 	assert(ndiv > 0);
 	assert(radius1 > 0.0 || radius2 > 0.0);
 	point const ce[2] = {p1, p2};
-	vector3d v12; // (ce[1] - ce[0]).get_norm()
-	vector_point_norm const &vpn(gen_cylinder_data(ce, radius1, radius2, ndiv, v12));
+	vector_point_norm const &vpn(gen_cylinder_data(ce, radius1, radius2, ndiv));
 
 	if (radius2 == 0.0) { // cone (triangles)
 		for (unsigned s = 0; s < (unsigned)ndiv; ++s) {

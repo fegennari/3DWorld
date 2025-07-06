@@ -292,20 +292,17 @@ inline bool is_poly_valid(point const *const p) {
 
 
 inline bool line_intersect_sphere(point const &p1, vector3d const &v12, point const &sc, float radius) {
-
 	float rad, t, dist; // unused
 	return line_intersect_sphere(p1, v12, sc, radius, rad, dist, t);
 }
 
 inline bool sphere_int_cylinder_sides(point const &sc, float sr, point const &cp1, point const &cp2, float r1, float r2) {
-
 	float t, rad; // unused
 	vector3d v1, v2; // unused
 	return sphere_int_cylinder_pretest(sc, sr, cp1, cp2, r1, r2, 0, v1, v2, t, rad);
 }
 
 inline bool sphere_intersect_cylinder(point const &sc, float sr, point const &cp1, point const &cp2, float r1, float r2, bool check_ends=1) {
-
 	point p_int; // unused
 	vector3d norm; // unused
 	return sphere_intersect_cylinder_ipt(sc, sr, cp1, cp2, r1, r2, check_ends, p_int, norm, 0);
@@ -683,6 +680,11 @@ inline void cylinder_quad_projection(point *pts, cylinder_3dw const &c, vector3d
 	return cylinder_quad_projection(pts, c.p1, c.p2, c.r1, c.r2, v1, npts);
 }
 
+inline vector_point_norm const &gen_cylinder_data(point const ce[2], float radius1, float radius2, unsigned ndiv) {
+	vector3d v12;
+	return gen_cylinder_data(ce, radius1, radius2, ndiv, v12);
+}
+
 
 // ****************** matrix allocation/deletion/clearing ************************
 
@@ -697,7 +699,6 @@ template<typename T> void matrix_ptr_fill_2d(T **&data, unsigned nx, unsigned ny
 }
 
 template<typename T> void matrix_gen_2d(T **&data, unsigned nx, unsigned ny) {
-
 	//matrix_delete_2d(data); // make sure to delete before re-allocating (if only everything was initialized to NULL)
 	matrix_base_alloc_2d(data, nx, ny);
 	matrix_ptr_fill_2d(data, nx, ny);
@@ -713,7 +714,6 @@ template<typename T> void matrix_gen_3d(T ***&data, unsigned nz) {
 }
 
 template<typename T> void matrix_delete_2d(T **&data) {
-
 	if (data) {
 		delete [] data[0];
 		delete [] data;
@@ -722,7 +722,6 @@ template<typename T> void matrix_delete_2d(T **&data) {
 }
 
 template<typename T> void matrix_delete_3d(T ***&data, unsigned nz) {
-
 	if (data) {
 		for (unsigned i = 0; i < nz; ++i) {matrix_delete_2d(data[i]);}
 		delete [] data;

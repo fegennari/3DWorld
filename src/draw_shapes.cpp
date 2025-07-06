@@ -290,8 +290,7 @@ template<unsigned NUM> void cobj_draw_buffer::add_polygon(vert_norm_texp const &
 void cobj_draw_buffer::draw_cylin_cdb(point const &p1, point const &p2, texgen_params_t const &tp, float radius1, float radius2, int ndiv, bool two_sided_lighting) {
 	assert(radius1 > 0.0 || radius2 > 0.0);
 	point const ce[2] = {p1, p2};
-	vector3d v12; // (ce[1] - ce[0]).get_norm()
-	vector_point_norm const &vpn(gen_cylinder_data(ce, radius1, radius2, ndiv, v12));
+	vector_point_norm const &vpn(gen_cylinder_data(ce, radius1, radius2, ndiv));
 	if (radius2 == 0.0) {gen_cone_triangles_tp(tri_verts, vpn, two_sided_lighting, tp);}
 	else {gen_cylinder_quads(quad_verts, vpn, tp, two_sided_lighting);}
 }
@@ -432,7 +431,6 @@ void coll_obj::draw_cylin_ends(int tid, int ndiv, cobj_draw_buffer &cdb) const {
 
 	vector3d const v12((points[1] - points[0]).get_norm());
 	vector_point_norm const &vpn(cylinder_vpn); // hack: since we know the caller already filled in the cached cylinder points, we don't need to recalculate them
-	//vector_point_norm const &vpn(gen_cylinder_data(points, radius, radius2, ndiv, v12));
 	vert_norm_texp vnt;
 	get_polygon_tparams(tid, v12, vnt);
 	float const r[2] = {radius, radius2};

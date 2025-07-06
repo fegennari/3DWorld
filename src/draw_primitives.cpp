@@ -513,7 +513,7 @@ void draw_shadow_cylinder(point const &p1, point const &p2, float radius1, float
 
 	assert(radius1 > 0.0 || radius2 > 0.0);
 	point const ce[2] = {p1, p2};
-	vector3d v12; // (ce[1] - ce[0]).get_norm()
+	vector3d v12;
 	vector_point_norm const &vpn(gen_cylinder_data(ce, radius1, radius2, ndiv, v12, perturb_map));
 	vector<vert_wrap_t> &verts(cylin_vertex_buffer.verts);
 	verts.resize(2*(ndiv+1));
@@ -536,7 +536,7 @@ void draw_shadow_cylinder(point const &p1, point const &p2, float radius1, float
 			verts[S+1].v = vpn.p[(s<<1)+i];
 		}
 		draw_and_clear_verts(verts, GL_TRIANGLE_FAN); // triangle fans can't be buffered
-	}
+	} // for i
 }
 
 

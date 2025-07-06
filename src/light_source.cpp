@@ -548,8 +548,7 @@ void light_source::draw_light_cone(shader_t &shader, float alpha) const {
 	for (unsigned n = 0; n < nstacks; ++n) { // stacks
 		float const v1(n*stack_delta), v2(v1 + stack_delta);
 		point const ce[2] = {(cylin.p1 + v2*dir), (cylin.p1 + v1*dir)}; // swap points to make second point the tip/zero radius
-		vector3d v12;
-		vector_point_norm const &vpn(gen_cylinder_data(ce, v2*cylin.r2, v1*cylin.r2, ndiv, v12));
+		vector_point_norm const &vpn(gen_cylinder_data(ce, v2*cylin.r2, v1*cylin.r2, ndiv));
 		color_wrapper cw_tip(colorRGBA(color, (1.0 - v1)*alpha)), cw_end(colorRGBA(color, (1.0 - v2)*alpha));
 
 		for (unsigned S = 0; S <= ndiv; ++S) {

@@ -1080,7 +1080,7 @@ template<typename branch_index_t> void tree_data_t::create_branch_vbo() {
 		unsigned const ndiv(cylin.get_num_div());
 		point const ce[2] = {cylin.p1, cylin.p2};
 		float const ndiv_inv(1.0/ndiv);
-		vector3d v12; // (ce[1] - ce[0]).get_norm()
+		vector3d v12;
 		vector_point_norm const &vpn(gen_cylinder_data(ce, cylin.r1, cylin.r2, ndiv, v12, NULL, 0.0, 1.0, 0)); // force_dim=0
 		bool const prev_connect(i > 0 && cylin.can_merge(all_cylins[i-1]));
 

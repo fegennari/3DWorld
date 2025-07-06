@@ -1083,8 +1083,7 @@ void small_tree::draw_pine_leaves(vbo_vnc_block_manager_t const &vbo_manager, ve
 void add_fast_cylinder(point const &p1, point const &p2, float radius1, float radius2, int ndiv, float tex_scale_len, vector<vert_norm_tc> &verts) { // returns quads
 	assert(radius1 > 0.0 || radius2 > 0.0);
 	point const ce[2] = {p1, p2};
-	vector3d v12;
-	vector_point_norm const &vpn(gen_cylinder_data(ce, radius1, radius2, ndiv, v12));
+	vector_point_norm const &vpn(gen_cylinder_data(ce, radius1, radius2, ndiv));
 	gen_cylinder_quads(verts, vpn, 0, tex_scale_len); // two_sided_lighting=0
 }
 void small_tree::get_trunk_quad_verts(vector<vert_norm_comp_tc_color> &verts, unsigned nsides) const {
@@ -1114,8 +1113,7 @@ void small_tree::get_trunk_verts(vector<vert_norm_comp_tc_color> &qv, vector<ver
 		assert(trunk_cylin.r2 == 0.0); // cone
 		color_wrapper const cw(bark_color);
 		point const ce[2] = {trunk_cylin.p1, trunk_cylin.p2};
-		vector3d v12;
-		vector_point_norm const &vpn(gen_cylinder_data(ce, trunk_cylin.r1, trunk_cylin.r2, nsides, v12));
+		vector_point_norm const &vpn(gen_cylinder_data(ce, trunk_cylin.r1, trunk_cylin.r2, nsides));
 		unsigned const ixoff(tv.size());
 		float const ndiv_inv(1.0/nsides);
 
@@ -1165,8 +1163,7 @@ bool small_tree::draw_trunk(bool shadow_only, bool all_visible, bool skip_lines,
 		if (cylin_verts && is_pine_tree()) { // flatten the tip (truncated cone)?
 			assert(trunk_cylin.r2 == 0.0); // cone
 			point const ce[2] = {trunk_cylin.p1, trunk_cylin.p2};
-			vector3d v12;
-			vector_point_norm const &vpn(gen_cylinder_data(ce, trunk_cylin.r1, trunk_cylin.r2, nsides, v12));
+			vector_point_norm const &vpn(gen_cylinder_data(ce, trunk_cylin.r1, trunk_cylin.r2, nsides));
 
 			if (shadow_only) { // optimized case with no normals or texture coordinates
 				unsigned const ixoff(cylin_verts->size());

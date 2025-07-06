@@ -1339,8 +1339,7 @@ public:
 		ce[0].z     = ce[1].z     = roof_z;
 		ce[0][!dim] = ce[1][!dim] = c.get_center_dim(!dim);
 		for (unsigned d = 0; d < 2; ++d) {ce[d][dim] = c.d[dim][d];}
-		vector3d v12;
-		vector_point_norm const &vpn(gen_cylinder_data(ce, radius, radius, ndiv, v12));
+		vector_point_norm const &vpn(gen_cylinder_data(ce, radius, radius, ndiv));
 
 		for (unsigned i = 0; i < ndiv; ++i) {
 			if (vpn.n[i].z < -0.01) continue; // skip bottom half of cylinder (with some tolerance)
@@ -1395,8 +1394,7 @@ public:
 		float const ndiv_inv(1.0/ndiv);
 		color_wrapper const cw(color);
 		point const ce[2] = {point(center.x, center.y, z1), point(center.x, center.y, z2)};
-		vector3d v12;
-		vector_point_norm const &vpn(gen_cylinder_data(ce, rscale1*radius, rscale2*radius, ndiv, v12));
+		vector_point_norm const &vpn(gen_cylinder_data(ce, rscale1*radius, rscale2*radius, ndiv));
 
 		for (unsigned i = 0; i < ndiv; ++i) { // similar to gen_cylinder_quads(), but with a color
 			for (unsigned j = 0; j < 2; ++j) {
