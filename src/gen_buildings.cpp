@@ -354,6 +354,8 @@ public:
 texture_id_mapper_t tid_mapper;
 
 int get_normal_map_for_bldg_tid(int tid) {return tid_mapper.get_normal_map_for_tid(tid);}
+tid_nm_pair_t get_concrete_texture  (float tscale=16.0) {return tid_nm_pair_t(get_concrete_tid(), tscale);}
+tid_nm_pair_t get_corr_metal_texture(float tscale) {return tid_nm_pair_t(building_texture_mgr.get_corr_metal_tid(), building_texture_mgr.get_corr_metal_nm_tid(), tscale, tscale);}
 
 class tid_vert_counter_t {
 	vector<unsigned> counts;
@@ -1433,6 +1435,7 @@ public:
 		tid_nm_pair_t const side_tex(building_texture_mgr.get_met_plate_tid(), building_texture_mgr.get_mplate_nm_tid(), 1.0, 1.0);
 		tid_nm_pair_t const base_tex(building_texture_mgr.get_met_roof_tid ()); // no normal map
 		tid_nm_pair_t const roof_tex(WHITE_TEX); // untextured
+		//tid_nm_pair_t const roof_tex(get_corr_metal_texture(2.0)); // looks distorted; need circular texture
 		auto &tverts(get_verts(roof_tex, 1)), &qverts(get_verts(side_tex, 0)); // triangle and quad verts
 		unsigned const ndiv(N_CYL_SIDES);
 		float const height(wtc.dz()), radius(0.25*(wtc.dx() + wtc.dy())); // should be equal size in X vs. Y
@@ -1595,9 +1598,6 @@ int get_building_door_tid(unsigned type) { // exterior doors, and interior doors
 	}
 	return -1; // never gets here
 }
-
-tid_nm_pair_t get_concrete_texture  (float tscale=16.0) {return tid_nm_pair_t(get_concrete_tid(), tscale);}
-tid_nm_pair_t get_corr_metal_texture(float tscale) {return tid_nm_pair_t(building_texture_mgr.get_corr_metal_tid(), building_texture_mgr.get_corr_metal_nm_tid(), tscale, tscale);}
 
 void add_driveway_or_porch(building_draw_t &bdraw, building_t const &building, cube_t const &c, colorRGBA const &color, bool skip_bottom) {
 	if (c.is_all_zeros()) return;
