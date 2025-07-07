@@ -1256,7 +1256,8 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	colorRGBA const wall_colors[8] = {WHITE, WHITE, WHITE, WHITE, colorRGBA(1.0, 0.85, 0.85), colorRGBA(1.0, 0.85, 0.75), colorRGBA(0.85, 1.0, 0.85), colorRGBA(0.85, 0.85, 1.0)};
 	wall_color = wall_color.modulate_with(wall_colors[rgen.rand()%8]);
 	if (rgen.rand_bool()) {add_solar_panels   (rgen);} // maybe add solar panels
-	//if (rgen.rand_bool()) {add_tv_antenna     (rgen);} // maybe add a TV antenna
+	else if (rgen.rand_bool()) {add_sat_dish  (rgen);}
+	//else if (rgen.rand_bool()) {add_tv_antenna(rgen);} // maybe add a TV antenna
 	if (rgen.rand_bool()) {add_outdoor_ac_unit(rgen);} // place an outdoor AC unit against an exterior wall 50% of the time, not actually on the roof
 	if (has_basement()) {has_basement_pipes = rgen.rand_bool();}
 	if (interior) {interior->finalize();}
@@ -1568,7 +1569,7 @@ bool building_t::get_power_point(vector<point> &ppts) const {
 
 void building_t::add_solar_panels(rand_gen_t &rgen) { // for houses
 	int const roof_tquad_ix(find_main_roof_tquad_ix(rgen, 1)); // skip_if_has_other_obj=1
-	if (roof_tquad_ix < 0) return; // not found, possibly not a house
+	if (roof_tquad_ix < 0) return; // not found, possibly not a house or has other objects
 	assert((unsigned)roof_tquad_ix < roof_tquads.size());
 	tquad_with_ix_t const &roof(roof_tquads[roof_tquad_ix]);
 	assert(roof.npts == 4);
@@ -1605,7 +1606,30 @@ void building_t::add_solar_panels(rand_gen_t &rgen) { // for houses
 		roof_tquads.push_back(side);
 	}
 }
+void building_t::add_rooftop_sat_dish(cube_t const &top, float radius, rand_gen_t &rgen) {
+	assert(top.is_strictly_normalized());
+	point dish_center;
 
+	for (unsigned d = 0; d < 2; ++d) {
+		bool const ddir(rgen.rand_bool());
+		dish_center[d] = top.d[d][ddir] + (ddir ? -1.0 : 1.0)*1.0*radius;
+	}
+	roof_obj_t dish(ROOF_OBJ_SAT_DISH);
+	dish.set_from_point(dish_center);
+	dish.expand_by_xy(radius);
+	set_cube_zvals(dish, top.z2(), (top.z2() + 2.5*radius));
+	details.push_back(dish);
+}
+void building_t::add_sat_dish(rand_gen_t &rgen) { // for houses
+	cube_t top; // uppermost part
+	auto parts_end(get_real_parts_end_inc_sec());
+
+	for (auto p = parts.begin(); p != parts_end; ++p) {
+		if (top.is_all_zeros() || p->z2() > top.z2()) {top = *p;}
+	}
+	float const radius(rgen.rand_uniform(0.2, 0.3)*get_window_vspace());
+	add_rooftop_sat_dish(top, radius, rgen);
+}
 void building_t::add_tv_antenna(rand_gen_t &rgen) { // for houses
 	// TODO
 }
@@ -2253,7 +2277,7 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 	bool const add_antenna((flat_roof || roof_type == ROOF_TYPE_SLOPE) && !has_helipad && !is_parking() && skylights.empty() && rgen.rand_bool());
 	bool const can_add_special_obj(has_flat_top && !has_helipad && !add_antenna && !is_parking() && skylights.empty()); // open roof space with no blocker
 	bool const add_water_tower(can_add_special_obj && (tsz.x < 2.0*tsz.y && tsz.y < 2.0*tsz.x) && (tsz.x > 0.5*tpsz.x && tsz.y > 0.5*tpsz.y) && rgen.rand_bool());
-	bool const add_sat_dish(can_add_special_obj && !add_water_tower && !is_industrial() /*&& rgen.rand_bool()*/);
+	bool const add_sat_dish(can_add_special_obj && !add_water_tower && !is_industrial());
 	unsigned const num_details(num_blocks + num_ac_units + 4*add_walls + add_antenna + add_water_tower + add_sat_dish);
 	if (num_details == 0) return; // nothing to do
 	if (add_walls && min(tsz.x, tsz.y) < 4.0*wall_width) return; // too small
@@ -2278,18 +2302,8 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 	}
 	if (add_sat_dish) {
 		float const radius(rgen.rand_uniform(0.015, 0.025)*(tpsz.x + tpsz.y));
-		point dish_center;
-
-		for (unsigned d = 0; d < 2; ++d) {
-			bool const ddir(rgen.rand_bool());
-			dish_center[d] = top.d[d][ddir] + (ddir ? -1.0 : 1.0)*1.5*radius;
-		}
-		roof_obj_t dish(ROOF_OBJ_SAT_DISH);
-		dish.set_from_point(dish_center);
-		dish.expand_by_xy(radius);
-		set_cube_zvals(dish, top.z2(), (top.z2() + 2.0*radius));
-		details.push_back(dish);
-		avoid_bcube = dish;
+		add_rooftop_sat_dish(top, radius, rgen);
+		avoid_bcube = details.back();
 		// Note: orient is chosen to point away from the roof later later since there's no dim/dir in roof objects
 	}
 	for (unsigned i = 0; i < num_blocks; ++i) {

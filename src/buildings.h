@@ -2280,7 +2280,9 @@ struct building_t : public building_geom_t {
 	void gen_house(cube_t const &base, rand_gen_t &rgen);
 	bool maybe_add_house_driveway(cube_t const &plot, unsigned building_ix) const;
 	bool get_power_point(vector<point> &ppts) const;
+	void add_rooftop_sat_dish(cube_t const &top, float radius, rand_gen_t &rgen);
 	void add_solar_panels(rand_gen_t &rgen);
+	void add_sat_dish    (rand_gen_t &rgen);
 	void add_tv_antenna  (rand_gen_t &rgen);
 	bool add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir, bool for_office_building, bool roof_access=0, bool courtyard=0, bool for_walkway=0);
 	float gen_peaked_roof(cube_t const &top_, float peak_height, bool dim, float extend_to, float max_dz, unsigned skip_side_tri);

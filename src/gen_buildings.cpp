@@ -1406,6 +1406,10 @@ public:
 			}
 		} // for i
 	}
+	void invert_tri_verts(vect_vnctcc_t &tverts, unsigned tverts_start) {
+		for (auto i = tverts.begin()+tverts_start; i != tverts.end(); ++i) {i->invert_normal();}
+		reverse(tverts.begin()+tverts_start, tverts.end());
+	}
 	void add_cone_tri_verts(vector_point_norm const &vpn, vect_vnctcc_t &tverts, unsigned ndiv, colorRGBA const &color, bool two_sided) {
 		float const ndiv_inv(1.0/ndiv);
 		color_wrapper const cw(color);
@@ -1420,12 +1424,8 @@ public:
 		}
 		if (two_sided) { // add a second cone with reversed winding order and inverted normals so that the bottom is drawn
 			unsigned const tverts_end(tverts.size());
-
-			for (unsigned i = tverts_start; i < tverts_end; ++i) {
-				tverts.push_back(tverts[i]);
-				tverts.back().invert_normal();
-			}
-			reverse(tverts.begin()+tverts_end, tverts.end());
+			for (unsigned i = tverts_start; i < tverts_end; ++i) {tverts.push_back(tverts[i]);}
+			invert_tri_verts(tverts, tverts_end);
 		}
 	}
 
@@ -1479,13 +1479,23 @@ public:
 		colorRGBA const color(GRAY);
 		color_wrapper const cw(color);
 		// draw cone triangles
-		unsigned const ndiv(N_CYL_SIDES);
-		point const ce[2] = {(center + cone_len*dir), center};
-		vector_point_norm const &vpn(gen_cylinder_data(ce, dish_radius, 0.0, ndiv)); // slightly wider at the bottom
+		unsigned const ndiv(N_CYL_SIDES), pole_ndiv(ndiv/2);
+		point ce[2] = {(center + cone_len*dir), center};
+		vector_point_norm const &vpn(gen_cylinder_data(ce, dish_radius, 0.0, ndiv));
 		add_cone_tri_verts(vpn, tverts, ndiv, color, 1); // two_sided=1
+		// draw collector at front center
+		ce[0] += cone_len*dir; // extend further out
+		swap(ce[0], ce[1]);
+		vector_point_norm const &vpn_cent(gen_cylinder_data(ce, pole_radius, 0.0, pole_ndiv));
+		add_cone_tri_verts(vpn_cent, tverts, pole_ndiv, color, 0); // two_sided=0
 		// draw pole
-		add_vert_cylinder(center, sd.z1(), center.z, pole_radius, 1.0, 1.0, ndiv/2, color, qverts); // pole
-		// draw collector at front center or bottom?
+		add_vert_cylinder(center, sd.z1(), center.z, pole_radius, 1.0, 1.0, pole_ndiv, color, qverts);
+		// draw pole top circle as a flattened cone
+		unsigned const tverts_start(tverts.size());
+		point const ce_top[2] = {center, center};
+		vector_point_norm const &vpn_top(gen_cylinder_data(ce_top, pole_radius, 0.0, pole_ndiv));
+		add_cone_tri_verts(vpn_top, tverts, pole_ndiv, color, 0); // top circle; two_sided=0
+		invert_tri_verts(tverts, tverts_start);
 	}
 	void add_tv_antenna(building_t const &bg, cube_t const &ant) {
 		// TODO: grid of cubes
