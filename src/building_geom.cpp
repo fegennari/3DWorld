@@ -1255,9 +1255,10 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	// white, white, white, white, pink, peach, lt green, lt blue
 	colorRGBA const wall_colors[8] = {WHITE, WHITE, WHITE, WHITE, colorRGBA(1.0, 0.85, 0.85), colorRGBA(1.0, 0.85, 0.75), colorRGBA(0.85, 1.0, 0.85), colorRGBA(0.85, 0.85, 1.0)};
 	wall_color = wall_color.modulate_with(wall_colors[rgen.rand()%8]);
-	if (rgen.rand_bool()) {add_solar_panels   (rgen);} // maybe add solar panels
-	else if (rgen.rand_bool()) {add_sat_dish  (rgen);}
-	//else if (rgen.rand_bool()) {add_tv_antenna(rgen);} // maybe add a TV antenna
+	unsigned const roof_obj_type((rgen.rand() & 7));
+	if (roof_obj_type &  1) {add_solar_panels(rgen);} // maybe add solar panels - 50%
+	if (roof_obj_type == 0) {add_sat_dish    (rgen);} // add a satellite dish - 1/8
+	if (roof_obj_type == 2) {add_tv_antenna  (rgen);} // add a TV antenna - 1/8
 	if (rgen.rand_bool()) {add_outdoor_ac_unit(rgen);} // place an outdoor AC unit against an exterior wall 50% of the time, not actually on the roof
 	if (has_basement()) {has_basement_pipes = rgen.rand_bool();}
 	if (interior) {interior->finalize();}
