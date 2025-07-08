@@ -215,7 +215,6 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_PARK_GATE ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1, 400.0, 100.0, "parking garage gate");
 	bldg_obj_types[TYPE_CONV_BELT ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1, 500.0, 100.0, "conveyor belt");
 	bldg_obj_types[TYPE_JAIL_BARS ] = bldg_obj_type_t(1, 1, 0, 0, 1, 0, 2,   0.0,   0.0, "jail bars"); // rat_coll? treated as a small object
-	bldg_obj_types[TYPE_SAT_DISH  ] = bldg_obj_type_t(1, 0, 0, 0, 1, 0, 1,   0.0,   0.0, "satellite dish");
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");

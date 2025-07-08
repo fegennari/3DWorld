@@ -1482,7 +1482,7 @@ public:
 		colorRGBA const color(GRAY);
 		color_wrapper const cw(color);
 		// draw cone triangles
-		unsigned const ndiv(N_CYL_SIDES), pole_ndiv(ndiv/2);
+		unsigned const ndiv(N_CYL_SIDES), pole_ndiv(8);
 		point ce[2] = {(center + cone_len*dir), center};
 		vector_point_norm const &vpn(gen_cylinder_data(ce, dish_radius, 0.0, ndiv));
 		add_cone_tri_verts(vpn, tverts, ndiv, color, 1); // two_sided=1

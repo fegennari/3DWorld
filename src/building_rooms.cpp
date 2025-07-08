@@ -1277,7 +1277,7 @@ void building_t::maybe_add_fire_escape(rand_gen_t &rgen) { // or ladder
 	}
 }
 
-void building_t::add_balconies(rand_gen_t &rgen, vect_cube_t &balconies) {
+void building_t::add_balconies(rand_gen_t &rgen, vect_cube_t &balconies) { // and exterior stairs/railings
 	if (!is_house || !has_room_geom()) return; // houses only for now
 	if (rgen.rand_bool()) return; // only add balconies to 50% of houses
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness()), door_width(get_doorway_width());
@@ -1377,7 +1377,7 @@ void building_t::add_balconies(rand_gen_t &rgen, vect_cube_t &balconies) {
 				front_wall.z1() = floor_slab.z2();
 				front_wall.d[dim][!dir] += (dir ? 1.0 : -1.0)*0.9*balcony_depth; // shrink to 10% width
 				ext_steps.emplace_back(front_wall, dim, dir, dir, 0, 0, 0, 0, 1); // step_up=1
-				details.emplace_back(floor_slab, DETAIL_OBJ_COLL_SHAD); // for shadows and pedestrian collisions
+				details  .emplace_back(floor_slab, DETAIL_OBJ_COLL_SHAD); // for shadows and pedestrian collisions
 
 				if (draw_style == 0 || draw_style == 3) { // add shadow casters for sides
 					cube_t cubes[4]; // {bottom, front, left side, right side}
