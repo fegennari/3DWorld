@@ -999,6 +999,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		case TYPE_SHELFRACK: add_rack(*i, 1, 0); break; // add_rack=1, add_objs=0
 		case TYPE_CHIM_CAP:  add_chimney_cap(*i); break;
 		case TYPE_LADDER:    add_ext_ladder(*i); break;
+		case TYPE_SAT_DISH:  add_sat_dish(*i); break;
 		case TYPE_CHECKOUT:  add_checkout(*i, tscale); break;
 		case TYPE_FISHTANK:  add_fishtank(*i); break;
 		case TYPE_OFF_PILLAR:add_wall_or_pillar(*i, tex_origin, wall_tex); break;
