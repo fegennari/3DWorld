@@ -1608,7 +1608,6 @@ void building_t::add_solar_panels(rand_gen_t &rgen) { // for houses
 	}
 }
 void building_t::add_rooftop_sat_dish(cube_t const &top, float radius, rand_gen_t &rgen) {
-	assert(top.is_strictly_normalized());
 	point dish_center;
 
 	for (unsigned d = 0; d < 2; ++d) {
@@ -1621,18 +1620,32 @@ void building_t::add_rooftop_sat_dish(cube_t const &top, float radius, rand_gen_
 	set_cube_zvals(dish, top.z2(), (top.z2() + 2.5*radius));
 	details.push_back(dish);
 }
-void building_t::add_sat_dish(rand_gen_t &rgen) { // for houses
+cube_t building_t::get_top_building_part() const {
 	cube_t top; // uppermost part
 	auto parts_end(get_real_parts_end_inc_sec());
 
 	for (auto p = parts.begin(); p != parts_end; ++p) {
 		if (top.is_all_zeros() || p->z2() > top.z2()) {top = *p;}
 	}
+	assert(top.is_strictly_normalized());
+	return top;
+}
+void building_t::add_sat_dish(rand_gen_t &rgen) { // for houses
 	float const radius(rgen.rand_uniform(0.2, 0.3)*get_window_vspace());
-	add_rooftop_sat_dish(top, radius, rgen);
+	add_rooftop_sat_dish(get_top_building_part(), radius, rgen);
 }
 void building_t::add_tv_antenna(rand_gen_t &rgen) { // for houses
-	// TODO
+	cube_t const top(get_top_building_part());
+	bool const long_dim(rgen.rand_bool());
+	float const hlen(0.6*get_window_vspace()), hwidth(0.6*hlen), height(1.8*hlen);
+	roof_obj_t ant(ROOF_OBJ_TV_ANT);
+	set_cube_zvals(ant, top.z2(), (top.z2() + height));
+
+	for (unsigned d = 0; d < 2; ++d) {
+		bool const ddir(rgen.rand_bool());
+		set_wall_width(ant, (top.d[d][ddir] + (ddir ? -1.0 : 1.0)*hlen), ((d == long_dim) ? hlen : hwidth), d);
+	}
+	details.push_back(ant);
 }
 
 void building_t::maybe_inv_rotate_pos_dir(point &pos, vector3d &dir) const {

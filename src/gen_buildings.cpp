@@ -1477,7 +1477,7 @@ public:
 		vector3d dir((point(sd.xc(), sd.yc(), 0.0) - point(bg.bcube.xc(), bg.bcube.yc(), 0.0)).get_norm()); // XY vector away from building center
 		dir.z = 1.0; // angled upward
 		dir.normalize();
-		tid_nm_pair_t const tex(WHITE_TEX, 1.0, 1); // untextured, shadowed
+		tid_nm_pair_t const tex(WHITE_TEX); // untextured
 		auto &tverts(get_verts(tex, 1)), &qverts(get_verts(tex, 0)); // triangle and quad verts
 		colorRGBA const color(GRAY);
 		color_wrapper const cw(color);
@@ -1501,7 +1501,29 @@ public:
 		invert_tri_verts(tverts, tverts_start);
 	}
 	void add_tv_antenna(building_t const &bg, cube_t const &ant) {
-		// TODO: grid of cubes
+		tid_nm_pair_t const tex(WHITE_TEX); // untextured
+		unsigned const num_div(8);
+		vector3d const sz(ant.get_size());
+		bool const dim(sz.x < sz.y);
+		float const len(sz[dim]), hwidth(0.5*sz[!dim]), height(sz.z), hbar_hw(0.01*height), vbar_hw(0.7*hbar_hw), xbar_hw(0.2*hbar_hw);
+		float const end_pad(8.0*xbar_hw), div_len(len - 2.0*end_pad), spacing(div_len/(num_div - 1)), step_shrink(0.5*hwidth/num_div);
+		vector3d center(ant.xc(), ant.yc(), (ant.z2() - hbar_hw));
+		if (bg.is_rotated()) {bg.do_xy_rotate(bg.bcube.get_cube_center(), center);}
+		cube_t vbar(ant), hbar(ant), xbar(ant);
+		vbar.z2() -= 2.0*hbar_hw; // top meets hbar bottom
+		hbar.z1()  = vbar.z2();
+		for (unsigned d = 0; d < 2; ++d) {set_wall_width(vbar, center[d], vbar_hw, d);}
+		set_wall_width(hbar, center[!dim], hbar_hw, !dim);
+		set_wall_width(xbar, hbar.zc(),    xbar_hw, 2   );
+		add_cube(bg, vbar, tex, GRAY,       0, 3, 0, 0); // draw XY  sides
+		add_cube(bg, hbar, tex, GRAY_BLACK, 0, 7, 0, 0); // draw all sides
+		unsigned const dim_mask(7 & ~(1 << (!dim))); // skip ends as an optimization, since they're very small
+		
+		for (unsigned n = 0; n < num_div; ++n) {
+			set_wall_width(xbar, (hbar.d[dim][0] + end_pad + n*spacing), xbar_hw, dim);
+			add_cube(bg, xbar, tex, LT_GRAY, 0, dim_mask, 0, 0);
+			xbar.expand_in_dim(!dim, -step_shrink);
+		}
 	}
 
 	static cube_t get_roof_light_from_pole(cube_with_ix_t const &pole) {
@@ -1520,11 +1542,11 @@ public:
 		cube_t base(pole);
 		base.z2() = pole.z1() + 0.5*pole_sz;
 		base.expand_by_xy(1.1*pole_sz);
-		tid_nm_pair_t const no_tex(WHITE_TEX); // untextured
-		add_cube(bg, pole,  no_tex, BKGRAY, 0, 3, 0, 0); // skip top and bottom
-		add_cube(bg, base,  no_tex, BKGRAY, 0, 7, 1, 0); // skip bottom
-		add_cube(bg, light, no_tex, BKGRAY, 0, 7, 1, 0); // skip bottom
-		add_cube(bg, light, no_tex, WHITE,  0, 4, 0, 1); // bottom only
+		tid_nm_pair_t const tex(WHITE_TEX); // untextured
+		add_cube(bg, pole,  tex, BKGRAY, 0, 3, 0, 0); // skip top and bottom
+		add_cube(bg, base,  tex, BKGRAY, 0, 7, 1, 0); // skip bottom
+		add_cube(bg, light, tex, BKGRAY, 0, 7, 1, 0); // skip bottom
+		add_cube(bg, light, tex, WHITE,  0, 4, 0, 1); // bottom only
 	}
 
 	unsigned num_verts() const {
