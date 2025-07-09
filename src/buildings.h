@@ -2148,6 +2148,7 @@ struct building_t : public building_geom_t {
 	bool is_powerplant  () const {return (btype == BTYPE_POWERPLANT);}
 	bool is_police_stat () const {return (btype == BTYPE_POLICE    );}
 	bool is_fire_stat   () const {return (btype == BTYPE_FIRE_STAT );}
+	bool is_prison      () const {return (btype == BTYPE_PRISON    );}
 	bool is_apt_or_hotel() const {return (is_apartment() || is_hotel());}
 	bool is_residential () const {return (is_house || is_apt_or_hotel());}
 	bool is_industrial  () const {return (is_factory() || is_warehouse() || is_powerplant());}
@@ -2809,6 +2810,7 @@ private:
 		bool is_lit, colorRGBA const &light_color, light_ix_assign_t &light_ix_assign);
 	void populate_jail_cell(rand_gen_t &rgen, cube_t const &cell, float zval, unsigned room_id, float tot_light_amt, bool dim, bool dir, bool bed_side,
 		bool sink_on_back_wall, bool is_lit, float bars_hthick, float bars_depth_pos, colorRGBA const &light_color, light_ix_assign_t &light_ix_assign);
+	void divide_part_into_jail_cells(cube_t const &part, unsigned part_id, rand_gen_t &rgen);
 	void add_garage_objs     (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
 	void add_floor_clutter_objs(rand_gen_t  rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	void add_floor_clutter_objs(rand_gen_t &rgen, room_t const &room, cube_t place_area, float zval, unsigned room_id,

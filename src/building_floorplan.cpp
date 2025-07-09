@@ -921,6 +921,9 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			no_split_walls_this_part = 1;
 		} // end use_hallway
 
+		else if (is_prison()) {
+			divide_part_into_jail_cells(*p, part_id, rgen);
+		}
 		else { // generate random walls using recursive 2D slices
 			float const min_wall_len2(0.85*min_wall_len); // a somewhat shorter value that applies to some tests (but not wall_split_thresh)
 			bool const no_walls(min(p->dx(), p->dy()) < min_wall_len2); // not enough space to add a room (chimney, porch support, garage, shed, etc.)

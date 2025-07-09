@@ -10,6 +10,14 @@ extern object_model_loader_t building_obj_model_loader;
 bool has_key_3d_model();
 
 
+void building_t::divide_part_into_jail_cells(cube_t const &part, unsigned part_id, rand_gen_t &rgen) {
+	float const floor_spacing(get_window_vspace()), dx(part.dx()), dy(part.dy());
+	bool const dim(dx < dy); // long dim
+	add_room(part, part_id); // for now we add a single room for the entire part
+	interior->rooms.back().assign_all_to(RTYPE_JAIL);
+	// TODO
+}
+
 bool building_t::add_jail_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
 	bool is_lit, colorRGBA const &light_color, light_ix_assign_t &light_ix_assign)
 {

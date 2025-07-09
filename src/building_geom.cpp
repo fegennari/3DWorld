@@ -301,6 +301,10 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 				place_area.expand_by_xy(0.05f*(bcube.dx() + bcube.dy()));
 				if (!has_bcube_int(place_area, parts)) {tree_pos = place_area.get_cube_center(); tree_pos.z = ground_floor_z1;}
 			}
+			if (0 && btype == BTYPE_OFFICE && is_cube()) { // single level cube
+				btype = BTYPE_PRISON;
+				assign_name(rgen); // re-assign a name
+			}
 			gen_details(rgen, 0);
 		}
 		else { // single part, entire cube/cylinder
