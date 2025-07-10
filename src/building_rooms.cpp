@@ -1765,9 +1765,8 @@ void building_t::add_extra_obj_slots() {
 // *** Wall and Door Trim ***
 
 void building_t::add_wall_and_door_trim_if_needed() {
-	// no interior or walls, except for industrial and parking structures
-	if (!has_room_geom() || (interior->walls[0].empty() && interior->walls[1].empty() && !is_industrial() && !is_parking())) return;
-	if (!interior->room_geom->trim_objs.empty()) return; // trim already generated
+	if (!has_room_geom() || interior->rooms.empty()) return; // no interior or rooms
+	if (!interior->room_geom->trim_objs.empty())     return; // trim already generated
 	add_wall_and_door_trim();
 	interior->room_geom->trim_objs.shrink_to_fit();
 }
@@ -2366,11 +2365,11 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 	assert(add_trim || add_coverings || add_ext_sills);
 	if (!has_int_windows()) return; // no windows
 	if (!is_cube())         return; // cube-shaped buildings only
-	bool const add_ext_trim(has_windows());
+	bool const add_ext_trim(has_windows()), prison(is_prison());
 	float const wall_thickness(get_wall_thickness()), trim_thickness(get_trim_thickness()), ext_wall_toler(0.01*trim_thickness); // prevents z-fighting when AA is disabled
 	float const window_h_border(WINDOW_BORDER_MULT*get_window_h_border()), window_v_border(WINDOW_BORDER_MULT*get_window_v_border()); // (0, 1) range
 	// Note: depth must be small to avoid object intersections; this applies to the windowsill as well
-	float const window_trim_width(get_wind_trim_thick()), window_trim_depth(1.0*trim_thickness), windowsill_depth(1.0*trim_thickness);
+	float const window_trim_width(get_wind_trim_thick()), window_trim_depth((prison ? 4.0 : 1.0)*trim_thickness), windowsill_depth(1.0*window_trim_depth);
 	float const floor_spacing(get_window_vspace()), window_offset(get_door_shift_dist()), extra_depth(windowsill_depth - window_trim_depth);
 	building_mat_t const &mat(get_material());
 	colorRGBA const trim_color(get_trim_color());
@@ -2384,7 +2383,8 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 	rgen.rand_mix();
 	vect_cube_t trims;
 	
-	if (add_ext_sills && (!add_ext_trim || !rgen.rand_bool())) { // add exterior window sills 50% of the time, but only if add_ext_trim=1
+	// add exterior window sills 50% of the time, but only if add_ext_trim=1; always add to prisons
+	if (add_ext_sills && (!add_ext_trim || (!prison && !rgen.rand_bool()))) {
 		add_ext_sills = 0;
 		if (!add_trim && !add_coverings) return; // nothing else to add
 	}
@@ -2462,8 +2462,8 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 					sill.z1() -= 0.04*window_height;
 					sill.z2()  = sill.z1() + 0.035*window_height;
 					sill.expand_in_dim(!dim, 0.050*window_height);
-					sill.d[dim][!dir] -= dscale*window_offset; // flush with exterior wall to avoid clipping through interior
-					sill.d[dim][ dir] -= dscale*0.06*window_height; // extend out from the wall
+					sill.d[dim][!dir]  = c.d[dim][!dir] + dscale*window_offset; // flush with exterior wall to avoid clipping through interior
+					sill.d[dim][ dir] -= dscale*(prison ? 0.08 : 0.06)*window_height; // extend out from the wall
 					bool blocked(0);
 
 					if (has_porch() && porch.intersects_xy(sill)) { // check for window sills blocked by porch roof
