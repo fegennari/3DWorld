@@ -226,4 +226,9 @@ void building_t::populate_jail_cell(rand_gen_t &rgen, cube_t const &cell, float 
 	}
 }
 
+void building_t::add_window_bars(cube_t const &window, bool dim, bool dir, unsigned room_id) {
+	if (!has_int_windows()) return; // no interior (or exterior) drawn windows
+	cube_t bars(window); // resize?
+	interior->room_geom->objs.emplace_back(bars, TYPE_JAIL_BARS, room_id, dim, dir, 0, 1.0, SHAPE_CUBE, GRAY);
+}
 

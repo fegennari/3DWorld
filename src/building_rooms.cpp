@@ -833,7 +833,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					added_obj = no_whiteboard = is_inter = 1;
 				}
 			}
-			if (!added_obj && is_ext_basement && rgen.rand_bool()) { // jail room
+			if (!added_obj && is_ext_basement && (is_prison() || rgen.rand_bool())) { // jail room 50% of the time, 100% for prisons
 				if (add_jail_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_lit, color, light_ix_assign)) {
 					r->assign_to(RTYPE_JAIL, f);
 					added_obj = no_whiteboard = is_jail = 1;
@@ -2812,6 +2812,7 @@ void building_t::add_window_coverings(cube_t const &window, bool dim, bool dir) 
 	switch (get_room_type_and_floor(room_id, window.zc(), floor_ix)) {
 	case RTYPE_BED : case RTYPE_MASTER_BED: case RTYPE_HOS_BED: add_window_blinds(window, dim, dir, room_id, floor_ix); break; // bedroom
 	case RTYPE_BATH: case RTYPE_MENS: case RTYPE_WOMENS: add_bathroom_window(window, dim, dir, room_id, floor_ix); break; // bathroom
+	case RTYPE_JAIL: add_window_bars(window, dim, dir, room_id); break; // prison jail cell
 	} // end switch
 }
 

@@ -2981,6 +2981,7 @@ private:
 	void add_window_coverings(cube_t const &window, bool dim, bool dir);
 	void add_window_blinds(cube_t const &window, bool dim, bool dir, unsigned room_ix, unsigned floor);
 	void add_bathroom_window(cube_t const &window, bool dim, bool dir, unsigned room_id, unsigned floor);
+	void add_window_bars(cube_t const &window, bool dim, bool dir, unsigned room_ix);
 	int get_room_id_for_window(cube_t const &window, bool dim, bool dir, bool &is_split) const;
 	void register_open_ext_door_state(int door_ix);
 	void add_interior_door(door_t &door, bool is_bathroom=0, bool make_unlocked=0, bool make_closed=0);
