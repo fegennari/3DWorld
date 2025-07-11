@@ -193,6 +193,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	objs.reserve(tot_num_rooms); // placeholder - there will be more than this many
 	bool const residential(is_residential());
 	bool const chair_color_per_floor(is_school());
+	bool const no_placed_bathroom(is_industrial() || is_parking() || is_prison());
 	float const extra_bathroom_prob((is_house ? 2.0 : 1.0)*0.02*min((int(tot_num_rooms) - 4), 20));
 	unsigned cand_bathroom(rooms.size()); // start at an invalid value
 	unsigned added_bathroom_objs_mask(0), numbered_rooms_seen(0), store_type_mask(0), num_locker_rooms(0);
@@ -203,7 +204,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	light_ix_assign_t light_ix_assign;
 	clear_existing_room_geom();
 
-	if (rooms.size() > 1) { // choose best room assignments for required rooms; if a single room, skip this step
+	// choose best room assignments for required rooms; if a single room or special building type, skip this step
+	if (rooms.size() > 1 && !no_placed_bathroom) {
 		float min_score(0.0); // lower is better
 
 		// Note: assigning cand_bathroom when has_pri_hall() is not strictly necessary, but may help add a bathroom to an upper stacked part
@@ -253,6 +255,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		bool const is_swim_pool_room(init_rtype_f0 == RTYPE_SWIM); // room with a swimming pool
 		bool const is_retail_room   (init_rtype_f0 == RTYPE_RETAIL);
 		bool const is_mall_store    (init_rtype_f0 == RTYPE_STORE);
+		bool const is_jail_room     (init_rtype_f0 == RTYPE_JAIL);
 		bool const is_office(r->is_office && (!is_hospital() || r->interior)); // hospital offices are converted to patient rooms, etc. if they have windows
 		bool const is_ext_basement(r->is_ext_basement()), is_backrooms(r->is_backrooms()), is_apt_or_hotel_room(r->is_apt_or_hotel_room());
 		bool const residential_room(is_house || (residential && !r->is_hallway && !is_basement && !is_retail_room)), industrial_room(r->is_industrial());
@@ -667,6 +670,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			if (is_office_bathroom /*|| r->get_room_type(f) == RTYPE_BATH*/) { // bathroom is already assigned
 				added_obj = is_bathroom = added_bathroom = no_whiteboard = add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt,
 					objs_start_inc_lights, objs_start, f, is_basement, 0, added_bathroom_objs_mask); // add_shower_tub=0
+			}
+			else if (is_jail_room) {
+				// TODO: add jail cell objects
+				is_jail = added_obj = no_whiteboard = no_plants = 1;
 			}
 			else if (f == 0 && init_rtype_f0 == RTYPE_LAUNDRY) {
 				added_obj = no_whiteboard = no_plants = is_laundry = added_laundry =
@@ -1125,7 +1132,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	bool const has_toilet(building_obj_model_loader.is_model_valid(OBJ_MODEL_TOILET)), has_sink(building_obj_model_loader.is_model_valid(OBJ_MODEL_SINK));
 
 	if (is_rotated() || !is_cube()) {} // skip for rotated and non-cube buildings, since toilets, etc. may not be placed
-	else if (is_parking()) {} // not yet added - suppress warnings
+	else if (no_placed_bathroom) {} // bathrooms use special placement - suppress warnings
 	else if (num_bathrooms == 0 && has_toilet) { // can happen, but very rare; skip if there was no toilet model since we can't have bathrooms in that case
 		cout << "no bathroom in building " << bcube.xc() << " " << bcube.yc() << endl;
 		if (cand_bathroom < rooms.size()) {cout << "cand bathroom was at " << rooms[cand_bathroom].str() << endl;}
