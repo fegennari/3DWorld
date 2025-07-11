@@ -1676,11 +1676,11 @@ colorRGBA building_t::get_floor_tex_and_color(cube_t const &floor_cube, tid_nm_p
 		else if (in_basement) {tex = mat.basement_floor_tex;} // basement
 		else {tex = mat.house_floor_tex;}
 	}
-	else if (!in_basement && is_parking()) {
+	else if (!in_basement && (is_parking() || is_prison())) {
 		tex = get_concrete_texture();
 		return WHITE;
 	}
-	else { // office building
+	else { // office or special building
 		bool const in_ext_basement(in_basement && (!get_basement().contains_cube_xy(floor_cube) || floor_cube.z2() < bcube.z1()));
 		bool const retail_or_mall((in_ext_basement && is_inside_mall_stores(floor_cube.get_cube_center())) || (has_retail() && floor_cube.z1() == ground_floor_z1));
 		if (retail_or_mall) {tex = get_tile_floor_texture();}
