@@ -2307,6 +2307,7 @@ struct building_t : public building_geom_t {
 	float get_hspacing_for_part(cube_t const &part, bool dim) const;
 	bool interior_enabled() const;
 	void gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes);
+	void add_part_sep_walls(vect_cube_t::const_iterator &p, cube_t const &place_area, unsigned rooms_start, uint64_t must_split[2]);
 	void assign_special_room_types(vector<unsigned> &utility_room_cands, vector<unsigned> &special_room_cands, unsigned doors_start, rand_gen_t &rgen);
 	void add_conference_room_window(unsigned room_ix);
 	void divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsigned hall_num_rooms, unsigned tot_num_windows,
@@ -2810,6 +2811,7 @@ private:
 	bool add_ladder_to_room  (rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	bool add_jail_objs       (rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
 		bool is_lit, colorRGBA const &light_color, light_ix_assign_t &light_ix_assign);
+	void add_prison_jail_cell_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	cube_t add_jail_cell_bars_and_door(cube_t const &cell, unsigned room_id, float tot_light_amt, bool dim, bool dir, bool hinge_side,
 		colorRGBA const &bar_color, float bars_hthick, float bars_depth_pos);
 	void populate_jail_cell(rand_gen_t &rgen, cube_t const &cell, float zval, unsigned room_id, float tot_light_amt, bool dim, bool dir, bool bed_side,

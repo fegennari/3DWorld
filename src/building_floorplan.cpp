@@ -924,6 +924,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 
 		else if (is_prison()) {
 			divide_part_into_jail_cells(*p, part_id, rgen);
+			add_part_sep_walls(p, place_area, rooms_start, must_split);
 		}
 		else { // generate random walls using recursive 2D slices
 			float const min_wall_len2(0.85*min_wall_len); // a somewhat shorter value that applies to some tests (but not wall_split_thresh)
@@ -1122,56 +1123,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 				}
 				is_first_split = 0;
 			} // end while()
-			// insert walls to split up parts into rectangular rooms
-			float const min_split_wall_len(0.5*min_wall_len); // allow a shorter than normal wall because these walls have higher priority
-			
-			if (min(p->dx(), p->dy()) < min_split_wall_len) { // too small, skip
-				has_small_part = 1;
-			}
-			else {
-				for (auto p2 = parts.begin(); p2 != parts_end; ++p2) {
-					if (p2 == p) continue; // skip self
-					if (min(p2->dx(), p2->dy()) < min_split_wall_len) {has_small_part = 1; continue;} // too small, skip
-
-					for (unsigned dim = 0; dim < 2; ++dim) {
-						for (unsigned dir = 0; dir < 2; ++dir) {
-							float const val(p->d[!dim][dir]);
-							if (p2->d[!dim][!dir] != val) continue; // not adjacent
-							if (p2->z1() >= p->z2() || p2->z2() <= p->z1()) continue; // no overlap in Z
-							if (p2->d[dim][0] > p->d[dim][0] || p2->d[dim][1] < p->d[dim][1]) continue; // not contained in dim (don't have to worry about Z-shaped case)
-
-							if (p2->d[dim][0] == p->d[dim][0] && p2->d[dim][1] == p->d[dim][1]) { // same xy values, must only vary in z
-								if (p2->z2() < p->z2()) continue; // add wall only on one side (arbitrary)
-								if (has_complex_floorplan && p2->z2() == p->z2() && dir == 0) continue; // two abutting walls in complex floorplan: skip the one with dir==0
-							}
-							cube_t wall;
-							wall.z1() = max(p->z1(), p2->z1()) + fc_thick; // shared Z range
-							wall.z2() = min(p->z2(), p2->z2()) - fc_thick;
-
-							for (unsigned d = 0; d < 2; ++d) {
-								if (p->d[dim][d] != p2->d[dim][d]) { // corner between the two parts
-									wall.d[dim][d] = p->d[dim][d]; // shorter part side with no gap
-									//wall.d[dim][d] -= (d ? 1.0 : -1.0)*0.2*wall_edge_spacing; // reduced gap (but still causes a noticeable split in the interior wall and trim)
-								}
-								else {
-									wall.d[dim][d] = place_area.d[dim][d]; // shorter part side with slight offset
-								}
-							} // for d
-							if (wall.get_sz_dim(dim) < min_split_wall_len) continue; // wall is too short to add (can this happen?)
-							wall.d[!dim][ dir] = val;
-							wall.d[!dim][!dir] = val + (dir ? -1.0 : 1.0)*wall_thick;
-							must_split[!dim] |= (1ULL << (interior->walls[!dim].size() & 63)); // flag this wall for extra splitting
-							interior->walls[!dim].push_back(wall);
-							assert(rooms_start < rooms.size()); // must have added at least one room
-
-							for (auto r = (rooms.begin() + rooms_start); r != rooms.end(); ++r) {
-								assert(p->contains_cube(*r));
-								if (r->d[!dim][dir] == val) {r->d[!dim][dir] = wall.d[!dim][!dir];} // clip room to exclude this newly added wall
-							}
-						} // for dir
-					} // for dim
-				} // for p2
-			} // end !too_small
+			add_part_sep_walls(p, place_area, rooms_start, must_split);
 		} // end wall placement
 		add_ceilings_floors_stairs(rgen, *p, hall, part_id, num_floors, rooms_start, use_hallway, first_part_this_stack, window_hspacing, window_border, is_industrial_part);
 		assign_special_room_types(utility_room_cands, special_room_cands, doors_start, rgen); // for rooms with hallways
@@ -1193,6 +1145,8 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 		rooms.back().set_no_geom();
 	}
 	// attempt to cut extra doorways into long walls if there's space to produce a more connected floorplan
+	unsigned const doors_start(interior->doors.size()), door_stacks_start(interior->door_stacks.size());
+
 	for (unsigned d = 0; d < 2; ++d) { // x,y: dim in which the wall partitions the room (wall runs in dim !d)
 		auto &walls(interior->walls[d]);
 		auto const &perp_walls(interior->walls[!d]);
@@ -1304,6 +1258,11 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			} // for nsplits
 		} // for w
 	} // for d
+	if (is_prison()) { // interior doors separating parts are jail cell bar doors
+		// TODO: these should actually be opaque with a barred window and a frame
+		for (auto d = interior->doors      .begin()+doors_start;       d != interior->doors      .end(); ++d) {d->for_jail = 1;}
+		for (auto d = interior->door_stacks.begin()+door_stacks_start; d != interior->door_stacks.end(); ++d) {d->for_jail = 1;}
+	}
 	reverse_door_hinges_if_needed();
 
 	// add stairs to connect together stacked parts for office buildings; must be done last after all walls/ceilings/floors have been assigned
@@ -1322,6 +1281,60 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 	else if (has_basement()) {interior->furnace_type = FTYPE_BASEMENT;} // basement only: place furnace in basement (at least if it's a house)
 	// else no furnace
 } // end gen_interior_int()
+
+void building_t::add_part_sep_walls(vect_cube_t::const_iterator &p, cube_t const &place_area, unsigned rooms_start, uint64_t must_split[2]) {
+	// insert walls to split up parts into rectangular rooms
+	float const wall_thick(get_wall_thickness()), fc_thick(get_fc_thickness());
+	auto parts_end(get_real_parts_end());
+	float const min_split_wall_len(0.5*get_min_wall_len()); // allow a shorter than normal wall because these walls have higher priority
+
+	if (min(p->dx(), p->dy()) < min_split_wall_len) { // too small, skip
+		has_small_part = 1;
+		return;
+	}
+	for (auto p2 = parts.begin(); p2 != parts_end; ++p2) {
+		if (p2 == p) continue; // skip self
+		if (min(p2->dx(), p2->dy()) < min_split_wall_len) {has_small_part = 1; continue;} // too small, skip
+
+		for (unsigned dim = 0; dim < 2; ++dim) {
+			for (unsigned dir = 0; dir < 2; ++dir) {
+				float const val(p->d[!dim][dir]);
+				if (p2->d[!dim][!dir] != val) continue; // not adjacent
+				if (p2->z1() >= p->z2() || p2->z2() <= p->z1()) continue; // no overlap in Z
+				if (p2->d[dim][0] > p->d[dim][0] || p2->d[dim][1] < p->d[dim][1]) continue; // not contained in dim (don't have to worry about Z-shaped case)
+
+				if (p2->d[dim][0] == p->d[dim][0] && p2->d[dim][1] == p->d[dim][1]) { // same xy values, must only vary in z
+					if (p2->z2() < p->z2()) continue; // add wall only on one side (arbitrary)
+					if (has_complex_floorplan && p2->z2() == p->z2() && dir == 0) continue; // two abutting walls in complex floorplan: skip the one with dir==0
+				}
+				cube_t wall;
+				wall.z1() = max(p->z1(), p2->z1()) + fc_thick; // shared Z range
+				wall.z2() = min(p->z2(), p2->z2()) - fc_thick;
+
+				for (unsigned d = 0; d < 2; ++d) {
+					if (p->d[dim][d] != p2->d[dim][d]) { // corner between the two parts
+						wall.d[dim][d] = p->d[dim][d]; // shorter part side with no gap
+						//wall.d[dim][d] -= (d ? 1.0 : -1.0)*0.2*wall_edge_spacing; // reduced gap (but still causes a noticeable split in the interior wall and trim)
+					}
+					else {
+						wall.d[dim][d] = place_area.d[dim][d]; // shorter part side with slight offset
+					}
+				} // for d
+				if (wall.get_sz_dim(dim) < min_split_wall_len) continue; // wall is too short to add (can this happen?)
+				wall.d[!dim][ dir] = val;
+				wall.d[!dim][!dir] = val + (dir ? -1.0 : 1.0)*wall_thick;
+				must_split[!dim] |= (1ULL << (interior->walls[!dim].size() & 63)); // flag this wall for extra splitting
+				interior->walls[!dim].push_back(wall);
+				assert(rooms_start < interior->rooms.size()); // must have added at least one room
+
+				for (auto r = (interior->rooms.begin() + rooms_start); r != interior->rooms.end(); ++r) {
+					assert(p->contains_cube(*r));
+					if (r->d[!dim][dir] == val) {r->d[!dim][dir] = wall.d[!dim][!dir];} // clip room to exclude this newly added wall
+				}
+			} // for dir
+		} // for dim
+	} // for p2
+}
 
 void building_t::assign_special_room_types(vector<unsigned> &utility_room_cands, vector<unsigned> &special_room_cands, unsigned doors_start, rand_gen_t &rgen) {
 	vector<room_t> &rooms(interior->rooms);

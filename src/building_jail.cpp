@@ -18,6 +18,10 @@ void building_t::divide_part_into_jail_cells(cube_t const &part, unsigned part_i
 	// TODO
 }
 
+void building_t::add_prison_jail_cell_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	// TODO
+}
+
 bool building_t::add_jail_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
 	bool is_lit, colorRGBA const &light_color, light_ix_assign_t &light_ix_assign)
 {
