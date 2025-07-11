@@ -2810,6 +2810,8 @@ private:
 	bool add_ladder_to_room  (rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	bool add_jail_objs       (rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
 		bool is_lit, colorRGBA const &light_color, light_ix_assign_t &light_ix_assign);
+	cube_t add_jail_cell_bars_and_door(cube_t const &cell, unsigned room_id, float tot_light_amt, bool dim, bool dir, bool hinge_side,
+		colorRGBA const &bar_color, float bars_hthick, float bars_depth_pos);
 	void populate_jail_cell(rand_gen_t &rgen, cube_t const &cell, float zval, unsigned room_id, float tot_light_amt, bool dim, bool dir, bool bed_side,
 		bool sink_on_back_wall, bool is_lit, float bars_hthick, float bars_depth_pos, colorRGBA const &light_color, light_ix_assign_t &light_ix_assign);
 	void divide_part_into_jail_cells(cube_t const &part, unsigned part_id, rand_gen_t &rgen);
