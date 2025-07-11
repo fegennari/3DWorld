@@ -1771,6 +1771,7 @@ struct door_t : public door_base_t {
 	bool is_locked_or_blocked(unsigned have_key) const {return (blocked || !check_key_mask_unlocks(have_key));}
 	bool is_partially_open() const {return (open_amt != (open ? 1.0 : 0.0));}
 	bool is_closet_door   () const {return (obj_ix >= 0 && !is_padlocked());}
+	bool can_see_through  () const {return (open_amt > 0.0 || for_jail);}
 	bool is_padlocked     () const {return (locked >= 2);}
 	bool is_locked_unlockable() const {return (locked >= MAX_LOCK_INDEX);}
 	bool check_key_mask_unlocks(unsigned key_mask) const;

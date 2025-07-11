@@ -2766,9 +2766,9 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 	if (line_int_cubes_get_t(pos, pos2, interior->floors  , tmin, target)) {normal =  plus_z;}
 	if (line_int_cubes_get_t(pos, pos2, interior->ceilings, tmin, target)) {normal = -plus_z;}
 	
-	// check closed interior doors
+	// check closed opaque interior doors
 	for (door_t const &d : interior->doors) {
-		if (d.open_amt > 0.0) continue;
+		if (d.open_amt > 0.0 || d.for_jail) continue;
 		cube_t door(d.get_true_bcube());
 		if (!line_int_cube_get_t(pos, pos2, door, tmin)) continue;
 		target = door;
@@ -3175,7 +3175,7 @@ point building_t::choose_creepy_sound_pos(point const &player_pos, rand_gen_t &r
 			
 		// adjacent room, check line of sight vs. doors
 		for (door_t const &door : interior->doors) {
-			if (door.open_amt == 0.0)        continue; // fully closed, skip
+			if (!door.can_see_through())     continue; // fully closed, skip
 			if (door.z2() > ground_floor_z1) continue; // not a basement door
 			if (check_line_clip(player_pos, sound_pos, door.get_true_bcube().d)) {is_visible = 1; break;}
 		}

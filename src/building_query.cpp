@@ -85,7 +85,7 @@ bool building_t::player_can_see_outside() const {
 			for (unsigned dix = ds->first_door_ix; dix < interior->doors.size(); ++dix) {
 				door_t const &door(interior->doors[dix]);
 				if (!ds->is_same_stack(door)) break; // moved to a different stack, done
-				if (door.open_amt == 0.0 || door.z1() > camera_pos.z || door.z2() < camera_pos.z) continue; // fully closed, or wrong floor
+				if (!door.can_see_through() || door.z1() > camera_pos.z || door.z2() < camera_pos.z) continue; // fully closed, or wrong floor
 				cube_t dbc(door.get_true_bcube());
 				dbc.expand_in_dim(door.dim, door_expand);
 				if (dbc.contains_pt_xy(camera_bs) || camera_pdu.cube_visible(dbc + xlate)) return 1;
@@ -1464,7 +1464,7 @@ bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &
 	for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) {
 		if (i->get_bldg_conn()) {
 			door_t const &door(interior->doors[i->first_door_ix]); // should be only one door
-			if (door.open_amt > 0.0 && door.get_true_bcube().intersects(room)) return 0; // open ext basement conn door counts, assuming light is on or opposite door is open
+			if (door.can_see_through() && door.get_true_bcube().intersects(room)) return 0; // open extb conn door counts, assuming light is on or opposite door is open
 			continue;
 		}
 		if ( i->not_a_room_separator())        continue; // skip non room separating doors
@@ -1476,7 +1476,7 @@ bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &
 			door_t const &door(interior->doors[dix]);
 			if (!i->is_same_stack(door)) break; // moved to a different stack, done
 			if (door.z1() > pos.z || door.z2() < pos.z) continue; // wrong floor
-			if (door.open_amt == 0.0) continue; // fully closed
+			if (!door.can_see_through()) continue; // fully closed
 			// check adjacent room; since we're passing in room_id, we can reuse pos; Note: usually windowless rooms are connected to office building hallways
 			if (!check_pos_in_unlit_room_recur(pos, rooms_visited, i->get_conn_room(room_id))) return 0; // if adjacent room is lit, return false
 		} // for dix
@@ -1572,7 +1572,7 @@ bool building_t::all_room_int_doors_closed(unsigned room_ix, float zval) const {
 		for (unsigned dix = ds.first_door_ix; dix < interior->doors.size(); ++dix) {
 			door_t const &door(interior->doors[dix]);
 			if (!ds.is_same_stack(door)) break; // moved to a different stack, done
-			if (door.z1() < z2 && door.z2() > z1 && door.open_amt > 0.0) return 0;
+			if (door.z1() < z2 && door.z2() > z1 && door.can_see_through()) return 0;
 		}
 	} // for ds
 	return 1;
@@ -3272,7 +3272,7 @@ bool building_t::is_cube_visible_through_door(point const &viewer, cube_t const 
 bool building_t::is_cube_visible_through_extb_door(point const &viewer, cube_t const &c) const {
 	if (!has_ext_basement()) return 0; // error?
 	door_t const &extb_door(interior->get_ext_basement_door());
-	if (extb_door.open_amt == 0.0) return 0; // closed door
+	if (!extb_door.can_see_through()) return 0; // closed door
 	cube_t door_bc(extb_door.get_true_bcube());
 	door_bc.expand_by_xy(get_wall_thickness()); // standing in the doorway counts
 	return (door_bc.contains_pt(viewer) || is_cube_visible_through_door(viewer, c, extb_door));

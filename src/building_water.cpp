@@ -225,7 +225,7 @@ bool building_t::water_visible_to_player() const { // applies to backrooms and p
 			if (!ds.is_connected_to_room(interior->pool.room_ix)) continue;
 			assert(ds.num_doors == 1); // must be a single door
 			door_t const &door(get_door(ds.first_door_ix));
-			if (door.open_amt == 0) continue; // fully closed
+			if (!door.can_see_through()) continue; // fully closed
 			if (!is_rot_cube_visible(door.get_true_bcube(), xlate)) continue;
 			if (is_cube_visible_through_door(camera_bs, pool_surface, door)) return 1;
 		} // for ds

@@ -216,7 +216,7 @@ bool building_t::find_mirror_in_room(unsigned room_id, vector3d const &xlate, fl
 					if (ds->z1() > i->z2() || ds->z2() < i->z1()) continue; // wrong floor
 					assert(ds->num_doors == 1); // must be a single door stack
 					door_t const &door(get_door(ds->first_door_ix));
-					if (door.open_amt > 0.0) continue; // open, skip
+					if (door.can_see_through()) continue; // open, skip
 					if (is_cube_visible_through_door(camera_bs, *i, door)) {found_closed_door = 1; break;}
 				}
 				if (found_closed_door) continue;

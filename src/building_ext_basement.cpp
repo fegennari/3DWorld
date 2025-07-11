@@ -963,7 +963,7 @@ bool building_t::interior_visible_from_other_building_ext_basement(vector3d cons
 	if (player_in_basement < 3) { // not in extended basement - we can do some other checks
 		if (!player_building->interior || !player_building->interior->conn_room_in_extb_hallway) return 0; // shouldn't be visible
 		door_t const &door(player_building->interior->get_ext_basement_door());
-		if (door.open_amt == 0.0) return 0; // fully closed door
+		if (!door.can_see_through()) return 0; // fully closed opaque door
 		cube_t dbc(door.get_true_bcube());
 		dbc.expand_in_dim(door.dim, get_wall_thickness()); // expand a bit to handle player in the doorway
 		if (!camera_pdu.cube_visible(dbc + xlate)) return 0; // check ext basement entrance visible
@@ -1018,7 +1018,7 @@ bool building_conn_info_t::is_visible_through_conn(building_t const &parent, bui
 			if (!expand_for_light) return 1; // can't ignore closed doors for room objects because they we may not draw the door itself
 			// if this is a light, check if the connecting door is open
 			door_t const &door((room.door_is_b ? target : parent).get_door(room.door_ix));
-			if (door.open || door.open_amt > 0.0) return 1; // true if either about to open or not fully closed
+			if (door.open || door.can_see_through()) return 1; // true if either about to open or not fully closed
 		} // for room
 	} // for c
 	return 0;
