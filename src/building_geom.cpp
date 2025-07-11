@@ -2719,18 +2719,17 @@ bool has_escalator_bcube_int(cube_t const &bcube, vector<escalator_t> const &esc
 	return 0;
 }
 float building_interior_t::get_doorway_width() const {
-	return (doors.empty() ? 0.0 : max(doors.front().dx(), doors.front().dy())); // calculate doorway width from first door
+	return (doors.empty() ? int_door_width : max(doors.front().dx(), doors.front().dy())); // calculate doorway width from first door
 }
 float building_t::get_doorway_width() const {
-	float width(0.0);
-	if (interior) {width = interior->get_doorway_width();}
+	float const width(interior ? interior->get_doorway_width() : 0.0);
 	return (width ? width : DOOR_WIDTH_SCALE*get_door_height()); // calculate from window spacing/door height if there's no interior or no interior doors
 }
 // and ramps, and extb conn rooms/doors, and escalators
 bool building_interior_t::is_blocked_by_stairs_or_elevator(cube_t const &c, float dmin, bool elevators_only, int no_check_enter_exit) const {
 	cube_t tc(c);
 	tc.expand_by_xy(dmin); // no pad in z
-	float const doorway_width(get_doorway_width()); // Note: can return zero
+	float const doorway_width(get_doorway_width());
 	float const trim_thickness(0.1*WALL_THICK_VAL*doorway_width/(DOOR_WIDTH_SCALE*.95*(1.0 - FLOOR_THICK_VAL_OFFICE)));
 	if (has_elevator_bcube_int (tc, elevators,  doorway_width, trim_thickness)) return 1;
 	if (has_escalator_bcube_int(tc, escalators, doorway_width)) return 1;

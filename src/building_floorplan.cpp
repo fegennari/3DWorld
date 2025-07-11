@@ -327,6 +327,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 		tot_num_landings   += (has_stairs ? (num_floors - 1) : 0);
 	}
 	if (has_sec_bldg()) {++tot_num_floors;}
+	interior->int_door_width = get_doorway_width(); // set the default value until doors are added
 	interior->ceilings  .reserve(tot_num_floors);
 	interior->floors    .reserve(tot_num_floors);
 	interior->landings  .reserve(tot_num_landings);

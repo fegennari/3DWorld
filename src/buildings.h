@@ -1987,6 +1987,7 @@ struct building_interior_t {
 	bool elevator_dir=0, extb_wall_dim=0, extb_wall_dir=0, conn_room_in_extb_hallway=0, has_sec_hallways=0, has_jail=0;
 	uint8_t num_extb_floors=0; // for malls and backrooms
 	float water_zval=0.0; // for multilevel backrooms and swimming pools
+	float int_door_width=0.0;
 
 	building_interior_t();
 	~building_interior_t();
