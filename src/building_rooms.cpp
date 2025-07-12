@@ -256,6 +256,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		bool const is_retail_room   (init_rtype_f0 == RTYPE_RETAIL);
 		bool const is_mall_store    (init_rtype_f0 == RTYPE_STORE);
 		bool const is_jail_room     (init_rtype_f0 == RTYPE_JAIL);
+		bool const is_jail_cell     (init_rtype_f0 == RTYPE_JAIL_CELL);
 		bool const is_office(r->is_office && (!is_hospital() || r->interior)); // hospital offices are converted to patient rooms, etc. if they have windows
 		bool const is_ext_basement(r->is_ext_basement()), is_backrooms(r->is_backrooms()), is_apt_or_hotel_room(r->is_apt_or_hotel_room());
 		bool const residential_room(is_house || (residential && !r->is_hallway && !is_basement && !is_retail_room)), industrial_room(r->is_industrial());
@@ -327,6 +328,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			short_n     = 2*short_n/3; // 2/3 as many in the short dim
 			light_size *= 0.9; // light intensity will be scaled larger to reach the floor
 		}
+		else if (is_jail_room) { // prison main room with jail cells
+			light_density = 0.35;
+		}
 		else if (r->is_single_floor) {
 			light_size *= sqrt(r->dz()/window_vspacing); // larger lights for taller rooms
 		}
@@ -372,6 +376,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		else if (is_mall)           {color = get_light_color_temp(0.46);} // mall concourse - yellowish white
 		else if (is_mall_store)     {color = get_light_color_temp(0.42);} // mall store - yellowish white (a bit more yellow than concourse)
 		else if (industrial_room)   {color = get_light_color_temp(0.44);} // industrial - yellowish white
+		else if (is_jail_room)      {color = get_light_color_temp(0.44);} // prison - yellowish white
 		else if (r->is_office)      {color = get_light_color_temp(0.60);} // office - blueish
 		else if (r->is_hallway)     {color = get_light_color_temp(0.60);} // office building hallway - blueish
 		else                        {color = get_light_color_temp(0.50);} // small office - white
@@ -504,7 +509,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					}
 				}
 			}
-			else if (nx > 1 || ny > 1) { // office, parking garage, backrooms, mall, or industrial with multiple lights
+			else if (nx > 1 || ny > 1) { // office, parking garage, backrooms, mall, prison, or industrial with multiple lights
 				vector3d const shrink(0.5*light.dx()*sqrt((nx - 1)/nx), 0.5*light.dy()*sqrt((ny - 1)/ny), 0.0);
 				float xstep(dx/nx), ystep(dy/ny), xs(-0.5f*dx + 0.5*xstep), ys(-0.5f*dy + 0.5*ystep);
 
@@ -671,8 +676,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				added_obj = is_bathroom = added_bathroom = no_whiteboard = add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt,
 					objs_start_inc_lights, objs_start, f, is_basement, 0, added_bathroom_objs_mask); // add_shower_tub=0
 			}
-			else if (is_jail_room) {
-				// TODO: add jail cell objects
+			else if (is_jail_room || is_jail_cell) {
+				if (is_jail_room) {add_prison_main_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);}
+				if (is_jail_cell) {add_prison_jail_cell_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);}
 				is_jail = added_obj = no_whiteboard = no_plants = 1;
 			}
 			else if (f == 0 && init_rtype_f0 == RTYPE_LAUNDRY) {
@@ -841,7 +847,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				}
 			}
 			if (!added_obj && is_ext_basement && (is_prison() || rgen.rand_bool())) { // jail room 50% of the time, 100% for prisons
-				if (add_jail_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_lit, color, light_ix_assign)) {
+				if (add_basement_jail_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_lit, color, light_ix_assign)) {
 					r->assign_to(RTYPE_JAIL, f);
 					added_obj = no_whiteboard = is_jail = 1;
 				}
@@ -2819,7 +2825,7 @@ void building_t::add_window_coverings(cube_t const &window, bool dim, bool dir) 
 	switch (get_room_type_and_floor(room_id, window.zc(), floor_ix)) {
 	case RTYPE_BED : case RTYPE_MASTER_BED: case RTYPE_HOS_BED: add_window_blinds(window, dim, dir, room_id, floor_ix); break; // bedroom
 	case RTYPE_BATH: case RTYPE_MENS: case RTYPE_WOMENS: add_bathroom_window(window, dim, dir, room_id, floor_ix); break; // bathroom
-	case RTYPE_JAIL: add_window_bars(window, dim, dir, room_id); break; // prison jail cell
+	case RTYPE_JAIL: case RTYPE_JAIL_CELL: add_window_bars(window, dim, dir, room_id); break; // prison jail cell
 	} // end switch
 }
 

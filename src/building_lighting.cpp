@@ -686,7 +686,7 @@ class building_indir_light_mgr_t {
 			light_center    = light_cube.get_cube_center();
 			in_attic        = ro.in_attic();
 			in_ext_basement = (light_in_basement && b.point_in_extended_basement_not_basement(light_center));
-			in_jail_cell    = (in_ext_basement && b.interior->has_jail && b.get_room(ro.room_id).get_room_type(0) == RTYPE_JAIL);
+			in_jail_cell    = (in_ext_basement && b.interior->has_jail && is_jail_room(b.get_room(ro.room_id).get_room_type(0)));
 			if (in_attic) {base_num_rays *= 4;} // more rays in attic, since light is large and there are only 1-2 of them
 			if (is_lamp ) {base_num_rays /= 2;} // half the rays for lamps
 			if (is_lamp ) {dir = 2;} // onmidirectional; dim stays at 2/Z

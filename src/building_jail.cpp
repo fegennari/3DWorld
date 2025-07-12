@@ -22,7 +22,11 @@ void building_t::add_prison_jail_cell_objs(rand_gen_t rgen, room_t const &room, 
 	// TODO
 }
 
-bool building_t::add_jail_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
+void building_t::add_prison_main_room_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	// TODO
+}
+
+bool building_t::add_basement_jail_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
 	bool is_lit, colorRGBA const &light_color, light_ix_assign_t &light_ix_assign)
 {
 	float const floor_spacing(get_window_vspace()), dx(room.dx()), dy(room.dy());
@@ -240,7 +244,8 @@ void building_t::populate_jail_cell(rand_gen_t &rgen, cube_t const &cell, float 
 
 void building_t::add_window_bars(cube_t const &window, bool dim, bool dir, unsigned room_id) {
 	if (!has_int_windows()) return; // no interior (or exterior) drawn windows
-	cube_t bars(window); // resize?
+	cube_t bars(window);
+	bars.expand_in_dim(dim, -0.1*window.get_sz_dim(dim)); // small shrink
 	interior->room_geom->objs.emplace_back(bars, TYPE_JAIL_BARS, room_id, dim, dir, 0, 1.0, SHAPE_CUBE, GRAY);
 }
 
