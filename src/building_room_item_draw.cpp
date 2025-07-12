@@ -1416,7 +1416,7 @@ void building_room_geom_t::create_door_vbos(building_t const &building) {
 				do_xy_rotate_normal(sin_term, cos_term, handle_dir);
 			}
 			for (unsigned side = 0; side < 2; ++side) {
-				//if (d.for_jail && bool(side) != d.open_dir) continue; // no handle on the inside/cell side of the door
+				//if (d.for_jail == 1 && bool(side) != d.open_dir) continue; // no handle on the inside/cell side of the door
 				point side_pos(handle_center);
 				side_pos[d.dim] += (side ? 1.0 : -1.0)*0.68*handle_height;
 

@@ -6330,25 +6330,26 @@ void add_grid_of_bars(rgeom_mat_t &mat, colorRGBA const &color, cube_t const &c,
 	max_eq(num_hbars, 2U);
 	float const v_span(c.get_sz_dim(hdim) - 2.0*vbar_hthick), h_span(c.get_sz_dim(vdim) - 2.0*hbar_hthick);
 	float const v_step(v_span/(num_vbars - 1)), h_step(h_span/(num_hbars - 1));
-	unsigned const skip_faces[2] = {get_skip_mask_for_dim(vdim), get_skip_mask_for_dim(hdim)};
-	cube_t bar(c);
-	bar.expand_in_dim(vdim, -hbar_hthick);
+	unsigned const skip_faces_v(get_skip_mask_for_dim(vdim)), skip_faces_h(get_skip_mask_for_dim(hdim));
 	vector3d const origin(c.get_llc());
 
 	for (unsigned n = 0; n < num_vbars; ++n) { // vertical
+		bool const on_edge(n == 0 || n+1 == num_vbars);
+		cube_t bar(c);
+		if (!on_edge) {bar.expand_in_dim(vdim, -hbar_hthick);} // shrink top and bottom for interior bars
 		set_wall_width(bar, (c.d[hdim][0] + vbar_hthick + n*v_step), vbar_hthick, hdim);
 		
-		if (cylin_vbars && n > 0 && n+1 < num_vbars) { // draw interior bars as cylinders
+		if (cylin_vbars && !on_edge) { // draw interior bars as cylinders
 			mat.add_ortho_cylin_to_verts(bar, color, vdim, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, N_CYL_SIDES/2, 0.0, 0, tscale); // ends, low detail
 		}
-		else {mat.add_cube_to_verts(bar, color, origin, skip_faces[0]);}
+		else {mat.add_cube_to_verts(bar, color, origin, skip_faces_v);}
 	}
-	bar = c;
+	cube_t bar(c);
 	if (h_adj_val != 0.0) {bar.expand_in_dim(adj_dim, h_adj_val);}
 
 	for (unsigned n = 0; n < num_hbars; ++n) { // horizontal
 		set_wall_width(bar, (c.d[vdim][0] + hbar_hthick + n*h_step), hbar_hthick, vdim);
-		mat.add_cube_to_verts(bar, color, origin, skip_faces[1]);
+		mat.add_cube_to_verts(bar, color, origin, skip_faces_h);
 	}
 }
 void building_room_geom_t::add_store_gate(cube_t const &c, bool dim, float open_amt) {
@@ -6567,35 +6568,66 @@ void building_room_geom_t::add_jail_cell_door(door_t const &D, door_rotation_t &
 	float const height(D.dz()), width(D.get_width()), tscale(4.0/height);
 	rgeom_mat_t &mat(mats_doors.get_material((rusty ? tid_nm_pair_t(get_rust_met_tid(), tscale, 1) : get_scratched_metal_tex(tscale, 1)), 1)); // shadowed
 	float const thickness(D.get_thickness()), vbar_hthick(0.25*thickness), hbar_hthick(0.15*thickness);
-	unsigned const num_vbars(max(2U, unsigned(10*width/height))), qv_start(mat.quad_verts.size()), tv_start(mat.itri_verts.size());
-	assert(thickness > 0.0);
+	unsigned const qv_start(mat.quad_verts.size()), tv_start(mat.itri_verts.size());
 	cube_t const c(D.get_true_bcube());
-	colorRGBA const color(LT_GRAY);
-	add_grid_of_bars(mat, color, c, num_vbars, 5, vbar_hthick, hbar_hthick, 2, !dim, dim, 0.1*thickness, 1, 8.0); // h-bars thinner, cylin_vbars=1
-	// add lock plate
-	bool const handle_side(D.get_handle_side());
+	colorRGBA const bar_color(colorRGBA(0.6, 0.6, 0.6)), plate_color(colorRGBA(0.9, 0.9, 0.9)), handle_color(bar_color);
+	bool const is_bars(D.for_jail == 1), handle_side(D.get_handle_side());
 	point const origin(c.get_llc());
-	cube_t plate(c);
-	plate.expand_in_dim(2,  -0.43*height); // shrink in Z
-	plate.expand_in_dim(dim, 0.18*thickness); // expand outside door
-	plate.d[!dim][!handle_side] = c.d[!dim][handle_side] - (handle_side ? 1.0 : -1.0)*0.28*width;
-	mat.add_cube_to_verts(plate, color, origin, 0); // draw all faces
-	// add door handle
-	float const plate_front(c.d[dim][D.open_dir]);
-	cube_t handle(plate);
-	handle.d[dim][!D.open_dir] = plate_front;
-	handle.d[dim][ D.open_dir] = plate_front + (D.open_dir ? 1.0 : -1.0)*0.07*width; // extend outward
-	handle.expand_in_dim(2,    -0.2*plate.dz()); // shrink in Z
-	handle.expand_in_dim(!dim, -0.435*plate.get_sz_dim(!dim)); // shrink width
-	handle.translate_dim(!dim, (handle_side ? 1.0 : -1.0)*0.05*width); // closer to the outside edge
-	float const handle_thick(0.4*handle.get_sz_dim(!dim));
-	cube_t hbot(handle), htop(handle), hext(handle);
-	hbot.z2() = hext.z1()    = handle.z1() + handle_thick;
-	htop.z1() = hext.z2()    = handle.z2() - handle_thick;
-	hext.d[dim][!D.open_dir] = handle.d[dim][D.open_dir] - (D.open_dir ? 1.0 : -1.0)*handle_thick;
-	unsigned const skip_inner(~get_face_mask(dim, !D.open_dir));
-	for (unsigned bt = 0; bt < 2; ++bt) {mat.add_cube_to_verts((bt ? htop : hbot), color, origin, skip_inner);}
-	mat.add_cube_to_verts(hext, color, origin, EF_Z12);
+	assert(thickness > 0.0);
+
+	if (is_bars) {
+		unsigned const num_vbars(max(2U, unsigned(10*width/height)));
+		add_grid_of_bars(mat, bar_color, c, num_vbars, 5, vbar_hthick, hbar_hthick, 2, !dim, dim, 0.1*thickness, 1, 8.0); // h-bars thinner, cylin_vbars=1
+	}
+	else { // metal door with barred window opening
+		unsigned const fb_mask(~get_skip_mask_for_xy(dim));
+		if (D.open_amt > 0.0) {mat.add_cube_to_verts(c, plate_color, origin, (EF_Z12 | ~fb_mask));} // draw edges if open
+		cube_t door_main(c);
+		door_main.expand_in_dim(dim, -0.2*thickness); // shrink thickness
+		cube_t opening(door_main);
+		opening.expand_in_dim(!dim, -0.2*width); // shrink edges
+		cube_t bot(opening), top(opening);
+		bot.z2() = door_main.z1() + 0.55*height;
+		top.z1() = door_main.z1() + 0.80*height;
+		set_cube_zvals(opening, bot.z2(), top.z1());
+		mat.add_cube_to_verts(bot, plate_color, origin, fb_mask);
+		mat.add_cube_to_verts(top, plate_color, origin, fb_mask);
+
+		for (unsigned d = 0; d < 2; ++d) { // sides
+			cube_t side(door_main);
+			side.d[!dim][!d] = opening.d[!dim][d];
+			mat.add_cube_to_verts(side, plate_color, origin, fb_mask);
+		}
+		for (unsigned d = 0; d < 2; ++d) {opening.d[dim][d] = c.d[dim][d];} // expand to full thickness
+		add_grid_of_bars(mat, bar_color, opening, 4, 4, vbar_hthick, hbar_hthick, 2, !dim, dim, 0.0, 1, 12.0);
+		drot.shift = 0.07*width*(D.open_dir ? 1.0 : -1.0)*D.open_amt;
+	}
+	for (unsigned dir = 0; dir < 2; ++dir) {
+		if (is_bars && dir != D.open_dir) continue; // handle is only on the outside of the door
+		// add lock plate
+		cube_t plate(c);
+		plate.z1() += 0.41*height; // shrink in Z
+		plate.z2() -= 0.45*height;
+		plate.expand_in_dim(dim, 0.18*thickness); // expand outside door
+		plate.d[!dim][!handle_side] = c.d[!dim][handle_side] - (handle_side ? 1.0 : -1.0)*0.28*width;
+		mat.add_cube_to_verts(plate, plate_color, origin, 0); // draw all faces
+		// add door handle
+		float const plate_front(c.d[dim][dir]);
+		cube_t handle(plate);
+		handle.d[dim][!dir] = plate_front;
+		handle.d[dim][ dir] = plate_front + (dir ? 1.0 : -1.0)*0.07*width; // extend outward
+		handle.expand_in_dim(2,    -0.2*plate.dz()); // shrink in Z
+		handle.expand_in_dim(!dim, -0.435*plate.get_sz_dim(!dim)); // shrink width
+		handle.translate_dim(!dim, (handle_side ? 1.0 : -1.0)*0.05*width); // closer to the outside edge
+		float const handle_thick(0.4*handle.get_sz_dim(!dim));
+		cube_t hbot(handle), htop(handle), hext(handle);
+		hbot.z2() = hext.z1()    = handle.z1() + handle_thick;
+		htop.z1() = hext.z2()    = handle.z2() - handle_thick;
+		hext.d[dim][!dir] = handle.d[dim][dir] - (dir ? 1.0 : -1.0)*handle_thick;
+		unsigned const skip_inner(~get_face_mask(dim, !dir));
+		for (unsigned bt = 0; bt < 2; ++bt) {mat.add_cube_to_verts((bt ? htop : hbot), handle_color, origin, skip_inner);}
+		mat.add_cube_to_verts(hext, handle_color, origin, EF_Z12);
+	} // for dir
 	// rotate door if open
 	drot.angle = 135.0*D.open_amt; // opens 135 degrees
 	maybe_rotate_door_verts(mat.quad_verts, qv_start, D, drot);

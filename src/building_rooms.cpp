@@ -1900,7 +1900,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	}
 	// add vertical strips on each side + strip on top of interior doors
 	for (door_stack_t const &ds : interior->door_stacks) {
-		if (ds.on_stairs || ds.for_jail) continue; // no frame for stairs or jail door, skip
+		if (ds.on_stairs || ds.for_jail == 1) continue; // no frame for stairs or jail bars door, skip
 		add_trim_for_door_or_int_window(ds, ds.dim, ds.get_mult_floor(), 0, door_trim_width, trim_thickness, door_trim_exp, window_vspacing); // draw_bot_trim=0
 	}
 	// handle interior windows similar to interior doors, except we also draw bottom trim

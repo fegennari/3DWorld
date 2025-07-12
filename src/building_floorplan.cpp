@@ -1258,10 +1258,9 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			} // for nsplits
 		} // for w
 	} // for d
-	if (is_prison()) { // interior doors separating parts are jail cell bar doors
-		// TODO: these should actually be opaque with a barred window and a frame
-		for (auto d = interior->doors      .begin()+doors_start;       d != interior->doors      .end(); ++d) {d->for_jail = 1;}
-		for (auto d = interior->door_stacks.begin()+door_stacks_start; d != interior->door_stacks.end(); ++d) {d->for_jail = 1;}
+	if (is_prison()) { // interior doors separating parts are jail cell bar doors; opaque with a barred window and a frame
+		for (auto d = interior->doors      .begin()+doors_start;       d != interior->doors      .end(); ++d) {d->for_jail = 2;}
+		for (auto d = interior->door_stacks.begin()+door_stacks_start; d != interior->door_stacks.end(); ++d) {d->for_jail = 2;}
 	}
 	reverse_door_hinges_if_needed();
 

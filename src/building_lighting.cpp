@@ -282,8 +282,8 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 		//e.get_ramp_bcube(0) - ignore ramp for now because it's not a cube
 	}
 	for (door_t const &d : interior->doors) {
-		if (d.open || !d.intersects(ext_bcube)) continue; // add only closed doors
-		cc.emplace_back(d.get_true_bcube(), WHITE);
+		if (d.open || d.for_jail == 1 || !d.intersects(ext_bcube)) continue; // add only closed doors; skip jail bar doors
+		cc.emplace_back(d.get_true_bcube(), (d.for_jail ? GRAY : WHITE));
 	}
 	for (cube_t const &i : interior->floors) {
 		if (!i.intersects(ext_bcube)) continue;

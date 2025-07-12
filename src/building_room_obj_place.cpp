@@ -5624,7 +5624,7 @@ bool building_t::add_padlock_to_door(unsigned door_ix, unsigned lock_color_mask,
 	float const edge_dist(door.for_jail ? 0.088 : 0.062);
 	bool const side(door.get_check_dirs());
 	cube_t lock;
-	lock.z1() = door.z1() + (door.for_jail ? 0.38 : 0.41)*door_height;
+	lock.z1() = door.z1() + (door.for_jail ? 0.365 : 0.41)*door_height;
 	lock.z2() = lock.z1() + height;
 	set_wall_width(lock, (door_bc.d[!door.dim][0] + (side ? edge_dist : (1.0 - edge_dist))*door_width), hwidth, !door.dim);
 	colorRGBA const color(lock_colors[color_ix]);

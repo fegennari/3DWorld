@@ -1714,8 +1714,8 @@ unsigned const DOOR_FLAG_SMALL_ROOM = 0x10; // door for a small room such as an 
 unsigned const DOOR_FLAG_AUTO_CLOSE = 0x20; // door automatically closes (office bathroom)
 
 struct door_base_t : public cube_t {
-	bool dim=0, open_dir=0, hinge_side=0, on_stairs=0, for_jail=0;
-	uint8_t flags=0;
+	bool dim=0, open_dir=0, hinge_side=0, on_stairs=0;
+	uint8_t flags=0, for_jail=0; // for_jail: 0=not jail, 1=jail bar doors, 2=metal room door
 	uint16_t conn_room[2]={}; // on each side of the door
 	// is it useful to store the two rooms in the door/door_stack? this will speed up connectivity searches for navigation and room assignment,
 	// but only for finding the second room connected to a door, because we still need to iterate over all doors;
@@ -1727,7 +1727,7 @@ struct door_base_t : public cube_t {
 	bool get_check_dirs  () const {return (dim ^ open_dir ^ hinge_side ^ 1);}
 	bool get_handle_side () const {return (get_check_dirs() ^ 1);} // 0: handle on left; 1: handle on right
 	float get_width      () const {return get_sz_dim(!dim);}
-	float get_thickness  () const {return DOOR_THICK_TO_WIDTH*(for_jail ? 1.25 : 1.0)*get_width();}
+	float get_thickness  () const {return DOOR_THICK_TO_WIDTH*((for_jail == 1) ? 1.25 : 1.0)*get_width();}
 	cube_t get_true_bcube     () const {cube_t bc(*this); bc.expand_in_dim(dim, 0.5*get_thickness()); return bc;}
 	cube_t get_clearance_bcube() const {cube_t bc(*this); bc.expand_in_dim(dim,     get_width    ()); return bc;}
 	cube_t get_open_door_path_bcube() const;
