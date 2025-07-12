@@ -1282,7 +1282,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 	// else no furnace
 } // end gen_interior_int()
 
-void building_t::add_part_sep_walls(vect_cube_t::const_iterator &p, cube_t const &place_area, unsigned rooms_start, uint64_t must_split[2]) {
+void building_t::add_part_sep_walls(vect_cube_t::const_iterator p, cube_t const &place_area, unsigned rooms_start, uint64_t must_split[2]) {
 	// insert walls to split up parts into rectangular rooms
 	float const wall_thick(get_wall_thickness()), fc_thick(get_fc_thickness());
 	auto parts_end(get_real_parts_end());

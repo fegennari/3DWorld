@@ -41,7 +41,7 @@ bool building_t::add_jail_objs(rand_gen_t rgen, room_t const &room, float &zval,
 	}
 	assert(!end_doors_span.is_all_zeros()); // no doors for this room?
 	if (is_house) {zval = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_CONCRETE);} // add concrete over the carpet (even if we don't make it a jail)
-	float const door_width(get_doorway_width()), wall_hthick(0.5*get_wall_thickness()), trim_thick(get_trim_thickness());
+	float const door_width(get_doorway_width()), wall_hthick(0.5*get_wall_thickness());
 	cube_t room_bounds(get_walkable_room_bounds(room));
 	set_cube_zvals(room_bounds, zval, (zval + get_floor_ceil_gap()));
 	float const room_len(room_bounds.get_sz_dim(dim)), min_cell_len(1.25*floor_spacing);

@@ -2307,7 +2307,7 @@ struct building_t : public building_geom_t {
 	float get_hspacing_for_part(cube_t const &part, bool dim) const;
 	bool interior_enabled() const;
 	void gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes);
-	void add_part_sep_walls(vect_cube_t::const_iterator &p, cube_t const &place_area, unsigned rooms_start, uint64_t must_split[2]);
+	void add_part_sep_walls(vect_cube_t::const_iterator p, cube_t const &place_area, unsigned rooms_start, uint64_t must_split[2]);
 	void assign_special_room_types(vector<unsigned> &utility_room_cands, vector<unsigned> &special_room_cands, unsigned doors_start, rand_gen_t &rgen);
 	void add_conference_room_window(unsigned room_ix);
 	void divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsigned hall_num_rooms, unsigned tot_num_windows,
