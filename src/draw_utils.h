@@ -50,14 +50,11 @@ public:
 class pt_line_drawer_no_lighting_t { // uses vbo for static points/lines; used for universe mode stars
 
 	vector<vert_color> points, lines;
-	unsigned vbo[2];
+	unsigned vbo[2]={};
 
 public:
-	pt_line_drawer_no_lighting_t() {vbo[0] = vbo[1] = 0;}
-	void clear() {points.resize(0); lines.resize(0); free_vbo();}
-	void add_pt(point const &v, colorRGBA const &c) {
-		points.emplace_back(v, c);
-	}
+	void clear() {points.clear(); lines.clear(); free_vbo();}
+	void add_pt  (point const &v,  colorRGBA const &c) {points.emplace_back(v, c);}
 	void add_line(point const &v1, colorRGBA const &c1, point const &v2, colorRGBA const &c2) {
 		lines.emplace_back(v1, c1);
 		lines.emplace_back(v2, c2);
@@ -76,7 +73,7 @@ template<class vert_type_t> class point_sprite_drawer_t {
 	vector<vert_type_t> points;
 
 public:
-	void clear() {points.resize(0);}
+	void clear() {points.clear();}
 	void reserve_pts(unsigned sz) {points.reserve(sz);}
 	void add_pt(vert_type_t const &v) {points.push_back(v);}
 	void sort_back_to_front();
