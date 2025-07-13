@@ -3674,7 +3674,7 @@ public:
 
 		for (building_creator_t *const bc : bcs) {
 			if (interior_shadow_maps) { // draw interior shadow maps
-				occlusion_checker_noncity_t oc(*bc);
+				occlusion_checker_noncity_t oc(*bc, 0, 1); // for_light=0, for_shadows=1
 				point const lpos(get_camera_pos() - xlate); // Note: camera_pos is actually the light pos
 				bool const light_in_player_building_extb(player_in_basement && player_building && player_building->point_in_extended_basement(lpos));
 				// don't draw the player model in the flashlight shadow
