@@ -295,7 +295,9 @@ void building_t::add_extb_room_floor_and_ceil(cube_t const &room) {
 	interior->floors  .push_back(floor);
 	interior->basement_ext_bcube.assign_or_union_with_cube(room);
 }
-void add_mall_room_walls(cube_t const &room, float wall_thickness, bool dim, bool dir, bool at_mall_end, bool &has_adj_store, vect_cube_t walls[2]) {
+void add_mall_room_walls(cube_t room, float wall_thickness, bool dim, bool dir, bool at_mall_end, bool &has_adj_store, vect_cube_t walls[2], float z_shrink=0.0) {
+	room.expand_in_z(-z_shrink); // subtract off the ceiling and floor to avoid a small sliver of wall above/below the door (optimization)
+
 	for (unsigned wdim = 0; wdim < 2; ++wdim) {
 		for (unsigned wdir = 0; wdir < 2; ++wdir) {
 			if (bool(wdim) != dim && bool(wdir) != dir && !at_mall_end) continue; // already have walls on this side
@@ -320,7 +322,7 @@ void building_t::add_mall_store(cube_t const &store, cube_t const &window_area, 
 	interior->get_extb_start_room().set_interior_window(); // mall concourse also has an interior window
 	interior->rooms.push_back(Room);
 	add_extb_room_floor_and_ceil(store);
-	add_mall_room_walls(store, wall_thickness, dim, dir, at_mall_end, has_adj_store, interior->walls);
+	add_mall_room_walls(store, wall_thickness, dim, dir, at_mall_end, has_adj_store, interior->walls, fc_thick);
 	// add door/window openings
 	float const ceil_gap(get_floor_thick_val()*floor_spacing - fc_thick + get_mall_top_window_gap(floor_spacing, window_vspace));
 	float const doorway_width(get_doorway_width()), wall_pos(store.d[!dim][!dir]);
@@ -444,7 +446,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 						Room.is_single_floor = 1;
 						Room.is_office       = 1; // required for creating office building bathroom
 						rooms.push_back(Room);
-						add_mall_room_walls(bathroom, wall_thickness, dim, d, 0, has_adj_store, interior->walls); // at_mall_end=0
+						add_mall_room_walls(bathroom, wall_thickness, dim, d, 0, has_adj_store, interior->walls, fc_thick); // at_mall_end=0
 						// add door
 						set_wall_width(door, bathroom.get_center_dim(dim), 0.5*doorway_width, dim);
 						door_t Door(door, !dim, d, 1); // open=1
@@ -523,7 +525,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 			add_extb_room_floor_and_ceil(hall);
 			unsigned const hall_walls_start(side_walls.size());
 			bool has_adj_store(0); // unused
-			add_mall_room_walls(hall, wall_thickness, !dim, d, 1, has_adj_store, interior->walls); // at_mall_end=1 (to cover missing stores)
+			add_mall_room_walls(hall, wall_thickness, !dim, d, 1, has_adj_store, interior->walls, fc_thick); // at_mall_end=1 (to cover missing stores)
 			side_halls[d] = hall;
 
 			// split walls between stores and hallways into two half slices so that they can be textured differently; is there a way to skip drawing interior faces?
@@ -569,7 +571,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 				rooms.emplace_back(hall, basement_part_ix, 0, 1, 0, 0, 2); // num_lights=0, is_hallway=1, is_office=0, is_sec_floor=0, interior=1 (extb)
 				add_extb_room_floor_and_ceil(hall);
 				bool has_adj_store(0); // unused
-				add_mall_room_walls(hall, wall_thickness, dim, d, 1, has_adj_store, interior->walls); // at_mall_end=1 (to cover missing stores)
+				add_mall_room_walls(hall, wall_thickness, dim, d, 1, has_adj_store, interior->walls, fc_thick); // at_mall_end=1 (to cover missing stores)
 
 				for (auto w = end_walls.begin(); w != end_walls.end(); ++w) {
 					if (!w->intersects(hall) || w->d[dim][0] >= wall_pos || w->d[dim][1] <= wall_pos) continue; // not the wall between the store and the hall
