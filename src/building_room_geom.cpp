@@ -2502,6 +2502,11 @@ void building_room_geom_t::add_eraser(room_object_t const &c) { // for now, a si
 	get_untextured_material(1, 0, 1).add_cube_to_verts_untextured(c, apply_light_color(c), EF_Z1); // shadowed, small
 }
 
+void building_room_geom_t::add_gun(room_object_t const &c) {
+	// TODO: something more detailed; or is this a 3D model?
+	get_metal_material(1, 0, 1).add_cube_to_verts_untextured(c, apply_light_color(c), EF_Z1); // shadowed, small
+}
+
 void building_room_geom_t::add_fire_ext_mount(room_object_t const &c) {
 	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // shadowed, small
 	colorRGBA const color(apply_light_color(c));

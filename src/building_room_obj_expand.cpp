@@ -1502,6 +1502,7 @@ void building_room_geom_t::add_wine_rack_bottles(room_object_t const &c, vect_ro
 	if (item_ix > 0 && rgen.rand_bool()) return obj; // no more items
 	cube_t drawer(drawer_in); // copy so that we can adjust z1
 	float const drawer_dz(drawer.dz());
+	// TODO: TYPE_GUN, when ready
 	unsigned const type_ix(rgen.rand() % 11); // 0-10
 	unsigned const types_dresser [11] = {TYPE_FOLD_SHIRT, TYPE_PAPER,  TYPE_BOX,       TYPE_FOLD_SHIRT, TYPE_BOOK, TYPE_KEY,     TYPE_BOTTLE, TYPE_MONEY,  TYPE_PHONE,  TYPE_SPRAYCAN, TYPE_TAPE};
 	unsigned const types_desk    [11] = {TYPE_FLASHLIGHT, TYPE_PAPER,  TYPE_DRINK_CAN, TYPE_STAPLER,    TYPE_BOOK, TYPE_KEY,     TYPE_BOTTLE, TYPE_MONEY,  TYPE_PHONE,  TYPE_SPRAYCAN, TYPE_TAPE};
