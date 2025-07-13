@@ -1107,16 +1107,19 @@ void universe_t::shift_cells(int dx, int dy, int dz) {
 				bool const zout(i2 < 0 || i2 >= int(U_BLOCKS));
 				bool const yout(j2 < 0 || j2 >= int(U_BLOCKS));
 				bool const xout(k2 < 0 || k2 >= int(U_BLOCKS));
+				ucell &dest(temp.cells[i][j][k]);
 
 				if (xout || yout || zout) { // allocate new cell
-					int const ii[3]     = {(int)k, (int)j, (int)i};
-					temp.cells[i][j][k].gen = 0;
-					temp.cells[i][j][k].gen_cell(ii);
+					int const ii[3] = {(int)k, (int)j, (int)i};
+					dest.gen = 0;
+					dest.gen_cell(ii);
 				}
 				else {
-					cells[i2][j2][k2].gen           = 1;
-					temp.cells[i][j][k]             = cells[i2][j2][k2];
-					temp.cells[i][j][k].rel_center -= vxyz*CELL_SIZE;
+					ucell &src(cells[i2][j2][k2]);
+					src.gen = 1;
+					src.free_context(); // must free star_pld vbos before copying
+					dest = src;
+					dest.rel_center -= vxyz*CELL_SIZE;
 				}
 			}
 		}
@@ -1124,9 +1127,10 @@ void universe_t::shift_cells(int dx, int dy, int dz) {
 	for (unsigned i = 0; i < U_BLOCKS; ++i) { // z
 		for (unsigned j = 0; j < U_BLOCKS; ++j) { // y
 			for (unsigned k = 0; k < U_BLOCKS; ++k) { // x
-				if (cells[i][j][k].gen == 0) cells[i][j][k].free_uobj();
-				cells[i][j][k]     = temp.cells[i][j][k];
-				cells[i][j][k].gen = 0;
+				ucell &c(cells[i][j][k]);
+				if (c.gen == 0) {c.free_uobj();}
+				c = temp.cells[i][j][k];
+				c.gen = 0;
 			}
 		}
 	}
