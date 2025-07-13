@@ -315,9 +315,9 @@ void free_obj::apply_physics() {
 
 		if (reset_timer <= ticks) { // dead
 			bool const player(is_player_ship());
-			if (player) player_death_pos = get_player_pos2();
+			if (player) {player_death_pos = get_player_pos2();}
 			reset();
-			if (player) reset_player_universe(); // hack
+			if (player) {reset_player_universe();} // hack
 			reset_timer = 0;
 		}
 		else {

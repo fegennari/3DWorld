@@ -662,13 +662,13 @@ protected:
 	unsigned flags, reset_timer, time, obj_id;
 	int sobj_coll_tid;
 	mutable int shadow_val;
-	float speed_factor, max_sfactor, temperature, extra_mass, rot_rate, sobj_dist, draw_rscale, ambient_scale;
+	float speed_factor=1.0, max_sfactor=1.0, temperature, extra_mass, rot_rate, sobj_dist, draw_rscale, ambient_scale;
 	point reset_pos;
 	vector3d velocity, upv, dir, dvel, rot_axis, gvect;
 	free_obj const *target_obj, *parent;
 	unsigned exp_lights[NUM_EXP_LIGHTS], num_exp_lights;
 	unsigned alignment;
-	float c_radius;
+	float c_radius=0.0;
 
 	static unsigned next_obj_id;
 
@@ -685,8 +685,7 @@ protected:
 	void operator=(free_obj const &) = delete; // forbidden
 
 public:
-	free_obj(point const &init_pos=all_zeros) : flags(OBJ_FLAGS_TARG), speed_factor(1.0), max_sfactor(1.0),
-		reset_pos(init_pos), alignment(ALIGN_NEUTRAL), c_radius(0.0) {init();}
+	free_obj(point const &init_pos=all_zeros) : flags(OBJ_FLAGS_TARG), reset_pos(init_pos), alignment(ALIGN_NEUTRAL) {init();}
 	
 	void fix_upv();
 	void accelerate(float speed, float accel);

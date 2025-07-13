@@ -35,7 +35,6 @@ enum {MOD_DESTROYED=0, MOD_OWNER, MOD_NAME, N_UMODS};
 
 int const AST_BELT_ID = -2;
 
-
 float const GALAXY_SCALE    = 8.0;
 float const GALAXY_OVERLAP  = 0.5;
 float const GALAXY_MIN_SIZE = 18.0*GALAXY_SCALE;
@@ -121,16 +120,15 @@ struct cell_ixs_t {int ix[3];};
 struct shadow_vars_t {
 	point sun_pos, ss_pos;
 	vector3d rscale;
-	float sun_radius, ss_radius, ring_ri, ring_ro;
+	float sun_radius=0.0, ss_radius=0.0, ring_ri=0.0, ring_ro=0.0;
 
-	shadow_vars_t() : sun_radius(0.0), ss_radius(0.0), ring_ri(0.0), ring_ro(0.0) {}
+	shadow_vars_t() {}
 	shadow_vars_t(point const &sp, float sr, point const &ssp, float ssr, vector3d const &rs, float rri, float rro)
 		: sun_pos(sp), ss_pos(ssp), rscale(rs), sun_radius(sr), ss_radius(ssr), ring_ri(rri), ring_ro(rro) {}
 };
 
 
 class named_obj { // size = 24
-
 	string name;
 
 public:
@@ -145,12 +143,10 @@ public:
 
 
 class uobj_rgen: public uobject { // size = 64
-
 public:
-	char gen;
+	char gen=0;
 	rand_gen_t rgen;
 
-	uobj_rgen() : gen(0) {}
 	void gen_rseeds();
 	void get_rseeds();
 	void set_rseeds() const;
@@ -159,14 +155,13 @@ public:
 
 
 class uobj_solid : public uobj_rgen, public named_obj { // size = 160
-
 public:
 	char type;
-	unsigned short num_satellites;
-	float temp, density, mass, gravity;
+	unsigned short num_satellites=0;
+	float temp=0.0, density=0.0, mass=0.0, gravity=0.0;
 	colorRGBA color, colorA, colorB;
 
-	uobj_solid(char type_) : type(type_), num_satellites(0), temp(0.0), density(0.0), mass(0.0), gravity(0.0) {set_defaults();}
+	uobj_solid(char type_) : type(type_) {set_defaults();}
 	virtual ~uobj_solid() {}
 	void set_defaults() {status = 0; gen = 0;}
 	void get_colors(unsigned char ca[3], unsigned char cb[3]) const;
@@ -176,21 +171,16 @@ public:
 	bool collision(upos_point_type const &p, float rad, vector3d const &v, upos_point_type &cpos, float &coll_r, bool simple) const;
 	bool rename(std::string const &name_) {setname(name_); return 1;}
 	int  get_type() const {return type;}
-
-	void add_gravity_vector(vector3d &vgravity, point const &mpos) const { // inlined
-		add_gravity_vector_base(vgravity, mpos, gravity, MAX_SOBJ_GRAVITY);
-	}
+	void add_gravity_vector(vector3d &vgravity, point const &mpos) const {add_gravity_vector_base(vgravity, mpos, gravity, MAX_SOBJ_GRAVITY);}
 	virtual bool surface_test(float rad, point const &p, float &coll_r, bool simple) const {return 1;}
 	virtual void free_uobj() {gen = 0;}
 };
 
 
 struct rotated_obj { // size = 48
-
 	vector3d rot_axis;
-	double rev_ang, rev_ang0, rot_ang, rot_ang0; // Note: rev_ang here to preserve rand() call order
+	double rev_ang=0.0, rev_ang0=0.0, rot_ang=0.0, rot_ang0=0.0; // Note: rev_ang here to preserve rand() call order
 
-	rotated_obj() : rev_ang(0.0), rev_ang0(0.0), rot_ang(0.0), rot_ang0(0.0) {}
 	void rgen_values();
 	void apply_gl_rotate() const;
 	void rotate_vector(vector3d &v) const;
@@ -199,7 +189,6 @@ struct rotated_obj { // size = 48
 
 
 class urev_body : public uobj_solid, public color_gen_class, public rotated_obj { // size = 360
-
 	// for textures/colors
 	unsigned char a[3], b[3];
 	
@@ -207,17 +196,16 @@ protected:
 	void calc_snow_thresh();
 
 public:
-	bool gas_giant; // planets only?
-	int owner;
-	unsigned orbiting_refs, tid, tsize;
-	float orbit, rot_rate, rev_rate, atmos, water, lava, resources, cloud_density, cloud_scale, wr_scale, snow_thresh, population, prev_pop;
+	bool gas_giant=0; // planets only?
+	int owner=NO_OWNER;
+	unsigned orbiting_refs=0, tid=0, tsize=0;
+	float orbit=0.0, rot_rate=0.0, rev_rate=0.0, atmos=0.0, water=0.0, lava=0.0, resources=0.0, cloud_density=1.0, cloud_scale=1.0;
+	float wr_scale=1.0, snow_thresh=0.0, population=0.0, prev_pop=0.0;
 	vector3d rev_axis, v_orbit, orbit_scale;
 	std::shared_ptr<upsurface> surface;
 	string comment;
 
-	urev_body(char type_) : uobj_solid(type_), gas_giant(0), owner(NO_OWNER), orbiting_refs(0), tid(0), tsize(0), orbit(0.0), rot_rate(0.0), rev_rate(0.0), atmos(0.0),
-		water(0.0), lava(0.0), resources(0.0), cloud_density(1.0), cloud_scale(1.0), wr_scale(1.0), snow_thresh(0.0), population(0.0), prev_pop(0.0), orbit_scale(all_ones)
-	{a[0] = a[1] = a[2] = b[0] = b[1] = b[2] = 0;}
+	urev_body(char type_) : uobj_solid(type_), orbit_scale(all_ones) {a[0] = a[1] = a[2] = b[0] = b[1] = b[2] = 0;}
 	virtual ~urev_body() {unset_owner();}
 	void gen_rotrev();
 	template<typename T> bool create_orbit(vector<T> const &objs, int i, point const &pos0, vector3d const &raxis,
@@ -276,17 +264,17 @@ public:
 
 class uplanet : public urev_body { // size = 456
 public:
-	float mosize, ring_ri, ring_ro;
+	float mosize=0.0, ring_ri=0.0, ring_ro=0.0;
 	colorRGBA ai_color, ao_color; // atmosphere colors
 	vector3d rscale;
 	vector<umoon> moons;
 	vector<color_wrapper> ring_data;
-	ussystem *system;
+	ussystem *system=nullptr;
 	std::shared_ptr<uasteroid_belt_planet> asteroid_belt;
-	unsigned ring_tid;
+	unsigned ring_tid=0;
 	// trade items?
 
-	uplanet() : urev_body(UTYPE_PLANET), mosize(0.0), ring_ri(0.0), ring_ro(0.0), rscale(all_ones), system(NULL), ring_tid(0) {}
+	uplanet() : urev_body(UTYPE_PLANET), rscale(all_ones) {}
 	void create(bool phase);
 	void process();
 	point_d do_update(point_d const &p0, bool update_rev=1, bool update_rot=1);
@@ -314,11 +302,10 @@ public:
 
 
 class umoon : public urev_body { // size = 368
-
 public:
-	uplanet *planet;
+	uplanet *planet=nullptr;
 
-	umoon() : urev_body(UTYPE_MOON), planet(NULL) {}
+	umoon() : urev_body(UTYPE_MOON) {}
 	void create(bool phase);
 	void gen_color();
 	void calc_temperature();
@@ -333,21 +320,17 @@ public:
 
 
 class ustar : public uobj_solid { // size = 184
-
 	struct solar_flare {
-		float length, radius, angle;
-		unsigned time, lifetime;
+		float length=0.0, radius=0.0, angle=0.0;
+		unsigned time=0, lifetime=0;
 		vector3d dir;
 		colorRGBA color1, color2;
 
-		solar_flare() : length(0.0), radius(0.0), angle(0.0), time(0), lifetime(0) {}
 		void gen(colorRGBA const &color);
 		void update(colorRGBA const &color);
 		void draw(float size, int ndiv, bool texture) const;
 	};
-
 	vector<solar_flare> solar_flares;
-
 public:
 	vector3d rot_axis;
 
@@ -372,17 +355,15 @@ public:
 
 
 class ussystem : public uobj_rgen { // size = 312
-
 public:
-	unsigned cluster_id;
+	unsigned cluster_id=0;
 	ustar sun;
 	vector<uplanet> planets;
 	std::shared_ptr<uasteroid_belt_system> asteroid_belt;
-	ugalaxy *galaxy;
-	colorRGBA galaxy_color;
-	vector3d orbit_scale;
+	ugalaxy *galaxy=nullptr;
+	colorRGBA galaxy_color=ALPHA0;
+	vector3d orbit_scale=all_ones;
 	
-	ussystem() : cluster_id(0), galaxy(NULL), galaxy_color(ALPHA0), orbit_scale(all_ones) {}
 	void create(point const &pos_);
 	void calc_color();
 	void process();
@@ -396,12 +377,9 @@ public:
 
 
 class unebula : public uobject_base, public volume_part_cloud { // size = 96
-
 	colorRGBA color[3];
-	float noise_exp;
-
+	float noise_exp=2.0;
 public:
-	unebula() : noise_exp(2.0) {}
 	void gen(float range, ellipsoid_t const &bounds);
 	void draw(point_d pos_, point const &camera, float max_dist, vpc_shader_t &s) const;
 	void free_uobj() {points.clear();}
@@ -410,25 +388,21 @@ public:
 
 
 class ugalaxy : public uobj_rgen, public named_obj, public ellipsoid_t { // size = 288
-
 	mutable float lrq_rad;
 	mutable point lrq_pos;
 
 	void apply_scale_transform(point &pos_) const;
 	point gen_valid_system_pos() const;
-
 public:
 	struct system_cluster {
-
-		float radius, bounds;
+		float radius, bounds=0.0;
 		point center;
 		colorRGBA color;
 		vector<point> systems;
-		unsigned s1, s2;
+		unsigned s1=0, s2=0;
 
-		system_cluster(float radius_, point const &center_) : radius(radius_), bounds(0.0), center(center_), color(BLACK), s1(0), s2(0) {}
+		system_cluster(float radius_, point const &center_) : radius(radius_), center(center_), color(BLACK) {}
 	};
-
 	vector<ussystem> sols;
 	deque<system_cluster> clusters;
 	vector<uasteroid_field> asteroid_fields;
@@ -451,22 +425,19 @@ public:
 
 
 class ucell : public uobj_rgen { // size = 216
-
 	pt_line_drawer planet_plds[2]; // {1-pixel, 2-pixel}
 	pt_line_drawer_no_lighting_t star_pld; // 1-pixel
 	point_sprite_drawer star_psd; // 2-pixel
-	colorRGBA last_bkg_color;
+	colorRGBA last_bkg_color=BLACK;
 	point last_player_pos;
-	unsigned last_star_cache_ix;
-	bool cached_stars_valid;
+	unsigned last_star_cache_ix=0;
+	bool cached_stars_valid=0;
 
 	void draw_all_stars(ushader_group &usg, bool clear_star_pld);
-
 public:
 	point rel_center;
 	std::shared_ptr<vector<ugalaxy> > galaxies; // must be a pointer to a vector to avoid deep copies
 
-	ucell() : last_bkg_color(BLACK), last_player_pos(all_zeros), last_star_cache_ix(0), cached_stars_valid(0) {}
 	void gen_cell(int const ii[3]);
 	void draw_nebulas(ushader_group &usg) const;
 	void draw_systems(ushader_group &usg, s_object const &clobj, unsigned pass, bool no_move, bool skip_closest, bool sel_cell, bool gen_only, bool no_asteroid_dust);
@@ -478,7 +449,6 @@ public:
 
 
 class s_object { // size = 60
-
 public:
 	int cellxyz[3], galaxy, cluster, system, planet, moon, asteroid_field, asteroid, type, val, id;
 	float dist;
@@ -513,7 +483,8 @@ public:
 	}
 	ussystem &get_system() const {
 		ugalaxy &g(get_galaxy());
-		assert(has_valid_system() && (unsigned)system < g.sols.size());
+		assert(has_valid_system());
+		assert((unsigned)system < g.sols.size());
 		return g.sols[system];
 	}
 	ustar &get_star() const {return get_system().sun;}
@@ -545,10 +516,8 @@ struct cell_block {
 };
 
 struct coll_test { // size = 16
-
-	int index;
-	float dist, rad, t;
-	coll_test() : index(0), dist(0.0f), rad(0.0f), t(0.0f) {}
+	int index=0;
+	float dist=0.0, rad=0.0, t=0.0;
 	bool operator<(const coll_test &A) const {return dist < A.dist;}
 };
 
@@ -558,7 +527,6 @@ struct line_query_state {
 
 
 class universe_t : protected cell_block {
-
 	icosphere_manager_t planet_manager;
 	cell_block temp; // used for shift_cells
 
@@ -599,7 +567,6 @@ public:
 
 typedef string modmap_val_t;
 typedef map<s_object, modmap_val_t> modmap;
-
 
 inline uplanet const &get_planet(s_object const &so) {return so.get_planet();}
 

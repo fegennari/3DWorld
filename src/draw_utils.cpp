@@ -236,14 +236,12 @@ void unbind_temp_vbo() {
 
 
 void pt_line_drawer::add_textured_pt(point const &v, colorRGBA c, int tid) {
-
 	if (tid >= 0) c = c.modulate_with(texture_color(tid));
 	vector3d const view_dir(get_camera_pos(), v);
 	add_pt(v, view_dir, c);
 }
 
 void pt_line_drawer::add_textured_line(point const &v1, point const &v2, colorRGBA c, int tid) {
-
 	if (tid >= 0) c = c.modulate_with(texture_color(tid));
 	vector3d view_dir(get_camera_pos(), (v1 + v2)*0.5);
 	orthogonalize_dir(view_dir, (v2 - v1), view_dir, 0);
@@ -251,7 +249,6 @@ void pt_line_drawer::add_textured_line(point const &v1, point const &v2, colorRG
 }
 
 void pt_line_drawer::draw() const {
-	
 	assert(!(lines.size() & 1));
 	if (!points.empty()) {draw_verts(points, GL_POINTS);}
 	if (!lines.empty ()) {draw_verts(lines,  GL_LINES );}
@@ -260,7 +257,6 @@ void pt_line_drawer::draw() const {
 
 
 void pt_line_drawer_no_lighting_t::draw() const {
-
 	assert(!(lines.size() & 1));
 	draw_verts(points, GL_POINTS);
 	draw_verts(lines,  GL_LINES);

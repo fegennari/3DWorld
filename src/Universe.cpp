@@ -519,14 +519,13 @@ void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool n
 			for (cix.ix[1] = 0; cix.ix[1] < int(U_BLOCKS); ++cix.ix[1]) { // y
 				for (cix.ix[0] = 0; cix.ix[0] < int(U_BLOCKS); ++cix.ix[0]) { // x
 					bool const sel_cell(clobj.cellxyz[0] == cix.ix[0] && clobj.cellxyz[1] == cix.ix[1] && clobj.cellxyz[2] == cix.ix[2]);
-					if (no_distant > 0 && !sel_cell) continue;
+					if (no_distant > 0 && !sel_cell)    continue;
 					if (!get_cell(cix.ix).is_visible()) continue;
 					if (sel_cell) {cur_cix = to_draw.size();}
 					to_draw.push_back(cix);
 				}
 			}
 		}
-
 		// first pass - create systems and draw distant stars
 		for (vector<cell_ixs_t>::const_iterator i = to_draw.begin(); i != to_draw.end(); ++i) {
 			UNROLL_3X(current.cellxyz[i_] = i->ix[i_] + uxyz[i_];)
@@ -534,9 +533,7 @@ void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool n
 			get_cell(i->ix).draw_systems(usg, clobj, 0, no_move, skip_closest, sel_cell, gen_only, no_asteroid_dust); // and asteroids
 		}
 		if (!gen_only) {
-			for (vector<cell_ixs_t>::const_iterator i = to_draw.begin(); i != to_draw.end(); ++i) {
-				get_cell(i->ix).draw_nebulas(usg); // draw nebulas
-			}
+			for (cell_ixs_t const &c : to_draw) {get_cell(c.ix).draw_nebulas(usg);} // draw nebulas
 		}
 	}
 	if (clobj.has_valid_system()) { // in a system
@@ -1041,17 +1038,17 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 						if (pass == 0 && !usg.atmos_to_draw.empty()) {
 							glEnable(GL_CULL_FACE);
 
-							for (vector<planet_draw_data_t>::const_iterator k = usg.atmos_to_draw.begin(); k != usg.atmos_to_draw.end(); ++k) {
-								uplanet const &planet(sol.planets[k->ix]);
-								planet.draw_atmosphere(usg, k->pos, k->size, k->svars, p2p_dist(camera, (pos + planet.pos)));
+							for (planet_draw_data_t const &pdd : usg.atmos_to_draw) {
+								uplanet const &planet(sol.planets[pdd.ix]);
+								planet.draw_atmosphere(usg, pdd.pos, pdd.size, pdd.svars, p2p_dist(camera, (pos + planet.pos)));
 							}
 							glDisable(GL_CULL_FACE);
 						}
 					} // pass
 					disable_blend();
 
-					for (auto pab = planet_asteroid_belts.begin(); pab != planet_asteroid_belts.end(); ++pab) { // changes lighting, draw last
-						(*pab)->draw_detail(pos, camera, no_asteroid_dust, 0, 0.1); // low density, no dust
+					for (auto const &pab : planet_asteroid_belts) { // changes lighting, draw last
+						pab->draw_detail(pos, camera, no_asteroid_dust, 0, 0.1); // low density, no dust
 					}
 				} // sol_draw_pass
 				if (draw_asteroid_belt) { // changes lighting, draw last
@@ -2257,7 +2254,7 @@ void ucell::free_uobj() {
 	gen = 0;
 
 	if (galaxies != nullptr) {
-		for (vector<ugalaxy>::iterator i = galaxies->begin(); i != galaxies->end(); ++i) {i->free_uobj();}
+		for (ugalaxy &g : *galaxies) {g.free_uobj();}
 		galaxies.reset();
 	}
 }
@@ -3394,7 +3391,6 @@ void uobj_rgen::set_rseeds() const {global_rand_gen = rgen;}
 
 
 bool s_object::write(ostream &out) const {
-
 	if (!out.good()) return 0;
 	out << type << " " << cellxyz[0] << " " << cellxyz[1] << " " << cellxyz[2] << " "
 		<< galaxy << " " << cluster << " " << system << " " << planet << " " << moon << " " << id;
@@ -3403,7 +3399,6 @@ bool s_object::write(ostream &out) const {
 
 
 bool s_object::read(istream &in) {
-
 	if (!in.good()) return 0;
 	return ((in >> type >> cellxyz[0] >> cellxyz[1] >> cellxyz[2] >> galaxy >> cluster >> system >> planet >> moon >> id) && in.good());
 }

@@ -38,7 +38,6 @@ void init_ship_weapon_classes();
 
 
 bool create_player_ship(unsigned sclass, unsigned align) {
-
 	if (player_ship_ptr != NULL) return 0;
 	player_ship_ptr = create_ship(sclass, ustart_pos, align, AI_ATT_ENEMY, TARGET_LAST, 0);
 	player_ship_ptr->rename("Player");
@@ -46,15 +45,11 @@ bool create_player_ship(unsigned sclass, unsigned align) {
 	return 1;
 }
 
-
 void reset_player_ship() {
-
 	player_ship().weapons = player_init_weapons;
 }
 
-
 void setup_ships() { // sets up all ship and weapons classes and default objects as well as creating the player's ship
-
 	static bool inited(0);
 	if (inited) return;
 	inited = 1;
@@ -64,15 +59,11 @@ void setup_ships() { // sets up all ship and weapons classes and default objects
 	cout << "Done." << endl;
 }
 
-
 void add_player_weap(unsigned weapon, unsigned num=1, unsigned ammo=0) {
-
 	player_ship().add_weapon(ship_weapon(weapon, num, ammo));
 }
 
-
 void add_ship_weapon(unsigned sclass, unsigned weapon, unsigned num, unsigned ammo, vector<point> const &weap_pts) {
-
 	assert(sclass < sclasses.size());
 	sclasses[sclass].add_weapon(ship_weapon(weapon, num, ammo, weap_pts));
 }
