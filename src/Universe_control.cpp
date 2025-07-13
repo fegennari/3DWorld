@@ -537,9 +537,10 @@ void check_shift_universe() {
 				sh[d]      = sign;
 				moved      = 1;
 				universe.shift_cells(sh[0], sh[1], sh[2]);
+				clobj0.init(); // cellxyz is invalidated
 			}
-		}
-	}
+		} // for sign
+	} // for d
 	if (moved) {shift_univ_objs(move, 1);} // advance all free objects by a cell
 	had_init_shift = 1;
 }
