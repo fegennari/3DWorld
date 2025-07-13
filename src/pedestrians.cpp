@@ -1746,8 +1746,9 @@ bool ped_manager_t::has_nearby_car_on_road(pedestrian_t const &ped, bool dim, un
 
 		for (auto it = range_start; it != cars.end(); ++it) {
 			car_base_t const &c(*it);
-			assert(c.cur_city == ped.city && c.dim == dim && c.dir == (dir != 0));
 			if (c.cur_road != road_ix) break; // different road, done
+			assert(c.cur_city == ped.city);
+			assert(c.dim == dim && c.dir == (dir != 0));
 			float const val(c.bcube.d[dim][!dir]); // back end of the car
 			if (dir) {if (val > pos_max) break;   } // already passed the ped, not a threat - done (cars are sorted in this dim)
 			else     {if (val < pos_min) continue;} // already passed the ped, not a threat - skip to next car

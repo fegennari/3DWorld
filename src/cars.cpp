@@ -1087,24 +1087,25 @@ void car_manager_t::extract_car_data(vector<car_city_vect_t> &cars_by_city) cons
 	// create parked cars vectors on first call; this is used for pedestrian navigation within parking lots;
 	// it won't be rebuilt on car destruction, but that should be okay
 	bool const add_parked_cars(cars_by_city.empty());
-	for (auto i = cars_by_city.begin(); i != cars_by_city.end(); ++i) {i->clear_cars();} // clear prev frame's state
+	for (car_city_vect_t &v : cars_by_city) {v.clear_cars();} // clear prev frame's state
 
-	for (auto i = cars.begin(); i != cars.end(); ++i) {
-		if (i->cur_road_type == TYPE_BUILDING) continue;
-		if (i->cur_city >= cars_by_city.size()) {cars_by_city.resize(i->cur_city+1);}
-		auto &dest(cars_by_city[i->cur_city]);
+	for (car_t const &car : cars) {
+		if (car.cur_road_type == TYPE_BUILDING) continue;
+		car_base_t const c(car); // deep copy to avoid assert if the car city changes in the car update thread between now and when it's added to dest
+		if (c.cur_city >= cars_by_city.size()) {cars_by_city.resize(c.cur_city+1);}
+		auto &dest(cars_by_city[c.cur_city]);
 		
-		if (!i->is_parked()) { // moving on road
-			if (i->in_parking_lot) { // cars in parking lots
-				bool const mdir(i->dir ^ i->in_reverse); // moving direction
-				cube_t bc(i->bcube);
-				if (!i->is_stopped()) {bc.d[i->dim][mdir] += (mdir ? 1.0 : -1.0)*i->get_length();} // extend one car length in front if moving
-				dest.parking_lot_car_bcubes.emplace_back(bc, i->dest_driveway);
+		if (!c.is_parked()) { // moving on road
+			if (car.in_parking_lot) { // cars in parking lots
+				bool const mdir(c.dir ^ car.in_reverse); // moving direction
+				cube_t bc(c.bcube);
+				if (!c.is_stopped()) {bc.d[c.dim][mdir] += (mdir ? 1.0 : -1.0)*c.get_length();} // extend one car length in front if moving
+				dest.parking_lot_car_bcubes.emplace_back(bc, c.dest_driveway);
 			}
-			else {dest.cars[i->dim][i->dir].push_back(*i);}
+			else {dest.cars[c.dim][c.dir].push_back(c);}
 		}
-		else if (i->is_sleeping()) {dest.sleeping_car_bcubes.emplace_back(i->bcube, i->cur_road);} // cars stopped in driveways
-		else if (add_parked_cars)  {dest.parked_car_bcubes  .emplace_back(i->bcube, i->cur_road);} // parked, not yet updated
+		else if (car.is_sleeping()) {dest.sleeping_car_bcubes.emplace_back(c.bcube, c.cur_road);} // cars stopped in driveways
+		else if (add_parked_cars)   {dest.parked_car_bcubes  .emplace_back(c.bcube, c.cur_road);} // parked, not yet updated
 	} // for i
 }
 
