@@ -227,8 +227,7 @@ class occlusion_checker_noncity_t {
 	building_occlusion_state_t state;
 	building_creator_t const &bc;
 public:
-	bool query_is_for_light, for_shadows, extra_occluders_dim=0;
-	vect_cube_t extra_occluders;
+	bool query_is_for_light, for_shadows;
 
 	occlusion_checker_noncity_t(building_creator_t const &bc_, bool for_light=0, bool for_shadows_=0) : bc(bc_), query_is_for_light(for_light), for_shadows(for_shadows_) {}
 	void set_exclude_bix(int exclude_bix) {state.exclude_bix = exclude_bix;}

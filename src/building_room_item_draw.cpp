@@ -1906,6 +1906,8 @@ void draw_and_clear_flares(quad_batch_draw &qbd, shader_t &s, colorRGBA const &c
 }
 quad_batch_draw flare_qbd; // resed across/between frames
 
+bool check_custom_occluder_cull(cube_t const &c, point const &viewer, vect_cube_t const &occluders, bool occluder_dim);
+
 // Note: non-const because it creates the VBO; inc_small: 0=large only, 1=large+small, 2=large+small+ext detail, 3=large+small+ext detail+int detail, 4=ext only
 void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &amask_shader, building_t const &building, occlusion_checker_noncity_t &oc,
 	vector3d const &xlate, unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building, bool mall_visible)
@@ -2082,6 +2084,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	unsigned last_room_ix(building.interior->rooms.size()), last_culled_room_ix(last_room_ix), last_floor_ix(0); // start at an invalid value
 	bool camera_in_closed_room(0), last_room_closed(0), obj_drawn(0), no_cull_room(0);
 	auto model_to_cull(obj_model_insts.end()), model_to_not_cull(obj_model_insts.end());
+	vect_cube_t const *extra_occluders(nullptr);
+	bool extra_occluders_dim(0);
 
 	if (camera_room >= 0) {
 		// check for stairs in case an object is visible through an open door on a floor above or below
@@ -2093,8 +2097,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		if (room.is_store()) { // add mall store occluders for the room the player is in
 			for (store_info_t const &s : building.interior->mall_info->stores) {
 				if ((int)s.room_id != camera_room) continue;
-				oc.extra_occluders     = s.occluders;
-				oc.extra_occluders_dim = !s.dim; // currently, all occluder walls are perpendicular to the store dim
+				extra_occluders     = &s.occluders;
+				extra_occluders_dim = !s.dim; // currently, all occluder walls are perpendicular to the store dim
 				break;
 			}
 			no_cull_room = 1; // don't need to cull objects in the same store as the player
@@ -2158,18 +2162,21 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		if (!shadow_only && player_in_this_basement && room.is_ext_basement() != (player_in_basement >= 3) && !building.is_cube_visible_through_extb_door(camera_bs, obj)) continue;
 		//highres_timer_t timer("Draw " + get_room_obj_type(obj).name);
 
-		if (check_occlusion && i != model_to_not_cull && !(no_cull_room && obj.room_id == (unsigned)camera_room && oc.extra_occluders.empty())) { // occlusion culling
-			if (obj.type == TYPE_HANGER && obj.is_hanging() && i+1 != obj_model_insts.end()) {
-				room_object_t &obj2(get_room_object_by_index((i+1)->obj_id));
+		if (check_occlusion && i != model_to_not_cull) { // occlusion culling
+			if (!(no_cull_room && obj.room_id == (unsigned)camera_room)) { // skip culling of objects in the same room as the player/light, except for extra_occluders
+				if (obj.type == TYPE_HANGER && obj.is_hanging() && i+1 != obj_model_insts.end()) {
+					room_object_t &obj2(get_room_object_by_index((i+1)->obj_id));
 
-				if (obj2.type == TYPE_CLOTHES) { // cull hanger and clothing together
-					cube_t bc(obj);
-					bc.union_with_cube(obj2);
-					if (building.check_obj_occluded(bc, camera_bs, oc, reflection_pass)) {model_to_cull = i+1; continue;}
-					model_to_not_cull = i+1;
+					if (obj2.type == TYPE_CLOTHES) { // cull hanger and clothing together
+						cube_t bc(obj);
+						bc.union_with_cube(obj2);
+						if (building.check_obj_occluded(bc, camera_bs, oc, reflection_pass)) {model_to_cull = i+1; continue;}
+						model_to_not_cull = i+1;
+					}
 				}
+				if (building.check_obj_occluded(obj, camera_bs, oc, reflection_pass)) continue;
 			}
-			if (building.check_obj_occluded(obj, camera_bs, oc, reflection_pass)) continue;
+			if (extra_occluders && check_custom_occluder_cull(obj, camera_bs, *extra_occluders, extra_occluders_dim)) continue;
 		}
 		if (camera_room >= 0) {
 			unsigned const floor_ix(room.get_floor_containing_zval(obj.zc(), floor_spacing));
@@ -2376,7 +2383,6 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	}
 	water_sound_manager.finalize();
 	water_draw.draw_and_clear(s);
-	oc.extra_occluders.clear(); // no longer needed/valid
 
 	if (player_in_building && !shadow_only && player_held_object.is_valid() && &building == player_building) {
 		// draw the item the player is holding; actual_player_pos should be the correct position for reflections
@@ -2812,6 +2818,16 @@ void building_t::debug_people_in_building(shader_t &s, point const &camera_bs) c
 	s.make_current();
 }
 
+bool check_custom_occluder_cull(cube_t const &c, point const &viewer, vect_cube_t const &occluders, bool occluder_dim) {
+	// check any extra occluders from special rooms such as mall stores
+	// Note: ignores building rotate since malls should not be in a rotated building
+	point pts[8];
+	unsigned const npts(get_cube_corners(c.d, pts, viewer, 0)); // should return only the 6 visible corners
+	cube_t occ_area(c);
+	occ_area.union_with_pt(viewer); // any occluder must intersect this cube
+	return are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, occ_area, occluders, occluder_dim);
+}
+
 // Note: c is in local building space and viewer_in is in non-rotated building space
 bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occlusion_checker_noncity_t const &oc,
 	bool reflection_pass, bool c_is_building_part, bool skip_basement_check) const
@@ -2912,9 +2928,6 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 			} // for D
 		}
 	}
-	// check any extra occluders from special rooms such as mall stores
-	if (are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, occ_area, oc.extra_occluders, oc.extra_occluders_dim)) return 1;
-	
 	if (!c_is_building_part && player_in_building) {
 		// viewer inside this building; includes shadow_only case and reflection_pass (even if reflected camera is outside the building);
 		// okay for retail glass floor reflections because the reflection won't cross an opaque floor or ceiling in fc_occluders
