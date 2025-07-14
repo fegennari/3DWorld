@@ -1982,7 +1982,7 @@ struct building_interior_t {
 	indoor_pool_t pool;
 	cube_t basement_ext_bcube, elevator_equip_room, ps_bathroom;
 	draw_range_t draw_range;
-	unsigned extb_walls_start[2] = {0,0};
+	unsigned extb_walls_start[2]={}, mall_hall_walls_start[2]={};
 	unsigned gen_room_details_pass=0, rgen_seed_ix=0;
 	int garage_room=-1, ext_basement_hallway_room_id=-1, ext_basement_door_stack_ix=-1, last_active_door_ix=-1, security_room_ix=-1;
 	uint8_t furnace_type=FTYPE_NONE, attic_type=ATTIC_TYPE_RAFTERS;
@@ -2032,6 +2032,7 @@ struct building_interior_t {
 	vector<room_t>::const_iterator ext_basement_rooms_start() const;
 	bool point_in_U_stairwell(point const &pos, float floor_spacing, bool mall_only=0) const;
 	bool point_in_ext_basement_room(point const &pos, float floor_spacing, float expand=0.0) const;
+	bool is_inside_mall_stores(point const &pos) const;
 	// tunnels
 	bool point_in_tunnel(point const &pos, float expand=0.0) const;
 	bool point_near_tunnel_entrance(point const &pos) const;
@@ -2662,7 +2663,6 @@ private:
 	void add_mall_stairs();
 	bool adjust_zval_for_mall_stairs(point const &pos, float &zval) const;
 	float get_mall_floor_spacing(cube_t const &room) const;
-	bool inside_mall_hallway(point const &pos) const;
 	bool is_inside_mall_stores(point const &pos) const;
 	room_t const &get_mall_concourse() const {assert(has_mall()); return interior->get_extb_start_room();}
 	float get_mall_floor_spacing    () const {return get_mall_floor_spacing(get_mall_concourse());}

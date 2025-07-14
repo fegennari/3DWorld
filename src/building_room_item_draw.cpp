@@ -2898,12 +2898,13 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 			for (unsigned D = 0; D < 2; ++D) {
 				bool const d(bool(D) ^ pri_dim); // try primary dim first
 				float const min_sz(min(floor_spacing, 0.5f*c.get_sz_dim(!d))); // account for perspective; min with floor_spacing to allow for room sized queries
-				unsigned const extb_walls_start(interior->extb_walls_start[d]);
+				// exclude mall back hallway walls, since they are a mostly either exterior walls and duplicated with store walls
+				unsigned const extb_walls_start(interior->extb_walls_start[d]), extb_walls_end(interior->mall_hall_walls_start[d]);
 				vect_cube_t const &walls(interior->walls[d]);
 				assert(extb_walls_start <= walls.size());
 
 				if (in_ext_basement) {
-					if (are_pts_occluded_by_any_cubes<1>(viewer, pts, npts, occ_area, walls.begin()+extb_walls_start, walls.end(), d, min_sz)) return 1;
+					if (are_pts_occluded_by_any_cubes<1>(viewer, pts, npts, occ_area, walls.begin()+extb_walls_start, walls.begin()+extb_walls_end, d, min_sz)) return 1;
 				}
 				else {
 					if (are_pts_occluded_by_any_cubes<1>(viewer, pts, npts, occ_area, walls.begin(), walls.begin()+extb_walls_start, d, min_sz)) return 1;

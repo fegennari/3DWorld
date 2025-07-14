@@ -2774,22 +2774,26 @@ void building_interior_t::get_stairs_and_elevators_bcubes_intersecting_cube(cube
 	// escalators are currently ignored here because they're not in basements/parking garages
 }
 
-struct cube_by_z1_descending {
-	bool operator()(cube_t const &a, cube_t const &b) const {return (a.z1() > b.z1());}
-};
-struct cube_by_z2_ascending {
-	bool operator()(cube_t const &a, cube_t const &b) const {return (a.z2() < b.z2());}
+struct cmp_mall_wall {
+	building_interior_t const &interior;
+	cmp_mall_wall(building_interior_t const &i) : interior(i) {}
+	bool operator()(cube_t const &c) const {return interior.is_inside_mall_stores(c.get_cube_center());}
 };
 
 void building_interior_t::sort_for_optimal_culling() {
 	for (unsigned d = 0; d < 2; ++d) { // sort walls longest to shortest to improve occlusion culling time
 		vect_cube_t &v(walls[d]);
 		assert(extb_walls_start[d] <= v.size());
+
+		if (has_mall()) { // move mall back hallway walls after mall interior walls for improved culling and ease of drawing
+			mall_hall_walls_start[d] = std::partition(v.begin()+extb_walls_start[d], v.end(), cmp_mall_wall(*this)) - v.begin();
+		}
+		else {mall_hall_walls_start[d] = v.size();} // no mall, set to end of range
 		sort(v.begin(), v.begin()+extb_walls_start[d], cube_by_sz(!d)); // skip exterior basement walls
-		sort(v.begin()+extb_walls_start[d], v.end(),   cube_by_sz(!d)); // only exterior basement walls
-	}
-	sort(floors  .begin(), floors  .end(), cube_by_z1_descending()); // top down,  for early z culling and improved occluder fusion
-	sort(ceilings.begin(), ceilings.end(), cube_by_z2_ascending ()); // bottom up, for early z culling and improved occluder fusion
+		sort(v.begin()+extb_walls_start[d], v.begin()+mall_hall_walls_start[d], cube_by_sz(!d)); // only exterior basement walls; excludes mall hall walls (not occluders)
+	} // for d
+	sort(floors  .begin(), floors  .end(), [](cube_t const &a, cube_t const &b) {return (a.z1() > b.z1());}); // top down,  for early z culling and improved occluder fusion
+	sort(ceilings.begin(), ceilings.end(), [](cube_t const &a, cube_t const &b) {return (a.z2() < b.z2());}); // bottom up, for early z culling and improved occluder fusion
 }
 void building_interior_t::remove_excess_capacity() {
 	remove_excess_cap(floors);

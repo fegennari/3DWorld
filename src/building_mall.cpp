@@ -56,19 +56,20 @@ void building_t::get_mall_open_areas(cube_t const &room, vect_cube_t &openings) 
 	}
 }
 
-bool building_t::inside_mall_hallway(point const &pos) const {
+bool building_interior_t::is_inside_mall_stores(point const &pos) const {
 	if (!has_mall()) return 0;
+	if (!mall_info->store_bounds.contains_pt(pos)) return 0;
 
-	for (auto r = interior->rooms.begin()+interior->ext_basement_hallway_room_id; r != interior->rooms.end(); ++r) {
-		if (r->is_hallway && r->contains_pt(pos)) return 1;
+	// check if inside mall back hallways to handle hallways on floors with no end stores; if this is too slow, the hallways can be stored inside interior
+	for (auto r = rooms.begin()+ext_basement_hallway_room_id; r != rooms.end(); ++r) {
+		if (r->is_hallway && r->contains_pt(pos)) return 0;
 	}
-	return 0;
+	return 1;
 }
 bool building_t::is_inside_mall_stores(point const &pos) const {
 	if (!has_mall() || pos.z > ground_floor_z1) return 0;
 	if (get_basement().contains_pt(pos))        return 0; // in basement, not mall
-	// Note: inside_mall_hallway() check is needed to handle hallways on floors with no end stores; if this is too slow, the hallways can be stored inside interior
-	return (interior->mall_info->store_bounds.contains_pt(pos) && !inside_mall_hallway(pos));
+	return interior->is_inside_mall_stores(pos);
 }
 
 unsigned choose_one_center(unsigned num, rand_gen_t &rgen) {

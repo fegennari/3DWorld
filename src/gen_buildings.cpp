@@ -2201,11 +2201,14 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 	float const wall_thickness(get_wall_thickness()), extb_wall_thresh(1.1*wall_thickness); // extb_wall_thresh uses wall thickness + tolerance
 
 	for (unsigned dim = 0; dim < 2; ++dim) { // Note: can almost pass in (1U << dim) as dim_filt, if it wasn't for door cutouts (2.2M T)
-		for (auto i = interior->walls[dim].begin(); i != interior->walls[dim].end(); ++i) {
+		vect_cube_t const &wv(interior->walls[dim]);
+
+		for (auto i = wv.begin(); i != wv.end(); ++i) {
 			//unsigned const dim_mask(1 << dim); // doesn't work with office building hallway intersection corners and door frame shadows
 			unsigned dim_mask(3); // XY
 			set_skip_faces_for_nearby_cube_edge(*i, bcube, wall_thickness, !dim, dim_mask); // easy case: skip faces along the edges of the building bcube
-			bool const in_basement(i->z1() < ground_floor_z1), in_ext_basement(in_basement && i >= (interior->walls[dim].begin() + interior->extb_walls_start[dim]));
+			bool const in_basement(i->z1() < ground_floor_z1), in_ext_basement(in_basement && i >= (wv.begin() + interior->extb_walls_start[dim]));
+			bool const in_mall_stores(in_ext_basement && has_mall() && i < (wv.begin() + interior->mall_hall_walls_start[dim]));
 			
 			// check rooms; skip this for above ground complex floorplans because they may have unexpected wall ends visible at non-rectangular rooms
 			if (!has_complex_floorplan || in_basement) {
@@ -2254,7 +2257,7 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 			
 			if (!is_house && in_ext_basement) { // office building extended basement, backrooms, or mall
 				// mall stores have wall texture with custom color, but back hallways are concrete; should bathrooms be white?
-				if (is_inside_mall_stores(i->get_cube_center())) {tex = mat.wall_tex; color = mall_wall_color;}
+				if (in_mall_stores) {tex = mat.wall_tex; color = mall_wall_color;}
 				else {tex = get_concrete_texture();} // extended basement
 			}
 			else if (is_industrial() && i->z1() >= ground_floor_z1) {tex = get_concrete_texture();} // industrial interior walls
