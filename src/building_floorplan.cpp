@@ -2447,10 +2447,6 @@ template<typename T> bool subtract_cube_from_cubes(cube_t const &s, vector<T> &c
 template bool subtract_cube_from_cubes(cube_t const &s, vector<cube_t>         &cubes, vect_cube_t *holes, bool clip_in_z, bool include_adj, bool no_z_test);
 template bool subtract_cube_from_cubes(cube_t const &s, vector<cube_with_ix_t> &cubes, vect_cube_t *holes, bool clip_in_z, bool include_adj, bool no_z_test);
 
-template<typename T> void subtract_cubes_from_cubes(T const &sub, vect_cube_t &cubes) {
-	for (auto i = sub.begin(); i != sub.end(); ++i) {subtract_cube_from_cubes(*i, cubes);}
-}
-
 void subtract_cube_from_floor_ceil(cube_t const &c, vect_cube_t &fs) {
 	unsigned iter_end(fs.size()); // capture orig size
 
