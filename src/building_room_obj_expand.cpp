@@ -42,6 +42,8 @@ void add_obj_pair(room_object_t const &obj, vect_room_object_t &objects) { // sh
 	room_object_t o1(obj), o2(obj);
 	o1.d[dim][1] = o2.d[dim][0] = obj.get_center_dim(dim); // abutting
 	((obj.dim ^ obj.dir ^ mirrored) ? o2 : o1).flags |= RO_FLAG_ADJ_TOP; // flag as mirrored; use for shoes; flag either o1 or o2 based on whether the shoe is left/right
+	o1.flags |= RO_FLAG_ADJ_LO; // first  in pair
+	o2.flags |= RO_FLAG_ADJ_HI; // second in pair
 	objects.push_back(o1);
 	objects.push_back(o2);
 }

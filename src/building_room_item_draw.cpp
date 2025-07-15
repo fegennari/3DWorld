@@ -1906,6 +1906,12 @@ void draw_and_clear_flares(quad_batch_draw &qbd, shader_t &s, colorRGBA const &c
 }
 quad_batch_draw flare_qbd; // resed across/between frames
 
+cube_t union_of_two_cubes(cube_t const &a, cube_t const &b) {
+	cube_t bc(a);
+	bc.union_with_cube(b);
+	return bc;
+}
+
 bool check_custom_occluder_cull(cube_t const &c, point const &viewer, vect_cube_t const &occluders, bool occluder_dim);
 
 // Note: non-const because it creates the VBO; inc_small: 0=large only, 1=large+small, 2=large+small+ext detail, 3=large+small+ext detail+int detail, 4=ext only
@@ -2094,7 +2100,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		camera_in_closed_room = (!room.has_stairs_on_floor(camera_floor) && building.all_room_int_doors_closed(camera_room, camera_bs.z));
 		camera_part           = room.part_id;
 
-		if (room.is_store()) { // add mall store occluders for the room the player is in
+		if (check_occlusion && room.is_store()) { // add mall store occluders for the room the player is in
 			for (store_info_t const &s : building.interior->mall_info->stores) {
 				if ((int)s.room_id != camera_room) continue;
 				extra_occluders     = &s.occluders;
@@ -2144,6 +2150,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			vect_stairwell_t const &sw(building.interior->stairwells);
 			if (sw.empty() || sw.front().is_u_shape() || !sw.front().line_intersects(camera_bs, obj_center)) continue;
 		}
+		//if (shadow_only && obj.type == TYPE_SHOEBOX) {} // draw as a cube? maybe TYPE_TOASTER and TYPE_FOLD_SHIRT as well?
 		room_t const &room(building.get_room(obj.room_id));
 
 		if (player_in_building && obj.room_id != last_culled_room_ix && !obj.is_exterior()) { // new room; apply room-based VFC + occlusion culling
@@ -2160,24 +2167,34 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		if (!(is_rotated ? building.is_rot_cube_visible(obj, xlate) : camera_pdu.cube_visible(obj + xlate))) continue; // VFC
 		// check for parking garage vs. mall/backrooms separation
 		if (!shadow_only && player_in_this_basement && room.is_ext_basement() != (player_in_basement >= 3) && !building.is_cube_visible_through_extb_door(camera_bs, obj)) continue;
-		//highres_timer_t timer("Draw " + get_room_obj_type(obj).name);
+		//highres_timer_t timer(string("Draw ") + get_room_obj_type(obj).name + (shadow_only ? " Shadow" : ""), (display_mode & 0x20));
 
 		if (check_occlusion && i != model_to_not_cull) { // occlusion culling
 			if (!(no_cull_room && obj.room_id == (unsigned)camera_room)) { // skip culling of objects in the same room as the player/light, except for extra_occluders
-				if (obj.type == TYPE_HANGER && obj.is_hanging() && i+1 != obj_model_insts.end()) {
+				bool no_check_occlude(0);
+
+				if (obj.type == TYPE_HANGER && obj.is_hanging() && i+1 != obj_model_insts.end()) { // hanger
 					room_object_t &obj2(get_room_object_by_index((i+1)->obj_id));
 
 					if (obj2.type == TYPE_CLOTHES) { // cull hanger and clothing together
-						cube_t bc(obj);
-						bc.union_with_cube(obj2);
-						if (building.check_obj_occluded(bc, camera_bs, oc, reflection_pass)) {model_to_cull = i+1; continue;}
+						if (building.check_obj_occluded(union_of_two_cubes(obj, obj2), camera_bs, oc, reflection_pass)) {model_to_cull = i+1; continue;}
 						model_to_not_cull = i+1;
 					}
 				}
-				if (building.check_obj_occluded(obj, camera_bs, oc, reflection_pass)) continue;
+				if (obj.type == TYPE_SHOE && (obj.flags & RO_FLAG_ADJ_LO) && i+1 != obj_model_insts.end()) { // first shoe in pair
+					room_object_t &obj2(get_room_object_by_index((i+1)->obj_id));
+
+					if (obj2.type == TYPE_SHOE && (obj.flags & RO_FLAG_ADJ_HI)) { // second shoe in pair
+						if (building.check_obj_occluded(union_of_two_cubes(obj, obj2), camera_bs, oc, reflection_pass)) {model_to_cull = i+1; continue;}
+						model_to_not_cull = i+1;
+						no_check_occlude  = 1;
+					}
+				}
+				if (!no_check_occlude && building.check_obj_occluded(obj, camera_bs, oc, reflection_pass)) continue;
 			}
-			if (extra_occluders && check_custom_occluder_cull(obj, camera_bs, *extra_occluders, extra_occluders_dim)) continue;
 		}
+		if (extra_occluders && check_custom_occluder_cull(obj, camera_bs, *extra_occluders, extra_occluders_dim)) continue;
+
 		if (camera_room >= 0) {
 			unsigned const floor_ix(room.get_floor_containing_zval(obj.zc(), floor_spacing));
 
