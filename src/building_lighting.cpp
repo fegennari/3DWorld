@@ -2220,7 +2220,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		// use smaller shadow radius for retail rooms, industrial, malls, and stores since there are so many lights (meaning shadows are less visible and perf is more important)
 		bool const reduced_shadows(in_retail_room || in_industrial || room.is_mall_or_store());
 		float const light_radius_shadow((reduced_shadows ? RETAIL_SMAP_DSCALE : 1.0)*light_radius);
-		bool force_smap_update(0);
+		bool force_smap_update(0); // Note: set to 1 to force shadow updates for profiling purposes
 		// must update industrial shadows when the player enters the building to include detail object shadows such as pipes
 		if (in_industrial && camera_in_building) {shadow_caster_hash ^= 12345;}
 

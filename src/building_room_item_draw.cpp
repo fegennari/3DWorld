@@ -2119,14 +2119,15 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		if (check_clip_cube && !clip_cube_bs.intersects(obj)) continue; // shadow map clip cube test: fast and high rejection ratio, do this first
 		// optimization: only draw models in the same room as the mirror for malls; applies to furniture stores, clothing stores, and bathrooms
 		if (reflection_pass && player_in_mall && cur_room_mirror.room_id > 0 && obj.room_id != cur_room_mirror.room_id) continue;
+		room_object const type(obj.type);
 
 		if (shadow_only) {
-			if (obj.type == TYPE_CEIL_FAN) continue; // not shadow casting; would shadow its own light
-			if (obj.is_exterior())         continue; // outdoors; no indoor shadow
-			if (obj.type == TYPE_KEY || obj.type == TYPE_SILVER || obj.type == TYPE_FOLD_SHIRT)         continue; // small
-			if (obj.z1() > camera_bs.z || (obj.z2() < two_floors_below && obj.type != TYPE_BLDG_FOUNT)) continue; // above or more than 2 floors below light, except mall fountains
+			if (type == TYPE_CEIL_FAN) continue; // not shadow casting; would shadow its own light
+			if (obj.is_exterior())     continue; // outdoors; no indoor shadow
+			if (type == TYPE_KEY || type == TYPE_SILVER || type == TYPE_FOLD_SHIRT)                 continue; // small
+			if (obj.z1() > camera_bs.z || (obj.z2() < two_floors_below && type != TYPE_BLDG_FOUNT)) continue; // above or more than 2 floors below light, except mall fountains
 		}
-		else if ((obj.type == TYPE_SILVER /*|| obj.type == TYPE_FOLD_SHIRT*/) && camera_bs.z < obj.z1()) continue; // not visible from below (except on glass table?)
+		else if ((type == TYPE_SILVER /*|| type == TYPE_FOLD_SHIRT*/) && camera_bs.z < obj.z1()) continue; // not visible from below (except on glass table?)
 		point obj_center(obj.get_cube_center());
 
 		if (!shadow_only && !building.is_house && !has_windows && !building.point_in_mall(obj_center)) { // windowless building
@@ -2135,11 +2136,11 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		if (is_rotated) {building.do_xy_rotate(building_center, obj_center);}
 		
 		// distance culling; allow fire extinguishers and primary hallway objects to be visible all the way down a long hallway
-		if (!shadow_only && obj.type != TYPE_FIRE_EXT && !(building.has_pri_hall() && building.pri_hall.contains_pt(obj_center))) {
+		if (!shadow_only && type != TYPE_FIRE_EXT && !(building.has_pri_hall() && building.pri_hall.contains_pt(obj_center))) {
 			float cull_dist(32.0*(obj.dx() + obj.dy() + obj.dz()));
 			if (building.check_pt_in_retail_room(obj_center)) {cull_dist *= 2.5;} // increased culling distance for retail areas
 			else if (building.point_in_mall     (obj_center)) {cull_dist *= 2.0;} // increased culling distance for malls
-			if (obj.type == TYPE_PADLOCK)                     {cull_dist *= 3.0;} // padlocks are small but can be seen from far away
+			if (type == TYPE_PADLOCK)                         {cull_dist *= 3.0;} // padlocks are small but can be seen from far away
 			if (!dist_less_than(camera_bs, obj_center, cull_dist)) continue; // too far
 		}
 		bool cull(0);
@@ -2150,7 +2151,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			vect_stairwell_t const &sw(building.interior->stairwells);
 			if (sw.empty() || sw.front().is_u_shape() || !sw.front().line_intersects(camera_bs, obj_center)) continue;
 		}
-		//if (shadow_only && obj.type == TYPE_SHOEBOX) {} // draw as a cube? maybe TYPE_TOASTER and TYPE_FOLD_SHIRT as well?
+		//if (shadow_only && type == TYPE_SHOEBOX) {} // draw as a cube? maybe TYPE_TOASTER and TYPE_FOLD_SHIRT as well?
 		room_t const &room(building.get_room(obj.room_id));
 
 		if (player_in_building && obj.room_id != last_culled_room_ix && !obj.is_exterior()) { // new room; apply room-based VFC + occlusion culling
@@ -2164,6 +2165,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 					(check_occlusion && building.check_obj_occluded(c, camera_bs, oc, reflection_pass))) {cull_room_ix = obj.room_id; continue;} // cull entire room
 			}
 		}
+		// mall shoe shadows are expensive; only enable if player is in the room
+		if (shadow_only && (type == TYPE_SHOE || type == TYPE_SHOEBOX) && !room.contains_pt(actual_player_pos) && building.point_in_mall(obj_center)) continue;
 		if (!(is_rotated ? building.is_rot_cube_visible(obj, xlate) : camera_pdu.cube_visible(obj + xlate))) continue; // VFC
 		// check for parking garage vs. mall/backrooms separation
 		if (!shadow_only && player_in_this_basement && room.is_ext_basement() != (player_in_basement >= 3) && !building.is_cube_visible_through_extb_door(camera_bs, obj)) continue;
@@ -2173,7 +2176,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			if (!(no_cull_room && obj.room_id == (unsigned)camera_room)) { // skip culling of objects in the same room as the player/light, except for extra_occluders
 				bool no_check_occlude(0);
 
-				if (obj.type == TYPE_HANGER && obj.is_hanging() && i+1 != obj_model_insts.end()) { // hanger
+				if (type == TYPE_HANGER && obj.is_hanging() && i+1 != obj_model_insts.end()) { // hanger
 					room_object_t &obj2(get_room_object_by_index((i+1)->obj_id));
 
 					if (obj2.type == TYPE_CLOTHES) { // cull hanger and clothing together
@@ -2181,7 +2184,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 						model_to_not_cull = i+1;
 					}
 				}
-				if (obj.type == TYPE_SHOE && (obj.flags & RO_FLAG_ADJ_LO) && i+1 != obj_model_insts.end()) { // first shoe in pair
+				if (type == TYPE_SHOE && (obj.flags & RO_FLAG_ADJ_LO) && i+1 != obj_model_insts.end()) { // first shoe in pair
 					room_object_t &obj2(get_room_object_by_index((i+1)->obj_id));
 
 					if (obj2.type == TYPE_SHOE && (obj.flags & RO_FLAG_ADJ_HI)) { // second shoe in pair
@@ -2209,7 +2212,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		}
 		apply_room_obj_rotate(obj, *i, objs); // Note: may modify obj by clearing flags and inst by updating dir
 		
-		if (bbd_in && !shadow_only && !is_rotated && (obj.type == TYPE_WALL_LAMP || obj.is_exterior())) { // draw exterior objects later; not for rotated buildings
+		if (bbd_in && !shadow_only && !is_rotated && (type == TYPE_WALL_LAMP || obj.is_exterior())) { // draw exterior objects later; not for rotated buildings
 			// wall lamp has transparent glass and must be drawn last; fire escape and wall lamp use outdoor lighting
 			bbd_in->models_to_draw.emplace_back(*i, obj);
 		}
@@ -2217,12 +2220,12 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			//draw_simple_cube(obj); // TESTING
 			int mirror_dim(3); // 3=none
 			bool const using_custom_tid(building.bind_custom_clothing_texure(obj));
-			if (obj.type == TYPE_SHOE && (obj.flags & RO_FLAG_ADJ_TOP)) {mirror_dim = 1;} // shoes may be mirrored in !obj.dim (Y in model space)
+			if (type == TYPE_SHOE && (obj.flags & RO_FLAG_ADJ_TOP)) {mirror_dim = 1;} // shoes may be mirrored in !obj.dim (Y in model space)
 			draw_obj_model(*i, obj, s, xlate, obj_center, shadow_only, mirror_dim, using_custom_tid);
 			obj_drawn = 1;
 		}
 		// check for security camera monitor if player is in this building; must be on on, powered, and active
-		if (player_in_building && obj.type == TYPE_MONITOR && !(obj.obj_id & 1) && obj.is_powered() && obj.is_active()) {
+		if (player_in_building && type == TYPE_MONITOR && !(obj.obj_id & 1) && obj.is_powered() && obj.is_active()) {
 			onscreen_text.clear();
 			setup_monitor_screen_draw(obj, monitor_screens_mat, onscreen_text);
 			add_tv_or_monitor_screen (obj, monitor_screens_mat, onscreen_text, &onscreen_text_mat);
@@ -2237,7 +2240,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			}
 			s.set_color_e(BLACK);
 		}
-		if (player_in_building && !shadow_only && obj.type == TYPE_SINK) { // sink
+		if (player_in_building && !shadow_only && type == TYPE_SINK) { // sink
 			if (obj.room_id == camera_room) {water_sound_manager.register_running_water(obj, building);}
 			water_draw.add_water_for_sink(obj);
 		}
