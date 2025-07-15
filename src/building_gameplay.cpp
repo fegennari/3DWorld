@@ -2005,13 +2005,6 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 	return 1;
 }
 
-room_object_t &building_room_geom_t::get_room_object_by_index(unsigned obj_id) {
-	if (obj_id < objs.size()) {return objs[obj_id];}
-	unsigned const exp_obj_id(obj_id - objs.size());
-	assert(exp_obj_id < expanded_objs.size());
-	return expanded_objs[exp_obj_id];
-}
-
 // Note: obj_vect is either objs or expanded_objs
 void building_room_geom_t::remove_objs_contained_in(cube_t const &c, vect_room_object_t &obj_vect, building_t &building) {
 	for (room_object_t &obj : obj_vect) {

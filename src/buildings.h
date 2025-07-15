@@ -1397,7 +1397,13 @@ struct building_room_geom_t {
 	void set_factory_machine_seed(unsigned rseed1, unsigned rseed2);
 	void set_factory_machine_seed_from_obj(room_object_t const &obj) {set_factory_machine_seed(obj.item_flags, obj.obj_id);}
 	void update_draw_state_for_room_object(room_object_t const &obj, building_t &building, bool was_taken);
-	room_object_t &get_room_object_by_index(unsigned obj_id);
+	
+	room_object_t &get_room_object_by_index(unsigned obj_id) { // inlined for performance
+		if (obj_id < objs.size()) {return objs[obj_id];}
+		unsigned const exp_obj_id(obj_id - objs.size());
+		assert(exp_obj_id < expanded_objs.size());
+		return expanded_objs[exp_obj_id];
+	}
 	float get_combined_obj_weight(room_object_t const &obj) const;
 	int find_avail_obj_slot() const;
 	void add_expanded_object(room_object_t const &obj);
