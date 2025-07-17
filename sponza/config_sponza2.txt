@@ -24,6 +24,7 @@ use_z_prepass 1
 toggle_reflections
 num_dynam_parts 200
 dlight_grid_bitshift 1
+enable_ssao 1 # enabled with key '6'
 
 grass_density 0
 grass_size 0.02 0.002

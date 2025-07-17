@@ -8,7 +8,7 @@
 #include "transform_obj.h"
 
 
-extern bool water_is_lava, enable_postproc_recolor;
+extern bool water_is_lava, enable_postproc_recolor, enable_ssao;
 extern unsigned depth_tid, frame_buffer_RGB_tid;
 extern int frame_counter, display_mode, show_fog, camera_coll_id, window_width, window_height, animate2;
 extern float NEAR_CLIP, FAR_CLIP, fticks, dist_to_fire_sq, water_plane_z, CAMERA_RADIUS;
@@ -305,7 +305,6 @@ void apply_player_underwater_effect(colorRGBA const &color_mod=WHITE, float inte
 
 void run_postproc_effects() {
 
-	bool const enable_ssao = 0;
 	point const camera(get_camera_pos());
 	bool const camera_underwater(world_mode != WMODE_UNIVERSE && is_underwater(camera));
 	float const drunkenness(get_player_drunkenness());
