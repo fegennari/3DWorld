@@ -1130,9 +1130,7 @@ void building_t::get_all_windows(vect_cube_with_ix_t &windows) const { // Note: 
 			blinds.back().expand_in_dim(c.dim, wall_thickness); // make sure the intersect the windows
 		}
 	}
-	static vect_vnctcc_t wall_quad_verts;
-	wall_quad_verts.clear();
-	get_all_drawn_window_verts_as_quads(wall_quad_verts);
+	vect_vnctcc_t const &wall_quad_verts(get_all_drawn_window_verts_as_quads());
 
 	for (unsigned i = 0; i < wall_quad_verts.size(); i += 4) { // iterate over each quad
 		cube_t c;
@@ -1140,18 +1138,17 @@ void building_t::get_all_windows(vect_cube_with_ix_t &windows) const { // Note: 
 		if (!get_wall_quad_window_area(wall_quad_verts, i, c, tx1, tx2, tz1, tz2)) continue;
 		bool const dim(c.dy() < c.dx()), dir(wall_quad_verts[i].get_norm()[dim] > 0.0);
 		assert(c.get_sz_dim(dim) == 0.0); // must be zero size in one dim (X or Y oriented); could also use the vertex normal
-		float const d_tx_inv(1.0f/(tx2 - tx1)), d_tz_inv(1.0f/(tz2 - tz1));
-		float const window_width(c.get_sz_dim(!dim)*d_tx_inv), window_height(c.dz()*d_tz_inv); // window_height should be equal to window_vspacing
+		float const window_width(c.get_sz_dim(!dim)/(tx2 - tx1)), window_height(c.dz()/(tz2 - tz1)); // window_height should be equal to window_vspacing
 		float const border_xy(window_width*window_h_border), border_z(window_height*window_v_border);
 		cube_t window(c); // copy dim <dim>
 
 		for (float z = tz1; z < tz2; z += 1.0) { // each floor
 			float const bot_edge(c.z1() + (z - tz1)*window_height);
-			set_cube_zvals(window, bot_edge+border_z, bot_edge+window_height-border_z);
+			set_cube_zvals(window, bot_edge+border_z, bot_edge+window_height-border_z); // subtract off border to get interior/open part of window
 
 			for (float xy = tx1; xy < tx2; xy += 1.0) { // windows along each wall
 				float const low_edge(c.d[!dim][0] + (xy - tx1)*window_width);
-				window.d[!dim][0] = low_edge + border_xy;
+				window.d[!dim][0] = low_edge + border_xy; // subtract off border to get interior/open part of window
 				window.d[!dim][1] = low_edge + window_width - border_xy;
 
 				for (room_object_t const &b : blinds) {

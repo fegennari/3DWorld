@@ -2365,8 +2365,8 @@ struct building_t : public building_geom_t {
 	void get_all_drawn_interior_verts(building_draw_t &bdraw);
 	void get_walkway_interior_verts  (building_draw_t &bdraw, building_walkway_t &w);
 	void get_all_drawn_window_verts  (building_draw_t &bdraw, bool lights_pass=0, float offset_scale=1.0,
-		point const *only_cont_pt_in=nullptr, bool no_skylights=0, bool draw_int_windows=0) const;
-	void get_all_drawn_window_verts_as_quads(vect_vnctcc_t &verts) const;
+		point const *only_cont_pt_in=nullptr, bool no_skylights=0, bool draw_int_windows=0, bool for_gen_not_draw=0) const;
+	vect_vnctcc_t const &get_all_drawn_window_verts_as_quads() const;
 	bool get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, point const &pos, vector3d const &view_dir, float dist, bool update_state, bool only_open);
 	void get_ext_door_verts(building_draw_t &bdraw, point const &viewer, vector3d const &view_dir, int skip_door_ix) const;
 	bool get_all_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, vector<point> const &pts, float dist);
@@ -3193,6 +3193,7 @@ void add_city_building_signs(cube_t const &region_bcube, vector<sign_t     > &si
 void add_city_building_flags(cube_t const &region_bcube, vector<city_flag_t> &flags);
 cube_t get_building_lights_bcube();
 cube_t get_grid_bcube_for_building(building_t const &b);
+bool get_wall_quad_window_area(vect_vnctcc_t const &wall_quad_verts, unsigned i, cube_t &c, float &tx1, float &tx2, float &tz1, float &tz2);
 unsigned get_street_dir(cube_t const &inner, cube_t const &outer);
 float get_closet_wall_thickness(room_object_t const &c);
 void get_closet_cubes(room_object_t const &c, cube_t cubes[5], bool for_collision=0);

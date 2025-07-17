@@ -2503,7 +2503,7 @@ template void building_t::add_door_verts(cube_t const &D, building_room_geom_t &
 
 // Note: this is actually the geometry of walls that have windows, not the windows themselves
 void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass, float offset_scale,
-	point const *only_cont_pt_in, bool no_skylights, bool draw_int_windows) const
+	point const *only_cont_pt_in, bool no_skylights, bool draw_int_windows, bool for_gen_not_draw) const
 {
 	if (!is_valid()) return; // invalid building
 
@@ -2540,10 +2540,10 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 		return;
 	}
 	int const window_tid(building_texture_mgr.get_window_tid());
-	if (window_tid < 0) return; // not allocated - error?
+	if (window_tid < 0 && !for_gen_not_draw) return; // not allocated - error?
 	if (mat.wind_xscale == 0.0 || mat.wind_yscale == 0.0) return; // no windows for this material?
 	tid_nm_pair_t tex;
-	colorRGBA color;
+	colorRGBA color(mat.window_color);
 
 	if (draw_int_windows && !has_windows()) { // calculate interior window spacing that aligns with actual floor spacing
 		float const window_tx(0.5*mat.floorplan_wind_xscale), window_ty(0.5/get_window_vspace());
@@ -2556,8 +2556,6 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 		float const tint(0.2*fract(100.0f*(bcube.x1() + bcube.y1())));
 		color = colorRGBA((1.0 - tint), (1.0 - tint), (0.8 + tint), 1.0);
 	}
-	else {color = mat.window_color;}
-
 	int const clip_windows(draw_windows ? (is_house ? 2 : 1) : 0);
 	float const floor_spacing(get_window_vspace()), first_floor_z1(ground_floor_z1 + floor_spacing);
 	float const gf_door_ztop(doors.empty() ? 0.0f : (EXACT_MULT_FLOOR_HEIGHT ? first_floor_z1 : doors.front().pts[2].z));
@@ -2655,8 +2653,8 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 			draw_parts_mask |= (1 << part_ix);
 
 			// add ground floor windows next to doors
-			if (!is_cube())  continue; // below logic is only correct for cube-shaped buildings; other shapes are generally convex anyway
-			if (dsides == 0) continue; // no doors
+			if (!is_cube()) continue; // below logic is only correct for cube-shaped buildings; other shapes are generally convex anyway
+			if (dsides == 0 && !for_gen_not_draw) continue; // no doors
 			float const space(0.25*floor_spacing), toler(0.1*floor_spacing);
 
 			for (unsigned dim = 0; dim < 2; ++dim) {
@@ -2719,11 +2717,15 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	if (cut_door_holes) {cut_holes_for_ext_doors(bdraw, only_cont_pt, draw_parts_mask, door_part_clamp_cube);}
 }
 
-void building_t::get_all_drawn_window_verts_as_quads(vect_vnctcc_t &verts) const { // for interior drawing
+vect_vnctcc_t const &building_t::get_all_drawn_window_verts_as_quads() const { // for interior drawing; not thread safe
+	// Note: we could cache the last building and not update, but this is rarely called on the same building twice in a row
+	static vect_vnctcc_t wall_quad_verts; // reused across buildings
+	wall_quad_verts.clear();
 	building_draw_t bdraw; // should this be a static variable?
-	get_all_drawn_window_verts(bdraw, 0, 1.0, nullptr, 1, 1); // lights_pass=0, no_skylights=1, draw_int_windows=1
-	bdraw.get_all_mat_verts(verts, 0); // triangles=0; combine quad verts across materials (should only be one)
-	assert((verts.size() & 3) == 0); // must be a multiple of 4
+	get_all_drawn_window_verts(bdraw, 0, 1.0, nullptr, 1, 1, 1); // lights_pass=0, no_skylights=1, draw_int_windows=1, for_gen_not_draw=1
+	bdraw.get_all_mat_verts(wall_quad_verts, 0); // triangles=0; combine quad verts across materials (should only be one)
+	assert((wall_quad_verts.size() & 3) == 0); // must be a multiple of 4
+	return wall_quad_verts;
 }
 
 void building_t::cut_holes_for_ext_doors(building_draw_t &bdraw, point const &contain_pt, unsigned draw_parts_mask, cube_t const &clamp_cube) const {

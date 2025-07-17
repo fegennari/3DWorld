@@ -10,7 +10,6 @@ extern object_model_loader_t building_obj_model_loader;
 
 void setup_bldg_obj_types();
 bool cube_int_tiled_terrain_trees(cube_t const &c);
-bool get_wall_quad_window_area(vect_vnctcc_t const &wall_quad_verts, unsigned i, cube_t &c, float &tx1, float &tx2, float &tz1, float &tz2);
 void get_balcony_pillars(room_object_t const &c, float ground_floor_z1, cube_t pillar[2]);
 void expand_convex_polygon_xy(vect_point &points, point const &center, float expand);
 bool is_pool_tile_floor(room_object_t const &obj);
@@ -2388,9 +2387,7 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 	colorRGBA const trim_color(get_trim_color());
 	colorRGBA const &frame_color(mat.window_color);
 	vect_room_object_t &trim_objs(interior->room_geom->trim_objs), &objs(interior->room_geom->objs);
-	static vect_vnctcc_t wall_quad_verts;
-	wall_quad_verts.clear();
-	get_all_drawn_window_verts_as_quads(wall_quad_verts);
+	vect_vnctcc_t const &wall_quad_verts(get_all_drawn_window_verts_as_quads());
 	rand_gen_t rgen;
 	rgen.set_state(wall_quad_verts.size(), interior->rooms.size());
 	rgen.rand_mix();
@@ -2407,8 +2404,7 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 		if (!get_wall_quad_window_area(wall_quad_verts, i, c, tx1, tx2, tz1, tz2)) continue;
 		bool const dim(c.dy() < c.dx()), dir(wall_quad_verts[i].get_norm()[dim] > 0.0);
 		assert(c.get_sz_dim(dim) == 0.0); // must be zero size in one dim (X or Y oriented); could also use the vertex normal
-		float const d_tx_inv(1.0f/(tx2 - tx1)), d_tz_inv(1.0f/(tz2 - tz1));
-		float const window_width(c.get_sz_dim(!dim)*d_tx_inv), window_height(c.dz()*d_tz_inv); // window_height should be equal to floor_spacing
+		float const window_width(c.get_sz_dim(!dim)/(tx2 - tx1)), window_height(c.dz()/(tz2 - tz1)); // window_height should be equal to floor_spacing
 		float const border_xy(window_width*window_h_border), border_z(window_height*window_v_border), dscale(dir ? -1.0 : 1.0);
 		bool const is_attic(has_attic() && c.z1() >= get_attic_part().z2());
 		cube_t window(c); // copy dim <dim>
@@ -2419,7 +2415,7 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 
 		for (float z = tz1; z < tz2; z += 1.0) { // each floor
 			float const bot_edge(c.z1() + (z - tz1)*window_height);
-			set_cube_zvals(window, bot_edge+border_z, bot_edge+window_height-border_z);
+			set_cube_zvals(window, bot_edge+border_z, bot_edge+window_height-border_z); // subtract off border to get interior/open part of window
 			// add separators for 50% of walls/floors for houses; not for attic windows; not for glass block windows?
 			bool const add_separators(is_house && !is_attic && rgen.rand_bool());
 			bool const one_dim_separators(add_separators && rgen.rand_bool()); // 1=vert/horiz separators only, 0=cross shaped separators
@@ -2427,7 +2423,7 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 
 			for (float xy = tx1; xy < tx2; xy += 1.0) { // windows along each wall
 				float const low_edge(c.d[!dim][0] + (xy - tx1)*window_width);
-				window.d[!dim][0] = low_edge + border_xy;
+				window.d[!dim][0] = low_edge + border_xy; // subtract off border to get interior/open part of window
 				window.d[!dim][1] = low_edge + window_width - border_xy;
 				bool at_walkway(0);
 				cube_t exclude;
