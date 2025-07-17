@@ -150,7 +150,7 @@ void building_t::setup_courtyard() {
 	unsigned num_rooms(0);
 	
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
-		if (r->intersects(door_bc)) {courtyard.room_ix = int16_t(r - interior->rooms.begin()); ++num_rooms;}
+		if (r->intersects(door_bc) && !r->is_nested()) {courtyard.room_ix = int16_t(r - interior->rooms.begin()); ++num_rooms;}
 	}
 	assert(num_rooms == 1);
 }

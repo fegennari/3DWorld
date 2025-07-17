@@ -2461,8 +2461,8 @@ void get_room_cands(vector<room_t> const &rooms, unsigned part_ix, cube_t const 
 	room_cands.clear();
 
 	for (room_t const &r : rooms) {
-		if (r.part_id != part_ix || !r.intersects(place_region)) continue;
-		if (check_private_rooms && r.is_apt_or_hotel_room())     continue;
+		if (r.part_id != part_ix || !r.intersects(place_region) || r.is_nested()) continue;
+		if (check_private_rooms && r.is_apt_or_hotel_room()) continue;
 		cube_t cand(r);
 		cand.intersect_with_cube_xy(place_region);
 		vector2d const room_sz(cand.get_size_xy());
@@ -2746,20 +2746,20 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			subtract_cube_from_floor_ceil(cut_cube, interior->ceilings);
 
 			// set has_stairs flags for containing rooms
-			for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
-				if (!r->intersects_no_adj(stairwell)) continue; // no stairs in this room
+			for (room_t &r : interior->rooms) {
+				if (!r.intersects_no_adj(stairwell)) continue; // no stairs in this room
 				// set the test point to the stairs entrance on the correct level using stairs_dir; the room contains stairs if it contains the stairs entrance
 				point test_pt(stairwell.get_cube_center());
 
-				if (part.contains_cube(*r)) { // bottom of stairs
+				if (part.contains_cube(r)) { // bottom of stairs
 					test_pt[dim] = stairwell.d[dim][!stairs_dir];
-					if (r->contains_pt_xy(test_pt)) {r->has_stairs |= (1U << min(num_floors-1U, 7U));} // top floor (clamp to 7 to avoid 8-bit overflow)
+					if (r.contains_pt_xy(test_pt)) {r.has_stairs |= (1U << min(num_floors-1U, 7U));} // top floor (clamp to 7 to avoid 8-bit overflow)
 				}
-				else if (p.contains_cube(*r)) { // top of stairs
+				else if (p.contains_cube(r)) { // top of stairs
 					test_pt[dim] = stairwell.d[dim][stairs_dir];
-					if (r->contains_pt_xy(test_pt)) {r->has_stairs |= 1;} // bottom floor
+					if (r.contains_pt_xy(test_pt)) {r.has_stairs |= 1;} // bottom floor
 				}
-				else {cout << TXT(stairwell.str()) << TXT(r->str()) << TXT(part.str()) << TXT(p.str()) << endl; assert(0);} // something bad happened
+				else {cout << TXT(stairwell.str()) << TXT(r.str()) << TXT(part.str()) << TXT(p.str()) << endl; assert(0);} // something bad happened
 			} // for r
 			if (use_basement_stairs) { // add a basement door at the bottom of the stairs
 				float const pos_shift((stairs_dir ? 1.0 : -1.0)*0.8*wall_thickness);
