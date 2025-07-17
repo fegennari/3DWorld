@@ -32,7 +32,7 @@ void main() {
 		for (int s = 0; s < NUM_STEPS; s++) {
 			pos += step;
 			float depth = get_linear_depth_01(pos);
-			if (depth + 0.005 < depth0) {break;} // large depth disconuity, skip this dir
+			if (depth + 0.005 < depth0) {break;} // large depth discontinuity, skip this dir
 
 			if (depth < depth0) {
 				//if (s == 0) {denom -= 1.0; break;} // if first sample is closer, assume this is the edge of the feature and the back of the face and discard
