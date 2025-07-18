@@ -1901,6 +1901,8 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 				unsigned const stairs_room(rooms_start + (rand_ix + n)%num_avail_rooms);
 				room_t &room(interior->rooms[stairs_room]);
 				assert(room.part_id == part_ix); // sanity check
+				if (room.is_nested()) continue; // nested rooms typically shouldn't have stairs or elevators
+				bool const is_jailroom(room.get_room_type(0) == RTYPE_JAIL && room.has_subroom()); // jailroom with jail cell(s)
 
 				if (is_parking_str) {
 					// always add an elevator to parking structures; place against a wall;
@@ -1939,6 +1941,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 					}
 				}
 				if (add_elevator) {
+					if (is_jailroom) continue; // not yet handled
 					if (min(room.dx(), room.dy()) < 2.0*ewidth) continue; // room is too small to place an elevator
 					bool placed(0);
 
@@ -1988,7 +1991,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 						max_eq(shrink, 2.0f*stairs_sz); // allow space for doors to open and player to enter/exit
 						cutout.expand_in_dim(dim, -0.5*shrink); // centered in the room
 
-						if (!is_step_dim) { // see if we can push the stairs to the wall on one of the sides without blocking a doorway
+						if (!is_step_dim && !is_jailroom) { // see if we can push the stairs to the wall on one of the sides without blocking a doorway
 							bool const first_dir(rgen.rand_bool());
 
 							for (unsigned d = 0; d < 2; ++d) {
@@ -2303,11 +2306,7 @@ void building_t::add_ceiling_cube_no_skylights(cube_t const &c) {
 
 bool building_t::check_cube_intersect_walls(cube_t const &c) const {
 	assert(interior);
-
-	for (unsigned d = 0; d < 2; ++d) {
-		if (has_bcube_int(c, interior->walls[d])) return 1;
-	}
-	return 0;
+	return (has_bcube_int(c, interior->walls[0]) || has_bcube_int(c, interior->walls[1]));
 }
 
 // Note: when querying for elevators and stairs, c should be padded to include the entrance/exit; c_nopad is the unpadded cube
@@ -2585,7 +2584,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			// iterations: 0-19: place in pri hallway, 20-39: place anywhere, 40-159: shrink size, 150-179: compact stairs, 180-199: allow cut walls
 			for (unsigned n = 0; n < cur_num_iters && !cand_is_valid; ++n) { // make up to 200 tries to add stairs
 				// clipped walls don't look right in some cases and may block hallways and rooms, use as a last resort; disable for houses since basement is optional anyway
-				bool const allow_clip_walls(n >= 180 && !is_house), use_pref_shared(n <= 2*iter_mult_factor);
+				bool const allow_clip_walls(n >= 180 && !is_house && !is_prison()), use_pref_shared(n <= 2*iter_mult_factor);
 				cube_t place_region(use_pref_shared ? pref_shared : shared); // use preferred shared area from primary hallway for bottom part for first 20 iterations
 
 				if (n >= 4*iter_mult_factor && n < 16*iter_mult_factor && (n%iter_mult_factor) == 0) { // decrease stairs size slightly every 10 iterations, 12 times

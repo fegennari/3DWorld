@@ -1684,7 +1684,7 @@ colorRGBA building_t::get_floor_tex_and_color(cube_t const &floor_cube, tid_nm_p
 		bool const in_ext_basement(in_basement && (!get_basement().contains_cube_xy(floor_cube) || floor_cube.z2() < bcube.z1()));
 		bool const retail_or_mall((in_ext_basement && is_inside_mall_stores(floor_cube.get_cube_center())) || (has_retail() && floor_cube.z1() == ground_floor_z1));
 		if (retail_or_mall) {tex = get_tile_floor_texture();}
-		else if (in_basement && (has_parking_garage || in_ext_basement)) {tex = get_concrete_texture();} // parking garage or extended basement is concrete
+		else if (in_basement && (has_parking_garage || in_ext_basement || is_prison())) {tex = get_concrete_texture();} // parking garage/ext basement/prison is concrete
 		else if (is_industrial ()) {tex = get_concrete_texture  ();} // industrial floor is always concrete; could also use a dark tile texture
 		else if (has_tile_floor()) {tex = get_tile_floor_texture();}
 		else {tex = mat.floor_tex;} // office block
