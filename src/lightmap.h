@@ -197,7 +197,7 @@ public:
 	bool has_custom_bcube() const {return !custom_bcube.is_all_zeros();}
 	cube_t calc_bcube(bool add_pad=0, float sqrt_thresh=0.0, bool clip_to_scene_bcube=0, float falloff=0.0) const;
 	cylinder_3dw calc_bounding_cylin( float sqrt_thresh=0.0, bool clip_to_scene_bcube=0, float falloff=0.0) const;
-	pos_dir_up calc_pdu(bool dynamic_cobj, bool is_cube_face, float falloff) const;
+	pos_dir_up calc_pdu(bool dynamic_cobj=0, bool is_cube_face=0, float falloff=0.0) const;
 	unsigned get_cube_eflags() const {return cube_eflags;}
 	unsigned get_num_rays()    const {return num_dlight_rays;}
 	bool is_visible()     const;

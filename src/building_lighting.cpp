@@ -1424,24 +1424,23 @@ float get_radius_for_room_light(room_object_t const &obj) {
 	return radius;
 }
 
-bool check_for_shadow_caster(vect_cube_with_ix_t const &cubes, cube_t const &light_bcube, point const &lpos,
+void check_for_shadow_caster(vect_cube_with_ix_t const &cubes, cube_t const &light_bcube, point const &lpos,
 	float dmax, bool has_stairs, vector3d const &xlate, unsigned &shadow_caster_hash)
 {
-	bool ret(0);
-
-	for (auto c = cubes.begin(); c != cubes.end(); ++c) {
-		if (lpos.z < c->z1())            continue; // light is below the object's bottom; assumes lights are spotlights pointed downward
-		if (!c->intersects(light_bcube)) continue; // object not within light area of effect
-		point const center(c->get_cube_center());
+	for (cube_with_ix_t const &c : cubes) {
+		if (lpos.z < c.z1())            continue; // light is below the object's bottom; assumes lights are spotlights pointed downward
+		if (!c.intersects(light_bcube)) continue; // object not within light area of effect
+		point const center(c.get_cube_center());
 		if (dmax > 0.0 && !dist_less_than(lpos, center, dmax)) continue; // too far from light to cast a visible shadow
-		
+		if (!dl_sources.back().calc_pdu().cube_visible(c))     continue; // occasionally helps; occlusion check helps a bit but is more complex and expensive
+
 		if (!has_stairs) {
 			// check for camera visibility of the union of the cube and the intersection points of the light rays
 			// projected through the top 4 corners of the cube to the floor (cube z1 value)
-			float const z(c->z2()); // top edge of the cube
+			float const z(c.z2()); // top edge of the cube
 			float const floor_z(light_bcube.z1()); // assume light z1 is on the floor; maybe could also use c->z1(), which at least works for people
-			point const corners[4] = {point(c->x1(), c->y1(), z), point(c->x2(), c->y1(), z), point(c->x2(), c->y2(), z), point(c->x1(), c->y2(), z)};
-			cube_t cube_ext(*c);
+			point const corners[4] = {point(c.x1(), c.y1(), z), point(c.x2(), c.y1(), z), point(c.x2(), c.y2(), z), point(c.x1(), c.y2(), z)};
+			cube_t cube_ext(c);
 
 			for (unsigned n = 0; n < 4; ++n) {
 				vector3d const delta(corners[n] - lpos);
@@ -1449,22 +1448,20 @@ bool check_for_shadow_caster(vect_cube_with_ix_t const &cubes, cube_t const &lig
 				cube_ext.union_with_pt(lpos + delta*t); // union with floor hit pos
 			}
 			if (!camera_pdu.cube_visible(cube_ext + xlate)) { // VFC
-				hash_mix_point(c->get_size(), shadow_caster_hash); // hash size rather than position to include the object's presence but not its position (sort of)
+				hash_mix_point(c.get_size(), shadow_caster_hash); // hash size rather than position to include the object's presence but not its position (sort of)
 				continue;
 			}
 		}
-		shadow_caster_hash += c->ix;
+		shadow_caster_hash += c.ix;
 		hash_mix_point(center, shadow_caster_hash);
-		ret = 1;
 	} // for c
-	return ret;
 }
-void check_for_dynamic_shadow_casters(vector<person_t> const &people, vect_cube_with_ix_t &ped_bcubes, vect_cube_with_ix_t const &moving_objs,
+void check_for_dynamic_shadow_casters(building_t const &b, vect_cube_with_ix_t &ped_bcubes, vect_cube_with_ix_t const &moving_objs,
 	cube_t const &light_bcube, point const &lpos, float dmax, bool has_stairs, vector3d const &xlate, bool check_people, unsigned &shadow_caster_hash)
 {
 	if (check_people && animate2) { // update shadow_caster_hash for moving people, but not for lamps, because their light points toward the floor
 		if (ped_bcubes.empty()) { // get all cubes on first light
-			for (person_t const &p : people) {
+			for (person_t const &p : b.interior->people) {
 				if (p.lying_down) continue; // people who are lying down don't cast dynamic shadows
 				// if this person is waiting and their location isn't changing,
 				// assume they have an idle animation playing and use the frame counter to make sure their shadows are updated each frame
@@ -2240,7 +2237,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				if (is_lamp || player_in_this_room || (player_in_attic && is_in_attic) ||
 					(lpos_rot.z > player_feet_zval && (check_floor_above || lpos_rot.z < (camera_bs.z + window_vspacing))))
 				{
-					//if (dl_sources.back().calc_pdu(0, 0, 0.0).sphere_visible_test(camera_bs, CAMERA_RADIUS)) {} // not really correct, and doesn't help much
+					//if (dl_sources.back().calc_pdu().sphere_visible_test(camera_bs, CAMERA_RADIUS)) {} // not really correct, and doesn't help much
 					// player shadow, based on head to feet Z-range; includes lamps (with no zval test)
 					force_smap_update   = 1; // always update, even if stationary; required to get correct shadows when player stands still and takes/moves objects
 					shadow_caster_hash ^= 0xdeadbeef; // update hash when player enters or leaves the light's area
@@ -2256,8 +2253,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				// use full light radius for attics since they're more open
 				float const dshadow_radius((is_in_attic ? 1.0 : (reduced_shadows ? RETAIL_SMAP_DSCALE : PERSON_INT_SMAP_DSCALE))*light_radius);
 				if (building_action_key) {force_smap_update = 1;} // toggling a door state or interacting with objects invalidates shadows in the building for that frame
-				check_for_dynamic_shadow_casters(interior->people, ped_bcubes, moving_objs, clipped_bc, lpos_rot,
-					dshadow_radius, stairs_light, xlate, (check_building_people && !is_lamp), shadow_caster_hash); // no people shadows for lam[s
+				check_for_dynamic_shadow_casters(*this, ped_bcubes, moving_objs, clipped_bc, lpos_rot, dshadow_radius,
+					stairs_light, xlate, (check_building_people && !is_lamp), shadow_caster_hash); // no people shadows for lam[s
 			}
 		}
 		if (!force_smap_update && interior->last_active_door_ix >= 0) { // check for door opening or closing; since this is player controlled, there should be at most one
@@ -2393,6 +2390,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 					corner_horiz_dist = 0.5*diag_sz; // calculate the radius
 				}
 				float const dp(light_dist/sqrt(light_dist*light_dist + corner_horiz_dist*corner_horiz_dist)), bwidth(0.5*(1.0 - dp));
+				vector3d const spotlight_dir(dir_always_vert ? -plus_z : -light_dir); // points either downward or away from the sun/moon
+				dl_sources.emplace_back(light_radius, lpos, lpos, color, 0, spotlight_dir, bwidth);
 				// check for dynamic shadow casters
 				bool force_smap_update(building_action_key); // update if a door is open or closed
 				unsigned shadow_caster_hash(0);
@@ -2402,14 +2401,12 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 					shadow_caster_hash ^= 0xdeadbeef; // update hash when player enters or leaves the light's area
 				}
 				if (!force_smap_update && ((camera_near_building && camera_bs.z > clipped_area.z1()) || camera_bs.z > z)) {
-					check_for_dynamic_shadow_casters(interior->people, ped_bcubes, moving_objs, clipped_area, lpos,
+					check_for_dynamic_shadow_casters(*this, ped_bcubes, moving_objs, clipped_area, lpos,
 						0.0, room_has_stairs, xlate, check_building_people, shadow_caster_hash); // dmax=0
 				}
 				hash_mix_point(lpos, shadow_caster_hash); // update when light (sun/moon) pos changes
 				bool const cache_shadows(!force_smap_update && sl.ix == shadow_caster_hash);
 				sl.ix = shadow_caster_hash; // store new hashval in the skylight for next frame
-				vector3d const spotlight_dir(dir_always_vert ? -plus_z : -light_dir); // points either downward or away from the sun/moon
-				dl_sources.emplace_back(light_radius, lpos, lpos, color, 0, spotlight_dir, bwidth);
 				assign_light_for_building_interior(dl_sources.back(), &sl, clipped_area, cache_shadows);
 			}
 			if (add_sky_lighting) { // add a weaker unshadowed vertical light using cur_ambient
