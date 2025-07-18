@@ -670,6 +670,9 @@ class building_indir_light_mgr_t {
 					base_num_rays *= 2; // more rays to reduce noise, since windows are large and few
 					surface_area  *= 0.5; // less indir light
 				}
+				else if (b.has_attic() && window.z1() >= b.get_attic_part().z2()) { // attic window
+					base_num_rays *= 8;
+				}
 			}
 			// light intensity scales with surface area, since incoming light is a constant per unit area (large windows = more light)
 			weight *= surface_area/0.0016f; // a fraction the surface area weight of lights
