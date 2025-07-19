@@ -2822,8 +2822,8 @@ private:
 	void add_prison_jail_cell_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	cube_t add_jail_cell_bars_and_door(cube_t const &cell, unsigned room_id, float tot_light_amt, bool dim, bool dir, bool hinge_side,
 		colorRGBA const &bar_color, float bars_hthick, float bars_depth_pos);
-	void populate_jail_cell(rand_gen_t &rgen, cube_t const &cell, float zval, unsigned room_id, float tot_light_amt, bool dim, bool dir, bool bed_side,
-		bool sink_on_back_wall, bool is_lit, float bars_hthick, float bars_depth_pos, colorRGBA const &light_color, light_ix_assign_t &light_ix_assign);
+	void populate_jail_cell(rand_gen_t &rgen, cube_t const &cell, float zval, unsigned room_id, float tot_light_amt,
+		bool dim, bool dir, bool bed_side, bool sink_on_back_wall, bool is_lit, float bars_hthick, float bars_depth_pos);
 	bool divide_part_into_jail_cells(cube_t const &part, unsigned part_id, rand_gen_t &rgen, bool try_short_dim=0);
 	void add_garage_objs     (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
 	void add_floor_clutter_objs(rand_gen_t  rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);

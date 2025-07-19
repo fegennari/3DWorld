@@ -1992,7 +1992,8 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	for (unsigned dim = 0; dim < 2; ++dim) {
 		for (auto w = interior->walls[dim].begin(); w != interior->walls[dim].end(); ++w) {
 			bool const in_basement(w->zc() < ground_floor_z1);
-			if (!in_basement && is_parking()) continue; // skip trim for parking structures
+			if (!in_basement && is_parking())  continue; // skip trim for parking structures
+			if (w->dz() < 0.5*window_vspacing) continue; // short wall segment from tall room extension, no trim
 			float floor_spacing(window_vspacing), ref_z1(bcube.z1());
 			
 			if (in_basement && !get_basement().intersects_no_adj(*w)) {
@@ -2020,7 +2021,6 @@ void building_t::add_wall_and_door_trim() { // and window trim
 					}
 				} // for W
 			}
-			if (w->dz() < 0.5*window_vspacing) continue; // short wall segment from tall room extension, no trim
 			unsigned const num_floors(max(1U, (unsigned)calc_num_floors(*w, floor_spacing, floor_thickness))); // at least one (to include mall bathrooms and hallways)
 			// snap to the nearest floor to handle short walls due to cut out stairs
 			float const ground_wall_z1(ref_z1 + fc_thick);
@@ -2039,6 +2039,15 @@ void building_t::add_wall_and_door_trim() { // and window trim
 						if (fabs(w->d[e.dim][dir] - clip_edge) < wall_thickness) {add_end_trim[dir] = 1;}
 					}
 				} // for e
+			}
+			if (is_prison()) { // add trim to the ends of jail cell walls
+				float const wall_center(w->get_center_dim(!dim));
+
+				for (cube_t const &part : parts) {
+					if (!part.contains_cube(*w)) continue;
+					add_end_trim[wall_center < part.get_center_dim(!dim)] = 1; // add trim to the end inside the part
+					break; // done
+				}
 			}
 			for (unsigned f = 0; f < num_floors; ++f, z += floor_spacing) {
 				if (z+trim_height < w->z1() || z > w->z2()) continue; // above or below wall; applies to short/clipped walls

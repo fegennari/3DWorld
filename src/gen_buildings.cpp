@@ -2210,8 +2210,10 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 			bool const in_basement(i->z1() < ground_floor_z1), in_ext_basement(in_basement && i >= (wv.begin() + interior->extb_walls_start[dim]));
 			bool const in_mall_stores(in_ext_basement && has_mall() && i < (wv.begin() + interior->mall_hall_walls_start[dim]));
 			
-			// check rooms; skip this for above ground complex floorplans because they may have unexpected wall ends visible at non-rectangular rooms
-			if (!has_complex_floorplan || in_basement) {
+			// check rooms to disable wall faces;
+			// skip for above ground complex floorplans because they may have unexpected wall ends visible at non-rectangular rooms;
+			// skip prisons except for extended basements because cell walls end at hallways
+			if ((!has_complex_floorplan || in_basement) && (!is_prison() || in_ext_basement)) {
 				unsigned const extb_room_start((interior->ext_basement_hallway_room_id >= 0) ? interior->ext_basement_hallway_room_id : interior->rooms.size());
 				unsigned const rooms_start(in_ext_basement ? extb_room_start : 0);
 				unsigned const rooms_end  (in_ext_basement ? interior->rooms.size() : extb_room_start);

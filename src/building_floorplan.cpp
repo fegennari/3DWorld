@@ -1210,6 +1210,16 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 						if (ds.z1() < cand.z2() && ds.z2() > cand.z1() && ds.get_open_door_path_bcube().intersects(cand)) {pos_valid = 0; break;}
 					}
 					if (!pos_valid) continue;
+
+					if (is_prison()) { // check if too close to jail cells
+						cube_t cand_exp(cand);
+						cand_exp.expand_in_dim(d, doorway_width); // clear a path for the door
+
+						for (room_t const &r : rooms) {
+							if (r.is_nested() && r.intersects(cand_exp)) {pos_valid = 0; break;}
+						}
+						if (!pos_valid) continue;
+					}
 					was_split = 1;
 
 					// Note: this code doesn't work for multiple reasons but is left in for reference in case I figure this out later

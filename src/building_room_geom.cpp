@@ -6365,7 +6365,7 @@ void building_room_geom_t::add_store_gate(cube_t const &c, bool dim, float open_
 }
 
 void building_room_geom_t::add_jail_bars(room_object_t const &c) {
-	bool const rusty(c.room_id & 1); // 50% chance
+	bool const rusty(c.item_flags & 1); // 50% chance
 	float const height(c.dz()), tscale(4.0/height);
 	rgeom_mat_t &mat(rusty ? get_material(tid_nm_pair_t(get_rust_met_tid(), tscale, 1), 1, 0, 1) : get_scratched_metal_material(tscale, 1, 0, 1)); // shadowed, small
 	float const thickness(c.get_depth()), vbar_hthick(0.25*thickness), hbar_hthick(0.15*thickness);
