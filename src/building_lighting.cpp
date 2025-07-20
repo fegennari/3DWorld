@@ -263,6 +263,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 
 			if (!is_house && in_ext_basement) { // office building extended basement, backrooms, or mall
 				if (is_inside_mall_stores(i->get_cube_center())) {color = interior->mall_info->mall_wall_color;}
+				else if (has_backrooms_texture()) {color = texture_color(interior->backrooms_tid);} // custom backrooms texture
 				else {color = concrete_color;} // extended basement, or backrooms exterior walls
 			}
 			cc.emplace_back(*i, color);

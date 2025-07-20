@@ -1374,10 +1374,9 @@ colorRGBA building_t::get_door_handle_color() const {
 void building_room_geom_t::create_door_vbos(building_t const &building) {
 	//highres_timer_t timer("Gen Room Geom Doors"); // 0.1ms
 	vect_door_t const &doors(building.interior->doors);
-	uint8_t const door_type(building.is_residential() ? (uint8_t)tquad_with_ix_t::TYPE_HDOOR : (uint8_t)tquad_with_ix_t::TYPE_ODOOR);
 	bool const have_door_handle_model(global_building_params.add_door_handles && building_obj_model_loader.is_model_valid(OBJ_MODEL_DOOR_HANDLE));
 	colorRGBA const handle_color(global_building_params.add_door_handles ? building.get_door_handle_color() : WHITE);
-	bool const residential(building.is_residential());
+	bool const residential(building.is_residential()), has_br_tex(building.has_backrooms_texture());
 	door_handles.clear();
 
 	for (door_t const &d : doors) { // interior doors; opens_out=0, exterior=0
@@ -1387,6 +1386,9 @@ void building_room_geom_t::create_door_vbos(building_t const &building) {
 			add_jail_cell_door(d, drot);
 		}
 		else { // normal interior door
+			bool const house_door(building.is_residential() ||
+				(d.z1() < building.ground_floor_z1 && has_br_tex && !building.get_basement().contains_cube(d))); // backrooms uses house door
+			uint8_t const door_type(house_door ? (uint8_t)tquad_with_ix_t::TYPE_HDOOR : (uint8_t)tquad_with_ix_t::TYPE_ODOOR);
 			building.add_door_verts(d, *this, drot, door_type, d.dim, d.open_dir, d.open_amt, 0, 0,
 				d.on_stairs, d.hinge_side, d.use_min_open_amt(), d.get_mult_floor()); // opens_out=0, exterior=0
 		}

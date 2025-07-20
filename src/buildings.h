@@ -17,7 +17,7 @@ bool const ENABLE_GLASS_FLOOR_REF  = 1;
 bool const DRAW_CITY_INT_WINDOWS   = 1; // requires having different window x/y size/space/offset values for interior vs. exterior windows
 bool const ADD_WALKWAY_EXT_DOORS   = 1; // requires DRAW_WALKWAY_INTERIORS=1 in gen_buildings.cpp
 unsigned const MAX_CYLIN_SIDES     = 36;
-unsigned const MAX_DRAW_BLOCKS     = 8; // for building interiors only; currently have floor, ceiling, walls, and doors
+unsigned const MAX_DRAW_BLOCKS     = 10; // for building interiors only; currently have floor, ceiling, walls, and doors with a few different materials
 unsigned const NUM_STAIRS_PER_FLOOR= 12;
 unsigned const NUM_STAIRS_PER_FLOOR_U = 16;
 unsigned const NUM_STAIRS_PER_FLOOR_L = 12;
@@ -1988,7 +1988,7 @@ struct building_interior_t {
 	cube_t basement_ext_bcube, elevator_equip_room, ps_bathroom;
 	draw_range_t draw_range;
 	unsigned extb_walls_start[2]={}, mall_hall_walls_start[2]={};
-	unsigned gen_room_details_pass=0, rgen_seed_ix=0;
+	unsigned gen_room_details_pass=0, rgen_seed_ix=0, backrooms_tid=0;
 	int garage_room=-1, ext_basement_hallway_room_id=-1, ext_basement_door_stack_ix=-1, last_active_door_ix=-1, security_room_ix=-1;
 	uint8_t furnace_type=FTYPE_NONE, attic_type=ATTIC_TYPE_RAFTERS;
 	bool door_state_updated=0, is_unconnected=0, ignore_ramp_placement=0, placed_people=0, elevators_disabled=0, attic_access_open=0, has_backrooms=0;
@@ -2147,6 +2147,7 @@ struct building_t : public building_geom_t {
 	bool has_mall       () const {return (interior && interior->has_mall());}
 	bool has_mall_ent_stairs() const {return (interior && interior->has_mall_ent_stairs());}
 	bool has_mall_skylight  () const {return (has_mall() && !interior->mall_info->skylights.empty());}
+	bool has_backrooms_texture() const {return (interior && interior->has_backrooms && interior->backrooms_tid > 0);}
 	bool is_office_bldg () const {return (btype == BTYPE_OFFICE    );}
 	bool is_apartment   () const {return (btype == BTYPE_APARTMENT );}
 	bool is_hotel       () const {return (btype == BTYPE_HOTEL     );}

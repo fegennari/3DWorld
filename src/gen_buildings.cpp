@@ -198,7 +198,7 @@ void rotate_verts_range(building_t const &b, vect_vnctcc_t &verts, unsigned vert
 class building_texture_mgr_t {
 	int window_tid=-1, hdoor_tid=-1, odoor_tid=-1, bdoor_tid=-1, bdoor2_tid=-1, gdoor_tid=-1, mdoor_tid=-1, ac_unit_tid1=-1, ac_unit_tid2=-1, bath_wind_tid=-1;
 	int helipad_tid=-1,	solarp_tid=-1, concrete_tid=-1, met_plate_tid=-1, mplate_nm_tid=-1, met_roof_tid=-1, tile_floor_tid=-1, tile_floor_nm_tid=-1, duct_tid=-1;
-	int vent_tid=-1, marble_floor_tid=-1, granite_floor_tid=-1, corr_metal_tid=-1, corr_metal_nm_tid=-1;
+	int vent_tid=-1, marble_floor_tid=-1, granite_floor_tid=-1, corr_metal_tid=-1, corr_metal_nm_tid=-1, br_wall_tid=-1, br_floor_tid=-1;
 
 	int ensure_tid(int &tid, const char *name, bool is_normal_map=0, bool invert_y=0) {
 		if (tid < 0) {tid = get_texture_by_name(name, is_normal_map, invert_y);}
@@ -230,6 +230,9 @@ public:
 	int get_granite_floor_tid() {return ensure_tid(granite_floor_tid, "interiors/granite_floor.jpg");}
 	int get_corr_metal_tid   () {return ensure_tid(corr_metal_tid,    "buildings/corrugated_metal.tif");}
 	int get_corr_metal_nm_tid() {return ensure_tid(corr_metal_nm_tid, "buildings/corrugated_metal_normal.tif");}
+	// Note: backrooms_wall2.jpg and backrooms_wall3.jpg work as well, but they're lower resolution and lower contrast
+	int get_backrooms_wall_tid () {return ensure_tid(br_wall_tid,  "interiors/backrooms_wall.jpg");}
+	int get_backrooms_floor_tid() {return ensure_tid(br_floor_tid, "interiors/backrooms_carpet.jpg");}
 
 	bool check_windows_texture() {
 		if (!global_building_params.windows_enabled()) return 0;
@@ -256,6 +259,11 @@ int get_ac_unit_tid   (unsigned ix) {return ((ix & 1) ? building_texture_mgr.get
 void set_tile_floor_texture() {
 	select_texture(building_texture_mgr.get_tile_floor_tid   ());
 	select_texture(building_texture_mgr.get_tile_floor_nm_tid(), 5);
+}
+unsigned choose_backrooms_wall_tex(rand_gen_t &rgen) {
+	if (rgen.rand_bool()) return 0; // use default concrete texture
+	int const tid(building_texture_mgr.get_backrooms_wall_tid()); // use backrooms texture(s)
+	return ((tid < 0) ? 0 : tid);
 }
 
 
@@ -311,6 +319,8 @@ public:
 		register_tid(building_texture_mgr.get_granite_floor_tid());
 		register_tid(building_texture_mgr.get_corr_metal_tid());
 		register_tid(building_texture_mgr.get_corr_metal_nm_tid());
+		register_tid(building_texture_mgr.get_backrooms_wall_tid());
+		register_tid(building_texture_mgr.get_backrooms_floor_tid());
 		register_tid(get_plywood_tid()); // for attics
 		register_tid(FONT_TEXTURE_ID); // for roof signs
 		for (unsigned i = 0; i < num_special_tids; ++i) {register_tid(special_tids[i]);}
@@ -1684,6 +1694,7 @@ colorRGBA building_t::get_floor_tex_and_color(cube_t const &floor_cube, tid_nm_p
 		bool const in_ext_basement(in_basement && (!get_basement().contains_cube_xy(floor_cube) || floor_cube.z2() < bcube.z1()));
 		bool const retail_or_mall((in_ext_basement && is_inside_mall_stores(floor_cube.get_cube_center())) || (has_retail() && floor_cube.z1() == ground_floor_z1));
 		if (retail_or_mall) {tex = get_tile_floor_texture();}
+		else if (in_ext_basement && has_backrooms_texture()) {tex = tid_nm_pair_t(building_texture_mgr.get_backrooms_floor_tid(), 32.0);}
 		else if (in_basement && (has_parking_garage || in_ext_basement || is_prison())) {tex = get_concrete_texture();} // parking garage/ext basement/prison is concrete
 		else if (is_industrial ()) {tex = get_concrete_texture  ();} // industrial floor is always concrete; could also use a dark tile texture
 		else if (has_tile_floor()) {tex = get_tile_floor_texture();}
@@ -1701,7 +1712,8 @@ colorRGBA building_t::get_ceil_tex_and_color(cube_t const &ceil_cube, tid_nm_pai
 		return (is_house ? mat.house_floor_color : mat.floor_color);
 	}
 	if (!is_house && in_ext_basement && !is_inside_mall_stores(ceil_cube.get_cube_center())) { // use concrete for office building ext basements except for malls
-		tex = get_concrete_texture();
+		if (has_backrooms_texture()) {tex = mat.ceil_tex;} // office building ceiling texture
+		else {tex = get_concrete_texture();}
 		return WHITE;
 	}
 	if (!in_basement && is_parking()) {
@@ -1728,6 +1740,7 @@ colorRGBA building_t::get_int_wall_tex_and_color(bool in_basement, bool in_ext_b
 	if (!is_house && in_ext_basement) { // office building extended basement, backrooms, or mall
 		// mall stores have wall texture with custom color, but back hallways are concrete; should bathrooms be white?
 		if (in_mall_stores) {tex = mat.wall_tex; color = interior->mall_info->mall_wall_color;}
+		else if (has_backrooms_texture()) {tex = tid_nm_pair_t(interior->backrooms_tid, 0.5*mat.wall_tex.tscale_x);} // custom backrooms texture; why 0.5x?
 		else {tex = get_concrete_texture();} // extended basement, or backrooms exterior walls
 	}
 	else if (is_industrial() && !in_basement) {tex = get_concrete_texture();} // industrial interior walls

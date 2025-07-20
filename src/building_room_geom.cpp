@@ -2688,8 +2688,12 @@ void building_room_geom_t::add_downspout(room_object_t const &c) {
 }
 
 bool is_wall_or_pillar_concrete(room_object_t const &c) {
-	// backroom pillars and upper (ADJ_HI) sections of retail room pillars are concrete; other objects are plaster/stucco
-	return (c.flags & (RO_FLAG_BACKROOM | RO_FLAG_ADJ_HI));
+	// backroom and parking garage pillars, and upper (ADJ_HI) sections of retail room pillars are concrete; other objects are plaster/stucco
+	return (c.type == TYPE_PG_PILLAR || (c.flags & (RO_FLAG_BACKROOM | RO_FLAG_ADJ_HI)));
+}
+tid_nm_pair_t get_basement_texture(room_object_t const &c, tid_nm_pair_t const &wall_tex) {
+	if (c.item_flags > 0) {return tid_nm_pair_t(c.item_flags, wall_tex.tscale_x, 1);} // item_flags holds custom texture ID
+	return (is_wall_or_pillar_concrete(c) ? tid_nm_pair_t(get_concrete_tid(), wall_tex.tscale_x, 1) : get_scaled_wall_tex(wall_tex));
 }
 void building_room_geom_t::add_stairs_wall(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex) {
 	unsigned const skip_faces(c.is_hanging() ? 0 : EF_Z1); // skip bottom, unless hanging (non-exit floor)
@@ -2698,8 +2702,8 @@ void building_room_geom_t::add_stairs_wall(room_object_t const &c, vector3d cons
 void building_room_geom_t::add_wall_or_pillar(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex) {
 	bool const draw_top(c.flags & RO_FLAG_ADJ_TOP);
 	unsigned const small((c.type == TYPE_PG_WALL) ? 2 : 0); // small=2/detail for parking garage or backrooms wall or pillar
-	if (c.type == TYPE_OFF_PILLAR && c.in_mall()) {} // special case for mall pillar?
-	tid_nm_pair_t const tex(is_wall_or_pillar_concrete(c) ? tid_nm_pair_t(get_concrete_tid(), wall_tex.tscale_x, 1) : get_scaled_wall_tex(wall_tex));
+	//if (c.type == TYPE_OFF_PILLAR && c.in_mall()) {} // special case for mall pillar?
+	tid_nm_pair_t const tex(get_basement_texture(c, wall_tex));
 	rgeom_mat_t &mat(get_material(tex, 1, 0, small)); // shadowed, no color atten, sides only unless draw_top
 	
 	if (c.shape == SHAPE_CUBE) {
@@ -2710,14 +2714,14 @@ void building_room_geom_t::add_wall_or_pillar(room_object_t const &c, vector3d c
 			if (ext_faces > 0) {get_material(tex, 0, 0, 0, 0, 1).add_cube_to_verts(c, c.color, tex_origin, ~ext_faces);} // unshadowed; exterior=1
 			skip_faces |= ext_faces;
 		}
-		mat.add_cube_to_verts(c, c.color, tex_origin, skip_faces);
+		mat.add_cube_to_verts(c, c.color, tex_origin, skip_faces, 0, 0, 0, 0, 1); // z_dim_uses_ty=1
 	}
 	else if (c.shape == SHAPE_CYLIN) {mat.add_vcylin_to_verts_tscale(c, c.color, 0, draw_top);}
 	else {assert(0);} // unsupported shape
 }
 void building_room_geom_t::add_basement_pillar(room_object_t const &c, tid_nm_pair_t const &wall_tex) {
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_concrete_tid(), wall_tex.tscale_x, 1), 1, 0, 2)); // small=2/detail, shadowed, no color atten
-	if      (c.shape == SHAPE_CUBE ) {mat.add_cube_to_verts  (c, c.color, all_zeros, EF_Z12);}
+	rgeom_mat_t &mat(get_material(get_basement_texture(c, wall_tex), 1, 0, 2)); // small=2/detail, shadowed, no color atten
+	if      (c.shape == SHAPE_CUBE ) {mat.add_cube_to_verts  (c, c.color, all_zeros, EF_Z12, 0, 0, 0, 0, 1);} // z_dim_uses_ty=1
 	else if (c.shape == SHAPE_CYLIN) {mat.add_vcylin_to_verts_tscale(c, c.color, 0, 0);} // skip top and bottom
 	else {assert(0);} // unsupported shape
 }
@@ -6676,8 +6680,8 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_CHAIR:    return get_chair_color(*this);
 	case TYPE_STAIR:    return (STAIRS_COLOR_TOP*0.5 + STAIRS_COLOR_BOT*0.5).modulate_with(texture_color(MARBLE_TEX));
 	case TYPE_STAIR_WALL: return texture_color(STUCCO_TEX);
-	case TYPE_PG_WALL: case TYPE_OFF_PILLAR: return texture_color(is_wall_or_pillar_concrete(*this) ? get_concrete_tid() : STUCCO_TEX);
-	case TYPE_PG_PILLAR:  return texture_color(get_concrete_tid());
+	case TYPE_PG_WALL: case TYPE_OFF_PILLAR: return texture_color((item_flags > 0) ? item_flags : (is_wall_or_pillar_concrete(*this) ? get_concrete_tid() : STUCCO_TEX));
+	case TYPE_PG_PILLAR:  return texture_color((item_flags > 0) ? item_flags : get_concrete_tid());
 	case TYPE_PG_BEAM:    return texture_color(get_concrete_tid());
 	case TYPE_SHELF_WALL: return texture_color(get_shelf_wall_tid(*this));
 	case TYPE_PARK_SPACE: return LT_GRAY; // texture_color(...)?

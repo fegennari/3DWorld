@@ -13,6 +13,7 @@ extern building_t const *player_building;
 bool using_hmap_with_detail();
 float get_ped_coll_radius();
 bool cube_int_underground_obj(cube_t const &c);
+unsigned choose_backrooms_wall_tex(rand_gen_t &rgen);
 
 
 bool building_t::extend_underground_basement(rand_gen_t rgen) {
@@ -205,6 +206,7 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 			else { // backrooms, possibly flooded
 				unsigned const num_floors(setup_multi_floor_room(hallway, Door, wall_dim, wall_dir, rgen));
 				interior->has_backrooms = 1;
+				interior->backrooms_tid = choose_backrooms_wall_tex(rgen); // may be 0/none
 
 				if (num_floors > 1) { // lowest level of multilevel rooms has water; no water if there's a single floor
 					float wmin(global_building_params.basement_water_level_min), wmax(global_building_params.basement_water_level_max);

@@ -32,3 +32,4 @@ Wheelchair: https://sketchfab.com/3d-models/wheelchair-f0ef4adc17ee4929b40e894c6
 Stretcher: https://sketchfab.com/3d-models/gurney-medevac-patient-stretcher-rescue-litter-40c85d5457a144d3b5dc1b328a2425a3
 Apple: https://sketchfab.com/3d-models/delicious-red-apple-dc5a0c0c439942d58d038a10d7064c91
 Apple: https://sketchfab.com/3d-models/apple-152ca55383b2491e816f5ed5ac127677
+Backrooms wall texture: https://sketchfab.com/3d-models/the-backrooms-wallpaper-texture-f7d2757432f94a2bb366c9a41503647b
