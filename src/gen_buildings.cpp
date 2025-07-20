@@ -1721,6 +1721,19 @@ colorRGBA building_t::get_ceil_tex_and_color(cube_t const &ceil_cube, tid_nm_pai
 	tex =  (residential ? mat.house_ceil_tex   : mat.ceil_tex  );
 	return (residential ? mat.house_ceil_color : mat.ceil_color);
 }
+colorRGBA building_t::get_int_wall_tex_and_color(bool in_basement, bool in_ext_basement, bool in_mall_stores, tid_nm_pair_t &tex) const {
+	building_mat_t const &mat(get_material());
+	colorRGBA color(in_basement ? WHITE : wall_color); // basement walls are always white
+
+	if (!is_house && in_ext_basement) { // office building extended basement, backrooms, or mall
+		// mall stores have wall texture with custom color, but back hallways are concrete; should bathrooms be white?
+		if (in_mall_stores) {tex = mat.wall_tex; color = interior->mall_info->mall_wall_color;}
+		else {tex = get_concrete_texture();} // extended basement, or backrooms exterior walls
+	}
+	else if (is_industrial() && !in_basement) {tex = get_concrete_texture();} // industrial interior walls
+	else {tex = mat.wall_tex;}
+	return color;
+}
 
 void draw_building_ext_door(building_draw_t &bdraw, tquad_with_ix_t const &door, building_t const &b) {
 	colorRGBA const &dcolor((door.type == tquad_with_ix_t::TYPE_GDOOR) ? WHITE : b.door_color); // garage doors are always white
@@ -2254,16 +2267,8 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 				} // for p
 			}
 			if (check_skylight_intersection(*i)) {dim_mask |= 4;} // draw top surface if under skylight
-			colorRGBA color(in_basement ? WHITE : wall_color); // basement walls are always white
 			tid_nm_pair_t tex;
-			
-			if (!is_house && in_ext_basement) { // office building extended basement, backrooms, or mall
-				// mall stores have wall texture with custom color, but back hallways are concrete; should bathrooms be white?
-				if (in_mall_stores) {tex = mat.wall_tex; color = mall_wall_color;}
-				else {tex = get_concrete_texture();} // extended basement
-			}
-			else if (is_industrial() && i->z1() >= ground_floor_z1) {tex = get_concrete_texture();} // industrial interior walls
-			else {tex = mat.wall_tex;}
+			colorRGBA const color(get_int_wall_tex_and_color(in_basement, in_ext_basement, in_mall_stores, tex));
 			bdraw.add_section(*this, 0, *i, tex, color, dim_mask, 1, 0, 1, 0); // no AO; X and/or Y dims only, skip bottom, only draw top if under skylight
 		} // for i
 	} // for dim

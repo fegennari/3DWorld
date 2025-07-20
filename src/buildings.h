@@ -2355,6 +2355,7 @@ struct building_t : public building_geom_t {
 	tid_nm_pair_t get_tile_floor_texture       () const;
 	colorRGBA get_floor_tex_and_color(cube_t const &floor_cube, tid_nm_pair_t &tex) const;
 	colorRGBA get_ceil_tex_and_color (cube_t const &ceil_cube,  tid_nm_pair_t &tex) const;
+	colorRGBA get_int_wall_tex_and_color(bool in_basement, bool in_ext_basement, bool in_mall_stores, tid_nm_pair_t &tex) const;
 	colorRGBA const &get_trim_color() const {return (is_house ? WHITE : DK_GRAY);}
 	bool has_tile_floor() const;
 	void get_all_drawn_exterior_verts(building_draw_t &bdraw);

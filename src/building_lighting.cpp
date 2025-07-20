@@ -257,12 +257,13 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 	for (unsigned d = 0; d < 2; ++d) {
 		for (auto i = interior->walls[d].begin(); i != interior->walls[d].end(); ++i) {
 			if (!i->intersects(ext_bcube)) continue;
+			// Note: similar to get_int_wall_tex_and_color(), but uses concrete_color rather than texture_color(concrete_tid) as an optimization
 			bool const in_basement(i->z1() < ground_floor_z1), in_ext_basement(in_basement && i >= (interior->walls[d].begin() + interior->extb_walls_start[d]));
 			colorRGBA color(in_basement ? WHITE : (is_industrial() ? concrete_color : wall_color)); // basement walls are always white
 
 			if (!is_house && in_ext_basement) { // office building extended basement, backrooms, or mall
 				if (is_inside_mall_stores(i->get_cube_center())) {color = interior->mall_info->mall_wall_color;}
-				else {color = concrete_color;} // extended basement
+				else {color = concrete_color;} // extended basement, or backrooms exterior walls
 			}
 			cc.emplace_back(*i, color);
 		} // for i
