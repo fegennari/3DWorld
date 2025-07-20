@@ -6,6 +6,8 @@
 #include "nav_grid.h"
 #include "profiler.h"
 #include <fstream>
+#include <unordered_map>
+#include <unordered_set>
 
 float const CROSS_SPEED_MULT     = 1.8; // extra speed multiplier when crossing the road
 float const CROSS_WAIT_TIME      = 60.0; // in seconds
@@ -42,9 +44,67 @@ point get_player_pos_bs       () {return (get_camera_pos() - get_camera_coord_sp
 float get_player_eye_height   () {return (CAMERA_RADIUS + camera_zh);}
 
 
+// from Programming Chaos: https://www.youtube.com/watch?v=T_Zux9X-xYw&t=1916s
+template<unsigned order> class markov_chain_name_gen_t {
+	size_t min_len=1000, max_len=0;
+	string init_prefix;
+	unordered_set<string> real_names;
+	unordered_map<string, string> markov;
+public:
+	markov_chain_name_gen_t() : init_prefix(order, '_') {}
+
+	void add_names(vector<string> const &names) {
+		for (string const &n : names) {
+			assert(!n.empty());
+			real_names.insert(n);
+			string name(n);
+			name[0] = tolower(name[0]); // lowercase capital letter
+			name = init_prefix + name + "*"; // add terminator
+
+			for (unsigned i = 0; i < name.size()-order; ++i) {
+				string const prefix(name.begin()+i, name.begin()+i+order);
+				markov[prefix].push_back(name[i+order]);
+			}
+			min_eq(min_len, n.size());
+			max_eq(max_len, n.size());
+		} // for n
+		max_eq(min_len, size_t(3)); // no 2-character names
+	}
+	string gen_name_inner(rand_gen_t &rgen) const {
+		string name, prefix(init_prefix);
+
+		while (name.size() < max_len) { // limit generated name length to the max of the input strings
+			auto it(markov.find(prefix));
+			if (it == markov.end()) break; // no cands
+			string const &cands(it->second);
+			assert(!cands.empty());
+			unsigned ix((cands.size() == 1) ? 0 : (rgen.rand() % cands.size()));
+			char const next(cands[ix]);
+			if (next == '*') break; // end of name
+			name  += next;
+			prefix = prefix.substr(1);
+			prefix.push_back(next);
+		} // end while
+		assert(!name.empty());
+		name[0] = toupper(name[0]); // capitalize
+		return name;
+	}
+	string gen_name(rand_gen_t &rgen) const {
+		string name;
+
+		for (unsigned n = 0; n < 10; ++n) { // 10 attempts to generate an acceptable name
+			name = gen_name_inner(rgen);
+			if (name.size() >= min_len && real_names.find(name) == real_names.end()) break; // valid name
+		}
+		//cout << name << endl; // TESTING
+		return name;
+	}
+};
+
 class person_name_gen_t {
 	bool loaded = 0;
 	vector<string> male_names, female_names;
+	markov_chain_name_gen_t<2> male_gen, female_gen; // order=2
 
 	static void load_from_file(string const &fn, vector<string> &names) {
 		std::ifstream in(fn.c_str());
@@ -59,6 +119,8 @@ class person_name_gen_t {
 		if (loaded) return;
 		load_from_file("text_data/male_names.txt",   male_names  );
 		load_from_file("text_data/female_names.txt", female_names);
+		male_gen  .add_names(male_names  );
+		female_gen.add_names(female_names);
 		loaded = 1; // mark as loaded whether or not reading succeeds
 	}
 public:
@@ -71,8 +133,12 @@ public:
 
 		if (inc_first) {
 			ensure_names_loaded();
-			vector<string> const &names(is_female ? female_names : male_names);
-			if (!names.empty()) {name += names[rgen.rand()%names.size()];}
+
+			if (rgen.rand_bool()) {name += (is_female ? female_gen : male_gen).gen_name(rgen);} // generate a name with the Markov model
+			else { // select a real first name
+				vector<string> const &names(is_female ? female_names : male_names);
+				if (!names.empty()) {name += names[rgen.rand()%names.size()];}
+			}
 		}
 		if (inc_last) {
 			if (!name.empty()) {name += " ";} // add a space between first and last names
