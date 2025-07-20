@@ -348,7 +348,7 @@ void building_t::populate_jail_cell(rand_gen_t &rgen, cube_t const &cell, float 
 		set_wall_width(toilet, center_pos, 0.5*width, dim);
 		toilet.d[!dim][!dir] = ts_space.d[!dim][dir] - dsign*length;
 		objs.emplace_back(toilet, TYPE_TOILET, room_id, !dim, !dir, 0, tot_light_amt);
-		add_bathroom_plumbing(objs.back());
+		if (zval < ground_floor_z1) {add_bathroom_plumbing(objs.back());} // only for basement toilets; above ground toilets may be near a window
 		float const tp_zval(zval + 0.7*height), tp_length(0.18*height);
 
 		if (sink_on_back_wall) { // on the back wall, not on bars
