@@ -3248,6 +3248,7 @@ bool is_val_inside_window(cube_t const &c, bool dim, float val, float window_spa
 bool get_fire_ext_height_and_radius(float window_vspacing, float &height, float &radius);
 point get_warning_light_src_pos(room_object_t const &c);
 void offset_hanging_tv(room_object_t &obj);
+float shift_val_to_not_intersect_window(cube_t const &c, float val, float hspace, float window_border, bool dim, int shift_edges_mode=0);
 template<typename T> void subtract_cube_from_cube(T const &c, cube_t const &s, vector<T> &out, bool clear_out=0);
 template<typename T> void subtract_cube_from_cube_inplace(cube_t const &s, vector<T> &cubes, unsigned &ix, unsigned &iter_end);
 template<typename T> void subtract_cubes_from_cube(cube_t const &c, vector<T> const &sub, vect_cube_t &out, vect_cube_t &out2, int zval_mode=0);

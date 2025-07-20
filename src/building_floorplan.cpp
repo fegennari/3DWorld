@@ -159,7 +159,7 @@ bool is_val_inside_window(cube_t const &c, bool dim, float val, float window_spa
 	return (uv > window_border && uv < 1.0f-window_border);
 }
 // shift_edges_mode: 0=normal, 1=opposite dir, 2=none
-float shift_val_to_not_intersect_window(cube_t const &c, float val, float hspace, float window_border, bool dim, int shift_edges_mode=0) {
+float shift_val_to_not_intersect_window(cube_t const &c, float val, float hspace, float window_border, bool dim, int shift_edges_mode) {
 	if (shift_edges_mode == 2) return val; // no shift
 	window_border *= 0.9; // adjust based on window frame so that wall doesn't end right at the edge
 	float const uv(fract((val - c.d[dim][0])/hspace));

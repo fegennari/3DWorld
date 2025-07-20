@@ -2828,7 +2828,7 @@ void building_t::add_window_coverings(cube_t const &window, bool dim, bool dir) 
 	// add blinds to some windows based on the containing room type for this floor
 	bool is_split(0);
 	int const room_id(get_room_id_for_window(window, dim, dir, is_split));
-	if (is_split) return; // window split across multiple rooms - how do we handle this? for now skip it
+	if (is_split && !is_prison()) return; // window split across multiple rooms - how do we handle this? for now skip it, but ignore for prison jail cells
 	unsigned floor_ix(0);
 
 	switch (get_room_type_and_floor(room_id, window.zc(), floor_ix)) {
