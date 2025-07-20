@@ -12,7 +12,7 @@ extern object_model_loader_t building_obj_model_loader; // for vent fans
 car_t car_from_parking_space(room_object_t const &o);
 void subtract_cube_from_floor_ceil(cube_t const &c, vect_cube_t &fs);
 colorRGBA get_light_color_temp_range(float tmin, float tmax, rand_gen_t &rgen);
-void set_light_xy(cube_t &light, point const &center, float light_size, bool light_dim, room_obj_shape light_shape);
+void set_light_xy(cube_t &light, point const &center, float light_size, bool light_dim, room_obj_shape light_shape, bool make_square);
 
 
 bool enable_parked_cars() {return (city_params.num_cars > 0 && !city_params.car_model_files.empty());}
@@ -485,7 +485,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 				// add a ceiling light; do we need a light switch as well?
 				float const light_size(0.02*(sub_room.dx() + sub_room.dy()));
 				cube_t light;
-				set_light_xy(light, sub_room.get_cube_center(), light_size, !dim, SHAPE_CUBE);
+				set_light_xy(light, sub_room.get_cube_center(), light_size, !dim, SHAPE_CUBE, 0); // make_square=0
 				bool const recessed(fabs(light.d[dim][dir] - door.d[dim][!dir]) < door_width);
 				float const light_dz((recessed ? 0.01 : 0.025)*window_vspacing);
 				set_cube_zvals(light, (ceil_zval - light_dz), ceil_zval);

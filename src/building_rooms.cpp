@@ -111,9 +111,12 @@ void expand_to_nonzero_area(cube_t &c, float exp_amt, bool dim) {
 		exp_amt *= 2.0;
 	}
 }
-void set_light_xy(cube_t &light, point const &center, float light_size, bool light_dim, room_obj_shape light_shape) {
+void set_light_xy(cube_t &light, point const &center, float light_size, bool light_dim, room_obj_shape light_shape, bool make_square) {
 	for (unsigned dim = 0; dim < 2; ++dim) {
-		float const sz(((light_shape == SHAPE_CYLIN || light_shape == SHAPE_SPHERE) ? 1.6 : ((bool(dim) == light_dim) ? 2.2 : 1.0))*light_size);
+		float sz(light_size);
+		if (light_shape == SHAPE_CYLIN || light_shape == SHAPE_SPHERE) {sz *= 1.6;} // circular
+		else if (make_square) {sz *= 1.5;} // similar area to 2.2x1 light
+		else {sz *= ((bool(dim) == light_dim) ? 2.2 : 1.0);} // rectangular
 		light.d[dim][0] = center[dim] - sz;
 		light.d[dim][1] = center[dim] + sz;
 	}
@@ -264,6 +267,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		unsigned const room_id(r - rooms.begin());
 		unsigned const min_br(multi_family ? num_floors : 1); // multi-family house requires one per floor; can apply to both bedrooms and bathrooms
 		room_obj_shape const light_shape((residential_room || industrial_room) ? SHAPE_CYLIN : SHAPE_CUBE);
+		bool const square_light(is_backrooms);
 		float light_density(0.0), light_size(def_light_size); // default size for houses
 		unsigned const room_objs_start(objs.size());
 		unsigned nx(1), ny(1), min_num_lights(0); // number of lights in X and Y for this room
@@ -353,7 +357,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		float const light_val(22.0*light_size);
 		r->light_intensity = light_val*light_val/r->get_area_xy(); // average for room, unitless; light surface area divided by room surface area with some fudge constant
 		cube_t light;
-		set_light_xy(light, room_center, light_size, room_dim, light_shape);
+		set_light_xy(light, room_center, light_size, room_dim, light_shape, square_light);
 		bool added_bathroom(0), is_numbered_room(0);
 		float z(r->z1());
 		if (!r->interior) {r->interior = (is_basement || is_room_windowless(*r));} // AKA windowless; calculate if not already set
