@@ -386,3 +386,19 @@ void building_t::add_window_bars(cube_t const &window, bool dim, bool dir, unsig
 	interior->room_geom->objs.emplace_back(bars, TYPE_JAIL_BARS, room_id, dim, dir, 0, 1.0, SHAPE_CUBE, GRAY);
 }
 
+bool building_t::stairs_or_elevator_blocked_by_nested_room(cube_t const &c, unsigned room_id) const {
+	if (!is_prison()) return 0; // currently, only prisons have jail cells that block stairs and elevators
+	room_t const &parent(get_room(room_id));
+	if (!parent.has_subroom()) return 0; // no nested rooms
+	cube_t c_exp(c);
+	c_exp.expand_by_xy(get_doorway_width()); // leave enough room to the sides for players and AI to walk around
+
+	// nested rooms are added before the parent room, so iterate backwards
+	for (int r = (int)room_id-1; r >= 0; --r) {
+		room_t const &room(get_room(r));
+		if (!room.is_nested() || !parent.contains_cube(room)) break; // no more nested rooms for this parent
+		if (c_exp.intersects(room)) return 1;
+	}
+	return 0;
+}
+

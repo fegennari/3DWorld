@@ -1951,7 +1951,6 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 					}
 				}
 				if (add_elevator) {
-					if (is_jailroom) continue; // not yet handled
 					if (min(room.dx(), room.dy()) < 2.0*ewidth) continue; // room is too small to place an elevator
 					bool placed(0);
 
@@ -1975,6 +1974,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 							if (is_cube_close_to_doorway(elevator, room))     continue; // try again
 							if (check_skylight_intersection(elevator))        continue; // check skylights; is this necessary?
 							if (!check_cube_within_part_sides(elevator))      continue; // outside building; do we need to check for clearance?
+							if (stairs_or_elevator_blocked_by_nested_room(elevator, stairs_room)) continue;
 							add_or_extend_elevator(elevator, 1); // add=1
 							elevator_cut = elevator;
 							placed       = 1; // successfully placed
@@ -2001,7 +2001,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 						max_eq(shrink, 2.0f*stairs_sz); // allow space for doors to open and player to enter/exit
 						cutout.expand_in_dim(dim, -0.5*shrink); // centered in the room
 
-						if (!is_step_dim && !is_jailroom) { // see if we can push the stairs to the wall on one of the sides without blocking a doorway
+						if (!is_step_dim) { // see if we can push the stairs to the wall on one of the sides without blocking a doorway
 							bool const first_dir(rgen.rand_bool());
 
 							for (unsigned d = 0; d < 2; ++d) {
@@ -2015,6 +2015,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 								float const shift((cand.d[dim][dir] - room.d[dim][dir]) - (dir ? -1.0 : 1.0)*wall_thickness); // negative if dir==1
 								cand.translate_dim(dim, -shift); // close the gap - flush with the wall
 								if (is_cube_close_to_doorway(cand, room)) continue;
+								if (stairs_or_elevator_blocked_by_nested_room(cand, stairs_room))  continue;
 								if (!elevator_cut.is_all_zeros() && cand.intersects(elevator_cut)) continue; // too close to parking structure elevator
 
 								if (!is_cube()) { // check for stairs outside or too close to building walls
@@ -2032,6 +2033,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 					float const room_width(room.get_sz_dim(!stairs_dim));
 					// skip if we can't push against a wall and the room is too narrow for space around the stairs to allow doors to open and people to walk
 					if (!against_wall && room_width < (1.1*2.0*doorway_width + stairs_sz)) continue;
+					if (!against_wall && stairs_or_elevator_blocked_by_nested_room(cutout, stairs_room)) continue; // check if left in room center
 
 					if (is_house && against_wall) { // try to convert to L-shaped stairs
 						float const stairs_len(cutout.get_sz_dim(stairs_dim)), stairs_width(cutout.get_sz_dim(!stairs_dim)); // primary/lower segment
@@ -2466,17 +2468,18 @@ void subtract_cube_from_floor_ceil(cube_t const &c, vect_cube_t &fs) {
 	}
 }
 
-void get_room_cands(vector<room_t> const &rooms, unsigned part_ix, cube_t const &place_region, vector2d const &min_sz, bool check_private_rooms, vect_cube_t &room_cands) {
+void get_room_cands(vector<room_t> const &rooms, unsigned part_ix, cube_t const &place_region, vector2d const &min_sz, bool check_private_rooms, vect_cube_with_ix_t &room_cands) {
 	room_cands.clear();
 
-	for (room_t const &r : rooms) {
+	for (unsigned room_id = 0; room_id < rooms.size(); ++room_id) {
+		room_t const &r(rooms[room_id]);
 		if (r.part_id != part_ix || !r.intersects(place_region) || r.is_nested()) continue;
 		if (check_private_rooms && r.is_apt_or_hotel_room()) continue;
 		cube_t cand(r);
 		cand.intersect_with_cube_xy(place_region);
 		vector2d const room_sz(cand.get_size_xy());
 		if (room_sz[0] < min_sz[0] || room_sz[1] < min_sz[1]) continue; // room too small
-		room_cands.push_back(cand);
+		room_cands.emplace_back(cand, room_id);
 	} // for r
 }
 
@@ -2495,7 +2498,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 
 	if (part.z2() < bcube.z2()) { // if this is the top floor, there is nothing above it (but roof geom may get us into this case anyway)
 		vect_door_stack_t doorways;
-		vect_cube_t room_cands[2];
+		vect_cube_with_ix_t room_cands[2]; // {upper, lower}
 		bool connected(0);
 
 		for (unsigned upper_part_ix = 0; upper_part_ix < real_num_parts; ++upper_part_ix) { // find the part on the top
@@ -2613,6 +2616,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				vector2d min_sz;
 				min_sz[ dim] = len_with_pad;
 				min_sz[!dim] = stairs_width;
+				unsigned sel_room[2] = {0,0}; // {upper, lower}
 				bool too_small(0);
 
 				if (!allow_clip_walls) { // select rooms above and below to constrain the place region
@@ -2621,16 +2625,20 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 					if (room_cands[0].size() > 1) {std::shuffle(room_cands[0].begin(), room_cands[0].end(), rand_gen_wrap_t(rgen));}
 					bool success(0);
 
-					for (cube_t const &rc : room_cands[0]) {
-						get_room_cands(interior->rooms, lower_part_ix, rc, min_sz, check_private_rooms, room_cands[1]); // set place_region=rc for use_pref_shared?
+					for (cube_with_ix_t &rc1 : room_cands[0]) {
+						get_room_cands(interior->rooms, lower_part_ix, rc1, min_sz, check_private_rooms, room_cands[1]); // set place_region=rc for use_pref_shared?
 						if (room_cands[1].empty()) continue; // not a valid lower room
-						place_region = room_cands[1][rgen.rand()%room_cands[1].size()];
+						cube_with_ix_t const &rc2(room_cands[1][rgen.rand()%room_cands[1].size()]);
+						sel_room[0]  = rc1.ix;
+						sel_room[1]  = rc2.ix;
+						place_region = rc2;
+						success      = 1;
 						if (is_parking()) {place_region.expand_by_xy(-0.5*wall_thickness);} // shrink to prevent Z-fighting with inside surface of ext wall
-						success = 1; break; // success/done
+						break; // success/done
 					}
 					if (!success) continue;
 				}
-				for (unsigned d = 0; d < 2; ++d) {
+				for (unsigned d = 0; d < 2; ++d) { // {x, y}
 					float const stairs_sz(min_sz[d]), v1(place_region.d[d][0]), v2(place_region.d[d][1] - stairs_sz);
 					if (v2 <= v1) {too_small = 1; break;}
 					float &lo_edge(cand.d[d][0]);
@@ -2689,13 +2697,14 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				cand_test[ stairs_dir].d[dim][0] += stairs_pad; // subtract off padding on one side
 				cand_test[!stairs_dir].d[dim][1] -= stairs_pad; // subtract off padding on one side
 
-				for (unsigned d = 0; d < 2; ++d) {
+				for (unsigned d = 0; d < 2; ++d) { // {lower, upper}
 					if (has_bcube_int(cand_test[d], interior->exclusion)) {bad_place = 1; break;} // bad placement
 					cube_t cand_nopad(cand_test[d]), cand_pad(cand_nopad);
 					cand_nopad.expand_in_dim( dim, -stairs_pad); // subtract off padding
 					cand_pad  .expand_in_dim(!dim, railing_pad); // extra space at sides for railing
 					// Note: check_walls is still needed to handle nested subrooms such as hospital room bathrooms
 					if (!is_valid_stairs_elevator_placement(cand_pad, cand_nopad, stairs_pad, dim, !allow_clip_walls, check_private_rooms)) {bad_place = 1; break;} // bad place
+					if (stairs_or_elevator_blocked_by_nested_room(cand_nopad, sel_room[!d])) {bad_place = 1; break;}
 					// what about stairs intersecting bathrooms when allow_clip_walls=1? I've seen that happen once
 					if (is_cube()) continue;
 					// handle non-cube building; need to check both parts above and below, so clip our test cube to each part
