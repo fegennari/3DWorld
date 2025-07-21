@@ -4,6 +4,7 @@
 // Sounds from http://www.findsounds.com
 #include "openal_wrap.h"
 #include "function_registry.h"
+#include "format_text.h"
 #include <iostream>
 #include <assert.h>
 #include <thread>
@@ -227,7 +228,7 @@ public:
 
 sound_manager_t sound_manager;
 
-unsigned get_sound_id_for_file(string const &fn) {return sound_manager.find_or_add_sound(fn);}
+unsigned get_sound_id_for_file(string const &fn) {return (disable_sound ? 0 : sound_manager.find_or_add_sound(fn));}
 string const &get_sound_name(unsigned id) {return sound_manager.get_name(id);}
 void set_sound_loop_state(unsigned id, bool play, float volume) {sound_manager.set_loop_state(id, play, volume);}
 bool check_for_active_sound(point const &pos, float radius, float min_gain) {return sound_manager.check_for_active_sound(pos, radius, min_gain);}
@@ -242,7 +243,7 @@ bool check_and_print_alut_error(const char *msg) { // returns 1 on error
 	ALenum const error_id(alutGetError());
 
 	if (error_id != AL_NO_ERROR) {
-		cerr << "alut error in " << msg << ": " << alutGetErrorString(error_id) << endl;
+		cerr << format_red("alut error in " + string(msg) + ": " + alutGetErrorString(error_id)) << endl;
 		return 1;
 	}
 	return 0;
@@ -252,7 +253,7 @@ bool check_and_print_al_error(const char *msg) { // returns 1 on error
 	ALenum error_id(alGetError());
 
 	if (error_id != AL_NO_ERROR) {
-		cerr << "OpenAL error in " << msg << ": ID " << error_id << endl; // Note: alutGetErrorString doesn't work on all AL error codes
+		cerr << format_red("OpenAL error in " + string(msg) + ": ID " + to_string(error_id)) << endl; // Note: alutGetErrorString doesn't work on all AL error codes
 		return 1;
 	}
 	return 0;
@@ -265,7 +266,7 @@ void openal_buffer::alloc() {
 	alGenBuffers(1, &buffer);
     
 	if (had_al_error()) {
-		cerr << "Error creating OpenAL buffers" << endl;
+		cerr << format_red("Error creating OpenAL buffers") << endl;
 		exit(1);
 	}
 	assert(is_valid());
@@ -321,7 +322,7 @@ unsigned buffer_manager_t::add_file_buffer(std::string const &fn) {
 
 	// check sounds directory first, and current directory second
 	if (!buf.load_from_file_std_path(fn) && !buf.load_from_file(fn)) {
-		cerr << "Failed to load sound file: " << fn << endl;
+		cerr << format_red("Failed to load sound file: " + fn) << endl;
 		exit(1);
 	}
 	if (frame_counter <= 1) {cout << "."; cout.flush();} // only show progress in pre-load
@@ -335,7 +336,7 @@ void openal_source::alloc() {
 	alGenSources(1, &source);
 
 	if (had_al_error()) {
-		cerr << "Error creating OpenAL sources" << endl;
+		cerr << format_red("Error creating OpenAL sources") << endl;
 		exit(1);
 	}
 	assert(is_valid());
@@ -551,8 +552,9 @@ void init_openal(int &argc, char** argv) {
 
 	if (!alutInit(&argc, argv)) {
 		check_and_print_alut_error("init");
-		cerr << "alutInit failed" << endl;
-		exit(1);
+		cerr << format_yellow("alutInit failed; sound will be disabled") << endl;
+		disable_sound = 1;
+		return;
 	}
 	alGetError(); // ignore any previous errors
 	sound_manager.setup_sounds();
@@ -561,6 +563,7 @@ void init_openal(int &argc, char** argv) {
 }
 
 void exit_openal() {
+	if (disable_sound) return;
 	if (!alutExit()) {check_and_print_alut_error("exit");}
 }
 
