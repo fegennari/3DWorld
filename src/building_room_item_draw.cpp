@@ -2077,7 +2077,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	water_sound_manager_t water_sound_manager(camera_bs);
 	rgeom_mat_t monitor_screens_mat, onscreen_text_mat=rgeom_mat_t(tid_nm_pair_t(FONT_TEXTURE_ID));
 	string onscreen_text;
-	bool const is_rotated(building.is_rotated()), is_player_building(&building == player_building);
+	bool const is_rotated(building.is_rotated()), is_player_building(&building == player_building), has_pri_hall(building.has_pri_hall());
 	bool const check_clip_cube(shadow_only && !is_rotated && !smap_light_clip_cube.is_all_zeros()); // check clip cube for shadow pass; not implemented for rotated buildings
 	bool const skip_interior_objs(!player_in_building_or_doorway && !shadow_only), has_windows(building.has_windows());
 	bool const player_in_industrial(building.point_in_industrial(camera_bs));
@@ -2137,12 +2137,16 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		}
 		if (is_rotated) {building.do_xy_rotate(building_center, obj_center);}
 		
-		// distance culling; allow fire extinguishers and primary hallway objects to be visible all the way down a long hallway
-		if (!shadow_only && type != TYPE_FIRE_EXT && !(building.has_pri_hall() && building.pri_hall.contains_pt(obj_center))) {
+		// distance culling
+		if (!shadow_only) {
 			float cull_dist(32.0*(obj.dx() + obj.dy() + obj.dz()));
-			if (building.check_pt_in_retail_room(obj_center)) {cull_dist *= 2.5;} // increased culling distance for retail areas
-			else if (building.point_in_mall     (obj_center)) {cull_dist *= 2.0;} // increased culling distance for malls
-			if (type == TYPE_PADLOCK)                         {cull_dist *= 3.0;} // padlocks are small but can be seen from far away
+
+			if (player_in_building_or_doorway) { // increase culling distance for player building
+				if (has_pri_hall && building.pri_hall.contains_pt(obj_center)) {cull_dist *= 10.0;} // primary hallway objects visible down a long hallway
+				else if (type == TYPE_FIRE_EXT || type == TYPE_PADLOCK)        {cull_dist *= 3.0 ;} // padlocks are small but can be seen from far away
+				else if (building.check_pt_in_retail_room(obj_center))         {cull_dist *= 2.5 ;} // increased culling distance for retail areas
+				else if (building.point_in_mall          (obj_center))         {cull_dist *= 2.0 ;} // increased culling distance for malls
+			}
 			if (!dist_less_than(camera_bs, obj_center, cull_dist)) continue; // too far
 		}
 		bool cull(0);
