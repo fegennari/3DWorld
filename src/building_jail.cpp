@@ -18,6 +18,8 @@ bool building_t::divide_part_into_jail_cells(cube_t const &part, unsigned part_i
 	float const room_width(part.get_sz_dim(!hall_dim)), min_cell_depth(max(floor_spacing, 2.5f*door_width)), min_hall_width(2.0*door_width);
 	float const min_room_width(2*min_cell_depth + min_hall_width), extra_width(room_width - min_room_width);
 	vector<room_t> &rooms(interior->rooms);
+	cube_t hall_room(part);
+	if (interior->prison_halls.empty()) {interior->prison_halls = parts;} // start as entire part
 
 	if (extra_width < 0.0) { // too narrow to fit jail cells; should be rare
 		if (!try_short_dim) {return divide_part_into_jail_cells(part, part_id, rgen, 1);} // try the other dim; try_short_dim=1
@@ -37,7 +39,7 @@ bool building_t::divide_part_into_jail_cells(cube_t const &part, unsigned part_i
 
 		for (unsigned d = 0; d < 2; ++d) { // each side
 			cube_t cell(part);
-			cell.d[dim][!d] = part.d[dim][d] + (d ? -1.0 : 1.0)*cell_depth; // room ends at side of central hallway
+			cell.d[dim][!d] = hall_room.d[dim][d] = part.d[dim][d] + (d ? -1.0 : 1.0)*cell_depth; // room ends at side of central hallway
 
 			for (unsigned n = 0; n < num_cells; ++n) {
 				float const low_edge(part.d[!dim][0] + n*cell_len);
@@ -86,7 +88,7 @@ bool building_t::divide_part_into_jail_cells(cube_t const &part, unsigned part_i
 			float const shift_cell_edge(shift_val_to_not_intersect_window(part, cell_edge, window_hspacing, get_window_h_border(), dim));
 			float const new_cell_depth(fabs(shift_cell_edge - cell.d[dim][dir])), new_hall_hwidth(shift_cell_edge - hall_centerline);
 			if (new_cell_depth > min_cell_depth && 2.0*new_hall_hwidth > min_hall_width) {cell_edge = shift_cell_edge;} // shift if cell and hall are wide enough
-			cell.d[dim][!dir] = cell_edge;
+			cell.d[dim][!dir] = hall_room.d[dim][dir] = cell_edge;
 
 			for (float xy = tx1; xy < tx2; xy += 1.0) { // windows along each wall
 				float const low_edge(c.d[!dim][0] + (xy - tx1)*window_width);
@@ -122,6 +124,8 @@ bool building_t::divide_part_into_jail_cells(cube_t const &part, unsigned part_i
 	rooms.back().assign_all_to(RTYPE_JAIL);
 	if (cells.empty()) return 0;
 	rooms.back().set_has_subroom();
+	assert(part_id < interior->prison_halls.size());
+	interior->prison_halls[part_id] = hall_room;
 	return 1;
 }
 

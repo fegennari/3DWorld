@@ -238,7 +238,6 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		float light_amt(is_basement ? 0.0f : window_vspacing*r->get_light_amt()); // exterior light: multiply perimeter/area by window spacing to make unitless; none for basement rooms
 		if (!is_house && r->is_hallway) {light_amt *= 2.0;} // double the light in office building hallways because they often connect to other lit hallways
 		float const floor_height(r->is_single_floor ? r->dz() : window_vspacing); // secondary buildings are always one floor
-		point room_center(r->get_cube_center());
 
 		if (r->is_sec_bldg) {
 			if    (has_garage) {r->assign_all_to(RTYPE_GARAGE);}
@@ -248,8 +247,12 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			interior->room_geom->first_mall_obj_ix = objs.size();
 			saw_mall = 1;
 		}
+		// determine lit/inner area of room (for prisons)
+		cube_t inner_room(*r);
+		if (is_prison() && r->has_subroom() && r->part_id < interior->prison_halls.size()) {inner_room = interior->prison_halls[r->part_id];}
 		// determine light pos and size for this stack of rooms
-		float const dx(r->dx()), dy(r->dy());
+		point room_center(inner_room.get_cube_center()); // non-const because zval may be increased when adding flooring
+		float const dx(inner_room.dx()), dy(inner_room.dy());
 		bool room_dim(dx < dy); // longer room dim
 		room_type const init_rtype_f0(r->get_room_type(0));
 		bool const is_parking_garage(init_rtype_f0 == RTYPE_PARKING   ); // all floors should be parking garage
@@ -642,7 +645,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 						if (f == 0) {place_objects_onto_surfaces(rgen, *r, room_id, tot_light_amt, objs_start, f, is_basement, 1);} // first floor reception desks; not_private=1
 					}
 					else if (is_school()) { // add lockers on upper parts
-						bool const hall_dim(r->dx() < r->dy());
+						bool const hall_dim(dx < dy);
 						cube_t const &part(get_part_for_room(*r));
 
 						if (r->d[hall_dim][0] == part.d[hall_dim][0] && r->d[hall_dim][1] == part.d[hall_dim][1]) {
