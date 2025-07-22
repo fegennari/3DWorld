@@ -55,11 +55,23 @@ bool building_t::divide_part_into_jail_cells(cube_t const &part, unsigned part_i
 		window_area.expand_in_z(-fc_thick); // exclude walls on stacked parts above or below
 		vect_vnctcc_t const &wall_quad_verts(get_all_drawn_window_verts_as_quads());
 		bool had_ext_wall(0);
+		cube_t c;
+		float tx1(0.0), tx2(0.0), tz1(0.0), tz2(0.0);
 
+		if (!try_short_dim) { // calculate sum of wall length in each dim and choose the other dim if too unbalanced
+			float wall_len[2] = {0,0};
+
+			for (unsigned i = 0; i < wall_quad_verts.size(); i += 4) { // iterate over each quad
+				if (!get_wall_quad_window_area(wall_quad_verts, i, c, tx1, tx2, tz1, tz2)) continue; // no windows in this wall
+				if (!c.intersects(window_area)) continue; // wrong part, skip
+				c.intersect_with_cube_xy(window_area); // only windows in this part count
+				bool const dim(c.dy() < c.dx());
+				wall_len[!dim] += c.get_sz_dim(!dim);
+			}
+			if (wall_len[long_dim] < 0.67*wall_len[!long_dim]) {return divide_part_into_jail_cells(part, part_id, rgen, 1);} // try_short_dim=1
+		}
 		for (unsigned i = 0; i < wall_quad_verts.size(); i += 4) { // iterate over each quad
-			cube_t c;
-			float tx1, tx2, tz1, tz2;
-			if (!get_wall_quad_window_area(wall_quad_verts, i, c, tx1, tx2, tz1, tz2)) continue;
+			if (!get_wall_quad_window_area(wall_quad_verts, i, c, tx1, tx2, tz1, tz2)) continue; // no windows in this wall
 			if (!c.intersects(window_area)) continue; // wrong part, skip
 			bool const dim(c.dy() < c.dx()), dir(wall_quad_verts[i].get_norm()[dim] > 0.0);
 			if (dim == hall_dim) continue; // only keep windows on long part edges
