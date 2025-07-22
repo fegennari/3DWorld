@@ -653,6 +653,7 @@ unsigned building_t::setup_multi_floor_room(extb_room_t &room, door_t const &doo
 		cube_t elevator_area(room);
 		elevator_area.expand_by_xy(-max(front_spacing, wall_spacing)); // shrink to keep away from walls and avoid exit doors
 		gen_xy_pos_for_cube_obj(elevator_bc, elevator_area, vector3d(0.5*elevator_width, 0.5*elevator_width, room_height), room_height, elevator_rgen, 1); // place_at_z1=1
+		min_eq(elevator_bc.z2(), ground_floor_z1); // clip to ground floor to prevent problems with trim
 		assert(interior->ext_basement_hallway_room_id >= 0);
 		bool const edim(elevator_rgen.rand_bool()), edir(elevator_rgen.rand_bool());
 		interior->elevators.emplace_back(elevator_bc, interior->ext_basement_hallway_room_id, edim, edir, 0, 1, 0, 1); // at_edge=0, interior_room=1, in_mall=0, in_br=1

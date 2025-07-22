@@ -2318,8 +2318,9 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		} // for s
 		for (cube_with_ix_t &w : walls) {
 			// snap to an exact floor zval, starting with the ground floor (no basements)
-			w.z1() = ground_floor_z1 + max(0, round_fp((w.z1() - ground_floor_z1)/window_vspacing))*window_vspacing;
-			if (w.z1() >= w.z2()) continue; // basement only, skip
+			int const floor_ix(round_fp((w.z1() - ground_floor_z1)/window_vspacing)); // can be positive or negative
+			w.z1() = ground_floor_z1 + max(0, floor_ix)*window_vspacing;
+			if (w.dz() <= trim_thickness) continue; // basement only (including some error), skip
 			bool const dim(w.dy() < w.dx());
 			unsigned const num_floors(calc_num_floors(w, window_vspacing, floor_thickness)), trim_flags(w.ix);
 			room_obj_shape const shape((trim_flags & RO_FLAG_ADJ_BOT) ? SHAPE_TALL : SHAPE_CUBE); // use SHAPE_TALL to draw unterminated ends
@@ -2999,7 +3000,7 @@ unsigned get_L_stairs_first_flight_count(stairs_landing_base_t const &s, float l
 cube_t building_t::get_init_elevator_car(elevator_t const &elevator) const {
 	cube_t elevator_car(elevator);
 	// always starts on the ground floor, not the bottom of the basement, unless the elevator is fully below ground or in the mall
-	if (!elevator.in_mall && elevator.z2() > ground_floor_z1) {max_eq(elevator_car.z1(), ground_floor_z1);}
+	if (!elevator.in_mall && elevator.zc() > ground_floor_z1) {max_eq(elevator_car.z1(), ground_floor_z1);}
 	elevator_car.z1() += 0.05*get_floor_thickness(); // shift up slightly
 	elevator_car.z2()  = elevator_car.z1() + get_window_vspace(); // one floor of height
 	return elevator_car;
@@ -3527,8 +3528,12 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		unsigned const elevator_id(i - interior->elevators.begin()); // used for room_object_t::room_id
 		float const floor_spacing(get_elevator_floor_spacing(*i));
 		objs.emplace_back(get_init_elevator_car(*i), TYPE_ELEVATOR, elevator_id, i->dim, i->dir, RO_FLAG_DYNAMIC);
-		objs.back().drawer_flags = (uint16_t)calc_num_floors(*i, floor_spacing, floor_thickness); // store the number of floors in drawer_flags; used for drawing
-		objs.back().item_flags   =  uint16_t(floor((objs.back().zc() - i->z1())/floor_spacing)); // use correct starting floor index
+		uint16_t const num_floors(calc_num_floors(*i, floor_spacing, floor_thickness));
+		uint16_t const cur_floor(floor((objs.back().zc() - i->z1())/floor_spacing)); // use correct starting floor index
+		assert(num_floors > 0);
+		assert(cur_floor < num_floors);
+		objs.back().drawer_flags = num_floors; // store the number of floors in drawer_flags; used for drawing
+		objs.back().item_flags   = cur_floor;
 	} // for i
 }
 
