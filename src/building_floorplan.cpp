@@ -2000,35 +2000,33 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 						float shrink(cutout.get_sz_dim(dim) - (is_step_dim ? 4.0 : 1.2)*stairs_sz); // set max size of stairs opening
 						max_eq(shrink, 2.0f*stairs_sz); // allow space for doors to open and player to enter/exit
 						cutout.expand_in_dim(dim, -0.5*shrink); // centered in the room
+					}
+					// see if we can push the stairs to the wall on one of the sides without blocking a doorway
+					bool const first_dir(rgen.rand_bool());
 
-						if (!is_step_dim) { // see if we can push the stairs to the wall on one of the sides without blocking a doorway
-							bool const first_dir(rgen.rand_bool());
+					for (unsigned d = 0; d < 2; ++d) {
+						bool const dim(!stairs_dim), dir(bool(d) ^ first_dir);
+						int const wall_type(classify_room_wall(room, room.z1(), dim, dir, 1));
+						// if the room is on the edge of the part that's not on the building exterior, then this room connects two parts and we need to place a door here later
+						if (              wall_type == ROOM_WALL_SEP) continue; // include partial sep walls
+						if (!is_cube() && wall_type == ROOM_WALL_EXT) continue; // no exterior walls of non-cube buildings
+						cube_t cand(cutout);
+						// add small gap to prevent z-fighting and FP accuracy asserts
+						float const shift((cand.d[dim][dir] - room.d[dim][dir]) - (dir ? -1.0 : 1.0)*wall_thickness); // negative if dir==1
+						cand.translate_dim(dim, -shift); // close the gap - flush with the wall
+						if (is_cube_close_to_doorway(cand, room)) continue;
+						if (stairs_or_elevator_blocked_by_nested_room(cand, stairs_room))  continue;
+						if (!elevator_cut.is_all_zeros() && cand.intersects(elevator_cut)) continue; // too close to parking structure elevator
 
-							for (unsigned d = 0; d < 2; ++d) {
-								bool const dir(bool(d) ^ first_dir);
-								int const wall_type(classify_room_wall(room, room.z1(), dim, dir, 1));
-								// if the room is on the edge of the part that's not on the building exterior, then this room connects two parts and we need to place a door here later
-								if (wall_type == ROOM_WALL_SEP) continue; // include partial sep walls
-								if (!is_cube() && wall_type == ROOM_WALL_EXT) continue; // no exterior walls of non-cube buildings
-								cube_t cand(cutout);
-								// add small gap to prevent z-fighting and FP accuracy asserts
-								float const shift((cand.d[dim][dir] - room.d[dim][dir]) - (dir ? -1.0 : 1.0)*wall_thickness); // negative if dir==1
-								cand.translate_dim(dim, -shift); // close the gap - flush with the wall
-								if (is_cube_close_to_doorway(cand, room)) continue;
-								if (stairs_or_elevator_blocked_by_nested_room(cand, stairs_room))  continue;
-								if (!elevator_cut.is_all_zeros() && cand.intersects(elevator_cut)) continue; // too close to parking structure elevator
-
-								if (!is_cube()) { // check for stairs outside or too close to building walls
-									cube_t stairs_ext(cand);
-									stairs_ext.expand_in_dim(stairs_dim, doorway_width);
-									if (!check_cube_within_part_sides(stairs_ext)) continue; // outside building
-								}
-								cutout = cand;
-								stairs_against_wall[dir] = 1;
-								break; // keep if it's good
-							} // for d
+						if (!is_cube()) { // check for stairs outside or too close to building walls
+							cube_t stairs_ext(cand);
+							stairs_ext.expand_in_dim(stairs_dim, doorway_width);
+							if (!check_cube_within_part_sides(stairs_ext)) continue; // outside building
 						}
-					} // for dim
+						cutout = cand;
+						stairs_against_wall[dir] = 1;
+						break; // keep if it's good
+					} // for d
 					bool const against_wall(stairs_against_wall[0] || stairs_against_wall[1]);
 					float const room_width(room.get_sz_dim(!stairs_dim));
 					// skip if we can't push against a wall and the room is too narrow for space around the stairs to allow doors to open and people to walk
