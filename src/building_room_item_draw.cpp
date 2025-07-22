@@ -2147,6 +2147,10 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 				else if (building.check_pt_in_retail_room(obj_center))         {cull_dist *= 2.5 ;} // increased culling distance for retail areas
 				else if (building.point_in_mall          (obj_center))         {cull_dist *= 2.0 ;} // increased culling distance for malls
 			}
+			else { // player not in this building
+				if (camera_in_building) {cull_dist *= 0.7;} // decrease culling distance for player in a different building (optimization)
+				if (obj.is_interior())  {cull_dist *= 0.7;} // interior room objects are unlikely to be seen by the player
+			}
 			if (!dist_less_than(camera_bs, obj_center, cull_dist)) continue; // too far
 		}
 		bool cull(0);
