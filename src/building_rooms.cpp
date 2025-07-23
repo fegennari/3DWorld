@@ -1609,6 +1609,7 @@ void building_t::add_exterior_ac_pipes(rand_gen_t rgen) {
 					if (!valid_area.contains_cube_xy(pipe))            continue;
 					if (has_bcube_int(pipe, skylights))                continue;
 					if (d == 0 && has_bcube_int_no_adj(pipe, details)) continue; // if pref dir is blocked, try the other dir
+					if (has_bcube_int(pipe, interior->stairwells))     continue; // check rooftop stairs
 
 					for (unsigned n = 0; n < 3; ++n) { // 3 pipes
 						float const r(radius[n]*height), pipe_end(pipe.d[min_dim][dir]), vert_ext(pipe_end + dsign*r);
