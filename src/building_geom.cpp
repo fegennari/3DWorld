@@ -2704,9 +2704,9 @@ bool has_stairs_bcube_int(cube_t const &bcube, vect_stairwell_t const &stairs, f
 	} // for s
 	return 0;
 }
-bool has_elevator_bcube_int(cube_t const &bcube, vector<elevator_t> const &elevators, float doorway_width, float trim_thickness) {
+bool has_elevator_bcube_int(cube_t const &bcube, vector<elevator_t> const &elevators, float front_pad, float trim_thickness) {
 	for (elevator_t const &e : elevators) {
-		if (e.get_bcube_padded(1.5*doorway_width, trim_thickness).intersects(bcube)) return 1; // front pad matches wall clip logic
+		if (e.get_bcube_padded(front_pad, trim_thickness).intersects(bcube)) return 1; // front pad matches wall clip logic
 	}
 	return 0;
 }
@@ -2730,8 +2730,9 @@ bool building_interior_t::is_blocked_by_stairs_or_elevator(cube_t const &c, floa
 	cube_t tc(c);
 	tc.expand_by_xy(dmin); // no pad in z
 	float const doorway_width(get_doorway_width());
+	float const front_pad(max(0.0, (1.5*doorway_width - dmin))); // don't need to double pad
 	float const trim_thickness(0.1*WALL_THICK_VAL*doorway_width/(DOOR_WIDTH_SCALE*.95*(1.0 - FLOOR_THICK_VAL_OFFICE)));
-	if (has_elevator_bcube_int (tc, elevators,  doorway_width, trim_thickness)) return 1;
+	if (has_elevator_bcube_int (tc, elevators,  front_pad, trim_thickness)) return 1;
 	if (has_escalator_bcube_int(tc, escalators, doorway_width)) return 1;
 	if (elevators_only) return 0;
 	tc.z1() -= 0.001*tc.dz(); // expand slightly to avoid placing an object exactly at the top of the stairs
