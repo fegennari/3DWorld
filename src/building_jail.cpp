@@ -418,3 +418,23 @@ bool building_t::stairs_or_elevator_blocked_by_nested_room(cube_t const &c, unsi
 	return 0;
 }
 
+void building_t::get_non_jail_cell_non_hallway_cubes(unsigned room_id, vect_cube_t &out) const {
+	assert(is_prison());
+	room_t const &parent(get_room(room_id));
+	assert(parent.part_id < parts.size());
+	assert(parent.part_id < interior->prison_halls.size());
+	cube_t const &hall(interior->prison_halls[parent.part_id]);
+	assert(parent.intersects(hall)); // parent usually contains hall, but may extend slightly outside
+	float const wall_thick(get_wall_thickness());
+	subtract_cube_from_cube(cube_t(parent), hall, out, 1); // clear_out=1
+	if (!parent.has_subroom()) return; // no cells
+
+	for (int r = (int)room_id-1; r >= 0; --r) {
+		room_t const &room(get_room(r));
+		if (!room.is_nested() || !parent.contains_cube(room)) break; // no more nested rooms for this parent
+		cube_t sub(room);
+		sub.expand_by_xy(wall_thick); // make sure to remove the walls to the sides of the cells
+		subtract_cube_from_cubes(sub, out); // no holes
+	}
+}
+

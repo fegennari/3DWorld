@@ -2715,6 +2715,7 @@ private:
 	bool is_obj_placement_blocked(cube_t const &c, cube_t const &room, bool inc_open_doors, bool check_open_dir=0, float dmin=0.0) const;
 	bool is_valid_placement_for_room(cube_t const &c, cube_t const &room, vect_cube_t const &blockers, bool inc_open_doors, vector2d const &room_pad=vector2d()) const;
 	bool stairs_or_elevator_blocked_by_nested_room(cube_t const &c, unsigned room_id) const;
+	void get_non_jail_cell_non_hallway_cubes(unsigned room_id, vect_cube_t &out) const;
 	bool check_cube_intersect_walls(cube_t const &c) const;
 	bool check_cube_contained_in_part(cube_t const &c) const;
 	bool is_valid_stairs_elevator_placement(cube_t const &c, cube_t const &c_nopad, float pad, int dim=2, bool check_walls=1, bool check_private_rooms=0) const;

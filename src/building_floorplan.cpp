@@ -1757,7 +1757,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	bool stairs_dim(0), bend_dir(0), stairs_have_railing(1), extended_from_above(0);
 	bool stairs_against_wall[2] = {0, 0};
 	stairs_shape sshape(SHAPE_STRAIGHT); // straight by default
-	bool must_add_stairs(first_part_this_stack);
+	bool must_add_stairs(first_part_this_stack || (is_prison() && interior->stairwells.empty()));
 	bool const is_basement_room((int)part_ix == basement_part_ix);
 	int force_stairs_dir(2); // 2=unset
 	unsigned stairs_ix(0);
@@ -1952,17 +1952,21 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 				}
 				if (add_elevator) {
 					if (min(room.dx(), room.dy()) < 2.0*ewidth) continue; // room is too small to place an elevator
+					bool const no_ext_walls(!(is_prison() && interior->elevators.empty()));
 					bool placed(0);
 
 					for (unsigned y = 0; y < 2 && !placed; ++y) { // try all 4 corners
 						for (unsigned x = 0; x < 2 && !placed; ++x) {
 							int const wtype_x(classify_room_wall(room, room.z1(), 0, x, 1)), wtype_y(classify_room_wall(room, room.z1(), 1, y, 1)); // include partial sep walls
-							if (wtype_x == ROOM_WALL_SEP || wtype_y == ROOM_WALL_SEP) continue; // don't place elevators between parts where they could block doorways
-							if (!is_cube() && (wtype_x == ROOM_WALL_EXT || wtype_y == ROOM_WALL_EXT)) continue; // no exterior walls of non-cube buildings
+							// don't place elevators between parts where they could block doorways, except for prisons, which have fewer placement options
+							if (no_ext_walls && (wtype_x == ROOM_WALL_SEP || wtype_y == ROOM_WALL_SEP)) continue;
+							if (!is_cube  () && (wtype_x == ROOM_WALL_EXT || wtype_y == ROOM_WALL_EXT)) continue; // no exterior walls of non-cube buildings
 							float const xval(room.d[0][x] + (x ? -ewidth : ewidth)), yval(room.d[1][y] + (y ? -ewidth : ewidth)), shrink(0.01*ewidth);
-							// check room interior edge for intersection with windows
-							if (wtype_x == ROOM_WALL_EXT && is_val_inside_window(part, 0, xval, window_hspacing[0], window_border)) continue;
-							if (wtype_y == ROOM_WALL_EXT && is_val_inside_window(part, 1, yval, window_hspacing[1], window_border)) continue;
+							// check room interior edge for intersection with windows if not a prison
+							if (no_ext_walls) {
+								if (wtype_x == ROOM_WALL_EXT && is_val_inside_window(part, 0, xval, window_hspacing[0], window_border)) continue;
+								if (wtype_y == ROOM_WALL_EXT && is_val_inside_window(part, 1, yval, window_hspacing[1], window_border)) continue;
+							}
 							bool const dim(rgen.rand_bool()), at_edge(wtype_x == ROOM_WALL_EXT || wtype_y == ROOM_WALL_EXT);
 							elevator_t elevator(room, stairs_room, dim, !(dim ? y : x), at_edge, room.interior); // elevator shaft
 							elevator.d[0][!x] = xval;
@@ -2031,8 +2035,35 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 					float const room_width(room.get_sz_dim(!stairs_dim));
 					// skip if we can't push against a wall and the room is too narrow for space around the stairs to allow doors to open and people to walk
 					if (!against_wall && room_width < (1.1*2.0*doorway_width + stairs_sz)) continue;
-					if (!against_wall && stairs_or_elevator_blocked_by_nested_room(cutout, stairs_room)) continue; // check if left in room center
 
+					if (!against_wall && stairs_or_elevator_blocked_by_nested_room(cutout, stairs_room)) { // check if left in room center
+						if (!is_prison()) continue;
+						// if this is a prison, consider areas next to interior walls where there are no cells
+						bool placed(0);
+						vect_cube_t cands;
+						get_non_jail_cell_non_hallway_cubes(stairs_room, cands);
+						if (cands.empty()) continue; // room is full
+						if (cands.size() > 1) {std::shuffle(cands.begin(), cands.end(), rand_gen_wrap_t(rgen));}
+						cutout.expand_in_dim(stairs_dim, -0.1*cutout.get_sz_dim(stairs_dim)); // make it smaller and more likely to fit
+						vector2d cut_sz(cutout.get_size_xy()), min_sz(cut_sz);
+						min_sz[stairs_dim] += 2.0*doorway_width + 2.0*window_vspacing; // must have space at the ends to enter and exit and space for a door to an adj part
+
+						for (cube_t const &cand : cands) {
+							vector2d const cand_sz(cand.get_size_xy());
+							if (cand_sz.x <= min_sz.x || cand_sz.y <= min_sz.y) continue; // too small
+							bool const edge_dir(room.get_center_dim(!stairs_dim) < cand.get_center_dim(!stairs_dim)), end_dir(rgen.rand_bool());
+							float const side_shift_val(cand.d[!stairs_dim][edge_dir] - cutout.d[!stairs_dim][edge_dir] - (edge_dir ? 1.0 : -1.0)*wall_thickness);
+							cutout.translate_dim(!stairs_dim, side_shift_val); // shift to the edge of the room
+							float const end_shift_val(cand.d[stairs_dim][end_dir] - cutout.d[stairs_dim][end_dir] - (end_dir ? 1.0 : -1.0)*doorway_width);
+							cutout.translate_dim(stairs_dim, end_shift_val); // shift to one end to maximize space for a door
+							if (is_cube_close_to_doorway(cutout, room)) continue;
+							cutout.intersect_with_cube_xy(room); // shouldn't be needed, except for FP error
+							stairs_against_wall[edge_dir] = 1;
+							placed = 1; // success
+							break;
+						} // for cand
+						if (!placed) continue;
+					}
 					if (is_house && against_wall) { // try to convert to L-shaped stairs
 						float const stairs_len(cutout.get_sz_dim(stairs_dim)), stairs_width(cutout.get_sz_dim(!stairs_dim)); // primary/lower segment
 
