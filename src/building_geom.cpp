@@ -1486,7 +1486,7 @@ void building_t::maybe_add_basement(rand_gen_t rgen) { // rgen passed by value s
 		for (auto const &p : parts) {
 			if (p.z1() != ground_floor_z1) continue; // only count ground floor parts
 			++num_gf_parts;
-			if (p.get_area_xy() > largest_gf_part.get_area_xy()) {largest_gf_part = p;}
+			if (p.get_area_xy() > largest_gf_part.get_area_xy()) {largest_gf_part = p;} // should we consider aspect ratio for prison basements?
 		}
 		assert(num_gf_parts > 0);
 		// Note: player collision is still based on ground floor building shape, so having the basement extend outside of this footprint still doesn't work
@@ -1495,7 +1495,7 @@ void building_t::maybe_add_basement(rand_gen_t rgen) { // rgen passed by value s
 		basement = largest_gf_part;
 		real_num_parts = (uint8_t)parts.size(); // set now because it's needed in the call below
 		expand_ground_floor_cube(basement);
-		// maybe extend the basement downward with extra floors
+		// maybe extend the basement downward with extra floors; should we limit non-parking garage prison basements to a single floor since stairs may not be placed?
 		unsigned const num_basement_floors(1 + (rgen.rand() % global_building_params.max_office_basement_floors)); // 1+
 		for (unsigned n = 1; n < num_basement_floors && (basement_z1 - floor_spacing) > max_sea_level; ++n) {basement_z1 -= floor_spacing;}
 	}
