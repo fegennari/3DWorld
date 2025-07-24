@@ -2692,7 +2692,8 @@ bool is_wall_or_pillar_concrete(room_object_t const &c) {
 	return (c.type == TYPE_PG_PILLAR || (c.flags & (RO_FLAG_BACKROOM | RO_FLAG_ADJ_HI)));
 }
 tid_nm_pair_t get_basement_texture(room_object_t const &c, tid_nm_pair_t const &wall_tex) {
-	if (c.item_flags > 0) {return tid_nm_pair_t(c.item_flags, wall_tex.tscale_x, 1);} // item_flags holds custom texture ID
+	// item_flags holds custom texture ID, except for exterior parking structure pillars, where item_flags stores the skip_faces
+	if (c.item_flags > 0 && !c.is_exterior()) {return tid_nm_pair_t(c.item_flags, wall_tex.tscale_x, 1);}
 	return (is_wall_or_pillar_concrete(c) ? tid_nm_pair_t(get_concrete_tid(), wall_tex.tscale_x, 1) : get_scaled_wall_tex(wall_tex));
 }
 void building_room_geom_t::add_stairs_wall(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex) {
