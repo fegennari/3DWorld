@@ -32,7 +32,7 @@ bool building_t::divide_part_into_jail_cells(cube_t const &part, unsigned part_i
 	vect_cube_with_ix_t cells;
 
 	if (in_basement) { // basement jail cell
-		float const room_len(part.get_sz_dim(hall_dim)), min_cell_len(1.3*min_cell_depth);
+		float const room_len(part.get_sz_dim(hall_dim)), min_cell_len(1.3*min_cell_depth), stairs_ext(door_width + wall_thickness);
 		unsigned const num_cells(room_len/min_cell_len); // floor
 		float const cell_len(room_len/num_cells);
 		bool const dim(!hall_dim);
@@ -46,6 +46,17 @@ bool building_t::divide_part_into_jail_cells(cube_t const &part, unsigned part_i
 				cell.d[!dim][0] = low_edge;
 				cell.d[!dim][1] = ((n+1 == num_cells) ? part.d[!dim][1] : (low_edge + cell_len)); // end exactly at the part
 				if (interior->is_cube_close_to_doorway(cell, part, door_width, 1)) continue; // check for extended basement door; inc_open=1
+				// check for stairs above so that they have space to extend below
+				bool blocked_by_stairs(0);
+
+				for (stairwell_t const &s : interior->stairwells) {
+					if (s.z1() > part.z2() + 0.5*floor_spacing) continue; // doesn't extend to basement
+					cube_t ext_cube(s);
+					if (s.z1() < part.z2() - 1.5*floor_spacing) {ext_cube.expand_in_dim(s.dim, stairs_ext);} // multi-floor basement stairs; expand at both ends
+					else {ext_cube.d[s.dim][!s.dir] += (s.dir ? -1.0 : 1.0)*stairs_ext;} // add padding on exit side
+					if (ext_cube.intersects_xy(cell)) {blocked_by_stairs = 1; break;}
+				}
+				if (blocked_by_stairs) continue;
 				cells.emplace_back(cell, (2*dim + d));
 			} // for n
 		} // for d
