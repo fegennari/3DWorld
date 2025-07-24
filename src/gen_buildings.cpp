@@ -3001,6 +3001,7 @@ void building_t::write_basement_entrance_depth_pass(shader_t &s) const {
 	if (camera_z < zval) return; // below upper basement level
 	// floor 3+ of office; skip industrial and parking since they are multiple floors tall; skip houses because entrance can be visible through L-shaped stairs
 	if (!is_house && !is_industrial() && !is_parking() && camera_z > ground_floor_z1 + 2.0*get_window_vspace()) return;
+	float const dz(BASEMENT_ENTRANCE_SCALE*get_floor_thickness()); // offset is required to clip grass
 	bool const depth_clamp_enabled(glIsEnabled(GL_DEPTH_CLAMP));
 	glPolygonOffset(-1.0, -1.0); // useful for avoiding z-fighting
 	glEnable(GL_POLYGON_OFFSET_FILL);
@@ -3009,11 +3010,14 @@ void building_t::write_basement_entrance_depth_pass(shader_t &s) const {
 	enable_blend();
 	glEnable(GL_CULL_FACE);
 	if (!depth_clamp_enabled) {glEnable(GL_DEPTH_CLAMP);}
+	float z(zval);
 
-	for (stairwell_t const &s : interior->stairwells) {
-		if (s.z1() < zval && !s.in_ext_basement) {draw_basement_entrance_cap(s, zval);} // draw if this is a basement stairwell (not extended basement stairs)
+	for (unsigned pass = 0; pass < 2; ++pass, z += dz) {
+		for (stairwell_t const &s : interior->stairwells) {
+			if (s.z1() < zval && !s.in_ext_basement) {draw_basement_entrance_cap(s, z);} // draw if this is a basement stairwell (not extended basement stairs)
+		}
+		if (has_pg_ramp() && !interior->ignore_ramp_placement) {draw_basement_entrance_cap(interior->pg_ramp, z);} // add opening for ramp onto ground floor
 	}
-	if (has_pg_ramp() && !interior->ignore_ramp_placement) {draw_basement_entrance_cap(interior->pg_ramp, zval);} // add opening for ramp onto ground floor
 	if (!depth_clamp_enabled) {glDisable(GL_DEPTH_CLAMP);}
 	glDisable(GL_CULL_FACE);
 	glDisable(GL_POLYGON_OFFSET_FILL);
