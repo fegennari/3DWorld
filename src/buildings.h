@@ -2715,6 +2715,7 @@ private:
 	bool is_obj_placement_blocked(cube_t const &c, cube_t const &room, bool inc_open_doors, bool check_open_dir=0, float dmin=0.0) const;
 	bool is_valid_placement_for_room(cube_t const &c, cube_t const &room, vect_cube_t const &blockers, bool inc_open_doors, vector2d const &room_pad=vector2d()) const;
 	bool stairs_or_elevator_blocked_by_nested_room(cube_t const &c, unsigned room_id) const;
+	bool is_prison_door_valid(cube_t const &cand, bool dim, bool &open_dir) const;
 	void get_non_jail_cell_non_hallway_cubes(unsigned room_id, vect_cube_t &out) const;
 	bool check_cube_intersect_walls(cube_t const &c) const;
 	bool check_cube_contained_in_part(cube_t const &c) const;
@@ -3005,9 +3006,9 @@ private:
 	void add_interior_door(door_t &door, bool is_bathroom=0, bool make_unlocked=0, bool make_closed=0);
 	void add_interior_door_for_floor(door_t &door, bool is_bathroom=0, bool make_unlocked=0, bool make_closed=0);
 	void remove_section_from_cube_and_add_door(cube_t &c, cube_t &c2, float v1, float v2, bool xy,
-		bool open_dir, bool is_bathroom=0, bool make_unlocked=0, bool make_closed=0);
+		bool open_dir, bool is_bathroom=0, bool make_unlocked=0, bool make_closed=0, bool part_sep_door=0);
 	void insert_door_in_wall_and_add_seg(cube_t &wall, float v1, float v2, bool dim, bool open_dir,
-		bool keep_high_side=0, bool is_bathroom=0, bool make_unlocked=0, bool make_closed=0);
+		bool keep_high_side=0, bool is_bathroom=0, bool make_unlocked=0, bool make_closed=0, bool part_sep_door=0);
 	void reverse_door_hinges_if_needed();
 	void ensure_doors_to_room_are_closed(room_t const &room, unsigned doors_start, bool ensure_locked=0);
 	unsigned get_floor_for_zval(float zval) const {return unsigned((zval - get_bcube_z1_inc_ext_basement())/get_window_vspace());}

@@ -35,7 +35,7 @@ void building_t::add_interior_door_for_floor(door_t &door, bool is_bathroom, boo
 }
 
 void building_t::remove_section_from_cube_and_add_door(cube_t &c, cube_t &c2, float v1, float v2, bool xy,
-	bool open_dir, bool is_bathroom, bool make_unlocked, bool make_closed)
+	bool open_dir, bool is_bathroom, bool make_unlocked, bool make_closed, bool part_sep_door)
 {
 	// remove a section from this cube; c is input+output cube, c2 is other output cube
 	assert(v1 < v2);
@@ -48,14 +48,15 @@ void building_t::remove_section_from_cube_and_add_door(cube_t &c, cube_t &c2, fl
 	door.d[!xy][0] = door.d[!xy][1] = c.get_center_dim(!xy); // zero area at wall centerline
 	door.d[ xy][0] = v1;
 	door.d[ xy][1] = v2;
+	if (part_sep_door && is_prison()) {door.for_jail = 2;} // interior doors separating parts are jail cell bar doors; opaque with a barred window and a frame
 	add_interior_door(door, is_bathroom, make_unlocked, make_closed);
 }
 
-void building_t::insert_door_in_wall_and_add_seg(cube_t &wall, float v1, float v2, bool dim,
-	bool open_dir, bool keep_high_side, bool is_bathroom, bool make_unlocked, bool make_closed)
+void building_t::insert_door_in_wall_and_add_seg(cube_t &wall, float v1, float v2, bool dim, bool open_dir,
+	bool keep_high_side, bool is_bathroom, bool make_unlocked, bool make_closed, bool part_sep_door)
 {
 	cube_t wall2;
-	remove_section_from_cube_and_add_door(wall, wall2, v1, v2, dim, open_dir, is_bathroom, make_unlocked, make_closed);
+	remove_section_from_cube_and_add_door(wall, wall2, v1, v2, dim, open_dir, is_bathroom, make_unlocked, make_closed, part_sep_door);
 	if (keep_high_side) {swap(wall, wall2);} // swap left and right
 	interior->walls[!dim].push_back(wall2);
 }
@@ -1210,16 +1211,8 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 						if (ds.z1() < cand.z2() && ds.z2() > cand.z1() && ds.get_open_door_path_bcube().intersects(cand)) {pos_valid = 0; break;}
 					}
 					if (!pos_valid) continue;
-
-					if (is_prison()) { // check if too close to jail cells
-						cube_t cand_exp(cand);
-						cand_exp.expand_in_dim(d, doorway_width); // clear a path for the door
-
-						for (room_t const &r : rooms) {
-							if (r.is_nested() && r.intersects(cand_exp)) {pos_valid = 0; break;}
-						}
-						if (!pos_valid) continue;
-					}
+					bool open_dir(wall.get_center_dim(d) > bldg_door_open_dir_tp[d]); // doors open away from the building center
+					if (is_prison() && !is_prison_door_valid(cand, d, open_dir)) continue; // check if too close to jail cells
 					was_split = 1;
 
 					// Note: this code doesn't work for multiple reasons but is left in for reference in case I figure this out later
@@ -1259,8 +1252,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 							}
 						}
 					}
-					bool const open_dir(wall.get_center_dim(d) > bldg_door_open_dir_tp[d]); // doors open away from the building center
-					insert_door_in_wall_and_add_seg(wall, lo_pos, hi_pos, !d, open_dir, 0); // keep_high_side=0; Note: modifies wall
+					insert_door_in_wall_and_add_seg(wall, lo_pos, hi_pos, !d, open_dir, 0, 0, 0, 0, 1); // high_side=is_br=unlocked=closed=0; part_sep_door=1; modifies wall
 					break;
 				} // for ntries
 				if (!was_split) break; // no more splits
@@ -1268,10 +1260,6 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			} // for nsplits
 		} // for w
 	} // for d
-	if (is_prison()) { // interior doors separating parts are jail cell bar doors; opaque with a barred window and a frame
-		for (auto d = interior->doors      .begin()+doors_start;       d != interior->doors      .end(); ++d) {d->for_jail = 2;}
-		for (auto d = interior->door_stacks.begin()+door_stacks_start; d != interior->door_stacks.end(); ++d) {d->for_jail = 2;}
-	}
 	reverse_door_hinges_if_needed();
 
 	// add stairs to connect together stacked parts for office buildings; must be done last after all walls/ceilings/floors have been assigned

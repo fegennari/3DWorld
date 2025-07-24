@@ -419,6 +419,26 @@ bool building_t::stairs_or_elevator_blocked_by_nested_room(cube_t const &c, unsi
 	return 0;
 }
 
+bool building_t::is_prison_door_valid(cube_t const &cand, bool dim, bool &open_dir) const { // check if too close to jail cells
+	if (!is_prison()) return 1;
+	assert(interior);
+	float const doorway_width(get_doorway_width());
+	cube_t cand_exp(cand);
+	cand_exp.expand_in_dim(dim, doorway_width); // clear a path for the door
+	cube_t open_bc(cand);
+	open_bc.d[dim][ open_dir] += (open_dir ? 1.0 : -1.0)*doorway_width; // extend outward
+	open_bc.d[dim][!open_dir] += (open_dir ? 1.0 : -1.0)*get_wall_thickness(); // shrink inward to prevent invalid intersections
+	open_bc.expand_in_dim(!dim, doorway_width); // increase width
+
+	for (room_t const &r : interior->rooms) {
+		if (r.is_ext_basement()) break; // end at extended basement rooms
+		if (!r.is_nested())   continue; // not a jail cell
+		if (r.intersects(cand_exp)) return 0;
+		if (r.intersects(open_bc )) {open_dir ^= 1; open_bc = cand;} // reverse open_dir if hits a cell, then reset so that this only happens once
+	}
+	return 1;
+}
+
 void building_t::get_non_jail_cell_non_hallway_cubes(unsigned room_id, vect_cube_t &out) const {
 	assert(is_prison());
 	room_t const &parent(get_room(room_id));
