@@ -2559,7 +2559,8 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				stairs_bot.z2() = s.z1() + window_vspacing; // limit to bottom landing
 				find_and_merge_with_landing(interior->landings, stairs_bot, sshape, 1, 0); // merge with bottom landing; num_floors=1; is_above=0
 			}
-			else if (!is_basement && is_cube()) { // try to extend an existing stairwell on the part above or below upward/downward; not for basements or non-cube buildings
+			else if (!(is_basement && (is_house || is_parking())) && is_cube()) { // not for house basements, parking garages, or non-cube buildings
+				// try to extend an existing stairwell on the part above or below upward/downward
 				for (unsigned ab = 0; ab < 2 && !cand_is_valid; ++ab) { // extend {below, above}
 					cube_t const &targ_part(ab ? part : p);
 
