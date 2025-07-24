@@ -570,6 +570,16 @@ bool building_t::is_valid_door_pos(cube_t const &door, float door_width, bool di
 	for (auto const &door : doors) { // check other exterior doors
 		if (test_cube.intersects(door.get_bcube())) return 0;
 	}
+	if (is_prison()) { // check jail cells
+		cube_t test_cube2(door);
+		test_cube2.expand_in_dim( dim, door_width); // must have space in front
+		test_cube2.expand_in_dim(!dim, get_wall_thickness()); // and a bit of space to the side
+
+		for (room_t const &r : interior->rooms) {
+			if (r.z1() < ground_floor_z1) break; // end at basement rooms
+			if (r.is_nested() && r.intersects(test_cube2)) return 0;
+		}
+	}
 	if (has_chimney == 2 && test_cube.intersects(get_fireplace())) return 0; // too close to fireplace (Note: door is actually placed first, likely has no effect)
 	return 1;
 }
