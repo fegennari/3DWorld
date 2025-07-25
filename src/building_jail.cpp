@@ -16,7 +16,10 @@ bool building_t::divide_part_into_jail_cells(cube_t const &part, unsigned part_i
 	float const dx(part_sz.x), dy(part_sz.y);
 	bool const long_dim(dx < dy), hall_dim(long_dim ^ try_short_dim), in_basement(part.z1() < ground_floor_z1);
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness()), fc_thick(get_fc_thickness()), door_width(get_doorway_width());
-	float const room_width(part_sz[!hall_dim]), min_cell_depth(max(floor_spacing, 2.5f*door_width)), min_hall_width(2.5*door_width);
+	float const room_width(part_sz[!hall_dim]), min_hall_width(2.5*door_width);
+	float min_cell_depth(max(floor_spacing, 2.5f*door_width));
+	int const num_end_windows(get_num_windows_on_side(part, !hall_dim));
+	if (num_end_windows >= 3) {max_eq(min_cell_depth, part_sz[!hall_dim]/num_end_windows);} // if at least three windows, make sure cells contains a full window
 	float const hall_centerline(part.get_center_dim(!hall_dim));
 	float min_room_width(2*min_cell_depth + min_hall_width), extra_width(room_width - min_room_width);
 	unsigned skip_side(2); // 2=neither
@@ -109,7 +112,8 @@ bool building_t::divide_part_into_jail_cells(cube_t const &part, unsigned part_i
 			// attempt to move to not intersect window
 			float const window_hspacing(part_sz[dim]/get_num_windows_on_side(part, dim)); // for hall end windows
 			float const shift_cell_edge(shift_val_to_not_intersect_window(part, cell_edge, window_hspacing, get_window_h_border(), dim));
-			float const new_cell_depth(fabs(shift_cell_edge - cell.d[dim][dir])), new_hall_hwidth(shift_cell_edge - hall_centerline);
+			float const new_cell_depth(fabs(shift_cell_edge - cell.d[dim][dir]));
+			float const new_hall_hwidth(shift_cell_edge - hall_centerline + ((skip_side < 2) ? cell_depth : 0.0)); // empty cell row counts as hallway
 			if (new_cell_depth > min_cell_depth && 2.0*new_hall_hwidth > min_hall_width) {cell_edge = shift_cell_edge;} // shift if cell and hall are wide enough
 			cell.d[dim][!dir] = hall_room.d[dim][dir] = cell_edge;
 
