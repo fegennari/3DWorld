@@ -448,18 +448,31 @@ bool building_t::is_prison_door_valid(cube_t const &cand, bool dim, bool &open_d
 	float const doorway_width(get_doorway_width());
 	cube_t cand_exp(cand);
 	cand_exp.expand_in_dim(dim, doorway_width); // clear a path for the door
-	cube_t open_bc(cand);
-	open_bc.d[dim][ open_dir] += (open_dir ? 1.0 : -1.0)*doorway_width; // extend outward
-	open_bc.d[dim][!open_dir] += (open_dir ? 1.0 : -1.0)*get_wall_thickness(); // shrink inward to prevent invalid intersections
-	open_bc.expand_in_dim(!dim, doorway_width); // increase width
 
-	for (room_t const &r : interior->rooms) {
-		if (r.is_ext_basement()) break; // end at extended basement rooms
-		if (!r.is_nested())   continue; // not a jail cell
-		if (r.intersects(cand_exp)) return 0;
-		if (r.intersects(open_bc )) {open_dir ^= 1; open_bc = cand;} // reverse open_dir if hits a cell, then reset so that this only happens once
-	}
-	return 1;
+	for (unsigned d = 0; d < 2; ++d) { // try both open_dir values
+		cube_t open_bc(cand);
+		open_bc.expand_in_dim(!dim, doorway_width); // increase width on both sides, since we don't know/can't control which direction the door will open
+		open_bc.d[dim][ open_dir] += (open_dir ? 1.0 : -1.0)*doorway_width; // extend outward
+		open_bc.d[dim][!open_dir] += (open_dir ? 1.0 : -1.0)*get_wall_thickness(); // shrink inward to prevent invalid intersections
+		bool valid(1);
+
+		for (room_t const &r : interior->rooms) {
+			if ( r.is_ext_basement()) break; // end at extended basement rooms
+			if (!r.is_nested())   continue; // not a jail cell
+			if ( r.intersects(cand_exp)) return 0; // invalid for either dim
+			if ( r.intersects(open_bc )) {valid = 0; break;} // invalid if hits a cell
+		}
+		if (valid) { // test that door is contained in a part
+			valid = 0;
+
+			for (cube_t const &part : parts) {
+				if (part.contains_cube(open_bc)) {valid = 1; break;}
+			}
+		}
+		if (valid) return 1;
+		open_dir ^= 1;
+	} // for d
+	return 0; // neither dir is valid
 }
 
 void building_t::get_non_jail_cell_non_hallway_cubes(unsigned room_id, vect_cube_t &out) const {
