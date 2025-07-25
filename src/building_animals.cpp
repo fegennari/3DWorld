@@ -254,7 +254,7 @@ bool building_t::add_rat(point const &pos, float hlength, vector3d const &dir, p
 	if (point_in_water_area(rat_pos, 0)) return 0; // don't place rat in water; full_room_height=0
 	rat_t rat(rat_pos, hlength, vector3d(dir.x, dir.y, 0.0).get_norm(), interior->room_geom->rats.size(), dead); // dir in XY plane
 	
-	if (check_line_coll_expand(pos, rat_pos, hlength, rat.height)) { // something is in the way
+	if (check_line_coll_expand(pos, rat_pos, hlength, rat.height, ATYPE_RAT)) { // something is in the way
 		point const test_pos(rat_pos + vector3d(0.0, 0.0, rat.height));
 		auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 
@@ -650,7 +650,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, float timestep, 
 			rat.pos = prev_pos; // restore previous pos before collision
 			rat.sleep_for(0.1, 0.2); // wait 0.1-0.2s so that we don't immediately collide and get pushed out again
 		}
-		else if (check_line_coll_expand((rat.pos + center_dz), (rat.dest + center_dz), coll_radius, squish_hheight)) {
+		else if (check_line_coll_expand((rat.pos + center_dz), (rat.dest + center_dz), coll_radius, squish_hheight, ATYPE_RAT)) {
 			rat.pos = prev_pos; // restore previous pos before collision
 		}
 		else {
@@ -680,7 +680,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, float timestep, 
 		if (is_pos_inside_building(target, xy_pad, hheight)) { // check if outside the valid area
 			point const p1_ext(p1 + coll_radius*vdir); // move the line slightly toward the dest to prevent collisions at the initial location
 			
-			if (!check_line_coll_expand(p1_ext, target, coll_radius, squish_hheight)) {
+			if (!check_line_coll_expand(p1_ext, target, coll_radius, squish_hheight, ATYPE_RAT)) {
 				rat.dest      = target;
 				rat.speed     = RAT_ATTACK_SPEED*global_building_params.rat_speed;
 				rat.wake_time = 0.0; // wake up
@@ -727,7 +727,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, float timestep, 
 			float const dist(p2p_dist(p1, cand_dest));
 			
 			if (dist < dist_thresh) { // already at this location
-				if (check_line_coll_expand(p1, cand_dest, coll_radius, squish_hheight)) {update_path = 1; continue;} // location is invalid, need to update the path below
+				if (check_line_coll_expand(p1, cand_dest, coll_radius, squish_hheight, ATYPE_RAT)) {update_path = 1; continue;} // location invalid, need to update path below
 				has_fear_dest = 1; // it's valid, so stay there
 				rat.speed     = 0.0;
 				break;
@@ -736,7 +736,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, float timestep, 
 			float const dist_to_fear(p2p_dist(rat.fear_pos, cand_dest));
 			float score(side_cov - 0.5f*top_gap + 0.2f*dist_to_fear - 0.1f*max(dist, dist_thresh)); // can be positive or negative
 			if (best_score != 0.0 && score <= best_score) continue; // check score before iterating over other rats; it can only decrease below
-			if (check_line_coll_expand(p1, cand_dest, coll_radius, squish_hheight)) continue; // use center before checking other rats so that the entire path is valid
+			if (check_line_coll_expand(p1, cand_dest, coll_radius, squish_hheight, ATYPE_RAT)) continue; // use center before checking other rats so that entire path is valid
 			float tot_mdist(0.0);
 			bool skip(0);
 			float const radius_scale = 0.8; // smaller dist (head can overlap tail)
@@ -782,7 +782,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, float timestep, 
 		rat.speed = 0.0; // will reset anim_time in the next frame
 	}
 	else if (!has_fear_dest && !rat.is_sleeping() &&
-		(rat.speed == 0.0 || newly_scared || update_path || is_at_dest || check_line_coll_expand(rat.pos, rat.dest, coll_radius, hheight)))
+		(rat.speed == 0.0 || newly_scared || update_path || is_at_dest || check_line_coll_expand(rat.pos, rat.dest, coll_radius, hheight, ATYPE_RAT)))
 	{
 		// stopped, no dest, at dest, collided, or newly scared - choose a new dest
 		float target_fov_dp(RAT_FOV_DP), target_max_dist(view_dist); // start at nominal/max values
@@ -812,7 +812,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, float timestep, 
 			if (!is_pos_inside_building(cand, xy_pad, hheight)) continue; // check if outside the valid area
 			point const p2(cand + line_project_dist*vdir + center_dz); // extend in vdir so that the head doesn't collide
 			point const p1_ext(p1 + coll_radius*vdir); // move the line slightly toward the dest to prevent collisions at the initial location
-			if (check_line_coll_expand(p1_ext, p2, coll_radius, squish_hheight)) continue;
+			if (check_line_coll_expand(p1_ext, p2, coll_radius, squish_hheight, ATYPE_RAT)) continue;
 			rat.dest  = cand;
 			rat.speed = global_building_params.rat_speed*rgen.rand_uniform(0.5, 1.0)*(is_scared ? 1.5 : 1.0); // random speed
 			break; // success
@@ -1722,7 +1722,7 @@ void get_xy_dir_to_closest_cube_edge(point const &pos, cube_t const &c, vector3d
 // applies to snakes and flies
 // return values: 0=no coll, 1=outside building, 2=static object, 3=dynamic object, 4=ourself (for snakes)
 // coll_dir points in the direction of the collision, opposite the collision normal / the direction we want to move to avoid a collision (new pos - old pos)
-int building_t::check_for_animal_coll(building_animal_t const &A, float hheight, float z_center_offset, bool on_floor_only, bool skip_player,
+int building_t::check_for_animal_coll(building_animal_t const &A, float hheight, float z_center_offset, int animal_type, bool skip_player,
 	point const &camera_bs, float timestep, point const &old_pos, point const &query_pos, vector3d &coll_dir) const
 {
 	if (!bcube.contains_pt_xy_exp(query_pos, -A.radius) && !interior->basement_ext_bcube.contains_pt_xy_exp(query_pos, -A.radius)) { // outside the building interior
@@ -1739,7 +1739,7 @@ int building_t::check_for_animal_coll(building_animal_t const &A, float hheight,
 		return 1; // outside building
 	}
 	// coll_ret: 0=no coll, 1=d0 wall, 2=d1 wall, 3=closed door d0, 4=closed door d1, 5=open door, 6=stairs, 7=elevator, 8=exterior wall, 9=room object, 10=closet, 11=cabinet
-	int const coll_ret(check_line_coll_expand((old_pos + center_dz), query_center_z, A.radius, hheight, !on_floor_only)); // for_spider=!on_floor_only
+	int const coll_ret(check_line_coll_expand((old_pos + center_dz), query_center_z, A.radius, hheight, animal_type));
 
 	if (coll_ret) {
 		if (coll_ret == 1 || coll_ret == 3) {coll_dir.x = ((query_pos.x < old_pos.x) ? -1.0 : 1.0);} // dim=0 wall/door, separates in X
@@ -1763,7 +1763,7 @@ int building_t::check_for_animal_coll(building_animal_t const &A, float hheight,
 }
 int building_t::check_for_snake_coll(snake_t const &snake, point const &camera_bs, float timestep, point const &old_pos, point const &query_pos, vector3d &coll_dir) const {
 	float const hheight(0.5*snake.get_height());
-	int const ret(check_for_animal_coll(snake, hheight, hheight, 1, 0, camera_bs, timestep, old_pos, query_pos, coll_dir)); // on_floor_only=1, skip_player=0
+	int const ret(check_for_animal_coll(snake, hheight, hheight, ATYPE_SNAKE, 0, camera_bs, timestep, old_pos, query_pos, coll_dir)); // skip_player=0
 	if (ret) return ret;
 	vector3d seg_dir;
 
@@ -1920,7 +1920,7 @@ void building_t::update_fly(insect_t &fly, point const &camera_bs, float timeste
 		vector3d const lookahead(fly.dir*(2.0*radius));
 		vector3d coll_dir; // opposite the collision normal; points toward the collider in the XY plane
 		// coll_type: 0=no coll, 1=outside building, 2=static object, 3=dynamic object; z_center_offset=0.0, on_floor_only=0
-		int const ret(check_for_animal_coll(fly, hheight, 0.0, 0, target_player, camera_bs, timestep, pos, (pos + lookahead), coll_dir));
+		int const ret(check_for_animal_coll(fly, hheight, 0.0, ATYPE_FLY, target_player, camera_bs, timestep, pos, (pos + lookahead), coll_dir));
 	
 		if (ret) { // collision
 			// if coll_dir is not set, use the direction we last moved in, or our dir if that's zero
@@ -1943,7 +1943,7 @@ void building_t::update_fly(insect_t &fly, point const &camera_bs, float timeste
 			return;
 		}
 		if (rgen.rand_float() < 0.25) { // every 4 updates send out a longer range collision query
-			if (check_for_animal_coll(fly, hheight, 0.0, 0, target_player, camera_bs, timestep, pos, (pos + 8.0*lookahead), coll_dir)) { // Note: coll_dir is unused
+			if (check_for_animal_coll(fly, hheight, 0.0, ATYPE_FLY, target_player, camera_bs, timestep, pos, (pos + 8.0*lookahead), coll_dir)) { // Note: coll_dir unused
 				fly.delta_dir *= 0.9f; // reduce direction change
 				fly.dir       += 0.25*rgen.signed_rand_vector_norm(); // adjust direction
 				fly.dir.normalize();
@@ -2010,7 +2010,7 @@ void building_t::update_roach(insect_t &roach, point const &camera_bs, float tim
 
 		if (!spawn_new_pos) {
 			// coll_ret: 0=no coll, 1=d0 wall, 2=d1 wall, 3=closed door d0, 4=closed door d1, 5=open door, 6=stairs, 7=elevator, 8=exterior wall, 9=room object, 10=closet, 11=cabinet
-			int const coll_ret(check_line_coll_expand(roach.last_pos, pos, radius, hheight, 0)); // for_spider=0
+			int const coll_ret(check_line_coll_expand(roach.last_pos, pos, radius, hheight, ATYPE_ROACH));
 			bool maybe_stuck(0);
 
 			if (coll_ret == 9) { // room object (except closet or kitchen cabinet); open door collisions are ignored (can go under doors)

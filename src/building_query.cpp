@@ -2751,8 +2751,9 @@ void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, ve
 // interior collision query used for rats, snakes, and insects: p1 and p2 are line end points; radius applies in X and Y, hheight is half height and applies in +/- z
 // note that for_spider is used with insects, not spiders, but it's named this way because it's passed into nested calls that use this variable name
 // return value: 0=no coll, 1=d0 wall, 2=d1 wall, 3=closed door d0, 4=closed door d1, 5=open door, 6=stairs, 7=elevator/escalator, 8=exterior wall, 9=room object, 10=closet, 11=cabinet
-int building_t::check_line_coll_expand(point const &p1, point const &p2, float radius, float hheight, bool for_spider) const {
+int building_t::check_line_coll_expand(point const &p1, point const &p2, float radius, float hheight, int animal_type) const {
 	assert(interior != nullptr);
+	bool const for_spider(animal_type == ATYPE_SPIDER || animal_type == ATYPE_FLY); // fly uses similar logic to spider since it's not on the floor
 	float const trim_thickness(get_trim_thickness()), zmin(min(p1.z, p2.z));
 	float const obj_z1(min(p1.z, p2.z) - hheight), obj_z2(max(p1.z, p2.z) + hheight);
 	vector3d const expand(radius, radius, hheight), expand_walls(expand + vector3d(trim_thickness, trim_thickness, 0.0)); // include the wall trim width
@@ -2785,7 +2786,7 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 	for (auto const &s : interior->stairwells) {
 		if (!line_int_cube_exp(p1, p2, s, expand)) continue;
 		if (s.shape == SHAPE_WALLED || s.is_u_shape()) return 6; // fully walled and U-shaped stairs always collide, even for spiders and insects
-		if (!for_spider && s.z1() < zmin - 0.5f*get_window_vspace()) return 6; // not the ground floor - definitely a collision; but not for spiders or insects
+		if (!for_spider && s.z1() < zmin - 0.5f*get_window_vspace()) return 6; // not the ground floor - definitely a collision, but not for spiders or flies
 
 		if (has_room_geom()) { // maybe we're under the stairs; check for individual stairs collisions; this condition should always be true
 			for (auto c = interior->room_geom->get_stairs_start(); c != interior->room_geom->objs.end(); ++c) {
@@ -2795,7 +2796,7 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 		}
 	} // for s
 	if (has_mall() && line_int_cube_exp(p1, p2, interior->mall_info->ent_stairs, expand)) return 6; // mall stairs
-	if (line_int_cubes_exp(p1, p2, interior->elevators,  expand, line_bcube)) return 7; // collide with entire elevator
+	if (line_int_cubes_exp(p1, p2, interior->elevators, expand, line_bcube)) return 7; // collide with entire elevator
 	
 	for (escalator_t const &e : interior->escalators) {
 		if (!line_int_cube_exp(p1, p2, e, expand)) continue;
@@ -2857,7 +2858,8 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 			if (c->z1() > obj_z2 || c->z2() < obj_z1) continue; // wrong floor
 			// skip non-colliding objects except for balls and books (that the player can drop), computers under desks, and expanded objects from closets,
 			// since rats must collide with these
-			if (!(for_spider ? c->is_spider_collidable() : c->is_floor_collidable())) continue;
+			//if (c->type == TYPE_JAIL_BARS && animal_type == ATYPE_SNAKE) {} // snakes collide with jail bars, but rats can walk through/over them - but jail bars not cached
+			if (!(for_spider ? c->is_spider_collidable() : c->is_floor_collidable()))                          continue;
 			if (!line_bcube.intersects(*c) || !line_int_cube_exp(p1, p2, get_true_room_obj_bcube(*c), expand)) continue; // catwalk floor only?
 			if (c->type == TYPE_RAMP && interior->ignore_ramp_placement && obj_z1 >= ground_floor_z1)          continue;
 

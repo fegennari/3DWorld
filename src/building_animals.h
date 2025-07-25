@@ -7,6 +7,8 @@
 
 template<typename T> cube_t get_cube_height_radius(point const &center, T radius, float height);
 
+// define separate types so that we can differentiate fly vs. roach from TYPE_INSECT
+enum {ATYPE_RAT=0, ATYPE_SNAKE, ATYPE_SPIDER, ATYPE_FLY, ATYPE_ROACH};
 
 struct building_animal_t {
 	point pos, last_pos;

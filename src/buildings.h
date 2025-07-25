@@ -2524,7 +2524,7 @@ private:
 	void update_spider(spider_t &spider, point const &camera_bs, float timestep, float &max_xmove, rand_gen_t &rgen);
 	bool maybe_squish_animals(room_object_t const &obj, point const &player_pos);
 	void update_snake(snake_t  &snake,  point const &camera_bs, float timestep, float &max_xmove, rand_gen_t &rgen);
-	int  check_for_animal_coll(building_animal_t const &A, float hheight, float z_center_offset, bool on_floor_only, bool skip_player,
+	int  check_for_animal_coll(building_animal_t const &A, float hheight, float z_center_offset, int animal_type, bool skip_player,
 		point const &camera_bs, float timestep, point const &old_pos, point const &query_pos, vector3d &coll_dir) const;
 	int  check_for_snake_coll(snake_t const &snake, point const &camera_bs, float timestep, point const &old_pos, point const &query_pos, vector3d &coll_dir) const;
 	void update_insect(insect_t &insect, point const &camera_bs, float timestep, vector<pair<float, point>> &targets, rand_gen_t &rgen) const;
@@ -2534,7 +2534,7 @@ private:
 
 	bool is_pos_inside_building(point const &pos, float xy_pad, float hheight, bool inc_attic=1) const;
 	void get_room_obj_cubes(room_object_t const &c, point const &pos, vect_cube_t &lg_cubes, vect_cube_t &sm_cubes, vect_cube_t &non_cubes) const;
-	int  check_line_coll_expand(point const &p1, point const &p2, float radius, float hheight, bool for_spider=0) const;
+	int  check_line_coll_expand(point const &p1, point const &p2, float radius, float hheight, int animal_type) const;
 	bool check_line_of_sight_large_objs(point const &p1, point const &p2) const;
 	bool check_line_int_interior_window(point const &p1, point const &p2) const;
 	bool check_and_handle_dynamic_obj_coll(point &pos, point const &cur_obj_pos, float radius,
