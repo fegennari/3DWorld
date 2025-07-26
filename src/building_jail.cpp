@@ -445,7 +445,15 @@ void building_t::populate_jail_cell(rand_gen_t &rgen, cube_t const &cell, float 
 			sink.d[dim][bed_side] = ts_space.d[dim][!bed_side] + bss*depth;
 			objs.emplace_back(sink, TYPE_SINK, room_id, dim, bed_side, 0, tot_light_amt);
 		}
-		add_bathroom_plumbing(objs.back());
+		bool maybe_against_window(0);
+
+		if (zval >= ground_floor_z1) { // windows are only above ground
+			room_t const &room(get_room(room_id));
+			cube_t const &part(parts[room.part_id]);
+			bool const sdim(sink_on_back_wall ? !dim : dim), sdir(sink_on_back_wall ? dir : !bed_side);
+			maybe_against_window = (fabs(ts_space.d[sdim][sdir] - part.d[sdim][sdir]) < wall_thick && classify_room_wall(room, zval, sdim, sdir, 0) == ROOM_WALL_EXT);
+		}
+		if (!maybe_against_window) {add_bathroom_plumbing(objs.back());}
 	}
 }
 
