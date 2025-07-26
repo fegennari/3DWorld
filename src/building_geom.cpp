@@ -1983,15 +1983,16 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office 
 	unsigned const max_doors(is_parking() ? 2 : (bldg_has_windows ? 3 : 4)); // buildings with windows have at most 3 doors since they're smaller
 	unsigned const num_doors(min_doors + (rgen.rand() % (max_doors - min_doors + 1)));
 	cube_t const parts_bcube(get_unrotated_parts_bcube());
+	assert(real_num_parts > has_basement());
+	unsigned const num_above_ground_parts(real_num_parts - has_basement());
 
 	for (unsigned num = 0; num < num_doors; ++num) {
 		bool placed(0);
 
-		for (auto b = parts.begin(); b != get_real_parts_end() && !placed; ++b) { // try all different ground floor parts
-			if (is_basement(b)) continue; // skip the basement
-			unsigned const part_ix(b - parts.begin());
+		for (unsigned part_ix = 0; part_ix < num_above_ground_parts && !placed; ++part_ix) { // try all different ground floor parts
+			cube_t const &part(parts[part_ix]);
 			if (bldg_has_windows && part_ix >= 4) break; // only first 4 parts can have doors - must match first floor window removal logic
-			if (b->z1() > ground_floor_z1)        break; // moved off the ground floor
+			if (part.z1() > ground_floor_z1)      break; // moved off the ground floor
 
 			if (!is_cube()) { // N-gon building; See if there's an X or Y oriented side to add a door to; should get here for exactly one part
 				vect_point const &points(get_part_ext_verts(part_ix));
@@ -2007,8 +2008,8 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office 
 						if (match_side_ix != num)        continue; // not the selected side; should this be randomized? most of the time there's only one valid side
 						++match_side_ix;
 						float const side_pos(0.5*(p1[d] + p2[d])), side_center(0.5*(p1[!d] + p2[!d]));
-						bool const dir(side_pos > b->get_center_dim(d)), allow_fail(!doors.empty());
-						if (!add_door(place_door(*b, d, dir, door_height, side_center, side_pos, 0.0, wscale, allow_fail, 0, rgen), part_ix, d, dir, 1)) continue;
+						bool const dir(side_pos > part.get_center_dim(d)), allow_fail(!doors.empty());
+						if (!add_door(place_door(part, d, dir, door_height, side_center, side_pos, 0.0, wscale, allow_fail, 0, rgen), part_ix, d, dir, 1)) continue;
 						placed = found = 1;
 						break;
 					} // for d
@@ -2019,7 +2020,7 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office 
 				bool const dim(interior->ind_info->entrance_dim), dir(interior->ind_info->entrance_dir);
 
 				if (num == 0) { // main entrance is in or between the smaller rooms
-					if (add_door(place_door(*b, dim, dir, door_height, interior->ind_info->entrance_pos, 0.0, 0.0, wscale, 0, 0, rgen), part_ix, dim, dir, 1)) {
+					if (add_door(place_door(part, dim, dir, door_height, interior->ind_info->entrance_pos, 0.0, 0.0, wscale, 0, 0, rgen), part_ix, dim, dir, 1)) {
 						used[2*dim + dir] = 1; // mark used
 						placed = 1;
 						continue;
@@ -2030,7 +2031,7 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office 
 
 					for (unsigned n = 0; n < 2; ++n) { // {centered, non-centered}
 						float const door_center_shift(n ? 0.4 : 0.05); // first pass is (nearly) centered, second pass is non-centered
-						cube_t const door(place_door(*b, dim, !dir, door_height, 0.0, 0.0, door_center_shift, 2.0*wscale, 1, 1, rgen));
+						cube_t const door(place_door(part, dim, !dir, door_height, 0.0, 0.0, door_center_shift, 2.0*wscale, 1, 1, rgen));
 
 						if (add_door(door, part_ix, dim, !dir, 1)) {
 							doors.back().type = tquad_with_ix_t::TYPE_GDOOR;
@@ -2051,9 +2052,9 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office 
 				bool const dim(pref_dim ^ bool(n>>1)), dir(pref_dir ^ bool(n&1));
 				if (used[2*dim + dir]) continue; // door already placed on this side
 				// find a side on the exterior to ensure door isn't obstructed by a building cube or in the courtyard
-				if (b->d[dim][dir] != parts_bcube.d[dim][dir]) continue;
-				bool const allow_fail(!doors.empty() || b+1 != get_real_parts_end()); // allow door placement to fail if we've already placed at least one door of not last part
-				if (!add_door(place_door(*b, dim, dir, door_height, 0.0, 0.0, 0.1, wscale, allow_fail, 0, rgen), part_ix, dim, dir, 1)) continue;
+				if (part.d[dim][dir] != parts_bcube.d[dim][dir]) continue;
+				bool const allow_fail(!doors.empty() || part_ix+1 < num_above_ground_parts); // allow failure if already placed at least one door and not last part
+				if (!add_door(place_door(part, dim, dir, door_height, 0.0, 0.0, 0.1, wscale, allow_fail, 0, rgen), part_ix, dim, dir, 1)) continue;
 				used[2*dim + dir] = 1; // mark used
 				placed = 1;
 				break;
