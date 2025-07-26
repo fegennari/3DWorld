@@ -561,6 +561,7 @@ bool building_t::is_valid_door_pos(cube_t const &door, float door_width, bool di
 		if (interior->is_blocked_by_stairs_or_elevator(door, door_width)) return 0;
 		cube_t test_cube(door);
 		test_cube.expand_in_dim(dim, door_width);
+		// should we exclude interior cell doors in prisons because they may block all possible exterior doors?
 		if (interior->is_cube_close_to_doorway(test_cube, cube_t(), 0.0, 1, 1))   return 0; // check interior doors: null room, inc_open=1, check_open_dir=1
 		if (door.zc() < ground_floor_z1 && check_cube_intersect_walls(test_cube)) return 0; // required for basement doors
 	}
@@ -2054,7 +2055,8 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office 
 				// find a side on the exterior to ensure door isn't obstructed by a building cube or in the courtyard
 				if (part.d[dim][dir] != parts_bcube.d[dim][dir]) continue;
 				bool const allow_fail(!doors.empty() || part_ix+1 < num_above_ground_parts); // allow failure if already placed at least one door and not last part
-				if (!add_door(place_door(part, dim, dir, door_height, 0.0, 0.0, 0.1, wscale, allow_fail, 0, rgen), part_ix, dim, dir, 1)) continue;
+				float const door_center_shift(is_prison() ? 0.25 : 0.1); // allow misaligned doors in prisons in case cells are to one side
+				if (!add_door(place_door(part, dim, dir, door_height, 0.0, 0.0, door_center_shift, wscale, allow_fail, 0, rgen), part_ix, dim, dir, 1)) continue;
 				used[2*dim + dir] = 1; // mark used
 				placed = 1;
 				break;
