@@ -2734,7 +2734,9 @@ float building_interior_t::get_doorway_width() const {
 float building_t::get_doorway_width() const {
 	if (is_prison()) {return get_nominal_doorway_width();} // if first door is a jail cell, it will be too narrow
 	float const width(interior ? interior->get_doorway_width() : 0.0);
-	return (width ? width : DOOR_WIDTH_SCALE*get_door_height()); // calculate from window spacing/door height if there's no interior or no interior doors
+	if (width > 0.0) return width;
+	// calculate from window spacing/door height if there's no interior or no interior doors
+	return DOOR_WIDTH_SCALE*get_door_height(); // Note: 0.85*get_nominal_doorway_width(); should we call get_nominal_doorway_width()?
 }
 // and ramps, and extb conn rooms/doors, and escalators
 bool building_interior_t::is_blocked_by_stairs_or_elevator(cube_t const &c, float dmin, bool elevators_only, int no_check_enter_exit) const {
