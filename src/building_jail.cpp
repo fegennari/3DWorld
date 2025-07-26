@@ -19,10 +19,11 @@ bool building_t::divide_part_into_jail_cells(cube_t const &part, unsigned part_i
 	float const dx(part_sz.x), dy(part_sz.y);
 	bool const long_dim(dx < dy), hall_dim(long_dim ^ try_short_dim), in_basement(part.z1() < ground_floor_z1);
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness()), wall_hthick(0.5*wall_thickness), fc_thick(get_fc_thickness());
-	float const door_width(get_doorway_width()), room_width(part_sz[!hall_dim]), min_hall_width(2.5*door_width);
-	float min_cell_depth(max(floor_spacing, 2.5f*door_width));
+	float const door_width(get_doorway_width()), room_width(part_sz[!hall_dim]), min_hall_width(2.1*door_width);
+	float min_cell_depth(max(floor_spacing, 2.1f*door_width));
 	int const num_end_windows(get_num_windows_on_side(part, !hall_dim));
-	if (num_end_windows >= 3) {max_eq(min_cell_depth, part_sz[!hall_dim]/num_end_windows);} // if at least three windows, make sure cells contains a full window
+	float const window_width(part_sz[!hall_dim]/num_end_windows);
+	if (num_end_windows >= 3) {max_eq(min_cell_depth, window_width);} // if at least three windows, make sure cells contains a full window
 	float const hall_centerline(part.get_center_dim(!hall_dim));
 	float min_room_width(2*min_cell_depth + min_hall_width), extra_width(room_width - min_room_width);
 	unsigned skip_side(2); // 2=neither
@@ -31,7 +32,7 @@ bool building_t::divide_part_into_jail_cells(cube_t const &part, unsigned part_i
 	if (interior->prison_halls.empty()) {interior->prison_halls = parts;} // start as entire part
 
 	if (extra_width < 0.0) { // too narrow to fit jail cells; should be rare
-		if (try_short_dim || part_sz[hall_dim] > 2.0*part_sz[!hall_dim]) { // consider skipping the cells on one side and creating a wider hallway
+		if (try_short_dim || part_sz[hall_dim] > 1.8*part_sz[!hall_dim]) { // consider skipping the cells on one side and creating a wider hallway
 			min_room_width -= min_cell_depth;
 			extra_width     = room_width - min_room_width;
 			// if we have enough space, skip side furthest from edge of bcube and keep exterior cells
@@ -44,7 +45,8 @@ bool building_t::divide_part_into_jail_cells(cube_t const &part, unsigned part_i
 			return 0;
 		}
 	}
-	float const cell_depth(min_cell_depth + min(0.5*min_cell_depth, extra_width/3.0)); // distribute extra width across the hall and cells on either side
+	float cell_depth(min_cell_depth + min(0.5*min_cell_depth, extra_width/3.0)); // distribute extra width across the hall and cells on either side
+	min_eq(cell_depth, 1.2f*max(min_cell_depth, window_width)); // not so wide that we clip a second window
 	vect_cube_with_ix_t cells;
 
 	if (in_basement) { // basement jail cell
