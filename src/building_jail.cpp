@@ -18,8 +18,8 @@ bool building_t::divide_part_into_jail_cells(cube_t const &part, unsigned part_i
 	vector2d const part_sz(part.get_size_xy());
 	float const dx(part_sz.x), dy(part_sz.y);
 	bool const long_dim(dx < dy), hall_dim(long_dim ^ try_short_dim), in_basement(part.z1() < ground_floor_z1);
-	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness()), fc_thick(get_fc_thickness()), door_width(get_doorway_width());
-	float const room_width(part_sz[!hall_dim]), min_hall_width(2.5*door_width);
+	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness()), wall_hthick(0.5*wall_thickness), fc_thick(get_fc_thickness());
+	float const door_width(get_doorway_width()), room_width(part_sz[!hall_dim]), min_hall_width(2.5*door_width);
 	float min_cell_depth(max(floor_spacing, 2.5f*door_width));
 	int const num_end_windows(get_num_windows_on_side(part, !hall_dim));
 	if (num_end_windows >= 3) {max_eq(min_cell_depth, part_sz[!hall_dim]/num_end_windows);} // if at least three windows, make sure cells contains a full window
@@ -133,8 +133,11 @@ bool building_t::divide_part_into_jail_cells(cube_t const &part, unsigned part_i
 		} // for i
 		if (!had_ext_wall && !try_short_dim) {return divide_part_into_jail_cells(part, part_id, rgen, 1);} // try the other dim; try_short_dim=1
 	}
+	unsigned const parent_room_id(rooms.size() + cells.size());
+
 	for (cube_with_ix_t const &cell : cells) {
 		bool const dim(cell.ix >> 1), dir(cell.ix & 1);
+		unsigned const room_id(rooms.size());
 		add_room(cell, part_id);
 		rooms.back().assign_all_to(RTYPE_JAIL_CELL);
 		rooms.back().set_is_nested();
@@ -149,6 +152,13 @@ bool building_t::divide_part_into_jail_cells(cube_t const &part, unsigned part_i
 			set_wall_width(wall, wall_pos, 0.5*wall_thickness, !dim);
 			interior->walls[!dim].push_back(wall);
 		}
+		// add the door
+		bool const hinge_side(room_id & 1);
+		float const bars_depth_pos(cell.d[dim][!dir] + (dir ? 1.0 : -1.0)*wall_hthick), bars_hthick(JAIL_BARS_THICK*wall_hthick);
+		cube_t bars(cell);
+		clip_wall_to_ceil_floor(bars, fc_thick);
+		set_wall_width(bars, bars_depth_pos, bars_hthick, dim);
+		add_jail_cell_door(bars, room_id, parent_room_id, !dim, dir, hinge_side);
 	} // for cell
 	add_room(part, part_id); // add a single room for the entire part, last, since cells are sub-rooms
 	rooms.back().assign_all_to(RTYPE_JAIL);
@@ -159,7 +169,7 @@ bool building_t::divide_part_into_jail_cells(cube_t const &part, unsigned part_i
 	return 1;
 }
 
-void building_t::add_prison_jail_cell_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+void building_t::add_prison_jail_cell_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	// find the open wall dim/dir
 	unsigned num_open_walls(0);
 	bool dim(0), dir(0);
@@ -192,14 +202,11 @@ void building_t::add_prison_jail_cell_objs(rand_gen_t rgen, room_t const &room, 
 	}
 	// Note: open wall/bars dim is inverted because the calls below use the hall dim
 	float const bars_depth_pos(room.d[dim][!dir] + (dir ? 1.0 : -1.0)*wall_hthick), bars_hthick(JAIL_BARS_THICK*wall_hthick);
-	cube_t bars(cell);
-	set_wall_width(bars, bars_depth_pos, bars_hthick, dim);
-	door_t const door(add_jail_cell_door(bars, room_id, !dim, dir, hinge_side));
-	add_jail_cell_bars(bars, door, room_id, tot_light_amt, !dim, dir, bar_color);
-	populate_jail_cell(rgen, cell_inner, zval, room_id, tot_light_amt, !dim, dir, bed_side, sink_on_back_wall, is_lit, bars_hthick, bars_depth_pos);
+	add_jail_cell_bars(cell, cube_t(), room_id, tot_light_amt, !dim, dir, hinge_side, bar_color);
+	populate_jail_cell(rgen, cell, zval, room_id, tot_light_amt, !dim, dir, bed_side, sink_on_back_wall, is_lit, bars_hthick, bars_depth_pos);
 }
 
-void building_t::add_prison_main_room_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+void building_t::add_prison_main_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	// TODO: desk, keys, stairs; also cafeteria, etc.
 }
 
@@ -258,8 +265,8 @@ bool building_t::add_basement_jail_objs(rand_gen_t rgen, room_t const &room, flo
 			bool const hinge_side((room_center < cell_center) ^ bool(dir) ^ 1), bed_side(!hinge_side); // door opens toward hallway center
 			cube_t bars(cell);
 			set_wall_width(bars, bars_depth_pos, bars_hthick, !dim);
-			door_t const door(add_jail_cell_door(bars, room_id, dim, dir, hinge_side));
-			add_jail_cell_bars(bars, door, room_id, tot_light_amt, dim, dir, bar_color);
+			add_jail_cell_door(bars, room_id, room_id, dim, dir, hinge_side); // parent_room_id=room_id
+			add_jail_cell_bars(cell, interior->doors.back(), room_id, tot_light_amt, dim, dir, hinge_side, bar_color);
 
 			if (rgen.rand_bool()) {
 				add_padlock_to_door(door_ix, (1 << lock_color_ix), rgen); // force lock_color_ix
@@ -330,28 +337,33 @@ unsigned building_t::get_nested_room_parent(unsigned room_id) const {
 	return room_id; // no parent; return ourself
 }
 
-door_t building_t::add_jail_cell_door(cube_t const &bars, unsigned room_id, bool dim, bool dir, bool hinge_side) {
-	bool const bed_side(!hinge_side); // door opens toward hallway center
-	float const door_width(get_doorway_width()), jail_door_width(JAIL_DOOR_WIDTH*door_width);
-	float const door_center(bars.get_center_dim(dim) - (bed_side ? 1.0 : -1.0)*0.1*door_width); // slightly away from bed and room door
+void building_t::add_jail_cell_door(cube_t const &bars, unsigned room_id, unsigned parent_room_id, bool dim, bool dir, bool hinge_side) {
+	float const door_width(get_doorway_width());
+	float const door_center(bars.get_center_dim(dim) - (hinge_side ? -1.0 : 1.0)*0.1*door_width); // slightly away from bed and room door
 	door_t door(bars, !dim, !dir, 0, 0, hinge_side); // open=0, on_stairs=0
 	door.for_jail     = 1;
-	door.conn_room[0] = get_nested_room_parent(room_id); // may be the same room
+	door.conn_room[0] = parent_room_id; // may be the same room
 	door.conn_room[1] = room_id;
-	set_wall_width(door, door_center, 0.5*jail_door_width, dim);
+	set_wall_width(door, door_center, 0.5*JAIL_DOOR_WIDTH*door_width, dim);
 	door.d[!dim][0] = door.d[!dim][1] = bars.get_center_dim(!dim); // shrink to zero width
 	add_interior_door(door, 0, 1, 1); // is_bathroom=0, make_unlocked=1, make_closed=1
-	return door;
 }
+void building_t::add_jail_cell_bars(cube_t const &cell, cube_t door_bc, unsigned room_id, float tot_light_amt, bool dim, bool dir, bool hinge_side, colorRGBA const &color) {
+	float const door_width(get_doorway_width()), bars_hwidth(JAIL_BARS_THICK*0.5*get_wall_thickness());
+	unsigned const parent_room_id(get_nested_room_parent(room_id)); // sets texture/material
 
-void building_t::add_jail_cell_bars(cube_t const &bars, door_t const &door, unsigned room_id, float tot_light_amt, bool dim, bool dir, colorRGBA const &color) {
-	unsigned const parent_room_id(door.get_conn_room(room_id)); // sets texture/material
-	cube_t bar_segs[2] = {bars, bars};
-	bar_segs[0].d[dim][1] = door.d[dim][0]; // lo side
-	bar_segs[1].d[dim][0] = door.d[dim][1]; // hi side
-
+	if (door_bc.is_all_zeros()) { // if not specified, find the door associated with this cell and get its bounds
+		for (door_stack_t const &ds : interior->door_stacks) {
+			if (ds.is_connected_to_room(room_id)) {door_bc = ds; break;}
+		}
+		assert(!door_bc.is_all_zeros()); // must be found
+	}
 	for (unsigned d = 0; d < 2; ++d) { // add bars on both sides of the door; dir is facing outside the cell
-		interior->room_geom->objs.emplace_back(bar_segs[d], TYPE_JAIL_BARS, room_id, !dim, dir, 0, tot_light_amt, SHAPE_CUBE, color, parent_room_id);
+		cube_t bars(cell);
+		set_wall_width(bars, door_bc.get_center_dim(!dim), bars_hwidth, !dim);
+		bars.d[dim][!d] = door_bc.d[dim][d];
+		assert(bars.is_strictly_normalized());
+		interior->room_geom->objs.emplace_back(bars, TYPE_JAIL_BARS, room_id, !dim, dir, 0, tot_light_amt, SHAPE_CUBE, color, parent_room_id);
 	}
 }
 

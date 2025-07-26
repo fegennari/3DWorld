@@ -2732,6 +2732,7 @@ float building_interior_t::get_doorway_width() const {
 	return (doors.empty() ? int_door_width : max(doors.front().dx(), doors.front().dy())); // calculate doorway width from first door
 }
 float building_t::get_doorway_width() const {
+	if (is_prison()) {return get_nominal_doorway_width();} // if first door is a jail cell, it will be too narrow
 	float const width(interior ? interior->get_doorway_width() : 0.0);
 	return (width ? width : DOOR_WIDTH_SCALE*get_door_height()); // calculate from window spacing/door height if there's no interior or no interior doors
 }

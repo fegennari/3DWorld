@@ -2929,6 +2929,7 @@ void building_interior_t::assign_door_conn_rooms(unsigned start_ds_ix) {
 
 	for (auto d = door_stacks.begin()+start_ds_ix; d != door_stacks.end(); ++d) {
 		if (d->get_for_closet() || d->get_backrooms()) continue; // excluded
+		if (d->for_jail == 1) continue; // jail cell door should have already been assigned
 		unsigned const dsix(d - door_stacks.begin());
 		unsigned rooms_start(0), rooms_end(rooms.size());
 
