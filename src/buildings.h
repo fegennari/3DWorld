@@ -2825,8 +2825,9 @@ private:
 		bool is_lit, colorRGBA const &light_color, light_ix_assign_t &light_ix_assign);
 	void add_prison_main_room_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	void add_prison_jail_cell_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
-	cube_t add_jail_cell_bars_and_door(cube_t const &cell, unsigned room_id, float tot_light_amt, bool dim, bool dir, bool hinge_side,
-		colorRGBA const &bar_color, float bars_hthick, float bars_depth_pos);
+	unsigned get_nested_room_parent(unsigned room_id) const;
+	door_t add_jail_cell_door(cube_t const &bars, unsigned room_id, bool dim, bool dir, bool hinge_side);
+	void add_jail_cell_bars(cube_t const &bars, door_t const &door, unsigned room_id, float tot_light_amt, bool dim, bool dir, colorRGBA const &color);
 	void populate_jail_cell(rand_gen_t &rgen, cube_t const &cell, float zval, unsigned room_id, float tot_light_amt,
 		bool dim, bool dir, bool bed_side, bool sink_on_back_wall, bool is_lit, float bars_hthick, float bars_depth_pos);
 	bool divide_part_into_jail_cells(cube_t const &part, unsigned part_id, rand_gen_t &rgen, bool try_short_dim=0);
