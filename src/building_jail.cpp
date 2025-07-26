@@ -195,9 +195,10 @@ void building_t::add_prison_jail_cell_objs(rand_gen_t rgen, room_t const &room, 
 	cell.expand_in_dim(dim, -wall_hthick); // exclude front and back
 	cube_t cell_inner(cell);
 	cell_inner.expand_in_dim(!dim, -wall_hthick); // sides, even against part edges in case there are windows
-
+	
 	for (unsigned d = 0; d < 2; ++d) { // exclude interior side walls
 		bool const at_ext_wall(fabs(room.d[!dim][d] - part.d[!dim][d]) < 3.0*wall_hthick); // Note: tolerance is needed for interior wall room shrink
+		if (at_ext_wall && zval < ground_floor_z1) continue; // no windows in basement, no shrink needed
 		cell.d[!dim][d] -= (d ? 1.0 : -1.0)*(at_ext_wall ? 0.8 : 1.0)*wall_hthick; // ext wall needs small shrink to avoid intersecting window bars/trim
 	}
 	// Note: open wall/bars dim is inverted because the calls below use the hall dim
