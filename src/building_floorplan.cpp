@@ -1938,6 +1938,8 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 				if (add_elevator) {
 					if (min(room.dx(), room.dy()) < 2.0*ewidth) continue; // room is too small to place an elevator
 					bool const no_ext_walls(!(is_prison() && interior->elevators.empty()));
+					cube_t clip_bounds(part);
+					clip_bounds.expand_by_xy(-get_trim_thickness());
 					bool placed(0);
 
 					for (unsigned y = 0; y < 2 && !placed; ++y) { // try all 4 corners
@@ -1959,6 +1961,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 							// shrink to leave a small gap between the outer wall to prevent z-fighting
 							if (wtype_x == ROOM_WALL_EXT) {elevator.d[0][x] += (x ? -shrink : shrink);}
 							if (wtype_y == ROOM_WALL_EXT) {elevator.d[1][y] += (y ? -shrink : shrink);}
+							elevator.intersect_with_cube_xy(clip_bounds); // last attempt to clip to shrunk part in case elevator was on a sep wall corner (for prisons)
 							if (has_bcube_int(elevator, interior->exclusion)) continue; // try again
 							if (is_cube_close_to_doorway(elevator, room))     continue; // try again
 							if (check_skylight_intersection(elevator))        continue; // check skylights; is this necessary?
