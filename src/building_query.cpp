@@ -2590,25 +2590,23 @@ bool building_t::get_begin_end_room_objs_on_ground_floor(float zval, bool for_sp
 	if (zval < get_ground_floor_z_thresh(for_spider)) { // optimized for the case of rats and spiders where most are on the ground floor or basement
 		cached_room_objs.ensure_cached(*this);
 		b = cached_room_objs.get_objs(for_spider).begin();
-		e = cached_room_objs.get_objs(for_spider).end();
+		e = cached_room_objs.get_objs(for_spider).end  ();
 		return 1; // use cached objects
 	}
 	b = interior->room_geom->objs.begin();
 	e = (for_spider ? interior->room_geom->objs.end() : interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators for rats, but include stairs for spiders
 	return 0; // use standard objects
 }
+void add_collidable_obj(room_object_t const &c, float z_thresh, bool for_spider, vect_room_object_t &ret) {
+	if (c.z1() < z_thresh && (c.is_collidable(for_spider) || c.type == TYPE_JAIL_BARS)) {ret.push_back(c);} // include jail bars because some animals collide with them
+}
 void building_t::get_objs_at_or_below_ground_floor(vect_room_object_t &ret, bool for_spider) const {
 	float const z_thresh(get_ground_floor_z_thresh(for_spider));
 	assert(has_room_geom());
 	// skip buttons/stairs/elevators for rats, but include stairs for spiders
 	auto objs_end(for_spider ? interior->room_geom->objs.end() : interior->room_geom->get_placed_objs_end());
-
-	for (auto c = interior->room_geom->objs.begin(); c != objs_end; ++c) {
-		if (c->z1() < z_thresh && c->is_collidable(for_spider)) {ret.push_back(*c);}
-	}
-	for (auto c = interior->room_geom->expanded_objs.begin(); c != interior->room_geom->expanded_objs.end(); ++c) {
-		if (c->z1() < z_thresh && c->is_collidable(for_spider)) {ret.push_back(*c);}
-	}
+	for (auto c = interior->room_geom->objs.begin(); c != objs_end; ++c) {add_collidable_obj(*c, z_thresh, for_spider, ret);}
+	for (auto c = interior->room_geom->expanded_objs.begin(); c != interior->room_geom->expanded_objs.end(); ++c) {add_collidable_obj(*c, z_thresh, for_spider, ret);}
 }
 
 void get_approx_car_cubes(room_object_t const &cb, cube_t cubes[5]) {
@@ -2858,8 +2856,8 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 			if (c->z1() > obj_z2 || c->z2() < obj_z1) continue; // wrong floor
 			// skip non-colliding objects except for balls and books (that the player can drop), computers under desks, and expanded objects from closets,
 			// since rats must collide with these
-			//if (c->type == TYPE_JAIL_BARS && animal_type == ATYPE_SNAKE) {} // snakes collide with jail bars, but rats can walk through/over them - but jail bars not cached
-			if (!(for_spider ? c->is_spider_collidable() : c->is_floor_collidable()))                          continue;
+			if (c->type == TYPE_JAIL_BARS && animal_type == ATYPE_SNAKE) {} // snakes collide with jail bars, but rats can walk through/over them
+			else if (!(for_spider ? c->is_spider_collidable() : c->is_floor_collidable()))                     continue;
 			if (!line_bcube.intersects(*c) || !line_int_cube_exp(p1, p2, get_true_room_obj_bcube(*c), expand)) continue; // catwalk floor only?
 			if (c->type == TYPE_RAMP && interior->ignore_ramp_placement && obj_z1 >= ground_floor_z1)          continue;
 
