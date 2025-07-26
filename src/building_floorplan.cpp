@@ -1146,8 +1146,6 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 		rooms.back().set_no_geom();
 	}
 	// attempt to cut extra doorways into long walls if there's space to produce a more connected floorplan
-	unsigned const doors_start(interior->doors.size()), door_stacks_start(interior->door_stacks.size());
-
 	for (unsigned d = 0; d < 2; ++d) { // x,y: dim in which the wall partitions the room (wall runs in dim !d)
 		auto &walls(interior->walls[d]);
 		auto const &perp_walls(interior->walls[!d]);
@@ -1900,7 +1898,6 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 				room_t &room(interior->rooms[stairs_room]);
 				assert(room.part_id == part_ix); // sanity check
 				if (room.is_nested()) continue; // nested rooms typically shouldn't have stairs or elevators
-				bool const is_jailroom(room.get_room_type(0) == RTYPE_JAIL && room.has_subroom()); // jailroom with jail cell(s)
 
 				if (is_parking_str) {
 					// always add an elevator to parking structures; place against a wall;
