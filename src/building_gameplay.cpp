@@ -204,7 +204,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_WARN_LIGHT] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 50.0,  2.0,   "warning light");
 	bldg_obj_types[TYPE_GAUGE     ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 0,  0.0,  0.0,   "gauge"); // detail object
 	bldg_obj_types[TYPE_PALLET    ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 10.0,  35.0,  "pallet");
-	bldg_obj_types[TYPE_SHELF_WALL] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1, 0.0,   0.0,   "shelf wall");
+	bldg_obj_types[TYPE_SHELF_WALL] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1,  0.0,  0.0,   "shelf wall");
 	bldg_obj_types[TYPE_VENDING   ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 1, 8000.0,500.0, "vending machine");
 	bldg_obj_types[TYPE_MED_CAB   ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 40.0,  10.0,  "medicine cabinet");
 	bldg_obj_types[TYPE_LOCKER    ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1, 100.0, 50.0,  "locker");
@@ -216,6 +216,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_CONV_BELT ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1, 500.0, 100.0, "conveyor belt");
 	bldg_obj_types[TYPE_JAIL_BARS ] = bldg_obj_type_t(1, 1, 0, 0, 1, 0, 2,   0.0, 0.0,   "jail bars"); // rat_coll? treated as a small object
 	bldg_obj_types[TYPE_GUN       ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 100.0, 0.5,   "gun");
+	bldg_obj_types[TYPE_STICK_NOTE] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,   0.0, 0.0,   "sticky note");
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");

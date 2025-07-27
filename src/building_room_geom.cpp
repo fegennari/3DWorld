@@ -2507,6 +2507,10 @@ void building_room_geom_t::add_gun(room_object_t const &c) {
 	get_metal_material(1, 0, 1).add_cube_to_verts_untextured(c, apply_light_color(c), EF_Z1); // shadowed, small
 }
 
+void building_room_geom_t::add_sticky_note(room_object_t const &c) {
+	get_untextured_material(0, 0, 1).add_cube_to_verts_untextured(c, apply_light_color(c), get_face_mask(c.dim, c.dir)); // unshadowed, small, front face only
+}
+
 void building_room_geom_t::add_fire_ext_mount(room_object_t const &c) {
 	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // shadowed, small
 	colorRGBA const color(apply_light_color(c));

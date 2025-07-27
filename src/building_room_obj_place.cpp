@@ -2411,9 +2411,42 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 	cube_t room_bounds(get_walkable_room_bounds(room)), place_area(room_bounds);
 	place_area.expand_by(-0.25*wall_thickness); // common spacing to wall for appliances
 	vect_room_object_t &objs(interior->room_geom->objs);
+	unsigned const fridge_ix(objs.size());
 	bool placed_obj(0);
-	placed_obj |= place_model_along_wall(OBJ_MODEL_FRIDGE, TYPE_FRIDGE, room, 0.75, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.2, 4, 0, WHITE, 1); // not at window
 	
+	if (place_model_along_wall(OBJ_MODEL_FRIDGE, TYPE_FRIDGE, room, 0.75, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.2, 4, 0, WHITE, 1)) { // not at window
+		placed_obj = 1;
+		// add sticky notes; what about fridge sides (not against walls)?
+		room_object_t const fridge(objs[fridge_ix]); // deep copy to avoid invaliding the reference
+		room_object_t note(fridge);
+		bool const dim(fridge.dim), dir(fridge.dir);
+		// TODO: random size: 1.5x2, 2x2, 3x3, 4x2, 4x4, 3x5, 4x6
+		float const one_inch(get_window_vspace()/8/12), note_width(2.0*one_inch), note_height(2.0*one_inch); // 2x2
+		float const fridge_height(fridge.get_height());
+
+		if (fridge.get_width() > 4.0*note_width && fridge_height > 6.0*note_height) { // should always be true
+			float const left(fridge.d[!dim][0] + note_width), right(fridge.d[!dim][1] - note_width); // of placement ranges
+			float const bot(fridge.z1() + 0.3*fridge_height + note_width), top(fridge.z2() - 0.05*fridge_height - note_width); // of placement ranges
+			float const front_face(fridge.d[dim][dir] - (dir ? 1.0 : -1.0)*0.08*fridge.get_depth()); // exclude the handles depth
+			note.d[dim][!dir] = front_face; // back on front of fridge
+			note.d[dim][ dir] = front_face + (dir ? 1.0 : -1.0)*0.1*one_inch;
+			note.type  = TYPE_STICK_NOTE;
+			note.color = LT_YELLOW; // TODO: random color
+			unsigned const num_notes(rgen.rand() % 11); // 0-10
+			unsigned const notes_start(objs.size());
+
+			for (unsigned n = 0; n < num_notes; ++n) {
+				for (unsigned N = 0; N < 4; ++N) { // 4 attempts to find a non-overlapping note
+					set_wall_width(note, rgen.rand_uniform(left, right), 0.5*note_width, !dim);
+					set_wall_width(note, rgen.rand_uniform(bot,  top  ), 0.5*note_height, 2);
+					// TODO: not blocking handles or water dispensor
+					if (has_bcube_int(note, objs, notes_start)) continue;
+					objs.push_back(note);
+					break;
+				} // for N
+			} // for n
+		}
+	}
 	if (residential) { // try to place a stove
 		unsigned const stove_ix(objs.size()); // can't use objs.back() because there's a blocker
 		
