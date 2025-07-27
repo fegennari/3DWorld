@@ -591,7 +591,7 @@ cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door
 	float const door_width(width_scale*door_height), door_half_width(0.5*door_width);
 	if (can_fail && base.get_sz_dim(!dim) < 2.0*door_width) return cube_t(); // part is too small to place a door
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness()), fc_thickness(get_fc_thickness());
-	float const door_shift(get_door_shift_dist()), base_lo(base.d[!dim][0]), base_hi(base.d[!dim][1]);
+	float const door_shift(get_door_shift_dist()), min_wall_spacing(1.2*door_half_width), base_lo(base.d[!dim][0]), base_hi(base.d[!dim][1]);
 	bool const calc_center(door_center == 0.0); // door not yet calculated
 	bool const centered(door_center_shift == 0.0 || hallway_dim == (uint8_t)dim); // center doors connected to primary hallways
 	// ideally we want the front (first) door to connect to the stairs in a multi-family house, but the stairs may be in the back, so we allow the back door as well
@@ -606,6 +606,8 @@ cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door
 		if (calc_center) { // add door to first part of house/building
 			float const offset(centered ? 0.5 : rgen.rand_uniform(0.5-door_center_shift, 0.5+door_center_shift));
 			door_center = offset*base_lo + (1.0 - offset)*base_hi;
+			max_eq(door_center, (base_lo + min_wall_spacing)); // door must be contained in base
+			min_eq(door_center, (base_hi - min_wall_spacing));
 		}
 		if (calc_center || door_pos == 0.0) {door_pos = base.d[dim][dir];}
 
@@ -625,16 +627,16 @@ cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door
 		}
 		if (interior && (!has_pri_hall() || is_basement) && !opens_up) { // not on a hallway - check distance to interior walls to make sure the door has space to open
 			auto const &walls(interior->walls[!dim]); // perpendicular to door
-			float const door_lo(door_center - 1.2*door_half_width), door_hi(door_center + 1.2*door_half_width); // pos along wall with a small expand
-			float const dpos_lo(door_pos    -     door_half_width), dpos_hi(door_pos    +     door_half_width); // expand width of the door
+			float const door_lo(door_center - min_wall_spacing), door_hi(door_center + min_wall_spacing); // pos along wall with a small expand
+			float const dpos_lo(door_pos    -  door_half_width), dpos_hi(door_pos    +  door_half_width); // expand width of the door
 
-			for (auto w = walls.begin(); w != walls.end(); ++w) {
-				if (w->z1() > door.z2() || w->z2() < door.z1())         continue; // wrong part/floor
-				if (w->d[ dim][0] > dpos_hi || w->d[ dim][1] < dpos_lo) continue; // not ending at same wall as door
-				if (w->d[!dim][0] > door_hi || w->d[!dim][1] < door_lo) continue; // not intersecting door
+			for (cube_t const &w : walls) {
+				if (w.z1() > door.z2() || w.z2() < door.z1())         continue; // wrong part/floor
+				if (w.d[ dim][0] > dpos_hi || w.d[ dim][1] < dpos_lo) continue; // not ending at same wall as door
+				if (w.d[!dim][0] > door_hi || w.d[!dim][1] < door_lo) continue; // not intersecting door
 				// Note: since we know that all rooms are wider than the door width, we know that we have space for a door on either side of the wall
 				// move the door so that it doesn't open into the end of the wall, but clamp to the base bounds in case the condition above doesn't hold
-				float const lo_dist(w->d[!dim][0] - door_lo), hi_dist(door_hi - w->d[!dim][1]);
+				float const lo_dist(w.d[!dim][0] - door_lo), hi_dist(door_hi - w.d[!dim][1]);
 				if (lo_dist < hi_dist) {door_center = min((door_center + lo_dist), (base_hi - door_half_width));}
 				else                   {door_center = max((door_center - hi_dist), (base_lo + door_half_width));}
 				break;
