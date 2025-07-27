@@ -1300,10 +1300,13 @@ point get_pos_to_stand_for_elevator(elevator_t const &e, float floor_spacing, fl
 	return pos;
 }
 
-void building_t::add_escalator_points(person_t const &person, ai_path_t &path) const {
+escalator_t const &building_t::get_escalator(unsigned ix) const {
 	assert(interior);
-	assert(person.cur_escalator < interior->escalators.size());
-	escalator_t const &e(interior->escalators[person.cur_escalator]);
+	assert(ix < interior->escalators.size());
+	return interior->escalators[ix];
+}
+void building_t::add_escalator_points(person_t const &person, ai_path_t &path) const {
+	escalator_t const& e(get_escalator(person.cur_escalator));
 	bool const going_up(e.is_going_up());
 	cube_t ends[2];
 	e.get_ends_bcube(ends[0], ends[1], 0); // exclude_sides=0
@@ -1752,11 +1755,11 @@ void building_t::find_nearest_stairs_ramp_esc(point const &p1, point const &p2, 
 		if (point_in_extended_basement_not_basement(p1) && point_in_extended_basement_not_basement(p2)) { // both points in mall area
 			for (unsigned i = 0; i < interior->escalators.size(); ++i) {
 				escalator_t const &e(interior->escalators[i]);
-				//if (!e.is_powered) continue; // don't use if unpowered?
 				if (!e.in_mall) continue; // only consider mall escalators
 				if (zmin < e.z1() || zmax > e.z2())   continue; // escalator doesn't span the correct floors
 				if (e.is_going_up() != (p2.z > p1.z)) continue; // wrong direction
-				sorted.emplace_back(get_dist_xy_through_pt(p1, e.get_cube_center(), p2), (i + stairs_end + 1));
+				float const dist((e.is_powered ? 1.0 : 1.5)*get_dist_xy_through_pt(p1, e.get_cube_center(), p2)); // increase distance/reduce priority if unpowered
+				sorted.emplace_back(dist, (i + stairs_end + 1));
 			}
 		}
 		if (inc_mall_ent_stairs && zmax < ground_floor_z1) { // consider mall entrance stairs
@@ -2876,7 +2879,10 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		person.next_path_pt(1);
 		return AI_BEGIN_PATH;
 	}
-	if (person.on_stairs()) {speed_mult *= (person.on_escalator() ? 0.8 : 0.9);} // slow down slightly on stairs and escalator; even if escalator is stopped?
+	if (person.on_stairs()) {
+		if (person.on_escalator()) {speed_mult *= (get_escalator(person.cur_escalator).is_powered ? 0.8 : 0.65);} // slower if escalator is unpowered
+		else {speed_mult *= 0.9;} // stairs
+	}
 	float const max_dist(get_person_max_move_dist(person, speed_mult));
 	float goal_dist(1.1f*max_dist);
 	if (dot_product((person.target_pos - person.pos), person.dir) < 0.0) {max_eq(goal_dist, coll_dist);} // don't turn in place if dest is behind us and we're close
