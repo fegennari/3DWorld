@@ -2025,32 +2025,10 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 					if (!against_wall && room_width < (1.1*2.0*doorway_width + stairs_sz)) continue;
 
 					if (!against_wall && stairs_or_elevator_blocked_by_nested_room(cutout, stairs_room)) { // check if left in room center
-						if (!is_prison()) continue;
 						// if this is a prison, consider areas next to interior walls where there are no cells
-						bool placed(0);
-						vect_cube_t cands;
-						get_non_jail_cell_non_hallway_cubes(stairs_room, cands);
-						if (cands.empty()) continue; // room is full
-						if (cands.size() > 1) {std::shuffle(cands.begin(), cands.end(), rand_gen_wrap_t(rgen));}
-						cutout.expand_in_dim(stairs_dim, -0.1*cutout.get_sz_dim(stairs_dim)); // make it smaller and more likely to fit
-						vector2d cut_sz(cutout.get_size_xy()), min_sz(cut_sz);
-						min_sz[stairs_dim] += 2.0*doorway_width + 2.0*window_vspacing; // must have space at the ends to enter and exit and space for a door to an adj part
-
-						for (cube_t const &cand : cands) {
-							vector2d const cand_sz(cand.get_size_xy());
-							if (cand_sz.x <= min_sz.x || cand_sz.y <= min_sz.y) continue; // too small
-							bool const edge_dir(room.get_center_dim(!stairs_dim) < cand.get_center_dim(!stairs_dim)), end_dir(rgen.rand_bool());
-							float const side_shift_val(cand.d[!stairs_dim][edge_dir] - cutout.d[!stairs_dim][edge_dir] - (edge_dir ? 1.0 : -1.0)*wall_thickness);
-							cutout.translate_dim(!stairs_dim, side_shift_val); // shift to the edge of the room
-							float const end_shift_val(cand.d[stairs_dim][end_dir] - cutout.d[stairs_dim][end_dir] - (end_dir ? 1.0 : -1.0)*doorway_width);
-							cutout.translate_dim(stairs_dim, end_shift_val); // shift to one end to maximize space for a door
-							if (is_cube_close_to_doorway(cutout, room)) continue;
-							cutout.intersect_with_cube_xy(room); // shouldn't be needed, except for FP error
-							stairs_against_wall[edge_dir] = 1;
-							placed = 1; // success
-							break;
-						} // for cand
-						if (!placed) continue;
+						bool wall_dir(0);
+						if (!is_prison() || !place_stairs_in_prison_room(cutout, stairs_room, stairs_dim, wall_dir, rgen)) continue;
+						stairs_against_wall[wall_dir] = 1;
 					}
 					if (is_house && against_wall) { // try to convert to L-shaped stairs
 						float const stairs_len(cutout.get_sz_dim(stairs_dim)), stairs_width(cutout.get_sz_dim(!stairs_dim)); // primary/lower segment

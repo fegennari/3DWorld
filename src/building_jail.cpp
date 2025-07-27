@@ -533,3 +533,31 @@ void building_t::get_non_jail_cell_non_hallway_cubes(unsigned room_id, vect_cube
 	}
 }
 
+bool building_t::place_stairs_in_prison_room(cube_t &stairs, unsigned room_id, bool stairs_dim, bool &wall_dir, rand_gen_t &rgen) const {
+	bool placed(0);
+	vect_cube_t cands;
+	get_non_jail_cell_non_hallway_cubes(room_id, cands);
+	if (cands.empty()) return 0; // room is full
+	if (cands.size() > 1) {std::shuffle(cands.begin(), cands.end(), rand_gen_wrap_t(rgen));}
+	float const doorway_width(get_nominal_doorway_width()), wall_thickness(get_wall_thickness());
+	stairs.expand_in_dim(stairs_dim, -0.1*stairs.get_sz_dim(stairs_dim)); // make it smaller and more likely to fit
+	vector2d cut_sz(stairs.get_size_xy()), min_sz(cut_sz);
+	min_sz[stairs_dim] += 2.0*doorway_width + 2.0*get_window_vspace(); // must have space at the ends to enter and exit and space for a door to an adj part
+	room_t const &room(interior->rooms[room_id]);
+
+	for (cube_t const &cand : cands) {
+		vector2d const cand_sz(cand.get_size_xy());
+		if (cand_sz.x <= min_sz.x || cand_sz.y <= min_sz.y) continue; // too small
+		bool const edge_dir(room.get_center_dim(!stairs_dim) < cand.get_center_dim(!stairs_dim)), end_dir(rgen.rand_bool());
+		float const side_shift_val(cand.d[!stairs_dim][edge_dir] - stairs.d[!stairs_dim][edge_dir] - (edge_dir ? 1.0 : -1.0)*wall_thickness);
+		stairs.translate_dim(!stairs_dim, side_shift_val); // shift to the edge of the room
+		float const end_shift_val(cand.d[stairs_dim][end_dir] - stairs.d[stairs_dim][end_dir] - (end_dir ? 1.0 : -1.0)*doorway_width);
+		stairs.translate_dim(stairs_dim, end_shift_val); // shift to one end to maximize space for a door
+		if (is_cube_close_to_doorway(stairs, room)) continue;
+		stairs.intersect_with_cube_xy(room); // shouldn't be needed, except for FP error
+		wall_dir = edge_dir;
+		return 1;
+	} // for cand
+	return 0; // failed
+}
+

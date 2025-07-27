@@ -2717,6 +2717,7 @@ private:
 	bool stairs_or_elevator_blocked_by_nested_room(cube_t const &c, unsigned room_id) const;
 	bool is_prison_door_valid(cube_t const &cand, bool dim, bool &open_dir) const;
 	void get_non_jail_cell_non_hallway_cubes(unsigned room_id, vect_cube_t &out) const;
+	bool place_stairs_in_prison_room(cube_t &stairs, unsigned room_id, bool stairs_dim, bool &wall_dir, rand_gen_t &rgen) const;
 	bool check_cube_intersect_walls(cube_t const &c) const;
 	bool check_cube_contained_in_part(cube_t const &c) const;
 	bool is_valid_stairs_elevator_placement(cube_t const &c, cube_t const &c_nopad, float pad, int dim=2, bool check_walls=1, bool check_private_rooms=0) const;
