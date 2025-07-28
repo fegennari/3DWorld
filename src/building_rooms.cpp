@@ -250,10 +250,11 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		}
 		// determine lit/inner area of room (for prisons)
 		cube_t inner_room(*r);
+		vect_cube_t other_room_parts;
 
 		if (is_prison() && r->has_subroom()) {
 			inner_room = get_prison_hall_for_room(*r);
-			//get_non_jail_cell_non_hallway_cubes(room_id, other_rooms); // TODO
+			get_non_jail_cell_non_hallway_cubes(room_id, other_room_parts);
 		}
 		// determine light pos and size for this stack of rooms
 		point room_center(inner_room.get_cube_center()); // non-const because zval may be increased when adding flooring
@@ -537,6 +538,24 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 						try_place_light_on_ceiling(cur_light, *r, room_id, room_dim, fc_thick, 0, 0, nx, ny, lcheck_start_ix, valid_lights, rgen); // allow_rot=0, allow_mult=0
 					}
 				} // for y
+				if (light_density > 0.0) {
+					for (cube_t const &c : other_room_parts) { // handle prison cell gaps
+						vector2d const sz(c.get_size_xy());
+						bool const dim(sz.x < sz.y); // long dim
+						unsigned const num(light_density*sz[dim]/window_vspacing);
+						if (num == 0) continue;
+						float const step(sz[dim]/num);
+						cube_t cur_light(light);
+						cur_light.expand_by_xy(-shrink);
+						cur_light.translate_dim(!dim, (c.get_center_dim(!dim) - room_center[!dim])); // center of area in short dim
+						cur_light.translate_dim( dim, (c.d[dim][0] + 0.5*step - room_center[dim]));
+
+						for (unsigned n = 0; n < num; ++n) {
+							try_place_light_on_ceiling(cur_light, *r, room_id, room_dim, fc_thick, 0, 0, (dim ? 1 : num), (dim ? num : 1), lcheck_start_ix, valid_lights, rgen);
+							cur_light.translate_dim(dim, step);
+						}
+					} // for c
+				}
 			}
 			else { // normal room with a single light
 				if (is_house && is_basement && !is_ext_basement) { // house basement cylindrical lights only
