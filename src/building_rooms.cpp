@@ -235,6 +235,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	for (auto r = rooms.begin(); r != rooms.end(); ++r) {
 		bool const is_basement(has_basement() && r->part_id == (int)basement_part_ix); // includes extended basement and parking garage
 		bool const is_mall(r->is_mall());
+		unsigned const room_id(r - rooms.begin());
 		float light_amt(is_basement ? 0.0f : window_vspacing*r->get_light_amt()); // exterior light: multiply perimeter/area by window spacing to make unitless; none for basement rooms
 		if (!is_house && r->is_hallway) {light_amt *= 2.0;} // double the light in office building hallways because they often connect to other lit hallways
 		float const floor_height(r->is_single_floor ? r->dz() : window_vspacing); // secondary buildings are always one floor
@@ -249,7 +250,11 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		}
 		// determine lit/inner area of room (for prisons)
 		cube_t inner_room(*r);
-		if (is_prison() && r->has_subroom()) {inner_room = get_prison_hall_for_room(*r);}
+
+		if (is_prison() && r->has_subroom()) {
+			inner_room = get_prison_hall_for_room(*r);
+			//get_non_jail_cell_non_hallway_cubes(room_id, other_rooms); // TODO
+		}
 		// determine light pos and size for this stack of rooms
 		point room_center(inner_room.get_cube_center()); // non-const because zval may be increased when adding flooring
 		float const dx(inner_room.dx()), dy(inner_room.dy());
@@ -262,12 +267,12 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		bool const is_mall_store    (init_rtype_f0 == RTYPE_STORE);
 		bool const is_jail_room     (init_rtype_f0 == RTYPE_JAIL);
 		bool const is_jail_cell     (init_rtype_f0 == RTYPE_JAIL_CELL);
+		bool const is_prison_room   (init_rtype_f0 == RTYPE_NOTSET && is_prison());
 		bool const is_office(r->is_office && (!is_hospital() || r->interior)); // hospital offices are converted to patient rooms, etc. if they have windows
 		bool const is_ext_basement(r->is_ext_basement()), is_backrooms(r->is_backrooms()), is_apt_or_hotel_room(r->is_apt_or_hotel_room());
 		bool const residential_room(is_house || (residential && !r->is_hallway && !is_basement && !is_retail_room)), industrial_room(r->is_industrial());
 		bool const is_mall_room(is_ext_basement && has_mall()), is_mall_bathroom(is_mall_room && is_bathroom(init_rtype_f0)), single_floor(is_mall || industrial_room);
 		unsigned const num_floors(single_floor ? 1 : calc_num_floors_room(*r, floor_height, floor_thickness)); // consider mall and factory a single floor
-		unsigned const room_id(r - rooms.begin());
 		unsigned const min_br(multi_family ? num_floors : 1); // multi-family house requires one per floor; can apply to both bedrooms and bathrooms
 		room_obj_shape const light_shape((residential_room || industrial_room) ? SHAPE_CYLIN : SHAPE_CUBE);
 		bool const square_light(is_backrooms);
@@ -334,7 +339,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			short_n     = 2*short_n/3; // 2/3 as many in the short dim
 			light_size *= 0.9; // light intensity will be scaled larger to reach the floor
 		}
-		else if (is_jail_room) { // prison main room with jail cells
+		else if (is_jail_room || is_prison_room) { // prison main room with jail cells
 			light_density = 0.35;
 		}
 		else if (r->is_single_floor) {
@@ -683,9 +688,12 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					objs_start_inc_lights, objs_start, f, is_basement, 0, added_bathroom_objs_mask); // add_shower_tub=0
 			}
 			else if (is_jail_room || is_jail_cell) {
-				if (is_jail_room) {add_prison_main_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);}
+				if (is_jail_room) {add_prison_hall_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);}
 				if (is_jail_cell) {add_prison_jail_cell_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);}
 				is_jail = added_obj = no_whiteboard = no_plants = 1;
+			}
+			else if (is_prison_room) {
+				added_obj = no_whiteboard = no_plants = assign_and_fill_prison_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 			}
 			else if (f == 0 && init_rtype_f0 == RTYPE_LAUNDRY) {
 				added_obj = no_whiteboard = no_plants = is_laundry = added_laundry =
