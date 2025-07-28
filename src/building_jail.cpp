@@ -14,15 +14,14 @@ bool has_key_3d_model();
 
 
 bool building_t::divide_part_into_jail_cells(cube_t const &part, unsigned part_id, rand_gen_t &rgen, bool try_short_dim) {
-	// TODO: create room(s) for RTYPE_VISIT, RTYPE_LAUNDRY, RTYPE_OFFICE, RTYPE_CAFETERIA, RTYPE_GYM, RTYPE_SHOWER, RTYPE_CLASS
 	vector2d const part_sz(part.get_size_xy());
 	float const dx(part_sz.x), dy(part_sz.y);
 	bool const long_dim(dx < dy), hall_dim(long_dim ^ try_short_dim), in_basement(part.z1() < ground_floor_z1);
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness()), wall_hthick(0.5*wall_thickness), fc_thick(get_fc_thickness());
-	float const door_width(get_doorway_width()), room_width(part_sz[!hall_dim]), min_hall_width(2.1*door_width);
+	float const door_width(get_doorway_width()), room_len(part_sz[hall_dim]), room_width(part_sz[!hall_dim]), min_hall_width(2.1*door_width);
 	float min_cell_depth(max(floor_spacing, 2.1f*door_width));
 	int const num_end_windows(get_num_windows_on_side(part, !hall_dim));
-	float const window_width(part_sz[!hall_dim]/num_end_windows);
+	float const window_width(room_width/num_end_windows);
 	if (num_end_windows >= 3) {max_eq(min_cell_depth, window_width);} // if at least three windows, make sure cells contains a full window
 	float const hall_centerline(part.get_center_dim(!hall_dim));
 	float min_room_width(2*min_cell_depth + min_hall_width), extra_width(room_width - min_room_width);
@@ -32,7 +31,7 @@ bool building_t::divide_part_into_jail_cells(cube_t const &part, unsigned part_i
 	if (interior->prison_halls.empty()) {interior->prison_halls = parts;} // start as entire part
 
 	if (extra_width < 0.0) { // too narrow to fit jail cells; should be rare
-		if (try_short_dim || part_sz[hall_dim] > 1.8*part_sz[!hall_dim]) { // consider skipping the cells on one side and creating a wider hallway
+		if (try_short_dim || room_len > 1.8*room_width) { // consider skipping the cells on one side and creating a wider hallway
 			min_room_width -= min_cell_depth;
 			extra_width     = room_width - min_room_width;
 			// if we have enough space, skip side furthest from edge of bcube and keep exterior cells
@@ -47,10 +46,11 @@ bool building_t::divide_part_into_jail_cells(cube_t const &part, unsigned part_i
 	}
 	float cell_depth(min_cell_depth + min(0.5*min_cell_depth, extra_width/3.0)); // distribute extra width across the hall and cells on either side
 	min_eq(cell_depth, 1.2f*max(min_cell_depth, window_width)); // not so wide that we clip a second window
+	unsigned added_cells(0); // 1 bit for lo wall, 2 bit for hi wall
 	vect_cube_with_ix_t cells;
 
 	if (in_basement) { // basement jail cell
-		float const room_len(part_sz[hall_dim]), min_cell_len(1.3*min_cell_depth), stairs_ext(door_width + wall_thickness);
+		float const min_cell_len(1.3*min_cell_depth), stairs_ext(door_width + wall_thickness);
 		unsigned const num_cells(room_len/min_cell_len); // floor
 		float const cell_len(room_len/num_cells);
 		bool const dim(!hall_dim);
@@ -77,6 +77,7 @@ bool building_t::divide_part_into_jail_cells(cube_t const &part, unsigned part_i
 				}
 				if (blocked_by_stairs) continue;
 				cells.emplace_back(cell, (2*dim + d));
+				added_cells |= (d ? 2 : 1);
 			} // for n
 		} // for d
 	}
@@ -86,9 +87,8 @@ bool building_t::divide_part_into_jail_cells(cube_t const &part, unsigned part_i
 		window_area.expand_by_xy(0.5*wall_thickness); // include ext walls exactly on the edges
 		window_area.expand_in_z(-fc_thick); // exclude walls on stacked parts above or below
 		vect_vnctcc_t const &wall_quad_verts(get_all_drawn_window_verts_as_quads());
-		bool had_ext_wall(0);
-		cube_t c;
 		float tx1(0.0), tx2(0.0), tz1(0.0), tz2(0.0);
+		cube_t c;
 
 		if (!try_short_dim) { // calculate sum of wall length in each dim and choose the other dim if too unbalanced
 			float wall_len[2] = {0,0};
@@ -109,18 +109,17 @@ bool building_t::divide_part_into_jail_cells(cube_t const &part, unsigned part_i
 			if (          dim == hall_dim ) continue; // only keep windows on long part edges
 			if ((unsigned)dir == skip_side) continue;
 			assert(c.get_sz_dim(dim) == 0.0); // must be zero size in one dim (X or Y oriented); could also use the vertex normal
-			had_ext_wall = 1;
 			// here we only care about the window width, not the height, because the rooms will span the same floors as the window
 			float const window_width(c.get_sz_dim(!dim)/(tx2 - tx1));
-			cube_t cell(part);
 			float cell_edge(part.d[dim][dir] + (dir ? -1.0 : 1.0)*cell_depth); // room ends at side of central hallway
+			cube_t cell(part);
 			// attempt to move to not intersect window
 			float const window_hspacing(part_sz[dim]/get_num_windows_on_side(part, dim)); // for hall end windows
 			float const shift_cell_edge(shift_val_to_not_intersect_window(part, cell_edge, window_hspacing, get_window_h_border(), dim));
 			float const new_cell_depth(fabs(shift_cell_edge - cell.d[dim][dir]));
 			float const new_hall_hwidth(shift_cell_edge - hall_centerline + ((skip_side < 2) ? cell_depth : 0.0)); // empty cell row counts as hallway
 			if (new_cell_depth > min_cell_depth && 2.0*new_hall_hwidth > min_hall_width) {cell_edge = shift_cell_edge;} // shift if cell and hall are wide enough
-			cell.d[dim][!dir] = hall_room.d[dim][dir] = cell_edge;
+			cell.d[dim][!dir] = cell_edge;
 
 			for (float xy = tx1; xy < tx2; xy += 1.0) { // windows along each wall
 				float const low_edge(c.d[!dim][0] + (xy - tx1)*window_width);
@@ -131,9 +130,11 @@ bool building_t::divide_part_into_jail_cells(cube_t const &part, unsigned part_i
 				// at this point there should be no placed stairs, elevators, or ext doors, so no need to check valid placement
 				cell.intersect_with_cube(part); // will assert if slightly outside
 				cells.emplace_back(cell, (2*dim + dir));
+				hall_room.d[dim][dir] = cell_edge;
+				added_cells |= (dir ? 2 : 1);
 			} // for xy
 		} // for i
-		if (!had_ext_wall && !try_short_dim) {return divide_part_into_jail_cells(part, part_id, rgen, 1);} // try the other dim; try_short_dim=1
+		if (!added_cells && !try_short_dim) {return divide_part_into_jail_cells(part, part_id, rgen, 1);} // try the other dim; try_short_dim=1
 	}
 	unsigned const parent_room_id(rooms.size() + cells.size());
 
@@ -162,13 +163,42 @@ bool building_t::divide_part_into_jail_cells(cube_t const &part, unsigned part_i
 		set_wall_width(bars, bars_depth_pos, bars_hthick, dim);
 		add_jail_cell_door(bars, room_id, parent_room_id, !dim, dir, hinge_side);
 	} // for cell
-	add_room(part, part_id); // add a single room for the entire part, last, since cells are sub-rooms
-	rooms.back().assign_all_to(RTYPE_JAIL);
-	if (cells.empty()) return 0;
-	rooms.back().set_has_subroom();
-	assert(part_id < interior->prison_halls.size());
-	interior->prison_halls[part_id] = hall_room;
-	return 1;
+	cube_t hall_with_cells(part), extra_room_area;
+
+	if (cells.empty()) {extra_room_area = part;} // all extra room area
+	else { // at least one cell was added; make this a cell block hallway
+		if (!in_basement && room_len > 4.0*floor_spacing && hall_room.get_sz_dim(!hall_dim) > min_hall_width + 2.5*floor_spacing) {
+			if (added_cells < 3) { // wide hallway with cells on one side; split non-cells side into more rooms
+				assert(added_cells);
+				bool const dim(!hall_dim), dir(added_cells == 2);
+				float const hall_width(1.25*min_hall_width);
+				extra_room_area = part;
+				hall_with_cells.d[dim][!dir] = hall_room.d[dim][!dir] = extra_room_area.d[dim][dir] = hall_room.d[dim][dir] + (dir ? -1.0 : 1.0)*hall_width;
+			}
+			else { // add extra room(s) in gap between cells, if any; or split into two hallways?
+				// TODO
+			}
+		}
+		add_room(hall_with_cells, part_id); // add a single room for the entire part, last, since cells are sub-rooms
+		rooms.back().assign_all_to(RTYPE_JAIL);
+		rooms.back().set_has_subroom();
+		assert(part_id < interior->prison_halls.size());
+		interior->prison_halls[part_id] = hall_room;
+	}
+	if (!extra_room_area.is_all_zeros()) { // add the extra room(s)
+		// TODO: RTYPE_VISIT, RTYPE_LAUNDRY, RTYPE_OFFICE, RTYPE_CAFETERIA, RTYPE_GYM, RTYPE_SHOWER, RTYPE_CLASS
+		// TODO: split further if large
+		add_room(extra_room_area, part_id);
+		rooms.back().set_office_floorplan(); // rooms include half the wall
+		bool const dim(!hall_dim), dir(added_cells == 2);
+		float const door_pos(extra_room_area.d[hall_dim][0] + rgen.rand_uniform(0.25, 0.75)*room_len); // center 50% of wall
+		cube_t wall(extra_room_area);
+		clip_wall_to_ceil_floor(wall, fc_thick);
+		set_wall_width(wall, extra_room_area.d[dim][dir], wall_hthick, dim);
+		insert_door_in_wall_and_add_seg(wall, (door_pos - 0.5*door_width), (door_pos + 0.5*door_width), hall_dim, dir, 0, 0, 0, 0, 1); // opens into hallway; jail_door=1
+		interior->walls[dim].push_back(wall); // add remainder
+	}
+	return !cells.empty();
 }
 
 void building_t::add_prison_jail_cell_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
@@ -210,7 +240,11 @@ void building_t::add_prison_jail_cell_objs(rand_gen_t rgen, room_t const &room, 
 }
 
 void building_t::add_prison_main_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
-	// TODO: desk, keys, etc.
+	float const floor_spacing(get_window_vspace());
+	cube_t const &hall(get_prison_hall_for_room(room));
+	bool const dim(hall.dx() < hall.dy()); // long dim
+	if (hall.get_sz_dim(!dim) < 1.8*floor_spacing) return; // too narrow for guard desk
+	// TODO: guard desk with keys
 }
 
 bool building_t::add_basement_jail_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
@@ -513,12 +547,15 @@ bool building_t::is_prison_door_valid(cube_t const &cand, bool dim, bool &open_d
 	return 0; // neither dir is valid
 }
 
+cube_t const &building_t::get_prison_hall_for_room(room_t const &r) const {
+	assert(interior);
+	assert(r.part_id < interior->prison_halls.size());
+	return interior->prison_halls[r.part_id];
+}
 void building_t::get_non_jail_cell_non_hallway_cubes(unsigned room_id, vect_cube_t &out) const {
 	assert(is_prison());
 	room_t const &parent(get_room(room_id));
-	assert(parent.part_id < parts.size());
-	assert(parent.part_id < interior->prison_halls.size());
-	cube_t const &hall(interior->prison_halls[parent.part_id]);
+	cube_t const &hall(get_prison_hall_for_room(parent));
 	assert(parent.intersects(hall)); // parent usually contains hall, but may extend slightly outside
 	float const wall_thick(get_wall_thickness());
 	subtract_cube_from_cube(cube_t(parent), hall, out, 1); // clear_out=1
@@ -543,7 +580,7 @@ bool building_t::place_stairs_in_prison_room(cube_t &stairs, unsigned room_id, b
 	stairs.expand_in_dim(stairs_dim, -0.1*stairs.get_sz_dim(stairs_dim)); // make it smaller and more likely to fit
 	vector2d cut_sz(stairs.get_size_xy()), min_sz(cut_sz);
 	min_sz[stairs_dim] += 2.0*doorway_width + 2.0*get_window_vspace(); // must have space at the ends to enter and exit and space for a door to an adj part
-	room_t const &room(interior->rooms[room_id]);
+	room_t const &room(get_room(room_id));
 
 	for (cube_t const &cand : cands) {
 		vector2d const cand_sz(cand.get_size_xy());

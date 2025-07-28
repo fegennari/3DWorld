@@ -35,7 +35,7 @@ void building_t::add_interior_door_for_floor(door_t &door, bool is_bathroom, boo
 }
 
 void building_t::remove_section_from_cube_and_add_door(cube_t &c, cube_t &c2, float v1, float v2, bool xy,
-	bool open_dir, bool is_bathroom, bool make_unlocked, bool make_closed, bool part_sep_door)
+	bool open_dir, bool is_bathroom, bool make_unlocked, bool make_closed, bool jail_door)
 {
 	// remove a section from this cube; c is input+output cube, c2 is other output cube
 	assert(v1 < v2);
@@ -48,15 +48,15 @@ void building_t::remove_section_from_cube_and_add_door(cube_t &c, cube_t &c2, fl
 	door.d[!xy][0] = door.d[!xy][1] = c.get_center_dim(!xy); // zero area at wall centerline
 	door.d[ xy][0] = v1;
 	door.d[ xy][1] = v2;
-	if (part_sep_door && is_prison()) {door.for_jail = 2;} // interior doors separating parts are jail cell bar doors; opaque with a barred window and a frame
+	if (jail_door) {door.for_jail = 2;} // prison bar doors; opaque with a barred window and a frame
 	add_interior_door(door, is_bathroom, make_unlocked, make_closed);
 }
 
 void building_t::insert_door_in_wall_and_add_seg(cube_t &wall, float v1, float v2, bool dim, bool open_dir,
-	bool keep_high_side, bool is_bathroom, bool make_unlocked, bool make_closed, bool part_sep_door)
+	bool keep_high_side, bool is_bathroom, bool make_unlocked, bool make_closed, bool jail_door)
 {
 	cube_t wall2;
-	remove_section_from_cube_and_add_door(wall, wall2, v1, v2, dim, open_dir, is_bathroom, make_unlocked, make_closed, part_sep_door);
+	remove_section_from_cube_and_add_door(wall, wall2, v1, v2, dim, open_dir, is_bathroom, make_unlocked, make_closed, jail_door);
 	if (keep_high_side) {swap(wall, wall2);} // swap left and right
 	interior->walls[!dim].push_back(wall2);
 }
@@ -1250,7 +1250,8 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 							}
 						}
 					}
-					insert_door_in_wall_and_add_seg(wall, lo_pos, hi_pos, !d, open_dir, 0, 0, 0, 0, 1); // high_side=is_br=unlocked=closed=0; part_sep_door=1; modifies wall
+					bool const jail_door(is_prison());
+					insert_door_in_wall_and_add_seg(wall, lo_pos, hi_pos, !d, open_dir, 0, 0, 0, 0, jail_door); // high_side=is_br=unlocked=closed=0; modifies wall
 					break;
 				} // for ntries
 				if (!was_split) break; // no more splits

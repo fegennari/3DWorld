@@ -249,7 +249,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		}
 		// determine lit/inner area of room (for prisons)
 		cube_t inner_room(*r);
-		if (is_prison() && r->has_subroom() && r->part_id < interior->prison_halls.size()) {inner_room = interior->prison_halls[r->part_id];}
+		if (is_prison() && r->has_subroom()) {inner_room = get_prison_hall_for_room(*r);}
 		// determine light pos and size for this stack of rooms
 		point room_center(inner_room.get_cube_center()); // non-const because zval may be increased when adding flooring
 		float const dx(inner_room.dx()), dy(inner_room.dy());

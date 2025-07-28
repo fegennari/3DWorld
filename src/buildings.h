@@ -2454,6 +2454,7 @@ struct building_t : public building_geom_t {
 	door_t       &get_door(unsigned door_ix)       {assert(interior); return interior->get_door(door_ix);}
 	point get_center_of_room(unsigned room_ix) const {return get_room(room_ix).get_cube_center();}
 	room_t const &get_pool_room() const {assert(interior); return get_room(interior->pool.room_ix);}
+	cube_t const &get_prison_hall_for_room(room_t const &r) const;
 	std::string get_room_name(point const &pos, int room_id=-1, unsigned floor_ix=0) const;
 	escalator_t const &get_escalator(unsigned ix) const;
 	void create_pending_textures() const;
@@ -3011,9 +3012,9 @@ private:
 	void add_interior_door(door_t &door, bool is_bathroom=0, bool make_unlocked=0, bool make_closed=0);
 	void add_interior_door_for_floor(door_t &door, bool is_bathroom=0, bool make_unlocked=0, bool make_closed=0);
 	void remove_section_from_cube_and_add_door(cube_t &c, cube_t &c2, float v1, float v2, bool xy,
-		bool open_dir, bool is_bathroom=0, bool make_unlocked=0, bool make_closed=0, bool part_sep_door=0);
+		bool open_dir, bool is_bathroom=0, bool make_unlocked=0, bool make_closed=0, bool jail_door=0);
 	void insert_door_in_wall_and_add_seg(cube_t &wall, float v1, float v2, bool dim, bool open_dir,
-		bool keep_high_side=0, bool is_bathroom=0, bool make_unlocked=0, bool make_closed=0, bool part_sep_door=0);
+		bool keep_high_side=0, bool is_bathroom=0, bool make_unlocked=0, bool make_closed=0, bool jail_door=0);
 	void reverse_door_hinges_if_needed();
 	void ensure_doors_to_room_are_closed(room_t const &room, unsigned doors_start, bool ensure_locked=0);
 	unsigned get_floor_for_zval(float zval) const {return unsigned((zval - get_bcube_z1_inc_ext_basement())/get_window_vspace());}
