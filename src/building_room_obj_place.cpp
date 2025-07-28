@@ -2454,7 +2454,7 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 	bool placed_obj(0);
 	
 	if (place_model_along_wall(OBJ_MODEL_FRIDGE, TYPE_FRIDGE, room, 0.75, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.2, 4, 0, WHITE, 1)) { // not at window
-		add_fridge_sticky_notes(rgen, fridge_obj_ix, zval, room_id, tot_light_amt);
+		if (is_house) {add_fridge_sticky_notes(rgen, fridge_obj_ix, zval, room_id, tot_light_amt);}
 		placed_obj = 1;
 	}
 	if (residential) { // try to place a stove
