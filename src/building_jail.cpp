@@ -14,7 +14,7 @@ bool has_key_3d_model();
 
 
 bool building_t::divide_part_into_jail_cells(cube_t const &part, unsigned part_id, rand_gen_t &rgen, bool try_short_dim) {
-	// TODO: we need to create a room for the stairs, elevator, common room, etc.; maybe the smallest part, or a subset of a part
+	// TODO: create room(s) for RTYPE_VISIT, RTYPE_LAUNDRY, RTYPE_OFFICE, RTYPE_CAFETERIA, RTYPE_GYM, RTYPE_SHOWER, RTYPE_CLASS
 	vector2d const part_sz(part.get_size_xy());
 	float const dx(part_sz.x), dy(part_sz.y);
 	bool const long_dim(dx < dy), hall_dim(long_dim ^ try_short_dim), in_basement(part.z1() < ground_floor_z1);
@@ -210,7 +210,7 @@ void building_t::add_prison_jail_cell_objs(rand_gen_t rgen, room_t const &room, 
 }
 
 void building_t::add_prison_main_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
-	// TODO: desk, keys, stairs; also cafeteria, etc.
+	// TODO: desk, keys, etc.
 }
 
 bool building_t::add_basement_jail_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start,

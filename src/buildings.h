@@ -530,12 +530,12 @@ enum {RTYPE_NOTSET=0, RTYPE_HALL, RTYPE_STAIRS, RTYPE_OFFICE, RTYPE_BATH, RTYPE_
 	  RTYPE_PLAY, RTYPE_ART, RTYPE_UTILITY, RTYPE_PARKING, RTYPE_RAMP_EXIT, RTYPE_ATTIC, RTYPE_MASTER_BED, RTYPE_UNFINISHED, RTYPE_SERVER, RTYPE_POOL,
 	  RTYPE_SWIM, RTYPE_SECURITY, RTYPE_LOUNGE, RTYPE_COMMON, RTYPE_BACKROOMS, RTYPE_RETAIL, RTYPE_ELEVATOR, RTYPE_CONF, RTYPE_MACHINE, RTYPE_INTERR,
 	  RTYPE_ELEV_EQUIP, RTYPE_STORE, RTYPE_MALL, RTYPE_RESTAURANT, RTYPE_FACTORY, RTYPE_WAREHOUSE, RTYPE_HOS_BED, RTYPE_HOS_OR, RTYPE_HOS_EXAM, RTYPE_CLASS,
-	  RTYPE_WAITING, RTYPE_LAB, RTYPE_CAFETERIA, RTYPE_LOCKER, RTYPE_JAIL, RTYPE_JAIL_CELL, NUM_RTYPES};
+	  RTYPE_WAITING, RTYPE_LAB, RTYPE_CAFETERIA, RTYPE_LOCKER, RTYPE_JAIL, RTYPE_JAIL_CELL, RTYPE_GYM, RTYPE_VISIT, RTYPE_SHOWER, NUM_RTYPES};
 typedef uint8_t room_type;
 
-inline bool is_bathroom (room_type   const rtype) {return (rtype == RTYPE_BATH || rtype == RTYPE_MENS || rtype == RTYPE_WOMENS);}
-inline bool is_jail_room(room_type   const rtype) {return (rtype == RTYPE_JAIL || rtype == RTYPE_JAIL_CELL);}
-inline bool is_ball_type(room_object const type ) {return (type == TYPE_LG_BALL || type == TYPE_POOL_BALL);}
+inline bool is_bathroom (room_type   const rtype) {return (rtype == RTYPE_BATH   || rtype == RTYPE_MENS || rtype == RTYPE_WOMENS);}
+inline bool is_jail_room(room_type   const rtype) {return (rtype == RTYPE_JAIL   || rtype == RTYPE_JAIL_CELL);}
+inline bool is_ball_type(room_object const type ) {return (type  == TYPE_LG_BALL || type  == TYPE_POOL_BALL );}
 
 // T-shirts are colored, jeans are always white
 inline colorRGBA const &gen_teeshirt_color(rand_gen_t &rgen) {return TSHIRT_COLORS[rgen.rand()%NUM_TSHIRT_COLORS];}
@@ -548,16 +548,16 @@ std::string const room_names[NUM_RTYPES] =
 	 "Play Room", "Art Room", "Utility Room", "Parking Garage", "Ramp Exit", "Attic", "Master Bedroom", "Unfinished Room", "Server Room", "Pool Room",
 	 "Swimming Pool Room", "Security Room", "Lounge", "Common Room", "Backrooms", "Retail", "Elevator", "Conference Room", "Machine Room", "Interrogation Room",
 	 "Elev Equip Room", "Store", "Mall Concourse", "Restaurant", "Factory Floor", "Warehouse", "Hospital Bedroom", "Operating Room", "Exam Room", "Classroom",
-	 "Waiting Room", "Laboratory", "Cafeteria", "Locker Room", "Jailroom", "Jail Cell"
+	 "Waiting Room", "Laboratory", "Cafeteria", "Locker Room", "Jailroom", "Jail Cell", "Gym", "Visitation", "Shower"
 };
-// short room names for elevator buttons (should be <= 8 characters)
+// short room names for breaker panel labels (should be <= 8 characters)
 std::string const room_names_short[NUM_RTYPES] =
 	{"", "Hall", "Stairs", "Office", "Bath", "Men", "Women", "Bed", "Kitchen", "Living",
 	"Dining", "Study", "Entry", "Library", "Storage", "Garage", "Shed", "Lobby", "Laundry", "Card",
 	"Play", "Art", "Utility", "Garage", "Ramp", "Attic", "Bed", "", "Server", "Pool",
 	"Swim", "Security", "Lounge", "Common", "Basement", "Retail", "Elevator", "Conference", "Machine", "Dungeon",
 	"Equipment", "Store", "Mall", "Restaurant", "Factory", "Warehouse", "Bedroom", "OR", "Exam", "Class",
-	"Waiting", "Lab", "Cafeteria", "Locker", "Jail", "Cell"
+	"Waiting", "Lab", "Cafeteria", "Locker", "Jail", "Cell", "Gym", "Visit", "Shower"
 };
 
 unsigned const room_priorities[NUM_RTYPES] = { // for breaker labels; higher values have higher priority
@@ -566,7 +566,7 @@ unsigned const room_priorities[NUM_RTYPES] = { // for breaker labels; higher val
 	2, 2, 3, 3, 0, 3, 3, 0, 4, 3,
 	4, 4, 4, 0, 1, 2, 1, 3, 2, 2,
 	1, 3, 4, 3, 1, 1, 2, 3, 3, 2,
-	2, 3, 4, 3, 3, 1
+	2, 3, 4, 3, 3, 1, 4, 3, 3
 };
 
 // store types, for use with object placement and naming
