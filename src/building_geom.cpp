@@ -1659,7 +1659,7 @@ void building_t::add_tv_antenna(rand_gen_t &rgen) { // for houses
 
 	for (unsigned d = 0; d < 2; ++d) {
 		bool const ddir(rgen.rand_bool());
-		set_wall_width(ant, (top.d[d][ddir] + (ddir ? -1.0 : 1.0)*hlen), ((d == long_dim) ? hlen : hwidth), d);
+		set_wall_width(ant, (top.d[d][ddir] + (ddir ? -1.0 : 1.0)*hlen), ((bool(d) == long_dim) ? hlen : hwidth), d);
 	}
 	details.push_back(ant);
 }
@@ -1985,7 +1985,7 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office 
 	unsigned const max_doors(is_parking() ? 2 : (bldg_has_windows ? 3 : 4)); // buildings with windows have at most 3 doors since they're smaller
 	unsigned const num_doors(min_doors + (rgen.rand() % (max_doors - min_doors + 1)));
 	cube_t const parts_bcube(get_unrotated_parts_bcube());
-	assert(real_num_parts > has_basement());
+	assert(real_num_parts > (unsigned)has_basement());
 	unsigned const num_above_ground_parts(real_num_parts - has_basement());
 
 	for (unsigned num = 0; num < num_doors; ++num) {

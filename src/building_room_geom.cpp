@@ -6618,7 +6618,7 @@ void building_room_geom_t::add_jail_cell_door(door_t const &D, door_rotation_t &
 		drot.shift = 0.07*width*(D.open_dir ? 1.0 : -1.0)*D.open_amt;
 	}
 	for (unsigned dir = 0; dir < 2; ++dir) {
-		if (is_bars && dir != D.open_dir) continue; // handle is only on the outside of the door
+		if (is_bars && bool(dir) != D.open_dir) continue; // handle is only on the outside of the door
 		// add lock plate
 		cube_t plate(c);
 		plate.z1() += 0.41*height; // shrink in Z

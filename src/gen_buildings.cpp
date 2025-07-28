@@ -1527,7 +1527,7 @@ public:
 		set_wall_width(xbar, hbar.zc(),    xbar_hw, 2   );
 		add_cube(bg, vbar, tex, GRAY,       0, 3, 0, 0); // draw XY  sides
 		add_cube(bg, hbar, tex, GRAY_BLACK, 0, 7, 0, 0); // draw all sides
-		unsigned const dim_mask(7 & ~(1 << (!dim))); // skip ends as an optimization, since they're very small
+		unsigned const dim_mask(7 & ~(1 << unsigned(!dim))); // skip ends as an optimization, since they're very small
 		
 		for (unsigned n = 0; n < num_div; ++n) {
 			set_wall_width(xbar, (hbar.d[dim][0] + end_pad + n*spacing), xbar_hw, dim);
