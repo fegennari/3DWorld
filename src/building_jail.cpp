@@ -18,7 +18,7 @@ bool building_t::divide_part_into_jail_cells(cube_t const &part, unsigned part_i
 	float const dx(part_sz.x), dy(part_sz.y);
 	bool const long_dim(dx < dy), hall_dim(long_dim ^ try_short_dim), in_basement(part.z1() < ground_floor_z1);
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness()), wall_hthick(0.5*wall_thickness), fc_thick(get_fc_thickness());
-	float const door_width(get_doorway_width()), room_len(part_sz[hall_dim]), room_width(part_sz[!hall_dim]), min_hall_width(2.1*door_width);
+	float const door_width(get_doorway_width()), door_hwidth(0.5*door_width), room_len(part_sz[hall_dim]), room_width(part_sz[!hall_dim]), min_hall_width(2.1*door_width);
 	float min_cell_depth(max(floor_spacing, 2.1f*door_width));
 	int const num_end_windows(get_num_windows_on_side(part, !hall_dim));
 	float const window_width(room_width/num_end_windows);
@@ -163,8 +163,51 @@ bool building_t::divide_part_into_jail_cells(cube_t const &part, unsigned part_i
 				cell_block.d[dim][!dir] = hall_room.d[dim][!dir] = extra_room_area.d[dim][dir] = hall_room.d[dim][dir] + (dir ? -1.0 : 1.0)*hall_width;
 			}
 		}
-		else { // look for gaps between cells along interior walls and add a room there
-			// TODO
+		else { // look for gaps between cells along interior walls and add room(s) there; these will be sub-rooms of the cell block
+			vect_cube_t cands;
+			subtract_cube_from_cube(cell_block, hall_room, cands, 0); // clear_out=0
+			subtract_cubes_from_cubes(cells, cands);
+			
+			for (cube_t const &cand : cands) { // Note: should be at least the size of a cell
+				if (cand.get_sz_dim(hall_dim) < 4.0*door_width) continue; // too narrow
+				bool const dir(hall_centerline < cand.get_center_dim(dim)); // side of hallway
+				float const hall_other_side(hall_room.d[dim][!dir]), dsign(dir ? 1.0 : -1.0);
+				float wall_pos(cand.d[dim][!dir] + dsign*wall_hthick), window_hspacing(0.0); // align with front of cell walls
+				bool at_part_edge[2]={};
+				for (unsigned d = 0; d < 2; ++d) {at_part_edge[d] = (cand.d[hall_dim][d] == part.d[hall_dim][d]);}
+
+				if (!in_basement && (at_part_edge[0] || at_part_edge[1])) { // attempt to move to not intersect window
+					window_hspacing = part_sz[dim]/get_num_windows_on_side(part, dim); // for hall end windows
+					wall_pos        = shift_val_to_not_intersect_window(part, wall_pos, window_hspacing, get_window_h_border(), dim);
+				}
+				float const new_hall_width(dsign*(wall_pos - hall_other_side)), pref_hall_width(1.25*min_hall_width);
+				if (new_hall_width < min_hall_width) continue; // hall too narrow
+				float const old_wall_pos(cand.d[dim][!dir]);
+				cube_t sub_room(cand);
+				sub_room.d[dim][!dir] = wall_pos;
+				assert(sub_room.is_strictly_normalized());
+				if (sub_room.get_sz_dim(dim) < min_cell_depth) continue; // room too narrow
+
+				if (dsign*(old_wall_pos - wall_pos) > wall_thickness) { // add horizontal walls
+					cube_t wall(sub_room);
+					clip_wall_to_ceil_floor(wall, fc_thick);
+					wall.d[dim][!dir] = wall_pos - dsign*wall_hthick;
+					wall.d[dim][ dir] = old_wall_pos;
+
+					for (unsigned d = 0; d < 2; ++d) {
+						if (at_part_edge[d]) continue; // no wall needed
+						set_wall_width(wall, sub_room.d[hall_dim][d], wall_hthick, hall_dim);
+						interior->walls[hall_dim].push_back(wall);
+					}
+				}
+				add_prison_room(sub_room, part_id, 1, 1); // inc_half_walls=1, is_nested=1
+				cube_t wall(sub_room);
+				clip_wall_to_ceil_floor(wall, fc_thick);
+				set_wall_width(wall, wall_pos, wall_hthick, dim);
+				//float door_pos(rgen.rand_uniform(sub_room.d[hall_dim][0]+door_width, sub_room.d[hall_dim][1]-door_width));
+				//insert_door_in_wall_and_add_seg(wall, (door_pos - door_hwidth), (door_pos + door_hwidth), hall_dim, dir); // opens into hallway
+				interior->walls[dim].push_back(wall); // add remainder
+			} // for cand
 		}
 		if (!cells.empty()) {add_prison_cells(cells, cell_block, part_id, 0);} // add cells if not added in split case above
 		assert(part_id < interior->prison_halls.size());
@@ -177,8 +220,7 @@ bool building_t::divide_part_into_jail_cells(cube_t const &part, unsigned part_i
 		unsigned const num_sub_rooms(room_len / target_len);
 
 		if (num_sub_rooms > 1) { // split further if large
-			float const room_step(room_len/num_sub_rooms), rand_amt(0.2*room_step);
-			float const door_hwidth(0.5*door_width), door_wall_space(1.2*door_hwidth);
+			float const room_step(room_len/num_sub_rooms), rand_amt(0.2*room_step), door_wall_space(1.2*door_hwidth);
 			float next_step_add(0.0);
 			cube_t sub_room(extra_room_area);
 			sub_room.d[hall_dim][1] = extra_room_area.d[hall_dim][0] + room_step;
@@ -187,8 +229,7 @@ bool building_t::divide_part_into_jail_cells(cube_t const &part, unsigned part_i
 				bool const is_last(n+1 == num_sub_rooms);
 				if (is_last) {sub_room.d[hall_dim][1] = extra_room_area.d[hall_dim][1];} // end at exactly the high edge
 				assert(sub_room.is_strictly_normalized());
-				add_room(sub_room, part_id);
-				rooms.back().set_office_floorplan(); // rooms include half the wall
+				add_prison_room(sub_room, part_id, 1, 0); // inc_half_walls=1, is_nested=0
 				if (is_last) break;
 				// add wall separating rooms
 				cube_t wall(sub_room);
@@ -208,8 +249,7 @@ bool building_t::divide_part_into_jail_cells(cube_t const &part, unsigned part_i
 			} // for n
 		}
 		else { // one big room
-			add_room(extra_room_area, part_id);
-			rooms.back().set_office_floorplan(); // rooms include half the wall
+			add_prison_room(extra_room_area, part_id, 1, 0); // inc_half_walls=1, is_nested=0
 		}
 		// add side walls; doors will be cut into these walls to connect rooms later
 		for (unsigned dir = 0; dir < 2; ++dir) {
@@ -221,6 +261,12 @@ bool building_t::divide_part_into_jail_cells(cube_t const &part, unsigned part_i
 		} // for dir
 	}
 	return !cells.empty();
+}
+
+void building_t::add_prison_room(cube_t const &room, unsigned part_id, bool inc_half_walls, bool is_nested) {
+	add_room(room, part_id);
+	if (inc_half_walls) {interior->rooms.back().set_office_floorplan();}
+	if (is_nested     ) {interior->rooms.back().set_is_nested();}
 }
 
 void building_t::add_prison_cells(vect_cube_with_ix_t const &cells, cube_t const &cell_block, unsigned part_id, unsigned skip_ix_mask) {
@@ -236,9 +282,8 @@ void building_t::add_prison_cells(vect_cube_with_ix_t const &cells, cube_t const
 		if (skip_ix_mask & (1 << cell.ix)) continue;
 		bool const dim(cell.ix >> 1), dir(cell.ix & 1);
 		unsigned const room_id(rooms.size());
-		add_room(cell, part_id);
+		add_prison_room(cell, part_id, 0, 1); // inc_half_walls=0, is_nested=1
 		rooms.back().assign_all_to(RTYPE_JAIL_CELL);
-		rooms.back().set_is_nested();
 		rooms.back().mark_open_wall(dim, !dir);
 		// add side interior walls
 		cube_t wall(cell);
@@ -596,9 +641,9 @@ bool building_t::is_prison_door_valid(cube_t const &cand, bool dim, bool &open_d
 		bool valid(1);
 
 		for (room_t const &r : interior->rooms) {
-			if ( r.is_ext_basement()) break; // end at extended basement rooms
-			if (!r.is_nested())   continue; // not a jail cell
-			if ( r.intersects(cand_exp)) return 0; // invalid for either dim
+			if ( r.is_ext_basement())                break; // end at extended basement rooms
+			if (!r.is_nested() || !r.is_jail_cell()) continue; // not a jail cell
+			if ( r.intersects(cand_exp))             return 0; // invalid for either dim
 			if ( r.intersects(open_bc )) {valid = 0; break;} // invalid if hits a cell
 		}
 		if (valid) { // test that door is contained in a part

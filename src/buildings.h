@@ -1543,6 +1543,7 @@ struct room_t : public cube_t { // size=56
 	bool is_retail           () const {return (get_room_type(0) == RTYPE_RETAIL   );}
 	bool is_factory          () const {return (get_room_type(0) == RTYPE_FACTORY  );}
 	bool is_warehouse        () const {return (get_room_type(0) == RTYPE_WAREHOUSE);}
+	bool is_jail_cell        () const {return (get_room_type(0) == RTYPE_JAIL_CELL);}
 	bool is_industrial       () const {return (is_factory() || is_warehouse());}
 	bool is_mall_or_store    () const {return (is_mall() || is_store());}
 	bool is_single_large_room() const {return(is_parking() || is_backrooms() || is_retail() || is_mall() || is_industrial());}
@@ -2837,6 +2838,7 @@ private:
 	void populate_jail_cell(rand_gen_t &rgen, cube_t const &cell, float zval, unsigned room_id, float tot_light_amt,
 		bool dim, bool dir, bool bed_side, bool sink_on_back_wall, bool is_lit, float bars_hthick, float bars_depth_pos);
 	bool divide_part_into_jail_cells(cube_t const &part, unsigned part_id, rand_gen_t &rgen, bool try_short_dim=0);
+	void add_prison_room(cube_t const &room, unsigned part_id, bool inc_half_walls, bool is_nested);
 	void add_prison_cells(vect_cube_with_ix_t const &cells, cube_t const &cell_block, unsigned part_id, unsigned skip_ix_mask=0);
 	void add_garage_objs     (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
 	void add_floor_clutter_objs(rand_gen_t  rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
