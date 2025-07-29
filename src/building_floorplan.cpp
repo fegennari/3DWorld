@@ -1184,13 +1184,13 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 							for (room_t const &r : rooms) {
 								if (r.z1() >= wall.z2() || r.z2() <= wall.z1()) continue; // no overlap in Z
 
-								for (unsigned e = 0; e < 2; ++e) { // check both directions from the wall
+								for (unsigned e = 0; e < 2; ++e) { // check both directions from the wall (front and back)
 									// skip wall edges co-incident with room edges where the entire wall is contained in the room; this can happen at part boundaries
 									if (wall.d[d][e] == r.d[d][e] && wall.d[d][!e] < r.d[d][1] && wall.d[d][!e] > r.d[d][0]) continue;
 									if (wall.d[d][e] <  r.d[d][0] || wall.d[d][ e] > r.d[d][1]) continue; // wall not inside room in dim d/dir e
-									if (lo[s] > r.d[!d][0] && hi[s] < r.d[!d][1]) {contained[e] = 1; break;} // entire wall contained in span of room
+									if (lo[s] > r.d[!d][0] && hi[s] < r.d[!d][1]) {contained[e] = 1;} // entire wall contained in span of room
 								}
-							}
+							} // for r
 							if (contained[0] && contained[1]) {valid = 0; break;} // wall seg contained in rooms on both sides => two doors in same wall between rooms => drop
 						} // for s
 					}
