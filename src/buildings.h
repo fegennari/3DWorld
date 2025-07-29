@@ -1994,7 +1994,7 @@ struct building_interior_t {
 	int garage_room=-1, ext_basement_hallway_room_id=-1, ext_basement_door_stack_ix=-1, last_active_door_ix=-1, security_room_ix=-1;
 	uint8_t furnace_type=FTYPE_NONE, attic_type=ATTIC_TYPE_RAFTERS;
 	bool door_state_updated=0, is_unconnected=0, ignore_ramp_placement=0, placed_people=0, elevators_disabled=0, attic_access_open=0, has_backrooms=0;
-	bool elevator_dir=0, extb_wall_dim=0, extb_wall_dir=0, conn_room_in_extb_hallway=0, has_sec_hallways=0, has_jail=0;
+	bool elevator_dir=0, extb_wall_dim=0, extb_wall_dir=0, conn_room_in_extb_hallway=0, has_sec_hallways=0, has_jail=0, has_outside_corners=0;
 	uint8_t num_extb_floors=0; // for malls and backrooms
 	float water_zval=0.0; // for multilevel backrooms and swimming pools
 	float int_door_width=0.0;
@@ -2720,7 +2720,7 @@ private:
 	bool is_valid_placement_for_room(cube_t const &c, cube_t const &room, vect_cube_t const &blockers, bool inc_open_doors, vector2d const &room_pad=vector2d()) const;
 	bool stairs_or_elevator_blocked_by_nested_room(cube_t const &c, unsigned room_id) const;
 	bool is_prison_door_valid(cube_t const &cand, bool dim, bool &open_dir) const;
-	void get_non_jail_cell_non_hallway_cubes(unsigned room_id, vect_cube_t &out) const;
+	void get_prison_cell_block_cubes(unsigned room_id, vect_cube_t &out, bool inc_hallway=0) const;
 	bool place_stairs_in_prison_room(cube_t &stairs, unsigned room_id, bool stairs_dim, bool &wall_dir, rand_gen_t &rgen) const;
 	bool check_cube_intersect_walls(cube_t const &c) const;
 	bool check_cube_contained_in_part(cube_t const &c) const;

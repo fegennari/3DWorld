@@ -254,7 +254,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 
 		if (is_prison() && r->has_subroom()) {
 			inner_room = get_prison_hall_for_room(*r);
-			get_non_jail_cell_non_hallway_cubes(room_id, other_room_parts);
+			get_prison_cell_block_cubes(room_id, other_room_parts);
 		}
 		// determine light pos and size for this stack of rooms
 		point room_center(inner_room.get_cube_center()); // non-const because zval may be increased when adding flooring
@@ -1922,7 +1922,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	// ceiling trim disabled for large office buildings with outside corners because there's a lot of trim to add, and outside corners don't join correctly;
 	// ceiling trim also disabled for non-houses (all office buildings), because it doesn't really work with acoustic paneling
 	// industrial/hospitals have nested rooms with outside corners; hotels may have L-shaped rooms with missing walls that form outside corners
-	bool const has_outside_corners(interior->has_sec_hallways || is_industrial() || is_hospital() || is_hotel());
+	bool const has_outside_corners(interior->has_sec_hallways || interior->has_outside_corners || is_industrial() || is_hospital() || is_hotel());
 	bool const has_ceil_trim(!has_outside_corners && is_house);
 	colorRGBA const trim_color(get_trim_color());
 	vect_room_object_t &objs(interior->room_geom->trim_objs);

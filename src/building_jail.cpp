@@ -165,8 +165,9 @@ bool building_t::divide_part_into_jail_cells(cube_t const &part, unsigned part_i
 		}
 		else { // look for gaps between cells along interior walls and add room(s) there; these will be sub-rooms of the cell block
 			vect_cube_t cands;
-			subtract_cube_from_cube(cell_block, hall_room, cands, 0); // clear_out=0
+			subtract_cube_from_cube(cell_block, hall_room, cands);
 			subtract_cubes_from_cubes(cells, cands);
+			sort(cands.begin(), cands.end(), [](cube_t const &a, cube_t const &b) {return (a.get_area_xy() > b.get_area_xy());}); // largest to smallest area
 			
 			for (cube_t const &cand : cands) { // Note: should be at least the size of a cell
 				if (cand.get_sz_dim(hall_dim) < 4.0*door_width) continue; // too narrow
@@ -182,6 +183,19 @@ bool building_t::divide_part_into_jail_cells(cube_t const &part, unsigned part_i
 				}
 				float const new_hall_width(dsign*(wall_pos - hall_other_side)), pref_hall_width(1.25*min_hall_width);
 				if (new_hall_width < min_hall_width) continue; // hall too narrow
+				
+				if (new_hall_width > pref_hall_width) { // try expanding into hallway
+					float cand_wall_pos(hall_other_side + dsign*pref_hall_width);
+					
+					if (window_hspacing > 0.0) {
+						cand_wall_pos = shift_val_to_not_intersect_window(part, cand_wall_pos, window_hspacing, get_window_h_border(), dim);
+						if (dsign*(cand_wall_pos - hall_other_side) < min_hall_width) {cand_wall_pos = wall_pos;} // too narrow, restore original wall_pos
+					}
+					wall_pos = cand_wall_pos; // maybe shift the wall outward
+					// TODO: wall edge align
+					// TODO: shift lights
+					interior->has_outside_corners = 1;
+				}
 				float const old_wall_pos(cand.d[dim][!dir]);
 				cube_t sub_room(cand);
 				sub_room.d[dim][!dir] = wall_pos;
@@ -204,9 +218,11 @@ bool building_t::divide_part_into_jail_cells(cube_t const &part, unsigned part_i
 				cube_t wall(sub_room);
 				clip_wall_to_ceil_floor(wall, fc_thick);
 				set_wall_width(wall, wall_pos, wall_hthick, dim);
-				//float door_pos(rgen.rand_uniform(sub_room.d[hall_dim][0]+door_width, sub_room.d[hall_dim][1]-door_width));
-				//insert_door_in_wall_and_add_seg(wall, (door_pos - door_hwidth), (door_pos + door_hwidth), hall_dim, dir); // opens into hallway
+				// insert a door; gen_interior_int() won't add a door because this wall is contained in the parent room
+				float const door_pos(rgen.rand_uniform(sub_room.d[hall_dim][0]+door_width, sub_room.d[hall_dim][1]-door_width));
+				insert_door_in_wall_and_add_seg(wall, (door_pos - door_hwidth), (door_pos + door_hwidth), hall_dim, dir); // opens into hallway
 				interior->walls[dim].push_back(wall); // add remainder
+				break; // only add the largest area cand that's valid
 			} // for cand
 		}
 		if (!cells.empty()) {add_prison_cells(cells, cell_block, part_id, 0);} // add cells if not added in split case above
@@ -666,16 +682,18 @@ cube_t building_t::get_prison_hall_for_room(room_t const &r) const {
 	hall.intersect_with_cube(r); // needed to handle pair of halls in a single part with two different rooms
 	return hall;
 }
-void building_t::get_non_jail_cell_non_hallway_cubes(unsigned room_id, vect_cube_t &out) const {
+void building_t::get_prison_cell_block_cubes(unsigned room_id, vect_cube_t &out, bool inc_hallway) const {
 	assert(is_prison());
 	room_t const &parent(get_room(room_id));
 	cube_t const hall(get_prison_hall_for_room(parent));
 	assert(parent.intersects(hall)); // parent usually contains hall, but may extend slightly outside
 	float const wall_thick(get_wall_thickness());
-	subtract_cube_from_cube(cube_t(parent), hall, out, 1); // clear_out=1
+	out.clear();
+	if (inc_hallway) {out.push_back(parent);}
+	else {subtract_cube_from_cube(cube_t(parent), hall, out);}
 	if (!parent.has_subroom()) return; // no cells
 
-	for (int r = (int)room_id-1; r >= 0; --r) {
+	for (int r = (int)room_id-1; r >= 0; --r) { // Note: includes non-cell rooms as well
 		room_t const &room(get_room(r));
 		if (!room.is_nested() || !parent.contains_cube(room)) break; // no more nested rooms for this parent
 		cube_t sub(room);
@@ -687,7 +705,7 @@ void building_t::get_non_jail_cell_non_hallway_cubes(unsigned room_id, vect_cube
 bool building_t::place_stairs_in_prison_room(cube_t &stairs, unsigned room_id, bool stairs_dim, bool &wall_dir, rand_gen_t &rgen) const {
 	bool placed(0);
 	vect_cube_t cands;
-	get_non_jail_cell_non_hallway_cubes(room_id, cands);
+	get_prison_cell_block_cubes(room_id, cands);
 	if (cands.empty()) return 0; // room is full
 	if (cands.size() > 1) {std::shuffle(cands.begin(), cands.end(), rand_gen_wrap_t(rgen));}
 	float const doorway_width(get_nominal_doorway_width()), wall_thickness(get_wall_thickness());
