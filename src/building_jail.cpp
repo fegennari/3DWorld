@@ -172,43 +172,52 @@ bool building_t::divide_part_into_jail_cells(cube_t const &part, unsigned part_i
 	}
 	if (!extra_room_area.is_all_zeros()) { // add the extra room(s)
 		bool const dim(!hall_dim);
-		unsigned const num_sub_rooms(room_len / (5.0*floor_spacing));
+		float const sub_room_width(extra_room_area.get_sz_dim(dim));
+		float const target_area(25.0*floor_spacing*floor_spacing), target_len(min(8.0f*floor_spacing, max(4.0f*floor_spacing, target_area/sub_room_width)));
+		unsigned const num_sub_rooms(room_len / target_len);
 
 		if (num_sub_rooms > 1) { // split further if large
-			float const room_step(room_len/num_sub_rooms), sub_room_width(extra_room_area.get_sz_dim(dim));
+			float const room_step(room_len/num_sub_rooms), rand_amt(0.2*room_step);
+			float const door_hwidth(0.5*door_width), door_wall_space(1.2*door_hwidth);
+			float next_step_add(0.0);
 			cube_t sub_room(extra_room_area);
 			sub_room.d[hall_dim][1] = extra_room_area.d[hall_dim][0] + room_step;
 
 			for (unsigned n = 0; n < num_sub_rooms; ++n) {
 				bool const is_last(n+1 == num_sub_rooms);
 				if (is_last) {sub_room.d[hall_dim][1] = extra_room_area.d[hall_dim][1];} // end at exactly the high edge
+				assert(sub_room.is_strictly_normalized());
 				add_room(sub_room, part_id);
 				rooms.back().set_office_floorplan(); // rooms include half the wall
 				if (is_last) break;
 				// add wall separating rooms
-				float const door_pos(sub_room.d[dim][0] + rgen.rand_uniform(0.35, 0.65)*sub_room_width); // center 30% of wall
 				cube_t wall(sub_room);
 				clip_wall_to_ceil_floor(wall, fc_thick);
 				set_wall_width(wall, sub_room.d[hall_dim][1], wall_hthick, hall_dim);
-				insert_door_in_wall_and_add_seg(wall, (door_pos - 0.5*door_width), (door_pos + 0.5*door_width), dim, rgen.rand_bool()); // random open_dir
+				// insert a door in the wall; this is optional since the room connecting code may add a door anway, but that doesn't always happen for short walls
+				float door_pos(sub_room.d[dim][0] + rgen.rand_uniform(0.35, 0.65)*sub_room_width); // center 30% of wall
+				max_eq(door_pos, wall.d[dim][0]+door_wall_space); // door must be contained in wall
+				min_eq(door_pos, wall.d[dim][1]-door_wall_space);
+				insert_door_in_wall_and_add_seg(wall, (door_pos - door_hwidth), (door_pos + door_hwidth), dim, rgen.rand_bool()); // random open_dir
 				interior->walls[hall_dim].push_back(wall); // add remainder
-				sub_room.translate_dim(hall_dim, room_step);
-				// TODO: add some random variation in room length
+				// shift to next room
+				float const room_end(sub_room.d[hall_dim][1]), step_adj(rand_amt*rgen.signed_rand_float());
+				sub_room.d[hall_dim][0] = room_end; // next room starts where the last rooms ends
+				sub_room.d[hall_dim][1] = room_end + (room_step - step_adj + next_step_add);
+				next_step_add = step_adj;
 			} // for n
 		}
 		else { // one big room
 			add_room(extra_room_area, part_id);
 			rooms.back().set_office_floorplan(); // rooms include half the wall
 		}
-		// add side walls
+		// add side walls; doors will be cut into these walls to connect rooms later
 		for (unsigned dir = 0; dir < 2; ++dir) {
 			if (!(added_cells & (1 << dir))) continue; // no cells/hall on this side
-			float const door_pos(extra_room_area.d[hall_dim][0] + rgen.rand_uniform(0.25, 0.75)*room_len); // center 50% of wall
 			cube_t wall(extra_room_area);
 			clip_wall_to_ceil_floor(wall, fc_thick);
 			set_wall_width(wall, extra_room_area.d[dim][dir], wall_hthick, dim);
-			insert_door_in_wall_and_add_seg(wall, (door_pos - 0.5*door_width), (door_pos + 0.5*door_width), hall_dim, dir, 0, 0, 0, 0, 1); // opens into hallway; jail_door=1
-			interior->walls[dim].push_back(wall); // add remainder
+			interior->walls[dim].push_back(wall);
 		} // for dir
 	}
 	return !cells.empty();
