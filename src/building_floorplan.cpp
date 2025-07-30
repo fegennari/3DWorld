@@ -2469,7 +2469,7 @@ void get_room_cands(vector<room_t> const &rooms, unsigned part_ix, cube_t const 
 
 	for (unsigned room_id = 0; room_id < rooms.size(); ++room_id) {
 		room_t const &r(rooms[room_id]);
-		if (r.part_id != part_ix || !r.intersects(place_region) || r.is_nested()) continue;
+		if (r.part_id != part_ix || !r.intersects(place_region) || r.is_bathroom_rtype() || r.is_jail_cell()) continue; // Note: r.is_nested() allowed for some room types
 		if (check_private_rooms && r.is_apt_or_hotel_room()) continue;
 		cube_t cand(r);
 		cand.intersect_with_cube_xy(place_region);
@@ -2533,7 +2533,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				cand = s; dim = s.dim; stairs_dir = s.dir; sshape = s.shape; // copy fields from these stairs and extend down
 				stack_conn    = 0; // not stacked - extended main stairs
 				cand_is_valid = 1;
-				if (num_floors > 1) {} // can we extend down to the lower parking garage level from here?
+				// Note: we likey extended the stairs down to the lower parking garage level in add_ceilings_floors_stairs() for the basement
 				cube_t stairs_bot(s);
 				stairs_bot.z2() = s.z1() + window_vspacing; // limit to bottom landing
 				find_and_merge_with_landing(interior->landings, stairs_bot, sshape, 1, 0); // merge with bottom landing; num_floors=1; is_above=0

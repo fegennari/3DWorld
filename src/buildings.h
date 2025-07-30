@@ -1544,6 +1544,7 @@ struct room_t : public cube_t { // size=56
 	bool is_factory          () const {return (get_room_type(0) == RTYPE_FACTORY  );}
 	bool is_warehouse        () const {return (get_room_type(0) == RTYPE_WAREHOUSE);}
 	bool is_jail_cell        () const {return (get_room_type(0) == RTYPE_JAIL_CELL);}
+	bool is_bathroom_rtype   () const {return is_bathroom(get_room_type(0));}
 	bool is_industrial       () const {return (is_factory() || is_warehouse());}
 	bool is_mall_or_store    () const {return (is_mall() || is_store());}
 	bool is_single_large_room() const {return(is_parking() || is_backrooms() || is_retail() || is_mall() || is_industrial());}
