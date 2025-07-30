@@ -192,9 +192,6 @@ bool building_t::divide_part_into_jail_cells(cube_t const &part, unsigned part_i
 						if (dsign*(cand_wall_pos - hall_other_side) < min_hall_width) {cand_wall_pos = wall_pos;} // too narrow, restore original wall_pos
 					}
 					wall_pos = cand_wall_pos; // maybe shift the wall outward
-					// TODO: wall edge align
-					// TODO: shift lights
-					interior->has_outside_corners = 1;
 				}
 				float const old_wall_pos(cand.d[dim][!dir]);
 				cube_t sub_room(cand);

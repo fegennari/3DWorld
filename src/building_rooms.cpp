@@ -1923,8 +1923,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	// ceiling trim disabled for large office buildings with outside corners because there's a lot of trim to add, and outside corners don't join correctly;
 	// ceiling trim also disabled for non-houses (all office buildings), because it doesn't really work with acoustic paneling
 	// industrial/hospitals have nested rooms with outside corners; hotels may have L-shaped rooms with missing walls that form outside corners
-	bool const has_outside_corners(interior->has_sec_hallways || interior->has_outside_corners || is_industrial() || is_hospital() || is_hotel());
-	bool const has_ceil_trim(!has_outside_corners && is_house);
+	bool const has_outside_corners(interior->has_sec_hallways || is_industrial() || is_hospital() || is_hotel()), has_ceil_trim(!has_outside_corners && is_house);
 	colorRGBA const trim_color(get_trim_color());
 	vect_room_object_t &objs(interior->room_geom->trim_objs);
 	vect_cube_t trim_cubes, trim_parts;
