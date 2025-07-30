@@ -1858,7 +1858,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		stairs_cut = stairs;
 		stairs_dim = long_dim;
 	}
-	else if (is_basement_room && part.contains_cube_xy(pri_hall) && can_extend_stairs_to_pg(stairs_ix)) { // multi-floor parking garage case
+	else if (is_basement_room && has_pri_hall() && part.contains_cube_xy(pri_hall) && can_extend_stairs_to_pg(stairs_ix)) { // multi-floor parking garage case
 		stairwell_t &s(interior->stairwells[stairs_ix]);
 		s.extends_below = 1;
 		// copy fields from these stairs and extend down
@@ -2072,7 +2072,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 							if (is_cube_close_to_doorway(cutout, room) || !check_cube_within_part_sides(stairs_ext)) continue; // still bad, skip this room
 						}
 					}
-					if (!is_house && against_wall) {sshape = SHAPE_WALLED_SIDES;} // add wall between room and office stairs if against a room wall
+					if (!is_house && against_wall && !is_industrial()) {sshape = SHAPE_WALLED_SIDES;} // add wall between room and office stairs if against a room wall
 					if (interior->landings.empty()) {interior->landings.reserve(num_floors-1);}
 					assert(cutout.is_strictly_normalized());
 					stairs_cut      = cutout;
