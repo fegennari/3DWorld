@@ -2318,6 +2318,7 @@ struct building_t : public building_geom_t {
 	float get_window_v_border() const;
 	float get_hspacing_for_part(cube_t const &part, bool dim) const;
 	bool interior_enabled() const;
+	bool is_missing_stairs() const;
 	void gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes);
 	void add_part_sep_walls(vect_cube_t::const_iterator p, cube_t const &place_area, unsigned rooms_start, uint64_t must_split[2]);
 	void assign_special_room_types(vector<unsigned> &utility_room_cands, vector<unsigned> &special_room_cands, unsigned doors_start, rand_gen_t &rgen);
@@ -2650,7 +2651,7 @@ private:
 	float get_min_hallway_width() const;
 	bool can_use_hallway_for_part(unsigned part_id) const;
 	cube_t get_hallway_for_part(cube_t const &part, float &num_hall_windows, float &hall_width, float &room_width);
-	void gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes);
+	void gen_interior_int(rand_gen_t &rgen, unsigned gen_index, bool has_overlapping_cubes);
 	void maybe_add_basement(rand_gen_t rgen);
 	bool extend_underground_basement(rand_gen_t rgen);
 	bool is_basement_room_not_int_bldg(cube_t const &room, building_t const *exclude=nullptr, bool allow_outside_grid=0) const;
@@ -2723,7 +2724,7 @@ private:
 	bool intersects_nested_room(cube_t const &c, unsigned room_id, cube_t *blocker=nullptr) const;
 	void move_cube_to_not_intersect_sub_room(cube_t &c, cube_t const &place_area, unsigned room_id, bool dim) const;
 	bool is_prison_door_valid(cube_t const &cand, bool dim, bool &open_dir) const;
-	void get_prison_cell_block_cubes(unsigned room_id, vect_cube_t &out, bool inc_hallway=0) const;
+	void get_prison_cell_block_cubes(unsigned room_id, vect_cube_t &out, bool inc_hallway=0, bool inc_non_cell_subrooms=0) const;
 	bool place_stairs_in_prison_room(cube_t &stairs, unsigned room_id, bool stairs_dim, bool &wall_dir, rand_gen_t &rgen) const;
 	bool check_cube_intersect_walls(cube_t const &c) const;
 	bool check_cube_contained_in_part(cube_t const &c) const;
@@ -2840,7 +2841,7 @@ private:
 	void add_jail_cell_bars(cube_t const &cell, cube_t door_bc, unsigned room_id, float tot_light_amt, bool dim, bool dir, bool hinge_side, colorRGBA const &color);
 	void populate_jail_cell(rand_gen_t &rgen, cube_t const &cell, float zval, unsigned room_id, float tot_light_amt,
 		bool dim, bool dir, bool bed_side, bool sink_on_back_wall, bool is_lit, float bars_hthick, float bars_depth_pos);
-	bool divide_part_into_jail_cells(cube_t const &part, unsigned part_id, rand_gen_t &rgen, bool try_short_dim=0);
+	bool divide_part_into_jail_cells(cube_t const &part, unsigned part_id, unsigned gen_index, rand_gen_t &rgen, bool try_short_dim=0);
 	void add_prison_room(cube_t const &room, unsigned part_id, bool inc_half_walls, bool is_nested);
 	void add_prison_cells(vect_cube_with_ix_t const &cells, cube_t const &cell_block, unsigned part_id, unsigned skip_ix_mask=0);
 	void add_garage_objs     (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);

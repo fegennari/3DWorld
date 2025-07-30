@@ -245,6 +245,21 @@ unsigned building_t::count_ext_walls_for_room(room_t const &room, float zval) co
 	}
 	return num_ext_walls;
 }
+bool building_t::is_missing_stairs() const {
+	assert(interior);
+	float const mult_floor_thresh(1.5*get_window_vspace());
+	bool has_mult_floors(0); // for now we ignore basements
+
+	for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
+		if (!is_basement(i) && i->dz() > mult_floor_thresh) {has_mult_floors = 1; break;}
+	}
+	if (!has_mult_floors) return 0; // no stairs needed
+
+	for (stairwell_t const &s : interior->stairwells) {
+		if (s.z1() >= ground_floor_z1) return 0; // has above ground stairs
+	}
+	return 1;
+}
 
 void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { // Note: contained in building bcube, so no bcube update is needed
 	if (!interior_enabled()) return;
@@ -258,7 +273,8 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 		roof_tquads.resize(roof_tquads_size);
 		doors.resize(doors_size);
 		ext_lights.clear(); // generated as part of the interior
-		gen_interior_int(rgen, has_overlapping_cubes);
+		gen_interior_int(rgen, n, has_overlapping_cubes);
+		if (is_prison() && is_missing_stairs()) {interior->is_unconnected = 1;}
 		if (!interior->is_unconnected) break; // done
 	} // for n
 	for (unsigned d = 0; d < 2; ++d) {interior->extb_walls_start[d] = interior->walls[d].size();}
@@ -299,7 +315,7 @@ cube_t building_t::get_hallway_for_part(cube_t const &part, float &num_hall_wind
 	return hall;
 }
 
-void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) { // Note: contained in building bcube, so no bcube update is needed
+void building_t::gen_interior_int(rand_gen_t &rgen, unsigned gen_index, bool has_overlapping_cubes) { // Note: contained in building bcube, so no bcube update is needed
 
 	// defer this until the building is close to the player?
 	interior.reset(new building_interior_t);
@@ -924,7 +940,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 		} // end use_hallway
 
 		else if (is_prison()) {
-			divide_part_into_jail_cells(*p, part_id, rgen);
+			divide_part_into_jail_cells(*p, part_id, gen_index, rgen);
 			add_part_sep_walls(p, place_area, rooms_start, must_split);
 		}
 		else { // generate random walls using recursive 2D slices
