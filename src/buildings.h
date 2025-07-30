@@ -2839,7 +2839,7 @@ private:
 	unsigned get_nested_room_parent(unsigned room_id) const;
 	void add_jail_cell_door(cube_t const &bars, unsigned room_id, unsigned parent_room_id, bool dim, bool dir, bool hinge_side);
 	void add_jail_cell_bars(cube_t const &cell, cube_t door_bc, unsigned room_id, float tot_light_amt, bool dim, bool dir, bool hinge_side, colorRGBA const &color);
-	void populate_jail_cell(rand_gen_t &rgen, cube_t const &cell, float zval, unsigned room_id, float tot_light_amt,
+	void populate_jail_cell(rand_gen_t &rgen, cube_t const &cell, cube_t const &place_area, float zval, unsigned room_id, float tot_light_amt,
 		bool dim, bool dir, bool bed_side, bool sink_on_back_wall, bool is_lit, float bars_hthick, float bars_depth_pos);
 	bool divide_part_into_jail_cells(cube_t const &part, unsigned part_id, unsigned gen_index, rand_gen_t &rgen, bool try_short_dim=0);
 	void add_prison_room(cube_t const &room, unsigned part_id, bool inc_half_walls, bool is_nested);
