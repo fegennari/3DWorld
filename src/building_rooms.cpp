@@ -535,8 +535,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 						cube_t cur_light(light);
 						cur_light.expand_by_xy(-shrink);
 						cur_light.translate(point((xs + x*xstep), (ys + y*ystep), 0.0));
+						if (is_jail_room && r->has_subroom()) {move_cube_to_not_intersect_sub_room(cur_light, inner_room, room_id, !room_dim);}
 						try_place_light_on_ceiling(cur_light, *r, room_id, room_dim, fc_thick, 0, 0, nx, ny, lcheck_start_ix, valid_lights, rgen); // allow_rot=0, allow_mult=0
-					}
+					} // for x
 				} // for y
 				if (light_density > 0.0) {
 					for (cube_t const &c : other_room_parts) { // handle prison cell gaps

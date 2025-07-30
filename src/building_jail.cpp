@@ -220,7 +220,7 @@ bool building_t::divide_part_into_jail_cells(cube_t const &part, unsigned part_i
 				set_wall_width(wall, wall_pos, wall_hthick, dim);
 				// insert a door; gen_interior_int() won't add a door because this wall is contained in the parent room
 				float const door_pos(rgen.rand_uniform(sub_room.d[hall_dim][0]+door_width, sub_room.d[hall_dim][1]-door_width));
-				insert_door_in_wall_and_add_seg(wall, (door_pos - door_hwidth), (door_pos + door_hwidth), hall_dim, dir); // opens into hallway
+				insert_door_in_wall_and_add_seg(wall, (door_pos - door_hwidth), (door_pos + door_hwidth), hall_dim, dir, 0, 0, 0, 0, 1); // opens into hallway; jail_door=1
 				interior->walls[dim].push_back(wall); // add remainder
 				break; // only add the largest area cand that's valid
 			} // for cand
@@ -628,18 +628,38 @@ void building_t::add_window_bars(cube_t const &window, bool dim, bool dir, unsig
 
 bool building_t::stairs_or_elevator_blocked_by_nested_room(cube_t const &c, unsigned room_id) const {
 	if (!is_prison()) return 0; // currently, only prisons have jail cells that block stairs and elevators
-	room_t const &parent(get_room(room_id));
-	if (!parent.has_subroom()) return 0; // no nested rooms
 	cube_t c_exp(c);
 	c_exp.expand_by_xy(get_doorway_width()); // leave enough room to the sides for players and AI to walk around
+	return intersects_nested_room(c_exp, room_id);
+}
+bool building_t::intersects_nested_room(cube_t const &c, unsigned room_id, cube_t *blocker) const {
+	room_t const &parent(get_room(room_id));
+	if (!parent.has_subroom()) return 0; // no nested rooms
 
-	// nested rooms are added before the parent room, so iterate backwards
-	for (int r = (int)room_id-1; r >= 0; --r) {
+	for (int r = (int)room_id-1; r >= 0; --r) { // nested rooms are added before the parent room, so iterate backwards
 		room_t const &room(get_room(r));
 		if (!room.is_nested() || !parent.contains_cube(room)) break; // no more nested rooms for this parent
-		if (c_exp.intersects(room)) return 1;
+		if (!c.intersects(room)) continue;
+		if (blocker) {*blocker = room;}
+		return 1;
 	}
 	return 0;
+}
+void building_t::move_cube_to_not_intersect_sub_room(cube_t &c, cube_t const &place_area, unsigned room_id, bool dim) const {
+	cube_t blocker;
+	if (!intersects_nested_room(c, room_id, &blocker)) return;
+	// blocked; move to closer side that has enough space in short dim
+	float const r1(place_area.d[dim][0]), r2(place_area.d[dim][1]), b1(blocker.d[dim][0]), b2(blocker.d[dim][1]);
+	float const lo_gap(b1 - r1), hi_gap(r2 - b2), lo_pos(0.5*(b1 + r1)), hi_pos(0.5*(b2 + r2));
+	float const cur_pos(c.get_center_dim(dim)), light_width(c.get_sz_dim(dim));
+	float new_pos(cur_pos);
+
+	if (lo_gap > light_width) { // lo shift is valid
+		if (hi_gap > light_width) { // both shifts are valid
+			new_pos = ((fabs(cur_pos - lo_pos) > fabs(cur_pos - hi_pos)) ? hi_pos : lo_pos); // choose pos with smaller delta
+		} else {new_pos = lo_pos;} // only lo shift is valid
+	} else if (hi_gap > light_width) {new_pos = hi_pos;} // only hi shift is valid
+	c.translate_dim(dim, (new_pos - cur_pos));
 }
 
 bool building_t::is_prison_door_valid(cube_t const &cand, bool dim, bool &open_dir) const { // check if too close to jail cells
