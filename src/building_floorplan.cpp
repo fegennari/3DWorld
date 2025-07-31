@@ -1876,13 +1876,9 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	}
 	else if (is_basement_room && has_pri_hall() && part.contains_cube_xy(pri_hall) && can_extend_stairs_to_pg(stairs_ix)) { // multi-floor parking garage case
 		stairwell_t &s(interior->stairwells[stairs_ix]);
-		s.extends_below = 1;
-		// copy fields from these stairs and extend down
-		stairs_cut = s;
-		stairs_dim = s.dim;
-		force_stairs_dir    = s.dir;
+		s.extends_below     = 1;
 		extended_from_above = 1;
-		sshape       = s.shape;
+		stairs_cut = s; stairs_dim = s.dim; force_stairs_dir = s.dir; bend_dir = s.bend_dir; sshape = s.shape; // copy fields from these stairs and extend down
 		// assume we can extend the existing hallway stairs downward
 		copy_zvals(stairs_cut, part);
 		room_t &room(interior->rooms.back()); // should be the last room
@@ -1902,11 +1898,36 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			float const elevator_prob[4] = {0.9, 0.5, 0.3, 0.1}; // higher chance of adding an elevator if there are more existing elevators
 			add_elevator = (rgen.rand_float() < elevator_prob[min(interior->elevators.size(), size_t(3))]);
 		}
+		if (!add_elevator && is_basement_room && !is_house && is_cube() && !is_industrial()) {
+			// try to extend an existing stairwell on the part above downward
+			for (stairwell_t &s : interior->stairwells) {
+				if (s.in_ext_basement || !s.is_straight() || s.z1() > part.z2() + floor_thickness || !part.contains_cube_xy(s)) continue;
+				cube_t s_bc(s);
+				set_cube_zvals(s_bc, part.z1(), part.z2());
+				cube_t ext_cube(s_bc); // add padding on exit side
+				if (s.dir) {ext_cube.d[s.dim][0] -= doorway_width;} else {ext_cube.d[s.dim][1] += doorway_width;}
+				if (!part.contains_cube_xy(ext_cube) || has_bcube_int(ext_cube, interior->exclusion)) continue; // bad placement
+				if (!is_valid_stairs_elevator_placement(ext_cube, s_bc, doorway_width, s.dim))        continue; // bad placement
+				int const room_id(get_room_containing_pt(s_bc.get_cube_center()));
+				if (room_id < 0) continue; // error?
+				get_room(room_id).has_stairs = 255; // stairs on all floors
+				s.extends_below     = 1;
+				extended_from_above = 1;
+				stairs_cut = s; stairs_dim = s.dim; force_stairs_dir = s.dir; bend_dir = s.bend_dir; sshape = s.shape; // copy fields from these stairs and extend down
+				copy_zvals(stairs_cut, part);
+				// clip stairs cube to the correct top or bottom floor to find the adjacent landing
+				float const landing_z1(part.z2() - fc_thick + window_vspacing);
+				set_cube_zvals(s_bc, landing_z1, landing_z1+floor_thickness);
+				find_and_merge_with_landing(interior->landings, s_bc, sshape, num_floors, 0); // is_above=0
+				break; // done
+			} // for s
+		}
 		unsigned const rooms_end(interior->rooms.size()), num_avail_rooms(rooms_end - rooms_start);
 		assert(num_avail_rooms > 0); // must have added at least one room
 		float stairs_scale(1.0);
 
 		for (unsigned N = 0; N < 4; ++N) {
+			if (extended_from_above) break; // stairs extended in above code
 			unsigned const rand_ix(rgen.rand()); // choose a random starting room to make into a stairwell or add an elevator to
 
 			// try all available rooms starting with the selected one to see if we can fit a stairwell/elevator in any of them
@@ -2573,7 +2594,11 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 						if (!shared.contains_cube_xy(ext_cube))           continue; // test for space to enter and exit
 						if (has_bcube_int(ext_cube, interior->exclusion)) continue; // bad placement
 						bool const allow_clip_walls(0); // clipping walls rarely helps and tends to create some strange stairs
-						if (!is_valid_stairs_elevator_placement(ext_cube, s_bc, stairs_pad, s.dim, !allow_clip_walls, check_private_rooms)) continue; // bad placement
+
+						if (ab == 0 && s.extends_below && s.z1() >= ground_floor_z1 && s.z1() < ground_floor_z1+floor_thickness) {
+							// basement already has stairs below these stairs; connect them
+						}
+						else if (!is_valid_stairs_elevator_placement(ext_cube, s_bc, stairs_pad, s.dim, !allow_clip_walls, check_private_rooms)) continue; // bad placement
 						(ab ? s.extends_above : s.extends_below) = 1;
 						cand = s; dim = s.dim; stairs_dir = s.dir; bend_dir = s.bend_dir; sshape = s.shape; // copy fields from these stairs and extend down/up
 						stack_conn    = 0; // not stacked - extended main stairs
