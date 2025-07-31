@@ -6596,9 +6596,9 @@ void building_room_geom_t::add_jail_cell_door(door_t const &D, door_rotation_t &
 	}
 	else { // metal door with barred window opening
 		unsigned const fb_mask(~get_skip_mask_for_xy(dim));
-		if (D.open_amt > 0.0) {mat.add_cube_to_verts(c, plate_color, origin, (EF_Z12 | ~fb_mask));} // draw edges if open
 		cube_t door_main(c);
 		door_main.expand_in_dim(dim, -0.2*thickness); // shrink thickness
+		if (D.open_amt > 0.0) {mat.add_cube_to_verts(door_main, plate_color, origin, (EF_Z12 | ~fb_mask));} // draw edges if open
 		cube_t opening(door_main);
 		opening.expand_in_dim(!dim, -0.2*width); // shrink edges
 		cube_t bot(opening), top(opening);
@@ -6625,7 +6625,7 @@ void building_room_geom_t::add_jail_cell_door(door_t const &D, door_rotation_t &
 		plate.z2() -= 0.45*height;
 		plate.expand_in_dim(dim, 0.18*thickness); // expand outside door
 		plate.d[!dim][!handle_side] = c.d[!dim][handle_side] - (handle_side ? 1.0 : -1.0)*0.28*width;
-		mat.add_cube_to_verts(plate, plate_color, origin, 0); // draw all faces
+		mat.add_cube_to_verts(plate, plate_color, origin, ((D.open_amt > 0.0) ? 0 : ~get_face_mask(!dim, handle_side))); // draw all faces except inner edge if closed
 		// add door handle
 		float const plate_front(c.d[dim][dir]);
 		cube_t handle(plate);
