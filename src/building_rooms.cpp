@@ -713,7 +713,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				is_jail = added_obj = no_whiteboard = no_plants = 1;
 			}
 			else if (is_prison_room) {
-				added_obj = no_whiteboard = no_plants = assign_and_fill_prison_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
+				added_obj = no_whiteboard = no_plants =
+					assign_and_fill_prison_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, objs_start_inc_lights, f, is_basement, chair_color);
 			}
 			else if (f == 0 && init_rtype_f0 == RTYPE_LAUNDRY) {
 				added_obj = no_whiteboard = no_plants = is_laundry = added_laundry =

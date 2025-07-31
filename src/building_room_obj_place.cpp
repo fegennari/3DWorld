@@ -645,13 +645,13 @@ bool building_t::add_filing_cabinet_to_room(rand_gen_t &rgen, room_t const &room
 
 // Note: can be for an office building or a house
 bool building_t::add_office_objs(rand_gen_t rgen, room_t const &room, vect_cube_t &blockers, colorRGBA const &chair_color,
-	float zval, unsigned room_id, unsigned floor, float tot_light_amt, unsigned objs_start, bool is_basement)
+	float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start, bool is_basement)
 {
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const desk_obj_id(objs.size());
 	if (!add_desk_to_room(rgen, room, blockers, chair_color, zval, room_id, tot_light_amt, objs_start, is_basement)) return 0;
 
-	if (!is_house && rgen.rand_float() < 0.5 && !room_has_stairs_or_elevator(room, zval, floor)) { // allow two desks in one office
+	if (!is_house && rgen.rand_float() < 0.5 && !room_has_stairs_or_elevator(room, zval, floor_ix)) { // allow two desks in one office
 		assert(objs[desk_obj_id].type == TYPE_DESK);
 		blockers.push_back(objs[desk_obj_id]); // temporarily add the previous desk as a blocker for the new desk and its chair
 		room_object_t const &maybe_chair(objs.back());

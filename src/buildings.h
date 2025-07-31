@@ -1990,6 +1990,7 @@ struct building_interior_t {
 	indoor_pool_t pool;
 	cube_t basement_ext_bcube, elevator_equip_room, ps_bathroom;
 	draw_range_t draw_range;
+	uint64_t room_type_count=0; // currently only used for prisons
 	unsigned extb_walls_start[2]={}, mall_hall_walls_start[2]={};
 	unsigned gen_room_details_pass=0, rgen_seed_ix=0, backrooms_tid=0;
 	int garage_room=-1, ext_basement_hallway_room_id=-1, ext_basement_door_stack_ix=-1, last_active_door_ix=-1, security_room_ix=-1;
@@ -2764,7 +2765,7 @@ private:
 	void add_pens_pencils_to_surface(cube_t const &c, bool dim, bool dir, unsigned max_num, rand_gen_t &rgen, unsigned room_id, float tot_light_amt, cube_t const &avoid=cube_t());
 	bool add_filing_cabinet_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	bool add_office_objs     (rand_gen_t rgen, room_t const &room, vect_cube_t &blockers, colorRGBA const &chair_color,
-		float zval, unsigned room_id, unsigned floor, float tot_light_amt, unsigned objs_start, bool is_basement);
+		float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start, bool is_basement);
 	void add_clock_to_room_wall(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, int type=2);
 	void add_industrial_office_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	bool create_office_cubicles(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
@@ -2796,6 +2797,9 @@ private:
 		cube_t const &place_area, room_type rtype, bool dim, int dir_skip_mask, bool add_padlocks);
 	bool add_locker_room_objs(rand_gen_t rgen, room_t const &room, float  zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	bool add_cafeteria_objs  (rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start);
+	bool add_gym_objs        (rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
+	bool add_visit_room_objs (rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
+	bool add_shower_room_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	bool get_hospital_room_bathroom(room_t const &room, unsigned room_id, int &nested_room_ix, cube_t &bathroom) const;
 	bool try_place_hospital_bed (rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id,
 		float tot_light_amt, unsigned objs_start, unsigned pref_orient, cube_t const &place_area);
@@ -2834,7 +2838,8 @@ private:
 	bool add_ladder_to_room  (rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	bool add_basement_jail_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
 		bool is_lit, colorRGBA const &light_color, light_ix_assign_t &light_ix_assign);
-	bool assign_and_fill_prison_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
+	bool assign_and_fill_prison_room(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
+		unsigned lights_start, unsigned floor_ix, bool is_basement, colorRGBA const &chair_color);
 	void add_prison_hall_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	void add_prison_jail_cell_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	unsigned get_nested_room_parent(unsigned room_id) const;
