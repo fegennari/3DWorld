@@ -1755,7 +1755,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 			zval = add_flooring(room, zval, room_id, tot_light_amt, flooring_type); // move the effective floor up
 		}
 	}
-	if (have_toilet && (room.is_office || is_prison())) { // office or prison bathroom
+	if (have_toilet && (room.is_office || (!is_basement && is_prison()))) { // office or above ground prison bathroom
 		if (min(place_area_sz.x, place_area_sz.y) > 1.5*floor_spacing && max(place_area_sz.x, place_area_sz.y) > 2.0*floor_spacing) {
 			if (divide_bathroom_into_stalls(rgen, room, zval, room_id, tot_light_amt, floor, lights_start, objs_start)) { // large enough, divide into bathroom stalls
 				added_bathroom_objs_mask |= (PLACED_TOILET | PLACED_SINK);
@@ -2187,6 +2187,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 		} // for e
 		if (d == 0 && !sink_side_set) {br_dim ^= 1;} // door not found on long dim - R90 and try short dim
 	} // for d
+	//if (!sink_side_set) return 0;
 	assert(sink_side_set);
 	float const room_len(place_area.get_sz_dim(!br_dim)), room_width(place_area.get_sz_dim(br_dim));
 	float const sinks_len(0.4*room_len), stalls_len(room_len - sinks_len), req_depth(2.0f*max(stall_depth, slength));
