@@ -366,22 +366,24 @@ struct room_pref_t {
 	room_type rtype=0;
 	bool allow_mult   =0  ; // allow multiple rooms of this type
 	bool allow_st_el  =0  ; // allow stairs or elevator in this room; hard constraint
+	bool is_private   =0  ; // private room; can't be along a path between other rooms
 	float min_size    =0.0; // in short dim, relative to floor spacing
 	float max_size    =0.0; // in long  dim, relative to floor spacing; 0 is infinite
 	float base_weight =0.0; // base priority; higher is more likely
 	float gfloor_scale=0.0; // weight factor for ground floor rooms; positive is preferred
 	float basement_val=0.0; // weight factor if in basement; higher is preferred, negative is avoided
+	float window_val  =0.0; // weight factor if room has windows; higher is preferred, negative is avoided
 };
 room_pref_t const room_prefs[] = {
-	// rtype, allow_mult, allow_st_el, min_size, max_size, base_weight, floor_scale, basement_val
-	{RTYPE_VISIT,     0, 1, 2.5, 0.0, 0.5, 1.0, -1.0},
-	{RTYPE_LAUNDRY,   0, 1, 0.0, 4.0, 0.5, 0.5,  1.0},
-	{RTYPE_OFFICE,    1, 1, 0.0, 3.0, 0.0, 0.0,  0.0},
-	{RTYPE_CAFETERIA, 0, 0, 4.0, 0.0, 1.0, 0.0,  0.0},
-	{RTYPE_GYM,       0, 1, 2.0, 7.0, 1.0, 0.0,  0.5},
-	{RTYPE_SHOWER,    0, 0, 2.0, 6.0, 1.0, 0.5,  1.0},
-	{RTYPE_CLASS,     1, 0, 3.0, 8.0, 0.5, 0.5,  0.0},
-	{RTYPE_BATH,      1, 0, 0.0, 3.0, 0.0, 0.0,  0.0}
+	// rtype, allow_mult, allow_st_el, is_private, min_size, max_size, base_weight, floor_scale, basement_val, window_val
+	{RTYPE_VISIT,     0, 1, 0, 2.5, 0.0, 0.5, 1.0, -1.0,  0.0},
+	{RTYPE_LAUNDRY,   0, 1, 0, 0.0, 4.0, 0.5, 0.5,  1.0, -0.5},
+	{RTYPE_OFFICE,    1, 1, 0, 0.0, 3.0, 0.0, 0.0,  0.0,  1.0},
+	{RTYPE_CAFETERIA, 0, 0, 0, 4.0, 0.0, 1.0, 0.0,  0.0,  0.0},
+	{RTYPE_GYM,       0, 1, 0, 2.0, 7.0, 1.0, 0.0,  0.5,  0.0},
+	{RTYPE_SHOWER,    0, 0, 1, 2.0, 6.0, 1.0, 0.5,  1.0, -1.0},
+	{RTYPE_CLASS,     1, 0, 0, 3.0, 8.0, 0.5, 0.5,  0.0,  0.5},
+	{RTYPE_BATH,      1, 0, 1, 0.0, 3.0, 0.0, 0.0,  0.0, -0.5}
 };
 bool building_t::assign_and_fill_prison_room(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, float tot_light_amt,
 	unsigned objs_start, unsigned lights_start, unsigned floor_ix, bool is_basement, colorRGBA const &chair_color)
@@ -391,90 +393,100 @@ bool building_t::assign_and_fill_prison_room(rand_gen_t rgen, room_t &room, floa
 	vector2d const room_sz(room.get_size_xy());
 	float const floor_spacing(get_window_vspace()), min_sz(room_sz.get_min_val()/floor_spacing), max_sz(room_sz.get_max_val()/floor_spacing);
 	bool const ground_floor(floor_ix == 0 && !is_basement); // Note: prisons don't have stacked parts
-	bool const has_stairs_elevator(room_has_stairs_or_elevator(room, zval, floor_ix));
+	bool const has_st_el(room_has_stairs_or_elevator(room, zval, floor_ix));
+	bool const has_ext_wall(!is_basement && count_ext_walls_for_room(room, zval) > 0);
+	bool const on_walk_path(/*count_num_int_doors(room) > 1 &&*/ is_room_on_critical_path(room_id, zval));
 	vector<pair<float, room_type>> cands;
-	cout << TXT(min_sz) << TXT(max_sz) << TXT(is_basement) << TXT(ground_floor) << TXT(has_stairs_elevator) << TXT(room.is_office) << endl;
+	//cout << TXT(min_sz) << TXT(max_sz) << TXT(is_basement) << TXT(ground_floor) << TXT(has_st_el) << TXT(has_ext_wall) << TXT(on_walk_path) << endl;
 
 	for (unsigned pass = 0; pass < 2; ++pass) { // first pass is more restrictive
 		bool const strict(pass == 0);
+		cands.clear();
 
 		for (unsigned i = 0; i < num_room_pref; ++i) {
 			room_pref_t const &p(room_prefs[i]);
-			if (has_stairs_elevator && !p.allow_st_el) continue;
+			if (has_st_el    && !p.allow_st_el) continue;
+			if (on_walk_path &&  p.is_private ) continue;
+
 			float weight(p.base_weight);
 			
-			if (!p.allow_mult && (interior->room_type_count & (uint64_t(1) << (p.rtype-1)))) {
+			if (!p.allow_mult && interior->has_room_type(p.rtype)) {
 				if (strict) continue;
-				weight -= 10.0; // penalize
+				weight -= 10.0; // penalize more
 			}
-			if (min_sz < p.min_size || (p.max_size > 0.0 && max_sz > p.max_size)) {
+			if (min_sz < p.min_size) {
 				if (strict) continue;
-				weight -= 10.0; // penalize
+				weight -= 2.0*(p.min_size - min_sz); // penalize based on undersize
+			}
+			if (p.max_size > 0.0 && max_sz > p.max_size) {
+				if (strict) continue;
+				weight -= 1.0*(max_sz - p.max_size); // penalize based on oversize
 			}
 			if (ground_floor) {weight += p.gfloor_scale;}
 			if (is_basement ) {weight += p.basement_val;}
-			cout << "cand " << room_names[p.rtype] << " weight " << weight << " pass " << pass << endl;
+			if (has_ext_wall) {weight += p.window_val  ;} // assumes exterior walls have windows
+			//cout << "cand " << room_names[p.rtype] << " weight " << weight << " pass " << pass << endl;
 			weight += rgen.rand_float(); // add some randomness
 			cands.emplace_back(-weight, p.rtype); // negate weight to get min value
 		} // for i
-		if (!cands.empty()) break;
-	} // for pass
-	std::sort(cands.begin(), cands.end());
-	unsigned added_bathroom_objs_mask(0); // unused
+		std::sort(cands.begin(), cands.end());
+		unsigned added_bathroom_objs_mask(0); // unused
 
-	for (auto const &cand : cands) {
-		cout << "try " << room_names[cand.second] << " weight " << -cand.first << endl;
-		switch (cand.second) { // split on rtype
-		case RTYPE_VISIT:
-			if (!add_visit_room_objs(rgen, room, zval, room_id, tot_light_amt, objs_start)) continue;
-			break;
-		case RTYPE_LAUNDRY:
-			if (!add_laundry_objs(rgen, room, zval, room_id, tot_light_amt, objs_start, added_bathroom_objs_mask)) continue;
-			break;
-		case RTYPE_OFFICE: {
-			vect_cube_t blockers; // unused
-			if (!add_office_objs(rgen, room, blockers, chair_color, zval, room_id, floor_ix, tot_light_amt, objs_start, is_basement)) continue;
-			break;
-		}
-		case RTYPE_CAFETERIA:
-			if (!add_cafeteria_objs(rgen, room, zval, room_id, floor_ix, tot_light_amt, objs_start)) continue;
-			break;
-		case RTYPE_GYM:
-			if (!add_gym_objs(rgen, room, zval, room_id, tot_light_amt, objs_start)) continue;
-			break;
-		case RTYPE_SHOWER:
-			if (!add_shower_room_objs(rgen, room, zval, room_id, tot_light_amt, objs_start)) {
-				if (!add_locker_room_objs(rgen, room, zval, room_id, tot_light_amt, objs_start)) continue; // fallback to locker room
+		for (auto const &cand : cands) {
+			room_type const rtype(cand.second);
+			//cout << "try " << room_names[rtype] << " weight " << -cand.first << endl;
+
+			switch (rtype) { // split on rtype
+			case RTYPE_VISIT:
+				if (!add_visit_room_objs(rgen, room, zval, room_id, floor_ix, tot_light_amt, objs_start)) continue;
+				break;
+			case RTYPE_LAUNDRY:
+				if (!add_laundry_objs(rgen, room, zval, room_id, tot_light_amt, objs_start, added_bathroom_objs_mask)) continue;
+				break;
+			case RTYPE_OFFICE: {
+				vect_cube_t blockers; // unused
+				if (!add_office_objs(rgen, room, blockers, chair_color, zval, room_id, floor_ix, tot_light_amt, objs_start, is_basement)) continue;
+				break;
 			}
-			break;
-		case RTYPE_CLASS: {
-			unsigned td_orient(0); // unused
-			if (!add_classroom_objs(rgen, room, zval, room_id, floor_ix, tot_light_amt, objs_start, chair_color, td_orient)) continue;
-			break;
-		}
-		case RTYPE_BATH:
-			if (!add_bathroom_objs(rgen, room, zval, room_id, tot_light_amt, lights_start, objs_start, floor_ix, is_basement, 0, added_bathroom_objs_mask)) continue;
-			break;
-		default: assert(0);
-		}
-		cout << "select " << room_names[cand.second] << endl;
-		interior->room_type_count |= (uint64_t(1) << (cand.second-1));
-		return 1; // success
-	} // for cand
-	cout << "no cand" << endl;
+			case RTYPE_CAFETERIA:
+				if (!add_cafeteria_objs(rgen, room, zval, room_id, floor_ix, tot_light_amt, objs_start)) continue;
+				break;
+			case RTYPE_GYM:
+				if (!add_gym_objs(rgen, room, zval, room_id, tot_light_amt, objs_start)) continue;
+				break;
+			case RTYPE_SHOWER:
+				if (!add_shower_room_objs(rgen, room, zval, room_id, tot_light_amt, objs_start)) continue;
+				break;
+			case RTYPE_CLASS: {
+				unsigned td_orient(0); // unused
+				if (!add_classroom_objs(rgen, room, zval, room_id, floor_ix, tot_light_amt, objs_start, chair_color, td_orient)) continue;
+				break;
+			}
+			case RTYPE_BATH:
+				if (!add_bathroom_objs(rgen, room, zval, room_id, tot_light_amt, lights_start, objs_start, floor_ix, is_basement, 0, added_bathroom_objs_mask)) continue;
+				break;
+			default: assert(0);
+			}
+			//cout << "select " << room_names[rtype] << endl;
+			room.assign_to(rtype, floor_ix);
+			interior->set_room_type(rtype);
+			return 1; // success
+		} // for cand
+	} // for pass
+	//cout << "no cand" << endl;
 	return 0;
 }
 
 bool building_t::add_gym_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
-	// TODO
+	return add_storage_objs(rgen, room, zval, room_id, tot_light_amt, objs_start, (zval < ground_floor_z1), 0); // TODO: placeholder
 	return 0;
 }
-bool building_t::add_visit_room_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
-	// TODO
+bool building_t::add_visit_room_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start) {
+	return add_conference_objs(rgen, room, zval, room_id, tot_light_amt, objs_start, floor_ix); // TODO: placeholder
 	return 0;
 }
 bool building_t::add_shower_room_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
-	// TODO
+	return add_locker_room_objs(rgen, room, zval, room_id, tot_light_amt, objs_start); // TODO: placeholder
 	return 0;
 }
 
