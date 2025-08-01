@@ -1097,6 +1097,21 @@ bool building_t::are_rooms_connected_without_using_room_or_door(unsigned room1, 
 	} // end while()
 	return 0; // room2 not found
 }
+// returns true if there is not path between the rooms connected to this room that don't go through this room
+bool building_t::is_room_on_critical_path(unsigned room_id, float zval) const {
+	vect_door_stack_t const &doorways(get_doorways_for_room(get_room(room_id), zval));
+	if (doorways.size() <= 1) return 0;
+	vector<unsigned> conn_rooms;
+	for (door_stack_t const &ds : doorways) {conn_rooms.push_back(ds.get_conn_room(room_id));}
+	unique_cont(conn_rooms); // should already be unique?
+
+	for (auto i = conn_rooms.begin(); i != conn_rooms.end(); ++i) {
+		for (auto j = i+1; j != conn_rooms.end(); ++j) {
+			if (!are_rooms_connected_without_using_room_or_door(*i, *j, room_id)) return 1;
+		}
+	}
+	return 0;
+}
 
 // Warning: this may be called from a different thread from the one that uses it for AI updates
 void building_t::register_player_in_building(point const &camera_bs, unsigned building_id) const {
