@@ -1755,7 +1755,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 			zval = add_flooring(room, zval, room_id, tot_light_amt, flooring_type); // move the effective floor up
 		}
 	}
-	if (have_toilet && room.is_office) { // office bathroom
+	if (have_toilet && (room.is_office || is_prison())) { // office or prison bathroom
 		if (min(place_area_sz.x, place_area_sz.y) > 1.5*floor_spacing && max(place_area_sz.x, place_area_sz.y) > 2.0*floor_spacing) {
 			if (divide_bathroom_into_stalls(rgen, room, zval, room_id, tot_light_amt, floor, lights_start, objs_start)) { // large enough, divide into bathroom stalls
 				added_bathroom_objs_mask |= (PLACED_TOILET | PLACED_SINK);
@@ -2138,9 +2138,11 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 		mens_room = (init_rtype == RTYPE_MENS);
 	}
 	else { // determine if this is the men's or women's room
-		point const part_center(get_part_for_room(room).get_cube_center()), room_center(room.get_cube_center());
-		mens_room = ((part_center.x < room_center.x) ^ (part_center.y < room_center.y));
-
+		if (is_prison() && !interior->has_room_type(RTYPE_BATH)) {mens_room = 1;} // prisons more commonly have men, so select men's room as the first bathroom
+		else {
+			point const part_center(get_part_for_room(room).get_cube_center()), room_center(room.get_cube_center());
+			mens_room = ((part_center.x < room_center.x) ^ (part_center.y < room_center.y));
+		}
 		if (!is_cube()) { // alternate between men's and women's restrooms
 			if      (interior->room_geom->mens_count < interior->room_geom->womens_count) {mens_room = 1;}
 			else if (interior->room_geom->mens_count > interior->room_geom->womens_count) {mens_room = 0;}
@@ -2347,8 +2349,8 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 			if (door.z1() > zval || door.z2() < zval) continue; // wrong floor
 			door.rtype  = rtype; // tag type so that the correct sign is added
 			door.locked = 0; // only needed for non-cube buildings
-			door.make_auto_close();
-			if (!is_cube() && !door_opens_inward(ds, room)) {door.opens_out_of_br = 1;}
+			if (door.for_jail != 1) {door.make_auto_close();} // what about metal doors with door.for_jail==2?
+			if ((!is_cube() || is_prison()) && !door_opens_inward(ds, room)) {door.opens_out_of_br = 1;}
 		} // for ds
 	} // for ds
 	// add a sign outside the bathroom door; should schools use boys/girls? but it doesn't match the text on the signs placed on the doors

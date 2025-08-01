@@ -6650,6 +6650,7 @@ void building_room_geom_t::add_jail_cell_door(door_t const &D, door_rotation_t &
 }
 
 void building_room_geom_t::maybe_add_door_sign(door_t const &door, door_rotation_t const &drot) {
+	if (door.for_jail) return; // no signs on jail doors
 	int tid(-1);
 	if      (door.rtype == RTYPE_MENS  ) {tid = get_texture_by_name("interiors/men_restroom.png"  );}
 	else if (door.rtype == RTYPE_WOMENS) {tid = get_texture_by_name("interiors/women_restroom.png");}

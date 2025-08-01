@@ -2010,6 +2010,8 @@ struct building_interior_t {
 	door_t       &get_door(unsigned door_ix)       {assert(door_ix < doors.size()); return doors[door_ix];}
 	room_t const &get_extb_start_room() const {return get_room(ext_basement_hallway_room_id);} // extb hallway, backrooms, or mall
 	room_t       &get_extb_start_room()       {return get_room(ext_basement_hallway_room_id);} // extb hallway, backrooms, or mall
+	void set_room_type(room_type rtype)       {assert(rtype > RTYPE_NOTSET && rtype < NUM_RTYPES); room_type_count |= (uint64_t(1) << (rtype-1));}
+	bool has_room_type(room_type rtype) const {assert(rtype > RTYPE_NOTSET && rtype < NUM_RTYPES); return (room_type_count & (uint64_t(1) << (rtype-1)));}
 	bool has_mall() const {return bool(mall_info);}
 	bool has_mall_ent_stairs() const {return (has_mall() && !mall_info->ent_stairs.is_all_zeros());}
 	int get_store_id_for_room(unsigned room_id) const;
