@@ -1895,8 +1895,13 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		// it might not be possible to place an elevator a part with no interior rooms, but that should be okay, because some other part will still have stairs
 		// do we need support for multiple floor cutouts stairs + elevator in this case as well?
 		if (!is_house && !is_parking_str && !must_add_stairs) {
-			float const elevator_prob[4] = {0.9, 0.5, 0.3, 0.1}; // higher chance of adding an elevator if there are more existing elevators
-			add_elevator = (rgen.rand_float() < elevator_prob[min(interior->elevators.size(), size_t(3))]);
+			if (!is_basement_room && interior->elevators.empty() && (part_ix+1 >= real_num_parts || part.z1() != parts[part_ix+1].z1())) {
+				add_elevator = 1; // always add an elevator to the last part in the stack if there are no elevators
+			}
+			else {
+				float const elevator_prob[4] = {0.9, 0.5, 0.3, 0.1}; // higher chance of adding an elevator if there are more existing elevators
+				add_elevator = (rgen.rand_float() < elevator_prob[min(interior->elevators.size(), size_t(3))]);
+			}
 		}
 		if (!add_elevator && is_basement_room && !is_house && is_cube() && !is_industrial()) {
 			// try to extend an existing stairwell on the part above downward
@@ -1935,7 +1940,8 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 				unsigned const stairs_room(rooms_start + (rand_ix + n)%num_avail_rooms);
 				room_t const &room(interior->rooms[stairs_room]);
 				assert(room.part_id == part_ix); // sanity check
-				if (room.is_nested()) continue; // nested rooms typically shouldn't have stairs or elevators
+				//if (room.is_nested()) continue; // nested rooms typically shouldn't have stairs or elevators, but they can in prisons
+				if (room.is_bathroom_rtype() || room.is_jail_cell()) continue; // no stairs or elevators in these rooms, if pre-assigned
 
 				if (is_parking_str) {
 					// always add an elevator to parking structures; place against a wall;
@@ -2004,7 +2010,8 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 							if (is_cube_close_to_doorway(elevator, room))     continue; // try again
 							if (check_skylight_intersection(elevator))        continue; // check skylights; is this necessary?
 							if (!check_cube_within_part_sides(elevator))      continue; // outside building; do we need to check for clearance?
-							if (stairs_or_elevator_blocked_by_nested_room(elevator, stairs_room)) continue;
+							// check for nested rooms such as prison cells, but not if the elevator is in a nested room itself as this will always fail
+							if (!room.is_nested() && stairs_or_elevator_blocked_by_nested_room(elevator, stairs_room)) continue;
 							add_or_extend_elevator(elevator, 1); // add=1
 							elevator_cut = elevator;
 							placed       = 1; // successfully placed
