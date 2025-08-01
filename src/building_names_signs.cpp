@@ -147,7 +147,7 @@ string building_t::get_room_name(point const &pos, int room_id, unsigned floor_i
 	unsigned room_type(get_room(room_id).get_room_type(floor_ix));
 	if (interior->elevator_equip_room.contains_pt(pos)) {room_type = RTYPE_ELEV_EQUIP;} // inside the parking garage
 	assert(room_type < NUM_RTYPES);
-	return room_names[room_type];
+	return room_names[room_type];// + (get_room(room_id).has_stairs_on_floor(floor_ix) ? " (Stairs)" : "");
 }
 
 // signs

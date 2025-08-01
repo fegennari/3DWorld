@@ -1933,7 +1933,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			// try all available rooms starting with the selected one to see if we can fit a stairwell/elevator in any of them
 			for (unsigned n = 0; n < num_avail_rooms; ++n) {
 				unsigned const stairs_room(rooms_start + (rand_ix + n)%num_avail_rooms);
-				room_t &room(interior->rooms[stairs_room]);
+				room_t const &room(interior->rooms[stairs_room]);
 				assert(room.part_id == part_ix); // sanity check
 				if (room.is_nested()) continue; // nested rooms typically shouldn't have stairs or elevators
 
@@ -1968,7 +1968,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 							stairs_cut = stairs;
 							stairs_dim = (dim ^ perp);
 							force_stairs_dir = (perp ? !sdir : dir);
-							room.has_stairs  = 255; // stairs on all floors
+							get_room(get_sub_room_containing_pt(stairs.get_cube_center(), stairs_room)).has_stairs = 255; // stairs on all floors; flag the sub-room
 							break; // done - no need to add stairs below
 						}
 					}
@@ -2011,8 +2011,8 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 						} // for x
 					} // for y
 					if (!placed) continue; // try another room
-					room.has_elevator = 1;
-					add_elevator      = 0;
+					get_room(get_sub_room_containing_pt(elevator_cut.get_cube_center(), stairs_room)).has_elevator = 1; // flag the sub-room
+					add_elevator = 0;
 					//room.set_no_geom();
 				}
 				else { // stairs
@@ -2112,10 +2112,11 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 					if (!is_house && against_wall && !is_industrial()) {sshape = SHAPE_WALLED_SIDES;} // add wall between room and office stairs if against a room wall
 					if (interior->landings.empty()) {interior->landings.reserve(num_floors-1);}
 					assert(cutout.is_strictly_normalized());
-					stairs_cut      = cutout;
-					room.has_stairs = 255; // stairs on all floors
-					if (!against_wall) {room.set_has_center_stairs();}
-					if (use_hallway || !pri_hall.is_all_zeros()) {room.set_no_geom();} // no geom in an office with stairs for buildings with hallways
+					room_t &s_room(get_room(get_sub_room_containing_pt(cutout.get_cube_center(), stairs_room))); // use the sub-room
+					stairs_cut        = cutout;
+					s_room.has_stairs = 255; // stairs on all floors
+					if (!against_wall) {s_room.set_has_center_stairs();}
+					if (use_hallway || !pri_hall.is_all_zeros()) {s_room.set_no_geom();} // no geom in an office with stairs for buildings with hallways
 				}
 				break; // success - done
 			} // for n

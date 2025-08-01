@@ -3257,6 +3257,18 @@ int building_t::get_room_containing_pt(point const &pt) const {
 	if (has_pool() && interior->pool.contains_pt(pt)) {return interior->pool.room_ix;}
 	return -1; // room not found
 }
+unsigned building_t::get_sub_room_containing_pt(point const &pt, unsigned parent_room_id) const {
+	room_t const &parent(get_room(parent_room_id));
+
+	if (parent.has_subroom()) {
+		for (int r = (int)parent_room_id-1; r >= 0; --r) { // nested rooms are added before the parent room, so iterate backwards
+			room_t const &room(get_room(r));
+			if (!room.is_nested() || !parent.contains_cube(room)) break; // no more nested rooms for this parent
+			if (room.contains_pt(pt)) return r;
+		}
+	}
+	return parent_room_id; // no containing sub-room found; return the paren's room
+}
 int building_t::get_room_containing_camera(point const &camera_rot) const {
 	if (player_in_elevator) { // use room assigned to elevator the player is in; more correct when elevator overlaps rooms other than the one it opens to
 		for (elevator_t const &e : interior->elevators) {
