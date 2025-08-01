@@ -3375,9 +3375,10 @@ bool building_t::add_laundry_objs(rand_gen_t rgen, room_t const &room, float zva
 		break; // there should only be one, and we've invalidated the reference
 	}
 	if (!is_house) { // commercial laundry room
-		unsigned const num_floors(round_fp(room.dz()/get_window_vspace())), max_place(num_floors*interior->rooms.size()/8);
+		unsigned const num_floors(round_fp(room.dz()/get_window_vspace()));
+		unsigned const max_place(num_floors*interior->rooms.size() / (is_prison() ? 16 : 8)); // fewer in prisons since there are so many cells
 		bool const wd_first(rgen.rand_bool());
-		bool any_placed(0);
+		unsigned tot_num_place(0);
 
 		for (unsigned e = 0; e < 2; ++e) {
 			bool const wd(bool(e) ^ wd_first); // {washer, dryer}
@@ -3388,12 +3389,15 @@ bool building_t::add_laundry_objs(rand_gen_t rgen, room_t const &room, float zva
 			// try to place more objects of this type along the same wall
 			room_object_t const obj(objs[obj_ix]); // deep copy
 			float const shift_amt(rgen.rand_uniform(1.25, 2.0)*obj.get_width()), clearance(0.8*obj.get_depth());
+			bool const first_dir(rgen.rand_bool()); // randomly select a priority side
 			unsigned num_place(1);
 
-			for (unsigned dir = 0; dir < 2; ++dir) { // {left, right} of obj
+			for (unsigned D = 0; D < 2 && num_place < max_place; ++D) { // {left, right} of obj
+				bool const dir(D ^ first_dir);
+				unsigned const max_this_side(max_place - num_place + 1);
 				room_object_t obj2(obj);
 
-				for (unsigned n = 1; n < max_place; ++n) {
+				for (unsigned n = 1; n < max_this_side; ++n) {
 					obj2.translate_dim(!obj.dim, (dir ? 1.0 : -1.0)*shift_amt);
 					if (!room.contains_cube(obj2)) break; // done
 					cube_t blocker(obj2); // used for collision tests
@@ -3404,11 +3408,12 @@ bool building_t::add_laundry_objs(rand_gen_t rgen, room_t const &room, float zva
 					++num_place;
 				} // for n
 			} // for dir
-			// if no extra objects were placed, try a different wall/pos
-			if (num_place == 1) {place_model_along_wall(model_id, type, room, height, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.8);}
-			any_placed = 1;
+			if (num_place == 1) { // if no extra objects were placed, try a different wall/pos
+				if (place_model_along_wall(model_id, type, room, height, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.8)) {++num_place;}
+			}
+			tot_num_place += num_place;
 		} // for wed
-		if (!any_placed) return 0; // failed
+		if (tot_num_place == 0) return 0; // failed
 		add_door_sign("Laundry", room, zval, room_id);
 		success = 1;
 	}
