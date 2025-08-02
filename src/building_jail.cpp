@@ -637,7 +637,7 @@ void building_t::add_jail_cell_door(cube_t const &bars, unsigned room_id, unsign
 	add_interior_door(door, 0, 1, 1); // is_bathroom=0, make_unlocked=1, make_closed=1
 }
 void building_t::add_jail_cell_bars(cube_t const &cell, cube_t door_bc, unsigned room_id, float tot_light_amt, bool dim, bool dir, bool hinge_side, colorRGBA const &color) {
-	float const door_width(get_doorway_width()), bars_hwidth(JAIL_BARS_THICK*0.5*get_wall_thickness());
+	float const bars_hwidth(JAIL_BARS_THICK*0.5*get_wall_thickness());
 	unsigned const parent_room_id(get_nested_room_parent(room_id)); // sets texture/material
 
 	if (door_bc.is_all_zeros()) { // if not specified, find the door associated with this cell and get its bounds
@@ -847,7 +847,6 @@ void building_t::get_prison_cell_block_cubes(unsigned room_id, vect_cube_t &out,
 }
 
 bool building_t::place_stairs_in_prison_room(cube_t &stairs, unsigned room_id, bool stairs_dim, bool &wall_dir, rand_gen_t &rgen) const {
-	bool placed(0);
 	vect_cube_t cands;
 	get_prison_cell_block_cubes(room_id, cands, 0, 1); // inc_hallway=0, inc_non_cell_subrooms=1 (allow stairs in those subrooms)
 	if (cands.empty()) return 0; // room is full
