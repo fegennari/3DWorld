@@ -1174,6 +1174,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_JAIL_BARS:  add_jail_bars(c); break;
 		case TYPE_GUN:        add_gun(c); break;
 		case TYPE_STICK_NOTE: add_sticky_note(c); break;
+		case TYPE_GYM_WEIGHT: add_gym_weight (c); break;
 		case TYPE_DBG_SHAPE:  add_debug_shape(c); break;
 		default: break;
 		} // end switch

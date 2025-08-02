@@ -6462,6 +6462,36 @@ void building_room_geom_t::add_lava_lamp(room_object_t const &c) {
 	for (auto i = mat.itri_verts.begin()+vix_start; i != mat.itri_verts.end(); ++i) {i->set_norm(-plus_z);} // normals point down
 }
 
+void building_room_geom_t::add_gym_weight(room_object_t const &c) {
+	// these could be lifting weights or hand weights (dumbbells), depending on size
+	rgeom_mat_t &mat(get_metal_material(1, 0, 1)); // untextured, shadowed, small=1
+	colorRGBA const color(apply_light_color(c));
+	float const height(c.dz()), width(c.get_width()), radius(0.25*(height + width)), length(c.get_length());
+
+	if (height < 0.5*width) { // single weight, vertical
+		mat.add_vcylin_to_verts(c, color, 0, 1); // draw top but not bottom
+		// TODO: draw the hole
+	}
+	else if (length < radius) { // single weight, horizontal
+		mat.add_ortho_cylin_to_verts(c, color, c.dim, 1, 1); // draw ends
+		// TODO: draw the hole
+	}
+	else { // two weights with a bar between
+		float const bar_radius(0.1*radius), bar_shrink(bar_radius - radius), weight_len(0.1*length);
+		cube_t bar(c);
+		bar.expand_in_dim( c.dim, -weight_len);
+		bar.expand_in_dim(!c.dim,  bar_shrink);
+		bar.expand_in_z(bar_shrink);
+		mat.add_ortho_cylin_to_verts(bar, apply_light_color(c, LT_GRAY), c.dim, 0, 0); // no ends
+
+		for (unsigned d = 0; d < 2; ++d) { // draw weights at ends
+			cube_t weight(c);
+			weight.d[c.dim][!d] = c.d[c.dim][d] - (d ? 1.0 : -1.0);
+			mat.add_ortho_cylin_to_verts(weight, color, c.dim, 1, 1); // draw ends
+		}
+	}
+}
+
 void building_room_geom_t::add_trash(room_object_t const &c) {
 	// add a ball of wrinkled paper; could be based on obj_id
 	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // shadowed, small

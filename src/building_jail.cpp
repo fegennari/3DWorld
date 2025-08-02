@@ -479,6 +479,7 @@ bool building_t::assign_and_fill_prison_room(rand_gen_t rgen, room_t &room, floa
 
 bool building_t::add_gym_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	return add_storage_objs(rgen, room, zval, room_id, tot_light_amt, objs_start, (zval < ground_floor_z1), 0); // TODO: placeholder
+	// TYPE_GYM_WEIGHT, TYPE_BENCH, TYPE_LOCKER, clothing, etc.
 	return 0;
 }
 bool building_t::add_visit_room_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start) {
