@@ -491,11 +491,23 @@ bool building_t::add_shower_room_objs(rand_gen_t rgen, room_t const &room, float
 }
 
 void building_t::add_prison_hall_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
-	float const floor_spacing(get_window_vspace());
 	cube_t const hall(get_prison_hall_for_room(room));
-	bool const dim(hall.dx() < hall.dy()); // long dim
-	if (hall.get_sz_dim(!dim) < 1.8*floor_spacing) return; // too narrow for guard desk
-	// TODO: guard desk with keys
+	vector2d const hall_sz(hall.get_size_xy());
+	bool const dim(hall_sz.x < hall_sz.y); // long dim
+	float const floor_spacing(get_window_vspace()), door_width(get_doorway_width());
+	float const desk_hwidth(0.5*0.9*floor_spacing), desk_hdepth(0.6*desk_hwidth), edge_space(desk_hwidth + 1.5*door_width);
+	if (hall_sz[!dim] < 2.0*(desk_hdepth + 1.25*door_width) || hall_sz[dim] < 2.0*edge_space) return; // too small for guard desk
+	float const centerline(hall.get_center_dim(!dim));
+	bool const dir(centerline - room.get_center_dim(!dim) < 0.1*floor_spacing*rgen.signed_rand_float()); // facing somewhat toward cells, if they're on one side
+	cube_t desk;
+	set_cube_zvals(desk, zval, zval+0.32*floor_spacing);
+	set_wall_width(desk, centerline, desk_hdepth, !dim);
+
+	for (unsigned n = 0; n < 20; ++n) {
+		float const val((n == 0) ? room.get_center_dim(dim) : rgen.rand_uniform((room.d[dim][0] + edge_space), (room.d[dim][1] - edge_space)));
+		set_wall_width(desk, val, desk_hwidth, dim);
+		if (add_reception_desk(rgen, desk, !dim, dir, room_id, tot_light_amt)) break; // add keys on the desk?
+	}
 }
 
 bool building_t::add_basement_jail_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
