@@ -216,7 +216,7 @@ bool building_t::add_room_lockers(rand_gen_t &rgen, room_t const &room, float zv
 				if (i->intersects(test_cube)) {invalid = 1; break;}
 			}
 			if (invalid || is_obj_placement_blocked(test_cube, room, 1,    0)) continue;
-			if (!check_if_placed_on_interior_wall  (test_cube, room, !dim, d)) continue; // ensure the locker is against a wall
+			if (!check_if_placed_on_wall           (test_cube, room, !dim, d)) continue; // ensure the locker is against a wall
 			unsigned flags(is_industrial() ? RO_FLAG_IN_FACTORY : 0);
 
 			if (add_padlocks && rgen.rand_float() < 0.25) { // add padlocks to some lockers

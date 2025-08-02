@@ -2094,7 +2094,7 @@ bool building_t::add_tp_roll(cube_t const &room, unsigned room_id, float tot_lig
 	tp.d[dim][!dir] = tp  .d[dim][dir] + (dir ? -1.0 : 1.0)*1.1*diameter; // set the diameter with a bit of extra space for clearance
 	// Note: not checked against other bathroom objects because the toilet is placed first
 	if (check_valid_pos && (!room.contains_cube(tp) || is_obj_placement_blocked(tp, room, 1))) return 0;
-	if (has_small_part && !check_if_placed_on_interior_wall(tp, get_room(room_id), dim, dir))  return 0; // need to check for missing walls
+	if (has_small_part && !check_if_placed_on_wall(tp, get_room(room_id), dim, dir))           return 0; // need to check for missing walls
 	interior->room_geom->objs.emplace_back(tp, TYPE_TPROLL, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, WHITE);
 	set_obj_id(interior->room_geom->objs);
 	return 1;
@@ -5019,7 +5019,7 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 					c_test.d[dim][!dir] += dir_sign*wall_thickness; // expand out more so that it's guaranteed to intersect appliances placed near the wall
 					if (overlaps_other_room_obj(c_test, objs_start))                     continue;
 					if (!is_gdoor && is_obj_placement_blocked(c_test, room, (ei==1), 1)) continue; // inc_open_doors=1/check_open_dir=1 for inside, to avoid placing behind open door
-					if (!check_if_placed_on_interior_wall(c, room, dim, dir))            continue; // ensure the switch is on a wall
+					if (!check_if_placed_on_wall(c, room, dim, dir))                     continue; // ensure the switch is on a wall
 					if (overlaps_or_adj_int_window(c))                                   continue; // check interior windows
 					// if is_basement, and this is an exterior wall, use a non-recessed light switch? but the basement ext wall will never have a doorway; next to basement stairs?
 					unsigned flags(RO_FLAG_NOCOLL);
@@ -5144,7 +5144,7 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 				if (d.get_true_bcube().intersects(c_exp)) {bad_place = 1; break;}
 			}
 			if (bad_place) continue;
-			if (!hit_cabinet && !check_if_placed_on_interior_wall(c, room, dim, dir)) continue; // ensure the outlet is on a wall; skip for cabinets/backsplashes
+			if (!hit_cabinet && !check_if_placed_on_wall(c, room, dim, dir)) continue; // ensure the outlet is on a wall; skip for cabinets/backsplashes
 			unsigned flags(RO_FLAG_NOCOLL);
 
 			if (is_house && is_basement && is_exterior_wall) { // house exterior basement wall; non-recessed
@@ -5213,8 +5213,8 @@ bool building_t::add_wall_vent_to_room(rand_gen_t rgen, room_t const &room, floa
 			if (d.get_open_door_bcube_for_room(room).intersects(door_test_cube)) {bad_place = 1; break;}
 		}
 		if (bad_place) continue;
-		if (!check_if_placed_on_interior_wall(c, room, dim, dir)) continue; // ensure the vent is on a wall
-		if (!check_cube_within_part_sides(c)) continue; // handle non-cube buildings
+		if (!check_if_placed_on_wall(c, room, dim, dir)) continue; // ensure the vent is on a wall
+		if (!check_cube_within_part_sides(c))            continue; // handle non-cube buildings
 
 		if (check_for_ducts) { // if this is a utility room, check to see if we can connect the vent to a furnace with a duct
 			assert(objs_start <= objs.size());
@@ -5278,9 +5278,10 @@ bool building_t::add_ceil_vent_to_room(rand_gen_t rgen, room_t const &room, floa
 	return 0; // failed
 }
 
-bool building_t::check_if_placed_on_interior_wall(cube_t const &c, room_t const &room, bool dim, bool dir) const {
+bool building_t::check_if_placed_on_wall(cube_t const &c, room_t const &room, bool dim, bool dir) const { // interior or exterior
 	bool const mall_or_store(room.is_mall_or_store());
-	if (!has_small_part && !mall_or_store && !room.has_open_wall(dim, dir) && !room_might_have_clipped_wall(room)) return 1; // check not needed, any non-door loc is a wall
+	// check not needed if we know that any non-door location is a wall
+	if (!has_small_part && !mall_or_store && !room.has_open_wall(dim, dir) && !room_might_have_clipped_wall(room)) return 1;
 	float const wall_thickness(get_wall_thickness()), wall_face(c.d[dim][dir]);
 	cube_t test_cube(c);
 	test_cube.d[dim][0] = test_cube.d[dim][1] = wall_face - (dir ? -1.0 : 1.0)*0.5*wall_thickness; // move inward
@@ -5641,7 +5642,7 @@ void building_t::try_place_light_on_wall(cube_t const &light, room_t const &room
 			if (d.get_open_door_bcube_for_room(room).intersects(door_test_cube)) {bad_place = 1; break;}
 		}
 		if (bad_place) continue;
-		if (!check_if_placed_on_interior_wall(c, room, dim, dir)) continue; // ensure the light is on a wall; is this really needed?
+		if (!check_if_placed_on_wall(c, room, dim, dir)) continue; // ensure the light is on a wall; is this really needed?
 		if (!check_cube_within_part_sides(c)) continue; // handle non-cube buildings
 		lights.push_back(c);
 		break; // success/done
