@@ -959,7 +959,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					added_obj = no_plants = no_whiteboard = 1;
 					r->assign_to(RTYPE_LOUNGE, f);
 				}
-				if (!added_obj && num_locker_rooms < 2 && rgen.rand_float() < 0.25) { // maybe make locker room
+				if (!added_obj && num_locker_rooms < 2 && !has_window && rgen.rand_float() < 0.25) { // maybe make locker room if there is no window
 					added_obj = no_plants = no_whiteboard = add_locker_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 					if (added_obj) {r->assign_to(RTYPE_LOCKER, f); ++num_locker_rooms;}
 				}

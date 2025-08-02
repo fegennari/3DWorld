@@ -166,7 +166,7 @@ bool building_t::add_room_lockers(rand_gen_t &rgen, room_t const &room, float zv
 	float const floor_spacing(get_window_vspace()), locker_height(0.75*floor_spacing), locker_depth(0.25*locker_height);
 	float locker_width(0.22*locker_height);
 	vect_room_object_t &objs(interior->room_geom->objs);
-	float const room_len(place_area.get_sz_dim(dim));
+	float const room_len(place_area.get_sz_dim(dim)); // long dim
 	unsigned const lockers_start(objs.size()), num_lockers(room_len/locker_width); // floor
 	// if there are enough lockers, increase their width slightly so that lockers tile to fill the exact wall length
 	if (num_lockers >= 10) {locker_width = room_len/num_lockers;}
@@ -195,6 +195,7 @@ bool building_t::add_room_lockers(rand_gen_t &rgen, room_t const &room, float zv
 
 	for (unsigned d = 0; d < 2; ++d) { // for each side of the room
 		if (dir_skip_mask & (1 << d)) continue;
+		if (zval >= ground_floor_z1 && classify_room_wall(room, zval, !dim, d, 0) == ROOM_WALL_EXT) continue; // skip exterior walls with windows
 		float const dsign(d ? -1.0 : 1.0), wall_edge(place_area.d[!dim][d]), locker_front(wall_edge + dsign*locker_depth);
 		locker.d[!dim][ d] = wall_edge;
 		locker.d[!dim][!d] = locker_front;
@@ -291,7 +292,9 @@ bool building_t::add_locker_room_objs(rand_gen_t rgen, room_t const &room, float
 		}
 	}
 	// maybe add a water fountain
-	if (place_model_along_wall(OBJ_MODEL_WFOUNTAIN, TYPE_WFOUNTAIN, room, 0.25, rgen, (zval+0.18*floor_spacing), room_id, tot_light_amt, room_bounds, objs_start)) {
+	if (place_model_along_wall(OBJ_MODEL_WFOUNTAIN, TYPE_WFOUNTAIN, room, 0.25, rgen, (zval+0.18*floor_spacing),
+		room_id, tot_light_amt, room_bounds, objs_start, 0.0, 4, 0, WHITE, 1)) // not_at_window=1
+	{
 		objs.back().dir ^= 1; // placed dir was backwards
 	}
 	// add shoes on the floor
