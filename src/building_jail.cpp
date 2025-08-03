@@ -531,9 +531,13 @@ void building_t::add_prison_hall_room_objs(rand_gen_t rgen, room_t const &room, 
 	set_cube_zvals(desk, zval, zval+0.32*floor_spacing);
 	set_wall_width(desk, centerline, desk_hdepth, !dim);
 
-	for (unsigned n = 0; n < 20; ++n) {
+	for (unsigned n = 0; n < 20; ++n) { // 20 tries
 		float const val((n == 0) ? room.get_center_dim(dim) : rgen.rand_uniform((room.d[dim][0] + edge_space), (room.d[dim][1] - edge_space)));
 		set_wall_width(desk, val, desk_hwidth, dim);
+		cube_t desk_exp(desk);
+		desk_exp.expand_by_xy(door_width);
+		if (intersects_nested_room  (desk_exp, room_id))     continue;
+		if (is_cube_close_to_doorway(desk, room, 0.0, 1, 1)) continue; // too close to a doorway
 		if (add_reception_desk(rgen, desk, !dim, dir, room_id, tot_light_amt)) break; // add keys on the desk?
 	}
 }
