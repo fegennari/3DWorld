@@ -2204,6 +2204,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 	stall_width  = stalls_len/num_stalls; // reclaculate to fill the gaps
 	sink_spacing = sinks_len/num_sinks;
 	bool const two_rows(room_width > 1.5*req_depth), skip_stalls_side(room_id & 1); // put stalls on a side consistent across floors
+	unsigned const showers_dir(is_prison() ? skip_stalls_side : 2); // one side of prison bathroom has showers rather than stalls
 	float const sink_side_sign(sink_side ? 1.0 : -1.0), stall_step(sink_side_sign*stall_width), sink_step(-sink_side_sign*sink_spacing);
 	float const floor_thickness(get_floor_thickness());
 	unsigned const NUM_STALL_COLORS = 4;
@@ -2215,17 +2216,14 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 
 	for (unsigned dir = 0; dir < 2; ++dir) { // each side of the wall
 		if (!two_rows && dir == (unsigned)skip_stalls_side) continue; // no stalls/sinks on this side
-		// add stalls
+		// add stalls or showers
 		float const dir_sign(dir ? -1.0 : 1.0), wall_pos(place_area.d[br_dim][dir]), stall_from_wall(wall_pos + dir_sign*(0.5*tlength + wall_thickness));
 		float stall_pos(place_area.d[!br_dim][!sink_side] + 0.5*stall_step);
 
 		for (unsigned n = 0; n < num_stalls; ++n, stall_pos += stall_step) {
 			point center(stall_from_wall, stall_pos, zval);
 			if (br_dim) {swap(center.x, center.y);} // R90 about z
-			cube_t toilet(center), stall(toilet);
-			toilet.expand_in_dim( br_dim, 0.5*tlength);
-			toilet.expand_in_dim(!br_dim, 0.5*twidth);
-			toilet.z2() += theight;
+			cube_t stall(center);
 			stall.z2() = stall.z1() + floor_spacing - floor_thickness; // set stall height to room height
 			stall.expand_in_dim(!br_dim, 0.5*stall_width);
 			stall.d[br_dim][ dir] = wall_pos; // + wall_thickness?
@@ -2241,20 +2239,29 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 			bool const is_open(rgen.rand_bool()); // 50% chance of stall door being open
 			bool const out_of_order(!is_open && !room.is_ext_basement() && rgen.rand_float() < 0.2); // not for mall bathrooms
 			unsigned const flags(out_of_order ? RO_FLAG_BROKEN : 0); // toilet can't be flushed and door can't be opened if out of order
-			objs.emplace_back(toilet, TYPE_TOILET, room_id, br_dim, !dir, flags, tot_light_amt);
-			add_bathroom_plumbing(objs.back());
-			objs.emplace_back(stall,  TYPE_STALL,  room_id, br_dim,  dir, (flags | (is_open ? RO_FLAG_OPEN : 0)), tot_light_amt, SHAPE_CUBE, stall_color);
+
+			if (dir == showers_dir) { // add shower rather than stall
+				// TODO: shower head and small seat
+			}
+			else { // toilet stall
+				cube_t toilet(center);
+				toilet.expand_in_dim( br_dim, 0.5*tlength);
+				toilet.expand_in_dim(!br_dim, 0.5*twidth);
+				toilet.z2() += theight;
+				objs.emplace_back(toilet, TYPE_TOILET, room_id, br_dim, !dir, flags, tot_light_amt);
+				add_bathroom_plumbing(objs.back());
+				float const tp_length(0.18*theight), wall_pos(toilet.get_center_dim(br_dim));
+				cube_t stall_inner(stall);
+				stall_inner.expand_in_dim(!br_dim, -0.0125*stall.dz()); // subtract off stall wall thickness
+				add_tp_roll(stall_inner, room_id, tot_light_amt, !br_dim, dir, tp_length, (zval + 0.7*theight), wall_pos);
+			}
+			objs.emplace_back(stall, TYPE_STALL, room_id, br_dim,  dir, (flags | (is_open ? RO_FLAG_OPEN : 0)), tot_light_amt, SHAPE_CUBE, stall_color);
 
 			if (out_of_order) { // add out-of-order sign
 				cube_t stall_clipped(stall);
 				stall_clipped.z2() -= 0.33*stall.dz(); // make it shorter; really only need the stall door, but the dim dimension size isn't used anyway
 				add_out_or_order_sign(stall_clipped, br_dim, !dir, room_id);
 			}
-			float const tp_length(0.18*theight), wall_pos(toilet.get_center_dim(br_dim));
-			cube_t stall_inner(stall);
-			stall_inner.expand_in_dim(!br_dim, -0.0125*stall.dz()); // subtract off stall wall thickness
-			add_tp_roll(stall_inner, room_id, tot_light_amt, !br_dim, dir, tp_length, (zval + 0.7*theight), wall_pos);
-
 			// move any lights that intersect stalls, since stalls extend to the ceiling
 			for (auto i = objs.begin()+lights_start; i < objs.begin()+lights_end; ++i) {
 				if (i->type != TYPE_LIGHT || !i->intersects(stall)) continue;
