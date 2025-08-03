@@ -5213,6 +5213,7 @@ bool building_t::add_wall_vent_to_room(rand_gen_t rgen, room_t const &room, floa
 		if (overlaps_or_adj_int_window(c_exp))                 continue; // check interior windows
 		cube_t door_test_cube(c_exp);
 		door_test_cube.expand_in_dim(!dim, 0.25*hwidth); // not too close to doors
+		door_test_cube.expand_in_dim( dim, wall_thickness); // check for the non opening side of the door as well
 		bool bad_place(0);
 
 		for (auto const &d : doorways) {
