@@ -1171,7 +1171,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, unsigned gen_index, bool has
 
 		// Note: iteration will include newly added all segments to recursively split long walls
 		for (unsigned w = first_wall_to_split[d]; w < walls.size(); ++w) { // skip hallway walls
-			bool pref_split(must_split[d] & (1ULL << (w & 63)));
+			bool pref_split(must_split[d] & (1ULL << (w & 63))); // part separator wall, etc.
 			float stairs_elev_pad(doorway_width);
 
 			for (unsigned nsplits = 0; nsplits < 4; ++nsplits) { // at most 4 splits
@@ -1190,7 +1190,23 @@ void building_t::gen_interior_int(rand_gen_t &rgen, unsigned gen_index, bool has
 				bool was_split(0);
 
 				for (unsigned ntries = 0; ntries < (pref_split ? 40U : 10U); ++ntries) { // choose random doorway positions and check against perp_walls for occlusion
-					float const doorway_pos(cube_rand_side_pos(wall, !d, 0.2, min_dist_abs, rgen, 1)); // for_door=1
+					float doorway_pos(cube_rand_side_pos(wall, !d, 0.2, min_dist_abs, rgen, 1)); // for_door=1
+
+					if (ntries == 0 && must_split && wall.z1() >= ground_floor_z1) {
+						// check if wall borders a hallway end on either side and center it in the hall
+						cube_t query_area(wall);
+						query_area.expand_in_dim( d, wall_thick); // include adjacent rooms
+						query_area.expand_in_dim(!d, -(wall_edge_space + doorway_hwidth)); // clip off invalid place area
+
+						for (room_t const &r : rooms) {
+							if (!r.is_hallway || !r.intersects(query_area)) continue;
+							if ((r.dx() < r.dy()) != d) continue; // not short edge
+							float const room_center(r.get_center_dim(!d));
+							if (room_center <= query_area.d[!d][0] || room_center >= query_area.d[!d][1]) continue; // hall center not in wall
+							doorway_pos = room_center; // shift to center of hallway
+							break;
+						} // for r
+					}
 					float const lo_pos(doorway_pos - doorway_hwidth), hi_pos(doorway_pos + doorway_hwidth);
 					bool valid(1);
 
@@ -1227,12 +1243,10 @@ void building_t::gen_interior_int(rand_gen_t &rgen, unsigned gen_index, bool has
 					int  const no_check_enter_exit((ntries > 5) ? (pref_conn ? 2 : 1) : 0); // no stairs enter/exit pad after first 5 tries, no enter/exit at all if pref_conn
 					if (interior->is_blocked_by_stairs_or_elevator(cand, stairs_elev_pad, elevators_only, no_check_enter_exit)) continue; // should we assert !pref_split?
 					// check for other nearby doorways
-					bool pos_valid(1);
-
 					for (door_stack_t const &ds : interior->door_stacks) {
-						if (ds.z1() < cand.z2() && ds.z2() > cand.z1() && ds.get_open_door_path_bcube().intersects(cand)) {pos_valid = 0; break;}
+						if (ds.z1() < cand.z2() && ds.z2() > cand.z1() && ds.get_open_door_path_bcube().intersects(cand)) {valid = 0; break;}
 					}
-					if (!pos_valid) continue;
+					if (!valid) continue;
 					bool open_dir(wall.get_center_dim(d) > bldg_door_open_dir_tp[d]); // doors open away from the building center
 					if (is_prison() && !is_prison_door_valid(cand, d, open_dir)) continue; // check if too close to jail cells
 					was_split = 1;
