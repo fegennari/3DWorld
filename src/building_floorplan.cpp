@@ -1162,6 +1162,9 @@ void building_t::gen_interior_int(rand_gen_t &rgen, unsigned gen_index, bool has
 		rooms.back().set_no_geom();
 	}
 	// attempt to cut extra doorways into long walls if there's space to produce a more connected floorplan
+	bool const jail_door(is_prison());
+	float const wall_edge_space(jail_door ? doorway_width : wall_thick); // must have space for jail door to open fully
+
 	for (unsigned d = 0; d < 2; ++d) { // x,y: dim in which the wall partitions the room (wall runs in dim !d)
 		auto &walls(interior->walls[d]);
 		auto const &perp_walls(interior->walls[!d]);
@@ -1176,7 +1179,12 @@ void building_t::gen_interior_int(rand_gen_t &rgen, unsigned gen_index, bool has
 				if (is_industrial() && wall.z1() >= ground_floor_z1) break; // don't split warehouse/factory walls as they already have doors
 				float const len(wall.get_sz_dim(!d)), min_split_len((pref_split ? 0.5 : 1.5)*min_wall_len); // = 2.0/6.0 * doorway_width
 				if (len < min_split_len) break; // not long enough to split - done
-				float const min_dist_abs(min(1.5f*doorway_width, max(0.5f*doorway_width, 0.5f*min_split_len)));
+				float min_dist_abs(min(1.5f*doorway_width, max(0.5f*doorway_width, 0.5f*min_split_len)));
+
+				if (jail_door) {
+					max_eq(min_dist_abs, 1.5f*doorway_width); // must have space for jail door to open fully
+					if (len < 2.1*min_dist_abs) break; // too short for jail door
+				}
 				bool const pref_conn(pref_conn_to.contains_cube(wall)); // house hallway, etc.
 				// walls currently don't run along the inside of exterior building walls, so we don't need to handle that case yet
 				bool was_split(0);
@@ -1188,7 +1196,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, unsigned gen_index, bool has
 
 					for (auto p = (perp_walls.begin() + first_wall_to_split[!d]); p != perp_walls.end(); ++p) { // skip hallway walls
 						if (p->z1() != wall.z1()) continue; // not the same zval/story
-						if (p->d[!d][1] < lo_pos-wall_thick || p->d[!d][0] > hi_pos+wall_thick) continue; // no overlap with wall
+						if (p->d[!d][1] < lo_pos-wall_edge_space || p->d[!d][0] > hi_pos+wall_edge_space) continue; // no overlap with wall
 						if (p->d[ d][1] > wall.d[d][0]-wall_thick && p->d[d][0] < wall.d[d][1]+wall_thick) {valid = 0; break;} // has perp intersection
 					}
 					if (valid && !pref_split) { // don't split walls into small segments that border the same two rooms on both sides (two doorways between the same pair of rooms)
@@ -1266,7 +1274,6 @@ void building_t::gen_interior_int(rand_gen_t &rgen, unsigned gen_index, bool has
 							}
 						}
 					}
-					bool const jail_door(is_prison());
 					insert_door_in_wall_and_add_seg(wall, lo_pos, hi_pos, !d, open_dir, 0, 0, 0, 0, jail_door); // high_side=is_br=unlocked=closed=0; modifies wall
 					break;
 				} // for ntries
