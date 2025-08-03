@@ -924,19 +924,23 @@ cube_t building_t::get_walkable_room_bounds(room_t const &room, bool floor_space
 	// offices, hallways, and extended basement rooms tile exactly and include half the walls, so we have to subtract those back off
 	if (!room.inc_half_walls()) return room;
 	cube_t c(room);
-	float const half_wall_thick(0.5*get_wall_thickness());
+	float const wall_thick(get_wall_thickness()), wall_hthick(0.5*wall_thick);
 
 	if ((room.is_hallway && !room.is_ext_basement()) || room.get_office_floorplan()) { // office building room; only shrink interior walls
 		cube_t const &part(get_part_for_room(room));
 		float min_shrink(0.0);
-		if (is_prison() && room.z1() >= ground_floor_z1) {min_shrink = (get_window_trim_thick() - get_trim_thickness());} // prison needs extra padding for window bars
 
-		for (unsigned d = 0; d < 2; ++d) {
-			c.d[d][0] += ((room.d[d][0] > part.d[d][0]) ? half_wall_thick : min_shrink);
-			c.d[d][1] -= ((room.d[d][1] < part.d[d][1]) ? half_wall_thick : min_shrink);
+		if (is_prison() && room.z1() >= ground_floor_z1) { // prison needs extra padding for window bars
+			min_shrink = (get_window_trim_thick() - get_trim_thickness());
+		}
+		for (unsigned d = 0; d < 2; ++d) { // add extra padding for part test to handle rooms clipped by building_t::add_part_sep_walls()
+			c.d[d][0] += ((room.d[d][0] > part.d[d][0] + 2.0*wall_thick) ? wall_hthick : min_shrink);
+			c.d[d][1] -= ((room.d[d][1] < part.d[d][1] - 2.0*wall_thick) ? wall_hthick : min_shrink);
 		}
 	}
-	else {c.expand_by_xy(-half_wall_thick);} // shrink on all sides; not exact, but we don't know which walls are interior vs. exterior
+	else { // shrink on all sides; not exact, but we don't know which walls are interior vs. exterior
+		c.expand_by_xy(-wall_hthick);
+	}
 	return c;
 }
 cube_t building_t::get_room_bounds_inside_trim(room_t const &room) const {
