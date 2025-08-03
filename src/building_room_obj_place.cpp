@@ -1004,7 +1004,7 @@ bool building_t::add_wall_tv(rand_gen_t &rgen, room_t const &room, float zval, u
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const tv_obj_ix(objs.size());
 	float const z1(zval + 0.3*get_window_vspace());
-	cube_t const room_area(get_walkable_room_bounds(room)); // right against the wall
+	cube_t const room_area(get_room_wall_bounds(room)); // right against the wall
 	if (!place_model_along_wall(OBJ_MODEL_TV, TYPE_TV, room, 0.5, rgen, z1, room_id, tot_light_amt, room_area, objs_start, 4.0, 4, 1, BKGRAY, 1, RO_FLAG_HANGING)) return 0;
 	offset_hanging_tv(objs[tv_obj_ix]);
 	assert(objs.back().type == TYPE_BLOCKER);
@@ -1710,7 +1710,7 @@ bool building_t::place_model_along_wall(unsigned model_id, room_object type, roo
 
 float building_t::add_flooring(room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned flooring_type, unsigned sub_type) {
 	float const new_zval(zval + get_flooring_thick());
-	cube_t flooring(get_walkable_room_bounds(room));
+	cube_t flooring(get_room_wall_bounds(room));
 	// expand flooring to include half of the walls so that it meets the door and trim is added; not for garages and sheds
 	if (!room.is_sec_bldg) {flooring.expand_by_xy(0.5*get_wall_thickness());}
 
@@ -3065,7 +3065,7 @@ void building_t::add_shelves(cube_t const &c, bool dim, bool dir, unsigned room_
 bool building_t::add_ladder_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	float const ladder_height(rgen.rand_uniform(0.77, 0.95)*get_floor_ceil_gap());
 	vector3d const ladder_sz(0.25, rgen.rand_uniform(0.2, 0.22), 1.0); // D, W, H
-	cube_t const place_area(get_walkable_room_bounds(room));
+	cube_t const place_area(get_room_wall_bounds(room));
 	return place_obj_along_wall(TYPE_INT_LADDER, room, ladder_height, ladder_sz, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.0, 1, 4, 0);
 }
 
@@ -4191,7 +4191,7 @@ void building_t::add_cameras_to_room(rand_gen_t &rgen, room_t const &room, float
 	float const window_vspacing(get_window_vspace()), doorway_width(get_doorway_width());
 	float const ceil_zval(room.is_single_floor ? (room.z2() - get_fc_thickness()) : (zval + get_floor_ceil_gap())); // on upper floor of retail
 	float const length(0.09*window_vspacing), width(0.4*length), height(0.5*length);
-	cube_t const place_area(get_walkable_room_bounds(room));
+	cube_t const place_area(get_room_wall_bounds(room));
 	bool const camera_side(rgen.rand_bool()), is_ground_floor(zval >= ground_floor_z1 && zval < ground_floor_z1 + window_vspacing);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t camera;
@@ -4970,7 +4970,7 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 	bool is_ground_floor, bool is_basement, bool is_jail)
 {
 	float const wall_thickness(get_wall_thickness()), switch_hwidth(0.5*wall_thickness);
-	cube_t const room_bounds(get_walkable_room_bounds(room));
+	cube_t const room_bounds(get_room_wall_bounds(room));
 	if (min(room_bounds.dx(), room_bounds.dy()) < 8.0*switch_hwidth) return; // room is too small; shouldn't happen
 	float const ceil_zval(zval + get_floor_ceil_gap());
 	vect_door_stack_t &doorways(get_doorways_for_room(room, zval)); // place light switch next to a door
@@ -5074,7 +5074,7 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 	unsigned objs_start, bool is_ground_floor, bool is_basement, bool is_kitchen)
 {
 	float const wall_thickness(get_wall_thickness()), plate_height(1.8*wall_thickness), plate_hwidth(0.5*wall_thickness), min_wall_spacing(4.0*plate_hwidth);
-	cube_t const room_bounds(get_walkable_room_bounds(room));
+	cube_t const room_bounds(get_room_wall_bounds(room));
 	if (min(room_bounds.dx(), room_bounds.dy()) < 3.0*min_wall_spacing) return; // room is too small; shouldn't happen
 	float const outlet_z1(zval + get_trim_height() + 0.4*plate_height); // wall trim height + some extra padding; same for every outlet
 	float plate_thickness(0.03*wall_thickness);
@@ -5188,7 +5188,7 @@ bool building_t::add_wall_vent_to_room(rand_gen_t rgen, room_t const &room, floa
 	float height(2.5*wall_thickness), hwidth(2.0*wall_thickness);
 	if (room.is_store()) {height *= 2.0; hwidth *= 2.0;} // larger wall vents for mall stores
 	float const thickness(0.1*wall_thickness), min_wall_spacing(1.5*hwidth);
-	cube_t const room_bounds(get_walkable_room_bounds(room));
+	cube_t const room_bounds(get_room_wall_bounds(room));
 	if (min(room_bounds.dx(), room_bounds.dy()) < 3.0*min_wall_spacing) return 0; // room is too small; shouldn't happen
 	bool const pref_dim(room.dx() < room.dy()); // shorter dim, to make it less likely to conflict with whiteboards
 	vect_door_stack_t const &doorways(get_doorways_for_room(room, zval));
@@ -5617,7 +5617,7 @@ void building_t::try_place_light_on_ceiling(cube_t const &light, room_t const &r
 void building_t::try_place_light_on_wall(cube_t const &light, room_t const &room, bool room_dim, float zval, vect_cube_t &lights, rand_gen_t &rgen) const {
 	float const wall_thickness(get_wall_thickness()), window_vspacing(get_window_vspace());
 	float const length(light.dz()), radius(0.25*min(light.dx(), light.dy())), min_wall_spacing(2.0*radius);
-	cube_t const room_bounds(get_walkable_room_bounds(room));
+	cube_t const room_bounds(get_room_wall_bounds(room));
 	if (min(room_bounds.dx(), room_bounds.dy()) < 3.0*min_wall_spacing) return; // room is too small; shouldn't happen
 	bool const pref_dim(!room_dim); // shorter dim
 	float const light_ws_dmax = 20.0; // max distance in world space from the origin; used to prevent shadow acne when values are large

@@ -2715,7 +2715,9 @@ private:
 		bool allow_mult, unsigned nx, unsigned ny, unsigned check_coll_start, vect_cube_t &lights, rand_gen_t &rgen) const;
 	void try_place_light_on_wall   (cube_t const &light, room_t const &room, bool room_dim, float zval, vect_cube_t &lights, rand_gen_t &rgen) const;
 	bool clip_cube_to_parts(cube_t &c, vect_cube_t &cubes) const;
-	cube_t get_walkable_room_bounds(room_t const &room, bool floor_space_only=0) const;
+	cube_t get_room_bounds            (room_t const &room, bool exc_window_bars=0, bool floor_space_only=0) const;
+	cube_t get_walkable_room_bounds   (room_t const &room) const {return get_room_bounds(room, 1);} // for objects on the floor; exc_window_bars=1
+	cube_t get_room_wall_bounds       (room_t const &room) const {return get_room_bounds(room, 0);} // for objects on walls; exc_window_bars=0
 	cube_t get_room_bounds_inside_trim(room_t const &room) const;
 	bool is_cube_contained_in_parts(cube_t const &c) const;
 	void expand_ground_floor_cube(cube_t &cube, cube_t const &skip=cube_t()) const;

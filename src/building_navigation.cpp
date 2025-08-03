@@ -918,7 +918,7 @@ public:
 	}
 }; // end building_nav_graph_t
 
-cube_t building_t::get_walkable_room_bounds(room_t const &room, bool floor_space_only) const {
+cube_t building_t::get_room_bounds(room_t const &room, bool exc_window_bars, bool floor_space_only) const {
 	if (floor_space_only && room.is_industrial() && interior->ind_info) return interior->ind_info->floor_space; // currently unused
 	// regular house rooms start and end at the walls;
 	// offices, hallways, and extended basement rooms tile exactly and include half the walls, so we have to subtract those back off
@@ -930,7 +930,7 @@ cube_t building_t::get_walkable_room_bounds(room_t const &room, bool floor_space
 		cube_t const &part(get_part_for_room(room));
 		float min_shrink(0.0);
 
-		if (is_prison() && room.z1() >= ground_floor_z1) { // prison needs extra padding for window bars
+		if (exc_window_bars && is_prison() && room.z1() >= ground_floor_z1) { // prison needs extra padding for window bars
 			min_shrink = (get_window_trim_thick() - get_trim_thickness());
 		}
 		for (unsigned d = 0; d < 2; ++d) { // add extra padding for part test to handle rooms clipped by building_t::add_part_sep_walls()
@@ -943,7 +943,7 @@ cube_t building_t::get_walkable_room_bounds(room_t const &room, bool floor_space
 	}
 	return c;
 }
-cube_t building_t::get_room_bounds_inside_trim(room_t const &room) const {
+cube_t building_t::get_room_bounds_inside_trim(room_t const &room) const { // used for object placement where we don't want to clip trim
 	cube_t bounds(get_walkable_room_bounds(room));
 	bounds.expand_by_xy(-get_trim_thickness());
 	return bounds;

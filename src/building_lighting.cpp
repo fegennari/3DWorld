@@ -1300,7 +1300,7 @@ void building_t::refine_light_bcube(point const &lpos, float light_radius, room_
 	// it's important that we don't use any tests against parts/rooms that depend on the light zval because the result must be valid for all lights in the stack
 	unsigned const NUM_RAYS = 180; // every 2 degrees
 	if (NUM_RAYS == 0) {light_bcube = tight_bcube; return;}
-	cube_t rays_bcube(lpos, lpos), room_exp(get_walkable_room_bounds(room));
+	cube_t rays_bcube(lpos, lpos), room_exp(get_room_wall_bounds(room));
 	float const wall_thickness(get_wall_thickness()), tolerance(0.01*wall_thickness);
 	room_exp.expand_by_xy(wall_thickness + tolerance); // to include points on the border + some FP error
 	// pre-compute the nearby walls we will use for clipping
@@ -2278,7 +2278,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			// skip attic, exterior, and mall back hallway stairs wall lights because they're not in rooms
 			else if (!is_in_attic && !is_exterior && !(wall_light && room.is_mall())) {
 				// expand slightly so that points exactly on the room bounds and exterior doors are included; not for backrooms because it already contains the wall width
-				cube_t room_exp(get_walkable_room_bounds(room));
+				cube_t room_exp(get_room_wall_bounds(room));
 				room_exp.expand_by((room.is_backrooms() ? 0.1 : 1.0)*room_xy_expand); // smaller expand for backrooms
 
 				if (room.open_wall_mask && !room.is_hallway) { // don't clamp on open wall sides, except for hallways

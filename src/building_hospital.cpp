@@ -598,6 +598,6 @@ void building_t::add_hospital_medicine_cabinet(rand_gen_t &rgen, room_t const &r
 	// add a medicine cabinet along a wall; not_at_window=1; flag as not a mirror
 	float const cabinet_height(rgen.rand_uniform(0.25, 0.35)*floor_spacing), cabinet_depth(rgen.rand_uniform(0.18, 0.22)), cabinet_width(rgen.rand_uniform(0.8, 1.2));
 	place_obj_along_wall(TYPE_MED_CAB, room, cabinet_height, vector3d(cabinet_depth, cabinet_width, 1.0), rgen, (zval + 0.5*floor_spacing - 0.2*cabinet_height),
-		room_id, tot_light_amt, get_walkable_room_bounds(room), objs_start, 4.0, 0, 4, 0, WHITE, 1, SHAPE_CUBE, get_wall_thickness(), RO_FLAG_HAS_EXTRA);
+		room_id, tot_light_amt, get_room_wall_bounds(room), objs_start, 4.0, 0, 4, 0, WHITE, 1, SHAPE_CUBE, get_wall_thickness(), RO_FLAG_HAS_EXTRA);
 }
 

@@ -802,7 +802,7 @@ void building_t::add_ext_basement_hallway_pipes_recur(unsigned room_id, bool hal
 		bool const conn_dir(room_centerline < door.get_center_dim(!hall_dim));
 		if (conn_dir != hall_side) continue; // wrong side of the hallway - might intersect a ceiling light
 		bool const door_side(rgen.rand_bool()); // add a branch to a random side of the door
-		cube_t const room_bounds(get_walkable_room_bounds(conn_room));
+		cube_t const room_bounds(get_room_wall_bounds(conn_room));
 		pipe_t conn_pipe(parent);
 		// 0.8x = ~0.5^3; limit to between parent pipe radius and base pipe radius
 		conn_pipe.radius = min(parent.radius, max(0.8f*parent.radius, rmin));
@@ -1197,7 +1197,7 @@ void building_t::get_pipe_basement_water_connections(vect_riser_pos_t &sewer, ve
 	if (inc_extb_conns /*&& extb_pipe_radius > 0.0*/) { // we have extended basement water consumers (or maybe enable even if not), add a connection through the hallway
 		extb_pipe_radius = max(min(0.5f*extb_pipe_radius, 2.0f*base_pipe_radius), base_pipe_radius); // not too large and not too small
 		room_t const &hallway(interior->get_extb_start_room());
-		extb_area = get_walkable_room_bounds(hallway);
+		extb_area = get_room_wall_bounds(hallway);
 		bool const wdim(interior->extb_wall_dim), wdir(interior->extb_wall_dir), first_side(rgen.rand_bool());
 		float const wall_dist(get_pipe_dist_to_wall(extb_pipe_radius, get_trim_thickness())); // calculated for sewer pipe, but should be large enough for water/HW pipes
 		point conn_pt(0.0, 0.0, ceil_zval);

@@ -960,7 +960,7 @@ void building_t::add_clock_to_room_wall(rand_gen_t &rgen, room_t const &room, fl
 	bool const digital((type <= 1) ? (type == 1) : rgen.rand_bool());
 	float const floor_spacing(get_window_vspace()), clock_height((digital ? 0.08 : 0.16)*floor_spacing), clock_z1(zval + get_floor_ceil_gap() - 1.4*clock_height);
 	float const clock_width((digital ? 4.0 : 1.0)*clock_height), clock_depth((digital ? 0.05 : 0.08)*clock_width);
-	cube_t const place_area(get_walkable_room_bounds(room));
+	cube_t const place_area(get_room_wall_bounds(room));
 	cube_t clock;
 	set_cube_zvals(clock, clock_z1, clock_z1+clock_height);
 
