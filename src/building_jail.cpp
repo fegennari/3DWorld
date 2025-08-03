@@ -232,35 +232,45 @@ bool building_t::divide_part_into_jail_cells(cube_t const &part, unsigned part_i
 		bool const dim(!hall_dim);
 		float const sub_room_width(extra_room_area.get_sz_dim(dim));
 		float const target_area(25.0*floor_spacing*floor_spacing), target_len(min(8.0f*floor_spacing, max(4.0f*floor_spacing, target_area/sub_room_width)));
-		unsigned const num_sub_rooms(room_len / target_len);
+		unsigned num_sub_rooms(room_len / target_len);
+		float pref_door_pos(0.0);
 
 		if (num_sub_rooms > 1) { // split further if large
-			float const room_step(room_len/num_sub_rooms), rand_amt(0.2*room_step), door_wall_space(1.2*door_hwidth);
-			float next_step_add(0.0);
+			// if large enough, add a hallway connecting the two ends so that we can have private rooms to the sides
+			bool const add_hall(room_len > 8.0f*floor_spacing);
+			float const hall_width(max(3.0*(door_width + wall_thickness), 0.04*room_len)), room_len_no_hall(room_len - (add_hall ? hall_width : 0.0));
+			float const room_step(room_len_no_hall/num_sub_rooms), rand_amt(0.2*room_step), door_wall_space(1.2*door_hwidth);
+			float const room_start(extra_room_area.d[hall_dim][0]);
+			unsigned hall_room_ix(num_sub_rooms); // start at an invalid index
+			
+			if (add_hall) {
+				++num_sub_rooms; // hall is an extra room
+				hall_room_ix = num_sub_rooms/2; // center room
+				if (!(num_sub_rooms & 1) && rgen.rand_bool()) {hall_room_ix -= 1;} // choose a random side if even
+			}
 			cube_t sub_room(extra_room_area);
-			sub_room.d[hall_dim][1] = extra_room_area.d[hall_dim][0] + room_step;
 
 			for (unsigned n = 0; n < num_sub_rooms; ++n) {
-				bool const is_last(n+1 == num_sub_rooms);
-				if (is_last) {sub_room.d[hall_dim][1] = extra_room_area.d[hall_dim][1];} // end at exactly the high edge
+				bool const is_last(n+1 == num_sub_rooms), is_hall(n == hall_room_ix);
+				float &lo_edge(sub_room.d[hall_dim][0]), &hi_edge(sub_room.d[hall_dim][1]);
+				if (is_last)      {hi_edge = extra_room_area.d[hall_dim][1];} // end at exactly the high edge
+				else if (is_hall) {hi_edge = lo_edge + hall_width;}
+				else              {hi_edge = room_start + (n+1)*room_step + rand_amt*rgen.signed_rand_float() - ((n > hall_room_ix) ? (room_step - hall_width) : 0.0);}
 				assert(sub_room.is_strictly_normalized());
-				add_prison_room(sub_room, part_id, 1, 0); // inc_half_walls=1, is_nested=0
+				add_prison_room(sub_room, part_id, 1, 0, is_hall); // inc_half_walls=1, is_nested=0
+				if (is_hall) {pref_door_pos = sub_room.get_center_dim(hall_dim);} // place door in center of hallway
 				if (is_last) break;
+				lo_edge = hi_edge; // shift to next room; next room starts where the last room ends
 				// add wall separating rooms
 				cube_t wall(sub_room);
 				clip_wall_to_ceil_floor(wall, fc_thick);
-				set_wall_width(wall, sub_room.d[hall_dim][1], wall_hthick, hall_dim);
+				set_wall_width(wall, hi_edge, wall_hthick, hall_dim);
 				// insert a door in the wall; this is optional since the room connecting code may add a door anway, but that doesn't always happen for short walls
 				float door_pos(sub_room.d[dim][0] + rgen.rand_uniform(0.35, 0.65)*sub_room_width); // center 30% of wall
 				max_eq(door_pos, wall.d[dim][0]+door_wall_space); // door must be contained in wall
 				min_eq(door_pos, wall.d[dim][1]-door_wall_space);
-				insert_door_in_wall_and_add_seg(wall, (door_pos - door_hwidth), (door_pos + door_hwidth), dim, rgen.rand_bool()); // random open_dir
+				insert_door_in_wall_and_add_seg(wall, (door_pos - door_hwidth), (door_pos + door_hwidth), dim, rgen.rand_bool()); // random open_dir; not a jail door
 				interior->walls[hall_dim].push_back(wall); // add remainder
-				// shift to next room
-				float const room_end(sub_room.d[hall_dim][1]), step_adj(rand_amt*rgen.signed_rand_float());
-				sub_room.d[hall_dim][0] = room_end; // next room starts where the last rooms ends
-				sub_room.d[hall_dim][1] = room_end + (room_step - step_adj + next_step_add);
-				next_step_add = step_adj;
 			} // for n
 		}
 		else { // one big room
@@ -272,14 +282,18 @@ bool building_t::divide_part_into_jail_cells(cube_t const &part, unsigned part_i
 			cube_t wall(extra_room_area);
 			clip_wall_to_ceil_floor(wall, fc_thick);
 			set_wall_width(wall, extra_room_area.d[dim][dir], wall_hthick, dim);
+			
+			if (pref_door_pos != 0.0) { // add hall jail door that opens out of the hallway; doesn't cover the part separator wall
+				insert_door_in_wall_and_add_seg(wall, (pref_door_pos - door_hwidth), (pref_door_pos + door_hwidth), !dim, dir, 0, 0, 0, 0, 1);
+			}
 			interior->walls[dim].push_back(wall);
 		} // for dir
 	}
 	return !cells.empty();
 }
 
-void building_t::add_prison_room(cube_t const &room, unsigned part_id, bool inc_half_walls, bool is_nested) {
-	add_room(room, part_id);
+void building_t::add_prison_room(cube_t const &room, unsigned part_id, bool inc_half_walls, bool is_nested, bool is_hall) {
+	add_room(room, part_id, 1, is_hall);
 	if (inc_half_walls) {interior->rooms.back().set_office_floorplan();}
 	if (is_nested     ) {interior->rooms.back().set_is_nested();}
 }
