@@ -390,7 +390,7 @@ struct room_pref_t {
 };
 room_pref_t const room_prefs[] = {
 	// rtype, allow_mult, allow_st_el, is_private, min_size, max_size, base_weight, floor_scale, basement_val, window_val
-	{RTYPE_VISIT,     0, 1, 0, 2.5, 0.0, 0.5, 1.0, -1.0,  0.0},
+	{RTYPE_VISIT,     0, 1, 1, 2.5, 0.0, 0.5, 1.0, -1.0,  0.0}, // flagged as private since it's separated into two parts
 	{RTYPE_LAUNDRY,   0, 1, 0, 0.0, 4.0, 0.5, 0.5,  1.0, -0.5},
 	{RTYPE_OFFICE,    1, 1, 0, 0.0, 3.0, 0.0, 0.0,  0.0,  1.0},
 	{RTYPE_CAFETERIA, 0, 0, 0, 4.0, 0.0, 1.0, 0.0,  0.0,  0.0},
