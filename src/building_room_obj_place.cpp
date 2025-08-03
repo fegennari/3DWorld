@@ -1708,7 +1708,7 @@ bool building_t::place_model_along_wall(unsigned model_id, room_object type, roo
 	return 1;
 }
 
-float building_t::add_flooring(room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned flooring_type) {
+float building_t::add_flooring(room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned flooring_type, unsigned sub_type) {
 	float const new_zval(zval + get_flooring_thick());
 	cube_t flooring(get_walkable_room_bounds(room));
 	// expand flooring to include half of the walls so that it meets the door and trim is added; not for garages and sheds
@@ -1722,10 +1722,16 @@ float building_t::add_flooring(room_t const &room, float zval, unsigned room_id,
 	tot_light_amt = 0.5*tot_light_amt + 0.5; // brighten flooring so that lights shining through doors and flashlights look better
 	unsigned flags(RO_FLAG_NOCOLL);
 	if (room.open_wall_mask) {flags |= RO_FLAG_OPEN;} // flag flooring as "open" so that color is not adjusted by room light
-	// cut elevators out of flooring in case they pass through bathrooms or utility rooms
+	// cut stairs and elevators out of flooring in case they pass through rooms with flooring
 	static vect_cube_t fparts, temp;
 	subtract_cubes_from_cube(flooring, interior->elevators, fparts, temp, 2); // check zval overlap
-	for (cube_t const &f : fparts) {interior->room_geom->objs.emplace_back(f, TYPE_FLOORING, room_id, 0, 0, flags, tot_light_amt, SHAPE_CUBE, WHITE, flooring_type);}
+	subtract_cubes_from_cubes(interior->stairwells, fparts, 0); // clip_in_z=0
+	vect_room_object_t &objs(interior->room_geom->objs);
+	
+	for (cube_t const &f : fparts) {
+		objs.emplace_back(f, TYPE_FLOORING, room_id, 0, 0, flags, tot_light_amt, SHAPE_CUBE, WHITE, flooring_type);
+		objs.back().obj_id = sub_type; // selects wood material, etc.
+	}
 	return new_zval;
 }
 

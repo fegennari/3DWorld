@@ -385,7 +385,7 @@ room_pref_t const room_prefs[] = {
 	{RTYPE_CLASS,     1, 0, 0, 3.0, 8.0, 0.5, 0.5,  0.0,  0.5},
 	{RTYPE_BATH,      1, 0, 1, 0.0, 3.0, 0.0, 0.0,  0.0, -0.5}
 };
-bool building_t::assign_and_fill_prison_room(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, float tot_light_amt,
+bool building_t::assign_and_fill_prison_room(rand_gen_t rgen, room_t &room, float &zval, unsigned room_id, float tot_light_amt,
 	unsigned objs_start, unsigned lights_start, unsigned floor_ix, bool is_basement, colorRGBA const &chair_color)
 {
 	assert(interior);
@@ -459,6 +459,7 @@ bool building_t::assign_and_fill_prison_room(rand_gen_t rgen, room_t &room, floa
 				break;
 			case RTYPE_CLASS: {
 				unsigned td_orient(0); // unused
+				zval = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_CARPET);
 				if (!add_classroom_objs(rgen, room, zval, room_id, floor_ix, tot_light_amt, objs_start, chair_color, td_orient)) continue;
 				break;
 			}
@@ -478,17 +479,29 @@ bool building_t::assign_and_fill_prison_room(rand_gen_t rgen, room_t &room, floa
 }
 
 bool building_t::add_gym_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
-	return add_storage_objs(rgen, room, zval, room_id, tot_light_amt, objs_start, (zval < ground_floor_z1), 0); // TODO: placeholder
-	// TYPE_GYM_WEIGHT, TYPE_BENCH, TYPE_LOCKER, clothing, etc.
-	return 0;
+	//return add_storage_objs(rgen, room, zval, room_id, tot_light_amt, objs_start, (zval < ground_floor_z1), 0); // placeholder
+	bool const rubber_flooring(rgen.rand_bool());
+	unsigned const sub_type(rubber_flooring ? 0 : 1); // select light colored wood
+	zval = add_flooring(room, zval, room_id, tot_light_amt, (rubber_flooring ? FLOORING_RUBBER : FLOORING_WOOD), sub_type);
+	//vect_room_object_t &objs(interior->room_geom->objs);
+	// TODO: TYPE_GYM_WEIGHT, TYPE_BENCH, TYPE_LOCKER, clothing, etc.
+	add_door_sign("Gym", room, zval, room_id);
+	return 1;
 }
 bool building_t::add_visit_room_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start) {
-	return add_conference_objs(rgen, room, zval, room_id, tot_light_amt, objs_start, floor_ix); // TODO: placeholder
-	return 0;
+	//return add_conference_objs(rgen, room, zval, room_id, tot_light_amt, objs_start, floor_ix); // placeholder
+	// TODO: must have doors at both sides
+	zval = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_CARPET);
+	// TODO: wall in center with windows, dividers, chairs, and phones
+	add_door_sign("Visitation", room, zval, room_id);
+	return 1;
 }
 bool building_t::add_shower_room_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
-	return add_locker_room_objs(rgen, room, zval, room_id, tot_light_amt, objs_start); // TODO: placeholder
-	return 0;
+	//return add_locker_room_objs(rgen, room, zval, room_id, tot_light_amt, objs_start); // placeholder
+	// TODO: showers, toilets, lockers, benches
+	zval = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_TILE);
+	add_door_sign("Shower", room, zval, room_id);
+	return 1;
 }
 
 void building_t::add_prison_hall_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {

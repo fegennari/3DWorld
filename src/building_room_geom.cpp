@@ -2249,6 +2249,7 @@ int get_flooring_texture(room_object_t const &c) {
 	case FLOORING_CARPET:   return get_texture_by_name((c.obj_id & 1) ? "carpet/carpet1.jpg" : "carpet/carpet2.jpg"); // select between two textures
 	case FLOORING_WOOD:     return ((c.obj_id & 1) ? (int)FENCE_TEX : (int)PANELING_TEX); // select between two textures
 	case FLOORING_LGTILE:   return select_tile_floor_texture((c.room_id & 1), 1.0).tid;
+	case FLOORING_RUBBER:   return get_texture_by_name("interiors/rubber_flooring.jpg"); // Note: doesn't tile, but looks okay
 	default: assert(0);
 	}
 	return -1; // shouldn't get here
