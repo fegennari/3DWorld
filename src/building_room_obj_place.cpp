@@ -1738,7 +1738,7 @@ float building_t::add_flooring(room_t const &room, float zval, unsigned room_id,
 bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, unsigned room_id, float tot_light_amt,
 	unsigned lights_start, unsigned objs_start, unsigned floor, bool is_basement, bool add_shower_tub, unsigned &added_bathroom_objs_mask)
 {
-	// Note: zval passed by reference
+	// Note: zval passed by reference due to add_flooring()
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 
 	if (!skylights.empty()) { // check for skylights; should we allow bathroom stalls (with ceilings?) even if there's a skylight?
@@ -1770,12 +1770,10 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 		}
 	}
 	float const tub_height_factor(0.2); // in units of floor spacing
-	bool placed_obj(0), placed_toilet(0), no_tub(0), added_vanity(0);
-	
-	if (is_house && !is_basement && add_vanity_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start)) { // try to place vanity
-		added_vanity = placed_obj = 1;
-		added_bathroom_objs_mask |= PLACED_SINK;
-	}
+	unsigned const vanity_obj_ix(objs.size());
+	bool placed_obj(0), placed_toilet(0), no_tub(0);
+	bool added_vanity(is_house && !is_basement && add_vanity_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start)); // try to place vanity
+
 	// place toilet first because it's in the corner out of the way and higher priority
 	if (have_toilet) { // have a toilet model
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TOILET)); // L, W, H
@@ -1783,42 +1781,49 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 		unsigned const first_corner(rgen.rand() & 3);
 		bool const first_dim(rgen.rand_bool());
 
-		for (unsigned n = 0; n < 4 && !placed_toilet; ++n) { // try 4 room corners
-			unsigned const corner_ix((first_corner + n)&3);
-			bool const xdir(corner_ix&1), ydir(corner_ix>>1);
-			point const corner(place_area.d[0][xdir], place_area.d[1][ydir], zval);
-			if (!check_pt_within_part_sides(corner)) continue; // invalid corner
+		for (unsigned pass = 0; pass < (added_vanity ? 2 : 1) && !placed_toilet; ++pass) { // {without, with} vanity
+			if (pass == 1) { // vanity pass; remove the vanity; not a bathroom without a toilet
+				objs.resize(vanity_obj_ix);
+				room.flags  &= ~ROOM_FLAG_MIRROR; // no more mirror
+				added_vanity = 0;
+			}
+			for (unsigned n = 0; n < 4 && !placed_toilet; ++n) { // try 4 room corners
+				unsigned const corner_ix((first_corner + n)&3);
+				bool const xdir(corner_ix&1), ydir(corner_ix>>1);
+				point const corner(place_area.d[0][xdir], place_area.d[1][ydir], zval);
+				if (!check_pt_within_part_sides(corner)) continue; // invalid corner
 
-			for (unsigned d = 0; d < 2 && !placed_toilet; ++d) { // try both dims
-				bool const dim(bool(d) ^ first_dim), dir(dim ? ydir : xdir);
-				cube_t c(corner, corner);
-				c.d[0][!xdir] += (xdir ? -1.0 : 1.0)*(dim ? width : length);
-				c.d[1][!ydir] += (ydir ? -1.0 : 1.0)*(dim ? length : width);
-				for (unsigned e = 0; e < 2; ++e) {c.d[!dim][e] += ((dim ? xdir : ydir) ? -1.5 : 1.5)*wall_thickness;} // extra padding on left and right sides
-				c.z2() += height;
-				cube_t c2(c); // used for placement tests
-				c2.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.8*length; // extra padding in front of toilet, to avoid placing other objects there (sink and tub)
-				c2.expand_in_dim(!dim, 0.4*width); // more padding on the sides
-				if (overlaps_other_room_obj(c2, objs_start) || is_cube_close_to_doorway(c2, room, 0.0, 1)) continue; // bad placement
-				objs.emplace_back(c,  TYPE_TOILET,  room_id, dim, !dir, 0, tot_light_amt);
-				add_bathroom_plumbing(objs.back());
-				objs.emplace_back(c2, TYPE_BLOCKER, room_id, 0, 0, RO_FLAG_INVIS); // add blocker cube to ensure no other object overlaps this space
-				placed_obj = placed_toilet = 1; // done
-				added_bathroom_objs_mask  |= PLACED_TOILET;
+				for (unsigned d = 0; d < 2 && !placed_toilet; ++d) { // try both dims
+					bool const dim(bool(d) ^ first_dim), dir(dim ? ydir : xdir);
+					cube_t c(corner, corner);
+					c.d[0][!xdir] += (xdir ? -1.0 : 1.0)*(dim ? width : length);
+					c.d[1][!ydir] += (ydir ? -1.0 : 1.0)*(dim ? length : width);
+					for (unsigned e = 0; e < 2; ++e) {c.d[!dim][e] += ((dim ? xdir : ydir) ? -1.5 : 1.5)*wall_thickness;} // extra padding on left and right sides
+					c.z2() += height;
+					cube_t c2(c); // used for placement tests
+					c2.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.8*length; // extra padding in front of toilet, to avoid placing other objects there (sink and tub)
+					c2.expand_in_dim(!dim, 0.4*width); // more padding on the sides
+					if (overlaps_other_room_obj(c2, objs_start) || is_cube_close_to_doorway(c2, room, 0.0, 1)) continue; // bad placement
+					objs.emplace_back(c,  TYPE_TOILET,  room_id, dim, !dir, 0, tot_light_amt);
+					add_bathroom_plumbing(objs.back());
+					objs.emplace_back(c2, TYPE_BLOCKER, room_id, 0, 0, RO_FLAG_INVIS); // add blocker cube to ensure no other object overlaps this space
+					placed_obj = placed_toilet = 1; // done
+					added_bathroom_objs_mask  |= PLACED_TOILET;
 
-				// try to place a roll of toilet paper on the adjacent wall
-				bool const tp_dir(dim ? xdir : ydir);
-				float const length(0.18*height), wall_pos(c.get_center_dim(dim)), far_edge_pos(wall_pos + (dir ? -1.0 : 1.0)*0.5*length);
-				cube_t const &part(get_part_for_room(room));
+					// try to place a roll of toilet paper on the adjacent wall
+					bool const tp_dir(dim ? xdir : ydir);
+					float const length(0.18*height), wall_pos(c.get_center_dim(dim)), far_edge_pos(wall_pos + (dir ? -1.0 : 1.0)*0.5*length);
+					cube_t const &part(get_part_for_room(room));
 
-				// if this wall has windows and bathroom has multiple exterior walls (which means it has non-glass block windows), don't place a TP roll
-				if (is_basement || !has_int_windows() || classify_room_wall(room, zval, !dim, tp_dir, 0) != ROOM_WALL_EXT ||
-					!is_val_inside_window(part, dim, far_edge_pos, get_hspacing_for_part(part, dim), get_window_h_border()) || count_ext_walls_for_room(room, zval) <= 1)
-				{
-					add_tp_roll(room_bounds, room_id, tot_light_amt, !dim, tp_dir, length, (c.z1() + 0.7*height), wall_pos);
-				}
-			} // for d
-		} // for n
+					// if this wall has windows and bathroom has multiple exterior walls (which means it has non-glass block windows), don't place a TP roll
+					if (is_basement || !has_int_windows() || classify_room_wall(room, zval, !dim, tp_dir, 0) != ROOM_WALL_EXT ||
+						!is_val_inside_window(part, dim, far_edge_pos, get_hspacing_for_part(part, dim), get_window_h_border()) || count_ext_walls_for_room(room, zval) <= 1)
+					{
+						add_tp_roll(room_bounds, room_id, tot_light_amt, !dim, tp_dir, length, (c.z1() + 0.7*height), wall_pos);
+					}
+				} // for d
+			} // for n
+		} // for pass
 		if (!placed_toilet) { // if the toilet can't be placed in a corner, allow it to be placed anywhere; needed for small offices
 			placed_toilet = place_model_along_wall(OBJ_MODEL_TOILET, TYPE_TOILET, room, 0.35, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.8);
 			placed_obj   |= placed_toilet;
@@ -1839,7 +1844,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 				}
 			}
 		}
-	}
+	} // end have_toilet
 	unsigned const pre_shower_tub_sink_ix(objs.size());
 
 	for (unsigned n = 0; n < 20; ++n) { // 20 tries to add a tub/shower and sink
@@ -1894,10 +1899,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 					}
 					cube_t c2(c); // used for placement tests
 
-					if (place_shower_tub) {
-						// anything?
-					}
-					else { // shower: extend out by door width on the side that opens, and a small amount on the other side
+					if (!place_shower_tub) { // shower: extend out by door width on the side that opens, and a small amount on the other side
 						c2.d[0][!xdir] += (xdir ? -1.0 : 1.0)*((!hdim) ? 1.1*shower_dy : 0.2*shower_dx);
 						c2.d[1][!ydir] += (ydir ? -1.0 : 1.0)*(  hdim  ? 1.1*shower_dx : 0.2*shower_dy);
 					}
@@ -1942,7 +1944,9 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 		}
 		unsigned const sink_obj_ix(objs.size());
 
-		if (added_vanity) {} // added vanity, no need to place a sink
+		if (added_vanity) { // added vanity, no need to place a sink
+			added_bathroom_objs_mask |= PLACED_SINK; // vanity includes a sink
+		}
 		else if (place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, room, 0.45, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.6)) {
 			placed_obj = 1;
 			bathroom_objs_mask |= PLACED_SINK;
