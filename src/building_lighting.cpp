@@ -50,6 +50,8 @@ unsigned get_machine_part_cubes(room_object_t const &c, float floor_ceil_gap, cu
 vect_cube_t const &get_cabinet_interior_cubes(room_object_t const &c, float wall_thickness, float z1_adj, float back_adj, float shelf_height);
 float get_med_cab_wall_thickness(room_object_t const &c);
 float get_locker_wall_thickness (room_object_t const &c);
+cube_t get_tv_screen(room_object_t const &c);
+int get_tv_or_monitor_tid(room_object_t const &c);
 
 bool check_indir_enabled(bool in_basement, bool in_attic) {
 	if (in_basement) return INDIR_BASEMENT_EN;
@@ -1516,7 +1518,9 @@ bool check_cube_visible_through_cut(vect_cube_t const &cuts, cube_t const &light
 	return 0;
 }
 
-bool add_dlight_if_visible(point const &pos, float radius, colorRGBA const &color, vector3d const &xlate, cube_t &lights_bcube, vector3d const &dir=zero_vector, float bwidth=1.0) {
+bool add_dlight_if_visible(point const &pos, float radius, colorRGBA const &color, vector3d const &xlate, cube_t &lights_bcube,
+	vector3d const &dir=zero_vector, float bwidth=1.0)
+{
 	assert(radius > 0.0);
 	if (!lights_bcube.contains_pt_xy(pos)) return 0;
 	if (!camera_pdu.sphere_visible_test((pos + xlate), radius)) return 0; // VFC
@@ -1742,9 +1746,10 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			if (i->is_moving() && i->is_visible()) {moving_objs.emplace_back(*i, (i - objs.begin() + 1));}
 			// handle light emitting objects in the player's building
 			room_object const type(i->type);
+			bool const is_tv_or_monitor_thats_on(i->is_tv_or_monitor() && i->is_tv_monitor_on()); // TV or monitor that's on, powered, and not broken
 
 			// should we do an occlusion query?
-			if ((type == TYPE_LAVALAMP || type == TYPE_FISHTANK || type == TYPE_WARN_LIGHT) && i->is_light_on()) {
+			if (((type == TYPE_LAVALAMP || type == TYPE_FISHTANK || type == TYPE_WARN_LIGHT) && i->is_light_on()) || is_tv_or_monitor_thats_on) {
 				room_t const &room(get_room(i->room_id)); // should we clip to the current floor in Z?
 				if ((camera_room_tall || room.is_industrial() || room.is_retail() || room.is_mall_or_store()) && camera_room == (int)i->room_id) {} // player in a tall room
 				else if (camera_in_mall && room.is_store()) {} // store visible from another floor of the mall
@@ -1759,6 +1764,14 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				else if (type == TYPE_WARN_LIGHT) {
 					if (!is_flashing_light_on()) continue; // not on
 					if (!add_dlight_if_visible(get_warning_light_src_pos(*i), 25.0*i->get_radius(), RED, xlate, lights_bcube)) continue; // point light
+				}
+				else if (is_tv_or_monitor_thats_on) {
+					vector3d const dir(vector_from_dim_dir(i->dim, i->dir));
+					colorRGBA const color(i->is_active() ? WHITE : texture_color(get_tv_or_monitor_tid(*i))); // white for security monitor
+					cube_t const screen(get_tv_screen(*i));
+					point lpos(screen.get_cube_center());
+					lpos[i->dim] = screen.d[i->dim][i->dir]; // front of screen
+					if (!add_dlight_if_visible(lpos, 3.0*screen.dz(), color, xlate, lights_bcube, dir, 0.15)) continue; // points in front
 				}
 				else {assert(0);}
 				assert(room.contains_pt(dl_sources.back().get_pos()));
