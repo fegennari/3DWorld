@@ -887,9 +887,10 @@ public:
 			if (update_windows) {get_windows(b);}
 			unsigned const new_floor(b.get_floor_for_zval(target.z));
 			bool const new_in_ext_basement(b.point_in_extended_basement_not_basement(target));
+			cube_t const valid_area(get_valid_area(b, target, new_floor));
 			floor_change  = (cur_floor >= 0 && cur_floor != (int)new_floor);
 			floor_change |= (new_in_ext_basement != in_ext_basement); // treat extended basement threshold cross as a floor change
-			need_rebuild  = (floor_change && !light_bounds.contains_cube(get_valid_area(b, target, new_floor)));
+			need_rebuild  = (floor_change && !light_bounds.contains_cube(valid_area));
 		}
 		if (need_rebuild) { // handle floor change
 			invalidate_lighting();
@@ -1059,11 +1060,11 @@ void building_t::create_building_volume_light_texture(unsigned bix, point const 
 bool building_t::ray_cast_camera_dir(point const &camera_bs, point &cpos, colorRGBA &ccolor) const { // unused - for debugging; excludes attic and extended basement
 	assert(!USE_BKG_THREAD); // not legal to call when running lighting in a background thread
 	building_indir_light_mgr.build_bvh(*this, camera_bs);
+	bool const in_attic(point_in_attic(camera_bs)), in_ext_basement(point_in_extended_basement_not_basement(camera_bs));
 	building_colors_t bcolors;
 	set_building_colors(bcolors);
 	vector3d cnorm; // unused
-	return ray_cast_interior(camera_bs, cview_dir, bcube, building_indir_light_mgr.get_bvh(), point_in_attic(camera_bs),
-		point_in_extended_basement_not_basement(camera_bs), bcolors, cpos, cnorm, ccolor);
+	return ray_cast_interior(camera_bs, cview_dir, bcube, building_indir_light_mgr.get_bvh(), in_attic, in_ext_basement, bcolors, cpos, cnorm, ccolor);
 }
 
 // Note: target is building space camera
@@ -1078,20 +1079,21 @@ void building_t::get_lights_with_priorities(point const &target, cube_t const &v
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (!i->is_light_type() || !i->is_light_on() || i->is_broken2()) continue; // not a light, or light not on, or fully broken
 		bool const light_in_basement(i->z1() < ground_floor_z1);
-		if (!check_indir_enabled(light_in_basement, i->in_attic())) continue;
-		if (!valid_area.contains_cube(*i)) continue; // outside valid area
-
-		if (i->in_elevator()) { // elevator light
-			if (get_elevator(i->obj_id).may_be_moving()) continue; // possibly moving elevator or elevator doors, don't update light yet
-		}
+		if (!check_indir_enabled(light_in_basement, i->in_attic()))        continue;
+		if (!valid_area.contains_cube_xy(*i) || i->z2() < valid_area.z1()) continue; // outside XY or below valid area
+		room_t const &light_room(get_room(i->room_id));
+		// check for and enable lights in tall rooms; this doesn't update valid_area though, so the top of the room won't be lit
+		if (light_room.is_single_floor && light_room.z1() < valid_area.z2()) {} // light in tall room intersecting valid_area - keep it
+		else if (i->z1() > valid_area.z2()) continue; // above valid area
+		if (i->in_elevator() && get_elevator(i->obj_id).may_be_moving()) continue; // possibly moving elevator or elevator doors, don't update light yet
 		point const center(i->get_cube_center());
 		float dist_sq(p2p_dist_sq(center, target));
-		dist_sq *= 0.005f*window_vspacing/(i->dx()*i->dy()); // account for the size of the light, larger lights smaller/higher priority
+		dist_sq *= 0.005f*window_vspacing/i->get_area_xy(); // account for the size of the light, larger lights smaller/higher priority
 
 		if (i->z1() < target.z || i->z2() > (target.z + window_vspacing)) { // penalty if on a different floor
 			dist_sq += (i->has_stairs() ? 0.25 : 1.0)*other_floor_penalty; // less penalty for lights on stairs
 		}
-		if (target_room >= 0 && get_room_containing_pt(center) == target_room) {dist_sq *= 0.1;} // prioritize the room the player is in
+		if (target_room >= 0 && (int)i->room_id == target_room) {dist_sq *= 0.1;} // prioritize the room the player is in; doesn't apply to elevators
 		// reduce distance for lights visible to target?
 		lights_to_sort.emplace_back(dist_sq, (i - objs.begin()));
 	} // for i
