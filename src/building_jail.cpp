@@ -82,6 +82,9 @@ bool building_t::divide_part_into_jail_cells(cube_t const &part, unsigned part_i
 			} // for n
 		} // for d
 	}
+	else if (is_rotated()) {
+		// exterior walls are rotated with the building - can't add jail cells
+	}
 	else { // above ground jail cell
 		// start by getting the windows associated with this part
 		cube_t window_area(part);
