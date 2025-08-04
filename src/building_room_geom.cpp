@@ -5532,6 +5532,9 @@ void add_tv_or_monitor_screen(room_object_t const &c, rgeom_mat_t &mat, std::str
 		building_room_geom_t::add_book_title(onscreen_text, text_area, *text_mat, WHITE, !c.dim, 2, c.dim, miry, 0, !c.dir); // {columns, lines, normal}
 	}
 }
+int get_tv_or_monitor_tid(room_object_t const &c) {
+	return ((c.shape == SHAPE_SHORT) ? c.get_comp_monitor_tid() : c.get_tv_tid()); // computer monitor vs. TV
+}
 void building_room_geom_t::add_tv_picture(room_object_t const &c) {
 	if (c.is_broken()) { // draw cracks for broken screen
 		unsigned skip_faces(get_face_mask(c.dim, c.dir)); // only the face oriented outward
@@ -5539,9 +5542,8 @@ void building_room_geom_t::add_tv_picture(room_object_t const &c) {
 		mat.add_cube_to_verts(get_tv_screen(c), apply_light_color(c, WHITE), c.get_llc(), skip_faces, !c.dim, (c.obj_id&1), (c.obj_id&2)); // X/Y mirror based on obj_id
 		return;
 	}
-	bool const is_off(c.obj_id & 1); // TV/monitor is off if obj_id LSB is set
-	if (is_off || c.is_active()) return; // skip if turned off or active security monitor (not drawn here)
-	tid_nm_pair_t tex(((c.shape == SHAPE_SHORT) ? c.get_comp_monitor_tid() : c.get_tv_tid()), 0.0); // computer monitor vs. TV
+	if (!c.is_tv_monitor_on() || c.is_active()) return; // skip if turned off or active security monitor (not drawn here)
+	tid_nm_pair_t tex(get_tv_or_monitor_tid(c), 0.0);
 	tex.emissive = 1.0;
 	add_tv_or_monitor_screen(c, get_material(tex));
 }

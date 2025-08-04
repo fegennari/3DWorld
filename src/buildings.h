@@ -770,6 +770,7 @@ struct room_object_t : public oriented_cube_t { // size=68
 	bool light_is_out   () const {return ((is_broken() || is_broken2()) && !is_open());} // only makes sense to call on lights
 	bool is_mirror      () const {return (type == TYPE_MIRROR || type == TYPE_DRESS_MIR || (type == TYPE_MED_CAB && !has_extra()));}
 	bool is_tv_or_monitor() const {return (type == TYPE_TV || type == TYPE_MONITOR);}
+	bool is_tv_monitor_on() const {return (!(obj_id & 1) && is_powered() && !is_broken());} // on, powered, and not broken
 	bool is_player_collidable() const;
 	bool can_use        () const;
 	bool is_interactive () const {return (has_dstate() || can_use());}
