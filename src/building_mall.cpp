@@ -1505,6 +1505,7 @@ void building_t::add_large_trashcan_contents(rand_gen_t &rgen, room_object_t con
 	} // for n
 }
 
+// Note: also used with school and prison cafeterias
 bool building_t::add_mall_table_with_chairs(rand_gen_t &rgen, cube_t const &table, cube_t const &place_area, colorRGBA const &chair_color,
 	unsigned room_id, float tot_light_amt, bool dim, unsigned tid_tag, vect_cube_t &blockers)
 {
@@ -1552,10 +1553,11 @@ bool building_t::add_mall_table_with_chairs(rand_gen_t &rgen, cube_t const &tabl
 	blockers.push_back(table); // add the table last, so that it doesn't block its own chairs
 	unsigned const place_obj_id(rgen.rand() % 9);
 	float const base_prob((table.z2() > ground_floor_z1) ? 1.0 : 0.5); // more likely in above ground cafeterias (with larger tables) then undergound malls
+	bool const no_alcohol(is_school() || is_prison());
 
 	switch (place_obj_id) { // TYPE_PHONE, TYPE_FOOD_BOX, TYPE_TRASH?
-	case 0: place_bottle_on_obj(rgen, table_obj, room_id, tot_light_amt, vect_cube_t(), 0, (is_school() ? BOTTLE_TYPE_COKE    : BOTTLE_TYPE_WINE   )); break;
-	case 1: place_dcan_on_obj  (rgen, table_obj, room_id, tot_light_amt, vect_cube_t(), 0, (is_school() ? DRINK_CAN_TYPE_COKE : DRINK_CAN_TYPE_BEER)); break;
+	case 0: place_bottle_on_obj(rgen, table_obj, room_id, tot_light_amt, vect_cube_t(), 0, (no_alcohol ? BOTTLE_TYPE_COKE    : BOTTLE_TYPE_WINE   )); break;
+	case 1: place_dcan_on_obj  (rgen, table_obj, room_id, tot_light_amt, vect_cube_t(), 0, (no_alcohol ? DRINK_CAN_TYPE_COKE : DRINK_CAN_TYPE_BEER)); break;
 	case 2: place_cup_on_obj   (rgen, table_obj, room_id, tot_light_amt); break;
 	case 3: place_plate_on_obj (rgen, table_obj, room_id, tot_light_amt); break;
 	case 4: if (rgen.rand_float() < 1.0*base_prob) {place_pizza_on_obj (rgen, table_obj, room_id, tot_light_amt);} break; // less common
