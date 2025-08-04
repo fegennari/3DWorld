@@ -1783,7 +1783,7 @@ void building_room_geom_t::draw_shower_head(room_object_t const &shower, float r
 		for (unsigned d = 0; d < 2; ++d) { // left/right | hot/cold
 			knob_pos[!head_dim] = center_pos + (d ? 1.0 : -1.0)*0.13*radius;
 			point knob_end(knob_pos);
-			knob_end[head_dim] += 1.5*extent_amt; // move out from the wall
+			knob_end[head_dim] += 1.2*extent_amt; // move out from the wall
 			metal_mat.add_cylin_to_verts(knob_pos, knob_end, 0.04*radius, 0.03*radius, color, 0, 1); // draw exposed end
 		}
 	}
@@ -4630,11 +4630,28 @@ void building_room_geom_t::add_br_stall(room_object_t const &c, bool inc_lg, boo
 	if (inc_sm) {
 		// Note: stall is tagged as a large object, but the small parts aren't modified by the player so we don't need to update them
 		if (c.flags & RO_FLAG_IN_JAIL) { // prison shower stall; add seat, handles, and shower head
-			float const width(c.get_width()), depth(c.get_depth());
-			float const inner_wall_pos(c.d[c.dim][c.dir]), extent_amt(0.06*(c.dir ? -1.0 : 1.0)*depth);
-			// TODO: add tile on back wall and floor, plus seat
-			cube_t bottom(c);
-			bottom.z2() = c.z1() + 0.01*c.dz(); // shrink to small height
+			unsigned const skip_faces(EF_Z1 | ~get_face_mask(c.dim, c.dir)); // bottom and back
+			float const width(c.get_width()), depth(c.get_depth()), height(c.dz()), signed_depth((c.dir ? -1.0 : 1.0)*depth);
+			float const inner_wall_pos(c.d[c.dim][c.dir] + 0.02*signed_depth), extent_amt(0.06*signed_depth);
+			point const llc(c.get_llc());
+			// add tile on back wall and floor, plus shelf
+			cube_t c_exp(c);
+			c_exp.expand_in_dim(!c.dim,  0.01*width); // slightly wider to avoid Z-fighting but merge with adjacent shower; textures should tile with adjacent shower
+			cube_t bottom(c_exp), back(c_exp), shelf(c_exp);
+			bottom.d[c.dim][!c.dir] += 0.01*signed_depth; // slight expand in front to avoid Z-fighting
+			back  .d[c.dim][!c.dir]  = shelf .d[c.dim][c.dir] = inner_wall_pos;
+			shelf .d[c.dim][!c.dir]  = bottom.d[c.dim][c.dir] = inner_wall_pos + 0.1*signed_depth; // add ledge
+			back  .z2() -= 0.08*height;
+			shelf .z2()  = c.z1() + 0.24*height;
+			bottom.z2()  = c.z1() + 0.02*height; // shrink to small height
+			colorRGBA const tile_color(apply_light_color(c, WHITE));
+			tid_nm_pair_t tex(get_texture_by_name("bathroom_tile.jpg"), 2.0/width, 0);
+			tex.set_specular(0.8, 60.0);
+			rgeom_mat_t &tile_mat(get_material(tex, 1, 0, 1)); // shadows, small
+			tile_mat.add_cube_to_verts(bottom, tile_color, llc, skip_faces);
+			tile_mat.add_cube_to_verts(back,   tile_color, llc, skip_faces);
+			tile_mat.add_cube_to_verts(shelf,  tile_color, llc, skip_faces);
+			// add shower head, handle(s), and drain
 			draw_shower_head(c, width, inner_wall_pos, extent_amt, c.dim);
 			add_shower_drain(bottom, apply_light_color(c, GRAY));
 		}

@@ -2260,6 +2260,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 				add_tp_roll(stall_inner, room_id, tot_light_amt, !br_dim, dir, tp_length, (zval + 0.7*theight), wall_pos);
 			}
 			objs.emplace_back(stall, TYPE_STALL, room_id, br_dim, dir, (flags | (is_open ? RO_FLAG_OPEN : 0)), tot_light_amt, SHAPE_CUBE, stall_color);
+			if (dir == showers_dir) {objs.back().obj_id = room_id;} // sets shower style (handles); matches across rooms
 
 			if (out_of_order) { // add out-of-order sign
 				cube_t stall_clipped(stall);
