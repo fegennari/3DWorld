@@ -969,7 +969,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		case TYPE_SINK:    add_sink_water(*i); break;
 		case TYPE_TV: case TYPE_MONITOR: add_tv_picture(*i); break;
 		case TYPE_CUBICLE: add_cubicle (*i, tscale); break;
-		case TYPE_STALL:   add_br_stall(*i); break;
+		case TYPE_STALL:   add_br_stall(*i, 1, 0); break; // inc_lg=1, inc_sm=0
 		case TYPE_COUNTER: add_counter (*i, tscale, 1, 0); break; // lg
 		case TYPE_CABINET: add_cabinet (*i, *i, tscale, 1, 0); break; // parent is self; lg
 		case TYPE_KSINK:   add_counter (*i, tscale, 1, 0); break; // counter with kitchen  sink; lg
@@ -1175,6 +1175,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_GUN:        add_gun(c); break;
 		case TYPE_STICK_NOTE: add_sticky_note(c); break;
 		case TYPE_GYM_WEIGHT: add_gym_weight (c); break;
+		case TYPE_STALL:      add_br_stall(c, 0, 1); break; // inc_lg=0, inc_sm=1
 		case TYPE_DBG_SHAPE:  add_debug_shape(c); break;
 		default: break;
 		} // end switch

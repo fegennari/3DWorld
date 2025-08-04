@@ -765,6 +765,13 @@ void building_room_geom_t::add_drain_cover(cube_t const &c, colorRGBA const &col
 	mat.add_vcylin_to_verts(c, color, 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // top only, unshadowed, small
 	for (auto i = mat.itri_verts.begin()+ix_start; i != mat.itri_verts.end(); ++i) {i->t[1] = 1.0 - i->t[1];} // mirror texture in Y to invert backwards text
 }
+void building_room_geom_t::add_shower_drain(cube_t const &bottom, colorRGBA const &color) {
+	cube_t drain;
+	drain.set_from_point(bottom.get_cube_center());
+	set_cube_zvals(drain, bottom.z2(), (bottom.z2() + 0.05*bottom.dz())); // very small height
+	drain.expand_by_xy(0.03*(bottom.dx() + bottom.dy())); // set radius
+	add_drain_cover(drain, color);
+}
 
 void building_room_geom_t::add_drain_pipe(room_object_t const &c) { // is_small=1
 	rgeom_mat_t &mat(get_untextured_material(0, 0, 1)); // unshadowed, small
@@ -1904,17 +1911,11 @@ void building_room_geom_t::add_shower(room_object_t const &c, float tscale, bool
 			glass_mat.add_cube_to_verts_untextured(glass, glass_color, (EF_Z1 | (d ? EF_Y12 : EF_X12))); // outside surface
 		} // for d
 	}
-	if (inc_sm) {
-		// add shower head
+	if (inc_sm) { // add shower head and drain
 		bool const head_dim(sz.y < sz.x);
 		float const inner_wall_pos(sides[head_dim].d[head_dim][!dirs[head_dim]]), extent_amt(signs[head_dim]*0.06*sz[head_dim]);
 		draw_shower_head(c, radius, inner_wall_pos, extent_amt, head_dim);
-		// add drain
-		cube_t drain;
-		drain.set_from_point(bottom.get_cube_center());
-		set_cube_zvals(drain, bottom.z2(), (bottom.z2() + 0.05*bottom.dz())); // very small height
-		drain.expand_by_xy(0.06*radius); // set radius
-		add_drain_cover(drain, metal_color);
+		add_shower_drain(bottom, metal_color);
 	}
 }
 
@@ -4625,7 +4626,20 @@ void building_room_geom_t::add_laundry_basket(room_object_t const &c) {
 	else {assert(0);}
 }
 
-void building_room_geom_t::add_br_stall(room_object_t const &c) {
+void building_room_geom_t::add_br_stall(room_object_t const &c, bool inc_lg, bool inc_sm) {
+	if (inc_sm) {
+		// Note: stall is tagged as a large object, but the small parts aren't modified by the player so we don't need to update them
+		if (c.flags & RO_FLAG_IN_JAIL) { // prison shower stall; add seat, handles, and shower head
+			float const width(c.get_width()), depth(c.get_depth());
+			float const inner_wall_pos(c.d[c.dim][c.dir]), extent_amt(0.06*(c.dir ? -1.0 : 1.0)*depth);
+			// TODO: add tile on back wall and floor, plus seat
+			cube_t bottom(c);
+			bottom.z2() = c.z1() + 0.01*c.dz(); // shrink to small height
+			draw_shower_head(c, width, inner_wall_pos, extent_amt, c.dim);
+			add_shower_drain(bottom, apply_light_color(c, GRAY));
+		}
+	}
+	if (!inc_lg) return;
 	rgeom_mat_t &mat(get_untextured_material(1));
 	colorRGBA const color(apply_light_color(c));
 

@@ -897,6 +897,9 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		update_draw_data = 1;
 	}
 	else if (type == TYPE_CLOSET || type == TYPE_STALL) {
+		if (type == TYPE_STALL && obj.flags & RO_FLAG_IN_JAIL) { // prison shower stall
+			// TODO: maybe turn on water
+		}
 		if (!obj.is_open()) { // not yet open
 			// remove any spraypaint or marker that's on the door; would be better if we could move it with the door, or add it back when the door is closed
 			cube_t door(get_open_closet_door(obj));

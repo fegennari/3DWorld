@@ -646,7 +646,7 @@ unsigned const RO_FLAG_NONEMPTY  = 0x040000; // for microwaves, shelves, shelfra
 unsigned const RO_FLAG_ON_FLOOR  = 0x800000; // for books, fallen objects, upper floor shelfracks, etc., aliased with RO_FLAG_IN_CLOSET/RO_FLAG_ON_SRACK
 unsigned const RO_FLAG_BROKEN2   = 0x040000; // for lights that are completely broken, aliased with RO_FLAG_HAS_EXTRA and RO_FLAG_NONEMPTY
 unsigned const RO_FLAG_PLCOLL    = 0x040000; // player collidable, for chairs, aliased with RO_FLAG_HAS_EXTRA
-unsigned const RO_FLAG_IN_JAIL   = 0x040000; // for jail cell objects such as bed; aliased with RO_FLAG_HAS_EXTRA
+unsigned const RO_FLAG_IN_JAIL   = 0x040000; // for jail cell/prison objects such as bed and stall/shower; aliased with RO_FLAG_HAS_EXTRA
 // object flags, fourth byte
 unsigned const RO_FLAG_DYNAMIC  = 0x01000000; // dynamic object (balls, elevators, etc.)
 unsigned const RO_FLAG_DSTATE   = 0x02000000; // this object has dynamic state
@@ -1252,7 +1252,7 @@ struct building_room_geom_t {
 	void add_pool_cue (room_object_t const &c);
 	void add_wall_mount(room_object_t const &c);
 	void add_toaster_proxy(room_object_t const &c);
-	void add_br_stall(room_object_t const &c);
+	void add_br_stall(room_object_t const &c, bool inc_lg, bool inc_sm);
 	void add_cubicle(room_object_t const &c, float tscale);
 	void add_window_sill(room_object_t const &c);
 	void add_exterior_step(room_object_t const &c);
@@ -1267,6 +1267,7 @@ struct building_room_geom_t {
 	void add_closet(room_object_t const &c, tid_nm_pair_t const &wall_tex, colorRGBA const &trim_color, bool inc_lg, bool inc_sm);
 	void add_hanger_rod(room_object_t const &c);
 	void add_drain_cover(cube_t const &c, colorRGBA const &color);
+	void add_shower_drain(cube_t const &bottom, colorRGBA const &color);
 	void add_drain_pipe(room_object_t const &c);
 	void add_electrical_wire(room_object_t const &c, vector3d const &rot_axis);
 	void add_electrical_wire_pair(room_object_t const &c);

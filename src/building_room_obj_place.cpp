@@ -2238,10 +2238,10 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 			}
 			bool const is_open(rgen.rand_bool()); // 50% chance of stall door being open
 			bool const out_of_order(!is_open && !room.is_ext_basement() && rgen.rand_float() < 0.2); // not for mall bathrooms
-			unsigned const flags(out_of_order ? RO_FLAG_BROKEN : 0); // toilet can't be flushed and door can't be opened if out of order
+			unsigned flags(out_of_order ? RO_FLAG_BROKEN : 0); // toilet can't be flushed and door can't be opened if out of order
 
 			if (dir == showers_dir) { // add shower rather than stall
-				// TODO: shower head and small seat
+				flags |= RO_FLAG_IN_JAIL;
 			}
 			else { // toilet stall
 				cube_t toilet(center);
@@ -2255,7 +2255,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 				stall_inner.expand_in_dim(!br_dim, -0.0125*stall.dz()); // subtract off stall wall thickness
 				add_tp_roll(stall_inner, room_id, tot_light_amt, !br_dim, dir, tp_length, (zval + 0.7*theight), wall_pos);
 			}
-			objs.emplace_back(stall, TYPE_STALL, room_id, br_dim,  dir, (flags | (is_open ? RO_FLAG_OPEN : 0)), tot_light_amt, SHAPE_CUBE, stall_color);
+			objs.emplace_back(stall, TYPE_STALL, room_id, br_dim, dir, (flags | (is_open ? RO_FLAG_OPEN : 0)), tot_light_amt, SHAPE_CUBE, stall_color);
 
 			if (out_of_order) { // add out-of-order sign
 				cube_t stall_clipped(stall);
