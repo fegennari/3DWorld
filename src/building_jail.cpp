@@ -293,7 +293,9 @@ bool building_t::divide_part_into_jail_cells(cube_t const &part, unsigned part_i
 }
 
 void building_t::add_prison_room(cube_t const &room, unsigned part_id, bool inc_half_walls, bool is_nested, bool is_hall) {
-	add_room(room, part_id, 1, is_hall);
+	unsigned num_lights(1);
+	if (is_hall) {num_lights = max(1, round_fp(0.4*max(room.dx(), room.dy())/min(room.dx(), room.dy())));}
+	add_room(room, part_id, num_lights, is_hall);
 	if (inc_half_walls) {interior->rooms.back().set_office_floorplan();}
 	if (is_nested     ) {interior->rooms.back().set_is_nested();}
 }

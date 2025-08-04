@@ -340,8 +340,11 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			short_n     = 2*short_n/3; // 2/3 as many in the short dim
 			light_size *= 0.9; // light intensity will be scaled larger to reach the floor
 		}
-		else if (is_jail_room || is_prison_room) { // prison main room with jail cells
+		else if (is_jail_room) { // prison main room with jail cells
 			light_density = 0.35;
+		}
+		else if (is_prison_room) { // prison nested room
+			light_density = 0.5;
 		}
 		else if (r->is_single_floor) {
 			light_size *= sqrt(r->dz()/window_vspacing); // larger lights for taller rooms
