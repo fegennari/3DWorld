@@ -1880,15 +1880,15 @@ void building_t::add_trim_for_door_or_int_window(cube_t const &c, bool dim, bool
 		assert(!draw_bot_trim);
 		return;
 	}
-	// add trim at top of door
-	unsigned const num_floors(calc_num_floors(c, floor_spacing, get_floor_thickness()));
+	// add trim at top and maybe bottom of door or int window
+	unsigned const num_floors(max(1U, calc_num_floors(c, floor_spacing, get_floor_thickness())));
 	float const fc_gap(floor_spacing*(1.0 - get_floor_thick_val()) - extra_top_gap);
 	float z(c.z1());
 	trim.d[!dim][0] = c.d[!dim][0] + trim_thickness;
 	trim.d[!dim][1] = c.d[!dim][1] - trim_thickness;
 
 	for (unsigned f = 0; f < num_floors; ++f, z += floor_spacing) {
-		float const z_top(z + fc_gap);
+		float const z_top(min(c.z2(), (z + fc_gap)));
 		set_cube_zvals(trim, z_top-top_twidth, z_top+top_z_adj); // z2=ceil height
 		bool const draw_top(draw_top_edge || (f+1 == num_floors && check_skylight_intersection(trim))); // draw top edge of trim for top floor if there's a skylight
 		unsigned const flags2(RO_FLAG_NOCOLL | (draw_top ? 0 : RO_FLAG_ADJ_TOP));
@@ -1951,8 +1951,10 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	for (cube_t const &w : interior->int_windows) {
 		bool const dim(w.dy() < w.dx()), is_in_mall(has_mall() && w.z2() < ground_floor_z1), draw_top_edge(is_in_mall);
 		float const floor_spacing(is_in_mall ? get_mall_floor_spacing() : window_vspacing);
+		float const tscale(min(1.0f, w.dz()/window_vspacing)); // smaller trim for short windows such as in prison visitation rooms
+		//float const tscale(1.0);
 		float extra_top_gap(is_in_mall ? get_mall_top_window_gap(floor_spacing, window_vspacing) : 0.0);
-		add_trim_for_door_or_int_window(w, dim, draw_top_edge, 1, door_trim_width, door_trim_width, door_trim_exp, floor_spacing, extra_top_gap); // draw_bot_trim=1
+		add_trim_for_door_or_int_window(w, dim, draw_top_edge, 1, tscale*door_trim_width, tscale*door_trim_width, tscale*door_trim_exp, floor_spacing, extra_top_gap);
 	}
 	if (has_mall()) { // add floor trim for mall store doors
 		for (cube_t const &d : interior->mall_info->store_doorways) {

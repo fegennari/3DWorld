@@ -457,7 +457,7 @@ bool building_t::assign_and_fill_prison_room(rand_gen_t rgen, room_t &room, floa
 
 			switch (rtype) { // split on rtype
 			case RTYPE_VISIT:
-				if (!add_visit_room_objs(rgen, room, zval, room_id, floor_ix, tot_light_amt, objs_start)) continue;
+				if (!add_visit_room_objs(rgen, room, zval, room_id, tot_light_amt, objs_start, lights_start)) continue;
 				break;
 			case RTYPE_LAUNDRY:
 				if (!add_laundry_objs(rgen, room, zval, room_id, tot_light_amt, objs_start, added_bathroom_objs_mask)) continue;
@@ -498,7 +498,6 @@ bool building_t::assign_and_fill_prison_room(rand_gen_t rgen, room_t &room, floa
 }
 
 bool building_t::add_gym_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
-	//return add_storage_objs(rgen, room, zval, room_id, tot_light_amt, objs_start, (zval < ground_floor_z1), 0); // placeholder
 	bool const rubber_flooring(rgen.rand_bool());
 	unsigned const sub_type(rubber_flooring ? 0 : 1); // select light colored wood
 	zval = add_flooring(room, zval, room_id, tot_light_amt, (rubber_flooring ? FLOORING_RUBBER : FLOORING_WOOD), sub_type);
@@ -507,16 +506,125 @@ bool building_t::add_gym_objs(rand_gen_t rgen, room_t const &room, float &zval, 
 	add_door_sign("Gym", room, zval, room_id);
 	return 1;
 }
-bool building_t::add_visit_room_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start) {
-	//return add_conference_objs(rgen, room, zval, room_id, tot_light_amt, objs_start, floor_ix); // placeholder
-	// TODO: must have doors at both sides
+bool building_t::add_visit_room_objs(rand_gen_t rgen, room_t &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned lights_start) {
+	vect_door_stack_t const &doorways(get_doorways_for_room(room, zval)); // get interior doors
+	if (doorways.size() < 2) return 0; // must have both public and prisoner doors
+	float const floor_spacing(get_window_vspace()), door_width(get_doorway_width());
+	float const wall_thick(get_wall_thickness()), wall_hthick(0.5*wall_thick), trim_thick(get_trim_thickness());
+	float const min_side_width(1.2*floor_spacing), clearance(0.1*floor_spacing + wall_thick);
+	vector2d const room_sz(room.get_size_xy());
+	bool dim(room_sz.x < room_sz.y); // long dim
+	if (room_sz[!dim] < 2.1*min_side_width + wall_thick) return 0; // too narrow
+	vect_room_object_t &objs(interior->room_geom->objs);
+	
+	// try to find dividing wall
+	cube_t room_interior(get_room_wall_bounds(room));
+	set_cube_zvals(room_interior, zval, (zval + get_floor_ceil_gap()));
+	float wall_pos(0.0);
+	bool valid(0);
+	
+	for (unsigned cand_dim = 0; cand_dim < 2; ++cand_dim) { // consider both dims
+		float const lo_pos(room.d[!dim][0] + min_side_width), hi_pos(room.d[!dim][1] - min_side_width);
+
+		for (unsigned n = 0; n < 25; ++n) {
+			wall_pos = rgen.rand_uniform(lo_pos, hi_pos);
+			cube_t test_cube(room);
+			set_wall_width(test_cube, wall_pos, clearance, !dim);
+			cube_t test_cube_exp(test_cube);
+			test_cube_exp.expand_in_dim(dim, wall_thick); // to intersect doors at room ends
+			bool has_door_on_side[2] = {0,0};
+			valid = 1;
+
+			for (door_stack_t const &ds : doorways) {
+				if (ds.intersects(test_cube_exp)) {valid = 0; break;}
+				has_door_on_side[ds.get_center_dim(!dim) < wall_pos] = 1;
+			}
+			if (!valid) continue;
+			cube_t cand_wall(room);
+			set_wall_width(cand_wall, wall_pos, wall_hthick, !dim);
+
+			for (auto i = objs.begin()+lights_start; i != objs.end(); ++i) { // check for lights blocking wall
+				if (i->intersects(cand_wall)) {valid = 0; break;}
+			}
+			if (!valid || !has_door_on_side[0] || !has_door_on_side[1])            {valid = 0; continue;} // must have a door on each side
+			if (interior->is_blocked_by_stairs_or_elevator(test_cube, door_width)) {valid = 0; continue;}
+			if (is_cube_close_to_exterior_doorway(test_cube, door_width, 1))       {valid = 0; continue;}
+			break; // valid
+		} // for n
+		if (valid) break; // success
+		if (cand_dim == 1) return 0; // both dims invalid
+		if (room_sz[!dim] < 4.0*floor_spacing) return 0; // too short in short dim
+		dim ^= 1;
+	} // for cand_dim
 	zval = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_CARPET);
-	// TODO: wall in center with windows, dividers, chairs, and phones
+	
+	// add wall and window separating prisoner from public sides
+	float const wall_z2(zval + 0.3*floor_spacing), table_z2(wall_z2 + trim_thick);
+	cube_t wall(room_interior);
+	wall.z2() = wall_z2;
+	set_wall_width(wall, wall_pos, wall_hthick, !dim);
+
+	for (unsigned d = 0; d < 2; ++d) { // add a gap to prevent Z-fighting with exterior walls
+		if (classify_room_wall(room, zval, dim, d, 0) == ROOM_WALL_EXT) {wall.d[dim][d] -= (d ? 1.0 : -1.0)*trim_thick;}
+	}
+	objs.emplace_back(wall, TYPE_STAIR_WALL, room_id, !dim, 0, RO_FLAG_ADJ_TOP, tot_light_amt, SHAPE_CUBE); // draw top
+	cube_t window(wall);
+	set_cube_zvals(window, wall_z2, room_interior.z2());
+	window.expand_in_dim(!dim, -0.3*wall_hthick); // narrower than wall
+	window.expand_in_dim( dim,     -wall_hthick); // shorten ends so that trim meets interior room wall
+	interior->int_windows.emplace_back(window, room_id);
+	room.set_interior_window();
+	
+	// add tables and dividers; both extend to both sides of the wall/window symmmetrically
+	cube_t const walkable_area(get_walkable_room_bounds(room));
+	float const seat_width(1.2*door_width), divider_width(0.5*wall_thick), room_len(walkable_area.get_sz_dim(dim));
+	unsigned const num_seats(room_len/seat_width);
+	float const seat_spacing(room_len/num_seats), table_depth(0.12*floor_spacing), divider_depth(0.3*floor_spacing);
+	unsigned const NUM_DIV_COLORS = 4;
+	colorRGBA const divider_colors[NUM_DIV_COLORS] = {colorRGBA(0.75, 1.0, 0.9, 1.0), colorRGBA(0.7, 0.8, 1.0), WHITE, DK_GRAY}; // blue-green, light blue
+	colorRGBA const divider_color(divider_colors[rgen.rand() % NUM_DIV_COLORS]); // random color
+	colorRGBA const table_color(LT_GRAY);
+	cube_t table(wall), divider(wall);
+	set_cube_zvals(table, (table_z2 - 0.75*wall_thick), table_z2);
+	divider.z2() += 0.3*floor_spacing; // taller than table
+	table  .expand_in_dim(!dim, table_depth  );
+	divider.expand_in_dim(!dim, divider_depth);
+	table  .d[dim][1] = walkable_area.d[dim][0] + seat_spacing;
+	divider.d[dim][1] = walkable_area.d[dim][0] + divider_width;
+	bool has_prev(0);
+
+	for (unsigned n = 0; n < num_seats; ++n) {
+		cube_t test_cube(table);
+		set_cube_zvals(test_cube, zval, window.z2()); // full room height
+		test_cube.expand_in_dim( dim, 0.5*divider_width); // need space for dividers
+		test_cube.expand_in_dim(!dim, (door_width + divider_depth - table_depth)); // need clearance to the back
+
+		if (is_obj_placement_blocked(test_cube, room, 1)) { // inc_open_doors=1
+			divider.translate_dim(dim, seat_spacing);
+			has_prev = 0;
+		}
+		else { // add table + divider(s)
+			objs.emplace_back(table, TYPE_METAL_BAR, room_id, !dim, 0, 0, tot_light_amt, SHAPE_CUBE, table_color, get_skip_mask_for_xy(dim)); // skip sides
+
+			if (!has_prev) { // left divider
+				objs.emplace_back(divider, TYPE_STALL, room_id, !dim, 0, 0, tot_light_amt, SHAPE_SHORT, divider_color);
+				has_prev = 1;
+			}
+			// right divider
+			// TODO: player can't take this
+			divider.translate_dim(dim, seat_spacing);
+			objs.emplace_back(divider, TYPE_STALL, room_id, !dim, 0, 0, tot_light_amt, SHAPE_SHORT, divider_color);
+		}
+		table.translate_dim(dim, seat_spacing);
+	} // for n
+	// chairs and phones
+	// TODO
+	// add waiting room chairs
+	// TODO
 	add_door_sign("Visitation", room, zval, room_id);
 	return 1;
 }
 bool building_t::add_shower_room_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
-	//return add_locker_room_objs(rgen, room, zval, room_id, tot_light_amt, objs_start); // placeholder
 	// TODO: showers, toilets, lockers, benches
 	zval = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_TILE);
 	add_door_sign("Shower", room, zval, room_id);

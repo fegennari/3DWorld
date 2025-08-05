@@ -4660,8 +4660,8 @@ void building_room_geom_t::add_br_stall(room_object_t const &c, bool inc_lg, boo
 	rgeom_mat_t &mat(get_untextured_material(1));
 	colorRGBA const color(apply_light_color(c));
 
-	if (c.shape == SHAPE_SHORT) { // wall separating urinals, drawn as a single cube
-		mat.add_cube_to_verts_untextured(c, color, ~get_face_mask(c.dim, c.dir));
+	if (c.shape == SHAPE_SHORT) { // wall separating urinals (hanging) or visitation stalls (not hanging), drawn as a single cube
+		mat.add_cube_to_verts_untextured(c, color, (c.is_hanging() ? ~get_face_mask(c.dim, c.dir) : 0));
 		return;
 	}
 	float const dz(c.dz()), wall_thick(0.0125*dz), frame_thick(6.0*wall_thick), door_gap(0.3*wall_thick);

@@ -2325,7 +2325,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 				if (!avoid.is_all_zeros() && urinal.intersects(avoid))        continue;
 				
 				if (!interior->is_cube_close_to_doorway(sep_wall, room, 0.0, 1)) { // check for doors, when the bathroom door is not centered on the room
-					objs.emplace_back(sep_wall, TYPE_STALL, room_id, br_dim, !dir, 0, tot_light_amt, SHAPE_SHORT, stall_color);
+					objs.emplace_back(sep_wall, TYPE_STALL, room_id, br_dim, !dir, RO_FLAG_HANGING, tot_light_amt, SHAPE_SHORT, stall_color);
 				}
 				objs.emplace_back(urinal, TYPE_URINAL, room_id, br_dim,  dir, 0, tot_light_amt);
 				add_bathroom_plumbing(objs.back());
@@ -2333,7 +2333,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 			if (!two_rows) { // skip first wall if adjacent to a stall
 				set_wall_width(sep_wall, (u_pos - 0.5*sink_step), 0.2*wall_thickness, !br_dim);
 				if (!avoid.is_all_zeros() && sep_wall.intersects(avoid)) {} // skip
-				else {objs.emplace_back(sep_wall, TYPE_STALL, room_id, br_dim, !dir, 0, tot_light_amt, SHAPE_SHORT, stall_color);}
+				else {objs.emplace_back(sep_wall, TYPE_STALL, room_id, br_dim, !dir, RO_FLAG_HANGING, tot_light_amt, SHAPE_SHORT, stall_color);}
 			}
 		}
 		if (!sinks_bcube.is_all_zeros()) { // add a long mirror above the sink
