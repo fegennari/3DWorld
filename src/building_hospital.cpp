@@ -8,9 +8,6 @@
 extern object_model_loader_t building_obj_model_loader;
 
 
-colorRGBA get_pastic_chair_color(colorRGBA const &color);
-colorRGBA get_couch_color(rand_gen_t &rgen);
-
 bool can_create_hospital_room() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_HOSP_BED);}
 
 void building_t::add_hospital_bathrooms(unsigned rooms_start, rand_gen_t &rgen) {

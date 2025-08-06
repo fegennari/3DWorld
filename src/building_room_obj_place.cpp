@@ -71,6 +71,7 @@ vector3d building_t::get_office_chair_size() const {
 	float const height(0.425*get_window_vspace()), radius(height*get_radius_for_square_model(OBJ_MODEL_OFFICE_CHAIR));
 	return vector3d(radius, radius, height);
 }
+// wooden_or_plastic: 0=wood, 1=plastic, 2=select based on building type
 bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id, point const &place_pos, colorRGBA const &chair_color,
 	bool dim, bool dir, float tot_light_amt, bool office_chair, bool enable_rotation, bool bar_stool, bool no_push_out, int wooden_or_plastic, bool reduced_clearance)
 {
@@ -110,7 +111,7 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 		chair_pos[dim] += dir_sign*rgen.rand_uniform(min_push_out, max_push_out)*chair_hwidth;
 	}
 	vector2d room_pad;
-	room_pad[ dim] = 4.0*wall_thickness; // more space in front and back
+	room_pad[ dim] = (no_push_out ? 1.0 : 4.0)*wall_thickness; // more space in front and back, if chair can be pushed out (not against wall)
 	room_pad[!dim] = 1.0*wall_thickness; // less space to the sides
 	cube_t chair(get_cube_height_radius(chair_pos, chair_hwidth, chair_height));
 	if (!is_valid_placement_for_room(chair, room, blockers, 1, room_pad)) return 0; // check proximity to doors; inc_open_doors=1
@@ -519,8 +520,7 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 			objs.emplace_back(drawers, TYPE_BLOCKER, room_id, dim, !dir, RO_FLAG_INVIS);
 		}
 		if (!(is_house || is_office_bldg()) || rgen.rand_float() > 0.05) { // 5% chance of no chair for office buildings and houses
-			point chair_pos;
-			chair_pos.z = zval;
+			point chair_pos(0.0, 0.0, zval);
 			chair_pos[ dim] = c.d[dim][!dir];
 			chair_pos[!dim] = pos + rgen.rand_uniform(-0.1, 0.1)*width; // slightly misaligned
 			// use office chair models when the desk has a computer monitor; now that occlusion culling works well, it's okay to have a ton of these in office buildings

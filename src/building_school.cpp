@@ -111,8 +111,7 @@ bool building_t::add_classroom_desk(rand_gen_t &rgen, room_t const &room, cube_t
 		place_book_on_obj(rgen, objs[desk_obj_ix], room_id, tot_light_amt, objs_start, 1, RO_FLAG_USED, 1); // use_dim_dir=1; skip_if_overlaps=1
 	}
 	// add chair
-	point chair_pos;
-	chair_pos.z     = desk.z1();
+	point chair_pos(0.0, 0.0, desk.z1());
 	chair_pos[ dim] = desk.d[dim][dir]; // front of desk
 	chair_pos[!dim] = desk.get_center_dim(!dim) + 0.1*rgen.signed_rand_float()*desk.get_sz_dim(dim); // slightly misaligned
 	

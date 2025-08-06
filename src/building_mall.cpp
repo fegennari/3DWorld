@@ -19,7 +19,6 @@ void add_city_plot_cut(cube_t const &cut);
 void add_city_ug_elevator_entrance(ug_elev_info_t const &uge);
 void rotate_obj_cube(cube_t &c, cube_t const &bc, bool in_dim, bool dir);
 void add_button(point const &pos, float button_radius, bool dim, bool dir, unsigned function_id, unsigned flags, vect_room_object_t &objs);
-colorRGBA get_couch_color(rand_gen_t &rgen);
 bool try_add_lamp(cube_t const &place_area, float floor_spacing, unsigned room_id, unsigned flags, float light_amt,
 	vect_cube_t &cubes, vect_room_object_t &objects, rand_gen_t &rgen);
 

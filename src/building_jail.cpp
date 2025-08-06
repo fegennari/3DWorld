@@ -577,27 +577,30 @@ bool building_t::add_visit_room_objs(rand_gen_t rgen, room_t &room, float &zval,
 	
 	// add tables and dividers; both extend to both sides of the wall/window symmmetrically
 	cube_t const walkable_area(get_walkable_room_bounds(room));
-	float const seat_width(1.2*door_width), divider_width(0.5*wall_thick), room_len(walkable_area.get_sz_dim(dim));
+	float const seat_width(1.2*door_width), divider_width(0.5*wall_thick), divider_hwidth(0.5*divider_width), room_len(walkable_area.get_sz_dim(dim));
 	unsigned const num_seats(room_len/seat_width);
-	float const seat_spacing(room_len/num_seats), table_depth(0.12*floor_spacing), divider_depth(0.3*floor_spacing);
+	float const seat_spacing(room_len/num_seats), table_depth(0.15*floor_spacing), divider_depth(0.3*floor_spacing);
 	unsigned const NUM_DIV_COLORS = 4;
 	colorRGBA const divider_colors[NUM_DIV_COLORS] = {colorRGBA(0.75, 1.0, 0.9, 1.0), colorRGBA(0.7, 0.8, 1.0), WHITE, DK_GRAY}; // blue-green, light blue
 	colorRGBA const divider_color(divider_colors[rgen.rand() % NUM_DIV_COLORS]); // random color
 	colorRGBA const table_color(LT_GRAY);
 	cube_t table(wall), divider(wall);
-	set_cube_zvals(table, (table_z2 - 0.75*wall_thick), table_z2);
+	set_cube_zvals(table, (table_z2 - 0.4*wall_thick), table_z2);
 	divider.z2() += 0.3*floor_spacing; // taller than table
 	table  .expand_in_dim(!dim, table_depth  );
 	divider.expand_in_dim(!dim, divider_depth);
-	table  .d[dim][1] = walkable_area.d[dim][0] + seat_spacing;
-	divider.d[dim][1] = walkable_area.d[dim][0] + divider_width;
+	table  .d[dim][0] += divider_hwidth; // starts at divider edge
+	table  .d[dim][1]  = walkable_area.d[dim][0] + seat_spacing - divider_hwidth; // ends at adjacent divider edge
+	divider.d[dim][1]  = walkable_area.d[dim][0] + divider_width;
+	colorRGBA const &chair_color(chair_colors[rgen.rand() % NUM_CHAIR_COLORS]);
+	vect_cube_t blockers; // unused
 	bool has_prev(0);
 
 	for (unsigned n = 0; n < num_seats; ++n) {
 		cube_t test_cube(table);
 		set_cube_zvals(test_cube, zval, window.z2()); // full room height
-		test_cube.expand_in_dim( dim, 0.5*divider_width); // need space for dividers
-		test_cube.expand_in_dim(!dim, (door_width + divider_depth - table_depth)); // need clearance to the back
+		test_cube.expand_in_dim( dim, divider_hwidth); // need space for dividers
+		test_cube.expand_in_dim(!dim, (0.5*door_width + divider_depth - table_depth)); // need clearance to the back
 
 		if (is_obj_placement_blocked(test_cube, room, 1)) { // inc_open_doors=1
 			divider.translate_dim(dim, seat_spacing);
@@ -607,20 +610,40 @@ bool building_t::add_visit_room_objs(rand_gen_t rgen, room_t &room, float &zval,
 			objs.emplace_back(table, TYPE_METAL_BAR, room_id, !dim, 0, 0, tot_light_amt, SHAPE_CUBE, table_color, get_skip_mask_for_xy(dim)); // skip sides
 
 			if (!has_prev) { // left divider
-				objs.emplace_back(divider, TYPE_STALL, room_id, !dim, 0, 0, tot_light_amt, SHAPE_SHORT, divider_color);
+				cube_t div(divider);
+				max_eq(div.d[dim][0], room_interior.d[dim][0]); // don't clip through walls at the ends
+				if (div.get_sz_dim(dim) > 0.0) {objs.emplace_back(div, TYPE_STALL, room_id, !dim, 0, 0, tot_light_amt, SHAPE_SHORT, divider_color);}
 				has_prev = 1;
 			}
 			// right divider
-			// TODO: player can't take this
 			divider.translate_dim(dim, seat_spacing);
-			objs.emplace_back(divider, TYPE_STALL, room_id, !dim, 0, 0, tot_light_amt, SHAPE_SHORT, divider_color);
+			cube_t div(divider);
+			min_eq(div.d[dim][1], room_interior.d[dim][1]); // don't clip through walls at the ends
+			if (div.get_sz_dim(dim) > 0.0) {objs.emplace_back(divider, TYPE_STALL, room_id, !dim, 0, 0, tot_light_amt, SHAPE_SHORT, divider_color);}
+			
+			for (unsigned d = 0; d < 2; ++d) { // add chairs and phones on each side
+				// chair at table
+				point chair_pos(0.0, 0.0, zval);
+				chair_pos[!dim] = 0.5*(divider.d[!dim][d] + table.d[!dim][d]);
+				chair_pos[ dim] = table.get_center_dim(dim) + 0.12*rgen.signed_rand_float()*seat_spacing; // slightly misaligned
+				add_chair(rgen, room, blockers, room_id, chair_pos, chair_color, !dim, !d, tot_light_amt, 0, 0, 0, 0, 1); // office_chair=0, plastic
+				// phone on table
+				cube_t half_table(table);
+				half_table.d[!dim][!d]  = wall.d[!dim][d];
+				half_table.d[!dim][ d] += (d ? 1.0 : -1.0)*wall_hthick; // allow phone to hang a bit off the edge of the table
+				place_phone_on_obj(rgen, half_table, room_id, tot_light_amt, !dim, d);
+			} // for d
+		}
+		for (unsigned d = 0; d < 2; ++d) { // add chairs against the far walls, even if no table
+			point chair_pos(0.0, 0.0, zval);
+			chair_pos[!dim] = walkable_area.d[!dim][d] - rgen.rand_uniform(0.22, 0.26)*(d ? 1.0 : -1.0)*floor_spacing; // a bit misaligned
+			chair_pos[ dim] = table.get_center_dim(dim) + 0.08*rgen.signed_rand_float()*seat_spacing; // a bit less misaligned
+			add_chair(rgen, room, blockers, room_id, chair_pos, chair_color, !dim, !d, tot_light_amt, 0, 0, 0, 1, 1); // office_chair=0, no_push_out=1, plastic
 		}
 		table.translate_dim(dim, seat_spacing);
 	} // for n
-	// chairs and phones
-	// TODO
-	// add waiting room chairs
-	// TODO
+	// add chairs for waiting?
+	//place_chairs_along_walls(rgen, room, zval, room_id, tot_light_amt, objs_start, chair_color, 1, 3*num_seats/2); // is_plastic=1
 	add_door_sign("Visitation", room, zval, room_id);
 	return 1;
 }
