@@ -2815,6 +2815,7 @@ private:
 		float tot_light_amt, unsigned objs_start, unsigned pref_orient, cube_t const &place_area);
 	bool add_hospital_room_objs (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start, int &nested_room_ix);
 	bool add_waiting_room_objs  (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start, int &nested_room_ix);
+	void add_short_wall_with_trim(cube_t const &wall, bool dim, unsigned room_id, float tot_light_amt);
 	void place_chairs_along_walls(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
 		colorRGBA const &chair_color, bool is_plastic, unsigned num);
 	bool add_exam_room_objs     (rand_gen_t rgen, room_t &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start);

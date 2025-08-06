@@ -567,7 +567,7 @@ bool building_t::add_visit_room_objs(rand_gen_t rgen, room_t &room, float &zval,
 	for (unsigned d = 0; d < 2; ++d) { // add a gap to prevent Z-fighting with exterior walls
 		if (classify_room_wall(room, zval, dim, d, 0) == ROOM_WALL_EXT) {wall.d[dim][d] -= (d ? 1.0 : -1.0)*trim_thick;}
 	}
-	objs.emplace_back(wall, TYPE_STAIR_WALL, room_id, !dim, 0, RO_FLAG_ADJ_TOP, tot_light_amt, SHAPE_CUBE); // draw top
+	add_short_wall_with_trim(wall, !dim, room_id, tot_light_amt);
 	cube_t window(wall);
 	set_cube_zvals(window, wall_z2, room_interior.z2());
 	window.expand_in_dim(!dim, -0.3*wall_hthick); // narrower than wall

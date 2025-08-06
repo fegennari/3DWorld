@@ -318,10 +318,7 @@ bool building_t::add_waiting_room_objs(rand_gen_t rgen, room_t const &room, floa
 		set_cube_zvals(wall, zval, zval+0.8*chair_height);
 		set_wall_width(wall, centerline, 0.45*wall_thickness, !long_dim); // set width
 		set_wall_width(wall, room.get_center_dim(long_dim), 0.5*chair_place_len, long_dim); // set length
-
-		if (!is_obj_placement_blocked(wall, room, 1, 0)) {
-			objs.emplace_back(wall, TYPE_STAIR_WALL, room_id, !long_dim, 0, RO_FLAG_ADJ_TOP, tot_light_amt, SHAPE_CUBE); // draw top
-		}
+		if (!is_obj_placement_blocked(wall, room, 1, 0)) {add_short_wall_with_trim(wall, !long_dim, room_id, tot_light_amt);}
 		// add chairs
 		colorRGBA const ccolor(is_plastic ? get_pastic_chair_color(chair_color) : chair_color);
 		cube_t chair0;
@@ -366,6 +363,13 @@ bool building_t::add_waiting_room_objs(rand_gen_t rgen, room_t const &room, floa
 	return 1;
 }
 
+void building_t::add_short_wall_with_trim(cube_t const &wall, bool dim, unsigned room_id, float tot_light_amt) {
+	interior->room_geom->objs.emplace_back(wall, TYPE_STAIR_WALL, room_id, dim, 0, RO_FLAG_ADJ_TOP, tot_light_amt, SHAPE_CUBE); // draw top
+	cube_t trim(wall);
+	trim.expand_by_xy(get_trim_thickness());
+	trim.z2() = wall.z1() + get_trim_height();
+	interior->room_geom->objs.emplace_back(trim, TYPE_METAL_BAR, room_id, dim, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, get_trim_color(), EF_Z1); // draw all but the bottom
+}
 void building_t::place_chairs_along_walls(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt,
 	unsigned objs_start, colorRGBA const &chair_color, bool is_plastic, unsigned num)
 {
