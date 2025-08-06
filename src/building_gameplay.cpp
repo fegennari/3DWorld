@@ -1826,6 +1826,7 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 			if (type == TYPE_LIGHT   && !i->is_visible())       continue; // can't take light attached to a ceiling fan as a separate object
 			if (type == TYPE_MWAVE   && i->is_nonempty())       continue; // can't take a microwave with something inside it
 			if (type == TYPE_PADLOCK && i->is_active())         continue; // padlock in locked onto a door, can't take
+			if (type == TYPE_STALL   && !i->is_hanging())       continue; // can only take hanging stall sections (urinals), not embedded walls (visitation rooms)
 			if (type == TYPE_SHOWERTUB && (i->taken_level & 3) == 3) continue; // both shower curtains already taken
 			if (type == TYPE_BUTTON && i->in_elevator() != bool(player_in_elevator)) continue; // check for buttons inside/outside elevator
 
