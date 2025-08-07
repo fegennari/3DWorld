@@ -1355,7 +1355,7 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 
 void building_room_geom_t::expand_locker(room_object_t const &c) {
 	bool const dim(c.dim), dir(c.dir);
-	bool const in_hallway(c.state_flags == RTYPE_HALL), in_locker_room(c.state_flags == RTYPE_LOCKER), in_industrial(c.state_flags == RTYPE_OFFICE);
+	bool const in_hallway(c.state_flags == RTYPE_HALL), in_locker_room(c.state_flags == RTYPE_LOCKER || c.state_flags == RTYPE_GYM), in_industrial(c.state_flags == RTYPE_OFFICE);
 	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_WAS_EXP);
 	float const wall_thickness(get_locker_wall_thickness(c));
 	cube_t interior(c);

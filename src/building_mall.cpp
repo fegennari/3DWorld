@@ -793,12 +793,14 @@ void building_t::add_mall_lower_floor_lights(room_t const &room, unsigned room_i
 
 void building_t::maybe_place_obj_on_bench(room_object_t const &bench, rand_gen_t rgen, float prob) {
 	if (rgen.rand_float() > prob) return; // no objects on this bench
+	bool const no_alcohol(is_school()  || is_prison()); // alcohol not allowed in schools or prisons
 	cube_t cubes[4]; // seat, lo side, hi side, [back]
 	unsigned const num(get_bench_cubes(bench, cubes));
+	vect_cube_t avoid; // empty/unused
 	cube_t &seat(cubes[0]);
 	if (num == 4) {seat.d[bench.dim][!bench.dir] = cubes[3].d[bench.dim][bench.dir];} // remove back from seat
-	if (rgen.rand_bool()) {place_bottle_on_obj(rgen, seat, bench.room_id, bench.light_amt);} // bottle
-	else                  {place_dcan_on_obj  (rgen, seat, bench.room_id, bench.light_amt);} // drink can
+	if (rgen.rand_bool()) {place_bottle_on_obj(rgen, seat, bench.room_id, bench.light_amt, avoid, 0, (no_alcohol ? BOTTLE_TYPE_COKE    : NUM_BOTTLE_TYPES-1 ));} // bottle
+	else                  {place_dcan_on_obj  (rgen, seat, bench.room_id, bench.light_amt, avoid, 0, (no_alcohol ? DRINK_CAN_TYPE_COKE : DRINK_CAN_TYPE_BEER));} // drink can
 }
 
 struct plant_loc_t : public sphere_t {

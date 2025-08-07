@@ -501,8 +501,43 @@ bool building_t::add_gym_objs(rand_gen_t rgen, room_t const &room, float &zval, 
 	bool const rubber_flooring(rgen.rand_bool());
 	unsigned const sub_type(rubber_flooring ? 0 : 1); // select light colored wood
 	zval = add_flooring(room, zval, room_id, tot_light_amt, (rubber_flooring ? FLOORING_RUBBER : FLOORING_WOOD), sub_type);
-	//vect_room_object_t &objs(interior->room_geom->objs);
-	// TODO: TYPE_GYM_WEIGHT, TYPE_BENCH, TYPE_LOCKER, clothing, etc.
+	float const floor_spacing(get_window_vspace()), wall_thick(get_wall_thickness()), trim_thick(get_trim_thickness());
+	vector2d const room_sz(room.get_size_xy());
+	bool const dim(room_sz.x < room_sz.y); // long dim
+	cube_t const place_area(get_walkable_room_bounds(room));
+	vect_room_object_t &objs(interior->room_geom->objs);
+
+	// add lockers along a wall
+	bool const locker_place_end(rgen.rand_bool());
+	float const locker_area_width(rgen.rand_uniform(2.0, 2.5)*min(floor_spacing, 0.35f*place_area.get_sz_dim(dim)));
+	cube_t locker_area(place_area);
+	locker_area.d[dim][!locker_place_end] = place_area.d[dim][locker_place_end] + (locker_place_end ? -1.0 : 1.0)*locker_area_width;
+	add_room_lockers(rgen, room, zval, room_id, tot_light_amt, objs_start, locker_area, RTYPE_GYM, dim, 0, 0); // add_padlocks=0
+
+	// add benches along the walls
+	float const bench_height(0.22*floor_spacing);
+	vector3d const bench_sz(rgen.rand_uniform(0.7, 0.9), rgen.rand_uniform(4.0, 6.0), 1.0); // D, W, H
+	unsigned const benches_start(objs.size()), num_benches((rgen.rand() % 5) + 2); // 2-6
+	cube_t bench_area(place_area);
+	bench_area.expand_by_xy(-0.25*wall_thick); // add more of a gap between walls
+
+	for (unsigned n = 0; n < num_benches; ++n) {
+		unsigned const bench_obj_id(objs.size());
+		if (!place_obj_along_wall(TYPE_BENCH, room, bench_height, bench_sz, rgen, zval, room_id, tot_light_amt, bench_area, objs_start, 1.0, 1)) break;
+		maybe_place_obj_on_bench(objs[bench_obj_id], rgen, 0.3);
+	}
+	if (room.interior) { // make bench a metal mesh material for interior rooms (alpha mask material is not visible through windows)
+		for (auto c = objs.begin()+benches_start; c != objs.end(); ++c) {
+			if (c->type == TYPE_BENCH) {c->item_flags = 1;}
+		}
+	}
+	// add weights
+	unsigned const num_weights((rgen.rand() % 9) + 4); // 4-12
+
+	for (unsigned n = 0; n < num_weights; ++n) {
+		// TODO: TYPE_WEIGHTS
+	}
+	// add clothing on the floor?
 	add_door_sign("Gym", room, zval, room_id);
 	return 1;
 }
