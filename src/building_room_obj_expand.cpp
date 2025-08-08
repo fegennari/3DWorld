@@ -1355,7 +1355,7 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 
 void building_room_geom_t::expand_locker(room_object_t const &c) {
 	bool const dim(c.dim), dir(c.dir);
-	bool const in_hallway(c.state_flags == RTYPE_HALL), in_locker_room(c.state_flags == RTYPE_LOCKER || c.state_flags == RTYPE_GYM), in_industrial(c.state_flags == RTYPE_OFFICE);
+	bool const in_hallway(c.state_flags == RTYPE_HALL), in_locker_room(c.state_flags == RTYPE_LOCKER), in_industrial(c.state_flags == RTYPE_OFFICE), in_gym(c.state_flags == RTYPE_GYM);
 	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_WAS_EXP);
 	float const wall_thickness(get_locker_wall_thickness(c));
 	cube_t interior(c);
@@ -1385,7 +1385,8 @@ void building_room_geom_t::expand_locker(room_object_t const &c) {
 		unsigned const obj_types_hall [num_obj_types] = {TYPE_NONE,    TYPE_BOTTLE, TYPE_DRINK_CAN, TYPE_PHONE,   TYPE_TRASH,    TYPE_TEESHIRT};
 		unsigned const obj_types_lroom[num_obj_types] = {TYPE_NONE,    TYPE_BOTTLE, TYPE_DRINK_CAN, TYPE_PHONE,   TYPE_TEESHIRT, TYPE_TEESHIRT};
 		unsigned const obj_types_ind  [num_obj_types] = {TYPE_HARDHAT, TYPE_BOTTLE, TYPE_DRINK_CAN, TYPE_HARDHAT, TYPE_TEESHIRT, TYPE_TEESHIRT};
-		unsigned const *const obj_types(in_hallway ? obj_types_hall : (in_locker_room ? obj_types_lroom : obj_types_ind));
+		unsigned const obj_types_gym  [num_obj_types] = {TYPE_NONE,    TYPE_BOTTLE, TYPE_DRINK_CAN, TYPE_TRASH,   TYPE_TEESHIRT, TYPE_TEESHIRT};
+		unsigned const *const obj_types(in_hallway ? obj_types_hall : (in_locker_room ? obj_types_lroom : (in_gym ? obj_types_gym : obj_types_ind)));
 		unsigned num_sel_obj_types(6);
 
 		if (level == 1) { // teeshirts only on the (larger) bottom level
