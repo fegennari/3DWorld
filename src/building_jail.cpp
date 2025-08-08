@@ -535,8 +535,24 @@ bool building_t::add_gym_objs(rand_gen_t rgen, room_t const &room, float &zval, 
 	unsigned const num_weights((rgen.rand() % 9) + 4); // 4-12
 
 	for (unsigned n = 0; n < num_weights; ++n) {
-		// TODO: TYPE_WEIGHTS
-	}
+		for (unsigned N = 0; N < 10; ++N) { // 10 tries
+			bool const hand_weight(rgen.rand_bool()), wdim(rgen.rand_bool());
+			float const length((hand_weight ? 0.20 : 0.70)*floor_spacing*rgen.rand_uniform(0.6, 1.0));
+			float const radius((hand_weight ? 0.03 : 0.10)*floor_spacing*rgen.rand_uniform(0.6, 1.0));
+			if (length > 0.4*room_sz[wdim] || radius > 0.2*room_sz[!wdim]) continue; // too large for room; shouldn't happen
+			cube_t weights;
+			set_cube_zvals(weights, zval, (zval + 2.0*radius));
+
+			for (unsigned d = 0; d < 2; ++d) {
+				float const sz((bool(d) == wdim) ? 0.5*length : radius), pad(1.5*sz);
+				set_wall_width(weights, rgen.rand_uniform((place_area.d[d][0] + pad), (place_area.d[d][1] - pad)), sz, d);
+			}
+			if (!is_valid_placement_for_room(weights, room, vect_cube_t(), 1) || overlaps_other_room_obj(weights, objs_start)) continue;
+			colorRGBA const color(WHITE*rgen.rand_uniform(0.0, 0.5)); // gray-black
+			objs.emplace_back(weights, TYPE_GYM_WEIGHT, room_id, wdim, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, color, int(hand_weight));
+			break; // done
+		} // for N
+	} // for n
 	// add clothing on the floor?
 	add_door_sign("Gym", room, zval, room_id);
 	return 1;

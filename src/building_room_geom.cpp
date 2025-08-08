@@ -6500,6 +6500,8 @@ void building_room_geom_t::add_gym_weight(room_object_t const &c) {
 	// these could be lifting weights or hand weights (dumbbells), depending on size
 	rgeom_mat_t &mat(get_metal_material(1, 0, 1)); // untextured, shadowed, small=1
 	colorRGBA const color(apply_light_color(c));
+	bool const hand_weight(c.item_flags == 1);
+	// TODO: longer, thinner weights, thicker bar for hand weights, bar passes through center
 	float const height(c.dz()), width(c.get_width()), radius(0.25*(height + width)), length(c.get_length());
 
 	if (height < 0.5*width) { // single weight, vertical
@@ -6520,7 +6522,7 @@ void building_room_geom_t::add_gym_weight(room_object_t const &c) {
 
 		for (unsigned d = 0; d < 2; ++d) { // draw weights at ends
 			cube_t weight(c);
-			weight.d[c.dim][!d] = c.d[c.dim][d] - (d ? 1.0 : -1.0);
+			weight.d[c.dim][!d] = bar.d[c.dim][d];
 			mat.add_ortho_cylin_to_verts(weight, color, c.dim, 1, 1); // draw ends
 		}
 	}
