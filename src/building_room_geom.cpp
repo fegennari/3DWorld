@@ -6553,7 +6553,9 @@ void building_room_geom_t::add_gym_weight(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_food_tray(room_object_t const &c) {
-	// TODO
+	rgeom_mat_t &mat(get_metal_material(1, 0, 1)); // shadowed, small
+	// TODO: rounded corners, open top with sides
+	mat.add_cube_to_verts_untextured(c, apply_light_color(c), EF_Z1);
 }
 
 void building_room_geom_t::add_trash(room_object_t const &c) {

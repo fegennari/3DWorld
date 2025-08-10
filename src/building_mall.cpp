@@ -1552,10 +1552,9 @@ bool building_t::add_mall_table_with_chairs(rand_gen_t &rgen, cube_t const &tabl
 		} // for n
 	} // for D
 	blockers.push_back(table); // add the table last, so that it doesn't block its own chairs
-	unsigned const place_obj_id(rgen.rand() % 9);
-	bool const above_ground(table.z2() > ground_floor_z1);
+	unsigned const place_obj_id(rgen.rand() % 9), objs_start(objs.size());
+	bool const above_ground(table.z2() > ground_floor_z1), no_alcohol(is_school() || is_prison());
 	float const base_prob(above_ground ? 1.0 : 0.5); // more likely in above ground cafeterias (with larger tables) then undergound malls
-	bool const no_alcohol(is_school() || is_prison());
 
 	// TODO: TYPE_FOOD_TRAY for school and prison
 	switch (place_obj_id) { // TYPE_PHONE, TYPE_FOOD_BOX, TYPE_TRASH?
@@ -1569,6 +1568,25 @@ bool building_t::add_mall_table_with_chairs(rand_gen_t &rgen, cube_t const &tabl
 	case 7: if (rgen.rand_float() < 0.2*base_prob) {place_laptop_on_obj(rgen, table_obj, room_id, tot_light_amt);} break; // very rare
 	case 8: if (rgen.rand_float() < 0.8*base_prob) {place_eating_items_on_table(rgen, table_obj_id); break;} // less common
 	} // default = place nothing
+
+	if (above_ground) { // add trays
+		unsigned const num_trays(rgen.rand() % 3); // 0-2
+		float const tray_width(0.2*window_vspacing), tray_depth(0.6*tray_width), tray_height(0.03*tray_width);
+
+		if (num_trays > 0 && tray_width < 0.45*table_len && tray_depth < 0.45*table_width) {
+			cube_t tray;
+			set_cube_zvals(tray, table_obj.z2(), table_obj.z2()+tray_height);
+			vector3d const tray_sz(0.5*(dim ? tray_depth : tray_width), 0.5*(dim ? tray_width : tray_depth), tray_height);
+
+			for (unsigned n = 0; n < num_trays; ++n) {
+				cube_t table_side(table_obj);
+				table_side.d[!dim][rgen.rand_bool()] = table_obj.get_center_dim(!dim); // place to one side (not across the center)
+				gen_xy_pos_for_cube_obj(tray, table_side, tray_sz, tray_height, rgen);
+				if (has_bcube_int(tray, objs, objs_start)) continue;
+				objs.emplace_back(tray, TYPE_FOOD_TRAY, room_id, !dim, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, GRAY);
+			}
+		}
+	}
 	return 1;
 }
 
