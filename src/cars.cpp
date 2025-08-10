@@ -16,6 +16,7 @@ float const MIN_CAR_STOP_SEP   = 0.25; // in units of car lengths
 
 extern bool tt_fire_button_down, enable_hcopter_shadows, city_action_key, camera_in_building, player_in_walkway;
 extern int display_mode, game_mode, map_mode, animate2, player_in_basement, player_in_closet, player_in_attic, camera_surf_collide;
+extern unsigned num_cars_drawn;
 extern float fticks, FAR_CLIP;
 extern point pre_smap_player_pos;
 extern vector<light_source> dl_sources;
@@ -756,6 +757,7 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows) { // N
 		cube_t non_rot_bcube(car.bcube);
 		set_wall_width(non_rot_bcube, car.bcube.zc(), 0.5*car.height, 2);
 		car_model_loader.draw_model(s, center, non_rot_bcube, front_n, car.get_color(), xlate, car.model_id, shadow_only, low_detail);
+		++num_cars_drawn;
 	}
 	else { // draw simple 1-2 cube model
 		quad_batch_draw &qbd(qbds[emit_now]);

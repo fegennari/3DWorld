@@ -20,6 +20,7 @@ bool some_person_has_idle_animation(0);
 
 extern bool tt_fire_button_down, camera_in_building, player_on_moving_ww;
 extern int display_mode, game_mode, camera_mode, animate2, frame_counter, camera_surf_collide;
+extern unsigned num_peds_drawn;
 extern float fticks, FAR_CLIP;
 extern double camera_zh;
 extern point pre_smap_player_pos, actual_player_pos;
@@ -2337,6 +2338,7 @@ bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up c
 		//colorRGBA const &color(((!ped.is_zombie && ped.model_id == 3) && is_in_building && in_building_gameplay_mode()) ? OLIVE : ALPHA0);
 		colorRGBA const &color(ALPHA0);
 		ped_model_loader.draw_model(s, ped.pos, bcube, draw_dir, color, xlate, ped.model_id, shadow_only, low_detail, anim_state, 0, 0, 0, 0, 0, 0, 3, 0, swap_xy_mode);
+		++num_peds_drawn;
 		//s.set_cur_color(RED); draw_simple_cube(bcube); // debugging; need to comment out the call above
 
 		// draw umbrella 75% of the time if pedestrian is outside and in the rain

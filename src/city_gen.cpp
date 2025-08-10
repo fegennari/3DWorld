@@ -17,6 +17,7 @@ float const CITY_LIGHT_FALLOFF      = 0.2; // smooth falloff for headlights, str
 
 
 bool had_building_interior_coll(0), city_lights_custom_bcube(0), has_transmission_lines(0), player_on_road(0), player_in_city(0);
+unsigned num_cars_drawn(0), num_peds_drawn(0);
 vector2d actual_max_road_seg_len;
 city_params_t city_params;
 point pre_smap_player_pos(all_zeros), actual_player_pos(all_zeros); // Note: pre_smap_player_pos can be security cameras, but actual_player_pos is always the player
@@ -3500,6 +3501,13 @@ public:
 		if  (trans_op_mask & 1) {ped_manager.draw(xlate, use_dlights, (shadow_only != 0), is_dlight_shadows);} // opaque
 		if ((trans_op_mask & 1) && !shadow_only) {road_gen.draw_label();} // after drawing cars so that it's in front
 		// Note: buildings are drawn through draw_buildings()
+
+		if (0 && (trans_op_mask & 1) && !shadow_only && !reflection_pass && (display_mode & 0x20)) {
+			ostringstream oss;
+			oss << "Cars: " << num_cars_drawn << " Peds: " << num_peds_drawn;
+			print_text_onscreen(oss.str(), GREEN, 0.8, 1);
+			num_cars_drawn = num_peds_drawn = 0; // reset for next frame
+		}
 	}
 	void draw_transparent(vector3d const &xlate) {road_gen.draw_transparent(xlate, enable_lights());} // drawn at the very end
 	void draw_roads(int trans_op_mask, vector3d const &xlate) {road_gen.draw(trans_op_mask, xlate, enable_lights(), 0);} // shadow_only=0
