@@ -3433,6 +3433,8 @@ bool building_t::add_laundry_objs(rand_gen_t rgen, room_t const &room, float zva
 			tot_num_place += num_place;
 		} // for wed
 		if (tot_num_place == 0) return 0; // failed
+		unsigned const num_buckets(rgen.rand() % 3); // 0-2
+		add_buckets_to_room(rgen, place_area, zval, room_id, tot_light_amt, objs_start, num_buckets);
 		add_door_sign("Laundry", room, zval, room_id);
 		success = 1;
 	}
