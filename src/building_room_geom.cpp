@@ -6500,29 +6500,37 @@ void building_room_geom_t::add_gym_weight(room_object_t const &c) {
 	// these could be lifting weights or hand weights (dumbbells), depending on size
 	rgeom_mat_t &mat(get_metal_material(1, 0, 1)); // untextured, shadowed, small=1
 	colorRGBA const color(apply_light_color(c));
-	bool const hand_weight(c.item_flags == 1);
-	// TODO: longer, thinner weights, thicker bar for hand weights, bar passes through center
-	float const height(c.dz()), width(c.get_width()), radius(0.25*(height + width)), length(c.get_length());
+	float const height(c.dz()), width(c.get_width()), length(c.get_length());
+	bool const hand_weight(c.item_flags == 1), vertical(height < 0.5*width);
+	float const radius(0.25*((vertical ? length : height) + width)), bar_radius((hand_weight ? 0.4 : 0.12)*radius), bar_shrink(bar_radius - radius);
 
-	if (height < 0.5*width) { // single weight, vertical
+	if (vertical) { // single weight, vertical
+		cube_t hole(c);
+		hole.expand_by_xy(bar_shrink);
+		hole.expand_in_z(0.01*height); // to avoid Z-fighting
+		// draw the inside surface first
+		mat.add_vcylin_to_verts(hole, color, 0, 0, 1); // two sided (only need inside)
+		// draw the hole as a transparent circle before the outer surface
+		mat.add_vcylin_to_verts(hole, ALPHA0, 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // draw top only, skip_sides=1
+		// draw the outer surface
 		mat.add_vcylin_to_verts(c, color, 0, 1); // draw top but not bottom
-		// TODO: draw the hole
 	}
 	else if (length < radius) { // single weight, horizontal
 		mat.add_ortho_cylin_to_verts(c, color, c.dim, 1, 1); // draw ends
-		// TODO: draw the hole
+		// draw the hole?
 	}
 	else { // two weights with a bar between
-		float const bar_radius(0.1*radius), bar_shrink(bar_radius - radius), weight_len(0.1*length);
+		bool const draw_bar_ends(!hand_weight);
+		float const weight_len((hand_weight ? 0.25 : 0.08)*length);
 		cube_t bar(c);
-		bar.expand_in_dim( c.dim, -weight_len);
-		bar.expand_in_dim(!c.dim,  bar_shrink);
+		bar.expand_in_dim(!c.dim, bar_shrink);
 		bar.expand_in_z(bar_shrink);
-		mat.add_ortho_cylin_to_verts(bar, apply_light_color(c, LT_GRAY), c.dim, 0, 0); // no ends
+		mat.add_ortho_cylin_to_verts(bar, apply_light_color(c, LT_GRAY), c.dim, draw_bar_ends, draw_bar_ends);
 
 		for (unsigned d = 0; d < 2; ++d) { // draw weights at ends
 			cube_t weight(c);
-			weight.d[c.dim][!d] = bar.d[c.dim][d];
+			weight.d[c.dim][!d] = weight.d[c.dim][d] - (d ? 1.0 : -1.0)*weight_len;
+			if (draw_bar_ends) {weight.d[c.dim][d] -= (d ? 1.0 : -1.0)*0.25*weight_len;} // shrink slightly so that bar passes through weight
 			mat.add_ortho_cylin_to_verts(weight, color, c.dim, 1, 1); // draw ends
 		}
 	}
