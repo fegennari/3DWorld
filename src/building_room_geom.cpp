@@ -6536,6 +6536,10 @@ void building_room_geom_t::add_gym_weight(room_object_t const &c) {
 	}
 }
 
+void building_room_geom_t::add_food_tray(room_object_t const &c) {
+	// TODO
+}
+
 void building_room_geom_t::add_trash(room_object_t const &c) {
 	// add a ball of wrinkled paper; could be based on obj_id
 	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // shadowed, small
