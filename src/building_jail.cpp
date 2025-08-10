@@ -513,6 +513,13 @@ bool building_t::add_gym_objs(rand_gen_t rgen, room_t &room, float &zval, unsign
 	cube_t locker_area(place_area);
 	locker_area.d[dim][!locker_place_end] = place_area.d[dim][locker_place_end] + (locker_place_end ? -1.0 : 1.0)*locker_area_width;
 	add_room_lockers(rgen, room, zval, room_id, tot_light_amt, objs_start, locker_area, RTYPE_GYM, dim, 0, 0); // add_padlocks=0
+
+	// maybe add mirror on the wall
+	if (room.interior && room_sz[!dim] > 2.0*floor_spacing) {
+		cube_t const room_interior(get_room_wall_bounds(room));
+		if (place_obj_along_wall(TYPE_MIRROR, room, 0.7*floor_spacing, vector3d(0.01, 0.75, 1.0), rgen, (zval + 0.1*floor_spacing), room_id, tot_light_amt,
+			room_interior, objs_start,10.0, 0, 4, 0, BKGRAY, 1, SHAPE_CUBE, wall_thick, (RO_FLAG_NOCOLL | RO_FLAG_IN_MALL))) {room.set_has_mirror();}
+	}
 	if (rgen.rand_float() < 0.9) {add_wall_water_fountain(rgen, room, zval, room_id, tot_light_amt, objs_start);}
 	if (rgen.rand_float() < 0.8) {add_wall_tv(rgen, room, zval, room_id, tot_light_amt, objs_start, 0.75);} // height_scale=0.75
 	if (rgen.rand_float() < 0.7) {add_ball_to_room(rgen, room, place_area, zval, room_id, tot_light_amt, objs_start, BALL_TYPE_BASKET);}
@@ -533,6 +540,7 @@ bool building_t::add_gym_objs(rand_gen_t rgen, room_t &room, float &zval, unsign
 			if (c->type == TYPE_BENCH) {c->item_flags = 1;}
 		}
 	}
+	// some kind of weight machine 3D models?
 	// add weights
 	unsigned const num_weights((rgen.rand() % 8) + 5); // 5-12
 
@@ -556,7 +564,7 @@ bool building_t::add_gym_objs(rand_gen_t rgen, room_t &room, float &zval, unsign
 			break; // done
 		} // for N
 	} // for n
-	// add shirts on the floor
+	// maybe add shirt on the floor
 	if (rgen.rand_float() < 0.6) {place_shirt_pants_on_floor(rgen, room, zval, room_id, tot_light_amt, place_area, objs_start, TYPE_TEESHIRT);} // orange shirt
 	add_door_sign("Gym", room, zval, room_id);
 	return 1;

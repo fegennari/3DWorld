@@ -146,7 +146,7 @@ void create_mirror_reflection_if_needed(building_t const *vis_conn_bldg, vector3
 		if (!have_mirror) continue; // not enabled
 		bool const interior_room(cur_room_mirror.is_interior()), is_house(cur_room_mirror.is_house()), is_open(cur_room_mirror.is_open());
 		// assumes mirror is not facing the doorway to a room with a window; assumes cube-shaped office buildings always use opaque glass block windows
-		bool const can_see_out_windows((is_house || !bldg->is_cube()) && !interior_room && bldg->has_int_windows());
+		bool const can_see_out_windows(cur_room_mirror.z2() > bldg->ground_floor_z1 && (is_house || bldg->is_prison() || !bldg->is_cube()) && !interior_room && bldg->has_int_windows());
 		bool const is_extb(bldg->point_in_extended_basement_not_basement(cur_room_mirror.get_cube_center()));
 		bool const dim(cur_room_mirror.dim ^ is_open), dir(is_open ? 1 : cur_room_mirror.dir); // always opens in +dir
 		cube_t const mirror_surface(get_mirror_surface(cur_room_mirror));
