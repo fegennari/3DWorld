@@ -1782,7 +1782,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 		unsigned const first_corner(rgen.rand() & 3);
 		bool const first_dim(rgen.rand_bool());
 
-		for (unsigned pass = 0; pass < (added_vanity ? 2 : 1) && !placed_toilet; ++pass) { // {without, with} vanity
+		for (unsigned pass = 0; pass < (added_vanity ? 2U : 1U) && !placed_toilet; ++pass) { // {without, with} vanity
 			if (pass == 1) { // vanity pass; remove the vanity; not a bathroom without a toilet
 				objs.resize(vanity_obj_ix);
 				room.flags  &= ~ROOM_FLAG_MIRROR; // no more mirror
@@ -3412,7 +3412,7 @@ bool building_t::add_laundry_objs(rand_gen_t rgen, room_t const &room, float zva
 			unsigned num_place(1);
 
 			for (unsigned D = 0; D < 2 && num_place < max_place; ++D) { // {left, right} of obj
-				bool const dir(D ^ first_dir);
+				bool const dir(bool(D) ^ first_dir);
 				unsigned const max_this_side(max_place - num_place + 1);
 				room_object_t obj2(obj);
 
