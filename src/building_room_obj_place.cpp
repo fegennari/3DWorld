@@ -1000,12 +1000,12 @@ bool building_t::add_vending_machine(rand_gen_t &rgen, room_t const &room, float
 	}
 	return 1;
 }
-bool building_t::add_wall_tv(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+bool building_t::add_wall_tv(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, float height_scale) {
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const tv_obj_ix(objs.size());
-	float const z1(zval + 0.3*get_window_vspace());
+	float const height(0.5*height_scale), z1(zval + (0.8 - height)*get_window_vspace());
 	cube_t const room_area(get_room_wall_bounds(room)); // right against the wall
-	if (!place_model_along_wall(OBJ_MODEL_TV, TYPE_TV, room, 0.5, rgen, z1, room_id, tot_light_amt, room_area, objs_start, 4.0, 4, 1, BKGRAY, 1, RO_FLAG_HANGING)) return 0;
+	if (!place_model_along_wall(OBJ_MODEL_TV, TYPE_TV, room, height, rgen, z1, room_id, tot_light_amt, room_area, objs_start, 4.0, 4, 1, BKGRAY, 1, RO_FLAG_HANGING)) return 0;
 	offset_hanging_tv(objs[tv_obj_ix]);
 	assert(objs.back().type == TYPE_BLOCKER);
 	objs.back().z1() = zval; // extend blocker down to the floor so that we don't place objects such as fishtanks under the TV
@@ -1339,8 +1339,9 @@ void building_t::place_shirt_pants_on_floor(rand_gen_t &rgen, room_t const &room
 		cube_t c(gen_xy_pos_in_area(valid_area, size, rgen, zval));
 		c.expand_by_xy(size);
 		c.z2() += height;
-		if (overlaps_other_room_obj(c, objs_start) || is_obj_placement_blocked(c, room, 1)) continue; // bad placement
-		interior->room_geom->objs.emplace_back(c, type, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, gen_shirt_pants_color(type, rgen));
+		if (overlaps_other_room_obj(c, objs_start, 1) || is_obj_placement_blocked(c, room, 1)) continue; // bad placement
+		colorRGBA const color((type == TYPE_TEESHIRT && is_prison()) ? ORANGE : gen_shirt_pants_color(type, rgen)); // prison orange shirt
+		interior->room_geom->objs.emplace_back(c, type, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, color);
 		break; // done
 	} // for n
 }

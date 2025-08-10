@@ -1426,7 +1426,8 @@ void building_room_geom_t::expand_locker(room_object_t const &c) {
 				set_cube_zvals(shirt, place_area.z2()-shirt_len, place_area.z2());
 				set_wall_width(shirt, c.get_center_dim( dim), 0.01*shirt_width,  dim); // set thickness
 				set_wall_width(shirt, c.get_center_dim(!dim), 0.50*shirt_width, !dim); // set width
-				expanded_objs.emplace_back(shirt, TYPE_TEESHIRT, c.room_id, c.dim, c.dir, RO_FLAG_HANGING, c.light_amt, SHAPE_CUBE, gen_teeshirt_color(rgen), rgen.rand());
+				colorRGBA const color(in_gym ? ORANGE : gen_teeshirt_color(rgen)); // orange for prison gyms
+				expanded_objs.emplace_back(shirt, TYPE_TEESHIRT, c.room_id, c.dim, c.dir, RO_FLAG_HANGING, c.light_amt, SHAPE_CUBE, color, rgen.rand());
 				break;
 			}
 			case TYPE_HARDHAT: {

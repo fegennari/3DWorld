@@ -497,11 +497,11 @@ bool building_t::assign_and_fill_prison_room(rand_gen_t rgen, room_t &room, floa
 	return 0;
 }
 
-bool building_t::add_gym_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+bool building_t::add_gym_objs(rand_gen_t rgen, room_t &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	bool const rubber_flooring(rgen.rand_float() < 0.65); // more likely to be rubber flooring
 	unsigned const sub_type(rubber_flooring ? 0 : 1); // select light colored wood
 	zval = add_flooring(room, zval, room_id, tot_light_amt, (rubber_flooring ? FLOORING_RUBBER : FLOORING_WOOD), sub_type);
-	float const floor_spacing(get_window_vspace()), wall_thick(get_wall_thickness());//, trim_thick(get_trim_thickness());
+	float const floor_spacing(get_window_vspace()), wall_thick(get_wall_thickness());
 	vector2d const room_sz(room.get_size_xy());
 	bool const dim(room_sz.x < room_sz.y); // long dim
 	cube_t const place_area(get_walkable_room_bounds(room));
@@ -513,7 +513,9 @@ bool building_t::add_gym_objs(rand_gen_t rgen, room_t const &room, float &zval, 
 	cube_t locker_area(place_area);
 	locker_area.d[dim][!locker_place_end] = place_area.d[dim][locker_place_end] + (locker_place_end ? -1.0 : 1.0)*locker_area_width;
 	add_room_lockers(rgen, room, zval, room_id, tot_light_amt, objs_start, locker_area, RTYPE_GYM, dim, 0, 0); // add_padlocks=0
-
+	if (rgen.rand_float() < 0.9) {add_wall_water_fountain(rgen, room, zval, room_id, tot_light_amt, objs_start);}
+	if (rgen.rand_float() < 0.8) {add_wall_tv(rgen, room, zval, room_id, tot_light_amt, objs_start, 0.75);} // height_scale=0.75
+	if (rgen.rand_float() < 0.7) {add_ball_to_room(rgen, room, place_area, zval, room_id, tot_light_amt, objs_start, BALL_TYPE_BASKET);}
 	// add benches along the walls
 	float const bench_height(0.22*floor_spacing);
 	vector3d const bench_sz(rgen.rand_uniform(0.7, 0.9), rgen.rand_uniform(4.0, 6.0), 1.0); // D, W, H
@@ -554,7 +556,8 @@ bool building_t::add_gym_objs(rand_gen_t rgen, room_t const &room, float &zval, 
 			break; // done
 		} // for N
 	} // for n
-	// add clothing on the floor?
+	// add shirts on the floor
+	if (rgen.rand_float() < 0.6) {place_shirt_pants_on_floor(rgen, room, zval, room_id, tot_light_amt, place_area, objs_start, TYPE_TEESHIRT);} // orange shirt
 	add_door_sign("Gym", room, zval, room_id);
 	return 1;
 }

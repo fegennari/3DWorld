@@ -170,6 +170,7 @@ bool building_t::add_room_lockers(rand_gen_t &rgen, room_t const &room, float zv
 	// if there are enough lockers, increase their width slightly so that lockers tile to fill the exact wall length
 	if (num_lockers >= 10) {locker_width = room_len/num_lockers;}
 	bool const add_blockers(rtype != RTYPE_HALL); // add blockers in front of rows of lockers, except for school hallways (which have splits for secondary hallways, etc.)
+	bool const single_side (rtype == RTYPE_GYM ), first_dir(single_side ? rgen.rand_bool() : 0);
 	// add expanded blockers for stairs, elevators, etc. to ensure there's space for the player and people to walk on the sides
 	float const clearance(get_min_front_clearance_inc_people()), se_clearance(2.0*clearance);
 	add_padlocks &= building_obj_model_loader.is_model_valid(OBJ_MODEL_PADLOCK);
@@ -192,7 +193,8 @@ bool building_t::add_room_lockers(rand_gen_t &rgen, room_t const &room, float zv
 	set_cube_zvals(locker, zval, zval+locker_height);
 	unsigned lix(0);
 
-	for (unsigned d = 0; d < 2; ++d) { // for each side of the room
+	for (unsigned D = 0; D < 2; ++D) { // for each side of the room
+		bool const d(bool(D) ^ first_dir);
 		if (dir_skip_mask & (1 << d)) continue;
 		if (zval >= ground_floor_z1 && classify_room_wall(room, zval, !dim, d, 0) == ROOM_WALL_EXT) continue; // skip exterior walls with windows
 		float const dsign(d ? -1.0 : 1.0), wall_edge(place_area.d[!dim][d]), locker_front(wall_edge + dsign*locker_depth);
@@ -237,11 +239,11 @@ bool building_t::add_room_lockers(rand_gen_t &rgen, room_t const &room, float zv
 			if (add_blockers) {row_bc.assign_or_union_with_cube(locker);}
 			interior->room_geom->has_locker = 1;
 		} // for n
-		if (!row_bc.is_all_zeros()) {
-			row_bc.d[!dim][ d] = locker_front;
-			row_bc.d[!dim][!d] = locker_front + dsign*locker_width;
-			objs.emplace_back(row_bc, TYPE_BLOCKER, room_id, !dim, !d, RO_FLAG_INVIS);
-		}
+		if (row_bc.is_all_zeros()) continue; // no lockers
+		row_bc.d[!dim][ d] = locker_front;
+		row_bc.d[!dim][!d] = locker_front + dsign*locker_width;
+		objs.emplace_back(row_bc, TYPE_BLOCKER, room_id, !dim, !d, RO_FLAG_INVIS);
+		if (single_side) break;
 	} // for d
 	return (objs.size() > lockers_start); // true if at least one locker was added
 }
@@ -291,11 +293,7 @@ bool building_t::add_locker_room_objs(rand_gen_t rgen, room_t const &room, float
 		}
 	}
 	// maybe add a water fountain
-	if (place_model_along_wall(OBJ_MODEL_WFOUNTAIN, TYPE_WFOUNTAIN, room, 0.25, rgen, (zval+0.18*floor_spacing),
-		room_id, tot_light_amt, room_bounds, objs_start, 0.0, 4, 0, WHITE, 1)) // not_at_window=1
-	{
-		objs.back().dir ^= 1; // placed dir was backwards
-	}
+	add_wall_water_fountain(rgen, room, zval, room_id, tot_light_amt, objs_start);
 	// add shoes on the floor
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_SHOE)) {
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SHOE)); // L, W, H
@@ -333,6 +331,14 @@ bool building_t::add_locker_room_objs(rand_gen_t rgen, room_t const &room, float
 	}
 	add_door_sign(sign_text, room, zval, room_id);
 	return 1;
+}
+
+void building_t::add_wall_water_fountain(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	if (place_model_along_wall(OBJ_MODEL_WFOUNTAIN, TYPE_WFOUNTAIN, room, 0.25, rgen, (zval+0.18*get_window_vspace()),
+		room_id, tot_light_amt, get_room_wall_bounds(room), objs_start, 0.0, 4, 0, WHITE, 1)) // not_at_window=1
+	{
+		interior->room_geom->objs.back().dir ^= 1; // placed dir was backwards
+	}
 }
 
 bool building_t::add_cafeteria_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start) {
