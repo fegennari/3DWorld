@@ -4627,22 +4627,24 @@ void building_room_geom_t::add_laundry_basket(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_br_stall(room_object_t const &c, bool inc_lg, bool inc_sm) {
+	bool const dim(c.dim), dir(c.dir), hinge_side(0); // does hinge_side matter?
+
 	if (inc_sm) {
 		// Note: stall is tagged as a large object, but the small parts aren't modified by the player so we don't need to update them
 		if (c.flags & RO_FLAG_IN_JAIL) { // prison shower stall; add seat, handles, and shower head
-			unsigned const skip_faces(EF_Z1 | ~get_face_mask(c.dim, c.dir)); // bottom and back
-			float const width(c.get_width()), depth(c.get_depth()), height(c.dz()), signed_depth((c.dir ? -1.0 : 1.0)*depth);
-			float const inner_wall_pos(c.d[c.dim][c.dir] + 0.02*signed_depth), extent_amt(0.06*signed_depth);
+			unsigned const skip_faces(EF_Z1 | ~get_face_mask(dim, dir)); // bottom and back
+			float const width(c.get_width()), depth(c.get_depth()), height(c.dz()), signed_depth((dir ? -1.0 : 1.0)*depth);
+			float const inner_wall_pos(c.d[dim][dir] + 0.02*signed_depth), extent_amt(0.06*signed_depth);
 			point const llc(c.get_llc());
 			// add tile on back wall and floor, plus shelf
 			cube_t c_exp(c);
-			c_exp.expand_in_dim(!c.dim,  0.01*width); // slightly wider to avoid Z-fighting but merge with adjacent shower; textures should tile with adjacent shower
+			c_exp.expand_in_dim(!dim,  0.01*width); // slightly wider to avoid Z-fighting but merge with adjacent shower; textures should tile with adjacent shower
 			cube_t bottom(c_exp), back(c_exp), shelf(c_exp);
-			bottom.d[c.dim][!c.dir] += 0.01*signed_depth; // slight expand in front to avoid Z-fighting
-			back  .d[c.dim][!c.dir]  = shelf .d[c.dim][c.dir] = inner_wall_pos;
-			shelf .d[c.dim][!c.dir]  = bottom.d[c.dim][c.dir] = inner_wall_pos + 0.1*signed_depth; // add ledge
+			bottom.d[dim][!dir] += 0.01*signed_depth; // slight expand in front to avoid Z-fighting
+			back  .d[dim][!dir]  = shelf .d[dim][dir] = inner_wall_pos;
+			shelf .d[dim][!dir]  = bottom.d[dim][dir] = inner_wall_pos + 0.1*signed_depth; // add ledge
 			back  .z2() -= 0.08*height;
-			shelf .z2()  = c.z1() + 0.24*height;
+			shelf .z2()  = c.z1() + 0.28*height;
 			bottom.z2()  = c.z1() + 0.02*height; // shrink to small height
 			colorRGBA const tile_color(apply_light_color(c, WHITE));
 			tid_nm_pair_t tex(get_texture_by_name("bathroom_tile.jpg"), 2.0/width, 0);
@@ -4651,8 +4653,23 @@ void building_room_geom_t::add_br_stall(room_object_t const &c, bool inc_lg, boo
 			tile_mat.add_cube_to_verts(bottom, tile_color, llc, skip_faces);
 			tile_mat.add_cube_to_verts(back,   tile_color, llc, skip_faces);
 			tile_mat.add_cube_to_verts(shelf,  tile_color, llc, skip_faces);
+			// add seat
+			bool const side(!hinge_side); // opposite the door open dir
+			cube_t seat(c), base;
+			set_cube_zvals(seat, (c.z1() + 0.22*height), (c.z1() + 0.24*height));
+			set_wall_width(seat, c.get_center_dim(dim), 0.2*depth, dim);
+			seat.d[!dim][!side]  = c.d[!dim][side] + (side ? -1.0 : 1.0)*0.2*width;
+			seat.d[!dim][ side] -= (side ? -1.0 : 1.0)*0.01*width; // shift slightly inward to avoid Z-fighting with stall wall
+			set_cube_zvals(base, bottom.z2(), seat.z1());
+			for (unsigned d = 0; d < 2; ++d) {set_wall_width(base, seat.get_center_dim(d), 0.025*width, d);}
+			pool_texture_params_t &params(pool_texture_params[POOL_TILE_FLOOR]);
+			float const tscale(8.0*params.tscale/width);
+			tid_nm_pair_t tex2(params.get_tid(), params.get_nm_tid(), tscale, tscale);
+			tex2.set_specular(params.spec_mag, params.spec_shine);
+			get_material(tex2, 1, 0, 1).add_cube_to_verts(seat, tile_color, all_zeros, ~get_face_mask(!dim, side)); // shadowed, small
+			get_untextured_material(1, 0, 1).add_cube_to_verts_untextured(base, BKGRAY, EF_Z12); // untextured, shadowed, small
 			// add shower head, handle(s), and drain
-			draw_shower_head(c, width, inner_wall_pos, extent_amt, c.dim);
+			draw_shower_head(c, width, inner_wall_pos, extent_amt, dim);
 			add_shower_drain(bottom, apply_light_color(c, GRAY));
 		}
 	}
@@ -4661,35 +4678,34 @@ void building_room_geom_t::add_br_stall(room_object_t const &c, bool inc_lg, boo
 	colorRGBA const color(apply_light_color(c));
 
 	if (c.shape == SHAPE_SHORT) { // wall separating urinals (hanging) or visitation stalls (not hanging), drawn as a single cube
-		mat.add_cube_to_verts_untextured(c, color, (c.is_hanging() ? ~get_face_mask(c.dim, c.dir) : 0));
+		mat.add_cube_to_verts_untextured(c, color, (c.is_hanging() ? ~get_face_mask(dim, dir) : 0));
 		return;
 	}
 	float const dz(c.dz()), wall_thick(0.0125*dz), frame_thick(6.0*wall_thick), door_gap(0.3*wall_thick);
 	cube_t sides(c), front(c);
 	sides.z2() -= 0.35*dz;
 	sides.z1() += 0.15*dz;
-	sides.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*wall_thick; // shorten for door
-	front.d[c.dim][ c.dir] = sides.d[c.dim][!c.dir]; // dir points toward the inside of the stall
+	sides.d[dim][!dir] += (dir ? 1.0 : -1.0)*wall_thick; // shorten for door
+	front.d[dim][ dir] = sides.d[dim][!dir]; // dir points toward the inside of the stall
 	cube_t side1(sides), side2(sides), front1(front), front2(front), door(front);
 	door.z2() -= 0.38*dz;
 	door.z1() += 0.18*dz;
-	side1.d[!c.dim][1] = side1.d[!c.dim][0] + wall_thick;
-	side2.d[!c.dim][0] = side2.d[!c.dim][1] - wall_thick;
-	door.expand_in_dim(!c.dim, -frame_thick);
-	front1.d[!c.dim][1] = door.d[!c.dim][0];
-	front2.d[!c.dim][0] = door.d[!c.dim][1];
-	unsigned const side_skip_mask(get_skip_mask_for_xy(c.dim));
+	side1.d[!dim][1] = side1.d[!dim][0] + wall_thick;
+	side2.d[!dim][0] = side2.d[!dim][1] - wall_thick;
+	door.expand_in_dim(!dim, -frame_thick);
+	front1.d[!dim][1] = door.d[!dim][0];
+	front2.d[!dim][0] = door.d[!dim][1];
+	unsigned const side_skip_mask(get_skip_mask_for_xy(dim));
 	mat.add_cube_to_verts_untextured(side1,  color, side_skip_mask);
 	mat.add_cube_to_verts_untextured(side2,  color, side_skip_mask);
 	mat.add_cube_to_verts_untextured(front1, color, EF_Z12);
 	mat.add_cube_to_verts_untextured(front2, color, EF_Z12);
-	door.expand_in_dim(!c.dim, -door_gap);
+	door.expand_in_dim(!dim, -door_gap);
 
 	if (c.is_open()) { // make the door open
-		bool const hinge_side(0); // does it matter?
-		float const door_width(door.get_sz_dim(!c.dim));
-		door.d[!c.dim][!hinge_side] -= (hinge_side ? -1.0 : 1.0)*(door_width - wall_thick); // width => thickness
-		door.d[ c.dim][ c.dir     ] -= (c.dir      ? -1.0 : 1.0)*(door_width - wall_thick); // thickness => width
+		float const door_width(door.get_sz_dim(!dim));
+		door.d[!dim][!hinge_side] -= (hinge_side ? -1.0 : 1.0)*(door_width - wall_thick); // width => thickness
+		door.d[ dim][ dir       ] -= (dir        ? -1.0 : 1.0)*(door_width - wall_thick); // thickness => width
 	}
 	mat.add_cube_to_verts_untextured(door, color);
 }
