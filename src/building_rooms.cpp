@@ -430,10 +430,11 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				add_retail_room_objs(rgen, *r, room_center.z, room_id, light_ix_assign);
 			}
 			else if (is_mall_store) {
+				is_lit = 1;
 				unsigned const objs_start(objs.size());
 				add_mall_store_objs       (rgen, *r, room_center.z,  room_id, store_type_mask, light_ix_assign);
 				add_outlets_to_room       (rgen, *r, room_center.z,  room_id, objs_start, 0, 0); // is_ground_floor=is_basement=0
-				add_light_switches_to_room(rgen, *r, room_center.z,  room_id, objs_start, 0, 0); // is_ground_floor=is_basement=0
+				add_light_switches_to_room(rgen, *r, room_center.z,  room_id, objs_start, 0, 0, is_lit); // is_ground_floor=is_basement=0
 				rgen.rand_mix(); // make sure numbers are different for each store
 			}
 			if ((!has_stairs && (f == 0 || top_floor) && interior->stairwells.size() > 1) || top_of_stairs) { // should this be outside the loop?
@@ -600,8 +601,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				}
 				objs.emplace_back(light_obj);
 			} // for l
-			if (is_lit) {r->lit_by_floor |= (1ULL << (f&31));} // flag this floor as being lit (for up to 32 floors)
 			float tot_light_amt(light_amt); // unitless, somewhere around 1.0
+			if (is_lit) {r->lit_by_floor |= (1ULL << (f&31));} // flag this floor as being lit (for up to 32 floors)
 			if (is_lit) {tot_light_amt += r->light_intensity;}
 			if (is_backrooms || is_parking_garage) {add_stains_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, floor_objs_start);}
 
@@ -682,7 +683,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					}
 				}
 				add_outlets_to_room(rgen, *r, room_center.z, room_id, objs_start, is_ground_floor, is_basement);
-				add_light_switches_to_room(rgen, *r, room_center.z, room_id, objs_start, is_ground_floor, is_basement); // shed, garage, or hallway
+				add_light_switches_to_room(rgen, *r, room_center.z, room_id, objs_start, is_ground_floor, is_basement, is_lit); // shed, garage, or hallway
 				if (is_basement && !is_swim_pool_room) {add_stains_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);}
 				if (has_stairs_this_floor && r->get_room_type(f) == RTYPE_NOTSET) {r->assign_to(RTYPE_STAIRS, f);}
 				continue; // no other geometry for this room
@@ -1136,7 +1137,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				if (num > 0) {add_plants_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, num);}
 			}
 			if (!is_jail) {add_outlets_to_room(rgen, *r, room_center.z, room_id, objs_start, is_ground_floor, is_basement, is_kitchen);}
-			add_light_switches_to_room(rgen, *r, room_center.z, room_id, objs_start, is_ground_floor, is_basement, is_jail); // add light switches
+			add_light_switches_to_room(rgen, *r, room_center.z, room_id, objs_start, is_ground_floor, is_basement, is_lit, is_jail, is_bathroom); // add light switches
 			
 			if (!r->is_hallway) { // no vents in hallways; vents use orig floor zval, not adjusted for bathroom tile floor
 				if (is_house) {add_ceil_vent_to_room(rgen, *r, floor_zval, room_id, objs_start_inc_lights );} // house vents

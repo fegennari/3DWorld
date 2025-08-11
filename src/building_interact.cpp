@@ -151,19 +151,27 @@ bool building_t::toggle_walkway_lights(point const &pos) {
 
 void building_t::toggle_light_object(room_object_t const &light, point const &sound_pos) { // called by the player
 	assert(has_room_geom());
-	bool const in_jail(light.z1() < ground_floor_z1 && get_room(light.room_id).get_room_type(0) == RTYPE_JAIL);
+	bool const in_jail(light.z1() < ground_floor_z1 && get_room(light.room_id).get_room_type(0) == RTYPE_JAIL), in_basement(light.z1() < ground_floor_z1);
+	float const floor_spacing(get_window_vspace());
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
-	bool updated(0), is_lamp(1);
+	bool updated(0), is_lamp(1), is_lit(0);
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) { // toggle all lights on this floor of this room
-		if (!i->is_light_type() || i->room_id != light.room_id || !i->is_powered()) continue; // can we break here if we passed the room?
+		if (i->room_id != light.room_id)         continue; // can we break here if we passed the room?
 		if (light.in_closet() != i->in_closet()) continue; // closet + room light are toggled independently
-		if (i->z2() != light.z2() && !in_jail)   continue; // Note: uses light z2 rather than z1 so that thin lights near doors are handled correctly, except for jails
+
+		if (i->type == TYPE_SWITCH && (in_basement || (i->z1() < light.z1() && i->z1() > light.z1() - floor_spacing))) { // toggle switch state
+			if (is_lit) {i->flags |= RO_FLAG_OPEN;} else {i->flags &= ~RO_FLAG_OPEN;} // light should be seen and updated before the switch
+			continue;
+		}
+		if (!i->is_light_type() || !i->is_powered()) continue;
+		if (i->z2() != light.z2() && !in_jail)       continue; // Note: uses light z2 rather than z1 so that thin lights near doors are handled correctly, except for jails
 		i->toggle_lit_state(); // Note: doesn't update indir lighting
 		i->flags &= ~RO_FLAG_IS_ACTIVE; // disable motion detection feature if the player manually switches lights off
 		register_indir_lighting_state_change(i - interior->room_geom->objs.begin());
+		is_lit  = i->is_lit();
 		updated = 1;
-		if (i->type == TYPE_LAMP)  continue; // lamps don't affect room object ambient lighting, and don't require regenerating the vertex data, so skip the step below
+		if (i->type == TYPE_LAMP) continue; // lamps don't affect room object ambient lighting, and don't require regenerating the vertex data, so skip the step below
 		if (is_lamp) {set_obj_lit_state_to(light.room_id, light.z2(), i->is_lit());} // update object lighting flags as well, for first non-lamp light
 		is_lamp = 0;
 	} // for i
@@ -319,8 +327,8 @@ void building_t::toggle_circuit_breaker(bool is_on, unsigned zone_id, unsigned n
 			i->obj_id = 1; // turn it off
 			i->flags ^= RO_FLAG_NO_POWER;
 		} // TYPE_VENT_FAN?
-		else if (i->type == TYPE_MWAVE || i->type == TYPE_CEIL_FAN || i->type == TYPE_CAMERA || i->type == TYPE_CLOCK || i->type == TYPE_LAVALAMP || i->type == TYPE_FISHTANK ||
-			i->type == TYPE_WARN_LIGHT || i->type == TYPE_VENDING)
+		else if (i->type == TYPE_MWAVE || i->type == TYPE_CEIL_FAN || i->type == TYPE_CAMERA || i->type == TYPE_CLOCK || i->type == TYPE_LAVALAMP ||
+			i->type == TYPE_FISHTANK || i->type == TYPE_WARN_LIGHT || i->type == TYPE_VENDING || i->type == TYPE_SWITCH)
 		{
 			i->flags ^= RO_FLAG_NO_POWER; // interactive powered devices; stove is gas and not electric powered
 		}
@@ -827,7 +835,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		// should select the correct light(s) for the room containing the switch
 		toggle_room_light(obj.get_cube_center(), 1, obj.room_id, 0, obj.in_closet(), obj.in_attic()); // exclude lamps; select closet lights if a closet light switch
 		gen_sound_thread_safe_at_player(SOUND_CLICK, 0.7);
-		obj.flags       ^= RO_FLAG_OPEN; // toggle on/off
+		//obj.flags       ^= RO_FLAG_OPEN; // toggle on/off - now handled by toggle_room_light()
 		sound_scale      = 0.1;
 		update_draw_data = 1;
 	}

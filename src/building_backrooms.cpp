@@ -460,7 +460,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 	pgbr_wall_ixs.emplace_back(pbgr_walls); // end of range
 	
 	// Add vents, light switch, and outlets (on all walls - or should it be only on the wall adjacent to building or next to the door?)
-	add_light_switches_to_room(rgen, true_room, zval, room_id, objs_start, 0, 1); // is_ground_floor=0, is_basement=1
+	add_light_switches_to_room(rgen, true_room, zval, room_id, objs_start, 0, 1, 1); // is_ground_floor=0, is_basement=1, is_lit=1
 	add_outlets_to_room       (rgen, true_room, zval, room_id, objs_start, 0, 1); // is_ground_floor=0, is_basement=1
 	add_wall_vent_to_room     (rgen, true_room, zval, room_id, objs_start, 0   ); // check_for_ducts=0
 	rgen.rand_bool(); // mix up in between

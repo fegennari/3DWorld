@@ -4982,7 +4982,7 @@ cube_t building_t::get_light_switch_bounds(float floor_zval, float wall_edge, fl
 	return c;
 }
 void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start,
-	bool is_ground_floor, bool is_basement, bool is_jail)
+	bool is_ground_floor, bool is_basement, bool is_lit, bool is_jail, bool is_bathroom)
 {
 	float const wall_thickness(get_wall_thickness()), switch_hwidth(0.5*wall_thickness);
 	cube_t const room_bounds(get_room_wall_bounds(room));
@@ -5013,7 +5013,8 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 	}
 	for (unsigned ei = 0; ei < 2; ++ei) { // exterior, interior
 		vect_door_stack_t const &cands(ei ? doorways : ext_doors);
-		unsigned const max_ls(is_residential() ? 2 : 1); // place up to 2 light switches in this room if it's a residential, otherwise place only 1
+		// place up to 2 light switches in this room if it's a hallway, or residential and not a bathroom, otherwise place only 1
+		unsigned const max_ls(((is_residential() && !is_bathroom) || room.is_hallway) ? 2 : 1);
 		unsigned num_ls(0);
 
 		for (auto i = cands.begin(); i != cands.end() && num_ls < max_ls; ++i) {
@@ -5054,6 +5055,8 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 							flags |= RO_FLAG_HANGING;
 						}
 					}
+					if (is_lit) {flags |= RO_FLAG_OPEN;} // lights on => switch on
+					if (is_house && is_bathroom) {flags |= RO_FLAG_LIT;} // house bathrooms have lighted switches
 					objs.emplace_back(c, TYPE_SWITCH, room_id, dim, dir, flags, 1.0); // dim/dir matches wall; fully lit
 					done = 1; // done, only need to add one for this door
 					++num_ls;

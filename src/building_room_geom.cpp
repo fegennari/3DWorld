@@ -5443,15 +5443,19 @@ void building_room_geom_t::add_switch(room_object_t const &c, bool draw_detail_p
 		add_flat_textured_detail_wall_object(plate, get_outlet_or_switch_box_color(c), get_texture_by_name("interiors/light_switch.jpg"), 0, in_attic);
 	}
 	else { // draw rocker (small object that can move/change state)
+		bool const is_lit(c.is_lit() && !c.is_open() && c.is_powered()); // light when turned off
 		float const width(c.get_width());
 		cube_t rocker(c);
 		set_wall_width(rocker, plate.d[c.dim][!c.dir], 0.15*scaled_depth, c.dim);
 		rocker.expand_in_dim(!c.dim, -0.27*width); // shrink horizontally
 		rocker.expand_in_dim(2,      -0.39*width); // shrink vertically
-		rgeom_mat_t &mat(get_untextured_material(0, 0, 1)); // unshadowed, small
+		tid_nm_pair_t tex(-1);
+		if (is_lit) {tex.emissive = 1.0;}
+		rgeom_mat_t &mat(get_material(tex, 0, 0, 1)); // unshadowed, small
+		colorRGBA const &color(is_lit ? colorRGBA(0.8, 0.5, 0.2) : c.color);
 		unsigned const qv_start(mat.quad_verts.size());
-		mat.add_cube_to_verts_untextured(rocker, c.color, (~get_face_mask(c.dim, c.dir) | EF_Z1)); // skip bottom face and face that's against the wall
-		vector3d const rot_axis(vector_from_dim_dir(!c.dim, (c.dir ^ c.is_open())));
+		mat.add_cube_to_verts_untextured(rocker, color, (~get_face_mask(c.dim, c.dir) | EF_Z1)); // skip bottom face and face that's against the wall
+		vector3d const rot_axis(vector_from_dim_dir(!c.dim, (c.dim ^ c.dir ^ c.is_open())));
 		rotate_verts(mat.quad_verts, rot_axis, 0.015*PI, plate.get_cube_center(), qv_start); // rotate rocker slightly about base plate center; could be optimized by caching
 	}
 }
