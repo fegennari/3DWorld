@@ -720,24 +720,65 @@ bool building_t::add_shower_room_objs(rand_gen_t rgen, room_t const &room, float
 void building_t::add_prison_hall_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	cube_t const hall(get_prison_hall_for_room(room));
 	vector2d const hall_sz(hall.get_size_xy());
-	bool const dim(hall_sz.x < hall_sz.y); // long dim
-	float const floor_spacing(get_window_vspace()), door_width(get_doorway_width());
-	float const desk_hwidth(0.5*0.9*floor_spacing), desk_hdepth(0.6*desk_hwidth), edge_space(desk_hwidth + 1.5*door_width);
-	if (hall_sz[!dim] < 2.0*(desk_hdepth + 1.25*door_width) || hall_sz[dim] < 2.0*edge_space) return; // too small for guard desk
-	float const centerline(hall.get_center_dim(!dim));
-	bool const dir(centerline - room.get_center_dim(!dim) < 0.1*floor_spacing*rgen.signed_rand_float()); // facing somewhat toward cells, if they're on one side
-	cube_t desk;
-	set_cube_zvals(desk, zval, zval+0.32*floor_spacing);
-	set_wall_width(desk, centerline, desk_hdepth, !dim);
+	bool const dim(hall_sz.x < hall_sz.y); // long dim (may not be primary dim for room, but should be primary dim for hall)
+	float const floor_spacing(get_window_vspace()), door_width(get_doorway_width()), wall_thick(get_wall_thickness()), centerline(hall.get_center_dim(!dim));
+	// add warning lights on wall ends between cells
+	float const light_zval(zval + 0.5*floor_spacing), light_height(0.1*floor_spacing), light_radius(0.12*light_height), light_spacing(5.0*floor_spacing);
+	vect_room_object_t &objs(interior->room_geom->objs);
+	vect_cube_t cells;
+	vector<point> prev_lights;
 
-	for (unsigned n = 0; n < 20; ++n) { // 20 tries
-		float const val((n == 0) ? room.get_center_dim(dim) : rgen.rand_uniform((room.d[dim][0] + edge_space), (room.d[dim][1] - edge_space)));
-		set_wall_width(desk, val, desk_hwidth, dim);
-		cube_t desk_exp(desk);
-		desk_exp.expand_by_xy(door_width);
-		if (intersects_nested_room  (desk_exp, room_id))     continue;
-		if (is_cube_close_to_doorway(desk, room, 0.0, 1, 1)) continue; // too close to a doorway
-		if (add_reception_desk(rgen, desk, !dim, dir, room_id, tot_light_amt)) break; // add keys on the desk?
+	for (int r = (int)room_id-1; r >= 0; --r) {
+		room_t const &room2(get_room(r));
+		if (!room2.is_nested() || !room.contains_cube(room2)) break; // no more nested rooms for this parent
+		if (!room2.is_jail_cell()) continue;
+		cells.push_back(room2);
+		cells.back().expand_by_xy(wall_thick);
+	}
+	for (cube_t const &wall : interior->walls[dim]) {
+		if (!room.intersects(wall) || wall.z1() > light_zval || wall.z2() < light_zval) continue;
+		if (!has_bcube_int(wall, cells)) continue; // not the wall between cells
+		bool const dir(wall.get_center_dim(!dim) < centerline);
+		point center(0.0, 0.0, light_zval);
+		center[ dim] = wall.get_center_dim(dim);
+		center[!dim] = wall.d[!dim][dir] + (dir ? 1.0 : -1.0)*2.0*light_radius;
+		bool is_close(0);
+
+		for (point const &p : prev_lights) {
+			if (dist_xy_less_than(center, p, light_spacing)) {is_close = 1; break;}
+		}
+		if (is_close) continue; // space lights out
+		cube_t light(center);
+		light.z2() += light_height;
+		light.expand_by_xy(light_radius);
+		if (!room.contains_cube(light)) continue;
+		prev_lights.push_back(center);
+		objs.emplace_back(light, TYPE_WARN_LIGHT, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_LIT), tot_light_amt, SHAPE_CYLIN);
+		// add a horizontal rod connecting the light to the wall
+		cube_t bar(center);
+		bar.expand_by(0.2*light_radius);
+		bar.d[!dim][!dir] = wall.d[!dim][dir];
+		objs.emplace_back(bar, TYPE_METAL_BAR, room_id, !dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, GRAY);
+	} // for wall
+
+	// add guard desk if there's space
+	float const desk_hwidth(0.5*0.9*floor_spacing), desk_hdepth(0.6*desk_hwidth), edge_space(desk_hwidth + 1.5*door_width);
+	
+	if (hall_sz[!dim] > 2.0*(desk_hdepth + 1.25*door_width) && hall_sz[dim] > 2.0*edge_space) {
+		bool const dir(centerline - room.get_center_dim(!dim) < 0.1*floor_spacing*rgen.signed_rand_float()); // facing somewhat toward cells, if they're on one side
+		cube_t desk;
+		set_cube_zvals(desk, zval, zval+0.32*floor_spacing);
+		set_wall_width(desk, centerline, desk_hdepth, !dim);
+
+		for (unsigned n = 0; n < 20; ++n) { // 20 tries
+			float const val((n == 0) ? room.get_center_dim(dim) : rgen.rand_uniform((room.d[dim][0] + edge_space), (room.d[dim][1] - edge_space)));
+			set_wall_width(desk, val, desk_hwidth, dim);
+			cube_t desk_exp(desk);
+			desk_exp.expand_by_xy(door_width);
+			if (intersects_nested_room  (desk_exp, room_id))     continue;
+			if (is_cube_close_to_doorway(desk, room, 0.0, 1, 1)) continue; // too close to a doorway
+			if (add_reception_desk(rgen, desk, !dim, dir, room_id, tot_light_amt)) break; // add keys on the desk?
+		}
 	}
 }
 
