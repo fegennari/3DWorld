@@ -1275,6 +1275,7 @@ struct building_room_geom_t {
 	void add_electrical_wire_pair(room_object_t const &c);
 	void add_key(room_object_t const &c);
 	void add_money(room_object_t const &c);
+	cube_t add_phone_frame_and_return_screen_if_on(room_object_t const &c, rgeom_mat_t &mat, bool in_hand);
 	void add_phone(room_object_t const &c);
 	void add_tproll(room_object_t const &c);
 	void add_tape(room_object_t const &c);

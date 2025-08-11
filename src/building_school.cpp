@@ -195,7 +195,7 @@ bool building_t::add_room_lockers(rand_gen_t &rgen, room_t const &room, float zv
 
 	for (unsigned D = 0; D < 2; ++D) { // for each side of the room
 		bool const d(bool(D) ^ first_dir);
-		if (dir_skip_mask & (1 << d)) continue;
+		if (dir_skip_mask & (1 << (unsigned)d)) continue;
 		if (zval >= ground_floor_z1 && classify_room_wall(room, zval, !dim, d, 0) == ROOM_WALL_EXT) continue; // skip exterior walls with windows
 		float const dsign(d ? -1.0 : 1.0), wall_edge(place_area.d[!dim][d]), locker_front(wall_edge + dsign*locker_depth);
 		locker.d[!dim][ d] = wall_edge;

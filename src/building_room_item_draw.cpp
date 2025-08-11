@@ -270,6 +270,7 @@ void rgeom_mat_t::add_disk_to_verts(point const &pos, float radius, vector3d con
 void rgeom_mat_t::add_round_rect_to_verts(cube_t const &c, float corner_radius, colorRGBA const &color,
 	bool draw_top, bool draw_bot, bool skip_sides, bool two_sided, float rs_bot, float rs_top, unsigned ndiv)
 {
+	assert(corner_radius > 0.0);
 	cube_t c_inner(c);
 	c_inner.expand_by_xy(-corner_radius);
 	assert(c_inner.is_strictly_normalized());
@@ -1545,18 +1546,17 @@ void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, 
 	}
 	else if (c.type == TYPE_PHONE) {
 		float const z_rot_angle(get_camera_z_rotate());
-
-		if (c.flags & (RO_FLAG_EMISSIVE | RO_FLAG_OPEN)) { // phone is ringing or locked screen
+		cube_t const screen(add_phone_frame_and_return_screen_if_on(c, mat, 1)); // in_hand=1
+		rotate_verts(mat.itri_verts, plus_z, z_rot_angle, c.get_cube_center(), 0); // rotate all quad verts about Z axis
+		
+		if (!screen.is_all_zeros()) {
 			static rgeom_mat_t screen_mat;
 			screen_mat.tex = get_phone_tex(c);
-			screen_mat.add_cube_to_verts(c, WHITE, all_zeros, ~EF_Z2, 0, 1); // mirror_x=1
+			screen_mat.add_cube_to_verts(screen, WHITE, all_zeros, ~EF_Z2, 0, 1); // mirror_x=1
 			rotate_verts(screen_mat.quad_verts, plus_z, z_rot_angle, c.get_cube_center(), 0); // rotate all quad verts about Z axis
 			tid_nm_pair_dstate_t state(s);
 			screen_mat.upload_draw_and_clear(state);
 		}
-		else {mat.add_cube_to_verts(c, BLACK, all_zeros, ~EF_Z2);} // screen drawn as black
-		mat.add_cube_to_verts(c, c.color, all_zeros, EF_Z2);
-		rotate_verts(mat.quad_verts, plus_z, z_rot_angle, c.get_cube_center(), 0); // rotate all quad verts about Z axis
 	}
 	else if (c.type == TYPE_RAT) { // draw the rat facing away from the player
 		bool const is_dead(c.is_broken()); // upside down if dead; shadow_pass=0; not animated
