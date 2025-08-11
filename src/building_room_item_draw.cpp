@@ -1608,7 +1608,7 @@ void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, 
 			}
 		}
 	}
-	else if (c.type == TYPE_ERASER) {
+	else if (c.type == TYPE_ERASER) { // Note: could make erasers rounded if we had support for non-vertical rounded rectangles
 		float const sz_delta(c.get_width() - c.dz()); // rotate vertically
 		cube_t c_rot(c);
 		

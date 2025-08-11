@@ -4021,7 +4021,8 @@ void building_room_geom_t::add_reception_desk(room_object_t const &c, float tsca
 	side_mat.add_cube_to_verts(left,  color, tex_origin, (EF_Z2 | lr_dim_mask), 0, 0, 0, 0, 1); // skip top face, z_dim_uses_ty=1
 	side_mat.add_cube_to_verts(right, color, tex_origin, (EF_Z2 | lr_dim_mask), 0, 0, 0, 0, 1); // skip top face, z_dim_uses_ty=1
 	// shiny marble top
-	// Note: I wanted to add cylinders to the left and right top to round the corners like in the mapx lobby, but it's not easy to get the textures to line up here
+	// Note: I wanted to add cylinders to the left and right top to round the corners like in the mapx lobby, but it's not easy to get the textures to line up here;
+	// make the top surface rounded? but won't be texture correctly
 	tid_nm_pair_t top_tex(get_counter_tid(), 2.5*tscale, 1);
 	top_tex.set_specular(0.5, 80.0);
 	rgeom_mat_t &top_mat(get_material(top_tex, 1)); // shadowed
@@ -4049,7 +4050,7 @@ void building_room_geom_t::add_conference_table(room_object_t const &c, float ts
 	colorRGBA const color(apply_light_color(c));
 	tid_nm_pair_t top_tex(get_counter_tid(), 2.5*tscale, 1);
 	top_tex.set_specular(0.5, 80.0);
-	get_material(top_tex, 1).add_cube_to_verts(cubes[0], color, all_zeros, 0); // shadowed; draw all faces
+	get_material(top_tex, 1).add_cube_to_verts(cubes[0], color, all_zeros, 0); // shadowed; draw all faces; make this rounded? but won't be texture correctly
 	get_wood_material(2.0*tscale).add_cube_to_verts(cubes[1], color, all_zeros, EF_Z12); // shadowed; skip top and bottom
 }
 
@@ -4249,7 +4250,7 @@ void building_room_geom_t::add_bed(room_object_t const &c, bool inc_lg, bool inc
 		}
 		if (!no_mattress) {
 			unsigned const mattress_skip_faces(EF_Z1 | get_skip_mask_for_xy(c.dim));
-			if (c.taken_level > 1) {get_untextured_material(1).add_cube_to_verts_untextured(mattress, sheet_color, mattress_skip_faces);} // sheets taken, bare mattress
+			if (c.taken_level > 1) {get_untextured_material(1).add_round_rect_to_verts(mattress, 0.03*c.get_width(), sheet_color, 1, 0);} // sheets taken, bare mattress
 			else {get_material(sheet_tex, 1).add_cube_to_verts(mattress, sheet_color, tex_origin, mattress_skip_faces);} // draw mattress with sheets, shadowed
 		}
 	} // end include_lg
@@ -6469,7 +6470,7 @@ void building_room_geom_t::add_theft_sensor(room_object_t const &c, bool alarm_m
 		bar2.z2() = z1 + 0.72*height;
 		colorRGBA const color(apply_light_color(c));
 		rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // shadowed, small
-		mat.add_cube_to_verts_untextured(base, color, EF_Z1);
+		mat.add_round_rect_to_verts(base, 0.25*depth, color, 1, 0); // skip bottom
 		mat.add_cube_to_verts_untextured(bot,  color, EF_Z1);
 		mat.add_cube_to_verts_untextured(top,  color, 0);
 		unsigned const skip_faces(get_skip_mask_for_xy(!c.dim));
