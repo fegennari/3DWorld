@@ -289,7 +289,8 @@ void building_t::add_trashcan_to_room(rand_gen_t rgen, room_t const &room, float
 	room_bounds.expand_by_xy(-1.1*radius); // leave a slight gap between trashcan and wall
 	if (!room_bounds.is_strictly_normalized()) return; // no space for trashcan (likely can't happen)
 	int const floor_ix(int((zval - room.z1())/floor_spacing));
-	bool const cylin(((mat_ix + 13*real_num_parts + 5*hallway_dim + 131*floor_ix) % 7) < 4); // varies per-building, per-floor
+	unsigned const shapes[3] = {SHAPE_CUBE, SHAPE_CYLIN, SHAPE_ROUNDED_CUBE};
+	unsigned const shape(shapes[(mat_ix + 13*real_num_parts + 5*hallway_dim + 131*floor_ix) % 3]); // varies per-building, per-floor
 	point center;
 	center.z = zval + 1.1*get_flooring_thick(); // slightly above the flooring/rug to avoid z-fighting
 	unsigned skip_wall(4); // start at an invalid value
@@ -326,7 +327,7 @@ void building_t::add_trashcan_to_room(rand_gen_t rgen, room_t const &room, float
 		cube_t const c(get_cube_height_radius(center, radius, height));
 		if (!avoid.is_all_zeros() && c.intersects_xy(avoid)) continue; // bad placement
 		if (is_obj_placement_blocked(c, room, !room.is_hallway) || overlaps_other_room_obj(c, objs_start)) continue; // bad placement
-		objs.emplace_back(c, TYPE_TCAN, room_id, dim, dir, 0, tot_light_amt, (cylin ? SHAPE_CYLIN : SHAPE_CUBE), tcan_colors[rgen.rand() % NUM_TCAN_COLORS]);
+		objs.emplace_back(c, TYPE_TCAN, room_id, dim, dir, 0, tot_light_amt, shape, tcan_colors[rgen.rand() % NUM_TCAN_COLORS]);
 
 		if (is_house || zval < ground_floor_z1 + 2.0*floor_spacing) { // add trash to the trashcan; not on upper floors of office buildings
 			unsigned const trash_start(objs.size());

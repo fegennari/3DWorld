@@ -522,7 +522,7 @@ enum { // room object types
 typedef uint8_t room_object;
 
 // room object and stairs shapes
-enum {SHAPE_CUBE=0, SHAPE_CYLIN, SHAPE_SPHERE, SHAPE_STAIRS_U, SHAPE_STAIRS_L, SHAPE_STAIRS_FAN, SHAPE_TALL, SHAPE_SHORT, SHAPE_ANGLED, SHAPE_VERT_TORUS};
+enum {SHAPE_CUBE=0, SHAPE_CYLIN, SHAPE_SPHERE, SHAPE_STAIRS_U, SHAPE_STAIRS_L, SHAPE_STAIRS_FAN, SHAPE_TALL, SHAPE_SHORT, SHAPE_ANGLED, SHAPE_VERT_TORUS, SHAPE_ROUNDED_CUBE};
 typedef uint8_t room_obj_shape;
 
 // room types; any new types must also be added to the three tables below

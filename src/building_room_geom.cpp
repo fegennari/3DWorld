@@ -4319,6 +4319,9 @@ void building_room_geom_t::add_trashcan(room_object_t const &c) {
 		if (c.shape == SHAPE_CYLIN) {
 			mat.add_vcylin_to_verts(c, color, 1, 0, 1, 1, 0.7, 1.0); // untextured, bottom only, two_sided truncated cone with inverted bottom normal
 		}
+		else if (c.shape == SHAPE_ROUNDED_CUBE) { // rounded sloped cube
+			mat.add_round_rect_to_verts(c, 0.3*c.get_width(), color, 0, 1, 0, 1, 0.4, 1.0);
+		}
 		else { // sloped cube; this shape is rather unique, so is drawn inline; untextured
 			cube_t base(c);
 			base.expand_by_xy(vector3d(-0.2*c.dx(), -0.2*c.dy(), 0.0)); // shrink base by 40%
