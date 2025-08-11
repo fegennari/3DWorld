@@ -6557,9 +6557,14 @@ void building_room_geom_t::add_gym_weight(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_food_tray(room_object_t const &c) {
+	colorRGBA const color(apply_light_color(c));
 	rgeom_mat_t &mat(get_metal_material(1, 0, 1)); // shadowed, small
-	// TODO: rounded corners, open top with sides
-	mat.add_cube_to_verts_untextured(c, apply_light_color(c), EF_Z1);
+	float const corner_radius(0.1*c.get_depth());
+	cube_t bot(c);
+	bot.z2() = c.z1() + 0.1*c.dz();
+	bot.expand_by_xy(-0.45*corner_radius);
+	mat.add_round_rect_to_verts(bot, 0.55*corner_radius, color, 1, 0, 1, 0); // draw top only
+	mat.add_round_rect_to_verts(c,        corner_radius, color, 0, 0, 0, 1, 0.5); // draw both sides with smaller corner radius at the bottom
 }
 
 void building_room_geom_t::add_trash(room_object_t const &c) {
