@@ -109,6 +109,7 @@ building_rooms.o
 building_room_geom.o
 building_room_obj_expand.o
 building_room_item_draw.o
+building_shape_draw.o
 building_room_obj_place.o
 building_basement.o
 building_ext_basement.o

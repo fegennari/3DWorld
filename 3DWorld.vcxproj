@@ -516,6 +516,7 @@
     <ClCompile Include="src\building_room_obj_expand.cpp" />
     <ClCompile Include="src\building_room_obj_place.cpp" />
     <ClCompile Include="src\building_school.cpp" />
+    <ClCompile Include="src\building_shape_draw.cpp" />
     <ClCompile Include="src\building_tunnels.cpp" />
     <ClCompile Include="src\building_water.cpp" />
     <ClCompile Include="src\build_world.cpp">
