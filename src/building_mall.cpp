@@ -1552,11 +1552,10 @@ bool building_t::add_mall_table_with_chairs(rand_gen_t &rgen, cube_t const &tabl
 		} // for n
 	} // for D
 	blockers.push_back(table); // add the table last, so that it doesn't block its own chairs
-	unsigned const place_obj_id(rgen.rand() % 9), objs_start(objs.size());
-	bool const above_ground(table.z2() > ground_floor_z1), no_alcohol(is_school() || is_prison());
+	bool const above_ground(table.z2() > ground_floor_z1), no_alcohol(is_school() || is_prison()), allow_set_table(!above_ground);
 	float const base_prob(above_ground ? 1.0 : 0.5); // more likely in above ground cafeterias (with larger tables) then undergound malls
+	unsigned const place_obj_id(rgen.rand() % (allow_set_table ? 9 : 8)), objs_start(objs.size());
 
-	// TODO: TYPE_FOOD_TRAY for school and prison
 	switch (place_obj_id) { // TYPE_PHONE, TYPE_FOOD_BOX, TYPE_TRASH?
 	case 0: place_bottle_on_obj(rgen, table_obj, room_id, tot_light_amt, vect_cube_t(), 0, (no_alcohol ? BOTTLE_TYPE_COKE    : BOTTLE_TYPE_WINE   )); break;
 	case 1: place_dcan_on_obj  (rgen, table_obj, room_id, tot_light_amt, vect_cube_t(), 0, (no_alcohol ? DRINK_CAN_TYPE_COKE : DRINK_CAN_TYPE_BEER)); break;
@@ -1566,7 +1565,7 @@ bool building_t::add_mall_table_with_chairs(rand_gen_t &rgen, cube_t const &tabl
 	case 5: if (rgen.rand_float() < 1.0*base_prob) {place_banana_on_obj(rgen, table_obj, room_id, tot_light_amt);} break; // less common
 	case 6: if (rgen.rand_float() < 1.0*base_prob) {place_apple_on_obj (rgen, table_obj, room_id, tot_light_amt);} break; // less common
 	case 7: if (rgen.rand_float() < 0.2*base_prob) {place_laptop_on_obj(rgen, table_obj, room_id, tot_light_amt);} break; // very rare
-	case 8: if (rgen.rand_float() < 0.8*base_prob) {place_eating_items_on_table(rgen, table_obj_id); break;} // less common
+	case 8: if (rgen.rand_float() < 0.8*base_prob) {place_eating_items_on_table(rgen, table_obj_id); break;} // set table; malls only; less common
 	} // default = place nothing
 
 	if (above_ground) { // add trays
