@@ -328,7 +328,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			type == TYPE_SHOEBOX || type == TYPE_LADDER || type == TYPE_CATWALK || type == TYPE_WARN_LIGHT || type == TYPE_GAUGE || type == TYPE_FORKLIFT || type == TYPE_TESTTUBE ||
 			type == TYPE_US_FLAG || type == TYPE_BLDG_FOUNT || type == TYPE_WHEELCHAIR || type == TYPE_OP_TABLE || type == TYPE_TROLLEY || type == TYPE_STRETCHER ||
 			type == TYPE_HARDHAT || type == TYPE_TOPHAT || type == TYPE_COMP_MOUSE || type == TYPE_APPLE || type == TYPE_JAIL_BARS || type == TYPE_GUN ||
-			type == TYPE_STICK_NOTE || type == TYPE_GYM_WEIGHT || type == TYPE_FOOD_TRAY) continue;
+			type == TYPE_STICK_NOTE || type == TYPE_GYM_WEIGHT || type == TYPE_FOOD_TRAY || type == TYPE_EX_MACHINE) continue;
 		bool const is_stairs(type == TYPE_STAIR || type == TYPE_STAIR_WALL);
 		if (c->z1() > (is_stairs ? stairs_z2 : z2) || c->z2() < (is_stairs ? stairs_z1 : z1)) continue;
 		if (!c->intersects_xy(ext_bcube)) continue;

@@ -273,6 +273,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_OP_TABLE  ] = bldg_obj_type_t(1, 1, 1, 0, 1, 1, 0, 1000,  100,   "operating table");
 	bldg_obj_types[TYPE_TROLLEY   ] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 0, 100,   20,    "hospital trolley");
 	bldg_obj_types[TYPE_STRETCHER ] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 0, 400,   100,   "stretcher");
+	bldg_obj_types[TYPE_EX_MACHINE] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 0, 1000,  160,   "exercise machine"); // differnent types; weight and value should vary by type
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// animals; not room objects
 	bldg_obj_types[TYPE_RAT       ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 8.99,  1.0,   "rat"); // can be picked up

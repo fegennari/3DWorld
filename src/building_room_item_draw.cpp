@@ -1329,7 +1329,7 @@ int room_object_t::get_model_id() const { // Note: first 8 bits is model ID, las
 	if (type == TYPE_BLDG_FOUNT) return OBJ_MODEL_FOUNTAIN + ((int)item_flags << 8); // same models as city fountains; select a sub_model_id
 	int id((int)type + OBJ_MODEL_TOILET - TYPE_TOILET);
 	// choose a sub_model_id for these types using bits 8-15
-	if (type == TYPE_HANGER || type == TYPE_CLOTHES || type == TYPE_PLANT_MODEL || type == TYPE_SHOE || type == TYPE_HOSP_BED || type == TYPE_APPLE) {
+	if (type == TYPE_HANGER || type == TYPE_CLOTHES || type == TYPE_PLANT_MODEL || type == TYPE_SHOE || type == TYPE_HOSP_BED || type == TYPE_APPLE || type == TYPE_EX_MACHINE) {
 		id += ((int)item_flags << 8);
 	}
 	return id;
@@ -1506,7 +1506,7 @@ void brg_batch_draw_t::draw_obj_models(shader_t &s, vector3d const &xlate, bool 
 float get_ao_shadow(room_object_t const &c, bool enable_indir) {
 	room_object const type(c.type);
 	// include types that don't contribute to indir lighting; these always contribute AO shadows
-	if (type == TYPE_BAR_STOOL || type == TYPE_SHELVES || type == TYPE_CONV_BELT) return 0.25; // light shadow
+	if (type == TYPE_BAR_STOOL || type == TYPE_SHELVES || type == TYPE_CONV_BELT || type == TYPE_EX_MACHINE) return 0.25; // light shadow
 	if (type == TYPE_OFF_CHAIR || type == TYPE_BENCH || type == TYPE_RCHAIR || type == TYPE_CASHREG || type == TYPE_CHEM_TANK || type == TYPE_HOSP_BED) return 0.5; // medium shadow
 	if (type == TYPE_WHEELCHAIR || type == TYPE_OP_TABLE || type == TYPE_TROLLEY) return 0.5; // medium shadow
 	if (type == TYPE_PARK_SPACE && c.is_used()) return 0.75; // parked car; dense shadow
