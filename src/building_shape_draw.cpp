@@ -219,8 +219,8 @@ void rgeom_mat_t::add_disk_to_verts(point const &pos, float radius, vector3d con
 }
 
 // Note: intended for untextured materials
-void rgeom_mat_t::add_round_rect_to_verts(cube_t const &c, float corner_radius, colorRGBA const &color,
-	bool draw_top, bool draw_bot, bool skip_sides, bool two_sided, float rs_bot, float rs_top, unsigned ndiv)
+void rgeom_mat_t::add_round_rect_to_verts(cube_t const &c, float corner_radius, colorRGBA const &color, bool draw_top, bool draw_bot, bool skip_sides,
+	bool two_sided, float rs_bot, float rs_top, float side_tscale, float end_tscale, unsigned ndiv)
 {
 	assert(corner_radius > 0.0);
 	cube_t c_inner(c);
@@ -233,12 +233,13 @@ void rgeom_mat_t::add_round_rect_to_verts(cube_t const &c, float corner_radius, 
 	cube_t corner(llc);
 	corner.z2() = c.z2();
 	corner.expand_by_xy(corner_radius);
-	add_vcylin_to_verts(corner, color, draw_bot, draw_top, two_sided, 0, rs_bot, rs_top, 1.0, 1.0, skip_sides);
+	add_vcylin_to_verts(corner, color, draw_bot, draw_top, two_sided, 0, rs_bot, rs_top, side_tscale, end_tscale, skip_sides);
 	
 	// stretch the curved sides over the cube shape; normals remain unchanged
 	for (auto v = itri_verts.begin()+itris_start; v != itri_verts.end(); ++v) {
 		for (unsigned d = 0; d < 2; ++d) {
-			if (v->v[d] > llc[d]) {v->v[d] += sz[d];}
+			if      (v->v[d] >  llc[d]) {v->v[d] +=     sz[d];} // stretch this vertex
+			else if (v->v[d] == llc[d]) {v->v[d] += 0.5*sz[d];} // center point; half stretch
 		}
 	}
 }

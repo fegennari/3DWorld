@@ -4050,7 +4050,8 @@ void building_room_geom_t::add_conference_table(room_object_t const &c, float ts
 	colorRGBA const color(apply_light_color(c));
 	tid_nm_pair_t top_tex(get_counter_tid(), 2.5*tscale, 1);
 	top_tex.set_specular(0.5, 80.0);
-	get_material(top_tex, 1).add_cube_to_verts(cubes[0], color, all_zeros, 0); // shadowed; draw all faces; make this rounded? but won't be texture correctly
+	get_material(top_tex, 1).add_cube_to_verts(cubes[0], color, all_zeros, 0); // shadowed; draw all faces
+	//get_material(top_tex, 1).add_round_rect_to_verts(cubes[0], 0.1*c.get_width(), color, 1, 1, 0); // draw all sides; not textured correctly
 	get_wood_material(2.0*tscale).add_cube_to_verts(cubes[1], color, all_zeros, EF_Z12); // shadowed; skip top and bottom
 }
 
