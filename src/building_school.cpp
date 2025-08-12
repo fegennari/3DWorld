@@ -241,7 +241,7 @@ bool building_t::add_room_lockers(rand_gen_t &rgen, room_t const &room, float zv
 		} // for n
 		if (row_bc.is_all_zeros()) continue; // no lockers
 		row_bc.d[!dim][ d] = locker_front;
-		row_bc.d[!dim][!d] = locker_front + dsign*locker_width;
+		row_bc.d[!dim][!d] = locker_front + dsign*max(locker_width, clearance);
 		objs.emplace_back(row_bc, TYPE_BLOCKER, room_id, !dim, !d, RO_FLAG_INVIS);
 		if (single_side) break;
 	} // for d
