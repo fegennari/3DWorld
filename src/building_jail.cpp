@@ -414,7 +414,7 @@ bool building_t::assign_and_fill_prison_room(rand_gen_t rgen, room_t &room, floa
 	bool const ground_floor(floor_ix == 0 && !is_basement); // Note: prisons don't have stacked parts
 	bool const has_st_el(room_has_stairs_or_elevator(room, zval, floor_ix));
 	bool const has_ext_wall(!is_basement && count_ext_walls_for_room(room, zval) > 0);
-	bool const on_walk_path(/*count_num_int_doors(room) > 1 &&*/ is_room_on_critical_path(room_id, zval));
+	bool const on_walk_path(is_room_on_critical_path(room_id, zval) || is_room_adjacent_to_ext_door(room, zval));
 	vector<pair<float, room_type>> cands;
 	//cout << TXT(min_sz) << TXT(max_sz) << TXT(is_basement) << TXT(ground_floor) << TXT(has_st_el) << TXT(has_ext_wall) << TXT(on_walk_path) << endl;
 
