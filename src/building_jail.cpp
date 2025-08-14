@@ -385,6 +385,7 @@ struct room_pref_t {
 	room_type rtype=0;
 	bool allow_mult   =0  ; // allow multiple rooms of this type
 	bool allow_st_el  =0  ; // allow stairs or elevator in this room; hard constraint
+	bool allow_door   =0  ; // allow exterior door to this room
 	bool is_private   =0  ; // private room; can't be along a path between other rooms
 	float min_size    =0.0; // in short dim, relative to floor spacing
 	float max_size    =0.0; // in long  dim, relative to floor spacing; 0 is infinite
@@ -394,15 +395,15 @@ struct room_pref_t {
 	float window_val  =0.0; // weight factor if room has windows; higher is preferred, negative is avoided
 };
 room_pref_t const room_prefs[] = {
-	// rtype, allow_mult, allow_st_el, is_private, min_size, max_size, base_weight, floor_scale, basement_val, window_val
-	{RTYPE_VISIT,     0, 1, 1, 2.5, 0.0, 0.5, 1.0, -1.0,  0.0}, // flagged as private since it's separated into two parts
-	{RTYPE_LAUNDRY,   0, 1, 0, 0.0, 4.0, 0.5, 0.5,  1.0, -0.5},
-	{RTYPE_OFFICE,    1, 1, 0, 0.0, 3.0, 0.0, 0.0,  0.0,  1.0},
-	{RTYPE_CAFETERIA, 0, 0, 0, 4.0, 0.0, 1.0, 0.0,  0.0,  0.0},
-	{RTYPE_GYM,       0, 1, 0, 2.0, 7.0, 1.0, 0.0,  0.5,  0.0},
-	{RTYPE_SHOWER,    0, 0, 1, 2.0, 6.0, 1.0, 0.5,  1.0, -1.0},
-	{RTYPE_CLASS,     1, 0, 0, 3.0, 8.0, 0.5, 0.5,  0.0,  0.5},
-	{RTYPE_BATH,      1, 0, 1, 0.0, 3.0, 0.0, 0.0,  0.0, -0.5}
+	// rtype, allow_mult, allow_st_el, allow_door, is_private, min_size, max_size, base_weight, floor_scale, basement_val, window_val
+	{RTYPE_VISIT,     0, 1, 1, 1, 2.5, 0.0, 0.5, 1.0, -1.0,  0.0}, // flagged as private since it's separated into two parts
+	{RTYPE_LAUNDRY,   0, 1, 0, 0, 0.0, 4.0, 0.5, 0.5,  1.0, -0.5},
+	{RTYPE_OFFICE,    1, 1, 1, 0, 0.0, 3.0, 0.0, 0.0,  0.0,  1.0},
+	{RTYPE_CAFETERIA, 0, 0, 0, 0, 4.0, 0.0, 1.0, 0.0,  0.0,  0.0},
+	{RTYPE_GYM,       0, 1, 0, 0, 2.0, 7.0, 1.0, 0.0,  0.5,  0.0},
+	{RTYPE_SHOWER,    0, 0, 0, 1, 2.0, 6.0, 1.0, 0.5,  1.0, -1.0},
+	{RTYPE_CLASS,     1, 0, 0, 0, 3.0, 8.0, 0.5, 0.5,  0.0,  0.5},
+	{RTYPE_BATH,      1, 0, 0, 1, 0.0, 3.0, 0.0, 0.0,  0.0, -0.5}
 };
 bool building_t::assign_and_fill_prison_room(rand_gen_t rgen, room_t &room, float &zval, unsigned room_id, float tot_light_amt,
 	unsigned objs_start, unsigned lights_start, unsigned floor_ix, bool is_basement, colorRGBA const &chair_color)
@@ -414,7 +415,8 @@ bool building_t::assign_and_fill_prison_room(rand_gen_t rgen, room_t &room, floa
 	bool const ground_floor(floor_ix == 0 && !is_basement); // Note: prisons don't have stacked parts
 	bool const has_st_el(room_has_stairs_or_elevator(room, zval, floor_ix));
 	bool const has_ext_wall(!is_basement && count_ext_walls_for_room(room, zval) > 0);
-	bool const on_walk_path(is_room_on_critical_path(room_id, zval) || is_room_adjacent_to_ext_door(room, zval));
+	bool const on_walk_path(is_room_on_critical_path(room_id, zval));
+	bool const has_ext_door(is_room_adjacent_to_ext_door(room, zval));
 	vector<pair<float, room_type>> cands;
 	//cout << TXT(min_sz) << TXT(max_sz) << TXT(is_basement) << TXT(ground_floor) << TXT(has_st_el) << TXT(has_ext_wall) << TXT(on_walk_path) << endl;
 
@@ -426,7 +428,7 @@ bool building_t::assign_and_fill_prison_room(rand_gen_t rgen, room_t &room, floa
 			room_pref_t const &p(room_prefs[i]);
 			if (has_st_el    && !p.allow_st_el) continue;
 			if (on_walk_path &&  p.is_private ) continue;
-
+			if (has_ext_door && !p.allow_door ) continue;
 			float weight(p.base_weight);
 			
 			if (!p.allow_mult && interior->has_room_type(p.rtype)) {
