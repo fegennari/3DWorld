@@ -640,6 +640,9 @@ bool building_t::add_visit_room_objs(rand_gen_t rgen, room_t &room, float &zval,
 		if (room_sz[!dim] < 4.0*floor_spacing) return 0; // too short in short dim
 		dim ^= 1;
 	} // for cand_dim
+	cube_t const &part(parts[room.part_id]);
+	max_eq(room_interior.d[dim][0], part.d[dim][0]+trim_thick); // fix for Z-fighting with exterior wall
+	min_eq(room_interior.d[dim][1], part.d[dim][1]-trim_thick); // fix for Z-fighting with exterior wall
 	zval = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_CARPET);
 	
 	// add wall and window separating prisoner from public sides
@@ -647,15 +650,17 @@ bool building_t::add_visit_room_objs(rand_gen_t rgen, room_t &room, float &zval,
 	cube_t wall(room_interior);
 	wall.z2() = wall_z2;
 	set_wall_width(wall, wall_pos, wall_hthick, !dim);
+	bool is_ext_wall[2] = {0,0};
 
 	for (unsigned d = 0; d < 2; ++d) { // add a gap to prevent Z-fighting with exterior walls
-		if (classify_room_wall(room, zval, dim, d, 0) == ROOM_WALL_EXT) {wall.d[dim][d] -= (d ? 1.0 : -1.0)*trim_thick;}
+		is_ext_wall[d] = (classify_room_wall(room, zval, dim, d, 0) == ROOM_WALL_EXT);
+		if (is_ext_wall[d]) {wall.d[dim][d] -= (d ? 1.0 : -1.0)*trim_thick;}
 	}
 	add_short_wall_with_trim(wall, !dim, room_id, tot_light_amt);
 	cube_t window(wall);
 	set_cube_zvals(window, wall_z2, room_interior.z2());
 	window.expand_in_dim(!dim, -0.3*wall_hthick); // narrower than wall
-	window.expand_in_dim( dim,     -wall_hthick); // shorten ends so that trim meets interior room wall
+	window.expand_in_dim( dim, -0.5*wall_hthick); // shorten ends so that trim meets interior room wall
 	interior->int_windows.emplace_back(window, room_id);
 	room.set_interior_window();
 	
@@ -673,8 +678,8 @@ bool building_t::add_visit_room_objs(rand_gen_t rgen, room_t &room, float &zval,
 	divider.z2() += 0.3*floor_spacing; // taller than table
 	table  .expand_in_dim(!dim, table_depth  );
 	divider.expand_in_dim(!dim, divider_depth);
-	table  .d[dim][0] += divider_hwidth; // starts at divider edge
-	table  .d[dim][1]  = walkable_area.d[dim][0] + seat_spacing - divider_hwidth; // ends at adjacent divider edge
+	table  .d[dim][0] += divider_width; // starts at divider edge
+	table  .d[dim][1]  = walkable_area.d[dim][0] + seat_spacing; // ends at adjacent divider edge
 	divider.d[dim][1]  = walkable_area.d[dim][0] + divider_width;
 	colorRGBA const &chair_color(chair_colors[rgen.rand() % NUM_CHAIR_COLORS]);
 	vect_cube_t blockers; // unused
@@ -696,14 +701,16 @@ bool building_t::add_visit_room_objs(rand_gen_t rgen, room_t &room, float &zval,
 			if (!has_prev) { // left divider
 				cube_t div(divider);
 				max_eq(div.d[dim][0], room_interior.d[dim][0]); // don't clip through walls at the ends
+				if (n == 0 && is_ext_wall[0]) {set_cube_zvals(div, table.z1()-wall_hthick, table.z2()+wall_hthick);} // smaller if at exterior wall/window
 				if (div.get_sz_dim(dim) > 0.0) {objs.emplace_back(div, TYPE_STALL, room_id, !dim, 0, 0, tot_light_amt, SHAPE_SHORT, divider_color);}
 				has_prev = 1;
 			}
 			// right divider
 			divider.translate_dim(dim, seat_spacing);
 			cube_t div(divider);
+			if (n+1 == num_seats && is_ext_wall[1]) {set_cube_zvals(div, table.z1()-wall_hthick, table.z2()+wall_hthick);} // smaller if at exterior wall/window
 			min_eq(div.d[dim][1], room_interior.d[dim][1]); // don't clip through walls at the ends
-			if (div.get_sz_dim(dim) > 0.0) {objs.emplace_back(divider, TYPE_STALL, room_id, !dim, 0, 0, tot_light_amt, SHAPE_SHORT, divider_color);}
+			if (div.get_sz_dim(dim) > 0.0) {objs.emplace_back(div, TYPE_STALL, room_id, !dim, 0, 0, tot_light_amt, SHAPE_SHORT, divider_color);}
 			
 			for (unsigned d = 0; d < 2; ++d) { // add chairs and phones on each side
 				// chair at table
