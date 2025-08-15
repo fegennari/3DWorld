@@ -1987,6 +1987,7 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office 
 	cube_t const parts_bcube(get_unrotated_parts_bcube());
 	assert(real_num_parts > (unsigned)has_basement());
 	unsigned const num_above_ground_parts(real_num_parts - has_basement());
+	unsigned num_placed(0);
 
 	for (unsigned num = 0; num < num_doors; ++num) {
 		bool placed(0);
@@ -2060,10 +2061,12 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office 
 				if (!add_door(place_door(part, dim, dir, door_height, 0.0, 0.0, door_center_shift, wscale, allow_fail, 0, rgen), part_ix, dim, dir, 1)) continue;
 				used[2*dim + dir] = 1; // mark used
 				placed = 1;
+				++num_placed;
 				break;
 			} // for n
 		} // for b
 	} // for num
+	if (num_placed == 0 && is_prison()) {replace_prison_cell_with_ext_door(door_height, rgen);}
 	//assert(!doors.empty()); // must have placed at least one door - too strong for rotated buildings?
 
 	if (has_courtyard) { // add a door opening into the courtyard

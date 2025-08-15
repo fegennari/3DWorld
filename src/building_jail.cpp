@@ -342,7 +342,41 @@ void building_t::add_prison_cells(vect_cube_with_ix_t const &cells, cube_t const
 	rooms.back().set_has_subroom();
 }
 
-void building_t::add_prison_jail_cell_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+void building_t::replace_prison_cell_with_ext_door(float door_height, rand_gen_t &rgen) { // called when no doors can be placed the normal way
+	assert(interior);
+	vector<room_t> &rooms(interior->rooms);
+	assert(!rooms.empty());
+	unsigned const rooms_end((interior->ext_basement_hallway_room_id > 0) ? interior->ext_basement_hallway_room_id : rooms.size());
+	assert(rooms_end > 0 && rooms_end <= rooms.size());
+	float const wall_thick(get_wall_thickness());
+	
+	for (unsigned n = 0; n < 10; ++n) { // 10 tries to select a room
+		room_t &r(rooms[rgen.rand() % rooms_end]);
+		if (r.z1() != ground_floor_z1 || !r.is_nested() || r.get_room_type(0) != RTYPE_JAIL_CELL) continue;
+		// Note: jail cell should always be along an exterior wall and wide enough to fit a door
+		cube_t const &part(parts[r.part_id]);
+		vector2d const room_sz(r.get_size_xy());
+		bool const dim(r.dy() < r.dx()); // door in long wall (opens in short dim)
+		int dir(2);
+
+		for (unsigned d = 0; d < 2; ++d) {
+			if (fabs(part.d[dim][d] - r.d[dim][d]) < 2.0*wall_thick) {dir = d;}
+		}
+		if (dir == 2) continue; // long dim not along exterior wall
+		float const door_center(r.get_center_dim(!dim));
+		if (!add_door(place_door(r, dim, dir, door_height, door_center, 0.0, 0.0, DOOR_WIDTH_SCALE_OFFICE, 0, 0, rgen), r.part_id, dim, dir, 1)) continue;
+		r.assign_to(RTYPE_ENTRY, 0, 1); // locked to entry on first floor
+
+		for (door_stack_t &ds : interior->door_stacks) {
+			door_t &door(get_door(ds.first_door_ix)); // first/bottom door is on the ground floor
+			door.for_jail = 2; // make this a metal door rather than bars door
+			door.locked   = 0; // always unlocked
+		}
+		return; // success
+	} // for n
+}
+
+void building_t::add_prison_jail_cell_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start) {
 	// find the open wall dim/dir
 	unsigned num_open_walls(0);
 	bool dim(0), dir(0);
@@ -378,7 +412,13 @@ void building_t::add_prison_jail_cell_objs(rand_gen_t rgen, room_t const &room, 
 	// Note: open wall/bars dim is inverted because the calls below use the hall dim
 	float const bars_depth_pos(room.d[dim][!dir] + (dir ? 1.0 : -1.0)*wall_hthick), bars_hthick(JAIL_BARS_THICK*wall_hthick);
 	add_jail_cell_bars(place_area, cube_t(), room_id, tot_light_amt, !dim, dir, hinge_side, bar_color);
-	populate_jail_cell(rgen, cell, place_area, zval, room_id, tot_light_amt, !dim, dir, bed_side, sink_on_back_wall, is_lit, bars_hthick, bars_depth_pos);
+	room_type const rtype(room.get_room_type(floor_ix));
+	
+	if (rtype == RTYPE_JAIL_CELL) {
+		populate_jail_cell(rgen, cell, place_area, zval, room_id, tot_light_amt, !dim, dir, bed_side, sink_on_back_wall, is_lit, bars_hthick, bars_depth_pos);
+	}
+	else if (rtype == RTYPE_ENTRY) {} // front door entryway; leave empty
+	else {assert(0);}
 }
 
 struct room_pref_t {

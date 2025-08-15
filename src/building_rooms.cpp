@@ -267,7 +267,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		bool const is_retail_room   (init_rtype_f0 == RTYPE_RETAIL);
 		bool const is_mall_store    (init_rtype_f0 == RTYPE_STORE);
 		bool const is_jail_room     (init_rtype_f0 == RTYPE_JAIL);
-		bool const is_jail_cell     (init_rtype_f0 == RTYPE_JAIL_CELL);
+		bool const is_jail_cell     (init_rtype_f0 == RTYPE_JAIL_CELL || r->get_room_type(1) == RTYPE_JAIL_CELL); // check second floor as well in case of ground floor door
 		bool const is_prison_room   (init_rtype_f0 == RTYPE_NOTSET && is_prison() && !r->is_hallway);
 		bool const is_office(r->is_office && (!is_hospital() || r->interior)); // hospital offices are converted to patient rooms, etc. if they have windows
 		bool const is_ext_basement(r->is_ext_basement()), is_backrooms(r->is_backrooms()), is_apt_or_hotel_room(r->is_apt_or_hotel_room());
@@ -712,8 +712,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					objs_start_inc_lights, objs_start, f, is_basement, 0, added_bathroom_objs_mask); // add_shower_tub=0
 			}
 			else if (is_jail_room || is_jail_cell) {
-				if (is_jail_room) {add_prison_hall_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);}
-				if (is_jail_cell) {add_prison_jail_cell_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);}
+				if (is_jail_room) {add_prison_hall_room_objs(rgen, *r, room_center.z, room_id,    tot_light_amt, objs_start);}
+				if (is_jail_cell) {add_prison_jail_cell_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start);}
 				is_jail = added_obj = no_whiteboard = no_plants = 1;
 			}
 			else if (is_prison_room) {
