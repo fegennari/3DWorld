@@ -33,3 +33,8 @@ Stretcher: https://sketchfab.com/3d-models/gurney-medevac-patient-stretcher-resc
 Apple: https://sketchfab.com/3d-models/delicious-red-apple-dc5a0c0c439942d58d038a10d7064c91
 Apple: https://sketchfab.com/3d-models/apple-152ca55383b2491e816f5ed5ac127677
 Backrooms wall texture: https://sketchfab.com/3d-models/the-backrooms-wallpaper-texture-f7d2757432f94a2bb366c9a41503647b
+Dumbell Rack: https://sketchfab.com/3d-models/dumbell-rack-289296b55ec141dda74406d6d3924e09
+Leg Press: https://sketchfab.com/3d-models/leg-press-machine-99b9c28dd70d4131918d23f0b58cb14a
+Horizontal Bar: https://sketchfab.com/3d-models/horizontal-bar-d76f3338a1a84ae398c14e0eef67802e
+Exercise Bike: https://sketchfab.com/3d-models/muskonge-n24t6n23s5001-8610274b3f4447658ba9a469f42daf38
+Roman Chair: https://sketchfab.com/3d-models/roman-chair-premium-3d-gym-equipment-model-300da23766f648648456da5dd717ee8d

@@ -139,7 +139,7 @@ void city_model_loader_t::load_model_id(unsigned id) { // currently up to 72 mod
 	unsigned const num_sub_models(get_num_sub_models(id));
 
 	for (unsigned sm = 0; sm < num_sub_models; ++sm) { // load all sub-models
-		city_model_t &model(get_model(id + (sm << 8)));
+		city_model_t &model(get_model(id + (sm << SUB_MODEL_BITSHIFT)));
 		if (model.tried_to_load) continue; // already tried to load (should never get here?)
 		if (can_skip_model(id) || model.fn.empty()) continue;
 		int const def_tid(-1); // should this be a model parameter?
@@ -353,7 +353,7 @@ unsigned get_model_id(unsigned id) { // first 8 bits = model_id, second 8 bits =
 	assert(model_id < NUM_OBJ_MODELS);
 	return model_id;
 }
-unsigned get_sub_model_id(unsigned id) {return (id >> 8);}
+unsigned get_sub_model_id(unsigned id) {return (id >> SUB_MODEL_BITSHIFT);}
 
 unsigned car_model_loader_t       ::num_models() const {return city_params.car_model_files.size();}
 unsigned helicopter_model_loader_t::num_models() const {return city_params.hc_model_files .size();}
@@ -381,7 +381,7 @@ unsigned object_model_loader_t::get_num_sub_models(unsigned id) const {
 	return city_params.building_models[get_model_id(id)].size();
 }
 int object_model_loader_t::get_valid_sub_model_id(unsigned id, vector<city_model_t> const &models) const {
-	unsigned const sub_model_id(id >> 8); // shift sub-model ID bits back to LSB; needed when models.size() is a power of 2
+	unsigned const sub_model_id(get_sub_model_id(id)); // shift sub-model ID bits back to LSB; needed when models.size() is a power of 2
 
 	for (unsigned i = 0; i < models.size(); ++i) { // check all models starting with the selected one and return the first valid
 		unsigned const cand((sub_model_id + i) % models.size()); // index will wrap around if too large, which allows rand() to be passed in

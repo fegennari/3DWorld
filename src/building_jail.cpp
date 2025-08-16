@@ -584,25 +584,30 @@ bool building_t::add_gym_objs(rand_gen_t rgen, room_t &room, float &zval, unsign
 	}
 	// add exercise machine 3D models
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_EX_MACHINE)) {
-		unsigned const num_machines((rgen.rand() % 5) + 4); // 4-8
+		unsigned const num_machines((rgen.rand() % 6) + 5); // 5-10
+		unsigned num_placed(0);
+		float const clearance(1.2*get_min_front_clearance_inc_people());
+		float const machine_width(0.75*floor_spacing), ring_spacing(machine_width + clearance); // machine_width is approximate
 		cube_t em_place_area(place_area);
 		em_place_area.expand_by_xy(-0.1*floor_spacing); // add extra spacing
 
-		for (unsigned n = 0; n < num_machines; ++n) {
-			unsigned obj_ix(objs.size()), em_type(rgen.rand());
-			// first, try to place along a wall; TODO: sizes should really depend on type
-			if (place_model_along_wall(OBJ_MODEL_EX_MACHINE, TYPE_EX_MACHINE, room, 0.5, rgen, zval, room_id, tot_light_amt, em_place_area, objs_start, 0.5, 4, 0, WHITE)) {
-				objs[obj_ix].item_flags = em_type; // assign a random type
-				continue;
-			}
-			// failing that, try to place in the center of the room
-			for (unsigned N = 0; N < 10; ++N) { // 10 tries
-				// TODO
-			} // for N
-		} // for n
+		for (unsigned ring = 0; ring < 4 && num_placed < num_machines; ++ring) {
+			for (unsigned n = num_placed; n < num_machines; ++n) {
+				uint16_t const em_type(rgen.rand()); // assign a random sub-model
+				unsigned const obj_ix(objs.size()), model_id(OBJ_MODEL_EX_MACHINE + (em_type << SUB_MODEL_BITSHIFT));
+				float const height(0.5*building_obj_model_loader.get_model(model_id).scale); // in units of floor spacing
+
+				if (place_model_along_wall(model_id, TYPE_EX_MACHINE, room, height, rgen, zval, room_id, tot_light_amt, em_place_area, objs_start, 0.5, 4, 0, WHITE)) {
+					objs[obj_ix].item_flags = em_type;
+					++num_placed;
+				}
+			} // for n
+			em_place_area.expand_by_xy(-ring_spacing);
+			if (em_place_area.get_size_xy().get_min_val() < 2.0*machine_width) break; // too small to place a machine
+		} // for ring
 	}
 	// add weights
-	unsigned const num_weights((rgen.rand() % 8) + 5); // 5-12
+	unsigned const num_weights((rgen.rand() % 7) + 6); // 6-12
 
 	for (unsigned n = 0; n < num_weights; ++n) {
 		for (unsigned N = 0; N < 10; ++N) { // 10 tries
@@ -620,7 +625,8 @@ bool building_t::add_gym_objs(rand_gen_t rgen, room_t &room, float &zval, unsign
 			}
 			if (!is_valid_placement_for_room(weights, room, vect_cube_t(), 1) || overlaps_other_room_obj(weights, objs_start, 1)) continue; // check_all=1
 			colorRGBA const color(WHITE*rgen.rand_uniform(0.0, 0.5)); // gray-black
-			objs.emplace_back(weights, TYPE_GYM_WEIGHT, room_id, wdim, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, color, int(hand_weight));
+			unsigned const flags((hand_weight || single_cylin) ? RO_FLAG_NOCOLL : 0); // only large weights have collisions for AI
+			objs.emplace_back(weights, TYPE_GYM_WEIGHT, room_id, wdim, 0, flags, tot_light_amt, SHAPE_CYLIN, color, int(hand_weight));
 			break; // done
 		} // for N
 	} // for n
