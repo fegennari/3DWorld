@@ -2466,7 +2466,8 @@ void building_t::maybe_add_special_roof(rand_gen_t &rgen) {
 	}
 	else if (is_cube()) { // only simple cubes are handled
 		if (global_building_params.dome_roof && sz.x < 1.2*sz.y && sz.y < 1.2*sz.x && sz.z > max(sz.x, sz.y)) {roof_type = ROOF_TYPE_DOME;} // roughly square, not too short
-		else if (parts.size() == 1 && bcube.dz() < 4.5*get_window_vspace() && rgen.rand_bool()) { // shorter single cube building; likely to become factory or warehouse
+		else if (btype == BTYPE_OFFICE && parts.size() == 1 && round_fp(top.dz()/get_window_vspace()) <= 4 && rgen.rand_bool()) {
+			// shorter single cube building; likely to become factory or warehouse
 			cube_t const &top(parts[0]);
 			roof_type = ROOF_TYPE_CURVED;
 			max_eq(bcube.z2(), (top.z2() + 0.125f*min(top.dx(), top.dy()))); // should curve in the short dim by 25% of radius
