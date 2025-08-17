@@ -8,6 +8,7 @@
 #include "model3d.h"
 
 
+unsigned const SUB_MODEL_BITSHIFT    = 8;
 float const SKELETAL_ANIM_TIME_CONST = 32.0; // maybe should rework these constants; this should be for people only, not all models
 
 enum {ANIM_ID_NONE=0, ANIM_ID_WALK, ANIM_ID_BHOP, ANIM_ID_FLIP, ANIM_ID_TWIRL, ANIM_ID_MARCH, ANIM_ID_ALIEN,
@@ -15,6 +16,10 @@ enum {ANIM_ID_NONE=0, ANIM_ID_WALK, ANIM_ID_BHOP, ANIM_ID_FLIP, ANIM_ID_TWIRL, A
 // Note: MODEL_ANIM_STAIRS is for future use when walking up and down stairs; MODEL_ANIM_ATTACK is for future use with zombies
 enum {MODEL_ANIM_WALK=0, MODEL_ANIM_IDLE, MODEL_ANIM_STAIRS_UP, MODEL_ANIM_STAIRS_DOWN, MODEL_ANIM_ATTACK, MODEL_ANIM_CROUCH, NUM_MODEL_ANIMS};
 string const animation_names[NUM_MODEL_ANIMS] = {"walking", "idle", "stairs_up", "stairs_down", "attack", "crouch"};
+
+inline unsigned get_sub_model_id (unsigned id) {return (id >> SUB_MODEL_BITSHIFT);}
+inline unsigned pack_sub_model_id(unsigned id) {return (id << SUB_MODEL_BITSHIFT);}
+inline unsigned combine_model_submodel_id(unsigned model_id, unsigned sub_model_id) {return model_id + pack_sub_model_id(sub_model_id);}
 
 struct animation_state_t {
 	bool enabled=0, fixed_anim_speed=0, cache_animations=0;

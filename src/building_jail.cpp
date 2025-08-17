@@ -594,14 +594,10 @@ bool building_t::add_gym_objs(rand_gen_t rgen, room_t &room, float &zval, unsign
 		for (unsigned ring = 0; ring < 4 && num_placed < num_machines; ++ring) {
 			for (unsigned n = num_placed; n < num_machines; ++n) {
 				uint16_t const em_type(rgen.rand()); // assign a random sub-model
-				unsigned const obj_ix(objs.size()), model_id(OBJ_MODEL_EX_MACHINE + (em_type << SUB_MODEL_BITSHIFT));
+				unsigned const obj_ix(objs.size()), model_id(combine_model_submodel_id(OBJ_MODEL_EX_MACHINE, em_type));
 				float const height(0.5*building_obj_model_loader.get_model(model_id).scale); // in units of floor spacing
-
-				if (place_model_along_wall(model_id, TYPE_EX_MACHINE, room, height, rgen, zval, room_id, tot_light_amt, em_place_area, objs_start, 0.5, 4, 0, WHITE)) {
-					objs[obj_ix].item_flags = em_type;
-					++num_placed;
-				}
-			} // for n
+				num_placed += place_model_along_wall(model_id, TYPE_EX_MACHINE, room, height, rgen, zval, room_id, tot_light_amt, em_place_area, objs_start, 0.5, 4, 0, WHITE);
+			}
 			em_place_area.expand_by_xy(-ring_spacing);
 			if (em_place_area.get_size_xy().get_min_val() < 2.0*machine_width) break; // too small to place a machine
 		} // for ring

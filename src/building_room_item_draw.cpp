@@ -1326,11 +1326,11 @@ int room_object_t::get_model_id() const { // Note: first 8 bits is model ID, las
 	if (type == TYPE_GBIKE  )    return OBJ_MODEL_BICYCLE   ; // same model as city bicycle
 	if (type == TYPE_XFORMER)    return OBJ_MODEL_SUBSTATION; // same model as city substation
 	if (type == TYPE_US_FLAG)    return OBJ_MODEL_FLAG      ; // same model as city flag
-	if (type == TYPE_BLDG_FOUNT) return OBJ_MODEL_FOUNTAIN + ((int)item_flags << SUB_MODEL_BITSHIFT); // same models as city fountains; select a sub_model_id
+	if (type == TYPE_BLDG_FOUNT) return OBJ_MODEL_FOUNTAIN + pack_sub_model_id(item_flags); // same models as city fountains; select a sub_model_id
 	int id((int)type + OBJ_MODEL_TOILET - TYPE_TOILET);
 	// choose a sub_model_id for these types using bits 8-15
 	if (type == TYPE_HANGER || type == TYPE_CLOTHES || type == TYPE_PLANT_MODEL || type == TYPE_SHOE || type == TYPE_HOSP_BED || type == TYPE_APPLE || type == TYPE_EX_MACHINE) {
-		id += ((int)item_flags << SUB_MODEL_BITSHIFT);
+		id += pack_sub_model_id(item_flags);
 	}
 	return id;
 }

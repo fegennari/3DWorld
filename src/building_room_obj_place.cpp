@@ -1707,6 +1707,7 @@ bool building_t::place_model_along_wall(unsigned model_id, room_object type, roo
 	if (!place_obj_along_wall(type, room, height*get_window_vspace(), sz, rgen, zval, room_id, tot_light_amt, place_area,
 		objs_start, front_clearance, 0, pref_orient, pref_centered, color, not_at_window, SHAPE_CUBE, 0.0, extra_flags, 0, force_pref)) return 0;
 	if (sideways) {objs[obj_id].dim ^= 1;}
+	objs[obj_id].item_flags = get_sub_model_id(model_id);
 	return 1;
 }
 

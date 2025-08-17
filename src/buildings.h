@@ -23,7 +23,6 @@ unsigned const NUM_STAIRS_PER_FLOOR_U = 16;
 unsigned const NUM_STAIRS_PER_FLOOR_L = 12;
 unsigned const NUM_STAIRS_PER_FLOOR_ESC = 12;
 unsigned const MAX_SHELVES         = 4;
-unsigned const SUB_MODEL_BITSHIFT  = 8;
 float const FLOOR_THICK_VAL_HOUSE  = 0.10; // 10% of floor spacing
 float const FLOOR_THICK_VAL_OFFICE = 0.11; // thicker for office buildings
 float const FLOOR_THICK_VAL_WINDOWLESS = 0.12; // even thicker for windowless office buildings

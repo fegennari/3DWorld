@@ -139,7 +139,7 @@ void city_model_loader_t::load_model_id(unsigned id) { // currently up to 72 mod
 	unsigned const num_sub_models(get_num_sub_models(id));
 
 	for (unsigned sm = 0; sm < num_sub_models; ++sm) { // load all sub-models
-		city_model_t &model(get_model(id + (sm << SUB_MODEL_BITSHIFT)));
+		city_model_t &model(get_model(combine_model_submodel_id(id, sm)));
 		if (model.tried_to_load) continue; // already tried to load (should never get here?)
 		if (can_skip_model(id) || model.fn.empty()) continue;
 		int const def_tid(-1); // should this be a model parameter?
@@ -353,7 +353,6 @@ unsigned get_model_id(unsigned id) { // first 8 bits = model_id, second 8 bits =
 	assert(model_id < NUM_OBJ_MODELS);
 	return model_id;
 }
-unsigned get_sub_model_id(unsigned id) {return (id >> SUB_MODEL_BITSHIFT);}
 
 unsigned car_model_loader_t       ::num_models() const {return city_params.car_model_files.size();}
 unsigned helicopter_model_loader_t::num_models() const {return city_params.hc_model_files .size();}
