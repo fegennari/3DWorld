@@ -585,14 +585,15 @@ bool building_t::is_valid_door_pos(cube_t const &door, float door_width, bool di
 }
 
 cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door_height, float door_center, float door_pos,
-	float door_center_shift, float width_scale, bool can_fail, bool opens_up, rand_gen_t &rgen, unsigned floor_ix) const
+	float door_center_shift, float width_scale, bool can_fail, bool opens_up, rand_gen_t &rgen, unsigned floor_ix, bool is_courtyard) const
 {
 	float const door_width(width_scale*door_height), door_half_width(0.5*door_width);
 	if (can_fail && base.get_sz_dim(!dim) < 2.0*door_width) return cube_t(); // part is too small to place a door
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness()), fc_thickness(get_fc_thickness());
 	float const door_shift(get_door_shift_dist()), min_wall_spacing(1.2*door_half_width), base_lo(base.d[!dim][0]), base_hi(base.d[!dim][1]);
 	bool const calc_center(door_center == 0.0); // door not yet calculated
-	bool const centered(door_center_shift == 0.0 || hallway_dim == (uint8_t)dim); // center doors connected to primary hallways
+	// center doors connected to primary hallways, garages/sheds, or industrial buildings
+	bool const centered(door_center_shift == 0.0 || hallway_dim == (uint8_t)dim);
 	// ideally we want the front (first) door to connect to the stairs in a multi-family house, but the stairs may be in the back, so we allow the back door as well
 	bool const is_basement(base.zc() < ground_floor_z1), is_front_door(/*doors.empty() &&*/ !is_basement);
 	bool const pref_near_stairs(interior && is_front_door && multi_family);
@@ -647,7 +648,7 @@ cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door
 
 		// we're free to choose the door pos, and have the interior, so we can check if the door is in a good location;
 		// if we get here on the last iteration, just keep the door even if it's an invalid location
-		if (calc_center && interior && !centered && !is_valid_door_pos(door, door_width, dim)) {
+		if (calc_center && interior && (!centered || is_courtyard) && !is_valid_door_pos(door, door_width, dim)) {
 			if (can_fail && n+1 == num_tries) return cube_t(); // last iteration, fail
 			continue; // try a new location
 		}
@@ -2083,7 +2084,7 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office 
 				bool const dim(n>>1), dir(n&1);
 				if (part.d[dim][dir] == parts_bcube.d[dim][dir] || part.d[dim][!dir] != parts_bcube.d[dim][!dir]) continue; // find a side on the interior
 				unsigned const door_ix(doors.size());
-				placed = add_door(place_door(part, dim, dir, door_height, 0.0, 0.0, 0.0, wscale, 1, 0, rgen), part_ix, dim, dir, 1, 0, 1); // centered, courtyard
+				placed = add_door(place_door(part, dim, dir, door_height, 0.0, 0.0, 0.0, wscale, 1, 0, rgen, 0, 1), part_ix, dim, dir, 1, 0, 1); // centered, courtyard
 				if (placed) {courtyard_door_ix = int8_t(door_ix);}
 			}
 		} // for b
