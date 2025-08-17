@@ -351,7 +351,8 @@ void building_t::replace_prison_cell_with_ext_door(float door_height, rand_gen_t
 	float const wall_thick(get_wall_thickness());
 	
 	for (unsigned n = 0; n < 10; ++n) { // 10 tries to select a room
-		room_t &r(rooms[rgen.rand() % rooms_end]);
+		unsigned const room_id(rgen.rand() % rooms_end);
+		room_t &r(rooms[room_id]);
 		if (r.z1() != ground_floor_z1 || !r.is_nested() || r.get_room_type(0) != RTYPE_JAIL_CELL) continue;
 		// Note: jail cell should always be along an exterior wall and wide enough to fit a door
 		cube_t const &part(parts[r.part_id]);
@@ -369,6 +370,7 @@ void building_t::replace_prison_cell_with_ext_door(float door_height, rand_gen_t
 
 		for (door_stack_t &ds : interior->door_stacks) {
 			door_t &door(get_door(ds.first_door_ix)); // first/bottom door is on the ground floor
+			if (!door.is_connected_to_room(room_id)) continue;
 			door.for_jail = 2; // make this a metal door rather than bars door
 			door.locked   = 0; // always unlocked
 		}
