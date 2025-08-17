@@ -342,7 +342,7 @@ void building_t::add_prison_cells(vect_cube_with_ix_t const &cells, cube_t const
 	rooms.back().set_has_subroom();
 }
 
-void building_t::replace_prison_cell_with_ext_door(float door_height, rand_gen_t &rgen) { // called when no doors can be placed the normal way
+void building_t::replace_prison_cell_with_ext_door(float door_height, bool for_courtyard, rand_gen_t &rgen) { // called when no doors can be placed the normal way
 	assert(interior);
 	vector<room_t> &rooms(interior->rooms);
 	assert(!rooms.empty());
@@ -364,6 +364,8 @@ void building_t::replace_prison_cell_with_ext_door(float door_height, rand_gen_t
 			if (fabs(part.d[dim][d] - r.d[dim][d]) < 2.0*wall_thick) {dir = d;}
 		}
 		if (dir == 2) continue; // long dim not along exterior wall
+		bool const door_in_courtyard(real_num_parts == (4 + has_basement()) && (r.d[dim][dir] < bcube.get_center_dim(dim)) == dir);
+		if (door_in_courtyard != for_courtyard) continue;
 		float const door_center(r.get_center_dim(!dim));
 		if (!add_door(place_door(r, dim, dir, door_height, door_center, 0.0, 0.0, DOOR_WIDTH_SCALE_OFFICE, 0, 0, rgen), r.part_id, dim, dir, 1)) continue;
 		r.assign_to(RTYPE_ENTRY, 0, 1); // locked to entry on first floor

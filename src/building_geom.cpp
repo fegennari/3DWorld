@@ -2067,7 +2067,7 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office 
 			} // for n
 		} // for b
 	} // for num
-	if (num_placed == 0 && is_prison()) {replace_prison_cell_with_ext_door(door_height, rgen);}
+	if (num_placed == 0 && is_prison()) {replace_prison_cell_with_ext_door(door_height, 0, rgen);} // for_courtyard=0
 	//assert(!doors.empty()); // must have placed at least one door - too strong for rotated buildings?
 
 	if (has_courtyard) { // add a door opening into the courtyard
@@ -2088,6 +2088,7 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office 
 				if (placed) {courtyard_door_ix = int8_t(door_ix);}
 			}
 		} // for b
+		if (!placed && is_prison()) {replace_prison_cell_with_ext_door(door_height, 1, rgen);} // for_courtyard=1
 	}
 	if (!doors.empty()) {floor_ext_door_mask |= 1;} // I suppose courtyard doors count here
 }
