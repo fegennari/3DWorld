@@ -625,7 +625,7 @@ bool building_t::add_gym_objs(rand_gen_t rgen, room_t &room, float &zval, unsign
 			}
 			if (!is_valid_placement_for_room(weights, room, vect_cube_t(), 1) || overlaps_other_room_obj(weights, objs_start, 1)) continue; // check_all=1
 			colorRGBA const color(WHITE*rgen.rand_uniform(0.0, 0.5)); // gray-black
-			unsigned const flags((hand_weight || single_cylin) ? RO_FLAG_NOCOLL : 0); // only large weights have collisions for AI
+			unsigned const flags((hand_weight || single_cylin) ? RO_FLAG_NOCOLL : 0); // only large weights have collisions for AI (but currently not enabled)
 			objs.emplace_back(weights, TYPE_GYM_WEIGHT, room_id, wdim, 0, flags, tot_light_amt, SHAPE_CYLIN, color, int(hand_weight));
 			break; // done
 		} // for N

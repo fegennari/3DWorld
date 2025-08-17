@@ -1861,8 +1861,17 @@ void building_t::get_avoid_cubes(float zval, float height, float radius, vect_cu
 	interior->get_avoid_cubes(avoid, z1, (z1 + height), 0.5*radius, get_floor_thickness(), get_floor_ceil_gap(), following_player, 0, fires_select_cube); // skip_stairs=0
 }
 void building_t::add_sub_rooms_to_avoid_if_needed(unsigned room_id, vect_cube_t &avoid) const {
-	if (get_room(room_id).is_industrial() && interior->ind_info) {vector_add_to(interior->ind_info->sub_rooms, avoid);}
-	else if (is_prison()) {get_prison_nested_rooms(avoid, room_id, 0);} // cells_only=0
+	room_t const &room(get_room(room_id));
+	if (room.is_industrial() && interior->ind_info) {vector_add_to(interior->ind_info->sub_rooms, avoid);}
+	else if (is_prison()) { // add walls between cells and other sub-rooms
+		cube_t const room_bounds(get_walkable_room_bounds(room)); // shrink to exclude walls along the edges of the room
+
+		for (unsigned d = 0; d < 2; ++d) {
+			for (cube_t const &wall : interior->walls[d]) {
+				if (room_bounds.intersects(wall)) {avoid.push_back(wall);} // assumes walls extend the entire room height, so we don't need zval here
+			}
+		}
+	}
 }
 
 bool building_t::find_route_to_point(person_t &person, float radius, bool is_first_path, bool following_player, ai_path_t &path) const {
