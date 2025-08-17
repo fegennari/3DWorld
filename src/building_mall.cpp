@@ -282,9 +282,19 @@ bool building_t::is_cube_city_placement_invalid(cube_t const &c) const { // for 
 	return is_invalid_city_placement_for_cube(c); // Note: city objects may not have been placed yet
 }
 bool building_t::is_store_placement_invalid(cube_t const &store) const {
+	if (is_in_city) { // mall room must be inside city bounds
+		static vect_cube_t city_bcubes;
+		if (city_bcubes.empty()) {get_city_bcubes(city_bcubes);}
+		bool contained(0);
+
+		for (cube_t const &c : city_bcubes) {
+			if (c.contains_cube_xy(store)) {contained = 1; break;}
+		}
+		if (!contained) return 0; // outside the city bcube
+	}
 	// here we don't need to check rooms of our own building, but we need to check other building basements;
-	// we normally check for rooms outside the building's tile, but this doesn't seem to be a problem for malls; we still check city bounds for city malls
-	return !is_basement_room_under_mesh_not_int_bldg(store, nullptr, !is_in_city); // allow_outside_grid=!is_in_city
+	// we normally check for rooms outside the building's tile, but this doesn't seem to be a problem for malls
+	return !is_basement_room_under_mesh_not_int_bldg(store, nullptr, 1); // allow_outside_grid=1
 }
 void building_t::add_extb_room_floor_and_ceil(cube_t const &room) {
 	float const fc_thick(get_fc_thickness());
