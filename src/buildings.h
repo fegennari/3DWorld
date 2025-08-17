@@ -2813,7 +2813,7 @@ private:
 	void add_wall_water_fountain(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	bool add_cafeteria_objs  (rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start);
 	bool add_gym_objs        (rand_gen_t rgen, room_t &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
-	bool add_visit_room_objs (rand_gen_t rgen, room_t &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned lights_start);
+	bool add_visit_room_objs (rand_gen_t rgen, room_t &room, float &zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start, unsigned lights_start);
 	bool add_shower_room_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	bool get_hospital_room_bathroom(room_t const &room, unsigned room_id, int &nested_room_ix, cube_t &bathroom) const;
 	bool try_place_hospital_bed (rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id,

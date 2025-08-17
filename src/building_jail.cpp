@@ -503,7 +503,7 @@ bool building_t::assign_and_fill_prison_room(rand_gen_t rgen, room_t &room, floa
 
 			switch (rtype) { // split on rtype
 			case RTYPE_VISIT:
-				if (!add_visit_room_objs(rgen, room, zval, room_id, tot_light_amt, objs_start, lights_start)) continue;
+				if (!add_visit_room_objs(rgen, room, zval, room_id, floor_ix, tot_light_amt, objs_start, lights_start)) continue;
 				break;
 			case RTYPE_LAUNDRY:
 				if (!add_laundry_objs(rgen, room, zval, room_id, tot_light_amt, objs_start, added_bathroom_objs_mask)) continue;
@@ -636,7 +636,9 @@ bool building_t::add_gym_objs(rand_gen_t rgen, room_t &room, float &zval, unsign
 	return 1;
 }
 
-bool building_t::add_visit_room_objs(rand_gen_t rgen, room_t &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned lights_start) {
+bool building_t::add_visit_room_objs(rand_gen_t rgen, room_t &room, float &zval, unsigned room_id, unsigned floor_ix,
+	float tot_light_amt, unsigned objs_start, unsigned lights_start)
+{
 	vect_door_stack_t const &doorways(get_doorways_for_room(room, zval)); // get interior doors
 	if (doorways.size() < 2) return 0; // must have both public and prisoner doors
 	float const floor_spacing(get_window_vspace()), door_width(get_doorway_width());
@@ -686,6 +688,27 @@ bool building_t::add_visit_room_objs(rand_gen_t rgen, room_t &room, float &zval,
 		if (room_sz[!dim] < 4.0*floor_spacing) return 0; // too short in short dim
 		dim ^= 1;
 	} // for cand_dim
+	// determine which side is for prisoners and which is for visitors;
+	// if we allow multiple visiation rooms, we really should be checking that any connected prisoner vs. visitor sides match, but that's difficult to do
+	// note that there may be cases where both doors connect to the same cell block, so we can't keep the prisoner and visitor paths separate
+	int vis_pref[2] = {0,0};
+	
+	for (unsigned d = 0; d < 2; ++d) {
+		cube_t half_room(room);
+		half_room.d[!dim][!d] = wall_pos;
+		if (floor_ix == 0 && is_room_adjacent_to_ext_door(half_room, zval)) {vis_pref[d] += 200;} // visitors have exterior doors (though this case may not be possible)
+		if (classify_room_wall(room, zval, !dim, d, 0) == ROOM_WALL_EXT)    {vis_pref[d] += 5  ;} // visitors should have windows
+	}
+	for (door_stack_t const &door : doorways) {
+		bool const d(wall_pos < door.get_center_dim(!dim));
+		room_t const &conn_room(get_room(door.get_conn_room(room_id)));
+		room_type const &rtype(conn_room.get_room_type(floor_ix));
+		if (rtype == RTYPE_OFFICE || rtype == RTYPE_HALL) {vis_pref[d] += 10;}
+		else if (rtype == RTYPE_GYM || rtype == RTYPE_BATH || rtype == RTYPE_SHOWER || rtype == RTYPE_CAFETERIA || rtype == RTYPE_LAUNDRY) {vis_pref[d] -= 10;}
+	}
+	if (vis_pref[0] >= 100 && vis_pref[1] >= 100) return 0; // can only get into this case when both sides have exterior doors; shouldn't happen
+	vis_pref[rgen.rand_bool()] += 1; // tie breaker
+	bool const vis_side(vis_pref[0] < vis_pref[1]);
 	cube_t const &part(parts[room.part_id]);
 	assert(part.contains_cube(room_interior));
 	max_eq(room_interior.d[dim][0], part.d[dim][0]+trim_thick); // fix for Z-fighting with exterior wall
@@ -773,6 +796,7 @@ bool building_t::add_visit_room_objs(rand_gen_t rgen, room_t &room, float &zval,
 			} // for d
 		}
 		for (unsigned d = 0; d < 2; ++d) { // add chairs against the far walls, even if no table
+			if (d != vis_side) continue; // only on visitor side
 			point chair_pos(0.0, 0.0, zval);
 			chair_pos[!dim] = walkable_area.d[!dim][d] - rgen.rand_uniform(0.22, 0.26)*(d ? 1.0 : -1.0)*floor_spacing; // a bit misaligned
 			chair_pos[ dim] = table.get_center_dim(dim) + 0.08*rgen.signed_rand_float()*seat_spacing; // a bit less misaligned
