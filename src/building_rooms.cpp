@@ -1053,6 +1053,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				no_whiteboard = 1;
 			}
 			if (r->has_subroom()) {no_whiteboard = 1;} // whiteboard placer ingores sub-rooms
+			if (is_prison     ()) {no_whiteboard = 1;} // not even in prison office
 
 			if (is_office && !no_whiteboard && !(library_floor_mask & floor_mask)) {
 				// office, no cubicles or bathroom, no library on this floor - maybe make it a library
