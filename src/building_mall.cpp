@@ -310,7 +310,9 @@ void add_mall_room_walls(cube_t room, float wall_thickness, bool dim, bool dir, 
 			if (!wv.empty()) { // try to merge with adjacent wall of previous room
 				cube_t &prev(wv.back());
 				
-				if (prev.z1() == wall.z1() && prev.z2() == wall.z2() && (wall.d[!wdim][0] == prev.d[!wdim][1] || wall.d[!wdim][1] == prev.d[!wdim][0])) {
+				if (prev.z1() == wall.z1() && prev.z2() == wall.z2() && wall.d[wdim][0] == prev.d[wdim][0] &&
+					(wall.d[!wdim][0] == prev.d[!wdim][1] || wall.d[!wdim][1] == prev.d[!wdim][0]))
+				{
 					prev.union_with_cube(wall);
 					continue;
 				}
