@@ -364,6 +364,7 @@ bool building_t::add_waiting_room_objs(rand_gen_t rgen, room_t const &room, floa
 }
 
 void building_t::add_short_wall_with_trim(cube_t const &wall, bool dim, unsigned room_id, float tot_light_amt) {
+	assert(wall.is_strictly_normalized());
 	interior->room_geom->objs.emplace_back(wall, TYPE_STAIR_WALL, room_id, dim, 0, RO_FLAG_ADJ_TOP, tot_light_amt, SHAPE_CUBE); // draw top
 	cube_t trim(wall);
 	trim.expand_by_xy(get_trim_thickness());

@@ -683,6 +683,7 @@ bool building_t::add_visit_room_objs(rand_gen_t rgen, room_t &room, float &zval,
 		dim ^= 1;
 	} // for cand_dim
 	cube_t const &part(parts[room.part_id]);
+	assert(part.contains_cube(room_interior));
 	max_eq(room_interior.d[dim][0], part.d[dim][0]+trim_thick); // fix for Z-fighting with exterior wall
 	min_eq(room_interior.d[dim][1], part.d[dim][1]-trim_thick); // fix for Z-fighting with exterior wall
 	zval = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_CARPET);

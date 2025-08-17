@@ -18,6 +18,7 @@ unsigned choose_backrooms_wall_tex(rand_gen_t &rgen);
 
 bool building_t::extend_underground_basement(rand_gen_t rgen) {
 	if (!has_basement() || is_rotated() || !interior) return 0;
+	if (is_prison() && !has_parking_garage)           return 0; // no extended basements in prison "dungeons"
 	//highres_timer_t timer("Extend Underground Basement"); // 540ms total
 	float const height(get_window_vspace() - get_fc_thickness()); // full height of floor to avoid a gap at the top (not get_floor_ceil_gap())
 	cube_t basement(get_basement());
