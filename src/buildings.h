@@ -2494,7 +2494,7 @@ struct building_t : public building_geom_t {
 	bool is_pos_in_pg_or_backrooms(point const &pos) const;
 	bool has_backrooms_or_mall() const {return (interior && (interior->has_backrooms || has_mall()));}
 	point get_retail_upper_stairs_landing_center() const;
-	void add_sub_rooms_to_avoid_if_needed(room_t const &room, vect_cube_t &avoid) const;
+	void add_sub_rooms_to_avoid_if_needed(unsigned room_id, vect_cube_t &avoid) const;
 private:
 	void clear_existing_room_geom();
 	void build_nav_graph() const;
@@ -2502,7 +2502,7 @@ private:
 	bool choose_dest_goal(person_t &person, rand_gen_t &rgen) const;
 	int  choose_dest_room(person_t &person, rand_gen_t &rgen) const;
 	int  maybe_use_escalator(person_t &person, building_loc_t const &loc, bool last_used_escalator, rand_gen_t &rgen) const;
-	bool select_person_dest_in_room(person_t &person, rand_gen_t &rgen, room_t const &room) const;
+	bool select_person_dest_in_room(person_t &person, rand_gen_t &rgen, unsigned room_id) const;
 	void get_avoid_cubes(float zval, float height, float radius, vect_cube_t &avoid, bool following_player, cube_t const *const fires_select_cube=nullptr) const;
 	bool find_route_to_point(person_t &person, float radius, bool is_first_path, bool following_player, ai_path_t &path) const;
 	void add_escalator_points(person_t const &person, ai_path_t &path) const;
@@ -2741,6 +2741,7 @@ private:
 	void move_cube_to_not_intersect_sub_room(cube_t &c, cube_t const &place_area, unsigned room_id, bool dim) const;
 	bool is_prison_door_valid(cube_t const &cand, bool dim, bool &open_dir) const;
 	void get_prison_cell_block_cubes(unsigned room_id, vect_cube_t &out, bool inc_hallway=0, bool inc_non_cell_subrooms=0) const;
+	void get_prison_nested_rooms(vect_cube_t &rooms, unsigned room_id, bool cells_only) const;
 	bool place_stairs_in_prison_room(cube_t &stairs, unsigned room_id, bool stairs_dim, bool &wall_dir, rand_gen_t &rgen) const;
 	bool check_cube_intersect_walls(cube_t const &c) const;
 	bool check_cube_contained_in_part(cube_t const &c) const;

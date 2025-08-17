@@ -827,14 +827,8 @@ void building_t::add_prison_hall_room_objs(rand_gen_t rgen, room_t const &room, 
 	vect_room_object_t &objs(interior->room_geom->objs);
 	vect_cube_t cells;
 	vector<point> prev_lights;
+	get_prison_nested_rooms(cells, room_id, 1); // cells_only=1
 
-	for (int r = (int)room_id-1; r >= 0; --r) {
-		room_t const &room2(get_room(r));
-		if (!room2.is_nested() || !room.contains_cube(room2)) break; // no more nested rooms for this parent
-		if (!room2.is_jail_cell()) continue;
-		cells.push_back(room2);
-		cells.back().expand_by_xy(wall_thick);
-	}
 	for (cube_t const &wall : interior->walls[dim]) {
 		if (!room.intersects(wall) || wall.z1() > light_zval || wall.z2() < light_zval) continue;
 		if (!has_bcube_int(wall, cells)) continue; // not the wall between cells
@@ -1227,6 +1221,19 @@ void building_t::get_prison_cell_block_cubes(unsigned room_id, vect_cube_t &out,
 		cube_t sub(room);
 		sub.expand_by_xy(wall_thick); // make sure to remove the walls to the sides of the cells
 		subtract_cube_from_cubes(sub, out); // no holes
+	}
+}
+void building_t::get_prison_nested_rooms(vect_cube_t &rooms, unsigned room_id, bool cells_only) const {
+	float const wall_thick(get_wall_thickness());
+	room_t const &room(get_room(room_id));
+	if (!room.has_subroom()) return;
+
+	for (int r = (int)room_id-1; r >= 0; --r) {
+		room_t const &room2(get_room(r));
+		if (!room2.is_nested() || !room.contains_cube(room2)) break; // no more nested rooms for this parent
+		if (cells_only && !room2.is_jail_cell()) continue;
+		rooms.push_back(room2);
+		rooms.back().expand_by_xy(wall_thick);
 	}
 }
 

@@ -564,7 +564,7 @@ public:
 		cube_t walk_area_exp(walk_area);
 		walk_area_exp.expand_by_xy(radius); // to capture objects that we could intersect when our center is in walk_area
 		keepout.clear();
-		building.add_sub_rooms_to_avoid_if_needed(building.get_room(room_ix), keepout); // must avoid sub-rooms
+		building.add_sub_rooms_to_avoid_if_needed(room_ix, keepout); // must avoid sub-rooms
 
 		for (auto i = avoid.begin(); i != avoid.end(); ++i) {
 			if (!i->intersects_xy(walk_area_exp)) continue;
@@ -732,7 +732,7 @@ public:
 						bool const no_use_init(N > 0 || (is_lg_room && !req_custom_dest));
 						bool not_room_center(0);
 						unsigned const avoid_size(avoid.size());
-						building.add_sub_rooms_to_avoid_if_needed(building.get_room(n), avoid); // must avoid sub-rooms
+						building.add_sub_rooms_to_avoid_if_needed(n, avoid); // must avoid sub-rooms
 						point const end_point(find_valid_room_dest(avoid, building, radius, cur_pt.z, n, up_or_down, not_room_center, rgen, no_use_init, custom_dest));
 						avoid.resize(avoid_size); // remove added sub-rooms
 						path.add(end_point);
@@ -1169,7 +1169,7 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const { //
 	if ((global_building_params.ai_target_player || cur_player_building_loc.same_room_floor(loc)) && can_target_player(person)) {
 		if (courtyard_door_ix >= 0 && interior->room_geom->courtyard.room_ix >= 0 && point_in_courtyard(cur_player_building_loc.pos)) {
 			// player in courtyard; currently never gets here because we can't target the player in this case
-			select_person_dest_in_room(person, rgen, get_room(interior->room_geom->courtyard.room_ix)); // target room connected to courtyard
+			select_person_dest_in_room(person, rgen, interior->room_geom->courtyard.room_ix); // target room connected to courtyard
 		}
 		else {
 			goal = cur_player_building_loc; // player is in a different room of our building, or we're following the player's position
@@ -1283,8 +1283,9 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const { //
 	return 1;
 }
 
-bool building_t::select_person_dest_in_room(person_t &person, rand_gen_t &rgen, room_t const &room) const {
+bool building_t::select_person_dest_in_room(person_t &person, rand_gen_t &rgen, unsigned room_id) const {
 	float const height(person.get_height()), radius(COLL_RADIUS_SCALE*person.radius);
+	room_t const &room(get_room(room_id));
 	cube_t valid_area(room);
 
 	// if on a glass floor and dest isn't the floor below, clip valid area to bounds of glass floor, assuming it makes a cube; railing coll should handle non-cube case
@@ -1299,7 +1300,7 @@ bool building_t::select_person_dest_in_room(person_t &person, rand_gen_t &rgen, 
 	point dest_pos(valid_area.get_cube_center());
 	vect_cube_t &avoid(reused_avoid_cubes[0]);
 	get_avoid_cubes(person.target_pos.z, height, radius, avoid, 0); // following_player=0
-	add_sub_rooms_to_avoid_if_needed(room, avoid); // must avoid sub-rooms
+	add_sub_rooms_to_avoid_if_needed(room_id, avoid); // must avoid sub-rooms
 	bool const no_use_init(room.is_single_large_room_or_store()); // don't use the room center for a parking garage, backrooms, retail area, mall, or store
 	if (!interior->nav_graph->find_valid_pt_in_room(avoid, *this, radius, person.target_pos.z, valid_area, rgen, dest_pos, no_use_init)) return 0;
 	
@@ -1394,7 +1395,7 @@ int building_t::maybe_use_escalator(person_t &person, building_loc_t const &loc,
 				person.target_pos[!dim] = e->get_center_dim(!dim); // centerline
 				person.target_pos[ dim] = e->d[dim][!dir] + (dir ? -1.0 : 1.0)*1.1*person.radius; // slightly in front of exit
 			}
-			else if (!select_person_dest_in_room(person, rgen, get_room(loc.room_ix))) continue;
+			else if (!select_person_dest_in_room(person, rgen, loc.room_ix)) continue;
 		}
 		else { // dest is upper floor
 			if (target_player) {
@@ -1482,7 +1483,7 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 
 		if (stay_in_room) {
 			person.is_first_path = 0; // respect the walls
-			if (select_person_dest_in_room(person, rgen, cur_room)) return 1;
+			if (select_person_dest_in_room(person, rgen, loc.room_ix)) return 1;
 		}
 	}
 	// sometimes use stairs in backrooms, parking garages, retail areas, and malls
@@ -1563,12 +1564,12 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 
 		if (new_z > cur_room.z1() && new_z < cur_room.z2()) { // valid if this floor is inside the room
 			person.target_pos.z = new_z;
-			if (select_person_dest_in_room(person, rgen, cur_room)) return 1; // if retail, this may lead to an upper floor stairs path that exits the room
+			if (select_person_dest_in_room(person, rgen, loc.room_ix)) return 1; // if retail, this may lead to an upper floor stairs path that exits the room
 		}
 	}
 	// how about a different location in the same room? this will at least get the person unstuck from an object and moving inside a parking garage
 	if ((person.is_first_path || single_large_room || cur_room.is_store()) && !must_leave_room) {
-		if (select_person_dest_in_room(person, rgen, cur_room)) {person.last_used_stairs = 0; return 1;}
+		if (select_person_dest_in_room(person, rgen, loc.room_ix)) {person.last_used_stairs = 0; return 1;}
 	}
 	return 2; // failed, but can retry
 }
@@ -1859,8 +1860,9 @@ void building_t::get_avoid_cubes(float zval, float height, float radius, vect_cu
 	float const z1(zval - radius);
 	interior->get_avoid_cubes(avoid, z1, (z1 + height), 0.5*radius, get_floor_thickness(), get_floor_ceil_gap(), following_player, 0, fires_select_cube); // skip_stairs=0
 }
-void building_t::add_sub_rooms_to_avoid_if_needed(room_t const &room, vect_cube_t &avoid) const {
-	if (room.is_industrial() && interior->ind_info) {vector_add_to(interior->ind_info->sub_rooms, avoid);}
+void building_t::add_sub_rooms_to_avoid_if_needed(unsigned room_id, vect_cube_t &avoid) const {
+	if (get_room(room_id).is_industrial() && interior->ind_info) {vector_add_to(interior->ind_info->sub_rooms, avoid);}
+	else if (is_prison()) {get_prison_nested_rooms(avoid, room_id, 0);} // cells_only=0
 }
 
 bool building_t::find_route_to_point(person_t &person, float radius, bool is_first_path, bool following_player, ai_path_t &path) const {
@@ -1912,7 +1914,7 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 				valid_area.clamp_pt_xy(dest);
 			}
 		}
-		add_sub_rooms_to_avoid_if_needed(start_room, avoid); // must avoid sub-rooms
+		add_sub_rooms_to_avoid_if_needed(loc1.room_ix, avoid); // must avoid sub-rooms
 		cube_t const constrain_area(point_over_glass_floor(from) ? get_bcubes_union(interior->room_geom->glass_floors) : cube_t());
 		if (!interior->nav_graph->complete_path_within_room(from, dest, loc1.room_ix, person.ssn, radius,
 			person.cur_rseed, is_first_path, following_player, constrain_area, avoid, *this, path)) return 0;
