@@ -6532,10 +6532,11 @@ void building_room_geom_t::add_gym_weight(room_object_t const &c) {
 	rgeom_mat_t &mat(get_metal_material(1, 0, 1)); // untextured, shadowed, small=1
 	colorRGBA const color(apply_light_color(c));
 	float const height(c.dz()), width(c.get_width()), length(c.get_length());
-	bool const hand_weight(c.item_flags == 1), vertical(height < 0.5*width);
+	bool const hand_weight(c.item_flags == 1), texture_ends(!hand_weight), vertical(height < 0.5*width);
 	float const radius(0.25*((vertical ? length : height) + width)), bar_radius((hand_weight ? 0.4 : 0.12)*radius), bar_shrink(bar_radius - radius);
+	cube_t weights[2];
 
-	if (vertical) { // single weight, vertical
+	if (vertical) { // single weight, vertical; probably not a hand weight, but we allow it
 		cube_t hole(c);
 		hole.expand_by_xy(bar_shrink);
 		hole.expand_in_z(0.01*height); // to avoid Z-fighting
@@ -6543,8 +6544,8 @@ void building_room_geom_t::add_gym_weight(room_object_t const &c) {
 		mat.add_vcylin_to_verts(hole, color, 0, 0, 1); // two sided (only need inside)
 		// draw the hole as a transparent circle before the outer surface
 		mat.add_vcylin_to_verts(hole, ALPHA0, 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // draw top only, skip_sides=1
-		// draw the outer surface
-		mat.add_vcylin_to_verts(c, color, 0, 1); // draw top but not bottom
+		// draw the top + outer surface
+		mat.add_vcylin_to_verts(c, color, 0, !texture_ends); // draw top only if ends are untextured
 	}
 	else if (length < radius) { // single weight, horizontal
 		mat.add_ortho_cylin_to_verts(c, color, c.dim, 1, 1); // draw ends
@@ -6562,7 +6563,21 @@ void building_room_geom_t::add_gym_weight(room_object_t const &c) {
 			cube_t weight(c);
 			weight.d[c.dim][!d] = weight.d[c.dim][d] - (d ? 1.0 : -1.0)*weight_len;
 			if (draw_bar_ends) {weight.d[c.dim][d] -= (d ? 1.0 : -1.0)*0.25*weight_len;} // shrink slightly so that bar passes through weight
-			mat.add_ortho_cylin_to_verts(weight, color, c.dim, 1, 1); // draw ends
+			mat.add_ortho_cylin_to_verts(weight, color, c.dim, !texture_ends, !texture_ends); // draw ends if untextured
+			if (texture_ends) {weights[d] = weight;}
+		}
+	}
+	if (texture_ends) {
+		rgeom_mat_t &end_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/weight_tex.jpg"), 0.0, 1), 1, 0, 1)); // shadowed, small=1
+		colorRGBA const tex_color(texture_color(end_mat.tex.tid));
+		colorRGBA const end_color(apply_light_color(c, WHITE*(c.color.get_luminance()/tex_color.get_luminance()))); // match the sides color; won't quite match if > 1.0
+		if (vertical) {end_mat.add_vcylin_to_verts(c, end_color, 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1);} // draw top only; skip_sides=1
+		else { // draw ends only
+			for (unsigned d = 0; d < 2; ++d) {
+				for (unsigned e = 0; e < 2; ++e) { // draw ends separately and invert the texture on the upper end with swap_end_txy=1 (x); words will be rotated for dim=1
+					end_mat.add_ortho_cylin_to_verts(weights[d], end_color, c.dim, !e, e, 0, 0, 1.0, 1.0, 1.0, 1.0, 1, N_CYL_SIDES, 0.0, 0, 1.0, 0.0, 0, e);
+				}
+			}
 		}
 	}
 }

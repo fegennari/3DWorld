@@ -94,29 +94,29 @@ void apply_half_or_quarter(int half_or_quarter, unsigned &s_end) { // 0=full cir
 
 void rgeom_mat_t::add_ortho_cylin_to_verts(cube_t const &c, colorRGBA const &color, int dim, bool draw_bot, bool draw_top, bool two_sided,
 	bool inv_tb, float rs_bot, float rs_top, float side_tscale, float end_tscale, bool skip_sides, unsigned ndiv, float side_tscale_add,
-	bool swap_txy, float len_tc2, float len_tc1, int half_or_quarter)
+	bool swap_txy, float len_tc2, float len_tc1, int half_or_quarter, int swap_end_txy)
 {
 	if (dim == 2) { // Z: this is our standard v_cylinder
 		add_vcylin_to_verts(c, color, draw_bot, draw_top, two_sided, inv_tb, rs_bot, rs_top, side_tscale, end_tscale, skip_sides,
-			ndiv, side_tscale_add, swap_txy, len_tc2, len_tc1, half_or_quarter);
+			ndiv, side_tscale_add, swap_txy, len_tc2, len_tc1, half_or_quarter, swap_end_txy);
 		return;
 	}
 	cube_t c_rot(c);
 	c_rot.swap_dims(2, dim);
 	unsigned const itri_verts_start_ix(itri_verts.size()), ixs_start_ix(indices.size());
 	add_vcylin_to_verts(c_rot, color, draw_bot, draw_top, two_sided, inv_tb, rs_bot, rs_top, side_tscale, end_tscale, skip_sides,
-		ndiv, side_tscale_add, swap_txy, len_tc2, len_tc1, half_or_quarter);
+		ndiv, side_tscale_add, swap_txy, len_tc2, len_tc1, half_or_quarter, swap_end_txy);
 	for (auto v = itri_verts.begin()+itri_verts_start_ix; v != itri_verts.end(); ++v) {v->swap_dims(2, dim);} // swap triangle vertices and normals
 	std::reverse(indices.begin()+ixs_start_ix, indices.end()); // fix winding order
 }
 void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, bool draw_bot, bool draw_top, bool two_sided,
 	bool inv_tb, float rs_bot, float rs_top, float side_tscale, float end_tscale, bool skip_sides, unsigned ndiv, float side_tscale_add,
-	bool swap_txy, float len_tc2, float len_tc1, int half_or_quarter)
+	bool swap_txy, float len_tc2, float len_tc1, int half_or_quarter, int swap_end_txy)
 {
 	point const center(c.get_cube_center());
 	float const radius(0.5*min(c.dx(), c.dy())); // cube X/Y size should be equal/square
-	add_cylin_to_verts(point(center.x, center.y, c.z1()), point(center.x, center.y, c.z2()), radius*rs_bot, radius*rs_top,
-		color, draw_bot, draw_top, two_sided, inv_tb, side_tscale, end_tscale, skip_sides, ndiv, side_tscale_add, swap_txy, len_tc2, len_tc1, half_or_quarter);
+	add_cylin_to_verts(point(center.x, center.y, c.z1()), point(center.x, center.y, c.z2()), radius*rs_bot, radius*rs_top, color, draw_bot, draw_top,
+		two_sided, inv_tb, side_tscale, end_tscale, skip_sides, ndiv, side_tscale_add, swap_txy, len_tc2, len_tc1, half_or_quarter, swap_end_txy);
 }
 void rgeom_mat_t::add_vcylin_to_verts_tscale(cube_t const &c, colorRGBA const &color, bool draw_bot, bool draw_top) {
 	vector3d const sz(c.get_size());
@@ -126,7 +126,7 @@ void rgeom_mat_t::add_vcylin_to_verts_tscale(cube_t const &c, colorRGBA const &c
 }
 void rgeom_mat_t::add_cylin_to_verts(point const &bot, point const &top, float bot_radius, float top_radius, colorRGBA const &color,
 	bool draw_bot, bool draw_top, bool two_sided, bool inv_tb, float side_tscale, float end_tscale, bool skip_sides, unsigned ndiv,
-	float side_tscale_add, bool swap_txy, float len_tc2, float len_tc1, int half_or_quarter)
+	float side_tscale_add, bool swap_txy, float len_tc2, float len_tc1, int half_or_quarter, int swap_end_txy)
 {
 	assert((!skip_sides) || draw_bot || draw_top); // must draw something
 	point const ce[2] = {bot, top};
@@ -187,7 +187,9 @@ void rgeom_mat_t::add_cylin_to_verts(point const &bot, point const &top, float b
 		for (unsigned I = 0; I < ndiv; ++I) {
 			unsigned const i(bt ? ndiv-I-1 : I); // invert winding order for top face
 			vector3d const side_normal(0.5*(vpn.n[i] + vpn.n[(i+ndiv-1)%ndiv])); // normalize?
-			itri_verts[itix++].assign(vpn.p[(i<<1) + bt], normal, half_end_tscale*(side_normal.x + 1.0), half_end_tscale*(side_normal.y + 1.0), cw); // assign tcs from side normal
+			float const ts(half_end_tscale*(side_normal.x*((swap_end_txy & 1) ? -1.0 : 1.0) + 1.0));
+			float const tt(half_end_tscale*(side_normal.y*((swap_end_txy & 2) ? -1.0 : 1.0) + 1.0));
+			itri_verts[itix++].assign(vpn.p[(i<<1) + bt], normal, ts, tt, cw); // assign tcs from side normal
 			indices[iix++] = center_ix; // center
 			indices[iix++] = center_ix + i + 1;
 			indices[iix++] = center_ix + ((i+1)%ndiv) + 1;
