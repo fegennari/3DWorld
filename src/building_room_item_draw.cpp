@@ -1508,7 +1508,7 @@ float get_ao_shadow(room_object_t const &c, bool enable_indir) {
 	// include types that don't contribute to indir lighting; these always contribute AO shadows
 	if (type == TYPE_BAR_STOOL || type == TYPE_SHELVES || type == TYPE_CONV_BELT || type == TYPE_EX_MACHINE) return 0.25; // light shadow
 	if (type == TYPE_OFF_CHAIR || type == TYPE_BENCH || type == TYPE_RCHAIR || type == TYPE_CASHREG || type == TYPE_CHEM_TANK || type == TYPE_HOSP_BED) return 0.5; // medium shadow
-	if (type == TYPE_WHEELCHAIR || type == TYPE_OP_TABLE || type == TYPE_TROLLEY) return 0.5; // medium shadow
+	if (type == TYPE_WHEELCHAIR || type == TYPE_OP_TABLE || type == TYPE_TROLLEY || type == TYPE_EX_MACHINE) return 0.5; // medium shadow
 	if (type == TYPE_PARK_SPACE && c.is_used()) return 0.75; // parked car; dense shadow
 	//TYPE_PALLET? or is that too expensive?
 	if (enable_indir) return 0.0; // skip objects below because they're already handled by indir lighting
