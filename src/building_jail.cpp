@@ -445,9 +445,9 @@ room_pref_t const room_prefs[] = {
 	{RTYPE_OFFICE,    1, 1, 1, 0, 0.0, 3.0, 0.0, 0.0,  0.0,  1.0},
 	{RTYPE_CAFETERIA, 0, 0, 0, 0, 4.0, 0.0, 1.0, 0.0,  0.0,  0.0},
 	{RTYPE_GYM,       0, 1, 0, 0, 2.0, 7.0, 1.0, 0.0,  0.5,  0.0},
-	{RTYPE_SHOWER,    0, 0, 0, 1, 2.0, 6.0, 1.0, 0.5,  1.0, -1.0},
+	{RTYPE_SHOWER,    0, 0, 0, 1, 2.0, 6.0, 1.0, 0.5,  1.0, -10.0},
 	{RTYPE_CLASS,     1, 0, 0, 0, 3.0, 8.0, 0.5, 0.5,  0.0,  0.5},
-	{RTYPE_BATH,      1, 0, 0, 1, 0.0, 3.0, 0.0, 0.0,  0.0, -0.5}
+	{RTYPE_BATH,      1, 0, 0, 1, 0.0, 4.0, 0.0, 0.0,  0.0, -5.0}
 };
 bool building_t::assign_and_fill_prison_room(rand_gen_t rgen, room_t &room, float &zval, unsigned room_id, float tot_light_amt,
 	unsigned objs_start, unsigned lights_start, unsigned floor_ix, bool is_basement, colorRGBA const &chair_color)
@@ -487,9 +487,12 @@ bool building_t::assign_and_fill_prison_room(rand_gen_t rgen, room_t &room, floa
 				if (strict) continue;
 				weight -= 1.0*(max_sz - p.max_size); // penalize based on oversize
 			}
+			if (has_ext_wall) { // assumes exterior walls have windows
+				if (p.window_val < -1.0) continue; // skip if too low
+				weight += p.window_val;
+			}
 			if (ground_floor) {weight += p.gfloor_scale;}
 			if (is_basement ) {weight += p.basement_val;}
-			if (has_ext_wall) {weight += p.window_val  ;} // assumes exterior walls have windows
 			//cout << "cand " << room_names[p.rtype] << " weight " << weight << " pass " << pass << endl;
 			weight += rgen.rand_float(); // add some randomness
 			cands.emplace_back(-weight, p.rtype); // negate weight to get min value
