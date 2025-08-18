@@ -814,8 +814,20 @@ bool building_t::add_visit_room_objs(rand_gen_t rgen, room_t &room, float &zval,
 }
 
 bool building_t::add_shower_room_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
-	// TODO: showers, toilets, lockers, benches
+	float const ceil_zval(zval + get_floor_ceil_gap() - 0.1*get_fc_thickness()); // lower slightly
 	zval = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_TILE);
+	float const wall_thick(get_wall_thickness());
+	vect_room_object_t &objs(interior->room_geom->objs);
+	// add wall tile
+	cube_t ceil(room);
+	set_cube_zvals(ceil, (ceil_zval - get_flooring_thick()), ceil_zval);
+	objs.emplace_back(ceil, TYPE_POOL_TILE, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_TOP));
+	cube_t room_ext(get_room_wall_bounds(room));
+	room_ext.expand_by_xy(0.5*wall_thick); // expand to include part sep walls, which don't actually overlap the room
+	set_cube_zvals(room_ext, zval, ceil.z1());
+	add_room_wall_tile(room_ext, room_id, tot_light_amt);
+
+	// TODO: showers, toilets, lockers, benches
 	add_door_sign("Shower", room, zval, room_id);
 	return 1;
 }

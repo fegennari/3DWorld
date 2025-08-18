@@ -3692,6 +3692,26 @@ bool building_t::add_pool_room_objs(rand_gen_t rgen, room_t const &room, float z
 	return 1;
 }
 
+void building_t::add_room_wall_tile(cube_t const &room, unsigned room_id, float tot_light_amt) {
+	float const tile_thickness(get_flooring_thick());
+	vect_room_object_t &objs(interior->room_geom->objs);
+
+	for (unsigned d = 0; d < 2; ++d) {
+		for (cube_t const &wall : interior->walls[d]) {
+			if (!wall.intersects_no_adj(room)) continue;
+			bool const dir(wall.get_center_dim(d) < room.get_center_dim(d)); // direction facing the center of the room
+			cube_t tile(wall);
+			tile.d[d][!dir]  = wall.d[d][dir]; // edge of wall facing the room
+			tile.d[d][ dir] += (dir ? 1.0 : -1.0)*tile_thickness;
+			tile.intersect_with_cube_xy(room);
+			max_eq(tile.z1(), room.z1()); // clip zvals to room bounds
+			min_eq(tile.z2(), room.z2());
+			expand_to_nonzero_area(tile, tile_thickness, d);
+			objs.emplace_back(tile, TYPE_POOL_TILE, room_id, d, !dir, RO_FLAG_NOCOLL);
+		} // for wall
+	} // for d
+}
+
 // for indoor pools, currently only in extended basements
 void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt) {
 	assert(has_pool());
@@ -3717,7 +3737,7 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 	cube_t bottom(pool);
 	bottom.z2() = pool.z1() + tile_thickness;
 	objs.emplace_back(bottom, TYPE_POOL_TILE, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_BOT | RO_FLAG_ADJ_LO), 1.0, SHAPE_CUBE, (pool.bottomless ? GRAY : WHITE));
-	// add ceiling and floor tile
+	// add ceiling, floor, and wall tile
 	cube_t ceil(room);
 	ceil.z2() = room.z2() - get_fc_thickness();
 	ceil.z1() = ceil.z2() - tile_thickness;
@@ -3734,18 +3754,8 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 		set_cube_zvals(fc, f.z2(), (f.z2() + tile_thickness));
 		objs.emplace_back(fc, TYPE_POOL_TILE, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_BOT));
 	}
-	// add wall tile
-	for (unsigned d = 0; d < 2; ++d) {
-		for (cube_t const &wall : interior->walls[d]) {
-			if (!wall.intersects_no_adj(room)) continue;
-			bool const dir(wall.get_center_dim(d) < room.get_center_dim(d)); // direction facing the center of the room
-			cube_t tile(wall);
-			tile.d[d][!dir]  = wall.d[d][dir]; // edge of wall facing the room
-			tile.d[d][ dir] += (dir ? 1.0 : -1.0)*tile_thickness;
-			expand_to_nonzero_area(tile, tile_thickness, d);
-			objs.emplace_back(tile, TYPE_POOL_TILE, room_id, d, !dir, RO_FLAG_NOCOLL);
-		} // for wall
-	} // for d
+	add_room_wall_tile(room, room_id, tot_light_amt);
+
 	// add a sloped ramp at the bottom if deep enough and not bottomless
 	if (!pool.bottomless && pool_depth > 1.2*shallow_depth && pool_len > 3.0*floor_spacing) {
 		interior->room_geom->pool_ramp_obj_ix = objs.size();

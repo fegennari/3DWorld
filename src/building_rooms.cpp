@@ -1149,7 +1149,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			bool const was_hung(can_hang && hang_pictures_whiteboard_chalkboard_in_room(rgen, *r, room_center.z,
 				room_id, tot_light_amt, objs_start, f, is_basement, pref_hang_orient));
 
-			if (is_jail) {} // no trashcan
+			if (is_jail || r->get_room_type(f) == RTYPE_SHOWER) {} // no trashcan
 			else if (is_bathroom || is_kitchen || is_hospital() || rgen.rand_float() < 0.8) { // 80% of the time, always in bathrooms, kitchens, and hospitals
 				add_trashcan_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, (was_hung && !is_house)); // no trashcans on same wall as office whiteboard
 			}
