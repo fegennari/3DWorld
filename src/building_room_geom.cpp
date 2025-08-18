@@ -2251,7 +2251,8 @@ void building_room_geom_t::add_test_tube(room_object_t const &c) {
 int get_flooring_texture(room_object_t const &c) {
 	switch (c.item_flags) { // select texture for flooring type
 	case FLOORING_MARBLE:   return MARBLE_TEX;
-	case FLOORING_TILE:     return get_texture_by_name("bathroom_tile.jpg");
+	//case FLOORING_TILE:     return get_texture_by_name("bathroom_tile.jpg");
+	case FLOORING_TILE:     return get_texture_by_name("interiors/mosaic_tiles.jpg");
 	case FLOORING_CONCRETE: return get_concrete_tid();
 	case FLOORING_CARPET:   return get_texture_by_name((c.obj_id & 1) ? "carpet/carpet1.jpg" : "carpet/carpet2.jpg"); // select between two textures
 	case FLOORING_WOOD:     return ((c.obj_id & 1) ? (int)FENCE_TEX : (int)PANELING_TEX); // select between two textures
@@ -2261,10 +2262,17 @@ int get_flooring_texture(room_object_t const &c) {
 	}
 	return -1; // shouldn't get here
 }
+int get_flooring_nmap_texture(room_object_t const &c) {
+	switch (c.item_flags) { // select texture for flooring type
+	case FLOORING_TILE: return get_texture_by_name("interiors/mosaic_tiles_normal.jpg");
+	case FLOORING_WOOD: return get_normal_map_for_bldg_tid(get_flooring_texture(c));
+	}
+	return -1; // no normal map
+}
 void building_room_geom_t::add_flooring(room_object_t const &c, float tscale) {
 	// open wall rooms are not colored by room lights as this can create seams in the floor lighting
 	colorRGBA const color(c.is_open() ? c.color : blend_color(c.color, apply_light_color(c), 0.5, 0.0)); // 50% mix
-	get_material(tid_nm_pair_t(get_flooring_texture(c), 0.8*tscale)).add_cube_to_verts(c, color, tex_origin, ~EF_Z2); // top face only, unshadowed
+	get_material(tid_nm_pair_t(get_flooring_texture(c), get_flooring_nmap_texture(c), 0.8*tscale, 0.8*tscale)).add_cube_to_verts(c, color, tex_origin, ~EF_Z2); // top, unshadowed
 }
 
 tquad_t get_ramp_tquad(room_object_t const &c) { // Note: normal is for the bottom surface
