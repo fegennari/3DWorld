@@ -1463,35 +1463,71 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 			} // for n
 		}
 	} // for i (sub_plots)
-	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_MAILBOX)) {
-		// place mailboxes on residential streets
+	bool const has_mailbox(building_obj_model_loader.is_model_valid(OBJ_MODEL_MAILBOX));
+	bool const has_bb_hoop(building_obj_model_loader.is_model_valid(OBJ_MODEL_BB_HOOP));
+
+	if (has_mailbox || has_bb_hoop) {
+		// place mailboxes and basketball hoops on residential streets
 		assert(driveways_start <= driveways.size());
-		float const mbox_height(1.1*sz_scale);
+		float const mbox_height(1.1*sz_scale), bbh_height(4.2*sz_scale), sidewalk_width(get_inner_sidewalk_width());
 
 		for (auto dw = driveways.begin()+driveways_start; dw != driveways.end(); ++dw) {
-			if (rgen.rand_bool()) continue; // only 50% of houses have mailboxes along the road
+			bool const add_mailbox(has_mailbox && rgen.rand_bool()); // only 50% of houses have mailboxes along the road
+			bool const add_bb_hoop(has_bb_hoop && rgen.rand_float() < 0.1); // 10% of the time
+			if (!add_mailbox && !add_bb_hoop) continue;
 			bool const dim(dw->dim), dir(dw->dir);
-			unsigned pref_side(2); // starts invalid
+			float const dsign(dir ? 1.0 : -1.0), dw_end(dw->d[dim][dir]);
+			cube_t dw_blocker(*dw);
+			dw_blocker.d[dim][dir] += dsign*sidewalk_width; // extend out to road to match the code in the caller
 			point pos(dw->get_cube_center()); // start at the driveway center
 
-			for (auto i = sub_plots.begin(); i != sub_plots.end(); ++i) { // find subplot for this driveway
-				if (!i->contains_pt_xy(pos)) continue; // wrong subplot
-				pref_side = (pos[!dim] < i->get_center_dim(!dim)); // place mailbox on the side of the driveway closer to the center of the plot
-				break; // done
-			}
-			if (pref_side == 2) continue; // no subplot found? error, or just skip the mailbox?
-			// place at end of driveway at the road, but far enough back to leave space for peds
-			pos[dim] = dw->d[dim][dir] - (dir ? 1.0 : -1.0)*(get_inner_sidewalk_width() + 0.5*mbox_height);
+			if (add_mailbox) {
+				unsigned pref_side(2); // starts invalid
+				
+				for (auto i = sub_plots.begin(); i != sub_plots.end(); ++i) { // find subplot for this driveway
+					if (!i->contains_pt_xy(pos)) continue; // wrong subplot
+					pref_side = (pos[!dim] < i->get_center_dim(!dim)); // place mailbox on the side of the driveway closer to the center of the plot
+					break; // done
+				}
+				if (pref_side < 2) { // else no subplot found? should this be an error?
+					// place at end of driveway at the road, but far enough back to leave space for peds
+					pos[dim] = dw_end - dsign*(sidewalk_width + 0.5*mbox_height);
 
-			for (unsigned n = 0; n < 2; ++n) {
-				unsigned const side(pref_side ^ n);
-				pos[!dim] = dw->d[!dim][side] + (side ? 1.0 : -1.0)*0.5*mbox_height; // off to the side of the driveway
-				mailbox_t const mbox(pos, mbox_height, dim, dir);
-				if (is_placement_blocked(mbox.bcube, blockers, *dw, prev_blockers_end, 0.0, 0)) continue; // try the other side
-				mbox_groups.add_obj(mbox, mboxes);
-				add_cube_to_colliders_and_blockers(mbox.bcube, colliders, blockers);
-				break; // done
-			} // for n
+					for (unsigned n = 0; n < 2; ++n) {
+						unsigned const side(pref_side ^ n);
+						pos[!dim] = dw->d[!dim][side] + (side ? 1.0 : -1.0)*0.5*mbox_height; // off to the side of the driveway
+						mailbox_t const mbox(pos, mbox_height, dim, dir);
+						if (is_placement_blocked(mbox.bcube, blockers, dw_blocker, prev_blockers_end)) continue; // try the other side
+						mbox_groups.add_obj(mbox, mboxes);
+						add_cube_to_colliders_and_blockers(mbox.bcube, colliders, blockers);
+						break; // done
+					} // for n
+				}
+			}
+			if (add_bb_hoop) {
+				float const lo(max((dw_end - dsign*(sidewalk_width + (dir ? 2.5f : 0.5f)*bbh_height)), (dw->d[dim][0] + 0.4f*bbh_height)));
+				float const hi(min((dw_end - dsign*(sidewalk_width + (dir ? 0.5f : 2.5f)*bbh_height)), (dw->d[dim][1] - 0.4f*bbh_height)));
+
+				if (lo < hi) {
+					bool const pref_side(rgen.rand_bool());
+					bool placed(0);
+
+					for (unsigned n = 0; n < 2 && !placed; ++n) {
+						unsigned const side(pref_side ^ n);
+						// move a bit further from the driveway to avoid intersections with parked trucks or ambulances, though they may still intersect
+						pos[!dim] = dw->d[!dim][side] + (side ? 1.0 : -1.0)*0.05*bbh_height; // side of the driveway
+
+						for (unsigned n = 0; n < 10 && !placed; ++n) { // 10 placement tries
+							pos[dim] = rgen.rand_uniform(lo, hi);
+							bb_hoop_t const bbh(pos, bbh_height, !dim, !side);
+							if (is_placement_blocked(bbh.bcube, blockers, dw_blocker, blockers.size())) continue; // intersects some other object
+							bb_hoop_groups.add_obj(bbh, bb_hoops);
+							add_cube_to_colliders_and_blockers(bbh.bcube, colliders, blockers);
+							placed = 1; // done
+						}
+					} // for n
+				}
+			}
 		} // for dw
 	}
 }
@@ -1786,6 +1822,7 @@ void city_obj_placer_t::place_birds(cube_t const &city_bcube, rand_gen_t &rgen) 
 	add_objs_top_center(swings,    0, 0, 1, unused, bird_locs, rgen);
 	add_objs_top_center(picnics,   0, 0, 1, unused, bird_locs, rgen);
 	add_objs_top_center(clines,    0, 0, 1, unused, bird_locs, rgen);
+	// bb_hoops? pos would need to be closer to the front than center
 
 	for (sign_t const &sign : signs) {
 		if (sign.small) continue; // skip small signs above doors
@@ -2008,14 +2045,9 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 
 		// driveways become blockers for other placed objects; make sure they extend into the road so that they intersect any placed streetlights or fire hydrants
 		for (auto j = driveways.begin()+driveways_start; j != driveways.end(); ++j) {
-			cube_t dw(*j);
-
-			for (unsigned d = 0; d < 2; ++d) {
-				if      (dw.d[d][0] == i->d[d][0]) {dw.d[d][0] -= sidewalk_width;}
-				else if (dw.d[d][1] == i->d[d][1]) {dw.d[d][1] += sidewalk_width;}
-			}
-			blockers.push_back(dw);
-		} // for j
+			blockers.push_back(*j);
+			blockers.back().d[j->dim][j->dir] += (j->dir ? 1.0 : -1.0)*sidewalk_width; // extend out to road
+		}
 		for (cube_t const &c : plot_cuts) { // add underground elevators and skylights to blockers since they have already been placed
 			if (i->intersects_xy(c)) {blockers.push_back(c);}
 		}
@@ -2071,6 +2103,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	plant_groups   .create_groups(plants,    all_objs_bcube);
 	flower_groups  .create_groups(flowers,   all_objs_bcube);
 	picnic_groups  .create_groups(picnics,   all_objs_bcube);
+	bb_hoop_groups .create_groups(bb_hoops,  all_objs_bcube);
 	pond_groups    .create_groups(ponds,     all_objs_bcube);
 	walkway_groups .create_groups(walkways,  all_objs_bcube);
 	pillar_groups  .create_groups(pillars,   all_objs_bcube);
@@ -2334,6 +2367,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(plants,    plant_groups,    dstate, 0.04, shadow_only, 1);
 	draw_objects(flowers,   flower_groups,   dstate, 0.06, shadow_only, 1);
 	draw_objects(picnics,   picnic_groups,   dstate, 0.14, shadow_only, 1);
+	draw_objects(bb_hoops,  bb_hoop_groups,  dstate, 0.10, shadow_only, 1);
 	draw_objects(chairs,    chair_groups,    dstate, 0.10, shadow_only, 1);
 	draw_objects(walkways,  walkway_groups,  dstate, 0.25, shadow_only, 1);
 	draw_objects(p_solars,  p_solar_groups,  dstate, 0.40, shadow_only, 0);
@@ -2513,6 +2547,7 @@ bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, vector
 	if (proc_vector_sphere_coll(plants,    plant_groups,    pos, p_last, radius, xlate, cnorm)) return 1; // optional?
 	if (proc_vector_sphere_coll(chairs,    chair_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(picnics,   picnic_groups,   pos, p_last, radius, xlate, cnorm)) return 1;
+	if (proc_vector_sphere_coll(bb_hoops,  bb_hoop_groups,  pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(ponds,     pond_groups,     pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(pillars,   pillar_groups,   pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(elevators, wwe_groups,      pos, p_last, radius, xlate, cnorm)) return 1;
@@ -2559,7 +2594,7 @@ bool city_obj_placer_t::line_intersect(point const &p1, point const &p2, float &
 	check_vector_line_intersect(picnics,   picnic_groups,   p1, p2, t, ret);
 	// Note: nothing to do for parking lots, tree_planters, hcaps, manholes, sewers, tcones, sculptures, flowers, pladders, chairs, pdecks, bballs, pfloats,
 	// clines, pigeons, ppaths, or birds;
-	// mboxes, swings, tramps, umbrellas, bikes, plants, ponds, p_solars, and momorail are ignored because they're small or not simple shapes
+	// mboxes, swings, tramps, umbrellas, bikes, plants, ponds, p_solars, bb_hoops, and skyways are ignored because they're small or not simple shapes
 	return ret;
 }
 

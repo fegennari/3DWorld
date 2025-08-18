@@ -342,6 +342,11 @@ struct picnic_t : public model_city_obj_t {
 	virtual unsigned get_model_id() const {return OBJ_MODEL_PICNIC;}
 };
 
+struct bb_hoop_t : public model_city_obj_t {
+	bb_hoop_t(point const &pos_, float height, bool dim_, bool dir_) : model_city_obj_t(pos_, height, dim_, dir_, get_model_id()) {}
+	virtual unsigned get_model_id() const {return OBJ_MODEL_BB_HOOP;}
+};
+
 struct traffic_cone_t : public city_obj_t {
 	traffic_cone_t(point const &pos_, float radius_);
 	float get_height() const {return 2.0*radius;}
@@ -712,6 +717,7 @@ private:
 	vector<potted_plant_t> plants;
 	vector<flower_t> flowers;
 	vector<picnic_t> picnics; // picnic tables
+	vector<bb_hoop_t> bb_hoops;
 	vector<pond_t> ponds;
 	vector<walkway_t> walkways;
 	vector<pillar_t> pillars;
@@ -724,7 +730,7 @@ private:
 	city_obj_groups_t bench_groups, planter_groups, trashcan_groups, fhydrant_groups, sstation_groups, fountain_groups, divider_groups, pool_groups, plad_groups,
 		chair_groups, pdeck_groups, ppole_groups, hcap_groups, manhole_groups, mbox_groups, tcone_groups, pigeon_groups, bird_groups, sign_groups, stopsign_groups,
 		flag_groups, nrack_groups, cline_groups, ppath_groups, swing_groups, tramp_groups, umbrella_groups, bike_groups, dumpster_groups, plant_groups, flower_groups,
-		picnic_groups, pond_groups, walkway_groups, pillar_groups, wwe_groups, uge_groups, p_solar_groups, bball_groups, pfloat_groups, sewer_groups, sculpt_groups;
+		picnic_groups, bb_hoop_groups, pond_groups, walkway_groups, pillar_groups, wwe_groups, uge_groups, p_solar_groups, bball_groups, pfloat_groups, sewer_groups, sculpt_groups;
 	skyway_t skyway; // optional
 	vect_parking_space_t pspaces;
 	bird_poop_manager_t bird_poop_manager;
