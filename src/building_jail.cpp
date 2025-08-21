@@ -825,9 +825,31 @@ bool building_t::add_shower_room_objs(rand_gen_t rgen, room_t const &room, float
 	cube_t room_ext(get_room_wall_bounds(room));
 	room_ext.expand_by_xy(0.5*wall_thick); // expand to include part sep walls, which don't actually overlap the room
 	set_cube_zvals(room_ext, zval, ceil.z1());
+	unsigned const wall_tile_start(objs.size());
 	add_room_wall_tile(room_ext, room_id, tot_light_amt);
+	unsigned const wall_tile_end(objs.size());
+	float const floor_spacing(get_window_vspace()), shower_width(0.5*floor_spacing), shower_depth(shower_width);
 
-	// TODO: showers, toilets, lockers, benches
+	for (unsigned i = wall_tile_start; i != wall_tile_end; ++i) {
+		room_object_t const wall(objs[i]); // deep copy to avoid reference invalidation
+		bool const dim(wall.dy() < wall.dx()), dir(room.get_center_dim(dim) < wall.get_center_dim(dim));
+		float const len(wall.get_sz_dim(!dim));
+		unsigned const num_showers(len/shower_width);
+		if (num_showers == 0) continue; // wall too short for showers
+		float const shower_spacing(len/num_showers), wall_edge(wall.d[dim][!dir]);
+		cube_t shower(wall); // copy zvals
+		shower.d[dim][ dir] = wall_edge;
+		shower.d[dim][!dir] = wall_edge + (dir ? -1.0 : 1.0)*shower_depth;
+
+		for (unsigned n = 0; n < num_showers; ++n) {
+			if (n == 0 || n+1 == num_showers) continue; // skip corner showers as they're unreachable
+			set_wall_width(shower, (wall.d[!dim][0] + (n + 0.5)*shower_spacing), 0.5*shower_spacing, !dim);
+			if (is_obj_placement_blocked(shower, room, 1, 1)) continue; // inc_open_doors=1, check_open_dir=1
+			// TODO: shower head and handles, but no wall
+			objs.emplace_back(shower, TYPE_SHOWER, room_id, dim, dir, 0, tot_light_amt);
+		} // for n
+	} // for i
+	// TODO: toilets, lockers, benches, etc.
 	add_door_sign("Shower", room, zval, room_id);
 	return 1;
 }
