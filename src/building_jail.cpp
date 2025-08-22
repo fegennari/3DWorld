@@ -523,7 +523,7 @@ bool building_t::assign_and_fill_prison_room(rand_gen_t rgen, room_t &room, floa
 				if (!add_gym_objs(rgen, room, zval, room_id, tot_light_amt, objs_start)) continue;
 				break;
 			case RTYPE_SHOWER:
-				if (!add_shower_room_objs(rgen, room, zval, room_id, tot_light_amt, objs_start)) continue;
+				if (!add_shower_room_objs(rgen, room, zval, room_id, tot_light_amt, objs_start, lights_start)) continue;
 				break;
 			case RTYPE_CLASS: {
 				unsigned td_orient(0); // unused
@@ -678,7 +678,7 @@ bool building_t::add_visit_room_objs(rand_gen_t rgen, room_t &room, float &zval,
 			cube_t cand_wall(room);
 			set_wall_width(cand_wall, wall_pos, wall_hthick, !dim);
 
-			for (auto i = objs.begin()+lights_start; i != objs.end(); ++i) { // check for lights blocking wall
+			for (auto i = objs.begin()+lights_start; i != objs.begin()+objs_start; ++i) { // check for lights blocking wall
 				if (i->intersects(cand_wall)) {valid = 0; break;}
 			}
 			if (!valid || !has_door_on_side[0] || !has_door_on_side[1])            {valid = 0; continue;} // must have a door on each side
@@ -813,7 +813,7 @@ bool building_t::add_visit_room_objs(rand_gen_t rgen, room_t &room, float &zval,
 	return 1;
 }
 
-bool building_t::add_shower_room_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+bool building_t::add_shower_room_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned lights_start) {
 	float const ceil_zval(zval + get_floor_ceil_gap() - 0.1*get_fc_thickness()); // lower slightly
 	zval = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_TILE);
 	float const wall_thick(get_wall_thickness());
@@ -827,18 +827,44 @@ bool building_t::add_shower_room_objs(rand_gen_t rgen, room_t const &room, float
 	set_cube_zvals(room_ext, zval, ceil.z1());
 	unsigned const wall_tile_start(objs.size());
 	add_room_wall_tile(room_ext, room_id, tot_light_amt);
-	unsigned const wall_tile_end(objs.size());
 	float const floor_spacing(get_window_vspace()), clearance(get_min_front_clearance_inc_people());
 	// add central wall if large enough
-	// TODO
-
-	// add showers along walls
+	vector2d const room_sz(room.get_size_xy());
+	bool const long_dim(room_sz.x < room_sz.y), wdim(!long_dim);
 	float const shower_width(0.5*floor_spacing), shower_depth(shower_width);
+
+	if (room_sz[wdim] > 4*shower_depth + 2*clearance + 2.0*wall_thick) {
+		float const room_center(room.get_center_dim(wdim));
+		cube_t wall(room);
+		set_cube_zvals(wall, zval, ceil.z1());
+		wall.expand_in_dim(long_dim, -(shower_depth + 2.0*clearance)); // shorten ends
+		set_wall_width(wall, room_center, wall_thick, wdim); // twice the normal wall thickness
+		bool blocked(0);
+
+		for (auto i = objs.begin()+lights_start; i != objs.begin()+objs_start; ++i) { // check for lights blocking wall
+			if (i->intersects(wall)) {blocked = 1; break;}
+		}
+		if (!blocked && !is_obj_placement_blocked(wall, room, 1)) { // inc_open_doors=1
+			interior->room_geom->objs.emplace_back(wall, TYPE_STAIR_WALL, room_id, wdim, 0, 0, tot_light_amt); // inner wall, used for collisions
+
+			for (unsigned tdim = 0; tdim < 2; ++tdim) {
+				for (unsigned tdir = 0; tdir < 2; ++tdir) {
+					cube_t tile(wall);
+					tile.expand_by_xy(get_flooring_thick());
+					tile.d[tdim][tdir] = wall.d[tdim][!tdir];
+					objs.emplace_back(tile, TYPE_POOL_TILE, room_id, tdim, tdir, RO_FLAG_NOCOLL);
+				}
+			}
+		}
+	}
+	unsigned const wall_tile_end(objs.size());
+	// add showers along walls
 	unsigned const showers_start(objs.size()), shower_style(rgen.rand());
 
 	for (unsigned i = wall_tile_start; i != wall_tile_end; ++i) {
 		room_object_t const wall(objs[i]); // deep copy to avoid reference invalidation
-		bool const dim(wall.dy() < wall.dx()), dir(room.get_center_dim(dim) < wall.get_center_dim(dim));
+		if (wall.type != TYPE_POOL_TILE) continue; // skip inner wall
+		bool const dim(wall.dim), dir(wall.dir);
 		float const len(wall.get_sz_dim(!dim));
 		unsigned const num_showers(len/shower_width);
 		if (num_showers == 0) continue; // wall too short for showers
