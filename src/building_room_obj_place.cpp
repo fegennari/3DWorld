@@ -1775,7 +1775,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 	float const tub_height_factor(0.2); // in units of floor spacing
 	unsigned const vanity_obj_ix(objs.size());
 	bool placed_obj(0), placed_toilet(0), no_tub(0);
-	bool added_vanity(is_house && !is_basement && add_vanity_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start)); // try to place vanity
+	bool added_vanity(is_house && !is_basement && rgen.rand_float() < 0.75 && add_vanity_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start)); // maybe add vanity
 
 	// place toilet first because it's in the corner out of the way and higher priority
 	if (have_toilet) { // have a toilet model

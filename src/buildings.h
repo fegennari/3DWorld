@@ -558,7 +558,7 @@ std::string const room_names_short[NUM_RTYPES] =
 	"Play", "Art", "Utility", "Garage", "Ramp", "Attic", "Bed", "", "Server", "Pool",
 	"Swim", "Security", "Lounge", "Common", "Basement", "Retail", "Elevator", "Conference", "Machine", "Dungeon",
 	"Equipment", "Store", "Mall", "Restaurant", "Factory", "Warehouse", "Bedroom", "OR", "Exam", "Class",
-	"Waiting", "Lab", "Cafeteria", "Locker", "Jail", "Cell", "Gym", "Visit", "Shower"
+	"Waiting", "Lab", "Cafeteria", "Locker", "Jail", "Cells", "Gym", "Visit", "Shower"
 };
 
 unsigned const room_priorities[NUM_RTYPES] = { // for breaker labels; higher values have higher priority
