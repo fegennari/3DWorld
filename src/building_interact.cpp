@@ -508,7 +508,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 
 		// make a first pass over all the large objects to determine if the player is inside one; in that case, the player can't reach out and interact with an object outside it
 		for (auto i = objs.begin(); i != objs_end; ++i) {
-			if (i->type != TYPE_STALL && i->type != TYPE_SHOWER && i->type != TYPE_ELEVATOR && !(i->type == TYPE_CLOSET && i->is_open())) continue; // TYPE_CUBICLE?
+			if (i->type != TYPE_STALL && !i->is_enc_shower() && i->type != TYPE_ELEVATOR && !(i->type == TYPE_CLOSET && i->is_open())) continue; // TYPE_CUBICLE?
 			if (!i->contains_pt(closest_to)) continue;
 			active_area = *i;
 			break; // there can be only one - done
@@ -867,7 +867,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 	}
 	else if (type == TYPE_SHOWER) { // shower
 		// if (interior->room_geom->cube_intersects_moved_obj(c_test)) continue; // not yet needed
-		if (can_open_bathroom_stall_or_shower(obj, int_pos, int_dir)) { // open/close shower door
+		if (obj.is_enc_shower() && can_open_bathroom_stall_or_shower(obj, int_pos, int_dir)) { // open/close shower door
 			obj.flags       ^= RO_FLAG_OPEN; // toggle open/close
 			sound_scale      = 0.35;
 			update_draw_data = 1;
@@ -905,7 +905,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		update_draw_data = 1;
 	}
 	else if (type == TYPE_CLOSET || type == TYPE_STALL) {
-		if (type == TYPE_STALL && obj.flags & RO_FLAG_IN_JAIL) { // prison shower stall
+		if (type == TYPE_STALL && obj.in_jail()) { // prison shower stall
 			// TODO: maybe turn on water
 		}
 		if (!obj.is_open()) { // not yet open

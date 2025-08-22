@@ -1801,13 +1801,24 @@ void building_room_geom_t::draw_shower_head(room_object_t const &shower, float r
 }
 
 void building_room_geom_t::add_shower(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm) {
-	bool const xdir(c.dim), ydir(c.dir), dirs[2] = {xdir, ydir}; // placed in this corner
 	vector3d const sz(c.get_size());
-	float const signs[2] = {(xdir ? -1.0f : 1.0f), (ydir ? -1.0f : 1.0f)};
 	float const radius(0.5f*(sz.x + sz.y));
-	colorRGBA const metal_color(apply_light_color(c, GRAY));
-	cube_t bottom(c), sides[2] = {c, c};
+	cube_t bottom(c);
 	bottom.z2() = c.z1() + 0.025*sz.z;
+	colorRGBA const metal_color(apply_light_color(c, GRAY));
+
+	if (c.in_jail()) { // prison shower room open shower
+		if (inc_sm) {
+			float const inner_wall_pos(c.d[c.dim][c.dir]), extent_amt((c.dir ? -1.0 : 1.0)*0.06*sz[c.dim]);
+			draw_shower_head(c, radius, inner_wall_pos, extent_amt, c.dim);
+			add_shower_drain(bottom, metal_color);
+		}
+		return;
+	}
+	// house shower enclosed in glass with door
+	bool const xdir(c.dim), ydir(c.dir), dirs[2] = {xdir, ydir}; // placed in this corner
+	float const signs[2] = {(xdir ? -1.0f : 1.0f), (ydir ? -1.0f : 1.0f)};
+	cube_t sides[2] = {c, c};
 
 	for (unsigned d = 0; d < 2; ++d) { // walls
 		sides[d].d[d][!dirs[d]] -= signs[d]*0.98*sz[d];
@@ -4121,7 +4132,7 @@ colorRGBA get_canopy_base_color(room_object_t const &c) {
 }
 
 void get_bed_cubes(room_object_t const &c, cube_t cubes[6]) { // frame, head, foot, mattress, pillow, legs_bcube; no posts or canopy
-	bool const is_wide(bed_is_wide(c)), in_jail(c.flags & RO_FLAG_IN_JAIL);
+	bool const is_wide(bed_is_wide(c)), in_jail(c.in_jail());
 	float const height(c.dz()), length(c.get_length()), width(c.get_width());
 	float const head_width(in_jail ? 0.02 : 0.04), foot_width(bed_has_posts(c) ? head_width : (in_jail ? 0.02f : 0.03f)); // relative to length
 	cube_t frame(c), head(c), foot(c), mattress(c), legs_bcube(c), pillow(c);
@@ -4152,7 +4163,7 @@ void get_bed_cubes(room_object_t const &c, cube_t cubes[6]) { // frame, head, fo
 }
 
 void building_room_geom_t::add_bed(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale) {
-	bool const is_bot_bunk(c.flags & RO_FLAG_ADJ_BOT), is_top_bunk(c.flags & RO_FLAG_ADJ_TOP), in_jail(c.flags & RO_FLAG_IN_JAIL), add_posts(bed_has_posts(c));
+	bool const is_bot_bunk(c.flags & RO_FLAG_ADJ_BOT), is_top_bunk(c.flags & RO_FLAG_ADJ_TOP), in_jail(c.in_jail()), add_posts(bed_has_posts(c));
 	cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube; no posts or canopy
 	get_bed_cubes(c, cubes);
 	cube_t const &frame(cubes[0]), &head(cubes[1]), &foot(cubes[2]), &mattress(cubes[3]), &pillow(cubes[4]);
@@ -4650,7 +4661,7 @@ void building_room_geom_t::add_br_stall(room_object_t const &c, bool inc_lg, boo
 
 	if (inc_sm) {
 		// Note: stall is tagged as a large object, but the small parts aren't modified by the player so we don't need to update them
-		if (c.flags & RO_FLAG_IN_JAIL) { // prison shower stall; add seat, handles, and shower head
+		if (c.in_jail()) { // prison shower stall; add seat, handles, and shower head
 			unsigned const skip_faces(EF_Z1 | ~get_face_mask(dim, dir)); // bottom and back
 			float const width(c.get_width()), depth(c.get_depth()), height(c.dz()), signed_depth((dir ? -1.0 : 1.0)*depth);
 			float const inner_wall_pos(c.d[dim][dir] + 0.02*signed_depth), extent_amt(0.06*signed_depth);

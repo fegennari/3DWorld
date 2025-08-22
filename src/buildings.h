@@ -747,6 +747,7 @@ struct room_object_t : public oriented_cube_t { // size=68
 	bool in_mall    () const {return  (flags & RO_FLAG_IN_MALL);}
 	bool in_factory () const {return  (flags & RO_FLAG_IN_FACTORY);}
 	bool in_warehouse()const {return  (flags & RO_FLAG_IN_WH);}
+	bool in_jail    () const {return  (flags & RO_FLAG_IN_JAIL);}
 	bool in_hallway () const {return  (flags & RO_FLAG_IN_HALLWAY);}
 	bool is_exterior() const {return  (flags & RO_FLAG_EXTERIOR);}
 	bool rotates    () const {return  (flags & RO_FLAG_RAND_ROT);}
@@ -771,6 +772,7 @@ struct room_object_t : public oriented_cube_t { // size=68
 	bool is_mirror      () const {return (type == TYPE_MIRROR || type == TYPE_DRESS_MIR || (type == TYPE_MED_CAB && !has_extra()));}
 	bool is_tv_or_monitor() const {return (type == TYPE_TV || type == TYPE_MONITOR);}
 	bool is_tv_monitor_on() const {return (!(obj_id & 1) && is_powered() && !is_broken());} // on, powered, and not broken
+	bool is_enc_shower   () const {return (type == TYPE_SHOWER && !in_jail());} // enclosed shower
 	bool is_player_collidable() const;
 	bool can_use        () const;
 	bool is_interactive () const {return (has_dstate() || can_use());}

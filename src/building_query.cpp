@@ -1320,7 +1320,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 				had_coll |= check_stall_collision(*c, pos, p_last, xy_radius, cnorm);
 				if (!c->is_open() && c->contains_pt(pos)) {register_in_closed_bathroom_stall();}
 			}
-			else if (type == TYPE_SHOWER && maybe_inside_room_object(*c, pos, xy_radius)) {
+			else if (c->is_enc_shower() && maybe_inside_room_object(*c, pos, xy_radius)) {
 				// shower is open and intersecting player, or player is inside shower; perform collision test with side only
 				had_coll |= check_shower_collision(*c, pos, p_last, xy_radius, cnorm);
 			}
@@ -1344,7 +1344,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 				if (type == TYPE_TOILET || (type == TYPE_URINAL && !is_player_model_female())) {player_near_toilet = 1;} // females can't use urinals
 				had_coll = 1;
 			}
-			if ((type == TYPE_STALL || type == TYPE_SHOWER) && !c->is_open() && c->contains_pt(pos)) {register_player_hiding(*c);} // player is hiding in the stall/shower
+			if ((type == TYPE_STALL || c->is_enc_shower()) && !c->is_open() && c->contains_pt(pos)) {register_player_hiding(*c);} // player is hiding in the stall/shower
 		} // for c
 	} // end interior->room_geom
 	if (!player_wait_respawn) { // zombies push player, but not when player is dead
@@ -1694,7 +1694,7 @@ bool building_interior_t::check_sphere_coll_room_objects(building_t const &build
 			else if (type == TYPE_CASHREG   ) {coll_ret |= check_cashreg_collision   (*c, pos, p_last, radius, &cnorm);}
 			else if (type == TYPE_CUBICLE   ) {coll_ret |= (unsigned)check_cubicle_collision (*c, pos, p_last, radius, &cnorm);}
 			else if (type == TYPE_STALL  && maybe_inside_room_object(*c, pos, radius)) {coll_ret |= (unsigned)check_stall_collision (*c, pos, p_last, radius, &cnorm);}
-			else if (type == TYPE_SHOWER && maybe_inside_room_object(*c, pos, radius)) {coll_ret |= (unsigned)check_shower_collision(*c, pos, p_last, radius, &cnorm);}
+			else if (c->is_enc_shower()  && maybe_inside_room_object(*c, pos, radius)) {coll_ret |= (unsigned)check_shower_collision(*c, pos, p_last, radius, &cnorm);}
 			else {coll_ret |= (unsigned)sphere_cube_int_update_pos(pos, radius, bc, p_last, 0, &cnorm);} // skip_z=0
 		}
 		if (coll_ret) { // collision with this object - set hardness
@@ -1938,7 +1938,7 @@ bool building_interior_t::line_coll(building_t const &building, point const &p1,
 				float const radius(c->get_radius());
 				if (sphere_test_comp(p1, c->get_cube_center(), (p1 - p2), radius*radius, tmin) && tmin < t) {t = tmin; had_coll = 1;}
 			}
-			//else if (c->type == TYPE_STALL || c->type == TYPE_SHOWER) {}
+			//else if (c->type == TYPE_STALL || c->is_enc_shower()) {}
 			else {had_coll |= get_line_clip_update_t(p1, p2, *c, t);} // assume it's a cube
 		} // for c
 		for (auto const &i : room_geom->trim_objs) {had_coll |= get_line_clip_update_t(p1, p2, i, t);} // include wall trim

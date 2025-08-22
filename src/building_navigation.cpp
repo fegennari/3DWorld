@@ -1684,7 +1684,7 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 				avoid.insert(avoid.end(), sides, sides+num_cubes);
 				continue;
 			}
-			else if (c->type == TYPE_SHOWER) {
+			else if (c->is_enc_shower()) {
 				cube_t sides[2];
 				unsigned const num_cubes(get_shower_cubes(*c, sides));
 				avoid.insert(avoid.end(), sides, sides+num_cubes);
@@ -2241,8 +2241,7 @@ bool building_t::place_people_if_needed(unsigned building_ix, float radius) cons
 
 		for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
 			if (i->type == TYPE_BED) {
-				bool const in_jail(i->flags & RO_FLAG_IN_JAIL);
-				if (rgen.rand_float() > (in_jail ? 0.15 : 0.1)) continue; // 10% chance for residential beds, 15% for jail beds
+				if (rgen.rand_float() > (i->in_jail() ? 0.15 : 0.1)) continue; // 10% chance for residential beds, 15% for jail beds
 				cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube
 				get_bed_cubes(*i, cubes);
 				person.pos = cube_top_center(cubes[3]); // center of the mattress

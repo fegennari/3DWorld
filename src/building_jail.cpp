@@ -828,7 +828,13 @@ bool building_t::add_shower_room_objs(rand_gen_t rgen, room_t const &room, float
 	unsigned const wall_tile_start(objs.size());
 	add_room_wall_tile(room_ext, room_id, tot_light_amt);
 	unsigned const wall_tile_end(objs.size());
-	float const floor_spacing(get_window_vspace()), shower_width(0.5*floor_spacing), shower_depth(shower_width);
+	float const floor_spacing(get_window_vspace()), clearance(get_min_front_clearance_inc_people());
+	// add central wall if large enough
+	// TODO
+
+	// add showers along walls
+	float const shower_width(0.5*floor_spacing), shower_depth(shower_width);
+	unsigned const showers_start(objs.size()), shower_style(rgen.rand());
 
 	for (unsigned i = wall_tile_start; i != wall_tile_end; ++i) {
 		room_object_t const wall(objs[i]); // deep copy to avoid reference invalidation
@@ -842,14 +848,22 @@ bool building_t::add_shower_room_objs(rand_gen_t rgen, room_t const &room, float
 		shower.d[dim][!dir] = wall_edge + (dir ? -1.0 : 1.0)*shower_depth;
 
 		for (unsigned n = 0; n < num_showers; ++n) {
-			if (n == 0 || n+1 == num_showers) continue; // skip corner showers as they're unreachable
 			set_wall_width(shower, (wall.d[!dim][0] + (n + 0.5)*shower_spacing), 0.5*shower_spacing, !dim);
 			if (is_obj_placement_blocked(shower, room, 1, 1)) continue; // inc_open_doors=1, check_open_dir=1
-			// TODO: shower head and handles, but no wall
-			objs.emplace_back(shower, TYPE_SHOWER, room_id, dim, dir, 0, tot_light_amt);
+			// check if entry area is blocked by another shower on an adjacent wall
+			cube_t entry_area(shower);
+			entry_area.d[dim][!dir] += (dir ? -1.0 : 1.0)*clearance; // extend into room
+			bool blocked(0);
+
+			for (auto s = objs.begin()+showers_start; s != objs.end(); ++s) {
+				if (s->type == TYPE_SHOWER && s->dim != dim && s->intersects(entry_area)) {blocked = 1; break;}
+			}
+			if (blocked) continue;
+			objs.emplace_back(shower, TYPE_SHOWER, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_IN_JAIL), tot_light_amt);
+			objs.back().obj_id = shower_style; // sets single vs. two handles
 		} // for n
 	} // for i
-	// TODO: toilets, lockers, benches, etc.
+	// TODO: lockers, benches, etc.
 	add_door_sign("Shower", room, zval, room_id);
 	return 1;
 }
