@@ -1750,9 +1750,10 @@ rgeom_mat_t &building_room_geom_t::get_shower_tile_mat(room_object_t const &c, f
 	return get_material(tex, 0); // no shadows
 }
 void building_room_geom_t::draw_shower_head(room_object_t const &shower, float radius, float wall_pos, float extent_amt, bool head_dim) { // small
+	bool const in_jail(shower.in_jail());
 	float const shower_height(shower.dz()), center_pos(shower.get_center_dim(!head_dim));
 	point start_pos, end_pos, base_pos, head_pos;
-	start_pos.z = shower.z1() + 0.85*shower_height;
+	start_pos.z = shower.z1() + (in_jail ? 0.9 : 0.85)*shower_height;
 	start_pos[ head_dim] = wall_pos;
 	start_pos[!head_dim] = center_pos;
 	base_pos = start_pos;
@@ -1771,7 +1772,7 @@ void building_room_geom_t::draw_shower_head(room_object_t const &shower, float r
 	// draw water control handles/knobs
 	point knob_pos;
 	knob_pos[head_dim] = wall_pos;
-	knob_pos.z = shower.z1() + 0.55*shower_height;
+	knob_pos.z = shower.z1() + (in_jail ? 0.5 : 0.55)*shower_height;
 
 	if (shower.obj_id & 8) { // single control
 		knob_pos[!head_dim] = center_pos;
@@ -1784,6 +1785,15 @@ void building_room_geom_t::draw_shower_head(room_object_t const &shower, float r
 		point handle_end(knob_end);
 		handle_end.z -= 0.12*radius; // points downward
 		metal_mat.add_cylin_to_verts(knob_end, handle_end, 0.02*radius, 0.015*radius, color, 0, 1); // draw exposed end
+
+		if (in_jail) { // add metal vertical bar
+			bool const dir(extent_amt > 0.0);
+			cube_t bar(shower);
+			bar.d[head_dim][dir] = wall_pos + 0.15*extent_amt; // along the wall the shower head and handle are on
+			set_wall_width(bar, center_pos, 0.014*radius, !head_dim);
+			set_cube_zvals(bar, knob_pos.z, base_pos.z);
+			metal_mat.add_cube_to_verts_untextured(bar, color*0.8, (~get_face_mask(head_dim, !dir) | EF_Z12));
+		}
 	}
 	else { // separate hot/cold
 		for (unsigned d = 0; d < 2; ++d) { // left/right | hot/cold
@@ -1803,22 +1813,30 @@ void building_room_geom_t::draw_shower_head(room_object_t const &shower, float r
 void building_room_geom_t::add_shower(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm) {
 	vector3d const sz(c.get_size());
 	float const radius(0.5f*(sz.x + sz.y));
-	cube_t bottom(c);
-	bottom.z2() = c.z1() + 0.025*sz.z;
 	colorRGBA const metal_color(apply_light_color(c, GRAY));
 
 	if (c.in_jail()) { // prison shower room open shower
 		if (inc_sm) {
 			float const inner_wall_pos(c.d[c.dim][c.dir]), extent_amt((c.dir ? -1.0 : 1.0)*0.06*sz[c.dim]);
+			cube_t bottom(c);
+			bottom.z2() = c.z1() + 0.0008*sz.z;
 			draw_shower_head(c, radius, inner_wall_pos, extent_amt, c.dim);
 			add_shower_drain(bottom, metal_color);
+			// add railing
+			float const railing_radius(0.02*radius), railing_zval(c.z1() + 0.35*c.dz());
+			cube_t railing(c);
+			railing.d[c.dim][!c.dir] = c.d[c.dim][c.dir] + (c.dir ? -1.0 : 1.0)*2.0*railing_radius;
+			set_cube_zvals(railing, railing_zval-railing_radius, railing_zval+railing_radius);
+			rgeom_mat_t &metal_mat(get_metal_material(1, 0, 1)); // shadowed, specular metal, small
+			metal_mat.add_ortho_cylin_to_verts(railing, metal_color, !c.dim, 1, 1); // draw ends in case they're visible from an end row of showers
 		}
 		return;
 	}
 	// house shower enclosed in glass with door
 	bool const xdir(c.dim), ydir(c.dir), dirs[2] = {xdir, ydir}; // placed in this corner
 	float const signs[2] = {(xdir ? -1.0f : 1.0f), (ydir ? -1.0f : 1.0f)};
-	cube_t sides[2] = {c, c};
+	cube_t bottom(c), sides[2] = {c, c};
+	bottom.z2() = c.z1() + 0.025*sz.z;
 
 	for (unsigned d = 0; d < 2; ++d) { // walls
 		sides[d].d[d][!dirs[d]] -= signs[d]*0.98*sz[d];
