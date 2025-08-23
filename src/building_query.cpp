@@ -3214,9 +3214,8 @@ bool building_t::cube_int_ext_door(cube_t const &c) const {
 	return 0;
 }
 
-// for use with in dir lighting updates when interior doors are opened or closed
-void building_t::get_rooms_for_door(unsigned door_ix, int room_ix[2]) const {
-	door_t const &door(get_door(door_ix));
+// for use with indir lighting updates when interior doors are opened or closed
+void building_t::get_rooms_for_door(door_t const &door, int room_ix[2]) const {
 	cube_t dbc(door.get_true_bcube());
 	dbc.expand_in_dim(door.dim, get_wall_thickness()); // make sure it overlaps the room
 	room_ix[0] = room_ix[1] = -1; // reset to invalid rooms in case no rooms are found
@@ -3225,8 +3224,9 @@ void building_t::get_rooms_for_door(unsigned door_ix, int room_ix[2]) const {
 		if (!r->intersects(dbc)) continue;
 		bool side(r->get_center_dim(door.dim) < door.get_center_dim(door.dim));
 		
-		if (room_ix[side] >= 0) { // must be basement door with room on top and bottom rather than each side
-			assert(door.on_stairs);
+		if (room_ix[side] >= 0) {
+			// must be basement door with room on top and bottom rather than each side, or jail cell door
+			assert(door.on_stairs || door.for_jail);
 			if (room_ix[!side] < 0) {side ^= 1;} // use the other side if unassigned
 		}
 		room_ix[side] = (r - interior->rooms.begin());
@@ -3243,8 +3243,10 @@ void building_t::get_lights_for_room_and_floor(unsigned room_ix, unsigned floor_
 }
 void building_t::get_lights_near_door(unsigned door_ix, vector<unsigned> &light_ids) const {
 	light_ids.clear();
+	door_t const &door(get_door(door_ix));
+	if (door.for_jail == 1) return; // jail bar doors do not affect lighting
 	int room_ix[2] = {};
-	get_rooms_for_door(door_ix, room_ix);
+	get_rooms_for_door(door, room_ix);
 	unsigned const floor_ix(get_floor_for_zval(get_door(door_ix).get_center_dim(2)));
 
 	for (unsigned d = 0; d < 2; ++d) {
