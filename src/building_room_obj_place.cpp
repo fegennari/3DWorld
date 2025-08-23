@@ -2429,7 +2429,7 @@ void building_t::add_fridge_sticky_notes(rand_gen_t rgen, unsigned fridge_obj_ix
 	vect_room_object_t &objs(interior->room_geom->objs);
 	room_object_t const fridge(objs[fridge_obj_ix]); // deep copy to avoid invaliding the reference
 	room_object_t note(fridge);
-	float const one_inch(get_window_vspace()/8/12), fridge_width(fridge.get_width()), fridge_height(fridge.get_height());
+	float const one_inch(get_one_inch()), fridge_width(fridge.get_width()), fridge_height(fridge.get_height());
 	if (fridge_width < 4.0*4.0*one_inch || fridge_height < 6.0*6.0*one_inch) return; // shouldn't fail
 	bool const dim(fridge.dim), dir(fridge.dir);
 	unsigned const NUM_SIZES(7), NUM_COLORS(8);

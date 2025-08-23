@@ -762,7 +762,7 @@ void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float 
 		
 		if (1) { // scatter some random pallets on the floor
 			unsigned const num_pallets((rgen.rand() % 3) + 3); // 3-5
-			float const one_inch(window_vspace/(8*12)), length(48*one_inch), width(40*one_inch), height(4.5*one_inch); // 48x40x4.5 inches
+			float const one_inch(get_one_inch()), length(48*one_inch), width(40*one_inch), height(4.5*one_inch); // 48x40x4.5 inches
 
 			for (unsigned n = 0; n < num_pallets; ++n) {
 				bool const pdim(rgen.rand_bool());

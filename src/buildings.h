@@ -507,7 +507,7 @@ enum { // room object types
 	TYPE_MACHINE, TYPE_BUCKET, TYPE_SPIWEB, TYPE_TREE, TYPE_THEFT_SENS, TYPE_ELEC_WIRE, TYPE_ERASER, TYPE_DWASHER, TYPE_PET_CAGE, TYPE_IBEAM,
 	TYPE_CATWALK, TYPE_VANITY, TYPE_CHEM_TANK, TYPE_HVAC_UNIT, TYPE_WARN_LIGHT, TYPE_GAUGE, TYPE_PALLET, TYPE_SHELF_WALL, TYPE_VENDING, TYPE_MED_CAB,
 	TYPE_LOCKER, TYPE_TESTTUBE, TYPE_HARDHAT, TYPE_TOPHAT, TYPE_COMP_MOUSE, TYPE_PARK_GATE, TYPE_CONV_BELT, TYPE_JAIL_BARS, TYPE_GUN, TYPE_STICK_NOTE,
-	TYPE_GYM_WEIGHT, TYPE_FOOD_TRAY,
+	TYPE_GYM_WEIGHT, TYPE_FOOD_TRAY, TYPE_BAR_SOAP,
 	/* these next ones are all 3D models - see logic in room_object_t::is_obj_model_type() */
 	TYPE_TOILET, TYPE_SINK, TYPE_TUB, TYPE_FRIDGE, TYPE_STOVE, TYPE_TV, TYPE_MONITOR, TYPE_COUCH, TYPE_OFF_CHAIR, TYPE_URINAL,
 	TYPE_LAMP, TYPE_WASHER, TYPE_DRYER, TYPE_KEY, TYPE_HANGER, TYPE_CLOTHES, TYPE_FESCAPE, TYPE_WALL_LAMP, TYPE_CUP, TYPE_TOASTER,
@@ -1334,6 +1334,7 @@ struct building_room_geom_t {
 	void add_filing_cabinet(room_object_t const &c, bool inc_lg, bool inc_sm);
 	void add_stapler(room_object_t const &c);
 	void add_eraser(room_object_t const &c);
+	void add_bar_soap(room_object_t const &c);
 	void add_gun(room_object_t const &c);
 	void add_sticky_note(room_object_t const &c);
 	void add_fire_ext_mount(room_object_t const &c);
@@ -2224,6 +2225,7 @@ struct building_t : public building_geom_t {
 	float get_flooring_thick () const {return 0.0012*get_window_vspace();}
 	float get_doorway_width  () const;
 	float get_landing_width  () const {return 1.0*get_doorway_width();} // for L-shaped stairs
+	float get_one_inch       () const {return get_window_vspace()/(8*12);}
 	float get_nominal_doorway_width   () const {return DOOR_WIDTH_SCALE*get_window_vspace();} // constant per-building, but not exactly the same as get_doorway_width()
 	float get_office_ext_doorway_width() const {return DOOR_WIDTH_SCALE_OFFICE*get_window_vspace();}
 	float get_parking_road_width      () const;

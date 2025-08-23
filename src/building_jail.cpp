@@ -832,6 +832,7 @@ bool building_t::add_shower_room_objs(rand_gen_t rgen, room_t const &room, float
 	vector2d const room_sz(room.get_size_xy());
 	bool const long_dim(room_sz.x < room_sz.y), wdim(!long_dim);
 	float const shower_width(0.5*floor_spacing), shower_depth(shower_width);
+	cube_t avoid;
 
 	if (room_sz[wdim] > 4*shower_depth + 2*clearance + 2.0*wall_thick) {
 		float const room_center(room.get_center_dim(wdim));
@@ -845,16 +846,19 @@ bool building_t::add_shower_room_objs(rand_gen_t rgen, room_t const &room, float
 			if (i->intersects(wall)) {blocked = 1; break;}
 		}
 		if (!blocked && !is_obj_placement_blocked(wall, room, 1)) { // inc_open_doors=1
+			float const tile_thick(get_flooring_thick());
 			interior->room_geom->objs.emplace_back(wall, TYPE_STAIR_WALL, room_id, wdim, 0, 0, tot_light_amt); // inner wall, used for collisions
 
 			for (unsigned tdim = 0; tdim < 2; ++tdim) {
 				for (unsigned tdir = 0; tdir < 2; ++tdir) {
 					cube_t tile(wall);
-					tile.expand_by_xy(get_flooring_thick());
+					tile.expand_by_xy(tile_thick);
 					tile.d[tdim][tdir] = wall.d[tdim][!tdir];
 					objs.emplace_back(tile, TYPE_POOL_TILE, room_id, tdim, tdir, RO_FLAG_NOCOLL);
 				}
 			}
+			avoid = wall;
+			avoid.expand_by_xy(tile_thick);
 		}
 	}
 	unsigned const wall_tile_end(objs.size());
@@ -889,7 +893,25 @@ bool building_t::add_shower_room_objs(rand_gen_t rgen, room_t const &room, float
 			objs.back().obj_id = shower_style; // sets single vs. two handles
 		} // for n
 	} // for i
-	// TODO: lockers, benches, etc.
+	// TODO: benches
+
+	// add some soap on the floor for players to pick up
+	unsigned const num_soap((rgen.rand() % 4) + 1); // 1-4
+	float const one_inch(get_one_inch()), soap_hlen(2.0*one_inch), soap_hwidth(1.25*one_inch), soap_height(1.0*one_inch); // 4x2.5x1
+	cube_t place_area(get_walkable_room_bounds(room));
+	place_area.z1() = zval;
+	unsigned const NUM_SOAP_COLORS = 5;
+	colorRGBA const soap_colors[NUM_SOAP_COLORS] = {WHITE, cream, vlt_yellow, colorRGBA(1.0, 0.8, 0.6), colorRGBA(0.7, 1.0, 0.7)};
+	colorRGBA const soap_color(soap_colors[rgen.rand() % NUM_SOAP_COLORS]);
+
+	for (unsigned n = 0; n < num_soap; ++n) {
+		bool const dim(rgen.rand_bool());
+		vector3d const soap_sz((dim ? soap_hwidth : soap_hlen), (dim ? soap_hlen : soap_hwidth), soap_height);
+		cube_t soap;
+		gen_xy_pos_for_cube_obj(soap, place_area, soap_sz, soap_height, rgen, 1); // place_at_z1=1
+		if (is_obj_placement_blocked(soap, room, 1) || (!avoid.is_all_zeros() && soap.intersects(avoid))) continue; // bad placement; allow soap in showers
+		objs.emplace_back(soap, TYPE_BAR_SOAP, room_id, dim, 0, (RO_FLAG_NOCOLL | RO_FLAG_ON_FLOOR), tot_light_amt, SHAPE_ROUNDED_CUBE, soap_color);
+	} // for n
 	add_door_sign("Shower", room, zval, room_id);
 	return 1;
 }
