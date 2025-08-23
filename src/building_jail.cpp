@@ -601,7 +601,7 @@ bool building_t::add_gym_objs(rand_gen_t rgen, room_t &room, float &zval, unsign
 		for (unsigned ring = 0; ring < 4 && num_placed < num_machines; ++ring) {
 			for (unsigned n = num_placed; n < num_machines; ++n) {
 				uint16_t const em_type(rgen.rand()); // assign a random sub-model
-				unsigned const obj_ix(objs.size()), model_id(combine_model_submodel_id(OBJ_MODEL_EX_MACHINE, em_type));
+				unsigned const model_id(combine_model_submodel_id(OBJ_MODEL_EX_MACHINE, em_type));
 				float const height(0.5*building_obj_model_loader.get_model(model_id).scale); // in units of floor spacing
 				num_placed += place_model_along_wall(model_id, TYPE_EX_MACHINE, room, height, rgen, zval, room_id, tot_light_amt, em_place_area, objs_start, 0.5, 4, 0, WHITE);
 			}
@@ -898,7 +898,7 @@ void building_t::add_prison_hall_room_objs(rand_gen_t rgen, room_t const &room, 
 	cube_t const hall(get_prison_hall_for_room(room));
 	vector2d const hall_sz(hall.get_size_xy());
 	bool const dim(hall_sz.x < hall_sz.y); // long dim (may not be primary dim for room, but should be primary dim for hall)
-	float const floor_spacing(get_window_vspace()), door_width(get_doorway_width()), wall_thick(get_wall_thickness()), centerline(hall.get_center_dim(!dim));
+	float const floor_spacing(get_window_vspace()), door_width(get_doorway_width()), centerline(hall.get_center_dim(!dim));
 	// add warning lights on wall ends between cells
 	float const light_zval(zval + 0.5*floor_spacing), light_height(0.1*floor_spacing), light_radius(0.12*light_height), light_spacing(5.0*floor_spacing);
 	vect_room_object_t &objs(interior->room_geom->objs);
