@@ -3235,10 +3235,12 @@ cube_t place_cylin_object_maybe_near(rand_gen_t &rgen, cube_t const &place_on, p
 	return c;
 }
 void building_t::add_basement_clutter_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
-	bool const add_bottles(rgen.rand_float() < 0.35); // 35% of rooms
-	bool const add_trash  (rgen.rand_float() < 0.35); // 35% of rooms
-	bool const add_papers (rgen.rand_float() < 0.50); // 50% of rooms
-	bool const add_glass  (rgen.rand_float() < 0.65); // 65% of the time
+	room_type const rtype(room.get_room_type(0)); // assumes first floor
+	bool const no_papers(rtype == RTYPE_BATH || rtype == RTYPE_SHOWER);
+	bool const add_bottles(              rgen.rand_float() < 0.35); // 35% of rooms
+	bool const add_trash  (!no_papers && rgen.rand_float() < 0.35); // 35% of rooms
+	bool const add_papers (!no_papers && rgen.rand_float() < 0.50); // 50% of rooms (paper trash)
+	bool const add_glass  (              rgen.rand_float() < 0.65); // 65% of the time
 	cube_t place_area(get_walkable_room_bounds(room));
 	place_area.expand_by(-get_trim_thickness()); // add some extra padding
 	add_floor_clutter_objs(rgen, room, place_area, zval, room_id, tot_light_amt, objs_start, add_bottles, add_trash, add_papers, add_glass);
