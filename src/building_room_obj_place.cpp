@@ -1725,12 +1725,15 @@ float building_t::add_flooring(room_t const &room, float zval, unsigned room_id,
 	tot_light_amt = 0.5*tot_light_amt + 0.5; // brighten flooring so that lights shining through doors and flashlights look better
 	unsigned flags(RO_FLAG_NOCOLL);
 	if (room.open_wall_mask) {flags |= RO_FLAG_OPEN;} // flag flooring as "open" so that color is not adjusted by room light
+	vect_room_object_t &objs(interior->room_geom->objs);
 	// cut stairs and elevators out of flooring in case they pass through rooms with flooring
 	static vect_cube_t fparts, temp;
 	subtract_cubes_from_cube(flooring, interior->elevators, fparts, temp, 2); // check zval overlap
-	subtract_cubes_from_cubes(interior->stairwells, fparts, 0); // clip_in_z=0
-	vect_room_object_t &objs(interior->room_geom->objs);
-	
+
+	for (stairwell_t const &s : interior->stairwells) {
+		if (s.z1() >= zval || s.z2() <= zval) continue; // no zval overlap / doesn't cut through flooring
+		subtract_cube_from_cubes(s, fparts); // no holes, clip_in_z=0
+	}
 	for (cube_t const &f : fparts) {
 		objs.emplace_back(f, TYPE_FLOORING, room_id, 0, 0, flags, tot_light_amt, SHAPE_CUBE, WHITE, flooring_type);
 		objs.back().obj_id = sub_type; // selects wood material, etc.
