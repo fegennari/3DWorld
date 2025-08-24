@@ -1513,7 +1513,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 					bool placed(0);
 
 					for (unsigned n = 0; n < 2 && !placed; ++n) {
-						unsigned const side(pref_side ^ n);
+						bool const side(pref_side ^ bool(n));
 						// move a bit further from the driveway to avoid intersections with parked trucks or ambulances, though they may still intersect
 						pos[!dim] = dw->d[!dim][side] + (side ? 1.0 : -1.0)*0.05*bbh_height; // side of the driveway
 

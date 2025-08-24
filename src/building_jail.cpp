@@ -799,7 +799,7 @@ bool building_t::add_visit_room_objs(rand_gen_t rgen, room_t &room, float &zval,
 			} // for d
 		}
 		for (unsigned d = 0; d < 2; ++d) { // add chairs against the far walls, even if no table
-			if (d != vis_side) continue; // only on visitor side
+			if (bool(d) != vis_side) continue; // only on visitor side
 			point chair_pos(0.0, 0.0, zval);
 			chair_pos[!dim] = walkable_area.d[!dim][d] - rgen.rand_uniform(0.22, 0.26)*(d ? 1.0 : -1.0)*floor_spacing; // a bit misaligned
 			chair_pos[ dim] = table.get_center_dim(dim) + 0.08*rgen.signed_rand_float()*seat_spacing; // a bit less misaligned
