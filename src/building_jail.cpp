@@ -952,11 +952,14 @@ void building_t::add_prison_hall_room_objs(rand_gen_t rgen, room_t const &room, 
 
 	for (cube_t const &wall : interior->walls[dim]) {
 		if (!room.intersects(wall) || wall.z1() > light_zval || wall.z2() < light_zval) continue;
-		if (!has_bcube_int(wall, cells)) continue; // not the wall between cells
 		bool const dir(wall.get_center_dim(!dim) < centerline);
+		float const wall_edge(wall.d[!dim][dir]);
+		cube_t wall_end(wall);
+		wall_end.d[!dim][!dir] = wall_edge - (dir ? 1.0 : -1.0)*light_radius; // shrink to short segment where the light will be to exclude interior room walls
+		if (!has_bcube_int(wall_end, cells)) continue; // not the wall between cells
 		point center(0.0, 0.0, light_zval);
 		center[ dim] = wall.get_center_dim(dim);
-		center[!dim] = wall.d[!dim][dir] + (dir ? 1.0 : -1.0)*2.0*light_radius;
+		center[!dim] = wall_edge + (dir ? 1.0 : -1.0)*2.0*light_radius; // move away from the wall end
 		bool is_close(0);
 
 		for (point const &p : prev_lights) {
@@ -972,7 +975,7 @@ void building_t::add_prison_hall_room_objs(rand_gen_t rgen, room_t const &room, 
 		// add a horizontal rod connecting the light to the wall
 		cube_t bar(center);
 		bar.expand_by(0.2*light_radius);
-		bar.d[!dim][!dir] = wall.d[!dim][dir];
+		bar.d[!dim][!dir] = wall_edge;
 		objs.emplace_back(bar, TYPE_METAL_BAR, room_id, !dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, GRAY);
 	} // for wall
 
