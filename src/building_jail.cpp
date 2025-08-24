@@ -918,12 +918,10 @@ bool building_t::add_shower_room_objs(rand_gen_t rgen, room_t const &room, float
 		soap_avoid.push_back(bench);
 	}
 	// add some soap on the floor for players to pick up
-	unsigned const num_soap((rgen.rand() % 4) + 1); // 1-4
+	unsigned const num_soap((rgen.rand() % (has_wall ? 4 : 2)) + 1); // 1-4 if there's a well, 1-2 if not
 	float const one_inch(get_one_inch()), soap_hlen(2.0*one_inch), soap_hwidth(1.25*one_inch), soap_height(1.0*one_inch); // 4x2.5x1
 	cube_t place_area(get_walkable_room_bounds(room));
 	place_area.z1() = zval;
-	unsigned const NUM_SOAP_COLORS = 5;
-	colorRGBA const soap_colors[NUM_SOAP_COLORS] = {WHITE, cream, vlt_yellow, colorRGBA(1.0, 0.8, 0.6), colorRGBA(0.7, 1.0, 0.7)};
 	colorRGBA const soap_color(soap_colors[rgen.rand() % NUM_SOAP_COLORS]);
 
 	for (unsigned n = 0; n < num_soap; ++n) {

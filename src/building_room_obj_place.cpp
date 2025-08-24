@@ -1977,7 +1977,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 					// this mirror is actually 3D, so we enable collision detection; treat as a house even if it's in an office building
 					unsigned flags(RO_FLAG_IS_HOUSE); // Note: not necessarily a house
 					if (count_ext_walls_for_room(room, mirror.z1()) == 1) {flags |= RO_FLAG_INTERIOR;} // flag as interior if windows are opaque glass blocks
-					objs.emplace_back(mirror, TYPE_MED_CAB, room_id, sink.dim, sink.dir, flags, tot_light_amt);
+					objs.emplace_back(mirror, TYPE_MED_CAB, room_id, sink.dim, sink.dir, flags, tot_light_amt); // Note: invalidates sink reference
 					set_obj_id(objs); // for crack texture selection/orient
 					room.set_has_mirror();
 				}
@@ -2040,6 +2040,7 @@ bool building_t::add_vanity_to_room(rand_gen_t &rgen, room_t &room, float &zval,
 		blocker.expand_in_dim(!dim, 0.05*depth); // include overhang on sides
 		if (overlaps_obj_or_placement_blocked(blocker, room, objs_start)) continue; // bad placement; need to check elevators for hospitals
 		// Note: has doors but no drawers
+		unsigned const vanity_obj_ix(objs.size());
 		objs.emplace_back(vanity,  TYPE_VANITY,  room_id, dim, !dir, flags, tot_light_amt);
 		objs.emplace_back(blocker, TYPE_BLOCKER, room_id, 0, 0, RO_FLAG_INVIS); // add blocker in front
 		// add a mirror/medicine cabinet above the sink; shouldn't need to check for overlaps since vanity is placed first
@@ -2052,6 +2053,21 @@ bool building_t::add_vanity_to_room(rand_gen_t &rgen, room_t &room, float &zval,
 		objs.emplace_back(mirror, TYPE_MED_CAB, room_id, dim, !dir, mirror_flags, tot_light_amt);
 		set_obj_id(objs); // for crack texture selection/orient
 		room.set_has_mirror();
+
+		if (rgen.rand_bool()) { // add a bar of soap next to the vanity sink
+			float const one_inch(get_one_inch()), soap_hlen(min(0.5*depth, 2.0*one_inch)), soap_hwidth(1.25*one_inch), soap_height(1.0*one_inch); // 4x2.5x1
+			colorRGBA const soap_color(soap_colors[rgen.rand() % NUM_SOAP_COLORS]);
+			vector3d const soap_sz((dim ? soap_hwidth : soap_hlen), (dim ? soap_hlen : soap_hwidth), soap_height);
+			cube_t const sink(get_sink_cube(objs[vanity_obj_ix]));
+			bool const side(rgen.rand_bool());
+			float const sink_edge(sink.d[!dim][side]);
+			cube_t soap, soap_area(vanity);
+			soap_area.d[ dim][!dir ] = vanity.get_center_dim(dim); // front half space
+			soap_area.d[!dim][!side] = sink_edge + (side ? 1.0 : -1.0)*soap_hwidth;
+			soap_area.d[!dim][ side] = sink_edge + (side ? 1.0 : -1.0)*4.0*one_inch; // move away from sink edge
+			gen_xy_pos_for_cube_obj(soap, soap_area, soap_sz, soap_height, rgen, 0); // place_at_z1=0
+			objs.emplace_back(soap, TYPE_BAR_SOAP, room_id, dim, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_ROUNDED_CUBE, soap_color);
+		}
 		return 1; // success/done
 	} // for cand
 	return 0;
