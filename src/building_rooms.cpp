@@ -3715,6 +3715,16 @@ void room_t::assign_to(room_type rt, unsigned floor, bool locked) {
 	rtype[floor] = rt;
 	if (locked) {rtype_locked |= (1 << floor);} // lock this floor
 }
+bool room_t::maybe_connected_open_wall(room_t const &r) const {
+	if (!open_wall_mask || !r.open_wall_mask) return 0;
+
+	for (unsigned dim = 0; dim < 2; ++dim) {
+		for (unsigned dir = 0; dir < 2; ++dir) {
+			if (has_open_wall(dim, dir) && r.has_open_wall(dim, !dir)) return 1; // must have opposite open walls
+		}
+	}
+	return 0;
+}
 bool room_t::has_room_of_type(room_type type) const {
 	for (unsigned n = 0; n < NUM_RTYPE_SLOTS; ++n) {
 		if (rtype[n] == type) return 1;

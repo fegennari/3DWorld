@@ -1003,10 +1003,13 @@ void building_t::build_nav_graph() const { // Note: does not depend on room geom
 				ng.connect_stairs(r, num_stairs, interior->mall_info->ent_stairs, doorway_width);
 			}
 		}
-		if (room.open_wall_mask || (has_complex_floorplan && !room.is_ext_basement())) { // check for connected hallways in office buildings, or open wall rooms
+		bool const has_open_floorplan(has_complex_floorplan && !room.is_ext_basement());
+
+		if (has_open_floorplan || (room.open_wall_mask && !room.is_nested())) { // check for connected hallways in office buildings, or open wall rooms; no prison cells
 			for (unsigned r2 = r+1; r2 < num_rooms; ++r2) { // check rooms with higher index (since graph is bidirectional)
 				room_t const &room2(interior->rooms[r2]);
-				if (!room2.open_wall_mask || room2.z1() != room.z1() || !room2.intersects(c)) continue; // not a connected hallway
+				if (room2.z1() != room.z1() || !room2.intersects(c))               continue; // not adjacent
+				if (!has_open_floorplan && !room.maybe_connected_open_wall(room2)) continue; // not a connected room pair
 				cube_t conn_cube(c);
 				conn_cube.intersect_with_cube(room2);
 				ng.connect_rooms(r, r2, -1, conn_cube);
@@ -1863,12 +1866,12 @@ void building_t::get_avoid_cubes(float zval, float height, float radius, vect_cu
 void building_t::add_sub_rooms_to_avoid_if_needed(unsigned room_id, vect_cube_t &avoid) const {
 	room_t const &room(get_room(room_id));
 	if (room.is_industrial() && interior->ind_info) {vector_add_to(interior->ind_info->sub_rooms, avoid);}
-	else if (is_prison()) { // add walls between cells and other sub-rooms
-		cube_t const room_bounds(get_walkable_room_bounds(room)); // shrink to exclude walls along the edges of the room
+	else if (is_prison() && room.has_subroom()) { // add walls between cells and other sub-rooms
+		cube_t const select_area(get_walkable_room_bounds(room)); // shrink to exclude walls along the edges of the room
 
 		for (unsigned d = 0; d < 2; ++d) {
 			for (cube_t const &wall : interior->walls[d]) {
-				if (room_bounds.intersects(wall)) {avoid.push_back(wall);} // assumes walls extend the entire room height, so we don't need zval here
+				if (select_area.intersects(wall)) {avoid.push_back(wall);} // assumes walls extend the entire room height, so we don't need zval here
 			}
 		}
 	}
