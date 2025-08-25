@@ -864,6 +864,7 @@ bool building_t::add_shower_room_objs(rand_gen_t rgen, room_t const &room, float
 	// add showers along walls and benches next to them
 	unsigned const showers_start(objs.size()), shower_style(rgen.rand());
 	float const bench_height(0.22*floor_spacing), bench_hwidth(0.5*rgen.rand_uniform(0.7, 0.9)*bench_height);
+	int const skip_dir((room_sz[wdim] < 2*shower_depth + clearance) ? rgen.rand_bool() : 2); // skip one side if room is too narrow; can this happen?
 	cube_t bench;
 	vect_cube_t soap_avoid;
 	vect_cube_with_ix_t bench_cands;
@@ -874,6 +875,7 @@ bool building_t::add_shower_room_objs(rand_gen_t rgen, room_t const &room, float
 		room_object_t const wall(objs[i]); // deep copy to avoid reference invalidation
 		if (wall.type != TYPE_POOL_TILE) continue; // skip inner wall
 		bool const dim(wall.dim), dir(wall.dir);
+		if (int(dir) == skip_dir) continue; // no showers on this side
 		float const len(wall.get_sz_dim(!dim));
 		unsigned const num_showers(len/shower_width);
 		if (num_showers == 0) continue; // wall too short for showers
