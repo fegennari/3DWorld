@@ -1182,7 +1182,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, unsigned gen_index, bool has
 				float min_dist_abs(min(1.5f*doorway_width, max(0.5f*doorway_width, 0.5f*min_split_len)));
 
 				if (jail_door) {
-					max_eq(min_dist_abs, 1.5f*doorway_width); // must have space for jail door to open fully
+					max_eq(min_dist_abs, 1.0f*doorway_width); // must have space for jail door to open most of the way (1.5x would be fully)
 					if (len < 2.1*min_dist_abs) break; // too short for jail door
 				}
 				bool const pref_conn(pref_conn_to.contains_cube(wall)); // house hallway, etc.

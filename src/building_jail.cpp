@@ -268,7 +268,7 @@ bool building_t::divide_part_into_jail_cells(cube_t const &part, unsigned part_i
 				cube_t wall(sub_room);
 				clip_wall_to_ceil_floor(wall, fc_thick);
 				set_wall_width(wall, hi_edge, wall_hthick, hall_dim);
-				// insert a door in the wall; this is optional since the room connecting code may add a door anway, but that doesn't always happen for short walls
+				// insert a door in the wall; this is optional since the room connecting code may add a door anyway, but that doesn't always happen for short walls
 				float door_pos(sub_room.d[dim][0] + rgen.rand_uniform(0.35, 0.65)*sub_room_width); // center 30% of wall
 				max_eq(door_pos, wall.d[dim][0]+door_wall_space); // door must be contained in wall
 				min_eq(door_pos, wall.d[dim][1]-door_wall_space);

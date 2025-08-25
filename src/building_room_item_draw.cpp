@@ -1009,7 +1009,7 @@ void building_room_geom_t::create_door_vbos(building_t const &building) {
 		door_rotation_t drot;
 
 		if (d.for_jail) { // jail cell metal door
-			add_jail_cell_door(d, drot);
+			add_jail_cell_door(d, building, drot);
 		}
 		else { // normal interior door
 			bool const house_door(building.is_residential() ||

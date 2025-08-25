@@ -1443,7 +1443,7 @@ private:
 	void create_dynamic_vbos(building_t const &building, point const &camera_bs, vector3d const &xlate, bool play_clock_tick);
 	void create_door_vbos(building_t const &building);
 	void add_door_handle(door_t const &door, door_rotation_t const &drot, colorRGBA const &color, bool residential);
-	void add_jail_cell_door(door_t const &D, door_rotation_t &drot);
+	void add_jail_cell_door(door_t const &D, building_t const &building, door_rotation_t &drot);
 	void maybe_add_door_sign(door_t const &door, door_rotation_t const &drot);
 	static void add_closet_objects(room_object_t const &c, vect_room_object_t &objects);
 	static void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[MAX_SHELVES], unsigned num_shelves, vect_room_object_t &objects, bool add_models_mode=0);

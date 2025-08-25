@@ -6756,7 +6756,7 @@ void building_room_geom_t::add_door_handle(door_t const &door, door_rotation_t c
 	maybe_rotate_door_verts(mat.quad_verts, qv_start, door, drot);
 }
 
-void building_room_geom_t::add_jail_cell_door(door_t const &D, door_rotation_t &drot) {
+void building_room_geom_t::add_jail_cell_door(door_t const &D, building_t const &building, door_rotation_t &drot) {
 	bool const dim(D.dim), rusty(D.conn_room[0] & 1); // 50% chance; same as jail bars
 	float const height(D.dz()), width(D.get_width()), tscale(4.0/height);
 	rgeom_mat_t &mat(mats_doors.get_material((rusty ? tid_nm_pair_t(get_rust_met_tid(), tscale, 1) : get_scratched_metal_tex(tscale, 1)), 1)); // shadowed
@@ -6793,7 +6793,6 @@ void building_room_geom_t::add_jail_cell_door(door_t const &D, door_rotation_t &
 		}
 		for (unsigned d = 0; d < 2; ++d) {opening.d[dim][d] = c.d[dim][d];} // expand to full thickness
 		add_grid_of_bars(mat, bar_color, opening, 4, 4, vbar_hthick, hbar_hthick, 2, !dim, dim, 0.0, 1, 12.0);
-		drot.shift = 0.07*width*(D.open_dir ? 1.0 : -1.0)*D.open_amt;
 	}
 	for (unsigned dir = 0; dir < 2; ++dir) {
 		if (is_bars && bool(dir) != D.open_dir) continue; // handle is only on the outside of the door
@@ -6821,8 +6820,9 @@ void building_room_geom_t::add_jail_cell_door(door_t const &D, door_rotation_t &
 		for (unsigned bt = 0; bt < 2; ++bt) {mat.add_cube_to_verts((bt ? htop : hbot), handle_color, origin, skip_inner);}
 		mat.add_cube_to_verts(hext, handle_color, origin, EF_Z12);
 	} // for dir
-	// rotate door if open
-	drot.angle = 135.0*D.open_amt; // opens 135 degrees
+	// rotate door if open; return value (tquad) ignored, only need drot set
+	if (D.open_amt > 0.0) {building.set_door_from_cube(D, dim, D.open_dir, tquad_with_ix_t::TYPE_ODOOR, 0.0, 0, D.open_amt, 0, 0, D.hinge_side, 0, drot);}
+	if (is_bars) {drot.shift = 0.0;} // no shift for bar doors
 	maybe_rotate_door_verts(mat.quad_verts, qv_start, D, drot);
 	maybe_rotate_door_verts(mat.itri_verts, tv_start, D, drot);
 }
