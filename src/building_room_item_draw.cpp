@@ -537,11 +537,13 @@ building_materials_t &building_room_geom_t::get_building_mat(tid_nm_pair_t const
 rgeom_mat_t &building_room_geom_t::get_metal_material(bool inc_shadows, bool dynamic, unsigned small, bool exterior, colorRGBA const &spec_color) {
 	tid_nm_pair_t tex(-1, 1.0, inc_shadows);
 	tex.set_metal_specular(spec_color);
+	tex.metalness = 1.0;
 	return get_material(tex, inc_shadows, dynamic, small, 0, exterior);
 }
 tid_nm_pair_t get_scratched_metal_tex(float tscale, bool inc_shadows) {
 	tid_nm_pair_t tex(get_texture_by_name("metals/60_scratch_metal.jpg"), tscale, inc_shadows);
 	tex.set_metal_specular(WHITE);
+	//tex.metalness = 1.0; // ?
 	return tex;
 }
 rgeom_mat_t &building_room_geom_t::get_scratched_metal_material(float tscale, bool inc_shadows, bool dynamic, unsigned small, bool exterior) {
