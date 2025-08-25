@@ -395,7 +395,6 @@ unsigned create_cube_map_reflection(unsigned &tid, unsigned &tsize, unsigned &la
 }
 
 unsigned create_tt_reflection(float terrain_zmin) {
-
 	if (do_zoom || disable_tt_water_reflect || (display_mode & 0x20)) return 0; // reflections not enabled
 	unsigned const xsize(window_width/2), ysize(window_height/2);
 	setup_reflection_texture(reflection_tid, xsize, ysize);
@@ -404,9 +403,7 @@ unsigned create_tt_reflection(float terrain_zmin) {
 	return reflection_tid;
 }
 
-
 void setup_shader_cube_map_params(shader_t &shader, cube_t const &bcube, unsigned tid, unsigned tsize) {
-
 	assert(tid > 0);
 	shader.add_uniform_vector3d("cube_map_center", bcube.get_cube_center()); // world space
 	shader.add_uniform_float("cube_map_near_clip", 0.5f*bcube.max_len());

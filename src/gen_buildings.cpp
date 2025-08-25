@@ -512,7 +512,8 @@ void setup_building_draw_shader_post(shader_t &s, bool have_indir) {
 	set_interior_lighting(s, have_indir);
 	if (have_indir) {indir_tex_mgr.setup_for_building(s);}
 }
-void setup_building_draw_shader(shader_t &s, float min_alpha, bool enable_indir, bool force_tsl, int use_texgen, float water_damage, float crack_damage) { // for building interiors
+// for drawing building interiors
+void setup_building_draw_shader(shader_t &s, float min_alpha, bool enable_indir, bool force_tsl, int use_texgen, float water_damage, float crack_damage, bool enable_int_reflect) {
 	float const pcf_scale = 0.2;
 	if (player_building == nullptr) {water_damage = crack_damage = 0.0;} // water damage and cracks only apply to player building; this can fail on the exterior walls pass
 	// disable indir if the player is in a closed closet
@@ -525,7 +526,7 @@ void setup_building_draw_shader(shader_t &s, float min_alpha, bool enable_indir,
 	if (crack_damage > 0.0) {s.set_prefix("#define ADD_CRACKS",          1);} // FS
 	if (add_vorocracks    ) {s.set_prefix("#define USE_VOROCRACKS",      1);} // FS
 	s.set_prefix("#define LINEAR_DLIGHT_ATTEN", 1); // FS; improves room lighting (better light distribution vs. framerate trade-off)
-	city_shader_setup(s, lights_bcube, 1, interior_use_smaps, use_bmap, min_alpha, force_tsl, pcf_scale, use_texgen, have_indir, 0); // use_dlights=1, is_outside=0
+	city_shader_setup(s, lights_bcube, 1, interior_use_smaps, use_bmap, min_alpha, force_tsl, pcf_scale, use_texgen, have_indir, 0, enable_int_reflect); // dlights=1, outside=0
 	setup_building_draw_shader_post(s, have_indir);
 	if (water_damage > 0.0 || crack_damage > 0.0) {setup_puddles_texture(s);} // 3D texture is used for both water damage and cracks
 
@@ -541,6 +542,13 @@ void setup_building_draw_shader(shader_t &s, float min_alpha, bool enable_indir,
 		s.add_uniform_float("crack_zmax",  player_building->ground_floor_z1); // cracks are only in the basement
 		// disable cracks on on ceilings (-z) since they may be wood; carpet is special cased to not have cracks; are cracks on particle board ceilings okay?
 		s.add_uniform_float("crack_normal_zmax", (player_building->is_house ? -0.5 : -2.0));
+	}
+	if (enable_int_reflect) {
+		assert(player_building);
+		unsigned const cube_map_tsize = 1024;
+		unsigned ref_tid(0); // TODO: must render cube map
+		cube_t cube_map_bcube(player_building->bcube); // FIXME: single room
+		setup_shader_cube_map_params(s, cube_map_bcube, ref_tid, cube_map_tsize);
 	}
 }
 
@@ -4010,6 +4018,7 @@ public:
 			// otherwise, we would need to switch between two different shaders every time we come across a building with people in it; not very clean, but seems to work
 			bool const enable_animations(global_building_params.enable_people_ai && draw_interior);
 			if (enable_animations) {enable_animations_for_shader(s);}
+			bool enable_int_reflect(0);
 
 			if (camera_in_building && player_building != nullptr) { // handle damage effects
 				if (camera_bs.z < player_building->ground_floor_z1 || player_building->point_on_basement_stairs(camera_bs)) { // entering or in basement
@@ -4022,8 +4031,9 @@ public:
 					water_damage *= damage_weight;
 					crack_damage *= damage_weight;
 				}
+				//enable_int_reflect = 1;
 			}
-			setup_building_draw_shader(s, min_alpha, 1, 0, 0, water_damage, crack_damage); // enable_indir=1, force_tsl=0, use_texgen=0
+			setup_building_draw_shader(s, min_alpha, 1, 0, 0, water_damage, crack_damage, enable_int_reflect); // enable_indir=1, force_tsl=0, use_texgen=0
 			vector<point> points; // reused temporary
 			bbd.clear_obj_models();
 			int indir_bcs_ix(-1), indir_bix(-1);
