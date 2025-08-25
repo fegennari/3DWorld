@@ -881,10 +881,11 @@ bool building_t::add_shower_room_objs(rand_gen_t rgen, room_t const &room, float
 	set_cube_zvals(bench, zval, zval+bench_height);
 
 	for (unsigned i = wall_tile_start; i != showers_start; ++i) {
-		room_object_t const wall(objs[i]); // deep copy to avoid reference invalidation
+		room_object_t wall(objs[i]); // deep copy to avoid reference invalidation
 		if (wall.type != TYPE_POOL_TILE) continue; // skip inner wall
 		bool const dim(wall.dim), dir(wall.dir);
 		if (int(dir) == skip_dir) continue; // no showers on this side
+		wall.expand_in_dim(!dim, -0.6*wall_thick); // shorten slightly to avoid intersecting door trim (half wall thick)
 		float const len(wall.get_sz_dim(!dim));
 		unsigned const num_showers(len/shower_width);
 		if (num_showers == 0) continue; // wall too short for showers
