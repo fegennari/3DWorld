@@ -2797,7 +2797,16 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	}
 	if (!point_in_building_or_basement_bcube(person.pos)) { // person must be inside the building
 		cout << TXT(person.pos.str()) << TXT(bcube.str()) << TXT(interior->basement_ext_bcube.str()) << endl;
-		assert(0);
+		// this can happen when people push each other through prison corner elevators, so clamp pos to building bounds rather than failing
+		cube_t clamp_cube;
+		if (person.pos.z > ground_floor_z1) {clamp_cube = bcube;}
+		else {
+			assert(has_basement());
+			assert(!has_ext_basement()); // this case is not yet handled
+			clamp_cube = get_basement();
+		}
+		clamp_cube.expand_by_xy(-person.radius); // put person inside the buidling
+		bcube.clamp_pt(person.pos);
 	}
 	debug_mode = (cur_player_building_loc.building_ix == person.cur_bldg); // used for debugging printouts
 	//if (zombie_in_attack_range(person)) {cout << TXTi(person.goal_type) << TXTi(person.ai_state) << TXT(person.path.size()) << endl;} // TESTING
