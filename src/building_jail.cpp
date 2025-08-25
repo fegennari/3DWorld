@@ -462,7 +462,6 @@ bool building_t::assign_and_fill_prison_room(rand_gen_t rgen, room_t &room, floa
 	bool const on_walk_path(is_room_on_critical_path(room_id, zval));
 	bool const has_ext_door(is_room_adjacent_to_ext_door(room, zval));
 	vector<pair<float, room_type>> cands;
-	//cout << TXT(min_sz) << TXT(max_sz) << TXT(is_basement) << TXT(ground_floor) << TXT(has_st_el) << TXT(has_ext_wall) << TXT(on_walk_path) << endl;
 
 	for (unsigned pass = 0; pass < 2; ++pass) { // first pass is more restrictive
 		bool const strict(pass == 0);
@@ -596,14 +595,14 @@ bool building_t::add_gym_objs(rand_gen_t rgen, room_t &room, float &zval, unsign
 		float const clearance(1.2*get_min_front_clearance_inc_people());
 		float const machine_width(0.75*floor_spacing), ring_spacing(machine_width + clearance); // machine_width is approximate
 		cube_t em_place_area(place_area);
-		em_place_area.expand_by_xy(-0.1*floor_spacing); // add extra spacing
+		em_place_area.expand_by_xy(-0.1*floor_spacing); // add extra spacing from wall
 
 		for (unsigned ring = 0; ring < 4 && num_placed < num_machines; ++ring) {
 			for (unsigned n = num_placed; n < num_machines; ++n) {
 				uint16_t const em_type(rgen.rand()); // assign a random sub-model
 				unsigned const model_id(combine_model_submodel_id(OBJ_MODEL_EX_MACHINE, em_type));
 				float const height(0.5*building_obj_model_loader.get_model(model_id).scale); // in units of floor spacing
-				num_placed += place_model_along_wall(model_id, TYPE_EX_MACHINE, room, height, rgen, zval, room_id, tot_light_amt, em_place_area, objs_start, 0.5, 4, 0, WHITE);
+				num_placed += place_model_along_wall(model_id, TYPE_EX_MACHINE, room, height, rgen, zval, room_id, tot_light_amt, em_place_area, objs_start, 1.0, 4, 0, WHITE);
 			}
 			em_place_area.expand_by_xy(-ring_spacing);
 			if (em_place_area.get_size_xy().get_min_val() < 2.0*machine_width) break; // too small to place a machine
