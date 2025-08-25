@@ -526,7 +526,8 @@ bool building_t::assign_and_fill_prison_room(rand_gen_t rgen, room_t &room, floa
 				break;
 			case RTYPE_CLASS: {
 				unsigned td_orient(0); // unused
-				zval = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_CARPET);
+				bool const carpet_type(rgen.rand_bool());
+				zval = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_CARPET, carpet_type);
 				if (!add_classroom_objs(rgen, room, zval, room_id, floor_ix, tot_light_amt, objs_start, chair_color, td_orient)) continue;
 				break;
 			}
@@ -715,7 +716,8 @@ bool building_t::add_visit_room_objs(rand_gen_t rgen, room_t &room, float &zval,
 	assert(part.contains_cube(room_interior));
 	max_eq(room_interior.d[dim][0], part.d[dim][0]+trim_thick); // fix for Z-fighting with exterior wall
 	min_eq(room_interior.d[dim][1], part.d[dim][1]-trim_thick); // fix for Z-fighting with exterior wall
-	zval = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_CARPET);
+	bool const carpet_type(rgen.rand_bool());
+	zval = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_CARPET, carpet_type);
 	
 	// add wall and window separating prisoner from public sides
 	float const wall_z2(zval + 0.3*floor_spacing), table_z2(wall_z2 + trim_thick);
@@ -742,7 +744,7 @@ bool building_t::add_visit_room_objs(rand_gen_t rgen, room_t &room, float &zval,
 	unsigned const num_seats(room_len/seat_width);
 	float const seat_spacing(room_len/num_seats), table_depth(0.15*floor_spacing), divider_depth(0.3*floor_spacing);
 	unsigned const NUM_DIV_COLORS = 4;
-	colorRGBA const divider_colors[NUM_DIV_COLORS] = {colorRGBA(0.75, 1.0, 0.9, 1.0), colorRGBA(0.7, 0.8, 1.0), WHITE, DK_GRAY}; // blue-green, light blue
+	colorRGBA const divider_colors[NUM_DIV_COLORS] = {colorRGBA(0.75, 1.0, 0.9, 1.0), colorRGBA(0.7, 0.8, 1.0), WHITE, LT_GRAY}; // blue-green, light blue
 	colorRGBA const divider_color(divider_colors[rgen.rand() % NUM_DIV_COLORS]); // random color
 	colorRGBA const table_color(LT_GRAY);
 	cube_t table(wall), divider(wall);
@@ -774,7 +776,11 @@ bool building_t::add_visit_room_objs(rand_gen_t rgen, room_t &room, float &zval,
 				cube_t div(divider);
 				max_eq(div.d[dim][0], room_interior.d[dim][0]); // don't clip through walls at the ends
 				if (n == 0 && is_ext_wall[0]) {set_cube_zvals(div, table.z1()-wall_hthick, table.z2()+wall_hthick);} // smaller if at exterior wall/window
-				if (div.get_sz_dim(dim) > 0.0) {objs.emplace_back(div, TYPE_STALL, room_id, !dim, 0, 0, tot_light_amt, SHAPE_SHORT, divider_color);}
+
+				if (div.get_sz_dim(dim) > 0.0) {
+					objs.emplace_back(div, TYPE_STALL, room_id, !dim, 0, 0, tot_light_amt, SHAPE_SHORT, divider_color);
+					objs.back().obj_id = !carpet_type; // opposite texture from carpet
+				}
 				has_prev = 1;
 			}
 			// right divider
@@ -782,8 +788,11 @@ bool building_t::add_visit_room_objs(rand_gen_t rgen, room_t &room, float &zval,
 			cube_t div(divider);
 			if (n+1 == num_seats && is_ext_wall[1]) {set_cube_zvals(div, table.z1()-wall_hthick, table.z2()+wall_hthick);} // smaller if at exterior wall/window
 			min_eq(div.d[dim][1], room_interior.d[dim][1]); // don't clip through walls at the ends
-			if (div.get_sz_dim(dim) > 0.0) {objs.emplace_back(div, TYPE_STALL, room_id, !dim, 0, 0, tot_light_amt, SHAPE_SHORT, divider_color);}
-			
+
+			if (div.get_sz_dim(dim) > 0.0) {
+				objs.emplace_back(div, TYPE_STALL, room_id, !dim, 0, 0, tot_light_amt, SHAPE_SHORT, divider_color);
+				objs.back().obj_id = !carpet_type; // opposite texture from carpet
+			}
 			for (unsigned d = 0; d < 2; ++d) { // add chairs and phones on each side
 				// chair at table
 				point chair_pos(0.0, 0.0, zval);

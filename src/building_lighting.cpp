@@ -37,7 +37,7 @@ colorRGBA get_textured_wood_color();
 bool bed_has_canopy_mat(room_object_t const &c);
 int get_canopy_texture();
 int get_counter_tid   ();
-int get_cubicle_tid(room_object_t const &c);
+int get_carpet_tid(room_object_t const &c);
 colorRGBA get_canopy_base_color(room_object_t const &c);
 void get_water_heater_cubes(room_object_t const &wh, cube_t cubes[2]);
 bool line_int_polygon_sides(point const &p1, point const &p2, cube_t const &bcube, vect_point const &points, float &t);
@@ -413,8 +413,8 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 		else if (type == TYPE_CUBICLE) { // cubicle - use actual drawn cubes
 			cube_t all_sides[5], surfaces[3];
 			get_cubicle_parts(*c, all_sides, all_sides+2, all_sides[4], surfaces);
-			add_colored_cubes(all_sides, 5, texture_color(get_cubicle_tid(*c)).modulate_with(c->color), cc); // sides + fronts + back
-			add_colored_cubes(surfaces,  3, texture_color(MARBLE_TEX         ).modulate_with(LT_GRAY ), cc);
+			add_colored_cubes(all_sides, 5, texture_color(get_carpet_tid(*c)).modulate_with(c->color), cc); // sides + fronts + back
+			add_colored_cubes(surfaces,  3, texture_color(MARBLE_TEX        ).modulate_with(LT_GRAY ), cc);
 		}
 		else if (type == TYPE_STALL && c->shape != SHAPE_SHORT) { // bathroom stall - hollow
 			cube_t sides(*c);

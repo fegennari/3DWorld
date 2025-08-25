@@ -106,13 +106,14 @@ int get_crack_tid(room_object_t const &obj, int alpha=0) {
 		((alpha == 2) ? "interiors/cracked_glass2_alpha_th.jpg" : (alpha ? "interiors/cracked_glass2_alpha.jpg" : "interiors/cracked_glass2.jpg")) :
 		(alpha ? "interiors/cracked_glass_alpha.jpg"  : "interiors/cracked_glass.jpg"), 0, 0, 1, 0.0, 1, 1, (alpha ? 4 : 3));
 }
-int get_box_tid() {return get_texture_by_name("interiors/box.jpg");}
-int get_crate_tid(room_object_t const &c) {return get_texture_by_name((c.obj_id & 1) ? "interiors/crate2.jpg" : "interiors/crate.jpg");}
+int get_box_tid       () {return get_texture_by_name("interiors/box.jpg");}
 int get_plywood_tid   () {return get_texture_by_name("interiors/plywood.jpg");}
 int get_insulation_tid() {return get_texture_by_name("interiors/insulation.jpg");}
 int get_cube_duct_tid () {return get_texture_by_name("interiors/duct.jpg");}
 int get_cylin_duct_tid() {return get_texture_by_name("buildings/metal_roof.jpg");} // metal roof is close enough
 int get_toilet_paper_nm_id() {return get_texture_by_name("interiors/toilet_paper_normal.jpg", 1);}
+int get_crate_tid  (room_object_t const &c) {return get_texture_by_name((c.obj_id & 1) ? "interiors/crate2.jpg" : "interiors/crate.jpg");}
+int get_carpet_tid (room_object_t const &c) {return get_texture_by_name((c.obj_id & 1) ? "carpet/carpet1.jpg" : "carpet/carpet2.jpg");} // select from one of 2 textures
 
 colorRGBA get_textured_wood_color() {return WOOD_COLOR.modulate_with(texture_color(WOOD2_TEX));} // Note: uses default WOOD_COLOR, not the per-building random variant
 colorRGBA get_counter_color      () {return (get_textured_wood_color()*0.75 + texture_color(get_counter_tid())*0.25);}
@@ -2283,7 +2284,7 @@ int get_flooring_texture(room_object_t const &c) {
 	//case FLOORING_TILE:     return get_texture_by_name("bathroom_tile.jpg");
 	case FLOORING_TILE:     return get_texture_by_name("interiors/mosaic_tiles.jpg");
 	case FLOORING_CONCRETE: return get_concrete_tid();
-	case FLOORING_CARPET:   return get_texture_by_name((c.obj_id & 1) ? "carpet/carpet1.jpg" : "carpet/carpet2.jpg"); // select between two textures
+	case FLOORING_CARPET:   return get_carpet_tid(c); // select between two textures
 	case FLOORING_WOOD:     return ((c.obj_id & 1) ? (int)FENCE_TEX : (int)PANELING_TEX); // select between two textures
 	case FLOORING_LGTILE:   return select_tile_floor_texture((c.room_id & 1), 1.0).tid;
 	case FLOORING_RUBBER:   return get_texture_by_name("interiors/rubber_flooring.jpg"); // Note: doesn't tile, but looks okay
@@ -4727,11 +4728,17 @@ void building_room_geom_t::add_br_stall(room_object_t const &c, bool inc_lg, boo
 		}
 	}
 	if (!inc_lg) return;
-	rgeom_mat_t &mat(get_untextured_material(1));
 	colorRGBA const color(apply_light_color(c));
 
-	if (c.shape == SHAPE_SHORT) { // wall separating urinals (hanging) or visitation stalls (not hanging), drawn as a single cube
-		mat.add_cube_to_verts_untextured(c, color, (c.is_hanging() ? ~get_face_mask(dim, dir) : 0));
+	if (c.shape == SHAPE_SHORT && !c.is_hanging()) { // wall separating visitation stalls (not hanging), drawn as a single cube
+		rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_carpet_tid(c), 1.0/c.dz(), 1), 1)); // shadowed
+		mat.add_cube_to_verts(c, color, c.get_llc(), 0);
+		return;
+	}
+	rgeom_mat_t &mat(get_untextured_material(1)); // shadowed
+
+	if (c.shape == SHAPE_SHORT) { // wall separating urinals
+		mat.add_cube_to_verts_untextured(c, color, ~get_face_mask(dim, dir));
 		return;
 	}
 	float const dz(c.dz()), wall_thick(0.0125*dz), frame_thick(6.0*wall_thick), door_gap(0.3*wall_thick);
@@ -4763,8 +4770,6 @@ void building_room_geom_t::add_br_stall(room_object_t const &c, bool inc_lg, boo
 	mat.add_cube_to_verts_untextured(door, color);
 }
 
-int get_cubicle_tid(room_object_t const &c) {return get_texture_by_name((c.obj_id & 1) ? "carpet/carpet1.jpg" : "carpet/carpet2.jpg");} // select from one of 2 textures
-
 void get_cubicle_parts(room_object_t const &c, cube_t sides[2], cube_t fronts[2], cube_t &back, cube_t surfaces[3]) {
 	float const dz(c.dz()), wall_thick(0.07*dz), frame_thick(8.0*wall_thick), dir_sign(c.dir ? 1.0 : -1.0);
 	cube_t side(c), front(c);
@@ -4793,7 +4798,7 @@ void get_cubicle_parts(room_object_t const &c, cube_t sides[2], cube_t fronts[2]
 void building_room_geom_t::add_cubicle(room_object_t const &c, float tscale) {
 	cube_t sides[2], fronts[2], back, surfaces[3];
 	get_cubicle_parts(c, sides, fronts, back, surfaces);
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_cubicle_tid(c), tscale), 1));
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_carpet_tid(c), tscale, 1), 1)); // shadowed
 	colorRGBA const color(apply_light_color(c));
 	point const tex_origin(c.get_llc());
 	unsigned const side_skip_mask (EF_Z12 | get_skip_mask_for_xy( c.dim));
@@ -6886,7 +6891,8 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_FLOORING: return texture_color(get_flooring_texture(*this)).modulate_with(color);
 	case TYPE_CRATE:    return texture_color(get_crate_tid(*this)).modulate_with(color);
 	case TYPE_BOX:      return texture_color(get_box_tid()).modulate_with(color);
-	case TYPE_CUBICLE:  return texture_color(get_cubicle_tid(*this));
+	case TYPE_CUBICLE:  return texture_color(get_carpet_tid(*this));
+	case TYPE_STALL:    return ((shape == SHAPE_SHORT && !is_hanging()) ? texture_color(get_carpet_tid(*this)).modulate_with(color) : color); // visit room separator is textured
 	case TYPE_SHELVES:  return get_textured_wood_color();
 	case TYPE_KEYBOARD: return BKGRAY;
 	case TYPE_COMPUTER: return BKGRAY;
