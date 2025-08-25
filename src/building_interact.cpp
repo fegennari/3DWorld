@@ -873,7 +873,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 			update_draw_data = 1;
 			play_open_close_sound(obj, sound_origin);
 		}
-		else { // turn on shower water
+		else if (obj.contains_pt(int_pos)) { // turn on shower water, only if standing inside the shower
 			gen_sound_thread_safe_at_player(SOUND_SINK);
 			sound_scale = 0.5;
 			if (!obj.is_open()) {register_achievement("Squeaky Clean");}
