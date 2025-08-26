@@ -969,7 +969,7 @@ void building_t::add_prison_hall_room_objs(rand_gen_t rgen, room_t const &room, 
 		point center(0.0, 0.0, light_zval);
 		center[ dim] = wall.get_center_dim(dim);
 		center[!dim] = wall_edge + (dir ? 1.0 : -1.0)*2.0*light_radius; // move away from the wall end
-		bool is_close(0);
+		bool is_close(0), blocked_by_wall(0);
 
 		for (point const &p : prev_lights) {
 			if (dist_xy_less_than(center, p, light_spacing)) {is_close = 1; break;}
@@ -979,6 +979,8 @@ void building_t::add_prison_hall_room_objs(rand_gen_t rgen, room_t const &room, 
 		light.z2() += light_height;
 		light.expand_by_xy(light_radius);
 		if (!room.contains_cube(light)) continue;
+		for (cube_t const &wall2 : interior->walls[dim]) {blocked_by_wall |= wall2.intersects(light);}
+		if (blocked_by_wall) continue; // blocked by cell wall extension
 		prev_lights.push_back(center);
 		objs.emplace_back(light, TYPE_WARN_LIGHT, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_LIT), tot_light_amt, SHAPE_CYLIN);
 		// add a horizontal rod connecting the light to the wall
