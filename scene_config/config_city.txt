@@ -249,7 +249,7 @@ city forklift_model     ../models/forklift.glb                    0 0 0  -1 -1 9
 city wind_turbine_model ../models/wind_turbine.glb                0 0 0  -1 -1 90  1 1.0 1.0
 city bb_hoop_model      ../models/basketball_hoop.glb             0 0 0  -1 -1 270 1 1.0 10.0
 # gym machine models; size value determines height relative to half a floor's spacing
-city ex_machine_model   ../models/interiors/exercise/dumbell_rack.glb    0 0 0  -1 -1 0   1 0.7 16.0
+city ex_machine_model   ../models/interiors/exercise/dumbell_rack.glb    0 0 0  -1 -1 90  1 0.7 16.0
 city ex_machine_model   ../models/interiors/exercise/roman_chair.glb     0 0 0  -1 -1 0   1 0.8 0.4
 city ex_machine_model   ../models/interiors/exercise/exercise_bike.glb   0 0 0  -1 -1 0   1 1.1 1.0
 city ex_machine_model   ../models/interiors/exercise/horizontal_bar.glb  0 0 0  -1 -1 0   1 1.5 0.01
