@@ -4240,7 +4240,8 @@ void building_t::add_cameras_to_room(rand_gen_t &rgen, room_t const &room, float
 	float const ceil_zval(room.is_single_floor ? (room.z2() - get_fc_thickness()) : (zval + get_floor_ceil_gap())); // on upper floor of retail
 	float const length(0.09*window_vspacing), width(0.4*length), height(0.5*length);
 	cube_t const place_area(get_room_wall_bounds(room));
-	bool const camera_side(rgen.rand_bool()), is_ground_floor(zval >= ground_floor_z1 && zval < ground_floor_z1 + window_vspacing);
+	bool const camera_side(rgen.rand_bool());
+	bool const is_ground_floor_hall(zval >= ground_floor_z1 && zval < ground_floor_z1 + window_vspacing && has_pri_hall());
 	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t camera;
 	set_cube_zvals(camera, (ceil_zval - height), ceil_zval);
@@ -4248,9 +4249,9 @@ void building_t::add_cameras_to_room(rand_gen_t &rgen, room_t const &room, float
 	for (unsigned dir = 0; dir < 2; ++dir) {
 		float const wall_pos(place_area.d[long_dim][!dir]), signed_len((dir ? 1.0 : -1.0)*length);
 		float pos(room.get_center_dim(!long_dim));
-		bool offset(is_ground_floor);
+		bool apply_offset(is_ground_floor_hall);
 		
-		if (!walkways.empty() && !offset) { // check for walkway doors
+		if (!walkways.empty() && !apply_offset) { // check for walkway doors
 			float const check_radius(width + get_wall_thickness());
 			point test_pt;
 			test_pt[ long_dim] = wall_pos;
@@ -4258,10 +4259,10 @@ void building_t::add_cameras_to_room(rand_gen_t &rgen, room_t const &room, float
 			test_pt.z = 0.5*(zval + ceil_zval);
 
 			for (auto const &door : doors) {
-				if (door.get_bcube().contains_pt_exp(test_pt, check_radius)) {offset = 1; break;}
+				if (door.get_bcube().contains_pt_exp(test_pt, check_radius)) {apply_offset = 1; break;}
 			}
 		}
-		if (offset) {pos += 0.65*doorway_width*((bool(dir) ^ camera_side) ? 1.0 : -1.0);} // place off to the side to avoid blocking doorway and exit sign
+		if (apply_offset) {pos += 0.65*doorway_width*((bool(dir) ^ camera_side) ? 1.0 : -1.0);} // place off to the side to avoid blocking doorway and exit sign
 		set_wall_width(camera, pos, 0.5*width, !long_dim);
 		camera.d[long_dim][!dir] = wall_pos + 0.25*signed_len; // near the wall
 		camera.d[long_dim][ dir] = wall_pos + 1.25*signed_len; // extend away from the wall
@@ -4270,7 +4271,8 @@ void building_t::add_cameras_to_room(rand_gen_t &rgen, room_t const &room, float
 		for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) { // check if blocked by a walkway false door, etc.
 			if (i->type == TYPE_BLOCKER && i->intersects(camera)) {blocked = 1; break;}
 		}
-		if (!blocked) {objs.emplace_back(camera, TYPE_CAMERA, room_id, long_dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, WHITE);}
+		if (blocked || interior->is_blocked_by_stairs_or_elevator(camera)) continue;
+		objs.emplace_back(camera, TYPE_CAMERA, room_id, long_dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, WHITE);
 		// Note: if we want to have cameras on the bottom retail floor, they need brackets extending from the wall
 	} // for dir
 }

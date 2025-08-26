@@ -1009,6 +1009,10 @@ void building_t::add_prison_hall_room_objs(rand_gen_t rgen, room_t const &room, 
 			if (add_reception_desk(rgen, desk, !dim, dir, room_id, tot_light_amt)) break; // add keys on the desk?
 		}
 	}
+	// add security cameras at each end of the hall
+	room_t hall_room(room);
+	hall_room.copy_from(hall);
+	add_cameras_to_room(rgen, hall_room, zval, room_id, tot_light_amt, objs_start);
 }
 
 bool building_t::add_basement_jail_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
