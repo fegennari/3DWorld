@@ -334,10 +334,12 @@ bool building_t::add_locker_room_objs(rand_gen_t rgen, room_t const &room, float
 }
 
 void building_t::add_wall_water_fountain(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	unsigned const wf_obj_ix(interior->room_geom->objs.size());
+
 	if (place_model_along_wall(OBJ_MODEL_WFOUNTAIN, TYPE_WFOUNTAIN, room, 0.25, rgen, (zval+0.18*get_window_vspace()),
-		room_id, tot_light_amt, get_room_wall_bounds(room), objs_start, 0.0, 4, 0, WHITE, 1)) // not_at_window=1
+		room_id, tot_light_amt, get_room_wall_bounds(room), objs_start, 1.0, 4, 0, WHITE, 1)) // not_at_window=1
 	{
-		interior->room_geom->objs.back().dir ^= 1; // placed dir was backwards
+		interior->room_geom->objs[wf_obj_ix].dir ^= 1; // placed dir was backwards
 	}
 }
 
