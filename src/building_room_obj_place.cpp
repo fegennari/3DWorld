@@ -4408,13 +4408,15 @@ bool building_t::add_security_room_objs(rand_gen_t rgen, room_t const &room, flo
 	}
 	add_desk_to_room(rgen, room, blockers, DK_GRAY, zval, room_id, tot_light_amt, objs_start, 0, 0, 1); // is_basement=0, desk_ix=0, no_computer=1
 
-	// add computer monitors along all walls that don't have doors
+	// add computer monitors along all walls that don't have windows, avoiding doors
+	// TODO: no more monitors than there are cameras
 	for (unsigned dim = 0; dim < 2; ++dim) {
 		float const wall_len(room_bounds.get_sz_dim(!dim));
 		unsigned const num_cols(floor(wall_len/horiz_space));
 		float const col_spacing(wall_len/num_cols), col_start(room_bounds.d[!dim][0] + 0.5*col_spacing);
 
 		for (unsigned dir = 0; dir < 2; ++dir) {
+			if (classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT) continue; // skip exterior walls with windows
 			tv.d[dim][ dir] = room_bounds.d[dim][dir]; // on the wall
 			tv.d[dim][!dir] = tv.d[dim][dir] + (dir ? -1.0 : 1.0)*tv_depth;
 

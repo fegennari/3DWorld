@@ -440,14 +440,15 @@ struct room_pref_t {
 };
 room_pref_t const room_prefs[] = {
 	// rtype, allow_mult, allow_st_el, allow_door, is_private, min_size, max_size, base_weight, floor_scale, basement_val, window_val
-	{RTYPE_VISIT,     0, 1, 1, 1, 2.5, 0.0, 0.5, 1.0, -1.0,  0.0}, // flagged as private since it's separated into two parts
-	{RTYPE_LAUNDRY,   0, 1, 0, 0, 0.0, 4.0, 0.5, 0.5,  1.0, -0.5},
-	{RTYPE_OFFICE,    1, 1, 1, 0, 0.0, 3.0, 0.0, 0.0,  0.0,  1.0},
-	{RTYPE_CAFETERIA, 0, 0, 0, 0, 4.0, 0.0, 1.0, 0.0,  0.0,  0.0},
-	{RTYPE_GYM,       0, 1, 0, 0, 2.0, 7.0, 1.0, 0.0,  0.5,  0.0},
-	{RTYPE_SHOWER,    0, 0, 0, 1, 2.0, 6.0, 1.0, 0.5,  1.0, -10.0},
-	{RTYPE_CLASS,     1, 0, 0, 0, 3.0, 8.0, 0.5, 0.5,  0.0,  0.5},
-	{RTYPE_BATH,      1, 0, 0, 1, 0.0, 4.0, 0.0, 0.0,  0.0, -5.0}
+	{RTYPE_VISIT,     0, 1, 1, 1, 2.5, 0.0,  0.5, 1.0, -1.0,  0.0}, // flagged as private since it's separated into two parts
+	{RTYPE_LAUNDRY,   0, 1, 0, 0, 0.0, 4.0,  0.5, 0.5,  1.0, -0.5},
+	{RTYPE_OFFICE,    1, 1, 1, 0, 0.0, 3.0, -4.0, 0.0,  0.0,  1.0},
+	{RTYPE_CAFETERIA, 0, 0, 0, 0, 4.0, 0.0,  1.0, 0.0,  0.0,  0.0},
+	{RTYPE_GYM,       0, 1, 0, 0, 2.0, 7.0,  1.0, 0.0,  0.5,  0.0},
+	{RTYPE_SHOWER,    0, 0, 0, 1, 2.0, 6.0,  1.0, 0.5,  1.0, -10.0},
+	{RTYPE_CLASS,     1, 0, 0, 0, 3.0, 8.0,  0.5, 0.5,  0.0,  0.5},
+	{RTYPE_BATH,      1, 0, 0, 1, 0.0, 4.0,  0.0, 0.0,  0.0, -5.0},
+	{RTYPE_SECURITY,  0, 0, 0, 1, 0.0, 4.0,  1.0, 1.0, -1.0, -1.0}
 };
 bool building_t::assign_and_fill_prison_room(rand_gen_t rgen, room_t &room, float &zval, unsigned room_id, float tot_light_amt,
 	unsigned objs_start, unsigned lights_start, unsigned floor_ix, bool is_basement, colorRGBA const &chair_color)
@@ -533,6 +534,10 @@ bool building_t::assign_and_fill_prison_room(rand_gen_t rgen, room_t &room, floa
 			}
 			case RTYPE_BATH:
 				if (!add_bathroom_objs(rgen, room, zval, room_id, tot_light_amt, lights_start, objs_start, floor_ix, is_basement, 0, added_bathroom_objs_mask)) continue;
+				break;
+			case RTYPE_SECURITY:
+				if (floor_ix > 0) continue; // ground floor only
+				if (!add_security_room_objs(rgen, room, zval, room_id, tot_light_amt, objs_start)) continue;
 				break;
 			default: assert(0);
 			}
