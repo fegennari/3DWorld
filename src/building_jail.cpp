@@ -952,7 +952,7 @@ bool building_t::add_shower_room_objs(rand_gen_t rgen, room_t const &room, float
 	return 1;
 }
 
-void building_t::add_prison_hall_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+void building_t::add_prison_hall_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) { // cell block
 	cube_t const hall(get_prison_hall_for_room(room));
 	vector2d const hall_sz(hall.get_size_xy());
 	bool const dim(hall_sz.x < hall_sz.y); // long dim (may not be primary dim for room, but should be primary dim for hall)
@@ -1014,6 +1014,8 @@ void building_t::add_prison_hall_room_objs(rand_gen_t rgen, room_t const &room, 
 			if (add_reception_desk(rgen, desk, !dim, dir, room_id, tot_light_amt)) break; // add keys on the desk?
 		}
 	}
+	// try to add a fire extinguisher; most likely there is a single wall (possibly zero), so this may fail half the time
+	add_fire_ext_along_wall(room, zval, room_id, tot_light_amt, !dim, rgen.rand_bool(), rgen);
 	// add security cameras at each end of the hall
 	room_t hall_room(room);
 	hall_room.copy_from(hall);

@@ -4000,15 +4000,12 @@ bool building_t::add_fire_ext_along_wall(cube_t const &room, float zval, unsigne
 
 	for (unsigned n = 0; n < 20; ++n) { // make 20 attempts at placing a fire extinguisher
 		float const val(rgen.rand_uniform(wall_pos_lo, wall_pos_hi)), cov_lo(val - min_clearance), cov_hi(val + min_clearance);
-
-		if (is_contained_in_wall_range(wall_pos, cov_lo, cov_hi, (zval + 0.5*window_vspacing), dim)) { // shouldn't need to check anything else?
-			add_fire_ext(fe_height, fe_radius, zval, wall_pos, val, room_id, tot_light_amt, dim, dir);
-			return 1; // done/success
-		}
-	} // for n
+		if (!is_contained_in_wall_range(wall_pos, cov_lo, cov_hi, (zval + 0.5*window_vspacing), dim)) continue;
+		if (add_fire_ext(fe_height, fe_radius, zval, wall_pos, val, room_id, tot_light_amt, dim, dir)) return 1; // done/success
+	}
 	return 0; // failed to place
 }
-void building_t::add_fire_ext(float height, float radius, float zval, float wall_edge, float pos_along_wall,
+bool building_t::add_fire_ext(float height, float radius, float zval, float wall_edge, float pos_along_wall,
 	unsigned room_id, float tot_light_amt, bool dim, bool dir, bool center_mount)
 {
 	float const window_vspacing(get_window_vspace()), dir_sign(dir ? -1.0 : 1.0), xlate(((dim ^ dir ^ 1) ? 1.0 : -1.0)*0.32*radius);
@@ -4018,6 +4015,7 @@ void building_t::add_fire_ext(float height, float radius, float zval, float wall
 	vect_room_object_t &objs(interior->room_geom->objs);
 	// add fire extinguisher
 	cube_t const fe_bcube(get_cube_height_radius(pos, radius, height));
+	if (interior->is_blocked_by_stairs_or_elevator(fe_bcube)) return 0;
 	objs.emplace_back(fe_bcube, TYPE_FIRE_EXT, room_id, !dim, (dir ^ dim), RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN); // mounted sideways
 	// add the wall mounting bracket; what about adding a small box with a door that contains the fire extinguisher?
 	cube_t wall_mount(fe_bcube);
@@ -4035,6 +4033,7 @@ void building_t::add_fire_ext(float height, float radius, float zval, float wall
 	set_cube_zvals(sign, (zval + 0.65*window_vspacing), (zval + 0.80*window_vspacing));
 	set_wall_width(sign, wall_mount.get_center_dim(!dim), 0.5*radius, !dim); // line up with wall bracket
 	objs.emplace_back(sign, TYPE_FEXT_SIGN, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt);
+	return 1;
 }
 
 bool building_t::is_contained_in_wall_range(float wall_pos, float cov_lo, float cov_hi, float zval, bool dim) const {

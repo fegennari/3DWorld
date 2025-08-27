@@ -529,8 +529,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 				bounds.d[dim][ dir] = wall_edge + (dir ? -1.0 : 1.0)*2.0*fe_radius; // outer edge
 				if (overlaps_other_room_obj(bounds, objs_start) || is_obj_placement_blocked(bounds, true_room, 1, 0)) continue; // inc_open_doors=1, check_open_dir=0
 				if (has_bcube_int(bounds, unreachable_rooms)) continue; // don't place in an unreachable room
-				add_fire_ext(fe_height, fe_radius, zval, wall_edge, val, room_id, tot_light_amt, dim, dir);
-				break; // done
+				if (add_fire_ext(fe_height, fe_radius, zval, wall_edge, val, room_id, tot_light_amt, dim, dir)) break; // done
 			} // for n
 		} // for N
 	}
