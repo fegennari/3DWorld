@@ -421,8 +421,17 @@ void building_t::add_prison_jail_cell_objs(rand_gen_t rgen, room_t const &room, 
 	if (rtype == RTYPE_JAIL_CELL) {
 		populate_jail_cell(rgen, cell, place_area, zval, room_id, tot_light_amt, !dim, dir, bed_side, sink_on_back_wall, is_lit, bars_hthick, bars_depth_pos);
 	}
-	else if (rtype == RTYPE_ENTRY) {} // front door entryway; leave empty
+	else if (rtype == RTYPE_ENTRY) { // front door or courtyard entryway
+		add_commercial_entry_room_objs(rgen, room, zval, room_id, tot_light_amt, objs_start);
+	}
 	else {assert(0);}
+}
+
+void building_t::add_commercial_entry_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	cube_t place_area(get_walkable_room_bounds(room));
+	place_area.expand_by(-0.75*get_wall_thickness()); // extra spacing for prisons
+	add_desk_to_room(rgen, room, vect_cube_t(), DK_GRAY, zval, room_id, tot_light_amt, objs_start, 0); // is_basement=0; may not fit; should this be a reception desk
+	add_vending_machine(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area);
 }
 
 struct room_pref_t {

@@ -984,22 +984,27 @@ bool building_t::add_mwave_on_table(rand_gen_t &rgen, room_t const &room, float 
 }
 bool building_t::add_vending_machine(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, cube_t const &place_area) {
 	if (NUM_VEND_TYPES == 0) return 0; // disabled
-	unsigned const vtype_id(rgen.rand() % NUM_VEND_TYPES), obj_id(interior->room_geom->objs.size());
-	vending_info_t const &vtype(get_vending_type(vtype_id));
-	float const floor_spacing(get_window_vspace()), height(0.75*floor_spacing*(vtype.size.z/72)); // normalized to 72"
-	if (!place_obj_along_wall(TYPE_VENDING, room, height, vtype.size, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 0, 4, 0, vtype.color)) return 0;
-	room_object_t &vm(interior->room_geom->objs[obj_id]);
-	vm.item_flags = vtype_id;
+	unsigned const init_type(rgen.rand());
 
-	if (vtype.size.z < 48) { // short objects are placed on a small table; this assumes we have space to raise it up
-		float const table_height(0.3*floor_spacing);
-		cube_t table(vm);
-		table.z2() = zval + table_height;
-		vm.translate_dim(2, table_height);
-		table.expand_by_xy(0.02*vm.get_width()); // slightly larger; hopefully won't intersect anything
-		interior->room_geom->objs.emplace_back(table, TYPE_TABLE, room_id, vm.dim, vm.dir, RO_FLAG_ADJ_TOP, tot_light_amt);
-	}
-	return 1;
+	for (unsigned n = 0; n < NUM_VEND_TYPES; ++n) { // try each type until one succeeds, in case we chose a large size that doesn't fit
+		unsigned const vtype_id((init_type + n) % NUM_VEND_TYPES), obj_id(interior->room_geom->objs.size());
+		vending_info_t const &vtype(get_vending_type(vtype_id));
+		float const floor_spacing(get_window_vspace()), height(0.75*floor_spacing*(vtype.size.z/72)); // normalized to 72"
+		if (!place_obj_along_wall(TYPE_VENDING, room, height, vtype.size, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 0, 4, 0, vtype.color)) continue;
+		room_object_t &vm(interior->room_geom->objs[obj_id]);
+		vm.item_flags = vtype_id;
+
+		if (vtype.size.z < 48) { // short objects are placed on a small table; this assumes we have space to raise it up
+			float const table_height(0.3*floor_spacing);
+			cube_t table(vm);
+			table.z2() = zval + table_height;
+			vm.translate_dim(2, table_height);
+			table.expand_by_xy(0.02*vm.get_width()); // slightly larger; hopefully won't intersect anything
+			interior->room_geom->objs.emplace_back(table, TYPE_TABLE, room_id, vm.dim, vm.dir, RO_FLAG_ADJ_TOP, tot_light_amt);
+		}
+		return 1;
+	} // for n
+	return 0;
 }
 bool building_t::add_wall_tv(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, float height_scale) {
 	vect_room_object_t &objs(interior->room_geom->objs);

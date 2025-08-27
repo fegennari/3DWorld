@@ -735,10 +735,6 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					added_obj = no_whiteboard = no_plants = add_security_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 					if (added_obj) {no_trashcan = 1;} // trashcan shadow flickers when camera is floating, do disable trashcans
 				}
-				else if (init_rtype_f0 == RTYPE_ENTRY) { // for prison, etc.
-					add_commercial_entry_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
-					added_obj = no_whiteboard = no_plants = 1; // always succeeds
-				}
 			}
 			// check if this room is adjacent to an exterior/walkway door, and if so, make it a lounge
 			if (is_apt_or_hotel_room || r->is_office || (has_walkway && r->get_room_type(f) == RTYPE_NOTSET)) {
