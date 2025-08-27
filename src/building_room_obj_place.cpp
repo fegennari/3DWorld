@@ -2746,6 +2746,11 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 	return placed_obj;
 }
 
+bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	// TODO
+	return 0;
+}
+
 bool building_t::add_fishtank_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, cube_t const &place_area) {
 	vect_room_object_t &objs(interior->room_geom->objs);
 	// first add a tall table

@@ -448,7 +448,8 @@ room_pref_t const room_prefs[] = {
 	{RTYPE_SHOWER,    0, 0, 0, 1, 2.0, 6.0,  1.0, 0.5,  1.0, -10.0},
 	{RTYPE_CLASS,     1, 0, 0, 0, 3.0, 8.0,  0.5, 0.5,  0.0,  0.5},
 	{RTYPE_BATH,      1, 0, 0, 1, 0.0, 4.0,  0.0, 0.0,  0.0, -5.0},
-	{RTYPE_SECURITY,  0, 0, 0, 1, 0.0, 4.0,  1.0, 1.0, -1.0, -1.0}
+	{RTYPE_SECURITY,  0, 0, 0, 1, 0.0, 4.0,  1.0, 1.0, -1.0, -1.0},
+	//{RTYPE_KITCHEN,   0, 1, 0, 1, 2.0, 5.0,  0.0, 0.0,  0.0,  0.0}
 };
 bool building_t::assign_and_fill_prison_room(rand_gen_t rgen, room_t &room, float &zval, unsigned room_id, float tot_light_amt,
 	unsigned objs_start, unsigned lights_start, unsigned floor_ix, bool is_basement, colorRGBA const &chair_color)
@@ -538,6 +539,9 @@ bool building_t::assign_and_fill_prison_room(rand_gen_t rgen, room_t &room, floa
 			case RTYPE_SECURITY:
 				if (floor_ix > 0) continue; // ground floor only
 				if (!add_security_room_objs(rgen, room, zval, room_id, tot_light_amt, objs_start)) continue;
+				break;
+			case RTYPE_KITCHEN:
+				if (!add_commercial_kitchen_objs(rgen, room, zval, room_id, tot_light_amt, objs_start)) continue;
 				break;
 			default: assert(0);
 			}
@@ -1407,6 +1411,7 @@ bool building_t::place_stairs_in_prison_room(cube_t &stairs, unsigned room_id, b
 		wall_dir = edge_dir;
 		return 1;
 	} // for cand
+	// what about replacing a cell with stairs? does a cell have enough space, or would we need to remove a wall as well?
 	return 0; // failed
 }
 
