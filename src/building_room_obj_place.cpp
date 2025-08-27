@@ -1654,6 +1654,7 @@ bool building_t::place_obj_along_wall(room_object type, room_t const &room, floa
 		bool const use_pref(pref_orient < 4 && (force_pref || n < 10)); // use pref orient for first 10 tries unless force_pref=1
 		bool const dim((force_dim < 2) ? force_dim : (use_pref ? (pref_orient >> 1) : rgen.rand_bool())); // choose a random wall unless forced
 		bool const dir(use_pref ? !(pref_orient & 1) : rgen.rand_bool()); // dir is inverted for the model, so we invert pref dir as well
+		if (!use_pref && !is_residential() && room.has_open_wall(dim, dir)) continue; // don't place against an open wall such as prison bars
 		unsigned const orient(2*dim + dir);
 		float center(0.0);
 		if (pref_centered && !center_tried[orient]) {center = place_area.get_center_dim(!dim); center_tried[orient] = 1;} // try centered
