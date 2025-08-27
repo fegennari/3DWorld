@@ -5631,11 +5631,11 @@ void add_tv_or_monitor_screen(room_object_t const &c, rgeom_mat_t &mat, std::str
 	mat.add_cube_to_verts(screen, WHITE, c.get_llc(), get_face_mask(c.dim, c.dir), !c.dim, miry); // draw outward face
 
 	if (text_mat != nullptr && !onscreen_text.empty()) { // onscreen text is drawn the same as book titles
-		float const width(screen.get_sz_dim(!c.dim)), height(screen.dz());
+		float const width(screen.get_sz_dim(!c.dim)), height(screen.dz()), text_width(min(0.5, 0.02*(onscreen_text.size() + 2)));
 		cube_t text_area(screen);
 		text_area.translate_dim( c.dim, -0.01*(c.dir ? -1.0 : 1.0)*c.get_width()); // move outward slightly
 		text_area.expand_in_dim(!c.dim, -0.05*width);
-		text_area.d[!c.dim][!miry] -= (miry ? -1.0 : 1.0)*0.8*width; // left part of the screen
+		text_area.d[!c.dim][!miry] -= (miry ? -1.0 : 1.0)*(1.0 - text_width)*width; // left part of the screen
 		text_area.z1() += 0.05*height;
 		text_area.z2() -= 0.90*height; // shrink to a small strip at the bottom
 		building_room_geom_t::add_book_title(onscreen_text, text_area, *text_mat, WHITE, !c.dim, 2, c.dim, miry, 0, !c.dir); // {columns, lines, normal}

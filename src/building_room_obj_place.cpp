@@ -4411,32 +4411,39 @@ bool building_t::add_security_room_objs(rand_gen_t rgen, room_t const &room, flo
 		blockers.push_back(breaker_panel);
 	}
 	add_desk_to_room(rgen, room, blockers, DK_GRAY, zval, room_id, tot_light_amt, objs_start, 0, 0, 1); // is_basement=0, desk_ix=0, no_computer=1
-
 	// add computer monitors along all walls that don't have windows, avoiding doors
-	// TODO: no more monitors than there are cameras
-	for (unsigned dim = 0; dim < 2; ++dim) {
+	// count the number of cameras placed so far; there could be more placed later, but hallways are populated first for buildings such as prisons
+	unsigned num_cameras(0), num_monitors(0);
+	for (auto i = objs.begin(); i != objs.begin()+objs_start; ++i) {num_cameras += (i->type == TYPE_CAMERA);}
+	unsigned const max_monitors(is_prison() ? num_cameras : max(num_cameras, 32U));
+	bool const first_dim(rgen.rand_bool()), first_dir(rgen.rand_bool()); // use random dim/dir to avoid bias when there are more monitor slots that cameras
+
+	for (unsigned D = 0; D < 2 && num_monitors < max_monitors; ++D) {
+		bool const dim(bool(D) ^ first_dim);
 		float const wall_len(room_bounds.get_sz_dim(!dim));
-		unsigned const num_cols(floor(wall_len/horiz_space));
+		unsigned const num_cols(floor(wall_len/horiz_space)), monitor_flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING);
 		float const col_spacing(wall_len/num_cols), col_start(room_bounds.d[!dim][0] + 0.5*col_spacing);
 
-		for (unsigned dir = 0; dir < 2; ++dir) {
+		for (unsigned d = 0; d < 2 && num_monitors < max_monitors; ++d) {
+			bool const dir(bool(d) ^ first_dir);
 			if (classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT) continue; // skip exterior walls with windows
 			tv.d[dim][ dir] = room_bounds.d[dim][dir]; // on the wall
 			tv.d[dim][!dir] = tv.d[dim][dir] + (dir ? -1.0 : 1.0)*tv_depth;
 
-			for (unsigned col = 0; col < num_cols; ++col) { // XY
+			for (unsigned col = 0; col < num_cols && num_monitors < max_monitors; ++col) { // XY
 				set_wall_width(tv, (col_start + ((dim ^ dir) ? (num_cols-col-1) : col)*col_spacing), tv_hwidth, !dim); // ordered left to right
 				if (!breaker_panel.is_all_zeros() && breaker_panel.intersects_xy(tv)) continue; // ignore zvals so that we don't put a monitor above the breaker panel
 
-				for (unsigned row = 0; row < num_rows; ++row) { // Z
+				for (unsigned row = 0; row < num_rows && num_monitors < max_monitors; ++row) { // Z
 					float const z1(start_zval + row*row_spacing);
 					set_cube_zvals(tv, z1, z1+tv_height);
 					if (is_obj_placement_blocked(tv, room, 1)) continue;
 					//if (overlaps_other_room_obj(tv, objs_start)) continue; // not needed since there are no objects placed first?
-					objs.emplace_back(tv, TYPE_MONITOR, room_id, dim, !dir, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), tot_light_amt, SHAPE_SHORT, BLACK); // monitors are shorter than TVs
+					objs.emplace_back(tv, TYPE_MONITOR, room_id, dim, !dir, monitor_flags, tot_light_amt, SHAPE_SHORT, BLACK); // monitors are shorter than TVs
 					offset_hanging_tv(objs.back());
 					set_obj_id(objs);
 					objs.back().obj_id &= ~1; // on by default; strip off LSB
+					++num_monitors;
 				} // for row
 			} // for col
 		} // for dir

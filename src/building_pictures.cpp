@@ -172,6 +172,7 @@ public:
 		monitors.clear();
 		auto objs_end(b.interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 		vect_room_object_t const &objs(b.interior->room_geom->objs);
+		set<unsigned> camera_rooms;
 
 		for (auto i = objs.begin(); i != objs_end; ++i) {
 			if (i->type == TYPE_CAMERA) { // register camera
@@ -193,15 +194,20 @@ public:
 				std::string const &room_str(room_names[rtype]); // what about store names? currently there are no cameras in stores
 				std::ostringstream oss;
 				
-				if (room_str == "Hallway") { // shorten hallway => hall and add floor number
-					oss << "Hall " << (floor_ix+1) << " " << dir_str;
+				if (room_str == "Hallway") { // primary hallway; shorten hallway => hall and add floor number
+					oss << "Hall " << (floor_ix+1);
 				}
-				else {
-					oss << room_str << " " << dir_str; // floor starts from 1; dir is opposite the room end
+				else if (room_str == "Jailroom") {
+					camera_rooms.insert(i->room_id);
+					oss << "Block " << camera_rooms.size() << " Floor " << (floor_ix+1);
 				}
+				else { // retail, etc.
+					oss << room_str ; // floor starts from 1; dir is opposite the room end
+				}
+				oss << " " << dir_str;
 				cameras.back().tag = oss.str();
 			}
-			else if (i->type == TYPE_MONITOR && room.contains_cube(*i)) { // register monitor
+			else if (i->type == TYPE_MONITOR && room.intersects(*i)) { // register monitor
 				monitors.emplace_back(i - objs.begin());
 			}
 		} // for i
