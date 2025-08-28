@@ -2881,6 +2881,7 @@ bool building_t::add_livingroom_objs(rand_gen_t rgen, room_t const &room, float 
 	if ((is_house || is_apartment()) && (rgen.rand()%3) == 0) { // add fishtank on a tall table 33% of the time
 		add_fishtank_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area);
 	}
+	// TODO: TYPE_COAT_RACK
 	if (is_house && rgen.rand_float() < 0.75 && is_room_adjacent_to_ext_door(room, zval)) {add_shoes_by_door(rgen, room, zval, room_id, tot_light_amt, objs_start);}
 	if (room.is_single_floor && objs_start > 0) {replace_light_with_ceiling_fan(rgen, room, cube_t(), room_id, tot_light_amt, objs_start-1);} // light is prev placed object
 	return 1;
@@ -4645,12 +4646,25 @@ bool building_t::place_apple_on_obj(rand_gen_t &rgen, cube_t const &place_on, un
 	return 1;
 }
 
-bool building_t::place_phone_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, bool dim, bool dir, float overhang_amt) {
-	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_PHONE)) return 0;
-	float const height(0.03*get_window_vspace()), radius((1.0 - overhang_amt)*height*get_radius_for_square_model(OBJ_MODEL_PHONE)); // almost square
-	if (min(place_on.dx(), place_on.dy()) < 2.1*radius) return 0; // surface is too small to place this phone
-	cube_t const phone(place_cylin_object(rgen, place_on, radius, height, radius));
-	interior->room_geom->objs.emplace_back(phone, TYPE_CONF_PHONE, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt);
+bool building_t::place_phone_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, bool dim, bool dir, float overhang_amt, bool vis_phone) {
+	if (vis_phone) {
+		if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_VIS_PHONE)) return 0;
+		vector3d sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_VIS_PHONE));
+		vector2d const place_sz(place_on.get_size_xy());
+		float const length(0.1*get_window_vspace()), width(length*sz.y/sz.x), height(length*sz.z/sz.x);
+		if (place_sz[dim] < 1.1*length || place_sz[!dim] < 1.2*width) return 0; // surface is too small to place this phone
+		if (dim) {swap(sz.x, sz.y);}
+		cube_t phone;
+		gen_xy_pos_for_cube_obj(phone, place_on, sz, height, rgen);
+		interior->room_geom->objs.emplace_back(phone, TYPE_VIS_PHONE, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt);
+	}
+	else {
+		if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_PHONE)) return 0;
+		float const height(0.03*get_window_vspace()), radius((1.0 - overhang_amt)*height*get_radius_for_square_model(OBJ_MODEL_PHONE)); // almost square
+		if (min(place_on.dx(), place_on.dy()) < 2.1*radius) return 0; // surface is too small to place this phone
+		cube_t const phone(place_cylin_object(rgen, place_on, radius, height, radius));
+		interior->room_geom->objs.emplace_back(phone, TYPE_CONF_PHONE, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt);
+	}
 	return 1;
 }
 

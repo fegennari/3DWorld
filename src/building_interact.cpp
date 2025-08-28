@@ -2439,10 +2439,10 @@ room_obj_dstate_t &building_room_geom_t::get_dstate(room_object_t const &obj) {
 }
 
 bool is_blocking_obj_on_top_surface(room_object_t const &o) { // objects on tables, counters, desks, etc.
-	return (o.type == TYPE_PLANT || o.type == TYPE_KEYBOARD || o.is_a_drink() || o.type == TYPE_MWAVE || is_ball_type(o.type) ||
-		o.type == TYPE_PLATE || o.type == TYPE_LAPTOP || o.type == TYPE_PAN || o.type == TYPE_VASE || o.type == TYPE_URN || o.type == TYPE_MONITOR ||
-		o.type == TYPE_LAMP || o.type == TYPE_CUP || o.type == TYPE_TOASTER || o.type == TYPE_SILVER || o.type == TYPE_PIZZA_BOX ||
-		o.type == TYPE_PLANT_MODEL || o.type == TYPE_CONF_PHONE || o.type == TYPE_HARDHAT || o.type == TYPE_TOPHAT || o.type == TYPE_COMP_MOUSE);
+	return (o.type == TYPE_PLANT || o.type == TYPE_KEYBOARD || o.is_a_drink() || o.type == TYPE_MWAVE || is_ball_type(o.type) || o.type == TYPE_PLATE ||
+		o.type == TYPE_LAPTOP || o.type == TYPE_PAN || o.type == TYPE_VASE || o.type == TYPE_URN || o.type == TYPE_MONITOR || o.type == TYPE_LAMP ||
+		o.type == TYPE_CUP || o.type == TYPE_TOASTER || o.type == TYPE_SILVER || o.type == TYPE_PIZZA_BOX || o.type == TYPE_PLANT_MODEL ||
+		o.type == TYPE_CONF_PHONE || o.type == TYPE_HARDHAT || o.type == TYPE_TOPHAT || o.type == TYPE_COMP_MOUSE || o.type == TYPE_VIS_PHONE);
 }
 bool can_place_on_object(room_object_t const &obj, point const &pos, float radius, float z_bias, float start_zval, float &zval) {
 	if (!obj.can_place_onto() && obj.type != TYPE_RUG) return 0; // can't place on this object type

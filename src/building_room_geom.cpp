@@ -3992,6 +3992,11 @@ void building_room_geom_t::add_wine_rack(room_object_t const &c, bool inc_lg, bo
 	}
 }
 
+void building_room_geom_t::add_coat_rack(room_object_t const &c, float tscale) {
+	//rgeom_mat_t &wood_mat(get_wood_material(tscale));
+	// TODO: cylinders
+}
+
 room_object_t get_desk_drawers_part(room_object_t const &c) {
 	bool const side(c.obj_id & 1);
 	float const desk_width(c.get_width()), height(c.dz());
@@ -6875,6 +6880,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_PICTURE:  return (has_extra() ? GRAY : texture_color(get_picture_tid())); // set abstract art to gray since color is unknown; incorrect for user screenshots
 	case TYPE_BCASE:    return get_textured_wood_color();
 	case TYPE_WINE_RACK:return get_textured_wood_color();
+	case TYPE_COAT_RACK:return get_textured_wood_color();
 	case TYPE_DESK:     return get_textured_wood_color();
 	case TYPE_RDESK:    return (texture_color(PANELING_TEX)*0.5 + texture_color(get_counter_tid())*0.5);
 	case TYPE_CONF_TABLE:return (get_textured_wood_color() *0.5 + texture_color(get_counter_tid())*0.5);
