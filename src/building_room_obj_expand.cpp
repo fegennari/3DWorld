@@ -1353,9 +1353,10 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 	set_rand_pos_for_sz(obj, !dim, length, width, rgen);
 }
 
-void building_room_geom_t::expand_locker(room_object_t const &c) {
+void building_room_geom_t::expand_locker(room_object_t const &c, building_type_t btype) {
 	bool const dim(c.dim), dir(c.dir);
-	bool const in_hallway(c.state_flags == RTYPE_HALL), in_locker_room(c.state_flags == RTYPE_LOCKER), in_industrial(c.state_flags == RTYPE_OFFICE), in_gym(c.state_flags == RTYPE_GYM);
+	bool const in_hallway(c.state_flags == RTYPE_HALL), in_locker_room(c.state_flags == RTYPE_LOCKER);
+	bool const in_industrial(c.state_flags == RTYPE_OFFICE), in_gym(c.state_flags == RTYPE_GYM), is_prison(btype == BTYPE_PRISON);
 	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_WAS_EXP);
 	float const wall_thickness(get_locker_wall_thickness(c));
 	cube_t interior(c);
@@ -1420,13 +1421,14 @@ void building_room_geom_t::expand_locker(room_object_t const &c) {
 				break;
 			}
 			case TYPE_TEESHIRT: { // vertical
+				if (is_prison) {} // TODO: prison jumpsuit in gym locker?
 				float const shirt_width(sqrt(width*width + depth*depth)*rgen.rand_uniform(0.9, 0.95)), shirt_len(shirt_width*rgen.rand_uniform(1.1, 1.3));
 				if (place_area.dz() < shirt_len) {bad_item = 1; break;} // not enough vertical space for a shirt
 				cube_t shirt;
 				set_cube_zvals(shirt, place_area.z2()-shirt_len, place_area.z2());
 				set_wall_width(shirt, c.get_center_dim( dim), 0.01*shirt_width,  dim); // set thickness
 				set_wall_width(shirt, c.get_center_dim(!dim), 0.50*shirt_width, !dim); // set width
-				colorRGBA const color(in_gym ? ORANGE : gen_teeshirt_color(rgen)); // orange for prison gyms
+				colorRGBA const color(is_prison ? ORANGE : gen_teeshirt_color(rgen)); // orange for prison gyms
 				expanded_objs.emplace_back(shirt, TYPE_TEESHIRT, c.room_id, c.dim, c.dir, RO_FLAG_HANGING, c.light_amt, SHAPE_CUBE, color, rgen.rand());
 				break;
 			}
@@ -2012,7 +2014,7 @@ bool building_room_geom_t::expand_object(room_object_t &c, building_t const &bui
 	case TYPE_WINE_RACK: expand_wine_rack(c); break;
 	case TYPE_CABINET: case TYPE_COUNTER: case TYPE_KSINK: case TYPE_VANITY: expand_cabinet(c); break;
 	case TYPE_MED_CAB:   expand_med_cab(c); break;
-	case TYPE_LOCKER:    expand_locker (c); break;
+	case TYPE_LOCKER:    expand_locker (c, building.btype); break;
 	case TYPE_BRK_PANEL: expand_breaker_panel(c, building); break;
 	//case TYPE_TCAN:      expand_trashcan(c); break;
 	default: assert(0); // not a supported expand type

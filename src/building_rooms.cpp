@@ -201,8 +201,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	unsigned added_bathroom_objs_mask(0), numbered_rooms_seen(0), store_type_mask(0), num_locker_rooms(0);
 	uint8_t last_unit_id(0);
 	uint64_t is_public_on_floor(0), library_floor_mask(0), added_kitchen_mask(0), added_living_mask(0), added_bath_mask(0); // 64 bit masks, per floor
-	bool added_bedroom(0), added_library(0), added_dining(0), added_laundry(0), added_basement_utility(0), added_fireplace(0), added_pool_room(0), added_cafeteria(0);
-	bool saw_mall(0);
+	bool added_bedroom(0), added_library(0), added_dining(0), added_laundry(0), added_basement_utility(0), added_fireplace(0), added_pool_room(0);
+	bool saw_mall(0), added_cafeteria(0), added_gym(0);
 	light_ix_assign_t light_ix_assign;
 	clear_existing_room_geom();
 
@@ -973,6 +973,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 						r->assign_to(RTYPE_LIBRARY, f);
 						added_library = is_library = added_obj = no_plants = no_whiteboard = 1;
 					}
+				}
+				if (!added_obj && !added_gym && rgen.rand_bool()) {
+					added_obj = no_plants = no_whiteboard = added_gym = add_gym_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
+					if (added_obj) {r->assign_to(RTYPE_GYM, f);}
 				}
 				//if (!added_obj && rgen.rand_float() < 0.25) {r->assign_to(RTYPE_ART, f);} // maybe make art room
 				//if (!added_obj) {} // teacher's office, principal's office, supply rooms, art/shop, etc.
