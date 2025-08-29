@@ -820,8 +820,8 @@ bool building_t::add_visit_room_objs(rand_gen_t rgen, room_t &room, float &zval,
 				// phone on table
 				cube_t half_table(table);
 				half_table.d[!dim][!d]  = wall.d[!dim][d];
-				half_table.d[!dim][ d] += (d ? 1.0 : -1.0)*wall_hthick; // allow phone to hang a bit off the edge of the table
-				place_phone_on_obj(rgen, half_table, room_id, tot_light_amt, !dim, d);
+				half_table.d[!dim][ d] -= (d ? 1.0 : -1.0)*0.5*wall_hthick; // add some padding on the table edge
+				place_phone_on_obj(rgen, half_table, room_id, tot_light_amt, !dim, d, 0.0, 1); // overhang_amt=0.0, vis_phone=1
 			} // for d
 		}
 		for (unsigned d = 0; d < 2; ++d) { // add chairs against the far walls, even if no table

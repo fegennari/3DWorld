@@ -4649,13 +4649,13 @@ bool building_t::place_apple_on_obj(rand_gen_t &rgen, cube_t const &place_on, un
 bool building_t::place_phone_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, bool dim, bool dir, float overhang_amt, bool vis_phone) {
 	if (vis_phone) {
 		if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_VIS_PHONE)) return 0;
-		vector3d sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_VIS_PHONE));
+		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_VIS_PHONE));
 		vector2d const place_sz(place_on.get_size_xy());
 		float const length(0.1*get_window_vspace()), width(length*sz.y/sz.x), height(length*sz.z/sz.x);
 		if (place_sz[dim] < 1.1*length || place_sz[!dim] < 1.2*width) return 0; // surface is too small to place this phone
-		if (dim) {swap(sz.x, sz.y);}
 		cube_t phone;
-		gen_xy_pos_for_cube_obj(phone, place_on, sz, height, rgen);
+		vector3d const scale(0.5*(dim ? width : length), 0.5*(dim ? length : width), height);
+		gen_xy_pos_for_cube_obj(phone, place_on, scale, height, rgen);
 		interior->room_geom->objs.emplace_back(phone, TYPE_VIS_PHONE, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt);
 	}
 	else {
