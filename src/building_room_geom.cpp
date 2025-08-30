@@ -1816,21 +1816,20 @@ void building_room_geom_t::add_shower(room_object_t const &c, float tscale, bool
 	float const radius(0.5f*(sz.x + sz.y));
 	colorRGBA const metal_color(apply_light_color(c, GRAY));
 
-	if (c.in_jail()) { // prison shower room open shower
-		if (inc_sm) {
-			float const inner_wall_pos(c.d[c.dim][c.dir]), extent_amt((c.dir ? -1.0 : 1.0)*0.06*sz[c.dim]);
-			cube_t bottom(c);
-			bottom.z2() = c.z1() + 0.0008*sz.z;
-			draw_shower_head(c, radius, inner_wall_pos, extent_amt, c.dim);
-			add_shower_drain(bottom, metal_color);
-			// add railing
-			float const railing_radius(0.02*radius), railing_zval(c.z1() + 0.35*c.dz());
-			cube_t railing(c);
-			railing.d[c.dim][!c.dir] = c.d[c.dim][c.dir] + (c.dir ? -1.0 : 1.0)*2.0*railing_radius;
-			set_cube_zvals(railing, railing_zval-railing_radius, railing_zval+railing_radius);
-			rgeom_mat_t &metal_mat(get_metal_material(1, 0, 1)); // shadowed, specular metal, small
-			metal_mat.add_ortho_cylin_to_verts(railing, metal_color, !c.dim, 1, 1); // draw ends in case they're visible from an end row of showers
-		}
+	if (c.type == TYPE_O_SHOWER) { // open shower
+		assert(inc_sm && !inc_lg);
+		float const inner_wall_pos(c.d[c.dim][c.dir]), extent_amt((c.dir ? -1.0 : 1.0)*0.06*sz[c.dim]);
+		cube_t bottom(c);
+		bottom.z2() = c.z1() + 0.0008*sz.z;
+		draw_shower_head(c, radius, inner_wall_pos, extent_amt, c.dim);
+		add_shower_drain(bottom, metal_color);
+		// add railing
+		float const railing_radius(0.02*radius), railing_zval(c.z1() + 0.35*c.dz());
+		cube_t railing(c);
+		railing.d[c.dim][!c.dir] = c.d[c.dim][c.dir] + (c.dir ? -1.0 : 1.0)*2.0*railing_radius;
+		set_cube_zvals(railing, railing_zval-railing_radius, railing_zval+railing_radius);
+		rgeom_mat_t &metal_mat(get_metal_material(1, 0, 1)); // shadowed, specular metal, small
+		metal_mat.add_ortho_cylin_to_verts(railing, metal_color, !c.dim, 1, 1); // draw ends in case they're visible from an end row of showers
 		return;
 	}
 	// house shower enclosed in glass with door

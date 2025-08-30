@@ -1687,7 +1687,7 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 				avoid.insert(avoid.end(), sides, sides+num_cubes);
 				continue;
 			}
-			else if (c->is_enc_shower()) {
+			else if (c->type == TYPE_SHOWER) {
 				cube_t sides[2];
 				unsigned const num_cubes(get_shower_cubes(*c, sides));
 				avoid.insert(avoid.end(), sides, sides+num_cubes);

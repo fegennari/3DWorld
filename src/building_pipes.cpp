@@ -1164,7 +1164,7 @@ void building_t::get_pipe_basement_water_connections(vect_riser_pos_t &sewer, ve
 			continue;
 		}
 		// Note: the dishwasher is always next to the kitchen sink and uses the same water connections
-		bool const hot_cold_obj (i.type == TYPE_SINK || i.type == TYPE_BRSINK || i.type == TYPE_KSINK || i.type == TYPE_TUB || i.type == TYPE_SHOWER ||
+		bool const hot_cold_obj (i.type == TYPE_SINK || i.type == TYPE_BRSINK || i.type == TYPE_KSINK || i.type == TYPE_TUB || i.is_shower() ||
 			i.type == TYPE_SHOWERTUB || i.type == TYPE_WASHER || i.type == TYPE_DWASHER || i.type == TYPE_VANITY || (i.type == TYPE_STALL && i.in_jail()));
 		bool const cold_only_obj(i.type == TYPE_TOILET || i.type == TYPE_URINAL || i.type == TYPE_DRAIN);
 		if (!hot_cold_obj && !cold_only_obj) continue;

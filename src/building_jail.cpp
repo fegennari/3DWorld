@@ -888,7 +888,7 @@ bool building_t::add_shower_room_objs(rand_gen_t rgen, room_t const &room, float
 		}
 	}
 	bool const has_wall(!avoid.is_all_zeros());
-	// add showers along walls and benches next to them
+	// add open showers along walls and benches next to them
 	unsigned const showers_start(objs.size()), shower_style(rgen.rand());
 	float const bench_height(0.22*floor_spacing), bench_hwidth(0.5*rgen.rand_uniform(0.7, 0.9)*bench_height);
 	int const skip_dir((room_sz[wdim] < 2*shower_depth + clearance) ? rgen.rand_bool() : 2); // skip one side if room is too narrow; can this happen?
@@ -921,10 +921,10 @@ bool building_t::add_shower_room_objs(rand_gen_t rgen, room_t const &room, float
 			bool blocked(0);
 
 			for (auto s = objs.begin()+showers_start; s != objs.end(); ++s) {
-				if (s->type == TYPE_SHOWER && s->dim != dim && s->intersects(entry_area)) {blocked = 1; break;}
+				if (s->type == TYPE_O_SHOWER && s->dim != dim && s->intersects(entry_area)) {blocked = 1; break;}
 			}
 			if (blocked) continue;
-			objs.emplace_back(shower, TYPE_SHOWER, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_IN_JAIL), tot_light_amt);
+			objs.emplace_back(shower, TYPE_O_SHOWER, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_IN_JAIL), tot_light_amt);
 			objs.back().obj_id = shower_style; // sets single vs. two handles
 			
 			if (i < ext_wall_tile_end && dim == wdim) { // maybe add bench for exterior wall showers

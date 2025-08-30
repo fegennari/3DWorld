@@ -510,7 +510,7 @@ enum { // room object types
 	TYPE_MACHINE, TYPE_BUCKET, TYPE_SPIWEB, TYPE_TREE, TYPE_THEFT_SENS, TYPE_ELEC_WIRE, TYPE_ERASER, TYPE_DWASHER, TYPE_PET_CAGE, TYPE_IBEAM,
 	TYPE_CATWALK, TYPE_VANITY, TYPE_CHEM_TANK, TYPE_HVAC_UNIT, TYPE_WARN_LIGHT, TYPE_GAUGE, TYPE_PALLET, TYPE_SHELF_WALL, TYPE_VENDING, TYPE_MED_CAB,
 	TYPE_LOCKER, TYPE_TESTTUBE, TYPE_HARDHAT, TYPE_TOPHAT, TYPE_COMP_MOUSE, TYPE_PARK_GATE, TYPE_CONV_BELT, TYPE_JAIL_BARS, TYPE_GUN, TYPE_STICK_NOTE,
-	TYPE_GYM_WEIGHT, TYPE_FOOD_TRAY, TYPE_BAR_SOAP, TYPE_COAT_RACK,
+	TYPE_GYM_WEIGHT, TYPE_FOOD_TRAY, TYPE_BAR_SOAP, TYPE_COAT_RACK, TYPE_O_SHOWER,
 	/* these next ones are all 3D models - see logic in room_object_t::is_obj_model_type() */
 	TYPE_TOILET, TYPE_SINK, TYPE_TUB, TYPE_FRIDGE, TYPE_STOVE, TYPE_TV, TYPE_MONITOR, TYPE_COUCH, TYPE_OFF_CHAIR, TYPE_URINAL,
 	TYPE_LAMP, TYPE_WASHER, TYPE_DRYER, TYPE_KEY, TYPE_HANGER, TYPE_CLOTHES, TYPE_FESCAPE, TYPE_WALL_LAMP, TYPE_CUP, TYPE_TOASTER,
@@ -776,7 +776,7 @@ struct room_object_t : public oriented_cube_t { // size=68
 	bool is_mirror      () const {return (type == TYPE_MIRROR || type == TYPE_DRESS_MIR || (type == TYPE_MED_CAB && !has_extra()));}
 	bool is_tv_or_monitor() const {return (type == TYPE_TV || type == TYPE_MONITOR);}
 	bool is_tv_monitor_on() const {return (!(obj_id & 1) && is_powered() && !is_broken());} // on, powered, and not broken
-	bool is_enc_shower   () const {return (type == TYPE_SHOWER && !in_jail());} // enclosed shower
+	bool is_shower       () const {return (type == TYPE_SHOWER || type == TYPE_O_SHOWER);}
 	bool is_player_collidable() const;
 	bool can_use        () const;
 	bool is_interactive () const {return (has_dstate() || can_use());}
