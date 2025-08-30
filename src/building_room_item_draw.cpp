@@ -1099,7 +1099,7 @@ void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst, vect_room
 		if (office_chair_rot_rate == 0.0) {obj.flags &= ~RO_FLAG_ROTATING; return;} // if no longer rotating, clear rotation bit
 		rotate_dir_about_z(inst.dir, office_chair_rot_rate*fticks);
 	}
-	else if (obj.type == TYPE_HANGER || obj.type == TYPE_CLOTHES) {
+	else if (obj.type == TYPE_HANGER || obj.type == TYPE_CLOTHES || obj.type == TYPE_JUMPSUIT) {
 		inst.dir = obj.get_dir(); // reset before applying rotate
 		float const angle(((obj.flags & RO_FLAG_ADJ_LO) ? -1.0 : 1.0)*0.08*TWO_PI);
 		rotate_dir_about_z(inst.dir, -angle); // limited rotation angle
@@ -1818,7 +1818,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 				if (type == TYPE_HANGER && obj.is_hanging() && i+1 != obj_model_insts.end()) { // hanger
 					room_object_t &obj2(get_room_object_by_index((i+1)->obj_id));
 
-					if (obj2.type == TYPE_CLOTHES) { // cull hanger and clothing together
+					if (obj2.type == TYPE_CLOTHES || obj2.type == TYPE_JUMPSUIT) { // cull hanger and clothing/jumpsuit together
 						if (building.check_obj_occluded(union_of_two_cubes(obj, obj2), camera_bs, oc, reflection_pass)) {model_to_cull = i+1; continue;}
 						model_to_not_cull = i+1;
 					}

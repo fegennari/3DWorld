@@ -1828,50 +1828,10 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 					}
 					else if (store_type == STORE_CLOTHING) { // add clothes racks
 						// Note: grouping into a rack object doesn't really help here because these are 3D models and must be drawn individually anyway
-						float const hr_radius(0.007*window_vspace), frame_hwidth(1.2*hr_radius), frame_width(2.0*frame_hwidth);
-						unsigned const flags(RO_FLAG_INTERIOR | RO_FLAG_IN_MALL | RO_FLAG_NOCOLL);
-						// add an invisible collider around the clothes rack for player and AI collisions
-						cube_t collider(rack);
-						collider.z2() = zval + 0.5*window_vspace;
-						set_wall_width(collider, rack_center, 0.2*rack_width, !dim);
-						objs.emplace_back(collider, TYPE_COLLIDER, room_id, !dim, 0, (RO_FLAG_IN_MALL | RO_FLAG_INVIS), light_amt);
-						unsigned const num_segs(2 + (room_id & 1)); // 2-3
-						int const hanger_model_id(rgen.rand()), clothing_model_id(rgen.rand()); // consistent for each rack
-						float const seg_len(rack_length/num_segs);
-
-						for (unsigned n = 0; n < num_segs; ++n) { // split into segments
-							// add hanger rod
-							float const lo_val(start + n*seg_len);
-							room_object_t hanger_rod(rack, TYPE_HANGER_ROD, room_id, !dim, 0, flags); // SHAPE_CUBE, even though it's a horizontal cylinder
-							hanger_rod.d[dim][0] = lo_val;
-							hanger_rod.d[dim][1] = lo_val + seg_len;
-							hanger_rod.z1() = collider  .z2();
-							hanger_rod.z2() = hanger_rod.z1() + 2.0*hr_radius;
-							set_wall_width(hanger_rod, rack_center, hr_radius, !dim);
-							// add a frame that holds the hanger rod; can construct from metal bars
-							colorRGBA const frame_color(DK_GRAY);
-
-							for (unsigned d = 0; d < 2; ++d) { // each end
-								if (d == 1 && n+1 < num_segs) continue; // not the end, use frame from the next segment
-								float const end_pos(hanger_rod.d[dim][d]);
-								cube_t hbar(collider); // copy width from collider
-								set_wall_width(hbar, hanger_rod.zc(), frame_hwidth, 2); // Z
-								hbar.d[dim][ d] = end_pos;
-								hbar.d[dim][!d] = end_pos + (d ? -1.0 : 1.0)*frame_width;
-								objs.emplace_back(hbar, TYPE_METAL_BAR, room_id, 0, 0, flags, light_amt, SHAPE_CUBE, frame_color, 0); // draw all sides
-
-								for (unsigned e = 0; e < 2; ++e) { // each side leg
-									cube_t vbar(hbar);
-									set_cube_zvals(vbar, rack.z1(), hbar.z1());
-									vbar.d[!dim][!e] = hbar.d[!dim][e] + (e ? -1.0 : 1.0)*frame_width;
-									objs.emplace_back(vbar, TYPE_METAL_BAR, room_id, 0, 0, flags, light_amt, SHAPE_CUBE, frame_color, EF_Z12); // skip top and bottom
-								}
-							} // for d
-							objs.push_back(hanger_rod); // must be added just before clothes
-							// add hangers and hanging clothes
-							unsigned const num_hangers(round_fp(15.0*rgen.rand_uniform(1.0, 1.5)*rack_length/(num_segs*window_vspace)));
-							building_room_geom_t::add_hangers_and_clothing(window_vspace, num_hangers, flags, hanger_model_id, clothing_model_id, objs, rgen);
-						} // for n
+						cube_t clothing_rack(rack);
+						clothing_rack.z2() = zval + 0.5*window_vspace;
+						set_wall_width(clothing_rack, rack_center, 0.2*rack_width, !dim);
+						add_clothing_rack(clothing_rack, room_id, dim, light_amt, RTYPE_STORE, rgen);
 					}
 					else if (store_type == STORE_PETS || store_type == STORE_SHOE) {
 						bool const is_pet_store(store_type == STORE_PETS);
@@ -2239,6 +2199,55 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 	}
 	unsigned const skip_dir((room_width < 0.8*room_len) ? rgen.rand_bool() : 2); // skip one side if room is narrow
 	add_ceiling_ducts(room, room.z2(), room_id, dim, skip_dir, light_amt, interior->mall_info->store_cylin_ducts, 1, 1, rgen); // skip ends and top
+}
+
+void building_t::add_clothing_rack(cube_t const &rack, unsigned room_id, bool dim, float light_amt, room_type rtype, rand_gen_t &rgen) {
+	float const window_vspace(get_window_vspace());
+	float const rack_length(rack.get_sz_dim(dim)), rack_width(rack.get_sz_dim(!dim)), rack_center(rack.get_center_dim(!dim));
+	float const hr_radius(0.007*window_vspace), frame_hwidth(1.2*hr_radius), frame_width(2.0*frame_hwidth);
+	unsigned const flags(RO_FLAG_INTERIOR | RO_FLAG_NOCOLL | RO_FLAG_IN_MALL);
+	vect_room_object_t &objs(interior->room_geom->objs);
+	// add an invisible collider around the clothes rack for player and AI collisions
+	objs.emplace_back(rack, TYPE_COLLIDER, room_id, !dim, 0, (RO_FLAG_IN_MALL | RO_FLAG_INVIS), light_amt);
+	unsigned num_segs(2 + (room_id & 1)); // 2-3
+	min_eq(num_segs, max(1U, unsigned(rack_length/rack_width))); // limit aspect ratio
+	int const hanger_model_id(rgen.rand()), clothing_model_id(rgen.rand()); // consistent for each rack
+	float const seg_len(rack_length/num_segs);
+
+	for (unsigned n = 0; n < num_segs; ++n) { // split into segments
+		// add hanger rod
+		float const lo_val(rack.d[dim][0] + n*seg_len);
+		room_object_t hanger_rod(rack, TYPE_HANGER_ROD, room_id, !dim, 0, flags); // SHAPE_CUBE, even though it's a horizontal cylinder
+		hanger_rod.d[dim][0] = lo_val;
+		hanger_rod.d[dim][1] = lo_val + seg_len;
+		hanger_rod.z1() = rack.z2();
+		hanger_rod.z2() = hanger_rod.z1() + 2.0*hr_radius;
+		set_wall_width(hanger_rod, rack_center, hr_radius, !dim);
+		// add a frame that holds the hanger rod; can construct from metal bars
+		colorRGBA const frame_color(DK_GRAY);
+
+		for (unsigned d = 0; d < 2; ++d) { // each end
+			if (d == 1 && n+1 < num_segs) continue; // not the end, use frame from the next segment
+			float const end_pos(hanger_rod.d[dim][d]);
+			cube_t hbar(rack); // copy width from collider
+			set_wall_width(hbar, hanger_rod.zc(), frame_hwidth, 2); // Z
+			hbar.d[dim][ d] = end_pos;
+			hbar.d[dim][!d] = end_pos + (d ? -1.0 : 1.0)*frame_width;
+			objs.emplace_back(hbar, TYPE_METAL_BAR, room_id, 0, 0, flags, light_amt, SHAPE_CUBE, frame_color, 0); // draw all sides
+
+			for (unsigned e = 0; e < 2; ++e) { // each side leg
+				cube_t vbar(hbar);
+				set_cube_zvals(vbar, rack.z1(), hbar.z1());
+				vbar.d[!dim][!e] = hbar.d[!dim][e] + (e ? -1.0 : 1.0)*frame_width;
+				objs.emplace_back(vbar, TYPE_METAL_BAR, room_id, 0, 0, flags, light_amt, SHAPE_CUBE, frame_color, EF_Z12); // skip top and bottom
+			}
+		} // for d
+		objs.push_back(hanger_rod); // must be added just before clothes
+		// add hangers and hanging clothes
+		unsigned const num_hangers(round_fp(15.0*rgen.rand_uniform(1.0, 1.5)*rack_length/(num_segs*window_vspace)));
+		bool const add_jumpsuits(rtype == RTYPE_JAIL);
+		building_room_geom_t::add_hangers_and_clothing(window_vspace, num_hangers, flags, hanger_model_id, clothing_model_id, objs, rgen, add_jumpsuits);
+	} // for n
 }
 
 void building_t::add_ceiling_ducts(cube_t const &room, float ceil_zval, unsigned room_id, bool dim, unsigned skip_dir, float light_amt,

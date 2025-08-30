@@ -1453,7 +1453,7 @@ private:
 public:
 	static void get_shelfrack_objects(room_object_t const &c, vect_room_object_t &objects, bool add_models_mode=0, bool books_only=0);
 	static void add_hangers_and_clothing(float window_vspacing, unsigned num_hangers, unsigned flags, int hanger_model_id, int clothing_model_id,
-		vect_room_object_t &objects, rand_gen_t &rgen);
+		vect_room_object_t &objects, rand_gen_t &rgen, bool add_jumpsuits=0);
 	static void add_pet_container(cube_t const &tank, unsigned room_id, float tot_light_amt, bool dim, bool dir, bool in_pet_store,
 		vect_room_object_t &objects, rand_gen_t &rgen, unsigned animal_type=TYPE_FISH, unsigned shelf_ix=0);
 private:
@@ -2959,6 +2959,7 @@ private:
 		unsigned room_id, float tot_light_amt, bool dim, unsigned tid_tag, vect_cube_t &blockers);
 	bool add_food_court_objs(rand_gen_t &rgen, cube_t const &place_area, float zval, unsigned room_id, float tot_light_amt, vect_cube_t const &blockers);
 	void add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, unsigned &type_mask, light_ix_assign_t &light_ix_assign);
+	void add_clothing_rack(cube_t const &rack, unsigned room_id, bool dim, float light_amt, room_type rtype, rand_gen_t &rgen);
 	void add_ceiling_ducts(cube_t const &room, float ceil_zval, unsigned room_id, bool dim, unsigned skip_dir, float light_amt,
 		bool cylin_ducts, bool skip_ends, bool skip_top, rand_gen_t &rgen);
 	void add_row_of_bookcases(cube_t const &row, float zval, unsigned room_id, float light_amt, bool dim, bool place_inside);

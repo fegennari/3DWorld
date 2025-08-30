@@ -256,7 +256,7 @@ city ex_machine_model   ../models/interiors/exercise/horizontal_bar.glb  0 0 0  
 city ex_machine_model   ../models/interiors/exercise/leg_press.glb       0 0 0  -1 -1 0   1 1.1 1.0
 #city vis_phone_model    ../models/interiors/phone/PhoneButtons.fbx       0 0 0  -1 -1 0  1 1.0 1.0
 city vis_phone_model    ../models/interiors/phone/PhoneNoButtons.fbx     0 0 0  -1 -1 0  1 1.0 1.0
-city jumpsuit_model     ../models/interiors/JumpsuitHanger.fbx           0 0 0  -1 -1 0  1 1.0 1.0
+city jumpsuit_model     ../models/interiors/Jumpsuit.fbx                 0 0 0  -1 -1 0  1 1.0 1.0
 
 # closet/clothing objects
 # filename recalc_normals two_sided centered body_material_id fixed_color_id xy_rot swap_xyz scale lod_mult [keywords] [shadow_mat_ids]

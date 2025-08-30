@@ -226,7 +226,7 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vect_room_
 }
 
 void building_room_geom_t::add_hangers_and_clothing(float window_vspacing, unsigned num_hangers, unsigned flags, int hanger_model_id, int clothing_model_id,
-	vect_room_object_t &objects, rand_gen_t &rgen)
+	vect_room_object_t &objects, rand_gen_t &rgen, bool add_jumpsuits)
 {
 	if (num_hangers == 0) return;
 	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_HANGER)) return;
@@ -240,12 +240,14 @@ void building_room_geom_t::add_hangers_and_clothing(float window_vspacing, unsig
 	hanger.type       = TYPE_HANGER;
 	hanger.item_flags = ((hanger_model_id >= 0) ? hanger_model_id : rgen.rand()); // choose a random hanger sub_model_id per-closet if not forced
 	set_cube_zvals(hanger, (hanger_rod.z1() - 0.07*window_vspacing), (hanger_rod.z2() + 1.0*wire_radius));
-	unsigned const hid(hanger.get_model_id());
+	unsigned const hid(hanger.get_model_id()), num_slots_plus_one(add_jumpsuits ? 15 : 63);
 	float const edge_spacing(max(4.0f*hr_radius, 0.06f*window_vspacing));
 	float const pos_min(hanger_rod.d[!dim][0] + edge_spacing), pos_max(hanger_rod.d[!dim][1] - edge_spacing);
-	float const pos_delta(pos_max - pos_min), slot_spacing(pos_delta/63.0);
+	float const pos_delta(pos_max - pos_min), slot_spacing(pos_delta/num_slots_plus_one);
 	uint64_t slots_used(0); // divide the space into 64 slots, initially all empty
-	bool const use_model(building_obj_model_loader.is_model_valid(OBJ_MODEL_CLOTHES));
+	unsigned const model_id(add_jumpsuits ? OBJ_MODEL_JUMPSUIT : OBJ_MODEL_CLOTHES);
+	unsigned const obj_type(add_jumpsuits ? TYPE_JUMPSUIT      : TYPE_CLOTHES     );
+	bool const use_model(building_obj_model_loader.is_model_valid(model_id));
 	bool const mix_hangers(hanger_model_id < 0 && rgen.rand_bool());
 
 	for (unsigned i = 0; i < num_hangers; ++i) { // since hangers are so narrow, we probably don't need to check for intersections
@@ -253,7 +255,7 @@ void building_room_geom_t::add_hangers_and_clothing(float window_vspacing, unsig
 		bool found_slot(0);
 			
 		for (unsigned n = 0; n < 10; ++n) { // 10 attempts to find an unused slot
-			slot_ix = rgen.rand()&63;
+			slot_ix = (rgen.rand() & num_slots_plus_one);
 			uint64_t const slot_mask(uint64_t(1) << slot_ix);
 			if (slots_used & slot_mask) continue;
 			slots_used |= slot_mask;
@@ -267,10 +269,12 @@ void building_room_geom_t::add_hangers_and_clothing(float window_vspacing, unsig
 			
 		if (use_model && rgen.rand_float() < 0.8) { // maybe add clothing to the hanger
 			objects.back().flags |= RO_FLAG_HANGING; // flag the hanger has having clothing hanging on it
-			room_object_t clothes(hanger, TYPE_CLOTHES, hanger_rod.room_id, dim, hanger_rod.dir, (flags | RO_FLAG_HANGING), hanger_rod.light_amt, SHAPE_CUBE, WHITE);
-			clothes.z2() -= 0.55*hanger.dz(); // top
-			clothes.z1() -= 0.3*window_vspacing/(1.0 + FLOOR_THICK_VAL_HOUSE); // bottom
+			room_object_t clothes(hanger, obj_type, hanger_rod.room_id, dim, hanger_rod.dir, (flags | RO_FLAG_HANGING), hanger_rod.light_amt, SHAPE_CUBE, WHITE);
+			clothes.z2() -= (add_jumpsuits ? 0.52 : 0.55)*hanger.dz(); // top
+			clothes.z1() -= (add_jumpsuits ? 0.60 : 0.30)*window_vspacing/(1.0 + FLOOR_THICK_VAL_HOUSE); // bottom
 			clothes.item_flags = ((clothing_model_id >= 0) ? clothing_model_id : rgen.rand()); // choose a random clothing sub_model_id if not forced
+			if (add_jumpsuits) {clothes.translate_dim(!dim, 0.40*clothes.get_width());} // jumpsuit is misaligned from the hanger
+			if (add_jumpsuits) {clothes.translate_dim( dim, 0.02*clothes.get_depth());} // jumpsuit is misaligned from the hanger
 			if (is_pants_model(clothes) && is_bar_hanger_model(hanger)) {++clothes.item_flags;} // hack to avoid placing pants on bar hangers
 			unsigned const cid(clothes.get_model_id());
 			float const scale(building_obj_model_loader.get_model_scale(cid));
@@ -279,11 +283,11 @@ void building_room_geom_t::add_hangers_and_clothing(float window_vspacing, unsig
 			bool skip(0);
 
 			for (auto m = objects.begin()+hanger_rod_ix+1; m != objects.end(); ++m) { // skip if this object intersects a previous hanging clothing item
-				if (m->type == TYPE_CLOTHES && m->intersects(clothes)) {skip = 1; break;}
+				if (m->type == obj_type && m->intersects(clothes)) {skip = 1; break;}
 			}
 			if (skip) continue;
 
-			if (is_shirt_model(clothes)) {
+			if (!add_jumpsuits && is_shirt_model(clothes)) {
 				if (rgen.rand_float() < 0.6) { // 60% of shirts are randomly colored rather than colored + textured with the model
 					clothes.color  = shirt_colors[rgen.rand()%NUM_SHIRT_COLORS];
 					clothes.flags |= RO_FLAG_UNTEXTURED;

@@ -1033,6 +1033,33 @@ void building_t::add_prison_hall_room_objs(rand_gen_t rgen, room_t const &room, 
 	room_t hall_room(room);
 	hall_room.copy_from(hall);
 	add_cameras_to_room(rgen, hall_room, zval, room_id, tot_light_amt, objs_start);
+
+	if (hall_sz[!dim] > 1.2*floor_spacing && rgen.rand_bool()) { // place rack of prison jumpsuits by a wall; start by adding a blocker along a wall
+		unsigned const num_racks(1 + rgen.rand_bool()); // 1-2
+		float const wall_thick(get_wall_thickness()), rack_height(0.65*floor_spacing), clearance(get_min_front_clearance_inc_people());
+		cube_t rack_area(hall);
+		rack_area.expand_by_xy(-wall_thick); // shrink
+
+		for (unsigned n = 0; n < num_racks; ++n) {
+			vector3d const rack_sz_scale(0.3, rgen.rand_uniform(0.5, 1.5), 1.0);
+
+			for (unsigned N = 0; N < 10; ++N) { // 10 tries
+				if (!place_obj_along_wall(TYPE_BLOCKER, room, rack_height, rack_sz_scale, rgen, zval, room_id, tot_light_amt, rack_area, objs_start, 0.0, 1)) break;
+				room_object_t const rack(objs.back());
+				objs.pop_back(); // remove the placeholder
+				cube_t rack_exp(rack);
+				rack_exp.expand_in_dim(rack.dim, wall_thick); // widen
+				if (has_bcube_int(rack_exp, cells)) continue; // don't place in front of cells
+				cube_t query_box(rack_exp);
+				set_wall_width(query_box, rack.get_center_dim(!rack.dim), wall_thick, !rack.dim); // shorten to the center area
+				if (!has_bcube_int(query_box, interior->walls[rack.dim])) continue; // not along a wall - in space between hall area and space with no cells
+				rack_exp.expand_by_xy(clearance);
+				if (interior->is_blocked_by_stairs_or_elevator(rack_exp)) continue;
+				add_clothing_rack(rack, room_id, !rack.dim, tot_light_amt, RTYPE_JAIL, rgen);
+				break; // success
+			} // for N
+		} // for n
+	}
 }
 
 bool building_t::add_basement_jail_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start,

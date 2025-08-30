@@ -1823,7 +1823,8 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 				}
 				if (has_hanger) continue;
 			}
-			if (type == TYPE_HANGER  && i->is_hanging() && (i+1) != objs_end && (i+1)->type == TYPE_CLOTHES) continue; // hanger with clothes - must take clothes first
+			// for hanger with clothes or jumpsuit - must take clothes/jumpsuit first
+			if (type == TYPE_HANGER  && i->is_hanging() && (i+1) != objs_end && ((i+1)->type == TYPE_CLOTHES || (i+1)->type == TYPE_JUMPSUIT)) continue;
 			if (type == TYPE_MIRROR  && !i->is_house() && !i->in_mall()) continue; // can only pick up mirrors from houses and clothing stores, not office buildings
 			if (type == TYPE_TABLE   && i->shape == SHAPE_CUBE) continue; // can only pick up short (TV) tables and cylindrical tables
 			if (type == TYPE_BED     && i->taken_level > 2)     continue; // can only take pillow, sheets, and mattress - not the frame
