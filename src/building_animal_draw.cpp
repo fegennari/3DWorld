@@ -537,25 +537,35 @@ void building_room_geom_t::draw_animals(shader_t &s, building_t const &building,
 
 		for (rat_t const &rat : rats) {
 			if (shadow_only && rat.shadow_non_visible) continue; // shadow not visible to the camera (player)
-			cube_t const bcube(rat.get_bcube());
+			if (rat.in_drain_amt == 1.0) continue; // fully inside drain
+			cube_t bcube(rat.get_bcube());
+			if (rat.in_drain_amt > 0.0) {bcube.translate_dim(2, -rat.in_drain_amt*rat.height);} // sink into drain
 			if (check_clip_cube && !smap_light_clip_cube.intersects(bcube + xlate)) continue; // shadow map clip cube test: fast and high rejection ratio, do this first
 			if (!camera_pdu.cube_visible(bcube + xlate)) continue; // VFC
 			if ((display_mode & 0x08) && building.check_obj_occluded(bcube, camera_bs, oc, reflection_pass)) continue;
 			point const pos(bcube.get_cube_center());
 			anim_state.anim_time = rat.anim_time;
+			cube_t rat_bcube(rat.get_bcube_with_dir());
+			vector3d dir(rat.dir);
+
+			if (rat.in_drain_amt > 0.0) { // partially inside drain
+				rat_bcube.translate_dim(2, -rat.in_drain_amt*rat.height); // sink into drain
+				bool const exiting(rat.fear == 0.0);
+				dir.z += rat.in_drain_amt*(exiting ? 1.0 : -1.0);
+				dir.normalize();
+			}
 			colorRGBA const color(rat_color); // make the rat's fur darker
 			//colorRGBA const color(blend_color(RED, WHITE, rat.fear, 0)); // used for debugging fear
 			//colorRGBA const color(blend_color(RED, WHITE, rat.attacking, 0));
-			cube_t const rat_bcube(rat.get_bcube_with_dir());
-			building_obj_model_loader.draw_model(s, pos, rat_bcube, rat.dir, color, xlate, OBJ_MODEL_RAT, shadow_only, 0, &anim_state, 0, 0, 0, rat.dead); // upside down if dead
+			building_obj_model_loader.draw_model(s, pos, rat_bcube, dir, color, xlate, OBJ_MODEL_RAT, shadow_only, 0, &anim_state, 0, 0, 0, rat.dead); // upside down if dead
 
 			if (rat.attacking) { // draw red glowing eyes
 				s.set_color_e(colorRGBA(0.5, 0.0, 0.0, 1.0)); // light emissive red
 				s.set_cur_color(RED);
 				select_texture(WHITE_TEX);
 				anim_state.clear_animation_id(s); // clear animations
-				point eyes_center(pos + vector3d(0.0, 0.0, 0.09*rat.height) + 0.85*rat.get_hlength()*rat.dir);
-				vector3d const eye_sep_dir(0.21*rat.hwidth*cross_product(rat.dir, plus_z).get_norm());
+				point eyes_center(pos + vector3d(0.0, 0.0, 0.09*rat.height) + 0.85*rat.get_hlength()*dir);
+				vector3d const eye_sep_dir(0.21*rat.hwidth*cross_product(dir, plus_z).get_norm());
 
 				for (unsigned d = 0; d < 2; ++d) { // draw left and right eye, untextured
 					draw_sphere_vbo((eyes_center + (d ? 1.0 : -1.0)*eye_sep_dir), 0.05*rat.height, 16, 0);

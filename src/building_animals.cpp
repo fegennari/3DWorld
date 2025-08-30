@@ -689,7 +689,11 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, float timestep, 
 			}
 		}
 	}
-	if (is_scared) {
+	if (is_scared && rat.in_drain_amt == 1.0) { // stay in the drain
+		has_fear_dest = 1; // stay there
+		rat.speed     = 0.0;
+	}
+	else if (is_scared) {
 		// find hiding spot (pref in opposite direction from fear_pos);
 		// we must check this each frame in case the player took or moved the object we were hiding under
 		float const rat_z1(rat.pos.z), rat_z2(rat.pos.z + height), rat_squish_z2(p1.z + squish_hheight);
@@ -699,6 +703,29 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, float timestep, 
 		dir_to_fear.z = 0.0; // XY plane only
 		dir_to_fear.normalize();
 		rat.wake_time = 0.0; // wake up
+
+		if (is_prison()) { // check for prison shower rooms and maybe hide inside a shower drain
+			int const room_id(get_room_containing_pt(p1));
+
+			if (room_id >= 0 && get_room(room_id).get_room_type(0) == RTYPE_SHOWER && rat.pos.z < get_room(room_id).z1() + floor_spacing) {
+				auto const objs_end(interior->room_geom->get_placed_objs_end());
+
+				for (auto c = interior->room_geom->objs.begin(); c != objs_end; ++c) {
+					if (c->type != TYPE_O_SHOWER) continue; // not an open shower drain
+					point const cand_dest(c->xc(), c->yc(), p1.z);
+					float const dist(p2p_dist_xy(p1, cand_dest));
+					if (dist > view_dist) continue; // too far away to see
+					if (dist < 1.2*rat.radius) {rat.in_drain_amt = CLIP_TO_01((1.2f*rat.radius - dist)/rat.radius);} // rat enter drain, for any drain that's close enough
+					if (dot_product((p1 - cand_dest), (p1 - rat.fear_pos)) > 0.0) continue; // don't run toward danger
+					float const score(floor_spacing + 0.1f*p2p_dist(rat.fear_pos, cand_dest) - 0.2f*max(dist, dist_thresh));
+					if (best_score != 0.0 && score <= best_score) continue; // check score
+					if (check_line_coll_expand(p1, cand_dest, coll_radius, squish_hheight, ATYPE_RAT)) continue; // location invalid
+					best_dest  = point(cand_dest.x, cand_dest.y, rat.pos.z); // keep zval on the floor
+					best_score = score;
+					if (cand_dest.x == rat.dest.x && cand_dest.y == rat.dest.y) break; // keep the same dest (optimization)
+				} // for c
+			}
+		}
 		vect_room_object_t::const_iterator b, e;
 		get_begin_end_room_objs_on_ground_floor(rat_z2, 0, b, e); // for_spider=0
 
@@ -724,7 +751,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, float timestep, 
 				safe_area.expand_in_dim(d, -min(1.5f*hlength, 0.49f*safe_area.get_sz_dim(d)));
 				cand_dest[d] = my_rgen.rand_uniform(safe_area.d[d][0], safe_area.d[d][1]);
 			}
-			float const dist(p2p_dist(p1, cand_dest));
+			float const dist(p2p_dist_xy(p1, cand_dest));
 			
 			if (dist < dist_thresh) { // already at this location
 				if (check_line_coll_expand(p1, cand_dest, coll_radius, squish_hheight, ATYPE_RAT)) {update_path = 1; continue;} // location invalid, need to update path below
@@ -773,8 +800,11 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, float timestep, 
 			has_fear_dest = 1; // set to avoid triggering the code below if close to dest
 			assert(rat.pos.z == rat.dest.z);
 		}
-		rat.fear = max(0.0f, (rat.fear - 0.2f*(timestep/TICKS_PER_SECOND))); // reduce fear over 5s
+	} // end is_scared
+	else if (rat.in_drain_amt > 0.0) {
+		rat.in_drain_amt = max(0.0, (rat.in_drain_amt - 2.5*(timestep/TICKS_PER_SECOND))); // exit the drain
 	}
+	if (rat.fear > 0.0) {rat.fear = max(0.0f, (rat.fear - 0.2f*(timestep/TICKS_PER_SECOND)));} // reduce fear over 5s
 	bool const is_at_dest(dist_less_than(rat.pos, rat.dest, dist_thresh));
 
 	if (!is_scared && !rat.is_sleeping() && is_at_dest && rat.dist_since_sleep > 1.5*floor_spacing && rgen.rand_bool()) { // 50% chance of taking a rest
@@ -832,7 +862,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, float timestep, 
 		rat.pos   = rat.dest; // just move it to the dest to prevent instability
 	}
 	// else dir is unchanged
-	rat.is_hiding = (has_fear_dest && dist_less_than(rat.pos, rat.dest, 2.0*dist_thresh)); // close to fear_dest
+	rat.is_hiding = ((has_fear_dest && dist_less_than(rat.pos, rat.dest, 2.0*dist_thresh)) || rat.in_drain_amt == 1.0); // close to fear_dest, or in a drain
 	float const turn_rate(is_scared ? 1.1 : 1.0); // higher turning rate when scared
 	update_dir_incremental(rat.dir, new_dir, turn_rate, timestep, rgen);
 	assert(rat.dir.z == 0.0); // must be in XY plane

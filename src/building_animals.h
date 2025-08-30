@@ -23,6 +23,7 @@ struct building_animal_t {
 	bool is_moving  () const {return (speed     > 0.0);}
 	bool is_sleeping() const {return (wake_time > 0.0);}
 	bool no_shadows () const {return 0;}
+	bool no_coll    () const {return 0;}
 	vector3d get_upv() const {return plus_z;}
 	void sleep_for(float time_secs_min, float time_secs_max);
 	float move(float timestep, bool can_move_forward=1, float anim_time_scale=1.0);
@@ -31,7 +32,7 @@ struct building_animal_t {
 
 struct rat_t : public building_animal_t {
 	point dest, fear_pos;
-	float height=0.0, hwidth=0.0, fear=0.0;
+	float height=0.0, hwidth=0.0, fear=0.0, in_drain_amt=0.0;
 	unsigned tunnel_tank_ix=0; // for sewer or pet store rats; could also add room_ix if it helps
 	bool is_hiding=0, near_player=0, attacking=0, dead=0;
 
@@ -41,6 +42,7 @@ struct rat_t : public building_animal_t {
 	bool operator<(rat_t const &r) const {return (pos.x < r.pos.x);} // compare only xvals
 	static bool allow_in_attic () {return 1;}
 	static bool not_by_ext_door() {return 0;}
+	bool no_coll() const {return (in_drain_amt == 1.0);}
 	float get_hlength() const {return radius;} // this is the bounding radius, so it represents the longest dim (half length)
 	float get_height () const {return height;}
 	float get_xy_radius() const {return radius;}

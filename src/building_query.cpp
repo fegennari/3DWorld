@@ -3094,6 +3094,7 @@ template<typename T> void vect_animal_t<T>::update_delta_sum_for_animal_coll(poi
 	for (auto r = start; r != this->end(); ++r) {
 		if (r->pos.x > coll_x2) break; // none after this can overlap - done
 		if (r->pos == cur_obj_pos) continue; // skip ourself
+		if (r->no_coll())          continue;
 		float coll_radius(r->get_xy_radius());
 		if (!dist_xy_less_than(pos, r->pos, radius_scale*(radius + coll_radius))) continue; // no collision
 		if (z2 < r->pos.z || z1 > (r->pos.z + r->get_height())) continue; // different floors; less likely to reject, so done last
