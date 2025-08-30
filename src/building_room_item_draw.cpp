@@ -1879,9 +1879,14 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			}
 			s.set_color_e(BLACK);
 		}
-		if (player_in_building && !shadow_only && type == TYPE_SINK) { // sink
-			if (obj.room_id == camera_room) {water_sound_manager.register_running_water(obj, building);}
-			water_draw.add_water_for_sink(obj);
+		if (player_in_building && !shadow_only) {
+			if (type == TYPE_SINK) { // sink
+				if (obj.room_id == camera_room) {water_sound_manager.register_running_water(obj, building);}
+				water_draw.add_water_for_sink(obj);
+			}
+			else if (obj.is_shower()) {
+				// allow shower to be turned on and draw running water?
+			}
 		}
 	} // for i
 	if (!skip_interior_objs && !door_handles.empty()) { // optimization: skip door handles for player outside building
