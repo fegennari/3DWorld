@@ -866,6 +866,8 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, float timestep, 
 	float const turn_rate(is_scared ? 1.1 : 1.0); // higher turning rate when scared
 	update_dir_incremental(rat.dir, new_dir, turn_rate, timestep, rgen);
 	assert(rat.dir.z == 0.0); // must be in XY plane
+	// Note: we should increase the rat's zval in rooms with flooring so that feet don't clip through the floor;
+	// but this varies per room per floor and isn't easy to track, and is expensive to iterate over objects each frame searching for flooring
 }
 
 void building_t::scare_rat(rat_t &rat, point const &camera_bs) const {

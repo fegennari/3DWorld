@@ -546,6 +546,8 @@ void building_room_geom_t::draw_animals(shader_t &s, building_t const &building,
 			point const pos(bcube.get_cube_center());
 			anim_state.anim_time = rat.anim_time;
 			cube_t rat_bcube(rat.get_bcube_with_dir());
+			// translate flooring thickness up so that feet don't clip through flooring and rugs as much, though now rats will slightly float above normal floors
+			rat_bcube.translate_dim(2, building.get_flooring_thick());
 			vector3d dir(rat.dir);
 
 			if (rat.in_drain_amt > 0.0) { // partially inside drain
