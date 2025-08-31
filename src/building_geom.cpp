@@ -301,8 +301,8 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 				place_area.expand_by_xy(0.05f*(bcube.dx() + bcube.dy()));
 				if (!has_bcube_int(place_area, parts)) {tree_pos = place_area.get_cube_center(); tree_pos.z = ground_floor_z1;}
 			}
-			if (btype == BTYPE_OFFICE && is_cube() && !is_rotated() && rand_gen_t(rgen).rand_float() < 0.1) { // single level cube; copy rgen
-				btype = BTYPE_PRISON;
+			if (btype == BTYPE_OFFICE && is_cube() && !is_rotated() && min(bcube.dx(), bcube.dy()) > 18.0*floor_spacing && rand_gen_t(rgen).rand_bool()) {
+				btype = BTYPE_PRISON; // large, single level cube; copy rgen
 				assign_name(rgen); // re-assign a name
 			}
 			gen_details(rgen, 0);
