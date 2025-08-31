@@ -2881,8 +2881,7 @@ bool building_t::add_livingroom_objs(rand_gen_t rgen, room_t const &room, float 
 	if ((is_house || is_apartment()) && (rgen.rand()%3) == 0) { // add fishtank on a tall table 33% of the time
 		add_fishtank_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area);
 	}
-	// TODO: TYPE_COAT_RACK
-	if (is_house && rgen.rand_float() < 0.75 && is_room_adjacent_to_ext_door(room, zval)) {add_shoes_by_door(rgen, room, zval, room_id, tot_light_amt, objs_start);}
+	add_entryway_objs(rgen, room, zval, room_id, tot_light_amt, objs_start);
 	if (room.is_single_floor && objs_start > 0) {replace_light_with_ceiling_fan(rgen, room, cube_t(), room_id, tot_light_amt, objs_start-1);} // light is prev placed object
 	return 1;
 }
@@ -3506,50 +3505,73 @@ bool building_t::add_laundry_objs(rand_gen_t rgen, room_t const &room, float zva
 	return 1; // done
 }
 
-void building_t::add_entryway_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+void building_t::add_entryway_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	// what about apartment entryway rooms next to entrance interior doors?
-	if (is_house && rgen.rand_float() < 0.8) {add_shoes_by_door(rgen, room, zval, room_id, tot_light_amt, objs_start);}
+	if (is_house) {
+		if (rgen.rand_float() < 0.50) {add_coatrack_by_door(rgen, room, zval, room_id, tot_light_amt, objs_start);}
+		if (rgen.rand_float() < 0.75) {add_shoes_by_door   (rgen, room, zval, room_id, tot_light_amt, objs_start);}
+	}
 }
-void building_t::add_shoes_by_door(rand_gen_t &rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
-	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_SHOE)) return;
-	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SHOE)); // L, W, H
+
+bool building_t::get_door_path_and_place_area(tquad_with_ix_t const &door, room_t const &room, cube_t &door_path, cube_t &place_area) {
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
-	float const length(0.2*floor_spacing*rgen.rand_uniform(0.75, 1.0)), width(length*sz.y/sz.x), height(length*sz.z/sz.x), hlen(0.5*length), pair_hw(width);
+	cube_t dbc(door.get_bcube());
+	bool const dim(dbc.dy() < dbc.dx()); // door dim
+	door_path = dbc;
+	door_path.expand_in_dim( dim, 1.0*floor_spacing ); // in front of door
+	door_path.expand_in_dim(!dim, 0.5*wall_thickness);
+	dbc.expand_in_dim( dim, 0.3*floor_spacing); // near the wall the door is on
+	dbc.expand_in_dim(!dim, 0.7*floor_spacing);
+	place_area = get_walkable_room_bounds(room);
+	place_area.expand_by(-0.5*wall_thickness);
+	place_area.intersect_with_cube(dbc);
+	return dim;
+}
+void building_t::add_shoes_by_door(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_SHOE)) return;
+	tquad_with_ix_t door;
+	if (!is_room_adjacent_to_ext_door(room, zval, 0, &door)) return; // no door; front_door_only=0
+	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SHOE)); // L, W, H
+	float const length(0.2*get_window_vspace()*rgen.rand_uniform(0.75, 1.0)), width(length*sz.y/sz.x), height(length*sz.z/sz.x), hlen(0.5*length), pair_hw(width);
 	unsigned const num_shoes(1 + (rgen.rand() % 3)); // 1-3
 	vect_room_object_t &objs(interior->room_geom->objs);
-	cube_t room_exp(room);
-	room_exp.expand_by_xy(wall_thickness);
+	cube_t door_path, place_area;
+	bool const dim(get_door_path_and_place_area(door, room, door_path, place_area));
+	vector2d const place_sz(place_area.get_size_xy());
+	cube_t shoes;
+	set_cube_zvals(shoes, zval, zval+height);
+	bool const dir(rgen.rand_bool());
 
-	for (tquad_with_ix_t const &d : doors) { // find the front exterior door
-		if (!d.is_exterior_door() || d.type == tquad_with_ix_t::TYPE_RDOOR) continue;
-		cube_t dbc(d.get_bcube());
-		if (!room_exp.contains_pt(dbc.get_cube_center())) continue;
-		bool const dim(dbc.dy() < dbc.dx()); // door dim
-		cube_t door_path(dbc);
-		door_path.expand_in_dim( dim, 1.0*floor_spacing ); // in front of door
-		door_path.expand_in_dim(!dim, 0.5*wall_thickness);
-		dbc.expand_in_dim( dim, 0.3*floor_spacing); // near the wall the door is on
-		dbc.expand_in_dim(!dim, 0.7*floor_spacing);
-		cube_t place_area(get_walkable_room_bounds(room));
-		place_area.expand_by(-0.5*wall_thickness);
-		place_area.intersect_with_cube(dbc);
-		vector2d const place_sz(place_area.get_size_xy());
-		cube_t shoes;
-		set_cube_zvals(shoes, zval, zval+height);
-		bool const dir(rgen.rand_bool());
-
-		for (unsigned n = 0, num_added = 0; n < 20 && num_added < num_shoes; ++n) { // try to place shoes
-			if (place_sz[dim] < 1.2*length || place_sz[!dim] < 2.4*pair_hw) continue; // not enough space
-			set_wall_width(shoes, rgen.rand_uniform((place_area.d[ dim][0] + hlen   ), (place_area.d[ dim][1] - hlen   )), hlen,     dim);
-			set_wall_width(shoes, rgen.rand_uniform((place_area.d[!dim][0] + pair_hw), (place_area.d[!dim][1] - pair_hw)), pair_hw, !dim);
-			if (shoes.intersects_xy(door_path) || overlaps_other_room_obj(shoes, objs_start)) continue;
-			if (interior->is_cube_close_to_doorway(shoes, room, 0.0, 1, 0) || interior->is_blocked_by_stairs_or_elevator(shoes)) continue; // not checking ext door
-			unsigned const item_flags(rgen.rand()); // random shoe sub-model
-			add_obj_pair(room_object_t(shoes, TYPE_SHOE, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, WHITE, item_flags), objs);
-			++num_added;
-		} // for n
-		break; // only add to the front door
-	} // for d
+	for (unsigned n = 0, num_added = 0; n < 20 && num_added < num_shoes; ++n) { // try to place shoes
+		if (place_sz[dim] < 1.2*length || place_sz[!dim] < 2.4*pair_hw) continue; // not enough space
+		set_wall_width(shoes, rgen.rand_uniform((place_area.d[ dim][0] + hlen   ), (place_area.d[ dim][1] - hlen   )), hlen,     dim);
+		set_wall_width(shoes, rgen.rand_uniform((place_area.d[!dim][0] + pair_hw), (place_area.d[!dim][1] - pair_hw)), pair_hw, !dim);
+		if (shoes.intersects_xy(door_path) || overlaps_other_room_obj(shoes, objs_start)) continue;
+		if (interior->is_cube_close_to_doorway(shoes, room, 0.0, 1, 0) || interior->is_blocked_by_stairs_or_elevator(shoes)) continue; // not checking ext door
+		unsigned const item_flags(rgen.rand()); // random shoe sub-model
+		add_obj_pair(room_object_t(shoes, TYPE_SHOE, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, WHITE, item_flags), objs);
+		++num_added;
+	} // for n
+}
+void building_t::add_coatrack_by_door(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	tquad_with_ix_t door;
+	if (!is_room_adjacent_to_ext_door(room, zval, 0, &door)) return; // no door; front_door_only=0
+	float const floor_spacing(get_window_vspace()), height(0.7*floor_spacing), radius(0.1*floor_spacing);
+	cube_t door_path, place_area;
+	bool const dim(get_door_path_and_place_area(door, room, door_path, place_area));
+	if (place_area.get_size_xy().get_min_val() < 2.5*radius) return; // too small; shouldn't happen
+	place_area.z2() = zval;
+	cube_t coatrack;
+	
+	for (unsigned n = 0; n < 20; ++n) { // 20 tries
+		gen_xy_pos_for_round_obj(coatrack, place_area, radius, height, radius, rgen);
+		if (coatrack.intersects_xy(door_path) || overlaps_other_room_obj(coatrack, objs_start)) continue;
+		if (interior->is_cube_close_to_doorway(coatrack, room, 0.0, 1, 0) || interior->is_blocked_by_stairs_or_elevator(coatrack)) continue; // not checking ext door
+		unsigned const item_flags(rgen.rand()); // random shoe sub-model
+		interior->room_geom->objs.emplace_back(coatrack, TYPE_COAT_RACK, room_id, 0, 0, 0, tot_light_amt, SHAPE_CYLIN, WHITE);
+		// add items on the coat rack such as shirts and hats?
+		break;
+	} // for n
 }
 
 void building_t::add_couches_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned const counts[4]) {

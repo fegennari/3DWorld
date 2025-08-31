@@ -3992,8 +3992,34 @@ void building_room_geom_t::add_wine_rack(room_object_t const &c, bool inc_lg, bo
 }
 
 void building_room_geom_t::add_coat_rack(room_object_t const &c, float tscale) {
-	//rgeom_mat_t &wood_mat(get_wood_material(tscale));
-	// TODO: cylinders
+	float const height(c.dz()), radius(c.get_radius()), pole_radius(0.1*radius);
+	cube_t pole(c), base(c);
+	base.z2() = pole.z1() = c.z1() + 0.025*height;
+	pole.expand_by_xy(pole_radius - radius); // shrink
+	colorRGBA const color(apply_wood_light_color(c));
+	rgeom_mat_t &mat(get_wood_material(tscale));
+	mat.add_vcylin_to_verts(pole, color, 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, N_CYL_SIDES, 0.0, 0, 8.0); // draw sides and top
+	mat.add_vcylin_to_verts(base, color, 0, 1, 0, 0, 1.0, 1.0, 2.0, 1.0, 0, N_CYL_SIDES, 0.0, 0, 0.1); // draw sides and top
+	// add posts
+	unsigned const num_posts = 8;
+	float const post_radius(0.5*pole_radius), posts_z1(c.z1() + 0.35*height), post_spacing((c.z2() - posts_z1)/num_posts), rot_angle(37.5*TO_RADIANS);
+	vector2d const center(c.xc(), c.yc());
+	float zval(posts_z1);
+
+	for (unsigned n = 0; n < num_posts; ++n) {
+		bool const dim(n&1), dir(n&2);
+		cube_t post(c);
+		set_wall_width(post, center[!dim], post_radius, !dim); // set width
+		post.d[dim][!dir] = center[dim]; // starts at pole centerline
+		set_wall_width(post, zval, post_radius, 2); // set zvals
+		vector3d const axis(cross_product(plus_z, vector_from_dim_dir(dim, dir)));
+		point const about(center.x, center.y, zval);
+		unsigned const qv_start(mat.quad_verts.size()), tv_start(mat.itri_verts.size());
+		mat.add_ortho_cylin_to_verts(post, color, dim, !dir, dir);
+		rotate_verts(mat.quad_verts, axis, rot_angle, about, qv_start); // rotate sides
+		rotate_verts(mat.itri_verts, axis, rot_angle, about, tv_start); // rotate ends
+		zval += post_spacing;
+	} // for n
 }
 
 room_object_t get_desk_drawers_part(room_object_t const &c) {
