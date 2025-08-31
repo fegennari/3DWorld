@@ -306,7 +306,7 @@ class building_nav_graph_t {
 	};
 
 	unsigned num_rooms=0, num_stairs=0;
-	float stairs_extend=0;
+	float floor_spacing=0.0, stairs_extend=0.0;
 	bool has_pg_ramp=0, has_mall_ent=0;
 	vector<node_t> nodes; // {rooms, stairs, mall entrance stairs, parking garage ramp}
 	mutable vector<building_cube_nav_grid> nav_grids; // for use with backrooms; cached during path finding
@@ -328,7 +328,7 @@ public:
 		assert(floor_ix < nav_grids.size()); // too strong?
 		if (floor_ix < nav_grids.size()) {nav_grids[floor_ix].invalidate();}
 	}
-	building_nav_graph_t(float stairs_extend_) : stairs_extend(stairs_extend_) {}
+	building_nav_graph_t(float floor_spacing_) : floor_spacing(floor_spacing_), stairs_extend(DOOR_WIDTH_SCALE*floor_spacing) {} // stairs_extend = doorway width
 
 	void set_num_rooms(unsigned num_rooms_, unsigned num_stairs_, bool has_pg_ramp_, bool has_mall_ent_) {
 		num_rooms    = num_rooms_;
@@ -516,7 +516,7 @@ public:
 		
 		if (building.is_above_retail_area(pos) && !building.point_over_glass_floor(pos)) {
 			point const landing_pos(building.get_retail_upper_stairs_landing_center());
-			//zval += (up_or_down ? -1.0 : 1.0)*building.get_window_vspace(); // one floor above or below so that we skip the blocked floor; but this asserts
+			//zval += (up_or_down ? -1.0 : 1.0)*floor_spacing; // one floor above or below so that we skip the blocked floor; but this asserts
 			return point(landing_pos.x, landing_pos.y, zval);
 		}
 		if (find_valid_pt_in_room(avoid, building, radius, zval, node.bcube, rgen, pos, no_use_init)) {not_room_center = 1;} // success
@@ -654,7 +654,6 @@ public:
 			return 1; // success
 		} // for npts
 		if (!no_grid_path && building.is_room_backrooms(room_ix)) { // run detailed path finding on backrooms
-			float const floor_spacing(building.get_window_vspace());
 			unsigned const num_floors(round_fp(walk_area.dz()/floor_spacing)), floor_ix(floor((p1.z - walk_area.z1())/floor_spacing));
 			assert(num_floors > 0 && floor_ix < num_floors);
 			if (nav_grids.empty()) {nav_grids.resize(num_floors);} else {assert(nav_grids.size() == num_floors);}
@@ -955,7 +954,7 @@ void building_t::build_nav_graph() const { // Note: does not depend on room geom
 	assert(interior);
 	if (interior->nav_graph && !interior->nav_graph->invalid) return; // already built
 	// Note: reallocating the nav_graph will also rebuild the nested nav_grid
-	interior->nav_graph.reset(new building_nav_graph_t(DOOR_WIDTH_SCALE*get_window_vspace())); // set stairs_extend == doorway width
+	interior->nav_graph.reset(new building_nav_graph_t(get_window_vspace()));
 	building_nav_graph_t &ng(*interior->nav_graph);
 	float const wall_width(get_wall_thickness()), doorway_width(get_doorway_width());
 	unsigned const num_rooms(interior->rooms.size()), num_stairs(interior->stairwells.size());
