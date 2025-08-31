@@ -817,7 +817,11 @@ bool building_t::add_visit_room_objs(rand_gen_t rgen, room_t &room, float &zval,
 				point chair_pos(0.0, 0.0, zval);
 				chair_pos[!dim] = 0.5*(divider.d[!dim][d] + table.d[!dim][d]);
 				chair_pos[ dim] = table.get_center_dim(dim) + 0.12*rgen.signed_rand_float()*seat_spacing; // slightly misaligned
-				add_chair(rgen, room, blockers, room_id, chair_pos, chair_color, !dim, !d, tot_light_amt, 0, 0, 0, 0, 1); // office_chair=0, plastic
+				
+				if (add_chair(rgen, room, blockers, room_id, chair_pos, chair_color, !dim, !d, tot_light_amt, 0, 0, 0, 0, 1)) { // office_chair=0, plastic
+					objs.push_back(objs.back());
+					objs.back().type = TYPE_COLLIDER; // add collider over the chair to prevent people from clipping through it, since this chair is not blocking a path
+				}
 				// phone on table
 				cube_t half_table(table);
 				half_table.d[!dim][!d]  = wall.d[!dim][d];
