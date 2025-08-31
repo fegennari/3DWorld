@@ -559,6 +559,7 @@ public:
 	int connect_room_endpoints(vect_cube_t const &avoid, building_t const &building, cube_t const &walk_area, unsigned room_ix, point const &p1, point const &p2,
 		float radius, ai_path_t &path, vect_cube_t &keepout, rand_gen_t &rgen, bool ignore_p1_coll=0, bool ignore_p2_coll=0, bool no_grid_path=0) const
 	{
+		if (!building.are_points_in_room_reachable(p1, p2, room_ix)) return 0; // unclear if this helps
 		assert(p1.z == p2.z);
 		bool is_path_valid(1);
 		cube_t walk_area_exp(walk_area);
@@ -783,6 +784,7 @@ public:
 	{
 		// used for reaching a goal such as the player within the same room;
 		// assumes the building shape is convex and the goal is inside the building so that the path to the goal never leaves a non-cube building
+		if (!building.are_points_in_room_reachable(from, to, room_ix)) return 0; // unclear if this helps
 		cube_t walk_area(calc_walkable_room_area(get_node(room_ix), radius));
 		if (!constrain_area.is_all_zeros()) {walk_area.intersect_with_cube_xy(constrain_area);}
 		cube_t clamp_area(walk_area);
@@ -891,6 +893,7 @@ public:
 				if (cur_pt.z < conn_node.bcube.z1() || cur_pt.z > conn_node.bcube.z2()) continue; // room doesn't cover this zval range
 				point const node_pt((cur == room1) ? cur_pt   : cur_node .get_center(cur_pt.z));
 				point const next_pt(is_goal        ? dest_pos : conn_node.get_center(cur_pt.z));
+				// Note: in the case of split rooms such as prison visitation rooms, this conn may not be reachable from the previous one, but there's no easy to account for this
 				a_star_node_state_t &sn(state[i->ix]);
 				vector2d const &pt(i->pt[up_or_down]); // point in doorway, etc.
 				float const dist_through_cur(state[cur].g_score + p2p_dist_xy(node_pt, pt) + p2p_dist_xy(pt, next_pt));
@@ -968,6 +971,7 @@ void building_t::build_nav_graph() const { // Note: does not depend on room geom
 		room_t const &room(interior->rooms[r]);
 		cube_t c(get_walkable_room_bounds(room));
 		if (room.is_hallway || room.is_mall()) {ng.mark_hallway(r);} // mall concourse works like a hallway
+		// if room is split with a wall such as a prison visitation room, should it be added as two graph nodes? but it won't be shared across floors
 		ng.set_room_bcube(r, c);
 		c.expand_by_xy(wall_width); // to include adjacent doors
 		if (is_room_adjacent_to_ext_door(c)) {ng.mark_exit(r);}
@@ -2296,7 +2300,12 @@ bool building_t::point_in_or_above_pool(point const &pos) const {
 	return (has_pool() && interior->pool.contains_pt_xy(pos) && pos.z < get_pool_room().z2());
 }
 bool building_t::same_room_and_floor_as_player(person_t const &person) const {
-	return (cur_player_building_loc.room_ix == person.cur_room && cur_player_building_loc.floor_ix == get_floor_for_zval(person.pos.z) && cur_player_building_loc.stairs_ix < 0);
+	if (cur_player_building_loc.room_ix   != person.cur_room)                  return 0; // different room
+	if (cur_player_building_loc.floor_ix  != get_floor_for_zval(person.pos.z)) return 0; // different floor
+	if (cur_player_building_loc.stairs_ix >= 0) return 0; // player on stairs
+	// the below check causes zombie orient/animation jitter; without it, the zombies freeze in place
+	//if (!are_points_in_room_reachable(person.pos, cur_player_building_loc.pos, person.cur_room)) return 0;
+	return 1;
 }
 bool building_t::is_player_visible(person_t const &person, unsigned vis_test) const {
 	building_dest_t const &target(cur_player_building_loc);

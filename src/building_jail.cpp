@@ -710,7 +710,8 @@ bool building_t::add_visit_room_objs(rand_gen_t rgen, room_t &room, float &zval,
 		dim ^= 1;
 	} // for cand_dim
 	// determine which side is for prisoners and which is for visitors;
-	// if we allow multiple visiation rooms, we really should be checking that any connected prisoner vs. visitor sides match, but that's difficult to do
+	// if we allow multiple visiation rooms, we really should be checking that any connected prisoner vs. visitor sides match and are reachable from the rest of the building,
+	// but that's difficult to do
 	// note that there may be cases where both doors connect to the same cell block, so we can't keep the prisoner and visitor paths separate
 	int vis_pref[2] = {0,0};
 	
@@ -1449,5 +1450,24 @@ bool building_t::place_stairs_in_prison_room(cube_t &stairs, unsigned room_id, b
 	} // for cand
 	// what about replacing a cell with stairs? does a cell have enough space, or would we need to remove a wall as well?
 	return 0; // failed
+}
+
+bool building_t::are_points_in_room_reachable(point const &p1, point const &p2, unsigned room_id) const {
+	assert(interior);
+	if (interior->int_windows.empty()) return 1; // no interior window => no visitation rooms
+	float const zval(0.5*(p1.z + p2.z)); // use average zval; usually p1.z==p2.z, except when walking on stairs
+	room_t const &room(get_room(room_id));
+	//assert(room.contains_pt(p1) && room.contains_pt(p2)); // too strong, can fail for people pushed out of rooms, etc.; should we return true in this case?
+	if (room.get_room_type_for_zval(zval, get_window_vspace()) != RTYPE_VISIT) return 1; // not visitation room
+
+	for (cube_with_ix_t const &w : interior->int_windows) {
+		if (w.ix != room_id)                continue; // wrong room
+		if (w.z1() > zval || w.z2() < zval) continue; // no Z overlap (wrong floor)
+		bool const dim(w.dy() < w.dx()); // separating/shorter dim
+		float const center(w.get_center_dim(dim));
+		if ((p1[dim] < center) != (p2[dim] < center)) return 0; // window separates => not reachable
+		break; // should only have one window
+	}
+	return 1;
 }
 

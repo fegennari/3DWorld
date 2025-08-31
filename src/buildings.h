@@ -2614,6 +2614,7 @@ public:
 	bool point_in_courtyard(point const &pos_bs) const;
 	bool point_on_basement_stairs(point const &pos_bs) const;
 	bool is_cube_visible_through_extb_door(point const &viewer, cube_t const &c) const;
+	bool are_points_in_room_reachable(point const &p1, point const &p2, unsigned room_id) const;
 	float get_bcube_z1_inc_ext_basement() const {return (has_ext_basement() ? min(bcube.z1(), interior->basement_ext_bcube.z1()) : bcube.z1());}
 	unsigned get_ext_basement_floor_ix(float zval) const;
 	void get_pgbr_wall_ix_for_pos(point const &pos, index_pair_t &start, index_pair_t &end) const;
