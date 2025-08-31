@@ -1265,6 +1265,10 @@ public:
 		mat.add_vcylin_to_verts(c, colorRGBA(WHITE, 0.5), 0, 0, 0, 0, 1.0, 1.0, 0.2);
 		for (auto i = mat.itri_verts.begin() + verts_start; i != mat.itri_verts.end(); ++i) {i->t[1] *= 1.2; i->t[1] += tex_off;}
 	}
+	void add_water_for_shower(room_object_t const &obj) {
+		if (!obj.is_active()) return;
+		// TODO
+	}
 	void draw_and_clear(shader_t &s) {
 		if (mat.empty()) return;
 		glDepthMask(GL_FALSE); // disable depth writing - fixes sky visible through exterior wall, but then not drawn in front of exterior wall
@@ -1879,14 +1883,9 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			}
 			s.set_color_e(BLACK);
 		}
-		if (player_in_building && !shadow_only) {
-			if (type == TYPE_SINK) { // sink
-				if (obj.room_id == camera_room) {water_sound_manager.register_running_water(obj, building);}
-				water_draw.add_water_for_sink(obj);
-			}
-			else if (obj.is_shower()) {
-				// allow shower to be turned on and draw running water?
-			}
+		if (player_in_building && !shadow_only && type == TYPE_SINK) { // sink
+			if (obj.room_id == camera_room) {water_sound_manager.register_running_water(obj, building);}
+			water_draw.add_water_for_sink(obj);
 		}
 	} // for i
 	if (!skip_interior_objs && !door_handles.empty()) { // optimization: skip door handles for player outside building
@@ -2011,6 +2010,10 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 					point const light_center(get_warning_light_src_pos(*i));
 					flare_qbd.add_billboard(light_center, camera_bs, plus_x, RED, radius, radius);
 				}
+			}
+			else if (i->is_shower()) { // Note: only closest shower plays water sound
+				if (i->room_id == camera_room) {water_sound_manager.register_running_water(*i, building);}
+				water_draw.add_water_for_shower(*i);
 			}
 			if (i->z1() < camera_bs.z && i->z1() > ao_zmin - max(0.0f, (i->dz() - floor_spacing))) { // camera not below or too far above this object; handle tall objects
 				float const ao_shadow(get_ao_shadow(*i, enable_indir));

@@ -661,7 +661,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		}
 	}
 	else if (obj.is_sink_type() || type == TYPE_TUB) { // sink or tub
-		if (!obj.is_active() && type == TYPE_TUB) {
+		if (type == TYPE_TUB && !obj.is_active()) {
 			gen_sound_thread_safe(SOUND_SINK, local_center); // play sound when turning the tub on
 			
 			if (obj.state_flags < 4) { // water level is 0-4
@@ -874,14 +874,17 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 			play_open_close_sound(obj, sound_origin);
 		}
 		else if (obj.contains_pt(int_pos)) { // turn on shower water, only if standing inside the shower
-			gen_sound_thread_safe_at_player(SOUND_SINK);
-			sound_scale = 0.5;
-			if (!obj.is_open()) {register_achievement("Squeaky Clean");}
+			if (type == TYPE_SHOWER) { // closed shower only
+				gen_sound_thread_safe_at_player(SOUND_SINK);
+				sound_scale = 0.5;
+				if (!obj.is_open()) {register_achievement("Squeaky Clean");}
 
-			if (!obj.state_flags) {
-				obj.state_flags = 1; // mark as filled with water
-				interior->room_geom->invalidate_static_geom();
+				if (!obj.state_flags) {
+					obj.state_flags = 1; // mark as filled with water
+					interior->room_geom->invalidate_static_geom();
+				}
 			}
+			if (type == TYPE_O_SHOWER) {obj.flags ^= RO_FLAG_IS_ACTIVE;} // open shower; toggle active bit
 		}
 	}
 	else if (type == TYPE_SHOWERTUB) { // open/close curtains
