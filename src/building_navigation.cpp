@@ -286,7 +286,7 @@ class building_nav_graph_t {
 		vector2d pt[2]; // stairs entry/exit point {up, down}
 		conn_room_t(unsigned ix_, int dix, vector2d const &ptu, vector2d const &ptd) : ix(ix_), door_ix(dix) {pt[0] = ptu; pt[1] = ptd;}
 	};
-	struct node_t { // represents one room or one stairwell
+	struct node_t { // represents one room, stairwell, or ramp
 		bool has_exit=0, is_hallway=0, is_stairs=0, is_ramp=0; // has_exit is not yet used
 		cube_t bcube;
 		vector<conn_room_t> conn_rooms;
@@ -851,7 +851,7 @@ public:
 		return 1; // Note: we can get here for complex floorplan office buildings with bad interior walls (-4.18, 4.28, -3.46)
 	}
 	
-	// A* algorithm; Note: path is stored backwards
+	// A* algorithm; Note: path is stored backwards; all points have the same zvals
 	bool find_path_points(unsigned room1, unsigned room2, unsigned ped_ix, float radius, bool use_stairs, bool is_first_path,
 		bool up_or_down, unsigned ped_rseed, vect_cube_t &avoid, building_t const &building, point const &cur_pt,
 		unsigned has_key, point const *const custom_dest, bool req_custom_dest, ai_path_t &path) const
@@ -886,9 +886,10 @@ public:
 				assert(i->ix < nodes.size());
 				if (closed[i->ix]) continue; // already closed (duplicate)
 				bool const is_goal(i->ix == room2);
-				node_t const &conn_node(get_node(i->ix));
+				node_t const &conn_node(get_node(i->ix)); // connected room, stairs, or ramp
 				if (conn_node.is_vert_conn() && !use_stairs && !is_goal)      continue; // skip stairs/ramp in this mode
 				if (!can_use_conn(*i, *building.interior, cur_pt.z, has_key)) continue; // blocked by closed or locked door; must do this check before setting open state
+				if (cur_pt.z < conn_node.bcube.z1() || cur_pt.z > conn_node.bcube.z2()) continue; // room doesn't cover this zval range
 				point const node_pt((cur == room1) ? cur_pt   : cur_node .get_center(cur_pt.z));
 				point const next_pt(is_goal        ? dest_pos : conn_node.get_center(cur_pt.z));
 				a_star_node_state_t &sn(state[i->ix]);
