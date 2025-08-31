@@ -4012,12 +4012,9 @@ void building_room_geom_t::add_coat_rack(room_object_t const &c, float tscale) {
 		set_wall_width(post, center[!dim], post_radius, !dim); // set width
 		post.d[dim][!dir] = center[dim]; // starts at pole centerline
 		set_wall_width(post, zval, post_radius, 2); // set zvals
-		vector3d const axis(cross_product(plus_z, vector_from_dim_dir(dim, dir)));
-		point const about(center.x, center.y, zval);
-		unsigned const qv_start(mat.quad_verts.size()), tv_start(mat.itri_verts.size());
+		unsigned const tv_start(mat.itri_verts.size());
 		mat.add_ortho_cylin_to_verts(post, color, dim, !dir, dir);
-		rotate_verts(mat.quad_verts, axis, rot_angle, about, qv_start); // rotate sides
-		rotate_verts(mat.itri_verts, axis, rot_angle, about, tv_start); // rotate ends
+		rotate_verts(mat.itri_verts, cross_product(plus_z, vector_from_dim_dir(dim, dir)), rot_angle, point(center.x, center.y, zval), tv_start);
 		zval += post_spacing;
 	} // for n
 }
