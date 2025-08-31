@@ -525,6 +525,7 @@ void swimming_pool_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float d
 		unsigned const ndiv(shadow_only ? 24 : max(4U, min(64U, unsigned(6.0f*dscale/p2p_dist(camera_bs, pos)))));
 		point const orig_cpos(camera_pos);
 		camera_pos = dstate.camera_bs; // required for proper two sided cylinder normals
+		//if (fabs(bcube.dx() - bcube.dy()) > 0.05*radius) {} // draw as round rectangle? may not work with caustics texture, need to return verts, need different coll
 
 		if (dstate.pass_ix == 2) { // draw sides, bottom, and maybe ladder
 			dstate.s.set_cur_color(color);
