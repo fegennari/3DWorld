@@ -377,10 +377,7 @@ void set_perspective_near_far(float near_clip, float far_clip, float aspect_rati
 	fgMatrixMode(FG_MODELVIEW);
 	fgLoadIdentity();
 }
-
-
 void set_perspective(float fovy, float nc_scale) {
-
 	perspective_fovy = fovy;
 	set_perspective_near_far(nc_scale*NEAR_CLIP, FAR_CLIP);
 }

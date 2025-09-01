@@ -188,7 +188,6 @@ void create_cobj_draw_streams(vector<face_draw_params_t> const &faces) { // refl
 }
 
 void set_custom_viewport(unsigned tex_size, float fov_angle, float near_plane, float far_plane) {
-
 	glViewport(0, 0, tex_size, tex_size);
 	fgMatrixMode(FG_PROJECTION);
 	fgPushMatrix();
@@ -350,7 +349,6 @@ void setup_reflection_texture(unsigned &tid, unsigned xsize, unsigned ysize) {
 }
 
 void setup_cube_map_reflection_texture(unsigned &tid, unsigned tex_size, unsigned &last_size) {
-
 	if (last_size != tex_size) {
 		free_texture(tid);
 		last_size = tex_size;
@@ -360,7 +358,6 @@ void setup_cube_map_reflection_texture(unsigned &tid, unsigned tex_size, unsigne
 }
 
 unsigned create_gm_z_reflection() {
-
 	cube_t bcube;
 	float min_camera_dist(0.0);
 	if (!get_reflection_plane_bounds(bcube, min_camera_dist)) return 0; // no reflective surfaces
@@ -386,8 +383,9 @@ unsigned create_cube_map_reflection(unsigned &tid, unsigned &tsize, unsigned &la
 	check_gl_error(998);
 	return faces_drawn;
 }
-
-unsigned create_cube_map_reflection(unsigned &tid, unsigned &tsize, unsigned &last_size, int cobj_id, cube_t const &cube, bool only_front_facing, bool is_indoors, unsigned skip_mask) {
+unsigned create_cube_map_reflection(unsigned &tid, unsigned &tsize, unsigned &last_size, int cobj_id, cube_t const &cube,
+	bool only_front_facing, bool is_indoors, unsigned skip_mask)
+{
 	bool const is_cobj(cobj_id >= 0); // !is_model3d
 	float const nclip((use_interior_cube_map_refl && !is_cobj) ? NEAR_CLIP : max(NEAR_CLIP, 0.5f*cube.max_len())); // slightly more than the cube half width in max dim
 	point const center((cube_map_center == all_zeros || is_cobj) ? cube.get_cube_center() : cube_map_center);

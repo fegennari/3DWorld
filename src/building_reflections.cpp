@@ -36,7 +36,6 @@ void draw_scene_for_building_reflection(unsigned &ref_tid, unsigned dim, bool di
 	bool interior_room, bool draw_exterior, bool is_extb, bool is_water, bool is_glass_floor, cube_t const &mirror)
 {
 	int reflection_pass(REF_PASS_ENABLED);
-	if ( is_house     ) {reflection_pass |= REF_PASS_HOUSE      ;} // unused
 	if ( interior_room) {reflection_pass |= REF_PASS_INTERIOR   ;}
 	if ( is_water     ) {reflection_pass |= REF_PASS_WATER      ;}
 	if ( is_extb      ) {reflection_pass |= REF_PASS_EXTB       ;}

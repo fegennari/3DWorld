@@ -51,7 +51,7 @@ extern unsigned smoke_tid, dl_tid, create_voxel_landscape, enabled_lights, refle
 extern float zmin, light_factor, fticks, perspective_fovy, perspective_nclip, cobj_z_bias, clip_plane_z, fog_dist_scale, sky_occlude_scale, cloud_cover;
 extern double tfticks;
 extern float temperature, atmosphere, zbottom, indir_vert_offset, rain_wetness, snow_cov_amt, NEAR_CLIP, FAR_CLIP, dlight_intensity_scale;
-extern point mesh_origin, flow_source, surface_pos, pre_ref_camera_pos;
+extern point mesh_origin, flow_source, surface_pos;
 extern vector3d wind;
 extern colorRGB const_indir_color, ambient_lighting_scale;
 extern colorRGBA bkg_color, sun_color, base_cloud_color, cur_fog_color;
@@ -1848,13 +1848,10 @@ bool is_sun_flare_visible() {
 
 float const spark_t::radius = 0.0;
 
-
 void spark_t::draw(quad_batch_draw &qbd) const {
-
 	point const camera(get_camera_pos());
 	qbd.add_billboard((pos + (camera - pos).get_norm()*0.02), camera, up_vector, c, 0.8*s, 0.8*s);
 }
-
 
 void draw_sparks(bool clear_at_end) { // projectile hit locations
 
