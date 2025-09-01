@@ -6261,8 +6261,8 @@ void building_room_geom_t::add_fishtank(room_object_t const &c) { // unshadowed,
 }
 
 void building_room_geom_t::add_metal_bar(room_object_t const &c) {
-	colorRGBA const color(apply_light_color(c));
-	rgeom_mat_t &metal_mat(get_metal_material(1, 0, 1)); // untextured, shadowed, small; should there be an option to make it scratched?
+	colorRGBA const color(apply_light_color(c)), spec_color((color.R == color.G && color.R == color.B) ? WHITE : color);
+	rgeom_mat_t &metal_mat(get_metal_material(1, 0, 1, 0, spec_color)); // untextured, shadowed, small; should there be an option to make it scratched?
 
 	if (c.shape == SHAPE_CUBE) {
 		metal_mat.add_cube_to_verts_untextured(c, color, c.item_flags); // skip_faces is stored in item_flags
