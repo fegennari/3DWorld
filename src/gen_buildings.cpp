@@ -68,10 +68,13 @@ void draw_candle_flames();
 void update_security_camera_image();
 void get_pedestrians_in_area(cube_t const &area, int building_ix, vector<point> &pts);
 void setup_puddles_texture(shader_t &s);
+void setup_player_building_cube_map();
+void bind_player_building_cube_map(shader_t &s);
 
 float get_door_open_dist    () {return 3.5*CAMERA_RADIUS;}
 float get_interior_draw_dist() {return global_building_params.interior_view_dist_scale*2.0f*(X_SCENE_SIZE + Y_SCENE_SIZE);}
 bool player_in_ext_basement () {return (player_in_basement == 3 && player_building != nullptr);}
+bool enable_cube_map_reflect() {return (camera_in_building      && player_building != nullptr && !player_building->is_rotated() && (display_mode & 0x20));}
 
 void update_lights_bcube_zvals(cube_t &lights_bcube, point const &lpos, float radius) {
 	min_eq(lights_bcube.z1(), (lpos.z - radius));
@@ -516,6 +519,7 @@ void setup_building_draw_shader_post(shader_t &s, bool have_indir) {
 void setup_building_draw_shader(shader_t &s, float min_alpha, bool enable_indir, bool force_tsl, int use_texgen, float water_damage, float crack_damage, bool enable_int_reflect) {
 	float const pcf_scale = 0.2;
 	if (player_building == nullptr) {water_damage = crack_damage = 0.0;} // water damage and cracks only apply to player building; this can fail on the exterior walls pass
+	if (enable_int_reflect) {s.set_prefix("#define ENABLE_BUILDING_CUBE_MAP", 1);} // FS
 	// disable indir if the player is in a closed closet
 	bool const have_indir(enable_indir && have_building_indir_lighting() && !(player_in_closet && !(player_in_closet & RO_FLAG_OPEN)));
 	bool const add_vorocracks(global_building_params.use_voronoise_cracks && crack_damage > 0.0);
@@ -543,13 +547,7 @@ void setup_building_draw_shader(shader_t &s, float min_alpha, bool enable_indir,
 		// disable cracks on on ceilings (-z) since they may be wood; carpet is special cased to not have cracks; are cracks on particle board ceilings okay?
 		s.add_uniform_float("crack_normal_zmax", (player_building->is_house ? -0.5 : -2.0));
 	}
-	if (enable_int_reflect) {
-		assert(player_building);
-		unsigned const cube_map_tsize = 1024;
-		unsigned ref_tid(0); // TODO: must render cube map
-		cube_t cube_map_bcube(player_building->bcube); // FIXME: single room
-		setup_shader_cube_map_params(s, cube_map_bcube, ref_tid, cube_map_tsize);
-	}
+	if (enable_int_reflect) {bind_player_building_cube_map(s);}
 }
 
 
@@ -3902,6 +3900,7 @@ public:
 		update_security_camera_image();
 		setup_building_lights(xlate); // setup lights on first (opaque) non-shadow pass
 		create_mirror_reflection_if_needed(vis_conn_bldg, xlate);
+		if (enable_cube_map_reflect()) {setup_player_building_cube_map();}
 		if (player_building) {player_building->create_pending_textures();} // I guess this goes here
 	}
 	static void push_scene_xlate(vector3d const &xlate) {
@@ -3932,10 +3931,11 @@ public:
 		point const camera(get_camera_pos()), camera_bs(camera - xlate);
 		int const use_bmap(global_building_params.has_normal_map);
 		bool const night(is_night(WIND_LIGHT_ON_RAND)), use_city_dlights(!reflection_pass);
-		bool const ref_pass_int_only(reflection_pass & REF_PASS_INT_ONLY), ref_pass_interior(reflection_pass & REF_PASS_INTERIOR); // REF_PASS_HOUSE is no longer used here
+		bool const ref_pass_int_only(reflection_pass & REF_PASS_INT_ONLY), ref_pass_interior(reflection_pass & REF_PASS_INTERIOR);
 		bool const ref_pass_water(reflection_pass & REF_PASS_WATER), ref_pass_extb(reflection_pass & REF_PASS_EXTB);
-		bool const not_mirror(reflection_pass & REF_PASS_NO_MIRROR), swap_front_back(reflection_pass && !not_mirror); // for mirror reflection, but not security cameras
-		bool const ref_glass_floor(reflection_pass & REF_PASS_GLASS_FLOOR);
+		bool const not_mirror(reflection_pass & REF_PASS_NO_MIRROR), ref_glass_floor(reflection_pass & REF_PASS_GLASS_FLOOR);
+		bool const ref_pass_cube_map(reflection_pass & REF_PASS_CUBE_MAP);
+		bool const swap_front_back(reflection_pass && !not_mirror && !ref_pass_cube_map); // for mirror reflection, but not security cameras or cube maps
 		// check for sun or moon; also need the smap pass for drawing with dynamic lights at night, so basically it's always enabled
 		bool const use_tt_smap(check_tile_smap(0)); // && (night || light_valid_and_enabled(0) || light_valid_and_enabled(1)));
 		bool have_windows(0), have_wind_lights(0), have_interior(0), is_city_lighting_setup(0);
@@ -4018,7 +4018,6 @@ public:
 			// otherwise, we would need to switch between two different shaders every time we come across a building with people in it; not very clean, but seems to work
 			bool const enable_animations(global_building_params.enable_people_ai && draw_interior);
 			if (enable_animations) {enable_animations_for_shader(s);}
-			bool enable_int_reflect(0);
 
 			if (camera_in_building && player_building != nullptr) { // handle damage effects
 				if (camera_bs.z < player_building->ground_floor_z1 || player_building->point_on_basement_stairs(camera_bs)) { // entering or in basement
@@ -4031,8 +4030,8 @@ public:
 					water_damage *= damage_weight;
 					crack_damage *= damage_weight;
 				}
-				//enable_int_reflect = 1;
 			}
+			bool const enable_int_reflect(enable_cube_map_reflect() && !reflection_pass);
 			setup_building_draw_shader(s, min_alpha, 1, 0, 0, water_damage, crack_damage, enable_int_reflect); // enable_indir=1, force_tsl=0, use_texgen=0
 			vector<point> points; // reused temporary
 			bbd.clear_obj_models();
@@ -4405,7 +4404,7 @@ public:
 					gen_and_draw_people_in_building(ped_draw_vars_t(*defer_ped_draw_vars.building, oc, s, xlate, defer_ped_draw_vars.bix, 0, reflection_pass));
 				}
 				// draw player reflection last so that alpha blending of hair works properly; not visible in water reflections or glass floor (due to low Fresnel term)
-				if (reflection_pass && !ref_pass_water && !not_mirror && !ref_glass_floor) {draw_player_model(s, xlate, 0);} // shadow_only=0
+				if (reflection_pass && !ref_pass_water && !not_mirror && !ref_glass_floor && !ref_pass_cube_map) {draw_player_model(s, xlate, 0);} // shadow_only=0
 				reset_interior_lighting_and_end_shader(s);
 			}
 			if (!ref_pass_interior && have_buildings_ext_paint()) { // draw spraypaint/markers on building exterior walls/windows, if needed

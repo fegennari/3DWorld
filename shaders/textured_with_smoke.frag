@@ -439,6 +439,15 @@ void main() {
 #endif // ENABLE_REFLECTIONS
 
 #ifdef ENABLE_CUBE_MAP_REFLECT
+#ifdef ENABLE_BUILDING_CUBE_MAP
+	if (metalness > 0.0 && specular_color.rgb != vec3(0.0)) { // only applies to metal materials
+		//vec3 rel_pos   = vpos - cube_map_center;
+		vec3 view_dir  = normalize(camera_pos - vpos);
+		vec3 ws_normal = normalize(normal_s);
+		vec3 ref_dir   = reflect(-view_dir, ws_normal);
+		color.rgb = specular_color.rgb*texture(reflection_tex, ref_dir).rgb;
+	}
+#else // !ENABLE_BUILDING_CUBE_MAP
 #ifdef ENABLE_CUBE_MAP_BUMP_MAPS
 	vec3 ws_normal = get_bump_map_normal();
 #else
@@ -512,6 +521,7 @@ void main() {
 	// use fresnel term to select between metallic specular color and monochrome fresnel specular color
 	vec3 spec_color = mix(specular_color.rgb, vec3((specular_color.r + specular_color.g + specular_color.b)/3.0), reflected.x);
 	color.rgb       = mix(t_color, color.rgb*spec_color, reflect_w);
+#endif // ENABLE_BUILDING_CUBE_MAP
 #endif // ENABLE_CUBE_MAP_REFLECT
 
 #ifdef APPLY_BURN_MASK

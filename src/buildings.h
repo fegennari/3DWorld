@@ -667,7 +667,7 @@ unsigned const RO_FLAG_MOVED    = 0x80000000; // for player push/pull
 // reflection pass flags
 unsigned const REF_PASS_ENABLED     = 0x01;
 unsigned const REF_PASS_INTERIOR    = 0x02;
-unsigned const REF_PASS_HOUSE       = 0x04;
+unsigned const REF_PASS_CUBE_MAP    = 0x04;
 unsigned const REF_PASS_WATER       = 0x08;
 unsigned const REF_PASS_EXTB        = 0x10;
 unsigned const REF_PASS_NO_MIRROR   = 0x20;

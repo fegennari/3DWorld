@@ -194,12 +194,14 @@ void set_custom_viewport(unsigned tex_size, float fov_angle, float near_plane, f
 	perspective_fovy = fov_angle;
 	set_perspective_near_far(near_plane, far_plane, 1.0); // AR = 1.0
 }
-void restore_scene_state() {
-
+void restore_default_viewport_and_matrices() {
 	fgMatrixMode(FG_PROJECTION);
 	fgPopMatrix();
 	fgMatrixMode(FG_MODELVIEW);
 	setup_viewport_and_proj_matrix(window_width, window_height); // restore
+}
+void restore_scene_state() {
+	restore_default_viewport_and_matrices();
 	update_shadow_matrices(); // restore
 	setup_sun_moon_light_pos();
 }
@@ -348,13 +350,16 @@ void setup_reflection_texture(unsigned &tid, unsigned xsize, unsigned ysize) {
 	assert(glIsTexture(tid));
 }
 
+void setup_cube_map_reflection_texture(unsigned &tid, unsigned tex_size) {
+	if (!tid) {setup_cube_map_texture(tid, tex_size, 1, ENABLE_CUBE_MAP_MIPMAPS, CUBE_MAP_ANISO);} // allocate=1
+	assert(glIsTexture(tid));
+}
 void setup_cube_map_reflection_texture(unsigned &tid, unsigned tex_size, unsigned &last_size) {
 	if (last_size != tex_size) {
 		free_texture(tid);
 		last_size = tex_size;
 	}
-	if (!tid) {setup_cube_map_texture(tid, tex_size, 1, ENABLE_CUBE_MAP_MIPMAPS, CUBE_MAP_ANISO);} // allocate=1
-	assert(glIsTexture(tid));
+	setup_cube_map_reflection_texture(tid, tex_size);
 }
 
 unsigned create_gm_z_reflection() {
@@ -401,12 +406,15 @@ unsigned create_tt_reflection(float terrain_zmin) {
 	return reflection_tid;
 }
 
-void setup_shader_cube_map_params(shader_t &shader, cube_t const &bcube, unsigned tid, unsigned tsize) {
+void setup_shader_cube_map_params(shader_t &shader, point const &center, float near_clip, unsigned tid, unsigned tsize) {
 	assert(tid > 0);
-	shader.add_uniform_vector3d("cube_map_center", bcube.get_cube_center()); // world space
-	shader.add_uniform_float("cube_map_near_clip", 0.5f*bcube.max_len());
+	shader.add_uniform_vector3d("cube_map_center", center); // world space
+	shader.add_uniform_float("cube_map_near_clip", near_clip);
 	shader.add_uniform_int("cube_map_texture_size", tsize);
 	bind_texture_tu(tid, 14); // tu_id=14
+}
+void setup_shader_cube_map_params(shader_t &shader, cube_t const &bcube, unsigned tid, unsigned tsize) {
+	setup_shader_cube_map_params(shader, bcube.get_cube_center(), 0.5f*bcube.max_len(), tid, tsize);
 }
 
 

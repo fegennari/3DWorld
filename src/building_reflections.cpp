@@ -12,7 +12,7 @@ room_object_t cur_room_mirror;
 shader_t reflection_shader;
 
 extern int display_mode, window_width, window_height;
-extern float CAMERA_RADIUS;
+extern float CAMERA_RADIUS, NEAR_CLIP, perspective_fovy;
 extern vector4d clip_plane;
 extern building_t const *player_building;
 
@@ -20,6 +20,8 @@ colorRGBA get_clear_color();
 void draw_sun_moon_stars(bool no_update);
 cube_t get_mirror_surface(room_object_t const &c);
 void draw_ortho_screen_space_triangle();
+void restore_default_viewport_and_matrices();
+void setup_shader_cube_map_params(shader_t &shader, point const &center, float near_clip, unsigned tid, unsigned tsize);
 
 bool cube_visible_in_building_mirror_reflection(cube_t const &c) {
 	if (!cur_room_mirror.is_mirror()) return 0;
@@ -292,4 +294,77 @@ bool building_t::find_mirror_needing_reflection(vector3d const &xlate) const {
 	}
 	return 1;
 }
+
+class cube_map_reflection_manager_t {
+	unsigned const tsize=1024;
+	unsigned tid=0;
+	float near_plane=0.0;
+	point center;
+public:
+	void capture(building_t const &building, point const &pos) {
+		bool interior_room(0), is_extb(0);
+		int const room_id(building.get_room_containing_pt(pos));
+		center = pos;
+
+		if (room_id >= 0) {
+			room_t const &room(building.get_room(room_id));
+			interior_room = room.interior;
+			is_extb       = room.is_ext_basement();
+			//center.x = room.xc(); center.y = room.yc(); // looks worse
+		}
+		bool const enable_mipmaps(0); // not needed?
+		if (!tid) {setup_cube_map_texture(tid, tsize, 1, enable_mipmaps, 4.0);} // allocate=1, aniso=4.0
+		assert(tid);
+		glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+		vector3d const pre_ref_cview_dir(cview_dir), prev_up_vector(up_vector);
+		pos_dir_up const prev_camera_pdu(camera_pdu);
+		float const far_plane(building.bcube.furthest_dist_to_pt(center)); // capture the entire building
+		near_plane = max(NEAR_CLIP, 0.001f*far_plane);
+		vector3d const xlate(get_tiled_terrain_model_xlate());
+		pre_reflect_camera_pos_bs = camera_pos - xlate;
+		set_custom_viewport(tsize, 90.0, near_plane, far_plane); // 90 degree FOV
+
+		for (unsigned dim = 0; dim < 3; ++dim) {
+			for (unsigned dir = 0; dir < 2; ++dir) {
+				//if ((prev_camera_pdu.pos[dim] > center[dim]) ^ dir) continue; // back facing - probably not legal
+				unsigned const face_id(2*dim + (dir == 0));
+				cview_dir = zero_vector;
+				up_vector = -plus_y;
+				cview_dir[dim] = (dir ? 1.0 : -1.0);
+				if (dim == 1) {up_vector = (dir ? plus_z : -plus_z);} // Note: in OpenGL, the cube map top/bottom is in Y, and up dir is special in this dim
+				float const angle(0.5*perspective_fovy*TO_RADIANS); // 90 degree FOV
+				camera_pdu = pos_dir_up(center, cview_dir, up_vector, angle, near_plane, far_plane, 1.0, 1);
+				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+				fgPushIdentityMatrix(); // MVM
+				vector3d const eye(center - 0.001*cview_dir);
+				fgLookAt(eye.x, eye.y, eye.z, center.x, center.y, center.z, up_vector.x, up_vector.y, up_vector.z);
+				int reflection_pass(REF_PASS_ENABLED | REF_PASS_INT_ONLY | REF_PASS_CUBE_MAP); // set interior only flag to avoid drawing outdoor objects
+				if ( interior_room) {reflection_pass |= REF_PASS_INTERIOR;}
+				if ( is_extb      ) {reflection_pass |= REF_PASS_EXTB    ;}
+				draw_buildings(0, reflection_pass, xlate);
+				render_to_texture_cube_map(tid, tsize, face_id); // render reflection to texture
+				fgPopMatrix(); // MVM
+			} // for dir
+		} // for dim
+		if (enable_mipmaps) {gen_mipmaps(6);}
+		camera_pdu = prev_camera_pdu;
+		up_vector  = prev_up_vector;
+		cview_dir  = pre_ref_cview_dir;
+		pre_reflect_camera_pos_bs = zero_vector; // disable
+		restore_default_viewport_and_matrices();
+		check_gl_error(531);
+	}
+	void bind(shader_t &s) const {
+		assert(tid); // must have been captured first
+		if (tid == 0) return; // no reflections captured
+		setup_shader_cube_map_params(s, center, near_plane, tid, tsize);
+	}
+};
+cube_map_reflection_manager_t cube_map_reflection_manager;
+
+void setup_player_building_cube_map() {
+	assert(player_building);
+	cube_map_reflection_manager.capture(*player_building, get_camera_building_space());
+}
+void bind_player_building_cube_map(shader_t &s) {cube_map_reflection_manager.bind(s);}
 
