@@ -2075,6 +2075,7 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom, f
 		bool const draw_bot(c.was_expanded() && !c.is_on_srack());
 		tid_nm_pair_t cap_tex(-1, 1.0, 0); // unshadowed
 		cap_tex.set_specular_color(cap_spec_colors[cap_color_ix], 0.8, 80.0);
+		cap_tex.metalness = 1.0;
 		rgeom_mat_t &cap_mat(get_material(cap_tex, 0, 0, 1)); // inc_shadows=0, dynamic=0, small=1
 		unsigned const cap_verts_start(cap_mat.itri_verts.size());
 		cap_mat.add_ortho_cylin_to_verts(cap, apply_light_color(c, cap_colors[cap_color_ix]), dim,
@@ -2642,7 +2643,9 @@ void building_room_geom_t::add_railing(room_object_t const &c) {
 	float const pole_radius(0.75*railing.r1), length(c.get_length()), height(get_railing_height(c));
 	unsigned const num_floors(c.item_flags + 1), ndiv(N_CYL_SIDES);
 	colorRGBA const &color(c.color);
-	tid_nm_pair_t tex((is_dirty ? get_texture_by_name((buttons_start & 1) ? "metals/65_Painted_dirty_metal.jpg" : "metals/67_rusty_dirty_metal.jpg") : -1), 1.0, 1); // shadowed
+	bool const tex_sel(buttons_start & 1); // consistent per building
+	tid_nm_pair_t tex((is_dirty ? get_texture_by_name(tex_sel ? "metals/65_Painted_dirty_metal.jpg" : "metals/67_rusty_dirty_metal.jpg") : -1), 1.0, 1); // shadowed
+	tex.metalness = (is_dirty ? 0.0 : 1.0); // for now, metalness only applies to untexture materials
 	tex.set_specular_color(((color == BLACK) ? WHITE : color), (is_dirty ? 0.3 : 0.7), (is_dirty ? 30.0 : 70.0)); // use a non-white metal specular color unless black
 	rgeom_mat_t &mat(get_material(tex, 1, 0, !is_exterior, 0, is_exterior)); // inc_shadows=1, dynamic=0, small|exterior
 	float const side_tscale(is_dirty ? 0.1*length/railing.r1 : 1.0), v_side_tscale(is_dirty ? 0.1*height/railing.r1 : 1.0);
@@ -2885,6 +2888,7 @@ void building_room_geom_t::add_pipe(room_object_t const &c, bool add_exterior) {
 	// make specular; maybe should not make specular if rusty, but setting per-pipe specular doesn't work, and water effect adds specular anyway
 	colorRGBA const spec_color(get_specular_color(c.color)); // special case metals
 	tex.set_specular_color(spec_color, 0.8, 60.0);
+	if (spec_color != WHITE) {tex.metalness = 1.0;} // metal if pipe has a metal specular color
 	rgeom_mat_t &mat(get_material(tex, shadowed, 0, (exterior ? 0 : (is_duct ? 1 : 2)), 0, exterior)); // detail, small, or exterior object
 	// swap texture XY for ducts
 	mat.add_ortho_cylin_to_verts(c, color, dim, (flat_ends && draw_joints[0]), (flat_ends && draw_joints[1]),
@@ -6324,6 +6328,7 @@ void building_room_geom_t::add_chem_tank(room_object_t const &c, bool draw_label
 	int const tid(get_chem_tank_tid(c));
 	tid_nm_pair_t tex(tid);
 	tex.set_specular_color(WHITE, 0.5, 40.0); // applies to textured case
+	//tex.metalness = 1.0; // no, painted metal is not metal
 	rgeom_mat_t &mat((tid < 0) ? get_metal_material(1) : get_material(tex, 1)); // shadowed
 	// capsule shape
 	cube_t bot(c), top(c), base(c);
@@ -6770,6 +6775,7 @@ void building_room_geom_t::add_door_handle(door_t const &door, door_rotation_t c
 	handle.d[!dim][ dir] -= dsign*(handle_len    - shaft_radius);
 	tid_nm_pair_t tex(-1, 1.0, 1); // untextured, shadowed
 	tex.set_specular_color(((color == BRASS_C) ? BRASS_C : WHITE), 0.7, 60.0); // metal
+	tex.metalness = 1.0;
 	rgeom_mat_t &mat(mats_doors.get_material(tex, 1)); // untextured, shadowed
 	unsigned const qv_start(mat.quad_verts.size());
 	mat.add_cube_to_verts_untextured(base,  color); // all faces
