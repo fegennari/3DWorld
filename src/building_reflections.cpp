@@ -302,22 +302,27 @@ class cube_map_reflection_manager_t {
 	float face_dist=0.0;
 	point center;
 	point last_update_pos[6]; // one per face
+	cube_t room_bounds;
 	building_t const *last_building=nullptr;
 public:
 	void capture(building_t const &building, point const &pos) {
 		bool interior_room(0), is_extb(0);
+		float const floor_spacing(building.get_window_vspace());
 		int const room_id(building.get_room_containing_pt(pos));
 		cube_t scene_bounds;
 		// calculate our cube map bounds based on what part of the building the center is in
 		if (!building.has_basement() || pos.z > building.ground_floor_z1) {scene_bounds = building.bcube;} // above ground/no basement
 		else if (!building.has_ext_basement() || building.get_basement().contains_pt(pos)) {scene_bounds = building.get_basement();}
 		else {scene_bounds = building.interior->basement_ext_bcube;}
-		cube_t room_bounds(scene_bounds); // defaults to building if not in a room
-		center = pos;
+		room_bounds = scene_bounds; // defaults to building if not in a room
+		center      = pos;
 
 		if (room_id >= 0) { // else error? disable cube maps?
 			room_t const &room(building.get_room(room_id));
+			unsigned const floor_ix(room.get_floor_containing_zval(pos.z, floor_spacing));
+			float const rz1(room.z1() + floor_ix*floor_spacing);
 			room_bounds   = room;
+			set_cube_zvals(room_bounds, rz1, rz1+floor_spacing); // clip to player's floor
 			interior_room = room.interior;
 			is_extb       = room.is_ext_basement();
 			//center.x = room.xc(); center.y = room.yc(); // looks worse
@@ -334,7 +339,6 @@ public:
 		glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 		vector3d const pre_ref_cview_dir(cview_dir), prev_up_vector(up_vector);
 		pos_dir_up const prev_camera_pdu(camera_pdu);
-		float const floor_spacing(building.get_window_vspace());
 		float far_plane(scene_bounds.furthest_dist_to_pt(center)); // capture the entire building
 		min_eq(far_plane, 50.0f*floor_spacing); // limit to a reasonable distance for malls, etc.
 		float const near_plane(max(NEAR_CLIP, 0.001f*far_plane));
