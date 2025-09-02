@@ -323,6 +323,8 @@ public:
 		vector3d const xlate(get_tiled_terrain_model_xlate());
 		pre_reflect_camera_pos_bs = camera_pos - xlate;
 		set_custom_viewport(tsize, 90.0, near_plane, far_plane); // 90 degree FOV
+		colorRGBA const orig_clear_color(get_clear_color());
+		glClearColor_rgba((orig_clear_color + DK_GRAY)*0.5); // darken and desaturate the sky color to account for clouds, terrain, buildings, etc.
 
 		for (unsigned dim = 0; dim < 3; ++dim) {
 			for (unsigned dir = 0; dir < 2; ++dir) {
@@ -351,6 +353,7 @@ public:
 		up_vector  = prev_up_vector;
 		cview_dir  = pre_ref_cview_dir;
 		pre_reflect_camera_pos_bs = zero_vector; // disable
+		glClearColor_rgba(orig_clear_color); // restore clear color
 		restore_default_viewport_and_matrices();
 		check_gl_error(531);
 	}
