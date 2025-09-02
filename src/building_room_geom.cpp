@@ -6001,8 +6001,11 @@ void building_room_geom_t::add_bench(room_object_t const &c) {
 	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // shadowed, small
 	// add legs on each side; draw sides of legs, always light gray or black
 	colorRGBA const legs_color(apply_light_color(c, (c.in_mall() ? BKGRAY : LT_GRAY)));
-	for (unsigned d = 0; d < 2; ++d) {mat.add_cube_to_verts_untextured(cubes[d+1], legs_color, (use_mesh ? EF_Z1 : EF_Z12));}
-
+	
+	for (unsigned d = 0; d < 2; ++d) {
+		if (use_mesh) {cubes[d+1].z2() += 0.05*c.dz();} // prevent Z-fighting
+		mat.add_cube_to_verts_untextured(cubes[d+1], legs_color, (use_mesh ? EF_Z1 : EF_Z12));
+	}
 	if (use_mesh) { // metal mesh material
 		colorRGBA const color(apply_light_color(c));
 		rgeom_mat_t &metal_mat(mats_amask.get_material(get_metal_grate_tex(1.0/c.get_depth(), c.room_id), 1));
