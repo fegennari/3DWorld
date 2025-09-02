@@ -59,6 +59,7 @@ tid_nm_pair_t get_metal_grate_tex(float tscale, unsigned sel_ix) {
 	string const fn((sel_ix & 1) ? "metals/4_perforated_metal.png" : "metals/17_perforated_metal_plate.png");
 	tid_nm_pair_t tex(get_texture_by_name(fn, 0, 0, 1, 1.0, 1, 3), tscale, 1); // shadowed=1, custom alpha mipmaps
 	tex.set_specular_color(WHITE, 0.6, 50.0);
+	tex.metalness = 0.5; // half reflective
 	return tex;
 }
 
@@ -1328,6 +1329,7 @@ void add_ladder_geom(rgeom_mat_t &mat, room_object_t const &c, colorRGBA const &
 tid_nm_pair_t get_ladder_tex(float width, bool shadowed) {
 	tid_nm_pair_t tex(get_texture_by_name("metals/65_Painted_dirty_metal.jpg"), 0.5/width, shadowed);
 	tex.set_specular_color(WHITE, 0.6, 50.0);
+	tex.metalness = 0.1; // slightly reflective
 	return tex;
 }
 void building_room_geom_t::add_ext_ladder(room_object_t const &c) {
@@ -2645,7 +2647,7 @@ void building_room_geom_t::add_railing(room_object_t const &c) {
 	colorRGBA const &color(c.color);
 	bool const tex_sel(buttons_start & 1); // consistent per building
 	tid_nm_pair_t tex((is_dirty ? get_texture_by_name(tex_sel ? "metals/65_Painted_dirty_metal.jpg" : "metals/67_rusty_dirty_metal.jpg") : -1), 1.0, 1); // shadowed
-	tex.metalness = (is_dirty ? 0.0 : 1.0); // for now, metalness only applies to untexture materials
+	tex.metalness = (is_dirty ? (tex_sel ? 0.25 : 0.0) : 1.0); // for now, metalness only applies to untexture materials
 	tex.set_specular_color(((color == BLACK) ? WHITE : color), (is_dirty ? 0.3 : 0.7), (is_dirty ? 30.0 : 70.0)); // use a non-white metal specular color unless black
 	rgeom_mat_t &mat(get_material(tex, 1, 0, !is_exterior, 0, is_exterior)); // inc_shadows=1, dynamic=0, small|exterior
 	float const side_tscale(is_dirty ? 0.1*length/railing.r1 : 1.0), v_side_tscale(is_dirty ? 0.1*height/railing.r1 : 1.0);
@@ -2886,6 +2888,7 @@ void building_room_geom_t::add_pipe(room_object_t const &c, bool add_exterior) {
 	else if (is_dirty) {tid = get_texture_by_name("metals/67_rusty_dirty_metal.jpg");} // "metals/65_Painted_dirty_metal.jpg" works as well
 	tid_nm_pair_t tex(tid, 1.0, shadowed); // custom specular color
 	// make specular; maybe should not make specular if rusty, but setting per-pipe specular doesn't work, and water effect adds specular anyway
+	tex.metalness = (is_dirty ? 0.1 : 0.5); // slightly reflective
 	colorRGBA const spec_color(get_specular_color(c.color)); // special case metals
 	tex.set_specular_color(spec_color, 0.8, 60.0);
 	if (spec_color != WHITE) {tex.metalness = 1.0;} // metal if pipe has a metal specular color
@@ -4533,7 +4536,7 @@ void building_room_geom_t::add_water_heater(room_object_t const &c) {
 		}
 		copper_mat.add_vcylin_to_verts(pipe, copper_color, 0, 0, in_store, 0, 1.0, 1.0, 1.0, 1.0, 0, pipe_ndiv); // draw inside if in store
 	} // for d
-	get_untextured_material(1, 0, 1).add_cube_to_verts_untextured(box, apply_light_color(c, LT_GRAY)); // control box
+	get_metal_material(1, 0, 1).add_cube_to_verts_untextured(box, apply_light_color(c, LT_GRAY)); // control box
 
 	if (is_house && (c.room_id & 1)) { // add sticker 50% of the time for houses
 		cube_t sticker(c);
@@ -6328,6 +6331,7 @@ void building_room_geom_t::add_chem_tank(room_object_t const &c, bool draw_label
 	int const tid(get_chem_tank_tid(c));
 	tid_nm_pair_t tex(tid);
 	tex.set_specular_color(WHITE, 0.5, 40.0); // applies to textured case
+	tex.metalness = 0.1; // slightly reflective
 	//tex.metalness = 1.0; // no, painted metal is not metal
 	rgeom_mat_t &mat((tid < 0) ? get_metal_material(1) : get_material(tex, 1)); // shadowed
 	// capsule shape

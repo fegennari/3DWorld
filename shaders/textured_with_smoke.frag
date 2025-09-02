@@ -439,13 +439,16 @@ void main() {
 #endif // ENABLE_REFLECTIONS
 
 #ifdef ENABLE_CUBE_MAP_REFLECT
-#ifdef ENABLE_BUILDING_CUBE_MAP
-	if (metalness > 0.0 && specular_color.rgb != vec3(0.0)) { // only applies to metal materials
+#ifdef ENABLE_BUILDING_CUBE_MAP // only applies to metal materials
+	if (metalness > 0.0 && specular_color.rgb != vec3(0.0) && gl_Color.rgb != vec3(0.0)) {
 		//vec3 rel_pos   = vpos - cube_map_center;
-		vec3 view_dir  = normalize(camera_pos - vpos);
+		vec3 view_dir  = normalize(vpos - camera_pos);
 		vec3 ws_normal = normalize(normal_s);
-		vec3 ref_dir   = reflect(-view_dir, ws_normal);
-		color.rgb = specular_color.rgb*texture(reflection_tex, ref_dir).rgb;
+		vec3 ref_dir   = reflect(view_dir, ws_normal);
+		vec3 ref_tex   = texture(reflection_tex, ref_dir).rgb;
+		// white specular: modulate with material color (for different shades of metal)
+		vec3 spec_color= ((specular_color.rgb == vec3(1.0)) ? gl_Color.rgb : specular_color.rgb);
+		color.rgb = mix(color.rgb, specular_color.rgb*ref_tex, metalness);
 	}
 #else // !ENABLE_BUILDING_CUBE_MAP
 #ifdef ENABLE_CUBE_MAP_BUMP_MAPS
