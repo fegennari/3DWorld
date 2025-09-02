@@ -308,7 +308,7 @@ public:
 		cube_t scene_bounds;
 		// calculate our cube map bounds based on what part of the building the center is in
 		if (!building.has_basement() || pos.z > building.ground_floor_z1) {scene_bounds = building.bcube;} // above ground/no basement
-		else if (!building.has_ext_basement() || !building.get_basement().contains_pt(pos)) {scene_bounds = building.get_basement();}
+		else if (!building.has_ext_basement() || building.get_basement().contains_pt(pos)) {scene_bounds = building.get_basement();}
 		else {scene_bounds = building.interior->basement_ext_bcube;}
 		cube_t room_bounds(scene_bounds); // defaults to building if not in a room
 		center = pos;

@@ -441,10 +441,17 @@ void main() {
 #ifdef ENABLE_CUBE_MAP_REFLECT
 #ifdef ENABLE_BUILDING_CUBE_MAP // only applies to metal materials
 	if (metalness > 0.0 && specular_color.rgb != vec3(0.0) && gl_Color.rgb != vec3(0.0)) {
-		//vec3 rel_pos   = vpos - cube_map_center;
 		vec3 view_dir  = normalize(vpos - camera_pos);
 		vec3 ws_normal = normalize(normal_s);
 		vec3 ref_dir   = reflect(view_dir, ws_normal);
+		vec3 boxMin    = cube_map_center - cube_map_near_clip;
+		vec3 boxMax    = cube_map_center + cube_map_near_clip;
+		vec3 firstPlaneIntersect  = (boxMax - vpos) / ref_dir;
+		vec3 secondPlaneIntersect = (boxMin - vpos) / ref_dir;
+		vec3 furthestPlane = max(firstPlaneIntersect, secondPlaneIntersect);
+		float dist         = min(min(furthestPlane.x, furthestPlane.y), furthestPlane.z);
+		vec3 intersectPosition = vpos + ref_dir * dist;
+		ref_dir = intersectPosition - cube_map_center;
 		vec3 ref_tex   = texture(reflection_tex, ref_dir).rgb;
 		// white specular: modulate with material color (for different shades of metal)
 		vec3 spec_color= ((specular_color.rgb == vec3(1.0)) ? gl_Color.rgb : specular_color.rgb);
@@ -461,17 +468,17 @@ void main() {
 	spec_scale     *= get_spec_color();
 #endif
 	float ref_ix    = refract_ix;
-	vec3 view_dir   = normalize(camera_pos - vpos);
-	vec2 reflected  = get_reflect_weight(view_dir, ws_normal, reflectivity2, ref_ix);
+	vec3 view_dir   = normalize(vpos - camera_pos);
+	vec2 reflected  = get_reflect_weight(-view_dir, ws_normal, reflectivity2, ref_ix);
 	vec3 reflect_w  = reflected.y*spec_scale; // use reflected weight including metalness
 	vec3 rel_pos    = vpos - cube_map_center;
 	rel_pos         = max(vec3(-cube_map_near_clip), min(vec3(cube_map_near_clip), rel_pos)); // clamp to cube bounds
-	vec3 ref_dir    = rel_pos + cube_map_near_clip*reflect(-view_dir, ws_normal); // position offset within cube (approx.)
-	//vec3 ref_dir    = -view_dir; // invisible effect
+	vec3 ref_dir    = rel_pos + cube_map_near_clip*reflect(view_dir, ws_normal); // position offset within cube (approx.)
+	//vec3 ref_dir    = view_dir; // invisible effect
 	vec3 t_color    = color.rgb; // transmitted color
 	
 	if (alpha < 1.0) { // handle refraction
-		vec3 refract_dir   = refract(-view_dir, ws_normal, 1.0/ref_ix); // refraction into the object
+		vec3 refract_dir   = refract(view_dir, ws_normal, 1.0/ref_ix); // refraction into the object
 		vec3 int_ref_color = vec3(0);
 		float int_ref_w    = 0.0;
 
