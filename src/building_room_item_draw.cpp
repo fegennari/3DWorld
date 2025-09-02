@@ -24,7 +24,7 @@ extern float fticks, office_chair_rot_rate, building_ambient_scale;
 extern point actual_player_pos, player_candle_pos, pre_reflect_camera_pos_bs;
 extern vector4d clip_plane;
 extern colorRGB cur_diffuse, cur_ambient;
-extern cube_t smap_light_clip_cube;
+extern cube_t smap_light_clip_cube, reflection_clip_cube;
 extern pos_dir_up camera_pdu;
 extern building_t const *player_building;
 extern carried_item_t player_held_object;
@@ -1711,14 +1711,15 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	rgeom_mat_t monitor_screens_mat, onscreen_text_mat=rgeom_mat_t(tid_nm_pair_t(FONT_TEXTURE_ID));
 	string onscreen_text;
 	bool const is_rotated(building.is_rotated()), is_player_building(&building == player_building), has_pri_hall(building.has_pri_hall());
-	bool const check_clip_cube(shadow_only && !is_rotated && !smap_light_clip_cube.is_all_zeros()); // check clip cube for shadow pass; not implemented for rotated buildings
+	bool check_clip_cube(shadow_only && !is_rotated && !smap_light_clip_cube.is_all_zeros()); // check clip cube for shadow pass; not implemented for rotated buildings
+	check_clip_cube |= (reflection_pass && !reflection_clip_cube.is_all_zeros()); // handle reflection clip cube as well
 	bool const skip_interior_objs(!player_in_building_or_doorway && !shadow_only), has_windows(building.has_windows());
 	bool const player_in_industrial(building.point_in_industrial(camera_bs));
 	bool const player_in_this_basement(player_in_building && player_in_basement >= 2), player_above_this_basement(player_in_building && player_in_basement == 0);
 	float const one_floor_above(camera_bs.z + floor_spacing);
 	float two_floors_below(camera_bs.z - 2.0*floor_spacing);
 	if (player_in_industrial) {min_eq(two_floors_below, ground_floor_z1);} // industrial lights reach more than 2 floors
-	cube_t const clip_cube_bs(smap_light_clip_cube - xlate);
+	cube_t const clip_cube_bs(shadow_only ? (smap_light_clip_cube - xlate) : reflection_clip_cube);
 	// skip for rotated buildings and reflection pass, since reflected pos may be in a different room; should we use actual_player_pos for shadow_only mode?
 	int const camera_room((is_rotated || reflection_pass) ? -1 : building.get_room_containing_camera(camera_bs));
 	int camera_part(-1), cull_room_ix(-1);

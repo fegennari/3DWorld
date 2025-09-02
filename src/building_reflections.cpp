@@ -8,6 +8,7 @@
 bool disable_city_shadow_maps(0), mirror_in_ext_basement(0);
 unsigned room_mirror_ref_tid(0);
 point pre_reflect_camera_pos_bs;
+cube_t reflection_clip_cube;
 room_object_t cur_room_mirror;
 shader_t reflection_shader;
 
@@ -298,30 +299,42 @@ bool building_t::find_mirror_needing_reflection(vector3d const &xlate) const {
 class cube_map_reflection_manager_t {
 	unsigned const tsize=1024;
 	unsigned tid=0;
-	float near_plane=0.0;
+	float face_dist=0.0;
 	point center;
 public:
 	void capture(building_t const &building, point const &pos) {
 		bool interior_room(0), is_extb(0);
 		int const room_id(building.get_room_containing_pt(pos));
+		cube_t scene_bounds;
+		// calculate our cube map bounds based on what part of the building the center is in
+		if (!building.has_basement() || pos.z > building.ground_floor_z1) {scene_bounds = building.bcube;} // above ground/no basement
+		else if (!building.has_ext_basement() || !building.get_basement().contains_pt(pos)) {scene_bounds = building.get_basement();}
+		else {scene_bounds = building.interior->basement_ext_bcube;}
+		cube_t room_bounds(scene_bounds); // defaults to building if not in a room
 		center = pos;
 
-		if (room_id >= 0) {
+		if (room_id >= 0) { // else error? disable cube maps?
 			room_t const &room(building.get_room(room_id));
+			room_bounds   = room;
 			interior_room = room.interior;
 			is_extb       = room.is_ext_basement();
 			//center.x = room.xc(); center.y = room.yc(); // looks worse
 		}
+		face_dist = 0.25*(room_bounds.dx() + room_bounds.dy()); // average room half width
 		bool const enable_mipmaps(0); // not needed?
 		if (!tid) {setup_cube_map_texture(tid, tsize, 1, enable_mipmaps, 4.0);} // allocate=1, aniso=4.0
 		assert(tid);
 		glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 		vector3d const pre_ref_cview_dir(cview_dir), prev_up_vector(up_vector);
 		pos_dir_up const prev_camera_pdu(camera_pdu);
-		float const far_plane(building.bcube.furthest_dist_to_pt(center)); // capture the entire building
-		near_plane = max(NEAR_CLIP, 0.001f*far_plane);
+		float const floor_spacing(building.get_window_vspace());
+		float far_plane(scene_bounds.furthest_dist_to_pt(center)); // capture the entire building
+		min_eq(far_plane, 50.0f*floor_spacing); // limit to a reasonable distance for malls, etc.
+		float const near_plane(max(NEAR_CLIP, 0.001f*far_plane));
 		vector3d const xlate(get_tiled_terrain_model_xlate());
 		pre_reflect_camera_pos_bs = camera_pos - xlate;
+		reflection_clip_cube.set_from_sphere(center, 20.0*floor_spacing); // optimization: limit model drawing to a reasonable distance
+		reflection_clip_cube.intersect_with_cube(scene_bounds);
 		set_custom_viewport(tsize, 90.0, near_plane, far_plane); // 90 degree FOV
 		colorRGBA const orig_clear_color(get_clear_color());
 		glClearColor_rgba((orig_clear_color + DK_GRAY)*0.5); // darken and desaturate the sky color to account for clouds, terrain, buildings, etc.
@@ -353,6 +366,7 @@ public:
 		up_vector  = prev_up_vector;
 		cview_dir  = pre_ref_cview_dir;
 		pre_reflect_camera_pos_bs = zero_vector; // disable
+		reflection_clip_cube.set_to_zeros();
 		glClearColor_rgba(orig_clear_color); // restore clear color
 		restore_default_viewport_and_matrices();
 		check_gl_error(531);
@@ -360,7 +374,7 @@ public:
 	void bind(shader_t &s) const {
 		assert(tid); // must have been captured first
 		if (tid == 0) return; // no reflections captured
-		setup_shader_cube_map_params(s, center, near_plane, tid, tsize);
+		setup_shader_cube_map_params(s, center, face_dist, tid, tsize); // pass face_dist in as near_plane as this cube map does not bound an object
 	}
 };
 cube_map_reflection_manager_t cube_map_reflection_manager;
