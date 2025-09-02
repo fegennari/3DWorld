@@ -12,7 +12,7 @@ cube_t reflection_clip_cube;
 room_object_t cur_room_mirror;
 shader_t reflection_shader;
 
-extern int display_mode, window_width, window_height;
+extern int display_mode, window_width, window_height, frame_counter;
 extern float CAMERA_RADIUS, NEAR_CLIP, perspective_fovy;
 extern vector4d clip_plane;
 extern building_t const *player_building;
@@ -301,6 +301,8 @@ class cube_map_reflection_manager_t {
 	unsigned tid=0;
 	float face_dist=0.0;
 	point center;
+	point last_update_pos[6]; // one per face
+	building_t const *last_building=nullptr;
 public:
 	void capture(building_t const &building, point const &pos) {
 		bool interior_room(0), is_extb(0);
@@ -322,6 +324,11 @@ public:
 		}
 		face_dist = 0.25*(room_bounds.dx() + room_bounds.dy()); // average room half width
 		bool const enable_mipmaps(0); // not needed?
+
+		if (&building != last_building) { // new building, reset state
+			for (unsigned f = 0; f < 6; ++f) {last_update_pos[f] = all_zeros;}
+			last_building = &building;
+		}
 		if (!tid) {setup_cube_map_texture(tid, tsize, 1, enable_mipmaps, 4.0);} // allocate=1, aniso=4.0
 		assert(tid);
 		glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
@@ -341,8 +348,11 @@ public:
 
 		for (unsigned dim = 0; dim < 3; ++dim) {
 			for (unsigned dir = 0; dir < 2; ++dir) {
-				//if ((prev_camera_pdu.pos[dim] > center[dim]) ^ dir) continue; // back facing - probably not legal
 				unsigned const face_id(2*dim + (dir == 0));
+				//if ((frame_counter % 6) != face_id) continue; // not our turn to update; no, looks bad
+				point &last_pos(last_update_pos[face_id]);
+				if (dist_xy_less_than(last_pos, center, 0.05*CAMERA_RADIUS)) continue; // no pos change; skip this face; ignore zval for head bob
+				last_pos  = center;
 				cview_dir = zero_vector;
 				up_vector = -plus_y;
 				cview_dir[dim] = (dir ? 1.0 : -1.0);
