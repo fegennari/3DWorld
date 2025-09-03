@@ -307,6 +307,7 @@ class cube_map_reflection_manager_t {
 public:
 	void capture(building_t const &building, point const &pos) {
 		bool interior_room(0), is_extb(0);
+		bool const sparse_update(building.has_mall() || building.is_industrial()); // slow case with many objects to draw
 		float const floor_spacing(building.get_window_vspace());
 		int const room_id(building.get_room_containing_pt(pos));
 		cube_t scene_bounds;
@@ -325,7 +326,6 @@ public:
 			set_cube_zvals(room_bounds, rz1, rz1+floor_spacing); // clip to player's floor
 			interior_room = room.interior;
 			is_extb       = room.is_ext_basement();
-			//center.x = room.xc(); center.y = room.yc(); // looks worse
 		}
 		face_dist = 0.25*(room_bounds.dx() + room_bounds.dy()); // average room half width
 		bool const enable_mipmaps(0); // not needed?
@@ -354,7 +354,7 @@ public:
 		for (unsigned dim = 0; dim < 3; ++dim) {
 			for (unsigned dir = 0; dir < 2; ++dir) {
 				unsigned const face_id(2*dim + (dir == 0));
-				//if ((frame_counter % 6) != face_id) continue; // not our turn to update; no, looks bad
+				if (sparse_update && (frame_counter % 6) != face_id)  continue; // not our turn to update; looks bad
 				point &last_pos(last_update_pos[face_id]);
 				if (dist_xy_less_than(last_pos, center, update_dist)) continue; // no pos change; skip this face; ignore zval for head bob
 				last_pos  = center;
