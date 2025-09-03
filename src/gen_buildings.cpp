@@ -3989,7 +3989,7 @@ public:
 			if (player_building) {player_building->draw_z_prepass(camera_bs);}
 			glEnable(GL_CULL_FACE); // back face culling optimization, helps with expensive lighting shaders; after draw_z_prepass()
 			glCullFace(swap_front_back ? GL_FRONT : GL_BACK);
-				
+			
 			for (building_creator_t *const bc : bcs) { // draw interior for the tile containing the camera
 				float const ddist_scale(bc->building_draw_windows.empty() ? 0.1 : 1.0), zpp_dist_scale(ddist_scale*z_prepass_dist);
 

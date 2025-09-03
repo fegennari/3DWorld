@@ -297,7 +297,7 @@ bool building_t::find_mirror_needing_reflection(vector3d const &xlate) const {
 }
 
 class cube_map_reflection_manager_t {
-	unsigned const tsize=1024;
+	unsigned const tsize=1024; // 512 is faster; likely dominated by subpixel object drawing (bottles, text, etc.)
 	unsigned tid=0;
 	float face_dist=0.0;
 	point center;
@@ -341,11 +341,12 @@ public:
 		pos_dir_up const prev_camera_pdu(camera_pdu);
 		float far_plane(scene_bounds.furthest_dist_to_pt(center)); // capture the entire building
 		min_eq(far_plane, 50.0f*floor_spacing); // limit to a reasonable distance for malls, etc.
-		float const near_plane(max(NEAR_CLIP, 0.001f*far_plane));
+		float const near_plane(max(NEAR_CLIP, 0.001f*far_plane)), update_dist(0.05*CAMERA_RADIUS);
 		vector3d const xlate(get_tiled_terrain_model_xlate());
 		pre_reflect_camera_pos_bs = camera_pos - xlate;
-		reflection_clip_cube.set_from_sphere(center, 20.0*floor_spacing); // optimization: limit model drawing to a reasonable distance
-		reflection_clip_cube.intersect_with_cube(scene_bounds);
+		cube_t ref_cube;
+		ref_cube.set_from_sphere(center, 20.0*floor_spacing); // optimization: limit model drawing to a reasonable distance
+		ref_cube.intersect_with_cube(scene_bounds);
 		set_custom_viewport(tsize, 90.0, near_plane, far_plane); // 90 degree FOV
 		colorRGBA const orig_clear_color(get_clear_color());
 		glClearColor_rgba((orig_clear_color + DK_GRAY)*0.5); // darken and desaturate the sky color to account for clouds, terrain, buildings, etc.
@@ -355,7 +356,7 @@ public:
 				unsigned const face_id(2*dim + (dir == 0));
 				//if ((frame_counter % 6) != face_id) continue; // not our turn to update; no, looks bad
 				point &last_pos(last_update_pos[face_id]);
-				if (dist_xy_less_than(last_pos, center, 0.05*CAMERA_RADIUS)) continue; // no pos change; skip this face; ignore zval for head bob
+				if (dist_xy_less_than(last_pos, center, update_dist)) continue; // no pos change; skip this face; ignore zval for head bob
 				last_pos  = center;
 				cview_dir = zero_vector;
 				up_vector = -plus_y;
@@ -363,6 +364,8 @@ public:
 				if (dim == 1) {up_vector = (dir ? plus_z : -plus_z);} // Note: in OpenGL, the cube map top/bottom is in Y, and up dir is special in this dim
 				float const angle(0.5*perspective_fovy*TO_RADIANS); // 90 degree FOV
 				camera_pdu = pos_dir_up(center, cview_dir, up_vector, angle, near_plane, far_plane, 1.0, 1);
+				reflection_clip_cube = ref_cube;
+				reflection_clip_cube.d[dim][!dir] = center[dim]; // clip to half space in front of cube map face
 				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 				fgPushIdentityMatrix(); // MVM
 				vector3d const eye(center - 0.001*cview_dir);

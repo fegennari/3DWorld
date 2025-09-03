@@ -2016,7 +2016,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 				if (i->room_id == camera_room) {water_sound_manager.register_running_water(*i, building);}
 				water_draw.add_water_for_shower(*i);
 			}
-			if (i->z1() < camera_bs.z && i->z1() > ao_zmin - max(0.0f, (i->dz() - floor_spacing))) { // camera not below or too far above this object; handle tall objects
+			if (!reflection_pass && i->z1() < camera_bs.z && i->z1() > ao_zmin - max(0.0f, (i->dz() - floor_spacing))) {
+				// camera not below or too far above this object; handle tall objects
 				float const ao_shadow(get_ao_shadow(*i, enable_indir));
 
 				if (ao_shadow > 0.0) { // add AO shadow quad on the floor below the object
