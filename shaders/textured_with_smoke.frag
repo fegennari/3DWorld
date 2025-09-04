@@ -274,6 +274,26 @@ vec3 cube_map_reflect_texture_filter(in vec3 ref_dir, in int mip_bias, in int fi
 	}
 	return color/tot_w;
 }
+
+vec3 apply_cube_map_blur(in vec3 ref_dir, in int blur_val) { // blur_val ranges from 0 to around 8
+	if (blur_val <= 0) {return texture(reflection_tex, ref_dir).rgb;} // auto mipmaps + anisotropic filtering with no blur
+	// add some blur
+	int mip_bias = 0;
+	int filt_sz  = 1;
+
+	// split blur logarithmically across mip bias and filter kernel size, to a max filter size of 7 (15x15)
+	// this provides the best quality vs. performance trade-off (mip bias is free but blocky and has seams; filter is smooth but expensive)
+	while (blur_val > 0) {
+		// Note: fliter_sz from 1=>2 is really a 1x1 to 3x3 transition, by we still use 2x to account for the Gaussian weights vs. box filter used for mipmaps
+		if (filt_sz  < 8) {--blur_val; filt_sz *= 2;}
+		if (blur_val > 0) {--blur_val; ++mip_bias;}
+	}
+	--filt_sz; // filt_sz of 0 is a 1x1 box
+	if      (filt_sz == 1) {return cube_map_reflect_texture_filter(ref_dir, mip_bias, 1);}
+	else if (filt_sz == 3) {return cube_map_reflect_texture_filter(ref_dir, mip_bias, 3);}
+	else if (filt_sz == 5) {return cube_map_reflect_texture_filter(ref_dir, mip_bias, 5);}
+	else                   {return cube_map_reflect_texture_filter(ref_dir, mip_bias, 7);}
+}
 #endif // ENABLE_CUBE_MAP_REFLECT
 
 // Note: This may seem like it can go into the vertex shader as well,
@@ -452,10 +472,12 @@ void main() {
 		float dist         = min(min(furthestPlane.x, furthestPlane.y), furthestPlane.z);
 		vec3 intersectPosition = vpos + ref_dir * dist;
 		ref_dir = intersectPosition - cube_map_center;
-		vec3 ref_tex   = texture(reflection_tex, ref_dir).rgb;
+		float shininess= specular_color.a; // typically 1-80
+		int blur_val   = max(0, int((80.0 - shininess)/10.0));
+		vec3 ref_tex   = apply_cube_map_blur(ref_dir, blur_val);
 		// white specular: modulate with material color (for different shades of metal)
-		vec3 spec_color= ((specular_color.rgb == vec3(1.0)) ? gl_Color.rgb : specular_color.rgb);
-		color.rgb = mix(color.rgb, specular_color.rgb*ref_tex, metalness);
+		vec3 spec_color= ((specular_color.r == specular_color.g && specular_color.r == specular_color.b) ? gl_Color.rgb : specular_color.rgb);
+		color.rgb = mix(color.rgb, spec_color*ref_tex, metalness);
 	}
 #else // !ENABLE_BUILDING_CUBE_MAP
 #ifdef ENABLE_CUBE_MAP_BUMP_MAPS
@@ -507,27 +529,7 @@ void main() {
 		alpha   = 1.0;
 	}
 	int blur_val = int(cube_map_reflect_mipmap_level + 0.5); // ranges from 1.0 (no blur) to around 256 (max blur)
-
-	if (blur_val > 0) { // add some blur
-		int mip_bias = 0;
-		int filt_sz  = 1;
-
-		// split blur logarithmically across mip bias and filter kernel size, to a max filter size of 7 (15x15)
-		// this provides the best quality vs. performance trade-off (mip bias is free but blocky and has seams; filter is smooth but expensive)
-		while (blur_val > 0) {
-			// Note: fliter_sz from 1=>2 is really a 1x1 to 3x3 transition, by we still use 2x to account for the Gaussian weights vs. box filter used for mipmaps
-			if (filt_sz  < 8) {--blur_val; filt_sz *= 2;}
-			if (blur_val > 0) {--blur_val; ++mip_bias;}
-		}
-		--filt_sz; // filt_sz of 0 is a 1x1 box
-		if      (filt_sz == 1) {color.rgb = cube_map_reflect_texture_filter(ref_dir, mip_bias, 1);}
-		else if (filt_sz == 3) {color.rgb = cube_map_reflect_texture_filter(ref_dir, mip_bias, 3);}
-		else if (filt_sz == 5) {color.rgb = cube_map_reflect_texture_filter(ref_dir, mip_bias, 5);}
-		else                   {color.rgb = cube_map_reflect_texture_filter(ref_dir, mip_bias, 7);}
-	}
-	else { // auto mipmaps + anisotropic filtering with no blur
-		color.rgb = texture(reflection_tex, ref_dir).rgb;
-	}
+	color.rgb    = apply_cube_map_blur(ref_dir, blur_val);
 	// use fresnel term to select between metallic specular color and monochrome fresnel specular color
 	vec3 spec_color = mix(specular_color.rgb, vec3((specular_color.r + specular_color.g + specular_color.b)/3.0), reflected.x);
 	color.rgb       = mix(t_color, color.rgb*spec_color, reflect_w);

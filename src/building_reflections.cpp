@@ -297,7 +297,7 @@ bool building_t::find_mirror_needing_reflection(vector3d const &xlate) const {
 }
 
 class cube_map_reflection_manager_t {
-	unsigned const tsize=1024; // 512 is faster; likely dominated by subpixel object drawing (bottles, text, etc.)
+	unsigned const tsize=512; // 512 is faster; likely dominated by subpixel object drawing (bottles, text, etc.)
 	unsigned tid=0;
 	float face_dist=0.0;
 	point center;
@@ -307,7 +307,7 @@ class cube_map_reflection_manager_t {
 public:
 	void capture(building_t const &building, point const &pos) {
 		bool interior_room(0), is_extb(0);
-		bool const sparse_update(building.has_mall() || building.is_industrial()); // slow case with many objects to draw
+		bool const sparse_update(0/*building.has_mall() || building.is_industrial()*/); // slow case with many objects to draw
 		float const floor_spacing(building.get_window_vspace());
 		int const room_id(building.get_room_containing_pt(pos));
 		cube_t scene_bounds;
@@ -328,7 +328,7 @@ public:
 			is_extb       = room.is_ext_basement();
 		}
 		face_dist = 0.25*(room_bounds.dx() + room_bounds.dy()); // average room half width
-		bool const enable_mipmaps(0); // not needed?
+		bool const enable_mipmaps(1); // only needed when blur is enabled
 
 		if (&building != last_building) { // new building, reset state
 			for (unsigned f = 0; f < 6; ++f) {last_update_pos[f] = all_zeros;}
