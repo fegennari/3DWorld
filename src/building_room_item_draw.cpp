@@ -1865,7 +1865,10 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			int mirror_dim(3); // 3=none
 			bool const using_custom_tid(building.bind_custom_clothing_texure(obj));
 			if (type == TYPE_SHOE && (obj.flags & RO_FLAG_ADJ_TOP)) {mirror_dim = 1;} // shoes may be mirrored in !obj.dim (Y in model space)
+			bool const is_metal(type == TYPE_SILVER || type == TYPE_KEY);
+			if (is_metal) {s.add_uniform_float("metalness", 1.0);}
 			draw_obj_model(*i, obj, s, xlate, obj_center, shadow_only, mirror_dim, using_custom_tid);
+			if (is_metal) {s.add_uniform_float("metalness", 0.0);}
 			obj_drawn = 1;
 		}
 		// check for security camera monitor if player is in this building; must be on and active
@@ -1893,6 +1896,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		colorRGBA const handle_color(building.get_door_handle_color());
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_DOOR_HANDLE)); // L, W, H
 		vector3d const exp_val((0.5/sz.z)*sz);
+		s.add_uniform_float("metalness", 1.0); // door handles are metal
 
 		for (door_handle_t const &h : door_handles) {
 			cube_t bc(h.center);
@@ -1921,6 +1925,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			building_obj_model_loader.draw_model(s, obj_center, bc, h.dir, handle_color, xlate, OBJ_MODEL_DOOR_HANDLE, shadow_only, 0, nullptr, 0, 0, 0, h.mirror);
 			obj_drawn = 1;
 		} // for h
+		s.add_uniform_float("metalness", 0.0); // reset
 	}
 	if (player_in_bldg_normal_pass) { // only drawn for the player building
 		// key/silverware/folded shirt: not drawn in the shadow or reflection passes; no emissive or rotated objects; no animations
@@ -1941,7 +1946,10 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 				if (c.dim) {swap_xy_mode = 1;}
 				dir = plus_z;
 			}
+			bool const is_metal(c.type == TYPE_SILVER || c.type == TYPE_KEY);
+			if (is_metal) {s.add_uniform_float("metalness", 1.0);}
 			building_obj_model_loader.draw_model(s, obj_center, c, dir, c.color, xlate, c.get_model_id(), shadow_only, 0, nullptr, 0, 0, 0, 0, 0, 0, 3, 0, swap_xy_mode);
+			if (is_metal) {s.add_uniform_float("metalness", 0.0);}
 			obj_drawn = 1;
 		} // for c
 	}

@@ -1447,17 +1447,25 @@ void building_room_geom_t::add_catwalk(room_object_t const &c) {
 	} // for end
 }
 
-void building_room_geom_t::add_obj_with_top_texture(room_object_t const &c, string const &text_name, colorRGBA const &sides_color, bool is_small) {
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_texture_by_name(text_name), 0.0), 1, 0, is_small)); // shadows
+void building_room_geom_t::add_obj_with_top_texture(room_object_t const &c, string const &text_name, colorRGBA const &sides_color, bool is_small, bool is_metal) {
+	tid_nm_pair_t tex(get_texture_by_name(text_name), 0.0);
+	if (is_metal) {tex.metalness = 0.5;} // somewhat reflective
+	rgeom_mat_t &mat(get_material(tex, 1, 0, is_small)); // shadows
 	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, ~EF_Z2, c.dim, (c.dim ^ c.dir ^ 1), c.dir); // top face only
-	unsigned const skip_faces(c.is_hanging() ? EF_Z2 : EF_Z12); // hanging keyboards nad laptops must draw the Z1 face
-	get_untextured_material(1, 0, is_small).add_cube_to_verts_untextured(c, apply_light_color(c, sides_color), skip_faces); // sides and maybe bottom, shadows
+	unsigned const skip_faces(c.is_hanging() ? EF_Z2 : EF_Z12); // hanging keyboards and laptops must draw the Z1 face
+	rgeom_mat_t &sides_mat(is_metal ? get_metal_material(1, 0, is_small) : get_untextured_material(1, 0, is_small));
+	sides_mat.add_cube_to_verts_untextured(c, apply_light_color(c, sides_color), skip_faces); // sides and maybe bottom, shadows
 }
-void building_room_geom_t::add_obj_with_front_texture(room_object_t const &c, string const &text_name, colorRGBA const &front_color, colorRGBA const &sides_color, bool is_small) {
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_texture_by_name(text_name), 0.0, 1), 1, 0, is_small)); // shadows
+void building_room_geom_t::add_obj_with_front_texture(room_object_t const &c, string const &text_name, colorRGBA const &front_color,
+	colorRGBA const &sides_color, bool is_small, bool is_metal)
+{
+	tid_nm_pair_t tex(get_texture_by_name(text_name), 0.0, 1);
+	if (is_metal) {tex.metalness = 0.5;} // somewhat reflective
+	rgeom_mat_t &mat(get_material(tex, 1, 0, is_small)); // shadows
 	unsigned const front_mask(get_face_mask(c.dim, c.dir));
 	mat.add_cube_to_verts(c, apply_light_color(c, front_color), zero_vector, front_mask, !c.dim, (c.dim ^ c.dir ^ 1), 0); // front face only
-	get_untextured_material(1, 0, is_small).add_cube_to_verts_untextured(c, apply_light_color(c, sides_color), ~front_mask); // sides, shadows
+	rgeom_mat_t &sides_mat(is_metal ? get_metal_material(1, 0, is_small) : get_untextured_material(1, 0, is_small));
+	sides_mat.add_cube_to_verts_untextured(c, apply_light_color(c, sides_color), ~front_mask); // sides, shadows
 }
 
 void building_room_geom_t::add_keyboard (room_object_t const &c) {add_obj_with_top_texture  (c, "interiors/keyboard.jpg", BKGRAY, 1);} // is_small=1
@@ -1586,11 +1594,11 @@ void building_room_geom_t::add_mwave(room_object_t const &c) {
 		body.d[!c.dim][!open_dir] = panel.d[!c.dim][open_dir]; // the other half
 		// draw the sides/top/back
 		unsigned const front_mask(get_face_mask(c.dim, c.dir));
-		rgeom_mat_t &untex_mat(get_untextured_material(1, 0, 1)); // shadowed, small
-		untex_mat.add_cube_to_verts_untextured(c, apply_light_color(c, GRAY), ~front_mask); // sides, shadows, is_small=1
+		get_metal_material(1, 0, 1).add_cube_to_verts_untextured(c, apply_light_color(c, GRAY), ~front_mask); // sides, shadows, is_small=1
 		// draw the interior
 		colorRGBA const interior_color(apply_light_color(c, WHITE));
 		float const wall_width(0.25*panel.get_sz_dim(!c.dim));
+		rgeom_mat_t &untex_mat(get_untextured_material(1, 0, 1)); // shadowed, small
 		add_interior_and_front_face(c, body, untex_mat, wall_width, front_mask, interior_color);
 		unsigned const door_front_mask(get_face_mask(!c.dim, open_dir));
 		colorRGBA const color(apply_light_color(c));
@@ -1610,7 +1618,7 @@ void building_room_geom_t::add_mwave(room_object_t const &c) {
 		get_material(tex, 1, 0, 1).add_cube_to_verts(panel, color, (panel_mx ? c.get_urc() : c.get_llc()), front_mask, !c.dim, panel_mx, 0); // shadows, is_small=1
 	}
 	else { // closed
-		add_obj_with_front_texture(c, texture_name, GRAY, 1); // is_small=1
+		add_obj_with_front_texture(c, texture_name, GRAY, 1, 1); // is_small=1, is_metal=1
 	}
 }
 
@@ -2496,14 +2504,16 @@ float get_filing_cabinet_drawers(room_object_t const &c, vect_cube_t &drawers) {
 }
 void building_room_geom_t::add_filing_cabinet(room_object_t const &c, bool inc_lg, bool inc_sm) {
 	colorRGBA const color(c.get_color());
-	if (inc_lg) {add_obj_with_front_texture(c, "interiors/filing_cabinet.png", color, 0);} // is_small=0
+	if (inc_lg) {add_obj_with_front_texture(c, "interiors/filing_cabinet.png", color, 0, 1);} // is_small=0, is_metal=1
 
 	if (inc_sm && c.drawer_flags != 0) { // add drawers and their contents if any drawer is open
 		vect_cube_t &drawers(get_temp_cubes());
 		vect_room_object_t &objects(get_temp_objects());
-		get_untextured_material(1, 0, 1); // ensure material is loaded
-		rgeom_mat_t &front_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/filing_cabinet_drawer.png"), 0.0, 1), 1, 0, 1)); // shadows, small
-		rgeom_mat_t &sides_mat(get_untextured_material(1, 0, 1)); // shadows, small
+		get_metal_material(1, 0, 1); // ensure material is loaded
+		tid_nm_pair_t tex(get_texture_by_name("interiors/filing_cabinet_drawer.png"), 0.0, 1);
+		tex.metalness = 0.5; // somewhat reflective
+		rgeom_mat_t &front_mat(get_material(tex, 1, 0, 1)); // shadows, small
+		rgeom_mat_t &sides_mat(get_metal_material(1, 0, 1)); // shadows, small
 		unsigned const front_mask(get_face_mask(c.dim, c.dir)), fb_mask(~get_skip_mask_for_xy(c.dim)), sides_mask(~get_skip_mask_for_xy(!c.dim));
 		colorRGBA const &drawers_color(apply_light_color(c, color));
 		get_filing_cabinet_drawers(c, drawers);
