@@ -1156,6 +1156,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 
 		for (auto c = objs.begin(); c != objs.end(); ++c) { // check for other objects to collide with (including stairs)
 			if (!c->is_player_collidable()) continue;
+			if (obj_z - radius > c->z2()) continue; // above the object
 			room_object const type(c->type);
 			if (on_attic_ladder && type == TYPE_ATTIC_DOOR) continue; // collision with attic door/ladder is handled above
 			bool const dim(c->dim), dir(c->dir);
@@ -1255,7 +1256,6 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 			}
 			else if (type == TYPE_CATWALK) {
 				if (!sphere_cube_intersect_xy(pos, xy_radius, *c)) continue;
-				if (obj_z - radius > c->z2()) continue; // above the catwalk
 				cube_t cubes[5];
 				get_catwalk_cubes(*c, cubes);
 				cube_t const &bot(cubes[0]);

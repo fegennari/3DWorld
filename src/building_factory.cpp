@@ -176,7 +176,7 @@ cube_t building_t::add_factory_ladders_and_catwalks(rand_gen_t &rgen, room_t con
 	// add catwalk above the entryway connecting the roofs of the two sub-rooms
 	cube_t const &entry(interior->ind_info->entrance_area);
 	float const doorway_width(get_doorway_width()), catwalk_width(1.1*doorway_width), catwalk_hwidth(0.5*catwalk_width), catwalk_height(0.5*window_vspace);
-	float const cw_lo(entry.d[edim][0] + 1.5*catwalk_hwidth), cw_hi(entry.d[edim][1] - 1.2*catwalk_hwidth), trim_thickness(get_trim_thickness());
+	float const cw_lo(entry.d[edim][0] + 2.0*catwalk_hwidth), cw_hi(entry.d[edim][1] - 1.2*catwalk_hwidth), trim_thickness(get_trim_thickness());
 	cube_t center_ladder;
 
 	if (cw_lo < cw_hi) { // should always be true
