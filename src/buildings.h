@@ -940,7 +940,7 @@ public:
 	void create_vbo(building_t const &building);
 	void create_vbo_inner();
 	void vao_setup(bool shadow_only);
-	void draw(tid_nm_pair_dstate_t &state, brg_batch_draw_t *bbd, int shadow_only, bool reflection_pass, bool exterior_geom);
+	void draw(tid_nm_pair_dstate_t &state, brg_batch_draw_t *bbd, int shadow_only, int reflection_pass, bool exterior_geom);
 	void pre_draw(int shadow_only) const;
 	void draw_geom() const;
 	void draw_inner(int shadow_only) const;
@@ -954,7 +954,7 @@ struct building_materials_t : public vector<rgeom_mat_t> {
 	unsigned count_all_verts() const;
 	rgeom_mat_t &get_material(tid_nm_pair_t const &tex, bool inc_shadows);
 	void create_vbos(building_t const &building);
-	void draw(brg_batch_draw_t *bbd, shader_t &s, int shadow_only, bool reflection_pass, bool exterior_geom=0);
+	void draw(brg_batch_draw_t *bbd, shader_t &s, int shadow_only, int reflection_pass, bool exterior_geom=0);
 	void upload_draw_and_clear(shader_t &s);
 };
 

@@ -17,7 +17,7 @@ quad_batch_draw candle_qbd;
 vect_room_object_t pending_objs;
 object_model_loader_t building_obj_model_loader;
 
-extern bool camera_in_building, player_in_tunnel, player_in_mall, building_alarm_active;
+extern bool camera_in_building, player_in_tunnel, player_in_mall, building_alarm_active, is_cube_map_reflection;
 extern int display_mode, frame_counter, animate2, player_in_basement, player_in_elevator;
 extern unsigned room_mirror_ref_tid;
 extern float fticks, office_chair_rot_rate, building_ambient_scale;
@@ -349,10 +349,11 @@ void brg_batch_draw_t::clear_ext_tiles() {
 }
 
 // shadow_only: 0=non-shadow pass, 1=shadow pass, 2=shadow pass with alpha mask texture
-void rgeom_mat_t::draw(tid_nm_pair_dstate_t &state, brg_batch_draw_t *bbd, int shadow_only, bool reflection_pass, bool exterior_geom) {
+void rgeom_mat_t::draw(tid_nm_pair_dstate_t &state, brg_batch_draw_t *bbd, int shadow_only, int reflection_pass, bool exterior_geom) {
 	assert(!(exterior_geom && shadow_only)); // exterior geom shadows are not yet supported
 	if (shadow_only && !en_shadows)         return; // shadows not enabled for this material (picture, whiteboard, rug, etc.)
 	if (shadow_only && tex.emissive == 1.0) return; // assume this is a light source and shouldn't produce shadows
+	if (reflection_pass == 2 && !en_shadows && tex.tid < 0)  return; // disable small non-shadow casting untextured objects in reflections (optimization)
 	if (reflection_pass && tex.tid == REFLECTION_TEXTURE_ID) return; // don't draw reflections of mirrors as this doesn't work correctly
 	if (bbd != nullptr  && tex.tid == REFLECTION_TEXTURE_ID) return; // only draw mirror reflections for player building (which has a null bbd)
 	if (num_verts == 0) return; // Note: should only happen when reusing materials and all objects using this material were removed
@@ -423,7 +424,7 @@ void building_materials_t::create_vbos(building_t const &building) { // up to ~1
 	for (iterator m = begin(); m != end(); ++m) {m->create_vbo(building);}
 	valid = 1;
 }
-void building_materials_t::draw(brg_batch_draw_t *bbd, shader_t &s, int shadow_only, bool reflection_pass, bool exterior_geom) {
+void building_materials_t::draw(brg_batch_draw_t *bbd, shader_t &s, int shadow_only, int reflection_pass, bool exterior_geom) {
 	if (!valid) return; // pending generation of data, don't draw yet
 	//highres_timer_t timer("Draw Materials"); // 0.0168
 	tid_nm_pair_dstate_t state(s);
@@ -1659,17 +1660,21 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	if (draw_lights)    {mats_lights .draw(bbd, s, shadow_only, reflection_pass);}
 	if (inc_small  )    {mats_dynamic.draw(bbd, s, shadow_only, reflection_pass);}
 	if (draw_detail_objs && inc_small >= 3) {mats_detail.draw(bbd, s, shadow_only, reflection_pass);} // now included in the shadow pass
+	bool const cube_map_ref(reflection_pass && is_cube_map_reflection);
 	
 	// draw exterior geom; shadows not supported; always use bbd;
 	// skip in reflection pass because that control flow doesn't work and is probably not needed (except for L-shaped house?)
-	if (!shadow_only && !reflection_pass && player_in_basement < 2) { // skip for player fully in the basement
+	if (!shadow_only && !reflection_pass && player_in_basement < 2 && !cube_map_ref) { // skip for player fully in the basement
 		// is there a way to incrementally blend/dither this geometry in? it's not drawn in the correct order for alpha blending to work
 		mats_exterior.draw(bbd_in, s, shadow_only, reflection_pass, 1); // exterior_geom=1
 		if (draw_detail_objs) {mats_ext_detail.draw(bbd_in, s, shadow_only, reflection_pass, 1);} // exterior_geom=1
 	}
 	if (!draw_ext_only) {mats_doors.draw(bbd, s, shadow_only, reflection_pass);}
-	if (inc_small     ) {mats_small.draw(bbd, s, shadow_only, reflection_pass);}
 
+	if (inc_small) {
+		int const ref_pass(reflection_pass ? (cube_map_ref ? 2 : 1) : 0); // set ref_pass=1 for cube maps to disable small non-shadow casting untextured objects
+		mats_small.draw(bbd, s, shadow_only, ref_pass);
+	}
 	if (!mats_amask.empty() && !draw_ext_only) { // draw plant leaves, spider webs, etc. using alpha masks in the detail pass
 		if (shadow_only) {
 			if (!amask_shader.is_setup()) {amask_shader.begin_simple_textured_shader(0.9);} // need to use texture with alpha test
@@ -1699,7 +1704,9 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			s.make_current(); // switch back to the normal shader
 		}
 	}
-	if (draw_int_detail_objs) {mats_text.draw(bbd, s, shadow_only, reflection_pass);} // text must be drawn last; drawn as interior detail objects
+	if (draw_int_detail_objs && !cube_map_ref) { // not for cube map reflections
+		mats_text.draw(bbd, s, shadow_only, reflection_pass); // text must be drawn last; drawn as interior detail objects
+	}
 	if (!shadow_only) {disable_blend();}
 	indexed_vao_manager_with_shadow_t::post_render();
 	if (draw_ext_only) return; // done
@@ -2084,7 +2091,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		s.add_uniform_float("refract_ix", 1.6); // refractive glass windows, tables, etc.
 		mats_alpha.draw(bbd, s, shadow_only, reflection_pass);
 		s.add_uniform_float("refract_ix", 1.0); // reset
-		if (inc_small) {mats_alpha_sm.draw(bbd, s, shadow_only, reflection_pass);} // bottles, etc.
+		if (inc_small && !cube_map_ref) {mats_alpha_sm.draw(bbd, s, shadow_only, reflection_pass);} // bottles, etc.
 		glDepthMask(GL_TRUE);
 		disable_blend();
 		indexed_vao_manager_with_shadow_t::post_render();

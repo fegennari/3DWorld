@@ -5,7 +5,7 @@
 #include "buildings.h"
 #include "shaders.h"
 
-bool disable_city_shadow_maps(0), mirror_in_ext_basement(0);
+bool disable_city_shadow_maps(0), mirror_in_ext_basement(0), is_cube_map_reflection(0);
 unsigned room_mirror_ref_tid(0);
 point pre_reflect_camera_pos_bs;
 cube_t reflection_clip_cube;
@@ -344,6 +344,7 @@ public:
 		float const near_plane(max(NEAR_CLIP, 0.001f*far_plane)), update_dist(0.05*CAMERA_RADIUS);
 		vector3d const xlate(get_tiled_terrain_model_xlate());
 		pre_reflect_camera_pos_bs = camera_pos - xlate;
+		is_cube_map_reflection    = 1;
 		cube_t ref_cube;
 		ref_cube.set_from_sphere(center, 20.0*floor_spacing); // optimization: limit model drawing to a reasonable distance
 		ref_cube.intersect_with_cube(scene_bounds);
@@ -383,6 +384,7 @@ public:
 		up_vector  = prev_up_vector;
 		cview_dir  = pre_ref_cview_dir;
 		pre_reflect_camera_pos_bs = zero_vector; // disable
+		is_cube_map_reflection    = 0;
 		reflection_clip_cube.set_to_zeros();
 		glClearColor_rgba(orig_clear_color); // restore clear color
 		restore_default_viewport_and_matrices();
