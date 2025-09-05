@@ -1817,6 +1817,7 @@ void building_room_geom_t::draw_shower_head(room_object_t const &shower, float r
 	// draw shower head nozzles using a custom texture
 	tid_nm_pair_t tex(get_texture_by_name("interiors/pegboard.png"), 1.0, 1); // shadowed
 	tex.set_specular_color(WHITE, 0.8, 60.0);
+	tex.metalness = 0.5; // somewhat reflective
 	rgeom_mat_t &head_mat(get_material(tex, 1, 0, 1)); // shadowed, small
 	head_mat.add_cylin_to_verts(base_pos, head_pos, 0.01*radius, 0.07*radius, color, 0, 1, 0, 0, 1.0, 0.5, 1); // skip_sides=1; draw top/end only
 }
@@ -2941,6 +2942,7 @@ void building_room_geom_t::add_duct(room_object_t const &c) {
 		tscales[w2 ] = 1.0/width2;
 		tid_nm_pair_t tex(get_cube_duct_tid(), -1, 0.0, 0.0, 1); // shadowed
 		tex.set_specular_color(WHITE, 0.8, 60.0); // set metal specular
+		tex.metalness = 0.25; // slightly reflective
 		colorRGBA const color(apply_light_color(c));
 
 		// each face must be drawn with a different texture scale, so three cubes drawn
