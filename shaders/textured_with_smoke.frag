@@ -459,8 +459,8 @@ void main() {
 #endif // ENABLE_REFLECTIONS
 
 #ifdef ENABLE_CUBE_MAP_REFLECT
-#ifdef ENABLE_BUILDING_CUBE_MAP // only applies to metal materials
-	if (metalness > 0.0 && specular_color.rgb != vec3(0.0) && gl_Color.rgb != vec3(0.0)) {
+#ifdef ENABLE_BUILDING_CUBE_MAP // handle metal and glass reflections
+	if ((metalness > 0.0 && specular_color.rgb != vec3(0.0) && gl_Color.rgb != vec3(0.0)) || refract_ix > 1.0) {
 		vec3 view_dir  = normalize(vpos - camera_pos);
 		vec3 ws_normal = normalize(normal_s);
 		vec3 ref_dir   = reflect(view_dir, ws_normal);
@@ -472,12 +472,19 @@ void main() {
 		float dist         = min(min(furthestPlane.x, furthestPlane.y), furthestPlane.z);
 		vec3 intersectPosition = vpos + ref_dir * dist;
 		ref_dir = intersectPosition - cube_map_center;
-		float shininess= specular_color.a; // typically 1-80
-		int blur_val   = max(0, int((80.0 - shininess)/10.0));
-		vec3 ref_tex   = apply_cube_map_blur(ref_dir, blur_val);
-		// white specular: modulate with material color (for different shades of metal)
-		vec3 spec_color= ((specular_color.r == specular_color.g && specular_color.r == specular_color.b) ? gl_Color.rgb : specular_color.rgb);
-		color.rgb = mix(color.rgb, spec_color*ref_tex, metalness);
+
+		if (metalness > 0.0) { // metal
+			float shininess= specular_color.a; // typically 1-80
+			int blur_val   = max(0, int((80.0 - shininess)/10.0));
+			vec3 ref_tex   = apply_cube_map_blur(ref_dir, blur_val);
+			// white specular: modulate with material color (for different shades of metal)
+			vec3 spec_color= ((specular_color.r == specular_color.g && specular_color.r == specular_color.b) ? gl_Color.rgb : specular_color.rgb);
+			color.rgb = mix(color.rgb, spec_color*ref_tex, metalness);
+		}
+		else { // glass/dielectric
+			vec2 reflected = get_reflect_weight(-view_dir, ws_normal, reflectivity2, refract_ix); // {fresnel_term, reflect_weight}
+			color = mix(color, vec4(texture(reflection_tex, ref_dir).rgb, 1.0), reflected.y);
+		}
 	}
 #else // !ENABLE_BUILDING_CUBE_MAP
 #ifdef ENABLE_CUBE_MAP_BUMP_MAPS
@@ -491,7 +498,7 @@ void main() {
 #endif
 	float ref_ix    = refract_ix;
 	vec3 view_dir   = normalize(vpos - camera_pos);
-	vec2 reflected  = get_reflect_weight(-view_dir, ws_normal, reflectivity2, ref_ix);
+	vec2 reflected  = get_reflect_weight(-view_dir, ws_normal, reflectivity2, ref_ix); // {fresnel_term, reflect_weight}
 	vec3 reflect_w  = reflected.y*spec_scale; // use reflected weight including metalness
 	vec3 rel_pos    = vpos - cube_map_center;
 	rel_pos         = max(vec3(-cube_map_near_clip), min(vec3(cube_map_near_clip), rel_pos)); // clamp to cube bounds

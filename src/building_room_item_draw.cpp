@@ -2081,8 +2081,10 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	if (!shadow_only && (!mats_alpha.empty() || (inc_small && !mats_alpha_sm.empty()))) { // draw last; not shadow casters; for shower glass, etc.
 		enable_blend();
 		glDepthMask(GL_FALSE); // disable depth writing
+		s.add_uniform_float("refract_ix", 1.6); // refractive glass windows, tables, etc.
 		mats_alpha.draw(bbd, s, shadow_only, reflection_pass);
-		if (inc_small) {mats_alpha_sm.draw(bbd, s, shadow_only, reflection_pass);}
+		s.add_uniform_float("refract_ix", 1.0); // reset
+		if (inc_small) {mats_alpha_sm.draw(bbd, s, shadow_only, reflection_pass);} // bottles, etc.
 		glDepthMask(GL_TRUE);
 		disable_blend();
 		indexed_vao_manager_with_shadow_t::post_render();
