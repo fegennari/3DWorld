@@ -2185,6 +2185,7 @@ void building_room_geom_t::remove_object(unsigned obj_id, point const &at_pos, b
 		invalidate_lights_geom();
 	}
 	update_draw_state_for_room_object(old_obj, building, 1);
+	register_reflection_update();
 	building.check_for_water_splash(cube_bot_center(old_obj), 0.8);
 }
 

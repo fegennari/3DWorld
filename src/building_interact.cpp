@@ -183,6 +183,7 @@ void building_t::register_light_state_change(room_object_t const &light, point c
 	if (!is_lamp) {interior->room_geom->invalidate_lights_geom();} // recreate light geom with correct emissive properties if not a lamp; deferred until next draw pass
 	gen_sound_thread_safe(SOUND_CLICK, local_to_camera_space(sound_pos));
 	register_building_sound(sound_pos, 0.1);
+	register_reflection_update();
 	float const fear_amt((light.is_light_on() ? 1.0 : 0.5)*(is_lamp ? 0.5 : 1.0)); // max fear from lights turning on; lamps are half as much fear
 
 	for (rat_t &rat : interior->room_geom->rats) { // light change scares rats
@@ -1048,6 +1049,7 @@ void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_buildin
 	if (!door.get_for_closet()) {interior->door_state_updated = 1;} // required for AI navigation logic to adjust to this change; what about backrooms doors?
 	if (has_room_geom()) {interior->room_geom->invalidate_door_geom();} // need to recreate doors VBO
 	check_for_water_splash(cube_bot_center(door), 2.0); // big splash
+	register_reflection_update();
 
 	if (player_in_this_building || by_player) { // is it really safe to call this from the AI thread?
 		point door_center(door.xc(), door.yc(), actor_pos.z);

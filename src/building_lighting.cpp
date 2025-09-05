@@ -798,6 +798,7 @@ class building_indir_light_mgr_t {
 			} // for splits
 		} // for n
 		is_running = 0; // flag as done
+		register_reflection_update();
 	}
 	void wait_for_finish(bool force_kill) {
 		// Note: for now the time taken to process a light should be pretty fast so we just block until finished; set kill_thread=1 to be faster

@@ -331,7 +331,7 @@ public:
 		bool const enable_mipmaps(1); // only needed when blur is enabled
 
 		if (&building != last_building) { // new building, reset state
-			for (unsigned f = 0; f < 6; ++f) {last_update_pos[f] = all_zeros;}
+			force_update();
 			last_building = &building;
 		}
 		if (!tid) {setup_cube_map_texture(tid, tsize, 1, enable_mipmaps, 4.0);} // allocate=1, aniso=4.0
@@ -395,6 +395,10 @@ public:
 		if (tid == 0) return; // no reflections captured
 		setup_shader_cube_map_params(s, center, face_dist, tid, tsize); // pass face_dist in as near_plane as this cube map does not bound an object
 	}
+	void force_update() {
+		if (tid == 0) return; // disabled
+		for (unsigned f = 0; f < 6; ++f) {last_update_pos[f] = all_zeros;}
+	}
 };
 cube_map_reflection_manager_t cube_map_reflection_manager;
 
@@ -403,4 +407,5 @@ void setup_player_building_cube_map() {
 	cube_map_reflection_manager.capture(*player_building, get_camera_building_space());
 }
 void bind_player_building_cube_map(shader_t &s) {cube_map_reflection_manager.bind(s);}
+void register_reflection_update() {cube_map_reflection_manager.force_update();}
 
