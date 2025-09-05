@@ -543,7 +543,7 @@ rgeom_mat_t &building_room_geom_t::get_metal_material(bool inc_shadows, bool dyn
 }
 tid_nm_pair_t get_scratched_metal_tex(float tscale, bool inc_shadows) {
 	tid_nm_pair_t tex(get_texture_by_name("metals/60_scratch_metal.jpg"), tscale, inc_shadows);
-	tex.set_metal_specular(WHITE);
+	tex.set_metal_specular(WHITE, 0.5, 40.0); // less shiny
 	tex.metalness = 0.5; // half reflective
 	return tex;
 }

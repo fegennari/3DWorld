@@ -776,7 +776,7 @@ void building_room_geom_t::add_shower_drain(cube_t const &bottom, colorRGBA cons
 }
 
 void building_room_geom_t::add_drain_pipe(room_object_t const &c) { // is_small=1
-	rgeom_mat_t &mat(get_untextured_material(0, 0, 1)); // unshadowed, small
+	rgeom_mat_t &mat(get_metal_material(0, 0, 1)); // unshadowed, small
 	colorRGBA const color(apply_light_color(c));
 
 	if (c.dir) { // horizontal (urinal)
@@ -2981,7 +2981,7 @@ void building_room_geom_t::add_warning_light(room_object_t const &c) {
 	base.z2() = light.z1() = top.z1() + 0.3*top.dz(); // c.z1() + 0.65*height
 	light.expand_by_xy(-0.05*radius); // slight shrink
 	pole .expand_by_xy(-0.85*radius);
-	rgeom_mat_t &base_pole_mat(get_untextured_material(1, 0, 1)); // shadowed, small
+	rgeom_mat_t &base_pole_mat(get_metal_material(1, 0, 1)); // shadowed, small
 	base_pole_mat.add_vcylin_to_verts(pole, apply_light_color(c,    GRAY), 0, 0); // sides only
 	base_pole_mat.add_vcylin_to_verts(base, apply_light_color(c, LT_GRAY), 1, 1); // sides + top and bottom
 	rgeom_mat_t &light_mat(get_material(tid_nm_pair_t((is_on ? RED_TEX : -1), 0.0, 1), 1, 0, 1)); // shadowed, small
@@ -3196,7 +3196,7 @@ void building_room_geom_t::add_elevator(room_object_t const &c, elevator_t const
 	}
 	// add button panel
 	cube_t const panel(get_elevator_car_panel(c, fc_thick_scale));
-	get_untextured_material(0, 1).add_cube_to_verts_untextured(panel, DK_GRAY, ~front_face_mask);
+	get_untextured_material(0, 1).add_cube_to_verts_untextured(panel, DK_GRAY, ~front_face_mask); // metal? if metal, this breaks the text alpha blending
 	// add floor numbers to the panel; buttons are added in building_t::add_stairs_and_elevators()
 	unsigned const num_floors(c.drawer_flags), cur_floor(c.item_flags);
 	assert(num_floors > 1);
@@ -3287,7 +3287,7 @@ void building_room_geom_t::add_elevator(room_object_t const &c, elevator_t const
 void building_room_geom_t::add_elevator_doors(elevator_t const &e, float fc_thick_scale) {
 	float const spacing(e.get_wall_thickness()), open_door_width(1.12*e.get_frame_width());
 	float const closed_door_width(0.995*0.5*e.get_sz_dim(!e.dim)); // slightly smaller than width to leave a small crack for the player to see out of
-	rgeom_mat_t &mat(get_untextured_material(1, 1));
+	rgeom_mat_t &mat(get_metal_material(1, 1));
 	assert(e.car_obj_id < objs.size());
 	room_object_t const &car(objs[e.car_obj_id]); // elevator car for this elevator
 	float const z2_offset(get_elevator_z2_offset(e, car, fc_thick_scale));
@@ -3528,7 +3528,7 @@ void building_room_geom_t::add_picture(room_object_t const &c) { // also whitebo
 	frame_mat.add_cube_to_verts_untextured(frame, (whiteboard ? GRAY : BLACK), skip_faces);
 	
 	if (whiteboard) { // add a marker ledge
-		get_untextured_material(1).add_cube_to_verts_untextured(get_whiteboard_marker_ledge(c), GRAY, (1 << (2*(2-c.dim) + !c.dir))); // shadowed
+		get_metal_material(1).add_cube_to_verts_untextured(get_whiteboard_marker_ledge(c), GRAY, (1 << (2*(2-c.dim) + !c.dir))); // shadowed
 	}
 	else if (c.rotates()) { // apply a random rotation
 		float const angle(0.2f*(fract(PI*c.obj_id + 1.61803f*c.item_flags) - 0.5f)); // random rotation based on obj_id and item flags
@@ -4410,7 +4410,7 @@ void building_room_geom_t::add_trashcan(room_object_t const &c) {
 			front_mat.add_cube_to_verts(front, colorRGBA(1.0, 0.9, 0.65), c.get_llc(), (~get_face_mask(c.dim, !c.dir) | EF_Z1)); // skip back and bottom
 		}
 	}
-	else { // smaller house/office trashcan
+	else { // smaller house/office plastic trashcan
 		rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
 
 		if (c.shape == SHAPE_CYLIN) {
@@ -5564,7 +5564,7 @@ void building_room_geom_t::add_switch(room_object_t const &c, bool draw_detail_p
 	}
 }
 
-void building_room_geom_t::add_breaker(room_object_t const &c) {
+void building_room_geom_t::add_breaker(room_object_t const &c) { // the switch itself
 	unsigned const skip_faces(~get_face_mask(c.dim, c.dir)); // skip face that's against the wall
 	vector3d const sz(c.get_size());
 	cube_t plate(c), rocker(c);
@@ -6401,7 +6401,7 @@ void building_room_geom_t::add_vent_fan_frame(room_object_t const &c) {
 	for (unsigned inv = 0; inv < 2; ++inv) { // draw two sided
 		mat.add_cube_to_verts(housing, color, llc, get_skip_mask_for_xy(c.dim), 0, 0, 0, bool(inv)); // skip front and back
 	}
-	if (extends_outside) { // draw the missing circular back of the motor
+	if (extends_outside) { // draw the missing circular back of the motor; not metal because the fan itself isn't flagged as metal
 		float const radius(0.073*c.dz());
 		point motor_back(0.0, 0.0, c.zc());
 		motor_back[ c.dim] = c.d[c.dim][!c.dir];
@@ -6738,7 +6738,7 @@ void building_room_geom_t::add_pet_cage(room_object_t const &c) {
 	cube_t top_bars(top);
 	top_bars.z1() = top.z2() - bar_thick;
 	add_grid_of_bars(metal_mat, color, top_bars, num_xy_bars[0], num_xy_bars[1], bar_hthick, bar_hthick, 0, 1);
-	// add bottom tray
+	// add bottom plastic tray
 	get_untextured_material(1, 0, 1).add_cube_to_verts_untextured(tray, apply_light_color(c, BKGRAY), EF_Z12); // shadowed, small; skip top and bottom
 	// add wood chips in tray
 	rgeom_mat_t &gravel_mat(get_material(tid_nm_pair_t(get_texture_by_name("wood_chips.jpg"), 2.0/sz.z), 1, 0, 1)); // shadowed, small

@@ -1594,7 +1594,7 @@ bool building_t::add_mall_table_with_chairs(rand_gen_t &rgen, cube_t const &tabl
 				table_side.d[!dim][rgen.rand_bool()] = table_obj.get_center_dim(!dim); // place to one side (not across the center)
 				gen_xy_pos_for_cube_obj(tray, table_side, tray_sz, tray_height, rgen);
 				if (has_bcube_int(tray, objs, objs_start)) continue;
-				objs.emplace_back(tray, TYPE_FOOD_TRAY, room_id, !dim, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_ROUNDED_CUBE, GRAY);
+				objs.emplace_back(tray, TYPE_FOOD_TRAY, room_id, !dim, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_ROUNDED_CUBE, LT_GRAY);
 			}
 		}
 	}
