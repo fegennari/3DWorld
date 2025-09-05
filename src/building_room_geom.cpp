@@ -4480,7 +4480,7 @@ void building_room_geom_t::add_bucket(room_object_t const &c, bool draw_metal, b
 		if (liquid_level <= 0.0) return; // no liquid
 		float const radius(c.get_radius()*(liquid_level + (1.0 - liquid_level)*bot_rscale));
 		point const center(c.xc(), c.yc(), (c.z1() + liquid_level*c.dz()));
-		get_untextured_material(0, 0, 0, 1).add_vert_disk_to_verts(center, radius, 0, apply_light_color(c, liquid_color)); // unshadowed, transparent
+		get_untextured_material(0, 0, 1, 1).add_vert_disk_to_verts(center, radius, 0, apply_light_color(c, liquid_color)); // unshadowed, transparent, small
 	}
 }
 

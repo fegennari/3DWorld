@@ -188,7 +188,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_INT_WINDOW] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1,  0.0,  0.0,   "window"); // window in interior wall between two rooms
 	bldg_obj_types[TYPE_INT_LADDER] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 50.0,  40.0,  "ladder"); // should factory/industrial ladders be pickup objects?
 	bldg_obj_types[TYPE_MACHINE   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 2,  0.0,  0.0,   "machine");
-	bldg_obj_types[TYPE_BUCKET    ] = bldg_obj_type_t(0, 1, 1, 1, 0, 0, 3,  8.0,  1.0,   "bucket"); // with transparent liquid
+	bldg_obj_types[TYPE_BUCKET    ] = bldg_obj_type_t(0, 1, 1, 1, 0, 0, 2,  8.0,  1.0,   "bucket"); // with transparent liquid
 	bldg_obj_types[TYPE_SPIWEB    ] = bldg_obj_type_t(0, 0, 0, 0, 0, 0, 2,  0.0,  0.0,   "spider web");
 	bldg_obj_types[TYPE_TREE      ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 3,  0.0,  1000.0,"tree"); // similar to plants; only in basement malls
 	bldg_obj_types[TYPE_THEFT_SENS] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 100.0, 30.0,  "theft sensor");
