@@ -1251,6 +1251,7 @@ void draw_candle_flames() {
 class water_draw_t {
 	rgeom_mat_t mat;
 	float tex_off;
+	rand_gen_t rgen;
 
 	void apply_vert_texture(unsigned verts_start, float tscale, float speed) {
 		speed *= tex_off;
@@ -1272,30 +1273,35 @@ public:
 		mat.add_vcylin_to_verts(c, colorRGBA(WHITE, 0.5), 0, 0, 0, 0, 1.0, 1.0, 0.2);
 		apply_vert_texture(verts_start, 1.2, 1.0);
 	}
-	void add_water_for_shower(room_object_t const &obj) {
+	void add_water_for_shower(room_object_t const &obj, particle_manager_t &particle_manager) {
 		if (!obj.is_active()) return;
 		point head_pos;
 		vector3d head_dir;
 		get_shower_head_pos_dir(obj, head_pos, head_dir);
 		colorRGBA const color(WHITE, 0.4);
 		unsigned const verts_start(mat.itri_verts.size()), num_streams(12);
-		float const delta_angle(TWO_PI/num_streams), height(obj.dz()), max_dist(2.0*height);
+		float const delta_angle(TWO_PI/num_streams), height(obj.dz()), max_dist(2.0*height), water_height(0.005*height);
 		float const width(0.5*(obj.dx() + obj.dy())), head_radius(0.07*width), spread_radius(0.75*head_radius);
 		float const spray_radius_top(0.04*head_radius), spray_radius_bot(0.12*head_radius), spread_radius_bot(7.0*spread_radius);
 		vector3d d_ref(vector_from_dim_dir(obj.dim, obj.dir));
 		vector3d const d1(cross_product(d_ref, head_dir).get_norm()), d2(cross_product(d1, head_dir).get_norm());
+		float const spash_prob(min(1.0, 0.8/fticks));
+		unsigned const splash_stream_ix(rgen.rand() % round_fp(num_streams/spash_prob)); // may select an index larger than num_streams
 
 		for (unsigned n = 0; n < num_streams; ++n) {
 			float const theta(n*delta_angle);
 			vector3d const offset(sin(theta)*d1 + cos(theta)*d2);
 			point water_start(head_pos + spread_radius*offset), water_end(head_pos + spread_radius_bot*offset + max_dist*head_dir);
 			do_line_clip(water_start, water_end, obj.d); // should only clip water_end
-			water_end += 2.0*spray_radius_bot*head_dir; // extend a bit further into the floor
-			mat.add_cylin_to_verts(water_end, water_start, spray_radius_bot, spray_radius_top, color, 0, 0); // no ends
+			point const ray_end(water_end + 2.0*spray_radius_bot*head_dir); // extend a bit further into the floor
+			mat.add_cylin_to_verts(ray_end, water_start, spray_radius_bot, spray_radius_top, color, 0, 0); // no ends
+			if (n != splash_stream_ix) continue; // no splash for this stream
+			water_end.z += water_height; // place above the water plane
+			particle_manager.add_particle(water_end, zero_vector, WHITE, 2.5*spray_radius_bot, PART_EFFECT_SPLASH);
 		} // for n
 		apply_vert_texture(verts_start, 4.0, 3.0);
 		// draw a puddle on the floor
-		point puddle_center(obj.xc(), obj.yc(), (obj.z1() + 0.01*height));
+		point puddle_center(obj.xc(), obj.yc(), (obj.z1() + water_height));
 		puddle_center[obj.dim] += (obj.dir ? -1.0 : 1.0)*0.15*width; // move further from the wall, closer to where the water hits
 		float const puddle_radius((0.4 + 0.01*sin(TWO_PI*tex_off + 100.0*(puddle_center.x + puddle_center.y)))*width); // slightly changes over time, different for each shower
 		mat.add_disk_to_verts(puddle_center, puddle_radius, plus_z, color);
@@ -2059,7 +2065,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			}
 			else if (i->is_shower()) { // Note: only closest shower plays water sound
 				if (i->room_id == camera_room) {water_sound_manager.register_running_water(*i, building);}
-				water_draw.add_water_for_shower(*i);
+				water_draw.add_water_for_shower(*i, particle_manager);
 			}
 			if (!reflection_pass && i->z1() < camera_bs.z && i->z1() > ao_zmin - max(0.0f, (i->dz() - floor_spacing))) {
 				// camera not below or too far above this object; handle tall objects
