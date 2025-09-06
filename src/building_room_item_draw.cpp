@@ -41,6 +41,7 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj);
 int get_toilet_paper_nm_id();
 void setup_monitor_screen_draw(room_object_t const &monitor, rgeom_mat_t &mat, std::string &onscreen_text);
 void add_tv_or_monitor_screen(room_object_t const &c, rgeom_mat_t &mat, std::string const &onscreen_text, rgeom_mat_t *text_mat);
+void get_shower_head_pos_dir(room_object_t const &c, point &head_pos, vector3d &head_dir);
 bool check_clock_time();
 bool have_fish_model();
 void register_fishtank(room_object_t const &obj, bool is_visible);
@@ -1250,6 +1251,11 @@ void draw_candle_flames() {
 class water_draw_t {
 	rgeom_mat_t mat;
 	float tex_off;
+
+	void apply_vert_texture(unsigned verts_start, float tscale, float speed) {
+		speed *= tex_off;
+		for (auto i = mat.itri_verts.begin() + verts_start; i != mat.itri_verts.end(); ++i) {i->t[1] *= tscale; i->t[1] += speed;}
+	}
 public:
 	water_draw_t() : mat(rgeom_mat_t(tid_nm_pair_t(FOAM_TEX))), tex_off(0.0) {}
 
@@ -1264,11 +1270,30 @@ public:
 		set_cube_zvals(c, (obj.z1() + (is_cube ? 0.7 : 0.6)*dz), (obj.z1() + (is_cube ? 1.3 : 0.925)*dz));
 		unsigned const verts_start(mat.itri_verts.size());
 		mat.add_vcylin_to_verts(c, colorRGBA(WHITE, 0.5), 0, 0, 0, 0, 1.0, 1.0, 0.2);
-		for (auto i = mat.itri_verts.begin() + verts_start; i != mat.itri_verts.end(); ++i) {i->t[1] *= 1.2; i->t[1] += tex_off;}
+		apply_vert_texture(verts_start, 1.2, 1.0);
 	}
 	void add_water_for_shower(room_object_t const &obj) {
 		if (!obj.is_active()) return;
-		// TODO
+		point head_pos;
+		vector3d head_dir;
+		get_shower_head_pos_dir(obj, head_pos, head_dir);
+		colorRGBA const color(WHITE, 0.4);
+		unsigned const verts_start(mat.itri_verts.size()), num_streams(12);
+		float const delta_angle(TWO_PI/num_streams), max_dist(2.0*obj.dz());
+		float const radius(0.5*(obj.dx() + obj.dy())), head_radius(0.07*radius), spread_radius(0.75*head_radius);
+		float const spray_radius_top(0.04*head_radius), spray_radius_bot(0.12*head_radius), spread_radius_bot(7.0*spread_radius);
+		vector3d d_ref(vector_from_dim_dir(obj.dim, obj.dir));
+		vector3d const d1(cross_product(d_ref, head_dir).get_norm()), d2(cross_product(d1, head_dir).get_norm());
+
+		for (unsigned n = 0; n < num_streams; ++n) {
+			float const theta(n*delta_angle);
+			vector3d const offset(sin(theta)*d1 + cos(theta)*d2);
+			point water_start(head_pos + spread_radius*offset), water_end(head_pos + spread_radius_bot*offset + max_dist*head_dir);
+			do_line_clip(water_start, water_end, obj.d); // should only clip water_end
+			water_end += 2.0*spray_radius_bot*head_dir; // extend a bit further into the floor
+			mat.add_cylin_to_verts(water_end, water_start, spray_radius_bot, spray_radius_top, color, 0, 0); // no ends
+		} // for n
+		apply_vert_texture(verts_start, 4.0, 3.0);
 	}
 	void draw_and_clear(shader_t &s) {
 		if (mat.empty()) return;
