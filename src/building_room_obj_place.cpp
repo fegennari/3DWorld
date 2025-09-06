@@ -3558,7 +3558,7 @@ void building_t::add_coatrack_by_door(rand_gen_t &rgen, room_t const &room, floa
 	if (!is_room_adjacent_to_ext_door(room, zval, 0, &door)) return; // no door; front_door_only=0
 	float const floor_spacing(get_window_vspace()), height(0.7*floor_spacing), radius(0.1*floor_spacing);
 	cube_t door_path, place_area;
-	bool const dim(get_door_path_and_place_area(door, room, door_path, place_area));
+	get_door_path_and_place_area(door, room, door_path, place_area);
 	if (place_area.get_size_xy().get_min_val() < 2.5*radius) return; // too small; shouldn't happen
 	place_area.z2() = zval;
 	cube_t coatrack;
@@ -3567,7 +3567,6 @@ void building_t::add_coatrack_by_door(rand_gen_t &rgen, room_t const &room, floa
 		gen_xy_pos_for_round_obj(coatrack, place_area, radius, height, radius, rgen);
 		if (coatrack.intersects_xy(door_path) || overlaps_other_room_obj(coatrack, objs_start)) continue;
 		if (interior->is_cube_close_to_doorway(coatrack, room, 0.0, 1, 0) || interior->is_blocked_by_stairs_or_elevator(coatrack)) continue; // not checking ext door
-		unsigned const item_flags(rgen.rand()); // random shoe sub-model
 		interior->room_geom->objs.emplace_back(coatrack, TYPE_COAT_RACK, room_id, 0, 0, 0, tot_light_amt, SHAPE_CYLIN, WHITE);
 		// add items on the coat rack such as shirts and hats?
 		break;
