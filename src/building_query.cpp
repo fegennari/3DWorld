@@ -1627,7 +1627,7 @@ bool building_interior_t::check_sphere_coll_room_objects(building_t const &build
 		if (c == self || type == TYPE_BLOCKER || type == TYPE_PAPER || type == TYPE_PEN || type == TYPE_PENCIL || c->is_a_drink() || type == TYPE_FLOORING || type == TYPE_SIGN ||
 			type == TYPE_WBOARD || type == TYPE_WALL_TRIM || type == TYPE_DRAIN || type == TYPE_CRACK || type == TYPE_SWITCH || type == TYPE_BREAKER || type == TYPE_OUTLET ||
 			type == TYPE_VENT || type == TYPE_WIND_SILL || type == TYPE_TEESHIRT || type == TYPE_PANTS || type == TYPE_BLANKET || type == TYPE_FOLD_SHIRT ||
-			type == TYPE_SPIWEB || type == TYPE_ELEC_WIRE || type == TYPE_TESTTUBE) continue;
+			type == TYPE_SPIWEB || type == TYPE_ELEC_WIRE || type == TYPE_TESTTUBE || type == TYPE_O_SHOWER) continue;
 		if (type == TYPE_RAILING && (!(c->flags & RO_FLAG_TOS) || !c->is_open())) continue; // only railings at the top of stairs (non-sloped) with balusters have collisions
 		if (type == TYPE_POOL_TILE && c->no_coll()) continue;
 		cube_t bc(get_true_room_obj_bcube(*c));
