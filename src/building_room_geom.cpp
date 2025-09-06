@@ -3513,7 +3513,7 @@ void building_room_geom_t::add_picture(room_object_t const &c) { // also whitebo
 	unsigned skip_faces(get_face_mask(c.dim, c.dir)); // only the face oriented outward
 	bool const mirror_x(c.dim ^ c.dir ^ 1);
 	point const tex_origin(c.get_llc());
-	get_untextured_material(); // ensure frame material is valid
+	if (whiteboard) {get_metal_material();} else {get_untextured_material();} // ensure frame material is valid
 	rgeom_mat_t &picture_mat(get_material(tid_nm_pair_t(picture_tid, 0.0)));
 	unsigned const picture_qv_start(picture_mat.quad_verts.size());
 	picture_mat.add_cube_to_verts(c, color, tex_origin, skip_faces, !c.dim, mirror_x);
@@ -3523,7 +3523,7 @@ void building_room_geom_t::add_picture(room_object_t const &c) { // also whitebo
 	exp.z = exp[!c.dim] = (whiteboard ? 0.04 : 0.06)*c.dz(); // frame width
 	exp[c.dim] = (whiteboard ? -0.1 : -0.25)*c.get_depth(); // shrink in this dim
 	frame.expand_by(exp);
-	rgeom_mat_t &frame_mat(get_untextured_material());
+	rgeom_mat_t &frame_mat(whiteboard ? get_metal_material() : get_untextured_material());
 	unsigned const frame_qv_start(frame_mat.quad_verts.size());
 	frame_mat.add_cube_to_verts_untextured(frame, (whiteboard ? GRAY : BLACK), skip_faces);
 	

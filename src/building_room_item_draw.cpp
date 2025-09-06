@@ -535,9 +535,9 @@ building_materials_t &building_room_geom_t::get_building_mat(tid_nm_pair_t const
 	if (small)       return ((tex.tid == FONT_TEXTURE_ID) ? mats_text : mats_small);
 	return mats_static;
 }
-rgeom_mat_t &building_room_geom_t::get_metal_material(bool inc_shadows, bool dynamic, unsigned small, bool exterior, colorRGBA const &spec_color) {
+rgeom_mat_t &building_room_geom_t::get_metal_material(bool inc_shadows, bool dynamic, unsigned small, bool exterior, colorRGBA const &spec_color, float mag, float shine) {
 	tid_nm_pair_t tex(-1, 1.0, inc_shadows);
-	tex.set_metal_specular(spec_color);
+	tex.set_metal_specular(spec_color, mag, shine);
 	tex.metalness = 1.0;
 	return get_material(tex, inc_shadows, dynamic, small, 0, exterior);
 }

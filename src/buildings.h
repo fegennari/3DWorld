@@ -1170,7 +1170,7 @@ struct building_room_geom_t {
 		return get_material(tid_nm_pair_t(-1, 1.0, inc_shadows, transparent), inc_shadows, dynamic, small, transparent, exterior);
 	}
 	rgeom_mat_t &get_wood_material(float tscale=1.0, bool inc_shadows=1, bool dynamic=0, unsigned small=0, bool exterior=0);
-	rgeom_mat_t &get_metal_material(bool inc_shadows=0, bool dynamic=0, unsigned small=0, bool exterior=0, colorRGBA const &spec_color=WHITE);
+	rgeom_mat_t &get_metal_material(bool inc_shadows=0, bool dynamic=0, unsigned small=0, bool exterior=0, colorRGBA const &spec_color=WHITE, float mag=0.8, float shine=60.0);
 	rgeom_mat_t &get_scratched_metal_material(float tscale, bool inc_shadows=0, bool dynamic=0, unsigned small=0, bool exterior=0);
 	colorRGBA apply_wood_light_color(room_object_t const &o) const;
 	void add_tquad(building_geom_t const &bg, tquad_with_ix_t const &tquad, cube_t const &bcube, tid_nm_pair_t const &tex,
