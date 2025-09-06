@@ -1273,7 +1273,7 @@ public:
 		mat.add_vcylin_to_verts(c, colorRGBA(WHITE, 0.5), 0, 0, 0, 0, 1.0, 1.0, 0.2);
 		apply_vert_texture(verts_start, 1.2, 1.0);
 	}
-	void add_water_for_shower(room_object_t const &obj, particle_manager_t &particle_manager) {
+	void add_water_for_shower(room_object_t const &obj, unsigned obj_ix, particle_manager_t &particle_manager) {
 		if (!obj.is_active()) return;
 		point head_pos;
 		vector3d head_dir;
@@ -1285,7 +1285,7 @@ public:
 		float const spray_radius_top(0.04*head_radius), spray_radius_bot(0.12*head_radius), spread_radius_bot(7.0*spread_radius);
 		vector3d d_ref(vector_from_dim_dir(obj.dim, obj.dir));
 		vector3d const d1(cross_product(d_ref, head_dir).get_norm()), d2(cross_product(d1, head_dir).get_norm());
-		float const spash_prob(min(1.0, 0.8/fticks));
+		float const spash_prob(min(1.0, 0.8/fticks)); // 32 per second
 		unsigned const splash_stream_ix(rgen.rand() % round_fp(num_streams/spash_prob)); // may select an index larger than num_streams
 
 		for (unsigned n = 0; n < num_streams; ++n) {
@@ -1295,7 +1295,7 @@ public:
 			do_line_clip(water_start, water_end, obj.d); // should only clip water_end
 			point const ray_end(water_end + 2.0*spray_radius_bot*head_dir); // extend a bit further into the floor
 			mat.add_cylin_to_verts(ray_end, water_start, spray_radius_bot, spray_radius_top, color, 0, 0); // no ends
-			if (n != splash_stream_ix) continue; // no splash for this stream
+			if (!animate2 || n != splash_stream_ix) continue; // no splash for this stream
 			water_end.z += water_height; // place above the water plane
 			particle_manager.add_particle(water_end, zero_vector, WHITE, 2.5*spray_radius_bot, PART_EFFECT_SPLASH);
 		} // for n
@@ -1305,6 +1305,17 @@ public:
 		puddle_center[obj.dim] += (obj.dir ? -1.0 : 1.0)*0.15*width; // move further from the wall, closer to where the water hits
 		float const puddle_radius((0.4 + 0.01*sin(TWO_PI*tex_off + 100.0*(puddle_center.x + puddle_center.y)))*width); // slightly changes over time, different for each shower
 		mat.add_disk_to_verts(puddle_center, puddle_radius, plus_z, color);
+		// add steam
+		float const steam_prob(0.05/fticks);
+
+		if (animate2 && rgen.rand_float() < steam_prob) {
+			float const theta(rgen.rand_float()*TWO_PI), head_dist(rgen.rand_uniform(0.1, 0.9));
+			point water_end(head_pos + max_dist*head_dir);
+			do_line_clip(head_pos, water_end, obj.d); // should only clip water_end
+			point steam_pos(head_pos + head_dist*(water_end - head_pos)); // somewhere along the water path
+			steam_pos += (spread_radius + head_dist*(spread_radius_bot - spread_radius))*(sin(theta)*d1 + cos(theta)*d2); // random shift to the side
+			particle_manager.add_particle(steam_pos, 0.0008*plus_z, colorRGBA(WHITE, 0.2), 0.25*width, PART_EFFECT_CLOUD, obj_ix, 1.0);
+		}
 	}
 	void draw_and_clear(shader_t &s) {
 		if (mat.empty()) return;
@@ -2065,7 +2076,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			}
 			else if (i->is_shower()) { // Note: only closest shower plays water sound
 				if (i->room_id == camera_room) {water_sound_manager.register_running_water(*i, building);}
-				water_draw.add_water_for_shower(*i, particle_manager);
+				water_draw.add_water_for_shower(*i, (i - objs.begin()), particle_manager);
 			}
 			if (!reflection_pass && i->z1() < camera_bs.z && i->z1() > ao_zmin - max(0.0f, (i->dz() - floor_spacing))) {
 				// camera not below or too far above this object; handle tall objects
