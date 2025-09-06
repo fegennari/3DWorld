@@ -1279,8 +1279,8 @@ public:
 		get_shower_head_pos_dir(obj, head_pos, head_dir);
 		colorRGBA const color(WHITE, 0.4);
 		unsigned const verts_start(mat.itri_verts.size()), num_streams(12);
-		float const delta_angle(TWO_PI/num_streams), max_dist(2.0*obj.dz());
-		float const radius(0.5*(obj.dx() + obj.dy())), head_radius(0.07*radius), spread_radius(0.75*head_radius);
+		float const delta_angle(TWO_PI/num_streams), height(obj.dz()), max_dist(2.0*height);
+		float const width(0.5*(obj.dx() + obj.dy())), head_radius(0.07*width), spread_radius(0.75*head_radius);
 		float const spray_radius_top(0.04*head_radius), spray_radius_bot(0.12*head_radius), spread_radius_bot(7.0*spread_radius);
 		vector3d d_ref(vector_from_dim_dir(obj.dim, obj.dir));
 		vector3d const d1(cross_product(d_ref, head_dir).get_norm()), d2(cross_product(d1, head_dir).get_norm());
@@ -1294,6 +1294,11 @@ public:
 			mat.add_cylin_to_verts(water_end, water_start, spray_radius_bot, spray_radius_top, color, 0, 0); // no ends
 		} // for n
 		apply_vert_texture(verts_start, 4.0, 3.0);
+		// draw a puddle on the floor
+		point puddle_center(obj.xc(), obj.yc(), (obj.z1() + 0.01*height));
+		puddle_center[obj.dim] += (obj.dir ? -1.0 : 1.0)*0.15*width; // move further from the wall, closer to where the water hits
+		float const puddle_radius((0.4 + 0.01*sin(TWO_PI*tex_off + 100.0*(puddle_center.x + puddle_center.y)))*width); // slightly changes over time, different for each shower
+		mat.add_disk_to_verts(puddle_center, puddle_radius, plus_z, color);
 	}
 	void draw_and_clear(shader_t &s) {
 		if (mat.empty()) return;

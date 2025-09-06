@@ -1761,7 +1761,7 @@ rgeom_mat_t &building_room_geom_t::get_shower_tile_mat(room_object_t const &c, f
 	return get_material(tex, 0); // no shadows
 }
 
-void get_shower_head_points(room_object_t const &shower, float radius, float wall_pos, float extent_amt, bool head_dim,
+void get_shower_head_points(room_object_t const &shower, float width, float wall_pos, float extent_amt, bool head_dim,
 	point &start_pos, point &end_pos, point &base_pos, point &head_pos)
 {
 	float const shower_height(shower.dz());
@@ -1774,7 +1774,7 @@ void get_shower_head_points(room_object_t const &shower, float radius, float wal
 	end_pos [head_dim]  += 0.25*extent_amt; // move out from the wall a bit more
 	head_pos = base_pos;
 	head_pos.z -= 0.05*shower_height;
-	base_pos.z += 0.012*radius;
+	base_pos.z += 0.012*width;
 	base_pos[head_dim] += 0.02*extent_amt;
 	head_pos[head_dim] += 0.75*extent_amt;
 }
@@ -1787,15 +1787,15 @@ void get_shower_head_pos_dir(room_object_t const &c, point &head_pos, vector3d &
 	head_dir = (head_pos - base_pos).get_norm();
 }
 
-void building_room_geom_t::add_shower_head(room_object_t const &shower, float radius, float wall_pos, float extent_amt, bool head_dim) { // small
+void building_room_geom_t::add_shower_head(room_object_t const &shower, float width, float wall_pos, float extent_amt, bool head_dim) { // small
 	bool const in_jail(shower.in_jail());
 	float const center_pos(shower.get_center_dim(!head_dim));
 	point start_pos, end_pos, base_pos, head_pos, knob_pos;
-	get_shower_head_points(shower, radius, wall_pos, extent_amt, head_dim, start_pos, end_pos, base_pos, head_pos);
+	get_shower_head_points(shower, width, wall_pos, extent_amt, head_dim, start_pos, end_pos, base_pos, head_pos);
 	colorRGBA const color(apply_light_color(shower, LT_GRAY));
 	rgeom_mat_t &metal_mat(get_metal_material(1, 0, 1)); // shadowed, specular metal, small
-	metal_mat.add_cylin_to_verts(base_pos,  head_pos, 0.01*radius, 0.07*radius, color, 0, 0); // shower head; draw sides only
-	metal_mat.add_cylin_to_verts(start_pos, end_pos,  0.02*radius, 0.02*radius, color, 0, 1); // pipe into wall; draw exposed end
+	metal_mat.add_cylin_to_verts(base_pos,  head_pos, 0.01*width, 0.07*width, color, 0, 0); // shower head; draw sides only
+	metal_mat.add_cylin_to_verts(start_pos, end_pos,  0.02*width, 0.02*width, color, 0, 1); // pipe into wall; draw exposed end
 	// draw water control handles/knobs
 	knob_pos[head_dim] = wall_pos;
 	knob_pos.z = shower.z1() + (in_jail ? 0.5 : 0.55)*shower.dz();
@@ -1804,29 +1804,29 @@ void building_room_geom_t::add_shower_head(room_object_t const &shower, float ra
 		knob_pos[!head_dim] = center_pos;
 		point knob_end(knob_pos);
 		knob_end[head_dim] += 0.3*extent_amt; // move out slightly
-		metal_mat.add_cylin_to_verts(knob_pos, knob_end, 0.12*radius, 0.12*radius, color, 0, 1); // plate; draw exposed end
+		metal_mat.add_cylin_to_verts(knob_pos, knob_end, 0.12*width, 0.12*width, color, 0, 1); // plate; draw exposed end
 		knob_end[head_dim] += 1.25*extent_amt; // move out more
-		metal_mat.add_cylin_to_verts(knob_pos, knob_end, 0.04*radius, 0.03*radius, color, 0, 1); // knob; draw exposed end
+		metal_mat.add_cylin_to_verts(knob_pos, knob_end, 0.04*width, 0.03*width, color, 0, 1); // knob; draw exposed end
 		knob_end[head_dim] -= 0.4*extent_amt; // move back a bit
 		point handle_end(knob_end);
-		handle_end.z -= 0.12*radius; // points downward
-		metal_mat.add_cylin_to_verts(knob_end, handle_end, 0.02*radius, 0.015*radius, color, 0, 1); // draw exposed end
+		handle_end.z -= 0.12*width; // points downward
+		metal_mat.add_cylin_to_verts(knob_end, handle_end, 0.02*width, 0.015*width, color, 0, 1); // draw exposed end
 
 		if (in_jail) { // add metal vertical bar
 			bool const dir(extent_amt > 0.0);
 			cube_t bar(shower);
 			bar.d[head_dim][dir] = wall_pos + 0.15*extent_amt; // along the wall the shower head and handle are on
-			set_wall_width(bar, center_pos, 0.014*radius, !head_dim);
+			set_wall_width(bar, center_pos, 0.014*width, !head_dim);
 			set_cube_zvals(bar, knob_pos.z, base_pos.z);
 			metal_mat.add_cube_to_verts_untextured(bar, color*0.8, (~get_face_mask(head_dim, !dir) | EF_Z12));
 		}
 	}
 	else { // separate hot/cold
 		for (unsigned d = 0; d < 2; ++d) { // left/right | hot/cold
-			knob_pos[!head_dim] = center_pos + (d ? 1.0 : -1.0)*0.13*radius;
+			knob_pos[!head_dim] = center_pos + (d ? 1.0 : -1.0)*0.13*width;
 			point knob_end(knob_pos);
 			knob_end[head_dim] += 1.2*extent_amt; // move out from the wall
-			metal_mat.add_cylin_to_verts(knob_pos, knob_end, 0.04*radius, 0.03*radius, color, 0, 1); // draw exposed end
+			metal_mat.add_cylin_to_verts(knob_pos, knob_end, 0.04*width, 0.03*width, color, 0, 1); // draw exposed end
 		}
 	}
 	// draw shower head nozzles using a custom texture
@@ -1834,22 +1834,22 @@ void building_room_geom_t::add_shower_head(room_object_t const &shower, float ra
 	tex.set_specular_color(WHITE, 0.8, 60.0);
 	tex.metalness = 0.5; // somewhat reflective
 	rgeom_mat_t &head_mat(get_material(tex, 1, 0, 1)); // shadowed, small
-	head_mat.add_cylin_to_verts(base_pos, head_pos, 0.01*radius, 0.07*radius, color, 0, 1, 0, 0, 1.0, 0.5, 1); // skip_sides=1; draw top/end only
+	head_mat.add_cylin_to_verts(base_pos, head_pos, 0.01*width, 0.07*width, color, 0, 1, 0, 0, 1.0, 0.5, 1); // skip_sides=1; draw top/end only
 }
 
 void building_room_geom_t::add_shower(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm) {
 	vector3d const sz(c.get_size());
-	float const radius(0.5f*(sz.x + sz.y));
+	float const width(0.5f*(sz.x + sz.y));
 	colorRGBA const metal_color(apply_light_color(c, colorRGBA(0.65, 0.65, 0.65)));
 
 	if (c.type == TYPE_O_SHOWER) { // open shower
 		assert(inc_sm && !inc_lg);
 		cube_t bottom(c);
 		bottom.z2() = c.z1() + 0.0008*sz.z;
-		add_shower_head(c, radius, c.d[c.dim][c.dir], get_shower_head_extent_amt(c), c.dim);
+		add_shower_head(c, width, c.d[c.dim][c.dir], get_shower_head_extent_amt(c), c.dim);
 		add_shower_drain(bottom, metal_color);
 		// add railing
-		float const railing_radius(0.02*radius), railing_zval(c.z1() + 0.35*c.dz());
+		float const railing_radius(0.02*width), railing_zval(c.z1() + 0.35*c.dz());
 		cube_t railing(c);
 		railing.d[c.dim][!c.dir] = c.d[c.dim][c.dir] + (c.dir ? -1.0 : 1.0)*2.0*railing_radius;
 		set_cube_zvals(railing, railing_zval-railing_radius, railing_zval+railing_radius);
@@ -1974,7 +1974,7 @@ void building_room_geom_t::add_shower(room_object_t const &c, float tscale, bool
 	if (inc_sm) { // add shower head and drain
 		bool const head_dim(sz.y < sz.x);
 		float const inner_wall_pos(sides[head_dim].d[head_dim][!dirs[head_dim]]), extent_amt(signs[head_dim]*0.06*sz[head_dim]);
-		add_shower_head(c, radius, inner_wall_pos, extent_amt, head_dim);
+		add_shower_head(c, width, inner_wall_pos, extent_amt, head_dim);
 		add_shower_drain(bottom, metal_color);
 	}
 }
