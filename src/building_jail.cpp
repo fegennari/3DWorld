@@ -458,7 +458,9 @@ room_pref_t const room_prefs[] = {
 	{RTYPE_CLASS,     1, 0, 0, 0, 3.0, 8.0,  0.5, 0.5,  0.0,  0.5},
 	{RTYPE_BATH,      1, 0, 0, 1, 0.0, 4.0,  0.0, 0.0,  0.0, -5.0},
 	{RTYPE_SECURITY,  0, 0, 0, 1, 0.0, 4.0,  1.0, 1.0, -1.0, -1.0},
-	//{RTYPE_KITCHEN,   0, 1, 0, 1, 2.0, 5.0,  0.0, 0.0,  0.0,  0.0}
+	//{RTYPE_LOUNGE,    1, 1, 1, 0, 2.0, 6.0, -4.0, 0.0,  0.0,  1.0}
+	//{RTYPE_INFIRMARY, 0, 0, 0, 1, 2.0, 5.0,  1.0, 0.0, -1.0,  0.0}
+	//{RTYPE_KITCHEN,   0, 1, 0, 1, 2.0, 5.0,  0.5, 0.0,  0.0,  0.0}
 };
 bool building_t::assign_and_fill_prison_room(rand_gen_t rgen, room_t &room, float &zval, unsigned room_id, float tot_light_amt,
 	unsigned objs_start, unsigned lights_start, unsigned floor_ix, bool is_basement, colorRGBA const &chair_color)
@@ -485,9 +487,12 @@ bool building_t::assign_and_fill_prison_room(rand_gen_t rgen, room_t &room, floa
 			if (has_ext_door && !p.allow_door ) continue;
 			float weight(p.base_weight);
 			
-			if (!p.allow_mult && interior->has_room_type(p.rtype)) {
-				if (strict) continue;
-				weight -= 10.0; // penalize more
+			if (interior->has_room_type(p.rtype)) {
+				if (!p.allow_mult) {
+					if (strict) continue;
+					weight -= 10.0; // penalize more
+				}
+				else {weight -= 1.0;} // lower weight for duplicate room type, so that we get more variety
 			}
 			if (min_sz < p.min_size) {
 				if (strict) continue;
@@ -548,6 +553,12 @@ bool building_t::assign_and_fill_prison_room(rand_gen_t rgen, room_t &room, floa
 			case RTYPE_SECURITY:
 				if (floor_ix > 0) continue; // ground floor only
 				if (!add_security_room_objs(rgen, room, zval, room_id, tot_light_amt, objs_start)) continue;
+				break;
+			case RTYPE_LOUNGE:
+				add_lounge_objs(rgen, room, zval, room_id, tot_light_amt, objs_start, 0); // is_lobby=0
+				break;
+			case RTYPE_INFIRMARY:
+				if (!add_infirmary_objs(rgen, room, zval, room_id, tot_light_amt, objs_start)) continue;
 				break;
 			case RTYPE_KITCHEN:
 				if (!add_commercial_kitchen_objs(rgen, room, zval, room_id, tot_light_amt, objs_start)) continue;
@@ -968,6 +979,11 @@ bool building_t::add_shower_room_objs(rand_gen_t rgen, room_t const &room, float
 	} // for n
 	add_door_sign("Shower", room, zval, room_id);
 	return 1;
+}
+
+bool building_t::add_infirmary_objs(rand_gen_t rgen, room_t &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	// TODO
+	return 0;
 }
 
 void building_t::add_prison_hall_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) { // cell block
