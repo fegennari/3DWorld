@@ -813,7 +813,7 @@ void building_room_geom_t::add_electrical_wire(room_object_t const &c, vector3d 
 	rotate_verts(plastic_mat.itri_verts, rot_axis, rot_angle, rot_pt, pastic_verts_start);
 	// copper core
 	cube_t core(c);
-	rgeom_mat_t &copper_mat(get_metal_material(0, 0, 1, 0, COPPER_C)); // unshadowed, small=1
+	rgeom_mat_t &copper_mat(get_metal_material(0, 0, 1, 0, 1, COPPER_C)); // unshadowed, small=1, no_reflect=1
 	unsigned const copper_verts_start(copper_mat.itri_verts.size());
 	colorRGBA const copper_color(apply_light_color(c, COPPER_C));
 
@@ -976,6 +976,9 @@ void building_room_geom_t::add_spraycan(room_object_t const &c) { // is_small=1
 	add_spraycan_to_material(c, get_untextured_material(1, 0, 1));
 }
 
+tid_nm_pair_t get_small_font_tex() {
+	return tid_nm_pair_t(FONT_TEXTURE_ID, 1.0f, 0, 0, 1); // unshadowed, no_reflect=1
+}
 void building_room_geom_t::add_button(room_object_t const &c, bool inc_geom, bool inc_text) {
 	bool const in_elevator(c.in_elevator()), for_mall_gate(c.in_mall());
 
@@ -1003,7 +1006,7 @@ void building_room_geom_t::add_button(room_object_t const &c, bool inc_geom, boo
 		if (is_up || is_down) {
 			cube_t sign(c);
 			sign.d[c.dim][c.dir] += (c.dir ? 1.0 : -1.0)*0.25*c.get_depth(); // shift outward
-			rgeom_mat_t &mat(get_material(tid_nm_pair_t(FONT_TEXTURE_ID), 0, 0, 1)); // unshadowed, small
+			rgeom_mat_t &mat(get_material(get_small_font_tex(), 0, 0, 1)); // unshadowed, small
 			add_sign_text_verts("V", sign, c.dim, c.dir, apply_light_color(c, BLACK), mat.quad_verts, 0.0, 0.0, 0, is_up); // invert_z=is_up
 		}
 	}
@@ -2061,7 +2064,7 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom, f
 	colorRGBA const color(apply_light_color(c));
 	colorRGBA const cap_colors[2] = {LT_GRAY, GOLD}, cap_spec_colors[2] = {WHITE, GOLD};
 	// setup the untextured plastic/glass material
-	tid_nm_pair_t tex(-1, 1.0, shadowed);
+	tid_nm_pair_t tex(-1, 1.0, shadowed, 0, 1); // no_reflect=1
 	tex.set_specular(0.5, 80.0);
 	rgeom_mat_t &mat(get_material(tex, shadowed, 0, 1, transparent)); // dynamic=0, small=1
 	vector3d const sz(c.get_size());
@@ -2098,7 +2101,7 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom, f
 
 	if (!is_empty) { // draw cap if nonempty
 		bool const draw_bot(c.was_expanded() && !c.is_on_srack());
-		tid_nm_pair_t cap_tex(-1, 1.0, 0); // unshadowed
+		tid_nm_pair_t cap_tex(-1, 1.0f, 0, 0, 1); // unshadowed, no_reflect=1
 		cap_tex.set_specular_color(cap_spec_colors[cap_color_ix], 0.8, 80.0);
 		cap_tex.metalness = 1.0;
 		rgeom_mat_t &cap_mat(get_material(cap_tex, 0, 0, 1)); // inc_shadows=0, dynamic=0, small=1
@@ -2119,14 +2122,14 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom, f
 	bool const flip(dim != 2 && c.dir);
 	string const &texture_fn(bp.texture_fn); // select the custom label texture for each bottle type
 	int const tid(texture_fn.empty() ? -1 : get_texture_by_name(texture_fn));
-	rgeom_mat_t &label_mat(get_material(tid_nm_pair_t(tid, 1.0, !shadowed), !shadowed, 0, 1)); // shadowed if plastic unshadowed, small
+	rgeom_mat_t &label_mat(get_material(tid_nm_pair_t(tid, 1.0f, !shadowed, 0, 1), !shadowed, 0, 1)); // shadowed if plastic unshadowed, small, no_reflect=1
 	unsigned const label_verts_start(label_mat.itri_verts.size());
 	// draw label
 	label_mat.add_ortho_cylin_to_verts(body, apply_light_color(c, WHITE), dim, 0, 0, 0, 0, 1.0, 1.0, side_tscale,
 		1.0, 0, bottle_ndiv, tscale_add, 0, (flip ? 0.0 : 1.0), (flip ? 1.0 : 0.0));
 
 	if (transparent) { // draw inside if plastic is transparent; not rotated
-		rgeom_mat_t &imat(get_untextured_material(0, 0, 1));
+		rgeom_mat_t &imat(get_untextured_material(0, 0, 1, 0, 0, 1)); // no_reflect=1
 		unsigned const verts_start(imat.itri_verts.size()), ixs_start(imat.indices.size());
 		imat.add_ortho_cylin_to_verts(body, apply_light_color(c, WHITE), dim, 0, 0); // sides only
 		invert_triangles(imat, verts_start, ixs_start); // invert inner surface
@@ -2143,7 +2146,7 @@ void building_room_geom_t::add_drink_can(room_object_t const &c) {
 	float const rot_angle(c.get_bottle_rot_angle());
 	point const center(c.get_cube_center());
 	colorRGBA const color(apply_light_color(c));
-	tid_nm_pair_t tp(get_texture_by_name(cp.texture_fn), 1);
+	tid_nm_pair_t tp(get_texture_by_name(cp.texture_fn), 1.0f, 1, 0, 1); // shadowed, no_reflect=1
 	tp.set_specular(0.8, 80.0);
 	rgeom_mat_t &label_mat(get_material(tp, 1, 0, 1)); // shadowed, small
 	float const tscale(cp.tscale*((dim == 2 || c.dir) ? 1.0 : -1.0)); // invert texture if horizontal/fallen
@@ -2152,13 +2155,13 @@ void building_room_geom_t::add_drink_can(room_object_t const &c) {
 	unsigned const label_verts_start(label_mat.itri_verts.size());
 	label_mat.add_ortho_cylin_to_verts(c, color, dim, 0, 0, 0, 0, 1.0, 1.0, tscale, 1.0, 0, ndiv, tscale_add, 0, ltc2, ltc1); // sides only
 	if (rot_angle != 0.0) {rotate_verts(label_mat.itri_verts, plus_z, rot_angle, center, label_verts_start);}
-	rgeom_mat_t &top_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/can_lid.jpg"), 0.0, 1), 1, 0, 1)); // shadowed, small
+	rgeom_mat_t &top_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/can_lid.jpg"), 0.0f, 1, 0, 1), 1, 0, 1)); // shadowed, small, no_reflect=1
 	unsigned const top_verts_start(top_mat.itri_verts.size());
 	top_mat.add_ortho_cylin_to_verts(c, color, dim, c.dir, !c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // top
 	if (rot_angle != 0.0) {rotate_verts(top_mat.itri_verts, plus_z, rot_angle, center, top_verts_start);}
 	
 	if (add_bottom) {
-		rgeom_mat_t &bot_mat(get_metal_material(1, 0, 1));
+		rgeom_mat_t &bot_mat(get_metal_material(1, 0, 1, 0, 1)); // no_reflect=1
 		unsigned const bot_verts_start(bot_mat.itri_verts.size());
 		bot_mat.add_ortho_cylin_to_verts(c, apply_light_color(c, LT_GRAY), dim, !c.dir, c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // untextured, shadowed, small, bottom
 		if (rot_angle != 0.0) {rotate_verts(bot_mat.itri_verts, plus_z, rot_angle, center, bot_verts_start);}
@@ -2188,7 +2191,7 @@ void building_room_geom_t::add_vase(room_object_t const &c) { // or urn
 			tex_scale_h = 2 + (rgen.rand()%7); // must be an integer, 2-8
 		}
 	}
-	rgeom_mat_t &side_mat(get_material(tid_nm_pair_t(tid, 0.0, 1), 1, 0, 1)); // shadowed, small
+	rgeom_mat_t &side_mat(get_material(tid_nm_pair_t(tid, 0.0f, 1, 0, 1), 1, 0, 1)); // shadowed, small, no_reflect=1
 	unsigned const ndiv(get_def_cylin_ndiv(c)), num_stacks(ndiv), itris_start(side_mat.itri_verts.size()), ixs_start(side_mat.indices.size());
 	float const tscale(tex_scale_v/num_stacks), zstep(c.dz()/num_stacks);
 	float const rbase(c.get_radius()), rmax(rbase);
@@ -2220,7 +2223,8 @@ void building_room_geom_t::add_vase(room_object_t const &c) { // or urn
 		bot.set_from_point(c.get_cube_center());
 		bot.expand_by_xy(start_radius);
 		bot.z1() = c.z1() + 0.01*c.dz(); // prevent z-fighting
-		get_untextured_material(1, 0, 1).add_vcylin_to_verts(bot, color, 1, 0, 0, 1, 1.0, 1.0, 1.0, 1.0, 1); // inverted, skip sides; shadowed in case it's on a glass table
+		// inverted, skip sides, no_reflect=1; shadowed in case it's on a glass table
+		get_untextured_material(1, 0, 1, 0, 0, 1).add_vcylin_to_verts(bot, color, 1, 0, 0, 1, 1.0, 1.0, 1.0, 1.0, 1);
 	}
 }
 
@@ -2911,7 +2915,7 @@ void building_room_geom_t::add_pipe(room_object_t const &c, bool add_exterior) {
 	int tid(-1);
 	if (is_duct || factory_rod) {tid = get_cylin_duct_tid();}
 	else if (is_dirty) {tid = get_texture_by_name("metals/67_rusty_dirty_metal.jpg");} // "metals/65_Painted_dirty_metal.jpg" works as well
-	tid_nm_pair_t tex(tid, 1.0, shadowed); // custom specular color
+	tid_nm_pair_t tex(tid, 1.0f, shadowed, 0, 1); // custom specular color, no_reflect=1
 	// make specular; maybe should not make specular if rusty, but setting per-pipe specular doesn't work, and water effect adds specular anyway
 	tex.metalness = (is_dirty ? 0.1 : 0.5); // slightly reflective
 	colorRGBA const spec_color(get_specular_color(c.color)); // special case metals
@@ -3070,13 +3074,13 @@ void building_room_geom_t::add_valve(room_object_t const &c) {
 	unsigned const dim(c.dir ? 2 : unsigned(c.dim)); // encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1
 	get_metal_material(1, 0, 2); // make sure it's in the map
 	colorRGBA const color(apply_light_color(c)), spec_color(get_specular_color(c.color)); // special case metals
-	rgeom_mat_t &mat(get_metal_material(1, 0, 2, 0, spec_color)); // detail object
+	rgeom_mat_t &mat(get_metal_material(1, 0, 2, 0, 1, spec_color)); // detail object, no_reflect=1
 	draw_metal_handle_wheel(c, dim, color, apply_light_color(c, WHITE), mat, get_metal_material(1, 0, 2));
 }
 
 void building_room_geom_t::add_gauge(room_object_t const &c) {
 	colorRGBA const color(apply_light_color(c)), spec_color(get_specular_color(c.color)); // special case metals
-	rgeom_mat_t &metal_mat(get_metal_material(1, 0, 2, 0, spec_color));
+	rgeom_mat_t &metal_mat(get_metal_material(1, 0, 2, 0, 1, spec_color)); // no_reflect=1
 	metal_mat.add_ortho_cylin_to_verts(c, color, c.dim, c.dir, !c.dir); // draw sides and bottom
 	rgeom_mat_t &dial_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/pressure_gauge.jpg"), 0.0, 1), 1, 0, 2)); // shadowed, detail
 	point const center(c.get_cube_center());
@@ -3089,7 +3093,7 @@ void building_room_geom_t::add_gauge(room_object_t const &c) {
 		cube_t stem(center);
 		stem.expand_by_xy(0.35*c.get_size().get_min_val());
 		set_cube_zvals(stem, (c.z1() - 0.25*c.dz()), c.zc()); // extends below the gauge
-		rgeom_mat_t &brass_mat(get_metal_material(1, 0, 2, 0, BRASS_C )); // shadowed, detail
+		rgeom_mat_t &brass_mat(get_metal_material(1, 0, 2, 0, 1, BRASS_C )); // shadowed, detail, no_reflect=1
 		brass_mat.add_vcylin_to_verts(stem, apply_light_color(c, BRASS_C), 0, 0); // draw sides only
 	}
 }
@@ -3231,7 +3235,7 @@ void building_room_geom_t::add_elevator(room_object_t const &c, elevator_t const
 	normal [ c.dim] = -dir_sign; // opposite dir from front of elevator
 	static vector<vert_tc_t> verts;
 	static ostringstream oss; // reused across buttons
-	tid_nm_pair_t tp(FONT_TEXTURE_ID), lit_tp(tp);
+	tid_nm_pair_t tp(get_small_font_tex()), lit_tp(tp);
 	lit_tp.emissive = 1.0;
 	get_material(lit_tp, 0, 1); // make sure it's allocated
 	rgeom_mat_t &mat(get_material(tp, 0, 1)); // unshadowed, dynamic=1
@@ -3721,7 +3725,7 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 		colorRGBA text_color(BLACK);
 		for (unsigned i = 0; i < 3; ++i) {text_color[i] = ((c.color[i] > 0.5) ? 0.0 : 1.0);} // invert + saturate to contrast with book cover
 		text_color = apply_light_color(c, text_color);
-		rgeom_mat_t &mat(get_material(tid_nm_pair_t(FONT_TEXTURE_ID), 0, 0, 1)); // no shadows, small=1
+		rgeom_mat_t &mat(get_material(get_small_font_tex(), 0, 0, 1)); // no shadows, small=1
 		unsigned const qv_start(mat.quad_verts.size());
 		// maybe choose author
 		bool add_author((!from_book_set || is_set_volume) && (rgen.rand() & 3)), add_spine_author(0); // add an author 75% of the time if not from a non-volume set
@@ -4532,8 +4536,8 @@ void building_room_geom_t::add_water_heater(room_object_t const &c) {
 	metal_mat.add_vcylin_to_verts(top,  apply_light_color(c, DK_GRAY), 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 64); // top - draw top; ndiv=64
 	metal_mat.add_vcylin_to_verts(vent, apply_light_color(c, LT_GRAY), 0, 0, in_store, 0, 1.0, 1.0, 1.0, 1.0, 0, 16); // ndiv=16; draw inside if in store
 	metal_mat.add_vcylin_to_verts(cone, apply_light_color(c, LT_GRAY), 0, 0, 0, 0, 1.8, 0.0); // cone
-	if (bend_pipes) {get_metal_material(1, 0, 1, 0, BRASS_C);} // make sure it exists in the materials
-	rgeom_mat_t &copper_mat(get_metal_material(1, 0, 1, 0, COPPER_C)); // small=1
+	if (bend_pipes) {get_metal_material(1, 0, 1, 0, 1, BRASS_C);} // make sure it exists in the materials, no_reflect=1
+	rgeom_mat_t &copper_mat(get_metal_material(1, 0, 1, 0, 1, COPPER_C)); // small=1, no_reflect=1
 	colorRGBA const copper_color(apply_light_color(c, COPPER_C));
 	bool const low_detail = 1;
 	unsigned const pipe_ndiv(get_rgeom_sphere_ndiv(low_detail));
@@ -4551,7 +4555,7 @@ void building_room_geom_t::add_water_heater(room_object_t const &c) {
 			copper_mat.add_vcylin_to_verts(v_pipe, copper_color, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, pipe_ndiv);
 			copper_mat.add_cylin_to_verts(bends[0], bends[1], pipe_radius, pipe_radius, copper_color, 0, 0, 0, 0, 1.0, 1.0, 0, pipe_ndiv);
 			// add brass fittings
-			rgeom_mat_t &brass_mat(get_metal_material(1, 0, 1, 0, BRASS_C)); // small=1
+			rgeom_mat_t &brass_mat(get_metal_material(1, 0, 1, 0, 1, BRASS_C)); // small=1, no_reflect=1
 			colorRGBA const brass_color(apply_light_color(c, BRASS_C));
 			float const fr(1.1*pipe_radius), extend(2.0*fr);
 			vector3d const delta((bends[0] - bends[1])*(extend/pipe_len));
@@ -4624,13 +4628,13 @@ void building_room_geom_t::add_furnace(room_object_t const &c) {
 	bool const low_detail = 1;
 	unsigned const pipe_ndiv(get_rgeom_sphere_ndiv(low_detail));
 	// insulated
-	rgeom_mat_t &insul_mat(get_metal_material(1, 0, 1, 0, WHITE)); // white reflective tape (not actually metal); shadows=1, small=1
+	rgeom_mat_t &insul_mat(get_metal_material(1, 0, 1, 0, 1, WHITE)); // white reflective tape (not actually metal); shadows=1, small=1, no_reflect=1
 	add_furnace_pipe_with_bend(c, insul_mat, apply_light_color(c, BLACK), pipe_ndiv, 0.02, 0.87, 0.484, 2.2);
 	// copper
-	rgeom_mat_t &copper_mat(get_metal_material(1, 0, 1, 0, COPPER_C)); // shadows=1, small=1
+	rgeom_mat_t &copper_mat(get_metal_material(1, 0, 1, 0, 1, COPPER_C)); // shadows=1, small=1, no_reflect=1
 	add_furnace_pipe_with_bend(c, copper_mat, apply_light_color(c, COPPER_C), pipe_ndiv, 0.007, 0.88, 0.45, 1.6);
 	// drain (2x)
-	rgeom_mat_t &plastic_mat(get_untextured_material(1, 0, 1)); // shadows=1, small=1
+	rgeom_mat_t &plastic_mat(get_untextured_material(1, 0, 1, 0, 0, 1)); // shadows=1, small=1, no_reflect=1
 
 	for (unsigned d = 0; d < 2; ++d) {
 		add_furnace_pipe_with_bend(c, plastic_mat, apply_light_color(c, WHITE), pipe_ndiv, 0.016, (d ? 0.081 : 0.173), 0.2, 1.8);
@@ -4918,7 +4922,7 @@ void building_room_geom_t::add_sign(room_object_t const &c, bool inc_back, bool 
 	}
 	if (!inc_text) return;
 	// add sign text
-	tid_nm_pair_t tex(FONT_TEXTURE_ID);
+	tid_nm_pair_t tex(FONT_TEXTURE_ID); // no_reflect=0
 	if (c.flags & RO_FLAG_EMISSIVE) {tex.emissive = 1.0;}
 	add_room_obj_sign_text_verts(c, apply_light_color(c), get_material(tex, 0, 0, small, 0, exterior).quad_verts); // unshadowed
 }
@@ -6024,7 +6028,7 @@ void building_room_geom_t::add_bench(room_object_t const &c) {
 	unsigned const num(get_bench_cubes(c, cubes));
 	assert(num == 3 || num == 4);
 	bool const use_mesh(c.item_flags == 1);
-	rgeom_mat_t &mat(use_mesh ? get_metal_material(1, 0, 1, 0, WHITE, 0.5, 50.0) : get_untextured_material(1, 0, 1)); // shadowed, small
+	rgeom_mat_t &mat(use_mesh ? get_metal_material(1, 0, 1, 0, 0, WHITE, 0.5, 50.0) : get_untextured_material(1, 0, 1)); // shadowed, small
 	// add legs on each side; draw sides of legs, always light gray or black
 	colorRGBA const legs_color(apply_light_color(c, (c.in_mall() ? BKGRAY : LT_GRAY)));
 	
@@ -6294,7 +6298,7 @@ void building_room_geom_t::add_fishtank(room_object_t const &c) { // unshadowed,
 
 void building_room_geom_t::add_metal_bar(room_object_t const &c) {
 	colorRGBA const color(apply_light_color(c)), spec_color((color.R == color.G && color.R == color.B) ? WHITE : color);
-	rgeom_mat_t &metal_mat(get_metal_material(1, 0, 1, 0, spec_color)); // untextured, shadowed, small; should there be an option to make it scratched?
+	rgeom_mat_t &metal_mat(get_metal_material(1, 0, 1, 0, 0, spec_color)); // untextured, shadowed, small; should there be an option to make it scratched?
 
 	if (c.shape == SHAPE_CUBE) {
 		metal_mat.add_cube_to_verts_untextured(c, color, c.item_flags); // skip_faces is stored in item_flags
@@ -6375,7 +6379,7 @@ void building_room_geom_t::add_chem_tank(room_object_t const &c, bool draw_label
 	mat.add_sphere_to_verts(top,  color, 0, -plus_z); // top hemisphere
 	// add pipes to floor
 	unsigned const pipe_ndiv(get_rgeom_sphere_ndiv(1)); // low_detail=1
-	rgeom_mat_t &pipe_mat(get_metal_material(1, 0, 0, 0, COPPER_C)); // not small
+	rgeom_mat_t &pipe_mat(get_metal_material(1, 0, 0, 0, 0, COPPER_C)); // not small
 	colorRGBA const pipe_color(apply_light_color(c, COPPER_C));
 	float const pipe_radius(0.04*radius);
 	point entry_pos(c.get_cube_center());

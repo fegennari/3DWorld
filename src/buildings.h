@@ -277,12 +277,13 @@ struct tid_nm_pair_t { // size=32
 	bool shadow_only=0; // only drawn in the shadow pass; used for simplified shadow casters
 	bool transparent=0; // used to draw batched alpha blended materials last
 	bool no_cracks  =0; // for basement crack effects
+	bool no_reflect =0; // no cube map reflections (optimization)
 
 	tid_nm_pair_t() {}
-	tid_nm_pair_t(int tid_, float txy=1.0, bool shadowed_=0, bool transparent_=0) : tid(tid_), nm_tid(FLAT_NMAP_TEX),
-		tscale_x(txy), tscale_y(txy), shadowed(shadowed_), transparent(transparent_) {} // non-normal mapped 1:1 texture AR
-	tid_nm_pair_t(int tid_, int nm_tid_, float tx, float ty, float xo=0.0, float yo=0.0, bool shadowed_=0, bool transparent_=0) :
-		tid(tid_), nm_tid(nm_tid_), tscale_x(tx), tscale_y(ty), txoff(xo), tyoff(yo), shadowed(shadowed_), transparent(transparent_) {}
+	tid_nm_pair_t(int tid_, float txy=1.0, bool shadowed_=0, bool transparent_=0, bool no_reflect_=0) : tid(tid_), nm_tid(FLAT_NMAP_TEX),
+		tscale_x(txy), tscale_y(txy), shadowed(shadowed_), transparent(transparent_), no_reflect(no_reflect_) {} // non-normal mapped 1:1 texture AR
+	tid_nm_pair_t(int tid_, int nm_tid_, float tx, float ty, float xo=0.0, float yo=0.0, bool shadowed_=0, bool transparent_=0, bool no_reflect_=0) :
+		tid(tid_), nm_tid(nm_tid_), tscale_x(tx), tscale_y(ty), txoff(xo), tyoff(yo), shadowed(shadowed_), transparent(transparent_), no_reflect(no_reflect_) {}
 	void set_shininess(float shine) {shininess = (unsigned char)max(1, min(255, round_fp(shine)));}
 	void set_specular(float mag, float shine) {set_specular_color(WHITE, mag, shine);}
 	void set_specular_color(colorRGB const &color, float mag, float shine);
@@ -291,7 +292,7 @@ struct tid_nm_pair_t { // size=32
 
 	bool is_compat_ignore_shadowed(tid_nm_pair_t const &t) const {
 		return (tid == t.tid && nm_tid == t.nm_tid && emissive == t.emissive && metalness == t.metalness &&
-			shininess == t.shininess && transparent == t.transparent && spec_color == t.spec_color);
+			shininess == t.shininess && transparent == t.transparent && spec_color == t.spec_color && no_reflect == t.no_reflect);
 	}
 	bool is_compatible(tid_nm_pair_t const &t) const {return (is_compat_ignore_shadowed(t) && shadowed == t.shadowed && shadow_only == t.shadow_only);}
 	bool operator==(tid_nm_pair_t const &t) const {return (is_compatible(t) && tscale_x == t.tscale_x && tscale_y == t.tscale_y && txoff == t.txoff && tyoff == t.tyoff);}
@@ -1167,11 +1168,12 @@ struct building_room_geom_t {
 	rgeom_mat_t &get_material(tid_nm_pair_t const &tex, bool inc_shadows=0, bool dynamic=0, unsigned small=0, bool transparent=0, bool exterior=0) {
 		return get_building_mat(tex, dynamic, small, transparent, exterior).get_material(tex, inc_shadows);
 	}
-	rgeom_mat_t &get_untextured_material(bool inc_shadows=0, bool dynamic=0, unsigned small=0, bool transparent=0, bool exterior=0) {
-		return get_material(tid_nm_pair_t(-1, 1.0, inc_shadows, transparent), inc_shadows, dynamic, small, transparent, exterior);
+	rgeom_mat_t &get_untextured_material(bool inc_shadows=0, bool dynamic=0, unsigned small=0, bool transparent=0, bool exterior=0, bool no_reflect=0) {
+		return get_material(tid_nm_pair_t(-1, 1.0f, inc_shadows, transparent, no_reflect), inc_shadows, dynamic, small, transparent, exterior);
 	}
 	rgeom_mat_t &get_wood_material(float tscale=1.0, bool inc_shadows=1, bool dynamic=0, unsigned small=0, bool exterior=0);
-	rgeom_mat_t &get_metal_material(bool inc_shadows=0, bool dynamic=0, unsigned small=0, bool exterior=0, colorRGBA const &spec_color=WHITE, float mag=0.8, float shine=60.0);
+	rgeom_mat_t &get_metal_material(bool inc_shadows=0, bool dynamic=0, unsigned small=0, bool exterior=0, bool no_reflect=0,
+		colorRGBA const &spec_color=WHITE, float mag=0.8, float shine=60.0);
 	rgeom_mat_t &get_scratched_metal_material(float tscale, bool inc_shadows=0, bool dynamic=0, unsigned small=0, bool exterior=0);
 	colorRGBA apply_wood_light_color(room_object_t const &o) const;
 	void add_tquad(building_geom_t const &bg, tquad_with_ix_t const &tquad, cube_t const &bcube, tid_nm_pair_t const &tex,

@@ -93,7 +93,7 @@ void building_room_geom_t::add_machine_pipe_in_region(room_object_t const &c, cu
 		add_spring(p1, radius, coil_radius, length, coil_gap, dim, color, spec_color, sparse);
 		return;
 	}
-	rgeom_mat_t &pipe_mat(get_metal_material(1, 0, 1, 0, spec_color));
+	rgeom_mat_t &pipe_mat(get_metal_material(1, 0, 1, 0, 1, spec_color)); // no_reflect=1
 	pipe_mat.add_cylin_to_verts(p1, p2, radius, radius, apply_light_color(c, color), 0, 0, 0, 0, 1.0, 1.0, 0, 16); // shadowed, small
 
 	// maybe add a valve or gauge
@@ -154,7 +154,7 @@ void building_room_geom_t::add_machine_pipe_in_region(room_object_t const &c, cu
 		draw_metal_handle_wheel(vg, vdim, apply_light_color(c, handle_color), apply_light_color(c, shaft_color), handle_mat, handle_mat);
 	}
 	// draw the fitting
-	rgeom_mat_t &fitting_mat(get_metal_material(0, 0, 1, 0, get_specular_color(fitting_color))); // unshadowed
+	rgeom_mat_t &fitting_mat(get_metal_material(0, 0, 1, 0, 1, get_specular_color(fitting_color))); // unshadowed, no_reflect=1
 	p1[dim] = vg_pos - fitting_hlen;
 	p2[dim] = vg_pos + fitting_hlen;
 	fitting_mat.add_cylin_to_verts(p1, p2, fitting_radius, fitting_radius, apply_light_color(c, fitting_color), 1, 1, 0, 0, 1.0, 1.0, 0, N_CYL_SIDES); // draw ends
@@ -216,7 +216,7 @@ void building_room_geom_t::add_spring(point pos, float radius, float r_wire, flo
 	unsigned num_coils(max(1, round_fp(length/(2.0*r_wire + coil_gap))));
 	unsigned const ndivo(N_CYL_SIDES / (sparse ? 2 : 1)), ndivi(N_CYL_SIDES/2);
 	float const coil_spacing(length/num_coils);
-	rgeom_mat_t &mat(get_metal_material(1, 0, 1, 0, spec_color)); // shadowed, small
+	rgeom_mat_t &mat(get_metal_material(1, 0, 1, 0, 1, spec_color)); // shadowed, small, no_reflect=1
 	// create one coil, then copy and translate to get the others
 	unsigned const verts_start(mat.itri_verts.size()), indices_start(mat.indices.size());
 	mat.add_ortho_torus_to_verts(pos, r_wire, radius, dim, color, 1.0, 0, 0, 0.0, ndivo, ndivi, coil_spacing);
@@ -596,7 +596,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 
 		if (num_floor_pipes > 0) {
 			colorRGBA const color(choose_pipe_color(rgen)), spec_color(get_specular_color(color)), pcolor(apply_light_color(c, color));
-			rgeom_mat_t &mat(get_metal_material(1, 0, 1, 0, spec_color));
+			rgeom_mat_t &mat(get_metal_material(1, 0, 1, 0, 1, spec_color)); // no_reflect=1
 			bool used_sides[3] = {};
 
 			for (unsigned n = 0; n < num_floor_pipes; ++n) {
