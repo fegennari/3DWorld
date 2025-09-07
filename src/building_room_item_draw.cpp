@@ -97,7 +97,7 @@ rgeom_alloc_t rgeom_alloc; // static allocator with free list, shared across all
 
 void print_building_rgeom_stats() {
 	size_t const size(rgeom_alloc.size());
-	if (size > 0) {cout << "rgeom_alloc: size: " << size << " mem: " << rgeom_alloc.get_mem_usage() << endl;} // start=462MB
+	if (size > 0) {cout << "rgeom_alloc: size: " << size << " mem (MB): " << in_mb(rgeom_alloc.get_mem_usage()) << endl;} // start=462MB
 }
 void clear_building_rgeom_free_list() {rgeom_alloc.clear_free_list();} // unused, but may be useful for testing
 

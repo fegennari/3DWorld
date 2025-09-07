@@ -400,6 +400,7 @@ public:
 		if (tid == 0) return; // disabled
 		for (unsigned f = 0; f < 6; ++f) {last_update_pos[f] = all_zeros;}
 	}
+	uint64_t get_gpu_mem_usage() const {return ((tid > 0) ? 6*3ULL*tsize*tsize : 0);} // 6 faces
 };
 cube_map_reflection_manager_t cube_map_reflection_manager;
 
@@ -411,4 +412,10 @@ void setup_player_building_cube_map() {
 }
 void bind_player_building_cube_map(shader_t &s) {cube_map_reflection_manager.bind(s);}
 void register_reflection_update() {cube_map_reflection_manager.force_update();}
+
+uint64_t get_reflection_gpu_mem_usage() {
+	uint64_t mem(cube_map_reflection_manager.get_gpu_mem_usage());
+	if (room_mirror_ref_tid > 0) {mem += 3ULL*window_width*window_height;}
+	return mem;
+}
 

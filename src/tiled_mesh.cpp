@@ -97,6 +97,7 @@ int check_city_contains_overlaps(cube_t const &query);
 bool check_inside_city(point const &pos, float radius);
 cube_t get_city_bcube_overlapping(cube_t const &c);
 void show_gpu_mem_info();
+uint64_t get_reflection_gpu_mem_usage();
 void interpolate_over_time(float &val, float target_val, float transition_secs, int &last_frame);
 
 
@@ -2627,6 +2628,7 @@ uint64_t tile_draw_t::show_debug_stats(bool calc_mem_only) const {
 	uint64_t const models_mem(get_city_model_gpu_mem() + get_loaded_models_gpu_mem() + get_building_models_gpu_mem());
 	uint64_t const frame_buf_mem(13*window_width*window_height); // RGB8 (as 32 bits?) front buffer + RGB8 back buffer + 32-bit depth buffer + 8 bit stencil buffer
 	uint64_t const ring_buf_mem(get_vbo_ring_buffers_size()), quad_ix_buf_mem(get_quad_ix_buffer_size()); // these should be small (8/16MB, ~5MB)
+	uint64_t const ref_tex_mem(get_reflection_gpu_mem_usage());
 
 	if (vbo) {
 		unsigned const tile_size(get_tile_size());
@@ -2634,14 +2636,15 @@ uint64_t tile_draw_t::show_debug_stats(bool calc_mem_only) const {
 		for (unsigned i = 0; i < NUM_LODS; ++i) {mem += 4ULL*(tile_size>>i)*(tile_size>>i)*sizeof(unsigned);} // approximate
 	}
 	uint64_t const tot_mem(mem + dtree_mem + ptree_mem + grass_mem + smap_free_list_mem + dlights_smap_mem + texture_mem + building_mem + models_mem +
-		frame_buf_mem + room_geom_mem + ring_buf_mem + quad_ix_buf_mem);
+		frame_buf_mem + room_geom_mem + ring_buf_mem + quad_ix_buf_mem + ref_tex_mem);
 	if (calc_mem_only) return tot_mem;
 
 	cout << "tiles drawn: " << to_draw.size() << " of " << tiles.size() << ", trees drawn: " << num_trees << ", shadow maps: " << num_smaps
 		<< ", GPU MB: " << in_mb(tot_mem)
 		<< ", tile MB: " << in_mb(mem - smap_mem) << ", tree CPU MB: " << in_mb(tcpu_mem) << ", tree GPU MB: " << in_mb(dtree_mem + ptree_mem)
 		<< ", grass MB: " << in_mb(grass_mem) << ", smap MB: " << in_mb(smap_mem) << ", smap free list MB: " << in_mb(smap_free_list_mem)
-		<< ", dlights smap mem MB: " << in_mb(dlights_smap_mem) << ", frame buf MB: " << in_mb(frame_buf_mem) << ", texture MB: " << in_mb(texture_mem)
+		<< ", reflection texture MB: " << in_mb(ref_tex_mem) << ", dlights smap mem MB: " << in_mb(dlights_smap_mem)
+		<< ", frame buf MB: " << in_mb(frame_buf_mem) << ", texture MB: " << in_mb(texture_mem)
 		<< ", building MB: " << in_mb(building_mem) << ", room_geom MB: " << in_mb(room_geom_mem) << ", model MB: " << in_mb(models_mem) << endl;
 	print_building_rgeom_stats ();
 	print_rgeom_vbo_cache_stats();
