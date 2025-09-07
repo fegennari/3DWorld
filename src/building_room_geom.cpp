@@ -6024,7 +6024,7 @@ void building_room_geom_t::add_bench(room_object_t const &c) {
 	unsigned const num(get_bench_cubes(c, cubes));
 	assert(num == 3 || num == 4);
 	bool const use_mesh(c.item_flags == 1);
-	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // shadowed, small
+	rgeom_mat_t &mat(use_mesh ? get_metal_material(1, 0, 1, 0, WHITE, 0.5, 50.0) : get_untextured_material(1, 0, 1)); // shadowed, small
 	// add legs on each side; draw sides of legs, always light gray or black
 	colorRGBA const legs_color(apply_light_color(c, (c.in_mall() ? BKGRAY : LT_GRAY)));
 	
