@@ -260,7 +260,8 @@ bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, flo
 		place_model_along_wall(OBJ_MODEL_WHEELCHAIR, TYPE_WHEELCHAIR, room, 0.45, rgen, zval, room_id, tot_light_amt, place_area, objs_start);
 	}
 	add_plants_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, 1); // add 1 plant
-	add_numbered_door_sign("Room ", room, zval, room_id, floor_ix);
+	if      (is_hospital()) {add_numbered_door_sign("Room ", room, zval, room_id, floor_ix);}
+	else if (is_prison  ()) {add_door_sign("Infirmary", room, zval, room_id);}
 	return 1;
 }
 

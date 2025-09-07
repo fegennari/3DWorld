@@ -905,6 +905,9 @@ void building_t::add_lounge_objs(rand_gen_t rgen, room_t const &room, float zval
 	bool const add_tall_table(!teacher && !is_lobby && min(place_area.dx(), place_area.dy()) > 1.4*window_vspacing && rgen.rand_float() < 0.75); // 75% if non-teacher lounge
 	point const table_pos(room.xc(), room.yc(), zval); // approximate; can be placed 10% away from the room center
 
+	if (is_prison()) { // add tables and chairs
+		// TODO
+	}
 	if (teacher || add_tall_table) { // add tall table with two bar stools, or a normal table with chairs for a teacher lounge
 		unsigned const max_chairs(add_tall_table ? 2 : 4);
 		add_table_and_chairs(rgen, room, blockers, room_id, table_pos, WHITE, 0.1, tot_light_amt, max_chairs, add_tall_table);
