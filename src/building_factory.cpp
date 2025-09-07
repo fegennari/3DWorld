@@ -749,7 +749,7 @@ void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float 
 		for (auto i = objs.begin()+machines_start; i != objs.end(); ++i) { // add some smoke emitters
 			if (i->type != TYPE_MACHINE)  continue;
 			if (rgen.rand_float() > 0.15) continue; // 15% chance
-			float const smoke_radius(0.12*(i->dx() + i->dy()));
+			float const smoke_radius(0.08*(i->dx() + i->dy()));
 			point const pos(i->xc(), i->yc(), (i->z1() + 0.9*i->dz())); // smoke starts near machine top and rises up to the ceiling
 			interior->ind_info->smoke_emitters.emplace_back(pos, smoke_radius, (i - objs.begin())); // store machine obj id
 		}
@@ -1056,7 +1056,7 @@ void bldg_industrial_info_t::next_frame(particle_manager_t &particle_manager) { 
 	for (smoke_source_t &s : smoke_emitters) { // generate smoke
 		s.time += fticks;
 		if (s.time < s.next_smoke_time) continue;
-		particle_manager.add_particle(s.pos, SMOKE_VEL_FACTORY*plus_z, DK_GRAY, s.radius, PART_EFFECT_SMOKE, s.pid, 0.5); // coll_radius=0.5
+		particle_manager.add_particle(s.pos, SMOKE_VEL_FACTORY*plus_z, colorRGBA(DK_GRAY, 0.75), s.radius, PART_EFFECT_SMOKE, s.pid, 0.5); // coll_radius=0.5
 		s.next_smoke_time = s.time + rgen.rand_uniform(0.5, 0.8)*TICKS_PER_SECOND;
 	}
 }

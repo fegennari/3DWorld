@@ -1819,8 +1819,8 @@ void particle_manager_t::next_frame(building_t &building) {
 	if (particles.empty()) return;
 	float const fticks_stable(min(fticks, 4.0f)); // clamp to 0.1s
 	auto const &objs(building.interior->room_geom->objs);
-	//                                        none sparks clouds smoke splash bubble, droplet
-	float const lifetimes[NUM_PART_EFFECTS] = {0.0, 2.5,   3.0,   2.0,  0.25,  2.0,    1.0};
+	//                                        none sparks clouds smoke splash bubble, droplet, steam
+	float const lifetimes[NUM_PART_EFFECTS] = {0.0, 2.5,   3.0,   2.0,  0.25,  2.0,    1.0,     2.0};
 
 	for (particle_t &p : particles) {
 		point const p_last(p.pos);
@@ -1841,6 +1841,9 @@ void particle_manager_t::next_frame(building_t &building) {
 			p.radius = p.init_radius*(1.0 + 3.0*lifetime); // radius increases over lifetime
 			p.color  = colorRGBA(DK_GRAY*(1.0 - lifetime), p.alpha*(1.0 - lifetime)); // dark gray => transparent black
 			//if (building.is_factory() && p.pos.z > building.ground_floor_z1) {} // should factory smoke be different?
+		}
+		else if (p.effect == PART_EFFECT_STEAM) {
+			p.radius = p.init_radius*(1.0 + 3.0*lifetime); // radius increases over lifetime; color remains constant
 		}
 		else if (p.effect == PART_EFFECT_SPLASH) {
 			p.radius  = p.init_radius*(1.0 + 1.0*lifetime); // radius increases over lifetime
@@ -1879,7 +1882,10 @@ void particle_manager_t::next_frame(building_t &building) {
 		if (p.parent_obj_id >= 0) {assert((unsigned)p.parent_obj_id < objs.size()); self = objs.begin() + p.parent_obj_id;}
 
 		if (building.interior->check_sphere_coll(building, p.pos, p_last, p.radius*p.coll_radius, self, cnorm, hardness, obj_ix)) {
-			if (p.effect == PART_EFFECT_CLOUD || p.effect == PART_EFFECT_SMOKE || p.effect == PART_EFFECT_DROPLET) {p.effect = PART_EFFECT_NONE; continue;} // no bounce
+			if (p.effect == PART_EFFECT_CLOUD || p.effect == PART_EFFECT_SMOKE || p.effect == PART_EFFECT_DROPLET || p.effect == PART_EFFECT_STEAM) { // no bounce
+				p.effect = PART_EFFECT_NONE;
+				continue;
+			}
 			apply_floor_vel_thresh(p.vel, cnorm);
 			bool const bounced(apply_object_bounce(p.vel, cnorm, bounce_scale*hardness, 0)); // on_floor=0
 			

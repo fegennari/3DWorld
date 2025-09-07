@@ -1314,7 +1314,7 @@ public:
 			do_line_clip(head_pos, water_end, obj.d); // should only clip water_end
 			point steam_pos(head_pos + head_dist*(water_end - head_pos)); // somewhere along the water path
 			steam_pos += (spread_radius + head_dist*(spread_radius_bot - spread_radius))*(sin(theta)*d1 + cos(theta)*d2); // random shift to the side
-			particle_manager.add_particle(steam_pos, 0.0008*plus_z, colorRGBA(WHITE, 0.2), 0.25*width, PART_EFFECT_CLOUD, obj_ix, 1.0);
+			particle_manager.add_particle(steam_pos, 0.0008*plus_z, colorRGBA(WHITE, 0.15), 0.2*width, PART_EFFECT_STEAM, obj_ix, 1.5); // coll_radius=1.5
 		}
 	}
 	void draw_and_clear(shader_t &s) {
@@ -2282,9 +2282,9 @@ void draw_emissive_billboards(quad_batch_draw &qbd, int tid) {
 }
 
 class particle_texture_manager_t {
-	// none, sparks, clouds, smoke, splash, bubble, droplet
+	// none, sparks, clouds, smoke, splash, bubble, droplet, steam
 	string const fns[NUM_PART_EFFECTS] = {"", "", "", "", "water_splash.png", "white_circle.png", "white_circle.png"};
-	int         tids[NUM_PART_EFFECTS] = {-1, BLUR_CENT_TEX, BLUR_TEX, BLUR_TEX, -1, -1, -1};
+	int         tids[NUM_PART_EFFECTS] = {-1, BLUR_CENT_TEX, BLUR_TEX, SMOKE_PUFF_TEX, -1, -1, -1, SMOKE_PUFF_TEX};
 public:
 	int get_tid(unsigned effect) {
 		assert(effect < NUM_PART_EFFECTS);
