@@ -1773,8 +1773,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	float two_floors_below(camera_bs.z - 2.0*floor_spacing);
 	if (player_in_industrial) {min_eq(two_floors_below, ground_floor_z1);} // industrial lights reach more than 2 floors
 	cube_t const clip_cube_bs(shadow_only ? (smap_light_clip_cube - xlate) : reflection_clip_cube);
-	// skip for rotated buildings and reflection pass, since reflected pos may be in a different room; should we use actual_player_pos for shadow_only mode?
-	int const camera_room((is_rotated || reflection_pass) ? -1 : building.get_room_containing_camera(camera_bs));
+	// skip for rotated buildings and planar reflection pass, since reflected pos may be in a different room; should we use actual_player_pos for shadow_only mode?
+	int const camera_room((is_rotated || (reflection_pass && !cube_map_ref)) ? -1 : building.get_room_containing_camera(camera_bs));
 	int camera_part(-1), cull_room_ix(-1);
 	unsigned last_room_ix(building.interior->rooms.size()), last_culled_room_ix(last_room_ix), last_floor_ix(0); // start at an invalid value
 	bool camera_in_closed_room(0), last_room_closed(0), obj_drawn(0), no_cull_room(0);
@@ -1813,8 +1813,16 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		if (shadow_only) {
 			if (type == TYPE_CEIL_FAN) continue; // not shadow casting; would shadow its own light
 			if (obj.is_exterior())     continue; // outdoors; no indoor shadow
+			if (player_in_mall && type == TYPE_HANGER) continue; // too small to cast a shadow for lights high above
 			if (type == TYPE_KEY || type == TYPE_SILVER || type == TYPE_FOLD_SHIRT)                 continue; // small
 			if (obj.z1() > camera_bs.z || (obj.z2() < two_floors_below && type != TYPE_BLDG_FOUNT)) continue; // above or more than 2 floors below light, except mall fountains
+		}
+		else if (cube_map_ref) {
+			if (type == TYPE_KEY || type == TYPE_PADLOCK || type == TYPE_SILVER || type == TYPE_CUP || type == TYPE_HANGER ||
+				type == TYPE_BANANA || type == TYPE_BAN_PEEL || type == TYPE_APPLE) continue; // small
+			if (camera_room >= 0 && (int)obj.room_id != camera_room) { // cull expensive objects in different room from the player
+				if (type == TYPE_CONF_PHONE || type == TYPE_VIS_PHONE || type == TYPE_SHOE || type == TYPE_SHOEBOX || type == TYPE_CLOTHES || type == TYPE_FOLD_SHIRT) continue;
+			}
 		}
 		else if ((type == TYPE_SILVER /*|| type == TYPE_FOLD_SHIRT*/) && camera_bs.z < obj.z1()) continue; // not visible from below (except on glass table?)
 		point obj_center(obj.get_cube_center());
@@ -1867,7 +1875,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		if (!(is_rotated ? building.is_rot_cube_visible(obj, xlate) : camera_pdu.cube_visible(obj + xlate))) continue; // VFC
 		// check for parking garage vs. mall/backrooms separation
 		if (!shadow_only && player_in_this_basement && room.is_ext_basement() != (player_in_basement >= 3) && !building.is_cube_visible_through_extb_door(camera_bs, obj)) continue;
-		//highres_timer_t timer(string("Draw ") + get_room_obj_type(obj).name + (shadow_only ? " Shadow" : ""), (display_mode & 0x20));
+		//highres_timer_t timer(string("Draw ") + get_room_obj_type(obj).name + (shadow_only ? " Shadow" : (reflection_pass ? " Ref" : "")), (display_mode & 0x20));
 
 		if (check_occlusion && i != model_to_not_cull) { // occlusion culling
 			if (!(no_cull_room && obj.room_id == (unsigned)camera_room)) { // skip culling of objects in the same room as the player/light, except for extra_occluders
