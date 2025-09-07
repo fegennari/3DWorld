@@ -886,6 +886,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 				}
 			}
 			if (type == TYPE_O_SHOWER) {obj.flags ^= RO_FLAG_IS_ACTIVE;} // open shower; toggle active bit
+			gen_sound_thread_safe_at_player(SOUND_SQUEAK);
 		}
 	}
 	else if (type == TYPE_SHOWERTUB) { // open/close curtains
