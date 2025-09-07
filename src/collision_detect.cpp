@@ -1696,8 +1696,7 @@ void create_footsteps(point const &pos, float sz, vector3d const &view_dir, poin
 
 void play_camera_footstep_sound() { // tiled terrain mode
 
-	if (!(display_mode & 0x0100)) return;
-	if (player_in_water == 2)     return; // no footsteps when underwater
+	if (player_in_water == 2) return; // no footsteps when underwater
 	if (player_on_moving_ww || player_on_escalator) return; // player is moving, but may not be walking - no footsteps
 	if (last_fall_frame == frame_counter) return; // no footsteps when falling
 	static double fs_time(0.0);
