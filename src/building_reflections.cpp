@@ -14,6 +14,8 @@ shader_t reflection_shader;
 
 extern int display_mode, window_width, window_height, frame_counter;
 extern float CAMERA_RADIUS, NEAR_CLIP, perspective_fovy;
+extern double camera_zh;
+extern point surface_pos;
 extern vector4d clip_plane;
 extern building_t const *player_building;
 
@@ -307,7 +309,6 @@ class cube_map_reflection_manager_t {
 public:
 	void capture(building_t const &building, point const &pos) {
 		bool interior_room(0), is_extb(0);
-		bool const sparse_update(0/*building.has_mall() || building.is_industrial()*/); // slow case with many objects to draw
 		float const floor_spacing(building.get_window_vspace());
 		int const room_id(building.get_room_containing_pt(pos));
 		cube_t scene_bounds;
@@ -341,7 +342,7 @@ public:
 		pos_dir_up const prev_camera_pdu(camera_pdu);
 		float far_plane(scene_bounds.furthest_dist_to_pt(center)); // capture the entire building
 		min_eq(far_plane, 50.0f*floor_spacing); // limit to a reasonable distance for malls, etc.
-		float const near_plane(max(NEAR_CLIP, 0.001f*far_plane)), update_dist(0.05*CAMERA_RADIUS);
+		float const near_plane(max(NEAR_CLIP, 0.001f*far_plane));
 		vector3d const xlate(get_tiled_terrain_model_xlate());
 		pre_reflect_camera_pos_bs = camera_pos - xlate;
 		is_cube_map_reflection    = 1;
@@ -355,9 +356,9 @@ public:
 		for (unsigned dim = 0; dim < 3; ++dim) {
 			for (unsigned dir = 0; dir < 2; ++dir) {
 				unsigned const face_id(2*dim + (dir == 0));
-				if (sparse_update && (frame_counter % 6) != face_id)  continue; // not our turn to update; looks bad
+				//if ((frame_counter % 6) != face_id) continue; // not our turn to update; looks bad
 				point &last_pos(last_update_pos[face_id]);
-				if (dist_xy_less_than(last_pos, center, update_dist)) continue; // no pos change; skip this face; ignore zval for head bob
+				if (center == last_pos) continue; // no pos change; skip this face
 				last_pos  = center;
 				cview_dir = zero_vector;
 				up_vector = -plus_y;
@@ -403,8 +404,10 @@ public:
 cube_map_reflection_manager_t cube_map_reflection_manager;
 
 void setup_player_building_cube_map() {
+	point camera_bs_raw(surface_pos - get_tiled_terrain_model_xlate());
+	camera_bs_raw.z += camera_zh;
 	assert(player_building);
-	cube_map_reflection_manager.capture(*player_building, get_camera_building_space());
+	cube_map_reflection_manager.capture(*player_building, camera_bs_raw);
 }
 void bind_player_building_cube_map(shader_t &s) {cube_map_reflection_manager.bind(s);}
 void register_reflection_update() {cube_map_reflection_manager.force_update();}
