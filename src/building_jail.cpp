@@ -1076,6 +1076,7 @@ void building_t::add_prison_hall_room_objs(rand_gen_t rgen, room_t const &room, 
 				if (!has_bcube_int(query_box, interior->walls[rack.dim])) continue; // not along a wall - in space between hall area and space with no cells
 				rack_exp.expand_by_xy(clearance);
 				if (interior->is_blocked_by_stairs_or_elevator(rack_exp)) continue;
+				if (intersects_nested_room(rack, room_id))                continue;
 				add_clothing_rack(rack, room_id, !rack.dim, tot_light_amt, RTYPE_JAIL, rgen);
 				break; // success
 			} // for N
