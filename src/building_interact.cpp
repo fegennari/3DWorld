@@ -541,12 +541,13 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 					else if (type == TYPE_FISHTANK && i->has_lid()) {keep = 1;} // fishtank with a lid and light
 					else if (type == TYPE_PICTURE || type == TYPE_TPROLL || type == TYPE_MWAVE || type == TYPE_TV || type == TYPE_MONITOR || type == TYPE_BLINDS ||
 						type == TYPE_SWITCH || type == TYPE_BOOK || type == TYPE_BRK_PANEL || type == TYPE_BREAKER || type == TYPE_ATTIC_DOOR || type == TYPE_OFF_CHAIR ||
-						type == TYPE_WFOUNTAIN || type == TYPE_VENDING || type == TYPE_MED_CAB || type == TYPE_LOCKER || type == TYPE_TCAN) {keep = 1;}
-					else if ((type == TYPE_STOVE || i->is_shower() || type == TYPE_SHOWERTUB /*|| type == TYPE_FRIDGE*/) && !i->in_mall()) {keep = 1;} // not in plumbing store
+						type == TYPE_WFOUNTAIN || type == TYPE_VENDING || type == TYPE_MED_CAB || type == TYPE_LOCKER || type == TYPE_TCAN)     {keep = 1;}
+					else if ((type == TYPE_STOVE || type == TYPE_SHOWER || type == TYPE_SHOWERTUB /*|| type == TYPE_FRIDGE*/) && !i->in_mall()) {keep = 1;} // not in plumbing store
+					else if (type == TYPE_O_SHOWER && i->contains_pt(closest_to)) {keep = 1;} // only if standing inside
 					else if (type == TYPE_LG_BALL && i->has_dstate()) {keep = 1;}
 					else if (type == TYPE_BUTTON && i->in_elevator() == bool(player_in_elevator)) {keep = 1;} // check for buttons inside/outside elevator
 					else if (type == TYPE_PIZZA_BOX && !i->was_expanded()) {keep = 1;} // can't open if on a shelf
-					else if (i->is_parked_car() && !i->is_broken()) {keep = 1;} // parked car with unbroken windows
+					else if (i->is_parked_car() && !i->is_broken())        {keep = 1;} // parked car with unbroken windows
 					else if (!check_only && type == TYPE_SHELFRACK && !i->obj_expanded()) {keep = 1;} // expand shelfrack when action key is actually applied
 					else if (type == TYPE_POOL_BALL && player_has_pool_cue()) {keep = 1;} // can only push pool ball if holding a pool cue
 					else if (type == TYPE_FALSE_DOOR && !((i->flags & RO_FLAG_WALKWAY) && i->is_interior())) {keep = 1;} // skip walkway only decal doors
@@ -570,8 +571,9 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 				else {center = obj_bc.closest_pt(closest_to);}
 				if (fabs(center.z - closest_to.z) > 0.7*floor_spacing) continue; // wrong floor
 				// use dmax for closets and open breaker boxes to prioritize objects inside
-				bool const low_priority(type == TYPE_CLOSET || (type == TYPE_BRK_PANEL && i->is_open()));
-				float const dist_sq(low_priority ? dmax*dmax : p2p_dist_sq(closest_to, center));
+				bool const low_priority (type == TYPE_CLOSET || (type == TYPE_BRK_PANEL && i->is_open()));
+				bool const high_priority(type == TYPE_BUTTON || type == TYPE_SWITCH);
+				float const dist_sq(low_priority ? dmax*dmax : p2p_dist_sq(closest_to, center)*(high_priority ? 0.1 : 1.0));
 				if (found_item && dist_sq >= closest_dist_sq)          continue; // not the closest
 				if (!obj_bc.closest_dist_less_than(closest_to, dmax))  continue; // too far
 				if (in_dir != zero_vector && !obj_bc.line_intersects(closest_to, query_ray_end)) continue; // player is not pointing at this object
@@ -874,7 +876,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 			update_draw_data = 1;
 			play_open_close_sound(obj, sound_origin);
 		}
-		else if (obj.contains_pt(int_pos)) { // turn on shower water, only if standing inside the shower
+		else { // turn on shower water
 			if (type == TYPE_SHOWER) { // closed shower only
 				gen_sound_thread_safe_at_player(SOUND_SINK);
 				sound_scale = 0.5;
