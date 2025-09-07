@@ -1,3 +1,5 @@
+Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/)
+
 Font Generator: https://lucide.github.io/Font-Atlas-Generator
 Icons from: https://www.freeimages.com
 Animated Pigeon Bird: https://sketchfab.com/3d-models/animated-bird-pigeon-797d27b68af3453e865149435df6aa30
@@ -42,3 +44,4 @@ Basketball Hoop: https://sketchfab.com/3d-models/basketball-hoop-84fc0d5249524b6
 Phone: https://sketchfab.com/3d-models/corded-phone-with-buttons-b11bc340cda14a75b1d8c1d63e79f8dd
 Phone: https://sketchfab.com/3d-models/corded-phone-no-buttons-77376f2347964e8d9632321bcdd89536
 Jumpsuit: https://sketchfab.com/3d-models/hangers-and-long-sleeve-jumpsuit-5992d6ecc58440f2b3009d2f44d68187
+Treadmill: https://sketchfab.com/3d-models/treadmill-proform-03e4ff99ecc24e5f8ea49d4e8df876e8#download
