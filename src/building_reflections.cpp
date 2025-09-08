@@ -400,7 +400,7 @@ public:
 		if (tid == 0) return; // disabled
 		for (unsigned f = 0; f < 6; ++f) {last_update_pos[f] = all_zeros;}
 	}
-	uint64_t get_gpu_mem_usage() const {return ((tid > 0) ? 6*3ULL*tsize*tsize : 0);} // 6 faces
+	uint64_t get_gpu_mem_usage() const {return ((tid > 0) ? 6*3ULL*tsize*tsize*4/3 : 0);} // 6 faces + mipmaps
 };
 cube_map_reflection_manager_t cube_map_reflection_manager;
 
