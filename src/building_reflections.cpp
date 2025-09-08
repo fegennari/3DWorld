@@ -405,7 +405,7 @@ public:
 cube_map_reflection_manager_t cube_map_reflection_manager;
 
 void setup_player_building_cube_map() {
-	point camera_bs_raw(surface_pos - get_tiled_terrain_model_xlate());
+	point camera_bs_raw(surface_pos);
 	camera_bs_raw.z += camera_zh;
 	assert(player_building);
 	cube_map_reflection_manager.capture(*player_building, camera_bs_raw);
