@@ -1809,21 +1809,23 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		if (check_clip_cube && !clip_cube_bs.intersects(obj)) continue; // shadow map clip cube test: fast and high rejection ratio, do this first
 		// optimization: only draw models in the same room as the mirror for malls; applies to furniture stores, clothing stores, and bathrooms
 		if (reflection_pass && player_in_mall && cur_room_mirror.room_id > 0 && obj.room_id != cur_room_mirror.room_id) continue;
+		bool const in_camera_room((int)obj.room_id == camera_room);
 		room_object const type(obj.type);
 
 		if (shadow_only) {
 			if (type == TYPE_CEIL_FAN) continue; // not shadow casting; would shadow its own light
 			if (obj.is_exterior())     continue; // outdoors; no indoor shadow
 			if (player_in_mall && type == TYPE_HANGER) continue; // too small to cast a shadow for lights high above
+			if (player_in_mall && type == TYPE_CLOTHES && !in_camera_room) continue; // optimization for expensive clothing
 			if (type == TYPE_KEY || type == TYPE_SILVER || type == TYPE_FOLD_SHIRT)                 continue; // small
 			if (obj.z1() > camera_bs.z || (obj.z2() < two_floors_below && type != TYPE_BLDG_FOUNT)) continue; // above or more than 2 floors below light, except mall fountains
 		}
 		else if (cube_map_ref) {
 			if (type == TYPE_KEY || type == TYPE_PADLOCK || type == TYPE_SILVER || type == TYPE_CUP || type == TYPE_HANGER ||
 				type == TYPE_BANANA || type == TYPE_BAN_PEEL || type == TYPE_APPLE || type == TYPE_TOY_MODEL) continue; // small
-			if (camera_room >= 0 && (int)obj.room_id != camera_room) { // cull expensive objects in different room from the player
+			if (!in_camera_room) { // cull expensive objects in different room from the player
 				if (type == TYPE_CONF_PHONE || type == TYPE_VIS_PHONE || type == TYPE_SHOE || type == TYPE_SHOEBOX || type == TYPE_CLOTHES ||
-					type == TYPE_FOLD_SHIRT || type == TYPE_FIRE_EXT || type == TYPE_TOASTER) continue;
+					type == TYPE_FOLD_SHIRT || type == TYPE_FIRE_EXT || type == TYPE_TOASTER || type == TYPE_LAMP) continue;
 			}
 		}
 		else if ((type == TYPE_SILVER /*|| type == TYPE_FOLD_SHIRT*/) && camera_bs.z < obj.z1()) continue; // not visible from below (except on glass table?)
@@ -1864,7 +1866,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		if (player_in_building && obj.room_id != last_culled_room_ix && !obj.is_exterior()) { // new room; apply room-based VFC + occlusion culling
 			last_culled_room_ix = obj.room_id;
 
-			if (obj.room_id != (unsigned)camera_room) { // camera not in this room
+			if (!in_camera_room) { // camera not in this room
 				cube_t c(room);
 				c.expand_in_z (-building.get_fc_thickness  ());
 				c.expand_by_xy(-building.get_wall_thickness());
@@ -1880,7 +1882,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		//highres_timer_t timer(string("Draw ") + get_room_obj_type(obj).name + (shadow_only ? " Shadow" : (reflection_pass ? " Ref" : "")), (display_mode & 0x20));
 
 		if (check_occlusion && i != model_to_not_cull) { // occlusion culling
-			if (!(no_cull_room && obj.room_id == (unsigned)camera_room)) { // skip culling of objects in the same room as the player/light, except for extra_occluders
+			if (!(no_cull_room && in_camera_room)) { // skip culling of objects in the same room as the player/light, except for extra_occluders
 				bool no_check_occlude(0);
 
 				if (type == TYPE_HANGER && obj.is_hanging() && i+1 != obj_model_insts.end()) { // hanger
@@ -1915,7 +1917,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			}
 			// if either the camera or the object are in different rooms with closed doors,
 			// on the same floor (not separated by stairs) of the same part (not visible across windows), then the object isn't visible
-			if ((last_room_closed || camera_in_closed_room) && obj.room_id != camera_room && (room.part_id == camera_part || !has_windows)) continue;
+			if ((last_room_closed || camera_in_closed_room) && !in_camera_room && (room.part_id == camera_part || !has_windows)) continue;
 		}
 		apply_room_obj_rotate(obj, *i, objs); // Note: may modify obj by clearing flags and inst by updating dir
 		
@@ -1951,7 +1953,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			s.set_color_e(BLACK);
 		}
 		if (player_in_building && !shadow_only && type == TYPE_SINK) { // sink
-			if (obj.room_id == camera_room) {water_sound_manager.register_running_water(obj, building);}
+			if (in_camera_room) {water_sound_manager.register_running_water(obj, building);}
 			water_draw.add_water_for_sink(obj);
 		}
 	} // for i
