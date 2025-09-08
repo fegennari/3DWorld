@@ -900,8 +900,11 @@ void building_room_geom_t::add_vert_roll_to_material(room_object_t const &c, rge
 	mat.add_vcylin_to_verts(roll, apply_light_color(c), 1, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv, 0.0, swap_txy); // paper/plastic roll
 }
 void building_room_geom_t::add_tproll(room_object_t const &c) { // is_small=1
-	if (c.was_expanded() || c.has_extra()) { // bare TP roll from a box or shelf rack, or paper towel roll
-		rgeom_mat_t &mat(get_material(tid_nm_pair_t(WHITE_TEX, get_toilet_paper_nm_id(), 0.0, 0.0, 0.0, 0.0, 1), 1, 0, 1)); // shadowed, small
+	bool const is_paper_towel(c.has_extra());
+
+	if (c.was_expanded() || is_paper_towel) { // bare TP roll from a box or shelf rack, or paper towel roll
+		bool const shadowed(1); // wide enough to cast a shadow, even on a shelf rack
+		rgeom_mat_t &mat(get_material(tid_nm_pair_t(WHITE_TEX, get_toilet_paper_nm_id(), 0.0, 0.0, 0.0, 0.0, shadowed, 0, 1), shadowed, 0, 1)); // small, on_reflect=1
 		add_vert_roll_to_material(c, mat);
 		return;
 	}
@@ -973,7 +976,8 @@ void building_room_geom_t::add_spraycan_to_material(room_object_t const &c, rgeo
 	if (draw_bottom) {mat.add_ortho_cylin_to_verts(can, apply_light_color(c, LT_GRAY), dim, !c.dir, c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 1, ndiv);} // top or bottom only, no sides
 }
 void building_room_geom_t::add_spraycan(room_object_t const &c) { // is_small=1
-	add_spraycan_to_material(c, get_untextured_material(1, 0, 1));
+	bool const shadowed(!c.is_on_srack());
+	add_spraycan_to_material(c, get_untextured_material(shadowed, 0, 1, 0, 0, 1)); // no_reflect=1
 }
 
 tid_nm_pair_t get_small_font_tex() {
@@ -2059,14 +2063,15 @@ void building_room_geom_t::add_shower_tub(room_object_t const &c, tid_nm_pair_t 
 void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom, float label_rot_angle) {
 	// obj_id: bits 1-3 for type, bits 6-7 for emptiness, bit 6 for cap color
 	unsigned const bottle_ndiv(get_rgeom_sphere_ndiv(1)); // use smaller ndiv (16) to reduce vertex count
-	bool const cap_color_ix(c.obj_id & 64);
-	bool const is_empty(c.is_bottle_empty()), transparent(c.color.A < 1.0), shadowed(c.color.A > 0.5);
+	bool const cap_color_ix(c.obj_id & 64), on_shelf_rack(c.is_on_srack());
+	bool const is_empty(c.is_bottle_empty()), transparent(c.color.A < 1.0), opaque(c.color.A > 0.5);
+	bool const mat_shadow(opaque && !on_shelf_rack), label_shadow(!opaque && !on_shelf_rack); // either plastic/glass or label casts shadow, if not on shelf rack
 	colorRGBA const color(apply_light_color(c));
 	colorRGBA const cap_colors[2] = {LT_GRAY, GOLD}, cap_spec_colors[2] = {WHITE, GOLD};
 	// setup the untextured plastic/glass material
-	tid_nm_pair_t tex(-1, 1.0, shadowed, 0, 1); // no_reflect=1
+	tid_nm_pair_t tex(-1, 1.0, mat_shadow, 0, 1); // no_reflect=1
 	tex.set_specular(0.5, 80.0);
-	rgeom_mat_t &mat(get_material(tex, shadowed, 0, 1, transparent)); // dynamic=0, small=1
+	rgeom_mat_t &mat(get_material(tex, mat_shadow, 0, 1, transparent)); // dynamic=0, small=1
 	vector3d const sz(c.get_size());
 	unsigned const dim(get_max_dim(sz)), dim1((dim+1)%3), dim2((dim+2)%3);
 	add_bottom |= (dim != 2); // add bottom if bottle is on its side
@@ -2087,7 +2092,7 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom, f
 	point const center(c.get_cube_center());
 	unsigned const verts_start(mat.itri_verts.size());
 
-	if (c.is_on_srack()) { // shelf rack bottle; draw middle as a cone as an optimization
+	if (on_shelf_rack) { // shelf rack bottle; draw middle as a cone as an optimization
 		mid.d[dim][c.dir] = body.d[dim][!c.dir];
 		mat.add_ortho_cylin_to_verts(mid, color, dim, 0, 0, 0, 0, (c.dir ? 0.38 : 1.0), (c.dir ? 1.0 : 0.38), 1.0, 1.0, 0, bottle_ndiv);
 	}
@@ -2100,7 +2105,7 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom, f
 	if (rot_angle != 0.0) {rotate_verts(mat.itri_verts, plus_z, rot_angle, center, verts_start);}
 
 	if (!is_empty) { // draw cap if nonempty
-		bool const draw_bot(c.was_expanded() && !c.is_on_srack());
+		bool const draw_bot(c.was_expanded() && !on_shelf_rack);
 		tid_nm_pair_t cap_tex(-1, 1.0f, 0, 0, 1); // unshadowed, no_reflect=1
 		cap_tex.set_specular_color(cap_spec_colors[cap_color_ix], 0.8, 80.0);
 		cap_tex.metalness = 1.0;
@@ -2122,7 +2127,7 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom, f
 	bool const flip(dim != 2 && c.dir);
 	string const &texture_fn(bp.texture_fn); // select the custom label texture for each bottle type
 	int const tid(texture_fn.empty() ? -1 : get_texture_by_name(texture_fn));
-	rgeom_mat_t &label_mat(get_material(tid_nm_pair_t(tid, 1.0f, !shadowed, 0, 1), !shadowed, 0, 1)); // shadowed if plastic unshadowed, small, no_reflect=1
+	rgeom_mat_t &label_mat(get_material(tid_nm_pair_t(tid, 1.0f, label_shadow, 0, 1), label_shadow, 0, 1)); // small, no_reflect=1
 	unsigned const label_verts_start(label_mat.itri_verts.size());
 	// draw label
 	label_mat.add_ortho_cylin_to_verts(body, apply_light_color(c, WHITE), dim, 0, 0, 0, 0, 1.0, 1.0, side_tscale,
@@ -2141,27 +2146,28 @@ void building_room_geom_t::add_drink_can(room_object_t const &c) {
 	unsigned const ndiv(get_rgeom_sphere_ndiv(1)); // use smaller ndiv (16) to reduce vertex count
 	unsigned const dim(get_max_dim(c.get_size()));
 	bool const add_bottom(dim != 2); // draw bottom if not vertical
+	bool const shadowed(!c.is_on_srack());
 	drink_can_params_t const &cp(drink_can_params[c.get_drink_can_type()]);
 	float const tscale_add(0.123*c.obj_id + get_obj_rand_tscale_add(c)); // add a pseudo-random rotation to the texture
 	float const rot_angle(c.get_bottle_rot_angle());
 	point const center(c.get_cube_center());
 	colorRGBA const color(apply_light_color(c));
-	tid_nm_pair_t tp(get_texture_by_name(cp.texture_fn), 1.0f, 1, 0, 1); // shadowed, no_reflect=1
+	tid_nm_pair_t tp(get_texture_by_name(cp.texture_fn), 1.0f, shadowed, 0, 1); // no_reflect=1
 	tp.set_specular(0.8, 80.0);
-	rgeom_mat_t &label_mat(get_material(tp, 1, 0, 1)); // shadowed, small
+	rgeom_mat_t &label_mat(get_material(tp, shadowed, 0, 1)); // small
 	float const tscale(cp.tscale*((dim == 2 || c.dir) ? 1.0 : -1.0)); // invert texture if horizontal/fallen
 	float ltc1(cp.tex_clip_y), ltc2(1.0 - cp.tex_clip_y);
 	if (dim != 2 && c.dir) {swap(ltc1, ltc2);} // invert label
 	unsigned const label_verts_start(label_mat.itri_verts.size());
 	label_mat.add_ortho_cylin_to_verts(c, color, dim, 0, 0, 0, 0, 1.0, 1.0, tscale, 1.0, 0, ndiv, tscale_add, 0, ltc2, ltc1); // sides only
 	if (rot_angle != 0.0) {rotate_verts(label_mat.itri_verts, plus_z, rot_angle, center, label_verts_start);}
-	rgeom_mat_t &top_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/can_lid.jpg"), 0.0f, 1, 0, 1), 1, 0, 1)); // shadowed, small, no_reflect=1
+	rgeom_mat_t &top_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/can_lid.jpg"), 0.0f, shadowed, 0, 1), shadowed, 0, 1)); // small, no_reflect=1
 	unsigned const top_verts_start(top_mat.itri_verts.size());
 	top_mat.add_ortho_cylin_to_verts(c, color, dim, c.dir, !c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // top
 	if (rot_angle != 0.0) {rotate_verts(top_mat.itri_verts, plus_z, rot_angle, center, top_verts_start);}
 	
 	if (add_bottom) {
-		rgeom_mat_t &bot_mat(get_metal_material(1, 0, 1, 0, 1)); // no_reflect=1
+		rgeom_mat_t &bot_mat(get_metal_material(shadowed, 0, 1, 0, 1)); // no_reflect=1
 		unsigned const bot_verts_start(bot_mat.itri_verts.size());
 		bot_mat.add_ortho_cylin_to_verts(c, apply_light_color(c, LT_GRAY), dim, !c.dir, c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // untextured, shadowed, small, bottom
 		if (rot_angle != 0.0) {rotate_verts(bot_mat.itri_verts, plus_z, rot_angle, center, bot_verts_start);}
@@ -2191,7 +2197,9 @@ void building_room_geom_t::add_vase(room_object_t const &c) { // or urn
 			tex_scale_h = 2 + (rgen.rand()%7); // must be an integer, 2-8
 		}
 	}
-	rgeom_mat_t &side_mat(get_material(tid_nm_pair_t(tid, 0.0f, 1, 0, 1), 1, 0, 1)); // shadowed, small, no_reflect=1
+	// ship shadows for vases on shelf racks; looks bad for vases on the top shelf with no cover, but usually this isn't visible to the player (except on retail upper floor)
+	bool const on_shelfrack(c.is_on_srack()), shadowed(!on_shelfrack);
+	rgeom_mat_t &side_mat(get_material(tid_nm_pair_t(tid, 0.0f, shadowed, 0, 1), shadowed, 0, 1)); // small, no_reflect=1
 	unsigned const ndiv(get_def_cylin_ndiv(c)), num_stacks(ndiv), itris_start(side_mat.itri_verts.size()), ixs_start(side_mat.indices.size());
 	float const tscale(tex_scale_v/num_stacks), zstep(c.dz()/num_stacks);
 	float const rbase(c.get_radius()), rmax(rbase);
@@ -2218,13 +2226,13 @@ void building_room_geom_t::add_vase(room_object_t const &c) { // or urn
 	} // for n
 	add_inverted_triangles(side_mat.itri_verts, side_mat.indices, itris_start, ixs_start); // add inner surfaces
 	
-	if (!c.is_on_srack()) { // draw the bottom surface if not on a shelf rack, though it may still be visible from above on a glass floor on the top shelf if no srack top
+	if (!on_shelfrack) { // draw the bottom surface if not on a shelf rack, though it may still be visible from above on a glass floor on the top shelf if no srack top
 		cube_t bot;
 		bot.set_from_point(c.get_cube_center());
 		bot.expand_by_xy(start_radius);
 		bot.z1() = c.z1() + 0.01*c.dz(); // prevent z-fighting
 		// inverted, skip sides, no_reflect=1; shadowed in case it's on a glass table
-		get_untextured_material(1, 0, 1, 0, 0, 1).add_vcylin_to_verts(bot, color, 1, 0, 0, 1, 1.0, 1.0, 1.0, 1.0, 1);
+		get_untextured_material(shadowed, 0, 1, 0, 0, 1).add_vcylin_to_verts(bot, color, 1, 0, 0, 1, 1.0, 1.0, 1.0, 1.0, 1);
 	}
 }
 
@@ -4500,7 +4508,7 @@ void building_room_geom_t::add_bucket(room_object_t const &c, bool draw_metal, b
 		if (liquid_level <= 0.0) return; // no liquid
 		float const radius(c.get_radius()*(liquid_level + (1.0 - liquid_level)*bot_rscale));
 		point const center(c.xc(), c.yc(), (c.z1() + liquid_level*c.dz()));
-		get_untextured_material(0, 0, 1, 1).add_vert_disk_to_verts(center, radius, 0, apply_light_color(c, liquid_color)); // unshadowed, transparent, small
+		get_untextured_material(0, 0, 1, 1, 0, 1).add_vert_disk_to_verts(center, radius, 0, apply_light_color(c, liquid_color)); // unshadowed, transparent, small, no_reflect=1
 	}
 }
 
@@ -5888,8 +5896,13 @@ tid_nm_pair_t get_ball_tex_params(room_object_t const &c, bool shadowed) {
 	return tex;
 }
 void building_room_geom_t::add_lg_ball(room_object_t const &c) { // is_small=1
-	bool const dynamic(c.is_dynamic()), low_detail(c.is_on_srack()); // either small or dynamic
-	rgeom_mat_t &mat(get_material(get_ball_tex_params(c, 1), 1, dynamic, !dynamic)); // shadowed=1
+	bool const dynamic(c.is_dynamic()), on_shelfrack(c.is_on_srack()), low_detail(on_shelfrack); // either small or dynamic
+	unsigned const btype(c.item_flags % NUM_BALL_TYPES);
+	bool const shadowed(!(on_shelfrack && (btype == BALL_TYPE_SOFT || btype == BALL_TYPE_TENNIS))); // no shadows for small balls on shelf racks
+	tid_nm_pair_t tex(get_ball_tex_params(c, 1));
+	tex.shadowed = shadowed;
+	if (on_shelfrack) {tex.no_reflect = 1;}
+	rgeom_mat_t &mat(get_material(tex, shadowed, dynamic, !dynamic));
 	float ts_off(0.0);
 	if (c.rotates()) {ts_off = fract(21111*c.x1() + 22222*c.y1());} // ball placed with random rotation
 	// rotate the texture coords using rot_matrix when the ball is rolling
@@ -6095,21 +6108,23 @@ void building_room_geom_t::add_flashlight_to_material(room_object_t const &c, rg
 	}
 }
 void building_room_geom_t::add_flashlight(room_object_t const &c) {
-	rgeom_mat_t &mat(get_metal_material(1, 0, 1)); // shadowed, small
+	bool const shadowed(!c.is_on_srack());
+	rgeom_mat_t &mat(get_metal_material(shadowed, 0, 1, 0, 1)); // small, no_reflect=1
 	add_flashlight_to_material(c, mat, get_def_cylin_ndiv(c));
 }
 
 void building_room_geom_t::add_candle(room_object_t const &c) {
-	unsigned const ndiv(get_def_cylin_ndiv(c)), ndiv_wick(c.is_on_srack() ? 8 : 12); // low detail for shelfrack objects
+	bool const on_shelfrack(c.is_on_srack()), shadowed(!on_shelfrack);
+	unsigned const ndiv(get_def_cylin_ndiv(c)), ndiv_wick(on_shelfrack ? 8 : 12); // low detail for shelfrack objects
 	cube_t candle(c), wick(c);
 	candle.z2() = wick.z1() = c.z1() + 0.8*c.dz();
 	wick.expand_by_xy(-0.94*c.get_radius()); // very thin
 	cube_t tip(wick);
 	wick.z2() = tip.z1() = wick.z1() + 0.6*wick.dz();
-	tid_nm_pair_t tp; // untextured
+	tid_nm_pair_t tp(-1, 1.0, shadowed, 0, 1); // untextured, no_reflect=1
 	if (c.is_lit()) {tp.emissive = 0.5;} // somewhat emissive to simulate subsurface scattering
-	get_material(tp, 1, 0, 1).add_vcylin_to_verts(candle, (c.is_lit() ? c.color : apply_light_color(c)), 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv); // draw sides and top
-	rgeom_mat_t &mat(get_untextured_material(0, 0, 1)); // unshadowed, small
+	get_material(tp, shadowed, 0, 1).add_vcylin_to_verts(candle, (c.is_lit() ? c.color : apply_light_color(c)), 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv); // draw sides and top
+	rgeom_mat_t &mat(get_untextured_material(0, 0, 1, 0, 0, 1)); // unshadowed, small, no_reflect=1
 	mat.add_vcylin_to_verts(wick, apply_light_color(c, WHITE), 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv_wick); // draw sides only
 	mat.add_vcylin_to_verts(tip,  apply_light_color(c, BLACK), 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv_wick); // draw sides and top
 }
