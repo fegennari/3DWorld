@@ -370,8 +370,8 @@ public:
 				reflection_clip_cube.d[dim][!dir] = center[dim]; // clip to half space in front of cube map face
 				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 				fgPushIdentityMatrix(); // MVM
-				vector3d const eye(center - 0.001*cview_dir);
-				fgLookAt(eye.x, eye.y, eye.z, center.x, center.y, center.z, up_vector.x, up_vector.y, up_vector.z);
+				vector3d const target(center + cview_dir);
+				fgLookAt(center.x, center.y, center.z, target.x, target.y, target.z, up_vector.x, up_vector.y, up_vector.z);
 				int reflection_pass(REF_PASS_ENABLED | REF_PASS_INT_ONLY | REF_PASS_CUBE_MAP); // set interior only flag to avoid drawing outdoor objects
 				if ( interior_room) {reflection_pass |= REF_PASS_INTERIOR;}
 				if ( is_extb      ) {reflection_pass |= REF_PASS_EXTB    ;}

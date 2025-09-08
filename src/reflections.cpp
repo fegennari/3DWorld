@@ -145,8 +145,8 @@ struct face_draw_params_t { // used for reflection cube maps
 		camera_pdu = pdu;
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 		coll_objects.cur_draw_stream_id = face_id;
-		vector3d const eye(pdu.pos - 0.001*cview_dir);
-		fgLookAt(eye.x, eye.y, eye.z, pdu.pos.x, pdu.pos.y, pdu.pos.z, up_vector.x, up_vector.y, up_vector.z);
+		vector3d const center(pdu.pos + cview_dir);
+		fgLookAt(pdu.pos.x, pdu.pos.y, pdu.pos.z, center.x, center.y, center.z, up_vector.x, up_vector.y, up_vector.z);
 		setup_sun_moon_light_pos();
 		bool const inc_mesh(cview_dir != plus_z), inc_grass_water(inc_mesh && !is_indoors);
 		draw_scene_from_custom_frustum(camera_pdu, cobj_id, 2, inc_mesh, inc_grass_water, inc_grass_water); // reflection_pass=2 (cube map)
