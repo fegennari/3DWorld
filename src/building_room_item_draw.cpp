@@ -1819,9 +1819,10 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		}
 		else if (cube_map_ref) {
 			if (type == TYPE_KEY || type == TYPE_PADLOCK || type == TYPE_SILVER || type == TYPE_CUP || type == TYPE_HANGER ||
-				type == TYPE_BANANA || type == TYPE_BAN_PEEL || type == TYPE_APPLE) continue; // small
+				type == TYPE_BANANA || type == TYPE_BAN_PEEL || type == TYPE_APPLE || type == TYPE_TOY_MODEL) continue; // small
 			if (camera_room >= 0 && (int)obj.room_id != camera_room) { // cull expensive objects in different room from the player
-				if (type == TYPE_CONF_PHONE || type == TYPE_VIS_PHONE || type == TYPE_SHOE || type == TYPE_SHOEBOX || type == TYPE_CLOTHES || type == TYPE_FOLD_SHIRT) continue;
+				if (type == TYPE_CONF_PHONE || type == TYPE_VIS_PHONE || type == TYPE_SHOE || type == TYPE_SHOEBOX || type == TYPE_CLOTHES ||
+					type == TYPE_FOLD_SHIRT || type == TYPE_FIRE_EXT || type == TYPE_TOASTER) continue;
 			}
 		}
 		else if ((type == TYPE_SILVER /*|| type == TYPE_FOLD_SHIRT*/) && camera_bs.z < obj.z1()) continue; // not visible from below (except on glass table?)
@@ -1840,7 +1841,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 				if (has_pri_hall && building.pri_hall.contains_pt(obj_center)) {cull_dist *= 10.0;} // primary hallway objects visible down a long hallway
 				else if (type == TYPE_FIRE_EXT || type == TYPE_PADLOCK)        {cull_dist *= 3.0 ;} // padlocks are small but can be seen from far away
 				else if (building.check_pt_in_retail_room(obj_center))         {cull_dist *= 2.5 ;} // increased culling distance for retail areas
-				else if (building.point_in_mall          (obj_center))         {cull_dist *= 2.0 ;} // increased culling distance for malls
+				else if (building.point_in_mall          (obj_center))         {cull_dist *= ((type == TYPE_HANGER) ? 1.2 : 2.0);} // increase dist for malls; less for hangers
 			}
 			else { // player not in this building
 				if (camera_in_building) {cull_dist *= 0.7;} // decrease culling distance for player in a different building (optimization)
@@ -1953,7 +1954,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			water_draw.add_water_for_sink(obj);
 		}
 	} // for i
-	if (!skip_interior_objs && !door_handles.empty()) { // optimization: skip door handles for player outside building
+	if (!skip_interior_objs && !cube_map_ref && !door_handles.empty()) { // optimization: skip door handles for player outside building
 		colorRGBA const handle_color(building.get_door_handle_color());
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_DOOR_HANDLE)); // L, W, H
 		vector3d const exp_val((0.5/sz.z)*sz);
@@ -2014,7 +2015,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			obj_drawn = 1;
 		} // for c
 	}
-	if (player_in_building_or_doorway) {
+	if (player_in_building_or_doorway && !cube_map_ref) {
 		// draw animals; skip animal shadows for industrial areas, retail rooms, and malls/stores as an optimization (must agree with lighting code)
 		if (shadow_only && (player_in_industrial || (building.has_retail() && building.get_retail_part().contains_pt(camera_bs)) || building.point_in_mall(camera_bs))) {}
 		else {draw_animals(s, building, oc, xlate, camera_bs, shadow_only, reflection_pass, check_clip_cube);}
@@ -2046,7 +2047,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	if (obj_drawn) {check_mvm_update();} // needed after popping model transform matrix
 
 	// draw water for sinks that are turned on, lava lamps, fish in fishtanks, and AO shadows; these aren't visible when the player is outside looking in through a window
-	if (player_in_building_or_doorway && !shadow_only) {
+	if (player_in_building_or_doorway && !shadow_only && !cube_map_ref) {
 		// only update and draw fish in the player building (since two extended basement bcubes can overlap); skip in reflection pass
 		bool const draw_fish(!reflection_pass && have_fish_model() && (player_in_doorway || (is_player_building && building.point_in_building_or_basement_bcube(camera_bs))));
 		float const ao_z_off(1.1*building.get_flooring_thick()); // slightly above rugs and flooring
@@ -2081,7 +2082,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 					flare_qbd.add_billboard(light_center, camera_bs, plus_x, RED, radius, radius);
 				}
 			}
-			else if (i->is_shower()) { // Note: only closest shower plays water sound
+			else if (!reflection_pass && i->is_shower()) { // Note: only closest shower plays water sound
 				if (i->room_id == camera_room) {water_sound_manager.register_running_water(*i, building);}
 				water_draw.add_water_for_shower(*i, (i - objs.begin()), particle_manager);
 			}
@@ -2111,7 +2112,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			if (!is_rotated && !camera_pdu.cube_visible(pbc + xlate)) continue; // VFC - may not help much
 			set_z_plane_rect_pts(point(p.pos.x, p.pos.y, (pbc.z1() + ao_z_off)), 0.4*p.radius, 0.4*p.radius, pts);
 			ao_qbd.add_quad_pts(pts, colorRGBA(0, 0, 0, 0.4), plus_z);
-		}
+		} // for p
 		// Note: animals are generally too small to have AO shadows
 		lava_lamp_draw.draw_and_clear(s);
 		if (!reflection_pass) {lava_lamp_draw.next_frame();}
@@ -2119,7 +2120,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		draw_and_clear_blur_qbd(ao_qbd);
 		if (!building.is_factory()) {draw_and_clear_flares(flare_qbd, s, RED);} // factory flares are drawn later
 	}
-	water_sound_manager.finalize();
+	if (!shadow_only && !reflection_pass) {water_sound_manager.finalize();}
 	water_draw.draw_and_clear(s);
 
 	if (player_in_building && !shadow_only && player_held_object.is_valid() && &building == player_building) {
