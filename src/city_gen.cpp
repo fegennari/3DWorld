@@ -3704,7 +3704,8 @@ size_t get_city_model_gpu_mem() {return city_gen.get_model_gpu_mem();}
 void next_pedestrian_animation() {city_gen.next_ped_animation();}
 void get_pedestrians_in_area(cube_t const &area, int building_ix, vector<point> &pts) {city_gen.get_pedestrians_in_area(area, building_ix, pts);}
 void free_city_context() {city_gen.free_context();}
-bool has_city_trees() {return (city_params.max_trees_per_plot > 0);}
+bool has_city_trees   () {return (city_params.max_trees_per_plot > 0);}
+bool has_cars_enabled () {return (city_params.num_cars > 0);}
 vector3d get_nom_car_size() {return city_params.get_nom_car_size();}
 void draw_car_in_pspace(car_t &car, shader_t &s, vector3d const &xlate, bool shadow_only, unsigned btype) {city_gen.draw_car_in_pspace(car, s, xlate, shadow_only, btype);}
 void set_car_model_color(car_t &car, unsigned btype) {city_gen.set_car_model_color(car, btype);}

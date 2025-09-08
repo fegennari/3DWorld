@@ -48,6 +48,7 @@ void register_fishtank(room_object_t const &obj, bool is_visible);
 void end_fish_draw(shader_t &s, bool inc_pools_and_fb);
 void calc_cur_ambient_diffuse();
 void reset_interior_lighting_and_end_shader(shader_t &s);
+bool has_cars_enabled();
 
 bool has_key_3d_model      () {return building_obj_model_loader.is_model_valid(OBJ_MODEL_KEY);}
 bool has_office_chair_model() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_OFFICE_CHAIR);}
@@ -2422,8 +2423,9 @@ struct comp_car_by_dist {
 };
 
 bool building_t::has_cars_to_draw(bool player_in_building) const {
-	if (!has_room_geom()) return 0;
-	if (is_parking())     return 1; // parking structure
+	if (!has_cars_enabled()) return 0;
+	if (!has_room_geom())    return 0;
+	if (is_parking())        return 1; // parking structure
 	if (player_in_building && has_parking_garage) return 1; // parking garage cars are drawn if the player is in the building
 	if (interior->room_geom->has_garage_car)      return 1; // have car in a garage
 	return 0;
