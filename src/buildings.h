@@ -1723,9 +1723,9 @@ struct escalator_t : public oriented_cube_t { // Note: not yet used
 	escalator_t(cube_t const &c, bool dim_, bool dir_, bool mdir, float ext, float dz, float brz, unsigned rid, bool in_mall_) :
 		oriented_cube_t(c, dim_, dir_), move_dir(mdir), in_mall(in_mall_), room_id(rid), end_ext(ext), delta_z(dz), bot_edge_shift(brz) {}
 	bool  is_going_up    () const {return move_dir;}
-	float get_side_width () const {return 0.10*get_width();}
-	float get_side_height() const {return 0.80*get_width();} // ramp/steps to top edge
-	float get_upper_hang () const {return 0.25*get_width();}
+	float get_side_width () const {return 0.09*get_width();}
+	float get_side_height() const {return 0.70*get_width();} // ramp/steps to top edge
+	float get_upper_hang () const {return 0.22*get_width();}
 	float get_floor_thick() const {return 0.01*get_width();}
 	float get_side_deltaz() const {return (get_side_height() + bot_edge_shift);} // bottom edge to top edge
 	cube_t get_ramp_bcube(bool exclude_sides) const;

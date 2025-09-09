@@ -42,7 +42,7 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 	}
 	float const wall_thickness(get_wall_thickness()), pillar_width(2.0*wall_thickness), fc_gap(get_floor_ceil_gap());
 	float const col_aisle_width(nom_aisle_width + pillar_width), rack_spacing((length - col_aisle_width)/nracks), rack_length(rack_spacing - col_aisle_width);
-	float const e_width(0.8*door_width), pair_width(2.1*e_width), end_pad(1.2*door_width); // for escalators
+	float const e_width(0.9*door_width), pair_width(2.1*e_width), end_pad(1.2*door_width); // for escalators
 	assert(rack_length > 0.0);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	vect_cube_t pillars, rack_bcubes;
