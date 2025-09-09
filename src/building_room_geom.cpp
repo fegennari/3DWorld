@@ -896,8 +896,8 @@ void building_room_geom_t::add_vert_roll_to_material(room_object_t const &c, rge
 	hole.expand_in_z(0.0025*c.dz()); // expand slightly to avoid z-fighting
 	bool const swap_txy(c.type == TYPE_TPROLL); // TP texture is horizontal rather than vertical
 	// draw top/bottom surface only to mask off the outer part of the roll when held by the player; when resting on an object, draw the top surface only
-	mat.add_vcylin_to_verts(hole, ALPHA0, player_held, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1, ndiv); // hole
-	mat.add_vcylin_to_verts(roll, apply_light_color(c), 1, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv, 0.0, swap_txy); // paper/plastic roll
+	mat.add_vcylin_to_verts(hole, ALPHA0,               player_held, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1, ndiv); // hole; should not shadow, but must be drawn first in this material
+	mat.add_vcylin_to_verts(roll, apply_light_color(c), player_held, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv, 0.0, swap_txy); // paper/plastic roll
 }
 void building_room_geom_t::add_tproll(room_object_t const &c) { // is_small=1
 	bool const is_paper_towel(c.has_extra());
