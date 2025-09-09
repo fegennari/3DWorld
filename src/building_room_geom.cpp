@@ -3419,7 +3419,7 @@ void building_room_geom_t::add_escalator(escalator_t const &e, float floor_spaci
 		}
 	}
 	else { // dynamic; draw moving steps
-		static float last_step_pos(0.0); // cahed for most recently drawn escalator
+		static float last_step_pos(0.0); // cached for most recently drawn escalator
 		float step_pos(last_step_pos);
 		if (!e.is_powered) {step_pos = 0.0;} // stop only this escalator
 		else if (animate2) {last_step_pos = step_pos = fract(ESCALATOR_SPEED*tfticks);}
@@ -3427,7 +3427,7 @@ void building_room_geom_t::add_escalator(escalator_t const &e, float floor_spaci
 		float const ramp_height(ramp.dz());
 		unsigned const num_steps(round_fp(NUM_STAIRS_PER_FLOOR_ESC*ramp_height/floor_spacing)), front_face(get_face_mask(dim, !dir));
 		float const step_len(ramp.get_sz_dim(dim)/num_steps), step_delta((dir ? 1.0 : -1.0)*step_len), step_height(ramp_height/num_steps);
-		float const belt_height(1.2*floor_height), stripe_height(0.2*step_height), tscale(0.5/step_len);
+		float const belt_height(1.2*floor_height), stripe_height(0.2*step_height), stripe_width(0.2*step_delta), tscale(0.5/step_len);
 		cube_t step(ramp);
 		vector3d delta; // goes up the ramp
 		delta.z    = step_height;
@@ -3453,8 +3453,8 @@ void building_room_geom_t::add_escalator(escalator_t const &e, float floor_spaci
 				cube_t stripe(step_clamped);
 				stripe.z1()  = step_clamped.z2() - stripe_height;
 				stripe.z2() += 0.1*stripe_height;
-				stripe.d[dim][ dir]  = stripe.d[dim][!dir] + 0.2*step_delta;
-				stripe.d[dim][!dir] -= stripe_height*step_delta;
+				stripe.d[dim][ dir]  = stripe.d[dim][!dir] + stripe_width;
+				stripe.d[dim][!dir] -= 0.05*step_delta; // extend outward
 				steps_mat.add_cube_to_verts(stripe, YELLOW, tex_origin, ~EF_Z2,    !dim); // top
 				steps_mat.add_cube_to_verts(stripe, YELLOW, tex_origin, front_face, dim); // front
 			}
