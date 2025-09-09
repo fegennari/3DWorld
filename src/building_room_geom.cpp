@@ -1194,11 +1194,14 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 	add_small_static_objs_to_verts(objects, 0, 0, WHITE, 1); // trim_color=WHITE (unused), inc_text=1
 }
 
+bool add_shelf_rack_top  (room_object_t const &c) {return (c.obj_id & 4);}
+bool add_shelf_rack_sides(room_object_t const &c) {return (c.obj_id & 2);}
+
 // returns num_shelves; all cubes passed in should start as zeros
 unsigned get_shelf_rack_cubes(room_object_t const &c, cube_t &back, cube_t &top, cube_t sides[2], cube_t shelves[5]) {
 	// 3-5 shelves, with optional top and sides, and central back with holes
 	unsigned const num_shelves(3 + (c.obj_id%3)); // 3-5
-	bool const add_top(c.obj_id & 4), add_sides(c.obj_id & 2);
+	bool const add_top(add_shelf_rack_top(c)), add_sides(add_shelf_rack_sides(c));
 	float const height(c.get_height()), length(c.get_width()), depth(c.get_depth());
 	float const shelf_thickness(0.015*height), bot_gap(1.8*shelf_thickness), back_thickness(0.05*depth);
 	float const side_thickness(min(0.1f*length, 0.75f*shelf_thickness)), top_thickness(add_top ? side_thickness : 0.0);
@@ -2197,8 +2200,8 @@ void building_room_geom_t::add_vase(room_object_t const &c) { // or urn
 			tex_scale_h = 2 + (rgen.rand()%7); // must be an integer, 2-8
 		}
 	}
-	// ship shadows for vases on shelf racks; looks bad for vases on the top shelf with no cover, but usually this isn't visible to the player (except on retail upper floor)
-	bool const on_shelfrack(c.is_on_srack()), shadowed(!on_shelfrack);
+	// ship shadows for vases on shelf racks as these are very slow; would be nice to enable shadows for vases with on_top=1, but even that is slower
+	bool const on_shelfrack(c.is_on_srack()), on_top(c.flags & RO_FLAG_TOS), shadowed(!on_shelfrack);
 	rgeom_mat_t &side_mat(get_material(tid_nm_pair_t(tid, 0.0f, shadowed, 0, 1), shadowed, 0, 1)); // small, no_reflect=1
 	unsigned const ndiv(get_def_cylin_ndiv(c)), num_stacks(ndiv), itris_start(side_mat.itri_verts.size()), ixs_start(side_mat.indices.size());
 	float const tscale(tex_scale_v/num_stacks), zstep(c.dz()/num_stacks);
@@ -2226,7 +2229,7 @@ void building_room_geom_t::add_vase(room_object_t const &c) { // or urn
 	} // for n
 	add_inverted_triangles(side_mat.itri_verts, side_mat.indices, itris_start, ixs_start); // add inner surfaces
 	
-	if (!on_shelfrack) { // draw the bottom surface if not on a shelf rack, though it may still be visible from above on a glass floor on the top shelf if no srack top
+	if (!on_shelfrack || on_top) { // draw the bottom surface if not on a shelf rack or on the top of an open shelf
 		cube_t bot;
 		bot.set_from_point(c.get_cube_center());
 		bot.expand_by_xy(start_radius);

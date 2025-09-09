@@ -17,6 +17,7 @@ void set_wall_width(cube_t &wall, float pos, float half_thick, unsigned dim);
 float get_med_cab_wall_thickness(room_object_t const &c);
 float get_locker_wall_thickness (room_object_t const &c);
 float get_radius_for_square_model(unsigned model_id);
+bool add_shelf_rack_top(room_object_t const &c);
 bool place_bottle_on_obj(rand_gen_t &rgen, cube_t const &place_on, vect_room_object_t &objs, float vspace,
 	unsigned rid, float lamt, unsigned max_type, vect_cube_t const &avoid, bool at_z1, bool allow_transparent=0);
 bool place_dcan_on_obj  (rand_gen_t &rgen, cube_t const &place_on, vect_room_object_t &objs, float vspace,
@@ -1094,10 +1095,10 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 	if (!c.is_nonempty()) return; // empty - no objects
 	cube_t back, top, sides[2], shelves[5];
 	unsigned const num_shelves(get_shelf_rack_cubes(c, back, top, sides, shelves));
-	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_WAS_EXP | RO_FLAG_ON_SRACK), unpowered_flags(flags | RO_FLAG_NO_POWER);
+	unsigned const base_flags(RO_FLAG_NOCOLL | RO_FLAG_WAS_EXP | RO_FLAG_ON_SRACK);
 	float const floor_spacing(c.dz()/SHELF_RACK_HEIGHT_FS);
 	float const top_shelf_z2(top.is_all_zeros() ? c.z2() : top.z1()); // bottom of the top, if present
-	bool const add_food_boxes(!global_building_params.food_box_tids.empty());
+	bool const add_food_boxes(!global_building_params.food_box_tids.empty()), has_top(add_shelf_rack_top(c));
 	rand_gen_t rgen;
 	vect_cube_t cubes; // for placed object overlap tests
 
@@ -1110,12 +1111,16 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 		int const category(((c.drawer_flags > 0) ? (c.drawer_flags-1) : rgen.rand()) % NUM_RETAIL_CAT); // use drawer_flags to select category (for malls), if nonzero
 
 		for (unsigned n = 0; n < num_shelves; ++n) {
-			float const ztop(((n+1) == num_shelves) ? top_shelf_z2 : shelves[n+1].z1());
+			bool const top_shelf((n+1) == num_shelves);
+			float const ztop(top_shelf ? top_shelf_z2 : shelves[n+1].z1());
 			cube_t shelf(shelves[n]); // this is the valid shelf area where objects can be placed
 			shelf.d[c.dim][!dir] = back.d[c.dim][dir]; // excludes the back
 			set_cube_zvals(shelf, shelf.z2(), ztop);
 			float const length(shelf.get_sz_dim(!c.dim)), depth(shelf.get_sz_dim(c.dim));
 			if (length <= depth) continue; // shouldn't happen
+			unsigned flags(base_flags);
+			if (top_shelf && !has_top) {flags |= RO_FLAG_TOS;} // flag on top of open shelf
+			unsigned const unpowered_flags(flags | RO_FLAG_NO_POWER);
 			float const height(shelf.dz()), height_val(min(height, c.dz()/5.0f)); // height_val is for use with objects that were tuned for 5 shelf racks
 			cubes.clear();
 			rgen.rand_mix(); // make sure to change the random values every shelf even if the items are skipped

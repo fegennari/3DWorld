@@ -616,7 +616,7 @@ enum {BIRD_STATE_FLYING=0, BIRD_STATE_GLIDING, BIRD_STATE_LANDING, BIRD_STATE_ST
 
 // object flags
 unsigned const RO_FLAG_LIT     = 0x01; // light is on
-unsigned const RO_FLAG_TOS     = 0x02; // at top of stairs; used for railings and lights
+unsigned const RO_FLAG_TOS     = 0x02; // at top of stairs; used for railings and lights; used for objects on open top shelves of shelf racks
 unsigned const RO_FLAG_IN_WH   = 0x02; // in warehouse; aliased with RO_FLAG_TOS
 unsigned const RO_FLAG_RSTAIRS = 0x04; // in a room with stairs
 unsigned const RO_FLAG_INVIS   = 0x08; // invisible
