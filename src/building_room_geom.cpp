@@ -1175,7 +1175,7 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 		unsigned const skip_faces_z((c.flags & RO_FLAG_ADJ_HI) ? EF_Z1 : EF_Z12); // only draw top face for high shelves since ceiling is high
 		static vect_cube_with_ix_t brackets;
 		get_shelf_brackets(c, shelves, num_shelves, brackets);
-		rgeom_mat_t &metal_mat(get_metal_material(1, 0, 1)); // shadowed, specular metal; small=1
+		rgeom_mat_t &metal_mat(get_metal_material(1, 0, 1, 0, 0, WHITE, 0.5, 40.0)); // shadowed, specular metal; small=1, less specular
 		colorRGBA const bracket_color(apply_light_color(c, LT_GRAY));
 
 		for (cube_with_ix_t const &b : brackets) {
@@ -5347,7 +5347,7 @@ void building_room_geom_t::add_dishwasher(room_object_t const &c) {
 	front.d[c.dim][!c.dir]  = body.d[c.dim][c.dir];
 	body.expand_in_dim(!c.dim, -0.02*c.get_width());
 	body.z2() -= 0.02*c.dz();
-	rgeom_mat_t &metal_mat(get_metal_material(1)); // shadowed, specular metal
+	rgeom_mat_t &metal_mat(get_metal_material(1, 0, 0, 0, 0, WHITE, 0.4, 40.0)); // shadowed, less specular metal
 	metal_mat.add_cube_to_verts_untextured(body, apply_light_color(c, WHITE), (~get_face_mask(c.dim, c.dir) | EF_Z1)); // skip front and bottom
 	add_dishwasher_front(front, c.d[c.dim][!c.dir], 0); // dw_skip_faces=0
 }

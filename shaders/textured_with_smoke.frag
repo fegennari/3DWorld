@@ -479,7 +479,8 @@ void main() {
 			vec3 ref_tex   = apply_cube_map_blur(ref_dir, blur_val);
 			// white specular: modulate with material color (for different shades of metal)
 			vec3 spec_color= ((specular_color.r == specular_color.g && specular_color.r == specular_color.b) ? texel.rgb*gl_Color.rgb : specular_color.rgb);
-			color.rgb = mix(color.rgb, spec_color*ref_tex, metalness);
+			float spec_mag = max(specular_color.r, max(specular_color.g, specular_color.b));
+			color.rgb = mix(color.rgb, spec_color*ref_tex, metalness*spec_mag);
 		}
 		else { // glass/dielectric
 			vec2 reflected = get_reflect_weight(-view_dir, ws_normal, reflectivity2, refract_ix); // {fresnel_term, reflect_weight}
