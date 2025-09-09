@@ -401,7 +401,12 @@ bool building_t::add_cafeteria_objs(rand_gen_t rgen, room_t const &room, float &
 bool building_t::add_library_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement) {
 	if (room.is_hallway || room.is_sec_bldg) return 0; // these can't be libraries
 
-	for (unsigned n = 0; n < 8; ++n) { // place up to 8 bookcases
+	if (is_prison()) { // add tables
+		// TODO
+	}
+	unsigned const num_bookcases((is_prison() || is_school()) ? 16 : 8);
+
+	for (unsigned n = 0; n < num_bookcases; ++n) { // place bookcases
 		if (add_bookcase_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, is_basement)) {
 			if (n == 0 && is_school()) { // add a row of computers on a long table after the first bookcase
 				float const window_vspacing(get_window_vspace()), table_height(rgen.rand_uniform(0.4, 0.42)*window_vspacing);

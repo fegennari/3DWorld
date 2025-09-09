@@ -460,6 +460,8 @@ room_pref_t const room_prefs[] = {
 	{RTYPE_SECURITY,  0, 0, 0, 1, 0.0, 4.0,  1.0, 1.0, -1.0, -1.0},
 	{RTYPE_LOUNGE,    1, 1, 1, 0, 2.0, 6.0, -4.0, 0.0,  0.0,  1.0},
 	{RTYPE_INFIRMARY, 0, 0, 0, 1, 2.0, 5.0,  1.0, 0.0, -1.0,  0.0},
+	{RTYPE_LIBRARY,   0, 1, 0, 1, 2.0, 7.0,  1.0, 0.0, -0.5,  0.5},
+	{RTYPE_RETAIL,    0, 1, 1, 0, 4.0, 0.0,  0.0, 0.0,  0.0,  0.0},
 	//{RTYPE_KITCHEN,   0, 1, 0, 1, 2.0, 5.0,  0.5, 0.0,  0.0,  0.0}
 };
 bool building_t::assign_and_fill_prison_room(rand_gen_t rgen, room_t &room, float &zval, unsigned room_id, float tot_light_amt,
@@ -559,6 +561,12 @@ bool building_t::assign_and_fill_prison_room(rand_gen_t rgen, room_t &room, floa
 				break;
 			case RTYPE_INFIRMARY:
 				if (!add_infirmary_objs(rgen, room, zval, room_id, floor_ix, tot_light_amt, objs_start)) continue;
+				break;
+			case RTYPE_LIBRARY:
+				if (!add_library_objs(rgen, room, zval, room_id, tot_light_amt, objs_start, is_basement)) continue;
+				break;
+			case RTYPE_RETAIL:
+				if (!add_small_retail_room_objs(rgen, room, zval, room_id, tot_light_amt)) continue;
 				break;
 			case RTYPE_KITCHEN:
 				if (!add_commercial_kitchen_objs(rgen, room, zval, room_id, tot_light_amt, objs_start)) continue;

@@ -2910,7 +2910,8 @@ private:
 	bool add_pool_room_objs  (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
 	void add_room_wall_tile(cube_t const &room, unsigned room_id, float tot_light_amt);
 	void add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
-	void add_retail_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, light_ix_assign_t &light_ix_assign);
+	bool add_retail_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, light_ix_assign_t &light_ix_assign);
+	bool add_small_retail_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float light_amt);
 	float gather_room_lights(unsigned objs_start_inc_lights, vect_cube_t &lights) const;
 	void add_ladders_to_nested_room_roofs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float light_amt, cube_t const &place_area);
 	cube_t add_factory_ladders_and_catwalks(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float light_amt, cube_t const &place_area,

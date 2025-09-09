@@ -20,7 +20,7 @@ bool building_t::get_retail_long_dim() const {
 	cube_t const &part(get_retail_part());
 	return (part.dx() < part.dy());
 }
-void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, light_ix_assign_t &light_ix_assign) {
+bool building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, light_ix_assign_t &light_ix_assign) {
 	// Note: this room should occupy the entire floor, so walkable room bounds == room == part
 	assert(has_room_geom());
 	for (unsigned d = 0; d < 2; ++d) {interior->room_geom->shelf_rack_occluders[d].clear();}
@@ -29,9 +29,9 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 	unsigned const nx(max(1U, unsigned(spacing*dx/floor_spacing))), ny(max(1U, unsigned(spacing*dy/floor_spacing))); // same spacing as room lights
 	bool const dim(dx < dy); // long dim (could also use get_retail_long_dim())
 	float const length(dim ? dy : dx), width(dim ? dx : dy), max_rack_width(0.5*floor_spacing);
-	if (width < 4.0*nom_aisle_width) return; // too small for shelf racks
+	if (width < 4.0*nom_aisle_width) return 0; // too small for shelf racks
 	unsigned const nrows((dim ? nx : ny)-1), nracks(max(2U, (dim ? ny : nx)/4));
-	if (nrows == 0) return; // too small for shelf racks
+	if (nrows == 0) return 0; // too small for shelf racks
 	float row_aisle_width(nom_aisle_width), aisle_spacing((width - row_aisle_width)/nrows), rack_width(aisle_spacing - row_aisle_width);
 	assert(rack_width > 0.0);
 	
@@ -310,6 +310,12 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 			break;
 		}
 	}
+	return 1;
+}
+
+bool building_t::add_small_retail_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float light_amt) { // for prisons, etc.
+	// TODO
+	return 0;
 }
 
 void building_t::add_retail_pillar(cube_t const &pillar, float zval, unsigned room_id, bool is_tall) {
