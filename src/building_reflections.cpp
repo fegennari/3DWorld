@@ -302,26 +302,28 @@ class cube_map_reflection_manager_t {
 	unsigned const tsize=512; // 512 is faster; likely dominated by subpixel object drawing (bottles, text, etc.)
 	unsigned tid=0;
 	float face_dist=0.0;
-	point center;
+	point center; // in camera space
 	point last_update_pos[6]; // one per face
 	cube_t room_bounds;
 	building_t const *last_building=nullptr;
 public:
-	void capture(building_t const &building, point const &pos) {
+	void capture(building_t const &building, point const &pos) { // pos is in camera space
 		bool interior_room(0), is_extb(0);
 		float const floor_spacing(building.get_window_vspace());
-		int const room_id(building.get_room_containing_pt(pos));
+		vector3d const xlate(get_tiled_terrain_model_xlate());
+		point const pos_bs(building.get_inv_rot_pos(pos - xlate));
+		int const room_id(building.get_room_containing_pt(pos_bs));
 		cube_t scene_bounds;
 		// calculate our cube map bounds based on what part of the building the center is in
-		if (!building.has_basement() || pos.z > building.ground_floor_z1) {scene_bounds = building.bcube;} // above ground/no basement
-		else if (!building.has_ext_basement() || building.get_basement().contains_pt(pos)) {scene_bounds = building.get_basement();}
+		if (!building.has_basement() || pos_bs.z > building.ground_floor_z1) {scene_bounds = building.bcube;} // above ground/no basement
+		else if (!building.has_ext_basement() || building.get_basement().contains_pt(pos_bs)) {scene_bounds = building.get_basement();}
 		else {scene_bounds = building.interior->basement_ext_bcube;}
 		room_bounds = scene_bounds; // defaults to building if not in a room
-		center      = pos;
+		center      = pos; // in camera space
 
 		if (room_id >= 0) { // else error? disable cube maps?
 			room_t const &room(building.get_room(room_id));
-			unsigned const floor_ix(room.get_floor_containing_zval(pos.z, floor_spacing));
+			unsigned const floor_ix(room.get_floor_containing_zval(pos_bs.z, floor_spacing));
 			float const rz1(room.z1() + floor_ix*floor_spacing);
 			room_bounds   = room;
 			set_cube_zvals(room_bounds, rz1, rz1+floor_spacing); // clip to player's floor
@@ -340,14 +342,13 @@ public:
 		glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 		vector3d const pre_ref_cview_dir(cview_dir), prev_up_vector(up_vector);
 		pos_dir_up const prev_camera_pdu(camera_pdu);
-		float far_plane(scene_bounds.furthest_dist_to_pt(center)); // capture the entire building
+		float far_plane(scene_bounds.furthest_dist_to_pt(pos_bs)); // capture the entire building
 		min_eq(far_plane, 50.0f*floor_spacing); // limit to a reasonable distance for malls, etc.
 		float const near_plane(max(NEAR_CLIP, 0.001f*far_plane));
-		vector3d const xlate(get_tiled_terrain_model_xlate());
 		pre_reflect_camera_pos_bs = camera_pos - xlate;
 		is_cube_map_reflection    = 1;
 		cube_t ref_cube;
-		ref_cube.set_from_sphere(center, 20.0*floor_spacing); // optimization: limit model drawing to a reasonable distance
+		ref_cube.set_from_sphere(pos_bs, 20.0*floor_spacing); // optimization: limit model drawing to a reasonable distance
 		ref_cube.intersect_with_cube(scene_bounds);
 		set_custom_viewport(tsize, 90.0, near_plane, far_plane); // 90 degree FOV
 		colorRGBA const orig_clear_color(get_clear_color());
@@ -367,7 +368,7 @@ public:
 				float const angle(0.5*perspective_fovy*TO_RADIANS); // 90 degree FOV
 				camera_pdu = pos_dir_up(center, cview_dir, up_vector, angle, near_plane, far_plane, 1.0, 1);
 				reflection_clip_cube = ref_cube;
-				reflection_clip_cube.d[dim][!dir] = center[dim]; // clip to half space in front of cube map face
+				reflection_clip_cube.d[dim][!dir] = pos_bs[dim]; // clip to half space in front of cube map face
 				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 				fgPushIdentityMatrix(); // MVM
 				vector3d const target(center + cview_dir);
@@ -394,7 +395,8 @@ public:
 	void bind(shader_t &s) const {
 		assert(tid); // must have been captured first
 		if (tid == 0) return; // no reflections captured
-		setup_shader_cube_map_params(s, center, face_dist, tid, tsize); // pass face_dist in as near_plane as this cube map does not bound an object
+		point const center_bs(center - get_tiled_terrain_model_xlate());
+		setup_shader_cube_map_params(s, center_bs, face_dist, tid, tsize); // pass face_dist in as near_plane as this cube map does not bound an object
 	}
 	void force_update() {
 		if (tid == 0) return; // disabled
@@ -405,10 +407,10 @@ public:
 cube_map_reflection_manager_t cube_map_reflection_manager;
 
 void setup_player_building_cube_map() {
-	point camera_bs_raw(surface_pos);
-	camera_bs_raw.z += camera_zh;
+	point camera_raw(surface_pos); // camera space
+	camera_raw.z += camera_zh;
 	assert(player_building);
-	cube_map_reflection_manager.capture(*player_building, camera_bs_raw);
+	cube_map_reflection_manager.capture(*player_building, camera_raw);
 }
 void bind_player_building_cube_map(shader_t &s) {cube_map_reflection_manager.bind(s);}
 void register_reflection_update() {cube_map_reflection_manager.force_update();}
