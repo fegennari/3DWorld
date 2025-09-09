@@ -95,7 +95,7 @@ unsigned building_t::add_water_heaters(rand_gen_t &rgen, room_t const &room, flo
 		if (overlaps_other_room_obj(c_exp, objs_start)) continue; // check existing objects, in particular storage room boxes that will have already been placed
 		if (zval > ground_floor_z1 && check_if_against_window(c, room, dim, dir)) continue; // can fail for apartment and hotel utility rooms
 		unsigned const flags((is_house ? RO_FLAG_IS_HOUSE : 0) | RO_FLAG_INTERIOR);
-		objs.emplace_back(c, TYPE_WHEATER, room_id, dim, !dir, flags, tot_light_amt, SHAPE_CYLIN);
+		objs.emplace_back(c, TYPE_WHEATER, room_id, dim, !dir, flags, tot_light_amt, SHAPE_CYLIN, WATER_HEATER_COLOR);
 		unsigned num_added(1);
 
 		if (is_house && has_attic()) { // add rooftop vent above the water heater
@@ -119,7 +119,7 @@ unsigned building_t::add_water_heaters(rand_gen_t &rgen, room_t const &room, flo
 				if (is_obj_placement_blocked(c, room, 1)) continue; // bad placement, skip
 				c_exp.translate(step);
 				if (overlaps_other_room_obj(c_exp, objs_start)) continue; // check existing objects
-				objs.emplace_back(c, TYPE_WHEATER, room_id, dim, !dir, flags, tot_light_amt, SHAPE_CYLIN);
+				objs.emplace_back(c, TYPE_WHEATER, room_id, dim, !dir, flags, tot_light_amt, SHAPE_CYLIN, WATER_HEATER_COLOR);
 				++num_added;
 			} // for m
 		}
@@ -154,7 +154,7 @@ bool gen_furnace_cand(cube_t const &place_area, float floor_spacing, bool near_w
 void building_t::add_breaker_panel(rand_gen_t &rgen, cube_t const &c, float ceil_zval, bool dim, bool dir, unsigned room_id, float tot_light_amt) {
 	assert(has_room_geom());
 	auto &objs(interior->room_geom->objs);
-	objs.emplace_back(c, TYPE_BRK_PANEL, room_id, dim, dir, RO_FLAG_INTERIOR, tot_light_amt, SHAPE_CUBE, colorRGBA(0.5, 0.6, 0.7));
+	objs.emplace_back(c, TYPE_BRK_PANEL, room_id, dim, dir, RO_FLAG_INTERIOR, tot_light_amt, SHAPE_CUBE, BREAKER_PANEL_COLOR);
 	set_obj_id(objs);
 
 	if (c.z1() < ground_floor_z1) { // add conduit if in the basement

@@ -2041,6 +2041,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 						float const val(rgen.rand_float());
 						room_object obj_type(TYPE_NONE);
 						room_obj_shape shape(SHAPE_CUBE);
+						colorRGBA color(WHITE);
 						unsigned model_type_id(0);
 						float hscale(1.0);
 						vector3d sz(1.0, 1.0, 1.0); // D, W, H
@@ -2072,6 +2073,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 								hscale   = (1.0 - get_floor_thick_val());
 								sz.x     = sz.y = 2.0*0.18;
 								shape    = SHAPE_CYLIN;
+								color    = WATER_HEATER_COLOR;
 								model_type_id = 24; // unused index < 32
 							}
 							else { // 0.9 - 1.0
@@ -2121,7 +2123,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 									if (is_cube_close_to_doorway(app, r, 0.0, 1, 1)) continue; // blocking back hallway door
 									if (door_blocker.intersects_xy(app))             continue; // blocking front door
 									if (has_bcube_int(app, blockers))                continue; // blocked
-									objs.emplace_back(app, obj_type, room_id, !sdim, sdir, RO_FLAG_IN_MALL, light_amt, shape);
+									objs.emplace_back(app, obj_type, room_id, !sdim, sdir, RO_FLAG_IN_MALL, light_amt, shape, color);
 									blockers.push_back(app);
 									any_placed = 1;
 

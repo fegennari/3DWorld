@@ -109,6 +109,8 @@ colorRGBA const DUCT_COLOR(WHITE);
 colorRGBA const rat_color(GRAY); // make the rat's fur darker
 colorRGBA const candle_color(0.95, 0.9, 0.75, 1.0); // cream
 colorRGBA const GLASS_COLOR(0.8, 1.0, 0.9, 0.25);
+colorRGBA const BREAKER_PANEL_COLOR(0.50, 0.60, 0.70);
+colorRGBA const WATER_HEATER_COLOR (0.50, 0.55, 0.60); // slightly blue-green tinted gray
 colorRGBA const mall_tc_legs_color(BKGRAY);
 
 unsigned const NUM_LOCK_COLORS = 8;

@@ -4538,8 +4538,8 @@ void building_room_geom_t::add_water_heater(room_object_t const &c) {
 	set_wall_width(box, c.get_center_dim(!c.dim), 0.2*radius, !c.dim);
 	box.d[c.dim][!c.dir] = front_pos - front_dir*0.10*radius; // back  of box
 	box.d[c.dim][ c.dir] = front_pos + front_dir*0.12*radius; // front of box
-	rgeom_mat_t &metal_mat(get_metal_material(1, 0, 1)); // shadowed=1, small=1
-	metal_mat.add_vcylin_to_verts(body, apply_light_color(c, GRAY   ), 0, 0, 0); // main body - draw sides only
+	rgeom_mat_t &metal_mat(get_metal_material(1, 0, 1, 0, 0, WHITE, 0.4, 60.0)); // shadowed=1, small=1, less specular
+	metal_mat.add_vcylin_to_verts(body, apply_light_color(c         ), 0, 0, 0); // main body - draw sides only
 	metal_mat.add_vcylin_to_verts(pan,  apply_light_color(c, LT_GRAY), 1, 0, 1, 0, 1.0, 1.0, 1.0, 1.0, 0, 64); // bottom pan - two sided, with bottom; ndiv=64
 	metal_mat.add_vcylin_to_verts(top,  apply_light_color(c, DK_GRAY), 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 64); // top - draw top; ndiv=64
 	metal_mat.add_vcylin_to_verts(vent, apply_light_color(c, LT_GRAY), 0, 0, in_store, 0, 1.0, 1.0, 1.0, 1.0, 0, 16); // ndiv=16; draw inside if in store
@@ -4574,7 +4574,7 @@ void building_room_geom_t::add_water_heater(room_object_t const &c) {
 		}
 		copper_mat.add_vcylin_to_verts(pipe, copper_color, 0, 0, in_store, 0, 1.0, 1.0, 1.0, 1.0, 0, pipe_ndiv); // draw inside if in store
 	} // for d
-	get_metal_material(1, 0, 1).add_cube_to_verts_untextured(box, apply_light_color(c, LT_GRAY)); // control box
+	get_metal_material(1, 0, 1, 0, 0, WHITE, 0.3, 40.0).add_cube_to_verts_untextured(box, apply_light_color(c, LT_GRAY)); // control box
 
 	if (is_house && (c.room_id & 1)) { // add sticker 50% of the time for houses
 		cube_t sticker(c);
@@ -6995,7 +6995,6 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_SPRAYCAN: return (DK_GRAY*0.5 + color*0.5);
 	case TYPE_CRACK:    return ALPHA0; // transparent
 	case TYPE_FPLACE:   return texture_color(BRICK2_TEX).modulate_with(color);
-	case TYPE_WHEATER:  return GRAY;
 	case TYPE_FURNACE:  return get_furnace_color();
 	case TYPE_SERVER:   return get_server_color ();
 	case TYPE_ATTIC_DOOR:return get_textured_wood_color();
