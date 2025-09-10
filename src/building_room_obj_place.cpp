@@ -147,6 +147,7 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 }
 
 // Note: must be first placed objects; returns the number of total objects added (table + optional chairs)
+// wooden_or_plastic: 0=wood, 1=plastic, 2=pastic for 50% of offices, otherwise wood
 unsigned building_t::add_table_and_chairs(rand_gen_t rgen, room_t const &room, vect_cube_t &blockers, unsigned room_id, point const &place_pos,
 	colorRGBA const &chair_color, float rand_place_off, float tot_light_amt, unsigned max_chairs, bool use_tall_table, int wooden_or_plastic)
 {
@@ -233,6 +234,32 @@ void building_t::shorten_chairs_in_region(cube_t const &region, unsigned objs_st
 		i->z2() -= 0.25*i->dz();
 		i->shape = SHAPE_SHORT;
 	}
+}
+
+bool building_t::fill_room_with_tables_and_chairs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool plastic_tc) {
+	float const vspace(get_window_vspace()), wall_thickness(get_wall_thickness()), clearance(get_min_front_clearance_inc_people());
+	float const table_spacing(0.5*vspace + 2.0*clearance); // placed tables will be rectangular, but we use square spacing
+	cube_t place_area(get_walkable_room_bounds(room));
+	place_area.expand_by_xy(-0.1*table_spacing); // add extra space at room walls
+	vector2d const place_sz(place_area.get_size_xy());
+	unsigned const nx(place_sz.x/table_spacing), ny(place_sz.y/table_spacing);
+	if (nx < 1 || ny < 1) return 0; // not enough space for any tables
+	float const xspace(place_sz.x/nx), yspace(place_sz.y/ny);
+	colorRGBA const &chair_color(chair_colors[rgen.rand() % NUM_CHAIR_COLORS]);
+	vect_room_object_t &objs(interior->room_geom->objs);
+	unsigned num_added(0);
+	vect_cube_t blockers;
+
+	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
+		if (!i->no_coll() && i->intersects(place_area)) {blockers.push_back(*i);}
+	}
+	for (unsigned y = 0; y < ny; ++y) {
+		for (unsigned x = 0; x < nx; ++x) {
+			point const center((place_area.x1() + (x + 0.5)*xspace), (place_area.y1() + (y + 0.5)*yspace), zval);
+			num_added += add_table_and_chairs(rgen, room, blockers, room_id, center, chair_color, 0.0, tot_light_amt, 4, 0, plastic_tc); // no offset, 4 chairs, short table
+		}
+	} // for y
+	return (num_added > 0);
 }
 
 void building_t::get_doorways_for_room(cube_t const &room, float zval, vect_door_stack_t &doorways, bool all_floors) const { // interior doorways; thread safe
@@ -899,24 +926,22 @@ void building_t::add_lounge_objs(rand_gen_t rgen, room_t const &room, float zval
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const room_objs_start(objs.size());
 	float const window_vspacing(get_window_vspace());
+	bool const teacher(is_school()), add_mult_tables(is_prison());
+	bool const add_tall_table(!teacher && !add_mult_tables && !is_lobby && min(place_area.dx(), place_area.dy()) > 1.4*window_vspacing && rgen.rand_float() < 0.75); // 75%
+	if (add_mult_tables) {fill_room_with_tables_and_chairs(rgen, room, zval, room_id, tot_light_amt, objs_start, 1);} // add tables and chairs; plastic_tc=1
 	vect_cube_t blockers;
 	add_lounge_blockers(objs, objs_start, blockers); // add any previously places tables, chairs, etc.
-	bool const teacher(is_school());
-	bool const add_tall_table(!teacher && !is_lobby && min(place_area.dx(), place_area.dy()) > 1.4*window_vspacing && rgen.rand_float() < 0.75); // 75% if non-teacher lounge
-	point const table_pos(room.xc(), room.yc(), zval); // approximate; can be placed 10% away from the room center
 
-	if (is_prison()) { // add tables and chairs
-		// TODO
-	}
 	if (teacher || add_tall_table) { // add tall table with two bar stools, or a normal table with chairs for a teacher lounge
 		unsigned const max_chairs(add_tall_table ? 2 : 4);
+		point const table_pos(room.xc(), room.yc(), zval); // approximate; can be placed 10% away from the room center
 		add_table_and_chairs(rgen, room, blockers, room_id, table_pos, WHITE, 0.1, tot_light_amt, max_chairs, add_tall_table);
 	}
 	if (teacher) {add_mwave_on_table(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area);} // add microwave on a table
 	cube_t const table_blocker(get_table_blocker(objs, objs_start));
 	if (!table_blocker.is_all_zeros()) {objs.emplace_back(table_blocker, TYPE_BLOCKER, room_id);} // add as an actual blocker for placement of chairs, fridge, etc.
 
-	if (min(room.dx(), room.dy()) > 1.5*window_vspacing) { // place 1-3 couch(es) along a wall if the room is large enough
+	if (!add_mult_tables && min(room.dx(), room.dy()) > 1.5*window_vspacing) { // place 1-3 couch(es) along a wall if the room is large enough
 		unsigned const couches_start(objs.size());
 		unsigned const counts[4] = {1, 2, 2, 3}; // 2 couches is more common
 		add_couches_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, counts);
