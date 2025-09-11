@@ -2226,7 +2226,7 @@ void building_t::add_clothing_rack(cube_t const &rack, unsigned room_id, bool di
 		hanger_rod.z2() = hanger_rod.z1() + 2.0*hr_radius;
 		set_wall_width(hanger_rod, rack_center, hr_radius, !dim);
 		// add a frame that holds the hanger rod; can construct from metal bars
-		colorRGBA const frame_color(DK_GRAY);
+		colorRGBA const frame_color(0.35, 0.35, 0.35);
 
 		for (unsigned d = 0; d < 2; ++d) { // each end
 			if (d == 1 && n+1 < num_segs) continue; // not the end, use frame from the next segment
@@ -2241,6 +2241,14 @@ void building_t::add_clothing_rack(cube_t const &rack, unsigned room_id, bool di
 				cube_t vbar(hbar);
 				set_cube_zvals(vbar, rack.z1(), hbar.z1());
 				vbar.d[!dim][!e] = hbar.d[!dim][e] + (e ? -1.0 : 1.0)*frame_width;
+
+				if (rtype != RTYPE_STORE) { // not a store (prison); add rolling wheels
+					cube_t wheel(vbar);
+					wheel.expand_in_dim( dim,  0.3*frame_width); // increase radius
+					wheel.expand_in_dim(!dim, -0.1*frame_width); // reduce thickness
+					wheel.z2() = vbar.z1() = rack.z1() + wheel.get_sz_dim(dim);
+					objs.emplace_back(wheel, TYPE_METAL_BAR, room_id, !dim, 0, flags, light_amt, SHAPE_CYLIN, GRAY_BLACK);
+				}
 				objs.emplace_back(vbar, TYPE_METAL_BAR, room_id, 0, 0, flags, light_amt, SHAPE_CUBE, frame_color, EF_Z12); // skip top and bottom
 			}
 		} // for d
