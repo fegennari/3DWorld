@@ -3700,7 +3700,7 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 		// if this is a set, but not a numbered volume, include the volume index in the title random seed so that the title is unique
 		unsigned const title_rand_id(c.obj_id + ((is_set_volume && !add_volume_index) ? (unsigned(c.drawer_flags) << 16) : 0));
 		rand_gen_t rgen;
-		rgen.set_state(c.obj_id+1, c.obj_id+123);
+		rgen.set_state((c.obj_id+1 + 37*c.room_id), 61*c.obj_id+123);
 		rgen.rand_mix();
 		string title, author;
 

@@ -1386,7 +1386,7 @@ void building_room_geom_t::expand_locker(room_object_t const &c, building_type_t
 		else            {place_area.z1() +=        LOCKER_BOT_SHELF_HEIGHT *height + 0.5*wall_thickness;} // upper level; matches drawing code
 
 		if (in_hallway) { // add books; stacked up to 4 high; tag with RO_FLAG_USED to indicate school subject books
-			if (add_row_of_cubes(c, place_area, width, depth, 0.15*depth, 0.0, TYPE_BOOK, (flags | RO_FLAG_USED), expanded_objs, rgen, !dir, 1, 4) > 0) {
+			if (add_row_of_cubes(c, place_area, width, depth, 0.15*depth, 0.0, TYPE_BOOK, (flags | RO_FLAG_USED), expanded_objs, rgen, (dim ^ dir), 1, 4) > 0) {
 				float const orig_z2(place_area.z2());
 				place_area = expanded_objs.back(); // top book
 				set_cube_zvals(place_area, place_area.z2(), orig_z2); // space above the book
