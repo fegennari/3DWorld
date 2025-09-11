@@ -1431,6 +1431,7 @@ bool person_base_t::is_close_to_player() const { // for debug printouts, etc.
 bool is_female_model(city_model_t const &model) {return (model.scale <= 0.95);}
 
 unsigned ped_model_loader_t::num_models() const {return city_params.ped_model_files.size();}
+bool ped_model_loader_t::is_prisoner_model(unsigned id) const {return string_find(get_model(id).fn, "prisoner");}
 
 city_model_t const &ped_model_loader_t::get_model(unsigned id) const {
 	assert(id < num_models());
@@ -1441,7 +1442,7 @@ city_model_t &ped_model_loader_t::get_model(unsigned id) {
 	return city_params.ped_model_files[id];
 }
 // pref_gender: 0=male, 1=female, 2=no preference
-int ped_model_loader_t::select_random_model(int rand_val, bool choose_zombie, unsigned pref_gender) {
+int ped_model_loader_t::select_random_model(int rand_val, bool choose_zombie, unsigned pref_gender, bool pref_prisoner) {
 	if (num_models() > 0 && zombie_models.empty() && people_models.empty()) { // first call - not setup
 		for (unsigned i = 0; i < num_models(); ++i) {(city_params.ped_model_files[i].is_zombie ? zombie_models : people_models).push_back(i);}
 	}
@@ -1455,12 +1456,19 @@ int ped_model_loader_t::select_random_model(int rand_val, bool choose_zombie, un
 	}
 	else {
 		if (choose_zombie) {rand_val ^= 0xdeadbeef;} // mix up the random value to decorrelate models when the people and zombie sets are the same size
-		// start with our randomly selected model and try to find a model of the correct gender;
-		// will loop around to the first model again and select the original model if no matching gender is found
+		// start with our randomly selected model and try to find a model of the correct gender and prisoner type with random offset to break ties
+		int best_score(-1);
+
 		for (unsigned n = 0; n < pool.size(); ++n) {
-			ret = pool[(rand_val + n) % pool.size()];
-			if (pref_gender >= 2 || (unsigned)is_female_model(get_model(ret)) == pref_gender) break;
-		}
+			unsigned const cand(pool[(rand_val + n) % pool.size()]);
+			int score(0);
+			if (pref_gender >= 2 || (unsigned)is_female_model(get_model(cand)) == pref_gender) {score += 2;} // 2 points for correct gender
+			if (!pref_prisoner   || is_prisoner_model(cand))                                   {score += 1;} // 1 point for correct prisoner model
+			if (score <= best_score) continue; // not better
+			ret = cand;
+			best_score = score;
+			if (score == 3) break; // perfect match
+		} // for n
 	}
 	assert(ret < num_models());
 	return ret;
@@ -1529,7 +1537,7 @@ void ped_manager_t::assign_ped_model(person_base_t &ped) { // Note: non-const, m
 	bool const is_new(ped.model_rand_seed == 0);
 	unsigned const pref_gender(is_new ? 2 : ped.is_female); // 0=male, 1=female, 2=no preference
 	if (is_new) {ped.model_rand_seed = rgen.rand();} // choose once and be consistent when switching between people and zombies
-	ped.model_id  = ped_model_loader.select_random_model(ped.model_rand_seed, choose_zombie, pref_gender);
+	ped.model_id  = ped_model_loader.select_random_model(ped.model_rand_seed, choose_zombie, pref_gender, ped.is_prisoner);
 	city_model_t const &model(ped_model_loader.get_model(ped.model_id));
 	ped.radius   *= model.scale;
 	ped.is_female = is_female_model(model);
@@ -2166,9 +2174,11 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 void ped_manager_t::gen_and_draw_people_in_building(ped_draw_vars_t const &pdv) {
 	if (!pdv.building.interior) return;
 	auto &people(pdv.building.interior->people);
+	bool const is_prisoner(pdv.building.is_prison());
 	
 	if (pdv.building.place_people_if_needed(pdv.bix, get_ped_radius())) {
 		for (person_t &p : people) { // people were added - set up their params
+			p.is_prisoner = is_prisoner;
 			assign_ped_model(p);
 			p.cur_bldg = pdv.bix; // store building index in dest_bldg field
 
