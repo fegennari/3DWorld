@@ -128,3 +128,5 @@ public:
 	virtual city_model_t       &get_model(unsigned id);
 };
 
+inline bool string_find(string const &s, string const &v) {return (s.find(v) != string::npos);}
+

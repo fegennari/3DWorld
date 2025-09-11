@@ -163,7 +163,7 @@ int building_params_t::read_building_texture(FILE *fp, string const &str, bool i
 	}
 	string const name(strc);
 	int const ret(get_texture_by_name(name, is_normal_map, tex_inv_y, get_wrap_mir()));
-	if (no_cracks != nullptr) {*no_cracks = (ret >= 0 && name.find("carpet") != string::npos);} // carpet floor textures have no cracks
+	if (no_cracks != nullptr) {*no_cracks = (ret >= 0 && string_find(name, "carpet"));} // carpet floor textures have no cracks
 	//cout << "texture filename: " << str << ", ID: " << ret << endl;
 	return ret;
 }

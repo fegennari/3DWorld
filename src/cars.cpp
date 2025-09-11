@@ -1030,9 +1030,9 @@ void car_manager_t::assign_car_model_size_color(car_t &car, rand_gen_t &local_rg
 	if (num_models > 0) { // handle emergency vehicles
 		// the best we can do is to search for the string 'police' and 'ambulance' in the filename
 		string const &fn(car_model_loader.get_model(car.model_id).fn);
-		if      (fn.find("Police"   ) != string::npos || fn.find("police"   ) != string::npos) {car.is_police    = 1;}
-		else if (fn.find("Ambulance") != string::npos || fn.find("ambulance") != string::npos) {car.is_ambulance = 1;}
-		//else if (fn.find("Bus"      ) != string::npos || fn.find("bus"      ) != string::npos) {car.is_bus       = 1;} // future work
+		if      (string_find(fn, "Police"   ) || string_find(fn, "police"   )) {car.is_police    = 1;}
+		else if (string_find(fn, "Ambulance") || string_find(fn, "ambulance")) {car.is_ambulance = 1;}
+		//else if (string_find(fn, "Bus"      ) || string_find(fn, "bus"      )) {car.is_bus       = 1;} // future work
 		car.is_emergency = is_active_emergency_vehicle(car_model_loader, car, 1, 1); // both lights and siren
 	}
 	assert(car.is_valid());

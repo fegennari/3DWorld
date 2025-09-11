@@ -126,8 +126,7 @@ colorRGBA city_model_loader_t::get_avg_color(unsigned id, bool area_weighted) {
 }
 bool city_model_loader_t::model_filename_contains(unsigned id, string const &str, string const &str2) const {
 	string const &fn(get_model(id).fn);
-	if (fn.find(str) != string::npos) return 1;
-	return (!str2.empty() && fn.find(str2) != string::npos);
+	return (string_find(fn, str) || (!str2.empty() && string_find(fn, str2)));
 }
 bool city_model_loader_t::is_model_valid(unsigned id) {
 	city_model_t &model(get_model(id));
