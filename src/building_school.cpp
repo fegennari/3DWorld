@@ -429,7 +429,22 @@ bool building_t::add_library_objs(rand_gen_t rgen, room_t const &room, float zva
 			break;
 		}
 	} // for n
-	if (add_tables) {fill_room_with_tables_and_chairs(rgen, room, zval, room_id, tot_light_amt, objs_start, 0);} // add tables; plastic_tc=0
+	if (add_tables) {
+		vect_room_object_t &objs(interior->room_geom->objs);
+		unsigned const tc_start(objs.size());
+		fill_room_with_tables_and_chairs(rgen, room, zval, room_id, tot_light_amt, objs_start, 0); // add tables; plastic_tc=0
+		vector<room_object_t> tables;
+
+		// add books on tables
+		for (auto i = objs.begin()+tc_start; i != objs.end(); ++i) { // add books on tables
+			if (i->type == TYPE_TABLE) {tables.push_back(*i);}
+		}
+		for (room_object_t const &table : tables) {
+			unsigned const pp_start(objs.size()), num_books(rgen.rand() % 4); // 0-3
+			unsigned const flags((is_school() && rgen.rand_bool()) ? RO_FLAG_USED : 0); // flag as school book half the time
+			for (unsigned n = 0; n < num_books; ++n) {place_book_on_obj(rgen, table, room_id, tot_light_amt, pp_start, 0, flags, 1, 0.35);} // skip_if_overlaps=1, 35% shift
+		}
+	}
 	if (!is_house ) {add_door_sign_remove_existing("Library", room, zval, room_id, objs_start);} // add office building library sign
 	return 1;
 }

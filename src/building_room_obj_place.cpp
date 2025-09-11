@@ -4510,11 +4510,14 @@ bool building_t::add_security_room_objs(rand_gen_t rgen, room_t const &room, flo
 	return 1;
 }
 
-bool building_t::place_book_on_obj(rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id,
-	float tot_light_amt, unsigned objs_start, bool use_dim_dir, unsigned extra_flags, bool skip_if_overlaps)
+bool building_t::place_book_on_obj(rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt,
+	unsigned objs_start, bool use_dim_dir, unsigned extra_flags, bool skip_if_overlaps, float rand_shift_amt)
 {
 	point center(place_on.get_cube_center());
-	for (unsigned d = 0; d < 2; ++d) {center[d] += 0.1*place_on.get_sz_dim(d)*rgen.rand_uniform(-1.0, 1.0);} // add a slight random shift
+
+	if (rand_shift_amt > 0.0) { // add a random XY shift
+		for (unsigned d = 0; d < 2; ++d) {center[d] += rand_shift_amt*place_on.get_sz_dim(d)*rgen.rand_uniform(-1.0, 1.0);}
+	}
 	cube_t const room_bounds(get_walkable_room_bounds(get_room(room_id)));
 	assert(room_bounds.contains_pt(center));
 	// book is randomly oriented for tables and rotated 90 degrees from desk orient
@@ -4525,13 +4528,14 @@ bool building_t::place_book_on_obj(rand_gen_t &rgen, room_object_t const &place_
 
 	// check if there's anything in the way; only handling pens and pencils here; paper is ignored, and larger objects should already be handled
 	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
+		if (!i->intersects(book)) continue;
+
 		if (i->type != TYPE_PEN && i->type != TYPE_PENCIL) {
-			if (skip_if_overlaps && *i != place_on) return 0; // something else like a cup
+			if (skip_if_overlaps && *i != place_on) return 0; // something else like a cup or another book
 			continue;
 		}
-		if (!i->intersects(book)) continue;
 		set_cube_zvals(book, i->z2(), i->z2()+book.dz()); // place book on top of object; maybe the book should be tilted?
-	}
+	} // for i
 	colorRGBA const color(book_colors[rgen.rand() % NUM_BOOK_COLORS]);
 	unsigned flags(RO_FLAG_NOCOLL | RO_FLAG_RAND_ROT | extra_flags);
 	if (place_on.is_glass_table()) {flags |= RO_FLAG_HAS_EXTRA;} // flag so that shadows are enabled
