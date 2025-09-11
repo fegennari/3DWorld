@@ -1839,12 +1839,12 @@ void building_room_geom_t::add_shower_head(room_object_t const &shower, float wi
 			metal_mat.add_cylin_to_verts(knob_pos, knob_end, 0.04*width, 0.03*width, color, 0, 1); // draw exposed end
 		}
 	}
-	// draw shower head nozzles using a custom texture
+	// draw shower head nozzle using a custom texture
 	tid_nm_pair_t tex(get_texture_by_name("interiors/pegboard.png"), 1.0, 1); // shadowed
 	tex.set_specular_color(WHITE, 0.8, 60.0);
 	tex.metalness = 0.5; // somewhat reflective
 	rgeom_mat_t &head_mat(get_material(tex, 1, 0, 1)); // shadowed, small
-	head_mat.add_cylin_to_verts(base_pos, head_pos, 0.01*width, 0.07*width, color, 0, 1, 0, 0, 1.0, 0.5, 1); // skip_sides=1; draw top/end only
+	head_mat.add_cylin_to_verts(base_pos, head_pos, 0.07*width, 0.07*width, color, 0, 1, 0, 0, 1.0, 0.5, 1); // skip_sides=1; draw top/end only
 }
 
 void building_room_geom_t::add_shower(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm) {
@@ -3570,7 +3570,7 @@ void building_room_geom_t::add_picture(room_object_t const &c) { // also whitebo
 }
 
 /*static*/ void building_room_geom_t::add_book_title(string const &title, cube_t const &title_area, rgeom_mat_t &mat, colorRGBA const &color,
-	unsigned hdim, unsigned tdim, unsigned wdim, bool cdir, bool ldir, bool wdir)
+	unsigned hdim, unsigned tdim, unsigned wdim, bool cdir, bool ldir, bool wdir) // or author
 {
 	vector3d column_dir(zero_vector), line_dir(zero_vector), normal(zero_vector);
 	column_dir[hdim] = (cdir ? -1.0 : 1.0); // along book height
@@ -3643,7 +3643,7 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 		rotate_verts(mat.quad_verts, plus_z, z_rot_angle, zrot_about, qv_start);
 	}
 	if (inc_sm) { // draw small faces: insides of covers, edges, and pages
-		rgeom_mat_t &mat(get_untextured_material(shadowed, 0, 1));
+		rgeom_mat_t &mat(get_untextured_material(shadowed, 0, 1, 0, 0, 1)); // no_reflect=1
 		unsigned const qv_start(mat.quad_verts.size());
 		unsigned const bot_skip_faces(extra_skip_faces | (was_dropped ? 0 : (EF_Z1 | ~get_face_mask(tdim, 0)))); // skip bottom face if not dropped
 		unsigned top_skip_faces(extra_skip_faces | (upright ? EF_Z1 : 0) | ~get_face_mask(tdim, 1)); // skip top face, skip bottom face if upright
@@ -3664,7 +3664,7 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 		rotate_verts(mat.quad_verts, plus_z, z_rot_angle, zrot_about, qv_start);
 
 		if (is_open) {
-			rgeom_mat_t &mat(get_material(tid_nm_pair_t(c.get_paper_tid(), 0.0), 0, 0, 1)); // map texture to quad
+			rgeom_mat_t &mat(get_material(tid_nm_pair_t(c.get_paper_tid(), 0.0), 0, 0, 1)); // map texture to quad; unshadowed
 			unsigned const qv_start(mat.quad_verts.size());
 			mat.add_cube_to_verts(pages, pages_color, zero_vector, ~EF_Z2, !c.dim, !c.dir, !cdir); // unshadowed, top face only, with proper orient
 			rotate_verts(mat.quad_verts, plus_z, z_rot_angle, zrot_about, qv_start); // rotated, but not tilted
@@ -3684,7 +3684,7 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 		if (inc_sm) {
 			int const picture_tid(c.get_picture_tid()); // not using user screenshot images
 			bool const swap_xy(upright ^ (!c.dim));
-			rgeom_mat_t &cover_mat(get_material(tid_nm_pair_t(picture_tid, 0.0), 0, 0, 1));
+			rgeom_mat_t &cover_mat(get_material(tid_nm_pair_t(picture_tid, 0.0f, 0, 0, 1), 0, 0, 1)); // unshadowed; no_reflect=1
 			unsigned const qv_start(cover_mat.quad_verts.size());
 			cover_mat.add_cube_to_verts(cover, WHITE, zero_vector, get_face_mask(tdim, tdir), swap_xy, ldir, !cdir); // no shadows, small=1
 			rotate_verts(cover_mat.quad_verts, axis,   tilt_angle,  tilt_about, qv_start);
@@ -6542,6 +6542,7 @@ void add_grid_of_bars(rgeom_mat_t &mat, colorRGBA const &color, cube_t const &c,
 {
 	max_eq(num_vbars, 2U);
 	max_eq(num_hbars, 2U);
+	bool const textured(mat.tex.tid >= 0);
 	float const v_span(c.get_sz_dim(hdim) - 2.0*vbar_hthick), h_span(c.get_sz_dim(vdim) - 2.0*hbar_hthick);
 	float const v_step(v_span/(num_vbars - 1)), h_step(h_span/(num_hbars - 1));
 	unsigned const skip_faces_v(get_skip_mask_for_dim(vdim)), skip_faces_h(get_skip_mask_for_dim(hdim));
@@ -6556,14 +6557,16 @@ void add_grid_of_bars(rgeom_mat_t &mat, colorRGBA const &color, cube_t const &c,
 		if (cylin_vbars && !on_edge) { // draw interior bars as cylinders
 			mat.add_ortho_cylin_to_verts(bar, color, vdim, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, N_CYL_SIDES/2, 0.0, 0, tscale); // ends, low detail
 		}
-		else {mat.add_cube_to_verts(bar, color, origin, skip_faces_v);}
+		else if (textured) {mat.add_cube_to_verts(bar, color, origin, skip_faces_v);}
+		else {mat.add_cube_to_verts_untextured(bar, color, skip_faces_v);}
 	}
 	cube_t bar(c);
 	if (h_adj_val != 0.0) {bar.expand_in_dim(adj_dim, h_adj_val);}
 
 	for (unsigned n = 0; n < num_hbars; ++n) { // horizontal
 		set_wall_width(bar, (c.d[vdim][0] + hbar_hthick + n*h_step), hbar_hthick, vdim);
-		mat.add_cube_to_verts(bar, color, origin, skip_faces_h);
+		if (textured) {mat.add_cube_to_verts(bar, color, origin, skip_faces_h);}
+		else {mat.add_cube_to_verts_untextured(bar, color, skip_faces_h);}
 	}
 }
 void building_room_geom_t::add_store_gate(cube_t const &c, bool dim, float open_amt) {
@@ -6729,7 +6732,7 @@ void building_room_geom_t::add_food_tray(room_object_t const &c) {
 
 void building_room_geom_t::add_trash(room_object_t const &c) {
 	// add a ball of wrinkled paper; could be based on obj_id
-	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // shadowed, small
+	rgeom_mat_t &mat(get_untextured_material(1, 0, 1, 0, 0, 1)); // shadowed, small; no_reflect=1
 	unsigned const verts_start(mat.itri_verts.size());
 	mat.add_sphere_to_verts(c, apply_light_color(c), 1); // initial sphere; low_detail=1
 	// add some random variation to each sphere vertex to crumple the paper;
