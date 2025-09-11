@@ -563,7 +563,7 @@ bool building_t::assign_and_fill_prison_room(rand_gen_t rgen, room_t &room, floa
 				if (!add_infirmary_objs(rgen, room, zval, room_id, floor_ix, tot_light_amt, objs_start)) continue;
 				break;
 			case RTYPE_LIBRARY:
-				if (!add_library_objs(rgen, room, zval, room_id, tot_light_amt, objs_start, is_basement)) continue;
+				if (!add_library_objs(rgen, room, zval, room_id, tot_light_amt, objs_start, is_basement, 1)) continue; // add_tables=1
 				break;
 			case RTYPE_RETAIL:
 				if (!add_small_retail_room_objs(rgen, room, zval, room_id, tot_light_amt)) continue;

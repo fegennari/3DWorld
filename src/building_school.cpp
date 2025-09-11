@@ -398,7 +398,7 @@ bool building_t::add_cafeteria_objs(rand_gen_t rgen, room_t const &room, float &
 	return 1;
 }
 
-bool building_t::add_library_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement) {
+bool building_t::add_library_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement, bool add_tables) {
 	if (room.is_hallway || room.is_sec_bldg) return 0; // these can't be libraries
 	bool const is_lg((is_prison() || is_school()));
 	unsigned const num_bookcases(is_lg ? 16 : 8);
@@ -429,8 +429,8 @@ bool building_t::add_library_objs(rand_gen_t rgen, room_t const &room, float zva
 			break;
 		}
 	} // for n
-	if (is_lg) {fill_room_with_tables_and_chairs(rgen, room, zval, room_id, tot_light_amt, objs_start, 0);} // add tables; plastic_tc=0
-	if (!is_house) {add_door_sign_remove_existing("Library", room, zval, room_id, objs_start);} // add office building library sign
+	if (add_tables) {fill_room_with_tables_and_chairs(rgen, room, zval, room_id, tot_light_amt, objs_start, 0);} // add tables; plastic_tc=0
+	if (!is_house ) {add_door_sign_remove_existing("Library", room, zval, room_id, objs_start);} // add office building library sign
 	return 1;
 }
 

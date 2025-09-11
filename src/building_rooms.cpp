@@ -969,7 +969,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					if (added_obj) {r->assign_to(RTYPE_LOCKER, f); ++num_locker_rooms;}
 				}
 				if (!added_obj && rgen.rand_float() < 0.25) { // maybe make library
-					if (add_library_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement)) {
+					if (add_library_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement, 1)) { // add_tables=1
 						r->assign_to(RTYPE_LIBRARY, f);
 						added_library = is_library = added_obj = no_plants = no_whiteboard = 1;
 					}
@@ -1062,7 +1062,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			if (is_prison     ()) {no_whiteboard = 1;} // not even in prison office
 
 			if (is_office && !no_whiteboard && !(library_floor_mask & floor_mask)) {
-				// office, no cubicles or bathroom, no library on this floor - maybe make it a library
+				// office, no cubicles or bathroom, no library on this floor - maybe make it a library; applies to schools as well
 				bool make_library(0);
 				if (is_office_bldg()) {make_library = ((rgen.rand() % (!has_pri_hall() ? 30U : max(50U, (unsigned)rooms.size()))) == 0);} // library is rare
 				else if (is_school()) {make_library = ((rgen.rand() % 5) == 0 && r->get_room_type(f) == RTYPE_OFFICE);} // more common in schools

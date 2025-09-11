@@ -251,7 +251,9 @@ bool building_t::fill_room_with_tables_and_chairs(rand_gen_t rgen, room_t const 
 	vect_cube_t blockers;
 
 	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
-		if (!i->no_coll() && i->intersects(place_area)) {blockers.push_back(*i);}
+		if (i->no_coll() || !i->intersects(place_area)) continue;
+		blockers.push_back(*i);
+		if (i->type == TYPE_BCASE) {blockers.back().expand_in_dim(i->dim, 0.5*clearance);} // add clearance in front of bookcases
 	}
 	for (unsigned y = 0; y < ny; ++y) {
 		for (unsigned x = 0; x < nx; ++x) {
