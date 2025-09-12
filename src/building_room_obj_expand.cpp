@@ -175,7 +175,11 @@ ball_type_t const &room_object_t::get_ball_type() const {
 	return pool_ball_type; // never gets here
 }
 
-void building_room_geom_t::add_closet_objects(room_object_t const &c, vect_room_object_t &objects) {
+void building_room_geom_t::expand_closet(room_object_t const &c) {
+	add_closet_objects(c, expanded_objs, 0); // no_models=0
+	invalidate_model_geom(); // likelu required if there are hangers and clothing
+}
+void building_room_geom_t::add_closet_objects(room_object_t const &c, vect_room_object_t &objects, bool no_models) {
 	rand_gen_t rgen(c.create_rgen());
 	cube_t ccubes[5]; // only used to get interior space
 	get_closet_cubes(c, ccubes);
@@ -215,25 +219,27 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vect_room_
 		}
 	}
 	// add hanger rod
+	unsigned const hanger_rod_ix(objects.size());
 	float const hr_radius(0.007*window_vspacing);
 	room_object_t hanger_rod(interior, TYPE_HANGER_ROD, c.room_id, c.dim, c.dir, (RO_FLAG_NOCOLL | RO_FLAG_INTERIOR)); // SHAPE_CUBE, even though it's a horizontal cylinder
 	hanger_rod.z1() = c.z1() + 0.8*window_vspacing;
 	hanger_rod.z2() = hanger_rod.z1() + 2.0*hr_radius;
 	set_wall_width(hanger_rod, (0.45*c.d[c.dim][c.dir] + 0.55*c.d[c.dim][!c.dir]), hr_radius, c.dim); // move slightly toward the back
 	objects.push_back(hanger_rod);
-	// add hangers and hanging clothes
-	unsigned const num_hangers(c.is_small_closet() ? ((rgen.rand()%7) + 2) : ((rgen.rand()%13) + 4)); // 2-8 / 4-16
-	add_hangers_and_clothing(window_vspacing, num_hangers, flags, -1, -1, objects, rgen); // hanger_model_id=clothing_model_id=-1
+	
+	if (!no_models) { // add hangers and hanging clothes
+		unsigned const num_hangers(c.is_small_closet() ? ((rgen.rand()%7) + 2) : ((rgen.rand()%13) + 4)); // 2-8 / 4-16
+		add_hangers_and_clothing(window_vspacing, num_hangers, flags, -1, -1, hanger_rod, objects, rgen); // hanger_model_id=clothing_model_id=-1
+		objects[hanger_rod_ix].item_flags = uint16_t(objects.size() - hanger_rod_ix); // number of objects hanging on the hanger rod, including hangers and clothing
+	}
 }
 
 void building_room_geom_t::add_hangers_and_clothing(float window_vspacing, unsigned num_hangers, unsigned flags, int hanger_model_id, int clothing_model_id,
-	vect_room_object_t &objects, rand_gen_t &rgen, bool add_jumpsuits)
+	room_object_t const &hanger_rod, vect_room_object_t &objects, rand_gen_t &rgen, bool add_jumpsuits)
 {
 	if (num_hangers == 0) return;
 	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_HANGER)) return;
 	assert(!objects.empty());
-	unsigned const hanger_rod_ix(objects.size() - 1);
-	room_object_t const hanger_rod(objects.back()); // hanger rod should have been added previously; deep copy to avoid reference invalidation
 	bool const dim(hanger_rod.dim);
 	float const hr_radius(0.5*hanger_rod.dz()), wire_radius(0.25*hr_radius);
 	if (hanger_rod.get_sz_dim(!dim) < 10.0*wire_radius) return;
@@ -241,7 +247,7 @@ void building_room_geom_t::add_hangers_and_clothing(float window_vspacing, unsig
 	hanger.type       = TYPE_HANGER;
 	hanger.item_flags = ((hanger_model_id >= 0) ? hanger_model_id : rgen.rand()); // choose a random hanger sub_model_id per-closet if not forced
 	set_cube_zvals(hanger, (hanger_rod.z1() - 0.07*window_vspacing), (hanger_rod.z2() + 1.0*wire_radius));
-	unsigned const hid(hanger.get_model_id()), num_slots_plus_one(add_jumpsuits ? 15 : 63);
+	unsigned const clothing_start(objects.size()), hid(hanger.get_model_id()), num_slots_plus_one(add_jumpsuits ? 15 : 63);
 	float const edge_spacing(max(4.0f*hr_radius, 0.06f*window_vspacing));
 	float const pos_min(hanger_rod.d[!dim][0] + edge_spacing), pos_max(hanger_rod.d[!dim][1] - edge_spacing);
 	float const pos_delta(pos_max - pos_min), slot_spacing(pos_delta/num_slots_plus_one);
@@ -283,7 +289,7 @@ void building_room_geom_t::add_hangers_and_clothing(float window_vspacing, unsig
 			resize_model_cube_xy(clothes, clothes.get_center_dim(dim), clothes.get_center_dim(!dim), cid, dim);
 			bool skip(0);
 
-			for (auto m = objects.begin()+hanger_rod_ix+1; m != objects.end(); ++m) { // skip if this object intersects a previous hanging clothing item
+			for (auto m = objects.begin()+clothing_start; m != objects.end(); ++m) { // skip if this object intersects a previous hanging clothing item
 				if (m->type == obj_type && m->intersects(clothes)) {skip = 1; break;}
 			}
 			if (skip) continue;
@@ -301,7 +307,6 @@ void building_room_geom_t::add_hangers_and_clothing(float window_vspacing, unsig
 		}
 		if (mix_hangers && (rgen.rand()&7) == 0) {hanger.item_flags = rgen.rand();} // switch to a new hanger type occasionally
 	} // for i
-	objects[hanger_rod_ix].item_flags = uint16_t(objects.size() - hanger_rod_ix); // number of objects hanging on the hanger rod, including hangers and shirts
 }
 
 bool add_cabinet_objects(room_object_t const &c, vect_room_object_t &objects) { // called on cabinets, counters, kitchen sinks, and bathroom vanities

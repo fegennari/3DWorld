@@ -1814,14 +1814,18 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 				get_conf_table_cubes(*i, cubes);
 				if (!cubes[0].line_intersects(p1c, p2c) && !cubes[1].line_intersects(p1c, p2c)) continue;
 			}
-			if (type == TYPE_HANGER_ROD && i->item_flags > 0) { // nonempty hanger rod
-				// search for hangers and don't allow hanger rod to be taken until the hangers are all taken
-				bool has_hanger(0);
+			if (type == TYPE_HANGER_ROD) {
+				if (i->in_mall()) continue; // mall clothing rack hanger rod is attached
 
-				for (auto j = i+1; j != (i + i->item_flags); ++j) { // iterate over all objects hanging on the hanger rod and look for untaken hangers
-					if (j->type == TYPE_HANGER) {has_hanger = 1; break;}
+				if (i->item_flags > 0) { // nonempty hanger rod
+					// search for hangers and don't allow hanger rod to be taken until the hangers are all taken
+					bool has_hanger(0);
+
+					for (auto j = i+1; j != (i + i->item_flags); ++j) { // iterate over all objects hanging on the hanger rod and look for untaken hangers
+						if (j->type == TYPE_HANGER) {has_hanger = 1; break;}
+					}
+					if (has_hanger) continue;
 				}
-				if (has_hanger) continue;
 			}
 			// for hanger with clothes or jumpsuit - must take clothes/jumpsuit first
 			if (type == TYPE_HANGER  && i->is_hanging() && (i+1) != objs_end && ((i+1)->type == TYPE_CLOTHES || (i+1)->type == TYPE_JUMPSUIT)) continue;

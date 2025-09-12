@@ -1396,7 +1396,7 @@ struct building_room_geom_t {
 	void expand_shelves(room_object_t const &c, bool add_models_mode=0);
 	void expand_shelfrack(room_object_t const &c);
 	void get_bookcase_books(room_object_t const &c, vect_room_object_t &books) {add_bookcase(c, 0, 0, 0, 1.0, 0, 1.0, nullptr, &books);} // Note: technically const
-	void expand_closet(room_object_t const &c) {add_closet_objects(c, expanded_objs);}
+	void expand_closet(room_object_t const &c);
 	void expand_cabinet(room_object_t const &c);
 	void expand_wine_rack(room_object_t const &c) {add_wine_rack_bottles(c, expanded_objs);}
 	void expand_med_cab(room_object_t const &c);
@@ -1454,12 +1454,12 @@ private:
 	void add_door_handle(door_t const &door, door_rotation_t const &drot, colorRGBA const &color, bool residential);
 	void add_jail_cell_door(door_t const &D, building_t const &building, door_rotation_t &drot);
 	void maybe_add_door_sign(door_t const &door, door_rotation_t const &drot);
-	static void add_closet_objects(room_object_t const &c, vect_room_object_t &objects);
+	static void add_closet_objects(room_object_t const &c, vect_room_object_t &objects, bool no_models);
 	static void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[MAX_SHELVES], unsigned num_shelves, vect_room_object_t &objects, bool add_models_mode=0);
 public:
 	static void get_shelfrack_objects(room_object_t const &c, vect_room_object_t &objects, bool add_models_mode=0, bool books_only=0);
 	static void add_hangers_and_clothing(float window_vspacing, unsigned num_hangers, unsigned flags, int hanger_model_id, int clothing_model_id,
-		vect_room_object_t &objects, rand_gen_t &rgen, bool add_jumpsuits=0);
+		room_object_t const &hanger_rod, vect_room_object_t &objects, rand_gen_t &rgen, bool add_jumpsuits=0);
 	static void add_pet_container(cube_t const &tank, unsigned room_id, float tot_light_amt, bool dim, bool dir, bool in_pet_store,
 		vect_room_object_t &objects, rand_gen_t &rgen, unsigned animal_type=TYPE_FISH, unsigned shelf_ix=0);
 private:

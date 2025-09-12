@@ -746,7 +746,7 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 		// Note: always drawn to avoid recreating all small objects when the player opens/closes a closet door, and so that objects can be seen through the cracks in the doors
 		if (!c.obj_expanded()) { // add boxes if not expanded
 			vect_room_object_t &objects(get_temp_objects());
-			add_closet_objects(c, objects);
+			add_closet_objects(c, objects, 1); // no_models=1
 			add_nested_objs_to_verts(objects);
 		}
 	} // end inc_sm
@@ -6992,7 +6992,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_SHOWER:   return colorRGBA(WHITE, 0.25); // partially transparent - does this actually work?
 	case TYPE_BLINDS:   return texture_color(get_blinds_tid()).modulate_with(color);
 	case TYPE_LG_BALL:  return texture_color(get_ball_tid(*this));
-	case TYPE_HANGER_ROD:return get_textured_wood_color();
+	case TYPE_HANGER_ROD:return LT_GRAY.modulate_with(in_mall() ? WHITE : get_textured_wood_color());
 	case TYPE_MONEY:    return texture_color(get_money_tid());
 	case TYPE_PHONE:    return color*0.5; // 50% case color, 50% black
 	case TYPE_LAPTOP:   return BKGRAY; // black-gray case, ignore logo colors

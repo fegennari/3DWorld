@@ -2215,16 +2215,18 @@ void building_t::add_clothing_rack(cube_t const &rack, unsigned room_id, bool di
 	min_eq(num_segs, max(1U, unsigned(rack_length/rack_width))); // limit aspect ratio
 	int const hanger_model_id(rgen.rand()), clothing_model_id(rgen.rand()); // consistent for each rack
 	float const seg_len(rack_length/num_segs);
+	// add hanger rod
+	room_object_t hanger_rod(rack, TYPE_HANGER_ROD, room_id, !dim, 0, flags); // SHAPE_CUBE, even though it's a horizontal cylinder
+	hanger_rod.z1() = rack.z2();
+	hanger_rod.z2() = hanger_rod.z1() + 2.0*hr_radius;
+	set_wall_width(hanger_rod, rack_center, hr_radius, !dim);
+	objs.push_back(hanger_rod); // passes through all segments
 
 	for (unsigned n = 0; n < num_segs; ++n) { // split into segments
-		// add hanger rod
+		// clip hanger rod to segments
 		float const lo_val(rack.d[dim][0] + n*seg_len);
-		room_object_t hanger_rod(rack, TYPE_HANGER_ROD, room_id, !dim, 0, flags); // SHAPE_CUBE, even though it's a horizontal cylinder
 		hanger_rod.d[dim][0] = lo_val;
 		hanger_rod.d[dim][1] = lo_val + seg_len;
-		hanger_rod.z1() = rack.z2();
-		hanger_rod.z2() = hanger_rod.z1() + 2.0*hr_radius;
-		set_wall_width(hanger_rod, rack_center, hr_radius, !dim);
 		// add a frame that holds the hanger rod; can construct from metal bars
 		colorRGBA const frame_color(0.35, 0.35, 0.35);
 
@@ -2252,11 +2254,10 @@ void building_t::add_clothing_rack(cube_t const &rack, unsigned room_id, bool di
 				objs.emplace_back(vbar, TYPE_METAL_BAR, room_id, 0, 0, flags, light_amt, SHAPE_CUBE, frame_color, EF_Z12); // skip top and bottom
 			}
 		} // for d
-		objs.push_back(hanger_rod); // must be added just before clothes
 		// add hangers and hanging clothes
 		unsigned const num_hangers(round_fp(15.0*rgen.rand_uniform(1.0, 1.5)*rack_length/(num_segs*window_vspace)));
 		bool const add_jumpsuits(rtype == RTYPE_JAIL);
-		building_room_geom_t::add_hangers_and_clothing(window_vspace, num_hangers, flags, hanger_model_id, clothing_model_id, objs, rgen, add_jumpsuits);
+		building_room_geom_t::add_hangers_and_clothing(window_vspace, num_hangers, flags, hanger_model_id, clothing_model_id, hanger_rod, objs, rgen, add_jumpsuits);
 	} // for n
 }
 
