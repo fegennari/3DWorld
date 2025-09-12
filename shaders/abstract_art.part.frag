@@ -81,7 +81,7 @@ vec4 colorful(vec2 pos, float seed) {
 
 vec4 gen_abstract_art(vec2 tc, vec3 seed) {
 	// seed.r selects the fractal/mode, seed.g selects the location, and seed.b selects the zoom level
-	int mode = int(6.0*seed.r);
+	int mode = int(5.99*seed.r);
 	vec2 pos = 2.0*tc - vec2(1.0); // [-1.0, 1.0]
 	if (mode == 3) {return gen_ZzArt(pos, seed.g);}
 	if (mode == 4) {return vortex   (pos, seed.g);}

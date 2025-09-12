@@ -418,7 +418,7 @@ public:
 			else if (s == "disp"   ) {unhandled(s, mat_in);} // displacement
 			// PBR parameters, mostly unsupported
 			else if (s == "metalness" || s == "pm") {
-				// Note: metalness has been added for 3DWorld and is not in the original obj file format;
+				// Note: metalness has been added for 3DWorld and is not in the original obj file format
 				assert(cur_mat);
 				if (!(mat_in >> cur_mat->metalness)) {cerr << "Error reading material metalness for " << material_name << endl; return 0;}
 			}
