@@ -429,24 +429,54 @@ bool building_t::add_library_objs(rand_gen_t rgen, room_t const &room, float zva
 			break;
 		}
 	} // for n
-	if (add_tables) {
-		vect_room_object_t &objs(interior->room_geom->objs);
-		unsigned const tc_start(objs.size());
-		fill_room_with_tables_and_chairs(rgen, room, zval, room_id, tot_light_amt, objs_start, 0); // add tables; plastic_tc=0
+	if (add_tables) {fill_room_with_tables_and_chairs(rgen, room, zval, room_id, tot_light_amt, objs_start, 0, 4);} // add tables; plastic_tc=0, max_books=4
+	if (!is_house ) {add_door_sign_remove_existing("Library", room, zval, room_id, objs_start);} // add office building library sign
+	return 1;
+}
+
+bool building_t::fill_room_with_tables_and_chairs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt,
+	unsigned objs_start, bool plastic_tc, unsigned max_books, unsigned max_num_xy)
+{
+	float const vspace(get_window_vspace()), clearance(get_min_front_clearance_inc_people());
+	float const table_spacing(0.5*vspace + 2.0*clearance); // placed tables will be rectangular, but we use square spacing
+	cube_t place_area(get_walkable_room_bounds(room));
+	place_area.expand_by_xy(-(0.1*table_spacing + 0.05*min(room.dx(), room.dy()))); // add extra space at room walls
+	vector2d const place_sz(place_area.get_size_xy());
+	unsigned nx(place_sz.x/table_spacing), ny(place_sz.y/table_spacing);
+	if (nx < 1 || ny < 1) return 0; // not enough space for any tables
+	if (max_num_xy > 0) {min_eq(nx, max_num_xy); min_eq(ny, max_num_xy);}
+	float const xspace(place_sz.x/nx), yspace(place_sz.y/ny);
+	colorRGBA const &chair_color(chair_colors[rgen.rand() % NUM_CHAIR_COLORS]);
+	vect_room_object_t &objs(interior->room_geom->objs);
+	unsigned const tc_start(objs.size());
+	unsigned num_added(0);
+	vect_cube_t blockers;
+
+	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
+		if (i->no_coll() || !i->intersects(place_area)) continue;
+		blockers.push_back(*i);
+		if (i->type == TYPE_BCASE) {blockers.back().expand_in_dim(i->dim, 0.5*clearance);} // add clearance in front of bookcases
+	}
+	for (unsigned y = 0; y < ny; ++y) {
+		for (unsigned x = 0; x < nx; ++x) {
+			point const center((place_area.x1() + (x + 0.5)*xspace), (place_area.y1() + (y + 0.5)*yspace), zval);
+			num_added += add_table_and_chairs(rgen, room, blockers, room_id, center, chair_color, 0.0, tot_light_amt, 4, 0, plastic_tc); // no offset, 4 chairs, short table
+		}
+	} // for y
+	if (max_books > 0) { // add books on tables
 		vector<room_object_t> tables;
 
-		// add books on tables
-		for (auto i = objs.begin()+tc_start; i != objs.end(); ++i) { // add books on tables
+		for (auto i = objs.begin()+tc_start; i != objs.end(); ++i) {
 			if (i->type == TYPE_TABLE) {tables.push_back(*i);}
 		}
 		for (room_object_t const &table : tables) {
-			unsigned const pp_start(objs.size()), num_books(rgen.rand() % 4); // 0-3
+			unsigned const pp_start(objs.size()), num_books(rgen.rand() % (max_books+1));
 			unsigned const flags((is_school() && rgen.rand_bool()) ? RO_FLAG_USED : 0); // flag as school book half the time
 			float const shift_amt((table.shape == SHAPE_CYLIN) ? 0.25 : 0.35); // less shift for cylindrical tables to avoid overlapping the edges
 			for (unsigned n = 0; n < num_books; ++n) {place_book_on_obj(rgen, table, room_id, tot_light_amt, pp_start, 0, flags, 1, shift_amt);} // skip_if_overlaps=1
 		}
 	}
-	if (!is_house ) {add_door_sign_remove_existing("Library", room, zval, room_id, objs_start);} // add office building library sign
-	return 1;
+	// other objects? deck of cards, pack of cigarettes, or ashtray for prison lounge tables?
+	return (num_added > 0);
 }
 
