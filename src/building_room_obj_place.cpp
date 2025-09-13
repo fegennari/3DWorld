@@ -236,14 +236,17 @@ void building_t::shorten_chairs_in_region(cube_t const &region, unsigned objs_st
 	}
 }
 
-bool building_t::fill_room_with_tables_and_chairs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool plastic_tc) {
-	float const vspace(get_window_vspace()), wall_thickness(get_wall_thickness()), clearance(get_min_front_clearance_inc_people());
+bool building_t::fill_room_with_tables_and_chairs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt,
+	unsigned objs_start, bool plastic_tc, unsigned max_num_xy)
+{
+	float const vspace(get_window_vspace()), clearance(get_min_front_clearance_inc_people());
 	float const table_spacing(0.5*vspace + 2.0*clearance); // placed tables will be rectangular, but we use square spacing
 	cube_t place_area(get_walkable_room_bounds(room));
-	place_area.expand_by_xy(-0.1*table_spacing); // add extra space at room walls
+	place_area.expand_by_xy(-(0.1*table_spacing + 0.05*min(room.dx(), room.dy()))); // add extra space at room walls
 	vector2d const place_sz(place_area.get_size_xy());
-	unsigned const nx(place_sz.x/table_spacing), ny(place_sz.y/table_spacing);
+	unsigned nx(place_sz.x/table_spacing), ny(place_sz.y/table_spacing);
 	if (nx < 1 || ny < 1) return 0; // not enough space for any tables
+	if (max_num_xy > 0) {min_eq(nx, max_num_xy); min_eq(ny, max_num_xy);}
 	float const xspace(place_sz.x/nx), yspace(place_sz.y/ny);
 	colorRGBA const &chair_color(chair_colors[rgen.rand() % NUM_CHAIR_COLORS]);
 	vect_room_object_t &objs(interior->room_geom->objs);
@@ -930,7 +933,7 @@ void building_t::add_lounge_objs(rand_gen_t rgen, room_t const &room, float zval
 	float const window_vspacing(get_window_vspace());
 	bool const teacher(is_school()), add_mult_tables(is_prison());
 	bool const add_tall_table(!teacher && !add_mult_tables && !is_lobby && min(place_area.dx(), place_area.dy()) > 1.4*window_vspacing && rgen.rand_float() < 0.75); // 75%
-	if (add_mult_tables) {fill_room_with_tables_and_chairs(rgen, room, zval, room_id, tot_light_amt, objs_start, 1);} // add tables and chairs; plastic_tc=1
+	if (add_mult_tables) {fill_room_with_tables_and_chairs(rgen, room, zval, room_id, tot_light_amt, objs_start, 1, 3);} // add tables and chairs; plastic_tc=1, max_num_xy=3
 	vect_cube_t blockers;
 	add_lounge_blockers(objs, objs_start, blockers); // add any previously places tables, chairs, etc.
 

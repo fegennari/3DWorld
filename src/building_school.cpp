@@ -442,7 +442,8 @@ bool building_t::add_library_objs(rand_gen_t rgen, room_t const &room, float zva
 		for (room_object_t const &table : tables) {
 			unsigned const pp_start(objs.size()), num_books(rgen.rand() % 4); // 0-3
 			unsigned const flags((is_school() && rgen.rand_bool()) ? RO_FLAG_USED : 0); // flag as school book half the time
-			for (unsigned n = 0; n < num_books; ++n) {place_book_on_obj(rgen, table, room_id, tot_light_amt, pp_start, 0, flags, 1, 0.35);} // skip_if_overlaps=1, 35% shift
+			float const shift_amt((table.shape == SHAPE_CYLIN) ? 0.25 : 0.35); // less shift for cylindrical tables to avoid overlapping the edges
+			for (unsigned n = 0; n < num_books; ++n) {place_book_on_obj(rgen, table, room_id, tot_light_amt, pp_start, 0, flags, 1, shift_amt);} // skip_if_overlaps=1
 		}
 	}
 	if (!is_house ) {add_door_sign_remove_existing("Library", room, zval, room_id, objs_start);} // add office building library sign
