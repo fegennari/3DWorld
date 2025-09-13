@@ -2121,7 +2121,7 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom, f
 	// add the label
 	// Note: we could add a bottom sphere to make it a capsule, then translate below the surface in -z to flatten the bottom; it wouldn't work for hoizontal bottles though
 	body.expand_in_dim(dim1, 0.03*radius); // expand slightly in radius
-	body.expand_in_dim(dim2, 0.03*radius); // expand slightly in radius
+	body.expand_in_dim(dim2, 0.03*radius);
 	body.d[dim][c.dir] += dir_sign*0.24*length; body.d[dim][!c.dir] -= dir_sign*0.12*length; // shrink in length
 	bottle_params_t const &bp(bottle_params[c.get_bottle_type()]);
 	// some labels are more square and scaled 2x to repeat as they're more stretched out; should we use a partial cylinder instead?
@@ -2135,14 +2135,17 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom, f
 	// draw label
 	label_mat.add_ortho_cylin_to_verts(body, apply_light_color(c, WHITE), dim, 0, 0, 0, 0, 1.0, 1.0, side_tscale,
 		1.0, 0, bottle_ndiv, tscale_add, 0, (flip ? 0.0 : 1.0), (flip ? 1.0 : 0.0));
+	if (rot_angle != 0.0) {rotate_verts(label_mat.itri_verts, plus_z, rot_angle, center, label_verts_start);}
 
-	if (transparent) { // draw inside if plastic is transparent; not rotated
+	if (transparent) { // draw inside if plastic is transparent
 		rgeom_mat_t &imat(get_untextured_material(0, 0, 1, 0, 0, 1)); // no_reflect=1
 		unsigned const verts_start(imat.itri_verts.size()), ixs_start(imat.indices.size());
+		body.expand_in_dim(dim1, -0.02*radius); // shrink off most of the expand to reduce clipping through the floor
+		body.expand_in_dim(dim2, -0.02*radius);
 		imat.add_ortho_cylin_to_verts(body, apply_light_color(c, WHITE), dim, 0, 0); // sides only
 		invert_triangles(imat, verts_start, ixs_start); // invert inner surface
+		if (rot_angle != 0.0) {rotate_verts(imat.itri_verts, plus_z, rot_angle, center, verts_start);}
 	}
-	if (rot_angle != 0.0) {rotate_verts(label_mat.itri_verts, plus_z, rot_angle, center, label_verts_start);}
 }
 
 void building_room_geom_t::add_drink_can(room_object_t const &c) {
