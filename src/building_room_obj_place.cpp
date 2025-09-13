@@ -149,7 +149,7 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 // Note: must be first placed objects; returns the number of total objects added (table + optional chairs)
 // wooden_or_plastic: 0=wood, 1=plastic, 2=pastic for 50% of offices, otherwise wood
 unsigned building_t::add_table_and_chairs(rand_gen_t rgen, room_t const &room, vect_cube_t &blockers, unsigned room_id, point const &place_pos,
-	colorRGBA const &chair_color, float rand_place_off, float tot_light_amt, unsigned max_chairs, bool use_tall_table, int wooden_or_plastic)
+	colorRGBA const &chair_color, float rand_place_off, float tot_light_amt, unsigned max_chairs, bool use_tall_table, int wooden_or_plastic, int chair_rand_add)
 {
 	bool const use_bar_stools(use_tall_table), is_store(room.is_store());
 	float const table_rscale(use_tall_table ? 0.12 : 0.18), room_dx(room.dx()), room_dy(room.dy());
@@ -182,6 +182,7 @@ unsigned building_t::add_table_and_chairs(rand_gen_t rgen, room_t const &room, v
 	set_obj_id(objs);
 	if (max_chairs == 0) return 1; // table only
 	// maybe place some chairs around the table
+	rgen.rseed1 += chair_rand_add; // used to make chair placement unique for duplicate tables
 	unsigned const blockers_sz(blockers.size());
 	unsigned num_chairs(0);
 	bool prev_not_added(0), pri_dim(rgen.rand_bool()), pri_dir(rgen.rand_bool());

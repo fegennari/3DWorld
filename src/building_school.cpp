@@ -460,7 +460,8 @@ bool building_t::fill_room_with_tables_and_chairs(rand_gen_t rgen, room_t const 
 	for (unsigned y = 0; y < ny; ++y) {
 		for (unsigned x = 0; x < nx; ++x) {
 			point const center((place_area.x1() + (x + 0.5)*xspace), (place_area.y1() + (y + 0.5)*yspace), zval);
-			num_added += add_table_and_chairs(rgen, room, blockers, room_id, center, chair_color, 0.0, tot_light_amt, 4, 0, plastic_tc); // no offset, 4 chairs, short table
+			int const chair_rand_add(12345*x + 54321*y); // keep the same table params (rgen not copied by ref/modified), but make chair placement unique
+			num_added += add_table_and_chairs(rgen, room, blockers, room_id, center, chair_color, 0.0, tot_light_amt, 4, 0, plastic_tc, chair_rand_add); // 4 chairs, short table
 		}
 	} // for y
 	if (max_books > 0) { // add books on tables
