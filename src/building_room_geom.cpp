@@ -4770,7 +4770,7 @@ void building_room_geom_t::add_br_stall(room_object_t const &c, bool inc_lg, boo
 			point const llc(c.get_llc());
 			// add tile on back wall and floor, plus shelf
 			cube_t c_exp(c);
-			c_exp.expand_in_dim(!dim,  0.01*width); // slightly wider to avoid Z-fighting but merge with adjacent shower; textures should tile with adjacent shower
+			c_exp.expand_in_dim(!dim, 0.01*width); // slightly wider to avoid Z-fighting but merge with adjacent shower; textures should tile with adjacent shower
 			cube_t bottom(c_exp), back(c_exp), shelf(c_exp);
 			bottom.d[dim][!dir] += 0.01*signed_depth; // slight expand in front to avoid Z-fighting
 			back  .d[dim][!dir]  = shelf .d[dim][dir] = inner_wall_pos;

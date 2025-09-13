@@ -971,7 +971,7 @@ bool building_t::add_shower_room_objs(rand_gen_t rgen, room_t const &room, float
 		soap_avoid.push_back(bench);
 	}
 	// add some soap on the floor for players to pick up
-	unsigned const num_soap((rgen.rand() % (has_wall ? 4 : 2)) + 1); // 1-4 if there's a well, 1-2 if not
+	unsigned const num_soap((rgen.rand() % (has_wall ? 4 : 2)) + 1); // 1-4 if there's a wall, 1-2 if not
 	float const one_inch(get_one_inch()), soap_hlen(2.0*one_inch), soap_hwidth(1.25*one_inch), soap_height(1.0*one_inch); // 4x2.5x1
 	cube_t place_area(get_walkable_room_bounds(room));
 	place_area.z1() = zval;

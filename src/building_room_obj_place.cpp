@@ -2307,6 +2307,20 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 
 			if (dir == showers_dir) { // add shower rather than stall
 				flags |= RO_FLAG_IN_JAIL;
+				
+				if (rgen.rand_bool()) { // maybe add a bar of soap
+					float const one_inch(get_one_inch()), soap_hlen(2.0*one_inch), soap_hwidth(1.25*one_inch), soap_height(1.0*one_inch); // 4x2.5x1
+					colorRGBA const soap_color(soap_colors[rgen.rand() % NUM_SOAP_COLORS]);
+					vector3d const soap_sz((!br_dim ? soap_hwidth : soap_hlen), (!br_dim ? soap_hlen : soap_hwidth), soap_height);
+					float const signed_depth(dir_sign*stall_depth), inner_wall_pos(stall.d[br_dim][dir] + 0.02*signed_depth);
+					cube_t shelf(stall); // from building_room_geom_t::add_br_stall()
+					shelf.d[br_dim][ dir] = inner_wall_pos + 0.02*signed_depth; // don't clip through tile
+					shelf.d[br_dim][!dir] = inner_wall_pos + 0.10*signed_depth;
+					shelf.z2() = stall.z1() + 0.28*stall.dz();
+					cube_t soap;
+					gen_xy_pos_for_cube_obj(soap, shelf, soap_sz, soap_height, rgen, 0); // place_at_z1=0
+					objs.emplace_back(soap, TYPE_BAR_SOAP, room_id, !br_dim, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_ROUNDED_CUBE, soap_color);
+				}
 			}
 			else { // toilet stall
 				cube_t toilet(center);
