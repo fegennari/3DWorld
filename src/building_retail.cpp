@@ -314,8 +314,48 @@ bool building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 }
 
 bool building_t::add_small_retail_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float light_amt) { // for prisons, etc.
-	// TODO
-	return 0;
+	// Note: simplified version of mall retail stores from building_t::add_mall_store_objs()
+	bool const dim(room.dx() < room.dy()); // long dim
+	float const window_vspace(get_window_vspace()), door_width(get_doorway_width());
+	cube_t const place_area(get_walkable_room_bounds(room));
+	float const dx(place_area.dx()), dy(place_area.dy()), spacing(0.8), nom_aisle_width(1.2*door_width);
+	unsigned const nx(max(1U, unsigned(spacing*dx/window_vspace))), ny(max(1U, unsigned(spacing*dy/window_vspace)));
+	float const length(dim ? dy : dx), width(dim ? dx : dy), max_rack_width(0.45*window_vspace);
+	unsigned const nrows((dim ? nx : ny)-1), nracks(max(2U, (dim ? ny : nx)/4));
+	if (width < 4.0*nom_aisle_width || nrows < 2) return 0; // can't fit at least two rows
+	float row_aisle_width(nom_aisle_width), aisle_spacing((width - row_aisle_width)/nrows), rack_width(aisle_spacing - row_aisle_width);
+	assert(rack_width > 0.0);
+
+	if (rack_width > max_rack_width) { // rack is too wide; widen the aisle instead
+		rack_width      = max_rack_width;
+		row_aisle_width = aisle_spacing - rack_width;
+		aisle_spacing   = (width - row_aisle_width)/nrows;
+	}
+	float const rack_spacing((length - nom_aisle_width)/nracks), rack_length(rack_spacing - nom_aisle_width);
+	assert(rack_length > 0.0);
+	cube_t rack;
+	set_cube_zvals(rack, zval, (zval + 0.65*window_vspace));
+	unsigned const style_id(rgen.rand() & 1); // same style for each rack: 3-4 shelves, no top or sides
+	unsigned rack_id(0);
+
+	for (unsigned n = 0; n < nrows; ++n) { // n+1 aisles
+		float const rack_lo(place_area.d[!dim][0] + row_aisle_width + n*aisle_spacing), rack_center(rack_lo + 0.5*rack_width);
+		rack.d[!dim][0] = rack_lo;
+		rack.d[!dim][1] = rack_lo + rack_width;
+
+		for (unsigned r = 0; r < nracks; ++r) {
+			float const start(place_area.d[dim][0] + nom_aisle_width + r*rack_spacing);
+			rack.d[dim][0] = start;
+			rack.d[dim][1] = start + rack_length;
+			cube_t test_cube(rack);
+			test_cube.expand_by_xy(0.6*door_width); // add extra padding
+			if (is_obj_placement_blocked(test_cube, room, 1, 1)) continue; // inc doors and check open_dir
+			add_shelf_rack(rack, dim, style_id, rack_id, room_id, 0, RETAIL_FOOD+1, 0, rgen); // add_occluders=0
+		} // for r
+	} // for n
+	if (rack_id == 0) return 0;
+	add_door_sign("Store", room, zval, room_id);
+	return 1;
 }
 
 void building_t::add_retail_pillar(cube_t const &pillar, float zval, unsigned room_id, bool is_tall) {

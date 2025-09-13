@@ -1175,6 +1175,7 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 					// will fall through to grouped items case below
 				}
 				else if (rgen2.rand_float() < 0.65) { // add bottles; these aren't consumable by the player because that would be too powerful
+					// TODO: no alcohol if school or prison
 					float const bot_height(height_val*rgen2.rand_uniform(0.7, 0.9)), bot_radius(min(0.25f*depth, bot_height*rgen2.rand_uniform(0.12, 0.18)));
 					add_rows_of_vcylinders(c, shelf, bot_radius, bot_height, 0.25, TYPE_BOTTLE, 2, flags, objects, rgen2); // 1-2 columns
 					continue;
