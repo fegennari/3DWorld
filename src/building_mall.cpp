@@ -1794,9 +1794,8 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 			assert(rack_width > 0.0);
 
 			if (rack_width > max_rack_width) { // rack is too wide; widen the aisle instead
-				rack_width      = max_rack_width;
-				row_aisle_width = aisle_spacing - rack_width;
-				aisle_spacing   = (width - row_aisle_width)/nrows;
+				row_aisle_width += 0.5*(rack_width - max_rack_width); // first aisle width increases by half the rack width; aisle_spacing is unchanged
+				rack_width       = max_rack_width;
 			}
 			float const rack_spacing((length - nom_aisle_width)/nracks), rack_length(rack_spacing - nom_aisle_width);
 			assert(rack_length > 0.0);

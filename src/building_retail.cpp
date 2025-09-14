@@ -36,9 +36,8 @@ bool building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 	assert(rack_width > 0.0);
 	
 	if (rack_width > max_rack_width) { // rack is too wide; widen the aisle instead
-		rack_width      = max_rack_width;
-		row_aisle_width = aisle_spacing - rack_width;
-		aisle_spacing   = (width - row_aisle_width)/nrows;
+		row_aisle_width += 0.5*(rack_width - max_rack_width); // first aisle width increases by half the rack width; aisle_spacing is unchanged
+		rack_width       = max_rack_width;
 	}
 	float const wall_thickness(get_wall_thickness()), pillar_width(2.0*wall_thickness), fc_gap(get_floor_ceil_gap());
 	float const col_aisle_width(nom_aisle_width + pillar_width), rack_spacing((length - col_aisle_width)/nracks), rack_length(rack_spacing - col_aisle_width);
@@ -327,9 +326,8 @@ bool building_t::add_small_retail_room_objs(rand_gen_t rgen, room_t const &room,
 	assert(rack_width > 0.0);
 
 	if (rack_width > max_rack_width) { // rack is too wide; widen the aisle instead
-		rack_width      = max_rack_width;
-		row_aisle_width = aisle_spacing - rack_width;
-		aisle_spacing   = (width - row_aisle_width)/nrows;
+		row_aisle_width += 0.5*(rack_width - max_rack_width); // first aisle width increases by half the rack width; aisle_spacing is unchanged
+		rack_width       = max_rack_width;
 	}
 	float const rack_spacing((length - nom_aisle_width)/nracks), rack_length(rack_spacing - nom_aisle_width);
 	assert(rack_length > 0.0);
@@ -353,7 +351,8 @@ bool building_t::add_small_retail_room_objs(rand_gen_t rgen, room_t const &room,
 			add_shelf_rack(rack, dim, style_id, rack_id, room_id, 0, RETAIL_FOOD+1, 0, rgen); // add_occluders=0
 		} // for r
 	} // for n
-	if (rack_id == 0) return 0;
+	if (rack_id == 0) return 0; // no racks were added
+	// add cash register/checkout counter?
 	add_door_sign("Store", room, zval, room_id);
 	return 1;
 }
