@@ -306,6 +306,15 @@ class cube_map_reflection_manager_t {
 	point last_update_pos[6]; // one per face
 	cube_t room_bounds;
 	building_t const *last_building=nullptr;
+
+	bool has_reflected_person(building_t const &building, pos_dir_up const &pdu, cube_t const &clip_cube) {
+		assert(building.interior);
+
+		for (person_t const &p : building.interior->people) {
+			if (!p.is_waiting_or_stopped() && clip_cube.contains_pt(p.pos) && pdu.point_visible_test(p.pos)) return 1;
+		}
+		return 0;
+	}
 public:
 	void capture(building_t const &building, point const &pos) { // pos is in camera space
 		bool interior_room(0), is_extb(0);
@@ -313,6 +322,7 @@ public:
 		vector3d const xlate(get_tiled_terrain_model_xlate());
 		point const pos_bs(building.get_inv_rot_pos(pos - xlate));
 		int const room_id(building.get_room_containing_pt(pos_bs));
+		bool const has_people(building.has_people());
 		cube_t scene_bounds;
 		// calculate our cube map bounds based on what part of the building the center is in
 		if (!building.has_basement() || pos_bs.z > building.ground_floor_z1) {scene_bounds = building.bcube;} // above ground/no basement
@@ -359,8 +369,7 @@ public:
 				unsigned const face_id(2*dim + (dir == 0));
 				//if ((frame_counter % 6) != face_id) continue; // not our turn to update; looks bad
 				point &last_pos(last_update_pos[face_id]);
-				if (center == last_pos) continue; // no pos change; skip this face
-				last_pos  = center;
+				if (center == last_pos && !has_people) continue; // no pos change; skip this face if there are no people
 				cview_dir = zero_vector;
 				up_vector = -plus_y;
 				cview_dir[dim] = (dir ? 1.0 : -1.0);
@@ -369,6 +378,8 @@ public:
 				camera_pdu = pos_dir_up(center, cview_dir, up_vector, angle, near_plane, far_plane, 1.0, 1);
 				reflection_clip_cube = ref_cube;
 				reflection_clip_cube.d[dim][!dir] = pos_bs[dim]; // clip to half space in front of cube map face
+				if (center == last_pos && !has_reflected_person(building, camera_pdu, reflection_clip_cube)) continue; // no pos change; skip if no reflected people
+				last_pos  = center;
 				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 				fgPushIdentityMatrix(); // MVM
 				vector3d const target(center + cview_dir);
