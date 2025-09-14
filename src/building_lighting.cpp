@@ -2225,7 +2225,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		}
 		if (!is_rot_cube_visible(clipped_bc, xlate, 1)) continue; // VFC - post clip; inc_mirror_reflections=1
 		// occlusion culling (expensive); skip basement check for mall lights viewed through skylights
-		if (check_occ && !clipped_bc.contains_pt(camera_rot) && check_obj_occluded(clipped_bc, camera_bs, oc, 0, 0, mall_light_vis)) continue;
+		if (in_camera_room && (in_retail_room || room.is_industrial())) {} // skip occlusion check for large open rooms
+		else if (check_occ && !clipped_bc.contains_pt(camera_rot) && check_obj_occluded(clipped_bc, camera_bs, oc, 0, 0, mall_light_vis)) continue;
 		bool const in_industrial(room.is_industrial()), tall_retail(in_retail_room && has_tall_retail()); // narrower for industrial ceiling lights and a bit lower for tall retail
 		float bwidth(in_industrial ? 0.125 : (tall_retail ? 0.24 : 0.25)); // as close to 180 degree FOV as we can get without shadow clipping
 		//if (wall_light) {bwidth = 1.0;} // wall light omnidirectional, but shadows are wrong
