@@ -403,9 +403,14 @@ void building_materials_t::clear() {
 	for (iterator m = begin(); m != end(); ++m) {m->clear();}
 	vector<rgeom_mat_t>::clear();
 }
-unsigned building_materials_t::count_all_verts() const {
+unsigned building_materials_t::count_all_verts(bool shadow_only, bool reflect_only) const {
 	unsigned num_verts(0);
-	for (const_iterator m = begin(); m != end(); ++m) {num_verts += m->num_verts;}
+	
+	for (const_iterator m = begin(); m != end(); ++m) {
+		if (shadow_only  && !m->en_shadows    ) continue;
+		if (reflect_only &&  m->tex.no_reflect) continue;
+		num_verts += m->num_verts;
+	}
 	return num_verts;
 }
 rgeom_mat_t &building_materials_t::get_material(tid_nm_pair_t const &tex, bool inc_shadows) {

@@ -955,7 +955,7 @@ struct building_materials_t : public vector<rgeom_mat_t> {
 	bool valid=0;
 	void clear();
 	void invalidate() {valid = 0;}
-	unsigned count_all_verts() const;
+	unsigned count_all_verts(bool shadow_only=0, bool reflect_only=0) const;
 	rgeom_mat_t &get_material(tid_nm_pair_t const &tex, bool inc_shadows);
 	void create_vbos(building_t const &building);
 	void draw(brg_batch_draw_t *bbd, shader_t &s, int shadow_only, int reflection_pass, bool exterior_geom=0);
