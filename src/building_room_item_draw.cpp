@@ -2668,13 +2668,8 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 				unsigned const extb_walls_start(interior->extb_walls_start[d]), extb_walls_end(interior->mall_hall_walls_start[d]);
 				vect_cube_t const &walls(interior->walls[d]);
 				assert(extb_walls_start <= walls.size());
-
-				if (in_ext_basement) {
-					if (are_pts_occluded_by_any_cubes<1>(viewer, pts, npts, occ_area, walls.begin()+extb_walls_start, walls.begin()+extb_walls_end, d, min_sz)) return 1;
-				}
-				else {
-					if (are_pts_occluded_by_any_cubes<1>(viewer, pts, npts, occ_area, walls.begin(), walls.begin()+extb_walls_start, d, min_sz)) return 1;
-				}
+				if (are_pts_occluded_by_any_cubes<1>(viewer, pts, npts, occ_area, walls.begin()+(in_ext_basement ? extb_walls_start : 0),
+					walls.begin()+(in_ext_basement ? extb_walls_end : extb_walls_start), d, min_sz)) return 1;
 			} // for D
 		}
 	}
@@ -2703,10 +2698,13 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 
 		if (player_building != nullptr && player_building->interior) { // check walls of the building the player is in
 			if (player_building != this) { // otherwise player_in_this_building should be true; note that we can get here from building_t::add_room_lights()
-				for (unsigned D = 0; D < 2; ++D) { // check walls of the building the player is in; can't use min_sz due to perspective effect of walls near the camera
+				for (unsigned D = 0; D < 2; ++D) {
 					bool const d(bool(D) ^ pri_dim); // try primary dim first
-					if (are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, occ_area, player_building->interior->walls[d], d)) return 1;
-				}
+					unsigned const extb_walls_start(player_building->interior->extb_walls_start[d]);
+					vect_cube_t const &walls(player_building->interior->walls[d]); // skip extended basement walls, since no other buildings will be visible from there
+					assert(extb_walls_start <= walls.size());
+					if (are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, occ_area, walls.begin(), walls.begin()+extb_walls_start, d)) return 1;
+				} // for D
 				if (fabs(viewer.z - c.zc()) > 0.5*floor_spacing) { // check floors and ceilings of the building the player is in
 					if (are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, occ_area, player_building->interior->fc_occluders, 2, 0.0, floor_spacing)) return 1;
 				}
