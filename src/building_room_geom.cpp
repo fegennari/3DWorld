@@ -3064,7 +3064,7 @@ void mirror_cube_z(cube_t &c, cube_t const &obj) {
 	c.translate_dim(2, 2.0*(obj.zc() - c.zc()));
 }
 void building_room_geom_t::add_sprinkler(room_object_t const &c) { // vertical sprinkler, from parking garage pipes
-	rgeom_mat_t &mat(get_metal_material(0, 0, 2)); // unshadowed, detail
+	rgeom_mat_t &mat(get_metal_material(0, 0, 2, 0, 1)); // unshadowed, detail, no_reflect=1
 	colorRGBA const metal_color(apply_light_color(c, LT_GRAY));
 	unsigned const ndiv = 12;
 	cube_t bot(c), mid(c), top(c);
@@ -5585,7 +5585,7 @@ void building_room_geom_t::add_switch(room_object_t const &c, bool draw_detail_p
 		set_wall_width(rocker, plate.d[c.dim][!c.dir], 0.15*scaled_depth, c.dim);
 		rocker.expand_in_dim(!c.dim, -0.27*width); // shrink horizontally
 		rocker.expand_in_dim(2,      -0.39*width); // shrink vertically
-		tid_nm_pair_t tex(-1);
+		tid_nm_pair_t tex(-1, 1.0f, 0, 0, 1); // no_reflect=1
 		if (is_lit) {tex.emissive = 1.0;}
 		rgeom_mat_t &mat(get_material(tex, 0, 0, 1)); // unshadowed, small
 		colorRGBA const &color(is_lit ? colorRGBA(0.8, 0.5, 0.2) : c.color);
