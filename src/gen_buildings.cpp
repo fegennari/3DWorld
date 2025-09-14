@@ -3983,32 +3983,34 @@ public:
 
 			// draw lit interiors; use z-prepass to reduce time taken for shading
 			// everything disabled, but same shader so that vertex transforms are identical; could also use "invariant" GLSL keyword on position variable
-			setup_smoke_shaders(s, 0.0, 0, 0, 0, 0, 0, 0);
-			glPolygonOffset(1.0, 1.0);
-			if (swap_front_back) {glEnable(GL_POLYGON_OFFSET_FILL);} // not sure why, but a polygon offset is required for the mirror reflection pass
-			glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color rendering, we only want to write to the Z-Buffer
-			if (player_building) {player_building->draw_z_prepass(camera_bs);}
-			glEnable(GL_CULL_FACE); // back face culling optimization, helps with expensive lighting shaders; after draw_z_prepass()
-			glCullFace(swap_front_back ? GL_FRONT : GL_BACK);
+			if (!ref_pass_cube_map) { // not in cube map reflection pass, since that uses a lower res texture
+				setup_smoke_shaders(s, 0.0, 0, 0, 0, 0, 0, 0);
+				glPolygonOffset(1.0, 1.0);
+				if (swap_front_back) {glEnable(GL_POLYGON_OFFSET_FILL);} // not sure why, but a polygon offset is required for the mirror reflection pass
+				glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color rendering, we only want to write to the Z-Buffer
+				if (player_building) {player_building->draw_z_prepass(camera_bs);}
+				glEnable(GL_CULL_FACE); // back face culling optimization, helps with expensive lighting shaders; after draw_z_prepass()
+				glCullFace(swap_front_back ? GL_FRONT : GL_BACK);
 			
-			for (building_creator_t *const bc : bcs) { // draw interior for the tile containing the camera
-				float const ddist_scale(bc->building_draw_windows.empty() ? 0.1 : 1.0), zpp_dist_scale(ddist_scale*z_prepass_dist);
+				for (building_creator_t *const bc : bcs) { // draw interior for the tile containing the camera
+					float const ddist_scale(bc->building_draw_windows.empty() ? 0.1 : 1.0), zpp_dist_scale(ddist_scale*z_prepass_dist);
 
-				for (auto g = bc->grid_by_tile.begin(); g != bc->grid_by_tile.end(); ++g) {
-					cube_t const &grid_bcube(g->get_vis_bcube());
+					for (auto g = bc->grid_by_tile.begin(); g != bc->grid_by_tile.end(); ++g) {
+						cube_t const &grid_bcube(g->get_vis_bcube());
 
-					if (reflection_pass ? grid_bcube.contains_pt_xy(camera_bs) : grid_bcube.closest_dist_xy_less_than(camera_bs, zpp_dist_scale)) {
-						if (!building_grid_visible(xlate, grid_bcube)) continue; // VFC
-						bc->building_draw_interior.draw_tile(s, (g - bc->grid_by_tile.begin()));
+						if (reflection_pass ? grid_bcube.contains_pt_xy(camera_bs) : grid_bcube.closest_dist_xy_less_than(camera_bs, zpp_dist_scale)) {
+							if (!building_grid_visible(xlate, grid_bcube)) continue; // VFC
+							bc->building_draw_interior.draw_tile(s, (g - bc->grid_by_tile.begin()));
+						}
 					}
-				}
-			} // for bc
-			if (swap_front_back) {glDisable(GL_POLYGON_OFFSET_FILL);}
-			glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-			s.end_shader();
+				} // for bc
+				if (swap_front_back) {glDisable(GL_POLYGON_OFFSET_FILL);}
+				glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+				s.end_shader();
+			}
 			set_std_depth_func_with_eq();
 
-			if (!enabled_bldg_lights.empty()) { // used for debugging
+			if (!enabled_bldg_lights.empty() && !reflection_pass) { // used for debugging
 				s.begin_color_only_shader(RED);
 				begin_sphere_draw(0); // textured=0
 				for (point const &lpos : enabled_bldg_lights) {draw_sphere_vbo(lpos, CAMERA_RADIUS, 16, 0);}
@@ -4032,7 +4034,7 @@ public:
 					crack_damage *= damage_weight;
 				}
 			}
-			bool const enable_int_reflect(enable_cube_map_reflect() && !reflection_pass);
+			bool const enable_int_reflect(!reflection_pass && enable_cube_map_reflect());
 			setup_building_draw_shader(s, min_alpha, 1, 0, 0, water_damage, crack_damage, enable_int_reflect); // enable_indir=1, force_tsl=0, use_texgen=0
 			vector<point> points; // reused temporary
 			bbd.clear_obj_models();
@@ -4095,7 +4097,7 @@ public:
 						building_t &b((*i)->get_building(bi.ix));
 						if (!b.interior) continue; // no interior, skip
 
-						if (draw_debug_vis) {
+						if (draw_debug_vis) { // draw markers colored by building type over each building
 							colorRGBA debug_color(btype_colors[b.btype]);
 							if (debug_color == WHITE && b.has_retail()) {debug_color = PINK;}
 							
@@ -4133,7 +4135,7 @@ public:
 							player_in_building_bcube = 1; // walkways count as in building bcube
 						}
 						if (!debug_draw && !player_in_building_bcube && !interior_visible && !camera_pdu.cube_visible(b.bcube + xlate)) continue; // VFC
-						b.maybe_gen_chimney_smoke();
+						if (!reflection_pass) {b.maybe_gen_chimney_smoke();}
 						bool const camera_near_building(player_in_building_bcube || (!b.doors.empty() && b.bcube.contains_pt_xy_exp(camera_bs, door_open_dist)));
 						bool cant_see_inside(0);
 
@@ -4173,7 +4175,7 @@ public:
 								parking_structure_dmin_sq = dist_sq;
 							}
 						}
-						if (!player_in_building_bcube && mall_elevator_visible) { // above the mall in the elevator
+						if (!player_in_building_bcube && mall_elevator_visible && !reflection_pass) { // above the mall in the elevator
 							if (b.point_in_mall_elevator_entrance(camera_bs, 1)) {
 								b.run_player_interact_logic(camera_bs); // still need to update the elevator and buttons
 								this_frame_camera_in_building = 1;
@@ -4191,7 +4193,7 @@ public:
 						// there currently shouldn't be any parked cars visible in mirrors or security cameras, so skip them in the reflection pass
 						if (!reflection_pass && b.has_cars_to_draw(player_in_building_bcube)) {buildings_with_cars.emplace_back(&b, player_in_building_bcube);}
 
-						if ((*i)->get_is_city()) { // check for nearby pedestrians in city buildings and open doors for them
+						if (!reflection_pass && (*i)->get_is_city()) { // check for nearby pedestrians in city buildings and open doors for them
 							float const ped_od(0.4*door_open_dist); // smaller than player dist
 							pts.clear();
 							cube_t door_test_cube(b.bcube);
@@ -4419,7 +4421,7 @@ public:
 				player_building->draw_water(xlate);
 				if (vis_conn_bldg) {vis_conn_bldg->draw_water(xlate);} // check any visible building as well
 			}
-			if (!ref_pass_interior && bbd.has_ext_geom()) { // skip for interior room reflections
+			if (!ref_pass_interior && !ref_pass_cube_map && bbd.has_ext_geom()) { // skip for interior and cube map room reflections
 				glDisable(GL_CULL_FACE);
 				ensure_city_lighting_setup(reflection_pass, xlate, is_city_lighting_setup); // needed for dlights to work
 				glEnable(GL_CULL_FACE); // above call may create shadow maps and disable face culling, so make sure it's re-enabled
