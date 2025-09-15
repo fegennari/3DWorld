@@ -1971,6 +1971,7 @@ struct bldg_industrial_info_t {
 	bool entrance_dim, entrance_dir;
 	float entrance_pos;
 	cube_t floor_space, entrance_area;
+	cube_with_ix_t non_window_walls[3]; // back and two sides; open area, excluding sub_rooms
 	rand_gen_t rgen; // used for generating smoke
 	vect_cube_t sub_rooms, pg_extended_pipes;
 
@@ -2357,6 +2358,7 @@ struct building_t : public building_geom_t {
 	void add_hospital_bathrooms(unsigned rooms_start, rand_gen_t &rgen);
 	bool maybe_create_nested_bathroom(room_t &room, rand_gen_t &rgen);
 	void create_industrial_floorplan(unsigned part_id, float window_hspacing[2], float window_border, rand_gen_t &rgen);
+	void setup_industrial_wall_occluders();
 	bool maybe_assign_interior_garage(bool &gdim, bool &gdir);
 	void add_parking_garage_ramp(rand_gen_t &rgen);
 	bool add_machines_to_room(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool less_clearance=0);

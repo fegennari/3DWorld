@@ -3835,6 +3835,7 @@ public:
 				if (!camera_in_this_building && !camera_pdu.cube_visible(b.get_ext_vis_bcube() + xlate) &&
 					!b.interior_visible_from_other_building_ext_basement(xlate, 1) && !b.check_pt_in_or_near_walkway(camera_bs, 1, 1, 0)) continue; // VFC
 				if (is_first_building) {oc.set_camera(camera_pdu, sec_camera_mode);} // setup occlusion culling on the first visible building; cur_building_only=sec_camera_mode
+				//b.is_entire_building_occluded(camera_bs, oc)) continue; // too strong and doesn't help?
 				is_first_building = 0;
 				oc.set_exclude_bix(bi->ix);
 				b.add_room_lights(xlate, bi->ix, camera_in_this_building, sec_camera_mode, oc, ped_bcubes, lights_bcube);

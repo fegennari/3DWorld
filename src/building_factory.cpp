@@ -98,6 +98,23 @@ void building_t::create_industrial_floorplan(unsigned part_id, float window_hspa
 	rooms.back().assign_all_to(is_warehouse() ? RTYPE_WAREHOUSE : RTYPE_FACTORY); // what about RTYPE_POWERPLANT (which has not yet been added)?
 	rooms.back().set_has_subroom();
 	rooms.back().is_single_floor = 1;
+	setup_industrial_wall_occluders();
+}
+
+void building_t::setup_industrial_wall_occluders() { // exterior wall occluders are under windows on the open floor area
+	assert(has_ind_info());
+	bool const edim(interior->ind_info->entrance_dim), edir(interior->ind_info->entrance_dir);
+	float const wall_hthick(0.1*get_wall_thickness()); // exterior wall should be infinitely thin, but this is close enough
+	cube_t no_window_area(interior->ind_info->floor_space);
+	no_window_area.z2() = get_industrial_window_z1(); // bottom of windows
+	cube_with_ix_t *nww(interior->ind_info->non_window_walls);
+
+	for (unsigned d = 0; d < 2; ++d) { // side walls
+		nww[d] = cube_with_ix_t(no_window_area, (2*(!edim) + d)); // ix encodes dim/dir
+		set_wall_width(nww[d], no_window_area.d[!edim][d], wall_hthick, !edim);
+	}
+	nww[2] = cube_with_ix_t(no_window_area, (2*edim + !edir)); // back wall
+	set_wall_width(nww[2], no_window_area.d[edim][!edir], wall_hthick, edim);
 }
 
 void add_ladder_with_blocker(cube_t const &ladder, unsigned room_id, bool dim, bool dir, float light_amt, float clearance, vect_room_object_t &objs, unsigned flags=0) {

@@ -1812,6 +1812,15 @@ bool building_t::add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir,
 	doors.push_back(set_door_from_cube(c, dim, dir, type, 1.5*get_door_shift_dist(), 1, 0.0, 0, 0, 0, 0, drot));
 	if (!roof_access && part_ix < 4) {door_sides[part_ix] |= 1 << (2*dim + dir);}
 	if (roof_access) {doors.back().type = tquad_with_ix_t::TYPE_RDOOR;}
+
+	if (for_office_building && !roof_access && !courtyard && !for_walkway && has_ind_info()) { // flag ext wall occluder as having a door
+		unsigned const orient(2*dim + dir);
+		cube_with_ix_t *nww(interior->ind_info->non_window_walls);
+
+		for (unsigned n = 0; n < 3; ++n) {
+			if ((nww[n].ix & 3) == orient) {nww[n].ix |= 4;}
+		}
+	}
 	return 1;
 }
 

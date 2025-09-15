@@ -17,7 +17,7 @@ quad_batch_draw candle_qbd;
 vect_room_object_t pending_objs;
 object_model_loader_t building_obj_model_loader;
 
-extern bool camera_in_building, player_in_tunnel, player_in_mall, building_alarm_active, is_cube_map_reflection;
+extern bool camera_in_building, player_in_tunnel, player_in_mall, building_alarm_active, is_cube_map_reflection, building_has_open_ext_door;
 extern int display_mode, frame_counter, animate2, player_in_basement, player_in_elevator;
 extern unsigned room_mirror_ref_tid;
 extern float fticks, office_chair_rot_rate, building_ambient_scale;
@@ -2369,7 +2369,7 @@ void fire_manager_t::draw(shader_t &s, vector3d const &xlate) {
 }
 
 template<bool check_sz, typename T> bool are_pts_occluded_by_any_cubes(point const &pt, point const *const pts, unsigned npts,
-	cube_t const &occ_area, T begin, T end, unsigned dim, float min_sz=0.0, float max_sep_dist=0.0)
+	cube_t const &occ_area, T begin, T end, unsigned dim=3, float min_sz=0.0, float max_sep_dist=0.0)
 {
 	assert(npts > 0);
 
@@ -2389,7 +2389,7 @@ template<bool check_sz, typename T> bool are_pts_occluded_by_any_cubes(point con
 	return 0;
 }
 template<bool check_sz, typename T> bool are_pts_occluded_by_any_cubes(point const &pt, point const *const pts, unsigned npts,
-	cube_t const &occ_area, vector<T> const &cubes, unsigned dim, float min_sz=0.0, float max_sep_dist=0.0)
+	cube_t const &occ_area, vector<T> const &cubes, unsigned dim=3, float min_sz=0.0, float max_sep_dist=0.0)
 {
 	return are_pts_occluded_by_any_cubes<check_sz>(pt, pts, npts, occ_area, cubes.begin(), cubes.end(), dim, min_sz, max_sep_dist);
 }
@@ -2419,7 +2419,7 @@ bool check_cube_occluded(cube_t const &cube, vect_cube_t const &occluders, point
 	unsigned const npts(get_cube_corners(cube.d, pts, viewer, 0)); // should return only the 6 visible corners
 	cube_t occ_area(cube);
 	occ_area.union_with_pt(viewer); // any occluder must intersect this cube
-	return are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, occ_area, occluders, 3); // set invalid dim of 3 because cubes are of mixed dim and we can't use that optimization
+	return are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, occ_area, occluders); // no dim because cubes are of mixed dim and we can't use that optimization
 }
 struct comp_car_by_dist {
 	vector3d const &viewer;
@@ -2613,7 +2613,7 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 	occ_area.union_with_pt(viewer); // any occluder must intersect this cube
 	point const center(c.get_cube_center());
 
-	if (!c_is_building_part && viewer.z > ground_floor_z1) {
+	if (!c_is_building_part && viewer.z > ground_floor_z1) { // viewer above ground
 		if (has_retail()) {
 			cube_t const &retail_part(get_retail_part());
 
@@ -2698,6 +2698,22 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 
 		if (player_building != nullptr && player_building->interior) { // check walls of the building the player is in
 			if (player_building != this) { // otherwise player_in_this_building should be true; note that we can get here from building_t::add_room_lights()
+				if (player_building->has_ind_info() && viewer.z > player_building->ground_floor_z1) {
+					cube_with_ix_t const *nww(player_building->interior->ind_info->non_window_walls);
+
+					for (unsigned n = 0; n < 3; ++n) {
+						cube_with_ix_t const &c(nww[n]);
+						if (building_has_open_ext_door && (c.ix & 4)) continue; // open exterior door, and this wall has an exterior door; skip it
+						bool const dim(c.ix & 2);
+						if ((viewer[dim] < c.d[dim][0]) == (pts[0][dim] < c.d[dim][0]) || !c.intersects(occ_area) || !check_line_clip(viewer, pts[0], c.d)) continue;
+						bool not_occluded(0);
+
+						for (unsigned p = 1; p < npts; ++p) { // skip first point
+							if (!check_line_clip(viewer, pts[p], c.d)) {not_occluded = 1; break;}
+						}
+						if (!not_occluded) return 1;
+					} // for n
+				}
 				for (unsigned D = 0; D < 2; ++D) {
 					bool const d(bool(D) ^ pri_dim); // try primary dim first
 					unsigned const extb_walls_start(player_building->interior->extb_walls_start[d]);
