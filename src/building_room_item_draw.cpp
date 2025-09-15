@@ -13,6 +13,7 @@ bool const DEBUG_AI_COLLIDERS  = 0;
 bool const ADD_WORKER_HARDHATS = 0; // doesn't look corret yet
 
 unsigned room_geom_mem(0);
+vector3d draw_bcube_xlate;
 quad_batch_draw candle_qbd;
 vect_room_object_t pending_objs;
 object_model_loader_t building_obj_model_loader;
@@ -266,9 +267,8 @@ void rgeom_mat_t::create_vbo_inner() {
 			}
 		} // for n
 	}
-	// calculate bcube, for use in VFC for the shadow pass;
-	// only enable for small blocks to reduce runtime overhead, plus they're more likely to be occluded
-	if (num_verts >= 256) {bcube.set_to_zeros();}
+	// calculate bcube; only enable for small blocks to reduce runtime overhead, plus they're more likely to be occluded
+	if (num_verts >= 20000) {bcube.set_to_zeros();}
 	else {
 		bcube.set_from_point(itri_verts.empty() ? quad_verts.front().v : itri_verts.front().v);
 		for (auto const &v : itri_verts) {bcube.union_with_pt(v.v);}
@@ -360,9 +360,9 @@ void rgeom_mat_t::draw(tid_nm_pair_dstate_t &state, brg_batch_draw_t *bbd, int s
 	if (reflection_pass && tex.tid == REFLECTION_TEXTURE_ID) return; // don't draw reflections of mirrors as this doesn't work correctly
 	if (bbd != nullptr  && tex.tid == REFLECTION_TEXTURE_ID) return; // only draw mirror reflections for player building (which has a null bbd)
 	if (num_verts == 0) return; // Note: should only happen when reusing materials and all objects using this material were removed
-	// VFC test for shadow pass on sparse materials that have their bcubes calculated; only really helps with backrooms;
-	// here we don't add xlate to bcube because it's the location of a light source that's already in building space, not camera space
-	if (shadow_only && !bcube.is_all_zeros() && !camera_pdu.cube_visible(bcube)) return;
+	// VFC test for sparse materials that have their bcubes calculated; mostly helps with backrooms;
+	// we don't add xlate to bcube in the shadow pass because it's the location of a light source that's already in building space, not camera space
+	if (!bcube.is_all_zeros() && !camera_pdu.cube_visible(bcube + (shadow_only ? zero_vector : draw_bcube_xlate))) return;
 	vao_setup(shadow_only);
 
 	// Note: the shadow pass doesn't normally bind textures and set uniforms, so we don't need to combine those calls into batches
@@ -1656,6 +1656,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	}
 	if (animate2 && (update_clocks || update_escalators || update_tunnel_water || (player_in_bldg_normal_pass && have_conv_belt))) {update_dynamic_draw_data();}
 	check_invalid_draw_data();
+	draw_bcube_xlate = xlate;
 
 	// generate vertex data in the shadow pass or if we haven't hit our generation limit unless this is the first frame; must be consistent for static and small geom
 	// Note that the distance cutoff for mats_static and mats_small is different, so we generally won't be creating them both
@@ -1780,7 +1781,11 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	if (draw_int_detail_objs) {mats_text.draw(bbd, s, shadow_only, ref_pass);} // text must be drawn last; drawn as interior detail objects
 	if (!shadow_only) {disable_blend();}
 	indexed_vao_manager_with_shadow_t::post_render();
-	if (draw_ext_only) return; // done
+	
+	if (draw_ext_only) {
+		draw_bcube_xlate = zero_vector;
+		return; // done
+	}
 	bool const disable_cull_face(0); // better but slower?
 	if (disable_cull_face) {glDisable(GL_CULL_FACE);}
 	point const building_center(building.bcube.get_cube_center());
@@ -2178,6 +2183,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		disable_blend();
 		indexed_vao_manager_with_shadow_t::post_render();
 	}
+	draw_bcube_xlate = zero_vector;
 }
 
 void building_t::subtract_stairs_and_elevators_from_cube(cube_t const &c, vect_cube_t &cube_parts, bool inc_stairs, bool inc_elevators) const {
