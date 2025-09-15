@@ -1729,6 +1729,25 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	if (!draw_ext_only) {mats_doors.draw(bbd, s, shadow_only, ref_pass);}
 	if (inc_small     ) {mats_small.draw(bbd, s, shadow_only, ref_pass);}
 
+	if (0 && player_in_building && !shadow_only && !reflection_pass && (display_mode & 0x20)) {
+		cout << "static: " << mats_static.count_all_verts() << endl;
+		cout << "small : " << mats_small.count_all_verts() << endl;
+		cout << "sm_sh : " << mats_small.count_all_verts(1) << endl;
+		cout << "sm_ref: " << mats_small.count_all_verts(0, 1) << endl;
+		cout << "text  : " << mats_text.count_all_verts() << endl;
+		cout << "txt_r : " << mats_text.count_all_verts(0, 1) << endl;
+		cout << "detail: " << mats_detail.count_all_verts() << endl;
+		cout << "det_r : " << mats_detail.count_all_verts(0, 1) << endl;
+		cout << "dynam : " << mats_dynamic.count_all_verts() << endl;
+		cout << "lights: " << mats_lights.count_all_verts() << endl;
+		cout << "amask : " << mats_amask.count_all_verts() << endl;
+		cout << "alpha : " << mats_alpha.count_all_verts() << endl;
+		cout << "a_sm  : " << mats_alpha_sm.count_all_verts() << endl;
+		cout << "doors : " << mats_doors.count_all_verts() << endl;
+		cout << "ext   : " << mats_exterior.count_all_verts() << endl;
+		cout << "ext_dt: " << mats_ext_detail.count_all_verts() << endl;
+		cout << endl;
+	}
 	if (!mats_amask.empty() && !draw_ext_only) { // draw plant leaves, spider webs, etc. using alpha masks in the detail pass
 		if (shadow_only) {
 			if (!amask_shader.is_setup()) {amask_shader.begin_simple_textured_shader(0.9);} // need to use texture with alpha test
