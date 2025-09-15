@@ -132,7 +132,7 @@ float building_t::gather_room_lights(unsigned objs_start_inc_lights, vect_cube_t
 }
 
 void building_t::add_ladders_to_nested_room_roofs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float light_amt, cube_t const &place_area) {
-	assert(interior->ind_info);
+	assert(has_ind_info());
 	bool const add_to_entry(is_warehouse());
 	bool const edim(interior->ind_info->entrance_dim), edir(interior->ind_info->entrance_dir); // long dim
 	float const window_vspace(get_window_vspace()), wall_thick(get_wall_thickness()), fc_thick(get_fc_thickness());
@@ -167,7 +167,7 @@ void building_t::add_ladders_to_nested_room_roofs(rand_gen_t &rgen, room_t const
 cube_t building_t::add_factory_ladders_and_catwalks(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float light_amt, cube_t const &place_area,
 	cube_t const &place_area_upper, float beams_z1, float support_width, vect_cube_t supports[2], vect_cube_t const &lights, vect_cube_t &ladders, vector<float> const &beam_pos)
 {
-	assert(interior->ind_info);
+	assert(has_ind_info());
 	bool const edim(interior->ind_info->entrance_dim), edir(interior->ind_info->entrance_dir); // long dim
 	float const window_vspace(get_window_vspace()), fc_thick(get_fc_thickness()), edir_sign(edir ? 1.0 : -1.0);
 	float const ladder_extend_up(get_player_height() + CAMERA_RADIUS), clearance(get_min_front_clearance()), room_center_short(room.get_center_dim(!edim));
@@ -305,7 +305,7 @@ cube_t building_t::add_factory_ladders_and_catwalks(rand_gen_t &rgen, room_t con
 void building_t::add_industrial_ducts_and_hvac(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float light_amt, float support_width, float ceil_zval,
 	cube_t const &place_area_upper, vect_cube_t const &beams, vect_cube_t supports[2], unsigned objs_start)
 {
-	assert(interior->ind_info);
+	assert(has_ind_info());
 	bool const edim(interior->ind_info->entrance_dim); // long dim
 	vect_room_object_t &objs(interior->room_geom->objs);
 	// add ceiling ducts and vents (similar to malls)
@@ -422,7 +422,7 @@ void building_t::add_industrial_ducts_and_hvac(rand_gen_t &rgen, room_t const &r
 void building_t::add_industrial_sprinkler_pipes(rand_gen_t &rgen, room_t const &room, unsigned room_id,
 	float support_width, unsigned objs_start, vect_cube_t const &lights, vect_cube_t const &beams)
 {
-	assert(interior->ind_info);
+	assert(has_ind_info());
 	bool const edim(interior->ind_info->entrance_dim);
 	float const doorway_width(get_doorway_width()), custom_floor_spacing(room.dz() - support_width); // place sprinklers under ceiling beams
 	float const wall_pad(1.05*support_width); // add a gap between the wall supports
@@ -618,7 +618,7 @@ void building_t::add_warehouse_shelves(rand_gen_t &rgen, room_t const &room, flo
 }
 
 void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start_inc_lights) { // ~0.25ms
-	assert(interior->ind_info);
+	assert(has_ind_info());
 	bool const room_is_factory(room.is_factory()), room_is_warehouse(room.is_warehouse());
 	bool const edim(interior->ind_info->entrance_dim), edir(interior->ind_info->entrance_dir), beam_dim(!edim); // edim is the long dim; beam_dim is short dim
 	float const window_vspace(get_window_vspace()), wall_thick(get_wall_thickness()), fc_thick(get_fc_thickness()), edir_sign(edir ? 1.0 : -1.0);
@@ -995,7 +995,7 @@ void building_t::add_industrial_office_objs(rand_gen_t &rgen, room_t const &room
 	cube_t const room_bounds(get_walkable_room_bounds(room));
 
 	if (1) { // add lockers along a wall
-		assert(interior->ind_info);
+		assert(has_ind_info());
 		bool const edim(interior->ind_info->entrance_dim), edir(interior->ind_info->entrance_dir), place_end(rgen.rand_bool());
 		int const dir_skip_mask(1 << (unsigned)edir); // along the interior wall only, to avoid blocking windows
 		float const floor_spacing(get_window_vspace()), locker_area_width(rgen.rand_uniform(2.0, 2.5)*min(floor_spacing, 0.35f*room_bounds.get_sz_dim(!edim)));
@@ -1060,3 +1060,4 @@ void bldg_industrial_info_t::next_frame(particle_manager_t &particle_manager) { 
 		s.next_smoke_time = s.time + rgen.rand_uniform(0.5, 0.8)*TICKS_PER_SECOND;
 	}
 }
+

@@ -751,7 +751,7 @@ bool cube_int_if_nonzero(cube_t const &c, cube_t const &C) {return (!C.is_all_ze
 void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cube_t const &place_area, float zval,
 	unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned objs_start_inc_beams, cube_t const &ladder)
 {
-	assert(is_factory() && interior->ind_info);
+	assert(is_factory() && has_ind_info());
 	bool const edim(interior->ind_info->entrance_dim), edir(interior->ind_info->entrance_dir);
 	float const floor_spacing(get_window_vspace()), fc_gap(room.dz()), max_place_sz(1.0*floor_spacing), max_height(fc_gap - floor_spacing);
 	float const doorway_width(get_doorway_width()), min_gap(max(doorway_width, get_min_front_clearance_inc_people())), ceil_zval(room.z2() - get_fc_thickness());

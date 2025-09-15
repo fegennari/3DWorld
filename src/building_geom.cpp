@@ -2020,7 +2020,7 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office 
 				} // for i
 				continue;
 			}
-			if (interior && interior->ind_info) { // industrial building custom doors
+			if (has_ind_info()) { // industrial building custom doors
 				bool const dim(interior->ind_info->entrance_dim), dir(interior->ind_info->entrance_dir);
 
 				if (num == 0) { // main entrance is in or between the smaller rooms
