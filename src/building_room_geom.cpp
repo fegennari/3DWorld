@@ -1408,7 +1408,7 @@ void building_room_geom_t::add_catwalk(room_object_t const &c) {
 	float const bzc(0.5*(bz2 + tz1)), mz1(bzc - hbar_hwidth), mz2(bzc + hbar_hwidth);
 	float const z1s[3] = {bz1, mz1, tz1}, z2s[3] = {bz2, mz2, tz2};
 	colorRGBA const bar_color(apply_light_color(c, YELLOW)), end_color(apply_light_color(c, LT_GRAY));
-	rgeom_mat_t &bar_mat(get_metal_material(1, 0, 1)); // shadowed, specular metal, small
+	rgeom_mat_t &bar_mat(get_metal_material(1, 0, 1, 0, 0, WHITE, 0.6, 50.0, 0.5)); // shadowed, specular painted metal, small
 	
 	for (unsigned side = 0; side < 2; ++side) {
 		float const edge(c.d[!dim][side]), ssign(side ? 1.0 : -1.0);

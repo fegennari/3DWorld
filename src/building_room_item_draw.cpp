@@ -544,11 +544,11 @@ building_materials_t &building_room_geom_t::get_building_mat(tid_nm_pair_t const
 	return mats_static;
 }
 rgeom_mat_t &building_room_geom_t::get_metal_material(bool inc_shadows, bool dynamic, unsigned small, bool exterior, bool no_reflect,
-	colorRGBA const &spec_color, float mag, float shine)
+	colorRGBA const &spec_color, float mag, float shine, float metalness)
 {
 	tid_nm_pair_t tex(-1, 1.0f, inc_shadows, 0, no_reflect);
 	tex.set_metal_specular(spec_color, mag, shine);
-	tex.metalness = 1.0;
+	tex.metalness = metalness;
 	return get_material(tex, inc_shadows, dynamic, small, 0, exterior);
 }
 tid_nm_pair_t get_scratched_metal_tex(float tscale, bool inc_shadows) {
