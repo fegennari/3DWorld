@@ -1465,7 +1465,7 @@ void building_room_geom_t::add_obj_with_top_texture(room_object_t const &c, stri
 	rgeom_mat_t &mat(get_material(tex, 1, 0, is_small)); // shadows
 	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, ~EF_Z2, c.dim, (c.dim ^ c.dir ^ 1), c.dir); // top face only
 	unsigned const skip_faces(c.is_hanging() ? EF_Z2 : EF_Z12); // hanging keyboards and laptops must draw the Z1 face
-	rgeom_mat_t &sides_mat((metalness > 0.0) ? get_painted_metal_material(1, 0, is_small, 0, 0, 0.8, 60.0, metalness) : get_untextured_material(1, 0, is_small));
+	rgeom_mat_t &sides_mat((metalness > 0.0) ? get_painted_metal_material(1, 0, is_small, 0, 0, spec, shine, metalness) : get_untextured_material(1, 0, is_small));
 	sides_mat.add_cube_to_verts_untextured(c, apply_light_color(c, sides_color), skip_faces); // sides and maybe bottom, shadows
 }
 void building_room_geom_t::add_obj_with_front_texture(room_object_t const &c, string const &text_name, colorRGBA const &front_color,
@@ -5617,13 +5617,16 @@ void building_room_geom_t::add_breaker(room_object_t const &c) { // the switch i
 }
 
 void building_room_geom_t::add_flat_textured_detail_wall_object(room_object_t const &c, colorRGBA const &side_color,
-	int tid, bool skip_z1_face, bool draw_all_faces, bool detail, bool mirror_y)
+	int tid, bool skip_z1_face, bool draw_all_faces, bool detail, bool mirror_y, float spec, float shine, float metalness)
 {
 	unsigned const small(detail ? 2 : 1); // small=1 or 2/detail
-	rgeom_mat_t &front_mat(get_material(tid_nm_pair_t(tid, 0.0, 0), 0, 0, small));
+	tid_nm_pair_t tex(tid, 0.0, 0);
+	tex.set_specular(spec, shine, metalness);
+	rgeom_mat_t &front_mat(get_material(tex, 0, 0, small));
 	front_mat.add_cube_to_verts(c, c.color, zero_vector, get_face_mask(c.dim, !c.dir), !c.dim, 0, mirror_y); // textured front face; always fully lit to match wall
 	unsigned const skip_faces(draw_all_faces ? 0 : (get_skip_mask_for_xy(c.dim) | (skip_z1_face ? EF_Z1 : 0))); // skip front/back and maybe bottom faces
-	get_untextured_material(0, 0, small).add_cube_to_verts_untextured(c, side_color, skip_faces); // sides: unshadowed, small
+	rgeom_mat_t &sides_mat((metalness > 0.0) ? get_painted_metal_material(0, 0, small, 0, 0, spec, shine, metalness) : get_untextured_material(0, 0, small));
+	sides_mat.add_cube_to_verts_untextured(c, side_color, skip_faces); // sides: unshadowed, small
 }
 void building_room_geom_t::add_outlet(room_object_t const &c) {
 	add_flat_textured_detail_wall_object(c, get_outlet_or_switch_box_color(c), get_texture_by_name("interiors/outlet1.jpg"), 1); // skip_z1_face=1 (optimization)
@@ -5632,11 +5635,14 @@ void building_room_geom_t::add_vent(room_object_t const &c) {
 	int const tid(get_texture_by_name("interiors/vent.jpg"));
 
 	if (c.is_hanging()) { // vent on a ceiling
-		rgeom_mat_t &front_mat(get_material(tid_nm_pair_t(tid, 0.0, 0), 0, 0, 2)); // small=2/detail
+		float const spec(0.15), shine(60.0), metalness(0.25); // painted metal, slightly reflective
+		tid_nm_pair_t tex(tid, 0.0, 0);
+		tex.set_specular(spec, shine, metalness);
+		rgeom_mat_t &front_mat(get_material(tex, 0, 0, 2)); // small=2/detail
 		front_mat.add_cube_to_verts(c, c.color, zero_vector, ~EF_Z1, !c.dim); // textured bottom face; always fully lit to match wall
-		get_untextured_material(0, 0, 2).add_cube_to_verts_untextured(c, c.color, EF_Z12); // sides: unshadowed, small; skip top and bottom face
+		get_painted_metal_material(0, 0, 2, 0, 0, spec, shine, metalness).add_cube_to_verts_untextured(c, c.color, EF_Z12); // sides: unshadowed, detail; skip top and bottom face
 	}
-	else {add_flat_textured_detail_wall_object(c, c.color, tid, 0);} // vent on a wall; skip_z1_face=0
+	else {add_flat_textured_detail_wall_object(c, c.color, tid, 0, 0, 1, 0, 0.25, 60.0, 0.5);} // vent on a wall; detail, skip_z1_face=0, painted metal
 }
 
 int select_plate_texture(unsigned rand_val) {
@@ -6422,7 +6428,9 @@ void building_room_geom_t::add_chem_tank(room_object_t const &c, bool draw_label
 int get_hvac_tid(room_object_t const &c) {return get_ac_unit_tid(c.obj_id);}
 
 void building_room_geom_t::add_hvac_unit(room_object_t const &c) {
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_hvac_tid(c), 0.0, 1), 1)); // shadows
+	tid_nm_pair_t tex(get_hvac_tid(c), 0.0, 1);
+	tex.set_specular(0.25, 50.0, 0.5); // painted metal
+	rgeom_mat_t &mat(get_material(tex, 1)); // shadows
 	colorRGBA const color(apply_light_color(c));
 	unsigned const front_mask(get_face_mask(c.dim, c.dir));
 	mat.add_cube_to_verts(c, color, zero_vector, front_mask, !c.dim, (c.dim ^ c.dir), 1); // front face only
@@ -6433,7 +6441,7 @@ void building_room_geom_t::add_hvac_unit(room_object_t const &c) {
 void building_room_geom_t::add_vent_fan_frame(room_object_t const &c) {
 	// draw sides of fan housing
 	bool const extends_outside(c.in_factory()); // visible from outside the building
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_rust_met_tid(), 0.0, 1), 1)); // shadowed; same material as I-Beam
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_rust_met_tid(), 0.0, 1), 1)); // shadowed; same material as I-Beam; not specular/reflective
 	cube_t housing(c);
 	if (extends_outside) {housing.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*0.36*c.get_depth();} // part inside the building
 	colorRGBA const color(apply_light_color(c));
