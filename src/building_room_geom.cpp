@@ -13,8 +13,9 @@ bool const ADD_BOOK_COVERS = 1; // cover pictures
 bool const ADD_BOOK_TITLES = 1;
 bool const USE_REAL_AUTHOR = 1; // for books
 float const DESK_TOP_THICK = 0.1; // relative to full height
-colorRGBA const STAIRS_COLOR_TOP(0.7, 0.7, 0.7);
-colorRGBA const STAIRS_COLOR_BOT(0.9, 0.9, 0.9);
+colorRGBA const STAIRS_COLOR_TOP   (0.7, 0.7, 0.7);
+colorRGBA const STAIRS_COLOR_BOT   (0.9, 0.9, 0.9);
+colorRGBA const drawer_handle_color(0.2, 0.2, 0.2);
 
 vect_cube_t temp_cubes;
 vect_room_object_t temp_objects[2];
@@ -58,8 +59,7 @@ tid_nm_pair_t get_metal_plate_tex(float tscale, bool shadowed) {
 tid_nm_pair_t get_metal_grate_tex(float tscale, unsigned sel_ix) {
 	string const fn((sel_ix & 1) ? "metals/4_perforated_metal.png" : "metals/17_perforated_metal_plate.png");
 	tid_nm_pair_t tex(get_texture_by_name(fn, 0, 0, 1, 1.0, 1, 3), tscale, 1); // shadowed=1, custom alpha mipmaps
-	tex.set_specular_color(WHITE, 0.6, 50.0);
-	tex.metalness = 0.5; // half reflective
+	tex.set_specular(0.6, 50.0, 0.5); // half reflective
 	return tex;
 }
 
@@ -456,7 +456,7 @@ void building_room_geom_t::add_drawers(room_object_t const &c, float tscale, vec
 	rgeom_mat_t &drawer_mat(get_wood_material(1.5*tscale, 1, 0, 1)); // shadowed, small=1
 	rgeom_mat_t &handle_mat(get_metal_material(0, 0, 1)); // untextured, unshadowed, small=1
 	colorRGBA const drawer_color(apply_light_color(c, WHITE)); // lighter color than dresser
-	colorRGBA const handle_color(apply_light_color(c, GRAY_BLACK));
+	colorRGBA const handle_color(apply_light_color(c, drawer_handle_color));
 	unsigned const door_skip_faces(~get_face_mask(c.dim, !c.dir));
 	vect_room_object_t &objects(get_temp_objects());
 	point const tex_orig(c.get_llc()); // relative to the dresser so that textures don't slide when it's moved
@@ -966,18 +966,19 @@ void building_room_geom_t::add_tape(room_object_t const &c) { // is_small=1
 	add_vert_roll_to_material(c, mat); // shadowed, small
 }
 
-void building_room_geom_t::add_spraycan_to_material(room_object_t const &c, rgeom_mat_t &mat, bool draw_bottom) { // should this have specular?
+void building_room_geom_t::add_spraycan_to_material(room_object_t const &c, rgeom_mat_t &side_mat, rgeom_mat_t &cap_mat, bool draw_bottom) { // should this have specular?
 	unsigned const dim(get_max_dim(c.get_size())), ndiv(get_def_cylin_ndiv(c));
 	draw_bottom |= (dim != 2); // if on its side or held by the player
 	cube_t can(c), cap(c);
 	can.d[dim][!c.dir] = cap.d[dim][c.dir] = (c.d[dim][c.dir] + 0.7*c.get_sz_dim(dim)*(c.dir ? -1.0 : 1.0)); // point between top of can and bottom of cap
-	mat.add_ortho_cylin_to_verts(can, apply_light_color(c, DK_GRAY), dim, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv); // sides only
-	mat.add_ortho_cylin_to_verts(cap, apply_light_color(c), dim, c.dir, !c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv); // sides + top
-	if (draw_bottom) {mat.add_ortho_cylin_to_verts(can, apply_light_color(c, LT_GRAY), dim, !c.dir, c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 1, ndiv);} // top or bottom only, no sides
+	side_mat.add_ortho_cylin_to_verts(can, apply_light_color(c, DK_GRAY), dim, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv); // sides only
+	cap_mat.add_ortho_cylin_to_verts(cap, apply_light_color(c), dim, c.dir, !c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv); // sides + top
+	if (draw_bottom) {side_mat.add_ortho_cylin_to_verts(can, apply_light_color(c, LT_GRAY), dim, !c.dir, c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 1, ndiv);} // top or bot only, no sides
 }
 void building_room_geom_t::add_spraycan(room_object_t const &c) { // is_small=1
 	bool const shadowed(!c.is_on_srack());
-	add_spraycan_to_material(c, get_untextured_material(shadowed, 0, 1, 0, 0, 1)); // no_reflect=1
+	get_untextured_material(shadowed, 0, 1, 0, 0, 1); // make sure it's loaded
+	add_spraycan_to_material(c, get_painted_metal_material(shadowed, 0, 1, 0, 1), get_untextured_material(shadowed, 0, 1, 0, 0, 1)); // small, no_reflect=1
 }
 
 tid_nm_pair_t get_small_font_tex() {
@@ -1338,8 +1339,7 @@ void add_ladder_geom(rgeom_mat_t &mat, room_object_t const &c, colorRGBA const &
 }
 tid_nm_pair_t get_ladder_tex(float width, bool shadowed) {
 	tid_nm_pair_t tex(get_texture_by_name("metals/65_Painted_dirty_metal.jpg"), 0.5/width, shadowed);
-	tex.set_specular_color(WHITE, 0.6, 50.0);
-	tex.metalness = 0.1; // slightly reflective
+	tex.set_specular(0.6, 50.0, 0.25); // slightly reflective
 	return tex;
 }
 void building_room_geom_t::add_ext_ladder(room_object_t const &c) {
@@ -1457,24 +1457,26 @@ void building_room_geom_t::add_catwalk(room_object_t const &c) {
 	} // for end
 }
 
-void building_room_geom_t::add_obj_with_top_texture(room_object_t const &c, string const &text_name, colorRGBA const &sides_color, bool is_small, bool is_metal) {
+void building_room_geom_t::add_obj_with_top_texture(room_object_t const &c, string const &text_name, colorRGBA const &sides_color, bool is_small,
+	float spec, float shine, float metalness)
+{
 	tid_nm_pair_t tex(get_texture_by_name(text_name), 0.0);
-	if (is_metal) {tex.metalness = 0.5;} // somewhat reflective
+	tex.set_specular(spec, shine, metalness);
 	rgeom_mat_t &mat(get_material(tex, 1, 0, is_small)); // shadows
 	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, ~EF_Z2, c.dim, (c.dim ^ c.dir ^ 1), c.dir); // top face only
 	unsigned const skip_faces(c.is_hanging() ? EF_Z2 : EF_Z12); // hanging keyboards and laptops must draw the Z1 face
-	rgeom_mat_t &sides_mat(is_metal ? get_metal_material(1, 0, is_small) : get_untextured_material(1, 0, is_small));
+	rgeom_mat_t &sides_mat((metalness > 0.0) ? get_painted_metal_material(1, 0, is_small, 0, 0, 0.8, 60.0, metalness) : get_untextured_material(1, 0, is_small));
 	sides_mat.add_cube_to_verts_untextured(c, apply_light_color(c, sides_color), skip_faces); // sides and maybe bottom, shadows
 }
 void building_room_geom_t::add_obj_with_front_texture(room_object_t const &c, string const &text_name, colorRGBA const &front_color,
-	colorRGBA const &sides_color, bool is_small, bool is_metal)
+	colorRGBA const &sides_color, bool is_small, float spec, float shine, float metalness)
 {
 	tid_nm_pair_t tex(get_texture_by_name(text_name), 0.0, 1);
-	if (is_metal) {tex.metalness = 0.5;} // somewhat reflective
+	tex.set_specular(spec, shine, metalness);
 	rgeom_mat_t &mat(get_material(tex, 1, 0, is_small)); // shadows
 	unsigned const front_mask(get_face_mask(c.dim, c.dir));
 	mat.add_cube_to_verts(c, apply_light_color(c, front_color), zero_vector, front_mask, !c.dim, (c.dim ^ c.dir ^ 1), 0); // front face only
-	rgeom_mat_t &sides_mat(is_metal ? get_metal_material(1, 0, is_small) : get_untextured_material(1, 0, is_small));
+	rgeom_mat_t &sides_mat((metalness > 0.0) ? get_painted_metal_material(1, 0, is_small, 0, 0, spec, shine, metalness) : get_untextured_material(1, 0, is_small));
 	sides_mat.add_cube_to_verts_untextured(c, apply_light_color(c, sides_color), ~front_mask); // sides, shadows
 }
 
@@ -1596,6 +1598,7 @@ cube_t get_mwave_panel_bcube(room_object_t const &c) {
 }
 void building_room_geom_t::add_mwave(room_object_t const &c) {
 	string const texture_name(c.is_powered() ? "interiors/microwave.jpg" : "interiors/microwave_off.jpg");
+	float const spec(0.8), shine(60.0), metalness(0.5); // for exterior
 
 	if (c.is_open()) { // door is open
 		bool const open_dir(c.dim ^ c.dir ^ 1);
@@ -1604,11 +1607,11 @@ void building_room_geom_t::add_mwave(room_object_t const &c) {
 		body.d[!c.dim][!open_dir] = panel.d[!c.dim][open_dir]; // the other half
 		// draw the sides/top/back
 		unsigned const front_mask(get_face_mask(c.dim, c.dir));
-		get_metal_material(1, 0, 1).add_cube_to_verts_untextured(c, apply_light_color(c, GRAY), ~front_mask); // sides, shadows, is_small=1
+		get_metal_material(1, 0, 1, 0, 0, WHITE, spec, shine, metalness).add_cube_to_verts_untextured(c, apply_light_color(c, GRAY), ~front_mask); // sides, shadows, is_small=1
 		// draw the interior
 		colorRGBA const interior_color(apply_light_color(c, WHITE));
 		float const wall_width(0.25*panel.get_sz_dim(!c.dim));
-		rgeom_mat_t &untex_mat(get_untextured_material(1, 0, 1)); // shadowed, small
+		rgeom_mat_t &untex_mat(get_painted_metal_material(1, 0, 1, 0, 0, 0.5, 40.0)); // shadowed, small
 		add_interior_and_front_face(c, body, untex_mat, wall_width, front_mask, interior_color);
 		unsigned const door_front_mask(get_face_mask(!c.dim, open_dir));
 		colorRGBA const color(apply_light_color(c));
@@ -1622,13 +1625,14 @@ void building_room_geom_t::add_mwave(room_object_t const &c) {
 		// draw the open door
 		bool const panel_mx(open_dir), door_mx(panel_mx ^ c.dim);
 		tid_nm_pair_t tex(tid, -1, (c.dim ? 0.0 : tscale), (c.dim ? tscale : 0.0));
+		tex.set_specular(spec, shine, metalness);
 		get_material(tex, 1, 0, 1).add_cube_to_verts(door, color, (door_mx ? door.get_urc() : door.get_llc()), door_front_mask, c.dim, door_mx, 0); // shadows, is_small=1
 		// draw the front panel, front face only
 		swap(tex.tscale_x, tex.tscale_y); // clipped in other dim
 		get_material(tex, 1, 0, 1).add_cube_to_verts(panel, color, (panel_mx ? c.get_urc() : c.get_llc()), front_mask, !c.dim, panel_mx, 0); // shadows, is_small=1
 	}
 	else { // closed
-		add_obj_with_front_texture(c, texture_name, GRAY, 1, 1); // is_small=1, is_metal=1
+		add_obj_with_front_texture(c, texture_name, GRAY, 1, spec, shine, metalness); // is_small=1
 	}
 }
 
@@ -1665,7 +1669,7 @@ void building_room_geom_t::add_cabinet_with_open_door(room_object_t const &c, cu
 	float wall_thickness, unsigned front_face_mask, float z1_adj, float back_adj, float shelf_height)
 {
 	vect_cube_t const &cubes(get_cabinet_interior_cubes(c, wall_thickness, z1_adj, back_adj, shelf_height));
-	rgeom_mat_t &mat(get_untextured_material(1)); // shadowed
+	rgeom_mat_t &mat(get_painted_metal_material(1, 0, 0, 0, 0, 0.5, 40.0)); // shadowed
 	mat.add_cube_to_verts(door, color, zero_vector, ~front_face_mask); // non-front sides of door; always +dir
 
 	for (auto i = cubes.begin(); i != cubes.end(); ++i) {
@@ -1704,7 +1708,7 @@ void building_room_geom_t::add_locker(room_object_t const &c) {
 			mat.add_cube_to_verts(paper, apply_light_color(c, WHITE), zero_vector, get_face_mask(!c.dim, hinge_side), c.dim, !c.dir, 0); // front only
 		}
 	}
-	else {add_obj_with_front_texture(c, tex_fn, c.color, side_color, 0);} // closed; texture is light gray
+	else {add_obj_with_front_texture(c, tex_fn, c.color, side_color, 0, 0.5, 40.0, 0.5);} // closed; texture is light gray, metal
 }
 
 void building_room_geom_t::add_mirror(room_object_t const &c) {
@@ -1758,7 +1762,7 @@ void building_room_geom_t::add_med_cab(room_object_t const &c) {
 		else { // draw front face
 			get_material(front_tex, 1).add_cube_to_verts(c, front_color, c.get_llc(), get_face_mask(c.dim, c.dir), !c.dim);
 		}
-		get_untextured_material(1).add_cube_to_verts_untextured(c, side_color, get_skip_mask_for_xy(c.dim)); // draw only the exterior sides, shadowed, untextured
+		get_painted_metal_material(1, 0, 0, 0, 0, 0.5, 40.0).add_cube_to_verts_untextured(c, side_color, get_skip_mask_for_xy(c.dim)); // draw only the ext sides, shadowed
 	}
 }
 
@@ -1841,8 +1845,7 @@ void building_room_geom_t::add_shower_head(room_object_t const &shower, float wi
 	}
 	// draw shower head nozzle using a custom texture
 	tid_nm_pair_t tex(get_texture_by_name("interiors/pegboard.png"), 1.0, 1); // shadowed
-	tex.set_specular_color(WHITE, 0.8, 60.0);
-	tex.metalness = 0.5; // somewhat reflective
+	tex.set_specular(0.8, 60.0, 0.5); // somewhat reflective
 	rgeom_mat_t &head_mat(get_material(tex, 1, 0, 1)); // shadowed, small
 	head_mat.add_cylin_to_verts(base_pos, head_pos, 0.07*width, 0.07*width, color, 0, 1, 0, 0, 1.0, 0.5, 1); // skip_sides=1; draw top/end only
 }
@@ -2167,7 +2170,9 @@ void building_room_geom_t::add_drink_can(room_object_t const &c) {
 	unsigned const label_verts_start(label_mat.itri_verts.size());
 	label_mat.add_ortho_cylin_to_verts(c, color, dim, 0, 0, 0, 0, 1.0, 1.0, tscale, 1.0, 0, ndiv, tscale_add, 0, ltc2, ltc1); // sides only
 	if (rot_angle != 0.0) {rotate_verts(label_mat.itri_verts, plus_z, rot_angle, center, label_verts_start);}
-	rgeom_mat_t &top_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/can_lid.jpg"), 0.0f, shadowed, 0, 1), shadowed, 0, 1)); // small, no_reflect=1
+	tid_nm_pair_t top_tex(get_texture_by_name("interiors/can_lid.jpg"), 0.0f, shadowed, 0, 1); // small, no_reflect=1
+	top_tex.set_specular(0.7, 80.0, 1.0); // metalness=1.0
+	rgeom_mat_t &top_mat(get_material(top_tex, shadowed, 0, 1));
 	unsigned const top_verts_start(top_mat.itri_verts.size());
 	top_mat.add_ortho_cylin_to_verts(c, color, dim, c.dir, !c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // top
 	if (rot_angle != 0.0) {rotate_verts(top_mat.itri_verts, plus_z, rot_angle, center, top_verts_start);}
@@ -2537,7 +2542,7 @@ float get_filing_cabinet_drawers(room_object_t const &c, vect_cube_t &drawers) {
 }
 void building_room_geom_t::add_filing_cabinet(room_object_t const &c, bool inc_lg, bool inc_sm) {
 	colorRGBA const color(c.get_color());
-	if (inc_lg) {add_obj_with_front_texture(c, "interiors/filing_cabinet.png", color, 0, 1);} // is_small=0, is_metal=1
+	if (inc_lg) {add_obj_with_front_texture(c, "interiors/filing_cabinet.png", color, 0, 0.5, 50.0, 0.5);} // is_small=0, metalness=0.5
 
 	if (inc_sm && c.drawer_flags != 0) { // add drawers and their contents if any drawer is open
 		vect_cube_t &drawers(get_temp_cubes());
@@ -2608,7 +2613,7 @@ void building_room_geom_t::add_sticky_note(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_fire_ext_mount(room_object_t const &c) {
-	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // shadowed, small
+	rgeom_mat_t &mat(get_painted_metal_material(1, 0, 1)); // shadowed, small
 	colorRGBA const color(apply_light_color(c));
 	float const plate_thickness(c.get_depth() - c.get_width()), inside_face(c.d[c.dim][!c.dir] + (c.dir ? 1.0 : -1.0)*plate_thickness), dz(c.dz());
 	assert(plate_thickness > 0.0);
@@ -2930,11 +2935,11 @@ void building_room_geom_t::add_pipe(room_object_t const &c, bool add_exterior) {
 	if (is_duct || factory_rod) {tid = get_cylin_duct_tid();}
 	else if (is_dirty) {tid = get_texture_by_name("metals/67_rusty_dirty_metal.jpg");} // "metals/65_Painted_dirty_metal.jpg" works as well
 	tid_nm_pair_t tex(tid, 1.0f, shadowed, 0, 1); // custom specular color, no_reflect=1
-	// make specular; maybe should not make specular if rusty, but setting per-pipe specular doesn't work, and water effect adds specular anyway
-	tex.metalness = (is_dirty ? 0.1 : (is_duct ? 0.25 : 0.5)); // partially reflective
 	colorRGBA const spec_color(get_specular_color(c.color)); // special case metals
 	tex.set_specular_color(spec_color, 0.8, 60.0);
-	if (spec_color != WHITE) {tex.metalness = 1.0;} // metal if pipe has a metal specular color
+	// make specular; maybe should not make specular if rusty, but setting per-pipe specular doesn't work, and water effect adds specular anyway
+	if (spec_color != WHITE) {tex.metalness = (is_dirty ? 0.25 : 1.0) ;} // metal if pipe has a metal specular color
+	else {tex.metalness = (is_dirty ? 0.1 :    (is_duct ? 0.25 : 0.5));} // partially reflective
 	rgeom_mat_t &mat(get_material(tex, shadowed, 0, (exterior ? 0 : (is_duct ? 1 : 2)), 0, exterior)); // detail, small, or exterior object
 	// swap texture XY for ducts
 	mat.add_ortho_cylin_to_verts(c, color, dim, (flat_ends && draw_joints[0]), (flat_ends && draw_joints[1]),
@@ -2973,8 +2978,7 @@ void building_room_geom_t::add_duct(room_object_t const &c) {
 		tscales[w1 ] = 1.0/width1;
 		tscales[w2 ] = 1.0/width2;
 		tid_nm_pair_t tex(get_cube_duct_tid(), -1, 0.0, 0.0, 1); // shadowed
-		tex.set_specular_color(WHITE, 0.8, 60.0); // set metal specular
-		tex.metalness = 0.25; // slightly reflective
+		tex.set_specular(0.8, 60.0, 0.25); // set metal specular, slightly reflective
 		colorRGBA const color(apply_light_color(c));
 
 		// each face must be drawn with a different texture scale, so three cubes drawn
@@ -4616,7 +4620,7 @@ void building_room_geom_t::add_furnace(room_object_t const &c) {
 	room_object_t main_unit(c);
 	room_object_t base(c); // base area below the furnace that connects to the ducts
 	main_unit.z1() = base.z2() = c.z1() + 0.167*c.dz();
-	add_obj_with_front_texture(main_unit, "interiors/furnace.jpg", get_furnace_color(), 1); // small=1
+	add_obj_with_front_texture(main_unit, "interiors/furnace.jpg", get_furnace_color(), 1, 0.5, 50.0, 0.1); // small=1, slightly metal
 	float const expand_amt(0.01*c.get_width());
 	base.expand_in_dim(!c.dim, expand_amt); // expand slightly in width
 	base.d[c.dim][c.dir] += (c.dir ? 1.0 : -1.0)*expand_amt; // shift slightly outward in the front
@@ -5239,8 +5243,8 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale, boo
 		vect_cube_t &cubes(get_temp_cubes());
 		subtract_cube_from_cube(top, sink, cubes);
 		for (cube_t const &i : cubes) {top_mat.add_cube_to_verts(i, top_color, tex_origin);} // should always be 4 cubes
-		colorRGBA const faucet_color(apply_light_color(c, GRAY)), sink_color(is_vanity ? apply_light_color(c) : apply_light_color(c, LT_GRAY));
-		rgeom_mat_t &basin_mat(is_vanity ? get_metal_material(0) : get_scratched_metal_material(4.0/c.dz(), 0)); // unshadowed
+		colorRGBA const faucet_color(apply_light_color(c, LT_GRAY)), sink_color(is_vanity ? apply_light_color(c) : apply_light_color(c, LT_GRAY));
+		rgeom_mat_t &basin_mat(is_vanity ? get_painted_metal_material(0, 0, 0, 0, 0, 0.6, 30.0) : get_scratched_metal_material(4.0/c.dz(), 0)); // unshadowed
 		basin_mat.add_cube_to_verts(sink, sink_color, tex_origin, EF_Z2, 0, 0, 0, 1); // basin: inverted, skip top face, unshadowed
 		float const water_level((c.state_flags & sink_water_state_bit) ? 0.3 : 0.0); // may be 30% filled
 		if (water_level > 0.0) {add_water_plane(c, sink, water_level);} // draw water
@@ -5506,7 +5510,7 @@ void building_room_geom_t::add_cabinet(room_object_t const &c, room_object_t con
 	rgeom_mat_t &door_mat(is_vanity ? get_untextured_material(shadowed, 0, 1) : get_wood_material(1.5*tscale, shadowed, 0, 1)); // shadowed if a door is open; small=1
 	rgeom_mat_t &handle_mat(get_metal_material(0, 0, 1)); // untextured, unshadowed, small
 	colorRGBA const door_color(is_vanity ? cabinet_color : apply_light_color(c, WHITE)); // lighter color than cabinet
-	colorRGBA const handle_color(apply_light_color(c, GRAY_BLACK));
+	colorRGBA const handle_color(apply_light_color(c, drawer_handle_color));
 	unsigned const door_skip_faces(~get_face_mask(dim, !dir));
 	float const door_thick(doors[0].get_sz_dim(dim)), handle_thick(0.75*door_thick);
 	float const hwidth(0.04*doors[0].dz()), near_side(0.1*door_width), far_side(door_width - near_side - hwidth);
@@ -6198,7 +6202,7 @@ void building_room_geom_t::add_food_box(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_safe(room_object_t const &c) {
-	add_obj_with_front_texture(c, "interiors/room_safe.jpg", c.color, 1);
+	add_obj_with_front_texture(c, "interiors/room_safe.jpg", c.color, 1, 0.5, 50.0, 0.25); // metal
 	// see add_mwave() for code to draw the open door
 }
 
@@ -6384,8 +6388,7 @@ void building_room_geom_t::add_chem_tank(room_object_t const &c, bool draw_label
 	colorRGBA const color(apply_light_color(c));
 	int const tid(get_chem_tank_tid(c));
 	tid_nm_pair_t tex(tid);
-	tex.set_specular_color(WHITE, 0.5, 40.0); // applies to textured case
-	tex.metalness = 0.1; // slightly reflective if not painted
+	tex.set_specular(0.5, 40.0, 0.2); // applies to textured case; slightly reflective if not painted
 	rgeom_mat_t &mat((tid < 0) ? get_painted_metal_material(1) : get_material(tex, 1)); // shadowed
 	// capsule shape
 	cube_t bot(c), top(c), base(c);

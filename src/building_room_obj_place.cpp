@@ -4075,7 +4075,7 @@ bool building_t::add_fire_ext(float height, float radius, float zval, float wall
 	wall_mount.d[dim][!dir] -= dir_sign*0.7*radius; // move inward
 	wall_mount.z1() -= 0.02*height; // under the fire extinguisher
 	wall_mount.z2() -= 0.50*height;
-	objs.emplace_back(wall_mount, TYPE_FEXT_MOUNT, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, GRAY_BLACK);
+	objs.emplace_back(wall_mount, TYPE_FEXT_MOUNT, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, DK_GRAY);
 	// add the sign
 	cube_t sign;
 	sign.d[dim][ dir] = wall_edge; // extend to touch the wall

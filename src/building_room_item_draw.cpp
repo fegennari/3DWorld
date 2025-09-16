@@ -1138,7 +1138,12 @@ void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, 
 			UNROLL_2X(swap(c_rot.d[dim][i_], c_rot.d[2][i_]);); // rotate into Z dir
 			c_rot.translate(c.get_cube_center() - c_rot.get_cube_center()); // translate it back to the correct location
 		}
-		if (c.type == TYPE_SPRAYCAN) {add_spraycan_to_material(c_rot, mat, 1);} // draw_bottom=1
+		if (c.type == TYPE_SPRAYCAN) {
+			static rgeom_mat_t metal_mat(get_painted_metal_material());
+			add_spraycan_to_material(c_rot, metal_mat, mat, 1); // draw_bottom=1
+			tid_nm_pair_dstate_t state(s);
+			metal_mat.upload_draw_and_clear(state);
+		}
 		else {add_pen_pencil_marker_to_material(c_rot, mat);}
 	}
 	else if (c.type == TYPE_TPROLL || c.type == TYPE_TAPE) { // apply get_player_cview_rot_matrix()?

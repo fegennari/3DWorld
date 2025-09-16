@@ -288,6 +288,7 @@ struct tid_nm_pair_t { // size=32
 		tid(tid_), nm_tid(nm_tid_), tscale_x(tx), tscale_y(ty), txoff(xo), tyoff(yo), shadowed(shadowed_), transparent(transparent_), no_reflect(no_reflect_) {}
 	void set_shininess(float shine) {shininess = (unsigned char)max(1, min(255, round_fp(shine)));}
 	void set_specular(float mag, float shine) {set_specular_color(WHITE, mag, shine);}
+	void set_specular(float mag, float shine, float metalness_) {set_specular(mag, shine); metalness = metalness_;}
 	void set_specular_color(colorRGB const &color, float mag, float shine);
 	void set_metal_specular(colorRGB const &color=WHITE, float mag=0.8, float shine=60.0) {set_specular_color(color, mag, shine);}
 	bool enabled() const {return (tid >= 0 || nm_tid >= 0);}
@@ -1294,7 +1295,7 @@ struct building_room_geom_t {
 	void add_phone(room_object_t const &c);
 	void add_tproll(room_object_t const &c);
 	void add_tape(room_object_t const &c);
-	static void add_spraycan_to_material(room_object_t const &c, rgeom_mat_t &mat, bool draw_bottom=0);
+	static void add_spraycan_to_material(room_object_t const &c, rgeom_mat_t &side_mat, rgeom_mat_t &cap_mat, bool draw_bottom=0);
 	void add_spraycan(room_object_t const &c);
 	void add_button(room_object_t const &c, bool inc_geom, bool inc_text);
 	void add_crate(room_object_t const &c);
@@ -1312,11 +1313,13 @@ struct building_room_geom_t {
 		colorRGBA const &color, colorRGBA const &spec_color=WHITE, bool sparse=0);
 	void add_machine(room_object_t const &c, float floor_ceil_gap, bldg_industrial_info_t const *ind_info);
 	void add_keyboard(room_object_t const &c);
-	void add_obj_with_top_texture  (room_object_t const &c, std::string const &text_name, colorRGBA const &sides_color, bool is_small=0, bool is_metal=0);
+	void add_obj_with_top_texture  (room_object_t const &c, std::string const &text_name, colorRGBA const &sides_color,
+		bool is_small=0, float spec=0.0, float shine=0.0, float metalness=0.0);
 	void add_obj_with_front_texture(room_object_t const &c, std::string const &text_name, colorRGBA const &front_color, colorRGBA const &sides_color,
-		bool is_small=0, bool is_metal=0);
-	void add_obj_with_front_texture(room_object_t const &c, std::string const &text_name, colorRGBA const &sides_color, bool is_small=0, bool is_metal=0) {
-		add_obj_with_front_texture(c, text_name, c.color, sides_color, is_small, is_metal); // front_color = c.color
+		bool is_small=0, float spec=0.0, float shine=0.0, float metalness=0.0);
+	void add_obj_with_front_texture(room_object_t const &c, std::string const &text_name, colorRGBA const &sides_color,
+		bool is_small=0, float spec=0.0, float shine=0.0, float metalness=0.0) {
+		add_obj_with_front_texture(c, text_name, c.color, sides_color, is_small, spec, shine, metalness); // front_color = c.color
 	}
 	void add_computer(room_object_t const &c);
 	void add_laptop(room_object_t const &c);
