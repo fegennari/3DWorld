@@ -78,8 +78,8 @@ bool building_t::add_classroom_objs(rand_gen_t rgen, room_t const &room, float z
 			if (!add_classroom_desk(rgen, room, desk, room_id, tot_light_amt, chair_color, dim, !dir, (1 + col + ncols*row))) continue;
 		} // for col
 	} // for row
-	bool const add_bottles(0), add_trash(rgen.rand_float() < 0.4), add_papers(rgen.rand_float() < 0.4), add_glass(0);
-	add_floor_clutter_objs(rgen, room, room_bounds, zval, room_id, tot_light_amt, objs_start, add_bottles, add_trash, add_papers, add_glass);
+	bool const add_bottles(0), add_trash(rgen.rand_float() < 0.4), add_papers(rgen.rand_float() < 0.4), add_glass(0), add_cigarettes(0);
+	add_floor_clutter_objs(rgen, room, room_bounds, zval, room_id, tot_light_amt, objs_start, add_bottles, add_trash, add_papers, add_glass, add_cigarettes);
 	add_numbered_door_sign("Classroom ", room, zval, room_id, floor_ix);
 	return 1;
 }
@@ -155,8 +155,8 @@ void building_t::add_hallway_lockers(rand_gen_t &rgen, room_t const &room, float
 	place_area.expand_in_dim(dim, -0.75*get_window_vspace()); // leave space at the ends for windows, etc.
 	bool const add_padlocks(floor_ix == 0); // first floor only, to avoid having too many model objects (but may be added to stacked parts)
 	add_room_lockers(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area, RTYPE_HALL, dim, 0, add_padlocks); // dir_skip_mask=0
-	bool const add_bottles(rgen.rand_float() < 0.35), add_trash(rgen.rand_float() < 0.75), add_papers(rgen.rand_float() < 0.5), add_glass(0);
-	add_floor_clutter_objs(rgen, room, room_bounds, zval, room_id, tot_light_amt, objs_start, add_bottles, add_trash, add_papers, add_glass);
+	bool const add_bottles(rgen.rand_float() < 0.35), add_trash(rgen.rand_float() < 0.75), add_papers(rgen.rand_float() < 0.5), add_glass(0), add_cigarettes(0);
+	add_floor_clutter_objs(rgen, room, room_bounds, zval, room_id, tot_light_amt, objs_start, add_bottles, add_trash, add_papers, add_glass, add_cigarettes);
 }
 
 bool building_t::add_room_lockers(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
@@ -464,20 +464,28 @@ bool building_t::fill_room_with_tables_and_chairs(rand_gen_t rgen, room_t const 
 			num_added += add_table_and_chairs(rgen, room, blockers, room_id, center, chair_color, 0.0, tot_light_amt, 4, 0, plastic_tc, chair_rand_add); // 4 chairs, short table
 		}
 	} // for y
-	if (max_books > 0) { // add books on tables
-		vector<room_object_t> tables;
+	// place objects on tables
+	vector<room_object_t> tables;
 
-		for (auto i = objs.begin()+tc_start; i != objs.end(); ++i) {
-			if (i->type == TYPE_TABLE) {tables.push_back(*i);}
-		}
-		for (room_object_t const &table : tables) {
-			unsigned const pp_start(objs.size()), num_books(rgen.rand() % (max_books+1));
+	for (auto i = objs.begin()+tc_start; i != objs.end(); ++i) {
+		if (i->type == TYPE_TABLE) {tables.push_back(*i);}
+	}
+	for (room_object_t const &table : tables) {
+		unsigned const pp_start(objs.size());
+
+		if (max_books > 0) { // add book(s)
+			unsigned const num_books(rgen.rand() % (max_books+1));
 			unsigned const flags((is_school() && rgen.rand_bool()) ? RO_FLAG_USED : 0); // flag as school book half the time
 			float const shift_amt((table.shape == SHAPE_CYLIN) ? 0.25 : 0.35); // less shift for cylindrical tables to avoid overlapping the edges
 			for (unsigned n = 0; n < num_books; ++n) {place_book_on_obj(rgen, table, room_id, tot_light_amt, pp_start, 0, flags, 1, shift_amt);} // skip_if_overlaps=1
 		}
-	}
-	// other objects? deck of cards, pack of cigarettes, or ashtray for prison lounge tables?
+		if (max_books <= 1) { // single book - not a library
+			// TODO: TYPE_CARD_DECK
+		}
+		if (is_prison()) {
+			// TODO: TYPE_CIGARETTE, ashtray?
+		}
+	} // for table
 	return (num_added > 0);
 }
 

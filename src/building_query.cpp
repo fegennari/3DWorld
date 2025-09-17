@@ -2185,7 +2185,8 @@ public:
 				type == TYPE_INT_WINDOW || type == TYPE_INT_LADDER || type == TYPE_CONF_PHONE || type == TYPE_SPIWEB || type == TYPE_TREE || type == TYPE_ELEC_WIRE ||
 				type == TYPE_ERASER || type == TYPE_SHOE || type == TYPE_CATWALK || type == TYPE_GAUGE || type == TYPE_RAMP || type == TYPE_TESTTUBE ||
 				type == TYPE_HARDHAT || type == TYPE_TOPHAT || type == TYPE_COMP_MOUSE || type == TYPE_JAIL_BARS || type == TYPE_GUN || type == TYPE_STICK_NOTE ||
-				type == TYPE_GYM_WEIGHT || type == TYPE_BAR_SOAP || type == TYPE_COAT_RACK || type == TYPE_VIS_PHONE || type == TYPE_JUMPSUIT) continue;
+				type == TYPE_GYM_WEIGHT || type == TYPE_BAR_SOAP || type == TYPE_COAT_RACK || type == TYPE_VIS_PHONE || type == TYPE_JUMPSUIT || type == TYPE_DECK_CARDS ||
+				type == TYPE_CIGARETTE) continue;
 			if (z1 > obj.z2() || z2 < obj.z1()) continue; // zval test
 
 			if (obj.type == TYPE_PARK_SPACE) {

@@ -3285,15 +3285,16 @@ void building_t::add_basement_clutter_objs(rand_gen_t rgen, room_t const &room, 
 	bool const add_trash  (!no_papers && rgen.rand_float() < 0.35); // 35% of rooms
 	bool const add_papers (!no_papers && rgen.rand_float() < 0.50); // 50% of rooms (paper trash)
 	bool const add_glass  (              rgen.rand_float() < 0.65); // 65% of the time
+	bool const add_cigarettes(is_prison() ? (rgen.rand_float() < 0.5) : 0);
 	cube_t place_area(get_walkable_room_bounds(room));
 	place_area.expand_by(-get_trim_thickness()); // add some extra padding
-	add_floor_clutter_objs(rgen, room, place_area, zval, room_id, tot_light_amt, objs_start, add_bottles, add_trash, add_papers, add_glass);
+	add_floor_clutter_objs(rgen, room, place_area, zval, room_id, tot_light_amt, objs_start, add_bottles, add_trash, add_papers, add_glass, add_cigarettes);
 }
 void set_max_drink_can_type(room_object_t &obj, unsigned max_type) {
 	if (obj.get_drink_can_type() > max_type) {obj.obj_id = max_type;} // clamp to max_type
 }
 void building_t::add_floor_clutter_objs(rand_gen_t &rgen, room_t const &room, cube_t place_area, float zval, unsigned room_id,
-	float tot_light_amt, unsigned objs_start, bool add_bottles, bool add_trash, bool add_papers, bool add_glass)
+	float tot_light_amt, unsigned objs_start, bool add_bottles, bool add_trash, bool add_papers, bool add_glass, bool add_cigarettes)
 {
 	vect_room_object_t &objs(interior->room_geom->objs);
 	float const floor_spacing(get_window_vspace()), min_place_sz(min(place_area.dx(), place_area.dy()));
@@ -3401,6 +3402,9 @@ void building_t::add_floor_clutter_objs(rand_gen_t &rgen, room_t const &room, cu
 			avoid.push_back(bc);
 			add_broken_glass_decal(point(bc.xc(), bc.yc(), glass_zval), radius, rgen);
 		}
+	}
+	if (add_cigarettes) {
+		//TYPE_CIGARETTE
 	}
 }
 

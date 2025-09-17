@@ -222,6 +222,8 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_BAR_SOAP  ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 0.5,   0.1,   "bar of soap");
 	bldg_obj_types[TYPE_COAT_RACK ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 1, 50.0,  25.0,  "coat rack");
 	bldg_obj_types[TYPE_O_SHOWER  ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 2, 0.0,   0.0,   "shower");
+	bldg_obj_types[TYPE_DECK_CARDS] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 5.0,   0.1,   "deck of cards");
+	bldg_obj_types[TYPE_CIGARETTE ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 0.0,   0.0,   "cigarette");
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");

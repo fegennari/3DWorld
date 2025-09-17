@@ -965,8 +965,8 @@ void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float 
 		} // for n
 	}
 	// add floor clutter and stains
-	bool const add_bottles(1), add_papers(0), add_glass(1), add_trash(rgen.rand_float() < 0.65); // 65% of rooms
-	add_floor_clutter_objs(rgen, room, place_area, zval, room_id, light_amt, objs_start, add_bottles, add_trash, add_papers, add_glass);
+	bool const add_bottles(1), add_papers(0), add_glass(1), add_trash(rgen.rand_float() < 0.65), add_cigarettes(rgen.rand_bool()); // trash in 65% of rooms
+	add_floor_clutter_objs(rgen, room, place_area, zval, room_id, light_amt, objs_start, add_bottles, add_trash, add_papers, add_glass, add_cigarettes);
 	unsigned const num_floor_stains(rgen.rand() % 9); // 0-8
 	float const stain_rmax(0.25*min(window_vspace, min(room.dx(), room.dy())));
 	add_floor_stains(rgen, place_area, zval, room_id, light_amt, objs_start, num_floor_stains, stain_rmax);

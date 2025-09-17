@@ -1487,6 +1487,7 @@ void building_room_geom_t::add_obj_with_front_texture(room_object_t const &c, st
 void building_room_geom_t::add_keyboard (room_object_t const &c) {add_obj_with_top_texture  (c, "interiors/keyboard.jpg", BKGRAY, 1);} // is_small=1
 void building_room_geom_t::add_laptop   (room_object_t const &c) {add_obj_with_top_texture  (c, "interiors/laptop.jpg",   BKGRAY, 1);} // is_small=1
 void building_room_geom_t::add_computer (room_object_t const &c) {add_obj_with_front_texture(c, "interiors/computer.jpg", BKGRAY, 1);} // is_small=1
+void building_room_geom_t::add_card_deck(room_object_t const &c) {add_obj_with_front_texture(c, "interiors/card_deck.jpg", WHITE, 1);} // is_small=1
 
 void place_pizza_toppings(cube_t const &pizza, float rmin, float rmax, float height, colorRGBA const &color, unsigned num, bool can_overlap,
 	rgeom_mat_t &mat, vector<sphere_t> &placed, rand_gen_t &rgen) {
@@ -2605,6 +2606,15 @@ void building_room_geom_t::add_eraser(room_object_t const &c) { // for now, a si
 void building_room_geom_t::add_bar_soap(room_object_t const &c) { // what about some subsurface scattering?
 	float const cradius(0.2*min(c.dx(), c.dy()));
 	get_untextured_material(0, 0, 1).add_round_rect_to_verts(c, cradius, c.color, 1, 0); // unshadowed, small; draw top and sides; always max lit
+}
+
+void building_room_geom_t::add_cigarette(room_object_t const &c) {
+	float const radius(0.5*c.dz()), filter_len(min(0.8*c.get_length(), 6.0*radius));
+	cube_t filter(c), body(c);
+	filter.d[c.dim][!c.dir] = body.d[c.dim][c.dir] = c.d[c.dim][!c.dir] + (c.dir ? 1.0 : -1.0)*filter_len;
+	rgeom_mat_t &mat(get_untextured_material(0, 0, 1)); // unshadowed, small
+	mat.add_ortho_cylin_to_verts(filter, apply_light_color(c, LT_BROWN), c.dim, !c.dir,  c.dir);
+	mat.add_ortho_cylin_to_verts(body,   apply_light_color(c          ), c.dim,  c.dir, !c.dir);
 }
 
 void building_room_geom_t::add_gun(room_object_t const &c) {
