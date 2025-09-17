@@ -182,18 +182,22 @@ void building_room_geom_t::add_tc_legs(cube_t const &c, room_object_t const &obj
 		skip_faces = 0; // leg ends may be visible; conservative
 	}
 	point const llc(c.get_llc());
-	for (unsigned i = 0; i < 4; ++i) {mat.add_cube_to_verts(cubes[i], color, llc, skip_faces);} // skip top and bottom faces
 
+	for (unsigned i = 0; i < 4; ++i) { // skip top and bottom faces
+		if (use_metal_mat) {mat.add_cube_to_verts_untextured(cubes[i], color, skip_faces);} else {mat.add_cube_to_verts(cubes[i], color, llc, skip_faces);}
+	}
 	if (frame_height > 0.0) { // draw frame for glass table with the same material as the legs
 		float const leg_width(abs_width ? width : get_tc_leg_width(c, width));
 
 		for (unsigned dim = 0; dim < 2; ++dim) {
+			unsigned const leg_skip_faces((draw_tops ? 0 : EF_Z2) | get_skip_mask_for_xy(!dim));
+
 			for (unsigned dir = 0; dir < 2; ++dir) {
 				cube_t frame(c);
 				frame.z1() = c.z2() - frame_height;
 				frame.expand_in_dim(!dim, -leg_width); // inside the legs
 				frame.d[dim][!dir] = frame.d[dim][dir] + (dir ? -1.0 : 1.0)*leg_width; // shrink to leg width
-				mat.add_cube_to_verts(frame, color, llc, ((draw_tops ? 0 : EF_Z2) | get_skip_mask_for_xy(!dim)));
+				mat.add_cube_to_verts_untextured(frame, color, leg_skip_faces);
 			} // for dir
 		} // for dim
 	}
@@ -293,7 +297,7 @@ void building_room_geom_t::add_table(room_object_t const &c, float tscale, float
 			// draw vertical pole and base
 			colorRGBA const base_color(apply_light_color(c, mall_tc_legs_color));
 			rgeom_mat_t &met_mat(get_painted_metal_material(1)); // shadowed
-			met_mat.add_vcylin_to_verts(cubes[1], base_color, 0, 0); // draw vertica support; sides only
+			met_mat.add_vcylin_to_verts(cubes[1], base_color, 0, 0); // draw vertical support; sides only
 			met_mat.add_vcylin_to_verts(cubes[2], base_color, 0, 1); // draw base; sides and top
 			return;
 		}
@@ -1670,12 +1674,12 @@ void building_room_geom_t::add_cabinet_with_open_door(room_object_t const &c, cu
 {
 	vect_cube_t const &cubes(get_cabinet_interior_cubes(c, wall_thickness, z1_adj, back_adj, shelf_height));
 	rgeom_mat_t &mat(get_painted_metal_material(1, 0, 0, 0, 0, 0.5, 40.0)); // shadowed
-	mat.add_cube_to_verts(door, color, zero_vector, ~front_face_mask); // non-front sides of door; always +dir
+	mat.add_cube_to_verts_untextured(door, color, ~front_face_mask); // non-front sides of door; always +dir
 
 	for (auto i = cubes.begin(); i != cubes.end(); ++i) {
 		unsigned sf(~get_face_mask(c.dim, !c.dir));
 		if (i - cubes.begin() > 3) {sf |= get_skip_mask_for_xy(!c.dim);} // sip side faces
-		mat.add_cube_to_verts(*i, color, zero_vector, sf); // skip back face
+		mat.add_cube_to_verts_untextured(*i, color, sf); // skip back face
 	}
 }
 float get_med_cab_wall_thickness(room_object_t const &c) {return 0.15*c.get_length();}
@@ -2625,10 +2629,10 @@ void building_room_geom_t::add_fire_ext_mount(room_object_t const &c) {
 	bottom.z2() -= 0.96*dz;
 	cube_t bot_cube(bottom);
 	bot_cube.d[c.dim][c.dir] = bottom.get_center_dim(c.dim); // half width
-	mat.add_cube_to_verts_untextured(back, color, ~get_face_mask(c.dim, !c.dir)); // skip back face against the wall
+	mat.add_cube_to_verts_untextured(back,     color, ~get_face_mask(c.dim, !c.dir)); // skip back face against the wall
+	mat.add_cube_to_verts_untextured(bot_cube, color,  get_skip_mask_for_xy (c.dim)); // skip faces adjacent to back and bottom
 	mat.add_vcylin_to_verts(loop,   color, 0, 0, 1); // two sided hollow cylinder
 	mat.add_vcylin_to_verts(bottom, color, 1, 1, 0); // draw top and bottom ends
-	mat.add_cube_to_verts_untextured(bot_cube, color, get_skip_mask_for_xy(c.dim)); // skip faces adjacent to back and bottom
 }
 
 void building_room_geom_t::add_fire_ext_sign(room_object_t const &c) {
@@ -3151,7 +3155,7 @@ void building_room_geom_t::add_breaker_panel(room_object_t const &c) {
 	rgeom_mat_t &mat(get_painted_metal_material(1, 0, 1)); // untextured, shadowed, small=1
 	// skip back face, which is against the wall; skip front face when open because it's recessed
 	unsigned const box_skip_faces(c.is_open() ? get_skip_mask_for_xy(c.dim) : ~get_face_mask(c.dim, c.dir));
-	mat.add_cube_to_verts(c, color, all_zeros, box_skip_faces);
+	mat.add_cube_to_verts_untextured(c, color, box_skip_faces);
 
 	if (c.is_open()) {
 		// draw inside face and inside edges of open box
