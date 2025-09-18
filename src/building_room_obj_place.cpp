@@ -960,9 +960,14 @@ void building_t::add_lounge_objs(rand_gen_t rgen, room_t const &room, float zval
 			place_model_along_wall(OBJ_MODEL_BAR_STOOL, TYPE_BAR_STOOL, room, 0.4, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.0, 4, 0);
 		}
 	}
-	// add 1-4 plants
-	unsigned const num_plants(1 + (rgen.rand() & 3));
-	add_plants_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, num_plants);
+	if (is_prison()) { // add objects on the floor
+		bool const add_bottles(0), add_trash(rgen.rand_float() < 0.6), add_papers(0), add_glass(0), add_cigarettes(rgen.rand_float() < 0.8);
+		add_floor_clutter_objs(rgen, room, place_area, zval, room_id, tot_light_amt, objs_start, add_bottles, add_trash, add_papers, add_glass, add_cigarettes);
+	}
+	else { // add 1-4 plants
+		unsigned const num_plants(1 + (rgen.rand() & 3));
+		add_plants_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, num_plants);
+	}
 	if (teacher) {add_door_sign("Teacher Lounge", room, zval, room_id);}
 }
 
@@ -3404,7 +3409,20 @@ void building_t::add_floor_clutter_objs(rand_gen_t &rgen, room_t const &room, cu
 		}
 	}
 	if (add_cigarettes) {
-		//TYPE_CIGARETTE
+		unsigned const num_cig((rgen.rand() % 4) + 2); // 2-5
+		float const near_prob(0.7), near_dist(0.2*floor_spacing);
+		float const scale(1.5*get_one_inch()), radius(0.16*scale), min_len(1.0*scale), max_len(2.0*scale); // 3.3 inches total length; scale up by 1.5x to make them easier to see
+		point prev_pos;
+
+		for (unsigned n = 0; n < num_cig; ++n) {
+			float const len(rgen.rand_uniform(min_len, max_len)), place_radius(0.5*len); // use a vertical cylinder bounds
+			cube_t cig(place_cylin_object_maybe_near(rgen, place_area, prev_pos, place_radius, 2.0*radius, 1.2*place_radius, near_prob, 1.5*place_radius, near_dist));
+			bool const dim(rgen.rand_bool());
+			set_wall_width(cig, cig.get_center_dim(!dim), radius, !dim);
+			if (is_obj_placement_blocked(cig, room, 1) || overlaps_other_room_obj(cig, objs_start) || has_bcube_int(cig, avoid)) continue; // bad placement
+			avoid.push_back(cig);
+			objs.emplace_back(cig, TYPE_CIGARETTE, room_id, dim, rgen.rand_bool(), (RO_FLAG_NOCOLL | RO_FLAG_ON_FLOOR), tot_light_amt, SHAPE_CYLIN, WHITE);
+		} // for n
 	}
 }
 

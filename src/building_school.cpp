@@ -472,19 +472,37 @@ bool building_t::fill_room_with_tables_and_chairs(rand_gen_t rgen, room_t const 
 		if (i->type == TYPE_TABLE) {tables.push_back(*i);}
 	}
 	for (room_object_t const &table : tables) {
+		bool const is_round(table.shape == SHAPE_CYLIN);
 		unsigned const pp_start(objs.size());
 
 		if (max_books > 0) { // add book(s)
 			unsigned const num_books(rgen.rand() % (max_books+1));
 			unsigned const flags((is_school() && rgen.rand_bool()) ? RO_FLAG_USED : 0); // flag as school book half the time
-			float const shift_amt((table.shape == SHAPE_CYLIN) ? 0.25 : 0.35); // less shift for cylindrical tables to avoid overlapping the edges
+			float const shift_amt(is_round ? 0.25 : 0.35); // less shift for cylindrical tables to avoid overlapping the edges
 			for (unsigned n = 0; n < num_books; ++n) {place_book_on_obj(rgen, table, room_id, tot_light_amt, pp_start, 0, flags, 1, shift_amt);} // skip_if_overlaps=1
 		}
 		if (max_books <= 1) { // single book - not a library
-			// TODO: TYPE_CARD_DECK
-		}
-		if (is_prison()) {
-			// TODO: TYPE_CIGARETTE, ashtray?
+			if (rgen.rand_float() < 0.5) { // maybe add a deck of cards
+				float const one_inch(get_one_inch()), height(1.0*one_inch), length(1.3*3.5*one_inch), width(1.3*2.5*one_inch); // 1x3.5x2.5; width/height scaled by 1.3
+				bool const dim(rgen.rand_bool());
+				cube_t surface(table);
+				if (is_round) {surface.expand_by_xy(-0.2*table.get_radius());} // shrink to avoid placing over the edge
+				vector2d const place_sz(surface.get_size_xy());
+			
+				if (place_sz[dim] > 2.0*length && place_sz[!dim] > 2.0*width) { // add if it fits
+					cube_t cards;
+					vector3d const scale(0.5*(dim ? width : length), 0.5*(dim ? length : width), height);
+					gen_xy_pos_for_cube_obj(cards, surface, scale, height, rgen);
+				
+					if (!overlaps_other_room_obj(cards, pp_start, 1)) { // check_all=1
+						bool const dir(table.get_center_dim(dim) < cards.get_center_dim(dim)); // facing the closer edge
+						interior->room_geom->objs.emplace_back(cards, TYPE_CARD_DECK, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt);
+					}
+				}
+			}
+			if (is_prison()) {
+				// TODO: TYPE_CIGARETTE, ashtray?
+			}
 		}
 	} // for table
 	return (num_added > 0);

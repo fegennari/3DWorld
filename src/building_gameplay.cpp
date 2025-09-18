@@ -222,7 +222,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_BAR_SOAP  ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 0.5,   0.1,   "bar of soap");
 	bldg_obj_types[TYPE_COAT_RACK ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 1, 50.0,  25.0,  "coat rack");
 	bldg_obj_types[TYPE_O_SHOWER  ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 2, 0.0,   0.0,   "shower");
-	bldg_obj_types[TYPE_DECK_CARDS] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 5.0,   0.1,   "deck of cards");
+	bldg_obj_types[TYPE_CARD_DECK ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 5.0,   0.1,   "deck of cards");
 	bldg_obj_types[TYPE_CIGARETTE ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 0.0,   0.0,   "cigarette");
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
@@ -1702,7 +1702,7 @@ float get_combined_stacked_obj_weights(room_object_t const &obj, vect_room_objec
 }
 
 cube_t get_true_obj_bcube(room_object_t const &obj) { // for player object pickup and move
-	if (obj.type == TYPE_PEN || obj.type == TYPE_PENCIL || obj.type == TYPE_POOL_CUE || obj.type == TYPE_TESTTUBE) {
+	if (obj.type == TYPE_PEN || obj.type == TYPE_PENCIL || obj.type == TYPE_POOL_CUE || obj.type == TYPE_TESTTUBE || obj.type == TYPE_CIGARETTE) {
 		cube_t obj_bcube(obj);
 		obj_bcube.expand_in_dim(!obj.dim, obj.get_width()); // make narrow objects wider and easier for the player to pick up
 		return obj_bcube;
