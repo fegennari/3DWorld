@@ -766,7 +766,9 @@ void building_room_geom_t::add_hanger_rod(room_object_t const &c) { // is_small=
 }
 
 void building_room_geom_t::add_drain_cover(cube_t const &c, colorRGBA const &color) {
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(MANHOLE_TEX, 0.0), 0, 0, 1));
+	tid_nm_pair_t tex(MANHOLE_TEX, 0.0);
+	tex.set_specular(0.4, 50.0, 1.0);
+	rgeom_mat_t &mat(get_material(tex, 0, 0, 1));
 	unsigned const ix_start(mat.itri_verts.size());
 	mat.add_vcylin_to_verts(c, color, 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // top only, unshadowed, small
 	for (auto i = mat.itri_verts.begin()+ix_start; i != mat.itri_verts.end(); ++i) {i->t[1] = 1.0 - i->t[1];} // mirror texture in Y to invert backwards text
