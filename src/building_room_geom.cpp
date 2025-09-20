@@ -2611,14 +2611,15 @@ void building_room_geom_t::add_bar_soap(room_object_t const &c) { // what about 
 }
 
 void building_room_geom_t::add_cigarette(room_object_t const &c) {
+	unsigned const ndiv(N_CYL_SIDES/2); // low detail
 	float const radius(0.5*c.dz()), filter_len(min(0.8*c.get_length(), 5.0*radius));
 	cube_t filter(c), body(c);
 	filter.d[c.dim][!c.dir] = body.d[c.dim][c.dir] = c.d[c.dim][c.dir] + (c.dir ? -1.0 : 1.0)*filter_len;
 	rgeom_mat_t &mat(get_untextured_material(0, 0, 1, 0, 0, 1)); // unshadowed, small, no_reflect=1
 	colorRGBA const TAN(0.8, 0.6, 0.2);
-	mat.add_ortho_cylin_to_verts(filter, apply_light_color(c, TAN     ), c.dim, !c.dir,  c.dir);
-	mat.add_ortho_cylin_to_verts(body,   apply_light_color(c          ), c.dim,  0,      0    ); // no ends
-	mat.add_ortho_cylin_to_verts(body,   apply_light_color(c, DK_BROWN), c.dim,  c.dir, !c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // end only; skip_sides=1
+	mat.add_ortho_cylin_to_verts(filter, apply_light_color(c, TAN     ), c.dim, !c.dir,  c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv);
+	mat.add_ortho_cylin_to_verts(body,   apply_light_color(c          ), c.dim,  0,      0,     0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv); // no ends
+	mat.add_ortho_cylin_to_verts(body,   apply_light_color(c, DK_BROWN), c.dim,  c.dir, !c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 1, ndiv); // end only; skip_sides=1
 }
 
 void building_room_geom_t::add_gun(room_object_t const &c) {

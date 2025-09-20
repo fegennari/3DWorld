@@ -482,16 +482,17 @@ bool building_t::fill_room_with_tables_and_chairs(rand_gen_t rgen, room_t const 
 			for (unsigned n = 0; n < num_books; ++n) {place_book_on_obj(rgen, table, room_id, tot_light_amt, pp_start, 0, flags, 1, shift_amt);} // skip_if_overlaps=1
 		}
 		if (max_books <= 1) { // single book - not a library
+			cube_t surface(table);
+			if (is_round) {surface.expand_by_xy(-0.2*table.get_radius());} // shrink to avoid placing over the edge
+
 			if (rgen.rand_float() < 0.5) { // maybe add a deck of cards
 				float const one_inch(get_one_inch()), height(1.0*one_inch), length(1.3*3.5*one_inch), width(1.3*2.5*one_inch); // 1x3.5x2.5; width/height scaled by 1.3
 				bool const dim(rgen.rand_bool());
-				cube_t surface(table);
-				if (is_round) {surface.expand_by_xy(-0.2*table.get_radius());} // shrink to avoid placing over the edge
 				vector2d const place_sz(surface.get_size_xy());
 			
 				if (place_sz[dim] > 2.0*length && place_sz[!dim] > 2.0*width) { // add if it fits
-					cube_t cards;
 					vector3d const scale(0.5*(dim ? width : length), 0.5*(dim ? length : width), height);
+					cube_t cards;
 					gen_xy_pos_for_cube_obj(cards, surface, scale, height, rgen);
 				
 					if (!overlaps_other_room_obj(cards, pp_start, 1)) { // check_all=1
@@ -500,8 +501,21 @@ bool building_t::fill_room_with_tables_and_chairs(rand_gen_t rgen, room_t const 
 					}
 				}
 			}
-			if (is_prison()) {
-				// TODO: TYPE_CIGARETTE, ashtray?
+			if (is_prison() && rgen.rand_float() < 0.33) { // maybe add cigarettes; add an ashtray as well?
+				unsigned const num_cig(rgen.rand_bool() + 1); // 1-2
+				float const scale(get_one_inch()), width(2.0*0.16*scale), min_len(1.0*scale), max_len(2.0*scale);
+
+				if (num_cig > 0 && max_len < 0.5*min(surface.dx(), surface.dy())) { // should always be true
+					for (unsigned n = 0; n < num_cig; ++n) {
+						bool const dim(rgen.rand_bool());
+						float const length(rgen.rand_uniform(min_len, max_len));
+						vector3d const scale(0.5*(dim ? width : length), 0.5*(dim ? length : width), width);
+						cube_t cig;
+						gen_xy_pos_for_cube_obj(cig, surface, scale, width, rgen);
+						if (overlaps_other_room_obj(cig, pp_start, 1)) continue; // check_all=1
+						interior->room_geom->objs.emplace_back(cig, TYPE_CIGARETTE, room_id, dim, rgen.rand_bool(), RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, WHITE);
+					} // for n
+				}
 			}
 		}
 	} // for table
