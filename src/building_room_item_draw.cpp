@@ -1684,7 +1684,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			mats_text .clear();
 			mall_geom_drawn = 1; // once we've drawn the mall geom we must always draw it so that shadows are updated and objects can be moved out of the mall
 		}
-		bool const create_small(inc_small && !mats_small.valid), create_text(draw_int_detail_objs && !mats_text.valid);
+		bool const create_small(inc_small && !mats_small.valid);
+		bool create_text(draw_int_detail_objs && !mats_text.valid);
 		//highres_timer_t timer("Create Small + Text VBOs", (create_small || create_text));
 
 		// Note: shelf rack book text is drawn in the text pass to make it thread safe
@@ -1694,7 +1695,16 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		}
 		else { // serial case
 			if (create_small) {create_small_static_vbos(building, skip_mall_objs);}
-			if (create_text ) {create_text_vbos(skip_mall_objs);}
+
+			if (!create_text) { // if drawers are opened/closed in the shadow pass, and there is a book, must create text as well before pending_objs are cleared
+				for (room_object_t const &o : pending_objs) {
+					if (o.type == TYPE_BOOK) {create_text = 1; break;}
+				}
+			}
+			if (create_text) {
+				create_text_vbos(skip_mall_objs);
+				add_text_objs_to_verts(pending_objs);
+			}
 		}
 		add_small_static_objs_to_verts(pending_objs, 0, 0, building.get_trim_color(), create_text, building.get_floor_ceil_gap(), building.interior->ind_info.get());
 		pending_objs.clear();
