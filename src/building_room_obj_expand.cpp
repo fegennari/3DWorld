@@ -979,8 +979,8 @@ void set_vase_id_and_color(room_object_t &obj, rand_gen_t &rgen) {
 	obj.color  = gen_vase_color(rgen);
 }
 
-void add_rows_of_vcylinders(room_object_t const &c, cube_t const &region, float radius, float height, float spacing_factor,
-	unsigned type, unsigned max_cols, unsigned flags, vect_room_object_t &objects, rand_gen_t &rgen, bool dir=0, bool inv_dim=0)
+void add_rows_of_vcylinders(room_object_t const &c, cube_t const &region, float radius, float height, float spacing_factor, unsigned type,
+	unsigned max_cols, unsigned flags, vect_room_object_t &objects, rand_gen_t &rgen, bool dir=0, bool inv_dim=0, bool no_alcohol=0)
 {
 	float const length(region.get_sz_dim(!c.dim)), shelf_depth(region.get_sz_dim(c.dim));
 	float const space(spacing_factor*radius), stride(2.0*radius + space);
@@ -1002,8 +1002,15 @@ void add_rows_of_vcylinders(room_object_t const &c, cube_t const &region, float 
 		for (unsigned col = 0; col < num_cols; ++col) {
 			if (rgen.rand_float() < 0.75) { // 75% chance
 				room_object_t obj(row_obj, type, c.room_id, (c.dim ^ inv_dim), dir, flags, c.light_amt, SHAPE_CYLIN);
-				if      (type == TYPE_BOTTLE    ) {obj.set_as_bottle(rand_id, 3, 1);} // 0-3; excludes poison and medicine; should we include medicine?; no_empty=1
-				else if (type == TYPE_DRINK_CAN ) {obj.obj_id = (uint16_t)(rand_id & 127); obj.color = WHITE;} // strip off empty bit
+				if      (type == TYPE_BOTTLE    ) {
+					unsigned const max_type(no_alcohol ? BOTTLE_TYPE_COKE : BOTTLE_TYPE_WINE); // excludes poison and medicine; should we include medicine?
+					obj.set_as_bottle(rand_id, max_type, 1); // no_empty=1
+				}
+				else if (type == TYPE_DRINK_CAN ) {
+					obj.obj_id = (uint16_t)(rand_id & 127); // strip off empty bit
+					obj.color  = WHITE;
+					if (no_alcohol) {obj.set_max_drink_can_type(DRINK_CAN_TYPE_COKE);}
+				}
 				else if (type == TYPE_VASE      ) {set_vase_id_and_color(obj, rgen);} // randomize the vase
 				else if (type == TYPE_SPRAYCAN  ) {set_spraypaint_color (obj, rgen);}
 				else if (type == TYPE_FLASHLIGHT) {obj.color = BLACK;}
@@ -1103,7 +1110,7 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 	unsigned const base_flags(RO_FLAG_NOCOLL | RO_FLAG_WAS_EXP | RO_FLAG_ON_SRACK);
 	float const floor_spacing(c.dz()/SHELF_RACK_HEIGHT_FS);
 	float const top_shelf_z2(top.is_all_zeros() ? c.z2() : top.z1()); // bottom of the top, if present
-	bool const add_food_boxes(!global_building_params.food_box_tids.empty()), has_top(add_shelf_rack_top(c));
+	bool const add_food_boxes(!global_building_params.food_box_tids.empty()), has_top(add_shelf_rack_top(c)), no_alcohol(c.flags & RO_FLAG_ADJ_HI);
 	rand_gen_t rgen;
 	vect_cube_t cubes; // for placed object overlap tests
 
@@ -1175,14 +1182,13 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 					// will fall through to grouped items case below
 				}
 				else if (rgen2.rand_float() < 0.65) { // add bottles; these aren't consumable by the player because that would be too powerful
-					// TODO: no alcohol if school or prison
 					float const bot_height(height_val*rgen2.rand_uniform(0.7, 0.9)), bot_radius(min(0.25f*depth, bot_height*rgen2.rand_uniform(0.12, 0.18)));
-					add_rows_of_vcylinders(c, shelf, bot_radius, bot_height, 0.25, TYPE_BOTTLE, 2, flags, objects, rgen2); // 1-2 columns
+					add_rows_of_vcylinders(c, shelf, bot_radius, bot_height, 0.25, TYPE_BOTTLE, 2, flags, objects, rgen2, 0, 0, no_alcohol); // 1-2 columns
 					continue;
 				}
 				else { // add drink cans; should these be grouped into six packs?
 					float const can_height(0.48*height_val), can_radius(0.13*height_val); // standard height and radius
-					add_rows_of_vcylinders(c, shelf, can_radius, can_height, 0.25, TYPE_DRINK_CAN, 2, flags, objects, rgen2); // 1-3 columns
+					add_rows_of_vcylinders(c, shelf, can_radius, can_height, 0.25, TYPE_DRINK_CAN, 2, flags, objects, rgen2, 0, 0, no_alcohol); // 1-3 columns
 					continue;
 				}
 			} // end food

@@ -433,8 +433,10 @@ void building_t::add_shelf_rack(cube_t const &c, bool dim, unsigned style_id, un
 	unsigned extra_flags, unsigned item_category, bool add_occluders, rand_gen_t &rgen)
 {
 	bool const is_empty(rgen.rand_float() < 0.05); // 5% empty
-	room_object_t srack(c, TYPE_SHELFRACK, room_id, !dim, 0, (extra_flags | (is_empty ? 0 : RO_FLAG_NONEMPTY)), 1.0, SHAPE_CUBE, WHITE); // tot_light_amt=1.0
-	srack.obj_id       = style_id; // common for all racks
+	unsigned flags(extra_flags | (is_empty ? 0 : RO_FLAG_NONEMPTY));
+	if (is_school() || is_prison()) {flags |= RO_FLAG_ADJ_HI;} // flag as no_alcohol
+	room_object_t srack(c, TYPE_SHELFRACK, room_id, !dim, 0, flags, 1.0, SHAPE_CUBE, WHITE); // tot_light_amt=1.0
+	srack.obj_id       = style_id;  // common for all racks
 	srack.item_flags   = rack_id++; // unique per rack
 	srack.drawer_flags = item_category;
 	interior->room_geom->objs.push_back(srack);

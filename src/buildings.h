@@ -796,6 +796,9 @@ struct room_object_t : public oriented_cube_t { // size=68
 	bool is_pet_container() const {return (type == TYPE_FISHTANK || type == TYPE_PET_CAGE);}
 	unsigned get_bottle_type   () const {return ((obj_id&63) % NUM_BOTTLE_TYPES   );} // first 6 bits are bottle type
 	unsigned get_drink_can_type() const {return ((obj_id&63) % NUM_DRINK_CAN_TYPES);} // first 6 bits are drink can type
+	void set_max_drink_can_type(unsigned max_type) {
+		if (get_drink_can_type() > max_type) {obj_id = max_type;} // clamp to max_type
+	}
 	unsigned get_orient() const {return (2*dim + dir);}
 	unsigned get_num_shelves() const;
 	float get_bottle_rot_angle() const {return (rotates() ? PI*(0.321*obj_id + color.R + 2.0*color.G) : 0.0);}
