@@ -1524,15 +1524,16 @@ void building_room_geom_t::add_wine_rack_bottles(room_object_t const &c, vect_ro
 	if (item_ix > 0 && rgen.rand_bool()) return obj; // no more items
 	cube_t drawer(drawer_in); // copy so that we can adjust z1
 	float const drawer_dz(drawer.dz());
-	// TODO: TYPE_GUN, TYPE_CARD_DECK, when ready
-	unsigned const type_ix(rgen.rand() % 11); // 0-10
-	unsigned const types_dresser [11] = {TYPE_FOLD_SHIRT, TYPE_PAPER,  TYPE_BOX,       TYPE_FOLD_SHIRT, TYPE_BOOK, TYPE_KEY,     TYPE_BOTTLE, TYPE_MONEY,  TYPE_PHONE,  TYPE_SPRAYCAN, TYPE_TAPE};
-	unsigned const types_desk    [11] = {TYPE_FLASHLIGHT, TYPE_PAPER,  TYPE_DRINK_CAN, TYPE_STAPLER,    TYPE_BOOK, TYPE_KEY,     TYPE_BOTTLE, TYPE_MONEY,  TYPE_PHONE,  TYPE_SPRAYCAN, TYPE_TAPE};
-	unsigned const types_attic   [11] = {TYPE_BOX,        TYPE_PAPER,  TYPE_PEN,       TYPE_PEN,        TYPE_BOOK, TYPE_KEY,     TYPE_BOTTLE, TYPE_BOX,    TYPE_BOOK,   TYPE_SPRAYCAN, TYPE_TAPE};
-	unsigned const types_kcabinet[11] = {TYPE_FLASHLIGHT, TYPE_BOX,    TYPE_PEN,       TYPE_PEN,        TYPE_BOOK, TYPE_PLATE,   TYPE_BOTTLE, TYPE_BOTTLE, TYPE_SILVER, TYPE_SPRAYCAN, TYPE_TAPE};
-	unsigned const types_fcabinet[11] = {TYPE_BOX,        TYPE_PAPER,  TYPE_PEN,       TYPE_PEN,        TYPE_BOOK, TYPE_STAPLER, TYPE_PAPER,  TYPE_BOOK,   TYPE_TAPE,   TYPE_STAPLER,  TYPE_TAPE};
+	// TODO: TYPE_GUN when ready
+	unsigned const NUM = 11;
+	unsigned const type_ix(rgen.rand() % NUM); // 0-10
+	unsigned const types_dresser [NUM] = {TYPE_FOLD_SHIRT, TYPE_PAPER,     TYPE_BOX,       TYPE_FOLD_SHIRT, TYPE_BOOK, TYPE_KEY,     TYPE_BOTTLE, TYPE_MONEY,  TYPE_PHONE,  TYPE_SPRAYCAN, TYPE_TAPE};
+	unsigned const types_desk    [NUM] = {TYPE_FLASHLIGHT, TYPE_CARD_DECK, TYPE_DRINK_CAN, TYPE_STAPLER,    TYPE_BOOK, TYPE_KEY,     TYPE_BOTTLE, TYPE_MONEY,  TYPE_PHONE,  TYPE_SPRAYCAN, TYPE_TAPE};
+	unsigned const types_attic   [NUM] = {TYPE_BOX,        TYPE_PAPER,     TYPE_PEN,       TYPE_PEN,        TYPE_BOOK, TYPE_KEY,     TYPE_BOTTLE, TYPE_BOX,    TYPE_BOOK,   TYPE_SPRAYCAN, TYPE_TAPE};
+	unsigned const types_kcabinet[NUM] = {TYPE_FLASHLIGHT, TYPE_BOX,       TYPE_CARD_DECK, TYPE_PEN,        TYPE_BOOK, TYPE_PLATE,   TYPE_BOTTLE, TYPE_BOTTLE, TYPE_SILVER, TYPE_SPRAYCAN, TYPE_TAPE};
+	unsigned const types_fcabinet[NUM] = {TYPE_BOX,        TYPE_PAPER,     TYPE_PEN,       TYPE_PEN,        TYPE_BOOK, TYPE_STAPLER, TYPE_PAPER,  TYPE_BOOK,   TYPE_TAPE,   TYPE_STAPLER,  TYPE_TAPE};
 	unsigned obj_type(0);
-	if (c.in_attic())                 {obj_type = types_attic   [type_ix];} // custom object overrides for attic item drawers
+	if      (c.in_attic())            {obj_type = types_attic   [type_ix];} // custom object overrides for attic item drawers
 	else if (c.type == TYPE_DESK)     {obj_type = types_desk    [type_ix];}
 	else if (c.type == TYPE_COUNTER)  {obj_type = types_kcabinet[type_ix];}
 	else if (c.type == TYPE_FCABINET) {obj_type = types_fcabinet[type_ix];}
@@ -1541,7 +1542,7 @@ void building_room_geom_t::add_wine_rack_bottles(room_object_t const &c, vect_ro
 	// if drawer is too small, replace teeshirt with pen
 	if (obj_type == TYPE_FOLD_SHIRT && (drawer.get_sz_dim(c.dim) < 0.55*c.dz() || drawer.get_sz_dim(!c.dim) < 0.52*c.dz())) {obj_type = TYPE_PEN;}
 	if (obj_type == TYPE_FOLD_SHIRT && !building_obj_model_loader.is_model_valid(OBJ_MODEL_FOLD_SHIRT)) {obj_type = TYPE_TEESHIRT;} // replace folded shirt with teeshirt
-	if (obj_type == TYPE_KEY && item_ix > 0) {obj_type = TYPE_BOTTLE;} // key must be first item/no two kes in one drawer
+	if (obj_type == TYPE_KEY && item_ix > 0) {obj_type = TYPE_BOTTLE;} // key must be first item/no two keys in one drawer
 	// object stacking logic
 	bool const is_stackable(obj_type == TYPE_BOX || obj_type == TYPE_PAPER || obj_type == TYPE_BOOK || obj_type == TYPE_PLATE || obj_type == TYPE_TAPE || obj_type == TYPE_FOLD_SHIRT);
 	// these don't combine well with others since they're large horiz cylinders
@@ -1660,9 +1661,9 @@ void building_room_geom_t::add_wine_rack_bottles(room_object_t const &c, vect_ro
 	}
 	case TYPE_PHONE: // phone
 	{
-		bool const dim(c.dim ^ rgen.rand_bool()); // random orient
+		bool const dim(c.dim ^ rgen.rand_bool()), dir((dim == c.dim) ? c.dir : rgen.rand_bool()); // random orient
 		float const length(0.3*c.dz()), width(0.45*length);
-		if (length < 0.9*sz[dim] && width < 0.9*sz[!dim]) {place_phone(obj, drawer, length, width, c.room_id, dim, c.dir, rgen);} // if it can fit
+		if (length < 0.9*sz[dim] && width < 0.9*sz[!dim]) {place_phone(obj, drawer, length, width, c.room_id, dim, dir, rgen);} // if it can fit
 		break;
 	}
 	case TYPE_SPRAYCAN: // spray paint can
@@ -1704,6 +1705,15 @@ void building_room_geom_t::add_wine_rack_bottles(room_object_t const &c, vect_ro
 		set_rand_pos_for_sz(obj, obj.dim, length, width, rgen);
 		break;
 	}
+	case TYPE_CARD_DECK: // deck of cards
+	{
+		bool const dim(rgen.rand_bool()), dir((dim == c.dim) ? c.dir : rgen.rand_bool()); // random orient
+		float const length(0.25f*min(sz.x, sz.y)), width((2.5/3.5)*length), height(min(0.5f*sz.z, 0.25f*length));
+		obj = room_object_t(drawer, TYPE_CARD_DECK, c.room_id, dim, dir);
+		obj.z2() = obj.z1() + height;
+		set_rand_pos_for_sz(obj, obj.dim, length, width, rgen);
+		break;
+	}
 	case TYPE_TEESHIRT: // T-shirt
 	{
 		float length(0.9*drawer.get_sz_dim(c.dim)), width(0.9*drawer.get_sz_dim(!c.dim));
@@ -1722,6 +1732,11 @@ void building_room_geom_t::add_wine_rack_bottles(room_object_t const &c, vect_ro
 		obj = room_object_t(drawer, TYPE_FOLD_SHIRT, c.room_id, c.dim, c.dir, 0, 1.0, SHAPE_CUBE, gen_teeshirt_color(rgen));
 		obj.z2() = obj.z1() + fs_height; // set height
 		set_rand_pos_for_sz(obj, c.dim, fs_length, fs_width, rgen);
+		break;
+	}
+	case TYPE_GUN: // handgun
+	{
+		assert(0); // not yet implemented
 		break;
 	}
 	default: assert(0);
