@@ -1631,7 +1631,8 @@ void building_room_geom_t::add_wine_rack_bottles(room_object_t const &c, vect_ro
 		float const diameter(min(0.8f*sz.z, length*rgen.rand_uniform(0.26, 0.34)));
 		obj = room_object_t(drawer, TYPE_BOTTLE, c.room_id, dim, rgen.rand_bool(), 0, 1.0, SHAPE_CYLIN);
 		obj.set_as_bottle(rgen.rand(), NUM_BOTTLE_TYPES-1, 0, 0, 0, 1); // can be empty; allow_transparent=1
-		obj.z2() = obj.z1() + diameter;
+		obj.z1() += 0.015*diameter; // translate up slightly to avoid label clipping through the bottom
+		obj.z2()  = obj.z1() + diameter;
 		set_rand_pos_for_sz(obj, dim, length, diameter, rgen);
 		break;
 	}

@@ -3318,7 +3318,9 @@ void building_t::add_floor_clutter_objs(rand_gen_t &rgen, room_t const &room, cu
 			if (min_place_sz < 6.0*radius) return; // room is too small to place this bottle; shouldn't get here
 			bool const is_can(rgen.rand_float() < 0.33); // 33% cans, 67% bottles
 			float const height(is_can ? 3.77*radius : floor_spacing*rgen.rand_uniform(0.075, 0.12)), stain_height(1.5*get_flooring_thick());
-			cube_t bottle(place_cylin_object_maybe_near(rgen, place_area, prev_pos, radius, height, max(2.0f*radius, height), near_prob, 2.0*height, near_dist));
+			cube_t place_area_bottle(place_area);
+			place_area_bottle.z1() += 0.03*radius; // translate up slightly to avoid label clipping through the bottom
+			cube_t bottle(place_cylin_object_maybe_near(rgen, place_area_bottle, prev_pos, radius, height, max(2.0f*radius, height), near_prob, 2.0*height, near_dist));
 			cube_t bc(bottle);
 			bool const fallen_over(rgen.rand_float() < 0.75); // make the bottle fallen over 75% of the time
 			unsigned flags(RO_FLAG_NOCOLL | RO_FLAG_ON_FLOOR);
@@ -3332,7 +3334,7 @@ void building_t::add_floor_clutter_objs(rand_gen_t &rgen, room_t const &room, cu
 				bottle.d[dim][dir] += xy_shift;
 				bc.translate_dim(dim, 0.5*xy_shift); // recenter
 				bc.expand_by_xy(delta); // account for any rotation
-				if (!place_area.contains_cube_xy(bc)) continue;
+				if (!place_area_bottle.contains_cube_xy(bc)) continue;
 				flags |= RO_FLAG_RAND_ROT; // rotate into a random orientation
 			}
 			if (is_obj_placement_blocked(bc, room, 1) || overlaps_other_room_obj(bc, objs_start) || has_bcube_int(bc, avoid)) continue; // bad placement
