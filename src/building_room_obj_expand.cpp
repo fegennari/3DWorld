@@ -1437,7 +1437,7 @@ void building_room_geom_t::expand_locker(room_object_t const &c, building_type_t
 				break;
 			}
 			case TYPE_TEESHIRT: { // vertical
-				if (is_prison) {} // TODO: prison jumpsuit in gym locker?
+				if (is_prison) {} // prison jumpsuit in gym locker? but we can't have models in lockers, so add jumpsuits to racks in hallways instead
 				float const shirt_width(sqrt(width*width + depth*depth)*rgen.rand_uniform(0.9, 0.95)), shirt_len(shirt_width*rgen.rand_uniform(1.1, 1.3));
 				if (place_area.dz() < shirt_len) {bad_item = 1; break;} // not enough vertical space for a shirt
 				cube_t shirt;
