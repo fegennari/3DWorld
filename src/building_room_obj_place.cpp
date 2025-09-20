@@ -496,6 +496,7 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 		set_obj_id(objs);
 		objs.back().obj_id += 123*desk_ix; // set even more differently per-desk so that they have different drawer contents
 		bool const add_computer(!no_computer && (force_computer || rgen.rand_bool()) && add_computer_to_desk(desk, desk_obj_ix, dim, dir, rgen, room_id, tot_light_amt));
+		bool has_chair(0);
 
 		if (!add_computer && !room.is_store()) { // no computer; add paper, pens, and pencils; not for furniture stores
 			if (rgen.rand_float() < 0.75) {add_papers_to_surface(c, dim, !dir, 7, rgen, room_id, tot_light_amt);} // add 0-7 sheet(s) of paper 75% of the time
@@ -516,19 +517,26 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 				objs.pop_back(); // remove the phone and maybe try again
 			} // for N
 		}
-		if (desk.desk_has_drawers()) { // place blocker in front of drawers so that they have room to open
-			room_object_t &desk_obj(objs[desk_obj_ix]);
-			room_object_t drawers(get_desk_drawers_part(desk_obj)); // use the actual object, after adding computer, since drawers side depends on obj_id
-			drawers.d[dim][!dir] += dsign*0.55*drawers.get_sz_dim(dim); // apply approximate drawer extend
-			objs.emplace_back(drawers, TYPE_BLOCKER, room_id, dim, !dir, RO_FLAG_INVIS);
-		}
 		if (!(is_house || is_office_bldg()) || rgen.rand_float() > 0.05) { // 5% chance of no chair for office buildings and houses
 			point chair_pos(0.0, 0.0, zval);
 			chair_pos[ dim] = c.d[dim][!dir];
 			chair_pos[!dim] = pos + rgen.rand_uniform(-0.1, 0.1)*width; // slightly misaligned
 			// use office chair models when the desk has a computer monitor; now that occlusion culling works well, it's okay to have a ton of these in office buildings
 			bool const office_chair(add_computer);
-			add_chair(rgen, room, blockers, room_id, chair_pos, chair_color, dim, dir, tot_light_amt, office_chair);
+			has_chair = add_chair(rgen, room, blockers, room_id, chair_pos, chair_color, dim, dir, tot_light_amt, office_chair);
+		}
+		if (!has_chair) { // no chair; add clearance for access to the desk
+			float const front(desk.d[dim][!dir]);
+			cube_t blocker(desk);
+			blocker.d[dim][ dir] = front;
+			blocker.d[dim][!dir] = front + dsign*clearance;
+			objs.emplace_back(blocker, TYPE_BLOCKER, room_id, dim, !dir, RO_FLAG_INVIS);
+		}
+		else if (desk.desk_has_drawers()) { // place blocker in front of drawers so that they have room to open
+			room_object_t &desk_obj(objs[desk_obj_ix]);
+			room_object_t drawers(get_desk_drawers_part(desk_obj)); // use the actual object, after adding computer, since drawers side depends on obj_id
+			drawers.d[dim][!dir] += dsign*0.55*drawers.get_sz_dim(dim); // apply approximate drawer extend
+			objs.emplace_back(drawers, TYPE_BLOCKER, room_id, dim, !dir, RO_FLAG_INVIS);
 		}
 		return 1; // done/success
 	} // for n
