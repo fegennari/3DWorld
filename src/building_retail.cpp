@@ -337,7 +337,7 @@ bool building_t::add_small_retail_room_objs(rand_gen_t rgen, room_t const &room,
 	unsigned rack_id(0);
 
 	for (unsigned n = 0; n < nrows; ++n) { // n+1 aisles
-		float const rack_lo(place_area.d[!dim][0] + row_aisle_width + n*aisle_spacing), rack_center(rack_lo + 0.5*rack_width);
+		float const rack_lo(place_area.d[!dim][0] + row_aisle_width + n*aisle_spacing);
 		rack.d[!dim][0] = rack_lo;
 		rack.d[!dim][1] = rack_lo + rack_width;
 
