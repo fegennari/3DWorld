@@ -556,7 +556,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 					else if (i->is_parked_car() && !i->is_broken())        {keep = 1;} // parked car with unbroken windows
 					else if (!check_only && type == TYPE_SHELFRACK && !i->obj_expanded()) {keep = 1;} // expand shelfrack when action key is actually applied
 					else if (type == TYPE_POOL_BALL && player_has_pool_cue()) {keep = 1;} // can only push pool ball if holding a pool cue
-					else if (type == TYPE_FALSE_DOOR && !((i->flags & RO_FLAG_WALKWAY) && i->is_interior())) {keep = 1;} // skip walkway only decal doors
+					else if (type == TYPE_FALSE_DOOR && !i->is_open() && !((i->flags & RO_FLAG_WALKWAY) && i->is_interior())) {keep = 1;} // skip walkway only decal doors
 					else if (type == TYPE_DWASHER) {keep = 1;} // bare dishwasher, in an appliance store
 				}
 				else if (type == TYPE_LIGHT) {keep = 1;} // closet light
