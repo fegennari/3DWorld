@@ -1782,7 +1782,7 @@ rgeom_mat_t &building_room_geom_t::get_shower_tile_mat(room_object_t const &c, f
 	if (!tile_type2) {color = color.modulate_with(colorRGBA(0.8, 0.6, 0.4));} // darker/browner
 	tid_nm_pair_t tex(get_tex_auto_nm((tile_type2 ? TILE_TEX : get_texture_by_name("bathroom_tile.jpg")), 2.5*tscale, 0));
 	if (tile_type2) {tex.set_specular(0.2, 40.0);} else {tex.set_specular(0.8, 60.0);} // TILE_TEX appears too shiny and wet with the default specular
-	tex.metalness = 0.25; // make slightly reflective
+	tex.metalness = 0.12; // make slightly reflective
 	return get_material(tex, 0); // no shadows
 }
 
