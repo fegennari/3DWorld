@@ -4716,7 +4716,7 @@ void building_room_geom_t::add_pool_ball(room_object_t const &c) {
 	bool const dynamic(c.is_dynamic()); // either small or dynamic
 	ball_type_t const &bt(pool_ball_type);
 	tid_nm_pair_t tex(get_texture_by_name(bt.tex_fname), 1.0, 1); // shadowed
-	tex.set_specular(bt.spec, bt.shine);
+	tex.set_specular(bt.spec, bt.shine, 0.1); // slightly reflective
 	rgeom_mat_t &mat(get_material(tex, 1, dynamic, !dynamic)); // shadowed, small/dynamic
 	// calculate rotation matrix
 	xform_matrix rot_matrix;
@@ -5153,7 +5153,8 @@ void building_room_geom_t::add_false_door_int(room_object_t const &c) {
 		if (c.has_extra()) { // vault door
 			float const width(c.get_width()), depth(c.get_depth());
 			unsigned const front_skip(two_side_interior ? 0 : ~get_face_mask(c.dim, !front_dir)); // skip front if not 2 sided
-			tid_nm_pair_t const door_tex(get_metal_plate_tex(2.0/width, shadowed));
+			tid_nm_pair_t door_tex(get_metal_plate_tex(2.0/width, shadowed));
+			door_tex.set_specular(0.4, 40.0, 1.0);
 			get_material(door_tex, shadowed, 0, 0, 0, exterior).add_cube_to_verts(c, c.color, c.get_llc(), (front_skip | EF_Z1)); // skip bottom
 			// draw wheel/handle(s)
 			rgeom_mat_t &handle_mat(get_metal_material(1, 0, 0, exterior));
@@ -6045,7 +6046,7 @@ void building_room_geom_t::add_pool_float(room_object_t const &c) {
 	float const alpha(1.0); // making transparent looks better, but doesn't blend well with other objects
 	assert(ro > 0.0);
 	tid_nm_pair_t tex(-1, 1.0, 1);
-	tex.set_specular(0.6, 80.0);
+	tex.set_specular(0.75, 80.0, 0.15); // slightly reflective
 	if (!deflated) {apply_thin_plastic_effect(c, tex);}
 	rgeom_mat_t &mat(get_material(tex, 1, 0, 1, (alpha < 1.0)));
 	unsigned const verts_start(mat.itri_verts.size());
@@ -6518,7 +6519,7 @@ cube_t get_parking_gate_arm(room_object_t const &c) {
 	return arm;
 }
 void building_room_geom_t::add_parking_gate(room_object_t const &c) {
-	add_obj_with_front_texture(c, "interiors/parking_ticket_machine.png", WHITE, c.color, 0);
+	add_obj_with_front_texture(c, "interiors/parking_ticket_machine.png", WHITE, c.color, 0, 0.5, 50.0, 0.5); // painted metal
 	// draw barrier arm; extends outside the object bcube
 	cube_t const arm(get_parking_gate_arm(c));
 	get_material(tid_nm_pair_t(HAZARD_TEX, 1.0/c.dz(), 1), 1).add_cube_to_verts(arm, apply_light_color(c, WHITE)); // shadowed; draw all faces
