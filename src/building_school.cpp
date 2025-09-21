@@ -429,7 +429,7 @@ bool building_t::add_library_objs(rand_gen_t rgen, room_t const &room, float &zv
 			break;
 		}
 	} // for n
-	zval = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_CARPET); // after bookcases?
+	if (!is_house ) {zval = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_CARPET);} // after bookcases?
 	if (add_tables) {fill_room_with_tables_and_chairs(rgen, room, zval, room_id, tot_light_amt, objs_start, 0, 4);} // add tables; plastic_tc=0, max_books=4
 	if (!is_house ) {add_door_sign_remove_existing("Library", room, zval, room_id, objs_start);} // add office building library sign
 	return 1;
