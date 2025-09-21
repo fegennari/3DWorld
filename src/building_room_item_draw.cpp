@@ -1535,21 +1535,32 @@ void draw_stove_flames(room_object_t const &stove, point const &camera_bs, shade
 void draw_obj_model(obj_model_inst_t const &i, room_object_t const &obj, shader_t &s, vector3d const &xlate, point const &obj_center, bool shadow_only,
 	int mirror_dim=3, bool using_custom_tid=0)
 {
-	bool const emissive_first_mat(!shadow_only && obj.type == TYPE_LAMP      && obj.is_light_on());
-	bool const emissive_body_mat (!shadow_only && obj.type == TYPE_WALL_LAMP && obj.is_light_on());
-	bool const use_low_z_bias(obj.type == TYPE_CUP && !shadow_only);
+	room_object const type(obj.type);
+	bool const emissive_first_mat(!shadow_only && type == TYPE_LAMP      && obj.is_light_on());
+	bool const emissive_body_mat (!shadow_only && type == TYPE_WALL_LAMP && obj.is_light_on());
+	bool const use_low_z_bias(type == TYPE_CUP && !shadow_only);
 	bool const untextured(obj.flags & RO_FLAG_UNTEXTURED);
-	bool const upside_down((obj.type == TYPE_RAT || obj.type == TYPE_ROACH || obj.type == TYPE_INSECT) && obj.is_broken());
+	bool const upside_down((type == TYPE_RAT || type == TYPE_ROACH || type == TYPE_INSECT) && obj.is_broken());
+	float const refract_ix((type == TYPE_SINK     || type == TYPE_URINAL) ? 1.5 : 1.0);
+	float metalness(0.0), specular(0.0), shine(1.0);
+	if      (type == TYPE_POOL_LAD ) {metalness = 1.0; specular = 1.0; shine = 80.0;} // object already has a low specular set, but is mostly metal
+	else if (type == TYPE_HOOD     ) {metalness = 0.5; specular = 1.0; shine = 40.0;} // painted metal
+	else if (type == TYPE_PADLOCK  ) {metalness = 1.0; specular = 0.5; shine = 60.0;} // only the shackle should be reflective?
+	else if (type == TYPE_TROLLEY  ) {metalness = 1.0; specular = 0.6; shine = 60.0;} // for hospitals
+	else if (type == TYPE_WFOUNTAIN) {metalness = 1.0; specular = 0.4; shine = 50.0;} // part metal and part painted metal
 	if (emissive_first_mat) {s.set_color_e(LAMP_COLOR*0.4);}
 	if (use_low_z_bias    ) {s.add_uniform_float("norm_bias_scale", 0.5*DEF_NORM_BIAS_SCALE);} // half the default value
+	if (metalness  > 0.0  ) {s.add_uniform_float("metalness",  metalness );}
+	if (refract_ix > 1.0  ) {s.add_uniform_float("refract_ix", refract_ix);}
+	if (specular   > 0.0  ) {s.set_specular(specular, shine);} // set default specular for materials that don't have any specular set
 	// Note: lamps are the most common and therefore most expensive models to draw
 	int const model_id(obj.get_model_id()); // first 8 bits is model ID, last 8 bits is sub-model ID
 	unsigned rot_only_mat_mask(0);
 	vector3d dir(i.dir);
 
 	if (dir != obj.get_dir()) { // handle models that have rotating parts; similar to car_draw_state_t::draw_helicopter()
-		if      (obj.type == TYPE_CEIL_FAN ) {rot_only_mat_mask =  1;} // only the first material (fan blades) rotate
-		else if (obj.type == TYPE_OFF_CHAIR) {rot_only_mat_mask = ~1;} // all but the first material (base) rotates
+		if      (type == TYPE_CEIL_FAN ) {rot_only_mat_mask =  1;} // only the first material (fan blades) rotate
+		else if (type == TYPE_OFF_CHAIR) {rot_only_mat_mask = ~1;} // all but the first material (base) rotates
 
 		if (rot_only_mat_mask > 0) { // draw the rotated part
 			building_obj_model_loader.draw_model(s, obj_center, obj, dir, obj.color, xlate, model_id, shadow_only,
@@ -1562,9 +1573,12 @@ void draw_obj_model(obj_model_inst_t const &i, room_object_t const &obj, shader_
 
 	building_obj_model_loader.draw_model(s, obj_center, obj, dir, obj.color, xlate, model_id, shadow_only,
 		0, nullptr, rot_only_mat_mask, untextured, 0, upside_down, emissive_body_mat, 0, mirror_dim, using_custom_tid);
-	if (!shadow_only && obj.type == TYPE_STOVE) {draw_stove_flames(obj, (camera_pdu.pos - xlate), s);} // draw blue burner flame
-	if (use_low_z_bias    ) {s.add_uniform_float("norm_bias_scale", DEF_NORM_BIAS_SCALE);} // restore to the defaults
+	if (!shadow_only && type == TYPE_STOVE) {draw_stove_flames(obj, (camera_pdu.pos - xlate), s);} // draw blue burner flame
 	if (emissive_first_mat) {s.set_color_e(BLACK);}
+	if (use_low_z_bias    ) {s.add_uniform_float("norm_bias_scale", DEF_NORM_BIAS_SCALE);} // restore to the defaults
+	if (refract_ix > 1.0  ) {s.add_uniform_float("refract_ix", 1.0);}
+	if (metalness  > 0.0  ) {s.add_uniform_float("metalness",  0.0);}
+	if (specular   > 0.0  ) {s.clear_specular();}
 }
 
 void brg_batch_draw_t::draw_obj_models(shader_t &s, vector3d const &xlate, bool shadow_only) const {
