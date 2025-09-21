@@ -1420,8 +1420,9 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 			float const min_alpha(min(0.99*alpha, (get_needs_alpha_test() ? (has_binary_alpha ? 0.9 : model3d_alpha_thresh) : 0.0)));
 			shader.add_uniform_float("min_alpha", min_alpha);
 		}
-		if (ns > 0.0)    {shader.set_specular_color(ks, ns);} // ns<=0 is undefined?
-		if (ke != BLACK) {shader.set_color_e(colorRGBA(ke, alpha));}
+		bool const set_specular(ks != BLACK && ns > 0.0);
+		if (set_specular) {shader.set_specular_color(ks, ns);} // ns<=0 is undefined?
+		if (ke != BLACK ) {shader.set_color_e(colorRGBA(ke, alpha));}
 		// Note: ka is ignored here because it represents a "fake" lighting model;
 		// 3DWorld uses a more realistic lighting model where ambient comes from indirect lighting that's computed independently from the material;
 		// however, it might make sense to use ka instead of ke when ke is not specified?
@@ -1429,7 +1430,7 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		geom    .render(shader, 0, xlate);
 		geom_tan.render(shader, 0, xlate);
 		shader.clear_color_e(); // Note: caller can cheat and override the emissive of the first material because it won't be set above but will be cleared here
-		if (ns > 0.0)    {shader.clear_specular();}
+		if (set_specular) {shader.clear_specular();}
 		if (need_blend)  {disable_blend(); /*glDepthMask(GL_TRUE);*/ /*glDisable(GL_SAMPLE_ALPHA_TO_COVERAGE);*/}
 		if (refract_ix_ix   >= 0) {shader.set_uniform_float(refract_ix_ix,   1.0);}
 		if (metalness_ix    >= 0) {shader.set_uniform_float(metalness_ix,    0.0);} // if metalness was specified, reset to the default of 0.0 for the next material
@@ -1997,15 +1998,17 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflec
 	}
 	// render geom that was not bound to a material; skip if skip_mat_mask was set since this material is non-indexable
 	if ((bmap_pass_mask & 1) && unbound_mat.color.alpha > 0.0 && (trans_op_mask & 1) && !unbound_geom.empty() && skip_mat_mask == 0) { // not in bump map only pass; assume opaque
+		bool const has_specular(unbound_mat.spec_color != BLACK);
+
 		if (is_normal_pass) { // cur_ub_tid texture shouldn't have an alpha mask, so we don't need to use it in the shadow pass
 			assert(unbound_mat.tid >= 0);
 			select_texture(unbound_mat.tid);
-			shader.set_material(unbound_mat);
+			if (has_specular) {shader.set_material(unbound_mat);} else {shader.set_cur_color(unbound_mat.color);}
 			if (!shader.get_user_flag(SHADER_FLAG_NO_ALPHA_TEST)) {shader.add_uniform_float("min_alpha", 0.0);}
 			set_def_spec_map();
 		}
 		if (is_normal_pass || enable_alpha_mask != 1) {unbound_geom.render(shader, is_shadow_pass, xlate);} // skip shadow + alpha mask only pass
-		if (is_normal_pass) {shader.clear_specular();}
+		if (is_normal_pass && has_specular) {shader.clear_specular();}
 	}
 	bool check_lod(force_lod);
 	point center(all_zeros);
