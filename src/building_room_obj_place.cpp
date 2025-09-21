@@ -12,6 +12,7 @@ extern object_model_loader_t building_obj_model_loader;
 extern bldg_obj_type_t bldg_obj_types[];
 
 bool enable_parked_cars();
+bool cube_map_reflect_active();
 car_t car_from_parking_space(room_object_t const &o);
 void get_stove_burner_locs(room_object_t const &stove, point locs[4]);
 void get_pool_ball_rot_matrix(room_object_t const &c, xform_matrix &rot_matrix);
@@ -2518,6 +2519,10 @@ void building_t::add_fridge_sticky_notes(rand_gen_t rgen, unsigned fridge_obj_ix
 	} // for n
 }
 
+colorRGBA get_toaster_color(rand_gen_t &rgen) {
+	if (cube_map_reflect_active()) return WHITE; // reflective metal
+	return toaster_colors[rgen.rand()%NUM_TOASTER_COLORS]; // matte colored
+}
 bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool allow_adj_ext_door) {
 	// Note: table and chairs have already been placed
 	bool const residential(is_residential());
@@ -2693,7 +2698,7 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 
 					if (!placed_mwave || !mwave.intersects(toaster)) { // don't overlap the microwave
 						objs.emplace_back(toaster, TYPE_TOASTER, room_id, !dim, rgen.rand_bool(), RO_FLAG_NOCOLL, tot_light_amt); // random dir
-						objs.back().color = toaster_colors[rgen.rand()%NUM_TOASTER_COLORS];
+						objs.back().color = get_toaster_color(rgen);
 						objs[cabinet_id].flags |= RO_FLAG_ADJ_TOP; // flag as having an object so that we don't add a book or bottle that could overlap it
 						placed_toaster = added_obj = 1;
 					}

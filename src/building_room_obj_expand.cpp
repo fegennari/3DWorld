@@ -18,6 +18,7 @@ float get_med_cab_wall_thickness(room_object_t const &c);
 float get_locker_wall_thickness (room_object_t const &c);
 float get_radius_for_square_model(unsigned model_id);
 bool add_shelf_rack_top(room_object_t const &c);
+colorRGBA get_toaster_color(rand_gen_t &rgen);
 bool place_bottle_on_obj(rand_gen_t &rgen, cube_t const &place_on, vect_room_object_t &objs, float vspace,
 	unsigned rid, float lamt, unsigned max_type, vect_cube_t const &avoid, bool at_z1, bool allow_transparent=0);
 bool place_dcan_on_obj  (rand_gen_t &rgen, cube_t const &place_on, vect_room_object_t &objs, float vspace,
@@ -1059,7 +1060,7 @@ unsigned add_row_of_cubes(room_object_t const &c, cube_t const &region, float wi
 					set_book_id_and_color(obj, rgen);
 				}
 				else if (type == TYPE_FOOD_BOX  ) {obj.obj_id  = objects_start;} // unique per section
-				else if (type == TYPE_TOASTER   ) {obj.color   = toaster_colors[rgen.rand()%NUM_TOASTER_COLORS];} // random color
+				else if (type == TYPE_TOASTER   ) {obj.color   = get_toaster_color(rgen);} // random color
 				else if (type == TYPE_FOLD_SHIRT) {obj.color   = TSHIRT_COLORS [rgen.rand()%NUM_TSHIRT_COLORS ];} // random color
 				else if (type == TYPE_MONITOR   ) {obj.obj_id |= 1;} // off by default; set LSB
 				objects.push_back(obj);
