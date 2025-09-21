@@ -2602,7 +2602,7 @@ void building_room_geom_t::add_stapler(room_object_t const &c) {
 	mat.add_cube_to_verts_untextured(base,  color, EF_Z1);
 	mat.add_cube_to_verts_untextured(top,   color, EF_Z1);
 	mat.add_cube_to_verts_untextured(hinge, color, EF_Z1);
-	mat.add_cube_to_verts_untextured(metal, apply_light_color(c, LT_GRAY), EF_Z12);
+	get_metal_material(0, 0, 1).add_cube_to_verts_untextured(metal, apply_light_color(c, LT_GRAY), EF_Z12); // unshadowed, small
 }
 
 void building_room_geom_t::add_eraser(room_object_t const &c) { // for now, a single cube
