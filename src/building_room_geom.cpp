@@ -1748,8 +1748,9 @@ cube_t get_mirror_surface(room_object_t const &c) {
 }
 void building_room_geom_t::add_med_cab(room_object_t const &c) {
 	bool is_mirror(c.is_mirror());
-	int const front_tid(is_mirror ? -1 : get_texture_by_name("interiors/med_cross.png"));
-	tid_nm_pair_t const front_tex(front_tid, 0.0, 1); // half the double cross texture
+	int const front_tid(is_mirror ? -1 : get_texture_by_name("interiors/med_cross.png")); // use cross texture rather than mirror for hospital medicine cabinets
+	tid_nm_pair_t front_tex(front_tid, 0.0, 1);
+	if (!is_mirror) {front_tex.set_specular(0.5, 40.0, 0.5);} // painted metal
 	colorRGBA const side_color(apply_light_color(c)), front_color(apply_light_color(c, WHITE));
 
 	if (c.is_open()) { // open medicine cabinet
