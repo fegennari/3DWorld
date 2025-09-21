@@ -66,9 +66,11 @@ tid_nm_pair_t get_metal_grate_tex(float tscale, unsigned sel_ix) {
 struct pool_texture_params_t {
 	string fn, nm_fn;
 	int tid=-1, nm_tid=-1;
-	float tscale, spec_mag, spec_shine;
-	pool_texture_params_t(string const &f, string const &nf, float ts, float sm, float ss) : fn(f), nm_fn(nf),           tscale(ts), spec_mag(sm), spec_shine(ss) {}
-	pool_texture_params_t(int tid_, int nm_tid_,             float ts, float sm, float ss) : tid(tid_), nm_tid(nm_tid_), tscale(ts), spec_mag(sm), spec_shine(ss) {}
+	float tscale, spec_mag, spec_shine, reflectivity;
+	pool_texture_params_t(string const &f, string const &nf, float ts, float sm, float ss, float ref) :
+		fn(f), nm_fn(nf),           tscale(ts), spec_mag(sm), spec_shine(ss), reflectivity(ref) {}
+	pool_texture_params_t(int tid_, int nm_tid_,             float ts, float sm, float ss, float ref) :
+		tid(tid_), nm_tid(nm_tid_), tscale(ts), spec_mag(sm), spec_shine(ss), reflectivity(ref) {}
 
 	int get_tid() {
 		if (tid < 0) {tid = get_texture_by_name(fn);}
@@ -81,11 +83,11 @@ struct pool_texture_params_t {
 };
 enum {POOL_TILE_INSIDE1=0, POOL_TILE_INSIDE2, POOL_TILE_WALL, POOL_TILE_FLOOR, POOL_TYPE_CEIL, NUM_POOL_TILES};
 pool_texture_params_t pool_texture_params[NUM_POOL_TILES] = {
-	pool_texture_params_t("interiors/glass_tiles.jpg",  "interiors/glass_tiles_normal.jpg",  0.5, 1.0, 100.0), // pool inside walls/floor tile
-	pool_texture_params_t(STUCCO_TEX,                 FLAT_NMAP_TEX,                         1.5, 0.2,  40.0), // pool inside walls/floor plaster; stucco texture, no normal map
-	pool_texture_params_t("interiors/glazed_tiles.jpg", "interiors/glazed_tiles_normal.jpg", 0.5, 0.8,  80.0), // room walls
-	pool_texture_params_t("interiors/mosaic_tiles.jpg", "interiors/mosaic_tiles_normal.jpg", 0.2, 1.0, 100.0), // room floor
-	pool_texture_params_t("interiors/mosaic_tiles.jpg", "interiors/mosaic_tiles_normal.jpg", 0.2, 0.2,  20.0)  // room ceiling
+	pool_texture_params_t("interiors/glass_tiles.jpg",  "interiors/glass_tiles_normal.jpg",  0.5, 1.0, 100.0, 0.0), // pool inside walls/floor tile
+	pool_texture_params_t(STUCCO_TEX,                 FLAT_NMAP_TEX,                         1.5, 0.2,  40.0, 0.0), // pool inside walls/floor plaster; stucco, no normal map
+	pool_texture_params_t("interiors/glazed_tiles.jpg", "interiors/glazed_tiles_normal.jpg", 0.5, 0.8,  80.0, 0.1), // room walls
+	pool_texture_params_t("interiors/mosaic_tiles.jpg", "interiors/mosaic_tiles_normal.jpg", 0.2, 1.0, 100.0, 0.1), // room floor
+	pool_texture_params_t("interiors/mosaic_tiles.jpg", "interiors/mosaic_tiles_normal.jpg", 0.2, 0.2,  20.0, 0.1)  // room ceiling
 };
 int get_pool_tile_type(room_object_t const &obj) {
 	if (obj.flags & RO_FLAG_ADJ_LO ) return ((obj.room_id & 1) ? POOL_TILE_INSIDE1 : POOL_TILE_INSIDE2); // select randomly based on room
@@ -1779,6 +1781,7 @@ rgeom_mat_t &building_room_geom_t::get_shower_tile_mat(room_object_t const &c, f
 	if (!tile_type2) {color = color.modulate_with(colorRGBA(0.8, 0.6, 0.4));} // darker/browner
 	tid_nm_pair_t tex(get_tex_auto_nm((tile_type2 ? TILE_TEX : get_texture_by_name("bathroom_tile.jpg")), 2.5*tscale, 0));
 	if (tile_type2) {tex.set_specular(0.2, 40.0);} else {tex.set_specular(0.8, 60.0);} // TILE_TEX appears too shiny and wet with the default specular
+	tex.metalness = 0.25; // make slightly reflective
 	return get_material(tex, 0); // no shadows
 }
 
@@ -2379,7 +2382,7 @@ void building_room_geom_t::add_pool_tile(room_object_t const &c, float tscale) {
 	pool_texture_params_t &params(get_pool_tile_params(c));
 	tscale *= params.tscale;
 	tid_nm_pair_t tex(params.get_tid(), params.get_nm_tid(), tscale, tscale); // normal map is inverted?
-	tex.set_specular(params.spec_mag, params.spec_shine);
+	tex.set_specular(params.spec_mag, params.spec_shine, params.reflectivity); // set metalness equal to reflectivity
 	rgeom_mat_t &mat(get_material(tex, 0, 0, 1)); // unshadowed, small
 	unsigned skip_faces(0);
 	if      (c.flags & RO_FLAG_ADJ_TOP) {skip_faces = ~EF_Z1;} // on the ceiling, only draw the bottom face
@@ -4845,7 +4848,7 @@ void building_room_geom_t::add_br_stall(room_object_t const &c, bool inc_lg, boo
 		mat.add_cube_to_verts(c, color, c.get_llc(), 0);
 		return;
 	}
-	rgeom_mat_t &mat(get_untextured_material(1)); // shadowed
+	rgeom_mat_t &mat(get_painted_metal_material(1, 0, 0, 0, 0, 0.5, 40.0, 0.25)); // shadowed, slightly reflective
 
 	if (c.shape == SHAPE_SHORT) { // wall separating urinals
 		mat.add_cube_to_verts_untextured(c, color, ~get_face_mask(dim, dir));
