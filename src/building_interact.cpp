@@ -446,6 +446,12 @@ bool can_open_bathroom_stall_or_shower(room_object_t const &stall, point const &
 	door_center.z = pos.z;
 	return (dot_product_ptv(from_dir, door_center, pos) > 0.0); // facing the stall door
 }
+bool can_use_shower_stall(room_object_t const &stall, point const &pos, vector3d const &from_dir) {
+	return (stall.type == TYPE_STALL && stall.in_jail() && stall.contains_pt(pos) && (from_dir[stall.dim] > 0.0) == stall.dir);
+}
+bool can_open_or_use_bathroom_stall_or_shower(room_object_t const &stall, point const &pos, vector3d const &from_dir) {
+	return (can_open_bathroom_stall_or_shower(stall, pos, from_dir) || can_use_shower_stall(stall, pos, from_dir));
+}
 
 bool building_t::chair_can_be_rotated(room_object_t const &chair) const {
 	if (chair.rotates()) return 1;
@@ -535,7 +541,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 				}
 				else if (!player_in_closet) {
 					if      ((type == TYPE_TOILET || type == TYPE_URINAL) && !i->is_broken() && !i->in_mall()) {keep = 1;} // toilet/urinal can be flushed unless broken or in store
-					else if (type == TYPE_STALL && i->shape == SHAPE_CUBE && can_open_bathroom_stall_or_shower(*i, closest_to, in_dir)) {keep = 1;} // bathroom stall can be opened
+					else if (type == TYPE_STALL && i->shape == SHAPE_CUBE && can_open_or_use_bathroom_stall_or_shower(*i, closest_to, in_dir)) {keep = 1;} // bathroom stall can be opened
 					else if ((i->is_sink_type() || type == TYPE_TUB) && !i->in_mall()) {keep = 1;} // sink/tub, not in mall appliance/plumbing store
 					else if (i->is_light_type() || type == TYPE_LAVALAMP) {keep = 1;} // room light or lamp
 					else if (type == TYPE_FISHTANK && i->has_lid()) {keep = 1;} // fishtank with a lid and light
@@ -911,10 +917,13 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		sound_scale      = 0.0; // no sound
 		update_draw_data = 1;
 	}
+	else if (can_use_shower_stall(obj, int_pos, int_dir)) { // prison shower stall; turn on water if facing inside
+		gen_sound_thread_safe_at_player(SOUND_SINK);
+		gen_sound_thread_safe_at_player(SOUND_SQUEAK);
+		sound_scale = 0.5;
+		if (!obj.is_open()) {register_achievement("Squeaky Clean");}
+	}
 	else if (type == TYPE_CLOSET || type == TYPE_STALL) {
-		if (type == TYPE_STALL && obj.in_jail()) { // prison shower stall
-			// TODO: maybe turn on water
-		}
 		if (!obj.is_open()) { // not yet open
 			// remove any spraypaint or marker that's on the door; would be better if we could move it with the door, or add it back when the door is closed
 			cube_t door(get_open_closet_door(obj));
