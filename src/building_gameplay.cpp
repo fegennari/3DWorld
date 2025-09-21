@@ -850,7 +850,7 @@ public:
 			type != TYPE_PENCIL && type != TYPE_HANGER_ROD && type != TYPE_TPROLL && type != TYPE_MARKER && type != TYPE_BUTTON && type != TYPE_PLATE && type != TYPE_TAPE &&
 			type != TYPE_FEXT_MOUNT && type != TYPE_FEXT_SIGN && type != TYPE_PIZZA_BOX && type != TYPE_PIZZA_TOP && type != TYPE_POOL_BALL && type != TYPE_DRINK_CAN &&
 			type != TYPE_KEY && type != TYPE_HANGER && type != TYPE_PADLOCK && type != TYPE_BANANA && type != TYPE_BAN_PEEL && type != TYPE_ELEC_WIRE && type != TYPE_ERASER &&
-			type != TYPE_TESTTUBE && type != TYPE_APPLE)
+			type != TYPE_TESTTUBE && type != TYPE_APPLE && type != TYPE_FOOD_BOX && type != TYPE_BAR_SOAP && type != TYPE_CARD_DECK && type != TYPE_TRASH)
 		{
 			rooms_stolen_from.insert(obj.room_id); // only if was_expanded?
 		}
