@@ -2836,17 +2836,14 @@ void building_room_geom_t::add_wall_or_pillar(room_object_t const &c, vector3d c
 	//if (c.type == TYPE_OFF_PILLAR && c.in_mall()) {} // special case for mall pillar?
 	tid_nm_pair_t const tex(get_basement_texture(c, wall_tex));
 	rgeom_mat_t &mat(get_material(tex, 1, 0, small)); // shadowed, no color atten, sides only unless draw_top
+	unsigned skip_faces(draw_top ? EF_Z1 : EF_Z12); // for cube
 	
-	if (c.shape == SHAPE_CUBE) {
-		unsigned skip_faces(draw_top ? EF_Z1 : EF_Z12);
-
-		if (c.is_exterior()) { // exterior visible parking garage pillar; draw the back side
-			unsigned ext_faces(c.item_flags);
-			if (ext_faces > 0) {get_material(tex, 0, 0, 0, 0, 1).add_cube_to_verts(c, c.color, tex_origin, ~ext_faces);} // unshadowed; exterior=1
-			skip_faces |= ext_faces;
-		}
-		mat.add_cube_to_verts(c, c.color, tex_origin, skip_faces, 0, 0, 0, 0, 1); // z_dim_uses_ty=1
+	if (c.shape == SHAPE_CUBE && c.is_exterior()) { // exterior visible parking garage pillar; draw the back side
+		unsigned ext_faces(c.item_flags);
+		if (ext_faces > 0) {get_material(tex, 0, 0, 0, 0, 1).add_cube_to_verts(c, c.color, tex_origin, ~ext_faces);} // unshadowed; exterior=1
+		skip_faces |= ext_faces;
 	}
+	if      (c.shape == SHAPE_CUBE ) {mat.add_cube_to_verts(c, c.color, tex_origin, skip_faces, 0, 0, 0, 0, 1);} // z_dim_uses_ty=1
 	else if (c.shape == SHAPE_CYLIN) {mat.add_vcylin_to_verts_tscale(c, c.color, 0, draw_top);}
 	else {assert(0);} // unsupported shape
 }
@@ -3233,8 +3230,8 @@ void building_room_geom_t::add_elevator(room_object_t const &c, elevator_t const
 	unsigned const floor_ceil_face_mask(front_face_mask & (EF_X12 | EF_Y12)); // +Z faces
 	tid_nm_pair_t paneling(get_tex_auto_nm(PANELING_TEX, 2.0f*tscale));
 	paneling.set_specular(0.1, 50.0);
-	get_material(get_tex_auto_nm(TILE_TEX, tscale), 1, 1).add_cube_to_verts(floor_, WHITE, tex_origin, floor_ceil_face_mask); // floor
-	get_material(get_tex_auto_nm(get_rect_panel_tid(), tscale), 1, 1).add_cube_to_verts(ceil_, WHITE, tex_origin, floor_ceil_face_mask); // ceiling
+	get_material(get_tex_auto_nm(TILE_TEX,             tscale), 1, 1).add_cube_to_verts(floor_, WHITE, tex_origin, floor_ceil_face_mask); // floor
+	get_material(get_tex_auto_nm(get_rect_panel_tid(), tscale), 1, 1).add_cube_to_verts(ceil_,  WHITE, tex_origin, floor_ceil_face_mask); // ceiling
 	rgeom_mat_t &paneling_mat(get_material(paneling, 1, 1));
 	paneling_mat.add_cube_to_verts(back, WHITE, tex_origin, front_face_mask, !c.dim);
 	float const width(c.get_width()), frame_width(ELEVATOR_FRAME_WIDTH*width), spacing(0.02*width), front_face(c.d[c.dim][c.dir] - signed_thickness);
