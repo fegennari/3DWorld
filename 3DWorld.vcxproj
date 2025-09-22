@@ -1025,6 +1025,7 @@
     <ClInclude Include="src\heightmap.h" />
     <ClInclude Include="src\inlines.h" />
     <ClInclude Include="src\lightmap.h" />
+    <ClInclude Include="src\logger.h" />
     <ClInclude Include="src\main.h" />
     <ClInclude Include="src\marching_cubes.h" />
     <ClInclude Include="src\mesh.h" />

@@ -755,6 +755,9 @@
     <ClInclude Include="src\format_text.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\logger.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="icon1.ico">
