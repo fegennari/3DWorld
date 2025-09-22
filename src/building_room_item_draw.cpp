@@ -353,9 +353,8 @@ void brg_batch_draw_t::clear_ext_tiles() {
 // shadow_only: 0=non-shadow pass, 1=shadow pass, 2=shadow pass with alpha mask texture
 void rgeom_mat_t::draw(tid_nm_pair_dstate_t &state, brg_batch_draw_t *bbd, int shadow_only, int reflection_pass, bool exterior_geom) {
 	assert(!(exterior_geom && shadow_only)); // exterior geom shadows are not yet supported
-	if (shadow_only && !en_shadows)         return; // shadows not enabled for this material (picture, whiteboard, rug, etc.)
-	if (shadow_only && tex.emissive == 1.0) return; // assume this is a light source and shouldn't produce shadows
-	//if (reflection_pass == 2 && !en_shadows && tex.tid < 0)  return; // disable small non-shadow casting untextured objects in cube map reflections (optimization)
+	if (shadow_only && !en_shadows)             return; // shadows not enabled for this material (picture, whiteboard, rug, etc.)
+	if (shadow_only && tex.emissive == 1.0)     return; // assume this is a light source and shouldn't produce shadows
 	if (reflection_pass == 2 && tex.no_reflect) return; // disable for cube map reflections (optimization)
 	if (reflection_pass && tex.tid == REFLECTION_TEXTURE_ID) return; // don't draw reflections of mirrors as this doesn't work correctly
 	if (bbd != nullptr  && tex.tid == REFLECTION_TEXTURE_ID) return; // only draw mirror reflections for player building (which has a null bbd)
@@ -363,7 +362,7 @@ void rgeom_mat_t::draw(tid_nm_pair_dstate_t &state, brg_batch_draw_t *bbd, int s
 	// VFC test for sparse materials that have their bcubes calculated; mostly helps with backrooms;
 	// we don't add xlate to bcube in the shadow pass because it's the location of a light source that's already in building space, not camera space
 	if (!bcube.is_all_zeros() && !camera_pdu.cube_visible(bcube + (shadow_only ? zero_vector : draw_bcube_xlate))) return;
-	vao_setup(shadow_only);
+	vao_setup(shadow_only); // create VAO if needed
 
 	// Note: the shadow pass doesn't normally bind textures and set uniforms, so we don't need to combine those calls into batches
 	if (bbd != nullptr && !shadow_only) { // add to batch draw (optimization)
@@ -1445,7 +1444,10 @@ void building_t::gen_and_draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, shad
 
 		if (!any_part_visible) {
 			// exterior geometry such as roof vents and chimney caps may still be visible even if no parts are visible, so draw them
-			if (is_house && !reflection_pass && has_room_geom()) {interior->room_geom->mats_exterior.draw(bbd, s, 0, 0, 1);}
+			if (is_house && !reflection_pass && has_room_geom()) {
+				interior->room_geom->mats_exterior.draw(bbd, s, 0, 0, 1);
+				indexed_vao_manager_with_shadow_t::post_render(); // required to avoid random crashes when VAO is created and VBOs are left bound
+			}
 			return;
 		}
 	}
