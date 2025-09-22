@@ -74,7 +74,8 @@ void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights
 {
 	use_dlights &= (lights_bcube.is_strictly_normalized() && !dl_sources.empty());
 	have_indir_smoke_tex = indir_lighting; // assume someone is going to set the indir texture in this case; ***note that this breaks normal indir scene drawing***
-	if (indir_lighting) {s.set_prefix("#define USE_ALT_SCENE_BOUNDS", 1);} // FS; need to use different scene_llc_scale for dynamic lighting vs. building indir lighting
+	if (indir_lighting    ) {s.set_prefix("#define USE_ALT_SCENE_BOUNDS",     1);} // FS; need to use different scene_llc_scale for dynamic lighting vs. building indir lighting
+	if (enable_int_reflect) {s.set_prefix("#define ENABLE_BUILDING_CUBE_MAP", 1);} // FS
 	// increase shadow map precision for small light far from origin, but much slower for rooms with dense lights such as factories and warehouses
 	//if (use_dlights && camera_in_building) {s.set_prefix("#define DLIGHT_SMAP_DOUBLE_PRECISION", 1);}
 	// Note: here use_texgen mode 5 is used as a hack so that the shader still has binding points for tex coords (can't optimize it out)
@@ -3690,6 +3691,7 @@ bool check_inside_city(point const &pos, float radius) { // Note: pos is in glob
 	if (!have_cities()) return 0;
 	return city_gen.check_inside_city((pos + get_tt_xlate_val()), radius); // apply xlate for all static objects
 }
+bool camera_in_city_bounds() {return check_inside_city(get_camera_building_space(), 0.0);}
 bool cube_int_underground_obj(cube_t const &c) {return city_gen.cube_int_underground_obj(c);} // Note: cube is in global space
 bool is_invalid_city_placement_for_cube(cube_t const &c) {return city_gen.is_invalid_placement_for_cube(c);}
 void add_city_plot_cut(cube_t const &cut) {city_gen.add_plot_cut(cut);}

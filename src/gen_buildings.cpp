@@ -70,12 +70,14 @@ void get_pedestrians_in_area(cube_t const &area, int building_ix, vector<point> 
 void setup_puddles_texture(shader_t &s);
 void setup_player_building_cube_map();
 void bind_player_building_cube_map(shader_t &s);
+bool camera_in_city_bounds();
 
 float get_door_open_dist    () {return 3.5*CAMERA_RADIUS;}
 float get_interior_draw_dist() {return global_building_params.interior_view_dist_scale*2.0f*(X_SCENE_SIZE + Y_SCENE_SIZE);}
 bool player_in_ext_basement () {return (player_in_basement == 3 && player_building != nullptr);}
 bool cube_map_reflect_active() {return (display_mode & 0x100);} // key 9; on by default
-bool enable_cube_map_reflect() {return (camera_in_building && player_building != nullptr && !player_building->is_rotated() && cube_map_reflect_active());}
+bool enable_cube_map_reflect() {return (cube_map_reflect_active() &&  camera_in_building && player_building != nullptr && !player_building->is_rotated());}
+bool enable_cube_map_city   () {return (cube_map_reflect_active() && !camera_in_building && camera_in_city_bounds());} // same as above, but for cities
 
 void update_lights_bcube_zvals(cube_t &lights_bcube, point const &lpos, float radius) {
 	min_eq(lights_bcube.z1(), (lpos.z - radius));
@@ -520,7 +522,6 @@ void setup_building_draw_shader_post(shader_t &s, bool have_indir) {
 void setup_building_draw_shader(shader_t &s, float min_alpha, bool enable_indir, bool force_tsl, int use_texgen, float water_damage, float crack_damage, bool enable_int_reflect) {
 	float const pcf_scale = 0.2;
 	if (player_building == nullptr) {water_damage = crack_damage = 0.0;} // water damage and cracks only apply to player building; this can fail on the exterior walls pass
-	if (enable_int_reflect) {s.set_prefix("#define ENABLE_BUILDING_CUBE_MAP", 1);} // FS
 	// disable indir if the player is in a closed closet
 	bool const have_indir(enable_indir && have_building_indir_lighting() && !(player_in_closet && !(player_in_closet & RO_FLAG_OPEN)));
 	bool const add_vorocracks(global_building_params.use_voronoise_cracks && crack_damage > 0.0);
@@ -3892,8 +3893,8 @@ public:
 		if (!s.is_setup()) {setup_smoke_shaders(s, 0.9, 0, 0, 0, 0, 0, 0);} // min_alpha=0.9 for depth test
 		else {s.enable();}
 	}
-	static void enable_city_shader(shader_t &s, bool use_dlights, int use_bmap, float min_alpha) {
-		if (!s.is_setup()) {city_shader_setup(s, get_city_lights_bcube(), use_dlights, 1, use_bmap, min_alpha);} // use_smap=1
+	static void enable_city_shader(shader_t &s, bool use_dlights, int use_bmap, float min_alpha, bool cube_map_reflect) {
+		if (!s.is_setup()) {city_shader_setup(s, get_city_lights_bcube(), use_dlights, 1, use_bmap, min_alpha, 0, 1.0, 0, 0, 1, cube_map_reflect);} // use_smap=1
 		else {s.enable();}
 	}
 
@@ -3903,6 +3904,7 @@ public:
 		setup_building_lights(xlate); // setup lights on first (opaque) non-shadow pass
 		create_mirror_reflection_if_needed(vis_conn_bldg, xlate);
 		if (enable_cube_map_reflect()) {setup_player_building_cube_map();}
+		if (enable_cube_map_city   ()) {} // TODO
 		if (player_building) {player_building->create_pending_textures();} // I guess this goes here
 	}
 	static void push_scene_xlate(vector3d const &xlate) {
@@ -4428,7 +4430,7 @@ public:
 				glDisable(GL_CULL_FACE);
 				ensure_city_lighting_setup(reflection_pass, xlate, is_city_lighting_setup); // needed for dlights to work
 				glEnable(GL_CULL_FACE); // above call may create shadow maps and disable face culling, so make sure it's re-enabled
-				enable_city_shader(city_shader, use_city_dlights, use_bmap, min_alpha);
+				enable_city_shader(city_shader, use_city_dlights, use_bmap, min_alpha, 0); // cube_map_reflect=0
 				bbd.draw_and_clear_ext_tiles(city_shader, xlate); // draw after ext walls but before windows so that alpha blending works properly
 				city_shader.disable();
 			}
@@ -4459,6 +4461,7 @@ public:
 			return;
 		}
 		// main/batched draw pass
+		bool const ext_cube_map_reflect(0/*enable_cube_map_city()*/);
 		ensure_city_lighting_setup(reflection_pass, xlate, is_city_lighting_setup);
 		// Note: indir and dlights are set for ground mode only
 		bool const keep_alpha = 1; // required for fog on windows
@@ -4507,7 +4510,7 @@ public:
 		// post-pass to render building exteriors in nearby tiles that have shadow maps; shadow maps don't work right when using reflections
 		if (use_smap_pass) {
 			//timer_t timer2("Draw Buildings Smap"); // 0.3
-			enable_city_shader(city_shader, use_city_dlights, use_bmap, min_alpha);
+			enable_city_shader(city_shader, use_city_dlights, use_bmap, min_alpha, ext_cube_map_reflect);
 			float const draw_dist(get_tile_smap_dist() + 0.5f*(X_SCENE_SIZE + Y_SCENE_SIZE));
 			int const norm_bias_scale_loc(city_shader.get_uniform_loc("norm_bias_scale"));
 			assert(norm_bias_scale_loc >= 0);
@@ -4519,6 +4522,7 @@ public:
 				bool const single_tile(bc->is_single_tile()), no_depth_write(!single_tile), transparent_windows(draw_interior && bc->has_interior_to_draw());
 				if (single_tile && !bc->use_smap_this_frame) continue; // optimization
 				if (no_depth_write) {glDepthMask(GL_FALSE);} // disable depth writing
+				bool const is_reflective(ext_cube_map_reflect && bc->get_is_city()); // city building exteriors only
 
 				for (auto g = bc->grid_by_tile.begin(); g != bc->grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
 					if (single_tile && bc->use_smap_this_frame) {} // not drawn in main/nonshadow pass, so must be drawn here
@@ -4536,9 +4540,11 @@ public:
 						enable_blend();
 						glEnable(GL_POLYGON_OFFSET_FILL);
 						if (!no_depth_write) {glDepthMask(GL_FALSE);} // always disable depth writing
+						if (is_reflective) {city_shader.add_uniform_float("refract_ix", 1.6);} // refractive glass windows
 						if (transparent_windows) {bc->building_draw_windows.toggle_transparent_windows_mode();}
 						bc->building_draw_windows.draw_tile(city_shader, tile_id); // draw windows on top of other buildings
 						if (transparent_windows) {bc->building_draw_windows.toggle_transparent_windows_mode();}
+						if (is_reflective) {city_shader.add_uniform_float("refract_ix", 1.0);} // restore
 						if (!no_depth_write) {glDepthMask(GL_TRUE);} // always re-enable depth writing
 						glDisable(GL_POLYGON_OFFSET_FILL);
 						disable_blend();
