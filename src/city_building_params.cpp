@@ -409,7 +409,7 @@ bool building_params_t::parse_buildings_option(FILE *fp) {
 	else if (str == "house_ceil_nm_tid" ) {cur_mat.house_ceil_tex.nm_tid  = read_building_texture(fp, str, 1, read_error);}
 	else if (str == "basement_floor_tid") {cur_mat.basement_floor_tex.tid = read_building_texture(fp, str, 0, read_error, 0, &cur_mat.basement_floor_tex.no_cracks);}
 	else if (str == "basement_floor_nm_tid") {cur_mat.basement_floor_tex.nm_tid = read_building_texture(fp, str, 1, read_error);}
-	// specular
+	// specular/metalness
 	else if (str == "side_specular" ) {read_building_mat_specular(fp, str, cur_mat.side_tex,  read_error);}
 	else if (str == "roof_specular" ) {read_building_mat_specular(fp, str, cur_mat.roof_tex,  read_error);}
 	else if (str == "wall_specular" ) {read_building_mat_specular(fp, str, cur_mat.wall_tex,  read_error);}
@@ -417,6 +417,9 @@ bool building_params_t::parse_buildings_option(FILE *fp) {
 	else if (str == "floor_specular") {read_building_mat_specular(fp, str, cur_mat.floor_tex, read_error);}
 	else if (str == "house_ceil_specular" ) {read_building_mat_specular(fp, str, cur_mat.house_ceil_tex,  read_error);}
 	else if (str == "house_floor_specular") {read_building_mat_specular(fp, str, cur_mat.house_floor_tex, read_error);}
+	else if (str == "side_metalness") {
+		if (!read_zero_one_float(fp, cur_mat.side_tex.metalness)) {buildings_file_err(str, read_error);}
+	}
 	// room objects/textures
 	else if (str == "add_rug_texture"    ) {read_texture_and_add_if_valid(fp, str, read_error, rug_tids    );}
 	else if (str == "add_picture_texture") {read_texture_and_add_if_valid(fp, str, read_error, picture_tids);}

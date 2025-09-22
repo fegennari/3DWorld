@@ -310,6 +310,8 @@ buildings side_nm_tid buildings/metal_building_NRM.jpg
 buildings side_tscale_x 4.0
 buildings side_tscale_y 5.0
 buildings side_color 1.0 1.0 1.0 1.0
+buildings side_specular  0.25 40.0
+buildings side_metalness 1.0
 buildings size_range 0.6 1.2  0.6 1.2  0.6 2.0
 buildings probability 2 # twice as likely as other materials
 buildings add_material
@@ -353,6 +355,8 @@ buildings roof_tscale 2.0
 buildings roof_tid mossy_rock.jpg
 buildings roof_nm_tid -1
 buildings side_color 1.0 0.8 0.6 1.0
+buildings side_specular  0.0 1.0 # disable specular
+buildings side_metalness 0.0
 buildings add_material
 buildings apartment_prob 0.0
 
@@ -368,6 +372,7 @@ buildings side_nm_tid buildings/office_windows_NRM.jpg
 buildings texture_mirror 0 # revert to wrap mode
 buildings side_color 0.5 0.5 0.5 1.0
 buildings side_color_grayscale_rand 0.25
+buildings side_specular 0.25 60.0
 buildings side_tscale_x 1.8
 buildings side_tscale_y 2.7
 buildings add_material
@@ -375,6 +380,7 @@ buildings add_material
 
 buildings side_tid    buildings/office_windows2.jpg # looks a bit odd
 buildings side_nm_tid buildings/office_windows2_NRM.jpg
+buildings side_specular 0.2 40.0
 buildings add_window_lights 1
 buildings no_walkways 0
 buildings window_xscale 30.0
@@ -396,6 +402,7 @@ buildings window_yscale 13.8
 buildings window_xoff 0.25
 buildings window_yoff 0.0
 buildings side_color 1.0 0.9 0.8 1.0
+buildings side_specular 0.2 40.0
 buildings side_tscale_x 2.0
 buildings side_tscale_y 2.3
 buildings add_material
@@ -415,6 +422,8 @@ buildings window_xoff 0.25
 buildings window_yoff 0.2
 buildings side_tid    buildings/skyscraper1.jpg
 buildings side_nm_tid buildings/skyscraper1_NRM.jpg
+buildings side_specular  0.5 60.0
+buildings side_metalness 0.5 # 50% glass/50% metal
 buildings add_window_lights 1
 buildings no_walkways 0
 buildings add_material
@@ -427,6 +436,8 @@ buildings window_xoff 0.0
 buildings window_yoff 0.4
 buildings side_tid    buildings/skyscraper2.jpg
 buildings side_nm_tid buildings/skyscraper2_NRM.jpg
+buildings side_specular  0.1 40.0
+buildings side_metalness 0.0
 buildings add_window_lights 1
 buildings apartment_prob 1.0
 buildings no_walkways 1
@@ -441,6 +452,8 @@ buildings window_xoff 0.1
 buildings window_yoff 0.02
 buildings side_tid    buildings/skyscraper3.jpg
 buildings side_nm_tid buildings/skyscraper3_NRM.jpg
+buildings side_specular  0.0 1.0
+buildings side_metalness 0.0
 buildings add_window_lights 1
 buildings apartment_prob 1.0
 buildings no_walkways 1
@@ -455,6 +468,8 @@ buildings window_xoff 0.0
 buildings window_yoff 0.35
 buildings side_tid    buildings/skyscraper4.jpg
 buildings side_nm_tid buildings/skyscraper4_NRM.jpg
+buildings side_specular  0.7 60.0
+buildings side_metalness 0.25 # 75% glass/25% metal
 buildings add_window_lights 1
 buildings no_walkways 0
 buildings add_material
@@ -467,6 +482,8 @@ buildings window_xoff 0.0
 buildings window_yoff 0.02
 buildings side_tid    buildings/skyscraper5.jpg
 buildings side_nm_tid buildings/skyscraper5_NRM.jpg
+buildings side_specular  0.4 50.0
+buildings side_metalness 0.5 # 50% glass/50% metal
 buildings floor_tid carpet/office_carpet2.jpg # nice, but low contrast with walls
 buildings floor_nm_tid none
 buildings add_window_lights 1
@@ -481,6 +498,8 @@ buildings window_xoff 0.3
 buildings window_yoff 0.22
 buildings side_tid    buildings/skyscraper6.jpg
 buildings side_nm_tid buildings/skyscraper6_NRM.jpg
+buildings side_specular  0.4 40.0
+buildings side_metalness 0.25 # a bit of metal
 buildings add_window_lights 1
 buildings no_walkways 1
 buildings add_material
@@ -493,6 +512,8 @@ buildings window_xoff 0.22
 buildings window_yoff 0.425
 buildings side_tid    buildings/skyscraper7.jpg
 buildings side_nm_tid buildings/skyscraper7_NRM.jpg
+buildings side_specular  0.2 40.0
+buildings side_metalness 0.0
 buildings add_window_lights 1
 buildings no_walkways 0
 buildings add_material
@@ -505,6 +526,8 @@ buildings window_xoff 0.0
 buildings window_yoff 0.4
 buildings side_tid    buildings/skyscraper8.jpg
 buildings side_nm_tid buildings/skyscraper8_NRM.jpg
+buildings side_specular  0.25 40.0
+buildings side_metalness 0.0
 buildings add_window_lights 1
 buildings no_walkways 1
 buildings add_material
