@@ -539,7 +539,7 @@ bool check_close_to_door(point const &pos, float min_dist, unsigned building_ix)
 
 // Note: blockers are used for placement of objects within this plot; colliders are used for pedestrian AI
 void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders,
-	vector<point> const &tree_pos, vect_cube_t const &pond_blockers, rand_gen_t &rgen, bool have_streetlights)
+	vector<point> const &tree_pos, vect_cube_t const &pond_blockers, vect_cube_t const &plot_cuts, rand_gen_t &rgen, bool have_streetlights)
 {
 	bool const is_residential(plot.is_residential), is_park(plot.is_park);
 	float const car_length(city_params.get_nom_car_size().x); // used as a size reference for other objects
@@ -688,6 +688,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 				pillar_exp.expand_by_xy(min_obj_spacing);
 				if (has_bcube_int_no_adj(pillar_exp, blockers)) continue; // skip the walkway; what else can this intersect, only parking lots?
 				if (intersects_city_obj(pillar_exp, elevators) || intersects_city_obj(pillar_exp, walkways, w.bcube)) continue; // exclude ourself
+				if (has_bcube_int_xy(pillar, plot_cuts)) continue;
 				pillar_groups.add_obj(pillar_t(pillar, is_concrete), pillars);
 				add_cube_to_colliders_and_blockers(pillar, colliders, blockers);
 
@@ -704,8 +705,8 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 					ebc.d[!w.dim][dir] += (dir ? 1.0 : -1.0)*e_depth; // set depth
 					cube_t ebc_exp(ebc);
 					ebc_exp.d[!w.dim][dir] += (dir ? 1.0 : -1.0)*e_clearance; // add clearance in front of door
-					if (!pillar_area.contains_cube_xy(ebc_exp))  continue; // not contained in plot interior
-					if (has_bcube_int_no_adj(ebc_exp, blockers)) continue;
+					if (!pillar_area.contains_cube_xy(ebc_exp)) continue; // not contained in plot interior
+					if (has_bcube_int_no_adj(ebc_exp, blockers) || has_bcube_int_xy(ebc, plot_cuts)) continue;
 					if (intersects_city_obj(ebc_exp, elevators) || intersects_city_obj(ebc_exp, walkways, w.bcube)) continue; // exclude ourself
 					ww_elevator_t const elevator(ebc, !w.dim, dir, w.floor_spacing, w.bcube);
 					w.attach_elevator(elevator);
@@ -2055,7 +2056,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 			place_residential_plot_objects(*i, blockers, colliders, roads, underground_blockers, driveways_start, city_id, detail_rgen); // before placing trees
 		}
 		place_trees_in_plot  (*i, blockers, colliders, tree_pos, plot_cuts, detail_rgen, buildings_end);
-		place_detail_objects (*i, blockers, colliders, tree_pos, underground_blockers, detail_rgen, have_streetlights);
+		place_detail_objects (*i, blockers, colliders, tree_pos, underground_blockers, plot_cuts, detail_rgen, have_streetlights);
 		add_objs_on_buildings(*i, blockers, colliders, hospital_signs);
 	} // for i (plot)
 	for (unsigned n = 0; n < 3; ++n) {

@@ -1309,7 +1309,7 @@ public:
 	bool is_invalid_placement_for_cube(cube_t const &c) const { // Note: c is in global space
 		if (!bcube.intersects_xy(c))    return 0; // not in this city
 		if (has_bcube_int_xy(c, roads)) return 1; // intersects or above a road
-		if (plots.empty()) return 0; // global connector road
+		if (plots.empty())              return 0; // global connector road
 
 		for (unsigned plot_ix = 0; plot_ix < plots.size(); ++plot_ix) {
 			if (!plots[plot_ix].contains_cube_xy(c)) continue;
