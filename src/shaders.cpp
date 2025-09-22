@@ -49,7 +49,6 @@ string property_map_t::empty_str;
 
 
 char const *append_ix(string &s, unsigned i, bool as_array) {
-
 	assert(i <= 9);
 	if (as_array) {s.push_back('[');}
 	s.push_back('0'+i);
@@ -57,10 +56,10 @@ char const *append_ix(string &s, unsigned i, bool as_array) {
 	return s.c_str();
 }
 
-
 int shader_t::get_uniform_loc(char const *const name) const {
-
-	assert(program && name);
+	assert(name);
+	if (!program) {cerr << "Error: Attempt to set shader uniform name " << name << " without program" << endl;}
+	assert(program);
 	int const loc(glGetUniformLocation(program, name));
 	//cout << "name: " << name << ", loc: " << loc << endl;
 	//assert(loc >= 0); // Note: if variable is unused, loc will be -1
