@@ -320,7 +320,7 @@ void brg_batch_draw_t::draw_and_clear_batch(vector<mat_entry_t> &batch, tid_nm_p
 	for (auto &i : batch) {
 		if (i.mats.empty()) continue; // empty slot
 		i.tex.set_gl(state);
-		for (auto const &m : i.mats) {m->draw_inner(0);} // shadow_only=0
+		for (auto const &m : i.mats) {assert(m); m->draw_inner(0);} // shadow_only=0
 		i.tex.unset_gl(state);
 		i.mats.clear(); // clear mats but not batch
 	}
@@ -380,6 +380,7 @@ void rgeom_mat_t::pre_draw(int shadow_only) const {
 	vao_mgr.pre_render(shadow_only != 0);
 }
 void rgeom_mat_t::draw_geom() const {
+	assert((num_ixs % 3) == 0); // must be triangles
 	glDrawRangeElements(GL_TRIANGLES, 0, num_verts, num_ixs, GL_UNSIGNED_INT, nullptr);
 	++num_frame_draw_calls;
 }

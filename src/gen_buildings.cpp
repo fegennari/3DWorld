@@ -3972,6 +3972,7 @@ public:
 		vector<pair<building_t *, bool>> buildings_with_cars; // {building, player_in_building}
 		vector<point> pts;
 		static brg_batch_draw_t bbd; // allocated memory is reused across building interiors
+		assert(!bbd.has_ext_geom());
 		bool const defer_people_draw_for_player_building(global_building_params.people_min_alpha > 0.0);
 		vis_conn_bldg = nullptr;
 
