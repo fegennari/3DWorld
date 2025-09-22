@@ -426,7 +426,7 @@ buildings window_yscale 15.5
 buildings window_xoff 0.0
 buildings window_yoff 0.4
 buildings side_tid    buildings/skyscraper2.jpg
-buildings side_nm_tid buildings/skyscraper4_NRM.jpg
+buildings side_nm_tid buildings/skyscraper2_NRM.jpg
 buildings add_window_lights 1
 buildings apartment_prob 1.0
 buildings no_walkways 1
@@ -440,7 +440,7 @@ buildings window_yscale 16.8
 buildings window_xoff 0.1
 buildings window_yoff 0.02
 buildings side_tid    buildings/skyscraper3.jpg
-buildings side_nm_tid buildings/skyscraper4_NRM.jpg
+buildings side_nm_tid buildings/skyscraper3_NRM.jpg
 buildings add_window_lights 1
 buildings apartment_prob 1.0
 buildings no_walkways 1
