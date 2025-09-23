@@ -4096,7 +4096,7 @@ public:
 					if (gdist_sq > rgeom_draw_dist_sq) continue; // too far
 					if (crack_damage > 0.0) {s.add_uniform_float("crack_weight", 0.0);} // no crack damage for room objects
 					if (is_first_tile && !reflection_pass) {oc.set_camera(camera_pdu);} // setup occlusion culling on the first visible tile
-					if (!ref_pass_interior) {bbd.next_tile(g->bcube);} // only needed for exterior geom; always uses main/exterior bcube
+					if (!ref_pass_interior && !ref_pass_cube_map) {bbd.next_tile(g->bcube);} // only needed for exterior geom; always uses main/exterior bcube
 					is_first_tile = 0;
 
 					for (cube_with_ix_t const &bi : g->bc_ixs) {
