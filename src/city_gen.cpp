@@ -42,6 +42,7 @@ float get_max_house_size();
 bool proc_buildings_sphere_coll(point &pos, point const &p_last, float radius, vector3d *cnorm=nullptr, bool check_interior=0, bool exclude_city=0);
 bool check_building_line_coll(point const &p1, point const &p2, bool city_bldgs);
 void draw_player_building_transparent(int reflection_pass, vector3d const &xlate);
+void bind_player_building_cube_map(shader_t &s);
 bool enable_player_flashlight();
 
 
@@ -89,6 +90,7 @@ void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights
 	if (use_texgen    ) {s.add_uniform_float("tc_texgen_mix",   0.0);} // always uses texgen in this mode
 	if (indir_lighting) {s.add_uniform_float("max_indir_light", 0.8);} // clamp to avoid over saturation with both direct and indir light
 	//if (use_smap) {bind_default_sun_moon_smap_textures();} // bind default sun/moon smap textures
+	if (enable_int_reflect) {bind_player_building_cube_map(s);}
 }
 
 void draw_state_t::begin_tile(point const &pos, bool will_emit_now, bool ensure_active) {
@@ -3684,14 +3686,12 @@ bool check_valid_scenery_pos(point const &pos, float radius, bool is_tall) {
 	return 1;
 }
 bool check_mesh_disable(point const &pos, float radius) { // Note: pos is in global space
-	if (!have_cities()) return 0;
-	return city_gen.check_mesh_disable((pos + get_tt_xlate_val()), radius); // apply xlate for all static objects
+	return (have_cities() && city_gen.check_mesh_disable((pos + get_tt_xlate_val()), radius)); // apply xlate for all static objects
 }
 bool check_inside_city(point const &pos, float radius) { // Note: pos is in global space
-	if (!have_cities()) return 0;
-	return city_gen.check_inside_city((pos + get_tt_xlate_val()), radius); // apply xlate for all static objects
+	return (have_cities() && city_gen.check_inside_city((pos + get_tt_xlate_val()), radius)); // apply xlate for all static objects
 }
-bool camera_in_city_bounds() {return check_inside_city(get_camera_building_space(), 0.0);}
+bool camera_in_city_bounds() {return (have_cities() && city_gen.check_inside_city(camera_pos, CAMERA_RADIUS));}
 bool cube_int_underground_obj(cube_t const &c) {return city_gen.cube_int_underground_obj(c);} // Note: cube is in global space
 bool is_invalid_city_placement_for_cube(cube_t const &c) {return city_gen.is_invalid_placement_for_cube(c);}
 void add_city_plot_cut(cube_t const &cut) {city_gen.add_plot_cut(cut);}

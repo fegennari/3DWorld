@@ -69,7 +69,6 @@ void update_security_camera_image();
 void get_pedestrians_in_area(cube_t const &area, int building_ix, vector<point> &pts);
 void setup_puddles_texture(shader_t &s);
 void setup_player_building_cube_map();
-void bind_player_building_cube_map(shader_t &s);
 bool camera_in_city_bounds();
 
 float get_door_open_dist    () {return 3.5*CAMERA_RADIUS;}
@@ -549,7 +548,6 @@ void setup_building_draw_shader(shader_t &s, float min_alpha, bool enable_indir,
 		// disable cracks on on ceilings (-z) since they may be wood; carpet is special cased to not have cracks; are cracks on particle board ceilings okay?
 		s.add_uniform_float("crack_normal_zmax", (player_building->is_house ? -0.5 : -2.0));
 	}
-	if (enable_int_reflect) {bind_player_building_cube_map(s);}
 }
 
 
@@ -3963,6 +3961,7 @@ public:
 		} // for bc
 		bool const draw_interior((have_windows || global_building_params.add_city_interiors) && draw_building_interiors);
 		bool const v(world_mode == WMODE_GROUND), indir(v), dlights(v), use_smap(v);
+		bool const ext_cube_map_reflect(0 && !reflection_pass && enable_cube_map_city());
 		float const min_alpha = 0.0; // 0.0 to avoid alpha test
 		enable_dlight_bcubes  = 1; // using light bcubes is both faster and more correct when shadow maps are not enabled
 		push_scene_xlate(xlate);
@@ -4431,7 +4430,7 @@ public:
 				glDisable(GL_CULL_FACE);
 				ensure_city_lighting_setup(reflection_pass, xlate, is_city_lighting_setup); // needed for dlights to work
 				glEnable(GL_CULL_FACE); // above call may create shadow maps and disable face culling, so make sure it's re-enabled
-				enable_city_shader(city_shader, use_city_dlights, use_bmap, min_alpha, 0); // cube_map_reflect=0
+				enable_city_shader(city_shader, use_city_dlights, use_bmap, min_alpha, ext_cube_map_reflect);
 				bbd.draw_and_clear_ext_tiles(city_shader, xlate); // draw after ext walls but before windows so that alpha blending works properly
 				city_shader.disable();
 			}
@@ -4462,7 +4461,6 @@ public:
 			return;
 		}
 		// main/batched draw pass
-		bool const ext_cube_map_reflect(0/*enable_cube_map_city()*/);
 		ensure_city_lighting_setup(reflection_pass, xlate, is_city_lighting_setup);
 		// Note: indir and dlights are set for ground mode only
 		bool const keep_alpha = 1; // required for fog on windows
