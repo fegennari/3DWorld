@@ -300,13 +300,60 @@ bool building_t::find_mirror_needing_reflection(vector3d const &xlate) const {
 
 class cube_map_reflection_manager_t {
 	unsigned const tsize=512; // 512 is faster; likely dominated by subpixel object drawing (bottles, text, etc.)
+	bool const enable_mipmaps=1; // only needed when blur is enabled
 	unsigned tid=0;
-	float face_dist=0.0;
+	float face_dist=0.0, near_plane=0.0, far_plane=0.0;
 	point center; // in camera space
 	point last_update_pos[6]; // one per face
 	cube_t room_bounds;
 	building_t const *last_building=nullptr;
+	vector3d pre_ref_cview_dir, prev_up_vector;
+	pos_dir_up prev_camera_pdu;
+	colorRGBA prev_clear_color;
 
+	void ensure_tid() {
+		if (!tid) {setup_cube_map_texture(tid, tsize, 1, enable_mipmaps, 4.0);} // allocate=1, aniso=4.0
+		assert(tid);
+	}
+	void pre_render() {
+		pre_ref_cview_dir = cview_dir;
+		prev_up_vector    = up_vector;
+		prev_camera_pdu   = camera_pdu;
+		prev_clear_color  = get_clear_color();
+		near_plane        = max(NEAR_CLIP, 0.001f*far_plane);
+		set_custom_viewport(tsize, 90.0, near_plane, far_plane); // 90 degree FOV
+		glClearColor_rgba((prev_clear_color + DK_GRAY)*0.5); // darken and desaturate the sky color to account for clouds, terrain, buildings, etc.
+		ensure_tid();
+		glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+	}
+	void pre_render_face() {
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+		fgPushIdentityMatrix(); // MVM
+		vector3d const target(center + cview_dir);
+		fgLookAt(center.x, center.y, center.z, target.x, target.y, target.z, up_vector.x, up_vector.y, up_vector.z);
+	}
+	void post_render_face(unsigned face_id) {
+		last_update_pos[face_id] = center;
+		render_to_texture_cube_map(tid, tsize, face_id); // render reflection to texture
+		fgPopMatrix(); // MVM
+	}
+	void restore_state() const {
+		if (enable_mipmaps) {gen_mipmaps(6);}
+		camera_pdu = prev_camera_pdu;
+		up_vector  = prev_up_vector;
+		cview_dir  = pre_ref_cview_dir;
+		glClearColor_rgba(prev_clear_color); // restore clear color
+		restore_default_viewport_and_matrices();
+		check_gl_error(531);
+	}
+	void set_view_frustum(unsigned dim, unsigned dir) {
+		cview_dir = zero_vector;
+		up_vector = -plus_y;
+		cview_dir[dim] = (dir ? 1.0 : -1.0);
+		if (dim == 1) {up_vector = (dir ? plus_z : -plus_z);} // Note: in OpenGL, the cube map top/bottom is in Y, and up dir is special in this dim
+		float const angle(0.5*perspective_fovy*TO_RADIANS); // 90 degree FOV
+		camera_pdu = pos_dir_up(center, cview_dir, up_vector, angle, near_plane, far_plane, 1.0, 1);
+	}
 	bool has_reflected_person(building_t const &building, pos_dir_up const &pdu, cube_t const &clip_cube) {
 		assert(building.interior);
 
@@ -316,7 +363,7 @@ class cube_map_reflection_manager_t {
 		return 0;
 	}
 public:
-	void capture(building_t const &building, point const &pos) { // pos is in camera space
+	void capture_building(building_t const &building, point const &pos) { // pos is in camera space
 		bool interior_room(0), is_extb(0);
 		float const floor_spacing(building.get_window_vspace());
 		vector3d const xlate(get_tiled_terrain_model_xlate());
@@ -345,20 +392,13 @@ public:
 			}
 		}
 		face_dist = 0.25*(room_bounds.dx() + room_bounds.dy()); // average room half width
-		bool const enable_mipmaps(1); // only needed when blur is enabled
 
 		if (&building != last_building) { // new building, reset state
 			force_update();
 			last_building = &building;
 		}
-		if (!tid) {setup_cube_map_texture(tid, tsize, 1, enable_mipmaps, 4.0);} // allocate=1, aniso=4.0
-		assert(tid);
-		glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
-		vector3d const pre_ref_cview_dir(cview_dir), prev_up_vector(up_vector);
-		pos_dir_up const prev_camera_pdu(camera_pdu);
-		float far_plane(scene_bounds.furthest_dist_to_pt(pos_bs)); // capture the entire building
+		far_plane = scene_bounds.furthest_dist_to_pt(pos_bs); // capture the entire building
 		min_eq(far_plane, 50.0f*floor_spacing); // limit to a reasonable distance for malls, etc.
-		float const near_plane(max(NEAR_CLIP, 0.001f*far_plane));
 		pre_reflect_camera_pos_bs = camera_pos - xlate;
 		is_cube_map_reflection    = 1;
 		cube_t ref_cube;
@@ -366,48 +406,49 @@ public:
 		ref_cube.intersect_with_cube(scene_bounds);
 		reflection_light_cube = ref_cube; // used to enabled lights behind the player that may be reflected
 		reflection_light_cube.intersect_with_cube(room_bounds);
-		set_custom_viewport(tsize, 90.0, near_plane, far_plane); // 90 degree FOV
-		colorRGBA const orig_clear_color(get_clear_color());
-		glClearColor_rgba((orig_clear_color + DK_GRAY)*0.5); // darken and desaturate the sky color to account for clouds, terrain, buildings, etc.
+		pre_render();
 
 		for (unsigned dim = 0; dim < 3; ++dim) {
 			for (unsigned dir = 0; dir < 2; ++dir) {
 				unsigned const face_id(2*dim + (dir == 0));
-				//if ((frame_counter % 6) != face_id) continue; // not our turn to update; looks bad
-				point &last_pos(last_update_pos[face_id]);
-				if (center == last_pos && !has_people) continue; // no pos change; skip this face if there are no people
-				cview_dir = zero_vector;
-				up_vector = -plus_y;
-				cview_dir[dim] = (dir ? 1.0 : -1.0);
-				if (dim == 1) {up_vector = (dir ? plus_z : -plus_z);} // Note: in OpenGL, the cube map top/bottom is in Y, and up dir is special in this dim
-				float const angle(0.5*perspective_fovy*TO_RADIANS); // 90 degree FOV
-				camera_pdu = pos_dir_up(center, cview_dir, up_vector, angle, near_plane, far_plane, 1.0, 1);
+				bool const center_moved(center != last_update_pos[face_id]);
+				if (!center_moved && !has_people) continue; // no pos change; skip this face if there are no people
+				set_view_frustum(dim, dir);
 				reflection_clip_cube = ref_cube;
 				reflection_clip_cube.d[dim][!dir] = pos_bs[dim]; // clip to half space in front of cube map face
-				if (center == last_pos && !has_reflected_person(building, camera_pdu, reflection_clip_cube)) continue; // no pos change; skip if no reflected people
-				last_pos  = center;
-				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-				fgPushIdentityMatrix(); // MVM
-				vector3d const target(center + cview_dir);
-				fgLookAt(center.x, center.y, center.z, target.x, target.y, target.z, up_vector.x, up_vector.y, up_vector.z);
+				if (!center_moved && !has_reflected_person(building, camera_pdu, reflection_clip_cube)) continue; // no pos change; skip if no reflected people
+				pre_render_face();
 				int reflection_pass(REF_PASS_ENABLED | REF_PASS_INT_ONLY | REF_PASS_CUBE_MAP); // set interior only flag to avoid drawing outdoor objects
 				if ( interior_room) {reflection_pass |= REF_PASS_INTERIOR;}
 				if ( is_extb      ) {reflection_pass |= REF_PASS_EXTB    ;}
 				draw_buildings(0, reflection_pass, xlate);
-				render_to_texture_cube_map(tid, tsize, face_id); // render reflection to texture
-				fgPopMatrix(); // MVM
+				post_render_face(face_id);
 			} // for dir
 		} // for dim
-		if (enable_mipmaps) {gen_mipmaps(6);}
-		camera_pdu = prev_camera_pdu;
-		up_vector  = prev_up_vector;
-		cview_dir  = pre_ref_cview_dir;
+		restore_state();
 		pre_reflect_camera_pos_bs = zero_vector; // disable
 		is_cube_map_reflection    = 0;
 		reflection_clip_cube.set_to_zeros();
-		glClearColor_rgba(orig_clear_color); // restore clear color
-		restore_default_viewport_and_matrices();
-		check_gl_error(531);
+	}
+	void capture_city(point const &pos) {
+		point const pos_bs(pos - get_tiled_terrain_model_xlate());
+		cube_t scene_bounds; // TODO bounds of city?
+		center    = pos; // in camera space
+		face_dist = 0.25*(scene_bounds.dx() + scene_bounds.dy()); // average scene half width
+		far_plane = scene_bounds.furthest_dist_to_pt(pos_bs); // capture the entire city
+		pre_render();
+
+		for (unsigned dim = 0; dim < 3; ++dim) {
+			for (unsigned dir = 0; dir < 2; ++dir) {
+				unsigned const face_id(2*dim + (dir == 0));
+				if (center == last_update_pos[face_id]) continue; // no pos change; skip this face
+				set_view_frustum(dim, dir);
+				pre_render_face();
+				// TODO
+				post_render_face(face_id);
+			} // for dir
+		} // for dim
+		restore_state();
 	}
 	void bind(shader_t &s) const {
 		assert(tid); // must have been captured first
@@ -424,10 +465,13 @@ public:
 cube_map_reflection_manager_t cube_map_reflection_manager;
 
 void setup_player_building_cube_map() {
-	point camera_raw(surface_pos); // camera space
-	camera_raw.z += camera_zh;
+	point const camera_raw(surface_pos + camera_zh*plus_z); // camera space
 	assert(player_building);
-	cube_map_reflection_manager.capture(*player_building, camera_raw);
+	cube_map_reflection_manager.capture_building(*player_building, camera_raw);
+}
+void setup_city_cube_map() {
+	point const camera_raw(surface_pos + camera_zh*plus_z); // camera space
+	cube_map_reflection_manager.capture_city(camera_raw);
 }
 void bind_player_building_cube_map(shader_t &s) {cube_map_reflection_manager.bind(s);}
 void register_reflection_update() {cube_map_reflection_manager.force_update();}

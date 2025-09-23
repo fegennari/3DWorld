@@ -69,6 +69,7 @@ void update_security_camera_image();
 void get_pedestrians_in_area(cube_t const &area, int building_ix, vector<point> &pts);
 void setup_puddles_texture(shader_t &s);
 void setup_player_building_cube_map();
+void setup_city_cube_map();
 bool camera_in_city_bounds();
 
 float get_door_open_dist    () {return 3.5*CAMERA_RADIUS;}
@@ -3903,7 +3904,7 @@ public:
 		create_mirror_reflection_if_needed(vis_conn_bldg, xlate);
 		reflection_light_cube.set_to_zeros(); // will be set below if cube map reflections are enabled; out of sync with lighting (above) by one frame
 		if (enable_cube_map_reflect()) {setup_player_building_cube_map();}
-		if (enable_cube_map_city   ()) {} // TODO
+		if (enable_cube_map_city   ()) {setup_city_cube_map();}
 		if (player_building) {player_building->create_pending_textures();} // I guess this goes here
 	}
 	static void push_scene_xlate(vector3d const &xlate) {
