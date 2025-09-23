@@ -25,6 +25,7 @@ extern unsigned LOCAL_RAYS, MAX_RAY_BOUNCES, NUM_THREADS;
 extern float indir_light_exp, fticks, DZ_VAL;
 extern double tfticks;
 extern colorRGB cur_ambient, cur_diffuse;
+extern cube_t reflection_light_cube;
 extern std::string lighting_update_text;
 extern vector<light_source> dl_sources;
 extern building_t const *player_building;
@@ -1571,6 +1572,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	bool const check_building_people(enable_building_people_ai()), check_attic(camera_in_building && has_attic() && interior->attic_access_open);
 	bool const camera_in_basement(camera_bs.z < ground_floor_z1), camera_in_ext_basement(camera_in_building && point_in_extended_basement_not_basement(camera_rot));
 	bool const show_room_name(display_mode & 0x20), check_occlusion(display_mode & 0x08); // debugging, keys '6' and '4'
+	bool const enable_ref_bcube(camera_in_building && !reflection_light_cube.is_all_zeros() && !is_rotated());
 	cube_t const &attic_access(interior->attic_access);
 	vect_cube_t &light_bcubes(interior->room_geom->light_bcubes);
 	vect_room_object_t &objs(interior->room_geom->objs); // non-const, light flags are updated
@@ -1995,7 +1997,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		float const light_radius(get_radius_for_room_light(*i)), cull_radius(0.95*light_radius);
 		assert(light_radius > 0.0);
 		// note that the same lights are used for the reflection pass, so a light behind the player won't be active in a mirror reflection
-		if (!camera_pdu.sphere_visible_test((lpos_rot + xlate), cull_radius)) continue; // VFC
+		bool const is_visible_in_reflection(enable_ref_bcube && reflection_light_cube.intersects(*i));
+		if (!is_visible_in_reflection && !camera_pdu.sphere_visible_test((lpos_rot + xlate), cull_radius)) continue; // VFC
 		// ext basement connector room must include the other building's ext basement, and it's simplest to just expand it by the max length of that room plus approx hallway width
 		bool const is_ext_conn_light(i->is_exterior());
 		float const light_bcube_expand(is_ext_conn_light ? (EXT_BASEMENT_JOIN_DIST*window_vspacing + get_doorway_width()) : 0.0);
@@ -2054,7 +2057,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				 << TXT(lpos.str()) << TXT(floor_z) << TXT(ceil_z) << TXT(is_lamp) << TXT(is_in_elevator) << TXT(light_in_basement) << endl;
 			assert(0);
 		}
-		if (!is_rot_cube_visible(clipped_bc, xlate, 1)) continue; // VFC; inc_mirror_reflections=1
+		if (!is_visible_in_reflection && !is_rot_cube_visible(clipped_bc, xlate, 1)) continue; // VFC; inc_mirror_reflections=1
 		bool recheck_coll(0);
 
 		if (cull_if_not_by_stairs) { // test light visibility through stairs and ramp cuts
@@ -2223,7 +2226,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				if (clipped_bc.d[d][1] > test_cube.d[d][1]) {clipped_bc.d[d][1] = sphere_bc.d[d][1];}
 			}
 		}
-		if (!is_rot_cube_visible(clipped_bc, xlate, 1)) continue; // VFC - post clip; inc_mirror_reflections=1
+		if (!is_visible_in_reflection && !is_rot_cube_visible(clipped_bc, xlate, 1)) continue; // VFC - post clip; inc_mirror_reflections=1
 		// occlusion culling (expensive); skip basement check for mall lights viewed through skylights
 		if (in_camera_room && (in_retail_room || room.is_industrial())) {} // skip occlusion check for large open rooms
 		else if (check_occ && !clipped_bc.contains_pt(camera_rot) && check_obj_occluded(clipped_bc, camera_bs, oc, 0, 0, mall_light_vis)) continue;

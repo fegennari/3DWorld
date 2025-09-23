@@ -8,7 +8,7 @@
 bool disable_city_shadow_maps(0), mirror_in_ext_basement(0), is_cube_map_reflection(0);
 unsigned room_mirror_ref_tid(0);
 point pre_reflect_camera_pos_bs;
-cube_t reflection_clip_cube;
+cube_t reflection_clip_cube, reflection_light_cube;
 room_object_t cur_room_mirror;
 shader_t reflection_shader;
 
@@ -333,12 +333,16 @@ public:
 
 		if (room_id >= 0) { // else error? disable cube maps?
 			room_t const &room(building.get_room(room_id));
-			unsigned const floor_ix(room.get_floor_containing_zval(pos_bs.z, floor_spacing));
-			float const rz1(room.z1() + floor_ix*floor_spacing);
 			room_bounds   = room;
-			set_cube_zvals(room_bounds, rz1, rz1+floor_spacing); // clip to player's floor
 			interior_room = room.interior;
 			is_extb       = room.is_ext_basement();
+
+			if (!room.is_single_floor) { // clip to the floor the player is on
+				float const room_floor_spacing(building.get_room_floor_spacing(room));
+				unsigned const floor_ix(room.get_floor_containing_zval(pos_bs.z, room_floor_spacing));
+				float const rz1(room.z1() + floor_ix*room_floor_spacing);
+				set_cube_zvals(room_bounds, rz1, rz1+room_floor_spacing); // clip to player's floor
+			}
 		}
 		face_dist = 0.25*(room_bounds.dx() + room_bounds.dy()); // average room half width
 		bool const enable_mipmaps(1); // only needed when blur is enabled
@@ -360,6 +364,8 @@ public:
 		cube_t ref_cube;
 		ref_cube.set_from_sphere(pos_bs, 20.0*floor_spacing); // optimization: limit model drawing to a reasonable distance
 		ref_cube.intersect_with_cube(scene_bounds);
+		reflection_light_cube = ref_cube; // used to enabled lights behind the player that may be reflected
+		reflection_light_cube.intersect_with_cube(room_bounds);
 		set_custom_viewport(tsize, 90.0, near_plane, far_plane); // 90 degree FOV
 		colorRGBA const orig_clear_color(get_clear_color());
 		glClearColor_rgba((orig_clear_color + DK_GRAY)*0.5); // darken and desaturate the sky color to account for clouds, terrain, buildings, etc.

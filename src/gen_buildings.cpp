@@ -46,7 +46,7 @@ extern int rand_gen_index, display_mode, window_width, window_height, camera_sur
 extern float CAMERA_RADIUS, fticks, NEAR_CLIP, FAR_CLIP;
 extern colorRGB cur_ambient, cur_diffuse;
 extern point pre_smap_player_pos, actual_player_pos;
-extern cube_t smap_light_clip_cube;
+extern cube_t smap_light_clip_cube, reflection_light_cube;
 extern vector<light_source> dl_sources;
 extern vector<point> enabled_bldg_lights;
 extern tree_placer_t tree_placer;
@@ -3903,6 +3903,7 @@ public:
 		update_security_camera_image();
 		setup_building_lights(xlate); // setup lights on first (opaque) non-shadow pass
 		create_mirror_reflection_if_needed(vis_conn_bldg, xlate);
+		reflection_light_cube.set_to_zeros(); // will be set below if cube map reflections are enabled; out of sync with lighting (above) by one frame
 		if (enable_cube_map_reflect()) {setup_player_building_cube_map();}
 		if (enable_cube_map_city   ()) {} // TODO
 		if (player_building) {player_building->create_pending_textures();} // I guess this goes here
