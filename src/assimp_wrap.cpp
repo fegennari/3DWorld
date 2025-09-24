@@ -548,6 +548,7 @@ class file_reader_assimp {
 			if (enable_shine_map) {mat.ns_tid = load_texture(scene, material, aiTextureType_SHININESS);} // usually unused
 			//mat.alpha_tid= load_texture(scene, material, aiTextureType_OPACITY); // unused/not supported?
 			//mat.refl_tid = load_texture(material, aiTextureType_REFLECTION); // unused
+			// PBR: aiTextureType_EMISSIVE, aiTextureType_METALNESS, aiTextureType_DIFFUSE_ROUGHNESS, etc.
 			// setup colors
 			aiColor4D color;
 			if (aiGetMaterialColor(material, AI_MATKEY_COLOR_AMBIENT,  &color) == AI_SUCCESS) {mat.ka = aiColor4D_to_colorRGBA(color);}
@@ -565,13 +566,14 @@ class file_reader_assimp {
 			if (aiGetMaterialFloat(material, AI_MATKEY_OPACITY, &alpha) == AI_SUCCESS && alpha > 0.0) {mat.alpha = alpha;}
 			// Note: can also use aiGetMaterialFloatArray(material, AI_MATKEY_OPACITY, &alpha, &num), where num is int(1)
 			// Note: The version of assimp I have installed in Ubuntu doesn't have AI_MATKEY_TRANSMISSION_FACTOR
-			aiGetMaterialFloat(material, AI_MATKEY_TRANSPARENCYFACTOR, &mat.tr       );
+			aiGetMaterialFloat(material, AI_MATKEY_TRANSPARENCYFACTOR, &mat.tr);
+			aiGetMaterialFloat(material, AI_MATKEY_REFRACTI,           &mat.ni);
 #ifdef _WIN32 // METALLIC_FACTOR is only available in newer Assimp versions, and not on my linux machine; that's okay because we don't load any models with metallic yet anyway
 			aiGetMaterialFloat(material, AI_MATKEY_METALLIC_FACTOR,    &mat.metalness);
 #endif
 			//if (aiGetMaterialInteger(mtl, AI_MATKEY_ENABLE_WIREFRAME, &wireframe) == AI_SUCCESS) {}
 			//if (aiGetMaterialInteger(mtl, AI_MATKEY_TWOSIDED,         &two_sided) == AI_SUCCESS) {}
-			// AI_MATKEY_ROUGHNESS_FACTOR?
+			// AI_MATKEY_ROUGHNESS_FACTOR? AI_MATKEY_COLOR_REFLECTIVE?
 			// illum? tf?
 			// apply special case string match for forcing alpha to 1.0 (for hair, etc.)
 			if (!assimp_alpha_exclude_str.empty() && string(material->GetName().C_Str()).find(assimp_alpha_exclude_str) != string::npos) {mat.no_blend = 1;}
