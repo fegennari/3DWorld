@@ -371,6 +371,7 @@ public:
 		int const room_id(building.get_room_containing_pt(pos_bs));
 		bool const has_people(building.has_people());
 		cube_t scene_bounds;
+		bool in_mall(0);
 		// calculate our cube map bounds based on what part of the building the center is in
 		if (!building.has_basement() || pos_bs.z > building.ground_floor_z1) {scene_bounds = building.bcube;} // above ground/no basement
 		else if (!building.has_ext_basement() || building.get_basement().contains_pt(pos_bs)) {scene_bounds = building.get_basement();}
@@ -383,6 +384,7 @@ public:
 			room_bounds   = room;
 			interior_room = room.interior;
 			is_extb       = room.is_ext_basement();
+			in_mall       = room.is_mall();
 
 			if (!room.is_single_floor) { // clip to the floor the player is on
 				float const room_floor_spacing(building.get_room_floor_spacing(room));
@@ -405,7 +407,10 @@ public:
 		ref_cube.set_from_sphere(pos_bs, 20.0*floor_spacing); // optimization: limit model drawing to a reasonable distance
 		ref_cube.intersect_with_cube(scene_bounds);
 		reflection_light_cube = ref_cube; // used to enabled lights behind the player that may be reflected
-		reflection_light_cube.intersect_with_cube(room_bounds);
+		cube_t room_bounds_adj(room_bounds);
+		// expand to pick up adjacent rooms whose lights may be visible through open doors or interior windows
+		room_bounds_adj.expand_by_xy((in_mall ? 8.0 : 4.0)*floor_spacing);
+		reflection_light_cube.intersect_with_cube(room_bounds_adj);
 		pre_render();
 
 		for (unsigned dim = 0; dim < 3; ++dim) {
