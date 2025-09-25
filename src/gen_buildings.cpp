@@ -69,15 +69,15 @@ void update_security_camera_image();
 void get_pedestrians_in_area(cube_t const &area, int building_ix, vector<point> &pts);
 void setup_puddles_texture(shader_t &s);
 void setup_player_building_cube_map();
-void setup_city_cube_map();
-bool camera_in_city_bounds();
+void setup_city_cube_map(cube_t const &city_bcube);
+bool camera_in_city_bounds(unsigned rc_mask, cube_t *city_bcube);
 
 float get_door_open_dist    () {return 3.5*CAMERA_RADIUS;}
 float get_interior_draw_dist() {return global_building_params.interior_view_dist_scale*2.0f*(X_SCENE_SIZE + Y_SCENE_SIZE);}
 bool player_in_ext_basement () {return (player_in_basement == 3 && player_building != nullptr);}
 bool cube_map_reflect_active() {return (display_mode & 0x100);} // key 9; on by default
 bool enable_cube_map_reflect() {return (cube_map_reflect_active() &&  camera_in_building && player_building != nullptr && !player_building->is_rotated());}
-bool enable_cube_map_city   () {return (cube_map_reflect_active() && !camera_in_building && camera_in_city_bounds());} // same as above, but for cities
+bool enable_cube_map_city(cube_t *city_bcube) {return (0 && cube_map_reflect_active() && !camera_in_building && camera_in_city_bounds(2, city_bcube));} // rc_mask=2 (commercial)
 
 void update_lights_bcube_zvals(cube_t &lights_bcube, point const &lpos, float radius) {
 	min_eq(lights_bcube.z1(), (lpos.z - radius));
@@ -3903,8 +3903,9 @@ public:
 		setup_building_lights(xlate); // setup lights on first (opaque) non-shadow pass
 		create_mirror_reflection_if_needed(vis_conn_bldg, xlate);
 		reflection_light_cube.set_to_zeros(); // will be set below if cube map reflections are enabled; out of sync with lighting (above) by one frame
+		cube_t city_bcube;
 		if (enable_cube_map_reflect()) {setup_player_building_cube_map();}
-		if (enable_cube_map_city   ()) {setup_city_cube_map();}
+		if (enable_cube_map_city(&city_bcube)) {setup_city_cube_map(city_bcube);}
 		if (player_building) {player_building->create_pending_textures();} // I guess this goes here
 	}
 	static void push_scene_xlate(vector3d const &xlate) {
@@ -3938,7 +3939,7 @@ public:
 		bool const ref_pass_int_only(reflection_pass & REF_PASS_INT_ONLY), ref_pass_interior(reflection_pass & REF_PASS_INTERIOR);
 		bool const ref_pass_water(reflection_pass & REF_PASS_WATER), ref_pass_extb(reflection_pass & REF_PASS_EXTB);
 		bool const not_mirror(reflection_pass & REF_PASS_NO_MIRROR), ref_glass_floor(reflection_pass & REF_PASS_GLASS_FLOOR);
-		bool const ref_pass_cube_map(reflection_pass & REF_PASS_CUBE_MAP);
+		bool const ref_pass_cube_map(reflection_pass & REF_PASS_CUBE_MAP), exterior_only(reflection_pass & REF_PASS_EXT_ONLY);
 		bool const swap_front_back(reflection_pass && !not_mirror && !ref_pass_cube_map); // for mirror reflection, but not security cameras or cube maps
 		// check for sun or moon; also need the smap pass for drawing with dynamic lights at night, so basically it's always enabled
 		bool const use_tt_smap(check_tile_smap(0)); // && (night || light_valid_and_enabled(0) || light_valid_and_enabled(1)));
@@ -3952,7 +3953,7 @@ public:
 			assert(bc);
 			have_windows     |= !bc->building_draw_windows.empty();
 			have_wind_lights |= !bc->building_draw_wind_lights.empty();
-			have_interior    |= (draw_building_interiors && bc->has_interior_geom);
+			have_interior    |= (!exterior_only && (draw_building_interiors && bc->has_interior_geom));
 			max_eq(max_draw_ix, bc->building_draw_vbo.get_num_draw_blocks());
 			if (night) {bc->ensure_window_lights_vbos();}
 			
@@ -3960,9 +3961,9 @@ public:
 				bc->use_smap_this_frame = (use_tt_smap && try_bind_tile_smap_at_point((bc->grid_by_tile[0].bcube.get_cube_center() + xlate), s, 1)); // check_only=1
 			}
 		} // for bc
-		bool const draw_interior((have_windows || global_building_params.add_city_interiors) && draw_building_interiors);
+		bool const draw_interior((have_windows || global_building_params.add_city_interiors) && draw_building_interiors && !exterior_only);
 		bool const v(world_mode == WMODE_GROUND), indir(v), dlights(v), use_smap(v);
-		bool const ext_cube_map_reflect(0 && !reflection_pass && enable_cube_map_city());
+		bool const ext_cube_map_reflect(!reflection_pass && enable_cube_map_city(nullptr));
 		float const min_alpha = 0.0; // 0.0 to avoid alpha test
 		enable_dlight_bcubes  = 1; // using light bcubes is both faster and more correct when shadow maps are not enabled
 		push_scene_xlate(xlate);
@@ -4455,7 +4456,7 @@ public:
 
 		// everything after this point is part of the building exteriors and uses city lights rather than building room lights;
 		// when the player is in the extended basement we still need to draw the exterior wall and door
-		if ((reflection_pass && (!DRAW_EXT_REFLECTIONS || ref_pass_int_only)) || player_cant_see_outside_building()) {
+		if ((reflection_pass && !DRAW_EXT_REFLECTIONS) || ref_pass_int_only || player_cant_see_outside_building()) {
 			// early exit for player fully in basement or attic, or house reflections, if enabled
 			pop_scene_xlate();
 			enable_dlight_bcubes = 0;
@@ -5735,11 +5736,12 @@ void draw_buildings(int shadow_only, int reflection_pass, vector3d const &xlate)
 	building_creator_city.create_vbos(); // create VBOs for city buildings (after adding skyways, etc.), if needed
 	vector<building_creator_t *> bcs;
 	// don't draw city buildings for interior shadows
+	bool const city_only(reflection_pass & REF_PASS_CITY_ONLY);
 	bool const draw_city(world_mode == WMODE_INF_TERRAIN && (shadow_only != 2 || !interior_shadow_maps || global_building_params.add_city_interiors));
-	bool const draw_sec ((shadow_only != 2 || interior_shadow_maps)); // don't draw secondary buildings for exterior dynamic shadows
+	bool const draw_sec ((shadow_only != 2 || interior_shadow_maps) && !city_only); // don't draw secondary buildings for exterior dynamic shadows
 	if (draw_city && building_creator_city.is_visible(xlate)) {bcs.push_back(&building_creator_city);}
 	if (draw_sec  && building_creator     .is_visible(xlate)) {bcs.push_back(&building_creator     );}
-	building_tiles.add_drawn(xlate, bcs);
+	if (!city_only) {building_tiles.add_drawn(xlate, bcs);}
 	building_creator_t::multi_draw(shadow_only, reflection_pass, xlate, bcs);
 }
 void create_building_reflections_and_textures() {

@@ -2905,11 +2905,15 @@ public:
 		}
 		return 0;
 	}
-	bool check_inside_city(point const &pos, float radius) const { // Note: pos is in camera space
+	bool check_inside_city(point const &pos, float radius, unsigned rc_mask, cube_t *city_bcube) const { // Note: pos is in camera space
 		cube_t query; query.set_from_sphere((pos - get_camera_coord_space_xlate()), radius);
 
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {
-			if (r->get_bcube().contains_cube_xy(query)) return 1;
+			if (!(rc_mask & (1 << (!r->get_is_residential())))) continue;
+			cube_t const &bc(r->get_bcube());
+			if (!bc.contains_cube_xy(query)) continue;
+			if (city_bcube) {*city_bcube = bc;}
+			return 1;
 		}
 		return 0;
 	}
@@ -3459,9 +3463,11 @@ public:
 		ret |= ped_manager.line_intersect_peds(p1x, p2x, t);
 		return ret;
 	}
+	bool check_inside_city (point const &pos, float radius, unsigned rc_mask=3, cube_t *city_bcube=nullptr) const {
+		return road_gen.check_inside_city(pos, radius, rc_mask, city_bcube);
+	}
 	bool choose_pt_in_park (point const &pos, point &park_pos, rand_gen_t &rgen) const {return road_gen.choose_pt_in_park(pos, park_pos, rgen);}
-	bool check_mesh_disable(point const &pos, float radius ) const {return road_gen.check_mesh_disable(pos, radius);}
-	bool check_inside_city (point const &pos, float radius ) const {return road_gen.check_inside_city (pos, radius);}
+	bool check_mesh_disable(point const &pos, float radius) const {return road_gen.check_mesh_disable(pos, radius);}
 	bool tile_contains_tunnel(cube_t const &bcube) const {return road_gen.tile_contains_tunnel(bcube);}
 	bool cube_int_underground_obj(cube_t const &c) const {return road_gen.cube_int_underground_obj(c);}
 	bool is_invalid_placement_for_cube(cube_t const &c) const {return road_gen.is_invalid_placement_for_cube(c);}
@@ -3691,7 +3697,7 @@ bool check_mesh_disable(point const &pos, float radius) { // Note: pos is in glo
 bool check_inside_city(point const &pos, float radius) { // Note: pos is in global space
 	return (have_cities() && city_gen.check_inside_city((pos + get_tt_xlate_val()), radius)); // apply xlate for all static objects
 }
-bool camera_in_city_bounds() {return (have_cities() && city_gen.check_inside_city(camera_pos, CAMERA_RADIUS));}
+bool camera_in_city_bounds(unsigned rc_mask, cube_t *city_bcube) {return (have_cities() && city_gen.check_inside_city(camera_pos, CAMERA_RADIUS, rc_mask, city_bcube));}
 bool cube_int_underground_obj(cube_t const &c) {return city_gen.cube_int_underground_obj(c);} // Note: cube is in global space
 bool is_invalid_city_placement_for_cube(cube_t const &c) {return city_gen.is_invalid_placement_for_cube(c);}
 void add_city_plot_cut(cube_t const &cut) {city_gen.add_plot_cut(cut);}

@@ -411,6 +411,9 @@ public:
 		// expand to pick up adjacent rooms whose lights may be visible through open doors or interior windows
 		room_bounds_adj.expand_by_xy((in_mall ? 8.0 : 4.0)*floor_spacing);
 		reflection_light_cube.intersect_with_cube(room_bounds_adj);
+		int reflection_pass(REF_PASS_ENABLED | REF_PASS_INT_ONLY | REF_PASS_CUBE_MAP); // set interior only flag to avoid drawing outdoor objects
+		if ( interior_room) {reflection_pass |= REF_PASS_INTERIOR;}
+		if ( is_extb      ) {reflection_pass |= REF_PASS_EXTB    ;}
 		pre_render();
 
 		for (unsigned dim = 0; dim < 3; ++dim) {
@@ -423,9 +426,6 @@ public:
 				reflection_clip_cube.d[dim][!dir] = pos_bs[dim]; // clip to half space in front of cube map face
 				if (!center_moved && !has_reflected_person(building, camera_pdu, reflection_clip_cube)) continue; // no pos change; skip if no reflected people
 				pre_render_face();
-				int reflection_pass(REF_PASS_ENABLED | REF_PASS_INT_ONLY | REF_PASS_CUBE_MAP); // set interior only flag to avoid drawing outdoor objects
-				if ( interior_room) {reflection_pass |= REF_PASS_INTERIOR;}
-				if ( is_extb      ) {reflection_pass |= REF_PASS_EXTB    ;}
 				draw_buildings(0, reflection_pass, xlate);
 				post_render_face(face_id);
 			} // for dir
@@ -435,12 +435,15 @@ public:
 		is_cube_map_reflection    = 0;
 		reflection_clip_cube.set_to_zeros();
 	}
-	void capture_city(point const &pos) {
-		point const pos_bs(pos - get_tiled_terrain_model_xlate());
-		cube_t scene_bounds; // TODO bounds of city?
+	void capture_city(point const &pos, cube_t const &city_bcube) {
+		assert(city_bcube.is_strictly_normalized());
+		vector3d const xlate(get_tiled_terrain_model_xlate());
+		point const pos_bs(pos - xlate);
 		center    = pos; // in camera space
-		face_dist = 0.25*(scene_bounds.dx() + scene_bounds.dy()); // average scene half width
-		far_plane = scene_bounds.furthest_dist_to_pt(pos_bs); // capture the entire city
+		face_dist = 0.25*(city_bcube.dx() + city_bcube.dy()); // average scene half width
+		far_plane = city_bcube.furthest_dist_to_pt(pos_bs); // capture the entire city
+		int const reflection_pass(REF_PASS_ENABLED | REF_PASS_CUBE_MAP | REF_PASS_CITY_ONLY | REF_PASS_EXT_ONLY);
+		int const trans_op_mask(1); // opaque only
 		pre_render();
 
 		for (unsigned dim = 0; dim < 3; ++dim) {
@@ -449,7 +452,8 @@ public:
 				if (center == last_update_pos[face_id]) continue; // no pos change; skip this face
 				set_view_frustum(dim, dir);
 				pre_render_face();
-				// TODO
+				draw_city_roads(trans_op_mask, xlate);
+				draw_buildings(0, reflection_pass, xlate);
 				post_render_face(face_id);
 			} // for dir
 		} // for dim
@@ -457,7 +461,6 @@ public:
 	}
 	void bind(shader_t &s) const {
 		assert(tid); // must have been captured first
-		if (tid == 0) return; // no reflections captured
 		point const center_bs(center - get_tiled_terrain_model_xlate());
 		setup_shader_cube_map_params(s, center_bs, face_dist, tid, tsize); // pass face_dist in as near_plane as this cube map does not bound an object
 	}
@@ -474,9 +477,9 @@ void setup_player_building_cube_map() {
 	assert(player_building);
 	cube_map_reflection_manager.capture_building(*player_building, camera_raw);
 }
-void setup_city_cube_map() {
+void setup_city_cube_map(cube_t const &city_bcube) {
 	point const camera_raw(surface_pos + camera_zh*plus_z); // camera space
-	cube_map_reflection_manager.capture_city(camera_raw);
+	cube_map_reflection_manager.capture_city(camera_raw, city_bcube);
 }
 void bind_player_building_cube_map(shader_t &s) {cube_map_reflection_manager.bind(s);}
 void register_reflection_update() {cube_map_reflection_manager.force_update();}

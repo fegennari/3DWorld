@@ -678,6 +678,8 @@ unsigned const REF_PASS_EXTB        = 0x10;
 unsigned const REF_PASS_NO_MIRROR   = 0x20;
 unsigned const REF_PASS_INT_ONLY    = 0x40;
 unsigned const REF_PASS_GLASS_FLOOR = 0x80;
+unsigned const REF_PASS_CITY_ONLY   = 0x100;
+unsigned const REF_PASS_EXT_ONLY    = 0x200;
 
 inline vector3d vector_from_dim_dir(int dim, bool dir) {
 	vector3d v;

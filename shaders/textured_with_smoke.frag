@@ -477,10 +477,17 @@ void main() {
 			float shininess= specular_color.a; // typically 1-80
 			int blur_val   = max(0, int((80.0 - shininess)/10.0));
 			vec3 ref_tex   = apply_cube_map_blur(ref_dir, blur_val);
-			// white specular: modulate with material color (for different shades of metal)
-			vec3 spec_color= ((specular_color.r == specular_color.g && specular_color.r == specular_color.b) ? texel.rgb*gl_Color.rgb : specular_color.rgb);
-			float spec_mag = max(specular_color.r, max(specular_color.g, specular_color.b));
-			color.rgb = mix(color.rgb, spec_color*ref_tex, metalness*spec_mag);
+
+			if (metalness > 1.0) { // special case for building exterior glass/steel
+				float v = 1.0 - max(texel.r, max(texel.g, texel.b));
+				color.rgb = mix(color.rgb, mix(vec3(1.0), texel.rgb, 0.75)*ref_tex, (0.25 + 0.5*v));
+			}
+			else {
+				// white specular: modulate with material color (for different shades of metal)
+				vec3 spec_color= ((specular_color.r == specular_color.g && specular_color.r == specular_color.b) ? texel.rgb*gl_Color.rgb : specular_color.rgb);
+				float spec_mag = max(specular_color.r, max(specular_color.g, specular_color.b));
+				color.rgb = mix(color.rgb, spec_color*ref_tex, metalness*spec_mag);
+			}
 		}
 		else { // glass/dielectric
 			vec2 reflected = get_reflect_weight(-view_dir, ws_normal, reflectivity2, refract_ix); // {fresnel_term, reflect_weight}
