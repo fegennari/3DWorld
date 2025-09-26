@@ -43,6 +43,7 @@ bool proc_buildings_sphere_coll(point &pos, point const &p_last, float radius, v
 bool check_building_line_coll(point const &p1, point const &p2, bool city_bldgs);
 void draw_player_building_transparent(int reflection_pass, vector3d const &xlate);
 void bind_player_building_cube_map(shader_t &s);
+bool enable_cube_map_city(cube_t *city_bcube);
 bool enable_player_flashlight();
 
 
@@ -98,7 +99,9 @@ void draw_state_t::begin_tile(point const &pos, bool will_emit_now, bool ensure_
 	emit_now = (use_smap && try_bind_tile_smap_at_point((pos + xlate), s));
 	if (will_emit_now && !emit_now) {disable_shadow_maps(s);} // not using shadow maps or second (non-shadow map) pass - disable shadow maps
 }
-void draw_state_t::pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only_, bool always_setup_shader, bool enable_animations, bool enable_occlusion) {
+void draw_state_t::pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only_,
+	bool always_setup_shader, bool enable_animations, bool enable_occlusion, bool enable_reflect)
+{
 	xlate       = xlate_;
 	camera_bs   = camera_pdu.pos - xlate;
 	shadow_only = shadow_only_;
@@ -119,7 +122,7 @@ void draw_state_t::pre_draw(vector3d const &xlate_, bool use_dlights_, bool shad
 	else {
 		bool const force_tsl = 0; // helps with hedges and flags, but causes problems with other models
 		cube_t const &lights_bcube(use_building_lights ? get_building_lights_bcube() : get_city_lights_bcube());
-		city_shader_setup(s, lights_bcube, use_dlights, use_smap, (use_bmap && !shadow_only), DEF_CITY_MIN_ALPHA, force_tsl, 0.5);
+		city_shader_setup(s, lights_bcube, use_dlights, use_smap, (use_bmap && !shadow_only), DEF_CITY_MIN_ALPHA, force_tsl, 0.5, 0, 0, 1, enable_reflect); // is_outside=1
 	}
 }
 void draw_state_t::end_draw() {
@@ -3027,7 +3030,8 @@ public:
 			}
 			if (have_animations()) {enable_animations_for_shader(dstate.s);}
 			if (!shadow_only) {enable_dlight_bcubes |= city_lights_custom_bcube;}
-			dstate.pre_draw(xlate, use_dlights, shadow_only, 1); // always_setup_shader=1
+			bool const enable_reflect(enable_cube_map_city(nullptr) && !shadow_only); // only needed for commercial cities, but we're drawing them all here
+			dstate.pre_draw(xlate, use_dlights, shadow_only, 1, 1, enable_reflect); // always_setup_shader=1, enable_occlusion=1
 			assert(dstate.s.is_setup());
 			for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->draw(dstate, shadow_only, 0);}
 			global_rn.draw(dstate, shadow_only, 1); // connector road may have bridges, and therefore needs shadows

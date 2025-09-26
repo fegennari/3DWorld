@@ -481,7 +481,7 @@ void hedge_draw_t::draw_and_clear(shader_t &s) {
 
 // swimming pools
 
-void begin_water_surface_draw() {
+void begin_water_surface_draw(shader_t &s) { // used for swimming pools and ponds
 	if (0) {
 		select_texture(WHITE_TEX);
 		select_texture(get_texture_by_name("normal_maps/ocean_water_normal.png", 1), 5);
@@ -489,11 +489,13 @@ void begin_water_surface_draw() {
 	else {select_texture(get_texture_by_name("snow2.jpg"));}
 	enable_blend(); // transparent water
 	glDepthMask(GL_FALSE);
+	s.add_uniform_float("refract_ix", 1.33);
 }
-void end_water_surface_draw() {
+void end_water_surface_draw(shader_t &s) {
 	if (0) {bind_default_flat_normal_map();}
 	disable_blend();
 	glDepthMask(GL_TRUE);
+	s.add_uniform_float("refract_ix", 1.0); // reset
 }
 
 // passes: 0=in-ground walls, 1=in-ground water, 2=above ground sides, 3=above ground water
@@ -501,13 +503,13 @@ void end_water_surface_draw() {
 	if (shadow_only) {} // nothing
 	else if (dstate.pass_ix == 2) {select_texture(WHITE_TEX);} // sides/untextured
 	else if (dstate.pass_ix == 0) {select_texture(get_texture_by_name("bathroom_tile.jpg"));} // walls and maybe ladder
-	else if (dstate.pass_ix == 1 || dstate.pass_ix == 3) {begin_water_surface_draw();} // water surface
+	else if (dstate.pass_ix == 1 || dstate.pass_ix == 3) {begin_water_surface_draw(dstate.s);} // water surface
 	else if (dstate.pass_ix == 4) {} // caustics pass - handled by the caller
 	else {assert(0);}
 }
 /*static*/ void swimming_pool_t::post_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only && dstate.pass_ix != 4) {dstate.s.set_cur_color(WHITE);} // restore to default color
-	if (dstate.pass_ix == 1 || dstate.pass_ix == 3) {end_water_surface_draw();} // water surface
+	if (dstate.pass_ix == 1 || dstate.pass_ix == 3) {end_water_surface_draw(dstate.s);} // water surface
 	city_obj_t::post_draw(dstate, shadow_only);
 }
 void swimming_pool_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
@@ -1717,12 +1719,12 @@ pond_t::pond_t(point const &pos_, float x_radius, float y_radius, float depth) :
 	assert(!shadow_only);
 	if      (dstate.pass_ix == 0) {select_texture(DIRT_TEX);} // dirt below
 	else if (dstate.pass_ix == 1) {select_texture(BLUR_CENT_TEX); enable_blend();} // dark blur
-	else {begin_water_surface_draw();} // water above
+	else {begin_water_surface_draw(dstate.s);} // water above
 }
 /*static*/ void pond_t::post_draw(draw_state_t &dstate, bool shadow_only) {
 	if      (dstate.pass_ix == 0) {} // dirt below
 	else if (dstate.pass_ix == 1) {disable_blend();} // dark blur
-	else {end_water_surface_draw();} // water above
+	else {end_water_surface_draw(dstate.s);} // water above
 }
 void pond_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	assert(!shadow_only);
@@ -1956,10 +1958,16 @@ ww_elevator_t::ww_elevator_t(cube_t const &c, bool dim_, bool dir_, float fs, cu
 	oriented_city_obj_t(c, dim_, dir_), floor_spacing(fs), platform_zval(c.z1() + get_fc_thick()), target_pzval(platform_zval), ww_bcube(ww_bcube_) {set_bsphere_from_bcube();}
 
 /*static*/ void ww_elevator_t::pre_draw (draw_state_t &dstate, bool shadow_only) {
-	if (dstate.pass_ix == 1) {enable_blend();} // transparent glass pass
+	if (dstate.pass_ix == 1) { // transparent glass pass
+		enable_blend();
+		dstate.s.add_uniform_float("refract_ix", 1.6); // refractive glass
+	}
 }
 /*static*/ void ww_elevator_t::post_draw(draw_state_t &dstate, bool shadow_only) {
-	if (dstate.pass_ix == 1) {disable_blend();} // transparent glass pass
+	if (dstate.pass_ix == 1) { // transparent glass pass
+		disable_blend();
+		dstate.s.add_uniform_float("refract_ix", 1.0); // reset
+	}
 }
 void ww_elevator_t::get_glass_sides(cube_with_ix_t sides[4]) const {
 	float const floor_thickness(get_floor_thickness()), glass_width(get_glass_thickness());
@@ -2258,7 +2266,13 @@ parking_solar_t::parking_solar_t(cube_t const &c, bool dim_, bool dir_, unsigned
 	set_bsphere_from_bcube();
 }
 /*static*/ void parking_solar_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
-	if (!shadow_only) {select_texture(get_solarp_tid());}
+	if (!shadow_only) {
+		select_texture(get_solarp_tid());
+		dstate.s.add_uniform_float("refract_ix", 1.6); // refractive glass; also applies to metal legs
+	}
+}
+/*static*/ void parking_solar_t::post_draw(draw_state_t &dstate, bool shadow_only) {
+	if (!shadow_only) {dstate.s.add_uniform_float("refract_ix", 1.0);} // reset
 }
 void parking_solar_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	// draw roof and solar panel

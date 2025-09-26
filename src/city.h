@@ -453,7 +453,8 @@ public:
 	float get_lod_factor(point const &pos) const {return draw_tile_dist/p2p_dist(camera_bs, pos);}
 	virtual void draw_unshadowed() {}
 	void begin_tile(point const &pos, bool will_emit_now=0, bool ensure_active=0);
-	void pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only_, bool always_setup_shader, bool enable_animations=0, bool enable_occlusion=1);
+	void pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only_, bool always_setup_shader,
+		bool enable_animations=0, bool enable_occlusion=1, bool enable_reflect=0);
 	void end_draw();
 	virtual void post_draw();
 	void set_untextured_material();
@@ -648,7 +649,7 @@ private:
 	void draw_city_region_int(quad_batch_draw &cache, unsigned type_ix);
 	void draw_transmission_line_wires(point const &p1, point const &p2, point const wire_pts1[3], point const wire_pts2[3], float radius);
 public:
-	void pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only, bool always_setup_shader=0, bool enable_occlusion=1);
+	void pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only, bool always_setup_shader=0, bool enable_occlusion=1, bool enable_reflect=0);
 	virtual void draw_unshadowed();
 	virtual void post_draw();
 	void end_cur_tile();
