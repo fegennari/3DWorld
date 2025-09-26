@@ -4436,7 +4436,7 @@ public:
 				bbd.draw_and_clear_ext_tiles(city_shader, xlate); // draw after ext walls but before windows so that alpha blending works properly
 				city_shader.disable();
 			}
-			bbd.clear_ext_tiles(); // required, even if there's no ext_geom(), because tile bboxes may still be nonempty
+			bbd.clear_ext_tile_bboxes(); // required, even if there's no ext_geom(), because tile bboxes may still be nonempty
 
 			if (!reflection_pass) { // draw windows and doors in depth pass to create holes
 				enable_holes_shader(holes_shader); // need same shader to avoid z-fighting

@@ -18,7 +18,7 @@ bool const USE_PARAMS_HSCALE  = 0;
 bool const FLATTEN_BUILDING_TILE = 1; // removes terrain from the inside of buildings, but is slightly slower/higher memory usage and requires space between building and tile edge to prevent seams
 int  const DITHER_NOISE_TEX   = NOISE_GEN_TEX;//PS_NOISE_TEX
 unsigned const NORM_TEXELS    = 512;
-unsigned const TILE_SMAP_START_TU_ID = 13;
+unsigned const TILE_SMAP_START_TU_ID = 21;
 float const FOG_DIST_TILES    = 1.45;
 float const DRAW_DIST_TILES   = 1.5;
 float const CREATE_DIST_TILES = 1.6;
@@ -2492,7 +2492,7 @@ void set_smap_enable_for_shader(shader_t &s, bool enable_smap, int shader_type) 
 }
 
 
-// uses texture units 0-11 and 15 (12 if using hmap texture, 13-14 if using shadow maps) + 16-20 for normal maps
+// uses texture units 0-11 and 15 (12 if using hmap texture) + 16-20 for normal maps + 21-22 for shadow maps
 // Note: could be static, except uses get_actual_zmin()
 void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass, bool enable_shadow_map) const {
 

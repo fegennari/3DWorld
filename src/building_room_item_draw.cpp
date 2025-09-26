@@ -346,7 +346,7 @@ void brg_batch_draw_t::draw_and_clear_ext_tiles(shader_t &s, vector3d const &xla
 	disable_blend();
 	indexed_vao_manager_with_shadow_t::post_render();
 }
-void brg_batch_draw_t::clear_ext_tiles() {
+void brg_batch_draw_t::clear_ext_tile_bboxes() {
 	for (tile_block_t &tb : ext_by_tile) {tb.bcube = cube_t();} // reset for next frame
 }
 

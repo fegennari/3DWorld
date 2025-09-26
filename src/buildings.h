@@ -1008,7 +1008,7 @@ public:
 	void add_material(rgeom_mat_t const &m, bool is_ext_tile=0);
 	void draw_and_clear(shader_t &s);
 	void draw_and_clear_ext_tiles(shader_t &s, vector3d const &xlate);
-	void clear_ext_tiles();
+	void clear_ext_tile_bboxes();
 	void clear_obj_models() {models_to_draw.clear();}
 	void draw_obj_models(shader_t &s, vector3d const &xlate, bool shadow_only) const;
 };
