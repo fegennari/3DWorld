@@ -5,6 +5,7 @@ start_maximized 1
 enable_mouse_look 1
 enable_timing_profiler 0
 #use_core_context 1
+#assert_on_gl_error 1
 disable_tt_water_reflect 1 # not needed for cities because cities aren't near water
 enable_model3d_bump_maps 1 # for pedestrians
 pre_load_full_tiled_terrain 1 # long load times but no initial lag when rotating the camera
