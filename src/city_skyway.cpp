@@ -394,11 +394,13 @@ void skyway_t::draw_glass_surfaces(draw_state_t &dstate, city_draw_qbds_t &qbds)
 	// draw transparent top glass panel; Z only
 	bind_default_flat_normal_map();
 	select_texture(WHITE_TEX);
+	dstate.s.add_uniform_float("refract_ix", 1.6); // refractive glass
 	tile_drawer_t td;
 	enable_blend();
 	glDepthMask(GL_FALSE); // disable depth writing so that clouds, etc. are drawn over the glass
 	draw_long_cube(top, colorRGBA(1.0, 1.0, 1.0, 0.25), dstate, qbds.untex_qbd, td, dist_scale, 0, 0, 0, 0.0, 3); // shadow_only=0
 	td.end_draw(qbds.untex_qbd);
+	dstate.s.add_uniform_float("refract_ix", 1.0); // reset
 	glDepthMask(GL_TRUE);
 	disable_blend();
 }

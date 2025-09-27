@@ -3050,7 +3050,8 @@ public:
 		translate_to(xlate);
 		bind_default_flat_normal_map();
 		enable_dlight_bcubes |= city_lights_custom_bcube;
-		dstate.pre_draw(xlate, use_dlights, 0, 1); // shadow_only=0, always_setup_shader=1
+		bool const enable_reflect(enable_cube_map_city(nullptr));
+		dstate.pre_draw(xlate, use_dlights, 0, 1, 0, enable_reflect); // shadow_only=0, always_setup_shader=1, enable_occlusion=0
 		// bind a valid but empty shadow map texture for both the sun and moon in case it was left in an invalid state and the first tile doesn't have a valid smap
 		for (unsigned i = 0; i < 2; ++i) {bind_texture_tu(get_empty_smap_tid(), 6+i);}
 		for (road_network_t &r : road_networks) {r.draw_transparent(dstate);}

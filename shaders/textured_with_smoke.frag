@@ -490,7 +490,9 @@ void main() {
 			}
 		}
 		else { // glass/dielectric
-			vec2 reflected = get_reflect_weight(-view_dir, ws_normal, reflectivity2, refract_ix); // {fresnel_term, reflect_weight}
+			vec3 ref_n = ws_normal;
+			if (dot(ref_n, view_dir) > 0.0) {ref_n *= -1.0;} // invert if viewed from the back side
+			vec2 reflected = get_reflect_weight(-view_dir, ref_n, reflectivity2, refract_ix); // {fresnel_term, reflect_weight}
 			color = mix(color, vec4(texture(reflection_tex, ref_dir).rgb, 1.0), reflected.y);
 		}
 	}
