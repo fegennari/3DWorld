@@ -509,8 +509,7 @@ void end_water_surface_draw(shader_t &s) {
 }
 /*static*/ void swimming_pool_t::post_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only && dstate.pass_ix != 4) {dstate.s.set_cur_color(WHITE);} // restore to default color
-	if (dstate.pass_ix == 1 || dstate.pass_ix == 3) {end_water_surface_draw(dstate.s);} // water surface
-	city_obj_t::post_draw(dstate, shadow_only);
+	if (!shadow_only && (dstate.pass_ix == 1 || dstate.pass_ix == 3)) {end_water_surface_draw(dstate.s);} // water surface
 }
 void swimming_pool_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	bool const caustics_pass(dstate.pass_ix == 4);
@@ -1842,14 +1841,16 @@ void walkway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_sc
 		else { // draw full sides
 			dstate.draw_cube(qbds.qbd, bcube, side_color, 0, 1.0, skip_dims, 0, 0, 0, tsx, tsx, tsy); // sides; skip ends, top, and bottom
 		}
+		qbds.qbd.draw_and_clear(); // must draw here since texture was set dynamically
+		side_mat.side_tex.unset_gl(state);
 	}
 	if (dstate.camera_bs.z < bcube.z1() || dstate.camera_bs.z > bcube.z2()) { // camera not inside walkway zvals - draw top and bottom
 		auto const &roof_mat(global_building_params.get_material(roof_mat_ix));
-		qbds.qbd.draw_and_clear(); // must draw here since texture was set dynamically
 		roof_mat.roof_tex.set_gl(state);
 		dstate.draw_cube(qbds.qbd, bcube, roof_color, 0, roof_mat.roof_tex.get_drawn_tscale_x(), 3); // top and bottom; skip ends and sides
+		qbds.qbd.draw_and_clear(); // must draw here since texture was set dynamically
+		roof_mat.roof_tex.unset_gl(state);
 	}
-	qbds.qbd.draw_and_clear(); // must draw here since texture was set dynamically
 }
 bool walkway_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
 	// Note: if the player is coming from a building, this code won't be called until pos_ is outside the building bcube,
