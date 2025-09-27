@@ -2267,39 +2267,43 @@ parking_solar_t::parking_solar_t(cube_t const &c, bool dim_, bool dir_, unsigned
 	set_bsphere_from_bcube();
 }
 /*static*/ void parking_solar_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
-	if (!shadow_only) {
+	if (!shadow_only && dstate.pass_ix == 0) { // solar panel texture + glass refraction
 		select_texture(get_solarp_tid());
 		dstate.s.add_uniform_float("refract_ix", 1.6); // refractive glass; also applies to metal legs
 	}
 }
 /*static*/ void parking_solar_t::post_draw(draw_state_t &dstate, bool shadow_only) {
-	if (!shadow_only) {dstate.s.add_uniform_float("refract_ix", 1.0);} // reset
+	if (!shadow_only && dstate.pass_ix == 0) {dstate.s.add_uniform_float("refract_ix", 1.0);} // reset
 }
 void parking_solar_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
-	// draw roof and solar panel
-	unsigned const vs1(qbds.qbd.verts.size()), vs2(qbds.untex_qbd.verts.size());
 	float const height(bcube.dz());
 	cube_t roof(bcube);
 	roof.z1() = bcube.z2() - 0.05*height;
-
-	if (!shadow_only) { // panel is not shadow casting
-		cube_t panel(roof);
-		panel.z2() += 0.005*height + 1.0E-4*p2p_dist(pos, dstate.camera_bs); // slightly above the roof to prevent Z-fighting, more when the player is far away
-		panel.expand_by_xy(-0.04*height); // small shrink to create a border
-		dstate.draw_cube(qbds.qbd,   panel, WHITE,   1, 1.0/height, 3, 0, 0, 0, 1.0, 1.0, 1.0, 0, 1); // top surface only; no_cull=1 since it's rotated
-	}
-	dstate.draw_cube(qbds.untex_qbd, roof,  LT_GRAY, 0, 0.0,        0, 0, 0, 0, 1.0, 1.0, 1.0, 0, 1); // draw all sides; no_cull=1 since it's rotated
-	// rotate into place
+	// setup rotation
 	float const angle(0.25*(dim ? -1.0 : 1.0)*(height/get_length()));
 	vector3d const axis(vector_from_dim_dir(!dim, dir));
 	point about;
 	about[ dim] = bcube.d[dim][dir];
 	about[!dim] = bcube.get_center_dim(!dim);
 	about.z     = roof.zc();
-	rotate_verts(qbds.qbd.verts,       axis, angle, about, vs1);
-	rotate_verts(qbds.untex_qbd.verts, axis, angle, about, vs2);
-	// draw 4 untextured metal legs
-	for (cube_t const &leg : get_legs()) {dstate.draw_cube(qbds.untex_qbd, leg, WHITE, 0, 0.0, 4);} // skip top and bottom
+
+	if (dstate.pass_ix == 0) { // draw panel
+		assert(!shadow_only); // panel is not shadow casting
+		cube_t panel(roof);
+		panel.z2() += 0.005*height + 1.0E-4*p2p_dist(pos, dstate.camera_bs); // slightly above the roof to prevent Z-fighting, more when the player is far away
+		panel.expand_by_xy(-0.04*height); // small shrink to create a border
+		unsigned const vs(qbds.qbd.verts.size());
+		dstate.draw_cube(qbds.qbd, panel, WHITE, 1, 1.0/height, 3, 0, 0, 0, 1.0, 1.0, 1.0, 0, 1); // top surface only; no_cull=1 since it's rotated
+		rotate_verts(qbds.qbd.verts, axis, angle, about, vs);
+	}
+	else { // draw roof frame
+		unsigned const vs(qbds.untex_qbd.verts.size());
+		dstate.draw_cube(qbds.untex_qbd, roof, LT_GRAY, 0, 0.0, 0, 0, 0, 0, 1.0, 1.0, 1.0, 0, 1); // draw all sides; no_cull=1 since it's rotated
+		rotate_verts(qbds.untex_qbd.verts, axis, angle, about, vs);
+	}
+	if (dstate.pass_ix == 1) { // draw 4 untextured metal legs
+		for (cube_t const &leg : get_legs()) {dstate.draw_cube(qbds.untex_qbd, leg, WHITE, 0, 0.0, 4);} // skip top and bottom
+	}
 }
 bool parking_solar_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
 	for (cube_t const &leg : get_legs()) {

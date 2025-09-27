@@ -2371,7 +2371,6 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(bb_hoops,  bb_hoop_groups,  dstate, 0.10, shadow_only, 1);
 	draw_objects(chairs,    chair_groups,    dstate, 0.10, shadow_only, 1);
 	draw_objects(walkways,  walkway_groups,  dstate, 0.25, shadow_only, 1);
-	draw_objects(p_solars,  p_solar_groups,  dstate, 0.40, shadow_only, 0);
 	draw_objects(elevators, wwe_groups,      dstate, 0.15, shadow_only, 0); // draw first pass opaque geometry
 	draw_objects(ug_elevs,  uge_groups,      dstate, 0.20, shadow_only, 0);
 	draw_objects(bballs,    bball_groups,    dstate, 0.12, shadow_only, 1);
@@ -2389,6 +2388,9 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 		for (dstate.pass_ix = 0; dstate.pass_ix < 2; ++dstate.pass_ix) { // {dirt bottom, dark blur}
 			draw_objects(ponds, pond_groups, dstate, 0.30, shadow_only, 1); // dist_scale=0.30, has_immediate_draw=1
 		}
+	}
+	for (dstate.pass_ix = (shadow_only ? 1 : 0); dstate.pass_ix < 2; ++dstate.pass_ix) { // {solar panel, metal frame}; panel does not cast shadows
+		draw_objects(p_solars, p_solar_groups, dstate, (dstate.pass_ix ? 0.25 : 0.45), shadow_only, 0);
 	}
 	for (dstate.pass_ix = 0; dstate.pass_ix < 3; ++dstate.pass_ix) { // {line, poles, clothes}
 		if (shadow_only && dstate.pass_ix == 0) continue; // skip line in the shadow pass because its too narrow to cast a good shadow
