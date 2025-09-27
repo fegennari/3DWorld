@@ -461,8 +461,9 @@ public:
 	}
 	void bind(shader_t &s) const {
 		assert(tid); // must have been captured first
-		point const center_bs(center - get_tiled_terrain_model_xlate());
-		setup_shader_cube_map_params(s, center_bs, face_dist, tid, tsize); // pass face_dist in as near_plane as this cube map does not bound an object
+		vector3d const xlate(get_tiled_terrain_model_xlate());
+		setup_shader_cube_map_params(s, (center - xlate), face_dist, tid, tsize); // pass face_dist in as near_plane as this cube map does not bound an object
+		s.add_uniform_vector3d("camera_pos", (get_camera_pos() - xlate)); // in world space; set in case dlights (which normally sets this) is not enabled
 	}
 	void force_update() {
 		if (tid == 0) return; // disabled
