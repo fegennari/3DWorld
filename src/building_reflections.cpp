@@ -442,6 +442,7 @@ public:
 		center    = pos; // in camera space
 		face_dist = 0.25*(city_bcube.dx() + city_bcube.dy()); // average scene half width
 		far_plane = city_bcube.furthest_dist_to_pt(pos_bs); // capture the entire city
+		disable_city_shadow_maps = 1; // shadows don't work because texture_matrix is not valid for the new MVM and are disabled for city buildings and roads
 		int const reflection_pass(REF_PASS_ENABLED | REF_PASS_CUBE_MAP | REF_PASS_CITY_ONLY | REF_PASS_EXT_ONLY);
 		int const trans_op_mask(1); // opaque only
 		pre_render();
@@ -458,6 +459,7 @@ public:
 			} // for dir
 		} // for dim
 		restore_state();
+		disable_city_shadow_maps = 0;
 	}
 	void bind(shader_t &s) const {
 		assert(tid); // must have been captured first

@@ -391,12 +391,12 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	if (enable_puddles    ) {s.set_prefix("#define ENABLE_PUDDLES",         1);} // FS
 	if (is_snowy          ) {s.set_prefix("#define ENABLE_SNOW_COVERAGE",   1);} // FS
 	if (abstract_art      ) {s.set_prefix("#define ENABLE_ABSTRACT_ART",    1);} // FS
-	if (use_smap && enable_ground_csm) {s.set_prefix("#define ENABLE_CASCADED_SHADOW_MAPS", 1);} // FS
 	if (!anim_shader.empty()) {s.set_prefix("#define ENABLE_VERTEX_ANIMATION", 0);} // VS
 	if (use_clip_plane    ) {s.set_prefix("#define ENABLE_CLIP_PLANE",      0);} // VS
 	if (enable_reflect == 2 && use_bmap && (enable_cube_map_bump_maps || is_cobj)) {s.set_prefix("#define ENABLE_CUBE_MAP_BUMP_MAPS",1);} // FS
 	float const water_depth(setup_underwater_fog(s, 1)); // FS
-	common_shader_block_pre(s, dlights, use_smap, indir_lighting, min_alpha, 0, use_wet_mask);
+	common_shader_block_pre(s, dlights, use_smap, indir_lighting, min_alpha, 0, use_wet_mask); // Note: may unset some flags
+	if (use_smap && enable_ground_csm) {s.set_prefix("#define ENABLE_CASCADED_SHADOW_MAPS", 1);} // FS
 	bool const enable_sky_occlusion(sky_occlude_scale > 0.0 && direct_lighting && !indir_lighting); // Note: common_shader_block_pre() changes indir_lighting
 	if (enable_sky_occlusion) {s.set_prefix("#define ENABLE_SKY_OCCLUSION", 1);} // FS
 	set_smoke_shader_prefixes(s, use_texgen, keep_alpha, direct_lighting, smoke_en, has_lt_atten, use_smap, use_bmap, use_spec_map, use_mvm, use_gloss_map);
