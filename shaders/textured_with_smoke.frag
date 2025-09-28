@@ -460,7 +460,7 @@ void main() {
 
 #ifdef ENABLE_CUBE_MAP_REFLECT
 #ifdef ENABLE_BUILDING_CUBE_MAP // handle metal and glass reflections
-	if ((metalness > 0.0 && specular_color.rgb != vec3(0.0) && gl_Color.rgb != vec3(0.0)) || refract_ix > 1.0) {
+	if ((metalness > 0.0 && specular_color.rgb != vec3(0.0) && specular_color.a > 1.0 && gl_Color.rgb != vec3(0.0)) || refract_ix > 1.0) {
 		vec3 view_dir  = normalize(vpos - camera_pos);
 		vec3 ws_normal = normalize(normal_s);
 		vec3 ref_dir   = reflect(view_dir, ws_normal);
