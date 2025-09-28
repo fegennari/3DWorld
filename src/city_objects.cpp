@@ -793,20 +793,26 @@ cube_t newsrack_t::get_bird_bcube() const {
 	return cm;
 }
 /*static*/ void newsrack_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
-	if (!shadow_only) {select_texture(get_texture_by_name("roads/fake_news.jpg"));}
-	if (!shadow_only) {dstate.s.set_specular(0.33, 40.0);} // low specular
+	if (shadow_only) {}
+	else if (dstate.pass_ix == 1) {select_texture(get_texture_by_name("roads/fake_news.jpg"));}
+	else { // metal
+		dstate.s.set_specular(0.35, 40.0); // low specular
+		dstate.s.add_uniform_float("metalness", 0.5); // partially reflective
+	}
 }
 /*static*/ void newsrack_t::post_draw(draw_state_t &dstate, bool shadow_only) {
-	if (!shadow_only) {dstate.s.clear_specular();}
+	if (!shadow_only && dstate.pass_ix == 0) {
+		dstate.s.clear_specular();
+		dstate.s.add_uniform_float("metalness", 0.0); // reset
+	}
 }
 void newsrack_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	if (!bcube.closest_dist_less_than(dstate.camera_bs, 0.45*dist_scale*dstate.draw_tile_dist)) { // far away, draw low detail single cube
 		dstate.draw_cube(qbds.qbd, bcube, color, 1); // skip_bottom=1
 		return;
 	}
-	// use a tiny texture scale so that we can use the newspaper texture for drawing the sides with the white texel in the LLC
-	float const dir_sign(dir ? 1.0 : -1.0), llc_tscale(0.0001);
-	bool const front_facing((dstate.camera_bs[dim] < bcube.get_center_dim(dim)) ^ dir);
+	float const dir_sign(dir ? 1.0 : -1.0);
+	bool const front_facing((dstate.camera_bs[dim] < bcube.get_center_dim(dim)) ^ dir), draw_metal(dstate.pass_ix == 0);
 	vector3d const sz(bcube.get_size());
 	cube_t body(bcube);
 	bool skip_bottom(1);
@@ -816,7 +822,8 @@ void newsrack_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_s
 	case 1: { // cube with coin mechanism on top
 		cube_t const cm(get_bird_bcube());
 		body.z2() = cm.z1();
-		dstate.draw_cube(qbds.qbd, cm, color, 1, llc_tscale); // coin mech; skip bottom
+		if (!draw_metal) break;
+		dstate.draw_cube(qbds.qbd, cm, color, 1); // coin mech; skip bottom
 
 		if (front_facing) { // draw the lock bar
 			cube_t bar(cm);
@@ -825,32 +832,36 @@ void newsrack_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_s
 			bar.d[dim][ dir] += dir_sign*0.05*sz[dim]; // extend outward a bit
 			bar.z2() -= 0.5*cm.dz();
 			bar.z1() -= 0.3*cm.dz();
-			dstate.draw_cube(qbds.qbd, bar, color, 0, llc_tscale); // skip face dim, !dir, or draw if player is in front?
+			dstate.draw_cube(qbds.qbd, bar, color, 0); // skip face dim, !dir, or draw if player is in front?
 		}
 		break;
 	}
 	case 2: { // cube with extended front
+		body.z1() = bcube.z1() + 0.35*sz.z;
+		if (!draw_metal) break;
 		cube_t stand(bcube);
-		stand.z2() = body.z1() = bcube.z1() + 0.35*sz.z;
+		stand.z2() = body.z1();
 		stand.d[dim][dir] -= dir_sign*0.1*sz[dim]; // shift front inward
-		dstate.draw_cube(qbds.qbd, stand, color, 1, llc_tscale, 4); // stand, skip top and bottom
+		dstate.draw_cube(qbds.qbd, stand, color, 1, 1.0, 4); // stand, skip top and bottom
 		skip_bottom = 0; // front of bottom may be visible
 		break;
 	}
 	case 3: { // cube on narrow stand
+		body.z1() = bcube.z1() + 0.50*sz.z;
+		if (!draw_metal) break;
 		cube_t stand(bcube), base(bcube);
-		stand.z2() = body .z1() = bcube.z1() + 0.50*sz.z;
+		stand.z2() = body .z1();
 		base .z2() = stand.z1() = bcube.z1() + 0.06*sz.z;
 		stand.expand_by_xy(-0.3*min(sz.x, sz.y)); // shrink in XY
-		dstate.draw_cube(qbds.qbd, stand, color, 1, llc_tscale, 4); // stand, skip top and bottom
-		dstate.draw_cube(qbds.qbd, base,  color, 1, llc_tscale); // base, skip bottom
+		dstate.draw_cube(qbds.qbd, stand, color, 1, 1.0, 4); // stand, skip top and bottom
+		dstate.draw_cube(qbds.qbd, base,  color, 1); // base, skip bottom
 		skip_bottom = 0; // edges of bottom may be visible
 		break;
 	}
 	} // end switch
-	dstate.draw_cube(qbds.qbd, body, color, skip_bottom, llc_tscale); // main body
+	if (draw_metal) {dstate.draw_cube(qbds.qbd, body, color, skip_bottom);} // main body
 	
-	if (front_facing) { // draw the door
+	if (front_facing && !shadow_only && dstate.pass_ix == 1) { // draw the door with a newspaper texture
 		cube_t door(body);
 		door.expand_in_dim( 2,   -0.1*body.dz()); // shrink height
 		door.expand_in_dim(!dim, -0.1*sz[!dim] ); // shrink width

@@ -2366,7 +2366,6 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(ppoles,    ppole_groups,    dstate, 0.20, shadow_only, 0);
 	draw_objects(signs,     sign_groups,     dstate, 0.25, shadow_only, 1, 1); // draw_qbd_as_quads=1
 	draw_objects(flags,     flag_groups,     dstate, 0.18, shadow_only, 1);
-	draw_objects(newsracks, nrack_groups,    dstate, 0.10, shadow_only, 0);
 	draw_objects(tcones,    tcone_groups,    dstate, 0.08, shadow_only, 1);
 	draw_objects(sculptures,sculpt_groups,   dstate, 0.18, shadow_only, 1);
 	draw_objects(swings,    swing_groups,    dstate, 0.06, shadow_only, 1);
@@ -2400,6 +2399,9 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	}
 	for (dstate.pass_ix = (shadow_only ? 1 : 0); dstate.pass_ix < 2; ++dstate.pass_ix) { // {solar panel, metal frame}; panel does not cast shadows
 		draw_objects(p_solars, p_solar_groups, dstate, (dstate.pass_ix ? 0.25 : 0.45), shadow_only, 0);
+	}
+	for (dstate.pass_ix = 0; dstate.pass_ix < (shadow_only ? 1 : 2); ++dstate.pass_ix) { // {metal case, newspaper}; newspaper does not cast shadows
+		draw_objects(newsracks, nrack_groups, dstate, (dstate.pass_ix ? 0.06 : 0.10), shadow_only, 0);
 	}
 	for (dstate.pass_ix = 0; dstate.pass_ix < 3; ++dstate.pass_ix) { // {line, poles, clothes}
 		if (shadow_only && dstate.pass_ix == 0) continue; // skip line in the shadow pass because its too narrow to cast a good shadow
