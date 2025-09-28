@@ -996,7 +996,7 @@ void tile_t::setup_shadow_maps(tile_shadow_map_manager &smap_manager, bool clean
 		if (lod_level < smap_lod_level) {clear_shadow_map(&smap_manager);} // LOD increase
 
 		if (smap_data.empty()) {
-			for (unsigned i = 0; i < NUM_LIGHT_SRC; ++i) { // uses tu_id 13 and 14
+			for (unsigned i = 0; i < NUM_LIGHT_SRC; ++i) { // uses tu_id 21 and 22
 				smap_data.push_back(smap_manager.new_smap_data(TILE_SMAP_START_TU_ID+i, this, i, lod_level));
 			}
 			//cout << "*** LOD: " << lod_level << " curLOD: " << smap_lod_level << " LODf: " << lod_level_f << " dist: " << smap_dist_scale << endl;

@@ -278,7 +278,7 @@ void sphere_point_norm::free_data() {
 }
 
 
-// ******************** CYLINDER ********************
+// ******************** CYLINDER/CIRCLE ********************
 
 
 void draw_circle_normal(float r_inner, float r_outer, int ndiv, int invert_normals, point const &pos, float tscale_s, float tscale_t) {
@@ -290,7 +290,7 @@ void draw_circle_normal(float r_inner, float r_outer, int ndiv, int invert_norma
 	float const inner_tscale(r_inner/r_outer);
 	float sin_s(0.0), cos_s(1.0);
 	static vector<vert_norm_tc> verts;
-	if (!disk) {verts.emplace_back(pos, n, 0.5*tscale_s, 0.5*tscale_t);}
+	if (!disk) {verts.emplace_back(pos, n, 0.5*tscale_s, 0.5*tscale_t);} // center
 
 	for (unsigned S = 0; S <= (unsigned)ndiv; ++S) {
 		float const s(sin_s), c(cos_s);
@@ -302,9 +302,27 @@ void draw_circle_normal(float r_inner, float r_outer, int ndiv, int invert_norma
 	}
 	draw_and_clear_verts(verts, (disk ? GL_TRIANGLE_STRIP : GL_TRIANGLE_FAN));
 }
-
 void draw_circle_normal(float r_inner, float r_outer, int ndiv, int invert_normals, float zval) {
 	draw_circle_normal(r_inner, r_outer, ndiv, invert_normals, point(0.0, 0.0, zval));
+}
+
+void draw_xy_oval(float rx, float ry, int ndiv, point const &pos, float tscale_s, float tscale_t) {
+
+	assert(rx > 0.0 && ry > 0.0);
+	vector3d const n(plus_z);
+	float const css(-1.0*TWO_PI/(float)ndiv), sin_ds(sin(css)), cos_ds(cos(css));
+	float sin_s(0.0), cos_s(1.0);
+	static vector<vert_norm_tc> verts;
+	verts.emplace_back(pos, n, 0.5*tscale_s, 0.5*tscale_t); // center
+
+	for (unsigned S = 0; S <= (unsigned)ndiv; ++S) {
+		float const s(sin_s), c(cos_s);
+		float const ts(0.5*(1.0 + s)*tscale_s), tt(0.5*(1.0 + c)*tscale_t);
+		verts.emplace_back((pos + point(rx*s, ry*c, 0.0)), n, ts, tt);
+		sin_s = s*cos_ds + c*sin_ds;
+		cos_s = c*cos_ds - s*sin_ds;
+	}
+	draw_and_clear_verts(verts, GL_TRIANGLE_FAN);
 }
 
 
