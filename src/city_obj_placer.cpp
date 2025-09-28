@@ -819,6 +819,15 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			}
 			bench_t const bench(pos, bench_radius, bench_dim, bench_dir);
 			if (is_park && check_path_coll_xy(bench.bcube, ppaths, paths_start)) continue; // check park path collision
+			// benches are added to fountains later, but we don't want to place random benches too close to fountains here
+			cube_t bench_pad(bench.bcube);
+			bench_pad.expand_by_xy(bench_spacing);
+			bool close_to_fountain(0);
+
+			for (auto f = fountains.begin()+fountains_start; f != fountains.end(); ++f) {
+				if (f->bcube.intersects_xy(bench_pad)) {close_to_fountain = 1; break;}
+			}
+			if (close_to_fountain) continue;
 			bench_groups.add_obj(bench, benches);
 			add_cube_to_colliders_and_blockers(bench.bcube, colliders, blockers);
 			blockers.back().expand_in_dim(!bench.dim, 0.25*bench.radius); // add extra padding in front (for seat access) and back (which extends outside bcube)
