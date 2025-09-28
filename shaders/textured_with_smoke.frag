@@ -473,7 +473,8 @@ void main() {
 		vec3 intersectPosition = vpos + ref_dir * dist;
 		ref_dir = intersectPosition - cube_map_center;
 
-		if (metalness > 0.0) { // metal
+		if (false) {color.rgb = texture(reflection_tex, ref_dir).rgb;} // makes debugging reflections easier
+		else if (metalness > 0.0) { // metal
 			float shininess= specular_color.a; // typically 1-80
 			int blur_val   = max(0, int((80.0 - shininess)/10.0));
 			vec3 ref_tex   = apply_cube_map_blur(ref_dir, blur_val);

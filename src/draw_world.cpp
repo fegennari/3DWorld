@@ -113,33 +113,25 @@ void gl_light_params_t::set_pos(point const &p, float w) {
 
 
 void set_light_ds_color(int light, colorRGBA const &diffuse, shader_t *shader) {
-
 	assert(light >= 0 && light < (int)MAX_SHADER_LIGHTS);
 	gl_light_params[light].set_ds(diffuse);
 	if (shader) {shader->upload_light_source(light, 0x0C);}
 }
-
 void set_light_a_color(int light, colorRGBA const &ambient, shader_t *shader) {
-
 	assert(light >= 0 && light < (int)MAX_SHADER_LIGHTS);
 	gl_light_params[light].set_a(ambient);
 	if (shader) {shader->upload_light_source(light, 0x02);}
 }
 
 void set_light_colors(int light, colorRGBA const &ambient, colorRGBA const &diffuse, shader_t *shader) {
-
 	set_light_ds_color(light, diffuse, shader);
 	set_light_a_color (light, ambient, shader);
 }
-
 void set_colors_and_enable_light(int light, colorRGBA const &ambient, colorRGBA const &diffuse, shader_t *shader) {
-
 	enable_light(light);
 	set_light_colors(light, ambient, diffuse, shader);
 }
-
 void clear_colors_and_disable_light(int light, shader_t *shader) {
-
 	enable_light(light); // enable temporarily so that we can update the shader colors for shaders that don't check the enabled state
 	assert(light >= 0 && light < (int)MAX_SHADER_LIGHTS);
 	set_light_colors(light, BLACK, BLACK, shader);
@@ -147,14 +139,12 @@ void clear_colors_and_disable_light(int light, shader_t *shader) {
 }
 
 void set_gl_light_pos(int light, point const &pos, float w, shader_t *shader) {
-
 	assert(light >= 0 && light < (int)MAX_SHADER_LIGHTS);
 	gl_light_params[light].set_pos(pos, w);
 	if (shader) {shader->upload_light_source(light, 0x01);}
 }
 
 void setup_gl_light_atten(int light, float c_a, float l_a, float q_a, shader_t *shader) {
-
 	gl_light_params[light].set_atten(c_a, l_a, q_a);
 	if (shader) {shader->upload_light_source(light, 0x10);}
 }

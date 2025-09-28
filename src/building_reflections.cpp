@@ -20,6 +20,7 @@ extern vector4d clip_plane;
 extern building_t const *player_building;
 
 colorRGBA get_clear_color();
+void setup_sun_moon_light_pos();
 void draw_sun_moon_stars(bool no_update);
 cube_t get_mirror_surface(room_object_t const &c);
 void draw_ortho_screen_space_triangle();
@@ -87,6 +88,7 @@ void draw_scene_for_building_reflection(unsigned &ref_tid, unsigned dim, bool di
 		draw_ortho_screen_space_triangle();
 	}
 	// draw reflected geometry
+	if (draw_exterior) {setup_sun_moon_light_pos();} // need to update sun/moon pos in eye space with new view dir
 	glStencilFunc(GL_NOTEQUAL, 0, ~0U); // keep if stencil bit has been set by the mirror draw
 	glEnable(GL_CLIP_DISTANCE0);
 	draw_buildings(0, reflection_pass, xlate);
@@ -110,6 +112,7 @@ void draw_scene_for_building_reflection(unsigned &ref_tid, unsigned dim, bool di
 	setup_reflection_texture(ref_tid, txsize, tysize);
 	render_to_texture(ref_tid, txsize, tysize); // render reflection to texture
 	restore_matrices_and_clear(); // reset state
+	if (draw_exterior) {setup_sun_moon_light_pos();}
 	camera_pos = old_camera_pos;
 	camera_pdu = old_camera_pdu; // restore camera_pdu
 	clip_plane = vector4d(); // reset to disable
@@ -453,12 +456,14 @@ public:
 				if (center == last_update_pos[face_id]) continue; // no pos change; skip this face
 				set_view_frustum(dim, dir);
 				pre_render_face();
+				setup_sun_moon_light_pos(); // need to update sun/moon pos in eye space with new view dir
 				draw_city_roads(trans_op_mask, xlate);
 				draw_buildings(0, reflection_pass, xlate);
 				post_render_face(face_id);
 			} // for dir
 		} // for dim
 		restore_state();
+		setup_sun_moon_light_pos(); // restore
 		disable_city_shadow_maps = 0;
 	}
 	void bind(shader_t &s) const {
