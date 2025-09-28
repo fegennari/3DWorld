@@ -1927,12 +1927,16 @@ void building_walkway_t::attach_elevator(cube_t const &e) {
 		select_texture(WHITE_TEX);
 		dstate.s.set_specular(0.8, 60.0); // specular metal surface
 		dstate.s.set_cur_color(WHITE);
+		dstate.s.add_uniform_float("metalness", 0.25); // partially reflective
 	}
 }
 /*static*/ void pillar_t::post_draw(draw_state_t &dstate, bool shadow_only) {
 	if (shadow_only) {} // nothing to do
 	else if (dstate.pass_ix == 0) {} // concrete cube
-	else {dstate.s.clear_specular();} // untextured steel cylinder
+	else { // untextured steel cylinder
+		dstate.s.clear_specular();
+		dstate.s.add_uniform_float("metalness", 0.0); // reset
+	}
 }
 void pillar_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	if (is_concrete != (dstate.pass_ix == 0)) return; // wrong pass
@@ -2483,9 +2487,11 @@ cube_t stopsign_t::get_bird_bcube() const {
 	else if (!shadow_only)        {tid = get_texture_by_name("roads/stop_4_way.jpg",    0, 0, 0);} // wrap_mir=0
 	if (tid >= 0) {select_texture(tid);}
 	if (!shadow_only) {dstate.s.add_uniform_float("min_alpha", 0.25);} // fix mipmap drawing
+	if (!shadow_only && dstate.pass_ix == 1) {dstate.s.add_uniform_float("metalness", 1.0);} // metal
 }
 /*static*/ void stopsign_t::post_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {dstate.s.add_uniform_float("min_alpha", DEF_CITY_MIN_ALPHA);}
+	if (!shadow_only && dstate.pass_ix == 1) {dstate.s.add_uniform_float("metalness", 0.0);} // clear
 }
 void stopsign_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	float const width(get_width()), thickness(get_depth()), sign_back(bcube.d[dim][dir] + (dir ? -1.0 : 1.0)*0.1*thickness);
