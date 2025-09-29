@@ -60,6 +60,7 @@ class shader_t : public property_map_t {
 	vector<int> attrib_locs;
 	string shader_names[NUM_SHADER_TYPES];
 	colorRGBA last_spec=ALPHA0;
+	float last_metalness=0.0;
 	
 	struct light_loc_t {
 		int v[5];
@@ -70,7 +71,7 @@ class shader_t : public property_map_t {
 	light_loc_t light_locs[MAX_SHADER_LIGHTS];
 	gl_light_params_t prev_lps[MAX_SHADER_LIGHTS];
 	int vnct_locs[4]; // {vertex, normal, color, tex_coord}
-	int emission_loc=-1, specular_color_loc=-1;
+	int emission_loc=-1, specular_color_loc=-1, metalness_loc=-1, ref_ix_loc=-1;
 
 	struct subroutine_val_t {
 		vector<unsigned> ixs;
@@ -200,8 +201,12 @@ public:
 	void set_black_diffuse_emissive_color(colorRGBA const &color);
 	void set_specular_color(colorRGB const &specular, float shininess);
 	void set_specular(float spec, float shine) {set_specular_color(colorRGB(spec, spec, spec), shine);}
+	void set_specular(float spec, float shine, float metalness) {set_specular(spec, shine); set_metalness(metalness);}
+	void set_metalness(float metalness);
+	void set_refract_ix(float ref_ix);
 	void set_material(base_mat_t const &mat);
 	void clear_specular() {set_specular(0.0, 0.0);}
+	void clear_specular_and_metalness() {clear_specular(); set_metalness(0.0);}
 
 	unsigned get_user_flags() const {return user_flags;}
 	bool get_user_flag(unsigned fbit) const {assert(fbit < 32); return (user_flags & (1<<fbit));}

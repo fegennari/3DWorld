@@ -450,9 +450,21 @@ void shader_t::set_specular_color(colorRGB const &specular, float shininess) {
 
 	if (spec_shine != last_spec) {
 		ensure_uniform_loc(specular_color_loc, "specular_color");
-		set_uniform_color(specular_color_loc, spec_shine);
+		set_uniform_color (specular_color_loc, spec_shine);
 		last_spec = spec_shine;
 	}
+}
+
+void shader_t::set_metalness(float metalness) {
+	if (metalness == last_metalness) return;
+	ensure_uniform_loc(metalness_loc, "metalness");
+	set_uniform_float (metalness_loc, metalness);
+	last_metalness = metalness;
+}
+
+void shader_t::set_refract_ix(float ref_ix) { // Note: last val not cached
+	ensure_uniform_loc(ref_ix_loc, "refract_ix");
+	set_uniform_float (ref_ix_loc, ref_ix);
 }
 
 void shader_t::set_material(base_mat_t const &mat) {
@@ -482,7 +494,7 @@ public:
 	void free_data() {
 		for (const_iterator s = begin(); s != end(); ++s) {glDeleteProgram(s->second.p);}
 	}
-	// can't free in the destructor because the gl context may be destroyed before this point
+	// can't free in the destructor because the GL context may be destroyed before this point
 	//~string_prog_map() {free_data();}
 };
 
@@ -831,7 +843,7 @@ bool shader_t::begin_shader(bool do_enable) {
 	}
 	cache_vnct_locs();
 	cache_matrix_locs();
-	emission_loc = specular_color_loc = -1;
+	emission_loc = specular_color_loc = metalness_loc = ref_ix_loc = -1;
 	if (do_enable) {enable();}
 #if 0 // debugging
 	glValidateProgram(program);
@@ -905,8 +917,9 @@ void shader_t::clear() {
 	subroutines.clear();
 	clear_vntc_locs();
 	clear_properties();
-	last_spec  = ALPHA0;
-	user_flags = 0; // clear user flags
+	last_spec      = ALPHA0;
+	last_metalness = 0.0;
+	user_flags     = 0; // clear user flags
 }
 
 

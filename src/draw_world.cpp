@@ -653,7 +653,7 @@ void draw_cobjs_group(vector<unsigned> const &cobjs, cobj_draw_buffer &cdb, int 
 			unsigned const tid(reflective_cobjs.get_tid_for_cid(*i));
 			if (tid == 0) {continue;} // reflection texture not setup - maybe this draw pass is creating the reflection texture for this cobj, so skip it
 			cdb.flush(); // all tids are unique, must flush every time
-			s.add_uniform_float("metalness", c.cp.metalness);
+			s.set_metalness(c.cp.metalness);
 			unsigned const tsize(reflective_cobjs.get_tsize_for_cid(*i));
 			// physically correct, but no anisotropic texture filtering, artifact at cube map seams, etc. - so we use 0.0 (auto mipmap level/perfect mirror) instead
 			float const shininess(c.cp.shine*c.cp.shine); // hack to adjust to the 3DWorld model/shininess ranges

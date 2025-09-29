@@ -1383,7 +1383,7 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		if (has_amask) {select_texture(WHITE_TEX);} // back to a default white texture
 	}
 	else {
-		int bump_map_mag_ix(-1), metalness_ix(-1), refract_ix_ix(-1);
+		int bump_map_mag_ix(-1);
 		
 		if (disable_model_textures) {
 			select_texture(WHITE_TEX);
@@ -1407,11 +1407,9 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 			tmgr.bind_texture_tu_or_white_tex(s_tid,  8); // specular map
 			tmgr.bind_texture_tu_or_white_tex(ns_tid, 9); // gloss map (Note: unclear how to interpret map_ns in object files)
 		}
-		if (!disable_shader_effects && metalness >= 0.0) {metalness_ix = shader.get_uniform_loc("metalness");}
-		if (metalness_ix >= 0) {shader.set_uniform_float(metalness_ix, metalness);} // set metalness if specified/valid; may or may not be used
-		// set index of refraction - may not actually be used (ENABLE_CUBE_MAP_REFLECT/ENABLE_REFLECTIONS)
-		if (!disable_shader_effects /*&& alpha < 1.0*/ && ni != 1.0 && ni > 0.0) {refract_ix_ix = shader.get_uniform_loc("refract_ix");}
-		if (refract_ix_ix >= 0) {shader.set_uniform_float(refract_ix_ix, ni);}
+		bool const use_metalness(!disable_shader_effects && metalness >= 0.0), use_ref_ix(!disable_shader_effects /*&& alpha < 1.0*/ && ni != 1.0 && ni > 0.0);
+		if (use_metalness) {shader.set_metalness (metalness);} // set metalness if specified/valid; may or may not be used
+		if (use_ref_ix   ) {shader.set_refract_ix(ni       );} // set index of refraction - may not actually be used (ENABLE_CUBE_MAP_REFLECT/ENABLE_REFLECTIONS)
 		bool const need_blend(is_partial_transparent()); // conservative, but should be okay
 		if (need_blend) {enable_blend(); /*glDepthMask(GL_FALSE);*/ /*glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE);*/}
 
@@ -1430,10 +1428,10 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		geom    .render(shader, 0, xlate);
 		geom_tan.render(shader, 0, xlate);
 		shader.clear_color_e(); // Note: caller can cheat and override the emissive of the first material because it won't be set above but will be cleared here
-		if (set_specular) {shader.clear_specular();}
-		if (need_blend)  {disable_blend(); /*glDepthMask(GL_TRUE);*/ /*glDisable(GL_SAMPLE_ALPHA_TO_COVERAGE);*/}
-		if (refract_ix_ix   >= 0) {shader.set_uniform_float(refract_ix_ix,   1.0);}
-		if (metalness_ix    >= 0) {shader.set_uniform_float(metalness_ix,    0.0);} // if metalness was specified, reset to the default of 0.0 for the next material
+		if (set_specular ) {shader.clear_specular();}
+		if (need_blend   ) {disable_blend(); /*glDepthMask(GL_TRUE);*/ /*glDisable(GL_SAMPLE_ALPHA_TO_COVERAGE);*/}
+		if (use_ref_ix   ) {shader.set_refract_ix(1.0);}
+		if (use_metalness) {shader.set_metalness (0.0);} // reset to the default of 0.0 for the next material
 		if (bump_map_mag_ix >= 0) {shader.set_uniform_float(bump_map_mag_ix, 1.0);} // reset back to default
 	}
 }
@@ -2251,7 +2249,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass,
 		set_local_model_scene_bounds(shader);
 	}
 	if (reflect_mode) {
-		shader.add_uniform_float("metalness", metalness); // may or may not be used
+		shader.set_metalness(metalness); // may or may not be used
 		shader.add_uniform_float("cube_map_reflect_mipmap_level", 0.0); // may or may not be used; should actually be per-material, based on specular exponent
 	}
 	if (reflective == 2 && !is_shadow_pass && !is_z_prepass) { // cube map reflections

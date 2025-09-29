@@ -500,7 +500,7 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 
 	if (!in_group || start_group) { // should be the same across groups
 		shader.set_material(cp);
-		if (cp.refract_ix != prev_refract_ix) {shader.add_uniform_float("refract_ix", cp.refract_ix);}
+		if (cp.refract_ix != prev_refract_ix) {shader.set_refract_ix(cp.refract_ix);}
 	}
 	if (cp.is_emissive) {assert(!in_group); cdb.flush(); shader.add_uniform_float("emissive_scale", 1.0);} // Note: slow (causes flush)
 

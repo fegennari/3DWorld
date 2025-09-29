@@ -1545,7 +1545,7 @@ void draw_obj_model(obj_model_inst_t const &i, room_object_t const &obj, shader_
 	bool const untextured(obj.flags & RO_FLAG_UNTEXTURED);
 	bool const upside_down((type == TYPE_RAT || type == TYPE_ROACH || type == TYPE_INSECT) && obj.is_broken());
 	float const refract_ix((type == TYPE_SINK     || type == TYPE_URINAL) ? 1.5 : 1.0);
-	float metalness(0.0), specular(0.0), shine(1.0);
+	float metalness(0.0), specular(0.0), shine(0.0);
 	if      (type == TYPE_POOL_LAD ) {metalness = 1.0; specular = 1.0; shine = 80.0;} // object already has a low specular set, but is mostly metal
 	else if (type == TYPE_HOOD     ) {metalness = 0.5; specular = 1.0; shine = 40.0;} // painted metal
 	else if (type == TYPE_PADLOCK  ) {metalness = 1.0; specular = 0.5; shine = 60.0;} // only the shackle should be reflective?
@@ -1553,9 +1553,8 @@ void draw_obj_model(obj_model_inst_t const &i, room_object_t const &obj, shader_
 	else if (type == TYPE_WFOUNTAIN) {metalness = 1.0; specular = 0.4; shine = 50.0;} // part metal and part painted metal
 	if (emissive_first_mat) {s.set_color_e(LAMP_COLOR*0.4);}
 	if (use_low_z_bias    ) {s.add_uniform_float("norm_bias_scale", 0.5*DEF_NORM_BIAS_SCALE);} // half the default value
-	if (metalness  > 0.0  ) {s.add_uniform_float("metalness",  metalness );}
-	if (refract_ix > 1.0  ) {s.add_uniform_float("refract_ix", refract_ix);}
-	if (specular   > 0.0  ) {s.set_specular(specular, shine);} // set default specular for materials that don't have any specular set
+	if (refract_ix > 1.0  ) {s.set_refract_ix(refract_ix);}
+	if (specular   > 0.0  ) {s.set_specular(specular, shine, metalness);} // set default specular for materials that don't have any specular set
 	// Note: lamps are the most common and therefore most expensive models to draw
 	int const model_id(obj.get_model_id()); // first 8 bits is model ID, last 8 bits is sub-model ID
 	unsigned rot_only_mat_mask(0);
@@ -1579,9 +1578,8 @@ void draw_obj_model(obj_model_inst_t const &i, room_object_t const &obj, shader_
 	if (!shadow_only && type == TYPE_STOVE) {draw_stove_flames(obj, (camera_pdu.pos - xlate), s);} // draw blue burner flame
 	if (emissive_first_mat) {s.set_color_e(BLACK);}
 	if (use_low_z_bias    ) {s.add_uniform_float("norm_bias_scale", DEF_NORM_BIAS_SCALE);} // restore to the defaults
-	if (refract_ix > 1.0  ) {s.add_uniform_float("refract_ix", 1.0);}
-	if (metalness  > 0.0  ) {s.add_uniform_float("metalness",  0.0);}
-	if (specular   > 0.0  ) {s.clear_specular();}
+	if (refract_ix > 1.0  ) {s.set_refract_ix(1.0);}
+	if (specular   > 0.0  ) {s.clear_specular_and_metalness();}
 }
 
 void brg_batch_draw_t::draw_obj_models(shader_t &s, vector3d const &xlate, bool shadow_only) const {
@@ -1994,9 +1992,9 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			bool const using_custom_tid(building.bind_custom_clothing_texure(obj));
 			if (type == TYPE_SHOE && (obj.flags & RO_FLAG_ADJ_TOP)) {mirror_dim = 1;} // shoes may be mirrored in !obj.dim (Y in model space)
 			bool const is_metal(type == TYPE_SILVER || type == TYPE_KEY);
-			if (is_metal) {s.add_uniform_float("metalness", 1.0);}
+			if (is_metal) {s.set_metalness(1.0);}
 			draw_obj_model(*i, obj, s, xlate, obj_center, shadow_only, mirror_dim, using_custom_tid);
-			if (is_metal) {s.add_uniform_float("metalness", 0.0);}
+			if (is_metal) {s.set_metalness(0.0);}
 			obj_drawn = 1;
 		}
 		// check for security camera monitor if player is in this building; must be on and active
@@ -2024,7 +2022,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		colorRGBA const handle_color(building.get_door_handle_color());
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_DOOR_HANDLE)); // L, W, H
 		vector3d const exp_val((0.5/sz.z)*sz);
-		s.add_uniform_float("metalness", 1.0); // door handles are metal
+		s.set_metalness(1.0); // door handles are metal
 
 		for (door_handle_t const &h : door_handles) {
 			cube_t bc(h.center);
@@ -2053,7 +2051,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			building_obj_model_loader.draw_model(s, obj_center, bc, h.dir, handle_color, xlate, OBJ_MODEL_DOOR_HANDLE, shadow_only, 0, nullptr, 0, 0, 0, h.mirror);
 			obj_drawn = 1;
 		} // for h
-		s.add_uniform_float("metalness", 0.0); // reset
+		s.set_metalness(0.0); // reset
 	}
 	if (player_in_bldg_normal_pass) { // only drawn for the player building
 		// key/silverware/folded shirt: not drawn in the shadow or reflection passes; no emissive or rotated objects; no animations
@@ -2075,9 +2073,9 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 				dir = plus_z;
 			}
 			bool const is_metal(c.type == TYPE_SILVER || c.type == TYPE_KEY);
-			if (is_metal) {s.add_uniform_float("metalness", 1.0);}
+			if (is_metal) {s.set_metalness(1.0);}
 			building_obj_model_loader.draw_model(s, obj_center, c, dir, c.color, xlate, c.get_model_id(), shadow_only, 0, nullptr, 0, 0, 0, 0, 0, 0, 3, 0, swap_xy_mode);
-			if (is_metal) {s.add_uniform_float("metalness", 0.0);}
+			if (is_metal) {s.set_metalness(0.0);}
 			obj_drawn = 1;
 		} // for c
 	}
@@ -2209,9 +2207,9 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	if (!shadow_only && (!mats_alpha.empty() || (inc_small && !mats_alpha_sm.empty()))) { // draw last; not shadow casters; for shower glass, etc.
 		enable_blend();
 		glDepthMask(GL_FALSE); // disable depth writing
-		s.add_uniform_float("refract_ix", 1.6); // refractive glass windows, tables, etc.
+		s.set_refract_ix(1.6); // refractive glass windows, tables, etc.
 		mats_alpha.draw(bbd, s, shadow_only, reflection_pass);
-		s.add_uniform_float("refract_ix", 1.0); // reset
+		s.set_refract_ix(1.0); // reset
 		if (inc_small && !cube_map_ref) {mats_alpha_sm.draw(bbd, s, shadow_only, reflection_pass);} // bottles, etc.
 		glDepthMask(GL_TRUE);
 		disable_blend();

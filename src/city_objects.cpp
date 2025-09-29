@@ -490,13 +490,13 @@ void begin_water_surface_draw(shader_t &s) { // used for swimming pools and pond
 	else {select_texture(get_texture_by_name("snow2.jpg"));}
 	enable_blend(); // transparent water
 	glDepthMask(GL_FALSE);
-	s.add_uniform_float("refract_ix", 1.33);
+	s.set_refract_ix(1.33);
 }
 void end_water_surface_draw(shader_t &s) {
 	if (0) {bind_default_flat_normal_map();}
 	disable_blend();
 	glDepthMask(GL_TRUE);
-	s.add_uniform_float("refract_ix", 1.0); // reset
+	s.set_refract_ix(1.0); // reset
 }
 
 // passes: 0=in-ground walls, 1=in-ground water, 2=above ground sides, 3=above ground water
@@ -795,16 +795,10 @@ cube_t newsrack_t::get_bird_bcube() const {
 /*static*/ void newsrack_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	if (shadow_only) {}
 	else if (dstate.pass_ix == 1) {select_texture(get_texture_by_name("roads/fake_news.jpg"));}
-	else { // metal
-		dstate.s.set_specular(0.35, 40.0); // low specular
-		dstate.s.add_uniform_float("metalness", 0.5); // partially reflective
-	}
+	else {dstate.s.set_specular(0.35, 40.0, 0.5);} // metal: low specular; partially reflective
 }
 /*static*/ void newsrack_t::post_draw(draw_state_t &dstate, bool shadow_only) {
-	if (!shadow_only && dstate.pass_ix == 0) {
-		dstate.s.clear_specular();
-		dstate.s.add_uniform_float("metalness", 0.0); // reset
-	}
+	if (!shadow_only && dstate.pass_ix == 0) {dstate.s.clear_specular_and_metalness();}
 }
 void newsrack_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	if (!bcube.closest_dist_less_than(dstate.camera_bs, 0.45*dist_scale*dstate.draw_tile_dist)) { // far away, draw low detail single cube
@@ -1936,18 +1930,14 @@ void building_walkway_t::attach_elevator(cube_t const &e) {
 	else if (dstate.pass_ix == 0) {select_texture(get_texture_by_name("roads/concrete.jpg"));} // concrete cube
 	else { // untextured steel cylinder
 		select_texture(WHITE_TEX);
-		dstate.s.set_specular(0.8, 60.0); // specular metal surface
+		dstate.s.set_specular(0.8, 60.0, 0.25); // specular metal surface; partially reflective
 		dstate.s.set_cur_color(WHITE);
-		dstate.s.add_uniform_float("metalness", 0.25); // partially reflective
 	}
 }
 /*static*/ void pillar_t::post_draw(draw_state_t &dstate, bool shadow_only) {
 	if (shadow_only) {} // nothing to do
 	else if (dstate.pass_ix == 0) {} // concrete cube
-	else { // untextured steel cylinder
-		dstate.s.clear_specular();
-		dstate.s.add_uniform_float("metalness", 0.0); // reset
-	}
+	else {dstate.s.clear_specular_and_metalness();} // untextured steel cylinder
 }
 void pillar_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	if (is_concrete != (dstate.pass_ix == 0)) return; // wrong pass
@@ -1973,13 +1963,13 @@ ww_elevator_t::ww_elevator_t(cube_t const &c, bool dim_, bool dir_, float fs, cu
 /*static*/ void ww_elevator_t::pre_draw (draw_state_t &dstate, bool shadow_only) {
 	if (dstate.pass_ix == 1) { // transparent glass pass
 		enable_blend();
-		dstate.s.add_uniform_float("refract_ix", 1.6); // refractive glass
+		dstate.s.set_refract_ix(1.6); // refractive glass
 	}
 }
 /*static*/ void ww_elevator_t::post_draw(draw_state_t &dstate, bool shadow_only) {
 	if (dstate.pass_ix == 1) { // transparent glass pass
 		disable_blend();
-		dstate.s.add_uniform_float("refract_ix", 1.0); // reset
+		dstate.s.set_refract_ix(1.0); // reset
 	}
 }
 void ww_elevator_t::get_glass_sides(cube_with_ix_t sides[4]) const {
@@ -2281,11 +2271,11 @@ parking_solar_t::parking_solar_t(cube_t const &c, bool dim_, bool dir_, unsigned
 /*static*/ void parking_solar_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only && dstate.pass_ix == 0) { // solar panel texture + glass refraction
 		select_texture(get_solarp_tid());
-		dstate.s.add_uniform_float("refract_ix", 1.6); // refractive glass; also applies to metal legs
+		dstate.s.set_refract_ix(1.6); // refractive glass; also applies to metal legs
 	}
 }
 /*static*/ void parking_solar_t::post_draw(draw_state_t &dstate, bool shadow_only) {
-	if (!shadow_only && dstate.pass_ix == 0) {dstate.s.add_uniform_float("refract_ix", 1.0);} // reset
+	if (!shadow_only && dstate.pass_ix == 0) {dstate.s.set_refract_ix(1.0);} // reset
 }
 void parking_solar_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	float const height(bcube.dz());
@@ -2498,11 +2488,11 @@ cube_t stopsign_t::get_bird_bcube() const {
 	else if (!shadow_only)        {tid = get_texture_by_name("roads/stop_4_way.jpg",    0, 0, 0);} // wrap_mir=0
 	if (tid >= 0) {select_texture(tid);}
 	if (!shadow_only) {dstate.s.add_uniform_float("min_alpha", 0.25);} // fix mipmap drawing
-	if (!shadow_only && dstate.pass_ix == 1) {dstate.s.add_uniform_float("metalness", 1.0);} // metal
+	if (!shadow_only && dstate.pass_ix == 1) {dstate.s.set_specular(0.5, 40.0, 1.0);} // metal
 }
 /*static*/ void stopsign_t::post_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {dstate.s.add_uniform_float("min_alpha", DEF_CITY_MIN_ALPHA);}
-	if (!shadow_only && dstate.pass_ix == 1) {dstate.s.add_uniform_float("metalness", 0.0);} // clear
+	if (!shadow_only && dstate.pass_ix == 1) {dstate.s.clear_specular_and_metalness();}
 }
 void stopsign_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	float const width(get_width()), thickness(get_depth()), sign_back(bcube.d[dim][dir] + (dir ? -1.0 : 1.0)*0.1*thickness);

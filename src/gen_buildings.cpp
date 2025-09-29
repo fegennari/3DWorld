@@ -136,7 +136,7 @@ void tid_nm_pair_t::set_gl(tid_nm_pair_dstate_t &state) const {
 	if (e_val     > 0.0) {state.s.add_uniform_float("emissive_scale", e_val);} // enable emissive
 	if (shininess > 0  ) {state.s.set_specular_color(spec_color.get_c3(), shininess);} // colored specular
 	if (no_cracks && state.crack_weight > 0.0) {state.s.add_uniform_float("crack_weight", 0.0);}
-	if (metalness > 0.0) {state.s.add_uniform_float("metalness", metalness);}
+	if (metalness > 0.0) {state.s.set_metalness(metalness);}
 }
 void tid_nm_pair_t::unset_gl(tid_nm_pair_dstate_t &state) const {
 	if (tid == REFLECTION_TEXTURE_ID && room_mirror_ref_tid != 0) {state.s.make_current(); return;}
@@ -146,7 +146,7 @@ void tid_nm_pair_t::unset_gl(tid_nm_pair_dstate_t &state) const {
 	if (get_emissive_val() > 0.0) {state.s.add_uniform_float("emissive_scale", 0.0);} // disable emissive
 	if (shininess          > 0  ) {state.s.clear_specular();} // clear specular
 	if (no_cracks && state.crack_weight > 0.0) {state.s.add_uniform_float("crack_weight", state.crack_weight);} // restore original value
-	if (metalness > 0.0) {state.s.add_uniform_float("metalness", 0.0);} // clear metalness
+	if (metalness > 0.0) {state.s.set_metalness(0.0);} // clear metalness
 }
 void tid_nm_pair_t::toggle_transparent_windows_mode() { // hack
 	if      (tid == BLDG_WINDOW_TEX    ) {tid = BLDG_WIND_TRANS_TEX;}
@@ -4541,11 +4541,11 @@ public:
 						enable_blend();
 						glEnable(GL_POLYGON_OFFSET_FILL);
 						if (!no_depth_write) {glDepthMask(GL_FALSE);} // always disable depth writing
-						if (is_reflective) {city_shader.add_uniform_float("refract_ix", 1.6);} // refractive glass windows
+						if (is_reflective) {city_shader.set_refract_ix(1.6);} // refractive glass windows
 						if (transparent_windows) {bc->building_draw_windows.toggle_transparent_windows_mode();}
 						bc->building_draw_windows.draw_tile(city_shader, tile_id); // draw windows on top of other buildings
 						if (transparent_windows) {bc->building_draw_windows.toggle_transparent_windows_mode();}
-						if (is_reflective) {city_shader.add_uniform_float("refract_ix", 1.0);} // restore
+						if (is_reflective) {city_shader.set_refract_ix(1.0);} // restore
 						if (!no_depth_write) {glDepthMask(GL_TRUE);} // always re-enable depth writing
 						glDisable(GL_POLYGON_OFFSET_FILL);
 						disable_blend();
