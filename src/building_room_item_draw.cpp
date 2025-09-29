@@ -739,9 +739,6 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_HANGER_ROD:add_hanger_rod(c); break;
 		case TYPE_DRAIN:     add_drain_pipe(c); break;
 		case TYPE_ELEC_WIRE: add_electrical_wire_pair(c); break;
-		case TYPE_KEY:       if (has_key_3d_model()) {model_objs.push_back(c);} else {add_key(c);} break; // draw or add as 3D model
-		case TYPE_SILVER:    if (c.was_expanded()  ) {model_objs.push_back(c);} break; // only draw here if expanded
-		case TYPE_FOLD_SHIRT:if (c.was_expanded()  ) {model_objs.push_back(c);} break; // only draw here if expanded
 		case TYPE_MONEY:     add_money   (c); break;
 		case TYPE_PHONE:     add_phone   (c); break;
 		case TYPE_TPROLL:    add_tproll  (c); break;
@@ -809,7 +806,6 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_TOPHAT:     add_tophat(c); break;
 		case TYPE_COMP_MOUSE: add_comp_mouse(c); break;
 		case TYPE_JAIL_BARS:  add_jail_bars(c); break;
-		case TYPE_GUN:        add_gun(c); break;
 		case TYPE_STICK_NOTE: add_sticky_note(c); break;
 		case TYPE_GYM_WEIGHT: add_gym_weight (c); break;
 		case TYPE_FOOD_TRAY:  add_food_tray  (c); break;
@@ -817,6 +813,12 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_CARD_DECK:  add_card_deck  (c); break;
 		case TYPE_CIGARETTE:  add_cigarette  (c); break;
 		case TYPE_DBG_SHAPE:  add_debug_shape(c); break;
+		// 3D model objects
+		case TYPE_KEY:       if (has_key_3d_model()) {model_objs.push_back(c);} else {add_key(c);} break; // draw or add as 3D model
+		case TYPE_SILVER:
+		case TYPE_FOLD_SHIRT:
+		case TYPE_HANDGUN:
+			if (c.was_expanded()) {model_objs.push_back(c);} break; // only draw here if expanded
 		default: break;
 		} // end switch
 	} // for i
@@ -917,7 +919,7 @@ void building_room_geom_t::create_obj_model_insts(building_t const &building) { 
 
 		for (auto i = obj_vect.begin(); i != objs_end; ++i) {
 			if (!i->is_visible() || !i->is_obj_model_type()) continue;
-			if (i->type == TYPE_KEY || (i->type == TYPE_SILVER && i->was_expanded())) continue; // drawn as small object model
+			if (i->type == TYPE_KEY || ((i->type == TYPE_SILVER || i->type == TYPE_HANDGUN) && i->was_expanded())) continue; // drawn as small object model
 			vector3d dir(get_obj_model_rotated_dir(*i, &building));
 			if (building.is_rotated()) {building.do_xy_rotate_normal(dir);}
 			unsigned const obj_id(i - obj_vect.begin() + obj_id_offset);
@@ -1203,6 +1205,13 @@ void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, 
 		check_mvm_update();
 		return; // don't need to run the code below
 	}
+	else if (c.type == TYPE_HANDGUN) {
+		// TODO: fix dir
+		// TODO: wrong object model
+		building_obj_model_loader.draw_model(s, c.get_cube_center(), c, cview_dir, WHITE, xlate, OBJ_MODEL_HANDGUN);
+		check_mvm_update();
+		return; // don't need to run the code below
+	}
 	else if (c.type == TYPE_CANDLE) {
 		static building_room_geom_t tmp_rgeom;
 		room_object_t obj(c);
@@ -1402,7 +1411,9 @@ int room_object_t::get_model_id() const { // Note: first 8 bits is model ID, las
 	if (type == TYPE_BLDG_FOUNT) return OBJ_MODEL_FOUNTAIN + pack_sub_model_id(item_flags); // same models as city fountains; select a sub_model_id
 	int id((int)type + OBJ_MODEL_TOILET - TYPE_TOILET);
 	// choose a sub_model_id for these types using bits 8-15
-	if (type == TYPE_HANGER || type == TYPE_CLOTHES || type == TYPE_PLANT_MODEL || type == TYPE_SHOE || type == TYPE_HOSP_BED || type == TYPE_APPLE || type == TYPE_EX_MACHINE) {
+	if (type == TYPE_HANGER || type == TYPE_CLOTHES || type == TYPE_PLANT_MODEL || type == TYPE_SHOE || type == TYPE_HOSP_BED || type == TYPE_APPLE ||
+		type == TYPE_EX_MACHINE || type == TYPE_HANDGUN)
+	{
 		id += pack_sub_model_id(item_flags);
 	}
 	return id;
@@ -1991,10 +2002,9 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			int mirror_dim(3); // 3=none
 			bool const using_custom_tid(building.bind_custom_clothing_texure(obj));
 			if (type == TYPE_SHOE && (obj.flags & RO_FLAG_ADJ_TOP)) {mirror_dim = 1;} // shoes may be mirrored in !obj.dim (Y in model space)
-			bool const is_metal(type == TYPE_SILVER || type == TYPE_KEY);
-			if (is_metal) {s.set_metalness(1.0);}
+			if (obj.is_metal_model()) {s.set_metalness(1.0);}
 			draw_obj_model(*i, obj, s, xlate, obj_center, shadow_only, mirror_dim, using_custom_tid);
-			if (is_metal) {s.set_metalness(0.0);}
+			if (obj.is_metal_model()) {s.set_metalness(0.0);}
 			obj_drawn = 1;
 		}
 		// check for security camera monitor if player is in this building; must be on and active
@@ -2072,10 +2082,9 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 				if (c.dim) {swap_xy_mode = 1;}
 				dir = plus_z;
 			}
-			bool const is_metal(c.type == TYPE_SILVER || c.type == TYPE_KEY);
-			if (is_metal) {s.set_metalness(1.0);}
+			if (c.is_metal_model()) {s.set_metalness(1.0);}
 			building_obj_model_loader.draw_model(s, obj_center, c, dir, c.color, xlate, c.get_model_id(), shadow_only, 0, nullptr, 0, 0, 0, 0, 0, 0, 3, 0, swap_xy_mode);
-			if (is_metal) {s.set_metalness(0.0);}
+			if (c.is_metal_model()) {s.set_metalness(0.0);}
 			obj_drawn = 1;
 		} // for c
 	}

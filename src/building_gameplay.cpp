@@ -215,7 +215,6 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_PARK_GATE ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1, 400.0, 100.0, "parking garage gate");
 	bldg_obj_types[TYPE_CONV_BELT ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1, 500.0, 100.0, "conveyor belt");
 	bldg_obj_types[TYPE_JAIL_BARS ] = bldg_obj_type_t(1, 1, 0, 0, 1, 0, 2,   0.0, 0.0,   "jail bars"); // rat_coll? treated as a small object
-	bldg_obj_types[TYPE_GUN       ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 100.0, 0.5,   "gun");
 	bldg_obj_types[TYPE_STICK_NOTE] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,   0.0, 0.0,   "sticky note");
 	bldg_obj_types[TYPE_GYM_WEIGHT] = bldg_obj_type_t(0, 1, 1, 1, 0, 0, 2, 20.0,  20.0,  "weights"); // or "weight"?
 	bldg_obj_types[TYPE_FOOD_TRAY ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 10.0,  0.5,   "food tray");
@@ -240,7 +239,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_WASHER    ] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 0, 300.0, 150.0, "washer");
 	bldg_obj_types[TYPE_DRYER     ] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 0, 300.0, 160.0, "dryer");
 	// keys are special because they're potentially either a small object or an object model (in a drawer)
-	bldg_obj_types[TYPE_KEY       ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 0.0,   0.05,  "room key"); // drawn as an object, not a model
+	bldg_obj_types[TYPE_KEY       ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 0.0,   0.05,  "room key"); // drawn as a small static object
 	bldg_obj_types[TYPE_HANGER    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 0.25,  0.05,  "clothes hanger");
 	bldg_obj_types[TYPE_CLOTHES   ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 10.0,  0.25,  "clothes"); // teeshirt, shirt, pants, etc.
 	bldg_obj_types[TYPE_FESCAPE   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 1, 0, 10000, 4000,  "fire escape"); // technically exterior, not interior
@@ -281,6 +280,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_EX_MACHINE] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 0, 1000,  160,   "exercise machine"); // differnent types; weight and value should vary by type
 	bldg_obj_types[TYPE_VIS_PHONE ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 40.0,  2.0,   "phone"); // visitation room phone
 	bldg_obj_types[TYPE_JUMPSUIT  ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 80.0,  5.0,   "jumpsuit"); // prison jumpsuit
+	bldg_obj_types[TYPE_HANDGUN   ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 2, 100.0, 0.5,   "handgun", 8); // drawn as a small static object when expanded (in a drawer)
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// animals; not room objects
 	bldg_obj_types[TYPE_RAT       ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 8.99,  1.0,   "rat"); // can be picked up
@@ -472,6 +472,9 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 	else if (otype == TYPE_CUP) {
 		type.name = (obj.is_nonempty() ? "cup of coffee" : "empty cup");
 	}
+	else if (otype == TYPE_HANDGUN) {
+		if (broken) {type.name = "unloaded handgun";}
+	}
 	else if (otype == TYPE_VENDING) {
 		vending_info_t const &vi(get_vending_type(obj.item_flags));
 		type.weight = vi.weight;
@@ -484,7 +487,7 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 	}
 	return type;
 }
-bool is_refillable(room_object_t const &obj) {return (obj.type == TYPE_FIRE_EXT);}
+bool is_refillable(room_object_t const &obj) {return (obj.type == TYPE_FIRE_EXT || obj.type == TYPE_HANDGUN);} // used to determine value
 
 float get_obj_value(room_object_t const &obj) {
 	float value(get_taken_obj_type(obj).value);
@@ -721,7 +724,7 @@ public:
 		while (!carried.empty()) {
 			room_object_t const &obj(carried.back());
 
-			if (obj.has_dstate() || obj.type == TYPE_BOOK || obj.type == TYPE_RAT || (obj.type == TYPE_FIRE_EXT && obj.is_broken())) {
+			if (obj.has_dstate() || obj.type == TYPE_BOOK || obj.type == TYPE_RAT || ((obj.type == TYPE_FIRE_EXT || obj.type == TYPE_HANDGUN) && obj.is_broken())) {
 				if (building.maybe_use_last_pickup_room_object(camera_bs, 1, 1)) continue; // no_time_check=1, random_dir=1
 			}
 			carried.pop_back();
@@ -1041,7 +1044,7 @@ public:
 			obj.use_count += val;
 
 			if (obj.use_count >= capacity) { // remove after too many uses
-				if (obj.type == TYPE_FIRE_EXT) {
+				if (obj.type == TYPE_FIRE_EXT || obj.type == TYPE_HANDGUN) {
 					float const old_value(get_obj_value(obj));
 					obj.flags |= RO_FLAG_BROKEN; // mark as empty
 					float const new_value(get_obj_value(obj));
@@ -2552,6 +2555,14 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos, bool
 			point const fire_ray_end(player_pos + (4.0f*r_sum)*dir); // longer range
 			interior->room_geom->fire_manager.put_out_fires(ray_start, fire_ray_end, 0.5*r_sum); // check for fires in range and put them out
 		}
+		else if (obj.type == TYPE_HANDGUN) {
+			// TODO: only if have ammo
+			// TODO: firing delay
+			gen_sound_thread_safe_at_player(SOUND_GUNSHOT);
+			register_building_sound(player_pos, 1.0);
+			player_inventory.mark_last_item_used();
+			// TODO: damage effect
+		}
 		else if (obj.type == TYPE_CANDLE    ) {delay_use = 1;} // nothing else to do at the moment
 		else if (obj.type == TYPE_FLASHLIGHT) {delay_use = 1;} // handled by flashlight key as well; only use flashlight when selected in inventory?
 		else {assert(0);}
@@ -2977,7 +2988,7 @@ bool room_object_t::can_use() const { // excludes dynamic objects
 	if (is_medicine()) return 1; // medicine can be carried in the inventory and used later
 	if (type == TYPE_TPROLL) {return (taken_level == 0);} // can only use the TP roll, not the holder
 	return (type == TYPE_SPRAYCAN || type == TYPE_MARKER || type == TYPE_BOOK || type == TYPE_PHONE || type == TYPE_TAPE || type == TYPE_RAT ||
-		type == TYPE_FIRE_EXT || type == TYPE_CANDLE || type == TYPE_ERASER || type == TYPE_FLASHLIGHT);
+		type == TYPE_FIRE_EXT || type == TYPE_CANDLE || type == TYPE_ERASER || type == TYPE_FLASHLIGHT || type == TYPE_HANDGUN);
 }
 bool room_object_t::can_place_onto() const { // Note: excludes flat objects such as TYPE_RUG and TYPE_BLANKET
 	return (type == TYPE_TABLE || type == TYPE_DESK || type == TYPE_DRESSER || type == TYPE_NIGHTSTAND || type == TYPE_COUNTER || type == TYPE_KSINK ||

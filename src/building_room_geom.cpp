@@ -2626,11 +2626,6 @@ void building_room_geom_t::add_cigarette(room_object_t const &c) {
 	mat.add_ortho_cylin_to_verts(body,   apply_light_color(c, DK_BROWN), c.dim,  c.dir, !c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 1, ndiv); // end only; skip_sides=1
 }
 
-void building_room_geom_t::add_gun(room_object_t const &c) {
-	// TODO: something more detailed; or is this a 3D model?
-	get_metal_material(1, 0, 1).add_cube_to_verts_untextured(c, apply_light_color(c), EF_Z1); // shadowed, small
-}
-
 void building_room_geom_t::add_sticky_note(room_object_t const &c) {
 	get_untextured_material(0, 0, 1).add_cube_to_verts_untextured(c, apply_light_color(c), get_face_mask(c.dim, c.dir)); // unshadowed, small, front face only
 }
@@ -7051,7 +7046,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_DUCT:     return texture_color((shape == SHAPE_CYLIN) ? get_cylin_duct_tid() : get_cube_duct_tid()).modulate_with(color);
 	case TYPE_FCABINET: return texture_color(get_texture_by_name("interiors/filing_cabinet.png"));
 	case TYPE_FEXT_SIGN:return colorRGBA(1.0, 0.4, 0.4, 1.0); // close enough
-	case TYPE_FIRE_EXT: return RED;
+	case TYPE_FIRE_EXT: return DK_RED;
 	case TYPE_PANTS:    return LT_BLUE; // close enough, don't need to use the texture color
 	case TYPE_POOL_TABLE: return (BROWN*0.75 + GREEN*0.25);
 	case TYPE_POOL_TILE: return texture_color(get_pool_tile_params(*this).get_tid());

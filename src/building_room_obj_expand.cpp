@@ -1532,7 +1532,7 @@ void building_room_geom_t::add_wine_rack_bottles(room_object_t const &c, vect_ro
 	if (item_ix > 0 && rgen.rand_bool()) return obj; // no more items
 	cube_t drawer(drawer_in); // copy so that we can adjust z1
 	float const drawer_dz(drawer.dz());
-	// TODO: TYPE_GUN when ready
+	// TODO: TYPE_HANDGUN when ready
 	unsigned const NUM = 11;
 	unsigned const type_ix(rgen.rand() % NUM); // 0-10
 	unsigned const types_dresser [NUM] = {TYPE_FOLD_SHIRT, TYPE_PAPER,     TYPE_BOX,       TYPE_FOLD_SHIRT, TYPE_BOOK, TYPE_KEY,     TYPE_BOTTLE, TYPE_MONEY,  TYPE_PHONE,  TYPE_SPRAYCAN, TYPE_TAPE};
@@ -1546,7 +1546,8 @@ void building_room_geom_t::add_wine_rack_bottles(room_object_t const &c, vect_ro
 	else if (c.type == TYPE_COUNTER)  {obj_type = types_kcabinet[type_ix];}
 	else if (c.type == TYPE_FCABINET) {obj_type = types_fcabinet[type_ix];}
 	else                              {obj_type = types_dresser [type_ix];} // dresser or nightstand
-	if (obj_type == TYPE_SILVER && !building_obj_model_loader.is_model_valid(OBJ_MODEL_SILVER)) {obj_type = TYPE_BOOK;} // replace silverware with book
+	if (obj_type == TYPE_SILVER  && !building_obj_model_loader.is_model_valid(OBJ_MODEL_SILVER )) {obj_type = TYPE_BOOK;} // replace silverware with book
+	if (obj_type == TYPE_HANDGUN && !building_obj_model_loader.is_model_valid(OBJ_MODEL_HANDGUN)) {obj_type = TYPE_BOOK;} // replace handgun with bottle
 	// if drawer is too small, replace teeshirt with pen
 	if (obj_type == TYPE_FOLD_SHIRT && (drawer.get_sz_dim(c.dim) < 0.55*c.dz() || drawer.get_sz_dim(!c.dim) < 0.52*c.dz())) {obj_type = TYPE_PEN;}
 	if (obj_type == TYPE_FOLD_SHIRT && !building_obj_model_loader.is_model_valid(OBJ_MODEL_FOLD_SHIRT)) {obj_type = TYPE_TEESHIRT;} // replace folded shirt with teeshirt
@@ -1743,9 +1744,14 @@ void building_room_geom_t::add_wine_rack_bottles(room_object_t const &c, vect_ro
 		set_rand_pos_for_sz(obj, c.dim, fs_length, fs_width, rgen);
 		break;
 	}
-	case TYPE_GUN: // handgun
+	case TYPE_HANDGUN: // handgun
 	{
-		assert(0); // not yet implemented
+		vector3d const ssz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_HANDGUN)); // D, W, H
+		float const sw_width(0.6*min(sz[!c.dim], min((ssz.y/ssz.x)*sz[c.dim], (ssz.y/ssz.z)*sz.z))), sw_length(sw_width*ssz.x/ssz.y), sw_height(sw_width*ssz.z/ssz.y);
+		obj = room_object_t(drawer, TYPE_HANDGUN, c.room_id, c.dim, c.dir); // random dir?
+		obj.item_flags = rgen.rand(); // random sub-model
+		obj.z2() = obj.z1() + sw_height; // set height
+		set_rand_pos_for_sz(obj, c.dim, sw_length, sw_width, rgen);
 		break;
 	}
 	default: assert(0);
