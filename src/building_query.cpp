@@ -2375,7 +2375,8 @@ template <typename T> bool has_cube_line_coll(point const &p1, point const &p2, 
 	}
 	return 0;
 }
-bool building_t::check_for_wall_ceil_floor_int(point const &p1, point const &p2, bool inc_pg_br_walls) const { // and interior doors/windows/gates
+// and interior doors/windows/gates
+bool building_t::check_for_wall_ceil_floor_int(point const &p1, point const &p2, bool inc_pg_br_walls, bool inc_tranparent, bool inc_bars) const {
 	if (!interior) return 0;
 
 	for (unsigned d = 0; d < 2; ++d) {
@@ -2390,10 +2391,10 @@ bool building_t::check_for_wall_ceil_floor_int(point const &p1, point const &p2,
 			if (has_cube_line_coll(p1, p2, interior->room_geom->pgbr_walls[d])) return 1;
 		}
 	}
-	if (check_line_int_interior_window(p1, p2)) return 1;
-	if (line_intersect_jail_walls_bars(p1, p2)) return 1;
+	if (inc_tranparent && check_line_int_interior_window(p1, p2)) return 1;
+	if (inc_bars       && line_intersect_jail_walls_bars(p1, p2)) return 1;
 
-	if (has_mall()) { // check closed mall store gates
+	if (inc_bars && has_mall()) { // check closed mall store gates
 		for (store_doorway_t const &d : interior->mall_info->store_doorways) {
 			if (d.open_amt == 1.0) continue; // fully open
 			cube_t gate(d);

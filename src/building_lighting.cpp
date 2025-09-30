@@ -2514,7 +2514,8 @@ void particle_manager_t::add_lights(vector3d const &xlate, building_t const &bui
 	if (!check_bcube_visible_for_building(get_bcube(), xlate, building, oc, lights_bcube)) return;
 
 	for (particle_t const &p : particles) { // only sparks create light
-		if (p.effect == PART_EFFECT_SPARK) {add_dlight_if_visible(p.pos, 20.0*p.radius, p.color, xlate, lights_bcube);}
+		if      (p.effect == PART_EFFECT_SPARK) {add_dlight_if_visible(p.pos,  20.0*p.radius, p.color,         xlate, lights_bcube);}
+		else if (p.effect == PART_EFFECT_FLASH) {add_dlight_if_visible(p.pos, 150.0*p.radius, p.color*p.alpha, xlate, lights_bcube);}
 	}
 }
 void fire_manager_t::add_lights(vector3d const &xlate, building_t const &building, occlusion_checker_noncity_t const &oc, cube_t &lights_bcube) const {

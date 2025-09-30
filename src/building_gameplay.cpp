@@ -43,6 +43,7 @@ void register_fly_attract(bool no_msg);
 room_obj_or_custom_item_t steal_from_car(room_object_t const &car, float floor_spacing, bool do_pickup);
 float get_filing_cabinet_drawers(room_object_t const &c, vect_cube_t &drawers);
 colorRGBA get_bucket_liquid_info(room_object_t const &c, float &liquid_level);
+point get_player_held_object_pos(point const &camera_bs);
 void reset_creepy_sounds();
 void clear_building_water_splashes();
 bool detailed_obj_intersect(room_object_t const &A, room_object_t const &B);
@@ -1166,6 +1167,7 @@ public:
 			float const aspect_ratio((float)window_width/(float)window_height);
 
 			if (cur_weight > 0.0 || tot_weight > 0.0 || best_value > 0.0) { // don't show stats until the player has picked something up
+				colorRGBA color(GREEN);
 				std::ostringstream oss;
 				oss << "Cur $" << cur_value << " / " << cur_weight << " lbs  Total $" << tot_value << " / " << tot_weight
 					<< " lbs  Best $" << best_value << "  Damage $" << round_fp(damage_done); // print damage to nearest dollar
@@ -1174,11 +1176,20 @@ public:
 					bldg_obj_type_t const otype(get_taken_obj_type(player_held_object));
 					unsigned const capacity(otype.capacity);
 					oss << "  [" << otype.name; // print the name of the throwable object
-					if (capacity > 0 && !player_held_object.is_broken()) {oss << " " << (capacity - carried.back().use_count) << "/" << capacity;} // print use/capacity if nonempty
+					
+					if (capacity > 0 && !player_held_object.is_broken()) {
+						unsigned const num_rem(capacity - carried.back().use_count);
+						oss << " " << num_rem << "/" << capacity; // print use/capacity if nonempty
+						
+						if (player_held_object.type == TYPE_HANDGUN) {
+							if      (num_rem == 2) {color = YELLOW;} // two shots left
+							else if (num_rem == 1) {color = RED   ;} // one  shot left
+						}
+					}
 					oss << "]";
 				}
 				float const yval((stats_display_mode == 2) ? -0.0104 : -0.011); // move above stats display if enabled
-				draw_text(GREEN, -0.010*aspect_ratio, yval, -0.02, oss.str(), 0.8); // size=0.8
+				draw_text(color, -0.010*aspect_ratio, yval, -0.02, oss.str(), 0.8); // size=0.8
 			}
 			if (phone_manager.is_phone_ringing() && player_held_object.type == TYPE_PHONE) { // player is holding a ringing phone, give them a hint
 				draw_text(LT_BLUE, -0.001*aspect_ratio, -0.009, -0.02, "[Press space to silence phone]");
@@ -2543,25 +2554,44 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos, bool
 			interior->room_geom->particle_manager.add_particle(part_pos, velocity, WHITE, 1.0*obj_radius, PART_EFFECT_CLOUD);
 			player_inventory.mark_last_item_used();
 			player_inventory.record_damage_done(0.05); // very small amount of damage
+			point const ray_end(player_pos + (2.0f*r_sum)*dir);
 
-			if (!interior->people.empty()) { // check for people in range
-				point const zombie_ray_end(player_pos + (2.0f*r_sum)*dir);
-
-				for (unsigned i = 0; i < interior->people.size(); ++i) {
-					cube_t const person_bcube(interior->people[i].get_bcube());
-					if (person_bcube.line_intersects(ray_start, zombie_ray_end)) {maybe_zombie_retreat(i, part_pos);}
-				}
+			for (unsigned i = 0; i < interior->people.size(); ++i) { // check for people in range
+				cube_t const person_bcube(interior->people[i].get_bcube());
+				if (person_bcube.line_intersects(ray_start, ray_end)) {maybe_zombie_retreat(i, part_pos, 0);} // is_ball=0
 			}
 			point const fire_ray_end(player_pos + (4.0f*r_sum)*dir); // longer range
 			interior->room_geom->fire_manager.put_out_fires(ray_start, fire_ray_end, 0.5*r_sum); // check for fires in range and put them out
 		}
 		else if (obj.type == TYPE_HANDGUN) {
-			// TODO: only if have ammo
-			// TODO: firing delay
-			gen_sound_thread_safe_at_player(SOUND_GUNSHOT);
-			register_building_sound(player_pos, 1.0);
-			player_inventory.mark_last_item_used();
-			// TODO: damage effect
+			static double next_fire_time(0.0);
+
+			if (tfticks > next_fire_time) {
+				if (obj.is_broken()) { // out of ammo
+					gen_sound_thread_safe_at_player(SOUND_CLICK, 1.0);
+				}
+				else {
+					gen_sound_thread_safe_at_player(SOUND_GUNSHOT); // TODO: better gunshot sound
+					register_building_sound(player_pos, 1.0);
+					player_inventory.mark_last_item_used();
+					// extend a bit up and further out to the end of the barrel
+					point const gun_pos(get_player_held_object_pos(player_pos) + 0.4*CAMERA_RADIUS*cview_dir + 0.05*CAMERA_RADIUS*plus_z);
+					interior->room_geom->particle_manager.add_particle(gun_pos, 0.0002*plus_z, colorRGBA(1.0, 1.0, 1.0, 0.4), 0.16*CAMERA_RADIUS, PART_EFFECT_SMOKE);
+					interior->room_geom->particle_manager.add_particle(gun_pos, zero_vector,   colorRGBA(1.0, 0.8, 0.5, 0.5), 0.12*CAMERA_RADIUS, PART_EFFECT_FLASH);
+					point const ray_start(player_pos + player_radius*dir), ray_end(player_pos + bcube.get_max_extent()*dir);
+
+					for (unsigned i = 0; i < interior->people.size(); ++i) { // check for people in range
+						cube_t person_bcube(interior->people[i].get_bcube());
+						person_bcube.expand_by_xy(-0.1*(person_bcube.dx() + person_bcube.dy())); // shrink to 60% of radius
+						point p1(ray_start), p2(ray_end);
+						if (!do_line_clip(p1, p2, person_bcube.d)) continue; // no hit
+						if (check_for_wall_ceil_floor_int(ray_start, p2, 1, 1, 0)) continue; // wall/floor/ceil/etc. between gun and zombie; include transparent but not bars
+						maybe_zombie_retreat(i, ray_start, 0, 2.5); // is_ball=0, duration_scale=2.5
+					}
+					// TODO: damage effect on wall (decal, like paint), etc.
+				}
+				next_fire_time = tfticks + 0.4*TICKS_PER_SECOND; // 2.5x per second
+			}
 		}
 		else if (obj.type == TYPE_CANDLE    ) {delay_use = 1;} // nothing else to do at the moment
 		else if (obj.type == TYPE_FLASHLIGHT) {delay_use = 1;} // handled by flashlight key as well; only use flashlight when selected in inventory?

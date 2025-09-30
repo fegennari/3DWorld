@@ -611,7 +611,8 @@ enum {/*building models*/ OBJ_MODEL_TOILET=0, OBJ_MODEL_SINK, OBJ_MODEL_TUB, OBJ
 	OBJ_MODEL_BICYCLE, OBJ_MODEL_SWINGSET, OBJ_MODEL_TRAMPOLINE, OBJ_MODEL_DUMPSTER, OBJ_MODEL_BIG_UMBRELLA, OBJ_MODEL_FLOWER, OBJ_MODEL_DECK_CHAIR, OBJ_MODEL_PICNIC,
 	OBJ_MODEL_WIND_TUR, OBJ_MODEL_BB_HOOP, NUM_OBJ_MODELS};
 
-enum {PART_EFFECT_NONE=0, PART_EFFECT_SPARK, PART_EFFECT_CLOUD, PART_EFFECT_SMOKE, PART_EFFECT_SPLASH, PART_EFFECT_BUBBLE, PART_EFFECT_DROPLET, PART_EFFECT_STEAM, NUM_PART_EFFECTS};
+enum {PART_EFFECT_NONE=0, PART_EFFECT_SPARK, PART_EFFECT_CLOUD, PART_EFFECT_SMOKE, PART_EFFECT_SPLASH, PART_EFFECT_BUBBLE, PART_EFFECT_DROPLET, PART_EFFECT_STEAM,
+	PART_EFFECT_FLASH, NUM_PART_EFFECTS};
 enum {PIPE_TYPE_SEWER=0, PIPE_TYPE_CW, PIPE_TYPE_HW, PIPE_TYPE_GAS, NUM_PIPE_TYPES};
 
 enum {BIRD_STATE_FLYING=0, BIRD_STATE_GLIDING, BIRD_STATE_LANDING, BIRD_STATE_STANDING, BIRD_STATE_TAKEOFF, NUM_BIRD_STATES};
@@ -2461,7 +2462,7 @@ struct building_t : public building_geom_t {
 	void register_player_change_floor(unsigned old_floor, unsigned new_floor) const;
 	void register_player_enter_building() const;
 	void register_player_exit_building (bool entered_another_building) const;
-	bool check_for_wall_ceil_floor_int (point const &p1, point const &p2, bool inc_pg_br_walls=1) const;
+	bool check_for_wall_ceil_floor_int (point const &p1, point const &p2, bool inc_pg_br_walls=1, bool inc_tranparent=1, bool inc_bars=1) const;
 	bool line_intersect_jail_walls_bars(point const &p1, point const &p2) const;
 	bool line_intersect_stairs_or_ramp (point const &p1, point const &p2, bool skip_u_stairs=0) const;
 	bool check_cube_on_or_near_stairs(cube_t const &c) const;
@@ -2519,7 +2520,7 @@ struct building_t : public building_geom_t {
 	int run_ai_elevator_logic(person_t &person, float delta_dir, rand_gen_t &rgen);
 	bool run_ai_pool_logic  (person_t &person, float &speed_mult) const;
 	bool run_ai_tunnel_logic(person_t &person, float &speed_mult) const;
-	bool maybe_zombie_retreat(unsigned person_ix, point const &hit_pos);
+	bool maybe_zombie_retreat(unsigned person_ix, point const &hit_pos, bool is_ball, float duration_scale=1.0);
 	void register_person_hit(unsigned person_ix, room_object_t const &obj, vector3d const &velocity);
 	bool is_room_backrooms(unsigned room_ix) const {return get_room(room_ix).is_backrooms();}
 	bool is_single_large_room         (int room_ix) const {return (room_ix >= 0 && get_room(room_ix).is_single_large_room());}

@@ -1831,8 +1831,8 @@ void particle_manager_t::next_frame(building_t &building) {
 	if (particles.empty()) return;
 	float const fticks_stable(min(fticks, 4.0f)); // clamp to 0.1s
 	auto const &objs(building.interior->room_geom->objs);
-	//                                        none sparks clouds smoke splash bubble, droplet, steam
-	float const lifetimes[NUM_PART_EFFECTS] = {0.0, 2.5,   3.0,   2.0,  0.25,  2.0,    1.0,     2.0};
+	//                           in seconds:  none sparks clouds smoke splash bubble, droplet, steam, flash
+	float const lifetimes[NUM_PART_EFFECTS] = {0.0, 2.5,   3.0,   2.0,  0.25,  2.0,    1.0,     2.0,   0.08};
 
 	for (particle_t &p : particles) {
 		point const p_last(p.pos);
@@ -1844,6 +1844,9 @@ void particle_manager_t::next_frame(building_t &building) {
 		if (p.effect == PART_EFFECT_SPARK) {
 			p.color = get_glow_color(2.0*lifetime, 1); // fade=1
 			apply_building_gravity(p.vel.z, 0.5*fticks_stable); // half gravity
+		}
+		else if (p.effect == PART_EFFECT_FLASH) {
+			p.color.A = 1.0 - lifetime; // transition to transparent
 		}
 		else if (p.effect == PART_EFFECT_CLOUD) { // form fire extinguisher
 			p.radius = p.init_radius*(1.0 + 4.0*lifetime); // radius increases over lifetime

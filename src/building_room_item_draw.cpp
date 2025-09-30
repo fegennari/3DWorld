@@ -1639,6 +1639,7 @@ cube_t union_of_two_cubes(cube_t const &a, cube_t const &b) {
 	bc.union_with_cube(b);
 	return bc;
 }
+point get_player_held_object_pos(point const &camera_bs) {return (camera_bs + CAMERA_RADIUS*cview_dir - vector3d(0.0, 0.0, 0.5*CAMERA_RADIUS));}
 
 bool check_custom_occluder_cull(cube_t const &c, point const &viewer, vect_cube_t const &occluders, bool occluder_dim);
 
@@ -2201,7 +2202,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 
 	if (player_in_building && !shadow_only && player_held_object.is_valid() && &building == player_building) {
 		// draw the item the player is holding; actual_player_pos should be the correct position for reflections
-		point const obj_pos((reflection_pass ? actual_player_pos : camera_bs) + CAMERA_RADIUS*cview_dir - vector3d(0.0, 0.0, 0.5*CAMERA_RADIUS));
+		point const obj_pos(get_player_held_object_pos(reflection_pass ? actual_player_pos : camera_bs));
 		player_held_object.translate(obj_pos - player_held_object.get_cube_center());
 		//unsigned room_id(building.get_room_containing_pt(obj_pos));
 		//if (room_id >= 0) {player_held_object.room_id = room_id;} // is this necessary?
@@ -2368,8 +2369,8 @@ void draw_emissive_billboards(quad_batch_draw &qbd, int tid) {
 
 class particle_texture_manager_t {
 	// none, sparks, clouds, smoke, splash, bubble, droplet, steam
-	string const fns[NUM_PART_EFFECTS] = {"", "", "", "", "water_splash.png", "white_circle.png", "white_circle.png"};
-	int         tids[NUM_PART_EFFECTS] = {-1, BLUR_CENT_TEX, BLUR_TEX, SMOKE_PUFF_TEX, -1, -1, -1, SMOKE_PUFF_TEX};
+	string const fns[NUM_PART_EFFECTS] = {"", "", "", "", "water_splash.png", "white_circle.png", "white_circle.png", ""};
+	int         tids[NUM_PART_EFFECTS] = {-1, BLUR_CENT_TEX, BLUR_TEX, SMOKE_PUFF_TEX, -1, -1, -1, SMOKE_PUFF_TEX, BLUR_TEX};
 public:
 	int get_tid(unsigned effect) {
 		assert(effect < NUM_PART_EFFECTS);
@@ -2401,7 +2402,7 @@ void particle_manager_t::draw(shader_t &s, vector3d const &xlate) { // non-const
 		if (qbd.empty()) continue;
 		int const tid(particle_texture_manager.get_tid(i));
 
-		if (i == PART_EFFECT_SPARK) { // draw emissive particles with a custom shader
+		if (i == PART_EFFECT_SPARK || i == PART_EFFECT_FLASH) { // draw emissive particles with a custom shader
 			draw_emissive_billboards(qbd, tid); // smooth alpha blended edges
 			s.make_current();
 		}
