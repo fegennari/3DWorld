@@ -54,7 +54,9 @@ void xform_matrix::apply_to_vector3d(vector3d &v) const {
 	glm::vec4 const vx(*this * (glm::vec4(vec3_from_vector3d(v), 1.0)));
 	v = vector3d_from_vec3(glm::vec3(vx));
 }
-
+void xform_matrix::apply_rotate(float angle_degrees, float x, float y, float z) {
+	*this = glm::rotate(*this, TO_RADIANS*angle_degrees, glm::vec3(x, y, z));
+}
 
 matrix_stack_t mvm_stack; // modelview matrix
 matrix_stack_t pjm_stack; // projection matrix

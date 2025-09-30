@@ -230,7 +230,7 @@ float city_model_loader_t::get_anim_duration(unsigned model_id, unsigned model_a
 
 void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t const &obj_bcube, vector3d const &dir, colorRGBA const &color,
 	vector3d const &xlate, unsigned model_id, bool is_shadow_pass, bool low_detail, animation_state_t *anim_state, unsigned skip_mat_mask, bool untextured,
-	bool force_high_detail, bool upside_down, bool emissive, bool do_local_rotate, int mirror_dim, bool using_custom_tid, int swap_xy_mode)
+	bool force_high_detail, bool upside_down, bool emissive, bool do_local_rotate, int mirror_dim, bool using_custom_tid, int swap_xy_mode, xform_matrix const *custom_xform)
 {
 	assert(!(low_detail && force_high_detail));
 	bool const is_valid(is_model_valid(model_id)); // first 8 bits is model ID, last 8 bits is sub-model ID
@@ -305,13 +305,17 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	translate_to(pos + z_offset*sz_scale*plus_z - local_rotate); // z_offset is in model space, scale to world space
 	rotate_model_from_plus_x_to_dir(dir); // typically rotated about the Z axis
 	if (local_rotate != all_zeros) {translate_to(local_rotate);}
-	if (dir.z != 0.0      ) {fgRotate(TO_DEG*asinf(-dir.z), 0.0, 1.0, 0.0);} // handle cars on a slope
-	if (do_mirror         ) {fgScale(((mirror_dim == 0) ? -1.0 : 1.0), ((mirror_dim == 1) ? -1.0 : 1.0), ((mirror_dim == 2) ? -1.0 : 1.0));}
-	if (model_file.xy_rot != 0.0) {fgRotate(model_file.xy_rot, 0.0, 0.0, 1.0);} // apply model rotation about z/up axis (in degrees)
-	if (swap_xy_mode      ) {fgRotate(-90.0, 1.0, 0.0, 0.0);} // swap Y and Z dirs - in both cases?
-	if (model_file.swap_xz) {fgRotate( 90.0, 0.0, 1.0, 0.0);} // swap X and Z dirs; models have up=X, but we want up=Z
-	if (model_file.swap_yz) {fgRotate( 90.0, 1.0, 0.0, 0.0);} // swap Y and Z dirs; models have up=Y, but we want up=Z
-	if (upside_down       ) {fgRotate(180.0, 1.0, 0.0, 0.0);} // R180 about X to flip over
+
+	if (custom_xform != nullptr) {fgMultMatrix(*custom_xform);}
+	else {
+		if (dir.z != 0.0      ) {fgRotate(TO_DEG*asinf(-dir.z), 0.0, 1.0, 0.0);} // handle cars on a slope
+		if (do_mirror         ) {fgScale(((mirror_dim == 0) ? -1.0 : 1.0), ((mirror_dim == 1) ? -1.0 : 1.0), ((mirror_dim == 2) ? -1.0 : 1.0));}
+		if (model_file.xy_rot != 0.0) {fgRotate(model_file.xy_rot, 0.0, 0.0, 1.0);} // apply model rotation about z/up axis (in degrees)
+		if (swap_xy_mode      ) {fgRotate(-90.0, 1.0, 0.0, 0.0);} // swap Y and Z dirs - in both cases?
+		if (model_file.swap_xz) {fgRotate( 90.0, 0.0, 1.0, 0.0);} // swap X and Z dirs; models have up=X, but we want up=Z
+		if (model_file.swap_yz) {fgRotate( 90.0, 1.0, 0.0, 0.0);} // swap Y and Z dirs; models have up=Y, but we want up=Z
+		if (upside_down       ) {fgRotate(180.0, 1.0, 0.0, 0.0);} // R180 about X to flip over
+	}
 	uniform_scale(sz_scale); // scale from model space to the world space size of our target cube, using a uniform scale based on the averages of the x,y,z sizes
 	point center(bcube_center);
 	UNROLL_3X(if (model_file.centered & (1<<i_)) {center[i_] = 0.0;}); // use centered bit mask to control which component is centered vs. translated

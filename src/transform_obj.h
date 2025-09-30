@@ -30,6 +30,7 @@ struct xform_matrix : public glm::mat4 { // Note: maybe better to use glm::gtx::
 	void normalize();
 	void check_valid(const char *msg_str) const;
 	void apply_to_vector3d(vector3d &v) const;
+	void apply_rotate(float angle_degrees, float x, float y, float z);
 	void print(std::string const &prefix=std::string(), std::ostream &out=std::cout) const {print_matrix(get_ptr(), prefix, out);}
 };
 

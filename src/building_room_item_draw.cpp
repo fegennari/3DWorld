@@ -1131,6 +1131,7 @@ float get_camera_z_rotate() {return -atan2(cview_dir.y, cview_dir.x);}
 
 void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, shader_t &s, vector3d const &xlate) { // held by the player
 	static rgeom_mat_t mat; // allocated memory is reused across frames; VBO is recreated every time; untextured
+	point const obj_center(c.get_cube_center());
 	bool needs_blend(0), reset_mat_nm_tid(0);
 
 	if (c.type == TYPE_SPRAYCAN || c.type == TYPE_MARKER) {
@@ -1140,7 +1141,7 @@ void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, 
 
 		if (dim != 2) { // if not oriented in Z
 			UNROLL_2X(swap(c_rot.d[dim][i_], c_rot.d[2][i_]);); // rotate into Z dir
-			c_rot.translate(c.get_cube_center() - c_rot.get_cube_center()); // translate it back to the correct location
+			c_rot.translate(obj_center - c_rot.get_cube_center()); // translate it back to the correct location
 		}
 		if (c.type == TYPE_SPRAYCAN) {
 			static rgeom_mat_t metal_mat(get_painted_metal_material());
@@ -1168,20 +1169,20 @@ void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, 
 	else if (c.type == TYPE_PHONE) {
 		float const z_rot_angle(get_camera_z_rotate());
 		cube_t const screen(add_phone_frame_and_return_screen_if_on(c, mat, 1)); // in_hand=1
-		rotate_verts(mat.itri_verts, plus_z, z_rot_angle, c.get_cube_center(), 0); // rotate all quad verts about Z axis
+		rotate_verts(mat.itri_verts, plus_z, z_rot_angle, obj_center, 0); // rotate all quad verts about Z axis
 		
 		if (!screen.is_all_zeros()) {
 			static rgeom_mat_t screen_mat;
 			screen_mat.tex = get_phone_tex(c);
 			screen_mat.add_cube_to_verts(screen, WHITE, all_zeros, ~EF_Z2, 0, 1); // mirror_x=1
-			rotate_verts(screen_mat.quad_verts, plus_z, z_rot_angle, c.get_cube_center(), 0); // rotate all quad verts about Z axis
+			rotate_verts(screen_mat.quad_verts, plus_z, z_rot_angle, obj_center, 0); // rotate all quad verts about Z axis
 			tid_nm_pair_dstate_t state(s);
 			screen_mat.upload_draw_and_clear(state);
 		}
 	}
 	else if (c.type == TYPE_RAT) { // draw the rat facing away from the player
 		bool const is_dead(c.is_broken()); // upside down if dead; shadow_pass=0; not animated
-		building_obj_model_loader.draw_model(s, c.get_cube_center(), c, cview_dir, rat_color, xlate, OBJ_MODEL_RAT, 0, 0, nullptr, 0, 0, 0, is_dead);
+		building_obj_model_loader.draw_model(s, obj_center, c, cview_dir, rat_color, xlate, OBJ_MODEL_RAT, 0, 0, nullptr, 0, 0, 0, is_dead);
 		check_mvm_update();
 		return; // don't need to run the code below
 	}
@@ -1201,14 +1202,16 @@ void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, 
 		tmp_rgeom.mats_small.upload_draw_and_clear(s);
 	}
 	else if (c.type == TYPE_FIRE_EXT) {
-		building_obj_model_loader.draw_model(s, c.get_cube_center(), c, cview_dir, WHITE, xlate, OBJ_MODEL_FIRE_EXT);
+		building_obj_model_loader.draw_model(s, obj_center, c, cview_dir, WHITE, xlate, OBJ_MODEL_FIRE_EXT);
 		check_mvm_update();
 		return; // don't need to run the code below
 	}
 	else if (c.type == TYPE_HANDGUN) {
-		// TODO: fix dir
-		// TODO: wrong object model
-		building_obj_model_loader.draw_model(s, c.get_cube_center(), c, cview_dir, WHITE, xlate, OBJ_MODEL_HANDGUN);
+		unsigned const model_id(c.get_model_id());
+		xform_matrix xf;
+		xf.apply_rotate(90.0, 1.0, 0.0, 0.0); // rotate from lying down to pointing outward
+		if (!building_obj_model_loader.get_model(model_id).mirrored) {xf.apply_rotate(180.0, 0.0, 1.0, 0.0);} // face away from the player, not toward
+		building_obj_model_loader.draw_model(s, obj_center, c, cview_dir, WHITE, xlate, model_id, 0, 0, nullptr, 0, 0, 0, 0, 0, 0, 3, 0, 0, &xf);
 		check_mvm_update();
 		return; // don't need to run the code below
 	}
@@ -1248,17 +1251,17 @@ void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, 
 		c_rot.z2() += sz_delta;
 		c_rot.expand_in_y(-0.5*sz_delta);
 		mat.add_cube_to_verts_untextured(c_rot, c.color); // simple untextured cube; all sides drawn
-		rotate_verts(mat.quad_verts, plus_z, (get_camera_z_rotate() + PI_TWO), c.get_cube_center(), 0); // rotate all itri verts about Z axis
+		rotate_verts(mat.quad_verts, plus_z, (get_camera_z_rotate() + PI_TWO), obj_center, 0); // rotate all itri verts about Z axis
 	}
 	else if (c.type == TYPE_FLASHLIGHT) {
 		unsigned const dim(get_max_dim(c.get_size()));
 		room_object_t c_rot(c);
 		c_rot.dir = 1; // points outward
 		c_rot.swap_dims(0, dim); // swap so that dim==X
-		c_rot.translate(c.get_cube_center() - c_rot.get_cube_center()); // translate it back to the correct location
+		c_rot.translate(obj_center - c_rot.get_cube_center()); // translate it back to the correct location
 		mat.tex.set_metal_specular(); // shiny
 		add_flashlight_to_material(c_rot, mat, N_CYL_SIDES);
-		rotate_verts(mat.itri_verts, plus_z, get_camera_z_rotate(), c.get_cube_center(), 0); // rotate all itri verts about Z axis
+		rotate_verts(mat.itri_verts, plus_z, get_camera_z_rotate(), obj_center, 0); // rotate all itri verts about Z axis
 	}
 	else {assert(0);}
 	if (needs_blend) {enable_blend();}
