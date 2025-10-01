@@ -2571,13 +2571,13 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos, bool
 					gen_sound_thread_safe_at_player(SOUND_CLICK, 1.0);
 				}
 				else {
-					gen_sound_thread_safe_at_player(SOUND_GUNSHOT); // TODO: better gunshot sound
+					gen_sound_thread_safe_at_player(SOUND_HANDGUN);
 					register_building_sound(player_pos, 1.0);
 					player_inventory.mark_last_item_used();
 					// extend a bit up and further out to the end of the barrel
 					point const gun_pos(get_player_held_object_pos(player_pos) + 0.4*CAMERA_RADIUS*cview_dir + 0.05*CAMERA_RADIUS*plus_z);
 					interior->room_geom->particle_manager.add_particle(gun_pos, 0.0002*plus_z, colorRGBA(1.0, 1.0, 1.0, 0.4), 0.16*CAMERA_RADIUS, PART_EFFECT_SMOKE);
-					interior->room_geom->particle_manager.add_particle(gun_pos, zero_vector,   colorRGBA(1.0, 0.8, 0.5, 0.5), 0.12*CAMERA_RADIUS, PART_EFFECT_FLASH);
+					interior->room_geom->particle_manager.add_particle(gun_pos, zero_vector,   colorRGBA(1.0, 0.6, 0.1, 0.5), 0.12*CAMERA_RADIUS, PART_EFFECT_FLASH);
 					point const ray_start(player_pos + player_radius*dir), ray_end(player_pos + bcube.get_max_extent()*dir);
 
 					for (unsigned i = 0; i < interior->people.size(); ++i) { // check for people in range

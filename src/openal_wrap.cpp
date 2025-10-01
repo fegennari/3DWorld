@@ -172,6 +172,7 @@ public:
 		add_new_sound("police.wav"     ); // SOUND_POLICE
 		add_new_sound("alarm.wav"      ); // SOUND_ALARM
 		add_new_sound("scratch.wav"    ); // SOUND_SCRATCH
+		add_new_sound("gunshot2.wav"   ); // SOUND_HANDGUN
 		cout << endl;
 
 		// create sources
