@@ -2559,7 +2559,7 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos, bool
 
 			for (unsigned i = 0; i < interior->people.size(); ++i) { // check for people in range
 				cube_t const person_bcube(interior->people[i].get_bcube());
-				if (person_bcube.line_intersects(ray_start, ray_end)) {maybe_zombie_retreat(i, part_pos, 0);} // is_ball=0
+				if (person_bcube.line_intersects(ray_start, ray_end)) {maybe_zombie_retreat(i, part_pos, obj.type);}
 			}
 			point const fire_ray_end(player_pos + (4.0f*r_sum)*dir); // longer range
 			interior->room_geom->fire_manager.put_out_fires(ray_start, fire_ray_end, 0.5*r_sum); // check for fires in range and put them out
@@ -2587,7 +2587,7 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos, bool
 						point p1(ray_start), p2(ray_end);
 						if (!do_line_clip(p1, p2, person_bcube.d)) continue; // no hit
 						if (check_for_wall_ceil_floor_int(ray_start, p2, 1, 1, 0)) continue; // wall/floor/ceil/etc. between gun and zombie; include transparent but not bars
-						maybe_zombie_retreat(i, ray_start, 0, 2.5); // is_ball=0, duration_scale=2.5
+						maybe_zombie_retreat(i, ray_start, obj.type);
 					}
 					// TODO: damage effect on wall (decal, like paint), etc.
 				}
