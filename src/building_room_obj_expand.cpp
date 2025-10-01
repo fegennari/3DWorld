@@ -1532,7 +1532,6 @@ void building_room_geom_t::add_wine_rack_bottles(room_object_t const &c, vect_ro
 	if (item_ix > 0 && rgen.rand_bool()) return obj; // no more items
 	cube_t drawer(drawer_in); // copy so that we can adjust z1
 	float const drawer_dz(drawer.dz());
-	// TODO: TYPE_HANDGUN when ready
 	unsigned const NUM = 11;
 	unsigned const type_ix(rgen.rand() % NUM); // 0-10
 	unsigned const types_dresser [NUM] = {TYPE_FOLD_SHIRT, TYPE_PAPER,     TYPE_BOX,       TYPE_FOLD_SHIRT, TYPE_BOOK, TYPE_KEY,     TYPE_BOTTLE, TYPE_MONEY,  TYPE_PHONE,  TYPE_SPRAYCAN, TYPE_TAPE};
@@ -1541,13 +1540,18 @@ void building_room_geom_t::add_wine_rack_bottles(room_object_t const &c, vect_ro
 	unsigned const types_kcabinet[NUM] = {TYPE_FLASHLIGHT, TYPE_BOX,       TYPE_CARD_DECK, TYPE_PEN,        TYPE_BOOK, TYPE_PLATE,   TYPE_BOTTLE, TYPE_BOTTLE, TYPE_SILVER, TYPE_SPRAYCAN, TYPE_TAPE};
 	unsigned const types_fcabinet[NUM] = {TYPE_BOX,        TYPE_PAPER,     TYPE_PEN,       TYPE_PEN,        TYPE_BOOK, TYPE_STAPLER, TYPE_PAPER,  TYPE_BOOK,   TYPE_TAPE,   TYPE_STAPLER,  TYPE_TAPE};
 	unsigned obj_type(0);
-	if      (c.in_attic())            {obj_type = types_attic   [type_ix];} // custom object overrides for attic item drawers
+
+	if (((c.type == TYPE_DESK && c.is_house()) || c.type == TYPE_NIGHTSTAND || c.type == TYPE_COUNTER) &&
+		building_obj_model_loader.is_model_valid(OBJ_MODEL_HANDGUN) && (rgen.rand() % 33) == 0)
+	{
+		obj_type = TYPE_HANDGUN; // maybe add a handgun
+	}
+	else if (c.in_attic())            {obj_type = types_attic   [type_ix];} // custom object overrides for attic item drawers
 	else if (c.type == TYPE_DESK)     {obj_type = types_desk    [type_ix];}
 	else if (c.type == TYPE_COUNTER)  {obj_type = types_kcabinet[type_ix];}
 	else if (c.type == TYPE_FCABINET) {obj_type = types_fcabinet[type_ix];}
 	else                              {obj_type = types_dresser [type_ix];} // dresser or nightstand
 	if (obj_type == TYPE_SILVER  && !building_obj_model_loader.is_model_valid(OBJ_MODEL_SILVER )) {obj_type = TYPE_BOOK;} // replace silverware with book
-	if (obj_type == TYPE_HANDGUN && !building_obj_model_loader.is_model_valid(OBJ_MODEL_HANDGUN)) {obj_type = TYPE_BOOK;} // replace handgun with bottle
 	// if drawer is too small, replace teeshirt with pen
 	if (obj_type == TYPE_FOLD_SHIRT && (drawer.get_sz_dim(c.dim) < 0.55*c.dz() || drawer.get_sz_dim(!c.dim) < 0.52*c.dz())) {obj_type = TYPE_PEN;}
 	if (obj_type == TYPE_FOLD_SHIRT && !building_obj_model_loader.is_model_valid(OBJ_MODEL_FOLD_SHIRT)) {obj_type = TYPE_TEESHIRT;} // replace folded shirt with teeshirt

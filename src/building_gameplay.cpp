@@ -918,8 +918,9 @@ public:
 			
 			if (obj.is_interactive()) {
 				carried.push_back(obj);
-				room_object_t &co(carried.back());
+				carried_item_t &co(carried.back());
 				co.flags &= ~RO_FLAG_ON_SRACK; // no longer on/in shelf rack, floor, or closet
+				if (obj.type == TYPE_HANDGUN) {co.use_count = (((obj.item_flags >> 8) & 255) % get_taken_obj_type(obj).capacity);} // random handgun ammo
 
 				if (type == TYPE_BOOK) { // clear dim and dir for books
 					float const dx(co.dx()), dy(co.dy()), dz(co.dz());
