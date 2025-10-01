@@ -725,8 +725,8 @@ public:
 		while (!carried.empty()) {
 			room_object_t const &obj(carried.back());
 
-			if (obj.has_dstate() || obj.type == TYPE_BOOK || obj.type == TYPE_RAT || ((obj.type == TYPE_FIRE_EXT || obj.type == TYPE_HANDGUN) && obj.is_broken())) {
-				if (building.maybe_use_last_pickup_room_object(camera_bs, 1, 1)) continue; // no_time_check=1, random_dir=1
+			if (obj.has_dstate() || obj.type == TYPE_BOOK || obj.type == TYPE_RAT || (obj.type == TYPE_FIRE_EXT && obj.is_broken())) { // drop items
+				building.maybe_use_last_pickup_room_object(camera_bs, 1, 1); // no_time_check=1, random_dir=1; may not be usable
 			}
 			carried.pop_back();
 		} // end while
