@@ -284,6 +284,7 @@ void building_params_t::init_kw_maps() {
 	kwmu.add("people_per_house_min",  people_per_house_min);
 	kwmu.add("people_per_house_max",  people_per_house_max);
 	kwmf.add("ai_retreat_time",       ai_retreat_time);
+	kwmr.add("zombie_fov",            zombie_fov,       FP_CHECK_NONNEG); // 0=auto
 	kwmr.add("people_min_alpha",      people_min_alpha, FP_CHECK_01);
 	kwmu.add("player_model_ix",       player_model_ix);
 	kwmb.add("show_player_model",     show_player_model);

@@ -29,6 +29,7 @@ buildings ai_follow_player    0 # enable player following in gameplay mode by de
 buildings ai_player_vis_test  1 # 0=no test, 1=LOS, 2=LOS+FOV, 3=LOS+FOV+lit
 buildings ai_sees_player_hide 2 # 0=doesn't see the player, 1=sees the player and waits outside the hiding spot, 2=opens the door and comes in
 buildings ai_retreat_time     5.0 # in seconds
+buildings zombie_fov          0.0 # in degrees; default/unset will match the player (60 degrees)
 # elevators
 buildings allow_elevator_line  1 # allow people to form lines waiting for an elevator
 buildings no_coll_enter_exit_elevator 1 # people can walk through each other rather than push each other when entering or exiting an elevator

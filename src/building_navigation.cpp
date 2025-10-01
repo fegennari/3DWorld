@@ -2355,10 +2355,10 @@ bool building_t::is_player_visible(person_t const &person, unsigned vis_test) co
 		point const eye_pos(person.get_eye_pos());
 		if (!is_sphere_visible(target.pos, player_radius, eye_pos) && !is_sphere_visible(pp2, player_radius, eye_pos)) return 0; // check both the bottom and top of player
 	}
-	if (vis_test >= 2) { // check person FOV
-		//if (dot_product((pp2 - eye_pos).get_norm(), person.dir) < 0.5) return 0; // 60 degree FOV => dp < 0.5
+	if (vis_test >= 2 && global_building_params.zombie_fov < 360.0) { // check person FOV
 		float const view_dist(10.0*get_window_vspace()); // 10 stories (~100 feet) should be good enough
-		pos_dir_up pdu(person.pos, person.dir, plus_z, 0.0, 0.1*person.radius, view_dist, 0.0, 1); // auto perspective angle, no_zoom=1
+		float const view_angle(0.5*TO_RADIANS*global_building_params.zombie_fov);
+		pos_dir_up const pdu(person.pos, person.dir, plus_z, view_angle, 0.1*person.radius, view_dist, 0.0, 1); // no_zoom=1
 		if (!pdu.sphere_visible_test(target.pos, player_radius) && !pdu.sphere_visible_test(pp2, player_radius)) return 0;
 	}
 	if (vis_test >= 3 && !same_room_and_floor) { // check lit state if not in the same room and floor

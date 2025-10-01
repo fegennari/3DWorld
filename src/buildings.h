@@ -384,7 +384,7 @@ struct building_params_t {
 	unsigned people_per_office_min=0, people_per_office_max=0, people_per_house_min=0, people_per_house_max=0, elevator_capacity=1;
 	unsigned player_model_ix=0;
 	float ai_retreat_time=4.0, elevator_wait_time=60.0, use_elevator_prob=0.25, elevator_wait_recall_prob=0.5;
-	float people_min_alpha=0.0;
+	float people_min_alpha=0.0, zombie_fov=0.0;
 	// building animal params
 	unsigned num_rats_min=0, num_rats_max=0, min_attack_rats=0, num_spiders_min=0, num_spiders_max=0, num_snakes_min=0, num_snakes_max=0, num_insects_min=0, num_insects_max=0;
 	float rat_speed   =0.0, rat_size_min   =0.5, rat_size_max   =1.0; // rats
