@@ -1030,7 +1030,7 @@ struct paint_draw_t {
 };
 struct building_decal_manager_t {
 	paint_draw_t paint_draw[2]; // {interior, exterior}
-	quad_batch_draw blood_qbd[2], tp_qbd, pend_tape_qbd, glass_qbd, burn_qbd; // blood_qbd: {red human blood, bug guts or stains}
+	quad_batch_draw blood_qbd[2], tp_qbd, pend_tape_qbd, glass_qbd, burn_qbd, bullet_qbd; // blood_qbd: {red human blood, bug guts or stains}
 	tape_quad_batch_draw tape_qbd; // for tape, but not pend_tape because it hasn't been placed yet
 	rand_gen_t rgen;
 
@@ -2408,6 +2408,8 @@ struct building_t : public building_geom_t {
 	colorRGBA get_floor_tex_and_color(cube_t const &floor_cube, tid_nm_pair_t &tex) const;
 	colorRGBA get_ceil_tex_and_color (cube_t const &ceil_cube,  tid_nm_pair_t &tex) const;
 	colorRGBA get_int_wall_tex_and_color(bool in_basement, bool in_ext_basement, bool in_mall_stores, tid_nm_pair_t &tex) const;
+	colorRGBA get_avg_floor_color(cube_t const &floor_cube) const;
+	colorRGBA get_avg_ceil_color (cube_t const &ceil_cube ) const;
 	colorRGBA const &get_trim_color() const {return (is_house ? WHITE : DK_GRAY);}
 	bool has_tile_floor() const;
 	void get_all_drawn_exterior_verts(building_draw_t &bdraw);

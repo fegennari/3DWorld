@@ -2589,7 +2589,8 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos, bool
 						if (check_for_wall_ceil_floor_int(ray_start, p2, 1, 1, 0)) continue; // wall/floor/ceil/etc. between gun and zombie; include transparent but not bars
 						maybe_zombie_retreat(i, ray_start, obj.type);
 					}
-					// TODO: damage effect on wall (decal, like paint), etc.
+					// TODO: damage objects
+					apply_paint(player_pos, dir, WHITE, 0, TYPE_HANDGUN);
 				}
 				next_fire_time = tfticks + 0.4*TICKS_PER_SECOND; // 2.5x per second
 			}
@@ -2738,8 +2739,8 @@ bool line_int_cube_get_t(point const &p1, point const &p2, cube_t const &cube, f
 template<typename T> bool line_int_cubes_get_t(point const &p1, point const &p2, vector<T> const &cubes, float &tmin, cube_t &target) { // cube_t, cube_with_ix_t, etc.
 	bool had_int(0);
 
-	for (auto c = cubes.begin(); c != cubes.end(); ++c) {
-		if (line_int_cube_get_t(p1, p2, *c, tmin)) {target = *c; had_int = 1;}
+	for (T const &c : cubes) {
+		if (line_int_cube_get_t(p1, p2, c, tmin)) {target = c; had_int = 1;}
 	}
 	return had_int;
 }
@@ -2771,10 +2772,10 @@ public:
 paint_manager_t ext_paint_manager;
 bool have_buildings_ext_paint() {return ext_paint_manager.have_paint_for_building();}
 void draw_buildings_ext_paint(shader_t &s) {ext_paint_manager.draw_paint(s);}
-float get_paint_max_radius(bool is_spraypaint) {return (is_spraypaint ? 2.0 : 0.035)*CAMERA_RADIUS;}
+float get_paint_max_radius(bool is_spraypaint, bool is_bullet) {return (is_spraypaint ? 2.0 : (is_bullet ? 0.06 : 0.035))*CAMERA_RADIUS;}
 
-float get_paint_radius(point const &source, point const &hit_pos, bool is_spraypaint) { // for spray paint and markers
-	float const max_radius(get_paint_max_radius(is_spraypaint));
+float get_paint_radius(point const &source, point const &hit_pos, bool is_spraypaint, bool is_bullet) { // for spray paint, markers, and bullets
+	float const max_radius(get_paint_max_radius(is_spraypaint, is_bullet));
 	return (is_spraypaint ? min(max_radius, max(0.05f*max_radius, 0.1f*p2p_dist(source, hit_pos))) : max_radius); // modified version of get_spray_radius()
 }
 vector3d get_coll_normal(unsigned dim, vector3d const &line_dir) {
@@ -2800,33 +2801,46 @@ unsigned remove_nearby_quads(point const &pos, float dist, quad_batch_draw &qbd)
 	return num_removed;
 }
 
-bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA const &color, unsigned emissive_color_id, room_object const obj_type) const { // spraypaint/marker
-	bool const is_spraypaint(obj_type == TYPE_SPRAYCAN), is_marker(obj_type == TYPE_MARKER), is_eraser(obj_type == TYPE_ERASER);
-	assert(is_spraypaint || is_marker || is_eraser); // only these three are supported
+// spraypaint/marker/eraser/bullet hole
+bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA const &color, unsigned emissive_color_id, room_object const obj_type) const {
+	bool const is_spraypaint(obj_type == TYPE_SPRAYCAN), is_marker(obj_type == TYPE_MARKER), is_eraser(obj_type == TYPE_ERASER), is_bullet(obj_type == TYPE_HANDGUN);
+	assert(is_spraypaint || is_marker || is_eraser || is_bullet); // only these object types are supported
 	// find intersection point and normal; assumes pos is inside the building
 	assert(has_room_geom());
-	float const max_dist((is_spraypaint ? 16.0 : 3.0)*CAMERA_RADIUS), tolerance(0.01*get_wall_thickness());
+	float const max_dist((is_spraypaint ? 16.0 : (is_bullet ? 100.0 : 3.0))*CAMERA_RADIUS), tolerance(0.01*get_wall_thickness());
 	vector3d const delta(max_dist*dir);
 	point const pos2(pos + delta);
 	float tmin(1.0);
 	bool on_glass(0);
 	vector3d normal;
 	cube_t target;
+	colorRGBA const int_wall_color(WHITE); // use white for walls because we want the interior color, not the paint color
+	colorRGBA hit_color(WHITE); // used for bullet holes
 	
 	for (unsigned d = 0; d < 2; ++d) {
-		if (line_int_cubes_get_t(pos, pos2, interior->walls[d], tmin, target)) {normal = get_coll_normal(d, dir);}
-		if (is_pos_in_pg_or_backrooms(pos) && line_int_cubes_get_t(pos, pos2, interior->room_geom->pgbr_walls[d], tmin, target)) {normal = get_coll_normal(d, dir);}
+		if (line_int_cubes_get_t(pos, pos2, interior->walls[d], tmin, target)) {
+			normal    = get_coll_normal(d, dir);
+			hit_color = int_wall_color;
+		}
+		if (is_pos_in_pg_or_backrooms(pos) && line_int_cubes_get_t(pos, pos2, interior->room_geom->pgbr_walls[d], tmin, target)) {
+			normal    = get_coll_normal(d, dir);
+			hit_color = LT_GRAY;
+		}
 	}
-	if (line_int_cubes_get_t(pos, pos2, interior->floors  , tmin, target)) {normal =  plus_z;}
-	if (line_int_cubes_get_t(pos, pos2, interior->ceilings, tmin, target)) {normal = -plus_z;}
-	
+	for (cube_t const &c : interior->floors) {
+		if (line_int_cube_get_t(pos, pos2, c, tmin)) {target = c; normal =  plus_z; hit_color = get_avg_floor_color(c);}
+	}
+	for (cube_t const &c : interior->ceilings) {
+		if (line_int_cube_get_t(pos, pos2, c, tmin)) {target = c; normal = -plus_z; hit_color = get_avg_ceil_color (c);}
+	}
 	// check closed opaque interior doors
 	for (door_t const &d : interior->doors) {
 		if (d.open_amt > 0.0 || d.for_jail) continue;
 		cube_t door(d.get_true_bcube());
 		if (!line_int_cube_get_t(pos, pos2, door, tmin)) continue;
-		target = door;
-		normal = get_coll_normal(d.dim, dir);
+		target    = door;
+		normal    = get_coll_normal(d.dim, dir);
+		hit_color = WHITE; // assume interior doors are white
 	}
 	// check for rugs, pictures, and whiteboards, which can all be painted over; also check for walls from closets
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
@@ -2851,8 +2865,9 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 				door.expand_in_dim(i->dim, 0.5*get_wall_thickness());
 				if (line_int_cube_get_t(pos, pos2, door, tmin)) {tmin = pre_tmin; continue;} // restore tmin and skip
 			}
-			normal = get_normal_for_ray_cube_int_xy(cand_p_int, *i, tolerance); // should always return a valid normal
-			target = *i;
+			normal    = get_normal_for_ray_cube_int_xy(cand_p_int, *i, tolerance); // should always return a valid normal
+			target    = *i;
+			hit_color = int_wall_color; // wall hit color
 		}
 		else if (i->type == TYPE_STALL || i->type == TYPE_CUBICLE) {
 			cube_t c(*i);
@@ -2866,16 +2881,16 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 			if (i->contains_pt(pos)) continue; // inside stall/cubicle, can't paint the exterior
 			vector3d const n(get_normal_for_ray_cube_int_xy((pos + tmin0*delta), c, tolerance)); // should always return a valid normal
 			if (n[i->dim] != 0) {walls_blocked = 1; continue;} // only the side walls count; avoids dealing with open doors
-			tmin = tmin0; normal = n; target = c;
+			tmin = tmin0; normal = n; target = c; hit_color = i->color;
 		}
 	} // for i
 	for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) { // check elevators
 		float tmin0(tmin);
 		if (!line_int_cube_get_t(pos, pos2, *i, tmin0)) continue;
-		if (i->contains_pt(pos)) {walls_blocked = 1; continue;} // can't spraypaint the outside of the elevator when standing inside it
+		if (i->contains_pt(pos)) {walls_blocked = 1;    continue;} // can't spraypaint the outside of the elevator when standing inside it
 		vector3d const n(get_normal_for_ray_cube_int_xy((pos + tmin0*delta), *i, tolerance)); // should always return a valid normal
 		if (n[i->dim] == (i->dir ? 1.0 : -1.0)) {walls_blocked = 1; continue;} // skip elevator opening, even if not currently open
-		tmin = tmin0; normal = n; target = *i;
+		tmin = tmin0; normal = n; target = *i; hit_color = int_wall_color; // interior wall hit
 	} // for i
 	for (auto i = interior->stairwells.begin(); i != interior->stairwells.end(); ++i) { // check stairs
 		if (!i->is_u_shape() && !i->has_walled_sides()) continue; // no walls, skip
@@ -2895,7 +2910,7 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 			if (n[i->dim] != 0) {walls_blocked = 1; continue;} // skip stairs opening, either side
 		}
 		else {assert(0);} // unsupported stairs type
-		tmin = tmin0; normal = n; target = c;
+		tmin = tmin0; normal = n; target = c; hit_color = int_wall_color; // interior wall hit
 	} // for i
 	// check exterior walls; must be done last; okay to add spraypaint and markers over windows but not over doors since they can be opened
 	cube_t const part(get_part_containing_pt(pos));
@@ -2915,13 +2930,13 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 			vector3d const n(-get_normal_for_ray_cube_int_xy(cand_p_int, part, tolerance)); // negate the normal because we're looking for the exit point from the cube
 			
 			if (n != zero_vector) {
-				float const radius(get_paint_radius(pos, cand_p_int, is_spraypaint));
+				float const radius(get_paint_radius(pos, cand_p_int, is_spraypaint, is_bullet));
 				bool hit_ext_door(0);
 
 				for (auto const &d : doors) {
 					if (d.get_bcube().contains_pt_exp(cand_p_int, radius)) {hit_ext_door = 1; break;}
 				}
-				if (!hit_ext_door) {tmin = tmax0; normal = n; target = part; exterior_wall = 1;}
+				if (!hit_ext_door) {tmin = tmax0; normal = n; target = part; hit_color = int_wall_color; exterior_wall = 1;}
 			}
 		}
 	}
@@ -2930,11 +2945,13 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 			bool const dim(w.dy() < w.dx());
 			target   = w;
 			normal   = get_coll_normal(dim, dir);
+			hit_color= GLASS_COLOR;
 			on_glass = 1;
 		}
 	}
 	if (line_int_cubes_get_t(pos, pos2, interior->room_geom->glass_floors, tmin, target)) { // check glass floors last
 		normal   = get_coll_normal(2, dir); // Z
+		hit_color= GLASS_COLOR;
 		on_glass = 1;
 	}
 	if (normal == zero_vector)            return 0; // no walls, ceilings, floors, etc. hit
@@ -2942,7 +2959,7 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 	point p_int(pos + tmin*delta);
 	if (check_line_intersect_doors(pos, p_int, 1))       return 0; // blocked by door, no spraypaint; can't add spraypaint over door in case door is opened; inc_open=1
 	if (has_pool() && interior->pool.contains_pt(p_int)) return 0; // can't use in the pool
-	float const radius(get_paint_radius(pos, p_int, is_spraypaint));
+	float const radius(get_paint_radius(pos, p_int, is_spraypaint, is_bullet));
 	static double next_sound_time(0.0);
 
 	if (is_eraser) { // erase mode; only applies to marker
@@ -2958,8 +2975,7 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 		}
 		return 1;
 	}
-	float const max_radius(get_paint_max_radius(is_spraypaint));
-	float const alpha((is_spraypaint && radius > 0.5*max_radius) ? (1.0 - (radius - 0.5*max_radius)/max_radius) : 1.0); // 0.5 - 1.0
+	float const max_radius(get_paint_max_radius(is_spraypaint, is_bullet));
 	p_int += 0.01*radius*normal; // move slightly away from the surface
 	assert(get_bcube_inc_extensions().contains_pt(p_int));
 	unsigned const dim(get_max_dim(normal)), d1((dim+1)%3), d2((dim+2)%3);
@@ -2977,6 +2993,15 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 	float const winding_order_sign(-SIGN(normal[dim])); // make sure to invert the winding order to match the normal sign
 	// Note: interior spraypaint draw uses back face culling while exterior draw does not; invert the winding order for exterior quads so that they show through windows correctly
 	vector3d const dx(radius*dir1*winding_order_sign*(exterior_wall ? -1.0 : 1.0));
+
+	if (is_bullet) {
+		interior->room_geom->decal_manager.bullet_qbd.add_quad_dirs(p_int, dx, radius*dir2, hit_color, normal);
+		if (on_glass) {interior->room_geom->decal_manager.bullet_qbd.add_quad_dirs(p_int, -dx, radius*dir2, hit_color, normal);} // draw on both sides of glass
+		if (exterior_wall) {} // draw in exterior pass?
+		player_inventory.record_damage_done(10.0); // more damage for bullet holes
+		return 1;
+	}
+	float const alpha((is_spraypaint && radius > 0.5*max_radius) ? (1.0 - (radius - 0.5*max_radius)/max_radius) : 1.0); // 0.5 - 1.0
 	colorRGBA const paint_color(((emissive_color_id > 0) ? WHITE : color), alpha); // color is always white if emissive
 	quad_batch_draw &qbd(interior->room_geom->decal_manager.paint_draw[exterior_wall].get_paint_qbd(is_marker, emissive_color_id));
 	qbd.add_quad_dirs(p_int, dx, radius*dir2, paint_color, normal); // add interior/exterior paint

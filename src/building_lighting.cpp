@@ -250,6 +250,17 @@ void add_colored_cubes(cube_t const *const cubes, unsigned num_cubes, colorRGBA 
 		if (!cubes[n].is_all_zeros()) {cc.emplace_back(cubes[n], color);}
 	}
 }
+colorRGBA building_t::get_avg_floor_color(cube_t const &floor_cube) const {
+	tid_nm_pair_t tex;
+	colorRGBA const color(get_floor_tex_and_color(floor_cube, tex));
+	return color.modulate_with(tex.get_avg_color());
+}
+colorRGBA building_t::get_avg_ceil_color (cube_t const &ceil_cube ) const {
+	tid_nm_pair_t tex;
+	colorRGBA const color(get_ceil_tex_and_color(ceil_cube, tex));
+	return color.modulate_with(tex.get_avg_color());
+}
+
 void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ext_bcube) const {
 	if (!interior) return; // nothing to do
 	building_mat_t const &mat(get_material());
@@ -290,15 +301,11 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 		if (d.open || d.for_jail == 1 || !d.intersects(ext_bcube)) continue; // add only closed doors; skip jail bar doors
 		cc.emplace_back(d.get_true_bcube(), (d.for_jail ? GRAY : WHITE));
 	}
-	for (cube_t const &i : interior->floors) {
-		if (!i.intersects(ext_bcube)) continue;
-		tid_nm_pair_t tex;
-		cc.emplace_back(i, get_floor_tex_and_color(i, tex).modulate_with(tex.get_avg_color()));
+	for (cube_t const &c : interior->floors) {
+		if (c.intersects(ext_bcube)) {cc.emplace_back(c, get_avg_floor_color(c));}
 	}
-	for (cube_t const &i : interior->ceilings) {
-		if (!i.intersects(ext_bcube)) continue;
-		tid_nm_pair_t tex;
-		cc.emplace_back(i, get_ceil_tex_and_color(i, tex).modulate_with(tex.get_avg_color()));
+	for (cube_t const &c : interior->ceilings) {
+		if (c.intersects(ext_bcube)) {cc.emplace_back(c, get_avg_ceil_color(c));}
 	}
 	// should glass floors be included? maybe not, since we want refractions rather than reflections; plus they're mostly transparent and near white
 	//for (cube_t const &i : interior->room_geom->glass_floors) {if (i.intersects(ext_bcube)) {cc.emplace_back(i, GLASS_COLOR);}}

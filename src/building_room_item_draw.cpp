@@ -2950,14 +2950,13 @@ void building_decal_manager_t::draw_building_interior_decals(shader_t &s, bool p
 		tape_qbd.draw();
 		pend_tape_qbd.draw();
 	}
-	if (!blood_qbd[0].empty() || !blood_qbd[1].empty() || !glass_qbd.empty() || !burn_qbd.empty()) { // draw alpha blended decals
+	if (!blood_qbd[0].empty() || !blood_qbd[1].empty() || !glass_qbd.empty() || !burn_qbd.empty() || !bullet_qbd.empty()) { // draw alpha blended decals
 		glDepthMask(GL_FALSE); // disable depth write
 		enable_blend();
-		int const blood_tids[2] = {BLOOD_SPLAT_TEX, get_texture_by_name("atlas/blood_white.png")};
 
 		for (unsigned i = 0; i < 2; ++i) {
 			if (blood_qbd[i].empty()) continue;
-			select_texture(blood_tids[i]);
+			select_texture(i ? get_texture_by_name("atlas/blood_white.png") : BLOOD_SPLAT_TEX);
 			blood_qbd[i].draw();
 		}
 		if (!glass_qbd.empty()) {
@@ -2967,6 +2966,14 @@ void building_decal_manager_t::draw_building_interior_decals(shader_t &s, bool p
 		if (!burn_qbd.empty()) {
 			select_texture(BLUR_CENT_TEX);
 			burn_qbd.draw();
+		}
+		if (!bullet_qbd.empty()) { // Note: not using parallax mapping as in draw_cracks_and_decals() because it doesn't work with TT buildings
+			select_texture(BULLET_D_TEX);
+			select_texture(BULLET_N_TEX, 5); // apply normal map
+			s.add_uniform_float("bump_tb_scale", -1.0); // invert the coordinate system (something backwards?)
+			bullet_qbd.draw();
+			s.add_uniform_float("bump_tb_scale", 1.0); // restore
+			bind_default_flat_normal_map(); // no normal map
 		}
 		disable_blend();
 		glDepthMask(GL_TRUE);
