@@ -182,8 +182,8 @@ bool object_model_loader_t::can_skip_model(unsigned id) const {
 	return 0;
 }
 
-/*static*/ void city_model_loader_t::rotate_model_from_plus_x_to_dir(vector3d const &dir) {
-	if (fabs(dir.y) > 0.001) {rotate_to_plus_x(dir);} // orient facing front
+/*static*/ void city_model_loader_t::rotate_model_from_plus_x_to_dir(vector3d const &dir) { // orient facing front
+	if (dir.y != 0.0) {rotate_to_plus_x(dir);}
 	else if (dir.x < 0.0) {fgRotate(180.0, 0.0, 0.0, 1.0);}
 }
 
@@ -303,12 +303,18 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	vector3d const local_rotate(do_local_rotate ? model_file.rotate_about : zero_vector);
 	fgPushMatrix();
 	translate_to(pos + z_offset*sz_scale*plus_z - local_rotate); // z_offset is in model space, scale to world space
-	rotate_model_from_plus_x_to_dir(dir); // typically rotated about the Z axis
+	if (custom_xform == nullptr) {rotate_model_from_plus_x_to_dir(dir);} // typically rotated about the Z axis
 	if (local_rotate != all_zeros) {translate_to(local_rotate);}
 
-	if (custom_xform != nullptr) {fgMultMatrix(*custom_xform);}
+	if (custom_xform != nullptr) {
+		vector3d const dir_xy(vector3d(dir.x, dir.y, 0.0).get_norm());
+		vector3d const vrot(cross_product(dir_xy, plus_z));
+		rotate_about(TO_DEG*asinf(dir.z), vrot);
+		rotate_to_plus_x(dir_xy);
+		fgMultMatrix(*custom_xform);
+	}
 	else {
-		if (dir.z != 0.0      ) {fgRotate(TO_DEG*asinf(-dir.z), 0.0, 1.0, 0.0);} // handle cars on a slope
+		if (dir.z != 0.0      ) {fgRotate(TO_DEG*asinf(-dir.z), 0.0, 1.0, 0.0);} // handle cars on a slope or objects tilted
 		if (do_mirror         ) {fgScale(((mirror_dim == 0) ? -1.0 : 1.0), ((mirror_dim == 1) ? -1.0 : 1.0), ((mirror_dim == 2) ? -1.0 : 1.0));}
 		if (model_file.xy_rot != 0.0) {fgRotate(model_file.xy_rot, 0.0, 0.0, 1.0);} // apply model rotation about z/up axis (in degrees)
 		if (swap_xy_mode      ) {fgRotate(-90.0, 1.0, 0.0, 0.0);} // swap Y and Z dirs - in both cases?
