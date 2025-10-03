@@ -2863,7 +2863,9 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 			(is_floor && (i->type == TYPE_RUG || i->type == TYPE_FLOORING)) ||
 			(i->type == TYPE_POOL_TILE && i->shape == SHAPE_CUBE))
 		{
-			if (line_int_cube_get_t(pos, pos2, *i, tmin)) {target = *i;} // Note: return value is ignored, we only need to update tmin and target; normal should be unchanged
+			if (!line_int_cube_get_t(pos, pos2, *i, tmin)) continue;
+			target = *i; // Note: we only need to update tmin and target; normal should be unchanged
+			if (i->type == TYPE_WBOARD || i->type == TYPE_MIRROR || i->type == TYPE_FLOORING || i->type == TYPE_POOL_TILE) {hit_color = i->get_color();}
 		}
 		else if (i->type == TYPE_CLOSET && line_int_cube_get_t(pos, pos2, *i, tmin)) {
 			point const cand_p_int(pos + tmin*delta);
@@ -2877,7 +2879,7 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 			target    = *i;
 			hit_color = int_wall_color; // wall hit color
 		}
-		else if (i->type == TYPE_STALL || i->type == TYPE_CUBICLE) {
+		else if (i->type == TYPE_STALL || i->type == TYPE_CUBICLE /*|| i->type == TYPE_FISHTANK*/) { // fishtank doesn't really work and can be moved or taken
 			cube_t c(*i);
 
 			if (i->type == TYPE_STALL && i->shape != SHAPE_SHORT) { // toilet stall, clip cube to wall height
