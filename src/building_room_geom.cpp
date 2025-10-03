@@ -5760,7 +5760,7 @@ int get_tv_or_monitor_tid(room_object_t const &c) {
 void building_room_geom_t::add_tv_picture(room_object_t const &c) {
 	if (c.is_broken()) { // draw cracks for broken screen
 		unsigned skip_faces(get_face_mask(c.dim, c.dir)); // only the face oriented outward
-		rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_crack_tid(c), 0.0, 0, true))); // unshadowed, transparent
+		rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_crack_tid(c), 0.0, 0, true))); // unshadowed, transparent; should this be reflective to match the screen?
 		mat.add_cube_to_verts(get_tv_screen(c), apply_light_color(c, WHITE), c.get_llc(), skip_faces, !c.dim, (c.obj_id&1), (c.obj_id&2)); // X/Y mirror based on obj_id
 		return;
 	}

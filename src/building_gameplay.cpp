@@ -2589,8 +2589,16 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos, bool
 						if (check_for_wall_ceil_floor_int(ray_start, p2, 1, 1, 0)) continue; // wall/floor/ceil/etc. between gun and zombie; include transparent but not bars
 						maybe_zombie_retreat(i, ray_start, obj.type);
 					}
-					// TODO: damage objects
-					apply_paint(player_pos, dir, WHITE, 0, TYPE_HANDGUN);
+					point hit_pos(ray_start);
+					apply_paint(ray_start, dir, WHITE, 0, TYPE_HANDGUN, &hit_pos);
+					auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
+
+					for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) { // break objects
+						point p1(ray_start), p2(hit_pos);
+						if (!do_line_clip(p1, p2, i->d)) continue; // actually clip the line
+						unsigned const obj_ix(i - interior->room_geom->objs.begin());
+						maybe_break_room_object(*i, p2, -dir, 0.0, obj_ix);
+					}
 				}
 				next_fire_time = tfticks + 0.4*TICKS_PER_SECOND; // 2.5x per second
 			}
@@ -2802,7 +2810,7 @@ unsigned remove_nearby_quads(point const &pos, float dist, quad_batch_draw &qbd)
 }
 
 // spraypaint/marker/eraser/bullet hole
-bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA const &color, unsigned emissive_color_id, room_object const obj_type) const {
+bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA const &color, unsigned emissive_color_id, room_object const obj_type, point *hit_pos) const {
 	bool const is_spraypaint(obj_type == TYPE_SPRAYCAN), is_marker(obj_type == TYPE_MARKER), is_eraser(obj_type == TYPE_ERASER), is_bullet(obj_type == TYPE_HANDGUN);
 	assert(is_spraypaint || is_marker || is_eraser || is_bullet); // only these object types are supported
 	// find intersection point and normal; assumes pos is inside the building
@@ -2954,6 +2962,7 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 		hit_color= GLASS_COLOR;
 		on_glass = 1;
 	}
+	if (hit_pos) {*hit_pos = pos + tmin*delta;}
 	if (normal == zero_vector)            return 0; // no walls, ceilings, floors, etc. hit
 	if (walls_blocked && normal.z == 0.0) return 0; // can't spraypaint walls through elevator, stairs, etc.
 	point p_int(pos + tmin*delta);

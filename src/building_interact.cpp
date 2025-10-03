@@ -1385,42 +1385,14 @@ void building_t::run_ball_update(vect_room_object_t::iterator ball_it, point con
 			bool handled(0);
 
 			// break the glass if not already broken; should windows get broken as well?
-			if (bt.breaks_glass && (obj.is_tv_or_monitor() || (obj.is_mirror() && !obj.is_open())) &&
-				velocity.mag() > 2.0*MIN_VELOCITY && !obj.is_broken())
-			{
-				vector3d front_dir(all_zeros);
-				front_dir[obj.dim] = (obj.dir ? 1.0 : -1.0);
-
-				if (dot_product(cnorm, front_dir) > 0.9) { // hit the front side of the screen
-					if (dist_less_than(new_center, obj.get_cube_center(), (radius + 0.5*obj.get_length() + 0.2*obj.dz()))) { // near the screen center
-						// capture value before breaking; if the player then takes this object, damage will be higher, but we can attribute this to making a mess of broken glass
-						register_broken_object(obj);
-						obj.flags |= RO_FLAG_BROKEN;
-						point const sound_origin(obj.xc(), obj.yc(), new_center.z); // generate sound from the player height
-						gen_sound_thread_safe(SOUND_GLASS, local_to_camera_space(sound_origin), 0.7);
-						register_building_sound(sound_origin, 0.7);
-						interior->room_geom->update_draw_state_for_room_object(obj, *this, 0);
-						
-						if (obj.is_mirror()) {register_achievement("7 Years of Bad Luck");}
-						else if (obj.is_tv_or_monitor() && obj.is_powered()/*!(obj.obj_id & 1)*/) { // only if turned on?
-							unsigned const obj_id(ball_it - interior->room_geom->objs.begin());
-							interior->room_geom->particle_manager.add_for_obj(ball, 0.06*radius, front_dir, 1.0*KICK_VELOCITY, 50, 60, PART_EFFECT_SPARK, obj_id);
-						}
-						// only dresser mirrors leave broken glass; TV and monitor screens have an outer film that holds in the glass;
-						// medicine cabinet mirrors and office bathroom mirrors have sinks below them rather than a flat surface for the glass to rest on
-						if (obj.type == TYPE_DRESS_MIR && obj_ix >= 2) { // create broken glass
-							room_object_t const &dresser(interior->room_geom->get_room_object_by_index(obj_ix - 2)); // should be dresser, blocker, mirror
-
-							if (dresser.type == TYPE_DRESSER) { // should always be true
-								static rand_gen_t rgen;
-								float const glass_radius(0.45*dresser.get_depth());
-								point glass_pos(cube_top_center(dresser));
-								glass_pos.z += 0.005*dresser.dz(); // slightly above
-								add_broken_glass_decal(glass_pos, glass_radius, rgen);
-							}
-						}
-						handled = 1;
+			if (bt.breaks_glass && velocity.mag() > 2.0*MIN_VELOCITY && !obj.is_broken()) {
+				if (maybe_break_room_object(obj, new_center, cnorm, radius, obj_ix)) {
+					if (obj.is_mirror()) {register_achievement("7 Years of Bad Luck");}
+					else if (obj.is_tv_or_monitor() && obj.is_powered()/*!(obj.obj_id & 1)*/) { // only if turned on?
+						unsigned const obj_id(ball_it - interior->room_geom->objs.begin());
+						interior->room_geom->particle_manager.add_for_obj(ball, 0.06*radius, obj.get_dir(), 1.0*KICK_VELOCITY, 50, 60, PART_EFFECT_SPARK, obj_id);
 					}
+					handled = 1;
 				}
 			}
 			if (obj.type == TYPE_PICTURE || obj.is_tv_or_monitor() || obj.type == TYPE_BUTTON || obj.type == TYPE_SWITCH ||
@@ -1482,6 +1454,37 @@ void building_t::run_ball_update(vect_room_object_t::iterator ball_it, point con
 	if (cont_bldg != nullptr && cont_bldg != this) { // switched buildings
 		if (cont_bldg->interior->room_geom->add_room_object(ball, *this, 1, velocity)) {ball.remove();} // move ball from this to other_bldg
 	}
+}
+
+bool building_t::maybe_break_room_object(room_object_t &obj, point const &hit_pos, vector3d const &hit_dir, float obj_radius, unsigned obj_ix) {
+	if (!obj.is_tv_or_monitor() && !(obj.is_mirror() && !obj.is_open())) return 0; // not breakable
+	if (obj.is_broken()) return 0; // already broken
+	if (dot_product(hit_dir, obj.get_dir()) < 0.9) return 0; // didn't hit the front side of the screen or mirror
+	point front_center(obj.get_cube_center());
+	front_center[obj.dim] = obj.d[obj.dim][obj.dir];
+	if (!dist_less_than(hit_pos, front_center, (obj_radius + 0.5*obj.get_length() + 0.2*obj.dz()))) return 0; // not near the screen or mirror center
+	// capture value before breaking; if the player then takes this object, damage will be higher, but we can attribute this to making a mess of broken glass
+	register_broken_object(obj);
+	obj.flags |= RO_FLAG_BROKEN;
+	point const sound_origin(obj.xc(), obj.yc(), hit_pos.z); // generate sound from the hit height
+	gen_sound_thread_safe(SOUND_GLASS, local_to_camera_space(sound_origin), 0.7);
+	register_building_sound(sound_origin, 0.7);
+	interior->room_geom->update_draw_state_for_room_object(obj, *this, 0);
+
+	// only dresser mirrors leave broken glass; TV and monitor screens have an outer film that holds in the glass;
+	// medicine cabinet mirrors and office bathroom mirrors have sinks below them rather than a flat surface for the glass to rest on
+	if (obj.type == TYPE_DRESS_MIR && obj_ix >= 2) { // create broken glass
+		room_object_t const &dresser(interior->room_geom->get_room_object_by_index(obj_ix - 2)); // should be dresser, blocker, mirror
+
+		if (dresser.type == TYPE_DRESSER) { // should always be true
+			static rand_gen_t rgen;
+			float const glass_radius(0.45*dresser.get_depth());
+			point glass_pos(cube_top_center(dresser));
+			glass_pos.z += 0.005*dresser.dz(); // slightly above
+			add_broken_glass_decal(glass_pos, glass_radius, rgen);
+		}
+	}
+	return 1;
 }
 
 void rotate_vector_xy(vector3d &v, float theta) {
