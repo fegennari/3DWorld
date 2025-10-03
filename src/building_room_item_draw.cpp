@@ -2869,13 +2869,14 @@ bool paint_draw_t::have_any_sp() const {
 	}
 	return 0;
 }
-quad_batch_draw &paint_draw_t::get_paint_qbd(bool is_marker, unsigned emissive_color_id) {
-	if (is_marker) return m_qbd;
+quad_batch_draw &paint_draw_t::get_paint_qbd(bool is_marker, bool is_bullet, unsigned emissive_color_id) {
+	if (is_marker) return marker_qbd;
+	if (is_bullet) return bullet_qbd;
 	return sp_qbd[(emissive_color_id == 0) ? 0 : (1 + ((emissive_color_id-1)%NUM_SP_EMISSIVE_COLORS))]; // choose spraypaint emissive color
 }
-void paint_draw_t::draw_paint(shader_t &s) const {
+void paint_draw_t::draw_paint(shader_t &s) const { // and markers and bullet holes
 	bool const have_sp(have_any_sp());
-	if (!have_sp && m_qbd.empty()) return; // nothing to do
+	if (!have_sp && marker_qbd.empty() && bullet_qbd.empty()) return; // nothing to do
 	glDepthMask(GL_FALSE); // disable depth write
 	enable_blend();
 	bind_default_flat_normal_map(); // no normal map
@@ -2891,16 +2892,25 @@ void paint_draw_t::draw_paint(shader_t &s) const {
 			if (i > 0) {s.clear_color_e();}
 		} // for i
 	}
-	if (!m_qbd.empty()) {
+	if (!marker_qbd.empty()) {
 		select_texture(get_texture_by_name("circle.png", 0, 0, 1, 0.0, 1, 1, 1)); // markers - sharp edges, used as alpha mask with white background color
-		m_qbd.draw();
+		marker_qbd.draw();
+	}
+	if (!bullet_qbd.empty()) { // Note: not using parallax mapping as in draw_cracks_and_decals() because it doesn't work with TT buildings
+		select_texture(BULLET_D_TEX);
+		select_texture(BULLET_N_TEX, 5); // apply normal map
+		s.add_uniform_float("bump_tb_scale", -1.0); // invert the coordinate system (something backwards?)
+		bullet_qbd.draw();
+		s.add_uniform_float("bump_tb_scale", 1.0); // restore
+		bind_default_flat_normal_map(); // no normal map
 	}
 	disable_blend();
 	glDepthMask(GL_TRUE);
 }
 void paint_draw_t::clear() {
 	for (unsigned i = 0; i <= NUM_SP_EMISSIVE_COLORS; ++i) {sp_qbd[i].clear();}
-	m_qbd.clear();
+	marker_qbd.clear();
+	bullet_qbd.clear();
 }
 
 void building_decal_manager_t::commit_pend_tape_qbd() {
@@ -2950,7 +2960,7 @@ void building_decal_manager_t::draw_building_interior_decals(shader_t &s, bool p
 		tape_qbd.draw();
 		pend_tape_qbd.draw();
 	}
-	if (!blood_qbd[0].empty() || !blood_qbd[1].empty() || !glass_qbd.empty() || !burn_qbd.empty() || !bullet_qbd.empty()) { // draw alpha blended decals
+	if (!blood_qbd[0].empty() || !blood_qbd[1].empty() || !glass_qbd.empty() || !burn_qbd.empty()) { // draw alpha blended decals
 		glDepthMask(GL_FALSE); // disable depth write
 		enable_blend();
 
@@ -2966,14 +2976,6 @@ void building_decal_manager_t::draw_building_interior_decals(shader_t &s, bool p
 		if (!burn_qbd.empty()) {
 			select_texture(BLUR_CENT_TEX);
 			burn_qbd.draw();
-		}
-		if (!bullet_qbd.empty()) { // Note: not using parallax mapping as in draw_cracks_and_decals() because it doesn't work with TT buildings
-			select_texture(BULLET_D_TEX);
-			select_texture(BULLET_N_TEX, 5); // apply normal map
-			s.add_uniform_float("bump_tb_scale", -1.0); // invert the coordinate system (something backwards?)
-			bullet_qbd.draw();
-			s.add_uniform_float("bump_tb_scale", 1.0); // restore
-			bind_default_flat_normal_map(); // no normal map
 		}
 		disable_blend();
 		glDepthMask(GL_TRUE);

@@ -2758,14 +2758,14 @@ class paint_manager_t : public paint_draw_t { // for paint on exterior walls/win
 	building_t const *paint_bldg = nullptr;
 public:
 	bool have_paint_for_building() const { // only true if the building contains the player
-		return (paint_bldg && (have_any_sp() || !m_qbd.empty()) && paint_bldg->bcube.contains_pt(get_camera_building_space()));
+		return (paint_bldg && (have_any_sp() || !marker_qbd.empty() || !bullet_qbd.empty()) && paint_bldg->bcube.contains_pt(get_camera_building_space()));
 	}
-	quad_batch_draw &get_paint_qbd_for_bldg(building_t const *const building, bool is_marker, unsigned emissive_color_id) {
+	quad_batch_draw &get_paint_qbd_for_bldg(building_t const *const building, bool is_marker, bool is_bullet, unsigned emissive_color_id) {
 		if (building != paint_bldg) { // paint switches to this building
 			clear();
 			paint_bldg = building;
 		}
-		return get_paint_qbd(is_marker, emissive_color_id);
+		return get_paint_qbd(is_marker, is_bullet, emissive_color_id);
 	}
 };
 
@@ -2963,8 +2963,8 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 	static double next_sound_time(0.0);
 
 	if (is_eraser) { // erase mode; only applies to marker
-		unsigned num_removed(remove_nearby_quads(p_int, radius, interior->room_geom->decal_manager.paint_draw[exterior_wall].get_paint_qbd(1, emissive_color_id))); // is_marker=1
-		if (exterior_wall) {max_eq(num_removed, remove_nearby_quads(p_int, radius, ext_paint_manager.get_paint_qbd_for_bldg(this, 1, emissive_color_id)));} // is_marker=1
+		unsigned num_removed(remove_nearby_quads(p_int, radius, interior->room_geom->decal_manager.paint_draw[exterior_wall].get_paint_qbd(1, 0, emissive_color_id))); // is_marker=1
+		if (exterior_wall) {max_eq(num_removed, remove_nearby_quads(p_int, radius, ext_paint_manager.get_paint_qbd_for_bldg(this, 1, 0, emissive_color_id)));} // is_marker=1
 		if (num_removed == 0) return 0;
 		register_achievement("Tampering with Evidence");
 		player_inventory.record_damage_done(-0.1*num_removed); // doesn't perfectly cancel damage
@@ -2993,29 +2993,22 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 	float const winding_order_sign(-SIGN(normal[dim])); // make sure to invert the winding order to match the normal sign
 	// Note: interior spraypaint draw uses back face culling while exterior draw does not; invert the winding order for exterior quads so that they show through windows correctly
 	vector3d const dx(radius*dir1*winding_order_sign*(exterior_wall ? -1.0 : 1.0));
-
-	if (is_bullet) {
-		interior->room_geom->decal_manager.bullet_qbd.add_quad_dirs(p_int, dx, radius*dir2, hit_color, normal);
-		if (on_glass) {interior->room_geom->decal_manager.bullet_qbd.add_quad_dirs(p_int, -dx, radius*dir2, hit_color, normal);} // draw on both sides of glass
-		if (exterior_wall) {} // draw in exterior pass?
-		player_inventory.record_damage_done(10.0); // more damage for bullet holes
-		return 1;
-	}
 	float const alpha((is_spraypaint && radius > 0.5*max_radius) ? (1.0 - (radius - 0.5*max_radius)/max_radius) : 1.0); // 0.5 - 1.0
-	colorRGBA const paint_color(((emissive_color_id > 0) ? WHITE : color), alpha); // color is always white if emissive
-	quad_batch_draw &qbd(interior->room_geom->decal_manager.paint_draw[exterior_wall].get_paint_qbd(is_marker, emissive_color_id));
+	colorRGBA paint_color(((emissive_color_id > 0) ? WHITE : color), alpha); // color is always white if emissive
+	if (is_bullet) {paint_color = paint_color.modulate_with(hit_color);} // bullet hole is tinted by the color of the material it hit
+	quad_batch_draw &qbd(interior->room_geom->decal_manager.paint_draw[exterior_wall].get_paint_qbd(is_marker, is_bullet, emissive_color_id));
 	qbd.add_quad_dirs(p_int, dx, radius*dir2, paint_color, normal); // add interior/exterior paint
 	if (on_glass) {qbd.add_quad_dirs(p_int, -dx, radius*dir2, paint_color, -normal);} // draw on both sides of glass
 
 	if (exterior_wall) { // add exterior paint only; will be drawn after building interior, but without iterior lighting, so it will be darker
-		ext_paint_manager.get_paint_qbd_for_bldg(this, is_marker, emissive_color_id).add_quad_dirs(p_int, dx, radius*dir2, paint_color, normal);
+		ext_paint_manager.get_paint_qbd_for_bldg(this, is_marker, is_bullet, emissive_color_id).add_quad_dirs(p_int, dx, radius*dir2, paint_color, normal);
 	}
-	if (tfticks > next_sound_time) { // play sound if sprayed/marked, but not too frequently; marker has no sound
+	if (tfticks > next_sound_time && !is_bullet) { // play sound if sprayed/marked, but not too frequently; marker has no sound
 		gen_sound_thread_safe_at_player((is_spraypaint ? (int)SOUND_SPRAY : ((color == WHITE) ? (int)SOUND_SCRATCH : (int)SOUND_SQUEAK)), 0.25); // spraypaint, chalk, marker
 		if (is_spraypaint) {register_building_sound(pos, 0.1);}
 		next_sound_time = tfticks + double(is_spraypaint ? 0.5 : 0.25)*TICKS_PER_SECOND;
 	}
-	player_inventory.record_damage_done(is_spraypaint ? 1.0 : 0.1); // spraypaint does more damage than markers
+	player_inventory.record_damage_done(is_spraypaint ? 1.0 : (is_bullet ? 10.0 : 0.1)); // spraypaint does more damage than markers, and bullets do the most damage
 	return 1;
 }
 
@@ -3030,12 +3023,12 @@ void remove_quads_in_bcube_from_qbd(cube_t const &c, quad_batch_draw &qbd) {
 		for (unsigned m = 0; m < 6; ++m) {qbd.verts[n+m].v = zero_vector;} // move all points to the origin to remove this quad
 	} // for n
 }
-void building_t::remove_paint_in_cube(cube_t const &c) const { // for whiteboards, pictures, etc.
+void building_t::remove_paint_in_cube(cube_t const &c) const { // for whiteboards, pictures, etc.; erases spraypaint and markers
 	if (!has_room_geom()) return;
 
 	for (unsigned exterior_wall = 0; exterior_wall < 2; ++exterior_wall) {
 		paint_draw_t &pd(interior->room_geom->decal_manager.paint_draw[exterior_wall]);
-		remove_quads_in_bcube_from_qbd(c, pd.m_qbd);
+		remove_quads_in_bcube_from_qbd(c, pd.marker_qbd);
 		for (unsigned n = 0; n <= NUM_SP_EMISSIVE_COLORS; ++n) {remove_quads_in_bcube_from_qbd(c, pd.sp_qbd[n]);}
 	}
 }

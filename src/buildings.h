@@ -1022,15 +1022,15 @@ struct tape_quad_batch_draw : public quad_batch_draw {
 };
 
 struct paint_draw_t {
-	quad_batch_draw sp_qbd[NUM_SP_EMISSIVE_COLORS+1], m_qbd; // {spraypaint, markers}
+	quad_batch_draw sp_qbd[NUM_SP_EMISSIVE_COLORS+1], marker_qbd, bullet_qbd; // {spraypaint, markers, bullets}
 	bool have_any_sp() const;
-	quad_batch_draw &get_paint_qbd(bool is_marker, unsigned emissive_color_id);
+	quad_batch_draw &get_paint_qbd(bool is_marker, bool is_bullet, unsigned emissive_color_id);
 	void draw_paint(shader_t &s) const;
 	void clear();
 };
 struct building_decal_manager_t {
 	paint_draw_t paint_draw[2]; // {interior, exterior}
-	quad_batch_draw blood_qbd[2], tp_qbd, pend_tape_qbd, glass_qbd, burn_qbd, bullet_qbd; // blood_qbd: {red human blood, bug guts or stains}
+	quad_batch_draw blood_qbd[2], tp_qbd, pend_tape_qbd, glass_qbd, burn_qbd; // blood_qbd: {red human blood, bug guts or stains}
 	tape_quad_batch_draw tape_qbd; // for tape, but not pend_tape because it hasn't been placed yet
 	rand_gen_t rgen;
 
