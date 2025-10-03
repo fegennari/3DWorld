@@ -168,6 +168,9 @@ void building_t::clear_existing_room_geom() {
 	for (building_walkway_t &w : walkways) {w.has_door = 0;} // reset for each call
 	if (interior->mall_info) {interior->mall_info->clear_room_details();}
 	if (interior->ind_info ) {interior->ind_info ->clear_room_details();}
+	if (is_prison()) {interior->int_windows.clear();}
+	interior->room_type_count  = 0;
+	interior->security_room_ix = -1;
 	invalidate_nav_graph();
 	has_int_fplace = 0; // reset for this generation
 }
