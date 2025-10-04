@@ -14,6 +14,7 @@ float const RAT_FEAR_SPEED   = 1.3; // multiplier
 float const RAT_ATTACK_SPEED = 1.2; // multiplier
 float const RAT_FOV_DP(cos(0.5*RAT_FOV_DEG*TO_RADIANS));
 float const SPIDER_VIEW_FLOORS = 4.0; // view distance in floors
+colorRGBA const spider_blood_color(0.4, 1.0, 0.2, 1.0); // yellow-green
 
 extern bool player_attracts_flies, player_wait_respawn, camera_in_building, player_in_tunnel;
 extern int animate2, camera_surf_collide, frame_counter, display_mode;
@@ -71,6 +72,28 @@ void building_t::update_animals(point const &camera_bs, unsigned building_ix) {
 	update_pet_birds    (camera_bs, building_ix);
 	update_insects      (camera_bs, building_ix);
 	interior->room_geom->last_animal_update_frame = frame_counter;
+}
+
+void building_t::shoot_gun_at_animals(point const &p1, point const &p2) {
+	// only rats and spiders are affected, not insects and pets
+	if (!has_room_geom()) return; // error?
+	
+	for (rat_t &rat : interior->room_geom->rats) {
+		if (rat.dead) continue;
+		if (!get_cube_height_radius(rat.pos, 0.5*rat.radius, rat.height).line_intersects(p1, p2)) continue; // smaller radius
+		add_blood_decal(rat.pos, 0.8*rat.get_xy_radius(), RED);
+		rat.dead  = 1;
+		rat.speed = 0.0;
+	}
+	for (spider_t &spider : interior->room_geom->spiders) {
+		if (spider.squished) continue;
+		cube_t bc(spider.pos);
+		bc.expand_by(vector3d(spider.radius, spider.radius, 0.75*spider.radius)); // smaller size
+		if (!bc.line_intersects(p1, p2)) continue;
+		add_blood_decal(spider.pos, 1.5*spider.get_xy_radius(), spider_blood_color);
+		spider.squished = 1;
+		spider.speed    = 0.0;
+	}
 }
 
 float select_animal_radius(float sz_min, float sz_max, float floor_spacing, rand_gen_t &rgen) {
@@ -323,6 +346,7 @@ void building_t::update_rats(point const &camera_bs, unsigned building_ix) {
 	point rat_alert_pos;
 
 	for (rat_t &rat : rats) { // must be done before sorting
+		if (rat.dead) continue;
 		rat.move(timestep, rat.is_facing_dest());
 		num_near_player += rat.near_player;
 		if (num_near_player == min_attack_rats) {rat_alert_pos = rat.pos;}
@@ -930,7 +954,7 @@ spider_t::spider_t(point const &pos_, float radius_, vector3d const &dir_, unsig
 }
 cube_t spider_t::get_bcube() const {
 	cube_t bcube(pos);
-	bcube.expand_by(vector3d(2.0*radius, 2.0*radius, radius)); // conservative?
+	bcube.expand_by(vector3d(get_xy_radius(), get_xy_radius(), radius)); // conservative?
 	return bcube;
 }
 vector3d spider_t::get_size() const {
@@ -1491,7 +1515,7 @@ bool building_t::maybe_squish_animals(room_object_t const &obj, point const &pla
 		if (spider.squished) continue; // already squished
 		if (!obj.contains_pt_xy(spider.pos) || !obj.intersects(spider.get_bcube())) continue;
 		if (obj.get_size().get_max_val() < spider.get_xy_radius()) continue; // object is too small to squish this spider
-		add_blood_decal(spider.pos, 1.5*spider.get_xy_radius(), colorRGBA(0.4, 1.0, 0.2, 1.0)); // yellow-green
+		add_blood_decal(spider.pos, 1.5*spider.get_xy_radius(), spider_blood_color);
 		spider.pos.z -= 0.4*spider.get_height(); // move it near the ground since it will be drawn flattened
 		any_squished  = spider.squished = 1;
 		register_achievement("Splat the Spider");

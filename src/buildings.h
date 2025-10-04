@@ -2566,6 +2566,7 @@ public:
 	void update_pet_snakes   (point const &camera_bs, unsigned building_ix);
 	void update_pet_birds    (point const &camera_bs, unsigned building_ix);
 	void update_insects      (point const &camera_bs, unsigned building_ix);
+	void shoot_gun_at_animals(point const &p1, point const &p2);
 	void get_objs_at_or_below_ground_floor(vect_room_object_t &ret, bool for_spider) const;
 	bool begin_fish_draw() const;
 	void rat_bite_player(point const &pos, float damage, rand_gen_t &rgen);

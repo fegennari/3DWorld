@@ -2606,8 +2606,9 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos, bool
 						point p1(ray_start), p2(hit_pos);
 						if (!do_line_clip(p1, p2, i->d)) continue; // actually clip the line
 						unsigned const obj_ix(i - interior->room_geom->objs.begin());
-						maybe_break_room_object(*i, p2, -dir, 0.0, obj_ix);
+						maybe_break_room_object(*i, p2, -dir, 0.0, obj_ix); // should get here for at most one object, in most cases
 					}
+					shoot_gun_at_animals(ray_start, hit_pos);
 				}
 				next_fire_time = tfticks + 0.4*TICKS_PER_SECOND; // 2.5x per second
 			}
