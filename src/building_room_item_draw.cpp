@@ -2222,8 +2222,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		glDepthMask(GL_FALSE); // disable depth writing
 		s.set_refract_ix(1.6); // refractive glass windows, tables, etc.
 		mats_alpha.draw(bbd, s, shadow_only, reflection_pass);
+		if (inc_small && !cube_map_ref) {mats_alpha_sm.draw(bbd, s, shadow_only, reflection_pass);} // bottles, fishtanks, etc.
 		s.set_refract_ix(1.0); // reset
-		if (inc_small && !cube_map_ref) {mats_alpha_sm.draw(bbd, s, shadow_only, reflection_pass);} // bottles, etc.
 		glDepthMask(GL_TRUE);
 		disable_blend();
 		indexed_vao_manager_with_shadow_t::post_render();
