@@ -4362,14 +4362,14 @@ void building_t::add_cameras_to_room(rand_gen_t &rgen, room_t const &room, float
 }
 
 bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start) { // for office buildings
-	float const window_vspacing(get_window_vspace());
+	float const window_vspacing(get_window_vspace()), ceiling_zval(zval + get_floor_ceil_gap());
 	float const server_height(0.7*window_vspacing*rgen.rand_uniform(0.9, 1.1));
 	float const server_width (0.3*window_vspacing*rgen.rand_uniform(0.9, 1.1)), server_hwidth(0.5*server_width);
 	float const server_depth (0.4*window_vspacing*rgen.rand_uniform(0.9, 1.1)), server_hdepth(0.5*server_depth);
 	float const comp_height  (0.2*window_vspacing*rgen.rand_uniform(0.9, 1.1));
 	float const min_spacing  (0.1*window_vspacing*rgen.rand_uniform(0.9, 1.1));
 	float const comp_hwidth(0.5*0.44*comp_height), comp_hdepth(0.5*0.9*comp_height); // fixed AR=0.44 to match the texture
-	float const server_period(server_width + min_spacing);
+	float const server_period(server_width + min_spacing), conduit_radius(0.05*server_width);
 	bool const long_dim(room.dx() < room.dy());
 	cube_t place_area(get_walkable_room_bounds(room));
 	place_area.expand_by(-0.25*get_wall_thickness()); // server spacing from walls
@@ -4395,7 +4395,8 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 
 			for (unsigned dir = 0; dir < 2; ++dir) {
 				float const dir_sign(dir ? -1.0 : 1.0);
-				center[!dim] = place_area.d[!dim][dir] + dir_sign*server_hdepth;
+				float const wall_pos(place_area.d[!dim][dir]);
+				center[!dim] = wall_pos + dir_sign*server_hdepth;
 				set_wall_width(server, center[!dim], server_hdepth, !dim); // position from the wall
 				cube_t server_exp(server);
 				server_exp.expand_in_dim(dim, server_hwidth); // check for more side/width spacing for doors
@@ -4403,7 +4404,7 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 				// Note: overlaps_other_room_obj includes previously placed servers, so we don't have to check for intersections at the corners of rooms
 				if (is_obj_placement_blocked(server_exp, room, 1) || overlaps_other_room_obj(server, objs_start)) { // no space for server; try computer instead
 					set_wall_width(computer,  center[ dim], comp_hwidth, dim); // position along the wall
-					set_wall_width(computer, (place_area.d[!dim][dir] + 1.2*dir_sign*comp_hdepth), comp_hdepth, !dim); // position from the wall
+					set_wall_width(computer, (wall_pos + 1.2*dir_sign*comp_hdepth), comp_hdepth, !dim); // position from the wall
 					if (is_obj_placement_blocked(computer, room, 1) || overlaps_other_room_obj(computer, objs_start)) continue;
 					objs.emplace_back(computer, TYPE_COMPUTER, room_id, !dim, !dir, 0, tot_light_amt);
 					++num_comps;
@@ -4414,6 +4415,12 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 				blocker.d[!dim][ dir]  = server.d[!dim][!dir]; // front of server
 				blocker.d[!dim][!dir] += dir_sign*server_width; // add space in the front for the door to open (don't block with another server)
 				objs.emplace_back(blocker, TYPE_BLOCKER, room_id, dim, 0, RO_FLAG_INVIS);
+				// add wire conduit on the top
+				cube_t conduit;
+				set_wall_width(conduit, (wall_pos + 0.75*dir_sign*server_hdepth), conduit_radius, !dim); // further toward the back wall
+				set_wall_width(conduit, center[dim], conduit_radius, dim);
+				set_cube_zvals(conduit, server.z2(), ceiling_zval);
+				objs.emplace_back(conduit, TYPE_PIPE, room_id, 0, 1, RO_FLAG_NOCOLL, 1.0, SHAPE_CYLIN, LT_GRAY); // vertical
 				++num_servers;
 			} // for dir
 		} // for n
