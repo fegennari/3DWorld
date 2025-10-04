@@ -2677,7 +2677,7 @@ public:
 	cube_t get_part_containing_cube(cube_t const &c) const;
 	cube_t get_part_containing_pt(point const &pt) const;
 	bool move_sphere_to_valid_part(point &pos, point const &p_last, float radius) const;
-	void remove_paint_in_cube(cube_t const &c) const;
+	void remove_paint_in_cube(cube_t const &c, bool inc_bullet_holes) const;
 	bool has_water() const {return (interior && interior->water_zval != 0.0);}
 	bool water_visible_to_player() const;
 	float get_floor_below_water_level() const;

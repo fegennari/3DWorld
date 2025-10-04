@@ -2156,12 +2156,12 @@ void building_room_geom_t::remove_object(unsigned obj_id, point const &at_pos, b
 	if (type == TYPE_WBOARD || type == TYPE_PICTURE || type == TYPE_MIRROR) {
 		cube_t bc(old_obj);
 		bc.d[old_obj.dim][old_obj.dir] += (old_obj.dir ? 1.0 : -1.0)*building.get_wall_thickness();
-		building.remove_paint_in_cube(bc);
+		building.remove_paint_in_cube(bc, (type == TYPE_WBOARD || type == TYPE_MIRROR)); // inc_bullet_holes for mirrors and whiteboards but not pictures
 	}
 	else if (type == TYPE_RUG || type == TYPE_FLOORING) {
 		cube_t bc(old_obj);
 		bc.z2() += building.get_wall_thickness();
-		building.remove_paint_in_cube(bc);
+		building.remove_paint_in_cube(bc, (type == TYPE_FLOORING)); // inc_bullet_holes for flooring but not rugs since bullets go through them
 	}
 	else if (type == TYPE_TCAN) {
 		unsigned const ix_end(min(size_t(obj_id+11U), objs.size())); // support for up to 10 trash items
@@ -3034,12 +3034,13 @@ void remove_quads_in_bcube_from_qbd(cube_t const &c, quad_batch_draw &qbd) {
 		for (unsigned m = 0; m < 6; ++m) {qbd.verts[n+m].v = zero_vector;} // move all points to the origin to remove this quad
 	} // for n
 }
-void building_t::remove_paint_in_cube(cube_t const &c) const { // for whiteboards, pictures, etc.; erases spraypaint and markers
+void building_t::remove_paint_in_cube(cube_t const &c, bool inc_bullet_holes) const { // for whiteboards, pictures, etc.; erases spraypaint, markers, and bullet holes
 	if (!has_room_geom()) return;
 
 	for (unsigned exterior_wall = 0; exterior_wall < 2; ++exterior_wall) {
 		paint_draw_t &pd(interior->room_geom->decal_manager.paint_draw[exterior_wall]);
 		remove_quads_in_bcube_from_qbd(c, pd.marker_qbd);
+		if (inc_bullet_holes) {remove_quads_in_bcube_from_qbd(c, pd.bullet_qbd);}
 		for (unsigned n = 0; n <= NUM_SP_EMISSIVE_COLORS; ++n) {remove_quads_in_bcube_from_qbd(c, pd.sp_qbd[n]);}
 	}
 }

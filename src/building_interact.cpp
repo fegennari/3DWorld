@@ -928,7 +928,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 			// remove any spraypaint or marker that's on the door; would be better if we could move it with the door, or add it back when the door is closed
 			cube_t door(get_open_closet_door(obj));
 			door.expand_in_dim(obj.dim, get_wall_thickness());
-			remove_paint_in_cube(door); // use the door before it's opened
+			remove_paint_in_cube(door, 1); // use the door before it's opened; inc_bullet_holes=1
 		}
 		obj.flags ^= RO_FLAG_OPEN; // toggle open/close
 
@@ -1089,7 +1089,7 @@ void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_buildin
 		notify_door_fully_closed_state(door);
 		cube_t door_exp(door);
 		door_exp.expand_in_dim(door.dim, 0.6*get_wall_thickness()); // make sure decals are included
-		remove_paint_in_cube(door_exp); // remove any paint that was over the closed door
+		remove_paint_in_cube(door_exp, 1); // remove any paint/markers/bullet holes that was over the closed door; inc_bullet_holes=1
 	}
 }
 void building_t::notify_door_fully_closed_state(door_t const &door) {
