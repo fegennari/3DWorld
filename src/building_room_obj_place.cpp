@@ -4862,21 +4862,21 @@ int building_t::check_valid_picture_placement(room_t const &room, cube_t const &
 bool building_t::hang_pictures_whiteboard_chalkboard_in_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id,
 	float tot_light_amt, unsigned objs_start, unsigned floor_ix, bool is_basement, unsigned pref_orient)
 {
-	if (!room_object_t::enable_pictures()) return 0; // disabled
-	
 	if (!is_house && !room.is_office) {
 		if (room.is_hallway) return 0; // no pictures or whiteboards in office building hallways (what about rooms with stairs?)
 		// room in a commercial building or hotel/apartment - add whiteboard/picture when there is a full wall to use
 	}
 	if (room.is_sec_bldg) return 0; // no pictures in secondary buildings
 	if (room.get_room_type(0) == RTYPE_STORAGE) return 0; // no pictures or whiteboards in storage rooms (always first floor)
+	bool const add_whiteboards(!is_residential() || room.is_office);
+	if (!add_whiteboards && !room_object_t::enable_pictures()) return 0; // pictures are disabled
 	cube_t const &part(get_part_for_room(room));
 	float const floor_height(get_window_vspace()), wall_thickness(get_wall_thickness());
 	bool const no_ext_walls(!is_basement && (has_int_windows() || !is_cube())); // don't place on ext walls with windows or non-square orients
 	vect_room_object_t &objs(interior->room_geom->objs);
 	bool was_hung(0);
 
-	if (!is_residential() || room.is_office) { // add whiteboards
+	if (add_whiteboards) { // add whiteboards
 		room_type const rtype(room.get_room_type(floor_ix));
 		bool const is_conference(rtype == RTYPE_CONF); // conference rooms always have a whiteboard
 		if (!is_conference && pref_orient == 4 && rgen.rand_float() < 0.1) return 0; // skip 10% of the time; don't skip if pref_orient was set (classroom)
@@ -4914,9 +4914,6 @@ bool building_t::hang_pictures_whiteboard_chalkboard_in_room(rand_gen_t rgen, ro
 				room_object_t wboard(c, TYPE_WBOARD, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, color); // whiteboard faces dir opposite the wall
 				if (use_blackboards && rgen.rand_float() < 0.25) {wboard.item_flags = 1;} // flag as having math writing
 				objs.push_back(wboard);
-				cube_t blocker(wboard);
-				blocker.d[dim][!dir] += (dir ? -1.0 : 1.0)*get_min_front_clearance_inc_people();
-				objs.emplace_back(blocker, TYPE_BLOCKER, room_id, dim, !dir, RO_FLAG_INVIS);
 
 				if (rgen.rand_float() < 0.8) { // add marker/chalk and maybe eraser
 					float const marker_hlen(0.5*0.06*floor_height), marker_radius(0.005*floor_height);
@@ -4944,6 +4941,9 @@ bool building_t::hang_pictures_whiteboard_chalkboard_in_room(rand_gen_t rgen, ro
 						}
 					}
 				}
+				cube_t blocker(wboard);
+				blocker.d[dim][!dir] += (dir ? -1.0 : 1.0)*get_min_front_clearance_inc_people();
+				objs.emplace_back(blocker, TYPE_BLOCKER, room_id, dim, !dir, RO_FLAG_INVIS);
 				if (use_blackboards && rtype == RTYPE_CLASS) {add_objects_next_to_classroom_chalkboard(rgen, wboard, room, zval, objs_start);} // add classroom flag, clock, etc.
 				if (!is_conference || rgen.rand_bool()) return 1; // only need to add one, except for conference rooms
 			} // for dir

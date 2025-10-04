@@ -2157,6 +2157,15 @@ void building_room_geom_t::remove_object(unsigned obj_id, point const &at_pos, b
 		cube_t bc(old_obj);
 		bc.d[old_obj.dim][old_obj.dir] += (old_obj.dir ? 1.0 : -1.0)*building.get_wall_thickness();
 		building.remove_paint_in_cube(bc, (type == TYPE_WBOARD || type == TYPE_MIRROR)); // inc_bullet_holes for mirrors and whiteboards but not pictures
+
+		if (type == TYPE_WBOARD) { // remove markers and erasers
+			for (unsigned i = obj_id+1; i < objs.size(); ++i) {
+				room_object_t &c(objs[i]);
+				if (c.room_id != old_obj.room_id || (c.type != TYPE_MARKER && c.type != TYPE_ERASER)) break;
+				invalidate_draw_data_for_obj(c);
+				c.remove();
+			}
+		}
 	}
 	else if (type == TYPE_RUG || type == TYPE_FLOORING) {
 		cube_t bc(old_obj);
