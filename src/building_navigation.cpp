@@ -2765,9 +2765,14 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		dist_xy_less_than(person.pos, cur_player_building_loc.pos, 2.0*floor_spacing));
 
 	if (person.retreat_time > 0.0) {
-		if (person.retreat_time == global_building_params.ai_retreat_time*TICKS_PER_SECOND) { // first retreating frame - clear path
+		if (person.goal_type == GOAL_TYPE_RETREAT) { // first retreating frame - clear path
 			person.abort_dest();
 			//person.is_first_path = 1; // probably not needed
+
+			if (cur_player_building_loc.is_valid()) { // turn and move away from the player, but only slightly to avoid running into something
+				person.goal_type  = GOAL_TYPE_NONE;
+				person.target_pos = person.pos - coll_dist*((cur_player_building_loc.pos - person.pos).get_norm());
+			}
 		}
 		wait_time = 0.0; // no waiting while retreating
 		person.retreat_time -= fticks;
@@ -3385,6 +3390,7 @@ bool building_t::maybe_zombie_retreat(unsigned person_ix, point const &hit_pos, 
 	float const duration_scale((hit_obj_type == TYPE_HANDGUN) ? 2.5 : ((hit_obj_type == TYPE_FIRE_EXT) ? 1.2 : 1.0));
 	// Note: this isn't really thread safe, but it should be okay to modify this state while the AI thread is running
 	person.retreat_time = duration_scale*global_building_params.ai_retreat_time*TICKS_PER_SECOND; // retreat
+	person.goal_type    = GOAL_TYPE_RETREAT;
 	return 1;
 }
 void building_t::register_person_hit(unsigned person_ix, room_object_t const &obj, vector3d const &velocity) {
