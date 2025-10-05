@@ -2530,6 +2530,7 @@ template<typename T> bool proc_vector_sphere_coll(vector<T> const &objs, city_ob
 	} // for g
 	return 0;
 }
+// this is intended to be called for the player, but will somewhat work for any query; will set player-specific flags such as player_in_skyway
 bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, vector3d *cnorm) const { // pos in in camera space
 	if (!sphere_cube_intersect(pos, (radius + p2p_dist(pos, p_last)), (all_objs_bcube + xlate))) return 0;
 	bool const skyway_coll(skyway.proc_sphere_coll(pos, p_last, radius, xlate, cnorm)); // must be before walkways

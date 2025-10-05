@@ -27,6 +27,7 @@ int select_tid_from_list(vector<unsigned> const &tids, unsigned ix);
 colorRGBA get_bed_sheet_color(int tid, rand_gen_t &rgen);
 void invalidate_tile_smap_in_region(cube_t const &region, bool repeat_next_frame);
 void draw_xy_oval(float rx, float ry, int ndiv, point const &pos, float tscale_s, float tscale_t);
+bool get_sphere_poly_int_val(point const &sc, float sr, point const *const points, unsigned npoints, vector3d const &normal, float thickness, float &val, vector3d &cnorm);
 
 
 void textured_mat_t::pre_draw(bool shadow_only) {
@@ -2265,6 +2266,8 @@ bool ug_elevator_t::proc_sphere_coll(point &pos_, point const &p_last, float rad
 
 // parking lot solar roofs
 
+float const SOLARP_SLOPE_VAL = 0.25; // height difference relative to total height
+
 parking_solar_t::parking_solar_t(cube_t const &c, bool dim_, bool dir_, unsigned ns, unsigned nr) : oriented_city_obj_t(c, dim_, dir_), num_spaces(ns), num_rows(nr) {
 	set_bsphere_from_bcube();
 }
@@ -2282,7 +2285,7 @@ void parking_solar_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float d
 	cube_t roof(bcube);
 	roof.z1() = bcube.z2() - 0.05*height;
 	// setup rotation
-	float const angle(0.25*(dim ? -1.0 : 1.0)*(height/get_length()));
+	float const angle(SOLARP_SLOPE_VAL*(dim ? -1.0 : 1.0)*(height/get_length()));
 	vector3d const axis(vector_from_dim_dir(!dim, dir));
 	point about;
 	about[ dim] = bcube.d[dim][dir];
@@ -2308,13 +2311,27 @@ void parking_solar_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float d
 	}
 }
 bool parking_solar_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
+	cube_t const bcx(bcube + xlate);
+	if (!sphere_cube_intersect_xy(pos_, radius_, bcx)) return 0;
+	float const slope_dz(SOLARP_SLOPE_VAL*bcube.dz()), pos_z(max(pos_.z, p_last.z));
+
+	// if pos is on the roof, treat the solar panel as a ramp
+	if (pos_z > bcx.z2() - slope_dz - radius_ && pos_z < bcx.z2() + 1.1*radius_) { // check lowest point of roof
+		float const t(CLIP_TO_01((pos_[dim] - bcx.d[dim][0])/bcx.get_sz_dim(dim))), ramp_z_pos(bcx.z2() - slope_dz*(dir ? (1.0-t) : t));
+
+		if (pos_z < ramp_z_pos + 1.1*radius_) {
+			pos_.z = ramp_z_pos + radius_; // move along ramp top surface
+			if (cnorm) {*cnorm = plus_z;} // close enough
+			return 1;
+		}
+	}
 	for (cube_t const &leg : get_legs()) {
 		if (sphere_cube_int_update_pos(pos_, radius_, (leg + xlate), p_last, 0, cnorm)) return 1;
 	}
 	return 0;
 }
 vect_cube_t const &parking_solar_t::get_legs() const {
-	float const height(bcube.dz()), border(0.01*height), leg_width(0.05*height), leg_hwidth(0.5*leg_width);
+	float const height(bcube.dz()), border(0.015*height), leg_width(0.05*height), leg_hwidth(0.5*leg_width);
 	cube_t inner(bcube), outer(bcube);
 	inner.expand_in_dim( dim, -(leg_width  + border));
 	inner.expand_in_dim(!dim, -(leg_hwidth + border));
@@ -2330,7 +2347,7 @@ vect_cube_t const &parking_solar_t::get_legs() const {
 		spans_per_side *= 3;
 		spaces_per_leg /= 3;
 	}
-	float const step(inner.get_sz_dim(!dim)/spans_per_side);
+	float const step(inner.get_sz_dim(!dim)/spans_per_side), slope_dz(SOLARP_SLOPE_VAL*bcube.dz());
 	static vect_cube_t legs; // reused across calls
 	legs.clear();
 
@@ -2339,7 +2356,7 @@ vect_cube_t const &parking_solar_t::get_legs() const {
 			cube_t leg(outer);
 			leg.d[dim][!side] = inner.d[dim][side];
 			set_wall_width(leg, (inner.d[!dim][0] + i*step), leg_hwidth, !dim);
-			if (bool(side) ^ dir) {leg.z2() -= 0.25*bcube.dz();} // shorter sloped side
+			if (bool(side) ^ dir) {leg.z2() -= slope_dz;} // shorter sloped side
 			legs.push_back(leg);
 		}
 	} // for side
