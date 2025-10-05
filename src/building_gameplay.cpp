@@ -3022,13 +3022,21 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 	vector3d const dx(radius*dir1*winding_order_sign*(exterior_wall ? -1.0 : 1.0));
 	float const alpha((is_spraypaint && radius > 0.5*max_radius) ? (1.0 - (radius - 0.5*max_radius)/max_radius) : 1.0); // 0.5 - 1.0
 	colorRGBA paint_color(((emissive_color_id > 0) ? WHITE : color), alpha); // color is always white if emissive
-	if (is_bullet) {paint_color = paint_color.modulate_with(hit_color);} // bullet hole is tinted by the color of the material it hit
+	tex_range_t tr; // starts with default value
+	
+	if (is_bullet) {
+		paint_color = paint_color.modulate_with(hit_color); // bullet hole is tinted by the color of the material it hit
+		static unsigned orient(0);
+		orient = (orient +1) & 3; // cycle through orients
+		if (orient & 1) {swap(tr.x1, tr.x2);} // MX
+		if (orient & 2) {swap(tr.y1, tr.y2);} // MY
+	}
 	quad_batch_draw &qbd(interior->room_geom->decal_manager.paint_draw[exterior_wall].get_paint_qbd(is_marker, is_bullet, emissive_color_id));
-	qbd.add_quad_dirs(p_int, dx, radius*dir2, paint_color, normal); // add interior/exterior paint
-	if (on_glass) {qbd.add_quad_dirs(p_int, -dx, radius*dir2, paint_color, -normal);} // draw on both sides of glass
+	qbd.add_quad_dirs(p_int, dx, radius*dir2, paint_color, normal, tr); // add interior/exterior paint
+	if (on_glass) {qbd.add_quad_dirs(p_int, -dx, radius*dir2, paint_color, -normal, tr);} // draw on both sides of glass
 
 	if (exterior_wall) { // add exterior paint only; will be drawn after building interior, but without iterior lighting, so it will be darker
-		ext_paint_manager.get_paint_qbd_for_bldg(this, is_marker, is_bullet, emissive_color_id).add_quad_dirs(p_int, dx, radius*dir2, paint_color, normal);
+		ext_paint_manager.get_paint_qbd_for_bldg(this, is_marker, is_bullet, emissive_color_id).add_quad_dirs(p_int, dx, radius*dir2, paint_color, normal, tr);
 	}
 	if (tfticks > next_sound_time && !is_bullet) { // play sound if sprayed/marked, but not too frequently; marker has no sound
 		gen_sound_thread_safe_at_player((is_spraypaint ? (int)SOUND_SPRAY : ((color == WHITE) ? (int)SOUND_SCRATCH : (int)SOUND_SQUEAK)), 0.25); // spraypaint, chalk, marker
