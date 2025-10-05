@@ -13,7 +13,7 @@ float const ALERT_THRESH   = 0.08; // min sound alert level for AIs
 float const PLAYER_RESPAWN = 5.0; // in seconds
 
 bool do_room_obj_pickup(0), use_last_pickup_object(0), show_bldg_pickup_crosshair(0), player_near_toilet(0), player_attracts_flies(0), player_wait_respawn(0);
-bool city_action_key(0), can_do_building_action(0);
+bool city_action_key(0), can_do_building_action(0), has_loaded_gun(0);
 int can_pickup_bldg_obj(0), player_in_elevator(0); // player_in_elevator: 0=no, 1=in, 2=in + doors closed, 3=moving
 float office_chair_rot_rate(0.0), cur_building_sound_level(0.0);
 point debug_event_pos;
@@ -769,8 +769,9 @@ public:
 	bool  player_has_pool_cue  () const {return has_pool_cue;}
 	bool  player_at_full_health() const {return (player_health == 1.0 && !is_poisoned);}
 	bool  player_is_thirsty    () const {return (thirst < 0.5);}
-	bool  player_holding_lit_candle    () const {return (!carried.empty() && carried.back().type == TYPE_CANDLE     && carried.back().is_lit());}
-	bool  player_holding_lit_flashlight() const {return (!carried.empty() && carried.back().type == TYPE_FLASHLIGHT && carried.back().is_lit());}
+	bool  player_holding_lit_candle    () const {return (!carried.empty() && carried.back().type == TYPE_CANDLE     &&  carried.back().is_lit   ());}
+	bool  player_holding_lit_flashlight() const {return (!carried.empty() && carried.back().type == TYPE_FLASHLIGHT &&  carried.back().is_lit   ());}
+	bool  player_holding_loaded_gun    () const {return (!carried.empty() && carried.back().type == TYPE_HANDGUN    && !carried.back().is_broken());}
 	bool  was_room_stolen_from(unsigned room_id) const {return (rooms_stolen_from.find(room_id) != rooms_stolen_from.end());}
 	void  refill_thirst() {thirst = 1.0;}
 
@@ -3380,6 +3381,7 @@ void attenuate_rate(float &v, float rate) {
 void building_gameplay_next_frame() {
 	attenuate_rate(office_chair_rot_rate, 0.05); // update office chair rotation
 	vignette_color = ALPHA0; // reset, may be set below
+	has_loaded_gun = (camera_in_building && player_inventory.player_holding_loaded_gun());
 
 	if (player_wait_respawn) {
 		vignette_color = RED;

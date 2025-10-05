@@ -12,7 +12,7 @@ int player_dodgeball_id(-1);
 vector<int> weap_cobjs;
 set<int> scheduled_weapons;
 
-extern bool keep_beams, have_indir_smoke_tex, begin_motion, enable_translocator, can_do_building_action;
+extern bool keep_beams, have_indir_smoke_tex, begin_motion, enable_translocator, can_do_building_action, has_loaded_gun;
 extern int game_mode, window_width, window_height, frame_counter, camera_coll_id, display_mode, spectate;
 extern int num_smileys, left_handed, iticks, camera_view, UNLIMITED_WEAPONS, animate2, last_inventory_frame;
 extern float fticks, NEAR_CLIP, FAR_CLIP;
@@ -935,15 +935,16 @@ void add_weapon_lights(int shooter) {
 
 void show_crosshair(colorRGBA const &color, int in_zoom) {
 
+	bool const show_gun_crosshair(has_loaded_gun && !do_zoom && !can_do_building_action);
 	float const scale((world_mode == WMODE_UNIVERSE) ? 0.25 : 1.0); // closer near clip for planets
 	float const xy_scale(scale*((can_do_building_action && !in_zoom) ? 1.5 : 1.0));
 	float const xy1(0.0006*xy_scale), xy2(0.0002*xy_scale), zval(-0.05*scale);
 	float const xy[8] = {-xy1, -xy2, xy1, xy2, 0.0, 0.0, 0.0, 0.0};
 	glDisable(GL_DEPTH_TEST);
 
-	if (in_zoom) {
+	if (show_gun_crosshair || in_zoom) {
 		shader_t s;
-		s.begin_color_only_shader(color);
+		s.begin_color_only_shader(show_gun_crosshair ? RED : color);
 		fgPushMatrix();
 		fgScale(2.0, 2.0, 1.0);
 		vert_wrap_t verts[8];
@@ -952,10 +953,10 @@ void show_crosshair(colorRGBA const &color, int in_zoom) {
 		fgPopMatrix();
 		s.end_shader();
 	}
-	else {
+	if (!in_zoom) {
 		point_sprite_drawer psd;
 		for (unsigned i = 0; i < 4; ++i) {psd.add_pt(vert_color(point(xy[2*i], xy[(2*i+4)&7], zval), color));}
-		psd.add_pt(vert_color(point(0.0, 0.0, zval), color));
+		psd.add_pt(vert_color(point(0.0, 0.0, zval), color)); // center
 		psd.draw(WHITE_TEX, 1.0); // draw with points of size 1 pixel, not blended
 	}
 	glEnable(GL_DEPTH_TEST);
