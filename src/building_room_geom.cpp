@@ -1488,10 +1488,11 @@ void building_room_geom_t::add_obj_with_front_texture(room_object_t const &c, st
 	sides_mat.add_cube_to_verts_untextured(c, apply_light_color(c, sides_color), ~front_mask); // sides, shadows
 }
 
-void building_room_geom_t::add_keyboard (room_object_t const &c) {add_obj_with_top_texture  (c, "interiors/keyboard.jpg", BKGRAY, 1);} // is_small=1
-void building_room_geom_t::add_laptop   (room_object_t const &c) {add_obj_with_top_texture  (c, "interiors/laptop.jpg",   BKGRAY, 1);} // is_small=1
-void building_room_geom_t::add_computer (room_object_t const &c) {add_obj_with_front_texture(c, "interiors/computer.jpg", BKGRAY, 1);} // is_small=1
-void building_room_geom_t::add_card_deck(room_object_t const &c) {add_obj_with_top_texture  (c, "interiors/card_deck.jpg", WHITE, 1);} // is_small=1
+void building_room_geom_t::add_keyboard  (room_object_t const &c) {add_obj_with_top_texture  (c, "interiors/keyboard.jpg", BKGRAY, 1);} // is_small=1
+void building_room_geom_t::add_laptop    (room_object_t const &c) {add_obj_with_top_texture  (c, "interiors/laptop.jpg",   BKGRAY, 1);} // is_small=1
+void building_room_geom_t::add_computer  (room_object_t const &c) {add_obj_with_front_texture(c, "interiors/computer.jpg", BKGRAY, 1);} // is_small=1
+void building_room_geom_t::add_card_deck (room_object_t const &c) {add_obj_with_top_texture  (c, "interiors/card_deck.jpg", WHITE, 1);} // is_small=1
+void building_room_geom_t::add_bullet_box(room_object_t const &c) {add_obj_with_top_texture  (c, "interiors/bullets.png",   BLACK, 1);} // is_small=1
 
 void place_pizza_toppings(cube_t const &pizza, float rmin, float rmax, float height, colorRGBA const &color, unsigned num, bool can_overlap,
 	rgeom_mat_t &mat, vector<sphere_t> &placed, rand_gen_t &rgen) {

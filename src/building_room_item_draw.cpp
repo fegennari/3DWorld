@@ -811,6 +811,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_FOOD_TRAY:  add_food_tray  (c); break;
 		case TYPE_STALL:      add_br_stall(c, 0, 1); break; // inc_lg=0, inc_sm=1
 		case TYPE_CARD_DECK:  add_card_deck  (c); break;
+		case TYPE_BULLETS:    add_bullet_box (c); break;
 		case TYPE_CIGARETTE:  add_cigarette  (c); break;
 		case TYPE_DBG_SHAPE:  add_debug_shape(c); break;
 		// 3D model objects

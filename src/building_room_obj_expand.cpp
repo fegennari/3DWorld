@@ -1542,9 +1542,9 @@ void building_room_geom_t::add_wine_rack_bottles(room_object_t const &c, vect_ro
 	unsigned obj_type(0);
 
 	if (((c.type == TYPE_DESK && c.is_house()) || c.type == TYPE_NIGHTSTAND || c.type == TYPE_COUNTER) &&
-		building_obj_model_loader.is_model_valid(OBJ_MODEL_HANDGUN) && (rgen.rand() % 33) == 0)
+		building_obj_model_loader.is_model_valid(OBJ_MODEL_HANDGUN) && (rgen.rand() % 17) == 0)
 	{
-		obj_type = TYPE_HANDGUN; // maybe add a handgun
+		obj_type = (rgen.rand_bool() ? TYPE_BULLETS : TYPE_HANDGUN); // maybe add a handgun or box of bullets
 	}
 	else if (c.in_attic())            {obj_type = types_attic   [type_ix];} // custom object overrides for attic item drawers
 	else if (c.type == TYPE_DESK)     {obj_type = types_desk    [type_ix];}
@@ -1559,7 +1559,7 @@ void building_room_geom_t::add_wine_rack_bottles(room_object_t const &c, vect_ro
 	// object stacking logic
 	bool const is_stackable(obj_type == TYPE_BOX || obj_type == TYPE_PAPER || obj_type == TYPE_BOOK || obj_type == TYPE_PLATE || obj_type == TYPE_TAPE || obj_type == TYPE_FOLD_SHIRT);
 	// these don't combine well with others since they're large horiz cylinders
-	bool const is_single_item(obj_type == TYPE_BOTTLE || obj_type == TYPE_DRINK_CAN || obj_type == TYPE_SPRAYCAN || obj_type == TYPE_FLASHLIGHT);
+	bool const is_single_item(obj_type == TYPE_BOTTLE || obj_type == TYPE_DRINK_CAN || obj_type == TYPE_SPRAYCAN || obj_type == TYPE_FLASHLIGHT || obj_type == TYPE_HANDGUN);
 	
 	if (item_ix == 0) {stack_z1 = drawer.z1();} // base case
 	else if (1 || is_stackable) { // any object can be placed on top of a stackable object
@@ -1724,6 +1724,15 @@ void building_room_geom_t::add_wine_rack_bottles(room_object_t const &c, vect_ro
 		bool const dim(rgen.rand_bool()), dir((dim == c.dim) ? c.dir : rgen.rand_bool()); // random orient
 		float const length(0.25f*min(sz.x, sz.y)), width((2.5/3.5)*length), height(min(0.5f*sz.z, 0.25f*length));
 		obj = room_object_t(drawer, TYPE_CARD_DECK, c.room_id, dim, dir);
+		obj.z2() = obj.z1() + height;
+		set_rand_pos_for_sz(obj, obj.dim, length, width, rgen);
+		break;
+	}
+	case TYPE_BULLETS: // box of bullets
+	{
+		bool const dim(rgen.rand_bool()), dir((dim == c.dim) ? c.dir : rgen.rand_bool()); // random orient
+		float const width(0.25f*min(sz.x, sz.y)), length(0.54*width), height(min(0.5f*sz.z, 0.3f*width));
+		obj = room_object_t(drawer, TYPE_BULLETS, c.room_id, dim, dir);
 		obj.z2() = obj.z1() + height;
 		set_rand_pos_for_sz(obj, obj.dim, length, width, rgen);
 		break;

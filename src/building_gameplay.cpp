@@ -225,6 +225,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_O_SHOWER  ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 2, 0.0,   0.0,   "shower");
 	bldg_obj_types[TYPE_CARD_DECK ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 5.0,   0.1,   "deck of cards");
 	bldg_obj_types[TYPE_CIGARETTE ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 0.0,   0.0,   "cigarette");
+	bldg_obj_types[TYPE_BULLETS   ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 0.0,   0.0,   "box of bullets"); // Note: no value or weight, since these are consumable
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");
@@ -663,7 +664,7 @@ class player_inventory_t { // manages player inventory, health, and other stats
 	set<unsigned> rooms_stolen_from;
 	float cur_value, cur_weight, tot_value, tot_weight, damage_done, best_value, player_health, drunkenness, bladder, bladder_time, oxygen, thirst;
 	float prev_player_zval, respawn_time=0.0, accum_fall_damage=0.0;
-	unsigned num_doors_unlocked, has_key; // has_key is a bit mask for key colors
+	unsigned num_doors_unlocked, has_key, extra_ammo; // has_key is a bit mask for key colors
 	unsigned machine_rseed1=0, machine_rseed2=0;
 	int prev_respawn_frame=0, last_meds_frame=0;
 	bool prev_in_building, has_flashlight, is_poisoned, poison_from_spider, has_pool_cue;
@@ -710,7 +711,7 @@ public:
 		cur_value     = cur_weight = tot_value = tot_weight = damage_done = accum_fall_damage = 0.0;
 		drunkenness   = bladder = bladder_time = prev_player_zval = 0.0;
 		player_health = oxygen = thirst = 1.0; // full health, oxygen, and (anti-)thirst
-		num_doors_unlocked = has_key = 0; // num_doors_unlocked not saved on death, but maybe should be?
+		num_doors_unlocked = has_key = extra_ammo = 0; // num_doors_unlocked not saved on death, but maybe should be?
 		prev_in_building = has_flashlight = is_poisoned = poison_from_spider = has_pool_cue = 0;
 		machine_rseed1 = machine_rseed2 = 0;
 		carried.clear();
@@ -862,7 +863,7 @@ public:
 			type != TYPE_PENCIL && type != TYPE_HANGER_ROD && type != TYPE_TPROLL && type != TYPE_MARKER && type != TYPE_BUTTON && type != TYPE_PLATE && type != TYPE_TAPE &&
 			type != TYPE_FEXT_MOUNT && type != TYPE_FEXT_SIGN && type != TYPE_PIZZA_BOX && type != TYPE_PIZZA_TOP && type != TYPE_POOL_BALL && type != TYPE_DRINK_CAN &&
 			type != TYPE_KEY && type != TYPE_HANGER && type != TYPE_PADLOCK && type != TYPE_BANANA && type != TYPE_BAN_PEEL && type != TYPE_ELEC_WIRE && type != TYPE_ERASER &&
-			type != TYPE_TESTTUBE && type != TYPE_APPLE && type != TYPE_FOOD_BOX && type != TYPE_BAR_SOAP && type != TYPE_CARD_DECK && type != TYPE_TRASH)
+			type != TYPE_TESTTUBE && type != TYPE_APPLE && type != TYPE_FOOD_BOX && type != TYPE_BAR_SOAP && type != TYPE_CARD_DECK && type != TYPE_TRASH && type != TYPE_BULLETS)
 		{
 			rooms_stolen_from.insert(obj.room_id); // only if was_expanded?
 		}
@@ -919,6 +920,7 @@ public:
 			added    = 1; // I guess?
 		}
 		else if (health == 0.0 && drunk == 0.0) { // add + print value and weight if item is not consumed
+			if (type == TYPE_BULLETS) {extra_ammo += bldg_obj_types[TYPE_HANDGUN].capacity;}
 			float const weight(get_obj_weight(obj));
 			cur_value  += value;
 			cur_weight += weight;
@@ -1193,6 +1195,7 @@ public:
 						if (player_held_object.type == TYPE_HANDGUN) {
 							if      (num_rem == 2) {color = YELLOW;} // two shots left
 							else if (num_rem == 1) {color = RED   ;} // one  shot left
+							if (extra_ammo > 0) {oss << " + " << extra_ammo;}
 						}
 					}
 					oss << "]";
@@ -1261,7 +1264,7 @@ public:
 		float const fticks_clamped(min(fticks, 0.25f*TICKS_PER_SECOND)); // limit to 250ms so that the player doesn't die when un-paused
 		float const elapsed_time(animate2 ? fticks_clamped : 0.0); // no time elapsed when time is paused
 		
-		// update candle, even when not in gameplay mode
+		// update held inventory item, even when not in gameplay mode
 		if (!carried.empty()) {
 			carried_item_t &obj(carried.back());
 
@@ -1270,6 +1273,15 @@ public:
 				min_eq(obj.use_count, get_taken_obj_type(obj).capacity); // use_count can't be > capacity
 				if (obj.get_remaining_capacity_ratio() <= 0.0) {obj.flags &= ~RO_FLAG_LIT;} // goes out when used up
 				if (player_in_water == 2) {obj.flags &= ~RO_FLAG_LIT;} // goes out under water
+			}
+			else if (obj.type == TYPE_HANDGUN) {
+				unsigned const num_reload(min(extra_ammo, obj.use_count));
+				
+				if (num_reload > 0) {
+					extra_ammo    -= num_reload;
+					obj.use_count -= num_reload;
+					obj.flags &= ~RO_FLAG_BROKEN; // no longer unloaded
+				}
 			}
 		}
 		// apply machine template to factory
