@@ -992,9 +992,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 	}
 	else if (is_ball_type(type)) { // push the ball
 		assert(obj.has_dstate());
-		room_obj_dstate_t &dstate(interior->room_geom->get_dstate(obj));
-		dstate.velocity.x += 0.5*KICK_VELOCITY*int_dir.x;
-		dstate.velocity.y += 0.5*KICK_VELOCITY*int_dir.y;
+		interior->room_geom->get_dstate(obj).velocity += 0.5*KICK_VELOCITY*vector3d(int_dir.x, int_dir.y, 0.0);
 		make_object_dynamic(obj, *interior);
 	}
 	else if (obj.is_parked_car()) {
@@ -1456,10 +1454,10 @@ void building_t::run_ball_update(vect_room_object_t::iterator ball_it, point con
 	}
 }
 
-bool building_t::maybe_break_room_object(room_object_t &obj, point const &hit_pos, vector3d const &hit_dir, float obj_radius, unsigned obj_ix) {
+bool building_t::maybe_break_room_object(room_object_t &obj, point const &hit_pos, vector3d const &hit_dir, float obj_radius, unsigned obj_ix, float min_dp) {
 	if (!obj.is_tv_or_monitor() && !(obj.is_mirror() && !obj.is_open())) return 0; // not breakable
 	if (obj.is_broken()) return 0; // already broken
-	if (dot_product(hit_dir, obj.get_dir()) < 0.9) return 0; // didn't hit the front side of the screen or mirror
+	if (dot_product(hit_dir, obj.get_dir()) < min_dp) return 0; // didn't hit the front side of the screen or mirror
 	point front_center(obj.get_cube_center());
 	front_center[obj.dim] = obj.d[obj.dim][obj.dir];
 	if (!dist_less_than(hit_pos, front_center, (obj_radius + 0.5*obj.get_length() + 0.2*obj.dz()))) return 0; // not near the screen or mirror center

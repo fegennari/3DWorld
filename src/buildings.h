@@ -3112,7 +3112,7 @@ private:
 	void call_elevator_to_floor(elevator_t &elevator, unsigned floor_ix, bool is_inside_elevator, bool is_up);
 	void call_elevator_to_floor_and_light_nearest_button(elevator_t &elevator, unsigned floor_ix, bool is_inside_elevator, bool is_up);
 	void run_ball_update(vect_room_object_t::iterator ball_it, point const &player_pos, float player_z1, bool player_is_moving);
-	bool maybe_break_room_object(room_object_t &obj, point const &hit_pos, vector3d const &hit_dir, float obj_radius, unsigned obj_ix);
+	bool maybe_break_room_object(room_object_t &obj, point const &hit_pos, vector3d const &hit_dir, float obj_radius, unsigned obj_ix, float min_dp=0.9);
 	void update_pool_table(room_object_t &ball);
 	bool get_zval_for_pool_bottom(point const &pos, float &zval) const;
 	bool get_zval_of_floor(point const &pos, float radius, float &zval) const;

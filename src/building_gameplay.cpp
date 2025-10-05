@@ -47,6 +47,7 @@ point get_player_held_object_pos(point const &camera_bs);
 void reset_creepy_sounds();
 void clear_building_water_splashes();
 bool detailed_obj_intersect(room_object_t const &A, room_object_t const &B);
+void make_object_dynamic(room_object_t &obj, building_interior_t &interior);
 
 bool in_building_gameplay_mode() {return (game_mode == GAME_MODE_BUILDINGS);} // replaces dodgeball mode
 
@@ -2611,9 +2612,15 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos, bool
 					for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) { // break objects
 						point p1(ray_start), p2(hit_pos);
 						if (!do_line_clip(p1, p2, i->d)) continue; // actually clip the line
+
+						if (is_ball_type(i->type)) { // push the ball
+							assert(i->has_dstate());
+							interior->room_geom->get_dstate(*i).velocity += 0.004*vector3d(dir.x, dir.y, 0.0);
+							make_object_dynamic(*i, *interior);
+						}
 						unsigned const obj_ix(i - interior->room_geom->objs.begin());
-						maybe_break_room_object(*i, p2, -dir, 0.0, obj_ix); // should get here for at most one object, in most cases
-					}
+						maybe_break_room_object(*i, p2, -dir, 0.0, obj_ix, 0.2); // should get here for at most one object, in most cases; min_dp=0.2
+					} // for i
 					shoot_gun_at_animals(ray_start, hit_pos);
 				}
 				next_fire_time = tfticks + 0.4*TICKS_PER_SECOND; // 2.5x per second
