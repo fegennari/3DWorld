@@ -829,13 +829,19 @@ public:
 		print_text_onscreen(oss.str(), YELLOW, 1.0, 1.5*TICKS_PER_SECOND, 0);
 		cur_value += value; // doesn't count as damage
 	}
-	void show_weight_limit_message(float item_weight) {
+	void show_weight_limit_message(float item_weight) const {
 		float const weight_limit(global_building_params.player_weight_limit), over_amt(item_weight + cur_weight - weight_limit);
 		std::ostringstream oss;
 		oss << "Over weight limit of " << weight_limit << " by " << over_amt << " lbs";
 		print_text_onscreen(oss.str(), RED, 1.0, 1.5*TICKS_PER_SECOND, 0);
 	}
 	void switch_item(bool dir) { // Note: current item is always carried.back()
+		if (carried.size() > 1 && carried.back().type == TYPE_HANDGUN && carried.back().is_broken()) { // carrying handgun with no bullets
+			// remove gun since it can't be used again anyway, but not if this is our only handgun, in case there are bullets to pick up later
+			bool have_second_handgun(0);
+			for (auto i = carried.begin(); i+1 != carried.end(); ++i) {have_second_handgun |= (i->type == TYPE_HANDGUN);} // skip last item
+			if (have_second_handgun) {carried.pop_back();}
+		}
 		if (carried.size() <= 1) return; // no other item to switch to
 		if (dir) {std::rotate(carried.begin(), carried.begin()+1, carried.end());}
 		else     {std::rotate(carried.begin(), carried.end  ()-1, carried.end());}
