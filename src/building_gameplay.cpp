@@ -478,6 +478,10 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 	else if (otype == TYPE_HANDGUN) {
 		if (broken) {type.name = "unloaded handgun";}
 	}
+	else if ((otype == TYPE_PICTURE || otype == TYPE_RUG) && broken) {
+		type.name   = "damaged " + type.name;
+		type.value *= ((otype == TYPE_PICTURE) ? 0.25 : 0.5);
+	}
 	else if (otype == TYPE_VENDING) {
 		vending_info_t const &vi(get_vending_type(obj.item_flags));
 		type.weight = vi.weight;
@@ -2891,6 +2895,8 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 	float const floor_spacing(get_window_vspace());
 	bool const is_wall(normal.x != 0.0 || normal.y != 0.0), is_floor(normal == plus_z);
 	bool walls_blocked(0);
+	room_object_t *target_obj=nullptr;
+	float target_obj_tmin(0.0);
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
 		float const pre_tmin(tmin);
@@ -2901,6 +2907,11 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 		{
 			if (!line_int_cube_get_t(pos, pos2, *i, tmin)) continue;
 			target = *i; // Note: we only need to update tmin and target; normal should be unchanged
+
+			if (i->type == TYPE_PICTURE || i->type == TYPE_RUG) { // record pictures and rugs as they can be damaged
+				target_obj = &*i;
+				target_obj_tmin = tmin;
+			}
 			if (i->type == TYPE_WBOARD || i->type == TYPE_MIRROR || i->type == TYPE_FLOORING || i->type == TYPE_POOL_TILE) {hit_color = i->get_color();}
 		}
 		else if (i->type == TYPE_CLOSET && line_int_cube_get_t(pos, pos2, *i, tmin)) {
@@ -3064,6 +3075,7 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 		next_sound_time = tfticks + double(is_spraypaint ? 0.5 : 0.25)*TICKS_PER_SECOND;
 	}
 	player_inventory.record_damage_done(is_spraypaint ? 1.0 : (is_bullet ? 10.0 : 0.1)); // spraypaint does more damage than markers, and bullets do the most damage
+	if (target_obj != nullptr && tmin == target_obj_tmin) {target_obj->flags |= RO_FLAG_BROKEN;} // damage pictures and rugs
 	return 1;
 }
 
