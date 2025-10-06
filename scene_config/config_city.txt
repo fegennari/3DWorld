@@ -201,14 +201,14 @@ city toilet_model ../models/interiors/toilet/toilet.model3d     1 0 0  -1 -1 0  
 city urinal_model ../models/interiors/urinal/urinal4.model3d    1 0 0  -1 -1 0  1 1.0 1.0  0
 city sink_model   ../models/interiors/simple_sink.model3d       1 0 0   0  0 90  0 1.0 1.0 # always white
 city tub_model    ../models/interiors/bathtub.model3d           1 0 0  -1 -1 90  1 1.0 1.0  2
-city fridge_model ../models/interiors/fridge/Fridge.model3d     1 0 0  -1 -1 90  1 1.0 1.0  0 1 2 3 4 5
+city fridge_model ../models/interiors/fridge/Fridge.model3d     1 0 0  -1 -1 90  1 1.0 4E-6  0 1 2 3 4 5
 city stove_model  ../models/interiors/stove/DB_Apps&Tech_04_13.model3d  1 1 0  0 -1 90  1 1.0 4.0  # reverse_winding=1 # two sided, first material is partially reversed winding
 city tv_model    "../models/interiors/SmartTV/Smart TV.model3d" 1 0 0  -1 0 90  1 1.0 1E-5 # materials are {glass screen, plastic body, logo + metal + leg, object, rubber feet}
 city couch_model  ../models/interiors/couch/OBJ.model3d         1 0 0  0 -1 90  1 1.0 5E-6
 city office_chair_model ../models/interiors/chairs/Free3d_office_chair1/Office_chair.model3d  1 0 0  0 -1 90  1 1.0 1.25E-5
 city lamp_model   ../models/interiors/lamp1.model3d             1 0 0  2 -1 0   1 1.0 0.4  0 # only draw the first material a-wire for the shadow pass
-city washer_model ../models/interiors/washer/Washing_machine_MODEL_obj.model3d  0 0 0  0 -1 90  1 1.0 1.0
-city dryer_model  ../models/interiors/dryer/Dryer.model3d       0 1 0  0 -1 0   0 1.0 1.0  # reverse_winding=64 # two sided, but only part of the 6th material is reversed
+city washer_model ../models/interiors/washer/Washing_machine_MODEL_obj.model3d  0 0 0  0 -1 90  1 1.0 1.4E-5
+city dryer_model  ../models/interiors/dryer/Dryer.model3d       0 1 0  0 -1 0   0 1.0 0.002 # reverse_winding=64 # two sided, but only part of the 6th material is reversed
 city key_model    ../models/interiors/singlkey.model3d          0 0 0  0 -1 0   2 1.0 1.0 # swap X and Z
 city fire_escape_model ../models/fire_escape.model3d            1 0 0  0 -1 0   1 1.0 1.0
 city wall_lamp_model ../models/wall_lamp/wall_lamp.model3d      1 0 0  0 -1 0   1 1.0 5.0
@@ -228,7 +228,7 @@ city bar_stool_model    ../models/interiors/bar_stool/bar_stool_avorio.glb  0 0 
 #city bar_stool_model   ../models/interiors/bar_stool/bar_stool_triangle/scene.gltf  0 0 0  0 0 90  1 1.0 1.0
 #city bar_stool_model   ../models/interiors/bar_stool/pub_stool/scene.gltf  0 0 0  0 0 90  1 1.0 1.0
 city padlock_model      ../models/interiors/padlock/untextured/scene.gltf   0 0 0  0 0 0  1 1.0 20.0  reverse_winding=8 # invert winding order of shackle
-city cash_register_model   ../models/interiors/cash_register/checkout_conv/scene.gltf  0 0 0  0 -1 26  1 1.0 1.0 # rotated at an odd angle
+city cash_register_model   ../models/interiors/cash_register/checkout_conv/scene.gltf  0 0 0  0 -1 26  1 1.0 0.16 # rotated at an odd angle
 city water_fountain_model  ../models/interiors/drinking_fountain/scene.gltf 0 0 0  0 0 270  1 1.0 1.0
 city banana_model       ../models/interiors/banana.glb            0 0 0  0 0 0  0 1.0 1.0
 city banana_peel_model  ../models/interiors/banana_peel.glb       0 0 0  0 0 0  1 1.0 1.0 # ../models/interiors/banana_peel2.glb is too brown
