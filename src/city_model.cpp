@@ -352,6 +352,8 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	if (use_custom_emissive) {model.set_material_emissive_color(model_file.body_mat_id, BLACK     );} // reset
 }
 
+unsigned city_model_loader_t::get_num_model_materials(unsigned model_id) {return get_model3d(model_id).num_materials();}
+
 unsigned get_model_id(unsigned id) { // first 8 bits = model_id, second 8 bits = sub_model_id
 	unsigned const model_id(id & 0xFF);
 	assert(model_id < NUM_OBJ_MODELS);

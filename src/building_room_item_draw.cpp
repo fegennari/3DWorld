@@ -1587,9 +1587,10 @@ void draw_obj_model(obj_model_inst_t const &i, room_object_t const &obj, shader_
 	}
 	// disable the leg and rubber feet for hanging monitors; materials are {glass screen, plastic body, logo + metal + leg, object, rubber feet}
 	if (obj.is_tv_or_monitor() && obj.is_hanging()) {rot_only_mat_mask |= 20;}
-
+	if (obj.is_metal_model()) {s.set_metalness(1.0);}
 	building_obj_model_loader.draw_model(s, obj_center, obj, dir, obj.color, xlate, model_id, shadow_only,
 		0, nullptr, rot_only_mat_mask, untextured, 0, upside_down, emissive_body_mat, 0, mirror_dim, using_custom_tid);
+	if (obj.is_metal_model()) {s.set_metalness(0.0);}
 	if (!shadow_only && type == TYPE_STOVE) {draw_stove_flames(obj, (camera_pdu.pos - xlate), s);} // draw blue burner flame
 	if (emissive_first_mat) {s.set_color_e(BLACK);}
 	if (use_low_z_bias    ) {s.add_uniform_float("norm_bias_scale", DEF_NORM_BIAS_SCALE);} // restore to the defaults
@@ -2007,9 +2008,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			int mirror_dim(3); // 3=none
 			bool const using_custom_tid(building.bind_custom_clothing_texure(obj));
 			if (type == TYPE_SHOE && (obj.flags & RO_FLAG_ADJ_TOP)) {mirror_dim = 1;} // shoes may be mirrored in !obj.dim (Y in model space)
-			if (obj.is_metal_model()) {s.set_metalness(1.0);}
+			// should we split out and sort single material alternating objects such as clothes and hangers to reduce the number of VBO changes? Doesn't seem to help much
 			draw_obj_model(*i, obj, s, xlate, obj_center, shadow_only, mirror_dim, using_custom_tid);
-			if (obj.is_metal_model()) {s.set_metalness(0.0);}
 			obj_drawn = 1;
 		}
 		// check for security camera monitor if player is in this building; must be on and active
