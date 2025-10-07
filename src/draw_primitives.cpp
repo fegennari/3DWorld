@@ -59,7 +59,7 @@ vector_point_norm const &gen_cylinder_data(point const ce[2], float radius1, flo
 	vpn.p.resize(2*ndiv);
 	vpn.n.resize(  ndiv);
 	float const r[2] = {radius1, radius2};
-	// speical case for ndiv==4 as this is a common min LOD size for tree trunk shadows, etc.
+	// special case for ndiv==4 as this is a common min LOD size for tree trunk shadows, etc.
 	float const css(TWO_PI/(float)ndiv), sin_ds((ndiv == 4) ? 1.0 : sin(css)), cos_ds((ndiv == 4) ? 0.0 : cos(css));
 	unsigned s0(0), s1(ndiv);
 

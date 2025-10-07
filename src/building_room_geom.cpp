@@ -979,9 +979,9 @@ void building_room_geom_t::add_spraycan_to_material(room_object_t const &c, rgeo
 	draw_bottom |= (dim != 2); // if on its side or held by the player
 	cube_t can(c), cap(c);
 	can.d[dim][!c.dir] = cap.d[dim][c.dir] = (c.d[dim][c.dir] + 0.7*c.get_sz_dim(dim)*(c.dir ? -1.0 : 1.0)); // point between top of can and bottom of cap
-	side_mat.add_ortho_cylin_to_verts(can, apply_light_color(c, DK_GRAY), dim, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv); // sides only
-	cap_mat.add_ortho_cylin_to_verts(cap, apply_light_color(c), dim, c.dir, !c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv); // sides + top
-	if (draw_bottom) {side_mat.add_ortho_cylin_to_verts(can, apply_light_color(c, LT_GRAY), dim, !c.dir, c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 1, ndiv);} // top or bot only, no sides
+	side_mat.add_ortho_cylin_to_verts(can, apply_light_color(c, DK_GRAY), dim, 0, 0, 0, 0, 1.0, 1.0, 0.0, 0.0, 0, ndiv); // sides only, untextured
+	cap_mat .add_ortho_cylin_to_verts(cap, apply_light_color(c), dim, c.dir, !c.dir, 0, 0, 1.0, 1.0, 0.0, 0.0, 0, ndiv); // sides + top, untextured
+	if (draw_bottom) {side_mat.add_ortho_cylin_to_verts(can, apply_light_color(c, LT_GRAY), dim, !c.dir, c.dir, 0, 0, 1.0, 1.0, 0.0, 0.0, 1, ndiv);} // top or bot only, no sides
 }
 void building_room_geom_t::add_spraycan(room_object_t const &c) { // is_small=1
 	bool const shadowed(!c.is_on_srack());
@@ -2112,14 +2112,14 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom, f
 
 	if (on_shelf_rack) { // shelf rack bottle; draw middle as a cone as an optimization
 		mid.d[dim][c.dir] = body.d[dim][!c.dir];
-		mat.add_ortho_cylin_to_verts(mid, color, dim, 0, 0, 0, 0, (c.dir ? 0.38 : 1.0), (c.dir ? 1.0 : 0.38), 1.0, 1.0, 0, bottle_ndiv);
+		mat.add_ortho_cylin_to_verts(mid, color, dim, 0, 0, 0, 0, (c.dir ? 0.38 : 1.0), (c.dir ? 1.0 : 0.38), 0.0, 0.0, 0, bottle_ndiv); // untextured
 	}
 	else { // normal bottle; draw middle as a sphere
 		mat.add_sphere_to_verts(mid, color, 1, vector_from_dim_dir(dim, c.dir)); // low_detail=1
 	}
-	mat.add_ortho_cylin_to_verts(body, color, dim, (add_bottom && !c.dir), (add_bottom && c.dir), 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bottle_ndiv); // bottom
+	mat.add_ortho_cylin_to_verts(body, color, dim, (add_bottom && !c.dir), (add_bottom && c.dir), 0, 0, 1.0, 1.0, 0.0, 0.0, 0, bottle_ndiv); // bottom, untextured
 	// draw neck of bottle as a truncated cone; draw as two sided if empty
-	mat.add_ortho_cylin_to_verts(neck, color, dim, 0, 0, is_empty, 0, (c.dir ? 0.85 : 1.0), (c.dir ? 1.0 : 0.85), 1.0, 1.0, 0, bottle_ndiv); // neck
+	mat.add_ortho_cylin_to_verts(neck, color, dim, 0, 0, is_empty, 0, (c.dir ? 0.85 : 1.0), (c.dir ? 1.0 : 0.85), 0.0, 0.0, 0, bottle_ndiv); // neck, untextured
 	if (rot_angle != 0.0) {rotate_verts(mat.itri_verts, plus_z, rot_angle, center, verts_start);}
 
 	if (!is_empty) { // draw cap if nonempty
@@ -2130,7 +2130,7 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom, f
 		rgeom_mat_t &cap_mat(get_material(cap_tex, 0, 0, 1)); // inc_shadows=0, dynamic=0, small=1
 		unsigned const cap_verts_start(cap_mat.itri_verts.size());
 		cap_mat.add_ortho_cylin_to_verts(cap, apply_light_color(c, cap_colors[cap_color_ix]), dim,
-			(draw_bot || c.dir), (draw_bot || !c.dir), 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bottle_ndiv);
+			(draw_bot || c.dir), (draw_bot || !c.dir), 0, 0, 1.0, 1.0, 0.0, 0.0, 0, bottle_ndiv); // untextured
 		if (rot_angle != 0.0) {rotate_verts(cap_mat.itri_verts, plus_z, rot_angle, center, cap_verts_start);}
 	}
 	// add the label
@@ -2622,9 +2622,9 @@ void building_room_geom_t::add_cigarette(room_object_t const &c) {
 	filter.d[c.dim][!c.dir] = body.d[c.dim][c.dir] = c.d[c.dim][c.dir] + (c.dir ? -1.0 : 1.0)*filter_len;
 	rgeom_mat_t &mat(get_untextured_material(0, 0, 1, 0, 0, 1)); // unshadowed, small, no_reflect=1
 	colorRGBA const TAN(0.8, 0.6, 0.2);
-	mat.add_ortho_cylin_to_verts(filter, apply_light_color(c, TAN     ), c.dim, !c.dir,  c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv);
-	mat.add_ortho_cylin_to_verts(body,   apply_light_color(c          ), c.dim,  0,      0,     0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv); // no ends
-	mat.add_ortho_cylin_to_verts(body,   apply_light_color(c, DK_BROWN), c.dim,  c.dir, !c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 1, ndiv); // end only; skip_sides=1
+	mat.add_ortho_cylin_to_verts(filter, apply_light_color(c, TAN     ), c.dim, !c.dir,  c.dir, 0, 0, 1.0, 1.0, 0.0, 0.0, 0, ndiv); // untextured
+	mat.add_ortho_cylin_to_verts(body,   apply_light_color(c          ), c.dim,  0,      0,     0, 0, 1.0, 1.0, 0.0, 0.0, 0, ndiv); // no ends, untextured
+	mat.add_ortho_cylin_to_verts(body,   apply_light_color(c, DK_BROWN), c.dim,  c.dir, !c.dir, 0, 0, 1.0, 1.0, 0.0, 0.0, 1, ndiv); // end only; skip_sides=1, untextured
 }
 
 void building_room_geom_t::add_sticky_note(room_object_t const &c) {
@@ -2944,7 +2944,7 @@ void building_room_geom_t::add_pipe(room_object_t const &c, bool add_exterior) {
 	bool const is_bolt(c.flags & RO_FLAG_RAND_ROT); // use RO_FLAG_RAND_ROT to indicate this is a bolt on the pipe rather than a pipe section
 	bool const is_dirty(!is_duct && !factory_rod && c.is_broken()), is_textured(is_duct || factory_rod || is_dirty);
 	unsigned const ndiv(is_bolt ? 6 : N_CYL_SIDES);
-	float const side_tscale(is_bolt ? 0.0 : 1.0); // bolts are untextured
+	float const side_tscale((is_bolt || !is_textured) ? 0.0 : 1.0); // bolts are untextured
 	float const len_tscale(is_textured ? (factory_rod ? 0.5 : 0.1)*c.get_sz_dim(dim)/radius : 1.0); // factory rod drawn textured as screw threads
 	// draw sides and possibly one or both ends
 	int tid(-1);
@@ -3098,9 +3098,9 @@ void building_room_geom_t::add_sprinkler(room_object_t const &c) { // vertical s
 	}
 	bot.expand_by_xy(-0.25*c.get_radius()); // shrink
 	mid.expand_by_xy(-0.60*c.get_radius()); // shrink
-	mat.add_vcylin_to_verts(bot, apply_light_color(c), c.dir, !c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv); // draw top
-	mat.add_vcylin_to_verts(mid, metal_color,          0,      0,     0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv); // no ends
-	mat.add_vcylin_to_verts(top, metal_color,          1,      1,     0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv); // draw ends
+	mat.add_vcylin_to_verts(bot, apply_light_color(c), c.dir, !c.dir, 0, 0, 1.0, 1.0, 0.0, 0.0, 0, ndiv); // draw top, untextured
+	mat.add_vcylin_to_verts(mid, metal_color,          0,      0,     0, 0, 1.0, 1.0, 0.0, 0.0, 0, ndiv); // no ends, untextured
+	mat.add_vcylin_to_verts(top, metal_color,          1,      1,     0, 0, 1.0, 1.0, 0.0, 0.0, 0, ndiv); // draw ends, untextured
 }
 
 void building_room_geom_t::add_valve(room_object_t const &c) {
@@ -4595,7 +4595,7 @@ void building_room_geom_t::add_water_heater(room_object_t const &c) {
 			v_pipe.z1() = c.z1(); // down to the floor
 			v_pipe.translate_dim(c.dim, (c.dir ? 1.0 : -1.0)*pipe_len); // shift in front of water heater
 			point const bends[2] = {point(pipe.xc(), pipe.yc(), bend_zval), point(v_pipe.xc(), v_pipe.yc(), bend_zval)};
-			copper_mat.add_vcylin_to_verts(v_pipe, copper_color, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, pipe_ndiv);
+			copper_mat.add_vcylin_to_verts(v_pipe, copper_color, 0, 0, 0, 0, 1.0, 1.0, 0.0, 0.0, 0, pipe_ndiv); // untextured
 			copper_mat.add_cylin_to_verts(bends[0], bends[1], pipe_radius, pipe_radius, copper_color, 0, 0, 0, 0, 1.0, 1.0, 0, pipe_ndiv);
 			// add brass fittings
 			rgeom_mat_t &brass_mat(get_metal_material(1, 0, 1, 0, 1, BRASS_C)); // small=1, no_reflect=1
@@ -6140,9 +6140,9 @@ void building_room_geom_t::add_flashlight_to_material(room_object_t const &c, rg
 	mid.d[dim][!c.dir] = top.d[dim][c.dir] = (c.d[dim][c.dir] - 0.4*length*dsign);
 	top.expand_in_dim(d1, -0.15*diameter);
 	top.expand_in_dim(d2, -0.15*diameter);
-	mat.add_ortho_cylin_to_verts(bot, color, dim, dbb,    dbt,   0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv); // draw sides and bottom if horizontal
-	mat.add_ortho_cylin_to_verts(top, color, dim, c.dir, !c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv); // draw sides and top
-	mat.add_ortho_cylin_to_verts(mid, color, dim, 0,      0,     0, 0, rsb, rst, 1.0, 1.0, 0, ndiv); // draw sides only; cone
+	mat.add_ortho_cylin_to_verts(bot, color, dim, dbb,    dbt,   0, 0, 1.0, 1.0, 0.0, 0.0, 0, ndiv); // draw sides and bottom if horizontal, untextured
+	mat.add_ortho_cylin_to_verts(top, color, dim, c.dir, !c.dir, 0, 0, 1.0, 1.0, 0.0, 0.0, 0, ndiv); // draw sides and top, untextured
+	mat.add_ortho_cylin_to_verts(mid, color, dim, 0,      0,     0, 0, rsb, rst, 0.0, 0.0, 0, ndiv); // draw sides only; cone, untextured
 
 	if (horizontal) { // horizontal, draw the lens
 		point lens_center(c.get_cube_center());
@@ -6166,10 +6166,10 @@ void building_room_geom_t::add_candle(room_object_t const &c) {
 	wick.z2() = tip.z1() = wick.z1() + 0.6*wick.dz();
 	tid_nm_pair_t tp(-1, 1.0, shadowed, 0, 1); // untextured, no_reflect=1
 	if (c.is_lit()) {tp.emissive = 0.5;} // somewhat emissive to simulate subsurface scattering
-	get_material(tp, shadowed, 0, 1).add_vcylin_to_verts(candle, (c.is_lit() ? c.color : apply_light_color(c)), 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv); // draw sides and top
+	get_material(tp, shadowed, 0, 1).add_vcylin_to_verts(candle, (c.is_lit() ? c.color : apply_light_color(c)), 0, 1, 0, 0, 1.0, 1.0, 0.0, 0.0, 0, ndiv); // draw sides/top, untextured
 	rgeom_mat_t &mat(get_untextured_material(0, 0, 1, 0, 0, 1)); // unshadowed, small, no_reflect=1
-	mat.add_vcylin_to_verts(wick, apply_light_color(c, WHITE), 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv_wick); // draw sides only
-	mat.add_vcylin_to_verts(tip,  apply_light_color(c, BLACK), 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv_wick); // draw sides and top
+	mat.add_vcylin_to_verts(wick, apply_light_color(c, WHITE), 0, 0, 0, 0, 1.0, 1.0, 0.0, 0.0, 0, ndiv_wick); // draw sides only, untextured
+	mat.add_vcylin_to_verts(tip,  apply_light_color(c, BLACK), 0, 1, 0, 0, 1.0, 1.0, 0.0, 0.0, 0, ndiv_wick); // draw sides and top, untextured
 }
 
 void get_security_camera_parts(room_object_t const &c, cube_t &mount, cube_t &body, cube_t &shaft) {
