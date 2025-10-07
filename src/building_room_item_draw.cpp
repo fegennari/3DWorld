@@ -190,6 +190,15 @@ void rgeom_mat_t::clear_vbos() {
 	vert_vbo_sz = ixs_vbo_sz = 0;
 }
 
+void update_hashval(rgeom_storage_t::vect_vertex_t const &verts, uint32_t &hash) {
+	float hvf(0.0);
+
+	for (auto const &v : verts) {
+		hvf  += v.v.x + v.v.y + v.v.z + v.t[0] + v.t[1];
+		hash += *((unsigned *)v.c);
+	}
+	hash += *((unsigned *)&hvf);
+}
 void rotate_verts(vector<rgeom_mat_t::vertex_t> &verts, building_t const &building) {
 	point const center(building.bcube.get_cube_center());
 
@@ -200,6 +209,7 @@ void rotate_verts(vector<rgeom_mat_t::vertex_t> &verts, building_t const &buildi
 		v.set_norm(n);
 	}
 }
+
 void rgeom_mat_t::create_vbo(building_t const &building) {
 	if (building.is_rotated()) { // rotate all vertices to match the building rotation
 		rotate_verts(quad_verts, building);
@@ -213,7 +223,17 @@ void rgeom_mat_t::create_vbo_inner() {
 	unsigned const qsz(quad_verts.size()*sizeof(vertex_t)), itsz(itri_verts.size()*sizeof(vertex_t)), tot_verts_sz(qsz + itsz);
 	// in most cases when num_verts starts out nonzero there is no actual update for this material, but accurately skipping the VBO update is difficult;
 	// hashing the vertex data is too slow, and simply summing the verts is inaccurate for things like light switch rotations and buildings far from the origin
-	num_verts = quad_verts.size() + itri_verts.size();
+	unsigned const new_num_verts(quad_verts.size() + itri_verts.size());
+
+	if (num_verts > 0) {
+		// if we've already allocated this material, compute the hashval to see if it's changed since last time; this saves a bit of time (230ms => 205ms)
+		uint32_t hash(0);
+		update_hashval(itri_verts, hash);
+		update_hashval(quad_verts, hash);
+		if (hash != hashval) {hashval = hash;}
+		else if (vao_mgr.vbo && num_verts == new_num_verts && hashval == hash) return; // same vert data, no need to update
+	}
+	num_verts = new_num_verts;
 	if (num_verts == 0) return; // nothing to do
 	gen_quad_ixs(indices, 6*(quad_verts.size()/4), itri_verts.size()); // append indices for quad_verts
 	num_ixs = indices.size();
