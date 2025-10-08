@@ -453,7 +453,7 @@ void building_room_geom_t::add_dresser_drawers(room_object_t const &c, float tsc
 	get_drawer_cubes(c, drawers, 1, 0); // front_only=1, inside_only=0
 	add_drawers(c, tscale, drawers);
 }
-void building_room_geom_t::add_drawers(room_object_t const &c, float tscale, vect_cube_t const &drawers, unsigned drawer_index_offset) {
+void building_room_geom_t::add_drawers(room_object_t const &c, float tscale, vect_cube_t const &drawers, unsigned drawer_index_offset, bool no_open_drawers) {
 	if (drawers.empty()) return;
 	assert(drawers.size() <= 16); // we only have 16 bits to store drawer flags
 	float const height(c.dz()), drawer_thick(get_drawer_wall_thick(height, c.get_depth()));
@@ -471,7 +471,7 @@ void building_room_geom_t::add_drawers(room_object_t const &c, float tscale, vec
 		float const dwidth(i->get_sz_dim(!c.dim)), handle_shrink(0.5*dwidth - handle_width);
 		unsigned door_skip_faces_mod(door_skip_faces);
 
-		if (i->d[c.dim][!c.dir] != c.d[c.dim][c.dir]) { // drawer is not flush with front face, so it's open
+		if (!no_open_drawers && i->d[c.dim][!c.dir] != c.d[c.dim][c.dir]) { // drawer is not flush with front face, so it's open
 			float const dheight(i->dz());
 			cube_t drawer_body(*i);
 			drawer_body.d[c.dim][!c.dir] = c. d[c.dim][ c.dir]; // flush with front
@@ -4133,8 +4133,30 @@ void building_room_geom_t::add_desk(room_object_t const &c, float tscale, bool i
 
 		if (inc_sm) {
 			bool const side(c.obj_id & 1);
-			drawers.d[!c.dim][side] -= (side ? 1.0 : -1.0)*0.85*get_tc_leg_width(c, 0.06); // make sure the drawers can pull out without hitting the desk legs
+			float const signed_leg_width((side ? 1.0 : -1.0)*get_tc_leg_width(c, 0.06));
+			drawers.d[!c.dim][side] -= 0.85*signed_leg_width; // make sure the drawers can pull out without hitting the desk legs
 			add_dresser_drawers(drawers, tscale);
+			float const height(c.dz()), depth(c.get_depth());
+
+			if (height > 0.75*depth) { // add middle keyboard drawer if desk is tall; can't be opened by the player because it may be blocked by the chair
+				float const front_face(drawers.d[c.dim][c.dir]);
+				cube_t mid_drawer(c);
+				mid_drawer.d[ c.dim][c.dir]  = front_face; // flush at front
+				mid_drawer.d[!c.dim][ side]  = drawers.d[!c.dim][!side];
+				mid_drawer.d[!c.dim][!side] += signed_leg_width;
+				set_cube_zvals(mid_drawer, drawers.z2()-0.15*height, drawers.z2());
+				get_wood_material(tscale, 1, 0, 1).add_cube_to_verts(mid_drawer, color, tex_origin, (EF_Z2 | ~get_face_mask(!c.dim, side))); // small=1
+				// draw drawer face
+				unsigned const cur_drawer_ix(temp_cubes.size()); // number of drawers from earlier add_dresser_drawers() call
+				vect_cube_t &drawers(get_temp_cubes());
+				cube_t drawer_face(mid_drawer);
+				drawer_face.d[c.dim][!c.dir] = front_face;
+				drawer_face.d[c.dim][ c.dir] = front_face + (c.dir ? 1.0 : -1.0)*0.02*depth;
+				drawer_face.expand_in_dim(!c.dim, -0.18*mid_drawer.get_sz_dim(!c.dim));
+				drawer_face.z1() += 0.04*height; // shift bottom up
+				drawers.push_back(drawer_face);
+				add_drawers(c, tscale, drawers, cur_drawer_ix, 1); // no_open_drawers=1
+			}
 		}
 	}
 	if (inc_lg && c.shape == SHAPE_TALL) { // add top/back section of desk; this part is outside the bcube

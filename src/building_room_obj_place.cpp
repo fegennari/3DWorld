@@ -465,8 +465,10 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 	cube_t const room_bounds(get_walkable_room_bounds(room));
 	float const vspace(get_window_vspace());
 	if (min(room_bounds.dx(), room_bounds.dy()) < 1.0*vspace) return 0; // room is too small
-	float const width(0.8*vspace*rgen.rand_uniform(1.0, 1.2)), depth(0.38*vspace*rgen.rand_uniform(1.0, 1.2)), height(0.23*vspace*rgen.rand_uniform(1.08, 1.2));
+	float const width(0.8*vspace*rgen.rand_uniform(1.0, 1.2)), depth(0.38*vspace*rgen.rand_uniform(1.0, 1.2));
 	float const clearance(max(0.5f*depth, get_min_front_clearance_inc_people()));
+	float height(0.23*vspace*rgen.rand_uniform(1.08, 1.2)), comp_sz_scale(1.0);
+	if ((room_id & 3) == 1) {height += 0.05*vspace; comp_sz_scale *= 0.8;} // maybe make taller to add a center drawer if this desk is likely to have drawers (room_id test)
 	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t c;
 	set_cube_zvals(c, zval, zval+height);
@@ -497,7 +499,8 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 		objs.push_back(desk);
 		set_obj_id(objs);
 		objs.back().obj_id += 123*desk_ix; // set even more differently per-desk so that they have different drawer contents
-		bool const add_computer(!no_computer && (force_computer || rgen.rand_bool()) && add_computer_to_desk(desk, desk_obj_ix, dim, dir, rgen, room_id, tot_light_amt));
+		bool const add_computer(!no_computer && (force_computer || rgen.rand_bool()) &&
+			add_computer_to_desk(desk, desk_obj_ix, dim, dir, rgen, room_id, tot_light_amt, comp_sz_scale));
 		bool has_chair(0);
 
 		if (!add_computer && !room.is_store()) { // no computer; add paper, pens, and pencils; not for furniture stores
