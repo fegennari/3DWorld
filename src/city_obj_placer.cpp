@@ -35,6 +35,33 @@ bool enable_instanced_pine_trees();
 bool are_birds_enabled() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_BIRD_ANIM);}
 
 
+// Note: copies rgen by value to avoid disrupting the original sequence
+bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, vect_cube_t &bcubes, vect_cube_t &colliders, vect_cube_t const &plot_cuts, rand_gen_t rgen) {
+	if (!plot.is_commercial())   return 0;
+	if (rgen.rand_float() < 0.5) return 0; // no gas station in this plot
+	bool const cx(rgen.rand_bool()), cy(rgen.rand_bool()), dim(rgen.rand_bool()); // select a random corner of the plot and dim
+	float const gs_width(1.6*city_params.road_width), gs_len(2.0*city_params.road_width);
+	float const sidewalk_width(get_sidewalk_width()), pad_dist(get_min_obj_spacing());
+	cube_t plot_inner(plot);
+	plot_inner.expand_by_xy(-sidewalk_width);
+	cube_t gs(plot_inner);
+	gs.z2() += 0.45*city_params.road_width; // set roof height
+	gs.d[0][!cx] = plot_inner.d[0][cx] + (cx ? -1.0 : 1.0)*(dim ? gs_width : gs_len);
+	gs.d[1][!cy] = plot_inner.d[1][cy] + (cy ? -1.0 : 1.0)*(dim ? gs_len : gs_width);
+	if (gs.contains_pt_xy(plot.get_cube_center())) return 0; // plot too small? shouldn't fail
+	if (has_bcube_int_xy(gs, bcubes, pad_dist))    return 0; // too close to a building
+	cube_t gs_exp(gs);
+	gs_exp.expand_by_xy(plot.dx() + plot.dy()); // don't place within two plot widths of another gas station
+	bool too_close(0);
+	for (gas_station_t const &g : gstations) {too_close |= g.bcube.intersects(gs_exp);}
+	if (too_close) return 0;
+	gass_groups.add_obj(gas_station_t(gs, dim, (dim ? cy : cx)), gstations);
+	bcubes.push_back(gs);
+	bcubes.back().expand_by_xy(pad_dist);
+	colliders.push_back(gs); // individual building and pumps?
+	return 1;
+}
+
 bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t const &full_plot, vector<car_t> &cars, unsigned city_id, unsigned plot_ix,
 	vect_cube_t &bcubes, vect_cube_t &colliders, vect_cube_t const &plot_cuts, rand_gen_t &rgen, bool add_cars)
 {
@@ -2049,6 +2076,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 		size_t const plot_id(i - plots.begin()), buildings_end(blockers.size());
 		assert(plot_id < plot_colliders.size());
 		vect_cube_t &colliders(plot_colliders[plot_id]); // used for pedestrians
+		if (!is_residential) {maybe_place_gas_station(*i, blockers, colliders, plot_cuts, rgen);} // ass gas stations to commercial cities; first, since they're large
 		if (add_parking_lots && !i->is_park) {i->has_parking = gen_parking_lots_for_plot(*i, cars, city_id, plot_id, blockers, colliders, plot_cuts, rgen, have_cars);}
 		unsigned const driveways_start(driveways.size());
 		if (is_residential) {add_house_driveways(*i, temp_cubes, detail_rgen, plot_id);}
@@ -2120,6 +2148,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	wwe_groups     .create_groups(elevators, all_objs_bcube);
 	uge_groups     .create_groups(ug_elevs,  all_objs_bcube);
 	p_solar_groups .create_groups(p_solars,  all_objs_bcube);
+	gass_groups    .create_groups(gstations, all_objs_bcube);
 	bball_groups   .create_groups(bballs,    all_objs_bcube);
 	pfloat_groups  .create_groups(pfloats,   all_objs_bcube);
 	if (skyway.valid) {all_objs_bcube.assign_or_union_with_cube(skyway.bcube);}
@@ -2383,6 +2412,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(ug_elevs,  uge_groups,      dstate, 0.20, shadow_only, 0);
 	draw_objects(bballs,    bball_groups,    dstate, 0.12, shadow_only, 1);
 	draw_objects(pfloats,   pfloat_groups,   dstate, 0.15, shadow_only, 1);
+	draw_objects(gstations, gass_groups,     dstate, 0.25, shadow_only, 1);
 	
 	if (!shadow_only) { // non shadow casting objects
 		draw_objects(hcaps,    hcap_groups,    dstate, 0.12, shadow_only, 0);
@@ -2569,6 +2599,7 @@ bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, vector
 	if (proc_vector_sphere_coll(ug_elevs,  uge_groups,      pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(pdecks,    pdeck_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(p_solars,  p_solar_groups,  pos, p_last, radius, xlate, cnorm)) return 1;
+	if (proc_vector_sphere_coll(gstations, gass_groups,     pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(clines,    cline_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(sculptures,sculpt_groups,   pos, p_last, radius, xlate, cnorm)) return 1;
 	// Note: no coll with tree_planters because the tree coll should take care of it;
@@ -2609,7 +2640,7 @@ bool city_obj_placer_t::line_intersect(point const &p1, point const &p2, float &
 	check_vector_line_intersect(picnics,   picnic_groups,   p1, p2, t, ret);
 	// Note: nothing to do for parking lots, tree_planters, hcaps, manholes, sewers, tcones, sculptures, flowers, pladders, chairs, pdecks, bballs, pfloats,
 	// clines, pigeons, ppaths, or birds;
-	// mboxes, swings, tramps, umbrellas, bikes, plants, ponds, p_solars, bb_hoops, and skyways are ignored because they're small or not simple shapes
+	// mboxes, swings, tramps, umbrellas, bikes, plants, ponds, p_solars, gstations, bb_hoops, and skyways are ignored because they're small or not simple shapes
 	return ret;
 }
 
@@ -2639,7 +2670,7 @@ bool city_obj_placer_t::get_color_at_xy_pre_road(point const &pos, colorRGBA &co
 	if (skyway.valid && skyway.bcube.contains_pt_xy(pos)) {color = WHITE; return 1;}
 	unsigned obj_ix(0);
 	if (check_city_obj_pt_xy_contains(walkway_groups, walkways, pos, obj_ix, 0)) {color = walkways[obj_ix].map_mode_color; return 1;} // is_cylin=0
-	if (check_city_obj_pt_xy_contains(p_solar_groups, p_solars, pos, obj_ix, 0)) {color = colorRGBA(0.4, 0.4, 1.0); return 1;} // placed over parking lots; light blue
+	if (check_city_obj_pt_xy_contains(p_solar_groups, p_solars, pos, obj_ix, 0)) {color = colorRGBA(0.4, 0.4, 1.0);        return 1;} // placed over parking lots; light blue
 	return 0;
 }
 bool city_obj_placer_t::get_color_at_xy(point const &pos, vect_cube_t const &plot_cuts, colorRGBA &color, bool skip_in_road) const {
@@ -2713,6 +2744,7 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, vect_cube_t const &plo
 	if (check_city_obj_pt_xy_contains(picnic_groups,   picnics,   pos, obj_ix, 0)) {color = BROWN; return 1;}
 	if (check_city_obj_pt_xy_contains(wwe_groups,      elevators, pos, obj_ix, 0)) {color = colorRGBA(0.8, 1.0, 0.8, 1.0); return 1;} // slightly blue-green glass; transparent?
 	if (check_city_obj_pt_xy_contains(uge_groups,      ug_elevs,  pos, obj_ix, 0)) {color = LT_GRAY; return 1;}
+	if (check_city_obj_pt_xy_contains(gass_groups,     gstations, pos, obj_ix, 0)) {color = WHITE;   return 1;} // should be more detailed?
 	if (check_vect_cube_contains_pt_xy(plot_cuts, pos)) {color = colorRGBA(0.7, 0.7, 1.0); return 1;} // mall skylight; very light blue
 	// Note: ppoles, hcaps, manholes, sewers, mboxes, tcones, sculptures, flowers, pladders, chairs, stopsigns, flags, clines, pigeons, birds, swings,
 	// umbrellas, bikes, and plants are skipped; pillars aren't visible under walkways;

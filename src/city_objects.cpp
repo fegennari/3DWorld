@@ -2363,6 +2363,41 @@ vect_cube_t const &parking_solar_t::get_legs() const {
 	return legs;
 }
 
+// gas stations
+
+gas_station_t::gas_station_t(cube_t const &c, bool dim_, bool dir_) : oriented_city_obj_t(c, dim_, dir_) {
+	set_bsphere_from_bcube();
+}
+/*static*/ void gas_station_t::pre_draw (draw_state_t &dstate, bool shadow_only) {
+	if (!shadow_only) {select_texture(WHITE_TEX);}
+}
+/*static*/ void gas_station_t::post_draw(draw_state_t &dstate, bool shadow_only) {
+	// TODO
+}
+void gas_station_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
+	dstate.draw_cube(qbds.untex_qbd, get_roof  (), WHITE); // draw all sides
+	dstate.draw_cube(qbds.untex_qbd, get_pillar(), BLUE, 1, 0.0, 4); // skip top and bottom
+	// TODO: draw gas pumps, small building, etc.
+}
+bool gas_station_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
+	if (!sphere_cube_intersect((pos_ - xlate), radius_, bcube)) return 0; // optimization
+	if (sphere_cube_int_update_pos(pos_, radius_, (get_roof  () + xlate), p_last, 0, cnorm)) return 1; // TODO: player walk on roof
+	if (sphere_cube_int_update_pos(pos_, radius_, (get_pillar() + xlate), p_last, 0, cnorm)) return 1;
+	return 0;
+}
+cube_t gas_station_t::get_roof() const {
+	cube_t roof(bcube);
+	roof.z1() = bcube.z2() - 0.08*bcube.dz();
+	return roof;
+}
+cube_t gas_station_t::get_pillar() const {
+	float const pillar_hwidth(0.02*(bcube.dx() + bcube.dy()));
+	cube_t pillar(bcube);
+	pillar.z2() = get_roof().z1();
+	for (unsigned d = 0; d < 2; ++d) {set_wall_width(pillar, pos[d], pillar_hwidth, d);}
+	return pillar;
+}
+
 // birds/pigeons
 
 // pos is at the feet; ignore dir.z
