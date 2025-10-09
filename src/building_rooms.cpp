@@ -3167,7 +3167,8 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		// call buttons on each floor outside the elevator
 		for (unsigned f = 0; f < num_floors; ++f) {
 			if (i->skip_floor_ix(f)) continue;
-			bool const top_floor(f == num_floors-1), exterior(i->in_mall == 1 && top_floor); // exterior buttons are only above the mall
+			bool const top_floor(f == num_floors-1);
+			bool const exterior(i->in_mall == 1 && top_floor && i->z2() > ground_floor_z1); // exterior buttons are only above the mall
 			point pos;
 			pos[ dim] = i->d[ dim][dir]; // front of the elevator
 			pos[!dim] = i->d[!dim][0] + 0.1*ewidth; // to the low side
