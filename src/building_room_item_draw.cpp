@@ -231,7 +231,7 @@ void rgeom_mat_t::create_vbo_inner() {
 		update_hashval(itri_verts, hash);
 		update_hashval(quad_verts, hash);
 		if (hash != hashval) {hashval = hash;}
-		else if (vao_mgr.vbo && num_verts == new_num_verts && hashval == hash) return; // same vert data, no need to update
+		else if (vao_mgr.vbo && num_verts == new_num_verts) return; // same vert data, no need to update
 	}
 	num_verts = new_num_verts;
 	if (num_verts == 0) return; // nothing to do
@@ -497,22 +497,21 @@ void building_room_geom_t::clear_small_materials() { // clears small material VB
 }
 // Note: used for room lighting changes; detail object changes are not supported
 void building_room_geom_t::check_invalid_draw_data() {
-	if (invalidate_mats_mask & (1 << MAT_TYPE_SMALL  )) { // small objects
+	if (invalidate_mats_mask & (1 << MAT_TYPE_SMALL)) { // small objects
 		mats_small   .invalidate();
 		mats_amask   .invalidate();
-		mats_text    .invalidate(); // Note: for now text is assigned to type MAT_TYPE_SMALL since it's always drawn with small objects
 		mats_alpha_sm.invalidate();
 	}
-	if (invalidate_mats_mask & (1 << MAT_TYPE_STATIC )) { // large objects and 3D models
+	if (invalidate_mats_mask & (1 << MAT_TYPE_STATIC)) { // large objects and 3D models
 		mats_static  .invalidate(); // obj_model_insts will also be recreated
 		mats_alpha   .invalidate();
 		mats_exterior.invalidate(); // not needed since this is immutable?
 	}
-	//if (invalidate_mats_mask & (1 << MAT_TYPE_TEXT  )) {mats_text    .invalidate();} // text objects
-	if (invalidate_mats_mask & (1 << MAT_TYPE_DYNAMIC )) {mats_dynamic .invalidate();} // dynamic objects
-	if (invalidate_mats_mask & (1 << MAT_TYPE_DOORS   )) {mats_doors   .invalidate();} // door_handles will also be created
-	if (invalidate_mats_mask & (1 << MAT_TYPE_LIGHTS  )) {mats_lights  .invalidate();}
-	if (invalidate_mats_mask & (1 << MAT_TYPE_DETAIL  )) {mats_detail  .invalidate();}
+	if (invalidate_mats_mask & (1 << MAT_TYPE_TEXT   )) {mats_text   .invalidate();} // text objects
+	if (invalidate_mats_mask & (1 << MAT_TYPE_DYNAMIC)) {mats_dynamic.invalidate();} // dynamic objects
+	if (invalidate_mats_mask & (1 << MAT_TYPE_DOORS  )) {mats_doors  .invalidate();} // door_handles will also be created
+	if (invalidate_mats_mask & (1 << MAT_TYPE_LIGHTS )) {mats_lights .invalidate();}
+	if (invalidate_mats_mask & (1 << MAT_TYPE_DETAIL )) {mats_detail .invalidate();}
 	invalidate_mats_mask = 0; // reset for next frame
 }
 void building_room_geom_t::invalidate_draw_data_for_obj(room_object_t const &obj, bool was_taken) {
@@ -529,6 +528,7 @@ void building_room_geom_t::invalidate_draw_data_for_obj(room_object_t const &obj
 	if (obj.type == TYPE_CEIL_FAN) {invalidate_lights_geom();} // invalidate the light on the fan as well
 	if (obj.type == TYPE_CLOCK)    {update_dynamic_draw_data();}
 	if (obj.type == TYPE_CUP && obj.is_nonempty()) {invalidate_small_geom();} // cup with coffee
+	if (obj.type == TYPE_BOOK || obj.type == TYPE_BCASE || obj.type == TYPE_SIGN || obj.type == TYPE_BUTTON || obj.type == TYPE_SHELFRACK) {update_text_draw_data();}
 }
 // Note: called when adding, removing, or moving objects
 void building_room_geom_t::update_draw_state_for_room_object(room_object_t const &obj, building_t &building, bool was_taken) {
