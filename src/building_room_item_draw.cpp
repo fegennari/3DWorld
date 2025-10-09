@@ -191,13 +191,15 @@ void rgeom_mat_t::clear_vbos() {
 }
 
 void update_hashval(rgeom_storage_t::vect_vertex_t const &verts, uint32_t &hash) {
-	float hvf(0.0);
+	static_assert(sizeof(rgeom_storage_t::vertex_t) == 28);
+	unsigned const num_uints(7*verts.size());
+	unsigned const *const ptr((unsigned const *)verts.data());
 
-	for (auto const &v : verts) {
-		hvf  += v.v.x + v.v.y + v.v.z + v.t[0] + v.t[1];
-		hash += *((unsigned *)v.c);
+	for (unsigned i = 0; i < num_uints; i += 14) { // should be good enough to process every other vertex
+		hash += ptr[i] + ptr[i+1] + ptr[i+2] + ptr[i+3] + ptr[i+4] + ptr[i+5] + ptr[i+6];
+		hash += hash << 10;
+		hash ^= hash >> 6;
 	}
-	hash += *((unsigned *)&hvf);
 }
 void rotate_verts(vector<rgeom_mat_t::vertex_t> &verts, building_t const &building) {
 	point const center(building.bcube.get_cube_center());
