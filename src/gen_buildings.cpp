@@ -76,8 +76,13 @@ float get_door_open_dist    () {return 3.5*CAMERA_RADIUS;}
 float get_interior_draw_dist() {return global_building_params.interior_view_dist_scale*2.0f*(X_SCENE_SIZE + Y_SCENE_SIZE);}
 bool player_in_ext_basement () {return (player_in_basement == 3 && player_building != nullptr);}
 bool cube_map_reflect_active() {return (display_mode & 0x100);} // key 9; on by default
-bool enable_cube_map_reflect() {return (cube_map_reflect_active() &&  camera_in_building && player_building != nullptr && !player_building->is_rotated());}
-bool enable_cube_map_city(cube_t *city_bcube) {return (cube_map_reflect_active() && !camera_in_building && camera_in_city_bounds(2, city_bcube));} // rc_mask=2 (commercial)
+
+bool enable_cube_map_reflect() {
+	return (cube_map_reflect_active() && camera_in_building && !player_in_uge && player_building != nullptr && !player_building->is_rotated());
+}
+bool enable_cube_map_city(cube_t *city_bcube) {
+	return (cube_map_reflect_active() && !camera_in_building && camera_in_city_bounds(2, city_bcube)); // rc_mask=2 (commercial)
+}
 
 void update_lights_bcube_zvals(cube_t &lights_bcube, point const &lpos, float radius) {
 	min_eq(lights_bcube.z1(), (lpos.z - radius));
