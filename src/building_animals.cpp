@@ -82,6 +82,7 @@ void building_t::shoot_gun_at_animals(point const &p1, point const &p2) {
 		if (rat.dead) continue;
 		if (!get_cube_height_radius(rat.pos, 0.5*rat.radius, rat.height).line_intersects(p1, p2)) continue; // smaller radius
 		add_blood_decal(rat.pos, 0.8*rat.get_xy_radius(), RED);
+		gen_sound_thread_safe(SOUND_RAT_SQUEAK, local_to_camera_space(rat.pos), 1.0, 1.5); // very high pitch
 		rat.dead  = 1;
 		rat.speed = 0.0;
 	}
