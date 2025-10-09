@@ -4446,11 +4446,12 @@ void building_room_geom_t::add_trashcan(room_object_t const &c) {
 
 	if (c.in_mall() || c.in_hallway()) { // large mall or hallway trashcan (same flag for both cases)
 		if (c.shape == SHAPE_CYLIN) {
+			bool const is_recycling(c.color.B > 1.2*max(c.color.R, c.color.G));
 			float const radius(c.get_radius()), r_inner(0.67*radius), torus_ri(0.5*(radius - r_inner)), torus_ro(radius - torus_ri);
 			cube_t inner(c);
 			inner.expand_by_xy(-torus_ri); // shrink to centerline of torus, not full width, so that the lid has some overlap
 			inner.z1() += 0.05*c.dz();
-			rgeom_mat_t &mat(get_metal_material(1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
+			rgeom_mat_t &mat(get_metal_material(1, 0, 1, 0, 0, WHITE, 0.8, 70.0, (is_recycling ? 0.0 : 1.0))); // inc_shadows=1, dynamic=0, small=1; recycling bin non reflective
 			mat.add_vcylin_to_verts(c, color, 0, 0); // outer, sides only, untextured
 			// draw black torus rim; half_or_quarter=3 (top half)
 			mat.add_vert_torus_to_verts(point(c.xc(), c.yc(), c.z2()), torus_ri, torus_ro, apply_light_color(c, BKGRAY), 1.0, 0, 3);
