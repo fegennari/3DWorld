@@ -1291,8 +1291,8 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 		for (escalator_t const &e : interior->escalators) {
 			if (!tc.intersects(e)) continue;
 			cube_t cubes[7];
-			e.get_all_cubes(cubes);
-			surface_orienter.register_cubes(cubes, 7);
+			unsigned const num(e.get_all_cubes(cubes)); // 6-7
+			surface_orienter.register_cubes(cubes, num);
 			obj_avoid.register_avoid_cube(e.get_ramp_bcube(0)); // avoid ramp since it's not a cube; exclude_sides=0
 		}
 		if (in_attic) {

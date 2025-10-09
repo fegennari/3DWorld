@@ -1752,7 +1752,7 @@ struct escalator_t : public oriented_cube_t { // Note: not yet used
 	cube_t get_side_for_end(cube_t const &end, bool lr) const;
 	cube_t get_support_pillar() const;
 	void get_ramp_bottom_pts(cube_t const &ramp, point bot_pts[4]) const;
-	void get_all_cubes(cube_t cubes[7]) const;
+	unsigned get_all_cubes(cube_t cubes[7]) const;
 };
 
 // door flags

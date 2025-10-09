@@ -520,6 +520,7 @@ cube_t escalator_t::get_side_for_end(cube_t const &end, bool lr) const {
 	return end_side;
 }
 cube_t escalator_t::get_support_pillar() const {
+	assert(!in_mall);
 	float const support_radius(0.15*get_width());
 	cube_t support(*this);
 	support.z2() = z1() + delta_z - get_upper_hang();
@@ -536,7 +537,7 @@ void escalator_t::get_ramp_bottom_pts(cube_t const &ramp, point bot_pts[4]) cons
 	bot_pts[1][!dim] = bot_pts[2][!dim] = ramp.d[!dim][1];
 	if (dim ^ dir ^ 1) {std::reverse(bot_pts, bot_pts+4);} // use correct vertex winding order
 }
-void escalator_t::get_all_cubes(cube_t cubes[7]) const { // {lo left wall, lo right wall, lo floor, hi left wall, hi right wall, hi floor, pillar}
+unsigned escalator_t::get_all_cubes(cube_t cubes[7]) const { // {lo left wall, lo right wall, lo floor, hi left wall, hi right wall, hi floor, [pillar]}
 	cube_t ends[2];
 	get_ends_bcube(ends[0], ends[1], 0); // exclude_sides=0
 	unsigned ix(0);
@@ -547,6 +548,8 @@ void escalator_t::get_all_cubes(cube_t cubes[7]) const { // {lo left wall, lo ri
 		end.z2() = end.z1() + get_floor_thick();
 		cubes[ix++] = end;
 	}
+	if (in_mall) return 6; // no pillar
 	cubes[ix++] = get_support_pillar();
+	return 7;
 }
 

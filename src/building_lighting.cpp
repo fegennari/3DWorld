@@ -292,9 +292,9 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 	}
 	for (escalator_t const &e : interior->escalators) {
 		cube_t cubes[7];
-		e.get_all_cubes(cubes);
-		add_colored_cubes(cubes, 6, LT_GRAY, cc); // walls and floors are light gray
-		cc.emplace_back(cubes[6], WHITE); // pillar is white
+		unsigned const num(e.get_all_cubes(cubes));
+		add_colored_cubes(cubes, min(num, 6U), LT_GRAY, cc); // walls and floors are light gray
+		if (num == 7) {cc.emplace_back(cubes[6], WHITE);} // pillar is white
 		//e.get_ramp_bcube(0) - ignore ramp for now because it's not a cube
 	}
 	for (door_t const &d : interior->doors) {

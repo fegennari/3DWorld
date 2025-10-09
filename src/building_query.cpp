@@ -1898,8 +1898,8 @@ bool building_interior_t::line_coll(building_t const &building, point const &p1,
 	for (escalator_t const &e : escalators) {
 		if (!check_line_clip(p1, p2, e.d)) continue;
 		cube_t cubes[7];
-		e.get_all_cubes(cubes);
-		for (unsigned n = 0; n < 7; ++n) {had_coll |= get_line_clip_update_t(p1, p2, cubes[n], t);}
+		unsigned const num(e.get_all_cubes(cubes));
+		for (unsigned n = 0; n < num; ++n) {had_coll |= get_line_clip_update_t(p1, p2, cubes[n], t);}
 		had_coll |= get_line_clip_update_t(p1, p2, e.get_ramp_bcube(0), t); // use conservative bcube of ramp
 	}
 	for (auto i = doors.begin(); i != doors.end(); ++i) {
@@ -1970,8 +1970,8 @@ point building_interior_t::find_closest_pt_on_obj_to_pos(building_t const &build
 	
 	for (escalator_t const &e : escalators) { // ramps are ignored
 		cube_t cubes[7];
-		e.get_all_cubes(cubes);
-		for (unsigned n = 0; n < 7; ++n) {update_closest_pt(cubes[n], pos, closest, pad_dist, dmin_sq);}
+		unsigned const num(e.get_all_cubes(cubes));
+		for (unsigned n = 0; n < num; ++n) {update_closest_pt(cubes[n], pos, closest, pad_dist, dmin_sq);}
 	}
 	for (auto i = doors.begin(); i != doors.end(); ++i) {
 		if (i->open) {} // handle open doors? - closest point on extruded polygon
@@ -2804,8 +2804,8 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 	for (escalator_t const &e : interior->escalators) {
 		if (!line_int_cube_exp(p1, p2, e, expand)) continue;
 		cube_t cubes[7];
-		e.get_all_cubes(cubes);
-		if (line_int_cubes_exp(p1, p2, cubes, 7, expand) || line_int_cube_exp(p1, p2, e.get_ramp_bcube(0), expand)) return 7; // test cubes and ramp bcube
+		unsigned const num(e.get_all_cubes(cubes));
+		if (line_int_cubes_exp(p1, p2, cubes, num, expand) || line_int_cube_exp(p1, p2, e.get_ramp_bcube(0), expand)) return 7; // test cubes and ramp bcube
 	}
 	// check exterior walls
 	if (point_in_attic(p1) && point_in_attic(p2)) {} // both points in attic, no need to check exterior walls
