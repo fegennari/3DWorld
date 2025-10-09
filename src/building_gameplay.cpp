@@ -2851,8 +2851,10 @@ unsigned remove_nearby_quads(point const &pos, float dist, quad_batch_draw &qbd)
 }
 
 // spraypaint/marker/eraser/bullet hole
-bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA const &color, unsigned emissive_color_id, room_object const obj_type, point *hit_pos) const {
-	if (is_rotated()) return 0; // not yet implemented
+bool building_t::apply_paint(point const &pos_, vector3d const &dir_, colorRGBA const &color, unsigned emissive_color_id, room_object const obj_type, point *hit_pos) const {
+	point pos(pos_);
+	vector3d dir(dir_);
+	maybe_inv_rotate_pos_dir(pos, dir);
 	bool const is_spraypaint(obj_type == TYPE_SPRAYCAN), is_marker(obj_type == TYPE_MARKER), is_eraser(obj_type == TYPE_ERASER), is_bullet(obj_type == TYPE_HANDGUN);
 	assert(is_spraypaint || is_marker || is_eraser || is_bullet); // only these object types are supported
 	// find intersection point and normal; assumes pos is inside the building
