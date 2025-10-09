@@ -1531,8 +1531,7 @@ public:
 		bool const dim(sz.x < sz.y);
 		float const len(sz[dim]), hwidth(0.5*sz[!dim]), height(sz.z), hbar_hw(0.01*height), vbar_hw(0.7*hbar_hw), xbar_hw(0.2*hbar_hw);
 		float const end_pad(8.0*xbar_hw), div_len(len - 2.0*end_pad), spacing(div_len/(num_div - 1)), step_shrink(0.5*hwidth/num_div);
-		vector3d center(ant.xc(), ant.yc(), (ant.z2() - hbar_hw));
-		if (bg.is_rotated()) {bg.do_xy_rotate(bg.bcube.get_cube_center(), center);}
+		vector3d const center(ant.xc(), ant.yc(), (ant.z2() - hbar_hw));
 		cube_t vbar(ant), hbar(ant), xbar(ant);
 		vbar.z2() -= 2.0*hbar_hw; // top meets hbar bottom
 		hbar.z1()  = vbar.z2();
@@ -1560,7 +1559,7 @@ public:
 		light.d[dim][!dir] -= (dir ? 1.0 : -1.0)*light_hwidth;
 		return light;
 	}
-	void add_rooftop_light(building_t const &bg, cube_with_ix_t const &pole) {
+	void add_rooftop_light(building_t const &bg, cube_with_ix_t const &pole) { // no rotated building support
 		cube_t const light(get_roof_light_from_pole(pole));
 		float const pole_sz(0.5*(pole.dx() + pole.dy()));
 		cube_t base(pole);
