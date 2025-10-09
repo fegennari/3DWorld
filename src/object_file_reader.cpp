@@ -453,12 +453,14 @@ public:
 	}
 
 	bool load_from_model3d_file(bool verbose) {
-		if (!model.read_from_disk(filename)) {
-			cerr << format_red("Error reading model3d file " + filename) << endl;
-			return 0;
-		}
 		{ // open a scope
 			timer_t timer("Model3d File Load");
+
+			if (!model.read_from_disk(filename)) {
+				cerr << format_red("Error reading model3d file " + filename) << endl;
+				return 0;
+			}
+			// load mtllib files; this will overwrite any material params from the model3d file and also load the textures
 			set<string> mat_lib_fns;
 			model.get_all_mat_lib_fns(mat_lib_fns);
 		
