@@ -9,6 +9,7 @@
 extern object_model_loader_t building_obj_model_loader;
 
 colorRGBA get_light_color_temp(float t);
+unsigned get_srack_num_shelves(room_object_t const &c);
 
 
 bool check_for_overlap(cube_t const &c, vect_room_object_t const &objs, unsigned objs_start, float xy_spacing) {
@@ -434,11 +435,13 @@ void building_t::add_shelf_rack(cube_t const &c, bool dim, unsigned style_id, un
 {
 	bool const is_empty(rgen.rand_float() < 0.05); // 5% empty
 	unsigned flags(extra_flags | (is_empty ? 0 : RO_FLAG_NONEMPTY));
+	unsigned const max_num_shelves((item_category == RETAIL_ELECTRONICS+1) ? 3 : 5); // Note: mall item_category has +1 added
 	if (is_school() || is_prison()) {flags |= RO_FLAG_ADJ_HI;} // flag as no_alcohol
 	room_object_t srack(c, TYPE_SHELFRACK, room_id, !dim, 0, flags, 1.0, SHAPE_CUBE, WHITE); // tot_light_amt=1.0
 	srack.obj_id       = style_id;  // common for all racks
 	srack.item_flags   = rack_id++; // unique per rack
 	srack.drawer_flags = item_category;
+	while (get_srack_num_shelves(srack) > max_num_shelves) {++srack.obj_id;}
 	interior->room_geom->objs.push_back(srack);
 	cube_t back, top, sides[2], shelves[5];
 	unsigned const num_shelves(get_shelf_rack_cubes(srack, back, top, sides, shelves));

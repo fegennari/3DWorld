@@ -1205,11 +1205,12 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 
 bool add_shelf_rack_top  (room_object_t const &c) {return (c.obj_id & 4);}
 bool add_shelf_rack_sides(room_object_t const &c) {return (c.obj_id & 2);}
+unsigned get_srack_num_shelves(room_object_t const &c) {return (3 + (c.obj_id%3));} // 3-5
 
 // returns num_shelves; all cubes passed in should start as zeros
 unsigned get_shelf_rack_cubes(room_object_t const &c, cube_t &back, cube_t &top, cube_t sides[2], cube_t shelves[5]) {
 	// 3-5 shelves, with optional top and sides, and central back with holes
-	unsigned const num_shelves(3 + (c.obj_id%3)); // 3-5
+	unsigned const num_shelves(get_srack_num_shelves(c)); // 3-5
 	bool const add_top(add_shelf_rack_top(c)), add_sides(add_shelf_rack_sides(c));
 	float const height(c.get_height()), length(c.get_width()), depth(c.get_depth());
 	float const shelf_thickness(0.015*height), bot_gap(1.8*shelf_thickness), back_thickness(0.05*depth);
