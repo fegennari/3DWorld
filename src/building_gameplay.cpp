@@ -1273,6 +1273,7 @@ public:
 			carried_item_t &obj(carried.back());
 
 			if (obj.type == TYPE_CANDLE && obj.is_lit()) { // apply lit candle use and water effect
+				obj.flags |= RO_FLAG_USED; // mark as used so that black tip is drawn
 				if ((frame_counter % 10) == 0) {obj.use_count += 10.0*elapsed_time;} // special logic for integer incrementing
 				min_eq(obj.use_count, get_taken_obj_type(obj).capacity); // use_count can't be > capacity
 				if (obj.get_remaining_capacity_ratio() <= 0.0) {obj.flags &= ~RO_FLAG_LIT;} // goes out when used up

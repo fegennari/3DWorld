@@ -6181,19 +6181,19 @@ void building_room_geom_t::add_flashlight(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_candle(room_object_t const &c) {
-	bool const on_shelfrack(c.is_on_srack()), shadowed(!on_shelfrack);
+	bool const on_shelfrack(c.is_on_srack()), shadowed(!on_shelfrack), is_used(c.is_used());
 	unsigned const ndiv(get_def_cylin_ndiv(c)), ndiv_wick(on_shelfrack ? 8 : 12); // low detail for shelfrack objects
 	cube_t candle(c), wick(c);
 	candle.z2() = wick.z1() = c.z1() + 0.8*c.dz();
 	wick.expand_by_xy(-0.94*c.get_radius()); // very thin
 	cube_t tip(wick);
-	wick.z2() = tip.z1() = wick.z1() + 0.6*wick.dz();
+	if (is_used) {wick.z2() = tip.z1() = wick.z1() + 0.6*wick.dz();} // add black tip if the candle was used
 	tid_nm_pair_t tp(-1, 1.0, shadowed, 0, 1); // untextured, no_reflect=1
 	if (c.is_lit()) {tp.emissive = 0.5;} // somewhat emissive to simulate subsurface scattering
 	get_material(tp, shadowed, 0, 1).add_vcylin_to_verts(candle, (c.is_lit() ? c.color : apply_light_color(c)), 0, 1, 0, 0, 1.0, 1.0, 0.0, 0.0, 0, ndiv); // draw sides/top, untextured
 	rgeom_mat_t &mat(get_untextured_material(0, 0, 1, 0, 0, 1)); // unshadowed, small, no_reflect=1
-	mat.add_vcylin_to_verts(wick, apply_light_color(c, WHITE), 0, 0, 0, 0, 1.0, 1.0, 0.0, 0.0, 0, ndiv_wick); // draw sides only, untextured
-	mat.add_vcylin_to_verts(tip,  apply_light_color(c, BLACK), 0, 1, 0, 0, 1.0, 1.0, 0.0, 0.0, 0, ndiv_wick); // draw sides and top, untextured
+	mat.add_vcylin_to_verts(wick, apply_light_color(c, WHITE), 0, !is_used, 0, 0, 1.0, 1.0, 0.0, 0.0, 0, ndiv_wick); // draw sides, top if unused/no tip, untextured
+	if (is_used) {mat.add_vcylin_to_verts(tip, apply_light_color(c, BLACK), 0, 1, 0, 0, 1.0, 1.0, 0.0, 0.0, 0, ndiv_wick);} // draw sides and top, untextured
 }
 
 void get_security_camera_parts(room_object_t const &c, cube_t &mount, cube_t &body, cube_t &shaft) {
