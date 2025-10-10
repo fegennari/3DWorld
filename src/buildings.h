@@ -231,12 +231,14 @@ class occlusion_checker_noncity_t {
 	building_occlusion_state_t state;
 	building_creator_t const &bc;
 public:
-	bool query_is_for_light, for_shadows;
+	bool query_is_for_light, for_shadows, extra_occ_dim=0;
+	vect_cube_t const *extra_occluders=nullptr; // for mall stores
 
 	occlusion_checker_noncity_t(building_creator_t const &bc_, bool for_light=0, bool for_shadows_=0) : bc(bc_), query_is_for_light(for_light), for_shadows(for_shadows_) {}
 	void set_exclude_bix(int exclude_bix) {state.exclude_bix = exclude_bix;}
 	void set_camera(pos_dir_up const &pdu, bool cur_building_only=0);
 	bool is_occluded(cube_t const &c) const;
+	bool check_custom_occluder_cull(cube_t const &c, point const &viewer) const;
 	vector3d const &get_xlate() const {return state.xlate;}
 };
 
@@ -2625,7 +2627,7 @@ public:
 	bool is_rot_cube_visible(cube_t const &c, vector3d const &xlate, bool inc_mirror_reflections=0) const;
 	bool is_cube_face_visible_from_pt(cube_t const &c, point const &p, unsigned dim, bool dir, bool same_room) const;
 	bool check_obj_occluded(cube_t const &c, point const &viewer, occlusion_checker_noncity_t const &oc,
-		bool reflection_pass=0, bool c_is_building_part=0, bool skip_basement_check=0) const;
+		bool reflection_pass=0, bool c_is_building_part=0, bool skip_basement_check=0, bool inc_extra_occluders=0) const;
 	bool check_pg_br_wall_occlusion(point const &viewer, point const *const pts, unsigned npts, cube_t const &occ_area, vector3d const &view_dir) const;
 	bool check_shelfrack_occlusion (point const &viewer, point const *const pts, unsigned npts, cube_t const &occ_area) const;
 	bool check_warehouse_shelf_occlusion(point const &viewer, point const *const pts, unsigned npts, cube_t const &occ_area) const;

@@ -128,7 +128,7 @@ public:
 			cube_t const bcube(S.get_bcube());
 			if (check_clip_cube && !smap_light_clip_cube.intersects(bcube + xlate)) continue; // shadow map clip cube test: fast and high rejection ratio, do this first
 			if (!camera_pdu.cube_visible(bcube + xlate)) continue; // VFC
-			if (check_occlusion && building.check_obj_occluded(bcube, camera_bs, oc, reflection_pass)) continue;
+			if (check_occlusion && building.check_obj_occluded(bcube, camera_bs, oc, reflection_pass, 0, 0, 1)) continue; // inc_extra_occluders=1
 			
 			if (S.dir == zero_vector || S.upv == zero_vector) {
 				if (!had_inval_spider_warn) {cout << "Error: Invalid spider: " << TXT(S.pos.str()) << TXT(S.dir.str()) << TXT(S.upv.str()) << endl;} // print only once
@@ -501,7 +501,7 @@ public:
 				cube_t const bcube(S.get_bcube());
 				if (check_clip_cube && !smap_light_clip_cube.intersects(bcube + xlate)) continue; // shadow map clip cube test: fast and high rejection ratio, do this first
 				if (!camera_pdu.cube_visible(bcube + xlate)) continue; // VFC
-				if (check_occlusion && building.check_obj_occluded(bcube, camera_bs, oc, reflection_pass)) continue;
+				if (check_occlusion && building.check_obj_occluded(bcube, camera_bs, oc, reflection_pass, 0, 0, (d == 1))) continue; // inc_extra_occluders=pet snakes
 				bool const is_distant(!dist_less_than(camera_bs, S.pos, 6.0*S.length));
 				draw_snake(S, shadow_only, reflection_pass, is_distant);
 				any_drawn = 1;
@@ -588,7 +588,7 @@ void building_room_geom_t::draw_animals(shader_t &s, building_t const &building,
 				for (rat_t const &rat : *to_draw) {
 					cube_t const bcube(rat.get_bcube());
 					if (!camera_pdu.cube_visible(bcube + xlate)) continue; // VFC
-					if ((display_mode & 0x08) && building.check_obj_occluded(bcube, camera_bs, oc, reflection_pass)) continue;
+					if ((display_mode & 0x08) && building.check_obj_occluded(bcube, camera_bs, oc, reflection_pass, 0, 0, 1)) continue; // inc_extra_occluders=1
 					anim_state.anim_time = rat.anim_time;
 					colorRGBA const color(player_in_mall ? pet_rat_colors[rat.id&3] : rat_color);
 					building_obj_model_loader.draw_model(s, bcube.get_cube_center(), rat.get_bcube_with_dir(), rat.dir, color, xlate, OBJ_MODEL_RAT, shadow_only, 0, &anim_state);
@@ -609,7 +609,7 @@ void building_room_geom_t::draw_animals(shader_t &s, building_t const &building,
 			if (!camera_pdu.sphere_visible_test((bird.pos + xlate), bird.radius)) continue; // VFC
 			cube_t bcube(bird.pos);
 			bcube.expand_by(bird.radius);
-			if ((display_mode & 0x08) && building.check_obj_occluded(bcube, camera_bs, oc, reflection_pass)) continue;
+			if ((display_mode & 0x08) && building.check_obj_occluded(bcube, camera_bs, oc, reflection_pass, 0, 0, 1)) continue; // inc_extra_occluders=1
 			anim_state.anim_time = 0.02*bird.anim_time/SKELETAL_ANIM_TIME_CONST;
 			building_obj_model_loader.draw_model(s, bird.pos, bcube, bird.dir, bird.color, xlate, OBJ_MODEL_BIRD_ANIM, shadow_only, 0, &anim_state);
 			bird_drawn = 1;

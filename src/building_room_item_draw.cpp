@@ -1665,8 +1665,6 @@ cube_t union_of_two_cubes(cube_t const &a, cube_t const &b) {
 }
 point get_player_held_object_pos(point const &camera_bs) {return (camera_bs + CAMERA_RADIUS*cview_dir - vector3d(0.0, 0.0, 0.5*CAMERA_RADIUS));}
 
-bool check_custom_occluder_cull(cube_t const &c, point const &viewer, vect_cube_t const &occluders, bool occluder_dim);
-
 // Note: non-const because it creates the VBO; inc_small: 0=large only, 1=large+small, 2=large+small+ext detail, 3=large+small+ext detail+int detail, 4=ext only
 void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &amask_shader, building_t const &building, occlusion_checker_noncity_t &oc,
 	vector3d const &xlate, unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building, bool mall_visible)
@@ -1878,10 +1876,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	int const camera_room((is_rotated || (reflection_pass && !cube_map_ref)) ? -1 : building.get_room_containing_camera(camera_bs));
 	int camera_part(-1), cull_room_ix(-1);
 	unsigned last_room_ix(building.interior->rooms.size()), last_culled_room_ix(last_room_ix), last_floor_ix(0); // start at an invalid value
-	bool camera_in_closed_room(0), last_room_closed(0), obj_drawn(0), no_cull_room(0);
+	bool camera_in_closed_room(0), last_room_closed(0), obj_drawn(0), no_cull_room(0), in_pet_store(0);
 	auto model_to_cull(obj_model_insts.end()), model_to_not_cull(obj_model_insts.end());
-	vect_cube_t const *extra_occluders(nullptr);
-	bool extra_occluders_dim(0);
 
 	if (camera_room >= 0) {
 		// check for stairs in case an object is visible through an open door on a floor above or below
@@ -1893,8 +1889,9 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		if (check_occlusion && room.is_store()) { // add mall store occluders for the room the player is in
 			for (store_info_t const &s : building.interior->mall_info->stores) {
 				if ((int)s.room_id != camera_room) continue;
-				extra_occluders     = &s.occluders;
-				extra_occluders_dim = !s.dim; // currently, all occluder walls are perpendicular to the store dim
+				oc.extra_occluders = &s.occluders;
+				oc.extra_occ_dim   = !s.dim; // currently, all occluder walls are perpendicular to the store dim
+				in_pet_store       = (s.store_type == STORE_PETS);
 				break;
 			}
 			no_cull_room = 1; // don't need to cull objects in the same store as the player
@@ -2005,7 +2002,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 				if (!no_check_occlude && building.check_obj_occluded(obj, camera_bs, oc, reflection_pass)) continue;
 			}
 		}
-		if (extra_occluders && check_custom_occluder_cull(obj, camera_bs, *extra_occluders, extra_occluders_dim)) continue;
+		if (oc.check_custom_occluder_cull(obj, camera_bs)) continue;
 
 		if (camera_room >= 0) {
 			unsigned const floor_ix(room.get_floor_containing_zval(obj.zc(), floor_spacing));
@@ -2116,6 +2113,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		} // for c
 	}
 	if (player_in_building_or_doorway && !cube_map_ref) {
+		if (!in_pet_store) {oc.extra_occluders = nullptr;} // only need extra occluders for animals in pet stores
 		// draw animals; skip animal shadows for industrial areas, retail rooms, and malls/stores as an optimization (must agree with lighting code)
 		if (shadow_only && (player_in_industrial || (building.has_retail() && building.get_retail_part().contains_pt(camera_bs)) || building.point_in_mall(camera_bs))) {}
 		else {draw_animals(s, building, oc, xlate, camera_bs, shadow_only, reflection_pass, check_clip_cube);}
@@ -2143,6 +2141,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		tid_nm_pair_dstate_t state(s);
 		mat.upload_draw_and_clear(state);
 	}
+	oc.extra_occluders = nullptr; // reset for next building
 	if (disable_cull_face) {glEnable(GL_CULL_FACE);} // re-enable face culling
 	if (obj_drawn) {check_mvm_update();} // needed after popping model transform matrix
 
@@ -2661,19 +2660,20 @@ void building_t::debug_people_in_building(shader_t &s, point const &camera_bs) c
 	s.make_current();
 }
 
-bool check_custom_occluder_cull(cube_t const &c, point const &viewer, vect_cube_t const &occluders, bool occluder_dim) {
+bool occlusion_checker_noncity_t::check_custom_occluder_cull(cube_t const &c, point const &viewer) const {
+	if (!extra_occluders) return 0;
 	// check any extra occluders from special rooms such as mall stores
 	// Note: ignores building rotate since malls should not be in a rotated building
 	point pts[8];
 	unsigned const npts(get_cube_corners(c.d, pts, viewer, 0)); // should return only the 6 visible corners
 	cube_t occ_area(c);
 	occ_area.union_with_pt(viewer); // any occluder must intersect this cube
-	return are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, occ_area, occluders, occluder_dim);
+	return are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, occ_area, *extra_occluders, extra_occ_dim);
 }
 
 // Note: c is in local building space and viewer_in is in non-rotated building space
 bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occlusion_checker_noncity_t const &oc,
-	bool reflection_pass, bool c_is_building_part, bool skip_basement_check) const
+	bool reflection_pass, bool c_is_building_part, bool skip_basement_check, bool inc_extra_occluders) const
 {
 	if (!interior) return 0; // could probably make this an assert
 	//highres_timer_t timer("Check Object Occlusion"); // 0.001ms
@@ -2782,6 +2782,7 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 			}
 			if (are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, occ_area, interior->fc_occluders, 2, 0.0, max_sep_dist)) return 1;
 		}
+		if (inc_extra_occluders && oc.extra_occluders && are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, occ_area, *oc.extra_occluders, oc.extra_occ_dim)) return 1;
 	}
 	else if (camera_in_building) { // player in some other building
 		if (checked_conn_ret  ) return 0; // player in ext basement connected to this building; skip below checks in this case
