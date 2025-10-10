@@ -2945,8 +2945,8 @@ void building_room_geom_t::add_pg_ramp(room_object_t const &c, float tscale) {
 void building_room_geom_t::add_pipe(room_object_t const &c, bool add_exterior) { // should be SHAPE_CYLIN
 	bool const exterior(c.is_exterior());
 	if (exterior != add_exterior) return;
-	unsigned const dim(c.dir ? 2 : unsigned(c.dim)); // encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1
-	float const radius(0.5*c.get_sz_dim((dim+1)%3));
+	unsigned const dim(c.get_pipe_dim());
+	float const radius(c.get_pipe_radius());
 	//assert(0.5*c.get_sz_dim((dim+2)%3) == radius); // must be a square cross section, but too strong due to FP error
 	// only vertical pipes cast shadows; horizontal ceiling pipes are too high and outside the ceiling light shadow map,
 	// or otherwise don't look correct when an area light is treated as a point light
@@ -2989,7 +2989,7 @@ void building_room_geom_t::add_pipe(room_object_t const &c, bool add_exterior) {
 }
 
 void building_room_geom_t::add_duct(room_object_t const &c) {
-	unsigned const dim(c.dir ? 2 : unsigned(c.dim)); // encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1 (same as pipes)
+	unsigned const dim(c.get_pipe_dim()); // same as pipes
 
 	if (c.shape == SHAPE_CUBE) {
 		unsigned skip_faces(0);
@@ -3120,7 +3120,7 @@ void building_room_geom_t::add_sprinkler(room_object_t const &c) { // vertical s
 
 void building_room_geom_t::add_valve(room_object_t const &c) {
 	// Note: we don't know which direction the pipe is in, so the valve handle must be symmetric
-	unsigned const dim(c.dir ? 2 : unsigned(c.dim)); // encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1
+	unsigned const dim(c.get_pipe_dim()); // same as pipes
 	get_metal_material(1, 0, 2); // make sure it's in the map
 	colorRGBA const color(apply_light_color(c)), spec_color(get_specular_color(c.color)); // special case metals
 	rgeom_mat_t &mat(get_metal_material(1, 0, 2, 0, 1, spec_color)); // detail object, no_reflect=1
@@ -6400,7 +6400,7 @@ void building_room_geom_t::add_metal_bar(room_object_t const &c) {
 		metal_mat.add_cube_to_verts_untextured(c, color, c.item_flags); // skip_faces is stored in item_flags
 	}
 	else if (c.shape == SHAPE_CYLIN) {
-		unsigned const dim(c.dir ? 2 : unsigned(c.dim)); // encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1
+		unsigned const dim(c.get_pipe_dim()); // same as pipes
 		bool const draw_bot(!(c.item_flags & EF_Z1)), draw_top(!(c.item_flags & EF_Z2));
 		metal_mat.add_ortho_cylin_to_verts(c, color, dim, draw_bot, draw_top);
 	}
@@ -6408,7 +6408,7 @@ void building_room_geom_t::add_metal_bar(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_ibeam(room_object_t const &c) {
-	unsigned const bdim(c.dir ? 2 : unsigned(c.dim)); // long dim; encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1 (same as pipes)
+	unsigned const bdim(c.get_pipe_dim()); // same as pipes
 	unsigned const idim(c.dir ? unsigned(c.dim) : 2); // I-shape dim
 	unsigned const wdim(!c.dim); // width dim
 	float const thickness(c.get_sz_dim(idim)), tb_thick(0.12*thickness);

@@ -353,7 +353,15 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 				inner_cube = cubes[0]; // tank
 			}
 			float const radius(c->get_radius()), shrink(radius*(1.0 - 1.0/SQRT2));
-			inner_cube.expand_by_xy(-shrink); // shrink to inscribed cube in XY
+
+			if (c->is_horizontal_cylin()) { // cylindrical duct, etc.
+				bool const dim(c->get_pipe_dim()), d1((dim+1)%3), d2((dim+2)%3);
+				inner_cube.expand_in_dim(d1, -shrink);
+				inner_cube.expand_in_dim(d2, -shrink);
+			}
+			else {
+				inner_cube.expand_by_xy(-shrink); // shrink to inscribed cube in XY
+			}
 			if  (c->shape == SHAPE_SPHERE  ) {inner_cube.expand_in_z(-shrink);} // shrink in Z as well
 			else if (type == TYPE_TABLE    ) {inner_cube.z1() += 0.88*c->dz();} // top of table
 			else if (type == TYPE_CHEM_TANK) {
@@ -363,6 +371,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 				base.expand_by_xy(0.5*(radius - shrink) - radius); // half radius, shrunk
 				cc.emplace_back(base, color);
 			}
+			assert(inner_cube.is_strictly_normalized());
 			cc.emplace_back(inner_cube, color);
 		}
 		else if (type == TYPE_CLOSET) { // Note: lighting cubes and indir lighting are *not* updated when closet doors are opened and closed
@@ -554,6 +563,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			else if (type == TYPE_SHOWERTUB ) {bc = get_shower_tub_wall(*c);}
 			else if (type == TYPE_CONV_BELT ) {bc = get_true_room_obj_bcube(*c);}
 			// what about open microwaves and dishwashers?
+			assert(bc.is_strictly_normalized());
 			cc.emplace_back(bc, color);
 		}
 	} // for c

@@ -801,13 +801,16 @@ struct room_object_t : public oriented_cube_t { // size=68
 	bool is_a_drink() const {return (type == TYPE_BOTTLE || type == TYPE_DRINK_CAN);}
 	bool is_pet_container() const {return (type == TYPE_FISHTANK || type == TYPE_PET_CAGE);}
 	bool is_metal_model() const {return (type == TYPE_SILVER || type == TYPE_KEY || type == TYPE_HANDGUN);}
+	bool is_horizontal_cylin   () const {return (shape == SHAPE_CYLIN && (type == TYPE_DUCT || type == TYPE_PIPE || type == TYPE_VALVE || type == TYPE_METAL_BAR));}
 	unsigned get_bottle_type   () const {return ((obj_id&63) % NUM_BOTTLE_TYPES   );} // first 6 bits are bottle type
 	unsigned get_drink_can_type() const {return ((obj_id&63) % NUM_DRINK_CAN_TYPES);} // first 6 bits are drink can type
 	void set_max_drink_can_type(unsigned max_type) {
 		if (get_drink_can_type() > max_type) {obj_id = max_type;} // clamp to max_type
 	}
-	unsigned get_orient() const {return (2*dim + dir);}
-	unsigned get_num_shelves() const;
+	unsigned get_orient()        const {return (2*dim + dir);}
+	unsigned get_num_shelves()   const;
+	unsigned get_pipe_dim()      const {return (dir ? 2 : unsigned(dim));} // encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1
+	float get_pipe_radius()      const {return 0.5*get_sz_dim((get_pipe_dim()+1)%3);}
 	float get_bottle_rot_angle() const {return (rotates() ? PI*(0.321*obj_id + color.R + 2.0*color.G) : 0.0);}
 	float get_depth () const {return get_length();} // some objects use depth rather than length
 	float get_radius() const;
