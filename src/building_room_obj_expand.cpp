@@ -1110,6 +1110,7 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 	cube_t back, top, sides[2], shelves[5];
 	unsigned const num_shelves(get_shelf_rack_cubes(c, back, top, sides, shelves));
 	unsigned const base_flags(RO_FLAG_NOCOLL | RO_FLAG_WAS_EXP | RO_FLAG_ON_SRACK);
+	unsigned const num_food_box_shelves((num_shelves > 4) ? 2 : 1); // add food boxes on the top shelf, or top two shelves if there are more than 4
 	float const floor_spacing(c.dz()/SHELF_RACK_HEIGHT_FS);
 	float const top_shelf_z2(top.is_all_zeros() ? c.z2() : top.z1()); // bottom of the top, if present
 	bool const add_food_boxes(!global_building_params.food_box_tids.empty()), has_top(add_shelf_rack_top(c)), no_alcohol(c.flags & RO_FLAG_ADJ_HI);
@@ -1180,7 +1181,7 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 					} // for n
 					continue;
 				}
-				else if (add_food_boxes && n == num_shelves-1) { // add food boxes on the top shelf
+				else if (add_food_boxes && n >= num_shelves - num_food_box_shelves) { // add food boxes on upper shelves
 					// will fall through to grouped items case below
 				}
 				else if (rgen2.rand_float() < 0.65) { // add bottles; these aren't consumable by the player because that would be too powerful
