@@ -20,7 +20,8 @@ buildings ball_prob 0.6 # set to 1.0 for testing of balls
 buildings split_stack_floorplan_prob 0.0
 buildings retail_floorplan_prob 0.6
 buildings two_floor_retail_prob 0.7
-buildings mall_prob 0.5
+buildings mall_prob 0.5 # set larger when no_retail_and_mall=1?
+buildings no_retail_and_mall 1 # optimization, since both retail and malls add many small objects
 buildings glass_floor_alpha 0.25 # set to 1.0 for opaque floor
 buildings add_office_basements 1
 buildings add_basement_tunnels 1

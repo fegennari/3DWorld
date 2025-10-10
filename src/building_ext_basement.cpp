@@ -179,11 +179,12 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 	bool added_lg_room(0);
 
 	if (!is_house && has_parking_garage) { // office building with parking garage
-		bool const add_malls(global_building_params.max_mall_levels > 0), try_mall_first(add_malls && rgen.rand_probability(global_building_params.mall_prob));
+		bool const add_mall(global_building_params.max_mall_levels > 0 && global_building_params.mall_prob > 0.0 && (!global_building_params.no_retail_and_mall || !has_retail()));
+		bool const try_mall_first(add_mall && rgen.rand_probability(global_building_params.mall_prob));
 
 		for (unsigned n = 0; n < 2; ++n) {
 			bool const is_mall((n == 0) == try_mall_first);
-			if (is_mall && !add_malls) continue;
+			if (is_mall && !add_mall)  continue;
 			unsigned const num_floors_added(max_expand_underground_room(hallway, wall_dim, wall_dir, is_mall, rgen));
 			if (num_floors_added == 0) continue;
 			interior->num_extb_floors = num_floors_added;
