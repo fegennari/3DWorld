@@ -188,19 +188,31 @@ void rgeom_mat_t::add_cylin_to_verts(point const &bot, point const &top, float b
 	for (unsigned bt = 0; bt < 2; ++bt) {
 		if (!(bt ? draw_top : draw_bot)) continue; // this disk not drawn
 		assert(half_or_quarter == 0); // half and quarter disk are not supported
-		float const tsx((swap_end_txy & 1) ? -1.0 : 1.0), tsy((swap_end_txy & 2) ? -1.0 : 1.0);
 		norm_comp const normal((bool(bt) ^ inv_tb) ? v12 : -v12);
 		unsigned const center_ix(itix);
 		itri_verts[itix++].assign(ce[bt], normal, half_end_tscale, half_end_tscale, cw); // center
 
-		for (unsigned I = 0; I < ndiv; ++I) {
-			unsigned const i(bt ? ndiv-I-1 : I); // invert winding order for top face
-			vector3d const side_normal(0.5*(vpn.n[i] + vpn.n[(i+ndiv-1)%ndiv])); // normalize?
-			float const ts(half_end_tscale*(side_normal.x*tsx + 1.0)), tt(half_end_tscale*(side_normal.y*tsy + 1.0));
-			itri_verts[itix++].assign(vpn.p[(i<<1) + bt], normal, ts, tt, cw); // assign tcs from side normal
-			indices[iix++] = center_ix; // center
-			indices[iix++] = center_ix + i + 1;
-			indices[iix++] = center_ix + ((i+1)%ndiv) + 1;
+		if (half_end_tscale == 0.0) { // untextured case - optimization
+			for (unsigned I = 0; I < ndiv; ++I) {
+				unsigned const i(bt ? ndiv-I-1 : I); // invert winding order for top face
+				itri_verts[itix++].assign(vpn.p[(i<<1) + bt], normal, 0.0, 0.0, cw); // assign tcs from side normal
+				indices[iix++] = center_ix; // center
+				indices[iix++] = center_ix + i + 1;
+				indices[iix++] = center_ix + ((i+1)%ndiv) + 1;
+			}
+		}
+		else {
+			float const tsx((swap_end_txy & 1) ? -1.0 : 1.0), tsy((swap_end_txy & 2) ? -1.0 : 1.0);
+
+			for (unsigned I = 0; I < ndiv; ++I) {
+				unsigned const i(bt ? ndiv-I-1 : I); // invert winding order for top face
+				vector3d const side_normal(0.5*(vpn.n[i] + vpn.n[(i+ndiv-1)%ndiv])); // normalize?
+				float const ts(half_end_tscale*(side_normal.x*tsx + 1.0)), tt(half_end_tscale*(side_normal.y*tsy + 1.0));
+				itri_verts[itix++].assign(vpn.p[(i<<1) + bt], normal, ts, tt, cw); // assign tcs from side normal
+				indices[iix++] = center_ix; // center
+				indices[iix++] = center_ix + i + 1;
+				indices[iix++] = center_ix + ((i+1)%ndiv) + 1;
+			}
 		}
 	} // for bt
 	if (inv_tb) {std::reverse(indices.begin()+ixs_start, indices.end());} // reverse the order to swap triangle winding order
