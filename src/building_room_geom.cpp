@@ -2110,15 +2110,29 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom, f
 	float const rot_angle(c.get_bottle_rot_angle() + label_rot_angle);
 	point const center(c.get_cube_center());
 	unsigned const verts_start(mat.itri_verts.size());
+	mat.add_ortho_cylin_to_verts(body, color, dim, (add_bottom && !c.dir), (add_bottom && c.dir), 0, 0, 1.0, 1.0, 0.0, 0.0, 0, bottle_ndiv); // bottom, untextured
 
 	if (on_shelf_rack) { // shelf rack bottle; draw middle as a cone as an optimization
 		mid.d[dim][c.dir] = body.d[dim][!c.dir];
-		mat.add_ortho_cylin_to_verts(mid, color, dim, 0, 0, 0, 0, (c.dir ? 0.38 : 1.0), (c.dir ? 1.0 : 0.38), 0.0, 0.0, 0, bottle_ndiv); // untextured
+
+		if (dim == 2) { // draw as a vertical cone using existing verts from the body cylinder
+			unsigned const center_ix(mat.itri_verts.size());
+			mat.itri_verts.emplace_back(point(c.xc(), c.yc(), (mid.z2() + 0.04*length)), plus_z, 0.0, 0.0, color); // top center
+
+			for (unsigned s = 0; s < bottle_ndiv; ++s) {
+				mat.indices.push_back(center_ix); // center
+				mat.indices.push_back(verts_start + (((s+1)%bottle_ndiv)<<1)+1);
+				mat.indices.push_back(verts_start + (s<<1)+1);
+			}
+			neck.z1() -= 0.04*length;
+		}
+		else {
+			mat.add_ortho_cylin_to_verts(mid, color, dim, 0, 0, 0, 0, (c.dir ? 0.38 : 1.0), (c.dir ? 1.0 : 0.38), 0.0, 0.0, 0, bottle_ndiv); // untextured
+		}
 	}
 	else { // normal bottle; draw middle as a sphere
 		mat.add_sphere_to_verts(mid, color, 1, vector_from_dim_dir(dim, c.dir)); // low_detail=1
 	}
-	mat.add_ortho_cylin_to_verts(body, color, dim, (add_bottom && !c.dir), (add_bottom && c.dir), 0, 0, 1.0, 1.0, 0.0, 0.0, 0, bottle_ndiv); // bottom, untextured
 	// draw neck of bottle as a truncated cone; draw as two sided if empty
 	mat.add_ortho_cylin_to_verts(neck, color, dim, 0, 0, is_empty, 0, (c.dir ? 0.85 : 1.0), (c.dir ? 1.0 : 0.85), 0.0, 0.0, 0, bottle_ndiv); // neck, untextured
 	if (rot_angle != 0.0) {rotate_verts(mat.itri_verts, plus_z, rot_angle, center, verts_start);}

@@ -144,7 +144,7 @@ void rgeom_mat_t::add_cylin_to_verts(point const &bot, point const &top, float b
 		apply_half_or_quarter(half_or_quarter, ndiv_draw);
 		unsigned const num_side_verts(flat_sides ? 4*ndiv_draw : 2*(ndiv_draw+1)), unique_verts_per_side(flat_sides ? 4 : 2);
 		itri_verts.resize(itris_start + num_side_verts);
-		indices.resize(ixs_start + 6*ndiv_draw);
+		indices   .resize(ixs_start   + 6*ndiv_draw   );
 
 		if (flat_sides) {
 			for (unsigned i = 0; i < ndiv_draw; ++i) { // vertex data
@@ -178,7 +178,7 @@ void rgeom_mat_t::add_cylin_to_verts(point const &bot, point const &top, float b
 		// room object drawing uses back face culling and single sided lighting; to make lighting two sided, need to add verts with inverted normals/winding dirs
 		if (two_sided) {add_inverted_triangles(itri_verts, indices, itris_start, ixs_start);}
 	}
-	// maybe add top and bottom end cap using triangles, currently using all TCs=0.0
+	// maybe add top and bottom end cap using triangles
 	unsigned const num_ends((unsigned)draw_top + (unsigned)draw_bot);
 	itris_start = itix = itri_verts.size();
 	ixs_start   = iix  = indices.size();
