@@ -2381,7 +2381,15 @@ void gas_station_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dis
 }
 bool gas_station_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
 	if (!sphere_cube_intersect((pos_ - xlate), radius_, bcube)) return 0; // optimization
-	if (sphere_cube_int_update_pos(pos_, radius_, (get_roof  () + xlate), p_last, 0, cnorm)) return 1; // TODO: player walk on roof
+	float const pos_z(max(pos_.z, p_last.z));
+	cube_t const roof(get_roof());
+
+	if (pos_z > roof.z2() - radius_ && pos_z < roof.z2() + 1.1*radius_) {
+		pos_.z = roof.z2() + radius_; // on roof
+		if (cnorm) {*cnorm = plus_z;}
+		return 1;
+	}
+	if (sphere_cube_int_update_pos(pos_, radius_, (roof +         xlate), p_last, 0, cnorm)) return 1; // needed for ball collision?
 	if (sphere_cube_int_update_pos(pos_, radius_, (get_pillar() + xlate), p_last, 0, cnorm)) return 1;
 	return 0;
 }
