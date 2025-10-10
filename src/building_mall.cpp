@@ -1846,7 +1846,8 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 					}
 					else { // add retail shelf racks
 						assert(store_type == STORE_RETAIL);
-						add_shelf_rack(rack, dim, style_id, rack_id, room_id, RO_FLAG_IN_MALL, item_category+1, 0, rgen); // add_occluders=0
+						cube_t const occluder(add_shelf_rack(rack, dim, style_id, rack_id, room_id, RO_FLAG_IN_MALL, item_category+1, 0, rgen)); // add_occluders=0
+						interior->mall_info->stores.back().occluders.push_back(occluder);
 					}
 					if (n > 0 && n+1 < nrows && (n & 1)) { // use alternating/odd rows, skipping ends
 						pillar.d[dim][0] = pillar.d[dim][1] = rack.d[dim][dir]; // end of back rack facing front of store - less likely to be blocked by checkout counter

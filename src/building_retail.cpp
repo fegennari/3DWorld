@@ -430,7 +430,7 @@ void building_t::add_checkout_objs(cube_t const &place_area, float zval, unsigne
 	}
 }
 
-void building_t::add_shelf_rack(cube_t const &c, bool dim, unsigned style_id, unsigned &rack_id, unsigned room_id,
+cube_t building_t::add_shelf_rack(cube_t const &c, bool dim, unsigned style_id, unsigned &rack_id, unsigned room_id,
 	unsigned extra_flags, unsigned item_category, bool add_occluders, rand_gen_t &rgen)
 {
 	bool const is_empty(rgen.rand_float() < 0.05); // 5% empty
@@ -446,9 +446,12 @@ void building_t::add_shelf_rack(cube_t const &c, bool dim, unsigned style_id, un
 	cube_t back, top, sides[2], shelves[5];
 	unsigned const num_shelves(get_shelf_rack_cubes(srack, back, top, sides, shelves));
 	interior->room_geom->get_shelfrack_objects(srack, interior->room_geom->objs, 1); // add_models_mode=1
-	if (!add_occluders) return;
-	interior->room_geom->shelf_rack_occluders[0].push_back(back);
-	interior->room_geom->shelf_rack_occluders[1].push_back(top.is_all_zeros() ? shelves[num_shelves-1] : top); // top, or top shelf
+	
+	if (add_occluders) {
+		interior->room_geom->shelf_rack_occluders[0].push_back(back);
+		interior->room_geom->shelf_rack_occluders[1].push_back(top.is_all_zeros() ? shelves[num_shelves-1] : top); // top, or top shelf
+	}
+	return back; // return back for mall stores so that they can be used as occluders
 }
 
 point building_t::get_retail_upper_stairs_landing_center() const {

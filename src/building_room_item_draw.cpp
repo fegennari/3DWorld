@@ -191,7 +191,7 @@ void rgeom_mat_t::clear_vbos() {
 }
 
 void update_hashval(rgeom_storage_t::vect_vertex_t const &verts, uint32_t &hash) {
-	static_assert(sizeof(rgeom_storage_t::vertex_t) == 28);
+	static_assert(sizeof(rgeom_storage_t::vertex_t) == 28, "must update hash logic for different vertex layout");
 	unsigned const num_uints(7*verts.size());
 	unsigned const *const ptr((unsigned const *)verts.data());
 
