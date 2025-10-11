@@ -2365,45 +2365,65 @@ vect_cube_t const &parking_solar_t::get_legs() const {
 
 // gas stations
 
-gas_station_t::gas_station_t(cube_t const &c, bool dim_, bool dir_) : oriented_city_obj_t(c, dim_, dir_) {
+gas_station_t::gas_station_t(cube_t const &c, bool dim_, bool dir_, unsigned rand_val) : oriented_city_obj_t(c, dim_, dir_) {
 	set_bsphere_from_bcube();
+	roof = bcube;
+	roof.z1() = bcube.z2() - 0.08*bcube.dz();
+	// add pillars
+	vector2d const sz(bcube.get_size_xy());
+	float const pillar_hwidth(0.02*sz[!dim]), pillar_z2(roof.z1());
+
+	for (unsigned n = 0; n < 4; ++n) {
+		cube_t &pillar(pillars[n]);
+		set_cube_zvals(pillar, bcube.z1(), pillar_z2);
+		for (unsigned d = 0; d < 2; ++d) {set_wall_width(pillar, (pos[d] + ((n & (1<<d)) ? 1.0 : -1.0)*0.16*sz[d]), pillar_hwidth, d);}
+	}
+	// place pumps
+	float const pump_height(0.5*bcube.dz());
+	pumps.reserve(4);
+
+	for (unsigned n = 0; n < 4; ++n) {
+		cube_t const &pillar(pillars[n]); // next to the pillar
+		point pump_pos(pillar.xc(), pillar.yc(), bcube.z1());
+		bool const pump_dir(pump_pos[!dim] > pos[!dim]);
+		pump_pos[!dim] += (pump_dir ? 1.0 : -1.0)*0.1*sz[!dim]; // offset away from the pillar
+		pumps.emplace_back(pump_pos, pump_height, dim, dir, rand_val); // select a random model
+	}
 }
 /*static*/ void gas_station_t::pre_draw (draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {select_texture(WHITE_TEX);}
 }
-/*static*/ void gas_station_t::post_draw(draw_state_t &dstate, bool shadow_only) {
-	// TODO
-}
 void gas_station_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
-	dstate.draw_cube(qbds.untex_qbd, get_roof  (), WHITE); // draw all sides
-	dstate.draw_cube(qbds.untex_qbd, get_pillar(), BLUE, 1, 0.0, 4); // skip top and bottom
-	// TODO: draw gas pumps, small building, etc.
+	dstate.draw_cube(qbds.untex_qbd, roof, WHITE); // draw all sides
+	float const dmax(dist_scale*dstate.draw_tile_dist);
+	if (!bcube.closest_dist_less_than(dstate.camera_bs, 0.5*dmax)) return; // only draw the roof
+	// TODO: add road surface
+	colorRGBA const pillar_color(0.25, 0.25, 1.0); // light blue
+	for (unsigned n = 0; n < 4; ++n) {dstate.draw_cube(qbds.untex_qbd, pillars[n], pillar_color, 1, 0.0, 4);} // skip top and bottom
+	if (!bcube.closest_dist_less_than(dstate.camera_bs, 0.2*dmax)) return; // only draw the roof and pillars
+	
+	for (gas_pump_t const &pump : pumps) {
+		if (dstate.check_sphere_visible(pump.pos, pump.radius)) {pump.draw(dstate, qbds, dist_scale, shadow_only);}
+	}
 }
 bool gas_station_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
 	if (!sphere_cube_intersect((pos_ - xlate), radius_, bcube)) return 0; // optimization
 	float const pos_z(max(pos_.z, p_last.z));
-	cube_t const roof(get_roof());
 
-	if (pos_z > roof.z2() - radius_ && pos_z < roof.z2() + 1.1*radius_) {
+	if (pos_z > roof.z2() - radius_ && pos_z < roof.z2() + 1.1*radius_) { // check for player on roof; must be first
 		pos_.z = roof.z2() + radius_; // on roof
 		if (cnorm) {*cnorm = plus_z;}
 		return 1;
 	}
-	if (sphere_cube_int_update_pos(pos_, radius_, (roof +         xlate), p_last, 0, cnorm)) return 1; // needed for ball collision?
-	if (sphere_cube_int_update_pos(pos_, radius_, (get_pillar() + xlate), p_last, 0, cnorm)) return 1;
+	if (sphere_cube_int_update_pos(pos_, radius_, (roof + xlate), p_last, 0, cnorm)) return 1; // needed for ball collision?
+
+	for (unsigned n = 0; n < 4; ++n) {
+		if (sphere_cube_int_update_pos(pos_, radius_, pillars[n], p_last, 0, cnorm)) return 1;
+	}
+	for (gas_pump_t const &pump : pumps) {
+		if (pump.proc_sphere_coll(pos_, p_last, radius_, xlate, cnorm)) return 1;
+	}
 	return 0;
-}
-cube_t gas_station_t::get_roof() const {
-	cube_t roof(bcube);
-	roof.z1() = bcube.z2() - 0.08*bcube.dz();
-	return roof;
-}
-cube_t gas_station_t::get_pillar() const {
-	float const pillar_hwidth(0.02*(bcube.dx() + bcube.dy()));
-	cube_t pillar(bcube);
-	pillar.z2() = get_roof().z1();
-	for (unsigned d = 0; d < 2; ++d) {set_wall_width(pillar, pos[d], pillar_hwidth, d);}
-	return pillar;
 }
 
 // birds/pigeons

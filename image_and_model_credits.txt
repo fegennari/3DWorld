@@ -49,3 +49,5 @@ Walther P88 Gun: https://sketchfab.com/3d-models/walther-p88-gun-a76d127c7e4a4be
 Smith and Wesson Gun: https://sketchfab.com/3d-models/handgun-animation-059f0191761341db815816bafc3e79a4
 CZ P07 Handgun: https://sketchfab.com/3d-models/cz-p07-handgun-3d8c3bd4b9d140f8a0762706c8d6e73d
 M1911 Handgun: https://sketchfab.com/3d-models/low-poly-m1911-handgun-b2cb2e51561b4ee88fa2153ea6f9d616
+Shell Gas Pump: https://sketchfab.com/3d-models/shell-gas-pump-3f41a7d17044402fa2f3e1798a4bff78
+Gas Pump: https://sketchfab.com/3d-models/gas-pump-add0f902b9164718bd0540e88bf9927e

@@ -441,15 +441,18 @@ struct parking_solar_t : public oriented_city_obj_t {
 	vect_cube_t const &get_legs() const;
 };
 
+struct gas_pump_t : public multi_model_city_obj_t {
+	gas_pump_t(point const &pos_, float height, bool dim_, bool dir_, unsigned model_sel) : multi_model_city_obj_t(pos_, height, dim_, dir_, OBJ_MODEL_GAS_PUMP, model_sel) {}
+};
 struct gas_station_t : public oriented_city_obj_t {
-	gas_station_t(cube_t const &c, bool dim_, bool dir_);
+	cube_t roof;
+	cube_t pillars[4];
+	vector<gas_pump_t> pumps;
+
+	gas_station_t(cube_t const &c, bool dim_, bool dir_, unsigned rand_val);
 	static void pre_draw (draw_state_t &dstate, bool shadow_only);
-	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
-private:
-	cube_t get_roof  () const;
-	cube_t get_pillar() const;
 };
 
 struct wind_turbine_t : public model_city_obj_t {

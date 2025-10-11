@@ -40,22 +40,22 @@ bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, vect_cu
 	if (!plot.is_commercial())   return 0;
 	if (rgen.rand_float() < 0.5) return 0; // no gas station in this plot
 	bool const cx(rgen.rand_bool()), cy(rgen.rand_bool()), dim(rgen.rand_bool()); // select a random corner of the plot and dim
-	float const gs_width(1.6*city_params.road_width), gs_len(2.0*city_params.road_width);
+	float const gs_width(1.0*city_params.road_width), gs_len(1.2*city_params.road_width);
 	float const sidewalk_width(get_sidewalk_width()), pad_dist(get_min_obj_spacing());
 	cube_t plot_inner(plot);
 	plot_inner.expand_by_xy(-sidewalk_width);
 	cube_t gs(plot_inner);
-	gs.z2() += 0.45*city_params.road_width; // set roof height
+	gs.z2() += 0.3*city_params.road_width; // set roof height
 	gs.d[0][!cx] = plot_inner.d[0][cx] + (cx ? -1.0 : 1.0)*(dim ? gs_width : gs_len);
 	gs.d[1][!cy] = plot_inner.d[1][cy] + (cy ? -1.0 : 1.0)*(dim ? gs_len : gs_width);
 	if (gs.contains_pt_xy(plot.get_cube_center())) return 0; // plot too small? shouldn't fail
 	if (has_bcube_int_xy(gs, bcubes, pad_dist))    return 0; // too close to a building
 	cube_t gs_exp(gs);
-	gs_exp.expand_by_xy(plot.dx() + plot.dy()); // don't place within two plot widths of another gas station
+	gs_exp.expand_by_xy(2.0*(plot.dx() + plot.dy())); // don't place within 4 plot widths of another gas station
 	bool too_close(0);
 	for (gas_station_t const &g : gstations) {too_close |= g.bcube.intersects(gs_exp);}
 	if (too_close) return 0;
-	gass_groups.add_obj(gas_station_t(gs, dim, (dim ? cy : cx)), gstations);
+	gass_groups.add_obj(gas_station_t(gs, dim, (dim ? cy : cx), rgen.rand()), gstations);
 	bcubes.push_back(gs);
 	bcubes.back().expand_by_xy(pad_dist);
 	colliders.push_back(gs); // individual building and pumps?
@@ -2051,6 +2051,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	detail_rgen.set_state(3145739*(city_id+1), 1572869*(city_id+1));
 	if (city_params.max_trees_per_plot > 0) {tree_placer.begin_block(0, 1); tree_placer.begin_block(1, 1);} // both small and large trees; in_city=1
 	bool const add_parking_lots(/*have_cars &&*/ !is_residential && city_params.min_park_spaces > 0 && city_params.min_park_rows > 0);
+	bool const add_gas_stations(!is_residential && building_obj_model_loader.is_model_valid(OBJ_MODEL_GAS_PUMP)); // commercial cities only
 	float const sidewalk_width(get_sidewalk_width());
 	get_building_ext_basement_bcubes(city_bcube, underground_blockers); // used for inground swimming pools and ponds in parks
 
@@ -2076,7 +2077,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 		size_t const plot_id(i - plots.begin()), buildings_end(blockers.size());
 		assert(plot_id < plot_colliders.size());
 		vect_cube_t &colliders(plot_colliders[plot_id]); // used for pedestrians
-		if (!is_residential) {maybe_place_gas_station(*i, blockers, colliders, plot_cuts, rgen);} // ass gas stations to commercial cities; first, since they're large
+		if (add_gas_stations) {maybe_place_gas_station(*i, blockers, colliders, plot_cuts, rgen);} // add gas stations first, since they're large
 		if (add_parking_lots && !i->is_park) {i->has_parking = gen_parking_lots_for_plot(*i, cars, city_id, plot_id, blockers, colliders, plot_cuts, rgen, have_cars);}
 		unsigned const driveways_start(driveways.size());
 		if (is_residential) {add_house_driveways(*i, temp_cubes, detail_rgen, plot_id);}
