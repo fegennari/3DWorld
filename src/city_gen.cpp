@@ -2912,7 +2912,7 @@ public:
 		cube_t query; query.set_from_sphere((pos - get_camera_coord_space_xlate()), radius);
 
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {
-			if (!(rc_mask & (1 << (!r->get_is_residential())))) continue;
+			if (!(rc_mask & (1 << unsigned(!r->get_is_residential())))) continue;
 			cube_t const &bc(r->get_bcube());
 			if (!bc.contains_cube_xy(query)) continue;
 			if (city_bcube) {*city_bcube = bc;}

@@ -2431,7 +2431,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	for (dstate.pass_ix = (shadow_only ? 1 : 0); dstate.pass_ix < 2; ++dstate.pass_ix) { // {solar panel, metal frame}; panel does not cast shadows
 		draw_objects(p_solars, p_solar_groups, dstate, (dstate.pass_ix ? 0.25 : 0.45), shadow_only, 0);
 	}
-	for (dstate.pass_ix = 0; dstate.pass_ix < (shadow_only ? 1 : 2); ++dstate.pass_ix) { // {metal case, newspaper}; newspaper does not cast shadows
+	for (dstate.pass_ix = 0; dstate.pass_ix < (shadow_only ? 1U : 2U); ++dstate.pass_ix) { // {metal case, newspaper}; newspaper does not cast shadows
 		draw_objects(newsracks, nrack_groups, dstate, (dstate.pass_ix ? 0.06 : 0.10), shadow_only, 0);
 	}
 	for (dstate.pass_ix = 0; dstate.pass_ix < 3; ++dstate.pass_ix) { // {line, poles, clothes}
