@@ -2390,7 +2390,7 @@ gas_station_t::gas_station_t(cube_t const &c, bool dim_, bool dir_, unsigned ran
 		pumps.emplace_back(pump_pos, pump_height, dim, dir, rand_val); // select a random model
 	}
 }
-/*static*/ void gas_station_t::pre_draw (draw_state_t &dstate, bool shadow_only) {
+/*static*/ void gas_station_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {select_texture(WHITE_TEX);}
 }
 void gas_station_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
@@ -2424,6 +2424,10 @@ bool gas_station_t::proc_sphere_coll(point &pos_, point const &p_last, float rad
 		if (pump.proc_sphere_coll(pos_, p_last, radius_, xlate, cnorm)) return 1;
 	}
 	return 0;
+}
+void gas_station_t::add_ped_colliders(vect_cube_t &colliders) const {
+	for (unsigned n = 0; n < 4; ++n) {colliders.push_back(pillars[n]);}
+	for (gas_pump_t const &pump : pumps) {colliders.push_back(pump.bcube);}
 }
 
 // birds/pigeons

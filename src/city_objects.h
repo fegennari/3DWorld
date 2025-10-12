@@ -453,6 +453,7 @@ struct gas_station_t : public oriented_city_obj_t {
 	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
+	void add_ped_colliders(vect_cube_t &colliders) const;
 };
 
 struct wind_turbine_t : public model_city_obj_t {

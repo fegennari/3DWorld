@@ -58,7 +58,7 @@ bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, vect_cu
 	gass_groups.add_obj(gas_station_t(gs, dim, (dim ? cy : cx), rgen.rand()), gstations);
 	bcubes.push_back(gs);
 	bcubes.back().expand_by_xy(pad_dist);
-	colliders.push_back(gs); // individual building and pumps?
+	gstations.back().add_ped_colliders(colliders);
 	return 1;
 }
 
