@@ -450,7 +450,8 @@ struct gas_station_t : public oriented_city_obj_t {
 	vector<gas_pump_t> pumps;
 
 	gas_station_t(cube_t const &c, bool dim_, bool dir_, unsigned rand_val);
-	static void pre_draw (draw_state_t &dstate, bool shadow_only);
+	float get_pavement_zval() const {return (bcube.z1() + 0.005*bcube.dz());}
+	static void pre_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 	void add_ped_colliders(vect_cube_t &colliders) const;

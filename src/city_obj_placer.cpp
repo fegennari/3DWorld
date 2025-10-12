@@ -40,10 +40,9 @@ bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, vect_cu
 	if (!plot.is_commercial())   return 0;
 	if (rgen.rand_float() < 0.5) return 0; // no gas station in this plot
 	bool const cx(rgen.rand_bool()), cy(rgen.rand_bool()), dim(rgen.rand_bool()); // select a random corner of the plot and dim
-	float const gs_width(1.0*city_params.road_width), gs_len(1.2*city_params.road_width);
-	float const sidewalk_width(get_sidewalk_width()), pad_dist(get_min_obj_spacing());
+	float const gs_width(1.0*city_params.road_width), gs_len(1.2*city_params.road_width), pad_dist(get_min_obj_spacing());
 	cube_t plot_inner(plot);
-	plot_inner.expand_by_xy(-sidewalk_width);
+	//plot_inner.expand_by_xy(-get_sidewalk_width());
 	cube_t gs(plot_inner);
 	gs.z2() += 0.3*city_params.road_width; // set roof height
 	gs.d[0][!cx] = plot_inner.d[0][cx] + (cx ? -1.0 : 1.0)*(dim ? gs_width : gs_len);

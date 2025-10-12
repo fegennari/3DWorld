@@ -249,8 +249,8 @@ city stretcher_model        ../models/stretcher.glb               0 1 0  -1 -1  
 city forklift_model     ../models/forklift.glb                    0 0 0  -1 -1 90  1 1.0 1.0
 city wind_turbine_model ../models/wind_turbine.glb                0 0 0  -1 -1 90  1 1.0 1.0
 city bb_hoop_model      ../models/basketball_hoop.glb             0 0 0  -1 -1 270 1 1.0 10.0
-city gas_pump_model     ../models/gas_pumps/shell_gas_pump.glb    0 0 0  -1 -1  0  1 1.0 1.0
-city gas_pump_model     ../models/gas_pumps/gas_pump.glb          0 0 0  -1 -1 90  1 1.0 1.0
+city gas_pump_model     ../models/gas_pumps/shell_gas_pump.glb    0 0 0  -1 -1  0  1 1.0 1.0 # has inverted normals on some faces
+city gas_pump_model     ../models/gas_pumps/gas_pump.glb          0 0 0  -1 -1 90  1 1.0 1.0 # has inverted text    on some faces
 # gym machine models; size value determines height relative to half a floor's spacing
 city ex_machine_model   ../models/interiors/exercise/dumbell_rack.glb    0 0 0  -1 -1 90  1 0.7 16.0
 city ex_machine_model   ../models/interiors/exercise/roman_chair.glb     0 0 0  -1 -1 0   1 0.7 0.4

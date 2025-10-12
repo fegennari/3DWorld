@@ -2368,14 +2368,15 @@ vect_cube_t const &parking_solar_t::get_legs() const {
 gas_station_t::gas_station_t(cube_t const &c, bool dim_, bool dir_, unsigned rand_val) : oriented_city_obj_t(c, dim_, dir_) {
 	set_bsphere_from_bcube();
 	roof = bcube;
-	roof.z1() = bcube.z2() - 0.08*bcube.dz();
+	roof.z1() = bcube.z2() - 0.1*bcube.dz();
+	roof.expand_by_xy(-0.1*bcube.get_sz_dim(!dim)); // roof slightly smaller than footprint/pavement
 	// add pillars
 	vector2d const sz(bcube.get_size_xy());
-	float const pillar_hwidth(0.02*sz[!dim]), pillar_z2(roof.z1());
+	float const pillar_hwidth(0.02*sz[!dim]), pillar_z2(roof.z1()), pavement_zval(get_pavement_zval());
 
 	for (unsigned n = 0; n < 4; ++n) {
 		cube_t &pillar(pillars[n]);
-		set_cube_zvals(pillar, bcube.z1(), pillar_z2);
+		set_cube_zvals(pillar, pavement_zval, pillar_z2);
 		for (unsigned d = 0; d < 2; ++d) {set_wall_width(pillar, (pos[d] + ((n & (1<<d)) ? 1.0 : -1.0)*0.16*sz[d]), pillar_hwidth, d);}
 	}
 	// place pumps
@@ -2384,27 +2385,36 @@ gas_station_t::gas_station_t(cube_t const &c, bool dim_, bool dir_, unsigned ran
 
 	for (unsigned n = 0; n < 4; ++n) {
 		cube_t const &pillar(pillars[n]); // next to the pillar
-		point pump_pos(pillar.xc(), pillar.yc(), bcube.z1());
+		point pump_pos(pillar.xc(), pillar.yc(), pavement_zval);
 		bool const pump_dir(pump_pos[!dim] > pos[!dim]);
 		pump_pos[!dim] += (pump_dir ? 1.0 : -1.0)*0.1*sz[!dim]; // offset away from the pillar
 		pumps.emplace_back(pump_pos, pump_height, dim, dir, rand_val); // select a random model
 	}
 }
 /*static*/ void gas_station_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
-	if (!shadow_only) {select_texture(WHITE_TEX);}
+	if (!shadow_only) {select_texture(get_texture_by_name("roads/concrete.jpg"));}
 }
 void gas_station_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
-	dstate.draw_cube(qbds.untex_qbd, roof, WHITE); // draw all sides
+	dstate.draw_cube(qbds.untex_qbd, roof, WHITE); // draw all sides; TODO: side texture
+
+	if (!shadow_only) { // draw pavement surface
+		cube_t pavement(bcube);
+		pavement.z2() = get_pavement_zval(); // shift slightly up
+		pavement.expand_by_xy(1.24*get_sidewalk_width()); // right up to the road edge; extends outside of bcube
+		dstate.draw_cube(qbds.qbd, pavement, GRAY, 1, 8.0, 3); // draw top surface only
+	}
 	float const dmax(dist_scale*dstate.draw_tile_dist);
-	if (!bcube.closest_dist_less_than(dstate.camera_bs, 0.5*dmax)) return; // only draw the roof
-	// TODO: add road surface
+	if (!shadow_only && !bcube.closest_dist_less_than(dstate.camera_bs, 0.5*dmax)) return; // only draw the roof and pavement
 	colorRGBA const pillar_color(0.25, 0.25, 1.0); // light blue
 	for (unsigned n = 0; n < 4; ++n) {dstate.draw_cube(qbds.untex_qbd, pillars[n], pillar_color, 1, 0.0, 4);} // skip top and bottom
-	if (!bcube.closest_dist_less_than(dstate.camera_bs, 0.2*dmax)) return; // only draw the roof and pillars
+	if (!shadow_only && !bcube.closest_dist_less_than(dstate.camera_bs, 0.2*dmax)) return; // draw everything but the high detail pump models
+	// TODO: manhole covers
+	// TODO: lights on underside of roof
 	
 	for (gas_pump_t const &pump : pumps) {
 		if (dstate.check_sphere_visible(pump.pos, pump.radius)) {pump.draw(dstate, qbds, dist_scale, shadow_only);}
 	}
+	if (!shadow_only) {bind_default_flat_normal_map();} // in case gas pump models use normal maps
 }
 bool gas_station_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
 	if (!sphere_cube_intersect((pos_ - xlate), radius_, bcube)) return 0; // optimization
