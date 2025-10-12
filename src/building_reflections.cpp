@@ -13,7 +13,7 @@ room_object_t cur_room_mirror;
 shader_t reflection_shader;
 
 extern int display_mode, window_width, window_height, frame_counter;
-extern float CAMERA_RADIUS, NEAR_CLIP, perspective_fovy;
+extern float CAMERA_RADIUS, NEAR_CLIP, perspective_fovy, light_factor;
 extern double camera_zh;
 extern point surface_pos;
 extern vector4d clip_plane;
@@ -305,7 +305,7 @@ class cube_map_reflection_manager_t {
 	unsigned const tsize=512; // 512 is faster; likely dominated by subpixel object drawing (bottles, text, etc.)
 	bool const enable_mipmaps=1; // only needed when blur is enabled
 	unsigned tid=0;
-	float face_dist=0.0, near_plane=0.0, far_plane=0.0;
+	float face_dist=0.0, near_plane=0.0, far_plane=0.0, last_light_factor=0.0;
 	point center; // in camera space
 	point last_update_pos[6]; // one per face
 	cube_t room_bounds;
@@ -447,13 +447,14 @@ public:
 		far_plane = city_bcube.furthest_dist_to_pt(pos_bs); // capture the entire city
 		disable_city_shadow_maps = 1; // shadows don't work because texture_matrix is not valid for the new MVM and are disabled for city buildings and roads
 		int const reflection_pass(REF_PASS_ENABLED | REF_PASS_CUBE_MAP | REF_PASS_CITY_ONLY | REF_PASS_EXT_ONLY);
+		bool const force_update(light_factor != last_light_factor); // update when sun pos/lighting changes
 		int const trans_op_mask(1); // opaque only
 		pre_render();
 
 		for (unsigned dim = 0; dim < 3; ++dim) {
 			for (unsigned dir = 0; dir < 2; ++dir) {
 				unsigned const face_id(2*dim + (dir == 0));
-				if (center == last_update_pos[face_id]) continue; // no pos change; skip this face
+				if (!force_update && center == last_update_pos[face_id]) continue; // no pos change; skip this face
 				set_view_frustum(dim, dir);
 				pre_render_face();
 				setup_sun_moon_light_pos(); // need to update sun/moon pos in eye space with new view dir
@@ -465,6 +466,7 @@ public:
 		restore_state();
 		setup_sun_moon_light_pos(); // restore
 		disable_city_shadow_maps = 0;
+		last_light_factor = light_factor;
 	}
 	void bind(shader_t &s) const {
 		assert(tid); // must have been captured first
