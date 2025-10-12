@@ -8,7 +8,6 @@
 
 extern object_model_loader_t building_obj_model_loader;
 
-colorRGBA get_light_color_temp(float t);
 unsigned get_srack_num_shelves(room_object_t const &c);
 
 

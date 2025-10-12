@@ -5,7 +5,6 @@
 #include "function_registry.h"
 #include "buildings.h"
 
-colorRGBA get_light_color_temp(float t);
 colorRGBA apply_light_color(room_object_t const &o, colorRGBA const &c);
 void add_boxes_to_space(room_object_t const &c, vect_room_object_t &objects, cube_t const &bounds, vect_cube_t &cubes, rand_gen_t &rgen,
 	unsigned num_boxes, float xy_scale, float hmin, float hmax, bool allow_crates, unsigned flags); // from building_room_obj_expand

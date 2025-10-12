@@ -2523,7 +2523,7 @@ void city_obj_placer_t::draw_transparent_objects(draw_state_t &dstate) {
 void city_obj_placer_t::add_lights(vector3d const &xlate, cube_t &lights_bcube) const {
 	skyway.add_lights(xlate, lights_bcube);
 
-	// add sculpture lights if night time
+	// add sculpture and gas station lights if night time
 	if (is_night() && !sculpt_groups.empty() && sculpt_groups.get_bcube().intersects_xy(lights_bcube)) {
 		unsigned start_ix(0);
 
@@ -2540,6 +2540,9 @@ void city_obj_placer_t::add_lights(vector3d const &xlate, cube_t &lights_bcube) 
 				dl_sources.emplace_back(ldist, lpos, lpos, p->color, 0); // omnidirectional point light, no shadows
 			}
 		} // for i
+	}
+	if (is_night() && !gstations.empty() && gass_groups.get_bcube().intersects_xy(lights_bcube)) {
+		for (gas_station_t const &gs : gstations) {gs.add_night_time_lights(xlate, lights_bcube);}
 	}
 }
 

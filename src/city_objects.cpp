@@ -13,6 +13,7 @@ extern double camera_zh;
 extern city_params_t city_params;
 extern object_model_loader_t building_obj_model_loader;
 extern building_params_t global_building_params;
+extern vector<light_source> dl_sources;
 
 unsigned const q2t_ixs[6] = {0,2,1,0,3,2}; // quad => 2 tris
 
@@ -2365,6 +2366,8 @@ vect_cube_t const &parking_solar_t::get_legs() const {
 
 // gas stations
 
+float const GS_LIGHT_COLOR_TEMP = 0.6; // bluish
+
 gas_station_t::gas_station_t(cube_t const &c, bool dim_, bool dir_, unsigned rand_val) : oriented_city_obj_t(c, dim_, dir_) {
 	vector2d const sz(bcube.get_size_xy());
 	float const height(bcube.dz()), width(sz[!dim]);
@@ -2372,7 +2375,7 @@ gas_station_t::gas_station_t(cube_t const &c, bool dim_, bool dir_, unsigned ran
 	roof = bcube;
 	roof.z1() = bcube.z2() - 0.1*height;
 	roof.expand_by_xy(-0.1*width); // roof slightly smaller than footprint/pavement
-	// add pillars
+	// place pillars
 	float const pillar_hwidth(0.02*width), pillar_z2(roof.z1()), pavement_zval(get_pavement_zval());
 
 	for (unsigned n = 0; n < 4; ++n) {
@@ -2400,6 +2403,20 @@ gas_station_t::gas_station_t(cube_t const &c, bool dim_, bool dir_, unsigned ran
 		for (unsigned d = 0; d < 2; ++d) {mh_pos[d] = (pos[d] + ((n & (1<<d)) ? 1.0 : -1.0)*0.32*sz[d]);}
 		manholes.emplace_back(mh_pos, manhole_radius);
 	}
+	// place lights on the underside of the roof
+	float const light_hwidth(0.025*width), light_z1(roof.z1() - 0.02*height);
+	vector2d const roof_sz(roof.get_size_xy());
+
+	for (unsigned n = 0; n < 5; ++n) {
+		cube_t &light(lights[n]);
+		set_cube_zvals(light, light_z1, roof.z1());
+
+		for (unsigned d = 0; d < 2; ++d) {
+			float center(pos[d]);
+			if (n < 4) {center += ((n & (1<<d)) ? 1.0 : -1.0)*0.36*roof_sz[d];} // offset for 4 corner lights
+			set_wall_width(light, center, light_hwidth, d);
+		}
+	}
 }
 void gas_station_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	// Note: most geometry is drawn immediately rather than in multiple passes since there are several materials and likely only one or two visible gas stations
@@ -2417,16 +2434,23 @@ void gas_station_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dis
 	if (!shadow_only && !bcube.closest_dist_less_than(dstate.camera_bs, 0.5*dmax)) return; // only draw the roof and pavement
 	colorRGBA const pillar_color(0.25, 0.25, 1.0); // light blue
 	for (unsigned n = 0; n < 4; ++n) {dstate.draw_cube(qbds.untex_qbd, pillars[n], pillar_color, 1, 0.0, 4);} // skip top and bottom
-	// TODO: lights on underside of roof
-	if (!shadow_only && !bcube.closest_dist_less_than(dstate.camera_bs, 0.2*dmax)) return; // draw everything but the manholes and high detail pump models
+	if (!shadow_only && !bcube.closest_dist_less_than(dstate.camera_bs, 0.2*dmax)) return; // skip small/detailed objects
 	
 	if (!shadow_only && !manholes.empty()) { // draw manholes
 		manhole_t::pre_draw(dstate, shadow_only);
 		for (manhole_t const &mh : manholes) {mh.draw(dstate, qbds, dist_scale, shadow_only);} // immediate draw
 	}
+	if (!shadow_only) { // draw lights
+		colorRGBA const lights_color(get_light_color_temp(GS_LIGHT_COLOR_TEMP)); // bluish
+		quad_batch_draw &lights_qbd(is_night() ? qbds.emissive_qbd : qbds.untex_qbd); // lights on/emissive at night
+		for (unsigned n = 0; n < 5; ++n) {dstate.draw_cube(lights_qbd, lights[n], lights_color, 0, 0.0, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1);} // skip_top=1
+	}
+	dstate.s.add_uniform_int("two_sided_lighting", 1);
+
 	for (gas_pump_t const &pump : pumps) {
 		if (dstate.check_sphere_visible(pump.pos, pump.radius)) {pump.draw(dstate, qbds, dist_scale, shadow_only);}
 	}
+	dstate.s.add_uniform_int("two_sided_lighting", 0);
 	if (!shadow_only) {bind_default_flat_normal_map();} // in case gas pump models use normal maps
 }
 bool gas_station_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
@@ -2451,6 +2475,26 @@ bool gas_station_t::proc_sphere_coll(point &pos_, point const &p_last, float rad
 void gas_station_t::add_ped_colliders(vect_cube_t &colliders) const {
 	for (unsigned n = 0; n < 4; ++n) {colliders.push_back(pillars[n]);}
 	for (gas_pump_t const &pump : pumps) {colliders.push_back(pump.bcube);}
+}
+void gas_station_t::add_night_time_lights(vector3d const &xlate, cube_t &lights_bcube) const {
+	if (!lights_bcube.intersects(bcube)) return; // not contained within the light volume
+	bool const cache_shadow_maps(city_params.num_cars == 0 && city_params.num_peds == 0);
+	float const ldist(1.0*city_params.road_width);
+
+	for (unsigned n = 0; n < 5; ++n) {
+		point const lpos(cube_bot_center(lights[n]));
+		if (!lights_bcube.contains_pt(lpos)) continue;
+		if (!camera_pdu.sphere_visible_test((lpos + xlate), ldist)) continue; // VFC
+		colorRGBA const color(get_light_color_temp(GS_LIGHT_COLOR_TEMP)); // bluish
+		min_eq(lights_bcube.z1(), (lpos.z - ldist));
+		max_eq(lights_bcube.z2(), (lpos.z + 0.1f*ldist)); // pointed down - don't extend as far up
+		dl_sources.emplace_back(ldist, lpos, lpos, color, 0, -plus_z, 0.2, 0.0, 0, 0.0, 0.0); // points down; default radius far clip
+		
+		if (cache_shadow_maps) { // cache shadow maps if there are no dynamic cars or pedestrians (player doesn't cast a shadow)
+			if (cached_smaps[n]) {dl_sources.back().assign_smap_id(uintptr_t(lights+n)/sizeof(void *));} // cache on second frame
+			cached_smaps[n] = 1;
+		} else {cached_smaps[n] = 0;}
+	} // for n
 }
 
 // birds/pigeons
