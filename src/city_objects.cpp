@@ -2366,13 +2366,14 @@ vect_cube_t const &parking_solar_t::get_legs() const {
 // gas stations
 
 gas_station_t::gas_station_t(cube_t const &c, bool dim_, bool dir_, unsigned rand_val) : oriented_city_obj_t(c, dim_, dir_) {
+	vector2d const sz(bcube.get_size_xy());
+	float const height(bcube.dz()), width(sz[!dim]);
 	set_bsphere_from_bcube();
 	roof = bcube;
-	roof.z1() = bcube.z2() - 0.1*bcube.dz();
-	roof.expand_by_xy(-0.1*bcube.get_sz_dim(!dim)); // roof slightly smaller than footprint/pavement
+	roof.z1() = bcube.z2() - 0.1*height;
+	roof.expand_by_xy(-0.1*width); // roof slightly smaller than footprint/pavement
 	// add pillars
-	vector2d const sz(bcube.get_size_xy());
-	float const pillar_hwidth(0.02*sz[!dim]), pillar_z2(roof.z1()), pavement_zval(get_pavement_zval());
+	float const pillar_hwidth(0.02*width), pillar_z2(roof.z1()), pavement_zval(get_pavement_zval());
 
 	for (unsigned n = 0; n < 4; ++n) {
 		cube_t &pillar(pillars[n]);
@@ -2380,37 +2381,49 @@ gas_station_t::gas_station_t(cube_t const &c, bool dim_, bool dir_, unsigned ran
 		for (unsigned d = 0; d < 2; ++d) {set_wall_width(pillar, (pos[d] + ((n & (1<<d)) ? 1.0 : -1.0)*0.16*sz[d]), pillar_hwidth, d);}
 	}
 	// place pumps
-	float const pump_height(0.5*bcube.dz());
+	float const pump_height(0.5*height);
 	pumps.reserve(4);
 
 	for (unsigned n = 0; n < 4; ++n) {
 		cube_t const &pillar(pillars[n]); // next to the pillar
 		point pump_pos(pillar.xc(), pillar.yc(), pavement_zval);
 		bool const pump_dir(pump_pos[!dim] > pos[!dim]);
-		pump_pos[!dim] += (pump_dir ? 1.0 : -1.0)*0.1*sz[!dim]; // offset away from the pillar
+		pump_pos[!dim] += (pump_dir ? 1.0 : -1.0)*0.1*width; // offset away from the pillar
 		pumps.emplace_back(pump_pos, pump_height, dim, dir, rand_val); // select a random model
 	}
-}
-/*static*/ void gas_station_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
-	if (!shadow_only) {select_texture(get_texture_by_name("roads/concrete.jpg"));}
+	// place manholes
+	float const manhole_radius(0.022*width);
+	point mh_pos(0.0, 0.0, (pavement_zval + 0.004*height));
+	manholes.reserve(4);
+
+	for (unsigned n = 0; n < 4; ++n) {
+		for (unsigned d = 0; d < 2; ++d) {mh_pos[d] = (pos[d] + ((n & (1<<d)) ? 1.0 : -1.0)*0.32*sz[d]);}
+		manholes.emplace_back(mh_pos, manhole_radius);
+	}
 }
 void gas_station_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
+	// Note: most geometry is drawn immediately rather than in multiple passes since there are several materials and likely only one or two visible gas stations
 	dstate.draw_cube(qbds.untex_qbd, roof, WHITE); // draw all sides; TODO: side texture
 
 	if (!shadow_only) { // draw pavement surface
 		cube_t pavement(bcube);
 		pavement.z2() = get_pavement_zval(); // shift slightly up
 		pavement.expand_by_xy(1.24*get_sidewalk_width()); // right up to the road edge; extends outside of bcube
+		select_texture(get_texture_by_name("roads/concrete.jpg"));
 		dstate.draw_cube(qbds.qbd, pavement, GRAY, 1, 8.0, 3); // draw top surface only
+		qbds.qbd.draw_and_clear();
 	}
 	float const dmax(dist_scale*dstate.draw_tile_dist);
 	if (!shadow_only && !bcube.closest_dist_less_than(dstate.camera_bs, 0.5*dmax)) return; // only draw the roof and pavement
 	colorRGBA const pillar_color(0.25, 0.25, 1.0); // light blue
 	for (unsigned n = 0; n < 4; ++n) {dstate.draw_cube(qbds.untex_qbd, pillars[n], pillar_color, 1, 0.0, 4);} // skip top and bottom
-	if (!shadow_only && !bcube.closest_dist_less_than(dstate.camera_bs, 0.2*dmax)) return; // draw everything but the high detail pump models
-	// TODO: manhole covers
 	// TODO: lights on underside of roof
+	if (!shadow_only && !bcube.closest_dist_less_than(dstate.camera_bs, 0.2*dmax)) return; // draw everything but the manholes and high detail pump models
 	
+	if (!shadow_only && !manholes.empty()) { // draw manholes
+		manhole_t::pre_draw(dstate, shadow_only);
+		for (manhole_t const &mh : manholes) {mh.draw(dstate, qbds, dist_scale, shadow_only);} // immediate draw
+	}
 	for (gas_pump_t const &pump : pumps) {
 		if (dstate.check_sphere_visible(pump.pos, pump.radius)) {pump.draw(dstate, qbds, dist_scale, shadow_only);}
 	}
