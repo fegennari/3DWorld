@@ -892,11 +892,12 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 	// place commercial sculptures
 	if (plot.is_commercial()) {
 		unsigned const num_sculptures(rgen.rand_uniform(0.0, 2.5)); // 0-2
+		float const spacing(1.5*min_obj_spacing);
 
 		for (unsigned n = 0; n < num_sculptures; ++n) {
 			float const radius(car_length*rgen.rand_uniform(0.15, 0.3));
 			point pos;
-			if (!try_place_obj(plot, blockers, rgen, radius, 1.5*min_obj_spacing, 10, pos, 0)) continue; // 10 tries
+			if (!try_place_obj(plot, blockers, rgen, (radius + spacing), spacing, 20, pos, 0)) continue; // 20 tries
 			cube_t bc(pos);
 			bc.expand_by_xy(radius);
 			bc.z2() += radius*rgen.rand_uniform(2.0, 4.0); // set height
