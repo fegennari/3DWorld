@@ -2383,10 +2383,22 @@ void city_obj_placer_t::next_frame() {
 	next_frame_birds(camera_bs, fticks_stable);
 }
 
-void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_only) {
+void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_only, bool reflection_pass) {
 	float const dist_scale((player_in_basement >= 2) ? 0.1 : 1.0); // small distance scale for player in mall since only cur city is visible through skylight
 	if (!dstate.check_cube_visible(all_objs_bcube, dist_scale)) return; // check bcube
 	dstate.pass_ix = 0;
+	draw_objects(walkways,  walkway_groups,  dstate, 0.25, shadow_only, 1);
+
+	for (dstate.pass_ix = 0; dstate.pass_ix < 2; ++dstate.pass_ix) { // {concrete cube, metal cylinder}
+		bool const is_cylin(dstate.pass_ix > 0);
+		draw_objects(pillars, pillar_groups, dstate, 0.20, shadow_only, is_cylin); // dist_scale=0.25, has_immediate_draw=cylinder
+	}
+	dstate.pass_ix = 0;
+
+	if (reflection_pass) {
+		if (dstate.camera_bs.z > city_zval + skyway.bcube.dz()) {skyway.draw(dstate, *this, shadow_only, reflection_pass);} // draw skyway if player is in the air
+		return; // that's it
+	}
 	draw_objects(benches,   bench_groups,    dstate, 0.16, shadow_only, 0); // dist_scale=0.16, has_immediate_draw=0
 	draw_objects(fhydrants, fhydrant_groups, dstate, 0.06, shadow_only, 1);
 	draw_objects(sstations, sstation_groups, dstate, 0.15, shadow_only, 1);
@@ -2407,7 +2419,6 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(picnics,   picnic_groups,   dstate, 0.14, shadow_only, 1);
 	draw_objects(bb_hoops,  bb_hoop_groups,  dstate, 0.10, shadow_only, 1);
 	draw_objects(chairs,    chair_groups,    dstate, 0.10, shadow_only, 1);
-	draw_objects(walkways,  walkway_groups,  dstate, 0.25, shadow_only, 1);
 	draw_objects(elevators, wwe_groups,      dstate, 0.15, shadow_only, 0); // draw first pass opaque geometry
 	draw_objects(ug_elevs,  uge_groups,      dstate, 0.20, shadow_only, 0);
 	draw_objects(bballs,    bball_groups,    dstate, 0.12, shadow_only, 1);
@@ -2439,10 +2450,6 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	}
 	dstate.s.add_uniform_float("min_alpha", DEF_CITY_MIN_ALPHA); // reset back to default after drawing 3D models such as fire hydrants and substations
 	
-	for (dstate.pass_ix = 0; dstate.pass_ix < 2; ++dstate.pass_ix) { // {concrete cube, metal cylinder}
-		bool const is_cylin(dstate.pass_ix > 0);
-		draw_objects(pillars, pillar_groups, dstate, 0.20, shadow_only, is_cylin); // dist_scale=0.25, has_immediate_draw=cylinder
-	}
 	for (dstate.pass_ix = 0; dstate.pass_ix < 2; ++dstate.pass_ix) { // {cube/city, cylinder/residential}
 		bool const is_cylin(dstate.pass_ix > 0);
 		draw_objects(trashcans, trashcan_groups, dstate, (is_cylin ? 0.08 : 0.10), shadow_only, is_cylin); // has_immediate_draw=cylinder
@@ -2508,7 +2515,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	}
 	dstate.pass_ix = 0; // reset back to 0
 	if (!shadow_only) {bird_poop_manager.draw(dstate.s, dstate.xlate);}
-	skyway.draw(dstate, *this, shadow_only); // must be last due to transparent roof
+	skyway.draw(dstate, *this, shadow_only, reflection_pass); // must be last due to transparent roof
 }
 void city_obj_placer_t::draw_transparent_objects(draw_state_t &dstate) {
 	if (!dstate.check_cube_visible(all_objs_bcube, 1.0)) return; // check bcube, dist_scale=1.0

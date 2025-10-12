@@ -606,7 +606,7 @@ struct moving_walkway_t : public cube_t {
 	cube_t track, sides[2];
 
 	moving_walkway_t(cube_t const &c, bool dim_, bool dir_, float speed_=0.0);
-	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, tile_drawer_t &td, bool shadow_only, bool draw_track, bool draw_sides) const;
+	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, tile_drawer_t &td, bool shadow_only, bool reflection_pass, bool draw_track, bool draw_sides) const;
 	bool proc_sphere_coll(point &pos, point const &p_last, float radius, point const &xlate, vector3d *cnorm) const;
 };
 
@@ -627,7 +627,7 @@ struct skyway_t : public city_obj_t {
 	skyway_t() {}
 	void init(cube_t const &c, bool dim_);
 	// Note: no pre_draw() and post_draw() because there can be only one
-	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_only) const;
+	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_only, bool reflection_pass) const;
 	void draw_glass_surfaces(draw_state_t &dstate, city_draw_qbds_t &qbds) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 	cube_t get_floor_occluder() const;
@@ -807,7 +807,7 @@ public:
 	void add_city_ug_elevator_entrances(vect_ug_elev_info_t const &uges);
 	static bool subdivide_plot_for_residential(cube_t const &plot, vector<road_t> const &roads,
 		float plot_subdiv_sz, unsigned parent_plot_ix, unsigned city_ix, vect_city_zone_t &sub_plots);
-	void draw_detail_objects(draw_state_t &dstate, bool shadow_only);
+	void draw_detail_objects(draw_state_t &dstate, bool shadow_only, bool reflection_pass);
 	void draw_transparent_objects(draw_state_t &dstate);
 	void add_lights(vector3d const &xlate, cube_t &lights_bcube) const;
 	bool proc_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, vector3d *cnorm) const;

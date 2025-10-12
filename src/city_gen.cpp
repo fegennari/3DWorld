@@ -1472,12 +1472,12 @@ public:
 	static void set_road_normal_map  () {select_texture(get_texture_by_name("normal_maps/dirt_normal.jpg", 1), 5);}
 	static void reset_road_normal_map() {bind_default_flat_normal_map();} // no normal map
 
-	void draw(road_draw_state_t &dstate, bool shadow_only, bool is_connector_road) {
-		city_obj_placer.draw_detail_objects(dstate, shadow_only); // always drawn; does its own VFC and distance test
-		if (!empty()) {draw_roads_and_plots(dstate, shadow_only, is_connector_road);}
+	void draw(road_draw_state_t &dstate, bool shadow_only, bool is_connector_road, bool reflection_pass) {
+		city_obj_placer.draw_detail_objects(dstate, shadow_only, reflection_pass); // always drawn; does its own VFC and distance test
+		if (!empty()) {draw_roads_and_plots(dstate, shadow_only, is_connector_road, reflection_pass);}
 		dstate.end_cur_tile(); // once for all tiles, to draw shadow casters and untextured streetlights
 	}
-	void draw_roads_and_plots(road_draw_state_t &dstate, bool shadow_only, bool is_connector_road) {
+	void draw_roads_and_plots(road_draw_state_t &dstate, bool shadow_only, bool is_connector_road, bool reflection_pass) {
 		if (!dstate.check_cube_visible(get_bcube_inc_stoplights_and_streetlights(), 1.0)) return; // VFC/too far
 
 		if (shadow_only) {
@@ -1547,18 +1547,22 @@ public:
 				}
 				if (use_road_normal_maps) {reset_road_normal_map();}
 
-				for (unsigned i = 1; i < 3; ++i) { // intersections (3-way, 4-way)
-					dstate.draw_stoplights_and_street_signs(isecs[i], roads, b->ranges[TYPE_ISEC2 + i], city_id, 0);
+				if (!reflection_pass) { // no stoplight and street sign reflections; bloom flares don't work anyway
+					for (unsigned i = 1; i < 3; ++i) { // intersections (3-way, 4-way)
+						dstate.draw_stoplights_and_street_signs(isecs[i], roads, b->ranges[TYPE_ISEC2 + i], city_id, 0);
+					}
 				}
 				dstate.end_cur_tile();
 			} // for b
 		} // end !shadow_only
+		if (reflection_pass) return; // road skirts, streetlights, bridges, and tunnels not needed for reflections
+
 		if (!is_connector_road) { // draw exterior edges (skirts) of city to cover the gap above the terrain
 			// it's okay to draw under connector roads, and these are vertical and generally have no light or shadows
 			dstate.draw_city_skirt(bcube, shadow_only);
 		}
 		draw_streetlights(dstate, shadow_only, 0);
-			
+		
 		// draw bridges and tunnels; only in connector road network; bridges and tunnels are sparse/uncommon, so don't need to be batched by blocks
 		for (auto b = bridges.begin(); b != bridges.end(); ++b) {
 			dstate.draw_bridge(*b, shadow_only);
@@ -3015,7 +3019,7 @@ public:
 		}
 		return global_rn.have_animations();
 	}
-	void draw(int trans_op_mask, vector3d const &xlate, bool use_dlights, bool shadow_only) { // non-const because dstate/qbd is modified
+	void draw(int trans_op_mask, vector3d const &xlate, bool use_dlights, bool shadow_only, bool reflection_pass) { // non-const because dstate/qbd is modified
 		if (road_networks.empty() && global_rn.empty()) return;
 
 		if (trans_op_mask & 1) { // opaque pass, should be first
@@ -3033,10 +3037,13 @@ public:
 			bool const enable_reflect(enable_cube_map_city(nullptr) && !shadow_only); // only needed for commercial cities, but we're drawing them all here
 			dstate.pre_draw(xlate, use_dlights, shadow_only, 1, 1, enable_reflect); // always_setup_shader=1, enable_occlusion=1
 			assert(dstate.s.is_setup());
-			for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->draw(dstate, shadow_only, 0);}
-			global_rn.draw(dstate, shadow_only, 1); // connector road may have bridges, and therefore needs shadows
-			draw_transmission_lines();
-			draw_wind_turbines(shadow_only);
+			for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->draw(dstate, shadow_only, 0, reflection_pass);}
+
+			if (!reflection_pass) { // these are outside of cities and not reflected
+				global_rn.draw(dstate, shadow_only, 1, reflection_pass); // connector road may have bridges, and therefore needs shadows
+				draw_transmission_lines();
+				draw_wind_turbines(shadow_only);
+			}
 			dstate.post_draw();
 			if (!shadow_only) {enable_dlight_bcubes = 0;}
 			set_std_depth_func();
@@ -3509,7 +3516,7 @@ public:
 		if (!shadow_only && !reflection_pass && (trans_op_mask & 1)) {setup_city_lights(xlate);} // setup lights on first (opaque) non-shadow pass
 		bool const use_dlights(enable_lights()), is_dlight_shadows(shadow_only == 2);
 		// roads don't cast shadows/aren't reflected in water, but stoplights cast shadows
-		if (reflection_pass == 0) {road_gen.draw(trans_op_mask, xlate, use_dlights, (shadow_only != 0));}
+		if (reflection_pass == 0) {road_gen.draw(trans_op_mask, xlate, use_dlights, (shadow_only != 0), reflection_pass);}
 		if (player_in_basement >= 2) return; // cars/people/labels are not even drawn when visible from a mall skylight because they're slower and usually not in view
 		car_manager.draw(trans_op_mask, xlate, use_dlights, (shadow_only != 0), is_dlight_shadows);
 		if  (trans_op_mask & 1) {ped_manager.draw(xlate, use_dlights, (shadow_only != 0), is_dlight_shadows);} // opaque
@@ -3524,7 +3531,7 @@ public:
 		}
 	}
 	void draw_transparent(vector3d const &xlate) {road_gen.draw_transparent(xlate, enable_lights());} // drawn at the very end
-	void draw_roads(int trans_op_mask, vector3d const &xlate) {road_gen.draw(trans_op_mask, xlate, enable_lights(), 0);} // shadow_only=0
+	void draw_roads(int trans_op_mask, vector3d const &xlate, bool reflection_pass) {road_gen.draw(trans_op_mask, xlate, enable_lights(), 0, reflection_pass);} // shadow_only=0
 	void draw_car_in_pspace(car_t &car, shader_t &s, vector3d const &xlate, bool shadow_only, unsigned btype) {car_manager.draw_car_in_pspace(car, s, xlate, shadow_only, btype);}
 	void set_car_model_color(car_t &car, unsigned btype) {car_manager.set_car_model_color(car, btype);}
 	void gen_and_draw_people_in_building(ped_draw_vars_t const &pdv) {ped_manager.gen_and_draw_people_in_building(pdv);}
@@ -3586,7 +3593,7 @@ void get_city_road_bcubes(vect_cube_t &bcubes, bool connector_only) {city_gen.ge
 void get_city_plot_zones(vect_city_zone_t &zones) {city_gen.get_all_plot_zones(zones);}
 void next_city_frame(bool use_threads_2_3) {city_gen.next_frame(use_threads_2_3);}
 void draw_cities(int shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate) {city_gen.draw(shadow_only, reflection_pass, trans_op_mask, xlate);}
-void draw_city_roads(int trans_op_mask, vector3d const &xlate) {city_gen.draw_roads(trans_op_mask, xlate);}
+void draw_city_roads(int trans_op_mask, vector3d const &xlate, bool reflection_pass) {city_gen.draw_roads(trans_op_mask, xlate, reflection_pass);}
 void setup_city_lights(vector3d const &xlate) {city_gen.setup_city_lights(xlate);}
 void add_city_manhole(point const &pos, float radius) {city_gen.add_manhole(pos, radius);}
 

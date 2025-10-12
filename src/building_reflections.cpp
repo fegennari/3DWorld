@@ -457,7 +457,7 @@ public:
 				set_view_frustum(dim, dir);
 				pre_render_face();
 				setup_sun_moon_light_pos(); // need to update sun/moon pos in eye space with new view dir
-				draw_city_roads(trans_op_mask, xlate);
+				draw_city_roads(trans_op_mask, xlate, 1); // reflection_pass=1
 				draw_buildings(0, reflection_pass, xlate);
 				post_render_face(face_id);
 			} // for dir

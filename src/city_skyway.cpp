@@ -5,7 +5,7 @@
 #include "city_objects.h"
 #include "lightmap.h" // for light_source
 
-extern bool player_on_moving_ww, city_lights_custom_bcube;
+extern bool player_on_moving_ww, city_lights_custom_bcube, player_in_skyway;
 extern int animate2, frame_counter;
 extern float fticks;
 extern vector<light_source> dl_sources;
@@ -75,7 +75,7 @@ moving_walkway_t::moving_walkway_t(cube_t const &c, bool dim_, bool dir_, float 
 		sides[d].d[!dim][!d] = track.d[!dim][d] = c.d[!dim][d] + (d ? -1.0 : 1.0)*side_width;
 	}
 }
-void moving_walkway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, tile_drawer_t &td, bool shadow_only, bool draw_track, bool draw_sides) const {
+void moving_walkway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, tile_drawer_t &td, bool shadow_only, bool reflection_pass, bool draw_track, bool draw_sides) const {
 	float const dist_scale = 0.5;
 
 	if (draw_track) { // track
@@ -83,7 +83,7 @@ void moving_walkway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, tile_d
 		float const tex_tyoff(speed*move_time*(dir ? -1.0 : 1.0));
 		draw_long_cube(track, WHITE, dstate, qbds.qbd, td, dist_scale, shadow_only, 1, 0, tscale, 0, dim, tex_tyoff); // skip_bottom=1, skip_top=0
 		
-		if (active && animate2 && !shadow_only) {
+		if (active && animate2 && !shadow_only && !reflection_pass) {
 			move_time += fticks;
 			if (move_time > 600.0*TICKS_PER_SECOND) {move_time = 0.0;} // reset every 10 min. to avoid precision problems
 		}
@@ -247,7 +247,7 @@ void skyway_t::init(cube_t const &c, bool dim_) {
 	}
 }
 
-void skyway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_only) const {
+void skyway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_only, bool reflection_pass) const {
 	float const dist_scale = 0.7;
 	if (!valid || !dstate.check_cube_visible(bcube, dist_scale)) return; // VFC/distance culling
 	//highres_timer_t timer("Draw Skyway"); // 0.03ms below, 0.08ms above, 0.09ms inside, 0.02ms at night (n shadows)
@@ -255,7 +255,7 @@ void skyway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_on
 	if (!shadow_only) {select_texture(get_concrete_tid());}
 	bind_default_flat_normal_map();
 	colorRGBA const ext_color(LT_GRAY);
-	bool const player_above_floor(dstate.camera_bs.z > bcube.z1());
+	bool const skip_interior_geom(dstate.camera_bs.z < bcube.z1() || (reflection_pass && !player_in_skyway)); // skip if player is below the floor
 	float const centerline(bcube.get_center_dim(!dim));
 	float const side_shift(shadow_only ? 0.1*(top.x1() - bcube.x1()) : 0.0); // shrink by 10% of wall width in the shadow pass
 	float const tscale = 16.0;
@@ -267,7 +267,7 @@ void skyway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_on
 		if (shadow_only) {c.expand_in_dim(!dim, (is_end ? 1.0 : -1.0)*side_shift);} // shrink walls slightly to prevent shadow acne
 		draw_long_cube(c, ext_color, dstate, qbds.qbd, td, dist_scale, shadow_only, skip_bottom, 0, tscale, skip_dims);
 	}
-	if (player_above_floor) { // draw steps if player is above the floor
+	if (!skip_interior_geom) { // draw steps if player is above the floor
 		for (cube_t const &c : steps) {
 			if (!dstate.check_cube_visible(c, 0.25*dist_scale)) continue;
 			td.next_cube(c, dstate, qbds.qbd);
@@ -285,15 +285,15 @@ void skyway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_on
 		bind_default_flat_normal_map();
 	}
 	td.end_draw(qbds.qbd);
-	if (!player_above_floor) return; // skip the remainder of the non-visible interior items
+	if (skip_interior_geom) return; // skip the remainder of the non-visible interior items
 	// draw moving walkway sides as untextured
 	dstate.set_untextured_material();
-	for (moving_walkway_t const &mww : mwws) {mww.draw(dstate, qbds, td, shadow_only, 0, 1);} // draw_track=0, draw_sides=1
+	for (moving_walkway_t const &mww : mwws) {mww.draw(dstate, qbds, td, shadow_only, reflection_pass, 0, 1);} // draw_track=0, draw_sides=1
 	td.end_draw(qbds.untex_qbd);
 	
 	if (!shadow_only) { // draw moving walkway moving textured tracks; not needed for the shadow pass
 		select_texture(get_walkway_track_tid());
-		for (moving_walkway_t const &mww : mwws) {mww.draw(dstate, qbds, td, shadow_only, 1, 0);} // draw_track=1, draw_sides=0
+		for (moving_walkway_t const &mww : mwws) {mww.draw(dstate, qbds, td, shadow_only, reflection_pass, 1, 0);} // draw_track=1, draw_sides=0
 		qbds.qbd.draw_and_clear();
 		select_texture(WHITE_TEX);
 	}

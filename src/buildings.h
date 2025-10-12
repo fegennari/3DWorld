@@ -3437,7 +3437,7 @@ vector3d get_nom_car_size();
 bool car_can_fit(cube_t const &c);
 void create_mirror_reflection_if_needed(building_t const *vis_conn_bldg, vector3d const &xlate);
 void register_reflection_update();
-void draw_city_roads(int trans_op_mask, vector3d const &xlate);
+void draw_city_roads(int trans_op_mask, vector3d const &xlate, bool reflection_pass=0);
 void get_closest_dim_dir_xy(cube_t const &inner, cube_t const &outer, bool &dim, bool &dir);
 bool check_city_tline_cube_intersect_xy(cube_t const &c);
 bool connect_to_nearest_transmission_line(point const &pos, float dmax, point &conn_pt);
