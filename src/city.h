@@ -722,7 +722,7 @@ struct pedestrian_t : public person_base_t { // city pedestrian
 	point dest_car_center; // since cars are sorted each frame, we can't find their positions by index so we need to cache them here
 	unsigned plot=0, next_plot=0, dest_plot=0, dest_bldg=0; // Note: can probably be made unsigned short later, though these are global plot and building indices
 	unsigned short city=0, colliding_ped=0;
-	unsigned char stuck_count=0;
+	unsigned char stuck_count=0, reverse_count=0;
 	bool collided=0, ped_coll=0, in_the_road=0, at_crosswalk=0, at_dest=0, has_dest_bldg=0, has_dest_car=0, destroyed=0, follow_player=0, using_nav_grid=0;
 
 	pedestrian_t(float radius_) : person_base_t(radius_) {}

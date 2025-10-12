@@ -1295,9 +1295,11 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 		if (!next_follow_player) {dest_pos = get_dest_pos(plot_bcube, next_plot_bcube, ped_mgr, debug_state);}
 
 		if (dest_pos != pos) {
+			point const prev_target(target_pos);
+			bool const had_target(target_valid());
 			bool update_path(0);
 
-			if (next_follow_player || (target_valid() && dist_xy_less_than(pos, target_pos, radius))) { // update every frame
+			if (next_follow_player || (had_target && dist_xy_less_than(pos, target_pos, radius))) { // update every frame
 				update_path = 1;
 			}
 			// no update mid-path for nav grid unless we collided and possibly moved off the path; optimization, and avoids random path changes
@@ -1310,14 +1312,20 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 			// run only every several frames to reduce runtime; also run when at dest and when close to the current target pos or at the destination;
 			// if path finding fails while following the player (and player is visible), move in a straight line to the player
 			if (at_dest || update_path) {run_path_finding(ped_mgr, plot_bcube, next_plot_bcube, colliders, dest_pos);}
-			else if (target_valid() && !next_follow_player) {dest_pos = target_pos;} // use previous frame's dest if valid
+			else if (had_target && !next_follow_player) {dest_pos = target_pos;} // use previous frame's dest if valid
 			vector3d dest_dir((dest_pos.x - pos.x), (dest_pos.y - pos.y), 0.0); // zval=0, not normalized
 			float const dmag(dest_dir.xy_mag());
 
 			if (speed > TOLERANCE && dmag > TOLERANCE) { // avoid divide-by-zero
 				dest_dir /= dmag; // normalize
+				float const dp(dot_product_xy(dest_dir, vel));
+				
+				if (!using_nav_grid && had_target && update_path && !collided && dp < 0.0 && !dist_xy_less_than(target_pos, prev_target, radius)) {
+					++reverse_count; // sharp angle turn, likely due to path update; count as a reversal
+					if (reverse_count > 5) {using_nav_grid = 1; reverse_count = 0;} // maybe stuck; switch to nav grid when there are too many reversals
+				}
 				// if destination is in exactly the opposite dir, pick an orthogonal direction using our SSN to decide which way deterministically
-				if (dot_product_xy(dest_dir, vel) < -0.99*speed) {dest_dir = cross_product(vel, plus_z*((ssn&1) ? 1.0 : -1.0)).get_norm();}
+				if (dp < -0.99*speed) {dest_dir = cross_product(vel, plus_z*((ssn&1) ? 1.0 : -1.0)).get_norm();}
 				update_velocity_dir(dest_dir, delta_dir); // slowly blend in destination dir (to avoid sharp direction changes)
 			}
 		}
@@ -1419,6 +1427,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 
 void pedestrian_t::register_at_dest() {
 	assert(plot == dest_plot);
+	stuck_count = reverse_count = 0;
 	//cout << get_name() << " at destination " << (has_dest_car ? "car " : (has_dest_bldg ? "building " : "")) << dest_bldg << " in plot " << dest_plot << endl; // placeholder
 }
 
@@ -1682,6 +1691,7 @@ void ped_manager_t::register_ped_new_plot(pedestrian_t const &ped) {
 void ped_manager_t::move_ped_to_next_plot(pedestrian_t &ped) {
 	if (ped.next_plot == ped.plot) return; // already there (error?)
 	ped.plot = ped.next_plot; // assumes plot is adjacent; doesn't actually do any moving, only registers the move
+	ped.reverse_count = 0; // reset for this plot
 	register_ped_new_plot(ped);
 }
 
