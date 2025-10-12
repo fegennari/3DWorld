@@ -77,8 +77,8 @@ struct model_city_obj_t : public oriented_city_obj_t {
 	virtual unsigned get_model_id() const = 0;
 	virtual float get_xy_coll_radius() const {assert(is_cylinder); return 0.25*(bcube.dx() + bcube.dy());} // assume square-ish
 	float get_overlay_radius() const {return model_city_obj_t::get_xy_coll_radius();} // for overhead map mode
-	static void pre_draw (draw_state_t &dstate, bool shadow_only) {disable_hemi_lighting_pre_post(dstate, shadow_only, 0);}
-	static void post_draw(draw_state_t &dstate, bool shadow_only) {disable_hemi_lighting_pre_post(dstate, shadow_only, 1);}
+	static void pre_draw (draw_state_t &dstate, bool shadow_only);
+	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only, animation_state_t *anim_state=nullptr, bool set_smap_tile=0) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };

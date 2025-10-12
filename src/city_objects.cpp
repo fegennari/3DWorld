@@ -89,6 +89,13 @@ model_city_obj_t::model_city_obj_t(point const &pos_, float height, bool dim_, b
 	bcube.expand_by(0.5*expand);
 	set_bsphere_from_bcube(); // recompute bsphere from bcube
 }
+/*static*/ void model_city_obj_t::pre_draw (draw_state_t &dstate, bool shadow_only) {
+	disable_hemi_lighting_pre_post(dstate, shadow_only, 0);
+}
+/*static*/ void model_city_obj_t::post_draw(draw_state_t &dstate, bool shadow_only) {
+	disable_hemi_lighting_pre_post(dstate, shadow_only, 1);
+	if (!shadow_only) {bind_default_flat_normal_map();} // in case it was left enabled by a model material
+}
 void model_city_obj_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only, animation_state_t *anim_state, bool set_smap_tile) const {
 	if (!dstate.is_visible_and_unoccluded(bcube, dist_scale)) return;
 	if (set_smap_tile) {dstate.begin_tile(pos, 1, 1);}
