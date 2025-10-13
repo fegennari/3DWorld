@@ -1474,6 +1474,7 @@ public:
 	static void reset_road_normal_map() {bind_default_flat_normal_map();} // no normal map
 
 	void draw(road_draw_state_t &dstate, bool shadow_only, bool is_connector_road, bool reflection_pass) {
+		if (reflection_pass && !bcube.contains_pt_xy(dstate.camera_bs)) return; // wrong city
 		city_obj_placer.draw_detail_objects(dstate, shadow_only, reflection_pass); // always drawn; does its own VFC and distance test
 		if (!empty()) {draw_roads_and_plots(dstate, shadow_only, is_connector_road, reflection_pass);}
 		dstate.end_cur_tile(); // once for all tiles, to draw shadow casters and untextured streetlights

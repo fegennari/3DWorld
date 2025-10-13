@@ -4479,7 +4479,8 @@ public:
 		glCullFace(swap_front_back ? GL_FRONT : GL_BACK);
 		if (!ext_door_draw.empty()) {glDisable(GL_DEPTH_CLAMP);} // if an exterior door was drawn, make sure we don't clamp the walls over the holes
 
-		// draw front faces of buildings, even in the reflection pass; nearby shadowed buildings will be drawn later
+		// draw front faces of buildings, even in the reflection pass; nearby shadowed buildings will be drawn later;
+		// this appears to be faster than drawing sparsely using bc->grid_by_tile, even in the exterior reflection pass (since we don't have city granularity tiles)
 		for (unsigned ix = 0; ix < max_draw_ix; ++ix) {
 			for (building_creator_t *const bc : bcs) {
 				if (!bc->use_smap_this_frame) {bc->building_draw_vbo.draw_block(s, ix, 0);}
