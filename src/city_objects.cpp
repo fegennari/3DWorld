@@ -29,6 +29,7 @@ colorRGBA get_bed_sheet_color(int tid, rand_gen_t &rgen);
 void invalidate_tile_smap_in_region(cube_t const &region, bool repeat_next_frame);
 void draw_xy_oval(float rx, float ry, int ndiv, point const &pos, float tscale_s, float tscale_t);
 bool get_sphere_poly_int_val(point const &sc, float sr, point const *const points, unsigned npoints, vector3d const &normal, float thickness, float &val, vector3d &cnorm);
+void get_pedestrians_in_area(cube_t const &area, int building_ix, vector<point> &pts);
 
 
 void textured_mat_t::pre_draw(bool shadow_only) {
@@ -2377,13 +2378,17 @@ float const GS_LIGHT_COLOR_TEMP = 0.6; // bluish
 
 gas_station_t::gas_station_t(cube_t const &c, bool dim_, bool dir_, unsigned rand_val) : oriented_city_obj_t(c, dim_, dir_) {
 	vector2d const sz(bcube.get_size_xy());
-	float const height(bcube.dz()), width(sz[!dim]);
-	set_bsphere_from_bcube();
+	float const height(bcube.dz()), width(sz[!dim]), pavement_zval(bcube.z1() + 0.005*bcube.dz());
 	roof = bcube;
 	roof.z1() = bcube.z2() - 0.1*height;
 	roof.expand_by_xy(-0.1*width); // roof slightly smaller than footprint/pavement
+	pavement = bcube;
+	pavement.z2() = pavement_zval; // shift slightly up
+	pavement.expand_by_xy(1.24*get_sidewalk_width()); // right up to the road edge; extends outside of bcube
+	bcube.union_with_cube(pavement); // must include pavement for VFC
+	set_bsphere_from_bcube();
 	// place pillars
-	float const pillar_hwidth(0.02*width), pillar_z2(roof.z1()), pavement_zval(get_pavement_zval());
+	float const pillar_hwidth(0.02*width), pillar_z2(roof.z1());
 
 	for (unsigned n = 0; n < 4; ++n) {
 		cube_t &pillar(pillars[n]);
@@ -2430,18 +2435,15 @@ void gas_station_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dis
 	dstate.draw_cube(qbds.untex_qbd, roof, WHITE); // draw all sides; TODO: side texture
 
 	if (!shadow_only) { // draw pavement surface
-		cube_t pavement(bcube);
-		pavement.z2() = get_pavement_zval(); // shift slightly up
-		pavement.expand_by_xy(1.24*get_sidewalk_width()); // right up to the road edge; extends outside of bcube
 		select_texture(get_texture_by_name("roads/concrete.jpg"));
 		dstate.draw_cube(qbds.qbd, pavement, GRAY, 1, 8.0, 3); // draw top surface only
 		qbds.qbd.draw_and_clear();
 	}
 	float const dmax(dist_scale*dstate.draw_tile_dist);
-	if (!shadow_only && !bcube.closest_dist_less_than(dstate.camera_bs, 0.5*dmax)) return; // only draw the roof and pavement
+	if (!shadow_only && !bcube.closest_dist_less_than(dstate.camera_bs, 0.50*dmax)) return; // only draw the roof and pavement
 	colorRGBA const pillar_color(0.25, 0.25, 1.0); // light blue
 	for (unsigned n = 0; n < 4; ++n) {dstate.draw_cube(qbds.untex_qbd, pillars[n], pillar_color, 1, 0.0, 4);} // skip top and bottom
-	if (!shadow_only && !bcube.closest_dist_less_than(dstate.camera_bs, 0.2*dmax)) return; // skip small/detailed objects
+	if (!shadow_only && !bcube.closest_dist_less_than(dstate.camera_bs, 0.25*dmax)) return; // skip small/detailed objects
 	
 	if (!shadow_only && !manholes.empty()) { // draw manholes
 		manhole_t::pre_draw(dstate, shadow_only);
@@ -2455,7 +2457,7 @@ void gas_station_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dis
 	dstate.s.add_uniform_int("two_sided_lighting", 1);
 
 	for (gas_pump_t const &pump : pumps) {
-		if (dstate.check_sphere_visible(pump.pos, pump.radius)) {pump.draw(dstate, qbds, dist_scale, shadow_only);}
+		if (dstate.is_visible_and_unoccluded(pump.bcube, 0.0)) {pump.draw(dstate, qbds, dist_scale, shadow_only);}
 	}
 	dstate.s.add_uniform_int("two_sided_lighting", 0);
 	if (!shadow_only) {bind_default_flat_normal_map();} // in case gas pump models use normal maps
@@ -2485,9 +2487,18 @@ void gas_station_t::add_ped_colliders(vect_cube_t &colliders) const {
 }
 void gas_station_t::add_night_time_lights(vector3d const &xlate, cube_t &lights_bcube) const {
 	if (!lights_bcube.intersects(bcube)) return; // not contained within the light volume
-	bool const cache_shadow_maps(city_params.num_cars == 0 && city_params.num_peds == 0);
+	bool cache_shadow_maps(/*city_params.num_cars == 0 &&*/1); // don't need to check for cars until they use gas stations
 	float const ldist(1.0*city_params.road_width);
+	cube_t bcube_exp(bcube);
+	bcube_exp.expand_by_xy(0.25*ldist); // slightly larger to include light spread
+	if (!camera_pdu.cube_visible(bcube_exp + xlate)) return; // VFC
 
+	if (cache_shadow_maps && city_params.num_peds > 0) { // check for nearby peds
+		static vector<point> pts;
+		pts.clear();
+		get_pedestrians_in_area(bcube_exp, -1, pts); // no building
+		cache_shadow_maps = pts.empty();
+	}
 	for (unsigned n = 0; n < 5; ++n) {
 		point const lpos(cube_bot_center(lights[n]));
 		if (!lights_bcube.contains_pt(lpos)) continue;

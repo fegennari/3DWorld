@@ -445,14 +445,13 @@ struct gas_pump_t : public multi_model_city_obj_t {
 	gas_pump_t(point const &pos_, float height, bool dim_, bool dir_, unsigned model_sel) : multi_model_city_obj_t(pos_, height, dim_, dir_, OBJ_MODEL_GAS_PUMP, model_sel) {}
 };
 struct gas_station_t : public oriented_city_obj_t {
-	cube_t roof;
+	cube_t roof, pavement;
 	cube_t pillars[4], lights[5];
 	mutable bool cached_smaps[5]={}; // for lights
 	vector<gas_pump_t> pumps;
 	vector<manhole_t> manholes;
 
 	gas_station_t(cube_t const &c, bool dim_, bool dir_, unsigned rand_val);
-	float get_pavement_zval() const {return (bcube.z1() + 0.005*bcube.dz());}
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 	void add_ped_colliders(vect_cube_t &colliders) const;
