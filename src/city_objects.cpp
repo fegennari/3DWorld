@@ -1835,7 +1835,10 @@ void walkway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_sc
 		float const tsx(side_mat.side_tex.get_drawn_tscale_x()), tsy(side_mat.side_tex.get_drawn_tscale_y());
 		unsigned const skip_dims((1 << unsigned(dim)) | 4);
 
-		if (!elevator_cut.is_all_zeros() && (dstate.camera_bs[!dim] < bcube.get_center_dim(!dim)) == elevator_dir) { // camera on same side as elevator, add a cut
+		if (!elevator_cut.is_all_zeros() && (dstate.camera_bs[!dim] < bcube.get_center_dim(!dim)) == elevator_dir &&
+			bcube.closest_dist_less_than(dstate.camera_bs, 0.4*dist_scale*dstate.draw_tile_dist))
+		{
+			// camera on same side as elevator, add a cut
 			float const split_pts[4] = {bcube.d[dim][0], elevator_cut.d[dim][0], elevator_cut.d[dim][1], bcube.d[dim][1]};
 			float const dz(bcube.dz());
 			unsigned const num_floors(round_fp(dz/floor_spacing));
@@ -1856,10 +1859,13 @@ void walkway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_sc
 		qbds.qbd.draw_and_clear(); // must draw here since texture was set dynamically
 		side_mat.side_tex.unset_gl(state);
 	}
-	if (dstate.camera_bs.z < bcube.z1() || dstate.camera_bs.z > bcube.z2()) { // camera not inside walkway zvals - draw top and bottom
+	bool const bot_vis(dstate.camera_bs.z < bcube.z1()), top_vis(dstate.camera_bs.z > bcube.z2());
+
+	if (bot_vis || top_vis) { // camera not inside walkway zvals - draw top and bottom
 		auto const &roof_mat(global_building_params.get_material(roof_mat_ix));
 		roof_mat.roof_tex.set_gl(state);
-		dstate.draw_cube(qbds.qbd, bcube, roof_color, 0, roof_mat.roof_tex.get_drawn_tscale_x(), 3); // top and bottom; skip ends and sides
+		// draw top or bottom; skip ends and sides
+		dstate.draw_cube(qbds.qbd, bcube, roof_color, !bot_vis, roof_mat.roof_tex.get_drawn_tscale_x(), 3, 0, 0, 0, 1.0, 1.0, 1.0, !top_vis);
 		qbds.qbd.draw_and_clear(); // must draw here since texture was set dynamically
 		roof_mat.roof_tex.unset_gl(state);
 	}
