@@ -414,6 +414,9 @@ public:
 		// expand to pick up adjacent rooms whose lights may be visible through open doors or interior windows
 		room_bounds_adj.expand_by_xy((in_mall ? 8.0 : 4.0)*floor_spacing);
 		reflection_light_cube.intersect_with_cube(room_bounds_adj);
+		// we could compute more accurate bounds for parallax correction in the fragment shader;
+		// but this doesn't work for a non-centered and non-square cube map, and using the room center may not be valid (inside elevator, etc.)
+		//cube_t cube_map_bounds(room_bounds); cube_map_bounds.intersect_with_cube(ref_cube); center = cube_map_bounds.get_cube_center();
 		int reflection_pass(REF_PASS_ENABLED | REF_PASS_INT_ONLY | REF_PASS_CUBE_MAP); // set interior only flag to avoid drawing outdoor objects
 		if ( interior_room) {reflection_pass |= REF_PASS_INTERIOR;}
 		if ( is_extb      ) {reflection_pass |= REF_PASS_EXTB    ;}
@@ -439,7 +442,7 @@ public:
 		reflection_clip_cube.set_to_zeros();
 	}
 	void capture_city(point const &pos, cube_t const &city_bcube) {
-		assert(city_bcube.is_strictly_normalized());
+		assert(city_bcube.is_strictly_normalized()); // Note: city_bcube z2 is close to z1 and does not include building height
 		vector3d const xlate(get_tiled_terrain_model_xlate());
 		point const pos_bs(pos - xlate);
 		center    = pos; // in camera space

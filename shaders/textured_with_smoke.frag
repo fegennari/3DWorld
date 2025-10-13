@@ -466,6 +466,8 @@ void main() {
 		vec3 ref_dir   = reflect(view_dir, ws_normal);
 		vec3 boxMin    = cube_map_center - cube_map_near_clip;
 		vec3 boxMax    = cube_map_center + cube_map_near_clip;
+		// apply parallax correction; only works for square and centered cube maps; if non-square, see:
+		// https://interplayoflight.wordpress.com/2013/04/29/parallax-corrected-cubemapping-with-any-cubemap/
 		vec3 firstPlaneIntersect  = (boxMax - vpos) / ref_dir;
 		vec3 secondPlaneIntersect = (boxMin - vpos) / ref_dir;
 		vec3 furthestPlane = max(firstPlaneIntersect, secondPlaneIntersect);
