@@ -2438,7 +2438,11 @@ gas_station_t::gas_station_t(cube_t const &c, bool dim_, bool dir_, unsigned ran
 }
 void gas_station_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	// Note: most geometry is drawn immediately rather than in multiple passes since there are several materials and likely only one or two visible gas stations
-	dstate.draw_cube(qbds.untex_qbd, roof, WHITE); // draw all sides; TODO: side texture
+	dstate.draw_cube(qbds.untex_qbd, roof, WHITE); // draw all sides
+	cube_t roof_edge(roof);
+	roof_edge.expand_by_xy(0.0035*roof.get_sz_dim(dim));
+	roof_edge.expand_in_z(-0.2*roof.dz());
+	dstate.draw_cube(qbds.untex_qbd, roof_edge, RED); // draw all sides
 
 	if (!shadow_only) { // draw pavement surface
 		select_texture(get_texture_by_name("roads/concrete.jpg"));
@@ -2469,7 +2473,9 @@ void gas_station_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dis
 	if (!shadow_only) {bind_default_flat_normal_map();} // in case gas pump models use normal maps
 }
 bool gas_station_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
-	if (!sphere_cube_intersect((pos_ - xlate), radius_, bcube)) return 0; // optimization
+	cube_t coll_bcube(roof); // all the collidable parts are under the roof
+	coll_bcube.z1() = bcube.z1();
+	if (!sphere_cube_intersect((pos_ - xlate), radius_, coll_bcube)) return 0; // optimization
 	float const pos_z(max(pos_.z, p_last.z));
 
 	if (pos_z > roof.z2() - radius_ && pos_z < roof.z2() + 1.1*radius_) { // check for player on roof; must be first
@@ -2512,12 +2518,17 @@ void gas_station_t::add_night_time_lights(vector3d const &xlate, cube_t &lights_
 		colorRGBA const color(get_light_color_temp(GS_LIGHT_COLOR_TEMP)); // bluish
 		min_eq(lights_bcube.z1(), (lpos.z - ldist));
 		max_eq(lights_bcube.z2(), (lpos.z + 0.1f*ldist)); // pointed down - don't extend as far up
-		dl_sources.emplace_back(ldist, lpos, lpos, color, 0, -plus_z, 0.2, 0.0, 0, 0.0, 0.0); // points down; default radius far clip
+		dl_sources.emplace_back(ldist, lpos, lpos, color, 0, -plus_z, 0.2); // points down; default radius far clip
 		
 		if (cache_shadow_maps) { // cache shadow maps if there are no dynamic cars or pedestrians (player doesn't cast a shadow)
 			if (cached_smaps[n]) {dl_sources.back().assign_smap_id(uintptr_t(lights+n)/sizeof(void *));} // cache on second frame
 			cached_smaps[n] = 1;
 		} else {cached_smaps[n] = 0;}
+
+		// add a small unshadowed point light to illuminate the underside of the roof, similar to building room lights
+		point const lpos2(lpos.x, lpos.y, (lpos.z - 2.0*lights[n].dz())); // slightly below the light
+		dl_sources.emplace_back(0.6*ldist, lpos2, lpos2, color, 0, plus_z, 1.0);
+		dl_sources.back().disable_shadows();
 	} // for n
 }
 
