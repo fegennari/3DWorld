@@ -131,7 +131,8 @@ void draw_state_t::end_draw() {
 }
 /*virtual*/ void draw_state_t::post_draw() {
 	end_draw();
-	ensure_shader_active();
+	if (!has_unshadowed()) return;
+	ensure_shader_active(); // select shader with shadow mapping disabled
 	draw_unshadowed();
 	s.end_shader();
 }
@@ -3032,7 +3033,7 @@ public:
 				dstate.set_enable_normal_map(1);
 				bind_default_flat_normal_map(); // set flat normal map texture as the default
 			}
-			if (have_animations()) {enable_animations_for_shader(dstate.s);}
+			if (!reflection_pass && have_animations()) {enable_animations_for_shader(dstate.s);} // needed for birds
 			if (!shadow_only) {enable_dlight_bcubes |= city_lights_custom_bcube;}
 			bool const enable_reflect(enable_cube_map_city(nullptr) && !shadow_only); // only needed for commercial cities, but we're drawing them all here
 			dstate.pre_draw(xlate, use_dlights, shadow_only, 1, 1, enable_reflect); // always_setup_shader=1, enable_occlusion=1

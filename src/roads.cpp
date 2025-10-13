@@ -1155,8 +1155,15 @@ void road_draw_state_t::pre_draw(vector3d const &xlate_, bool use_dlights_, bool
 	ar = city_params.get_road_ar();
 }
 
+bool road_draw_state_t::has_unshadowed() const {
+	for (unsigned i = 0; i < NUM_RD_TIDS; ++i) {
+		if (!qbd_batched[i].empty()) return 1;
+	}
+	return 0;
+}
 void road_draw_state_t::draw_unshadowed() {
 	for (unsigned i = 0; i < NUM_RD_TIDS; ++i) { // only unshadowed blocks
+		if (qbd_batched[i].empty()) continue;
 		road_mat_mgr.set_texture(i);
 		qbd_batched[i].draw_and_clear();
 	}
