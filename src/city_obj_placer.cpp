@@ -2385,7 +2385,8 @@ void city_obj_placer_t::next_frame() {
 }
 
 void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_only, bool reflection_pass) {
-	float const dist_scale((player_in_basement >= 2) ? 0.1 : 1.0); // small distance scale for player in mall since only cur city is visible through skylight
+	// small distance scale for player in mall since only cur city is visible through skylight; lower distance scale for reflections
+	float const dist_scale((player_in_basement >= 2) ? 0.1 : (reflection_pass ? 0.4 : 1.0));
 	if (!dstate.check_cube_visible(all_objs_bcube, dist_scale)) return; // check bcube
 	dstate.pass_ix = 0;
 	draw_objects(walkways,  walkway_groups,  dstate, 0.25, shadow_only, 1);
