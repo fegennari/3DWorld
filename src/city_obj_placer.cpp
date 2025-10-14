@@ -2827,6 +2827,24 @@ void city_obj_placer_t::get_ponds_in_xy_range(cube_t const &range, vect_cube_t &
 	}
 }
 
+gs_reservation_t city_obj_placer_t::reserve_nearest_gas_station_lane(point const &pos) {
+	gs_reservation_t ret;
+	float dmin_sq(0.0);
+
+	for (unsigned i = 0; i < gstations.size(); ++i) {
+		gas_station_t &gs(gstations[i]);
+		point cand_pos; // should the lane be the one closest to pos?
+		int const lane_ix(gs.get_avail_lane(cand_pos)); // Note: can't reserve this lane until we have the closest gas station
+		if (lane_ix < 0) continue; // no lanes available
+		float const dsq(p2p_dist_xy_sq(pos, cand_pos)); // TODO: should we take into account the current direction to avoid backtracking?
+		if (dmin_sq > 0.0 && dmin_sq < dsq) continue; // not closer
+		ret     = gs_reservation_t(i, lane_ix, point(cand_pos.x, cand_pos.y, pos.z));
+		dmin_sq = dsq;
+	} // for i
+	if (ret.valid) {gstations[ret.gs_ix].reserve_lane(ret.lane_ix);}
+	return ret;
+}
+
 bool city_obj_placer_t::update_depth_if_underwater(point const &pos, float &depth) const {
 	if (!all_objs_bcube.contains_pt(pos)) return 0;
 

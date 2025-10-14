@@ -445,11 +445,13 @@ struct gas_pump_t : public multi_model_city_obj_t {
 	gas_pump_t(point const &pos_, float height, bool dim_, bool dir_, unsigned model_sel) : multi_model_city_obj_t(pos_, height, dim_, dir_, OBJ_MODEL_GAS_PUMP, model_sel) {}
 };
 struct gas_station_t : public oriented_city_obj_t {
+	static unsigned const num_pillars=4, num_lights=5, num_lanes=4;
 	cube_t roof, pavement;
-	cube_t pillars[4], lights[5];
-	mutable bool cached_smaps[5]={}; // for lights
+	cube_t pillars[num_pillars], lights[num_lights];
+	mutable bool cached_smaps[num_lights]={}; // for lights
 	vector<gas_pump_t> pumps;
 	vector<manhole_t> manholes;
+	bool lane_reserved[4]={}, out_reserved=0; // for car logic
 
 	gas_station_t(cube_t const &c, bool dim_, bool dir_, unsigned rand_val);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
@@ -457,6 +459,16 @@ struct gas_station_t : public oriented_city_obj_t {
 	bool line_intersect(point const &p1, point const &p2, float &t) const;
 	void add_ped_colliders(vect_cube_t &colliders) const;
 	void add_night_time_lights(vector3d const &xlate, cube_t &lights_bcube) const;
+	int get_avail_lane(point &entrance_pos) const;
+	void reserve_lane(unsigned lane_ix);
+};
+struct gs_reservation_t {
+	bool valid=0;
+	unsigned gs_ix=0, lane_ix=0;
+	point entrance_pos;
+
+	gs_reservation_t() {}
+	gs_reservation_t(unsigned gix, unsigned lix, point const &epos) : valid(1), gs_ix(gix), lane_ix(lix), entrance_pos(epos) {}
 };
 
 struct wind_turbine_t : public model_city_obj_t {
@@ -823,6 +835,7 @@ public:
 	void get_plot_cuts(cube_t const &plot, vect_cube_t &cuts) const;
 	bool cube_int_underground_obj(cube_t const &c) const;
 	void get_ponds_in_xy_range(cube_t const &range, vect_cube_t &pond_bcs) const;
+	gs_reservation_t reserve_nearest_gas_station_lane(point const &pos);
 	bool update_depth_if_underwater(point const &pos, float &depth) const;
 	bool move_to_not_intersect_driveway(point &pos, float radius, bool dim) const;
 	void next_frame();

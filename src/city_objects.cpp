@@ -2396,16 +2396,16 @@ gas_station_t::gas_station_t(cube_t const &c, bool dim_, bool dir_, unsigned ran
 	// place pillars
 	float const pillar_hwidth(0.02*width), pillar_z2(roof.z1());
 
-	for (unsigned n = 0; n < 4; ++n) {
+	for (unsigned n = 0; n < num_pillars; ++n) {
 		cube_t &pillar(pillars[n]);
 		set_cube_zvals(pillar, pavement_zval, pillar_z2);
 		for (unsigned d = 0; d < 2; ++d) {set_wall_width(pillar, (pos[d] + ((n & (1<<d)) ? 1.0 : -1.0)*0.16*sz[d]), pillar_hwidth, d);}
 	}
 	// place pumps
 	float const pump_height(0.5*height);
-	pumps.reserve(4);
+	pumps.reserve(num_pillars);
 
-	for (unsigned n = 0; n < 4; ++n) {
+	for (unsigned n = 0; n < num_pillars; ++n) {
 		cube_t const &pillar(pillars[n]); // next to the pillar
 		point pump_pos(pillar.xc(), pillar.yc(), pavement_zval);
 		bool const pump_dir(pump_pos[!dim] > pos[!dim]);
@@ -2425,7 +2425,7 @@ gas_station_t::gas_station_t(cube_t const &c, bool dim_, bool dir_, unsigned ran
 	float const light_hwidth(0.025*width), light_z1(roof.z1() - 0.02*height);
 	vector2d const roof_sz(roof.get_size_xy());
 
-	for (unsigned n = 0; n < 5; ++n) {
+	for (unsigned n = 0; n < num_lights; ++n) {
 		cube_t &light(lights[n]);
 		set_cube_zvals(light, light_z1, roof.z1());
 
@@ -2452,7 +2452,7 @@ void gas_station_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dis
 	float const dmax(dist_scale*dstate.draw_tile_dist);
 	if (!shadow_only && !bcube.closest_dist_less_than(dstate.camera_bs, 0.50*dmax)) return; // only draw the roof and pavement
 	colorRGBA const pillar_color(0.25, 0.25, 1.0); // light blue
-	for (unsigned n = 0; n < 4; ++n) {dstate.draw_cube(qbds.untex_qbd, pillars[n], pillar_color, 1, 0.0, 4);} // skip top and bottom
+	for (unsigned n = 0; n < num_pillars; ++n) {dstate.draw_cube(qbds.untex_qbd, pillars[n], pillar_color, 1, 0.0, 4);} // skip top and bottom
 	if (!shadow_only && !bcube.closest_dist_less_than(dstate.camera_bs, 0.25*dmax)) return; // skip small/detailed objects
 	
 	if (!shadow_only && !manholes.empty()) { // draw manholes
@@ -2462,7 +2462,7 @@ void gas_station_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dis
 	if (!shadow_only) { // draw lights
 		colorRGBA const lights_color(get_light_color_temp(GS_LIGHT_COLOR_TEMP)); // bluish
 		quad_batch_draw &lights_qbd(is_night() ? qbds.emissive_qbd : qbds.untex_qbd); // lights on/emissive at night
-		for (unsigned n = 0; n < 5; ++n) {dstate.draw_cube(lights_qbd, lights[n], lights_color, 0, 0.0, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1);} // skip_top=1
+		for (unsigned n = 0; n < num_lights; ++n) {dstate.draw_cube(lights_qbd, lights[n], lights_color, 0, 0.0, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1);} // skip_top=1
 	}
 	dstate.s.add_uniform_int("two_sided_lighting", 1);
 
@@ -2485,7 +2485,7 @@ bool gas_station_t::proc_sphere_coll(point &pos_, point const &p_last, float rad
 	}
 	if (sphere_cube_int_update_pos(pos_, radius_, (roof + xlate), p_last, 0, cnorm)) return 1; // needed for ball collision?
 
-	for (unsigned n = 0; n < 4; ++n) {
+	for (unsigned n = 0; n < num_pillars; ++n) {
 		if (sphere_cube_int_update_pos(pos_, radius_, pillars[n], p_last, 0, cnorm)) return 1;
 	}
 	for (gas_pump_t const &pump : pumps) {
@@ -2497,14 +2497,14 @@ bool gas_station_t::line_intersect(point const &p1, point const &p2, float &t) c
 	if (!bcube.line_intersects(p1, p2)) return 0;
 	bool ret(0);
 	ret |= check_line_clip_update_t(p1, p2, t, roof);
-	for (unsigned n = 0; n < 4; ++n) {ret |= check_line_clip_update_t(p1, p2, t, pillars[n]);}
+	for (unsigned n = 0; n < num_pillars; ++n) {ret |= check_line_clip_update_t(p1, p2, t, pillars[n]);}
 	for (gas_pump_t const &pump : pumps) {ret |= check_line_clip_update_t(p1, p2, t, pump.bcube);}
 	return ret;
 }
 void gas_station_t::add_ped_colliders(vect_cube_t &colliders) const {
-	assert(pumps.size() == 4); // pumps paired with pillars
+	assert(pumps.size() == num_pillars); // pumps paired with pillars
 
-	for (unsigned n = 0; n < 4; ++n) { // merge into a single larger cube to improve navigation
+	for (unsigned n = 0; n < num_pillars; ++n) { // merge into a single larger cube to improve navigation
 		colliders.push_back(pillars[n]);
 		colliders.back().union_with_cube(pumps[n].bcube);
 	}
@@ -2523,7 +2523,7 @@ void gas_station_t::add_night_time_lights(vector3d const &xlate, cube_t &lights_
 		get_pedestrians_in_area(bcube_exp, -1, pts); // no building
 		cache_shadow_maps = pts.empty();
 	}
-	for (unsigned n = 0; n < 5; ++n) {
+	for (unsigned n = 0; n < num_lights; ++n) {
 		point const lpos(cube_bot_center(lights[n]));
 		if (!lights_bcube.contains_pt(lpos)) continue;
 		if (!camera_pdu.sphere_visible_test((lpos + xlate), ldist)) continue; // VFC
@@ -2542,6 +2542,21 @@ void gas_station_t::add_night_time_lights(vector3d const &xlate, cube_t &lights_
 		dl_sources.emplace_back(0.6*ldist, lpos2, lpos2, color, 0, plus_z, 1.0);
 		dl_sources.back().disable_shadows();
 	} // for n
+}
+int gas_station_t::get_avail_lane(point &entrance_pos) const {
+	static rand_gen_t rgen;
+	unsigned const first_lane_ix(rgen.rand()); // randomize lane selection
+	
+	for (unsigned i = 0; i < num_lanes; ++i) {
+		unsigned const lix((i + first_lane_ix) % num_lanes);
+		if (!lane_reserved[lix]) return lix;
+	}
+	return -1; // no lanes available
+}
+void gas_station_t::reserve_lane(unsigned lane_ix) {
+	assert(lane_ix < num_lanes);
+	assert(!lane_reserved[lane_ix]); // not reserved by someone else
+	lane_reserved[lane_ix] = 1;
 }
 
 // birds/pigeons
