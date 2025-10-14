@@ -530,6 +530,7 @@ class file_reader_assimp {
 		if (!mesh_bcube.is_all_zeros()) {
 			// if load_animations, the computed bcube will be in the default pose (T-pose for people models), and therefore it won't be usable for VFC
 			// can we transform the bcube or individual vertices by the animated bone transforms efficiently?
+			// this only needs to be done for the extermety bones such as hands, feet, and head of humans or zombies, but we don't know the bone names
 			if (load_animations) {}
 			model.union_bcube_with(mesh_bcube);
 		}
