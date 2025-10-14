@@ -2584,6 +2584,12 @@ sign_t::sign_t(cube_t const &bcube_, bool dim_, bool dir_, string const &text_, 
 		for (unsigned n = 0; n < text_len; ++n) {char_pos[n] *= pos_scale;} // scale so that full width is 1.0
 	}
 }
+void sign_t::set_frame(float fwidth, colorRGBA const &fcolor) {
+	frame_width = fwidth*frame_bcube.dz();
+	frame_color = fcolor;
+	radius     += frame_width;
+	bcube.expand_by(frame_width);
+}
 /*static*/ void sign_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {text_drawer::bind_font_texture();}
 	if (!shadow_only) {enable_blend();}
@@ -2608,6 +2614,19 @@ void sign_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale
 	}
 	else {
 		dstate.draw_cube(qbds.untex_qbd, frame_bcube, bkg_color); // untextured, matte back
+	}
+	if (frame_width > 0.0) { // draw frame
+		cube_t frame_exp(frame_bcube);
+		frame_exp.expand_by(frame_width);
+
+		for (unsigned d = 0; d < 2; ++d) { // {bot, top} and {left, right}
+			cube_t ctb(frame_exp), clr(frame_exp);
+			set_wall_width(ctb, frame_bcube.d[   2][d], frame_width,    2);
+			set_wall_width(clr, frame_bcube.d[!dim][d], frame_width, !dim);
+			set_cube_zvals(clr, frame_bcube.z1(), frame_bcube.z2()); // clip to sign bounds
+			dstate.draw_cube(qbds.untex_qbd, ctb, frame_color, 0, 0.0, 0); // untextured, draw all faces
+			dstate.draw_cube(qbds.untex_qbd, clr, frame_color, 0, 0.0, 4); // untextured, skip top and bottom
+		}
 	}
 	if (!connector.is_all_zeros()) { // draw connector; is this needed for the shadow pass?
 		dstate.draw_cube(qbds.untex_qbd, connector, LT_GRAY, 0, 0.0, (free_standing ? 4 : 0)); // untextured, matte; skip top and bottom if free standing
@@ -2653,6 +2672,11 @@ void sign_t::draw_text(draw_state_t &dstate, city_draw_qbds_t &qbds, string cons
 	bool const front_facing(((camera_pdu.pos[dim] - dstate.xlate[dim]) < text_bcube.d[dim][dir]) ^ dir);
 	if (front_facing  ) {add_sign_text_verts(text_to_draw, text_bcube, dim,  dir, text_color, qbd.verts, first_char_clip_val, last_char_clip_val);} // draw the front side text
 	else if (two_sided) {add_sign_text_verts(text_to_draw, text_bcube, dim, !dir, text_color, qbd.verts, first_char_clip_val, last_char_clip_val);} // draw the back  side text
+}
+bool sign_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
+	if (sphere_cube_int_update_pos(pos_, radius_, (frame_bcube + xlate), p_last, 0, cnorm)) return 1;
+	if (free_standing && !connector.is_all_zeros() && sphere_cube_int_update_pos(pos_, radius_, (connector + xlate), p_last, 0, cnorm)) return 1;
+	return 0;
 }
 
 stopsign_t::stopsign_t(point const &pos_, float height, float width, bool dim_, bool dir_, unsigned num_way_) :

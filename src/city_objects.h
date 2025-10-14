@@ -511,7 +511,8 @@ struct sign_t : public oriented_city_obj_t {
 	bool two_sided, emissive, small, scrolling, free_standing, in_skyway;
 	int sign_id=-1; // >= 0 means this is one of multiple alternatives
 	float draw_zmin=0.0; // for skyway signs
-	colorRGBA bkg_color, text_color;
+	float frame_width=0.0; // relative to height
+	colorRGBA bkg_color, text_color, frame_color;
 	cube_t connector, frame_bcube, text_bcube;
 	string text;
 	vector<float> char_pos; // used for scrolling while drawing
@@ -519,10 +520,12 @@ struct sign_t : public oriented_city_obj_t {
 	sign_t(cube_t const &bcube_, bool dim_, bool dir_, string const &text_, colorRGBA const &bc, colorRGBA const &tc,
 		bool two_sided_=0, bool emissive_=0, bool small_=0, bool scrolling_=0, bool fs=0, bool in_skyway_=0, cube_t const &conn=cube_t());
 	bool is_hospital_sign() const {return (text == "Hospital");}
+	void set_frame(float fwidth, colorRGBA const &fcolor);
 	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 	void draw_text(draw_state_t &dstate, city_draw_qbds_t &qbds, string const &text_to_draw, float first_char_clip_val=0.0, float last_char_clip_val=0.0) const;
+	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };
 
 struct stopsign_t : public oriented_city_obj_t {
