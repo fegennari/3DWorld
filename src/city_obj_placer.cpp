@@ -71,6 +71,7 @@ bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, vect_cu
 	sign_t sign(sign_bcube, !dim, road_dir, text, WHITE, BLACK, 1, 0, 0, 0, 1, 0, pole); // two_sided=1, emissive=0, small=0, scrolling=0, free_standing=1, in_skyway=0
 	sign_groups.add_obj(sign, signs);
 	colliders.push_back(sign_bcube);
+	colliders.back().z1() = plot.z1(); // extend down to the ground
 	return 1;
 }
 

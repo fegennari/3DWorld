@@ -2494,8 +2494,12 @@ bool gas_station_t::proc_sphere_coll(point &pos_, point const &p_last, float rad
 	return 0;
 }
 void gas_station_t::add_ped_colliders(vect_cube_t &colliders) const {
-	for (unsigned n = 0; n < 4; ++n) {colliders.push_back(pillars[n]);}
-	for (gas_pump_t const &pump : pumps) {colliders.push_back(pump.bcube);}
+	assert(pumps.size() == 4); // pumps paired with pillars
+
+	for (unsigned n = 0; n < 4; ++n) { // merge into a single larger cube to improve navigation
+		colliders.push_back(pillars[n]);
+		colliders.back().union_with_cube(pumps[n].bcube);
+	}
 }
 void gas_station_t::add_night_time_lights(vector3d const &xlate, cube_t &lights_bcube) const {
 	if (!lights_bcube.intersects(bcube)) return; // not contained within the light volume
