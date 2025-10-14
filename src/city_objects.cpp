@@ -2493,6 +2493,14 @@ bool gas_station_t::proc_sphere_coll(point &pos_, point const &p_last, float rad
 	}
 	return 0;
 }
+bool gas_station_t::line_intersect(point const &p1, point const &p2, float &t) const { // for bird collision checks, etc.
+	if (!bcube.line_intersects(p1, p2)) return 0;
+	bool ret(0);
+	ret |= check_line_clip_update_t(p1, p2, t, roof);
+	for (unsigned n = 0; n < 4; ++n) {ret |= check_line_clip_update_t(p1, p2, t, pillars[n]);}
+	for (gas_pump_t const &pump : pumps) {ret |= check_line_clip_update_t(p1, p2, t, pump.bcube);}
+	return ret;
+}
 void gas_station_t::add_ped_colliders(vect_cube_t &colliders) const {
 	assert(pumps.size() == 4); // pumps paired with pillars
 

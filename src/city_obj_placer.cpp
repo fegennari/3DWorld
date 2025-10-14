@@ -2664,9 +2664,10 @@ bool city_obj_placer_t::line_intersect(point const &p1, point const &p2, float &
 	check_vector_line_intersect(ug_elevs,  uge_groups,      p1, p2, t, ret);
 	check_vector_line_intersect(dumpsters, dumpster_groups, p1, p2, t, ret);
 	check_vector_line_intersect(picnics,   picnic_groups,   p1, p2, t, ret);
+	for (gas_station_t const &gs : gstations) {ret |= gs.line_intersect(p1, p2, t);}
 	// Note: nothing to do for parking lots, tree_planters, hcaps, manholes, sewers, tcones, sculptures, flowers, pladders, chairs, pdecks, bballs, pfloats,
 	// clines, pigeons, ppaths, or birds;
-	// mboxes, swings, tramps, umbrellas, bikes, plants, ponds, p_solars, gstations, bb_hoops, and skyways are ignored because they're small or not simple shapes
+	// mboxes, swings, tramps, umbrellas, bikes, plants, ponds, p_solars, bb_hoops, and skyways are ignored because they're small or not simple shapes
 	return ret;
 }
 
