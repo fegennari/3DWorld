@@ -2384,17 +2384,17 @@ float const GS_LIGHT_COLOR_TEMP = 0.6; // bluish
 
 gas_station_t::gas_station_t(cube_t const &c, bool dim_, bool dir_, unsigned rand_val) : oriented_city_obj_t(c, dim_, dir_) {
 	vector2d const sz(bcube.get_size_xy());
-	float const height(bcube.dz()), width(sz[!dim]), pavement_zval(bcube.z1() + 0.005*bcube.dz());
+	float const height(bcube.dz()), length(sz[!dim]), pavement_zval(bcube.z1() + 0.005*bcube.dz());
 	roof = bcube;
 	roof.z1() = bcube.z2() - 0.1*height;
-	roof.expand_by_xy(-0.1*width); // roof slightly smaller than footprint/pavement
+	roof.expand_by_xy(-0.1*length); // roof slightly smaller than footprint/pavement
 	pavement = bcube;
 	pavement.z2() = pavement_zval; // shift slightly up
 	pavement.expand_by_xy(1.24*get_sidewalk_width()); // right up to the road edge; extends outside of bcube
 	bcube.union_with_cube(pavement); // must include pavement for VFC
 	set_bsphere_from_bcube();
 	// place pillars
-	float const pillar_hwidth(0.02*width), pillar_z2(roof.z1());
+	float const pillar_hwidth(0.02*length), pillar_z2(roof.z1());
 
 	for (unsigned n = 0; n < num_pillars; ++n) {
 		cube_t &pillar(pillars[n]);
@@ -2409,11 +2409,11 @@ gas_station_t::gas_station_t(cube_t const &c, bool dim_, bool dir_, unsigned ran
 		cube_t const &pillar(pillars[n]); // next to the pillar
 		point pump_pos(pillar.xc(), pillar.yc(), pavement_zval);
 		bool const pump_dir(pump_pos[!dim] > pos[!dim]);
-		pump_pos[!dim] += (pump_dir ? 1.0 : -1.0)*0.1*width; // offset away from the pillar
+		pump_pos[!dim] += (pump_dir ? 1.0 : -1.0)*0.1*length; // offset away from the pillar
 		pumps.emplace_back(pump_pos, pump_height, dim, dir, rand_val); // select a random model
 	}
 	// place manholes
-	float const manhole_radius(0.022*width);
+	float const manhole_radius(0.022*length);
 	point mh_pos(0.0, 0.0, (pavement_zval + 0.004*height));
 	manholes.reserve(4);
 
@@ -2422,7 +2422,7 @@ gas_station_t::gas_station_t(cube_t const &c, bool dim_, bool dir_, unsigned ran
 		manholes.emplace_back(mh_pos, manhole_radius);
 	}
 	// place lights on the underside of the roof
-	float const light_hwidth(0.025*width), light_z1(roof.z1() - 0.02*height);
+	float const light_hwidth(0.025*length), light_z1(roof.z1() - 0.02*height);
 	vector2d const roof_sz(roof.get_size_xy());
 
 	for (unsigned n = 0; n < num_lights; ++n) {
@@ -2543,6 +2543,15 @@ void gas_station_t::add_night_time_lights(vector3d const &xlate, cube_t &lights_
 		dl_sources.back().disable_shadows();
 	} // for n
 }
+// ^
+// ^ LANE3  => V
+// R PUMP PUMP   E
+// O LANE2  => V X
+// A LANE1  => V I
+// D PUMP PUMP   T
+// ^ LANE0  => V
+// + > > ROAD > >
+// here dim is vertical
 int gas_station_t::get_avail_lane(point &entrance_pos) const {
 	static rand_gen_t rgen;
 	unsigned const first_lane_ix(rgen.rand()); // randomize lane selection
@@ -2553,10 +2562,22 @@ int gas_station_t::get_avail_lane(point &entrance_pos) const {
 	}
 	return -1; // no lanes available
 }
-void gas_station_t::reserve_lane(unsigned lane_ix) {
+void gas_station_t::reserve_lane(unsigned lane_ix) { // lane_ix is the lane we want to reserve returned by get_avail_lane()
 	assert(lane_ix < num_lanes);
 	assert(!lane_reserved[lane_ix]); // not reserved by someone else
 	lane_reserved[lane_ix] = 1;
+}
+bool gas_station_t::reserve_output_lane(unsigned cur_lane_ix) { // cur_lane_ix is the input lane we're currently in
+	if (out_reserved) return 0; // someone else has this lane reserved - wait
+	assert(cur_lane_ix < num_lanes);
+	assert(lane_reserved[cur_lane_ix]); // must be in a valid input lane
+	lane_reserved[cur_lane_ix] = 0; // free our input lane
+	out_reserved = 1;
+	return 1;
+}
+void gas_station_t::leave_output_lane() {
+	assert(out_reserved);
+	out_reserved = 0;
 }
 
 // birds/pigeons

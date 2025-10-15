@@ -40,11 +40,12 @@ bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, vect_cu
 	if (!plot.is_commercial())   return 0;
 	if (rgen.rand_float() < 0.5) return 0; // no gas station in this plot
 	bool const cx(rgen.rand_bool()), cy(rgen.rand_bool()), dim(rgen.rand_bool()); // select a random corner of the plot and dim
-	float const gs_width(1.0*city_params.road_width), gs_len(1.2*city_params.road_width), pad_dist(get_min_obj_spacing());
+	vector3d const nom_car_size(city_params.get_nom_car_size()); // {length, width, height}
+	float const gs_width(10.0*nom_car_size.y), gs_len(3.5*nom_car_size.x), pad_dist(get_min_obj_spacing());
 	cube_t gs(plot);
 	gs.z2() += 0.3*city_params.road_width; // set roof height
-	gs.d[0][!cx] = plot.d[0][cx] + (cx ? -1.0 : 1.0)*(dim ? gs_width : gs_len);
-	gs.d[1][!cy] = plot.d[1][cy] + (cy ? -1.0 : 1.0)*(dim ? gs_len : gs_width);
+	gs.d[0][!cx] = plot.d[0][cx] + (cx ? -1.0 : 1.0)*(dim ? gs_len : gs_width);
+	gs.d[1][!cy] = plot.d[1][cy] + (cy ? -1.0 : 1.0)*(dim ? gs_width : gs_len);
 	if (gs.contains_pt_xy(plot.get_cube_center())) return 0; // plot too small? shouldn't fail
 	if (has_bcube_int_xy(gs, bcubes, pad_dist))    return 0; // too close to a building
 	cube_t gs_exp(gs);
@@ -58,17 +59,17 @@ bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, vect_cu
 	bcubes.back().expand_by_xy(pad_dist);
 	gstations.back().add_ped_colliders(colliders);
 	// add price sign near the corner by the intersection
-	float const sign_height(0.25*city_params.road_width), sign_width(0.3*sign_height), sign_depth(0.12*sign_width), sidewalk_width(get_sidewalk_width());
+	float const sign_height(0.26*city_params.road_width), sign_width(0.3*sign_height), sign_depth(0.12*sign_width), sidewalk_width(get_sidewalk_width());
 	cube_t sign_bcube;
 	set_cube_zvals(sign_bcube, plot.z1(), (plot.z1() + sign_height));
-	set_wall_width(sign_bcube, (plot.d[!dim][road_dir] + (road_dir ? -1.0 : 1.0)*(sign_depth + 0.5*sidewalk_width)), 0.5*sign_depth, !dim);
-	set_wall_width(sign_bcube, (plot.d[ dim][dir     ] + (dir      ? -1.0 : 1.0)*(sign_width + 0.5*sidewalk_width)), 0.5*sign_width, dim);
+	set_wall_width(sign_bcube, gs.get_center_dim(!dim), 0.5*sign_width, !dim);
+	set_wall_width(sign_bcube, (gs.d[dim][dir]+ (dir ? 1.0 : -1.0)*sidewalk_width), 0.5*sign_depth, dim);
 	cube_t pole(sign_bcube);
 	pole.z2() = sign_bcube.z1() = sign_bcube.z1() + 0.6*sign_bcube.dz();
-	pole.expand_in_dim( dim, -0.45*sign_width);
-	pole.expand_in_dim(!dim, -0.10*sign_depth);
+	pole.expand_in_dim(!dim, -0.45*sign_width);
+	pole.expand_in_dim( dim, -0.10*sign_depth);
 	string const text("   GAS\nRegular  4.69\nPlus    4.79\nSupreme 4.99");
-	sign_t sign(sign_bcube, !dim, road_dir, text, WHITE, BLACK, 1, 0, 0, 0, 1, 0, pole); // two_sided=1, emissive=0, small=0, scrolling=0, free_standing=1, in_skyway=0
+	sign_t sign(sign_bcube, dim, road_dir, text, WHITE, BLACK, 1, 0, 0, 0, 1, 0, pole); // two_sided=1, emissive=0, small=0, scrolling=0, free_standing=1, in_skyway=0
 	sign.set_frame(0.015, BLUE);
 	sign_groups.add_obj(sign, signs);
 	colliders.push_back(pole); // only add the pole as a collider since the sign itself is above pedestrian heads

@@ -459,8 +459,11 @@ struct gas_station_t : public oriented_city_obj_t {
 	bool line_intersect(point const &p1, point const &p2, float &t) const;
 	void add_ped_colliders(vect_cube_t &colliders) const;
 	void add_night_time_lights(vector3d const &xlate, cube_t &lights_bcube) const;
+	// car lane management logic
 	int get_avail_lane(point &entrance_pos) const;
 	void reserve_lane(unsigned lane_ix);
+	bool reserve_output_lane(unsigned cur_lane_ix);
+	void leave_output_lane();
 };
 struct gs_reservation_t {
 	bool valid=0;
