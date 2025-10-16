@@ -36,7 +36,9 @@ bool are_birds_enabled() {return building_obj_model_loader.is_model_valid(OBJ_MO
 
 
 // Note: copies rgen by value to avoid disrupting the original sequence
-bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, vect_cube_t &bcubes, vect_cube_t &colliders, vect_cube_t const &plot_cuts, rand_gen_t rgen) {
+bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, unsigned plot_ix, vect_cube_t const &plot_cuts,
+	vect_cube_t &bcubes, vect_cube_t &colliders, rand_gen_t rgen)
+{
 	if (!plot.is_commercial())   return 0;
 	if (rgen.rand_float() < 0.5) return 0; // no gas station in this plot
 	bool const cx(rgen.rand_bool()), cy(rgen.rand_bool()), dim(rgen.rand_bool()); // select a random corner of the plot and dim
@@ -53,8 +55,8 @@ bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, vect_cu
 	bool too_close(0);
 	for (gas_station_t const &g : gstations) {too_close |= g.bcube.intersects(gs_exp);}
 	if (too_close) return 0;
-	bool const dir(dim ? cy : cx), road_dir(dim ? cx : cy);
-	gass_groups.add_obj(gas_station_t(gs, dim, dir, rgen.rand()), gstations);
+	bool const dir(dim ? cy : cx), ent_dir(dim ? cx : cy);
+	gass_groups.add_obj(gas_station_t(gs, dim, dir, ent_dir, plot_ix, gstations.size(), rgen.rand()), gstations);
 	bcubes.push_back(gs);
 	bcubes.back().expand_by_xy(pad_dist);
 	gstations.back().add_ped_colliders(colliders);
@@ -62,14 +64,14 @@ bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, vect_cu
 	float const sign_height(0.26*city_params.road_width), sign_width(0.3*sign_height), sign_depth(0.12*sign_width), sidewalk_width(get_sidewalk_width());
 	cube_t sign_bcube;
 	set_cube_zvals(sign_bcube, plot.z1(), (plot.z1() + sign_height));
-	set_wall_width(sign_bcube, gs.get_center_dim(!dim), 0.5*sign_width, !dim);
-	set_wall_width(sign_bcube, (gs.d[dim][dir]+ (dir ? 1.0 : -1.0)*sidewalk_width), 0.5*sign_depth, dim);
+	set_wall_width(sign_bcube, gs.get_center_dim(!dim), 0.5*sign_width, !dim); // center of edge
+	set_wall_width(sign_bcube, (gs.d[dim][dir] + (dir ? 1.0 : -1.0)*sidewalk_width), 0.5*sign_depth, dim); // along the road
 	cube_t pole(sign_bcube);
 	pole.z2() = sign_bcube.z1() = sign_bcube.z1() + 0.6*sign_bcube.dz();
 	pole.expand_in_dim(!dim, -0.45*sign_width);
 	pole.expand_in_dim( dim, -0.10*sign_depth);
 	string const text("   GAS\nRegular  4.69\nPlus    4.79\nSupreme 4.99");
-	sign_t sign(sign_bcube, dim, road_dir, text, WHITE, BLACK, 1, 0, 0, 0, 1, 0, pole); // two_sided=1, emissive=0, small=0, scrolling=0, free_standing=1, in_skyway=0
+	sign_t sign(sign_bcube, dim, dir, text, WHITE, BLACK, 1, 0, 0, 0, 1, 0, pole); // two_sided=1, emissive=0, small=0, scrolling=0, free_standing=1, in_skyway=0
 	sign.set_frame(0.015, BLUE);
 	sign_groups.add_obj(sign, signs);
 	colliders.push_back(pole); // only add the pole as a collider since the sign itself is above pedestrian heads
@@ -2092,7 +2094,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 		size_t const plot_id(i - plots.begin()), buildings_end(blockers.size());
 		assert(plot_id < plot_colliders.size());
 		vect_cube_t &colliders(plot_colliders[plot_id]); // used for pedestrians
-		if (add_gas_stations) {maybe_place_gas_station(*i, blockers, colliders, plot_cuts, rgen);} // add gas stations first, since they're large
+		if (add_gas_stations) {maybe_place_gas_station(*i, plot_id, plot_cuts, blockers, colliders, rgen);} // add gas stations first, since they're large
 		if (add_parking_lots && !i->is_park) {i->has_parking = gen_parking_lots_for_plot(*i, cars, city_id, plot_id, blockers, colliders, plot_cuts, rgen, have_cars);}
 		unsigned const driveways_start(driveways.size());
 		if (is_residential) {add_house_driveways(*i, temp_cubes, detail_rgen, plot_id);}
@@ -2828,14 +2830,14 @@ void city_obj_placer_t::get_ponds_in_xy_range(cube_t const &range, vect_cube_t &
 	}
 }
 
-gs_reservation_t city_obj_placer_t::reserve_nearest_gas_station_lane(point const &pos) {
+gs_reservation_t city_obj_placer_t::reserve_nearest_gas_station_lane(point const &pos, rand_gen_t &rgen) const {
 	gs_reservation_t ret;
 	float dmin_sq(0.0);
 
 	for (unsigned i = 0; i < gstations.size(); ++i) {
-		gas_station_t &gs(gstations[i]);
+		gas_station_t const &gs(gstations[i]);
 		point cand_pos; // should the lane be the one closest to pos?
-		int const lane_ix(gs.get_avail_lane(cand_pos)); // Note: can't reserve this lane until we have the closest gas station
+		int const lane_ix(gs.get_avail_lane(cand_pos, rgen)); // Note: can't reserve this lane until we have the closest gas station
 		if (lane_ix < 0) continue; // no lanes available
 		float const dsq(p2p_dist_xy_sq(pos, cand_pos)); // TODO: should we take into account the current direction to avoid backtracking?
 		if (dmin_sq > 0.0 && dmin_sq < dsq) continue; // not closer

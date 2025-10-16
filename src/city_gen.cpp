@@ -2184,11 +2184,21 @@ private:
 		} // for n
 		return 0; // failed
 	}
+	bool select_avail_gas_station_lane(car_t &car, rand_gen_t &rgen) const {
+		gs_reservation_t const dest(city_obj_placer.reserve_nearest_gas_station_lane(car.get_center(), rgen));
+		if (!dest.valid) return 0;
+		car.dest_gstation = dest.gs_ix; // what about dest.entrance_pos?
+		car.dest_gs_lane  = dest.lane_ix;
+		return 1;
+	}
 public:
 	bool choose_new_car_dest(car_t &car, rand_gen_t &rgen) const {
+		car.dest_driveway = -1; // reset; if nonzero, that may mean this driveway is never used after this point
+		car.dest_gstation = -1;
+		// select a gas station if low on fuel and a slot is open; fuel to be added later
+		//if (select_avail_gas_station_lane(car, rgen)) return 1; // TODO: enable when working
 		// select a driveway if one is available and we're in the dest city; otherwise, select an intersection
 		//assert(car.dest_driveway < 0); // generally okay, but could maybe fail due to floating-point error? better to reset below?
-		car.dest_driveway = -1; // reset; if nonzero, that may mean this driveway is never used after this point
 		if (city_params.cars_use_driveways && car.cur_city == car.dest_city && select_avail_driveway_or_parking_space(car, rgen)) return 1;
 		unsigned const num_tot(isecs[0].size() + isecs[1].size() + isecs[2].size()); // include 2-way, 3-way, and 4-way intersections
 		if (num_tot == 0) return 0; // no isecs to select

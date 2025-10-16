@@ -122,7 +122,7 @@ struct car_base_t { // the part needed for the pedestrian interface (size = 48);
 	bool dim=0, dir=0, stopped_at_light=0, stopped_for_ssign=0; // Note: stopped_at_light also applies to stopped at stop sign
 	uint8_t cur_road_type=TYPE_RSEG, turn_dir=TURN_NONE;
 	uint16_t cur_city=0, cur_road=0, cur_seg=0;
-	short dest_driveway=-1; // -1 is unset
+	short dest_driveway=-1, dest_gstation=-1; // -1 is unset
 	float max_speed=0.0, cur_speed=0.0;
 
 	point get_center() const {return bcube.get_cube_center();}
@@ -146,9 +146,9 @@ struct car_t : public car_base_t, public waiting_obj_t { // size = 136
 	bool is_truck=0, is_police=0, is_ambulance=0, is_emergency=0, entering_city=0, in_tunnel=0, dest_valid=0, destroyed=0;
 	bool in_reverse=0, engine_running=0, is_braking=0, in_parking_lot=0;
 	uint8_t color_id=0, front_car_turn_dir=TURN_UNSPEC, model_id=0;
-	uint16_t dest_city=0, dest_isec=0;
+	uint16_t dest_city=0, dest_isec=0, dest_gs_lane=0;
 	float height=0.0, dz=0.0, rot_z=0.0, turn_val=0.0, waiting_pos=0.0, wake_time=0.0;
-	vector2d park_space_cent;
+	vector2d park_space_cent; // or gas station pos
 	cube_t prev_bcube;
 	car_t const *car_in_front=nullptr;
 
@@ -185,10 +185,12 @@ struct car_t : public car_base_t, public waiting_obj_t { // size = 136
 	void person_in_the_way(bool is_player, bool at_stopsign);
 	bool must_wait_entering_or_crossing_road(vector<car_t> const &cars, driveway_t const &driveway, unsigned road_ix, float lookahead_time) const;
 	bool check_for_road_clear_and_wait(vector<car_t> const &cars, driveway_t const &driveway, unsigned road_ix);
+	// driveway/parking lot/gas station enter/exit
 	bool run_enter_driveway_logic(vector<car_t> const &cars, driveway_t const &driveway);
 	void pull_into_driveway(driveway_t const &driveway, rand_gen_t &rgen);
 	void back_or_pull_out_of_driveway(driveway_t const &driveway);
 	bool exit_driveway_to_road(vector<car_t> const &cars, driveway_t const &driveway, float centerline, unsigned road_ix, rand_gen_t &rgen);
+	// collisions
 	bool check_collision(car_t &c, road_gen_base_t const &road_gen);
 	bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d const &xlate, vector3d *cnorm) const;
 	bool front_intersects_car(car_t const &c) const;
@@ -302,14 +304,15 @@ struct driveway_t : public oriented_cube_t {
 	mutable uint8_t in_use=0; // either reserves the spot, or a car is parked there; 1=temporary, 2=permanent
 	mutable unsigned last_ped_frame=0;
 	unsigned plot_ix=0;
-	int park_lot_ix=-1;
+	int park_lot_ix=-1, gstation_ix=-1; // driveway may be part of a parking lot or gas station
 
 	driveway_t() {}
-	driveway_t(cube_t const &c, bool dim_, bool dir_, unsigned pix, int plix=-1) : oriented_cube_t(c, dim_, dir_), plot_ix(pix), park_lot_ix(plix) {}
+	driveway_t(cube_t const &c, bool dim_, bool dir_, unsigned pix, int plix=-1, int gsix=-1) : oriented_cube_t(c, dim_, dir_), plot_ix(pix), park_lot_ix(plix), gstation_ix(gsix) {}
 	float get_edge_at_road() const {return d[dim][dir];}
 	void mark_ped_this_frame() const;
 	bool has_recent_ped() const;
 	bool is_parking_lot() const {return (park_lot_ix >= 0);}
+	bool is_gas_station() const {return (gstation_ix >= 0);}
 	cube_t extend_across_road() const;
 	tex_range_t get_tex_range(float ar) const;
 };

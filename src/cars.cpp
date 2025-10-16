@@ -276,6 +276,7 @@ bool car_t::check_for_road_clear_and_wait(vector<car_t> const &cars, driveway_t 
 	return 1; // wait for the path to become clear
 }
 
+// driveway/parking lot/gas station enter/exit
 bool car_t::run_enter_driveway_logic(vector<car_t> const &cars, driveway_t const &driveway) {
 	if (dim == driveway.dim) return 0; // car must be on a road perpendicular to the driveway, which may be the road connected to it
 	cube_t const turn_area(driveway.extend_across_road()); // includes driveway and the road adjacent to it
@@ -298,7 +299,7 @@ bool car_t::run_enter_driveway_logic(vector<car_t> const &cars, driveway_t const
 		// change to being in driveway even though we may not be onto the driveway yet (especially when turning left)
 		// leave cur_road unchanged until we pull into the driveway so that cars will stop if we're still in the road (possibly waiting for a ped to move)
 		cur_road_type = TYPE_DRIVEWAY;
-		cur_seg       = dest_driveway; // store driveway index in cur_seg
+		cur_seg       = ((dest_driveway >= 0) ? dest_driveway : dest_gstation); // store driveway or gas station index in cur_seg
 	}
 	return 1;
 }
@@ -336,9 +337,8 @@ void car_t::pull_into_driveway(driveway_t const &driveway, rand_gen_t &rgen) {
 			begin_turn(); // capture car centerline before the turn
 		}
 		else { // transitioned to parked and wait before leaving
-			dest_valid      = 0;
-			dest_driveway   = -1;
-			engine_running  = 0;
+			dest_valid      = engine_running = 0;
+			dest_driveway   = dest_gstation  = -1;
 			park_space_cent = vector2d();
 			sleep(rgen, 60.0); // sleep for 60-120s rather than permanently parking
 		}

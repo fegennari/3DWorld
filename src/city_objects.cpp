@@ -2382,7 +2382,9 @@ vect_cube_t const &parking_solar_t::get_legs() const {
 
 float const GS_LIGHT_COLOR_TEMP = 0.6; // bluish
 
-gas_station_t::gas_station_t(cube_t const &c, bool dim_, bool dir_, unsigned rand_val) : oriented_city_obj_t(c, dim_, dir_) {
+gas_station_t::gas_station_t(cube_t const &c, bool dim_, bool dir_, bool edir, unsigned rand_val, unsigned pix, unsigned gix) :
+	oriented_city_obj_t(c, dim_, dir_), ent_dir(edir), plot_ix(pix), gs_ix(gix)
+{
 	vector2d const sz(bcube.get_size_xy());
 	float const height(bcube.dz()), length(sz[!dim]), pavement_zval(bcube.z1() + 0.005*bcube.dz());
 	roof = bcube;
@@ -2399,7 +2401,11 @@ gas_station_t::gas_station_t(cube_t const &c, bool dim_, bool dir_, unsigned ran
 	for (unsigned n = 0; n < num_pillars; ++n) {
 		cube_t &pillar(pillars[n]);
 		set_cube_zvals(pillar, pavement_zval, pillar_z2);
-		for (unsigned d = 0; d < 2; ++d) {set_wall_width(pillar, (pos[d] + ((n & (1<<d)) ? 1.0 : -1.0)*0.16*sz[d]), pillar_hwidth, d);}
+		
+		for (unsigned d = 0; d < 2; ++d) {
+			float const spacing(((d == dim) ? 0.21 : 0.16)*sz[d]);
+			set_wall_width(pillar, (pos[d] + ((n & (1<<d)) ? 1.0 : -1.0)*spacing), pillar_hwidth, d);
+		}
 	}
 	// place pumps
 	float const pump_height(0.5*height);
@@ -2459,6 +2465,18 @@ void gas_station_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dis
 		manhole_t::pre_draw(dstate, shadow_only);
 		for (manhole_t const &mh : manholes) {mh.draw(dstate, qbds, dist_scale, shadow_only);} // immediate draw
 	}
+	/*if (!shadow_only) { // lane debugging
+		colorRGBA const lane_colors[num_lanes] = {RED, GREEN, BLUE, YELLOW};
+
+		for (unsigned n = 0; n < num_lanes; ++n) {
+			cube_t lane(get_entrance_for_lane(n));
+			lane.z2() += 0.01*bcube.dz();
+			dstate.draw_cube(qbds.untex_qbd, lane, lane_colors[n]);
+		}
+		cube_t lane(get_exit_lane());
+		lane.z2() += 0.01*bcube.dz();
+		dstate.draw_cube(qbds.untex_qbd, lane, CYAN);
+	}*/
 	if (!shadow_only) { // draw lights
 		colorRGBA const lights_color(get_light_color_temp(GS_LIGHT_COLOR_TEMP)); // bluish
 		quad_batch_draw &lights_qbd(is_night() ? qbds.emissive_qbd : qbds.untex_qbd); // lights on/emissive at night
@@ -2544,25 +2562,50 @@ void gas_station_t::add_night_time_lights(vector3d const &xlate, cube_t &lights_
 	} // for n
 }
 // ^
-// ^ LANE3  => V
+// ^ LANE1  => V
 // R PUMP PUMP   E
-// O LANE2  => V X
-// A LANE1  => V I
+// O LANE3  => V X
+// A LANE2  => V I
 // D PUMP PUMP   T
 // ^ LANE0  => V
 // + > > ROAD > >
 // here dim is vertical
-int gas_station_t::get_avail_lane(point &entrance_pos) const {
-	static rand_gen_t rgen;
+driveway_t gas_station_t::get_entrance_for_lane(unsigned lane_ix) const {
+	assert(lane_ix < num_lanes);
+	float const car_width(city_params.get_nom_car_size().y), lane_width(1.6*car_width);
+	cube_t lane(pavement);
+	for (unsigned d = 0; d < 2; ++d) {lane.d[dim][d] = roof.d[dim][d];} // clamp to roof bounds
+	bool const side(lane_ix & 1);
+	
+	if (lane_ix <= 1) { // outer lanes
+		lane.d[dim][!side] = lane.d[dim][side] + (side ? -1.0 : 1.0)*lane_width;
+	}
+	else { // inner lanes
+		lane.d[dim][!side] = pavement.get_center_dim(dim); // lanes 2 and 3 meet at the middle
+		lane.d[dim][ side] = lane.d[dim][!side] + (side ? 1.0 : -1.0)*lane_width;
+	}
+	lane.d[!dim][!ent_dir] = pavement.d[!dim][!ent_dir] + (ent_dir ? 1.0 : -1.0)*2.0*car_width; // clip to exit lane
+	return driveway_t(lane, !dim, ent_dir, plot_ix, -1, gs_ix); // parking_lot_ix=-1
+}
+driveway_t gas_station_t::get_exit_lane() const {
+	float const car_width(city_params.get_nom_car_size().y);
+	cube_t lane(pavement);
+	lane.d[!dim][ent_dir] = pavement.d[!dim][!ent_dir] + (ent_dir ? 1.0 : -1.0)*2.0*car_width; // clip to exit lane
+	return driveway_t(lane, dim, dir, plot_ix, -1, gs_ix); // parking_lot_ix=-1
+}
+int gas_station_t::get_avail_lane(point &entrance_pos, rand_gen_t &rgen) const {
 	unsigned const first_lane_ix(rgen.rand()); // randomize lane selection
 	
 	for (unsigned i = 0; i < num_lanes; ++i) {
 		unsigned const lix((i + first_lane_ix) % num_lanes);
-		if (!lane_reserved[lix]) return lix;
+		if (lane_reserved[lix]) continue;
+		entrance_pos = get_entrance_for_lane(lix).get_cube_center();
+		return lix;
 	}
 	return -1; // no lanes available
 }
-void gas_station_t::reserve_lane(unsigned lane_ix) { // lane_ix is the lane we want to reserve returned by get_avail_lane()
+// these are const even though they modify reserved lane flags, as that doesn't count as modifying the gas station (and is required for the car/city API)
+void gas_station_t::reserve_lane(unsigned lane_ix) const { // lane_ix is the lane we want to reserve returned by get_avail_lane()
 	assert(lane_ix < num_lanes);
 	assert(!lane_reserved[lane_ix]); // not reserved by someone else
 	lane_reserved[lane_ix] = 1;

@@ -446,22 +446,26 @@ struct gas_pump_t : public multi_model_city_obj_t {
 };
 struct gas_station_t : public oriented_city_obj_t {
 	static unsigned const num_pillars=4, num_lights=5, num_lanes=4;
+	bool ent_dir;
+	unsigned plot_ix, gs_ix;
 	cube_t roof, pavement;
 	cube_t pillars[num_pillars], lights[num_lights];
 	mutable bool cached_smaps[num_lights]={}; // for lights
 	vector<gas_pump_t> pumps;
 	vector<manhole_t> manholes;
-	bool lane_reserved[4]={}, out_reserved=0; // for car logic
+	mutable bool lane_reserved[4]={}, out_reserved=0; // for car logic
 
-	gas_station_t(cube_t const &c, bool dim_, bool dir_, unsigned rand_val);
+	gas_station_t(cube_t const &c, bool dim_, bool dir_, bool edir, unsigned pix, unsigned gix, unsigned rand_val);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 	bool line_intersect(point const &p1, point const &p2, float &t) const;
 	void add_ped_colliders(vect_cube_t &colliders) const;
 	void add_night_time_lights(vector3d const &xlate, cube_t &lights_bcube) const;
 	// car lane management logic
-	int get_avail_lane(point &entrance_pos) const;
-	void reserve_lane(unsigned lane_ix);
+	driveway_t get_entrance_for_lane(unsigned lane_ix) const;
+	driveway_t get_exit_lane() const;
+	int get_avail_lane(point &entrance_pos, rand_gen_t &rgen) const;
+	void reserve_lane(unsigned lane_ix) const;
 	bool reserve_output_lane(unsigned cur_lane_ix);
 	void leave_output_lane();
 };
@@ -781,7 +785,7 @@ private:
 	float plot_subdiv_sz=0.0;
 	bool has_residential_plots=0;
 	
-	bool maybe_place_gas_station(road_plot_t const &plot, vect_cube_t &bcubes, vect_cube_t &colliders, vect_cube_t const &plot_cuts, rand_gen_t rgen);
+	bool maybe_place_gas_station(road_plot_t const &plot, unsigned plot_ix, vect_cube_t const &plot_cuts, vect_cube_t &bcubes, vect_cube_t &colliders, rand_gen_t rgen);
 	bool gen_parking_lots_for_plot(cube_t const &full_plot, vector<car_t> &cars, unsigned city_id, unsigned plot_ix,
 		vect_cube_t &bcubes, vect_cube_t &colliders, vect_cube_t const &plot_cuts, rand_gen_t &rgen, bool add_cars);
 	void add_cars_to_driveways(vector<car_t> &cars, vector<road_plot_t> const &plots, vector<vect_cube_t> &plot_colliders, unsigned city_id, rand_gen_t &rgen);
@@ -838,7 +842,7 @@ public:
 	void get_plot_cuts(cube_t const &plot, vect_cube_t &cuts) const;
 	bool cube_int_underground_obj(cube_t const &c) const;
 	void get_ponds_in_xy_range(cube_t const &range, vect_cube_t &pond_bcs) const;
-	gs_reservation_t reserve_nearest_gas_station_lane(point const &pos);
+	gs_reservation_t reserve_nearest_gas_station_lane(point const &pos, rand_gen_t &rgen) const;
 	bool update_depth_if_underwater(point const &pos, float &depth) const;
 	bool move_to_not_intersect_driveway(point &pos, float radius, bool dim) const;
 	void next_frame();
