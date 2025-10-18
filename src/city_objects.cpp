@@ -2403,7 +2403,7 @@ gas_station_t::gas_station_t(cube_t const &c, bool dim_, bool dir_, bool edir, u
 		set_cube_zvals(pillar, pavement_zval, pillar_z2);
 		
 		for (unsigned d = 0; d < 2; ++d) {
-			float const spacing(((d == dim) ? 0.21 : 0.16)*sz[d]);
+			float const spacing(((bool(d) == dim) ? 0.21 : 0.16)*sz[d]);
 			set_wall_width(pillar, (pos[d] + ((n & (1<<d)) ? 1.0 : -1.0)*spacing), pillar_hwidth, d);
 		}
 	}
@@ -2414,8 +2414,7 @@ gas_station_t::gas_station_t(cube_t const &c, bool dim_, bool dir_, bool edir, u
 	for (unsigned n = 0; n < num_pillars; ++n) {
 		cube_t const &pillar(pillars[n]); // next to the pillar
 		point pump_pos(pillar.xc(), pillar.yc(), pavement_zval);
-		bool const pump_dir(pump_pos[!dim] > pos[!dim]);
-		pump_pos[!dim] += (pump_dir ? 1.0 : -1.0)*0.1*length; // offset away from the pillar
+		pump_pos[!dim] += (ent_dir ? 1.0 : -1.0)*0.1*length; // offset away from the pillar toward the entrance
 		pumps.emplace_back(pump_pos, pump_height, dim, dir, rand_val); // select a random model
 	}
 	// place manholes
@@ -2572,7 +2571,8 @@ void gas_station_t::add_night_time_lights(vector3d const &xlate, cube_t &lights_
 // here dim is vertical
 driveway_t gas_station_t::get_entrance_for_lane(unsigned lane_ix) const {
 	assert(lane_ix < num_lanes);
-	float const car_width(city_params.get_nom_car_size().y), lane_width(1.6*car_width);
+	vector3d const car_size(city_params.get_nom_car_size());
+	float const car_width(car_size.y), lane_width(1.6*car_width);
 	cube_t lane(pavement);
 	for (unsigned d = 0; d < 2; ++d) {lane.d[dim][d] = roof.d[dim][d];} // clamp to roof bounds
 	bool const side(lane_ix & 1);
@@ -2585,13 +2585,19 @@ driveway_t gas_station_t::get_entrance_for_lane(unsigned lane_ix) const {
 		lane.d[dim][ side] = lane.d[dim][!side] + (side ? 1.0 : -1.0)*lane_width;
 	}
 	lane.d[!dim][!ent_dir] = pavement.d[!dim][!ent_dir] + (ent_dir ? 1.0 : -1.0)*2.0*car_width; // clip to exit lane
-	return driveway_t(lane, !dim, ent_dir, plot_ix, -1, gs_ix); // parking_lot_ix=-1
+	bool const which_pump((gs_ix + lane_ix) & 1); // random-ish, but consistent per gas station and lane
+	float stop_loc(pumps[which_pump ? 3 : 0].bcube.get_center_dim(!dim)); // select between opposite corner pumps
+	stop_loc += (ent_dir ? -1.0 : 1.0)*0.2*car_size.x; // shift up so that the pump is near the rear of the car
+	return driveway_t(lane, !dim, ent_dir, plot_ix, -1, gs_ix, stop_loc); // parking_lot_ix=-1
 }
 driveway_t gas_station_t::get_exit_lane() const {
 	float const car_width(city_params.get_nom_car_size().y);
 	cube_t lane(pavement);
 	lane.d[!dim][ent_dir] = pavement.d[!dim][!ent_dir] + (ent_dir ? 1.0 : -1.0)*2.0*car_width; // clip to exit lane
 	return driveway_t(lane, dim, dir, plot_ix, -1, gs_ix); // parking_lot_ix=-1
+}
+driveway_t gas_station_t::get_driveway_for_lane(unsigned lane_ix) const {
+	return ((lane_ix == num_lanes) ? get_exit_lane() : get_entrance_for_lane(lane_ix)); // lane_ix=num_lanes is the exit lane
 }
 int gas_station_t::get_avail_lane(point &entrance_pos, rand_gen_t &rgen) const {
 	unsigned const first_lane_ix(rgen.rand()); // randomize lane selection

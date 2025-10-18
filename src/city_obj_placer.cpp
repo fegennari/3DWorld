@@ -2847,6 +2847,10 @@ gs_reservation_t city_obj_placer_t::reserve_nearest_gas_station_lane(point const
 	if (ret.valid) {gstations[ret.gs_ix].reserve_lane(ret.lane_ix);}
 	return ret;
 }
+driveway_t city_obj_placer_t::get_gas_station_driveway(car_t const &car) const {
+	assert(car.dest_gstation >= 0 && car.dest_gstation < gstations.size());
+	return gstations[car.dest_gstation].get_driveway_for_lane(car.dest_gs_lane);
+}
 
 bool city_obj_placer_t::update_depth_if_underwater(point const &pos, float &depth) const {
 	if (!all_objs_bcube.contains_pt(pos)) return 0;

@@ -305,9 +305,11 @@ struct driveway_t : public oriented_cube_t {
 	mutable unsigned last_ped_frame=0;
 	unsigned plot_ix=0;
 	int park_lot_ix=-1, gstation_ix=-1; // driveway may be part of a parking lot or gas station
+	float stop_loc=0.0; // used for gas stations
 
 	driveway_t() {}
-	driveway_t(cube_t const &c, bool dim_, bool dir_, unsigned pix, int plix=-1, int gsix=-1) : oriented_cube_t(c, dim_, dir_), plot_ix(pix), park_lot_ix(plix), gstation_ix(gsix) {}
+	driveway_t(cube_t const &c, bool dim_, bool dir_, unsigned pix, int plix=-1, int gsix=-1, float sl=0.0) :
+		oriented_cube_t(c, dim_, dir_), plot_ix(pix), park_lot_ix(plix), gstation_ix(gsix), stop_loc(sl) {}
 	float get_edge_at_road() const {return d[dim][dir];}
 	void mark_ped_this_frame() const;
 	bool has_recent_ped() const;
@@ -807,7 +809,7 @@ class car_manager_t { // and trucks and helicopters
 	road_isec_t const &get_car_isec(car_t const &car) const;
 	bool check_collision(car_t &c1, car_t &c2) const;
 	void register_car_at_city(car_t const &car);
-	cube_t const &get_car_dest_bcube(car_t const &car, bool isec_only) const;
+	cube_t get_car_dest_bcube(car_t const &car, bool isec_only) const;
 	int get_parking_lot_ix_for_car(car_t const &car) const;
 	void add_car();
 	void get_car_ix_range_for_cube(vector<car_block_t>::const_iterator cb, cube_t const &bc, unsigned &start, unsigned &end) const;

@@ -282,8 +282,8 @@ bool car_t::run_enter_driveway_logic(vector<car_t> const &cars, driveway_t const
 	cube_t const turn_area(driveway.extend_across_road()); // includes driveway and the road adjacent to it
 	if (!bcube.intersects_xy(turn_area)) return 0; // not yet crossed into turn area
 
-	if (turn_dir == TURN_NONE) {
-		if (prev_bcube.intersects_xy(turn_area)) return 0; // not yet turning, and in turn area last frame - too late to turn (likely car was spawned here)
+	if (turn_dir == TURN_NONE) { // not yet turning
+		if (prev_bcube.intersects_xy(turn_area)) return 0; // in turn area last frame - too late to turn (likely car was spawned here)
 		if (driveway.has_recent_ped() && get_wait_time_secs() < 60.0) return 1; // pedestrian(s) in driveway, wait unless we've already been waiting for > 60s
 		bool const dw_turn_dir(dir ^ driveway.dir ^ driveway.dim); // turn into driveway: 0=left, 1=right
 		// if turning left: check for oncoming cars, wait until clear; only done at start of turn - if a car comes along mid-turn then we can't stop
@@ -314,7 +314,6 @@ void car_t::pull_into_driveway(driveway_t const &driveway, rand_gen_t &rgen) {
 			return; // continue to turn
 		}
 		if (dim == driveway.dim) { // in driveway; stop and turn at dest parking space
-			assert(dim == driveway.dim);
 			assert(dir != driveway.dir);
 			car_pos = get_front_end(); // add half length to get front of car
 		}
@@ -324,11 +323,17 @@ void car_t::pull_into_driveway(driveway_t const &driveway, rand_gen_t &rgen) {
 		stop_pos = park_space_cent[dim];
 		set_target_speed(0.4); // 40% of max speed - reset in case we stopped due to a pedestrian in the way
 	}
-	else { // house driveway; stop in the center
+	else { // not a parking lot
 		assert(dim == driveway.dim);
 		assert(dir != driveway.dir);
-		car_pos  = bcube.get_center_dim(dim);
-		stop_pos = driveway.get_center_dim(driveway.dim);
+		car_pos = bcube.get_center_dim(dim);
+
+		if (driveway.is_gas_station()) { // gas station entrance
+			stop_pos = driveway.stop_loc;
+		}
+		else { // house driveway; stop in the center
+			stop_pos = driveway.get_center_dim(driveway.dim);
+		}
 	}
 	if ((car_pos < stop_pos) != dir) { // reached the driveway center or turn point
 		if (driveway.is_parking_lot() && dim == driveway.dim) { // turn into parking space
@@ -378,6 +383,7 @@ bool car_t::exit_driveway_to_road(vector<car_t> const &cars, driveway_t const &d
 		if (in_reverse) {decelerate_fast();} // pause before going forward
 		driveway.in_use = 0; // Note: in_use flag is mutable
 		in_reverse      = in_parking_lot = 0;
+		dest_driveway   = dest_gstation  = -1;
 		return 1; // driveway exit complete, continue forward
 	}
 	set_target_speed(in_reverse ? 0.25 : 0.35); // 25-35% of max speed
@@ -1695,9 +1701,9 @@ void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlig
 						city_bcube.z2() += 10.0*city_params.road_width; // increase height to make it more easily visible
 						draw_cube_verts_only(city_bcube + xlate);
 					}
-					if (sel_car->dest_driveway >= 0) {
+					if (sel_car->dest_driveway >= 0 || sel_car->dest_gstation >= 0) {
 						s.set_cur_color(CYAN);
-						cube_t dw_bcube(get_car_dest_bcube(*sel_car, 0)); // driveway
+						cube_t dw_bcube(get_car_dest_bcube(*sel_car, 0)); // driveway or gas station lane
 						dw_bcube.z2() += 4.0*city_params.road_width; // increase height to make it more easily visible
 						draw_cube_verts_only(dw_bcube + xlate);
 
