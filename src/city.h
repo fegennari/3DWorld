@@ -119,7 +119,7 @@ struct road_gen_base_t {
 
 struct car_base_t { // the part needed for the pedestrian interface (size = 48); could use oriented_cube_t
 	cube_t bcube;
-	bool dim=0, dir=0, stopped_at_light=0, stopped_for_ssign=0; // Note: stopped_at_light also applies to stopped at stop sign
+	bool dim=0, dir=0, stopped_at_light=0, stopped_for_ssign=0, need_gas=0; // Note: stopped_at_light also applies to stopped at stop sign
 	uint8_t cur_road_type=TYPE_RSEG, turn_dir=TURN_NONE;
 	uint16_t cur_city=0, cur_road=0, cur_seg=0;
 	short dest_driveway=-1, dest_gstation=-1; // -1 is unset
@@ -311,6 +311,7 @@ struct driveway_t : public oriented_cube_t {
 	driveway_t(cube_t const &c, bool dim_, bool dir_, unsigned pix, int plix=-1, int gsix=-1, float sl=0.0) :
 		oriented_cube_t(c, dim_, dir_), plot_ix(pix), park_lot_ix(plix), gstation_ix(gsix), stop_loc(sl) {}
 	float get_edge_at_road() const {return d[dim][dir];}
+	float get_centerline  () const {return get_center_dim(!dim);}
 	void mark_ped_this_frame() const;
 	bool has_recent_ped() const;
 	bool is_parking_lot() const {return (park_lot_ix >= 0);}

@@ -2616,7 +2616,7 @@ void gas_station_t::reserve_lane(unsigned lane_ix) const { // lane_ix is the lan
 	assert(!lane_reserved[lane_ix]); // not reserved by someone else
 	lane_reserved[lane_ix] = 1;
 }
-bool gas_station_t::reserve_output_lane(unsigned cur_lane_ix) { // cur_lane_ix is the input lane we're currently in
+bool gas_station_t::reserve_output_lane(unsigned cur_lane_ix) const { // cur_lane_ix is the input lane we're currently in
 	if (out_reserved) return 0; // someone else has this lane reserved - wait
 	assert(cur_lane_ix < num_lanes);
 	assert(lane_reserved[cur_lane_ix]); // must be in a valid input lane
@@ -2624,7 +2624,7 @@ bool gas_station_t::reserve_output_lane(unsigned cur_lane_ix) { // cur_lane_ix i
 	out_reserved = 1;
 	return 1;
 }
-void gas_station_t::leave_output_lane() {
+void gas_station_t::leave_output_lane() const {
 	assert(out_reserved);
 	out_reserved = 0;
 }

@@ -110,7 +110,7 @@ string car_t::str() const {
 
 string car_t::label_str() const {
 	std::ostringstream oss;
-	oss << TXT(dim) << TXTn(dir) << TXT(cur_city) << TXT(cur_road) << TXTn(cur_seg) << TXT(dz) << TXTn(turn_val) << TXT(max_speed) << TXTn(cur_speed)
+	oss << TXT(dim) << TXTn(dir) << TXT(cur_city) << TXT(cur_road) << TXTn(cur_seg) << TXT(dz) << TXTi(turn_dir) << TXTn(turn_val) << TXT(max_speed) << TXTn(cur_speed)
 		<< "sleep=" << is_sleeping() << " wait_time=" << get_wait_time_secs() << "\n" << TXTin(cur_road_type)
 		<< TXTn(stopped_at_light) << TXTn(in_isect()) << "cars_in_front=" << count_cars_in_front() << "\n" << TXT(dest_city) << TXTn(dest_isec);
 	oss << "car=" << this << " car_in_front=" << car_in_front << endl; // debugging
@@ -292,8 +292,7 @@ bool car_t::run_enter_driveway_logic(vector<car_t> const &cars, driveway_t const
 		begin_turn(); // capture car centerline before the turn
 	}
 	set_target_speed(0.4); // 40% of max speed
-	float const centerline(driveway.get_center_dim(!driveway.dim));
-	maybe_apply_turn(centerline, 1); // for_driveway=1
+	maybe_apply_turn(driveway.get_centerline(), 1); // for_driveway=1
 
 	if (turn_dir == TURN_NONE) { // turn has been completed
 		// change to being in driveway even though we may not be onto the driveway yet (especially when turning left)
@@ -324,16 +323,16 @@ void car_t::pull_into_driveway(driveway_t const &driveway, rand_gen_t &rgen) {
 		set_target_speed(0.4); // 40% of max speed - reset in case we stopped due to a pedestrian in the way
 	}
 	else { // not a parking lot
-		assert(dim == driveway.dim);
-		assert(dir != driveway.dir);
-		car_pos = bcube.get_center_dim(dim);
-
 		if (driveway.is_gas_station()) { // gas station entrance
-			stop_pos = driveway.stop_loc;
+			if (!need_gas) return; // continue moving until it's time to turn
+			stop_pos = driveway.stop_loc; // not yet stopped, continue to gas pump
 		}
 		else { // house driveway; stop in the center
 			stop_pos = driveway.get_center_dim(driveway.dim);
 		}
+		assert(dim == driveway.dim);
+		assert(dir != driveway.dir);
+		car_pos = bcube.get_center_dim(dim);
 	}
 	if ((car_pos < stop_pos) != dir) { // reached the driveway center or turn point
 		if (driveway.is_parking_lot() && dim == driveway.dim) { // turn into parking space
@@ -343,7 +342,8 @@ void car_t::pull_into_driveway(driveway_t const &driveway, rand_gen_t &rgen) {
 		}
 		else { // transitioned to parked and wait before leaving
 			dest_valid      = engine_running = 0;
-			dest_driveway   = dest_gstation  = -1;
+			dest_driveway   = -1;
+			need_gas        = 0; // if this was a gas station, we now have our gas
 			park_space_cent = vector2d();
 			sleep(rgen, 60.0); // sleep for 60-120s rather than permanently parking
 		}
@@ -355,7 +355,7 @@ void car_t::back_or_pull_out_of_driveway(driveway_t const &driveway) {
 		bool const dw_turn_dir(dir ^ driveway.dir ^ dim);
 		in_reverse = 1; // always back out, since we pulled in
 		turn_dir   = (dw_turn_dir ? (uint8_t)TURN_RIGHT : (uint8_t)TURN_LEFT); // Note: if we turn the other way, we need to back out of the driveway
-		if (maybe_apply_turn(driveway.get_center_dim(dim), 1)) return;
+		if (maybe_apply_turn(driveway.get_centerline(), 1)) return;
 	}
 	else { // normal driveway or parking lot exit driveway
 		assert(dim == driveway.dim);
@@ -382,7 +382,7 @@ bool car_t::exit_driveway_to_road(vector<car_t> const &cars, driveway_t const &d
 	if (is_turning && turn_dir == TURN_NONE) { // turn has been completed
 		if (in_reverse) {decelerate_fast();} // pause before going forward
 		driveway.in_use = 0; // Note: in_use flag is mutable
-		in_reverse      = in_parking_lot = 0;
+		in_reverse      = in_parking_lot =  0;
 		dest_driveway   = dest_gstation  = -1;
 		return 1; // driveway exit complete, continue forward
 	}

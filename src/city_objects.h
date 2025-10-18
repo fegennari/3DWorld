@@ -467,8 +467,8 @@ struct gas_station_t : public oriented_city_obj_t {
 	driveway_t get_driveway_for_lane(unsigned lane_ix) const;
 	int get_avail_lane(point &entrance_pos, rand_gen_t &rgen) const;
 	void reserve_lane(unsigned lane_ix) const;
-	bool reserve_output_lane(unsigned cur_lane_ix);
-	void leave_output_lane();
+	bool reserve_output_lane(unsigned cur_lane_ix) const;
+	void leave_output_lane() const;
 };
 struct gs_reservation_t {
 	bool valid=0;
@@ -844,7 +844,9 @@ public:
 	bool cube_int_underground_obj(cube_t const &c) const;
 	void get_ponds_in_xy_range(cube_t const &range, vect_cube_t &pond_bcs) const;
 	gs_reservation_t reserve_nearest_gas_station_lane(point const &pos, rand_gen_t &rgen) const;
-	driveway_t get_gas_station_driveway(car_t const &car) const;
+	driveway_t get_gas_station_driveway(car_t const &car, bool for_exit_lane=0) const;
+	bool reserve_gas_station_exit_lane(car_t const &car) const;
+	void leave_gas_station(unsigned gsix) const;
 	bool update_depth_if_underwater(point const &pos, float &depth) const;
 	bool move_to_not_intersect_driveway(point &pos, float radius, bool dim) const;
 	void next_frame();
