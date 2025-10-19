@@ -2469,13 +2469,14 @@ void gas_station_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dis
 		quad_batch_draw &lights_qbd(is_night() ? qbds.emissive_qbd : qbds.untex_qbd); // lights on/emissive at night
 		for (unsigned n = 0; n < num_lights; ++n) {dstate.draw_cube(lights_qbd, lights[n], lights_color, 0, 0.0, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1);} // skip_top=1
 	}
+	model_city_obj_t::pre_draw(dstate, shadow_only);
 	dstate.s.add_uniform_int("two_sided_lighting", 1);
 
 	for (gas_pump_t const &pump : pumps) {
 		if (dstate.is_visible_and_unoccluded(pump.bcube, 0.0)) {pump.draw(dstate, qbds, dist_scale, shadow_only);}
 	}
 	dstate.s.add_uniform_int("two_sided_lighting", 0);
-	if (!shadow_only) {bind_default_flat_normal_map();} // in case gas pump models use normal maps
+	model_city_obj_t::post_draw(dstate, shadow_only);
 }
 bool gas_station_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
 	cube_t coll_bcube(roof); // all the collidable parts are under the roof
