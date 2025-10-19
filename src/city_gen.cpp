@@ -1608,8 +1608,10 @@ public:
 		for (unsigned n = 0; n < 10; ++n) { // make 10 tries
 			unsigned const seg_ix(rgen.rand()%segs.size());
 			road_seg_t const &seg(segs[seg_ix]); // chose a random segment
+			unsigned const rand_val(rgen.rand());
 			car.dim = seg.dim;
-			car.dir = rgen.rand_bool();
+			car.dir = (rand_val & 1);
+			car.headlight_color = (rand_val >> 1);
 			car.choose_max_speed(rgen);
 			car.fuel_amt = rgen.rand_uniform(0.1, 0.9); // start with a random amount of fuel, but not full or empty
 			car.cur_road = seg.road_ix;

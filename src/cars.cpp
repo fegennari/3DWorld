@@ -91,7 +91,7 @@ void car_t::destroy() { // Note: not calling create_explosion(), so no chain rea
 		gen_smoke(exp_pos, 1.0, rgen.rand_uniform(0.4, 0.6));
 	} // for n
 	gen_delayed_from_player_sound(SOUND_EXPLODE, pos, 1.0);
-	destroyed = 1;
+	destroyed      = 1;
 	engine_running = 0;
 	park();
 }
@@ -144,6 +144,7 @@ void car_t::set_target_speed(float speed_factor) {
 	float const target_speed(speed_factor*max_speed);
 	if      (cur_speed < 0.9*target_speed) {maybe_accelerate();}
 	else if (cur_speed > 1.1*target_speed) {decelerate();}
+	if (speed_factor > 0.0) {engine_running = 1;} // start up if stopped
 }
 
 void car_t::maybe_accelerate(float mult) {
@@ -600,7 +601,7 @@ void draw_and_clear_blur_qbd(quad_batch_draw &qbd) {
 /*static*/ float car_draw_state_t::get_headlight_dist() {return 3.5*city_params.road_width;} // distance headlights will shine
 
 colorRGBA car_draw_state_t::get_headlight_color(car_t const &car) const {
-	return colorRGBA(1.0, 1.0, (1.0 + 0.8*(fract(1000.0*car.max_speed) - 0.5)), 1.0); // slight yellow-blue tinting using max_speed as a hash
+	return colorRGBA(1.0, 1.0, (1.0 + 0.8*(fract(car.headlight_color/255.0) - 0.5)), 1.0); // slight yellow-blue tinting
 }
 
 void car_draw_state_t::pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only_) {
@@ -800,8 +801,8 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows) { // N
 		}
 		ao_qbd.add_quad_pts(pao, colorRGBA(0, 0, 0, 0.9), plus_z);
 	}
-	if (dist_val > 0.3)  return; // to far - no lights to draw
-	if (car.is_parked()) return; // no lights when parked
+	if (dist_val > 0.3) return; // to far - no lights to draw
+	if (car.is_parked() && !car.engine_running) return; // no lights when parked
 	vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
 	unsigned const lr_xor(((camera_pdu.pos[!dim] - xlate[!dim]) - center[!dim]) < 0.0f);
 	bool const brake_lights_on(car.is_almost_stopped() || car.stopped_at_light || car.is_braking), headlights_on(car.headlights_on());

@@ -54,7 +54,7 @@ bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, unsigne
 	gs_exp.expand_by_xy(2.0*(plot.dx() + plot.dy())); // don't place within 4 plot widths of another gas station
 	bool too_close(0);
 	for (gas_station_t const &g : gstations) {too_close |= g.bcube.intersects(gs_exp);}
-	if (too_close) return 0;
+	if (too_close) return 0; // too close to another gas station
 	bool const dir(dim ? cy : cx), ent_dir(dim ? cx : cy);
 	gass_groups.add_obj(gas_station_t(gs, dim, dir, ent_dir, plot_ix, gstations.size(), rgen.rand()), gstations);
 	bcubes.push_back(gs);
