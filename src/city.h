@@ -147,7 +147,7 @@ struct car_t : public car_base_t, public waiting_obj_t { // size = 136
 	bool in_reverse=0, engine_running=0, is_braking=0, in_parking_lot=0;
 	uint8_t color_id=0, front_car_turn_dir=TURN_UNSPEC, model_id=0;
 	uint16_t dest_city=0, dest_isec=0, dest_gs_lane=0;
-	float height=0.0, dz=0.0, rot_z=0.0, turn_val=0.0, waiting_pos=0.0, wake_time=0.0;
+	float height=0.0, dz=0.0, rot_z=0.0, turn_val=0.0, waiting_pos=0.0, wake_time=0.0, fuel_amt=0.0;
 	vector2d park_space_cent; // or gas station pos
 	cube_t prev_bcube;
 	car_t const *car_in_front=nullptr;
@@ -155,6 +155,7 @@ struct car_t : public car_base_t, public waiting_obj_t { // size = 136
 	void set_bcube(point const &center, vector3d const &sz);
 	bool is_valid   () const {return !bcube.is_all_zeros();}
 	bool is_sleeping() const {return (wake_time > 0.0);}
+	bool in_gs_exit_lane() const;
 	float get_max_lookahead_dist() const;
 	bool headlights_on() const;
 	float get_turn_rot_z(float dist_to_turn) const;

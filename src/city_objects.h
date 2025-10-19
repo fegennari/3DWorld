@@ -843,8 +843,8 @@ public:
 	void get_plot_cuts(cube_t const &plot, vect_cube_t &cuts) const;
 	bool cube_int_underground_obj(cube_t const &c) const;
 	void get_ponds_in_xy_range(cube_t const &range, vect_cube_t &pond_bcs) const;
-	gs_reservation_t reserve_nearest_gas_station_lane(point const &pos, rand_gen_t &rgen) const;
-	driveway_t get_gas_station_driveway(car_t const &car, bool for_exit_lane=0) const;
+	gs_reservation_t reserve_nearest_gas_station_lane(point const &pos, rand_gen_t &rgen, float max_dist=0.0) const;
+	driveway_t get_gas_station_driveway(car_t const &car) const;
 	bool reserve_gas_station_exit_lane(car_t const &car) const;
 	void leave_gas_station(unsigned gsix) const;
 	bool update_depth_if_underwater(point const &pos, float &depth) const;

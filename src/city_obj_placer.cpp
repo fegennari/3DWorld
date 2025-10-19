@@ -2830,16 +2830,16 @@ void city_obj_placer_t::get_ponds_in_xy_range(cube_t const &range, vect_cube_t &
 	}
 }
 
-gs_reservation_t city_obj_placer_t::reserve_nearest_gas_station_lane(point const &pos, rand_gen_t &rgen) const {
+gs_reservation_t city_obj_placer_t::reserve_nearest_gas_station_lane(point const &pos, rand_gen_t &rgen, float max_dist) const {
 	gs_reservation_t ret;
-	float dmin_sq(0.0);
+	float dmin_sq(max_dist*max_dist); // Note: max_dist=0.0 is unlimited
 
 	for (unsigned i = 0; i < gstations.size(); ++i) {
 		gas_station_t const &gs(gstations[i]);
 		point cand_pos; // should the lane be the one closest to pos?
 		int const lane_ix(gs.get_avail_lane(cand_pos, rgen)); // Note: can't reserve this lane until we have the closest gas station
 		if (lane_ix < 0) continue; // no lanes available
-		float const dsq(p2p_dist_xy_sq(pos, cand_pos)); // TODO: should we take into account the current direction to avoid backtracking?
+		float const dsq(p2p_dist_xy_sq(pos, cand_pos)); // should we take into account the current direction to avoid backtracking?
 		if (dmin_sq > 0.0 && dmin_sq < dsq) continue; // not closer
 		ret     = gs_reservation_t(i, lane_ix, point(cand_pos.x, cand_pos.y, pos.z));
 		dmin_sq = dsq;
@@ -2847,10 +2847,10 @@ gs_reservation_t city_obj_placer_t::reserve_nearest_gas_station_lane(point const
 	if (ret.valid) {gstations[ret.gs_ix].reserve_lane(ret.lane_ix);}
 	return ret;
 }
-driveway_t city_obj_placer_t::get_gas_station_driveway(car_t const &car, bool for_exit_lane) const {
+driveway_t city_obj_placer_t::get_gas_station_driveway(car_t const &car) const {
 	unsigned const gsix((car.dest_gstation >= 0) ? (unsigned)car.dest_gstation : car.cur_seg); // use cur_seg if dest_gstation isn't set
 	assert(gsix < gstations.size());
-	return gstations[gsix].get_driveway_for_lane(for_exit_lane ? gas_station_t::num_lanes : car.dest_gs_lane);
+	return gstations[gsix].get_driveway_for_lane(car.dest_gs_lane);
 }
 bool city_obj_placer_t::reserve_gas_station_exit_lane(car_t const &car) const {
 	assert(car.dest_gstation >= 0 && car.dest_gstation < gstations.size());

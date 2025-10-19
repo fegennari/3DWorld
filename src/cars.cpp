@@ -29,6 +29,7 @@ float get_clamped_fticks() {return min(fticks, 4.0f);} // clamp to 100ms
 
 float car_t::get_max_lookahead_dist() const {return (get_length() + city_params.road_width);} // extend one car length + one road width in front
 float car_t::get_turn_rot_z(float dist_to_turn) const {return (1.0 - CLIP_TO_01(4.0f*fabs(dist_to_turn)/city_params.road_width));}
+bool car_t::in_gs_exit_lane() const {return (dest_gs_lane == gas_station_t::num_lanes);}
 
 void car_t::set_bcube(point const &center, vector3d const &sz) {
 	height = sz.z;
@@ -108,30 +109,35 @@ string car_t::str() const {
 	return oss.str();
 }
 
-string car_t::label_str() const {
+string car_t::label_str() const { // for query printout
 	std::ostringstream oss;
-	oss << TXT(dim) << TXTn(dir) << TXT(cur_city) << TXT(cur_road) << TXTn(cur_seg) << TXT(dz) << TXTi(turn_dir) << TXTn(turn_val) << TXT(max_speed) << TXTn(cur_speed)
+	oss << TXT(dim) << TXTn(dir) << TXT(cur_city) << TXT(cur_road) << TXTn(cur_seg)
+		<< TXT(dz) << TXTi(turn_dir) << TXTn(turn_val)
+		<< TXT(max_speed) << TXTn(cur_speed)
 		<< "sleep=" << is_sleeping() << " wait_time=" << get_wait_time_secs() << "\n" << TXTin(cur_road_type)
-		<< TXTn(stopped_at_light) << TXTn(in_isect()) << "cars_in_front=" << count_cars_in_front() << "\n" << TXT(dest_city) << TXTn(dest_isec);
-	oss << "car=" << this << " car_in_front=" << car_in_front << endl; // debugging
+		<< TXTn(stopped_at_light) << TXT(in_isect()) << TXTn(fuel_amt)
+		<< "cars_in_front=" << count_cars_in_front() << "\n" << TXT(dest_city) << TXTn(dest_isec);
+	//oss << "car=" << this << " car_in_front=" << car_in_front << endl; // debugging
 	return oss.str();
 }
 
 void car_t::choose_max_speed(rand_gen_t &rgen) { // add some speed variation
-	max_speed = rgen.rand_uniform(0.66, 1.0);
+	max_speed      = rgen.rand_uniform(0.66, 1.0);
 	engine_running = 1; // car starts up
 }
 void car_t::move(float speed_mult) {
 	prev_bcube = bcube;
 	if (destroyed || stopped_at_light || is_stopped()) return;
 	assert(speed_mult >= 0.0 && cur_speed > 0.0 && cur_speed <= CONN_ROAD_SPEED_MULT*max_speed); // Note: must be valid for connector road => city transitions
+	float const length(get_length());
 	float dist(cur_speed*speed_mult);
-	if (dz != 0.0) {dist *= min(1.25, max(0.75, (1.0 - 0.5*dz/get_length())));} // slightly faster down hills, slightly slower up hills
+	if (dz != 0.0) {dist *= min(1.25, max(0.75, (1.0 - 0.5*dz/length)));} // slightly faster down hills, slightly slower up hills
 	min_eq(dist, 0.25f*city_params.road_width); // limit to half a car length to prevent cars from crossing an intersection in a single frame
 	move_by((dir ^ in_reverse) ? dist : -dist);
+	if (fuel_amt > 0.0) {fuel_amt = max(0.0f, (fuel_amt - 0.001f*dist/length));} // consume fuel
 	// update waiting state
 	float const cur_pos(get_front_end());
-	if (fabs(cur_pos - waiting_pos) > get_length()) {waiting_pos = cur_pos; reset_waiting();} // update when we move at least a car length
+	if (fabs(cur_pos - waiting_pos) > length) {waiting_pos = cur_pos; reset_waiting();} // update when we move at least a car length
 }
 
 void car_t::set_target_speed(float speed_factor) {
@@ -343,9 +349,13 @@ void car_t::pull_into_driveway(driveway_t const &driveway, rand_gen_t &rgen) {
 		else { // transitioned to parked and wait before leaving
 			dest_valid      = engine_running = 0;
 			dest_driveway   = -1;
-			need_gas        = 0; // if this was a gas station, we now have our gas
 			park_space_cent = vector2d();
-			sleep(rgen, 60.0); // sleep for 60-120s rather than permanently parking
+
+			if (dest_gstation >= 0) {
+				need_gas = 0; // we now have our gas
+				fuel_amt = 1.0;
+			}
+			sleep(rgen, ((dest_gstation >= 0) ? 30.0 : 60.0)); // sleep for 60-120s rather than permanently parking; 30-60s for gas stations
 		}
 	}
 	else if (driveway.contains_cube_xy(bcube)) {cur_road = (unsigned short)driveway.plot_ix;} // store plot_ix in road field; is this actually needed?

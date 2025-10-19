@@ -2464,18 +2464,6 @@ void gas_station_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dis
 		manhole_t::pre_draw(dstate, shadow_only);
 		for (manhole_t const &mh : manholes) {mh.draw(dstate, qbds, dist_scale, shadow_only);} // immediate draw
 	}
-	/*if (!shadow_only) { // lane debugging
-		colorRGBA const lane_colors[num_lanes] = {RED, GREEN, BLUE, YELLOW};
-
-		for (unsigned n = 0; n < num_lanes; ++n) {
-			cube_t lane(get_entrance_for_lane(n));
-			lane.z2() += 0.01*bcube.dz();
-			dstate.draw_cube(qbds.untex_qbd, lane, lane_colors[n]);
-		}
-		cube_t lane(get_exit_lane());
-		lane.z2() += 0.01*bcube.dz();
-		dstate.draw_cube(qbds.untex_qbd, lane, CYAN);
-	}*/
 	if (!shadow_only) { // draw lights
 		colorRGBA const lights_color(get_light_color_temp(GS_LIGHT_COLOR_TEMP)); // bluish
 		quad_batch_draw &lights_qbd(is_night() ? qbds.emissive_qbd : qbds.untex_qbd); // lights on/emissive at night

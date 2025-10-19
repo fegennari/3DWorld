@@ -1611,6 +1611,7 @@ public:
 			car.dim = seg.dim;
 			car.dir = rgen.rand_bool();
 			car.choose_max_speed(rgen);
+			car.fuel_amt = rgen.rand_uniform(0.1, 0.9); // start with a random amount of fuel, but not full or empty
 			car.cur_road = seg.road_ix;
 			car.cur_seg  = seg_ix;
 			car.cur_road_type = TYPE_RSEG;
@@ -1892,7 +1893,7 @@ private:
 	}
 	driveway_t get_driveway_or_gs_entrance(car_t const &car) const {
 		if (car.dest_driveway >= 0) return get_driveway(car.dest_driveway); // entering driveway
-		if (car.dest_gstation >= 0 || car.dest_gs_lane == gas_station_t::num_lanes) return city_obj_placer.get_gas_station_driveway(car); // entering or exiting gas station
+		if (car.dest_gstation >= 0 || car.in_gs_exit_lane()) return city_obj_placer.get_gas_station_driveway(car); // entering or exiting gas station
 		return get_driveway(car.cur_seg); // exiting driveway
 	}
 	cube_t get_driveway_cube_inc_parking_lot(driveway_t const &driveway) const { // Note: currently unused
@@ -1909,18 +1910,17 @@ private:
 			driveway_t driveway(city_obj_placer.get_gas_station_driveway(car));
 			
 			if (!car.need_gas) { // done at the pump, continue to the exit
-				if (car.is_stopped() && car.dest_gs_lane < gas_station_t::num_lanes) { // waiting to leave the pump
+				if (car.is_stopped() && !car.in_gs_exit_lane()) { // waiting to leave the pump
 					if (!city_obj_placer.reserve_gas_station_exit_lane(car)) return 1; // wait to exit
 				}
-				if (car.dest_gs_lane == gas_station_t::num_lanes && car.dim == driveway.dim) return car_leave_driveway(car, cars, driveway, rgen); // fully in exit lane
+				if (car.in_gs_exit_lane() && car.dim == driveway.dim) return car_leave_driveway(car, cars, driveway, rgen); // fully in exit lane
 
-				if (car.turn_dir == TURN_NONE && car.dest_gs_lane != gas_station_t::num_lanes) { // time to turn into exit lane
+				if (car.turn_dir == TURN_NONE && !car.in_gs_exit_lane()) { // time to turn into exit lane
 					car.dest_gs_lane = gas_station_t::num_lanes; // next lane is the gas station exit
 					driveway         = city_obj_placer.get_gas_station_driveway(car); // update driveway from entrance to exit
 					car.turn_dir     = ((car.dim ^ car.dir ^ driveway.dir) ? (uint8_t)TURN_RIGHT : (uint8_t)TURN_LEFT);
 					car.begin_turn(); // capture car centerline before the turn
 				}
-				// FIXME: if the driveway is short and we reach the end before our turn is complete, need to auto complete the turn
 				if (car.maybe_apply_turn(driveway.get_centerline(), 1)) { // turn into exit lane; for_driveway=1
 					car.set_target_speed(0.25); // 25% of max speed when turning
 					return 1; // continue to turn
@@ -1930,7 +1930,7 @@ private:
 			car.pull_into_driveway(driveway, rgen); // may be before or after stopping
 			return 1; // no other logic to run here
 		}
-		driveway_t const &driveway(get_driveway((car.dest_driveway >= 0) ? (unsigned)car.dest_driveway : car.cur_seg));
+		driveway_t const &driveway(get_driveway((car.dest_driveway >= 0) ? (unsigned)car.dest_driveway : car.cur_seg)); // Note: must be by reference for unsetting of in_use
 		// if pedestrian(s) in driveway, stop and wait unless we've been waiting for > 60s
 		if (driveway.has_recent_ped() && car.get_wait_time_secs() < 60.0) {car.sleep(rgen, 0.5); return 1;}
 
@@ -1945,6 +1945,8 @@ private:
 		bool in_driveway(driveway.contains_cube_xy(car.bcube));
 		// for cars in parking lots, we only need to check the bounds of the car inside the driveway dim, since parking spaces are to the side
 		in_driveway |= (driveway.is_parking_lot() && car.bcube.d[ddim][0] >= driveway.d[ddim][0] && car.bcube.d[ddim][1] <= driveway.d[ddim][1]);
+		// if exiting the gas station lane nearest the road, we may not have had a chance to turn yet, so do it now
+		in_driveway |= (car.dest_gstation >= 0 && car.in_gs_exit_lane() && car.turn_dir == TURN_NONE && driveway.intersects_xy(car.bcube));
 		
 		if (in_driveway) { // car still in driveway or parking lot, continue to pull/back out
 			car.back_or_pull_out_of_driveway(driveway);
@@ -2225,7 +2227,8 @@ private:
 		return 0; // failed
 	}
 	bool select_avail_gas_station_lane(car_t &car, rand_gen_t &rgen) const {
-		gs_reservation_t const dest(city_obj_placer.reserve_nearest_gas_station_lane(car.get_center(), rgen));
+		float const max_dist(0.5*max(bcube.dx(), bcube.dy())); // half the city length
+		gs_reservation_t const dest(city_obj_placer.reserve_nearest_gas_station_lane(car.get_center(), rgen, max_dist));
 		if (!dest.valid) return 0;
 		car.dest_gstation = dest.gs_ix; // what about dest.entrance_pos?
 		car.dest_gs_lane  = dest.lane_ix;
@@ -2239,7 +2242,7 @@ public:
 		car.dest_gstation = -1;
 		car.dest_gs_lane  =  0;
 		// select a gas station if low on fuel and a slot is open; fuel to be added later; or select if nearby
-		//if (city_params.cars_use_driveways && select_avail_gas_station_lane(car, rgen)) return 1;
+		if (city_params.cars_use_driveways && car.fuel_amt < 0.2 && select_avail_gas_station_lane(car, rgen)) return 1;
 		// select a driveway if one is available and we're in the dest city; otherwise, select an intersection
 		//assert(car.dest_driveway < 0); // generally okay, but could maybe fail due to floating-point error? better to reset below?
 		if (city_params.cars_use_driveways && car.cur_city == car.dest_city && select_avail_driveway_or_parking_space(car, rgen)) return 1;
