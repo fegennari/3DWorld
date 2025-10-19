@@ -37,16 +37,15 @@ void main() {
 	epos        = fg_ModelViewMatrix * vertex;
 	gl_Position = fg_ProjectionMatrix * epos;
 	fg_Color_vf = fg_Color;
+	eye_norm    = normalize(fg_NormalMatrix * normal_in);
 
 	if (use_fg_ViewMatrix) {
-		eye_norm = normalize(fg_NormalMatrix * normal_in);
-		normal   = normalize((transpose(fg_ViewMatrix) * vec4(eye_norm, 1)).xyz);
-		vpos     = (inverse(fg_ViewMatrix) * epos).xyz; // world space
+		normal = normalize((transpose(fg_ViewMatrix) * vec4(eye_norm, 1)).xyz);
+		vpos   = (inverse(fg_ViewMatrix) * epos).xyz; // world space
 	}
 	else {
-		eye_norm = normalize(mat3(fg_ModelViewMatrix) * normal_in); // Note: avoids the fg_NormalMatrix upload
-		vpos     = vertex.xyz + world_space_offset.xyz; // Note: rotation not supported here
-		normal   = normalize(normal_in);
+		vpos   = vertex.xyz + world_space_offset.xyz; // Note: rotation not supported here
+		normal = normalize(normal_in);
 	}
 #ifdef USE_BUMP_MAP
 	setup_tbn();
