@@ -2589,11 +2589,13 @@ driveway_t gas_station_t::get_driveway_for_lane(unsigned lane_ix) const {
 	return ((lane_ix == num_lanes) ? get_exit_lane() : get_entrance_for_lane(lane_ix)); // lane_ix=num_lanes is the exit lane
 }
 int gas_station_t::get_avail_lane(point &entrance_pos, rand_gen_t &rgen) const {
+	bool const skip_lane_closest_to_road(city_params.num_peds > 0); // pedestrians stand in this lane when waiting at the crosswalk, so skip it if they're enabled
 	unsigned const first_lane_ix(rgen.rand()); // randomize lane selection
 	
 	for (unsigned i = 0; i < num_lanes; ++i) {
 		unsigned const lix((i + first_lane_ix) % num_lanes);
 		if (lane_reserved[lix]) continue;
+		if (skip_lane_closest_to_road && lix == unsigned(dir)) continue;
 		entrance_pos = get_entrance_for_lane(lix).get_cube_center();
 		return lix;
 	}

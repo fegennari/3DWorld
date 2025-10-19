@@ -453,7 +453,8 @@ struct gas_station_t : public oriented_city_obj_t {
 	mutable bool cached_smaps[num_lights]={}; // for lights
 	vector<gas_pump_t> pumps;
 	vector<manhole_t> manholes;
-	mutable bool lane_reserved[4]={}, out_reserved=0; // for car logic
+	mutable bool lane_reserved[num_lanes]={}, out_reserved=0; // for car logic
+	//mutable unsigned last_ped_frame[num_lanes+1]={}; // for future work with car/ped coll; not easy to implement
 
 	gas_station_t(cube_t const &c, bool dim_, bool dir_, bool edir, unsigned pix, unsigned gix, unsigned rand_val);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;

@@ -225,7 +225,7 @@ void car_t::complete_turn_and_swap_dim() {
 }
 
 void car_t::person_in_the_way(bool is_player, bool at_stopsign) {
-	if (!in_parking_lot) { // don't honk if in a parking lot, since people have a right to walk there
+	if (!in_parking_lot && cur_road_type != TYPE_DRIVEWAY) { // don't honk if in a parking lot or driveway, since people have a right to walk there
 		static rand_gen_t rgen;
 		bool const is_zombie(in_building_gameplay_mode() && !is_player);
 		// honk less often for zombies since they're often in the road; honk less often at stop signs because peds don't predict stop sign logic as well as traffic lights
@@ -330,6 +330,8 @@ void car_t::pull_into_driveway(driveway_t const &driveway, rand_gen_t &rgen) {
 	}
 	else { // not a parking lot
 		if (driveway.is_gas_station()) { // gas station entrance
+			// reset speed in case we stopped due to a pedestrian in the way; this may run someone over, but that's better than getting stuck
+			set_target_speed(0.4);
 			if (!need_gas) return; // continue moving until it's time to turn
 			stop_pos = driveway.stop_loc; // not yet stopped, continue to gas pump
 		}
@@ -1099,7 +1101,7 @@ void car_city_vect_t::clear_cars() { // Note: not clearing parked_car_bcubes()
 	parking_lot_car_bcubes.clear();
 }
 
-void car_manager_t::extract_car_data(vector<car_city_vect_t> &cars_by_city) const { // used for pedetrian update logic
+void car_manager_t::extract_car_data(vector<car_city_vect_t> &cars_by_city) const { // used for pedestrian update logic
 	if (cars.empty()) return;
 	//timer_t timer("Extract Car Data");
 	// create parked cars vectors on first call; this is used for pedestrian navigation within parking lots;
