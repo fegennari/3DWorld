@@ -1494,6 +1494,7 @@ void building_room_geom_t::add_laptop    (room_object_t const &c) {add_obj_with_
 void building_room_geom_t::add_computer  (room_object_t const &c) {add_obj_with_front_texture(c, "interiors/computer.jpg", BKGRAY, 1);} // is_small=1
 void building_room_geom_t::add_card_deck (room_object_t const &c) {add_obj_with_top_texture  (c, "interiors/card_deck.jpg", WHITE, 1);} // is_small=1
 void building_room_geom_t::add_bullet_box(room_object_t const &c) {add_obj_with_top_texture  (c, "interiors/bullets.png",   BLACK, 1);} // is_small=1
+void building_room_geom_t::add_ceil_tile (room_object_t const &c) {add_obj_with_top_texture  (c, "noise.png", WHITE, 1);} // is_small=1; noise tex is interior of part board
 
 void place_pizza_toppings(cube_t const &pizza, float rmin, float rmax, float height, colorRGBA const &color, unsigned num, bool can_overlap,
 	rgeom_mat_t &mat, vector<sphere_t> &placed, rand_gen_t &rgen) {
