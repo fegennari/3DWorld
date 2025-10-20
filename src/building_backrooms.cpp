@@ -702,7 +702,7 @@ unsigned building_t::setup_multi_floor_room(extb_room_t &room, door_t const &doo
 }
 
 bool building_t::is_pos_in_pg_or_backrooms(point const &pos) const { // Note: typically used to guard interior->room_geom->pgbr_walls logic
-	return (has_parking_garage && pos.z < ground_floor_z1 && ((interior && interior->has_backrooms) || get_basement().contains_pt(pos)));
+	return (has_parking_garage && pos.z < ground_floor_z1 && (has_backrooms() || get_basement().contains_pt(pos)));
 }
 
 bool building_room_geom_t::cube_int_backrooms_walls(cube_t const &c) const { // used for door opening collision checks

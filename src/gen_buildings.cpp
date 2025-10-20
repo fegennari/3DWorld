@@ -1726,6 +1726,7 @@ colorRGBA building_t::get_ceil_tex_and_color(cube_t const &ceil_cube, tid_nm_pai
 	}
 	if (!is_house && in_ext_basement && !is_inside_mall_stores(ceil_cube.get_cube_center())) { // use concrete for office building ext basements except for malls
 		if (has_backrooms_texture()) {tex = mat.ceil_tex;} // office building ceiling texture
+		else if (has_extb_ceiling_tile()) {tex = mat.ceil_tex;} // office building ceiling texture when crack free
 		else {tex = get_concrete_texture();}
 		return WHITE;
 	}

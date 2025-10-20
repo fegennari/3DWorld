@@ -1713,7 +1713,7 @@ tquad_with_ix_t building_t::set_door_from_cube(cube_t const &c, bool dim, bool d
 			door.pts[0][dim] = door.pts[1][dim] = pos + c.dz()*((dir ^ opens_out) ? 1.0 : -1.0);
 		}
 		else { // rotates to the side
-			bool const check_backroom_walls(interior && interior->has_backrooms && c.z1() < ground_floor_z1 && !get_basement().contains_cube(c));
+			bool const check_backroom_walls(has_backrooms() && c.z1() < ground_floor_z1 && !get_basement().contains_cube(c));
 			float const wall_thickness(get_wall_thickness()), floor_thickness(get_floor_thickness());
 			float const width(c.get_sz_dim(!dim)), signed_width(width*((dir ^ opens_out) ? 1.0 : -1.0));
 			float const offset(0.005*width*((dir ^ dim) ? 1.0 : -1.0)*open_amt); // move slightly away from the wall to prevent z-fighting

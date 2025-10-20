@@ -676,7 +676,7 @@ void building_interior_t::place_exterior_room(extb_room_t const &room, cube_t co
 		for (cube_t const &skylight : mall_info->skylights) {subtract_cube_from_cubes(skylight, P.wall_segs);}
 	}
 	vector_add_to(P.wall_segs, ceilings);
-	subtract_cubes_from_cube(floor,   P.stairs, P.wall_segs, P.temp_cubes, 2); // cut out stairs; zval_mode=2 (check for zval overlap)
+	subtract_cubes_from_cube(floor, P.stairs, P.wall_segs, P.temp_cubes, 2); // cut out stairs; zval_mode=2 (check for zval overlap)
 	vector_add_to(P.wall_segs, floors);
 	basement_ext_bcube.assign_or_union_with_cube(room);
 	// add walls; Note: two adjoining rooms may share overlapping walls
