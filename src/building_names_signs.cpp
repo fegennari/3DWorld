@@ -637,10 +637,12 @@ void building_t::add_door_sign(string const &text, room_t const &room, float zva
 	colorRGBA const text_color(dark_mode ? WHITE : DK_BLUE);
 	bool const check_contained_in_room(!is_residential()); // apartment buildings and hotels always need room numbers
 	bool const in_mall(has_mall() && room.is_ext_basement());
+	auto const skip_door((interior->ext_basement_door_stack_ix >= 0) ? (interior->door_stacks.begin() + interior->ext_basement_door_stack_ix) : interior->door_stacks.end());
 
 	for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) {
 		if (!i->is_connected_to_room(room_id)) continue;
 		if (room_inner.contains_cube(*i))      continue; // skip interior door such as nested bathroom
+		if (i == skip_door)                    continue; // skip extended basement door, since sign is likely not visible
 		bool const side(room_center[i->dim] < i->get_center_dim(i->dim));
 		float const door_width(i->get_width()), side_sign(side ? 1.0 : -1.0);
 		cube_t sign(*i);
