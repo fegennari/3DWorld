@@ -798,9 +798,9 @@ void display() {
 		return;
 	}
 	if (start_maximized) {
+		start_maximized = 0;
 		toggle_fullscreen();
 		begin_loading_screen();
-		start_maximized = 0;
 		return;
 	}
 	if (frame_counter == 2) {cout << format_green("Time to first completed frame: " + to_string(GET_TIME_MS() - program_start_time)) << endl;} // 16s for config_heightmap

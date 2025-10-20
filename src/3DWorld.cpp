@@ -95,7 +95,7 @@ int invert_mh_image(0), voxel_editing(0), min_time(0), show_framerate(0), prepro
 int camera_view(0), camera_reset(1), camera_mode(0), camera_surf_collide(1), camera_coll_smooth(0), use_smoke_for_fog(0);
 int window_width(512), window_height(512), map_color(1); // window dimensions, etc.
 int border_height(20), border_width(4), world_mode(START_MODE), display_mode(INIT_DMODE), do_read_mesh(0);
-int last_mouse_x(0), last_mouse_y(0), m_button(0), mouse_state(1), maximized(0), fullscreen(0), verbose_mode(0), leaf_color_changed(0);
+int last_mouse_x(0), last_mouse_y(0), m_button(0), mouse_state(1), fullscreen(0), verbose_mode(0), leaf_color_changed(0);
 int do_zoom(0), disable_universe(0), disable_inf_terrain(0), precip_mode(0), building_action_key(0);
 int num_trees(0), num_smileys(1), srand_param(3), left_handed(0), mesh_scale_change(0);
 int pause_frame(0), show_fog(0), spectate(0), b2down(0), free_for_all(0), teams(2), show_scores(0), universe_only(0);
@@ -2391,6 +2391,7 @@ int main(int argc, char** argv) {
 	progress();
  	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH | GLUT_STENCIL | GLUT_MULTISAMPLE);
 	glutInitWindowSize(window_width, window_height);
+	glutInitWindowPosition(0, 0);
 
 	if (init_core_context) {
 		glutInitContextVersion(4, 5);
