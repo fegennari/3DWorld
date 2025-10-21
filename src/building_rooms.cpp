@@ -1181,6 +1181,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	} // for r (room)
 	if (saw_mall) {interior->room_geom->last_mall_obj_ix = objs.size();}
 	if (is_house) {interior->assign_master_bedroom(window_vspacing, floor_thickness);}
+	add_ceiling_tile_objects(rgen);
 	add_tunnel_objects(rgen);
 	add_interior_window_objects();
 	add_padlocks(rgen);

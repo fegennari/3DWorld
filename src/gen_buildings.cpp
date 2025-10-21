@@ -1725,8 +1725,9 @@ colorRGBA building_t::get_ceil_tex_and_color(cube_t const &ceil_cube, tid_nm_pai
 		return (is_house ? mat.house_floor_color : mat.floor_color);
 	}
 	if (!is_house && in_ext_basement && !is_inside_mall_stores(ceil_cube.get_cube_center())) { // use concrete for office building ext basements except for malls
-		if (has_backrooms_texture()) {tex = mat.ceil_tex;} // office building ceiling texture
-		else if (has_extb_ceiling_tile()) {tex = mat.ceil_tex;} // office building ceiling texture when crack free
+		if      (has_backrooms_texture()) {tex = mat.ceil_tex;} // office building ceiling texture
+		// office building ceiling texture if crack free; set no_cracks=1 as a special flag, even though it's not respected when drawing in this situation
+		else if (has_extb_ceiling_tile()) {tex = mat.ceil_tex; tex.no_cracks = 1;}
 		else {tex = get_concrete_texture();}
 		return WHITE;
 	}
@@ -2234,7 +2235,40 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 		}
 		tid_nm_pair_t tex;
 		colorRGBA const color(get_ceil_tex_and_color(*i, tex));
-		bdraw.add_section(*this, 0, *i, tex, color, 4, 0, skip_top, 1, 0); // no AO; Z dim only
+
+		if (!is_house && tex.tid == mat.ceil_tex.tid && tex.no_cracks && !is_rotated()) { // special case of extended basement ceiling tile texture
+			// orient the tile along the long room dim and scale/align to the room area; assumes a rectangular room with no stair or elevator cutouts
+			vert_norm_comp_tc_color vert;
+			vert.set_norm(-plus_z); // pointed downward
+			vert.set_c4(color);
+			vector2d const room_sz(i->get_size_xy());
+			float const zval(i->z1()); // bottom of ceiling
+			float tscale[2] = {tex.get_drawn_tscale_x(), 2.0f*tex.get_drawn_tscale_y()};
+			bool const dim(room_sz.x < room_sz.y); // long dim
+			auto &verts(bdraw.get_verts(tex)); // quads
+			for (unsigned d = 0; d < 2; ++d) {tscale[d] = max(1, round_fp(tscale[d]*room_sz[d]));} // exact tiling
+			tscale[1] *= 0.5; // align to half a tile in X
+			float const tmult[2] = {tscale[0]/room_sz[0], tscale[1]/room_sz[1]};
+			vect_cube_t ceil_cubes, temp;
+			subtract_cubes_from_cube(*i, interior->missing_ceil_tiles, ceil_cubes, temp, 2); // check zvals overlap
+
+			for (cube_t const &c : ceil_cubes) {
+				float const tx1((c.x1() - i->x1())*tmult[0]), tx2((c.x2() - i->x1())*tmult[0]);
+				float const ty1((c.y1() - i->y1())*tmult[1]), ty2((c.y2() - i->y1())*tmult[1]);
+
+				for (unsigned n = 0; n < 4; ++n) {
+					bool const xv(n>>1), yv(bool(n&1) ^ bool(n&2));
+					vert.v.assign(c.d[0][xv], c.d[1][yv], zval);
+					vert.t[0] = (xv ? tx2 : tx1);
+					vert.t[1] = (yv ? ty2 : ty1);
+					if (dim) {swap(vert.t[0], vert.t[1]);}
+					verts.push_back(vert);
+				}
+			} // for c
+		}
+		else {
+			bdraw.add_section(*this, 0, *i, tex, color, 4, 0, skip_top, 1, 0); // no AO; Z dim only
+		}
 	} // for i
 	// minor optimization: don't need shadows for ceilings because lights only point down; assumes ceil_tex is only used for ceilings; not true for all houses/apts/hotels
 	if (!is_residential()) {bdraw.set_no_shadows_for_tex(mat.ceil_tex);}

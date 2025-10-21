@@ -7029,6 +7029,11 @@ void building_room_geom_t::add_debug_shape(room_object_t const &c) {
 	else {assert(0);} // unsupported shape
 }
 
+void building_room_geom_t::add_ceiling_space(cube_t const &c, tid_nm_pair_t const &wall_tex) {
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_concrete_tid(), wall_tex.tscale_x, 0), 0, 0, 1)); // unshadowed, small
+	mat.add_cube_to_verts(c, WHITE, all_zeros, EF_Z1, 0, 0, 0, 1); // inverted, skip bottom face
+}
+
 colorRGBA room_object_t::get_color() const {
 	switch (type) {
 	case TYPE_TABLE:    return get_table_color(*this);

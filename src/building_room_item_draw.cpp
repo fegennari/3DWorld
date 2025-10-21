@@ -705,7 +705,9 @@ void building_room_geom_t::create_small_static_vbos(building_t const &building, 
 		add_small_static_objs_to_verts(objs, 0, 0, trim_color, 0, floor_ceil_gap, ind_info); // inc_text=0
 	}
 	add_attic_interior_and_rafters(building, 2.0/obj_scale, 0); // only if there's an attic; detail_pass=0
-	for (tunnel_seg_t const &t : building.interior->tunnels) {add_tunnel(t);}
+	tid_nm_pair_t const &wall_tex(building.get_material().wall_tex);
+	for (tunnel_seg_t const &t : building.interior->tunnels ) {add_tunnel(t);}
+	for (cube_t const &c : building.interior->ceiling_spaces) {add_ceiling_space(c, wall_tex);}
 }
 
 void building_room_geom_t::add_nested_objs_to_verts(vect_room_object_t const &objs_to_add) {

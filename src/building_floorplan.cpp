@@ -2483,6 +2483,7 @@ template<typename T> void subtract_cubes_from_cube(cube_t const &c, vector<T> co
 	} // for s
 }
 template void subtract_cubes_from_cube(cube_t const &c, vector<cube_t>         const &sub, vect_cube_t &out, vect_cube_t &out2, int zval_mode); // explicit instantiation
+template void subtract_cubes_from_cube(cube_t const &c, vector<cube_with_ix_t> const &sub, vect_cube_t &out, vect_cube_t &out2, int zval_mode); // explicit instantiation
 template void subtract_cubes_from_cube(cube_t const &c, vector<stairs_place_t> const &sub, vect_cube_t &out, vect_cube_t &out2, int zval_mode); // explicit instantiation
 template void subtract_cubes_from_cube(cube_t const &c, vector<elevator_t>     const &sub, vect_cube_t &out, vect_cube_t &out2, int zval_mode); // explicit instantiation
 

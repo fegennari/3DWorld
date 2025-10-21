@@ -1413,6 +1413,7 @@ struct building_room_geom_t {
 	void add_spider_web(room_object_t const &c);
 	void add_pet_cage(room_object_t const &c);
 	void add_debug_shape(room_object_t const &c);
+	void add_ceiling_space(cube_t const &c, tid_nm_pair_t const &wall_tex);
 	static void draw_ball_in_building(room_object_t  const &c, shader_t &s);
 	void draw_interactive_player_obj(carried_item_t const &c, shader_t &s, vector3d const &xlate);
 	// functions for expanding nested objects
@@ -2015,10 +2016,11 @@ struct bldg_industrial_info_t {
 };
 
 struct building_interior_t {
-	vect_cube_t floors, ceilings, fc_occluders, exclusion, open_walls, split_window_walls, prison_halls;
+	vect_cube_t floors, ceilings, fc_occluders, exclusion, open_walls, split_window_walls, prison_halls, ceiling_spaces;
 	vect_cube_t walls[2]; // walls are split by dim, which is the separating dimension of the wall
 	vect_cube_with_ix_t int_windows; // ix stores room index
 	vect_cube_with_ix_t parking_str_walls; // interior of exterior walls; ix stores draw flags
+	vect_cube_with_ix_t missing_ceil_tiles; // ix is room index
 	vect_stairwell_t stairwells;
 	vect_tunnel_seg_t tunnels;
 	vect_door_t doors;
@@ -2721,6 +2723,8 @@ private:
 	bool is_basement_room_under_mesh_not_int_bldg(cube_t const &room, building_t const *exclude=nullptr, bool allow_outside_grid=0) const;
 	bool is_basement_room_placement_valid(cube_t &room, ext_basement_room_params_t &P, bool dim, bool dir, bool *add_end_door=nullptr, building_t const *exclude=nullptr) const;
 	bool add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &door_bcube, cube_t const &basement, bool wall_dim, bool wall_dir, float length_mult);
+	void remove_ceiling_tiles(cube_t const &room, tid_nm_pair_t const &ceil_tex, rand_gen_t &rgen);
+	void add_ceiling_tile_objects(rand_gen_t &rgen);
 	bool check_pool_room_slice_valid(cube_t const &slice, int skip_room_ix) const;
 	void maybe_assign_extb_room_as_swimming(rand_gen_t &rgen);
 	void add_wall_section_above_pool_room_door(door_stack_t &ds, room_t const &room);

@@ -239,6 +239,10 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 	cube_t wall_area(hallway);
 	wall_area.d[wall_dim][!wall_dir] += (wall_dir ? 1.0 : -1.0)*0.5*wall_thickness; // move separator wall inside the hallway to avoid clipping exterior wall
 	assert(P.rooms.size() >= 2); // must have at least basement and primary hallway
+	tid_nm_pair_t ceil_tex;
+	if (!is_house && hallway.is_hallway) {get_ceil_tex_and_color(hallway, ceil_tex);}
+	bool const remove_ceil_tiles(ceil_tex.tid == get_material().ceil_tex.tid);
+	if (remove_ceil_tiles) {remove_ceiling_tiles(hallway, ceil_tex, rgen);}
 	interior->place_exterior_room(hallway, wall_area, fc_thick, wall_thickness, P, basement_part_ix, 0, hallway.is_hallway); // use basement part_ix; num_lights=0
 	if (interior->has_backrooms) {rooms.back().assign_all_to(RTYPE_BACKROOMS);} // make it backrooms
 	else if (has_mall())         {rooms.back().assign_all_to(RTYPE_MALL     );} // make it a mall concourse
@@ -246,6 +250,7 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 	reserve_extra(rooms, ((P.rooms.size()-2) + 1)); // allocate an extra room for a possible connector to an adjacent building
 
 	for (auto r = P.rooms.begin()+2; r != P.rooms.end(); ++r) { // skip basement and primary hallway
+		if (remove_ceil_tiles && r->is_hallway) {remove_ceiling_tiles(*r, ceil_tex, rgen);}
 		interior->place_exterior_room(*r, *r, fc_thick, wall_thickness, P, basement_part_ix, 0, r->is_hallway);
 	}
 	for (stairs_place_t const &stairs : P.stairs) {
@@ -265,6 +270,65 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 		for (unsigned r = interior->ext_basement_hallway_room_id; r < rooms.size(); ++r) {try_place_tunnel_at_extb_hallway_end(rooms[r], r, rgen);}
 	}
 	return 1;
+}
+
+void building_t::remove_ceiling_tiles(cube_t const &room, tid_nm_pair_t const &ceil_tex, rand_gen_t &rgen) {
+	assert(interior);
+	unsigned const num_missing(rgen.rand() % 4); // 0-3
+	if (num_missing == 0) return;
+	float tscale[2] = {ceil_tex.get_drawn_tscale_x(), 2.0f*ceil_tex.get_drawn_tscale_y()}; // width is half the texture
+	vector2d const room_sz(room.get_size_xy());
+	bool const dim(room_sz.x < room_sz.y); // long dim
+	if (dim) {swap(tscale[0], tscale[1]);}
+	for (unsigned d = 0; d < 2; ++d) {tscale[d] = max(1, round_fp(tscale[d]*room_sz[d]))/room_sz[d];} // exact tiling
+	vector2d const tile_sz(1.0/tscale[0], 1.0/tscale[1]);
+	unsigned const num[2] = {room_sz.x/tile_sz.x, room_sz.y/tile_sz.y};
+	if (num[0] == 0 || num[1] == 0) return; // room narrower than one tile
+	unsigned const room_ix(interior->rooms.size()); // will be the next room added
+	unsigned const missing_tiles_start(interior->missing_ceil_tiles.size());
+	cube_t cut(room); // copy zvals
+	
+	for (unsigned n = 0; n < num_missing; ++n) {
+		for (unsigned N = 0; N < 10; ++N) { // N tries
+			for (unsigned d = 0; d < 2; ++d) { // xy
+				unsigned const ix(rgen.rand() % num[d]);
+				float const pos(room.d[d][0] + ix*tile_sz[d]);
+				cut.d[d][0] = pos + ((d ^ dim) ? 0.08 : 0.04)*tile_sz[d]; // clip off the lower edge to preserve the brown frame
+				cut.d[d][1] = pos + tile_sz[d];
+			}
+			bool dup(0);
+			for (auto i = interior->missing_ceil_tiles.begin()+missing_tiles_start; i != interior->missing_ceil_tiles.end(); ++i) {dup |= (cut == *i);}
+			if (dup) continue; // we already removed this tile
+			interior->missing_ceil_tiles.emplace_back(cut, room_ix); // record so that tiles can be added on the floor later
+			break;
+		} // for N
+	} // for n
+	// add ceiling space
+	float const fc_thick(get_fc_thickness());
+	cube_t ceil_space(room);
+	ceil_space.expand_by_xy(-0.5*get_wall_thickness());
+	ceil_space.z1() = room.z2() - fc_thick;
+	ceil_space.z2() += 0.01*fc_thick; // expand up slightly above the reach of the upward pointing ceiling lights, since they're not shadowed properly
+	cube_t cs_ext(ceil_space);
+	cs_ext.z2() += fc_thick;
+	if (is_basement_room_under_mesh_not_int_bldg(cs_ext)) {ceil_space = cs_ext;} // expand upward if there's space
+	interior->ceiling_spaces.push_back(ceil_space);
+}
+
+void building_t::add_ceiling_tile_objects(rand_gen_t &rgen) {
+	assert(interior);
+	unsigned last_room_ix(0); // can't be a real basement room
+	float const ceil_thick(get_floor_thickness());
+
+	for (cube_with_ix_t const &ct : interior->missing_ceil_tiles) {
+		if (ct.ix != last_room_ix) { // new room
+			room_t const &room(get_room(ct.ix));
+			cube_t ceil_above(room);
+			set_cube_zvals(ceil_above, ct.z1(), ct.z1()+ceil_thick); // space above the ceiling
+			// TODO
+			last_room_ix = ct.ix;
+		}
+	} // for ct
 }
 
 void extend_adj_cubes(cube_t const &oldc, cube_t const &newc, vect_cube_t &cubes, float wall_thickness, unsigned wall_dim=2) {
