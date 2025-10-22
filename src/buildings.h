@@ -1130,6 +1130,16 @@ struct door_handle_t {
 	door_handle_t(point const &cp, float h, bool D, bool hd, bool m, bool c, vector3d const d) : center(cp), height(h), dim(D), hdir(hd), mirror(m), closed(c), dir(d) {}
 };
 
+struct ceiling_space_t : public cube_t {
+	uint16_t nx, ny; // tile counts
+	vector2d space; // spacing between tiles
+	vector<uint8_t> light; // light values per grid point, size nx*ny
+
+	ceiling_space_t(cube_t const &c, unsigned nx_, unsigned ny_, vector2d const &s) : cube_t(c), nx(nx_), ny(ny_), space(s) {light.resize(nx*ny, 0);}
+	void    set_light_val(unsigned x, unsigned y, uint8_t val) {assert(x < nx && y < ny); light[y*nx + x] = val;}
+	uint8_t get_light_val(unsigned x, unsigned y) const        {assert(x < nx && y < ny); return light[y*nx + x];}
+};
+
 struct building_room_geom_t {
 
 	bool has_pictures=0, has_garage_car=0, modified_by_player=0, have_clock=0, have_conv_belt=0, glass_floor_split=0, mall_geom_drawn=0, has_locker=0;
@@ -1413,7 +1423,7 @@ struct building_room_geom_t {
 	void add_spider_web(room_object_t const &c);
 	void add_pet_cage(room_object_t const &c);
 	void add_debug_shape(room_object_t const &c);
-	void add_ceiling_space(cube_t const &c, tid_nm_pair_t const &wall_tex);
+	void add_ceiling_space(ceiling_space_t const &c, tid_nm_pair_t const &wall_tex);
 	static void draw_ball_in_building(room_object_t  const &c, shader_t &s);
 	void draw_interactive_player_obj(carried_item_t const &c, shader_t &s, vector3d const &xlate);
 	// functions for expanding nested objects
@@ -2016,7 +2026,7 @@ struct bldg_industrial_info_t {
 };
 
 struct building_interior_t {
-	vect_cube_t floors, ceilings, fc_occluders, exclusion, open_walls, split_window_walls, prison_halls, ceiling_spaces;
+	vect_cube_t floors, ceilings, fc_occluders, exclusion, open_walls, split_window_walls, prison_halls;
 	vect_cube_t walls[2]; // walls are split by dim, which is the separating dimension of the wall
 	vect_cube_with_ix_t int_windows; // ix stores room index
 	vect_cube_with_ix_t parking_str_walls; // interior of exterior walls; ix stores draw flags
@@ -2029,6 +2039,7 @@ struct building_interior_t {
 	vector<room_t> rooms;
 	vector<elevator_t> elevators;
 	vector<escalator_t> escalators;
+	vector<ceiling_space_t> ceiling_spaces;
 	vector<person_t> people;
 	std::unique_ptr<building_room_geom_t  > room_geom;
 	std::unique_ptr<building_nav_graph_t  > nav_graph;

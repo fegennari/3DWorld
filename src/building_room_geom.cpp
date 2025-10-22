@@ -7029,9 +7029,72 @@ void building_room_geom_t::add_debug_shape(room_object_t const &c) {
 	else {assert(0);} // unsupported shape
 }
 
-void building_room_geom_t::add_ceiling_space(cube_t const &c, tid_nm_pair_t const &wall_tex) {
+void building_room_geom_t::add_ceiling_space(ceiling_space_t const &c, tid_nm_pair_t const &wall_tex) {
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_concrete_tid(), wall_tex.tscale_x, 0), 0, 0, 1)); // unshadowed, small
-	mat.add_cube_to_verts(c, WHITE, all_zeros, EF_Z1, 0, 0, 0, 1); // inverted, skip bottom face
+	vector3d const sz(c.get_size());
+	unsigned const vst(mat.itri_verts.size()), nx(c.nx), ny(c.ny);
+	float const dx(sz.x/(nx-1)), dy(sz.y/(ny-1)), dtx(wall_tex.tscale_x*sz.x/(nx-1)), dty(wall_tex.tscale_x*sz.y/(ny-1)), dtz(wall_tex.tscale_x*sz.z);
+	rgeom_storage_t::vertex_t v;
+	// draw top surface
+	v.set_norm(-plus_z);
+	v.v.assign(c.x1(), c.y1(), c.z2());
+	v.c[3] = 255; // alpha=1.0
+
+	for (unsigned y = 0; y < ny; ++y) {
+		v.v.x  = c.x1();
+		v.t[0] = 0.0;
+		for (unsigned x = 0; x < nx; ++x) {
+			v.c[0] = v.c[1] = v.c[2] = c.get_light_val(x, y); // set luminance
+			mat.itri_verts.push_back(v);
+
+			if (x > 0 && y > 0) { // add a quad (2 triangles)
+				unsigned const ix(vst + (y-1)*nx + (x-1)); // index of quad LLC
+				mat.indices.push_back(ix);
+				mat.indices.push_back(ix+nx);
+				mat.indices.push_back(ix+1);
+				mat.indices.push_back(ix+1);
+				mat.indices.push_back(ix+nx);
+				mat.indices.push_back(ix+nx+1);
+			}
+			v.v.x  += dx;
+			v.t[0] += dtx;
+		} // for x
+		v.v.y  += dy;
+		v.t[1] += dty;
+	} // for y
+	// draw sides
+	unsigned const quad_ix_vals[6] = {0, 1, 2, 1, 3, 2};
+	unsigned xy[2]={};
+
+	for (unsigned d = 0; d < 2; ++d) { // x,y dim
+		for (unsigned e = 0; e < 2; ++e) { // dir
+			unsigned const num(d ? ny : nx), vss(mat.itri_verts.size());
+			xy [!d] = (e ? (d ? nx : ny)-1 : 0); // grid edge in other dim
+			v.v[!d] = c.d[!d][e];
+			v.v[ d] = c.d[ d][0];
+			v.t[ 0] = 0.0;
+			v.set_norm(vector_from_dim_dir(!d, !e));
+
+			for (unsigned n = 0; n < num; ++n) {
+				xy [d]  = n;
+				v.c[0]  = v.c[1] = v.c[2] = c.get_light_val(xy[0], xy[1]); // set luminance
+				v.v.z   = c.z1();
+				v.t[0] += (d ? dty : dtx);
+				v.t[1]  = 0.0;
+				mat.itri_verts.push_back(v);
+				v.v.z   = c.z2();
+				v.t[1]  = dtz;
+				mat.itri_verts.push_back(v);
+				
+				if (n > 0) { // add a quad (2 triangles)
+					unsigned const ix(vss + 2*(n-1)), ixs_start(mat.indices.size()); // index of quad LLC
+					for (unsigned i = 0; i < 6; ++i) {mat.indices.push_back(ix + quad_ix_vals[i]);}
+					if (bool(d) ^ bool(e)) {reverse(mat.indices.begin()+ixs_start, mat.indices.end());} // swap winding order
+				}
+				v.v[d] += (d ? dy : dx);
+			} // for n
+		} // for e
+	} // for d
 }
 
 colorRGBA room_object_t::get_color() const {
