@@ -1284,9 +1284,11 @@ void road_draw_state_t::draw_bridge(bridge_t const &bridge, bool shadow_only) { 
 	vector3d const delta(p2 - p1);
 	colorRGBA const main_color(WHITE), cables_color(LT_GRAY), concrete_color(LT_GRAY);
 	color_wrapper const cw_main(main_color), cw_cables(cables_color), cw_concrete(concrete_color);
-	float const thickness(0.2*scale), conn_thick(0.25*thickness), wall_width(0.25*thickness), wall_height(0.5*thickness);
+	float const thickness(0.2*scale), conn_thick(0.25*thickness), wall_width(0.25*thickness), wall_height(0.25*thickness);
 	unsigned num_segs(max(16U, min(48U, unsigned(ceil(2.5*len/scale))))); // scale to fit the gap, with reasonable ranges
 	if (bridge.over_water) {num_segs /= 6;} // fewer pylons
+	point const closest_pt((bridge + xlate).closest_pt(camera_pdu.pos));
+	float const dist_val(shadow_only ? 1.0 : p2p_dist(camera_pdu.pos, closest_pt)/draw_tile_dist);
 	float const step_sz(1.0/num_segs), delta_d(step_sz*delta[d]), delta_z(step_sz*delta.z), dz_scale(bridge.dz()/(bridge.get_sz_dim(d)));
 	float cur_dval(p1[d]); // resize zvals based on max num_segs
 	vector<float> sm_split_pos;
@@ -1325,8 +1327,8 @@ void road_draw_state_t::draw_bridge(bridge_t const &bridge, bool shadow_only) { 
 		} // for n
 	}
 	else { // not over water, draw arches
-		point const cpos(camera_pdu.pos - xlate), closest_pt((bridge + xlate).closest_pt(camera_pdu.pos));
-		float const dist_val(shadow_only ? 1.0 : p2p_dist(camera_pdu.pos, closest_pt)/draw_tile_dist), peak_height(BRIDGE_HEIGHT_TO_LEN*len), cable_thick(0.1*thickness);
+		point const cpos(camera_pdu.pos - xlate);
+		float const peak_height(BRIDGE_HEIGHT_TO_LEN*len), cable_thick(0.1*thickness);
 		int const cable_ndiv(min(24, max(4, int(0.4/dist_val))));
 		float zvals[48+1] = {}, cur_zpos(p1.z);
 
@@ -1386,7 +1388,7 @@ void road_draw_state_t::draw_bridge(bridge_t const &bridge, bool shadow_only) { 
 					if (!shadow_only && dist_val < 0.1) { // use high detail vertical cylinders
 						s.set_cur_color(cables_color);
 						point const &p(conn_pts[e]);
-						draw_fast_cylinder(point(p.x, p.y, cur_zpos+0.15*thickness), point(p.x, p.y, zval), cable_thick, cable_thick, cable_ndiv, 0); // no ends
+						draw_fast_cylinder(point(p.x, p.y, cur_zpos+0.15*thickness), point(p.x, p.y, zval), cable_thick, cable_thick, cable_ndiv, 0, 0); // no ends
 					}
 					else { // use lower detail cubes; okay for shadow pass
 						cube_t c(conn_pts[e]);
@@ -1410,6 +1412,7 @@ void road_draw_state_t::draw_bridge(bridge_t const &bridge, bool shadow_only) { 
 		} // for n
 	} // end not over water case
 
+	// draw beams on the bottom? not split because they're likely already in shadow
 	// draw bottom surface
 	float tscale(0.0);
 
@@ -1429,7 +1432,7 @@ void road_draw_state_t::draw_bridge(bridge_t const &bridge, bool shadow_only) { 
 		bot_bc.d[ d][1]  = next_dval;
 		bot_bc.d[!d][0] += 0.4*w_expand;
 		bot_bc.d[!d][1] -= 0.4*w_expand;
-		float extend_dz1(dz_scale*(bridge.d[d][0] - bot_bc.d[d][0])), extend_dz2(dz_scale*(bot_bc.d[d][1] - bridge.d[d][1]));
+		float extend_dz1(dz_scale*(bridge.d[d][0] - cur_dval)), extend_dz2(dz_scale*(next_dval - bridge.d[d][1]));
 		if (dir) {swap(extend_dz1, extend_dz2);}
 		float const z1(bridge.z1() - extend_dz1 - 0.25*ROAD_HEIGHT), z2(bridge.z2() + extend_dz2 - 0.25*ROAD_HEIGHT); // move slightly downward
 		point bot_center(bot_bc.get_cube_center());
@@ -1451,7 +1454,17 @@ void road_draw_state_t::draw_bridge(bridge_t const &bridge, bool shadow_only) { 
 			side_center.z = 0.5f*(z1 + z2) + 0.5f*wall_height;
 			set_cube_pts(side_bc, z1, z2, z1+wall_height, z2+wall_height, (d != 0), dir, pts);
 			draw_cube(qbd_bridge, cw_concrete, side_center, pts, 1, invert_normals, tscale); // skip_bottom=1
-		}
+			// add side railing
+			int const railing_ndiv(min(16, max(4, int(0.2/dist_val))));
+			float const radius(0.1*wall_width), railing_dz(wall_height + 4.0*radius);
+			point p1, p2;
+			p1.z = (dir ? z2 : z1) + railing_dz;
+			p2.z = (dir ? z1 : z2) + railing_dz;
+			p1[!d] = p2[!d] = side_bc.d[!d][!e];
+			p1[ d] = cur_dval;
+			p2[ d] = next_dval;
+			draw_fast_cylinder(p1, p2, radius, radius, railing_ndiv, 0, 1, 0, nullptr, 0.0, 0.0, nullptr, 0, 0.0); // draw ends; untextured
+		} // for e
 		qbd_bridge.draw_and_clear(); // flush
 		cur_dval = next_dval;
 	} // for n
