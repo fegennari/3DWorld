@@ -194,6 +194,7 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 
 			if (is_mall) {
 				interior->mall_info.reset(new building_mall_info_t);
+				water_damage = crack_damage = 0.0; // no damage for malls
 				door_t &ent_door(interior->doors.back());
 				door_stack_t &ent_ds(interior->door_stacks.back());
 				ent_door.open_dir ^= 1; // door opens into the parking garage rather than the mall
@@ -272,6 +273,7 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 	return 1;
 }
 
+// num_rooms=5255 num_tiles=10453 num_verts=416764
 void building_t::remove_ceiling_tiles(cube_t const &room, tid_nm_pair_t const &ceil_tex, rand_gen_t &rgen) {
 	assert(interior);
 	unsigned const num_missing(rgen.rand() % 4); // 0-3
