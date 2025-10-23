@@ -2734,7 +2734,7 @@ private:
 	bool is_basement_room_under_mesh_not_int_bldg(cube_t const &room, building_t const *exclude=nullptr, bool allow_outside_grid=0) const;
 	bool is_basement_room_placement_valid(cube_t &room, ext_basement_room_params_t &P, bool dim, bool dir, bool *add_end_door=nullptr, building_t const *exclude=nullptr) const;
 	bool add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &door_bcube, cube_t const &basement, bool wall_dim, bool wall_dir, float length_mult);
-	void remove_ceiling_tiles(cube_t const &room, tid_nm_pair_t const &ceil_tex, rand_gen_t &rgen);
+	void remove_ceiling_tiles(cube_t const &room, tid_nm_pair_t const &ceil_tex, ext_basement_room_params_t &P, rand_gen_t &rgen);
 	void add_ceiling_tile_objects(rand_gen_t &rgen);
 	bool check_pool_room_slice_valid(cube_t const &slice, int skip_room_ix) const;
 	void maybe_assign_extb_room_as_swimming(rand_gen_t &rgen);

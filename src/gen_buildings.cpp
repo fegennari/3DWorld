@@ -2245,10 +2245,11 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 			float const zval(i->z1()); // bottom of ceiling
 			float tscale[2] = {tex.get_drawn_tscale_x(), 2.0f*tex.get_drawn_tscale_y()};
 			bool const dim(room_sz.x < room_sz.y); // long dim
+			if (dim) {swap(tscale[0], tscale[1]);}
 			auto &verts(bdraw.get_verts(tex)); // quads
 			for (unsigned d = 0; d < 2; ++d) {tscale[d] = max(1, round_fp(tscale[d]*room_sz[d]));} // exact tiling
-			tscale[1] *= 0.5; // align to half a tile in X
-			float const tmult[2] = {tscale[0]/room_sz[0], tscale[1]/room_sz[1]};
+			tscale[!dim] *= 0.5; // align to half a tile in X
+			float tmult[2] = {tscale[0]/room_sz[0], tscale[1]/room_sz[1]};
 			vect_cube_t ceil_cubes, temp;
 			subtract_cubes_from_cube(*i, interior->missing_ceil_tiles, ceil_cubes, temp, 2); // check zvals overlap
 
