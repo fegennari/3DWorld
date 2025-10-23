@@ -1131,11 +1131,12 @@ struct door_handle_t {
 };
 
 struct ceiling_space_t : public cube_t {
+	unsigned room_ix;
 	uint16_t nx, ny; // tile counts
 	vector2d space; // spacing between tiles
 	vector<uint8_t> light; // light values per grid point, size nx*ny
 
-	ceiling_space_t(cube_t const &c, unsigned nx_, unsigned ny_, vector2d const &s) : cube_t(c), nx(nx_), ny(ny_), space(s) {light.resize(nx*ny, 0);}
+	ceiling_space_t(cube_t const &c, unsigned rix, unsigned nx_, unsigned ny_, vector2d const &s) : cube_t(c), room_ix(rix), nx(nx_), ny(ny_), space(s) {light.resize(nx*ny, 0);}
 	void    set_light_val(unsigned x, unsigned y, uint8_t val) {assert(x < nx && y < ny); light[y*nx + x] = val;}
 	uint8_t get_light_val(unsigned x, unsigned y) const        {assert(x < nx && y < ny); return light[y*nx + x];}
 };
@@ -1424,6 +1425,7 @@ struct building_room_geom_t {
 	void add_pet_cage(room_object_t const &c);
 	void add_debug_shape(room_object_t const &c);
 	void add_ceiling_space(ceiling_space_t const &c, tid_nm_pair_t const &wall_tex);
+	void add_ceiling_tile_hole(cube_t const &c);
 	static void draw_ball_in_building(room_object_t  const &c, shader_t &s);
 	void draw_interactive_player_obj(carried_item_t const &c, shader_t &s, vector3d const &xlate);
 	// functions for expanding nested objects

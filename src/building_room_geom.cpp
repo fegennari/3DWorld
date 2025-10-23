@@ -7097,6 +7097,11 @@ void building_room_geom_t::add_ceiling_space(ceiling_space_t const &c, tid_nm_pa
 	} // for d
 }
 
+void building_room_geom_t::add_ceiling_tile_hole(cube_t const &c) {
+	rgeom_mat_t &mat(get_untextured_material(0, 0, 1)); // unshadowed, small
+	mat.add_cube_to_verts(c, colorRGBA(0.31, 0.2, 0.12), all_zeros, EF_Z12, 0, 0, 0, 1); // inverted sides, skip top and bottom; color should match the tile frame
+}
+
 colorRGBA room_object_t::get_color() const {
 	switch (type) {
 	case TYPE_TABLE:    return get_table_color(*this);

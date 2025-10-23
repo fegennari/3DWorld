@@ -282,7 +282,7 @@ void building_t::remove_ceiling_tiles(cube_t const &room_in, tid_nm_pair_t const
 	assert(interior);
 	unsigned const num_missing(rgen.rand() % 4); // 0-3
 	if (num_missing == 0) return;
-	float const wall_thick(get_wall_thickness()), fc_thick(get_fc_thickness());
+	float const wall_thick(get_wall_thickness()), fc_thick(get_fc_thickness()), tile_thick(0.2*fc_thick);
 	cube_t ceiling(room_in), room;
 	ceiling.z1() = room_in.z2() - fc_thick;
 	P.subtract_stairs_from_floor_ceil(ceiling, P.wall_segs);
@@ -300,17 +300,19 @@ void building_t::remove_ceiling_tiles(cube_t const &room_in, tid_nm_pair_t const
 	unsigned const num[2] = {room_sz.x/tile_sz.x, room_sz.y/tile_sz.y};
 	if (num[0] == 0 || num[1] == 0) return; // room narrower than one tile
 	// add ceiling space
-	ceiling_space_t ceil_space(room, num[0]+1, num[1]+1, tile_sz); // verts is tiles+1
-	ceil_space.expand_by_xy(-0.51*wall_thick); // slightly more than half to avoid Z-fighting with pool room walls
+	unsigned const room_ix(interior->rooms.size()); // will be the next room added
+	ceiling_space_t ceil_space(room, room_ix, num[0]+1, num[1]+1, tile_sz); // verts is tiles+1
+	ceil_space.expand_by_xy(-0.52*wall_thick); // slightly more than half to avoid Z-fighting with pool room walls
 	ceil_space.z1() = room.z2() - fc_thick;
 	ceil_space.z2() += 0.01*fc_thick; // expand up slightly above the reach of the upward pointing ceiling lights, since they're not shadowed properly
 	cube_t cs_ext(ceil_space);
 	cs_ext.z2() += fc_thick;
 	if (is_basement_room_under_mesh_not_int_bldg(cs_ext)) {ceil_space.z2() = cs_ext.z2();} // expand upward if there's space
 	// add missing tiles
-	unsigned const room_ix(interior->rooms.size()); // will be the next room added
 	unsigned const missing_tiles_start(interior->missing_ceil_tiles.size());
-	cube_t cut(room); // copy zvals
+	cube_t cut, cut_clip_cube(ceil_space);
+	cut_clip_cube.expand_by_xy(-0.02*wall_thick); // slight shrink to make sure it's in front of the inside wall
+	set_cube_zvals(cut, ceiling.z1(), (ceiling.z1() + tile_thick)); // make it relatively thin
 
 	for (unsigned n = 0; n < num_missing; ++n) {
 		for (unsigned N = 0; N < 10; ++N) { // N tries
@@ -322,6 +324,8 @@ void building_t::remove_ceiling_tiles(cube_t const &room_in, tid_nm_pair_t const
 				cut.d[d][0] = pos + ((d ^ dim) ? 0.09 : 0.045)*tile_sz[d]; // clip off the lower edge to preserve the brown frame
 				cut.d[d][1] = pos + tile_sz[d];
 			}
+			assert(cut.intersects_xy(cut_clip_cube));
+			cut.intersect_with_cube_xy(cut_clip_cube);
 			bool dup(0);
 			for (auto i = interior->missing_ceil_tiles.begin()+missing_tiles_start; i != interior->missing_ceil_tiles.end(); ++i) {dup |= (cut == *i);}
 			if (dup) continue; // we already removed this tile
@@ -341,9 +345,11 @@ void building_t::add_ceiling_tile_objects(rand_gen_t &rgen) {
 	unsigned last_room_ix(0); // can't be a real basement room
 	float const ceil_thick(get_floor_thickness());
 	vect_room_object_t &objs(interior->room_geom->objs);
+	// TODO: add some sort of metal bracket holding up the lights; should be able to iterate in the same order as ceiling_spaces
 
 	for (cube_t const &cs : interior->ceiling_spaces) {
 		bool const dim(cs.dx() < cs.dy()); // long dim
+		// TODO: find lights matching cs.room_ix
 		// TODO: pipes
 	} // for cs
 	for (cube_with_ix_t const &ct : interior->missing_ceil_tiles) {
