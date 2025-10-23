@@ -707,7 +707,7 @@ void building_t::end_ext_basement_hallway(extb_room_t &room, cube_t const &conn_
 				stairs.d[dim][!dir] = stairs_start; // near end/top of stairs
 				bool const add_railing(rgen.rand_bool()); // 50% of the time
 				float const wall_half_thick(0.5*get_wall_thickness());
-				stairs.expand_in_dim(!dim, -(add_railing ? 2.0 : 1.0)*wall_half_thick); // shrink on the sides; more if there are railings
+				stairs.expand_in_dim(!dim, - wall_half_thick); // shrink on the sides
 				stairs.expand_in_dim( dim, -(wall_half_thick + get_trim_thickness()));  // shrink on the ends
 				assert(!stairs.intersects_xy(room.conn_bcube));
 				P.stairs.emplace_back(stairs, dim, !dir, add_railing);

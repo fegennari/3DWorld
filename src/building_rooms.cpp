@@ -3405,9 +3405,9 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 				if (!has_side_walls && !has_wall_both_sides/*!i->against_wall[d]*/) {flags |= RO_FLAG_OPEN;} // use this flag to indicate no walls, need balusters
 				railing.z2() = railing_z2;
 
-				if (add_wall || i->roof_access) {
+				if (add_wall || i->roof_access || i->in_ext_basement) {
 					railing.translate_dim(!dim, (d ? -1.0 : 1.0)*2.0*wall_hw); // shift railing inside of walls
-					railing.expand_in_dim( dim, -(i->roof_access ? 2.0 : 1.0)*wall_hw); // shrink slightly to avoid clipping through an end wall
+					if (!i->in_ext_basement) {railing.expand_in_dim( dim, -(i->roof_access ? 2.0 : 1.0)*wall_hw);} // shrink slightly to avoid clipping through an end wall
 				}
 				if (is_U) { // adjust railing height/angle to match stairs
 					flags |= RO_FLAG_HAS_EXTRA; // make it taller
