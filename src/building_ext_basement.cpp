@@ -321,7 +321,7 @@ void building_t::remove_ceiling_tiles(cube_t const &room_in, tid_nm_pair_t const
 			for (unsigned d = 0; d < 2; ++d) { // xy
 				ix[d] = rgen.rand() % num[d];
 				float const pos(room.d[d][0] + ix[d]*tile_sz[d]);
-				cut.d[d][0] = pos + ((d ^ dim) ? 0.09 : 0.045)*tile_sz[d]; // clip off the lower edge to preserve the brown frame
+				cut.d[d][0] = pos + ((d ^ dim) ? 0.085 : 0.042)*tile_sz[d]; // clip off the lower edge to preserve the brown frame
 				cut.d[d][1] = pos + tile_sz[d];
 			}
 			assert(cut.intersects_xy(cut_clip_cube));
@@ -342,25 +342,74 @@ void building_t::remove_ceiling_tiles(cube_t const &room_in, tid_nm_pair_t const
 
 void building_t::add_ceiling_tile_objects(rand_gen_t &rgen) {
 	assert(has_room_geom());
-	unsigned last_room_ix(0); // can't be a real basement room
-	float const ceil_thick(get_floor_thickness());
+	float const fc_thick(get_fc_thickness()), light_amt(1.0);
+	unsigned const pipe_flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING);
 	vect_room_object_t &objs(interior->room_geom->objs);
-	// TODO: add some sort of metal bracket holding up the lights; should be able to iterate in the same order as ceiling_spaces
+	auto cur_obj(objs.begin()); // used for lights iteration; lights should be in the same order as ceiling_spaces
+	auto tile_iter(interior->missing_ceil_tiles.begin());
+	vect_cube_t miss_tiles, pipe_avoid;
 
-	for (cube_t const &cs : interior->ceiling_spaces) {
+	for (ceiling_space_t const &cs : interior->ceiling_spaces) {
+		miss_tiles.clear();
+		pipe_avoid.clear();
+
+		for (; cur_obj != objs.end() && cur_obj->room_id <= cs.room_ix; ++cur_obj) {
+			if (cur_obj->room_id != cs.room_ix || cur_obj->type != TYPE_LIGHT) continue; // not a light in this room
+			room_object_t const &light(*cur_obj);
+			cube_t base(light);
+			base.z1()  = light.z2(); // flush with top of light
+			base.z2() += 1.0*light.dz();
+			objs.emplace_back(base, TYPE_METAL_BAR, cs.room_ix, light.dim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, LT_GRAY, EF_Z1); // skip bottom
+			// add two support posts
+			float const post_radius(0.04*light.get_width());
+			cube_t post;
+			set_cube_zvals(post, base.z2(), cs.z2());
+			set_wall_width(post, light.get_center_dim(!light.dim), post_radius, !light.dim);
+			if (pipe_avoid.empty()) {pipe_avoid.push_back(post);} // only need to add the first light, since they should be in a line
+
+			for (unsigned d = 0; d < 2; ++d) {
+				set_wall_width(post, (light.d[light.dim][d] + (d ? -1.0 : 1.0)*4.0*post_radius), post_radius, light.dim);
+				objs.emplace_back(post, TYPE_METAL_BAR, cs.room_ix, 0, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, LT_GRAY, EF_Z12); // skip top and bottom
+			}
+		} // for cur_obj
+		// place ceiling tiles on the floor
+		room_t const &room(get_room(cs.room_ix));
 		bool const dim(cs.dx() < cs.dy()); // long dim
-		// TODO: find lights matching cs.room_ix
-		// TODO: pipes
-	} // for cs
-	for (cube_with_ix_t const &ct : interior->missing_ceil_tiles) {
-		if (ct.ix != last_room_ix) { // new room
-			room_t const &room(get_room(ct.ix));
-			cube_t ceil_above(room);
-			set_cube_zvals(ceil_above, ct.z1(), ct.z1()+ceil_thick); // space above the ceiling
+		float const floor_zval(room.z1() + fc_thick);
+
+		for (; tile_iter != interior->missing_ceil_tiles.end() && tile_iter->ix <= cs.room_ix; ++tile_iter) {
+			assert(tile_iter->ix == cs.room_ix); // can't have tile without a ceiling space
+			// place tile on the floor
+			// TODO: random pos; avoid placing over stairs
+			cube_t tile(*tile_iter);
+			miss_tiles.push_back(tile);
+			tile.translate_dim(2, (floor_zval - tile.z1()));
+			objs.emplace_back(tile, TYPE_CEIL_TILE, cs.room_ix, dim, 0, RO_FLAG_NOCOLL, light_amt);
 			// TODO: hanging wires, etc.
-			last_room_ix = ct.ix;
-		}
-	} // for ct
+		} // for tile_iter
+		// add pipes in the ceiling
+		//float const pipe_z1(cs.z1() + 0.2*fc_thick); // resting on ceiling tile
+		float const pipe_zc(cs.zc()); // center of space
+		unsigned const num_pipes(1 + (rgen.rand() % 5)); // 1-5
+		cube_t pipe(cs); // full length of ceiling space
+
+		for (unsigned n = 0; n < num_pipes; ++n) {
+			float const radius(rgen.rand_uniform(0.125, 0.25)*fc_thick), edge_spacing(2.0*radius);
+			colorRGBA const pipe_color(rgen.rand_bool() ? COPPER_C : LT_GRAY); // TODO: more colors
+
+			for (unsigned N = 0; N < 10; ++N) { // 10 attempts to place a pipe
+				float const pipe_pos(rgen.rand_uniform((cs.d[!dim][0] + edge_spacing), (cs.d[!dim][1] - edge_spacing)));
+				set_wall_width(pipe, pipe_zc,  radius, 2);
+				set_wall_width(pipe, pipe_pos, radius, !dim);
+				if (!has_bcube_int_xy(pipe, miss_tiles)) break; // not visible through a missing tile, skip (but counts as a pipe)
+				if ( has_bcube_int_xy(pipe, pipe_avoid)) continue; // blocked by light post or another pipe
+				interior->room_geom->objs.emplace_back(pipe, TYPE_PIPE, cs.room_ix, dim, 0, pipe_flags, light_amt, SHAPE_CYLIN, pipe_color); // horizontal
+				pipe_avoid.push_back(pipe);
+				// TODO: hanging brackets?
+				break; // success
+			} // for N
+		} // for n
+	} // for cs
 }
 
 void extend_adj_cubes(cube_t const &oldc, cube_t const &newc, vect_cube_t &cubes, float wall_thickness, unsigned wall_dim=2) {

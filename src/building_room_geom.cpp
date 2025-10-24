@@ -1467,9 +1467,9 @@ void building_room_geom_t::add_catwalk(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_obj_with_top_texture(room_object_t const &c, string const &text_name, colorRGBA const &sides_color, bool is_small,
-	float spec, float shine, float metalness)
+	float spec, float shine, float metalness, float tscale)
 {
-	tid_nm_pair_t tex(get_texture_by_name(text_name), 0.0);
+	tid_nm_pair_t tex(get_texture_by_name(text_name), tscale);
 	tex.set_specular(spec, shine, metalness);
 	rgeom_mat_t &mat(get_material(tex, 1, 0, is_small)); // shadows
 	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, ~EF_Z2, c.dim, (c.dim ^ c.dir ^ 1), c.dir); // top face only
@@ -1494,7 +1494,12 @@ void building_room_geom_t::add_laptop    (room_object_t const &c) {add_obj_with_
 void building_room_geom_t::add_computer  (room_object_t const &c) {add_obj_with_front_texture(c, "interiors/computer.jpg", BKGRAY, 1);} // is_small=1
 void building_room_geom_t::add_card_deck (room_object_t const &c) {add_obj_with_top_texture  (c, "interiors/card_deck.jpg", WHITE, 1);} // is_small=1
 void building_room_geom_t::add_bullet_box(room_object_t const &c) {add_obj_with_top_texture  (c, "interiors/bullets.png",   BLACK, 1);} // is_small=1
-void building_room_geom_t::add_ceil_tile (room_object_t const &c) {add_obj_with_top_texture  (c, "noise.png", WHITE, 1);} // is_small=1; noise tex is interior of part board
+
+// noise tex is interior of part board; set tscale based on length
+void building_room_geom_t::add_ceil_tile (room_object_t const &c) {
+	float const tscale(1.0/c.get_length());
+	add_obj_with_top_texture(c, "noise.png", WHITE, 1, 0.0, 0.0, 0.0, tscale); // is_small=1
+}
 
 void place_pizza_toppings(cube_t const &pizza, float rmin, float rmax, float height, colorRGBA const &color, unsigned num, bool can_overlap,
 	rgeom_mat_t &mat, vector<sphere_t> &placed, rand_gen_t &rgen) {

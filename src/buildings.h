@@ -1339,7 +1339,7 @@ struct building_room_geom_t {
 	void add_machine(room_object_t const &c, float floor_ceil_gap, bldg_industrial_info_t const *ind_info);
 	void add_keyboard(room_object_t const &c);
 	void add_obj_with_top_texture  (room_object_t const &c, std::string const &text_name, colorRGBA const &sides_color,
-		bool is_small=0, float spec=0.0, float shine=0.0, float metalness=0.0);
+		bool is_small=0, float spec=0.0, float shine=0.0, float metalness=0.0, float tscale=0.0);
 	void add_obj_with_front_texture(room_object_t const &c, std::string const &text_name, colorRGBA const &front_color, colorRGBA const &sides_color,
 		bool is_small=0, float spec=0.0, float shine=0.0, float metalness=0.0);
 	void add_obj_with_front_texture(room_object_t const &c, std::string const &text_name, colorRGBA const &sides_color,
