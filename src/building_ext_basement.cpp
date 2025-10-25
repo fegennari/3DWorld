@@ -297,7 +297,7 @@ void building_t::remove_ceiling_tiles(cube_t const &room_in, tid_nm_pair_t const
 	if (dim) {swap(tscale[0], tscale[1]);}
 	for (unsigned d = 0; d < 2; ++d) {tscale[d] = max(1, round_fp(tscale[d]*room_sz[d]))/room_sz[d];} // exact tiling
 	vector2d const tile_sz(1.0/tscale[0], 1.0/tscale[1]);
-	unsigned const num[2] = {room_sz.x/tile_sz.x, room_sz.y/tile_sz.y};
+	unsigned const num[2] = {unsigned(room_sz.x/tile_sz.x), unsigned(room_sz.y/tile_sz.y)};
 	if (num[0] == 0 || num[1] == 0) return; // room narrower than one tile
 	// add ceiling space
 	unsigned const room_ix(interior->rooms.size()); // will be the next room added

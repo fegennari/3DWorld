@@ -2853,7 +2853,7 @@ driveway_t city_obj_placer_t::get_gas_station_driveway(car_t const &car) const {
 	return gstations[gsix].get_driveway_for_lane(car.dest_gs_lane);
 }
 bool city_obj_placer_t::reserve_gas_station_exit_lane(car_t const &car) const {
-	assert(car.dest_gstation >= 0 && car.dest_gstation < gstations.size());
+	assert(car.dest_gstation >= 0 && car.dest_gstation < (short)gstations.size());
 	return gstations[car.dest_gstation].reserve_output_lane(car.dest_gs_lane);
 }
 void city_obj_placer_t::leave_gas_station(unsigned gsix) const {
