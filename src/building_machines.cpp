@@ -13,6 +13,7 @@ int get_metal_texture (unsigned id);
 tid_nm_pair_t get_metal_plate_tex(float tscale, bool shadowed);
 colorRGBA apply_light_color(room_object_t const &o, colorRGBA const &c);
 float get_merged_pipe_radius(float r1, float r2, float exponent);
+void set_pipe_specular(colorRGBA const &spec_color, bool is_duct, bool is_dirty, tid_nm_pair_t &tex);
 
 extern object_model_loader_t building_obj_model_loader; // for vent fans
 
@@ -93,7 +94,9 @@ void building_room_geom_t::add_machine_pipe_in_region(room_object_t const &c, cu
 		add_spring(p1, radius, coil_radius, length, coil_gap, dim, color, spec_color, sparse);
 		return;
 	}
-	rgeom_mat_t &pipe_mat(get_metal_material(1, 0, 1, 0, 1, spec_color)); // no_reflect=1
+	tid_nm_pair_t tex(-1, 1.0f, 1, 0, 1); // shadowed, no_reflect=1
+	set_pipe_specular(spec_color, 0, 0, tex); // is_duct=0, is_dirty=0
+	rgeom_mat_t &pipe_mat(get_material(tex, 0, 0, 1)); // shadowed, small
 	pipe_mat.add_cylin_to_verts(p1, p2, radius, radius, apply_light_color(c, color), 0, 0, 0, 0, 1.0, 1.0, 0, 16); // shadowed, small
 
 	// maybe add a valve or gauge
@@ -150,7 +153,7 @@ void building_room_geom_t::add_machine_pipe_in_region(room_object_t const &c, cu
 		vg.d[vdim][!vdir] = attach_pt[vdim];
 		vg.d[vdim][ vdir] = attach_pt[vdim] + (vdir ? 1.0 : -1.0)*vg_radius*rgen.rand_uniform(0.4, 0.5); // set depth
 		colorRGBA const handle_color(handle_colors[rgen.rand() % NUM_HANDLE_COLORS]), shaft_color(choose_pipe_color(rgen));
-		rgeom_mat_t &handle_mat(get_metal_material(1, 0, 1, 0, 1)); // shadowed, no_reflect=1
+		rgeom_mat_t &handle_mat(get_metal_material(1, 0, 1, 0, 1, WHITE, 0.7, 60.0, 0.5)); // shadowed, no_reflect=1; painted metal
 		draw_metal_handle_wheel(vg, vdim, apply_light_color(c, handle_color), apply_light_color(c, shaft_color), handle_mat, handle_mat);
 	}
 	// draw the fitting
@@ -389,7 +392,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 				unsigned const NUM_HANDLE_COLORS = 5;
 				colorRGBA const handle_colors[NUM_HANDLE_COLORS] = {colorRGBA(0.5, 0.0, 0.0), DK_RED, colorRGBA(0.5, 0.25, 0.0), LT_GRAY, BKGRAY};
 				colorRGBA const handle_color(handle_colors[rgen.rand() % NUM_HANDLE_COLORS]), shaft_color(choose_pipe_color(rgen));
-				rgeom_mat_t &mat(get_metal_material(1, 0, 1, 0, 1)); // shadowed, small, specular metal, no_reflect=1
+				rgeom_mat_t &mat(get_metal_material(1, 0, 1, 0, 1, WHITE, 0.7, 60.0, 0.5)); // shadowed, small, specular metal, no_reflect=1; painted metal
 				// use the same material for the handle and the shaft
 				draw_metal_handle_wheel(valve, dim, apply_light_color(c, handle_color), apply_light_color(c, shaft_color), mat, mat);
 				avoid.push_back(valve);

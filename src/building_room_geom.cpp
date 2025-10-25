@@ -2948,6 +2948,13 @@ void building_room_geom_t::add_pg_ramp(room_object_t const &c, float tscale) {
 	add_ramp(c, thickness, 0, mat); // skip_bottom=0
 }
 
+void set_pipe_specular(colorRGBA const &spec_color, bool is_duct, bool is_dirty, tid_nm_pair_t &tex) {
+	tex.set_specular_color(spec_color, 0.7, 50.0);
+	// make specular; maybe should not make specular if rusty, but setting per-pipe specular doesn't work, and water effect adds specular anyway
+	if (spec_color != WHITE) {tex.metalness = (is_dirty ? 0.25 : 0.6) ;} // more metal if pipe has a metal specular color
+	else {tex.metalness = (is_dirty ? 0.1 :    (is_duct ? 0.25 : 0.4));} // partially reflective
+}
+
 void building_room_geom_t::add_pipe(room_object_t const &c, bool add_exterior) { // should be SHAPE_CYLIN
 	bool const exterior(c.is_exterior());
 	if (exterior != add_exterior) return;
@@ -2973,10 +2980,7 @@ void building_room_geom_t::add_pipe(room_object_t const &c, bool add_exterior) {
 	else if (is_dirty) {tid = get_texture_by_name("metals/67_rusty_dirty_metal.jpg");} // "metals/65_Painted_dirty_metal.jpg" works as well
 	tid_nm_pair_t tex(tid, 1.0f, shadowed, 0, 1); // custom specular color, no_reflect=1
 	colorRGBA const spec_color(get_specular_color(c.color)); // special case metals
-	tex.set_specular_color(spec_color, 0.8, 60.0);
-	// make specular; maybe should not make specular if rusty, but setting per-pipe specular doesn't work, and water effect adds specular anyway
-	if (spec_color != WHITE) {tex.metalness = (is_dirty ? 0.25 : 1.0) ;} // metal if pipe has a metal specular color
-	else {tex.metalness = (is_dirty ? 0.1 :    (is_duct ? 0.25 : 0.5));} // partially reflective
+	set_pipe_specular(spec_color, is_duct, is_dirty, tex);
 	rgeom_mat_t &mat(get_material(tex, shadowed, 0, (exterior ? 0 : (is_duct ? 1 : 2)), 0, exterior)); // detail, small, or exterior object
 	// swap texture XY for ducts
 	mat.add_ortho_cylin_to_verts(c, color, dim, (flat_ends && draw_joints[0]), (flat_ends && draw_joints[1]),
@@ -4624,7 +4628,7 @@ void building_room_geom_t::add_water_heater(room_object_t const &c) {
 	metal_mat.add_vcylin_to_verts(vent, apply_light_color(c, LT_GRAY), 0, 0, in_store, 0, 1.0, 1.0, 1.0, 1.0, 0, 16); // ndiv=16; draw inside if in store
 	metal_mat.add_vcylin_to_verts(cone, apply_light_color(c, LT_GRAY), 0, 0, 0, 0, 1.8, 0.0); // cone
 	if (bend_pipes) {get_metal_material(1, 0, 1, 0, 1, BRASS_C);} // make sure it exists in the materials, no_reflect=1
-	rgeom_mat_t &copper_mat(get_metal_material(1, 0, 1, 0, 1, COPPER_C)); // small=1, no_reflect=1
+	rgeom_mat_t &copper_mat(get_metal_material(1, 0, 1, 0, 1, COPPER_C, 0.7, 60.0, 0.7)); // small=1, no_reflect=1
 	colorRGBA const copper_color(apply_light_color(c, COPPER_C));
 	bool const low_detail = 1;
 	unsigned const pipe_ndiv(get_rgeom_sphere_ndiv(low_detail));
@@ -4718,7 +4722,7 @@ void building_room_geom_t::add_furnace(room_object_t const &c) {
 	rgeom_mat_t &insul_mat(get_painted_metal_material(1, 0, 1, 0, 1)); // white reflective tape (not actually metal); shadows=1, small=1, no_reflect=1
 	add_furnace_pipe_with_bend(c, insul_mat, apply_light_color(c, BLACK), pipe_ndiv, 0.02, 0.87, 0.484, 2.2);
 	// copper
-	rgeom_mat_t &copper_mat(get_metal_material(1, 0, 1, 0, 1, COPPER_C)); // shadows=1, small=1, no_reflect=1
+	rgeom_mat_t &copper_mat(get_metal_material(1, 0, 1, 0, 1, COPPER_C, 0.7, 60.0, 0.7)); // shadows=1, small=1, no_reflect=1
 	add_furnace_pipe_with_bend(c, copper_mat, apply_light_color(c, COPPER_C), pipe_ndiv, 0.007, 0.88, 0.45, 1.6);
 	// drain (2x)
 	rgeom_mat_t &plastic_mat(get_untextured_material(1, 0, 1, 0, 0, 1)); // shadows=1, small=1, no_reflect=1
@@ -6479,7 +6483,7 @@ void building_room_geom_t::add_chem_tank(room_object_t const &c, bool draw_label
 	mat.add_sphere_to_verts(top,  color, 0, -plus_z); // top hemisphere
 	// add pipes to floor
 	unsigned const pipe_ndiv(get_rgeom_sphere_ndiv(1)); // low_detail=1
-	rgeom_mat_t &pipe_mat(get_metal_material(1, 0, 0, 0, 0, COPPER_C)); // not small
+	rgeom_mat_t &pipe_mat(get_metal_material(1, 0, 0, 0, 0, COPPER_C, 0.7, 60.0, 0.7)); // not small
 	colorRGBA const pipe_color(apply_light_color(c, COPPER_C));
 	float const pipe_radius(0.04*radius);
 	point entry_pos(c.get_cube_center());
