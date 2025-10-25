@@ -374,18 +374,44 @@ void building_t::add_ceiling_tile_objects(rand_gen_t &rgen) {
 		} // for cur_obj
 		// place ceiling tiles on the floor
 		room_t const &room(get_room(cs.room_ix));
+		cube_t place_area(get_walkable_room_bounds(room));
+		place_area.expand_by_xy(-get_trim_thickness());
 		bool const dim(cs.dx() < cs.dy()); // long dim
-		float const floor_zval(room.z1() + fc_thick);
+		float const floor_zval(room.z1() + fc_thick), fc_gap(get_floor_ceil_gap());
 
 		for (; tile_iter != interior->missing_ceil_tiles.end() && tile_iter->ix <= cs.room_ix; ++tile_iter) {
 			assert(tile_iter->ix == cs.room_ix); // can't have tile without a ceiling space
 			// place tile on the floor
-			// TODO: random pos; avoid placing over stairs
-			cube_t tile(*tile_iter);
-			miss_tiles.push_back(tile);
-			tile.translate_dim(2, (floor_zval - tile.z1()));
-			objs.emplace_back(tile, TYPE_CEIL_TILE, cs.room_ix, dim, 0, RO_FLAG_NOCOLL, light_amt);
-			// TODO: hanging wires, etc.
+			miss_tiles.push_back(*tile_iter); // needed for visible pipe placement
+			cube_t const tile(*tile_iter);
+
+			for (unsigned n = 0; n < 10; ++n) { // 10 placement attempts
+				cube_t ftile(*tile_iter); // tile on floor
+				ftile.translate_dim(2, (floor_zval - tile.z1()));
+				for (unsigned d = 0; d < 2; ++d) {ftile.translate_dim(d, 1.5*rgen.signed_rand_float()*tile.get_sz_dim(d));} // move +/- 1.5 tiles away in both dims
+				if (!place_area.contains_cube_xy(ftile))             continue; // clipping through walls
+				if (interior->is_cube_close_to_doorway(ftile, room)) continue; // no clipping through doors
+				if (has_bcube_int(ftile, interior->stairwells))      continue; // don't place on stairs
+				objs.emplace_back(ftile, TYPE_CEIL_TILE, cs.room_ix, dim, 0, RO_FLAG_NOCOLL, light_amt);
+				break; // success
+			} // for n
+			if (rgen.rand_float() < 0.5) { // add hanging wire
+				bool const cx(rgen.rand_bool()), cy(rgen.rand_bool()); // choose a random corner
+				float const radius(rgen.rand_uniform(0.04, 0.08)*fc_thick);
+				point const corner((tile.d[0][cx] + (cx ? -1.0 : 1.0)*radius), (tile.d[1][cy] + (cy ? -1.0 : 1.0)*radius), cs.z2()); // starts at ceiling
+				cube_t wire(corner, corner);
+				wire.expand_by_xy(radius);
+				wire.z1() = cs.z1() - rgen.rand_uniform(0.1, 0.5)*fc_gap; // set length
+				// TODO: single wire, not a pair
+				objs.emplace_back(wire, TYPE_ELEC_WIRE, cs.room_ix, 0, 1, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), light_amt, SHAPE_CYLIN); // vertical
+			}
+			if (rgen.rand_float() < 0.5) { // add spider web
+				bool const tdim(rgen.rand_bool()), tdir(rgen.rand_bool()); // choose a random edge
+				cube_t web(tile); // copy tile width
+				set_cube_zvals(web, tile.z2(), cs.z2()); // top of tile to top of ceiling
+				set_wall_width(web, tile.d[tdim][tdir], 0.02*fc_thick, tdim); // close to zero area
+				objs.emplace_back(web, TYPE_SPIWEB, cs.room_ix, tdim, tdir, RO_FLAG_NOCOLL, light_amt);
+			}
 		} // for tile_iter
 		// add pipes in the ceiling
 		//float const pipe_z1(cs.z1() + 0.2*fc_thick); // resting on ceiling tile
@@ -394,7 +420,7 @@ void building_t::add_ceiling_tile_objects(rand_gen_t &rgen) {
 		cube_t pipe(cs); // full length of ceiling space
 
 		for (unsigned n = 0; n < num_pipes; ++n) {
-			float const radius(rgen.rand_uniform(0.125, 0.25)*fc_thick), edge_spacing(2.0*radius);
+			float const radius(rgen.rand_uniform(0.12, 0.25)*fc_thick), edge_spacing(2.0*radius);
 			colorRGBA const pipe_color(rgen.rand_bool() ? COPPER_C : LT_GRAY); // TODO: more colors
 
 			for (unsigned N = 0; N < 10; ++N) { // 10 attempts to place a pipe
