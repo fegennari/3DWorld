@@ -994,8 +994,8 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 					wscale     = min(0.9f*garage_width, (garage_width - 2.0f*shelf_depth))/gs_door_height; // avoid clipping through shelves
 					gdoor_dir ^= 1; // facing away from the house, not toward it
 				}
-				add_door(place_door(c, pri_dim, gdoor_dir, gs_door_height, 0.0, 0.0, 0.0, wscale, 0, is_garage, rgen), parts.size(), pri_dim, gdoor_dir, 0);
-				if (is_garage) {doors.back().type = tquad_with_ix_t::TYPE_GDOOR;} // make it a garage door rather than a house door
+				bool const has_door(add_door(place_door(c, pri_dim, gdoor_dir, gs_door_height, 0.0, 0.0, 0.0, wscale, 0, is_garage, rgen), parts.size(), pri_dim, gdoor_dir, 0));
+				if (is_garage && has_door) {doors.back().type = tquad_with_ix_t::TYPE_GDOOR;} // make it a garage door rather than a house door
 
 				if (is_garage) { // add driveway
 					bool const ddir((pri_dim == dim) ? dir : dir2), has_r90_turn(street_dir && (2*pri_dim + ddir + 1) != street_dir);
@@ -1108,8 +1108,10 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				has_int_garage = 1;
 				room_t const &garage(interior->get_garage_room());
 				float const wscale(0.9*garage.get_sz_dim(!gdim)/door_height);
-				add_door(place_door(garage, gdim, gdir, door_height, 0.0, 0.0, 0.0, wscale, 0, 1, rgen), garage.part_id, gdim, gdir, 0); // centered in garage
-				doors.back().type = tquad_with_ix_t::TYPE_GDOOR; // make it a garage door
+				
+				if (add_door(place_door(garage, gdim, gdir, door_height, 0.0, 0.0, 0.0, wscale, 0, 1, rgen), garage.part_id, gdim, gdir, 0)) { // centered in garage
+					doors.back().type = tquad_with_ix_t::TYPE_GDOOR; // make it a garage door
+				}
 				driveway = garage;
 				driveway.z2() = garage.z1() + driveway_dz;
 				driveway.d[gdim][!gdir] = garage.d[gdim][gdir]; // start pos
@@ -2065,7 +2067,8 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office 
 				if (used[2*dim + dir]) continue; // door already placed on this side
 				// find a side on the exterior to ensure door isn't obstructed by a building cube or in the courtyard
 				if (part.d[dim][dir] != parts_bcube.d[dim][dir]) continue;
-				bool const allow_fail(!doors.empty() || part_ix+1 < num_above_ground_parts); // allow failure if already placed at least one door and not last part
+				// allow failure if already placed at least one door and not last part and side
+				bool const allow_fail(!doors.empty() || part_ix+1 < num_above_ground_parts || n+1 < 4);
 				float const door_center_shift(is_prison() ? 0.25 : 0.1); // allow misaligned doors in prisons in case cells are to one side
 				if (!add_door(place_door(part, dim, dir, door_height, 0.0, 0.0, door_center_shift, wscale, allow_fail, 0, rgen), part_ix, dim, dir, 1)) continue;
 				used[2*dim + dir] = 1; // mark used

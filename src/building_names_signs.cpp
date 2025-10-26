@@ -294,7 +294,7 @@ void building_t::add_exterior_door_items(rand_gen_t &rgen) { // mostly signs; ad
 	// Note: these are interior items drawn on the exterior and expect interior lights, so they won't get sunlight;
 	// but we want to generate these dynamically rather than statically because each sign text character is a separate quad
 	if (is_house) { // maybe add welcome sign and add doorbell
-		assert(!doors.empty());
+		if (doors.empty()) return; // shouldn't happen
 		tquad_with_ix_t const &front_door(doors.front());
 		add_doorbell_lamp_and_porch_items(front_door, rgen);
 
