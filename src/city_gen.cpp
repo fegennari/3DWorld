@@ -1614,8 +1614,8 @@ public:
 			car.dir = (rand_val & 1);
 			car.headlight_color = (rand_val >> 1);
 			car.choose_max_speed(rgen);
-			// start with a random amount of fuel, but not full or empty; use a higher value if there's no gas station in this city
-			car.fuel_amt = (has_gas_station() ? rgen.rand_uniform(0.1, 0.9) : rgen.rand_uniform(0.5, 0.9));
+			// start with random fuel, but not full or empty; use a higher value if no gas station in this city (use is_residential, gas stations not yet placed)
+			car.fuel_amt = (/*has_gas_station()*/!is_residential ? rgen.rand_uniform(0.1, 0.9) : rgen.rand_uniform(0.5, 0.9));
 			car.cur_road = seg.road_ix;
 			car.cur_seg  = seg_ix;
 			car.cur_road_type = TYPE_RSEG;
