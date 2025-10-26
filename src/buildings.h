@@ -637,14 +637,14 @@ unsigned const RO_FLAG_ADJ_HI  = 0x0800; // for kitchen counters/closets/door tr
 unsigned const RO_FLAG_ADJ_BOT = 0x1000; // for door trim/railings/ext steps/etc.
 unsigned const RO_FLAG_ADJ_TOP = 0x2000; // for door trim/railings
 unsigned const RO_FLAG_IS_HOUSE= 0x4000; // used for mirror reflections, shelves, tables, desks, beds, closets, and false doors
-unsigned const RO_FLAG_RAND_ROT= 0x8000; // random rotation; used for office chairs, papers, pictures, cups, and balls
+unsigned const RO_FLAG_RAND_ROT= 0x8000; // random rotation; used for office chairs, papers, pictures, cups, balls, and ceiling tiles
 unsigned const RO_FLAG_UNTEXTURED= 0x1000; // for shirts, aliased with RO_FLAG_ADJ_BOT
 unsigned const RO_FLAG_FROM_SET  = 0x1000; // for books,  aliased with RO_FLAG_ADJ_BOT
 unsigned const RO_FLAG_HAS_VOL_IX= 0x2000; // for books,  aliased with RO_FLAG_ADJ_TOP
 unsigned const RO_FLAG_FOR_CAR   = 0x1000; // for car blockers, aliased with RO_FLAG_ADJ_BOT
 unsigned const RO_FLAG_WALKWAY   = 0x1000; // for walkway objects (outside of buildings), aliased with RO_FLAG_ADJ_BOT
 // object flags, third byte, for pickup/interact state
-unsigned const RO_FLAG_IN_HALLWAY= 0x010000; // for attic doors and trashcans
+unsigned const RO_FLAG_IN_HALLWAY= 0x010000; // for attic doors, trashcans, and hanging wires
 unsigned const RO_FLAG_IN_MALL   = 0x010000; // for mall chairs, tables, benches, trashcans, etc.; aliased with RO_FLAG_IN_HALLWAY and RO_FLAG_IN_FACTORY
 unsigned const RO_FLAG_IN_FACTORY= 0x010000; // for machines, ladders, etc.; aliased with RO_FLAG_IN_HALLWAY and RO_FLAG_IN_MALL
 unsigned const RO_FLAG_IN_ATTIC  = 0x020000; // in attic
@@ -1313,7 +1313,7 @@ struct building_room_geom_t {
 	void add_shower_drain(cube_t const &bottom, colorRGBA const &color);
 	void add_drain_pipe(room_object_t const &c);
 	void add_electrical_wire(room_object_t const &c, vector3d const &rot_axis);
-	void add_electrical_wire_pair(room_object_t const &c);
+	void add_electrical_wire_or_pair(room_object_t const &c);
 	void add_key(room_object_t const &c);
 	void add_money(room_object_t const &c);
 	cube_t add_phone_frame_and_return_screen_if_on(room_object_t const &c, rgeom_mat_t &mat, bool in_hand);

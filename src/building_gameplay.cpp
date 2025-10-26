@@ -226,7 +226,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_CARD_DECK ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 5.0,   0.1,   "deck of cards");
 	bldg_obj_types[TYPE_CIGARETTE ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 0.0,   0.0,   "cigarette");
 	bldg_obj_types[TYPE_BULLETS   ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 0.0,   0.0,   "box of bullets"); // Note: no value or weight, since these are consumable
-	bldg_obj_types[TYPE_CEIL_TILE ] = bldg_obj_type_t(0, 0, 1, 1, 0, 0, 2, 4.0,   1.0,   "ceiling tile"); // fallen acoustic ceiling tile
+	bldg_obj_types[TYPE_CEIL_TILE ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 4.0,   1.0,   "ceiling tile"); // fallen acoustic ceiling tile
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");

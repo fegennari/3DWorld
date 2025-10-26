@@ -799,11 +799,10 @@ void building_room_geom_t::add_drain_pipe(room_object_t const &c) { // is_small=
 }
 
 void building_room_geom_t::add_electrical_wire(room_object_t const &c, vector3d const &rot_axis) { // is_small=1
-	bool const vertical(c.is_hanging());
+	bool const vertical(c.is_hanging()), is_rotated(rot_axis != zero_vector);
 	float const radius(c.get_ortho_radius()), core_radius(0.67*radius), rot_angle(12.0*TO_RADIANS);
 	float const length(vertical ? c.dz() : c.get_sz_dim(c.dim)), insul_pullback(min(0.33f*length, 4.0f*radius));
-	point rot_pt(c.get_cube_center());
-	if (vertical) {rot_pt.z = c.z2();} else {rot_pt[c.dim] = c.d[c.dim][c.dir];}
+	point rot_pt;
 	// plastic cover
 	cube_t plastic(c);
 	rgeom_mat_t &plastic_mat(get_untextured_material(0, 0, 1)); // unshadowed, small
@@ -818,7 +817,11 @@ void building_room_geom_t::add_electrical_wire(room_object_t const &c, vector3d 
 		plastic.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*insul_pullback; // strip back
 		plastic_mat.add_ortho_cylin_to_verts(plastic, color, c.dim, c.dir, !c.dir);
 	}
-	rotate_verts(plastic_mat.itri_verts, rot_axis, rot_angle, rot_pt, pastic_verts_start);
+	if (is_rotated) {
+		rot_pt = c.get_cube_center();
+		if (vertical) {rot_pt.z = c.z2();} else {rot_pt[c.dim] = c.d[c.dim][c.dir];}
+		rotate_verts(plastic_mat.itri_verts, rot_axis, rot_angle, rot_pt, pastic_verts_start);
+	}
 	// copper core
 	cube_t core(c);
 	rgeom_mat_t &copper_mat(get_metal_material(0, 0, 1, 0, 1, COPPER_C)); // unshadowed, small=1, no_reflect=1
@@ -834,9 +837,13 @@ void building_room_geom_t::add_electrical_wire(room_object_t const &c, vector3d 
 		set_wall_width(core, core.zc(), core_radius, 2);
 		copper_mat.add_ortho_cylin_to_verts(core, copper_color, c.dim, c.dir, !c.dir);
 	}
-	rotate_verts(copper_mat.itri_verts, rot_axis, rot_angle, rot_pt, copper_verts_start);
+	if (is_rotated) {rotate_verts(copper_mat.itri_verts, rot_axis, rot_angle, rot_pt, copper_verts_start);}
 }
-void building_room_geom_t::add_electrical_wire_pair(room_object_t const &c) {
+void building_room_geom_t::add_electrical_wire_or_pair(room_object_t const &c) {
+	if (c.in_hallway()) { // single wire case
+		add_electrical_wire(c, zero_vector); // not rotated
+		return;
+	}
 	// expand one wire into a wire pair; will extend outside the original bcube bounds
 	bool const vertical(c.is_hanging());
 	float const dist(1.25*c.get_ortho_radius()); // close but not quite touching
@@ -1495,10 +1502,19 @@ void building_room_geom_t::add_computer  (room_object_t const &c) {add_obj_with_
 void building_room_geom_t::add_card_deck (room_object_t const &c) {add_obj_with_top_texture  (c, "interiors/card_deck.jpg", WHITE, 1);} // is_small=1
 void building_room_geom_t::add_bullet_box(room_object_t const &c) {add_obj_with_top_texture  (c, "interiors/bullets.png",   BLACK, 1);} // is_small=1
 
-// noise tex is interior of part board; set tscale based on length
-void building_room_geom_t::add_ceil_tile (room_object_t const &c) {
-	float const tscale(1.0/c.get_length());
-	add_obj_with_top_texture(c, "noise.png", WHITE, 1, 0.0, 0.0, 0.0, tscale); // is_small=1
+// noise tex is interior of part board
+void building_room_geom_t::add_ceil_tile(room_object_t const &c) {
+	float const tscale(1.0/c.get_length()), rot_angle(c.color.A);
+	colorRGBA const color(apply_light_color(c, colorRGBA(c.color, 1.0)));
+	point const rot_pt(c.get_cube_center());
+	rgeom_mat_t &top_mat(get_material(tid_nm_pair_t(get_texture_by_name("noise.png"), tscale), 1, 0, 1)); // shadows, small
+	unsigned const top_verts_start(top_mat.quad_verts.size());
+	top_mat.add_cube_to_verts(c, color, zero_vector, ~EF_Z2, c.dim); // top face only
+	rotate_verts(top_mat.quad_verts, plus_z, rot_angle, rot_pt, top_verts_start);
+	rgeom_mat_t &sides_mat(get_untextured_material(1, 0, 1)); // is_small=1
+	unsigned const sides_verts_start(sides_mat.quad_verts.size());
+	sides_mat.add_cube_to_verts_untextured(c, color, EF_Z1); // sides and top, shadows
+	rotate_verts(sides_mat.quad_verts, plus_z, rot_angle, rot_pt, sides_verts_start);
 }
 
 void place_pizza_toppings(cube_t const &pizza, float rmin, float rmax, float height, colorRGBA const &color, unsigned num, bool can_overlap,

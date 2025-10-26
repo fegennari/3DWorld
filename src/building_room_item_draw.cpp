@@ -763,7 +763,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_LG_BALL:   add_lg_ball   (c); break;
 		case TYPE_HANGER_ROD:add_hanger_rod(c); break;
 		case TYPE_DRAIN:     add_drain_pipe(c); break;
-		case TYPE_ELEC_WIRE: add_electrical_wire_pair(c); break;
+		case TYPE_ELEC_WIRE: add_electrical_wire_or_pair(c); break;
 		case TYPE_MONEY:     add_money   (c); break;
 		case TYPE_PHONE:     add_phone   (c); break;
 		case TYPE_TPROLL:    add_tproll  (c); break;
