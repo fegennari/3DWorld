@@ -2180,29 +2180,19 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	//unsigned const first_ceiling_ix(max(1U, unsigned(retail_floor_levels))); // skip first floor and any ground floor retail space
 	unsigned last_landing_ix(0);
 	z += floor_vert_spacing; // move to next floor
+	vect_cube_t to_add;
 
 	for (unsigned f = 1; f < num_floors; ++f, z += floor_vert_spacing) { // skip first floor; draw pairs of floors and ceilings
-		cube_t to_add[8]; // up to 2 cuts for stairs + elevator
 		float const zc(z - fc_thick), zf(z + fc_thick);
+		to_add.clear();
 
-		if (!has_stairs && !has_elevator) {to_add[0] = part;} // neither - add single cube
+		if (!has_stairs && !has_elevator) {to_add.push_back(part);} // neither - add single cube
 		else {
 			bool const is_at_top(f+1 == num_floors && !extended_from_above);
 			assert(part.contains_cube_xy(first_cut));
-			subtract_cube_xy(part, first_cut, to_add);
+			subtract_cube_from_cube(part, first_cut, to_add);
+			if (has_stairs && has_elevator) {subtract_cube_from_cubes(stairs_cut, to_add);} // both
 
-			if (has_stairs && has_elevator) { // both
-				bool found(0);
-
-				for (unsigned n = 0; n < 4; ++n) { // find the cube where the stairs are placed
-					if (!to_add[n].intersects_xy_no_adj(stairs_cut)) continue;
-					subtract_cube_xy(to_add[n], stairs_cut, to_add+4); // append up to 4 more cubes
-					to_add[n].set_to_zeros(); // this cube was replaced
-					found = 1;
-					break; // assume there is only one; it's up to the placer step to ensure this
-				}
-				assert(found);
-			}
 			if (has_stairs) { // add landings and stairwells
 				// make sure to enable back wall for the first flight of stairs
  				landing_t landing(stairs_cut, 0, f, stairs_dim, stairs_dir, stairs_have_railing,
@@ -2226,10 +2216,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 				interior->landings.push_back(landing);
 			}
 		}
-		for (unsigned i = 0; i < 8; ++i) { // skip zero area cubes from stairs/elevator shafts along an exterior wall
-			cube_t &cf(to_add[i]);
-			if (!cf.is_zero_area()) {interior->add_ceil_floor_pair(cf, zc, z, zf);}
-		}
+		for (cube_t const &cf : to_add) {interior->add_ceil_floor_pair(cf, zc, z, zf);}
 	} // for f
 	bool has_roof_access(0);
 
