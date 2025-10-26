@@ -1506,15 +1506,10 @@ void building_room_geom_t::add_bullet_box(room_object_t const &c) {add_obj_with_
 void building_room_geom_t::add_ceil_tile(room_object_t const &c) {
 	float const tscale(1.0/c.get_length()), rot_angle(c.color.A);
 	colorRGBA const color(apply_light_color(c, colorRGBA(c.color, 1.0)));
-	point const rot_pt(c.get_cube_center());
-	rgeom_mat_t &top_mat(get_material(tid_nm_pair_t(get_texture_by_name("noise.png"), tscale), 1, 0, 1)); // shadows, small
-	unsigned const top_verts_start(top_mat.quad_verts.size());
-	top_mat.add_cube_to_verts(c, color, zero_vector, ~EF_Z2, c.dim); // top face only
-	rotate_verts(top_mat.quad_verts, plus_z, rot_angle, rot_pt, top_verts_start);
-	rgeom_mat_t &sides_mat(get_untextured_material(1, 0, 1)); // is_small=1
-	unsigned const sides_verts_start(sides_mat.quad_verts.size());
-	sides_mat.add_cube_to_verts_untextured(c, color, EF_Z1); // sides and top, shadows
-	rotate_verts(sides_mat.quad_verts, plus_z, rot_angle, rot_pt, sides_verts_start);
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_texture_by_name("noise.png"), tscale), 1, 0, 1)); // shadows, small
+	unsigned const verts_start(mat.quad_verts.size());
+	mat.add_cube_to_verts(c, color, zero_vector, EF_Z1, c.dim); // top and sides
+	rotate_verts(mat.quad_verts, plus_z, rot_angle, c.get_cube_center(), verts_start);
 }
 
 void place_pizza_toppings(cube_t const &pizza, float rmin, float rmax, float height, colorRGBA const &color, unsigned num, bool can_overlap,
