@@ -669,11 +669,17 @@ bool building_t::add_office_objs(rand_gen_t rgen, room_t const &room, vect_cube_
 	if (!add_desk_to_room(rgen, room, blockers, chair_color, zval, room_id, tot_light_amt, objs_start, is_basement)) return 0;
 
 	if (!is_house && (is_prison() || rgen.rand_float() < 0.5) && !room_has_stairs_or_elevator(room, zval, floor_ix)) { // allow two desks in one office
-		assert(objs[desk_obj_id].type == TYPE_DESK);
-		blockers.push_back(objs[desk_obj_id]); // temporarily add the previous desk as a blocker for the new desk and its chair
+		room_object_t const &desk(objs[desk_obj_id]);
+		assert(desk.type == TYPE_DESK);
+		blockers.push_back(desk); // temporarily add the previous desk as a blocker for the new desk and its chair
 		room_object_t const &maybe_chair(objs.back());
 		bool const added_chair(maybe_chair.type == TYPE_CHAIR || maybe_chair.type == TYPE_OFF_CHAIR);
-		if (added_chair) {blockers.push_back(maybe_chair);}
+		float const clearance(get_min_front_clearance_inc_people());
+
+		if (added_chair) {
+			blockers.push_back(maybe_chair);
+			blockers.back().expand_by_xy(clearance); // extra clearance around chair for people to walk around it
+		}
 		add_desk_to_room(rgen, room, blockers, chair_color, zval, room_id, tot_light_amt, objs_start, is_basement, 1); // desk_ix=1
 		if (added_chair) {blockers.pop_back();} // remove the chair if it was added
 		blockers.pop_back(); // remove the first desk blocker
