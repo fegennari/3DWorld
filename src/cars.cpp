@@ -125,7 +125,7 @@ void car_t::choose_max_speed(rand_gen_t &rgen) { // add some speed variation
 	max_speed      = rgen.rand_uniform(0.66, 1.0);
 	engine_running = 1; // car starts up
 }
-void car_t::move(float speed_mult) {
+void car_t::move(float speed_mult, bool has_gas_station) {
 	prev_bcube = bcube;
 	if (destroyed || stopped_at_light || is_stopped()) return;
 	assert(speed_mult >= 0.0 && cur_speed > 0.0 && cur_speed <= CONN_ROAD_SPEED_MULT*max_speed); // Note: must be valid for connector road => city transitions
@@ -134,7 +134,7 @@ void car_t::move(float speed_mult) {
 	if (dz != 0.0) {dist *= min(1.25, max(0.75, (1.0 - 0.5*dz/length)));} // slightly faster down hills, slightly slower up hills
 	min_eq(dist, 0.25f*city_params.road_width); // limit to half a car length to prevent cars from crossing an intersection in a single frame
 	move_by((dir ^ in_reverse) ? dist : -dist);
-	if (fuel_amt > 0.0) {fuel_amt = max(0.0f, (fuel_amt - 0.001f*dist/length));} // consume fuel
+	if (fuel_amt > 0.0) {fuel_amt = max(0.0, (fuel_amt - 0.001*(has_gas_station ? 1.0 : 0.1)*dist/length));} // consume fuel, less if there's no gas station
 	// update waiting state
 	float const cur_pos(get_front_end());
 	if (fabs(cur_pos - waiting_pos) > length) {waiting_pos = cur_pos; reset_waiting();} // update when we move at least a car length
@@ -1375,7 +1375,7 @@ void car_manager_t::next_frame(ped_manager_t const &ped_manager, float car_speed
 			i->maybe_wake(rgen);
 			continue; // no update for parked cars
 		}
-		i->move(speed);
+		i->move(speed, city_has_gas_station(*i));
 		if (i->entering_city) {entering_city.push_back(cix);} // record for use in collision detection
 		if (!i->stopped_at_light && i->is_almost_stopped() && i->in_isect()) {get_car_isec(*i).stoplight.mark_blocked(i->dim, i->dir);} // blocking intersection
 		register_car_at_city(*i);

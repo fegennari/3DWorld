@@ -507,6 +507,7 @@ public:
 		bcube.z2() += ROAD_HEIGHT; // make it nonzero size
 	}
 	bool get_is_residential() const {return is_residential;}
+	bool has_gas_station   () const {return city_obj_placer.has_gas_station();}
 	cube_t const &get_bcube() const {return bcube;}
 	cube_t const &get_plot_bcube(unsigned plot_ix) const {assert(plot_ix < plots.size()); return plots[plot_ix];}
 	vector<power_pole_t> const &get_power_poles() const {return city_obj_placer.get_power_poles();} // used for city connectivity
@@ -1613,7 +1614,8 @@ public:
 			car.dir = (rand_val & 1);
 			car.headlight_color = (rand_val >> 1);
 			car.choose_max_speed(rgen);
-			car.fuel_amt = rgen.rand_uniform(0.1, 0.9); // start with a random amount of fuel, but not full or empty
+			// start with a random amount of fuel, but not full or empty; use a higher value if there's no gas station in this city
+			car.fuel_amt = (has_gas_station() ? rgen.rand_uniform(0.1, 0.9) : rgen.rand_uniform(0.5, 0.9));
 			car.cur_road = seg.road_ix;
 			car.cur_seg  = seg_ix;
 			car.cur_road_type = TYPE_RSEG;
@@ -2090,7 +2092,7 @@ public:
 						}
 					}
 					else { // drive toward the destination intersection
-						point const dest_pos(car_rn.get_car_dest_isec_center(car, road_networks, global_rn));
+						point const dest_pos(car_rn.get_car_dest_isec_center(car, road_networks));
 						dest_dir = dest_pos - car.get_center();
 					}
 					dest_dir.z = 0.0; // always level
@@ -2143,19 +2145,19 @@ public:
 		for (unsigned n = 0; n < isec_type; ++n) {flat_isec_ix += isecs[n].size();}
 		return (car.dest_isec == flat_isec_ix); // dest_isec is in flat space, while the current isec is defined by {cur_road_type, cur_seg)
 	}
-	road_isec_t const &get_car_dest_isec(car_t const &car, vector<road_network_t> const &road_networks, road_network_t const &global_rn) const {
+	road_isec_t const &get_car_dest_isec(car_t const &car, vector<road_network_t> const &road_networks) const {
 		if (car.dest_city == city_id) {return get_isec_by_ix(car.dest_isec);} // local destination within the current city
 		assert(car.dest_city < road_networks.size());
-		road_isec_t const *const isec(find_isec_to_dest_city(car, road_networks[car.dest_city], global_rn)); // destination in another city
+		road_isec_t const *const isec(find_isec_to_dest_city(car, road_networks[car.dest_city])); // destination in another city
 		assert(isec != nullptr); // path must exist, otherwise this city wouldn't have been chosen
 		return *isec;
 	}
-	point get_car_dest_isec_center(car_t const &car, vector<road_network_t> const &road_networks, road_network_t const &global_rn) const {
-		return get_car_dest_isec(car, road_networks, global_rn).get_cube_center();
+	point get_car_dest_isec_center(car_t const &car, vector<road_network_t> const &road_networks) const {
+		return get_car_dest_isec(car, road_networks).get_cube_center();
 	}
-	cube_t get_car_dest(car_t const &car, vector<road_network_t> const &road_networks, road_network_t const &global_rn, bool isec_only) const { // isec or driveway
+	cube_t get_car_dest(car_t const &car, vector<road_network_t> const &road_networks, bool isec_only) const { // isec or driveway
 		if (!isec_only && dest_driveway_in_this_city(car)) {return get_driveway_or_gs_entrance(car);} // driveway or gas station in this city
-		return get_car_dest_isec(car, road_networks, global_rn); // else assume we want andest intersection
+		return get_car_dest_isec(car, road_networks); // else assume we want andest intersection
 	}
 	int get_parking_lot_ix_for_car(car_t const &car) const {
 		if (!car.in_parking_lot)    return -1; // caller should really check this
@@ -2163,15 +2165,18 @@ public:
 		// dest_driveway is reset after the car is parked, so we must re-query; this could be optimized by caching the parking lot index in the car
 		return get_parking_lot_ix(car.get_center(), 1); // inc_driveways=1
 	}
+	road_isec_t const *find_isec_to_dest_city(unsigned dest_city) const {
+		// Note: here we don't attempt to find shortcuts through other cities as this would be quite complex
+		auto it(cix_to_isec.find(dest_city));
+		if (it != cix_to_isec.end()) {return it->second;} // found
+		return nullptr; // not found, caller can error check
+	}
 private:
-	road_isec_t const *find_isec_to_dest_city(car_t const &car, road_network_t const &dest_rn, road_network_t const &global_rn) const {
+	road_isec_t const *find_isec_to_dest_city(car_t const &car, road_network_t const &dest_rn) const {
 		assert(car. cur_city == city_id);
 		assert(car.dest_city == dest_rn.city_id);
 		assert(dest_rn.city_id != city_id); // not ourself
-		// Note: here we don't attempt to find shortcuts through other cities as this would be quite complex
-		auto it(cix_to_isec.find(car.dest_city));
-		if (it != cix_to_isec.end()) {return it->second;} // found
-		return nullptr; // not found, caller can error check
+		return find_isec_to_dest_city(car.dest_city);
 	}
 	void find_isec_to_enter_driveway(car_t &car, driveway_t const &driveway) const {
 		// find intersection before the driveway such that driving on the road exiting this intersection will encounter the driveway on the right
@@ -3176,29 +3181,52 @@ public:
 		if (road_networks.empty()) {assert(!car.dest_valid); return;} // no roads, no updates
 		if (!car.dest_valid) {car.dest_city = car.cur_city;} // start in current city
 		else {
-			auto const &conn(get_city_by_ix(car.cur_city).get_connected());
-			float const new_city_prob(city_params.new_city_prob*min(0.4f, 0.1f*conn.size())); // 10% to 40% chance, depending on the number of connecting cities (to reduce traffic congestion)
+			road_network_t const &cur_city(get_city_by_ix(car.cur_city));
+			auto const &conn(cur_city.get_connected());
+			bool has_dest_city(0);
 
-			if (rgen.rand_probability(new_city_prob)) { // select a different city when there are multiple cities
-				if (rgen.rand_float() < city_params.traffic_balance_val) { // choose the connected city with the lowest traffic density
-					float min_td(0.0);
+			if (!conn.empty()) {
+				// 10% to 40% chance, depending on the number of connecting cities (to reduce traffic congestion)
+				float const new_city_prob(city_params.new_city_prob*min(0.4f, 0.1f*conn.size()));
 
-					for (auto c = conn.begin(); c != conn.end(); ++c) {
-						float const td(get_city_by_ix(*c).get_traffic_density()); // excludes global_rn
-						if (min_td == 0.0 || td < min_td) {min_td = td; car.dest_city = *c;}
-					}
+				if (car.fuel_amt < 0.25 && !cur_city.has_gas_station()) { // search for a gas station in the closest connected city
+					point const car_center(car.get_center());
+					float dmin(0);
+
+					for (unsigned c : conn) {
+						assert(c != car.cur_city);
+						road_network_t const &dest_city(get_city_by_ix(c));
+						if (!dest_city.has_gas_station()) continue;
+						road_isec_t const *const isec(cur_city.find_isec_to_dest_city(c)); // destination in another city
+						assert(isec != nullptr);
+						point const isec_center(isec->get_cube_center());
+						// use distance from car to exit intersection, plus 25% of distance from intersection to dest city (since conn roads are faster and have no stoplights)
+						float const dist(p2p_dist_xy(car_center, isec_center) + 0.25*p2p_dist_xy(isec_center, dest_city.get_bcube().get_cube_center()));
+						if (dmin == 0.0 || dist < dmin) {car.dest_city = c; dmin = dist; has_dest_city = 1;}
+					} // for c
 				}
-				else { // choose a randomly selected connected city
-					vector<unsigned> const cands(conn.begin(), conn.end()); // copy set to vector; should not include car.dest_city
-					car.dest_city = cands[rgen.rand() % cands.size()]; // choose a random connected (adjacent) city
+				if (!has_dest_city && rgen.rand_probability(new_city_prob)) { // select a different city
+					if (rgen.rand_float() < city_params.traffic_balance_val) { // choose the connected city with the lowest traffic density
+						float min_td(0.0);
+						unsigned ret(0);
+
+						for (unsigned c : conn) {
+							float const td(get_city_by_ix(c).get_traffic_density()); // excludes global_rn
+							if (min_td == 0.0 || td < min_td) {min_td = td; car.dest_city = c;}
+						}
+					}
+					else { // choose a randomly selected connected city
+						vector<unsigned> const cands(conn.begin(), conn.end()); // copy set to vector; should not include car.dest_city
+						car.dest_city = cands[rgen.rand() % cands.size()]; // choose a random connected (adjacent) city
+					}
 				}
 			}
 		}
-		car.dest_valid = get_city(car.dest_city).choose_new_car_dest(car, rgen);
+		car.dest_valid = get_city_by_ix(car.dest_city).choose_new_car_dest(car, rgen);
 	}
 	bool car_at_dest(car_t const &car) const {
 		if (!car.dest_valid) return 0;
-		return get_city(car.dest_city).car_at_dest(car);
+		return get_city_by_ix(car.dest_city).car_at_dest(car);
 	}
 	road_network_t const &get_car_rn(car_base_t const &car) const {return road_network_t::get_car_rn(car, road_networks, global_rn);}
 	
@@ -3225,6 +3253,7 @@ bool car_manager_t::check_collision(car_t &c1, car_t &c2)        const {return c
 void car_manager_t::register_car_at_city(car_t const &car) {road_gen.register_car_at_city(car.cur_city);}
 cube_t car_manager_t::get_car_dest_bcube(car_t const &car, bool isec_only) const {return road_gen.get_car_dest_bcube(car, isec_only);}
 int car_manager_t::get_parking_lot_ix_for_car(car_t const &car) const {return road_gen.get_parking_lot_ix_for_car(car);}
+bool car_manager_t::city_has_gas_station(car_t const &car) const {return road_gen.get_city(car.cur_city).has_gas_station();}
 
 void car_manager_t::add_car() {
 	car_t car;

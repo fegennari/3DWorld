@@ -169,7 +169,7 @@ struct car_t : public car_base_t, public waiting_obj_t { // size = 136
 	string str() const;
 	string label_str() const;
 	void choose_max_speed(rand_gen_t &rgen);
-	void move(float speed_mult);
+	void move(float speed_mult, bool has_gas_station);
 	void set_target_speed(float speed_factor);
 	void maybe_accelerate(float mult=0.02);
 	void accelerate(float mult=0.02);
@@ -813,6 +813,7 @@ class car_manager_t { // and trucks and helicopters
 	void register_car_at_city(car_t const &car);
 	cube_t get_car_dest_bcube(car_t const &car, bool isec_only) const;
 	int get_parking_lot_ix_for_car(car_t const &car) const;
+	bool city_has_gas_station(car_t const &car) const;
 	void add_car();
 	void get_car_ix_range_for_cube(vector<car_block_t>::const_iterator cb, cube_t const &bc, unsigned &start, unsigned &end) const;
 	void remove_destroyed_cars();

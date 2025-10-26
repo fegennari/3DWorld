@@ -816,6 +816,7 @@ public:
 	bool has_plot_dividers() const {return !dividers.empty();}
 	bool have_animations  () const {return !birds   .empty();} // only birds are animated
 	bool has_residential  () const {return has_residential_plots;}
+	bool has_gas_station  () const {return !gstations.empty();}
 	vector<power_pole_t> const &get_power_poles() const {return ppoles;} // used for city connectivity
 	void set_plot_subdiv_sz(float sz) {plot_subdiv_sz = sz;}
 	void gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<vect_cube_t> &plot_colliders, vector<car_t> &cars, vector<road_t> const &roads,
