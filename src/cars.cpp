@@ -1729,10 +1729,12 @@ void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlig
 						s.set_cur_color(BLUE);
 						draw_cube_verts_only(sel_car->get_ped_coll_check_area() + xlate);
 					}
-					s.set_cur_color(PURPLE);
-					cube_t isec_bcube(get_car_dest_bcube(*sel_car, 1)); // isec
-					isec_bcube.z2() += 4.0*city_params.road_width; // increase height to make it more easily visible
-					draw_cube_verts_only(isec_bcube + xlate);
+					if (sel_car->cur_city != CONN_CITY_IX) {
+						s.set_cur_color(PURPLE);
+						cube_t isec_bcube(get_car_dest_bcube(*sel_car, 1)); // isec_only=1
+						isec_bcube.z2() += 4.0*city_params.road_width; // increase height to make it more easily visible
+						draw_cube_verts_only(isec_bcube + xlate);
+					}
 				}
 				set_fill_mode(); // reset
 				s.end_shader();

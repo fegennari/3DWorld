@@ -2433,8 +2433,8 @@ public:
 	cube_t const &get_city_bcube(unsigned city_ix) const {return get_city(city_ix).get_bcube();}
 	cube_t const &get_city_plot_bcube(unsigned city_ix, unsigned plot_ix) const {return get_city(city_ix).get_plot_bcube(plot_ix);}
 	vect_cube_t const &get_colliders_for_plot(unsigned city_ix, unsigned global_plot_id) const {return get_city(city_ix).get_colliders_for_plot(global_plot_id);}
-	cube_t get_car_dest_bcube(car_t const &car, bool isec_only) const {return get_city(car.dest_city).get_car_dest(car, road_networks, global_rn, isec_only);}
-	int get_parking_lot_ix_for_car(car_t const &car) const {return get_city(car.dest_city).get_parking_lot_ix_for_car(car);}
+	cube_t get_car_dest_bcube(car_t const &car, bool isec_only) const {return get_city(car.cur_city).get_car_dest(car, road_networks, isec_only);}
+	int get_parking_lot_ix_for_car(car_t const &car)            const {return get_city(car.cur_city).get_parking_lot_ix_for_car(car);}
 
 	bool cube_int_underground_obj(cube_t const &c) const {
 		if (global_rn.cube_intersect_tunnel(c)) return 1;
