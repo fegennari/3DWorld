@@ -1932,7 +1932,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		else if ((type == TYPE_SILVER /*|| type == TYPE_FOLD_SHIRT*/) && camera_bs.z < obj.z1()) continue; // not visible from below (except on glass table?)
 		point obj_center(obj.get_cube_center());
 
-		if (!shadow_only && !building.is_house && !has_windows && !building.point_in_mall(obj_center)) { // windowless building
+		if (!shadow_only && !building.is_house && !has_windows && !building.point_in_mall(obj_center)) { // windowless building or parking structure
 			if (obj.z1() > one_floor_above || obj.z2() < two_floors_below) continue; // more than one floor of difference
 		}
 		if (is_rotated) {building.do_xy_rotate(building_center, obj_center);}
@@ -2070,7 +2070,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			if (shadow_only) {
 				if (bc.z1() > camera_bs.z || bc.z2() < two_floors_below) continue; // above or more than two floors below the light
 			}
-			else if (!building.is_house && !has_windows) { // windowless building
+			else if (!building.is_house && !has_windows) { // windowless building or parking structure
 				if (bc.z1() > one_floor_above || bc.z2() < two_floors_below) continue; // more than one floor of difference
 			}
 			point obj_center(h.center);
@@ -2826,8 +2826,8 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 		}
 	}
 	else if (viewer.z < bcube.z2()) { // player not in a building and not above this building
-		if (is_rotated())                       return 0; // not implemented yet - c is not an axis aligned cube in global coordinate space
-		if (has_windows() && oc.is_occluded(c)) return 1; // check other buildings; not needed for windowless buildings since they shouldn't be drawn (and wrong for walkways)
+		if (is_rotated()) return 0; // not implemented yet - c is not an axis aligned cube in global coordinate space
+		if (has_windows_or_openings() && oc.is_occluded(c)) return 1; // check other buildings; not needed for windowless buildings (shouldn't be drawn, and wrong for walkways)
 	}
 	if (!c_is_building_part && viewer.z > ground_floor_ceiling && is_cube()) {
 		// player above first floor of this building; check if object is occluded by a roof; we don't check bcube.z2() becase a lower part roof may be an occluder

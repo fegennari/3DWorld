@@ -4188,7 +4188,7 @@ public:
 
 						if (!debug_draw && !interior_visible) {
 							// check if player is outside a windowless building (city office building); need to account for open doors
-							if (!player_in_building_bcube && !b.has_windows()) {
+							if (!player_in_building_bcube && !b.has_windows_or_openings()) {
 								if (!b.point_near_ext_door(camera_bs, 20.0*door_open_dist)) continue; // too far away (use larger dist for door steps and ext door signs)
 								if (!camera_near_building) {cant_see_inside = 1;} // can see exterior objects, but not interiors
 							}

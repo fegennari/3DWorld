@@ -1564,7 +1564,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		camera_can_see_ext_basement = (interior_visible_from_other_building_ext_basement(xlate, 1) || player_can_see_mall); // expand_for_light=1
 
 		if (camera_can_see_ext_basement) {} // skip occlusion checks below
-		else if (!has_windows()) { // can't see interior through windows
+		else if (!has_windows_or_openings()) { // can't see interior through windows
 			bool above_skylight(0);
 
 			for (cube_with_ix_t &sl : skylights) {
@@ -1824,7 +1824,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		bool const sep_by_extb_door((in_ext_basement && !camera_in_ext_basement && !camera_can_see_ext_basement && !player_in_uge) || (!in_ext_basement && camera_in_ext_basement));
 		if (sep_by_extb_door && interior->get_ext_basement_door().open_amt == 0.0) continue; // closed door - light not visible
 		// if player above mall looking through skylight, can only see mall and store lights
-		if (player_can_see_mall && !has_windows() && (!in_ext_basement || !room.is_mall_or_store())) continue;
+		if (player_can_see_mall && !has_windows_or_openings() && (!in_ext_basement || !room.is_mall_or_store())) continue;
 
 		if (lpos.z < camera_z) { // light below the player
 			if (is_in_elevator || is_in_closet) continue; // elevator or closet light on the floor below the player

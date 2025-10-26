@@ -2258,6 +2258,7 @@ struct building_t : public building_geom_t {
 	colorRGBA get_door_handle_color() const;
 	building_mat_t const &get_material() const;
 	bool has_windows         () const {return get_material().add_windows;}
+	bool has_windows_or_openings() const {return (has_windows() || is_parking());}
 	bool has_int_windows     () const {return (DRAW_CITY_INT_WINDOWS || has_windows());}
 	float get_floor_thick_val() const {return (is_house ? FLOOR_THICK_VAL_HOUSE : (has_windows() ? FLOOR_THICK_VAL_OFFICE : FLOOR_THICK_VAL_WINDOWLESS));}
 	float get_elevator_fc_thick_scale() const {return 1.005*0.5*get_floor_thick_val();}
