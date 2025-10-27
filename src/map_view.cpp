@@ -381,7 +381,9 @@ void draw_overhead_map() {
 
 
 void place_player_at_xy(float xval, float yval) {
-	surface_pos.assign(xval, yval, interpolate_mesh_zval(xval, yval, CAMERA_RADIUS, 0, 0));
+	float mesh_xv(xval), mesh_yv(yval);
+	if (world_mode == WMODE_INF_TERRAIN) {mesh_xv -= DX_VAL*xoff; mesh_yv -= DY_VAL*yoff;}
+	surface_pos.assign(xval, yval, interpolate_mesh_zval(mesh_xv, mesh_yv, CAMERA_RADIUS, 0, 0));
 }
 void teleport_to_map_location() {
 	static int last_update_frame(0);
