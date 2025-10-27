@@ -110,7 +110,8 @@ bool model_city_obj_t::proc_sphere_coll(point &pos_, point const &p_last, float 
 }
 
 multi_model_city_obj_t::multi_model_city_obj_t(point const &pos_, float height, bool dim_, bool dir_, unsigned model_id, unsigned model_select, bool is_cylinder_) :
-	model_city_obj_t(pos_, height, dim_, dir_, (model_id + (model_select << 8)), is_cylinder_), full_model_id(model_id + (model_select << 8)) {}
+	model_city_obj_t(pos_, height, dim_, dir_, combine_model_submodel_id(model_id, model_select), is_cylinder_),
+	full_model_id(combine_model_submodel_id(model_id, model_select)) {}
 
 // swingsets
 
@@ -901,7 +902,7 @@ clothesline_t::clothesline_t(point const &p1, point const &p2, float height_, ra
 
 	for (unsigned n = 0; n < num_items; ++n) {
 		if (building_obj_model_loader.is_model_valid(OBJ_MODEL_CLOTHES) && rgen.rand_bool()) { // clothing model (shirt or pants)
-			unsigned const model_id(OBJ_MODEL_CLOTHES + (rgen.rand() << 8)); // select a random clothing sub-model
+			unsigned const model_id(combine_model_submodel_id(OBJ_MODEL_CLOTHES, rgen.rand())); // select a random clothing sub-model
 			bool const is_pants(is_pants_model(model_id));
 			vector3d const sz(building_obj_model_loader.get_model_world_space_size(model_id)); // W, D, H
 			float const dz((is_pants ? 0.45 : 0.5)*height), hwidth(0.5*dz*sz.x/sz.z), hthick(0.5*dz*sz.y/sz.z); // pants are shorter
@@ -2469,13 +2470,16 @@ void gas_station_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dis
 		quad_batch_draw &lights_qbd(is_night() ? qbds.emissive_qbd : qbds.untex_qbd); // lights on/emissive at night
 		for (unsigned n = 0; n < num_lights; ++n) {dstate.draw_cube(lights_qbd, lights[n], lights_color, 0, 0.0, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1);} // skip_top=1
 	}
-	model_city_obj_t::pre_draw(dstate, shadow_only);
-	dstate.s.add_uniform_int("two_sided_lighting", 1);
+	if (!pumps.empty()) {
+		model_city_obj_t::pre_draw(dstate, shadow_only);
+		bool const has_inv_normals(!(get_sub_model_id(pumps.front().get_model_id()) & 1)); // all pumps should have the same model; the first one has inverted normals
+		if (has_inv_normals) {dstate.s.add_uniform_int("two_sided_lighting", 1);}
 
-	for (gas_pump_t const &pump : pumps) {
-		if (dstate.is_visible_and_unoccluded(pump.bcube, 0.0)) {pump.draw(dstate, qbds, dist_scale, shadow_only);}
+		for (gas_pump_t const &pump : pumps) {
+			if (dstate.is_visible_and_unoccluded(pump.bcube, 0.0)) {pump.draw(dstate, qbds, dist_scale, shadow_only);}
+		}
+		if (has_inv_normals) {dstate.s.add_uniform_int("two_sided_lighting", 0);}
 	}
-	dstate.s.add_uniform_int("two_sided_lighting", 0);
 	model_city_obj_t::post_draw(dstate, shadow_only);
 }
 bool gas_station_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
