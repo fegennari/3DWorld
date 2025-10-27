@@ -214,7 +214,7 @@ void building_t::get_parking_struct_ext_walls(vect_cube_with_ix_t &walls, bool e
 		unsigned const face_masks[4] = {127-64, 127-32, 127-16, 127-8}; // enable XYZ but skip all XY but {+y, -y, +x, -x} in XY
 
 		for (unsigned n = 0; n < 4; ++n) { // exterior: top and bottom; interior: inside faces
-			if (f < 2) { // cut out slots for doors on the ground floor lower wall and second floor upper wall
+			if (f < 2 || have_walkway_ext_door) { // cut out slots for doors on the ground floor lower wall and second floor upper wall, and for walkway doors
 				for (unsigned lu = 0; lu < 2; ++lu) { // split into lower and upper sections
 					if (f == (lu ? num_floors : 0)) continue; // no lower/upper section for this floor
 					cube_t wall(sides[n]);
