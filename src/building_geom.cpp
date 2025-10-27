@@ -280,7 +280,6 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 		if (alt_step_factor > 0.0 && !(num_sides&1)) {half_offset = 1;} // chamfered cube/hexagon
 		if (alt_step_factor > 0.0) {num_sides *= 2;}
 	}
-
 	// determine the number of levels and splits
 	unsigned num_levels(mat.min_levels);
 
@@ -293,6 +292,8 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 	float const height(base.dz()), floor_spacing(get_window_vspace());
 
 	if (num_levels == 1) { // single level
+		bool const is_cube_office(btype == BTYPE_OFFICE && is_cube());
+
 		if (do_split) { // generate L, T, or U shape
 			split_in_xy(base, rgen);
 
@@ -302,7 +303,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 				place_area.expand_by_xy(0.05f*(bcube.dx() + bcube.dy()));
 				if (!has_bcube_int(place_area, parts)) {tree_pos = place_area.get_cube_center(); tree_pos.z = ground_floor_z1;}
 			}
-			if (btype == BTYPE_OFFICE && is_cube() && !is_rotated() && min(bcube.dx(), bcube.dy()) > 18.0*floor_spacing && rand_gen_t(rgen).rand_bool()) {
+			if (is_cube_office && !is_rotated() && min(bcube.dx(), bcube.dy()) > 18.0*floor_spacing && rand_gen_t(rgen).rand_bool()) {
 				btype = BTYPE_PRISON; // large, single level cube; copy rgen
 				assign_name(rgen); // re-assign a name
 			}
@@ -323,13 +324,15 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 				adjust_part_zvals_for_floor_spacing(parts[0]);
 				parts[1].z1() = parts[0].z2();
 			}
-			else if (btype == BTYPE_OFFICE && is_cube() && num_floors <= 4) { // <= 4 floors
+			else if (is_cube_office && num_floors <= 4) { // <= 4 floors
 				btype = (rgen.rand_bool() ? BTYPE_WAREHOUSE : BTYPE_FACTORY); // make this a factory or warehouse
 				assign_name(rgen); // re-assign a name
 			}
 			// parking garages are <= 8 floors and large footprint
-			else if (btype == BTYPE_OFFICE && is_cube() && num_floors <= 8 && roof_type == ROOF_TYPE_FLAT && min(bcube.dx(), bcube.dy()) > 12.0*floor_spacing) {
-				btype = BTYPE_PARKING; // make a parking garage
+			else if (is_cube_office && (roof_type == ROOF_TYPE_FLAT || is_in_city) && num_floors <= 8 && min(bcube.dx(), bcube.dy()) > 12.0*floor_spacing) {
+				btype     = BTYPE_PARKING; // make a parking garage
+				roof_type = ROOF_TYPE_FLAT;
+				roof_tquads.clear(); // in case it was assigned a sloped roof
 				assign_name(rgen); // re-assign a name
 			}
 			else if (is_cube() && num_floors >= 3 && !is_hospital() && rgen.rand_probability(global_building_params.retail_floorplan_prob)) { // 3+ floors, consider retail
