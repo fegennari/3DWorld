@@ -373,7 +373,7 @@ void building_t::add_exterior_door_items(rand_gen_t &rgen) { // mostly signs; ad
 			set_wall_width(sign, (entrance.d[!dim][side] + (side ? 1.0 : -1.0)*0.25*floor_spacing), 0.006*floor_spacing, !dim);
 			sign.d[dim][!dir] = wall_face;
 			sign.d[dim][ dir] = wall_face + (dir ? 1.0 : -1.0)*0.1*floor_spacing; // extend out
-			unsigned const obj_id(register_sign_text("P\nA\nR\nK\nI\nN\nG")); // Note: 'I' is not centered
+			unsigned const obj_id(register_sign_text("P\nA\nR\nK\nI\nN\nG")); // Note: will be center aligned
 
 			for (unsigned d = 0; d < 2; ++d) { // add twice for text on both sides
 				objs.emplace_back(sign, TYPE_SIGN, 1, !dim, d, (flags | RO_FLAG_HANGING | RO_FLAG_ADJ_TOP), 1.0, SHAPE_CUBE, WHITE); // room_id=1

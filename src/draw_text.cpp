@@ -88,6 +88,14 @@ font_texture_manager_t font_texture_manager; // singleton
 void load_font_texture_atlas(string const &fn) {font_texture_manager.load(fn);}
 void free_font_texture_atlas() {font_texture_manager.free_gl_state();}
 
+bool is_vertical_text(string const &text) {
+	if (text.size() < 3 || !(text.size() & 1)) return 0; // expecting N chars and N-1 newlines
+
+	for (unsigned i = 1; i < text.size(); i += 2) { // look for newlines - skip first character
+		if (text[i] != '\n') return 0;
+	}
+	return 1;
+}
 
 void gen_text_verts(vector<vert_tc_t> &verts, point const &pos, string const &text, float tsize,
 	vector3d const &column_dir, vector3d const &line_dir, bool use_quads=0, bool include_space_chars=0)
@@ -96,8 +104,14 @@ void gen_text_verts(vector<vert_tc_t> &verts, point const &pos, string const &te
 	float const char_spacing = 0.06;
 	float const char_sz(0.001*tsize);
 	vector3d const line_delta(-line_dir*line_spacing*char_sz);
+	bool const vertical(is_vertical_text(text));
+	float col_width(0.0);
 	point cursor(pos), line_start(cursor);
 
+	if (vertical) {
+		for (unsigned i = 0; i < text.size(); i += 2) {max_eq(col_width, font_texture_manager.lookup_ascii(text[i]).width);} // skip newline chars
+		col_width *= char_sz;
+	}
 	for (string::const_iterator i = text.begin(); i != text.end(); ++i) {
 		if (*i == '\n') { // newline (CR/LF)
 			line_start += line_delta; // LF
@@ -112,6 +126,7 @@ void gen_text_verts(vector<vert_tc_t> &verts, point const &pos, string const &te
 			per_char_data_t const &pcd(font_texture_manager.lookup_ascii(*i));
 			if (pcd.width == 0.0) continue; // non-printable character, skip it (currently never get here, but left for future use)
 			float const char_width(char_sz*pcd.width);
+			if (vertical) {cursor += 0.5*(col_width - char_width)*column_dir;} // center align
 
 			// skip non-printable space character, except at the beginning and end (for scrolling signs) because we need those verts for the bcube bounds
 			if (include_space_chars || *i != ' ' || i == text.begin() || i+1 == text.end()) {
