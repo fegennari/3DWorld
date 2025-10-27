@@ -345,7 +345,8 @@ void building_t::add_ceiling_tile_objects(rand_gen_t &rgen) {
 	float const fc_thick(get_fc_thickness()), light_amt(1.0);
 	unsigned const pipe_flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING), wire_flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING | RO_FLAG_IN_HALLWAY);
 	vect_room_object_t &objs(interior->room_geom->objs);
-	auto cur_obj(objs.begin()); // used for lights iteration; lights should be in the same order as ceiling_spaces
+	unsigned const objs_end(objs.size());
+	unsigned cur_obj_ix(0); // used for lights iteration; lights should be in the same order as ceiling_spaces
 	auto tile_iter(interior->missing_ceil_tiles.begin());
 	vect_cube_t miss_tiles, pipe_avoid, light_bcs, tile_block;
 
@@ -355,9 +356,9 @@ void building_t::add_ceiling_tile_objects(rand_gen_t &rgen) {
 		light_bcs .clear();
 		tile_block.clear();
 
-		for (; cur_obj != objs.end() && cur_obj->room_id <= cs.room_ix; ++cur_obj) {
-			if (cur_obj->room_id != cs.room_ix || cur_obj->type != TYPE_LIGHT) continue; // not a light in this room
-			room_object_t const &light(*cur_obj);
+		for (; cur_obj_ix != objs_end && objs[cur_obj_ix].room_id <= cs.room_ix; ++cur_obj_ix) {
+			room_object_t const &light(objs[cur_obj_ix]);
+			if (light.room_id != cs.room_ix || light.type != TYPE_LIGHT) continue; // not a light in this room
 			light_bcs.push_back(light);
 			cube_t base(light);
 			base.z1()  = light.z2(); // flush with top of light
