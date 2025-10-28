@@ -2081,7 +2081,7 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 		tid_nm_pair_t tex;
 		colorRGBA color;
 
-		if (i->type == ROOF_OBJ_WALL && mat.add_windows) { // wall of brick/block building, use side color
+		if (i->type == ROOF_OBJ_WALL && (mat.add_windows || is_parking())) { // wall of brick/block/concrete building, use side color
 			tex   = side_tex;
 			color = side_color;
 		}
