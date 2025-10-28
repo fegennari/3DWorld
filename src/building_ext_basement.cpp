@@ -342,7 +342,7 @@ void building_t::remove_ceiling_tiles(cube_t const &room_in, tid_nm_pair_t const
 
 void building_t::add_ceiling_tile_objects(rand_gen_t &rgen) {
 	assert(has_room_geom());
-	float const fc_thick(get_fc_thickness()), light_amt(1.0);
+	float const floor_spacing(get_window_vspace()), fc_thick(get_fc_thickness()), light_amt(1.0);
 	unsigned const pipe_flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING), wire_flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING | RO_FLAG_IN_HALLWAY);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const objs_end(objs.size());
@@ -450,7 +450,27 @@ void building_t::add_ceiling_tile_objects(rand_gen_t &rgen) {
 				if ( has_bcube_int_xy(pipe, pipe_avoid)) continue; // blocked by light post or another pipe
 				interior->room_geom->objs.emplace_back(pipe, TYPE_PIPE, cs.room_ix, dim, 0, pipe_flags, light_amt, SHAPE_CYLIN, pipe_color); // horizontal
 				pipe_avoid.push_back(pipe);
-				// TODO: hanging brackets over miss_tiles?
+				// add hanging brackets over miss_tiles and fittings at ends
+				colorRGBA const bracket_color((pipe_color == LT_GRAY) ? GRAY : LT_GRAY); // different from pipe color
+				float const radius_expand(0.12*radius), space_len(cs.get_sz_dim(dim));
+				float bracket_spacing(0.5*floor_spacing);
+				unsigned const num_seg(max(2, round_fp(space_len/bracket_spacing)));
+				bracket_spacing = space_len/num_seg;
+				
+				for (unsigned b = 0; b <= num_seg; ++b) {
+					cube_t bracket(pipe);
+					set_wall_width(bracket, (cs.d[dim][0] + b*bracket_spacing), 1.2*radius, dim);
+					bracket.expand_in_dim(!dim, radius_expand);
+					bracket.expand_in_dim(2,    radius_expand);
+					if (!has_bcube_int_xy(bracket, miss_tiles)) continue; // only add if over a missing tile
+					objs.emplace_back(bracket, TYPE_PIPE, cs.room_ix, dim, 0, (pipe_flags | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI), light_amt, SHAPE_CYLIN, bracket_color);
+					if (b == 0 || b == num_seg) continue; // add a vertical bolt into the ceiling, bu[t not at the ends
+					cube_t bolt;
+					set_cube_zvals(bolt, pipe.z2(), cs.z2());
+					set_wall_width(bolt, bracket.get_center_dim( dim), 0.2*radius,  dim);
+					set_wall_width(bolt, bracket.get_center_dim(!dim), 0.2*radius, !dim);
+					objs.emplace_back(bolt, TYPE_PIPE, cs.room_ix, 0, 1, pipe_flags, light_amt, SHAPE_CYLIN, GRAY); // vertical, no ends
+				} // for b
 				break; // success
 			} // for N
 		} // for n
