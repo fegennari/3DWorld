@@ -2475,6 +2475,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if (camera_in_building && camera_in_basement && has_mall()) {
 			for (cube_t const &sl : interior->mall_info->skylights) {
 				// only add an ambient light because the skylight is likely shadowed by buildings above
+				point const lpos(sl.get_cube_center());
+				if (!lights_bcube.contains_pt_xy(lpos)) continue; // not contained within the light volume
 				cube_t lit_area(sl);
 				cube_t const mall_concourse(get_mall_concourse());
 				float const light_radius(max(mall_concourse.dz(), 0.5f*mall_concourse.get_sz_dim(!interior->extb_wall_dim))); // max of height and concourse half width
@@ -2486,7 +2488,6 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				if (!is_rot_cube_visible(lit_area, xlate, 1)) {} // VFC; inc_mirror_reflections=1
 				else if (check_occlusion && !lit_area.contains_pt(camera_rot) && check_obj_occluded(lit_area, camera_bs, oc)) {} // occlusion culling
 				else { // add the light
-					point const lpos(sl.get_cube_center());
 					dl_sources.emplace_back(1.3*light_radius, lpos, lpos, get_outdoor_light_color(), 0, -plus_z, 0.3); // increase light radius for stronger effect
 					dl_sources.back().set_custom_bcube(lit_area);
 					dl_sources.back().disable_shadows();
@@ -2499,6 +2500,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			float const light_height(3.0*window_vspacing);
 			cube_t const &ramp(interior->pg_ramp);
 			point const lpos(ramp.xc(), ramp.yc(), (ramp.z2() + light_height));
+			if (!lights_bcube.contains_pt_xy(lpos)) continue; // not contained within the light volume
 			cube_t lit_area(ramp); // area over the ramp extending not quite down to the floor below the roof
 			lit_area.expand_by_xy(wall_thickness); // include landing interior edges
 			set_cube_zvals(lit_area, (ramp.z2() - window_vspacing + 0.1*fc_thick), lpos.z);

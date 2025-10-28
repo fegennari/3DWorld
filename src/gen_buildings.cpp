@@ -3904,6 +3904,8 @@ public:
 					cube_t const light(building_draw_t::get_roof_light_from_pole(l));
 					point const lpos(light.xc(), light.yc(), (light.z1() - 2.0*light.dz())); // slightly below the light head
 					float const radius(6.0*l.dz());
+					if (!lights_bcube.contains_pt_xy(lpos)) continue; // not within light volume (too far from camera)
+					if (!camera_pdu.sphere_visible_test((lpos + xlate), radius)) continue; // VFC
 					update_lights_bcube_zvals(lights_bcube, lpos, radius);
 					dl_sources.push_back(light_source(radius, lpos, lpos, colorRGBA(1.0, 1.0, 0.8, 1.0), 0, -plus_z, 0.3));
 				}
