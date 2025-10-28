@@ -1782,13 +1782,13 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 	}
 	if (concrete_roof ) {
 		roof_color   = blend_color(roof_color, WHITE, 0.5, 0); // lighten roof color
-		roof_tex     = get_concrete_texture  (1.5 * mat.side_tex.tscale_x);
-		roof_acc_tex = get_corr_metal_texture(1.0 * mat.side_tex.tscale_x);
+		roof_tex     = get_concrete_texture  (12.0);
+		roof_acc_tex = get_corr_metal_texture(8.0);
 		tid_mapper.register_roof_texture(roof_acc_tex.tid); // Note: can't register concrete as a roof texture, so we must use another texture
 	}
 	if (concrete_walls) {
 		side_color = blend_color(side_color, WHITE, 0.5, 0); // lighten side color
-		side_tex   = get_concrete_texture  (1.5 * mat.side_tex.tscale_x);
+		side_tex   = get_concrete_texture(12.0);
 		tid_mapper.register_side_texture(side_tex.tid); // is this needed?
 	}
 	if (detail_color == BLACK) {detail_color = roof_color;} // use roof color if not set
