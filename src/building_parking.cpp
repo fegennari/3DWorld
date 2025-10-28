@@ -212,9 +212,15 @@ void building_t::get_parking_struct_ext_walls(vect_cube_with_ix_t &walls, bool e
 		cube_t sides[4]; // {-y, +y, center -x, center +x}
 		subtract_cube_xy(slice, inner, sides);
 		unsigned const face_masks[4] = {127-64, 127-32, 127-16, 127-8}; // enable XYZ but skip all XY but {+y, -y, +x, -x} in XY
+		bool split_lu(f < 2); // handle doors on the ground floor lower wall and second floor upper wall
 
+		if (!split_lu && have_walkway_ext_door) { // include walkway doors if any overlap in Z
+			for (cube_t const &c : door_cuts) {split_lu |= (c.z1() < slice.z2() && c.z2() > slice.z1());}
+		}
 		for (unsigned n = 0; n < 4; ++n) { // exterior: top and bottom; interior: inside faces
-			if (f < 2 || have_walkway_ext_door) { // cut out slots for doors on the ground floor lower wall and second floor upper wall, and for walkway doors
+			unsigned face_mask(exterior_surfaces ? 4 : face_masks[n]);
+
+			if (split_lu) { // cut out slots for doors
 				for (unsigned lu = 0; lu < 2; ++lu) { // split into lower and upper sections
 					if (f == (lu ? num_floors : 0)) continue; // no lower/upper section for this floor
 					cube_t wall(sides[n]);
@@ -222,11 +228,14 @@ void building_t::get_parking_struct_ext_walls(vect_cube_with_ix_t &walls, bool e
 					else    {wall.z2() = zval - int_ext_wall_fc_gap;} // lower wall
 					wall_parts.clear();
 					subtract_cubes_from_cube(wall, door_cuts, wall_parts, temp, 2); // check zval overlap
-					unsigned const face_mask(exterior_surfaces ? 4 : face_masks[n]);
+					if (exterior_surfaces && f == 0) {face_mask |= 128;} // zkip Z1 for bottom floor
 					for (cube_t const &w : wall_parts) {walls.emplace_back(w, face_mask);}
 				} // for lu
 			}
-			else {walls.emplace_back(sides[n], (exterior_surfaces ? 4 : face_masks[n]));} // add entire wall
+			else { // add entire wall
+				if (exterior_surfaces && f == num_floors) {face_mask |= 256;} // skip Z2 for top floor since it will cause Z-fighting with the roof
+				walls.emplace_back(sides[n], face_mask);
+			}
 		} // for n
 	} // for f
 	if (!exterior_surfaces && interior) {interior->parking_str_walls = walls;} // cache for future use
