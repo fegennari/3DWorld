@@ -2799,6 +2799,7 @@ vect_vnctcc_t const &building_t::get_all_drawn_window_verts_as_quads() const { /
 
 void building_t::cut_holes_for_ext_doors(building_draw_t &bdraw, point const &contain_pt, unsigned draw_parts_mask, vect_cube_t const &clamp_cubes) const {
 	if (doors.empty()) return;
+	if (is_parking ()) return;
 	float const floor_spacing(get_window_vspace());
 	vector3d const xlate(get_camera_coord_space_xlate());
 	auto const parts_end(get_real_parts_end_inc_sec());
