@@ -305,9 +305,13 @@ void building_t::remove_ceiling_tiles(cube_t const &room_in, tid_nm_pair_t const
 	ceil_space.expand_by_xy(-0.52*wall_thick); // slightly more than half to avoid Z-fighting with pool room walls
 	ceil_space.z1() = room.z2() - fc_thick;
 	ceil_space.z2() += 0.01*fc_thick; // expand up slightly above the reach of the upward pointing ceiling lights, since they're not shadowed properly
-	cube_t cs_ext(ceil_space);
-	cs_ext.z2() += fc_thick;
-	if (is_basement_room_under_mesh_not_int_bldg(cs_ext)) {ceil_space.z2() = cs_ext.z2();} // expand upward if there's space
+
+	for (unsigned n = 0; n < 2; ++n) { // expand upward multiple times if there's space
+		cube_t cs_ext(ceil_space);
+		cs_ext.z2() += fc_thick;
+		if (!is_basement_room_under_mesh_not_int_bldg(cs_ext)) break; // can't expand up
+		ceil_space.z2() = cs_ext.z2();
+	}
 	// add missing tiles
 	unsigned const missing_tiles_start(interior->missing_ceil_tiles.size());
 	cube_t cut, cut_clip_cube(ceil_space);
@@ -357,7 +361,7 @@ void building_t::add_ceiling_tile_objects(rand_gen_t &rgen) {
 		tile_block.clear();
 
 		for (; cur_obj_ix != objs_end && objs[cur_obj_ix].room_id <= cs.room_ix; ++cur_obj_ix) {
-			room_object_t const &light(objs[cur_obj_ix]);
+			room_object_t const light(objs[cur_obj_ix]); // deep copy to avoid invalidating the reference
 			if (light.room_id != cs.room_ix || light.type != TYPE_LIGHT) continue; // not a light in this room
 			light_bcs.push_back(light);
 			cube_t base(light);
@@ -369,18 +373,19 @@ void building_t::add_ceiling_tile_objects(rand_gen_t &rgen) {
 			cube_t post;
 			set_cube_zvals(post, base.z2(), cs.z2());
 			set_wall_width(post, light.get_center_dim(!light.dim), post_radius, !light.dim);
-			if (pipe_avoid.empty()) {pipe_avoid.push_back(post);} // only need to add the first light, since they should be in a line
 
 			for (unsigned d = 0; d < 2; ++d) {
 				set_wall_width(post, (light.d[light.dim][d] + (d ? -1.0 : 1.0)*4.0*post_radius), post_radius, light.dim);
 				objs.emplace_back(post, TYPE_METAL_BAR, cs.room_ix, 0, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, LT_GRAY, EF_Z12); // skip top and bottom
 			}
+			if (pipe_avoid.empty()) {pipe_avoid.push_back(post);} // only need to add the first light, since they should be in a line
 		} // for cur_obj
 		// place ceiling tiles on the floor
+		vector3d const cs_sz(cs.get_size());
 		room_t const &room(get_room(cs.room_ix));
 		cube_t place_area(get_walkable_room_bounds(room));
 		place_area.expand_by_xy(-get_trim_thickness());
-		bool const dim(cs.dx() < cs.dy()); // long dim
+		bool const dim(cs_sz.x < cs_sz.y); // long dim
 		float const floor_zval(room.z1() + fc_thick), fc_gap(get_floor_ceil_gap());
 
 		for (; tile_iter != interior->missing_ceil_tiles.end() && tile_iter->ix <= cs.room_ix; ++tile_iter) {
@@ -430,6 +435,25 @@ void building_t::add_ceiling_tile_objects(rand_gen_t &rgen) {
 				objs.emplace_back(web, TYPE_SPIWEB, cs.room_ix, tdim, tdir, RO_FLAG_NOCOLL, light_amt);
 			}
 		} // for tile_iter
+		if (cs_sz.z > 1.8*fc_thick && cs.get_sz_dim(!dim) > 4.0*fc_thick) { // add duct in the ceiling if there's enough clearance
+			bool const is_cylin(rgen.rand_bool()); // per-building?
+			room_obj_shape const duct_shape(is_cylin ? SHAPE_CYLIN : SHAPE_CUBE);
+			float const height(rgen.rand_uniform(0.8, 1.0)*min(2.0*fc_thick, 0.8*cs_sz.z));
+			float const width((is_cylin ? 0.5 : rgen.rand_uniform(0.5, 0.7))*height), edge_spacing(1.25*width);
+			cube_t duct(cs); // full length of ceiling space
+			duct.z1() = cs.z2() - height; // along the ceiling
+
+			for (unsigned N = 0; N < 10; ++N) { // 10 attempts to place a duct
+				float const duct_pos(rgen.rand_uniform((cs.d[!dim][0] + edge_spacing), (cs.d[!dim][1] - edge_spacing)));
+				set_wall_width(duct, duct_pos, width, !dim);
+				if (!has_bcube_int_xy(duct, miss_tiles)) break; // not visible through a missing tile, skip (but counts as a pipe)
+				if ( has_bcube_int_xy(duct, pipe_avoid)) continue; // blocked by light post or another pipe
+				// Note: may clip through a spider web, is that okay?
+				interior->room_geom->objs.emplace_back(duct, TYPE_DUCT, cs.room_ix, dim, 0, pipe_flags, light_amt, duct_shape, WHITE); // horizontal
+				pipe_avoid.push_back(duct);
+				break; // success
+			} // for N
+		}
 		// add pipes in the ceiling
 		//float const pipe_z1(cs.z1() + 0.2*fc_thick); // resting on ceiling tile
 		float const pipe_zc(cs.zc()); // center of space
