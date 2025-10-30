@@ -1980,7 +1980,9 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		cube_with_ix_t entrance(interior->parking_entrance);
 		bool const dim(entrance.ix >> 1), dir(entrance.ix & 1);
 		entrance.d[dim][!dir] = entrance.d[dim][dir] + (dir ? -1.0 : 1.0)*get_park_struct_wall_thick(); // shrink to only exterior wall
-		add_trim_for_door_or_int_window(entrance, dim, 1, 0, door_trim_width, door_trim_width, door_trim_exp, window_vspacing); // draw_top_edge=1, draw_bot_trim=0
+		float const top_gap(ground_floor_z1 - entrance.z1()); // negative
+		entrance.z1() = ground_floor_z1; // extend bottom to ground level
+		add_trim_for_door_or_int_window(entrance, dim, 1, 0, door_trim_width, door_trim_width, door_trim_exp, window_vspacing, top_gap); // draw_top_edge=1, draw_bot_trim=0
 	}
 	// add trim around exterior doors
 	for (auto d = doors.begin(); d != doors.end(); ++d) {
@@ -2745,6 +2747,17 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 		objs.emplace_back(step, TYPE_EXT_STEP, 0, dim, !dir, flags, 1.0, shape, step_color);
 		if (above_ground && !is_garage) {to_add_stairs.push_back(obj_ix);} // add steps up to this door
 	} // for d
+	if (is_parking() && !interior->parking_entrance.is_all_zeros()) { // add parking garage entrance ramp
+		cube_with_ix_t const &ent(interior->parking_entrance);
+		bool const edim(ent.ix >> 1), edir(ent.ix & 1);
+		float length(0.6*ent.dz());
+		cube_t ramp(ent);
+		set_cube_zvals(ramp, ground_floor_z1, ent.z1());
+		ramp.d[edim][!edir]  = ent.d[edim][edir]; // flush with front face
+		ramp.d[edim][ edir] += (edir ? 1.0 : -1.0)*length; // extend outward
+		unsigned const flags(RO_FLAG_EXTERIOR | (is_in_city ? RO_FLAG_ADJ_LO : 0));
+		objs.emplace_back(ramp, TYPE_EXT_STEP, 0, edim, !edir, flags, 1.0, SHAPE_ANGLED, step_color);
+	}
 	if (to_add_stairs.empty()) return; // no stairs - done
 	if (!is_house) return; // only houses have actual stairs; office buildings have walkways
 	cube_t const &part(parts[0]); // assumes door is on parts[0] (single part)

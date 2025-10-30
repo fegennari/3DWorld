@@ -22,7 +22,8 @@ bool building_t::add_parking_structure_entrance(rand_gen_t rgen) {
 	cube_t const &part(parts.front()); // sets the exterior space
 	room_t const &room(interior->rooms.front()); // main above ground room is first; sets the interior space
 	float const entrance_width(get_parking_ramp_width()), extend_len(1.0*get_parked_car_size().x), door_width(get_doorway_width());
-	bool const wdim(rgen.rand_bool()), wdir(rgen.rand_bool()), wside(rgen.rand_bool()); // choose a random wall + end to try first
+	// choose a random wall + end to try first; if in the side, use the closest street side
+	bool const wdim(street_dir ? ((street_dir-1) >> 1) : rgen.rand_bool()), wdir(street_dir ? ((street_dir-1)&1) : rgen.rand_bool()), wside(rgen.rand_bool());
 	cube_t entrance;
 	entrance.z1() = room    .z1() + get_fc_thickness();
 	entrance.z2() = entrance.z1() + get_floor_ceil_gap();
@@ -49,7 +50,7 @@ bool building_t::add_parking_structure_entrance(rand_gen_t rgen) {
 				interior->parking_entrance = cube_with_ix_t(entrance, (2*dim + dir));
 				// add a driveway
 				driveway = entrance;
-				set_cube_zvals(driveway, ground_floor_z1, entrance.z1());
+				set_cube_zvals(driveway, ground_floor_z1, (ground_floor_z1 + get_trim_thickness()));
 				driveway.d[dim][!dir]  = ent_wall;
 				driveway.d[dim][ dir] += (dir ? 1.0 : -1.0)*1.5*get_window_vspace();
 				driveway.expand_in_dim(!dim, 0.5*get_park_struct_wall_thick());
@@ -466,7 +467,7 @@ void building_t::add_parking_garage_ramp(rand_gen_t &rgen) {
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness);
 	float const z1(room.z1() + fc_thick), z2(room.z2() + fc_thick); // bottom level room floor to first floor floor
 	bool const ramp_pref_xdir(rgen.rand_bool()), ramp_pref_ydir(rgen.rand_bool());
-	if (is_in_city && is_parking()) {} // TODO: don't face toward the walkway/skyway
+	//if (is_in_city && is_parking()) {} // don't face toward the walkway/skyway? but the skyway hasn't been placed yet
 	bool added_ramp(0), dir(0);
 
 	for (unsigned pass = 0; pass < 2 && !added_ramp; ++pass) {
