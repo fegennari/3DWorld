@@ -328,8 +328,10 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 				btype = (rgen.rand_bool() ? BTYPE_WAREHOUSE : BTYPE_FACTORY); // make this a factory or warehouse
 				assign_name(rgen); // re-assign a name
 			}
-			// parking garages are <= 8 floors and large footprint
-			else if (is_cube_office && (roof_type == ROOF_TYPE_FLAT || is_in_city) && num_floors <= 8 && min(bcube.dx(), bcube.dy()) > 12.0*floor_spacing) {
+			// parking garages are large footprint, and <= 8 floors unless in a city
+			else if (is_cube_office && (roof_type == ROOF_TYPE_FLAT || is_in_city) && num_floors <= (is_in_city ? 20 : 8) &&
+				min(bcube.dx(), bcube.dy()) > (is_in_city ? 11.5 : 12.0)*floor_spacing)
+			{
 				btype     = BTYPE_PARKING; // make a parking garage
 				roof_type = ROOF_TYPE_FLAT;
 				roof_tquads.clear(); // in case it was assigned a sloped roof
