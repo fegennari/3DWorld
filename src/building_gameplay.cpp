@@ -224,9 +224,10 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_COAT_RACK ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 1, 50.0,  25.0,  "coat rack");
 	bldg_obj_types[TYPE_O_SHOWER  ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 2, 0.0,   0.0,   "shower");
 	bldg_obj_types[TYPE_CARD_DECK ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 5.0,   0.1,   "deck of cards");
-	bldg_obj_types[TYPE_CIGARETTE ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 0.0,   0.0,   "cigarette");
+	bldg_obj_types[TYPE_CIGARETTE ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 0.0,   0.0,   "cigarette"); // or just the butt
 	bldg_obj_types[TYPE_BULLETS   ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 0.0,   0.0,   "box of bullets"); // Note: no value or weight, since these are consumable
 	bldg_obj_types[TYPE_CEIL_TILE ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 4.0,   1.0,   "ceiling tile"); // fallen acoustic ceiling tile
+	bldg_obj_types[TYPE_MUSHROOM  ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 0.0,   0.0,   "mushroom");
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");
@@ -878,6 +879,9 @@ public:
 			type == TYPE_TOILET || type == TYPE_URINAL || (type == TYPE_RAT && obj.is_broken()))
 		{
 			register_fly_attract(0); // trashcans, toilets, urinals, and dead rats attract flies
+		}
+		if (type == TYPE_MUSHROOM) {
+			// TODO: some effect
 		}
 		if (is_boxed_machine(obj)) {
 			machine_rseed1 = obj.item_flags;

@@ -2659,6 +2659,18 @@ void building_room_geom_t::add_cigarette(room_object_t const &c) {
 	mat.add_ortho_cylin_to_verts(body,   apply_light_color(c, DK_BROWN), c.dim,  c.dir, !c.dir, 0, 0, 1.0, 1.0, 0.0, 0.0, 1, ndiv); // end only; skip_sides=1, untextured
 }
 
+void building_room_geom_t::add_mushroom(room_object_t const &c) {
+	float const radius(c.get_radius());
+	cube_t base(c), cap(c);
+	base.z2() = c.z1() + 0.6*c.dz();
+	cap .z1() = c.z2() - 2.0*radius; // set the bottom of the cap bounding sphere
+	base.expand_by_xy(0.8*radius);
+	rgeom_mat_t &mat(get_untextured_material(1, 0, 1, 0, 0, 1)); // shadowed, small, no_reflect=1
+	// TODO: rotate a random amount about a random XY dir?
+	mat.add_vcylin_to_verts(base, apply_light_color(c, WHITE), 0, 0); // draw sides only
+	mat.add_sphere_to_verts(cap,  apply_light_color(c), 1, -plus_z); // low_detail=1, skip bottom half
+}
+
 void building_room_geom_t::add_sticky_note(room_object_t const &c) {
 	get_untextured_material(0, 0, 1).add_cube_to_verts_untextured(c, apply_light_color(c), get_face_mask(c.dim, c.dir)); // unshadowed, small, front face only
 }
