@@ -349,6 +349,7 @@ int get_texture_by_name(string const &name, bool is_normal_map, bool invert_y, i
 	// try to load/add the texture directly from a file: assume it's RGB with wrap and mipmaps
 	assert(omp_get_thread_num_3dw() == 0); // must be serial
 	tid = textures.size();
+	// Note: BC1 compression doesn't work well with normal maps, so disable it; maybe we should use BC5 instead?
 	bool const do_compress(allow_compress && def_tex_compress && !is_normal_map);
 	// type format width height wrap_mir ncolors use_mipmaps name [invert_y=0 [do_compress=1 [anisotropy=1.0 [mipmap_alpha_weight=1.0 [normal_map=0]]]]]
 	texture_t new_tex(0, IMG_FMT_AUTO, 0, 0, wrap_mir, ncolors, use_mipmaps, name, invert_y, do_compress,

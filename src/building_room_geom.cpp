@@ -116,7 +116,7 @@ int get_cube_duct_tid () {return get_texture_by_name("interiors/duct.jpg");}
 int get_cylin_duct_tid() {return get_texture_by_name("buildings/metal_roof.jpg");} // metal roof is close enough
 int get_toilet_paper_nm_id() {return get_texture_by_name("interiors/toilet_paper_normal.jpg", 1);}
 int get_crate_tid  (room_object_t const &c) {return get_texture_by_name((c.obj_id & 1) ? "interiors/crate2.jpg" : "interiors/crate.jpg");}
-int get_carpet_tid (room_object_t const &c) {return get_texture_by_name((c.obj_id & 1) ? "carpet/carpet1.jpg" : "carpet/carpet2.jpg");} // select from one of 2 textures
+int get_carpet_tid (room_object_t const &c) {return get_texture_by_name((c.obj_id & 1) ? "carpet/carpet1.jpg"   : "carpet/carpet2.jpg" );} // select from one of 2 textures
 
 colorRGBA get_textured_wood_color() {return WOOD_COLOR.modulate_with(texture_color(WOOD2_TEX));} // Note: uses default WOOD_COLOR, not the per-building random variant
 colorRGBA get_counter_color      () {return (get_textured_wood_color()*0.75 + texture_color(get_counter_tid())*0.25);}
@@ -2386,7 +2386,7 @@ int get_flooring_texture(room_object_t const &c) {
 }
 int get_flooring_nmap_texture(room_object_t const &c) {
 	switch (c.item_flags) { // select texture for flooring type
-	case FLOORING_TILE: return get_texture_by_name("interiors/mosaic_tiles_normal.jpg");
+	case FLOORING_TILE: return get_texture_by_name("interiors/mosaic_tiles_normal.jpg", 1);
 	case FLOORING_WOOD: return get_normal_map_for_bldg_tid(get_flooring_texture(c));
 	}
 	return -1; // no normal map

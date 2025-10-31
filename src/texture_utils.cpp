@@ -22,7 +22,9 @@ void dxt_texture_compress(uint8_t const *const data, vector<uint8_t> &comp_data,
 	assert(width > 0 && height > 0);
 	assert(ncolors == 3 || ncolors == 4);
 	assert(data != nullptr);
+	// see https://www.reedbeta.com/blog/understanding-bcn-texture-compression-formats/
 	// RGB=DXT1/BC1, RGBA=DXT5/BC3
+	// normal maps could use BC5 with stb_compress_bc5_block() if they were changed to two components and z is calculated in the shader
 	bool const has_alpha(ncolors == 4);
 	unsigned const block_sz(has_alpha ? 16 : 8), x_blocks((width + 3)/4), y_blocks((height + 3)/4); // take ceil()
 	comp_data.resize(x_blocks*y_blocks*block_sz);
