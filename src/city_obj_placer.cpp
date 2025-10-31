@@ -24,7 +24,7 @@ extern vector<light_source> dl_sources;
 city_flag_t create_flag(bool dim, bool dir, point const &base_pt, float height, float length, int flag_id=-1);
 void get_building_ext_basement_bcubes(cube_t const &city_bcube, vect_cube_t &bcubes);
 void get_walkways_for_city(cube_t const &city_bcube, vect_bldg_walkway_t &walkway_cands);
-void add_house_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways);
+void add_building_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways);
 bool connect_buildings_to_skyway(cube_t &m_bcube, bool m_dim, cube_t const &city_bcube, vector<skyway_conn_t> &ww_conns);
 void get_city_building_walkways(cube_t const &city_bcube, vector<building_walkway_t *> &bwws);
 float get_inner_sidewalk_width();
@@ -1910,11 +1910,12 @@ void city_obj_placer_t::place_birds(cube_t const &city_bcube, rand_gen_t &rgen) 
 	} // for n
 }
 
-void city_obj_placer_t::add_house_driveways(road_plot_t const &plot, vect_cube_t &temp_cubes, rand_gen_t &rgen, unsigned plot_ix) {
+void city_obj_placer_t::add_building_driveways(road_plot_t const &plot, vect_cube_t &temp_cubes, rand_gen_t &rgen, unsigned plot_ix) {
 	cube_t plot_z(plot);
 	plot_z.z1() = plot_z.z2() = plot.z2() + 0.0002*city_params.road_width; // shift slightly up to avoid Z-fighting
+	if (!plot.is_residential) {plot_z.expand_by_xy(get_sidewalk_width());} // city plots extend to the road while residential plots have sidewalks
 	temp_cubes.clear();
-	add_house_driveways_for_plot(plot_z, temp_cubes);
+	add_building_driveways_for_plot(plot_z, temp_cubes);
 
 	for (auto i = temp_cubes.begin(); i != temp_cubes.end(); ++i) {
 		bool dim(0), dir(0);
@@ -2097,7 +2098,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 		if (add_gas_stations) {maybe_place_gas_station(*i, plot_id, plot_cuts, blockers, colliders, rgen);} // add gas stations first, since they're large
 		if (add_parking_lots && !i->is_park) {i->has_parking = gen_parking_lots_for_plot(*i, cars, city_id, plot_id, blockers, colliders, plot_cuts, rgen, have_cars);}
 		unsigned const driveways_start(driveways.size());
-		if (is_residential) {add_house_driveways(*i, temp_cubes, detail_rgen, plot_id);}
+		/*if (is_residential)*/ {add_building_driveways(*i, temp_cubes, detail_rgen, plot_id);} // driveways always added now that cities have parking structures
 
 		// driveways become blockers for other placed objects; make sure they extend into the road so that they intersect any placed streetlights or fire hydrants
 		for (auto j = driveways.begin()+driveways_start; j != driveways.end(); ++j) {

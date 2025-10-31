@@ -329,8 +329,8 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 				assign_name(rgen); // re-assign a name
 			}
 			// parking garages are large footprint, and <= 8 floors unless in a city
-			else if (is_cube_office && (roof_type == ROOF_TYPE_FLAT || is_in_city) && num_floors <= (is_in_city ? 20 : 8) &&
-				min(bcube.dx(), bcube.dy()) > (is_in_city ? 11.5 : 12.0)*floor_spacing)
+			else if (is_cube_office && (roof_type == ROOF_TYPE_FLAT || is_in_city) && num_floors <= (is_in_city ? 20U : 8U) &&
+				min(bcube.dx(), bcube.dy()) > (is_in_city ? 11.0 : 12.0)*floor_spacing)
 			{
 				btype     = BTYPE_PARKING; // make a parking garage
 				roof_type = ROOF_TYPE_FLAT;
@@ -1385,9 +1385,12 @@ unsigned get_street_dir(cube_t const &inner, cube_t const &outer) {
 	return 2*dim + dir + 1;
 }
 
-// Note: applies to city residential plots, called by city_obj_placer_t;
+// Note: applies to city residential plots and city blocks with parking structures, called by city_obj_placer_t;
 // shouldn't be const because this modifies city_driveway as it's needed for balcony placement logic later; but this must be const for city API, so city_driveway is mutable
-bool building_t::maybe_add_house_driveway(cube_t const &plot, unsigned building_ix) const {
+bool building_t::maybe_add_city_driveway(cube_t const &plot, unsigned building_ix) const {
+	// handle parking structure entrance driveways as a special case
+	if (is_parking() && has_driveway() && extend_existing_driveway(driveway, plot, bcube, vect_cube_t(), city_driveway)) return 1;
+	// below is for houses only
 	if (!is_house) return 0;
 	assert(plot.contains_cube_xy(bcube));
 	cube_t sub_plot(plot);
@@ -1412,7 +1415,7 @@ bool building_t::maybe_add_house_driveway(cube_t const &plot, unsigned building_
 	if (tree_pos != all_zeros) {avoid.push_back(cube_t()); avoid.back().set_from_sphere(tree_pos, hwidth);} // assume tree diameter is similar to driveway width
 	cube_t ac_unit;
 	
-	if (has_ac) { // include outdoor AC unit; would be better if we can move the AC instead, but it's too late for that
+	if (is_house && has_ac) { // include outdoor AC unit; would be better if we can move the AC instead, but it's too late for that
 		assert(!details.empty() && details.back().type == ROOF_OBJ_AC);
 		ac_unit = details.back();
 		avoid.push_back(ac_unit);

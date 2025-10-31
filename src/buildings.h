@@ -2365,7 +2365,7 @@ struct building_t : public building_geom_t {
 	bool check_walkway_door_clearance(cube_t const &c, bool dim) const;
 	bool add_walkway_door(building_walkway_geom_t &walkway, bool dir, unsigned part_ix);
 	void gen_house(cube_t const &base, rand_gen_t &rgen);
-	bool maybe_add_house_driveway(cube_t const &plot, unsigned building_ix) const;
+	bool maybe_add_city_driveway(cube_t const &plot, unsigned building_ix) const;
 	bool get_power_point(vector<point> &ppts) const;
 	cube_t get_top_building_part() const;
 	void add_rooftop_sat_dish(cube_t const &top, float radius, rand_gen_t &rgen);

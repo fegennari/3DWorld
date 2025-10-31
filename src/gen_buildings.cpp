@@ -5181,16 +5181,16 @@ public:
 					else if (query_mode == 1) { // return house driveways
 						building_t const &B(get_building(b.ix));
 						// B.city_driveway will be the added driveway; if a valid driveway already connects the garage to the road, it will remain all zeros
-						if (B.maybe_add_house_driveway(query_cube, b.ix) && !B.city_driveway.is_all_zeros()) {cubes.push_back(B.city_driveway);} // ix not set
+						if (B.maybe_add_city_driveway(query_cube, b.ix) && !B.city_driveway.is_all_zeros()) {cubes.push_back(B.city_driveway);} // ix not set
 					}
 					else {assert(0);} // invalid mode/not implemented
 				}
 			} // for x
 		} // for y
 	}
-	void get_overlapping_bcubes      (cube_t const &xy_range, vect_cube_t         &bcubes) const {return query_for_cube(xy_range, bcubes,    0);}
-	void get_overlapping_bcubes      (cube_t const &xy_range, vect_cube_with_ix_t &bcubes) const {return query_for_cube(xy_range, bcubes,    0);}
-	void add_house_driveways_for_plot(cube_t const &plot,     vect_cube_t      &driveways) const {return query_for_cube(plot,     driveways, 1);}
+	void get_overlapping_bcubes(cube_t const &xy_range, vect_cube_t         &bcubes) const {return query_for_cube(xy_range, bcubes,    0);}
+	void get_overlapping_bcubes(cube_t const &xy_range, vect_cube_with_ix_t &bcubes) const {return query_for_cube(xy_range, bcubes,    0);}
+	void add_driveways_for_plot(cube_t const &plot,     vect_cube_t      &driveways) const {return query_for_cube(plot,     driveways, 1);}
 
 	void get_building_ext_basement_bcubes(cube_t const &city_bcube, vect_cube_t &bcubes) const {
 		vector<cube_with_ix_t> cand_bldgs;
@@ -5906,12 +5906,12 @@ void clear_building_vbos() {
 // city interface
 void set_buildings_pos_range(cube_t const &pos_range) {global_building_params.set_pos_range(pos_range);}
 // Note: no xlate applied for any of these four queries below
-void get_building_bcubes(cube_t const &xy_range, vect_cube_with_ix_t &bcubes  ) {building_creator_city.get_overlapping_bcubes(xy_range, bcubes);}
-void get_building_bcubes(cube_t const &xy_range, vect_cube_t         &bcubes  ) {building_creator_city.get_overlapping_bcubes(xy_range, bcubes);}
+void get_building_bcubes(cube_t const &xy_range, vect_cube_with_ix_t        &bcubes) {building_creator_city.get_overlapping_bcubes(xy_range, bcubes);}
+void get_building_bcubes(cube_t const &xy_range, vect_cube_t                &bcubes) {building_creator_city.get_overlapping_bcubes(xy_range, bcubes);}
 void get_building_ext_basement_bcubes(cube_t const &city_bcube, vect_cube_t &bcubes) {building_creator_city.get_building_ext_basement_bcubes(city_bcube, bcubes);}
 void get_walkways_for_city(cube_t const &city_bcube, vect_bldg_walkway_t &walkways ) {building_creator_city.get_walkways_for_city(city_bcube, walkways);}
-void get_building_power_points(cube_t const &xy_range, vector<point> &ppts    ) {building_creator_city.get_power_points(xy_range, ppts);}
-void add_house_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways  ) {building_creator_city.add_house_driveways_for_plot(plot, driveways);}
+void get_building_power_points(cube_t const &xy_range, vector<point> &ppts         ) {building_creator_city.get_power_points(xy_range, ppts);}
+void add_building_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways    ) {building_creator_city.add_driveways_for_plot(plot, driveways);}
 
 void add_buildings_exterior_lights(vector3d const &xlate, cube_t &lights_bcube) {
 	building_creator     .add_exterior_lights(xlate, lights_bcube);
