@@ -3208,7 +3208,6 @@ public:
 				if (!has_dest_city && rgen.rand_probability(new_city_prob)) { // select a different city
 					if (rgen.rand_float() < city_params.traffic_balance_val) { // choose the connected city with the lowest traffic density
 						float min_td(0.0);
-						unsigned ret(0);
 
 						for (unsigned c : conn) {
 							float const td(get_city_by_ix(c).get_traffic_density()); // excludes global_rn
