@@ -991,4 +991,63 @@ void building_t::add_basement_electrical_house(rand_gen_t &rgen) {
 	add_basement_electrical(obstacles, walls, vect_cube_t(), -1, rgen); // no beams, room_id=-1 (to be calculated)
 }
 
+void building_t::add_basement_room_detail_objs(rand_gen_t &rgen) {
+	if (water_damage < 0.25) return; // not enough water for wet objects
+	float const floor_spacing(get_window_vspace()), fc_thick(get_fc_thickness()), trim_thickness(get_trim_thickness()), light_amt(1.0);
+	auto &objs(interior->room_geom->objs);
+	vect_cube_t avoid;
+
+	for (unsigned room_id = 0; room_id < interior->rooms.size(); ++room_id) {
+		room_t const &room(interior->rooms[room_id]);
+		if (room.z1() >= ground_floor_z1)     continue; // not in the basement
+		if (rgen.rand_float() > water_damage) continue; // more water damage = higher chance of mushrooms
+		cube_t const floor_area(get_walkable_room_bounds(room));
+		vector2d const room_sz(floor_area.get_size_xy());
+		float const zval(room.z1() + fc_thick), xy_val(room_sz.x/(room_sz.x + room_sz.y));
+		unsigned const num_clusters(1 + (rgen.rand() % 8)); // 1-8
+		unsigned corners_used(0); // 4 bit masks
+
+		for (unsigned n = 0; n < num_clusters; ++n) {
+			float const radius(0.02*floor_spacing*rgen.rand_uniform(0.5, 1.0)), edge_pad(2.0*radius), height(radius*rgen.rand_uniform(2.4, 4.0));
+			cube_t place_area(floor_area);
+			place_area.expand_by(-(radius*rgen.rand_uniform(1.3, 2.0) + trim_thickness));
+			point pos(0.0, 0.0, (zval - 0.25*radius));
+
+			if (rgen.rand_float() < 0.5) { // corner
+				unsigned const cix(rgen.rand() & 3);
+				if (corners_used & (1 << cix)) continue; // already placed in this corner
+				corners_used |= (1 << cix);
+				for (unsigned d = 0; d < 2; ++d) {pos[d] = place_area.d[d][bool(cix & (1 << d))];}
+				assert(room.contains_pt(pos));
+			}
+			else { // wall edge
+				bool const dim(rgen.rand_float() < xy_val), dir(rgen.rand_bool());
+				pos[ dim] = place_area.d[dim][dir];
+				pos[!dim] = rgen.rand_uniform(place_area.d[!dim][0]+edge_pad, place_area.d[!dim][1]-edge_pad);
+				assert(room.contains_pt(pos));
+			}
+			cube_t mushroom(pos);
+			mushroom.expand_by_xy(radius);
+			mushroom.z2() += height;
+			if (is_obj_placement_blocked(mushroom, room, 1, 1)) continue; // Note: doesn't check other previously placed room objects
+			objs.emplace_back(mushroom, TYPE_MUSHROOM, room_id, 0, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CYLIN, WHITE);
+			avoid.clear();
+			avoid.push_back(mushroom);
+			unsigned const num_add(rgen.rand() % 3); // 0-2
+
+			for (unsigned m = 0; m < num_add; ++m) {
+				for (unsigned N = 0; N < 10; ++N) { // N tries
+					cube_t mushroom2(mushroom);
+					mushroom2.expand_by_xy(-0.2*radius*rgen.rand_float());
+					mushroom2.z2() -= 0.2*height*rgen.rand_float();
+					for (unsigned d = 0; d < 2; ++d) {mushroom2.translate_dim(d, 3.0*radius*rgen.signed_rand_float());}
+					if (!place_area.contains_cube_xy(mushroom2) || has_bcube_int(mushroom2, avoid) || is_obj_placement_blocked(mushroom2, room, 1)) continue;
+					objs.emplace_back(mushroom2, TYPE_MUSHROOM, room_id, 0, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CYLIN, WHITE);
+					avoid.push_back(mushroom2);
+					break; // success
+				} // for N
+			} // for m
+		} // for n
+	} // for room
+}
 

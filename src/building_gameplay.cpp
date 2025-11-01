@@ -1690,6 +1690,7 @@ void building_t::register_player_enter_building() const {
 		str += "\nType: " + btype_names[btype];
 		if (!address.empty()) {str += "\n" + address;} // add address on a second line if known
 		if (interior && !interior->people.empty()) {str += "\nPopulation " + std::to_string(interior->people.size());}
+		//str += " water: " + std::to_string(water_damage);
 		print_entering_building(str);
 	}
 	reset_creepy_sounds();

@@ -2661,14 +2661,24 @@ void building_room_geom_t::add_cigarette(room_object_t const &c) {
 
 void building_room_geom_t::add_mushroom(room_object_t const &c) {
 	float const radius(c.get_radius());
+	rand_gen_t rgen;
+	rgen.set_state(1000.0*(c.x1() + c.y1()), 10000.0*radius);
+	float const radius_z(rgen.rand_uniform(0.5, 1.0)*radius); // flatten the cap somewhat
 	cube_t base(c), cap(c);
-	base.z2() = c.z1() + 0.6*c.dz();
-	cap .z1() = c.z2() - 2.0*radius; // set the bottom of the cap bounding sphere
-	base.expand_by_xy(0.8*radius);
+	base.z2() = c.z2() - 1.0*radius_z; // ends at sphere center
+	cap .z1() = c.z2() - 2.0*radius_z; // set the bottom of the cap bounding sphere
+	base.expand_by_xy(-0.75*radius);
+	colorRGBA const color(apply_light_color(c, WHITE)); // for base and bottom of cap
 	rgeom_mat_t &mat(get_untextured_material(1, 0, 1, 0, 0, 1)); // shadowed, small, no_reflect=1
-	// TODO: rotate a random amount about a random XY dir?
-	mat.add_vcylin_to_verts(base, apply_light_color(c, WHITE), 0, 0); // draw sides only
+	unsigned const verts_start(mat.itri_verts.size());
+	mat.add_vcylin_to_verts(base, color, 0, 0); // draw sides only
 	mat.add_sphere_to_verts(cap,  apply_light_color(c), 1, -plus_z); // low_detail=1, skip bottom half
+	mat.add_vert_disk_to_verts(cube_top_center(base), radius, 1, color, 0, 0, 0, N_CYL_SIDES/2); // normal_z_neg=1, low detail
+
+	if (rgen.rand_bool()) { // maybe apply a small random rotation
+		vector3d const rot_axis(vector3d(rgen.signed_rand_float(), rgen.signed_rand_float(), 0.0).get_norm());
+		rotate_verts(mat.itri_verts, rot_axis, 0.1*PI*rgen.rand_float(), c.get_cube_center(), verts_start);
+	}
 }
 
 void building_room_geom_t::add_sticky_note(room_object_t const &c) {
