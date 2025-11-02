@@ -21,6 +21,7 @@ sphere_t cur_explosion_sphere;
 
 bool player_is_drowning();
 float get_player_drunkenness();
+float get_player_shrooms();
 
 
 void bind_depth_buffer(unsigned tu_id=0) {
@@ -307,7 +308,7 @@ void run_postproc_effects() {
 
 	point const camera(get_camera_pos());
 	bool const camera_underwater(world_mode != WMODE_UNIVERSE && is_underwater(camera));
-	float const drunkenness(get_player_drunkenness());
+	float const drunkenness(get_player_drunkenness()), shrooms(get_player_shrooms());
 	int index(-1);
 	static xform_matrix prev_mvm, prev_pjm; // previous frame's matrices, for use with motion blur, etc.
 	static bool prev_mat_valid(0);
@@ -320,10 +321,11 @@ void run_postproc_effects() {
 			}
 		}
 	}
-	if (drunkenness > 0.5) { // at least slightly drunk
-		if (drunkenness > 1.5) {add_2d_blur();} // very drunk
-		if (drunkenness > 1.0) {add_color_only_effect("double_vision", 0.5f*(drunkenness - 1.0f));} // moderately drunk
-		add_color_only_effect("drunken_wave", 1.0f*(min(drunkenness, 1.25f) - 0.5f));
+	if (drunkenness > 0.5 || shrooms > 0.0) { // at least slightly drunk or high
+		float const double_vision(max(shrooms, 0.5f*(drunkenness - 1.0f)));
+		if (drunkenness   > 1.5) {add_2d_blur();} // very drunk
+		if (double_vision > 0.0) {add_color_only_effect("double_vision", double_vision);} // moderately drunk
+		if (drunkenness   > 0.5) {add_color_only_effect("drunken_wave", 1.0f*(min(drunkenness, 1.25f) - 0.5f));}
 	}
 	else if (camera_underwater) {
 		apply_player_underwater_effect();

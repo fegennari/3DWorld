@@ -668,7 +668,7 @@ class player_inventory_t { // manages player inventory, health, and other stats
 	vector<carried_item_t> carried; // interactive items the player is currently carrying
 	vector<dead_person_t > dead_players;
 	set<unsigned> rooms_stolen_from;
-	float cur_value, cur_weight, tot_value, tot_weight, damage_done, best_value, player_health, drunkenness, bladder, bladder_time, oxygen, thirst;
+	float cur_value, cur_weight, tot_value, tot_weight, damage_done, best_value, player_health, drunkenness, bladder, bladder_time, shroom_amt, shroom_time, oxygen, thirst;
 	float prev_player_zval, respawn_time=0.0, accum_fall_damage=0.0;
 	unsigned num_doors_unlocked, has_key, extra_ammo; // has_key is a bit mask for key colors
 	unsigned machine_rseed1=0, machine_rseed2=0;
@@ -715,7 +715,7 @@ public:
 	void clear() { // called on player death
 		max_eq(best_value, tot_value);
 		cur_value     = cur_weight = tot_value = tot_weight = damage_done = accum_fall_damage = 0.0;
-		drunkenness   = bladder = bladder_time = prev_player_zval = 0.0;
+		drunkenness   = bladder = bladder_time = shroom_amt = shroom_time = prev_player_zval = 0.0;
 		player_health = oxygen = thirst = 1.0; // full health, oxygen, and (anti-)thirst
 		num_doors_unlocked = has_key = extra_ammo = 0; // num_doors_unlocked not saved on death, but maybe should be?
 		prev_in_building = has_flashlight = is_poisoned = poison_from_spider = has_pool_cue = 0;
@@ -752,7 +752,8 @@ public:
 		return 1;
 	}
 	void take_damage(float amt, int poison_type=0) { // poison_type: 0=none, 1=spider, 2=snake
-		player_health -= amt*(1.0f - 0.75f*min(drunkenness, 1.0f)); // up to 75% damage reduction when drunk
+		// up to 75% damage reduction when drunk + 50% damage reduction for shrooms
+		player_health -= amt*(1.0f - 0.75f*min(drunkenness, 1.0f))*(1.0f - 0.5f*shroom_amt);
 
 		if (poison_type > 0) {
 			if (!is_poisoned) { // first poisoning (by spider)
@@ -770,6 +771,7 @@ public:
 	float get_speed_mult () const {return (1.0f - 0.4f*get_carry_weight_ratio())*((bladder > 0.9) ? 0.6 : 1.0);} // 40% reduction for heavy load, 40% reduction for full bladder
 	float get_drunkenness() const {return drunkenness;}
 	float get_oxygen     () const {return oxygen;}
+	float get_shrooms_amt() const {return shroom_amt;}
 	bool  player_is_dead () const {return (player_health <= 0.0);}
 	unsigned player_has_key    () const {return has_key;}
 	bool  player_has_flashlight() const {return has_flashlight;}
@@ -880,9 +882,8 @@ public:
 		{
 			register_fly_attract(0); // trashcans, toilets, urinals, and dead rats attract flies
 		}
-		if (type == TYPE_MUSHROOM) {
-			// TODO: some effect
-		}
+		if (type == TYPE_MUSHROOM) {shroom_time += 10*TICKS_PER_SECOND;}
+
 		if (is_boxed_machine(obj)) {
 			machine_rseed1 = obj.item_flags;
 			machine_rseed2 = obj.obj_id;
@@ -1353,7 +1354,11 @@ public:
 			return;
 		}
 		// update state for next frame
+		float const prev_shroom_amt(shroom_amt);
 		drunkenness = max(0.0f, (drunkenness - 0.0001f*elapsed_time)); // slowly decrease over time
+		shroom_time = max(0.0f, (shroom_time - fticks));
+		shroom_amt  = ((shroom_time > 0.0) ? min(1.0f, (shroom_amt + 0.02f*fticks)) : max(0.0f, (shroom_amt - 0.01f*fticks)));
+		if (prev_shroom_amt < 1.0 && shroom_amt >= 1.0) {print_text_onscreen("You don't feel well", RED, 1.0, 3*TICKS_PER_SECOND, 0);}
 		// should the player drink when underwater? maybe depends on how clean the water is? how about only if thirst < 0.5
 		if (player_in_water == 2 && thirst < 0.5) {thirst = min(1.0f, (thirst + 0.01f *elapsed_time));} // underwater
 		else {thirst = max(0.0f, (thirst - 0.0001f*elapsed_time));} // slowly decrease over time (250s)
@@ -1390,8 +1395,9 @@ public:
 
 player_inventory_t player_inventory;
 
-float get_player_drunkenness() {return player_inventory.get_drunkenness();}
-float get_player_oxygen     () {return player_inventory.get_oxygen     ();}
+float get_player_drunkenness() {return player_inventory.get_drunkenness ();}
+float get_player_oxygen     () {return player_inventory.get_oxygen      ();}
+float get_player_shrooms    () {return player_inventory.get_shrooms_amt ();}
 float get_player_building_speed_mult() {return player_inventory.get_speed_mult();}
 bool player_can_open_door(door_t const &door) {return player_inventory.can_open_door(door);}
 void register_in_closed_bathroom_stall() {player_inventory.register_in_closed_bathroom_stall();}
@@ -1494,6 +1500,7 @@ bool register_player_object_pickup(room_object_t const &obj, point const &at_pos
 	else if (is_healing_food(obj)) {
 		if (obj.type == TYPE_PIZZA_BOX) {gen_sound_thread_safe_at_player(SOUND_EATING, 1.00);} // eating pizza is noisy, but eating a banana is quiet
 	}
+	else if (obj.type == TYPE_MUSHROOM) {gen_sound_thread_safe_at_player(SOUND_EATING, 1.00);}
 	else {gen_sound_thread_safe_at_player(SOUND_ITEM, 0.25);}
 	register_building_sound_for_obj(obj, at_pos);
 	do_room_obj_pickup = 0; // no more object pickups
