@@ -882,8 +882,11 @@ public:
 		{
 			register_fly_attract(0); // trashcans, toilets, urinals, and dead rats attract flies
 		}
-		if (type == TYPE_MUSHROOM) {shroom_time += 10*TICKS_PER_SECOND;}
-
+		if (type == TYPE_MUSHROOM) {
+			//if (obj.color == RED) {} // different per-color effects?
+			//if (obj.color == WHITE) {}
+			shroom_time += 10*TICKS_PER_SECOND;
+		}
 		if (is_boxed_machine(obj)) {
 			machine_rseed1 = obj.item_flags;
 			machine_rseed2 = obj.obj_id;
@@ -1356,8 +1359,8 @@ public:
 		// update state for next frame
 		float const prev_shroom_amt(shroom_amt);
 		drunkenness = max(0.0f, (drunkenness - 0.0001f*elapsed_time)); // slowly decrease over time
-		shroom_time = max(0.0f, (shroom_time - fticks));
-		shroom_amt  = ((shroom_time > 0.0) ? min(1.0f, (shroom_amt + 0.02f*fticks)) : max(0.0f, (shroom_amt - 0.01f*fticks)));
+		shroom_time = max(0.0f, (shroom_time - elapsed_time));
+		shroom_amt  = ((shroom_time > 0.0) ? min(1.0f, (shroom_amt + 0.02f*elapsed_time)) : max(0.0f, (shroom_amt - 0.01f*elapsed_time)));
 		if (prev_shroom_amt < 1.0 && shroom_amt >= 1.0) {print_text_onscreen("You don't feel well", RED, 1.0, 3*TICKS_PER_SECOND, 0);}
 		// should the player drink when underwater? maybe depends on how clean the water is? how about only if thirst < 0.5
 		if (player_in_water == 2 && thirst < 0.5) {thirst = min(1.0f, (thirst + 0.01f *elapsed_time));} // underwater

@@ -1030,7 +1030,8 @@ void building_t::add_basement_room_detail_objs(rand_gen_t &rgen) {
 			mushroom.expand_by_xy(radius);
 			mushroom.z2() += height;
 			if (is_obj_placement_blocked(mushroom, room, 1, 1)) continue; // Note: doesn't check other previously placed room objects
-			objs.emplace_back(mushroom, TYPE_MUSHROOM, room_id, 0, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CYLIN, WHITE);
+			colorRGBA const color((rgen.rand_float() < 0.25) ? RED : WHITE);
+			objs.emplace_back(mushroom, TYPE_MUSHROOM, room_id, 0, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CYLIN, color);
 			avoid.clear();
 			avoid.push_back(mushroom);
 			unsigned const num_add(rgen.rand() % 3); // 0-2
@@ -1042,7 +1043,7 @@ void building_t::add_basement_room_detail_objs(rand_gen_t &rgen) {
 					mushroom2.z2() -= 0.2*height*rgen.rand_float();
 					for (unsigned d = 0; d < 2; ++d) {mushroom2.translate_dim(d, 3.0*radius*rgen.signed_rand_float());}
 					if (!place_area.contains_cube_xy(mushroom2) || has_bcube_int(mushroom2, avoid) || is_obj_placement_blocked(mushroom2, room, 1)) continue;
-					objs.emplace_back(mushroom2, TYPE_MUSHROOM, room_id, 0, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CYLIN, WHITE);
+					objs.emplace_back(mushroom2, TYPE_MUSHROOM, room_id, 0, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CYLIN, color);
 					avoid.push_back(mushroom2);
 					break; // success
 				} // for N
