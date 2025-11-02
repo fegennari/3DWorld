@@ -633,7 +633,7 @@ class building_indir_light_mgr_t {
 		colorRGBA const cw(color*weight);
 		unsigned const nsteps(1 + unsigned(p2p_dist(p1, p2)*step_sz_inv)); // round up (dist can be 0)
 		vector3d const step((p2 - p1)/nsteps); // at least two points
-		
+
 		for (unsigned s = 0; s < nsteps; ++s) {
 			p1 += step; // don't double count the first step
 			lmcell *lmc(lmgr.get_lmcell_round_down(p1));
@@ -744,10 +744,11 @@ class building_indir_light_mgr_t {
 		if (b.is_house)        {weight *=  2.0;} // houses have dimmer lights and seem to work better with more indir
 		if (is_negative_light) {weight *= -1.0;}
 		weight /= base_num_rays; // normalize to the number of rays
+		weight *= 0.555; // adjustment for smaller step size below
 		unsigned NUM_PRI_SPLITS(is_window ? 4 : 16); // we're counting primary rays for windows, use fewer primary splits to reduce noise at the cost of increased time
 		max_eq(base_num_rays, NUM_PRI_SPLITS);
 		int const num_rays(base_num_rays/NUM_PRI_SPLITS);
-		float const step_sz_inv(1.0/(0.3f*(DX_VAL + DY_VAL + DZ_VAL)));
+		float const step_sz_inv(6.0/(DX_VAL + DY_VAL + DZ_VAL)); // 2 steps per grid on average
 		building_colors_t bcolors;
 		b.set_building_colors(bcolors);
 		
