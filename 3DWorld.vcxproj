@@ -1250,6 +1250,7 @@
     <None Include="shaders\ship_draw.frag" />
     <None Include="shaders\ship_draw.vert" />
     <None Include="shaders\ship_shields.frag" />
+    <None Include="shaders\shrooms.frag" />
     <None Include="shaders\simplex_noise.part" />
     <None Include="shaders\simple_texture_luminance.frag" />
     <None Include="shaders\snow.vert" />
