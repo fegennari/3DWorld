@@ -2199,7 +2199,7 @@ void building_room_geom_t::add_drink_can(room_object_t const &c) {
 	unsigned const ndiv(get_rgeom_sphere_ndiv(1)); // use smaller ndiv (16) to reduce vertex count
 	unsigned const dim(get_max_dim(c.get_size()));
 	bool const add_bottom(dim != 2); // draw bottom if not vertical
-	bool const shadowed(!c.is_on_srack());
+	bool const shadowed(!c.is_on_srack()), is_empty(c.is_bottle_empty());
 	drink_can_params_t const &cp(drink_can_params[c.get_drink_can_type()]);
 	float const tscale_add(0.123*c.obj_id + get_obj_rand_tscale_add(c)); // add a pseudo-random rotation to the texture
 	float const rot_angle(c.get_bottle_rot_angle());
@@ -2214,7 +2214,7 @@ void building_room_geom_t::add_drink_can(room_object_t const &c) {
 	unsigned const label_verts_start(label_mat.itri_verts.size());
 	label_mat.add_ortho_cylin_to_verts(c, color, dim, 0, 0, 0, 0, 1.0, 1.0, tscale, 1.0, 0, ndiv, tscale_add, 0, ltc2, ltc1); // sides only
 	if (rot_angle != 0.0) {rotate_verts(label_mat.itri_verts, plus_z, rot_angle, center, label_verts_start);}
-	tid_nm_pair_t top_tex(get_texture_by_name("interiors/can_lid.jpg"), 0.0f, shadowed, 0, 1); // small, no_reflect=1
+	tid_nm_pair_t top_tex(get_texture_by_name((is_empty ? "interiors/can_lid_open.jpg" : "interiors/can_lid.jpg")), 0.0f, shadowed, 0, 1); // small, no_reflect=1
 	top_tex.set_specular(0.7, 80.0, 1.0); // metalness=1.0
 	rgeom_mat_t &top_mat(get_material(top_tex, shadowed, 0, 1));
 	unsigned const top_verts_start(top_mat.itri_verts.size());
