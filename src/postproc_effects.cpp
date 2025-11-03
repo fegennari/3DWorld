@@ -21,7 +21,7 @@ sphere_t cur_explosion_sphere;
 
 bool player_is_drowning();
 float get_player_drunkenness();
-float get_player_shrooms();
+vector3d get_player_shrooms();
 
 
 void bind_depth_buffer(unsigned tu_id=0) {
@@ -160,6 +160,7 @@ void add_color_only_effect(string const &frag_shader, float intensity=1.0, float
 	s.add_uniform_int("frame_buffer_tex", 0);
 	s.add_uniform_float("time", time); // may not be used
 	s.add_uniform_color("color_mod", color_mod); // may not be used
+	s.add_uniform_float("aspect_ratio", float(window_width)/float(window_height));
 	select_texture(NOISE_TEX, 1);
 	s.add_uniform_int("noise_tex", 1); // Note: used for heat waves effect, could be used for others
 	set_xy_step(s); // may not be used
@@ -308,7 +309,8 @@ void run_postproc_effects() {
 
 	point const camera(get_camera_pos());
 	bool const camera_underwater(world_mode != WMODE_UNIVERSE && is_underwater(camera));
-	float const drunkenness(get_player_drunkenness()), shrooms(get_player_shrooms());
+	float const drunkenness(get_player_drunkenness());
+	vector3d const shrooms(get_player_shrooms());
 	int index(-1);
 	static xform_matrix prev_mvm, prev_pjm; // previous frame's matrices, for use with motion blur, etc.
 	static bool prev_mat_valid(0);
@@ -321,11 +323,13 @@ void run_postproc_effects() {
 			}
 		}
 	}
-	if (drunkenness > 0.5 || shrooms > 0.0) { // at least slightly drunk or high
+	if (drunkenness > 0.5 || shrooms != zero_vector) { // at least slightly drunk or high
+		float const dv_amt(max(0.5f*(drunkenness - 1.0f), shrooms.x));
 		if (drunkenness > 1.5) {add_2d_blur();} // very drunk
-		if (drunkenness > 1.0) {add_color_only_effect("double_vision", 0.5f*(drunkenness - 1.0f));} // moderately drunk
+		if (dv_amt      > 0.0) {add_color_only_effect("double_vision", dv_amt);} // moderately drunk or white shrooms
 		if (drunkenness > 0.5) {add_color_only_effect("drunken_wave", 1.0f*(min(drunkenness, 1.25f) - 0.5f));}
-		if (shrooms     > 0.0) {add_color_only_effect("shrooms", shrooms);}
+		if (shrooms.y   > 0.0) {add_color_only_effect("shrooms",  shrooms.y);} // red shrooms
+		if (shrooms.z   > 0.0) {add_color_only_effect("shrooms2", shrooms.z);} // red with white spot shrooms
 	}
 	else if (camera_underwater) {
 		apply_player_underwater_effect();

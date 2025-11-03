@@ -339,7 +339,7 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 	if (otype == TYPE_TPROLL     && obj.taken_level > 0) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,   6.0,  0.5, "toilet paper holder");} // second item to take from tproll
 	if (otype == TYPE_COMP_MOUSE && obj.taken_level > 0) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,   4.0,  0.1, "mouse pad");} // second item to take
 	if (otype == TYPE_TCAN       && obj.in_mall()      ) {return bldg_obj_type_t(0, 1, 1, 1, 0, 0, 2,  80.0, 40.0, "large trashcan");}
-	if (is_boxed_machine(obj))                        {return bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 100.0, 20.0, "small machine");} // taken from a box
+	if (is_boxed_machine(obj))                           {return bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 100.0, 20.0, "small machine");} // taken from a box
 
 	if (otype == TYPE_BED) {
 		if (obj.taken_level > 1) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 250.0, mattress_weight, "mattress"  );} // third item to take from bed
@@ -489,6 +489,11 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 		type.weight = vi.weight;
 		type.value  = vi.value;
 		type.name   = vi.name + " machine";
+	}
+	else if (otype == TYPE_MUSHROOM) {
+		if      (obj.color == WHITE) {type.name = "white mushroom";}
+		else if (obj.color == RED  ) {type.name = "red mushroom"  ;}
+		else                         {type.name = "magic mushroom";} // red with white spots
 	}
 	if (wv_factor != 1.0) { // scale weight and value by this factor, rounded to the nearest pound and dollar
 		type.weight = int(wv_factor*type.weight);
@@ -668,9 +673,10 @@ class player_inventory_t { // manages player inventory, health, and other stats
 	vector<carried_item_t> carried; // interactive items the player is currently carrying
 	vector<dead_person_t > dead_players;
 	set<unsigned> rooms_stolen_from;
-	float cur_value, cur_weight, tot_value, tot_weight, damage_done, best_value, player_health, drunkenness, bladder, bladder_time, shroom_amt, shroom_time, oxygen, thirst;
+	vector3d shrooms_amt, shrooms_time; // stored separately for the three types: white, red, red with white spots (invincibility)
+	float cur_value, cur_weight, tot_value, tot_weight, damage_done, best_value, player_health, drunkenness, bladder, bladder_time, oxygen, thirst;
 	float prev_player_zval, respawn_time=0.0, accum_fall_damage=0.0;
-	unsigned num_doors_unlocked, has_key, extra_ammo; // has_key is a bit mask for key colors
+	unsigned num_doors_unlocked, has_key, extra_ammo, last_item_type; // has_key is a bit mask for key colors
 	unsigned machine_rseed1=0, machine_rseed2=0;
 	int prev_respawn_frame=0, last_meds_frame=0;
 	bool prev_in_building, has_flashlight, is_poisoned, poison_from_spider, has_pool_cue;
@@ -695,7 +701,7 @@ class player_inventory_t { // manages player inventory, health, and other stats
 		rooms_stolen_from.clear();
 		player_attracts_flies = 0; // even if items remain in the player's inventory
 	}
-	void adjust_health(float health, std::ostringstream &oss, colorRGBA &text_color) {
+	void adjust_health(float health, bool is_mushroom, std::ostringstream &oss, colorRGBA &text_color) {
 		if (health > 0.0) { // heal
 			player_health = min(1.0f, (player_health + health));
 			oss << ": +" << round_fp(100.0*health) << "% Health";
@@ -703,9 +709,9 @@ class player_inventory_t { // manages player inventory, health, and other stats
 		if (health < 0.0) { // take damage
 			player_health += health;
 			oss << ": " << round_fp(100.0*health) << "% Health";
-			text_color = RED;
 			add_camera_filter(colorRGBA(RED, 0.25), 4, -1, CAM_FILT_DAMAGE); // 4 ticks of red damage
-			gen_sound_thread_safe_at_player(SOUND_DOH, 0.5);
+			text_color = (is_mushroom ? MAGENTA : RED);
+			if (!is_mushroom || player_is_dead()) {gen_sound_thread_safe_at_player(SOUND_DOH, 0.5);}
 			if (player_is_dead()) {register_achievement("Mr. Yuck");}
 		}
 	}
@@ -715,9 +721,10 @@ public:
 	void clear() { // called on player death
 		max_eq(best_value, tot_value);
 		cur_value     = cur_weight = tot_value = tot_weight = damage_done = accum_fall_damage = 0.0;
-		drunkenness   = bladder = bladder_time = shroom_amt = shroom_time = prev_player_zval = 0.0;
+		drunkenness   = bladder = bladder_time = prev_player_zval = 0.0;
+		shrooms_amt   = shrooms_time = zero_vector;
 		player_health = oxygen = thirst = 1.0; // full health, oxygen, and (anti-)thirst
-		num_doors_unlocked = has_key = extra_ammo = 0; // num_doors_unlocked not saved on death, but maybe should be?
+		num_doors_unlocked = has_key = extra_ammo = last_item_type = 0; // num_doors_unlocked not saved on death, but maybe should be?
 		prev_in_building = has_flashlight = is_poisoned = poison_from_spider = has_pool_cue = 0;
 		machine_rseed1 = machine_rseed2 = 0;
 		carried.clear();
@@ -752,8 +759,9 @@ public:
 		return 1;
 	}
 	void take_damage(float amt, int poison_type=0) { // poison_type: 0=none, 1=spider, 2=snake
-		// up to 75% damage reduction when drunk + 50% damage reduction for shrooms
-		player_health -= amt*(1.0f - 0.75f*min(drunkenness, 1.0f))*(1.0f - 0.5f*shroom_amt);
+		if (player_is_invincible()) return;
+		// up to 75% damage reduction when drunk + 100% damage reduction (invincibility) for shrooms
+		player_health -= amt*(1.0f - 0.75f*min(drunkenness, 1.0f))*(1.0f - shrooms_amt.z);
 
 		if (poison_type > 0) {
 			if (!is_poisoned) { // first poisoning (by spider)
@@ -771,13 +779,14 @@ public:
 	float get_speed_mult () const {return (1.0f - 0.4f*get_carry_weight_ratio())*((bladder > 0.9) ? 0.6 : 1.0);} // 40% reduction for heavy load, 40% reduction for full bladder
 	float get_drunkenness() const {return drunkenness;}
 	float get_oxygen     () const {return oxygen;}
-	float get_shrooms_amt() const {return shroom_amt;}
+	vector3d get_shrooms_amt() const {return shrooms_amt;}
 	bool  player_is_dead () const {return (player_health <= 0.0);}
 	unsigned player_has_key    () const {return has_key;}
 	bool  player_has_flashlight() const {return has_flashlight;}
 	bool  player_has_pool_cue  () const {return has_pool_cue;}
 	bool  player_at_full_health() const {return (player_health == 1.0 && !is_poisoned);}
 	bool  player_is_thirsty    () const {return (thirst < 0.5);}
+	bool  player_is_invincible () const {return (shrooms_amt.z >= 1.0);}
 	bool  player_holding_lit_candle    () const {return (!carried.empty() && carried.back().type == TYPE_CANDLE     &&  carried.back().is_lit   ());}
 	bool  player_holding_lit_flashlight() const {return (!carried.empty() && carried.back().type == TYPE_FLASHLIGHT &&  carried.back().is_lit   ());}
 	bool  player_holding_loaded_gun    () const {return (!carried.empty() && carried.back().type == TYPE_HANDGUN    && !carried.back().is_broken());}
@@ -882,20 +891,31 @@ public:
 		{
 			register_fly_attract(0); // trashcans, toilets, urinals, and dead rats attract flies
 		}
-		if (type == TYPE_MUSHROOM) {
-			//if (obj.color == RED) {} // different per-color effects?
-			//if (obj.color == WHITE) {}
-			shroom_time += 10*TICKS_PER_SECOND;
-		}
 		if (is_boxed_machine(obj)) {
 			machine_rseed1 = obj.item_flags;
 			machine_rseed2 = obj.obj_id;
 		}
-		damage_done += value;
+		damage_done   += value;
+		last_item_type = type;
 		colorRGBA text_color(GREEN);
 		std::ostringstream oss;
 		oss << get_taken_obj_type(obj).name;
 
+		if (type == TYPE_MUSHROOM) {
+			if (obj.color == WHITE) {
+				health = 0.25;
+				shrooms_time.x += 10*TICKS_PER_SECOND;
+			}
+			else if (obj.color == RED) {
+				drunk += 0.25; // high-ness
+				shrooms_time.y += 10*TICKS_PER_SECOND;
+			}
+			else { // red with white spots
+				oss << ": 30s invincibility";
+				health = -0.25; // does damage
+				shrooms_time.z += 30*TICKS_PER_SECOND;
+			}
+		}
 		if (is_consumable(obj)) { // nonempty bottle, consumable
 			if (type == TYPE_BOTTLE) {
 				// should alcohol, poison, and medicine help with thirst? I guess alcohol helps somewhat
@@ -924,7 +944,7 @@ public:
 			else if (obj.type == TYPE_APPLE    ) {health = 0.20;}
 			else {assert(0);}
 		}
-		adjust_health(health, oss, text_color);
+		adjust_health(health, (type == TYPE_MUSHROOM), oss, text_color);
 		if (type == TYPE_FLASHLIGHT) {has_flashlight = 1;} // also goes in inventory
 		if (type == TYPE_POOL_CUE  ) {has_pool_cue   = 1;} // also goes in inventory
 
@@ -1001,7 +1021,7 @@ public:
 		if (drunk > 0.0) {
 			drunkenness += drunk;
 			oss << ": +" << round_fp(100.0*drunk) << "% Drunkenness";
-			if (drunkenness > 0.99f && (drunkenness - drunk) <= 0.99f) {oss << "\nYou are drunk"; text_color = DK_GREEN;}
+			if (drunkenness > 0.99f && (drunkenness - drunk) <= 0.99f) {oss << "\nYou are " << ((liquid > 0.0) ? "drunk" : "high"); text_color = DK_GREEN;}
 		}
 		if (!bladder_was_full && bladder >= 0.9f) {oss << "\nYou need to use the bathroom"; text_color = YELLOW;}
 	}
@@ -1010,7 +1030,7 @@ public:
 		colorRGBA text_color(GREEN);
 		std::ostringstream oss;
 		oss << item.name;
-		adjust_health(item.health, oss, text_color);
+		adjust_health(item.health, 0, oss, text_color); // is_mushroom=0
 
 		if (item.health == 0.0 && item.alcohol == 0.0) { // add + print value and weight if item is not consumed
 			cur_value  += item.value;
@@ -1249,6 +1269,7 @@ public:
 		if (has_pool_cue  ) {show_pool_cue_icon  ();}
 	}
 	void apply_fall_damage(float delta_z, float dscale=1.0) {
+		if (player_is_invincible())       return;
 		if (!in_building_gameplay_mode()) return;
 		if (player_wait_respawn)          return;
 		if (!camera_surf_collide)         return; // no fall damage when flying
@@ -1339,8 +1360,13 @@ public:
 		if (player_is_dead()) {register_player_death(SOUND_SCREAM3, ""); return;} // dead
 		
 		if (drunkenness > 2.0) {
-			register_player_death(SOUND_DROWN, " of alcohol poisoning");
-			register_achievement("One More Drink");
+			if (last_item_type == TYPE_MUSHROOM) {
+				register_player_death(SOUND_SCREAM3, " of mushroom poisoning");
+			}
+			else { // alcohol
+				register_player_death(SOUND_DROWN, " of alcohol poisoning");
+				register_achievement("One More Drink");
+			}
 			return;
 		}
 		if (is_poisoned) {
@@ -1357,11 +1383,15 @@ public:
 			return;
 		}
 		// update state for next frame
-		float const prev_shroom_amt(shroom_amt);
+		vector3d const prev_shroom_amt(shrooms_amt);
 		drunkenness = max(0.0f, (drunkenness - 0.0001f*elapsed_time)); // slowly decrease over time
-		shroom_time = max(0.0f, (shroom_time - elapsed_time));
-		shroom_amt  = ((shroom_time > 0.0) ? min(1.0f, (shroom_amt + 0.02f*elapsed_time)) : max(0.0f, (shroom_amt - 0.01f*elapsed_time)));
-		if (prev_shroom_amt < 1.0 && shroom_amt >= 1.0) {print_text_onscreen("You don't feel well", RED, 1.0, 3*TICKS_PER_SECOND, 0);}
+
+		for (unsigned d = 0; d < 3; ++d) {
+			float &time(shrooms_time[d]), &amt(shrooms_amt[d]);
+			time = max(0.0f, (time - elapsed_time));
+			amt  = ((time > 0.0) ? min(1.0, (amt + elapsed_time/(1.5*TICKS_PER_SECOND))) : max(0.0, (amt - elapsed_time/(3.0*TICKS_PER_SECOND))));
+			if (prev_shroom_amt[d] < 1.0 && amt >= 1.0) {print_text_onscreen("You don't feel well", RED, 1.0, 3*TICKS_PER_SECOND, 0);}
+		}
 		// should the player drink when underwater? maybe depends on how clean the water is? how about only if thirst < 0.5
 		if (player_in_water == 2 && thirst < 0.5) {thirst = min(1.0f, (thirst + 0.01f *elapsed_time));} // underwater
 		else {thirst = max(0.0f, (thirst - 0.0001f*elapsed_time));} // slowly decrease over time (250s)
@@ -1400,7 +1430,7 @@ player_inventory_t player_inventory;
 
 float get_player_drunkenness() {return player_inventory.get_drunkenness ();}
 float get_player_oxygen     () {return player_inventory.get_oxygen      ();}
-float get_player_shrooms    () {return player_inventory.get_shrooms_amt ();}
+vector3d get_player_shrooms () {return player_inventory.get_shrooms_amt ();}
 float get_player_building_speed_mult() {return player_inventory.get_speed_mult();}
 bool player_can_open_door(door_t const &door) {return player_inventory.can_open_door(door);}
 void register_in_closed_bathroom_stall() {player_inventory.register_in_closed_bathroom_stall();}
