@@ -650,7 +650,7 @@ class building_indir_light_mgr_t {
 		vector3d const ray_scale(scene_bounds.get_size()/light_bounds.get_size()), llc_shift(scene_bounds.get_llc() - light_bounds.get_llc()*ray_scale);
 		float const tolerance(1.0E-5*valid_area.get_max_dim_sz());
 		bool const is_window(cur_light & IS_WINDOW_BIT);
-		bool in_attic(0), in_ext_basement(0), is_skylight(0), in_jail_cell(0);
+		bool in_attic(0), in_ext_basement(0), is_skylight(0), in_jail_cell(0), half_step_sz(1);
 		float weight(100.0), light_radius(0.0);
 		point light_center;
 		cube_t light_cube;
@@ -681,8 +681,8 @@ class building_indir_light_mgr_t {
 			}
 			else { // normal window
 				assert(window.ix < 4); // encodes 2*dim + dir
-				dim =  bool(window.ix >> 1);
-				dir = !bool(window.ix &  1); // cast toward the interior
+				dim =  bool(window.ix & 2);
+				dir = !bool(window.ix & 1); // cast toward the interior
 				surface_area = window.dz()*window.get_sz_dim(!bool(dim));
 				light_cube.translate_dim(dim, (dir ? 1.0 : -1.0)*0.5*b.get_wall_thickness()); // shift slightly inside the building to avoid collision with the exterior wall
 				lcolor = outdoor_color;
@@ -727,11 +727,11 @@ class building_indir_light_mgr_t {
 			if (ro.is_round())        {light_radius = ro.get_radius();}
 			if (in_jail_cell)         {weight *= 0.25;} // lower weight for jail cell lights since there are so many
 			if (in_attic)             {weight *= ATTIC_LIGHT_RADIUS_SCALE*ATTIC_LIGHT_RADIUS_SCALE;} // based on surface area rather than radius
-			else if (b.point_in_industrial(light_center)) {base_num_rays /= 4;} // many lights in industrial areas, fewer rays needed
+			else if (b.point_in_industrial(light_center)) {base_num_rays /= 4; half_step_sz = 0;} // many lights in industrial areas, fewer rays needed
 			else if (light_in_basement) {
 				if (in_ext_basement) {
 					if      (b.interior->has_backrooms) {weight *= 0.2; base_num_rays /= 4;} // darker and fewer rays
-					else if (b.has_mall()             ) {weight *= 0.1; base_num_rays /= 8;} // darker and fewer rays, since there are so many lights
+					else if (b.has_mall()             ) {weight *= 0.1; base_num_rays /= 8; half_step_sz = 0;} // darker and fewer rays, since there are so many lights
 					else                                {weight *= 0.5;} // regular extended basement
 				}
 				else { // basement is darker, parking garages are even darker
@@ -740,15 +740,15 @@ class building_indir_light_mgr_t {
 				}
 			}
 		} // end room light case
-		if (b.check_pt_in_retail_room(light_center)) {weight *= 0.5; base_num_rays /= 5;} // many lights, fewer rays
+		if (b.check_pt_in_retail_room(light_center)) {weight *= 0.5; base_num_rays /= 5; half_step_sz = 0;} // many lights, fewer rays
 		if (b.is_house)        {weight *=  2.0;} // houses have dimmer lights and seem to work better with more indir
 		if (is_negative_light) {weight *= -1.0;}
 		weight /= base_num_rays; // normalize to the number of rays
-		weight *= 0.555; // adjustment for smaller step size below
+		if (half_step_sz) {weight *= 0.5;}
 		unsigned NUM_PRI_SPLITS(is_window ? 4 : 16); // we're counting primary rays for windows, use fewer primary splits to reduce noise at the cost of increased time
 		max_eq(base_num_rays, NUM_PRI_SPLITS);
 		int const num_rays(base_num_rays/NUM_PRI_SPLITS);
-		float const step_sz_inv(6.0/(DX_VAL + DY_VAL + DZ_VAL)); // 2 steps per grid on average
+		float const step_sz_inv((half_step_sz ? 6.0 : 3.0)/(DX_VAL + DY_VAL + DZ_VAL)); // 1-2 steps per grid on average
 		building_colors_t bcolors;
 		b.set_building_colors(bcolors);
 		
