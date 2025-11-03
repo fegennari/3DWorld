@@ -1030,7 +1030,8 @@ void building_t::add_basement_room_detail_objs(rand_gen_t &rgen) {
 			mushroom.expand_by_xy(radius);
 			mushroom.z2() += height;
 			if (is_obj_placement_blocked(mushroom, room, 1, 1)) continue; // Note: doesn't check other previously placed room objects
-			colorRGBA const color((rgen.rand_float() < 0.25) ? RED : WHITE);
+			colorRGBA const colors[4] = {WHITE, RED, WHITE, PINK}; // pink is red with white dots
+			colorRGBA const &color(colors[rgen.rand() & 3]);
 			objs.emplace_back(mushroom, TYPE_MUSHROOM, room_id, 0, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CYLIN, color);
 			avoid.clear();
 			avoid.push_back(mushroom);

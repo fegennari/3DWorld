@@ -2663,21 +2663,35 @@ void building_room_geom_t::add_mushroom(room_object_t const &c) {
 	float const radius(c.get_radius());
 	rand_gen_t rgen;
 	rgen.set_state(1000.0*(c.x1() + c.y1()), 10000.0*radius);
-	float const radius_z(rgen.rand_uniform(0.5, 1.0)*radius); // flatten the cap somewhat
-	cube_t base(c), cap(c);
-	base.z2() = c.z2() - 1.0*radius_z; // ends at sphere center
-	cap .z1() = c.z2() - 2.0*radius_z; // set the bottom of the cap bounding sphere
-	base.expand_by_xy(-0.75*radius);
-	colorRGBA const color(apply_light_color(c, WHITE)); // for base and bottom of cap
+	float const radius_z(rgen.rand_uniform(0.35, 1.0)*radius); // flatten the cap somewhat
+	cube_t stalk(c), cap(c);
+	stalk.z2() = c.z2() - 1.0*radius_z; // ends at sphere center
+	cap  .z1() = c.z2() - 2.0*radius_z; // set the bottom of the cap bounding sphere
+	stalk.expand_by_xy(-0.75*radius);
+	bool const has_spots(c.color == PINK);
+	colorRGBA const cap_color  (apply_light_color(c, (has_spots ? WHITE : c.color)));
+	colorRGBA const stalk_color(apply_light_color(c, WHITE)); // for stalk and bottom of cap
+	rgeom_mat_t *cap_mat(nullptr);
+	unsigned cap_verts_start(0);
+
+	if (has_spots) {
+		get_untextured_material(1, 0, 1, 0, 0, 1); // make sure material is loaded
+		cap_mat = &get_material(tid_nm_pair_t(get_texture_by_name("shrooms.png"), 1.0f, 1, 0, 1), 1, 0, 1); // shadowed, small, no_reflect=1
+		cap_verts_start = cap_mat->itri_verts.size();
+	}
 	rgeom_mat_t &mat(get_untextured_material(1, 0, 1, 0, 0, 1)); // shadowed, small, no_reflect=1
+	if (!has_spots) {cap_mat = &mat;} // untextured cap
 	unsigned const verts_start(mat.itri_verts.size());
-	mat.add_vcylin_to_verts(base, color, 0, 0); // draw sides only
-	mat.add_sphere_to_verts(cap,  apply_light_color(c), 1, -plus_z); // low_detail=1, skip bottom half
-	mat.add_vert_disk_to_verts(cube_top_center(base), radius, 1, color, 0, 0, 0, N_CYL_SIDES/2); // normal_z_neg=1, low detail
+	mat.add_vcylin_to_verts(stalk, stalk_color, 0, 0); // draw sides only
+	mat.add_vert_disk_to_verts(cube_top_center(stalk), radius, 1, stalk_color, 0, 0, 0, N_CYL_SIDES/2); // normal_z_neg=1, low detail
+	cap_mat->add_sphere_to_verts(cap, cap_color, 1, -plus_z, tex_range_t(0.0, 0.0, 1.5, 1.0)); // low_detail=1, skip bottom half
 
 	if (rgen.rand_bool()) { // maybe apply a small random rotation
 		vector3d const rot_axis(vector3d(rgen.signed_rand_float(), rgen.signed_rand_float(), 0.0).get_norm());
-		rotate_verts(mat.itri_verts, rot_axis, 0.1*PI*rgen.rand_float(), c.get_cube_center(), verts_start);
+		point const rot_pt(c.get_cube_center());
+		float const rot_angle(0.1*PI*rgen.rand_float());
+		rotate_verts(mat.itri_verts, rot_axis, rot_angle, rot_pt, verts_start);
+		if (has_spots) {rotate_verts(cap_mat->itri_verts, rot_axis, rot_angle, rot_pt, cap_verts_start);}
 	}
 }
 
