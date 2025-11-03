@@ -1036,7 +1036,7 @@ struct paint_draw_t {
 };
 struct building_decal_manager_t {
 	paint_draw_t paint_draw[2]; // {interior, exterior}
-	quad_batch_draw blood_qbd[2], tp_qbd, pend_tape_qbd, glass_qbd, burn_qbd; // blood_qbd: {red human blood, bug guts or stains}
+	quad_batch_draw blood_qbd[2], tp_qbd, pend_tape_qbd, glass_qbd, burn_qbd, graffiti_qbd; // blood_qbd: {red human blood, bug guts or stains}
 	tape_quad_batch_draw tape_qbd; // for tape, but not pend_tape because it hasn't been placed yet
 	rand_gen_t rgen;
 
@@ -2739,7 +2739,8 @@ private:
 	bool is_basement_room_placement_valid(cube_t &room, ext_basement_room_params_t &P, bool dim, bool dir, bool *add_end_door=nullptr, building_t const *exclude=nullptr) const;
 	bool add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &door_bcube, cube_t const &basement, bool wall_dim, bool wall_dir, float length_mult);
 	void remove_ceiling_tiles(cube_t const &room, tid_nm_pair_t const &ceil_tex, ext_basement_room_params_t &P, rand_gen_t &rgen);
-	void add_ceiling_tile_objects(rand_gen_t &rgen);
+	void add_ceiling_tile_objects(rand_gen_t rgen);
+	void add_graffiti(rand_gen_t rgen);
 	bool check_pool_room_slice_valid(cube_t const &slice, int skip_room_ix) const;
 	void maybe_assign_extb_room_as_swimming(rand_gen_t &rgen);
 	void add_wall_section_above_pool_room_door(door_stack_t &ds, room_t const &room);

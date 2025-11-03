@@ -344,7 +344,7 @@ void building_t::remove_ceiling_tiles(cube_t const &room_in, tid_nm_pair_t const
 	interior->ceiling_spaces.push_back(ceil_space);
 }
 
-void building_t::add_ceiling_tile_objects(rand_gen_t &rgen) {
+void building_t::add_ceiling_tile_objects(rand_gen_t rgen) {
 	assert(has_room_geom());
 	float const floor_spacing(get_window_vspace()), fc_thick(get_fc_thickness()), light_amt(1.0);
 	unsigned const pipe_flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING), wire_flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING | RO_FLAG_IN_HALLWAY);
@@ -499,6 +499,17 @@ void building_t::add_ceiling_tile_objects(rand_gen_t &rgen) {
 			} // for N
 		} // for n
 	} // for cs
+}
+
+void building_t::add_graffiti(rand_gen_t rgen) {
+	if (!has_ext_basement() || has_mall() || !has_room_geom())    return;
+	if (!interior->room_geom->decal_manager.graffiti_qbd.empty()) return; // already created
+
+	for (unsigned d = 0; d < 2; ++d) { // {x, y}
+		for (auto w = interior->walls[d].begin() + interior->extb_walls_start[d]; w != interior->walls[d].end(); ++w) {
+			// TODO: graffiti_qbd
+		} // for w
+	} // for d
 }
 
 void extend_adj_cubes(cube_t const &oldc, cube_t const &newc, vect_cube_t &cubes, float wall_thickness, unsigned wall_dim=2) {
