@@ -87,8 +87,15 @@ vec3 get_bump_map_normal() {
 #ifdef USE_TILE_BLEND_NMAP
 	return normalize(ByExampleProceduralNoise(tc) * 2.0 - 1.0);
 #else
+#ifdef USE_RG_NORMAL_MAP // used for 2-component compressed RG normal maps
+	vec3 normal;
+	normal.xy = texture(bump_map, tc).xy * 2.0 - 1.0;
+	normal.z  = 1.0 - length(normal.xy); // always positive
+	return normalize(normal);
+#else
 	return normalize(texture(bump_map, tc).xyz * 2.0 - 1.0);
-#endif
+#endif // USE_RG_NORMAL_MAP
+#endif // USE_TILE_BLEND_NMAP
 }
 #endif // !BUMP_MAP_CUSTOM
 
