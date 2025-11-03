@@ -1593,6 +1593,9 @@
     <None Include="shaders\shrooms.frag">
       <Filter>Shaders\frag\Fullscreen</Filter>
     </None>
+    <None Include="shaders\shrooms2.frag">
+      <Filter>Shaders\frag\Fullscreen</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Script1.rc">
