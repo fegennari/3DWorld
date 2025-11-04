@@ -3573,7 +3573,7 @@ void building_room_geom_t::add_escalator(escalator_t const &e, float floor_spaci
 
 void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
 	bool const is_on(c.is_light_on()), on_but_dim(is_on && c.light_is_out());
-	bool const missing_cover(c.flags & RO_FLAG_ADJ_BOT);
+	bool const missing_cover(c.flags & RO_FLAG_ADJ_BOT), hanging(c.flags & RO_FLAG_ADJ_TOP);
 	tid_nm_pair_t tp(((is_on || missing_cover || c.shape == SHAPE_SPHERE) ? (int)WHITE_TEX : (int)PLASTER_TEX), tscale);
 	tp.emissive = (is_on ? 1.0 : 0.0);
 	colorRGBA const color(c.color*(on_but_dim ? 0.4 : 1.0));
@@ -3625,6 +3625,16 @@ void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
 				rotate_verts(untex_mat.quad_verts, vector_from_dim_dir(c.dim, (d ^ c.dim ^ 1)), 0.33*PI, cube_top_center(ref), verts_start);
 			} // for d
 			untex_mat.add_cube_to_verts_untextured(frame, LT_GRAY, EF_Z2);
+		}
+		else if (hanging) {
+			float const length(c.get_length());
+			cube_t light(c);
+			light.z2() -= 0.08*length; // subtract off frame thickness
+			cube_t back(light);
+			light.d[c.dim][!c.dir] = back.d[c.dim][c.dir] = c.d[c.dim][c.dir] + (c.dir ? -1.0 : 1.0)*0.92*length;
+			mat.add_cube_to_verts(light, color, c.get_llc(), (EF_Z2 | ~get_face_mask(c.dim, !c.dir)));
+			rgeom_mat_t &untex_mat(mats_lights.get_material(tid_nm_pair_t(-1, 1.0f, 0), 0)); // unshadowed; metal?
+			untex_mat.add_cube_to_verts_untextured(back, LT_GRAY, (EF_Z2 | ~get_face_mask(c.dim, c.dir)));
 		}
 		else {mat.add_cube_to_verts(c, color, c.get_llc(), EF_Z2);} // sometimes textured, skip top face
 	}

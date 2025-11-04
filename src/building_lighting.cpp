@@ -650,7 +650,7 @@ class building_indir_light_mgr_t {
 		vector3d const ray_scale(scene_bounds.get_size()/light_bounds.get_size()), llc_shift(scene_bounds.get_llc() - light_bounds.get_llc()*ray_scale);
 		float const tolerance(1.0E-5*valid_area.get_max_dim_sz());
 		bool const is_window(cur_light & IS_WINDOW_BIT);
-		bool in_attic(0), in_ext_basement(0), is_skylight(0), in_jail_cell(0), half_step_sz(1);
+		bool in_attic(0), in_ext_basement(0), is_skylight(0), in_jail_cell(0), half_step_sz(1), hanging(0);
 		float weight(100.0), light_radius(0.0);
 		point light_center;
 		cube_t light_cube;
@@ -739,6 +739,10 @@ class building_indir_light_mgr_t {
 					base_num_rays /= 4;
 				}
 			}
+			if (!is_lamp && (ro.flags & RO_FLAG_ADJ_TOP)) { // fallen/hanging ceiling light
+				light_dir = ro.get_dir();
+				hanging   = 1;
+			}
 		} // end room light case
 		if (b.check_pt_in_retail_room(light_center)) {weight *= 0.5; base_num_rays /= 5; half_step_sz = 0;} // many lights, fewer rays
 		if (b.is_house)        {weight *=  2.0;} // houses have dimmer lights and seem to work better with more indir
@@ -770,6 +774,7 @@ class building_indir_light_mgr_t {
 				pri_dir = rgen.signed_rand_vector_spherical().get_norm(); // should this be cosine weighted for windows? and clipped to the beamwidth for ceiling lights?
 				if (is_window && ((pri_dir[dim] > 0.0) ^ dir)) {pri_dir[dim] *= -1.0;} // reflect light if needed about window plane to ensure it enters the room
 				//if (!is_window && dir < 2 && (pri_dir[dim] > 0) != bool(dir)) {pri_dir[dim] *= -1.0;} // point in general light dir/hemisphere; doesn't seem to improve quality
+				if (hanging && dot_product(pri_dir, light_dir) < 0.0) {pri_dir.negate();}
 			}
 			float const lum_thresh(0.1*ray_lcolor.get_luminance());
 			point origin, init_cpos, cpos;
@@ -2250,10 +2255,13 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if (in_camera_room && (in_retail_room || room.is_industrial())) {} // skip occlusion check for large open rooms
 		else if (check_occ && !clipped_bc.contains_pt(camera_rot) && check_obj_occluded(clipped_bc, camera_bs, oc, 0, 0, mall_light_vis)) continue;
 		bool const in_industrial(room.is_industrial()), tall_retail(in_retail_room && has_tall_retail()); // narrower for industrial ceiling lights and a bit lower for tall retail
+		bool const hanging(!wall_light && !is_lamp && (i->flags & RO_FLAG_ADJ_TOP));
 		float bwidth(in_industrial ? 0.125 : (tall_retail ? 0.24 : 0.25)); // as close to 180 degree FOV as we can get without shadow clipping
 		//if (wall_light) {bwidth = 1.0;} // wall light omnidirectional, but shadows are wrong
 		vector3d dir;
-		if (wall_light) {dir[i->dim] = (i->dir ? 1.0 : -1.0);} else {dir = -plus_z;} // points down, unless it's a wall light
+		if   (wall_light) {dir[i->dim] = (i->dir ? 1.0 : -1.0);}
+		else if (hanging) {dir = i->get_dir();} // fallen/hanging
+		else              {dir = -plus_z;} // points down, unless it's a wall light
 		dl_sources.emplace_back(light_radius, lpos_rot, lpos_rot, color, 0, dir, bwidth);
 		if (track_lights) {enabled_bldg_lights.push_back(lpos_rot);}
 		//++num_add;
@@ -2309,7 +2317,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		setup_light_for_building_interior(dl_sources.back(), *i, clipped_bc_rot, force_smap_update, shadow_caster_hash);
 		
 		// add upward pointing light (sideways for wall lights); only when player is near/inside a building (optimization); not for lights hanging on ceiling fans
-		if ((camera_near_building || in_walkway_near_camera) && (is_lamp || wall_light || lpos_rot.z > up_light_zmin) && !i->is_hanging()) {
+		if ((camera_near_building || in_walkway_near_camera) && (is_lamp || wall_light || lpos_rot.z > up_light_zmin) && !hanging && !i->is_hanging()) {
 			cube_t light_bc2(clipped_bc);
 
 			if (is_in_elevator) {

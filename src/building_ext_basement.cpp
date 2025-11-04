@@ -381,7 +381,23 @@ void building_t::add_ceiling_tile_objects(rand_gen_t rgen) {
 			if (pipe_avoid.empty()) {pipe_avoid.push_back(post);} // only need to add the first light, since they should be in a line
 			int const rand_val(rgen.rand() % 7);
 
-			if (rand_val == 1) { // flag as missing the cover; should the cover be on the floor like the ceiling tiles?
+			if (rand_val == 0) { // make the light fall
+				room_object_t &light(objs[cur_obj_ix]);
+				cube_t frame(light);
+				vector3d const light_sz(light.get_size());
+				bool const dim(light.dim), dir(rgen.rand_bool()); // long dim
+				float const sz_diff(light_sz[dim] - light_sz.z);
+				frame.z1()  = light.z2() - 0.08*light_sz.z;
+				light.z1() -= sz_diff;
+				light.d[dim][!dir] += (dir ? 1.0 : -1.0)*sz_diff;
+				light.dir    = dir;
+				light.flags |= RO_FLAG_ADJ_TOP; // flag as hanging at the top
+				//objs.emplace_back(light, TYPE_COLLIDER, light.room_id, dim, dir, RO_FLAG_INVIS, 1.0); // no, blocks people but not the player
+				// add the frame; really there should be a hole in the tile here, but that causes problems with texture alignment, etc.
+				objs.emplace_back(frame, TYPE_METAL_BAR, light.room_id, dim, dir, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, LT_GRAY, EF_Z2); // skip top
+
+			}
+			else if (rand_val == 1) { // flag as missing the cover; should the cover be on the floor like the ceiling tiles?
 				objs[cur_obj_ix].flags |= RO_FLAG_ADJ_BOT;
 			}
 		} // for cur_obj
