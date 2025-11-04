@@ -3573,7 +3573,8 @@ void building_room_geom_t::add_escalator(escalator_t const &e, float floor_spaci
 
 void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
 	bool const is_on(c.is_light_on()), on_but_dim(is_on && c.light_is_out());
-	tid_nm_pair_t tp(((is_on || c.shape == SHAPE_SPHERE) ? (int)WHITE_TEX : (int)PLASTER_TEX), tscale);
+	bool const missing_cover(c.flags & RO_FLAG_ADJ_BOT);
+	tid_nm_pair_t tp(((is_on || missing_cover || c.shape == SHAPE_SPHERE) ? (int)WHITE_TEX : (int)PLASTER_TEX), tscale);
 	tp.emissive = (is_on ? 1.0 : 0.0);
 	colorRGBA const color(c.color*(on_but_dim ? 0.4 : 1.0));
 	rgeom_mat_t &mat(mats_lights.get_material(tp, 0)); // no shadows
@@ -3582,7 +3583,51 @@ void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
 		assert(c.shape == SHAPE_CYLIN);
 		mat.add_ortho_cylin_to_verts(c, color, c.dim, !c.dir, c.dir); // draw top but not bottom
 	}
-	else if (c.shape == SHAPE_CUBE  ) {mat.add_cube_to_verts  (c, color, c.get_llc(), EF_Z2);} // sometimes textured, skip top face
+	else if (c.shape == SHAPE_CUBE) {
+		if (missing_cover) {
+			float const height(c.dz()), width(c.get_width()), length(c.get_length()), frame_thick(0.16*height), center(c.get_center_dim(!c.dim));
+			cube_t frame(c), ends[4], caps[4];
+			frame.z1() = c.z2() - frame_thick;
+
+			for (unsigned d = 0; d < 2; ++d) { // draw flourescent tubes
+				cube_t tube(c);
+				tube.z2()  = frame.z1();
+				tube.z1() += 0.5*frame_thick;
+				tube.expand_in_dim(c.dim, -0.1*length); // shorten
+				set_wall_width(tube, (center + (d ? 1.0 : -1.0)*0.15*width), 0.5*tube.dz(), !c.dim);
+
+				for (unsigned e = 0; e < 2; ++e) { // determine ends
+					float const shift((e ? -1.0 : 1.0)*0.025*length);
+					cube_t &end(ends[2*d + e]), &cap(caps[2*d + e]);
+					end = tube;
+					end.d[c.dim][!e] = tube.d[c.dim][e] = tube.d[c.dim][e] + shift;
+					cap = end;
+					cap.expand_in_dim(!c.dim, -0.2*end.get_sz_dim(!c.dim));
+					cap.translate_dim(c.dim, -shift);
+				}
+				mat.add_ortho_cylin_to_verts(tube, color, c.dim, 0, 0); // no ends
+			} // for d
+			// draw the ends and frame; can't resize the frame in XY because it must meet the top part above the ceiling
+			rgeom_mat_t &untex_mat(mats_lights.get_material(tid_nm_pair_t(-1, 1.0f, 0), 0)); // unshadowed; metal?
+
+			for (unsigned d = 0; d < 2; ++d) {
+				for (unsigned e = 0; e < 2; ++e) {
+					untex_mat.add_ortho_cylin_to_verts    (ends[2*d + e], colorRGBA(0.0, 0.35, 0.0), c.dim, !e, e); // dark green
+					untex_mat.add_cube_to_verts_untextured(caps[2*d + e], WHITE, EF_Z2); // skip top face
+				}
+				cube_t ref(c); // reflector
+				ref.z2()  = frame.z1();
+				ref.z1() -= 0.2*height;
+				ref.expand_in_dim(c.dim, -0.02*length); // shorten slightly
+				set_wall_width(ref, (center + (d ? 1.0 : -1.0)*0.25*width), 0.005*width, !c.dim);
+				unsigned const verts_start(untex_mat.quad_verts.size());
+				untex_mat.add_cube_to_verts_untextured(ref, LT_GRAY, EF_Z2);
+				rotate_verts(untex_mat.quad_verts, vector_from_dim_dir(c.dim, (d ^ c.dim ^ 1)), 0.33*PI, cube_top_center(ref), verts_start);
+			} // for d
+			untex_mat.add_cube_to_verts_untextured(frame, LT_GRAY, EF_Z2);
+		}
+		else {mat.add_cube_to_verts(c, color, c.get_llc(), EF_Z2);} // sometimes textured, skip top face
+	}
 	else if (c.shape == SHAPE_CYLIN ) {mat.add_vcylin_to_verts(c, color, 1, 0);} // bottom only
 	else if (c.shape == SHAPE_SPHERE) {mat.add_sphere_to_verts(c, color);}
 	else {assert(0);}

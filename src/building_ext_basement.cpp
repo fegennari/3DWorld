@@ -379,6 +379,11 @@ void building_t::add_ceiling_tile_objects(rand_gen_t rgen) {
 				objs.emplace_back(post, TYPE_METAL_BAR, cs.room_ix, 0, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, LT_GRAY, EF_Z12); // skip top and bottom
 			}
 			if (pipe_avoid.empty()) {pipe_avoid.push_back(post);} // only need to add the first light, since they should be in a line
+			int const rand_val(rgen.rand() % 7);
+
+			if (rand_val == 1) { // flag as missing the cover; should the cover be on the floor like the ceiling tiles?
+				objs[cur_obj_ix].flags |= RO_FLAG_ADJ_BOT;
+			}
 		} // for cur_obj
 		// place ceiling tiles on the floor
 		vector3d const cs_sz(cs.get_size());
