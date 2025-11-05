@@ -523,12 +523,54 @@ void building_t::add_ceiling_tile_objects(rand_gen_t rgen) {
 }
 
 void building_t::add_graffiti(rand_gen_t rgen) {
-	if (!has_ext_basement() || has_mall() || !has_room_geom())    return;
-	if (!interior->room_geom->decal_manager.graffiti_qbd.empty()) return; // already created
+	return; // comment out when ready
+	if (!has_ext_basement() || has_mall() || !has_room_geom()) return;
+	quad_batch_draw &qbd(interior->room_geom->decal_manager.graffiti_qbd);
+	if (!qbd.empty()) return; // already created
+	assert(interior->ext_basement_hallway_room_id >= 0);
+	float const floor_spacing(get_window_vspace()), fc_thick(get_fc_thickness());
+	float const graffiti_sz(1.2*floor_spacing), graffiti_hthick(0.25*get_trim_thickness()), edge_space(2.0*get_wall_thickness());
+	vect_cube_t placed;
 
 	for (unsigned d = 0; d < 2; ++d) { // {x, y}
 		for (auto w = interior->walls[d].begin() + interior->extb_walls_start[d]; w != interior->walls[d].end(); ++w) {
-			// TODO: graffiti_qbd
+			float const length(w->get_sz_dim(!d) - 2.0*edge_space);
+			if (length < 1.2*graffiti_sz)    continue; // too short
+			float const wall_z1(w->z1() + fc_thick), wall_z2(w->z2() - fc_thick), wall_dz(wall_z2 - wall_z1);
+			if (wall_dz < 0.5*floor_spacing) continue; // short wall? skip
+			unsigned const num_graffiti(rgen.rand() % unsigned(length/graffiti_sz));
+			if (num_graffiti == 0) continue;
+			// find room this wall is associated with
+			room_t const *room(nullptr);
+
+			for (auto r = interior->rooms.begin()+interior->ext_basement_hallway_room_id; r != interior->rooms.end(); ++r) {
+				if (!w->intersects(*r) || w->d[!d][0] < r->d[!d][0] || w->d[!d][1] > r->d[!d][1]) continue; // room does not contain this wall
+				room = &(*r);
+				break; // only return the first room
+			}
+			if (!room) continue; // no room; error?
+			bool const dir(room->get_center_dim(d) < w->get_center_dim(d));
+			cube_t gbc;
+			set_wall_width(gbc, w->d[d][!dir], graffiti_hthick, d); // at wall edge
+
+			for (unsigned n = 0; n < num_graffiti; ++n) {
+				float const hwidth(0.5*graffiti_sz*rgen.rand_uniform(0.5, 1.0));
+				set_wall_width(gbc, rgen.rand_uniform((w->d[!d][0] + hwidth + edge_space), (w->d[!d][1] - hwidth - edge_space)), hwidth, !d);
+				gbc.z1() = wall_z1 + rgen.rand_uniform(0.20, 0.40)*wall_dz;
+				gbc.z2() = wall_z2 - rgen.rand_uniform(0.05, 0.20)*wall_dz;
+				if (has_bcube_int(gbc, placed)) continue;
+				// Note: should not need to check for wall edges in dim !d since the wall is contained in the room
+				colorRGBA const color(BLACK); // TODO
+				bool const wdir(d ^ dir ^ 1); // winding dir
+				point pts[4];
+				for (unsigned i = 0; i < 4; ++i) {pts[i][d] = gbc.d[d][!dir];}
+				pts[0].z = pts[1].z = gbc.z1();
+				pts[2].z = pts[3].z = gbc.z2();
+				pts[0][!d] = pts[3][!d] = gbc.d[!d][ wdir];
+				pts[1][!d] = pts[2][!d] = gbc.d[!d][!wdir];
+				qbd.add_quad_pts(pts, color, vector_from_dim_dir(d, !dir));
+				placed.push_back(gbc);
+			} // for n
 		} // for w
 	} // for d
 }
