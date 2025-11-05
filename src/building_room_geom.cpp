@@ -3607,24 +3607,33 @@ void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
 				}
 				mat.add_ortho_cylin_to_verts(tube, color, c.dim, 0, 0); // no ends
 			} // for d
-			// draw the ends and frame; can't resize the frame in XY because it must meet the top part above the ceiling
-			rgeom_mat_t &untex_mat(mats_lights.get_material(tid_nm_pair_t(-1, 1.0f, 0), 0)); // unshadowed; metal?
+			// draw the ends
+			tid_nm_pair_t tex(-1, 1.0f, 0);
+			rgeom_mat_t &untex_mat(mats_lights.get_material(tex, 0)); // unshadowed
 
 			for (unsigned d = 0; d < 2; ++d) {
 				for (unsigned e = 0; e < 2; ++e) {
 					untex_mat.add_ortho_cylin_to_verts    (ends[2*d + e], colorRGBA(0.0, 0.35, 0.0), c.dim, !e, e); // dark green
 					untex_mat.add_cube_to_verts_untextured(caps[2*d + e], WHITE, EF_Z2); // skip top face
 				}
+			}
+			// draw the reflector
+			tex.set_specular(1.0, 80.0, 1.0); // fully reflective
+			rgeom_mat_t &ref_mat(mats_lights.get_material(tex, 0)); // unshadowed
+
+			for (unsigned d = 0; d < 2; ++d) {
 				cube_t ref(c); // reflector
 				ref.z2()  = frame.z1();
 				ref.z1() -= 0.2*height;
 				ref.expand_in_dim(c.dim, -0.02*length); // shorten slightly
 				set_wall_width(ref, (center + (d ? 1.0 : -1.0)*0.25*width), 0.005*width, !c.dim);
-				unsigned const verts_start(untex_mat.quad_verts.size());
-				untex_mat.add_cube_to_verts_untextured(ref, LT_GRAY, EF_Z2);
-				rotate_verts(untex_mat.quad_verts, vector_from_dim_dir(c.dim, (d ^ c.dim ^ 1)), 0.33*PI, cube_top_center(ref), verts_start);
+				unsigned const verts_start(ref_mat.quad_verts.size());
+				ref_mat.add_cube_to_verts_untextured(ref, LT_GRAY, EF_Z2);
+				rotate_verts(ref_mat.quad_verts, vector_from_dim_dir(c.dim, (d ^ c.dim ^ 1)), 0.33*PI, cube_top_center(ref), verts_start);
 			} // for d
-			untex_mat.add_cube_to_verts_untextured(frame, LT_GRAY, EF_Z2);
+			// draw the frame; can't resize the frame in XY because it must meet the top part above the ceiling
+			tex.set_specular(0.8, 60.0, 0.5); // partially reflective (same as metal bar)
+			mats_lights.get_material(tex, 0).add_cube_to_verts_untextured(frame, LT_GRAY, EF_Z2); // unshadowed
 		}
 		else if (hanging) {
 			float const length(c.get_length());
@@ -3633,8 +3642,9 @@ void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
 			cube_t back(light);
 			light.d[c.dim][!c.dir] = back.d[c.dim][c.dir] = c.d[c.dim][c.dir] + (c.dir ? -1.0 : 1.0)*0.92*length;
 			mat.add_cube_to_verts(light, color, c.get_llc(), (EF_Z2 | ~get_face_mask(c.dim, !c.dir)));
-			rgeom_mat_t &untex_mat(mats_lights.get_material(tid_nm_pair_t(-1, 1.0f, 0), 0)); // unshadowed; metal?
-			untex_mat.add_cube_to_verts_untextured(back, LT_GRAY, (EF_Z2 | ~get_face_mask(c.dim, c.dir)));
+			tid_nm_pair_t tex(-1, 1.0f, 0);
+			tex.set_specular(0.8, 60.0, 0.5); // partially reflective (same as metal bar)
+			mats_lights.get_material(tex, 0).add_cube_to_verts_untextured(back, LT_GRAY, (EF_Z2 | ~get_face_mask(c.dim, c.dir))); // unshadowed
 		}
 		else {mat.add_cube_to_verts(c, color, c.get_llc(), EF_Z2);} // sometimes textured, skip top face
 	}
