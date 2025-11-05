@@ -23,7 +23,7 @@ string const model_opt_names[NUM_OBJ_MODELS] =
 /*building non-room objects*/ "door_handle_model",
 /*city models*/ "fire_hydrant_model", "substation_model", "mailbox_model", "umbrella_model", "pigeon_model", "fountain_model", "bird_animated_model", "flag_model",
 "bicycle_model", "swingset_model", "trampoline_model", "dumpster_model", "big_umbrella_model", "flower_model", "deck_chair_model", "picnic_table_model", "wind_turbine_model",
-"bb_hoop_model", "gas_pump_model"};
+"bb_hoop_model", "gas_pump_model", "statue_model"};
 
 void read_to_newline(FILE *fp) {
 	while (1) {

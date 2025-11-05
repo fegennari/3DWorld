@@ -588,7 +588,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 	float const car_length(city_params.get_nom_car_size().x); // used as a size reference for other objects
 	float const min_obj_spacing(get_min_obj_spacing()), sidewalk_width(get_sidewalk_width());
 	unsigned const benches_start(benches.size()), trashcans_start(trashcans.size()), substations_start(sstations.size());
-	unsigned const fountains_start(fountains.size()), ppoles_start(ppoles.size()), paths_start(ppaths.size());
+	unsigned const fountains_start(fountains.size()), statues_start(statues.size()), ppoles_start(ppoles.size()), paths_start(ppaths.size());
 
 	// place paths in parks
 	if (is_park) {
@@ -844,6 +844,12 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			}
 		}
 	}
+#if 0
+	// place statues in parks and 25% of the time in city blocks
+	if ((is_park || (!is_residential && (rgen.rand() & 3) == 0)) && building_obj_model_loader.is_model_valid(OBJ_MODEL_STATUE)) {
+		// TODO
+	}
+#endif
 	// place benches in parks and non-residential areas, and next to fountains
 	if (!plot.is_residential_not_park()) {
 		float const bench_radius(0.3 * car_length), bench_spacing(max(bench_radius, 1.5f*min_obj_spacing)); // add a bit of extra space
@@ -1121,7 +1127,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 		// find all bird placements
 		vect_bird_place_t pigeon_locs;
 
-		// maybe place on benches, trashcans, substations, and fountains
+		// maybe place on benches, trashcans, substations, fountains, and statues
 		for (auto i = benches.begin()+benches_start; i != benches.end(); ++i) {
 			if (i->bcube.get_sz_dim(!i->dim) <= 2.0*obj_edge_spacing) continue;
 			vect_bird_place_t *const dest(select_bird_loc_dest(add_pigeons, add_birds, pigeon_locs, bird_locs, rgen));
@@ -1139,6 +1145,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 		}
 		add_objs_top_center(sstations, substations_start, add_pigeons, add_birds, pigeon_locs, bird_locs, rgen);
 		add_objs_top_center(fountains, fountains_start,   add_pigeons, add_birds, pigeon_locs, bird_locs, rgen);
+		add_objs_top_center(statues,   statues_start,     add_pigeons, add_birds, pigeon_locs, bird_locs, rgen);
 
 		// place pigeons
 		if (add_pigeons) {
@@ -2132,6 +2139,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	fhydrant_groups.create_groups(fhydrants, all_objs_bcube);
 	sstation_groups.create_groups(sstations, all_objs_bcube);
 	fountain_groups.create_groups(fountains, all_objs_bcube);
+	statue_groups  .create_groups(statues,   all_objs_bcube);
 	divider_groups .create_groups(dividers,  all_objs_bcube);
 	pool_groups    .create_groups(pools,     all_objs_bcube);
 	plad_groups    .create_groups(pladders,  all_objs_bcube);
@@ -2423,6 +2431,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(fhydrants, fhydrant_groups, dstate, 0.06, shadow_only, 1);
 	draw_objects(sstations, sstation_groups, dstate, 0.15, shadow_only, 1);
 	draw_objects(fountains, fountain_groups, dstate, 0.20, shadow_only, 1);
+	draw_objects(statues,   statue_groups,   dstate, 0.15, shadow_only, 1);
 	draw_objects(mboxes,    mbox_groups,     dstate, 0.04, shadow_only, 1);
 	draw_objects(ppoles,    ppole_groups,    dstate, 0.20, shadow_only, 0);
 	draw_objects(signs,     sign_groups,     dstate, 0.25, shadow_only, 1, 1); // draw_qbd_as_quads=1
@@ -2606,6 +2615,7 @@ bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, vector
 	if (proc_vector_sphere_coll(fhydrants, fhydrant_groups, pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(sstations, sstation_groups, pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(fountains, fountain_groups, pos, p_last, radius, xlate, cnorm)) return 1;
+	if (proc_vector_sphere_coll(statues,   statue_groups,   pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(dividers,  divider_groups,  pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(pools,     pool_groups,     pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(ppoles,    ppole_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
@@ -2671,7 +2681,7 @@ bool city_obj_placer_t::line_intersect(point const &p1, point const &p2, float &
 	for (gas_station_t const &gs : gstations) {ret |= gs.line_intersect(p1, p2, t);}
 	// Note: nothing to do for parking lots, tree_planters, hcaps, manholes, sewers, tcones, sculptures, flowers, pladders, chairs, pdecks, bballs, pfloats,
 	// clines, pigeons, ppaths, or birds;
-	// mboxes, swings, tramps, umbrellas, bikes, plants, ponds, p_solars, bb_hoops, and skyways are ignored because they're small or not simple shapes
+	// mboxes, swings, tramps, umbrellas, bikes, plants, ponds, p_solars, bb_hoops, statues, and skyways are ignored because they're small or not simple shapes
 	return ret;
 }
 
@@ -2778,7 +2788,7 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, vect_cube_t const &plo
 	if (check_city_obj_pt_xy_contains(gass_groups,     gstations, pos, obj_ix, 0)) {color = WHITE;   return 1;} // should be more detailed?
 	if (check_vect_cube_contains_pt_xy(plot_cuts, pos)) {color = colorRGBA(0.7, 0.7, 1.0); return 1;} // mall skylight; very light blue
 	// Note: ppoles, hcaps, manholes, sewers, mboxes, tcones, sculptures, flowers, pladders, chairs, stopsigns, flags, clines, pigeons, birds, swings,
-	// umbrellas, bikes, and plants are skipped; pillars aren't visible under walkways;
+	// umbrellas, bikes, statues, and plants are skipped; pillars aren't visible under walkways;
 	// free standing signs can be added, but they're small and expensive to iterate over and won't contribute much
 	return 0;
 }

@@ -134,6 +134,11 @@ struct fountain_t : public multi_model_city_obj_t {
 		multi_model_city_obj_t(pos_, height, 0, 0, OBJ_MODEL_FOUNTAIN, model_select, 1) {} // dim=0, dir=0, is_cylinder=1
 };
 
+struct statue_t : public multi_model_city_obj_t {
+	statue_t(point const &pos_, float height, unsigned model_select) :
+		multi_model_city_obj_t(pos_, height, 0, 0, OBJ_MODEL_STATUE, model_select, 1) {} // dim=0, dir=0, is_cylinder=1
+};
+
 struct divider_t : public oriented_city_obj_t {
 	unsigned type;
 	uint8_t skip_dims;
@@ -732,6 +737,7 @@ private:
 	vector<fire_hydrant_t> fhydrants;
 	vector<substation_t> sstations;
 	vector<fountain_t> fountains;
+	vector<statue_t> statues;
 	vector<divider_t> dividers; // dividers for residential plots
 	vector<swimming_pool_t> pools;
 	vector<pool_ladder_t> pladders;
@@ -771,11 +777,11 @@ private:
 	vector<beach_ball_t> bballs;
 	vector<pool_float_t> pfloats;
 	// index is last obj in group
-	city_obj_groups_t bench_groups, planter_groups, trashcan_groups, fhydrant_groups, sstation_groups, fountain_groups, divider_groups, pool_groups, plad_groups,
-		chair_groups, pdeck_groups, ppole_groups, hcap_groups, manhole_groups, mbox_groups, tcone_groups, pigeon_groups, bird_groups, sign_groups, stopsign_groups,
-		flag_groups, nrack_groups, cline_groups, ppath_groups, swing_groups, tramp_groups, umbrella_groups, bike_groups, dumpster_groups, plant_groups, flower_groups,
-		picnic_groups, bb_hoop_groups, pond_groups, walkway_groups, pillar_groups, wwe_groups, uge_groups, p_solar_groups, gass_groups, bball_groups, pfloat_groups,
-		sewer_groups, sculpt_groups;
+	city_obj_groups_t bench_groups, planter_groups, trashcan_groups, fhydrant_groups, sstation_groups, fountain_groups, statue_groups, divider_groups, pool_groups,
+		plad_groups, chair_groups, pdeck_groups, ppole_groups, hcap_groups, manhole_groups, mbox_groups, tcone_groups, pigeon_groups, bird_groups, sign_groups,
+		stopsign_groups, flag_groups, nrack_groups, cline_groups, ppath_groups, swing_groups, tramp_groups, umbrella_groups, bike_groups, dumpster_groups, plant_groups,
+		flower_groups, picnic_groups, bb_hoop_groups, pond_groups, walkway_groups, pillar_groups, wwe_groups, uge_groups, p_solar_groups, gass_groups, bball_groups,
+		pfloat_groups, sewer_groups, sculpt_groups;
 	skyway_t skyway; // optional
 	vect_parking_space_t pspaces;
 	bird_poop_manager_t bird_poop_manager;
