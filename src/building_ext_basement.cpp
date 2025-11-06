@@ -543,7 +543,7 @@ void building_t::add_graffiti(rand_gen_t rgen) {
 		for (auto w = interior->walls[d].begin() + interior->extb_walls_start[d]; w != interior->walls[d].end(); ++w) {
 			float const length(w->get_sz_dim(!d) - 2.0*edge_space);
 			if (length < 1.2*graffiti_sz)    continue; // too short
-			float const wall_z1(w->z1() + fc_thick), wall_z2(w->z2() - fc_thick), wall_dz(wall_z2 - wall_z1);
+			float const wall_z1(w->z1() + fc_thick), wall_z2(min(w->z2(), (w->z1() + 1.5f*floor_spacing)) - fc_thick), wall_dz(wall_z2 - wall_z1); // not too high for tall pool rooms
 			if (wall_dz < 0.5*floor_spacing) continue; // short wall? skip
 			unsigned const num_graffiti(rgen.rand() % unsigned(length/graffiti_sz));
 			if (num_graffiti == 0) continue;
@@ -556,7 +556,8 @@ void building_t::add_graffiti(rand_gen_t rgen) {
 				break; // only return the first room
 			}
 			if (!room) continue; // no room; error?
-			bool const dir(room->get_center_dim(d) < w->get_center_dim(d));
+			bool const dir(room->get_center_dim(d) < w->get_center_dim(d)), wdir(d ^ dir ^ 1); // winding dir
+			vector3d const normal(vector_from_dim_dir(d, !dir));
 			cube_t gbc;
 			set_wall_width(gbc, w->d[d][!dir], graffiti_hthick, d); // at wall edge
 
@@ -567,15 +568,14 @@ void building_t::add_graffiti(rand_gen_t rgen) {
 				gbc.z2() = wall_z2 - rgen.rand_uniform(0.05, 0.20)*wall_dz;
 				if (has_bcube_int(gbc, placed)) continue;
 				// Note: should not need to check for wall edges in dim !d since the wall is contained in the room
-				colorRGBA const color(BLACK); // TODO
-				bool const wdir(d ^ dir ^ 1); // winding dir
+				colorRGBA const &color(spcan_colors[rgen.rand() % NUM_SPCAN_COLORS]); // same as spraycans
 				point pts[4];
 				for (unsigned i = 0; i < 4; ++i) {pts[i][d] = gbc.d[d][!dir];}
 				pts[0].z = pts[1].z = gbc.z1();
 				pts[2].z = pts[3].z = gbc.z2();
 				pts[0][!d] = pts[3][!d] = gbc.d[!d][ wdir];
 				pts[1][!d] = pts[2][!d] = gbc.d[!d][!wdir];
-				qbd.add_quad_pts(pts, color, vector_from_dim_dir(d, !dir));
+				qbd.add_quad_pts(pts, color, normal);
 				placed.push_back(gbc);
 			} // for n
 		} // for w
