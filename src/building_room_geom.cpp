@@ -1502,11 +1502,12 @@ void building_room_geom_t::add_computer  (room_object_t const &c) {add_obj_with_
 void building_room_geom_t::add_card_deck (room_object_t const &c) {add_obj_with_top_texture  (c, "interiors/card_deck.jpg", WHITE, 1);} // is_small=1
 void building_room_geom_t::add_bullet_box(room_object_t const &c) {add_obj_with_top_texture  (c, "interiors/bullets.png",   BLACK, 1);} // is_small=1
 
-// noise tex is interior of part board
+// noise tex is interior of part board; if is_lit() is set, this is a light cover on the floor rather than a ceiling tile
 void building_room_geom_t::add_ceil_tile(room_object_t const &c) {
 	float const tscale(1.0/c.get_length()), rot_angle(c.color.A);
 	colorRGBA const color(apply_light_color(c, colorRGBA(c.color, 1.0)));
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_texture_by_name("noise.png"), tscale), 1, 0, 1)); // shadows, small
+	tid_nm_pair_t const tex((c.is_lit() ? (int)PLASTER_TEX : get_texture_by_name("noise.png")), tscale);
+	rgeom_mat_t &mat(get_material(tex, 1, 0, 1)); // shadows, small
 	unsigned const verts_start(mat.quad_verts.size());
 	mat.add_cube_to_verts(c, color, zero_vector, EF_Z1, c.dim); // top and sides
 	rotate_verts(mat.quad_verts, plus_z, rot_angle, c.get_cube_center(), verts_start);

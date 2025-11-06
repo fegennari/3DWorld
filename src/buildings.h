@@ -2741,6 +2741,7 @@ private:
 	bool add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &door_bcube, cube_t const &basement, bool wall_dim, bool wall_dir, float length_mult);
 	void remove_ceiling_tiles(cube_t const &room, tid_nm_pair_t const &ceil_tex, ext_basement_room_params_t &P, rand_gen_t &rgen);
 	void add_ceiling_tile_objects(rand_gen_t rgen);
+	void add_tile_on_floor(rand_gen_t &rgen, cube_t const &c, cube_t const &room, cube_t const &place_area, unsigned room_ix, bool is_light, vect_cube_t &tile_block);
 	void add_graffiti(rand_gen_t rgen);
 	bool check_pool_room_slice_valid(cube_t const &slice, int skip_room_ix) const;
 	void maybe_assign_extb_room_as_swimming(rand_gen_t &rgen);

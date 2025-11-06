@@ -346,7 +346,7 @@ void building_t::remove_ceiling_tiles(cube_t const &room_in, tid_nm_pair_t const
 
 void building_t::add_ceiling_tile_objects(rand_gen_t rgen) {
 	assert(has_room_geom());
-	float const floor_spacing(get_window_vspace()), fc_thick(get_fc_thickness()), light_amt(1.0);
+	float const floor_spacing(get_window_vspace()), fc_thick(get_fc_thickness()), fc_gap(get_floor_ceil_gap()), light_amt(1.0);
 	unsigned const pipe_flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING), wire_flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING | RO_FLAG_IN_HALLWAY);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const objs_end(objs.size());
@@ -355,6 +355,10 @@ void building_t::add_ceiling_tile_objects(rand_gen_t rgen) {
 	vect_cube_t miss_tiles, pipe_avoid, light_bcs, tile_block;
 
 	for (ceiling_space_t const &cs : interior->ceiling_spaces) {
+		vector3d const cs_sz(cs.get_size());
+		room_t const &room(get_room(cs.room_ix));
+		cube_t place_area(get_walkable_room_bounds(room));
+		place_area.expand_by_xy(-get_trim_thickness());
 		miss_tiles.clear();
 		pipe_avoid.clear();
 		light_bcs .clear();
@@ -399,38 +403,19 @@ void building_t::add_ceiling_tile_objects(rand_gen_t rgen) {
 			}
 			else if (rand_val == 1) { // flag as missing the cover; should the cover be on the floor like the ceiling tiles?
 				objs[cur_obj_ix].flags |= RO_FLAG_ADJ_BOT;
+				add_tile_on_floor(rgen, objs[cur_obj_ix], room, place_area, cs.room_ix, 1, tile_block); // is_light=1
 			}
 		} // for cur_obj
 		// place ceiling tiles on the floor
-		vector3d const cs_sz(cs.get_size());
-		room_t const &room(get_room(cs.room_ix));
-		cube_t place_area(get_walkable_room_bounds(room));
-		place_area.expand_by_xy(-get_trim_thickness());
 		bool const dim(cs_sz.x < cs_sz.y); // long dim
-		float const floor_zval(room.z1() + fc_thick), fc_gap(get_floor_ceil_gap());
 
 		for (; tile_iter != interior->missing_ceil_tiles.end() && tile_iter->ix <= cs.room_ix; ++tile_iter) {
 			assert(tile_iter->ix == cs.room_ix); // can't have tile without a ceiling space
 			// place tile on the floor
 			miss_tiles.push_back(*tile_iter); // needed for visible pipe placement
 			cube_t const tile(*tile_iter);
+			add_tile_on_floor(rgen, tile, room, place_area, cs.room_ix, 0, tile_block); // is_light=0
 
-			for (unsigned n = 0; n < 40; ++n) { // 40 placement attempts
-				cube_t ftile(*tile_iter); // tile on floor
-				ftile.translate_dim(2, (floor_zval - tile.z1()));
-				for (unsigned d = 0; d < 2; ++d) {ftile.translate_dim(d, 2.0*rgen.signed_rand_float()*tile.get_sz_dim(d));} // move +/- 2 tiles away in both dims
-				float const rot_angle(PI*rgen.rand_float()*(1.0 - n/40.0)); // reduce angle with later iterations
-				point const rot_pt(ftile.get_cube_center());
-				cube_t tile_rot(ftile - rot_pt); // rotate about the tile center
-				tile_rot = rotate_cube(tile_rot, plus_z, rot_angle) + rot_pt;
-				if (!place_area.contains_cube_xy(tile_rot))        continue; // clipping through walls
-				if (has_bcube_int(tile_rot, tile_block))           continue; // check previously placed tiles
-				if (has_bcube_int(tile_rot, interior->stairwells)) continue; // don't place on stairs
-				if (interior->is_cube_close_to_doorway(tile_rot, room, 0.0, 1, 1)) continue; // no clipping through doors
-				objs.emplace_back(ftile, TYPE_CEIL_TILE, cs.room_ix, dim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, colorRGBA(WHITE, rot_angle)); // store rot angle in alpha
-				tile_block.push_back(tile_rot);
-				break; // success
-			} // for n
 			if (rgen.rand_float() < 0.5) { // add hanging wire
 				bool const cx(rgen.rand_bool()), cy(rgen.rand_bool()); // choose a random corner
 				float const radius(rgen.rand_uniform(0.04, 0.08)*fc_thick);
@@ -520,6 +505,28 @@ void building_t::add_ceiling_tile_objects(rand_gen_t rgen) {
 			} // for N
 		} // for n
 	} // for cs
+}
+void building_t::add_tile_on_floor(rand_gen_t &rgen, cube_t const &c, cube_t const &room, cube_t const &place_area, unsigned room_ix, bool is_light, vect_cube_t &tile_block) {
+	bool const dim(c.dx() < c.dy()); // long dim
+	unsigned const flags(RO_FLAG_NOCOLL | (is_light ? RO_FLAG_LIT : 0));
+	float const floor_zval(room.z1() + get_fc_thickness()), light_amt(1.0);
+
+	for (unsigned n = 0; n < 40; ++n) { // 40 placement attempts
+		cube_t ftile(c); // tile on floor
+		ftile.translate_dim(2, (floor_zval - c.z1()));
+		for (unsigned d = 0; d < 2; ++d) {ftile.translate_dim(d, 2.0*rgen.signed_rand_float()*c.get_sz_dim(d));} // move +/- 2 tiles away in both dims
+		float const rot_angle(PI*rgen.rand_float()*(1.0 - n/40.0)); // reduce angle with later iterations
+		point const rot_pt(ftile.get_cube_center());
+		cube_t tile_rot(ftile - rot_pt); // rotate about the tile center
+		tile_rot = rotate_cube(tile_rot, plus_z, rot_angle) + rot_pt;
+		if (!place_area.contains_cube_xy(tile_rot))        continue; // clipping through walls
+		if (has_bcube_int(tile_rot, tile_block))           continue; // check previously placed tiles
+		if (has_bcube_int(tile_rot, interior->stairwells)) continue; // don't place on stairs
+		if (interior->is_cube_close_to_doorway(tile_rot, room, 0.0, 1, 1)) continue; // no clipping through doors
+		interior->room_geom->objs.emplace_back(ftile, TYPE_CEIL_TILE, room_ix, dim, 0, flags, light_amt, SHAPE_CUBE, colorRGBA(WHITE, rot_angle)); // store angle in alpha
+		tile_block.push_back(tile_rot);
+		return; // success
+	} // for n
 }
 
 void building_t::add_graffiti(rand_gen_t rgen) {
