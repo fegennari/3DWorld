@@ -702,6 +702,7 @@ struct bldg_obj_type_t {
 	bldg_obj_type_t(bool pc, bool ac, bool rc, bool pu, bool at, bool im, uint8_t ls, float v, float w, std::string const &n, unsigned cap=0) :
 		player_coll(pc), ai_coll(ac), rat_coll(rc), pickup(pu), attached(at), is_model(im), lg_sm(ls), value(v), weight(w), capacity(cap), name(n) {}
 	void update_modified_flags_for_type(bldg_obj_type_t t) {lg_sm |= t.lg_sm; is_model |= t.is_model; ai_coll |= t.ai_coll;}
+	void set_val_weight_name(float v, float w, string const &n) {value = v; weight = w; name = n;}
 };
 
 struct oriented_cube_t : public cube_t {

@@ -360,16 +360,16 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 		bldg_obj_type_t type(get_room_obj_type(obj));
 		switch (obj.item_flags) {
 		case TYPE_FISH:
-			if (broken) {type.value =  10.0; type.weight =  20.0; type.name = "broken fish tank";}
-			else        {type.value = 100.0; type.weight = 160.0; type.name = "fish tank";}
+			if (broken) {type.set_val_weight_name(10.0,  20.0,  "broken fish tank");}
+			else        {type.set_val_weight_name(100.0, 160.0, "fish tank"       );}
 			break;
 		case TYPE_RAT:
-			if (otype == TYPE_PET_CAGE) {type.value =  45.0; type.weight =   8.0; type.name = "rat cage";}
-			else                        {type.value =  50.0; type.weight =  30.0; type.name = "rat tank";}
+			if (otype == TYPE_PET_CAGE) {type.set_val_weight_name(45.0, 8.0,  "rat cage");}
+			else                        {type.set_val_weight_name(50.0, 30.0, "rat tank");}
 			break;
-		case TYPE_SNAKE : type.value =  60.0; type.weight =  35.0; type.name = "snake terrarium";  break;
-		case TYPE_SPIDER: type.value =  40.0; type.weight =  25.0; type.name = "spider terrarium"; break;
-		case TYPE_BIRD  : type.value =  50.0; type.weight =  10.0; type.name = "bird cage";        break;
+		case TYPE_SNAKE : type.set_val_weight_name(60.0, 35.0, "snake terrarium" ); break;
+		case TYPE_SPIDER: type.set_val_weight_name(40.0, 25.0, "spider terrarium"); break;
+		case TYPE_BIRD  : type.set_val_weight_name(50.0, 10.0, "bird cage"       ); break;
 		default: assert(0); // unsupported
 		}
 		return type;
@@ -428,9 +428,7 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 
 	if (otype == TYPE_LG_BALL) {
 		ball_type_t const &bt(obj.get_ball_type());
-		type.name   = bt.name; // use a more specific type name
-		type.value  = bt.value;
-		type.weight = bt.weight;
+		type.set_val_weight_name(bt.value, bt.weight, bt.name); // use a more specific type
 	}
 	else if (otype == TYPE_CLOTHES) {
 		if      (is_shirt_model(obj)) {type.name = "shirt";}
@@ -486,9 +484,7 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 	}
 	else if (otype == TYPE_VENDING) {
 		vending_info_t const &vi(get_vending_type(obj.item_flags));
-		type.weight = vi.weight;
-		type.value  = vi.value;
-		type.name   = vi.name + " machine";
+		type.set_val_weight_name(vi.value, vi.weight, (vi.name + " machine"));
 	}
 	else if (otype == TYPE_MUSHROOM) {
 		if      (obj.color == WHITE) {type.name = "white mushroom";}
