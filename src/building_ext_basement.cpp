@@ -529,15 +529,53 @@ void building_t::add_tile_on_floor(rand_gen_t &rgen, cube_t const &c, cube_t con
 	} // for n
 }
 
+class graffiti_draw_t {
+	quad_batch_draw &qbd;
+public:
+	graffiti_draw_t(quad_batch_draw &qbd_) : qbd(qbd_) {}
+
+	void add_stroke(point const &p1, point const &p2, float radius, vector3d const &normal, colorRGBA const &color) {
+		vector3d const line_dir((p2 - p1).get_norm()), cross_dir(cross_product(normal, line_dir));
+		vector3d const line_v(radius*line_dir), cross_v(radius*cross_dir);
+		point const p1_out(p1 - line_v), p2_out(p2 + line_v);
+		point const p1o1(p1_out - cross_v), plo2(p1_out + cross_v), p1i1(p1 - cross_v), p1i2(p1 + cross_v);
+		point const p2o1(p2_out - cross_v), p2o2(p2_out + cross_v), p2i1(p2 - cross_v), p2i2(p2 + cross_v);
+		point const pts1[4] = {p1o1, plo2, p1i2, p1i1};
+		point const ptsc[4] = {p1i1, p1i2, p2i2, p2i1};
+		point const pts2[4] = {p2o1, p2i1, p2i2, p2o2};
+		color_wrapper const cw(color);
+		qbd.add_quad_pts(pts1, cw, normal, tex_range_t(0.0, 0.0, 1.0, 0.5));
+		qbd.add_quad_pts(ptsc, cw, normal, tex_range_t(0.0, 0.5, 1.0, 0.5));
+		qbd.add_quad_pts(pts2, cw, normal, tex_range_t(1.0, 0.0, 0.5, 1.0));
+	}
+	void add_strokes(cube_t const &gbc, float max_radius, colorRGBA const &color, unsigned num, bool dim, bool dir, rand_gen_t &rgen) {
+		vector3d const normal(vector_from_dim_dir(dim, !dir));
+		point p[2];
+		p[0][dim] = p[1][dim] = gbc.d[dim][!dir]; // against the wall
+
+		for (unsigned n = 0; n < num; ++n) {
+			float const radius(rgen.rand_uniform(0.5, 1.0)*max_radius);
+
+			for (unsigned d = 0; d < 2; ++d) {
+				unsigned const pdim(d ? 2 : !dim);
+				for (unsigned i = 0; i < 2; ++i) {p[i][pdim] = rgen.rand_uniform(gbc.d[pdim][0]+radius, gbc.d[pdim][1]-radius);}
+			}
+			add_stroke(p[0], p[1], radius, normal, color);
+		} // for n
+	}
+};
+
 void building_t::add_graffiti(rand_gen_t rgen) {
-	return; // comment out when ready
 	if (!has_ext_basement() || has_mall() || !has_room_geom()) return;
 	quad_batch_draw &qbd(interior->room_geom->decal_manager.graffiti_qbd);
 	if (!qbd.empty()) return; // already created
 	assert(interior->ext_basement_hallway_room_id >= 0);
 	float const floor_spacing(get_window_vspace()), fc_thick(get_fc_thickness());
-	float const graffiti_sz(1.2*floor_spacing), graffiti_hthick(0.25*get_trim_thickness()), edge_space(2.0*get_wall_thickness());
-	vect_cube_t placed;
+	float const graffiti_sz(1.3*floor_spacing), graffiti_hthick(0.25*get_trim_thickness()), edge_space(2.0*get_wall_thickness());
+	bool const room_select(rgen.rand_bool()); // even vs. odd
+	vector<room_t> const &rooms(interior->rooms);
+	auto const first_room(rooms.begin() + interior->ext_basement_hallway_room_id);
+	graffiti_draw_t gd(qbd);
 
 	for (unsigned d = 0; d < 2; ++d) { // {x, y}
 		for (auto w = interior->walls[d].begin() + interior->extb_walls_start[d]; w != interior->walls[d].end(); ++w) {
@@ -545,38 +583,34 @@ void building_t::add_graffiti(rand_gen_t rgen) {
 			if (length < 1.2*graffiti_sz)    continue; // too short
 			float const wall_z1(w->z1() + fc_thick), wall_z2(min(w->z2(), (w->z1() + 1.5f*floor_spacing)) - fc_thick), wall_dz(wall_z2 - wall_z1); // not too high for tall pool rooms
 			if (wall_dz < 0.5*floor_spacing) continue; // short wall? skip
-			unsigned const num_graffiti(rgen.rand() % unsigned(length/graffiti_sz));
+			unsigned const num_graffiti(rgen.rand() % round_fp(length/graffiti_sz));
 			if (num_graffiti == 0) continue;
 			// find room this wall is associated with
 			room_t const *room(nullptr);
 
-			for (auto r = interior->rooms.begin()+interior->ext_basement_hallway_room_id; r != interior->rooms.end(); ++r) {
+			for (auto r = first_room; r < rooms.end(); ++r) {
 				if (!w->intersects(*r) || w->d[!d][0] < r->d[!d][0] || w->d[!d][1] > r->d[!d][1]) continue; // room does not contain this wall
+				if (((r - rooms.begin()) & 1) == room_select) break; // found the room, but it's not selected, so no graffiti
 				room = &(*r);
 				break; // only return the first room
 			}
-			if (!room) continue; // no room; error?
+			if (!room || !room->is_hallway) continue; // no room, or not a hallway
 			bool const dir(room->get_center_dim(d) < w->get_center_dim(d)), wdir(d ^ dir ^ 1); // winding dir
 			vector3d const normal(vector_from_dim_dir(d, !dir));
 			cube_t gbc;
 			set_wall_width(gbc, w->d[d][!dir], graffiti_hthick, d); // at wall edge
 
 			for (unsigned n = 0; n < num_graffiti; ++n) {
-				float const hwidth(0.5*graffiti_sz*rgen.rand_uniform(0.5, 1.0));
+				float const hwidth(0.5*graffiti_sz*rgen.rand_uniform(0.4, 1.0));
 				set_wall_width(gbc, rgen.rand_uniform((w->d[!d][0] + hwidth + edge_space), (w->d[!d][1] - hwidth - edge_space)), hwidth, !d);
-				gbc.z1() = wall_z1 + rgen.rand_uniform(0.20, 0.40)*wall_dz;
-				gbc.z2() = wall_z2 - rgen.rand_uniform(0.05, 0.20)*wall_dz;
-				if (has_bcube_int(gbc, placed)) continue;
+				gbc.z1() = wall_z1 + rgen.rand_uniform(0.20, 0.30)*wall_dz;
+				gbc.z2() = wall_z2 - rgen.rand_uniform(0.05, 0.15)*wall_dz;
+				if (has_bcube_int(gbc, interior->stairwells)) continue; // allow graffiti to overlap, but check stairs
 				// Note: should not need to check for wall edges in dim !d since the wall is contained in the room
 				colorRGBA const &color(spcan_colors[rgen.rand() % NUM_SPCAN_COLORS]); // same as spraycans
-				point pts[4];
-				for (unsigned i = 0; i < 4; ++i) {pts[i][d] = gbc.d[d][!dir];}
-				pts[0].z = pts[1].z = gbc.z1();
-				pts[2].z = pts[3].z = gbc.z2();
-				pts[0][!d] = pts[3][!d] = gbc.d[!d][ wdir];
-				pts[1][!d] = pts[2][!d] = gbc.d[!d][!wdir];
-				qbd.add_quad_pts(pts, color, normal);
-				placed.push_back(gbc);
+				float const max_radius(rgen.rand_uniform(0.18, 0.24)*hwidth);
+				unsigned const num_strokes(5 + (rgen.rand()%4)); // 5-8
+				gd.add_strokes(gbc, max_radius, color, num_strokes, d, dir, rgen);
 			} // for n
 		} // for w
 	} // for d

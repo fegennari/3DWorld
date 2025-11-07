@@ -2989,7 +2989,9 @@ void building_decal_manager_t::draw_building_interior_decals(shader_t &s, bool p
 		tape_qbd.draw();
 		pend_tape_qbd.draw();
 	}
-	if (!blood_qbd[0].empty() || !blood_qbd[1].empty() || !glass_qbd.empty() || !burn_qbd.empty() || !graffiti_qbd.empty()) { // draw alpha blended decals
+	bool const draw_graffiti(player_in_basement >= 2 && !graffiti_qbd.empty());
+
+	if (!blood_qbd[0].empty() || !blood_qbd[1].empty() || !glass_qbd.empty() || !burn_qbd.empty() || draw_graffiti) { // draw alpha blended decals
 		glDepthMask(GL_FALSE); // disable depth write
 		enable_blend();
 
@@ -3002,10 +3004,15 @@ void building_decal_manager_t::draw_building_interior_decals(shader_t &s, bool p
 			select_texture(get_texture_by_name("interiors/broken_glass.png"));
 			glass_qbd.draw();
 		}
-		if (!burn_qbd.empty() || !graffiti_qbd.empty()) {
+		if (!burn_qbd.empty() || draw_graffiti) {
 			select_texture(BLUR_CENT_TEX);
 			burn_qbd.draw();
-			graffiti_qbd.draw();
+			
+			if (draw_graffiti) {
+				s.add_uniform_float("bump_map_mag", 0.0); // no normal maps; must set because texture coords result in zero derivatives
+				graffiti_qbd.draw();
+				s.add_uniform_float("bump_map_mag", 1.0);
+			}
 		}
 		disable_blend();
 		glDepthMask(GL_TRUE);
