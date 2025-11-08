@@ -135,8 +135,8 @@ struct fountain_t : public multi_model_city_obj_t {
 };
 
 struct statue_t : public multi_model_city_obj_t {
-	statue_t(point const &pos_, float height, unsigned model_select) :
-		multi_model_city_obj_t(pos_, height, 0, 0, OBJ_MODEL_STATUE, model_select, 1) {} // dim=0, dir=0, is_cylinder=1
+	statue_t(point const &pos_, float height, bool dim_, bool dir_, unsigned model_select) :
+		multi_model_city_obj_t(pos_, height, dim_, dir_, OBJ_MODEL_STATUE, model_select, 0) {} // is_cylinder=0
 };
 
 struct divider_t : public oriented_city_obj_t {

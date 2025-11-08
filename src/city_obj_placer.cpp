@@ -829,7 +829,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 	}
 	// place fountains in parks and 25% of the time in city blocks
 	if ((is_park || (!is_residential && (rgen.rand() & 3) == 0)) && building_obj_model_loader.is_model_valid(OBJ_MODEL_FOUNTAIN)) {
-		float const radius(0.35 * car_length), spacing(max(1.5f*radius, min_obj_spacing));
+		float const radius(0.35*car_length), spacing(max(1.5f*radius, min_obj_spacing));
 		cube_t place_area(plot);
 		place_area.expand_by_xy(-sidewalk_width); // not too close to sidewalks
 		point pos;
@@ -844,15 +844,25 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			}
 		}
 	}
-#if 0
-	// place statues in parks and 25% of the time in city blocks
-	if ((is_park || (!is_residential && (rgen.rand() & 3) == 0)) && building_obj_model_loader.is_model_valid(OBJ_MODEL_STATUE)) {
-		// TODO
+	// place statues in parks and 1/8 of the time in city blocks
+	if ((is_park || (!is_residential && (rgen.rand() & 7) == 0)) && building_obj_model_loader.is_model_valid(OBJ_MODEL_STATUE)) {
+		float const height(0.6*car_length), radius(0.5*height), spacing(max(radius, min_obj_spacing));
+		cube_t place_area(plot);
+		place_area.expand_by_xy(-2.0*sidewalk_width); // not too close to sidewalks
+		point pos;
+
+		if (try_place_obj(place_area, blockers, rgen, radius, spacing, 4, pos, 0)) { // 4 tries
+			statue_t const statue(pos, height, rgen.rand_bool(), rgen.rand_bool(), rgen.rand()); // random orient and model_select
+
+			if (!is_park || !check_path_coll_xy(statue.bcube, ppaths, paths_start)) { // check park path collision
+				statue_groups.add_obj(statue, statues);
+				add_cube_to_colliders_and_blockers(statue.bcube, colliders, blockers);
+			}
+		}
 	}
-#endif
 	// place benches in parks and non-residential areas, and next to fountains
 	if (!plot.is_residential_not_park()) {
-		float const bench_radius(0.3 * car_length), bench_spacing(max(bench_radius, 1.5f*min_obj_spacing)); // add a bit of extra space
+		float const bench_radius(0.3*car_length), bench_spacing(max(bench_radius, 1.5f*min_obj_spacing)); // add a bit of extra space
 
 		for (unsigned n = 0; n < city_params.max_benches_per_plot; ++n) {
 			point pos;
@@ -1145,7 +1155,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 		}
 		add_objs_top_center(sstations, substations_start, add_pigeons, add_birds, pigeon_locs, bird_locs, rgen);
 		add_objs_top_center(fountains, fountains_start,   add_pigeons, add_birds, pigeon_locs, bird_locs, rgen);
-		add_objs_top_center(statues,   statues_start,     add_pigeons, add_birds, pigeon_locs, bird_locs, rgen);
+		//add_objs_top_center(statues,   statues_start,     add_pigeons, add_birds, pigeon_locs, bird_locs, rgen); // no, top center is not always a spot to stand on
 
 		// place pigeons
 		if (add_pigeons) {
@@ -2431,7 +2441,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(fhydrants, fhydrant_groups, dstate, 0.06, shadow_only, 1);
 	draw_objects(sstations, sstation_groups, dstate, 0.15, shadow_only, 1);
 	draw_objects(fountains, fountain_groups, dstate, 0.20, shadow_only, 1);
-	draw_objects(statues,   statue_groups,   dstate, 0.15, shadow_only, 1);
+	draw_objects(statues,   statue_groups,   dstate, 0.12, shadow_only, 1);
 	draw_objects(mboxes,    mbox_groups,     dstate, 0.04, shadow_only, 1);
 	draw_objects(ppoles,    ppole_groups,    dstate, 0.20, shadow_only, 0);
 	draw_objects(signs,     sign_groups,     dstate, 0.25, shadow_only, 1, 1); // draw_qbd_as_quads=1
