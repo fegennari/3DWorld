@@ -595,7 +595,7 @@ void building_t::add_graffiti(rand_gen_t rgen) {
 				break; // only return the first room
 			}
 			if (!room || !room->is_hallway) continue; // no room, or not a hallway
-			bool const dir(room->get_center_dim(d) < w->get_center_dim(d)), wdir(d ^ dir ^ 1); // winding dir
+			bool const dir(room->get_center_dim(d) < w->get_center_dim(d));
 			vector3d const normal(vector_from_dim_dir(d, !dir));
 			cube_t gbc;
 			set_wall_width(gbc, w->d[d][!dir], graffiti_hthick, d); // at wall edge
@@ -607,10 +607,14 @@ void building_t::add_graffiti(rand_gen_t rgen) {
 				gbc.z2() = wall_z2 - rgen.rand_uniform(0.05, 0.15)*wall_dz;
 				if (has_bcube_int(gbc, interior->stairwells)) continue; // allow graffiti to overlap, but check stairs
 				// Note: should not need to check for wall edges in dim !d since the wall is contained in the room
-				colorRGBA const &color(spcan_colors[rgen.rand() % NUM_SPCAN_COLORS]); // same as spraycans
-				float const max_radius(rgen.rand_uniform(0.18, 0.24)*hwidth);
-				unsigned const num_strokes(5 + (rgen.rand()%4)); // 5-8
-				gd.add_strokes(gbc, max_radius, color, num_strokes, d, dir, rgen);
+				unsigned const num_colors(1 + rgen.rand_bool()); // apply 1-2 colors to the same area
+
+				for (unsigned nc = 0; nc < num_colors; ++nc) {
+					colorRGBA const &color(spcan_colors[rgen.rand() % NUM_SPCAN_COLORS]); // same as spraycans
+					float const max_radius(rgen.rand_uniform(0.18, 0.24)*hwidth);
+					unsigned const num_strokes(5 + (rgen.rand()%4)); // 5-8
+					gd.add_strokes(gbc, max_radius, color, num_strokes, d, dir, rgen);
+				}
 			} // for n
 		} // for w
 	} // for d
