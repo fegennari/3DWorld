@@ -4882,7 +4882,7 @@ void building_room_geom_t::add_pool_cue(room_object_t const &c) {
 	point const center(c.get_cube_center());
 	vector3d const sz(c.get_size());
 	unsigned const dim(get_max_dim(sz));
-	float const len(sz[dim]), radius(0.5*sz[(dim+1)%3]); // either other dim should work for radius
+	float const len(sz[dim]), radius(0.5*sz[(dim+1)%3]); // either dim should work for radius
 	point tip(center), p1(center), p2(center), end(center);
 	tip[dim] = c.d[dim][ c.dir];
 	end[dim] = c.d[dim][!c.dir];

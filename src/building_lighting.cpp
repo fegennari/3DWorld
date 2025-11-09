@@ -338,7 +338,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			type == TYPE_HARDHAT || type == TYPE_TOPHAT || type == TYPE_COMP_MOUSE || type == TYPE_APPLE || type == TYPE_JAIL_BARS || type == TYPE_HANDGUN ||
 			type == TYPE_STICK_NOTE || type == TYPE_GYM_WEIGHT || type == TYPE_FOOD_TRAY || type == TYPE_EX_MACHINE || type == TYPE_BAR_SOAP || type == TYPE_COAT_RACK ||
 			type == TYPE_VIS_PHONE || type == TYPE_JUMPSUIT || type == TYPE_O_SHOWER || type == TYPE_CARD_DECK || type == TYPE_CIGARETTE || type == TYPE_BULLETS ||
-			type == TYPE_MUSHROOM) continue;
+			type == TYPE_MUSHROOM || type == TYPE_POOL_CUE) continue;
 		bool const is_stairs(type == TYPE_STAIR || type == TYPE_STAIR_WALL);
 		if (c->z1() > (is_stairs ? stairs_z2 : z2) || c->z2() < (is_stairs ? stairs_z1 : z1)) continue;
 		if (!c->intersects_xy(ext_bcube)) continue;
@@ -372,6 +372,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 				base.expand_by_xy(0.5*(radius - shrink) - radius); // half radius, shrunk
 				cc.emplace_back(base, color);
 			}
+			if (!inner_cube.is_strictly_normalized()) {cout << TXT(c->str()) << TXT(inner_cube.str()) << TXTi(type) << endl;}
 			assert(inner_cube.is_strictly_normalized());
 			cc.emplace_back(inner_cube, color);
 		}
