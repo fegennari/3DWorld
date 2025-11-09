@@ -3415,7 +3415,7 @@ void accumulate_shared_xy_area(cube_t const &c, cube_t const &sc, float &area);
 bool have_secondary_buildings();
 bool get_building_door_pos_closest_to(unsigned building_id, point const &target_pos, point &door_pos, bool inc_garage_door=0);
 cube_t register_deck_and_get_part_bounds(unsigned building_id, cube_t const &deck);
-bool register_achievement(std::string const &str);
+bool register_achievement(std::string const &str, std::string const &suffix="");
 bool enable_building_indir_lighting_no_cib();
 bool enable_building_indir_lighting();
 bool in_building_gameplay_mode();

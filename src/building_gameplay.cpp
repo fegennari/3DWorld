@@ -655,10 +655,10 @@ class achievement_tracker_t {
 	set<string> achievements;
 	// some way to make this persistent, print these out somewhere, or add small screen icons?
 public:
-	bool register_achievement(string const &achievement) {
+	bool register_achievement(string const &achievement, string const &suffix="") {
 		if (!achievements.insert(achievement).second) return 0; // we already have this one
 		std::ostringstream msg;
-		msg << "You have unlocked a new achievement:\n" << achievement << " (" << achievements.size() << "/" << NUM_ACHIEVEMENTS << ")";
+		msg << "You have unlocked a new achievement:\n" << achievement << suffix << " (" << achievements.size() << "/" << NUM_ACHIEVEMENTS << ")";
 		// Note: can set a yval of -0.005 to not block other text, but there can only be one active onscreen message at once anyway
 		print_text_onscreen(msg.str(), WHITE, 1.25, 3*TICKS_PER_SECOND, 20);
 		return 1;
@@ -666,7 +666,7 @@ public:
 };
 achievement_tracker_t achievement_tracker;
 
-bool register_achievement(string const &str) {return achievement_tracker.register_achievement(str);}
+bool register_achievement(string const &str, string const &suffix) {return achievement_tracker.register_achievement(str, suffix);}
 
 class player_inventory_t { // manages player inventory, health, and other stats
 	vector<carried_item_t> carried; // interactive items the player is currently carrying
@@ -1517,7 +1517,7 @@ void pool_ball_in_pocket(unsigned ball_number) {
 	if (ball_number == 15) return; // scratch on the cue ball doesn't count
 	// future work: special achievement for getting the balls in the correct order
 	player_inventory.register_reward(100.0);
-	register_achievement("Ball in Pocket (" + get_pool_ball_name(ball_number) + ")");
+	register_achievement("Ball in Pocket", (" (" + get_pool_ball_name(ball_number) + ")"));
 }
 
 bool register_player_object_pickup(room_object_t const &obj, point const &at_pos) {
