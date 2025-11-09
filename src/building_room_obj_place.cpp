@@ -4834,6 +4834,7 @@ bool building_t::add_rug_to_room(rand_gen_t rgen, cube_t const &room, float zval
 // return value: 0=invalid, 1=valid and good, 2=valid but could be better
 int building_t::check_valid_picture_placement(room_t const &room, cube_t const &c, float width, float zval, bool dim, bool dir, unsigned objs_start) const {
 	assert(interior != nullptr);
+	if (check_if_near_missing_wall(c, room)) return 0;
 	float const wall_thickness(get_wall_thickness()), clearance(4.0*wall_thickness), side_clearance(1.0*wall_thickness);
 	cube_t tc(c), keepout(c);
 	tc.expand_in_dim(!dim, 0.1*width); // expand slightly to account for frame
@@ -5466,7 +5467,14 @@ bool building_t::add_ceil_vent_to_room(rand_gen_t rgen, room_t const &room, floa
 	return 0; // failed
 }
 
+bool building_t::check_if_near_missing_wall(cube_t const &c, room_t const &room) const {
+	if (!room.has_cut_wall()) return 0;
+	cube_t test_cube(c);
+	test_cube.expand_by_xy(get_wall_thickness());
+	return has_bcube_int(test_cube, interior->missing_wall_segs);
+}
 bool building_t::check_if_placed_on_wall(cube_t const &c, room_t const &room, bool dim, bool dir) const { // interior or exterior
+	if (check_if_near_missing_wall(c, room)) return 0;
 	bool const mall_or_store(room.is_mall_or_store());
 	// check not needed if we know that any non-door location is a wall
 	if (!has_small_part && !mall_or_store && !room.has_open_wall(dim, dir) && !room_might_have_clipped_wall(room)) return 1;

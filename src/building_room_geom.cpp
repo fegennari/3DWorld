@@ -2519,6 +2519,10 @@ void building_room_geom_t::add_wall_trim(room_object_t const &c, bool for_closet
 	}
 }
 
+void building_room_geom_t::add_wall_gap(room_object_t const &c) {
+	// TODO
+}
+
 void building_room_geom_t::add_blinds(room_object_t const &c) {
 	bool const vertical(!c.is_hanging());
 	colorRGBA const color(c.color); // room color not applied as it looks wrong when viewed from outside the building

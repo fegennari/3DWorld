@@ -227,6 +227,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_CIGARETTE ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 0.0,   0.0,   "cigarette"); // or just the butt
 	bldg_obj_types[TYPE_BULLETS   ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 0.0,   0.0,   "box of bullets"); // Note: no value or weight, since these are consumable
 	bldg_obj_types[TYPE_CEIL_TILE ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 4.0,   1.0,   "ceiling tile"); // fallen acoustic ceiling tile
+	bldg_obj_types[TYPE_WALL_GAP  ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 2, 0.0,   0.0,   "wall gap");
 	bldg_obj_types[TYPE_MUSHROOM  ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 0.0,   0.0,   "mushroom");
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models

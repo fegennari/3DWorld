@@ -516,7 +516,7 @@ enum { // room object types
 	TYPE_MACHINE, TYPE_BUCKET, TYPE_SPIWEB, TYPE_TREE, TYPE_THEFT_SENS, TYPE_ELEC_WIRE, TYPE_ERASER, TYPE_DWASHER, TYPE_PET_CAGE, TYPE_IBEAM,
 	TYPE_CATWALK, TYPE_VANITY, TYPE_CHEM_TANK, TYPE_HVAC_UNIT, TYPE_WARN_LIGHT, TYPE_GAUGE, TYPE_PALLET, TYPE_SHELF_WALL, TYPE_VENDING, TYPE_MED_CAB,
 	TYPE_LOCKER, TYPE_TESTTUBE, TYPE_HARDHAT, TYPE_TOPHAT, TYPE_COMP_MOUSE, TYPE_PARK_GATE, TYPE_CONV_BELT, TYPE_JAIL_BARS, TYPE_STICK_NOTE, TYPE_GYM_WEIGHT,
-	TYPE_FOOD_TRAY, TYPE_BAR_SOAP, TYPE_COAT_RACK, TYPE_O_SHOWER, TYPE_CARD_DECK, TYPE_CIGARETTE, TYPE_BULLETS, TYPE_CEIL_TILE, TYPE_MUSHROOM,
+	TYPE_FOOD_TRAY, TYPE_BAR_SOAP, TYPE_COAT_RACK, TYPE_O_SHOWER, TYPE_CARD_DECK, TYPE_CIGARETTE, TYPE_BULLETS, TYPE_CEIL_TILE, TYPE_WALL_GAP, TYPE_MUSHROOM,
 	/* these next ones are all 3D models - see logic in room_object_t::is_obj_model_type() */
 	TYPE_TOILET, TYPE_SINK, TYPE_TUB, TYPE_FRIDGE, TYPE_STOVE, TYPE_TV, TYPE_MONITOR, TYPE_COUCH, TYPE_OFF_CHAIR, TYPE_URINAL,
 	TYPE_LAMP, TYPE_WASHER, TYPE_DRYER, TYPE_KEY, TYPE_HANGER, TYPE_CLOTHES, TYPE_FESCAPE, TYPE_WALL_LAMP, TYPE_CUP, TYPE_TOASTER,
@@ -1373,6 +1373,7 @@ struct building_room_geom_t {
 	void add_flooring (room_object_t const &c, float tscale);
 	void add_pool_tile(room_object_t const &c, float tscale);
 	void add_wall_trim(room_object_t const &c, bool for_closet=0);
+	void add_wall_gap (room_object_t const &c);
 	void add_blinds(room_object_t const &c);
 	void add_fireplace(room_object_t const &c, float tscale);
 	void add_filing_cabinet(room_object_t const &c, bool inc_lg, bool inc_sm);
@@ -1564,6 +1565,7 @@ unsigned const ROOM_FLAG_RO_GEOM  = 0x0080; // room should not have objects plac
 unsigned const ROOM_FLAG_TUNNEL   = 0x0100; // room has a tunnel connection at one end
 unsigned const ROOM_FLAG_NESTED   = 0x0200; // room is nested inside another room
 unsigned const ROOM_FLAG_HAS_SUB  = 0x0400; // room has a sub-room nested inside it
+unsigned const ROOM_FLAG_CUT_WALL = 0x0800; // wall has sections cut from it
 
 struct room_t : public cube_t { // size=56
 	bool is_hallway=0, is_office=0, is_sec_bldg=0, is_single_floor=0;
@@ -1628,6 +1630,7 @@ struct room_t : public cube_t { // size=56
 	void set_has_tunnel_conn  () {flags |= ROOM_FLAG_TUNNEL  ;}
 	void set_is_nested        () {flags |= ROOM_FLAG_NESTED  ;}
 	void set_has_subroom      () {flags |= ROOM_FLAG_HAS_SUB ;}
+	void set_has_cut_wall     () {flags |= ROOM_FLAG_CUT_WALL;}
 	bool get_has_center_stairs() const {return (flags & ROOM_FLAG_CSTAIRS );}
 	bool get_office_floorplan () const {return (flags & ROOM_FLAG_OFF_FP  );}
 	bool get_has_skylight     () const {return (flags & ROOM_FLAG_SKYLIGHT);}
@@ -1639,6 +1642,7 @@ struct room_t : public cube_t { // size=56
 	bool has_tunnel_conn      () const {return (flags & ROOM_FLAG_TUNNEL  );}
 	bool is_nested            () const {return (flags & ROOM_FLAG_NESTED  );}
 	bool has_subroom          () const {return (flags & ROOM_FLAG_HAS_SUB );}
+	bool has_cut_wall         () const {return (flags & ROOM_FLAG_CUT_WALL);}
 }; // room_t
 
 struct extb_room_t : public cube_t { // extended basement room candidate
@@ -1753,6 +1757,7 @@ struct stairs_place_t : public cube_t { // for extended basements
 	bool dim, dir, add_railing;
 	stairs_place_t(cube_t const &c, bool dim_, bool dir_, bool add_railing_) : cube_t(c), dim(dim_), dir(dir_), add_railing(add_railing_) {}
 };
+typedef vector<stairs_place_t> vect_stairs_place_t;
 
 struct escalator_t : public oriented_cube_t { // Note: not yet used
 	bool move_dir=0, in_mall=0, is_powered=1; // move_dir points upward
@@ -2034,7 +2039,7 @@ struct building_interior_t {
 	vect_cube_t walls[2]; // walls are split by dim, which is the separating dimension of the wall
 	vect_cube_with_ix_t int_windows; // ix stores room index
 	vect_cube_with_ix_t parking_str_walls; // interior of exterior walls; ix stores draw flags
-	vect_cube_with_ix_t missing_ceil_tiles; // ix is room index
+	vect_cube_with_ix_t missing_ceil_tiles, missing_wall_segs; // ix is room index
 	vect_stairwell_t stairwells;
 	vect_tunnel_seg_t tunnels;
 	vect_door_t doors;
@@ -2100,8 +2105,9 @@ struct building_interior_t {
 		bool same_as_player, bool skip_stairs=0, cube_t const *const fires_select_cube=nullptr) const;
 	void create_fc_occluders();
 	void add_ceil_floor_pair(cube_t cf, float zc, float z, float zf);
-	void place_exterior_room(extb_room_t const &room, cube_t const &wall_area, float fc_thick, float wall_thick, ext_basement_room_params_t &P,
-		unsigned part_id, unsigned num_lights=0, bool is_hallway=0, unsigned is_building_conn=0, unsigned wall_skip_dim=2, unsigned thin_wall_dir=2);
+	void place_exterior_room(extb_room_t const &room, cube_t const &wall_area, float fc_thick, float wall_thick, ext_basement_room_params_t &P, rand_gen_t &rgen,
+		unsigned part_id, bool is_house, unsigned num_lights=0, bool is_hallway=0, unsigned is_building_conn=0, unsigned wall_skip_dim=2, unsigned thin_wall_dir=2);
+	void remove_extended_basement_wall_sections(vect_cube_t &wall_segs, bool dim, unsigned room_id, vect_stairs_place_t const &stairs, rand_gen_t &rgen);
 	colorRGBA get_attic_ceiling_color() const;
 	room_t const &get_garage_room() const {assert(garage_room >= 0); return get_room(garage_room);}
 	vector<room_t>::const_iterator ext_basement_rooms_start() const;
@@ -2741,6 +2747,7 @@ private:
 	bool add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &door_bcube, cube_t const &basement, bool wall_dim, bool wall_dir, float length_mult);
 	void remove_ceiling_tiles(cube_t const &room, tid_nm_pair_t const &ceil_tex, ext_basement_room_params_t &P, rand_gen_t &rgen);
 	void add_ceiling_tile_objects(rand_gen_t rgen);
+	void add_missing_wall_objects(rand_gen_t rgen);
 	void add_tile_on_floor(rand_gen_t &rgen, cube_t const &c, cube_t const &room, cube_t const &place_area, unsigned room_ix, bool is_light, vect_cube_t &tile_block);
 	void add_graffiti(rand_gen_t rgen);
 	bool check_pool_room_slice_valid(cube_t const &slice, int skip_room_ix) const;
@@ -3076,6 +3083,7 @@ private:
 	void add_outlets_to_room  (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start, bool is_ground_floor, bool is_basement, bool is_kitchen=0);
 	bool add_wall_vent_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start, bool check_for_ducts);
 	bool add_ceil_vent_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start);
+	bool check_if_near_missing_wall(cube_t const &c, room_t const &room) const;
 	bool check_if_placed_on_wall(cube_t const &c, room_t const &room, bool dim, bool dir) const;
 	bool place_eating_items_on_table(rand_gen_t &rgen, unsigned table_obj_id);
 	void place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room, unsigned room_id, float tot_light_amt,

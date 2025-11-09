@@ -2189,7 +2189,7 @@ public:
 				type == TYPE_ERASER || type == TYPE_SHOE || type == TYPE_CATWALK || type == TYPE_GAUGE || type == TYPE_RAMP || type == TYPE_TESTTUBE ||
 				type == TYPE_HARDHAT || type == TYPE_TOPHAT || type == TYPE_COMP_MOUSE || type == TYPE_JAIL_BARS || type == TYPE_HANDGUN || type == TYPE_STICK_NOTE ||
 				type == TYPE_GYM_WEIGHT || type == TYPE_BAR_SOAP || type == TYPE_COAT_RACK || type == TYPE_VIS_PHONE || type == TYPE_JUMPSUIT || type == TYPE_CARD_DECK ||
-				type == TYPE_CIGARETTE || type == TYPE_BULLETS || type == TYPE_CEIL_TILE || type == TYPE_MUSHROOM) continue;
+				type == TYPE_CIGARETTE || type == TYPE_BULLETS || type == TYPE_CEIL_TILE || type == TYPE_WALL_GAP || type == TYPE_MUSHROOM) continue;
 			if (z1 > obj.z2() || z2 < obj.z1()) continue; // zval test
 
 			if (obj.type == TYPE_PARK_SPACE) {
@@ -2644,7 +2644,7 @@ void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, ve
 		type == TYPE_LAVALAMP || type == TYPE_WFOUNTAIN || type == TYPE_INT_LADDER || type == TYPE_MACHINE || type == TYPE_CONF_PHONE || type == TYPE_XFORMER ||
 		type == TYPE_US_FLAG || type == TYPE_BLDG_FOUNT || type == TYPE_THEFT_SENS || type == TYPE_WARN_LIGHT || type == TYPE_FORKLIFT || type == TYPE_OP_TABLE ||
 		type == TYPE_HARDHAT || type == TYPE_TOPHAT || type == TYPE_EX_MACHINE || type == TYPE_COAT_RACK || type == TYPE_VIS_PHONE || type == TYPE_JUMPSUIT ||
-		type == TYPE_SHOWERTUB)
+		type == TYPE_SHOWERTUB || type == TYPE_CEIL_TILE || type == TYPE_WALL_GAP)
 	{
 		non_cubes.push_back(c); // non-cubes; bar stools are close, should they be included?
 		// allow walking on the floor above a parking garage ramp if there's no cutout; shrink ramp bcube to the ceiling of the top floor of the parking garage
