@@ -857,6 +857,7 @@ public:
 			}
 			// if new texture has specular and block does not, copy specular parameters from new texture; this is needed for house wood floors
 			if (tex.shininess && !block.tex.shininess) {block.tex.spec_color = tex.spec_color; block.tex.shininess = tex.shininess;}
+			block.tex.no_cracks |= tex.no_cracks;
 		}
 		return (quads_or_tris ? block.tri_verts : block.quad_verts);
 	}
@@ -1726,8 +1727,7 @@ colorRGBA building_t::get_ceil_tex_and_color(cube_t const &ceil_cube, tid_nm_pai
 	}
 	if (!is_house && in_ext_basement && !is_inside_mall_stores(ceil_cube.get_cube_center())) { // use concrete for office building ext basements except for malls
 		if      (has_backrooms_texture()) {tex = mat.ceil_tex;} // office building ceiling texture
-		// office building ceiling texture if crack free; set no_cracks=1 as a special flag, even though it's not respected when drawing in this situation
-		else if (has_extb_ceiling_tile()) {tex = mat.ceil_tex; tex.no_cracks = 1;}
+		else if (has_extb_ceiling_tile()) {tex = mat.ceil_tex; tex.no_cracks = 1;} // set no_cracks=1 as a special flag to avoid adding cracks to ceiling tiles
 		else {tex = get_concrete_texture();}
 		return WHITE;
 	}
