@@ -538,8 +538,8 @@ void building_t::add_missing_wall_objects(rand_gen_t rgen) {
 	for (cube_with_ix_t const &w : interior->missing_wall_segs) {
 		room_t const &room(get_room(w.ix));
 		bool const dim(w.dy() < w.dx()), dir(room.get_center_dim(dim) < w.get_center_dim(dim));
-		interior->room_geom->objs.emplace_back(w, TYPE_WALL_GAP, w.ix, dim, 0, 0, light_amt);
-		// anything else?
+		interior->room_geom->objs.emplace_back(w, TYPE_WALL_GAP, w.ix, dim, dir, 0, light_amt, SHAPE_CUBE, WHITE, rgen.rand()); // random item flags
+		// anything else? pipes or conduits?
 	} // for w
 }
 
@@ -1072,7 +1072,7 @@ void building_interior_t::place_exterior_room(extb_room_t const &room, cube_t co
 					w->z1() == wall.z1() && w->z2() == wall.z2()) {P.wall_exclude.push_back(*w);} // same width and height, overlap in length
 			}
 			subtract_cubes_from_cube(wall, P.wall_exclude, P.wall_segs, P.temp_cubes, 2); // cut out doorways, etc.; zval_mode=2 (check for zval overlap)
-			//if (is_house && is_hallway && !is_building_conn) {remove_extended_basement_wall_sections(P.wall_segs, dim, room_id, P.stairs, rgen);}
+			if (is_house && is_hallway && !is_building_conn) {remove_extended_basement_wall_sections(P.wall_segs, dim, room_id, P.stairs, rgen);}
 			vector_add_to(P.wall_segs, walls[dim]);
 			P.wall_exclude.resize(wall_exclude_sz); // remove the wall_exclude cubes we just added
 		} // for dir
@@ -1093,6 +1093,7 @@ void building_interior_t::remove_extended_basement_wall_sections(vect_cube_t &wa
 	if (has_bcube_int(gap, stairs)) return; // too close to stairs
 	//if (cube_int_underground_obj(seg)) return; // check tunnels, in-ground pools, etc.; can't fail?
 	if (query_min_height(seg, seg.z2()) < seg.z2()) return; // check for terrain clipping through ceiling; should be rare
+	// TODO: check for adjacent rooms from this building?
 	seg .d[!dim][1] = gap.d[!dim][0]; // left  part
 	seg2.d[!dim][0] = gap.d[!dim][1]; // right part
 	wall_segs.push_back(seg2); // invalidates seg; must be last

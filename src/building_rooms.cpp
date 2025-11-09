@@ -2052,9 +2052,10 @@ void building_t::add_wall_and_door_trim() { // and window trim
 			bool const in_basement(w->zc() < ground_floor_z1);
 			if (!in_basement && is_parking())  continue; // skip trim for parking structures
 			if (w->dz() < 0.5*window_vspacing) continue; // short wall segment from tall room extension, no trim
+			bool const in_ext_basement(in_basement && !get_basement().intersects_no_adj(*w));
 			float floor_spacing(window_vspacing), ref_z1(bcube.z1());
 			
-			if (in_basement && !get_basement().intersects_no_adj(*w)) {
+			if (in_ext_basement) {
 				if (interior->has_backrooms) continue; // no trim in basement backrooms
 				
 				if (has_mall()) {
@@ -2155,6 +2156,20 @@ void building_t::add_wall_and_door_trim() { // and window trim
 			} // for f
 		} // for w
 	} // for d
+	// add trim at the bottom of interior edges of missing wall segments
+	for (cube_t const &w : interior->missing_wall_segs) {
+		bool const dim(w.dy() < w.dx());
+		cube_t trim0(w);
+		trim0.z2() = w.z1() + trim_height;
+		trim0.expand_in_dim(dim, trim_thickness); // match the wall side trim
+
+		for (unsigned d = 0; d < 2; ++d) { // left/right
+			cube_t trim(trim0);
+			trim.d[!dim][!d] = w.d[!dim][d] + (d ? -1.0 : 1.0)*trim_thickness; // set thickness
+			unsigned const flags(flags | RO_FLAG_ADJ_BOT | (d ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO)); // skip back and bottom but draw ends
+			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, !dim, !d, flags, 1.0, SHAPE_TALL, trim_color);
+		}
+	} // for c
 	// add trim for exterior walls
 	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {
 		if (is_basement(i) || is_parking()) continue; // skip basement and parking structure walls because they're bare concrete

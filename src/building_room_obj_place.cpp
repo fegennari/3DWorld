@@ -5104,6 +5104,7 @@ void building_t::add_stains_to_room(rand_gen_t rgen, room_t const &room, float z
 		c.expand_in_dim(dim, 0.5*wall_thickness); // required to intersect doors
 		if (overlaps_other_room_obj(c, objs_start, 1))     continue; // check for things like closets; check_all=1 to include blinds
 		if (interior->is_blocked_by_stairs_or_elevator(c)) continue; // check stairs and elevators
+		if (check_if_near_missing_wall(c, room))           continue;
 		bool bad_place(0);
 
 		for (auto const &d : doorways) {
