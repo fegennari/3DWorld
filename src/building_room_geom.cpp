@@ -2520,44 +2520,51 @@ void building_room_geom_t::add_wall_trim(room_object_t const &c, bool for_closet
 }
 
 void building_room_geom_t::add_wall_gap(room_object_t const &c) {
-	bool const has_insulation(c.item_flags & 1);
-	unsigned const front_face_mask(get_face_mask(c.dim, !c.dir)), sides_face_mask(~get_skip_mask_for_xy(!c.dim));
-	float const height(c.dz()), depth(c.get_depth()), width(c.get_width()), tscale(2.0/height), dsign(c.dir ? 1.0 : -1.0);
+	bool const dim(c.dim), dir(c.dir), has_insulation(c.room_id & 1); // consistent per room
+	unsigned const front_face_mask(get_face_mask(dim, !dir)), sides_face_mask(~get_skip_mask_for_xy(!dim));
+	float const height(c.dz()), depth(c.get_depth()), width(c.get_width()), tscale(2.0/height), dsign(dir ? 1.0 : -1.0);
 	colorRGBA const color(apply_light_color(c));
 	// draw inside wall face
 	cube_t wall_inner(c);
-	wall_inner.translate_dim(c.dim, dsign*depth);
+	wall_inner.translate_dim(dim, dsign*depth*(has_insulation ? 0.5 : 1.0)); // half depth if there's insulation
 	int const tid(has_insulation ? get_insulation_tid() : get_plywood_tid());
 	// small; shadowed, since this wall may block the light to a room on the other side
-	get_material(tid_nm_pair_t(tid, tscale, 1), 1, 0, 1).add_cube_to_verts(wall_inner, color, c.get_llc(), front_face_mask, c.dim);
+	get_material(tid_nm_pair_t(tid, tscale, 1), 1, 0, 1).add_cube_to_verts(wall_inner, color, c.get_llc(), front_face_mask, dim);
 	// draw wood studs; draw sides and front separately for vertical grain in both
-	unsigned const num_studs(max(2, round_fp(6.0*width/height)));
-	float const stud_width(0.5*depth), stud_hwidth(0.5*stud_width), stud_spacing((width - stud_width)/(num_studs - 1));
-	float pos(c.d[!c.dim][0] + stud_hwidth);
+	unsigned const num_studs(max(2, 1+round_fp(5.4*width/height)));
+	float const stud_width(0.025*height), stud_hwidth(0.5*stud_width), stud_spacing((width - stud_width)/(num_studs - 1));
+	float pos(c.d[!dim][0] + stud_hwidth);
 	rgeom_mat_t &wood_mat(get_wood_material(tscale, 1, 0, 1)); // shadowed, small
 	cube_t stud(c);
-	stud.d[c.dim][!c.dir] += 0.1*dsign*depth; // shift inward by sheet rock thickness
+	stud.d[dim][!dir] += 0.1*dsign*depth; // shift inward by sheet rock thickness
 
 	for (unsigned n = 0; n < num_studs; ++n) {
-		set_wall_width(stud, pos, stud_hwidth, !c.dim);
+		set_wall_width(stud, pos, stud_hwidth, !dim);
 		point const llc(stud.get_llc());
-		wood_mat.add_cube_to_verts(stud, color, llc, front_face_mask,  c.dim); // front
-		wood_mat.add_cube_to_verts(stud, color, llc, sides_face_mask, !c.dim); // sides
+		unsigned const sides_face_mask2(sides_face_mask | ((n == 0) ? ~get_face_mask(!dim, 0) : 0) | ((n+1 == num_studs) ? ~get_face_mask(!dim, 1) : 0));
+		wood_mat.add_cube_to_verts(stud, color, llc, front_face_mask,   dim); // front
+		wood_mat.add_cube_to_verts(stud, color, llc, sides_face_mask2, !dim); // sides
 		pos += stud_spacing;
 	} // for n
 	// draw top and bottom wood to cover the ceiling and floor gap
 	cube_t top(c);
-	top.d[c.dim][!c.dir] += 0.2*dsign*depth; // shift inward more than the stud
-	top.expand_in_dim(!c.dim, -stud_hwidth); // between the studs
+	top.d[dim][!dir] += 0.2*dsign*depth; // shift inward more than the stud
+	top.expand_in_dim(!dim, -stud_hwidth); // between the studs
 	cube_t bot(top);
 	top.z1() = c.z2() - stud_width;
 	bot.z2() = c.z1() + stud_width;
 	point const top_llc(top.get_llc()), bot_llc(bot.get_llc());
-	wood_mat.add_cube_to_verts(top, color, top_llc, front_face_mask, !c.dim); // front
-	wood_mat.add_cube_to_verts(top, color, top_llc, ~EF_Z1,           c.dim); // bottom
-	wood_mat.add_cube_to_verts(bot, color, bot_llc, front_face_mask, !c.dim); // front
-	wood_mat.add_cube_to_verts(bot, color, bot_llc, ~EF_Z2,           c.dim); // top
-	// draw partial paster/stucco parts on the studs?
+	wood_mat.add_cube_to_verts(top, color, top_llc, front_face_mask, !dim); // front
+	wood_mat.add_cube_to_verts(top, color, top_llc, ~EF_Z1,           dim); // bottom
+	wood_mat.add_cube_to_verts(bot, color, bot_llc, front_face_mask, !dim); // front
+	wood_mat.add_cube_to_verts(bot, color, bot_llc, ~EF_Z2,           dim); // top
+	// draw pipes/conduits
+	rand_gen_t rgen;
+	rgen.set_state(c.room_id, c.item_flags);
+	// TODO
+
+	// draw partial paster/stucco parts on the studs
+	// TODO
 }
 
 void building_room_geom_t::add_blinds(room_object_t const &c) {
