@@ -1644,7 +1644,7 @@ void building_t::update_pool_table(room_object_t &ball) {
 	} // for n
 	if (hit_ball || hit_table || in_pocket) {
 		float const vscale(max(0.05f, 2.0f*(velocity - v_old).mag()/KICK_VELOCITY));
-		float const gain((in_pocket ? 1.0 : ((hit_ball ? 1.0 : 0.2))*vscale));
+		float const gain (in_pocket ? 1.0 : (hit_ball ? 1.0 : 0.2)*vscale);
 		float const pitch(in_pocket ? 2.5 : (hit_ball ? 5.0 : 1.5));
 		gen_sound_thread_safe(SOUND_KICK_BALL, local_to_camera_space(new_pos), gain, pitch);
 	}
