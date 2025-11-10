@@ -2189,7 +2189,7 @@ public:
 				type == TYPE_ERASER || type == TYPE_SHOE || type == TYPE_CATWALK || type == TYPE_GAUGE || type == TYPE_RAMP || type == TYPE_TESTTUBE ||
 				type == TYPE_HARDHAT || type == TYPE_TOPHAT || type == TYPE_COMP_MOUSE || type == TYPE_JAIL_BARS || type == TYPE_HANDGUN || type == TYPE_STICK_NOTE ||
 				type == TYPE_GYM_WEIGHT || type == TYPE_BAR_SOAP || type == TYPE_COAT_RACK || type == TYPE_VIS_PHONE || type == TYPE_JUMPSUIT || type == TYPE_CARD_DECK ||
-				type == TYPE_CIGARETTE || type == TYPE_BULLETS || type == TYPE_CEIL_TILE || type == TYPE_WALL_GAP || type == TYPE_MUSHROOM) continue;
+				type == TYPE_CIGARETTE || type == TYPE_BULLETS || type == TYPE_CEIL_TILE || type == TYPE_MUSHROOM) continue;
 			if (z1 > obj.z2() || z2 < obj.z1()) continue; // zval test
 
 			if (obj.type == TYPE_PARK_SPACE) {
@@ -2197,6 +2197,7 @@ public:
 				pair<cube_t, colorRGBA> const ret(car_bcube_color_from_parking_space(obj, building.btype)); // Note: currently always white
 				add_obj(cube_with_color_t(ret.first, ret.second, 0)); // is_round=0
 			}
+			else if (type == TYPE_WALL_GAP) {add_obj(cube_with_color_t(obj, BROWN, 0));}
 			else {add_obj(cube_with_color_t(obj, obj.get_color(), (obj.is_round() && obj.type != TYPE_PIPE)));}
 		} // for obj
 		cur_frame = frame_counter;

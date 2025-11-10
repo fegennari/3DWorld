@@ -1373,7 +1373,8 @@ struct building_room_geom_t {
 	void add_flooring (room_object_t const &c, float tscale);
 	void add_pool_tile(room_object_t const &c, float tscale);
 	void add_wall_trim(room_object_t const &c, bool for_closet=0);
-	void add_wall_gap (room_object_t const &c);
+	void add_romex_wire(cube_t const &wire, bool dim, bool flat_dim, rand_gen_t &rgen);
+	void add_wall_gap (room_object_t const &c, float tscale);
 	void add_blinds(room_object_t const &c);
 	void add_fireplace(room_object_t const &c, float tscale);
 	void add_filing_cabinet(room_object_t const &c, bool inc_lg, bool inc_sm);

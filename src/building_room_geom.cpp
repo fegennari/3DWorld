@@ -126,6 +126,13 @@ rgeom_mat_t &building_room_geom_t::get_wood_material(float tscale, bool inc_shad
 		3.0*tscale, 3.0*tscale, 0.0, 0.0, inc_shadows), inc_shadows, dynamic, small, 0, exterior); // hard-coded for common material
 }
 
+void set_pipe_specular(colorRGBA const &spec_color, bool is_duct, bool is_dirty, tid_nm_pair_t &tex) {
+	tex.set_specular_color(spec_color, 0.7, 50.0);
+	// make specular; maybe should not make specular if rusty, but setting per-pipe specular doesn't work, and water effect adds specular anyway
+	if (spec_color != WHITE) {tex.metalness = (is_dirty ? 0.25 : 0.6) ;} // more metal if pipe has a metal specular color
+	else {tex.metalness = (is_dirty ? 0.1 :    (is_duct ? 0.25 : 0.4));} // partially reflective
+}
+
 void invert_triangles(rgeom_mat_t &mat, unsigned verts_start, unsigned ixs_start) {
 	for (auto i = mat.itri_verts.begin()+verts_start; i != mat.itri_verts.end(); ++i) {i->invert_normal();}
 	reverse(mat.indices.begin()+ixs_start, mat.indices.end());
@@ -2519,10 +2526,33 @@ void building_room_geom_t::add_wall_trim(room_object_t const &c, bool for_closet
 	}
 }
 
-void building_room_geom_t::add_wall_gap(room_object_t const &c) {
+// Romex is thinner horizontally and not metal
+void building_room_geom_t::add_romex_wire(cube_t const &wire, bool dim, bool flat_dim, rand_gen_t &rgen) {
+	assert(flat_dim != dim);
+	unsigned const num_romex_colors = 6;
+	colorRGBA const romex_colors[num_romex_colors] = {WHITE, WHITE, YELLOW, YELLOW, ORANGE, BLACK};
+	colorRGBA const color(romex_colors[rgen.rand() % num_romex_colors]);
+	tid_nm_pair_t tp(-1, 1.0f, 1, 0, 1); // shadowed, no_reflect=1
+	tp.set_specular(0.25, 50.0);
+	rgeom_mat_t &plastic(get_material(tp, 1, 0, 1)); // shadowed, small
+	unsigned const verts_start(plastic.itri_verts.size());
+	plastic.add_ortho_cylin_to_verts(wire, color, dim, 0, 0); // sides only
+	// shrink horizontally by 67% around the center
+	float const centerline(wire.get_center_dim(flat_dim)), scale(0.33), scale_inv(1.0/scale);
+	
+	for (auto i = plastic.itri_verts.begin()+verts_start; i != plastic.itri_verts.end(); ++i) {
+		i->v[flat_dim] = centerline + scale*(i->v[flat_dim] - centerline);
+		vector3d normal(i->get_norm());
+		normal[flat_dim] *= scale_inv;
+		normal.normalize();
+		i->set_norm(normal);
+	}
+}
+
+void building_room_geom_t::add_wall_gap(room_object_t const &c, float tscale) {
 	bool const dim(c.dim), dir(c.dir), has_insulation(c.room_id & 1); // consistent per room
 	unsigned const front_face_mask(get_face_mask(dim, !dir)), sides_face_mask(~get_skip_mask_for_xy(!dim));
-	float const height(c.dz()), depth(c.get_depth()), width(c.get_width()), tscale(2.0/height), dsign(dir ? 1.0 : -1.0);
+	float const height(c.dz()), depth(c.get_depth()), width(c.get_width()), dsign(dir ? 1.0 : -1.0);
 	colorRGBA const color(apply_light_color(c));
 	// draw inside wall face
 	cube_t wall_inner(c);
@@ -2580,16 +2610,7 @@ void building_room_geom_t::add_wall_gap(room_object_t const &c) {
 		set_wall_width(pipe, zval,       radius, 2  );
 		set_wall_width(pipe, centerline, radius, dim);
 		
-		if (is_romex) { // Romex is thinner horizontally and not metal
-			unsigned const num_romex_colors = 6;
-			colorRGBA const romex_colors[num_romex_colors] = {WHITE, WHITE, YELLOW, YELLOW, ORANGE, BLACK};
-			colorRGBA const color(romex_colors[rgen.rand() % num_romex_colors]);
-			rgeom_mat_t &plastic(get_untextured_material(1, 0, 1)); // shadowed, small
-			unsigned const verts_start(plastic.itri_verts.size());
-			plastic.add_ortho_cylin_to_verts(pipe, color, !dim, 0, 0); // sides only
-			// shrink horizontally by 65% around the center; normals won't be correct, but that should be okay
-			for (auto i = plastic.itri_verts.begin()+verts_start; i != plastic.itri_verts.end(); ++i) {i->v[dim] = centerline + 0.35*(i->v[dim] - centerline);}
-		}
+		if (is_romex) {add_romex_wire(pipe, !dim, dim, rgen);}
 		else {
 			colorRGBA color;
 			if (rgen.rand_float() < 0.35) {color = COPPER_C;}
@@ -2597,7 +2618,9 @@ void building_room_geom_t::add_wall_gap(room_object_t const &c) {
 				float const v(rgen.rand_uniform(0.5, 0.8));
 				color.assign(v, v, v);
 			}
-			add_pipe(room_object_t(pipe, TYPE_PIPE, c.room_id, !dim, 0, (RO_FLAG_NOCOLL | RO_FLAG_LIT), c.light_amt, SHAPE_CYLIN, color), 0); // shadowed; add_exterior=0
+			tid_nm_pair_t tex(-1, 1.0f, 1, 0, 1); // custom specular color, shadowed, no_reflect=1
+			set_pipe_specular(get_specular_color(color), 0, 0, tex);
+			get_material(tex, 1, 0, 1).add_ortho_cylin_to_verts(pipe, color, !dim, 0, 0); // small=1, sides only
 		}
 	} // for n
 	// draw partial paster/stucco parts on the studs
@@ -3081,13 +3104,6 @@ void building_room_geom_t::add_pg_ramp(room_object_t const &c, float tscale) {
 	add_ramp(c, thickness, 0, mat); // skip_bottom=0
 }
 
-void set_pipe_specular(colorRGBA const &spec_color, bool is_duct, bool is_dirty, tid_nm_pair_t &tex) {
-	tex.set_specular_color(spec_color, 0.7, 50.0);
-	// make specular; maybe should not make specular if rusty, but setting per-pipe specular doesn't work, and water effect adds specular anyway
-	if (spec_color != WHITE) {tex.metalness = (is_dirty ? 0.25 : 0.6) ;} // more metal if pipe has a metal specular color
-	else {tex.metalness = (is_dirty ? 0.1 :    (is_duct ? 0.25 : 0.4));} // partially reflective
-}
-
 void building_room_geom_t::add_pipe(room_object_t const &c, bool add_exterior) { // should be SHAPE_CYLIN
 	bool const exterior(c.is_exterior());
 	if (exterior != add_exterior) return;
@@ -3112,8 +3128,7 @@ void building_room_geom_t::add_pipe(room_object_t const &c, bool add_exterior) {
 	if (is_duct || factory_rod) {tid = get_cylin_duct_tid();}
 	else if (is_dirty) {tid = get_texture_by_name("metals/67_rusty_dirty_metal.jpg");} // "metals/65_Painted_dirty_metal.jpg" works as well
 	tid_nm_pair_t tex(tid, 1.0f, shadowed, 0, 1); // custom specular color, no_reflect=1
-	colorRGBA const spec_color(get_specular_color(c.color)); // special case metals
-	set_pipe_specular(spec_color, is_duct, is_dirty, tex);
+	set_pipe_specular(get_specular_color(c.color), is_duct, is_dirty, tex); // special case metals
 	rgeom_mat_t &mat(get_material(tex, shadowed, 0, (exterior ? 0 : (is_duct ? 1 : 2)), 0, exterior)); // detail, small, or exterior object
 	// swap texture XY for ducts
 	mat.add_ortho_cylin_to_verts(c, color, dim, (flat_ends && draw_joints[0]), (flat_ends && draw_joints[1]),
