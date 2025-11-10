@@ -532,15 +532,12 @@ void building_t::add_tile_on_floor(rand_gen_t &rgen, cube_t const &c, cube_t con
 
 void building_t::add_missing_wall_objects(rand_gen_t rgen) {
 	assert(has_room_geom());
-	float const light_amt(1.0);
-	vect_room_object_t &objs(interior->room_geom->objs);
 
 	for (cube_with_ix_t const &w : interior->missing_wall_segs) {
 		room_t const &room(get_room(w.ix));
 		bool const dim(w.dy() < w.dx()), dir(room.get_center_dim(dim) < w.get_center_dim(dim));
-		interior->room_geom->objs.emplace_back(w, TYPE_WALL_GAP, w.ix, dim, dir, 0, light_amt, SHAPE_CUBE, WHITE, rgen.rand()); // random item flags
-		// anything else? pipes or conduits?
-	} // for w
+		interior->room_geom->objs.emplace_back(w, TYPE_WALL_GAP, w.ix, dim, dir, 0, 1.0, SHAPE_CUBE, WHITE, rgen.rand()); // random item flags
+	}
 }
 
 class graffiti_draw_t {
@@ -1072,14 +1069,14 @@ void building_interior_t::place_exterior_room(extb_room_t const &room, cube_t co
 					w->z1() == wall.z1() && w->z2() == wall.z2()) {P.wall_exclude.push_back(*w);} // same width and height, overlap in length
 			}
 			subtract_cubes_from_cube(wall, P.wall_exclude, P.wall_segs, P.temp_cubes, 2); // cut out doorways, etc.; zval_mode=2 (check for zval overlap)
-			if (is_house && is_hallway && !is_building_conn) {remove_extended_basement_wall_sections(P.wall_segs, dim, room_id, P.stairs, rgen);}
+			if (is_house && is_hallway && !is_building_conn) {remove_extended_basement_wall_sections(P.wall_segs, dim, room_id, P, rgen);}
 			vector_add_to(P.wall_segs, walls[dim]);
 			P.wall_exclude.resize(wall_exclude_sz); // remove the wall_exclude cubes we just added
 		} // for dir
 	} // for dim
 }
 
-void building_interior_t::remove_extended_basement_wall_sections(vect_cube_t &wall_segs, bool dim, unsigned room_id, vect_stairs_place_t const &stairs, rand_gen_t &rgen) {
+void building_interior_t::remove_extended_basement_wall_sections(vect_cube_t &wall_segs, bool dim, unsigned room_id, ext_basement_room_params_t const &P, rand_gen_t &rgen) {
 	if (wall_segs.empty() || rgen.rand_float() < 0.25) return; // no removed section
 	cube_t &seg((wall_segs.size() == 1) ? wall_segs.front() : wall_segs[rgen.rand() % wall_segs.size()]); // select one random segment
 	float const wall_len(seg.get_sz_dim(!dim)), floor_spacing(seg.dz()); // assumes wall is one floor tall
@@ -1088,16 +1085,23 @@ void building_interior_t::remove_extended_basement_wall_sections(vect_cube_t &wa
 	float const cut_center(rgen.rand_uniform((seg.d[!dim][0] + edge_space), (seg.d[!dim][1] - edge_space)));
 	cube_t seg2(seg), gap(seg);
 	set_wall_width(gap, cut_center, cut_hwidth, !dim);
+	if (has_bcube_int(gap, P.stairs)) return; // too close to stairs
+	//if (cube_int_underground_obj(gap)) return; // check tunnels, in-ground pools, etc.; can't fail?
+	if (query_min_height(gap, gap.z2()) < gap.z2()) return; // check for terrain clipping through ceiling; should be rare
+	// check for adjacent rooms from this building
+	room_t &room(get_room(room_id));
 	cube_t gap_exp(gap);
 	gap_exp.expand_by_xy(wall_thick);
-	if (has_bcube_int(gap, stairs)) return; // too close to stairs
-	//if (cube_int_underground_obj(seg)) return; // check tunnels, in-ground pools, etc.; can't fail?
-	if (query_min_height(seg, seg.z2()) < seg.z2()) return; // check for terrain clipping through ceiling; should be rare
-	// TODO: check for adjacent rooms from this building?
+	bool has_adj(0);
+
+	for (auto const &r : P.rooms) {
+		if (r.intersects(gap_exp) && r != room) {has_adj = 1; break;}
+	}
+	if (has_adj) return;
 	seg .d[!dim][1] = gap.d[!dim][0]; // left  part
 	seg2.d[!dim][0] = gap.d[!dim][1]; // right part
 	wall_segs.push_back(seg2); // invalidates seg; must be last
-	get_room(room_id).set_has_cut_wall(); // needed for outlet/light switch/vent placement
+	room.set_has_cut_wall(); // needed for outlet/light switch/vent placement
 	missing_wall_segs.emplace_back(gap, room_id);
 }
 

@@ -2107,7 +2107,7 @@ struct building_interior_t {
 	void add_ceil_floor_pair(cube_t cf, float zc, float z, float zf);
 	void place_exterior_room(extb_room_t const &room, cube_t const &wall_area, float fc_thick, float wall_thick, ext_basement_room_params_t &P, rand_gen_t &rgen,
 		unsigned part_id, bool is_house, unsigned num_lights=0, bool is_hallway=0, unsigned is_building_conn=0, unsigned wall_skip_dim=2, unsigned thin_wall_dir=2);
-	void remove_extended_basement_wall_sections(vect_cube_t &wall_segs, bool dim, unsigned room_id, vect_stairs_place_t const &stairs, rand_gen_t &rgen);
+	void remove_extended_basement_wall_sections(vect_cube_t &wall_segs, bool dim, unsigned room_id, ext_basement_room_params_t const &P, rand_gen_t &rgen);
 	colorRGBA get_attic_ceiling_color() const;
 	room_t const &get_garage_room() const {assert(garage_room >= 0); return get_room(garage_room);}
 	vector<room_t>::const_iterator ext_basement_rooms_start() const;
