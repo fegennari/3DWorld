@@ -2868,6 +2868,7 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 			// since rats must collide with these
 			if (c->type == TYPE_JAIL_BARS && animal_type == ATYPE_SNAKE) {} // snakes collide with jail bars, but rats can walk through/over them
 			else if (!(for_spider ? c->is_spider_collidable() : c->is_floor_collidable()))                     continue;
+			if (animal_type == ATYPE_ROACH && c->type == TYPE_WALL_GAP)                                        continue; // roaches can go inside wall gaps
 			if (!line_bcube.intersects(*c) || !line_int_cube_exp(p1, p2, get_true_room_obj_bcube(*c), expand)) continue; // catwalk floor only?
 			if (c->type == TYPE_RAMP && interior->ignore_ramp_placement && obj_z1 >= ground_floor_z1)          continue;
 
