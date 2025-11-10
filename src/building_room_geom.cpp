@@ -2561,8 +2561,45 @@ void building_room_geom_t::add_wall_gap(room_object_t const &c) {
 	// draw pipes/conduits
 	rand_gen_t rgen;
 	rgen.set_state(c.room_id, c.item_flags);
-	// TODO
+	unsigned const max_pipes(4), num_pipes(1 + (rgen.rand() % max_pipes)); // 1-max_pipes
+	float const centerline(c.get_center_dim(dim)); // may be halfway inside the insulation
+	vector2d prev_pipes[max_pipes]; // {zval, radius}
+	
+	for (unsigned n = 0; n < num_pipes; ++n) {
+		bool const is_romex(rgen.rand_bool());
+		float const radius((is_romex ? 0.08 : rgen.rand_uniform(0.12, 0.20))*depth);
+		float const zval(rgen.rand_uniform((c.z1() + 0.2*height + radius), (c.z1() + 0.8*height - radius)));
+		bool bad_place(0);
 
+		for (unsigned m = 0; m < n; ++m) { // check previous pipes
+			if (fabs(zval - prev_pipes[m].x) < 1.5*(radius + prev_pipes[m].y)) {bad_place = 1; break;}
+		}
+		if (bad_place) continue;
+		prev_pipes[n].assign(zval, radius);
+		cube_t pipe(c); // full length
+		set_wall_width(pipe, zval,       radius, 2  );
+		set_wall_width(pipe, centerline, radius, dim);
+		
+		if (is_romex) { // Romex is thinner horizontally and not metal
+			unsigned const num_romex_colors = 6;
+			colorRGBA const romex_colors[num_romex_colors] = {WHITE, WHITE, YELLOW, YELLOW, ORANGE, BLACK};
+			colorRGBA const color(romex_colors[rgen.rand() % num_romex_colors]);
+			rgeom_mat_t &plastic(get_untextured_material(1, 0, 1)); // shadowed, small
+			unsigned const verts_start(plastic.itri_verts.size());
+			plastic.add_ortho_cylin_to_verts(pipe, color, !dim, 0, 0); // sides only
+			// shrink horizontally by 65% around the center; normals won't be correct, but that should be okay
+			for (auto i = plastic.itri_verts.begin()+verts_start; i != plastic.itri_verts.end(); ++i) {i->v[dim] = centerline + 0.35*(i->v[dim] - centerline);}
+		}
+		else {
+			colorRGBA color;
+			if (rgen.rand_float() < 0.35) {color = COPPER_C;}
+			else { // random shade of mid to light gray
+				float const v(rgen.rand_uniform(0.5, 0.8));
+				color.assign(v, v, v);
+			}
+			add_pipe(room_object_t(pipe, TYPE_PIPE, c.room_id, !dim, 0, (RO_FLAG_NOCOLL | RO_FLAG_LIT), c.light_amt, SHAPE_CYLIN, color), 0); // shadowed; add_exterior=0
+		}
+	} // for n
 	// draw partial paster/stucco parts on the studs
 	// TODO
 }
