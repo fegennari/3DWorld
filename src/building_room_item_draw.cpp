@@ -693,19 +693,19 @@ void building_room_geom_t::create_small_static_vbos(building_t const &building, 
 	//highres_timer_t timer("Gen Room Geom Small"); // up to 36ms on new computer for buildings with large retail areas
 	float const floor_ceil_gap(building.get_floor_ceil_gap());
 	colorRGBA const &trim_color(building.get_trim_color());
+	tid_nm_pair_t const wall_tex(building.get_material().wall_tex.get_scaled_version(2.0)); // account for 2.0 draw_scale
 	bldg_industrial_info_t const *ind_info(building.interior->ind_info.get());
 	model_objs.clear(); // currently model_objs are only created for small objects in drawers, so we clear this here
-	add_small_static_objs_to_verts(expanded_objs, 0, 0, trim_color, 0, floor_ceil_gap, ind_info); // inc_text=0
+	add_small_static_objs_to_verts(expanded_objs, 0, 0, trim_color, wall_tex, 0, floor_ceil_gap, ind_info); // inc_text=0
 
 	if (skip_mall_objs && first_mall_obj_ix > 0) { // draw pre-mall objects and then elevator buttons, etc.
-		add_small_static_objs_to_verts(objs, 0, first_mall_obj_ix,          trim_color, 0, floor_ceil_gap, ind_info); // inc_text=0
-		add_small_static_objs_to_verts(objs, last_mall_obj_ix, objs.size(), trim_color, 0, floor_ceil_gap, ind_info); // inc_text=0
+		add_small_static_objs_to_verts(objs, 0, first_mall_obj_ix,          trim_color, wall_tex, 0, floor_ceil_gap, ind_info); // inc_text=0
+		add_small_static_objs_to_verts(objs, last_mall_obj_ix, objs.size(), trim_color, wall_tex, 0, floor_ceil_gap, ind_info); // inc_text=0
 	}
 	else { // draw full range
-		add_small_static_objs_to_verts(objs, 0, 0, trim_color, 0, floor_ceil_gap, ind_info); // inc_text=0
+		add_small_static_objs_to_verts(objs, 0, 0, trim_color, wall_tex, 0, floor_ceil_gap, ind_info); // inc_text=0
 	}
 	add_attic_interior_and_rafters(building, 2.0/obj_scale, 0); // only if there's an attic; detail_pass=0
-	tid_nm_pair_t const &wall_tex(building.get_material().wall_tex);
 	for (tunnel_seg_t    const &t : building.interior->tunnels           ) {add_tunnel(t);}
 	for (ceiling_space_t const &c : building.interior->ceiling_spaces    ) {add_ceiling_space(c, wall_tex);}
 	for (cube_t          const &c : building.interior->missing_ceil_tiles) {add_ceiling_tile_hole(c);}
@@ -715,7 +715,7 @@ void building_room_geom_t::add_nested_objs_to_verts(vect_room_object_t const &ob
 	vector_add_to(objs_to_add, pending_objs); // nested objects are added at the end so that small and text materials are thread safe
 }
 void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t const &objs_to_add, unsigned six, unsigned eix, colorRGBA const &trim_color,
-	bool inc_text, float floor_ceil_gap, bldg_industrial_info_t const *ind_info)
+	tid_nm_pair_t const &wall_tex, bool inc_text, float floor_ceil_gap, bldg_industrial_info_t const *ind_info)
 {
 	if (objs_to_add.empty()) return; // don't add untextured material, otherwise we may fail the (num_verts > 0) assert
 	float const tscale(2.0/obj_scale);
@@ -839,7 +839,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_BULLETS:    add_bullet_box (c); break;
 		case TYPE_CIGARETTE:  add_cigarette  (c); break;
 		case TYPE_CEIL_TILE:  add_ceil_tile  (c); break;
-		case TYPE_WALL_GAP:   add_wall_gap   (c, tscale); break;
+		case TYPE_WALL_GAP:   add_wall_gap   (c, wall_tex); break; // wall_tscale should always be available here
 		case TYPE_MUSHROOM:   add_mushroom   (c); break;
 		case TYPE_DBG_SHAPE:  add_debug_shape(c); break;
 		// 3D model objects
@@ -1764,7 +1764,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 				add_text_objs_to_verts(pending_objs);
 			}
 		}
-		add_small_static_objs_to_verts(pending_objs, 0, 0, building.get_trim_color(), create_text, building.get_floor_ceil_gap(), building.interior->ind_info.get());
+		add_small_static_objs_to_verts(pending_objs, 0, 0, building.get_trim_color(), building.get_material().wall_tex,
+			create_text, building.get_floor_ceil_gap(), building.interior->ind_info.get());
 		pending_objs.clear();
 
 		// upload VBO data serially

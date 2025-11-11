@@ -1374,7 +1374,7 @@ struct building_room_geom_t {
 	void add_pool_tile(room_object_t const &c, float tscale);
 	void add_wall_trim(room_object_t const &c, bool for_closet=0);
 	void add_romex_wire(cube_t const &wire, bool dim, bool flat_dim, rand_gen_t &rgen);
-	void add_wall_gap (room_object_t const &c, float tscale);
+	void add_wall_gap (room_object_t const &c, tid_nm_pair_t const &wall_tex);
 	void add_blinds(room_object_t const &c);
 	void add_fireplace(room_object_t const &c, float tscale);
 	void add_filing_cabinet(room_object_t const &c, bool inc_lg, bool inc_sm);
@@ -1486,7 +1486,7 @@ private:
 	void create_detail_vbos(building_t const &building);
 	void add_nested_objs_to_verts(vect_room_object_t const &objs_to_add);
 	void add_small_static_objs_to_verts(vect_room_object_t const &objs_to_add, unsigned six, unsigned eix, colorRGBA const &trim_color,
-		bool inc_text=0, float floor_ceil_gap=0.0, bldg_industrial_info_t const *ind_info=nullptr);
+		tid_nm_pair_t const &wall_tex, bool inc_text=0, float floor_ceil_gap=0.0, bldg_industrial_info_t const *ind_info=nullptr);
 	void create_obj_model_insts(building_t const &building);
 	void create_lights_vbos(building_t const &building);
 	void create_dynamic_vbos(building_t const &building, point const &camera_bs, vector3d const &xlate, bool play_clock_tick);

@@ -1214,7 +1214,7 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 	if (c.obj_expanded()) return; // shelves have already been expanded, don't need to create contained objects below
 	vect_room_object_t &objects(get_temp_objects());
 	get_shelf_objects(c, shelves, num_shelves, objects);
-	add_small_static_objs_to_verts(objects, 0, 0, WHITE, 1); // trim_color=WHITE (unused), inc_text=1
+	add_small_static_objs_to_verts(objects, 0, 0, WHITE, tid_nm_pair_t(), 1); // trim_color=WHITE (unused), no wall_tex, inc_text=1
 }
 
 bool add_shelf_rack_top  (room_object_t const &c) {return (c.obj_id & 4);}
@@ -1285,7 +1285,7 @@ void building_room_geom_t::add_rack(room_object_t const &c, bool add_rack, bool 
 		vect_room_object_t &objects(get_temp_objects(obj_text_pass)); // select second vector for text pass
 		get_shelfrack_objects(c, objects, 0, obj_text_pass); // add_models_mode=0, books_only=obj_text_pass
 		if (obj_text_pass) {add_text_objs_to_verts(objects);}
-		else {add_small_static_objs_to_verts(objects, 0, 0, WHITE, 0);} // trim_color=WHITE(unused), inc_text=0
+		else {add_small_static_objs_to_verts(objects, 0, 0, WHITE, tid_nm_pair_t(), 0);} // trim_color=WHITE(unused), no wall_tex, inc_text=0
 	}
 }
 
@@ -2549,10 +2549,10 @@ void building_room_geom_t::add_romex_wire(cube_t const &wire, bool dim, bool fla
 	}
 }
 
-void building_room_geom_t::add_wall_gap(room_object_t const &c, float tscale) {
+void building_room_geom_t::add_wall_gap(room_object_t const &c, tid_nm_pair_t const &wall_tex) {
 	bool const dim(c.dim), dir(c.dir), has_insulation(c.room_id & 1); // consistent per room
 	unsigned const front_face_mask(get_face_mask(dim, !dir)), sides_face_mask(~get_skip_mask_for_xy(!dim));
-	float const height(c.dz()), depth(c.get_depth()), width(c.get_width()), dsign(dir ? 1.0 : -1.0);
+	float const height(c.dz()), depth(c.get_depth()), width(c.get_width()), tscale(wall_tex.tscale_x), dsign(dir ? 1.0 : -1.0);
 	colorRGBA const color(apply_light_color(c));
 	// draw inside wall face
 	cube_t wall_inner(c);
@@ -2623,8 +2623,58 @@ void building_room_geom_t::add_wall_gap(room_object_t const &c, float tscale) {
 			get_material(tex, 1, 0, 1).add_ortho_cylin_to_verts(pipe, color, !dim, 0, 0); // small=1, sides only
 		}
 	} // for n
-	// draw partial paster/stucco parts on the studs
-	// TODO
+	// draw partial plaster/stucco parts on the studs at each side
+	float const front_face(c.d[dim][!dir]), int_face(stud.d[dim][!dir]), max_shift(1.5*depth + 0.05*width);
+	vector3d const front_dir(vector_from_dim_dir(dim, !dir));
+	int const nm_tid(get_normal_map_for_bldg_tid(STUCCO_TEX));
+	get_untextured_material(0, 0, 1); // make sure edge material is loaded
+	rgeom_mat_t &wall_mat(get_material(wall_tex, 1, 0, 1)); // shadowed, small
+	rgeom_mat_t &edge_mat(get_untextured_material(0, 0, 1)); // unshadowed, small
+	auto &fverts(wall_mat.itri_verts);
+	auto &everts(edge_mat.quad_verts);
+	rgeom_storage_t::vertex_t vf;
+	vf.set_c3(WHITE);
+	vf.set_norm(front_dir);
+	vf.v[dim] = front_face;
+
+	for (unsigned d = 0; d < 2; ++d) { // left, right
+		unsigned const num_pts(10 + (rgen.rand() % 6)); // 10-15
+		float const z_step(height/(num_pts-1)), wall_edge(c.d[!dim][d]), dsign(d ? -1.0 : 1.0);
+		bool const reverse_dir(d ^ dim ^ dir);
+		float zval(c.z1());
+
+		for (unsigned n = 0; n < num_pts; ++n) {
+			int const ix(fverts.size());
+			float &v_pos(vf.v[!dim]);
+			vf.v.z  = zval + ((n == 0 || n+1 == num_pts) ? 0.0 : 0.25*z_step*rgen.signed_rand_float()); // add some randomness to middle vertices
+			v_pos  = wall_edge;
+			vf.t[0] = wall_tex.tscale_x*(v_pos - tex_origin[!dim]) + wall_tex.txoff;
+			vf.t[1] = wall_tex.tscale_y*(vf.v.z - tex_origin.z)    + wall_tex.tyoff;
+			fverts.push_back(vf); // outer vertex
+			float const shift(dsign*max_shift*rgen.rand_uniform(0.1, 0.9));
+			v_pos  += shift;
+			vf.t[0] += wall_tex.tscale_y*shift;
+			fverts.push_back(vf); // inner vertex
+			zval += z_step;
+
+			if (n > 0) {
+				// emit two triangles for face trapezoid
+				int const ix_offs[6] = {-2, -1, 1, -2, 1, 0};
+				for (unsigned i = 0; i < 6; ++i) {wall_mat.indices.push_back(ix + ix_offs[reverse_dir ? 5-i : i]);}
+				// add untextured edges
+				rgeom_storage_t::vertex_t ve1(vf), ve2(fverts[ix - 1]); // copy {upper, lower} edges
+				if (reverse_dir) {swap(ve1, ve2);}
+				norm_comp const nc(cross_product(front_dir, (ve2.v - ve1.v)).get_norm());
+				ve1.set_norm(nc);
+				ve2.set_norm(nc);
+				everts.push_back(ve1);
+				everts.push_back(ve2);
+				ve1.v[dim] = ve2.v[dim] = int_face; // shift from front to interior
+				everts.push_back(ve2);
+				everts.push_back(ve1);
+			}
+		} // for n
+	} // for d
 }
 
 void building_room_geom_t::add_blinds(room_object_t const &c) {
