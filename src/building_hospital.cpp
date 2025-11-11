@@ -502,31 +502,7 @@ bool building_t::add_operating_room_objs(rand_gen_t rgen, room_t &room, float zv
 			place_area, objs_start, 0.0, 0, 4, 0, WHITE, 1, SHAPE_CUBE, 0.0, RO_FLAG_UNTEXTURED); // not_at_window=1
 	}
 	place_area.expand_by_xy(-get_trim_thickness());
-
-	// add hospital trolley
-	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_TROLLEY)) {
-		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TROLLEY)); // L, W, H
-		float const height(0.38*floor_spacing), hwidth(0.5*height*sz.y/sz.z), hlength(0.5*height*sz.x/sz.z);
-
-		if (max(hwidth, hlength) < 6.0*max(place_area.dx(), place_area.dy())) { // should generally be true
-			bool const trolley_dim(rgen.rand_bool()); // same for all iterations
-			cube_t trolley_place_area(place_area);
-			trolley_place_area.expand_in_dim( trolley_dim, -hlength);
-			trolley_place_area.expand_in_dim(!trolley_dim, -hwidth );
-
-			for (unsigned n = 0; n < 10; ++n) { // 10 attempts to place
-				point center(0.0, 0.0, zval);
-				gen_xy_pos_in_cube(center, trolley_place_area, rgen);
-				cube_t trolley(center);
-				trolley.expand_in_dim( trolley_dim, hlength);
-				trolley.expand_in_dim(!trolley_dim, hwidth );
-				trolley.z2() += height;
-				if (trolley.intersects(op_table) || overlaps_obj_or_placement_blocked(trolley, place_area, objs_start)) continue; // bad placement
-				objs.emplace_back(trolley, TYPE_TROLLEY, room_id, trolley_dim, rgen.rand_bool(), 0, tot_light_amt);
-				break;
-			} // for n
-		}
-	}
+	add_trolley(rgen, place_area, op_table, zval, room_id, tot_light_amt, objs_start); // add hospital trolley
 	if (rgen.rand_bool()) {place_model_along_wall(OBJ_MODEL_STRETCHER, TYPE_STRETCHER, room, 0.15, rgen, zval, room_id, tot_light_amt, place_area, objs_start);}
 	// add a gas tank along a wall
 	unsigned const num_tank_colors = 3;
@@ -589,6 +565,29 @@ bool building_t::add_operating_room_objs(rand_gen_t rgen, room_t &room, float zv
 		i->shape = SHAPE_CYLIN;
 	} // for i
 	return 1;
+}
+
+void building_t::add_trolley(rand_gen_t &rgen, cube_t const &place_area, cube_t const &avoid, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_TROLLEY)) return;
+	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TROLLEY)); // L, W, H
+	float const height(0.38*get_window_vspace()), hwidth(0.5*height*sz.y/sz.z), hlength(0.5*height*sz.x/sz.z);
+	if (max(hwidth, hlength) > 6.0*max(place_area.dx(), place_area.dy())) return; // should generally not fail
+	bool const trolley_dim(rgen.rand_bool()); // same for all iterations
+	cube_t trolley_place_area(place_area);
+	trolley_place_area.expand_in_dim( trolley_dim, -hlength);
+	trolley_place_area.expand_in_dim(!trolley_dim, -hwidth );
+
+	for (unsigned n = 0; n < 10; ++n) { // 10 attempts to place
+		point center(0.0, 0.0, zval);
+		gen_xy_pos_in_cube(center, trolley_place_area, rgen);
+		cube_t trolley(center);
+		trolley.expand_in_dim( trolley_dim, hlength);
+		trolley.expand_in_dim(!trolley_dim, hwidth );
+		trolley.z2() += height;
+		if ((!avoid.is_all_zeros() && trolley.intersects(avoid)) || overlaps_obj_or_placement_blocked(trolley, place_area, objs_start)) continue; // bad placement
+		interior->room_geom->objs.emplace_back(trolley, TYPE_TROLLEY, room_id, trolley_dim, rgen.rand_bool(), 0, tot_light_amt);
+		return; // success/done
+	} // for n
 }
 
 bool building_t::add_lab_room_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start) {

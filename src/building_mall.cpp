@@ -2262,12 +2262,12 @@ void building_t::add_clothing_rack(cube_t const &rack, unsigned room_id, bool di
 }
 
 void building_t::add_ceiling_ducts(cube_t const &room, float ceil_zval, unsigned room_id, bool dim, unsigned skip_dir, float light_amt,
-	bool cylin_ducts, bool skip_ends, bool skip_top, rand_gen_t &rgen)
+	bool cylin_ducts, bool skip_ends, bool skip_top, rand_gen_t &rgen, float sz_scale)
 {
-	float const window_vspace(get_window_vspace()), wall_hthick(0.5*get_wall_thickness()), room_len(room.get_sz_dim(dim));
-	unsigned const num_vents(max(2U, (unsigned)round_fp(0.5*room_len/window_vspace))); // per side
-	float const vent_spacing(room_len/num_vents), vent_ext((cylin_ducts ? 0.05 : 0.1)*window_vspace);
-	float const duct_height((cylin_ducts ? 0.25 : 0.2)*window_vspace), duct_width((cylin_ducts ? 0.25 : 0.26)*window_vspace);
+	float const window_vspace(get_window_vspace()), scaled_space(sz_scale*window_vspace), wall_hthick(0.5*get_wall_thickness()), room_len(room.get_sz_dim(dim));
+	unsigned const num_vents(max(2U, (unsigned)round_fp(0.5*room_len/scaled_space))); // per side
+	float const vent_spacing(room_len/num_vents), vent_ext((cylin_ducts ? 0.05 : 0.1)*scaled_space);
+	float const duct_height((cylin_ducts ? 0.25 : 0.2)*scaled_space), duct_width((cylin_ducts ? 0.25 : 0.26)*scaled_space);
 	unsigned const duct_flags(RO_FLAG_IN_MALL | (skip_ends ? (RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI) : 0)); // Note: mall and factory flag are the same, so we don't need to know
 	unsigned const main_duct_flags(duct_flags | (skip_top ? RO_FLAG_ADJ_TOP : 0));
 	cube_t duct(room);
@@ -2289,11 +2289,11 @@ void building_t::add_ceiling_ducts(cube_t const &room, float ceil_zval, unsigned
 		duct_ext.d[!dim][!d] = duct.d[!dim][!d] - dscale*vent_ext; // extend a bit further out
 
 		for (unsigned n = 0; n < num_vents; ++n) {
-			set_wall_width(duct_ext, (duct.d[dim][0] + (0.5 + n)*vent_spacing), 0.12*window_vspace, dim);
+			set_wall_width(duct_ext, (duct.d[dim][0] + (0.5 + n)*vent_spacing), 0.12*scaled_space, dim);
 			objs.emplace_back(duct_ext, TYPE_DUCT, room_id, !dim, 0, duct_flags, light_amt, SHAPE_CUBE); // dir=0 (XY)
 			cube_t vent(duct_ext);
 			vent.d[!dim][d] = duct_ext.d[!dim][!d]; // shrink to end of duct
-			vent.expand_by(0.005*window_vspace);
+			vent.expand_by(0.005*scaled_space);
 			objs.emplace_back(vent, TYPE_VENT, room_id, !dim, d, RO_FLAG_IN_MALL, light_amt, SHAPE_CUBE);
 		} // for n
 	} // for d

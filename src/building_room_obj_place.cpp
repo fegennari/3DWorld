@@ -2798,9 +2798,20 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 	return placed_obj;
 }
 
-bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
-	// TODO
-	return 0;
+bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float light_amt, unsigned objs_start) {
+	float const floor_spacing(get_window_vspace());
+	vector2d const room_sz(room.get_size_xy());
+	if (room_sz.get_min_val() < 2.0*floor_spacing || room_sz.get_max_val() < 3.0*floor_spacing) return 0; // too small
+	bool const dim(room_sz.x < room_sz.y); // long dim
+	float const ceil_zval(zval + floor_spacing - get_fc_thickness());
+	cube_t const place_area(get_walkable_room_bounds(room));
+	vect_room_object_t &objs(interior->room_geom->objs);
+	//cube_t hood;
+	unsigned const skip_dir(2); // TODO
+	add_ceiling_ducts(room, ceil_zval, room_id, dim, skip_dir, light_amt, 0, 1, 1, rgen, 0.5); // cylin_ducts=0, skip_ends=1, skip_top=1, sz_scale=0.5
+	// TODO: center island, big grill, multiple sinks, stacks of dishes, metal racks, walk in freezer, fridge, ovens, hood, vent; all shiny metal
+	add_trolley(rgen, place_area, cube_t(), zval, room_id, light_amt, objs_start); // seems like this can work in a kitchen
+	return 1;
 }
 
 bool building_t::add_fishtank_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, cube_t const &place_area) {

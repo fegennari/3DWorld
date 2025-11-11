@@ -944,9 +944,15 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 							added_obj = no_whiteboard = added_cafeteria = add_cafeteria_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start);
 							if (added_obj) {r->assign_to(RTYPE_CAFETERIA, f);}
 						}
-						else if (rand_val == 7 && f > 0) { // lab; not on the first floor; currently unreachable
-							added_obj = no_whiteboard = add_lab_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start);
-							if (added_obj) {r->assign_to(RTYPE_LAB, f);}
+						else if (rand_val == 7) {
+							if (f > 0) { // lab; not on the first floor; currently unreachable
+								added_obj = no_whiteboard = add_lab_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start);
+								if (added_obj) {r->assign_to(RTYPE_LAB, f);}
+							}
+							else { // commercial kitchen on the first floor
+								added_obj = no_whiteboard = add_commercial_kitchen_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
+								if (added_obj) {r->assign_to(RTYPE_KITCHEN, f);}
+							}
 						}
 					} // for N
 					// else make it an office or something else below
@@ -961,6 +967,11 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				if (!added_obj && f == 0 && !added_cafeteria && rgen.rand_bool()) {
 					added_obj = no_plants = no_whiteboard = added_cafeteria = add_cafeteria_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start);
 					if (added_obj) {r->assign_to(RTYPE_CAFETERIA, f);}
+				}
+				if (!added_obj && f == 0 && !added_kitchen_mask && rgen.rand_bool()) {
+					added_obj = no_plants = no_whiteboard = add_commercial_kitchen_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
+					added_kitchen_mask |= added_obj;
+					if (added_obj) {r->assign_to(RTYPE_KITCHEN, f);}
 				}
 				if (!added_obj && rgen.rand_float() < 0.2) { // maybe make teacher's lounge
 					add_lounge_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, 0); // is_lobby=0
