@@ -121,9 +121,13 @@ int get_carpet_tid (room_object_t const &c) {return get_texture_by_name((c.obj_i
 colorRGBA get_textured_wood_color() {return WOOD_COLOR.modulate_with(texture_color(WOOD2_TEX));} // Note: uses default WOOD_COLOR, not the per-building random variant
 colorRGBA get_counter_color      () {return (get_textured_wood_color()*0.75 + texture_color(get_counter_tid())*0.25);}
 
-rgeom_mat_t &building_room_geom_t::get_wood_material(float tscale, bool inc_shadows, bool dynamic, unsigned small, bool exterior) {
-	return get_material(tid_nm_pair_t(WOOD2_TEX, get_texture_by_name("normal_maps/wood_NRM.jpg", 1),
-		3.0*tscale, 3.0*tscale, 0.0, 0.0, inc_shadows), inc_shadows, dynamic, small, 0, exterior); // hard-coded for common material
+rgeom_mat_t &building_room_geom_t::get_wood_material(float tscale, bool inc_shadows, bool dynamic, unsigned small, bool exterior, unsigned type) {
+	int tid(-1), nm_tid(-1);
+	if      (type == WOOD_TYPE_DARK   ) {tid = WOOD2_TEX; nm_tid = get_texture_by_name("normal_maps/wood_NRM.jpg", 1);} // dark wood/bark, horizontal
+	else if (type == WOOD_TYPE_OAK    ) {tid = get_texture_by_name("interiors/oak_wood.jpg"); nm_tid = get_texture_by_name("interiors/oak_wood_normal.jpg", 1);} // oak veneer, vertical
+	else if (type == WOOD_TYPE_PLYWOOD) {tid = get_texture_by_name("interiors/plywood2.jpg"); nm_tid = get_texture_by_name("interiors/plywood2_normal.jpg", 1);} // plywood, horizontal
+	else {assert(0);}
+	return get_material(tid_nm_pair_t(tid, nm_tid, 3.0*tscale, 3.0*tscale, 0.0, 0.0, inc_shadows), inc_shadows, dynamic, small, 0, exterior);
 }
 
 void set_pipe_specular(colorRGBA const &spec_color, bool is_duct, bool is_dirty, tid_nm_pair_t &tex) {
@@ -2551,20 +2555,21 @@ void building_room_geom_t::add_romex_wire(cube_t const &wire, bool dim, bool fla
 
 void building_room_geom_t::add_wall_gap(room_object_t const &c, tid_nm_pair_t const &wall_tex) {
 	bool const dim(c.dim), dir(c.dir), has_insulation(c.room_id & 1); // consistent per room
+	bool const use_plywood(buttons_start & 1); // consistent per building
 	unsigned const front_face_mask(get_face_mask(dim, !dir)), sides_face_mask(~get_skip_mask_for_xy(!dim));
-	float const height(c.dz()), depth(c.get_depth()), width(c.get_width()), tscale(wall_tex.tscale_x), dsign(dir ? 1.0 : -1.0);
+	float const height(c.dz()), depth(c.get_depth()), width(c.get_width()), dsign(dir ? 1.0 : -1.0);
 	colorRGBA const color(apply_light_color(c));
 	// draw inside wall face
 	cube_t wall_inner(c);
 	wall_inner.translate_dim(dim, dsign*depth*(has_insulation ? 0.5 : 1.0)); // half depth if there's insulation
 	int const tid(has_insulation ? get_insulation_tid() : get_plywood_tid());
 	// small; shadowed, since this wall may block the light to a room on the other side
-	get_material(tid_nm_pair_t(tid, tscale, 1), 1, 0, 1).add_cube_to_verts(wall_inner, color, c.get_llc(), front_face_mask, dim);
+	get_material(tid_nm_pair_t(tid, 2.0/height, 1), 1, 0, 1).add_cube_to_verts(wall_inner, color, c.get_llc(), front_face_mask, dim);
 	// draw wood studs; draw sides and front separately for vertical grain in both
 	unsigned const num_studs(max(2, 1+round_fp(5.4*width/height)));
 	float const stud_width(0.025*height), stud_hwidth(0.5*stud_width), stud_spacing((width - stud_width)/(num_studs - 1));
 	float pos(c.d[!dim][0] + stud_hwidth);
-	rgeom_mat_t &wood_mat(get_wood_material(tscale, 1, 0, 1)); // shadowed, small
+	rgeom_mat_t &wood_mat(get_wood_material((use_plywood ? 1.0 : 2.0)/height, 1, 0, 1, 0, (use_plywood ? WOOD_TYPE_PLYWOOD : WOOD_TYPE_DARK))); // shadowed, small
 	cube_t stud(c);
 	stud.d[dim][!dir] += 0.1*dsign*depth; // shift inward by sheet rock thickness
 

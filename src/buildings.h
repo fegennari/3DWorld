@@ -619,6 +619,8 @@ enum {PIPE_TYPE_SEWER=0, PIPE_TYPE_CW, PIPE_TYPE_HW, PIPE_TYPE_GAS, NUM_PIPE_TYP
 
 enum {BIRD_STATE_FLYING=0, BIRD_STATE_GLIDING, BIRD_STATE_LANDING, BIRD_STATE_STANDING, BIRD_STATE_TAKEOFF, NUM_BIRD_STATES};
 
+enum {WOOD_TYPE_DARK=0, WOOD_TYPE_OAK, WOOD_TYPE_PLYWOOD};
+
 // object flags
 unsigned const RO_FLAG_LIT     = 0x01; // light is on
 unsigned const RO_FLAG_TOS     = 0x02; // at top of stairs; used for railings and lights; used for objects on open top shelves of shelf racks
@@ -1200,7 +1202,7 @@ struct building_room_geom_t {
 	rgeom_mat_t &get_untextured_material(bool inc_shadows=0, bool dynamic=0, unsigned small=0, bool transparent=0, bool exterior=0, bool no_reflect=0) {
 		return get_material(tid_nm_pair_t(-1, 1.0f, inc_shadows, transparent, no_reflect), inc_shadows, dynamic, small, transparent, exterior);
 	}
-	rgeom_mat_t &get_wood_material(float tscale=1.0, bool inc_shadows=1, bool dynamic=0, unsigned small=0, bool exterior=0);
+	rgeom_mat_t &get_wood_material(float tscale=1.0, bool inc_shadows=1, bool dynamic=0, unsigned small=0, bool exterior=0, unsigned type=WOOD_TYPE_DARK);
 	rgeom_mat_t &get_metal_material(bool inc_shadows=0, bool dynamic=0, unsigned small=0, bool exterior=0, bool no_reflect=0,
 		colorRGBA const &spec_color=WHITE, float mag=0.8, float shine=60.0, float metalness=1.0);
 	rgeom_mat_t &get_painted_metal_material(bool inc_shadows=0, bool dynamic=0, unsigned small=0, bool exterior=0, bool no_reflect=0,

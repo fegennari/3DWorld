@@ -53,3 +53,5 @@ Shell Gas Pump: https://sketchfab.com/3d-models/shell-gas-pump-3f41a7d17044402fa
 Gas Pump: https://sketchfab.com/3d-models/gas-pump-add0f902b9164718bd0540e88bf9927e
 Angel Statue: https://sketchfab.com/3d-models/angel-statue-ad7d6f9a90754c78b09c86dfade50975
 Marble Angel Statue: https://sketchfab.com/3d-models/angel-old-marble-version-2c879fc654b44f5e8d12527948535b51
+Oak Veneer: https://polyhaven.com/a/oak_veneer_01
+Plywood: https://polyhaven.com/a/plywood
