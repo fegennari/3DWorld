@@ -2553,6 +2553,13 @@ void building_room_geom_t::add_romex_wire(cube_t const &wire, bool dim, bool fla
 	}
 }
 
+colored_cube_t get_indir_lighting_wall_gap_cube(room_object_t const &c) {
+	bool const has_insulation(c.room_id & 1);
+	cube_t wall_inner(c);
+	wall_inner.translate_dim(c.dim, (c.dir ? 1.0 : -1.0)*c.get_depth()*(has_insulation ? 0.5 : 1.0));
+	int const tid(has_insulation ? get_insulation_tid() : get_plywood_tid());
+	return colored_cube_t(wall_inner, texture_color(tid));
+}
 void building_room_geom_t::add_wall_gap(room_object_t const &c, tid_nm_pair_t const &wall_tex) {
 	bool const dim(c.dim), dir(c.dir), has_insulation(c.room_id & 1); // consistent per room
 	bool const use_plywood(buttons_start & 1); // consistent per building
@@ -7452,6 +7459,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_MIRROR:    return WHITE; // should be reflecting
 	//case TYPE_POOL_BALL: return ???; // texture_color(get_ball_tid(*this))? uses a texture atlas, so unclear what color to use here; use white by default
 	//case TYPE_CHIMNEY:  return texture_color(get_material().side_tex); // should modulate with texture color, but we don't have it here
+	//case TYPE_WALL_GAP: // handled with custom code
 	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BOTTLE, TYPE_PEN_PENCIL, etc.
 	}
 	if (is_obj_model_type()) {return color.modulate_with(get_model_color());} // handle models

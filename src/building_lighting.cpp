@@ -53,6 +53,7 @@ float get_med_cab_wall_thickness(room_object_t const &c);
 float get_locker_wall_thickness (room_object_t const &c);
 cube_t get_tv_screen(room_object_t const &c);
 int get_tv_or_monitor_tid(room_object_t const &c);
+colored_cube_t get_indir_lighting_wall_gap_cube(room_object_t const &c);
 
 bool check_indir_enabled(bool in_basement, bool in_attic) {
 	if (in_basement) return INDIR_BASEMENT_EN;
@@ -338,7 +339,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			type == TYPE_HARDHAT || type == TYPE_TOPHAT || type == TYPE_COMP_MOUSE || type == TYPE_APPLE || type == TYPE_JAIL_BARS || type == TYPE_HANDGUN ||
 			type == TYPE_STICK_NOTE || type == TYPE_GYM_WEIGHT || type == TYPE_FOOD_TRAY || type == TYPE_EX_MACHINE || type == TYPE_BAR_SOAP || type == TYPE_COAT_RACK ||
 			type == TYPE_VIS_PHONE || type == TYPE_JUMPSUIT || type == TYPE_O_SHOWER || type == TYPE_CARD_DECK || type == TYPE_CIGARETTE || type == TYPE_BULLETS ||
-			type == TYPE_MUSHROOM || type == TYPE_POOL_CUE || type == TYPE_CEIL_TILE || type == TYPE_WALL_GAP) continue;
+			type == TYPE_MUSHROOM || type == TYPE_POOL_CUE || type == TYPE_CEIL_TILE) continue;
 		bool const is_stairs(type == TYPE_STAIR || type == TYPE_STAIR_WALL);
 		if (c->z1() > (is_stairs ? stairs_z2 : z2) || c->z2() < (is_stairs ? stairs_z1 : z1)) continue;
 		if (!c->intersects_xy(ext_bcube)) continue;
@@ -375,6 +376,9 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			if (!inner_cube.is_strictly_normalized()) {cout << TXT(c->str()) << TXT(inner_cube.str()) << TXTi(type) << endl;}
 			assert(inner_cube.is_strictly_normalized());
 			cc.emplace_back(inner_cube, color);
+		}
+		else if (type == TYPE_WALL_GAP) {
+			cc.push_back(get_indir_lighting_wall_gap_cube(*c));
 		}
 		else if (type == TYPE_CLOSET) { // Note: lighting cubes and indir lighting are *not* updated when closet doors are opened and closed
 			cube_t cubes[5];
