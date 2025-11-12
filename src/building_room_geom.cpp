@@ -2652,7 +2652,7 @@ void building_room_geom_t::add_wall_gap(room_object_t const &c, tid_nm_pair_t co
 	for (unsigned d = 0; d < 2; ++d) { // left, right
 		unsigned const num_pts(10 + (rgen.rand() % 6)); // 10-15
 		float const z_step(height/(num_pts-1)), wall_edge(c.d[!dim][d]), dsign(d ? -1.0 : 1.0);
-		bool const reverse_dir(d ^ dim ^ dir);
+		bool const reverse_dir(bool(d) ^ dim ^ dir);
 		float zval(c.z1());
 
 		for (unsigned n = 0; n < num_pts; ++n) {
@@ -3792,7 +3792,7 @@ void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
 				set_wall_width(ref, (center + (d ? 1.0 : -1.0)*0.25*width), 0.005*width, !c.dim);
 				unsigned const verts_start(ref_mat.quad_verts.size());
 				ref_mat.add_cube_to_verts_untextured(ref, LT_GRAY, EF_Z2);
-				rotate_verts(ref_mat.quad_verts, vector_from_dim_dir(c.dim, (d ^ c.dim ^ 1)), 0.33*PI, cube_top_center(ref), verts_start);
+				rotate_verts(ref_mat.quad_verts, vector_from_dim_dir(c.dim, (bool(d) ^ c.dim ^ 1)), 0.33*PI, cube_top_center(ref), verts_start);
 			} // for d
 			// draw the frame; can't resize the frame in XY because it must meet the top part above the ceiling
 			tex.set_specular(0.8, 60.0, 0.5); // partially reflective (same as metal bar)

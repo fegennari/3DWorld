@@ -326,7 +326,7 @@ void building_t::remove_ceiling_tiles(cube_t const &room_in, tid_nm_pair_t const
 			for (unsigned d = 0; d < 2; ++d) { // xy
 				ix[d] = rgen.rand() % num[d];
 				float const pos(room.d[d][0] + ix[d]*tile_sz[d]);
-				cut.d[d][0] = pos + ((d ^ dim) ? 0.085 : 0.042)*tile_sz[d]; // clip off the lower edge to preserve the brown frame
+				cut.d[d][0] = pos + ((bool(d) ^ dim) ? 0.085 : 0.042)*tile_sz[d]; // clip off the lower edge to preserve the brown frame
 				cut.d[d][1] = pos + tile_sz[d];
 			}
 			assert(cut.intersects_xy(cut_clip_cube));

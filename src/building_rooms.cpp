@@ -970,7 +970,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				}
 				if (!added_obj && f == 0 && !added_kitchen_mask && rgen.rand_bool()) {
 					added_obj = no_plants = no_whiteboard = add_commercial_kitchen_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
-					added_kitchen_mask |= added_obj;
+					if (added_obj) {added_kitchen_mask |= 1;}
 					if (added_obj) {r->assign_to(RTYPE_KITCHEN, f);}
 				}
 				if (!added_obj && rgen.rand_float() < 0.2) { // maybe make teacher's lounge
