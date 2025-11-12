@@ -517,6 +517,7 @@ enum { // room object types
 	TYPE_CATWALK, TYPE_VANITY, TYPE_CHEM_TANK, TYPE_HVAC_UNIT, TYPE_WARN_LIGHT, TYPE_GAUGE, TYPE_PALLET, TYPE_SHELF_WALL, TYPE_VENDING, TYPE_MED_CAB,
 	TYPE_LOCKER, TYPE_TESTTUBE, TYPE_HARDHAT, TYPE_TOPHAT, TYPE_COMP_MOUSE, TYPE_PARK_GATE, TYPE_CONV_BELT, TYPE_JAIL_BARS, TYPE_STICK_NOTE, TYPE_GYM_WEIGHT,
 	TYPE_FOOD_TRAY, TYPE_BAR_SOAP, TYPE_COAT_RACK, TYPE_O_SHOWER, TYPE_CARD_DECK, TYPE_CIGARETTE, TYPE_BULLETS, TYPE_CEIL_TILE, TYPE_WALL_GAP, TYPE_MUSHROOM,
+	TYPE_SHELL_CASE,
 	/* these next ones are all 3D models - see logic in room_object_t::is_obj_model_type() */
 	TYPE_TOILET, TYPE_SINK, TYPE_TUB, TYPE_FRIDGE, TYPE_STOVE, TYPE_TV, TYPE_MONITOR, TYPE_COUCH, TYPE_OFF_CHAIR, TYPE_URINAL,
 	TYPE_LAMP, TYPE_WASHER, TYPE_DRYER, TYPE_KEY, TYPE_HANGER, TYPE_CLOTHES, TYPE_FESCAPE, TYPE_WALL_LAMP, TYPE_CUP, TYPE_TOASTER,
@@ -1386,6 +1387,7 @@ struct building_room_geom_t {
 	void add_card_deck(room_object_t const &c);
 	void add_bullet_box(room_object_t const &c);
 	void add_cigarette(room_object_t const &c);
+	void add_shell_casing(room_object_t const &c);
 	void add_mushroom (room_object_t const &c);
 	void add_sticky_note(room_object_t const &c);
 	void add_fire_ext_mount(room_object_t const &c);
@@ -2507,6 +2509,7 @@ struct building_t : public building_geom_t {
 	bool check_cube_on_or_near_stairs(cube_t const &c) const;
 	bool drop_room_object(room_object_t &obj, point const &dest, point const &player_pos, bool dim, bool dir);
 	bool maybe_use_last_pickup_room_object(point const &player_pos, bool no_time_check=0, bool random_dir=0);
+	void player_fire_handgun(point const &player_pos, float player_radius);
 	bool maybe_update_tape(point const &player_pos, bool end_of_tape);
 	void handle_vert_cylin_tape_collision(point &cur_pos, point const &prev_pos, float z1, float z2, float radius, bool is_player) const;
 	void draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, shader_t &amask_shader, occlusion_checker_noncity_t &oc, vector3d const &xlate,
@@ -3156,7 +3159,7 @@ private:
 	void register_button_event(room_object_t const &button);
 	void call_elevator_to_floor(elevator_t &elevator, unsigned floor_ix, bool is_inside_elevator, bool is_up);
 	void call_elevator_to_floor_and_light_nearest_button(elevator_t &elevator, unsigned floor_ix, bool is_inside_elevator, bool is_up);
-	void run_ball_update(vect_room_object_t::iterator ball_it, point const &player_pos, float player_z1, bool player_is_moving);
+	void run_dynamic_obj_update(vect_room_object_t::iterator obj_it, point const &player_pos, float player_z1, bool player_is_moving);
 	bool maybe_break_room_object(room_object_t &obj, point const &hit_pos, vector3d const &hit_dir, float obj_radius, unsigned obj_ix, float min_dp=0.9);
 	void update_pool_table(room_object_t &ball);
 	bool get_zval_for_pool_bottom(point const &pos, float &zval) const;

@@ -229,6 +229,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_CEIL_TILE ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 4.0,   1.0,   "ceiling tile"); // fallen acoustic ceiling tile
 	bldg_obj_types[TYPE_WALL_GAP  ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 2, 0.0,   0.0,   "wall gap");
 	bldg_obj_types[TYPE_MUSHROOM  ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 0.0,   0.0,   "mushroom");
+	bldg_obj_types[TYPE_SHELL_CASE] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 0.0,   0.01,  "shell casing");
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");
@@ -881,7 +882,8 @@ public:
 			type != TYPE_PENCIL && type != TYPE_HANGER_ROD && type != TYPE_TPROLL && type != TYPE_MARKER && type != TYPE_BUTTON && type != TYPE_PLATE && type != TYPE_TAPE &&
 			type != TYPE_FEXT_MOUNT && type != TYPE_FEXT_SIGN && type != TYPE_PIZZA_BOX && type != TYPE_PIZZA_TOP && type != TYPE_POOL_BALL && type != TYPE_DRINK_CAN &&
 			type != TYPE_KEY && type != TYPE_HANGER && type != TYPE_PADLOCK && type != TYPE_BANANA && type != TYPE_BAN_PEEL && type != TYPE_ELEC_WIRE && type != TYPE_ERASER &&
-			type != TYPE_TESTTUBE && type != TYPE_APPLE && type != TYPE_FOOD_BOX && type != TYPE_BAR_SOAP && type != TYPE_CARD_DECK && type != TYPE_TRASH && type != TYPE_BULLETS)
+			type != TYPE_TESTTUBE && type != TYPE_APPLE && type != TYPE_FOOD_BOX && type != TYPE_BAR_SOAP && type != TYPE_CARD_DECK && type != TYPE_TRASH &&
+			type != TYPE_BULLETS && type != TYPE_SHELL_CASE && type != TYPE_CIGARETTE)
 		{
 			rooms_stolen_from.insert(obj.room_id); // only if was_expanded?
 		}
@@ -1789,7 +1791,7 @@ float get_combined_stacked_obj_weights(room_object_t const &obj, vect_room_objec
 }
 
 cube_t get_true_obj_bcube(room_object_t const &obj) { // for player object pickup and move
-	if (obj.type == TYPE_PEN || obj.type == TYPE_PENCIL || obj.type == TYPE_POOL_CUE || obj.type == TYPE_TESTTUBE || obj.type == TYPE_CIGARETTE) {
+	if (obj.type == TYPE_PEN || obj.type == TYPE_PENCIL || obj.type == TYPE_POOL_CUE || obj.type == TYPE_TESTTUBE || obj.type == TYPE_CIGARETTE || obj.type == TYPE_SHELL_CASE) {
 		cube_t obj_bcube(obj);
 		obj_bcube.expand_in_dim(!obj.dim, obj.get_width()); // make narrow objects wider and easier for the player to pick up
 		return obj_bcube;
@@ -2649,45 +2651,8 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos, bool
 			static double next_fire_time(0.0);
 
 			if (tfticks > next_fire_time) {
-				if (obj.is_broken()) { // out of ammo
-					gen_sound_thread_safe_at_player(SOUND_CLICK, 1.0);
-				}
-				else {
-					gen_sound_thread_safe_at_player(SOUND_HANDGUN);
-					register_building_sound(player_pos, 1.0);
-					player_inventory.mark_last_item_used();
-					// extend a bit up and further out to the end of the barrel
-					point const gun_pos(get_player_held_object_pos(player_pos) + 0.4*CAMERA_RADIUS*cview_dir + 0.05*CAMERA_RADIUS*plus_z);
-					interior->room_geom->particle_manager.add_particle(gun_pos, 0.0002*plus_z, colorRGBA(1.0, 1.0, 1.0, 0.4), 0.16*CAMERA_RADIUS, PART_EFFECT_SMOKE);
-					interior->room_geom->particle_manager.add_particle(gun_pos, zero_vector,   colorRGBA(1.0, 0.6, 0.1, 0.5), 0.12*CAMERA_RADIUS, PART_EFFECT_FLASH);
-					point const ray_start(player_pos + player_radius*dir), ray_end(player_pos + bcube.get_max_extent()*dir);
-
-					for (unsigned i = 0; i < interior->people.size(); ++i) { // check for people in range
-						cube_t person_bcube(interior->people[i].get_bcube());
-						person_bcube.expand_by_xy(-0.1*(person_bcube.dx() + person_bcube.dy())); // shrink to 60% of radius
-						point p1(ray_start), p2(ray_end);
-						if (!do_line_clip(p1, p2, person_bcube.d)) continue; // no hit
-						if (check_for_wall_ceil_floor_int(ray_start, p2, 1, 1, 0)) continue; // wall/floor/ceil/etc. between gun and zombie; include transparent but not bars
-						maybe_zombie_retreat(i, ray_start, obj.type);
-					}
-					point hit_pos(ray_start);
-					apply_paint(ray_start, dir, WHITE, 0, TYPE_HANDGUN, &hit_pos);
-					auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
-
-					for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) { // break objects
-						point p1(ray_start), p2(hit_pos);
-						if (!do_line_clip(p1, p2, i->d)) continue; // actually clip the line
-
-						if (is_ball_type(i->type)) { // push the ball
-							assert(i->has_dstate());
-							interior->room_geom->get_dstate(*i).velocity += 0.004*vector3d(dir.x, dir.y, 0.0);
-							make_object_dynamic(*i, *interior);
-						}
-						unsigned const obj_ix(i - interior->room_geom->objs.begin());
-						maybe_break_room_object(*i, p2, -dir, 0.0, obj_ix, 0.2); // should get here for at most one object, in most cases; min_dp=0.2
-					} // for i
-					shoot_gun_at_animals(ray_start, hit_pos);
-				}
+				if (obj.is_broken()) {gen_sound_thread_safe_at_player(SOUND_CLICK, 1.0);} // out of ammo
+				else {player_fire_handgun(player_pos, player_radius);}
 				next_fire_time = tfticks + 0.4*TICKS_PER_SECOND; // 2.5x per second
 			}
 		}
@@ -2698,6 +2663,58 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos, bool
 	else {assert(0);}
 	last_use_time = tfticks;
 	return 1;
+}
+
+void building_t::player_fire_handgun(point const &player_pos, float player_radius) {
+	vector3d const dir(cview_dir);
+	gen_sound_thread_safe_at_player(SOUND_HANDGUN);
+	register_building_sound(player_pos, 1.0);
+	player_inventory.mark_last_item_used();
+	// extend a bit up and further out to the end of the barrel
+	point const gun_pos(get_player_held_object_pos(player_pos) + 0.4*CAMERA_RADIUS*cview_dir + 0.05*CAMERA_RADIUS*plus_z);
+	interior->room_geom->particle_manager.add_particle(gun_pos, 0.0002*plus_z, colorRGBA(1.0, 1.0, 1.0, 0.4), 0.16*CAMERA_RADIUS, PART_EFFECT_SMOKE);
+	interior->room_geom->particle_manager.add_particle(gun_pos, zero_vector,   colorRGBA(1.0, 0.6, 0.1, 0.5), 0.12*CAMERA_RADIUS, PART_EFFECT_FLASH);
+	vect_room_object_t &objs(interior->room_geom->objs);
+	// add shell casing
+	int const room_id(get_room_containing_camera(player_pos)); // not rotated?
+	float const light_amt = 1.0; // ???
+	float const one_inch(get_one_inch()), casing_len(0.707*one_inch), casing_radius(0.5*0.39*one_inch); // 9mm for reference
+	point casing_pos(gun_pos + 0.05*CAMERA_RADIUS*plus_z);
+	cube_t casing(casing_pos); // starts vertical
+	casing.expand_by_xy(casing_radius);
+	casing.z2() += casing_len;
+	objs.emplace_back(casing, TYPE_SHELL_CASE, max(room_id, 0), 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_DSTATE), light_amt, SHAPE_CYLIN, BRASS_C);
+	objs.back().obj_id = (uint16_t)interior->room_geom->allocate_dynamic_state();
+	interior->update_dynamic_draw_data();
+	// check for people in range
+	point const ray_start(player_pos + player_radius*dir), ray_end(player_pos + bcube.get_max_extent()*dir);
+
+	for (unsigned i = 0; i < interior->people.size(); ++i) {
+		cube_t person_bcube(interior->people[i].get_bcube());
+		person_bcube.expand_by_xy(-0.1*(person_bcube.dx() + person_bcube.dy())); // shrink to 60% of radius
+		point p1(ray_start), p2(ray_end);
+		if (!do_line_clip(p1, p2, person_bcube.d)) continue; // no hit
+		if (check_for_wall_ceil_floor_int(ray_start, p2, 1, 1, 0)) continue; // wall/floor/ceil/etc. between gun and zombie; include transparent but not bars
+		maybe_zombie_retreat(i, ray_start, TYPE_HANDGUN);
+	}
+	point hit_pos(ray_start);
+	apply_paint(ray_start, dir, WHITE, 0, TYPE_HANDGUN, &hit_pos);
+	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
+
+	// break objects
+	for (auto i = objs.begin(); i != objs_end; ++i) {
+		point p1(ray_start), p2(hit_pos);
+		if (!do_line_clip(p1, p2, i->d)) continue; // actually clip the line
+
+		if (is_ball_type(i->type)) { // push the ball
+			assert(i->has_dstate());
+			interior->room_geom->get_dstate(*i).velocity += 0.004*vector3d(dir.x, dir.y, 0.0);
+			make_object_dynamic(*i, *interior);
+		}
+		unsigned const obj_ix(i - objs.begin());
+		maybe_break_room_object(*i, p2, -dir, 0.0, obj_ix, 0.2); // should get here for at most one object, in most cases; min_dp=0.2
+	} // for i
+	shoot_gun_at_animals(ray_start, hit_pos);
 }
 
 // adds two back-to-back quads for two sided lighting

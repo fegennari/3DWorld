@@ -2189,7 +2189,7 @@ public:
 				type == TYPE_ERASER || type == TYPE_SHOE || type == TYPE_CATWALK || type == TYPE_GAUGE || type == TYPE_RAMP || type == TYPE_TESTTUBE ||
 				type == TYPE_HARDHAT || type == TYPE_TOPHAT || type == TYPE_COMP_MOUSE || type == TYPE_JAIL_BARS || type == TYPE_HANDGUN || type == TYPE_STICK_NOTE ||
 				type == TYPE_GYM_WEIGHT || type == TYPE_BAR_SOAP || type == TYPE_COAT_RACK || type == TYPE_VIS_PHONE || type == TYPE_JUMPSUIT || type == TYPE_CARD_DECK ||
-				type == TYPE_CIGARETTE || type == TYPE_BULLETS || type == TYPE_CEIL_TILE || type == TYPE_MUSHROOM) continue;
+				type == TYPE_CIGARETTE || type == TYPE_BULLETS || type == TYPE_CEIL_TILE || type == TYPE_MUSHROOM || type == TYPE_SHELL_CASE) continue;
 			if (z1 > obj.z2() || z2 < obj.z1()) continue; // zval test
 
 			if (obj.type == TYPE_PARK_SPACE) {

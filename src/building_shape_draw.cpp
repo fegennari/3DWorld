@@ -295,7 +295,8 @@ void rgeom_mat_t::add_sphere_to_verts(point const &center, vector3d const &size,
 		for (auto i = verts.begin(); i != verts.end(); ++i) {
 			point pt(i->v*size);
 			vector3d normal(i->n);
-			matrix->apply_to_vector3d(pt); matrix->apply_to_vector3d(normal);
+			matrix->apply_to_vector3d(pt);
+			matrix->apply_to_vector3d(normal);
 			itri_verts.emplace_back((pt + center), normal, (tr.x1 + i->t[0]*tscale[0] + ts_add), (tr.y1 + i->t[1]*tscale[1] + tt_add), cw);
 		}
 	}

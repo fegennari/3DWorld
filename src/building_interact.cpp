@@ -1271,26 +1271,32 @@ void apply_building_gravity(float &vz, float dt_ticks) {
 	max_eq(vz, -TERM_VELOCITY);
 }
 
-void building_t::run_ball_update(vect_room_object_t::iterator ball_it, point const &player_pos, float player_z1, bool player_is_moving) {
-	room_object_t &ball(*ball_it);
-	assert(ball.has_dstate());
-	room_obj_dstate_t &dstate(interior->room_geom->get_dstate(ball));
+void building_t::run_dynamic_obj_update(vect_room_object_t::iterator obj_it, point const &player_pos, float player_z1, bool player_is_moving) {
+	room_object_t &obj(*obj_it);
+	assert(obj.has_dstate());
+	room_obj_dstate_t &dstate(interior->room_geom->get_dstate(obj));
 	vector3d &velocity(dstate.velocity);
 
-	if (ball.type == TYPE_POOL_BALL && ball.is_dynamic()) {
-		assert(ball.state_flags < interior->room_geom->objs.size());
-		room_object_t const &pool_table(interior->room_geom->objs[ball.state_flags]);
+	if (obj.type == TYPE_POOL_BALL && obj.is_dynamic()) {
+		assert(obj.state_flags < interior->room_geom->objs.size());
+		room_object_t const &pool_table(interior->room_geom->objs[obj.state_flags]);
 
-		if (pool_table.type == TYPE_POOL_TABLE && pool_table.contains_pt(cube_bot_center(ball))) { // ball on pool table
+		if (pool_table.type == TYPE_POOL_TABLE && pool_table.contains_pt(cube_bot_center(obj))) { // ball on pool table
 			if (velocity.x == 0.0 && velocity.y == 0.0) {velocity.z = 0.0;} // if not moving in XY, set v.z to zero (for balls dropped onto the table)
 
 			if (velocity.z == 0.0) { // check if moving on the pool table in the XY plane
-				update_pool_table(ball);
+				update_pool_table(obj);
 				return;
 			}
 		}
 	}
-	assert(is_ball_type(ball.type)); // currently, only balls have has_dstate()
+	if (obj.type == TYPE_SHELL_CASE) {
+		float const radius(obj.get_bsphere_radius());
+		// TODO
+		return;
+	}
+	room_object_t &ball(obj);
+	assert(is_ball_type(ball.type)); // some type of ball
 	float const player_radius(get_scaled_player_radius()), player_z2(player_pos.z), radius(ball.get_radius());
 	float const fc_thick(get_fc_thickness()), fticks_stable(min(fticks, 1.0f)); // cap to 1/40s to improve stability
 	ball_type_t const &bt(ball.get_ball_type());
@@ -1371,7 +1377,7 @@ void building_t::run_ball_update(vect_room_object_t::iterator ball_it, point con
 
 	for (unsigned n = 0; n < num_steps && !had_coll; ++n) {
 		new_center = center + ((n+1)*step_len)*delta;
-		had_coll   = interior->check_sphere_coll(*this, new_center, center, radius, ball_it, cnorm, hardness, obj_ix, 1); // is_ball=1
+		had_coll   = interior->check_sphere_coll(*this, new_center, center, radius, obj_it, cnorm, hardness, obj_ix, 1); // is_ball=1
 	}
 	if (had_coll) {
 		hardness *= bt.elastic;
@@ -1387,7 +1393,7 @@ void building_t::run_ball_update(vect_room_object_t::iterator ball_it, point con
 				if (maybe_break_room_object(obj, new_center, cnorm, radius, obj_ix)) {
 					if (obj.is_mirror()) {register_achievement("7 Years of Bad Luck");}
 					else if (obj.is_tv_or_monitor() && obj.is_powered()/*!(obj.obj_id & 1)*/) { // only if turned on?
-						unsigned const obj_id(ball_it - interior->room_geom->objs.begin());
+						unsigned const obj_id(obj_it - interior->room_geom->objs.begin());
 						interior->room_geom->particle_manager.add_for_obj(ball, 0.06*radius, obj.get_dir(), 1.0*KICK_VELOCITY, 50, 60, PART_EFFECT_SPARK, obj_id);
 					}
 					handled = 1;
@@ -1749,8 +1755,8 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 			//else if (c->type == TYPE_FURNACE) {} // or TYPE_HVAC_UNIT?
 			//else if (c->type == TYPE_FRIDGE ) {}
 		}
-		if (!c->has_dstate()) continue; // Note: no test of player_coll flag
-		run_ball_update(c, camera_rot, player_z1, player_is_moving);
+		// Note: no test of player_coll flag
+		if (c->has_dstate()) {run_dynamic_obj_update(c, camera_rot, player_z1, player_is_moving);}
 	} // for c
 	if (player_in_this_building) { // interactions only run for player building
 		if (player_in_closet) { // check for collisions with expanded objects in closets

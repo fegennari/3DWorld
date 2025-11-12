@@ -2830,6 +2830,23 @@ void building_room_geom_t::add_cigarette(room_object_t const &c) {
 	mat.add_ortho_cylin_to_verts(body,   apply_light_color(c, DK_BROWN), c.dim,  c.dir, !c.dir, 0, 0, 1.0, 1.0, 0.0, 0.0, 1, ndiv); // end only; skip_sides=1, untextured
 }
 
+void transform_verts(rgeom_storage_t::vect_vertex_t &verts, unsigned verts_start, xform_matrix const &matrix) {
+	for (auto i = verts.begin()+verts_start; i != verts.end(); ++i) {
+		vector3d normal(i->get_norm());
+		matrix.apply_to_vector3d(i->v);
+		matrix.apply_to_vector3d(normal);
+		i->set_norm(normal);
+	}
+}
+void building_room_geom_t::add_shell_casing(room_object_t const &c) {
+	bool const dynamic(c.is_dynamic()); // either small or dynamic
+	float const radius(c.get_radius());
+	rgeom_mat_t &mat(get_metal_material(0, dynamic, !dynamic, 0, 1, c.color)); // unshadowed, small, no_reflect=1
+	unsigned const verts_start(mat.itri_verts.size());
+	mat.add_cylin_to_verts(cube_bot_center(c), cube_top_center(c), radius, radius, apply_light_color(c), 1, 0, 1); // two sided (hollow) + draw bottom
+	if (c.has_dstate()) {transform_verts(mat.itri_verts, verts_start, get_dstate(c).rot_matrix);}
+}
+
 void building_room_geom_t::add_mushroom(room_object_t const &c) {
 	float const radius(c.get_radius());
 	rand_gen_t rgen;

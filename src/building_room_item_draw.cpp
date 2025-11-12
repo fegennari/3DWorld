@@ -838,6 +838,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_CARD_DECK:  add_card_deck  (c); break;
 		case TYPE_BULLETS:    add_bullet_box (c); break;
 		case TYPE_CIGARETTE:  add_cigarette  (c); break;
+		case TYPE_SHELL_CASE: add_shell_casing(c); break;
 		case TYPE_CEIL_TILE:  add_ceil_tile  (c); break;
 		case TYPE_WALL_GAP:   add_wall_gap   (c, wall_tex); break; // wall_tscale should always be available here
 		case TYPE_MUSHROOM:   add_mushroom   (c); break;
@@ -1012,8 +1013,9 @@ void building_room_geom_t::create_dynamic_vbos(building_t const &building, point
 			}
 			if (!i->is_dynamic()) continue; // only dynamic objects
 			switch (i->type) {
-			case TYPE_LG_BALL  : add_lg_ball  (*i); break;
-			case TYPE_POOL_BALL: add_pool_ball(*i); break;
+			case TYPE_LG_BALL   : add_lg_ball     (*i); break;
+			case TYPE_POOL_BALL : add_pool_ball   (*i); break;
+			case TYPE_SHELL_CASE: add_shell_casing(*i); break;
 			default: assert(0); // not a supported dynamic object type
 			}
 		} // for i
