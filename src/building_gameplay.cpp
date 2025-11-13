@@ -2678,14 +2678,15 @@ void building_t::player_fire_handgun(point const &player_pos, float player_radiu
 	// add shell casing
 	int const room_id(get_room_containing_camera(player_pos)); // not rotated?
 	float const light_amt = 1.0; // ???
-	float const one_inch(get_one_inch()), casing_len(0.707*one_inch), casing_radius(0.5*0.39*one_inch); // 9mm for reference
+	float const sz_scale(2.0*get_one_inch()), casing_len(0.707*sz_scale), casing_radius(0.5*0.39*sz_scale); // 9mm for reference, scaled 2x to make it easier to see
 	point casing_pos(gun_pos + 0.05*CAMERA_RADIUS*plus_z);
 	cube_t casing(casing_pos); // starts vertical
 	casing.expand_by_xy(casing_radius);
 	casing.z2() += casing_len;
-	objs.emplace_back(casing, TYPE_SHELL_CASE, max(room_id, 0), 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_DSTATE), light_amt, SHAPE_CYLIN, BRASS_C);
-	objs.back().obj_id = (uint16_t)interior->room_geom->allocate_dynamic_state();
-	interior->update_dynamic_draw_data();
+	room_object_t const casing_obj(casing, TYPE_SHELL_CASE, max(room_id, 0), 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_DYNAMIC | RO_FLAG_DSTATE), light_amt, SHAPE_CYLIN, BRASS_C);
+	vector3d const right_dir(cross_product(cview_dir, plus_z).get_norm());
+	vector3d const eject_dir((plus_z + 0.5*right_dir - 0.25*cview_dir).get_norm()); // up, to the right, and slightly back
+	interior->room_geom->add_room_object(casing_obj, *this, 1, 0.5*THROW_VELOCITY*eject_dir);
 	// check for people in range
 	point const ray_start(player_pos + player_radius*dir), ray_end(player_pos + bcube.get_max_extent()*dir);
 

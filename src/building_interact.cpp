@@ -1270,14 +1270,25 @@ void apply_building_gravity(float &vz, float dt_ticks) {
 	vz -= OBJ_GRAVITY*dt_ticks; // apply gravitational acceleration
 	max_eq(vz, -TERM_VELOCITY);
 }
+bool is_on_floor(point const &pt, building_interior_t const &interior) {
+	for (cube_t const &f : interior.floors) {
+		if (f.contains_pt(pt)) return 1;
+	}
+	for (cube_t const &f : interior.room_geom->glass_floors) {
+		if (f.contains_pt(pt)) return 1;
+	}
+	return 0;
+}
 
 void building_t::run_dynamic_obj_update(vect_room_object_t::iterator obj_it, point const &player_pos, float player_z1, bool player_is_moving) {
 	room_object_t &obj(*obj_it);
+	bool const was_dynamic(obj.is_dynamic());
+	if (obj.type == TYPE_SHELL_CASE && !was_dynamic) return;
 	assert(obj.has_dstate());
 	room_obj_dstate_t &dstate(interior->room_geom->get_dstate(obj));
 	vector3d &velocity(dstate.velocity);
 
-	if (obj.type == TYPE_POOL_BALL && obj.is_dynamic()) {
+	if (obj.type == TYPE_POOL_BALL && was_dynamic) {
 		assert(obj.state_flags < interior->room_geom->objs.size());
 		room_object_t const &pool_table(interior->room_geom->objs[obj.state_flags]);
 
@@ -1290,20 +1301,55 @@ void building_t::run_dynamic_obj_update(vect_room_object_t::iterator obj_it, poi
 			}
 		}
 	}
+	float const fc_thick(get_fc_thickness()), radius(obj.get_radius()), fticks_stable(min(fticks, 1.0f)); // cap to 1/40s to improve stability
+	point const center(obj.get_cube_center());
+	point new_center(center);
+	vector3d cnorm;
+	int obj_ix(-1);
+	float hardness(0.0);
+	bool on_floor(0), had_coll(0);
+
 	if (obj.type == TYPE_SHELL_CASE) {
-		float const radius(obj.get_bsphere_radius());
-		// TODO
+		apply_building_gravity(velocity.z, fticks_stable);
+		vector3d const delta(velocity*fticks_stable);
+		unsigned const num_steps2(max(1U, unsigned(delta.mag()/radius))); // don't move more than radius
+		float const step_len(1.0/num_steps2);
+		new_center += delta;
+
+		for (unsigned n = 0; n < num_steps2 && !had_coll; ++n) {
+			new_center = center + ((n+1)*step_len)*delta;
+			had_coll   = interior->check_sphere_coll(*this, new_center, center, radius, obj_it, cnorm, hardness, obj_ix, 0); // is_ball=0
+		}
+		point const prev_new_center(new_center);
+
+		if (move_sphere_to_valid_part(new_center, center, radius) && new_center != prev_new_center) { // collision with exterior wall
+			cnorm    = (new_center - prev_new_center).get_norm();
+			hardness = 1.0;
+			had_coll = 1;
+		}
+		if (had_coll && apply_object_bounce(velocity, cnorm, 0.75*hardness, on_floor) && hardness > 0.5) { // 75% bouncy
+			gen_sound_thread_safe(SOUND_SHELLC, local_to_camera_space(new_center), hardness);
+		}
+		obj.translate(new_center - center);
+		int const new_room_id(get_room_containing_pt(new_center));
+		if (new_room_id >= 0) {obj.room_id = new_room_id;} // is this needed?
+
+		if (velocity.mag_sq() < MIN_VELOCITY_SQ) { // stopped
+			velocity.z = 0.0; // stopped
+			obj_dynamic_to_static(obj, *interior);
+		}
+		else { // moving
+			interior->update_dynamic_draw_data();
+			apply_roll_to_matrix(dstate.rot_matrix, new_center, center, plus_z, radius, 0.01, 0.2); // on_floor=0
+		}
 		return;
 	}
 	room_object_t &ball(obj);
 	assert(is_ball_type(ball.type)); // some type of ball
-	float const player_radius(get_scaled_player_radius()), player_z2(player_pos.z), radius(ball.get_radius());
-	float const fc_thick(get_fc_thickness()), fticks_stable(min(fticks, 1.0f)); // cap to 1/40s to improve stability
+	float const player_radius(get_scaled_player_radius()), player_z2(player_pos.z);
 	ball_type_t const &bt(ball.get_ball_type());
-	point const center(ball.get_cube_center());
-	bool const was_dynamic(ball.is_dynamic()), is_moving_fast(velocity.mag() > 0.5*KICK_VELOCITY), can_kick(bt.can_kick && !ball.no_coll());
-	bool on_floor(0), kicked(0);
-	point new_center(center);
+	bool const is_moving_fast(velocity.mag() > 0.5*KICK_VELOCITY), can_kick(bt.can_kick && !ball.no_coll());
+	bool kicked(0);
 
 	// check the player, but not if they're looking directly at the ball; assume in that case they intend to pick it up instead
 	if (can_kick && camera_surf_collide && player_is_moving && !player_wait_respawn && dot_product_ptv(cview_dir, new_center, player_pos) < 0.9*p2p_dist(new_center, player_pos)) {
@@ -1342,14 +1388,8 @@ void building_t::run_dynamic_obj_update(vect_room_object_t::iterator obj_it, poi
 
 		for (unsigned step = 0; step < num_steps; ++step) {
 			point const test_pt(new_center.x, new_center.y, (new_center.z - radius - 0.1*fc_thick));
-			on_floor = 0; // reset for this iteration
+			on_floor = is_on_floor(test_pt, *interior);
 
-			for (cube_t const &f : interior->floors) {
-				if (f.contains_pt(test_pt)) {on_floor = 1; break;}
-			}
-			for (cube_t const &f : interior->room_geom->glass_floors) {
-				if (f.contains_pt(test_pt)) {on_floor = 1; break;}
-			}
 			if (on_floor) { // moving on the floor, apply surface friction
 				velocity *= (1.0f - min(1.0f, bt.friction*OBJ_DECELERATE*step_sz));
 				if (velocity.mag_sq() < MIN_VELOCITY_SQ) {velocity = zero_vector;} // zero velocity if stopped
@@ -1368,14 +1408,10 @@ void building_t::run_dynamic_obj_update(vect_room_object_t::iterator obj_it, poi
 	if (new_center == center) return; // not moving, done
 	// check for collisions and move to new location
 	vector3d const delta(new_center - center);
-	unsigned const num_steps(max(1U, unsigned(delta.mag()/radius))); // don't move more than ball radius
-	float const step_len(1.0/num_steps);
-	vector3d cnorm;
-	int obj_ix(-1);
-	float hardness(0.0);
-	bool had_coll(0);
+	unsigned const num_steps2(max(1U, unsigned(delta.mag()/radius))); // don't move more than radius
+	float const step_len(1.0/num_steps2);
 
-	for (unsigned n = 0; n < num_steps && !had_coll; ++n) {
+	for (unsigned n = 0; n < num_steps2 && !had_coll; ++n) {
 		new_center = center + ((n+1)*step_len)*delta;
 		had_coll   = interior->check_sphere_coll(*this, new_center, center, radius, obj_it, cnorm, hardness, obj_ix, 1); // is_ball=1
 	}
