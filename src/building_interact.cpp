@@ -1327,14 +1327,14 @@ void building_t::run_dynamic_obj_update(vect_room_object_t::iterator obj_it, poi
 			hardness = 1.0;
 			had_coll = 1;
 		}
-		if (had_coll && apply_object_bounce(velocity, cnorm, 0.75*hardness, on_floor) && hardness > 0.5) { // 75% bouncy
+		if (had_coll && apply_object_bounce(velocity, cnorm, 0.75*hardness, on_floor) && hardness > 0.7) { // 75% bouncy
 			gen_sound_thread_safe(SOUND_SHELLC, local_to_camera_space(new_center), hardness);
 		}
 		obj.translate(new_center - center);
 		int const new_room_id(get_room_containing_pt(new_center));
 		if (new_room_id >= 0) {obj.room_id = new_room_id;} // is this needed?
 
-		if (velocity.mag_sq() < MIN_VELOCITY_SQ) { // stopped
+		if (velocity.mag_sq() < 8.0*MIN_VELOCITY_SQ) { // stopped
 			velocity.z = 0.0; // stopped
 			obj_dynamic_to_static(obj, *interior);
 		}

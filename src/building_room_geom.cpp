@@ -2840,19 +2840,20 @@ void transform_verts(rgeom_storage_t::vect_vertex_t &verts, unsigned verts_start
 }
 void building_room_geom_t::add_shell_casing(room_object_t const &c) {
 	bool const dynamic(c.is_dynamic());
-	float const radius(c.get_radius()), hheight(0.5*c.dz());
+	float const radius(c.get_radius()), hlen(0.5*c.dx()); // length in X
 	point const center(c.get_cube_center());
 	rgeom_mat_t &mat(get_metal_material(0, dynamic, !dynamic, 0, 1, c.color)); // unshadowed, either small or dynamic, no_reflect=1
 	unsigned const verts_start(mat.itri_verts.size());
-	mat.add_cylin_to_verts(point(0.0, 0.0, -hheight), point(0.0, 0.0, hheight), radius, radius, apply_light_color(c), 1, 0, 1); // two sided (hollow) + draw bottom
+	mat.add_cylin_to_verts(point(-hlen, 0.0, 0.0), point(hlen, 0.0, 0.0), radius, radius, apply_light_color(c), 1, 0, 1); // two sided (hollow) + draw bottom
 	
 	if (c.has_dstate()) {
 		room_obj_dstate_t const &dstate(get_dstate(c));
 
 		if (dstate.velocity.z == 0.0) { // stopped; apply XY velocity rotate
-			vector3d const dir(dstate.velocity.get_norm());
-			rotate_verts(mat.itri_verts, plus_x, PI_TWO, zero_vector, verts_start); // rotate 90 degrees from vertical into the XY plane
-			rotate_verts(mat.itri_verts, plus_z, atan2(dir.y, dir.x), zero_vector, verts_start);
+			vector3d vrot(plus_x);
+			dstate.rot_matrix.apply_to_vector3d(vrot);
+			vrot = vector3d(vrot.x, vrot.y, 0.0).get_norm(); // project into XY plane
+			rotate_verts(mat.itri_verts, plus_z, -atan2(vrot.y, vrot.x), zero_vector, verts_start);
 		}
 		else {transform_verts(mat.itri_verts, verts_start, dstate.rot_matrix);} // spinning in the air
 	}

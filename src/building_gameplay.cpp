@@ -2681,8 +2681,8 @@ void building_t::player_fire_handgun(point const &player_pos, float player_radiu
 	float const sz_scale(2.0*get_one_inch()), casing_len(0.707*sz_scale), casing_radius(0.5*0.39*sz_scale); // 9mm for reference, scaled 2x to make it easier to see
 	point casing_pos(gun_pos + 0.05*CAMERA_RADIUS*plus_z);
 	cube_t casing(casing_pos); // starts vertical
-	casing.expand_by_xy(casing_radius);
-	casing.z2() += casing_len;
+	casing.expand_by(casing_radius);
+	casing.expand_in_dim(0, (0.5*casing_len - casing_radius)); // longer in X
 	room_object_t const casing_obj(casing, TYPE_SHELL_CASE, max(room_id, 0), 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_DYNAMIC | RO_FLAG_DSTATE), light_amt, SHAPE_CYLIN, BRASS_C);
 	vector3d const right_dir(cross_product(cview_dir, plus_z).get_norm());
 	vector3d const eject_dir((plus_z + 0.5*right_dir - 0.25*cview_dir).get_norm()); // up, to the right, and slightly back
