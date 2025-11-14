@@ -2809,8 +2809,15 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 	//cube_t hood;
 	unsigned const skip_dir(2); // TODO
 	add_ceiling_ducts(room, ceil_zval, room_id, dim, skip_dir, light_amt, 0, 1, 1, rgen, 0.5); // cylin_ducts=0, skip_ends=1, skip_top=1, sz_scale=0.5
-	// TODO: center island, big grill, multiple sinks, stacks of dishes, metal racks, walk in freezer, fridge, ovens, hood, vent; all shiny metal
-	add_trolley(rgen, place_area, cube_t(), zval, room_id, light_amt, objs_start); // seems like this can work in a kitchen
+	// TODO: center island, big grill, multiple sinks, stacks of dishes, metal racks, walk in freezer, ovens, hood, vent; all shiny metal
+	unsigned num_fridges((rgen.rand() % 3) + 2); // 2-4
+
+	for (unsigned i = 0; i < num_fridges; ++i) {
+		place_model_along_wall(OBJ_MODEL_FRIDGE, TYPE_FRIDGE, room, 0.75, rgen, zval, room_id, light_amt, place_area, objs_start, 1.2, 4, 0, WHITE, 1);
+	}
+	unsigned num_trolleys((rgen.rand() % 2) + 2); // 2-3
+	for (unsigned i = 0; i < num_trolleys; ++i) {add_trolley(rgen, place_area, cube_t(), zval, room_id, light_amt, objs_start);} // seems like this can work in a kitchen
+	add_door_sign("Kitchen", room, zval, room_id);
 	return 1;
 }
 
