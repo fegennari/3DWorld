@@ -344,7 +344,7 @@ void building_t::toggle_circuit_breaker(bool is_on, unsigned zone_id, unsigned n
 	interior->room_geom->invalidate_lights_geom();
 	interior->room_geom->invalidate_static_geom();
 	interior->room_geom->invalidate_small_geom ();
-	interior->room_geom->update_text_draw_data ();
+	interior->room_geom->invalidate_text_geom  ();
 }
 
 // doors and other interactive objects

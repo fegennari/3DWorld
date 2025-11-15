@@ -2030,6 +2030,7 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 	// since we're mixing doors and drawers for kitchen cabinets, check the height to width ration to determine if it's a drawer or a door
 	bool const is_door(has_doors && drawer.dz() > 0.5*drawer.get_sz_dim(!obj.dim));
 	if (is_door && pickup_item) return 0; // nothing to do for door when picking up items
+	bool was_open(0);
 	
 	if (pickup_item && !is_door) { // pick up item in drawer rather than opening drawer; doesn't apply to doors because items aren't in the doors themselves
 		if (!(obj.drawer_flags & (1U << closest_drawer_id))) return 0; // drawer is not open
@@ -2055,8 +2056,9 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 		if (is_door) {c_test.d[obj.dim][obj.dir] += (obj.dir ? 1.0 : -1.0)*drawer.get_sz_dim(!obj.dim);} // expand outward by the width of the door
 		else         {c_test.d[obj.dim][obj.dir] += drawer_extend;} // drawer
 		unsigned const flag_bit(1U << (unsigned)closest_drawer_id);
+		was_open = (obj.drawer_flags & flag_bit);
 
-		if (!(obj.drawer_flags & flag_bit)) { // closed - check if door/drawer can open
+		if (!was_open) { // closed - check if door/drawer can open
 			if (cube_intersects_moved_obj(c_test, closest_obj_id)) return 0; // blocked, can't open; ignore this object
 
 			if (obj.was_moved()) { // object was moved, check if the door/drawer is now blocked
@@ -2106,6 +2108,15 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 		}
 		else { // drawer
 			invalidate_small_geom(); // only need to update small objects for drawers
+		}
+		if (!is_door && was_open) { // need to remove text of books in drawers when they are closed
+			float stack_z1(0.0);
+
+			for (unsigned item_ix = 0; item_ix < 16; ++item_ix) { // take the *last* item in the drawer first, which will be the top item if stacked
+				room_object_t const cand_item(get_item_in_drawer(drawers_part, drawer, closest_drawer_id, item_ix, stack_z1));
+				if (cand_item.type == TYPE_NONE) break; // no more items
+				if (cand_item.has_text()) {invalidate_text_geom();}
+			}
 		}
 	}
 	return 1;

@@ -530,7 +530,7 @@ void building_room_geom_t::invalidate_draw_data_for_obj(room_object_t const &obj
 	if (obj.type == TYPE_CEIL_FAN) {invalidate_lights_geom();} // invalidate the light on the fan as well
 	if (obj.type == TYPE_CLOCK)    {update_dynamic_draw_data();}
 	if (obj.type == TYPE_CUP && obj.is_nonempty()) {invalidate_small_geom();} // cup with coffee
-	if (obj.type == TYPE_BOOK || obj.type == TYPE_BCASE || obj.type == TYPE_SIGN || obj.type == TYPE_BUTTON || obj.type == TYPE_SHELFRACK) {update_text_draw_data();}
+	if (obj.has_text())            {invalidate_text_geom();}
 }
 // Note: called when adding, removing, or moving objects
 void building_room_geom_t::update_draw_state_for_room_object(room_object_t const &obj, building_t &building, bool was_taken) {

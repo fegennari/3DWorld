@@ -806,6 +806,7 @@ struct room_object_t : public oriented_cube_t { // size=68
 	bool is_pet_container() const {return (type == TYPE_FISHTANK || type == TYPE_PET_CAGE);}
 	bool is_metal_model() const {return (type == TYPE_SILVER || type == TYPE_KEY || type == TYPE_HANDGUN);}
 	bool is_horizontal_cylin   () const {return (shape == SHAPE_CYLIN && (type == TYPE_DUCT || type == TYPE_PIPE || type == TYPE_VALVE || type == TYPE_METAL_BAR));}
+	bool has_text              () const {return (type == TYPE_BOOK || type == TYPE_BCASE || type == TYPE_SIGN || type == TYPE_BUTTON || type == TYPE_SHELFRACK);}
 	unsigned get_bottle_type   () const {return ((obj_id&63) % NUM_BOTTLE_TYPES   );} // first 6 bits are bottle type
 	unsigned get_drink_can_type() const {return ((obj_id&63) % NUM_DRINK_CAN_TYPES);} // first 6 bits are drink can type
 	void set_max_drink_can_type(unsigned max_type) {
@@ -1189,7 +1190,7 @@ struct building_room_geom_t {
 	void invalidate_static_geom  () {invalidate_mats_mask |= (1 << MAT_TYPE_STATIC );}
 	void invalidate_model_geom   () {invalidate_static_geom();}
 	void invalidate_small_geom   () {invalidate_mats_mask |= (1 << MAT_TYPE_SMALL  );}
-	void update_text_draw_data   () {invalidate_mats_mask |= (1 << MAT_TYPE_TEXT   );}
+	void invalidate_text_geom    () {invalidate_mats_mask |= (1 << MAT_TYPE_TEXT   );}
 	void invalidate_lights_geom  () {invalidate_mats_mask |= (1 << MAT_TYPE_LIGHTS );} // cache state and apply change later in case this is called from a different thread
 	void invalidate_detail_geom  () {invalidate_mats_mask |= (1 << MAT_TYPE_DETAIL );}
 	void update_dynamic_draw_data() {invalidate_mats_mask |= (1 << MAT_TYPE_DYNAMIC);}
