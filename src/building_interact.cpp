@@ -1327,7 +1327,7 @@ void building_t::run_dynamic_obj_update(vect_room_object_t::iterator obj_it, poi
 			hardness = 1.0;
 			had_coll = 1;
 		}
-		if (had_coll && apply_object_bounce(velocity, cnorm, 0.75*hardness, on_floor) && hardness > 0.7) { // 75% bouncy
+		if (had_coll && apply_object_bounce(velocity, cnorm, 0.75*hardness, on_floor) && hardness > 0.9) { // 75% bouncy
 			gen_sound_thread_safe(SOUND_SHELLC, local_to_camera_space(new_center), hardness);
 		}
 		obj.translate(new_center - center);
