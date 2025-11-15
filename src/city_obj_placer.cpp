@@ -588,7 +588,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 	float const car_length(city_params.get_nom_car_size().x); // used as a size reference for other objects
 	float const min_obj_spacing(get_min_obj_spacing()), sidewalk_width(get_sidewalk_width());
 	unsigned const benches_start(benches.size()), trashcans_start(trashcans.size()), substations_start(sstations.size());
-	unsigned const fountains_start(fountains.size()), statues_start(statues.size()), ppoles_start(ppoles.size()), paths_start(ppaths.size());
+	unsigned const fountains_start(fountains.size()), ppoles_start(ppoles.size()), paths_start(ppaths.size());
 
 	// place paths in parks
 	if (is_park) {

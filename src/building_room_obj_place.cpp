@@ -2805,7 +2805,6 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 	bool const dim(room_sz.x < room_sz.y); // long dim
 	float const ceil_zval(zval + floor_spacing - get_fc_thickness());
 	cube_t const place_area(get_walkable_room_bounds(room));
-	vect_room_object_t &objs(interior->room_geom->objs);
 	//cube_t hood;
 	unsigned const skip_dir(2); // TODO
 	add_ceiling_ducts(room, ceil_zval, room_id, dim, skip_dir, light_amt, 0, 1, 1, rgen, 0.5); // cylin_ducts=0, skip_ends=1, skip_top=1, sz_scale=0.5

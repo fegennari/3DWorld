@@ -2638,7 +2638,6 @@ void building_room_geom_t::add_wall_gap(room_object_t const &c, tid_nm_pair_t co
 	// draw partial plaster/stucco parts on the studs at each side
 	float const front_face(c.d[dim][!dir]), int_face(stud.d[dim][!dir]), max_shift(1.5*depth + 0.05*width);
 	vector3d const front_dir(vector_from_dim_dir(dim, !dir));
-	int const nm_tid(get_normal_map_for_bldg_tid(STUCCO_TEX));
 	get_untextured_material(0, 0, 1); // make sure edge material is loaded
 	rgeom_mat_t &wall_mat(get_material(wall_tex, 1, 0, 1)); // shadowed, small
 	rgeom_mat_t &edge_mat(get_untextured_material(0, 0, 1)); // unshadowed, small
