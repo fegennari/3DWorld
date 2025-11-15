@@ -986,7 +986,7 @@ void building_room_geom_t::add_tape(room_object_t const &c) { // is_small=1
 		// draw a cardboard colored circle under the hole before drawing the roll to sort of cover this up (though it's not textured);
 		cube_t bot_fill(c);
 		bot_fill.expand_by_xy(-0.1*c.dx());
-		bot_fill.z2() -= 0.95*c.dz();
+		bot_fill.z2() -= 0.8*c.dz();
 		mat.add_vcylin_to_verts(bot_fill, apply_light_color(c, texture_color(get_box_tid())), 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // top side only
 	}
 	add_vert_roll_to_material(c, mat); // shadowed, small
