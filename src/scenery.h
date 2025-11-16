@@ -10,13 +10,12 @@
 #include "voxels.h"
 
 
-enum {PLANT_MJ = 0, PLANT1, PLANT2, PLANT3, PLANT4, COFFEE, SEAWEED, NUM_PLANT_TYPES};
-enum {LEAFY_PLANT_UW = 0, LEAFY_PLANT_DIRT, LEAFY_PLANT_GRASS, LEAFY_PLANT_ROCK, NUM_LEAFY_PLANT_TYPES};
+enum {PLANT_MJ=0, PLANT1, PLANT2, PLANT3, PLANT4, COFFEE, SEAWEED, NUM_PLANT_TYPES};
+enum {LEAFY_PLANT_UW=0, LEAFY_PLANT_DIRT, LEAFY_PLANT_GRASS, LEAFY_PLANT_ROCK, NUM_LEAFY_PLANT_TYPES};
 unsigned const NUM_LAND_PLANT_TYPES  = 6;
 unsigned const NUM_WATER_PLANT_TYPES = NUM_PLANT_TYPES - NUM_LAND_PLANT_TYPES;
 
 struct plant_type {
-
 	int tid;
 	float leaf_length, leaf_width_base, leaf_width_end;
 	colorRGBA stemc, leafc, berryc;
@@ -27,7 +26,6 @@ struct plant_type {
 
 
 struct surface_cache {
-
 	typedef pair<long, long> seed_pair;
 	typedef map<seed_pair, p_upsurface> surface_map;
 	surface_map scache;
@@ -37,16 +35,12 @@ struct surface_cache {
 	void clear_unref();
 };
 
-
 class surface_rock : public scenery_obj { // size = 1456+
-
-	int vbo_mgr_ix;
-	float scale;
+	int vbo_mgr_ix=-1;
+	float scale=0.0;
 	vector3d dir;
 	p_upsurface surface;
-
 public:
-	surface_rock() : vbo_mgr_ix(-1), scale(0.0), dir(zero_vector) {}
 	void create(int x, int y, int use_xy, bool fixed_sz_rock_cache);
 	void gen_points(vbo_vnt_block_manager_t &vbo_manager);
 	unsigned get_num_verts() const;
@@ -55,20 +49,15 @@ public:
 	void destroy();
 };
 
-
 class s_rock : public scenery_obj { // size = 48
-
-	float size, angle;
+	float size=0.0, angle=0.0;
 	vector3d scale, dir;
-
 public:
-	s_rock() : size(0.0), angle(0.0) {}
 	void create(int x, int y, int use_xy);
 	void add_cobjs();
 	void draw(float sscale, bool shadow_only, bool reflection_pass, vector3d const &xlate, float scale_val) const;
 	void add_bounds_to_bcube(cube_t &bcube) const {scenery_obj::add_bounds_to_bcube(bcube, 1.3*radius);}
 };
-
 
 class voxel_rock_manager_t {
 	vector<unique_ptr<voxel_model_rock>> models;
@@ -83,26 +72,21 @@ public:
 };
 
 class voxel_rock : public scenery_obj {
-
-	unsigned model_ix;
-	int rseed;
+	unsigned model_ix=0;
+	int rseed=0;
 
 	unsigned get_tid() const;
-
 public:
-	voxel_rock() : model_ix(0), rseed(0) {}
 	void create(int x, int y, int use_xy);
 	void build_model();
 	void add_cobjs();
 	void draw(float sscale, bool shadow_only, bool reflection_pass, vector3d const &xlate, float scale_val, shader_t &s, bool use_model_texgen);
 };
 
-
 class burnable_scenery_obj : public scenery_obj {
 protected:
-	float fire_amt, burn_amt;
+	float fire_amt=0.0, burn_amt=0.0;
 public:
-	burnable_scenery_obj() : fire_amt(0.0), burn_amt(0.0) {}
 	virtual ~burnable_scenery_obj() {}
 	virtual float get_bsphere_radius() const = 0;
 	virtual point get_center() const = 0;
@@ -110,11 +94,9 @@ public:
 	void draw_fire(fire_drawer_t &fire_drawer, float rscale, unsigned ix) const;
 };
 
-
 class wood_scenery_obj : public burnable_scenery_obj {
 protected:
-	int closest_tree_type; // cached from drawing functions
-	wood_scenery_obj() : closest_tree_type(-1) {}
+	int closest_tree_type=-1; // cached from drawing functions
 	void calc_type();
 	bool is_from_large_trees() const;
 	int get_tid() const;
@@ -123,16 +105,12 @@ public:
 	void cache_closest_tree_type(tree_cont_t const &trees);
 };
 
-
 class s_log : public wood_scenery_obj { // size = 57 (60)
-
-	float length, radius2;
+	float length=0.0, radius2=0.0;
 	point pt2;
 	vector3d dir;
-
 public:
-	s_log() : length(0.0), radius2(0.0) {}
-	virtual point get_center() const {return ((pos + pt2)*0.5);}
+	virtual point get_center() const {return (pos + pt2)*0.5;}
 	bool check_sphere_coll(point &center, float sphere_radius) const {return 0;} // no collisions
 	void shift_by(vector3d const &vd);
 	int create(int x, int y, int use_xy, float minz);
@@ -143,13 +121,9 @@ public:
 	void add_bounds_to_bcube(cube_t &bcube) const {scenery_obj::add_bounds_to_bcube(bcube, get_bsphere_radius());}
 };
 
-
 class s_stump : public wood_scenery_obj { // size = 29 (32)
-
-	float radius2, height;
-
+	float radius2=0.0, height=0.0;
 public:
-	s_stump() : radius2(0.0), height(0.0) {}
 	virtual point get_center() const {return (pos + point(0.0, 0.0, 0.5*height));}
 	int create(int x, int y, int use_xy, float minz);
 	void add_cobjs();
@@ -159,14 +133,12 @@ public:
 	void add_bounds_to_bcube(cube_t &bcube) const {scenery_obj::add_bounds_to_bcube(bcube, get_bsphere_radius());}
 };
 
-
 struct texture_binder_t {
 	int cur_tid=-1;
 	void do_bind(int tid);
 };
 
 struct plant_base : public burnable_scenery_obj { // size = 32
-
 	struct shader_state_t {
 		int color_scale_loc, normal_scale_loc, wind_scale_loc, wind_add_loc;
 		float wind_scale;
@@ -177,9 +149,8 @@ struct plant_base : public burnable_scenery_obj { // size = 32
 		void set_wind_scale(shader_t &s, float wscale);
 		void set_wind_add(shader_t &s, float w_add);
 	};
-	int vbo_mgr_ix;
+	int vbo_mgr_ix=-1;
 
-	plant_base() : vbo_mgr_ix(-1) {}
 	bool operator<(plant_base const &p) const {return (type < p.type);}
 	int create(int x, int y, int use_xy, float minz);
 	void next_frame();
@@ -187,15 +158,11 @@ struct plant_base : public burnable_scenery_obj { // size = 32
 	virtual point get_center() const {return pos;}
 };
 
-
 class s_plant : public plant_base { // size = 56
-
-	int coll_id2;
-	float height;
+	int coll_id2=-1;
+	float height=1.0;
 	vector<vert_wrap_t> berries;
-
 public:
-	s_plant() : coll_id2(-1), height(1.0) {}
 	virtual float get_bsphere_radius() const {return 0.5f*(height + radius);}
 	point get_top_pt() const {return pos + point(0.0, 0.0, height);}
 	bool is_water_plant() const;
@@ -221,18 +188,14 @@ public:
 	void add_bounds_to_bcube(cube_t &bcube) const {scenery_obj::add_bounds_to_bcube(bcube, (height + radius));}
 };
 
-
 class leafy_plant : public plant_base {
-
-	unsigned plant_ix;
-	float delta_z, motion_amt, cur_motion_energy, prev_motion_energy;
+	unsigned plant_ix=0;
+	float delta_z=0.0, motion_amt=0.0, cur_motion_energy=0.0, prev_motion_energy=0.0;
 	struct plant_leaf {xform_matrix m;};
 	vector<plant_leaf> leaves;
 
 	void gen_leaves();
-
 public:
-	leafy_plant() : plant_ix(0), delta_z(0.0), motion_amt(0.0), cur_motion_energy(0.0), prev_motion_energy(0.0) {}
 	virtual float get_bsphere_radius() const {return radius;}
 	int create(int x, int y, int use_xy, float minz, unsigned plant_ix_);
 	void create2(point const &pos_, float radius_, int type_, int calc_z, unsigned plant_ix_);
@@ -249,7 +212,6 @@ public:
 
 
 class scenery_group {
-
 	vector<rock_shape3d> rock_shapes;
 	vector<surface_rock> surface_rocks;
 	vector<voxel_rock>   voxel_rocks;
@@ -263,11 +225,9 @@ class scenery_group {
 	vbo_vnt_block_manager_t leafy_vbo_manager;
 	cube_t all_bcube;
 	vector<vert_norm_comp> temp_pts;
-
 public:
-	bool generated;
+	bool generated=0;
 
-	scenery_group() : generated(0) {all_bcube.set_to_zeros();}
 	void clear_vbos();
 	void clear();
 	void free_cobjs();
@@ -289,6 +249,6 @@ public:
 	void leafy_plant_coll(unsigned plant_ix, float energy);
 	bool choose_butterfly_dest(point &dest, sphere_t &plant_bsphere, rand_gen_t &rgen) const;
 	void write_plants_to_cobj_file(std::ostream &out) const;
-	size_t get_gpu_mem() const {return (plant_vbo_manager.get_gpu_mem() + rock_vbo_manager.get_gpu_mem() + leafy_vbo_manager.get_gpu_mem());} // only accounts for part of the memory
+	size_t get_gpu_mem() const {return (plant_vbo_manager.get_gpu_mem() + rock_vbo_manager.get_gpu_mem() + leafy_vbo_manager.get_gpu_mem());} // only accounts for part of memory
 };
 
