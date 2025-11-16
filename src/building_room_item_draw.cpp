@@ -2412,6 +2412,19 @@ public:
 };
 particle_texture_manager_t particle_texture_manager;
 
+void draw_bubbles(vector<sphere_t> const &bubbles, shader_t &s, bool in_fishtank) {
+	if (bubbles.empty()) return;
+	if (in_fishtank) {s.add_uniform_float("animation_time", 0.0);} // not animated
+	select_texture(WHITE_TEX);
+	bind_default_flat_normal_map(); // no normal map
+	s.set_cur_color(colorRGBA(0.6, 0.8, 1.0)); // blue-green tinted
+	begin_sphere_draw(0); // untextured
+	unsigned const ndiv(in_fishtank ? 12 : N_SPHERE_DIV);
+	for (sphere_t const &b : bubbles) {draw_sphere_vbo(b.pos, b.radius, ndiv, 0);} // textured=0
+	end_sphere_draw();
+	check_mvm_update(); // needed after sphere drawing applies transforms
+}
+
 void particle_manager_t::draw(shader_t &s, vector3d const &xlate) { // non-const because qbd is modified
 	if (particles.empty() || !camera_pdu.cube_visible(get_bcube() + xlate)) return; // no particles are visible
 	point const viewer_bs(camera_pdu.pos - xlate);
@@ -2444,14 +2457,8 @@ void particle_manager_t::draw(shader_t &s, vector3d const &xlate) { // non-const
 		// we can't make them transparent though because the underwater effect is run later and won't alpha blend properly
 		// Note: can probably use instanced drawing here
 		s.add_uniform_float("ambient_scale", 0.5);
-		select_texture(WHITE_TEX);
-		bind_default_flat_normal_map(); // no normal map
-		s.set_cur_color(colorRGBA(0.6, 0.8, 1.0)); // blue-green tinted
-		begin_sphere_draw(0); // untextured
-		for (sphere_t const &b : bubbles) {draw_sphere_vbo(b.pos, b.radius, N_SPHERE_DIV, 0);} // textured=0
-		end_sphere_draw();
+		draw_bubbles(bubbles, s, 0); // in_fishtank=0
 		s.add_uniform_float("ambient_scale", building_ambient_scale); // reset
-		check_mvm_update(); // needed after sphere drawing applies transforms
 	}
 }
 

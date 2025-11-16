@@ -13,6 +13,7 @@ extern float fticks;
 bool check_ramp_collision(room_object_t const &c, point &pos, float radius, vector3d *cnorm);
 void draw_animated_fish_model(shader_t &s, vector3d const &pos, float radius, vector3d const &dir, float anim_time, colorRGBA const &color);
 bool play_attack_sound(point const &pos, float gain, float pitch, rand_gen_t &rgen);
+void draw_bubbles(vector<sphere_t> const &bubbles, shader_t &s, bool in_fishtank);
 
 
 int get_future_frame(float min_secs, float max_secs, rand_gen_t &rgen) {
@@ -156,6 +157,7 @@ class fish_manager_t {
 	}; // fish_cont_t
 
 	class fishtank_t : public fish_cont_t {
+		vector<sphere_t> bubbles;
 	public:
 		unsigned obj_id=0; // used as a unique identifier
 		bool visible=0;
@@ -168,9 +170,31 @@ class fish_manager_t {
 			float const max_fish_radius(0.125*(1.0 + 1.0/fish.size())*bcube.min_len()); // more fish = smaller size
 			populate(max_fish_radius, 0.0016);
 		}
+		void clear() {
+			fish_cont_t::clear();
+			bubbles.clear();
+		}
 		void next_frame() {
 			present = visible = 0; // mark as not present or visible until it's seen
 			fish_cont_t::next_frame(1.5); // speed_mult_max=1.5
+			if (!animate2) return;
+			// update bubbles
+			float const elapsed_secs(fticks/TICKS_PER_SECOND), bubble_rate(elapsed_secs/4.0), rise_rate(0.25*elapsed_secs*bcube.dz()); // avg one bubble per 4s
+
+			if (bubbles.size() < fish.size()) { // don't allow more bubbles than fish
+				for (fish_t const &f : fish) {
+					if (rgen.rand_float() > bubble_rate) continue;
+					vector3d const bdir(vector3d(f.dir.x, f.dir.y, 0.0).get_norm()); // XY
+					bubbles.emplace_back((f.pos + 1.4*f.radius*bdir), rgen.rand_uniform(0.06, 0.12)*f.radius); // spawn bubble in front
+				}
+			}
+			auto i(bubbles.begin()), o(i);
+
+			for (; i != bubbles.end(); ++i) {
+				i->pos.z += rise_rate;
+				if (i->pos.z + 0.5*i->radius < valid_area.z2()) {*o++ = *i;} // remove bubble when it reaches the water surface
+			}
+			bubbles.erase(o, bubbles.end());
 		}
 		void update_object(room_object_t const &obj) { // handle movement when the table is pushed
 			present = 1;
@@ -181,7 +205,9 @@ class fish_manager_t {
 			for (fish_t &f : fish) {f.pos += delta;}
 		}
 		void draw(shader_t &s, animation_state_t &anim_state, float anim_time) const {
-			if (visible) {fish_cont_t::draw(s, anim_state, anim_time);}
+			if (!visible) return;
+			fish_cont_t::draw(s, anim_state, anim_time);
+			draw_bubbles(bubbles, s, 1); // in_fishtank=1
 		}
 	}; // fishtank_t
 
