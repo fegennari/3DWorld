@@ -177,7 +177,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_SAFE      ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 2, 250.0, 300.0, "safe");
 	bldg_obj_types[TYPE_LADDER    ] = bldg_obj_type_t(1, 0, 0, 0, 1, 0, 1,  0.0,  0.0,   "ladder");
 	bldg_obj_types[TYPE_CHECKOUT  ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1,  0.0,  300.0, "checkout counter");
-	bldg_obj_types[TYPE_FISHTANK  ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 100.0, 160.0, "fish tank");
+	bldg_obj_types[TYPE_FISHTANK  ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 3, 100.0, 160.0, "fish tank"); // tank is large, plants are small
 	bldg_obj_types[TYPE_LAVALAMP  ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 30.0,  3.0,   "lava lamp");
 	bldg_obj_types[TYPE_SHOWERTUB ] = bldg_obj_type_t(1, 1, 1, 1, 1, 0, 1,  0.0,  0.0,   "shower"); // shower part of a shower+tub combo; technically large and small; take curtains
 	bldg_obj_types[TYPE_TRASH     ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,  0.0,  0.1,   "trash");

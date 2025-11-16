@@ -137,6 +137,7 @@ struct pipe_t;
 struct tunnel_seg_t;
 struct bldg_industrial_info_t;
 struct car_t;
+class s_plant;
 typedef vector<point> vect_point;
 typedef vector<sphere_t> vect_sphere_t;
 
@@ -1399,7 +1400,9 @@ struct building_room_geom_t {
 	void add_railing(room_object_t const &c);
 	void add_downspout(room_object_t const &c);
 	void add_plant_pot(room_object_t const &c, float height, float radius, bool no_dirt);
+	void add_plant(s_plant const &plant, float light_amt, bool draw_leaf_bot_surf);
 	void add_potted_plant(room_object_t const &c, bool inc_pot, bool inc_plant);
+	void add_fishtank_plants(room_object_t const &c);
 	void add_tree(room_object_t const &c, bool inc_pot, bool inc_tree);
 	void add_lg_ball(room_object_t const &c);
 	void add_toy(room_object_t const &c);

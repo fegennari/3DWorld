@@ -742,6 +742,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_O_SHOWER:  add_shower   (c, tscale, 0, 1); break; // inc_lg=0, inc_sm=1
 		case TYPE_SHOWERTUB: add_shower_tub(c, tid_nm_pair_t(), trim_color, tscale, 0, 1); break; // don't need wall_tex; inc_lg=0, inc_sm=1
 		case TYPE_RAILING:   if (!c.is_exterior()) {add_railing(c);}  break; // interior only
+		case TYPE_FISHTANK:  add_fishtank_plants(c); break;
 		case TYPE_PLANT:     add_potted_plant(c, 0, 1); break; // plant only
 		case TYPE_TREE:      add_tree(c, 0, 1); break; // tree only
 		case TYPE_CRATE:     add_crate    (c); break; // not small but only added to windowless rooms

@@ -216,10 +216,11 @@ void building_room_geom_t::add_tc_legs(cube_t const &c, room_object_t const &obj
 	}
 }
 
-colorRGBA apply_light_color(room_object_t const &o, colorRGBA const &c) {
+colorRGBA apply_light_color(float light_amt, colorRGBA const &c) {
 	if (enable_building_indir_lighting()) return c; // disable this when using indir lighting
-	return c * (0.5f + 0.5f*min(sqrt(o.light_amt), 1.5f)); // use c.light_amt as an approximation for ambient lighting due to sun/moon
+	return c * (0.5f + 0.5f*min(sqrt(light_amt), 1.5f)); // use c.light_amt as an approximation for ambient lighting due to sun/moon
 }
+colorRGBA apply_light_color(room_object_t const &o, colorRGBA const &c) {return apply_light_color(o.light_amt, c);}
 colorRGBA building_room_geom_t::apply_wood_light_color(room_object_t const &o) const {return apply_light_color(o, wood_color);}
 colorRGBA apply_light_color(room_object_t const &o) {return apply_light_color(o, o.color);} // use object color
 
@@ -6203,7 +6204,7 @@ void add_inverted_quads(rgeom_storage_t::vect_vertex_t &verts, unsigned verts_st
 	reverse(verts.begin()+verts_end, verts.end());
 }
 void building_room_geom_t::add_plant_pot(room_object_t const &c, float height, float radius, bool no_dirt) {
-	float const pot_top(c.z1() + height), dirt_level(pot_top - 0.15*height), cx(c.get_center_dim(0)), cy(c.get_center_dim(1));
+	float const pot_top(c.z1() + height), dirt_level(pot_top - 0.15*height), cx(c.xc()), cy(c.yc());
 	rgeom_mat_t &pot_mat(get_untextured_material(1));
 	pot_mat.add_cylin_to_verts(point(cx, cy, c.z1()), point(cx, cy, pot_top), 0.65*radius, radius, apply_light_color(c), no_dirt, 0, 1, 0);
 
@@ -6216,6 +6217,17 @@ void building_room_geom_t::add_plant_pot(room_object_t const &c, float height, f
 		dirt_mat.add_vert_disk_to_verts(point(cx, cy, dirt_level), 0.947*radius, 0, apply_light_color(c, WHITE));
 	}
 }
+void building_room_geom_t::add_plant(s_plant const &plant, float light_amt, bool draw_leaf_bot_surf) {
+	static vector<vert_norm_comp> points;
+	points.clear();
+	plant.create_leaf_points(points, 10.0, 1.5, 4); // plant_scale=10.0 seems to work well; more levels and rings
+	auto &leaf_verts(mats_amask.get_material(tid_nm_pair_t(plant.get_leaf_tid(), 1.0, 1), 1).quad_verts); // shadowed
+	unsigned const leaf_verts_start(leaf_verts.size());
+	color_wrapper const leaf_cw(apply_light_color(light_amt, plant.get_leaf_color()));
+	float const ts[4] = {0,1,1,0}, tt[4] = {0,0,1,1};
+	for (unsigned i = 0; i < points.size(); ++i) {leaf_verts.emplace_back(vert_norm_comp_tc(points[i], ts[i&3], tt[i&3]), leaf_cw);}
+	if (draw_leaf_bot_surf) {add_inverted_quads(leaf_verts, leaf_verts_start);}
+}
 void building_room_geom_t::add_potted_plant(room_object_t const &c, bool inc_pot, bool inc_plant) {
 	float const plant_radius(c.get_radius()), pot_height(max(1.2*plant_radius, 0.3*c.dz()));
 
@@ -6225,25 +6237,34 @@ void building_room_geom_t::add_potted_plant(room_object_t const &c, bool inc_pot
 		add_plant_pot(c, pot_height, PLANT_POT_RADIUS*plant_radius, no_dirt);
 	}
 	if (inc_plant && c.taken_level == 0) { // plant not taken
-		// draw plant leaves
-		float const stem_radius(0.08*plant_radius), pot_top(c.z1() + pot_height), dirt_level(pot_top - 0.15*pot_height), cx(c.get_center_dim(0)), cy(c.get_center_dim(1));
+		float const stem_radius(0.08*plant_radius), pot_top(c.z1() + pot_height), dirt_level(pot_top - 0.15*pot_height), cx(c.xc()), cy(c.yc());
 		point const base_pos(cx, cy, dirt_level); // base of plant trunk, center of dirt disk
+		// draw plant leaves; shadowed
+		bool const draw_leaf_bot_surf(c.has_extra()); // if on upper floor of mall, visible from below; duplicate and reverse leaf verts to draw back surfaces
 		s_plant plant;
-		plant.create_no_verts(base_pos, (c.z2() - base_pos.z), stem_radius, c.obj_id, 0, 1); // land_plants_only=1
-		static vector<vert_norm_comp> points;
-		points.clear();
-		plant.create_leaf_points(points, 10.0, 1.5, 4); // plant_scale=10.0 seems to work well; more levels and rings
-		auto &leaf_verts(mats_amask.get_material(tid_nm_pair_t(plant.get_leaf_tid(), 1.0, 1), 1).quad_verts); // shadowed
-		unsigned const leaf_verts_start(leaf_verts.size());
-		color_wrapper const leaf_cw(apply_light_color(c, plant.get_leaf_color()));
-		float const ts[4] = {0,1,1,0}, tt[4] = {0,0,1,1};
-		for (unsigned i = 0; i < points.size(); ++i) {leaf_verts.emplace_back(vert_norm_comp_tc(points[i], ts[i&3], tt[i&3]), leaf_cw);}
-		// if on upper floor of mall, visible from below; duplicate and reverse leaf verts to draw back surfaces
-		if (c.has_extra()) {add_inverted_quads(leaf_verts, leaf_verts_start);}
-		// draw plant stem
+		plant.create_no_verts(base_pos, (c.z2() - base_pos.z), stem_radius, c.obj_id, 0, 1); // calc_z=0, land_plants_only=1
+		add_plant(plant, c.light_amt, draw_leaf_bot_surf);
+		// draw plant stem; shadowed
 		colorRGBA const stem_color(plant.get_stem_color());
-		mats_amask.get_material(get_tex_auto_nm(WOOD2_TEX), 1).add_cylin_to_verts(point(cx, cy, base_pos.z), point(cx, cy, c.z2()), stem_radius, 0.0f, stem_color, 0, 0); // stem
+		mats_amask.get_material(get_tex_auto_nm(WOOD2_TEX), 1).add_cylin_to_verts(base_pos, point(cx, cy, c.z2()), stem_radius, 0.0f, stem_color, 0, 0);
 	}
+}
+
+void building_room_geom_t::add_fishtank_plants(room_object_t const &c) { // currently only a single plant
+	if (c.item_flags != TYPE_FISH) return; // not a fishtank
+	rand_gen_t rgen(c.create_rgen());
+	float const tank_height(c.dz()), plant_height(rgen.rand_uniform(0.65, 0.8)*tank_height), tank_depth(c.get_depth());
+	float const plant_radius(rgen.rand_uniform(0.3, 0.36)*tank_depth), edge_space(plant_radius + 0.05*tank_depth), stem_radius(0.05*plant_radius);
+	point base_pos(0.0, 0.0, (c.z1() + 0.05*tank_height)); // base of plant trunk; placed on the gravel
+	for (unsigned d = 0; d < 2; ++d) {base_pos[d] = rgen.rand_uniform(c.d[d][0]+edge_space, c.d[d][1]-edge_space);}
+	// draw plant leaves; shadowed
+	s_plant plant;
+	plant.create_no_verts(base_pos, plant_height, stem_radius, c.obj_id, 0, 0, 1); // calc_z=0, land_plants_only=0, water_plants_only=1
+	add_plant(plant, c.light_amt, 0); // draw_leaf_bot_surf=0
+	// draw plant stem; shadowed
+	colorRGBA const stem_color(plant.get_stem_color());
+	point const p2(base_pos.x, base_pos.y, (base_pos.z + plant_height));
+	mats_amask.get_material(tid_nm_pair_t(-1, 1.0f, 1), 1).add_cylin_to_verts(base_pos, p2, stem_radius, 0.0f, stem_color, 0, 0);
 }
 
 void building_room_geom_t::add_tree(room_object_t const &c, bool inc_pot, bool inc_tree) {

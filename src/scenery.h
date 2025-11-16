@@ -171,7 +171,7 @@ public:
 	int get_leaf_tid() const;
 	int create(int x, int y, int use_xy, float minz);
 	void create2(point const &pos_, float height_, float radius_, int type_, int calc_z);
-	void create_no_verts(point const &pos_, float height_, float radius_, int type_, int calc_z=0, bool land_plants_only=0);
+	void create_no_verts(point const &pos_, float height_, float radius_, int type_, int calc_z=0, bool land_plants_only=0, bool water_plants_only=0);
 	void place_in_pond(cube_t const &pond);
 	void add_cobjs();
 	bool check_sphere_coll(point &center, float sphere_radius) const;
