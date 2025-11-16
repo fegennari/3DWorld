@@ -109,7 +109,6 @@ void building_t::move_door_to_other_side_of_wall(tquad_with_ix_t &door, float di
 }
 
 void building_t::clip_door_to_interior(tquad_with_ix_t &door) const {
-
 	cube_t clip_cube(door.get_bcube());
 	float const dz(clip_cube.dz());
 	float xy_border(0.0), z_border(0.0);
@@ -984,8 +983,9 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				c.d[ dim][dir  ]  = base.d[ dim][dir ]; // shove it into the opposite corner of the bcube
 				c.d[!dim][!dir2] -= dist1; // move away from bcube edge
 				c.d[ dim][!dir ] -= dist2; // move away from bcube edge
-				c.z2() = c.z1() + max(floor_spacing, min(min(c.dx(), c.dy()), height)); // no taller than x or y size, but at least one floor high; Note: z1 same as part1
-				bool is_garage(car_can_fit(c)), pri_dim(c.dx() < c.dy()); // garage must be able to fit a car
+				vector2d const c_sz(c.get_size_xy());
+				c.z2() = c.z1() + max(floor_spacing, min(c_sz.get_min_val(), height)); // no taller than x or y size, but at least one floor high; Note: z1 same as part1
+				bool is_garage(car_can_fit(c)), pri_dim(c_sz.x < c_sz.y); // garage must be able to fit a car
 				// maybe we could extend the garage in the correct dim to fit a car, but that can lead to problems with the fence and driveway placement
 				//if (street_dir && pri_dim != pref_street_dim) {is_garage = 0;} // garage is in wrong dim, make it a shed instead (we're allowing driveway bends, so this is okay now)
 				(is_garage ? has_garage : has_shed) = 1;
@@ -995,16 +995,21 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				float const gs_door_height(min(door_height, 0.9f*c.dz())); // clamp to 90% of garage/shed height to make sure there's room for the ceiling trim
 				
 				if (is_garage) {
-					float const shelf_depth(0.15*floor_spacing), garage_width(c.get_sz_dim(!pri_dim));
+					float const shelf_depth(0.15*floor_spacing), garage_width(c_sz[!pri_dim]);
 					wscale     = min(0.9f*garage_width, (garage_width - 2.0f*shelf_depth))/gs_door_height; // avoid clipping through shelves
 					gdoor_dir ^= 1; // facing away from the house, not toward it
-				}
+					
+					if (0) { // move against the house? no, this causes problems with window cutouts/stencil masks
+						bool ext_dir(c.d[!pri_dim][1] == bcube.d[!pri_dim][1]), adj_part(parts[1].d[!pri_dim][ext_dir] != c.d[!pri_dim][ext_dir]);
+						c.translate_dim(!pri_dim, (parts[adj_part].d[!pri_dim][ext_dir] - c.d[!pri_dim][!ext_dir]));
+					}
+				} // else shed
 				bool const has_door(add_door(place_door(c, pri_dim, gdoor_dir, gs_door_height, 0.0, 0.0, 0.0, wscale, 0, is_garage, rgen), parts.size(), pri_dim, gdoor_dir, 0));
 				if (is_garage && has_door) {doors.back().type = tquad_with_ix_t::TYPE_GDOOR;} // make it a garage door rather than a house door
 
 				if (is_garage) { // add driveway
 					bool const ddir((pri_dim == dim) ? dir : dir2), has_r90_turn(street_dir && (2*pri_dim + ddir + 1) != street_dir);
-					float const length(c.get_sz_dim(pri_dim)), width(c.get_sz_dim(!pri_dim));
+					float const length(c_sz[pri_dim]), width(c_sz[!pri_dim]);
 					driveway = c;
 					driveway.z2() = driveway.z1() + driveway_dz;
 					driveway.expand_in_dim(!pri_dim, -0.05*width); // shrink slightly to a bit narrower than the garage
