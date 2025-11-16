@@ -2043,12 +2043,19 @@ struct bldg_industrial_info_t {
 	void clear_room_details() {smoke_emitters.clear();}
 };
 
+struct wall_seg_t : public cube_t {
+	bool dim, dir, open=0;
+	unsigned room_ix;
+	wall_seg_t(cube_t const &c, bool dim_, bool dir_, unsigned r) : cube_t(c), dim(dim_), dir(dir_), room_ix(r) {}
+};
+
 struct building_interior_t {
 	vect_cube_t floors, ceilings, fc_occluders, exclusion, open_walls, split_window_walls, prison_halls;
 	vect_cube_t walls[2]; // walls are split by dim, which is the separating dimension of the wall
 	vect_cube_with_ix_t int_windows; // ix stores room index
 	vect_cube_with_ix_t parking_str_walls; // interior of exterior walls; ix stores draw flags
-	vect_cube_with_ix_t missing_ceil_tiles, missing_wall_segs; // ix is room index
+	vect_cube_with_ix_t missing_ceil_tiles; // ix is room index
+	vector<wall_seg_t> missing_wall_segs;
 	vect_stairwell_t stairwells;
 	vect_tunnel_seg_t tunnels;
 	vect_door_t doors;
@@ -2755,6 +2762,7 @@ private:
 	bool is_basement_room_under_mesh_not_int_bldg(cube_t const &room, building_t const *exclude=nullptr, bool allow_outside_grid=0) const;
 	bool is_basement_room_placement_valid(cube_t &room, ext_basement_room_params_t &P, bool dim, bool dir, bool *add_end_door=nullptr, building_t const *exclude=nullptr) const;
 	bool add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &door_bcube, cube_t const &basement, bool wall_dim, bool wall_dir, float length_mult);
+	void add_secret_underground_rooms(ext_basement_room_params_t &P, rand_gen_t rgen);
 	void remove_ceiling_tiles(cube_t const &room, tid_nm_pair_t const &ceil_tex, ext_basement_room_params_t &P, rand_gen_t &rgen);
 	void add_ceiling_tile_objects(rand_gen_t rgen);
 	void add_missing_wall_objects(rand_gen_t rgen);

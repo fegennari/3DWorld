@@ -2562,17 +2562,19 @@ colored_cube_t get_indir_lighting_wall_gap_cube(room_object_t const &c) {
 	return colored_cube_t(wall_inner, texture_color(tid));
 }
 void building_room_geom_t::add_wall_gap(room_object_t const &c, tid_nm_pair_t const &wall_tex) {
-	bool const dim(c.dim), dir(c.dir), has_insulation(c.room_id & 1); // consistent per room
+	bool const dim(c.dim), dir(c.dir), open(c.is_open()), has_insulation(!open && (c.room_id & 1)); // consistent per room
 	bool const use_plywood(buttons_start & 1); // consistent per building
 	unsigned const front_face_mask(get_face_mask(dim, !dir)), sides_face_mask(~get_skip_mask_for_xy(!dim));
 	float const height(c.dz()), depth(c.get_depth()), width(c.get_width()), dsign(dir ? 1.0 : -1.0);
 	colorRGBA const color(apply_light_color(c));
-	// draw inside wall face
-	cube_t wall_inner(c);
-	wall_inner.translate_dim(dim, dsign*depth*(has_insulation ? 0.5 : 1.0)); // half depth if there's insulation
-	int const tid(has_insulation ? get_insulation_tid() : get_plywood_tid());
-	// small; shadowed, since this wall may block the light to a room on the other side
-	get_material(tid_nm_pair_t(tid, 2.0/height, 1), 1, 0, 1).add_cube_to_verts(wall_inner, color, c.get_llc(), front_face_mask, dim);
+	
+	if (!open) { // draw inside wall face
+		cube_t wall_inner(c);
+		wall_inner.translate_dim(dim, dsign*depth*(has_insulation ? 0.5 : 1.0)); // half depth if there's insulation
+		int const tid(has_insulation ? get_insulation_tid() : get_plywood_tid());
+		// small; shadowed, since this wall may block the light to a room on the other side
+		get_material(tid_nm_pair_t(tid, 2.0/height, 1), 1, 0, 1).add_cube_to_verts(wall_inner, color, c.get_llc(), front_face_mask, dim);
+	}
 	// draw wood studs; draw sides and front separately for vertical grain in both
 	unsigned const num_studs(max(2, 1+round_fp(5.4*width/height)));
 	float const stud_width(0.025*height), stud_hwidth(0.5*stud_width), stud_spacing((width - stud_width)/(num_studs - 1));

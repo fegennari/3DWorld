@@ -2168,17 +2168,16 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		} // for w
 	} // for d
 	// add trim at the bottom of interior edges of missing wall segments
-	for (cube_t const &w : interior->missing_wall_segs) {
-		bool const dim(w.dy() < w.dx());
+	for (wall_seg_t const &w : interior->missing_wall_segs) {
 		cube_t trim0(w);
 		trim0.z2() = w.z1() + trim_height;
-		trim0.expand_in_dim(dim, trim_thickness); // match the wall side trim
+		trim0.expand_in_dim(w.dim, trim_thickness); // match the wall side trim
 
 		for (unsigned d = 0; d < 2; ++d) { // left/right
 			cube_t trim(trim0);
-			trim.d[!dim][!d] = w.d[!dim][d] + (d ? -1.0 : 1.0)*trim_thickness; // set thickness
+			trim.d[!w.dim][!d] = w.d[!w.dim][d] + (d ? -1.0 : 1.0)*trim_thickness; // set thickness
 			unsigned const flags(flags | RO_FLAG_ADJ_BOT | (d ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO)); // skip back and bottom but draw ends
-			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, !dim, !d, flags, 1.0, SHAPE_TALL, trim_color);
+			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, !w.dim, !d, flags, 1.0, SHAPE_TALL, trim_color);
 		}
 	} // for c
 	// add trim for exterior walls
