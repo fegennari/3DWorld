@@ -2562,9 +2562,10 @@ colored_cube_t get_indir_lighting_wall_gap_cube(room_object_t const &c) {
 	return colored_cube_t(wall_inner, texture_color(tid));
 }
 void building_room_geom_t::add_wall_gap(room_object_t const &c, tid_nm_pair_t const &wall_tex) {
-	bool const dim(c.dim), dir(c.dir), open(c.is_open()), has_insulation(!open && (c.room_id & 1)); // consistent per room
+	bool const dim(c.dim), open(c.is_open()), has_insulation(!open && (c.room_id & 1)); // consistent per room
+	bool dir(c.dir);
 	bool const use_plywood(buttons_start & 1); // consistent per building
-	unsigned const front_face_mask(get_face_mask(dim, !dir)), sides_face_mask(~get_skip_mask_for_xy(!dim));
+	unsigned const front_face_mask(open ? 0 : get_face_mask(dim, !dir)), sides_face_mask(~get_skip_mask_for_xy(!dim));
 	float const height(c.dz()), depth(c.get_depth()), width(c.get_width()), dsign(dir ? 1.0 : -1.0);
 	colorRGBA const color(apply_light_color(c));
 	
@@ -2578,22 +2579,26 @@ void building_room_geom_t::add_wall_gap(room_object_t const &c, tid_nm_pair_t co
 	// draw wood studs; draw sides and front separately for vertical grain in both
 	unsigned const num_studs(max(2, 1+round_fp(5.4*width/height)));
 	float const stud_width(0.025*height), stud_hwidth(0.5*stud_width), stud_spacing((width - stud_width)/(num_studs - 1));
-	float pos(c.d[!dim][0] + stud_hwidth);
+	float const sr_thickness(0.1*dsign*depth), tb_shrink(0.2*dsign*depth);
+	float start_pos(c.d[!dim][0] + stud_hwidth);
 	rgeom_mat_t &wood_mat(get_wood_material((use_plywood ? 1.0 : 2.0)/height, 1, 0, 1, 0, (use_plywood ? WOOD_TYPE_PLYWOOD : WOOD_TYPE_DARK))); // shadowed, small
 	cube_t stud(c);
-	stud.d[dim][!dir] += 0.1*dsign*depth; // shift inward by sheet rock thickness
+	stud.d[dim][!dir] += sr_thickness; // shift inward by sheet rock thickness
+	if (open) {stud.d[dim][dir] -= sr_thickness;} // shift the other side as well if open
 
 	for (unsigned n = 0; n < num_studs; ++n) {
-		set_wall_width(stud, pos, stud_hwidth, !dim);
+		bool const is_first(n == 0), is_last(n+1 == num_studs);
+		//if (open && !is_first && !is_last) continue; // skip center studs if open
+		set_wall_width(stud, (start_pos + n*stud_spacing), stud_hwidth, !dim);
 		point const llc(stud.get_llc());
-		unsigned const sides_face_mask2(sides_face_mask | ((n == 0) ? ~get_face_mask(!dim, 0) : 0) | ((n+1 == num_studs) ? ~get_face_mask(!dim, 1) : 0));
+		unsigned const sides_face_mask2(sides_face_mask | (is_first ? ~get_face_mask(!dim, 0) : 0) | (is_last ? ~get_face_mask(!dim, 1) : 0));
 		wood_mat.add_cube_to_verts(stud, color, llc, front_face_mask,   dim); // front
 		wood_mat.add_cube_to_verts(stud, color, llc, sides_face_mask2, !dim); // sides
-		pos += stud_spacing;
 	} // for n
 	// draw top and bottom wood to cover the ceiling and floor gap
 	cube_t top(c);
-	top.d[dim][!dir] += 0.2*dsign*depth; // shift inward more than the stud
+	top.d[dim][!dir] += tb_shrink; // shift inward more than the stud
+	if (open) {top.d[dim][dir] -= tb_shrink;}
 	top.expand_in_dim(!dim, -stud_hwidth); // between the studs
 	cube_t bot(top);
 	top.z1() = c.z2() - stud_width;
@@ -2613,7 +2618,13 @@ void building_room_geom_t::add_wall_gap(room_object_t const &c, tid_nm_pair_t co
 	for (unsigned n = 0; n < num_pipes; ++n) {
 		bool const is_romex(rgen.rand_bool());
 		float const radius((is_romex ? 0.08 : rgen.rand_uniform(0.12, 0.20))*depth);
-		float const zval(rgen.rand_uniform((c.z1() + 0.2*height + radius), (c.z1() + 0.8*height - radius)));
+		float zmin(0.1*height + radius), zmax(0.9*height - radius);
+
+		if (open) { // top or bottom, but not middle
+			if (rgen.rand_bool()) {zmax = zmin + 0.1*height;} // lower
+			else                  {zmin = zmax - 0.1*height;} // upper
+		}
+		float const zval(c.z1() + rgen.rand_uniform(zmin, zmax));
 		bool bad_place(0);
 
 		for (unsigned m = 0; m < n; ++m) { // check previous pipes
@@ -2639,56 +2650,73 @@ void building_room_geom_t::add_wall_gap(room_object_t const &c, tid_nm_pair_t co
 		}
 	} // for n
 	// draw partial plaster/stucco parts on the studs at each side
-	float const front_face(c.d[dim][!dir]), int_face(stud.d[dim][!dir]), max_shift(1.5*depth + 0.05*width);
-	vector3d const front_dir(vector_from_dim_dir(dim, !dir));
 	get_untextured_material(0, 0, 1); // make sure edge material is loaded
 	rgeom_mat_t &wall_mat(get_material(wall_tex, 1, 0, 1)); // shadowed, small
 	rgeom_mat_t &edge_mat(get_untextured_material(0, 0, 1)); // unshadowed, small
 	auto &fverts(wall_mat.itri_verts);
 	auto &everts(edge_mat.quad_verts);
+	vector<unsigned> &wall_ixs(wall_mat.indices);
 	rgeom_storage_t::vertex_t vf;
 	vf.set_c3(WHITE);
-	vf.set_norm(front_dir);
-	vf.v[dim] = front_face;
 
-	for (unsigned d = 0; d < 2; ++d) { // left, right
-		unsigned const num_pts(10 + (rgen.rand() % 6)); // 10-15
-		float const z_step(height/(num_pts-1)), wall_edge(c.d[!dim][d]), dsign(d ? -1.0 : 1.0);
-		bool const reverse_dir(bool(d) ^ dim ^ dir);
-		float zval(c.z1());
+	for (unsigned draw_dir = 0; draw_dir < (open ? 2 : 1); ++draw_dir, dir ^= 1) {
+		float const front_face(c.d[dim][!dir]), int_face(stud.d[dim][!dir]), max_shift(1.5*depth + 0.05*width);
+		vector3d const front_dir(vector_from_dim_dir(dim, !dir));
+		unsigned const fv_start(fverts.size()), fixs_start(wall_ixs.size());
+		vf.set_norm(front_dir);
+		vf.v[dim] = front_face;
 
-		for (unsigned n = 0; n < num_pts; ++n) {
-			int const ix(fverts.size());
-			float &v_pos(vf.v[!dim]);
-			vf.v.z  = zval + ((n == 0 || n+1 == num_pts) ? 0.0 : 0.25*z_step*rgen.signed_rand_float()); // add some randomness to middle vertices
-			v_pos  = wall_edge;
-			vf.t[0] = wall_tex.tscale_x*(v_pos - tex_origin[!dim]) + wall_tex.txoff;
-			vf.t[1] = wall_tex.tscale_y*(vf.v.z - tex_origin.z)    + wall_tex.tyoff;
-			fverts.push_back(vf); // outer vertex
-			float const shift(dsign*max_shift*rgen.rand_uniform(0.1, 0.9));
-			v_pos  += shift;
-			vf.t[0] += wall_tex.tscale_y*shift;
-			fverts.push_back(vf); // inner vertex
-			zval += z_step;
+		for (unsigned d = 0; d < 2; ++d) { // left, right
+			unsigned const num_pts(10 + (rgen.rand() % 6)); // 10-15
+			float const z_step(height/(num_pts-1)), wall_edge(c.d[!dim][d]), dsign(d ? -1.0 : 1.0);
+			bool const reverse_dir(bool(d) ^ dim ^ dir);
+			float zval(c.z1());
 
-			if (n > 0) {
-				// emit two triangles for face trapezoid
-				int const ix_offs[6] = {-2, -1, 1, -2, 1, 0};
-				for (unsigned i = 0; i < 6; ++i) {wall_mat.indices.push_back(ix + ix_offs[reverse_dir ? 5-i : i]);}
-				// add untextured edges
-				rgeom_storage_t::vertex_t ve1(vf), ve2(fverts[ix - 1]); // copy {upper, lower} edges
-				if (reverse_dir) {swap(ve1, ve2);}
-				norm_comp const nc(cross_product(front_dir, (ve2.v - ve1.v)).get_norm());
-				ve1.set_norm(nc);
-				ve2.set_norm(nc);
-				everts.push_back(ve1);
-				everts.push_back(ve2);
-				ve1.v[dim] = ve2.v[dim] = int_face; // shift from front to interior
-				everts.push_back(ve2);
-				everts.push_back(ve1);
+			for (unsigned n = 0; n < num_pts; ++n) {
+				int const ix(fverts.size());
+				float &v_pos(vf.v[!dim]);
+				vf.v.z  = zval + ((n == 0 || n+1 == num_pts) ? 0.0 : 0.25*z_step*rgen.signed_rand_float()); // add some randomness to middle vertices
+				v_pos  = wall_edge;
+				vf.t[0] = wall_tex.tscale_x*(v_pos - tex_origin[!dim]) + wall_tex.txoff;
+				vf.t[1] = wall_tex.tscale_y*(vf.v.z - tex_origin.z)    + wall_tex.tyoff;
+				fverts.push_back(vf); // outer vertex
+				float const shift(dsign*max_shift*rgen.rand_uniform(0.1, 0.9));
+				v_pos  += shift;
+				vf.t[0] += wall_tex.tscale_y*shift;
+				fverts.push_back(vf); // inner vertex
+				zval += z_step;
+
+				if (n > 0) {
+					// emit two triangles for face trapezoid
+					int const ix_offs[6] = {-2, -1, 1, -2, 1, 0};
+					for (unsigned i = 0; i < 6; ++i) {wall_ixs.push_back(ix + ix_offs[reverse_dir ? 5-i : i]);}
+					// add untextured edges
+					rgeom_storage_t::vertex_t ve1(vf), ve2(fverts[ix - 1]); // copy {upper, lower} edges
+					if (reverse_dir) {swap(ve1, ve2);}
+					norm_comp const nc(cross_product(front_dir, (ve2.v - ve1.v)).get_norm());
+					ve1.set_norm(nc);
+					ve2.set_norm(nc);
+					everts.push_back(ve1);
+					everts.push_back(ve2);
+					ve1.v[dim] = ve2.v[dim] = int_face; // shift from front to interior
+					everts.push_back(ve2);
+					everts.push_back(ve1);
+				}
+			} // for n
+		} // for d
+		if (open) { // add back side faces
+			unsigned const fv_end(fverts.size()), fixs_end(wall_ixs.size()), num_verts(fv_end - fv_start);
+			for (unsigned i = fixs_start; i < fixs_end; ++i) {wall_ixs.push_back(wall_ixs[i] + num_verts);}
+			reverse(wall_ixs.begin()+fixs_end, wall_ixs.end()); // reverse winding order
+
+			for (unsigned i = fv_start; i < fv_end; ++i) {
+				auto v(fverts[i]);
+				v.v[dim] += (int_face - front_face);
+				v.invert_normal();
+				fverts.push_back(v);
 			}
-		} // for n
-	} // for d
+		}
+	} // for draw_dir
 }
 
 void building_room_geom_t::add_blinds(room_object_t const &c) {

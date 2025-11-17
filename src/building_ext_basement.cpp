@@ -1110,7 +1110,7 @@ void building_interior_t::remove_extended_basement_wall_sections(vect_cube_t &wa
 
 void building_t::add_secret_underground_rooms(ext_basement_room_params_t &P, rand_gen_t rgen) {
 	if (interior->missing_wall_segs.empty()) return;
-	float const floor_spacing(get_window_vspace()), fc_thick(get_fc_thickness()), wall_thick(get_wall_thickness());
+	float const floor_spacing(get_window_vspace()), fc_thick(get_fc_thickness()), wall_thick(get_wall_thickness()), hall_edge_pad(2.0*wall_thick);
 
 	for (wall_seg_t &w : interior->missing_wall_segs) {
 		room_t const &hall(get_room(w.room_ix));
@@ -1120,8 +1120,8 @@ void building_t::add_secret_underground_rooms(ext_basement_room_params_t &P, ran
 		room.d[w.dim][!w.dir] = wall_edge;
 		room.d[w.dim][ w.dir] = wall_edge + dsign*rgen.rand_uniform(2.0, 4.0)*floor_spacing; // extend outward
 		for (unsigned d = 0; d < 2; ++d) {room.d[!w.dim][d] += (d ? 1.0 : -1.0)*rgen.rand_uniform(1.0, 2.0)*floor_spacing;} // widen the room
-		max_eq(room.d[!w.dim][0], hall.d[!w.dim][0]); // clip to hallway length
-		min_eq(room.d[!w.dim][1], hall.d[!w.dim][1]);
+		max_eq(room.d[!w.dim][0], hall.d[!w.dim][0]+hall_edge_pad); // clip to hallway length with some padding to avoid intersecting adjacent room
+		min_eq(room.d[!w.dim][1], hall.d[!w.dim][1]-hall_edge_pad);
 		cube_t room_ext(room);
 		room_ext.expand_in_dim(!w.dim, wall_thick);
 		room_ext.d[w.dim][w.dir] += dsign*wall_thick;
