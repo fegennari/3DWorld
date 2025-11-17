@@ -2171,7 +2171,7 @@ bool building_t::place_people_if_needed(unsigned building_ix, float radius) cons
 	unsigned first_basement_room(0);
 
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) { // add room_cands
-		if (r->is_sec_bldg)                              continue; // don't place people in garages and sheds
+		if (r->is_sec_bldg || r->is_secret_room())       continue; // don't place people in garages, sheds, or secret rooms
 		if (!ALLOW_AI_IN_MALLS && r->is_mall_or_store()) continue; // don't place people in malls or stores
 		//if (has_mall() && !r->is_mall_or_store())        continue; // TESTING - only place in malls
 		if (min(r->dx(), r->dy()) < 3.0*radius)          continue; // room to small to place a person

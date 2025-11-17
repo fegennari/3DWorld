@@ -742,6 +742,7 @@ bool building_t::add_machines_to_room(rand_gen_t rgen, room_t const &room, float
 			cube_t tc(c);
 			tc.d[dim][!dir] += dir_sign*4.0*depth; // add 4*depth worth of clearance in the front to avoid blocking airflow
 			if (tc.intersects(avoid) || overlaps_other_room_obj(tc, objs_start) || is_obj_placement_blocked(tc, room, 1)) continue; // inc_open_doors=1
+			if (has_bcube_int(tc, interior->missing_wall_segs)) continue;
 			objs.emplace_back(c, TYPE_VENT_FAN, room_id, dim, !dir, RO_FLAG_INTERIOR, tot_light_amt, SHAPE_CUBE);
 			break; // done
 		} // for t

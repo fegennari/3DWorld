@@ -1131,7 +1131,6 @@ void building_t::add_secret_underground_rooms(ext_basement_room_params_t &P, ran
 		w.conn_room_ix = interior->rooms.size(); // will be the room added below
 		interior->place_exterior_room(room, room, fc_thick, wall_thick, P, rgen, hall.part_id, is_house, 1); // num_lights=1 (but will have no lights)
 		interior->rooms.back().set_has_cut_wall();
-		// TODO: add false door?
 		P.rooms.push_back(room);
 		w.open = 1;
 	} // for w

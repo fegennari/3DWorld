@@ -101,37 +101,43 @@ cube_t tunnel_seg_t::get_conn_bcube(tunnel_conn_t const &c) const {
 void building_t::get_valid_extb_room_end_doors(room_t const &room, float zval, unsigned room_id, float end_pad_ext, cube_with_ix_t doors[2]) const {
 	assert(interior);
 	if (has_pool() && (int)room_id == interior->pool.room_ix) return; // no false doors or tunnels in swimming pool room
+	bool const is_secret(room.is_secret_room());
 
-	if (!room.is_hallway) {
+	if (!room.is_hallway && !is_secret) {
 		float const dx(room.dx()), dy(room.dy());
 		if (min(dx, dy) > 0.25*max(dx, dy)) return; // not high aspect ratio
 	}
 	if (room.is_ext_basement_conn()) return; // don't add a door to the end that connects to the adjacent building's extended basement
-	bool const dim(room.dx() < room.dy()); // long dim
-	float const door_width(get_doorway_width()), wall_thickness(get_wall_thickness()), expand_val(2.0*wall_thickness);
+	float const door_width(get_doorway_width()), wall_thickness(get_wall_thickness()), fc_thick(get_fc_thickness()), expand_val(is_secret ? 0.0 : 2.0*wall_thickness);
 	assert(interior->ext_basement_hallway_room_id >= 0 && (unsigned)interior->ext_basement_hallway_room_id < interior->rooms.size());
+	bool dim(room.dx() < room.dy()); // long dim
 
-	for (unsigned dir = 0; dir < 2; ++dir) { // check both ends
-		cube_t query_region(room);
-		query_region.d[dim][!dir]  = room.d[dim][dir]; // shrink to the end of the hallway
-		query_region.d[dim][ dir] += (dir ? 1.0 : -1.0)*end_pad_ext; // extend away from the room
-		query_region.expand_in_dim(dim, 1.5*door_width); // distance from end to nearest door/room in either direction
-		query_region.expand_by_xy(expand_val);
-		query_region.expand_in_z(-get_fc_thickness()); // subtract floors and ceilings
-		if (interior->is_cube_close_to_doorway(query_region, room))   continue; // bad placement/not needed
-		if (interior->is_blocked_by_stairs_or_elevator(query_region)) continue; // check stairs
-		bool near_other_room(0);
+	for (unsigned dim_vals = 0; dim_vals < (is_secret ? 2 : 1); ++dim_vals) {
+		for (unsigned dir = 0; dir < 2; ++dir) { // check both ends
+			cube_t query_region(room);
+			if (is_secret) {query_region.expand_in_dim(!dim, -wall_thickness);} // don't intersect the connecting hallway
+			query_region.d[dim][!dir]  = room.d[dim][dir]; // shrink to the end of the room
+			query_region.d[dim][ dir] += (dir ? 1.0 : -1.0)*end_pad_ext; // extend away from the room
+			query_region.expand_in_dim(dim, 1.5*door_width); // distance from end to nearest door/room in either direction
+			query_region.expand_by_xy(expand_val);
+			query_region.expand_in_z(-fc_thick); // subtract floors and ceilings
+			if (query_region.intersects(get_basement()))                  continue; // too close to basement
+			if (interior->is_cube_close_to_doorway(query_region, room))   continue; // bad placement/not needed
+			if (interior->is_blocked_by_stairs_or_elevator(query_region)) continue; // check stairs
+			bool near_other_room(0);
 
-		for (unsigned r = interior->ext_basement_hallway_room_id; r < interior->rooms.size(); ++r) {
-			if (r != room_id && interior->rooms[r].intersects(query_region)) {near_other_room = 1; break;}
-		}
-		if (near_other_room) continue; // too close to another room to the side of or opposite the door
-		cube_t door;
-		set_cube_zvals(door, zval, (zval + get_floor_ceil_gap())); // extend to the ceiling
-		set_wall_width(door, room.get_center_dim(!dim), 0.5*door_width, !dim);
-		set_wall_width(door, (room.d[dim][dir] + (dir ? -1.0 : 1.0)*0.5*wall_thickness), 2.0*get_trim_thickness(), dim);
-		doors[dir] = cube_with_ix_t(door, (2*dim + dir));
-	} // for dir
+			for (unsigned r = interior->ext_basement_hallway_room_id; r < interior->rooms.size(); ++r) {
+				if (r != room_id && interior->rooms[r].intersects(query_region)) {near_other_room = 1; break;}
+			}
+			if (near_other_room) continue; // too close to another room to the side of or opposite the door
+			cube_t door;
+			set_cube_zvals(door, zval, (zval + get_floor_ceil_gap())); // extend to the ceiling
+			set_wall_width(door, room.get_center_dim(!dim), 0.5*door_width, !dim);
+			set_wall_width(door, (room.d[dim][dir] + (dir ? -1.0 : 1.0)*0.5*wall_thickness), 2.0*get_trim_thickness(), dim);
+			doors[dir] = cube_with_ix_t(door, (2*dim + dir));
+		} // for dir
+		dim ^= 1; // try the other dim for secret rooms
+	} // for dim_vals
 }
 
 void building_t::add_false_door_to_extb_room_if_needed(room_t const &room, float zval, unsigned room_id) {
@@ -160,6 +166,7 @@ void building_t::add_false_door_to_extb_room_if_needed(room_t const &room, float
 		cube_t blocker(door);
 		blocker.d[dim][!dir] = room.d[dim][dir] + (dir ? -1.0 : 1.0)*get_doorway_width(); // add clearance
 		objs.emplace_back(blocker, TYPE_BLOCKER, room_id, dim, dir, RO_FLAG_INVIS);
+		break; // only need to add one
 	} // for d
 }
 
