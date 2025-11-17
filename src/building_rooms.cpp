@@ -579,6 +579,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			unsigned const objs_start_inc_lights(objs.size());
 			bool const walls_not_shared(is_backrooms); // multi-floor backrooms have different walls and can't share the light stack
 			if (is_retail_room) {interior->room_geom->retail_start = objs_start_inc_lights;}
+			unsigned num_broken(0);
 
 			for (cube_t const &l : valid_lights) {
 				bool dim(l.dx() < l.dy()), dir(0); // dir is only used for wall lights
@@ -602,10 +603,12 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				else if (is_ext_basement && valid_lights.size() == 1 && (rgen_lights.rand() & 7) == 0) { // broken ext basement light; not for hallways with multiple lights
 					light_obj.flags |= RO_FLAG_BROKEN2;
 					light_obj.flags &= ~RO_FLAG_LIT; // off by default
+					++num_broken;
 				}
 				objs.emplace_back(light_obj);
 			} // for l
 			float tot_light_amt(light_amt); // unitless, somewhere around 1.0
+			if (num_broken == valid_lights.size()) {is_lit = 0;} // if all lights are broken, room is not lit
 			if (is_lit) {r->lit_by_floor |= (1ULL << (f&31));} // flag this floor as being lit (for up to 32 floors)
 			if (is_lit) {tot_light_amt += r->light_intensity;}
 			if (is_backrooms || is_parking_garage) {add_stains_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, floor_objs_start);}
