@@ -2236,7 +2236,8 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 		tid_nm_pair_t tex;
 		colorRGBA const color(get_ceil_tex_and_color(*i, tex));
 
-		if (!is_house && tex.tid == mat.ceil_tex.tid && tex.no_cracks && !is_rotated()) { // special case of extended basement ceiling tile texture
+		if (tex.tid == mat.ceil_tex.tid && tex.no_cracks && !is_rotated() && !interior->missing_ceil_tiles.empty()) {
+			// special case of extended basement ceiling tile texture;
 			// orient the tile along the long room dim and scale/align to the room area; assumes a rectangular room with no stair or elevator cutouts
 			vert_norm_comp_tc_color vert;
 			vert.set_norm(-plus_z); // pointed downward

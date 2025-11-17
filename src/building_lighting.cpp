@@ -305,15 +305,23 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 	for (cube_t const &c : interior->floors) {
 		if (c.intersects(ext_bcube)) {cc.emplace_back(c, get_avg_floor_color(c));}
 	}
+	static vect_cube_t ceil_cubes, temp; // used across calls for subtracting holes
+
 	for (cube_t const &c : interior->ceilings) {
-		if (c.intersects(ext_bcube)) {cc.emplace_back(c, get_avg_ceil_color(c));}
-	}
+		if (!c.intersects(ext_bcube)) continue;
+		colorRGBA const ceil_color(get_avg_ceil_color(c));
+
+		if (c.z1() < ground_floor_z1 && !interior->missing_ceil_tiles.empty() && !get_basement().contains_cube_xy(c)) {
+			subtract_cubes_from_cube(c, interior->missing_ceil_tiles, ceil_cubes, temp, 2); // check zvals overlap
+			for (cube_t const &C : ceil_cubes) {cc.emplace_back(C, ceil_color);}
+		}
+		else {cc.emplace_back(c, ceil_color);} // add entire ceiling
+	} // for c
 	// should glass floors be included? maybe not, since we want refractions rather than reflections; plus they're mostly transparent and near white
 	//for (cube_t const &i : interior->room_geom->glass_floors) {if (i.intersects(ext_bcube)) {cc.emplace_back(i, GLASS_COLOR);}}
 	add_colored_cubes(details, detail_color.modulate_with(mat.roof_tex.get_avg_color()), ext_bcube, cc); // should this be included?
 	if (!has_room_geom()) return; // nothing else to add
 	vect_room_object_t const &objs(interior->room_geom->objs);
-	static vect_cube_t temp; // used across calls for subtracting holes
 		
 	for (auto c = objs.begin(); c != objs.end(); ++c) { // Note: ignores expanded objects (including shelf rack objects)
 		room_object const type(c->type);
@@ -1025,6 +1033,7 @@ public:
 					min_eq(VA.z1(), b.interior->basement_ext_bcube.z1());
 					max_eq(VA.z2(), b.interior->basement_ext_bcube.z2());
 				}
+				for (cube_t const &c : b.interior->ceiling_spaces) {max_eq(VA.z2(), c.z2());} // extend up to include ceiling spaces
 			}
 			else if (b.has_tall_retail()) { // handle lights on tall retail ceilings
 				cube_t const &retail_room(b.get_retail_part());
