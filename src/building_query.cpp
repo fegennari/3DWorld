@@ -1515,6 +1515,12 @@ bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &
 			if (!check_pos_in_unlit_room_recur(point(center.x, center.y, pos.z), rooms_visited, r)) return 0; // if adjacent room is lit, return false; room_id is known
 		}
 	}
+	if (room.has_cut_wall()) { // check light through open wall sections
+		for (wall_seg_t const &w : interior->missing_wall_segs) {
+			if (w.room_ix      == (unsigned)room_id && !check_pos_in_unlit_room_recur(pos, rooms_visited, w.conn_room_ix)) return 0;
+			if (w.conn_room_ix == (unsigned)room_id && !check_pos_in_unlit_room_recur(pos, rooms_visited, w.room_ix     )) return 0;
+		}
+	}
 	return 1;
 }
 

@@ -1621,6 +1621,8 @@ struct room_t : public cube_t { // size=56
 	bool is_mall_or_store    () const {return (is_mall() || is_store());}
 	bool is_single_large_room() const {return(is_parking() || is_backrooms() || is_retail() || is_mall() || is_industrial());}
 	bool is_single_large_room_or_store() const {return (is_single_large_room() || is_store());}
+	bool is_secret_room      () const {return (is_ext_basement() && has_cut_wall() && !is_hallway);}
+	bool has_non_door_vis    () const {return (open_wall_mask || has_interior_window() || has_cut_wall());}
 	bool is_apt_or_hotel_room() const {return (unit_id > 0);}
 	bool has_room_of_type(room_type type) const;
 	void init_pre_populate(bool is_first_pass);
@@ -2044,10 +2046,11 @@ struct bldg_industrial_info_t {
 };
 
 struct wall_seg_t : public cube_t {
-	bool dim, dir, open=0;
-	unsigned room_ix;
+	bool dim=0, dir=0, open=0;
+	unsigned room_ix=0, conn_room_ix=0;
 	wall_seg_t(cube_t const &c, bool dim_, bool dir_, unsigned r) : cube_t(c), dim(dim_), dir(dir_), room_ix(r) {}
 };
+typedef vector<wall_seg_t> vect_wall_seg_t;
 
 struct building_interior_t {
 	vect_cube_t floors, ceilings, fc_occluders, exclusion, open_walls, split_window_walls, prison_halls;
@@ -2055,7 +2058,7 @@ struct building_interior_t {
 	vect_cube_with_ix_t int_windows; // ix stores room index
 	vect_cube_with_ix_t parking_str_walls; // interior of exterior walls; ix stores draw flags
 	vect_cube_with_ix_t missing_ceil_tiles; // ix is room index
-	vector<wall_seg_t> missing_wall_segs;
+	vect_wall_seg_t missing_wall_segs;
 	vect_stairwell_t stairwells;
 	vect_tunnel_seg_t tunnels;
 	vect_door_t doors;
@@ -2354,7 +2357,7 @@ struct building_t : public building_geom_t {
 	bool are_rooms_connected(room_t const &r1, room_t const &r2, float zval, bool check_door_open) const;
 	bool all_room_int_doors_closed(unsigned room_ix, float zval) const;
 	bool room_might_have_clipped_wall(room_t const &room) const {return (((has_clipped_wall & 1) && room.has_stairs) || ((has_clipped_wall & 2) && room.has_elevator));}
-	bool room_has_non_door_vis       (room_t const &room) const {return room.open_wall_mask || room.has_interior_window() || room_might_have_clipped_wall(room);}
+	bool room_has_non_door_vis       (room_t const &room) const {return room.has_non_door_vis() || room_might_have_clipped_wall(room);}
 	unsigned check_line_coll(point const &p1, point const &p2, float &t, bool occlusion_only=0, bool ret_any_pt=0, bool no_coll_pt=0, bool check_non_coll=0) const;
 	bool get_interior_color_at_xy(point const &pos, colorRGBA &color) const;
 	bool point_in_mall_elevator_entrance(point const &pos, bool inc_front_space) const;

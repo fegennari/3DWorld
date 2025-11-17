@@ -376,7 +376,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		bool added_bathroom(0), is_numbered_room(0);
 		float z(r->z1());
 		if (!r->interior) {r->interior = (is_basement || is_room_windowless(*r));} // AKA windowless; calculate if not already set
-		bool const has_window(!r->interior);
+		bool const has_window(!r->interior), is_secret(r->is_secret_room());
 		// reset is_public_on_floor when we move to a new apartment/hotel unit
 		if (r->unit_id != last_unit_id) {is_public_on_floor = 0; last_unit_id = r->unit_id;}
 		// make chair colors consistent for each part by using a few variables for a hash
@@ -458,7 +458,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 
 			// motion detection lights for large office building office, mall bathrooms, and office bathrooms; limit to interior rooms to have lit rooms viewed through windows
 			if ((!is_house && has_pri_hall() && r->is_office && !has_window) || is_mall_bathroom || (maybe_office_bathroom && !is_parking())) {flags |= RO_FLAG_IS_ACTIVE;}
-			else if (r->is_sec_bldg) {is_lit = 0;} // garage and shed lights start off
+			else if (r->is_sec_bldg || is_secret) {is_lit = 0;} // garage, shed, and secret room lights start off
 			else {
 				// 50% of lights are on, 75% for top of stairs, 100% for non-basement hallways, 100% for parking garages, backrooms, and malls
 				is_lit  = ((r->is_hallway && !is_basement) || is_parking_garage || is_backrooms || is_mall_room || is_retail_room || industrial_room);
@@ -475,6 +475,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			}
 			if (is_lit)                    {flags |= RO_FLAG_LIT | RO_FLAG_EMISSIVE;}
 			if (has_stairs)                {flags |= RO_FLAG_RSTAIRS;}
+			//if (is_secret)                 {flags |= RO_FLAG_NO_POWER;} // power is off in this room TODO: enable later
 			if (r->is_ext_basement_conn()) {flags |= RO_FLAG_EXTERIOR;} // flag as exterior since this light may reach the connected building
 			// add one or more lights to the ceiling of this room if there's space (always for top of stairs);
 			// must check lights vs. backrooms walls and pillars, and mall pillars

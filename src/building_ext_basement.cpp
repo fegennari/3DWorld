@@ -675,7 +675,7 @@ void building_t::maybe_assign_extb_room_as_swimming(rand_gen_t &rgen) {
 	float best_dmin(min_dmin);
 
 	for (auto r = first_room; r != rooms.end(); ++r) {
-		if (r->is_hallway || r->has_stairs)       continue;
+		if (r->is_hallway || r->has_stairs || r->has_cut_wall()) continue;
 		if (r->z1() - pool_max_depth < sea_level) continue; // too deep
 		float const dmin(min(r->dx(), r->dy()));
 		if (dmin < best_dmin) continue; // too small, or smaller than best room
@@ -793,6 +793,8 @@ void building_t::maybe_assign_extb_room_as_swimming(rand_gen_t &rgen) {
 	// cut out a space in the floor for the pool
 	for (cube_t &f : interior->floors) {
 		if (!room.contains_cube(f)) continue;
+		if (!f.contains_cube_xy(pool)) {cout << TXT(room.str()) << TXT(f.str()) << TXT(pool.str()) << endl;}
+		assert(f.contains_cube_xy(pool));
 		vect_cube_t floor_parts;
 		subtract_cube_from_cube(f, pool, floor_parts); // should only get here for one floor
 		assert(floor_parts.size() == 4);
@@ -1098,11 +1100,11 @@ void building_interior_t::remove_extended_basement_wall_sections(vect_cube_t &wa
 		if (r.intersects(gap_exp) && r != room) {has_adj = 1; break;}
 	}
 	if (has_adj) return;
+	bool const dir(room.get_center_dim(dim) < seg.get_center_dim(dim));
 	seg .d[!dim][1] = gap.d[!dim][0]; // left  part
 	seg2.d[!dim][0] = gap.d[!dim][1]; // right part
 	wall_segs.push_back(seg2); // invalidates seg; must be last
 	room.set_has_cut_wall(); // needed for outlet/light switch/vent placement
-	bool const dir(room.get_center_dim(dim) < seg.get_center_dim(dim));
 	missing_wall_segs.emplace_back(gap, dim, dir, room_id);
 }
 
@@ -1111,18 +1113,26 @@ void building_t::add_secret_underground_rooms(ext_basement_room_params_t &P, ran
 	float const floor_spacing(get_window_vspace()), fc_thick(get_fc_thickness()), wall_thick(get_wall_thickness());
 
 	for (wall_seg_t &w : interior->missing_wall_segs) {
-		float const wall_edge(w.d[w.dim][w.dir]); // opposite/inside edge of wall
 		room_t const &hall(get_room(w.room_ix));
+		float const wall_edge(hall.d[w.dim][w.dir]), dsign(w.dir ? 1.0 : -1.0); // should be wall centerline
 		extb_room_t room(w);
+		set_cube_zvals(room, hall.z1(), hall.z2());
 		room.d[w.dim][!w.dir] = wall_edge;
-		room.d[w.dim][ w.dir] = wall_edge + (w.dir ? 1.0 : -1.0)*rgen.rand_uniform(2.0, 4.0)*floor_spacing; // extend outward
+		room.d[w.dim][ w.dir] = wall_edge + dsign*rgen.rand_uniform(2.0, 4.0)*floor_spacing; // extend outward
 		for (unsigned d = 0; d < 2; ++d) {room.d[!w.dim][d] += (d ? 1.0 : -1.0)*rgen.rand_uniform(1.0, 2.0)*floor_spacing;} // widen the room
 		max_eq(room.d[!w.dim][0], hall.d[!w.dim][0]); // clip to hallway length
 		min_eq(room.d[!w.dim][1], hall.d[!w.dim][1]);
-		if (has_bcube_int_no_adj(room, P.rooms) || has_bcube_int(room, P.stairs)) continue;
-		if (!is_basement_room_under_mesh_not_int_bldg(room)) continue;
+		cube_t room_ext(room);
+		room_ext.expand_in_dim(!w.dim, wall_thick);
+		room_ext.d[w.dim][w.dir] += dsign*wall_thick;
+		if (has_bcube_int_no_adj(room_ext, P.rooms) || has_bcube_int(room_ext, P.stairs)) continue;
+		if (!is_basement_room_under_mesh_not_int_bldg(room_ext)) continue;
 		P.wall_exclude.push_back(w);
-		interior->place_exterior_room(room, room, fc_thick, wall_thick, P, rgen, hall.part_id, is_house, 1); // num_lights=1 (TODO: no lights?)
+		w.conn_room_ix = interior->rooms.size(); // will be the room added below
+		interior->place_exterior_room(room, room, fc_thick, wall_thick, P, rgen, hall.part_id, is_house, 1); // num_lights=1 (but will have no lights)
+		interior->rooms.back().set_has_cut_wall();
+		// TODO: add false door?
+		P.rooms.push_back(room);
 		w.open = 1;
 	} // for w
 }
