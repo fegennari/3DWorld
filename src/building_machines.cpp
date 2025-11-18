@@ -305,7 +305,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 	bool parts_swapped(0), is_cylins[2] = {0, 0};
 	unsigned num_parts(0), cylin_dims[2] = {2, 2}; // defaults to Z
 	rand_gen_t rgen(get_machine_info(c, floor_ceil_gap, base, parts, support, is_cylins, cylin_dims, num_parts, parts_swapped));
-	bool const dim(c.dim), dir(c.dir), two_part(num_parts == 2), in_factory(c.in_factory()), in_box(c.was_expanded());
+	bool const dim(c.dim), dir(c.dir), two_part(num_parts == 2), in_factory(c.in_factory()), in_box(c.was_expanded()), has_back_wall(!(c.flags & RO_FLAG_ADJ_BOT));
 	float const pipe_rmax(0.033*min(height, min(width, depth))), back_wall_pos(c.d[dim][!dir]);
 	bool const metal_base( in_factory && (c.flags & RO_FLAG_FROM_SET  )); // factory machine grid
 	bool const untextured(!in_factory && (c.flags & RO_FLAG_UNTEXTURED)); // for hospitals
@@ -468,7 +468,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 				} // for n
 			}
 		}
-		else if ((is_cylin || has_gap) && cylin_dim != unsigned(dim)) { // if there's a gap between the machine and the wall; not for cylinders facing the wall
+		else if (has_back_wall && (is_cylin || has_gap) && cylin_dim != unsigned(dim)) { // if there's a gap between machine and wall; not for cylinders facing wall
 			// add pipe(s) connecting to back wall in {dim, !dir} or ceiling
 			unsigned const num_pipes((rgen.rand() % 4) + 1); // 1-4
 			bool const allow_valve(!is_cylin); // add valves to cubes only so that they don't intersect the parts
@@ -505,7 +505,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 			}
 		}
 		// add a duct to the wall
-		if (!is_cylin && has_gap && rgen.rand_float() < 0.65) {
+		if (has_back_wall && !is_cylin && has_gap && rgen.rand_float() < 0.65) {
 			bool const two_sided(in_box); // since end is visible
 			float const radius(rgen.rand_uniform(2.0, 4.0)*pipe_rmax); // wider than a pipe
 			point p1, p2;
@@ -683,7 +683,7 @@ vector2d get_machine_max_sz(cube_t const &place_area, float min_gap, float max_p
 	return max_sz;
 }
 bool building_t::add_machines_to_room(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool less_clearance) {
-	float const floor_spacing(get_window_vspace()), fc_gap(get_floor_ceil_gap());
+	float const floor_spacing(get_window_vspace()), fc_gap(get_floor_ceil_gap()), wall_thick(get_wall_thickness());
 	float const clearance_factor(less_clearance ? 0.2 : 1.0), min_place_sz((less_clearance ? 0.25 : 0.5)*floor_spacing), max_place_sz(1.5*floor_spacing);
 	float const min_clearance(clearance_factor*get_min_front_clearance_inc_people()), min_gap(max(clearance_factor*get_doorway_width(), min_clearance));
 	unsigned const num_machines((rgen.rand() % 5) + 1); // 1-5
@@ -716,7 +716,12 @@ bool building_t::add_machines_to_room(rand_gen_t rgen, room_t const &room, float
 			c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*depth;
 			set_wall_width(c, center, hwidth, !dim);
 			if (c.intersects(avoid) || overlaps_other_room_obj(c, objs_start) || is_obj_placement_blocked(c, room, 1)) continue; // inc_open_doors=1
-			objs.emplace_back(c, TYPE_MACHINE, room_id, dim, !dir, 0, tot_light_amt, SHAPE_CUBE, LT_GRAY, rgen.rand()); // add more randomness
+			// check if close to a wall cut
+			cube_t c_exp(c);
+			c_exp.d[dim][dir] -= (dir ? -1.0 : 1.0)*2.0*wall_thick;
+			unsigned flags(0);
+			if (has_bcube_int(c_exp, interior->missing_wall_segs)) {flags |= RO_FLAG_ADJ_BOT;}
+			objs.emplace_back(c, TYPE_MACHINE, room_id, dim, !dir, flags, tot_light_amt, SHAPE_CUBE, LT_GRAY, rgen.rand()); // add more randomness
 			set_obj_id(objs);
 			if (no_opposite_sides) {used_orients[unsigned(dim) + unsigned(dir)] = 1;} // mark this orient as used
 			any_placed = 1;
@@ -743,6 +748,11 @@ bool building_t::add_machines_to_room(rand_gen_t rgen, room_t const &room, float
 			tc.d[dim][!dir] += dir_sign*4.0*depth; // add 4*depth worth of clearance in the front to avoid blocking airflow
 			if (tc.intersects(avoid) || overlaps_other_room_obj(tc, objs_start) || is_obj_placement_blocked(tc, room, 1)) continue; // inc_open_doors=1
 			if (has_bcube_int(tc, interior->missing_wall_segs)) continue;
+			// check for rooms opposite this wall that would block the fan exhaust
+			cube_t space_behind(c);
+			space_behind.d[dim][ dir] = wall_pos - dir_sign*0.5*floor_spacing; // extend to other side of wall
+			space_behind.d[dim][!dir] = wall_pos - dir_sign*2.0*wall_thick; // shift to not intersect the room
+			if (interior->cube_in_ext_basement_room(space_behind, 0)) continue; // xy_only=0
 			objs.emplace_back(c, TYPE_VENT_FAN, room_id, dim, !dir, RO_FLAG_INTERIOR, tot_light_amt, SHAPE_CUBE);
 			break; // done
 		} // for t
