@@ -5170,9 +5170,15 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 	cube_t const room_bounds(get_room_wall_bounds(room));
 	if (min(room_bounds.dx(), room_bounds.dy()) < 8.0*switch_hwidth) return; // room is too small; shouldn't happen
 	float const ceil_zval(zval + get_floor_ceil_gap());
-	vect_door_stack_t &doorways(get_doorways_for_room(room, zval)); // place light switch next to a door
-	std::shuffle(doorways.begin(), doorways.end(), rand_gen_wrap_t(rgen));
 	vect_room_object_t &objs(interior->room_geom->objs);
+	vect_door_stack_t &doorways(get_doorways_for_room(room, zval)); // place light switch next to a door
+
+	if (doorways.empty() && room.is_ext_basement()) { // no doors? maybe a secret room - look for a false door instead
+		for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
+			if (i->type == TYPE_FALSE_DOOR) {doorways.emplace_back(door_base_t(*i, i->dim, !i->dir), 0);}
+		}
+	}
+	std::shuffle(doorways.begin(), doorways.end(), rand_gen_wrap_t(rgen));
 	unsigned const objs_end(objs.size());
 	bool const first_side(rgen.rand_bool());
 	vect_door_stack_t ext_doors; // not really door stacks, but we can fill in the data to treat them as such
