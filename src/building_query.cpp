@@ -1336,6 +1336,9 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 			else if (type == TYPE_RDESK) {
 				had_coll |= (check_rdesk_collision(*c, pos, p_last, xy_radius, cnorm) != 0);
 			}
+			/*else if (type == TYPE_SHOP_CART) {
+				// move the cart rather than pos if colliding with the front or back?
+			}*/
 			else if (type == TYPE_COLLIDER && (c->flags & RO_FLAG_ADJ_TOP)) { // special handling for ladder collider
 				point const orig_pos(pos);
 
@@ -2870,6 +2873,7 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 
 		for (auto c = objs_beg; c != objs_end; ++c) {
 			if (c->z1() > obj_z2 || c->z2() < obj_z1) continue; // wrong floor
+			if (c->type == TYPE_SHOP_CART && (animal_type == ATYPE_RAT || animal_type == ATYPE_SNAKE)) continue; // rats and snakes can pass under
 			// skip non-colliding objects except for balls and books (that the player can drop), computers under desks, and expanded objects from closets,
 			// since rats must collide with these
 			if (c->type == TYPE_JAIL_BARS && animal_type == ATYPE_SNAKE) {} // snakes collide with jail bars, but rats can walk through/over them

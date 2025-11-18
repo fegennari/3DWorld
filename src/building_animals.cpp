@@ -588,6 +588,12 @@ bool can_hide_under(room_object_t const &c, cube_t &hide_area) {
 		hide_area = c;
 		return 1;
 	}
+	else if (c.type == TYPE_SHOP_CART) {
+		hide_area = c;
+		hide_area.z1() += 0.08*c.dz();
+		for (unsigned d = 0; d < 2; ++d) {hide_area.expand_in_dim(d, -0.2*c.get_sz_dim(d));}
+		return 1;
+	}
 	else if (c.type == TYPE_SHELVES) {
 		if (c.get_num_shelves() < 4) return 0; // only 4 shelves provide a small enough space at the bottom to hide under
 		hide_area = c;

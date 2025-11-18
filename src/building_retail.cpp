@@ -39,7 +39,7 @@ bool building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 		row_aisle_width += 0.5*(rack_width - max_rack_width); // first aisle width increases by half the rack width; aisle_spacing is unchanged
 		rack_width       = max_rack_width;
 	}
-	float const wall_thickness(get_wall_thickness()), pillar_width(2.0*wall_thickness), fc_gap(get_floor_ceil_gap());
+	float const wall_thickness(get_wall_thickness()), pillar_width(2.0*wall_thickness), fc_gap(get_floor_ceil_gap()), clearance(get_min_front_clearance_inc_people());
 	float const col_aisle_width(nom_aisle_width + pillar_width), rack_spacing((length - col_aisle_width)/nracks), rack_length(rack_spacing - col_aisle_width);
 	float const e_width(0.9*door_width), pair_width(2.1*e_width), end_pad(1.2*door_width); // for escalators
 	assert(rack_length > 0.0);
@@ -224,7 +224,7 @@ bool building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 						unsigned const item_flags(~get_face_mask(dim, !dir)); // skip side facing railing
 						objs.emplace_back(beam, TYPE_METAL_BAR, room_id, dim, dir, RO_FLAG_NOCOLL, 1.0, SHAPE_CUBE, BLACK, item_flags);
 					}
-					// add another level of shelf racks on this floor;
+					// add another level of shelf racks on this floor, but no shopping carts;
 					// stairs/elevators/escalators/pillars extend through both floors, so we don't need to recheck intersections, but we may need to increase their height
 					unsigned const objs_end(objs.size());
 					float const min_rack_len(min(0.5f*rack_length, 1.0f*floor_spacing)), min_pillar_z2(floor_z2 + 0.85*fc_gap);
@@ -251,7 +251,7 @@ bool building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 					for (elevator_t &e : interior->elevators) {
 						if (e.skip_floors_mask == 0 || e.z2() < floor_z2 || e.z1() > floor_z1 || !upper_floor.contains_cube_xy(e)) continue;
 						// check for opening clearance
-						float const front_clearance(ELEVATOR_STAND_DIST*floor_spacing + 0.5*get_min_front_clearance_inc_people());
+						float const front_clearance(ELEVATOR_STAND_DIST*floor_spacing + 0.5*clearance);
 						cube_t const bc_pad(e.get_bcube_padded(front_clearance));
 						if (!upper_floor.contains_cube_xy(bc_pad)) continue; // too close to edge of floor; can this fail?
 						if (upper_conn.intersects(bc_pad))         continue; // too close to escalator
@@ -296,6 +296,32 @@ bool building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 			checkout.expand_in_dim(dim, -1.6*nom_aisle_width); // shrink
 			unsigned const check_objs_start(skip_middle_row ? objs.size() : objs_start); // can skip objs check if middle row is skipped
 			add_checkout_objs(checkout, zval, room_id, 1.0, check_objs_start, dim, dir, rgen.rand_bool()); // tot_light_amt=1.0
+		}
+	}
+	// add shopping carts
+	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_SHOP_CART)) {
+		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SHOP_CART)); // D, W, H
+		float const height(0.425*floor_spacing), hlen(0.5*height*sz.x/sz.z), hwidth(0.5*height*sz.y/sz.z);
+		unsigned const num_carts(1 + (rgen.rand() % (nrows*nracks/4)));
+		cube_t cart_area(room);
+		cart_area.expand_by_xy(-(max(hlen, hwidth) + wall_thickness));
+		cube_t cart;
+		set_cube_zvals(cart, zval, zval+height);
+
+		if (cart_area.is_strictly_normalized()) { // should always be true
+			for (unsigned n = 0; n < num_carts; ++n) {
+				bool const dim(rgen.rand_bool());
+				vector2d const sz((dim ? hwidth : hlen), (dim ? hlen : hwidth));
+
+				for (unsigned N = 0; N < 10; ++N) { // 10 random placement tries
+					for (unsigned d = 0; d < 2; ++d) {set_wall_width(cart, rgen.rand_uniform(cart_area.d[d][0], cart_area.d[d][1]), sz[d], d);}
+					cube_t c_exp(cart);
+					c_exp.expand_in_dim(dim, clearance); // make sure there's clearance in front and behind to push; should align carts to aisles
+					if (overlaps_other_room_obj(c_exp, objs_start) || interior->is_blocked_by_stairs_or_elevator(c_exp)) continue;
+					objs.emplace_back(cart, TYPE_SHOP_CART, room_id, dim, rgen.rand_bool(), 0, 1.0);
+					break; // success/done
+				}
+			} // for n
 		}
 	}
 	add_cameras_to_room(rgen, room, zval, room_id, 1.0, objs.size()); // tot_light_amt=1.0

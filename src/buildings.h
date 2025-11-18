@@ -525,7 +525,7 @@ enum { // room object types
 	TYPE_HOOD, TYPE_RCHAIR, TYPE_SILVER, TYPE_TOY_MODEL, TYPE_CEIL_FAN, TYPE_FIRE_EXT, TYPE_FOLD_SHIRT, TYPE_PLANT_MODEL, TYPE_POOL_TABLE, TYPE_POOL_LAD,
 	TYPE_BAR_STOOL, TYPE_PADLOCK, TYPE_CASHREG, TYPE_WFOUNTAIN, TYPE_BANANA, TYPE_BAN_PEEL, TYPE_CONF_PHONE, TYPE_SHOE, TYPE_SHOEBOX, TYPE_VENT_FAN,
 	TYPE_HOSP_BED, TYPE_HOSP_CURT, TYPE_FORKLIFT, TYPE_WHEELCHAIR, TYPE_OP_TABLE, TYPE_TROLLEY, TYPE_STRETCHER, TYPE_APPLE, TYPE_EX_MACHINE, TYPE_VIS_PHONE,
-	TYPE_JUMPSUIT, TYPE_HANDGUN,
+	TYPE_JUMPSUIT, TYPE_HANDGUN, TYPE_SHOP_CART,
 	/* shared with city objects */
 	TYPE_GBIKE, TYPE_XFORMER, TYPE_US_FLAG, TYPE_BLDG_FOUNT,
 	/* animals; bird is only used for pet stores */
@@ -607,7 +607,7 @@ enum {/*building models*/ OBJ_MODEL_TOILET=0, OBJ_MODEL_SINK, OBJ_MODEL_TUB, OBJ
 	OBJ_MODEL_FOLD_SHIRT, OBJ_MODEL_PLANT, OBJ_MODEL_POOL_TABLE, OBJ_MODEL_POOL_LAD, OBJ_MODEL_BAR_STOOL, OBJ_MODEL_PADLOCK, OBJ_MODEL_CASHREG, OBJ_MODEL_WFOUNTAIN,
 	OBJ_MODEL_BANANA, OBJ_MODEL_BAN_PEEL, OBJ_MODEL_PHONE, OBJ_MODEL_SHOE, OBJ_MODEL_SHOEBOX, OBJ_MODEL_VENT_FAN, OBJ_MODEL_HOSP_BED, OBJ_MODEL_HOSP_CURT, OBJ_MODEL_FORKLIFT,
 	OBJ_MODEL_WHEELCHAIR, OBJ_MODEL_OP_TABLE, OBJ_MODEL_TROLLEY, OBJ_MODEL_STRETCHER, OBJ_MODEL_APPLE, OBJ_MODEL_EX_MACHINE, OBJ_MODEL_VIS_PHONE, OBJ_MODEL_JUMPSUIT,
-	OBJ_MODEL_HANDGUN,
+	OBJ_MODEL_HANDGUN, OBJ_MODEL_SHOP_CART,
 	OBJ_MODEL_GBIKE/*unused*/, OBJ_MODEL_XFMR/*unused*/, OBJ_MODEL_US_FLAG/*unused*/, OBJ_MODEL_BLDG_FOUNT/*unused*/,
 	/*animal models*/ OBJ_MODEL_RAT, OBJ_MODEL_ROACH,
 	/*building non-room objects*/ OBJ_MODEL_DOOR_HANDLE,
@@ -1803,11 +1803,8 @@ unsigned const DOOR_FLAG_AUTO_CLOSE = 0x20; // door automatically closes (office
 struct door_base_t : public cube_t {
 	bool dim=0, open_dir=0, hinge_side=0, on_stairs=0;
 	uint8_t flags=0, for_jail=0; // for_jail: 0=not jail, 1=jail bar doors, 2=metal room door
-	uint16_t conn_room[2]={}; // on each side of the door
-	// is it useful to store the two rooms in the door/door_stack? this will speed up connectivity searches for navigation and room assignment,
-	// but only for finding the second room connected to a door, because we still need to iterate over all doors;
-	// unfortunately, it's not easy/cheap to assign these values because the room may not even be added until after the door is placed, so we have to go back and set room1/room2 later
-	//uint8_t room1, room2;
+	uint16_t conn_room[2]={}; // rooms on each side of the door
+
 	door_base_t() {}
 	door_base_t(cube_t const &c, bool dim_, bool dir, bool os=0, bool hs=0) :
 		cube_t(c), dim(dim_), open_dir(dir), hinge_side(hs), on_stairs(os) {assert(is_normalized());}
