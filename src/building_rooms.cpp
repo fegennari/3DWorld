@@ -475,7 +475,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			}
 			if (is_lit)                    {flags |= RO_FLAG_LIT | RO_FLAG_EMISSIVE;}
 			if (has_stairs)                {flags |= RO_FLAG_RSTAIRS;}
-			//if (is_secret)                 {flags |= RO_FLAG_NO_POWER;} // power is off in this room TODO: enable later
+			if (is_secret)                 {flags |= RO_FLAG_NO_POWER;} // power is off in this room TODO: enable later
 			if (r->is_ext_basement_conn()) {flags |= RO_FLAG_EXTERIOR;} // flag as exterior since this light may reach the connected building
 			// add one or more lights to the ceiling of this room if there's space (always for top of stairs);
 			// must check lights vs. backrooms walls and pillars, and mall pillars

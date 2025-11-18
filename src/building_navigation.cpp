@@ -2375,6 +2375,8 @@ bool building_t::can_target_player(person_t const &person) const {
 	if (point_over_glass_floor(person.pos)) {return point_over_glass_floor(cur_player_building_loc.pos);}
 	assert(cur_player_building_loc.room_ix >= 0);
 	room_t const &player_room(get_room(cur_player_building_loc.room_ix));
+	// for now, zombies can't enter secret rooms because they're not connected with doors and there are no animations for squeezing between wall studs
+	if (person.cur_room != cur_player_building_loc.room_ix && player_room.is_secret_room()) return 0;
 	float const first_floor_zceil(player_room.z1() + get_window_vspace());
 	if (player_room.is_single_floor && !player_room.is_mall() && cur_player_building_loc.pos.z > first_floor_zceil) return 0; // check for player on unreachable floor
 	// if player is on the upper floor, don't update target (in case person is on stairs landing)
