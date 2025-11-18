@@ -1286,6 +1286,7 @@
     <None Include="shaders\tree_leaves_ppl.vert" />
     <None Include="shaders\triplanar_bump_map.part.frag" />
     <None Include="shaders\triplanar_texture.part.frag" />
+    <None Include="shaders\trippy_waves.frag" />
     <None Include="shaders\vertex_xlate_scale.vert" />
     <None Include="shaders\vert_plus_normal.vert" />
     <None Include="shaders\vert_xform_only.vert" />

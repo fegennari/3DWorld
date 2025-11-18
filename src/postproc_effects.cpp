@@ -329,7 +329,7 @@ void run_postproc_effects() {
 		if (dv_amt      > 0.0) {add_color_only_effect("double_vision", dv_amt);} // moderately drunk or white shrooms
 		if (drunkenness > 0.5) {add_color_only_effect("drunken_wave", 1.0f*(min(drunkenness, 1.25f) - 0.5f));}
 		if (shrooms.y   > 0.0) {add_color_only_effect("shrooms",  shrooms.y);} // red shrooms
-		if (shrooms.z   > 0.0) {add_color_only_effect("shrooms2", shrooms.z);} // red with white spot shrooms
+		if (shrooms.z   > 0.0) {add_color_only_effect(((shrooms.z == 1.0) ? "trippy_waves" : "shrooms2"), shrooms.z);} // red with white spot shrooms
 	}
 	else if (camera_underwater) {
 		apply_player_underwater_effect();
