@@ -110,7 +110,7 @@ int get_crack_tid(room_object_t const &obj, int alpha=0) {
 		(alpha ? "interiors/cracked_glass_alpha.jpg"  : "interiors/cracked_glass.jpg"), 0, 0, 1, 0.0, 1, 1, (alpha ? 4 : 3));
 }
 int get_box_tid       () {return get_texture_by_name("interiors/box.jpg");}
-int get_plywood_tid   () {return get_texture_by_name("interiors/plywood.jpg");}
+int get_plywood_tid   () {return get_texture_by_name("interiors/plywood.jpg");} // Note: misnamed, actually OSB
 int get_insulation_tid() {return get_texture_by_name("interiors/insulation.jpg");}
 int get_cube_duct_tid () {return get_texture_by_name("interiors/duct.jpg");}
 int get_cylin_duct_tid() {return get_texture_by_name("buildings/metal_roof.jpg");} // metal roof is close enough
@@ -2572,7 +2572,7 @@ void building_room_geom_t::add_wall_gap(room_object_t const &c, tid_nm_pair_t co
 	if (!open) { // draw inside wall face
 		cube_t wall_inner(c);
 		wall_inner.translate_dim(dim, dsign*depth*(has_insulation ? 0.5 : 1.0)); // half depth if there's insulation
-		int const tid(has_insulation ? get_insulation_tid() : get_plywood_tid());
+		int const tid(has_insulation ? get_insulation_tid() : get_plywood_tid()); // fiberglass insulation or OSB
 		// small; shadowed, since this wall may block the light to a room on the other side
 		get_material(tid_nm_pair_t(tid, 2.0/height, 1), 1, 0, 1).add_cube_to_verts(wall_inner, color, c.get_llc(), front_face_mask, dim);
 	}

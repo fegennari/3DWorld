@@ -447,18 +447,31 @@ void building_t::add_ceiling_tile_objects(rand_gen_t rgen) {
 			bool const is_cylin(rgen.rand_bool()); // per-building?
 			room_obj_shape const duct_shape(is_cylin ? SHAPE_CYLIN : SHAPE_CUBE);
 			float const height(rgen.rand_uniform(0.8, 1.0)*min(2.0*fc_thick, 0.8*cs_sz.z));
-			float const width((is_cylin ? 0.5 : rgen.rand_uniform(0.5, 0.7))*height), edge_spacing(1.25*width);
+			float const hwidth((is_cylin ? 0.5 : rgen.rand_uniform(0.5, 0.7))*height), edge_spacing(1.25*hwidth);
 			cube_t duct(cs); // full length of ceiling space
 			duct.z1() = cs.z2() - height; // along the ceiling
 
 			for (unsigned N = 0; N < 10; ++N) { // 10 attempts to place a duct
 				float const duct_pos(rgen.rand_uniform((cs.d[!dim][0] + edge_spacing), (cs.d[!dim][1] - edge_spacing)));
-				set_wall_width(duct, duct_pos, width, !dim);
+				set_wall_width(duct, duct_pos, hwidth, !dim);
 				if (!has_bcube_int_xy(duct, miss_tiles)) break; // not visible through a missing tile, skip (but counts as a pipe)
 				if ( has_bcube_int_xy(duct, pipe_avoid)) continue; // blocked by light post or another pipe
 				// Note: may clip through a spider web, is that okay?
-				interior->room_geom->objs.emplace_back(duct, TYPE_DUCT, cs.room_ix, dim, 0, pipe_flags, light_amt, duct_shape, WHITE); // horizontal
+				objs.emplace_back(duct, TYPE_DUCT, cs.room_ix, dim, 0, pipe_flags, light_amt, duct_shape, WHITE); // horizontal
 				pipe_avoid.push_back(duct);
+				// add vents along the duct; maybe these should be in every hallway, even if there are no missing ceiling tiles?
+				float const duct_len(duct.get_sz_dim(dim)), nom_spacing(2.0*floor_spacing);
+				unsigned const num_vents(duct_len/nom_spacing);
+				float const vent_spacing(duct_len/num_vents), vents_start(duct.d[dim][0] + 0.5*vent_spacing);
+				cube_t vent;
+				set_cube_zvals(vent, (cs.z1() - 0.1*fc_thick), (duct.z1() + (is_cylin ? 0.5*height : 0.0))); // slightly below the ceiling
+				set_wall_width(vent, duct_pos, 0.7*hwidth, !dim);
+
+				for (unsigned n = 0; n < num_vents; ++n) {
+					set_wall_width(vent, (vents_start + n*vent_spacing), 1.0*hwidth, dim);
+					if (has_bcube_int_xy(vent, light_bcs)) continue;
+					objs.emplace_back(vent, TYPE_VENT, cs.room_ix, dim, 0, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), light_amt);
+				}
 				break; // success
 			} // for N
 		}
@@ -480,7 +493,7 @@ void building_t::add_ceiling_tile_objects(rand_gen_t rgen) {
 				set_wall_width(pipe, pipe_pos, radius, !dim);
 				if (!has_bcube_int_xy(pipe, miss_tiles)) break; // not visible through a missing tile, skip (but counts as a pipe)
 				if ( has_bcube_int_xy(pipe, pipe_avoid)) continue; // blocked by light post or another pipe
-				interior->room_geom->objs.emplace_back(pipe, TYPE_PIPE, cs.room_ix, dim, 0, pipe_flags, light_amt, SHAPE_CYLIN, pipe_color); // horizontal
+				objs.emplace_back(pipe, TYPE_PIPE, cs.room_ix, dim, 0, pipe_flags, light_amt, SHAPE_CYLIN, pipe_color); // horizontal
 				pipe_avoid.push_back(pipe);
 				// add hanging brackets over miss_tiles and fittings at ends
 				colorRGBA const bracket_color((pipe_color == LT_GRAY) ? GRAY : LT_GRAY); // different from pipe color
