@@ -348,8 +348,9 @@ void building_t::remove_ceiling_tiles(cube_t const &room_in, tid_nm_pair_t const
 
 void building_t::add_ceiling_tile_objects(rand_gen_t rgen) {
 	assert(has_room_geom());
-	float const floor_spacing(get_window_vspace()), fc_thick(get_fc_thickness()), fc_gap(get_floor_ceil_gap()), light_amt(1.0);
-	unsigned const pipe_flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING), wire_flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING | RO_FLAG_IN_HALLWAY);
+	if (interior->ceiling_spaces.empty()) return;
+	float const floor_spacing(get_window_vspace()), wall_thick(get_wall_thickness()), fc_thick(get_fc_thickness()), fc_gap(get_floor_ceil_gap()), light_amt(1.0);
+	unsigned const pipe_flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING), wire_flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING | RO_FLAG_IN_HALLWAY), vent_flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const objs_end(objs.size());
 	unsigned cur_obj_ix(0); // used for lights iteration; lights should be in the same order as ceiling_spaces
@@ -459,18 +460,17 @@ void building_t::add_ceiling_tile_objects(rand_gen_t rgen) {
 				// Note: may clip through a spider web, is that okay?
 				objs.emplace_back(duct, TYPE_DUCT, cs.room_ix, dim, 0, pipe_flags, light_amt, duct_shape, WHITE); // horizontal
 				pipe_avoid.push_back(duct);
-				// add vents along the duct; maybe these should be in every hallway, even if there are no missing ceiling tiles?
+				// add vents along the duct
 				float const duct_len(duct.get_sz_dim(dim)), nom_spacing(2.0*floor_spacing);
 				unsigned const num_vents(duct_len/nom_spacing);
 				float const vent_spacing(duct_len/num_vents), vents_start(duct.d[dim][0] + 0.5*vent_spacing);
 				cube_t vent;
-				set_cube_zvals(vent, (cs.z1() - 0.1*fc_thick), (duct.z1() + (is_cylin ? 0.5*height : 0.0))); // slightly below the ceiling
-				set_wall_width(vent, duct_pos, 0.7*hwidth, !dim);
+				set_cube_zvals(vent, (cs.z1() - 0.1*wall_thick), (duct.z1() + (is_cylin ? 0.5*height : 0.0))); // slightly below the ceiling
+				set_wall_width(vent, duct_pos, 0.625*hwidth, !dim);
 
 				for (unsigned n = 0; n < num_vents; ++n) {
 					set_wall_width(vent, (vents_start + n*vent_spacing), 1.0*hwidth, dim);
-					if (has_bcube_int_xy(vent, light_bcs)) continue;
-					objs.emplace_back(vent, TYPE_VENT, cs.room_ix, dim, 0, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), light_amt);
+					if (!has_bcube_int_xy(vent, light_bcs)) {objs.emplace_back(vent, TYPE_VENT, cs.room_ix, dim, 0, vent_flags, light_amt);}
 				}
 				break; // success
 			} // for N
@@ -520,6 +520,36 @@ void building_t::add_ceiling_tile_objects(rand_gen_t rgen) {
 			} // for N
 		} // for n
 	} // for cs
+	// add ceiling vents in hallways with no missing tiles/spaces as well
+	float const vent_hlen(1.12*wall_thick), vent_hwid(0.7*wall_thick), edge_spacing(2.0*vent_hwid);
+	auto cs(interior->ceiling_spaces.begin());
+	cur_obj_ix = 0; // reset for another iteration
+
+	for (unsigned r = interior->ext_basement_hallway_room_id; r < interior->rooms.size(); ++r) {
+		if (cs != interior->ceiling_spaces.end() && cs->room_ix == r) {++cs; continue;} // skip this room
+		room_t const &room(interior->rooms[r]);
+		if (!room.is_hallway) continue; // hallways only
+		vector2d const room_sz(room.get_size_xy());
+		bool const dim(room_sz.x < room_sz.y);
+		if (room_sz[!dim] < 4.0*edge_spacing) continue; // too narrow; shouldn't happen
+		float const room_len(room_sz[dim]), nom_spacing(2.0*floor_spacing), hwidth();
+		light_bcs.clear();
+
+		for (; cur_obj_ix != objs_end && objs[cur_obj_ix].room_id <= r; ++cur_obj_ix) {
+			room_object_t const &light(objs[cur_obj_ix]);
+			if (light.room_id == r && light.type == TYPE_LIGHT) {light_bcs.push_back(light);}
+		}
+		unsigned const num_vents(room_len/nom_spacing);
+		float const vent_spacing(room_len/num_vents), vents_start(room.d[dim][0] + 0.5*vent_spacing), vent_z2(room.z2() - fc_thick);
+		cube_t vent;
+		set_cube_zvals(vent, (vent_z2 - 0.1*wall_thick), vent_z2); // slightly below the ceiling
+		set_wall_width(vent, rgen.rand_uniform(room.d[!dim][0]+edge_spacing, room.d[!dim][1]-edge_spacing), vent_hwid, !dim);
+
+		for (unsigned n = 0; n < num_vents; ++n) {
+			set_wall_width(vent, (vents_start + n*vent_spacing), vent_hlen, dim);
+			if (!has_bcube_int_xy(vent, light_bcs)) {objs.emplace_back(vent, TYPE_VENT, r, dim, 0, vent_flags, light_amt);}
+		}
+	} // for r
 }
 void building_t::add_tile_on_floor(rand_gen_t &rgen, cube_t const &c, cube_t const &room, cube_t const &place_area, unsigned room_ix, bool is_light, vect_cube_t &tile_block) {
 	bool const dim(c.dx() < c.dy()); // long dim
