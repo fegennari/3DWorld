@@ -312,8 +312,14 @@ void building_t::remove_ceiling_tiles(cube_t const &room_in, tid_nm_pair_t const
 		cube_t cs_ext(ceil_space);
 		cs_ext.z2() += fc_thick;
 		if (!is_basement_room_under_mesh_not_int_bldg(cs_ext)) break; // can't expand up
+		bool hit_adj_room(0);
+
+		for (cube_t const &c : P.rooms) {
+			if (c != room_in && c.intersects(cs_ext)) {hit_adj_room = 1; break;}
+		}
+		if (hit_adj_room) break;
 		ceil_space.z2() = cs_ext.z2();
-	}
+	} // for n
 	// add missing tiles
 	unsigned const missing_tiles_start(interior->missing_ceil_tiles.size());
 	cube_t cut, cut_clip_cube(ceil_space);
