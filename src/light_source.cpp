@@ -133,7 +133,8 @@ void light_source::get_bounds(cube_t &bcube, int bnds[3][2], float sqrt_thresh, 
 }
 
 float light_source::calc_cylin_end_radius(float falloff) const {
-	float const d(1.0f - 2.0f*(bwidth + ((falloff > 0.0) ? falloff : LT_DIR_FALLOFF))); // use default falloff if zero
+	float d(1.0f - 2.0f*(bwidth + ((falloff > 0.0) ? falloff : LT_DIR_FALLOFF))); // use default falloff if zero
+	max_eq(d, 0.1f); // avoid divide by zero
 	return radius*sqrt(1.0f/(d*d) - 1.0f);
 }
 cylinder_3dw light_source::calc_bounding_cylin(float sqrt_thresh, bool clip_to_scene_bcube, float falloff) const {
