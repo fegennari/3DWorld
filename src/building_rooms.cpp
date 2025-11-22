@@ -2095,7 +2095,9 @@ void building_t::add_wall_and_door_trim() { // and window trim
 					}
 				} // for W
 			}
-			unsigned const num_floors(max(1U, (unsigned)calc_num_floors(*w, floor_spacing, floor_thickness))); // at least one (to include mall bathrooms and hallways)
+			// at least one floor (to include mall bathrooms and hallways); pool room is single floor even if tall
+			bool const single_floor(in_ext_basement && !interior->has_backrooms && !has_mall());
+			unsigned const num_floors(single_floor ? 1U : max(1U, (unsigned)calc_num_floors(*w, floor_spacing, floor_thickness)));
 			// snap to the nearest floor to handle short walls due to cut out stairs
 			float const ground_wall_z1(ref_z1 + fc_thick);
 			float z(ground_wall_z1 + floor_spacing*round_fp((w->z1() - ground_wall_z1)/floor_spacing));

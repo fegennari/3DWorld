@@ -112,7 +112,7 @@ void building_t::get_valid_extb_room_end_doors(room_t const &room, float zval, u
 	assert(interior->ext_basement_hallway_room_id >= 0 && (unsigned)interior->ext_basement_hallway_room_id < interior->rooms.size());
 	bool dim(room.dx() < room.dy()); // long dim
 
-	for (unsigned dim_vals = 0; dim_vals < (is_secret ? 2 : 1); ++dim_vals) {
+	for (unsigned dim_vals = 0; dim_vals < (is_secret ? 2U : 1U); ++dim_vals) {
 		for (unsigned dir = 0; dir < 2; ++dir) { // check both ends
 			cube_t query_region(room);
 			if (is_secret) {query_region.expand_in_dim(!dim, -wall_thickness);} // don't intersect the connecting hallway

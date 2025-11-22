@@ -2659,7 +2659,7 @@ void building_room_geom_t::add_wall_gap(room_object_t const &c, tid_nm_pair_t co
 	rgeom_storage_t::vertex_t vf;
 	vf.set_c3(WHITE);
 
-	for (unsigned draw_dir = 0; draw_dir < (open ? 2 : 1); ++draw_dir, dir ^= 1) {
+	for (unsigned draw_dir = 0; draw_dir < (open ? 2U : 1U); ++draw_dir, dir ^= 1) {
 		float const front_face(c.d[dim][!dir]), int_face(stud.d[dim][!dir]), max_shift(1.5*depth + 0.05*width);
 		vector3d const front_dir(vector_from_dim_dir(dim, !dir));
 		unsigned const fv_start(fverts.size()), fixs_start(wall_ixs.size());
