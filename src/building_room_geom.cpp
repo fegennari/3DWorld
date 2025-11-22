@@ -2579,12 +2579,12 @@ void building_room_geom_t::add_wall_gap(room_object_t const &c, tid_nm_pair_t co
 	// draw wood studs; draw sides and front separately for vertical grain in both
 	unsigned const num_studs(max(2, 1+round_fp(5.4*width/height)));
 	float const stud_width(0.025*height), stud_hwidth(0.5*stud_width), stud_spacing((width - stud_width)/(num_studs - 1));
-	float const sr_thickness(0.1*dsign*depth), tb_shrink(0.2*dsign*depth);
+	float const sr_thickness(0.1*depth), tb_shrink(0.2*dsign*depth);
 	float start_pos(c.d[!dim][0] + stud_hwidth);
 	rgeom_mat_t &wood_mat(get_wood_material((use_plywood ? 1.0 : 2.0)/height, 1, 0, 1, 0, (use_plywood ? WOOD_TYPE_PLYWOOD : WOOD_TYPE_DARK))); // shadowed, small
 	cube_t stud(c);
-	stud.d[dim][!dir] += sr_thickness; // shift inward by sheet rock thickness
-	if (open) {stud.d[dim][dir] -= sr_thickness;} // shift the other side as well if open
+	stud.d[dim][!dir] += dsign*sr_thickness; // shift inward by sheet rock thickness
+	if (open) {stud.d[dim][dir] -= dsign*sr_thickness;} // shift the other side as well if open
 
 	for (unsigned n = 0; n < num_studs; ++n) {
 		bool const is_first(n == 0), is_last(n+1 == num_studs);
@@ -2716,6 +2716,33 @@ void building_room_geom_t::add_wall_gap(room_object_t const &c, tid_nm_pair_t co
 				fverts.push_back(v);
 			}
 		}
+		// add triangles of plaster on the floor, assuming the space next to the wall is empty
+		cube_t room_space(c);
+		room_space.d[dim][ dir]  = front_face;
+		room_space.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.5*height; // hallway should be at least half a floor height in width
+		unsigned const num_tri_frags(2 + (rgen.rand() % 4)); // 2-5
+		vf.set_norm(plus_z);
+		vf.v.z = room_space.z1() + 0.0012*height/(1.0 - FLOOR_THICK_VAL_HOUSE) + sr_thickness; // above flooring
+
+		for (unsigned n = 0; n < num_tri_frags; ++n) {
+			int const ix(fverts.size());
+			float const sz(rgen.rand_uniform(0.5, 1.0)*0.15*height); // triangle radius
+			vector2d center;
+			for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform(room_space.d[d][0]+sz, room_space.d[d][1]-sz);}
+
+			for (unsigned i = 0; i < 3; ++i) { // one triangle
+				vector3d const offset(rgen.signed_rand_vector_xy().get_norm()*sz);
+
+				for (unsigned d = 0; d < 2; ++d) {
+					vf.v[d] = center[d] + offset[d];
+					vf.t[d] = wall_tex.tscale_x*(vf.v[d] - c.d[d][0]);
+				}
+				wall_ixs.push_back(ix + i);
+				fverts.push_back(vf);
+			} // for i
+			// swap indices to make winding direction correct
+			if (cross_product((fverts[ix].v - fverts[ix+1].v), (fverts[ix+2].v - fverts[ix+1].v)).z > 0.0) {swap(wall_ixs.back(), wall_ixs[wall_ixs.size()-2]);}
+		} // for n
 	} // for draw_dir
 }
 
