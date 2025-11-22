@@ -1336,9 +1336,6 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 			else if (type == TYPE_RDESK) {
 				had_coll |= (check_rdesk_collision(*c, pos, p_last, xy_radius, cnorm) != 0);
 			}
-			/*else if (type == TYPE_SHOP_CART) {
-				// move the cart rather than pos if colliding with the front or back?
-			}*/
 			else if (type == TYPE_COLLIDER && (c->flags & RO_FLAG_ADJ_TOP)) { // special handling for ladder collider
 				point const orig_pos(pos);
 

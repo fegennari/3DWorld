@@ -298,32 +298,7 @@ bool building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 			add_checkout_objs(checkout, zval, room_id, 1.0, check_objs_start, dim, dir, rgen.rand_bool()); // tot_light_amt=1.0
 		}
 	}
-	// add shopping carts
-	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_SHOP_CART)) {
-		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SHOP_CART)); // D, W, H
-		float const height(0.425*floor_spacing), hlen(0.5*height*sz.x/sz.z), hwidth(0.5*height*sz.y/sz.z);
-		unsigned const num_carts(1 + (rgen.rand() % (nrows*nracks/4)));
-		cube_t cart_area(room);
-		cart_area.expand_by_xy(-(max(hlen, hwidth) + wall_thickness));
-		cube_t cart;
-		set_cube_zvals(cart, zval, zval+height);
-
-		if (cart_area.is_strictly_normalized()) { // should always be true
-			for (unsigned n = 0; n < num_carts; ++n) {
-				bool const dim(rgen.rand_bool());
-				vector2d const sz((dim ? hwidth : hlen), (dim ? hlen : hwidth));
-
-				for (unsigned N = 0; N < 10; ++N) { // 10 random placement tries
-					for (unsigned d = 0; d < 2; ++d) {set_wall_width(cart, rgen.rand_uniform(cart_area.d[d][0], cart_area.d[d][1]), sz[d], d);}
-					cube_t c_exp(cart);
-					c_exp.expand_in_dim(dim, clearance); // make sure there's clearance in front and behind to push; should align carts to aisles
-					if (overlaps_other_room_obj(c_exp, objs_start) || interior->is_blocked_by_stairs_or_elevator(c_exp)) continue;
-					objs.emplace_back(cart, TYPE_SHOP_CART, room_id, dim, rgen.rand_bool(), 0, 1.0);
-					break; // success/done
-				}
-			} // for n
-		}
-	}
+	add_shopping_carts_to_room(rgen, room, zval, room_id, 1.0, objs_start, (nrows*nracks/4)); // light_amt=1.0
 	add_cameras_to_room(rgen, room, zval, room_id, 1.0, objs.size()); // tot_light_amt=1.0
 	//cout << TXT(temp_objs.size()) << endl;
 
@@ -336,6 +311,34 @@ bool building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 		}
 	}
 	return 1;
+}
+
+void building_t::add_shopping_carts_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float light_amt, unsigned objs_start, unsigned max_carts) {
+	if (max_carts == 0 || !building_obj_model_loader.is_model_valid(OBJ_MODEL_SHOP_CART)) return;
+	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SHOP_CART)); // D, W, H
+	float const height(0.425*get_window_vspace()), hlen(0.5*height*sz.x/sz.z), hwidth(0.5*height*sz.y/sz.z);
+	float const clearance(get_min_front_clearance_inc_people());
+	unsigned const num_carts(1 + (rgen.rand() % max_carts));
+	cube_t cart_area(room);
+	cart_area.expand_by_xy(-(max(hlen, hwidth) + get_wall_thickness()));
+	cube_t cart;
+	set_cube_zvals(cart, zval, zval+height);
+
+	if (cart_area.is_strictly_normalized()) { // should always be true
+		for (unsigned n = 0; n < num_carts; ++n) {
+			bool const dim(rgen.rand_bool());
+			vector2d const sz((dim ? hwidth : hlen), (dim ? hlen : hwidth));
+
+			for (unsigned N = 0; N < 10; ++N) { // 10 random placement tries
+				for (unsigned d = 0; d < 2; ++d) {set_wall_width(cart, rgen.rand_uniform(cart_area.d[d][0], cart_area.d[d][1]), sz[d], d);}
+				cube_t c_exp(cart);
+				c_exp.expand_in_dim(dim, clearance); // make sure there's clearance in front and behind to push; should align carts to aisles
+				if (overlaps_other_room_obj(c_exp, objs_start) || interior->is_blocked_by_stairs_or_elevator(c_exp)) continue;
+				interior->room_geom->objs.emplace_back(cart, TYPE_SHOP_CART, room_id, dim, rgen.rand_bool(), 0, 1.0);
+				break; // success/done
+			}
+		} // for n
+	}
 }
 
 bool building_t::add_small_retail_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float light_amt) { // for prisons, etc.

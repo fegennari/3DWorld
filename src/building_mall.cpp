@@ -1748,6 +1748,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 	}
 	cube_t blocked, room_area(room);
 	room_area.expand_by_xy(-wall_hthick);
+	unsigned max_shopping_carts(0);
 
 	// add checkout counter(s)/cash register(s) to the side of the door
 	if (store_type == STORE_CLOTHING || store_type == STORE_RETAIL || store_type == STORE_BOOK || store_type == STORE_SHOE) {
@@ -1783,7 +1784,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 	if (store_type == STORE_RETAIL || store_type == STORE_BOOK || store_type == STORE_CLOTHING || store_type == STORE_PETS || store_type == STORE_SHOE) {
 		cube_t place_area(room_area);
 		place_area.expand_in_dim(dim, -0.5*door_width); // add extra padding in front and back for doors
-		// simplified version of building_t::add_retail_room_objs() with no escalators, checkout counters, wall light, short racks, or shopping carts
+		// simplified version of building_t::add_retail_room_objs() with no escalators, checkout counters, wall light, or short racks
 		float const dx(place_area.dx()), dy(place_area.dy()), spacing(0.8), nom_aisle_width(1.5*door_width);
 		unsigned const nx(max(1U, unsigned(spacing*dx/window_vspace))), ny(max(1U, unsigned(spacing*dy/window_vspace)));
 		float const length(dim ? dy : dx), width(dim ? dx : dy), max_rack_width(0.5*window_vspace);
@@ -1805,6 +1806,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 			pillar_area.expand_in_dim(dim, -0.25*room_len); // center 50% of room
 			unsigned const style_id(rgen.rand()); // same style for each rack
 			unsigned rack_id(0);
+			if (is_end_store) {max_shopping_carts = nrows*nracks/4;} // same as retail stores
 
 			for (unsigned n = 0; n < nrows; ++n) { // n+1 aisles
 				float const rack_lo(place_area.d[!dim][0] + row_aisle_width + n*aisle_spacing), rack_center(rack_lo + 0.5*rack_width);
@@ -2199,6 +2201,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 			objs.emplace_back(tv, TYPE_BLOCKER, 0, 0, 0, (RO_FLAG_INVIS | RO_FLAG_NOCOLL)); // add a placeholder blocker so that screens cycle through different images
 		} // for n
 	}
+	if (max_shopping_carts > 0) {add_shopping_carts_to_room(rgen, room, zval, room_id, light_amt, objs_start, max_shopping_carts);}
 	unsigned const skip_dir((room_width < 0.8*room_len) ? rgen.rand_bool() : 2); // skip one side if room is narrow
 	add_ceiling_ducts(room, room.z2(), room_id, dim, skip_dir, light_amt, interior->mall_info->store_cylin_ducts, 1, 1, rgen); // skip ends and top
 }
