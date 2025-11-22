@@ -482,8 +482,9 @@ void building_t::add_ceiling_tile_objects(rand_gen_t rgen) {
 			} // for N
 		}
 		// add pipes in the ceiling
-		//float const pipe_z1(cs.z1() + 0.2*fc_thick); // resting on ceiling tile
-		float const pipe_zc(cs.zc()); // center of space
+		bool const can_stack(cs.dz() > 1.5*fc_thick); // 2 width height; usually true
+		bool const dz_dim(dim ^ bool(interior->rooms.size() & 1)); // random per building
+		float const pipe_zc(cs.zc() + (can_stack ? (dz_dim ? 1.0 : -1.0)*0.25*fc_thick : 0.0)); // center of space shifted up/down to avoid intersecting crossing pipes
 		unsigned const num_pipes(1 + (rgen.rand() % 5)); // 1-5
 		cube_t pipe(cs); // full length of ceiling space
 		unsigned const NCOLORS = 7;
@@ -499,6 +500,18 @@ void building_t::add_ceiling_tile_objects(rand_gen_t rgen) {
 				set_wall_width(pipe, pipe_pos, radius, !dim);
 				if (!has_bcube_int_xy(pipe, miss_tiles)) break; // not visible through a missing tile, skip (but counts as a pipe)
 				if ( has_bcube_int_xy(pipe, pipe_avoid)) continue; // blocked by light post or another pipe
+
+				if (can_stack) { // check if pipe can be extended into an adjacent ceiling space on either end
+					for (ceiling_space_t const &cs2 : interior->ceiling_spaces) {
+						if (cs2 == cs) continue; // skip self
+						if (pipe.z1() < cs2.z1() || pipe.z2() > cs2.z2()) continue; // zval not contained
+						if (pipe.d[!dim][0] < cs2.d[!dim][0] || pipe.d[!dim][1] > cs2.d[!dim][1]) continue; // not intersecting
+
+						for (unsigned d = 0; d < 2; ++d) {
+							if (fabs(cs2.d[dim][!d] - cs.d[dim][d]) <= 2.0*wall_thick) {pipe.d[dim][d] = cs2.d[dim][d];}
+						}
+					} // for cs2
+				}
 				objs.emplace_back(pipe, TYPE_PIPE, cs.room_ix, dim, 0, pipe_flags, light_amt, SHAPE_CYLIN, pipe_color); // horizontal
 				pipe_avoid.push_back(pipe);
 				// add hanging brackets over miss_tiles and fittings at ends
@@ -538,7 +551,7 @@ void building_t::add_ceiling_tile_objects(rand_gen_t rgen) {
 		vector2d const room_sz(room.get_size_xy());
 		bool const dim(room_sz.x < room_sz.y);
 		if (room_sz[!dim] < 4.0*edge_spacing) continue; // too narrow; shouldn't happen
-		float const room_len(room_sz[dim]), nom_spacing(2.0*floor_spacing), hwidth();
+		float const room_len(room_sz[dim]), nom_spacing(2.0*floor_spacing);
 		light_bcs.clear();
 
 		for (; cur_obj_ix != objs_end && objs[cur_obj_ix].room_id <= r; ++cur_obj_ix) {
