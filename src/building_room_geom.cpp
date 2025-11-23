@@ -2307,7 +2307,8 @@ void building_room_geom_t::add_vase(room_object_t const &c) { // or urn
 void building_room_geom_t::add_paper(room_object_t const &c) {
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(c.get_paper_tid(), 0.0), 0, 0, 1)); // map texture to quad
 	unsigned const qv_start(mat.quad_verts.size());
-	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, ~EF_Z2, c.dim, (c.dim ^ c.dir ^ 1), c.dir); // unshadowed, top face only, with proper orient
+	colorRGBA const color(apply_light_color((0.5 + 0.5*c.light_amt), c.color)); // not as dark if unlit
+	mat.add_cube_to_verts(c, color, zero_vector, ~EF_Z2, c.dim, (c.dim ^ c.dir ^ 1), c.dir); // unshadowed, top face only, with proper orient
 	
 	if (c.rotates()) { // add slight rotation to misalign the paper
 		float const angle((PI/8.0)*(fract(123.456*c.obj_id) - 0.5));
