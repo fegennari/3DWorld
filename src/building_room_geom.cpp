@@ -2656,8 +2656,9 @@ void building_room_geom_t::add_wall_gap(room_object_t const &c, tid_nm_pair_t co
 	auto &fverts(wall_mat.itri_verts);
 	auto &everts(edge_mat.quad_verts);
 	vector<unsigned> &wall_ixs(wall_mat.indices);
-	rgeom_storage_t::vertex_t vf;
+	rgeom_storage_t::vertex_t vf, ve;
 	vf.set_c3(WHITE);
+	ve.set_c3(WHITE);
 
 	for (unsigned draw_dir = 0; draw_dir < (open ? 2U : 1U); ++draw_dir, dir ^= 1) {
 		float const front_face(c.d[dim][!dir]), int_face(stud.d[dim][!dir]), max_shift(1.5*depth + 0.05*width);
@@ -2716,32 +2717,57 @@ void building_room_geom_t::add_wall_gap(room_object_t const &c, tid_nm_pair_t co
 				fverts.push_back(v);
 			}
 		}
-		// add triangles of plaster on the floor, assuming the space next to the wall is empty
+		// add triangles of plaster on the floor, assuming the space next to the wall is emptyl it's okay if they overlap
 		cube_t room_space(c);
 		room_space.d[dim][ dir]  = front_face;
 		room_space.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.5*height; // hallway should be at least half a floor height in width
-		unsigned const num_tri_frags(2 + (rgen.rand() % 4)); // 2-5
+		unsigned const num_tri_frags(3 + (rgen.rand() % 5)); // 3-7
 		vf.set_norm(plus_z);
 		vf.v.z = room_space.z1() + 0.0012*height/(1.0 - FLOOR_THICK_VAL_HOUSE) + sr_thickness; // above flooring
 
 		for (unsigned n = 0; n < num_tri_frags; ++n) {
 			int const ix(fverts.size());
-			float const sz(rgen.rand_uniform(0.5, 1.0)*0.15*height); // triangle radius
+			float const sz(rgen.rand_uniform(0.25, 1.0)*0.12*height); // triangle radius
 			vector2d center;
 			for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform(room_space.d[d][0]+sz, room_space.d[d][1]-sz);}
 
 			for (unsigned i = 0; i < 3; ++i) { // one triangle
 				vector3d const offset(rgen.signed_rand_vector_xy().get_norm()*sz);
+				float best_score(0.0);
 
-				for (unsigned d = 0; d < 2; ++d) {
-					vf.v[d] = center[d] + offset[d];
-					vf.t[d] = wall_tex.tscale_x*(vf.v[d] - c.d[d][0]);
-				}
+				for (unsigned m = 0; m < ((i > 0) ? 4 : 1); ++m) { // try all 4 XY directions and use max area triangle
+					vector2d cand(center + vector2d(((m&1) ? -1.0 : 1.0)*offset[0], ((m>>1) ? -1.0 : 1.0)*offset[1]));
+					float score(0.0);
+					if (i >  0) {score  = fabs(fverts.back().v.x - cand.x) + fabs(fverts.back().v.y - cand.y);} // edge distance to previous vertex
+					if (i == 2) {score *= fabs(fverts[ix]   .v.x - cand.x) + fabs(fverts[ix]   .v.y - cand.y);} // area formed by first two verts
+					if (score < best_score) continue; // not better
+					best_score = score;
+
+					for (unsigned d = 0; d < 2; ++d) {
+						vf.v[d] = cand[d];
+						vf.t[d] = wall_tex.tscale_x*(vf.v[d] - c.d[d][0]);
+					}
+				} // for m
 				wall_ixs.push_back(ix + i);
 				fverts.push_back(vf);
 			} // for i
 			// swap indices to make winding direction correct
-			if (cross_product((fverts[ix].v - fverts[ix+1].v), (fverts[ix+2].v - fverts[ix+1].v)).z > 0.0) {swap(wall_ixs.back(), wall_ixs[wall_ixs.size()-2]);}
+			bool const reverse(cross_product((fverts[ix].v - fverts[ix+1].v), (fverts[ix+2].v - fverts[ix+1].v)).z > 0.0);
+			if (reverse) {swap(wall_ixs.back(), wall_ixs[wall_ixs.size()-2]);}
+
+			// add untextured edges
+			for (unsigned i = 0; i < 3; ++i) {
+				point const &v1(fverts[ix+i].v), &v2(fverts[ix + (i + (reverse ? 1 : 2))%3].v);
+				ve.set_norm(cross_product((v1 - v2), plus_z).get_norm());
+				ve.v = v1;
+				everts.push_back(ve);
+				ve.v = v2;
+				everts.push_back(ve);
+				ve.v.z = room_space.z1(); // bottom edges
+				everts.push_back(ve);
+				ve.v.x = v1.x; ve.v.y = v1.y;
+				everts.push_back(ve);
+			} // for i
 		} // for n
 	} // for draw_dir
 }
