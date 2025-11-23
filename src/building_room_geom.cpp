@@ -2579,12 +2579,15 @@ void building_room_geom_t::add_wall_gap(room_object_t const &c, tid_nm_pair_t co
 		// small; shadowed, since this wall may block the light to a room on the other side
 		get_material(tid_nm_pair_t(tid, 2.0/height, 1), 1, 0, 1).add_cube_to_verts(wall_inner, color, c.get_llc(), front_face_mask, dim);
 	}
-	// draw wood studs; draw sides and front separately for vertical grain in both
+	// draw wood studs with nails; draw sides and front separately for vertical grain in both
 	unsigned const num_studs(max(2, 1+round_fp(5.4*width/height)));
 	float const stud_width(0.025*height), stud_hwidth(0.5*stud_width), stud_spacing((width - stud_width)/(num_studs - 1));
 	float const sr_thickness(0.1*depth), tb_shrink(0.2*dsign*depth);
 	float start_pos(c.d[!dim][0] + stud_hwidth);
+	tid_nm_pair_t const nail_tex(get_rust_met_tid(), 0.0, 0);
+	get_material(nail_tex, 0, 0, 1); // make sure it's in the map
 	rgeom_mat_t &wood_mat(get_wood_material((use_plywood ? 1.0 : 2.0)/height, 1, 0, 1, 0, (use_plywood ? WOOD_TYPE_PLYWOOD : WOOD_TYPE_DARK))); // shadowed, small
+	rgeom_mat_t &nail_mat(get_material(nail_tex, 0, 0, 1)); // unshadowed, small
 	cube_t stud(c);
 	stud.d[dim][!dir] += dsign*sr_thickness; // shift inward by sheet rock thickness
 	if (open) {stud.d[dim][dir] -= dsign*sr_thickness;} // shift the other side as well if open
@@ -2597,6 +2600,29 @@ void building_room_geom_t::add_wall_gap(room_object_t const &c, tid_nm_pair_t co
 		unsigned const sides_face_mask2(sides_face_mask | (is_first ? ~get_face_mask(!dim, 0) : 0) | (is_last ? ~get_face_mask(!dim, 1) : 0));
 		wood_mat.add_cube_to_verts(stud, color, llc, front_face_mask,   dim); // front
 		wood_mat.add_cube_to_verts(stud, color, llc, sides_face_mask2, !dim); // sides
+		// add nails
+		unsigned const num_nails(4);
+		float const nail_spacing(height/num_nails); // vertically
+		float const nail_inset_dist(0.2*sr_thickness), nail_head_thick(0.4*sr_thickness), nail_iradius(0.06*stud_width), nail_oradius(3.0*nail_iradius);
+		colorRGBA const nail_color(apply_light_color(c, colorRGBA(0.35, 0.35, 0.35))); // dark-medium gray
+		point nail_pos(stud.get_cube_center());
+		if (open) {nail_pos[dim] = c.d[dim][dir] - dsign*nail_inset_dist;} // pass through the stud and out the other side
+		nail_pos.z = c.z1() + 0.5*nail_spacing;
+
+		for (unsigned N = 0; N < num_nails; ++N) {
+			point nail_end(nail_pos), head_end(nail_pos);
+			nail_end[dim] = c.d[dim][!dir] + dsign*nail_inset_dist;
+			head_end[dim] = nail_end[ dim] + dsign*nail_head_thick;
+			nail_mat.add_cylin_to_verts(nail_pos, nail_end, nail_iradius, nail_iradius, nail_color, 0, 0, 0, 0, 1.0, 1.0, 0, 16); // shaft; no ends; ndiv=16
+			nail_mat.add_cylin_to_verts(head_end, nail_end, nail_iradius, nail_oradius, nail_color, 0, 1, 0, 0, 1.0, 1.0, 0, 16); // head ; one end; ndiv=16
+
+			if (open) { // draw head on the other side
+				nail_end[dim] = c.d[dim][dir] - dsign*nail_inset_dist;
+				head_end[dim] = nail_end[dim] - dsign*nail_head_thick;
+				nail_mat.add_cylin_to_verts(head_end, nail_end, nail_iradius, nail_oradius, nail_color, 0, 1, 0, 0, 1.0, 1.0, 0, 16); // head; draw one end; ndiv=16; reversed
+			}
+			nail_pos.z += nail_spacing;
+		} // for N
 	} // for n
 	// draw top and bottom wood to cover the ceiling and floor gap
 	cube_t top(c);
