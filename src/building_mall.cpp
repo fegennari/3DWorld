@@ -1660,7 +1660,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 	// select store type
 	bool const dim(doorway.dy() < doorway.dx()), dir(room.get_center_dim(dim) < doorway.get_center_dim(dim)); // points from room center toward doorway; doorway wall
 	bool const mall_dim(interior->extb_wall_dim), is_end_store(dim == mall_dim), tall_retail(floor_spacing > 1.5*window_vspace);
-	float const room_len(room.get_sz_dim(dim)), room_width(room.get_sz_dim(!dim)), pillar_z2(room.z2() - fc_thick);
+	float const room_len(room.get_sz_dim(dim)), room_width(room.get_sz_dim(!dim)), pillar_z2(room.z2() - fc_thick), clearance(get_min_front_clearance_inc_people());
 	room_t const &mall_room(get_mall_concourse());
 	vect_room_object_t &objs(interior->room_geom->objs);
 	assert(room_id > 0); // can't be the first room
@@ -1673,7 +1673,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 	unsigned store_type(store_selects[rgen.rand() % NUM_STORE_SELECT]);
 	cube_t const &fc_area(interior->mall_info->food_court_bounds);
 
-	if (0 && !is_end_store && !fc_area.is_zero_area() && room.z1() == fc_area.z1()) { // food stores should be placed on ground floors near the food court
+	if (!is_end_store && !fc_area.is_zero_area() && room.z1() == fc_area.z1()) { // food stores should be placed on ground floors near the food court
 		// always place if contained in food court
 		if (room.d[mall_dim][0] > fc_area.d[mall_dim][0] && room.d[mall_dim][1] < fc_area.d[mall_dim][1]) {store_type = STORE_FOOD;}
 		// place 50% of the time if partially overlaps food court
@@ -1763,7 +1763,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 		blocked = checkout_area;
 		blocked.expand_in_dim(!dim, 2.0*door_width); // add extra space to both sides
 	}
-	if (store_type == STORE_FOOD || (store_type == STORE_RETAIL && item_category == RETAIL_FOOD)) { // maybe add wine racks
+	if (/*store_type == STORE_FOOD ||*/ (store_type == STORE_RETAIL && item_category == RETAIL_FOOD)) { // maybe add wine racks
 		float const width(0.4*window_vspace*rgen.rand_uniform(1.0, 1.5)), depth(0.16*window_vspace), height(0.5*window_vspace*rgen.rand_uniform(1.0, 1.5));
 
 		for (unsigned yc = 0; yc < 2; ++yc) {
@@ -2164,7 +2164,38 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 		} // for row
 	}
 	else if (store_type == STORE_FOOD) { // restaurant, coffee shop, etc.
-		// TODO
+		// TODO: should have counter rather than glass window and door?
+		// split between public space in the front and commercial kitchen in the back
+		float const fb_split(room.d[dim][0] + rgen.rand_uniform(0.4, 0.6)*room_len); // close to the center
+		// add separator wall on top and bottom, and metal counter
+		bool const leave_end_gaps(1);
+		cube_t wall(room);
+		wall.z2() = zval + 0.35*window_vspace; // set wall height
+		set_wall_width(wall, fb_split, wall_hthick, dim);
+		cube_t upper_wall(wall);
+		if (leave_end_gaps) {wall.expand_in_dim(!dim, -clearance);}
+		add_short_wall_with_trim(wall, dim, room_id, light_amt); // bottom wall
+		set_cube_zvals(upper_wall, (zval + get_floor_ceil_gap()), room.z2());
+		objs.emplace_back(upper_wall, TYPE_STAIR_WALL, room_id, dim, 0, RO_FLAG_HANGING, light_amt, SHAPE_CUBE, interior->mall_info->mall_wall_color); // draw bottom
+		cube_t counter(wall);
+		set_cube_zvals(counter, wall.z2(), (wall.z2() + wall_thickness));
+		counter.expand_in_dim(dim, 2.0*wall_thickness);
+		objs.emplace_back(counter, TYPE_METAL_BAR, room_id, dim, 0, 0, light_amt, SHAPE_CUBE, LT_GRAY, (leave_end_gaps ? 0 : get_skip_mask_for_xy(!dim))); // skip ends if no gaps
+
+		if (leave_end_gaps) { // add end gap blockers
+			for (unsigned d = 0; d < 2; ++d) {
+				cube_t blocker(room);
+				blocker.d[!dim][!d] = wall.d[!dim][d];
+				set_wall_width(blocker, fb_split, 1.5*clearance, dim);
+				objs.emplace_back(blocker, TYPE_BLOCKER, room_id, 0, 0, 0, 1.0);
+			}
+		}
+		// populate kitchen and public areas
+		room_t pub_area(room), kitchen(room);
+		pub_area.d[dim][!dir] = counter.d[dim][ dir];
+		kitchen .d[dim][ dir] = counter.d[dim][!dir];
+		add_commercial_kitchen_objs(rgen, kitchen, zval, room_id, light_amt, objs_start);
+		add_cafeteria_objs(rgen, pub_area, zval, room_id, 0, light_amt, objs_start); // floor_ix=0
 	}
 	else if (store_type == STORE_PETS) { // rats, snakes, birds, spiders, fish, etc.
 		// add fish tanks along walls

@@ -2802,12 +2802,15 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 	float const floor_spacing(get_window_vspace());
 	vector2d const room_sz(room.get_size_xy());
 	if (room_sz.get_min_val() < 2.0*floor_spacing || room_sz.get_max_val() < 3.0*floor_spacing) return 0; // too small
-	bool const dim(room_sz.x < room_sz.y); // long dim
+	bool const in_mall(room.is_ext_basement() && has_mall()), dim(room_sz.x < room_sz.y); // long dim
 	float const ceil_zval(zval + floor_spacing - get_fc_thickness());
 	cube_t const place_area(get_walkable_room_bounds(room));
 	//cube_t hood;
-	unsigned const skip_dir(2); // TODO
-	add_ceiling_ducts(room, ceil_zval, room_id, dim, skip_dir, light_amt, 0, 1, 1, rgen, 0.5); // cylin_ducts=0, skip_ends=1, skip_top=1, sz_scale=0.5
+
+	if (!in_mall) { // mall already has ceiling vents
+		unsigned const skip_dir(2); // TODO
+		add_ceiling_ducts(room, ceil_zval, room_id, dim, skip_dir, light_amt, 0, 1, 1, rgen, 0.5); // cylin_ducts=0, skip_ends=1, skip_top=1, sz_scale=0.5
+	}
 	// TODO: center island, big grill, multiple sinks, stacks of dishes, metal racks, walk in freezer, ovens, hood, vent; all shiny metal
 	unsigned num_fridges((rgen.rand() % 3) + 2); // 2-4
 
@@ -2816,7 +2819,7 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 	}
 	unsigned num_trolleys((rgen.rand() % 2) + 2); // 2-3
 	for (unsigned i = 0; i < num_trolleys; ++i) {add_trolley(rgen, place_area, cube_t(), zval, room_id, light_amt, objs_start);} // seems like this can work in a kitchen
-	add_door_sign("Kitchen", room, zval, room_id);
+	if (!in_mall) {add_door_sign("Kitchen", room, zval, room_id);}
 	return 1;
 }
 
@@ -4267,12 +4270,12 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 	}
 	// add trashcans
 	bool const both_ends(floor_ix == 0); // floors above the ground floor have only one trashcan
-	add_corner_trashcans(rgen, room, zval, room_id, tot_light_amt, long_dim, both_ends);
+	add_corner_trashcans(rgen, room, zval, room_id, tot_light_amt, objs_start, long_dim, both_ends);
 	// add cameras to each end of the hallway
 	add_cameras_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);
 }
 
-void building_t::add_corner_trashcans(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool dim, bool both_ends) {
+void building_t::add_corner_trashcans(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool dim, bool both_ends) {
 	// add one or more trashcan to a corner; use a large cylinder, the same as a mall trashcan
 	float const window_vspacing(get_window_vspace());
 	float const tcan_height(0.26*window_vspacing), tcan_radius(0.1*window_vspacing), wall_spacing(1.2*tcan_radius);
@@ -4288,7 +4291,7 @@ void building_t::add_corner_trashcans(rand_gen_t &rgen, room_t const &room, floa
 		float const end_pos (room.d[ dim][end_dir ] + (end_dir  ? -1.0 : 1.0)*wall_spacing);
 		set_wall_width(tcan, side_pos, tcan_radius, !dim);
 		set_wall_width(tcan, end_pos,  tcan_radius,  dim);
-		if (is_obj_placement_blocked(tcan, room, 1)) continue; // inc_open=1
+		if (is_obj_placement_blocked(tcan, room, 1) || overlaps_other_room_obj(tcan, objs_start)) continue; // inc_open=1
 		room_object_t const tcan_obj(tcan, TYPE_TCAN, room_id, dim, end_dir, RO_FLAG_IN_HALLWAY, tot_light_amt, SHAPE_CYLIN, LT_GRAY);
 		interior->room_geom->objs.push_back(tcan_obj);
 		add_large_trashcan_contents(rgen, tcan_obj, room_id, tot_light_amt);

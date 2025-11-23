@@ -349,15 +349,17 @@ bool building_t::add_cafeteria_objs(rand_gen_t rgen, room_t const &room, float &
 	cube_t const room_bounds(get_walkable_room_bounds(room));
 	vector2d const room_sz(room_bounds.get_size_xy());
 	if (min(room_sz.x, room_sz.y) < 3.0*floor_spacing || max(room_sz.x, room_sz.y) < 3.5*floor_spacing) return 0; // too small to be a cafeteria
-	if (!has_tile_floor()) {zval = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_LGTILE);}
+	bool const in_mall(room.is_ext_basement() && has_mall()); // if mall, this is a restaurant
+	if (!in_mall && !has_tile_floor()) {zval = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_LGTILE);}
 	bool const dim(room_sz.y < room_sz.x); // short dim
-	unsigned const num_cols((room_sz[dim] > 3.5*floor_spacing) ? 2 : 1);
-	float const clearance(get_min_front_clearance_inc_people()), col_space(1.25*clearance), trim_thick(get_trim_thickness());
+	unsigned const num_cols((room_sz[dim] > (in_mall ? 2.5 : 3.5)*floor_spacing) ? 2 : 1);
+	float const clearance(get_min_front_clearance_inc_people()*(in_mall ? 1.5 : 1.0)), col_space(1.25*clearance), trim_thick(get_trim_thickness());
 	cube_t place_area(room_bounds);
 	place_area.expand_by_xy(-1.1*clearance);
 	float const row_span(place_area.get_sz_dim(!dim)), col_span(place_area.get_sz_dim(dim)), col_start(place_area.d[dim][0]);
-	float const table_height(0.3*floor_spacing), table_width(0.4*floor_spacing), table_len((col_span + col_space)/num_cols - col_space);
-	float row_spacing(2.5*table_width);
+	float const table_height(0.3*floor_spacing), table_width(0.4*floor_spacing);
+	float row_spacing(2.5*table_width), table_len((col_span + col_space)/num_cols - col_space);
+	if (in_mall) {min_eq(table_len, 2.0f*table_width);} // no long tables in restaurants
 	unsigned const num_rows(max(1U, unsigned(row_span/row_spacing))); // floor
 	row_spacing = row_span/num_rows;
 	colorRGBA const &chair_color(mall_chair_colors[rgen.rand() % NUM_MALL_CHAIR_COLORS]);
@@ -392,9 +394,12 @@ bool building_t::add_cafeteria_objs(rand_gen_t rgen, room_t const &room, float &
 			pos += table_len + col_space;
 		} // for c
 	} // for r
-	add_corner_trashcans  (rgen, room, zval, room_id, tot_light_amt, rgen.rand_bool(), 1); // random dim, both_ends=1
-	add_clock_to_room_wall(rgen, room, zval, room_id, tot_light_amt, objs_start);
-	add_door_sign("Cafeteria", room, zval, room_id);
+	add_corner_trashcans(rgen, room, zval, room_id, tot_light_amt, objs_start, rgen.rand_bool(), 1); // random dim, both_ends=1
+
+	if (!in_mall) {
+		add_clock_to_room_wall(rgen, room, zval, room_id, tot_light_amt, objs_start);
+		add_door_sign("Cafeteria", room, zval, room_id);
+	}
 	return 1;
 }
 

@@ -462,7 +462,7 @@ room_pref_t const room_prefs[] = {
 	{RTYPE_INFIRMARY, 0, 0, 0, 1, 2.0, 5.0,  1.0, 0.0, -1.0,  0.0},
 	{RTYPE_LIBRARY,   0, 1, 0, 1, 2.0, 7.0,  1.0, 0.0, -0.5,  0.5},
 	{RTYPE_RETAIL,    0, 1, 1, 0, 4.0, 0.0,  0.0, 0.0,  0.0,  0.0},
-	//{RTYPE_KITCHEN,   0, 1, 0, 1, 2.0, 5.0,  0.5, 0.0,  0.0,  0.0}
+	{RTYPE_KITCHEN,   0, 1, 0, 1, 2.0, 5.0,  0.5, 0.0,  0.0,  0.0}
 };
 bool building_t::assign_and_fill_prison_room(rand_gen_t rgen, room_t &room, float &zval, unsigned room_id, float tot_light_amt,
 	unsigned objs_start, unsigned lights_start, unsigned floor_ix, bool is_basement, colorRGBA const &chair_color)
