@@ -451,6 +451,12 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					has_stairs = 1;
 				} // for s
 			}
+			if (is_secret) { // TODO: 50% probability?
+				if (add_cave_objs(rgen, *r, room_center.z, room_id)) {
+					r->assign_to(RTYPE_CAVE, f);
+					continue; // no lights, switches, outlets, rugs, pictures, or other objects
+				}
+			}
 			unsigned num_lights(r->num_lights), flags(0);
 			float light_z2(z + floor_height - fc_thick + light_delta_z);
 			if (industrial_room) {light_z2 -= CEILING_BEAM_THICK*wall_thickness;} // on the underside of industrial ceiling beams

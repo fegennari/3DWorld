@@ -544,6 +544,7 @@ enum {RTYPE_NOTSET=0, RTYPE_HALL, RTYPE_STAIRS, RTYPE_OFFICE, RTYPE_BATH, RTYPE_
 	  RTYPE_SWIM, RTYPE_SECURITY, RTYPE_LOUNGE, RTYPE_COMMON, RTYPE_BACKROOMS, RTYPE_RETAIL, RTYPE_ELEVATOR, RTYPE_CONF, RTYPE_MACHINE, RTYPE_INTERR,
 	  RTYPE_ELEV_EQUIP, RTYPE_STORE, RTYPE_MALL, RTYPE_RESTAURANT, RTYPE_FACTORY, RTYPE_WAREHOUSE, RTYPE_HOS_BED, RTYPE_HOS_OR, RTYPE_HOS_EXAM, RTYPE_CLASS,
 	  RTYPE_WAITING, RTYPE_LAB, RTYPE_CAFETERIA, RTYPE_LOCKER, RTYPE_JAIL, RTYPE_JAIL_CELL, RTYPE_GYM, RTYPE_VISIT, RTYPE_SHOWER, RTYPE_INFIRMARY,
+	  RTYPE_CAVE,
 	  NUM_RTYPES};
 typedef uint8_t room_type;
 
@@ -593,7 +594,7 @@ enum {SHAPE_STRAIGHT=0, SHAPE_U, SHAPE_WALLED, SHAPE_WALLED_SIDES, SHAPE_RAMP, S
 typedef uint8_t stairs_shape;
 
 enum {ROOM_WALL_INT=0, ROOM_WALL_SEP, ROOM_WALL_EXT, ROOM_WALL_BASEMENT};
-enum {FLOORING_MARBLE=0, FLOORING_TILE, FLOORING_CONCRETE, FLOORING_CARPET, FLOORING_WOOD, FLOORING_LGTILE, FLOORING_RUBBER, NUM_FLOORING_TYPES}; // Note: not all are used
+enum {FLOORING_MARBLE=0, FLOORING_TILE, FLOORING_CONCRETE, FLOORING_CARPET, FLOORING_WOOD, FLOORING_LGTILE, FLOORING_RUBBER, FLOORING_ROCK, NUM_FLOORING_TYPES}; // not all are used
 enum {MAT_TYPE_STATIC=0, MAT_TYPE_SMALL, MAT_TYPE_DYNAMIC, MAT_TYPE_DETAIL, MAT_TYPE_DOORS, MAT_TYPE_LIGHTS, MAT_TYPE_TEXT}; // building_room_geom_t material types; max is 8
 enum {FTYPE_NONE=0, FTYPE_BASEMENT, FTYPE_ATTIC}; // for furnace
 enum {ATTIC_TYPE_RAFTERS=0, ATTIC_TYPE_FIBERGLASS, ATTIC_TYPE_WOOD, ATTIC_TYPE_PLASTER, NUM_ATTIC_TYPES};
@@ -3063,6 +3064,7 @@ private:
 		room_object_t const &ref_light, vect_cube_t const &rooms_to_light, light_ix_assign_t &light_ix_assign);
 	void add_mall_lower_floor_lights(room_t const &room, unsigned room_id, unsigned lights_start, light_ix_assign_t &light_ix_assign);
 	void add_sub_room_light(room_object_t light, room_t const &room, unsigned room_id, bool dim, unsigned objs_start, light_ix_assign_t &light_ix_assign, rand_gen_t &rgen);
+	bool add_cave_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id);
 	bool add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vect_riser_pos_t const &risers, vect_cube_t &pipe_cubes,
 		unsigned room_id, unsigned num_floors, unsigned objs_start, float ceil_zval, rand_gen_t &rgen, unsigned pipe_type, bool allow_place_fail=0);
 	void add_ext_basement_hallway_pipes_recur(unsigned room_id, bool hall_dim, unsigned pipe_type, float radius_factor,
