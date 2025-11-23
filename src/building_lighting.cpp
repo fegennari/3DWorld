@@ -386,6 +386,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			cc.emplace_back(inner_cube, color);
 		}
 		else if (type == TYPE_WALL_GAP) {
+			if (c->is_open()) continue; // open, doesn't block light
 			cc.push_back(get_indir_lighting_wall_gap_cube(*c));
 		}
 		else if (type == TYPE_CLOSET) { // Note: lighting cubes and indir lighting are *not* updated when closet doors are opened and closed
