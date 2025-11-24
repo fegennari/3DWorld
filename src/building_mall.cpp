@@ -2164,9 +2164,23 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 		} // for row
 	}
 	else if (store_type == STORE_FOOD) { // restaurant, coffee shop, etc.
-		// TODO: should have counter rather than glass window and door?
+		bool const has_dining(rgen.rand_bool());
+		float const front_wall(room.d[dim][dir]);
+
+		if (0 && !has_dining) {
+			// TODO: should have counter rather than glass window and door?
+			// can't modify interior->mall_info->store_doorways at this point in the control flow; must decide on store type earlier
+			cube_t front_area(room);
+			set_wall_width(front_area, front_wall, wall_thickness, dim);
+			auto i(interior->int_windows.begin()), o(i);
+
+			for (; i != interior->int_windows.end(); ++i) {
+				if (!i->intersects(front_area)) {*(o++) = *i;} // keep if not this store
+			}
+			interior->int_windows.erase(o, interior->int_windows.end());
+		}
 		// split between public space in the front and commercial kitchen in the back
-		float const fb_split(room.d[dim][0] + rgen.rand_uniform(0.4, 0.6)*room_len); // close to the center
+		float const fb_split(front_wall + (dir ? -1.0 : 1.0)*((has_dining ? 0.5 : 0.3) + rgen.rand_uniform(0.0, 0.1))*room_len); // front vs. back split pos
 		// add separator wall on top and bottom, and metal counter
 		bool const leave_end_gaps(1);
 		cube_t wall(room);
@@ -2195,7 +2209,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 		pub_area.d[dim][!dir] = counter.d[dim][ dir];
 		kitchen .d[dim][ dir] = counter.d[dim][!dir];
 		add_commercial_kitchen_objs(rgen, kitchen, zval, room_id, light_amt, objs_start);
-		add_cafeteria_objs(rgen, pub_area, zval, room_id, 0, light_amt, objs_start); // floor_ix=0
+		if (has_dining) {add_cafeteria_objs(rgen, pub_area, zval, room_id, 0, light_amt, objs_start);} // floor_ix=0
 	}
 	else if (store_type == STORE_PETS) { // rats, snakes, birds, spiders, fish, etc.
 		// add fish tanks along walls
