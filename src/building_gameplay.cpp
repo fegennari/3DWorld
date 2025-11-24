@@ -216,8 +216,8 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_COMP_MOUSE] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 10.0,  0.25,  "computer mouse");
 	bldg_obj_types[TYPE_PARK_GATE ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1, 400.0, 100.0, "parking garage gate");
 	bldg_obj_types[TYPE_CONV_BELT ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1, 500.0, 100.0, "conveyor belt");
-	bldg_obj_types[TYPE_JAIL_BARS ] = bldg_obj_type_t(1, 1, 0, 0, 1, 0, 2,   0.0, 0.0,   "jail bars"); // rat_coll? treated as a small object
-	bldg_obj_types[TYPE_STICK_NOTE] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,   0.0, 0.0,   "sticky note");
+	bldg_obj_types[TYPE_JAIL_BARS ] = bldg_obj_type_t(1, 1, 0, 0, 1, 0, 2,  0.0,  0.0,   "jail bars"); // rat_coll? treated as a small object
+	bldg_obj_types[TYPE_STICK_NOTE] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,  0.0,  0.0,   "sticky note");
 	bldg_obj_types[TYPE_GYM_WEIGHT] = bldg_obj_type_t(0, 1, 1, 1, 0, 0, 2, 20.0,  20.0,  "weights"); // or "weight"?
 	bldg_obj_types[TYPE_FOOD_TRAY ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 10.0,  0.5,   "food tray");
 	bldg_obj_types[TYPE_BAR_SOAP  ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 0.5,   0.1,   "bar of soap");
@@ -230,6 +230,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_WALL_GAP  ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 2, 0.0,   0.0,   "wall gap");
 	bldg_obj_types[TYPE_MUSHROOM  ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 0.0,   0.0,   "mushroom");
 	bldg_obj_types[TYPE_SHELL_CASE] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 0.0,   0.01,  "shell casing");
+	bldg_obj_types[TYPE_PAN_SHELF ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 2, 0.0,   0.0,   "pantry shelf");
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");

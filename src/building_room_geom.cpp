@@ -3243,6 +3243,10 @@ void building_room_geom_t::add_shelf_wall(room_object_t const &c, tid_nm_pair_t 
 	rgeom_mat_t &mat(get_material(get_tex_auto_nm(get_shelf_wall_tid(c), 2.0*wall_tex.tscale_x, 1), 1, 0)); // shadowed
 	mat.add_cube_to_verts(c, c.color, tex_origin, (draw_top ? EF_Z1 : EF_Z12), c.dim);
 }
+void building_room_geom_t::add_pantry_shelf(room_object_t const &c) {
+	unsigned const skip_faces(get_face_mask(c.dim, c.dir) & ~EF_Z12); // draw front, top, and bottom
+	get_untextured_material(1, 0, 1).add_cube_to_verts_untextured(c, c.color, skip_faces); // untextured, small, always lit
+}
 
 void building_room_geom_t::add_parking_space(room_object_t const &c, float tscale) {
 	float const space_width(c.get_width()), line_width(0.04*space_width);
@@ -3475,8 +3479,8 @@ void building_room_geom_t::add_sprinkler(room_object_t const &c) { // vertical s
 	}
 	bot.expand_by_xy(-0.25*c.get_radius()); // shrink
 	mid.expand_by_xy(-0.60*c.get_radius()); // shrink
-	mat.add_vcylin_to_verts(bot, apply_light_color(c), c.dir, !c.dir, 0, 0, 1.0, 1.0, 0.0, 0.0, 0, ndiv); // draw top, untextured
-	mat.add_vcylin_to_verts(mid, metal_color,          0,      0,     0, 0, 1.0, 1.0, 0.0, 0.0, 0, ndiv); // no ends, untextured
+	mat.add_vcylin_to_verts(bot, apply_light_color(c), c.dir, !c.dir, 0, 0, 1.0, 1.0, 0.0, 0.0, 0, ndiv); // draw top,  untextured
+	mat.add_vcylin_to_verts(mid, metal_color,          0,      0,     0, 0, 1.0, 1.0, 0.0, 0.0, 0, ndiv); // no ends,   untextured
 	mat.add_vcylin_to_verts(top, metal_color,          1,      1,     0, 0, 1.0, 1.0, 0.0, 0.0, 0, ndiv); // draw ends, untextured
 }
 

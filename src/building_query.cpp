@@ -698,9 +698,18 @@ unsigned get_closet_num_coll_cubes(room_object_t const &c) {
 	return ((!c.is_open() && !c.is_small_closet()) ? 5U : 4U);
 }
 unsigned check_closet_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
-	cube_t cubes[5];
+	cube_t cubes[5]; // front left, left side, front right, right side, door
 	get_closet_cubes(c, cubes, 1); // get cubes for walls and door; required to handle collision with closet interior; for_collision=1
-	return check_cubes_collision(cubes, get_closet_num_coll_cubes(c), pos, p_last, radius, cnorm);
+	unsigned ret(0);
+
+	if (c.item_flags == RTYPE_KITCHEN) { // shrink interior to account for pantry shelves
+		cube_t back_shelves(c);
+		back_shelves.d[c.dim][c.dir] = back_shelves.d[c.dim][!c.dir] + (c.dir ? 1.0 : -1.0)*0.4*c.get_depth();
+		if (sphere_cube_int_update_pos(pos, radius, back_shelves, p_last, 0, cnorm)) {ret |= (1<<5);}
+		for (unsigned d = 0; d < 2; ++d) {cubes[2*d  ].d[c.dim][!c.dir] = c.d[c.dim][!c.dir];} // extend front walls to the back
+		for (unsigned d = 0; d < 2; ++d) {cubes[2*d+1].set_to_zeros();} // can skip the sides
+	}
+	return (check_cubes_collision(cubes, get_closet_num_coll_cubes(c), pos, p_last, radius, cnorm) | ret);
 }
 unsigned check_bed_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
 	cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube

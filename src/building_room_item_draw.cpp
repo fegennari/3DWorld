@@ -843,6 +843,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_CEIL_TILE:  add_ceil_tile  (c); break;
 		case TYPE_WALL_GAP:   add_wall_gap   (c, wall_tex); break; // wall_tscale should always be available here
 		case TYPE_MUSHROOM:   add_mushroom   (c); break;
+		case TYPE_PAN_SHELF:  add_pantry_shelf(c); break;
 		case TYPE_DBG_SHAPE:  add_debug_shape(c); break;
 		// 3D model objects
 		case TYPE_KEY:       if (has_key_3d_model()) {model_objs.push_back(c);} else {add_key(c);} break; // draw or add as 3D model

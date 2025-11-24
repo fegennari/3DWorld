@@ -182,11 +182,12 @@ void building_room_geom_t::expand_closet(room_object_t const &c) {
 }
 void building_room_geom_t::add_closet_objects(room_object_t const &c, vect_room_object_t &objects, bool no_models) {
 	rand_gen_t rgen(c.create_rgen());
-	cube_t ccubes[5]; // only used to get interior space
+	cube_t ccubes[5]; // front left, left side, front right, right side, door; used to get interior space
 	get_closet_cubes(c, ccubes);
 	cube_t const interior(get_closet_interior_space(c, ccubes));
-	float const depth(interior.get_sz_dim(c.dim)), box_sz(0.25*depth), window_vspacing(c.dz()*(1.0 + FLOOR_THICK_VAL_HOUSE));
-	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_WAS_EXP);
+	bool const dim(c.dim), dir(c.dir); // dir faces the front
+	float const height(c.dz()), depth(interior.get_sz_dim(dim)), box_sz(0.25*depth), window_vspacing(height*(1.0 + FLOOR_THICK_VAL_HOUSE));
+	unsigned const base_flags(RO_FLAG_NOCOLL | RO_FLAG_INTERIOR), flags(base_flags | RO_FLAG_WAS_EXP);
 
 	if (c.item_flags == RTYPE_BED) { // bedroom closet
 		unsigned const num_boxes((rgen.rand()%3) + (rgen.rand()%4)); // 0-5
@@ -199,7 +200,7 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vect_room_
 
 			if (is_hotel || rgen.rand_bool()) { // maybe add a safe; always add for hotels
 				float const sheight(0.15*window_vspacing*rgen.rand_uniform(1.0, 1.2)), swidth(1.0*sheight), sdepth(min(1.1f*sheight, 0.67f*depth));
-				sz[c.dim] = 0.5*sdepth; sz[!c.dim] = 0.5*swidth; sz.z = sheight;
+				sz[dim] = 0.5*sdepth; sz[!dim] = 0.5*swidth; sz.z = sheight;
 				add_obj_to_closet(c, interior, objects, cubes, rgen, sz, TYPE_SAFE, flags, SHAPE_CUBE, colorRGBA(0.7, 0.7, 0.7, 1.0), 1); // against_back=1
 			}
 			if (rgen.rand_bool()) { // maybe add a lamp in the closet
@@ -207,12 +208,12 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vect_room_
 			}
 			if (!is_hotel && rgen.rand_bool()) { // maybe add an old computer in the closet
 				float const height(0.21*window_vspacing*rgen.rand_uniform(1.0, 1.2)), cheight(0.75*height), cwidth(0.44*cheight), cdepth(0.9*cheight);
-				sz[c.dim] = 0.5*cdepth; sz[!c.dim] = 0.5*cwidth; sz.z = cheight;
+				sz[dim] = 0.5*cdepth; sz[!dim] = 0.5*cwidth; sz.z = cheight;
 				add_obj_to_closet(c, interior, objects, cubes, rgen, sz, TYPE_COMPUTER, (flags | RO_FLAG_BROKEN));
 			}
 			if (!is_hotel && rgen.rand_bool()) { // maybe add a keyboard in the closet
 				float const kbd_hwidth(0.12*window_vspacing), kbd_depth(0.6*kbd_hwidth), kbd_height(0.06*kbd_hwidth);
-				sz[c.dim] = 0.5*kbd_depth; sz[!c.dim] = kbd_hwidth; sz.z = kbd_height;
+				sz[dim] = 0.5*kbd_depth; sz[!dim] = kbd_hwidth; sz.z = kbd_height;
 				add_obj_to_closet(c, interior, objects, cubes, rgen, sz, TYPE_KEYBOARD, flags);
 			}
 			if (!is_hotel && rgen.rand_bool()) { // maybe add a paint can in the closet
@@ -224,10 +225,10 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vect_room_
 		// add hanger rod
 		unsigned const hanger_rod_ix(objects.size());
 		float const hr_radius(0.007*window_vspacing);
-		room_object_t hanger_rod(interior, TYPE_HANGER_ROD, c.room_id, c.dim, c.dir, (RO_FLAG_NOCOLL | RO_FLAG_INTERIOR)); // SHAPE_CUBE, even though it's a horizontal cylinder
+		room_object_t hanger_rod(interior, TYPE_HANGER_ROD, c.room_id, dim, dir, base_flags); // SHAPE_CUBE, even though it's a horizontal cylinder
 		hanger_rod.z1() = c.z1() + 0.8*window_vspacing;
 		hanger_rod.z2() = hanger_rod.z1() + 2.0*hr_radius;
-		set_wall_width(hanger_rod, (0.45*c.d[c.dim][c.dir] + 0.55*c.d[c.dim][!c.dir]), hr_radius, c.dim); // move slightly toward the back
+		set_wall_width(hanger_rod, (0.45*c.d[dim][dir] + 0.55*c.d[dim][!dir]), hr_radius, dim); // move slightly toward the back
 		objects.push_back(hanger_rod);
 	
 		if (!no_models) { // add hangers and hanging clothes
@@ -236,8 +237,26 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vect_room_
 			objects[hanger_rod_ix].item_flags = uint16_t(objects.size() - hanger_rod_ix); // number of objects hanging on the hanger rod, including hangers and clothing
 		}
 	}
-	else if (c.item_flags == RTYPE_KITCHEN) { // kitchen pantry
-		// TODO
+	else if (c.item_flags == RTYPE_KITCHEN) { // kitchen pantry; add shelves with food items
+		unsigned const num_shelf_levels(3);
+		unsigned const sdims[3] = {dim, !dim, !dim}, sdirs[3] = {dir, 1, 0};
+		float const shelf_dz(height/(num_shelf_levels+1)), shelf_hthick(0.006*height), door_width(ccubes[2].d[!dim][0] - ccubes[0].d[!dim][1]); // front right - front left
+		float const back_shelf_edge(interior.d[dim][!dir] + (dir ? 1.0 : -1.0)*0.4*c.get_depth());
+		cube_t shelves[3] = {interior, interior, interior}; // {back, left, right}
+		shelves[0].d[dim][dir] = back_shelf_edge; // back
+		
+		for (unsigned d = 0; d < 2; ++d) {
+			shelves[d+1].d[ dim][!dir] = back_shelf_edge;
+			shelves[d+1].d[!dim][!d  ] = ccubes[2*d].d[!dim][!d] + (d ? 1.0 : -1.0)*0.01*door_width; // edge of door + trim
+		}
+		for (unsigned n = 0; n < num_shelf_levels; ++n) {
+			for (unsigned s = 0; s < 3; ++s) {
+				cube_t shelf(shelves[s]);
+				set_wall_width(shelf, (c.z1() + (n+1)*shelf_dz), shelf_hthick, 2); // set zvals
+				objects.emplace_back(shelf, TYPE_PAN_SHELF, c.room_id, sdims[s], sdirs[s], base_flags, c.light_amt, SHAPE_CUBE, WHITE);
+				// TODO: populate shelf with food items
+			} // for s
+		} // for n
 	}
 	else {
 		assert(0);
