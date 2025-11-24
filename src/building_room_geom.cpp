@@ -2764,7 +2764,7 @@ void building_room_geom_t::add_wall_gap(room_object_t const &c, tid_nm_pair_t co
 				vector3d const offset(rgen.signed_rand_vector_xy().get_norm()*sz);
 				float best_score(0.0);
 
-				for (unsigned m = 0; m < ((i > 0) ? 4 : 1); ++m) { // try all 4 XY directions and use max area triangle
+				for (unsigned m = 0; m < ((i > 0) ? 4U : 1U); ++m) { // try all 4 XY directions and use max area triangle
 					vector2d cand(center + vector2d(((m&1) ? -1.0 : 1.0)*offset[0], ((m>>1) ? -1.0 : 1.0)*offset[1]));
 					float score(0.0);
 					if (i >  0) {score  = fabs(fverts.back().v.x - cand.x) + fabs(fverts.back().v.y - cand.y);} // edge distance to previous vertex

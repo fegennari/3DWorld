@@ -1047,7 +1047,7 @@ bool building_t::add_wall_tv(rand_gen_t &rgen, room_t const &room, float zval, u
 }
 
 bool building_t::check_valid_closet_placement(cube_t const &c, room_t const &room, unsigned objs_start, unsigned bed_ix, float min_bed_space) const {
-	if (min_bed_space > 0.0) {
+	if (min_bed_space > 0.0 && bed_ix > 0) { // don't place too close to bed, if there is a bed
 		room_object_t const &bed(interior->room_geom->get_room_object_by_index(bed_ix));
 		assert(bed.type == TYPE_BED);
 		cube_t bed_exp(bed);
@@ -1094,104 +1094,14 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t &bl
 	}
 	cube_t room_bounds(get_walkable_room_bounds(room)), place_area(room_bounds);
 	place_area.expand_by(-get_trim_thickness()); // shrink to leave a small gap
-	// closet
-	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), window_h_border(get_window_h_border());
-	float const closet_min_depth(0.65*doorway_width), closet_min_width(1.5*doorway_width), min_dist_to_wall(1.0*doorway_width), min_bed_space(front_clearance);
-	unsigned const first_corner(rgen.rand() & 3);
-	bool const first_dim(rgen.rand_bool()), is_store(room.is_store());
-	cube_t const &part(get_part_for_room(room));
+	float const window_vspacing(get_window_vspace());
+	bool const is_store(room.is_store());
 	bool placed_closet(0), placed_lamp(0);
 	unsigned closet_obj_id(0);
-	bool chk_windows[2][2] = {}; // precompute which walls are exterior and can have windows, {dim}x{dir}
-
-	if (!is_basement && has_int_windows()) { // are bedrooms ever placed in the basement?
-		for (unsigned d = 0; d < 4; ++d) {chk_windows[d>>1][d&1] = (classify_room_wall(room, zval, (d>>1), (d&1), 0) == ROOM_WALL_EXT);}
+	
+	if (!is_store) { // add closet if not a mall furniture store
+		placed_closet = add_closet_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, RTYPE_BED, bed_obj_ix, front_clearance, closet_obj_id, light_ix_assign);
 	}
-	for (unsigned n = 0; n < 4 && !placed_closet; ++n) { // try 4 room corners
-		if (is_store) continue; // no closets in furniture stores
-		unsigned const corner_ix((first_corner + n)&3);
-		bool const xdir(corner_ix&1), ydir(corner_ix>>1);
-		point const corner(room_bounds.d[0][xdir], room_bounds.d[1][ydir], zval);
-
-		for (unsigned d = 0; d < 2 && !placed_closet; ++d) { // try both dims
-			bool const dim(bool(d) ^ first_dim), dir(dim ? ydir : xdir), other_dir(dim ? xdir : ydir);
-			if (room_bounds.get_sz_dim(!dim) < closet_min_width + min_dist_to_wall) continue; // room is too narrow to add a closet here
-			if (chk_windows[dim][dir]) continue; // don't place closets against exterior walls where they would block a window
-			float const dir_sign(dir ? -1.0 : 1.0), signed_front_clearance(dir_sign*front_clearance);
-			float const window_hspacing(get_hspacing_for_part(part, dim));
-			cube_t c(corner, corner);
-			c.d[0][!xdir] += (xdir ? -1.0 : 1.0)*(dim ? closet_min_width : closet_min_depth);
-			c.d[1][!ydir] += (ydir ? -1.0 : 1.0)*(dim ? closet_min_depth : closet_min_width);
-			if (chk_windows[!dim][other_dir] && is_val_inside_window(part, dim, c.d[dim][!dir], window_hspacing, window_h_border)) continue; // check for window intersection
-			c.z2() += window_vspacing - floor_thickness;
-			c.d[dim][!dir] += signed_front_clearance; // extra padding in front, to avoid placing too close to bed, etc.
-			if (!check_valid_closet_placement(c, room, objs_start, bed_obj_ix, min_bed_space)) continue; // bad placement
-			// good placement, see if we can make the closet larger
-			unsigned const num_steps = 10;
-			float const req_dist(chk_windows[!dim][!other_dir] ? (other_dir ? -1.0 : 1.0)*min_dist_to_wall : 0.0); // signed; at least min dist from opposite wall if exterior
-			float max_grow((room_bounds.d[!dim][!other_dir] - req_dist) - c.d[!dim][!other_dir]);
-			min_eq(max_grow, 1.5f*window_vspacing); // limit to a reasonable length
-			float const len_step(max_grow/num_steps), depth_step(dir_sign*0.35*doorway_width/num_steps); // signed
-
-			for (unsigned s1 = 0; s1 < num_steps; ++s1) { // try increasing width
-				cube_t c2(c);
-				c2.d[!dim][!other_dir] += len_step;
-				if (!check_valid_closet_placement(c2, room, objs_start, bed_obj_ix, min_bed_space)) break; // bad placement
-				c = c2; // valid placement, update with larger cube
-			}
-			if (front_clearance < doorway_width && room_object_t(c, TYPE_CLOSET, room_id, dim, !dir).is_small_closet()) {
-				// will be a small closet; add extra space in front to make the sure the door can open
-				cube_t c_ext(c);
-				c_ext.d[dim][!dir] += dir_sign*(doorway_width - front_clearance);
-				if (!check_valid_closet_placement(c_ext, room, objs_start, bed_obj_ix, 0.0)) continue; // bad placement; don't need to recheck bed
-			}
-			for (unsigned s2 = 0; s2 < num_steps; ++s2) { // now try increasing depth
-				cube_t c2(c);
-				c2.d[dim][!dir] += depth_step;
-				if (chk_windows[!dim][other_dir] && is_val_inside_window(part, dim, (c2.d[dim][!dir] - signed_front_clearance),
-					window_hspacing, get_window_h_border())) break; // bad placement
-				if (!check_valid_closet_placement(c2, room, objs_start, bed_obj_ix, min_bed_space)) break; // bad placement
-				c = c2; // valid placement, update with larger cube
-			}
-			c.d[dim][!dir] -= signed_front_clearance; // subtract off front clearance
-			assert(c.is_strictly_normalized());
-			unsigned flags(0);
-			if (is_house) {flags |= RO_FLAG_IS_HOUSE;}
-			if (c.d[!dim][0] == room_bounds.d[!dim][0]) {flags |= RO_FLAG_ADJ_LO;}
-			if (c.d[!dim][1] == room_bounds.d[!dim][1]) {flags |= RO_FLAG_ADJ_HI;}
-			if (is_hotel()) {flags |= RO_FLAG_HAS_EXTRA;} // flag so that the closet has a safe
-			//if ((rgen.rand() % 10) == 0) {flags |= RO_FLAG_OPEN;} // 10% chance of open closet; unclear if this adds any value, but it works
-			closet_obj_id = objs.size();
-			objs.emplace_back(c, TYPE_CLOSET, room_id, dim, !dir, flags, tot_light_amt, SHAPE_CUBE, wall_color); // closet door is always white; sides should match interior walls
-			set_obj_id(objs);
-			if (flags & RO_FLAG_OPEN) {interior->room_geom->expand_object(objs.back(), *this);} // expand opened closets immediately
-			placed_closet = 1; // done
-			// add a light inside the closet
-			room_object_t const closet(objs.back()); // deep copy so that we can invalidate the reference
-			bool const small_closet(closet.is_small_closet());
-			point lpos(cube_top_center(closet));
-			lpos[dim] += 0.05*c.get_sz_dim(dim)*(dir ? -1.0 : 1.0); // move slightly toward the front of the closet
-			cube_t light(lpos);
-			light.z1() -= 0.02*window_vspacing;
-			light.expand_by_xy((small_closet ? 0.04 : 0.06)*window_vspacing);
-			colorRGBA const color(1.0, 1.0, 0.9); // yellow-ish
-			objs.emplace_back(light, TYPE_LIGHT, room_id, dim, 0, (RO_FLAG_NOCOLL | RO_FLAG_IN_CLOSET), 0.0, SHAPE_CYLIN, color); // dir=0 (unused)
-			objs.back().obj_id = light_ix_assign.get_next_ix();
-
-			if (small_closet) { // add a blocker in front of the closet to avoid placing furniture that blocks the door from opening
-				c.d[dim][!dir] += dir_sign*doorway_width;
-				objs.emplace_back(c, TYPE_BLOCKER, room_id, dim, 0, RO_FLAG_INVIS);
-				// add closet door
-				cube_t cubes[5];
-				get_closet_cubes(closet, cubes);
-				door_t door(cubes[4], dim, !dir, 0); // open=0
-				door.d[dim][0] = door.d[dim][1] = door.get_center_dim(dim); // shrink to zero width
-				door.set_for_closet(); // flag so that we don't try to add a light switch by this door, etc.
-				add_interior_door(door, 0, 1, 1); // is_bathroom=0, make_unlocked=1, make_closed=1
-				interior->doors.back().obj_ix = closet_obj_id;
-			}
-		} // for d
-	} // for n
 	// dresser
 	float const ds_height(rgen.rand_uniform(0.26, 0.32)*window_vspacing), ds_depth(rgen.rand_uniform(0.20, 0.25)*window_vspacing), ds_width(rgen.rand_uniform(0.6, 0.9)*window_vspacing);
 	vector3d const ds_sz_scale(ds_depth/ds_height, ds_width/ds_height, 1.0);
@@ -1356,6 +1266,112 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t &bl
 	}
 	return 1; // success
 } // end add_bedroom_objs()
+
+bool building_t::add_closet_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
+	unsigned room_type, unsigned bed_obj_ix, float front_clearance, unsigned &closet_obj_id, light_ix_assign_t &light_ix_assign)
+{
+	bool const is_bedroom(room_type == RTYPE_BED); // otherwise a kitchen pantry
+	float const window_vspacing(get_window_vspace()), doorway_width(get_doorway_width()), floor_thickness(get_floor_thickness()), window_h_border(get_window_h_border());
+	float const closet_min_depth((is_bedroom ? 0.65 : 0.8)*doorway_width), closet_min_width(1.5*doorway_width);
+	float const min_dist_to_wall(1.0*doorway_width), min_bed_space(front_clearance);
+	unsigned const first_corner(rgen.rand() & 3);
+	bool const first_dim(rgen.rand_bool());
+	cube_t const &part(get_part_for_room(room));
+	cube_t room_bounds(get_walkable_room_bounds(room));
+	bool chk_windows[2][2] = {}; // precompute which walls are exterior and can have windows, {dim}x{dir}
+	vect_room_object_t &objs(interior->room_geom->objs);
+
+	if (zval > ground_floor_z1 && has_int_windows()) { // are bedrooms/kitchens ever placed in the basement?
+		for (unsigned d = 0; d < 4; ++d) {chk_windows[d>>1][d&1] = (classify_room_wall(room, zval, (d>>1), (d&1), 0) == ROOM_WALL_EXT);}
+	}
+	for (unsigned n = 0; n < 4; ++n) { // try 4 room corners
+		unsigned const corner_ix((first_corner + n)&3);
+		bool const xdir(corner_ix&1), ydir(corner_ix>>1);
+		point const corner(room_bounds.d[0][xdir], room_bounds.d[1][ydir], zval);
+
+		for (unsigned d = 0; d < 2; ++d) { // try both dims
+			bool const dim(bool(d) ^ first_dim), dir(dim ? ydir : xdir), other_dir(dim ? xdir : ydir);
+			if (room_bounds.get_sz_dim(!dim) < closet_min_width + min_dist_to_wall) continue; // room is too narrow to add a closet here
+			if (chk_windows[dim][dir]) continue; // don't place closets against exterior walls where they would block a window
+			float const dir_sign(dir ? -1.0 : 1.0), signed_front_clearance(dir_sign*front_clearance);
+			float const window_hspacing(get_hspacing_for_part(part, dim));
+			cube_t c(corner, corner);
+			c.d[0][!xdir] += (xdir ? -1.0 : 1.0)*(dim ? closet_min_width : closet_min_depth);
+			c.d[1][!ydir] += (ydir ? -1.0 : 1.0)*(dim ? closet_min_depth : closet_min_width);
+			if (chk_windows[!dim][other_dir] && is_val_inside_window(part, dim, c.d[dim][!dir], window_hspacing, window_h_border)) continue; // check for window intersection
+			c.z2() += window_vspacing - floor_thickness;
+			c.d[dim][!dir] += signed_front_clearance; // extra padding in front, to avoid placing too close to bed, etc.
+			if (!check_valid_closet_placement(c, room, objs_start, bed_obj_ix, min_bed_space)) continue; // bad placement
+			// good placement, see if we can make the closet larger
+			unsigned const num_steps = 10;
+			float const req_dist(chk_windows[!dim][!other_dir] ? (other_dir ? -1.0 : 1.0)*min_dist_to_wall : 0.0); // signed; at least min dist from opposite wall if exterior
+			float max_grow((room_bounds.d[!dim][!other_dir] - req_dist) - c.d[!dim][!other_dir]);
+			min_eq(max_grow, 1.5f*window_vspacing); // limit to a reasonable length
+			float const len_step(max_grow/num_steps), depth_step(dir_sign*0.35*doorway_width/num_steps); // signed
+
+			for (unsigned s1 = 0; s1 < num_steps; ++s1) { // try increasing width
+				cube_t c2(c);
+				c2.d[!dim][!other_dir] += len_step;
+				if (!check_valid_closet_placement(c2, room, objs_start, bed_obj_ix, min_bed_space))       break; // bad placement
+				if (!is_bedroom && !room_object_t(c2, TYPE_CLOSET, room_id, dim, !dir).is_small_closet()) break; // kitchen pantry is small
+				c = c2; // valid placement, update with larger cube
+			}
+			if (front_clearance < doorway_width && room_object_t(c, TYPE_CLOSET, room_id, dim, !dir).is_small_closet()) {
+				// will be a small closet; add extra space in front to make the sure the door can open
+				cube_t c_ext(c);
+				c_ext.d[dim][!dir] += dir_sign*(doorway_width - front_clearance);
+				if (!check_valid_closet_placement(c_ext, room, objs_start, bed_obj_ix, 0.0)) continue; // bad placement; don't need to recheck bed
+			}
+			for (unsigned s2 = 0; s2 < num_steps; ++s2) { // now try increasing depth
+				cube_t c2(c);
+				c2.d[dim][!dir] += depth_step;
+				if (chk_windows[!dim][other_dir] && is_val_inside_window(part, dim, (c2.d[dim][!dir] - signed_front_clearance),
+					window_hspacing, get_window_h_border())) break; // bad placement
+				if (!check_valid_closet_placement(c2, room, objs_start, bed_obj_ix, min_bed_space)) break; // bad placement
+				c = c2; // valid placement, update with larger cube
+			}
+			c.d[dim][!dir] -= signed_front_clearance; // subtract off front clearance
+			assert(c.is_strictly_normalized());
+			unsigned flags(0);
+			if (!is_bedroom) {flags |= 0;}
+			if (c.d[!dim][0] == room_bounds.d[!dim][0]) {flags |= RO_FLAG_ADJ_LO;}
+			if (c.d[!dim][1] == room_bounds.d[!dim][1]) {flags |= RO_FLAG_ADJ_HI;}
+			if (is_hotel()) {flags |= RO_FLAG_HAS_EXTRA;} // flag so that the closet has a safe
+			//if ((rgen.rand() % 10) == 0) {flags |= RO_FLAG_OPEN;} // 10% chance of open closet; unclear if this adds any value, but it works
+			closet_obj_id = objs.size();
+			// closet door is always white; sides should match interior walls; store room type in item flags
+			objs.emplace_back(c, TYPE_CLOSET, room_id, dim, !dir, flags, tot_light_amt, SHAPE_CUBE, wall_color, room_type);
+			set_obj_id(objs);
+			if (flags & RO_FLAG_OPEN) {interior->room_geom->expand_object(objs.back(), *this);} // expand opened closets immediately
+			// add a light inside the closet
+			room_object_t const closet(objs.back()); // deep copy so that we can invalidate the reference
+			bool const small_closet(closet.is_small_closet());
+			point lpos(cube_top_center(closet));
+			lpos[dim] += 0.05*c.get_sz_dim(dim)*(dir ? -1.0 : 1.0); // move slightly toward the front of the closet
+			cube_t light(lpos);
+			light.z1() -= 0.02*window_vspacing;
+			light.expand_by_xy((small_closet ? 0.04 : 0.06)*window_vspacing);
+			colorRGBA const color(1.0, 1.0, 0.9); // yellow-ish
+			objs.emplace_back(light, TYPE_LIGHT, room_id, dim, 0, (RO_FLAG_NOCOLL | RO_FLAG_IN_CLOSET), 0.0, SHAPE_CYLIN, color); // dir=0 (unused)
+			objs.back().obj_id = light_ix_assign.get_next_ix();
+
+			if (small_closet) { // add a blocker in front of the closet to avoid placing furniture that blocks the door from opening
+				c.d[dim][!dir] += dir_sign*doorway_width;
+				objs.emplace_back(c, TYPE_BLOCKER, room_id, dim, 0, RO_FLAG_INVIS);
+				// add closet door
+				cube_t cubes[5];
+				get_closet_cubes(closet, cubes);
+				door_t door(cubes[4], dim, !dir, 0); // open=0
+				door.d[dim][0] = door.d[dim][1] = door.get_center_dim(dim); // shrink to zero width
+				door.set_for_closet(); // flag so that we don't try to add a light switch by this door, etc.
+				add_interior_door(door, 0, 1, 1); // is_bathroom=0, make_unlocked=1, make_closed=1
+				interior->doors.back().obj_ix = closet_obj_id;
+			}
+			return 1; // done
+		} // for d
+	} // for n
+	return 0; // failed
+}
 
 void building_t::place_shirt_pants_on_floor(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt,
 	cube_t const &place_area, unsigned objs_start, unsigned type)
@@ -2534,20 +2550,29 @@ colorRGBA get_toaster_color(rand_gen_t &rgen) {
 	if (cube_map_reflect_active()) return WHITE; // reflective metal
 	return toaster_colors[rgen.rand()%NUM_TOASTER_COLORS]; // matte colored
 }
-bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool allow_adj_ext_door) {
+bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt,
+	unsigned objs_start, bool allow_adj_ext_door, light_ix_assign_t &light_ix_assign)
+{
 	// Note: table and chairs have already been placed
 	bool const residential(is_residential());
 	if (room.is_hallway || room.is_sec_bldg || room.is_office) return 0; // these can't be kitchens
 	if (!residential && rgen.rand_bool()) return 0; // some office buildings have kitchens, allow it half the time
 	// if it has an external door then reject the room half the time; most houses don't have a front door to the kitchen
 	if (is_room_adjacent_to_ext_door(room, zval, 1) && (!allow_adj_ext_door || rgen.rand_bool())) return 0; // front_door_only=1
-	float const wall_thickness(get_wall_thickness());
+	float const vspace(get_window_vspace()), wall_thickness(get_wall_thickness());
 	cube_t room_bounds(get_walkable_room_bounds(room)), place_area(room_bounds);
 	place_area.expand_by(-0.25*wall_thickness); // common spacing to wall for appliances
 	vect_room_object_t &objs(interior->room_geom->objs);
+	
+	if (residential && min(room.dx(), room.dy()) > 2.0*vspace) { // add a pantry if large, which is of type TYPE_CLOSET
+		float const clearance(get_min_front_clearance_inc_people());
+		unsigned closet_obj_id(0); // unused
+		add_closet_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, RTYPE_KITCHEN, 0, clearance, closet_obj_id, light_ix_assign); // bed_obj_ix=0 (not set)
+	}
+	// place a fridge
 	unsigned const fridge_obj_ix(objs.size());
 	bool placed_obj(0);
-	
+
 	if (place_model_along_wall(OBJ_MODEL_FRIDGE, TYPE_FRIDGE, room, 0.75, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.2, 4, 0, WHITE, 1)) { // not at window
 		if (is_house) {add_fridge_sticky_notes(rgen, fridge_obj_ix, zval, room_id, tot_light_amt);}
 		placed_obj = 1;
@@ -2593,8 +2618,7 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 		}
 	}	
 	if (residential && placed_obj) { // if we have at least a fridge or stove, try to add countertops
-		float const vspace(get_window_vspace()), height(0.345*vspace), depth(0.74*height), floor_thickness(get_floor_thickness());
-		float const min_clearance(get_min_front_clearance_inc_people());
+		float const height(0.345*vspace), depth(0.74*height), floor_thickness(get_floor_thickness()), min_clearance(get_min_front_clearance_inc_people());
 		float min_hwidth(0.6*height), front_clearance(max(0.6f*height, min_clearance));
 		cube_t cabinet_area(room_bounds);
 		cabinet_area.expand_by(-0.05*wall_thickness); // smaller gap than place_area; this is needed to prevent z-fighting with exterior walls
@@ -2777,9 +2801,9 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 	}
 	if (placed_obj && building_obj_model_loader.is_model_valid(OBJ_MODEL_BAN_PEEL) && rgen.rand_bool()) { // maybe place a banana peel on the floor
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_BAN_PEEL));
-		float const floor_spacing(get_window_vspace()), length(0.083*floor_spacing), width(length*sz.y/sz.x), height(length*sz.z/sz.x);
+		float length(0.083*vspace), width(length*sz.y/sz.x), height(length*sz.z/sz.x);
 		cube_t valid_area(place_area);
-		valid_area.expand_by_xy(-0.25*floor_spacing); // not too close to a wall
+		valid_area.expand_by_xy(-0.25*vspace); // not too close to a wall
 		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random orientation
 		vector3d size(0.5*length, 0.5*width, height);
 		if (dim) {swap(size.x, size.y);}

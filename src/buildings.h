@@ -2893,6 +2893,8 @@ private:
 	bool check_valid_closet_placement(cube_t const &c, room_t const &room, unsigned objs_start, unsigned bed_ix, float min_bed_space=0.0) const;
 	bool add_bedroom_objs    (rand_gen_t rgen, room_t &room, vect_cube_t &blockers, colorRGBA const &chair_color, float zval, unsigned room_id, unsigned floor,
 		float tot_light_amt, unsigned objs_start, bool room_is_lit, bool is_basement, bool force, light_ix_assign_t &light_ix_assign);
+	bool add_closet_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
+		unsigned room_type, unsigned bed_obj_ix, float front_clearance, unsigned &closet_obj_id, light_ix_assign_t &light_ix_assign);
 	void place_shirt_pants_on_floor(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt,
 		cube_t const &place_area, unsigned objs_start, unsigned type);
 	bool replace_light_with_ceiling_fan(rand_gen_t &rgen, cube_t const &room, cube_t const &avoid, unsigned room_id, float tot_light_amt, unsigned light_obj_ix);
@@ -2942,7 +2944,8 @@ private:
 	void add_office_door_sign(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id);
 	void add_out_or_order_sign(cube_t const &door_bc, bool dim, bool dir, unsigned room_id);
 	void make_door_out_or_order(room_t const &room, float zval, unsigned room_id, unsigned door_stack_ix);
-	bool add_kitchen_objs    (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool allow_adj_ext_door);
+	bool add_kitchen_objs    (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt,
+		unsigned objs_start, bool allow_adj_ext_door, light_ix_assign_t &light_ix_assign);
 	bool add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float light_amt, unsigned objs_start);
 	void add_fridge_sticky_notes(rand_gen_t rgen, unsigned fridge_obj_ix, float zval, unsigned room_id, float tot_light_amt);
 	bool add_fishtank_to_room(rand_gen_t&rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, cube_t const &place_area);

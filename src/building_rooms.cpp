@@ -815,7 +815,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				}
 				else if (rtype == RTYPE_KITCHEN) { // assigned apartment kitchen
 					added_tc = can_place_onto = add_table_and_chairs(rgen, *r, blockers, room_id, room_center, chair_color, 0.1, tot_light_amt);
-					add_kitchen_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, 0); // allow_adj_ext_door=0; return value ignored
+					add_kitchen_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, 0, light_ix_assign); // allow_adj_ext_door=0; return value ignored
 					is_kitchen = 1;
 				}
 				else if (rtype == RTYPE_COMMON) { // common room
@@ -1026,7 +1026,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				if (!(added_kitchen_mask & floor_mask) && (!residential || is_entry_floor) && !is_basement && !is_tall_room && !has_fireplace && !is_industrial()) {
 					// make it a kitchen if it's the last room in a house, even if there's no table or it has stairs
 					if ((added_tc && !has_stairs) || (is_house && (r+1) == rooms.end())) {
-						if (add_kitchen_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, added_living)) {
+						if (add_kitchen_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, added_living, light_ix_assign)) {
 							r->assign_to(RTYPE_KITCHEN, f);
 							added_kitchen_mask |= floor_mask;
 							is_kitchen = added_obj = 1;
