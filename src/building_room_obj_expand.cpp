@@ -176,6 +176,163 @@ ball_type_t const &room_object_t::get_ball_type() const {
 	return pool_ball_type; // never gets here
 }
 
+void set_book_id_and_color(room_object_t &obj, rand_gen_t &rgen) {
+	obj.obj_id = rgen.rand();
+	obj.color  = book_colors[rgen.rand() % NUM_BOOK_COLORS];
+}
+void set_vase_id_and_color(room_object_t &obj, rand_gen_t &rgen) {
+	obj.obj_id = rgen.rand();
+	obj.color  = gen_vase_color(rgen);
+}
+void set_spraypaint_color(room_object_t &obj, rand_gen_t &rgen, unsigned *color_ix=nullptr) {
+	obj.color  = spcan_colors[(color_ix ? (*color_ix)++ : rgen.rand()) % NUM_SPCAN_COLORS];
+	obj.obj_id = rgen.rand(); // used to select emissive color
+}
+
+void add_rows_of_vcylinders(room_object_t const &c, cube_t const &region, float radius, float height, float spacing_factor, unsigned type,
+	unsigned max_cols, unsigned flags, vect_room_object_t &objects, rand_gen_t &rgen, bool dir=0, bool inv_dim=0, bool no_alcohol=0)
+{
+	float const length(region.get_sz_dim(!c.dim)), shelf_depth(region.get_sz_dim(c.dim));
+	float const space(spacing_factor*radius), stride(2.0*radius + space);
+	unsigned const num_rows(length/stride), num_cols(min((1U + (rgen.rand()%max_cols)), max(1U, unsigned(shelf_depth/stride)))); // round down
+	float const row_spacing(length/num_rows), col_spacing(shelf_depth/num_cols);
+	point pos;
+	pos[ c.dim] = region.d[ c.dim][0] + 0.5*col_spacing;
+	pos[!c.dim] = region.d[!c.dim][0] + 0.5*row_spacing;
+	pos.z = region.z1();
+	if (type == TYPE_PAN || type == TYPE_TCAN || type == TYPE_BUCKET || type == TYPE_VASE) {pos.z += 0.002*c.dz();} // shift up slightly to prevent Z-fighting
+	cube_t objc(get_cube_height_radius(pos, radius, height));
+	bool const is_drink(type == TYPE_BOTTLE || type == TYPE_DRINK_CAN);
+	unsigned rand_id(is_drink ? rgen.rand() : 0);
+	if (is_drink) {flags |= RO_FLAG_NO_CONS;} // not consumable
+
+	for (unsigned row = 0; row < num_rows; ++row) {
+		cube_t row_obj(objc);
+
+		for (unsigned col = 0; col < num_cols; ++col) {
+			if (rgen.rand_float() < 0.75) { // 75% chance
+				room_object_t obj(row_obj, type, c.room_id, (c.dim ^ inv_dim), dir, flags, c.light_amt, SHAPE_CYLIN);
+				if      (type == TYPE_BOTTLE    ) {
+					unsigned const max_type(no_alcohol ? BOTTLE_TYPE_COKE : BOTTLE_TYPE_WINE); // excludes poison and medicine; should we include medicine?
+					obj.set_as_bottle(rand_id, max_type, 1); // no_empty=1
+				}
+				else if (type == TYPE_DRINK_CAN ) {
+					obj.obj_id = (uint16_t)(rand_id & 127); // strip off empty bit
+					obj.color  = WHITE;
+					if (no_alcohol) {obj.set_max_drink_can_type(DRINK_CAN_TYPE_COKE);}
+				}
+				else if (type == TYPE_VASE      ) {set_vase_id_and_color(obj, rgen);} // randomize the vase
+				else if (type == TYPE_SPRAYCAN  ) {set_spraypaint_color (obj, rgen);}
+				else if (type == TYPE_FLASHLIGHT) {obj.color = BLACK;}
+				else if (type == TYPE_CANDLE    ) {obj.color = candle_color;}
+				else if (type == TYPE_TCAN      ) {obj.color = tcan_colors[rgen.rand()%NUM_TCAN_COLORS];}
+				else if (type == TYPE_LAMP      ) {obj.color = lamp_colors[rgen.rand()%NUM_LAMP_COLORS];}
+				else if (type == TYPE_BUCKET    ) {obj.color = LT_GRAY;}
+				else if (type == TYPE_PAN       ) {obj.color = DK_GRAY;}
+				objects.push_back(obj);
+				if (type == TYPE_VASE) {objects.back().z2() -= 0.1*rgen.rand_float()*height;} // add a bit of height variation
+			}
+			row_obj.translate_dim(c.dim, col_spacing);
+		} // for col
+		if (is_drink && rgen.rand_float() < 0.1) {rand_id = rgen.rand();} // 10% chance to update bottle/can type
+		objc.translate_dim(!c.dim, row_spacing);
+	} // for row
+}
+unsigned add_row_of_cubes(room_object_t const &c, cube_t const &region, float width, float depth, float height, float spacing_factor, unsigned type,
+	unsigned flags, vect_room_object_t &objects, rand_gen_t &rgen, bool dir=0, bool inv_dim=0, unsigned max_stack_height=1, bool no_empty=0)
+{
+	float const length(region.get_sz_dim(!c.dim)), space(spacing_factor*width), stride(width + space);
+	unsigned const num_rows(length/stride); // round down
+	unsigned const food_box_type((type == TYPE_FOOD_BOX) ? rgen.rand() : 0); // unique per section
+	float const row_spacing(length/num_rows), shelf_depth(region.get_sz_dim(c.dim));
+	unsigned num_items(0);
+	point pos;
+	pos[ c.dim] = region.d[ c.dim][0] + 0.5*shelf_depth;
+	pos[!c.dim] = region.d[!c.dim][0] + 0.5*row_spacing;
+	pos.z = region.z1();
+	cube_t objc(pos);
+	objc.z2() += height;
+	objc.expand_in_dim( c.dim, 0.5*depth);
+	objc.expand_in_dim(!c.dim, 0.5*width);
+
+	for (unsigned row = 0; row < num_rows; ++row) {
+		if (no_empty || rgen.rand_float() < 0.75) { // 75% chance
+			unsigned const stack_height(1 + ((max_stack_height > 1) ? (rgen.rand() % max_stack_height) : 0));
+			cube_t objc_stack(objc);
+
+			for (unsigned stack = 0; stack < stack_height; ++stack) {
+				room_object_t obj(objc_stack, type, c.room_id, (c.dim ^ inv_dim), dir, flags, c.light_amt);
+
+				if (type == TYPE_BOOK) { // reduce size randomly
+					obj.z2() -= 0.5*height*rgen.rand_float();
+					obj.expand_in_dim( c.dim, -0.1*width*rgen.rand_float()); // length
+					obj.expand_in_dim(!c.dim, -0.2*width*rgen.rand_float()); // width
+					set_book_id_and_color(obj, rgen);
+				}
+				else if (type == TYPE_FOOD_BOX  ) {obj.obj_id  = food_box_type;}
+				else if (type == TYPE_TOASTER   ) {obj.color   = get_toaster_color(rgen);} // random color
+				else if (type == TYPE_FOLD_SHIRT) {obj.color   = TSHIRT_COLORS [rgen.rand()%NUM_TSHIRT_COLORS ];} // random color
+				else if (type == TYPE_MONITOR   ) {obj.obj_id |= 1;} // off by default; set LSB
+				objects.push_back(obj);
+				++num_items;
+				if (stack+1 == stack_height) break; // done with stack
+				objc_stack.translate_dim(2, obj.dz()); // shift stack up
+				if (objc_stack.z2() > region.z2()) break; // stack is too tall
+
+				if (type == TYPE_LAPTOP) { // add a bit of horizontal jitter
+					for (unsigned d = 0; d < 2; ++d) {objc_stack.translate_dim(d, 0.05*objc.get_sz_dim(d)*rgen.signed_rand_float());}
+				}
+			} // for stack
+		}
+		objc.translate_dim(!c.dim, row_spacing);
+	} // for row
+	return num_items;
+}
+void add_row_of_balls(room_object_t const &c, cube_t const &region, float spacing_factor,
+	float floor_spacing, unsigned flags, vect_room_object_t &objects, rand_gen_t &rgen)
+{
+	unsigned const btype(rgen.rand() % NUM_BALL_TYPES);
+	float const radius(ball_types[btype].radius*floor_spacing/(12*8)), diameter(2.0*radius), shelf_depth(region.get_sz_dim(c.dim));
+	if (diameter > region.dz() || diameter > shelf_depth) return; // not enough space to fit a ball of this type; often happens with beach balls
+	float const length(region.get_sz_dim(!c.dim)), space(spacing_factor*diameter), stride(diameter + space);
+	unsigned const num_rows(length/stride); // round down
+	float const row_spacing(length/num_rows);
+	point pos;
+	pos[ c.dim] = region.d[ c.dim][0] + 0.5*shelf_depth;
+	pos[!c.dim] = region.d[!c.dim][0] + 0.5*row_spacing;
+	pos.z = region.z1() + radius;
+	cube_t objc;
+	objc.set_from_sphere(pos, radius);
+
+	for (unsigned row = 0; row < num_rows; ++row) {
+		if (rgen.rand_float() < 0.75) { // 75% chance
+			room_object_t obj(objc, TYPE_LG_BALL, c.room_id, 0, 0, (flags | RO_FLAG_RAND_ROT), c.light_amt, SHAPE_SPHERE);
+			obj.item_flags = btype; // no dstate
+			objects.push_back(obj);
+		}
+		objc.translate_dim(!c.dim, row_spacing);
+	}
+}
+
+void add_rows_of_food_boxes(rand_gen_t &rgen, room_object_t const &parent, cube_t const &shelf, float height_val, float depth, bool dir, vect_room_object_t &objects) {
+	float const fheight(height_val*rgen.rand_uniform(0.7, 0.9)), fdepth(min(depth, fheight)*rgen.rand_uniform(0.15, 0.25));
+	float const fwidth(min(depth, fheight)*rgen.rand_uniform(0.6, 0.9));
+	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_WAS_EXP);
+	add_row_of_cubes(parent, shelf, fwidth, fdepth, fheight, 0.2, TYPE_FOOD_BOX, flags, objects, rgen, dir);
+}
+void add_rows_of_bottles_or_cans(rand_gen_t &rgen, room_object_t const &parent, cube_t const &shelf, float height_val, float depth, vect_room_object_t &objects) {
+	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_WAS_EXP);
+
+	if (rgen.rand_float() < 0.65) { // add bottles; these aren't consumable by the player because that would be too powerful
+		float const bot_height(height_val*rgen.rand_uniform(0.7, 0.9)), bot_radius(min(0.25f*depth, bot_height*rgen.rand_uniform(0.12, 0.18)));
+		add_rows_of_vcylinders(parent, shelf, bot_radius, bot_height, 0.25, TYPE_BOTTLE, 2, flags, objects, rgen); // 1-2 columns
+	}
+	else { // add drink cans; should these be grouped into six packs?
+		float const can_height(0.48*height_val), can_radius(min(0.45f*depth, 0.13f*height_val)); // standard height and radius
+		add_rows_of_vcylinders(parent, shelf, can_radius, can_height, 0.25, TYPE_DRINK_CAN, 2, flags, objects, rgen); // 1-3 columns
+	}
+}
+
 void building_room_geom_t::expand_closet(room_object_t const &c) {
 	add_closet_objects(c, expanded_objs, 0); // no_models=0
 	invalidate_model_geom(); // likelu required if there are hangers and clothing
@@ -240,8 +397,8 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vect_room_
 	else if (c.item_flags == RTYPE_KITCHEN) { // kitchen pantry; add shelves with food items
 		unsigned const num_shelf_levels(3);
 		unsigned const sdims[3] = {dim, !dim, !dim}, sdirs[3] = {dir, 1, 0};
-		float const shelf_dz(height/(num_shelf_levels+1)), shelf_hthick(0.006*height), door_width(ccubes[2].d[!dim][0] - ccubes[0].d[!dim][1]); // front right - front left
-		float const back_shelf_edge(interior.d[dim][!dir] + (dir ? 1.0 : -1.0)*0.4*c.get_depth());
+		float const shelf_dz(height/(num_shelf_levels+1)), shelf_hthick(0.005*height), door_width(ccubes[2].d[!dim][0] - ccubes[0].d[!dim][1]); // front right - front left
+		float const back_shelf_edge(interior.d[dim][!dir] + (dir ? 1.0 : -1.0)*0.4*c.get_depth()), height_val(shelf_dz - 2.0*shelf_hthick);
 		cube_t shelves[3] = {interior, interior, interior}; // {back, left, right}
 		shelves[0].d[dim][dir] = back_shelf_edge; // back
 		
@@ -253,8 +410,17 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vect_room_
 			for (unsigned s = 0; s < 3; ++s) {
 				cube_t shelf(shelves[s]);
 				set_wall_width(shelf, (c.z1() + (n+1)*shelf_dz), shelf_hthick, 2); // set zvals
-				objects.emplace_back(shelf, TYPE_PAN_SHELF, c.room_id, sdims[s], sdirs[s], base_flags, c.light_amt, SHAPE_CUBE, WHITE);
-				// TODO: populate shelf with food items
+				objects.emplace_back(shelf, TYPE_PAN_SHELF, c.room_id, sdims[s], sdirs[s], base_flags, c.light_amt, SHAPE_CUBE, WHITE);	
+				// populate shelf with food items
+				room_object_t c2(c);
+				c2.dim = sdims[s]; c2.dir = sdirs[s]; // required for correct item orient on side shelves
+				float const shelf_depth(shelf.get_sz_dim(c2.dim));
+				if      (rgen.rand_float() < 0.6) {add_rows_of_food_boxes     (rgen, c2, shelf, 0.7*height_val, shelf_depth, c2.dir, objects);} // food boxes; more likely
+				else if (rgen.rand_float() < 0.8) {add_rows_of_bottles_or_cans(rgen, c2, shelf, 0.5*height_val, shelf_depth,         objects);} // bottles or cans
+				else { // paper towels
+					float const oheight(0.7*height_val), radius(min(0.45f*shelf_depth, 0.25f*oheight));
+					add_rows_of_vcylinders(c2, shelf, radius, oheight, 0.2, TYPE_TPROLL, 1, (flags | RO_FLAG_HAS_EXTRA), objects, rgen); // 1 column
+				}
 			} // for s
 		} // for n
 	}
@@ -654,11 +820,6 @@ unsigned get_shelves_for_object(room_object_t const &c, cube_t shelves[MAX_SHELV
 	return num_shelves;
 }
 
-void set_spraypaint_color(room_object_t &obj, rand_gen_t &rgen, unsigned *color_ix=nullptr) {
-	obj.color  = spcan_colors[(color_ix ? (*color_ix)++ : rgen.rand()) % NUM_SPCAN_COLORS];
-	obj.obj_id = rgen.rand(); // used to select emissive color
-}
-
 void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t const shelves[MAX_SHELVES], unsigned num_shelves, vect_room_object_t &objects, bool add_models_mode) {
 	if (!c_in.is_nonempty()) return; // empty - no objects
 	room_object_t c(c_in); // deep copy so that we can set flags and don't invalidate the reference
@@ -999,140 +1160,6 @@ void building_room_geom_t::expand_shelves(room_object_t const &c, bool add_model
 	get_shelf_objects(c, shelves, num_shelves, (add_models_mode ? objs : expanded_objs), add_models_mode); // models expand to objs; everything else expands to expanded_objs
 }
 
-void set_book_id_and_color(room_object_t &obj, rand_gen_t &rgen) {
-	obj.obj_id = rgen.rand();
-	obj.color  = book_colors[rgen.rand() % NUM_BOOK_COLORS];
-}
-void set_vase_id_and_color(room_object_t &obj, rand_gen_t &rgen) {
-	obj.obj_id = rgen.rand();
-	obj.color  = gen_vase_color(rgen);
-}
-
-void add_rows_of_vcylinders(room_object_t const &c, cube_t const &region, float radius, float height, float spacing_factor, unsigned type,
-	unsigned max_cols, unsigned flags, vect_room_object_t &objects, rand_gen_t &rgen, bool dir=0, bool inv_dim=0, bool no_alcohol=0)
-{
-	float const length(region.get_sz_dim(!c.dim)), shelf_depth(region.get_sz_dim(c.dim));
-	float const space(spacing_factor*radius), stride(2.0*radius + space);
-	unsigned const num_rows(length/stride), num_cols(min((1U + (rgen.rand()%max_cols)), max(1U, unsigned(shelf_depth/stride)))); // round down
-	float const row_spacing(length/num_rows), col_spacing(shelf_depth/num_cols);
-	point pos;
-	pos[ c.dim] = region.d[ c.dim][0] + 0.5*col_spacing;
-	pos[!c.dim] = region.d[!c.dim][0] + 0.5*row_spacing;
-	pos.z = region.z1();
-	if (type == TYPE_PAN || type == TYPE_TCAN || type == TYPE_BUCKET || type == TYPE_VASE) {pos.z += 0.002*c.dz();} // shift up slightly to prevent Z-fighting
-	cube_t objc(get_cube_height_radius(pos, radius, height));
-	bool const is_drink(type == TYPE_BOTTLE || type == TYPE_DRINK_CAN);
-	unsigned rand_id(is_drink ? rgen.rand() : 0);
-	if (is_drink) {flags |= RO_FLAG_NO_CONS;} // not consumable
-
-	for (unsigned row = 0; row < num_rows; ++row) {
-		cube_t row_obj(objc);
-
-		for (unsigned col = 0; col < num_cols; ++col) {
-			if (rgen.rand_float() < 0.75) { // 75% chance
-				room_object_t obj(row_obj, type, c.room_id, (c.dim ^ inv_dim), dir, flags, c.light_amt, SHAPE_CYLIN);
-				if      (type == TYPE_BOTTLE    ) {
-					unsigned const max_type(no_alcohol ? BOTTLE_TYPE_COKE : BOTTLE_TYPE_WINE); // excludes poison and medicine; should we include medicine?
-					obj.set_as_bottle(rand_id, max_type, 1); // no_empty=1
-				}
-				else if (type == TYPE_DRINK_CAN ) {
-					obj.obj_id = (uint16_t)(rand_id & 127); // strip off empty bit
-					obj.color  = WHITE;
-					if (no_alcohol) {obj.set_max_drink_can_type(DRINK_CAN_TYPE_COKE);}
-				}
-				else if (type == TYPE_VASE      ) {set_vase_id_and_color(obj, rgen);} // randomize the vase
-				else if (type == TYPE_SPRAYCAN  ) {set_spraypaint_color (obj, rgen);}
-				else if (type == TYPE_FLASHLIGHT) {obj.color = BLACK;}
-				else if (type == TYPE_CANDLE    ) {obj.color = candle_color;}
-				else if (type == TYPE_TCAN      ) {obj.color = tcan_colors[rgen.rand()%NUM_TCAN_COLORS];}
-				else if (type == TYPE_LAMP      ) {obj.color = lamp_colors[rgen.rand()%NUM_LAMP_COLORS];}
-				else if (type == TYPE_BUCKET    ) {obj.color = LT_GRAY;}
-				else if (type == TYPE_PAN       ) {obj.color = DK_GRAY;}
-				objects.push_back(obj);
-				if (type == TYPE_VASE) {objects.back().z2() -= 0.1*rgen.rand_float()*height;} // add a bit of height variation
-			}
-			row_obj.translate_dim(c.dim, col_spacing);
-		} // for col
-		if (is_drink && rgen.rand_float() < 0.1) {rand_id = rgen.rand();} // 10% chance to update bottle/can type
-		objc.translate_dim(!c.dim, row_spacing);
-	} // for row
-}
-unsigned add_row_of_cubes(room_object_t const &c, cube_t const &region, float width, float depth, float height, float spacing_factor, unsigned type,
-	unsigned flags, vect_room_object_t &objects, rand_gen_t &rgen, bool dir=0, bool inv_dim=0, unsigned max_stack_height=1, bool no_empty=0)
-{
-	float const length(region.get_sz_dim(!c.dim)), space(spacing_factor*width), stride(width + space);
-	unsigned const num_rows(length/stride); // round down
-	unsigned const food_box_type((type == TYPE_FOOD_BOX) ? rgen.rand() : 0); // unique per section
-	float const row_spacing(length/num_rows), shelf_depth(region.get_sz_dim(c.dim));
-	unsigned num_items(0);
-	point pos;
-	pos[ c.dim] = region.d[ c.dim][0] + 0.5*shelf_depth;
-	pos[!c.dim] = region.d[!c.dim][0] + 0.5*row_spacing;
-	pos.z = region.z1();
-	cube_t objc(pos);
-	objc.z2() += height;
-	objc.expand_in_dim( c.dim, 0.5*depth);
-	objc.expand_in_dim(!c.dim, 0.5*width);
-
-	for (unsigned row = 0; row < num_rows; ++row) {
-		if (no_empty || rgen.rand_float() < 0.75) { // 75% chance
-			unsigned const stack_height(1 + ((max_stack_height > 1) ? (rgen.rand() % max_stack_height) : 0));
-			cube_t objc_stack(objc);
-			
-			for (unsigned stack = 0; stack < stack_height; ++stack) {
-				room_object_t obj(objc_stack, type, c.room_id, (c.dim ^ inv_dim), dir, flags, c.light_amt);
-
-				if (type == TYPE_BOOK) { // reduce size randomly
-					obj.z2() -= 0.5*height*rgen.rand_float();
-					obj.expand_in_dim( c.dim, -0.1*width*rgen.rand_float()); // length
-					obj.expand_in_dim(!c.dim, -0.2*width*rgen.rand_float()); // width
-					set_book_id_and_color(obj, rgen);
-				}
-				else if (type == TYPE_FOOD_BOX  ) {obj.obj_id  = food_box_type;}
-				else if (type == TYPE_TOASTER   ) {obj.color   = get_toaster_color(rgen);} // random color
-				else if (type == TYPE_FOLD_SHIRT) {obj.color   = TSHIRT_COLORS [rgen.rand()%NUM_TSHIRT_COLORS ];} // random color
-				else if (type == TYPE_MONITOR   ) {obj.obj_id |= 1;} // off by default; set LSB
-				objects.push_back(obj);
-				++num_items;
-				if (stack+1 == stack_height) break; // done with stack
-				objc_stack.translate_dim(2, obj.dz()); // shift stack up
-				if (objc_stack.z2() > region.z2()) break; // stack is too tall
-				
-				if (type == TYPE_LAPTOP) { // add a bit of horizontal jitter
-					for (unsigned d = 0; d < 2; ++d) {objc_stack.translate_dim(d, 0.05*objc.get_sz_dim(d)*rgen.signed_rand_float());}
-				}
-			} // for stack
-		}
-		objc.translate_dim(!c.dim, row_spacing);
-	} // for row
-	return num_items;
-}
-void add_row_of_balls(room_object_t const &c, cube_t const &region, float spacing_factor,
-	float floor_spacing, unsigned flags, vect_room_object_t &objects, rand_gen_t &rgen)
-{
-	unsigned const btype(rgen.rand() % NUM_BALL_TYPES);
-	float const radius(ball_types[btype].radius*floor_spacing/(12*8)), diameter(2.0*radius), shelf_depth(region.get_sz_dim(c.dim));
-	if (diameter > region.dz() || diameter > shelf_depth) return; // not enough space to fit a ball of this type; often happens with beach balls
-	float const length(region.get_sz_dim(!c.dim)), space(spacing_factor*diameter), stride(diameter + space);
-	unsigned const num_rows(length/stride); // round down
-	float const row_spacing(length/num_rows);
-	point pos;
-	pos[ c.dim] = region.d[ c.dim][0] + 0.5*shelf_depth;
-	pos[!c.dim] = region.d[!c.dim][0] + 0.5*row_spacing;
-	pos.z = region.z1() + radius;
-	cube_t objc;
-	objc.set_from_sphere(pos, radius);
-
-	for (unsigned row = 0; row < num_rows; ++row) {
-		if (rgen.rand_float() < 0.75) { // 75% chance
-			room_object_t obj(objc, TYPE_LG_BALL, c.room_id, 0, 0, (flags | RO_FLAG_RAND_ROT), c.light_amt, SHAPE_SPHERE);
-			obj.item_flags = btype; // no dstate
-			objects.push_back(obj);
-		}
-		objc.translate_dim(!c.dim, row_spacing);
-	}
-}
-
 void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_room_object_t &objects, bool add_models_mode, bool books_only) {
 	if (!c.is_nonempty()) return; // empty - no objects
 	cube_t back, top, sides[2], shelves[5];
@@ -1212,14 +1239,8 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 				else if (add_food_boxes && n >= num_shelves - num_food_box_shelves) { // add food boxes on upper shelves
 					// will fall through to grouped items case below
 				}
-				else if (rgen2.rand_float() < 0.65) { // add bottles; these aren't consumable by the player because that would be too powerful
-					float const bot_height(height_val*rgen2.rand_uniform(0.7, 0.9)), bot_radius(min(0.25f*depth, bot_height*rgen2.rand_uniform(0.12, 0.18)));
-					add_rows_of_vcylinders(c, shelf, bot_radius, bot_height, 0.25, TYPE_BOTTLE, 2, flags, objects, rgen2, 0, 0, no_alcohol); // 1-2 columns
-					continue;
-				}
-				else { // add drink cans; should these be grouped into six packs?
-					float const can_height(0.48*height_val), can_radius(0.13*height_val); // standard height and radius
-					add_rows_of_vcylinders(c, shelf, can_radius, can_height, 0.25, TYPE_DRINK_CAN, 2, flags, objects, rgen2, 0, 0, no_alcohol); // 1-3 columns
+				else { // bottles or cans; not consumable
+					add_rows_of_bottles_or_cans(rgen2, c, shelf, height_val, depth, objects);
 					continue;
 				}
 			} // end food
@@ -1240,9 +1261,7 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 
 				if (category == RETAIL_FOOD) { // food boxes (add_models_mode == 0)
 					if (add_models_mode) continue; // not model
-					float const fheight(height_val*rgen2.rand_uniform(0.7, 0.9)), fdepth(min(depth, fheight)*rgen2.rand_uniform(0.15, 0.25));
-					float const fwidth(min(depth, fheight)*rgen2.rand_uniform(0.6, 0.9));
-					add_row_of_cubes(c, section, fwidth, fdepth, fheight, 0.2, TYPE_FOOD_BOX, flags, objects, rgen2, dir);
+					add_rows_of_food_boxes(rgen2, c, section, height_val, depth, dir, objects);
 				}
 				else if (category == RETAIL_HOUSE_GOODS) { // houshold goods
 					unsigned const type_ix(rgen2.rand() % 9);
