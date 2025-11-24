@@ -3667,6 +3667,7 @@ void building_t::add_coatrack_by_door(rand_gen_t &rgen, room_t const &room, floa
 	cube_t door_path, place_area;
 	get_door_path_and_place_area(door, room, door_path, place_area);
 	if (place_area.get_size_xy().get_min_val() < 2.5*radius) return; // too small; shouldn't happen
+	vect_room_object_t &objs(interior->room_geom->objs);
 	place_area.z2() = zval;
 	cube_t coatrack;
 	
@@ -3674,8 +3675,24 @@ void building_t::add_coatrack_by_door(rand_gen_t &rgen, room_t const &room, floa
 		gen_xy_pos_for_round_obj(coatrack, place_area, radius, height, radius, rgen);
 		if (coatrack.intersects_xy(door_path) || overlaps_other_room_obj(coatrack, objs_start)) continue;
 		if (interior->is_cube_close_to_doorway(coatrack, room, 0.0, 1, 0) || interior->is_blocked_by_stairs_or_elevator(coatrack)) continue; // not checking ext door
-		interior->room_geom->objs.emplace_back(coatrack, TYPE_COAT_RACK, room_id, 0, 0, 0, tot_light_amt, SHAPE_CYLIN, WHITE);
-		// add items on the coat rack such as shirts and hats?
+		objs.emplace_back(coatrack, TYPE_COAT_RACK, room_id, 0, 0, 0, tot_light_amt, SHAPE_CYLIN, WHITE);
+		
+		if (1/*rgen.rand_float() < 0.9*/) { // add tophat
+			float const th_radius(rgen.rand_uniform(0.06, 0.07)*floor_spacing), th_height(rgen.rand_uniform(1.0, 1.8)*th_radius);
+			float const cr_radius(objs.back().get_radius());
+
+			for (unsigned n = 0; n < 10; ++n) {
+				vector3d delta(rgen.signed_rand_vector_spherical_xy(2.0*cr_radius));
+				delta.z = rgen.rand_uniform(0.1, 0.4)*height;
+				cube_t that(coatrack.get_cube_center() + delta);
+				that.z2() += th_height;
+				that.expand_by_xy(th_radius);
+				if (!room.contains_cube(that)) continue; // not contained in room
+				objs.emplace_back(that, TYPE_TOPHAT, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, BKGRAY);
+				break;
+			} // for n
+		}
+		// add items on the coat rack such as shirts?
 		break;
 	} // for n
 }
