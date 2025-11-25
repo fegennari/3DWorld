@@ -1026,8 +1026,9 @@ void building_t::add_attic_ductwork(rand_gen_t rgen, room_object_t const &furnac
 	duct_top.z1() = furnace.z2();
 	intake.d[furnace.dim][ furnace.dir]  = furnace.d[furnace.dim][!furnace.dir]; // back of furnace
 	intake.d[furnace.dim][!furnace.dir] -= (furnace.dir ? 1.0 : -1.0)*intake_height; // back of intake
+	bool const add_intake(cube_in_attic(duct_top) && cube_in_attic(intake));
 
-	if (cube_in_attic(duct_top) && cube_in_attic(intake)) {
+	if (add_intake) {
 		cube_t const cubes[2] = {duct_top, intake};
 		
 		for (unsigned d = 0; d < 2; ++d) {
@@ -1131,6 +1132,7 @@ void building_t::add_attic_ductwork(rand_gen_t rgen, room_object_t const &furnac
 			if (try_route_duct_with_jog(duct, conn, conn.dim, objs, horiz_ducts_start, avoid_cubes, sub_cubes, 0.0, use_extend, is_cylin)) {break;}
 		}
 	} // for ducts_to_reroute
+	if (add_intake) {avoid_cubes.push_back(intake);}
 	for (auto i = objs.begin()+ducts_start; i != objs.end(); ++i) {avoid_cubes.push_back(*i);} // add *all* ducts to avoid_cubes
 }
 
