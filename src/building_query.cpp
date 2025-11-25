@@ -2580,7 +2580,7 @@ bool room_object_t::is_spider_collidable() const { // include objects on the flo
 	if (!is_floor_collidable()) { // below are the exceptions: objects that are not floor collidable but spiders can walk on
 		if (type != TYPE_LIGHT && type != TYPE_BRSINK && type != TYPE_MIRROR && type != TYPE_MWAVE && type != TYPE_HANGER_ROD &&
 			type != TYPE_LAPTOP && type != TYPE_MONITOR && type != TYPE_CLOTHES && type != TYPE_TOASTER && type != TYPE_CABINET &&
-			type != TYPE_INT_WINDOW && type != TYPE_IBEAM && type != TYPE_MED_CAB && !is_pet_container()) return 0;
+			type != TYPE_INT_WINDOW && type != TYPE_IBEAM && type != TYPE_MED_CAB && type != TYPE_PAN_SHELF && !is_pet_container()) return 0;
 	}
 	// these objects are ignored by spiders and will be walked through; ceiling fan is probably okay because it connects to the ceiling with a small cylinder
 	if (type == TYPE_CEIL_FAN || type == TYPE_BANANA || type == TYPE_BAN_PEEL || type == TYPE_APPLE) return 0; // not a cube
