@@ -3033,8 +3033,9 @@ private:
 	void add_attic_objects   (rand_gen_t rgen);
 	void add_attic_ductwork  (rand_gen_t rgen, room_object_t const &furnace, vect_cube_t &avoid_cubes);
 	bool add_attic_roof_vent(point const &bot_center, float radius, unsigned room_id, float light_amt=1.0);
-	int choose_air_intake_room() const;
 	int vent_in_attic_test(cube_t const &vent, bool dim) const;
+	int choose_air_intake_room() const;
+	void add_house_skylight(rand_gen_t rgen);
 	void add_exterior_ac_pipes(rand_gen_t rgen);
 	void add_tunnel_objects   (rand_gen_t rgen);
 	void add_interior_window_objects();

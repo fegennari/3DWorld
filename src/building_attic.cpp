@@ -1147,6 +1147,44 @@ int building_t::choose_air_intake_room() const { // for the air return
 	return best_room;
 }
 
+void building_t::add_house_skylight(rand_gen_t rgen) {
+	return; // remove when this works
+	if (!is_house || !interior || interior->rooms.empty() || has_attic()) return; // houses only; can't pass skylight through attic
+	float const floor_spacing(get_window_vspace()), fc_thick(get_fc_thickness()), light_hwidth(0.1*floor_spacing);
+	vector2d skylight_sz;
+	for (unsigned d = 0; d < 2; ++d) {skylight_sz[d] = rgen.rand_uniform(0.25, 0.5)*floor_spacing;}
+	vector2d skylight_hsz(0.5*skylight_sz);
+
+	for (unsigned n = 0; n < 4; ++n) { // select room cands
+		room_t const &room(get_room(rgen.rand() % interior->rooms.size()));
+		if (room.part_id >= real_num_parts) continue; // skip garage/shed/basement
+		cube_t const &part(parts[room.part_id]);
+		if (real_num_parts == 2 && part.z2() < parts[1-room.part_id].z2())  continue; // upper/taller part only
+		cube_t place_area(part);
+		place_area.expand_by_xy(-0.5*floor_spacing); // not too close to the edge
+		place_area.intersect_with_cube(room);
+		if (place_area.dx() < 2.0*skylight_sz.x || place_area.dy() < 2.0*skylight_sz.y) continue; // room is too small; unlikely
+		cube_t exclude(room); // add space for the light or ceiling fan
+		for (unsigned d = 0; d < 2; ++d) {set_wall_width(exclude, room.get_center_dim(d), light_hwidth, d);}
+		cube_t skylight;
+		set_cube_zvals(skylight, room.z2()-fc_thick, room.z2());
+
+		for (unsigned N = 0; N < 10; ++N) { // select a random pos
+			for (unsigned d = 0; d < 2; ++d) {
+				set_wall_width(skylight, rgen.rand_uniform((place_area.d[d][0] + skylight_hsz[d]), (place_area.d[d][1] - skylight_hsz[d])), skylight_hsz[d], d);
+			}
+			if (skylight.intersects_xy(exclude)) continue; // don't block the light
+			subtract_cube_from_cubes(skylight, interior->ceilings);
+			
+			for (tquad_with_ix_t &tq : roof_tquads) { // subtract from roof_tquads
+				// TODO
+			}
+			skylights.push_back(skylight);
+			return; // success/done
+		} // for N
+	} // for n
+}
+
 void building_room_geom_t::add_chimney(room_object_t const &c, tid_nm_pair_t const &tex) { // inside attic
 	tid_nm_pair_t tex2(tex);
 	tex2.shadowed = 1;
@@ -1158,7 +1196,10 @@ void building_room_geom_t::add_chimney(room_object_t const &c, tid_nm_pair_t con
 
 // I guess skylights are similar to attics, so this code goes here?
 void building_room_geom_t::add_skylights_details(building_t const &b) {
-	for (cube_t const &skylight : b.skylights) {add_skylight_details(skylight, b.has_skylight_light);}
+	for (cube_t const &skylight : b.skylights) {
+		add_skylight_details(skylight, b.has_skylight_light);
+		if (b.is_house) {} // TODO: add interior walls, clipped to the roof
+	}
 }
 void add_skylight_bar_grid(cube_t const &skylight, float bar_hwidth, float spacing, unsigned num, bool dim, vect_cube_t &bars) {
 	for (unsigned i = 0; i < num+1; ++i) { // includes bar at the end
@@ -1176,8 +1217,7 @@ void add_skylight_bar_grid(cube_t const &skylight, float bar_hwidth, float spaci
 void building_room_geom_t::add_skylight_details(cube_t const &skylight, bool has_skylight_light) {
 	vector3d const sz(skylight.get_size());
 	bool const dmax(sz.x < sz.y);
-	float const thickness(skylight.dz()), length(sz[dmax]), width(sz[!dmax]), bar_width(0.67*sz.z), bar_hwidth(0.5*bar_width);
-	if (width < 10.0*thickness) return; // no bars needed
+	float const thickness(skylight.dz()), length(sz[dmax]), width(sz[!dmax]), bar_width(min(0.06*min(length, width), 0.67*sz.z)), bar_hwidth(0.5*bar_width);
 	unsigned const num_rows((unsigned)ceil(0.1*length/thickness)), num_cols((unsigned)ceil(0.04*width/thickness));
 	float const row_spacing((length - bar_width)/num_rows), col_spacing((width - bar_width)/num_cols);
 	vect_cube_t bars[2]; // per dim

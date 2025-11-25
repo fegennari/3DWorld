@@ -1108,6 +1108,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	}
 	calc_bcube_from_parts(); // maybe calculate a tighter bounding cube
 	gen_interior(rgen, 0); // before adding door
+	add_house_skylight(rgen);
 
 	if (gen_door) { // add exterior doors and possibly a garage + driveway and extended basement
 		// attempt to add an interior garage when legal, always when along a street, else 75% of the time; not for multi-family, since we can't make them one per resident
