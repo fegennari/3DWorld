@@ -332,6 +332,21 @@ void add_rows_of_bottles_or_cans(rand_gen_t &rgen, room_object_t const &parent, 
 		add_rows_of_vcylinders(parent, shelf, can_radius, can_height, 0.25, TYPE_DRINK_CAN, 2, flags, objects, rgen); // 1-3 columns
 	}
 }
+void add_stack_of_plates(cube_t const &place_area, float radius, unsigned room_id, float light_amt, rand_gen_t &rgen, vect_cube_t &blockers, vect_room_object_t &objects) {
+	float const height(0.1*radius), spacing(min(1.2f*radius, 0.48f*min(place_area.dx(), place_area.dy())));
+	if (place_area.dz() < height) return; // can't fit any plates vertically; shouldn't happen
+	cube_t plate;
+	gen_xy_pos_for_round_obj(plate, place_area, radius, height, spacing, rgen, 1); // place_at_z1=1
+	room_object_t obj(plate, TYPE_PLATE, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_WAS_EXP), light_amt, SHAPE_CYLIN);
+	if (!add_if_not_intersecting(obj, objects, blockers)) return; // can't place the bottom plate
+	unsigned const stack_height(1 + (rgen.rand()%5)); // 1-6
+
+	for (unsigned s = 1; s < stack_height; ++s) {
+		obj.translate_dim(2, height); // shift up in z
+		if (obj.z2() + height > place_area.z2()) break; // stack is too high, end it here
+		objects.push_back(obj);
+	}
+}
 
 void building_room_geom_t::expand_closet(room_object_t const &c) {
 	add_closet_objects(c, expanded_objs, 0); // no_models=0
@@ -401,6 +416,7 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vect_room_
 		float const back_shelf_edge(interior.d[dim][!dir] + (dir ? 1.0 : -1.0)*0.4*c.get_depth()), height_val(shelf_dz - 2.0*shelf_hthick);
 		cube_t shelves[3] = {interior, interior, interior}; // {back, left, right}
 		shelves[0].d[dim][dir] = back_shelf_edge; // back
+		static vect_cube_t blockers;
 		
 		for (unsigned d = 0; d < 2; ++d) {
 			shelves[d+1].d[ dim][!dir] = back_shelf_edge;
@@ -414,11 +430,19 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vect_room_
 				// populate shelf with food items
 				room_object_t c2(c);
 				c2.dim = sdims[s]; c2.dir = sdirs[s]; // required for correct item orient on side shelves
-				float const shelf_depth(shelf.get_sz_dim(c2.dim));
-				if      (rgen.rand_float() < 0.6) {add_rows_of_food_boxes     (rgen, c2, shelf, 0.7*height_val, shelf_depth, c2.dir, objects);} // food boxes; more likely
-				else if (rgen.rand_float() < 0.8) {add_rows_of_bottles_or_cans(rgen, c2, shelf, 0.5*height_val, shelf_depth,         objects);} // bottles or cans
+				float const shelf_depth(shelf.get_sz_dim(c2.dim)), rand_val(rgen.rand_float()), rv1((s == 0) ? 0.7 : 0.6), rv2((s == 0) ? 1.0 : 0.8);
+				if      (rand_val < rv1) {add_rows_of_food_boxes     (rgen, c2, shelf, 0.7*height_val, shelf_depth, c2.dir, objects);} // food boxes; more likely
+				else if (rand_val < rv2) {add_rows_of_bottles_or_cans(rgen, c2, shelf, 0.5*height_val, shelf_depth,         objects);} // bottles or cans
+				else if (rand_val < 0.9) { // plates; can't add cups because they're models
+					unsigned const num_plates(2); // up to 2 stacks
+					cube_t plate_area(shelf);
+					set_cube_zvals(plate_area, shelf.z2(), shelf.z2()+height_val);
+					float const plate_radius(rgen.rand_uniform(0.40, 0.48)*plate_area.get_size().get_min_val());
+					blockers.clear();
+					for (unsigned n = 0; n < num_plates; ++n) {add_stack_of_plates(plate_area, plate_radius, c.room_id, c.light_amt, rgen, blockers, objects);}
+				}
 				else { // paper towels
-					float const oheight(0.7*height_val), radius(min(0.45f*shelf_depth, 0.25f*oheight));
+					float const oheight(0.67*height_val), radius(min(0.45f*shelf_depth, 0.25f*oheight));
 					add_rows_of_vcylinders(c2, shelf, radius, oheight, 0.2, TYPE_TPROLL, 1, (flags | RO_FLAG_HAS_EXTRA), objects, rgen); // 1 column
 				}
 			} // for s
@@ -569,21 +593,8 @@ bool add_cabinet_objects(room_object_t const &c, vect_room_object_t &objects) { 
 	if (in_kitchen) {
 		// add plates
 		unsigned const max_plates(0 + 1*sz_ratio), num_plates(rgen.rand() % max_plates); // wider cabinet has more plates
-		float const plate_radius(min(sz_scale*rgen.rand_uniform(0.30, 0.35), 0.45f*c_min_xy)), plate_height(0.1*plate_radius);
-
-		for (unsigned n = 0; n < num_plates; ++n) {
-			cube_t plate;
-			gen_xy_pos_for_round_obj(plate, interior, plate_radius, plate_height, 1.2*plate_radius, rgen, 1); // place_at_z1=1
-			room_object_t obj(plate, TYPE_PLATE, c.room_id, 0, 0, flags, light_amt, SHAPE_CYLIN);
-			if (!add_if_not_intersecting(obj, objects, cubes)) continue; // can't place the bottom plate
-			unsigned const stack_height(1 + (rgen.rand()%5)); // 1-6
-
-			for (unsigned s = 1; s < stack_height; ++s) {
-				obj.translate_dim(2, plate_height); // shift up in z
-				if (obj.z2() + plate_height > interior.z2()) break; // stack is too high, end it here
-				objects.push_back(obj);
-			}
-		} // for n
+		float const plate_radius(min(sz_scale*rgen.rand_uniform(0.30, 0.35), 0.45f*c_min_xy));
+		for (unsigned n = 0; n < num_plates; ++n) {add_stack_of_plates(interior, plate_radius, c.room_id, light_amt, rgen, cubes, objects);}
 		// add pans
 		unsigned const num_pans(rgen.rand()%3); // 0-2
 		float const pan_radius(min(sz_scale*rgen.rand_uniform(0.40, 0.45), 0.45f*c_min_xy)), pan_height(rgen.rand_uniform(0.4, 0.5)*pan_radius);
