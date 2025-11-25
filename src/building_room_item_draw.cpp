@@ -19,7 +19,7 @@ vect_room_object_t pending_objs;
 object_model_loader_t building_obj_model_loader;
 
 extern bool camera_in_building, player_in_tunnel, player_in_mall, building_alarm_active, is_cube_map_reflection, building_has_open_ext_door;
-extern int display_mode, frame_counter, animate2, player_in_basement, player_in_elevator;
+extern int display_mode, frame_counter, animate2, player_in_basement, player_in_attic, player_in_elevator;
 extern unsigned room_mirror_ref_tid;
 extern float fticks, office_chair_rot_rate, building_ambient_scale;
 extern point actual_player_pos, player_candle_pos, pre_reflect_camera_pos_bs;
@@ -1913,11 +1913,12 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		if (i == model_to_cull) continue;
 		if (skip_interior_objs && i->int_vis_only) continue; // interior, not visible
 		room_object_t &obj(get_room_object_by_index(i->obj_id));
-		if ((int)obj.room_id == cull_room_ix)                 continue; // cull all objects in this room
+		bool const in_attic(obj.in_attic());
+		if ((int)obj.room_id == cull_room_ix && !in_attic)    continue; // cull all objects in this room
 		if (check_clip_cube && !clip_cube_bs.intersects(obj)) continue; // shadow map clip cube test: fast and high rejection ratio, do this first
 		// optimization: only draw models in the same room as the mirror for malls; applies to furniture stores, clothing stores, and bathrooms
 		if (reflection_pass && player_in_mall && cur_room_mirror.room_id > 0 && obj.room_id != cur_room_mirror.room_id) continue;
-		bool const in_camera_room((int)obj.room_id == camera_room);
+		bool const in_camera_room(in_attic ? player_in_attic : ((int)obj.room_id == camera_room));
 		room_object const type(obj.type);
 
 		if (shadow_only) {
@@ -1969,9 +1970,9 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			if (sw.empty() || sw.front().is_u_shape() || !sw.front().line_intersects(camera_bs, obj_center)) continue;
 		}
 		//if (shadow_only && type == TYPE_SHOEBOX) {} // draw as a cube? maybe TYPE_TOASTER and TYPE_FOLD_SHIRT as well?
-		room_t const &room(building.get_room(obj.room_id));
+		room_t const &room(building.get_room(obj.room_id)); // incorrect but mostly unused for in_attic==1
 
-		if (player_in_building && obj.room_id != last_culled_room_ix && !obj.is_exterior()) { // new room; apply room-based VFC + occlusion culling
+		if (player_in_building && !in_attic && obj.room_id != last_culled_room_ix && !obj.is_exterior()) { // new room; apply room-based VFC + occlusion culling
 			last_culled_room_ix = obj.room_id;
 
 			if (!in_camera_room) { // camera not in this room
@@ -2015,7 +2016,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		}
 		if (oc.check_custom_occluder_cull(obj, camera_bs)) continue;
 
-		if (camera_room >= 0) {
+		if (camera_room >= 0 && !in_attic) {
 			unsigned const floor_ix(room.get_floor_containing_zval(obj.zc(), floor_spacing));
 
 			if (obj.room_id != last_room_ix || floor_ix != last_floor_ix) { // new room or new floor
