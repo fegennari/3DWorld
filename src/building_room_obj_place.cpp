@@ -3677,18 +3677,17 @@ void building_t::add_coatrack_by_door(rand_gen_t &rgen, room_t const &room, floa
 		if (interior->is_cube_close_to_doorway(coatrack, room, 0.0, 1, 0) || interior->is_blocked_by_stairs_or_elevator(coatrack)) continue; // not checking ext door
 		objs.emplace_back(coatrack, TYPE_COAT_RACK, room_id, 0, 0, 0, tot_light_amt, SHAPE_CYLIN, WHITE);
 		
-		if (1/*rgen.rand_float() < 0.9*/) { // add tophat
-			float const th_radius(rgen.rand_uniform(0.06, 0.07)*floor_spacing), th_height(rgen.rand_uniform(1.0, 1.8)*th_radius);
-			float const cr_radius(objs.back().get_radius());
+		if (rgen.rand_bool()) { // add tophat
+			float const th_radius(rgen.rand_uniform(0.06, 0.07)*floor_spacing), th_height(rgen.rand_uniform(1.0, 1.8)*th_radius), cr_radius(objs.back().get_radius());
 
 			for (unsigned n = 0; n < 10; ++n) {
-				vector3d delta(rgen.signed_rand_vector_spherical_xy(2.0*cr_radius));
-				delta.z = rgen.rand_uniform(0.1, 0.4)*height;
+				vector3d delta(rgen.signed_rand_vector_xy(1.0).get_norm()*(0.1*cr_radius + th_radius));
+				delta.z = rgen.rand_uniform(0.1, 0.3)*height;
 				cube_t that(coatrack.get_cube_center() + delta);
 				that.z2() += th_height;
 				that.expand_by_xy(th_radius);
 				if (!room.contains_cube(that)) continue; // not contained in room
-				objs.emplace_back(that, TYPE_TOPHAT, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, BKGRAY);
+				objs.emplace_back(that, TYPE_TOPHAT, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), tot_light_amt, SHAPE_CYLIN, BKGRAY);
 				break;
 			} // for n
 		}

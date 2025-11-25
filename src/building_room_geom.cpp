@@ -6280,6 +6280,7 @@ void building_room_geom_t::add_hard_hat(room_object_t const &c) {
 
 void building_room_geom_t::add_tophat(room_object_t const &c) {
 	// tall cylinder with short cylinder brim and red band
+	bool const draw_bot(c.is_hanging());
 	colorRGBA const color(apply_light_color(c));
 	float const height(c.dz()), radius(c.get_radius());
 	cube_t top(c), brim(c), band(c);
@@ -6289,7 +6290,7 @@ void building_room_geom_t::add_tophat(room_object_t const &c) {
 	band.expand_by_xy(-0.28*radius);
 	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // shadowed, small
 	mat.add_vcylin_to_verts(top,  color, 0, 1); // skip bottom
-	mat.add_vcylin_to_verts(brim, color, 0, 1); // skip bottom
+	mat.add_vcylin_to_verts(brim, color, draw_bot, 1); // should be a disk if !draw_bot, but it's not an easy shape to draw
 	mat.add_vcylin_to_verts(band, apply_light_color(c, RED), 0, 1); // skip bottom; always red
 }
 
