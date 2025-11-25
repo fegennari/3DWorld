@@ -1508,7 +1508,7 @@ void building_room_geom_t::add_obj_with_front_texture(room_object_t const &c, st
 	sides_mat.add_cube_to_verts_untextured(c, apply_light_color(c, sides_color), ~front_mask); // sides, shadows
 }
 
-void building_room_geom_t::add_keyboard  (room_object_t const &c) {add_obj_with_top_texture  (c, "interiors/keyboard.jpg", BKGRAY, 1);} // is_small=1
+void building_room_geom_t::add_keyboard  (room_object_t const &c) {add_obj_with_top_texture  (c, "interiors/keyboard.jpg", BKGRAY, 1);} // is_small=1; wireless
 void building_room_geom_t::add_laptop    (room_object_t const &c) {add_obj_with_top_texture  (c, "interiors/laptop.jpg",   BKGRAY, 1);} // is_small=1
 void building_room_geom_t::add_computer  (room_object_t const &c) {add_obj_with_front_texture(c, "interiors/computer.jpg", BKGRAY, 1);} // is_small=1
 void building_room_geom_t::add_card_deck (room_object_t const &c) {add_obj_with_top_texture  (c, "interiors/card_deck.jpg", WHITE, 1);} // is_small=1
@@ -6302,12 +6302,25 @@ void building_room_geom_t::add_comp_mouse(room_object_t const &c) {
 	
 	if (c.taken_level == 0) { // draw mouse itself as a stretched sphere if not taken
 		float const depth(c.get_depth());
+		vector2d const center(c.xc(), c.yc());
 		cube_t mouse(c);
-		set_wall_width(mouse, c.get_center_dim( c.dim), 0.30*depth,  c.dim); // length
-		set_wall_width(mouse, c.get_center_dim(!c.dim), 0.16*depth, !c.dim); // width
+		set_wall_width(mouse, center[ c.dim], 0.28*depth,  c.dim); // length
+		set_wall_width(mouse, center[!c.dim], 0.16*depth, !c.dim); // width
 		tid_nm_pair_t tex(-1, 1.0, 1); // shadowed
 		tex.set_specular(0.4, 75.0);
-		get_material(tex, 1, 0, 1).add_sphere_to_verts(mouse, apply_light_color(c, BKGRAY), 0); // shadowed, small, low detail=0
+		rgeom_mat_t &mat(get_material(tex, 1, 0, 1)); // shadowed, small
+		colorRGBA const color(apply_light_color(c, BKGRAY));
+		mat.add_sphere_to_verts(mouse, color, 0); // low detail=0
+		
+		if (c.room_id & 1) { // draw the wire; else it's wireless
+			float const wire_radius(0.05*c.dz());
+			cube_t wire;
+			set_cube_zvals(wire, pad.z2(), pad.z2()+2.0*wire_radius);
+			set_wall_width(wire, center[!c.dim], wire_radius, !c.dim);
+			wire.d[c.dim][ c.dir] = center[c.dim];
+			wire.d[c.dim][!c.dir] = c.d[c.dim][!c.dir] + (c.dir ? -1.0 : 1.0)*depth; // extends off the mouse pad
+			mat.add_ortho_cylin_to_verts(wire, color, c.dim, 0, 0); // no ends
+		}
 	}
 }
 
