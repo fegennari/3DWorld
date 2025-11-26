@@ -834,11 +834,15 @@ public:
 		if (conn.door_ix < 0) return 1; // no door
 		unsigned door_ix(conn.door_ix);
 
-		if (door_ix >= interior.doors.size()) { // mall gate
+		if (door_ix >= interior.doors.size()) {
 			door_ix -= interior.doors.size();
-			assert(interior.has_mall());
-			assert(door_ix < interior.mall_info->store_doorways.size());
-			return !interior.mall_info->store_doorways[door_ix].closed;
+
+			if (interior.has_mall()) { // mall gate
+				assert(door_ix < interior.mall_info->store_doorways.size());
+				return !interior.mall_info->store_doorways[door_ix].closed;
+			}
+			assert(door_ix < interior.missing_wall_segs.size()); // missing wall seg
+			return in_building_gameplay_mode(); // only zombies can use
 		}
 		//if (global_building_params.ai_opens_doors && has_key) return 1; // locked door won't stop us; incorrect because door may not cover z-range (for multi-floor backrooms)
 		door_t const &first_door(interior.doors[door_ix]);
@@ -984,6 +988,12 @@ void building_t::build_nav_graph() const { // Note: does not depend on room geom
 			unsigned const r2(ds.get_conn_room(r));
 			if (r2 > r) {ng.connect_rooms(r, r2, ds.first_door_ix, ds);} // check rooms with higher index (since graph is bidirectional)
 		} // for d
+		for (unsigned i = 0; i < interior->missing_wall_segs.size(); ++i) {
+			wall_seg_t const &w(interior->missing_wall_segs[i]);
+			if (!w.is_connected_to_room(r)) continue; // door not connected to this room
+			unsigned const r2(w.get_conn_room(r)), dix(i + interior->doors.size()); // offset by the number of doors
+			if (r2 > r) {ng.connect_rooms(r, r2, dix, w);}
+		}
 		for (unsigned s = 0; s < num_stairs; ++s) { // stairs
 			stairwell_t const &stairwell(interior->stairwells[s]);
 
@@ -992,14 +1002,14 @@ void building_t::build_nav_graph() const { // Note: does not depend on room geom
 			}
 			// allow adjacency only for mall back hallway stairs, since they don't intersect the room
 			if ((stairwell.in_mall == 2) ? room.intersects(stairwell) : room.intersects_no_adj(stairwell)) {ng.connect_stairs(r, s, stairwell, doorway_width);}
-		}
+		} // for s
 		if (has_mall()) {
 			bool const is_mall_concourse((int)r == interior->ext_basement_hallway_room_id);
 
 			if (is_mall_concourse) { // bidirectional; only need to check mall => store/parking garage direction
-				for (auto i = interior->mall_info->store_doorways.begin(); i != interior->mall_info->store_doorways.end(); ++i) {
-					store_doorway_t const &d(*i);
-					unsigned const dix(i - interior->mall_info->store_doorways.begin() + interior->doors.size()); // offset by the number of doors
+				for (unsigned i = 0; i < interior->mall_info->store_doorways.size(); ++i) {
+					store_doorway_t const &d(interior->mall_info->store_doorways[i]);
+					unsigned const dix(i + interior->doors.size()); // offset by the number of doors
 					if (!d.locked_closed()) {ng.connect_rooms(r, d.room_id, dix, d);}
 				}
 			}
@@ -1078,6 +1088,7 @@ bool building_t::are_rooms_connected_without_using_room_or_door(unsigned room1, 
 		unsigned const cur(pend.back());
 		pend.pop_back();
 
+		// ignores interior->missing_wall_segs
 		for (door_stack_t const &ds : interior->door_stacks) {
 			if ( ds.not_a_room_separator())    continue; // not a real door between two rooms
 			if (!ds.is_connected_to_room(cur)) continue;
@@ -2375,7 +2386,7 @@ bool building_t::can_target_player(person_t const &person) const {
 	if (point_over_glass_floor(person.pos)) {return point_over_glass_floor(cur_player_building_loc.pos);}
 	assert(cur_player_building_loc.room_ix >= 0);
 	room_t const &player_room(get_room(cur_player_building_loc.room_ix));
-	// for now, zombies can't enter secret rooms because they're not connected with doors and there are no animations for squeezing between wall studs
+	// zombies can't enter secret rooms, but only if they see the player enter
 	if (person.cur_room != cur_player_building_loc.room_ix && player_room.is_secret_room()) return 0;
 	float const first_floor_zceil(player_room.z1() + get_window_vspace());
 	if (player_room.is_single_floor && !player_room.is_mall() && cur_player_building_loc.pos.z > first_floor_zceil) return 0; // check for player on unreachable floor

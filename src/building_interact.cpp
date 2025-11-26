@@ -1124,6 +1124,28 @@ void building_t::handle_items_intersecting_closed_door(door_t const &door) {
 	} // for obj
 }
 
+cube_t door_base_t::get_open_door_bcube_for_room(cube_t const &room) const {
+	bool const dir(get_check_dirs());
+	cube_t bcube(get_true_bcube());
+	if (door_opens_inward(*this, room)) {bcube.d[!dim][dir] += (dir ? 1.0 : -1.0)*get_width();} // include door fully open position
+	return bcube;
+}
+unsigned door_base_t::get_conn_room(unsigned room_id) const {
+	assert(!no_room_conn());
+	if (room_id == conn_room[0]) return conn_room[1];
+	if (room_id == conn_room[1]) return conn_room[0];
+	cout << TXT(room_id) << TXT(conn_room[0]) << TXT(conn_room[1]) << TXT(str()) << endl; // TESTING
+	assert(0); // invalid room
+	return room_id;
+}
+
+unsigned wall_seg_t::get_conn_room(unsigned room_id) const {
+	if (room_id == room_ix) return conn_room_ix;
+	if (room_id == conn_room_ix) return room_ix;
+	assert(0); // invalid room
+	return room_id;
+}
+
 bool door_t::check_key_mask_unlocks(unsigned key_mask) const {
 	if (!is_closed_and_locked()) return 1;
 	if (key_mask == 0)           return 0; // no key

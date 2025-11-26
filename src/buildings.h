@@ -2048,6 +2048,8 @@ struct wall_seg_t : public cube_t {
 	bool dim=0, dir=0, open=0;
 	unsigned room_ix=0, conn_room_ix=0;
 	wall_seg_t(cube_t const &c, bool dim_, bool dir_, unsigned r) : cube_t(c), dim(dim_), dir(dir_), room_ix(r) {}
+	bool is_connected_to_room(unsigned room_id) const {return (room_ix == room_id || conn_room_ix == room_id);}
+	unsigned get_conn_room(unsigned room_id) const;
 };
 typedef vector<wall_seg_t> vect_wall_seg_t;
 

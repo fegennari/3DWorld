@@ -5435,21 +5435,6 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 	} // for wall
 }
 
-cube_t door_base_t::get_open_door_bcube_for_room(cube_t const &room) const {
-	bool const dir(get_check_dirs());
-	cube_t bcube(get_true_bcube());
-	if (door_opens_inward(*this, room)) {bcube.d[!dim][dir] += (dir ? 1.0 : -1.0)*get_width();} // include door fully open position
-	return bcube;
-}
-unsigned door_base_t::get_conn_room(unsigned room_id) const {
-	assert(!no_room_conn());
-	if (room_id == conn_room[0]) return conn_room[1];
-	if (room_id == conn_room[1]) return conn_room[0];
-	cout << TXT(room_id) << TXT(conn_room[0]) << TXT(conn_room[1]) << TXT(str()) << endl; // TESTING
-	assert(0); // invalid room
-	return room_id;
-}
-
 bool building_t::add_wall_vent_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start, bool check_for_ducts) {
 	float const wall_thickness(get_wall_thickness()), ceiling_zval(zval + get_floor_ceil_gap());
 	float height(2.5*wall_thickness), hwidth(2.0*wall_thickness);
