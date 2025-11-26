@@ -1147,6 +1147,41 @@ int building_t::choose_air_intake_room() const { // for the air return
 	return best_room;
 }
 
+void building_t::maybe_add_skylight(rand_gen_t &rgen) { // for office building
+	if (is_industrial()) return; // no industrial building skylights; they work, but factories, etc. have enough windows already
+	if (is_parking   ()) return; // not needed for parking structures
+	// maybe add skylights; cube roofs only for now, since we can't cut holes in other shapes; only for office buildings with interiors;
+	// could add skylights to house rooms such as bathrooms, but they haven't been assigned and we would need to cut holes in the roof and possibly attic
+	// note that at this point there has been no floorplanning, so we don't know where primary hallways, etc. will be
+	float part_zmax(bcube.z1());
+	for (cube_t const &part : parts) {max_eq(part_zmax, part.z2());}
+
+	// add skylights to top floor roofs
+	for (auto p = parts.begin(); p != parts.end(); ++p) { // at this point, all parts should be main building parts
+		if (p->z2() != part_zmax) continue; // not top floor
+		cube_t roof_ceiling(*p), skylight;
+		roof_ceiling.z1() = p->z2() - get_fc_thickness();
+
+		if (can_use_hallway_for_part(p - parts.begin())) { // if we have a hallway, align the skylight to it
+			float num_hall_windows, hall_width, room_width;
+			cube_t const hall(get_hallway_for_part(*p, num_hall_windows, hall_width, room_width));
+			bool const hall_dim(hall.dx() < hall.dy());
+			skylight = hall;
+			skylight.expand_in_dim( hall_dim, -rgen.rand_uniform(0.1, 0.3)*hall.get_sz_dim(hall_dim)); // shrink
+			skylight.expand_in_dim(!hall_dim, -0.5*get_wall_thickness()); // shrink slightly
+		}
+		else {
+			for (unsigned d = 0; d < 2; ++d) {
+				float const hwidth(rgen.rand_uniform(0.1, 0.2)*roof_ceiling.get_sz_dim(d));
+				if (rgen.rand_bool()) {set_wall_width(skylight, roof_ceiling.get_center_dim(d), hwidth, d);} // centered
+				else {set_wall_width(skylight, rgen.rand_uniform((roof_ceiling.d[d][0] + 1.5*hwidth), (roof_ceiling.d[d][1] - 1.5*hwidth)), hwidth, d);} // misaligned
+			}
+		}
+		copy_zvals(skylight, roof_ceiling);
+		skylights.push_back(skylight);
+	} // for p
+}
+
 void building_t::add_house_skylight(rand_gen_t rgen) {
 	return; // remove when this works
 	if (!is_house || !interior || interior->rooms.empty() || has_attic()) return; // houses only; can't pass skylight through attic
