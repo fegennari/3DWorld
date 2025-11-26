@@ -368,13 +368,14 @@ bool building_t::add_waiting_room_objs(rand_gen_t rgen, room_t const &room, floa
 	return 1;
 }
 
-void building_t::add_short_wall_with_trim(cube_t const &wall, bool dim, unsigned room_id, float tot_light_amt) {
+void building_t::add_short_wall_with_trim(cube_t const &wall, bool dim, unsigned room_id, float tot_light_amt, colorRGBA const &wall_color) {
 	assert(wall.is_strictly_normalized());
-	interior->room_geom->objs.emplace_back(wall, TYPE_STAIR_WALL, room_id, dim, 0, RO_FLAG_ADJ_TOP, tot_light_amt, SHAPE_CUBE); // draw top
+	interior->room_geom->objs.emplace_back(wall, TYPE_STAIR_WALL, room_id, dim, 0, RO_FLAG_ADJ_TOP, tot_light_amt, SHAPE_CUBE, wall_color); // draw top
 	cube_t trim(wall);
 	trim.expand_by_xy(get_trim_thickness());
 	trim.z2() = wall.z1() + get_trim_height();
-	interior->room_geom->objs.emplace_back(trim, TYPE_METAL_BAR, room_id, dim, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, get_trim_color(), EF_Z1); // draw all but the bottom
+	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_UNTEXTURED); // not reflective
+	interior->room_geom->objs.emplace_back(trim, TYPE_METAL_BAR, room_id, dim, 0, flags, tot_light_amt, SHAPE_CUBE, get_trim_color(), EF_Z1); // draw all but the bottom
 }
 void building_t::place_chairs_along_walls(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt,
 	unsigned objs_start, colorRGBA const &chair_color, bool is_plastic, unsigned num)

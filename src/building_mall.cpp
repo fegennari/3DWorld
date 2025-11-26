@@ -1677,7 +1677,8 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 	// select store type
 	bool const dim(doorway.dy() < doorway.dx()), dir(room.get_center_dim(dim) < doorway.get_center_dim(dim)); // points from room center toward doorway; doorway wall
 	bool const mall_dim(interior->extb_wall_dim), is_end_store(dim == mall_dim), tall_retail(floor_spacing > 1.5*window_vspace);
-	float const room_len(room.get_sz_dim(dim)), room_width(room.get_sz_dim(!dim)), pillar_z2(room.z2() - fc_thick), clearance(get_min_front_clearance_inc_people());
+	float const room_len(room.get_sz_dim(dim)), room_width(room.get_sz_dim(!dim)), pillar_z2(room.z2() - fc_thick);
+	float const clearance(get_min_front_clearance_inc_people()), dsign(dir ? -1.0 : 1.0);
 	room_t const &mall_room(get_mall_concourse());
 	vect_room_object_t &objs(interior->room_geom->objs);
 	assert(room_id > 0); // can't be the first room
@@ -1753,8 +1754,8 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 	if (store_type == STORE_RETAIL || store_type == STORE_CLOTHING || store_type == STORE_SHOE) {
 		cube_t ts_area(doorway);
 		ts_area.z2() = doorway.z1() + 0.6*window_vspace; // set height
-		ts_area.d[dim][ dir] = doorway.d[dim][!dir] + (dir ? -1.0 : 1.0)*0.75*wall_thickness; // move slightly away from the doorway
-		ts_area.d[dim][!dir] = ts_area.d[dim][ dir] + (dir ? -1.0 : 1.0)*0.22*window_vspace ; // extend into the store
+		ts_area.d[dim][ dir] = doorway.d[dim][!dir] + dsign*0.75*wall_thickness; // move slightly away from the doorway
+		ts_area.d[dim][!dir] = ts_area.d[dim][ dir] + dsign*0.22*window_vspace ; // extend into the store
 		ts_area.expand_in_dim(!dim, 0.07*window_vspace);
 
 		for (unsigned e = 0; e < 2; ++e) {
@@ -2182,27 +2183,59 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 	}
 	else if (store_type == STORE_FOOD) { // restaurant, coffee shop, etc.
 		bool const has_dining(rgen.rand_bool());
-		float const front_wall(room.d[dim][dir]);
+		float const front_wall(room.d[dim][dir]), bot_wall_z1(room.z1() + fc_thick), bot_wall_z2(zval + 0.35*window_vspace);
+		colorRGBA const &wall_color(interior->mall_info->mall_wall_color);
 
-		if (0 && !has_dining) { // add counter rather than glass window and door
-			cube_t front_area(room);
+		if (!has_dining) { // add counter rather than glass window and door
+			cube_t front_area(room), windows_area;
 			set_wall_width(front_area, front_wall, wall_thickness, dim);
-			remove_if_intersects(interior->int_windows, front_area);
-			remove_if_intersects(interior->mall_info->store_doorways, front_area);
-			// TODO: walls, etc.
+
+			for (cube_t const &w : interior->int_windows) {
+				if (w.intersects(front_area)) {windows_area.assign_or_union_with_cube(w);}
+			}
+			if (!windows_area.is_all_zeros()) { // found windows to remove; should always be true
+				remove_if_intersects(interior->int_windows, front_area);
+				remove_if_intersects(interior->mall_info->store_doorways, front_area);
+				// add front top and bottom wall sections and counter
+				cube_t wall(windows_area);
+				set_wall_width(wall, room.d[dim][dir], wall_hthick, dim);
+				set_cube_zvals(wall, bot_wall_z1, bot_wall_z2);
+				add_short_wall_with_trim(wall, dim, room_id, light_amt, wall_color); // bottom wall
+				cube_t counter(wall);
+				set_cube_zvals(counter, wall.z2(), (wall.z2() + wall_thickness));
+				counter.expand_in_dim(dim, 3.0*wall_thickness);
+				objs.emplace_back(counter, TYPE_METAL_BAR, room_id, dim, 0, 0, light_amt, SHAPE_CUBE, LT_GRAY, 0); // draw all faces
+				set_cube_zvals(wall, windows_area.z2()-wall_thickness, windows_area.z2()); // narrow strip to fill the bottom edge of the top wall
+				objs.emplace_back(wall, TYPE_STAIR_WALL, room_id, dim, 0, RO_FLAG_HANGING, light_amt, SHAPE_CUBE, wall_color); // upper wall; draw bottom
+				// add trim around the opening
+				float const trim_hwidth(0.5*get_trim_height());
+				colorRGBA const &trim_color(get_trim_color());
+				cube_t trim(wall);
+				trim.expand_in_dim(!dim, trim_hwidth);
+				trim.expand_in_dim( dim, 2.0*get_trim_thickness());
+				set_wall_width(trim, wall.z1(), trim_hwidth, 2);
+				unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_UNTEXTURED); // not reflective
+				objs.emplace_back(trim, TYPE_METAL_BAR, room_id, dim, 0, flags, light_amt, SHAPE_CUBE, trim_color, 0); // draw all sides
+				set_cube_zvals(trim, bot_wall_z2+0.1*trim_hwidth, trim.z1());
+
+				for (unsigned d = 0; d < 2; ++d) { // left, right
+					set_wall_width(trim, windows_area.d[!dim][d], trim_hwidth, !dim);
+					objs.emplace_back(trim, TYPE_METAL_BAR, room_id, dim, 0, flags, light_amt, SHAPE_CUBE, trim_color, EF_Z2); // skip top
+				}
+			}
 		}
 		// split between public space in the front and commercial kitchen in the back
-		float const fb_split(front_wall + (dir ? -1.0 : 1.0)*((has_dining ? 0.5 : 0.3) + rgen.rand_uniform(0.0, 0.1))*room_len); // front vs. back split pos
+		float const fb_split(front_wall + dsign*((has_dining ? 0.5 : 0.25) + rgen.rand_uniform(0.0, 0.1))*room_len); // front vs. back split pos
 		// add separator wall on top and bottom, and metal counter
 		bool const leave_end_gaps(1);
 		cube_t wall(room);
-		wall.z2() = zval + 0.35*window_vspace; // set wall height
+		set_cube_zvals(wall, bot_wall_z1, bot_wall_z2);
 		set_wall_width(wall, fb_split, wall_hthick, dim);
 		cube_t upper_wall(wall);
 		if (leave_end_gaps) {wall.expand_in_dim(!dim, -clearance);}
 		add_short_wall_with_trim(wall, dim, room_id, light_amt); // bottom wall
-		set_cube_zvals(upper_wall, (zval + get_floor_ceil_gap()), room.z2());
-		objs.emplace_back(upper_wall, TYPE_STAIR_WALL, room_id, dim, 0, RO_FLAG_HANGING, light_amt, SHAPE_CUBE, interior->mall_info->mall_wall_color); // draw bottom
+		set_cube_zvals(upper_wall, (zval + get_floor_ceil_gap()), (room.z2() - fc_thick));
+		objs.emplace_back(upper_wall, TYPE_STAIR_WALL, room_id, dim, 0, RO_FLAG_HANGING, light_amt, SHAPE_CUBE, wall_color); // draw bottom
 		cube_t counter(wall);
 		set_cube_zvals(counter, wall.z2(), (wall.z2() + wall_thickness));
 		counter.expand_in_dim(dim, 2.0*wall_thickness);

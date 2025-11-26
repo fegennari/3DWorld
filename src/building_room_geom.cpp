@@ -3205,7 +3205,7 @@ tid_nm_pair_t get_basement_texture(room_object_t const &c, tid_nm_pair_t const &
 }
 void building_room_geom_t::add_stairs_wall(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex) {
 	unsigned const skip_faces(c.is_hanging() ? 0 : EF_Z1); // skip bottom, unless hanging (non-exit floor)
-	get_material(get_scaled_wall_tex(wall_tex), 1).add_cube_to_verts(c, c.color, tex_origin, skip_faces); // no room lighting color atten
+	get_material(get_scaled_wall_tex(wall_tex), 1).add_cube_to_verts(c, c.color, tex_origin, skip_faces, !c.dim); // no room lighting color atten
 }
 void building_room_geom_t::add_wall_or_pillar(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex) {
 	bool const draw_top(c.flags & RO_FLAG_ADJ_TOP);
@@ -6858,16 +6858,18 @@ void building_room_geom_t::add_fishtank(room_object_t const &c) { // unshadowed,
 }
 
 void building_room_geom_t::add_metal_bar(room_object_t const &c) {
+	bool const non_reflective(c.flags & RO_FLAG_UNTEXTURED); // used for trim
 	colorRGBA const color(apply_light_color(c)), spec_color((color.R == color.G && color.R == color.B) ? WHITE : color);
-	rgeom_mat_t &metal_mat(get_metal_material(1, 0, 1, 0, 0, spec_color, 0.8, 60.0, 0.5)); // untextured, shadowed, small, half metal; add an option to make it scratched?
+	// untextured, shadowed, small, half metal; add an option to make it scratched?
+	rgeom_mat_t &mat(non_reflective ? get_untextured_material(1, 0, 1) : get_metal_material(1, 0, 1, 0, 0, spec_color, 0.8, 60.0, 0.5));
 
 	if (c.shape == SHAPE_CUBE) {
-		metal_mat.add_cube_to_verts_untextured(c, color, c.item_flags); // skip_faces is stored in item_flags
+		mat.add_cube_to_verts_untextured(c, color, c.item_flags); // skip_faces is stored in item_flags
 	}
 	else if (c.shape == SHAPE_CYLIN) {
 		unsigned const dim(c.get_pipe_dim()); // same as pipes
 		bool const draw_bot(!(c.item_flags & EF_Z1)), draw_top(!(c.item_flags & EF_Z2));
-		metal_mat.add_ortho_cylin_to_verts(c, color, dim, draw_bot, draw_top);
+		mat.add_ortho_cylin_to_verts(c, color, dim, draw_bot, draw_top);
 	}
 	else {assert(0);}
 }
