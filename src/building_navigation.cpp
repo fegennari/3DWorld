@@ -411,12 +411,13 @@ public:
 		seen[room1] = 1;
 
 		while (!pend.empty()) {
-			node_t const &node(get_node(pend.back()));
+			unsigned const cur(pend.back());
+			node_t const &node(get_node(cur));
 			pend.pop_back();
 
 			for (auto i = node.conn_rooms.begin(); i != node.conn_rooms.end(); ++i) {
 				if (seen[i->ix]) continue;
-				if (!can_use_conn(*i, interior, zval, has_key)) continue; // blocked by closed or locked door
+				if (!can_use_conn(*i, interior, zval, has_key, cur)) continue; // blocked by closed or locked door
 				if (i->ix == room2) return 1; // found, done
 				pend.push_back(i->ix);
 				seen[i->ix] = 1;
@@ -830,7 +831,7 @@ public:
 		return 1;
 	}
 
-	bool can_use_conn(conn_room_t const &conn, building_interior_t const &interior, float zval, unsigned has_key) const {
+	bool can_use_conn(conn_room_t const &conn, building_interior_t const &interior, float zval, unsigned has_key, unsigned from_room) const {
 		if (conn.door_ix < 0) return 1; // no door
 		unsigned door_ix(conn.door_ix);
 
@@ -841,8 +842,10 @@ public:
 				assert(door_ix < interior.mall_info->store_doorways.size());
 				return !interior.mall_info->store_doorways[door_ix].closed;
 			}
+			if (in_building_gameplay_mode())        return 1; // zombies can use wall gaps
+			if (from_room >= interior.rooms.size()) return 0; // from_room is not a valid room; error?
 			assert(door_ix < interior.missing_wall_segs.size()); // missing wall seg
-			return in_building_gameplay_mode(); // only zombies can use
+			return (interior.missing_wall_segs[door_ix].conn_room_ix == from_room); // non-zombies can only exit secret rooms, not enter them
 		}
 		//if (global_building_params.ai_opens_doors && has_key) return 1; // locked door won't stop us; incorrect because door may not cover z-range (for multi-floor backrooms)
 		door_t const &first_door(interior.doors[door_ix]);
@@ -892,8 +895,8 @@ public:
 				if (closed[i->ix]) continue; // already closed (duplicate)
 				bool const is_goal(i->ix == room2);
 				node_t const &conn_node(get_node(i->ix)); // connected room, stairs, or ramp
-				if (conn_node.is_vert_conn() && !use_stairs && !is_goal)      continue; // skip stairs/ramp in this mode
-				if (!can_use_conn(*i, *building.interior, cur_pt.z, has_key)) continue; // blocked by closed or locked door; must do this check before setting open state
+				if (conn_node.is_vert_conn() && !use_stairs && !is_goal)                continue; // skip stairs/ramp in this mode
+				if (!can_use_conn(*i, *building.interior, cur_pt.z, has_key, cur))      continue; // blocked by closed or locked door; must do this check before setting open state
 				if (cur_pt.z < conn_node.bcube.z1() || cur_pt.z > conn_node.bcube.z2()) continue; // room doesn't cover this zval range
 				point const node_pt((cur == room1) ? cur_pt   : cur_node .get_center(cur_pt.z));
 				point const next_pt(is_goal        ? dest_pos : conn_node.get_center(cur_pt.z));
@@ -2386,7 +2389,7 @@ bool building_t::can_target_player(person_t const &person) const {
 	if (point_over_glass_floor(person.pos)) {return point_over_glass_floor(cur_player_building_loc.pos);}
 	assert(cur_player_building_loc.room_ix >= 0);
 	room_t const &player_room(get_room(cur_player_building_loc.room_ix));
-	// zombies can't enter secret rooms, but only if they see the player enter
+	// zombies won't enter secret rooms to follow the player, but may enter them randomly when the player is inside
 	if (person.cur_room != cur_player_building_loc.room_ix && player_room.is_secret_room()) return 0;
 	float const first_floor_zceil(player_room.z1() + get_window_vspace());
 	if (player_room.is_single_floor && !player_room.is_mall() && cur_player_building_loc.pos.z > first_floor_zceil) return 0; // check for player on unreachable floor
