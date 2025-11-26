@@ -332,12 +332,14 @@ void add_rows_of_bottles_or_cans(rand_gen_t &rgen, room_object_t const &parent, 
 		add_rows_of_vcylinders(parent, shelf, can_radius, can_height, 0.25, TYPE_DRINK_CAN, 2, flags, objects, rgen); // 1-3 columns
 	}
 }
-void add_stack_of_plates(cube_t const &place_area, float radius, unsigned room_id, float light_amt, rand_gen_t &rgen, vect_cube_t &blockers, vect_room_object_t &objects) {
+void add_stack_of_plates(cube_t const &place_area, float radius, unsigned room_id, float light_amt, unsigned flags,
+	rand_gen_t &rgen, vect_cube_t &blockers, vect_room_object_t &objects)
+{
 	float const height(0.1*radius), spacing(min(1.2f*radius, 0.48f*min(place_area.dx(), place_area.dy())));
 	if (place_area.dz() < height) return; // can't fit any plates vertically; shouldn't happen
 	cube_t plate;
 	gen_xy_pos_for_round_obj(plate, place_area, radius, height, spacing, rgen, 1); // place_at_z1=1
-	room_object_t obj(plate, TYPE_PLATE, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_WAS_EXP), light_amt, SHAPE_CYLIN);
+	room_object_t obj(plate, TYPE_PLATE, room_id, 0, 0, flags, light_amt, SHAPE_CYLIN);
 	if (!add_if_not_intersecting(obj, objects, blockers)) return; // can't place the bottom plate
 	unsigned const stack_height(1 + (rgen.rand()%5)); // 1-6
 
@@ -439,7 +441,7 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vect_room_
 					set_cube_zvals(plate_area, shelf.z2(), shelf.z2()+height_val);
 					float const plate_radius(rgen.rand_uniform(0.40, 0.48)*plate_area.get_size().get_min_val());
 					blockers.clear();
-					for (unsigned n = 0; n < num_plates; ++n) {add_stack_of_plates(plate_area, plate_radius, c.room_id, c.light_amt, rgen, blockers, objects);}
+					for (unsigned n = 0; n < num_plates; ++n) {add_stack_of_plates(plate_area, plate_radius, c.room_id, c.light_amt, flags, rgen, blockers, objects);}
 				}
 				else { // paper towels
 					float const oheight(0.67*height_val), radius(min(0.45f*shelf_depth, 0.25f*oheight));
@@ -594,7 +596,7 @@ bool add_cabinet_objects(room_object_t const &c, vect_room_object_t &objects) { 
 		// add plates
 		unsigned const max_plates(0 + 1*sz_ratio), num_plates(rgen.rand() % max_plates); // wider cabinet has more plates
 		float const plate_radius(min(sz_scale*rgen.rand_uniform(0.30, 0.35), 0.45f*c_min_xy));
-		for (unsigned n = 0; n < num_plates; ++n) {add_stack_of_plates(interior, plate_radius, c.room_id, light_amt, rgen, cubes, objects);}
+		for (unsigned n = 0; n < num_plates; ++n) {add_stack_of_plates(interior, plate_radius, c.room_id, light_amt, flags, rgen, cubes, objects);}
 		// add pans
 		unsigned const num_pans(rgen.rand()%3); // 0-2
 		float const pan_radius(min(sz_scale*rgen.rand_uniform(0.40, 0.45), 0.45f*c_min_xy)), pan_height(rgen.rand_uniform(0.4, 0.5)*pan_radius);

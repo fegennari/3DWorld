@@ -283,7 +283,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_BLDG_FOUNT] = bldg_obj_type_t(1, 1, 1, 0, 1, 1, 0, 0.0,   0.0,   "fountain"); // mall fountain
 	bldg_obj_types[TYPE_WHEELCHAIR] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 0, 300,   40,    "wheelchair");
 	bldg_obj_types[TYPE_OP_TABLE  ] = bldg_obj_type_t(1, 1, 1, 0, 1, 1, 0, 1000,  100,   "operating table");
-	bldg_obj_types[TYPE_TROLLEY   ] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 0, 100,   20,    "hospital trolley");
+	bldg_obj_types[TYPE_TROLLEY   ] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 0, 100,   20,    "trolley");
 	bldg_obj_types[TYPE_STRETCHER ] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 0, 400,   100,   "stretcher");
 	bldg_obj_types[TYPE_EX_MACHINE] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 0, 1000,  160,   "exercise machine"); // differnent types; weight and value should vary by type
 	bldg_obj_types[TYPE_VIS_PHONE ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 40.0,  2.0,   "phone"); // visitation room phone
@@ -1753,6 +1753,7 @@ bool is_obj_in_or_on_obj(room_object_t const &parent, room_object_t const &child
 	if (parent.type == TYPE_BOX       && parent.is_open() && parent.contains_cube(child)) return 1; // open box with an object inside
 	if (parent.type == TYPE_STOVE     && parent.contains_cube(child))                     return 1; // pan, etc. on a stove
 	if (parent.type == TYPE_COAT_RACK && parent.intersects(child))                        return 1; // top hat on coat rack
+	if (parent.type == TYPE_TROLLEY   && parent.intersects(child))                        return 1; // plates on trolley
 	// check for object on the mattress of a bed, excluding stacked bunk bed
 	if (parent.type == TYPE_BED   && child.type != TYPE_BED && child.z1() <= parent.z2() && child.z1() > parent.zc() && child.intersects_xy(parent)) return 1;
 	
@@ -1775,9 +1776,9 @@ bool object_has_something_on_it(room_object_t const &obj, vect_room_object_t con
 	if (!object_can_have_something_on_it(obj)) return 0;
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
-		if (i->type == TYPE_BLOCKER) continue; // ignore blockers (from removed objects)
-		if (*i == obj)               continue; // skip self (bcube check)
-		if (obj.type == TYPE_BED && i->type == TYPE_BED) continue; // skip stacked bunk beds
+		if (i->type == TYPE_BLOCKER || i->type == TYPE_FLOORING) continue; // ignore blockers (from removed objects) and flooring
+		if (*i == obj)                                           continue; // skip self (bcube check)
+		if (obj.type == TYPE_BED && i->type == TYPE_BED)         continue; // skip stacked bunk beds
 		if (is_obj_in_or_on_obj(obj, *i)) return 1;
 	}
 	return 0;
@@ -1823,6 +1824,11 @@ cube_t get_true_obj_bcube(room_object_t const &obj) { // for player object picku
 		cube_t obj_bcube(obj);
 		obj_bcube.z1() += 0.50*obj.dz(); // only include the top half, so that we can pick up objects such as balls under the pool table
 		obj_bcube.z2() -= 0.05*obj.dz(); // make it slightly shorter so that it's easier to pick up pool balls
+		return obj_bcube;
+	}
+	if (obj.type == TYPE_TROLLEY) {
+		cube_t obj_bcube(obj);
+		obj_bcube.z2() -= 0.15*obj.dz(); // clip off the top/handles so that objects on top can be selected
 		return obj_bcube;
 	}
 	if (obj.is_obj_model_type()) {
@@ -1950,6 +1956,7 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 			if (object_has_something_on_it(*i, other_obj_vect, other_objs_end)) continue; // check the other one as well
 			if (building.check_for_wall_ceil_floor_int(at_pos, p1c))       continue; // skip if it's on the other side of a wall, ceiling, or floor
 			if (was_expanded && has_locker && is_inside_closed_locker(*i)) continue;
+			if (type == TYPE_PLATE && (i+1) != objs_end && (i+1)->type == TYPE_PLATE && (i+1)->x1() == i->x1() && (i+1)->y1() == i->y1()) continue; // stacked plates
 			closest_obj_id = (i - obj_vect.begin()) + obj_id_offset; // valid pickup object
 			dmin_sq = dsq; // this object is the closest, even if it can't be picked up
 		} // for i
@@ -2367,6 +2374,7 @@ bool is_movable(room_object_t const &obj) {
 	bldg_obj_type_t const &bot(get_room_obj_type(obj));
 	// allow pushing of appliance store objects
 	if (obj.in_mall() && (type == TYPE_TUB || type == TYPE_TOILET || type == TYPE_SINK || type == TYPE_URINAL || type == TYPE_FURNACE || type == TYPE_WHEATER)) return 1;
+	if (type == TYPE_TROLLEY || type == TYPE_WHEELCHAIR || type == TYPE_SHOP_CART) return 1; // wheeled objects can always be pushed
 	return (bot.weight >= 40.0 && !bot.attached); // heavy non-attached objects, including tables
 }
 bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir, float range, int mode) { // mode: 0=normal, 1=pull

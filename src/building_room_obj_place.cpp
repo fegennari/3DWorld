@@ -19,6 +19,8 @@ void get_pool_ball_rot_matrix(room_object_t const &c, xform_matrix &rot_matrix);
 float get_cockroach_height_from_radius(float radius);
 void rotate_obj_cube(cube_t &c, cube_t const &bc, bool in_dim, bool dir);
 cube_t get_whiteboard_marker_ledge(room_object_t const &c);
+void add_stack_of_plates(cube_t const &place_area, float radius, unsigned room_id, float light_amt, unsigned flags,
+	rand_gen_t &rgen, vect_cube_t &blockers, vect_room_object_t &objects);
 
 
 class door_path_checker_t {
@@ -2841,8 +2843,23 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 	for (unsigned i = 0; i < num_fridges; ++i) {
 		place_model_along_wall(OBJ_MODEL_FRIDGE, TYPE_FRIDGE, room, 0.75, rgen, zval, room_id, light_amt, place_area, objs_start, 1.2, 4, 0, WHITE, 1);
 	}
+	// add trolleys with plates; seems like this can work in a kitchen
 	unsigned num_trolleys((rgen.rand() % 2) + 2); // 2-3
-	for (unsigned i = 0; i < num_trolleys; ++i) {add_trolley(rgen, place_area, cube_t(), zval, room_id, light_amt, objs_start);} // seems like this can work in a kitchen
+	vect_room_object_t &objs(interior->room_geom->objs);
+	vect_cube_t blockers;
+	
+	for (unsigned i = 0; i < num_trolleys; ++i) {
+		unsigned const obj_ix(objs.size());
+		if (!add_trolley(rgen, place_area, cube_t(), zval, room_id, light_amt, objs_start)) continue;
+		if (rgen.rand_float() < 0.35) continue; // no plates
+		room_object_t const trolley(objs[obj_ix]);
+		cube_t plate_area(trolley);
+		plate_area.expand_in_dim( trolley.dim, -0.2*trolley.get_sz_dim( trolley.dim)); // shorten length
+		plate_area.expand_in_dim(!trolley.dim, -0.1*trolley.get_sz_dim(!trolley.dim)); // shorten width
+		float const height(trolley.dz()), plate_radius(rgen.rand_uniform(0.25, 0.3)*min(plate_area.dx(), plate_area.dy()));
+		set_cube_zvals(plate_area, plate_area.z2()-0.13*height, plate_area.z2()+0.4*height);
+		add_stack_of_plates(plate_area, plate_radius, room_id, light_amt, RO_FLAG_NOCOLL, rgen, blockers, objs);
+	} // for i
 	if (!in_mall) {add_door_sign("Kitchen", room, zval, room_id);}
 	return 1;
 }
