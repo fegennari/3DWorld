@@ -544,8 +544,6 @@ bool building_t::assign_and_fill_prison_room(rand_gen_t rgen, room_t &room, floa
 				break;
 			case RTYPE_CLASS: {
 				unsigned td_orient(0); // unused
-				bool const carpet_type(rgen.rand_bool());
-				zval = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_CARPET, carpet_type);
 				if (!add_classroom_objs(rgen, room, zval, room_id, floor_ix, tot_light_amt, objs_start, chair_color, td_orient)) continue;
 				break;
 			}

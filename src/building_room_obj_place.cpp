@@ -2824,13 +2824,14 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 	return placed_obj;
 }
 
-bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float light_amt, unsigned objs_start) {
+bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float light_amt, unsigned objs_start) {
 	float const floor_spacing(get_window_vspace());
 	vector2d const room_sz(room.get_size_xy());
 	if (room_sz.get_min_val() < 2.0*floor_spacing || room_sz.get_max_val() < 3.0*floor_spacing) return 0; // too small
 	bool const in_mall(room.is_ext_basement() && has_mall()), dim(room_sz.x < room_sz.y); // long dim
 	float const ceil_zval(zval + floor_spacing - get_fc_thickness());
 	cube_t const place_area(get_walkable_room_bounds(room));
+	if (btype == BTYPE_PRISON) {zval = add_flooring(room, zval, room_id, light_amt, FLOORING_LGTILE);}
 	//cube_t hood;
 
 	if (!in_mall) { // mall already has ceiling vents

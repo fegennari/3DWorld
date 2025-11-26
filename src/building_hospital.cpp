@@ -116,7 +116,7 @@ bool building_t::try_place_hospital_bed(rand_gen_t &rgen, room_t const &room, fl
 	return 0;
 }
 
-bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix,
+bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, unsigned floor_ix,
 	float tot_light_amt, unsigned objs_start, int &nested_room_ix)
 {
 	if (!can_create_hospital_room()) return 0; // no hospital bed
@@ -124,9 +124,10 @@ bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, flo
 	cube_t room_bounds(get_walkable_room_bounds(room)), place_area(room_bounds), bathroom;
 	place_area.expand_by(-1.0*wall_thickness); // add extra padding, since bed models are slightly different sizes
 	vect_room_object_t &objs(interior->room_geom->objs);
+	unsigned const flooring_start(objs.size());
+	if (btype != BTYPE_HOSPITAL) {zval = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_LGTILE);} // add flooring for prison
 	bool const has_bathroom(get_hospital_room_bathroom(room, room_id, nested_room_ix, bathroom));
-	unsigned const beds_start(objs.size());
-	unsigned const max_beds(max(1U, min(16U, unsigned(0.25*room_bounds.get_area_xy()/(floor_spacing*floor_spacing)))));
+	unsigned const beds_start(objs.size()), max_beds(max(1U, min(16U, unsigned(0.25*room_bounds.get_area_xy()/(floor_spacing*floor_spacing)))));
 	unsigned num_beds(0), pref_orient(4);
 
 	if (has_bathroom) { // add blocker for bathroom
@@ -147,7 +148,10 @@ bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, flo
 		pref_orient = 2*bed.dim + bed.dir; // try to place later beds along the same wall
 		++num_beds;
 	} // for n
-	if (num_beds == 0) return 0;
+	if (num_beds == 0) {
+		objs.resize(flooring_start); // remove flooring
+		return 0;
+	}
 	bool const add_tall_table(rgen.rand_bool());
 	bool const add_curtains(num_beds > 1 && building_obj_model_loader.is_model_valid(OBJ_MODEL_HOSP_CURT));
 	unsigned const beds_end(objs.size());

@@ -8,7 +8,7 @@
 extern object_model_loader_t building_obj_model_loader;
 
 
-bool building_t::add_classroom_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix,
+bool building_t::add_classroom_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, unsigned floor_ix,
 	float tot_light_amt, unsigned objs_start, colorRGBA const &chair_color, unsigned &td_orient)
 {
 	if (room.has_elevator) return 0; // no classroom in an elevator
@@ -55,6 +55,10 @@ bool building_t::add_classroom_objs(rand_gen_t rgen, room_t const &room, float z
 	unsigned const ncols(avail_width/desk_wspacing), nrows(avail_len/desk_dspacing);
 	if (nrows < 1 || ncols < 1) return 0; // not enough space for student desks; shouldn't happen
 
+	if (btype == BTYPE_PRISON) { // prison classroom has carpeting
+		bool const carpet_type(rgen.rand_bool());
+		zval = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_CARPET, carpet_type);
+	}
 	// place teacher desk at front
 	cube_t tdesk;
 	set_cube_zvals(tdesk, zval, zval+td_height);

@@ -341,7 +341,7 @@ void building_t::add_shopping_carts_to_room(rand_gen_t &rgen, room_t const &room
 	}
 }
 
-bool building_t::add_small_retail_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float light_amt) { // for prisons, etc.
+bool building_t::add_small_retail_room_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float light_amt) { // for prisons, etc.
 	// Note: simplified version of mall retail stores from building_t::add_mall_store_objs()
 	bool const dim(room.dx() < room.dy()); // long dim
 	float const window_vspace(get_window_vspace()), door_width(get_doorway_width());
@@ -351,6 +351,8 @@ bool building_t::add_small_retail_room_objs(rand_gen_t rgen, room_t const &room,
 	float const length(dim ? dy : dx), width(dim ? dx : dy), max_rack_width(0.45*window_vspace);
 	unsigned const nrows((dim ? nx : ny)-1), nracks(max(2U, (dim ? ny : nx)/4));
 	if (width < 4.0*nom_aisle_width || nrows < 2) return 0; // can't fit at least two rows
+	unsigned const flooring_start(interior->room_geom->objs.size());
+	zval = add_flooring(room, zval, room_id, light_amt, FLOORING_LGTILE);
 	float row_aisle_width(nom_aisle_width), aisle_spacing((width - row_aisle_width)/nrows), rack_width(aisle_spacing - row_aisle_width);
 	assert(rack_width > 0.0);
 
@@ -380,7 +382,10 @@ bool building_t::add_small_retail_room_objs(rand_gen_t rgen, room_t const &room,
 			add_shelf_rack(rack, dim, style_id, rack_id, room_id, 0, RETAIL_FOOD+1, 0, rgen); // add_occluders=0
 		} // for r
 	} // for n
-	if (rack_id == 0) return 0; // no racks were added
+	if (rack_id == 0) { // no racks were added
+		interior->room_geom->objs.resize(flooring_start); // remove flooring
+		return 0;
+	}
 	// add cash register/checkout counter?
 	add_door_sign("Store", room, zval, room_id);
 	return 1;

@@ -2904,7 +2904,7 @@ private:
 	bool add_ball_to_room    (rand_gen_t &rgen, room_t const &room, cube_t const &place_area, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
 		int force_type=-1, cube_t const &avoid_xy=cube_t(), bool in_pool=0);
 	bool maybe_add_fireplace_to_room(rand_gen_t &rgen, room_t const &room, vect_cube_t &blockers, float zval, unsigned room_id, float tot_light_amt);
-	bool add_classroom_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start,
+	bool add_classroom_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start,
 		colorRGBA const &chair_color, unsigned &td_orient);
 	bool add_classroom_desk(rand_gen_t &rgen, room_t const &room, cube_t const &desk, unsigned room_id, float tot_light_amt,
 		colorRGBA const &chair_color, bool dim, bool dir, unsigned desk_ix);
@@ -2922,7 +2922,7 @@ private:
 	bool get_hospital_room_bathroom(room_t const &room, unsigned room_id, int &nested_room_ix, cube_t &bathroom) const;
 	bool try_place_hospital_bed (rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id,
 		float tot_light_amt, unsigned objs_start, unsigned pref_orient, cube_t const &place_area);
-	bool add_hospital_room_objs (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start, int &nested_room_ix);
+	bool add_hospital_room_objs (rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start, int &nested_room_ix);
 	bool add_waiting_room_objs  (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start, int &nested_room_ix);
 	void add_short_wall_with_trim(cube_t const &wall, bool dim, unsigned room_id, float tot_light_amt);
 	void place_chairs_along_walls(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
@@ -2947,7 +2947,7 @@ private:
 	void make_door_out_or_order(room_t const &room, float zval, unsigned room_id, unsigned door_stack_ix);
 	bool add_kitchen_objs    (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt,
 		unsigned objs_start, bool allow_adj_ext_door, light_ix_assign_t &light_ix_assign);
-	bool add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float light_amt, unsigned objs_start);
+	bool add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float light_amt, unsigned objs_start);
 	void add_fridge_sticky_notes(rand_gen_t rgen, unsigned fridge_obj_ix, float zval, unsigned room_id, float tot_light_amt);
 	bool add_fishtank_to_room(rand_gen_t&rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, cube_t const &place_area);
 	bool add_livingroom_objs (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
@@ -2999,7 +2999,7 @@ private:
 	void add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
 	bool add_retail_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, light_ix_assign_t &light_ix_assign);
 	void add_shopping_carts_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float light_amt, unsigned objs_start, unsigned max_carts);
-	bool add_small_retail_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float light_amt);
+	bool add_small_retail_room_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float light_amt);
 	float gather_room_lights(unsigned objs_start_inc_lights, vect_cube_t &lights) const;
 	void add_ladders_to_nested_room_roofs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float light_amt, cube_t const &place_area);
 	cube_t add_factory_ladders_and_catwalks(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float light_amt, cube_t const &place_area,
