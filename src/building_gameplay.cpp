@@ -1750,8 +1750,9 @@ void building_t::register_player_exit_building(bool entered_another_building) co
 bool is_obj_in_or_on_obj(room_object_t const &parent, room_object_t const &child) {
 	if (parent.type == TYPE_WINE_RACK && parent.contains_pt(child.get_cube_center()))     return 1; // check for wine bottles left in wine rack
 	if (fabs(child.z1() - parent.z2()) < 0.05*parent.dz() && child.intersects_xy(parent)) return 1; // zval test
-	if (parent.type == TYPE_BOX   && parent.is_open() && parent.contains_cube(child))     return 1; // open box with an object inside
-	if (parent.type == TYPE_STOVE && parent.contains_cube(child))                         return 1; // pan, etc. on a stove
+	if (parent.type == TYPE_BOX       && parent.is_open() && parent.contains_cube(child)) return 1; // open box with an object inside
+	if (parent.type == TYPE_STOVE     && parent.contains_cube(child))                     return 1; // pan, etc. on a stove
+	if (parent.type == TYPE_COAT_RACK && parent.intersects(child))                        return 1; // top hat on coat rack
 	// check for object on the mattress of a bed, excluding stacked bunk bed
 	if (parent.type == TYPE_BED   && child.type != TYPE_BED && child.z1() <= parent.z2() && child.z1() > parent.zc() && child.intersects_xy(parent)) return 1;
 	
@@ -1767,8 +1768,8 @@ bool object_can_have_something_on_it(room_object_t const &obj) {
 	// only these types can have objects placed on them (what about TYPE_SHELF?)
 	return (type == TYPE_TABLE || type == TYPE_DESK || type == TYPE_COUNTER || type == TYPE_DRESSER || type == TYPE_NIGHTSTAND || type == TYPE_CONF_TABLE ||
 		type == TYPE_RDESK || obj.is_crate_or_box() || type == TYPE_WINE_RACK || type == TYPE_BOOK || type == TYPE_STOVE || type == TYPE_MWAVE ||
-		type == TYPE_BED || type == TYPE_SERVER || type == TYPE_PIZZA_BOX || type == TYPE_LAPTOP || type == TYPE_FOLD_SHIRT || type == TYPE_PALLET
-		/*|| type == TYPE_FCABINET*/ /*|| type == TYPE_SHELF*/);
+		type == TYPE_BED || type == TYPE_SERVER || type == TYPE_PIZZA_BOX || type == TYPE_LAPTOP || type == TYPE_FOLD_SHIRT || type == TYPE_PALLET ||
+		type == TYPE_COAT_RACK || type == TYPE_TROLLEY /*|| type == TYPE_FCABINET*/ /*|| type == TYPE_SHELF*/);
 }
 bool object_has_something_on_it(room_object_t const &obj, vect_room_object_t const &objs, vect_room_object_t::const_iterator objs_end) {
 	if (!object_can_have_something_on_it(obj)) return 0;
