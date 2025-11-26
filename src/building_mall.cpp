@@ -1112,46 +1112,6 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 		}
 	} // for f
 
-	// add objects for store doors, which are always between pairs of interior windows
-	for (auto i = interior->mall_info->store_doorways.begin(); i != interior->mall_info->store_doorways.end(); ++i) {
-		store_doorway_t const &d(*i);
-		//room_t const &store(get_room(d.room_id));
-		bool const dim(d.dim), dir(d.dir);
-		// can either use room_id or d.room_id for these objects
-		// add ceiling box where the gate would come down from
-		cube_t cbox(d);
-		cbox.z1() = d.z2() - 0.1*window_vspace;
-		cbox.expand_in_dim( dim,  1.0*wall_thickness); // grow
-		cbox.expand_in_dim(!dim, -0.5*wall_thickness); // shrink
-		objs.emplace_back(cbox, TYPE_METAL_BAR, room_id, dim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, GRAY);
-		// add slot for the gate
-		cube_t slot(cbox);
-		set_cube_zvals(slot, cbox.z1()-trim_thick, cbox.z1());
-		set_wall_width(slot, cbox.get_center_dim(dim), 0.2*wall_thickness, dim);
-		objs.emplace_back(slot, TYPE_METAL_BAR, room_id, dim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, BLACK);
-		// add button plate
-		float const trim_thickness(get_trim_thickness()), trim_width(0.5*wall_thickness), trim_exp(2.0*trim_thickness + trim_width);
-		float const trim_edge(i->get_center_dim(dim) + (dir ? 1.0 : -1.0)*trim_exp), plate_front(trim_edge + (dir ? 1.0 : -1.0)*0.5*trim_thickness); // inside front of gate trim
-		float const button_cline(i->d[!dim][0] + 0.4*trim_width); // to the low side
-		cube_t plate;
-		set_cube_zvals(plate, (d.z1() + 0.46*window_vspace), (d.z1() + 0.54*window_vspace));
-		plate.d[dim][!dir] = trim_edge; // back
-		plate.d[dim][ dir] = plate_front; // front
-		set_wall_width(plate, button_cline, 0.55*trim_width, !dim);
-		objs.emplace_back(plate, TYPE_METAL_BAR, room_id, dim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, BKGRAY);
-		// add gate control buttons on the inside
-		unsigned const dix(i - interior->mall_info->store_doorways.begin());
-		point pos;
-		pos[ dim] = plate_front;
-		pos[!dim] = button_cline;
-
-		for (unsigned du = 0; du < 2; ++du) { // {down, up}
-			pos.z = d.z1() + (0.04*du + 0.48)*window_vspace;
-			unsigned flags(RO_FLAG_NOCOLL | RO_FLAG_IN_MALL | (du ? RO_FLAG_ADJ_TOP : RO_FLAG_ADJ_BOT));
-			add_button(pos, 0.2*wall_thickness, dim, dir, dix, flags, objs);
-		}
-	} // for d
-
 	// add a fountain in the center of an opening with benches around it
 	unsigned const NUM_MALL_BENCH_COLORS = 6;
 	colorRGBA const mall_bench_colors[NUM_MALL_BENCH_COLORS] = {WHITE, LT_BROWN, DK_GRAY, LT_BROWN, colorRGBA(0.1, 0.4, 0.8), LT_BROWN}; // LT_BROWN becomes wood texture
@@ -1601,6 +1561,54 @@ bool building_t::add_mall_table_with_chairs(rand_gen_t &rgen, cube_t const &tabl
 	return 1;
 }
 
+void building_t::add_mall_store_door_objs() {
+	assert(has_mall());
+	float const window_vspace(get_window_vspace()), wall_thickness(get_wall_thickness()), trim_thick(get_trim_thickness());
+	float const light_amt = 1.0; // fully lit, for now
+	unsigned const room_id(interior->ext_basement_hallway_room_id);
+	vect_room_object_t &objs(interior->room_geom->objs);
+	unsigned dix(0);
+
+	// add objects for store doors, which are always between pairs of interior windows
+	for (store_doorway_t const &d : interior->mall_info->store_doorways) {
+		//room_t const &store(get_room(d.room_id));
+		bool const dim(d.dim), dir(d.dir);
+		// can either use room_id or d.room_id for these objects
+		// add ceiling box where the gate would come down from
+		cube_t cbox(d);
+		cbox.z1() = d.z2() - 0.1*window_vspace;
+		cbox.expand_in_dim( dim,  1.0*wall_thickness); // grow
+		cbox.expand_in_dim(!dim, -0.5*wall_thickness); // shrink
+		objs.emplace_back(cbox, TYPE_METAL_BAR, room_id, dim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, GRAY);
+		// add slot for the gate
+		cube_t slot(cbox);
+		set_cube_zvals(slot, cbox.z1()-trim_thick, cbox.z1());
+		set_wall_width(slot, cbox.get_center_dim(dim), 0.2*wall_thickness, dim);
+		objs.emplace_back(slot, TYPE_METAL_BAR, room_id, dim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, BLACK);
+		// add button plate
+		float const trim_thickness(get_trim_thickness()), trim_width(0.5*wall_thickness), trim_exp(2.0*trim_thickness + trim_width);
+		float const trim_edge(d.get_center_dim(dim) + (dir ? 1.0 : -1.0)*trim_exp), plate_front(trim_edge + (dir ? 1.0 : -1.0)*0.5*trim_thickness); // inside front of gate trim
+		float const button_cline(d.d[!dim][0] + 0.4*trim_width); // to the low side
+		cube_t plate;
+		set_cube_zvals(plate, (d.z1() + 0.46*window_vspace), (d.z1() + 0.54*window_vspace));
+		plate.d[dim][!dir] = trim_edge; // back
+		plate.d[dim][ dir] = plate_front; // front
+		set_wall_width(plate, button_cline, 0.55*trim_width, !dim);
+		objs.emplace_back(plate, TYPE_METAL_BAR, room_id, dim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, BKGRAY);
+		// add gate control buttons on the inside
+		point pos;
+		pos[ dim] = plate_front;
+		pos[!dim] = button_cline;
+
+		for (unsigned du = 0; du < 2; ++du) { // {down, up}
+			pos.z = d.z1() + (0.04*du + 0.48)*window_vspace;
+			unsigned flags(RO_FLAG_NOCOLL | RO_FLAG_IN_MALL | (du ? RO_FLAG_ADJ_TOP : RO_FLAG_ADJ_BOT));
+			add_button(pos, 0.2*wall_thickness, dim, dir, dix, flags, objs);
+		}
+		++dix;
+	} // for d
+}
+
 bool building_t::add_food_court_objs(rand_gen_t &rgen, cube_t const &place_area, float zval, unsigned room_id, float tot_light_amt, vect_cube_t const &blockers) {
 	bool const dim(!interior->extb_wall_dim); // row dim runs perpendicular to mall dim for more shorter rows
 	float const window_vspacing(get_window_vspace()), clearance(get_min_front_clearance_inc_people()), row_span(place_area.get_sz_dim(!dim));
@@ -1641,6 +1649,15 @@ bool building_t::add_food_court_objs(rand_gen_t &rgen, cube_t const &place_area,
 		} // while
 	} // for r
 	return 1;
+}
+
+template<typename T> void remove_if_intersects(vector<T> &objs, cube_t const &c) {
+	auto i(objs.begin()), o(i);
+
+	for (; i != objs.end(); ++i) {
+		if (!i->intersects(c)) {*(o++) = *i;} // keep if not this store
+	}
+	objs.erase(o, objs.end());
 }
 
 // Note: room is non-const because the has_mirror flag may get set
@@ -2167,17 +2184,12 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 		bool const has_dining(rgen.rand_bool());
 		float const front_wall(room.d[dim][dir]);
 
-		if (0 && !has_dining) {
-			// TODO: should have counter rather than glass window and door?
-			// can't modify interior->mall_info->store_doorways at this point in the control flow; must decide on store type earlier
+		if (0 && !has_dining) { // add counter rather than glass window and door
 			cube_t front_area(room);
 			set_wall_width(front_area, front_wall, wall_thickness, dim);
-			auto i(interior->int_windows.begin()), o(i);
-
-			for (; i != interior->int_windows.end(); ++i) {
-				if (!i->intersects(front_area)) {*(o++) = *i;} // keep if not this store
-			}
-			interior->int_windows.erase(o, interior->int_windows.end());
+			remove_if_intersects(interior->int_windows, front_area);
+			remove_if_intersects(interior->mall_info->store_doorways, front_area);
+			// TODO: walls, etc.
 		}
 		// split between public space in the front and commercial kitchen in the back
 		float const fb_split(front_wall + (dir ? -1.0 : 1.0)*((has_dining ? 0.5 : 0.3) + rgen.rand_uniform(0.0, 0.1))*room_len); // front vs. back split pos

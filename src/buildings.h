@@ -3052,6 +3052,7 @@ private:
 	void add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, unsigned floor_ix, vect_cube_t &rooms_to_light);
 	void maybe_place_obj_on_bench(room_object_t const &bench, rand_gen_t rgen, float prob);
 	unsigned add_mall_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, vect_cube_t &rooms_to_light);
+	void add_mall_store_door_objs();
 	void add_tv_to_wall(cube_t const &tv, unsigned room_id, float light_amt, bool dim, bool dir, bool use_monitor_image=0, int on_off=2);
 	bool is_valid_placement_at_mall_wall(cube_t const &c, cube_t const &entrance_stairs_bcube, vect_cube_t const &wall_blockers) const;
 	void add_large_trashcan_contents(rand_gen_t &rgen, room_object_t const &tcan, unsigned room_id, float tot_light_amt);
