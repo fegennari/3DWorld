@@ -1628,7 +1628,7 @@ void building_t::add_solar_panels(rand_gen_t &rgen) { // for houses
 	// add sides, similar to thick_poly_to_sides()
 	tquad_t bottom(panel);
 	for (unsigned n = 0; n < 4; ++n) {bottom[n] -= bias;}
-	tquad_with_ix_t side(4, tquad_with_ix_t::TYPE_TRIM);
+	tquad_with_ix_t side(4, tquad_with_ix_t::TYPE_MET_TRIM);
 
 	for (unsigned i = 0; i < 4; ++i) {
 		unsigned const inext((i+1)&3);

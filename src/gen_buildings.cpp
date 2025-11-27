@@ -669,7 +669,7 @@ void add_tquad_to_verts(building_geom_t const &bg, tquad_with_ix_t const &tquad,
 			vert.t[1]  = tex.tscale_y*((i == 2 || i == 3));
 			vert.t[1] *= 0.97; // trim off the top door frame
 		}
-		else if (tquad.type == tquad_with_ix_t::TYPE_TRIM) {} // untextured - no tex coords
+		else if (tquad.is_untextured()) {} // untextured - no tex coords
 		else {assert(0);}
 		if (exclude_frame) {vert.t[0] = DOOR_FRAME_WIDTH + (1.0 - 2.0*DOOR_FRAME_WIDTH)*vert.t[0];}
 		if (do_rotate) {bg.do_xy_rotate(center, vert.v);}
@@ -1886,8 +1886,10 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 		else if (i->type == tquad_with_ix_t::TYPE_SOLAR) {
 			bdraw.add_tquad(*this, *i, bcube, building_texture_mgr.get_solarp_tid(), colorRGBA(0.6, 0.6, 0.6)); // panel is too bright compared to the roof, use a darker color
 		}
-		else if (i->type == tquad_with_ix_t::TYPE_TRIM) { // solar panel edges
-			bdraw.add_tquad(*this, *i, bcube, tid_nm_pair_t(NO_SHADOW_WHITE_TEX), LT_GRAY); // untextured, no shadows
+		else if (i->type == tquad_with_ix_t::TYPE_SKYLIGHT_CAP) continue; // not drawn here
+		else if (i->is_untextured()) {
+			colorRGBA const color((i->type == tquad_with_ix_t::TYPE_MET_TRIM) ? LT_GRAY : WHITE); // gutters and skylight interior=white, solar panel edges=light gray
+			bdraw.add_tquad(*this, *i, bcube, tid_nm_pair_t(NO_SHADOW_WHITE_TEX), color); // untextured, no shadows
 		}
 		else if (is_house && (i->type == tquad_with_ix_t::TYPE_ROOF_PEAK || i->type == tquad_with_ix_t::TYPE_ROOF_SLOPE) && i->npts == 4) {
 			// house peaked/sloped trapezoid roof: extend lower zvals out a bit
@@ -1982,7 +1984,7 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 						bool is_skylight_edge2(0);
 						for (cube_t const &s : skylights) {is_skylight_edge2 |= (old_edge == s.d[!top_dim][!d]);}
 						if (is_skylight_edge2) continue; // no gutter along skylight
-						tquad_with_ix_t bot_surf(4, tquad_with_ix_t::TYPE_TRIM);
+						tquad_with_ix_t bot_surf(4, tquad_with_ix_t::TYPE_WHITE_TRIM);
 						UNROLL_4X(bot_surf.pts[i_].z = new_bcube.z1(););
 						bot_surf.pts[0][!top_dim] = bot_surf.pts[1][!top_dim] = old_edge;
 						bot_surf.pts[2][!top_dim] = bot_surf.pts[3][!top_dim] = new_edge;
@@ -2005,7 +2007,7 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 						bdraw.add_tquad(*this, bot_surf, bcube, bot_tex, WHITE);
 
 						for (unsigned e = 0; e < 2; ++e) { // add triangle end caps
-							tquad_with_ix_t end_cap(3, tquad_with_ix_t::TYPE_TRIM);
+							tquad_with_ix_t end_cap(3, tquad_with_ix_t::TYPE_WHITE_TRIM);
 							UNROLL_3X(end_cap.pts[i_][top_dim] = bot_edge_bcube.d[top_dim][e];); // end
 							end_cap.pts[0][!top_dim] = new_edge;
 							end_cap.pts[1][!top_dim] = end_cap.pts[2][!top_dim] = old_edge;

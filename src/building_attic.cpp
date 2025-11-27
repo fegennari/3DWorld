@@ -1183,7 +1183,6 @@ void building_t::maybe_add_skylight(rand_gen_t &rgen) { // for office building
 }
 
 void building_t::add_house_skylight(rand_gen_t rgen) {
-	return; // remove when this works
 	if (!is_house || !interior || interior->rooms.empty() || has_attic()) return; // houses only; can't pass skylight through attic
 	if (roof_type == ROOF_TYPE_HIPPED) return; // not handling hipped roof/triangles
 	float const floor_spacing(get_window_vspace()), fc_thick(get_fc_thickness()), light_hwidth(0.1*floor_spacing);
@@ -1236,7 +1235,7 @@ void building_t::add_house_skylight(rand_gen_t rgen) {
 					if      (p[dim] == bc.d[dim][0]) {z1 = p.z;}
 					else if (p[dim] == bc.d[dim][1]) {z2 = p.z;}
 				}
-				float const dz((z2 - z1)/bc.get_sz_dim(dim));
+				float const dz((z2 - z1)/bc.get_sz_dim(dim)), lo_edge(bc.d[dim][0]);
 				if (dim) {subtract_cube_from_cube_transpose(bc, skylight, tq_parts);}
 				else {subtract_cube_from_cube(bc, skylight, tq_parts, 1);} // clear_out=1
 
@@ -1246,12 +1245,32 @@ void building_t::add_house_skylight(rand_gen_t rgen) {
 					for (unsigned n = 0; n < tq2.npts; ++n) {
 						point &p(tq2.pts[n]);
 						c.clamp_pt_xy(p);
-						p.z = z1 + (p[dim] - bc.d[dim][0])*dz;
+						p.z = z1 + (p[dim] - lo_edge)*dz;
 					}
 					new_roof_tquads.push_back(tq2);
 				} // for c
-				// add top cap and interior sides
+				// add interior sides and top cap
+				tquad_with_ix_t side  (4, tquad_with_ix_t::TYPE_WHITE_TRIM  );
+				tquad_with_ix_t sl_cap(4, tquad_with_ix_t::TYPE_SKYLIGHT_CAP);
 
+				for (unsigned sdim = 0; sdim < 2; ++sdim) {
+					for (unsigned sdir = 0; sdir < 2; ++sdir) {
+						bool const wind_dir(sdim ^ sdir);
+						float const epos(skylight.d[sdim][sdir]);
+						for (unsigned n = 0; n < 4; ++n) {side.pts[n][sdim] = epos;}
+						side.pts[0].z = side.pts[1].z = skylight.z2(); // lower edges
+						side.pts[0][!sdim] = side.pts[3][!sdim] = skylight.d[!sdim][ wind_dir];
+						side.pts[1][!sdim] = side.pts[2][!sdim] = skylight.d[!sdim][!wind_dir];
+						for (unsigned n = 2; n < 4; ++n) {side.pts[n].z = z1 + (side.pts[n][dim] - lo_edge)*dz;} // upper edges
+
+						if (sdim == 0) {
+							sl_cap.pts[sdir ? 1 : 3] = side.pts[2];
+							sl_cap.pts[sdir ? 2 : 0] = side.pts[3];
+						}
+						new_roof_tquads.push_back(side);
+					} // for sdir
+				} // for sdim
+				new_roof_tquads.push_back(sl_cap);
 			} // for tq
 			roof_tquads.swap(new_roof_tquads);
 			subtract_cube_from_cubes(skylight, interior->ceilings);

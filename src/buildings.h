@@ -461,14 +461,15 @@ struct building_geom_t { // describes the physical shape of a building
 
 struct tquad_with_ix_t : public tquad_t {
 	// roof {office, peak, hip, slope}, roof access cover, wall, house door, building front door, building back door, garage door, interior doors back face, office doors, roof doors
-	enum {TYPE_ROOF_OFFICE=0, TYPE_ROOF_PEAK, TYPE_ROOF_HIP, TYPE_ROOF_SLOPE, TYPE_ROOF_ACC, TYPE_WALL, TYPE_HDOOR, TYPE_BDOOR, TYPE_BDOOR2, TYPE_GDOOR,
-		TYPE_IDOOR, TYPE_IDOOR_IN, TYPE_ODOOR, TYPE_ODOOR_IN, TYPE_RDOOR, TYPE_RDOOR2, TYPE_RDOOR_IN, TYPE_HELIPAD, TYPE_SOLAR, TYPE_TRIM};
+	enum {TYPE_ROOF_OFFICE=0, TYPE_ROOF_PEAK, TYPE_ROOF_HIP, TYPE_ROOF_SLOPE, TYPE_ROOF_ACC, TYPE_WALL, TYPE_HDOOR, TYPE_BDOOR, TYPE_BDOOR2, TYPE_GDOOR, TYPE_IDOOR,
+		TYPE_IDOOR_IN, TYPE_ODOOR, TYPE_ODOOR_IN, TYPE_RDOOR, TYPE_RDOOR2, TYPE_RDOOR_IN, TYPE_HELIPAD, TYPE_SOLAR, TYPE_MET_TRIM, TYPE_WHITE_TRIM, TYPE_SKYLIGHT_CAP};
 	bool is_roof         () const {return (type == TYPE_ROOF_OFFICE || type == TYPE_ROOF_PEAK || type == TYPE_ROOF_HIP || type == TYPE_ROOF_SLOPE);}
 	bool is_building_door() const {return (type == TYPE_BDOOR || type == TYPE_BDOOR2);} // for office buildings
 	bool is_exterior_door() const {return (type == TYPE_HDOOR || type == TYPE_GDOOR    || is_rooftop_door()  || is_building_door());}
 	bool is_interior_door() const {return (type == TYPE_IDOOR || type == TYPE_IDOOR_IN || type == TYPE_ODOOR || type == TYPE_ODOOR_IN);}
 	bool is_inside_face  () const {return (type == TYPE_IDOOR_IN || type == TYPE_ODOOR_IN || type == TYPE_RDOOR_IN);}
 	bool is_rooftop_door () const {return (type == TYPE_RDOOR || type == TYPE_RDOOR2 || type == TYPE_RDOOR_IN);}
+	bool is_untextured   () const {return (type == TYPE_MET_TRIM || type == TYPE_WHITE_TRIM || type == TYPE_SKYLIGHT_CAP);}
 
 	unsigned type;
 	tquad_with_ix_t(unsigned npts_=0, unsigned type_=TYPE_ROOF_PEAK) : tquad_t(npts_), type(type_) {}
