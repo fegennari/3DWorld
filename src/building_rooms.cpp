@@ -1587,9 +1587,11 @@ void building_t::add_gutter_downspouts(rand_gen_t &rgen, vect_cube_t const &balc
 			min_eq(int_gutter.d[!dim][1], p->d[!dim][1]);
 			assert(part.is_all_zeros());
 			part  = *p; // part may be useful to have below
+		} // for p
+		if (part.is_all_zeros()) { // must be found
+			cout << "failed to add gutter at " << g.str() << endl;
+			assert(0);
 		}
-		assert(!part.is_all_zeros()); // must be found
-
 		for (unsigned e = 0; e < 2; ++e) { // add gutter at each end
 			if (skip_ends[e]) continue;
 			float const centerline(int_gutter.d[!dim][e] + (e ? -1.0 : 1.0)*edge_spacing);

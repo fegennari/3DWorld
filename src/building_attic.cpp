@@ -1185,6 +1185,7 @@ void building_t::maybe_add_skylight(rand_gen_t &rgen) { // for office building
 void building_t::add_house_skylight(rand_gen_t rgen) {
 	return; // remove when this works
 	if (!is_house || !interior || interior->rooms.empty() || has_attic()) return; // houses only; can't pass skylight through attic
+	if (roof_type == ROOF_TYPE_HIPPED) return; // not handling hipped roof/triangles
 	float const floor_spacing(get_window_vspace()), fc_thick(get_fc_thickness()), light_hwidth(0.1*floor_spacing);
 	vector2d skylight_sz;
 	for (unsigned d = 0; d < 2; ++d) {skylight_sz[d] = rgen.rand_uniform(0.25, 0.5)*floor_spacing;}
@@ -1209,11 +1210,51 @@ void building_t::add_house_skylight(rand_gen_t rgen) {
 				set_wall_width(skylight, rgen.rand_uniform((place_area.d[d][0] + skylight_hsz[d]), (place_area.d[d][1] - skylight_hsz[d])), skylight_hsz[d], d);
 			}
 			if (skylight.intersects_xy(exclude)) continue; // don't block the light
-			subtract_cube_from_cubes(skylight, interior->ceilings);
+			unsigned num_int(0);
+			bool skip(0);
 			
-			for (tquad_with_ix_t &tq : roof_tquads) { // subtract from roof_tquads
-				// TODO
+			for (tquad_with_ix_t &tq : roof_tquads) { // triangle roof tquads aren't yet supported
+				if (!tq.get_bcube().intersects_xy(skylight)) continue;
+				if (tq.npts != 4) {skip = 1; break;}
+				++num_int;
 			}
+			if (skip || num_int > 1) continue; // skip triangles and multiple roof quad hits
+			vect_tquad_with_ix_t new_roof_tquads;
+			vect_cube_t tq_parts;
+
+			// subtract from roof_tquads
+			for (tquad_with_ix_t &tq : roof_tquads) {
+				cube_t const bc(tq.get_bcube());
+				if (!bc.intersects_xy(skylight)) {new_roof_tquads.push_back(tq); continue;} // keep full tquad
+				vector3d const normal(tq.get_norm());
+				assert(normal.x == 0.0 || normal.y == 0.0); // must be tilted in either X or Y
+				bool const dim(normal.x == 0.0);
+				float z1(0.0), z2(0.0);
+
+				for (unsigned n = 0; n < tq.npts; ++n) {
+					point const &p(tq.pts[n]);
+					if      (p[dim] == bc.d[dim][0]) {z1 = p.z;}
+					else if (p[dim] == bc.d[dim][1]) {z2 = p.z;}
+				}
+				float const dz((z2 - z1)/bc.get_sz_dim(dim));
+				if (dim) {subtract_cube_from_cube_transpose(bc, skylight, tq_parts);}
+				else {subtract_cube_from_cube(bc, skylight, tq_parts, 1);} // clear_out=1
+
+				for (cube_t const &c : tq_parts) {
+					tquad_with_ix_t tq2(tq); // same type
+
+					for (unsigned n = 0; n < tq2.npts; ++n) {
+						point &p(tq2.pts[n]);
+						c.clamp_pt_xy(p);
+						p.z = z1 + (p[dim] - bc.d[dim][0])*dz;
+					}
+					new_roof_tquads.push_back(tq2);
+				} // for c
+				// add top cap and interior sides
+
+			} // for tq
+			roof_tquads.swap(new_roof_tquads);
+			subtract_cube_from_cubes(skylight, interior->ceilings);
 			skylights.push_back(skylight);
 			return; // success/done
 		} // for N

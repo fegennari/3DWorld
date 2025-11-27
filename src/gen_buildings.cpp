@@ -1903,10 +1903,10 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 				if (cur.z > prev.z && cur.z == next.z) {top_dim = (cur.x == next.x); top_lo = min(cur[top_dim], next[top_dim]); top_hi = max(cur[top_dim], next[top_dim]);}
 			}
 			if (top_dim == 2 || top_dim != bot_dim) {
-				cout << "Bad house roof: " << TXT(top_dim) << TXT(bot_dim) << TXT(bcube.str()) << endl; // -464, -28 | -446, -13
+				cout << "Bad house roof: " << TXT(top_dim) << TXT(bot_dim) << TXT(bcube.str()) << endl;
 				assert(0);
 			}
-			if (top_lo == bot_lo || top_hi == bot_hi) { // peaked, maybe clipped at one end, not hipped
+			else if (top_lo == bot_lo || top_hi == bot_hi) { // peaked, maybe clipped at one end, not hipped
 				cube_t const tq_bcube(i->get_bcube());
 				cube_t tq_bcube_lower(tq_bcube);
 				tq_bcube_lower.z1() -= tq_bcube_lower.dz(); // extend downward so that it intersects the part below
@@ -1937,16 +1937,20 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 							}
 						} // for d
 					} // for n
+					float const top_lh[2] = {top_lo, top_hi}, bot_lh[2] = {bot_lo, bot_hi};
 					cube_t bot_edge_bcube;
-					bool either_end_extended(0);
-
+					bool either_end_extended(0), is_skylight_edge[2] = {0,0};
+					
+					for (unsigned d = 0; d < 2; ++d) {
+						for (cube_t const &s : skylights) {is_skylight_edge[d] |= (top_lh[d] == s.d[top_dim][!d]);}
+					}
 					for (unsigned n = 0; n < tq.npts; ++n) { // extend ends outward second
 						point &cur(tq.pts[n]);
-						float const top_lh[2] = {top_lo, top_hi}, bot_lh[2] = {bot_lo, bot_hi};
 
 						for (unsigned d = 0; d < 2; ++d) {
 							float const edge(top_lh[d]);
 							if (edge != bot_lh[d] || cur[top_dim] != edge) continue; // vert not at end of roof
+							if (is_skylight_edge[d]) continue; // don't extend at edge of skylight
 							float const extend_signed((d ? 1.0 : -1.0)*extend);
 
 							if (edge != bcube.d[top_dim][d]) {
@@ -1975,6 +1979,9 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 					for (unsigned d = 0; d < 2; ++d) {
 						float const old_edge(tq_bcube.d[!top_dim][d]), new_edge(new_bcube.d[!top_dim][d]);
 						if (fabs(old_edge - new_edge) < 0.5*extend) continue; // not extended in this dir (can only extend in one dir per tquad)
+						bool is_skylight_edge2(0);
+						for (cube_t const &s : skylights) {is_skylight_edge2 |= (old_edge == s.d[!top_dim][!d]);}
+						if (is_skylight_edge2) continue; // no gutter along skylight
 						tquad_with_ix_t bot_surf(4, tquad_with_ix_t::TYPE_TRIM);
 						UNROLL_4X(bot_surf.pts[i_].z = new_bcube.z1(););
 						bot_surf.pts[0][!top_dim] = bot_surf.pts[1][!top_dim] = old_edge;
