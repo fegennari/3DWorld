@@ -2357,6 +2357,21 @@ bool building_t::is_player_visible(person_t const &person, unsigned vis_test) co
 			}
 		}
 		else {has_los = 1;} // assume that we have a line of sight if we're in the same room and floor as the player (optimization)
+
+		if (has_los) { // check elevators and stairs walls; can ignore zvals since these are vertical cube blockers
+			for (elevator_t const &e : interior->elevators) {
+				if (!room.intersects(e)) continue;
+				cube_t test_cube(e);
+				test_cube.expand_by_xy(-player_radius);
+				if (test_cube.line_intersects(person.pos, target.pos)) return 0;
+			}
+			for (stairwell_t const &s : interior->stairwells) { // only U-shaped stairs have walls on the sides and ends that block all visibility
+				if (!s.is_u_shape() || !room.intersects(s)) continue;
+				cube_t test_cube(s);
+				test_cube.expand_by_xy(-player_radius);
+				if (test_cube.line_intersects(person.pos, target.pos)) return 0;
+			}
+		}
 	}
 	if (!has_los && same_room && floor_delta == 1 && person.pos.z > ground_floor_z1) {
 		// if the person and the player are on adjacent floors of the same room connected by stairs (and not in a parking garage), cheat and say they have a line of sight;
