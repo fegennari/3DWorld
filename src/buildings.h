@@ -3420,6 +3420,7 @@ template<typename T> void subtract_cube_from_cube_inplace(cube_t const &s, vecto
 template<typename T> void subtract_cubes_from_cube(cube_t const &c, vector<T> const &sub, vect_cube_t &out, vect_cube_t &out2, int zval_mode=0);
 template<typename T> bool subtract_cube_from_cubes(cube_t const &s, vector<T> &cubes, vect_cube_t *holes=nullptr, bool clip_in_z=0, bool include_adj=0, bool no_z_test=0);
 template<typename T> bool line_int_cubes(point const &p1, point const &p2, vector<T> const &cubes, cube_t const &line_bcube);
+void subtract_cube_from_cube_transpose(cube_t c, cube_t s, vect_cube_t &out);
 
 template<typename T> void subtract_cubes_from_cubes(T const &sub, vect_cube_t &cubes, bool clip_in_z=0) {
 	for (auto const &s : sub) {subtract_cube_from_cubes(s, cubes, nullptr, clip_in_z);} // no holes

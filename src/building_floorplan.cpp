@@ -2441,6 +2441,12 @@ template<typename T> void subtract_cube_from_cube(T const &c, cube_t const &s, v
 	if (c.x1() < s.x1()) {T C(c); max_eq(C.y1(), s.y1()); min_eq(C.y2(), s.y2()); C.x2() = s.x1(); out.push_back(C);} // left center
 	if (c.x2() > s.x2()) {T C(c); max_eq(C.y1(), s.y1()); min_eq(C.y2(), s.y2()); C.x1() = s.x2(); out.push_back(C);} // right center
 }
+void subtract_cube_from_cube_transpose(cube_t c, cube_t s, vect_cube_t &out) {
+	c.swap_dims(0, 1);
+	s.swap_dims(0, 1);
+	subtract_cube_from_cube(c, s, out, 1); // clear_out=1
+	for (cube_t &c : out) {c.swap_dims(0, 1);}
+}
 template<typename T> void subtract_cube_from_cube_inplace(cube_t const &s, vector<T> &cubes, unsigned &ix, unsigned &iter_end) { // Note: ix is an index to cubes
 	unsigned const prev_sz(cubes.size());
 	assert(ix < prev_sz);
