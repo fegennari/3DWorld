@@ -768,8 +768,9 @@ public:
 		player_health -= amt*(1.0f - 0.75f*min(drunkenness, 1.0f))*(1.0f - shrooms_amt.z);
 
 		if (poison_type > 0) {
-			if (!is_poisoned) { // first poisoning (by spider)
-				print_text_onscreen("You have been poisoned", DK_RED, 1.0, 2.5*TICKS_PER_SECOND, 0);
+			if (!is_poisoned) { // first poisoning (by spider/snake)
+				string const msg(string("You have been poisoned by ") + ((poison_type == 1) ? "spider" : "snake") + " venom");
+				print_text_onscreen(msg, DK_RED, 1.0, 2.5*TICKS_PER_SECOND, 0);
 				is_poisoned = 1;
 			}
 			poison_from_spider = (poison_type == 1);
