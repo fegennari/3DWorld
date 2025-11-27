@@ -694,7 +694,7 @@ public:
 
 		if (node.is_hallway) {
 			bool const min_dim(walk_area.dy() < walk_area.dx());
-			float const shrink(min(0.5f*radius, max(0.0f, 0.9f*0.5f*walk_area.get_sz_dim(min_dim)))); // shrink by an extra half radius if hallway is wide enough
+			float const shrink(min(0.5f*radius, max(0.0f, 0.9f*0.5f*walk_area.get_sz_dim(min_dim)))); // shrink by up to an extra half radius if hallway is wide enough
 			walk_area.expand_in_dim(min_dim, -shrink);
 		}
 		return walk_area;
@@ -715,6 +715,7 @@ public:
 			int const came_from(state[n].came_from_ix);
 			bool const is_first_pt(path.empty());
 			cube_t const walk_area(calc_walkable_room_area(node, radius));
+			bool fixed(0);
 			
 			if (is_first_pt) { // last point in path (first point in reverse path)
 				assert(n == start_ix);
@@ -765,7 +766,7 @@ public:
 				assert(prev.z == next.z);
 				point const p1(closest_room_pt(walk_area, prev)), p2(closest_room_pt(walk_area, next));
 				//assert(p1 != p2); // does this always hold?
-				path.add(p1); // walk out of doorway and into room
+				path.add(p1); // walk from room into doorway
 				
 				if (!connect_room_endpoints(avoid, building, walk_area, n, p1, p2, radius, path, keepout, rgen)) { // unreachable
 					path.clear();
@@ -773,9 +774,10 @@ public:
 					//disconnect_room_pair(n, came_from); // ???
 					return 0;
 				}
-				path.add(p2); // walk from room into doorway
+				fixed = 1; // make path from/to door fixed when entering a room to avoid diagonal shortcuts through a doorway that clip through the door frame
+				path.add(p2, fixed); // walk from doorway into room
 			}
-			path.add(next); // doorway
+			path.add(next, fixed); // walk to doorway
 			n = came_from;
 		} // end while()
 		return 0; // never gets here
