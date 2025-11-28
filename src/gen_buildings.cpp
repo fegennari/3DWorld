@@ -1887,7 +1887,7 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 			bdraw.add_tquad(*this, *i, bcube, building_texture_mgr.get_solarp_tid(), colorRGBA(0.6, 0.6, 0.6)); // panel is too bright compared to the roof, use a darker color
 		}
 		else if (i->type == tquad_with_ix_t::TYPE_SKYLIGHT_CAP) continue; // drawn in get_all_drawn_window_verts()
-		else if (i->is_untextured()) {
+		else if (i->is_trim()) {
 			colorRGBA const color((i->type == tquad_with_ix_t::TYPE_MET_TRIM) ? LT_GRAY : WHITE); // gutters and skylight interior=white, solar panel edges=light gray
 			bdraw.add_tquad(*this, *i, bcube, tid_nm_pair_t(NO_SHADOW_WHITE_TEX), color); // untextured, no shadows
 		}
@@ -2395,6 +2395,16 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 	if (has_attic()) {
 		// add inside surface of attic access hole; could be draw as room geom if needed
 		bdraw.add_section(*this, 0, interior->attic_access, mat.wall_tex, mat.wall_color, 3, 0, 0, 1, 0, 0.0, 0, 1.0, 1); // no AO; X/Y dims only, inverted normals
+
+		if (!skylights.empty()) { // add interior of skylight trim
+			for (tquad_with_ix_t const &tq : roof_tquads) {
+				if (tq.type != tquad_with_ix_t::TYPE_WHITE_TRIM)   continue;
+				if (!tq.get_bcube().intersects(skylights.front())) continue;
+				tquad_with_ix_t tq_rev(tq);
+				tq_rev.reverse_pts(); // draw outside faces
+				bdraw.add_tquad(*this, tq_rev, bcube, tid_nm_pair_t(NO_SHADOW_WHITE_TEX), WHITE); // untextured, no shadows
+			}
+		}
 	}
 	// Note: interior doors are drawn as part of room_geom
 	bdraw.end_draw_range_capture(interior->draw_range); // 80MB, 394MB, 836ms
@@ -2610,7 +2620,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 				if (tq.type != tquad_with_ix_t::TYPE_SKYLIGHT_CAP) continue;
 				bdraw.add_tquad(*this, tq, bcube, tp, skylight_color); // untextured
 				tquad_with_ix_t tq_rev(tq);
-				std::reverse(tq_rev.pts, tq_rev.pts+tq_rev.npts);
+				tq_rev.reverse_pts();
 				bdraw.add_tquad(*this, tq_rev, bcube, tp, skylight_color); // draw again reversed, so that bottom is visible from inside the building
 			}
 		}

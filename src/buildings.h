@@ -469,11 +469,13 @@ struct tquad_with_ix_t : public tquad_t {
 	bool is_interior_door() const {return (type == TYPE_IDOOR || type == TYPE_IDOOR_IN || type == TYPE_ODOOR || type == TYPE_ODOOR_IN);}
 	bool is_inside_face  () const {return (type == TYPE_IDOOR_IN || type == TYPE_ODOOR_IN || type == TYPE_RDOOR_IN);}
 	bool is_rooftop_door () const {return (type == TYPE_RDOOR || type == TYPE_RDOOR2 || type == TYPE_RDOOR_IN);}
-	bool is_untextured   () const {return (type == TYPE_MET_TRIM || type == TYPE_WHITE_TRIM || type == TYPE_SKYLIGHT_CAP);}
+	bool is_trim         () const {return (type == TYPE_MET_TRIM || type == TYPE_WHITE_TRIM);}
+	bool is_untextured   () const {return (is_trim() || type == TYPE_SKYLIGHT_CAP);}
 
 	unsigned type;
 	tquad_with_ix_t(unsigned npts_=0, unsigned type_=TYPE_ROOF_PEAK) : tquad_t(npts_), type(type_) {}
 	tquad_with_ix_t(tquad_t const &t, unsigned type_) : tquad_t(t), type(type_) {}
+	void reverse_pts() {std::reverse(pts, pts+npts);}
 };
 typedef vector<tquad_with_ix_t> vect_tquad_with_ix_t;
 

@@ -1799,7 +1799,8 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 	// Note: zval passed by reference due to add_flooring()
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 
-	if (!skylights.empty()) { // check for skylights; should we allow bathroom stalls (with ceilings?) even if there's a skylight?
+	if (!is_house && !skylights.empty()) { // check for skylights if it's an office building; houses can have bathroom skylights (my old house did)
+		// should we allow bathroom stalls (with ceilings?) even if there's a skylight?
 		cube_t test_cube(room);
 		set_cube_zvals(test_cube, zval, zval+floor_spacing);
 		if (check_skylight_intersection(test_cube)) return 0;

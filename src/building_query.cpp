@@ -626,16 +626,17 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 				}
 				else {had_coll |= sphere_cube_int_update_pos(pos2, radius, (i + xlate), p_last2, xy_only, cnorm_ptr);} // treat as cubes
 			} // for i
-			for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {
+			for (tquad_with_ix_t const &tq : roof_tquads) {
+				if (tq.is_trim()) continue;
 				point const pos_xlate(pos2 - xlate);
 
 				if (check_interior && had_coll && pos2.z - xlate.z > part_z2) { // player standing on top of a building with a sloped roof or roof access cover
-					if (point_in_polygon_2d(pos_xlate.x, pos_xlate.y, i->pts, i->npts)) {
-						vector3d const normal(i->get_norm());
+					if (point_in_polygon_2d(pos_xlate.x, pos_xlate.y, tq.pts, tq.npts)) {
+						vector3d const normal(tq.get_norm());
 						if (normal.z == 0.0) continue; // skip vertical sides as the player can't stand on them
-						float const rdist(dot_product_ptv(normal, pos_xlate, i->pts[0]));
+						float const rdist(dot_product_ptv(normal, pos_xlate, tq.pts[0]));
 
-						if (draw_building_interiors && i->type == tquad_with_ix_t::TYPE_ROOF_ACC) { // don't allow walking on roof access tquads
+						if (draw_building_interiors && tq.type == tquad_with_ix_t::TYPE_ROOF_ACC) { // don't allow walking on roof access tquads
 							if (rdist < -radius*normal.z) continue; // player is below this tquad
 							else {pos2.x = p_last2.x; pos2.y = p_last2.y; break;} // block the player from walking here (can only walk through raised opening)
 						}
@@ -643,10 +644,10 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 					}
 				}
 				else { // normal case for bouncing object, etc.
-					vector3d const normal(i->get_norm());
-					float const rdist(dot_product_ptv(normal, pos_xlate, i->pts[0]));
+					vector3d const normal(tq.get_norm());
+					float const rdist(dot_product_ptv(normal, pos_xlate, tq.pts[0]));
 
-					if (fabs(rdist) < radius && sphere_poly_intersect(i->pts, i->npts, pos_xlate, normal, rdist, radius)) {
+					if (fabs(rdist) < radius && sphere_poly_intersect(tq.pts, tq.npts, pos_xlate, normal, rdist, radius)) {
 						pos2 += normal*(radius - rdist); // update current pos
 						if (cnorm_ptr) {*cnorm_ptr = ((normal.z < 0.0) ? -1.0 : 1.0)*normal;} // make sure normal points up
 						had_coll = 1; // flag as colliding
@@ -1883,6 +1884,13 @@ bool building_interior_t::check_sphere_coll_walls_elevators_doors(building_t con
 			had_coll |= sphere_cube_int_update_pos_zval(pos, obj_z, radius, gate, p_last, cnorm);
 		}
 	}
+	if (!attic_access.is_all_zeros() && obj_z > attic_access.z2()) { // point maybe in attic
+		for (cube_t const &sl : building.skylights) { // house skylights work like walls
+			cube_t sl_ext(sl);
+			sl_ext.z2() = building.bcube.z2(); // extend upward
+			had_coll |= sphere_cube_int_update_pos_zval(pos, obj_z, radius, sl_ext, p_last, cnorm);
+		}
+	}
 	if (conn_info) { // check for collision with closed door separating the adjacent building at the end of the connecting room
 		door_t const *const conn_door(conn_info->get_door_to_conn_part(building, pos));
 		if (conn_door != nullptr) {had_coll |= check_door_coll(building, *conn_door, pos, p_last, radius, obj_z, check_open_doors, cnorm);}
@@ -2129,8 +2137,9 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, float &t,
 	if (check_line_int_cubes(details, p1r, p2r, t)) {coll = BLDG_COLL_DETAIL;} // details cube
 
 	if (!no_coll_pt || !vert) { // vert line already tested building cylins/cubes, and marked coll roof, no need to test again unless we need correct coll_pt t-val
-		for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {
-			if (line_poly_intersect(p1r, p2r, i->pts, i->npts, i->get_norm(), tmin) && tmin < t) {t = tmin; coll = BLDG_COLL_ROOF;} // roof quad
+		for (tquad_with_ix_t const &tq : roof_tquads) {
+			if (tq.is_trim()) continue;
+			if (line_poly_intersect(p1r, p2r, tq.pts, tq.npts, tq.get_norm(), tmin) && tmin < t) {t = tmin; coll = BLDG_COLL_ROOF;} // roof quad
 		}
 	}
 	if (!vert || check_non_coll) { // don't need to check fences for vertical collisions since they're horizontal blockers

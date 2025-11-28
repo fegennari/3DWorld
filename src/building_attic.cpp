@@ -262,6 +262,7 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 	cube_t const avoid(get_attic_access_door_avoid());
 	vect_cube_t avoid_cubes;
 	avoid_cubes.push_back(avoid);
+	vector_add_to(skylights, avoid_cubes);
 
 	// add light(s)
 	cube_t const &part(get_part_for_room(room)); // Note: assumes attic is a single part
@@ -650,7 +651,7 @@ void add_attic_roof_geom(rgeom_mat_t &mat, colorRGBA const &color, float thickne
 	for (tquad_with_ix_t const &i : b.roof_tquads) {
 		if (!b.is_attic_roof(i, 0)) continue; // type_roof_only=0
 		tquad_with_ix_t tq(i);
-		std::reverse(tq.pts, tq.pts+tq.npts); // reverse the normal and winding order
+		tq.reverse_pts(); // reverse the normal and winding order
 		vector3d const normal(tq.get_norm());
 		bool const is_roof(tq.is_roof());
 		
@@ -668,13 +669,15 @@ void add_attic_roof_geom(rgeom_mat_t &mat, colorRGBA const &color, float thickne
 			vert.v = tq.pts[i];
 
 			if (is_roof) { // roof
-				// shrink bottom edge by thickness to avoid clipping through the floor below;
-				// since the quad is a loop, we can check both the previous and next points to see if they're above us, and use the vector delta for the shift
-				vector3d shift_dir;
-				point const &prev(tq.pts[(i+tq.npts-1)%tq.npts]), &next(tq.pts[(i+1)%tq.npts]);
-				if      (vert.v.z < prev.z) {shift_dir = prev - vert.v;}
-				else if (vert.v.z < next.z) {shift_dir = next - vert.v;}
-				if (shift_dir.z > 0.0) {vert.v += shift_dir*(thickness/shift_dir.z);}
+				if (tq.get_bcube().z1() <= b.interior->attic_access.z2()) { // tquad ends at or below attic floor
+					// shrink bottom edge by thickness to avoid clipping through the floor below;
+					// since the quad is a loop, we can check both the previous and next points to see if they're above us, and use the vector delta for the shift
+					vector3d shift_dir;
+					point const &prev(tq.pts[(i+tq.npts-1)%tq.npts]), &next(tq.pts[(i+1)%tq.npts]);
+					if      (vert.v.z < prev.z) {shift_dir = prev - vert.v;}
+					else if (vert.v.z < next.z) {shift_dir = next - vert.v;}
+					if (shift_dir.z > 0.0) {vert.v += shift_dir*(thickness/shift_dir.z);}
+				}
 				bool const swap_tc_xy((fabs(normal.x) < fabs(normal.y)) ^ swap_st);
 				vert.t[!swap_tc_xy] = vert.v.x*tsx;
 				vert.t[ swap_tc_xy] = vert.v.y*tsy;
@@ -1183,7 +1186,8 @@ void building_t::maybe_add_skylight(rand_gen_t &rgen) { // for office building
 }
 
 void building_t::add_house_skylight(rand_gen_t rgen) {
-	if (!is_house || !interior || interior->rooms.empty() || has_attic()) return; // houses only; can't pass skylight through attic
+	if (!is_house || !interior || interior->rooms.empty()) return; // houses only
+	if (has_attic()) return; // sort of works; shaft may be tall, lighting isn't really correct, and may block attic area; disabled for now
 	if (roof_type == ROOF_TYPE_HIPPED) return; // not handling hipped roof/triangles
 	float const floor_spacing(get_window_vspace()), fc_thick(get_fc_thickness()), light_hwidth(0.1*floor_spacing);
 	vector2d skylight_sz;
@@ -1191,7 +1195,7 @@ void building_t::add_house_skylight(rand_gen_t rgen) {
 	vector2d skylight_hsz(0.5*skylight_sz);
 
 	for (unsigned n = 0; n < 4; ++n) { // select room cands
-		room_t const &room(get_room(rgen.rand() % interior->rooms.size()));
+		room_t &room(get_room(rgen.rand() % interior->rooms.size()));
 		if (room.part_id >= real_num_parts) continue; // skip garage/shed/basement
 		cube_t const &part(parts[room.part_id]);
 		if (real_num_parts == 2 && part.z2() < parts[1-room.part_id].z2())  continue; // upper/taller part only
@@ -1274,6 +1278,8 @@ void building_t::add_house_skylight(rand_gen_t rgen) {
 			} // for tq
 			roof_tquads.swap(new_roof_tquads);
 			subtract_cube_from_cubes(skylight, interior->ceilings);
+			if (has_attic()) {subtract_cube_from_cubes(skylight, interior->floors);} // subtract from attic floor as well
+			room.set_has_skylight();
 			skylights.push_back(skylight);
 			return; // success/done
 		} // for N
