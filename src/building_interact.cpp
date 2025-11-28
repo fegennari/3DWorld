@@ -151,14 +151,15 @@ bool building_t::toggle_walkway_lights(point const &pos) {
 
 void building_t::toggle_light_object(room_object_t const &light, point const &sound_pos) { // called by the player
 	assert(has_room_geom());
-	bool const in_jail(light.z1() < ground_floor_z1 && get_room(light.room_id).get_room_type(0) == RTYPE_JAIL), in_basement(light.z1() < ground_floor_z1);
+	bool const in_jail(light.z1() < ground_floor_z1 && get_room(light.room_id).get_room_type(0) == RTYPE_JAIL);
+	bool const in_basement(light.z1() < ground_floor_z1), in_closet(light.in_closet());
 	float const floor_spacing(get_window_vspace());
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
-	bool updated(0), is_lamp(1), is_first_light(0), is_lit(0);
+	bool updated(0), is_lamp(1), is_first_light(1), is_lit(0);
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) { // toggle all lights on this floor of this room
-		if (i->room_id != light.room_id)         continue; // can we break here if we passed the room?
-		if (light.in_closet() != i->in_closet()) continue; // closet + room light are toggled independently
+		if (i->room_id != light.room_id) continue; // can we break here if we passed the room?
+		if (in_closet != i->in_closet()) continue; // closet + room light are toggled independently
 
 		if (i->type == TYPE_SWITCH && (in_basement || (i->z1() < light.z1() && i->z1() > light.z1() - floor_spacing))) { // toggle switch state
 			if (is_lit) {i->flags |= RO_FLAG_OPEN;} else {i->flags &= ~RO_FLAG_OPEN;} // light should be seen and updated before the switch
@@ -173,7 +174,7 @@ void building_t::toggle_light_object(room_object_t const &light, point const &so
 		updated = 1;
 		if (i->type == TYPE_LAMP) continue; // lamps don't affect room object ambient lighting, and don't require regenerating the vertex data, so skip the step below
 		if (i->is_broken2()) {i->light_amt = tfticks + 2.0*fticks;} // next flicker is next frame to avoid capturing the reflection cube map with the light on
-		else { // no object state change for a broken light
+		else if (!in_closet) { // no object state change for a broken light
 			if (is_first_light) {set_obj_lit_state_to(light.room_id, light.z2(), i->is_lit());} // update object lighting flags as well, for first non-lamp light
 			is_first_light = 0;
 		}

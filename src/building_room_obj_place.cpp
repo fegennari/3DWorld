@@ -1114,7 +1114,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t &bl
 	unsigned closet_obj_id(0);
 	
 	if (!is_store) { // add closet if not a mall furniture store
-		placed_closet = add_closet_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, RTYPE_BED, bed_obj_ix, front_clearance, closet_obj_id, light_ix_assign);
+		placed_closet = add_closet_to_room(rgen, room, zval, room_id, objs_start, RTYPE_BED, bed_obj_ix, front_clearance, closet_obj_id, light_ix_assign);
 	}
 	// dresser
 	float const ds_height(rgen.rand_uniform(0.26, 0.32)*window_vspacing), ds_depth(rgen.rand_uniform(0.20, 0.25)*window_vspacing), ds_width(rgen.rand_uniform(0.6, 0.9)*window_vspacing);
@@ -1281,13 +1281,14 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t &bl
 	return 1; // success
 } // end add_bedroom_objs()
 
-bool building_t::add_closet_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
+bool building_t::add_closet_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start,
 	unsigned room_type, unsigned bed_obj_ix, float front_clearance, unsigned &closet_obj_id, light_ix_assign_t &light_ix_assign)
 {
 	bool const is_bedroom(room_type == RTYPE_BED); // otherwise a kitchen pantry
 	float const window_vspacing(get_window_vspace()), doorway_width(get_doorway_width()), floor_thickness(get_floor_thickness()), window_h_border(get_window_h_border());
 	float const closet_min_depth((is_bedroom ? 0.65 : 0.8)*doorway_width), closet_min_width(1.5*doorway_width);
 	float const min_dist_to_wall(1.0*doorway_width), min_bed_space(front_clearance);
+	float const tot_light_amt=1.0; // expanded closed items aren't updated when room lights change, and closet lights don't update anything, so set to 1.0
 	unsigned const first_corner(rgen.rand() & 3);
 	bool const first_dim(rgen.rand_bool());
 	cube_t const &part(get_part_for_room(room));
@@ -2582,7 +2583,7 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 	if (residential && min(room.dx(), room.dy()) > 2.0*vspace) { // add a pantry if large, which is of type TYPE_CLOSET
 		float const clearance(get_min_front_clearance_inc_people());
 		unsigned closet_obj_id(0); // unused
-		add_closet_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, RTYPE_KITCHEN, 0, clearance, closet_obj_id, light_ix_assign); // bed_obj_ix=0 (not set)
+		add_closet_to_room(rgen, room, zval, room_id, objs_start, RTYPE_KITCHEN, 0, clearance, closet_obj_id, light_ix_assign); // bed_obj_ix=0 (not set)
 	}
 	// place a fridge
 	unsigned const fridge_obj_ix(objs.size());
