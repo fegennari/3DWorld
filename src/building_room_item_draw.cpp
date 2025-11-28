@@ -671,6 +671,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		case TYPE_LOCKER:    add_locker(*i); break;
 		case TYPE_PARK_GATE: add_parking_gate (*i); break;
 		case TYPE_CONV_BELT: add_conveyor_belt(*i, 0); break; // draw_dynamic=0
+		case TYPE_KITCH_APP: add_kitchen_appliance(*i); break;
 		case TYPE_COAT_RACK: add_coat_rack(*i, tscale); break;
 		//case TYPE_FRIDGE: if (i->is_open()) {} break; // draw open fridge?
 		case TYPE_ELEVATOR: break; // not handled here
@@ -755,6 +756,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_WINE_RACK: add_wine_rack(c, 0, 1, tscale); break;
 		case TYPE_BOTTLE:    add_bottle   (c); break;
 		case TYPE_DRINK_CAN: add_drink_can(c); break;
+		case TYPE_JAR:       add_jar      (c); break;
 		case TYPE_VASE:      add_vase     (c); break;
 		case TYPE_URN:       add_vase     (c); break;
 		case TYPE_PAPER:     add_paper    (c); break;

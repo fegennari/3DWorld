@@ -2242,6 +2242,21 @@ void building_room_geom_t::add_drink_can(room_object_t const &c) {
 	}
 }
 
+void building_room_geom_t::add_jar(room_object_t const &c) {
+	tid_nm_pair_t tex(-1, 1.0, false, 0, 1); // unshadowed, no_reflect=1
+	tex.set_specular(0.5, 80.0);
+	rgeom_mat_t &glass_mat(get_material(tex, 0, 0, 1, 1)); // dynamic=0, small=1, transparent
+	glass_mat.add_vcylin_to_verts(c, apply_light_color(c, GLASS_COLOR), 0, 0, 1); // glass jar: no ends, two sided
+	// add the spice
+	float const glass_thick(0.04*c.get_radius());
+	cube_t spice(c);
+	spice.z2() -= (0.25 + 0.5*(c.item_flags % 100)/100.0)*c.dz();
+	spice.z1() += glass_thick;
+	if (spice.dz() <= 0.0) return; // shouldn't be possible
+	spice.expand_by_xy(-glass_thick); // small shrink
+	get_untextured_material(1, 0, 1, 0, 0, 1).add_vcylin_to_verts(spice, apply_light_color(c), 0, 1); // shadowed; draw sides and top
+}
+
 // functions reused from snake drawing
 void draw_segment(rgeom_mat_t &mat, point const &p1, point const &p2, float radius1, float radius2,
 	float seg_ix, float tscale_x, float tscale_y, color_wrapper const &cw, unsigned ndiv, unsigned &data_pos);
@@ -7080,6 +7095,11 @@ void building_room_geom_t::add_conveyor_belt(room_object_t const &c, bool draw_d
 			roller_mat.add_ortho_cylin_to_verts(roller, roller_color, !dim, 0, 0); // draw sides only
 		}
 	}
+}
+
+void building_room_geom_t::add_kitchen_appliance(room_object_t const &c) {
+	//unsigned const type(c.item_flags % NUM_KC_APP);
+	// TODO
 }
 
 void add_grid_of_bars(rgeom_mat_t &mat, colorRGBA const &color, cube_t const &c, unsigned num_vbars, unsigned num_hbars, float vbar_hthick,

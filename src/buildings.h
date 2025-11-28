@@ -76,6 +76,7 @@ unsigned const NUM_PFLOAT_COLORS  = 6;
 unsigned const NUM_HARDHAT_COLORS = 9;
 unsigned const NUM_HANDLE_COLORS  = 4;
 unsigned const NUM_SOAP_COLORS    = 5;
+unsigned const NUM_SPICE_COLORS   = 7;
 unsigned const NUM_MALL_CHAIR_COLORS  = 5;
 unsigned const NUM_SP_EMISSIVE_COLORS = 2;
 colorRGBA const GD_SP_COLOR(0.5, 1.0, 1.0); // used for glow-in-the-dark spraypaint
@@ -101,6 +102,7 @@ colorRGBA const pfloat_colors [NUM_PFLOAT_COLORS ] = {WHITE, YELLOW, PINK, GREEN
 colorRGBA const hardhat_colors[NUM_HARDHAT_COLORS] = {YELLOW, YELLOW, YELLOW, YELLOW, ORANGE, ORANGE, RED, WHITE, colorRGBA(0.25, 0.25, 1.0, 1.0)};
 colorRGBA const handle_colors [NUM_HANDLE_COLORS ] = {DK_RED, colorRGBA(0.1, 0.2, 0.4), colorRGBA(0.05, 0.3, 0.05), BKGRAY};
 colorRGBA const soap_colors   [NUM_SOAP_COLORS   ] = {WHITE, cream, vlt_yellow, colorRGBA(1.0, 0.8, 0.6), colorRGBA(0.7, 1.0, 0.7)};
+colorRGBA const spice_colors  [NUM_SPICE_COLORS  ] = {WHITE, BLACK, LT_BROWN, BROWN, DK_BROWN, DK_GREEN, OLIVE};
 colorRGBA const mall_chair_colors[NUM_MALL_CHAIR_COLORS] = {WHITE, LT_GRAY, GRAY, ORANGE, LT_BROWN};
 colorRGBA const LAMP_COLOR(1.0, 0.8, 0.6); // soft white
 colorRGBA const WALL_LAMP_COLOR(1.0, 0.9, 0.8);
@@ -521,7 +523,7 @@ enum { // room object types
 	TYPE_CATWALK, TYPE_VANITY, TYPE_CHEM_TANK, TYPE_HVAC_UNIT, TYPE_WARN_LIGHT, TYPE_GAUGE, TYPE_PALLET, TYPE_SHELF_WALL, TYPE_VENDING, TYPE_MED_CAB,
 	TYPE_LOCKER, TYPE_TESTTUBE, TYPE_HARDHAT, TYPE_TOPHAT, TYPE_COMP_MOUSE, TYPE_PARK_GATE, TYPE_CONV_BELT, TYPE_JAIL_BARS, TYPE_STICK_NOTE, TYPE_GYM_WEIGHT,
 	TYPE_FOOD_TRAY, TYPE_BAR_SOAP, TYPE_COAT_RACK, TYPE_O_SHOWER, TYPE_CARD_DECK, TYPE_CIGARETTE, TYPE_BULLETS, TYPE_CEIL_TILE, TYPE_WALL_GAP, TYPE_MUSHROOM,
-	TYPE_SHELL_CASE, TYPE_PAN_SHELF,
+	TYPE_SHELL_CASE, TYPE_PAN_SHELF, TYPE_JAR, TYPE_KITCH_APP,
 	/* these next ones are all 3D models - see logic in room_object_t::is_obj_model_type() */
 	TYPE_TOILET, TYPE_SINK, TYPE_TUB, TYPE_FRIDGE, TYPE_STOVE, TYPE_TV, TYPE_MONITOR, TYPE_COUCH, TYPE_OFF_CHAIR, TYPE_URINAL,
 	TYPE_LAMP, TYPE_WASHER, TYPE_DRYER, TYPE_KEY, TYPE_HANGER, TYPE_CLOTHES, TYPE_FESCAPE, TYPE_WALL_LAMP, TYPE_CUP, TYPE_TOASTER,
@@ -535,6 +537,9 @@ enum { // room object types
 	TYPE_RAT, TYPE_ROACH, TYPE_SPIDER, TYPE_SNAKE, TYPE_INSECT, TYPE_FISH, TYPE_BIRD,
 	NUM_ROBJ_TYPES};
 typedef uint8_t room_object;
+
+// commercial kitchen appliances
+enum {KCA_GRILL=0, KCA_OVEN, KCA_FRYER, KCA_FREEZER, NUM_KC_APP};
 
 // room object and stairs shapes
 enum {SHAPE_CUBE=0, SHAPE_CYLIN, SHAPE_SPHERE, SHAPE_STAIRS_U, SHAPE_STAIRS_L, SHAPE_STAIRS_FAN, SHAPE_TALL, SHAPE_SHORT, SHAPE_ANGLED, SHAPE_VERT_TORUS, SHAPE_ROUNDED_CUBE};
@@ -1375,6 +1380,7 @@ struct building_room_geom_t {
 	void add_shower_tub(room_object_t const &c, tid_nm_pair_t const &wall_tex, colorRGBA const &trim_color, float tscale, bool inc_lg, bool inc_sm);
 	void add_bottle(room_object_t const &c, bool add_bottom=0, float label_rot_angle=0.0);
 	void add_drink_can(room_object_t const &c);
+	void add_jar(room_object_t const &c);
 	void add_vase(room_object_t const &c);
 	void add_paper(room_object_t const &c);
 	static void add_pen_pencil_marker_to_material(room_object_t const &c_, rgeom_mat_t &mat);
@@ -1431,6 +1437,7 @@ struct building_room_geom_t {
 	void add_vent_fan_frame(room_object_t const &c);
 	void add_parking_gate (room_object_t const &c);
 	void add_conveyor_belt(room_object_t const &c, bool draw_dynamic);
+	void add_kitchen_appliance(room_object_t const &c);
 	void add_store_gate(cube_t const &c, bool dim, float open_amt);
 	void add_jail_bars(room_object_t const &c);
 	void add_theft_sensor(room_object_t const &c, bool alarm_mode=0);

@@ -231,6 +231,8 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_MUSHROOM  ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 0.0,   0.0,   "mushroom");
 	bldg_obj_types[TYPE_SHELL_CASE] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 0.0,   0.01,  "shell casing");
 	bldg_obj_types[TYPE_PAN_SHELF ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 2, 0.0,   0.0,   "pantry shelf");
+	bldg_obj_types[TYPE_JAR       ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 5.0,   0.25,  "jar of spice");
+	bldg_obj_types[TYPE_KITCH_APP ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1, 1000.0,200.0, "kitchen appliance"); // for commercial kitchens: grill, oven, deep fryer, freezer, etc.
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");
@@ -886,7 +888,7 @@ public:
 			type != TYPE_FEXT_MOUNT && type != TYPE_FEXT_SIGN && type != TYPE_PIZZA_BOX && type != TYPE_PIZZA_TOP && type != TYPE_POOL_BALL && type != TYPE_DRINK_CAN &&
 			type != TYPE_KEY && type != TYPE_HANGER && type != TYPE_PADLOCK && type != TYPE_BANANA && type != TYPE_BAN_PEEL && type != TYPE_ELEC_WIRE && type != TYPE_ERASER &&
 			type != TYPE_TESTTUBE && type != TYPE_APPLE && type != TYPE_FOOD_BOX && type != TYPE_BAR_SOAP && type != TYPE_CARD_DECK && type != TYPE_TRASH &&
-			type != TYPE_BULLETS && type != TYPE_SHELL_CASE && type != TYPE_CIGARETTE)
+			type != TYPE_BULLETS && type != TYPE_SHELL_CASE && type != TYPE_CIGARETTE && type != TYPE_JAR)
 		{
 			rooms_stolen_from.insert(obj.room_id); // only if was_expanded?
 		}

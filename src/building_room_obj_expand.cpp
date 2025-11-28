@@ -229,6 +229,7 @@ void add_rows_of_vcylinders(room_object_t const &c, cube_t const &region, float 
 				else if (type == TYPE_LAMP      ) {obj.color = lamp_colors[rgen.rand()%NUM_LAMP_COLORS];}
 				else if (type == TYPE_BUCKET    ) {obj.color = LT_GRAY;}
 				else if (type == TYPE_PAN       ) {obj.color = DK_GRAY;}
+				else if (type == TYPE_JAR       ) {obj.color = spice_colors[rgen.rand()%NUM_SPICE_COLORS]; obj.item_flags = rgen.rand();} // random spice level and color
 				objects.push_back(obj);
 				if (type == TYPE_VASE) {objects.back().z2() -= 0.1*rgen.rand_float()*height;} // add a bit of height variation
 			}
@@ -426,22 +427,27 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vect_room_
 		}
 		for (unsigned n = 0; n < num_shelf_levels; ++n) {
 			for (unsigned s = 0; s < 3; ++s) {
+				bool const back(s == 0), top(n+1 == num_shelf_levels);
 				cube_t shelf(shelves[s]);
 				set_wall_width(shelf, (c.z1() + (n+1)*shelf_dz), shelf_hthick, 2); // set zvals
 				objects.emplace_back(shelf, TYPE_PAN_SHELF, c.room_id, sdims[s], sdirs[s], base_flags, c.light_amt, SHAPE_CUBE, WHITE);	
 				// populate shelf with food items
+				set_cube_zvals(shelf, shelf.z2(), shelf.z2()+height_val); // space above shelf
 				room_object_t c2(c);
 				c2.dim = sdims[s]; c2.dir = sdirs[s]; // required for correct item orient on side shelves
-				float const shelf_depth(shelf.get_sz_dim(c2.dim)), rand_val(rgen.rand_float()), rv1((s == 0) ? 0.7 : 0.6), rv2((s == 0) ? 1.0 : 0.8);
+				float const shelf_depth(shelf.get_sz_dim(c2.dim)), rand_val(rgen.rand_float());
+				float const rv1(back ? 0.7 : 0.4), rv2(back ? 1.0 : 0.6), rv3(back ? 1.0 : 0.8);
 				if      (rand_val < rv1) {add_rows_of_food_boxes     (rgen, c2, shelf, 0.7*height_val, shelf_depth, c2.dir, objects);} // food boxes; more likely
 				else if (rand_val < rv2) {add_rows_of_bottles_or_cans(rgen, c2, shelf, 0.5*height_val, shelf_depth,         objects);} // bottles or cans
+				else if (rand_val < rv3 && !top) { // jars
+					float const oheight(0.2*height_val), radius(min(0.45f*shelf_depth, 0.3f*oheight));
+					add_rows_of_vcylinders(c2, shelf, radius, oheight, 0.2, TYPE_JAR, 1, flags, objects, rgen); // 1 column
+				}
 				else if (rand_val < 0.9) { // plates; can't add cups because they're models
 					unsigned const num_plates(2); // up to 2 stacks
-					cube_t plate_area(shelf);
-					set_cube_zvals(plate_area, shelf.z2(), shelf.z2()+height_val);
-					float const plate_radius(rgen.rand_uniform(0.40, 0.48)*plate_area.get_size().get_min_val());
+					float const plate_radius(rgen.rand_uniform(0.40, 0.48)*shelf.get_size().get_min_val());
 					blockers.clear();
-					for (unsigned n = 0; n < num_plates; ++n) {add_stack_of_plates(plate_area, plate_radius, c.room_id, c.light_amt, flags, rgen, blockers, objects);}
+					for (unsigned n = 0; n < num_plates; ++n) {add_stack_of_plates(shelf, plate_radius, c.room_id, c.light_amt, flags, rgen, blockers, objects);}
 				}
 				else { // paper towels
 					float const oheight(0.67*height_val), radius(min(0.45f*shelf_depth, 0.25f*oheight));
