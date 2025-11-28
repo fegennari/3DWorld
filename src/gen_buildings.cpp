@@ -4319,6 +4319,7 @@ public:
 						this_frame_player_in_attic    =  (b.point_in_attic(camera_bs) ? (b.has_attic_window ? 1 : 2) : 0);
 						this_frame_player_in_water    =   b.point_in_water_area((camera_bs - get_bldg_player_height()*plus_z), 0); // full_room_height=0
 						if (this_frame_player_in_water && b.point_in_water_area(camera_bs, 0)) {this_frame_player_in_water = 2;} // full_room_height=0; test for underwater
+						do_zoom = 0; // doesn't work
 						
 						if (!camera_surf_collide) { // handle player clipping/flying into or out of an elevator
 							if (!b.point_in_elevator(camera_bs, 1)) {player_in_elevator = 0;} // check_elevator_car=1
