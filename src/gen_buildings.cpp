@@ -1886,7 +1886,7 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 		else if (i->type == tquad_with_ix_t::TYPE_SOLAR) {
 			bdraw.add_tquad(*this, *i, bcube, building_texture_mgr.get_solarp_tid(), colorRGBA(0.6, 0.6, 0.6)); // panel is too bright compared to the roof, use a darker color
 		}
-		else if (i->type == tquad_with_ix_t::TYPE_SKYLIGHT_CAP) continue; // not drawn here
+		else if (i->type == tquad_with_ix_t::TYPE_SKYLIGHT_CAP) continue; // drawn in get_all_drawn_window_verts()
 		else if (i->is_untextured()) {
 			colorRGBA const color((i->type == tquad_with_ix_t::TYPE_MET_TRIM) ? LT_GRAY : WHITE); // gutters and skylight interior=white, solar panel edges=light gray
 			bdraw.add_tquad(*this, *i, bcube, tid_nm_pair_t(NO_SHADOW_WHITE_TEX), color); // untextured, no shadows
@@ -2587,6 +2587,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	if (!is_valid()) return; // invalid building
 
 	if (!no_skylights && !lights_pass) { // draw skylight glass
+		colorRGBA const skylight_color(WHITE, 0.1);
 		tid_nm_pair_t tp;
 		tp.transparent = 1; // doesn't do anything?
 
@@ -2595,13 +2596,22 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 			float const ceil_thickness(glass.dz());
 			glass.z1() += 0.50*ceil_thickness; // glass pane is only 25% of ceiling thickness
 			glass.z2() -= 0.25*ceil_thickness;
-			bdraw.add_cube(*this, glass, tp, colorRGBA(WHITE, 0.1), 0, 4, 0, 0, 0); // top and bottom only, untextured
+			bdraw.add_cube(*this, glass, tp, skylight_color, 0, 4, 0, 0, 0); // top and bottom only, untextured
 		}
 		if (has_mall()) {
 			for (cube_t const &skylight : interior->mall_info->skylights) {
 				cube_t glass(skylight);
 				glass.z1() = glass.zc(); // top half thickness is glass
-				bdraw.add_cube(*this, glass, tp, colorRGBA(WHITE, 0.1), 0, 4, 0, 0, 0); // top and bottom only, untextured
+				bdraw.add_cube(*this, glass, tp, skylight_color, 0, 4, 0, 0, 0); // top and bottom only, untextured
+			}
+		}
+		if (is_house && !skylights.empty()) { // draw rooftop skylight cap
+			for (tquad_with_ix_t const &tq : roof_tquads) {
+				if (tq.type != tquad_with_ix_t::TYPE_SKYLIGHT_CAP) continue;
+				bdraw.add_tquad(*this, tq, bcube, tp, skylight_color); // untextured
+				tquad_with_ix_t tq_rev(tq);
+				std::reverse(tq_rev.pts, tq_rev.pts+tq_rev.npts);
+				bdraw.add_tquad(*this, tq_rev, bcube, tp, skylight_color); // draw again reversed, so that bottom is visible from inside the building
 			}
 		}
 	}
