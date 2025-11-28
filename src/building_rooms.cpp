@@ -721,8 +721,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				has_fireplace = added_fireplace = maybe_add_fireplace_to_room(rgen, *r, blockers, room_center.z, room_id, tot_light_amt);
 			}
 			if (is_office_bathroom /*|| r->get_room_type(f) == RTYPE_BATH*/) { // bathroom is already assigned
-				added_obj = is_bathroom = added_bathroom = no_whiteboard = add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt,
+				added_obj = is_bathroom = no_whiteboard = add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt,
 					objs_start_inc_lights, objs_start, f, is_basement, 0, added_bathroom_objs_mask); // add_shower_tub=0
+				added_bathroom |= is_bathroom;
 			}
 			else if (is_jail_room || is_jail_cell) {
 				if (is_jail_room) {add_prison_hall_room_objs(rgen, *r, room_center.z, room_id,    tot_light_amt, objs_start);}
@@ -879,8 +880,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				if (!added_obj && !has_fireplace && (must_be_bathroom || (can_be_bathroom(*r) && (num_bathrooms == 0 || rgen.rand_float() < bathroom_prob)))) {
 					// bathrooms can be in both houses and office buildings
 					bool const add_shower_tub(is_residential()); // residential buildings have showers and/or tubs; office buildings have only toilets and sinks
-					added_obj = is_bathroom = added_bathroom = add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt,
+					added_obj = is_bathroom = add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt,
 						objs_start_inc_lights, objs_start, f, is_basement, add_shower_tub, added_bathroom_objs_mask);
+					added_bathroom |= is_bathroom;
 					if (is_bathroom) {r->assign_to(RTYPE_BATH, f);}
 				}
 			}
