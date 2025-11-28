@@ -5853,6 +5853,11 @@ void building_t::try_place_light_on_ceiling(cube_t const &light, room_t const &r
 				} // for n
 				if (!allow_mult && light_placed) break;
 			} // for d
+			if (lights.size() == 2) { // placed two lights rather than one; make them smaller
+				for (cube_t &l : lights) {
+					for (unsigned d = 0; d < 2; ++d) {l.expand_in_dim(d, -0.1*l.get_sz_dim(d));} // preserve aspect ratio
+				}
+			}
 		} // for D
 	}
 	if (light_placed) {
