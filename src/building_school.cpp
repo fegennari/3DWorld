@@ -380,6 +380,9 @@ bool building_t::add_cafeteria_objs(rand_gen_t rgen, room_t const &room, float &
 		blockers.back().expand_in_dim( d.dim, 1.5*width); // more space in front of door
 		blockers.back().expand_in_dim(!d.dim, 1.0*width); // less space to the side
 	}
+	for (auto i = interior->room_geom->objs.begin()+objs_start; i != interior->room_geom->objs.end(); ++i) {
+		if (i->type == TYPE_BLOCKER) {blockers.push_back(*i);} // include previously placed blockers, for example from vending machines
+	}
 	for (unsigned r = 0; r < num_rows; ++r) {
 		float const row_pos(place_area.d[!dim][0] + (r + 0.5)*row_spacing);
 		set_wall_width(table, row_pos, 0.5*table_width, !dim);

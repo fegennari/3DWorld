@@ -1012,30 +1012,42 @@ bool building_t::add_mwave_on_table(rand_gen_t &rgen, room_t const &room, float 
 	objs.emplace_back(mwave, TYPE_MWAVE, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt);
 	return 1;
 }
-bool building_t::add_vending_machine(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, cube_t const &place_area) {
-	if (NUM_VEND_TYPES == 0) return 0; // disabled
+
+bool building_t::add_vending_machine(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
+	cube_t const &place_area, unsigned max_type)
+{
+	min_eq(max_type, (unsigned)NUM_VEND_TYPES);
+	if (max_type == 0) return 0; // disabled
 	unsigned const init_type(rgen.rand());
 
-	for (unsigned n = 0; n < NUM_VEND_TYPES; ++n) { // try each type until one succeeds, in case we chose a large size that doesn't fit
-		unsigned const vtype_id((init_type + n) % NUM_VEND_TYPES), obj_id(interior->room_geom->objs.size());
-		vending_info_t const &vtype(get_vending_type(vtype_id));
-		float const floor_spacing(get_window_vspace()), height(0.75*floor_spacing*(vtype.size.z/72)); // normalized to 72"
-		if (!place_obj_along_wall(TYPE_VENDING, room, height, vtype.size, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 0, 4, 0, vtype.color)) continue;
-		room_object_t &vm(interior->room_geom->objs[obj_id]);
-		vm.item_flags = vtype_id;
-
-		if (vtype.size.z < 48) { // short objects are placed on a small table; this assumes we have space to raise it up
-			float const table_height(0.3*floor_spacing);
-			cube_t table(vm);
-			table.z2() = zval + table_height;
-			vm.translate_dim(2, table_height);
-			table.expand_by_xy(0.02*vm.get_width()); // slightly larger; hopefully won't intersect anything
-			interior->room_geom->objs.emplace_back(table, TYPE_TABLE, room_id, vm.dim, vm.dir, RO_FLAG_ADJ_TOP, tot_light_amt);
-		}
-		return 1;
-	} // for n
+	for (unsigned n = 0; n < max_type; ++n) { // try each type until one succeeds, in case we chose a large size that doesn't fit
+		unsigned const vtype_id((init_type + n) % max_type);
+		if (add_vending_machine_type(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area, vtype_id)) return 1;
+	}
 	return 0;
 }
+bool building_t::add_vending_machine_type(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
+	cube_t const &place_area, unsigned vtype_id)
+{
+	assert(vtype_id < NUM_VEND_TYPES);
+	unsigned const obj_id(interior->room_geom->objs.size());
+	vending_info_t const &vtype(get_vending_type(vtype_id));
+	float const floor_spacing(get_window_vspace()), height(0.75*floor_spacing*(vtype.size.z/72)); // normalized to 72"
+	if (!place_obj_along_wall(TYPE_VENDING, room, height, vtype.size, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 0, 4, 0, vtype.color)) return 0;
+	room_object_t &vm(interior->room_geom->objs[obj_id]);
+	vm.item_flags = vtype_id;
+
+	if (vtype.size.z < 48) { // short objects are placed on a small table; this assumes we have space to raise it up
+		float const table_height(0.3*floor_spacing);
+		cube_t table(vm);
+		table.z2() = zval + table_height;
+		vm.translate_dim(2, table_height);
+		table.expand_by_xy(0.02*vm.get_width()); // slightly larger; hopefully won't intersect anything
+		interior->room_geom->objs.emplace_back(table, TYPE_TABLE, room_id, vm.dim, vm.dir, RO_FLAG_ADJ_TOP, tot_light_amt);
+	}
+	return 1;
+}
+
 bool building_t::add_wall_tv(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, float height_scale) {
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const tv_obj_ix(objs.size());
@@ -2845,6 +2857,8 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 	for (unsigned i = 0; i < num_fridges; ++i) {
 		place_model_along_wall(OBJ_MODEL_FRIDGE, TYPE_FRIDGE, room, 0.75, rgen, zval, room_id, light_amt, place_area, objs_start, 1.2, 4, 0, WHITE, 1);
 	}
+	add_mwave_on_table  (rgen, room, zval, room_id, light_amt, objs_start, place_area); // placeholder
+	add_corner_trashcans(rgen, room, zval, room_id, light_amt, objs_start, dim, 1); // both_ends=1
 	// add trolleys with plates; seems like this can work in a kitchen
 	unsigned num_trolleys((rgen.rand() % 2) + 2); // 2-3
 	vect_room_object_t &objs(interior->room_geom->objs);
@@ -4338,6 +4352,7 @@ void building_t::add_corner_trashcans(rand_gen_t &rgen, room_t const &room, floa
 	// add one or more trashcan to a corner; use a large cylinder, the same as a mall trashcan
 	float const window_vspacing(get_window_vspace());
 	float const tcan_height(0.26*window_vspacing), tcan_radius(0.1*window_vspacing), wall_spacing(1.2*tcan_radius);
+	cube_t const place_area(get_walkable_room_bounds(room));
 	cube_t tcan;
 	set_cube_zvals(tcan, zval, zval+tcan_height); // set height
 	bool add_to_ends[2] = {1, 1}; // defaults to both ends
@@ -4345,16 +4360,20 @@ void building_t::add_corner_trashcans(rand_gen_t &rgen, room_t const &room, floa
 
 	for (unsigned end_dir = 0; end_dir < 2; ++end_dir) {
 		if (!add_to_ends[end_dir]) continue;
-		bool const side_dir(rgen.rand_bool());
-		float const side_pos(room.d[!dim][side_dir] + (side_dir ? -1.0 : 1.0)*wall_spacing);
-		float const end_pos (room.d[ dim][end_dir ] + (end_dir  ? -1.0 : 1.0)*wall_spacing);
-		set_wall_width(tcan, side_pos, tcan_radius, !dim);
-		set_wall_width(tcan, end_pos,  tcan_radius,  dim);
-		if (is_obj_placement_blocked(tcan, room, 1) || overlaps_other_room_obj(tcan, objs_start)) continue; // inc_open=1
-		room_object_t const tcan_obj(tcan, TYPE_TCAN, room_id, dim, end_dir, RO_FLAG_IN_HALLWAY, tot_light_amt, SHAPE_CYLIN, LT_GRAY);
-		interior->room_geom->objs.push_back(tcan_obj);
-		add_large_trashcan_contents(rgen, tcan_obj, room_id, tot_light_amt);
-	} // for d
+		bool side_dir(rgen.rand_bool()); // first side dir to try
+
+		for (unsigned d = 0; d < 2; ++d, side_dir ^= 1) { // try both sides
+			float const side_pos(place_area.d[!dim][side_dir] + (side_dir ? -1.0 : 1.0)*wall_spacing);
+			float const end_pos (place_area.d[ dim][end_dir ] + (end_dir  ? -1.0 : 1.0)*wall_spacing);
+			set_wall_width(tcan, side_pos, tcan_radius, !dim);
+			set_wall_width(tcan, end_pos,  tcan_radius,  dim);
+			if (is_obj_placement_blocked(tcan, room, 1) || overlaps_other_room_obj(tcan, objs_start)) continue; // inc_open=1
+			room_object_t const tcan_obj(tcan, TYPE_TCAN, room_id, dim, end_dir, RO_FLAG_IN_HALLWAY, tot_light_amt, SHAPE_CYLIN, LT_GRAY);
+			interior->room_geom->objs.push_back(tcan_obj);
+			add_large_trashcan_contents(rgen, tcan_obj, room_id, tot_light_amt);
+			break; // success/done
+		} // for d
+	} // for end_dir
 }
 
 void building_t::add_wall_us_flag(float wall_pos, float flag_pos, float zval, bool dim, bool dir, unsigned room_id, float tot_light_amt) {

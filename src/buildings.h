@@ -2893,7 +2893,10 @@ private:
 	vector2d get_conf_room_table_length_width(cube_t const &room) const;
 	bool add_conference_objs (rand_gen_t rgen,  room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned floor_ix);
 	void add_lounge_objs     (rand_gen_t rgen,  room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_lobby);
-	bool add_vending_machine (rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, cube_t const &place_area);
+	bool add_vending_machine (rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
+		cube_t const &place_area, unsigned max_type=NUM_VEND_TYPES);
+	bool add_vending_machine_type(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
+		cube_t const &place_area, unsigned vtype_id);
 	bool add_wall_tv(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, float height_scale=1.0);
 	bool add_mwave_on_table(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, cube_t const &place_area);
 	bool check_valid_closet_placement(cube_t const &c, room_t const &room, unsigned objs_start, unsigned bed_ix, float min_bed_space=0.0) const;
@@ -3065,6 +3068,7 @@ private:
 		unsigned room_id, float tot_light_amt, bool dim, unsigned tid_tag, vect_cube_t &blockers);
 	bool add_food_court_objs(rand_gen_t &rgen, cube_t const &place_area, float zval, unsigned room_id, float tot_light_amt, vect_cube_t const &blockers);
 	void add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, unsigned &type_mask, light_ix_assign_t &light_ix_assign);
+	void add_restaurant_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, bool dim, bool dir, float light_amt);
 	void add_clothing_rack(cube_t const &rack, unsigned room_id, bool dim, float light_amt, room_type rtype, rand_gen_t &rgen);
 	void add_ceiling_ducts(cube_t const &room, float ceil_zval, unsigned room_id, bool dim, unsigned skip_dir, float light_amt,
 		bool cylin_ducts, bool skip_ends, bool skip_top, rand_gen_t &rgen, float sz_scale=1.0);
