@@ -1502,6 +1502,7 @@ void building_t::gen_and_draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, shad
 		// capture state before generating backrooms, which may add more doors
 		interior->room_geom->init_num_doors   = interior->doors      .size();
 		interior->room_geom->init_num_dstacks = interior->door_stacks.size();
+		interior->room_geom->init_num_details = details.size();
 		rand_gen_t rgen;
 		rgen.set_state(building_ix, (parts.size() + 17*interior->rgen_seed_ix)); // set to something canonical per building
 		interior->room_geom->decal_manager.rgen = rgen; // copy rgen for use with decals
@@ -1519,14 +1520,17 @@ void building_t::clear_room_geom(bool even_if_player_modified) {
 		interior->room_geom->clear_materials(); // but we can still clear the materials
 		return;
 	}
-	// restore pre-room_geom door state by removing any doors added to backrooms
+	// restore pre-room_geom door state by removing any doors added to closets or backrooms, and any exterior details
 	assert(interior->room_geom->init_num_doors   <= interior->doors      .size());
 	assert(interior->room_geom->init_num_dstacks <= interior->door_stacks.size());
+	assert(interior->room_geom->init_num_details <= details.size());
 	interior->doors      .resize(interior->room_geom->init_num_doors  );
 	interior->door_stacks.resize(interior->room_geom->init_num_dstacks);
+	details.resize(interior->room_geom->init_num_details);
 	interior->room_geom->clear(); // free VBO data before deleting the room_geom object
 	interior->room_geom.reset();
 	invalidate_nav_graph(); // required since interior doors may be removed
+	// what about restoring coll_bcube?
 }
 void building_t::clear_small_room_geom_vbos() {
 	if (this == player_building) return; // not for the player building

@@ -173,6 +173,7 @@ void building_t::clear_existing_room_geom() {
 	interior->security_room_ix = -1;
 	invalidate_nav_graph();
 	has_int_fplace = 0; // reset for this generation
+	ladder.set_to_zeros(); // will be re-placed
 }
 
 void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
