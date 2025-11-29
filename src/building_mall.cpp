@@ -359,10 +359,12 @@ void building_t::add_mall_store(cube_t const &store, cube_t const &window_area, 
 	// add an opening in the center
 	cube_t opening(wall_cut);
 	set_wall_width(opening, wall_cut.get_center_dim(dim), 1.0*doorway_width, dim); // twice door width
-	cube_t doorway(opening);
-	set_wall_width(doorway, wall_pos, 0.5*wall_thickness, !dim);
+	cube_t doorway(opening), storefront(wall_cut);
+	set_wall_width(doorway,    wall_pos, 0.5*wall_thickness, !dim);
+	set_wall_width(storefront, wall_pos, 0.5*wall_thickness, !dim);
 	bool const closed(rgen.rand_float() < 0.1); // 10% of the time
 	interior->mall_info->store_doorways.emplace_back(doorway, room_ix, !dim, dir, closed);
+	interior->mall_info->storefronts.push_back(storefront);
 	
 	// add window on each side of the doorway
 	for (unsigned side = 0; side < 2; ++side) {
@@ -1430,7 +1432,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 			float const wall_pos(room.d[mall_dim][d]), d_sign(d ? -1.0 : 1.0), back_pos(wall_pos + d_sign*0.5*desk_depth);
 			desk.d[mall_dim][ d] = back_pos - d_sign*desk_depth; // back, extended back more - for end store window coll test
 			desk.d[mall_dim][!d] = back_pos + d_sign*desk_depth; // front
-			if (has_bcube_int(desk, interior->int_windows) || has_bcube_int(desk, interior->mall_info->store_doorways)) continue; // too close to store door or window
+			if (has_bcube_int(desk, interior->mall_info->storefronts)) continue; // too close to store door or window
 			desk.d[mall_dim][ d] = back_pos; // back
 			add_reception_desk(rgen, desk, mall_dim, !d, room_id, light_amt); // ignore return value
 
@@ -1456,8 +1458,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 bool building_t::is_valid_placement_at_mall_wall(cube_t const &c, cube_t const &entrance_stairs_bcube, vect_cube_t const &wall_blockers) const {
 	if (entrance_stairs_bcube.intersects(c))              return 0; // too close to entrance stairs
 	if (has_bcube_int(c, interior->mall_info->bathrooms)) return 0; // too close to bathroom doors and water fountain
-	if (has_bcube_int(c, interior->int_windows) || has_bcube_int(c, interior->mall_info->store_doorways)) return 0; // too close to store door or window
-	if (has_bcube_int(c, wall_blockers)) return 0;
+	if (has_bcube_int(c, wall_blockers) || has_bcube_int(c, interior->mall_info->storefronts)) return 0;
 	return 1;
 }
 
@@ -2239,11 +2240,11 @@ void building_t::add_restaurant_objs(rand_gen_t &rgen, room_t const &room, float
 	cube_t front_area(room), windows_area;
 	set_wall_width(front_area, front_wall, wall_thickness, dim);
 
-	for (cube_t const &w : interior->int_windows) {
+	for (cube_t const &w : interior->mall_info->storefronts) {
 		if (w.intersects(front_area)) {windows_area.assign_or_union_with_cube(w);}
 	}
 	if (!is_open && !windows_area.is_all_zeros()) { // windows_area should never be zero area
-		// add counter rather than glass window and door
+		// add counter rather than glass window and door; must remove windows and doorways but keep storefronts
 		remove_if_intersects(interior->int_windows, front_area);
 		remove_if_intersects(interior->mall_info->store_doorways, front_area);
 		// add front top and bottom wall sections and counter

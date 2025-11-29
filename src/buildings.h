@@ -2023,7 +2023,7 @@ struct building_mall_info_t {
 	vector<store_info_t> stores; // added during interior object placement
 	stairwell_t ent_stairs;
 	vect_cube_t bathrooms; // actually bathroom pairs
-	vect_cube_t skylights, ext_stairs_elevators;
+	vect_cube_t skylights, ext_stairs_elevators, storefronts; // storefronts are unions of doors and windows used as blockers
 	vector<pet_tank_t> pet_tanks; // except for fish (rats, snakes, spiders)
 	std::unique_ptr<store_texture_manager_t> tmgr;
 	cube_t store_bounds, food_court_bounds;

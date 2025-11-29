@@ -396,7 +396,7 @@ bool building_t::add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, floa
 		tc.d[dim][!dir] += (dir ? -1.0 : 1.0)*clearance; // increase space to add clearance
 		if (is_obj_placement_blocked(tc, room, 1) || overlaps_other_room_obj(tc, objs_start)) continue; // bad placement
 		tc.d[dim][ dir] -= (dir ? -1.0 : 1.0)*wall_thickness; // expand to wall to check for interior windows and store doors
-		if (has_bcube_int(tc, interior->int_windows) || (is_store && has_bcube_int(tc, interior->mall_info->store_doorways))) continue;
+		if (has_bcube_int(tc, interior->int_windows) || (is_store && has_bcube_int(tc, interior->mall_info->storefronts))) continue;
 		unsigned flags(room.has_open_wall(dim, dir) ? RO_FLAG_OPEN : 0); // flag as open if along an open wall so that the back is drawn
 
 		if (is_basement && rgen.rand_float() < 0.40) { // fallen bookcase 40% of the time
@@ -5586,8 +5586,7 @@ bool building_t::check_if_placed_on_wall(cube_t const &c, room_t const &room, bo
 	test_cube.expand_in_dim(!dim, 0.5*wall_thickness);
 
 	if (mall_or_store) { // special logic to handle mall store windows and doors
-		if (has_bcube_int(test_cube, interior->int_windows              )) return 0; // on window, not wall
-		if (has_bcube_int(test_cube, interior->mall_info->store_doorways)) return 0; // on store door, not wall
+		if (has_bcube_int(test_cube, interior->mall_info->storefronts)) return 0; // on store door or window, not wall
 		return 1;
 	}
 	// check for exterior wall
