@@ -48,7 +48,7 @@ void building_t::remove_section_from_cube_and_add_door(cube_t &c, cube_t &c2, fl
 	door.d[!xy][0] = door.d[!xy][1] = c.get_center_dim(!xy); // zero area at wall centerline
 	door.d[ xy][0] = v1;
 	door.d[ xy][1] = v2;
-	if (jail_door) {door.for_jail = 2;} // prison bar doors; opaque with a barred window and a frame
+	if (jail_door) {door.type = DOOR_TYPE_JAIL;} // prison bar doors; opaque with a barred window and a frame
 	add_interior_door(door, is_bathroom, make_unlocked, make_closed);
 }
 
@@ -2989,7 +2989,7 @@ void building_interior_t::assign_door_conn_rooms(unsigned start_ds_ix) {
 
 	for (auto d = door_stacks.begin()+start_ds_ix; d != door_stacks.end(); ++d) {
 		if (d->get_for_closet() || d->get_backrooms()) continue; // excluded
-		if (d->for_jail == 1) continue; // jail cell door should have already been assigned
+		if (d->is_bars()) continue; // jail cell door should have already been assigned
 		unsigned const dsix(d - door_stacks.begin());
 		unsigned rooms_start(0), rooms_end(rooms.size());
 

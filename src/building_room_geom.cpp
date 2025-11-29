@@ -7412,15 +7412,15 @@ void building_room_geom_t::add_door_handle(door_t const &door, door_rotation_t c
 	maybe_rotate_door_verts(mat.quad_verts, qv_start, door, drot);
 }
 
-void building_room_geom_t::add_jail_cell_door(door_t const &D, building_t const &building, door_rotation_t &drot) {
-	bool const dim(D.dim), rusty(D.conn_room[0] & 1); // 50% chance; same as jail bars
+void building_room_geom_t::add_metal_door(door_t const &D, building_t const &building, door_rotation_t &drot) {
 	float const height(D.dz()), width(D.get_width()), tscale(4.0/height);
+	bool const is_bars(D.is_bars()), is_jail_door(D.type == DOOR_TYPE_JAIL), handle_side(D.get_handle_side());
+	bool const dim(D.dim), rusty((is_bars || is_jail_door) && (D.conn_room[0] & 1)); // 50% chance; same as jail bars
 	rgeom_mat_t &mat(mats_doors.get_material((rusty ? tid_nm_pair_t(get_rust_met_tid(), tscale, 1) : get_scratched_metal_tex(tscale, 1)), 1)); // shadowed
 	float const thickness(D.get_thickness()), vbar_hthick(0.25*thickness), hbar_hthick(0.15*thickness);
 	unsigned const qv_start(mat.quad_verts.size()), tv_start(mat.itri_verts.size());
 	cube_t const c(D.get_true_bcube());
 	colorRGBA const bar_color(colorRGBA(0.6, 0.6, 0.6)), plate_color(colorRGBA(0.9, 0.9, 0.9)), handle_color(bar_color);
-	bool const is_bars(D.for_jail == 1), handle_side(D.get_handle_side());
 	point const origin(c.get_llc());
 	assert(thickness > 0.0);
 
@@ -7428,27 +7428,33 @@ void building_room_geom_t::add_jail_cell_door(door_t const &D, building_t const 
 		unsigned const num_vbars(max(2U, unsigned(10*width/height)));
 		add_grid_of_bars(mat, bar_color, c, num_vbars, 5, vbar_hthick, hbar_hthick, 2, !dim, dim, 0.1*thickness, 1, 8.0); // h-bars thinner, cylin_vbars=1
 	}
-	else { // metal door with barred window opening
+	else { // metal door
 		unsigned const fb_mask(~get_skip_mask_for_xy(dim));
 		cube_t door_main(c);
 		door_main.expand_in_dim(dim, -0.2*thickness); // shrink thickness
 		if (D.open_amt > 0.0) {mat.add_cube_to_verts(door_main, plate_color, origin, (EF_Z12 | ~fb_mask));} // draw edges if open
-		cube_t opening(door_main);
-		opening.expand_in_dim(!dim, -0.2*width); // shrink edges
-		cube_t bot(opening), top(opening);
-		bot.z2() = door_main.z1() + 0.55*height;
-		top.z1() = door_main.z1() + 0.80*height;
-		set_cube_zvals(opening, bot.z2(), top.z1());
-		mat.add_cube_to_verts(bot, plate_color, origin, fb_mask);
-		mat.add_cube_to_verts(top, plate_color, origin, fb_mask);
 
-		for (unsigned d = 0; d < 2; ++d) { // sides
-			cube_t side(door_main);
-			side.d[!dim][!d] = opening.d[!dim][d];
-			mat.add_cube_to_verts(side, plate_color, origin, fb_mask);
+		if (is_jail_door) { // metal door with barred window opening
+			cube_t opening(door_main);
+			opening.expand_in_dim(!dim, -0.2*width); // shrink edges
+			cube_t bot(opening), top(opening);
+			bot.z2() = door_main.z1() + 0.55*height;
+			top.z1() = door_main.z1() + 0.80*height;
+			set_cube_zvals(opening, bot.z2(), top.z1());
+			mat.add_cube_to_verts(bot, plate_color, origin, fb_mask);
+			mat.add_cube_to_verts(top, plate_color, origin, fb_mask);
+
+			for (unsigned d = 0; d < 2; ++d) { // sides
+				cube_t side(door_main);
+				side.d[!dim][!d] = opening.d[!dim][d];
+				mat.add_cube_to_verts(side, plate_color, origin, fb_mask);
+			}
+			for (unsigned d = 0; d < 2; ++d) {opening.d[dim][d] = c.d[dim][d];} // expand to full thickness
+			add_grid_of_bars(mat, bar_color, opening, 4, 4, vbar_hthick, hbar_hthick, 2, !dim, dim, 0.0, 1, 12.0);
 		}
-		for (unsigned d = 0; d < 2; ++d) {opening.d[dim][d] = c.d[dim][d];} // expand to full thickness
-		add_grid_of_bars(mat, bar_color, opening, 4, 4, vbar_hthick, hbar_hthick, 2, !dim, dim, 0.0, 1, 12.0);
+		else { // metal freezer door
+			mat.add_cube_to_verts(door_main, plate_color, origin, fb_mask);
+		}
 	}
 	for (unsigned dir = 0; dir < 2; ++dir) {
 		if (is_bars && bool(dir) != D.open_dir) continue; // handle is only on the outside of the door
@@ -7484,7 +7490,7 @@ void building_room_geom_t::add_jail_cell_door(door_t const &D, building_t const 
 }
 
 void building_room_geom_t::maybe_add_door_sign(door_t const &door, door_rotation_t const &drot) {
-	if (door.for_jail) return; // no signs on jail doors
+	if (door.is_metal()) return; // no signs on jail or metal doors
 	int tid(-1);
 	if      (door.rtype == RTYPE_MENS  ) {tid = get_texture_by_name("interiors/men_restroom.png"  );}
 	else if (door.rtype == RTYPE_WOMENS) {tid = get_texture_by_name("interiors/women_restroom.png");}

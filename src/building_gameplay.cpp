@@ -2977,7 +2977,7 @@ bool building_t::apply_paint(point const &pos_, vector3d const &dir_, colorRGBA 
 	}
 	// check closed opaque interior doors
 	for (door_t const &d : interior->doors) {
-		if (d.open_amt > 0.0 || d.for_jail) continue;
+		if (d.can_see_through()) continue;
 		cube_t door(d.get_true_bcube());
 		if (!line_int_cube_get_t(pos, pos2, door, tmin)) continue;
 		target    = door;

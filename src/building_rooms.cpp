@@ -1777,7 +1777,7 @@ void building_t::add_padlocks(rand_gen_t rgen) {
 		return;
 	}
 	for (auto d = interior->doors.begin(); d != interior->doors.end(); ++d) {
-		if (d->open || !d->locked || d->for_jail || rgen.rand_bool()) continue;
+		if (d->open || !d->locked || d->is_metal() || d->get_for_closet() || rgen.rand_bool()) continue;
 		unsigned const door_ix(d - interior->doors.begin());
 		unsigned key_color_mask(0);
 
@@ -1985,7 +1985,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	}
 	// add vertical strips on each side + strip on top of interior doors
 	for (door_stack_t const &ds : interior->door_stacks) {
-		if (ds.on_stairs || ds.for_jail == 1) continue; // no frame for stairs or jail bars door, skip
+		if (ds.on_stairs || ds.is_bars() || ds.type == DOOR_TYPE_METAL) continue; // no frame for stairs, jail bars door, or metal freezer doors; skip
 		add_trim_for_door_or_int_window(ds, ds.dim, ds.get_mult_floor(), 0, door_trim_width, trim_thickness, door_trim_exp, window_vspacing); // draw_bot_trim=0
 	}
 	// handle interior windows similar to interior doors, except we also draw bottom trim

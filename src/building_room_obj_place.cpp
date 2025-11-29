@@ -2470,7 +2470,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 			if (door.z1() > zval || door.z2() < zval) continue; // wrong floor
 			door.rtype  = rtype; // tag type so that the correct sign is added
 			door.locked = 0; // only needed for non-cube buildings
-			if (door.for_jail != 1) {door.make_auto_close();} // what about metal doors with door.for_jail==2?
+			if (!door.is_bars()) {door.make_auto_close();} // what about DOOR_TYPE_JAIL?
 			if ((!is_cube() || is_prison()) && !door_opens_inward(ds, room)) {door.opens_out_of_br = 1;}
 		} // for ds
 	} // for ds
@@ -5289,7 +5289,7 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 
 		for (auto i = cands.begin(); i != cands.end() && num_ls < max_ls; ++i) {
 			if (!is_house && room.is_ext_basement() && room_bounds.contains_cube_xy(*i)) continue; // skip interior backrooms doors
-			if (i->for_jail == 1) continue; // skip jail cell doors
+			if (i->is_bars()) continue; // skip jail cell doors
 			// check for windows if (real_num_parts > 1)? is it actually possible for doors to be within far_spacing of a window? yes, for office building walkways
 			bool const dim(i->dim), dir(i->get_center_dim(dim) > room.get_center_dim(dim));
 			float const dir_sign(dir ? -1.0 : 1.0), door_width(i->get_width());
@@ -5961,22 +5961,23 @@ bool building_t::add_padlock_to_door(unsigned door_ix, unsigned lock_color_mask,
 	}
 	door.obj_ix = objs.size();
 	door.set_padlock_color_ix(color_ix); // padlocked
+	bool const is_bars(door.is_bars());
 	cube_t const door_bc(door.get_true_bcube());
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_PADLOCK)); // D, W, H
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	float const door_width(door_bc.get_sz_dim(!door.dim)), door_height(door_bc.dz());
-	float const height((door.for_jail ? 0.09 : 0.078)*door_height), hwidth(0.5*height*sz.y/sz.z), depth(height*sz.x/sz.z);
-	float const edge_dist(door.for_jail ? 0.088 : 0.062);
+	float const height((is_bars ? 0.09 : 0.078)*door_height), hwidth(0.5*height*sz.y/sz.z), depth(height*sz.x/sz.z);
+	float const edge_dist(is_bars ? 0.088 : 0.062);
 	bool const side(door.get_check_dirs());
 	cube_t lock;
-	lock.z1() = door.z1() + (door.for_jail ? 0.365 : 0.41)*door_height;
+	lock.z1() = door.z1() + (is_bars ? 0.365 : 0.41)*door_height;
 	lock.z2() = lock.z1() + height;
 	set_wall_width(lock, (door_bc.d[!door.dim][0] + (side ? edge_dist : (1.0 - edge_dist))*door_width), hwidth, !door.dim);
 	colorRGBA const color(lock_colors[color_ix]);
 
 	// since we don't know which side of the door the player will be on, add the padlock to both sides
 	for (unsigned d = 0; d < 2; ++d) {
-		if (door.for_jail && bool(d) == door.open_dir) continue; // no padlock on the inside/cell side of the door
+		if (is_bars && bool(d) == door.open_dir) continue; // no padlock on the inside/cell side of the door
 		float const pos(door_bc.d[door.dim][!d]);
 		lock.d[door.dim][ d] = pos;
 		lock.d[door.dim][!d] = pos + (d ? -1.0 : 1.0)*depth;

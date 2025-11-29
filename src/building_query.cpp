@@ -3266,7 +3266,7 @@ void building_t::get_rooms_for_door(door_t const &door, int room_ix[2]) const {
 		
 		if (room_ix[side] >= 0) {
 			// must be basement door with room on top and bottom rather than each side, or jail cell door
-			assert(door.on_stairs || door.for_jail);
+			assert(door.on_stairs || door.is_bars());
 			if (room_ix[!side] < 0) {side ^= 1;} // use the other side if unassigned
 		}
 		room_ix[side] = (r - interior->rooms.begin());
@@ -3284,7 +3284,7 @@ void building_t::get_lights_for_room_and_floor(unsigned room_ix, unsigned floor_
 void building_t::get_lights_near_door(unsigned door_ix, vector<unsigned> &light_ids) const {
 	light_ids.clear();
 	door_t const &door(get_door(door_ix));
-	if (door.for_jail == 1) return; // jail bar doors do not affect lighting
+	if (door.is_bars()) return; // jail bar doors do not affect lighting
 	int room_ix[2] = {};
 	get_rooms_for_door(door, room_ix);
 	unsigned const floor_ix(get_floor_for_zval(get_door(door_ix).get_center_dim(2)));

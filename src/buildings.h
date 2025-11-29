@@ -1512,7 +1512,7 @@ private:
 	void create_dynamic_vbos(building_t const &building, point const &camera_bs, vector3d const &xlate, bool play_clock_tick);
 	void create_door_vbos(building_t const &building);
 	void add_door_handle(door_t const &door, door_rotation_t const &drot, colorRGBA const &color, bool residential);
-	void add_jail_cell_door(door_t const &D, building_t const &building, door_rotation_t &drot);
+	void add_metal_door(door_t const &D, building_t const &building, door_rotation_t &drot);
 	void maybe_add_door_sign(door_t const &door, door_rotation_t const &drot);
 	static void add_closet_objects(room_object_t const &c, vect_room_object_t &objects, bool no_models);
 	static void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[MAX_SHELVES], unsigned num_shelves, vect_room_object_t &objects, bool add_models_mode=0);
@@ -1812,9 +1812,12 @@ unsigned const DOOR_FLAG_BACKROOMS  = 0x08; // door in backrooms
 unsigned const DOOR_FLAG_SMALL_ROOM = 0x10; // door for a small room such as an elevator equipment room
 unsigned const DOOR_FLAG_AUTO_CLOSE = 0x20; // door automatically closes (office bathroom)
 
+enum {DOOR_TYPE_STD=0, DOOR_TYPE_BARS, DOOR_TYPE_JAIL, DOOR_TYPE_METAL, NUM_DOOR_TYPES};
+colorRGBA const door_colors[NUM_DOOR_TYPES] = {WHITE, GRAY, GRAY, WHITE};
+
 struct door_base_t : public cube_t {
 	bool dim=0, open_dir=0, hinge_side=0, on_stairs=0;
-	uint8_t flags=0, for_jail=0; // for_jail: 0=not jail, 1=jail bar doors, 2=metal room door
+	uint8_t flags=0, type=DOOR_TYPE_STD;
 	uint16_t conn_room[2]={}; // rooms on each side of the door
 
 	door_base_t() {}
@@ -1822,8 +1825,10 @@ struct door_base_t : public cube_t {
 		cube_t(c), dim(dim_), open_dir(dir), hinge_side(hs), on_stairs(os) {assert(is_normalized());}
 	bool get_check_dirs  () const {return (dim ^ open_dir ^ hinge_side ^ 1);}
 	bool get_handle_side () const {return (get_check_dirs() ^ 1);} // 0: handle on left; 1: handle on right
+	bool is_bars         () const {return (type == DOOR_TYPE_BARS);}
+	bool is_metal        () const {return (type != DOOR_TYPE_STD);}
 	float get_width      () const {return get_sz_dim(!dim);}
-	float get_thickness  () const {return DOOR_THICK_TO_WIDTH*((for_jail == 1) ? 1.25 : 1.0)*get_width();}
+	float get_thickness  () const {return DOOR_THICK_TO_WIDTH*((type == DOOR_TYPE_BARS) ? 1.25 : 1.0)*get_width();}
 	cube_t get_true_bcube     () const {cube_t bc(*this); bc.expand_in_dim(dim, 0.5*get_thickness()); return bc;}
 	cube_t get_clearance_bcube() const {cube_t bc(*this); bc.expand_in_dim(dim,     get_width    ()); return bc;}
 	cube_t get_open_door_path_bcube() const;
@@ -1867,7 +1872,7 @@ struct door_t : public door_base_t {
 	bool is_locked_or_blocked(unsigned have_key) const {return (blocked || !check_key_mask_unlocks(have_key));}
 	bool is_partially_open() const {return (open_amt != (open ? 1.0 : 0.0));}
 	bool is_closet_door   () const {return (obj_ix >= 0 && !is_padlocked());}
-	bool can_see_through  () const {return (open_amt > 0.0 || for_jail);}
+	bool can_see_through  () const {return (open_amt > 0.0 || type == DOOR_TYPE_BARS || type == DOOR_TYPE_JAIL);}
 	bool is_padlocked     () const {return (locked >= 2);}
 	bool is_locked_unlockable() const {return (locked >= MAX_LOCK_INDEX);}
 	bool check_key_mask_unlocks(unsigned key_mask) const;

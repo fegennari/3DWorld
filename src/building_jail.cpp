@@ -373,8 +373,8 @@ void building_t::replace_prison_cell_with_ext_door(float door_height, bool for_c
 		for (door_stack_t &ds : interior->door_stacks) {
 			door_t &door(get_door(ds.first_door_ix)); // first/bottom door is on the ground floor
 			if (!door.is_connected_to_room(room_id)) continue;
-			door.for_jail = 2; // make this a metal door rather than bars door
-			door.locked   = 0; // always unlocked
+			door.type   = DOOR_TYPE_JAIL; // make this a metal plate door rather than bars door
+			door.locked = 0; // always unlocked
 		}
 		return; // success
 	} // for n
@@ -1221,7 +1221,7 @@ void building_t::add_jail_cell_door(cube_t const &bars, unsigned room_id, unsign
 	float const door_width(get_doorway_width());
 	float const door_center(bars.get_center_dim(dim) - (hinge_side ? -1.0 : 1.0)*0.1*door_width); // slightly away from bed and room door
 	door_t door(bars, !dim, !dir, 0, 0, hinge_side); // open=0, on_stairs=0
-	door.for_jail     = 1;
+	door.type         = DOOR_TYPE_BARS;
 	door.conn_room[0] = parent_room_id; // may be the same room
 	door.conn_room[1] = room_id;
 	set_wall_width(door, door_center, 0.5*JAIL_DOOR_WIDTH*door_width, dim);
