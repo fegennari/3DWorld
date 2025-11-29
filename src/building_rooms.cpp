@@ -3774,17 +3774,23 @@ room_t::room_t(cube_t const &c, unsigned p, unsigned nl, bool is_hallway_, bool 
 	if (is_hallway) {set_no_geom         ();} // no geom in hallways
 	if      (is_sec_bldg) {assign_all_to(RTYPE_GARAGE);} // or RTYPE_SHED - will be set later
 	else if (is_hallway)  {assign_all_to(RTYPE_HALL  );}
-	else if (is_office)   {assign_all_to(RTYPE_OFFICE);}
+	else if (is_office)   {assign_all_to(RTYPE_OFFICE, 0);}
 	else if (has_stairs)  {assign_all_to(RTYPE_STAIRS);} // not really correct since has_stairs is now a per-floor bit flag, but this will likely be overwritten later anyway
 	else                  {assign_all_to(RTYPE_NOTSET, 0);}
 }
 void room_t::assign_all_to(room_type rt, bool locked) {
+	assert(!(locked && rt == RTYPE_NOTSET));
 	for (unsigned n = 0; n < NUM_RTYPE_SLOTS; ++n) {rtype[n] = rt;}
 	if (locked) {rtype_locked = 0xFF;} // room type is locked on all floors
 }
 void room_t::assign_to(room_type rt, unsigned floor, bool locked) {
+	assert(!(locked && rt == RTYPE_NOTSET));
 	// room types are only tracked up to the 6th floor, and every floor above that has the same type as the 6th floor; good enough for houses at least
 	floor = wrap_room_floor(floor);
+	
+	/*if ((rtype_locked & (1 << floor)) && rt != rtype[floor] && !(is_bathroom(rt) && is_bathroom(rtype[floor])) && !locked) {
+		cout << "Locked room assigned " << room_names[rtype[floor]] << " to " << room_names[rt] << " for floor " << floor << endl;
+	}*/
 	// assign unless already set to a bathroom, unless we're refining the bathroom type to men's or women's
 	if (is_bathroom(rtype[floor]) && !is_bathroom(rt)) return;
 	rtype[floor] = rt;
