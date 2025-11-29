@@ -1284,7 +1284,8 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t &bl
 bool building_t::add_closet_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start,
 	unsigned room_type, unsigned bed_obj_ix, float front_clearance, unsigned &closet_obj_id, light_ix_assign_t &light_ix_assign)
 {
-	bool const is_bedroom(room_type == RTYPE_BED); // otherwise a kitchen pantry
+	bool const is_bedroom(room_type == RTYPE_BED); // otherwise a kitchen pantry or freezer
+	bool const is_freezer(!is_bedroom && !is_house);
 	float const window_vspacing(get_window_vspace()), doorway_width(get_doorway_width()), floor_thickness(get_floor_thickness()), window_h_border(get_window_h_border());
 	float const closet_min_depth((is_bedroom ? 0.65 : 0.8)*doorway_width), closet_min_width(1.5*doorway_width);
 	float const min_dist_to_wall(1.0*doorway_width), min_bed_space(front_clearance);
@@ -1348,7 +1349,7 @@ bool building_t::add_closet_to_room(rand_gen_t &rgen, room_t const &room, float 
 			c.d[dim][!dir] -= signed_front_clearance; // subtract off front clearance
 			assert(c.is_strictly_normalized());
 			unsigned flags(0);
-			if (!is_bedroom) {flags |= 0;}
+			if (is_house) {flags |= RO_FLAG_IS_HOUSE;}
 			if (c.d[!dim][0] == room_bounds.d[!dim][0]) {flags |= RO_FLAG_ADJ_LO;}
 			if (c.d[!dim][1] == room_bounds.d[!dim][1]) {flags |= RO_FLAG_ADJ_HI;}
 			if (is_hotel()) {flags |= RO_FLAG_HAS_EXTRA;} // flag so that the closet has a safe
@@ -1381,6 +1382,7 @@ bool building_t::add_closet_to_room(rand_gen_t &rgen, room_t const &room, float 
 				door.set_for_closet(); // flag so that we don't try to add a light switch by this door, etc.
 				add_interior_door(door, 0, 1, 1); // is_bathroom=0, make_unlocked=1, make_closed=1
 				interior->doors.back().obj_ix = closet_obj_id;
+				if (is_freezer) {} // TODO: new metal door type
 			}
 			return 1; // done
 		} // for d
@@ -2838,7 +2840,9 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 	return placed_obj;
 }
 
-bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float light_amt, unsigned objs_start) {
+bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id,
+	float light_amt, unsigned objs_start, light_ix_assign_t &light_ix_assign)
+{
 	float const floor_spacing(get_window_vspace());
 	vector2d const room_sz(room.get_size_xy());
 	if (room_sz.get_min_val() < 2.0*floor_spacing || room_sz.get_max_val() < 3.0*floor_spacing) return 0; // too small
@@ -2846,13 +2850,20 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 	float const ceil_zval(zval + floor_spacing - get_fc_thickness());
 	cube_t const place_area(get_walkable_room_bounds(room));
 	if (btype == BTYPE_PRISON) {zval = add_flooring(room, zval, room_id, light_amt, FLOORING_LGTILE);}
-	//cube_t hood;
 
 	if (!in_mall) { // mall already has ceiling vents
 		unsigned const skip_dir(2); // TODO
 		add_ceiling_ducts(room, ceil_zval, room_id, dim, skip_dir, light_amt, 0, 1, 1, rgen, 0.5); // cylin_ducts=0, skip_ends=1, skip_top=1, sz_scale=0.5
 	}
+	// add walk-in freezer as a "closet" type
+	float const clearance(get_min_front_clearance_inc_people());
+	unsigned closet_obj_id(0); // unused
+	add_closet_to_room(rgen, room, zval, room_id, objs_start, RTYPE_KITCHEN, 0, clearance, closet_obj_id, light_ix_assign); // bed_obj_ix=0 (not set)
+	// add hood
+	//cube_t hood; // TODO
+	
 	// TODO: center island, big grill, multiple sinks, stacks of dishes, metal racks, walk in freezer, ovens, hood, vent; all shiny metal
+	// TYPE_KITCH_APP: KCA_GRILL, KCA_OVEN, KCA_FRYER, KCA_FREEZER
 	unsigned num_fridges((rgen.rand() % 3) + 2); // 2-4
 
 	for (unsigned i = 0; i < num_fridges; ++i) {

@@ -348,7 +348,7 @@ void building_t::add_mall_store(cube_t const &store, cube_t const &window_area, 
 	add_mall_room_walls(store, wall_thickness, dim, dir, at_mall_end, has_adj_store, interior->walls, fc_thick);
 	// add door/window openings; this may cut the mall concourse walls rather than the store walls we just added
 	float const ceil_gap(get_floor_thick_val()*floor_spacing - fc_thick + get_mall_top_window_gap(floor_spacing, window_vspace));
-	float const doorway_width(get_doorway_width()), wall_pos(store.d[!dim][!dir]);
+	float const doorway_width(get_doorway_width()), wall_pos(store.d[!dim][!dir]); // front wall
 	cube_t wall_cut(window_area);
 	wall_cut.z1() += fc_thick;
 	wall_cut.z2() -= ceil_gap;
@@ -1661,7 +1661,7 @@ template<typename T> void remove_if_intersects(vector<T> &objs, cube_t const &c)
 }
 
 // Note: room is non-const because the has_mirror flag may get set
-void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, unsigned &type_mask, light_ix_assign_t &light_ix_assign) {
+unsigned building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, unsigned &type_mask, light_ix_assign_t &light_ix_assign) {
 	float const door_width(get_doorway_width()), floor_spacing(room.dz()), window_vspace(get_window_vspace());
 	float const wall_thickness(get_wall_thickness()), wall_hthick(0.5*wall_thickness), fc_thick(get_fc_thickness()), pillar_width(2.0*wall_thickness);
 	float const light_amt = 1.0; // fully lit, for now
@@ -2183,7 +2183,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 		} // for row
 	}
 	else if (store_type == STORE_FOOD) { // restaurant, coffee shop, etc.
-		add_restaurant_objs(rgen, room, zval, room_id, dim, dir, light_amt);
+		add_restaurant_objs(rgen, room, zval, room_id, dim, dir, light_amt, light_ix_assign);
 	}
 	else if (store_type == STORE_PETS) { // rats, snakes, birds, spiders, fish, etc.
 		// add fish tanks along walls
@@ -2223,9 +2223,10 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 	if (max_shopping_carts > 0) {add_shopping_carts_to_room(rgen, room, zval, room_id, light_amt, objs_start, max_shopping_carts);}
 	unsigned const skip_dir((room_width < 0.8*room_len) ? rgen.rand_bool() : 2); // skip one side if room is narrow
 	add_ceiling_ducts(room, room.z2(), room_id, dim, skip_dir, light_amt, interior->mall_info->store_cylin_ducts, 1, 1, rgen); // skip ends and top
+	return store_type;
 }
 
-void building_t::add_restaurant_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, bool dim, bool dir, float light_amt) {
+void building_t::add_restaurant_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, bool dim, bool dir, float light_amt, light_ix_assign_t &light_ix_assign) {
 	float const window_vspace(get_window_vspace()), wall_thickness(get_wall_thickness()), wall_hthick(0.5*wall_thickness), fc_thick(get_fc_thickness());
 	float const clearance(get_min_front_clearance_inc_people());
 	int const style((3*rgen.rand()) % 3); // {open with dining, open with no dining, closed with counter}
@@ -2310,7 +2311,7 @@ void building_t::add_restaurant_objs(rand_gen_t &rgen, room_t const &room, float
 	room_t pub_area(room), kitchen(room);
 	pub_area.d[dim][!dir] = counter.d[dim][ dir];
 	kitchen .d[dim][ dir] = counter.d[dim][!dir];
-	add_commercial_kitchen_objs(rgen, kitchen, zval, room_id, light_amt, objs_start);
+	add_commercial_kitchen_objs(rgen, kitchen, zval, room_id, light_amt, objs_start, light_ix_assign);
 
 	if (is_open) { // add vending machines
 		cube_t const pub_room_bounds(get_walkable_room_bounds(pub_area));

@@ -791,7 +791,7 @@ struct room_object_t : public oriented_cube_t { // size=68
 	bool is_light_type() const {return (type == TYPE_LIGHT || (type == TYPE_LAMP && !was_expanded() && !in_attic()));} // light, or lamp not in closet
 	bool is_sink_type () const {return (type == TYPE_SINK || type == TYPE_KSINK || type == TYPE_BRSINK || type == TYPE_VANITY);}
 	bool is_obj_model_type() const {return (type >= TYPE_TOILET && type < NUM_ROBJ_TYPES);}
-	bool is_small_closet() const {return (type == TYPE_CLOSET && get_width() < 1.2*dz());}
+	bool is_small_closet() const {return (type == TYPE_CLOSET && (item_flags == RTYPE_KITCHEN || get_width() < 1.2*dz()));} // includes pantry
 	bool is_bottle_empty() const {return ((obj_id & BOTTLE_EMPTY_MASK) == BOTTLE_EMPTY_MASK);} // also applies to drink cans
 	bool desk_has_drawers()const {return (((room_id & 3) || has_extra()) && get_width() > 1.5*get_depth());} // 75% of the time, if wide enough
 	bool is_glass_table () const {return (type == TYPE_TABLE && is_house() && (obj_id & 1));} // 50% chance if in a house
@@ -2967,7 +2967,7 @@ private:
 	void make_door_out_or_order(room_t const &room, float zval, unsigned room_id, unsigned door_stack_ix);
 	bool add_kitchen_objs    (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt,
 		unsigned objs_start, bool allow_adj_ext_door, light_ix_assign_t &light_ix_assign);
-	bool add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float light_amt, unsigned objs_start);
+	bool add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float light_amt, unsigned objs_start, light_ix_assign_t &light_ix_assign);
 	void add_fridge_sticky_notes(rand_gen_t rgen, unsigned fridge_obj_ix, float zval, unsigned room_id, float tot_light_amt);
 	bool add_fishtank_to_room(rand_gen_t&rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, cube_t const &place_area);
 	bool add_livingroom_objs (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
@@ -2982,7 +2982,7 @@ private:
 	bool add_basement_jail_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
 		bool is_lit, colorRGBA const &light_color, light_ix_assign_t &light_ix_assign);
 	bool assign_and_fill_prison_room(rand_gen_t rgen, room_t &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
-		unsigned lights_start, unsigned floor_ix, bool is_basement, colorRGBA const &chair_color);
+		unsigned lights_start, unsigned floor_ix, bool is_basement, colorRGBA const &chair_color, light_ix_assign_t &light_ix_assign);
 	void add_prison_hall_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	void add_prison_jail_cell_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start);
 	void add_commercial_entry_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
@@ -3079,8 +3079,8 @@ private:
 	bool add_mall_table_with_chairs(rand_gen_t &rgen, cube_t const &table, cube_t const &place_area, colorRGBA const &chair_color,
 		unsigned room_id, float tot_light_amt, bool dim, unsigned tid_tag, vect_cube_t &blockers);
 	bool add_food_court_objs(rand_gen_t &rgen, cube_t const &place_area, float zval, unsigned room_id, float tot_light_amt, vect_cube_t const &blockers);
-	void add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, unsigned &type_mask, light_ix_assign_t &light_ix_assign);
-	void add_restaurant_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, bool dim, bool dir, float light_amt);
+	unsigned add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, unsigned &type_mask, light_ix_assign_t &light_ix_assign);
+	void add_restaurant_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, bool dim, bool dir, float light_amt, light_ix_assign_t &light_ix_assign);
 	void add_clothing_rack(cube_t const &rack, unsigned room_id, bool dim, float light_amt, room_type rtype, rand_gen_t &rgen);
 	void add_ceiling_ducts(cube_t const &room, float ceil_zval, unsigned room_id, bool dim, unsigned skip_dir, float light_amt,
 		bool cylin_ducts, bool skip_ends, bool skip_top, rand_gen_t &rgen, float sz_scale=1.0);

@@ -465,7 +465,7 @@ room_pref_t const room_prefs[] = {
 	{RTYPE_KITCHEN,   0, 1, 0, 1, 2.0, 5.0,  0.5, 0.0,  0.0,  0.0}
 };
 bool building_t::assign_and_fill_prison_room(rand_gen_t rgen, room_t &room, float &zval, unsigned room_id, float tot_light_amt,
-	unsigned objs_start, unsigned lights_start, unsigned floor_ix, bool is_basement, colorRGBA const &chair_color)
+	unsigned objs_start, unsigned lights_start, unsigned floor_ix, bool is_basement, colorRGBA const &chair_color, light_ix_assign_t &light_ix_assign)
 {
 	assert(interior);
 	unsigned const num_room_pref(sizeof(room_prefs)/sizeof(room_pref_t));
@@ -567,7 +567,7 @@ bool building_t::assign_and_fill_prison_room(rand_gen_t rgen, room_t &room, floa
 				if (!add_small_retail_room_objs(rgen, room, zval, room_id, tot_light_amt)) continue;
 				break;
 			case RTYPE_KITCHEN:
-				if (!add_commercial_kitchen_objs(rgen, room, zval, room_id, tot_light_amt, objs_start)) continue;
+				if (!add_commercial_kitchen_objs(rgen, room, zval, room_id, tot_light_amt, objs_start, light_ix_assign)) continue;
 				break;
 			default: assert(0);
 			}

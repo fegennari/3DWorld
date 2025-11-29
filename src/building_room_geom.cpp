@@ -622,15 +622,16 @@ void add_quad_to_mat(rgeom_mat_t &mat, point const pts[4], float const ts[4], fl
 	for (unsigned n = 0; n < 4; ++n) {mat.quad_verts.emplace_back(pts[n], normal, ts[n], tt[n], cw);}
 }
 
-// no lighting scale, houses/apartments/hotel rooms only
+// no lighting scale, houses/apartments/hotel rooms only; includes kitchen pantry
 void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t const &wall_tex, colorRGBA const &trim_color, bool inc_lg, bool inc_sm) {
 	bool const open(c.is_open()), use_small_door(c.is_small_closet()), draw_interior(open || player_in_closet);
+	bool const in_kitchen(c.item_flags == RTYPE_KITCHEN), is_freezer(in_kitchen && !c.is_house());
 	float const wall_thick(get_closet_wall_thickness(c)), trim_hwidth(0.3*wall_thick);
 	cube_t cubes[5];
 	get_closet_cubes(c, cubes);
 
 	if (inc_lg) { // draw closet walls and doors
-		rgeom_mat_t &wall_mat(get_material(get_scaled_wall_tex(wall_tex), 1));
+		rgeom_mat_t &wall_mat(is_freezer ? get_metal_material(1) : get_material(get_scaled_wall_tex(wall_tex), 1)); // shadowed
 		// need to draw the face that's against the wall for the shadow pass if the closet light is on, if the player is in the closet, or if the doors are open
 		unsigned const skip_faces(EF_Z12); // skip top and bottom
 
@@ -642,12 +643,16 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 			unsigned const front_wall_skip_flags((draw_interior ? EF_Z12 : skip_faces) | extra_skip_faces);
 			wall_mat.add_cube_to_verts(cubes[2*d], c.color, tex_origin, front_wall_skip_flags); // Note: c.color should be wall color
 		} // for d
+		if (is_freezer) {
+			// TODO: draw back walls, ceiling, floor, and maybe top surface
+		}
 		cube_t const &doors(cubes[4]);
 		point const llc(doors.get_llc());
 		float const out_sign(c.dir ? 1.0 : -1.0);
 
 		if (use_small_door) {} // small house closet door - draw as a regular door
 		else { // 4 panel folding door
+			assert(!is_freezer); // what about in_kitchen?
 			cube_t doors_no_trim(doors);
 			doors_no_trim.expand_in_dim(!c.dim, -trim_hwidth);
 			float const doors_width(doors.get_sz_dim(!c.dim)), door_thickness(doors.get_sz_dim(c.dim));
@@ -709,7 +714,7 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 			}
 		}
 	} // end inc_lg
-	if (inc_sm) { // add wall trim for each side of the closet door
+	if (inc_sm && !is_freezer) { // add wall trim for each side of the closet door
 		float const height(c.dz()), window_vspacing(height*(1.0 + FLOOR_THICK_VAL_HOUSE));
 		float const trim_height(0.04*window_vspacing), trim_thickness(0.1*WALL_THICK_VAL*window_vspacing), trim_plus_wall_thick(trim_thickness + wall_thick);
 		bool const draw_interior_trim(1 || draw_interior); // always enable so that we don't have to regenerate small geom when closet doors are opened or closed
@@ -762,7 +767,7 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 			} // for d
 		} // for is_side
 		// Note: always drawn to avoid recreating all small objects when the player opens/closes a closet door, and so that objects can be seen through the cracks in the doors
-		if (!c.obj_expanded()) { // add boxes if not expanded
+		if (!in_kitchen && !c.obj_expanded()) { // add boxes if not expanded or in a kitchen
 			vect_room_object_t &objects(get_temp_objects());
 			add_closet_objects(c, objects, 1); // no_models=1
 			add_nested_objs_to_verts(objects);
@@ -7098,8 +7103,22 @@ void building_room_geom_t::add_conveyor_belt(room_object_t const &c, bool draw_d
 }
 
 void building_room_geom_t::add_kitchen_appliance(room_object_t const &c) {
-	//unsigned const type(c.item_flags % NUM_KC_APP);
+	unsigned const type(c.item_flags % NUM_KC_APP);
 	// TODO
+
+	if (type == KCA_GRILL) {
+
+	}
+	else if (type == KCA_OVEN) {
+
+	}
+	else if (type == KCA_FRYER) {
+
+	}
+	else if (type == KCA_FREEZER) {
+
+	}
+	else {assert(0);}
 }
 
 void add_grid_of_bars(rgeom_mat_t &mat, colorRGBA const &color, cube_t const &c, unsigned num_vbars, unsigned num_hbars, float vbar_hthick,

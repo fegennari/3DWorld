@@ -412,7 +412,7 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vect_room_
 			objects[hanger_rod_ix].item_flags = uint16_t(objects.size() - hanger_rod_ix); // number of objects hanging on the hanger rod, including hangers and clothing
 		}
 	}
-	else if (c.item_flags == RTYPE_KITCHEN) { // kitchen pantry; add shelves with food items
+	else if (c.item_flags == RTYPE_KITCHEN && c.is_house()) { // kitchen pantry; add shelves with food items
 		unsigned const num_shelf_levels(3);
 		unsigned const sdims[3] = {dim, !dim, !dim}, sdirs[3] = {dir, 1, 0};
 		float const shelf_dz(height/(num_shelf_levels+1)), shelf_hthick(0.005*height), door_width(ccubes[2].d[!dim][0] - ccubes[0].d[!dim][1]); // front right - front left
@@ -455,6 +455,9 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vect_room_
 				}
 			} // for s
 		} // for n
+	}
+	else if (c.item_flags == RTYPE_KITCHEN && !c.is_house()) { // commercial kitchen walk in freezer
+		// TODO
 	}
 	else {
 		assert(0);
