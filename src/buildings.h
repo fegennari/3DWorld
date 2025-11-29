@@ -1573,6 +1573,7 @@ struct elevator_t : public oriented_cube_t { // dim/dir applies to the door
 };
 
 unsigned const NUM_RTYPE_SLOTS = 8; // enough for houses; hard max is 8 so that a uint8_t bit mask can be used
+unsigned const ALL_RTYPES_MASK = (1 << NUM_RTYPE_SLOTS) - 1;
 inline unsigned wrap_room_floor(unsigned floor) {return min(floor, NUM_RTYPE_SLOTS-1U);}
 
 // room flags
@@ -1591,16 +1592,18 @@ unsigned const ROOM_FLAG_CUT_WALL = 0x0800; // wall has sections cut from it
 
 struct room_t : public cube_t { // size=56
 	bool is_hallway=0, is_office=0, is_sec_bldg=0, is_single_floor=0;
-	uint16_t flags=0;
 	uint8_t has_stairs=0; // per-floor bit mask; always set to 255 for stairs that span the entire room
 	uint8_t has_elevator=0; // number of elevators, usually either 0 or 1
 	uint8_t interior=0; // 0=not interior (has windows), 1=interior, 2=extended basement, {3,4}=extended basement connector, dim=interior-3
 	uint8_t ext_sides=0; // sides that have exteriors, and likely windows (bits for x1, x2, y1, y2)
-	uint8_t part_id=0, num_lights=0, rtype_locked=0;
+	uint8_t part_id=0, num_lights=0;
 	uint8_t unit_id=0; // for apartments and hotels; also encodes {dim, dir} for mall stores
 	uint8_t open_wall_mask=0; // {dim x dir}
-	uint8_t floors_pre_assigned=0; // one per NUM_RTYPE_SLOTS
-	room_type rtype[NUM_RTYPE_SLOTS]; // this applies to the first few floors because some rooms can have variable per-floor assignment
+private:
+	uint8_t floors_pre_assigned=0, rtype_locked=0; // one per NUM_RTYPE_SLOTS
+	uint16_t flags=0;
+	room_type rtype[NUM_RTYPE_SLOTS]; // this applies to the first N floors because some rooms can have variable per-floor assignment
+public:
 	uint32_t lit_by_floor=0; // used for AI placement; 32 floor is enough for most buildings
 	float light_intensity=0.0; // due to room lights, if turned on
 
@@ -1609,6 +1612,7 @@ struct room_t : public cube_t { // size=56
 	room_t(room_t const &r, cube_t const &c) {*this = r; copy_from(c);} // sub-room
 	void assign_all_to(room_type rt, bool locked=1); // locked by default
 	void assign_to(room_type rt, unsigned floor, bool locked=0); // unlocked by default
+	void clear_room_type(unsigned floor);
 	void mark_open_wall     (bool dim, bool dir) {open_wall_mask |= (1 << (2*dim + dir));}
 	void mark_open_wall_dim (bool dim          ) {open_wall_mask |= (1 << 2*dim) | (1 << (2*dim + 1));} // both dirs for this dim
 	bool has_open_wall      (bool dim, bool dir) const {return (open_wall_mask & (1 << (2*dim + dir)));}
@@ -1648,6 +1652,7 @@ struct room_t : public cube_t { // size=56
 	void set_has_skylight     () {flags |= ROOM_FLAG_SKYLIGHT;}
 	void set_is_entryway      () {flags |= ROOM_FLAG_IS_ENTRY;}
 	void set_has_mirror       () {flags |= ROOM_FLAG_MIRROR  ;}
+	void clear_has_mirror     () {flags &= ~ROOM_FLAG_MIRROR ;}
 	void set_has_out_of_order () {flags |= ROOM_FLAG_HAS_OOO ;}
 	void set_interior_window  () {flags |= ROOM_FLAG_INT_WIND;}
 	void set_no_geom          () {flags |= ROOM_FLAG_RO_GEOM ;}

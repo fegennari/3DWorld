@@ -3781,7 +3781,7 @@ room_t::room_t(cube_t const &c, unsigned p, unsigned nl, bool is_hallway_, bool 
 void room_t::assign_all_to(room_type rt, bool locked) {
 	assert(!(locked && rt == RTYPE_NOTSET));
 	for (unsigned n = 0; n < NUM_RTYPE_SLOTS; ++n) {rtype[n] = rt;}
-	if (locked) {rtype_locked = 0xFF;} // room type is locked on all floors
+	if (locked) {rtype_locked = ALL_RTYPES_MASK;} // room type is locked on all floors
 }
 void room_t::assign_to(room_type rt, unsigned floor, bool locked) {
 	assert(!(locked && rt == RTYPE_NOTSET));
@@ -3795,6 +3795,11 @@ void room_t::assign_to(room_type rt, unsigned floor, bool locked) {
 	if (is_bathroom(rtype[floor]) && !is_bathroom(rt)) return;
 	rtype[floor] = rt;
 	if (locked) {rtype_locked |= (1 << floor);} // lock this floor
+}
+void room_t::clear_room_type(unsigned floor) {
+	floor = wrap_room_floor(floor);
+	rtype[floor]  = RTYPE_NOTSET; // not a bathroom; can't call assign_to() because it skips bathrooms
+	rtype_locked &= ~(1 << floor); // unlock as well
 }
 bool room_t::maybe_connected_open_wall(room_t const &r) const {
 	if (!open_wall_mask || !r.open_wall_mask) return 0;

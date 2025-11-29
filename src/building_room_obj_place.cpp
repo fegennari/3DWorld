@@ -457,7 +457,7 @@ bool building_t::room_has_stairs_or_elevator(room_t const &room, float zval, uns
 bool building_t::is_room_office_bathroom(room_t &room, float zval, unsigned floor) const { // Note: may also update room flags
 	if (!room.is_office || !is_bathroom(room.get_room_type(floor))) return 0;
 	if (!room_has_stairs_or_elevator(room, zval, floor))            return 1;
-	room.rtype[wrap_room_floor(floor)] = RTYPE_NOTSET; // not a bathroom; can't call assign_to() because it skips bathrooms
+	room.clear_room_type(floor); // not a bathroom; can't call assign_to() because it skips bathrooms
 	return 0;
 }
 
@@ -1858,7 +1858,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 		for (unsigned pass = 0; pass < (added_vanity ? 2U : 1U) && !placed_toilet; ++pass) { // {without, with} vanity
 			if (pass == 1) { // vanity pass; remove the vanity; not a bathroom without a toilet
 				objs.resize(vanity_obj_ix);
-				room.flags  &= ~ROOM_FLAG_MIRROR; // no more mirror
+				room.clear_has_mirror(); // no more mirror
 				added_vanity = 0;
 			}
 			for (unsigned n = 0; n < 4 && !placed_toilet; ++n) { // try 4 room corners
