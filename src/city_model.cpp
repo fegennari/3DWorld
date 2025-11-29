@@ -303,7 +303,8 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	vector3d const local_rotate(do_local_rotate ? model_file.rotate_about : zero_vector);
 	fgPushMatrix();
 	translate_to(pos + z_offset*sz_scale*plus_z - local_rotate); // z_offset is in model space, scale to world space
-	vector3d const dir_xy(vector3d(dir.x, dir.y, 0.0).get_norm());
+	vector3d dir_xy(dir.x, dir.y, 0.0);
+	if (dir_xy == zero_vector) {dir_xy = plus_x;} else {dir_xy.normalize();}
 	if (dir.z != 0.0) {rotate_about(TO_DEG*asinf(dir.z), cross_product(dir_xy, plus_z));} // handle cars on a slope or objects tilted
 	rotate_to_plus_x(dir_xy);
 	if (local_rotate != all_zeros) {translate_to(local_rotate);}
