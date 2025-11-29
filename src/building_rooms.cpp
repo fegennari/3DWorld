@@ -435,10 +435,15 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			else if (is_mall_store) {
 				is_lit = 1;
 				unsigned const objs_start(objs.size());
-				add_mall_store_objs       (rgen, *r, room_center.z,  room_id, store_type_mask, light_ix_assign);
+				unsigned const store_type(add_mall_store_objs(rgen, *r, room_center.z,  room_id, store_type_mask, light_ix_assign));
 				add_outlets_to_room       (rgen, *r, room_center.z,  room_id, objs_start, 0, 0); // is_ground_floor=is_basement=0
 				add_light_switches_to_room(rgen, *r, room_center.z,  room_id, objs_start, 0, 0, is_lit); // is_ground_floor=is_basement=0
 				rgen.rand_mix(); // make sure numbers are different for each store
+				
+				if (store_type == STORE_FOOD) { // restaurants have separate dining vs. kitchen and may need more lights
+					max_eq(nx, 3U);
+					max_eq(ny, 3U);
+				}
 			}
 			if ((!has_stairs && (f == 0 || top_floor) && interior->stairwells.size() > 1) || top_of_stairs) { // should this be outside the loop?
 				// check for stairwells connecting stacked parts (is this still needed?); check for roof access stairs and set top_of_stairs=0
