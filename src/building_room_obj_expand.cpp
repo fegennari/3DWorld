@@ -353,7 +353,8 @@ void add_stack_of_plates(cube_t const &place_area, float radius, unsigned room_i
 
 void building_room_geom_t::expand_closet(room_object_t const &c) {
 	add_closet_objects(c, expanded_objs, 0); // no_models=0
-	invalidate_model_geom(); // likelu required if there are hangers and clothing
+	invalidate_small_geom();
+	invalidate_model_geom(); // likely required if there are hangers and clothing
 }
 void building_room_geom_t::add_closet_objects(room_object_t const &c, vect_room_object_t &objects, bool no_models) {
 	rand_gen_t rgen(c.create_rgen());
