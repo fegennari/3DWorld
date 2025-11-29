@@ -3808,6 +3808,7 @@ void building_room_geom_t::add_escalator(escalator_t const &e, float floor_spaci
 		rgeom_mat_t &bot_mat(get_metal_material(1, 0, 0, 0, 0, WHITE, 0.5, 30.0, 0.25)); // shadowed=1
 		bot_mat.add_quad_to_verts(bot_pts, colorRGBA(0.85, 0.85, 0.85));
 		// draw metal surfaces
+		get_untextured_material(0); // ensure railing material is loaded
 		rgeom_mat_t &metal_mat(get_metal_material(1)); // shadowed=1
 		for (unsigned d = 0; d < 2; ++d) {metal_mat.add_cube_to_verts_untextured(floors[d], sides_color, (EF_Z1 | sides_skip));} // skip bottom and sides; skip inside end as well?
 		metal_mat.add_cube_to_verts_untextured(upper, sides_color, EF_Z2); // skip top surface
