@@ -341,6 +341,7 @@ void building_t::add_mall_store(cube_t const &store, cube_t const &window_area, 
 	Room.assign_all_to(RTYPE_STORE);
 	Room.interior        = 2; // mark as extended basement
 	Room.is_single_floor = 1;
+	Room.unit_id         = 2*(!dim) + (!dir);
 	Room.set_interior_window();
 	interior->get_extb_start_room().set_interior_window(); // mall concourse also has an interior window
 	interior->rooms.push_back(Room);
@@ -1665,17 +1666,8 @@ unsigned building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zv
 	float const door_width(get_doorway_width()), floor_spacing(room.dz()), window_vspace(get_window_vspace());
 	float const wall_thickness(get_wall_thickness()), wall_hthick(0.5*wall_thickness), fc_thick(get_fc_thickness()), pillar_width(2.0*wall_thickness);
 	float const light_amt = 1.0; // fully lit, for now
-	// get doorway bcube
-	cube_t doorway;
-
-	for (store_doorway_t const &d : interior->mall_info->store_doorways) {
-		if (d.room_id != room_id) continue;
-		assert(doorway.is_all_zeros()); // must be exactly one
-		doorway = d;
-	}
-	assert(!doorway.is_all_zeros()); // must be found
 	// select store type
-	bool const dim(doorway.dy() < doorway.dx()), dir(room.get_center_dim(dim) < doorway.get_center_dim(dim)); // points from room center toward doorway; doorway wall
+	bool const dim(room.unit_id >> 1), dir(room.unit_id & 1); // points from room center toward doorway; doorway wall
 	bool const mall_dim(interior->extb_wall_dim), is_end_store(dim == mall_dim), tall_retail(floor_spacing > 1.5*window_vspace);
 	float const room_len(room.get_sz_dim(dim)), room_width(room.get_sz_dim(!dim)), pillar_z2(room.z2() - fc_thick);
 	float const clearance(get_min_front_clearance_inc_people());
@@ -1730,6 +1722,16 @@ unsigned building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zv
 		if (!is_duplicate) break; // unique name, done
 	}
 	//cout << store_name << endl; // TESTING
+	cube_t doorway;
+
+	if (store_type != STORE_FOOD) { // get doorway bcube; may have been removed for restaurants with no public access, so not needed for these stores
+		for (store_doorway_t const &d : interior->mall_info->store_doorways) {
+			if (d.room_id != room_id) continue;
+			assert(doorway.is_all_zeros()); // must be exactly one
+			doorway = d;
+		}
+		assert(!doorway.is_all_zeros()); // must be found
+	}
 	bool const emissive(0);
 	colorRGBA const logo_color(choose_sign_color(rgen, emissive));
 	interior->mall_info->stores.emplace_back(dim, dir, room_id, store_type, item_category, logo_color, store_name);
@@ -1942,7 +1944,7 @@ unsigned building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zv
 					}
 				}
 				if (store_type == STORE_FURNITURE) {
-					room_t sub_room(r, room.part_id);
+					room_t sub_room(r, room.part_id); // Note: temporary, not added to interior->rooms
 					sub_room.assign_all_to(RTYPE_STORE);
 					// set open_wall flags; required for drawing backs of bookcases and avoiding tall desks
 					if (row   > 0         ) {sub_room.mark_open_wall( dim, 0);}

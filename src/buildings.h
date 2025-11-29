@@ -1596,7 +1596,7 @@ struct room_t : public cube_t { // size=56
 	uint8_t interior=0; // 0=not interior (has windows), 1=interior, 2=extended basement, {3,4}=extended basement connector, dim=interior-3
 	uint8_t ext_sides=0; // sides that have exteriors, and likely windows (bits for x1, x2, y1, y2)
 	uint8_t part_id=0, num_lights=0, rtype_locked=0;
-	uint8_t unit_id=0; // for apartments and hotels
+	uint8_t unit_id=0; // for apartments and hotels; also encodes {dim, dir} for mall stores
 	uint8_t open_wall_mask=0; // {dim x dir}
 	uint8_t floors_pre_assigned=0; // one per NUM_RTYPE_SLOTS
 	room_type rtype[NUM_RTYPE_SLOTS]; // this applies to the first few floors because some rooms can have variable per-floor assignment
