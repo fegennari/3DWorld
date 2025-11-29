@@ -321,16 +321,16 @@ void add_rows_of_food_boxes(rand_gen_t &rgen, room_object_t const &parent, cube_
 	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_WAS_EXP);
 	add_row_of_cubes(parent, shelf, fwidth, fdepth, fheight, 0.2, TYPE_FOOD_BOX, flags, objects, rgen, dir);
 }
-void add_rows_of_bottles_or_cans(rand_gen_t &rgen, room_object_t const &parent, cube_t const &shelf, float height_val, float depth, vect_room_object_t &objects) {
+void add_rows_of_bottles_or_cans(rand_gen_t &rgen, room_object_t const &parent, cube_t const &shelf, float height_val, float depth, bool no_alcohol, vect_room_object_t &objects) {
 	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_WAS_EXP);
 
 	if (rgen.rand_float() < 0.65) { // add bottles; these aren't consumable by the player because that would be too powerful
 		float const bot_height(height_val*rgen.rand_uniform(0.7, 0.9)), bot_radius(min(0.25f*depth, bot_height*rgen.rand_uniform(0.12, 0.18)));
-		add_rows_of_vcylinders(parent, shelf, bot_radius, bot_height, 0.25, TYPE_BOTTLE, 2, flags, objects, rgen); // 1-2 columns
+		add_rows_of_vcylinders(parent, shelf, bot_radius, bot_height, 0.25, TYPE_BOTTLE, 2, flags, objects, rgen, 0, 0, no_alcohol); // 1-2 columns
 	}
 	else { // add drink cans; should these be grouped into six packs?
 		float const can_height(0.48*height_val), can_radius(min(0.45f*depth, 0.13f*height_val)); // standard height and radius
-		add_rows_of_vcylinders(parent, shelf, can_radius, can_height, 0.25, TYPE_DRINK_CAN, 2, flags, objects, rgen); // 1-3 columns
+		add_rows_of_vcylinders(parent, shelf, can_radius, can_height, 0.25, TYPE_DRINK_CAN, 2, flags, objects, rgen, 0, 0, no_alcohol); // 1-3 columns
 	}
 }
 void add_stack_of_plates(cube_t const &place_area, float radius, unsigned room_id, float light_amt, unsigned flags,
@@ -438,7 +438,7 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vect_room_
 				float const shelf_depth(shelf.get_sz_dim(c2.dim)), rand_val(rgen.rand_float());
 				float const rv1(back ? 0.7 : 0.4), rv2(back ? 1.0 : 0.6), rv3(back ? 1.0 : 0.8);
 				if      (rand_val < rv1) {add_rows_of_food_boxes     (rgen, c2, shelf, 0.7*height_val, shelf_depth, c2.dir, objects);} // food boxes; more likely
-				else if (rand_val < rv2) {add_rows_of_bottles_or_cans(rgen, c2, shelf, 0.5*height_val, shelf_depth,         objects);} // bottles or cans
+				else if (rand_val < rv2) {add_rows_of_bottles_or_cans(rgen, c2, shelf, 0.5*height_val, shelf_depth, 0,      objects);} // bottles or cans
 				else if (rand_val < rv3 && !top) { // jars
 					float const oheight(0.2*height_val), radius(min(0.45f*shelf_depth, 0.3f*oheight));
 					add_rows_of_vcylinders(c2, shelf, radius, oheight, 0.2, TYPE_JAR, 1, flags, objects, rgen); // 1 column
@@ -1262,7 +1262,7 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 					// will fall through to grouped items case below
 				}
 				else { // bottles or cans; not consumable
-					add_rows_of_bottles_or_cans(rgen2, c, shelf, height_val, depth, objects);
+					add_rows_of_bottles_or_cans(rgen2, c, shelf, height_val, depth, no_alcohol, objects);
 					continue;
 				}
 			} // end food
