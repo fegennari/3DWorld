@@ -2102,7 +2102,7 @@ struct building_interior_t {
 	draw_range_t draw_range;
 	uint64_t room_type_count=0; // currently only used for prisons
 	unsigned extb_walls_start[2]={}, mall_hall_walls_start[2]={};
-	unsigned gen_room_details_pass=0, rgen_seed_ix=0, backrooms_tid=0;
+	unsigned gen_room_details_pass=0, rgen_seed_ix=0, backrooms_tid=0, room_geom_rseed=0;
 	int garage_room=-1, ext_basement_hallway_room_id=-1, ext_basement_door_stack_ix=-1, last_active_door_ix=-1, security_room_ix=-1;
 	uint8_t furnace_type=FTYPE_NONE, attic_type=ATTIC_TYPE_RAFTERS;
 	bool door_state_updated=0, is_unconnected=0, ignore_ramp_placement=0, placed_people=0, elevators_disabled=0, attic_access_open=0, has_backrooms=0;

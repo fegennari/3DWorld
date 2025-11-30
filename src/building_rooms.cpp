@@ -1212,6 +1212,12 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			for (auto i = objs.begin() + room_objs_start; i != objs.end(); ++i) {i->flags |= RO_FLAG_INTERIOR;}
 		}
 	} // for r (room)
+	// check if rseed1 differs from previous value
+	if (interior->room_geom_rseed == 0) {interior->room_geom_rseed = rgen.rseed1;}
+	else if (rgen.rseed1 != interior->room_geom_rseed) {
+		cout << "Error: Building " << name << " " << btype_names[btype] << " random seed differs between gen_room_details() calls" << endl;
+		cout << TXT(has_basement()) << TXT(has_ext_basement()) << TXT(has_mall()) << endl;
+	}
 	if (has_mall()) {add_mall_store_door_objs();};
 	if (saw_mall) {interior->room_geom->last_mall_obj_ix = objs.size();}
 	if (is_house) {interior->assign_master_bedroom(window_vspacing, floor_thickness);}
