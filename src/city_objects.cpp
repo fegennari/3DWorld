@@ -1725,22 +1725,59 @@ void sculpture_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_
 
 // ponds
 
-pond_t::pond_t(point const &pos_, float x_radius, float y_radius, float depth) : city_obj_t(pos_, max(x_radius, y_radius)) {
+bool point_in_ellipse(point const &p, cube_t const &c) {
+	if (!c.contains_pt_xy(p)) return 0;
+	float const xv((p.x - c.xc())/(0.5*c.dx())), yv((p.y - c.yc())/(0.5*c.dy()));
+	return (xv*xv + yv*yv < 1.0);
+}
+bool has_circle_overlap(sphere_t const &circle, vector<sphere_t> const &circles) {
+	for (sphere_t const &c : circles) {
+		if (dist_xy_less_than(circle.pos, c.pos, (circle.radius + c.radius))) return 1;
+	}
+	return 0;
+}
+pond_t::pond_t(point const &pos_, float x_radius, float y_radius, float depth, unsigned rseed) : city_obj_t(pos_, max(x_radius, y_radius)) {
 	bcube.set_from_point(pos);
 	bcube.expand_in_x(x_radius);
 	bcube.expand_in_y(y_radius);
 	bcube.z1() -= depth;
+	// add lily pads
+	rand_gen_t rgen;
+	rgen.set_state(rseed, 3*rseed+1);
+	unsigned const num(10 + (rgen.rand() % 31)); // 10-40
+	lily_pads.reserve(num);
+
+	for (unsigned n = 0; n < num; ++n) {
+		sphere_t lpad;
+		lpad.pos.z  = (rgen.rand() % 8); // stores orient
+		lpad.radius = rgen.rand_uniform(0.5, 1.0)*0.03*radius;
+		cube_t lp_area(bcube), lp_avoid(bcube);
+		lp_area.expand_by_xy(-2.0*lpad.radius); // don't place too close to the pond edge
+		lp_avoid.expand_by(-vector3d(0.4*bcube.dx(), 0.4*bcube.dy(), 0.0)); // avoid the center
+		bool success(0);
+
+		for (unsigned N = 0; N < 100; ++N) {
+			for (unsigned d = 0; d < 2; ++d) {lpad.pos[d] = rgen.rand_uniform(bcube.d[d][0], bcube.d[d][1]);}
+			if (point_in_ellipse(lpad.pos, lp_area) && !point_in_ellipse(lpad.pos, lp_avoid) && !has_circle_overlap(lpad, lily_pads)) {success = 1; break;}
+		}
+		if (!success) break; // shouldn't happen
+		lily_pads.push_back(lpad);
+	} // for n
 }
 /*static*/ void pond_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	assert(!shadow_only);
 	if      (dstate.pass_ix == 0) {select_texture(DIRT_TEX);} // dirt below
 	else if (dstate.pass_ix == 1) {select_texture(BLUR_CENT_TEX); enable_blend();} // dark blur
-	else {begin_water_surface_draw(dstate.s);} // water above
+	else if (dstate.pass_ix == 2) {select_texture(get_texture_by_name("lilypad.png")); enable_blend();} // lily pads
+	else if (dstate.pass_ix == 3) {begin_water_surface_draw(dstate.s);} // water above
+	else {assert(0);}
 }
 /*static*/ void pond_t::post_draw(draw_state_t &dstate, bool shadow_only) {
 	if      (dstate.pass_ix == 0) {} // dirt below
 	else if (dstate.pass_ix == 1) {disable_blend();} // dark blur
-	else {end_water_surface_draw(dstate.s);} // water above
+	else if (dstate.pass_ix == 2) {disable_blend();} // lily pads
+	else if (dstate.pass_ix == 3) {end_water_surface_draw(dstate.s);} // water above
+	else {assert(0);}
 }
 void pond_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	assert(!shadow_only);
@@ -1774,11 +1811,26 @@ void pond_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale
 		dstate.s.set_cur_color(BLACK);
 		draw_xy_oval(R.x, R.y, ndiv, point(pos.x, pos.y, bcube.z2()+dz_off), tscale, tscale);
 	}
-	else { // water above
+	else if (dstate.pass_ix == 2) { // lily pads
+		if (ndiv < 20) return; // skip if far
+		float const z1(bcube.z2() + 2.0*dz_off), z2(z1 + dz_off);
+		color_wrapper const cw(WHITE);
+		
+		for (sphere_t const &cr : lily_pads) {
+			unsigned const orient(round_fp(cr.pos.z));
+			bool const mx(orient & 1), my(orient & 2), swap_xy(orient & 4);
+			cube_t lpad;
+			lpad.set_from_sphere(cr);
+			set_cube_zvals(lpad, z1, z2);
+			dstate.draw_cube(qbds.qbd, lpad, cw, 1, 0.0, 3, mx, my, swap_xy); // top only
+		} // for cr
+	}
+	else if (dstate.pass_ix == 3) { // water above
 		float const tscale(2.0);
 		dstate.s.set_cur_color(colorRGBA(0.2, 0.3, 0.5, 0.5)); // semi-transparent
 		draw_xy_oval(R.x, R.y, ndiv, point(pos.x, pos.y, bcube.z2()+2.0*dz_off), tscale, tscale);
 	}
+	else {assert(0);}
 }
 bool pond_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const { // pos_ is in camera space
 	point const pos_bs(pos_ - xlate);
@@ -1789,11 +1841,6 @@ bool pond_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, p
 	pos_ = p_last; // finding the actual intersection point requires solving a quartic equation, so simply revert to the last pos
 	if (cnorm) {*cnorm = vector3d(delta.x, delta.y, 0.0).get_norm();} // assume collision normal is in the XY plane
 	return 1;
-}
-bool point_in_ellipse(point const &p, cube_t const &c) {
-	if (!c.contains_pt_xy(p)) return 0;
-	float const xv((p.x - c.xc())/(0.5*c.dx())), yv((p.y - c.yc())/(0.5*c.dy()));
-	return (xv*xv + yv*yv < 1.0);
 }
 bool pond_t::point_contains_xy(point const &p) const { // p is in global space
 	return point_in_ellipse(p, bcube);

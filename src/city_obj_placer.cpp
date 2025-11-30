@@ -661,7 +661,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 				if (blocked) continue;
 				if (has_bcube_int_xy(pond, active_pond_blockers)) continue; // check underground basement rooms
 				float const depth(city_params.road_width*rgen.rand_uniform(0.1, 0.5));
-				pond_t const pond_obj(center, pond_sz.x, pond_sz.y, depth);
+				pond_t const pond_obj(center, pond_sz.x, pond_sz.y, depth, rgen.rand());
 
 				for (point const &p : tree_pos) { // check trees; trees on the edge are okay
 					if (pond.contains_pt_xy(p) && pond_obj.point_contains_xy(p)) {blocked = 1; break;}
@@ -2473,7 +2473,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 		draw_objects(pladders, plad_groups,    dstate, 0.06, shadow_only, 1);
 		draw_objects(ppaths,   ppath_groups,   dstate, 0.25, shadow_only, 0, 1); // draw_qbd_as_quads=1
 
-		for (dstate.pass_ix = 0; dstate.pass_ix < 2; ++dstate.pass_ix) { // {dirt bottom, dark blur}
+		for (dstate.pass_ix = 0; dstate.pass_ix < 3; ++dstate.pass_ix) { // {dirt bottom, dark blur, lily pads}
 			draw_objects(ponds, pond_groups, dstate, 0.30, shadow_only, 1); // dist_scale=0.30, has_immediate_draw=1
 		}
 	}
@@ -2558,7 +2558,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 }
 void city_obj_placer_t::draw_transparent_objects(draw_state_t &dstate) {
 	if (!dstate.check_cube_visible(all_objs_bcube, 1.0)) return; // check bcube, dist_scale=1.0
-	dstate.pass_ix = 2; // water surface
+	dstate.pass_ix = 3; // water surface
 	draw_objects(ponds, pond_groups, dstate, 0.30, 0, 1); // dist_scale=0.30, shadow_only=0, has_immediate_draw=1
 	dstate.pass_ix = 1; // transparent glass surfaces
 	draw_objects(elevators, wwe_groups, dstate, 0.20, 0, 0); // dist_scale=0.20, shadow_only=0, has_immediate_draw=0
