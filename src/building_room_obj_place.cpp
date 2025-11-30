@@ -5661,9 +5661,8 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 {
 	vect_room_object_t &objs(interior->room_geom->objs);
 	assert(objs.size() > objs_start);
-	bool const is_library   (room.get_room_type(floor) == RTYPE_LIBRARY);
-	bool const is_kitchen   (room.get_room_type(floor) == RTYPE_KITCHEN);
-	bool const is_conference(room.get_room_type(floor) == RTYPE_CONF   );
+	room_type const rtype(room.get_room_type(floor));
+	bool const is_library(rtype == RTYPE_LIBRARY), is_kitchen(rtype == RTYPE_KITCHEN), is_conference(rtype == RTYPE_CONF);
 	bool const sparse_place(floor > 0 && !is_conference && interior->rooms.size() > 40); // fewer objects on upper floors of large office buildings as an optimization
 	float const place_book_prob(( is_house ? 1.0 : 0.5)*(room.is_office ? 0.80 : 1.00)*(sparse_place ? 0.75 : 1.0));
 	float const place_bottle_prob(is_house ? 1.0 :      (room.is_office ? 0.80 : 0.50)*(sparse_place ? 0.50 : 1.0));
@@ -5681,7 +5680,7 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 		if (obj.is_on_floor()) continue; // can't place on fallen over object
 		// add place settings to kitchen and dining room tables 50% of the time
 		bool const is_table(obj.type == TYPE_TABLE || obj.type == TYPE_CONF_TABLE); // for eating, and directionless (meaning objects can have any orient)
-		bool const is_eating_table(is_table && (room.get_room_type(floor) == RTYPE_KITCHEN || room.get_room_type(floor) == RTYPE_DINING) && rgen.rand_bool());
+		bool const is_eating_table(is_table && (rtype == RTYPE_KITCHEN || rtype == RTYPE_DINING) && rgen.rand_bool());
 		if (is_eating_table && place_eating_items_on_table(rgen, i)) continue; // no other items to place
 		float book_prob(0.0), bottle_prob(0.0), cup_prob(0.0), plant_prob(0.0), laptop_prob(0.0), pizza_prob(0.0), toy_prob(0.0), banana_prob(0.0);
 		static vect_cube_t avoid; // reuse across buildings
