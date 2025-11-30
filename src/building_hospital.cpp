@@ -258,7 +258,7 @@ bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, flo
 		placed_couch = place_model_along_wall(OBJ_MODEL_COUCH, TYPE_COUCH, room, 0.40, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 4, 0, color);
 	}
 	if (!placed_couch && rgen.rand_bool()) {
-		place_model_along_wall(OBJ_MODEL_RCHAIR, TYPE_RCHAIR, room, 0.5, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0);
+		place_model_along_wall(OBJ_MODEL_RCHAIR, TYPE_RCHAIR, room, 0.5, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0); // not rotated
 	}
 	if (rgen.rand_float() < ((num_beds > 1) ? 0.5 : 0.25)) { // maybe add a wheelchair; more likely if there are multiple beds
 		place_model_along_wall(OBJ_MODEL_WHEELCHAIR, TYPE_WHEELCHAIR, room, 0.45, rgen, zval, room_id, tot_light_amt, place_area, objs_start);
