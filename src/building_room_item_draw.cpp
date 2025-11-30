@@ -2552,7 +2552,8 @@ bool building_t::has_cars_to_draw(bool player_in_building) const {
 	return 0;
 }
 void building_t::draw_cars_in_building(shader_t &s, vector3d const &xlate, bool player_in_this_building, bool shadow_only) const {
-	if (!has_room_geom()) return; // can get here in rare cases, maybe only shadow_only pass
+	if (!has_room_geom   ()) return; // can get here in rare cases, maybe only shadow_only pass
+	if (!has_cars_enabled()) return;
 	point viewer(camera_pdu.pos - xlate); // building space
 	bool const check_occlusion(display_mode & 0x08), is_parking_str(is_parking());
 	float const floor_spacing(get_window_vspace());
@@ -2585,12 +2586,13 @@ void building_t::draw_cars_in_building(shader_t &s, vector3d const &xlate, bool 
 			if (viewer.z > max_vis_zval) return;
 		}
 		viewer = get_inv_rot_pos(viewer); // not needed because there are no cars in rotated buildings?
+		assert(pg_wall_start <= interior->room_geom->wall_ps_end);
 		auto objs_ps_end(objs.begin() + interior->room_geom->wall_ps_end);
 		assert(objs_ps_end <= objs.end());
 		vect_cube_t occluders; // should this be split out per PG level?
 
 		// start at walls, since parking spaces are added after those, and continue across all parking garage levels
-		for (auto i = objs.begin()+pg_wall_start; i != objs_ps_end; ++i) {
+		for (auto i = objs.begin()+pg_wall_start; i < objs_ps_end; ++i) {
 			if (check_occlusion && (i->type == TYPE_PG_WALL || (is_parking_str && i->type == TYPE_STAIR_WALL))) {occluders.push_back(*i);}
 			if (i->type != TYPE_PARK_SPACE || !i->is_used())                       continue; // not a space, or no car in this space
 			if (player_in_this_building && i->z2() < viewer.z - 2.0*floor_spacing) continue; // more than a floor below - skip
