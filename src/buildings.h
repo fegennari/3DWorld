@@ -2062,7 +2062,7 @@ struct bldg_industrial_info_t {
 	bldg_industrial_info_t(bool dim, bool dir, float epos, cube_t const &fs, cube_t const &ee) :
 		entrance_dim(dim), entrance_dir(dir), entrance_pos(epos), floor_space(fs), entrance_area(ee) {}
 	void next_frame(particle_manager_t &particle_manager);
-	void clear_room_details() {smoke_emitters.clear();}
+	void clear_room_details() {smoke_emitters.clear(); pg_extended_pipes.clear();}
 };
 
 struct wall_seg_t : public cube_t {

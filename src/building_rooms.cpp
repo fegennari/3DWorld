@@ -171,6 +171,7 @@ void building_t::clear_existing_room_geom() {
 	if (is_prison()) {interior->int_windows.clear();}
 	interior->room_type_count  = 0;
 	interior->security_room_ix = -1;
+	interior->elevator_equip_room.set_to_zeros();
 	invalidate_nav_graph();
 	has_int_fplace = 0; // reset for this generation
 	ladder.set_to_zeros(); // will be re-placed
@@ -869,8 +870,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					r->assign_to(RTYPE_OFFICE, f); // if room is on a lower floor where we can assign a type, re-assign to an office
 				}
 			}
-			// bedroom or bathroom case; need to check first floor even if must_be_bathroom
-			if (!added_obj && allow_br && !is_tall_room && !has_walkway && can_be_bedroom_or_bathroom(*r, f)) {
+			// bedroom or bathroom case; need to check first floor even if must_be_bathroom;
+			// skip if this overlaps with other room slots as that may cause nondeterminism across gen_room_details() calls
+			if (!added_obj && allow_br && !is_tall_room && !has_walkway && can_be_bedroom_or_bathroom(*r, f) && f < NUM_RTYPE_SLOTS) {
 				// Note: num_bedrooms is summed across all floors, while num_bathrooms is per-floor
 				// Note: min_br is applied to bedrooms, but could be applied to bathrooms in the same way
 				bool const pref_sec_bath(is_house && num_bathrooms == 1 && num_bedrooms > min_br && rooms.size() >= 6 && !must_be_bathroom && !has_fireplace && can_be_bathroom(*r));
