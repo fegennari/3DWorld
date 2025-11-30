@@ -2287,7 +2287,7 @@ void building_t::add_restaurant_objs(rand_gen_t &rgen, room_t const &room, float
 	set_cube_zvals(wall, bot_wall_z1, bot_wall_z2);
 	set_wall_width(wall, fb_split, wall_hthick, dim);
 	cube_t upper_wall(wall);
-	if (leave_end_gaps) {wall.expand_in_dim(!dim, -clearance);}
+	if (leave_end_gaps) {wall.expand_in_dim(!dim, -1.25*clearance);}
 	add_short_wall_with_trim(wall, dim, room_id, light_amt); // bottom wall
 	set_cube_zvals(upper_wall, (zval + get_floor_ceil_gap()), (room.z2() - fc_thick));
 	objs.emplace_back(upper_wall, TYPE_STAIR_WALL, room_id, dim, 0, RO_FLAG_HANGING, light_amt, SHAPE_CUBE, wall_color); // draw bottom
