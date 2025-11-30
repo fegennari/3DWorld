@@ -1710,6 +1710,7 @@ unsigned building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zv
 	unsigned type_ix(is_retail ? (NUM_STORE_TYPES + item_category) : store_type);
 	type_mask |= (1U << type_ix);
 	cube_t doorway;
+	bool no_doorway(0);
 
 	if (store_type != STORE_FOOD) { // get doorway bcube; may have been removed for restaurants with no public access, so not needed for these stores
 		for (store_doorway_t const &d : interior->mall_info->store_doorways) {
@@ -1720,6 +1721,7 @@ unsigned building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zv
 		if (doorway.is_all_zeros()) { // must be found
 			cout << "Failed to find doorway for mall store in building " << name << " at " << bcube.str() << endl;
 			store_type = STORE_FOOD; // as a fallback, set to a food store to avoid asserting
+			no_doorway = 1;
 		}
 	}
 	// generate or select a store name
@@ -2188,7 +2190,7 @@ unsigned building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zv
 		} // for row
 	}
 	else if (store_type == STORE_FOOD) { // restaurant, coffee shop, etc.
-		add_restaurant_objs(rgen, room, zval, room_id, dim, dir, light_amt, light_ix_assign);
+		add_restaurant_objs(rgen, room, zval, room_id, dim, dir, no_doorway, light_amt, light_ix_assign);
 	}
 	else if (store_type == STORE_PETS) { // rats, snakes, birds, spiders, fish, etc.
 		// add fish tanks along walls
@@ -2231,10 +2233,11 @@ unsigned building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zv
 	return store_type;
 }
 
-void building_t::add_restaurant_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, bool dim, bool dir, float light_amt, light_ix_assign_t &light_ix_assign) {
+void building_t::add_restaurant_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id,
+	bool dim, bool dir, bool no_doorway, float light_amt, light_ix_assign_t &light_ix_assign) {
 	float const window_vspace(get_window_vspace()), wall_thickness(get_wall_thickness()), wall_hthick(0.5*wall_thickness), fc_thick(get_fc_thickness());
 	float const clearance(get_min_front_clearance_inc_people());
-	int const style((3*rgen.rand()) % 3); // {open with dining, open with no dining, closed with counter}
+	int const style(no_doorway ? 2 : ((3*rgen.rand()) % 3)); // {open with dining, open with no dining, closed with counter}; must be closed with counter if no doorway
 	bool const has_dining(style == 0), is_open(style < 2);
 	float const front_wall(room.d[dim][dir]), bot_wall_z1(room.z1() + fc_thick), bot_wall_z2(zval + 0.35*window_vspace);
 	colorRGBA const &wall_color(interior->mall_info->mall_wall_color);
