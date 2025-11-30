@@ -1709,6 +1709,19 @@ unsigned building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zv
 	if (is_end_store && is_retail && item_category == RETAIL_BOXED) {item_category = RETAIL_FOOD;} // make end retail stores food rather than boxes
 	unsigned type_ix(is_retail ? (NUM_STORE_TYPES + item_category) : store_type);
 	type_mask |= (1U << type_ix);
+	cube_t doorway;
+
+	if (store_type != STORE_FOOD) { // get doorway bcube; may have been removed for restaurants with no public access, so not needed for these stores
+		for (store_doorway_t const &d : interior->mall_info->store_doorways) {
+			if (d.room_id != room_id) continue;
+			assert(doorway.is_all_zeros()); // must be exactly one
+			doorway = d;
+		}
+		if (doorway.is_all_zeros()) { // must be found
+			cout << "Failed to find doorway for mall store in building " << name << " at " << bcube.str() << endl;
+			store_type = STORE_FOOD; // as a fallback, set to a food store to avoid asserting
+		}
+	}
 	// generate or select a store name
 	string store_name;
 	
@@ -1722,16 +1735,6 @@ unsigned building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zv
 		if (!is_duplicate) break; // unique name, done
 	}
 	//cout << store_name << endl; // TESTING
-	cube_t doorway;
-
-	if (store_type != STORE_FOOD) { // get doorway bcube; may have been removed for restaurants with no public access, so not needed for these stores
-		for (store_doorway_t const &d : interior->mall_info->store_doorways) {
-			if (d.room_id != room_id) continue;
-			assert(doorway.is_all_zeros()); // must be exactly one
-			doorway = d;
-		}
-		assert(!doorway.is_all_zeros()); // must be found
-	}
 	bool const emissive(0);
 	colorRGBA const logo_color(choose_sign_color(rgen, emissive));
 	interior->mall_info->stores.emplace_back(dim, dir, room_id, store_type, item_category, logo_color, store_name);
