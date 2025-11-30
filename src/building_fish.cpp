@@ -174,6 +174,9 @@ class fish_manager_t {
 			fish_cont_t::clear();
 			bubbles.clear();
 		}
+		bool matches_obj(room_object_t const &obj) const {
+			return (obj_id == obj.obj_id || bcube == obj); // allow either obj_id (in case it's moved) or bcube (in case the IDs are reordered) to match
+		}
 		void next_frame() {
 			present = visible = 0; // mark as not present or visible until it's seen
 			fish_cont_t::next_frame(1.5); // speed_mult_max=1.5
@@ -368,13 +371,18 @@ public:
 			fishtanks.push_back(fishtank_t(obj, is_visible));
 		}
 		else { // find existing fishtank
+			bool found(0);
+
 			for (fishtank_t &ft : fishtanks) {
-				if (ft.obj_id != obj.obj_id) continue;
+				if (!ft.matches_obj(obj)) continue;
 				assert(!ft.present); // check for duplicate obj_id
 				ft.update_object(obj);
 				ft.visible = is_visible;
+				found = 1;
 				break; // can only have one
 			}
+			if (!found) {cout << "Failed to find previous fishtank at " << obj.str() << endl;}
+			//assert(found);
 		}
 		++fishtank_ix;
 	}
@@ -390,7 +398,11 @@ public:
 	void end_objs() { // remove any fishtanks that are no longer present
 		unsigned const pre_num_fishtanks(fishtanks.size());
 		fishtanks.erase(remove_if(fishtanks.begin(), fishtanks.end(), [](fishtank_t const &ft) {return !ft.present;}), fishtanks.end());
-		if (fishtank_ix != fishtanks.size()) {cout << TXT(pre_num_fishtanks) << TXT(fishtanks.size()) << TXT(fishtank_ix) << endl;}
+		
+		if (fishtank_ix != fishtanks.size()) {
+			cout << TXT(pre_num_fishtanks) << TXT(fishtanks.size()) << TXT(fishtank_ix) << endl;
+			if (prev_building) {cout << "name: " << prev_building->name << endl;}
+		}
 		assert(fishtank_ix == fishtanks.size());
 	}
 	void draw_fish(shader_t &s, bool inc_pools_and_fb) const {
