@@ -1287,7 +1287,7 @@ bool building_t::add_closet_to_room(rand_gen_t &rgen, room_t const &room, float 
 	bool const is_bedroom(room_type == RTYPE_BED); // otherwise a kitchen pantry or freezer
 	bool const is_freezer(!is_bedroom && !is_house);
 	float const window_vspacing(get_window_vspace()), doorway_width(get_doorway_width()), floor_thickness(get_floor_thickness()), window_h_border(get_window_h_border());
-	float const closet_min_depth((is_bedroom ? 0.65 : 0.8)*doorway_width), closet_min_width(1.5*doorway_width);
+	float const closet_min_depth((is_freezer ? 1.5 : (is_bedroom ? 0.65 : 0.8))*doorway_width), closet_min_width(1.5*doorway_width);
 	float const min_dist_to_wall(1.0*doorway_width), min_bed_space(front_clearance);
 	float const tot_light_amt=1.0; // expanded closed items aren't updated when room lights change, and closet lights don't update anything, so set to 1.0
 	unsigned const first_corner(rgen.rand() & 3);
@@ -1350,8 +1350,11 @@ bool building_t::add_closet_to_room(rand_gen_t &rgen, room_t const &room, float 
 			assert(c.is_strictly_normalized());
 			unsigned flags(0);
 			if (is_house) {flags |= RO_FLAG_IS_HOUSE;}
-			if (c.d[!dim][0] == room_bounds.d[!dim][0]) {flags |= RO_FLAG_ADJ_LO;}
-			if (c.d[!dim][1] == room_bounds.d[!dim][1]) {flags |= RO_FLAG_ADJ_HI;}
+
+			if (!is_freezer) { // flag walls to skip drawing; freezer needs to draw all walls
+				if (c.d[!dim][0] == room_bounds.d[!dim][0]) {flags |= RO_FLAG_ADJ_LO;}
+				if (c.d[!dim][1] == room_bounds.d[!dim][1]) {flags |= RO_FLAG_ADJ_HI;}
+			}
 			if (is_hotel()) {flags |= RO_FLAG_HAS_EXTRA;} // flag so that the closet has a safe
 			//if ((rgen.rand() % 10) == 0) {flags |= RO_FLAG_OPEN;} // 10% chance of open closet; unclear if this adds any value, but it works
 			closet_obj_id = objs.size();
@@ -1382,6 +1385,7 @@ bool building_t::add_closet_to_room(rand_gen_t &rgen, room_t const &room, float 
 				door.set_for_closet(); // flag so that we don't try to add a light switch by this door, etc.
 				add_interior_door(door, 0, 1, 1); // is_bathroom=0, make_unlocked=1, make_closed=1
 				interior->doors.back().obj_ix = closet_obj_id;
+				if (is_freezer) {interior->doors.back().type = interior->door_stacks.back().type = DOOR_TYPE_METAL;}
 				if (is_freezer) {} // TODO: new metal door type
 			}
 			return 1; // done
@@ -2850,15 +2854,19 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 	float const ceil_zval(zval + floor_spacing - get_fc_thickness());
 	cube_t const place_area(get_walkable_room_bounds(room));
 	if (btype == BTYPE_PRISON) {zval = add_flooring(room, zval, room_id, light_amt, FLOORING_LGTILE);}
-
-	if (!in_mall) { // mall already has ceiling vents
-		unsigned const skip_dir(2); // TODO
-		add_ceiling_ducts(room, ceil_zval, room_id, dim, skip_dir, light_amt, 0, 1, 1, rgen, 0.5); // cylin_ducts=0, skip_ends=1, skip_top=1, sz_scale=0.5
-	}
+	vect_room_object_t &objs(interior->room_geom->objs);
 	// add walk-in freezer as a "closet" type
 	float const clearance(get_min_front_clearance_inc_people());
-	unsigned closet_obj_id(0); // unused
-	add_closet_to_room(rgen, room, zval, room_id, objs_start, RTYPE_KITCHEN, 0, clearance, closet_obj_id, light_ix_assign); // bed_obj_ix=0 (not set)
+	unsigned closet_obj_id(0);
+	
+	if (add_closet_to_room(rgen, room, zval, room_id, objs_start, RTYPE_KITCHEN, 0, clearance, closet_obj_id, light_ix_assign)) { // bed_obj_ix=0 (not set)
+		if (in_mall) {objs[closet_obj_id].flags |= RO_FLAG_IN_MALL;}
+	}
+	if (!in_mall) { // mall already has ceiling vents
+		unsigned const skip_dir(2); // TODO
+		// TODO: shorten to avoid freezer
+		add_ceiling_ducts(room, ceil_zval, room_id, dim, skip_dir, light_amt, 0, 1, 1, rgen, 0.5); // cylin_ducts=0, skip_ends=1, skip_top=1, sz_scale=0.5
+	}
 	// add hood
 	//cube_t hood; // TODO
 	
@@ -2873,7 +2881,6 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 	add_corner_trashcans(rgen, room, zval, room_id, light_amt, objs_start, dim, 1); // both_ends=1
 	// add trolleys with plates; seems like this can work in a kitchen
 	unsigned num_trolleys((rgen.rand() % 2) + 2); // 2-3
-	vect_room_object_t &objs(interior->room_geom->objs);
 	vect_cube_t blockers;
 	
 	for (unsigned i = 0; i < num_trolleys; ++i) {

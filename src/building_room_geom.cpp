@@ -624,7 +624,7 @@ void add_quad_to_mat(rgeom_mat_t &mat, point const pts[4], float const ts[4], fl
 
 // no lighting scale, houses/apartments/hotel rooms only; includes kitchen pantry
 void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t const &wall_tex, colorRGBA const &trim_color, bool inc_lg, bool inc_sm) {
-	bool const open(c.is_open()), use_small_door(c.is_small_closet()), draw_interior(open || player_in_closet);
+	bool const dim(c.dim), dir(c.dir), open(c.is_open()), use_small_door(c.is_small_closet()), draw_interior(open || player_in_closet);
 	bool const in_kitchen(c.item_flags == RTYPE_KITCHEN), is_freezer(in_kitchen && !c.is_house());
 	float const wall_thick(get_closet_wall_thickness(c)), trim_hwidth(0.3*wall_thick);
 	cube_t cubes[5];
@@ -637,60 +637,71 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 
 		for (unsigned d = 0; d < 2; ++d) {
 			bool const adj_room_wall(c.flags & (d ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO));
-			unsigned const extra_skip_faces(adj_room_wall ? ~get_face_mask(!c.dim, d) : 0); // adjacent to room wall, skip that face
+			unsigned const extra_skip_faces(adj_room_wall ? ~get_face_mask(!dim, d) : 0); // adjacent to room wall, skip that face
 			// only need to draw side wall when not adjacent to room wall; skip front face of side wall
-			if (!adj_room_wall) {wall_mat.add_cube_to_verts(cubes[2*d+1], c.color, tex_origin, (skip_faces | extra_skip_faces | get_skip_mask_for_xy(c.dim)));}
+			if (!adj_room_wall) {wall_mat.add_cube_to_verts(cubes[2*d+1], c.color, tex_origin, (skip_faces | extra_skip_faces | get_skip_mask_for_xy(dim)));}
 			unsigned const front_wall_skip_flags((draw_interior ? EF_Z12 : skip_faces) | extra_skip_faces);
 			wall_mat.add_cube_to_verts(cubes[2*d], c.color, tex_origin, front_wall_skip_flags); // Note: c.color should be wall color
 		} // for d
 		if (is_freezer) {
-			// TODO: draw back walls, ceiling, floor, and maybe top surface
+			// draw back wall, ceiling, floor, and maybe top surface
+			bool const draw_top_surface(c.flags & RO_FLAG_IN_MALL);
+			cube_t back(c), bot(c), top(c);
+			back.d[dim][dir] = c.d[dim][!dir] + (dir ? 1.0 : -1.0)*wall_thick; // set back wall thickness
+			bot.z2() = c.z1() + 0.02*wall_thick; // floor
+			top.z1() = c.z2() - 0.10*wall_thick; // ceiling
+			if (draw_top_surface) {top.z2() = top.z1() + wall_thick;}
+			wall_mat.add_cube_to_verts(back, c.color, tex_origin, get_face_mask(dim, dir));
+			wall_mat.add_cube_to_verts(bot,  c.color, tex_origin, ~EF_Z2);
+			wall_mat.add_cube_to_verts(top,  c.color, tex_origin, (draw_top_surface ? ~get_face_mask(dim, !dir) : ~EF_Z1));
+			// draw door trim
+			// TODO: use cubes[0] and cubes[2]
 		}
 		cube_t const &doors(cubes[4]);
 		point const llc(doors.get_llc());
-		float const out_sign(c.dir ? 1.0 : -1.0);
+		float const out_sign(dir ? 1.0 : -1.0);
 
 		if (use_small_door) {} // small house closet door - draw as a regular door
 		else { // 4 panel folding door
 			assert(!is_freezer); // what about in_kitchen?
 			cube_t doors_no_trim(doors);
-			doors_no_trim.expand_in_dim(!c.dim, -trim_hwidth);
-			float const doors_width(doors.get_sz_dim(!c.dim)), door_thickness(doors.get_sz_dim(c.dim));
+			doors_no_trim.expand_in_dim(!dim, -trim_hwidth);
+			float const doors_width(doors.get_sz_dim(!dim)), door_thickness(doors.get_sz_dim(dim));
 			float const door_spacing(0.25*doors_width), door_gap(0.01*door_spacing);
 			int const tid(get_rect_panel_tid());
 			float tx(1.0/doors_width), ty(0.25/doors.dz());
-			if (!c.dim) {swap(tx, ty);} // swap so that ty is always in Z
+			if (!dim) {swap(tx, ty);} // swap so that ty is always in Z
 			tid_nm_pair_t const door_tex(tid, get_normal_map_for_bldg_tid(tid), tx, ty); // 4x1 panels
 			rgeom_mat_t &door_mat(get_material(door_tex, 1));
 			bool const doors_fold(c.is_hanging()); // else doors slide
 
 			if (doors_fold && open) { // draw open bifold doors open on both
 				// Note: this doesn't always look correct because doors can intersect other objects such as lights and dressers, and they have no edge quads
-				float const panel_len(0.2*doors_no_trim.get_sz_dim(!c.dim) - 2.0*door_gap), open_amt(0.5*panel_len), extend(sqrt(panel_len*panel_len - open_amt*open_amt));
-				float const nom_pos(doors_no_trim.d[c.dim][!c.dir]), front_pos(nom_pos + out_sign*extend), z1(doors.z1()), z2(doors.z2());
+				float const panel_len(0.2*doors_no_trim.get_sz_dim(!dim) - 2.0*door_gap), open_amt(0.5*panel_len), extend(sqrt(panel_len*panel_len - open_amt*open_amt));
+				float const nom_pos(doors_no_trim.d[dim][!dir]), front_pos(nom_pos + out_sign*extend), z1(doors.z1()), z2(doors.z2());
 				float const ts[4] = {0.0, 0.25, 0.25, 0.0}, tt[4] = {0.0, 0.0, 0.25, 0.25};
 				color_wrapper const cw(WHITE);
 				point side_pt, out_pt, inner_pt; // left side door points in this order from left to right, forming a V-shape pointing outward
-				side_pt[c.dim] = inner_pt[c.dim] = nom_pos;
-				out_pt [c.dim] = front_pos;
+				side_pt[dim] = inner_pt[dim] = nom_pos;
+				out_pt [dim] = front_pos;
 
 				for (unsigned side = 0; side < 2; ++side) {
-					float const open_sign(side ? -1.0 : 1.0), side_pos(doors_no_trim.d[!c.dim][side]);
-					side_pt [!c.dim] = side_pos;
-					out_pt  [!c.dim] = side_pos + open_sign*open_amt;
-					inner_pt[!c.dim] = side_pos + 2*open_sign*open_amt;
+					float const open_sign(side ? -1.0 : 1.0), side_pos(doors_no_trim.d[!dim][side]);
+					side_pt [!dim] = side_pos;
+					out_pt  [!dim] = side_pos + open_sign*open_amt;
+					inner_pt[!dim] = side_pos + 2*open_sign*open_amt;
 					// outside faces
 					point pts1o[4] = {point(side_pt.x, side_pt.y, z1), point(out_pt.x,   out_pt.y,   z1), point(out_pt.x,   out_pt.y,   z2), point(side_pt.x, side_pt.y, z2)};
 					point pts2o[4] = {point(out_pt.x,  out_pt.y,  z1), point(inner_pt.x, inner_pt.y, z1), point(inner_pt.x, inner_pt.y, z2), point(out_pt.x,  out_pt.y,  z2)};
-					if (!c.dim) {std::reverse(pts1o, pts1o+4); std::reverse(pts2o, pts2o+4);} // reverse the winding order
+					if (!dim) {std::reverse(pts1o, pts1o+4); std::reverse(pts2o, pts2o+4);} // reverse the winding order
 					add_quad_to_mat(door_mat, pts1o, ts, tt, cw);
 					add_quad_to_mat(door_mat, pts2o, ts, tt, cw);
 					// inside faces
 					point pts1i[4], pts2i[4];
 					
 					for (unsigned n = 0; n < 4; ++n) { // create inside surfaces of doors with inverted winding order and normal
-						pts1i[n] = pts1o[3-n]; pts1i[n][c.dim] += open_sign*door_thickness;
-						pts2i[n] = pts2o[3-n]; pts2i[n][c.dim] += open_sign*door_thickness;
+						pts1i[n] = pts1o[3-n]; pts1i[n][dim] += open_sign*door_thickness;
+						pts2i[n] = pts2o[3-n]; pts2i[n][dim] += open_sign*door_thickness;
 					}
 					add_quad_to_mat(door_mat, pts1i, ts, tt, cw);
 					add_quad_to_mat(door_mat, pts2i, ts, tt, cw);
@@ -706,9 +717,9 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 				for (unsigned n = 0; n < 4; ++n) {
 					unsigned const N(open ? open_n[n] : n);
 					cube_t door(doors_no_trim);
-					door.d[!c.dim][0] = doors_no_trim.d[!c.dim][0] +  N   *door_spacing + gaps[N  ]; // left  edge
-					door.d[!c.dim][1] = doors_no_trim.d[!c.dim][0] + (N+1)*door_spacing - gaps[N+1]; // right edge
-					if (!doors_fold && (n == 1 || n == 2)) {door.translate_dim(c.dim, -1.1*out_sign*door_thickness);} // inset the inner sliding doors
+					door.d[!dim][0] = doors_no_trim.d[!dim][0] +  N   *door_spacing + gaps[N  ]; // left  edge
+					door.d[!dim][1] = doors_no_trim.d[!dim][0] + (N+1)*door_spacing - gaps[N+1]; // right edge
+					if (!doors_fold && (n == 1 || n == 2)) {door.translate_dim(dim, -1.1*out_sign*door_thickness);} // inset the inner sliding doors
 					door_mat.add_cube_to_verts(door, WHITE, llc, skip_faces);
 				}
 			}
@@ -721,37 +732,37 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 
 		for (unsigned is_side = 0; is_side < 2; ++is_side) { // front wall, side wall
 			for (unsigned d = 0; d < 2; ++d) {
-				unsigned skip_faces((draw_interior_trim ? 0 : ~get_face_mask(c.dim, !c.dir)) | EF_Z1), trim_flags(0);
+				unsigned skip_faces((draw_interior_trim ? 0 : ~get_face_mask(dim, !dir)) | EF_Z1), trim_flags(0);
 				cube_t trim;
 				
 				if (is_side) { // sides of closet
 					if (c.flags & (d ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO)) continue; // adjacent to room wall, skip that wall
 					trim = c;
-					trim.d[!c.dim][!d]     = trim.d[!c.dim][d];
-					trim.d[!c.dim][ d]    += (d     ? 1.0 : -1.0)*trim_thickness; // expand away from wall
-					trim.d[ c.dim][c.dir] += (c.dir ? 1.0 : -1.0)*trim_thickness; // expand to cover the outside corner gap; doesn't really line up properly for angled ceiling trim though
-					trim_flags |= (c.dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO); // shift trim bottom edge to prevent intersection with trim in other dim at outside corner
+					trim.d[!dim][!d]   = trim.d[!dim][d];
+					trim.d[!dim][ d]  += (d   ? 1.0 : -1.0)*trim_thickness; // expand away from wall
+					trim.d[ dim][dir] += (dir ? 1.0 : -1.0)*trim_thickness; // expand to cover the outside corner gap; doesn't really line up properly for angled ceiling trim though
+					trim_flags |= (dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO); // shift trim bottom edge to prevent intersection with trim in other dim at outside corner
 				}
 				else { // front of closet on sides of door
 					trim = cubes[2*d]; // start with front wall on this side
-					trim.d[!c.dim][!d    ] -= (d ? -1.0 : 1.0)*0.1*trim_thickness; // shrink slightly to avoid z-fighting with closet wall/door frame when the door is open
-					trim.d[ c.dim][!c.dir]  = trim.d[c.dim][c.dir];
-					trim.d[ c.dim][ c.dir] += (c.dir ? 1.0 : -1.0)*trim_thickness; // expand away from wall
+					trim.d[!dim][!d  ] -= (d ? -1.0 : 1.0)*0.1*trim_thickness; // shrink slightly to avoid z-fighting with closet wall/door frame when the door is open
+					trim.d[ dim][!dir]  = trim.d[dim][dir];
+					trim.d[ dim][ dir] += (dir ? 1.0 : -1.0)*trim_thickness; // expand away from wall
 					
 					// expand to cover the outside corner gap if not along room wall, otherwise hide the face; doesn't really line up properly for angled ceiling trim though
 					if (c.flags & (d ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO)) {
-						skip_faces |= ~get_face_mask(!c.dim, d); // disable hidden faces
+						skip_faces |= ~get_face_mask(!dim, d); // disable hidden faces
 					}
 					else {
-						trim.d[!c.dim][d] += (d ? 1.0 : -1.0)*trim_thickness;
+						trim.d[!dim][d] += (d ? 1.0 : -1.0)*trim_thickness;
 						trim_flags |= (d ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO); // shift trim bottom edge to prevent intersection with trim in other dim at outside corner
 					}
 					trim_flags |= (d ? RO_FLAG_ADJ_BOT : RO_FLAG_ADJ_TOP); // flag ends that meet the door, which need to be capped
 				}
-				bool const trim_dim(c.dim ^ bool(is_side)), trim_dir(is_side ? d : c.dir);
+				bool const trim_dim(dim ^ bool(is_side)), trim_dir(is_side ? d : dir);
 				cube_t btrim(trim); // bottom trim
-				if (is_side) {btrim.d[!c.dim][!d    ] -= (d     ? 1.0 : -1.0)*trim_plus_wall_thick;} // expand on the inside of the closet
-				else         {btrim.d[ c.dim][!c.dir] -= (c.dir ? 1.0 : -1.0)*trim_plus_wall_thick;} // expand on the inside of the closet
+				if (is_side) {btrim.d[!dim][!d  ] -= (d   ? 1.0 : -1.0)*trim_plus_wall_thick;} // expand on the inside of the closet
+				else         {btrim.d[ dim][!dir] -= (dir ? 1.0 : -1.0)*trim_plus_wall_thick;} // expand on the inside of the closet
 				btrim.z2() = c.z1() + trim_height;
 				get_untextured_material(0, 0, 1).add_cube_to_verts_untextured(btrim, trim_color, skip_faces); // is_small, untextured, no shadows; both interior and exterior
 				set_cube_zvals(trim, c.z2()-trim_height, c.z2());
@@ -760,8 +771,8 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 
 				if (!is_side && !use_small_door) { // draw vertical door frame on either side of the door; small doors have their own trim added elsewhere
 					copy_zvals(trim, c); // full z height
-					set_wall_width(trim, cubes[2*d].get_center_dim(c.dim), 0.7*wall_thick, c.dim); // a bit more than wall half thickness + trim thickness
-					set_wall_width(trim, trim.d[!c.dim][!d], trim_hwidth, !c.dim);
+					set_wall_width(trim, cubes[2*d].get_center_dim(dim), 0.7*wall_thick, dim); // a bit more than wall half thickness + trim thickness
+					set_wall_width(trim, trim.d[!dim][!d], trim_hwidth, !dim);
 					add_wall_trim(room_object_t(trim, TYPE_WALL_TRIM, c.room_id, trim_dim, trim_dir, (RO_FLAG_ADJ_BOT | RO_FLAG_ADJ_TOP), 1.0, SHAPE_TALL, trim_color), 1);
 				}
 			} // for d
