@@ -2975,11 +2975,13 @@ bool building_t::add_livingroom_objs(rand_gen_t rgen, room_t const &room, float 
 		min_eq(tv_pref_area.d[!couch.dim][1], couch.d[!couch.dim][1]+tv_overlap);
 	}
 	tv_ix = objs.size();
+	// place TV: first attempt to place across from the couch, then prefer centered; also prefer not_at_window=1
+	cube_t const tv_areas[2] = {tv_pref_area, place_area};
 
-	// place TV: first attempt to place across from the couch, then prefer centered; maybe should set not_at_window=1, but that seems too restrictive
-	if (place_model_along_wall(OBJ_MODEL_TV, TYPE_TV, room, 0.45, rgen, zval, room_id, tot_light_amt, tv_pref_area, objs_start, 4.0, tv_pref_orient, 1, BKGRAY, 0, 0, 1) ||
-		place_model_along_wall(OBJ_MODEL_TV, TYPE_TV, room, 0.45, rgen, zval, room_id, tot_light_amt, place_area,   objs_start, 4.0, tv_pref_orient, 1, BKGRAY, 0, 0, 0))
-	{
+	for (unsigned n = 0; n < 4; ++n) {
+		bool const force_pref(n < 2), not_at_window(!(n & 1));
+		if (!place_model_along_wall(OBJ_MODEL_TV, TYPE_TV, room, 0.45, rgen, zval, room_id, tot_light_amt, tv_areas[n>>1],
+			objs_start, 4.0, tv_pref_orient, 1, BKGRAY, not_at_window, 0, force_pref)) continue;
 		placed_tv = 1;
 		// add a small table to place the TV on so that it's off the floor and not blocked as much by tables and chairs
 		room_object_t &tv(objs[tv_ix]);
@@ -2988,7 +2990,8 @@ bool building_t::add_livingroom_objs(rand_gen_t rgen, room_t const &room, float 
 		tv.translate_dim(2, height); // move TV up
 		table.z2() = tv.z1();
 		objs.emplace_back(table, TYPE_TABLE, room_id, 0, 0, (RO_FLAG_IS_HOUSE | RO_FLAG_ADJ_TOP), tot_light_amt, SHAPE_SHORT); // short table; houses only
-	}
+		break; // done
+	} // for n
 	if (placed_couch && placed_tv) {
 		room_object_t const &couch(objs[couch_ix]), &tv(objs[tv_ix]);
 
