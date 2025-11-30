@@ -188,12 +188,13 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	vector<room_t> &rooms(interior->rooms);
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness), wall_thickness(get_wall_thickness());
 	float const light_thick(0.025*window_vspacing), def_light_size(0.1*window_vspacing), doorway_width(get_doorway_width());
+	bool const is_first_gen(interior->gen_room_details_pass == 0);
 	interior->room_geom->obj_scale = window_vspacing; // used to scale room object textures
 	unsigned tot_num_rooms(0), num_bathrooms(0), num_bedrooms(0), num_storage_rooms(0);
 	
 	for (auto r = rooms.begin(); r != rooms.end(); ++r) {
 		tot_num_rooms += calc_num_floors_room(*r, window_vspacing, floor_thickness);
-		r->init_pre_populate(interior->gen_room_details_pass == 0);
+		r->init_pre_populate(is_first_gen);
 	}
 	++interior->gen_room_details_pass;
 	objs.reserve(tot_num_rooms); // placeholder - there will be more than this many
@@ -648,6 +649,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			unsigned const objs_start(wall_light ? objs_start_inc_lights : objs.size()); // wall light counts as an object since it must be avoided
 			bool has_walkway(0);
 			rgen.rand_mix();
+			rand_gen_t rgen2(rgen); // copy so that changes and calls made below don't modify the seed across rooms
 			blockers.clear(); // clear for this new room
 
 			if (r->is_ext_basement_conn()) { // room connecting extended basements of two buildings
@@ -684,7 +686,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 
 					if (is_house) { // allow pictures, rugs, and light switches in the hallways of houses; no pref orient
 						hang_pictures_whiteboard_chalkboard_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f, is_basement);
-						if (rgen.rand_bool()) {add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);} // 50% of the time; not all rugs will be placed
+						if (rgen2.rand_bool()) {add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);} // 50% of the time; not all rugs will be placed
 					}
 					else if (*r == pri_hall) { // office building/school/hospital primary hallway
 						add_pri_hall_objs(rgen, room_rgen, *r, room_center.z, room_id, tot_light_amt, f, objs_start);
@@ -719,7 +721,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 
 			// place room objects
 			bool const added_living(added_living_mask & floor_mask), is_office_bathroom(!has_walkway && maybe_office_bathroom);
-			bool const allow_br(!is_house || must_be_bathroom || f > 0 || num_floors == 1 || (rgen.rand_float() < 0.33f*(added_living + (added_kitchen_mask&1) + 1))); // bed/bath
+			bool const allow_br(!is_house || must_be_bathroom || f > 0 || num_floors == 1 || (rgen2.rand_float() < 0.33f*(added_living + (added_kitchen_mask&1) + 1))); // bed/bath
 			bool has_fireplace(0);
 			if (is_ext_basement) {add_false_door_to_extb_room_if_needed(*r, room_center.z, room_id);}
 			
@@ -895,19 +897,19 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			if (!added_obj && is_office && is_office_bldg()) { // add cubicles if this is a large office building office
 				added_obj = no_whiteboard = create_office_cubicles(rgen, *r, room_center.z, room_id, tot_light_amt);
 			}
-			if (!added_obj && is_ext_basement && rgen.rand_float() < 0.5) { // machine room
+			if (!added_obj && is_ext_basement && rgen2.rand_float() < 0.5) { // machine room
 				if (add_machines_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start)) {
 					r->assign_to(RTYPE_MACHINE, f);
 					added_obj = no_whiteboard = is_machine = 1;
 				}
 			}
-			if (!added_obj && is_ext_basement && water_damage > 0.25 && rgen.rand_float() < 0.25) { // interrogation room; only for buildings with water damage
+			if (!added_obj && is_ext_basement && water_damage > 0.25 && rgen2.rand_float() < 0.25) { // interrogation room; only for buildings with water damage
 				if (add_interrogation_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start)) {
 					r->assign_to(RTYPE_INTERR, f);
 					added_obj = no_whiteboard = is_inter = 1;
 				}
 			}
-			if (!added_obj && is_ext_basement && (is_prison() || rgen.rand_bool())) { // jail room 50% of the time, 100% for prisons
+			if (!added_obj && is_ext_basement && (is_prison() || rgen2.rand_bool())) { // jail room 50% of the time, 100% for prisons
 				if (add_basement_jail_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_lit, color, light_ix_assign)) {
 					r->assign_to(RTYPE_JAIL, f);
 					added_obj = no_whiteboard = is_jail = 1;
@@ -936,7 +938,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					if (r->has_subroom()) {must_be_waiting = 1;} // only waiting rooms have logic to handle placement around bathrooms
 
 					for (unsigned N = 0; N < 10 && !added_obj; ++N) { // 10 tries to select a valid room type
-						unsigned const rand_val(must_be_waiting ? 0 : (rgen.rand() % 7));
+						unsigned const rand_val(must_be_waiting ? 0 : (rgen2.rand() % 7));
 
 						if (rand_val == 0) { // waiting room; should there be at most one per floor?
 							added_obj = no_whiteboard = add_waiting_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start, nested_room_ix);
@@ -982,39 +984,39 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					if (added_obj) {r->assign_to(RTYPE_CLASS, f);}
 				}
 				// else if no window, or can't make into a classroom
-				if (!added_obj && f == 0 && !added_cafeteria && rgen.rand_bool()) {
+				if (!added_obj && f == 0 && !added_cafeteria && rgen2.rand_bool()) {
 					added_obj = no_plants = no_whiteboard = added_cafeteria = add_cafeteria_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start);
 					if (added_obj) {r->assign_to(RTYPE_CAFETERIA, f);}
 				}
-				if (!added_obj && f == 0 && !added_kitchen_mask && rgen.rand_bool()) {
+				if (!added_obj && f == 0 && !added_kitchen_mask && rgen2.rand_bool()) {
 					added_obj = no_plants = no_whiteboard = add_commercial_kitchen_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, light_ix_assign);
 					if (added_obj) {added_kitchen_mask |= 1;}
 					if (added_obj) {r->assign_to(RTYPE_KITCHEN, f);}
 				}
-				if (!added_obj && rgen.rand_float() < 0.2) { // maybe make teacher's lounge
+				if (!added_obj && rgen2.rand_float() < 0.2) { // maybe make teacher's lounge
 					add_lounge_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, 0); // is_lobby=0
 					added_obj = no_plants = no_whiteboard = 1;
 					r->assign_to(RTYPE_LOUNGE, f);
 				}
-				if (!added_obj && num_locker_rooms < 2 && !has_window && rgen.rand_float() < 0.25) { // maybe make locker room if there is no window
+				if (!added_obj && num_locker_rooms < 2 && !has_window && rgen2.rand_float() < 0.25) { // maybe make locker room if there is no window
 					added_obj = no_plants = no_whiteboard = add_locker_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 					if (added_obj) {r->assign_to(RTYPE_LOCKER, f); ++num_locker_rooms;}
 				}
-				if (!added_obj && rgen.rand_float() < 0.25) { // maybe make library
+				if (!added_obj && rgen2.rand_float() < 0.25) { // maybe make library
 					if (add_library_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement, 1)) { // add_tables=1
 						r->assign_to(RTYPE_LIBRARY, f);
 						added_library = is_library = added_obj = no_plants = no_whiteboard = 1;
 					}
 				}
-				if (!added_obj && !added_gym && rgen.rand_bool()) {
+				if (!added_obj && !added_gym && rgen2.rand_bool()) {
 					added_obj = no_plants = no_whiteboard = added_gym = add_gym_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 					if (added_obj) {r->assign_to(RTYPE_GYM, f);}
 				}
-				//if (!added_obj && rgen.rand_float() < 0.25) {r->assign_to(RTYPE_ART, f);} // maybe make art room
+				//if (!added_obj && rgen2.rand_float() < 0.25) {r->assign_to(RTYPE_ART, f);} // maybe make art room
 				//if (!added_obj) {} // teacher's office, principal's office, supply rooms, art/shop, etc.
 			}
 			// add cubicles if this is a large office; allowed in schools and hospitals if not assigned as a special room
-			if (!added_obj && is_office && (f > 0 || rgen.rand_float() < 0.4)) { // allow for storage and utility rooms on ground floor
+			if (!added_obj && is_office && (f > 0 || rgen2.rand_float() < 0.4)) { // allow for storage and utility rooms on ground floor
 				added_obj = no_whiteboard = create_office_cubicles(rgen, *r, room_center.z, room_id, tot_light_amt);
 			}
 			float tc_prob(0.0);
@@ -1022,7 +1024,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			else if (r->is_office) {tc_prob = (is_hospital() ? 0.2 : 0.6);}
 			else                   {tc_prob = (is_house ? 0.95 : 0.5);}
 
-			if (!added_obj && !r->has_subroom() && rgen.rand_float() < tc_prob) {
+			if (!added_obj && !r->has_subroom() && rgen2.rand_float() < tc_prob) {
 				// place a table and maybe some chairs near the center of the room if it's not a hallway;
 				// 60% of the time for offices, 95% of the time for houses, and 50% for other buildings
 				unsigned const num_tcs(add_table_and_chairs(rgen, *r, blockers, room_id, room_center, chair_color, 0.1, tot_light_amt));
@@ -1043,19 +1045,19 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				}
 			}
 			// if we haven't added any objects yet, and this room is an interior office on the first floor or basement, make it a storage room 50% of the time; at most 4x
-			if (!added_obj && num_storage_rooms <= 4 && (is_basement || (r->is_office && !has_window && f == 0)) && rgen.rand_bool()) {
+			if (!added_obj && num_storage_rooms <= 4 && (is_basement || (r->is_office && !has_window && f == 0)) && rgen2.rand_bool()) {
 				added_obj = no_whiteboard = is_storage = add_storage_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement, has_stairs);
 				if (added_obj) {r->assign_to(RTYPE_STORAGE, f); ++num_storage_rooms;}
 			}
 			// try to place a desk if there's no table, bed, etc.; this can be an office
-			if (!added_obj && (!is_basement || rgen.rand_bool())) {
+			if (!added_obj && (!is_basement || rgen2.rand_bool())) {
 				added_obj = can_place_onto = added_desk = add_office_objs(rgen, *r, blockers, chair_color, room_center.z, room_id, f, tot_light_amt, objs_start, is_basement);
 				if (added_obj && !has_stairs_this_floor) {r->assign_to((is_house ? (room_type)RTYPE_STUDY : (room_type)RTYPE_OFFICE), f);} // or other room type - may overwrite below
 			}
 			// Note: added_obj is not set to 1 below this point
 			if (is_house && !is_living && (added_tc || added_desk) && !is_kitchen && is_entry_floor) {
 				// don't add second living room unless we added a kitchen and have enough rooms
-				if ((!added_living && !r->get_has_center_stairs() && rooms.size() >= 8 && (added_kitchen_mask || rgen.rand_bool())) || is_room_an_exit(*r, room_id, room_center.z)) {
+				if ((!added_living && !r->get_has_center_stairs() && rooms.size() >= 8 && (added_kitchen_mask || rgen2.rand_bool())) || is_room_an_exit(*r, room_id, room_center.z)) {
 					// add a living room on the ground floor if it has a table or desk but isn't a kitchen
 					if (add_livingroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start)) {
 						is_living = 1;
@@ -1096,8 +1098,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			if (is_office && !no_whiteboard && !(library_floor_mask & floor_mask)) {
 				// office, no cubicles or bathroom, no library on this floor - maybe make it a library; applies to schools as well
 				bool make_library(0);
-				if (is_office_bldg()) {make_library = ((rgen.rand() % (!has_pri_hall() ? 30U : max(50U, (unsigned)rooms.size()))) == 0);} // library is rare
-				else if (is_school()) {make_library = ((rgen.rand() % 5) == 0 && r->get_room_type(f) == RTYPE_OFFICE);} // more common in schools
+				if (is_office_bldg()) {make_library = ((rgen2.rand() % (!has_pri_hall() ? 30U : max(50U, (unsigned)rooms.size()))) == 0);} // library is rare
+				else if (is_school()) {make_library = ((rgen2.rand() % 5) == 0 && r->get_room_type(f) == RTYPE_OFFICE);} // more common in schools
 
 				if (make_library && add_library_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement)) {
 					r->assign_to(RTYPE_LIBRARY, f);
@@ -1109,13 +1111,13 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				place_objects_onto_surfaces(rgen, *r, room_id, tot_light_amt, objs_start, f, is_basement, not_private_room);
 			}
 			if (residential_room && !is_utility && !is_inter && !is_machine && !(is_laundry && !is_house)) { // place house/apartment/hotel-specific items
-				if (!is_bathroom && !is_kitchen && !is_library && rgen.rand_float() < (is_basement ? 0.25 : 0.8)) {
+				if (!is_bathroom && !is_kitchen && !is_library && rgen2.rand_float() < (is_basement ? 0.25 : 0.8)) {
 					// place bookcase 80% of the time, but not in bathrooms, kitchens, or utlity rooms
-					rand_gen_t rgen2(rgen); // copy so that rgen isn't updated in the call below
-					add_bookcase_to_room(rgen2, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement);
+					rand_gen_t rgen3(rgen); // copy so that rgen isn't updated in the call below
+					add_bookcase_to_room(rgen3, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement);
 				}
 				// maybe add a rug, 25% of the time if there's a table and 75% of the time otherwise
-				if (!has_stairs && !not_private_room && (rgen.rand()&3) <= (added_tc ? 0 : 2) && !is_kitchen) {
+				if (!has_stairs && !not_private_room && (rgen2.rand()&3) <= (added_tc ? 0 : 2) && !is_kitchen) {
 					add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 				}
 			}
@@ -1160,11 +1162,11 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				else if (is_basement) {r->assign_to(RTYPE_CARD, f);} // basement card room
 				else { // unassigned room of house on upper floor with added object/table
 					// this case is relatively rare, and we've already added a table, so it's too late to make this a bedroom/bathroom if can_be_bedroom_or_bathroom(*r, f)
-					r->assign_to((rgen.rand_bool() ? (room_type)RTYPE_PLAY : (room_type)RTYPE_ART), f); // play room or art room
+					r->assign_to((rgen2.rand_bool() ? (room_type)RTYPE_PLAY : (room_type)RTYPE_ART), f); // play room or art room
 					is_play_art = 1;
 				}
 			}
-			if (is_house && is_basement && !added_basement_utility && !has_stairs && !is_machine && (is_storage || room_type_was_not_set) && rgen.rand_bool()) {
+			if (is_house && is_basement && !added_basement_utility && !has_stairs && !is_machine && (is_storage || room_type_was_not_set) && rgen2.rand_bool()) {
 				// basement laundry, storage, or card room; should this be placed before adding boxes to the floor of storage rooms?
 				added_basement_utility = is_utility = no_plants = add_basement_utility_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 				if (added_basement_utility) {r->assign_to(RTYPE_UTILITY, f);}
@@ -1172,7 +1174,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			// add potted plants to some room types
 			if (!is_bathroom && !is_bedroom && !is_kitchen && !is_storage && !is_utility && !no_plants && !is_basement && !is_hospital()) {
 				// 0-2 for living/dining rooms, 50% chance for houses, 25% (first floor) / 10% (other floors) chance for offices
-				unsigned const num(is_house ? (rgen.rand() % ((is_living || is_dining) ? 3 : 2)) : ((rgen.rand()%((f == 0) ? 4 : 10)) == 0));
+				unsigned const num(is_house ? (rgen2.rand() % ((is_living || is_dining) ? 3 : 2)) : ((rgen2.rand()%((f == 0) ? 4 : 10)) == 0));
 				if (num > 0) {add_plants_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, num);}
 			}
 			if (!is_jail) {add_outlets_to_room(rgen, *r, room_center.z, room_id, objs_start, is_ground_floor, is_basement, is_kitchen);}
@@ -1188,13 +1190,13 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				room_id, tot_light_amt, objs_start, f, is_basement, pref_hang_orient));
 
 			if (is_jail || r->get_room_type(f) == RTYPE_SHOWER || no_trashcan) {} // no trashcan
-			else if (is_bathroom || is_kitchen || is_hospital() || rgen.rand_float() < 0.8) { // 80% of the time, always in bathrooms, kitchens, and hospitals
+			else if (is_bathroom || is_kitchen || is_hospital() || rgen2.rand_float() < 0.8) { // 80% of the time, always in bathrooms, kitchens, and hospitals
 				add_trashcan_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, (was_hung && !is_house)); // no trashcans on same wall as office whiteboard
 			}
 			if (is_bedroom || is_living || is_dining || is_play_art) {add_floor_clutter_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);}
 			else if (is_basement && !is_mall_room) {add_basement_clutter_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);}
 
-			if (is_house && !(is_bathroom || is_kitchen || is_storage || is_jail) && rgen.rand_float() < ((f > 0) ? 0.15 : 0.25)) {
+			if (is_house && !(is_bathroom || is_kitchen || is_storage || is_jail) && rgen2.rand_float() < ((f > 0) ? 0.15 : 0.25)) {
 				unsigned const max_num(is_bedroom ? 1 : 2);
 				add_boxes_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, max_num); // place boxes in this room
 			}

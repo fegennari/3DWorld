@@ -152,7 +152,7 @@ void building_t::add_objects_next_to_classroom_chalkboard(rand_gen_t &rgen, room
 	add_plants_to_room(rgen, room, zval, cb.room_id, cb.light_amt, objs_start, num_plants);
 }
 
-void building_t::add_hallway_lockers(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start) {
+void building_t::add_hallway_lockers(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start) {
 	bool const dim(room.dx() < room.dy()); // hallway dim
 	cube_t const room_bounds(get_walkable_room_bounds(room));
 	cube_t place_area(room_bounds);
