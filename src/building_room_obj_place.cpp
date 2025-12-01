@@ -2858,14 +2858,16 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 	// add walk-in freezer as a "closet" type
 	float const clearance(get_min_front_clearance_inc_people());
 	unsigned closet_obj_id(0);
+	cube_t avoid;
 	
 	if (add_closet_to_room(rgen, room, zval, room_id, objs_start, RTYPE_KITCHEN, 0, clearance, closet_obj_id, light_ix_assign)) { // bed_obj_ix=0 (not set)
+		avoid = objs[closet_obj_id];
+		avoid.expand_in_dim(objs[closet_obj_id].dim, 1.2*get_doorway_width()); // allow space for door to open
 		if (in_mall) {objs[closet_obj_id].flags |= RO_FLAG_IN_MALL;}
 	}
 	if (!in_mall) { // mall already has ceiling vents
 		unsigned const skip_dir(2); // TODO
-		// TODO: shorten to avoid freezer
-		add_ceiling_ducts(room, ceil_zval, room_id, dim, skip_dir, light_amt, 0, 1, 1, rgen, 0.5); // cylin_ducts=0, skip_ends=1, skip_top=1, sz_scale=0.5
+		add_ceiling_ducts(room, ceil_zval, room_id, dim, skip_dir, light_amt, 0, 1, 1, rgen, 0.5, avoid); // cylin_ducts=0, skip_ends=1, skip_top=1, sz_scale=0.5
 	}
 	// add hood
 	//cube_t hood; // TODO
