@@ -1515,19 +1515,23 @@ void building_t::gen_and_draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, shad
 void building_t::clear_room_geom(bool even_if_player_modified) {
 	clear_clothing_textures();
 	if (!has_room_geom()) return;
+	auto &room_geom(*interior->room_geom);
 
-	if (interior->room_geom->modified_by_player && !even_if_player_modified) { // keep the player's modifications and don't delete the room geom
-		interior->room_geom->clear_materials(); // but we can still clear the materials
+	if (room_geom.modified_by_player && !even_if_player_modified) { // keep the player's modifications and don't delete the room geom
+		room_geom.clear_materials(); // but we can still clear the materials
 		return;
 	}
 	// restore pre-room_geom door state by removing any doors added to closets or backrooms, and any exterior details
-	assert(interior->room_geom->init_num_doors   <= interior->doors      .size());
-	assert(interior->room_geom->init_num_dstacks <= interior->door_stacks.size());
-	assert(interior->room_geom->init_num_details <= details.size());
-	interior->doors      .resize(interior->room_geom->init_num_doors  );
-	interior->door_stacks.resize(interior->room_geom->init_num_dstacks);
-	details.resize(interior->room_geom->init_num_details);
-	interior->room_geom->clear(); // free VBO data before deleting the room_geom object
+	unsigned const num_rooms(interior->rooms.size());
+	assert(room_geom.orig_assigned_rooms.size() == num_rooms);
+	for (unsigned i = 0; i < num_rooms; ++i) {interior->rooms[i].restore(room_geom.orig_assigned_rooms[i]);}
+	assert(room_geom.init_num_doors   <= interior->doors      .size());
+	assert(room_geom.init_num_dstacks <= interior->door_stacks.size());
+	assert(room_geom.init_num_details <= details.size());
+	interior->doors      .resize(room_geom.init_num_doors  );
+	interior->door_stacks.resize(room_geom.init_num_dstacks);
+	details.resize(room_geom.init_num_details);
+	room_geom.clear(); // free VBO data before deleting the room_geom object
 	interior->room_geom.reset();
 	invalidate_nav_graph(); // required since interior doors may be removed
 	// what about restoring coll_bcube?

@@ -1174,62 +1174,21 @@ unsigned const ROOM_FLAG_NESTED   = 0x0200; // room is nested inside another roo
 unsigned const ROOM_FLAG_HAS_SUB  = 0x0400; // room has a sub-room nested inside it
 unsigned const ROOM_FLAG_CUT_WALL = 0x0800; // wall has sections cut from it
 
-struct room_t : public cube_t { // size=56
-	bool is_hallway=0, is_office=0, is_sec_bldg=0, is_single_floor=0;
-	uint8_t has_stairs=0; // per-floor bit mask; always set to 255 for stairs that span the entire room
-	uint8_t has_elevator=0; // number of elevators, usually either 0 or 1
-	uint8_t interior=0; // 0=not interior (has windows), 1=interior, 2=extended basement, {3,4}=extended basement connector, dim=interior-3
-	uint8_t ext_sides=0; // sides that have exteriors, and likely windows (bits for x1, x2, y1, y2)
-	uint8_t part_id=0, num_lights=0;
-	uint8_t unit_id=0; // for apartments and hotels; also encodes {dim, dir} for mall stores
-	uint8_t open_wall_mask=0; // {dim x dir}
-private:
-	uint8_t floors_pre_assigned=0, rtype_locked=0; // one per NUM_RTYPE_SLOTS
+struct room_assignment_t {
+protected:
+	uint8_t rtype_locked=0; // one per NUM_RTYPE_SLOTS
 	uint16_t flags=0;
-	room_type rtype[NUM_RTYPE_SLOTS]; // this applies to the first N floors because some rooms can have variable per-floor assignment
-public:
 	uint32_t lit_by_floor=0; // used for AI placement; 32 floor is enough for most buildings
-	float light_intensity=0.0; // due to room lights, if turned on
-
-	room_t() {assign_all_to(RTYPE_NOTSET, 0);} // locked=0
-	room_t(cube_t const &c, unsigned p, unsigned nl=0, bool is_hallway_=0, bool is_office_=0, bool is_sec_bldg_=0, uint8_t interior_=0);
-	room_t(room_t const &r, cube_t const &c) {*this = r; copy_from(c);} // sub-room
+	room_type rtype[NUM_RTYPE_SLOTS]={}; // this applies to the first N floors because some rooms can have variable per-floor assignment
+public:
 	void assign_all_to(room_type rt, bool locked=1); // locked by default
 	void assign_to(room_type rt, unsigned floor, bool locked=0); // unlocked by default
 	void clear_room_type(unsigned floor);
-	void mark_open_wall     (bool dim, bool dir) {open_wall_mask |= (1 << (2*dim + dir));}
-	void mark_open_wall_dim (bool dim          ) {open_wall_mask |= (1 << 2*dim) | (1 << (2*dim + 1));} // both dirs for this dim
-	bool has_open_wall      (bool dim, bool dir) const {return (open_wall_mask & (1 << (2*dim + dir)));}
-	bool maybe_connected_open_wall(room_t const &r) const;
 	room_type get_room_type (unsigned floor) const {return rtype[wrap_room_floor(floor)];}
-	bool is_rtype_locked    (unsigned floor) const {return (rtype_locked & (1 << wrap_room_floor(floor)));}
-	bool is_lit_on_floor    (unsigned floor) const {return (lit_by_floor & (1ULL << (floor&31)));}
-	bool has_stairs_on_floor(unsigned floor) const {return (get_has_center_stairs() || (has_stairs & (1U << min(floor, 7U))));} // floors >= 7 are treated as the top floor
-	bool is_garage_or_shed  (unsigned floor) const {return (is_sec_bldg || get_room_type(floor) == RTYPE_GARAGE || get_room_type(floor) == RTYPE_SHED);}
-	bool is_ext_basement     () const {return (interior >= 2);}
-	bool is_ext_basement_conn() const {return (interior >= 3);}
-	bool inc_half_walls      () const {return (is_hallway || get_office_floorplan() || is_ext_basement());} // hallway, office, or extended basement
-	bool is_parking          () const {return (get_room_type(0) == RTYPE_PARKING  );}
-	bool is_backrooms        () const {return (get_room_type(0) == RTYPE_BACKROOMS);}
-	bool is_mall             () const {return (get_room_type(0) == RTYPE_MALL     );}
-	bool is_store            () const {return (get_room_type(0) == RTYPE_STORE    );}
-	bool is_retail           () const {return (get_room_type(0) == RTYPE_RETAIL   );}
-	bool is_factory          () const {return (get_room_type(0) == RTYPE_FACTORY  );}
-	bool is_warehouse        () const {return (get_room_type(0) == RTYPE_WAREHOUSE);}
-	bool is_jail_cell        () const {return (get_room_type(0) == RTYPE_JAIL_CELL);}
-	bool is_bathroom_rtype   () const {return is_bathroom(get_room_type(0));}
-	bool is_industrial       () const {return (is_factory() || is_warehouse());}
-	bool is_mall_or_store    () const {return (is_mall() || is_store());}
-	bool is_single_large_room() const {return(is_parking() || is_backrooms() || is_retail() || is_mall() || is_industrial());}
-	bool is_single_large_room_or_store() const {return (is_single_large_room() || is_store());}
-	bool is_secret_room      () const {return (is_ext_basement() && has_cut_wall() && !is_hallway);}
-	bool has_non_door_vis    () const {return (open_wall_mask || has_interior_window() || has_cut_wall());}
-	bool is_apt_or_hotel_room() const {return (unit_id > 0);}
 	bool has_room_of_type(room_type type) const;
-	void init_pre_populate(bool is_first_pass);
-	float get_light_amt() const;
-	unsigned get_floor_containing_zval(float zval, float floor_spacing) const {return (is_single_floor ? 0 : unsigned((zval - z1())/floor_spacing));}
-	room_type get_room_type_for_zval  (float zval, float floor_spacing) const {return get_room_type(get_floor_containing_zval(zval, floor_spacing));}
+	bool any_lit_floors() const {return bool(lit_by_floor);}
+	bool is_lit_on_floor (unsigned floor) const {return (lit_by_floor & (1ULL << (floor&31)));}
+	void set_lit_on_floor(unsigned floor) {lit_by_floor |= (1ULL << (floor&31));}
 
 	void set_has_center_stairs() {flags |= ROOM_FLAG_CSTAIRS ;}
 	void set_office_floorplan () {flags |= ROOM_FLAG_OFF_FP  ;}
@@ -1256,6 +1215,52 @@ public:
 	bool is_nested            () const {return (flags & ROOM_FLAG_NESTED  );}
 	bool has_subroom          () const {return (flags & ROOM_FLAG_HAS_SUB );}
 	bool has_cut_wall         () const {return (flags & ROOM_FLAG_CUT_WALL);}
+};
+
+struct room_t : public cube_t, public room_assignment_t { // size=56
+	bool is_hallway=0, is_office=0, is_sec_bldg=0, is_single_floor=0;
+	uint8_t has_stairs=0; // per-floor bit mask; always set to 255 for stairs that span the entire room
+	uint8_t has_elevator=0; // number of elevators, usually either 0 or 1
+	uint8_t interior=0; // 0=not interior (has windows), 1=interior, 2=extended basement, {3,4}=extended basement connector, dim=interior-3
+	uint8_t ext_sides=0; // sides that have exteriors, and likely windows (bits for x1, x2, y1, y2)
+	uint8_t part_id=0, num_lights=0;
+	uint8_t unit_id=0; // for apartments and hotels; also encodes {dim, dir} for mall stores
+	uint8_t open_wall_mask=0; // {dim x dir}
+	float light_intensity=0.0; // due to room lights, if turned on
+
+	room_t() {}
+	room_t(cube_t const &c, unsigned p, unsigned nl=0, bool is_hallway_=0, bool is_office_=0, bool is_sec_bldg_=0, uint8_t interior_=0);
+	room_t(room_t const &r, cube_t const &c) {*this = r; copy_from(c);} // sub-room
+	void restore(room_assignment_t const &r) {*(room_assignment_t *)this = r;}
+	void mark_open_wall     (bool dim, bool dir) {open_wall_mask |= (1 << (2*dim + dir));}
+	void mark_open_wall_dim (bool dim          ) {open_wall_mask |= (1 << 2*dim) | (1 << (2*dim + 1));} // both dirs for this dim
+	bool has_open_wall      (bool dim, bool dir) const {return (open_wall_mask & (1 << (2*dim + dir)));}
+	bool maybe_connected_open_wall(room_t const &r) const;
+	bool is_rtype_locked    (unsigned floor) const {return (rtype_locked & (1 << wrap_room_floor(floor)));}
+	bool has_stairs_on_floor(unsigned floor) const {return (get_has_center_stairs() || (has_stairs & (1U << min(floor, 7U))));} // floors >= 7 are treated as the top floor
+	bool is_garage_or_shed  (unsigned floor) const {return (is_sec_bldg || get_room_type(floor) == RTYPE_GARAGE || get_room_type(floor) == RTYPE_SHED);}
+	bool is_ext_basement     () const {return (interior >= 2);}
+	bool is_ext_basement_conn() const {return (interior >= 3);}
+	bool inc_half_walls      () const {return (is_hallway || get_office_floorplan() || is_ext_basement());} // hallway, office, or extended basement
+	bool is_parking          () const {return (get_room_type(0) == RTYPE_PARKING  );}
+	bool is_backrooms        () const {return (get_room_type(0) == RTYPE_BACKROOMS);}
+	bool is_mall             () const {return (get_room_type(0) == RTYPE_MALL     );}
+	bool is_store            () const {return (get_room_type(0) == RTYPE_STORE    );}
+	bool is_retail           () const {return (get_room_type(0) == RTYPE_RETAIL   );}
+	bool is_factory          () const {return (get_room_type(0) == RTYPE_FACTORY  );}
+	bool is_warehouse        () const {return (get_room_type(0) == RTYPE_WAREHOUSE);}
+	bool is_jail_cell        () const {return (get_room_type(0) == RTYPE_JAIL_CELL);}
+	bool is_bathroom_rtype   () const {return is_bathroom(get_room_type(0));}
+	bool is_industrial       () const {return (is_factory() || is_warehouse());}
+	bool is_mall_or_store    () const {return (is_mall() || is_store());}
+	bool is_single_large_room() const {return(is_parking() || is_backrooms() || is_retail() || is_mall() || is_industrial());}
+	bool is_single_large_room_or_store() const {return (is_single_large_room() || is_store());}
+	bool is_secret_room      () const {return (is_ext_basement() && has_cut_wall() && !is_hallway);}
+	bool has_non_door_vis    () const {return (open_wall_mask || has_interior_window() || has_cut_wall());}
+	bool is_apt_or_hotel_room() const {return (unit_id > 0);}
+	float get_light_amt() const;
+	unsigned get_floor_containing_zval(float zval, float floor_spacing) const {return (is_single_floor ? 0 : unsigned((zval - z1())/floor_spacing));}
+	room_type get_room_type_for_zval  (float zval, float floor_spacing) const {return get_room_type(get_floor_containing_zval(zval, floor_spacing));}
 }; // room_t
 
 struct extb_room_t : public cube_t { // extended basement room candidate
@@ -1286,6 +1291,7 @@ struct building_room_geom_t {
 	vector<room_obj_dstate_t> obj_dstate;
 	vector<obj_model_inst_t> obj_model_insts;
 	vector<door_handle_t> door_handles; // for 3D model drawing
+	vector<room_assignment_t> orig_assigned_rooms;
 	vector<unsigned> moved_obj_ids;
 	vect_rat_t    rats, sewer_rats, pet_rats;
 	vect_spider_t spiders, sewer_spiders;
@@ -2110,6 +2116,7 @@ struct building_interior_t {
 	uint8_t num_extb_floors=0; // for malls and backrooms
 	float water_zval=0.0; // for multilevel backrooms and swimming pools
 	float int_door_width=0.0;
+	//vect_room_object_t prev_objs; vector<room_t> prev_rooms; // used for debugging
 
 	building_interior_t();
 	~building_interior_t();

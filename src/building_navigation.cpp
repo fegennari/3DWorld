@@ -2200,7 +2200,7 @@ bool building_t::place_people_if_needed(unsigned building_ix, float radius) cons
 		vect_door_stack_t const &doorways(get_doorways_for_room(*r, 0.0, 1)); // get interior doors; all_floors=1
 
 		for (unsigned f = 0; f < num_floors; ++f) {
-			if (r->lit_by_floor && !r->is_lit_on_floor(f)) continue; // don't place person in an unlit room; only applies if room geom has been generated
+			if (r->any_lit_floors() && !r->is_lit_on_floor(f)) continue; // don't place person in an unlit room; only applies if room geom has been generated
 			float const zval(r->z1() + f*floor_spacing);
 			if (has_water() && r->intersects(get_water_cube()) && zval < interior->water_zval) continue; // don't place in a room with water on the floor
 			
