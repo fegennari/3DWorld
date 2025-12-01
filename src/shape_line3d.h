@@ -9,12 +9,10 @@
 class scenery_obj { // size = 28
 
 protected:
-	int coll_id, type;
-	float radius, dz;
+	int coll_id=-1, type=-1;
+	float radius=0.0, dz=0.0;
 	point pos;
-
 public:
-	scenery_obj() : coll_id(-1), type(-1), radius(0.0), dz(0.0), pos(all_zeros) {}
 	bool check_sphere_coll(point &center, float sphere_radius) const; // default implementation
 	void shift_by(vector3d const &vd);
 	void gen_spos(int x, int y, int use_xy);
@@ -29,36 +27,26 @@ public:
 	void add_bounds_to_bcube(cube_t &bcube, float bradius=0.0) const {bcube.assign_or_union_with_sphere(pos, ((bradius == 0.0) ? radius : bradius));}
 };
 
-
 struct scolor { // size = 28
-
-	int tid;
-	float spec1, spec2;
+	int tid=-1;
+	float spec1=0.0, spec2=0.0;
 	colorRGBA c;
-	scolor() : tid(-1), spec1(0.0f), spec2(0.0f) {}
 };
-
 
 struct face3d { // size = 28
-
-	unsigned v[3], color_id;
+	unsigned v[3]={}, color_id=0;
 	vector3d norm;
-	face3d() : color_id(0) {v[0] = v[1] = v[2] = 0;}
 };
 
-
 class shape3d : public scenery_obj { // size = 72
-
 protected:
-	int tid;
-	float tex_scale, scale;
+	int tid=0;
+	float tex_scale=1.0, scale=1.0;
 	colorRGBA color;
 	vector<point>  points;
 	vector<face3d> faces;
 	vector<scolor> colors;
-
 public:
-	shape3d() : tid(0), tex_scale(1.0), scale(1.0) {}
 	bool alloc_shape(unsigned npoints, unsigned nfaces, unsigned ncolors);
 	bool read_from_file(const char *filename);
 	void set_texture(int tid_, float tscale=1.0) {tid = tid_; tex_scale = tscale;}
@@ -76,13 +64,9 @@ public:
 	void destroy();
 };
 
-
 class rock_shape3d : public shape3d { // size = 72
-
-	mutable unsigned vbo;
-
+	mutable unsigned vbo=0;
 public:
-	rock_shape3d() : vbo(0) {}
 	void create(int x, int y, bool use_xy);
 	void gen_rock(unsigned nverts, float size, int rand_seed, int type);
 	void add_cobjs();

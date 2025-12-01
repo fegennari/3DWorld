@@ -83,7 +83,7 @@ public:
 	void draw(float sscale, bool shadow_only, bool reflection_pass, vector3d const &xlate, float scale_val, shader_t &s, bool use_model_texgen);
 };
 
-class burnable_scenery_obj : public scenery_obj {
+class burnable_scenery_obj : public scenery_obj { // size=48
 protected:
 	float fire_amt=0.0, burn_amt=0.0;
 public:
@@ -121,7 +121,7 @@ public:
 	void add_bounds_to_bcube(cube_t &bcube) const {scenery_obj::add_bounds_to_bcube(bcube, get_bsphere_radius());}
 };
 
-class s_stump : public wood_scenery_obj { // size = 29 (32)
+class s_stump : public wood_scenery_obj { // size = 64
 	float radius2=0.0, height=0.0;
 public:
 	virtual point get_center() const {return (pos + point(0.0, 0.0, 0.5*height));}
@@ -138,7 +138,7 @@ struct texture_binder_t {
 	void do_bind(int tid);
 };
 
-struct plant_base : public burnable_scenery_obj { // size = 32
+struct plant_base : public burnable_scenery_obj { // size = 56
 	struct shader_state_t {
 		int color_scale_loc, normal_scale_loc, wind_scale_loc, wind_add_loc;
 		float wind_scale;
@@ -158,7 +158,7 @@ struct plant_base : public burnable_scenery_obj { // size = 32
 	virtual point get_center() const {return pos;}
 };
 
-class s_plant : public plant_base { // size = 56
+class s_plant : public plant_base { // size = 88
 	int coll_id2=-1;
 	float height=1.0;
 	vector<vert_wrap_t> berries;
