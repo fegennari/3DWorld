@@ -1929,13 +1929,12 @@ cube_t get_trim_cube(cube_t const &c, bool dim, bool dir, float trim_thickness) 
 	return trim;
 }
 
-void building_t::add_trim_for_door_or_int_window(cube_t const &c, bool dim, bool draw_top_edge, bool draw_bot_trim,
+void building_t::add_trim_for_door_or_int_window(cube_t const &c, colorRGBA const &color, bool dim, bool draw_top_edge, bool draw_bot_trim,
 	float side_twidth, float top_twidth, float side_texp, float floor_spacing, float extra_top_gap)
 {
 	float const trim_thickness(get_trim_thickness());
 	float const top_z_adj(draw_top_edge ? (side_twidth - top_twidth) : 0.0); // higher when top edge is drawn since door is below ceiling
 	unsigned const bot_flags(RO_FLAG_NOCOLL | RO_FLAG_ADJ_BOT);
-	colorRGBA const trim_color(get_trim_color());
 	vect_room_object_t &objs(interior->room_geom->trim_objs);
 	cube_t trim(c);
 	set_wall_width(trim, trim.get_center_dim(dim), side_texp, dim);
@@ -1948,7 +1947,7 @@ void building_t::add_trim_for_door_or_int_window(cube_t const &c, bool dim, bool
 		trim.d[!dim][1] = c.d[!dim][side] + (side ? side_twidth : trim_thickness);
 		bool const draw_top(draw_top_edge || check_skylight_intersection(trim)); // draw top edge of trim for top floor if there's a skylight
 		unsigned const flags2(bot_flags | (draw_top ? 0 : RO_FLAG_ADJ_TOP));
-		objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, side, flags2, 1.0, SHAPE_TALL, trim_color); // abuse tall flag
+		objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, side, flags2, 1.0, SHAPE_TALL, color); // abuse tall flag
 	}
 	if (top_twidth == 0.0) { // no top or bottom trim
 		assert(!draw_bot_trim);
@@ -1966,11 +1965,11 @@ void building_t::add_trim_for_door_or_int_window(cube_t const &c, bool dim, bool
 		set_cube_zvals(trim, z_top-top_twidth, z_top+top_z_adj); // z2=ceil height
 		bool const draw_top(draw_top_edge || (f+1 == num_floors && check_skylight_intersection(trim))); // draw top edge of trim for top floor if there's a skylight
 		unsigned const flags2(RO_FLAG_NOCOLL | (draw_top ? 0 : RO_FLAG_ADJ_TOP));
-		objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, 0, flags2, 1.0, SHAPE_SHORT, trim_color);
+		objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, 0, flags2, 1.0, SHAPE_SHORT, color);
 
 		if (draw_bot_trim) {
 			set_cube_zvals(trim, z, z+top_twidth);
-			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, 0, bot_flags, 1.0, SHAPE_SHORT, trim_color);
+			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, 0, bot_flags, 1.0, SHAPE_SHORT, color);
 		}
 		else if (has_mall() && c.z2() < ground_floor_z1 && !get_basement().contains_cube(c)) { // draw threshold below mall doors
 			cube_t btrim(trim);
@@ -2018,8 +2017,15 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	}
 	// add vertical strips on each side + strip on top of interior doors
 	for (door_stack_t const &ds : interior->door_stacks) {
-		if (ds.on_stairs || ds.is_bars() || ds.type == DOOR_TYPE_METAL) continue; // no frame for stairs, jail bars door, or metal freezer doors; skip
-		add_trim_for_door_or_int_window(ds, ds.dim, ds.get_mult_floor(), 0, door_trim_width, trim_thickness, door_trim_exp, window_vspacing); // draw_bot_trim=0
+		if (ds.on_stairs || ds.is_bars()) continue; // no frame for stairs or jail bars door; skip
+		bool const draw_top(ds.get_mult_floor());
+
+		if (ds.type == DOOR_TYPE_METAL) { // freezer door; add thin rubber lining
+			add_trim_for_door_or_int_window(ds, BLACK, ds.dim, draw_top, 1, 0.25*door_trim_width, trim_thickness, 0.25*door_trim_exp, window_vspacing); // draw_bot_trim=1
+		}
+		else {
+			add_trim_for_door_or_int_window(ds, trim_color, ds.dim, draw_top, 0, door_trim_width, trim_thickness, door_trim_exp, window_vspacing); // draw_bot_trim=0
+		}
 	}
 	// handle interior windows similar to interior doors, except we also draw bottom trim
 	for (cube_t const &w : interior->int_windows) {
@@ -2028,7 +2034,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		float const tscale(min(1.0f, w.dz()/window_vspacing)); // smaller trim for short windows such as in prison visitation rooms
 		//float const tscale(1.0);
 		float extra_top_gap(is_in_mall ? get_mall_top_window_gap(floor_spacing, window_vspacing) : 0.0);
-		add_trim_for_door_or_int_window(w, dim, draw_top_edge, 1, tscale*door_trim_width, tscale*door_trim_width, tscale*door_trim_exp, floor_spacing, extra_top_gap);
+		add_trim_for_door_or_int_window(w, trim_color, dim, draw_top_edge, 1, tscale*door_trim_width, tscale*door_trim_width, tscale*door_trim_exp, floor_spacing, extra_top_gap);
 	}
 	if (has_mall()) { // add floor trim for mall store doors
 		for (cube_t const &d : interior->mall_info->store_doorways) {
@@ -2044,7 +2050,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		entrance.d[dim][!dir] = entrance.d[dim][dir] + (dir ? -1.0 : 1.0)*get_park_struct_wall_thick(); // shrink to only exterior wall
 		float const top_gap(ground_floor_z1 - entrance.z1()); // negative
 		entrance.z1() = ground_floor_z1; // extend bottom to ground level
-		add_trim_for_door_or_int_window(entrance, dim, 1, 0, door_trim_width, door_trim_width, door_trim_exp, window_vspacing, top_gap); // draw_top_edge=1, draw_bot_trim=0
+		add_trim_for_door_or_int_window(entrance, trim_color, dim, 1, 0, door_trim_width, door_trim_width, door_trim_exp, window_vspacing, top_gap); // draw_top_edge=1, draw_bot_trim=0
 	}
 	// add trim around exterior doors
 	for (auto d = doors.begin(); d != doors.end(); ++d) {
@@ -2325,7 +2331,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 			float const top_trim_width(max(trim_thickness, fc_gap - i->dz())); // make sure it covers the gap above the door
 			cube_t door_bc(*i);
 			door_bc.z2() = i->z1() + fc_gap; // extend wall trim to the ceiling
-			add_trim_for_door_or_int_window(door_bc, i->dim, 0, 0, 0.5*door_trim_width, top_trim_width, 0.5*door_trim_exp, window_vspacing); // draw_top_edge=0, draw_bot_trim=0
+			add_trim_for_door_or_int_window(door_bc, trim_color, i->dim, 0, 0, 0.5*door_trim_width, top_trim_width, 0.5*door_trim_exp, window_vspacing); // top_edge=0, bot_trim=0
 			continue;
 		}
 		if (i->type == TYPE_FLOORING && i->item_flags < NUM_FLOORING_TYPES) {} // include bath/server/cafeteria/gym/shower/classroom/etc. room flooring
@@ -2359,7 +2365,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 			if (e.in_mall == 2) { // add trim to the front sides of mall back hallway elevator
 				cube_t front_inner(front);
 				front_inner.expand_in_dim(!e.dim, -trim_thickness); // slight shrink to prevent Z-fighting
-				add_trim_for_door_or_int_window(front_inner, e.dim, 0, 0, door_trim_width, 0.0, 0.8*door_trim_exp, 0.0, 0.0);
+				add_trim_for_door_or_int_window(front_inner, trim_color, e.dim, 0, 0, door_trim_width, 0.0, 0.8*door_trim_exp, 0.0, 0.0);
 			}
 			cube_t door_trim(e);
 			set_wall_width(door_trim, front_face, 1.6*trim_thickness, e.dim);
@@ -2396,7 +2402,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 			if (s.in_mall == 2) { // mall back hallway stairs - add vertical trim
 				cube_t front(get_trim_cube(s, s.dim, !s.dir, trim_thickness));
 				front.expand_in_dim(!s.dim, -0.28*wall_thickness); // slight shrink to prevent Z-fighting
-				add_trim_for_door_or_int_window(front, s.dim, 0, 0, door_trim_width, 0.0, 0.8*door_trim_exp, 0.0, 0.0);
+				add_trim_for_door_or_int_window(front, trim_color, s.dim, 0, 0, door_trim_width, 0.0, 0.8*door_trim_exp, 0.0, 0.0);
 				continue;
 			}
 			if (has_parking_garage && s.z2() <= ground_floor_z1) continue; // skip parking garage and extended basement stairs

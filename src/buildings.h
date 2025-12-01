@@ -3161,7 +3161,7 @@ private:
 	void add_gutter_downspouts(rand_gen_t &rgen, vect_cube_t const &balconies);
 	void add_extra_obj_slots();
 	void add_wall_and_door_trim_if_needed();
-	void add_trim_for_door_or_int_window(cube_t const &c, bool dim, bool draw_top_edge, bool draw_bot_trim,
+	void add_trim_for_door_or_int_window(cube_t const &c, colorRGBA const &color, bool dim, bool draw_top_edge, bool draw_bot_trim,
 		float side_twidth, float top_twidth, float side_texp, float floor_spacing, float extra_top_gap=0.0);
 	void add_wall_and_door_trim();
 	void add_window_trim_and_coverings(bool add_trim, bool add_blinds, bool add_ext_sills=0);

@@ -603,10 +603,12 @@ void get_closet_cubes(room_object_t const &c, cube_t cubes[5], bool for_collisio
 		cubes[2*d] = front; // front left or front right
 		doors.d[!c.dim][d] = walls[d].d[!c.dim][!d]; // clip door to space between walls
 	} // for d
-	doors.d[c.dim][ c.dir] -= (c.dir ? 1.0 : -1.0)*0.2*wall_thick; // shift in slightly
-	doors.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*(depth - 0.8*wall_thick); // make it narrow
-	if (for_collision && c.is_open() && use_small_door) {cubes[4] = cube_t();} // open doors for small closets are no longer included
-	else {cubes[4] = doors;} // return closed door cube; caller must handle open door
+	if (for_collision && c.is_open() && use_small_door) {cubes[4] = cube_t();}  // return closed door cube; caller must handle open door
+	else {
+		doors.d[c.dim][ c.dir] -= (c.dir ? 1.0 : -1.0)*0.2*wall_thick; // shift in slightly
+		doors.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*(depth - 0.8*wall_thick); // make it narrow
+		cubes[4] = doors;
+	}
 }
 cube_t get_open_closet_door(room_object_t const &obj) {
 	cube_t cubes[5];
@@ -646,16 +648,15 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 		if (is_freezer) {
 			// draw back wall, ceiling, floor, and maybe top surface
 			bool const draw_top_surface(c.flags & RO_FLAG_IN_MALL);
+			unsigned const front_face(get_face_mask(dim, dir));
 			cube_t back(c), bot(c), top(c);
 			back.d[dim][dir] = c.d[dim][!dir] + (dir ? 1.0 : -1.0)*wall_thick; // set back wall thickness
 			bot.z2() = c.z1() + 0.02*wall_thick; // floor
 			top.z1() = c.z2() - 0.10*wall_thick; // ceiling
 			if (draw_top_surface) {top.z2() = top.z1() + wall_thick;}
-			wall_mat.add_cube_to_verts(back, c.color, tex_origin, get_face_mask(dim, dir));
-			wall_mat.add_cube_to_verts(bot,  c.color, tex_origin, ~EF_Z2);
+			wall_mat.add_cube_to_verts(back, c.color, tex_origin, front_face);
+			wall_mat.add_cube_to_verts(bot,  c.color, tex_origin, ~(EF_Z2 | ~front_face));
 			wall_mat.add_cube_to_verts(top,  c.color, tex_origin, (draw_top_surface ? ~get_face_mask(dim, !dir) : ~EF_Z1));
-			// draw door trim
-			// TODO: use cubes[0] and cubes[2]
 		}
 		cube_t const &doors(cubes[4]);
 		point const llc(doors.get_llc());
@@ -7463,8 +7464,10 @@ void building_room_geom_t::add_metal_door(door_t const &D, building_t const &bui
 		unsigned const fb_mask(~get_skip_mask_for_xy(dim));
 		cube_t door_main(c);
 		door_main.expand_in_dim(dim, -0.2*thickness); // shrink thickness
-		if (D.open_amt > 0.0) {mat.add_cube_to_verts(door_main, plate_color, origin, (EF_Z12 | ~fb_mask));} // draw edges if open
-
+		
+		if (D.open_amt > 0.0) { // draw edges if open; draw top surface for freezer door in a tall room
+			mat.add_cube_to_verts(door_main, plate_color, origin, ((D.get_mult_floor() ? EF_Z1 : EF_Z12) | ~fb_mask));
+		}
 		if (is_jail_door) { // metal door with barred window opening
 			cube_t opening(door_main);
 			opening.expand_in_dim(!dim, -0.2*width); // shrink edges

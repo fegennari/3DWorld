@@ -1374,7 +1374,8 @@ bool building_t::add_closet_to_room(rand_gen_t &rgen, room_t const &room, float 
 			objs.emplace_back(light, TYPE_LIGHT, room_id, dim, 0, (RO_FLAG_NOCOLL | RO_FLAG_IN_CLOSET), 0.0, SHAPE_CYLIN, color); // dir=0 (unused)
 			objs.back().obj_id = light_ix_assign.get_next_ix();
 
-			if (small_closet) { // add a blocker in front of the closet to avoid placing furniture that blocks the door from opening
+			if (small_closet) {
+				// add a blocker in front of the closet to avoid placing furniture that blocks the door from opening
 				c.d[dim][!dir] += dir_sign*doorway_width;
 				objs.emplace_back(c, TYPE_BLOCKER, room_id, dim, 0, RO_FLAG_INVIS);
 				// add closet door
@@ -1384,9 +1385,16 @@ bool building_t::add_closet_to_room(rand_gen_t &rgen, room_t const &room, float 
 				door.d[dim][0] = door.d[dim][1] = door.get_center_dim(dim); // shrink to zero width
 				door.set_for_closet(); // flag so that we don't try to add a light switch by this door, etc.
 				add_interior_door(door, 0, 1, 1); // is_bathroom=0, make_unlocked=1, make_closed=1
-				interior->doors.back().obj_ix = closet_obj_id;
-				if (is_freezer) {interior->doors.back().type = interior->door_stacks.back().type = DOOR_TYPE_METAL;}
-				if (is_freezer) {} // TODO: new metal door type
+				door_t &Door(interior->doors.back());
+				Door.obj_ix = closet_obj_id;
+				
+				if (is_freezer) { // metal door
+					if (has_mall()) { // assume tall ceiling - draw top
+						Door.set_mult_floor();
+						interior->door_stacks.back().set_mult_floor();
+					}
+					Door.type = interior->door_stacks.back().type = DOOR_TYPE_METAL;
+				}
 			}
 			return 1; // done
 		} // for d
