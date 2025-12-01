@@ -2753,7 +2753,7 @@ public:
 	void invalidate_nav_graph();
 	void invalidate_nav_grid (unsigned floor_ix);
 	point local_to_camera_space(point const &pos) const;
-	void play_door_open_close_sound(point const &pos, bool open, float gain=1.0, float pitch=1.0, bool is_metal=0) const;
+	void play_door_open_close_sound(point const &pos, bool open, float gain=1.0, float pitch=1.0, unsigned door_type=DOOR_TYPE_STD) const;
 	void play_open_close_sound(room_object_t const &obj, point const &sound_origin) const;
 	void maybe_gen_chimney_smoke() const;
 	int get_part_ix_containing_cube(cube_t const &c) const;

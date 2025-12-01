@@ -1069,7 +1069,7 @@ void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_buildin
 	if (player_in_this_building || by_player) { // is it really safe to call this from the AI thread?
 		point door_center(door.xc(), door.yc(), actor_pos.z);
 		// if door was opened or is fully closed play a sound; otherwise, play the close sound later when fully closed
-		if (door.open || door.open_amt == 0.0) {play_door_open_close_sound(door_center, door.open, 1.0, 1.0, door.is_metal());}
+		if (door.open || door.open_amt == 0.0) {play_door_open_close_sound(door_center, door.open, 1.0, 1.0, door.type);}
 		
 		if (by_player) {
 			// bias the sound slightly toward the side of the door the player is on to force a zombie to go through the doorway to get there,
@@ -1215,7 +1215,7 @@ void building_t::doors_next_frame(point const &player_pos) {
 		handle_items_intersecting_closed_door(*d);
 		
 		if (!d->open && d->open_amt == 0.0) { // door closes fully
-			play_door_open_close_sound(point(d->xc(), d->yc(), camera_pos.z), 0, 1.0, 1.0, d->is_metal()); // play close sound at player z; open=0
+			play_door_open_close_sound(point(d->xc(), d->yc(), camera_pos.z), 0, 1.0, 1.0, d->type); // play close sound at player z; open=0
 			notify_door_fully_closed_state(*d);
 		}
 		interior->last_active_door_ix = (d - interior->doors.begin());
@@ -1238,8 +1238,12 @@ point building_t::local_to_camera_space(point const &pos) const {
 	return (pos_rot + get_camera_coord_space_xlate()); // convert to camera space
 }
 
-void building_t::play_door_open_close_sound(point const &pos, bool open, float gain, float pitch, bool is_metal) const {
-	gen_sound_thread_safe((is_metal ? (unsigned)SOUND_METAL_DOOR : (open ? (unsigned)SOUND_DOOR_OPEN : (unsigned)SOUND_DOOR_CLOSE)), local_to_camera_space(pos), gain, pitch);
+void building_t::play_door_open_close_sound(point const &pos, bool open, float gain, float pitch, unsigned door_type) const {
+	unsigned sound_ix(0);
+	if (door_type == DOOR_TYPE_BARS || door_type == DOOR_TYPE_JAIL) {sound_ix = SOUND_METAL_DOOR;}
+	else if (door_type == DOOR_TYPE_METAL) {sound_ix = SOUND_OBJ_FALL;}
+	else {sound_ix = (open ? SOUND_DOOR_OPEN : SOUND_DOOR_CLOSE);} // wood
+	gen_sound_thread_safe(sound_ix, local_to_camera_space(pos), gain, pitch);
 }
 // called for both player and AI actions
 void building_t::play_open_close_sound(room_object_t const &obj, point const &sound_origin) const {
