@@ -210,6 +210,18 @@ public:
 	void draw_leaves(shader_t &s, bool shadow_only, bool reflection_pass, vector3d const &xlate, shader_state_t &state, vbo_vnt_block_manager_t &vbo_manager) const;
 };
 
+class mushroom : public burnable_scenery_obj { // size = 56
+	float height=0.0;
+public:
+	virtual point get_center() const {return (pos + point(0.0, 0.0, 0.5*height));}
+	int create(int x, int y, int use_xy, float minz);
+	void add_cobjs() {} // no collisions
+	bool check_sphere_coll(point &center, float sphere_radius) const;
+	void draw(float sscale, bool shadow_only, bool reflection_pass, vector3d const &xlate, float scale_val) const;
+	virtual float get_bsphere_radius() const {return max(height, radius);}
+	void add_bounds_to_bcube(cube_t &bcube) const {scenery_obj::add_bounds_to_bcube(bcube, get_bsphere_radius());}
+};
+
 
 class scenery_group {
 	vector<rock_shape3d> rock_shapes;
@@ -220,6 +232,7 @@ class scenery_group {
 	vector<s_stump>      stumps;
 	vector<s_plant>      plants;
 	vector<leafy_plant>  leafy_plants;
+	vector<mushroom>     mushrooms;
 	vbo_vnc_block_manager_t plant_vbo_manager;
 	vbo_vnt_block_manager_t rock_vbo_manager;
 	vbo_vnt_block_manager_t leafy_vbo_manager;

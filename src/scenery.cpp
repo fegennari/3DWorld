@@ -1082,6 +1082,42 @@ void leafy_plant::draw_leaves(shader_t &s, bool shadow_only, bool reflection_pas
 }
 
 
+int mushroom::create(int x, int y, int use_xy, float minz) {
+	gen_spos(x, y, use_xy);
+	if (pos.z < minz) return 0;
+	radius  = rand_uniform2(0.005, 0.01)/tree_scale;
+	pos.z  -= radius; // sink a bit into the ground
+	height  = rand_uniform2(4.0, 5.0)*radius;
+	return 1;
+}
+
+bool mushroom::check_sphere_coll(point &center, float sphere_radius) const {
+	if (!dist_less_than(center, pos, (max(height, radius) + sphere_radius))) return 0; // sphere-sphere coll optimization
+	return sphere_vert_cylin_intersect(center, sphere_radius, cylinder_3dw(pos, pos+point(0.0, 0.0, height), radius, radius));
+}
+
+void mushroom::draw(float sscale, bool shadow_only, bool reflection_pass, vector3d const &xlate, float scale_val) const { // not drawn in the shadow pass
+	if (reflection_pass && pos.z < water_plane_z) return;
+	float const cap_zscale(0.5);
+	point const cap_center(pos + vector3d(0.0, 0.0, (height - cap_zscale*radius))), center_cs(cap_center + xlate);
+	float const dist(distance_to_camera(center_cs));
+	if (dist > 1000.0*radius) return; // too far away
+	if (!check_visible(shadow_only, get_bsphere_radius(), center_cs)) return;
+	WHITE.set_for_cur_shader();
+	int const ndiv(max(3, min(N_CYL_SIDES, int(1.0*sscale*radius/dist))));
+	draw_fast_cylinder(pos, cap_center, 0.4*radius, 0.3*radius, ndiv, 0); // stem; textured=0
+	// draw cap
+	fgPushMatrix();
+	translate_to(cap_center);
+	//rotate_about(angle, dir);
+	scale_by(vector3d(1.0, 1.0, cap_zscale)*radius);
+	if (get_camera_pos().z < cap_center.z) {draw_circle_normal(0.0, 0.99, ndiv, 1, 0.0);} // white underside of cap
+	RED.set_for_cur_shader();
+	draw_sphere_vbo_raw(ndiv, 0, 1); // textured=0, half=1
+	fgPopMatrix();
+}
+
+
 // ************ SCENERY OBJECT INTERFACE/WRAPPERS/DRIVERS ************
 
 
@@ -1140,7 +1176,6 @@ template<typename T, typename ARG> void update_scenery_zvals_vector(vector<T> &v
 
 
 void scenery_group::clear_vbos() {
-	
 	for (unsigned i = 0; i < rock_shapes.size(); ++i) {rock_shapes[i].clear_vbo();}
 	plant_vbo_manager.clear_vbo();
 	rock_vbo_manager .clear_vbo();
@@ -1203,6 +1238,7 @@ bool scenery_group::check_sphere_coll(point &center, float radius) const {
 	coll |= check_scenery_vector_sphere_coll(stumps,        center, radius);
 	coll |= check_scenery_vector_sphere_coll(plants,        center, radius);
 	coll |= check_scenery_vector_sphere_coll(leafy_plants,  center, radius);
+	// no mushrooms
 	return coll;
 }
 
@@ -1216,6 +1252,7 @@ void scenery_group::shift(vector3d const &vd) {
 	shift_scenery_vector(stumps,        vd);
 	shift_scenery_vector(plants,        vd);
 	shift_scenery_vector(leafy_plants,  vd);
+	shift_scenery_vector(mushrooms,     vd);
 }
 
 void scenery_group::calc_bcube() {
@@ -1229,6 +1266,7 @@ void scenery_group::calc_bcube() {
 	update_bcube(stumps,        all_bcube);
 	update_bcube(plants,        all_bcube);
 	update_bcube(leafy_plants,  all_bcube);
+	update_bcube(mushrooms,     all_bcube);
 }
 
 // update region is inclusive: [x1,x2]x[y1,y2]
@@ -1244,11 +1282,11 @@ bool scenery_group::update_zvals(int x1, int y1, int x2, int y2) { // inefficien
 	update_scenery_zvals_vector(plants,        x1, y1, x2, y2, updated, plant_vbo_manager);
 	update_scenery_zvals_vector(leafy_plants,  x1, y1, x2, y2, updated, leafy_vbo_manager);
 	update_scenery_zvals_vector(surface_rocks, x1, y1, x2, y2, updated); // rock_vbo_manager not updated (pos is applied to the MVM), so not passed into the call
+	update_scenery_zvals_vector(mushrooms,     x1, y1, x2, y2, updated);
 	return updated;
 }
 
 void scenery_group::do_rock_damage(point const &pos, float radius, float damage) {
-
 	for (unsigned i = 0; i < rock_shapes.size(); ++i) {
 		if (rock_shapes[i].do_impact_damage(pos, radius)) rock_collision(0, -1, zero_vector, pos, damage, IMPACT);
 	}
@@ -1287,6 +1325,7 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool 
 			if (val >= 150) continue;
 			rand2_mix();
 			bool const veg((global_rand_gen.rseed1&127)/128.0 < vegetation_);
+			bool add_mushroom(0);
 			
 			if (val >= 100) { // +50% leafy plants
 				leafy_plant plant;
@@ -1321,17 +1360,23 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool 
 				if (!check_valid_scenery_pos(voxel_rocks.back())) {voxel_rocks.pop_back(); continue;}
 			}
 			else if (val < 50) { // 24.5%
-				rocks.push_back(s_rock());
-				rocks.back().create(j, i, 1);
-				if (!check_valid_scenery_pos(rocks.back())) {rocks.pop_back(); continue;}
-				rocks.back().add_bounds_to_bcube(all_bcube);
+				if (veg && val < 25) {add_mushroom = 1;}
+				else {
+					rocks.push_back(s_rock());
+					rocks.back().create(j, i, 1);
+					if (!check_valid_scenery_pos(rocks.back())) {rocks.pop_back(); continue;}
+					rocks.back().add_bounds_to_bcube(all_bcube);
+				}
 			}
 			else if (veg && val < 85) { // 24.5%
-				s_log log;
-				if (log.create(j, i, 1, min_log_z)) {
-					if (!check_valid_scenery_pos(log)) continue;
-					logs.push_back(log);
-					log.add_bounds_to_bcube(all_bcube);
+				if (veg && val < 60) {add_mushroom = 1;}
+				else {
+					s_log log;
+					if (log.create(j, i, 1, min_log_z)) {
+						if (!check_valid_scenery_pos(log)) continue;
+						logs.push_back(log);
+						log.add_bounds_to_bcube(all_bcube);
+					}
 				}
 			}
 			else if (veg) { // 10.5%
@@ -1340,6 +1385,14 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool 
 					if (!check_valid_scenery_pos(stump)) continue;
 					stumps.push_back(stump);
 					stump.add_bounds_to_bcube(all_bcube);
+				}
+			}
+			if (add_mushroom) {
+				mushroom m;
+				if (m.create(j, i, 1, min_log_z)) {
+					if (!check_valid_scenery_pos(m)) continue;
+					mushrooms.push_back(m);
+					m.add_bounds_to_bcube(all_bcube);
 				}
 			}
 		} // for j
@@ -1465,6 +1518,10 @@ void scenery_group::draw_opaque_objects(shader_t &s, shader_t &vrs, bool shadow_
 		draw_scenery_vector(logs,   sscale, shadow_only, reflection_pass, xlate, scale_val);
 		draw_scenery_vector(stumps, sscale, shadow_only, reflection_pass, xlate, scale_val);
 	}
+	if (!shadow_only && !mushrooms.empty()) { // mushrooms are too small to cast shadows
+		select_texture(WHITE_TEX);
+		draw_scenery_vector(mushrooms, sscale, shadow_only, reflection_pass, xlate, scale_val);
+	}
 	if (!shadow_only) {select_texture(WOOD_TEX);} // plant stems use wood texture
 	for (unsigned i = 0; i < plants.size(); ++i) {plants[i].draw_stem(sscale, shadow_only, reflection_pass, xlate);}
 
@@ -1526,10 +1583,11 @@ void scenery_group::draw(bool shadow_only, vector3d const &xlate) {
 void scenery_group::draw_fires(shader_t &s) const {
 	
 	fire_drawer_t fire_drawer;
-	draw_scenery_vector_fires(logs,   fire_drawer, 1.8);
-	draw_scenery_vector_fires(stumps, fire_drawer, 1.8);
-	draw_scenery_vector_fires(plants, fire_drawer, 1.5);
+	draw_scenery_vector_fires(logs,         fire_drawer, 1.8);
+	draw_scenery_vector_fires(stumps,       fire_drawer, 1.8);
+	draw_scenery_vector_fires(plants,       fire_drawer, 1.5);
 	draw_scenery_vector_fires(leafy_plants, fire_drawer, 1.8);
+	draw_scenery_vector_fires(mushrooms,    fire_drawer, 1.6);
 	fire_drawer.draw(s);
 }
 
