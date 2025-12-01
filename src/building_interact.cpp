@@ -1221,6 +1221,7 @@ void building_t::doors_next_frame(point const &player_pos) {
 		interior->last_active_door_ix = (d - interior->doors.begin());
 	} // for d
 	bool updated(interior->last_active_door_ix >= 0);
+	if (updated) {register_reflection_update();} // update reflections for moving doors
 
 	if (interior->door_state_updated && has_mall()) { // check mall store gates
 		for (store_doorway_t &d : interior->mall_info->store_doorways) {
