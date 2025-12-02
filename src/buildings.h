@@ -1178,7 +1178,6 @@ struct room_assignment_t {
 protected:
 	uint8_t rtype_locked=0; // one per NUM_RTYPE_SLOTS
 	uint16_t flags=0;
-	uint32_t lit_by_floor=0; // used for AI placement; 32 floor is enough for most buildings
 	room_type rtype[NUM_RTYPE_SLOTS]={}; // this applies to the first N floors because some rooms can have variable per-floor assignment
 public:
 	void assign_all_to(room_type rt, bool locked=1); // locked by default
@@ -1186,9 +1185,6 @@ public:
 	void clear_room_type(unsigned floor);
 	room_type get_room_type (unsigned floor) const {return rtype[wrap_room_floor(floor)];}
 	bool has_room_of_type(room_type type) const;
-	bool any_lit_floors() const {return bool(lit_by_floor);}
-	bool is_lit_on_floor (unsigned floor) const {return (lit_by_floor & (1ULL << (floor&31)));}
-	void set_lit_on_floor(unsigned floor) {lit_by_floor |= (1ULL << (floor&31));}
 
 	void set_has_center_stairs() {flags |= ROOM_FLAG_CSTAIRS ;}
 	void set_office_floorplan () {flags |= ROOM_FLAG_OFF_FP  ;}
@@ -1226,6 +1222,7 @@ struct room_t : public cube_t, public room_assignment_t { // size=56
 	uint8_t part_id=0, num_lights=0;
 	uint8_t unit_id=0; // for apartments and hotels; also encodes {dim, dir} for mall stores
 	uint8_t open_wall_mask=0; // {dim x dir}
+	uint32_t lit_by_floor=0; // used for AI placement; 32 floor is enough for most buildings
 	float light_intensity=0.0; // due to room lights, if turned on
 
 	room_t() {}
@@ -1258,6 +1255,9 @@ struct room_t : public cube_t, public room_assignment_t { // size=56
 	bool is_secret_room      () const {return (is_ext_basement() && has_cut_wall() && !is_hallway);}
 	bool has_non_door_vis    () const {return (open_wall_mask || has_interior_window() || has_cut_wall());}
 	bool is_apt_or_hotel_room() const {return (unit_id > 0);}
+	bool any_lit_floors      () const {return bool(lit_by_floor);}
+	bool is_lit_on_floor (unsigned floor) const {return (lit_by_floor & (1ULL << (floor&31)));}
+	void set_lit_on_floor(unsigned floor) {lit_by_floor |= (1ULL << (floor&31));}
 	float get_light_amt() const;
 	unsigned get_floor_containing_zval(float zval, float floor_spacing) const {return (is_single_floor ? 0 : unsigned((zval - z1())/floor_spacing));}
 	room_type get_room_type_for_zval  (float zval, float floor_spacing) const {return get_room_type(get_floor_containing_zval(zval, floor_spacing));}

@@ -245,6 +245,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		float light_amt(is_basement ? 0.0f : window_vspacing*r->get_light_amt()); // exterior light: multiply perimeter/area by window spacing to make unitless; none for basement rooms
 		if (!is_house && r->is_hallway) {light_amt *= 2.0;} // double the light in office building hallways because they often connect to other lit hallways
 		float const floor_height(r->is_single_floor ? r->dz() : window_vspacing); // secondary buildings are always one floor
+		r->lit_by_floor = 0; // starts unlit; set below
 
 		if (r->is_sec_bldg) {
 			if    (has_garage) {r->assign_all_to(RTYPE_GARAGE);}
@@ -407,8 +408,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			float const floor_zval(z + fc_thick);
 			room_center.z = floor_zval;
 			// top floor may have stairs connecting to upper stack
-			bool const top_floor(f+1 == num_floors);
-			bool const has_stairs_this_floor(r->has_stairs_on_floor(f));
+			bool const top_floor(f+1 == num_floors), has_stairs_this_floor(r->has_stairs_on_floor(f));
+			bool const floor_will_alias(num_floors > NUM_RTYPE_SLOTS && f+1 >= NUM_RTYPE_SLOTS); // this floor will alias with later floors in room type assignment
 			unsigned const floor_objs_start(objs.size()); // needed for backrooms lights
 			unsigned pillars_start(0); // needed for mall lights
 			bool is_lit(0), light_dim(room_dim), wall_light(0), has_stairs(has_stairs_this_floor), top_of_stairs(has_stairs && top_floor);
@@ -868,7 +869,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				}
 			}
 			// bedroom or bathroom case; need to check first floor even if must_be_bathroom;
-			if (!added_obj && allow_br && !is_tall_room && !has_walkway && can_be_bedroom_or_bathroom(*r, f)) {
+			if (!added_obj && allow_br && !is_tall_room && !has_walkway && !floor_will_alias && can_be_bedroom_or_bathroom(*r, f)) {
 				// Note: num_bedrooms is summed across all floors, while num_bathrooms is per-floor
 				// Note: min_br is applied to bedrooms, but could be applied to bathrooms in the same way
 				bool const pref_sec_bath(is_house && num_bathrooms == 1 && num_bedrooms > min_br && rooms.size() >= 6 && !must_be_bathroom && !has_fireplace && can_be_bathroom(*r));
@@ -1043,7 +1044,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				}
 			}
 			// if we haven't added any objects yet, and this room is an interior office on the first floor or basement, make it a storage room 50% of the time; at most 4x
-			if (!added_obj && num_storage_rooms <= 4 && (is_basement || (r->is_office && !has_window && f == 0)) && rgen.rand_bool()) {
+			if (!added_obj && num_storage_rooms <= 4 && !floor_will_alias && (is_basement || (r->is_office && !has_window && f == 0)) && rgen.rand_bool()) {
 				added_obj = no_whiteboard = is_storage = add_storage_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement, has_stairs);
 				if (added_obj) {r->assign_to(RTYPE_STORAGE, f); ++num_storage_rooms;}
 			}
@@ -1093,7 +1094,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			if (r->has_subroom()) {no_whiteboard = 1;} // whiteboard placer ingores sub-rooms
 			if (is_prison     ()) {no_whiteboard = 1;} // not even in prison office
 
-			if (is_office && !no_whiteboard && !(library_floor_mask & floor_mask)) {
+			if (is_office && !no_whiteboard && !(library_floor_mask & floor_mask) && !floor_will_alias) {
 				// office, no cubicles or bathroom, no library on this floor - maybe make it a library; applies to schools as well
 				bool make_library(0);
 				if (is_office_bldg()) {make_library = ((rgen.rand() % (!has_pri_hall() ? 30U : max(50U, (unsigned)rooms.size()))) == 0);} // library is rare
