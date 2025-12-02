@@ -176,7 +176,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_FOOD_BOX  ] = bldg_obj_type_t(0, 0, 1, 1, 0, 0, 2,  8.0,  1.0,   "box of food");
 	bldg_obj_types[TYPE_SAFE      ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 2, 250.0, 300.0, "safe");
 	bldg_obj_types[TYPE_LADDER    ] = bldg_obj_type_t(1, 0, 0, 0, 1, 0, 1,  0.0,  0.0,   "ladder");
-	bldg_obj_types[TYPE_CHECKOUT  ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1,  0.0,  300.0, "checkout counter");
+	bldg_obj_types[TYPE_CO_COUNTER] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1,  0.0,  300.0, "checkout counter");
 	bldg_obj_types[TYPE_FISHTANK  ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 3, 100.0, 160.0, "fish tank"); // tank is large, plants are small
 	bldg_obj_types[TYPE_LAVALAMP  ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 30.0,  3.0,   "lava lamp");
 	bldg_obj_types[TYPE_SHOWERTUB ] = bldg_obj_type_t(1, 1, 1, 1, 1, 0, 1,  0.0,  0.0,   "shower"); // shower part of a shower+tub combo; technically large and small; take curtains
@@ -267,7 +267,8 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_POOL_LAD  ] = bldg_obj_type_t(0, 0, 1, 0, 1, 1, 0, 200.0, 35.0,  "pool ladder");
 	bldg_obj_types[TYPE_BAR_STOOL ] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 0, 100.0, 40.0,  "bar stool");
 	bldg_obj_types[TYPE_PADLOCK   ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 10.0,  0.2,   "padlock");
-	bldg_obj_types[TYPE_CASHREG   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 1, 0, 1000,  200,   "cash register");
+	bldg_obj_types[TYPE_CHECKOUT  ] = bldg_obj_type_t(1, 1, 1, 0, 1, 1, 0, 1000,  200,   "checkout counter");
+	bldg_obj_types[TYPE_CASHREG   ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 150,   30,    "cash register");
 	bldg_obj_types[TYPE_WFOUNTAIN ] = bldg_obj_type_t(1, 1, 1, 0, 1, 1, 0, 200,   80,    "water fountain");
 	bldg_obj_types[TYPE_BANANA    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 0.25,  0.3,   "banana");
 	bldg_obj_types[TYPE_BAN_PEEL  ] = bldg_obj_type_t(1, 0, 1, 1, 0, 1, 0, 0.0,   0.05,  "banana peel");
@@ -3204,7 +3205,7 @@ bool room_object_t::can_use() const { // excludes dynamic objects
 bool room_object_t::can_place_onto() const { // Note: excludes flat objects such as TYPE_RUG and TYPE_BLANKET
 	return (type == TYPE_TABLE || type == TYPE_DESK || type == TYPE_DRESSER || type == TYPE_NIGHTSTAND || type == TYPE_COUNTER || type == TYPE_KSINK ||
 		type == TYPE_BRSINK || type == TYPE_BED || is_crate_or_box() || type == TYPE_PALLET || type == TYPE_KEYBOARD || type == TYPE_BOOK ||
-		type == TYPE_FCABINET || type == TYPE_MWAVE || type == TYPE_POOL_TABLE || type == TYPE_CONF_TABLE || type == TYPE_CHECKOUT || type == TYPE_VANITY); // TYPE_STAIR?
+		type == TYPE_FCABINET || type == TYPE_MWAVE || type == TYPE_POOL_TABLE || type == TYPE_CONF_TABLE || type == TYPE_CO_COUNTER || type == TYPE_VANITY); // TYPE_STAIR?
 }
 
 bool building_t::apply_toilet_paper(point const &pos, vector3d const &dir, float half_width) {

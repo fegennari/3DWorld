@@ -45,7 +45,7 @@ bool line_int_polygon_sides(point const &p1, point const &p2, cube_t const &bcub
 bool is_flashing_light_on();
 void get_pool_table_cubes(room_object_t const &c, cube_t cubes[5]);
 unsigned get_couch_cubes(room_object_t const &c, cube_t cubes[4]);
-unsigned get_cashreg_cubes(room_object_t const &c, cube_t cubes[2]);
+unsigned get_checkout_cubes(room_object_t const &c, cube_t cubes[2]);
 void get_fishtank_cubes(room_object_t const &c, cube_t sides[4], cube_t &substrate, cube_t &lid, cube_t &light);
 unsigned get_machine_part_cubes(room_object_t const &c, float floor_ceil_gap, cube_t cubes[4]);
 vect_cube_t const &get_cabinet_interior_cubes(room_object_t const &c, float wall_thickness, float z1_adj, float back_adj, float shelf_height);
@@ -487,9 +487,9 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			unsigned const num_cubes(get_couch_cubes(*c, cubes));
 			for (unsigned n = 0; n < num_cubes; ++n) {cc.emplace_back(cubes[n], color);}
 		}
-		else if (type == TYPE_CASHREG) {
+		else if (type == TYPE_CHECKOUT) {
 			cube_t cubes[2]; // body, screen
-			get_cashreg_cubes(*c, cubes);
+			get_checkout_cubes(*c, cubes);
 			cc.emplace_back(cubes[0], color); // only add the body
 		}
 		else if (type == TYPE_FISHTANK) { // add lid and substrate only

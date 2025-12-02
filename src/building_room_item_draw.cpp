@@ -655,7 +655,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		case TYPE_SHELFRACK: add_rack(*i, 1, 0); break; // add_rack=1, add_objs=0
 		case TYPE_CHIM_CAP:  add_chimney_cap(*i); break;
 		case TYPE_LADDER:    add_ext_ladder(*i); break;
-		case TYPE_CHECKOUT:  add_checkout(*i, tscale); break;
+		case TYPE_CO_COUNTER:add_checkout(*i, tscale); break;
 		case TYPE_FISHTANK:  add_fishtank(*i); break;
 		case TYPE_OFF_PILLAR:add_wall_or_pillar(*i, tex_origin, wall_tex); break;
 		case TYPE_SHELF_WALL:add_shelf_wall(*i, wall_tex); break;
@@ -1650,7 +1650,7 @@ float get_ao_shadow(room_object_t const &c, bool enable_indir) {
 	room_object const type(c.type);
 	// include types that don't contribute to indir lighting; these always contribute AO shadows
 	if (type == TYPE_BAR_STOOL || type == TYPE_SHELVES || type == TYPE_CONV_BELT || type == TYPE_EX_MACHINE || type == TYPE_SHOP_CART) return 0.25; // light shadow
-	if (type == TYPE_OFF_CHAIR || type == TYPE_BENCH || type == TYPE_RCHAIR || type == TYPE_CASHREG || type == TYPE_CHEM_TANK || type == TYPE_HOSP_BED) return 0.5; // medium shadow
+	if (type == TYPE_OFF_CHAIR || type == TYPE_BENCH || type == TYPE_RCHAIR || type == TYPE_CHECKOUT || type == TYPE_CHEM_TANK || type == TYPE_HOSP_BED) return 0.5; // medium shadow
 	if (type == TYPE_WHEELCHAIR || type == TYPE_OP_TABLE || type == TYPE_TROLLEY || type == TYPE_EX_MACHINE) return 0.5; // medium shadow
 	if (type == TYPE_PARK_SPACE && c.is_used()) return 0.75; // parked car; dense shadow
 	//TYPE_PALLET? or is that too expensive?
@@ -2211,7 +2211,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 				if (ao_shadow > 0.0) { // add AO shadow quad on the floor below the object
 					if (!is_rotated && !camera_pdu.cube_visible(*i + xlate)) continue; // VFC - may not help much
 					float rscale(0.5 + 0.5*(1.0 - ao_shadow)); // 0.5 will be the size of the object; dense shadow is sharper/smaller radius
-					if (i->type == TYPE_CASHREG || i->type == TYPE_PARK_SPACE) {rscale *= 0.75;} // bcube is larger than it should be for cash registers and parked cars
+					if (i->type == TYPE_CHECKOUT || i->type == TYPE_PARK_SPACE) {rscale *= 0.75;} // bcube is larger than it should be for cash registers and parked cars
 					float const dx(i->dx()), dy(i->dy()), rx(min(rscale*dx, 0.5f*dx+ao_max_ext)), ry(min(rscale*dy, 0.5f*dy+ao_max_ext));
 
 					set_z_plane_rect_pts(point(i->xc(), i->yc(), (i->z1() + ao_z_off)), rx, ry, pts);

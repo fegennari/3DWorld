@@ -943,7 +943,7 @@ unsigned check_couch_collision(room_object_t const &c, point &pos, point const &
 	return check_cubes_collision(cubes, get_couch_cubes(c, cubes), pos, p_last, radius, cnorm);
 }
 
-unsigned get_cashreg_cubes(room_object_t const &c, cube_t cubes[2]) { // main, screen
+unsigned get_checkout_cubes(room_object_t const &c, cube_t cubes[2]) { // main, screen
 	cube_t const bc(get_true_room_obj_bcube(c));
 	bool const dir2(c.dim ^ c.dir);
 	float const width(bc.get_sz_dim(!c.dim)), length(bc.get_sz_dim(c.dim));
@@ -957,9 +957,9 @@ unsigned get_cashreg_cubes(room_object_t const &c, cube_t cubes[2]) { // main, s
 	cubes[1] = screen; // conservative
 	return 2;
 }
-unsigned check_cashreg_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
+unsigned check_checkout_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
 	cube_t cubes[2];
-	return check_cubes_collision(cubes, get_cashreg_cubes(c, cubes), pos, p_last, radius, cnorm);
+	return check_cubes_collision(cubes, get_checkout_cubes(c, cubes), pos, p_last, radius, cnorm);
 }
 
 bool maybe_inside_room_object(room_object_t const &obj, point const &pos, float radius) {
@@ -981,7 +981,7 @@ cube_t get_true_room_obj_bcube(room_object_t const &c) { // for collisions, etc.
 		c_ext.z2() = c.z1() + get_railing_height(c);
 		return c_ext;
 	}
-	if (c.type == TYPE_CASHREG) {
+	if (c.type == TYPE_CHECKOUT) {
 		cube_t c_ext(c);
 		c_ext.expand_in_dim(!c.dim, -0.25*c.get_width()); // object bcube is twice the size it should be; subtract this off
 		return c_ext;
@@ -1710,7 +1710,7 @@ bool building_interior_t::check_sphere_coll_room_objects(building_t const &build
 			else if (type == TYPE_POOL_TABLE) {coll_ret |= check_pool_table_collision(*c, pos, p_last, radius, &cnorm);}
 			else if (type == TYPE_SHELFRACK ) {coll_ret |= check_shelf_rack_collision(*c, pos, p_last, radius, &cnorm);}
 			else if (type == TYPE_COUCH     ) {coll_ret |= check_couch_collision     (*c, pos, p_last, radius, &cnorm);}
-			else if (type == TYPE_CASHREG   ) {coll_ret |= check_cashreg_collision   (*c, pos, p_last, radius, &cnorm);}
+			else if (type == TYPE_CHECKOUT  ) {coll_ret |= check_checkout_collision  (*c, pos, p_last, radius, &cnorm);}
 			else if (type == TYPE_CUBICLE   ) {coll_ret |= (unsigned)check_cubicle_collision (*c, pos, p_last, radius, &cnorm);}
 			else if (type == TYPE_STALL  && maybe_inside_room_object(*c, pos, radius)) {coll_ret |= (unsigned)check_stall_collision (*c, pos, p_last, radius, &cnorm);}
 			else if (type == TYPE_SHOWER && maybe_inside_room_object(*c, pos, radius)) {coll_ret |= (unsigned)check_shower_collision(*c, pos, p_last, radius, &cnorm);}
@@ -2763,9 +2763,9 @@ void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, ve
 		cube_t cubes[4]; // bottom, back, arm, arm
 		lg_cubes.insert(lg_cubes.end(), cubes, cubes+get_couch_cubes(c, cubes));
 	}
-	else if (type == TYPE_CASHREG) {
+	else if (type == TYPE_CHECKOUT) {
 		cube_t cubes[2]; // body, screen
-		get_cashreg_cubes(c, cubes);
+		get_checkout_cubes(c, cubes);
 		lg_cubes .push_back(cubes[0]); // walk on the body
 		non_cubes.push_back(cubes[1]); // avoid the screen
 	}

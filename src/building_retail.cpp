@@ -427,22 +427,22 @@ void building_t::add_checkout_objs(cube_t const &place_area, float zval, unsigne
 	float const centerline(place_area.get_center_dim(!dim)), cr_space(1.5*get_doorway_width());
 	float checkout_len(checkout.get_sz_dim(dim));
 
-	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_CASHREG)) {
-		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_CASHREG)); // D, W, H
+	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_CHECKOUT)) {
+		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_CHECKOUT)); // D, W, H
 		float const height(0.5*floor_spacing), hlen(0.5*height*sz.x/sz.z), hwidth(0.5*height*sz.y/sz.z);
 		if (2.0*hlen > checkout_len) return; // not enough space to fit
-		cube_t cashreg;
+		cube_t cc;
 		vect_cube_t to_add;
-		set_cube_zvals(cashreg, zval, (zval + height));
-		set_wall_width(cashreg, centerline, hwidth, !dim);
+		set_cube_zvals(cc, zval, (zval + height));
+		set_wall_width(cc, centerline, hwidth, !dim);
 		unsigned const num(max(1U, min(4U, unsigned(0.25*checkout_len/hlen))));
 
 		for (unsigned n = 0; n < num; ++n) {
-			set_wall_width(cashreg, (checkout.d[dim][0] + checkout_len*(n+1)/(num+1)), hlen, dim);
+			set_wall_width(cc, (checkout.d[dim][0] + checkout_len*(n+1)/(num+1)), hlen, dim);
 			// check shelfracks; shouldn't need to check stairs or elevators
-			if (!check_for_overlap(cashreg, objs, objs_start, cr_space)) {to_add.push_back(cashreg);} // don't add directly as it may collide with the next cashreg
+			if (!check_for_overlap(cc, objs, objs_start, cr_space)) {to_add.push_back(cc);} // don't add directly as it may collide with the next checkout counter
 		}
-		for (cube_t const &c : to_add) {objs.emplace_back(c, TYPE_CASHREG, room_id, dim, cr_dir, 0);}
+		for (cube_t const &c : to_add) {objs.emplace_back(c, TYPE_CHECKOUT, room_id, dim, cr_dir, 0);}
 	}
 	else if (checkout_len > 0.4*floor_spacing) { // add if large enough
 		checkout.expand_in_dim(dim, -0.1*(checkout_len - 0.4*floor_spacing)); // shrink slightly more if long
@@ -458,7 +458,7 @@ void building_t::add_checkout_objs(cube_t const &place_area, float zval, unsigne
 			seg.d[dim][0] = lo_end + seg_half_gap;
 			seg.d[dim][1] = lo_end + seg_len - seg_half_gap;
 			// check shelfracks; shouldn't need to check stairs or elevators
-			if (!check_for_overlap(seg, objs, objs_start, cr_space)) {objs.emplace_back(seg, TYPE_CHECKOUT, room_id, dim, dir, 0);}
+			if (!check_for_overlap(seg, objs, objs_start, cr_space)) {objs.emplace_back(seg, TYPE_CO_COUNTER, room_id, dim, dir, 0);}
 		}
 	}
 }
