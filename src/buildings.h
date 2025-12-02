@@ -598,7 +598,7 @@ enum {RETAIL_BOXED=0, RETAIL_FOOD, RETAIL_HOUSE_GOODS, RETAIL_KITCHEN, RETAIL_EL
 std::string const store_type_strs [NUM_STORE_TYPES] = {"", "clothing", "food", "book", "retail", "furniture", "pet", "appliance", "shoe"};
 std::string const srack_categories[NUM_RETAIL_CAT ] = {"boxed items", "food", "household goods", "kitchen", "electronics"};
 
-enum {SHAPE_STRAIGHT=0, SHAPE_U, SHAPE_WALLED, SHAPE_WALLED_SIDES, SHAPE_RAMP, SHAPE_L, SHAPE_FAN}; // stairs shapes; SHAPE_FAN is used for mall entrances
+enum {SHAPE_STRAIGHT=0, SHAPE_U, SHAPE_WALLED, SHAPE_WALLED_SIDES, SHAPE_RAMP, SHAPE_L, SHAPE_FAN, SHAPE_SPIRAL}; // stairs shapes; SHAPE_FAN is used for mall entrances
 typedef uint8_t stairs_shape;
 
 enum {ROOM_WALL_INT=0, ROOM_WALL_SEP, ROOM_WALL_EXT, ROOM_WALL_BASEMENT};

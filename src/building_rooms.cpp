@@ -3402,6 +3402,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 				objs.emplace_back(stair, TYPE_STAIR, 0, !dim, dir2, stair_flags);
 			}
 		}
+		else if (i->shape == SHAPE_SPIRAL) {assert(0);} // not yet implemented
 		else {assert(0);}
 		// add walls and railings
 		bool const extend_walls_up(i->is_at_top && !i->roof_access); // space above is open, add a wall so that people can't fall down the stairs
@@ -3540,7 +3541,9 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 				}
 			}
 		} // for d
-		if (i->has_railing && is_U) { // add a railing for the back wall of U-shaped stairs
+		// add railings
+		if (!i->has_railing) {} // no railing
+		else if (is_U) { // add a railing for the back wall of U-shaped stairs
 			float const railing_zc(wall_bottom + 0.819*window_vspacing); // determined experimentally
 			cube_t railing(*i);
 			set_wall_width(railing, (i->d[dim][dir] - dsign*2.0*wall_hw), wall_hw, dim);
@@ -3557,7 +3560,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 				objs.emplace_back(railing, TYPE_RAILING, 0, !dim, dir, (base_rflags | RO_FLAG_TOS | RO_FLAG_OPEN), 1.0, SHAPE_CUBE, railing_color);
 			}
 		}
-		else if (i->has_railing && i->is_l_shape()) { // add railings to the sides of each segment, along the hole at the top on 3 sides, and around the two landing sides
+		else if (i->is_l_shape()) { // add railings to the sides of each segment, along the hole at the top on 3 sides, and around the two landing sides
 			bool const dir2(i->bend_dir);
 			// add side railings
 			cube_t segs[2] = {*i, *i}; // {dim/dir, !dim/dir2}
@@ -3605,7 +3608,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			set_wall_width(railing, i->d[!dim][dir2], railing_hw, !dim);
 			objs.emplace_back(railing, TYPE_RAILING, 0, dim, dir2, (base_rflags | RO_FLAG_TOS | RO_FLAG_OPEN | RO_FLAG_ADJ_TOP), 1.0, SHAPE_CUBE, railing_color); // no vert pole
 		}
-		else if (i->has_railing && !has_wall_both_sides && !i->in_mall && (i->stack_conn || (extend_walls_up && i->shape == SHAPE_STRAIGHT))) {
+		else if (!has_wall_both_sides && !i->in_mall && (i->stack_conn || (extend_walls_up && i->shape == SHAPE_STRAIGHT))) {
 			// add railings around the top if: straight + top floor with no roof access, connector stairs, or basement stairs
 			room_object_t railing(*i, TYPE_RAILING, 0, !dim, dir, (base_rflags | RO_FLAG_TOS | RO_FLAG_ADJ_BOT), 1.0, SHAPE_CUBE, railing_color); // flag to skip drawing ends
 			set_cube_zvals(railing, i->z2(), (i->z2() + fc_gap)); // starts at the floor
@@ -3634,6 +3637,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 				objs.emplace_back(railing);
 			}
 		}
+		else if (i->shape == SHAPE_SPIRAL) {} // not yet implemented
 	} // for i (landings)
 	if (has_pool()) { // add pool stairs
 		interior->room_geom->pool_stairs_start_ix = objs.size();

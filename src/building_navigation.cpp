@@ -370,6 +370,7 @@ public:
 			entry_u.d[dim][ dir] = entry_u.d[dim][!dir]; // no extend?
 			entry_d.d[dim][!dir] = entry_d.d[dim][ dir];
 		}
+		else if (s.shape == SHAPE_SPIRAL) {} // spiral staircase not yet implemented
 		else { // straight stairs: entrances are on opposite ends
 			entry_u.d[dim][ dir] = entry_u.d[dim][!dir] + extend; // shrink to extend length at the entrance to the stairs when going up
 			entry_d.d[dim][!dir] = entry_d.d[dim][ dir] - extend; // shrink to extend length at the entrance to the stairs when going down
@@ -2108,6 +2109,7 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 				else if (stairs.shape == SHAPE_FAN) { // mall stairs
 					// TODO: same as straight stairs?
 				}
+				else if (stairs.shape == SHAPE_SPIRAL) {} // spiral staircase not yet implemented
 			} // end stairs case
 			if (from_path.front() != enter_pt) {path.add(enter_pt, 1);} // don't add a duplicate
 			path.add(from_path); // concatenate the two path segments in reverse order: to + from
