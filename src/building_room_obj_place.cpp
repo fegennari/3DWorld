@@ -4815,12 +4815,12 @@ float get_plate_radius(rand_gen_t &rgen, cube_t const &place_on, float window_vs
 	return min(rgen.rand_uniform(0.05, 0.07)*window_vspacing, 0.25f*min(place_on.dx(), place_on.dy()));
 }
 
-bool building_t::place_plate_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid) {
-	float const radius(get_plate_radius(rgen, place_on, get_window_vspace()));
-	cube_t const plate(place_cylin_object(rgen, place_on, radius, 0.1*radius, 1.1*radius));
+bool building_t::place_plate_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid, bool is_bowl) {
+	float const radius(get_plate_radius(rgen, place_on, get_window_vspace())), height((is_bowl ? rgen.rand_uniform(0.3, 0.7) : 0.1)*radius);
+	cube_t const plate(place_cylin_object(rgen, place_on, radius, height, 1.1*radius));
 	if (has_bcube_int(plate, avoid)) return 0; // only make one attempt
 	vect_room_object_t &objs(interior->room_geom->objs);
-	objs.emplace_back(plate, TYPE_PLATE, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN);
+	objs.emplace_back(plate, TYPE_PLATE, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, WHITE, (is_bowl ? 1 : 0));
 	set_obj_id(objs);
 	return 1;
 }

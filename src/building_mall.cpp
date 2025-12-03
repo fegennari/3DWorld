@@ -1533,8 +1533,8 @@ bool building_t::add_mall_table_with_chairs(rand_gen_t &rgen, cube_t const &tabl
 	switch (place_obj_id) { // TYPE_PHONE, TYPE_FOOD_BOX, TYPE_TRASH?
 	case 0: place_bottle_on_obj(rgen, table_obj, room_id, tot_light_amt, vect_cube_t(), 0, (no_alcohol ? BOTTLE_TYPE_COKE    : BOTTLE_TYPE_WINE   )); break;
 	case 1: place_dcan_on_obj  (rgen, table_obj, room_id, tot_light_amt, vect_cube_t(), 0, (no_alcohol ? DRINK_CAN_TYPE_COKE : DRINK_CAN_TYPE_BEER)); break;
-	case 2: place_cup_on_obj   (rgen, table_obj, room_id, tot_light_amt); break;
-	case 3: place_plate_on_obj (rgen, table_obj, room_id, tot_light_amt); break;
+	case 2: place_cup_on_obj   (rgen, table_obj, room_id, tot_light_amt, vect_cube_t()); break;
+	case 3: place_plate_on_obj (rgen, table_obj, room_id, tot_light_amt, vect_cube_t(), (rgen.rand_float() < 0.35)); break; // plate or (less often) bowl
 	case 4: if (rgen.rand_float() < 1.0*base_prob) {place_pizza_on_obj (rgen, table_obj, room_id, tot_light_amt);} break; // less common
 	case 5: if (rgen.rand_float() < 1.0*base_prob) {place_banana_on_obj(rgen, table_obj, room_id, tot_light_amt);} break; // less common
 	case 6: if (rgen.rand_float() < 1.0*base_prob) {place_apple_on_obj (rgen, table_obj, room_id, tot_light_amt);} break; // less common

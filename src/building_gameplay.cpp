@@ -501,6 +501,9 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 	else if (otype == TYPE_CEIL_TILE && obj.is_lit()) { // light cover rather than ceiling tile
 		type.set_val_weight_name(2.0, 0.25, "light cover");
 	}
+	else if (otype == TYPE_PLATE && obj.item_flags == 1) {
+		type.name = "bowl";
+	}
 	if (wv_factor != 1.0) { // scale weight and value by this factor, rounded to the nearest pound and dollar
 		type.weight = int(wv_factor*type.weight);
 		type.value  = int(wv_factor*type.value );

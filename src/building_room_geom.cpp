@@ -6181,16 +6181,32 @@ int select_plate_texture(unsigned rand_val) {
 void building_room_geom_t::add_plate(room_object_t const &c) { // is_small=1
 	// select plate texture based on room and a property of this building; plates in the same room will match
 	int const tid(select_plate_texture(c.room_id + stairs_start));
-	bool const vertical(c.get_length() < c.dz()), shadowed(vertical), top_dir(vertical ? c.dir : 1);
+	bool const is_bowl(c.item_flags == 1), vertical(!is_bowl && c.get_length() < c.dz()), shadowed(vertical || is_bowl), top_dir(vertical ? c.dir : 1);
 	unsigned const cylin_dim(vertical ? c.dim : 2);
 	rgeom_mat_t &top_mat(get_material(tid_nm_pair_t(tid, 0.0, shadowed), shadowed, 0, 1)); // small
 	colorRGBA color(apply_light_color(c));
 	UNROLL_3X(min_eq(color[i_], 0.9f);); // clamp color to 90% max to avoid over saturation
-	top_mat.add_ortho_cylin_to_verts(c, color, cylin_dim, !top_dir, top_dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // top surface, skip sides
+	cube_t bowl(c);
+
+	if (is_bowl) { // bottom/outer surface
+		bowl.z2() += c.dz(); // expand to full sphere
+		top_mat.add_sphere_to_verts(bowl, color, 0, plus_z); // low_detail=0, bottom half
+	}
+	else { // plate top surface
+		top_mat.add_ortho_cylin_to_verts(c, color, cylin_dim, !top_dir, top_dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // skip sides
+	}
 	rgeom_mat_t &untex_mat(get_untextured_material(shadowed, 0, 1)); // untextured, small
-	// truncated cone, sloped sides, bottom if vertical on on a glass table (ADJ_BOT)
-	bool const draw_bot(vertical || (c.flags & RO_FLAG_ADJ_BOT));
-	untex_mat.add_ortho_cylin_to_verts(c, color, cylin_dim, (draw_bot && top_dir), (draw_bot && !top_dir), 0, 0, (top_dir ? 0.8 : 1.0), (top_dir ? 1.0 : 0.8));
+
+	if (is_bowl) { // top/inner surface
+		unsigned const verts_start(untex_mat.itri_verts.size()), ixs_start(untex_mat.indices.size());
+		untex_mat.add_sphere_to_verts(bowl, color, 0, plus_z); // low_detail=0, bottom half
+		reverse(untex_mat.indices.begin()+ixs_start, untex_mat.indices.end()); // reverse for top surface
+		for (auto i = untex_mat.itri_verts.begin()+verts_start; i != untex_mat.itri_verts.end(); ++i) {i->invert_normal();} // invert normal
+	}
+	else { // plate: truncated cone, sloped sides, bottom if vertical on on a glass table (ADJ_BOT)
+		bool const draw_bot(vertical || (c.flags & RO_FLAG_ADJ_BOT));
+		untex_mat.add_ortho_cylin_to_verts(c, color, cylin_dim, (draw_bot && top_dir), (draw_bot && !top_dir), 0, 0, (top_dir ? 0.8 : 1.0), (top_dir ? 1.0 : 0.8));
+	}
 }
 
 void building_room_geom_t::add_water_plane(room_object_t const &c, cube_t const &water_area, float water_level) {
