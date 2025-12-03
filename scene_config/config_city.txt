@@ -229,7 +229,7 @@ city bar_stool_model    ../models/interiors/bar_stool/bar_stool_avorio.glb  0 0 
 #city bar_stool_model   ../models/interiors/bar_stool/pub_stool/scene.gltf  0 0 0  0 0 90  1 1.0 1.0
 city padlock_model      ../models/interiors/padlock/untextured/scene.gltf   0 0 0  0 0 0  1 1.0 20.0  reverse_winding=8 # invert winding order of shackle
 city checkout_model     ../models/interiors/cash_register/checkout_conv/scene.gltf  0 0 0  0 -1 26  1 1.0 0.16 # rotated at an odd angle
-city cash_register_model ../models/interiors/cash_register/cash_register.glb 0 0 0  -1 -1 90  1 1.0 1.0
+city cash_register_model ../models/interiors/cash_register/cash_register.glb 0 0 0  -1 -1 270  1 1.0 1.0
 city water_fountain_model  ../models/interiors/drinking_fountain/scene.gltf 0 0 0  0 0 270  1 1.0 1.0
 city banana_model       ../models/interiors/banana.glb            0 0 0  0 0 0  0 1.0 1.0
 city banana_peel_model  ../models/interiors/banana_peel.glb       0 0 0  0 0 0  1 1.0 1.0 # ../models/interiors/banana_peel2.glb is too brown

@@ -2256,7 +2256,7 @@ void building_t::add_restaurant_objs(rand_gen_t &rgen, room_t const &room, float
 		cube_t wall(windows_area);
 		set_wall_width(wall, room.d[dim][dir], wall_hthick, dim);
 		set_cube_zvals(wall, bot_wall_z1, bot_wall_z2);
-		add_restaurant_counter(wall, dim, room_id, light_amt, 0, 1, rgen); // leave_end_gaps=0, with_cash_registers=1
+		add_restaurant_counter(wall, dim, dir, room_id, light_amt, 0, 1, rgen); // leave_end_gaps=0, with_cash_registers=1
 		set_cube_zvals(wall, windows_area.z2()-wall_thickness, windows_area.z2()); // narrow strip to fill the bottom edge of the top wall
 		objs.emplace_back(wall, TYPE_STAIR_WALL, room_id, dim, 0, RO_FLAG_HANGING, light_amt, SHAPE_CUBE, wall_color); // upper wall; draw bottom
 		// add trim around the opening
@@ -2287,7 +2287,7 @@ void building_t::add_restaurant_objs(rand_gen_t &rgen, room_t const &room, float
 	set_cube_zvals(upper_wall, (zval + get_floor_ceil_gap()), (room.z2() - fc_thick));
 	objs.emplace_back(upper_wall, TYPE_STAIR_WALL, room_id, dim, 0, RO_FLAG_HANGING, light_amt, SHAPE_CUBE, wall_color); // draw bottom
 	unsigned const objs_start(objs.size());
-	cube_t const counter(add_restaurant_counter(wall, dim, room_id, light_amt, leave_end_gaps, !is_open, rgen)); // with_cash_registers=!is_open
+	cube_t const counter(add_restaurant_counter(wall, dim, dir, room_id, light_amt, leave_end_gaps, is_open, rgen)); // with_cash_registers=is_open
 
 	if (is_open && !windows_area.is_all_zeros()) { // add a blocker for the windows and door
 		cube_t blocker(windows_area);
@@ -2317,26 +2317,42 @@ void building_t::add_restaurant_objs(rand_gen_t &rgen, room_t const &room, float
 	else {add_corner_trashcans(rgen, pub_area, zval, room_id, light_amt, objs_start, !dim, 1);} // both_ends=1
 }
 
-cube_t building_t::add_restaurant_counter(cube_t const &wall, bool dim, unsigned room_id, float light_amt, bool leave_end_gaps, bool with_cash_registers, rand_gen_t &rgen) {
+cube_t building_t::add_restaurant_counter(cube_t const &wall, bool dim, bool dir, unsigned room_id, float light_amt, bool leave_end_gaps, bool with_cash_registers, rand_gen_t &rgen) {
 	float const wall_thickness(get_wall_thickness()), clearance(get_min_front_clearance_inc_people());
 	vect_room_object_t &objs(interior->room_geom->objs);
 	add_short_wall_with_trim(wall, dim, room_id, light_amt, interior->mall_info->mall_wall_color); // bottom wall
 	cube_t counter(wall);
 	set_cube_zvals(counter, wall.z2(), (wall.z2() + wall_thickness));
 	counter.expand_in_dim(dim, 3.0*wall_thickness);
-	objs.emplace_back(counter, TYPE_METAL_BAR, room_id, dim, 0, 0, light_amt, SHAPE_CUBE, LT_GRAY, (leave_end_gaps ? 0 : get_skip_mask_for_xy(!dim))); // skip ends if no gaps
-	// add a blocker around the counter and the windows/entrance
+	unsigned const skip_faces(leave_end_gaps ? 0 : get_skip_mask_for_xy(!dim)); // skip ends if no gaps
+	objs.emplace_back(counter, TYPE_METAL_BAR, room_id, dim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, LT_GRAY, skip_faces);
+	// add a collider + blocker around the counter and the windows/entrance
 	unsigned const objs_start(objs.size());
 	cube_t blocker(counter);
 	blocker.z1() = wall.z1();
+	objs.emplace_back(blocker, TYPE_COLLIDER, room_id, dim, RO_FLAG_INVIS,  0, light_amt, SHAPE_CUBE); // for player and people
 	blocker.expand_in_dim(dim, clearance);
-	objs.emplace_back(blocker, TYPE_BLOCKER, room_id, dim, 0, 0, light_amt, SHAPE_CUBE);
+	objs.emplace_back(blocker, TYPE_BLOCKER,  room_id, dim, RO_FLAG_NOCOLL, 0, light_amt, SHAPE_CUBE); // for objects
+	// maybe add cash register
 	if (!with_cash_registers || !building_obj_model_loader.is_model_valid(OBJ_MODEL_CASHREG)) return counter;
 	float const window_vspace(get_window_vspace());
-	unsigned const num_cr(1);
+	unsigned const cr_start(objs.size()), num_cr(2 + (rgen.rand()%3)); // 2-4
+	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_CASHREG)); // D, W, H
+	float const height(0.12*window_vspace), hwidth(0.5*height*sz.y/sz.z), hdepth(0.5*height*sz.x/sz.z), edge_space(1.5*hwidth);
+	if (hwidth > 0.25*counter.get_sz_dim(!dim)) return counter; // counter not wide enough for cash register; shouldn't happen
+	cube_t cr;
+	set_cube_zvals(cr, counter.z2(), counter.z2()+height);
+	set_wall_width(cr, counter.get_center_dim(dim), hdepth, dim); // centered on the counter
 
 	for (unsigned n = 0; n < num_cr; ++n) {
-		// TODO: add cash register
+		for (unsigned N = 0; N < 10; ++N) {
+			set_wall_width(cr, rgen.rand_uniform(counter.d[!dim][0]+edge_space, counter.d[!dim][1]-edge_space), hwidth, !dim);
+			cube_t cr_exp(cr);
+			cr_exp.expand_in_dim(!dim, edge_space); // require a gap between cash registers
+			if (overlaps_other_room_obj(cr_exp, cr_start)) continue; // blocked
+			objs.emplace_back(cr, TYPE_CASHREG, room_id, dim, dir, 0, light_amt, SHAPE_CUBE);
+			break; // success
+		} // for N
 	} // for n
 	return counter;
 }
