@@ -16,7 +16,8 @@ float const OBJ_GRAVITY    = 0.0003; // unsigned magnitude
 float const TERM_VELOCITY  = 1.0;
 float const OBJ_ELASTICITY = 0.8;
 
-extern bool tt_fire_button_down, flashlight_on, use_last_pickup_object, city_action_key, can_do_building_action, toggle_room_light, player_wait_respawn, building_alarm_active;
+extern bool tt_fire_button_down, flashlight_on, use_last_pickup_object, city_action_key, can_do_building_action, toggle_room_light, player_wait_respawn;
+extern bool building_alarm_active, player_in_mall;
 extern int player_in_closet, camera_surf_collide, can_pickup_bldg_obj, building_action_key, animate2, frame_counter, player_in_elevator, player_in_attic, player_in_basement;
 extern float fticks, CAMERA_RADIUS, office_chair_rot_rate;
 extern double tfticks;
@@ -533,7 +534,13 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 
 			for (auto i = obj_vect.begin(); i != obj_vect_end; ++i) {
 				room_object const type(i->type);
-				if (cur_player_building_loc.room_ix >= 0 && i->room_id != cur_player_building_loc.room_ix && type != TYPE_BUTTON) continue; // not in the same room as the player
+				
+				if (cur_player_building_loc.room_ix >= 0 && i->room_id != cur_player_building_loc.room_ix && type != TYPE_BUTTON) { // not in the same room as the player
+					// allow interacting with items on a mall restaurant counter between the mall concourse and room
+					bool const on_restaurant_counter(player_in_mall && cur_player_building_loc.room_ix == interior->ext_basement_hallway_room_id &&
+						interior->obj_on_restaurant_counter(*i));
+					if (!on_restaurant_counter) continue;
+				}
 				if (!active_area.is_all_zeros() && !i->intersects(active_area)) continue; // out of reach for the player
 				// check for objects not in the attic when the player is in the attic and vice versa
 				if (bool(player_in_attic) != i->in_attic() && type != TYPE_ATTIC_DOOR) continue;

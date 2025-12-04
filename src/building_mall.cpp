@@ -2561,4 +2561,10 @@ int building_interior_t::get_store_id_for_room(unsigned room_id) const { // uses
 	}
 	return -1; // not found
 }
+bool building_interior_t::obj_on_restaurant_counter(room_object_t const &obj) const {
+	if (!obj.in_mall()) return 0;
+	int const store_id(get_store_id_for_room(obj.room_id));
+	if (store_id < 0) return 0;
+	return (mall_info->stores[store_id].store_type == STORE_FOOD);
+}
 
