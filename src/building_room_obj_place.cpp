@@ -4800,7 +4800,7 @@ bool building_t::place_laptop_on_obj(rand_gen_t &rgen, room_object_t const &plac
 }
 
 bool building_t::place_pizza_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid) {
-	float const width(0.15*get_window_vspace());
+	float const width(0.15*get_window_vspace()); // square
 	if (min(place_on.dx(), place_on.dy()) < 1.2*width) return 0; // place_on is too small
 	cube_t pizza;
 	gen_xy_pos_for_cube_obj(pizza, place_on, vector3d(0.5*width, 0.5*width, 0.0), 0.1*width, rgen);
