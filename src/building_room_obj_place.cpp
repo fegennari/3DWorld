@@ -5653,7 +5653,7 @@ bool building_t::place_eating_items_on_table(rand_gen_t &rgen, unsigned table_ob
 		cube_t plate;
 		plate.set_from_sphere(pos, plate_radius);
 		set_cube_zvals(plate, table.z2(), table.z2()+plate_height); // place on the table
-		objs.emplace_back(plate, TYPE_PLATE, table.room_id, 0, 0, plate_flags, table.light_amt, SHAPE_CYLIN);
+		objs.emplace_back(plate, TYPE_PLATE, table.room_id, 0, 0, plate_flags, table.light_amt, SHAPE_CYLIN); // or bowl?
 		set_obj_id(objs);
 
 		if (building_obj_model_loader.is_model_valid(OBJ_MODEL_SILVER)) {
@@ -5776,8 +5776,8 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 			if (surface.is_all_zeros()) continue; // no surface to place on
 		}
 		// Note: after this point, the obj reference is invalid
-		if (is_eating_table) { // table in a room for eating, add a plate
-			if (place_plate_on_obj(rgen, surface, room_id, tot_light_amt, avoid)) {avoid.push_back(objs.back());}
+		if (is_eating_table) { // table in a room for eating, add a plate or bowl
+			if (place_plate_on_obj(rgen, surface, room_id, tot_light_amt, avoid, (rgen.rand_float() < 0.25))) {avoid.push_back(objs.back());}
 		}
 		if (avoid.empty() && rgen.rand_probability(book_prob)) { // place book if it's the first item (no plate)
 			placed_book_on_counter |= (surface.type == TYPE_COUNTER);
