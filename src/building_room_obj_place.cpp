@@ -4812,7 +4812,7 @@ bool building_t::place_pizza_on_obj(rand_gen_t &rgen, cube_t const &place_on, un
 }
 
 float get_plate_radius(rand_gen_t &rgen, cube_t const &place_on, float window_vspacing) {
-	return min(rgen.rand_uniform(0.05, 0.07)*window_vspacing, 0.25f*min(place_on.dx(), place_on.dy()));
+	return min(rgen.rand_uniform(0.05, 0.07)*window_vspacing, 0.33f*min(place_on.dx(), place_on.dy()));
 }
 
 bool building_t::place_plate_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid, bool is_bowl) {

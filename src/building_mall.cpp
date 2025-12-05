@@ -1556,7 +1556,7 @@ bool building_t::add_mall_table_with_chairs(rand_gen_t &rgen, cube_t const &tabl
 				table_side.d[!dim][rgen.rand_bool()] = table_obj.get_center_dim(!dim); // place to one side (not across the center)
 				gen_xy_pos_for_cube_obj(tray, table_side, tray_sz, tray_height, rgen);
 				if (has_bcube_int(tray, objs, objs_start)) continue;
-				objs.emplace_back(tray, TYPE_FOOD_TRAY, room_id, !dim, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_ROUNDED_CUBE, LT_GRAY);
+				add_cafeteria_tray(tray, !dim, room_id, tot_light_amt, no_alcohol, rgen);
 			}
 		}
 	}
@@ -2374,13 +2374,13 @@ cube_t building_t::add_restaurant_counter(cube_t const &wall, bool dim, bool dir
 			if (place_plate_on_obj(rgen, counter, room_id, light_amt, avoid, (rgen.rand_float() < 0.35))) {avoid.push_back(objs.back());}
 			break;
 		case 2: { // tray
-			float const width(0.2*min(window_vspace, counter.get_sz_dim(!dim))), depth(min(0.6*width, 0.9*counter.get_sz_dim(dim))), height(0.03*width);
+			float const width(0.2*min(window_vspace, counter.get_sz_dim(!dim))), depth(min(0.6*width, 0.95*counter.get_sz_dim(dim))), height(0.03*width);
 			cube_t tray;
 			set_cube_zvals(tray, counter.z2(), counter.z2()+height);
 			vector3d const tray_sz(0.5*(dim ? width : depth), 0.5*(dim ? depth : width), height);
 			gen_xy_pos_for_cube_obj(tray, counter, tray_sz, height, rgen);
 			if (has_bcube_int(tray, avoid)) continue; // blocked
-			objs.emplace_back(tray, TYPE_FOOD_TRAY, room_id, dim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_ROUNDED_CUBE, LT_GRAY);
+			add_cafeteria_tray(tray, dim, room_id, light_amt, 0, rgen); // no_alcohol=0
 			avoid.push_back(tray);
 			break;
 		}
@@ -2402,6 +2402,40 @@ cube_t building_t::add_restaurant_counter(cube_t const &wall, bool dim, bool dir
 			                   place_apple_on_obj (rgen, counter, room_id, light_amt, avoid)) {avoid.push_back(objs.back());}
 	}
 	return counter;
+}
+
+bool building_t::add_object_to_tray(cube_t const &tray, bool dim, unsigned room_id, float light_amt, bool no_alcohol, vect_cube_t const &avoid, rand_gen_t &rgen) {
+	cube_t place_area(tray);
+	place_area.z2() = tray.z1() + 0.1*tray.dz(); // top of tray
+	place_area.expand_by_xy(-0.1*tray.get_sz_dim(dim));
+
+	// we could flag the tray as having something on it to prevent the player taking the tray from under the object, but it's too thin to really tell
+	switch (rgen.rand() % 6) { // simplified version of the logic in add_mall_table_with_chairs()
+	case 0: return place_bottle_on_obj(rgen, place_area, room_id, light_amt, avoid, 0, (no_alcohol ? BOTTLE_TYPE_COKE    : BOTTLE_TYPE_WINE   ));
+	case 1: return place_dcan_on_obj  (rgen, place_area, room_id, light_amt, avoid, 0, (no_alcohol ? DRINK_CAN_TYPE_COKE : DRINK_CAN_TYPE_BEER));
+	case 2: return place_cup_on_obj   (rgen, place_area, room_id, light_amt, avoid);
+	case 3: return place_plate_on_obj (rgen, place_area, room_id, light_amt, avoid, (rgen.rand_float() < 0.35)); // plate or (less often) bowl
+	case 4: return place_banana_on_obj(rgen, place_area, room_id, light_amt, avoid);
+	case 5: return place_apple_on_obj (rgen, place_area, room_id, light_amt, avoid);
+	}
+	return 0; // never gets here
+}
+unsigned building_t::add_objects_to_tray(cube_t const &tray, bool dim, unsigned room_id, float light_amt, bool no_alcohol, rand_gen_t &rgen, unsigned max_num) {
+	unsigned const num(rgen.rand() % (max_num+1));
+	static vect_cube_t avoid;
+	avoid.clear();
+
+	for (unsigned n = 0; n < num; ++n) {
+		if (add_object_to_tray(tray, dim, room_id, light_amt, no_alcohol, avoid, rgen)) {avoid.push_back(interior->room_geom->objs.back());}
+	}
+	return avoid.size();
+}
+void building_t::add_cafeteria_tray(cube_t const &tray, bool dim, unsigned room_id, float light_amt, bool no_alcohol, rand_gen_t &rgen) {
+	vect_room_object_t &objs(interior->room_geom->objs);
+	unsigned const tray_obj_ix(objs.size());
+	objs.emplace_back(tray, TYPE_FOOD_TRAY, room_id, dim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_ROUNDED_CUBE, LT_GRAY);
+	unsigned const num_objs(add_objects_to_tray(tray, dim, room_id, light_amt, no_alcohol, rgen, 2)); // 0-2 objects
+	if (num_objs > 0) {objs[tray_obj_ix].flags |= RO_FLAG_ADJ_TOP;} // flag tray as having something on it
 }
 
 void building_t::add_clothing_rack(cube_t const &rack, unsigned room_id, bool dim, float light_amt, room_type rtype, rand_gen_t &rgen) {
