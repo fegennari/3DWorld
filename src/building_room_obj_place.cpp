@@ -4874,6 +4874,22 @@ bool building_t::place_apple_on_obj(rand_gen_t &rgen, cube_t const &place_on, un
 	interior->room_geom->objs.emplace_back(bbc, TYPE_APPLE, room_id, rgen.rand_bool(), rgen.rand_bool(), RO_FLAG_NOCOLL, tot_light_amt, SHAPE_SPHERE, WHITE, item_flags);
 	return 1;
 }
+bool building_t::place_bowl_of_apples_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid) {
+	if (!place_plate_on_obj(rgen, place_on, room_id, tot_light_amt, avoid, 1)) return 0; // is_bowl=1
+	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_APPLE)) return 1; // placed an empty bowl, even if there's no apple
+	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_APPLE));
+	unsigned const item_flags(rgen.rand()); // random apple sub-model
+	float const radius(rgen.rand_uniform(0.02, 0.025)*get_window_vspace()), height(4.0*radius*sz.z/(sz.x + sz.y)); // assumes xsize == ysize
+	vect_room_object_t &objs(interior->room_geom->objs);
+	objs.back().flags |= RO_FLAG_ADJ_TOP; // mark bowl as having something on it; TODO: don't let player take bowl if nonempty
+	cube_t const bowl(objs.back());
+	cube_t bbc;
+	bbc.set_from_sphere(bowl.get_cube_center(), radius); // first apple is at the bottom and centered
+	set_cube_zvals(bbc, bowl.z1(), bowl.z1()+height);
+	interior->room_geom->objs.emplace_back(bbc, TYPE_APPLE, room_id, rgen.rand_bool(), rgen.rand_bool(), RO_FLAG_NOCOLL, tot_light_amt, SHAPE_SPHERE, WHITE, item_flags);
+	// TODO: add multiple apples
+	return 1;
+}
 
 bool building_t::place_phone_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, bool dim, bool dir, float overhang_amt, bool vis_phone) {
 	if (vis_phone) {

@@ -2364,6 +2364,7 @@ cube_t building_t::add_restaurant_counter(cube_t const &wall, bool dim, bool dir
 	unsigned const num_pizza (rgen.rand() % 4); // 0-3
 	unsigned const num_drinks(add_cash_registers ? (rgen.rand() % 9) : 0); // 0-8
 	unsigned const num_fruit (add_cash_registers ? (rgen.rand() % 7) : 0); // 0-6
+	unsigned const num_apple_bowls(rgen.rand() % 3); // 0-2
 
 	for (unsigned n = 0; n < num_cont; ++n) { // containers
 		switch (rgen.rand()%3) { // TYPE_SILVER?
@@ -2392,6 +2393,10 @@ cube_t building_t::add_restaurant_counter(cube_t const &wall, bool dim, bool dir
 			objs.back().dim    = dim; // set dim, but leave dir random
 			avoid.push_back(objs.back());
 		}
+	}
+	for (unsigned n = 0; n < num_apple_bowls; ++n) { // bowls of apples
+		unsigned const bowl_obj_ix(objs.size());
+		if (place_bowl_of_apples_on_obj(rgen, counter, room_id, light_amt, avoid)) {avoid.push_back(objs[bowl_obj_ix]);}
 	}
 	for (unsigned n = 0; n < num_drinks; ++n) { // drinks; no wine; should they be grouped together?
 		if (rgen.rand_bool() ? place_bottle_on_obj(rgen, counter, room_id, light_amt, avoid, 0, BOTTLE_TYPE_BEER) :
