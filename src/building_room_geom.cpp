@@ -5441,9 +5441,16 @@ void building_room_geom_t::add_sign(room_object_t const &c, bool inc_back, bool 
 		bool const dark_mode(c.color == WHITE); // white text on black background
 		unsigned const skip_back_face(~get_face_mask(c.dim, !c.dir));
 		unsigned const skip_faces(hanging ? (draw_top ? 0 : EF_Z2) : skip_back_face); // skip back face, top face if hanging and !draw_top
-		// back of the sign, always white (for now); unshadowed; what about transparent plastic back for hanging signs?
+		// back of the sign; unshadowed; what about transparent plastic back for hanging signs?
 		rgeom_mat_t &mat(get_untextured_material(0, 0, small, 0, exterior));
-		colorRGBA const color(apply_light_color(c, (dark_mode ? (c.is_exterior() ? colorRGBA(0.2, 0.2, 0.8) : BKGRAY) : WHITE))); // blue background for exterior parking sign
+		colorRGBA bkg_col;
+		
+		if (c.item_flags == 0) {bkg_col = (dark_mode ? (c.is_exterior() ? colorRGBA(0.2, 0.2, 0.8) : BKGRAY) : WHITE);} // blue background for exterior parking sign
+		else { // custom color
+			assert(c.item_flags <= NUM_SIGN_BKG_COLORS);
+			bkg_col = blend_color(sign_bkg_colors[c.item_flags-1], WHITE, 0.5, 0); // 50% mix of color and white, to keep good contrast against dark text; calc_alpha=0
+		}
+		colorRGBA const color(apply_light_color(c, bkg_col));
 		mat.add_cube_to_verts_untextured(c, color, skip_faces);
 
 		if (c.has_extra()) { // add a black-ish frame (or white in dark mode)

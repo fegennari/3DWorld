@@ -1755,7 +1755,9 @@ unsigned building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zv
 		sign.d[dim][ dir] = ext_wall_pos + (dir ? 1.0 : -1.0)*sign_thick;
 		set_wall_width(sign, door_center, sign_hwidth, !dim);
 		unsigned const flags(RO_FLAG_LIT | RO_FLAG_NOCOLL | (emissive ? RO_FLAG_EMISSIVE : 0) | RO_FLAG_HANGING);
-		objs.emplace_back(sign, TYPE_SIGN, interior->ext_basement_hallway_room_id, dim, dir, flags, light_amt, SHAPE_CUBE, logo_color); // always lit
+		unsigned item_flags(0);
+		if (rgen.rand_bool()) {item_flags = (rgen.rand() % (NUM_SIGN_BKG_COLORS-1)) + 1;} // set a custom background color 50% of the time; light colors, excludes black
+		objs.emplace_back(sign, TYPE_SIGN, interior->ext_basement_hallway_room_id, dim, dir, flags, light_amt, SHAPE_CUBE, logo_color, item_flags); // always lit
 		objs.back().obj_id = register_sign_text(store_name);
 	}
 	// add theft sensors to either side of the doorway for retail, clothing, and shoe stores
@@ -2327,7 +2329,6 @@ cube_t building_t::add_restaurant_counter(cube_t const &wall, bool dim, bool dir
 	unsigned const skip_faces(leave_end_gaps ? 0 : get_skip_mask_for_xy(!dim)); // skip ends if no gaps
 	objs.emplace_back(counter, TYPE_METAL_BAR, room_id, dim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, LT_GRAY, skip_faces);
 	// add a collider + blocker around the counter and the windows/entrance
-	unsigned const objs_start(objs.size());
 	cube_t blocker(counter);
 	blocker.z1() = wall.z1();
 	objs.emplace_back(blocker, TYPE_COLLIDER, room_id, dim, RO_FLAG_INVIS,  0, light_amt, SHAPE_CUBE); // for player and people
