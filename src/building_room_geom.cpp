@@ -4924,7 +4924,7 @@ void building_room_geom_t::add_trashcan(room_object_t const &c) {
 	colorRGBA const color(apply_light_color(c));
 
 	if (c.in_mall() || c.in_hallway()) { // large mall or hallway trashcan (same flag for both cases)
-		if (c.shape == SHAPE_CYLIN) {
+		if (c.shape == SHAPE_CYLIN) { // round metal
 			bool const is_recycling(c.color.B > 1.2*max(c.color.R, c.color.G));
 			float const radius(c.get_radius()), r_inner(0.67*radius), torus_ri(0.5*(radius - r_inner)), torus_ro(radius - torus_ri);
 			cube_t inner(c);
@@ -4949,7 +4949,7 @@ void building_room_geom_t::add_trashcan(room_object_t const &c) {
 			tbag.expand_by_xy(-wall_thickness);
 			tbag.z2() = bot.z2() - 0.1*dz;
 			unsigned const front_face(get_face_mask(c.dim, c.dir)), skip_faces(~front_face | EF_Z1); // skip front and bottom
-			rgeom_mat_t &mat(get_painted_metal_material(1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
+			rgeom_mat_t &mat(get_painted_metal_material(1, 0, 1, 0, 0, 0.5, 60.0, 0.0)); // inc_shadows=1, dynamic=0, small=1; not reflective
 			mat.add_cube_to_verts_untextured(c, color, skip_faces); // outer
 			mat.add_cube_to_verts(inner, color*0.5, all_zeros, skip_faces, 0, 0, 0, 1); // outer, darker, inverted
 			mat.add_cube_to_verts(tbag, apply_light_color(c, BKGRAY), all_zeros, (~front_face | EF_Z2), 0, 0, 0, 1); // black trash bag, inverted
