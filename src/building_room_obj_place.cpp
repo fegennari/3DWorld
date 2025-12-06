@@ -4815,8 +4815,9 @@ float get_plate_radius(rand_gen_t &rgen, cube_t const &place_on, float window_vs
 	return min(rgen.rand_uniform(0.05, 0.07)*window_vspacing, 0.33f*min(place_on.dx(), place_on.dy()));
 }
 
-bool building_t::place_plate_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid, bool is_bowl) {
-	float const radius(get_plate_radius(rgen, place_on, get_window_vspace())), height((is_bowl ? rgen.rand_uniform(0.3, 0.7) : 0.1)*radius);
+bool building_t::place_plate_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid, bool is_bowl, bool is_deep) {
+	float const radius(get_plate_radius(rgen, place_on, get_window_vspace()));
+	float const height((is_bowl ? (is_deep ? rgen.rand_uniform(0.6, 0.7) : rgen.rand_uniform(0.3, 0.7)) : 0.1)*radius);
 	cube_t const plate(place_cylin_object(rgen, place_on, radius, height, 1.1*radius));
 	if (has_bcube_int(plate, avoid)) return 0; // only make one attempt
 	vect_room_object_t &objs(interior->room_geom->objs);
@@ -4867,27 +4868,35 @@ bool building_t::place_apple_on_obj(rand_gen_t &rgen, cube_t const &place_on, un
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_APPLE));
 	float const radius(rgen.rand_uniform(0.02, 0.025)*get_window_vspace()), height(4.0*radius*sz.z/(sz.x + sz.y)); // assumes xsize == ysize
 	if (min(place_on.dx(), place_on.dy()) < 2.5*radius) return 0; // surface is too small to place this apple
-	cube_t bbc;
-	gen_xy_pos_for_round_obj(bbc, place_on, radius, height, 1.2*radius, rgen);
-	if (has_bcube_int(bbc, avoid)) return 0; // only make one attempt
+	cube_t abc;
+	gen_xy_pos_for_round_obj(abc, place_on, radius, height, 1.2*radius, rgen);
+	if (has_bcube_int(abc, avoid)) return 0; // only make one attempt
 	unsigned const item_flags(rgen.rand()); // random apple sub-model
-	interior->room_geom->objs.emplace_back(bbc, TYPE_APPLE, room_id, rgen.rand_bool(), rgen.rand_bool(), RO_FLAG_NOCOLL, tot_light_amt, SHAPE_SPHERE, WHITE, item_flags);
+	interior->room_geom->objs.emplace_back(abc, TYPE_APPLE, room_id, rgen.rand_bool(), rgen.rand_bool(), RO_FLAG_NOCOLL, tot_light_amt, SHAPE_SPHERE, WHITE, item_flags);
 	return 1;
 }
 bool building_t::place_bowl_of_apples_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid) {
-	if (!place_plate_on_obj(rgen, place_on, room_id, tot_light_amt, avoid, 1)) return 0; // is_bowl=1
+	if (!place_plate_on_obj(rgen, place_on, room_id, tot_light_amt, avoid, 1, 1)) return 0; // is_bowl=1, is_deep=1
 	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_APPLE)) return 1; // placed an empty bowl, even if there's no apple
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_APPLE));
-	unsigned const item_flags(rgen.rand()); // random apple sub-model
-	float const radius(rgen.rand_uniform(0.02, 0.025)*get_window_vspace()), height(4.0*radius*sz.z/(sz.x + sz.y)); // assumes xsize == ysize
+	unsigned const item_flags(rgen.rand()); // random apple sub-model, the same for each apple
 	vect_room_object_t &objs(interior->room_geom->objs);
-	objs.back().flags |= RO_FLAG_ADJ_TOP; // mark bowl as having something on it; TODO: don't let player take bowl if nonempty
-	cube_t const bowl(objs.back());
-	cube_t bbc;
-	bbc.set_from_sphere(bowl.get_cube_center(), radius); // first apple is at the bottom and centered
-	set_cube_zvals(bbc, bowl.z1(), bowl.z1()+height);
-	interior->room_geom->objs.emplace_back(bbc, TYPE_APPLE, room_id, rgen.rand_bool(), rgen.rand_bool(), RO_FLAG_NOCOLL, tot_light_amt, SHAPE_SPHERE, WHITE, item_flags);
-	// TODO: add multiple apples
+	objs.back().flags |= RO_FLAG_ADJ_TOP; // mark bowl as having something on it
+	room_object_t const bowl(objs.back()); // deep copy
+	float const radius(min(rgen.rand_uniform(0.02, 0.025)*get_window_vspace(), 0.36f*bowl.get_radius())), height(4.0*radius*sz.z/(sz.x + sz.y)); // assumes xsize == ysize
+	point const center(bowl.get_cube_center());
+	cube_t abc;
+	abc.set_from_sphere(center, radius); // first apple is at the bottom and centered
+	set_cube_zvals(abc, bowl.z1(), bowl.z1()+height);
+	interior->room_geom->objs.emplace_back(abc, TYPE_APPLE, room_id, rgen.rand_bool(), rgen.rand_bool(), RO_FLAG_NOCOLL, tot_light_amt, SHAPE_SPHERE, WHITE, item_flags);
+	// next layer has 3 apples
+	float angle(PI*rgen.rand_float());
+
+	for (unsigned n = 0; n < 3; ++n, angle += TWO_PI/3) {
+		cube_t abc2(abc);
+		abc2 += 1.9*radius*vector3d(sin(angle), cos(angle), 0.5).get_norm();
+		interior->room_geom->objs.emplace_back(abc2, TYPE_APPLE, room_id, rgen.rand_bool(), rgen.rand_bool(), RO_FLAG_NOCOLL, tot_light_amt, SHAPE_SPHERE, WHITE, item_flags);
+	}
 	return 1;
 }
 
