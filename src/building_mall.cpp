@@ -2258,7 +2258,7 @@ void building_t::add_restaurant_objs(rand_gen_t &rgen, room_t const &room, float
 		cube_t wall(windows_area);
 		set_wall_width(wall, room.d[dim][dir], wall_hthick, dim);
 		set_cube_zvals(wall, bot_wall_z1, bot_wall_z2);
-		add_restaurant_counter(wall, dim, dir, room_id, light_amt, 0, 1, rgen); // leave_end_gaps=0, add_cash_registers=1
+		add_restaurant_counter(wall, dim, dir, room_id, light_amt, 1, 1, rgen); // leave_end_gaps=1 (doesn't span the entire room), add_cash_registers=1
 		set_cube_zvals(wall, windows_area.z2()-wall_thickness, windows_area.z2()); // narrow strip to fill the bottom edge of the top wall
 		objs.emplace_back(wall, TYPE_STAIR_WALL, room_id, dim, 0, RO_FLAG_HANGING, light_amt, SHAPE_CUBE, wall_color); // upper wall; draw bottom
 		// add trim around the opening
@@ -2339,6 +2339,9 @@ cube_t building_t::add_restaurant_counter(cube_t const &wall, bool dim, bool dir
 	objs.emplace_back(blocker, TYPE_COLLIDER, room_id, dim, RO_FLAG_INVIS,  0, light_amt, SHAPE_CUBE); // for player and people
 	blocker.expand_in_dim(dim, clearance);
 	objs.emplace_back(blocker, TYPE_BLOCKER,  room_id, dim, RO_FLAG_NOCOLL, 0, light_amt, SHAPE_CUBE); // for objects
+	cube_t place_area(counter);
+	place_area.expand_in_dim(!dim, -wall_thickness); // skip ends, which may be inside the wall trim
+	float const counter_len(place_area.get_sz_dim(!dim));
 	vect_cube_t avoid;
 	
 	if (add_cash_registers && building_obj_model_loader.is_model_valid(OBJ_MODEL_CASHREG)) {
@@ -2347,14 +2350,14 @@ cube_t building_t::add_restaurant_counter(cube_t const &wall, bool dim, bool dir
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_CASHREG)); // D, W, H
 		float const height(0.12*window_vspace), hwidth(0.5*height*sz.y/sz.z), hdepth(0.5*height*sz.x/sz.z), edge_space(1.5*hwidth);
 
-		if (hwidth < 0.25*counter.get_sz_dim(!dim)) { // counter is wide enough for cash registers; should be true
+		if (hwidth < 0.25*counter_len) { // counter is wide enough for cash registers; should be true
 			cube_t cr;
-			set_cube_zvals(cr, counter.z2(), counter.z2()+height);
-			set_wall_width(cr, counter.get_center_dim(dim), hdepth, dim); // centered on the counter
+			set_cube_zvals(cr, place_area.z2(), place_area.z2()+height);
+			set_wall_width(cr, place_area.get_center_dim(dim), hdepth, dim); // centered on the counter
 
 			for (unsigned n = 0; n < num_cr; ++n) {
 				for (unsigned N = 0; N < 10; ++N) {
-					set_wall_width(cr, rgen.rand_uniform(counter.d[!dim][0]+edge_space, counter.d[!dim][1]-edge_space), hwidth, !dim);
+					set_wall_width(cr, rgen.rand_uniform(place_area.d[!dim][0]+edge_space, place_area.d[!dim][1]-edge_space), hwidth, !dim);
 					cube_t cr_exp(cr);
 					cr_exp.expand_in_dim(!dim, edge_space); // require a gap between cash registers
 					if (has_bcube_int(cr_exp, avoid)) continue; // blocked
@@ -2375,17 +2378,17 @@ cube_t building_t::add_restaurant_counter(cube_t const &wall, bool dim, bool dir
 	for (unsigned n = 0; n < num_cont; ++n) { // containers
 		switch (rgen.rand()%3) { // TYPE_SILVER?
 		case 0: // cup
-			if (place_cup_on_obj  (rgen, counter, room_id, light_amt, avoid)) {avoid.push_back(objs.back());}
+			if (place_cup_on_obj  (rgen, place_area, room_id, light_amt, avoid)) {avoid.push_back(objs.back());}
 			break;
 		case 1: // plate or bowl
-			if (place_plate_on_obj(rgen, counter, room_id, light_amt, avoid, (rgen.rand_float() < 0.35))) {avoid.push_back(objs.back());}
+			if (place_plate_on_obj(rgen, place_area, room_id, light_amt, avoid, (rgen.rand_float() < 0.35))) {avoid.push_back(objs.back());}
 			break;
 		case 2: { // tray
-			float const width(0.22*min(window_vspace, counter.get_sz_dim(!dim))), depth(min(0.6*width, 0.95*counter.get_sz_dim(dim))), height(0.03*width);
+			float const width(0.22*min(window_vspace, counter_len)), depth(min(0.6*width, 0.95*place_area.get_sz_dim(dim))), height(0.03*width);
 			cube_t tray;
-			set_cube_zvals(tray, counter.z2(), counter.z2()+height);
+			set_cube_zvals(tray, place_area.z2(), place_area.z2()+height);
 			vector3d const tray_sz(0.5*(dim ? width : depth), 0.5*(dim ? depth : width), height);
-			gen_xy_pos_for_cube_obj(tray, counter, tray_sz, height, rgen);
+			gen_xy_pos_for_cube_obj(tray, place_area, tray_sz, height, rgen);
 			if (has_bcube_int(tray, avoid)) continue; // blocked
 			add_cafeteria_tray(tray, dim, room_id, light_amt, 0, rgen); // no_alcohol=0
 			avoid.push_back(tray);
@@ -2394,7 +2397,7 @@ cube_t building_t::add_restaurant_counter(cube_t const &wall, bool dim, bool dir
 		} // end switch
 	}
 	for (unsigned n = 0; n < num_pizza; ++n) { // pizza; should these be stacked?
-		if (place_pizza_on_obj(rgen, counter, room_id, light_amt, avoid)) {
+		if (place_pizza_on_obj(rgen, place_area, room_id, light_amt, avoid)) {
 			objs.back().flags |= RO_FLAG_IN_MALL;
 			objs.back().dim    = dim; // set dim, but leave dir random
 			avoid.push_back(objs.back());
@@ -2402,15 +2405,15 @@ cube_t building_t::add_restaurant_counter(cube_t const &wall, bool dim, bool dir
 	}
 	for (unsigned n = 0; n < num_apple_bowls; ++n) { // bowls of apples
 		unsigned const bowl_obj_ix(objs.size());
-		if (place_bowl_of_apples_on_obj(rgen, counter, room_id, light_amt, avoid)) {avoid.push_back(objs[bowl_obj_ix]);}
+		if (place_bowl_of_apples_on_obj(rgen, place_area, room_id, light_amt, avoid)) {avoid.push_back(objs[bowl_obj_ix]);}
 	}
 	for (unsigned n = 0; n < num_drinks; ++n) { // drinks; no wine; should they be grouped together?
-		if (rgen.rand_bool() ? place_bottle_on_obj(rgen, counter, room_id, light_amt, avoid, 0, BOTTLE_TYPE_BEER) :
-			                   place_dcan_on_obj  (rgen, counter, room_id, light_amt, avoid, 0, DRINK_CAN_TYPE_BEER)) {avoid.push_back(objs.back());}
+		if (rgen.rand_bool() ? place_bottle_on_obj(rgen, place_area, room_id, light_amt, avoid, 0, BOTTLE_TYPE_BEER) :
+			                   place_dcan_on_obj  (rgen, place_area, room_id, light_amt, avoid, 0, DRINK_CAN_TYPE_BEER)) {avoid.push_back(objs.back());}
 	}
 	for (unsigned n = 0; n < num_fruit; ++n) { // fruit; apples in a bowl?
-		if (rgen.rand_bool() ? place_banana_on_obj(rgen, counter, room_id, light_amt, avoid) :
-			                   place_apple_on_obj (rgen, counter, room_id, light_amt, avoid)) {avoid.push_back(objs.back());}
+		if (rgen.rand_bool() ? place_banana_on_obj(rgen, place_area, room_id, light_amt, avoid) :
+			                   place_apple_on_obj (rgen, place_area, room_id, light_amt, avoid)) {avoid.push_back(objs.back());}
 	}
 	return counter;
 }
