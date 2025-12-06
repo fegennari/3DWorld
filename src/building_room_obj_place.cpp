@@ -2861,7 +2861,7 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 	bool const in_mall(room.is_ext_basement() && has_mall()), dim(room_sz.x < room_sz.y); // long dim
 	float const ceil_zval(zval + floor_spacing - get_fc_thickness());
 	cube_t const place_area(get_walkable_room_bounds(room));
-	if (btype == BTYPE_PRISON) {zval = add_flooring(room, zval, room_id, light_amt, FLOORING_LGTILE);}
+	if (!has_tile_floor() && !in_mall) {zval = add_flooring(room, zval, room_id, light_amt, FLOORING_LGTILE);} // prison and maybe school
 	vect_room_object_t &objs(interior->room_geom->objs);
 	// add walk-in freezer as a "closet" type
 	float const clearance(get_min_front_clearance_inc_people());
