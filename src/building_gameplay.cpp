@@ -1763,6 +1763,7 @@ bool is_obj_in_or_on_obj(room_object_t const &parent, room_object_t const &child
 	if (parent.type == TYPE_TROLLEY   && parent.intersects(child))                        return 1; // plates on trolley
 	// check for object on the mattress of a bed, excluding stacked bunk bed
 	if (parent.type == TYPE_BED   && child.type != TYPE_BED && child.z1() <= parent.z2() && child.z1() > parent.zc() && child.intersects_xy(parent)) return 1;
+	if ((parent.type == TYPE_FOOD_TRAY || parent.type == TYPE_PLATE) && child.z1() >= parent.z1() && parent.intersects(child)) return 1; // tray or plate with food
 	
 	if (parent.type == TYPE_POOL_TABLE && child.type == TYPE_POOL_CUE) { // handle pool cue leaning against pool table
 		cube_t table_exp(parent);
@@ -1775,9 +1776,9 @@ bool object_can_have_something_on_it(room_object_t const &obj) {
 	auto const type(obj.type);
 	// only these types can have objects placed on them (what about TYPE_SHELF?)
 	return (type == TYPE_TABLE || type == TYPE_DESK || type == TYPE_COUNTER || type == TYPE_DRESSER || type == TYPE_NIGHTSTAND || type == TYPE_CONF_TABLE ||
-		type == TYPE_RDESK || obj.is_crate_or_box() || type == TYPE_WINE_RACK || type == TYPE_BOOK || type == TYPE_STOVE || type == TYPE_MWAVE ||
-		type == TYPE_BED || type == TYPE_SERVER || type == TYPE_PIZZA_BOX || type == TYPE_LAPTOP || type == TYPE_FOLD_SHIRT || type == TYPE_PALLET ||
-		type == TYPE_COAT_RACK || type == TYPE_TROLLEY /*|| type == TYPE_FCABINET*/ /*|| type == TYPE_SHELF*/);
+		type == TYPE_RDESK || obj.is_crate_or_box() || type == TYPE_WINE_RACK || type == TYPE_BOOK || type == TYPE_STOVE || type == TYPE_MWAVE || type == TYPE_BED ||
+		type == TYPE_SERVER || type == TYPE_PIZZA_BOX || type == TYPE_LAPTOP || type == TYPE_FOLD_SHIRT || type == TYPE_PALLET || type == TYPE_COAT_RACK ||
+		type == TYPE_TROLLEY || (type == TYPE_FOOD_TRAY || type == TYPE_PLATE) && (obj.flags & RO_FLAG_ADJ_TOP) /*|| type == TYPE_FCABINET*/ /*|| type == TYPE_SHELF*/);
 }
 bool object_has_something_on_it(room_object_t const &obj, vect_room_object_t const &objs, vect_room_object_t::const_iterator objs_end) {
 	if (!object_can_have_something_on_it(obj)) return 0;

@@ -1544,7 +1544,7 @@ bool building_t::add_mall_table_with_chairs(rand_gen_t &rgen, cube_t const &tabl
 
 	if (above_ground) { // add trays
 		unsigned const num_trays(rgen.rand() % 3); // 0-2
-		float const tray_width(0.2*window_vspacing), tray_depth(0.6*tray_width), tray_height(0.03*tray_width);
+		float const tray_width(0.22*window_vspacing), tray_depth(0.6*tray_width), tray_height(0.03*tray_width);
 
 		if (num_trays > 0 && tray_width < 0.45*table_len && tray_depth < 0.45*table_width) {
 			cube_t tray;
@@ -2376,7 +2376,7 @@ cube_t building_t::add_restaurant_counter(cube_t const &wall, bool dim, bool dir
 			if (place_plate_on_obj(rgen, counter, room_id, light_amt, avoid, (rgen.rand_float() < 0.35))) {avoid.push_back(objs.back());}
 			break;
 		case 2: { // tray
-			float const width(0.2*min(window_vspace, counter.get_sz_dim(!dim))), depth(min(0.6*width, 0.95*counter.get_sz_dim(dim))), height(0.03*width);
+			float const width(0.22*min(window_vspace, counter.get_sz_dim(!dim))), depth(min(0.6*width, 0.95*counter.get_sz_dim(dim))), height(0.03*width);
 			cube_t tray;
 			set_cube_zvals(tray, counter.z2(), counter.z2()+height);
 			vector3d const tray_sz(0.5*(dim ? width : depth), 0.5*(dim ? depth : width), height);
