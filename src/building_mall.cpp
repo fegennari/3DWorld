@@ -14,6 +14,7 @@ using std::string;
 string choose_store_name(unsigned store_type, unsigned item_category, rand_gen_t &rgen);
 colorRGBA choose_pot_color(rand_gen_t &rgen);
 colorRGBA choose_sign_color(rand_gen_t &rgen, bool emissive=0);
+colorRGBA get_stain_color(rand_gen_t &rgen, bool is_food=0);
 bool is_invalid_city_placement_for_cube(cube_t const &c);
 void add_city_plot_cut(cube_t const &cut);
 void add_city_ug_elevator_entrance(ug_elev_info_t const &uge);
@@ -2449,6 +2450,13 @@ void building_t::add_cafeteria_tray(cube_t const &tray, bool dim, unsigned room_
 	objs.emplace_back(tray, TYPE_FOOD_TRAY, room_id, dim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_ROUNDED_CUBE, LT_GRAY);
 	unsigned const num_objs(add_objects_to_tray(tray, dim, room_id, light_amt, no_alcohol, rgen, 2)); // 0-2 objects
 	if (num_objs > 0) {objs[tray_obj_ix].flags |= RO_FLAG_ADJ_TOP;} // flag tray as having something on it
+
+	if (rgen.rand_float() < 0.4) { // add a stain on the tray; this won't be removed when the tray is taken, but hopefully that's okay
+		float const stain_radius(rgen.rand_uniform(0.25, 0.45)*min(tray.dx(), tray.dy()));
+		colorRGBA const color(get_stain_color(rgen, 1)); // is_food=1
+		point const pos(tray.xc(), tray.yc(), (tray.z1() + 0.2*tray.dz())); // centered, on top of top surface of tray, under any placed items
+		interior->room_geom->decal_manager.add_blood_or_stain(pos, stain_radius, color, 0, 2, 1); // is_blood=0; +z
+	}
 }
 
 void building_t::add_clothing_rack(cube_t const &rack, unsigned room_id, bool dim, float light_amt, room_type rtype, rand_gen_t &rgen) {

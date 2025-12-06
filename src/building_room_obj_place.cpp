@@ -2906,6 +2906,10 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 		add_stack_of_plates(plate_area, plate_radius, room_id, light_amt, RO_FLAG_NOCOLL, rgen, blockers, objs);
 	} // for i
 	if (!in_mall) {add_door_sign("Kitchen", room, zval, room_id);}
+	// add floor stains
+	unsigned const num_stains(rgen.rand() % 5); // 0-4
+	float const rmax(min(0.2f*floor_spacing, 0.1f*min(place_area.dx(), place_area.dy())));
+	add_floor_stains(rgen, place_area, zval, room_id, light_amt, objs_start, num_stains, rmax, 1); // is_food=1
 	return 1;
 }
 
@@ -4811,6 +4815,17 @@ bool building_t::place_pizza_on_obj(rand_gen_t &rgen, cube_t const &place_on, un
 	return 1;
 }
 
+colorRGBA get_stain_color(rand_gen_t &rgen, bool is_food=0) {
+	if (is_food) {
+		unsigned const num = 7;
+		colorRGBA const colors[num] = {WHITE, BROWN, LT_BROWN, DK_BROWN, OLIVE, colorRGBA(0.6, 0.25, 0.05), colorRGBA(0.6, 0.1, 0.05)};
+		return colors[rgen.rand() % num];
+	}
+	colorRGBA color(BLACK); // color.B = 0.0
+	color.R = rgen.rand_uniform(0.0, 0.5);
+	color.G = rgen.rand_uniform(0.0, 0.5);
+	return color;
+}
 float get_plate_radius(rand_gen_t &rgen, cube_t const &place_on, float window_vspacing) {
 	return min(rgen.rand_uniform(0.05, 0.07)*window_vspacing, 0.33f*min(place_on.dx(), place_on.dy()));
 }
@@ -4823,6 +4838,13 @@ bool building_t::place_plate_on_obj(rand_gen_t &rgen, cube_t const &place_on, un
 	vect_room_object_t &objs(interior->room_geom->objs);
 	objs.emplace_back(plate, TYPE_PLATE, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, WHITE, (is_bowl ? 1 : 0));
 	set_obj_id(objs);
+
+	if (!is_bowl && rgen.rand_float() < 0.35) { // maybe add a stain on the plate; this won't be removed when the plate is taken, but hopefully that's okay
+		float const stain_radius(rgen.rand_uniform(0.6, 0.9)*radius);
+		colorRGBA const color(get_stain_color(rgen, 1)); // is_food=1
+		point const pos(plate.xc(), plate.yc(), (plate.z2() + 0.2*plate.dz())); // centered, on top of top surface of tray, under any placed items
+		interior->room_geom->decal_manager.add_blood_or_stain(pos, stain_radius, color, 0, 2, 1); // is_blood=0; +z
+	}
 	return 1;
 }
 
@@ -5210,12 +5232,6 @@ void building_t::add_boxes_to_room(rand_gen_t rgen, room_t const &room, float zv
 	} // for n
 }
 
-colorRGBA get_stain_color(rand_gen_t &rgen) {
-	colorRGBA color(BLACK); // color.B = 0.0
-	color.R = rgen.rand_uniform(0.0, 0.5);
-	color.G = rgen.rand_uniform(0.0, 0.5);
-	return color;
-}
 void building_t::add_stains_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	assert(has_room_geom());
 	bool const backrooms(room.is_backrooms()), parking_garage(room.is_parking());
@@ -5273,7 +5289,9 @@ void building_t::add_stains_to_room(rand_gen_t rgen, room_t const &room, float z
 		interior->room_geom->decal_manager.add_blood_or_stain(pos, radius, get_stain_color(rgen), 0, dim, !dir); // is_blood=0
 	} // for n
 }
-void building_t::add_floor_stains(rand_gen_t &rgen, cube_t const &place_area, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned num, float rmax) {
+void building_t::add_floor_stains(rand_gen_t &rgen, cube_t const &place_area, float zval, unsigned room_id,
+	float tot_light_amt, unsigned objs_start, unsigned num, float rmax, bool is_food)
+{
 	float const height(1.5*get_flooring_thick());
 
 	for (unsigned n = 0; n < num; ++n) {
@@ -5281,8 +5299,9 @@ void building_t::add_floor_stains(rand_gen_t &rgen, cube_t const &place_area, fl
 		point const pos(gen_xy_pos_in_area(place_area, radius, rgen, zval));
 		cube_t const c(get_cube_height_radius(pos, radius, height));
 		if (overlaps_other_room_obj(c, objs_start) || is_obj_placement_blocked(c, place_area, 0)) continue; // for now, just make one random attempt
-		interior->room_geom->decal_manager.add_blood_or_stain(point(pos.x, pos.y, zval+height), radius, get_stain_color(rgen), 0, 2, 1); // is_blood=0; +z
-	}
+		colorRGBA const color(get_stain_color(rgen, is_food));
+		interior->room_geom->decal_manager.add_blood_or_stain(point(pos.x, pos.y, zval+height), radius, color, 0, 2, 1); // is_blood=0; +z
+	} // for n
 }
 
 room_object_t get_conduit(bool dim, bool dir, float radius, float wall_pos_dim, float wall_pos_not_dim, float z1, float z2, unsigned room_id) {
