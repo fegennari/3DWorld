@@ -2238,11 +2238,11 @@ unsigned building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zv
 void building_t::add_restaurant_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id,
 	bool dim, bool dir, bool no_doorway, float light_amt, light_ix_assign_t &light_ix_assign) {
 	float const window_vspace(get_window_vspace()), wall_thickness(get_wall_thickness()), wall_hthick(0.5*wall_thickness), fc_thick(get_fc_thickness());
-	float const clearance(get_min_front_clearance_inc_people());
+	float const clearance(get_min_front_clearance_inc_people()), trim_thickness(get_trim_thickness()), trim_height(get_trim_height());
 	int const style(no_doorway ? 2 : ((3*rgen.rand()) % 3)); // {open with dining, open with no dining, closed with counter}; must be closed with counter if no doorway
 	bool const has_dining(style == 0), is_open(style < 2);
 	float const front_wall(room.d[dim][dir]), bot_wall_z1(room.z1() + fc_thick), bot_wall_z2(zval + 0.35*window_vspace);
-	colorRGBA const &wall_color(interior->mall_info->mall_wall_color);
+	colorRGBA const &wall_color(interior->mall_info->mall_wall_color), &trim_color(get_trim_color());
 	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t front_area(room), windows_area;
 	set_wall_width(front_area, front_wall, wall_thickness, dim);
@@ -2262,11 +2262,10 @@ void building_t::add_restaurant_objs(rand_gen_t &rgen, room_t const &room, float
 		set_cube_zvals(wall, windows_area.z2()-wall_thickness, windows_area.z2()); // narrow strip to fill the bottom edge of the top wall
 		objs.emplace_back(wall, TYPE_STAIR_WALL, room_id, dim, 0, RO_FLAG_HANGING, light_amt, SHAPE_CUBE, wall_color); // upper wall; draw bottom
 		// add trim around the opening
-		float const trim_hwidth(0.5*get_trim_height());
-		colorRGBA const &trim_color(get_trim_color());
+		float const trim_hwidth(0.5*trim_height);
 		cube_t trim(wall);
 		trim.expand_in_dim(!dim, trim_hwidth);
-		trim.expand_in_dim( dim, 2.0*get_trim_thickness());
+		trim.expand_in_dim( dim, 2.0*trim_thickness);
 		set_wall_width(trim, wall.z1(), trim_hwidth, 2);
 		unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_UNTEXTURED); // not reflective
 		objs.emplace_back(trim, TYPE_METAL_BAR, room_id, dim, 0, flags, light_amt, SHAPE_CUBE, trim_color, 0); // draw all sides
@@ -2287,7 +2286,13 @@ void building_t::add_restaurant_objs(rand_gen_t &rgen, room_t const &room, float
 	cube_t upper_wall(wall);
 	if (leave_end_gaps) {wall.expand_in_dim(!dim, -1.25*clearance);}
 	set_cube_zvals(upper_wall, (zval + get_floor_ceil_gap()), (room.z2() - fc_thick));
-	objs.emplace_back(upper_wall, TYPE_STAIR_WALL, room_id, dim, 0, RO_FLAG_HANGING, light_amt, SHAPE_CUBE, wall_color); // draw bottom
+	objs.emplace_back(upper_wall, TYPE_STAIR_WALL, room_id, dim, 0, 0, light_amt, SHAPE_CUBE, wall_color); // draw sides only
+	// add upper wall bottom trim
+	cube_t trim(upper_wall);
+	set_cube_zvals(trim, upper_wall.z1()-trim_height, upper_wall.z1());
+	trim.expand_in_dim(dim, trim_thickness);
+	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_UNTEXTURED); // not reflective
+	interior->room_geom->objs.emplace_back(trim, TYPE_METAL_BAR, room_id, dim, 0, flags, light_amt, SHAPE_CUBE, trim_color, get_skip_mask_for_xy(!dim)); // skip ends
 	unsigned const objs_start(objs.size());
 	cube_t const counter(add_restaurant_counter(wall, dim, dir, room_id, light_amt, leave_end_gaps, is_open, rgen)); // add_cash_registers=is_open
 
@@ -2415,7 +2420,6 @@ bool building_t::add_object_to_tray(cube_t const &tray, bool dim, unsigned room_
 	place_area.z2() = tray.z1() + 0.1*tray.dz(); // top of tray
 	place_area.expand_by_xy(-0.1*tray.get_sz_dim(dim));
 
-	// we could flag the tray as having something on it to prevent the player taking the tray from under the object, but it's too thin to really tell
 	switch (rgen.rand() % 6) { // simplified version of the logic in add_mall_table_with_chairs()
 	case 0: return place_bottle_on_obj(rgen, place_area, room_id, light_amt, avoid, 0, (no_alcohol ? BOTTLE_TYPE_COKE    : BOTTLE_TYPE_WINE   ));
 	case 1: return place_dcan_on_obj  (rgen, place_area, room_id, light_amt, avoid, 0, (no_alcohol ? DRINK_CAN_TYPE_COKE : DRINK_CAN_TYPE_BEER));
