@@ -2518,21 +2518,22 @@ void building_t::add_clothing_rack(cube_t const &rack, unsigned room_id, bool di
 	} // for n
 }
 
-void building_t::add_ceiling_ducts(cube_t const &room, float ceil_zval, unsigned room_id, bool dim, unsigned skip_dir, float light_amt,
+void building_t::add_ceiling_ducts(cube_t const &room_area, float ceil_zval, unsigned room_id, bool dim, unsigned skip_dir, float light_amt,
 	bool cylin_ducts, bool skip_ends, bool skip_top, rand_gen_t &rgen, float sz_scale, cube_t const &avoid)
 {
 	float const window_vspace(get_window_vspace()), scaled_space(sz_scale*window_vspace), wall_hthick(0.5*get_wall_thickness());
 	float const duct_height((cylin_ducts ? 0.25 : 0.2)*scaled_space), duct_width((cylin_ducts ? 0.25 : 0.26)*scaled_space), vent_ext((cylin_ducts ? 0.05 : 0.1)*scaled_space);
 	// Note: mall and factory flag are the same, so we don't need to know which; but this is also used with commercial kitchens, which is kind of wrong
 	unsigned const duct_flags(RO_FLAG_IN_MALL | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI);
-	cube_t room_area(get_room_wall_bounds(get_room(room_id)));
-	room_area.intersect_with_cube(room);
+	room_t const &room(get_room(room_id));
+	cube_t int_area(room_area);
+	int_area.intersect_with_cube(get_room_wall_bounds(room));
 	vect_room_object_t &objs(interior->room_geom->objs);
 
 	for (unsigned d = 0; d < 2; ++d) { // each side
 		if (unsigned(d) == skip_dir) continue;
 		float const dscale(d ? 1.0 : -1.0);
-		cube_t duct(room_area);
+		cube_t duct(int_area);
 		duct.z2() = ceil_zval - get_fc_thickness();
 		duct.z1() = duct.z2() - duct_height;
 		duct.d[!dim][ d] = room.d[!dim][d] - dscale*wall_hthick;
@@ -2548,9 +2549,15 @@ void building_t::add_ceiling_ducts(cube_t const &room, float ceil_zval, unsigned
 				if (p.get_area_xy() > duct.get_area_xy()) {duct = p;}
 			}
 		}
+		if (duct.z1() > ground_floor_z1) { // check for windows if not underground; this isn't required, so maybe can be relaxed?
+			if (classify_room_wall(room, int_area.z1(), !dim, d, 0) == ROOM_WALL_EXT) continue;
+		}
+		if (duct.z1() < room.z1() + window_vspace) { // check for door intersections if not a tall room
+			if (is_cube_close_to_doorway(duct, int_area, 0.0, 1, 1)) continue; // inc_open_doors=1, check_open_dir=1
+		}
 		unsigned main_duct_flags(RO_FLAG_IN_MALL | (skip_top ? RO_FLAG_ADJ_TOP : 0));
-		if (skip_ends && duct.d[dim][0] == room_area.d[dim][0]) {main_duct_flags |= RO_FLAG_ADJ_LO;} // skip lo end if at room bounds
-		if (skip_ends && duct.d[dim][1] == room_area.d[dim][1]) {main_duct_flags |= RO_FLAG_ADJ_HI;} // skip hi end if at room bounds
+		if (skip_ends && duct.d[dim][0] == int_area.d[dim][0]) {main_duct_flags |= RO_FLAG_ADJ_LO;} // skip lo end if at room bounds
+		if (skip_ends && duct.d[dim][1] == int_area.d[dim][1]) {main_duct_flags |= RO_FLAG_ADJ_HI;} // skip hi end if at room bounds
 		objs.emplace_back(duct, TYPE_DUCT, room_id, dim, 0, main_duct_flags, light_amt, (cylin_ducts ? SHAPE_CYLIN : SHAPE_CUBE)); // dir=0 (XY)
 		// add vents along the duct
 		float const duct_len(duct.get_sz_dim(dim));
