@@ -767,9 +767,11 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 {
 	assert(is_factory() && has_ind_info());
 	bool const edim(interior->ind_info->entrance_dim), edir(interior->ind_info->entrance_dir);
-	float const floor_spacing(get_window_vspace()), fc_gap(room.dz()), max_place_sz(1.0*floor_spacing), max_height(fc_gap - floor_spacing);
-	float const doorway_width(get_doorway_width()), min_gap(max(doorway_width, get_min_front_clearance_inc_people())), ceil_zval(room.z2() - get_fc_thickness());
-	if (max_height <= 0.0) return; // should never happen
+	float const floor_spacing(get_window_vspace()), fc_thick(get_fc_thickness()), doorway_width(get_doorway_width());
+	float const fc_gap(room.dz()), max_place_sz(1.0*floor_spacing), max_height(fc_gap - floor_spacing);
+	float const max_edge_height(max_height - 0.1*floor_spacing - fc_thick); // more space at edges of room to leave clearance for ducts and HVAC units
+	float const min_gap(max(doorway_width, get_min_front_clearance_inc_people())), ceil_zval(room.z2() - fc_thick);
+	if (max_edge_height <= 0.0) return; // should never happen
 	vect_room_object_t &objs(interior->room_geom->objs);
 	vector2d max_sz(get_machine_max_sz(place_area, min_gap, max_place_sz, 0.5));
 	cube_t avoid(interior->ind_info->entrance_area);
@@ -1049,7 +1051,7 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 	avoid.d[edim][!edir] = room.d[edim][!edir]; // extend to opposite end of the factory so that we have space to place a ladder and sprinkler pipe
 
 	for (unsigned n = 0; n < num_machines; ++n) {
-		float const height(min(fc_gap*rgen.rand_uniform(0.3, 0.7), max_height));
+		float const height(min(fc_gap*rgen.rand_uniform(0.3, 0.7), max_edge_height));
 		cube_t c;
 		set_cube_zvals(c, zval, zval+height);
 
