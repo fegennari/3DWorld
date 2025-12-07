@@ -2568,9 +2568,8 @@ void building_t::add_ceiling_ducts(cube_t const &room, float ceil_zval, unsigned
 }
 
 void building_t::add_row_of_bookcases(cube_t const &row, float zval, unsigned room_id, float light_amt, bool dim, bool place_inside) {
-	float const window_vspace(get_window_vspace());
+	float const window_vspace(get_window_vspace()), wall_length(row.get_sz_dim(!dim));
 	float const bc_width(0.45*window_vspace), bc_depth(0.13*window_vspace), bc_height(0.75*window_vspace);
-	float const wall_length(row.get_sz_dim(!dim));
 	unsigned const num_bc(max(1, round_fp(wall_length/bc_width)));
 	float const bcase_width(wall_length/num_bc);
 	vect_room_object_t &objs(interior->room_geom->objs);

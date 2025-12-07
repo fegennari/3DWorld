@@ -460,11 +460,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					has_stairs = 1;
 				} // for s
 			}
-			if (is_secret) { // TODO: 50% probability?
-				if (add_cave_objs(rgen, *r, room_center.z, room_id)) {
-					r->assign_to(RTYPE_CAVE, f);
-					continue; // no lights, switches, outlets, rugs, pictures, or other objects
-				}
+			if (is_secret && add_cave_objs(rgen, *r, room_center.z, room_id)) {
+				r->assign_to(RTYPE_CAVE, f);
+				continue; // no lights, switches, outlets, rugs, pictures, or other objects
 			}
 			unsigned num_lights(r->num_lights), flags(0);
 			float light_z2(z + floor_height - fc_thick + light_delta_z);
@@ -490,7 +488,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			}
 			if (is_lit)                    {flags |= RO_FLAG_LIT | RO_FLAG_EMISSIVE;}
 			if (has_stairs)                {flags |= RO_FLAG_RSTAIRS;}
-			if (is_secret)                 {flags |= RO_FLAG_NO_POWER;} // power is off in this room TODO: enable later
+			if (is_secret)                 {flags |= RO_FLAG_NO_POWER;} // power is permanently off in this room
 			if (r->is_ext_basement_conn()) {flags |= RO_FLAG_EXTERIOR;} // flag as exterior since this light may reach the connected building
 			// add one or more lights to the ceiling of this room if there's space (always for top of stairs);
 			// must check lights vs. backrooms walls and pillars, and mall pillars

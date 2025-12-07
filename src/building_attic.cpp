@@ -1297,10 +1297,7 @@ void building_room_geom_t::add_chimney(room_object_t const &c, tid_nm_pair_t con
 
 // I guess skylights are similar to attics, so this code goes here?
 void building_room_geom_t::add_skylights_details(building_t const &b) {
-	for (cube_t const &skylight : b.skylights) {
-		add_skylight_details(skylight, b.has_skylight_light);
-		if (b.is_house) {} // TODO: add interior walls, clipped to the roof
-	}
+	for (cube_t const &skylight : b.skylights) {add_skylight_details(skylight, b.has_skylight_light);}
 }
 void add_skylight_bar_grid(cube_t const &skylight, float bar_hwidth, float spacing, unsigned num, bool dim, vect_cube_t &bars) {
 	for (unsigned i = 0; i < num+1; ++i) { // includes bar at the end

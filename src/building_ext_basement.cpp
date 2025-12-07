@@ -1202,6 +1202,7 @@ bool building_t::add_cave_objs(rand_gen_t rgen, room_t const &room, float zval, 
 	float light_amt(1.0);
 	// add random vertical walls + blockers, and ceiling floor texture?
 	return 0; // not yet enabled
+	if (rgen.rand_bool()) return 0; // 50% of rooms are caves
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const flooring_obj_ix(objs.size()); // should be exactly one, since there are no stairs or elevator cuts
 	zval = add_flooring(room, zval, room_id, light_amt, FLOORING_ROCK);
