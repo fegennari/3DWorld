@@ -2549,7 +2549,7 @@ void building_t::add_ceiling_ducts(cube_t const &room_area, float ceil_zval, uns
 				if (p.get_area_xy() > duct.get_area_xy()) {duct = p;}
 			}
 		}
-		if (duct.z1() > ground_floor_z1) { // check for windows if not underground; this isn't required, so maybe can be relaxed?
+		if (!is_industrial() && duct.z1() > ground_floor_z1) { // check for windows if not underground; this isn't required, so maybe can be relaxed?
 			if (classify_room_wall(room, int_area.z1(), !dim, d, 0) == ROOM_WALL_EXT) continue;
 		}
 		if (duct.z1() < room.z1() + window_vspace) { // check for door intersections if not a tall room
