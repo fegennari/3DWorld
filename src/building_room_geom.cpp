@@ -6158,8 +6158,9 @@ void building_room_geom_t::add_flat_textured_detail_wall_object(room_object_t co
 	tid_nm_pair_t tex(tid, 0.0, 0);
 	tex.set_specular(spec, shine, metalness);
 	rgeom_mat_t &front_mat(get_material(tex, 0, 0, small));
-	front_mat.add_cube_to_verts(c, c.color, zero_vector, get_face_mask(c.dim, !c.dir), !c.dim, 0, mirror_y); // textured front face; always fully lit to match wall
-	unsigned const skip_faces(draw_all_faces ? 0 : (get_skip_mask_for_xy(c.dim) | (skip_z1_face ? EF_Z1 : 0))); // skip front/back and maybe bottom faces
+	unsigned const front_face_mask(get_face_mask(c.dim, !c.dir));
+	front_mat.add_cube_to_verts(c, c.color, zero_vector, front_face_mask, !c.dim, 0, mirror_y); // textured front face; always fully lit to match wall
+	unsigned const skip_faces(draw_all_faces ? ~front_face_mask : (get_skip_mask_for_xy(c.dim) | (skip_z1_face ? EF_Z1 : 0))); // skip front/back and maybe bottom faces
 	rgeom_mat_t &sides_mat((metalness > 0.0) ? get_painted_metal_material(0, 0, small, 0, 0, spec, shine, metalness) : get_untextured_material(0, 0, small));
 	sides_mat.add_cube_to_verts_untextured(c, side_color, skip_faces); // sides: unshadowed, small
 }
@@ -6177,7 +6178,10 @@ void building_room_geom_t::add_vent(room_object_t const &c) {
 		front_mat.add_cube_to_verts(c, c.color, zero_vector, ~EF_Z1, !c.dim); // textured bottom face; always fully lit to match wall
 		get_painted_metal_material(0, 0, 2, 0, 0, spec, shine, metalness).add_cube_to_verts_untextured(c, c.color, EF_Z12); // sides: unshadowed, detail; skip top and bottom face
 	}
-	else {add_flat_textured_detail_wall_object(c, c.color, tid, 0, 0, 1, 0, 0.25, 60.0, 0.5);} // vent on a wall; detail, skip_z1_face=0, painted metal
+	else { // vent on a wall
+		bool const draw_all_faces(c.in_mall()); // draw back side of vent lip
+		add_flat_textured_detail_wall_object(c, c.color, tid, 0, draw_all_faces, 1, 0, 0.25, 60.0, 0.5); // detail, skip_z1_face=0, painted metal
+	}
 }
 
 int select_plate_texture(unsigned rand_val) {
