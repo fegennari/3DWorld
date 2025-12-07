@@ -1033,10 +1033,8 @@ void building_t::add_attic_ductwork(rand_gen_t rgen, room_object_t const &furnac
 
 	if (add_intake) {
 		cube_t const cubes[2] = {duct_top, intake};
-		
-		for (unsigned d = 0; d < 2; ++d) {
-			objs.emplace_back(cubes[d], TYPE_DUCT, furnace.room_id, furnace.dim, 1, duct_flags, 1.0, SHAPE_CUBE, DUCT_COLOR); // dir=1; vertical, always cubes
-		}
+		// dir=1; vertical, always cubes
+		for (unsigned d = 0; d < 2; ++d) {objs.emplace_back(cubes[d], TYPE_DUCT, furnace.room_id, furnace.dim, 1, duct_flags, 1.0, SHAPE_CUBE, DUCT_COLOR);}
 	}
 	// add ducts on the attic floor
 	unsigned const ducts_start(objs.size()); // includes cubes above vents in cylindrical ducts case

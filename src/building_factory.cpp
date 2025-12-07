@@ -338,7 +338,7 @@ void building_t::add_industrial_ducts_and_hvac(rand_gen_t &rgen, room_t const &r
 
 	// add vertical sections of duct up to the ceiling and HVAC units on each side
 	for (unsigned i = ducts_start; i < ducts_end; ++i) {
-		room_object_t const &duct(objs[i]);
+		room_object_t const duct(objs[i]); // deep copy to avoid invalidating the reference
 		if (duct.type != TYPE_DUCT || duct.dim != edim) continue; // not the long duct
 		room_obj_shape const duct_shape(duct.shape);
 		unsigned const duct_flags(RO_FLAG_IN_MALL | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI);
@@ -375,8 +375,8 @@ void building_t::add_industrial_ducts_and_hvac(rand_gen_t &rgen, room_t const &r
 				cube_t hvac_exp(hvac);
 				hvac_exp.expand_in_dim(!edim, depth); // increase depth so that vents in front are also occluded
 
-				for (unsigned i = ducts_start; i < ducts_end; ++i) {
-					room_object_t &obj(objs[i]);
+				for (unsigned j = ducts_start; j < ducts_end; ++j) {
+					room_object_t &obj(objs[j]);
 					if (obj.type == TYPE_DUCT && obj.dim == edim) continue; // skip the long duct
 					if (obj.intersects(hvac_exp)) {obj.type = TYPE_BLOCKER;} // turn into a blocker if it intersects
 				}
@@ -431,6 +431,7 @@ void building_t::add_industrial_ducts_and_hvac(rand_gen_t &rgen, room_t const &r
 			if (!vduct_placed) { // not placed; use room center; if odd number of vertical supports, offset to a random side to avoid intersecting the center support
 				set_wall_width(vduct, (duct.get_center_dim(edim) + (rgen.rand_bool() ? 1.0 : -1.0)*(0.5*support_width + hwidth)), hwidth, edim);
 			}
+			assert(vduct.is_strictly_normalized());
 			objs.emplace_back(vduct, TYPE_DUCT, room_id, 0, 1, duct_flags, light_amt, duct_shape); // vertical, same shape
 		}
 	} // for i

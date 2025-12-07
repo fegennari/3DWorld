@@ -2555,6 +2555,7 @@ void building_t::add_ceiling_ducts(cube_t const &room_area, float ceil_zval, uns
 		if (duct.z1() < room.z1() + window_vspace) { // check for door intersections if not a tall room
 			if (is_cube_close_to_doorway(duct, int_area, 0.0, 1, 1)) continue; // inc_open_doors=1, check_open_dir=1
 		}
+		assert(duct.is_strictly_normalized());
 		unsigned main_duct_flags(RO_FLAG_IN_MALL | (skip_top ? RO_FLAG_ADJ_TOP : 0));
 		if (skip_ends && duct.d[dim][0] == int_area.d[dim][0]) {main_duct_flags |= RO_FLAG_ADJ_LO;} // skip lo end if at room bounds
 		if (skip_ends && duct.d[dim][1] == int_area.d[dim][1]) {main_duct_flags |= RO_FLAG_ADJ_HI;} // skip hi end if at room bounds
@@ -2570,6 +2571,7 @@ void building_t::add_ceiling_ducts(cube_t const &room_area, float ceil_zval, uns
 
 		for (unsigned n = 0; n < num_vents; ++n) {
 			set_wall_width(duct_ext, (duct.d[dim][0] + (0.5 + n)*vent_spacing), 0.12*scaled_space, dim);
+			assert(duct_ext.is_strictly_normalized());
 			objs.emplace_back(duct_ext, TYPE_DUCT, room_id, !dim, 0, duct_flags, light_amt, SHAPE_CUBE); // dir=0 (XY)
 			cube_t vent(duct_ext);
 			vent.d[!dim][d] = duct_ext.d[!dim][!d]; // shrink to end of duct
