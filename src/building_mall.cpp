@@ -2456,6 +2456,7 @@ void building_t::add_cafeteria_tray(cube_t const &tray, bool dim, unsigned room_
 		colorRGBA const color(get_stain_color(rgen, 1)); // is_food=1
 		point const pos(tray.xc(), tray.yc(), (tray.z1() + 0.2*tray.dz())); // centered, on top of top surface of tray, under any placed items
 		interior->room_geom->decal_manager.add_blood_or_stain(pos, stain_radius, color, 0, 2, 1); // is_blood=0; +z
+		objs[tray_obj_ix].flags |= RO_FLAG_BROKEN; // mark as stained
 	}
 }
 

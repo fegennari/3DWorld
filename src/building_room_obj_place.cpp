@@ -4844,6 +4844,7 @@ bool building_t::place_plate_on_obj(rand_gen_t &rgen, cube_t const &place_on, un
 		colorRGBA const color(get_stain_color(rgen, 1)); // is_food=1
 		point const pos(plate.xc(), plate.yc(), (plate.z2() + 0.2*plate.dz())); // centered, on top of top surface of tray, under any placed items
 		interior->room_geom->decal_manager.add_blood_or_stain(pos, stain_radius, color, 0, 2, 1); // is_blood=0; +z
+		objs.back().flags |= RO_FLAG_BROKEN; // mark as stained
 	}
 	return 1;
 }

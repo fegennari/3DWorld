@@ -2987,6 +2987,16 @@ void building_decal_manager_t::add_blood_or_stain(point const &pos, float radius
 	if (!dir) {swap(ds, dt);} // use correct winding order
 	blood_qbd[!is_blood].add_quad_dirs(pos, ds*radius, dt*radius, color, dn, tex_range); // -x!
 }
+void building_decal_manager_t::remove_blood_or_stain(cube_t const &rem_area, bool is_blood) {
+	// we're not tracking indices in add_blood_or_stain(), so we must iterate, and set all vertices to the same value to remove a stain
+	auto &verts(blood_qbd[!is_blood].verts);
+	assert((verts.size() % 6) == 0); // each quad is 2 tris = 6 verts
+
+	for (unsigned i = 0; i < verts.size(); i += 6) { // iterate by quad
+		if (!rem_area.contains_pt(verts[i].v)) continue; // not this decal
+		for (unsigned n = 1; n < 6; ++n) {verts[i+n] = verts[i];} // shrink quad to zero area
+	}
+}
 void building_decal_manager_t::draw_building_interior_decals(shader_t &s, bool player_in_building, bool shadow_only) const {
 	if (shadow_only) { // shadow pass, draw tape only
 		if (player_in_building) {

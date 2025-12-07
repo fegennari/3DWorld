@@ -685,7 +685,7 @@ unsigned const RO_FLAG_USED     = 0x10000000; // used by the player (spraypaint,
 unsigned const RO_FLAG_IN_ELEV  = 0x20000000; // for elevator lights, buttons, and flooring; aliased with RO_FLAG_BACKROOM and RO_FLAG_IN_POOL
 unsigned const RO_FLAG_BACKROOM = 0x20000000; // in backrooms, for walls and pillars; aliased with RO_FLAG_IN_ELEV and RO_FLAG_IN_POOL
 unsigned const RO_FLAG_IN_POOL  = 0x20000000; // for stairs, railings, and drains; aliased with RO_FLAG_IN_ELEV and RO_FLAG_BACKROOM
-unsigned const RO_FLAG_BROKEN   = 0x40000000; // for TVs, monitors, flickering lights, and ond computers; maybe can use for windows
+unsigned const RO_FLAG_BROKEN   = 0x40000000; // for TVs, monitors, flickering lights, and computers; used for stained trays/plates; maybe can use for windows
 unsigned const RO_FLAG_MOVED    = 0x80000000; // for player push/pull
 
 // reflection pass flags
@@ -1060,6 +1060,7 @@ struct building_decal_manager_t {
 	void commit_pend_tape_qbd();
 	void add_burn_spot(point const &pos, float radius);
 	void add_blood_or_stain(point const &pos, float radius, colorRGBA const &color, bool is_blood=0, unsigned dim=2, bool dir=1);
+	void remove_blood_or_stain(cube_t const &rem_area, bool is_blood=0);
 	void draw_building_interior_decals(shader_t &s, bool player_in_building, bool shadow_only) const;
 };
 

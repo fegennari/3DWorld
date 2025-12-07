@@ -2310,6 +2310,11 @@ void building_room_geom_t::remove_object(unsigned obj_id, point const &at_pos, b
 			else if (c.type != TYPE_BLOCKER) {break;}
 		}
 	}
+	else if ((type == TYPE_FOOD_TRAY || type == TYPE_PLATE) && old_obj.is_broken()) { // remove stain from tray or plate
+		cube_t rem_area(old_obj);
+		rem_area.z2() += old_obj.dz(); // extend to cover the area above
+		decal_manager.remove_blood_or_stain(rem_area, 0);
+	}
 	if (is_light) {
 		// if indir lighting is enabled, attempt to create a new object for the wires while the old light is being removed; otherwise, replace the light with wires
 		int new_obj_id(-1);
