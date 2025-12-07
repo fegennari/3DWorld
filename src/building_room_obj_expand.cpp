@@ -114,12 +114,14 @@ void add_boxes_to_space(room_object_t const &c, vect_room_object_t &objects, cub
 }
 
 cube_t get_closet_interior_space(room_object_t const &c, cube_t const cubes[5]) {
+	bool const dim(c.dim), dir(c.dir), in_kitchen(c.item_flags == RTYPE_KITCHEN), is_freezer(in_kitchen && !c.is_house());
 	cube_t interior(c);
-	if (!cubes[1].is_all_zeros()) {interior.d[!c.dim][0] = cubes[1].d[!c.dim][1];} // left  side (if wall exists)
-	if (!cubes[3].is_all_zeros()) {interior.d[!c.dim][1] = cubes[3].d[!c.dim][0];} // right side (if wall exists)
-	float const extra_space(c.is_small_closet() ? 0.0 : (c.dir ? -1.0 : 1.0)*1.2*cubes[4].get_sz_dim(c.dim)); // add some extra space for sliding/folding doors
-	interior.d[c.dim][c.dir] = cubes[2].d[c.dim][!c.dir] + extra_space; // set to inside of front wall
-	interior.expand_by_xy(-0.02*interior.min_len()); // shrink slightly to clip off the area taken by the wall trim where objects shouldn't be placed
+	if (!cubes[1].is_all_zeros()) {interior.d[!dim][0] = cubes[1].d[!dim][1];} // left  side (if wall exists)
+	if (!cubes[3].is_all_zeros()) {interior.d[!dim][1] = cubes[3].d[!dim][0];} // right side (if wall exists)
+	float const extra_space(c.is_small_closet() ? 0.0 : (dir ? -1.0 : 1.0)*1.2*cubes[4].get_sz_dim(dim)); // add some extra space for sliding/folding doors
+	interior.d[dim][dir] = cubes[2].d[dim][!dir] + extra_space; // set to inside of front wall
+	if (!in_kitchen) {interior.expand_by_xy(-0.02*interior.min_len());} // shrink slightly to clip off the area taken by the wall trim where objects shouldn't be placed
+	if ( is_freezer) {interior.d[dim][!dir] += (dir ? 1.0 : -1.0)*get_closet_wall_thickness(c);} // add freezer back wall
 	assert(interior.is_strictly_normalized());
 	return interior;
 }
@@ -363,7 +365,7 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vect_room_
 	cube_t const interior(get_closet_interior_space(c, ccubes));
 	bool const dim(c.dim), dir(c.dir); // dir faces the front
 	float const height(c.dz()), depth(interior.get_sz_dim(dim)), box_sz(0.25*depth), window_vspacing(height*(1.0 + FLOOR_THICK_VAL_HOUSE));
-	unsigned const base_flags(RO_FLAG_NOCOLL | RO_FLAG_INTERIOR), flags(base_flags | RO_FLAG_WAS_EXP);
+	unsigned const base_flags(RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | (c.flags & RO_FLAG_IS_HOUSE)), flags(base_flags | RO_FLAG_WAS_EXP);
 
 	if (c.item_flags == RTYPE_BED) { // bedroom closet
 		unsigned const num_boxes((rgen.rand()%3) + (rgen.rand()%4)); // 0-5
@@ -413,56 +415,70 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vect_room_
 			objects[hanger_rod_ix].item_flags = uint16_t(objects.size() - hanger_rod_ix); // number of objects hanging on the hanger rod, including hangers and clothing
 		}
 	}
-	else if (c.item_flags == RTYPE_KITCHEN && c.is_house()) { // kitchen pantry; add shelves with food items
+	else if (c.item_flags == RTYPE_KITCHEN) { // kitchen pantry or walk-in freezer; add shelves with food items
+		bool const is_pantry(c.is_house()), is_freezer(!is_pantry);
 		unsigned const num_shelf_levels(3);
 		unsigned const sdims[3] = {dim, !dim, !dim}, sdirs[3] = {dir, 1, 0};
-		float const shelf_dz(height/(num_shelf_levels+1)), shelf_hthick(0.005*height), door_width(ccubes[2].d[!dim][0] - ccubes[0].d[!dim][1]); // front right - front left
-		float const back_shelf_edge(interior.d[dim][!dir] + (dir ? 1.0 : -1.0)*0.4*c.get_depth()), height_val(shelf_dz - 2.0*shelf_hthick);
+		float const shelf_dz(height/(num_shelf_levels+1)), shelf_hthick((is_pantry ? 0.005 : 0.0015)*height);
+		float const door_width(ccubes[2].d[!dim][0] - ccubes[0].d[!dim][1]); // front right - front left
+		float const back_shelf_edge(interior.d[dim][!dir] + (dir ? 1.0 : -1.0)*(is_pantry ? 0.4 : 0.3)*c.get_depth()), height_val(shelf_dz - 2.0*shelf_hthick);
+		float const edge_gap((is_pantry ? 0.01 : 0.1)*door_width); // more gap for freezers
 		cube_t shelves[3] = {interior, interior, interior}; // {back, left, right}
 		shelves[0].d[dim][dir] = back_shelf_edge; // back
 		static vect_cube_t blockers;
 		
 		for (unsigned d = 0; d < 2; ++d) {
 			shelves[d+1].d[ dim][!dir] = back_shelf_edge;
-			shelves[d+1].d[!dim][!d  ] = ccubes[2*d].d[!dim][!d] + (d ? 1.0 : -1.0)*0.01*door_width; // edge of door + trim
+			shelves[d+1].d[!dim][!d  ] = ccubes[2*d].d[!dim][!d] + (d ? 1.0 : -1.0)*edge_gap; // edge of door + trim
+		}
+		if (is_freezer) { // add vertical bars at corners
+			float const vbar_hwidth(4.0*shelf_hthick);
+			cube_t vbar(interior);
+			set_wall_width(vbar, back_shelf_edge, vbar_hwidth, dim);
+
+			for (unsigned d = 0; d < 2; ++d) {
+				set_wall_width(vbar, shelves[d+1].d[!dim][!d], vbar_hwidth, !dim);
+				objects.emplace_back(vbar, TYPE_METAL_BAR, c.room_id, 0, 0, base_flags, c.light_amt, SHAPE_CUBE, GRAY, EF_Z12); // skip top and bottom
+			}
 		}
 		for (unsigned n = 0; n < num_shelf_levels; ++n) {
 			for (unsigned s = 0; s < 3; ++s) {
 				bool const back(s == 0), top(n+1 == num_shelf_levels);
 				cube_t shelf(shelves[s]);
 				set_wall_width(shelf, (c.z1() + (n+1)*shelf_dz), shelf_hthick, 2); // set zvals
-				objects.emplace_back(shelf, TYPE_PAN_SHELF, c.room_id, sdims[s], sdirs[s], base_flags, c.light_amt, SHAPE_CUBE, WHITE);	
+				objects.emplace_back(shelf, TYPE_PAN_SHELF, c.room_id, sdims[s], sdirs[s], base_flags, c.light_amt, SHAPE_CUBE, WHITE);
+
 				// populate shelf with food items
-				set_cube_zvals(shelf, shelf.z2(), shelf.z2()+height_val); // space above shelf
-				room_object_t c2(c);
-				c2.dim = sdims[s]; c2.dir = sdirs[s]; // required for correct item orient on side shelves
-				float const shelf_depth(shelf.get_sz_dim(c2.dim)), rand_val(rgen.rand_float());
-				float const rv1(back ? 0.7 : 0.4), rv2(back ? 1.0 : 0.6), rv3(back ? 1.0 : 0.8);
-				if      (rand_val < rv1) {add_rows_of_food_boxes     (rgen, c2, shelf, 0.7*height_val, shelf_depth, c2.dir, objects);} // food boxes; more likely
-				else if (rand_val < rv2) {add_rows_of_bottles_or_cans(rgen, c2, shelf, 0.5*height_val, shelf_depth, 0,      objects);} // bottles or cans
-				else if (rand_val < rv3 && !top) { // jars
-					float const oheight(0.2*height_val), radius(min(0.45f*shelf_depth, 0.3f*oheight));
-					add_rows_of_vcylinders(c2, shelf, radius, oheight, 0.2, TYPE_JAR, 1, flags, objects, rgen); // 1 column
+				if (is_pantry) {
+					set_cube_zvals(shelf, shelf.z2(), shelf.z2()+height_val); // space above shelf
+					room_object_t c2(c);
+					c2.dim = sdims[s]; c2.dir = sdirs[s]; // required for correct item orient on side shelves
+					float const shelf_depth(shelf.get_sz_dim(c2.dim)), rand_val(rgen.rand_float());
+					float const rv1(back ? 0.7 : 0.4), rv2(back ? 1.0 : 0.6), rv3(back ? 1.0 : 0.8);
+					if      (rand_val < rv1) {add_rows_of_food_boxes     (rgen, c2, shelf, 0.7*height_val, shelf_depth, c2.dir, objects);} // food boxes; more likely
+					else if (rand_val < rv2) {add_rows_of_bottles_or_cans(rgen, c2, shelf, 0.5*height_val, shelf_depth, 0,      objects);} // bottles or cans
+					else if (rand_val < rv3 && !top) { // jars
+						float const oheight(0.2*height_val), radius(min(0.45f*shelf_depth, 0.3f*oheight));
+						add_rows_of_vcylinders(c2, shelf, radius, oheight, 0.2, TYPE_JAR, 1, flags, objects, rgen); // 1 column
+					}
+					else if (rand_val < 0.9) { // plates; can't add cups because they're models
+						unsigned const num_plates(2); // up to 2 stacks
+						float const plate_radius(rgen.rand_uniform(0.40, 0.48)*shelf.get_size().get_min_val());
+						blockers.clear();
+						for (unsigned n = 0; n < num_plates; ++n) {add_stack_of_plates(shelf, plate_radius, c.room_id, c.light_amt, flags, rgen, blockers, objects);}
+					}
+					else { // paper towels
+						float const oheight(0.67*height_val), radius(min(0.45f*shelf_depth, 0.25f*oheight));
+						add_rows_of_vcylinders(c2, shelf, radius, oheight, 0.2, TYPE_TPROLL, 1, (flags | RO_FLAG_HAS_EXTRA), objects, rgen); // 1 column
+					}
 				}
-				else if (rand_val < 0.9) { // plates; can't add cups because they're models
-					unsigned const num_plates(2); // up to 2 stacks
-					float const plate_radius(rgen.rand_uniform(0.40, 0.48)*shelf.get_size().get_min_val());
-					blockers.clear();
-					for (unsigned n = 0; n < num_plates; ++n) {add_stack_of_plates(shelf, plate_radius, c.room_id, c.light_amt, flags, rgen, blockers, objects);}
-				}
-				else { // paper towels
-					float const oheight(0.67*height_val), radius(min(0.45f*shelf_depth, 0.25f*oheight));
-					add_rows_of_vcylinders(c2, shelf, radius, oheight, 0.2, TYPE_TPROLL, 1, (flags | RO_FLAG_HAS_EXTRA), objects, rgen); // 1 column
+				else { // freezer
+
 				}
 			} // for s
 		} // for n
 	}
-	else if (c.item_flags == RTYPE_KITCHEN && !c.is_house()) { // commercial kitchen walk in freezer
-		// TODO
-	}
-	else {
-		assert(0);
-	}
+	else {assert(0);}
 }
 
 void building_room_geom_t::add_hangers_and_clothing(float window_vspacing, unsigned num_hangers, unsigned flags, int hanger_model_id, int clothing_model_id,

@@ -41,6 +41,8 @@ bool add_cabinet_objects(room_object_t const &c, vect_room_object_t &objects);
 vector3d get_obj_model_rotated_dir(room_object_t const &obj, building_t const *const building);
 tid_nm_pair_t select_tile_floor_texture(bool use_granite, float tscale);
 tid_nm_pair_t get_scratched_metal_tex(float tscale, bool inc_shadows);
+void add_grid_of_bars(rgeom_mat_t &mat, colorRGBA const &color, cube_t const &c, unsigned num_vbars, unsigned num_hbars, float vbar_hthick,
+	float hbar_hthick, unsigned vdim, unsigned hdim, unsigned adj_dim=0, float h_adj_val=0.0, bool cylin_vbars=0, float tscale=1.0);
 
 unsigned get_face_mask(unsigned dim, bool dir) {return ~(1 << (2*(2-dim) + dir));} // draw only these faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2
 unsigned get_skip_mask_for_xy (bool       dim) {return (dim ? EF_Y12 : EF_X12);} // skip these faces
@@ -580,7 +582,7 @@ float get_closet_wall_thickness(room_object_t const &c) {
 	return (WALL_THICK_VAL*(1.0f - FLOOR_THICK_VAL_HOUSE)*c.dz()); // use c.dz() as floor_spacing
 }
 
-// cubes: front left, left side, front right, right side, door
+// cubes: front left, left side, front right, right side, [door]
 void get_closet_cubes(room_object_t const &c, cube_t cubes[5], bool for_collision) {
 	float const width(c.get_width()), depth(c.get_depth()), height(c.dz());
 	bool const use_small_door(c.is_small_closet()), doors_fold(!use_small_door && c.is_hanging());
@@ -624,7 +626,7 @@ void add_quad_to_mat(rgeom_mat_t &mat, point const pts[4], float const ts[4], fl
 	for (unsigned n = 0; n < 4; ++n) {mat.quad_verts.emplace_back(pts[n], normal, ts[n], tt[n], cw);}
 }
 
-// no lighting scale, houses/apartments/hotel rooms only; includes kitchen pantry
+// no lighting scale, houses/apartments/hotel rooms only; includes kitchen pantry and walk-in freezer
 void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t const &wall_tex, colorRGBA const &trim_color, bool inc_lg, bool inc_sm) {
 	bool const dim(c.dim), dir(c.dir), open(c.is_open()), use_small_door(c.is_small_closet()), draw_interior(open || player_in_closet);
 	bool const in_kitchen(c.item_flags == RTYPE_KITCHEN), is_freezer(in_kitchen && !c.is_house());
@@ -656,7 +658,7 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 			if (draw_top_surface) {top.z2() = top.z1() + wall_thick;}
 			wall_mat.add_cube_to_verts(back, c.color, tex_origin, front_face);
 			wall_mat.add_cube_to_verts(bot,  c.color, tex_origin, ~(EF_Z2 | ~front_face));
-			wall_mat.add_cube_to_verts(top,  c.color, tex_origin, (draw_top_surface ? ~get_face_mask(dim, !dir) : ~EF_Z1));
+			wall_mat.add_cube_to_verts(top,  c.color, tex_origin, (draw_top_surface ? ~get_face_mask(dim, !dir) : ~(EF_Z1 | ~front_face)));
 		}
 		cube_t const &doors(cubes[4]);
 		point const llc(doors.get_llc());
@@ -3276,8 +3278,16 @@ void building_room_geom_t::add_shelf_wall(room_object_t const &c, tid_nm_pair_t 
 	mat.add_cube_to_verts(c, c.color, tex_origin, (draw_top ? EF_Z1 : EF_Z12), c.dim);
 }
 void building_room_geom_t::add_pantry_shelf(room_object_t const &c) {
-	unsigned const skip_faces(get_face_mask(c.dim, c.dir) & ~EF_Z12); // draw front, top, and bottom
-	get_untextured_material(1, 0, 1).add_cube_to_verts_untextured(c, c.color, skip_faces); // untextured, small, always lit
+	if (!c.is_house()) { // walk-in freezer shelves are metal bars
+		float const height(c.dz()), width(c.get_width()), depth(c.get_depth());
+		rgeom_mat_t &mat(get_scratched_metal_material(10.0/depth, 1, 0, 1)); // shadowed, small
+		unsigned const num_dbars(8), num_wbars(round_fp(0.25*num_dbars*width/depth));
+		add_grid_of_bars(mat, WHITE, c, num_dbars, num_wbars, height, height, !c.dim, c.dim);
+	}
+	else { // house pantry shelves are untextured
+		unsigned const skip_faces(get_face_mask(c.dim, c.dir) & ~EF_Z12); // draw front, top, and bottom
+		get_untextured_material(1, 0, 1).add_cube_to_verts_untextured(c, c.color, skip_faces); // untextured, small, always lit
+	}
 }
 
 void building_room_geom_t::add_parking_space(room_object_t const &c, float tscale) {
@@ -7026,7 +7036,7 @@ void building_room_geom_t::add_hvac_unit(room_object_t const &c) {
 	colorRGBA const color(apply_light_color(c));
 	unsigned const front_mask(get_face_mask(c.dim, c.dir));
 	mat.add_cube_to_verts(c, color, zero_vector, front_mask, !c.dim, (c.dim ^ c.dir), 1); // front face only
-	mat.tex.tscale_x = mat.tex.tscale_y = 0.2/c.min_len(); // scale to remove the fan
+	mat.tex.tscale_x = mat.tex.tscale_y = 0.3/c.dz(); // scale to remove the fan
 	mat.add_cube_to_verts(c, color, c.get_llc(), ~front_mask); // sides
 }
 
@@ -7162,7 +7172,7 @@ void building_room_geom_t::add_kitchen_appliance(room_object_t const &c) {
 }
 
 void add_grid_of_bars(rgeom_mat_t &mat, colorRGBA const &color, cube_t const &c, unsigned num_vbars, unsigned num_hbars, float vbar_hthick,
-	float hbar_hthick, unsigned vdim, unsigned hdim, unsigned adj_dim=0, float h_adj_val=0.0, bool cylin_vbars=0, float tscale=1.0)
+	float hbar_hthick, unsigned vdim, unsigned hdim, unsigned adj_dim, float h_adj_val, bool cylin_vbars, float tscale)
 {
 	max_eq(num_vbars, 2U);
 	max_eq(num_hbars, 2U);

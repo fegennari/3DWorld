@@ -1284,10 +1284,9 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t &bl
 bool building_t::add_closet_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start,
 	unsigned room_type, unsigned bed_obj_ix, float front_clearance, unsigned &closet_obj_id, light_ix_assign_t &light_ix_assign)
 {
-	bool const is_bedroom(room_type == RTYPE_BED); // otherwise a kitchen pantry or freezer
-	bool const is_freezer(!is_bedroom && !is_house);
-	float const window_vspacing(get_window_vspace()), doorway_width(get_doorway_width()), floor_thickness(get_floor_thickness()), window_h_border(get_window_h_border());
-	float const closet_min_depth((is_freezer ? 1.5 : (is_bedroom ? 0.65 : 0.8))*doorway_width), closet_min_width(1.5*doorway_width);
+	bool const is_bedroom(room_type == RTYPE_BED), is_pantry(!is_bedroom && is_house), is_freezer(!is_bedroom && !is_house);
+	float const window_vspacing(get_window_vspace()), doorway_width(get_doorway_width()), fc_gap(get_floor_ceil_gap()), window_h_border(get_window_h_border());
+	float const closet_min_depth((is_freezer ? 1.5 : (is_pantry ? 0.8 : 0.65))*doorway_width), closet_min_width(1.5*doorway_width);
 	float const min_dist_to_wall(1.0*doorway_width), min_bed_space(front_clearance);
 	float const tot_light_amt=1.0; // expanded closed items aren't updated when room lights change, and closet lights don't update anything, so set to 1.0
 	unsigned const first_corner(rgen.rand() & 3);
@@ -1315,13 +1314,13 @@ bool building_t::add_closet_to_room(rand_gen_t &rgen, room_t const &room, float 
 			c.d[0][!xdir] += (xdir ? -1.0 : 1.0)*(dim ? closet_min_width : closet_min_depth);
 			c.d[1][!ydir] += (ydir ? -1.0 : 1.0)*(dim ? closet_min_depth : closet_min_width);
 			if (chk_windows[!dim][other_dir] && is_val_inside_window(part, dim, c.d[dim][!dir], window_hspacing, window_h_border)) continue; // check for window intersection
-			c.z2() += window_vspacing - floor_thickness;
+			c.z2()         += fc_gap; // uo to the ceiling
 			c.d[dim][!dir] += signed_front_clearance; // extra padding in front, to avoid placing too close to bed, etc.
 			if (!check_valid_closet_placement(c, room, objs_start, bed_obj_ix, min_bed_space)) continue; // bad placement
 			// good placement, see if we can make the closet larger
-			unsigned const num_steps = 10;
+			unsigned const num_steps(is_freezer ? 4 : 10);
 			float const req_dist(chk_windows[!dim][!other_dir] ? (other_dir ? -1.0 : 1.0)*min_dist_to_wall : 0.0); // signed; at least min dist from opposite wall if exterior
-			float const grow_limit(1.5*window_vspacing); // limit to a reasonable length; less for a freezer
+			float const grow_limit((is_freezer ? 0.3f : 1.5f)*window_vspacing); // limit to a reasonable length; less for a freezer
 			float max_grow((room_bounds.d[!dim][!other_dir] - req_dist) - c.d[!dim][!other_dir]);
 			max_grow = max(-grow_limit, min(grow_limit, max_grow));
 			float const len_step(max_grow/num_steps), depth_step(dir_sign*0.35*doorway_width/num_steps); // signed
@@ -1329,8 +1328,8 @@ bool building_t::add_closet_to_room(rand_gen_t &rgen, room_t const &room, float 
 			for (unsigned s1 = 0; s1 < num_steps; ++s1) { // try increasing width
 				cube_t c2(c);
 				c2.d[!dim][!other_dir] += len_step;
-				if (!check_valid_closet_placement(c2, room, objs_start, bed_obj_ix, min_bed_space))       break; // bad placement
-				if (!is_bedroom && !room_object_t(c2, TYPE_CLOSET, room_id, dim, !dir).is_small_closet()) break; // kitchen pantry is small
+				if (!check_valid_closet_placement(c2, room, objs_start, bed_obj_ix, min_bed_space))     break; // bad placement
+				if (is_pantry && !room_object_t(c2, TYPE_CLOSET, room_id, dim, !dir).is_small_closet()) break; // kitchen pantry is small
 				c = c2; // valid placement, update with larger cube
 			}
 			if (front_clearance < doorway_width && room_object_t(c, TYPE_CLOSET, room_id, dim, !dir).is_small_closet()) {
@@ -1367,7 +1366,7 @@ bool building_t::add_closet_to_room(rand_gen_t &rgen, room_t const &room, float 
 			room_object_t const closet(objs.back()); // deep copy so that we can invalidate the reference
 			bool const small_closet(closet.is_small_closet());
 			point lpos(cube_top_center(closet));
-			lpos[dim] += 0.05*c.get_sz_dim(dim)*(dir ? -1.0 : 1.0); // move slightly toward the front of the closet
+			lpos[dim] += 0.05*c.get_sz_dim(dim)*dir_sign; // move slightly toward the front of the closet
 			cube_t light(lpos);
 			light.z1() -= 0.02*window_vspacing;
 			light.expand_by_xy((small_closet ? 0.04 : 0.06)*window_vspacing);
@@ -1396,6 +1395,16 @@ bool building_t::add_closet_to_room(rand_gen_t &rgen, room_t const &room, float 
 					}
 					Door.type = interior->door_stacks.back().type = DOOR_TYPE_METAL;
 				}
+			}
+			if (is_freezer) { // add interior AC unit
+				float const length(0.6*doorway_width), depth(0.2*length), height(0.7*length);
+				float const back_wall(c.d[dim][dir] + (dir ? -1.0 : 1.0)*get_closet_wall_thickness(closet));
+				cube_t ac(c);
+				ac.z1() = c.z2() - height;
+				ac.d[dim][ dir] = back_wall;
+				ac.d[dim][!dir] = back_wall + dir_sign*depth;
+				set_wall_width(ac, c.get_center_dim(!dim), 0.5*length, !dim);
+				objs.emplace_back(ac, TYPE_HVAC_UNIT, room_id, dim, !dir, RO_FLAG_IN_FACTORY, tot_light_amt);
 			}
 			return 1; // done
 		} // for d
