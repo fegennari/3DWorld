@@ -1306,10 +1306,10 @@ bool building_t::add_closet_to_room(rand_gen_t &rgen, room_t const &room, float 
 		point const corner(room_bounds.d[0][xdir], room_bounds.d[1][ydir], zval);
 
 		for (unsigned d = 0; d < 2; ++d) { // try both dims
-			bool const dim(bool(d) ^ first_dim), dir(dim ? ydir : xdir), other_dir(dim ? xdir : ydir);
+			bool const dim(bool(d) ^ first_dim), dir(dim ? ydir : xdir), other_dir(dim ? xdir : ydir); // dir is against the wall
 			if (room_bounds.get_sz_dim(!dim) < closet_min_width + min_dist_to_wall) continue; // room is too narrow to add a closet here
 			if (chk_windows[dim][dir]) continue; // don't place closets against exterior walls where they would block a window
-			float const dir_sign(dir ? -1.0 : 1.0), signed_front_clearance(dir_sign*front_clearance);
+			float const dir_sign(dir ? -1.0 : 1.0), signed_front_clearance(dir_sign*front_clearance); // faces outward
 			float const window_hspacing(get_hspacing_for_part(part, dim));
 			cube_t c(corner, corner);
 			c.d[0][!xdir] += (xdir ? -1.0 : 1.0)*(dim ? closet_min_width : closet_min_depth);
@@ -1321,8 +1321,9 @@ bool building_t::add_closet_to_room(rand_gen_t &rgen, room_t const &room, float 
 			// good placement, see if we can make the closet larger
 			unsigned const num_steps = 10;
 			float const req_dist(chk_windows[!dim][!other_dir] ? (other_dir ? -1.0 : 1.0)*min_dist_to_wall : 0.0); // signed; at least min dist from opposite wall if exterior
+			float const grow_limit(1.5*window_vspacing); // limit to a reasonable length; less for a freezer
 			float max_grow((room_bounds.d[!dim][!other_dir] - req_dist) - c.d[!dim][!other_dir]);
-			min_eq(max_grow, 1.5f*window_vspacing); // limit to a reasonable length
+			max_grow = max(-grow_limit, min(grow_limit, max_grow));
 			float const len_step(max_grow/num_steps), depth_step(dir_sign*0.35*doorway_width/num_steps); // signed
 
 			for (unsigned s1 = 0; s1 < num_steps; ++s1) { // try increasing width
