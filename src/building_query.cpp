@@ -29,7 +29,8 @@ float get_player_move_dist();
 void get_shelf_brackets(room_object_t const &c, cube_t shelves[MAX_SHELVES], unsigned num_shelves, vect_cube_with_ix_t &brackets);
 void get_catwalk_cubes(room_object_t const &c, cube_t cubes[5]);
 unsigned get_machine_part_cubes(room_object_t const &c, float floor_ceil_gap, cube_t cubes[4]);
-cube_t get_parking_gate_arm(room_object_t const &c);
+cube_t get_parking_gate_arm (room_object_t const &c);
+cube_t get_freezer_back_wall(room_object_t const &c);
 
 
 // called by player_in_windowless_building(); assumes player is in this building; handles windows and exterior doors but not attics and basements
@@ -699,13 +700,14 @@ unsigned get_closet_num_coll_cubes(room_object_t const &c) {
 	return ((!c.is_open() && !c.is_small_closet()) ? 5U : 4U);
 }
 unsigned check_closet_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
-	cube_t cubes[5]; // front left, left side, front right, right side, door
+	cube_t cubes[5]; // front left, left side, front right, right side, [door]
 	get_closet_cubes(c, cubes, 1); // get cubes for walls and door; required to handle collision with closet interior; for_collision=1
 	unsigned ret(0);
 
-	if (c.item_flags == RTYPE_KITCHEN) { // shrink interior to account for pantry shelves
+	if (c.item_flags == RTYPE_KITCHEN) { // shrink interior to account for pantry/freezer shelves
+		bool const is_freezer(!c.is_house());
 		cube_t back_shelves(c);
-		back_shelves.d[c.dim][c.dir] = back_shelves.d[c.dim][!c.dir] + (c.dir ? 1.0 : -1.0)*0.4*c.get_depth();
+		back_shelves.d[c.dim][c.dir] = back_shelves.d[c.dim][!c.dir] + (c.dir ? 1.0 : -1.0)*(is_freezer ? 0.3 : 0.4)*c.get_depth(); // see add_closet_objects()
 		if (sphere_cube_int_update_pos(pos, radius, back_shelves, p_last, 0, cnorm)) {ret |= (1<<5);}
 		for (unsigned d = 0; d < 2; ++d) {cubes[2*d  ].d[c.dim][!c.dir] = c.d[c.dim][!c.dir];} // extend front walls to the back
 		for (unsigned d = 0; d < 2; ++d) {cubes[2*d+1].set_to_zeros();} // can skip the sides
@@ -2693,6 +2695,7 @@ void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, ve
 		cube_t cubes[5];
 		get_closet_cubes(c, cubes, 1); // get cubes for walls and door; for_collision=1
 		lg_cubes.insert(lg_cubes.end(), cubes, (cubes + get_closet_num_coll_cubes(c)));
+		if (c.is_freezer()) {lg_cubes.push_back(get_freezer_back_wall(c));}
 	}
 	else if (type == TYPE_BED) {
 		cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube

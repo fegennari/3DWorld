@@ -804,6 +804,8 @@ struct room_object_t : public oriented_cube_t { // size=68
 	bool is_tv_or_monitor() const {return (type == TYPE_TV || type == TYPE_MONITOR);}
 	bool is_tv_monitor_on() const {return (!(obj_id & 1) && is_powered() && !is_broken());} // on, powered, and not broken
 	bool is_shower       () const {return (type == TYPE_SHOWER || type == TYPE_O_SHOWER);}
+	bool is_pantry       () const {return (item_flags == RTYPE_KITCHEN &&  is_house());}
+	bool is_freezer      () const {return (item_flags == RTYPE_KITCHEN && !is_house());}
 	bool is_player_collidable() const;
 	bool can_use        () const;
 	bool is_interactive () const {return ((has_dstate() && is_ball_type(type)) || can_use());}
@@ -3404,7 +3406,7 @@ cube_t get_grid_bcube_for_building(building_t const &b);
 bool get_wall_quad_window_area(vect_vnctcc_t const &wall_quad_verts, unsigned i, cube_t &c, float &tx1, float &tx2, float &tz1, float &tz2);
 unsigned get_street_dir(cube_t const &inner, cube_t const &outer);
 float get_closet_wall_thickness(room_object_t const &c);
-void get_closet_cubes(room_object_t const &c, cube_t cubes[5], bool for_collision=0);
+unsigned get_closet_cubes(room_object_t const &c, cube_t cubes[5], bool for_collision=0);
 void get_bed_cubes   (room_object_t const &c, cube_t cubes[6]);
 void get_table_cubes (room_object_t const &c, cube_t cubes[5]);
 void get_cubes_for_plastic_table(room_object_t const &c, float top_dz, cube_t cubes[3]);

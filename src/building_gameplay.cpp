@@ -2466,9 +2466,9 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 				if (obj.type == TYPE_BED && is_ball_type(i->type)) continue; // ignore ball on/under bed
 				
 				if (i->is_open() && i->is_small_closet()) { // check open closet door collision
-					cube_t cubes[5]; // front left, left side, front right, right side, door
-					get_closet_cubes(*i, cubes, 1); // get cubes for walls and door; for_collision=1
-					for (unsigned n = 0; n < 5; ++n) {bad_placement |= (!cubes[n].is_all_zeros() && cubes[n].intersects(moved_obj));}
+					cube_t cubes[5]; // front left, left side, front right, right side, [door]
+					unsigned const num(get_closet_cubes(*i, cubes, 1)); // get cubes for walls and door; for_collision=1
+					for (unsigned n = 0; n < num; ++n) {bad_placement |= cubes[n].intersects(moved_obj);}
 				}
 				else if (i->intersects(moved_obj)) {bad_placement = detailed_obj_intersect(moved_obj, *i);}
 			} // for i

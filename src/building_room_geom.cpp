@@ -583,7 +583,7 @@ float get_closet_wall_thickness(room_object_t const &c) {
 }
 
 // cubes: front left, left side, front right, right side, [door]
-void get_closet_cubes(room_object_t const &c, cube_t cubes[5], bool for_collision) {
+unsigned get_closet_cubes(room_object_t const &c, cube_t cubes[5], bool for_collision) {
 	float const width(c.get_width()), depth(c.get_depth()), height(c.dz());
 	bool const use_small_door(c.is_small_closet()), doors_fold(!use_small_door && c.is_hanging());
 	// small closets: door does not collide when open; large closets: edges of door still collide even when open
@@ -605,12 +605,19 @@ void get_closet_cubes(room_object_t const &c, cube_t cubes[5], bool for_collisio
 		cubes[2*d] = front; // front left or front right
 		doors.d[!c.dim][d] = walls[d].d[!c.dim][!d]; // clip door to space between walls
 	} // for d
-	if (for_collision && c.is_open() && use_small_door) {cubes[4] = cube_t();}  // return closed door cube; caller must handle open door
-	else {
-		doors.d[c.dim][ c.dir] -= (c.dir ? 1.0 : -1.0)*0.2*wall_thick; // shift in slightly
-		doors.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*(depth - 0.8*wall_thick); // make it narrow
-		cubes[4] = doors;
+	if (for_collision && c.is_open() && use_small_door) { // return closed door cube; caller must handle open door
+		cubes[4] = cube_t();
+		return 4;
 	}
+	doors.d[c.dim][ c.dir] -= (c.dir ? 1.0 : -1.0)*0.2*wall_thick; // shift in slightly
+	doors.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*(depth - 0.8*wall_thick); // make it narrow
+	cubes[4] = doors;
+	return 5;
+}
+cube_t get_freezer_back_wall(room_object_t const &c) {
+	cube_t back(c);
+	back.d[c.dim][c.dir] = c.d[c.dim][!c.dir] + (c.dir ? 1.0 : -1.0)*get_closet_wall_thickness(c); // set back wall thickness
+	return back;
 }
 cube_t get_open_closet_door(room_object_t const &obj) {
 	cube_t cubes[5];
@@ -629,7 +636,7 @@ void add_quad_to_mat(rgeom_mat_t &mat, point const pts[4], float const ts[4], fl
 // no lighting scale, houses/apartments/hotel rooms only; includes kitchen pantry and walk-in freezer
 void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t const &wall_tex, colorRGBA const &trim_color, bool inc_lg, bool inc_sm) {
 	bool const dim(c.dim), dir(c.dir), open(c.is_open()), use_small_door(c.is_small_closet()), draw_interior(open || player_in_closet);
-	bool const in_kitchen(c.item_flags == RTYPE_KITCHEN), is_freezer(in_kitchen && !c.is_house());
+	bool const in_kitchen(c.item_flags == RTYPE_KITCHEN), is_freezer(c.is_freezer());
 	float const wall_thick(get_closet_wall_thickness(c)), trim_hwidth(0.3*wall_thick);
 	cube_t cubes[5];
 	get_closet_cubes(c, cubes);
@@ -651,14 +658,13 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 			// draw back wall, ceiling, floor, and maybe top surface
 			bool const draw_top_surface(c.flags & RO_FLAG_IN_MALL);
 			unsigned const front_face(get_face_mask(dim, dir));
-			cube_t back(c), bot(c), top(c);
-			back.d[dim][dir] = c.d[dim][!dir] + (dir ? 1.0 : -1.0)*wall_thick; // set back wall thickness
+			cube_t bot(c), top(c);
 			bot.z2() = c.z1() + 0.02*wall_thick; // floor
 			top.z1() = c.z2() - 0.10*wall_thick; // ceiling
 			if (draw_top_surface) {top.z2() = top.z1() + wall_thick;}
-			wall_mat.add_cube_to_verts(back, c.color, tex_origin, front_face);
-			wall_mat.add_cube_to_verts(bot,  c.color, tex_origin, ~(EF_Z2 | ~front_face));
-			wall_mat.add_cube_to_verts(top,  c.color, tex_origin, (draw_top_surface ? ~get_face_mask(dim, !dir) : ~(EF_Z1 | ~front_face)));
+			wall_mat.add_cube_to_verts(get_freezer_back_wall(c), c.color, tex_origin, front_face);
+			wall_mat.add_cube_to_verts(bot, c.color, tex_origin, ~(EF_Z2 | ~front_face));
+			wall_mat.add_cube_to_verts(top, c.color, tex_origin, (draw_top_surface ? ~get_face_mask(dim, !dir) : ~(EF_Z1 | ~front_face)));
 		}
 		cube_t const &doors(cubes[4]);
 		point const llc(doors.get_llc());

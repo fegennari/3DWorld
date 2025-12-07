@@ -1688,11 +1688,11 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 		if (global_building_params.ai_sees_player_hide >= 2 && c->is_open()) { // open hiding spot that we can enter
 			// in the unlikely event the player closes the door on a zombie, I guess they're stuck in here; good job to the player
 			if (c->type == TYPE_CLOSET) {
-				cube_t cubes[5]; // front left, left side, front right, right side, door
+				cube_t cubes[5]; // front left, left side, front right, right side, [door]
 				get_closet_cubes(*c, cubes, 1); // for_collision=1
 				bool const small_closet(c->is_small_closet());
 
-				for (unsigned i = 0; i < 4; ++i) { // skip the open door
+				for (unsigned i = 0; i < 4; ++i) { // skip the door
 					if (small_closet && (i == 0 || i == 2)) continue; // skip front sides next to door to allow larger zombies space to enter the closet
 					avoid.push_back(cubes[i]);
 				}

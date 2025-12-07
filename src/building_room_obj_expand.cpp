@@ -114,14 +114,14 @@ void add_boxes_to_space(room_object_t const &c, vect_room_object_t &objects, cub
 }
 
 cube_t get_closet_interior_space(room_object_t const &c, cube_t const cubes[5]) {
-	bool const dim(c.dim), dir(c.dir), in_kitchen(c.item_flags == RTYPE_KITCHEN), is_freezer(in_kitchen && !c.is_house());
+	bool const dim(c.dim), dir(c.dir), in_kitchen(c.item_flags == RTYPE_KITCHEN);
 	cube_t interior(c);
 	if (!cubes[1].is_all_zeros()) {interior.d[!dim][0] = cubes[1].d[!dim][1];} // left  side (if wall exists)
 	if (!cubes[3].is_all_zeros()) {interior.d[!dim][1] = cubes[3].d[!dim][0];} // right side (if wall exists)
 	float const extra_space(c.is_small_closet() ? 0.0 : (dir ? -1.0 : 1.0)*1.2*cubes[4].get_sz_dim(dim)); // add some extra space for sliding/folding doors
 	interior.d[dim][dir] = cubes[2].d[dim][!dir] + extra_space; // set to inside of front wall
-	if (!in_kitchen) {interior.expand_by_xy(-0.02*interior.min_len());} // shrink slightly to clip off the area taken by the wall trim where objects shouldn't be placed
-	if ( is_freezer) {interior.d[dim][!dir] += (dir ? 1.0 : -1.0)*get_closet_wall_thickness(c);} // add freezer back wall
+	if (!in_kitchen   ) {interior.expand_by_xy(-0.02*interior.min_len());} // shrink slightly to clip off the area taken by the wall trim where objects shouldn't be placed
+	if (c.is_freezer()) {interior.d[dim][!dir] += (dir ? 1.0 : -1.0)*get_closet_wall_thickness(c);} // add freezer back wall
 	assert(interior.is_strictly_normalized());
 	return interior;
 }
@@ -416,13 +416,13 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vect_room_
 		}
 	}
 	else if (c.item_flags == RTYPE_KITCHEN) { // kitchen pantry or walk-in freezer; add shelves with food items
-		bool const is_pantry(c.is_house()), is_freezer(!is_pantry);
+		bool const is_freezer(c.is_freezer());
 		unsigned const num_shelf_levels(3);
 		unsigned const sdims[3] = {dim, !dim, !dim}, sdirs[3] = {dir, 1, 0};
-		float const shelf_dz(height/(num_shelf_levels+1)), shelf_hthick((is_pantry ? 0.005 : 0.0015)*height);
+		float const shelf_dz(height/(num_shelf_levels+1)), shelf_hthick((is_freezer ? 0.0015 : 0.005)*height);
 		float const door_width(ccubes[2].d[!dim][0] - ccubes[0].d[!dim][1]); // front right - front left
-		float const back_shelf_edge(interior.d[dim][!dir] + (dir ? 1.0 : -1.0)*(is_pantry ? 0.4 : 0.3)*c.get_depth()), height_val(shelf_dz - 2.0*shelf_hthick);
-		float const edge_gap((is_pantry ? 0.01 : 0.1)*door_width); // more gap for freezers
+		float const back_shelf_edge(interior.d[dim][!dir] + (dir ? 1.0 : -1.0)*(is_freezer ? 0.3 : 0.4)*c.get_depth()), height_val(shelf_dz - 2.0*shelf_hthick);
+		float const edge_gap((is_freezer ? 0.1 : 0.01)*door_width); // more gap for freezers
 		cube_t shelves[3] = {interior, interior, interior}; // {back, left, right}
 		shelves[0].d[dim][dir] = back_shelf_edge; // back
 		static vect_cube_t blockers;
@@ -449,7 +449,7 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vect_room_
 				objects.emplace_back(shelf, TYPE_PAN_SHELF, c.room_id, sdims[s], sdirs[s], base_flags, c.light_amt, SHAPE_CUBE, WHITE);
 
 				// populate shelf with food items
-				if (is_pantry) {
+				if (!is_freezer) { // pantry
 					set_cube_zvals(shelf, shelf.z2(), shelf.z2()+height_val); // space above shelf
 					room_object_t c2(c);
 					c2.dim = sdims[s]; c2.dir = sdirs[s]; // required for correct item orient on side shelves
