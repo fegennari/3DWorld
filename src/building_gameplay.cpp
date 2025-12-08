@@ -1503,7 +1503,7 @@ bool use_vending_machine(room_object_t &obj) {
 		player_inventory.add_custom_item(item);
 	}
 	else if (obj.item_flags == VEND_ANY_OBJ) { // any object vending machine
-		for (unsigned n = 0; n < 100; ++n) { // 100 attempts to find a valid item
+		for (unsigned n = 0; n < 10; ++n) { // 10 attempts to find a valid item
 			unsigned const type(rgen.rand() % NUM_ROBJ_TYPES);
 			bldg_obj_type_t const &otype(bldg_obj_types[type]);
 			if (!otype.pickup || otype.attached) continue;
@@ -1514,7 +1514,12 @@ bool use_vending_machine(room_object_t &obj) {
 			player_inventory.add_custom_item(custom_item_t(otype.name, otype.value, otype.weight, 0.0)); // can't heal
 			return 1; // success
 		} // for n
-		return 0; // no valid object type found
+		// no valid item? then give an animal; should be rare
+		string   const animal_names  [4] = {"rat", "snake", "spider", "cockroach"};
+		unsigned const animal_weights[4] = {0.8, 2.0, 0.1, 0.01};
+		unsigned const animal_type(rgen.rand() & 3);
+		player_inventory.add_custom_item(custom_item_t(animal_names[animal_type], 0.0, animal_weights[animal_type])); // value=0.0
+		return 1; // success
 	}
 	else if (obj.item_flags == VEND_COFFEE) {
 		custom_item_t item;
