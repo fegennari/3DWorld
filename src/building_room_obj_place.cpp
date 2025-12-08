@@ -4683,8 +4683,8 @@ bool building_t::add_security_room_objs(rand_gen_t rgen, room_t const &room, flo
 				for (unsigned row = 0; row < num_rows && num_monitors < max_monitors; ++row) { // Z
 					float const z1(start_zval + row*row_spacing);
 					set_cube_zvals(tv, z1, z1+tv_height);
-					if (is_obj_placement_blocked(tv, room, 1)) continue;
-					//if (overlaps_other_room_obj(tv, objs_start)) continue; // not needed since there are no objects placed first?
+					if (is_obj_placement_blocked(tv, room, 1))   continue;
+					if (overlaps_other_room_obj(tv, objs_start)) continue; // check for tall desk and breaker panel
 					objs.emplace_back(tv, TYPE_MONITOR, room_id, dim, !dir, monitor_flags, tot_light_amt, SHAPE_SHORT, BLACK); // monitors are shorter than TVs
 					offset_hanging_tv(objs.back());
 					set_obj_id(objs);
