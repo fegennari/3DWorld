@@ -545,7 +545,8 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 				// check for objects not in the attic when the player is in the attic and vice versa
 				if (bool(player_in_attic) != i->in_attic() && type != TYPE_ATTIC_DOOR) continue;
 				bool keep(0);
-				if (type == TYPE_BOX && !i->is_open()) {keep = 1;} // box can only be opened once; check first so that selection works for boxes in closets
+				// box can only be opened once; check first so that selection works for boxes in closets; boxes flagged as used can't be opened
+				if (type == TYPE_BOX && !i->is_open() && !i->is_used()) {keep = 1;}
 				else if (type == TYPE_CLOSET) {
 					if (i->is_small_closet()) continue; // uses regular door now
 					if (in_dir.z > 0.5)       continue; // not looking up at the light

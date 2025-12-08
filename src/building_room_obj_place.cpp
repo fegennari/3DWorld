@@ -19,6 +19,7 @@ void get_pool_ball_rot_matrix(room_object_t const &c, xform_matrix &rot_matrix);
 float get_cockroach_height_from_radius(float radius);
 void rotate_obj_cube(cube_t &c, cube_t const &bc, bool in_dim, bool dir);
 cube_t get_whiteboard_marker_ledge(room_object_t const &c);
+cube_t get_freezer_ac_unit(room_object_t const &freezer);
 void add_stack_of_plates(cube_t const &place_area, float radius, unsigned room_id, float light_amt, unsigned flags,
 	rand_gen_t &rgen, vect_cube_t &blockers, vect_room_object_t &objects);
 
@@ -1396,16 +1397,8 @@ bool building_t::add_closet_to_room(rand_gen_t &rgen, room_t const &room, float 
 					Door.type = interior->door_stacks.back().type = DOOR_TYPE_METAL;
 				}
 			}
-			if (is_freezer) { // add interior AC unit
-				float const length(0.6*doorway_width), depth(0.2*length), height(0.7*length);
-				float const back_wall(c.d[dim][dir] + (dir ? -1.0 : 1.0)*get_closet_wall_thickness(closet));
-				cube_t ac(c);
-				ac.z1() = c.z2() - height;
-				ac.d[dim][ dir] = back_wall;
-				ac.d[dim][!dir] = back_wall + dir_sign*depth;
-				set_wall_width(ac, c.get_center_dim(!dim), 0.5*length, !dim);
-				objs.emplace_back(ac, TYPE_HVAC_UNIT, room_id, dim, !dir, RO_FLAG_IN_FACTORY, tot_light_amt);
-			}
+			// add interior AC unit if this is a freezer
+			if (is_freezer) {objs.emplace_back(get_freezer_ac_unit(closet), TYPE_HVAC_UNIT, room_id, dim, !dir, RO_FLAG_IN_FACTORY, tot_light_amt);}
 			return 1; // done
 		} // for d
 	} // for n
