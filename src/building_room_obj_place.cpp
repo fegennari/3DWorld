@@ -2908,6 +2908,7 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 		set_cube_zvals(plate_area, plate_area.z2()-0.13*height, plate_area.z2()+0.4*height);
 		add_stack_of_plates(plate_area, plate_radius, room_id, light_amt, RO_FLAG_NOCOLL, rgen, blockers, objs);
 	} // for i
+	if (rgen.rand_bool()) {add_buckets_to_room(rgen, place_area, zval, room_id, light_amt, objs_start, 1);} // maybe add a bucket
 	if (!in_mall) {add_door_sign("Kitchen", room, zval, room_id);}
 	// add floor stains
 	unsigned const num_stains(rgen.rand() % 5); // 0-4
