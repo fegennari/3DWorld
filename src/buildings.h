@@ -3001,7 +3001,7 @@ private:
 	bool add_basement_jail_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
 		bool is_lit, colorRGBA const &light_color, light_ix_assign_t &light_ix_assign);
 	bool assign_and_fill_prison_room(rand_gen_t rgen, room_t &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
-		unsigned lights_start, unsigned floor_ix, bool is_basement, colorRGBA const &chair_color, light_ix_assign_t &light_ix_assign);
+		unsigned lights_start, unsigned floor_ix, bool is_basement, colorRGBA const &chair_color, light_ix_assign_t &light_ix_assign, room_type &prev_rtype);
 	void add_prison_hall_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	void add_prison_jail_cell_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start);
 	void add_commercial_entry_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);

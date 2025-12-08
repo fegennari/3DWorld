@@ -210,6 +210,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	bool added_bedroom(0), added_library(0), added_dining(0), added_laundry(0), added_basement_utility(0), added_fireplace(0), added_pool_room(0);
 	bool saw_mall(0), added_cafeteria(0), added_gym(0);
 	light_ix_assign_t light_ix_assign;
+	room_type prev_rtype(RTYPE_NOTSET); // used for prisons
 	clear_existing_room_geom();
 
 	// choose best room assignments for required rooms; if a single room or special building type, skip this step
@@ -736,8 +737,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				is_jail = added_obj = no_whiteboard = no_plants = 1;
 			}
 			else if (is_prison_room) {
-				added_obj = no_whiteboard = no_plants =
-					assign_and_fill_prison_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, objs_start_inc_lights, f, is_basement, chair_color, light_ix_assign);
+				added_obj = no_whiteboard = no_plants = assign_and_fill_prison_room(rgen, *r, room_center.z, room_id, tot_light_amt,
+					objs_start, objs_start_inc_lights, f, is_basement, chair_color, light_ix_assign, prev_rtype);
 			}
 			else if (f == 0 && init_rtype_f0 == RTYPE_LAUNDRY) {
 				added_obj = no_whiteboard = no_plants = is_laundry = added_laundry =
@@ -966,7 +967,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 								added_obj = no_whiteboard = add_lab_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start);
 								if (added_obj) {r->assign_to(RTYPE_LAB, f);}
 							}
-							else { // commercial kitchen on the first floor
+							else { // commercial kitchen on the first floor; should this be next to the cafeteria?
 								added_obj = no_whiteboard = add_commercial_kitchen_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, light_ix_assign);
 								if (added_obj) {r->assign_to(RTYPE_KITCHEN, f);}
 							}
@@ -981,11 +982,11 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					if (added_obj) {r->assign_to(RTYPE_CLASS, f);}
 				}
 				// else if no window, or can't make into a classroom
-				if (!added_obj && f == 0 && !added_cafeteria && rgen.rand_bool()) {
+				if (!added_obj && f == 0 && !added_cafeteria && rgen.rand_bool()) { // cafeteria
 					added_obj = no_plants = no_whiteboard = added_cafeteria = add_cafeteria_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start);
 					if (added_obj) {r->assign_to(RTYPE_CAFETERIA, f);}
 				}
-				if (!added_obj && f == 0 && !added_kitchen_mask && rgen.rand_bool()) {
+				if (!added_obj && f == 0 && !added_kitchen_mask && rgen.rand_bool()) { // commercial kitchen; should this be next to the cafeteria?
 					added_obj = no_plants = no_whiteboard = add_commercial_kitchen_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, light_ix_assign);
 					if (added_obj) {added_kitchen_mask |= 1;}
 					if (added_obj) {r->assign_to(RTYPE_KITCHEN, f);}

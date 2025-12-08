@@ -464,8 +464,8 @@ room_pref_t const room_prefs[] = {
 	{RTYPE_RETAIL,    0, 1, 1, 0, 4.0, 0.0,  0.0, 0.0,  0.0,  0.0},
 	{RTYPE_KITCHEN,   0, 1, 0, 1, 2.0, 5.0,  0.5, 0.0,  0.0,  0.0}
 };
-bool building_t::assign_and_fill_prison_room(rand_gen_t rgen, room_t &room, float &zval, unsigned room_id, float tot_light_amt,
-	unsigned objs_start, unsigned lights_start, unsigned floor_ix, bool is_basement, colorRGBA const &chair_color, light_ix_assign_t &light_ix_assign)
+bool building_t::assign_and_fill_prison_room(rand_gen_t rgen, room_t &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
+	unsigned lights_start, unsigned floor_ix, bool is_basement, colorRGBA const &chair_color, light_ix_assign_t &light_ix_assign, room_type &prev_rtype)
 {
 	assert(interior);
 	unsigned const num_room_pref(sizeof(room_prefs)/sizeof(room_pref_t));
@@ -482,7 +482,7 @@ bool building_t::assign_and_fill_prison_room(rand_gen_t rgen, room_t &room, floa
 		bool const strict(pass == 0);
 		cands.clear();
 
-		for (unsigned i = 0; i < num_room_pref; ++i) {
+		for (unsigned i = 0; i < num_room_pref; ++i) { // score each room type
 			room_pref_t const &p(room_prefs[i]);
 			if (has_st_el    && !p.allow_st_el) continue;
 			if (on_walk_path &&  p.is_private ) continue;
@@ -510,6 +510,8 @@ bool building_t::assign_and_fill_prison_room(rand_gen_t rgen, room_t &room, floa
 			}
 			if (ground_floor) {weight += p.gfloor_scale;}
 			if (is_basement ) {weight += p.basement_val;}
+			// prefer to place adjacent cafeteria and kitchen; likely vertically stacked on adjacent floors of the same room; won't work if rooms are added in diff passes
+			if ((prev_rtype == RTYPE_CAFETERIA && p.rtype == RTYPE_KITCHEN) || (prev_rtype == RTYPE_KITCHEN && p.rtype == RTYPE_CAFETERIA)) {weight += 1.0;}
 			//cout << "cand " << room_names[p.rtype] << " weight " << weight << " pass " << pass << endl;
 			weight += rgen.rand_float(); // add some randomness
 			cands.emplace_back(-weight, p.rtype); // negate weight to get min value
@@ -574,6 +576,7 @@ bool building_t::assign_and_fill_prison_room(rand_gen_t rgen, room_t &room, floa
 			//cout << "select " << room_names[rtype] << endl;
 			room.assign_to(rtype, floor_ix);
 			interior->set_room_type(rtype);
+			prev_rtype = rtype;
 			return 1; // success
 		} // for cand
 	} // for pass
