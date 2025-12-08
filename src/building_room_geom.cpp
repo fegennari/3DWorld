@@ -273,7 +273,7 @@ void building_room_geom_t::add_table(room_object_t const &c, float tscale, float
 	min_eq(top_dz, get_tc_leg_width(c, leg_width)/dz); // reduce the top thickness of tall tables
 
 	if (c.shape == SHAPE_CYLIN) { // round table
-		bool const marble(c.obj_id & 1); // 50% marble top with metal base; else wood
+		bool const marble((c.item_flags > 0) || (c.obj_id & 1)); // 50% marble top with metal base; always for tables flagged as plastic; else wood
 		vector3d const size(c.get_size());
 		cube_t top(c), legs_bc(c);
 		top.z1()    += (1.0 - top_dz)*dz;
