@@ -360,7 +360,7 @@ void building_room_geom_t::expand_closet(room_object_t const &c) {
 }
 void building_room_geom_t::add_closet_objects(room_object_t const &c, vect_room_object_t &objects, bool no_models) {
 	rand_gen_t rgen(c.create_rgen());
-	cube_t ccubes[5]; // front left, left side, front right, right side, door; used to get interior space
+	cube_t ccubes[5]; // front left, left side, front right, right side, [door]; used to get interior space
 	get_closet_cubes(c, ccubes);
 	cube_t const interior(get_closet_interior_space(c, ccubes));
 	bool const dim(c.dim), dir(c.dir); // dir faces the front

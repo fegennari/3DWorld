@@ -3407,6 +3407,7 @@ bool get_wall_quad_window_area(vect_vnctcc_t const &wall_quad_verts, unsigned i,
 unsigned get_street_dir(cube_t const &inner, cube_t const &outer);
 float get_closet_wall_thickness(room_object_t const &c);
 unsigned get_closet_cubes(room_object_t const &c, cube_t cubes[5], bool for_collision=0);
+cube_t get_freezer_back_wall(room_object_t const &c);
 void get_bed_cubes   (room_object_t const &c, cube_t cubes[6]);
 void get_table_cubes (room_object_t const &c, cube_t cubes[5]);
 void get_cubes_for_plastic_table(room_object_t const &c, float top_dz, cube_t cubes[3]);

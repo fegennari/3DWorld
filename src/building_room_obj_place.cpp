@@ -5431,7 +5431,7 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 	for (unsigned i = objs_start; i < objs_end; ++i) { // can't iterate over objs while modifying it
 		room_object_t const &obj(objs[i]);
 		if (obj.type != TYPE_CLOSET) continue;
-		cube_t cubes[5]; // front left, left side, front right, right side, door
+		cube_t cubes[5]; // front left, left side, front right, right side, [door]
 		get_closet_cubes(obj, cubes); // for_collision=0
 		bool const dim(obj.dim), dir(!obj.dir);
 		bool side_of_door(0);

@@ -394,6 +394,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			get_closet_cubes(*c, cubes, 1); // for_collision=1
 			if (!c->is_small_closet() && c->is_open()) {cubes[4].set_to_zeros();} // ignore open doors of large closets
 			add_colored_cubes(cubes, 5, color, cc); // include door, whether closed or open
+			if (c->is_freezer()) {cc.emplace_back(get_freezer_back_wall(*c), color);}
 		}
 		else if (type == TYPE_BED) { // Note: posts are not included
 			colorRGBA const wood_color(get_textured_wood_color()), sheets_color(c->color.modulate_with(texture_color(c->get_sheet_tid())));

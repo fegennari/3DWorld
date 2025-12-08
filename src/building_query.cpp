@@ -29,8 +29,7 @@ float get_player_move_dist();
 void get_shelf_brackets(room_object_t const &c, cube_t shelves[MAX_SHELVES], unsigned num_shelves, vect_cube_with_ix_t &brackets);
 void get_catwalk_cubes(room_object_t const &c, cube_t cubes[5]);
 unsigned get_machine_part_cubes(room_object_t const &c, float floor_ceil_gap, cube_t cubes[4]);
-cube_t get_parking_gate_arm (room_object_t const &c);
-cube_t get_freezer_back_wall(room_object_t const &c);
+cube_t get_parking_gate_arm(room_object_t const &c);
 
 
 // called by player_in_windowless_building(); assumes player is in this building; handles windows and exterior doors but not attics and basements
@@ -709,6 +708,7 @@ unsigned check_closet_collision(room_object_t const &c, point &pos, point const 
 		cube_t back_shelves(c);
 		back_shelves.d[c.dim][c.dir] = back_shelves.d[c.dim][!c.dir] + (c.dir ? 1.0 : -1.0)*(is_freezer ? 0.3 : 0.4)*c.get_depth(); // see add_closet_objects()
 		if (sphere_cube_int_update_pos(pos, radius, back_shelves, p_last, 0, cnorm)) {ret |= (1<<5);}
+		if (c.is_freezer() && sphere_cube_int_update_pos(pos, radius, get_freezer_back_wall(c), p_last, 0, cnorm)) {ret |= (1<<6);}
 		for (unsigned d = 0; d < 2; ++d) {cubes[2*d  ].d[c.dim][!c.dir] = c.d[c.dim][!c.dir];} // extend front walls to the back
 		for (unsigned d = 0; d < 2; ++d) {cubes[2*d+1].set_to_zeros();} // can skip the sides
 	}
@@ -1958,6 +1958,7 @@ bool building_interior_t::line_coll(building_t const &building, point const &p1,
 				get_closet_cubes(*c, cubes, 1); // get cubes for walls and door; for_collision=1
 				unsigned const n_end(get_closet_num_coll_cubes(*c));
 				for (unsigned n = 0; n < n_end; ++n) {had_coll |= get_line_clip_update_t(p1, p2, cubes[n], t);}
+				if (c->is_freezer()) {had_coll |= get_line_clip_update_t(p1, p2, get_freezer_back_wall(*c), t);}
 			}
 			else if (c->is_vert_cylinder()) { // vertical cylinder
 				if (line_intersect_cylinder_with_t(p1, p2, c->get_cylinder(), 1, tmin) && tmin < t) {t = tmin; had_coll = 1;}
@@ -2914,7 +2915,8 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 			else if (c->type == TYPE_CLOSET) {
 				cube_t cubes[5];
 				get_closet_cubes(*c, cubes, 1); // get cubes for walls and door; for_collision=1
-				if (line_int_cubes_exp(p1, p2, cubes, get_closet_num_coll_cubes(*c), expand)) return 10; // closet
+				if (line_int_cubes_exp(p1, p2, cubes, get_closet_num_coll_cubes(*c), expand))        return 10; // closet
+				if (c->is_freezer() && line_int_cube_exp(p1, p2, get_freezer_back_wall(*c), expand)) return 10; // closet
 			}
 			else if (c->type == TYPE_BED) {
 				cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube
