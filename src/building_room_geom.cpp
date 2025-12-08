@@ -1071,7 +1071,7 @@ void building_room_geom_t::add_button(room_object_t const &c, bool inc_geom, boo
 
 void building_room_geom_t::add_crate(room_object_t const &c) { // is_small=1
 	// Note: draw as "small", not because crates are small, but because they're only added to windowless rooms and can't be easily seen from outside a building
-	unsigned skip_faces(c.is_open() ? EF_Z12 : EF_Z1); // skip bottom face (even for stacked crate?); skip top if opened
+	unsigned skip_faces((c.is_open() ? EF_Z2 : 0) | (c.is_hanging() ? 0 : EF_Z1)); // skip bottom face if not on a mesh shelf; skip top if opened
 	colorRGBA const color(apply_light_color(c));
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_crate_tid(c), 0.0), 1, 0, 1));
 	mat.add_cube_to_verts(c, color, zero_vector, skip_faces);
@@ -1090,19 +1090,25 @@ void building_room_geom_t::add_crate(room_object_t const &c) { // is_small=1
 void building_room_geom_t::add_box(room_object_t const &c) { // is_small=1
 	// Note: draw as "small", not because boxes are small, but because they're only added to windowless rooms and can't be easily seen from outside a building
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_box_tid(), get_texture_by_name("interiors/box_normal.jpg", 1), 0.0, 0.0), 1, 0, 1)); // is_small=1
-	float const sz(2048), x1(12/sz), x2(576/sz), x3(1458/sz), y1(1-1667/sz), y2(1-1263/sz), y3(1-535/sz); //, x4(2032/sz), y4(1-128/sz); // Note: we don't use all parts of the texture
+	float const sz(2048), x1(12/sz), x2(576/sz), x3(1458/sz), y1(1-1667/sz), y2(1-1263/sz), y3(1-535/sz); //, x4(2032/sz), y4(1-128/sz); // Note: don't use all parts of the texture
 	unsigned verts_start(mat.quad_verts.size());
 	colorRGBA const color(apply_light_color(c));
-	mat.add_cube_to_verts(c, color, zero_vector, (c.is_open() ? EF_Z2 : EF_Z1)); // skip bottom face (even for stacked box?)
-	assert(mat.quad_verts.size() == verts_start + 20); // there should be 5 quads (+z -x +x -y +y) / 20 verts (no -z)
-	mat.quad_verts[verts_start+0].set_tc(x1, y2); // z (top or inside bottom)
-	mat.quad_verts[verts_start+1].set_tc(x2, y2);
-	mat.quad_verts[verts_start+2].set_tc(x2, y3);
-	mat.quad_verts[verts_start+3].set_tc(x1, y3);
+	unsigned skip_faces(0), num_z_faces(2), vert_ix(0);
+	if (!c.is_hanging()) {skip_faces |= EF_Z1; --num_z_faces;} // skip bottom face if not on a mesh shelf
+	if ( c.is_open   ()) {skip_faces |= EF_Z2; --num_z_faces;} // skip top face if open
+	mat.add_cube_to_verts(c, color, zero_vector, skip_faces);
+	assert(mat.quad_verts.size() == verts_start + 16 + 4*num_z_faces); // there should be 4-6 quads: {[-z,] [+z,] -x, +x, -y, +y}
 
+	for (unsigned n = 0; n < num_z_faces; ++n) { // z (top or bottom)
+		mat.quad_verts[verts_start+0].set_tc(x1, y2);
+		mat.quad_verts[verts_start+1].set_tc(x2, y2);
+		mat.quad_verts[verts_start+2].set_tc(x2, y3);
+		mat.quad_verts[verts_start+3].set_tc(x1, y3);
+		verts_start += 4;
+	}
 	for (unsigned d = 0; d < 2; ++d) { // for each end
 		unsigned const ix_shift((1 + 2*d)*c.dim); // needed to make sure the up icon actually faces up
-		unsigned ix(verts_start + 4*d + 4);
+		unsigned ix(verts_start + 4*d);
 
 		for (unsigned e = 0; e < 2; ++e) { // x, y
 			bool const f(c.dim ^ bool(e));

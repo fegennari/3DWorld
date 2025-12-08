@@ -1025,7 +1025,8 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 		cube_t bounds(S);
 		bounds.z1() = S.z2(); // place on top of shelf
 		// allow_crates=1; copy flags from shelf, except for open flag
-		unsigned const box_flags((c.flags & ~RO_FLAG_OPEN) | RO_FLAG_NOCOLL);
+		unsigned box_flags((c.flags & ~RO_FLAG_OPEN) | RO_FLAG_NOCOLL);
+		if (in_warehouse) {box_flags |= RO_FLAG_HANGING;} // warehouse boxes have visible bottoms
 		add_boxes_to_space(c, objects, bounds, cubes, rgen, num_boxes, 0.42*width*sz_scale*(is_house ? 1.5 : 1.0), 0.4*box_zscale, 0.98*box_zscale, 1, box_flags);
 
 		if (on_warehouse_floor) { // add pallets; only for shelves on main warehouse floor

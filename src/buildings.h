@@ -646,7 +646,7 @@ unsigned const RO_FLAG_NODYNAM = 0x40; // for light shadow maps
 unsigned const RO_FLAG_INTERIOR= 0x80; // applies to containing room
 // object flags, second byte
 unsigned const RO_FLAG_EMISSIVE= 0x0100; // for signs, lights, and phones
-unsigned const RO_FLAG_HANGING = 0x0200; // for signs, blinds, hangers, shirts, teeshirts, beams, walls, ladders, and balconies; treated as "folding" for closet doors
+unsigned const RO_FLAG_HANGING = 0x0200; // for signs, blinds, hangers, shirts, teeshirts, beams, walls, ladders, balconies, and boxes on mesh; treated as "folding" for closet doors
 unsigned const RO_FLAG_ADJ_LO  = 0x0400; // for kitchen counters/closets/door trim/blinds/railings
 unsigned const RO_FLAG_ADJ_HI  = 0x0800; // for kitchen counters/closets/door trim/blinds/railings
 unsigned const RO_FLAG_ADJ_BOT = 0x1000; // for door trim/railings/ext steps/etc.

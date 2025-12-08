@@ -3232,12 +3232,15 @@ void building_t::add_boxes_and_crates(rand_gen_t &rgen, room_t const &room, floa
 		point const pos(gen_xy_pos_in_area(crate_bounds, sz, rgen, zval));
 		cube_t crate(get_cube_height_radius(pos, sz, 2.0*sz.z)); // multiply by 2 since this is a size rather than half size/radius
 		if (has_bcube_int(crate, exclude)) continue; // don't place crates between the door and the center of the room
-		bool bad_placement(0);
+		bool bad_placement(0), is_stacked(0);
 
 		for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
 			if (!i->intersects(crate)) continue;
-			// only handle stacking of crates on other crates
-			if (i->is_crate_or_box() && i->z1() == zval && (i->z2() + crate.dz() < ceil_zval) && i->contains_pt_xy(pos)) {crate.translate_dim(2, i->dz());}
+			
+			if (i->is_crate_or_box() && i->z1() == zval && (i->z2() + crate.dz() < ceil_zval) && i->contains_pt_xy(pos)) { // only handle stacking of crates on other crates
+				crate.translate_dim(2, i->dz());
+				is_stacked = 1;
+			}
 			else {bad_placement = 1; break;}
 		}
 		if (bad_placement) continue;
@@ -3246,7 +3249,7 @@ void building_t::add_boxes_and_crates(rand_gen_t &rgen, room_t const &room, floa
 		cube_t c2(crate);
 		c2.expand_by(vector3d(0.5*c2.dx(), 0.5*c2.dy(), 0.0)); // approx extents of flaps if open
 		room_object const type(rgen.rand_bool() ? TYPE_CRATE : TYPE_BOX);
-		unsigned flags(0);
+		unsigned flags(is_stacked ? RO_FLAG_HANGING : 0); // draw bottom if stacked
 
 		if (type == TYPE_BOX) { // determine which sides are against a wall, for use with box flaps logic
 			for (unsigned d = 0; d < 4; ++d) {
