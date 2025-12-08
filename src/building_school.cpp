@@ -163,6 +163,8 @@ void building_t::add_hallway_lockers(rand_gen_t rgen, room_t const &room, float 
 	add_floor_clutter_objs(rgen, room, room_bounds, zval, room_id, tot_light_amt, objs_start, add_bottles, add_trash, add_papers, add_glass, add_cigarettes);
 }
 
+// functions below this point are used in other building types such as hospitals, prisons, and industrial
+
 bool building_t::add_room_lockers(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
 	cube_t const &place_area, room_type rtype, bool dim, int dir_skip_mask, bool add_padlocks)
 {
@@ -447,6 +449,39 @@ bool building_t::add_library_objs(rand_gen_t rgen, room_t const &room, float &zv
 	return 1;
 }
 
+cube_t get_table_inner_bcube(room_object_t const &table) {
+	cube_t surface(table);
+	if (table.is_round()) {surface.expand_by_xy(-0.2*table.get_radius());} // shrink to avoid placing over the edge
+	return surface;
+}
+void building_t::place_cards_on_surface(rand_gen_t &rgen, cube_t const &surface, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	float const one_inch(get_one_inch()), height(1.0*one_inch), length(1.3*3.5*one_inch), width(1.3*2.5*one_inch); // 1x3.5x2.5; width/height scaled by 1.3
+	bool const dim(rgen.rand_bool());
+	vector2d const place_sz(surface.get_size_xy());
+	if (place_sz[dim] < 2.0*length || place_sz[!dim] < 2.0*width) return; // doesn't fit
+	vector3d const scale(0.5*(dim ? width : length), 0.5*(dim ? length : width), height);
+
+	for (unsigned N = 0; N < 2; ++N) { // 2 tries
+		cube_t cards;
+		gen_xy_pos_for_cube_obj(cards, surface, scale, height, rgen);
+		if (overlaps_other_room_obj(cards, objs_start, 1)) continue; // check_all=1
+		bool const dir(surface.get_center_dim(dim) < cards.get_center_dim(dim)); // facing the closer edge
+		interior->room_geom->objs.emplace_back(cards, TYPE_CARD_DECK, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt);
+		break; // success/done
+	}
+}
+void building_t::place_cards_on_table(rand_gen_t rgen, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	vect_room_object_t &objs(interior->room_geom->objs);
+	unsigned const objs_end(objs.size());
+
+	for (unsigned i = objs_start; i < objs_end; ++i) { // find the table; can't iterate over objs because we modify it
+		room_object_t const &obj(objs[i]);
+		if (obj.type != TYPE_TABLE) continue;
+		cube_t const surface(get_table_inner_bcube(obj));
+		place_cards_on_surface(rgen, surface, room_id, tot_light_amt, i+1); // check for intersections with objects placed after the table
+	}
+}
+
 bool building_t::fill_room_with_tables_and_chairs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt,
 	unsigned objs_start, bool plastic_tc, unsigned max_books, unsigned max_num_xy)
 {
@@ -484,34 +519,19 @@ bool building_t::fill_room_with_tables_and_chairs(rand_gen_t rgen, room_t const 
 		if (i->type == TYPE_TABLE) {tables.push_back(*i);}
 	}
 	for (room_object_t const &table : tables) {
-		bool const is_round(table.shape == SHAPE_CYLIN);
 		unsigned const pp_start(objs.size());
 
 		if (max_books > 0) { // add book(s)
 			unsigned const num_books(rgen.rand() % (max_books+1));
 			unsigned const flags((is_school() && rgen.rand_bool()) ? RO_FLAG_USED : 0); // flag as school book half the time
-			float const shift_amt(is_round ? 0.25 : 0.35); // less shift for cylindrical tables to avoid overlapping the edges
+			float const shift_amt(table.is_round() ? 0.25 : 0.35); // less shift for cylindrical tables to avoid overlapping the edges
 			for (unsigned n = 0; n < num_books; ++n) {place_book_on_obj(rgen, table, room_id, tot_light_amt, pp_start, 0, flags, 1, shift_amt);} // skip_if_overlaps=1
 		}
 		if (max_books <= 1) { // single book - not a library
-			cube_t surface(table);
-			if (is_round) {surface.expand_by_xy(-0.2*table.get_radius());} // shrink to avoid placing over the edge
+			cube_t const surface(get_table_inner_bcube(table));
 
 			if (rgen.rand_float() < 0.5) { // maybe add a deck of cards
-				float const one_inch(get_one_inch()), height(1.0*one_inch), length(1.3*3.5*one_inch), width(1.3*2.5*one_inch); // 1x3.5x2.5; width/height scaled by 1.3
-				bool const dim(rgen.rand_bool());
-				vector2d const place_sz(surface.get_size_xy());
-			
-				if (place_sz[dim] > 2.0*length && place_sz[!dim] > 2.0*width) { // add if it fits
-					vector3d const scale(0.5*(dim ? width : length), 0.5*(dim ? length : width), height);
-					cube_t cards;
-					gen_xy_pos_for_cube_obj(cards, surface, scale, height, rgen);
-				
-					if (!overlaps_other_room_obj(cards, pp_start, 1)) { // check_all=1
-						bool const dir(table.get_center_dim(dim) < cards.get_center_dim(dim)); // facing the closer edge
-						interior->room_geom->objs.emplace_back(cards, TYPE_CARD_DECK, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt);
-					}
-				}
+				place_cards_on_surface(rgen, surface, room_id, tot_light_amt, pp_start);
 			}
 			if (is_prison() && rgen.rand_float() < 0.33) { // maybe add cigarettes; add an ashtray as well?
 				unsigned const num_cig(rgen.rand_bool() + 1); // 1-2

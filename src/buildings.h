@@ -3163,6 +3163,8 @@ private:
 	bool place_eating_items_on_table(rand_gen_t &rgen, unsigned table_obj_id);
 	void place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room, unsigned room_id, float tot_light_amt,
 		unsigned objs_start, unsigned floor, bool is_basement, bool not_private);
+	void place_cards_on_surface(rand_gen_t &rgen, cube_t const &surface, unsigned room_id, float tot_light_amt, unsigned objs_start);
+	void place_cards_on_table(rand_gen_t rgen, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	bool can_be_bedroom_or_bathroom(room_t const &room, unsigned floor_ix, bool skip_conn_check=0) const;
 	bool can_be_bathroom(room_t const &room) const;
 	bool find_mirror_in_room(unsigned room_id, vector3d const &xlate, float &dmin_sq, bool same_room) const;
