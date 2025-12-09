@@ -3475,15 +3475,36 @@ void building_room_geom_t::add_warning_light(room_object_t const &c) {
 	light_mat.add_vcylin_to_verts(light, (is_on ? RED : colorRGBA(0.5, 0.0, 0.0)), 0, 1); // draw sides and top
 }
 
-void building_room_geom_t::add_pallet(room_object_t const &c) {
+void swap_vert_dims(rgeom_storage_t::vect_vertex_t &verts, unsigned start_ix, unsigned d1, unsigned d2) {
+	assert(d1 < 3 && d2 < 3 && d1 != d2);
+	assert(start_ix <= verts.size());
+
+	for (auto v = verts.begin()+start_ix; v != verts.end(); ++v) {
+		swap(v->v[d1], v->v[d2]);
+		swap(v->n[d1], v->n[d2]);
+	}
+}
+void building_room_geom_t::add_pallet(room_object_t const &c_in) {
+	room_object_t c(c_in);
+	unsigned const dim(get_min_dim(c.get_size()));
+	bool const vertical(dim < 2);
+	
+	if (vertical) { // leaning against the wall; final geom will extend outside the bcube in dim
+		float const height(c.dz());
+		c.translate_dim(2, -0.01*height); // shift slightly down so that the bottom edge touches the floor when rotated
+		c.translate_dim(dim, (c.dir ? -1.0 : 1.0)*0.142*height); // shift away from the wall so that the edge touches when rotated
+		c.swap_dims(dim, 2); // swap dims to make horizontal for creating the pallet geometry, then swap back at the end
+	}
 	tid_nm_pair_t const nail_tex(get_rust_met_tid(), 0.0, 0);
 	get_material(nail_tex, 0, 0, 1); // make sure it's in the map
 	rgeom_mat_t &wood_mat(get_wood_material(2.0/c.get_length(), 1, 0, 1)); // shadowed, small
 	rgeom_mat_t &nail_mat(get_material(nail_tex, 0, 0, 1)); // unshadowed, small
+	unsigned const wood_verts_start(wood_mat.quad_verts.size()), nail_verts_start(nail_mat.itri_verts.size()), nail_ixs_start(nail_mat.indices.size()); // capture for rotate/swap
 	point const origin(c.get_llc());
 	colorRGBA const stringer_color(apply_light_color(c)), board_color(apply_light_color(c, colorRGBA(0.8, 0.6, 0.4))); // stringer is lighter than board
 	colorRGBA const nail_color(apply_light_color(c, colorRGBA(0.35, 0.35, 0.35))); // dark-medium gray
 	unsigned const num_stringers(3), num_boards(7);
+	unsigned const bot_skip_flags(vertical ? 0 : EF_Z1); // skip bottom unless vertical/leaning
 	float const length(c.get_length()), width(c.get_width()), height(c.dz());
 	float const board_thick(0.12*height), board_width(0.07*length), board_hwidth(0.5*board_width), stringer_thick(0.03*width), stringer_hthick(0.5*stringer_thick);
 	float const stringer_spacing((width - stringer_thick)/(num_stringers - 1)), board_spacing((length - board_width)/(num_boards - 1)), nail_radius(0.25*stringer_thick);
@@ -3493,7 +3514,7 @@ void building_room_geom_t::add_pallet(room_object_t const &c) {
 	
 	for (unsigned n = 0; n < num_stringers; ++n) { // stringers
 		set_wall_width(stringer, (first_strpinger_pos + n*stringer_spacing), stringer_hthick, !c.dim);
-		wood_mat.add_cube_to_verts(stringer, stringer_color, origin, EF_Z1); // skip bottom
+		wood_mat.add_cube_to_verts(stringer, stringer_color, origin, bot_skip_flags); // skip bottom
 	}
 	for (unsigned n = 0; n < num_boards; ++n) { // boards
 		float const pos(first_board_pos + n*board_spacing);
@@ -3502,7 +3523,7 @@ void building_room_geom_t::add_pallet(room_object_t const &c) {
 			cube_t board(c);
 			board.d[2][!d] = stringer.d[2][d]; // set zval
 			set_wall_width(board, pos, board_hwidth, c.dim);
-			wood_mat.add_cube_to_verts(board, board_color, origin, (d ? 0 : EF_Z1)); // skip bottom?
+			wood_mat.add_cube_to_verts(board, board_color, origin, (d ? 0 : bot_skip_flags)); // skip bottom?
 		}
 		// add nails for each stringer to top board; is this too expensive?
 		point nail_center(0.0, 0.0, (c.z2() + 0.01*height));
@@ -3513,6 +3534,19 @@ void building_room_geom_t::add_pallet(room_object_t const &c) {
 			nail_mat.add_vert_disk_to_verts(nail_center, nail_radius, 0, nail_color, 0, 0, 0, N_CYL_SIDES/2); // low detail (16 sides)
 		}
 	} // for n
+	if (vertical) {
+		float angle(((c.dim ^ c.dir) ? 1.0 : -1.0)*0.1*PI); // leaning against the wall
+		if (c.dir) {angle += PI;} // rotate 180 degrees so that top is facing into the room
+		point const rotate_pt(c.get_cube_center());
+		vector3d axis;
+		axis[1-dim] = 1.0; // cross product
+		rotate_verts(wood_mat.quad_verts, axis, angle, rotate_pt, wood_verts_start);
+		rotate_verts(nail_mat.itri_verts, axis, angle, rotate_pt, nail_verts_start);
+		swap_vert_dims(wood_mat.quad_verts, wood_verts_start, dim, 2);
+		swap_vert_dims(nail_mat.itri_verts, nail_verts_start, dim, 2);
+		reverse(wood_mat.quad_verts.begin()+wood_verts_start, wood_mat.quad_verts.end()); // reverse winding order
+		reverse(nail_mat.indices   .begin()+nail_ixs_start,   nail_mat.indices   .end());
+	}
 }
 
 void mirror_cube_z(cube_t &c, cube_t const &obj) {

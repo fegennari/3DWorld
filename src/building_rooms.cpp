@@ -682,8 +682,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					add_swimming_pool_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt);
 				}
 				if (r->is_hallway) { // add special hallway objects
-					if (is_ext_basement) {add_false_door_to_extb_room_if_needed(*r, room_center.z, room_id);}
-
+					if (is_ext_basement) {
+						if (has_mall()) {add_mall_back_hallway_objs(rgen, *r, room_center.z, room_id, tot_light_amt);} // mall back hallway
+						else {add_false_door_to_extb_room_if_needed(*r, room_center.z, room_id);} // extended basement hallway
+					}
 					if (is_house) { // allow pictures, rugs, and light switches in the hallways of houses; no pref orient
 						hang_pictures_whiteboard_chalkboard_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f, is_basement);
 						if (rgen.rand_bool()) {add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);} // 50% of the time; not all rugs will be placed

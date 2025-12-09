@@ -3106,6 +3106,7 @@ private:
 	unsigned add_objects_to_tray(cube_t const &tray, bool dim, unsigned room_id, float light_amt, bool no_alcohol, rand_gen_t &rgen, unsigned max_num);
 	void add_cafeteria_tray(cube_t const &tray, bool dim, unsigned room_id, float light_amt, bool no_alcohol, rand_gen_t &rgen);
 	void add_clothing_rack(cube_t const &rack, unsigned room_id, bool dim, float light_amt, room_type rtype, rand_gen_t &rgen);
+	void add_mall_back_hallway_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float light_amt);
 	void add_ceiling_ducts(cube_t const &room_area, float ceil_zval, unsigned room_id, bool dim, unsigned skip_dir, float light_amt,
 		bool cylin_ducts, bool skip_ends, bool skip_top, rand_gen_t &rgen, float sz_scale=1.0, cube_t const &avoid=cube_t());
 	void add_row_of_bookcases(cube_t const &row, float zval, unsigned room_id, float light_amt, bool dim, bool place_inside);

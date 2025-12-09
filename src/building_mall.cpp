@@ -15,6 +15,7 @@ string choose_store_name(unsigned store_type, unsigned item_category, rand_gen_t
 colorRGBA choose_pot_color(rand_gen_t &rgen);
 colorRGBA choose_sign_color(rand_gen_t &rgen, bool emissive=0);
 colorRGBA get_stain_color(rand_gen_t &rgen, bool is_food=0);
+vector3d get_pallet_hsize(float one_inch, bool dim);
 bool is_invalid_city_placement_for_cube(cube_t const &c);
 void add_city_plot_cut(cube_t const &cut);
 void add_city_ug_elevator_entrance(ug_elev_info_t const &uge);
@@ -2515,6 +2516,37 @@ void building_t::add_clothing_rack(cube_t const &rack, unsigned room_id, bool di
 		unsigned const num_hangers(round_fp(15.0*rgen.rand_uniform(1.0, 1.5)*rack_length/(num_segs*window_vspace)));
 		bool const add_jumpsuits(rtype == RTYPE_JAIL);
 		building_room_geom_t::add_hangers_and_clothing(window_vspace, num_hangers, flags, hanger_model_id, clothing_model_id, hanger_rod, objs, rgen, add_jumpsuits);
+	} // for n
+}
+
+void building_t::add_mall_back_hallway_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float light_amt) {
+	cube_t room_bounds(get_walkable_room_bounds(room));
+	room_bounds.expand_by_xy(-get_trim_thickness()); // not needed?
+	vector2d const room_sz(room_bounds.get_size_xy());
+	bool const dim(room_sz.x < room_sz.y); // long dim
+	float const one_inch(get_one_inch());
+	vector3d pallet_sz(get_pallet_hsize(one_inch, !dim));
+	unsigned num_pallets(rgen.rand() % 5); // 0-4
+	min_eq(num_pallets, unsigned(0.1*room_sz[dim]/(pallet_sz.x + pallet_sz.y))); // not too many for short rooms
+	if (num_pallets == 0) return;
+	pallet_sz.x *= 2.0; pallet_sz.y *= 2.0; // expand to width
+	swap(pallet_sz[!dim], pallet_sz.z); // vertical, leaning against the wall
+	float const hlen(0.5*pallet_sz[dim]), width(pallet_sz[!dim]);
+	vect_room_object_t &objs(interior->room_geom->objs);
+	unsigned const objs_start(objs.size()); // there should be no other objects placed on the floor previously
+	cube_t pallet;
+	set_cube_zvals(pallet, zval, zval+pallet_sz.z);
+
+	for (unsigned n = 0; n < num_pallets; ++n) {
+		bool const dir(rgen.rand_bool()); // side of the hallway
+		float const pos(rgen.rand_uniform((room_bounds.d[dim][0] + hlen), (room_bounds.d[dim][1] - hlen)));
+		float const wall_edge(room_bounds.d[!dim][dir]);
+		set_wall_width(pallet, pos, hlen, dim);
+		pallet.d[!dim][ dir] = wall_edge; // against the wall
+		pallet.d[!dim][!dir] = wall_edge + (dir ? -1.0 : 1.0)*width; // extend into room
+		if (is_obj_placement_blocked(pallet, room,    1)) continue; // inc_open_doors=1
+		if (overlaps_other_room_obj (pallet, objs_start)) continue; // overlaps another pallet
+		objs.emplace_back(pallet, TYPE_PALLET, room_id, !dim, dir, 0, light_amt);
 	} // for n
 }
 
