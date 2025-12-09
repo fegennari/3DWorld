@@ -635,6 +635,11 @@ void building_t::add_warehouse_shelves(rand_gen_t &rgen, room_t const &room, flo
 	} // for r
 }
 
+vector3d get_pallet_hsize(float one_inch, bool dim) {
+	float const length(48*one_inch), width(40*one_inch), height(4.5*one_inch); // 48x40x4.5 inches
+	return vector3d(0.5*(dim ? width : length), 0.5*(dim ? length : width), height); // half size
+}
+
 void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start_inc_lights) { // ~0.25ms
 	assert(has_ind_info());
 	bool const room_is_factory(room.is_factory()), room_is_warehouse(room.is_warehouse());
@@ -776,20 +781,31 @@ void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float 
 		add_warehouse_shelves(rgen, room, zval, room_id, objs_start, light_amt, support_width, place_area, supports[!edim]);
 		// add a forklift
 		xfmr_fl_area.expand_by_xy(-wall_thick*rgen.rand_uniform(0.5, 1.5)); // not too close to the wall
-		place_model_along_wall(OBJ_MODEL_FORKLIFT, TYPE_FORKLIFT, room, 0.9, rgen, zval, room_id, light_amt, xfmr_fl_area, objs_start, 0.25, 4, 0, WHITE, 0, 0, 0);
+		unsigned const forklift_obj_ix(objs.size());
+		bool const added_forklift(place_model_along_wall(OBJ_MODEL_FORKLIFT, TYPE_FORKLIFT, room, 0.9,
+			rgen, zval, room_id, light_amt, xfmr_fl_area, objs_start, 0.25, 4, 0, WHITE, 0, 0, 0));
 		
 		if (1) { // scatter some random pallets on the floor
 			unsigned const num_pallets((rgen.rand() % 3) + 3); // 3-5
-			float const one_inch(get_one_inch()), length(48*one_inch), width(40*one_inch), height(4.5*one_inch); // 48x40x4.5 inches
+			float const one_inch(get_one_inch());
+			cube_t pallet;
 
+			if (added_forklift && rgen.rand_bool()) { // maybe add a pallet on the forklift
+				room_object_t const forklift(objs[forklift_obj_ix]); // deep copy
+				bool const pdim(forklift.dim);
+				vector3d const pallet_sz(get_pallet_hsize(one_inch, 0));
+				pallet.z1() = forklift.z1() + 0.105*forklift.dz();
+				pallet.z2() = pallet  .z1() + pallet_sz.z;
+				set_wall_width(pallet, forklift.get_center_dim(!pdim), pallet_sz.x, !pdim);
+				set_wall_width(pallet, (forklift.d[pdim][forklift.dir] - (forklift.dir ? 1.0 : -1.0)*0.64*pallet_sz.y), pallet_sz.y,  pdim);
+				objs.emplace_back(pallet, TYPE_PALLET, room_id, pdim, 0, 0, light_amt);
+			}
 			for (unsigned n = 0; n < num_pallets; ++n) {
 				bool const pdim(rgen.rand_bool());
-				vector3d pallet_sz(0.5*length, 0.5*width, height); // half size
-				if (pdim) {swap(pallet_sz.x, pallet_sz.y);}
-				cube_t pallet;
+				vector3d const pallet_sz(get_pallet_hsize(one_inch, pdim));
 
 				for (unsigned N = 0; N < 10; ++N) { // 10 place attempts
-					gen_xy_pos_for_cube_obj(pallet, place_area, pallet_sz, height, rgen, 1); // place_at_z1=1
+					gen_xy_pos_for_cube_obj(pallet, place_area, pallet_sz, pallet_sz.z, rgen, 1); // place_at_z1=1
 					if (overlaps_obj_or_placement_blocked(pallet, place_area, objs_start)) continue; // bad placement
 					objs.emplace_back(pallet, TYPE_PALLET, room_id, pdim, 0, 0, light_amt);
 
@@ -797,7 +813,7 @@ void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float 
 						unsigned const num_add((rgen.rand() % 7) + 1); // 1-7 additional pallets
 
 						for (unsigned m = 0; m < num_add; ++m) {
-							set_cube_zvals(pallet, pallet.z2(), (pallet.z2() + height)); // move up
+							set_cube_zvals(pallet, pallet.z2(), (pallet.z2() + pallet_sz.z)); // move up
 							for (unsigned d = 0; d < 2; ++d) {pallet.translate_dim(d, 0.1*pallet_sz[d]*rgen.signed_rand_float());} // add some random XY shift
 							if (overlaps_obj_or_placement_blocked(pallet, place_area, objs_start)) break; // bad placement, end the stack
 							objs.back().flags |= RO_FLAG_ADJ_TOP; // flag pallet below as having something stack onto it
