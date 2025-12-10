@@ -991,7 +991,7 @@ void building_t::add_lounge_objs(rand_gen_t rgen, room_t const &room, float zval
 		unsigned const num_plants(1 + (rgen.rand() & 3));
 		add_plants_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, num_plants);
 	}
-	if (teacher) {add_door_sign("Teacher Lounge", room, zval, room_id);}
+	add_door_sign((teacher ? "Teacher Lounge" : "Lounge"), room, zval, room_id);
 }
 
 bool building_t::add_mwave_on_table(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, cube_t const &place_area) {

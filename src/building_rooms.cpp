@@ -206,7 +206,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	unsigned cand_bathroom(rooms.size()); // start at an invalid value
 	unsigned added_bathroom_objs_mask(0), numbered_rooms_seen(0), store_type_mask(0), num_locker_rooms(0);
 	uint8_t last_unit_id(0);
-	uint64_t is_public_on_floor(0), library_floor_mask(0), added_kitchen_mask(0), added_living_mask(0), added_bath_mask(0); // 64 bit masks, per floor
+	uint64_t is_public_on_floor(0), library_floor_mask(0), added_kitchen_mask(0), added_living_mask(0), added_bath_mask(0), has_lounge_mask(0); // 64 bit masks, per floor
 	bool added_bedroom(0), added_library(0), added_dining(0), added_laundry(0), added_basement_utility(0), added_fireplace(0), added_pool_room(0);
 	bool saw_mall(0), added_cafeteria(0), added_gym(0);
 	light_ix_assign_t light_ix_assign;
@@ -1048,6 +1048,15 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			if (!added_obj && num_storage_rooms <= 4 && !floor_will_alias && (is_basement || (r->is_office && !has_window && f == 0)) && rgen.rand_bool()) {
 				added_obj = no_whiteboard = is_storage = add_storage_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement, has_stairs);
 				if (added_obj) {r->assign_to(RTYPE_STORAGE, f); ++num_storage_rooms;}
+			}
+			// maybe make a lounge to primary hallway office buildings
+			if (!added_obj && !floor_will_alias && !is_basement && is_office_bldg() && has_pri_hall() && r->is_office && !(has_lounge_mask & (1<<f)) &&
+				min(r->dx(), r->dy()) > 1.5*window_vspacing && rgen.rand_float() < 0.1)
+			{
+				add_lounge_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, 0); // is_lobby=0
+				r->assign_to(RTYPE_LOUNGE, f);
+				added_obj = 1;
+				has_lounge_mask |= (1<<f);
 			}
 			// try to place a desk if there's no table, bed, etc.; this can be an office
 			if (!added_obj && (!is_basement || rgen.rand_bool())) {
