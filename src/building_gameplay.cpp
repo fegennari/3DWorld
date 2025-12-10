@@ -293,6 +293,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_JUMPSUIT  ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 80.0,  5.0,   "jumpsuit"); // prison jumpsuit
 	bldg_obj_types[TYPE_HANDGUN   ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 2, 100.0, 0.5,   "handgun", 8); // drawn as a small static object when expanded (in a drawer); 8 bullet cap
 	bldg_obj_types[TYPE_SHOP_CART ] = bldg_obj_type_t(1, 1, 1, 0, 0, 1, 0, 120,   49,    "shopping cart"); // can push but not pick up
+	bldg_obj_types[TYPE_FOOD_FISH ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 10.0,  0.1,   "cooked fish");
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// animals; not room objects
 	bldg_obj_types[TYPE_RAT       ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 8.99,  1.0,   "rat"); // can be picked up

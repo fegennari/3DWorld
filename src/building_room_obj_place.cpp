@@ -4845,6 +4845,7 @@ bool building_t::place_plate_on_obj(rand_gen_t &rgen, cube_t const &place_on, un
 	vect_room_object_t &objs(interior->room_geom->objs);
 	objs.emplace_back(plate, TYPE_PLATE, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, WHITE, (is_bowl ? 1 : 0));
 	set_obj_id(objs);
+	if (!is_bowl) {place_food_on_plate(rgen, plate, room_id, tot_light_amt);}
 
 	if (!is_bowl && rgen.rand_float() < 0.35) { // maybe add a stain on the plate; this won't be removed when the plate is taken, but hopefully that's okay
 		float const stain_radius(rgen.rand_uniform(0.6, 0.9)*radius);
@@ -4854,6 +4855,16 @@ bool building_t::place_plate_on_obj(rand_gen_t &rgen, cube_t const &place_on, un
 		objs.back().flags |= RO_FLAG_BROKEN; // mark as stained
 	}
 	return 1;
+}
+void building_t::place_food_on_plate(rand_gen_t &rgen, cube_t const &plate, unsigned room_id, float tot_light_amt) {
+	if (rgen.rand_float() < 0.35 && building_obj_model_loader.is_model_valid(OBJ_MODEL_FISH)) { // maybe add a fish
+		float const rscale(get_radius_for_square_model(OBJ_MODEL_FISH)); // radius to height ratio; approximate as square, even though it's not
+		float const plate_radius(0.5*plate.dx()), fish_radius(rgen.rand_uniform(0.66, 0.78)*plate_radius), fish_height(fish_radius/rscale);
+		cube_t fish(cube_top_center(plate));
+		fish.expand_by_xy(fish_radius);
+		fish.z2() += fish_height;
+		interior->room_geom->objs.emplace_back(fish, TYPE_FOOD_FISH, room_id, rgen.rand_bool(), rgen.rand_bool(), RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN);
+	}
 }
 
 bool building_t::place_cup_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid, bool make_empty) {
@@ -5707,6 +5718,7 @@ bool building_t::place_eating_items_on_table(rand_gen_t &rgen, unsigned table_ob
 		set_cube_zvals(plate, table.z2(), table.z2()+plate_height); // place on the table
 		objs.emplace_back(plate, TYPE_PLATE, table.room_id, 0, 0, plate_flags, table.light_amt, SHAPE_CYLIN); // or bowl?
 		set_obj_id(objs);
+		place_food_on_plate(rgen, plate, table.room_id, table.light_amt);
 
 		if (building_obj_model_loader.is_model_valid(OBJ_MODEL_SILVER)) {
 			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SILVER)); // D, W, H

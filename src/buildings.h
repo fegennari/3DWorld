@@ -532,7 +532,7 @@ enum { // room object types
 	TYPE_HOOD, TYPE_RCHAIR, TYPE_SILVER, TYPE_TOY_MODEL, TYPE_CEIL_FAN, TYPE_FIRE_EXT, TYPE_FOLD_SHIRT, TYPE_PLANT_MODEL, TYPE_POOL_TABLE, TYPE_POOL_LAD,
 	TYPE_BAR_STOOL, TYPE_PADLOCK, TYPE_CHECKOUT, TYPE_WFOUNTAIN, TYPE_BANANA, TYPE_BAN_PEEL, TYPE_CONF_PHONE, TYPE_SHOE, TYPE_SHOEBOX, TYPE_VENT_FAN,
 	TYPE_HOSP_BED, TYPE_HOSP_CURT, TYPE_FORKLIFT, TYPE_WHEELCHAIR, TYPE_OP_TABLE, TYPE_TROLLEY, TYPE_STRETCHER, TYPE_APPLE, TYPE_EX_MACHINE, TYPE_VIS_PHONE,
-	TYPE_JUMPSUIT, TYPE_HANDGUN, TYPE_SHOP_CART, TYPE_CASHREG,
+	TYPE_JUMPSUIT, TYPE_HANDGUN, TYPE_SHOP_CART, TYPE_CASHREG, TYPE_FOOD_FISH,
 	/* shared with city objects */
 	TYPE_GBIKE, TYPE_XFORMER, TYPE_US_FLAG, TYPE_BLDG_FOUNT,
 	/* animals; bird is only used for pet stores */
@@ -618,7 +618,7 @@ enum {/*building models*/ OBJ_MODEL_TOILET=0, OBJ_MODEL_SINK, OBJ_MODEL_TUB, OBJ
 	OBJ_MODEL_FOLD_SHIRT, OBJ_MODEL_PLANT, OBJ_MODEL_POOL_TABLE, OBJ_MODEL_POOL_LAD, OBJ_MODEL_BAR_STOOL, OBJ_MODEL_PADLOCK, OBJ_MODEL_CHECKOUT, OBJ_MODEL_WFOUNTAIN,
 	OBJ_MODEL_BANANA, OBJ_MODEL_BAN_PEEL, OBJ_MODEL_PHONE, OBJ_MODEL_SHOE, OBJ_MODEL_SHOEBOX, OBJ_MODEL_VENT_FAN, OBJ_MODEL_HOSP_BED, OBJ_MODEL_HOSP_CURT, OBJ_MODEL_FORKLIFT,
 	OBJ_MODEL_WHEELCHAIR, OBJ_MODEL_OP_TABLE, OBJ_MODEL_TROLLEY, OBJ_MODEL_STRETCHER, OBJ_MODEL_APPLE, OBJ_MODEL_EX_MACHINE, OBJ_MODEL_VIS_PHONE, OBJ_MODEL_JUMPSUIT,
-	OBJ_MODEL_HANDGUN, OBJ_MODEL_SHOP_CART, OBJ_MODEL_CASHREG,
+	OBJ_MODEL_HANDGUN, OBJ_MODEL_SHOP_CART, OBJ_MODEL_CASHREG, OBJ_MODEL_FISH,
 	OBJ_MODEL_GBIKE/*unused*/, OBJ_MODEL_XFMR/*unused*/, OBJ_MODEL_US_FLAG/*unused*/, OBJ_MODEL_BLDG_FOUNT/*unused*/,
 	/*animal models*/ OBJ_MODEL_RAT, OBJ_MODEL_ROACH,
 	/*building non-room objects*/ OBJ_MODEL_DOOR_HANDLE,
@@ -3140,6 +3140,7 @@ private:
 	bool place_laptop_on_obj (rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid=vect_cube_t(), bool use_dim_dir=0);
 	bool place_pizza_on_obj  (rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid=vect_cube_t());
 	bool place_plate_on_obj  (rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid=vect_cube_t(), bool is_bowl=0, bool is_deep=0);
+	void place_food_on_plate (rand_gen_t &rgen, cube_t const &plate,    unsigned room_id, float tot_light_amt);
 	bool place_cup_on_obj    (rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid=vect_cube_t(), bool make_empty=0);
 	bool place_toy_on_obj    (rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid=vect_cube_t());
 	bool place_banana_on_obj (rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid=vect_cube_t());
