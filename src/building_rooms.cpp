@@ -1050,13 +1050,13 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				if (added_obj) {r->assign_to(RTYPE_STORAGE, f); ++num_storage_rooms;}
 			}
 			// maybe make a lounge to primary hallway office buildings
-			if (!added_obj && !floor_will_alias && !is_basement && is_office_bldg() && has_pri_hall() && r->is_office && !(has_lounge_mask & (1<<f)) &&
+			if (!added_obj && !floor_will_alias && !is_basement && is_office_bldg() && has_pri_hall() && r->is_office && !(has_lounge_mask & (1ULL<<f)) &&
 				min(r->dx(), r->dy()) > 1.5*window_vspacing && rgen.rand_float() < 0.1)
 			{
 				add_lounge_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, 0); // is_lobby=0
 				r->assign_to(RTYPE_LOUNGE, f);
 				added_obj = 1;
-				has_lounge_mask |= (1<<f);
+				has_lounge_mask |= (1ULL<<f);
 			}
 			// try to place a desk if there's no table, bed, etc.; this can be an office
 			if (!added_obj && (!is_basement || rgen.rand_bool())) {
