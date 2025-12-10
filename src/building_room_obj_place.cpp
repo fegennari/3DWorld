@@ -4822,12 +4822,13 @@ bool building_t::place_pizza_on_obj(rand_gen_t &rgen, cube_t const &place_on, un
 	return 1;
 }
 
+colorRGBA get_liquid_food_color(rand_gen_t &rgen) {
+	unsigned const num = 7;
+	colorRGBA const colors[num] = {WHITE, BROWN, LT_BROWN, DK_BROWN, OLIVE, colorRGBA(0.6, 0.25, 0.05), colorRGBA(0.6, 0.1, 0.05)};
+	return colors[rgen.rand() % num];
+}
 colorRGBA get_stain_color(rand_gen_t &rgen, bool is_food=0) {
-	if (is_food) {
-		unsigned const num = 7;
-		colorRGBA const colors[num] = {WHITE, BROWN, LT_BROWN, DK_BROWN, OLIVE, colorRGBA(0.6, 0.25, 0.05), colorRGBA(0.6, 0.1, 0.05)};
-		return colors[rgen.rand() % num];
-	}
+	if (is_food) return get_liquid_food_color(rgen);
 	colorRGBA color(BLACK); // color.B = 0.0
 	color.R = rgen.rand_uniform(0.0, 0.5);
 	color.G = rgen.rand_uniform(0.0, 0.5);

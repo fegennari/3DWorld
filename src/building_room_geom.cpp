@@ -41,6 +41,7 @@ bool add_cabinet_objects(room_object_t const &c, vect_room_object_t &objects);
 vector3d get_obj_model_rotated_dir(room_object_t const &obj, building_t const *const building);
 tid_nm_pair_t select_tile_floor_texture(bool use_granite, float tscale);
 tid_nm_pair_t get_scratched_metal_tex(float tscale, bool inc_shadows);
+colorRGBA get_liquid_food_color(rand_gen_t &rgen);
 void add_grid_of_bars(rgeom_mat_t &mat, colorRGBA const &color, cube_t const &c, unsigned num_vbars, unsigned num_hbars, float vbar_hthick,
 	float hbar_hthick, unsigned vdim, unsigned hdim, unsigned adj_dim=0, float h_adj_val=0.0, bool cylin_vbars=0, float tscale=1.0);
 
@@ -6269,6 +6270,14 @@ void building_room_geom_t::add_plate(room_object_t const &c) { // is_small=1
 		untex_mat.add_sphere_to_verts(bowl, color, 0, plus_z); // low_detail=0, bottom half
 		reverse(untex_mat.indices.begin()+ixs_start, untex_mat.indices.end()); // reverse for top surface
 		for (auto i = untex_mat.itri_verts.begin()+verts_start; i != untex_mat.itri_verts.end(); ++i) {i->invert_normal();} // invert normal
+		
+		if (!(c.flags & RO_FLAG_ADJ_TOP)) { // maybe add liquid in the bowl if otherwise empty (no apples)
+			rand_gen_t rgen(c.create_rgen());
+			float const liquid_level(0.5), radius(c.get_radius()*sqrt(liquid_level)); // TODO: random
+			point const center(c.xc(), c.yc(), (c.z1() + liquid_level*c.dz()));
+			colorRGBA const liquid_color(get_liquid_food_color(rgen));
+			get_untextured_material(0, 0, 1).add_vert_disk_to_verts(center, radius, 0, apply_light_color(c, liquid_color)); // unshadowed, small
+		}
 	}
 	else { // plate: truncated cone, sloped sides, bottom if vertical on on a glass table (ADJ_BOT)
 		bool const draw_bot(vertical || (c.flags & RO_FLAG_ADJ_BOT));
