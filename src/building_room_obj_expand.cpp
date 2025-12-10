@@ -351,6 +351,36 @@ void add_stack_of_plates(cube_t const &place_area, float radius, unsigned room_i
 		objects.push_back(obj);
 	}
 }
+void add_pizza_box_stack(cube_t const &shelf, bool dim, bool dir, unsigned flags, unsigned room_id, float light_amt, vect_room_object_t &objects, rand_gen_t &rgen) {
+	float const height(shelf.dz()), length(shelf.get_sz_dim(!dim)), depth(shelf.get_sz_dim(dim));
+	float const pbox_width(0.8*depth), pbox_height(0.1*pbox_width), pbox_space(0.2*pbox_width), pbox_stride(pbox_width + pbox_space);
+	unsigned const num_boxes(length/pbox_stride), max_stack_height(min(4U, unsigned(height/pbox_height))); // round down
+	if (num_boxes == 0 || max_stack_height == 0) return; // none can fit?
+	float const spacing(length/num_boxes), stack_xy_rand(1.0*pbox_space/max_stack_height);
+	point pos;
+	pos[ dim] = shelf.get_center_dim(dim);
+	pos[!dim] = shelf.d[!dim][0] + 0.5*spacing;
+	cube_t pizza;
+	pizza.set_from_point(pos);
+	set_cube_zvals(pizza, shelf.z1(), shelf.z1()+pbox_height);
+	pizza.expand_by_xy(0.5*pbox_width);
+
+	for (unsigned n = 0; n < num_boxes; ++n) {
+		unsigned const stack_sz(rgen.rand() % max_stack_height);
+		cube_t pizza_stacked(pizza);
+
+		for (unsigned N = 0; N < stack_sz; ++N) {
+			objects.emplace_back(pizza_stacked, TYPE_PIZZA_BOX, room_id, dim, dir, flags, light_amt);
+			point xlate;
+			xlate.z = pbox_height; // stacked vertically
+			for (unsigned d = 0; d < 2; ++d) {xlate[d] = stack_xy_rand*rgen.signed_rand_float();}
+			pizza_stacked.translate(xlate);
+			//if (pizza_stacked.intersects(back)) break; // leaning over, hit the back of the shelf, no more stacking
+			if (!shelf.contains_cube_xy(pizza_stacked)) break; // leaning over, off the shelf, no more stacking
+		}
+		pizza.translate_dim(!dim, spacing);
+	} // for n
+}
 
 cube_t get_freezer_ac_unit(room_object_t const &freezer) {
 	bool const dim(freezer.dim), dir(freezer.dir);
@@ -491,13 +521,20 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vect_room_
 					}
 				}
 				else { // freezer
-					blockers.clear();
-					blockers.push_back(ac);
-					shelf.expand_in_dim(sdim, -2.0*shelf_hthick); // shrink slightly to avoid vertical bars
-					unsigned const num_boxes(1 + (rgen.rand() % 5)); // 1-5
-					unsigned const box_flags(flags | RO_FLAG_USED | RO_FLAG_HANGING); // used=can't open, and bottom is visible
-					float const box_sz(0.4*shelf_depth), hscale(min(shelf.dz(), shelf_depth)), hmin(0.3*hscale), hmax(0.7*hscale);
-					add_boxes_to_space(c, objects, shelf, blockers, rgen, num_boxes, box_sz, hmin, hmax, 0, box_flags); // allow_crates=0
+					shelf.d[sdim][sdir] -= (sdir ? 1.0 : -1.0)*shelf_hthick; // shrink outer edge slightly to avoid vertical bars
+
+					if (!shelf.intersects(ac) && rgen.rand_float() < 0.4) { // add pizza boxes, but not in front of the AC
+						add_pizza_box_stack(shelf, sdim, sdir, (flags | RO_FLAG_HANGING), c.room_id, c.light_amt, objects, rgen);
+					}
+					else { // add random closed boxes
+						unsigned const num_boxes(2 + (rgen.rand() % 4)); // 2-5
+						unsigned const box_flags(flags | RO_FLAG_USED | RO_FLAG_HANGING); // used=can't open, and bottom is visible
+						float const box_sz(0.4*shelf_depth), hscale(min(shelf.dz(), shelf_depth)), hmin(0.3*hscale), hmax(0.7*hscale);
+						blockers.clear();
+						blockers.push_back(ac);
+						blockers.back().d[sdim][sdir] = shelf.d[sdim][sdir]; // extend to front of shelf to avoid blocking airflow
+						add_boxes_to_space(c, objects, shelf, blockers, rgen, num_boxes, box_sz, hmin, hmax, 0, box_flags); // allow_crates=0
+					}
 				}
 			} // for s
 		} // for n
@@ -1272,32 +1309,7 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 				rand_gen_t rgen2(rgen); // local rgen so that we get the same outcome for either value of add_models_model
 
 				if (n == 0) { // bottom shelf, add pizza; box can't be opened by the player
-					float const pbox_width(0.8*depth), pbox_height(0.1*pbox_width), pbox_space(0.2*pbox_width), pbox_stride(pbox_width + pbox_space);
-					unsigned const num_boxes(length/pbox_stride), max_stack_height(min(4U, unsigned(height/pbox_height))); // round down
-					if (num_boxes == 0 || max_stack_height == 0) continue; // none can fit?
-					float const spacing(length/num_boxes), stack_xy_rand(1.0*pbox_space/max_stack_height);
-					point pos;
-					pos[ c.dim] = shelf.get_center_dim(c.dim);
-					pos[!c.dim] = shelf.d[!c.dim][0] + 0.5*spacing;
-					cube_t pizza;
-					pizza.set_from_point(pos);
-					set_cube_zvals(pizza, shelf.z1(), shelf.z1()+pbox_height);
-					pizza.expand_by_xy(0.5*pbox_width);
-
-					for (unsigned n = 0; n < num_boxes; ++n) {
-						unsigned const stack_sz(rgen2.rand() % max_stack_height);
-						cube_t pizza_stacked(pizza);
-
-						for (unsigned N = 0; N < stack_sz; ++N) {
-							objects.emplace_back(pizza_stacked, TYPE_PIZZA_BOX, c.room_id, c.dim, dir, flags, c.light_amt);
-							point xlate;
-							xlate.z = pbox_height; // stacked vertically
-							for (unsigned d = 0; d < 2; ++d) {xlate[d] = stack_xy_rand*rgen2.signed_rand_float();}
-							pizza_stacked.translate(xlate);
-							if (pizza_stacked.intersects(back)) break; // leaning over, hit the back of the shelf, no more stacking
-						}
-						pizza.translate_dim(!c.dim, spacing);
-					} // for n
+					add_pizza_box_stack(shelf, c.dim, dir, flags, c.room_id, c.light_amt, objects, rgen);
 					continue;
 				}
 				else if (add_food_boxes && n >= num_shelves - num_food_box_shelves) { // add food boxes on upper shelves

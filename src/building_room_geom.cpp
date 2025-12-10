@@ -1523,7 +1523,7 @@ void building_room_geom_t::add_obj_with_top_texture(room_object_t const &c, stri
 	tex.set_specular(spec, shine, metalness);
 	rgeom_mat_t &mat(get_material(tex, 1, 0, is_small)); // shadows
 	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, ~EF_Z2, c.dim, (c.dim ^ c.dir ^ 1), c.dir); // top face only
-	unsigned const skip_faces(c.is_hanging() ? EF_Z2 : EF_Z12); // hanging keyboards and laptops must draw the Z1 face
+	unsigned const skip_faces(c.is_hanging() ? EF_Z2 : EF_Z12); // hanging keyboards, laptops, and pizza boxes on wire shelves must draw the Z1 face
 	rgeom_mat_t &sides_mat((metalness > 0.0) ? get_painted_metal_material(1, 0, is_small, 0, 0, spec, shine, metalness) : get_untextured_material(1, 0, is_small));
 	sides_mat.add_cube_to_verts_untextured(c, apply_light_color(c, sides_color), skip_faces); // sides and maybe bottom, shadows
 }
