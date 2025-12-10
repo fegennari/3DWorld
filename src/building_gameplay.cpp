@@ -1023,6 +1023,7 @@ public:
 		return added;
 	}
 	void consume_object(float liquid, float drunk, std::ostringstream &oss, colorRGBA &text_color) {
+		if (!in_building_gameplay_mode()) return;
 		bool const bladder_was_full(bladder >= 0.9);
 
 		if (liquid > 0.0) { // add one drink to the bladder, 25% of capacity
