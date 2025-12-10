@@ -2420,12 +2420,17 @@ cube_t building_t::add_restaurant_counter(cube_t const &wall, bool dim, bool dir
 	return counter;
 }
 
-bool building_t::add_object_to_tray(cube_t const &tray, bool dim, unsigned room_id, float light_amt, bool no_alcohol, vect_cube_t const &avoid, rand_gen_t &rgen) {
+bool building_t::add_object_to_tray(cube_t const &tray, bool dim, unsigned room_id, float light_amt, bool no_alcohol,
+	vect_cube_t const &avoid, rand_gen_t &rgen, unsigned &prev_type)
+{
 	cube_t place_area(tray);
 	place_area.z2() = tray.z1() + 0.1*tray.dz(); // top of tray
 	place_area.expand_by_xy(-0.1*tray.get_sz_dim(dim));
+	unsigned type_ix(rgen.rand() % 6);
+	if (type_ix == prev_type) {type_ix = ((type_ix+1) % 6);} // use a different type
+	prev_type = type_ix;
 
-	switch (rgen.rand() % 6) { // simplified version of the logic in add_mall_table_with_chairs()
+	switch (type_ix) { // simplified version of the logic in add_mall_table_with_chairs()
 	case 0: return place_bottle_on_obj(rgen, place_area, room_id, light_amt, avoid, 0, (no_alcohol ? BOTTLE_TYPE_COKE    : BOTTLE_TYPE_WINE   ));
 	case 1: return place_dcan_on_obj  (rgen, place_area, room_id, light_amt, avoid, 0, (no_alcohol ? DRINK_CAN_TYPE_COKE : DRINK_CAN_TYPE_BEER));
 	case 2: return place_cup_on_obj   (rgen, place_area, room_id, light_amt, avoid);
@@ -2438,10 +2443,11 @@ bool building_t::add_object_to_tray(cube_t const &tray, bool dim, unsigned room_
 unsigned building_t::add_objects_to_tray(cube_t const &tray, bool dim, unsigned room_id, float light_amt, bool no_alcohol, rand_gen_t &rgen, unsigned max_num) {
 	unsigned const num(rgen.rand() % (max_num+1));
 	static vect_cube_t avoid;
+	unsigned prev_type(255); // start at an invalid type
 	avoid.clear();
 
 	for (unsigned n = 0; n < num; ++n) {
-		if (add_object_to_tray(tray, dim, room_id, light_amt, no_alcohol, avoid, rgen)) {avoid.push_back(interior->room_geom->objs.back());}
+		if (add_object_to_tray(tray, dim, room_id, light_amt, no_alcohol, avoid, rgen, prev_type)) {avoid.push_back(interior->room_geom->objs.back());}
 	}
 	return avoid.size();
 }
