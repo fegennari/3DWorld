@@ -6273,10 +6273,14 @@ void building_room_geom_t::add_plate(room_object_t const &c) { // is_small=1
 		
 		if (!(c.flags & RO_FLAG_ADJ_TOP)) { // maybe add liquid in the bowl if otherwise empty (no apples)
 			rand_gen_t rgen(c.create_rgen());
-			float const liquid_level(0.5), radius(c.get_radius()*sqrt(liquid_level)); // TODO: random
-			point const center(c.xc(), c.yc(), (c.z1() + liquid_level*c.dz()));
-			colorRGBA const liquid_color(get_liquid_food_color(rgen));
-			get_untextured_material(0, 0, 1).add_vert_disk_to_verts(center, radius, 0, apply_light_color(c, liquid_color)); // unshadowed, small
+			float const liquid_level(rgen.rand_uniform(-0.5, 0.8)); // random amount, sometimes empty
+
+			if (liquid_level > 0.0) {
+				float const radius(c.get_radius()*sqrt(liquid_level));
+				point const center(c.xc(), c.yc(), (c.z1() + liquid_level*c.dz()));
+				colorRGBA const liquid_color(get_liquid_food_color(rgen));
+				get_untextured_material(0, 0, 1).add_vert_disk_to_verts(center, radius, 0, apply_light_color(c, liquid_color)); // unshadowed, small
+			}
 		}
 	}
 	else { // plate: truncated cone, sloped sides, bottom if vertical on on a glass table (ADJ_BOT)
