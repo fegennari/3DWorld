@@ -639,33 +639,50 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 	bool const dim(c.dim), dir(c.dir), open(c.is_open()), use_small_door(c.is_small_closet()), draw_interior(open || player_in_closet);
 	bool const in_kitchen(c.item_flags == RTYPE_KITCHEN), is_freezer(c.is_freezer());
 	float const wall_thick(get_closet_wall_thickness(c)), trim_hwidth(0.3*wall_thick);
-	cube_t cubes[5];
+	cube_t cubes[5]; // front left, left side, front right, right side, [door]
 	get_closet_cubes(c, cubes);
 
 	if (inc_lg) { // draw closet walls and doors
-		rgeom_mat_t &wall_mat(is_freezer ? get_metal_material(1) : get_material(get_scaled_wall_tex(wall_tex), 1)); // shadowed
-		// need to draw the face that's against the wall for the shadow pass if the closet light is on, if the player is in the closet, or if the doors are open
-		unsigned const skip_faces(EF_Z12); // skip top and bottom
-
-		for (unsigned d = 0; d < 2; ++d) {
-			bool const adj_room_wall(c.flags & (d ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO));
-			unsigned const extra_skip_faces(adj_room_wall ? ~get_face_mask(!dim, d) : 0); // adjacent to room wall, skip that face
-			// only need to draw side wall when not adjacent to room wall; skip front face of side wall
-			if (!adj_room_wall) {wall_mat.add_cube_to_verts(cubes[2*d+1], c.color, tex_origin, (skip_faces | extra_skip_faces | get_skip_mask_for_xy(dim)));}
-			unsigned const front_wall_skip_flags((draw_interior ? EF_Z12 : skip_faces) | extra_skip_faces);
-			wall_mat.add_cube_to_verts(cubes[2*d], c.color, tex_origin, front_wall_skip_flags); // Note: c.color should be wall color
-		} // for d
 		if (is_freezer) {
-			// draw back wall, ceiling, floor, and maybe top surface
+			// draw exterior surfaces with reflective metal
+			rgeom_mat_t &wall_mat(get_metal_material(1)); // shadowed
+			unsigned const front_face(get_face_mask(dim, dir)), back_face(get_face_mask(dim, !dir));
 			bool const draw_top_surface(c.flags & RO_FLAG_IN_MALL);
-			unsigned const front_face(get_face_mask(dim, dir));
+			cube_t const back(get_freezer_back_wall(c));
 			cube_t bot(c), top(c);
 			bot.z2() = c.z1() + 0.02*wall_thick; // floor
 			top.z1() = c.z2() - 0.10*wall_thick; // ceiling
 			if (draw_top_surface) {top.z2() = top.z1() + wall_thick;}
-			wall_mat.add_cube_to_verts(get_freezer_back_wall(c), c.color, tex_origin, front_face);
-			wall_mat.add_cube_to_verts(bot, c.color, tex_origin, ~(EF_Z2 | ~front_face));
-			wall_mat.add_cube_to_verts(top, c.color, tex_origin, (draw_top_surface ? ~get_face_mask(dim, !dir) : ~(EF_Z1 | ~front_face)));
+			wall_mat.add_cube_to_verts(bot, c.color, tex_origin, front_face);
+			wall_mat.add_cube_to_verts(top, c.color, tex_origin, (draw_top_surface ? (~back_face | EF_Z1) : front_face));
+
+			for (unsigned d = 0; d < 2; ++d) {
+				wall_mat.add_cube_to_verts(cubes[2*d+1], c.color, tex_origin, get_face_mask(!dim, d)); // side
+				wall_mat.add_cube_to_verts(cubes[2*d  ], c.color, tex_origin, (EF_Z12 | ~back_face )); // front
+			}
+			// draw interior surfaces with 50% reflective white painted metal
+			rgeom_mat_t &int_mat(get_metal_material(1, 0, 0, 0, 0, WHITE, 0.8, 60.0, 0.5));
+			int_mat.add_cube_to_verts(back, c.color, tex_origin, front_face);
+			int_mat.add_cube_to_verts(bot,  c.color, tex_origin, ~EF_Z2);
+			int_mat.add_cube_to_verts(top,  c.color, tex_origin, ~EF_Z1);
+
+			for (unsigned d = 0; d < 2; ++d) {
+				int_mat.add_cube_to_verts(cubes[2*d+1], c.color, tex_origin, get_face_mask(!dim, !d)); // side
+				int_mat.add_cube_to_verts(cubes[2*d  ], c.color, tex_origin, back_face); // front
+			}
+		}
+		else { // closet or pantry
+			rgeom_mat_t &wall_mat(get_material(get_scaled_wall_tex(wall_tex), 1)); // shadowed
+
+			for (unsigned d = 0; d < 2; ++d) {
+				bool const adj_room_wall(c.flags & (d ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO));
+				unsigned const extra_skip_faces(adj_room_wall ? ~get_face_mask(!dim, d) : 0); // adjacent to room wall, skip that face
+				// only need to draw side wall when not adjacent to room wall; skip front face of side wall
+				if (!adj_room_wall) {wall_mat.add_cube_to_verts(cubes[2*d+1], c.color, tex_origin, (EF_Z12 | get_skip_mask_for_xy(dim)));}
+				// need to draw the face that's against the wall for the shadow pass if the closet light is on, if the player is in the closet, or if the doors are open
+				unsigned const front_wall_skip_flags(EF_Z12 | extra_skip_faces);
+				wall_mat.add_cube_to_verts(cubes[2*d], c.color, tex_origin, front_wall_skip_flags); // Note: c.color should be wall color
+			} // for d
 		}
 		cube_t const &doors(cubes[4]);
 		point const llc(doors.get_llc());
@@ -730,7 +747,7 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 					door.d[!dim][0] = doors_no_trim.d[!dim][0] +  N   *door_spacing + gaps[N  ]; // left  edge
 					door.d[!dim][1] = doors_no_trim.d[!dim][0] + (N+1)*door_spacing - gaps[N+1]; // right edge
 					if (!doors_fold && (n == 1 || n == 2)) {door.translate_dim(dim, -1.1*out_sign*door_thickness);} // inset the inner sliding doors
-					door_mat.add_cube_to_verts(door, WHITE, llc, skip_faces);
+					door_mat.add_cube_to_verts(door, WHITE, llc, EF_Z12);
 				}
 			}
 		}
