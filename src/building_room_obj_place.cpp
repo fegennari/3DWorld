@@ -2858,14 +2858,30 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id,
 	float light_amt, unsigned objs_start, light_ix_assign_t &light_ix_assign)
 {
-	float const floor_spacing(get_window_vspace());
+	float const floor_spacing(get_window_vspace()), wall_thick(get_wall_thickness());
 	vector2d const room_sz(room.get_size_xy());
 	if (room_sz.get_min_val() < 2.0*floor_spacing || room_sz.get_max_val() < 3.0*floor_spacing) return 0; // too small
 	bool const in_mall(room.is_ext_basement() && has_mall()), dim(room_sz.x < room_sz.y); // long dim
+	bool const add_island(room.get_sz_dim(!dim) > 3.0*floor_spacing); // if room is wide enough, add a center island
 	float const ceil_zval(zval + floor_spacing - get_fc_thickness());
-	cube_t const place_area(get_walkable_room_bounds(room));
+	//cube_t const place_area(get_walkable_room_bounds(room));
+	cube_t place_area(get_room_wall_bounds(room));
+	place_area.expand_by_xy(-get_trim_thickness());
 	if (!has_tile_floor() && !in_mall) {zval = add_flooring(room, zval, room_id, light_amt, FLOORING_LGTILE);} // prison and maybe school
 	vect_room_object_t &objs(interior->room_geom->objs);
+
+	if (add_island) {
+		float const wall_hlen(0.25*room.get_sz_dim(!dim));
+		cube_t wall;
+		set_cube_zvals(wall, zval, (zval + 0.35*floor_spacing));
+		set_wall_width(wall, room.get_center_dim(!dim), 0.5*wall_thick, !dim);
+		set_wall_width(wall, room.get_center_dim( dim), wall_hlen,       dim);
+		add_short_wall_with_trim(wall, !dim, room_id, light_amt, WHITE);
+		cube_t counter(wall);
+		set_cube_zvals(counter, wall.z2(), (wall.z2() + wall_thick));
+		counter.expand_by_xy(0.5*wall_thick);
+		objs.emplace_back(counter, TYPE_METAL_BAR, room_id, dim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, LT_GRAY, 0);
+	}
 	// add walk-in freezer as a "closet" type
 	float const clearance(get_min_front_clearance_inc_people());
 	unsigned closet_obj_id(0);
@@ -2883,13 +2899,28 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 	// add hood
 	//cube_t hood; // TODO
 	
-	// TODO: center island, big grill, multiple sinks, stacks of dishes, metal racks, walk in freezer, ovens, hood, vent; all shiny metal
-	// TYPE_KITCH_APP: KCA_GRILL, KCA_OVEN, KCA_FRYER, KCA_FREEZER
 	unsigned num_fridges((rgen.rand() % 3) + 2); // 2-4
 
 	for (unsigned i = 0; i < num_fridges; ++i) {
 		place_model_along_wall(OBJ_MODEL_FRIDGE, TYPE_FRIDGE, room, 0.75, rgen, zval, room_id, light_amt, place_area, objs_start, 1.2, 4, 0, WHITE, 1);
 	}
+	// TODO: big grill, multiple sinks, stacks of dishes, metal racks, ovens; all shiny metal
+	// TYPE_KITCH_APP: KCA_GRILL, KCA_OVEN, KCA_FRYER, KCA_FREEZER
+	unsigned fail_count(0);
+
+	for (unsigned n = 0; n < 20; ++n) { // place up to 20 kitchen appliances; stop after enough failures
+		unsigned const app_type(rgen.rand()), obj_ix(objs.size());
+		float const height(rgen.rand_uniform(0.32, 0.48)*floor_spacing);
+		vector3d sz_scale(1.0, 1.0, 1.0);
+		sz_scale[ dim] = rgen.rand_uniform(0.8, 2.0); // width
+		sz_scale[!dim] = rgen.rand_uniform(0.6, 1.1); // depth
+		
+		if (!place_obj_along_wall(TYPE_KITCH_APP, room, height, sz_scale, rgen, zval, room_id, light_amt, place_area, objs_start, 0.5, 1, 4, 0, WHITE, 1, SHAPE_CUBE, 0.0)) {
+			if (++fail_count >= 4) break; // stop after 4 failures
+			continue;
+		}
+		objs[obj_ix].item_flags = app_type;
+	} // for n
 	add_mwave_on_table  (rgen, room, zval, room_id, light_amt, objs_start, place_area); // placeholder
 	add_corner_trashcans(rgen, room, zval, room_id, light_amt, objs_start, dim, 1); // both_ends=1
 	// add trolleys with plates; seems like this can work in a kitchen

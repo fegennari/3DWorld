@@ -7230,6 +7230,9 @@ void building_room_geom_t::add_conveyor_belt(room_object_t const &c, bool draw_d
 
 void building_room_geom_t::add_kitchen_appliance(room_object_t const &c) {
 	unsigned const type(c.item_flags % NUM_KC_APP);
+	colorRGBA const color(apply_light_color(c));
+	rgeom_mat_t &metal_mat(get_metal_material(1)); // shadowed
+	metal_mat.add_cube_to_verts_untextured(c, color, EF_Z1); // placeholder
 	// TODO
 
 	if (type == KCA_GRILL) {
