@@ -2386,14 +2386,7 @@ cube_t building_t::add_restaurant_counter(cube_t const &wall, bool dim, bool dir
 			if (place_plate_on_obj(rgen, place_area, room_id, light_amt, avoid, (rgen.rand_float() < 0.35))) {avoid.push_back(objs.back());}
 			break;
 		case 2: { // tray
-			float const width(0.22*min(window_vspace, counter_len)), depth(min(0.6*width, 0.95*place_area.get_sz_dim(dim))), height(0.03*width);
-			cube_t tray;
-			set_cube_zvals(tray, place_area.z2(), place_area.z2()+height);
-			vector3d const tray_sz(0.5*(dim ? width : depth), 0.5*(dim ? depth : width), height);
-			gen_xy_pos_for_cube_obj(tray, place_area, tray_sz, height, rgen);
-			if (has_bcube_int(tray, avoid)) continue; // blocked
-			add_cafeteria_tray(tray, dim, room_id, light_amt, 0, rgen); // no_alcohol=0
-			avoid.push_back(tray);
+			add_cafeteria_tray_to_surface(place_area, dim, room_id, light_amt, avoid, rgen);
 			break;
 		}
 		} // end switch
@@ -2464,6 +2457,20 @@ void building_t::add_cafeteria_tray(cube_t const &tray, bool dim, unsigned room_
 		point const pos(tray.xc(), tray.yc(), (tray.z1() + 0.2*tray.dz())); // centered, on top of top surface of tray, under any placed items
 		interior->room_geom->decal_manager.add_blood_or_stain(pos, stain_radius, color, 0, 2, 1); // is_blood=0; +z
 		objs[tray_obj_ix].flags |= RO_FLAG_BROKEN; // mark as stained
+	}
+}
+void building_t::add_cafeteria_tray_to_surface(cube_t const &surface, bool dim, unsigned room_id, float light_amt, vect_cube_t &avoid, rand_gen_t &rgen) {
+	float const width(min(0.22f*get_window_vspace(), 0.8f*surface.get_sz_dim(!dim))), depth(min(0.63*width, 0.95*surface.get_sz_dim(dim))), height(0.03*width);
+	cube_t tray;
+	set_cube_zvals(tray, surface.z2(), surface.z2()+height);
+	vector3d const tray_sz(0.5*(dim ? width : depth), 0.5*(dim ? depth : width), height);
+
+	for (unsigned n = 0; n < 4; ++n) { // 4 attempts
+		gen_xy_pos_for_cube_obj(tray, surface, tray_sz, height, rgen);
+		if (has_bcube_int(tray, avoid)) continue; // blocked
+		add_cafeteria_tray(tray, dim, room_id, light_amt, 0, rgen); // no_alcohol=0
+		avoid.push_back(tray);
+		break;
 	}
 }
 
