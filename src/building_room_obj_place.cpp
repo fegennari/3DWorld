@@ -2855,35 +2855,74 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 	return placed_obj;
 }
 
+vector3d gen_kitchen_app_size(float floor_spacing, bool dim, rand_gen_t &rgen) {
+	float const height(rgen.rand_uniform(0.32, 0.48)*floor_spacing);
+	vector3d sz_scale(1.0, 1.0, 1.0);
+	sz_scale[!dim] = rgen.rand_uniform(0.8, 2.0); // width
+	sz_scale[ dim] = rgen.rand_uniform(0.6, 1.1); // depth
+	sz_scale *= height;
+	return sz_scale;
+}
 bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id,
 	float light_amt, unsigned objs_start, light_ix_assign_t &light_ix_assign)
 {
-	float const floor_spacing(get_window_vspace()), wall_thick(get_wall_thickness());
+	float const floor_spacing(get_window_vspace()), wall_thick(get_wall_thickness()), trim_thick(get_trim_thickness());
 	vector2d const room_sz(room.get_size_xy());
 	if (room_sz.get_min_val() < 2.0*floor_spacing || room_sz.get_max_val() < 3.0*floor_spacing) return 0; // too small
 	bool const in_mall(room.is_ext_basement() && has_mall()), dim(room_sz.x < room_sz.y); // long dim
 	bool const add_island(room.get_sz_dim(!dim) > 3.0*floor_spacing); // if room is wide enough, add a center island
-	float const ceil_zval(zval + floor_spacing - get_fc_thickness());
-	//cube_t const place_area(get_walkable_room_bounds(room));
+	float const ceil_zval(zval + floor_spacing - get_fc_thickness()), clearance(get_min_front_clearance_inc_people());
 	cube_t place_area(get_room_wall_bounds(room));
-	place_area.expand_by_xy(-get_trim_thickness());
+	place_area.expand_by_xy(-trim_thick);
 	if (!has_tile_floor() && !in_mall) {zval = add_flooring(room, zval, room_id, light_amt, FLOORING_LGTILE);} // prison and maybe school
 	vect_room_object_t &objs(interior->room_geom->objs);
 
-	if (add_island) {
-		float const wall_hlen(0.25*room.get_sz_dim(!dim));
-		cube_t wall;
-		set_cube_zvals(wall, zval, (zval + 0.35*floor_spacing));
-		set_wall_width(wall, room.get_center_dim(!dim), 0.5*wall_thick, !dim);
-		set_wall_width(wall, room.get_center_dim( dim), wall_hlen,       dim);
-		add_short_wall_with_trim(wall, !dim, room_id, light_amt, WHITE);
-		cube_t counter(wall);
-		set_cube_zvals(counter, wall.z2(), (wall.z2() + wall_thick));
-		counter.expand_by_xy(0.5*wall_thick);
-		objs.emplace_back(counter, TYPE_METAL_BAR, room_id, dim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, LT_GRAY, 0);
+	if (add_island) { // add a custom table created from metal bars
+		float const room_len(room.get_sz_dim(!dim));
+		float const table_len(min(0.5f*room_len, (room_len - 2.0f*floor_spacing))), table_width(min(0.4f*table_len, 0.6f*floor_spacing));
+		unsigned const num_legs_per_side(max(2U, (unsigned)(0.8*room_len/floor_spacing)));
+		float const leg_width(0.7*wall_thick), leg_hwidth(0.5*leg_width), leg_spacing((table_len - 2.0*leg_width)/(num_legs_per_side - 1));
+		cube_t table;
+		set_cube_zvals(table, zval, (zval + 0.3*floor_spacing + wall_thick));
+		set_wall_width(table, room.get_center_dim(!dim), 0.5*table_width, !dim);
+		set_wall_width(table, room.get_center_dim( dim), 0.5*table_len,    dim);
+		cube_t top(table), leg(table);
+		top.z1() = leg.z2() = table.z2() - wall_thick;
+		objs.emplace_back(top, TYPE_METAL_BAR, room_id, dim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, WHITE, 0);
+
+		for (unsigned n = 0; n < num_legs_per_side; ++n) {
+			set_wall_width(leg, (table.d[dim][0] + leg_width + n*leg_spacing), leg_hwidth, dim);
+
+			for (unsigned d = 0; d < 2; ++d) { // each side
+				set_wall_width(leg, (table.d[!dim][d] + (d ? -1.0 : 1.0)*leg_width), leg_hwidth, !dim);
+				objs.emplace_back(leg, TYPE_METAL_BAR, room_id, 0, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, WHITE, EF_Z12); // skip drawing of top and bottom
+			}
+		} // for n
+		objs.emplace_back(table, TYPE_COLLIDER, room_id, 0, 0, RO_FLAG_INVIS, light_amt);
+		// place objects on the table; similar to building_t::add_restaurant_counter()
+		unsigned const num_cont (2 + (rgen.rand() % 7)); // 2-8
+		unsigned const num_pizza(0 + (rgen.rand() % 3)); // 0-2
+		vect_cube_t avoid;
+
+		for (unsigned n = 0; n < num_cont; ++n) { // containers
+			switch (rgen.rand()%3) { // TYPE_SILVER?
+			case 0: // cup
+				if (place_cup_on_obj  (rgen, table, room_id, light_amt, avoid)) {avoid.push_back(objs.back());}
+				break;
+			case 1: // plate or bowl
+				if (place_plate_on_obj(rgen, table, room_id, light_amt, avoid, (rgen.rand_float() < 0.35))) {avoid.push_back(objs.back());}
+				break;
+			case 2: { // tray
+				add_cafeteria_tray_to_surface(table, !dim, room_id, light_amt, avoid, rgen);
+				break;
+			}
+			} // end switch
+		}
+		for (unsigned n = 0; n < num_pizza; ++n) { // pizza
+			if (place_pizza_on_obj(rgen, table, room_id, light_amt, avoid)) {avoid.push_back(objs.back());} // random dim/dir
+		}
 	}
 	// add walk-in freezer as a "closet" type
-	float const clearance(get_min_front_clearance_inc_people());
 	unsigned closet_obj_id(0);
 	cube_t avoid;
 	
@@ -2897,7 +2936,7 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 		add_ceiling_ducts(room, ceil_zval, room_id, dim, skip_dir, light_amt, 0, 1, 1, rgen, 0.5, avoid); // cylin_ducts=0, skip_ends=1, skip_top=1, sz_scale=0.5
 	}
 	// add hood
-	//cube_t hood; // TODO
+	//cube_t hood; // TODO - must avoid ceiling lights
 	
 	unsigned num_fridges((rgen.rand() % 3) + 2); // 2-4
 
@@ -2906,21 +2945,46 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 	}
 	// TODO: big grill, multiple sinks, stacks of dishes, metal racks, ovens; all shiny metal
 	// TYPE_KITCH_APP: KCA_GRILL, KCA_OVEN, KCA_FRYER, KCA_FREEZER
+	float const app_gap(trim_thick); // must be large enough to prevent cube intersection
 	unsigned fail_count(0);
 
 	for (unsigned n = 0; n < 20; ++n) { // place up to 20 kitchen appliances; stop after enough failures
 		unsigned const app_type(rgen.rand()), obj_ix(objs.size());
-		float const height(rgen.rand_uniform(0.32, 0.48)*floor_spacing);
-		vector3d sz_scale(1.0, 1.0, 1.0);
-		sz_scale[ dim] = rgen.rand_uniform(0.8, 2.0); // width
-		sz_scale[!dim] = rgen.rand_uniform(0.6, 1.1); // depth
+		vector3d const app_sz(gen_kitchen_app_size(floor_spacing, 0, rgen));
 		
-		if (!place_obj_along_wall(TYPE_KITCH_APP, room, height, sz_scale, rgen, zval, room_id, light_amt, place_area, objs_start, 0.5, 1, 4, 0, WHITE, 1, SHAPE_CUBE, 0.0)) {
-			if (++fail_count >= 4) break; // stop after 4 failures
+		if (!place_obj_along_wall(TYPE_KITCH_APP, room, app_sz.z, app_sz, rgen, zval, room_id, light_amt, place_area, objs_start, 0.5, 1, 4, 0, WHITE, 1, SHAPE_CUBE, 0.0)) {
+			if (++fail_count >= 10) break; // stop after 10 failures
 			continue;
 		}
 		objs[obj_ix].item_flags = app_type;
+		room_object_t const app(objs[obj_ix]); // deep copy to avoid reference invalidation
+		bool const adim(app.dim), adir(app.dir);
+
+		for (unsigned d = 0; d < 2; ++d) { // for each side of this appliance
+			cube_t prev(app);
+
+			for (unsigned m = 0; m < 3; ++m) { // up to 3 neighbors
+				vector3d const app_sz2(gen_kitchen_app_size(floor_spacing, adim, rgen));
+				room_object_t app2(app);
+				app2.d[!adim][!d] = prev.d[!adim][ d] + (d ? 1.0 : -1.0)*app_gap; // adj edge
+				app2.d[!adim][ d] = app2.d[!adim][!d] + (d ? 1.0 : -1.0)*app_sz2[!adim]; // far edge
+				app2.d[ adim][adir] = app.d[ adim][!adir] + (adir ? 1.0 : -1.0)*app_sz2[adim]; // front
+				app2.z2() = app2.z1() + app_sz2.z;
+				if (!place_area.contains_cube_xy(app2) || is_obj_placement_blocked(app2, room, 1)) break;
+				if (overlaps_other_room_obj(app2, objs_start) || check_if_against_window(app2, room, adim, !adir)) break;
+				app2.item_flags = rgen.rand(); // random type
+				app2.obj_id     = objs.size();
+				objs.push_back(app2);
+				prev = app2;
+				float const front(app2.d[adim][adir]);
+				cube_t blocker(app2);
+				blocker.d[adim][!adir] = front;
+				blocker.d[adim][ adir] = front + (adir ? 1.0 : -1.0)*clearance; // extend in front
+				objs.emplace_back(blocker, TYPE_BLOCKER, room_id, 0, 0, RO_FLAG_INVIS, light_amt);
+			} // for m
+		} // for d
 	} // for n
+	// what about placing appliances on the sides of the center table?
 	add_mwave_on_table  (rgen, room, zval, room_id, light_amt, objs_start, place_area); // placeholder
 	add_corner_trashcans(rgen, room, zval, room_id, light_amt, objs_start, dim, 1); // both_ends=1
 	// add trolleys with plates; seems like this can work in a kitchen
