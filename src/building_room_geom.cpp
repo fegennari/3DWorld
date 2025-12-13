@@ -1111,7 +1111,7 @@ void building_room_geom_t::add_box(room_object_t const &c) { // is_small=1
 	float const sz(2048), x1(12/sz), x2(576/sz), x3(1458/sz), y1(1-1667/sz), y2(1-1263/sz), y3(1-535/sz); //, x4(2032/sz), y4(1-128/sz); // Note: don't use all parts of the texture
 	unsigned verts_start(mat.quad_verts.size());
 	colorRGBA const color(apply_light_color(c));
-	unsigned skip_faces(0), num_z_faces(2), vert_ix(0);
+	unsigned skip_faces(0), num_z_faces(2);
 	if (!c.is_hanging()) {skip_faces |= EF_Z1; --num_z_faces;} // skip bottom face if not on a mesh shelf
 	if ( c.is_open   ()) {skip_faces |= EF_Z2; --num_z_faces;} // skip top face if open
 	mat.add_cube_to_verts(c, color, zero_vector, skip_faces);

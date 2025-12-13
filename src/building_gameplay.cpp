@@ -1518,7 +1518,7 @@ bool use_vending_machine(room_object_t &obj) {
 		} // for n
 		// no valid item? then give an animal; should be rare
 		string   const animal_names  [4] = {"rat", "snake", "spider", "cockroach"};
-		unsigned const animal_weights[4] = {0.8, 2.0, 0.1, 0.01};
+		float    const animal_weights[4] = {0.8, 2.0, 0.1, 0.01};
 		unsigned const animal_type(rgen.rand() & 3);
 		player_inventory.add_custom_item(custom_item_t(animal_names[animal_type], 0.0, animal_weights[animal_type])); // value=0.0
 		return 1; // success
@@ -1785,7 +1785,7 @@ bool object_can_have_something_on_it(room_object_t const &obj) {
 	return (type == TYPE_TABLE || type == TYPE_DESK || type == TYPE_COUNTER || type == TYPE_DRESSER || type == TYPE_NIGHTSTAND || type == TYPE_CONF_TABLE ||
 		type == TYPE_RDESK || obj.is_crate_or_box() || type == TYPE_WINE_RACK || type == TYPE_BOOK || type == TYPE_STOVE || type == TYPE_MWAVE || type == TYPE_BED ||
 		type == TYPE_SERVER || type == TYPE_PIZZA_BOX || type == TYPE_LAPTOP || type == TYPE_FOLD_SHIRT || type == TYPE_PALLET || type == TYPE_COAT_RACK ||
-		type == TYPE_TROLLEY || (type == TYPE_FOOD_TRAY || type == TYPE_PLATE) && (obj.flags & RO_FLAG_ADJ_TOP) /*|| type == TYPE_FCABINET*/ /*|| type == TYPE_SHELF*/);
+		type == TYPE_TROLLEY || ((type == TYPE_FOOD_TRAY || type == TYPE_PLATE) && (obj.flags & RO_FLAG_ADJ_TOP)) /*|| type == TYPE_FCABINET*/ /*|| type == TYPE_SHELF*/);
 }
 bool object_has_something_on_it(room_object_t const &obj, vect_room_object_t const &objs, vect_room_object_t::const_iterator objs_end) {
 	if (!object_can_have_something_on_it(obj)) return 0;
