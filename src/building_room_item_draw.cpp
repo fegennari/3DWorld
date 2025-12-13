@@ -671,7 +671,6 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		case TYPE_LOCKER:    add_locker(*i); break;
 		case TYPE_PARK_GATE: add_parking_gate (*i); break;
 		case TYPE_CONV_BELT: add_conveyor_belt(*i, 0); break; // draw_dynamic=0
-		case TYPE_KITCH_APP: add_kitchen_appliance(*i); break;
 		case TYPE_COAT_RACK: add_coat_rack(*i, tscale); break;
 		//case TYPE_FRIDGE: if (i->is_open()) {} break; // draw open fridge?
 		case TYPE_ELEVATOR: break; // not handled here
@@ -1600,12 +1599,12 @@ void draw_obj_model(obj_model_inst_t const &i, room_object_t const &obj, shader_
 	bool const upside_down((type == TYPE_RAT || type == TYPE_ROACH || type == TYPE_INSECT) && obj.is_broken());
 	float const refract_ix((type == TYPE_SINK     || type == TYPE_URINAL) ? 1.5 : 1.0);
 	float metalness(0.0), specular(0.0), shine(0.0);
-	if      (type == TYPE_POOL_LAD  ) {metalness = 1.0; specular = 1.0; shine = 80.0;} // object already has a low specular set, but is mostly metal
-	else if (type == TYPE_HOOD      ) {metalness = 0.5; specular = 1.0; shine = 40.0;} // painted metal
-	else if (type == TYPE_PADLOCK   ) {metalness = 1.0; specular = 0.5; shine = 60.0;} // only the shackle should be reflective?
-	else if (type == TYPE_TROLLEY   ) {metalness = 1.0; specular = 0.6; shine = 60.0;} // for hospitals
-	else if (type == TYPE_WFOUNTAIN ) {metalness = 1.0; specular = 0.4; shine = 50.0;} // part metal and part painted metal
-	else if (type == TYPE_CK_APP_MOD) {metalness = 1.0; specular = 0.8; shine = 60.0;} // shiny metal
+	if      (type == TYPE_POOL_LAD ) {metalness = 1.0; specular = 1.0; shine = 80.0;} // object already has a low specular set, but is mostly metal
+	else if (type == TYPE_HOOD     ) {metalness = 0.5; specular = 1.0; shine = 40.0;} // painted metal
+	else if (type == TYPE_PADLOCK  ) {metalness = 1.0; specular = 0.5; shine = 60.0;} // only the shackle should be reflective?
+	else if (type == TYPE_TROLLEY  ) {metalness = 1.0; specular = 0.6; shine = 60.0;} // for hospitals
+	else if (type == TYPE_WFOUNTAIN) {metalness = 1.0; specular = 0.4; shine = 50.0;} // part metal and part painted metal
+	else if (type == TYPE_KITCH_APP) {metalness = 1.0; specular = 0.8; shine = 60.0;} // shiny metal
 	if (emissive_first_mat) {s.set_color_e(LAMP_COLOR*0.4);}
 	if (use_low_z_bias    ) {s.add_uniform_float("norm_bias_scale", 0.5*DEF_NORM_BIAS_SCALE);} // half the default value
 	if (refract_ix > 1.0  ) {s.set_refract_ix(refract_ix);}

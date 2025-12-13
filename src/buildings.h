@@ -525,23 +525,20 @@ enum { // room object types
 	TYPE_CATWALK, TYPE_VANITY, TYPE_CHEM_TANK, TYPE_HVAC_UNIT, TYPE_WARN_LIGHT, TYPE_GAUGE, TYPE_PALLET, TYPE_SHELF_WALL, TYPE_VENDING, TYPE_MED_CAB,
 	TYPE_LOCKER, TYPE_TESTTUBE, TYPE_HARDHAT, TYPE_TOPHAT, TYPE_COMP_MOUSE, TYPE_PARK_GATE, TYPE_CONV_BELT, TYPE_JAIL_BARS, TYPE_STICK_NOTE, TYPE_GYM_WEIGHT,
 	TYPE_FOOD_TRAY, TYPE_BAR_SOAP, TYPE_COAT_RACK, TYPE_O_SHOWER, TYPE_CARD_DECK, TYPE_CIGARETTE, TYPE_BULLETS, TYPE_CEIL_TILE, TYPE_WALL_GAP, TYPE_MUSHROOM,
-	TYPE_SHELL_CASE, TYPE_PAN_SHELF, TYPE_JAR, TYPE_KITCH_APP,
+	TYPE_SHELL_CASE, TYPE_PAN_SHELF, TYPE_JAR,
 	/* these next ones are all 3D models - see logic in room_object_t::is_obj_model_type() */
 	TYPE_TOILET, TYPE_SINK, TYPE_TUB, TYPE_FRIDGE, TYPE_STOVE, TYPE_TV, TYPE_MONITOR, TYPE_COUCH, TYPE_OFF_CHAIR, TYPE_URINAL,
 	TYPE_LAMP, TYPE_WASHER, TYPE_DRYER, TYPE_KEY, TYPE_HANGER, TYPE_CLOTHES, TYPE_FESCAPE, TYPE_WALL_LAMP, TYPE_CUP, TYPE_TOASTER,
 	TYPE_HOOD, TYPE_RCHAIR, TYPE_SILVER, TYPE_TOY_MODEL, TYPE_CEIL_FAN, TYPE_FIRE_EXT, TYPE_FOLD_SHIRT, TYPE_PLANT_MODEL, TYPE_POOL_TABLE, TYPE_POOL_LAD,
 	TYPE_BAR_STOOL, TYPE_PADLOCK, TYPE_CHECKOUT, TYPE_WFOUNTAIN, TYPE_BANANA, TYPE_BAN_PEEL, TYPE_CONF_PHONE, TYPE_SHOE, TYPE_SHOEBOX, TYPE_VENT_FAN,
 	TYPE_HOSP_BED, TYPE_HOSP_CURT, TYPE_FORKLIFT, TYPE_WHEELCHAIR, TYPE_OP_TABLE, TYPE_TROLLEY, TYPE_STRETCHER, TYPE_APPLE, TYPE_EX_MACHINE, TYPE_VIS_PHONE,
-	TYPE_JUMPSUIT, TYPE_HANDGUN, TYPE_SHOP_CART, TYPE_CASHREG, TYPE_FOOD_FISH, TYPE_CK_APP_MOD,
+	TYPE_JUMPSUIT, TYPE_HANDGUN, TYPE_SHOP_CART, TYPE_CASHREG, TYPE_FOOD_FISH, TYPE_KITCH_APP,
 	/* shared with city objects */
 	TYPE_GBIKE, TYPE_XFORMER, TYPE_US_FLAG, TYPE_BLDG_FOUNT,
 	/* animals; bird is only used for pet stores */
 	TYPE_RAT, TYPE_ROACH, TYPE_SPIDER, TYPE_SNAKE, TYPE_INSECT, TYPE_FISH, TYPE_BIRD,
 	NUM_ROBJ_TYPES};
 typedef uint8_t room_object;
-
-// commercial kitchen appliances
-enum {KCA_GRILL=0, KCA_FRYER, KCA_OVEN, KCA_SINK, KCA_HOOD, NUM_KC_APP};
 
 // room object and stairs shapes
 enum {SHAPE_CUBE=0, SHAPE_CYLIN, SHAPE_SPHERE, SHAPE_STAIRS_U, SHAPE_STAIRS_L, SHAPE_STAIRS_FAN, SHAPE_TALL, SHAPE_SHORT, SHAPE_ANGLED, SHAPE_VERT_TORUS, SHAPE_ROUNDED_CUBE};
@@ -818,7 +815,7 @@ struct room_object_t : public oriented_cube_t { // size=68
 	bool is_round  () const {return (shape == SHAPE_CYLIN || shape == SHAPE_SPHERE || shape == SHAPE_VERT_TORUS);}
 	bool is_a_drink() const {return (type == TYPE_BOTTLE || type == TYPE_DRINK_CAN);}
 	bool is_pet_container() const {return (type == TYPE_FISHTANK || type == TYPE_PET_CAGE);}
-	bool is_metal_model() const {return (type == TYPE_SILVER || type == TYPE_KEY || type == TYPE_HANDGUN || type == TYPE_CK_APP_MOD);}
+	bool is_metal_model() const {return (type == TYPE_SILVER || type == TYPE_KEY || type == TYPE_HANDGUN || type == TYPE_KITCH_APP);}
 	bool is_horizontal_cylin   () const {return (shape == SHAPE_CYLIN && (type == TYPE_DUCT || type == TYPE_PIPE || type == TYPE_VALVE || type == TYPE_METAL_BAR));}
 	bool has_text              () const {return (type == TYPE_BOOK || type == TYPE_BCASE || type == TYPE_SIGN || type == TYPE_BUTTON || type == TYPE_SHELFRACK);}
 	unsigned get_bottle_type   () const {return ((obj_id&63) % NUM_BOTTLE_TYPES   );} // first 6 bits are bottle type
@@ -1560,7 +1557,6 @@ struct building_room_geom_t {
 	void add_vent_fan_frame(room_object_t const &c);
 	void add_parking_gate (room_object_t const &c);
 	void add_conveyor_belt(room_object_t const &c, bool draw_dynamic);
-	void add_kitchen_appliance(room_object_t const &c);
 	void add_store_gate(cube_t const &c, bool dim, float open_amt);
 	void add_jail_bars(room_object_t const &c);
 	void add_theft_sensor(room_object_t const &c, bool alarm_mode=0);
