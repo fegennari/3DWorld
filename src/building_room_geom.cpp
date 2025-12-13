@@ -7232,20 +7232,21 @@ void building_room_geom_t::add_kitchen_appliance(room_object_t const &c) {
 	unsigned const type(c.item_flags % NUM_KC_APP);
 	colorRGBA const color(apply_light_color(c));
 	rgeom_mat_t &metal_mat(get_metal_material(1)); // shadowed
-	metal_mat.add_cube_to_verts_untextured(c, color, EF_Z1); // placeholder
-	// TODO
 
 	if (type == KCA_GRILL) {
-
-	}
-	else if (type == KCA_OVEN) {
-
+		metal_mat.add_cube_to_verts_untextured(c, color, EF_Z1); // TODO: placeholder
 	}
 	else if (type == KCA_FRYER) {
-
+		metal_mat.add_cube_to_verts_untextured(c, color, EF_Z1); // TODO: placeholder
 	}
-	else if (type == KCA_FREEZER) {
-
+	else if (type == KCA_OVEN) {
+		metal_mat.add_cube_to_verts_untextured(c, color, EF_Z1); // TODO: placeholder
+	}
+	else if (type == KCA_SINK) {
+		metal_mat.add_cube_to_verts_untextured(c, color, EF_Z1); // TODO: placeholder
+	}
+	else if (type == KCA_HOOD) {
+		metal_mat.add_cube_to_verts_untextured(c, color, EF_Z1); // TODO: placeholder
 	}
 	else {assert(0);}
 }

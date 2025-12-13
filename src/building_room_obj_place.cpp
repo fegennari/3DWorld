@@ -2855,13 +2855,28 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 	return placed_obj;
 }
 
-vector3d gen_kitchen_app_size(float floor_spacing, bool dim, rand_gen_t &rgen) {
-	float const height(rgen.rand_uniform(0.32, 0.48)*floor_spacing);
-	vector3d sz_scale(1.0, 1.0, 1.0);
-	sz_scale[!dim] = rgen.rand_uniform(0.8, 2.0); // width
-	sz_scale[ dim] = rgen.rand_uniform(0.6, 1.1); // depth
-	sz_scale *= height;
-	return sz_scale;
+struct app_params_t {
+	unsigned type;
+	//bool on_ceil=0; // for hood
+	vector3d sscale; // relative to floor spacing
+
+	app_params_t(unsigned type_=0) : type(type_), sscale(1.0, 1.0, 1.0) {}
+
+	void set_scale(float hmin, float hmax, float wmin, float wmax, float dmin, float dmax, bool dim, rand_gen_t &rgen) {
+		sscale[!dim] = rgen.rand_uniform(wmin, wmax); // width/height
+		sscale[ dim] = rgen.rand_uniform(dmin, dmax); // depth/height
+		sscale      *= rgen.rand_uniform(hmin, hmax); // height
+	}
+};
+app_params_t gen_kitchen_app_size(float floor_spacing, bool dim, rand_gen_t &rgen) {
+	app_params_t ap(rgen.rand() % (NUM_KC_APP-1)); // random type; no hood
+	if      (ap.type == KCA_GRILL) {ap.set_scale(0.32, 0.36,  1.2, 2.0,  0.6, 0.7,  dim, rgen);}
+	else if (ap.type == KCA_FRYER) {ap.set_scale(0.32, 0.36,  0.6, 0.8,  0.6, 0.7,  dim, rgen);}
+	else if (ap.type == KCA_OVEN ) {ap.set_scale(0.38, 0.50,  0.6, 0.8,  0.4, 0.6,  dim, rgen);}
+	else if (ap.type == KCA_SINK ) {ap.set_scale(0.30, 0.34,  1.2, 1.6,  0.5, 0.6,  dim, rgen);}
+	else {assert(0);}
+	ap.sscale *= floor_spacing;
+	return ap;
 }
 bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id,
 	float light_amt, unsigned objs_start, light_ix_assign_t &light_ix_assign)
@@ -2905,7 +2920,7 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 		vect_cube_t avoid;
 
 		for (unsigned n = 0; n < num_cont; ++n) { // containers
-			switch (rgen.rand()%3) { // TYPE_SILVER?
+			switch (rgen.rand()%3) {
 			case 0: // cup
 				if (place_cup_on_obj  (rgen, table, room_id, light_amt, avoid)) {avoid.push_back(objs.back());}
 				break;
@@ -2949,14 +2964,16 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 	unsigned fail_count(0);
 
 	for (unsigned n = 0; n < 20; ++n) { // place up to 20 kitchen appliances; stop after enough failures
-		unsigned const app_type(rgen.rand()), obj_ix(objs.size());
-		vector3d const app_sz(gen_kitchen_app_size(floor_spacing, 0, rgen));
+		unsigned obj_ix(objs.size());
+		app_params_t const ap(gen_kitchen_app_size(floor_spacing, dim, rgen));
 		
-		if (!place_obj_along_wall(TYPE_KITCH_APP, room, app_sz.z, app_sz, rgen, zval, room_id, light_amt, place_area, objs_start, 0.5, 1, 4, 0, WHITE, 1, SHAPE_CUBE, 0.0)) {
+		if (!place_obj_along_wall(TYPE_KITCH_APP, room, ap.sscale.z, ap.sscale, rgen, zval, room_id, light_amt,
+			place_area, objs_start, 0.5, 1, 4, 0, WHITE, 1, SHAPE_CUBE, 0.0))
+		{
 			if (++fail_count >= 10) break; // stop after 10 failures
 			continue;
 		}
-		objs[obj_ix].item_flags = app_type;
+		objs[obj_ix].item_flags = ap.type;
 		room_object_t const app(objs[obj_ix]); // deep copy to avoid reference invalidation
 		bool const adim(app.dim), adir(app.dir);
 
@@ -2964,15 +2981,15 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 			cube_t prev(app);
 
 			for (unsigned m = 0; m < 3; ++m) { // up to 3 neighbors
-				vector3d const app_sz2(gen_kitchen_app_size(floor_spacing, adim, rgen));
+				app_params_t const ap2(gen_kitchen_app_size(floor_spacing, dim, rgen));
 				room_object_t app2(app);
 				app2.d[!adim][!d] = prev.d[!adim][ d] + (d ? 1.0 : -1.0)*app_gap; // adj edge
-				app2.d[!adim][ d] = app2.d[!adim][!d] + (d ? 1.0 : -1.0)*app_sz2[!adim]; // far edge
-				app2.d[ adim][adir] = app.d[ adim][!adir] + (adir ? 1.0 : -1.0)*app_sz2[adim]; // front
-				app2.z2() = app2.z1() + app_sz2.z;
+				app2.d[!adim][ d] = app2.d[!adim][!d] + (d ? 1.0 : -1.0)*ap2.sscale[!adim]; // far edge
+				app2.d[ adim][adir] = app.d[ adim][!adir] + (adir ? 1.0 : -1.0)*ap2.sscale[adim]; // front
+				app2.z2() = app2.z1() + ap2.sscale.z;
 				if (!place_area.contains_cube_xy(app2) || is_obj_placement_blocked(app2, room, 1)) break;
 				if (overlaps_other_room_obj(app2, objs_start) || check_if_against_window(app2, room, adim, !adir)) break;
-				app2.item_flags = rgen.rand(); // random type
+				app2.item_flags = ap2.type;
 				app2.obj_id     = objs.size();
 				objs.push_back(app2);
 				prev = app2;

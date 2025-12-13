@@ -541,7 +541,7 @@ enum { // room object types
 typedef uint8_t room_object;
 
 // commercial kitchen appliances
-enum {KCA_GRILL=0, KCA_OVEN, KCA_FRYER, KCA_FREEZER, NUM_KC_APP};
+enum {KCA_GRILL=0, KCA_FRYER, KCA_OVEN, KCA_SINK, KCA_HOOD, NUM_KC_APP};
 
 // room object and stairs shapes
 enum {SHAPE_CUBE=0, SHAPE_CYLIN, SHAPE_SPHERE, SHAPE_STAIRS_U, SHAPE_STAIRS_L, SHAPE_STAIRS_FAN, SHAPE_TALL, SHAPE_SHORT, SHAPE_ANGLED, SHAPE_VERT_TORUS, SHAPE_ROUNDED_CUBE};
