@@ -252,13 +252,6 @@ city wind_turbine_model ../models/wind_turbine.glb                0 0 0  -1 -1 9
 city bb_hoop_model      ../models/basketball_hoop.glb             0 0 0  -1 -1 270 1 1.0 10.0
 city gas_pump_model     ../models/gas_pumps/shell_gas_pump.glb    0 0 0  -1 -1  0  1 1.0 1.0 # has inverted normals on some faces
 city gas_pump_model     ../models/gas_pumps/gas_pump.glb          0 0 0  -1 -1 90  1 1.0 1.0 # has inverted text    on some faces
-# gym machine models; size value determines height relative to half a floor's spacing
-city ex_machine_model   ../models/interiors/exercise/dumbell_rack.glb    0 0 0  -1 -1 90  1 0.7 16.0
-city ex_machine_model   ../models/interiors/exercise/roman_chair.glb     0 0 0  -1 -1 0   1 0.7 0.4
-city ex_machine_model   ../models/interiors/exercise/exercise_bike.glb   0 0 0  -1 -1 0   1 1.1 1.0
-city ex_machine_model   ../models/interiors/exercise/horizontal_bar.glb  0 0 0  -1 -1 0   1 1.5 0.01
-city ex_machine_model   ../models/interiors/exercise/leg_press.glb       0 0 0  -1 -1 0   1 1.1 1.0
-city ex_machine_model   ../models/interiors/exercise/treadmill.glb       0 0 0  -1 -1 0   1 1.2 1.0
 #city vis_phone_model    ../models/interiors/phone/PhoneButtons.fbx       0 0 0  -1 -1 0   1 1.0 1.0
 city vis_phone_model    ../models/interiors/phone/PhoneNoButtons.fbx     0 0 0  -1 -1 0   1 1.0 1.0
 city jumpsuit_model     ../models/interiors/Jumpsuit.fbx                 0 0 0  -1 -1 0   1 1.0 1.0
@@ -268,6 +261,18 @@ city handgun_model      ../models/interiors/guns/m1911_handgun.glb       0 0 0  
 city handgun_model      ../models/interiors/guns/walther_p88_gun.glb     0 0 0  -1 -1 90  0 1.0 1.0
 city shop_cart_model    ../models/interiors/shopping_cart.glb            0 0 0  -1 -1 90  1 1.0 1.0
 city fish_model         model_data/fish/fishOBJ.model3d                  0 0 0  -1 -1 0   1 1.0 1.0 # Note: will load this twice
+
+# models with multiple sub-types; size value determines height relative to half a floor's spacing
+# gym exercise machine models
+city ex_machine_model   ../models/interiors/exercise/dumbell_rack.glb    0 0 0  -1 -1 90  1 0.7 16.0
+city ex_machine_model   ../models/interiors/exercise/roman_chair.glb     0 0 0  -1 -1 0   1 0.7 0.4
+city ex_machine_model   ../models/interiors/exercise/exercise_bike.glb   0 0 0  -1 -1 0   1 1.1 1.0
+city ex_machine_model   ../models/interiors/exercise/horizontal_bar.glb  0 0 0  -1 -1 0   1 1.5 0.01
+city ex_machine_model   ../models/interiors/exercise/leg_press.glb       0 0 0  -1 -1 0   1 1.1 1.0
+city ex_machine_model   ../models/interiors/exercise/treadmill.glb       0 0 0  -1 -1 0   1 1.2 1.0
+# commercial kitchen appliance models
+city ck_appliance_model ../models/interiors/kitchen/built-in_oven.glb    0 0 0  -1 -1 0   1 0.8 1.0
+
 
 # closet/clothing objects
 # filename recalc_normals two_sided centered body_material_id fixed_color_id xy_rot swap_xyz scale lod_mult [keywords] [shadow_mat_ids]

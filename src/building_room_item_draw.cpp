@@ -1447,7 +1447,7 @@ int room_object_t::get_model_id() const { // Note: first 8 bits is model ID, las
 	int id((int)type + OBJ_MODEL_TOILET - TYPE_TOILET);
 	// choose a sub_model_id for these types using bits 8-15
 	if (type == TYPE_HANGER || type == TYPE_CLOTHES || type == TYPE_PLANT_MODEL || type == TYPE_SHOE || type == TYPE_HOSP_BED || type == TYPE_APPLE ||
-		type == TYPE_EX_MACHINE || type == TYPE_HANDGUN)
+		type == TYPE_EX_MACHINE || type == TYPE_HANDGUN || type == TYPE_KITCH_APP)
 	{
 		id += pack_sub_model_id(item_flags);
 	}
@@ -1600,11 +1600,12 @@ void draw_obj_model(obj_model_inst_t const &i, room_object_t const &obj, shader_
 	bool const upside_down((type == TYPE_RAT || type == TYPE_ROACH || type == TYPE_INSECT) && obj.is_broken());
 	float const refract_ix((type == TYPE_SINK     || type == TYPE_URINAL) ? 1.5 : 1.0);
 	float metalness(0.0), specular(0.0), shine(0.0);
-	if      (type == TYPE_POOL_LAD ) {metalness = 1.0; specular = 1.0; shine = 80.0;} // object already has a low specular set, but is mostly metal
-	else if (type == TYPE_HOOD     ) {metalness = 0.5; specular = 1.0; shine = 40.0;} // painted metal
-	else if (type == TYPE_PADLOCK  ) {metalness = 1.0; specular = 0.5; shine = 60.0;} // only the shackle should be reflective?
-	else if (type == TYPE_TROLLEY  ) {metalness = 1.0; specular = 0.6; shine = 60.0;} // for hospitals
-	else if (type == TYPE_WFOUNTAIN) {metalness = 1.0; specular = 0.4; shine = 50.0;} // part metal and part painted metal
+	if      (type == TYPE_POOL_LAD  ) {metalness = 1.0; specular = 1.0; shine = 80.0;} // object already has a low specular set, but is mostly metal
+	else if (type == TYPE_HOOD      ) {metalness = 0.5; specular = 1.0; shine = 40.0;} // painted metal
+	else if (type == TYPE_PADLOCK   ) {metalness = 1.0; specular = 0.5; shine = 60.0;} // only the shackle should be reflective?
+	else if (type == TYPE_TROLLEY   ) {metalness = 1.0; specular = 0.6; shine = 60.0;} // for hospitals
+	else if (type == TYPE_WFOUNTAIN ) {metalness = 1.0; specular = 0.4; shine = 50.0;} // part metal and part painted metal
+	else if (type == TYPE_CK_APP_MOD) {metalness = 1.0; specular = 0.8; shine = 60.0;} // shiny metal
 	if (emissive_first_mat) {s.set_color_e(LAMP_COLOR*0.4);}
 	if (use_low_z_bias    ) {s.add_uniform_float("norm_bias_scale", 0.5*DEF_NORM_BIAS_SCALE);} // half the default value
 	if (refract_ix > 1.0  ) {s.set_refract_ix(refract_ix);}
@@ -1651,7 +1652,7 @@ float get_ao_shadow(room_object_t const &c, bool enable_indir) {
 	// include types that don't contribute to indir lighting; these always contribute AO shadows
 	if (type == TYPE_BAR_STOOL || type == TYPE_SHELVES || type == TYPE_CONV_BELT || type == TYPE_EX_MACHINE || type == TYPE_SHOP_CART) return 0.25; // light shadow
 	if (type == TYPE_OFF_CHAIR || type == TYPE_BENCH || type == TYPE_RCHAIR || type == TYPE_CHECKOUT || type == TYPE_CHEM_TANK || type == TYPE_HOSP_BED) return 0.5; // medium shadow
-	if (type == TYPE_WHEELCHAIR || type == TYPE_OP_TABLE || type == TYPE_TROLLEY || type == TYPE_EX_MACHINE) return 0.5; // medium shadow
+	if (type == TYPE_WHEELCHAIR || type == TYPE_OP_TABLE || type == TYPE_TROLLEY) return 0.5; // medium shadow
 	if (type == TYPE_PARK_SPACE && c.is_used()) return 0.75; // parked car; dense shadow
 	//TYPE_PALLET? or is that too expensive?
 	if (enable_indir) return 0.0; // skip objects below because they're already handled by indir lighting
