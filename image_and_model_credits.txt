@@ -58,3 +58,5 @@ Oak Veneer: https://polyhaven.com/a/oak_veneer_01
 Plywood: https://polyhaven.com/a/plywood
 Cash Register: https://sketchfab.com/3d-models/canarian-cafe-cash-register-a785cf24aa624c30a69b59c60c473d8d
 Built-In Oven: https://sketchfab.com/3d-models/built-in-oven-50be70931dcb4a838b906382233a28f1
+Kitchen Sink: https://sketchfab.com/3d-models/kitchen-sink-504248ed68e3480a807aced6f002b2d5
+Deep Fryer: https://sketchfab.com/3d-models/commercial-deep-fryer-14a3e351ed02498088886bb6acdbefec

@@ -2855,34 +2855,54 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 	return placed_obj;
 }
 
-// commercial kitchen appliances, read from model config file;
-// should agree with the set of models specified in the config file, but won't fail if models are missing or extra
-enum {KCA_BI_OVEN=0, NUM_KC_APP};
+// commercial kitchen appliances, read from model config file; should agree with the set of models specified in the config file
+enum {KCA_BI_OVEN=0, KCA_DEEP_FRYER, KCA_SINK, NUM_KC_APP};
 
 struct ck_app_model_t {
 	unsigned app_type=0, model_id=0;
 
 	void assign(rand_gen_t &rgen) {
-		app_type = (rgen.rand() % building_obj_model_loader.get_num_sub_models(OBJ_MODEL_CK_APP));
+		unsigned const num_sub_models(building_obj_model_loader.get_num_sub_models(OBJ_MODEL_CK_APP));
+		assert(num_sub_models == NUM_KC_APP);
+		app_type = (rgen.rand() % num_sub_models);
 		model_id = combine_model_submodel_id(OBJ_MODEL_CK_APP, app_type);
 	}
-	float get_height() const {return 0.5*building_obj_model_loader.get_model(model_id).scale;} // in units of floor spacing}
+	float    get_height  () const {return 0.5*building_obj_model_loader.get_model(model_id).scale;} // in units of floor spacing
+	vector3d get_sz_scale() const {return     building_obj_model_loader.get_model_world_space_size(model_id);}
 
 	void add_exterior(vect_room_object_t &objs, unsigned obj_ix) {
 		assert(obj_ix < objs.size());
-		room_object_t const &app(objs[obj_ix]);
+		room_object_t const app(objs[obj_ix]); // deep copy
 		bool const dim(app.dim), dir(app.dir);
-		cube_t c(app);
+		float const height(app.dz());
+		cube_t frame(app);
+		float z_shift(0.0);
 		unsigned skip_faces(0); // 0=don't draw
+		bool add_platform(0);
 
 		if (app_type == KCA_BI_OVEN) { // front face only; add sides, top, and back
 			skip_faces = ~get_face_mask(dim, dir) | EF_Z1;
-			if (app_type == KCA_BI_OVEN) {c.d[dim][dir] -= (dir ? 1.0 : -1.0)*0.09*app.get_depth();} // oven; shift front edge behind door
+			if (app_type == KCA_BI_OVEN) {frame.d[dim][dir] -= (dir ? 1.0 : -1.0)*0.09*app.get_depth();} // oven; shift front edge behind door
 		}
-		else if (app_type == 9999) { // top face only; draw front, sides, and back
+		else if (app_type == KCA_SINK) { // top face only; draw front, sides, and back
+			z_shift = 0.3*height;
+			frame.z2() = app.z1() + z_shift + 0.49*height;
 			skip_faces = EF_Z12;
 		}
-		if (skip_faces) {objs.emplace_back(c, TYPE_METAL_BAR, app.room_id, dim, dir, RO_FLAG_NOCOLL, app.light_amt, SHAPE_CUBE, WHITE, skip_faces);}
+		if (app_type == KCA_BI_OVEN   ) {z_shift = 0.6*height; add_platform = 1;}
+		if (app_type == KCA_DEEP_FRYER) {z_shift = 0.4*height; add_platform = 1;}
+
+		if (add_platform) { // place this object on a platform/table; should this be merged across adjacent objects at the same height?
+			assert(z_shift > 0.0);
+			cube_t platform(app);
+			platform.z2() = app.z1() + z_shift;
+			objs.emplace_back(platform, TYPE_METAL_BAR, app.room_id, dim, dir, 0, app.light_amt, SHAPE_CUBE, WHITE, EF_Z1);
+		}
+		if (z_shift > 0.0) {objs[obj_ix].translate_dim(2, z_shift);} // shift up
+
+		if (skip_faces) { // add missing sides of this model
+			objs.emplace_back(frame, TYPE_METAL_BAR, app.room_id, dim, dir, RO_FLAG_NOCOLL, app.light_amt, SHAPE_CUBE, WHITE, skip_faces);
+		}
 	}
 };
 
@@ -2922,6 +2942,7 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 			}
 		} // for n
 		objs.emplace_back(table, TYPE_COLLIDER, room_id, 0, 0, RO_FLAG_INVIS, light_amt);
+		// TODO: can put some smaller objects such as deep fryer on the table
 		// place objects on the table; similar to building_t::add_restaurant_counter()
 		unsigned const num_cont (2 + (rgen.rand() % 7)); // 2-8
 		unsigned const num_pizza(0 + (rgen.rand() % 3)); // 0-2
@@ -2985,21 +3006,22 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 		app_model.add_exterior(objs, obj_ix);
 		room_object_t const app(objs[obj_ix]); // deep copy to avoid reference invalidation
 		bool const adim(app.dim), adir(app.dir);
+		assert(app.item_flags == app_model.app_type);
 
 		for (unsigned d = 0; d < 2; ++d) { // for each side of this appliance
 			cube_t prev(app);
 
 			for (unsigned m = 0; m < 3; ++m) { // up to 3 neighbors
 				app_model.assign(rgen);
-				float const height(floor_spacing*app_model.get_height());
-				vector3d const sz_scale(building_obj_model_loader.get_model_world_space_size(app_model.model_id)); // D, W, H
+				vector3d const sz_scale(app_model.get_sz_scale()); // D, W, H
+				float const height(floor_spacing*app_model.get_height()), depth(height*sz_scale.x/sz_scale.z), width(height*sz_scale.y/sz_scale.z);
 				room_object_t app2(app);
-				app2.d[!adim][!d  ] = prev.d[!adim][ d] + (d ? 1.0 : -1.0)*app_gap; // adj edge
-				app2.d[!adim][ d  ] = app2.d[!adim][!d] + (d ? 1.0 : -1.0)*height*sz_scale[!adim]/sz_scale.z; // far edge
-				app2.d[ adim][adir] = app.d[ adim][!adir] + (adir ? 1.0 : -1.0)*height*sz_scale[adim]/sz_scale.z; // front
-				app2.z2() = app2.z1() + height;
-				if (!place_area.contains_cube_xy(app2) || is_obj_placement_blocked(app2, room, 1)) break;
-				if (overlaps_other_room_obj(app2, objs_start) || check_if_against_window(app2, room, adim, !adir)) break;
+				app2.d[!adim][!d  ] = prev.d[!adim][ d   ] + (d    ? 1.0 : -1.0)*app_gap; // adj edge
+				app2.d[!adim][ d  ] = app2.d[!adim][!d   ] + (d    ? 1.0 : -1.0)*width  ; // far edge
+				app2.d[ adim][adir] = app .d[ adim][!adir] + (adir ? 1.0 : -1.0)*depth  ; // front
+				set_cube_zvals(app2, zval, (zval + height));
+				if (!place_area.contains_cube_xy(app2)        || is_obj_placement_blocked(app2, room, 1)) break;
+				if (overlaps_other_room_obj(app2, objs_start) || check_if_against_window (app2, room, adim, !adir)) break;
 				app2.item_flags = app_model.app_type;
 				objs.push_back(app2);
 				app_model.add_exterior(objs, objs.size()-1);
@@ -3008,7 +3030,7 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 				cube_t blocker(app2);
 				blocker.d[adim][!adir] = front;
 				blocker.d[adim][ adir] = front + (adir ? 1.0 : -1.0)*clearance; // extend in front
-				objs.emplace_back(blocker, TYPE_BLOCKER, room_id, 0, 0, RO_FLAG_INVIS, light_amt);
+				objs.emplace_back(blocker, TYPE_BLOCKER, room_id, adim, adir, RO_FLAG_INVIS, light_amt);
 			} // for m
 		} // for d
 	} // for n
