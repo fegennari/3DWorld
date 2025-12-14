@@ -2076,16 +2076,21 @@ colorRGBA model3d::set_color_for_material(unsigned mat_id, colorRGBA const &colo
 	}
 	return orig_color;
 }
-
 int model3d::set_texture_for_material(unsigned mat_id, int tid) { // returns the original texture ID
 	int orig_tid(tid);
 	if (mat_id == materials.size()) {swap(orig_tid, unbound_mat.tid);} // unbound geom is material ID materials.size() (one past the end)
 	else {swap(orig_tid, get_material(mat_id).d_tid);}
 	return orig_tid;
 }
-
 void model3d::set_material_emissive_color(unsigned mat_id, colorRGBA const &color) {
 	get_material(mat_id).ke = color; // Note: mat_id cannot map to unbound_mat
+}
+void model3d::set_all_mat_specular(colorRGBA const &ks, float ns, float metalness) { // used for building commercial kitchen objects
+	for (material_t &m : materials) {
+		if (ks.A      >  0.0) {m.ks = ks;}
+		if (ns        >  0.0) {m.ns = ns;}
+		if (metalness >= 0.0) {m.metalness = metalness;}
+	}
 }
 
 

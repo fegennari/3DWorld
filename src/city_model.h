@@ -128,6 +128,7 @@ public:
 	virtual bool can_skip_model(unsigned id) const;
 	virtual city_model_t const &get_model(unsigned id) const;
 	virtual city_model_t       &get_model(unsigned id);
+	void set_all_material_specular(unsigned id, colorRGBA const &ks, float ns, float metalness);
 };
 
 inline bool string_find(string const &s, string const &v) {return (s.find(v) != string::npos);}

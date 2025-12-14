@@ -650,6 +650,7 @@ public:
 	colorRGBA set_color_for_material(unsigned mat_id, colorRGBA const &color);
 	int set_texture_for_material(unsigned mat_id, int tid);
 	void set_material_emissive_color(unsigned mat_id, colorRGBA const &color);
+	void set_all_mat_specular(colorRGBA const &ks, float ns=0.0, float metalness=-1.0);
 	void ensure_reflection_cube_map();
 	cube_t get_single_transformed_bcube(vector3d const &xlate=zero_vector) const;
 	void setup_shadow_maps();

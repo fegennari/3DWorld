@@ -408,6 +408,9 @@ city_model_t &object_model_loader_t::get_model(unsigned id) {
 	if (model_id < 0) return null_model;
 	return models[model_id];
 }
+void object_model_loader_t::set_all_material_specular(unsigned id, colorRGBA const &ks, float ns, float metalness) {
+	get_model3d(id).set_all_mat_specular(ks, ns, metalness);
+}
 
 bool city_params_t::add_model(unsigned id, FILE *fp) {
 	if (id >= NUM_OBJ_MODELS) {cout << TXT(id) << TXT(NUM_OBJ_MODELS) << endl;}
