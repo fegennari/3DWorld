@@ -584,8 +584,8 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 		} // for d
 	} // for n
 	// what about placing appliances on the sides of the center table?
-	add_mwave_on_table  (rgen, room, zval, room_id, light_amt, objs_start, place_area); // placeholder
-	add_corner_trashcans(rgen, room, zval, room_id, light_amt, objs_start, dim, 1); // both_ends=1
+	add_mwave_on_table  (rgen, room, zval, room_id, light_amt, objs_start, place_area, 1); // plastic=1
+	add_corner_trashcans(rgen, room, zval, room_id, light_amt, objs_start, dim,        1); // both_ends=1
 	// add trolleys with plates; seems like this can work in a kitchen
 	unsigned num_trolleys((rgen.rand() % 2) + 2); // 2-3
 	vect_cube_t blockers;
@@ -611,7 +611,9 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 	return 1;
 }
 
-bool building_t::add_mwave_on_table(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, cube_t const &place_area) {
+bool building_t::add_mwave_on_table(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id,
+	float tot_light_amt, unsigned objs_start, cube_t const &place_area, bool plastic)
+{
 	float const window_vspacing(get_window_vspace()), table_height(rgen.rand_uniform(0.33, 0.36)*window_vspacing);
 	float const mheight(rgen.rand_uniform(1.0, 1.2)*0.14*window_vspacing), mwidth(1.7*mheight), mdepth(1.2*mheight); // fixed AR=1.7 to match the texture
 	vector3d const sz_scale(rgen.rand_uniform(1.5, 1.8)*mdepth, rgen.rand_uniform(1.5, 1.8)*mwidth, table_height); // depth, width, height
@@ -621,7 +623,8 @@ bool building_t::add_mwave_on_table(rand_gen_t &rgen, room_t const &room, float 
 	room_object_t &table(objs[table_obj_ix]);
 	bool const dim(table.dim), dir(table.dir);
 	float const pos(rgen.rand_uniform((table.d[!dim][0] + 0.6*mwidth), (table.d[!dim][1] - 0.6*mwidth)));
-	table.flags |= RO_FLAG_ADJ_TOP; // flag as having a microwave so that we don't add a book or bottle that could overlap it
+	table.flags     |= RO_FLAG_ADJ_TOP; // flag as having a microwave so that we don't add a book or bottle that could overlap it
+	table.item_flags = (plastic ? 1 : 0);
 	cube_t mwave;
 	set_cube_zvals(mwave, table.z2(), table.z2()+mheight);
 	set_wall_width(mwave, pos, 0.5*mwidth, !dim);
