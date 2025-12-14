@@ -489,6 +489,7 @@
     <ClCompile Include="src\building_attic.cpp" />
     <ClCompile Include="src\building_backrooms.cpp" />
     <ClCompile Include="src\building_basement.cpp" />
+    <ClCompile Include="src\building_bathroom.cpp" />
     <ClCompile Include="src\building_clocks.cpp" />
     <ClCompile Include="src\building_ext_basement.cpp" />
     <ClCompile Include="src\building_factory.cpp" />
@@ -499,6 +500,7 @@
     <ClCompile Include="src\building_hospital.cpp" />
     <ClCompile Include="src\building_interact.cpp" />
     <ClCompile Include="src\building_jail.cpp" />
+    <ClCompile Include="src\building_kitchen.cpp" />
     <ClCompile Include="src\building_lighting.cpp" />
     <ClCompile Include="src\building_machines.cpp" />
     <ClCompile Include="src\building_mall.cpp" />

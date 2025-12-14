@@ -136,6 +136,8 @@ building_hospital.o
 building_school.o
 building_parking.o
 building_jail.o
+building_bathroom.o
+building_kitchen.o
 simplifier.o
 city_model.o
 city_building_params.o
