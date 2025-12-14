@@ -371,12 +371,17 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 enum {KCA_BI_OVEN=0, KCA_DEEP_FRYER, KCA_SINK, KCA_SINK2, KCA_OVEN, KCA_OMWC, NUM_KC_APP};
 
 struct ck_app_model_t {
-	unsigned app_type=0, model_id=0;
+	unsigned app_type=0, model_id=0, app_type_place_mask=0;
 
 	void assign(rand_gen_t &rgen) {
 		unsigned const num_sub_models(building_obj_model_loader.get_num_sub_models(OBJ_MODEL_CK_APP));
 		assert(num_sub_models == NUM_KC_APP);
-		app_type = (rgen.rand() % num_sub_models);
+
+		for (unsigned N = 0; N < 10; ++N) { // 10 attempts to place a model we haven't yet placed
+			app_type = (rgen.rand() % num_sub_models);
+			if (!(app_type_place_mask & (1U << app_type))) break; // not yet placed - done
+		}
+		app_type_place_mask |= (1U << app_type); // mark this model as placed
 		model_id = combine_model_submodel_id(OBJ_MODEL_CK_APP, app_type);
 	}
 	float    get_height  () const {return 0.5*building_obj_model_loader.get_model(model_id).scale;} // in units of floor spacing
@@ -522,10 +527,10 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 	unsigned const has_ck_app_models(building_obj_model_loader.is_model_valid(OBJ_MODEL_CK_APP));
 	float const app_gap(trim_thick); // must be large enough to prevent cube intersection
 	unsigned fail_count(0);
+	ck_app_model_t app_model; // reused across calls; tracks model stats
 
 	for (unsigned n = 0; n < (has_ck_app_models ? 20 : 0); ++n) { // place up to 20 kitchen appliance models; stop after enough failures
 		unsigned obj_ix(objs.size());
-		ck_app_model_t app_model;
 		app_model.assign(rgen);
 			
 		if (!place_model_along_wall(app_model.model_id, TYPE_KITCH_APP, room, app_model.get_height(),
