@@ -368,7 +368,7 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 }
 
 // commercial kitchen appliances, read from model config file; should agree with the set of models specified in the config file
-enum {KCA_BI_OVEN=0, KCA_DEEP_FRYER, KCA_SINK, NUM_KC_APP};
+enum {KCA_BI_OVEN=0, KCA_DEEP_FRYER, KCA_SINK, KCA_SINK2, KCA_OVEN, KCA_OMWC, NUM_KC_APP};
 
 struct ck_app_model_t {
 	unsigned app_type=0, model_id=0;
@@ -392,18 +392,37 @@ struct ck_app_model_t {
 		unsigned skip_faces(0); // 0=don't draw
 		bool add_platform(0);
 
-		if (app_type == KCA_BI_OVEN) { // front face only; add sides, top, and back
-			skip_faces = ~get_face_mask(dim, dir) | EF_Z1;
-			if (app_type == KCA_BI_OVEN) {frame.d[dim][dir] -= (dir ? 1.0 : -1.0)*0.09*app.get_depth();} // oven; shift front edge behind door
+		if (app_type == KCA_BI_OVEN || app_type == KCA_OVEN || app_type == KCA_OMWC) { // front face only; add sides, top, and back
+			unsigned const front_face_mask(get_face_mask(dim, dir));
+			float const fb_shift((app_type == KCA_OMWC || app_type == KCA_OVEN) ? 0.06 : 0.09);
+			skip_faces = ~front_face_mask | EF_Z1;
+			frame.d[dim][dir] -= (dir ? 1.0 : -1.0)*fb_shift*app.get_depth(); // shift front edge behind door
+
+			if (app_type != KCA_OMWC) {
+				z_shift      = 0.6*height;
+				add_platform = 1;
+				frame.translate_dim(2, z_shift);
+			}
+			if (app_type == KCA_OVEN) { // need an extra plate near the front
+				cube_t c(frame);
+				c.z1() = frame.z2() - 0.25*height;
+				objs.emplace_back(c, TYPE_METAL_BAR, app.room_id, dim, dir, 0, app.light_amt, SHAPE_CUBE, WHITE, front_face_mask);
+			}
 		}
 		else if (app_type == KCA_SINK) { // top face only; draw front, sides, and back
 			z_shift = 0.3*height;
 			frame.z2() = app.z1() + z_shift + 0.49*height;
 			skip_faces = EF_Z12;
 		}
-		if (app_type == KCA_BI_OVEN   ) {z_shift = 0.6*height; add_platform = 1;}
-		if (app_type == KCA_DEEP_FRYER) {z_shift = 0.4*height; add_platform = 1;}
-
+		else if (app_type == KCA_SINK2) { // top face only; draw front, sides, and back
+			z_shift    = 1.1*height;
+			frame.z2() = app.z1() + z_shift + 0.96*height;
+			skip_faces = EF_Z12;
+		}
+		else if (app_type == KCA_DEEP_FRYER) {
+			z_shift = 0.4*height;
+			add_platform = 1;
+		}
 		if (add_platform) { // place this object on a platform/table; should this be merged across adjacent objects at the same height?
 			assert(z_shift > 0.0);
 			cube_t platform(app);
