@@ -568,16 +568,17 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 				app2.d[!adim][ d  ] = app2.d[!adim][!d   ] + (d    ? 1.0 : -1.0)*width  ; // far edge
 				app2.d[ adim][adir] = app .d[ adim][!adir] + (adir ? 1.0 : -1.0)*depth  ; // front
 				set_cube_zvals(app2, zval, (zval + height));
-				if (!place_area.contains_cube_xy(app2)        || is_obj_placement_blocked(app2, room, 1)) break;
-				if (overlaps_other_room_obj(app2, objs_start) || check_if_against_window (app2, room, adim, !adir)) break;
+				float const front(app2.d[adim][adir]);
+				cube_t tc(app2);
+				tc.d[adim][adir] = front + (adir ? 1.0 : -1.0)*clearance; // extend in front
+				if (!place_area.contains_cube_xy(tc)        || is_obj_placement_blocked(tc, room, 1)) break;
+				if (overlaps_other_room_obj(tc, objs_start) || check_if_against_window (tc, room, adim, !adir)) break;
 				app2.item_flags = app_model.app_type;
 				objs.push_back(app2);
 				app_model.add_exterior(objs, objs.size()-1);
 				prev = app2;
-				float const front(app2.d[adim][adir]);
-				cube_t blocker(app2);
+				cube_t blocker(tc); // add a blocker for front clearance
 				blocker.d[adim][!adir] = front;
-				blocker.d[adim][ adir] = front + (adir ? 1.0 : -1.0)*clearance; // extend in front
 				objs.emplace_back(blocker, TYPE_BLOCKER, room_id, adim, adir, RO_FLAG_INVIS, light_amt);
 			} // for m
 		} // for d
