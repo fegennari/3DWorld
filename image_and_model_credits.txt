@@ -63,3 +63,10 @@ Kitchen Sink (no faucet): https://sketchfab.com/3d-models/kitchen-sink-c5636343a
 Deep Fryer: https://sketchfab.com/3d-models/commercial-deep-fryer-14a3e351ed02498088886bb6acdbefec
 Oven: https://sketchfab.com/3d-models/oven-no1-be59c580bda64e63bd9e8520f431be55
 Oven/Microwave/Wine Cooler: https://sketchfab.com/3d-models/oven-microwave-and-winecooler-60ffe27b68dd4f9cb9f79b7b61350311
+Low Poly Commercial Kitchen Items:
+Grill: https://sketchfab.com/3d-models/low-poly-commercial-grill-691c7f655da34b76bb1c1e35ae4a82da
+Deep Fryer: https://sketchfab.com/3d-models/low-poly-commercial-deep-fryer-dd0b744d8c554a20a5990b66d3711177
+Dishwasher: https://sketchfab.com/3d-models/low-poly-commercial-dishwasher-867f4e0186204d84b83e7955e7362e09
+Oven: https://sketchfab.com/3d-models/low-poly-commercial-oven-f7c235ac783244808e91fb4bcc4846fa
+Fridge: https://sketchfab.com/3d-models/low-poly-commercial-fridge-c38d498836de42c5ba50fb68fc8fc23a
+Stove: https://sketchfab.com/3d-models/low-poly-commercial-stove-ef058208ff4a45538616dde7517a0f11

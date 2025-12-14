@@ -368,7 +368,7 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 }
 
 // commercial kitchen appliances, read from model config file; should agree with the set of models specified in the config file
-enum {KCA_BI_OVEN=0, KCA_DEEP_FRYER, KCA_SINK, KCA_SINK2, KCA_OVEN, KCA_OMWC, NUM_KC_APP};
+enum {KCA_BI_OVEN=0, KCA_DEEP_FRYER, KCA_SINK, KCA_SINK2, KCA_OVEN, KCA_OMWC, KCA_LP_DEEP_FRYER, KCA_LP_DISHWASHER, KCA_LP_FRIDGE, KCA_LP_GRILL, KCA_LP_OVEN, NUM_KC_APP};
 
 struct ck_app_model_t {
 	unsigned app_type=0, model_id=0, app_type_place_mask=0;
@@ -441,6 +441,17 @@ struct ck_app_model_t {
 		}
 	}
 };
+
+void set_specular_for_low_poly_kitchen_models() {
+	static bool specular_was_set=0;
+	if (specular_was_set) return;
+	specular_was_set = 1;
+
+	for (unsigned i = KCA_LP_DEEP_FRYER; i < NUM_KC_APP; ++i) {
+		unsigned const model_id(combine_model_submodel_id(OBJ_MODEL_CK_APP, i));
+		building_obj_model_loader.set_all_material_specular(model_id, WHITE, 60.0, 1.0); // fully specular metal
+	}
+}
 
 bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id,
 	float light_amt, unsigned objs_start, light_ix_assign_t &light_ix_assign)
@@ -525,6 +536,7 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 	}
 	// place commerial kitchen appliances (grills, deep fryers, ovens, sinks, etc.)
 	unsigned const has_ck_app_models(building_obj_model_loader.is_model_valid(OBJ_MODEL_CK_APP));
+	if (has_ck_app_models) {set_specular_for_low_poly_kitchen_models();}
 	float const app_gap(trim_thick); // must be large enough to prevent cube intersection
 	unsigned fail_count(0);
 	ck_app_model_t app_model; // reused across calls; tracks model stats
