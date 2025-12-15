@@ -957,7 +957,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 							if (added_obj) {r->assign_to(RTYPE_CLASS, f);}
 						}
 						else if (rand_val == 5 && num_locker_rooms < 2 && f > 0 && r->interior) { // locker room; not on the first floor, only windowless rooms
-							added_obj = no_whiteboard = add_locker_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
+							added_obj = no_whiteboard = add_locker_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start);
 							if (added_obj) {r->assign_to(RTYPE_LOCKER, f); ++num_locker_rooms;}
 						}
 						else if (rand_val == 6 && !added_cafeteria) { // cafeteria
@@ -999,7 +999,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					r->assign_to(RTYPE_LOUNGE, f);
 				}
 				if (!added_obj && num_locker_rooms < 2 && !has_window && rgen.rand_float() < 0.25) { // maybe make locker room if there is no window
-					added_obj = no_plants = no_whiteboard = add_locker_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
+					added_obj = no_plants = no_whiteboard = add_locker_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start);
 					if (added_obj) {r->assign_to(RTYPE_LOCKER, f); ++num_locker_rooms;}
 				}
 				if (!added_obj && rgen.rand_float() < 0.25) { // maybe make library
