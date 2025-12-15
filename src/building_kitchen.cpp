@@ -473,11 +473,35 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 		set_wall_width(table, room.get_center_dim(!dim), 0.5*table_width, !dim);
 		set_wall_width(table, room.get_center_dim( dim), 0.5*table_len,    dim);
 		objs.emplace_back(table, TYPE_TABLE, room_id, dim, 0, RO_FLAG_ADJ_TOP, light_amt, SHAPE_CUBE, WHITE, item_flags); // metal; assumes table has something on it
-		// TODO: can put some smaller objects such as deep fryer on the table
+		unsigned const avoid_start(objs.size());
+		vect_cube_t avoid;
+		
+		// add microwave to table
+		bool const mdim(!dim), mdir(rgen.rand_bool());
+		float const mheight(rgen.rand_uniform(1.0, 1.2)*0.16*floor_spacing), mwidth(1.7*mheight), mdepth(1.2*mheight); // fixed AR=1.7 to match the texture
+		float const pos(rgen.rand_uniform((table.d[!mdim][0] + 0.6*mwidth), (table.d[!mdim][1] - 0.6*mwidth)));
+		cube_t mwave;
+		set_cube_zvals(mwave, table.z2(), table.z2()+mheight);
+		set_wall_width(mwave, pos, 0.5*mwidth, !mdim);
+		mwave.d[mdim][!mdir] = table.d[mdim][!mdir] + (mdir ? 1.0 : -1.0)*rgen.rand_uniform(0.0, 0.1)*mdepth;
+		mwave.d[mdim][ mdir] = mwave.d[mdim][!mdir] + (mdir ? 1.0 : -1.0)*mdepth;
+		objs.emplace_back(mwave, TYPE_MWAVE, room_id, mdim, !mdir, RO_FLAG_NOCOLL, light_amt);
+		avoid.push_back(mwave);
+		// add deep fryer to table
+		unsigned const model_id(combine_model_submodel_id(OBJ_MODEL_CK_APP, KCA_DEEP_FRYER));
+		float const dp_height(0.7*0.5*building_obj_model_loader.get_model(model_id).scale); // smaller version
+		
+		if (place_model_along_wall(model_id, TYPE_KITCH_APP, room, dp_height, rgen, table.z2(), room_id, light_amt, table, avoid_start)) {
+			objs.back().dir ^= 1; // backwards
+			avoid.push_back(objs.back());
+		}
+		// add toaster to table
+		if (place_model_along_wall(OBJ_MODEL_TOASTER, TYPE_TOASTER, room, 0.09, rgen, table.z2(), room_id, light_amt, table, avoid_start)) {
+			avoid.push_back(objs.back());
+		}
 		// place objects on the table; similar to building_t::add_restaurant_counter()
 		unsigned const num_cont (4 + (rgen.rand() % 5)); // 4-8
 		unsigned const num_pizza(0 + (rgen.rand() % 3)); // 0-2
-		vect_cube_t avoid;
 
 		for (unsigned n = 0; n < num_cont; ++n) { // containers
 			switch (rgen.rand()%4) {
