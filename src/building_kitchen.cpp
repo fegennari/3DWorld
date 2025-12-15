@@ -542,8 +542,12 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 			if (!add_fridge) {app_model.add_exterior(objs, obj_ix);}
 			room_object_t const app(objs[obj_ix]); // deep copy to avoid reference invalidation
 			bool const adim(app.dim), adir(app.dir);
-			if (!add_fridge) {assert(app.item_flags == app_model.app_type);}
-
+			
+			if (!add_fridge) {
+				assert(app.item_flags == app_model.app_type);
+				if      (app_model.app_type == KCA_LP_GRILL) {add_pan_on_grill(app, rgen);}
+				else if (app_model.app_type == KCA_LP_STOVE) {add_pan_on_stove(app, rgen);}
+			}
 			for (unsigned d = 0; d < 2; ++d) { // for each side of this appliance
 				cube_t prev(app);
 
@@ -565,6 +569,8 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 					app2.item_flags = app_model.app_type;
 					objs.push_back(app2);
 					app_model.add_exterior(objs, objs.size()-1);
+					if      (app_model.app_type == KCA_LP_GRILL) {add_pan_on_grill(app2, rgen);}
+					else if (app_model.app_type == KCA_LP_STOVE) {add_pan_on_stove(app2, rgen);}
 					prev = app2;
 					cube_t blocker(tc); // add a blocker for front clearance
 					blocker.d[adim][!adir] = front;
@@ -606,6 +612,40 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 	float const rmax(min(0.2f*floor_spacing, 0.1f*min(place_area.dx(), place_area.dy())));
 	add_floor_stains(rgen, place_area, zval, room_id, light_amt, objs_start, num_stains, rmax, 1); // is_food=1
 	return 1;
+}
+
+bool building_t::place_pan_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid) {
+	// somewhat larger than pans placed on stoves
+	float const floor_spacing(get_window_vspace()), height(rgen.rand_uniform(0.02, 0.025)*floor_spacing);
+	float const radius(rgen.rand_uniform(0.05, 0.06)*floor_spacing), edge_dist(2.0*radius);
+	if (min(place_on.dx(), place_on.dy()) < 2.1*edge_dist) return 0; // too small
+	cube_t pan_bc(place_cylin_object(rgen, place_on, radius, height, edge_dist)); // add space for the handle
+	pan_bc.translate_dim(2, 0.01*height); // fix for Z-fighting
+	room_object_t const pan(pan_bc, TYPE_PAN, room_id, rgen.rand_bool(), rgen.rand_bool(), RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, DK_GRAY);
+	pan_bc = get_pan_bcube_inc_handle(pan); // include the handle
+	if (!place_on.contains_cube_xy(pan_bc) || has_bcube_int(pan_bc, avoid)) return 0; // only make one attempt
+	interior->room_geom->objs.push_back(pan);
+	return 1;
+}
+void building_t::add_pan_on_grill(room_object_t const &grill, rand_gen_t &rgen) { // does a pan belong on a grill?
+	cube_t top(grill);
+	top.z2() -= 0.17*grill.dz();
+	top.d[grill.dim][!grill.dir] += (grill.dir ? 1.0 : -1.0)*0.1*grill.get_depth(); // shrink off back part
+	place_pan_on_obj(rgen, top, grill.room_id, grill.light_amt); // no avoid
+}
+void building_t::add_pan_on_stove(room_object_t const &stove, rand_gen_t &rgen) { // commercial stove
+	float const depth(stove.get_depth());
+	cube_t top(stove);
+	top.z2() -= 0.07*stove.dz();
+	top.expand_by_xy(-0.07*depth);
+	cube_t burner(top);
+	for (unsigned d = 0; d < 2; ++d) {burner.d[d][rgen.rand_bool()] = top.get_center_dim(d);} // pick a random quadrant
+	float const floor_spacing(get_window_vspace()), height(rgen.rand_uniform(0.02, 0.025)*floor_spacing), radius(rgen.rand_uniform(0.05, 0.06)*floor_spacing);
+	cube_t pan;
+	pan.set_from_point(cube_top_center(burner));
+	pan.expand_by_xy(radius);
+	pan.z2() += height;
+	interior->room_geom->objs.emplace_back(pan, TYPE_PAN, stove.room_id, stove.dim, rgen.rand_bool(), RO_FLAG_NOCOLL, stove.light_amt, SHAPE_CYLIN, DK_GRAY);
 }
 
 bool building_t::add_mwave_on_table(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id,

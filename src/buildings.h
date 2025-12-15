@@ -2925,6 +2925,8 @@ private:
 	bool add_vending_machine_type(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
 		cube_t const &place_area, unsigned vtype_id);
 	bool add_wall_tv(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, float height_scale=1.0);
+	void add_pan_on_grill(room_object_t const &grill, rand_gen_t &rgen);
+	void add_pan_on_stove(room_object_t const &stove, rand_gen_t &rgen);
 	bool add_mwave_on_table(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt,
 		unsigned objs_start, cube_t const &place_area, bool is_plastic=0, bool is_metal=0);
 	bool check_valid_closet_placement(cube_t const &c, room_t const &room, unsigned objs_start, unsigned bed_ix, float min_bed_space=0.0) const;
@@ -3526,6 +3528,7 @@ void gen_xy_pos_in_cube (point &pos, cube_t const &c, rand_gen_t &rgen);
 void gen_xyz_pos_in_cube(point &pos, cube_t const &c, rand_gen_t &rgen);
 void gen_xy_pos_for_cube_obj(cube_t &C, cube_t const &S, vector3d const &sz, float height, rand_gen_t &rgen, bool place_at_z1=0);
 void gen_xy_pos_for_round_obj(cube_t &C, cube_t const &S, float radius, float height, float spacing, rand_gen_t &rgen, bool place_at_z1=0);
+cube_t place_cylin_object(rand_gen_t &rgen, cube_t const &place_on, float radius, float height, float dist_from_edge,  bool place_at_z1=0);
 void add_obj_pair(room_object_t const &obj, vect_room_object_t &objects);
 // functions in building_interact.cc and building_gameplay.cc
 void gen_sound_thread_safe(unsigned id, point const &pos, float gain=1.0, float pitch=1.0, float gain_scale=1.0, bool skip_if_already_playing=0);

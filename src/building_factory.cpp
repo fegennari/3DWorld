@@ -11,8 +11,6 @@ extern float CAMERA_RADIUS, fticks;
 extern object_model_loader_t building_obj_model_loader;
 
 
-cube_t place_cylin_object(rand_gen_t &rgen, cube_t const &place_on, float radius, float height, float dist_from_edge, bool place_at_z1=0);
-
 void building_t::create_industrial_floorplan(unsigned part_id, float window_hspacing[2], float window_border, rand_gen_t &rgen) {
 	assert(part_id < parts.size());
 	cube_t const &part(parts[part_id]);

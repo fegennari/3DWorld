@@ -57,7 +57,7 @@ float get_radius_for_square_model(unsigned model_id) {
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(model_id));
 	return 0.5f*0.5f*(sz.x + sz.y)/sz.z; // assume square and take average of xsize and ysize
 }
-cube_t place_cylin_object(rand_gen_t &rgen, cube_t const &place_on, float radius, float height, float dist_from_edge, bool place_at_z1=0) {
+cube_t place_cylin_object(rand_gen_t &rgen, cube_t const &place_on, float radius, float height, float dist_from_edge, bool place_at_z1) {
 	cube_t c;
 	gen_xy_pos_for_round_obj(c, place_on, radius, height, dist_from_edge, rgen, place_at_z1); // place at dist_from_edge from edge
 	return c;
@@ -3817,18 +3817,6 @@ bool building_t::place_bowl_of_apples_on_obj(rand_gen_t &rgen, cube_t const &pla
 		abc2 += 1.9*radius*vector3d(sin(angle), cos(angle), 0.5).get_norm();
 		interior->room_geom->objs.emplace_back(abc2, TYPE_APPLE, room_id, rgen.rand_bool(), rgen.rand_bool(), RO_FLAG_NOCOLL, tot_light_amt, SHAPE_SPHERE, WHITE, item_flags);
 	}
-	return 1;
-}
-
-bool building_t::place_pan_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid) {
-	// somewhat larger than pans placed on stoves
-	float const floor_spacing(get_window_vspace()), radius(rgen.rand_uniform(0.05, 0.06)*floor_spacing), height(rgen.rand_uniform(0.02, 0.025)*floor_spacing);
-	cube_t pan_bc(place_cylin_object(rgen, place_on, radius, height, 2.0*radius)); // add space for the handle
-	pan_bc.translate_dim(2, 0.01*height); // fix for Z-fighting
-	room_object_t const pan(pan_bc, TYPE_PAN, room_id, rgen.rand_bool(), rgen.rand_bool(), RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, DK_GRAY);
-	pan_bc = get_pan_bcube_inc_handle(pan); // include the handle
-	if (!place_on.contains_cube_xy(pan_bc) || has_bcube_int(pan_bc, avoid)) return 0; // only make one attempt
-	interior->room_geom->objs.push_back(pan);
 	return 1;
 }
 
