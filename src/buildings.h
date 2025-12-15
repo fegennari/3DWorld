@@ -3144,6 +3144,7 @@ private:
 	bool place_banana_on_obj (rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid=vect_cube_t());
 	bool place_apple_on_obj  (rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid=vect_cube_t());
 	bool place_bowl_of_apples_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid=vect_cube_t());
+	bool place_pan_on_obj    (rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid=vect_cube_t());
 	bool place_phone_on_obj  (rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, bool dim, bool dir, float overhang_amt=0.0, bool vis_phone=0);
 	bool add_rug_to_room     (rand_gen_t  rgen, cube_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	bool hang_pictures_whiteboard_chalkboard_in_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start,

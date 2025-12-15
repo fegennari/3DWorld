@@ -6689,15 +6689,15 @@ void building_room_geom_t::add_toy(room_object_t const &c) { // is_small=1
 
 cube_t get_pan_bcube_inc_handle(room_object_t const &c) {
 	cube_t pan_inc_handle(c);
-	pan_inc_handle.d[!c.dim][ c.dir] = c.d[!c.dim][c.dir] + (c.dir ? 1.0 : -1.0)*0.60*c.get_sz_dim(!c.dim); // outer edge
+	pan_inc_handle.d[!c.dim][c.dir] += (c.dir ? 1.0 : -1.0)*0.60*c.get_width(); // outer edge
 	return pan_inc_handle;
 }
 void building_room_geom_t::add_pan(room_object_t const &c) { // is_small=1
 	colorRGBA const color(apply_light_color(c));
 	rgeom_mat_t &mat(get_scratched_metal_material(1.0/c.dz(), 1, 0, 1)); // shadowed, small
 	mat.add_vcylin_to_verts(c, color, 1, 0, 1, 1, 0.8, 1.0);
-	// add handle
-	float const diameter(c.get_sz_dim(!c.dim)), handle_radius(0.08*diameter), edge_pos(c.d[!c.dim][c.dir]);
+	// add handle; extends outside bounds
+	float const diameter(c.get_width()), handle_radius(0.08*diameter), edge_pos(c.d[!c.dim][c.dir]);
 	cube_t handle;
 	handle.d[!c.dim][!c.dir] = edge_pos - (c.dir ? 1.0 : -1.0)*0.02*diameter; // inner edge - shift slightly
 	handle.d[!c.dim][ c.dir] = edge_pos + (c.dir ? 1.0 : -1.0)*0.60*diameter; // outer edge

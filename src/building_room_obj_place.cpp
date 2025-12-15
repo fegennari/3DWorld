@@ -3820,6 +3820,18 @@ bool building_t::place_bowl_of_apples_on_obj(rand_gen_t &rgen, cube_t const &pla
 	return 1;
 }
 
+bool building_t::place_pan_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid) {
+	// somewhat larger than pans placed on stoves
+	float const floor_spacing(get_window_vspace()), radius(rgen.rand_uniform(0.05, 0.06)*floor_spacing), height(rgen.rand_uniform(0.02, 0.025)*floor_spacing);
+	cube_t pan_bc(place_cylin_object(rgen, place_on, radius, height, 2.0*radius)); // add space for the handle
+	pan_bc.translate_dim(2, 0.01*height); // fix for Z-fighting
+	room_object_t const pan(pan_bc, TYPE_PAN, room_id, rgen.rand_bool(), rgen.rand_bool(), RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, DK_GRAY);
+	pan_bc = get_pan_bcube_inc_handle(pan); // include the handle
+	if (!place_on.contains_cube_xy(pan_bc) || has_bcube_int(pan_bc, avoid)) return 0; // only make one attempt
+	interior->room_geom->objs.push_back(pan);
+	return 1;
+}
+
 bool building_t::place_phone_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, bool dim, bool dir, float overhang_amt, bool vis_phone) {
 	if (vis_phone) {
 		if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_VIS_PHONE)) return 0;

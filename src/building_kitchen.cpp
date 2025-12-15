@@ -475,24 +475,26 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 		objs.emplace_back(table, TYPE_TABLE, room_id, dim, 0, RO_FLAG_ADJ_TOP, light_amt, SHAPE_CUBE, WHITE, item_flags); // metal; assumes table has something on it
 		// TODO: can put some smaller objects such as deep fryer on the table
 		// place objects on the table; similar to building_t::add_restaurant_counter()
-		unsigned const num_cont (2 + (rgen.rand() % 7)); // 2-8
+		unsigned const num_cont (4 + (rgen.rand() % 5)); // 4-8
 		unsigned const num_pizza(0 + (rgen.rand() % 3)); // 0-2
 		vect_cube_t avoid;
 
 		for (unsigned n = 0; n < num_cont; ++n) { // containers
-			switch (rgen.rand()%3) {
+			switch (rgen.rand()%4) {
 			case 0: // cup
 				if (place_cup_on_obj  (rgen, table, room_id, light_amt, avoid)) {avoid.push_back(objs.back());}
 				break;
 			case 1: // plate or bowl
 				if (place_plate_on_obj(rgen, table, room_id, light_amt, avoid, (rgen.rand_float() < 0.35))) {avoid.push_back(objs.back());}
 				break;
-			case 2: { // tray
+			case 2: // pan
+				if (place_pan_on_obj  (rgen, table, room_id, light_amt, avoid)) {avoid.push_back(get_pan_bcube_inc_handle(objs.back()));}
+				break;
+			case 3: // tray
 				add_cafeteria_tray_to_surface(table, !dim, room_id, light_amt, avoid, rgen);
 				break;
-			}
 			} // end switch
-		}
+		} // for n
 		for (unsigned n = 0; n < num_pizza; ++n) { // pizza
 			if (place_pizza_on_obj(rgen, table, room_id, light_amt, avoid)) {avoid.push_back(objs.back());} // random dim/dir
 		}
