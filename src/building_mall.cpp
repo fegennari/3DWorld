@@ -1631,7 +1631,7 @@ bool building_t::add_food_court_objs(rand_gen_t &rgen, cube_t const &place_area,
 		fc_blockers.back().expand_by_xy(clearance); // add space for walking around tables and chairs
 	}
 	colorRGBA const &chair_color(mall_chair_colors[rgen.rand() % NUM_MALL_CHAIR_COLORS]);
-	unsigned const tid_tag(rgen.rand() + 1); // sets table texture; make nonzero to flag as a textured surface table
+	unsigned const tid_tag(get_table_item_flags(rgen, 1, 0)); // sets table texture; is_plastic=1, is_metal=0
 	cube_t table;
 	set_cube_zvals(table, zval, zval+table_height);
 

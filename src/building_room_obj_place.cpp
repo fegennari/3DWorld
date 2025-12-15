@@ -146,7 +146,7 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 }
 
 // Note: must be first placed objects; returns the number of total objects added (table + optional chairs)
-// wooden_or_plastic: 0=wood, 1=plastic, 2=pastic for 50% of offices, otherwise wood
+// wooden_or_plastic: 0=wood, 1=plastic, 2=pastic for 50% of offices, 3=metal, otherwise wood
 unsigned building_t::add_table_and_chairs(rand_gen_t rgen, room_t const &room, vect_cube_t &blockers, unsigned room_id, point const &place_pos,
 	colorRGBA const &chair_color, float rand_place_off, float tot_light_amt, unsigned max_chairs, bool use_tall_table, int wooden_or_plastic, int chair_rand_add)
 {
@@ -173,7 +173,9 @@ unsigned building_t::add_table_and_chairs(rand_gen_t rgen, room_t const &room, v
 	cube_t table(llc, urc);
 	if (!is_valid_placement_for_room(table, room, blockers, 1, vector2d(room_pad, room_pad))) return 0; // check proximity to doors and collision with blockers
 	//if (door_path_checker_t().check_door_path_blocked(table, get_room(room_id), room_id, table_pos.z, *this)) return 0; // optional, but may want to allow for kitchens/dining
-	unsigned const item_flags(is_plastic ? 1 : 0);
+	bool const is_metal(wooden_or_plastic == 3);
+	unsigned item_flags(get_table_item_flags(rgen, is_plastic, is_metal));
+	min_eq(item_flags, 2U); // limit to first plastic material for office buildings
 	unsigned flags(is_house ? RO_FLAG_IS_HOUSE : 0);
 	// basements can have broken glass tables 50% of the time; these are short cube tables
 	if (!is_round && !use_tall_table && !is_plastic && place_pos.z < ground_floor_z1 && (rgen.rand_float() < 0.5)) {flags |= RO_FLAG_BROKEN;}

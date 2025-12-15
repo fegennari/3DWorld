@@ -467,28 +467,15 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 	if (!has_tile_floor() && !in_mall) {zval = add_flooring(room, zval, room_id, light_amt, FLOORING_LGTILE);} // prison and maybe school
 	vect_room_object_t &objs(interior->room_geom->objs);
 
-	if (add_island) { // add a custom table created from metal bars
+	if (add_island) { // add a large table in the center of the room
 		float const room_len(room.get_sz_dim(!dim));
 		float const table_len(min(0.5f*room_len, (room_len - 2.0f*floor_spacing))), table_width(min(0.4f*table_len, 0.6f*floor_spacing));
-		unsigned const num_legs_per_side(max(2U, (unsigned)(0.8*room_len/floor_spacing)));
-		float const leg_width(0.7*wall_thick), leg_hwidth(0.5*leg_width), leg_spacing((table_len - 2.0*leg_width)/(num_legs_per_side - 1));
+		unsigned const item_flags(get_table_item_flags(rgen, 0, 1)); // is_plastic=0, is_metal=1
 		cube_t table;
 		set_cube_zvals(table, zval, (zval + 0.3*floor_spacing + wall_thick));
 		set_wall_width(table, room.get_center_dim(!dim), 0.5*table_width, !dim);
 		set_wall_width(table, room.get_center_dim( dim), 0.5*table_len,    dim);
-		cube_t top(table), leg(table);
-		top.z1() = leg.z2() = table.z2() - wall_thick;
-		objs.emplace_back(top, TYPE_METAL_BAR, room_id, dim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, WHITE, 0);
-
-		for (unsigned n = 0; n < num_legs_per_side; ++n) {
-			set_wall_width(leg, (table.d[dim][0] + leg_width + n*leg_spacing), leg_hwidth, dim);
-
-			for (unsigned d = 0; d < 2; ++d) { // each side
-				set_wall_width(leg, (table.d[!dim][d] + (d ? -1.0 : 1.0)*leg_width), leg_hwidth, !dim);
-				objs.emplace_back(leg, TYPE_METAL_BAR, room_id, 0, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, WHITE, EF_Z12); // skip drawing of top and bottom
-			}
-		} // for n
-		objs.emplace_back(table, TYPE_COLLIDER, room_id, 0, 0, RO_FLAG_INVIS, light_amt);
+		objs.emplace_back(table, TYPE_TABLE, room_id, dim, 0, RO_FLAG_ADJ_TOP, light_amt, SHAPE_CUBE, WHITE, item_flags); // metal; assumes table has something on it
 		// TODO: can put some smaller objects such as deep fryer on the table
 		// place objects on the table; similar to building_t::add_restaurant_counter()
 		unsigned const num_cont (2 + (rgen.rand() % 7)); // 2-8
@@ -584,8 +571,8 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 		} // for d
 	} // for n
 	// what about placing appliances on the sides of the center table?
-	add_mwave_on_table  (rgen, room, zval, room_id, light_amt, objs_start, place_area, 1); // plastic=1
-	add_corner_trashcans(rgen, room, zval, room_id, light_amt, objs_start, dim,        1); // both_ends=1
+	add_mwave_on_table  (rgen, room, zval, room_id, light_amt, objs_start, place_area, 0, 1); // plastic=0, metal=1
+	add_corner_trashcans(rgen, room, zval, room_id, light_amt, objs_start, dim, 1); // both_ends=1
 	// add trolleys with plates; seems like this can work in a kitchen
 	unsigned num_trolleys((rgen.rand() % 2) + 2); // 2-3
 	vect_cube_t blockers;
@@ -612,7 +599,7 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 }
 
 bool building_t::add_mwave_on_table(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id,
-	float tot_light_amt, unsigned objs_start, cube_t const &place_area, bool plastic)
+	float tot_light_amt, unsigned objs_start, cube_t const &place_area, bool is_plastic, bool is_metal)
 {
 	float const window_vspacing(get_window_vspace()), table_height(rgen.rand_uniform(0.33, 0.36)*window_vspacing);
 	float const mheight(rgen.rand_uniform(1.0, 1.2)*0.14*window_vspacing), mwidth(1.7*mheight), mdepth(1.2*mheight); // fixed AR=1.7 to match the texture
@@ -624,7 +611,7 @@ bool building_t::add_mwave_on_table(rand_gen_t &rgen, room_t const &room, float 
 	bool const dim(table.dim), dir(table.dir);
 	float const pos(rgen.rand_uniform((table.d[!dim][0] + 0.6*mwidth), (table.d[!dim][1] - 0.6*mwidth)));
 	table.flags     |= RO_FLAG_ADJ_TOP; // flag as having a microwave so that we don't add a book or bottle that could overlap it
-	table.item_flags = (plastic ? 1 : 0);
+	table.item_flags = get_table_item_flags(rgen, is_plastic, is_metal); // sets table texture
 	cube_t mwave;
 	set_cube_zvals(mwave, table.z2(), table.z2()+mheight);
 	set_wall_width(mwave, pos, 0.5*mwidth, !dim);

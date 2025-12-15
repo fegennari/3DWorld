@@ -2925,7 +2925,8 @@ private:
 	bool add_vending_machine_type(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
 		cube_t const &place_area, unsigned vtype_id);
 	bool add_wall_tv(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, float height_scale=1.0);
-	bool add_mwave_on_table(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, cube_t const &place_area, bool plastic=0);
+	bool add_mwave_on_table(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt,
+		unsigned objs_start, cube_t const &place_area, bool is_plastic=0, bool is_metal=0);
 	bool check_valid_closet_placement(cube_t const &c, room_t const &room, unsigned objs_start, unsigned bed_ix, float min_bed_space=0.0) const;
 	bool add_bedroom_objs    (rand_gen_t rgen, room_t &room, vect_cube_t &blockers, colorRGBA const &chair_color, float zval, unsigned room_id, unsigned floor,
 		float tot_light_amt, unsigned objs_start, bool room_is_lit, bool is_basement, bool force, light_ix_assign_t &light_ix_assign);
@@ -3446,6 +3447,7 @@ colorRGBA choose_pipe_color(rand_gen_t &rgen);
 colorRGBA get_pastic_chair_color(colorRGBA const &color);
 colorRGBA get_couch_color(rand_gen_t &rgen);
 colorRGBA get_light_color_temp(float t);
+unsigned get_table_item_flags(rand_gen_t &rgen, bool is_plastic, bool is_metal);
 void gen_crate_sz(vector3d &sz, rand_gen_t &rgen, float window_vspacing);
 void get_balcony_cubes(room_object_t const &c, cube_t cubes[4]);
 void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_gen_t &rgen);

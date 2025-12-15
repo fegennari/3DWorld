@@ -369,7 +369,7 @@ bool building_t::add_cafeteria_objs(rand_gen_t rgen, room_t const &room, float &
 	unsigned const num_rows(max(1U, unsigned(row_span/row_spacing))); // floor
 	row_spacing = row_span/num_rows;
 	colorRGBA const &chair_color(mall_chair_colors[rgen.rand() % NUM_MALL_CHAIR_COLORS]);
-	unsigned const tid_tag(rgen.rand() + 1); // sets table texture; make nonzero to flag as a textured surface table
+	unsigned const tid_tag(get_table_item_flags(rgen, 1, 0)); // sets table texture; is_plastic=1, is_metal=0
 	vect_door_stack_t const &doorways(get_doorways_for_room(room, zval));
 	cube_t table;
 	set_cube_zvals(table, zval, zval+table_height);

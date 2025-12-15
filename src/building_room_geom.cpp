@@ -246,7 +246,10 @@ colorRGBA get_table_color(room_object_t const &c) {
 		bool const marble(c.obj_id & 1);
 		return (marble ? texture_color(MARBLE_TEX) : get_textured_wood_color()); // ignore the black legs of marble tables
 	}
-	else if (c.item_flags > 0) { // plastic textured table
+	else if (c.item_flags == 1) { // metal table
+		return c.color; // generally white
+	}
+	else if (c.item_flags > 1) { // plastic textured table
 		return (c.color + mall_tc_legs_color)*0.5; // a mix of table surface color with texture, gray frame, and black base; so make 50% surface color and 50% black
 	}
 	else { // rectangular or short wooden table
@@ -268,7 +271,12 @@ void get_cubes_for_plastic_table(room_object_t const &c, float top_dz, cube_t cu
 	}
 	cubes[0] = top; cubes[1] = vert; cubes[2] = base;
 }
-// 6 quads for top + 4 quads per leg = 22 quads = 88 verts for rectangular wooden table
+unsigned get_table_item_flags(rand_gen_t &rgen, bool is_plastic, bool is_metal) {
+	assert(!(is_plastic && is_metal)); // can't be both
+	return (is_plastic ? (rgen.rand() + 2) : (is_metal ? 1 : 0)); // 0 = wood, 1 = metal, >=2 = plastic
+}
+
+// 6 quads for top + 4 quads per leg = 22 quads = 88 verts for rectangular wooden table; round wooden and plastic tables have a single cylinder support
 void building_room_geom_t::add_table(room_object_t const &c, float tscale, float top_dz, float leg_width) {
 	float const dz(c.dz());
 	min_eq(top_dz, get_tc_leg_width(c, leg_width)/dz); // reduce the top thickness of tall tables
@@ -298,7 +306,28 @@ void building_room_geom_t::add_table(room_object_t const &c, float tscale, float
 	else { // rectangular or short table
 		assert(c.shape == SHAPE_CUBE || c.shape == SHAPE_SHORT);
 
-		if (c.type == TYPE_TABLE && c.item_flags > 0) { // mall food court table - rectangular with a single cylinder support and flat cylinder base
+		if (c.type == TYPE_TABLE && c.item_flags == 1) { // metal (commercial kitchen) table
+			float const length(c.get_length()), width(c.get_width());
+			unsigned const num_legs_per_side(max(2U, (unsigned)(length/width)));
+			leg_width *= 0.7*width; // narrower than wooden table
+			float const leg_hwidth(0.5*leg_width), leg_spacing((length - 2.0*leg_width)/(num_legs_per_side - 1));
+			cube_t top(c), leg(c);
+			top.z1() = leg.z2() = c.z2() - top_dz*dz;
+			colorRGBA const color(apply_light_color(c));
+			rgeom_mat_t &mat(get_metal_material(1)); // shadowed
+			mat.add_cube_to_verts_untextured(top, color, 0); // draw all faces
+
+			for (unsigned n = 0; n < num_legs_per_side; ++n) {
+				set_wall_width(leg, (c.d[c.dim][0] + leg_width + n*leg_spacing), leg_hwidth, c.dim);
+
+				for (unsigned d = 0; d < 2; ++d) { // each side
+					set_wall_width(leg, (c.d[!c.dim][d] + (d ? -1.0 : 1.0)*leg_width), leg_hwidth, !c.dim);
+					mat.add_cube_to_verts_untextured(leg, color, EF_Z12); // draw sides
+				}
+			} // for n
+			return;
+		}
+		if (c.type == TYPE_TABLE && c.item_flags > 1) { // plastic (mall food court) table - rectangular with a single cylinder support and flat cylinder base
 			float const width(min(c.dx(), c.dy()));
 			cube_t cubes[3];
 			get_cubes_for_plastic_table(c, top_dz, cubes);
@@ -309,7 +338,7 @@ void building_room_geom_t::add_table(room_object_t const &c, float tscale, float
 			mat.add_cube_to_verts_untextured(frame, apply_light_color(c, DK_GRAY)); // gray frame; all faces drawn
 			unsigned const NUM_PAT_TEX = 6;
 			string const pat_tex[NUM_PAT_TEX] = {"interiors/glass_tiles.jpg", "marble.jpg", "marble2.jpg", "bathroom_tile.jpg", "foam1.jpg", "water.jpg"};
-			rgeom_mat_t &top_mat(get_material(tid_nm_pair_t(get_texture_by_name(pat_tex[c.item_flags % NUM_PAT_TEX]), 1.0/width), 0)); // unshadowed - frame will cast shadows
+			rgeom_mat_t &top_mat(get_material(tid_nm_pair_t(get_texture_by_name(pat_tex[(c.item_flags-1) % NUM_PAT_TEX]), 1.0/width), 0)); // unshadowed - frame will cast shadows
 			top_mat.add_cube_to_verts(top, apply_light_color(c), c.get_llc(), ~EF_Z2); // draw top surface only
 			// draw vertical pole and base
 			colorRGBA const base_color(apply_light_color(c, mall_tc_legs_color));
