@@ -2410,6 +2410,7 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 		if (i->no_coll() || i->type == TYPE_BLOCKER) continue; // not interactive
 		if (i->type == TYPE_BCASE && i->in_mall())   continue; // can't move bookstore bookcase, since the adjacent bookcase's back isn't drawn
 		if ((i->type == TYPE_BED || i-> type == TYPE_HOSP_BED || i->type == TYPE_OP_TABLE) && i->is_used()) continue; // can't move occupied bed/table
+		if (i->type == TYPE_TABLE && i->item_flags == 1 && i->get_length() > 1.2*get_window_vspace())       continue; // can't move large metal tables
 		
 		if (i->type == TYPE_POOL_TABLE) {
 			// don't push pool table if there are balls on it, since it's too easily to accidentally do this when trying to hit a pool ball
