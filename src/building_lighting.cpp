@@ -348,7 +348,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			type == TYPE_STICK_NOTE || type == TYPE_GYM_WEIGHT || type == TYPE_FOOD_TRAY || type == TYPE_EX_MACHINE || type == TYPE_BAR_SOAP || type == TYPE_COAT_RACK ||
 			type == TYPE_VIS_PHONE || type == TYPE_JUMPSUIT || type == TYPE_O_SHOWER || type == TYPE_CARD_DECK || type == TYPE_CIGARETTE || type == TYPE_BULLETS ||
 			type == TYPE_MUSHROOM || type == TYPE_POOL_CUE || type == TYPE_CEIL_TILE || type == TYPE_SHELL_CASE || type == TYPE_SHOP_CART || type == TYPE_JAR) continue;
-		bool const is_stairs(type == TYPE_STAIR || type == TYPE_STAIR_WALL || type == TYPE_FOOD_FISH);
+		bool const is_stairs(type == TYPE_STAIR || type == TYPE_STAIR_WALL || type == TYPE_FOOD_FISH || type == TYPE_MILK);
 		if (c->z1() > (is_stairs ? stairs_z2 : z2) || c->z2() < (is_stairs ? stairs_z1 : z1)) continue;
 		if (!c->intersects_xy(ext_bcube)) continue;
 		colorRGBA const color(c->get_color());

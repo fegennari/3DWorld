@@ -294,6 +294,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_SHOP_CART ] = bldg_obj_type_t(1, 1, 1, 0, 0, 1, 0, 120,   49,    "shopping cart"); // can push but not pick up
 	bldg_obj_types[TYPE_FOOD_FISH ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 10.0,  0.1,   "cooked fish");
 	bldg_obj_types[TYPE_KITCH_APP ] = bldg_obj_type_t(1, 1, 1, 0, 1, 1, 0, 500,   200,   "kitchen appliance"); // different types; can't take, weight and value don't really matter
+	bldg_obj_types[TYPE_MILK      ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 3.0,   4.0,   "carton of milk"); // half gallon, though box says pint
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// animals; not room objects
 	bldg_obj_types[TYPE_RAT       ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 8.99,  1.0,   "rat"); // can be picked up

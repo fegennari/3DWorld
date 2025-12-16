@@ -175,8 +175,9 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 		static vect_cube_t blockers;
 		int const table_blocker_ix(gather_room_placement_blockers(cabinet_area, objs_start, blockers, 1, 1)); // inc_open_doors=1, ignore_chairs=1
 		bool const have_toaster(building_obj_model_loader.is_model_valid(OBJ_MODEL_TOASTER));
+		bool const have_milk   (building_obj_model_loader.is_model_valid(OBJ_MODEL_MILK   ));
 		vector3d const toaster_sz(have_toaster ? building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TOASTER) : zero_vector); // L, D, H
-		bool is_sink(1), placed_mwave(0), placed_toaster(0), had_counter(0);
+		bool is_sink(1), placed_mwave(0), placed_toaster(0), placed_milk(0), had_counter(0);
 		unsigned num_paper_towels(0);
 		cube_t mwave, toaster;
 
@@ -252,6 +253,7 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 			}
 			blockers.push_back(c); // add to blockers so that later counters don't intersect this one
 			bool added_obj(0);
+			cube_t ptroll;
 
 			// place a microwave on a counter 50% of the time
 			if (!is_sink && !placed_mwave && c.get_sz_dim(!dim) > 0.5*vspace && rgen.rand_bool()) {
@@ -289,12 +291,20 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 				float const ptheight(0.115*vspace), ptradius(0.25*ptheight);
 
 				if (min(c.dx(), c.dy()) > 2.5*ptradius) { // add if it fits
-					cube_t ptroll;
 					gen_xy_pos_for_round_obj(ptroll, c, ptradius, ptheight, 1.2*ptradius, rgen);
 					objs.emplace_back(ptroll, TYPE_TPROLL, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_HAS_EXTRA), tot_light_amt);
 					objs[cabinet_id].flags |= RO_FLAG_ADJ_TOP; // flag as having an object so that we don't add a book or bottle that could overlap it
 					++num_paper_towels;
 				}
+			}
+			// place milk carton, at most one per kitchen
+			if (have_milk && !is_sink && !placed_milk && rgen.rand_float() < 0.5) {
+				static vect_cube_t avoid;
+				avoid.clear();
+				if (placed_mwave  ) {avoid.push_back(mwave  );}
+				if (placed_toaster) {avoid.push_back(toaster);}
+				if (!ptroll.is_all_zeros()) {avoid.push_back(ptroll);}
+				placed_milk = place_milk_on_obj(rgen, c, room_id, tot_light_amt, avoid);
 			}
 			if (is_sink) { // kitchen sink; add cups, plates, and cockroaches
 				cube_t sink(get_sink_cube(objs[cabinet_id]));
@@ -515,11 +525,11 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 			avoid.push_back(objs.back());
 		}
 		// place objects on the table; similar to building_t::add_restaurant_counter()
-		unsigned const num_cont (4 + (rgen.rand() % 5)); // 4-8
+		unsigned const num_cont (5 + (rgen.rand() % 5)); // 5-9
 		unsigned const num_pizza(0 + (rgen.rand() % 3)); // 0-2
 
 		for (unsigned n = 0; n < num_cont; ++n) { // containers
-			switch (rgen.rand()%4) {
+			switch (rgen.rand() % 5) {
 			case 0: // cup
 				if (place_cup_on_obj  (rgen, table, room_id, light_amt, avoid)) {avoid.push_back(objs.back());}
 				break;
@@ -529,7 +539,9 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 			case 2: // pan
 				if (place_pan_on_obj  (rgen, table, room_id, light_amt, avoid)) {avoid.push_back(get_pan_bcube_inc_handle(objs.back()));}
 				break;
-			case 3: // tray
+			case 3: // milk
+				if (place_milk_on_obj (rgen, table, room_id, light_amt, avoid)) {avoid.push_back(objs.back());}
+			case 4: // tray
 				add_cafeteria_tray_to_surface(table, !dim, room_id, light_amt, avoid, rgen);
 				break;
 			} // end switch
@@ -688,6 +700,17 @@ void building_t::add_pan_on_stove(room_object_t const &stove, rand_gen_t &rgen) 
 	pan.expand_by_xy(radius);
 	pan.z2() += height;
 	interior->room_geom->objs.emplace_back(pan, TYPE_PAN, stove.room_id, stove.dim, rgen.rand_bool(), RO_FLAG_NOCOLL, stove.light_amt, SHAPE_CYLIN, DK_GRAY);
+}
+bool building_t::place_milk_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid) {
+	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_MILK)) return 0;
+	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_MILK));
+	float const height(0.06*get_window_vspace()), radius(height*(sz.x + sz.y)/sz.z); // assumes square
+	if (min(place_on.dx(), place_on.dy()) < 2.5*radius) return 0; // surface is too small to place this milk
+	cube_t milk;
+	gen_xy_pos_for_round_obj(milk, place_on, radius, height, 1.1*radius, rgen);
+	if (has_bcube_int(milk, avoid)) return 0; // only make one attempt
+	interior->room_geom->objs.emplace_back(milk, TYPE_MILK, room_id, rgen.rand_bool(), rgen.rand_bool(), RO_FLAG_NOCOLL, tot_light_amt);
+	return 1;
 }
 
 bool building_t::add_mwave_on_table(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id,
