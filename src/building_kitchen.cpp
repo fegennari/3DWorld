@@ -369,74 +369,29 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 
 // commercial kitchen appliances, read from model config file; should agree with the set of models specified in the config file
 enum {KCA_BI_OVEN=0, KCA_DEEP_FRYER, KCA_SINK, KCA_SINK2, KCA_OVEN, KCA_OMWC, KCA_LP_DEEP_FRYER, KCA_LP_DISHWASHER, KCA_LP_FRIDGE, KCA_LP_GRILL, KCA_LP_OVEN, KCA_LP_STOVE, NUM_KC_APP};
+unsigned const cka_classes[NUM_KC_APP] = {1, 0, 2, 2, 1, 1, 0, 2, 2, 0, 1, 0}; // 0=needs hood, 1=cooks, 2=doesn't cook
 
 struct ck_app_model_t {
-	unsigned app_type=0, model_id=0, app_type_place_mask=0;
+	unsigned app_type=0, model_id=0, obj_counts[NUM_KC_APP]={};
+	vector<unsigned> cands;
 
-	void assign(rand_gen_t &rgen) {
-		for (unsigned N = 0; N < 10; ++N) { // 10 attempts to place a model we haven't yet placed
-			app_type = (rgen.rand() % NUM_KC_APP);
-			if (!(app_type_place_mask & (1U << app_type))) break; // not yet placed - done
+	void assign(rand_gen_t &rgen, unsigned cka_class) {
+		unsigned min_count(1000);
+		cands.clear();
+
+		for (unsigned n = 0; n < NUM_KC_APP; ++n) {
+			if (cka_classes[n] == cka_class) {min_eq(min_count, obj_counts[n]);}
 		}
-		app_type_place_mask |= (1U << app_type); // mark this model as placed
+		for (unsigned n = 0; n < NUM_KC_APP; ++n) {
+			if (cka_classes[n] == cka_class && obj_counts[n] == min_count) {cands.push_back(n);}
+		}
+		assert(!cands.empty()); // must have at least one cand for each class
+		app_type = cands[rgen.rand() % cands.size()];
 		model_id = combine_model_submodel_id(OBJ_MODEL_CK_APP, app_type);
 	}
 	float    get_height  () const {return 0.5*building_obj_model_loader.get_model(model_id).scale;} // in units of floor spacing
 	vector3d get_sz_scale() const {return     building_obj_model_loader.get_model_world_space_size(model_id);}
-
-	void add_exterior(vect_room_object_t &objs, unsigned obj_ix) {
-		assert(obj_ix < objs.size());
-		room_object_t const app(objs[obj_ix]); // deep copy
-		bool const dim(app.dim), dir(app.dir);
-		float const height(app.dz());
-		cube_t frame(app);
-		float z_shift(0.0);
-		unsigned skip_faces(0); // 0=don't draw
-		bool add_platform(0);
-
-		if (app_type == KCA_BI_OVEN || app_type == KCA_OVEN || app_type == KCA_OMWC) { // front face only; add sides, top, and back
-			unsigned const front_face_mask(get_face_mask(dim, dir));
-			float const fb_shift((app_type == KCA_OMWC || app_type == KCA_OVEN) ? 0.06 : 0.09);
-			skip_faces = ~front_face_mask | EF_Z1;
-			frame.d[dim][dir] -= (dir ? 1.0 : -1.0)*fb_shift*app.get_depth(); // shift front edge behind door
-
-			if (app_type != KCA_OMWC) {
-				z_shift      = 0.6*height;
-				add_platform = 1;
-				frame.translate_dim(2, z_shift);
-			}
-			if (app_type == KCA_OVEN) { // need an extra plate near the front
-				cube_t c(frame);
-				c.z1() = frame.z2() - 0.25*height;
-				objs.emplace_back(c, TYPE_METAL_BAR, app.room_id, dim, dir, 0, app.light_amt, SHAPE_CUBE, WHITE, front_face_mask);
-			}
-		}
-		else if (app_type == KCA_SINK) { // top face only; draw front, sides, and back
-			z_shift = 0.3*height;
-			frame.z2() = app.z1() + z_shift + 0.49*height;
-			skip_faces = EF_Z12;
-		}
-		else if (app_type == KCA_SINK2) { // top face only; draw front, sides, and back
-			z_shift    = 1.1*height;
-			frame.z2() = app.z1() + z_shift + 0.96*height;
-			skip_faces = EF_Z12;
-		}
-		else if (app_type == KCA_DEEP_FRYER) {
-			z_shift = 0.4*height;
-			add_platform = 1;
-		}
-		if (add_platform) { // place this object on a platform/table; should this be merged across adjacent objects at the same height?
-			assert(z_shift > 0.0);
-			cube_t platform(app);
-			platform.z2() = app.z1() + z_shift;
-			objs.emplace_back(platform, TYPE_METAL_BAR, app.room_id, dim, dir, 0, app.light_amt, SHAPE_CUBE, WHITE, EF_Z1);
-		}
-		if (z_shift > 0.0) {objs[obj_ix].translate_dim(2, z_shift);} // shift up
-
-		if (skip_faces) { // add missing sides of this model
-			objs.emplace_back(frame, TYPE_METAL_BAR, app.room_id, dim, dir, RO_FLAG_NOCOLL, app.light_amt, SHAPE_CUBE, WHITE, skip_faces);
-		}
-	}
+	void post_add() {++obj_counts[app_type];}
 };
 
 void set_specular_for_low_poly_kitchen_models() {
@@ -450,6 +405,66 @@ void set_specular_for_low_poly_kitchen_models() {
 	}
 }
 
+void building_t::add_commercial_kitchen_app_post(unsigned obj_ix, unsigned app_type, cube_t &hood, unsigned cclass_counts[3], rand_gen_t &rgen) {
+	vect_room_object_t &objs(interior->room_geom->objs);
+	assert(obj_ix < objs.size());
+	room_object_t const app(objs[obj_ix]); // deep copy
+	bool const dim(app.dim), dir(app.dir);
+	float const height(app.dz());
+	cube_t frame(app);
+	float z_shift(0.0);
+	unsigned skip_faces(0); // 0=don't draw
+	bool add_platform(0);
+
+	if (app_type == KCA_BI_OVEN || app_type == KCA_OVEN || app_type == KCA_OMWC) { // front face only; add sides, top, and back
+		unsigned const front_face_mask(get_face_mask(dim, dir));
+		float const fb_shift((app_type == KCA_OMWC || app_type == KCA_OVEN) ? 0.06 : 0.09);
+		skip_faces = ~front_face_mask | EF_Z1;
+		frame.d[dim][dir] -= (dir ? 1.0 : -1.0)*fb_shift*app.get_depth(); // shift front edge behind door
+
+		if (app_type != KCA_OMWC) {
+			z_shift      = 0.6*height;
+			add_platform = 1;
+			frame.translate_dim(2, z_shift);
+		}
+		if (app_type == KCA_OVEN) { // need an extra plate near the front
+			cube_t c(frame);
+			c.z1() = frame.z2() - 0.25*height;
+			objs.emplace_back(c, TYPE_METAL_BAR, app.room_id, dim, dir, 0, app.light_amt, SHAPE_CUBE, WHITE, front_face_mask);
+		}
+	}
+	else if (app_type == KCA_SINK) { // top face only; draw front, sides, and back
+		z_shift = 0.3*height;
+		frame.z2() = app.z1() + z_shift + 0.49*height;
+		skip_faces = EF_Z12;
+	}
+	else if (app_type == KCA_SINK2) { // top face only; draw front, sides, and back
+		z_shift    = 1.1*height;
+		frame.z2() = app.z1() + z_shift + 0.96*height;
+		skip_faces = EF_Z12;
+	}
+	else if (app_type == KCA_DEEP_FRYER) {
+		z_shift = 0.3*height;
+		add_platform = 1;
+	}
+	if (add_platform) { // place this object on a platform/table; should this be merged across adjacent objects at the same height?
+		assert(z_shift > 0.0);
+		cube_t platform(app);
+		platform.z2() = app.z1() + z_shift;
+		objs.emplace_back(platform, TYPE_METAL_BAR, app.room_id, dim, dir, 0, app.light_amt, SHAPE_CUBE, WHITE, EF_Z1);
+	}
+	if (z_shift > 0.0) {objs[obj_ix].translate_dim(2, z_shift);} // shift up
+
+	if (skip_faces) { // add missing sides of this model
+		objs.emplace_back(frame, TYPE_METAL_BAR, app.room_id, dim, dir, RO_FLAG_NOCOLL, app.light_amt, SHAPE_CUBE, WHITE, skip_faces);
+	}
+	unsigned const app_cclass(cka_classes[app_type]);
+	++cclass_counts[app_cclass];
+	if (app_cclass == 0) {hood.assign_or_union_with_cube(app);}
+	if      (app_type == KCA_LP_GRILL) {add_pan_on_grill(app, rgen);}
+	else if (app_type == KCA_LP_STOVE) {add_pan_on_stove(app, rgen);}
+}
+
 bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id,
 	float light_amt, unsigned objs_start, light_ix_assign_t &light_ix_assign)
 {
@@ -458,7 +473,7 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 	if (room_sz.get_min_val() < 2.0*floor_spacing || room_sz.get_max_val() < 3.0*floor_spacing) return 0; // too small
 	bool const in_mall(room.is_ext_basement() && has_mall()), dim(room_sz.x < room_sz.y); // long dim
 	bool const add_island(room.get_sz_dim(!dim) > 3.0*floor_spacing); // if room is wide enough, add a center island
-	float const ceil_zval(zval + floor_spacing - get_fc_thickness()), clearance(get_min_front_clearance_inc_people());
+	float const ceil_zval((in_mall ? room.z2() : (zval + floor_spacing)) - get_fc_thickness()), clearance(get_min_front_clearance_inc_people());
 	cube_t place_area(get_room_wall_bounds(room));
 	place_area.expand_by_xy(-trim_thick);
 	if (!has_tile_floor() && !in_mall) {zval = add_flooring(room, zval, room_id, light_amt, FLOORING_LGTILE);} // prison and maybe school
@@ -536,26 +551,29 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 		unsigned const skip_dir(2); // allow both dirs, depending on what placement is legal
 		add_ceiling_ducts(room, ceil_zval, room_id, dim, skip_dir, light_amt, 0, 1, 1, rgen, 0.5, avoid); // cylin_ducts=0, skip_ends=1, skip_top=1, sz_scale=0.5
 	}
-	// add hood
-	//cube_t hood; // TODO - must avoid ceiling lights
-	
 	// place commerial kitchen appliances (grills, deep fryers, ovens, sinks, etc.); only legal if all models have been loaded
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_CK_APP) && building_obj_model_loader.get_num_sub_models(OBJ_MODEL_CK_APP) == NUM_KC_APP) {
 		set_specular_for_low_poly_kitchen_models();
 		float const app_gap(trim_thick); // must be large enough to prevent cube intersection
-		unsigned fail_count(0);
+		unsigned fail_count(0), num_fridge(0), cclass_counts[3] = {0, 1, 1}; // prefer hood items
+		cclass_counts[rgen.rand_bool() + 1] = 2; // randomize second two classes
 		ck_app_model_t app_model; // reused across calls; tracks model stats
+		cube_t hood;
+		bool add_fridge_pass(1); // add fridge on first and every alternating non-cooking class pass
 
-		for (unsigned n = 0; n < 20; ++n) { // place up to 20 kitchen appliance models; stop after enough failures
-			bool const add_fridge((rgen.rand() % 4) == 0); // 25% chance of fridge
+		for (unsigned n = 0; n < 20; ++n) { // place up to 20 kitchen appliance models groups; stop after enough failures
+			unsigned const cka_class(min_element(cclass_counts, cclass_counts+3) - cclass_counts);
+			bool const non_cook_class(cka_class == 2), add_fridge(non_cook_class && add_fridge_pass);
 			unsigned obj_ix(objs.size());
 			bool success(0);
+			hood.set_to_zeros();
 
 			if (add_fridge) {
 				success = place_model_along_wall(OBJ_MODEL_FRIDGE, TYPE_FRIDGE, room, 0.75, rgen, zval, room_id, light_amt, place_area, objs_start, 1.2, 4, 0, WHITE, 1);
+				num_fridge += success;
 			}
 			else {
-				app_model.assign(rgen);
+				app_model.assign(rgen, cka_class);
 				float const height(app_model.get_height());
 				success = place_model_along_wall(app_model.model_id, TYPE_KITCH_APP, room, height, rgen, zval, room_id, light_amt, place_area, objs_start, 1.0, 4, 0, WHITE, 1);
 			}
@@ -563,20 +581,20 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 				if (++fail_count >= 10) break; // stop after 10 failures
 				continue;
 			}
-			if (!add_fridge) {app_model.add_exterior(objs, obj_ix);}
+			if (non_cook_class && num_fridge > 1) {add_fridge_pass ^= 1;}
 			room_object_t const app(objs[obj_ix]); // deep copy to avoid reference invalidation
 			bool const adim(app.dim), adir(app.dir);
 			
 			if (!add_fridge) {
 				assert(app.item_flags == app_model.app_type);
-				if      (app_model.app_type == KCA_LP_GRILL) {add_pan_on_grill(app, rgen);}
-				else if (app_model.app_type == KCA_LP_STOVE) {add_pan_on_stove(app, rgen);}
+				app_model.post_add();
+				add_commercial_kitchen_app_post(obj_ix, app_model.app_type, hood, cclass_counts, rgen);
 			}
 			for (unsigned d = 0; d < 2; ++d) { // for each side of this appliance
 				cube_t prev(app);
 
 				for (unsigned m = 0; m < 4; ++m) { // up to 4 neighbors
-					app_model.assign(rgen);
+					app_model.assign(rgen, cka_class); // same class
 					vector3d const sz_scale(app_model.get_sz_scale()); // D, W, H
 					float const height(floor_spacing*app_model.get_height()), depth(height*sz_scale.x/sz_scale.z), width(height*sz_scale.y/sz_scale.z);
 					room_object_t app2(app);
@@ -592,9 +610,8 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 					app2.type = TYPE_KITCH_APP; // in case app was a fridge
 					app2.item_flags = app_model.app_type;
 					objs.push_back(app2);
-					app_model.add_exterior(objs, objs.size()-1);
-					if      (app_model.app_type == KCA_LP_GRILL) {add_pan_on_grill(app2, rgen);}
-					else if (app_model.app_type == KCA_LP_STOVE) {add_pan_on_stove(app2, rgen);}
+					app_model.post_add();
+					add_commercial_kitchen_app_post(objs.size()-1, app_model.app_type, hood, cclass_counts, rgen);
 					prev = app2;
 					cube_t blocker(tc); // add a blocker for front clearance
 					blocker.d[adim][!adir] = front;
@@ -651,7 +668,8 @@ bool building_t::place_pan_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsi
 	interior->room_geom->objs.push_back(pan);
 	return 1;
 }
-void building_t::add_pan_on_grill(room_object_t const &grill, rand_gen_t &rgen) { // does a pan belong on a grill?
+void building_t::add_pan_on_grill(room_object_t const &grill, rand_gen_t &rgen) {
+	if (rgen.rand_bool()) return; // does a pan belong on a grill? only add half the time
 	cube_t top(grill);
 	top.z2() -= 0.17*grill.dz();
 	top.d[grill.dim][!grill.dir] += (grill.dir ? 1.0 : -1.0)*0.1*grill.get_depth(); // shrink off back part
