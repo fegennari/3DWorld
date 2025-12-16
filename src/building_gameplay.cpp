@@ -232,6 +232,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_SHELL_CASE] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 0.0,   0.01,  "shell casing");
 	bldg_obj_types[TYPE_PAN_SHELF ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 2, 0.0,   0.0,   "pantry shelf");
 	bldg_obj_types[TYPE_JAR       ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 5.0,   0.25,  "jar of spice");
+	bldg_obj_types[TYPE_VENT_HOOD ] = bldg_obj_type_t(0, 0, 1, 0, 1, 0, 1, 500,  200.00, "ventilation hood"); // rat_coll set since it's spider collidable
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");

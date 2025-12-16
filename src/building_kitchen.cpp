@@ -457,6 +457,9 @@ void building_t::add_commercial_kitchen_app_post(unsigned obj_ix, unsigned app_t
 		z_shift = 0.3*height;
 		add_platform = 1;
 	}
+	else if (app_type == KCA_LP_GRILL) {add_pan_on_grill(app, rgen);}
+	else if (app_type == KCA_LP_STOVE) {add_pan_on_stove(app, rgen);}
+
 	if (add_platform) { // place this object on a platform/table; should this be merged across adjacent objects at the same height?
 		assert(z_shift > 0.0);
 		cube_t platform(app);
@@ -464,15 +467,11 @@ void building_t::add_commercial_kitchen_app_post(unsigned obj_ix, unsigned app_t
 		objs.emplace_back(platform, TYPE_METAL_BAR, app.room_id, dim, dir, 0, app.light_amt, SHAPE_CUBE, WHITE, EF_Z1);
 	}
 	if (z_shift > 0.0) {objs[obj_ix].translate_dim(2, z_shift);} // shift up
-
-	if (skip_faces) { // add missing sides of this model
-		objs.emplace_back(frame, TYPE_METAL_BAR, app.room_id, dim, dir, RO_FLAG_NOCOLL, app.light_amt, SHAPE_CUBE, WHITE, skip_faces);
-	}
+	// add missing sides of this model
+	if (skip_faces) {objs.emplace_back(frame, TYPE_METAL_BAR, app.room_id, dim, dir, RO_FLAG_NOCOLL, app.light_amt, SHAPE_CUBE, WHITE, skip_faces);}
 	unsigned const app_cclass(cka_classes[app_type]);
 	++cclass_counts[app_cclass];
 	if (app_cclass == 0) {hood.assign_or_union_with_cube(app);}
-	if      (app_type == KCA_LP_GRILL) {add_pan_on_grill(app, rgen);}
-	else if (app_type == KCA_LP_STOVE) {add_pan_on_stove(app, rgen);}
 }
 
 bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id,
@@ -630,6 +629,13 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 					objs.emplace_back(blocker, TYPE_BLOCKER, room_id, adim, adir, RO_FLAG_INVIS, light_amt);
 				} // for m
 			} // for d
+			if (!hood.is_all_zeros() && hood.get_sz_dim(!adim) > 0.35*floor_spacing) { // add hoods/vents where needed, if not too small
+				float const hood_z1(max((ceil_zval - 1.0f*floor_spacing), (zval + 0.67f*floor_spacing)));
+				set_cube_zvals(hood, hood_z1, ceil_zval);
+				// TODO - must avoid ceiling lights?
+				// TODO: ceiling ducts
+				objs.emplace_back(hood, TYPE_VENT_HOOD, room_id, adim, adir, 0, light_amt, SHAPE_CUBE, WHITE);
+			}
 		} // for n
 	}
 	else { // can't load all appliance models; place only fridge instead

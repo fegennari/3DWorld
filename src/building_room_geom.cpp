@@ -7257,6 +7257,29 @@ void building_room_geom_t::add_conveyor_belt(room_object_t const &c, bool draw_d
 	}
 }
 
+void building_room_geom_t::add_vent_hood(room_object_t const &c) {
+	colorRGBA const color(apply_light_color(c));
+	rgeom_mat_t &mat(get_metal_material(1)); // shadowed
+	bool const dim(c.dim), dir(c.dir);
+	float const depth(c.get_depth()), wall_thick(0.01*depth), dz(0.5f*min(c.dz(), depth)), front_z1(c.z1() + dz), dsign(dir ? 1.0 : -1.0);
+	cube_t top(c), front(c), back(c);
+	top.z1() = front_z1 + 0.5*dz; // between front edge and ceiling
+	top.expand_by_xy(-wall_thick);
+	front.z1() = front_z1;
+	front.d[dim][!dir] = c.d[dim][ dir] - dsign*wall_thick;
+	back .d[dim][ dir] = c.d[dim][!dir] + dsign*wall_thick;
+	mat.add_cube_to_verts_untextured(top,   color, ~EF_Z1); // draw bottom surface only
+	mat.add_cube_to_verts_untextured(front, color,  EF_Z2); // skip top
+	mat.add_cube_to_verts_untextured(back,  color, (EF_Z2 | ~get_face_mask(c.dim, !c.dir))); // skip top and back
+
+	for (unsigned d = 0; d < 2; ++d) { // draw sides
+		cube_t side(c);
+		side.d[!dim][!d] = c.d[!dim][d] + (d ? -1.0 : 1.0)*wall_thick;
+		// TODO: sloped bottom edge
+		mat.add_cube_to_verts_untextured(side, color, (EF_Z2 | get_skip_mask_for_xy(dim))); // skip top, front, and back
+	} // for d
+}
+
 void add_grid_of_bars(rgeom_mat_t &mat, colorRGBA const &color, cube_t const &c, unsigned num_vbars, unsigned num_hbars, float vbar_hthick,
 	float hbar_hthick, unsigned vdim, unsigned hdim, unsigned adj_dim, float h_adj_val, bool cylin_vbars, float tscale)
 {
