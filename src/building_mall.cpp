@@ -2315,7 +2315,7 @@ void building_t::add_restaurant_objs(rand_gen_t &rgen, room_t const &room, float
 	room_t pub_area(room), kitchen(room);
 	pub_area.d[dim][!dir] = counter.d[dim][ dir];
 	kitchen .d[dim][ dir] = counter.d[dim][!dir];
-	add_commercial_kitchen_objs(rgen, kitchen, zval, room_id, light_amt, objs_start, objs_start, light_ix_assign); // no lights_start
+	add_commercial_kitchen_objs(rgen, kitchen, zval, room_id, 0, light_amt, objs_start, objs_start, light_ix_assign); // floor_ix=0, no lights_start
 
 	if (is_open) { // add vending machines
 		cube_t const pub_room_bounds(get_walkable_room_bounds(pub_area));
@@ -2606,9 +2606,10 @@ bool building_t::add_ceiling_ducts(cube_t const &room_area, float ceil_zval, uns
 					if (pass == 0) {use_second_pass = 1; continue;} // else allow it
 				}
 			}
-			if (duct.z1() < room.z1() + window_vspace) { // check for door intersections if not a tall room
+			if (!room.is_single_floor || duct.z1() < room.z1() + window_vspace) { // check for door intersections if not a tall room
 				if (is_cube_close_to_doorway(duct, int_area, 0.0, 1, 1)) continue; // inc_open_doors=1, check_open_dir=1
 			}
+			if (interior->is_blocked_by_stairs_or_elevator(duct)) continue;
 			unsigned main_duct_flags(RO_FLAG_IN_MALL | (skip_top ? RO_FLAG_ADJ_TOP : 0));
 			if (skip_ends && duct.d[dim][0] == int_area.d[dim][0]) {main_duct_flags |= RO_FLAG_ADJ_LO;} // skip lo end if at room bounds
 			if (skip_ends && duct.d[dim][1] == int_area.d[dim][1]) {main_duct_flags |= RO_FLAG_ADJ_HI;} // skip hi end if at room bounds

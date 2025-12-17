@@ -971,7 +971,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 							}
 							else { // commercial kitchen on the first floor; should this be next to the cafeteria?
 								added_obj = no_whiteboard =
-									add_commercial_kitchen_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, objs_start_inc_lights, light_ix_assign);
+									add_commercial_kitchen_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start, objs_start_inc_lights, light_ix_assign);
 								if (added_obj) {r->assign_to(RTYPE_KITCHEN, f);}
 							}
 						}
@@ -991,7 +991,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				}
 				if (!added_obj && f == 0 && !added_kitchen_mask && rgen.rand_bool()) { // commercial kitchen; should this be next to the cafeteria?
 					added_obj = no_plants = no_whiteboard =
-						add_commercial_kitchen_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, objs_start_inc_lights, light_ix_assign);
+						add_commercial_kitchen_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start, objs_start_inc_lights, light_ix_assign);
 					if (added_obj) {added_kitchen_mask |= 1;}
 					if (added_obj) {r->assign_to(RTYPE_KITCHEN, f);}
 				}

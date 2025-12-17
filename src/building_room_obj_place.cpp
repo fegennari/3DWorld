@@ -1041,6 +1041,7 @@ bool building_t::check_valid_closet_placement(cube_t const &c, room_t const &roo
 		if (c.intersects_xy(bed_exp)) return 0; // too close to bed
 	}
 	if (overlaps_other_room_obj(c, objs_start) || is_cube_close_to_doorway(c, room, 0.0, 1)) return 0;
+	if (interior->is_blocked_by_stairs_or_elevator(c)) return 0; // needed for walk-in freezers
 	if (has_attic() && c.intersects_xy(interior->attic_access) && (c.z2() + get_floor_thickness()) > interior->attic_access.z1()) return 0;
 	return 1;
 }

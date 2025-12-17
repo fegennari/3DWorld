@@ -483,9 +483,10 @@ void building_t::add_commercial_kitchen_app_post(unsigned obj_ix, unsigned app_t
 	if (app_cclass == 0) {hood.assign_or_union_with_cube(app);}
 }
 
-bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id,
+bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, unsigned floor_ix,
 	float light_amt, unsigned objs_start, unsigned lights_start, light_ix_assign_t &light_ix_assign)
 {
+	if (room_has_stairs_or_elevator(room, zval, floor_ix)) return 0; // works, but stairs may be blocked by a trolley
 	float const floor_spacing(get_window_vspace()), wall_thick(get_wall_thickness()), trim_thick(get_trim_thickness());
 	vector2d const room_sz(room.get_size_xy());
 	if (room_sz.get_min_val() < 2.0*floor_spacing || room_sz.get_max_val() < 3.0*floor_spacing) return 0; // too small
