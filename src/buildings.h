@@ -2987,7 +2987,8 @@ private:
 	bool add_kitchen_objs    (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt,
 		unsigned objs_start, bool allow_adj_ext_door, light_ix_assign_t &light_ix_assign);
 	void add_commercial_kitchen_app_post(unsigned obj_ix, unsigned app_type, cube_t &hood, unsigned cclass_counts[3], rand_gen_t &rgen);
-	bool add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float light_amt, unsigned objs_start, light_ix_assign_t &light_ix_assign);
+	bool add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float light_amt,
+		unsigned objs_start, unsigned lights_start, light_ix_assign_t &light_ix_assign);
 	void add_fridge_sticky_notes(rand_gen_t rgen, unsigned fridge_obj_ix, float zval, unsigned room_id, float tot_light_amt);
 	bool add_fishtank_to_room(rand_gen_t&rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, cube_t const &place_area);
 	bool add_livingroom_objs (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
@@ -3109,8 +3110,8 @@ private:
 	void add_cafeteria_tray_to_surface(cube_t const &surface, bool dim, unsigned room_id, float light_amt, vect_cube_t &avoid, rand_gen_t &rgen);
 	void add_clothing_rack(cube_t const &rack, unsigned room_id, bool dim, float light_amt, room_type rtype, rand_gen_t &rgen);
 	void add_mall_back_hallway_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float light_amt);
-	void add_ceiling_ducts(cube_t const &room_area, float ceil_zval, unsigned room_id, bool dim, unsigned skip_dir, float light_amt,
-		bool cylin_ducts, bool skip_ends, bool skip_top, rand_gen_t &rgen, float sz_scale=1.0, cube_t const &avoid=cube_t());
+	bool add_ceiling_ducts(cube_t const &room_area, float ceil_zval, unsigned room_id, bool dim, unsigned skip_dir, float light_amt,
+		bool cylin_ducts, bool skip_ends, bool skip_top, rand_gen_t &rgen, float sz_scale=1.0, vect_cube_t const &avoid=vect_cube_t());
 	void add_row_of_bookcases(cube_t const &row, float zval, unsigned room_id, float light_amt, bool dim, bool place_inside);
 	void add_shelves_along_walls(cube_t const &room_area, float zval, unsigned room_id, float light_amt,
 		bool dim, unsigned store_type, float height, float depth, bool place_inside, rand_gen_t &rgen);

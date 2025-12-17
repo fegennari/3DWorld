@@ -569,7 +569,7 @@ bool building_t::assign_and_fill_prison_room(rand_gen_t rgen, room_t &room, floa
 				if (!add_small_retail_room_objs(rgen, room, zval, room_id, tot_light_amt)) continue;
 				break;
 			case RTYPE_KITCHEN:
-				if (!add_commercial_kitchen_objs(rgen, room, zval, room_id, tot_light_amt, objs_start, light_ix_assign)) continue;
+				if (!add_commercial_kitchen_objs(rgen, room, zval, room_id, tot_light_amt, objs_start, lights_start, light_ix_assign)) continue;
 				break;
 			default: assert(0);
 			}

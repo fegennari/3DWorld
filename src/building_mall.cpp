@@ -2315,7 +2315,7 @@ void building_t::add_restaurant_objs(rand_gen_t &rgen, room_t const &room, float
 	room_t pub_area(room), kitchen(room);
 	pub_area.d[dim][!dir] = counter.d[dim][ dir];
 	kitchen .d[dim][ dir] = counter.d[dim][!dir];
-	add_commercial_kitchen_objs(rgen, kitchen, zval, room_id, light_amt, objs_start, light_ix_assign);
+	add_commercial_kitchen_objs(rgen, kitchen, zval, room_id, light_amt, objs_start, objs_start, light_ix_assign); // no lights_start
 
 	if (is_open) { // add vending machines
 		cube_t const pub_room_bounds(get_walkable_room_bounds(pub_area));
@@ -2563,8 +2563,8 @@ void building_t::add_mall_back_hallway_objs(rand_gen_t rgen, room_t const &room,
 	} // for n
 }
 
-void building_t::add_ceiling_ducts(cube_t const &room_area, float ceil_zval, unsigned room_id, bool dim, unsigned skip_dir, float light_amt,
-	bool cylin_ducts, bool skip_ends, bool skip_top, rand_gen_t &rgen, float sz_scale, cube_t const &avoid)
+bool building_t::add_ceiling_ducts(cube_t const &room_area, float ceil_zval, unsigned room_id, bool dim, unsigned skip_dir, float light_amt,
+	bool cylin_ducts, bool skip_ends, bool skip_top, rand_gen_t &rgen, float sz_scale, vect_cube_t const &avoid)
 {
 	float const window_vspace(get_window_vspace()), scaled_space(sz_scale*window_vspace), wall_hthick(0.5*get_wall_thickness());
 	float const duct_height((cylin_ducts ? 0.25 : 0.2)*scaled_space), duct_width((cylin_ducts ? 0.25 : 0.26)*scaled_space), vent_ext((cylin_ducts ? 0.05 : 0.1)*scaled_space);
@@ -2574,56 +2574,67 @@ void building_t::add_ceiling_ducts(cube_t const &room_area, float ceil_zval, uns
 	cube_t int_area(room_area);
 	int_area.intersect_with_cube(get_room_wall_bounds(room));
 	vect_room_object_t &objs(interior->room_geom->objs);
+	bool added_duct(0), use_second_pass(0);
 
-	for (unsigned d = 0; d < 2; ++d) { // each side
-		if (unsigned(d) == skip_dir) continue;
-		float const dscale(d ? 1.0 : -1.0);
-		cube_t duct(int_area);
-		duct.z2() = ceil_zval - get_fc_thickness();
-		duct.z1() = duct.z2() - duct_height;
-		duct.d[!dim][ d] = room.d[!dim][d] - dscale*wall_hthick;
-		duct.d[!dim][!d] = duct.d[!dim][d] - dscale*duct_width;
+	for (unsigned pass = 0; pass < 2; ++pass) { // first pass skips walls with windows, second pass allows them if duct is above top of window
+		for (unsigned d = 0; d < 2; ++d) { // each side
+			if (unsigned(d) == skip_dir) continue;
+			float const dscale(d ? 1.0 : -1.0);
+			cube_t duct(int_area);
+			duct.z2() = ceil_zval - get_fc_thickness();
+			duct.z1() = duct.z2() - duct_height;
+			duct.d[!dim][ d] = room.d[!dim][d] - dscale*wall_hthick;
+			duct.d[!dim][!d] = duct.d[!dim][d] - dscale*duct_width;
 
-		if (!avoid.is_all_zeros() && duct.intersects(avoid)) {
-			vect_cube_t duct_parts;
-			subtract_cube_from_cube(duct, avoid, duct_parts);
-			if (duct_parts.empty()) continue; // shouldn't happen
-			duct.set_to_zeros();
+			if (has_bcube_int(duct, avoid)) {
+				vect_cube_t duct_parts, temp;
+				subtract_cubes_from_cube(duct, avoid, duct_parts, temp, 1); // ignore zvals
+				if (duct_parts.empty()) continue; // shouldn't happen
+				duct.set_to_zeros();
 
-			for (cube_t const &p : duct_parts) { // duct is the largest remaining part that doesn't overlap avoid
-				if (p.get_area_xy() > duct.get_area_xy()) {duct = p;}
+				for (cube_t const &p : duct_parts) { // duct is the largest remaining part that doesn't overlap avoid
+					if (p.get_area_xy() > duct.get_area_xy()) {duct = p;}
+				}
 			}
-		}
-		if (!is_industrial() && duct.z1() > ground_floor_z1) { // check for windows if not underground; this isn't required, so maybe can be relaxed?
-			if (classify_room_wall(room, int_area.z1(), !dim, d, 0) == ROOM_WALL_EXT) continue;
-		}
-		if (duct.z1() < room.z1() + window_vspace) { // check for door intersections if not a tall room
-			if (is_cube_close_to_doorway(duct, int_area, 0.0, 1, 1)) continue; // inc_open_doors=1, check_open_dir=1
-		}
-		assert(duct.is_strictly_normalized());
-		unsigned main_duct_flags(RO_FLAG_IN_MALL | (skip_top ? RO_FLAG_ADJ_TOP : 0));
-		if (skip_ends && duct.d[dim][0] == int_area.d[dim][0]) {main_duct_flags |= RO_FLAG_ADJ_LO;} // skip lo end if at room bounds
-		if (skip_ends && duct.d[dim][1] == int_area.d[dim][1]) {main_duct_flags |= RO_FLAG_ADJ_HI;} // skip hi end if at room bounds
-		objs.emplace_back(duct, TYPE_DUCT, room_id, dim, 0, main_duct_flags, light_amt, (cylin_ducts ? SHAPE_CYLIN : SHAPE_CUBE)); // dir=0 (XY)
-		// add vents along the duct
-		float const duct_len(duct.get_sz_dim(dim));
-		unsigned const num_vents(max(2U, (unsigned)round_fp(0.5*duct_len/scaled_space))); // per side
-		float const vent_spacing(duct_len/num_vents);
-		cube_t duct_ext(duct); // duct => vent extension
-		duct_ext.expand_in_z( -(cylin_ducts ? 0.2 : 0.15)*duct_height); // shrink
-		duct_ext.d[!dim][ d] = (cylin_ducts ? duct.get_center_dim(!dim) : duct.d[!dim][!d]); // centered if cylinder, flush with duct if cube
-		duct_ext.d[!dim][!d] = duct.d[!dim][!d] - dscale*vent_ext; // extend a bit further out
+			assert(duct.is_strictly_normalized());
+			float const duct_len(duct.get_sz_dim(dim));
+			if (duct_len < 0.5*int_area.get_sz_dim(dim)) continue; // skip if duct is less than half the room length post-clip
 
-		for (unsigned n = 0; n < num_vents; ++n) {
-			set_wall_width(duct_ext, (duct.d[dim][0] + (0.5 + n)*vent_spacing), 0.12*scaled_space, dim);
-			assert(duct_ext.is_strictly_normalized());
-			objs.emplace_back(duct_ext, TYPE_DUCT, room_id, !dim, 0, duct_flags, light_amt, SHAPE_CUBE); // dir=0 (XY)
-			cube_t vent(duct_ext);
-			vent.d[!dim][d] = duct_ext.d[!dim][!d]; // shrink to end of duct
-			vent.expand_by(0.005*scaled_space);
-			objs.emplace_back(vent, TYPE_VENT, room_id, !dim, d, RO_FLAG_IN_MALL, light_amt, SHAPE_CUBE);
-		} // for n
-	} // for d
+			if (!is_industrial() && duct.z1() > ground_floor_z1) { // check for windows if not underground; this isn't required, so maybe can be relaxed?
+				if (classify_room_wall(room, int_area.z1(), !dim, d, 0) == ROOM_WALL_EXT) { // wall may have windows
+					if (duct.z1() < ceil_zval - get_window_v_border()*window_vspace) continue; // duct below window; can't place
+					if (pass == 0) {use_second_pass = 1; continue;} // else allow it
+				}
+			}
+			if (duct.z1() < room.z1() + window_vspace) { // check for door intersections if not a tall room
+				if (is_cube_close_to_doorway(duct, int_area, 0.0, 1, 1)) continue; // inc_open_doors=1, check_open_dir=1
+			}
+			unsigned main_duct_flags(RO_FLAG_IN_MALL | (skip_top ? RO_FLAG_ADJ_TOP : 0));
+			if (skip_ends && duct.d[dim][0] == int_area.d[dim][0]) {main_duct_flags |= RO_FLAG_ADJ_LO;} // skip lo end if at room bounds
+			if (skip_ends && duct.d[dim][1] == int_area.d[dim][1]) {main_duct_flags |= RO_FLAG_ADJ_HI;} // skip hi end if at room bounds
+			objs.emplace_back(duct, TYPE_DUCT, room_id, dim, 0, main_duct_flags, light_amt, (cylin_ducts ? SHAPE_CYLIN : SHAPE_CUBE)); // dir=0 (XY)
+			added_duct = 1;
+			// add vents along the duct
+			unsigned const num_vents(max(2U, (unsigned)round_fp(0.5*duct_len/scaled_space))); // per side
+			float const vent_spacing(duct_len/num_vents);
+			cube_t duct_ext(duct); // duct => vent extension
+			duct_ext.expand_in_z( -(cylin_ducts ? 0.2 : 0.15)*duct_height); // shrink
+			duct_ext.d[!dim][ d] = (cylin_ducts ? duct.get_center_dim(!dim) : duct.d[!dim][!d]); // centered if cylinder, flush with duct if cube
+			duct_ext.d[!dim][!d] = duct.d[!dim][!d] - dscale*vent_ext; // extend a bit further out
+
+			for (unsigned n = 0; n < num_vents; ++n) {
+				set_wall_width(duct_ext, (duct.d[dim][0] + (0.5 + n)*vent_spacing), 0.12*scaled_space, dim);
+				assert(duct_ext.is_strictly_normalized());
+				objs.emplace_back(duct_ext, TYPE_DUCT, room_id, !dim, 0, duct_flags, light_amt, SHAPE_CUBE); // dir=0 (XY)
+				cube_t vent(duct_ext);
+				vent.d[!dim][d] = duct_ext.d[!dim][!d]; // shrink to end of duct
+				vent.expand_by(0.005*scaled_space);
+				objs.emplace_back(vent, TYPE_VENT, room_id, !dim, d, RO_FLAG_IN_MALL, light_amt, SHAPE_CUBE);
+			} // for n
+		} // for d
+		if (added_duct || !use_second_pass) break; // only one pass needed
+	} // for pass
+	return added_duct;
 }
 
 void building_t::add_row_of_bookcases(cube_t const &row, float zval, unsigned room_id, float light_amt, bool dim, bool place_inside) {

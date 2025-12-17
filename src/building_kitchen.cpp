@@ -414,6 +414,15 @@ void set_specular_for_low_poly_kitchen_models() {
 		building_obj_model_loader.set_all_material_specular(model_id, WHITE, 60.0, 1.0); // fully specular metal
 	}
 }
+void move_lights_to_not_intersect(vect_room_object_t &objs, unsigned objs_start, unsigned objs_end, cube_t const &avoid) {
+	assert(objs_start <= objs_end && objs_end <= objs.size());
+
+	for (auto i = objs.begin()+objs_start; i != objs.begin()+objs_end; ++i) { // move light away from avoid; this is rare
+		if (i->type != TYPE_LIGHT || !i->intersects(avoid)) continue; // or intersects_xy()?
+		bool const dim(i->dy() < i->dx()), dir(avoid.get_center_dim(dim) < i->get_center_dim(dim)); // move in narrow dim
+		i->translate_dim(dim, (avoid.d[dim][dir] - i->d[dim][!dir])); // hopefully this pos is inside the room and not intersecting anything
+	}
+}
 
 void building_t::add_commercial_kitchen_app_post(unsigned obj_ix, unsigned app_type, cube_t &hood, unsigned cclass_counts[3], rand_gen_t &rgen) {
 	vect_room_object_t &objs(interior->room_geom->objs);
@@ -475,7 +484,7 @@ void building_t::add_commercial_kitchen_app_post(unsigned obj_ix, unsigned app_t
 }
 
 bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id,
-	float light_amt, unsigned objs_start, light_ix_assign_t &light_ix_assign)
+	float light_amt, unsigned objs_start, unsigned lights_start, light_ix_assign_t &light_ix_assign)
 {
 	float const floor_spacing(get_window_vspace()), wall_thick(get_wall_thickness()), trim_thick(get_trim_thickness());
 	vector2d const room_sz(room.get_size_xy());
@@ -551,16 +560,15 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 	}
 	// add walk-in freezer as a "closet" type
 	unsigned closet_obj_id(0);
-	cube_t avoid;
+	vect_cube_t duct_avoid;
 	
 	if (add_closet_to_room(rgen, room, zval, room_id, objs_start, RTYPE_KITCHEN, 0, clearance, closet_obj_id, light_ix_assign)) { // bed_obj_ix=0 (not set)
-		avoid = objs[closet_obj_id];
-		avoid.expand_in_dim(objs[closet_obj_id].dim, 1.2*get_doorway_width()); // allow space for door to open
-		if (in_mall) {objs[closet_obj_id].flags |= RO_FLAG_IN_MALL;}
-	}
-	if (!in_mall) { // mall already has ceiling vents
-		unsigned const skip_dir(2); // allow both dirs, depending on what placement is legal
-		add_ceiling_ducts(room, ceil_zval, room_id, dim, skip_dir, light_amt, 0, 1, 1, rgen, 0.5, avoid); // cylin_ducts=0, skip_ends=1, skip_top=1, sz_scale=0.5
+		room_object_t &freezer(objs[closet_obj_id]);
+		cube_t avoid(freezer);
+		avoid.expand_in_dim(freezer.dim, 1.1*get_doorway_width()); // allow space for door to open
+		duct_avoid.push_back(avoid);
+		if (in_mall) {freezer.flags |= RO_FLAG_IN_MALL;}
+		move_lights_to_not_intersect(objs, lights_start, objs_start, avoid); // or freezer?
 	}
 	// place commerial kitchen appliances (grills, deep fryers, ovens, sinks, etc.); only legal if all models have been loaded
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_CK_APP) && building_obj_model_loader.get_num_sub_models(OBJ_MODEL_CK_APP) == NUM_KC_APP) {
@@ -632,9 +640,9 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 			if (!hood.is_all_zeros() && hood.get_sz_dim(!adim) > 0.35*floor_spacing) { // add hoods/vents where needed, if not too small
 				float const hood_z1(max((ceil_zval - 1.0f*floor_spacing), (zval + 0.67f*floor_spacing)));
 				set_cube_zvals(hood, hood_z1, ceil_zval);
-				// TODO - must avoid ceiling lights?
-				// TODO: ceiling ducts
 				objs.emplace_back(hood, TYPE_VENT_HOOD, room_id, adim, adir, 0, light_amt, SHAPE_CUBE, WHITE);
+				move_lights_to_not_intersect(objs, lights_start, objs_start, hood);
+				duct_avoid.push_back(hood);
 			}
 		} // for n
 	}
@@ -643,6 +651,14 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 
 		for (unsigned i = 0; i < num_fridges; ++i) {
 			place_model_along_wall(OBJ_MODEL_FRIDGE, TYPE_FRIDGE, room, 0.75, rgen, zval, room_id, light_amt, place_area, objs_start, 1.2, 4, 0, WHITE, 1);
+		}
+	}
+	if (!in_mall) { // add ceiling ducts; mall already has them added
+		unsigned const skip_dir(2), ducts_start(objs.size()); // allow both dirs, depending on what placement is legal
+		add_ceiling_ducts(room, ceil_zval, room_id, dim, skip_dir, light_amt, 0, 1, 1, rgen, 0.5, duct_avoid); // cylin_ducts=0, skip_ends=1, skip_top=1, sz_scale=0.5
+
+		for (auto i = objs.begin()+ducts_start; i != objs.end(); ++i) {
+			if (i->type == TYPE_DUCT) {move_lights_to_not_intersect(objs, lights_start, objs_start, *i);}
 		}
 	}
 	// what about placing appliances on the sides of the center table?
