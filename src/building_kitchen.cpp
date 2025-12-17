@@ -639,7 +639,7 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 				} // for m
 			} // for d
 			if (!hood.is_all_zeros() && hood.get_sz_dim(!adim) > 0.35*floor_spacing) { // add hoods/vents where needed, if not too small
-				float const hood_z1(max((ceil_zval - 1.0f*floor_spacing), (zval + 0.67f*floor_spacing)));
+				float const hood_z1(max((ceil_zval - 1.0f*floor_spacing), (zval + 0.6f*floor_spacing)));
 				set_cube_zvals(hood, hood_z1, ceil_zval);
 				objs.emplace_back(hood, TYPE_VENT_HOOD, room_id, adim, adir, 0, light_amt, SHAPE_CUBE, WHITE);
 				move_lights_to_not_intersect(objs, lights_start, objs_start, hood);
