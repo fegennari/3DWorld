@@ -1764,6 +1764,7 @@ void building_t::register_player_exit_building(bool entered_another_building) co
 }
 
 bool is_obj_in_or_on_obj(room_object_t const &parent, room_object_t const &child) {
+	if (child.z2() <= parent.z1() || child.type == TYPE_FLOORING) return 0;
 	if (parent.type == TYPE_WINE_RACK && parent.contains_pt(child.get_cube_center()))     return 1; // check for wine bottles left in wine rack
 	if (fabs(child.z1() - parent.z2()) < 0.05*parent.dz() && child.intersects_xy(parent)) return 1; // zval test
 	if (parent.type == TYPE_BOX       && parent.is_open() && parent.contains_cube(child)) return 1; // open box with an object inside
