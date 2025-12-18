@@ -3448,6 +3448,8 @@ cube_t get_elevator_car_panel(room_object_t const &c, float fc_thick_scale);
 cube_t get_true_room_obj_bcube(room_object_t const &c);
 cube_t get_sink_cube(room_object_t const &c);
 cube_t get_mwave_panel_bcube(room_object_t const &c);
+void get_vent_hood_cubes(room_object_t const &c, cube_t cubes[5]);
+unsigned get_com_kitchen_app_coll_cubes(room_object_t const &app, cube_t cubes[3]);
 tquad_t get_ramp_tquad(room_object_t const &c);
 colorRGBA gen_vase_color(rand_gen_t &rgen);
 colorRGBA choose_pipe_color(rand_gen_t &rgen);

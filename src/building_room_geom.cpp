@@ -7257,31 +7257,35 @@ void building_room_geom_t::add_conveyor_belt(room_object_t const &c, bool draw_d
 	}
 }
 
+// {top, front, back, left side, right side}, where sides aren't really cubes
+void get_vent_hood_cubes(room_object_t const &c, cube_t cubes[5]) {
+	bool const dim(c.dim), dir(c.dir);
+	float const depth(c.get_depth()), wall_thick(0.01*depth), dz(0.5f*min(c.dz(), depth)), front_z1(c.z1() + dz), dsign(dir ? 1.0 : -1.0);
+	for (unsigned n = 0; n < 5; ++n) {cubes[n] = c;}
+	cubes[0].z1() = front_z1 + 0.5*dz; // top: between front edge and ceiling
+	cubes[0].expand_by_xy(-wall_thick); // top
+	cubes[1].z1() = front_z1; // front
+	cubes[1].d[dim][!dir] = c.d[dim][ dir] - dsign*wall_thick; // front
+	cubes[2].d[dim][ dir] = c.d[dim][!dir] + dsign*wall_thick; // back
+	for (unsigned d = 0; d < 2; ++d) {cubes[d+3].d[!dim][!d] = c.d[!dim][d] + (d ? -1.0 : 1.0)*wall_thick;} // sides
+}
+
 void building_room_geom_t::add_vent_hood(room_object_t const &c) {
 	colorRGBA const color(apply_light_color(c));
 	rgeom_mat_t &mat(get_metal_material(1)); // shadowed
 	bool const dim(c.dim), dir(c.dir);
 	unsigned const skip_fb(get_skip_mask_for_xy(dim)), skip_sides(get_skip_mask_for_xy(!dim));
 	unsigned const front_face_mask(get_face_mask(c.dim, c.dir)), back_face_mask(get_face_mask(c.dim, !c.dir));
-	float const depth(c.get_depth()), width(c.get_width()), wall_thick(0.01*depth), dz(0.5f*min(c.dz(), depth)), front_z1(c.z1() + dz);
-	float const front_edge(c.d[dim][dir]), back_edge(c.d[dim][!dir]), dsign(dir ? 1.0 : -1.0);
-	cube_t top(c), front(c), back(c);
-	top.z1() = front_z1 + 0.5*dz; // between front edge and ceiling
-	top.expand_by_xy(-wall_thick);
-	front.z1() = front_z1;
-	front.d[dim][!dir] = front_edge - dsign*wall_thick;
-	back .d[dim][ dir] = back_edge  + dsign*wall_thick;
-	mat.add_cube_to_verts_untextured(top,   color, ~EF_Z1); // draw bottom surface only
-	mat.add_cube_to_verts_untextured(front, color, (EF_Z2 | skip_sides)); // skip top and sides
-	mat.add_cube_to_verts_untextured(back,  color, (EF_Z2 | skip_sides | ~back_face_mask)); // skip top, back, and sides
+	float const depth(c.get_depth()), width(c.get_width()), wall_thick(0.01*depth), front_edge(c.d[dim][dir]), back_edge(c.d[dim][!dir]);
+	cube_t cubes[5]; // {top, front, back, left side, right side}
+	get_vent_hood_cubes(c, cubes);
+	mat.add_cube_to_verts_untextured(cubes[0], color, ~EF_Z1); // top: draw bottom surface only
+	mat.add_cube_to_verts_untextured(cubes[1], color, (EF_Z2 | skip_sides)); // front: skip top and sides
+	mat.add_cube_to_verts_untextured(cubes[2], color, (EF_Z2 | skip_sides | ~back_face_mask)); // back: skip top, back, and sides
 	unsigned const verts_start(mat.quad_verts.size());
-
-	for (unsigned d = 0; d < 2; ++d) { // draw sides
-		cube_t side(c);
-		side.d[!dim][!d] = c.d[!dim][d] + (d ? -1.0 : 1.0)*wall_thick;
-		mat.add_cube_to_verts_untextured(side, color, (EF_Z2 | skip_fb)); // skip top, front, and back
-	}
+	for (unsigned d = 0; d < 2; ++d) {mat.add_cube_to_verts_untextured(cubes[d+3], color, (EF_Z2 | skip_fb));} // sides: skip top, front, and back
 	// make bottom edges of sides sloped
+	float const front_z1(cubes[1].z1());
 	vector3d bot_edge_delta;
 	bot_edge_delta[dim] = (front_edge - back_edge);
 	bot_edge_delta.z    = (front_z1   - c.z1()   );
@@ -7293,9 +7297,9 @@ void building_room_geom_t::add_vent_hood(room_object_t const &c) {
 	}
 	// draw metal grid on inside of back and bottom
 	colorRGBA const grid_color(apply_light_color(c, WHITE));
-	cube_t grid_back(back), grid_top(top);
-	grid_back.z2() = top.z1();
-	grid_back.d[dim][dir] += dsign*wall_thick; // extend outward from wall
+	cube_t grid_back(cubes[2]), grid_top(cubes[0]);
+	grid_back.z2() = grid_top.z1();
+	grid_back.d[dim][dir] += (dir ? 1.0 : -1.0)*wall_thick; // extend outward from wall
 	grid_back.expand_in_dim(2,    -0.20*grid_back.dz());
 	grid_back.expand_in_dim(!dim, -0.08*width);
 	grid_top .z1() -= wall_thick; // extend down

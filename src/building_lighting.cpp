@@ -415,8 +415,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 		else if (type == TYPE_DESK || type == TYPE_DRESSER || type == TYPE_NIGHTSTAND || type == TYPE_TABLE) { // objects with legs
 			if (c->is_glass_table()) continue; // skip glass table (transparent with thin legs)
 			cube_t cubes[7];
-			unsigned const num(get_table_like_object_cubes(*c, cubes));
-			add_colored_cubes(cubes, num, color, cc);
+			add_colored_cubes(cubes, get_table_like_object_cubes(*c, cubes), color, cc);
 		}
 		else if (type == TYPE_CONF_TABLE) {
 			cube_t cubes[2]; // {top, base}
@@ -542,6 +541,11 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			float const wall_thickness(get_locker_wall_thickness(*c));
 			vect_cube_t const &cubes(get_cabinet_interior_cubes(*c, wall_thickness, 0.02*c->dz(), 1.5*wall_thickness, LOCKER_BOT_SHELF_HEIGHT));
 			add_colored_cubes(cubes, color, ext_bcube, cc);
+		}
+		else if (type == TYPE_VENT_HOOD) {
+			cube_t cubes[5]; // {top, front, back, left side, right side}
+			get_vent_hood_cubes(*c, cubes);
+			add_colored_cubes(cubes, 5, color, cc);
 		}
 		else { // single cube
 			cube_t bc(*c); // handle 3D models that don't fill the entire cube
