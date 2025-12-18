@@ -7310,7 +7310,7 @@ void building_room_geom_t::add_vent_hood(room_object_t const &c) {
 	top_mat.tex.tscale_y = 1.0/grid_twidth;
 	top_mat.tex.tscale_x = round_fp(grid_len/(1.5*grid_twidth))/grid_len; // exact multiple
 	if (dim) {swap(top_mat.tex.tscale_x, top_mat.tex.tscale_y);}
-	top_mat.add_cube_to_verts(grid_top,  grid_color, grid_top .get_llc(), ~EF_Z1, dim); // bottom surface only
+	top_mat.add_cube_to_verts(grid_top,  grid_color, grid_top .get_llc(), ~EF_Z1, dim, dim); // bottom surface only
 	rgeom_mat_t &back_mat(get_material(tid_nm_pair_t(get_texture_by_name("roads/metal_grid.jpg")), 0)); // unshadowed
 	back_mat.tex.tscale_y = 1.0/grid_bwidth;
 	back_mat.tex.tscale_x = round_fp(grid_len/(1.5*grid_bwidth))/grid_len; // exact multiple
