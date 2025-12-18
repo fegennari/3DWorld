@@ -547,6 +547,10 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			get_vent_hood_cubes(*c, cubes);
 			add_colored_cubes(cubes, 5, color, cc);
 		}
+		else if (type == TYPE_KITCH_APP) {
+			cube_t cubes[3];
+			add_colored_cubes(cubes, get_com_kitchen_app_coll_cubes(*c, cubes), color, cc);
+		}
 		else { // single cube
 			cube_t bc(*c); // handle 3D models that don't fill the entire cube
 			bool const dim(c->dim), dir(c->dir);

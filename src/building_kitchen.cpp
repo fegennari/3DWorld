@@ -378,8 +378,44 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 }
 
 // commercial kitchen appliances, read from model config file; should agree with the set of models specified in the config file
-enum {KCA_BI_OVEN=0, KCA_DEEP_FRYER, KCA_SINK, KCA_SINK2, KCA_OVEN, KCA_OMWC, KCA_LP_DEEP_FRYER, KCA_LP_DISHWASHER, KCA_LP_FRIDGE, KCA_LP_GRILL, KCA_LP_OVEN, KCA_LP_STOVE, NUM_KC_APP};
+enum {KCA_BI_OVEN=0, KCA_DEEP_FRYER, KCA_SINK, KCA_SINK2, KCA_OVEN, KCA_OMWC, KCA_LP_FRYER, KCA_LP_DISHWASHER, KCA_LP_FRIDGE, KCA_LP_GRILL, KCA_LP_OVEN, KCA_LP_STOVE, NUM_KC_APP};
 unsigned const cka_classes[NUM_KC_APP] = {1, 0, 2, 2, 1, 1, 0, 2, 2, 0, 1, 0}; // 0=needs hood, 1=cooks, 2=doesn't cook
+
+cube_t get_com_kitchen_app_coll_bcube(room_object_t const &app) {
+	cube_t c(app);
+	assert(app.type == TYPE_KITCH_APP);
+	assert(app.item_flags < NUM_KC_APP);
+	if      (app.item_flags == KCA_DEEP_FRYER) {c.z2() -= 0.17*app.dz();}
+	else if (app.item_flags == KCA_SINK      ) {c.z2() -= 0.51*app.dz();}
+	else if (app.item_flags == KCA_LP_FRYER  ) {c.z2() -= 0.22*app.dz();}
+	else if (app.item_flags == KCA_LP_GRILL  ) {c.z2() -= 0.18*app.dz();}
+	else if (app.item_flags == KCA_LP_STOVE  ) {c.z2() -= 0.13*app.dz();}
+	return c;
+}
+unsigned get_com_kitchen_app_coll_cubes(room_object_t const &app, cube_t cubes[3]) {
+	assert(app.type == TYPE_KITCH_APP);
+
+	if (app.item_flags == KCA_LP_DISHWASHER) { // 3 parts, excluding plates: {bottom, back middle, top}
+		cubes[0] = cubes[1] = cubes[2] = app;
+		cubes[0].z2() = cubes[1].z1() = app.z1() + 0.35*app.dz();
+		cubes[1].z2() = cubes[2].z1() = app.z1() + 0.65*app.dz();
+		cubes[1].d[app.dim][app.dir] -= (app.dir ? 1.0 : -1.0)*0.95*app.get_depth(); // shrink to the back
+		return 3;
+	}
+	cubes[0] = get_com_kitchen_app_coll_bcube(app);
+
+	if (app.item_flags == KCA_DEEP_FRYER || app.item_flags == KCA_LP_FRYER || app.item_flags == KCA_LP_GRILL || app.item_flags == KCA_LP_STOVE) {
+		float val(0.0);
+		if      (app.item_flags == KCA_DEEP_FRYER) {val = 0.96;}
+		else if (app.item_flags == KCA_LP_FRYER  ) {val = 0.91;}
+		else if (app.item_flags == KCA_LP_GRILL  ) {val = 0.93;}
+		else if (app.item_flags == KCA_LP_STOVE  ) {val = 0.96;}
+		cubes[1] = app;
+		cubes[1].d[app.dim][app.dir] -= (app.dir ? 1.0 : -1.0)*val*app.get_depth(); // shrink to the back
+		return 2; // 2 parts
+	}
+	return 1; // 1 part
+}
 
 struct ck_app_model_t {
 	unsigned app_type=0, model_id=0, obj_counts[NUM_KC_APP]={};
@@ -409,7 +445,7 @@ void set_specular_for_low_poly_kitchen_models() {
 	if (specular_was_set) return;
 	specular_was_set = 1;
 
-	for (unsigned i = KCA_LP_DEEP_FRYER; i < NUM_KC_APP; ++i) {
+	for (unsigned i = KCA_LP_FRYER; i < NUM_KC_APP; ++i) {
 		unsigned const model_id(combine_model_submodel_id(OBJ_MODEL_CK_APP, i));
 		building_obj_model_loader.set_all_material_specular(model_id, WHITE, 60.0, 1.0); // fully specular metal
 	}

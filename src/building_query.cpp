@@ -969,6 +969,10 @@ unsigned check_vent_hood_collision(room_object_t const &c, point &pos, point con
 	get_vent_hood_cubes(c, cubes);
 	return check_cubes_collision(cubes, 5, pos, p_last, radius, cnorm);
 }
+unsigned check_com_kitchen_app_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
+	cube_t cubes[3];
+	return check_cubes_collision(cubes, get_com_kitchen_app_coll_cubes(c, cubes), pos, p_last, radius, cnorm);
+}
 
 bool maybe_inside_room_object(room_object_t const &obj, point const &pos, float radius) {
 	return ((obj.is_open() && sphere_cube_intersect(pos, radius, obj)) || obj.contains_pt(pos));
@@ -1720,6 +1724,7 @@ bool building_interior_t::check_sphere_coll_room_objects(building_t const &build
 			else if (type == TYPE_COUCH     ) {coll_ret |= check_couch_collision     (*c, pos, p_last, radius, &cnorm);}
 			else if (type == TYPE_CHECKOUT  ) {coll_ret |= check_checkout_collision  (*c, pos, p_last, radius, &cnorm);}
 			else if (type == TYPE_VENT_HOOD ) {coll_ret |= check_vent_hood_collision (*c, pos, p_last, radius, &cnorm);}
+			else if (type == TYPE_KITCH_APP ) {coll_ret |= check_com_kitchen_app_collision   (*c, pos, p_last, radius, &cnorm);}
 			else if (type == TYPE_CUBICLE   ) {coll_ret |= (unsigned)check_cubicle_collision (*c, pos, p_last, radius, &cnorm);}
 			else if (type == TYPE_STALL  && maybe_inside_room_object(*c, pos, radius)) {coll_ret |= (unsigned)check_stall_collision (*c, pos, p_last, radius, &cnorm);}
 			else if (type == TYPE_SHOWER && maybe_inside_room_object(*c, pos, radius)) {coll_ret |= (unsigned)check_shower_collision(*c, pos, p_last, radius, &cnorm);}
@@ -2791,6 +2796,10 @@ void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, ve
 		get_vent_hood_cubes(c, cubes);
 		lg_cubes .insert(lg_cubes .end(), cubes+0, cubes+2); // top and front; back is ignored
 		non_cubes.insert(non_cubes.end(), cubes+3, cubes+5); // sides
+	}
+	else if (type == TYPE_KITCH_APP) {
+		cube_t cubes[3];
+		lg_cubes.insert(lg_cubes.end(), cubes, cubes+get_com_kitchen_app_coll_cubes(c, cubes));
 	}
 	else if (type == TYPE_ATTIC_DOOR) {lg_cubes.push_back(get_true_room_obj_bcube(c));}
 	else if (type == TYPE_CATWALK   ) {lg_cubes.push_back(get_catwalk_bottom(c));}
