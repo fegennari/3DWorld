@@ -7262,7 +7262,8 @@ void building_room_geom_t::add_vent_hood(room_object_t const &c) {
 	rgeom_mat_t &mat(get_metal_material(1)); // shadowed
 	bool const dim(c.dim), dir(c.dir);
 	unsigned const skip_fb(get_skip_mask_for_xy(dim)), skip_sides(get_skip_mask_for_xy(!dim));
-	float const depth(c.get_depth()), wall_thick(0.01*depth), dz(0.5f*min(c.dz(), depth)), front_z1(c.z1() + dz);
+	unsigned const front_face_mask(get_face_mask(c.dim, c.dir)), back_face_mask(get_face_mask(c.dim, !c.dir));
+	float const depth(c.get_depth()), width(c.get_width()), wall_thick(0.01*depth), dz(0.5f*min(c.dz(), depth)), front_z1(c.z1() + dz);
 	float const front_edge(c.d[dim][dir]), back_edge(c.d[dim][!dir]), dsign(dir ? 1.0 : -1.0);
 	cube_t top(c), front(c), back(c);
 	top.z1() = front_z1 + 0.5*dz; // between front edge and ceiling
@@ -7272,7 +7273,7 @@ void building_room_geom_t::add_vent_hood(room_object_t const &c) {
 	back .d[dim][ dir] = back_edge  + dsign*wall_thick;
 	mat.add_cube_to_verts_untextured(top,   color, ~EF_Z1); // draw bottom surface only
 	mat.add_cube_to_verts_untextured(front, color, (EF_Z2 | skip_sides)); // skip top and sides
-	mat.add_cube_to_verts_untextured(back,  color, (EF_Z2 | skip_sides | ~get_face_mask(c.dim, !c.dir))); // skip top, back, and sides
+	mat.add_cube_to_verts_untextured(back,  color, (EF_Z2 | skip_sides | ~back_face_mask)); // skip top, back, and sides
 	unsigned const verts_start(mat.quad_verts.size());
 
 	for (unsigned d = 0; d < 2; ++d) { // draw sides
@@ -7290,7 +7291,27 @@ void building_room_geom_t::add_vent_hood(room_object_t const &c) {
 		if (v->v.z == c.z1() && v->v[dim] == front_edge) {v->v.z = front_z1;} // front bottom
 		if (v->n[2] < 0) {v->set_norm(bot_n);} // bottom edge normal
 	}
-	// TODO: draw fans or wire mesh on inside of back and/or bottom
+	// draw metal grid on inside of back and bottom
+	colorRGBA const grid_color(apply_light_color(c, WHITE));
+	cube_t grid_back(back), grid_top(top);
+	grid_back.z2() = top.z1();
+	grid_back.d[dim][dir] += dsign*wall_thick; // extend outward from wall
+	grid_back.expand_in_dim(2,    -0.20*grid_back.dz());
+	grid_back.expand_in_dim(!dim, -0.08*width);
+	grid_top .z1() -= wall_thick; // extend down
+	grid_top .expand_in_dim( dim, -0.20*depth);
+	grid_top .expand_in_dim(!dim, -0.08*width);
+	float const grid_len(grid_top.get_sz_dim(!dim)), grid_twidth(grid_top.get_sz_dim(dim)), grid_bwidth(grid_back.dz());
+	rgeom_mat_t &top_mat(get_material(tid_nm_pair_t(get_hvac_tid(c), 0))); // unshadowed
+	top_mat.tex.tscale_y = 1.0/grid_twidth;
+	top_mat.tex.tscale_x = round_fp(grid_len/(1.5*grid_twidth))/grid_len; // exact multiple
+	if (dim) {swap(top_mat.tex.tscale_x, top_mat.tex.tscale_y);}
+	top_mat.add_cube_to_verts(grid_top,  grid_color, grid_top .get_llc(), ~EF_Z1, dim); // bottom surface only
+	rgeom_mat_t &back_mat(get_material(tid_nm_pair_t(get_texture_by_name("roads/metal_grid.jpg")), 0)); // unshadowed
+	back_mat.tex.tscale_y = 1.0/grid_bwidth;
+	back_mat.tex.tscale_x = round_fp(grid_len/(1.5*grid_bwidth))/grid_len; // exact multiple
+	if (!dim) {swap(back_mat.tex.tscale_x, back_mat.tex.tscale_y);}
+	back_mat.add_cube_to_verts(grid_back, grid_color, grid_back.get_llc(), front_face_mask, !dim); // front of back surface only
 }
 
 void add_grid_of_bars(rgeom_mat_t &mat, colorRGBA const &color, cube_t const &c, unsigned num_vbars, unsigned num_hbars, float vbar_hthick,
