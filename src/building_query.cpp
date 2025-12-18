@@ -2599,8 +2599,10 @@ public:
 };
 cached_room_objs_t cached_room_objs;
 
-bool room_object_t::is_floor_collidable() const {return (bldg_obj_types[type].rat_coll || is_floor_clutter());}
-
+bool room_object_t::is_floor_collidable() const {
+	if (type == TYPE_METAL_BAR) return !no_coll();
+	return (bldg_obj_types[type].rat_coll || is_floor_clutter());
+}
 bool room_object_t::is_spider_collidable() const { // include objects on the floor, walls, and ceilings
 	if (!is_floor_collidable()) { // below are the exceptions: objects that are not floor collidable but spiders can walk on
 		if (type != TYPE_LIGHT && type != TYPE_BRSINK && type != TYPE_MIRROR && type != TYPE_MWAVE && type != TYPE_HANGER_ROD &&
