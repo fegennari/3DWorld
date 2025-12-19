@@ -105,7 +105,7 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 	// if it has an external door then reject the room half the time; most houses don't have a front door to the kitchen
 	if (is_room_adjacent_to_ext_door(room, zval, 1) && (!allow_adj_ext_door || rgen.rand_bool())) return 0; // front_door_only=1
 	float const vspace(get_window_vspace()), wall_thickness(get_wall_thickness());
-	cube_t room_bounds(get_walkable_room_bounds(room)), place_area(room_bounds);
+	cube_t room_bounds(get_walkable_room_bounds(room)), place_area(room_bounds), stove_bc;
 	place_area.expand_by(-0.25*wall_thickness); // common spacing to wall for appliances
 	vect_room_object_t &objs(interior->room_geom->objs);
 	
@@ -133,6 +133,7 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 				vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_HOOD)); // D, W, H
 				float const width(stove.get_sz_dim(!stove.dim)), height(width*sz.z/sz.y), depth(width*sz.x/sz.y); // scale to the width of the stove
 				float const ceiling_z(zval + get_floor_ceil_gap()), z_top(ceiling_z + get_fc_thickness()); // shift up a bit because it's too low
+				stove_bc = stove;
 				cube_t hood(stove);
 				set_cube_zvals(hood, z_top-height, z_top);
 				hood.d[stove.dim][stove.dir] = stove.d[stove.dim][!stove.dir] + (stove.dir ? 1.0 : -1.0)*depth;
@@ -338,6 +339,12 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 			if (cabinet_area.get_sz_dim(dim) > 6.0*depth) { // kitchen is wide enough
 				float const wall_spacing(2.6*depth);
 				cube_t island(sink);
+
+				if (!stove_bc.is_all_zeros()) { // try to merge sink with stove for longer island
+					for (unsigned d = 0; d < 2; ++d) {
+						if (stove_bc.d[!dim][d] == sink.d[!dim][!d]) {island.d[!dim][!d] = stove_bc.d[!dim][!d];}
+					}
+				}
 				island.translate_dim(dim, (sink.dir ? 1.0 : -1.0)*3.0*depth);
 				max_eq(island.d[!dim][0], cabinet_area.d[!dim][0]+wall_spacing);
 				min_eq(island.d[!dim][1], cabinet_area.d[!dim][1]-wall_spacing);
