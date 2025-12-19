@@ -415,6 +415,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			unsigned pillars_start(0); // needed for mall lights
 			bool is_lit(0), light_dim(room_dim), wall_light(0), has_stairs(has_stairs_this_floor), top_of_stairs(has_stairs && top_floor);
 			float light_delta_z(0.0);
+			cube_t div_wall;
 			vect_cube_t rooms_to_light;
 			colorRGBA const chair_color(chair_color_per_floor ? (chair_colors[(chair_color_ix + f*(mat_ix + 1)) % NUM_CHAIR_COLORS]) : base_chair_color);
 
@@ -440,7 +441,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			else if (is_mall_store) {
 				is_lit = 1;
 				unsigned const objs_start(objs.size());
-				unsigned const store_type(add_mall_store_objs(rgen, *r, room_center.z,  room_id, store_type_mask, light_ix_assign));
+				unsigned const store_type(add_mall_store_objs(rgen, *r, room_center.z, room_id, store_type_mask, div_wall, light_ix_assign));
 				add_outlets_to_room       (rgen, *r, room_center.z,  room_id, objs_start, 0, 0); // is_ground_floor=is_basement=0
 				add_light_switches_to_room(rgen, *r, room_center.z,  room_id, objs_start, 0, 0, is_lit); // is_ground_floor=is_basement=0
 				rgen.rand_mix(); // make sure numbers are different for each store
@@ -588,6 +589,22 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					}
 				}
 				if (!wall_light) {try_place_light_on_ceiling(light, *r, room_id, room_dim, fc_thick, 1, 1, 1, 1, lcheck_start_ix, valid_lights, rgen);} // allow_rot=1, allow_mult=1
+			}
+			if (!div_wall.is_all_zeros()) { // divided room such as mall restaurant; split and duplicate lights intersecting the wall
+				bool const dim(div_wall.dy() < div_wall.dx()); // should be light dim as well
+				cube_t split(div_wall);
+				split.expand_in_dim(dim, wall_thickness); // add some extra padding
+				vect_cube_t split_lights;
+
+				for (cube_t const &l : valid_lights) {
+					if (!l.intersects(split)) {split_lights.push_back(l); continue;}
+					
+					for (unsigned d = 0; d < 2; ++d) {
+						split_lights.push_back(l);
+						split_lights.back().translate_dim(dim, (split.d[dim][d] - l.d[dim][!d]));
+					}
+				} // for l
+				valid_lights.swap(split_lights);
 			}
 			rand_gen_t rgen_lights(rgen); // copy state so that we don't modify rgen
 			unsigned const objs_start_inc_lights(objs.size());

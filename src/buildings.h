@@ -3101,9 +3101,9 @@ private:
 	bool add_mall_table_with_chairs(rand_gen_t &rgen, cube_t const &table, cube_t const &place_area, colorRGBA const &chair_color,
 		unsigned room_id, float tot_light_amt, bool dim, unsigned tid_tag, vect_cube_t &blockers);
 	bool add_food_court_objs(rand_gen_t &rgen, cube_t const &place_area, float zval, unsigned room_id, float tot_light_amt, vect_cube_t const &blockers);
-	unsigned add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, unsigned &type_mask, light_ix_assign_t &light_ix_assign);
-	void add_restaurant_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id,
-		bool dim, bool dir, bool no_doorway, float light_amt, light_ix_assign_t &light_ix_assign);
+	unsigned add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, unsigned &type_mask, cube_t &div_wall, light_ix_assign_t &light_ix_assign);
+	void add_restaurant_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, bool dim, bool dir,
+		bool no_doorway, float light_amt, cube_t &div_wall, light_ix_assign_t &light_ix_assign);
 	cube_t add_restaurant_counter(cube_t const &wall, bool dim, bool dir, unsigned room_id, float light_amt, bool leave_end_gaps, bool add_cash_registers, rand_gen_t &rgen);
 	bool add_object_to_tray(cube_t const &tray, bool dim, unsigned room_id, float light_amt, bool no_alcohol, vect_cube_t const &avoid, rand_gen_t &rgen, unsigned &prev_type);
 	unsigned add_objects_to_tray(cube_t const &tray, bool dim, unsigned room_id, float light_amt, bool no_alcohol, rand_gen_t &rgen, unsigned max_num);
