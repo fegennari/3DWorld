@@ -3717,7 +3717,9 @@ float get_plate_radius(rand_gen_t &rgen, cube_t const &place_on, float window_vs
 	return min(rgen.rand_uniform(0.05, 0.07)*window_vspacing, 0.33f*min(place_on.dx(), place_on.dy()));
 }
 
-bool building_t::place_plate_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid, bool is_bowl, bool is_deep) {
+bool building_t::place_plate_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt,
+	vect_cube_t const &avoid, bool is_bowl, bool is_deep, bool no_food)
+{
 	float const radius(get_plate_radius(rgen, place_on, get_window_vspace()));
 	float const height((is_bowl ? (is_deep ? rgen.rand_uniform(0.6, 0.7) : rgen.rand_uniform(0.3, 0.7)) : 0.1)*radius);
 	cube_t const plate(place_cylin_object(rgen, place_on, radius, height, 1.1*radius));
@@ -3725,7 +3727,7 @@ bool building_t::place_plate_on_obj(rand_gen_t &rgen, cube_t const &place_on, un
 	vect_room_object_t &objs(interior->room_geom->objs);
 	objs.emplace_back(plate, TYPE_PLATE, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, WHITE, (is_bowl ? 1 : 0));
 	set_obj_id(objs);
-	if (!is_bowl) {place_food_on_plate(rgen, plate, room_id, tot_light_amt);}
+	if (!is_bowl && !no_food) {place_food_on_plate(rgen, plate, room_id, tot_light_amt);}
 
 	if (!is_bowl && rgen.rand_float() < 0.35) { // maybe add a stain on the plate; this won't be removed when the plate is taken, but hopefully that's okay
 		float const stain_radius(rgen.rand_uniform(0.6, 0.9)*radius);
