@@ -1764,7 +1764,7 @@ void building_t::register_player_exit_building(bool entered_another_building) co
 }
 
 bool is_obj_in_or_on_obj(room_object_t const &parent, room_object_t const &child) {
-	if (child.z2() <= parent.z1() || child.type == TYPE_FLOORING) return 0;
+	if (child.z2() <= parent.z1()) return 0; // child is under, not in or on
 	if (parent.type == TYPE_WINE_RACK && parent.contains_pt(child.get_cube_center()))     return 1; // check for wine bottles left in wine rack
 	if (fabs(child.z1() - parent.z2()) < 0.05*parent.dz() && child.intersects_xy(parent)) return 1; // zval test
 	if (parent.type == TYPE_BOX       && parent.is_open() && parent.contains_cube(child)) return 1; // open box with an object inside
@@ -2494,6 +2494,7 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 
 				for (auto i = obj_vect.begin(); i != obj_vect_end; ++i) {
 					if (i->type == TYPE_BLOCKER || *i == obj) continue; // ignore blockers and self
+					if (bldg_obj_types[i->type].attached)     continue; // can't be moved
 					if (!is_obj_in_or_on_obj(obj, *i))        continue;
 					*i += move_vector; // move this object as well
 					i->flags |= RO_FLAG_MOVED;
