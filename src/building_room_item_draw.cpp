@@ -35,6 +35,7 @@ extern building_params_t global_building_params;
 unsigned get_num_screenshot_tids();
 tid_nm_pair_t get_phone_tex(room_object_t const &c);
 template< typename T > void gen_quad_ixs(vector<T> &ixs, unsigned size, unsigned ix_offset);
+void rotate_verts_range(building_t const &b, vect_vnctcc_t &verts, unsigned verts_start);
 void draw_emissive_billboards(quad_batch_draw &qbd, int tid);
 void draw_car_in_pspace(car_t &car, shader_t &s, vector3d const &xlate, bool shadow_only, unsigned btype);
 void set_car_model_color(car_t &car, unsigned btype);
@@ -2327,6 +2328,7 @@ void building_t::draw_glass_surfaces(vector3d const &xlate) const {
 			} // for f
 		} // for c
 		if (!player_is_above) {reverse(mat.quad_verts.begin(), mat.quad_verts.end());} // reverse so that top surface is drawn before bottom surface for correct alpha blending
+		if (is_rotated()) {rotate_verts_range(*this, mat.quad_verts, 0);}
 		mat.create_vbo_inner();
 	}
 	calc_cur_ambient_diffuse();
