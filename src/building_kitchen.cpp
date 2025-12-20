@@ -366,7 +366,7 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 	return placed_obj;
 }
 
-bool building_t::add_objects_in_sink(rand_gen_t &rgen, cube_t const &sink, bool dim, bool dir, unsigned room_id, float tot_light_amt) {
+void building_t::add_objects_in_sink(rand_gen_t &rgen, cube_t const &sink, bool dim, bool dir, unsigned room_id, float tot_light_amt) {
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const objs_start(objs.size()), num_objs(1 + rgen.rand_bool()); // 1-2 objects
 
