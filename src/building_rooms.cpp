@@ -955,7 +955,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					if (r->has_subroom()) {must_be_waiting = 1;} // only waiting rooms have logic to handle placement around bathrooms
 
 					for (unsigned N = 0; N < 10 && !added_obj; ++N) { // 10 tries to select a valid room type
-						unsigned const rand_val(must_be_waiting ? 0 : (rgen.rand() % 7));
+						unsigned const rand_val(must_be_waiting ? 0 : (rgen.rand() % 8));
 
 						if (rand_val == 0) { // waiting room; should there be at most one per floor?
 							added_obj = no_whiteboard = add_waiting_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start, nested_room_ix);
@@ -982,13 +982,14 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 							if (added_obj) {r->assign_to(RTYPE_CAFETERIA, f);}
 						}
 						else if (rand_val == 7) {
-							if (f > 0) { // lab; not on the first floor; currently unreachable
+							if (f > 0) { // lab; not on the first floor
 								added_obj = no_whiteboard = add_lab_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start);
 								if (added_obj) {r->assign_to(RTYPE_LAB, f);}
 							}
-							else { // commercial kitchen on the first floor; should this be next to the cafeteria?
+							else if (!added_kitchen_mask) { // commercial kitchen on the first floor; should this be next to the cafeteria?
 								added_obj = no_whiteboard =
 									add_commercial_kitchen_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start, objs_start_inc_lights, light_ix_assign);
+								added_kitchen_mask |= added_obj;
 								if (added_obj) {r->assign_to(RTYPE_KITCHEN, f);}
 							}
 						}
