@@ -728,7 +728,8 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 	add_mwave_on_table  (rgen, room, zval, room_id, light_amt, objs_start, place_area, 0, 1); // plastic=0, metal=1
 	add_corner_trashcans(rgen, room, zval, room_id, light_amt, objs_start, dim, 1); // both_ends=1
 	// add trolleys with plates; seems like this can work in a kitchen
-	unsigned num_trolleys((rgen.rand() % 2) + 2); // 2-3
+	unsigned const max_trolleys(round_fp(0.1*room_sz.x*room_sz.y/(floor_spacing*floor_spacing)) + !add_island); // scale with room size; one extra if there's no island
+	unsigned const num_trolleys(min(max_trolleys, ((rgen.rand() % 2) + 2U))); // 2-3
 	vect_cube_t blockers;
 	
 	for (unsigned i = 0; i < num_trolleys; ++i) {
