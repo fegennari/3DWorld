@@ -78,8 +78,10 @@ http://casual-effects.com/data/
 
 I've packaged up the 3D models that are too large for the GitHub repo and put them on Google Drive here: v7, 732MB, for latest release:
 https://drive.google.com/file/d/1T2fPwiJ7x2ga8hRPrLAZDlkWZMh-NsVp/view?usp=drive_link
-And the newer file: v8, 813MB, for git head:
-https://drive.google.com/file/d/1I0Sy9ejArw4T5tQzwb4Umk30Ve6T9vyB/view?usp=drive_link
+
+And the newer file: v9, 853MB, for git head:
+https://drive.google.com/file/d/11R-LCFb6VEylX7ncPgkUrgZN01zz88P2/view?usp=drive_link
+
 Some of these models are stored in 3DWorld's internal format and should not be reused in other projects. Others come from websites such as Mixamo.
 There is also a textures directory with additional textures used with building interiors that can be merged with the project textures directory.
 
