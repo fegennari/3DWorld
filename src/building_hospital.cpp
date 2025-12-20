@@ -8,6 +8,8 @@
 extern object_model_loader_t building_obj_model_loader;
 
 
+int select_lab_model();
+
 bool can_create_hospital_room() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_HOSP_BED);}
 
 void building_t::add_hospital_bathrooms(unsigned rooms_start, rand_gen_t &rgen) {
@@ -597,8 +599,22 @@ bool building_t::add_trolley(rand_gen_t &rgen, cube_t const &place_area, cube_t 
 }
 
 bool building_t::add_lab_room_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start) {
-	// TODO
-	return 0;
+	cube_t place_area(get_walkable_room_bounds(room));
+	place_area.expand_by_xy(-get_trim_thickness());
+	cube_t avoid;
+	vect_room_object_t &objs(interior->room_geom->objs);
+	colorRGBA const &chair_color(chair_colors[rgen.rand() % NUM_CHAIR_COLORS]);
+	if (add_desk_to_room(rgen, room, vect_cube_t(), chair_color, zval, room_id, tot_light_amt, objs_start, 0)) {} // is_basement=0
+	int const model_id(select_lab_model());
+
+	if (model_id >= 0) { // add fridge/freezer model from commercial kitchens
+		float const height(0.7*0.5*building_obj_model_loader.get_model(model_id).scale);
+		if (place_model_along_wall(model_id, TYPE_KITCH_APP, room, height, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 4, 0, WHITE, 1)) {}
+	}
+	// TODO: second desk, plastic or metal table, TYPE_TESTTUBE
+	add_trolley(rgen, place_area, avoid, zval, room_id, tot_light_amt, objs_start); // add hospital trolley
+	add_numbered_door_sign("LAB ", room, zval, room_id, floor_ix);
+	return 1;
 }
 
 void building_t::add_hospital_medicine_cabinet(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {

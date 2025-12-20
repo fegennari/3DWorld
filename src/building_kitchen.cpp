@@ -394,6 +394,13 @@ void building_t::add_objects_in_sink(rand_gen_t &rgen, cube_t const &sink, bool 
 enum {KCA_BI_OVEN=0, KCA_DEEP_FRYER, KCA_SINK, KCA_SINK2, KCA_OVEN, KCA_OMWC, KCA_LP_FRYER, KCA_LP_DISHWASHER, KCA_LP_FRIDGE, KCA_LP_GRILL, KCA_LP_OVEN, KCA_LP_STOVE, NUM_KC_APP};
 unsigned const cka_classes[NUM_KC_APP] = {1, 0, 2, 2, 1, 1, 0, 2, 2, 0, 1, 0}; // 0=needs hood, 1=cooks, 2=doesn't cook
 
+bool enable_kitchen_app_models() {
+	return (building_obj_model_loader.is_model_valid(OBJ_MODEL_CK_APP) && building_obj_model_loader.get_num_sub_models(OBJ_MODEL_CK_APP) == NUM_KC_APP);
+}
+int select_lab_model() { // currently only the fridge
+	return (enable_kitchen_app_models() ? combine_model_submodel_id(OBJ_MODEL_CK_APP, KCA_LP_FRIDGE) : -1);
+}
+
 cube_t get_com_kitchen_app_coll_bcube(room_object_t const &app) {
 	cube_t c(app);
 	assert(app.type == TYPE_KITCH_APP);
@@ -633,7 +640,7 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 		move_lights_to_not_intersect(objs, lights_start, objs_start, avoid); // or freezer?
 	}
 	// place commerial kitchen appliances (grills, deep fryers, ovens, sinks, etc.); only legal if all models have been loaded
-	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_CK_APP) && building_obj_model_loader.get_num_sub_models(OBJ_MODEL_CK_APP) == NUM_KC_APP) {
+	if (enable_kitchen_app_models()) {
 		set_specular_for_low_poly_kitchen_models();
 		float const app_gap(trim_thick); // must be large enough to prevent cube intersection
 		unsigned fail_count(0), num_fridge(0), cclass_counts[3] = {0, 1, 1}; // prefer hood items
