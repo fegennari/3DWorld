@@ -571,14 +571,17 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 		// add microwave to table
 		bool const mdim(!dim), mdir(rgen.rand_bool());
 		float const mheight(rgen.rand_uniform(1.0, 1.2)*0.16*floor_spacing), mwidth(1.7*mheight), mdepth(1.2*mheight); // fixed AR=1.7 to match the texture
-		float const pos(rgen.rand_uniform((table.d[!mdim][0] + 0.6*mwidth), (table.d[!mdim][1] - 0.6*mwidth)));
+		float const pos(rgen.rand_uniform((table.d[!mdim][0] + 0.6*mwidth), (table.d[!mdim][1] - 0.6*mwidth))), dsign(mdir ? 1.0 : -1.0);
 		cube_t mwave;
 		set_cube_zvals(mwave, table.z2(), table.z2()+mheight);
 		set_wall_width(mwave, pos, 0.5*mwidth, !mdim);
-		mwave.d[mdim][!mdir] = table.d[mdim][!mdir] + (mdir ? 1.0 : -1.0)*rgen.rand_uniform(0.0, 0.1)*mdepth;
-		mwave.d[mdim][ mdir] = mwave.d[mdim][!mdir] + (mdir ? 1.0 : -1.0)*mdepth;
+		mwave.d[mdim][!mdir] = table.d[mdim][!mdir] + dsign*rgen.rand_uniform(0.0, 0.1)*mdepth;
+		mwave.d[mdim][ mdir] = mwave.d[mdim][!mdir] + dsign*mdepth;
 		objs.emplace_back(mwave, TYPE_MWAVE, room_id, mdim, !mdir, RO_FLAG_NOCOLL, light_amt);
-		avoid.push_back(mwave);
+		cube_t blocker(mwave);
+		blocker.d[mdim][mdir] += dsign*mdepth; // add clearance in front; needed for toaster and deep fryer since nocoll is true for mwave
+		objs.emplace_back(blocker, TYPE_BLOCKER, room_id, dim, 0, RO_FLAG_INVIS, light_amt);
+		avoid.push_back(blocker);
 		// add deep fryer to table
 		unsigned const model_id(combine_model_submodel_id(OBJ_MODEL_CK_APP, KCA_DEEP_FRYER));
 		float const dp_height(0.7*0.5*building_obj_model_loader.get_model(model_id).scale); // smaller version
