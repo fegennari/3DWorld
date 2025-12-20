@@ -541,8 +541,7 @@ public:
 			if (d > 2.0*radius) return 0; // path deviation too long
 			++tot_steps;
 			if (tot_steps > init_steps + 10000) return 0; // too many steps
-			//waypoints.push_back(waypoint_t(cur)); // testing
-		}
+		} // end while
 		return 1; // success
 	}
 

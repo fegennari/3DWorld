@@ -1443,7 +1443,6 @@ void car_manager_t::next_frame(ped_manager_t const &ped_manager, float car_speed
 		car_blocks_by_road.emplace_back(cars_by_road.size(), 0, cube_t()); // add terminator
 		cars_by_road.emplace_back(cube_t(), cars.size()); // add terminator
 	}
-	//cout << TXT(cars.size()) << TXT(entering_city.size()) << TXT(in_isects.size()) << endl; // TESTING
 }
 
 // calculate max zval along line for buildings and terrain; this is not intended to be fast;

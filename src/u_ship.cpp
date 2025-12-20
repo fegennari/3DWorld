@@ -1434,7 +1434,6 @@ void u_ship::ai_fire(vector3d const &targ_dir, float target_dist, float min_dist
 		}
 		if (!weap.is_fighter && !maybe_has_line_of_sight(pos + (upos_point_type)fire_dir*(double)target_dist)) continue; // no LOS for orbiting ship
 		if (!has_clear_line_of_fire(weap, fire_dir, target_dist)) continue; // don't shoot if shot is blocked by a non-enemy or fixed object
-		//cout << weap.name << " " << target_obj->get_name() << endl; // testing
 		if (target_dist < TOLERANCE || fire_dir.mag() < TOLERANCE) continue; // not sure how we can get here
 		fire_weapon(fire_dir, target_dist);
 	} // for i
@@ -2822,7 +2821,6 @@ void u_ship::draw_obj(uobj_draw_data &ddata) const { // front is in -z
 	//display_mode ^= 0x08;
 	times[sclass+off] += GET_DELTA_TIME;
 	++counts[sclass+off];
-	//if (frame_counter == 1000) exit(0); // testing
 	
 	if (((++count) & 1023) == 0) {
 		int tot_time(0);

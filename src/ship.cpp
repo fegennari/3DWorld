@@ -309,7 +309,6 @@ public:
 		}
 		for (unsigned i = 0; i < NUM_ALIGNMENT; ++i) {
 			team_entry_t &e(team_entries[i]);
-			//cout << "Team " << align_names[i] << " enabled " << e.enabled << " started " << e.started << " lost " << e.lost << " ts " << ntships[i] << " os " << noships[i] << endl; // TESTING
 			if (!e.enabled || e.lost) continue; // disabled or already lost
 			
 			if (i == team_with_most_owned && have_excess_credits(i) && !e.end_game) {

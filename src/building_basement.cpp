@@ -342,7 +342,6 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	unsigned &nlights_len(dim ? nlights_x : nlights_y), &nlights_wid(dim ? nlights_y : nlights_x);
 	nlights_len = num_rows; // lights over each row of parking spaces
 	nlights_wid = round_fp(0.25*wid_sz/parking_sz.y); // 4 parking spaces per light on average, including roads
-	//cout << TXT(nlights_len) << TXT(nlights_wid) << TXT(num_space_wid) << TXT(num_rows) << TXT(capacity) << endl; // TESTING
 	assert(num_space_wid >= 4); // must fit at least 4 cars per row
 	
 	// add walls and pillars between strips

@@ -97,7 +97,6 @@ public:
 			name = gen_name_inner(rgen);
 			if (name.size() >= min_len && real_names.find(name) == real_names.end()) break; // valid name
 		}
-		//cout << name << endl; // TESTING
 		return name;
 	}
 };

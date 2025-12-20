@@ -86,10 +86,7 @@ public:
 	}
 	size_t get_mem_usage() const {
 		size_t mem(free_list.size()*sizeof(rgeom_storage_t));
-		for (auto i = free_list.begin(); i != free_list.end(); ++i) {
-			//cout << i->tex.tid << "\t" << i->tex.shadowed << "\t" << i->get_tot_vert_capacity() << "\t" << i->get_mem_usage() << endl; // TESTING
-			mem += i->get_mem_usage();
-		}
+		for (auto i = free_list.begin(); i != free_list.end(); ++i) {mem += i->get_mem_usage();}
 		return mem;
 	}
 	size_t size() const {return free_list.size();}

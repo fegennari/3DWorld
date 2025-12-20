@@ -2837,7 +2837,7 @@ int universe_t::get_closest_object(s_object &result, point pos, int max_level, b
 				unsigned s(s_);
 				if (s == cs1) s = so; else if (s == so) s = cs1;
 				ussystem &system(galaxy.sols[s]);
-				assert(system.cluster_id == cl); // testing
+				assert(system.cluster_id == cl);
 				float const dists_sq(p2p_dist_sq(pos, system.pos)), testval2(expand*(system.radius + MAX_PLANET_EXTENT) + r_add);
 				if (dists_sq > testval2*testval2) continue;
 				float dists(sqrt(dists_sq));

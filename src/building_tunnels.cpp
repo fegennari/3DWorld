@@ -154,7 +154,6 @@ void building_t::add_false_door_to_extb_room_if_needed(room_t const &room, float
 
 		if (is_open) { // add an open door; should this have collisions enabled?
 			flags |= (RO_FLAG_HAS_EXTRA | RO_FLAG_OPEN); // make this an open vault/blast door
-			//cube_t c(door); c.z1() = c.z2(); c.z2() += 1.0; objs.emplace_back(c, TYPE_DBG_SHAPE, room_id, dim, dir, 0, 1.0, SHAPE_CUBE, RED); // TESTING
 		}
 		else { // add a closed door
 			if      (is_house)           {flags |= RO_FLAG_IS_HOUSE ;}

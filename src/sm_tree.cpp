@@ -587,7 +587,6 @@ int get_tree_class_from_height(float zpos, bool pine_trees_only) {
 
 int get_tree_type_from_height(float zpos, rand_gen_t &rgen, bool for_scenery) {
 
-	//return T_DECID; // TESTING
 	switch (get_tree_class_from_height(zpos, (world_mode == WMODE_INF_TERRAIN && (tree_mode == 2 || (!for_scenery && tree_mode == 3))))) { // force pine trees in small tree mode
 	case TREE_CLASS_NONE: return TREE_NONE;
 	case TREE_CLASS_PINE: return ((rgen.rand()%10 == 0) ? (int)T_SH_PINE : (int)T_PINE);

@@ -4234,7 +4234,7 @@ public:
 						else if (ext_basement_conn_visible || mall_skylight_visible) {inc_small = 3;} // include interior and exterior detail objects
 						else if (inc_small && bdist_sq < rgeom_int_detail_dist_sq)   {inc_small = 3;} // include interior and exterior detail objects
 						else if (inc_small && bdist_sq < rgeom_ext_detail_dist_sq)   {inc_small = 2;} // include exterior detail objects
-						if (debug_draw) {inc_small = 3;} // TESTING
+						if (debug_draw) {inc_small = 3;}
 						bool const player_in_bldg(debug_draw || player_in_building_bcube);
 						if (ext_basement_conn_visible) {s.add_uniform_float("wet_effect", 0.0);} // disable for non-player building
 						b.gen_and_draw_room_geom(&bbd, s, amask_shader, oc, xlate, bi.ix, 0, reflection_pass,

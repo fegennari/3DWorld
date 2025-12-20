@@ -1144,7 +1144,7 @@ void update_water_volumes() {
 		if (temperature > EVAP_TEMP_POINT && v.w_volume > 0.0) { // apply evaporation
 			v.w_volume = max(0.0f, (v.w_volume - EVAPORATION*(temperature - EVAP_TEMP_POINT)*v.area));
 		}
-		if (v.w_volume < 0.0) cout << "wv: " << v.w_volume << ", sv: " << v.spill_vol << ", lwv: " << v.lwv << endl; // testing
+		if (v.w_volume < 0.0) {cout << "wv: " << v.w_volume << ", sv: " << v.spill_vol << ", lwv: " << v.lwv << endl;}
 		assert(v.w_volume >= 0.0);
 		
 		// don't let the graph get unlinked until the depth is 0 (should use z_spill or something?)

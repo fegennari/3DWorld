@@ -1738,7 +1738,6 @@ unsigned building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zv
 		}
 		if (!is_duplicate) break; // unique name, done
 	}
-	//cout << store_name << endl; // TESTING
 	bool const emissive(0);
 	colorRGBA const logo_color(choose_sign_color(rgen, emissive));
 	interior->mall_info->stores.emplace_back(dim, dir, room_id, store_type, item_category, logo_color, store_name);

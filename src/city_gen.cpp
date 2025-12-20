@@ -763,7 +763,6 @@ private:
 	bool align_isec3_to(unsigned int3_ix, cube_t const &c, bool dim) {
 		assert(int3_ix < isecs[1].size());
 		cube_t const src(isecs[1][int3_ix]); // deep copy so that it's not changed below
-		//cout << c.d[!dim][0] << " " << c.d[!dim][1] << " " << src.d[!dim][0] << " " << src.d[!dim][1] << " " << (c.d[!dim][0] - src.d[!dim][0]) << endl; // TESTING
 		if (c.d[!dim][0] == src.d[!dim][0]) return 0; // already aligned - done
 
 		for (unsigned d = 0; d < 2; ++d) { // low, high

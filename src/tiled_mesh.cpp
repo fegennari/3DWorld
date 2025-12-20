@@ -3645,9 +3645,6 @@ void draw_tiled_terrain(int reflection_pass) {
 			s.end_shader();
 		}
 	}
-	if (camera_surf_collide) {
-		//int const tid(get_tiled_terrain_tid_under_point(get_camera_pos())); // TESTING
-	}
 }
 
 void draw_tiled_terrain_lightning(bool reflection_pass) {terrain_tile_draw.update_lightning(reflection_pass);}

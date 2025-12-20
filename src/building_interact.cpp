@@ -1149,7 +1149,7 @@ unsigned door_base_t::get_conn_room(unsigned room_id) const {
 	assert(!no_room_conn());
 	if (room_id == conn_room[0]) return conn_room[1];
 	if (room_id == conn_room[1]) return conn_room[0];
-	cout << TXT(room_id) << TXT(conn_room[0]) << TXT(conn_room[1]) << TXT(str()) << endl; // TESTING
+	cout << TXT(room_id) << TXT(conn_room[0]) << TXT(conn_room[1]) << TXT(str()) << endl;
 	assert(0); // invalid room
 	return room_id;
 }
@@ -2238,7 +2238,6 @@ void elevator_t::register_at_dest() {
 
 	if (!call_requests.empty()) {
 		uint8_t &req_dirs(call_requests.front().req_dirs);
-		//cout << TXTi(req_dirs) << TXT(stop_on_passing_floor) << TXT(going_up) << TXT(call_requests.size()) << TXT(call_requests[0].floor_ix) << endl; // TESTING
 
 		if (stop_on_passing_floor && call_requests.size() > 1) { // only valid if there's another call request
 			// if both up and down buttons were pressed (req_dirs == 3), we should unset one dir but leave the other;

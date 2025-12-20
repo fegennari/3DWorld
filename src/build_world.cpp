@@ -1127,7 +1127,6 @@ string add_loaded_model(vector<coll_tquad> const &ppts, coll_obj cobj, float sca
 		cur_cube.cp.surfs     = 0; // clear
 		cur_cube.type         = COLL_CUBE;
 		cur_cube.cp.cobj_type = COBJ_TYPE_MODEL3D;
-		//cur_cube.cp.color = BLUE; cur_cube.cp.draw = 1; // testing
 		maybe_reserve_fixed_cobjs(cubes.size());
 
 		for (vector<cube_t>::const_iterator i = cubes.begin(); i != cubes.end(); ++i) {
