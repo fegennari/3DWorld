@@ -492,18 +492,18 @@ float get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_
 	return drawer_extend; // signed
 }
 
-void building_room_geom_t::add_dresser_drawers(room_object_t const &c, float tscale) { // or nightstand
+void building_room_geom_t::add_dresser_drawers(room_object_t const &c, float tscale, bool is_wood) { // or nightstand
 	vect_cube_t &drawers(get_temp_cubes());
 	get_drawer_cubes(c, drawers, 1, 0); // front_only=1, inside_only=0
-	add_drawers(c, tscale, drawers);
+	add_drawers(c, tscale, drawers, 0, 0, is_wood);
 }
-void building_room_geom_t::add_drawers(room_object_t const &c, float tscale, vect_cube_t const &drawers, unsigned drawer_index_offset, bool no_open_drawers) {
+void building_room_geom_t::add_drawers(room_object_t const &c, float tscale, vect_cube_t const &drawers, unsigned drawer_index_offset, bool no_open_drawers, bool is_wood) {
 	if (drawers.empty()) return;
 	assert(drawers.size() <= 16); // we only have 16 bits to store drawer flags
 	float const height(c.dz()), drawer_thick(get_drawer_wall_thick(height, c.get_depth()));
 	float const handle_thick(0.75*drawer_thick), dir_sign(c.dir ? 1.0 : -1.0), handle_width(0.07*height);
 	get_metal_material(0, 0, 1); // ensure material exists so that door_mat reference is not invalidated
-	rgeom_mat_t &drawer_mat(get_wood_material(1.5*tscale, 1, 0, 1)); // shadowed, small=1
+	rgeom_mat_t &drawer_mat(is_wood ? get_wood_material(1.5*tscale, 1, 0, 1) : get_untextured_material(1, 0, 1)); // shadowed, small=1
 	rgeom_mat_t &handle_mat(get_metal_material(0, 0, 1)); // untextured, unshadowed, small=1
 	colorRGBA const drawer_color(apply_light_color(c, WHITE)); // lighter color than dresser
 	colorRGBA const handle_color(apply_light_color(c, drawer_handle_color));
@@ -529,7 +529,7 @@ void building_room_geom_t::add_drawers(room_object_t const &c, float tscale, vec
 			right.d[!c.dim][0]    += 0.87*dwidth; // set width of right side
 			back.d[c.dim][c.dir]   = c.d[c.dim][c.dir] + 0.25f*dir_sign*drawer_thick; // flush with front face and narrow
 			unsigned const skip_mask_front_back(get_skip_mask_for_xy(c.dim));
-			colorRGBA const blr_color(drawer_color*0.4 + apply_wood_light_color(c)*0.4); // halfway between base and drawer colors, but slightly darker
+			colorRGBA const blr_color(is_wood ? (drawer_color*0.4 + apply_wood_light_color(c)*0.4) : drawer_color*0.8); // halfway between base and drawer colors, but slightly darker
 			// swap the texture orientation of drawers to make them stand out more
 			drawer_mat.add_cube_to_verts(bottom, blr_color, tex_orig,  skip_mask_front_back, 1);
 			drawer_mat.add_cube_to_verts(left,   blr_color, tex_orig, (skip_mask_front_back | EF_Z1), 1);
@@ -4699,25 +4699,19 @@ room_object_t get_desk_top_back(room_object_t const &c) {
 }
 void building_room_geom_t::add_desk(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm) {
 	// desk top and legs, similar to add_table()
+	bool const is_wood(1/*c.is_house() || c.shape == SHAPE_TALL*/);
 	point const tex_origin(c.get_llc());
-	colorRGBA const color(apply_wood_light_color(c));
+	colorRGBA const color(is_wood ? apply_wood_light_color(c) : apply_light_color(c));
+	room_object_t drawers;
 
-	if (inc_lg) {
-		cube_t top(c), legs_bcube(c);
-		top.z1() += (1.0 - DESK_TOP_THICK)*c.dz();
-		legs_bcube.z2() = top.z1();
-		get_wood_material(tscale).add_cube_to_verts(top, color, tex_origin); // all faces drawn
-		add_tc_legs(legs_bcube, c, color, 0.06, 1, tscale);
-	}
 	if (c.desk_has_drawers()) { // add drawers 75% of the time
-		room_object_t drawers(get_desk_drawers_part(c));
-		if (inc_lg) {get_wood_material(tscale).add_cube_to_verts(drawers, color, tex_origin);} // all faces drawn
+		drawers = get_desk_drawers_part(c);
 
 		if (inc_sm) {
 			bool const side(c.obj_id & 1);
 			float const signed_leg_width((side ? 1.0 : -1.0)*get_tc_leg_width(c, 0.06));
 			drawers.d[!c.dim][side] -= 0.85*signed_leg_width; // make sure the drawers can pull out without hitting the desk legs
-			add_dresser_drawers(drawers, tscale);
+			add_dresser_drawers(drawers, tscale, is_wood);
 			float const height(c.dz()), depth(c.get_depth());
 
 			if (height > 0.75*depth) { // add middle keyboard drawer if desk is tall; can't be opened by the player because it may be blocked by the chair
@@ -4727,7 +4721,8 @@ void building_room_geom_t::add_desk(room_object_t const &c, float tscale, bool i
 				mid_drawer.d[!c.dim][ side]  = drawers.d[!c.dim][!side];
 				mid_drawer.d[!c.dim][!side] += signed_leg_width;
 				set_cube_zvals(mid_drawer, drawers.z2()-0.15*height, drawers.z2());
-				get_wood_material(tscale, 1, 0, 1).add_cube_to_verts(mid_drawer, color, tex_origin, (EF_Z2 | ~get_face_mask(!c.dim, side))); // small=1
+				rgeom_mat_t &drawer_mat(is_wood ? get_wood_material(tscale, 1, 0, 1) : get_untextured_material(1, 0, 1)); // shadowed, small=1
+				drawer_mat.add_cube_to_verts(mid_drawer, color, tex_origin, (EF_Z2 | ~get_face_mask(!c.dim, side)));
 				// draw drawer face
 				unsigned const cur_drawer_ix(temp_cubes.size()); // number of drawers from earlier add_dresser_drawers() call
 				vect_cube_t &drawers(get_temp_cubes());
@@ -4737,12 +4732,22 @@ void building_room_geom_t::add_desk(room_object_t const &c, float tscale, bool i
 				drawer_face.expand_in_dim(!c.dim, -0.18*mid_drawer.get_sz_dim(!c.dim));
 				drawer_face.z1() += 0.04*height; // shift bottom up
 				drawers.push_back(drawer_face);
-				add_drawers(c, tscale, drawers, cur_drawer_ix, 1); // no_open_drawers=1
+				add_drawers(c, tscale, drawers, cur_drawer_ix, 1, is_wood); // no_open_drawers=1
 			}
 		}
 	}
-	if (inc_lg && c.shape == SHAPE_TALL) { // add top/back section of desk; this part is outside the bcube
-		add_bookcase(get_desk_top_back(c), 1, 1, 0, tscale, 1, 0.4, &tex_origin); // no_shelves=1, side_width=0.4, both large and small, no text, use same tex origin
+	if (inc_lg) {
+		cube_t top(c), legs_bcube(c);
+		top.z1() += (1.0 - DESK_TOP_THICK)*c.dz();
+		legs_bcube.z2() = top.z1();
+		rgeom_mat_t &mat(is_wood ? get_wood_material(tscale) : get_untextured_material(1)); // shadowdd
+		mat.add_cube_to_verts(top,     color, tex_origin); // all faces drawn
+		mat.add_cube_to_verts(drawers, color, tex_origin); // all faces drawn
+		add_tc_legs(legs_bcube, c, color, (is_wood ? 0.06 : 0.04), 1, tscale, !is_wood);
+	
+		if (c.shape == SHAPE_TALL) { // add top/back section of desk; this part is outside the bcube
+			add_bookcase(get_desk_top_back(c), 1, 1, 0, tscale, 1, 0.4, &tex_origin); // no_shelves=1, side_width=0.4, both large and small, no text, use same tex origin
+		}
 	}
 }
 
