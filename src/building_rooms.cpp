@@ -989,7 +989,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 							else if (!added_kitchen_mask) { // commercial kitchen on the first floor; should this be next to the cafeteria?
 								added_obj = no_whiteboard =
 									add_commercial_kitchen_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start, objs_start_inc_lights, light_ix_assign);
-								added_kitchen_mask |= added_obj;
+								if (added_obj) {added_kitchen_mask |= 1;}
 								if (added_obj) {r->assign_to(RTYPE_KITCHEN, f);}
 							}
 						}
