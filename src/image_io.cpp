@@ -3,6 +3,7 @@
 // 10/14/13
 #include "targa.h"
 #include "textures.h"
+#include "format_text.h"
 //#include "profiler.h"
 #include <fstream> // for filebuf
 
@@ -25,7 +26,7 @@ bool stb_image_enabled() {return 0;}
 #ifdef ENABLE_PNG
 #include "png.h"
 
-void wrap_png_error(png_structp, png_const_charp) {cerr << "Error reading PNG image file." << endl;}
+void wrap_png_error(png_structp, png_const_charp) {cerr << format_red("Error reading PNG image file.") << endl;}
 #endif
 
 #ifdef ENABLE_DDS
@@ -93,7 +94,7 @@ FILE *open_texture_file(string const &filename) {
 	FILE *fp(open_texture_file_no_check(filename));
 
 	if (fp == nullptr) {
-		cerr << endl << "Error loading image " << filename << endl;
+		cerr << endl << format_red("Error loading image " + filename) << endl;
 		exit(1);
 	}
 	return fp;
@@ -128,7 +129,7 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 			else if (ext == "ppm")   {format = IMG_FMT_PPM;}
 			else if (ext == "tex2d") {format = IMG_FMT_TEX2D;}
 			else if (ext == "hdr") {
-				cerr << "Error: HDR texture format is not yet supported: " << name << endl;
+				cerr << format_red("Error: HDR texture format is not yet supported: " + name) << endl;
 				exit(1);
 			}
 			else { // unsupported native image format
@@ -137,7 +138,7 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 				else
 #endif
 				{
-					cerr << "Error: Unidentified image file format for autodetect: " << ext << " in filename " << name << endl;
+					cerr << format_red("Error: Unidentified image file format for autodetect: " + ext + " in filename " + name) << endl;
 					exit(1);
 				}
 			}
@@ -168,7 +169,7 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 			case IMG_FMT_TEX2D: defer_load_type = DEFER_TYPE_TEX2D; break;
 			case IMG_FMT_OTHER: break; // already loaded by stb_image
 			default:
-				cerr << "Unsupported image format: " << int(format) << endl;
+				cerr << format_red("Unsupported image format: ") << int(format) << endl;
 				exit(1);
 			}
 		}
@@ -359,7 +360,7 @@ bool write_rgb_bmp_image(string const &fn, unsigned char *data, unsigned width, 
 	FILE *fp(fopen(fn.c_str(), "wb"));
 
 	if (fp == NULL) {
-		cerr << "Error opening BMP file " << fn << " for write." << endl;
+		cerr << format_red("Error opening BMP file " + fn + " for write.") << endl;
 		return 0;
 	}
 	maybe_swap_rb(data, width*height, ncolors); // Note: data not const because of this line
@@ -426,7 +427,7 @@ void texture_t::load_targa(int index, bool allow_diff_width_height) {
 		ret = tga_read(&img, name.c_str()); // try current directory
 
 		if (ret != TGA_NOERR) {
-			cerr << "Error reading targa file " << name << ": " << tga_error(ret) << endl;
+			cerr << format_red("Error reading targa file " + name + ": " + string(tga_error(ret))) << endl;
 			exit(1);
 		}
 	}
@@ -454,7 +455,7 @@ void texture_t::load_targa(int index, bool allow_diff_width_height) {
 void texture_t::load_jpeg(int index, bool allow_diff_width_height) {
 	//timer_t timer("Load Jpeg"); // 187 calls, 7063ms total
 	if (!load_stb_image(index, allow_diff_width_height)) { // allow_two_byte_grayscale=0
-		cerr << "Error loading JPEG texture image file " << name << endl;
+		cerr << format_red("Error loading JPEG texture image file " + name) << endl;
 		exit(1);
 	}
 }
@@ -467,7 +468,7 @@ public:
 
 	bool init(string const &fn) {
 		fp = fopen(fn.c_str(), "wb");
-		if (fp == NULL) {cerr << "Error opening image file " << fn << " for write." << endl; return 0;}
+		if (fp == NULL) {cerr << format_red("Error opening image file " + fn + " for write.") << endl; return 0;}
 		return 1;
 	}
 	void add_data(void *data, int size) {buffer.insert(buffer.end(), (char *)data, (char *)data+size);}
@@ -496,7 +497,7 @@ int write_jpeg_data(string const &fn, unsigned char const *const data, unsigned 
 	writer.flush(); // flush once at the end, which writes the entire image as one fwrite() call
 	return 1;
 #else
-	cerr << "Error: JPEG writing support is not enabled." << endl;
+	cerr << format_red("Error: JPEG writing support is not enabled.") << endl;
 	return 0;
 #endif
 }
@@ -517,7 +518,7 @@ void texture_t::load_png(int index, bool allow_diff_width_height, bool allow_two
 	FILE *fp(open_texture_file(name));
 
 	if (fp == NULL) {
-		cerr << "Error opening png file " << name << " for read." << endl;
+		cerr << format_red("Error opening png file " + name + " for read.") << endl;
 		exit(1);
 	}
 	png_structp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, (png_voidp)wrap_png_error, 0, 0);
@@ -565,7 +566,7 @@ void texture_t::load_png(int index, bool allow_diff_width_height, bool allow_two
 	}
 #else
 	if (!load_stb_image(index, allow_diff_width_height, allow_two_byte_grayscale)) {
-		cerr << "Error loading texture image file " << name << ": png support has not been enabled." << endl;
+		cerr << format_red("Error loading texture image file " + name + ": png support has not been enabled.") << endl;
 		exit(1);
 	}
 #endif
@@ -578,7 +579,7 @@ int texture_t::write_to_png(string const &fn) const {
 	FILE *fp(fopen(fn.c_str(), "wb"));
 
 	if (fp == NULL) {
-		cerr << "Error opening png file " << fn << " for write." << endl;
+		cerr << format_red("Error opening png file " + fn + " for write.") << endl;
 		return 0;
 	}
 	// Initialize write structure
@@ -626,7 +627,7 @@ int texture_t::write_to_png(string const &fn) const {
 		return 1;
 	}
 #endif
-	cerr << "Error: PNG writing support is not enabled." << endl;
+	cerr << format_red("Error: PNG writing support is not enabled.") << endl;
 	return 0;
 #endif
 }
@@ -639,7 +640,7 @@ void texture_t::load_tiff(int index, bool allow_diff_width_height, bool allow_tw
 	if (tif == NULL) {tif = TIFFOpen(name.c_str(), "r");} // not found, try current directory
 
 	if (tif == NULL) {
-		cerr << "Error opening tiff file " << name << " for read." << endl;
+		cerr << format_red("Error opening tiff file " + name + " for read.") << endl;
 		exit(1);
 	}
 	uint32_t w(0), h(0);
@@ -674,7 +675,7 @@ void texture_t::load_tiff(int index, bool allow_diff_width_height, bool allow_tw
 		assert(raster != NULL);
 
 		if (!TIFFReadRGBAImage(tif, width, height, raster, 0)) {
-			cerr << "Error reading data from tiff file " << name << "." << endl;
+			cerr << format_red("Error reading data from tiff file " + name + ".") << endl;
 			exit(1);
 		}
 		alloc();
@@ -690,7 +691,7 @@ void texture_t::load_tiff(int index, bool allow_diff_width_height, bool allow_tw
 	}
 	TIFFClose(tif);
 #else
-	cerr << "Error loading texture image file " << name << ": tiff support has not been enabled." << endl;
+	cerr << format_red("Error loading texture image file " + name + ": tiff support has not been enabled.") << endl;
 	exit(1);
 #endif
 }
@@ -705,7 +706,7 @@ void texture_t::deferred_load_and_bind() {
 	case DEFER_TYPE_DDS  : deferred_load_dds    (); break;
 	case DEFER_TYPE_TEX2D: read_texture2d_binary(); break;
 	default:
-		cerr << "Unhandled texture defer type " << defer_load_type << endl;
+		cerr << format_red("Unhandled texture defer type ") << defer_load_type << endl;
 		exit(1);
 	}
 }
@@ -772,7 +773,7 @@ void texture_t::load_ppm(int index, bool allow_diff_width_height) {
 	filebuf fb;
 
 	if (!open_texture_filebuf(fb, name)) {
-		cerr << "Error: Couldn't open ppm file " << name << endl;
+		cerr << format_red("Error: Couldn't open ppm file " + name) << endl;
 		exit(1);
 	}
 	istream in(&fb);
@@ -854,7 +855,7 @@ bool texture_t::load_stb_image(int index, bool allow_diff_width_height, bool all
 		}
 	}
 	if (file_data == nullptr) { // still not found, or there was an error
-		cerr << "Error: stbi_load() returned error: \"" << stbi_failure_reason() << "\" for file " << name << endl;
+		cerr << format_red("Error: stbi_load() returned error: \"" + string(stbi_failure_reason()) + "\" for file " + name) << endl;
 		return 0; // default to some other image reader
 	}
 	//cout << TXT(name) << TXT(width) << TXT(height) << TXT(w) << TXT(h) << TXT(ncolors) << TXT(nc) << endl;
@@ -871,7 +872,7 @@ bool texture_t::load_stb_image(int index, bool allow_diff_width_height, bool all
 	}
 	return 1;
 #else
-	cerr << "Error: stb_image support has not been enabled" << endl;
+	cerr << format_red("Error: stb_image support has not been enabled") << endl;
 	return 0; // disabled
 #endif
 }
