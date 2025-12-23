@@ -1104,6 +1104,7 @@ public:
 	void load_dds();
 	void deferred_load_dds();
 	void load_ppm(int index, bool allow_diff_width_height);
+	void set_default_white_texture();
 	void auto_insert_alpha_channel(int index);
 	void fill_to_grayscale_color(unsigned char color_val);
 	void fill_transparent_with_avg_color();

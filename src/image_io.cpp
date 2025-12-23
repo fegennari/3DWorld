@@ -106,6 +106,13 @@ bool check_texture_file_exists(string const &filename) {
 	return 1;
 }
 
+void texture_t::set_default_white_texture() { // 1x1 RGB white texture for failed load cases
+	width   = height = 1;
+	ncolors = 3;
+	alloc();
+	data[0] = data[1] = data[2] = 255; // white
+}
+
 void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byte_grayscale, bool ignore_word_alignment) {
 
 	//timer_t timer("Load Texture " + name);
@@ -715,8 +722,8 @@ void texture_t::load_dds() {
 #ifdef ENABLE_DDS
 	defer_load_type = DEFER_TYPE_DDS;
 #else
-	cerr << "Error loading texture image file " << name << ": DDS support has not been enabled." << endl;
-	exit(1);
+	cerr << format_red("Error loading texture image file " + name + ": DDS support has not been enabled; setting to white.") << endl;
+	set_default_white_texture();
 #endif
 }
 
