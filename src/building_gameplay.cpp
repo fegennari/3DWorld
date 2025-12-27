@@ -507,6 +507,13 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 	else if (otype == TYPE_PLATE && obj.item_flags == 1) {
 		type.name = "bowl";
 	}
+	else if (otype == TYPE_BOX && (obj.flags & RO_FLAG_USED)) { // handle custom box contents for boxes that can't be opened
+		if (obj.is_freezer()) { // box in walk-in freezer
+			unsigned const num_contents = 8;
+			string const contents[num_contents] = {"frozen potatoes", "frozen chicken", "frozen beef", "frozen pork", "ice cream", "frozen fries", "frozen vegetables", "lasagna"};
+			type.name = "box of " + contents[obj.obj_id % num_contents];
+		}
+	}
 	if (wv_factor != 1.0) { // scale weight and value by this factor, rounded to the nearest pound and dollar
 		type.weight = int(wv_factor*type.weight);
 		type.value  = int(wv_factor*type.value );
