@@ -245,7 +245,8 @@ unsigned add_row_of_cubes(room_object_t const &c, cube_t const &region, float wi
 {
 	float const length(region.get_sz_dim(!c.dim)), space(spacing_factor*width), stride(width + space);
 	unsigned const num_rows(length/stride); // round down
-	unsigned const food_box_type((type == TYPE_FOOD_BOX) ? rgen.rand() : 0); // unique per section
+	bool const is_pantry(c.type == TYPE_CLOSET);
+	unsigned const food_box_type((type == TYPE_FOOD_BOX && !is_pantry) ? rgen.rand() : 0); // unique per section, for retail shelf racks
 	float const row_spacing(length/num_rows), shelf_depth(region.get_sz_dim(c.dim));
 	unsigned num_items(0);
 	point pos;
@@ -271,7 +272,7 @@ unsigned add_row_of_cubes(room_object_t const &c, cube_t const &region, float wi
 					obj.expand_in_dim(!c.dim, -0.2*width*rgen.rand_float()); // width
 					set_book_id_and_color(obj, rgen);
 				}
-				else if (type == TYPE_FOOD_BOX  ) {obj.obj_id  = food_box_type;}
+				else if (type == TYPE_FOOD_BOX  ) {obj.obj_id  = (is_pantry ? rgen.rand() : food_box_type);} // same for shelf rack, variable for pantry
 				else if (type == TYPE_TOASTER   ) {obj.color   = get_toaster_color(rgen);} // random color
 				else if (type == TYPE_FOLD_SHIRT) {obj.color   = TSHIRT_COLORS [rgen.rand()%NUM_TSHIRT_COLORS ];} // random color
 				else if (type == TYPE_MONITOR   ) {obj.obj_id |= 1;} // off by default; set LSB
