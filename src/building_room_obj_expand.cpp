@@ -241,13 +241,13 @@ void add_rows_of_vcylinders(room_object_t const &c, cube_t const &region, float 
 	} // for row
 }
 unsigned add_row_of_cubes(room_object_t const &c, cube_t const &region, float width, float depth, float height, float spacing_factor, unsigned type,
-	unsigned flags, vect_room_object_t &objects, rand_gen_t &rgen, bool dir=0, bool inv_dim=0, unsigned max_stack_height=1, bool no_empty=0)
+	unsigned flags, vect_room_object_t &objects, rand_gen_t &rgen, bool dir=0, bool inv_dim=0, unsigned max_stack_height=1, unsigned max_cols=1, bool no_empty=0)
 {
-	float const length(region.get_sz_dim(!c.dim)), space(spacing_factor*width), stride(width + space);
-	unsigned const num_rows(length/stride); // round down
+	float const length(region.get_sz_dim(!c.dim)), shelf_depth(region.get_sz_dim(c.dim));
+	unsigned const num_rows(length/((spacing_factor + 1.0)*width)); // round down
 	bool const is_pantry(c.type == TYPE_CLOSET);
 	unsigned const food_box_type((type == TYPE_FOOD_BOX && !is_pantry) ? rgen.rand() : 0); // unique per section, for retail shelf racks
-	float const row_spacing(length/num_rows), shelf_depth(region.get_sz_dim(c.dim));
+	float const row_spacing(length/num_rows);
 	unsigned num_items(0);
 	point pos;
 	pos[ c.dim] = region.d[ c.dim][0] + 0.5*shelf_depth;
@@ -257,35 +257,46 @@ unsigned add_row_of_cubes(room_object_t const &c, cube_t const &region, float wi
 	objc.z2() += height;
 	objc.expand_in_dim( c.dim, 0.5*depth);
 	objc.expand_in_dim(!c.dim, 0.5*width);
+	if (max_cols > 1) {min_eq(max_cols, (unsigned)floor(shelf_depth/((spacing_factor + 1.0)*depth)));}
 
 	for (unsigned row = 0; row < num_rows; ++row) {
 		if (no_empty || rgen.rand_float() < 0.75) { // 75% chance
-			unsigned const stack_height(1 + ((max_stack_height > 1) ? (rgen.rand() % max_stack_height) : 0));
-			cube_t objc_stack(objc);
+			float col_stride(0.0);
+			unsigned num_cols(1);
 
-			for (unsigned stack = 0; stack < stack_height; ++stack) {
-				room_object_t obj(objc_stack, type, c.room_id, (c.dim ^ inv_dim), dir, flags, c.light_amt);
+			if (max_cols > 1) {
+				num_cols   = 1 + (rgen.rand() % max_cols);
+				col_stride = shelf_depth/(num_cols + 1);
+			}
+			for (unsigned col = 0; col < num_cols; ++col) {
+				unsigned const stack_height(1 + ((max_stack_height > 1) ? (rgen.rand() % max_stack_height) : 0));
+				cube_t objc_stack(objc);
+				objc_stack.translate_dim(c.dim, ((col == 0) ? -0.5*(num_cols - 1)*col_stride : col_stride));
 
-				if (type == TYPE_BOOK) { // reduce size randomly
-					obj.z2() -= 0.5*height*rgen.rand_float();
-					obj.expand_in_dim( c.dim, -0.1*width*rgen.rand_float()); // length
-					obj.expand_in_dim(!c.dim, -0.2*width*rgen.rand_float()); // width
-					set_book_id_and_color(obj, rgen);
-				}
-				else if (type == TYPE_FOOD_BOX  ) {obj.obj_id  = (is_pantry ? rgen.rand() : food_box_type);} // same for shelf rack, variable for pantry
-				else if (type == TYPE_TOASTER   ) {obj.color   = get_toaster_color(rgen);} // random color
-				else if (type == TYPE_FOLD_SHIRT) {obj.color   = TSHIRT_COLORS [rgen.rand()%NUM_TSHIRT_COLORS ];} // random color
-				else if (type == TYPE_MONITOR   ) {obj.obj_id |= 1;} // off by default; set LSB
-				objects.push_back(obj);
-				++num_items;
-				if (stack+1 == stack_height) break; // done with stack
-				objc_stack.translate_dim(2, obj.dz()); // shift stack up
-				if (objc_stack.z2() > region.z2()) break; // stack is too tall
+				for (unsigned stack = 0; stack < stack_height; ++stack) {
+					room_object_t obj(objc_stack, type, c.room_id, (c.dim ^ inv_dim), dir, flags, c.light_amt);
 
-				if (type == TYPE_LAPTOP) { // add a bit of horizontal jitter
-					for (unsigned d = 0; d < 2; ++d) {objc_stack.translate_dim(d, 0.05*objc.get_sz_dim(d)*rgen.signed_rand_float());}
-				}
-			} // for stack
+					if (type == TYPE_BOOK) { // reduce size randomly
+						obj.z2() -= 0.5*height*rgen.rand_float();
+						obj.expand_in_dim( c.dim, -0.1*width*rgen.rand_float()); // length
+						obj.expand_in_dim(!c.dim, -0.2*width*rgen.rand_float()); // width
+						set_book_id_and_color(obj, rgen);
+					}
+					else if (type == TYPE_FOOD_BOX  ) {obj.obj_id  = (is_pantry ? rgen.rand() : food_box_type);} // same for shelf rack, variable for pantry
+					else if (type == TYPE_TOASTER   ) {obj.color   = get_toaster_color(rgen);} // random color
+					else if (type == TYPE_FOLD_SHIRT) {obj.color   = TSHIRT_COLORS [rgen.rand()%NUM_TSHIRT_COLORS ];} // random color
+					else if (type == TYPE_MONITOR   ) {obj.obj_id |= 1;} // off by default; set LSB
+					objects.push_back(obj);
+					++num_items;
+					if (stack+1 == stack_height) break; // done with stack
+					objc_stack.translate_dim(2, obj.dz()); // shift stack up
+					if (objc_stack.z2() > region.z2()) break; // stack is too tall
+
+					if (type == TYPE_LAPTOP) { // add a bit of horizontal jitter
+						for (unsigned d = 0; d < 2; ++d) {objc_stack.translate_dim(d, 0.05*objc.get_sz_dim(d)*rgen.signed_rand_float());}
+					}
+				} // for stack
+			} // for col
 		}
 		objc.translate_dim(!c.dim, row_spacing);
 	} // for row
@@ -321,7 +332,8 @@ void add_rows_of_food_boxes(rand_gen_t &rgen, room_object_t const &parent, cube_
 	float const fheight(height_val*rgen.rand_uniform(0.7, 0.9)), fdepth(min(depth, fheight)*rgen.rand_uniform(0.15, 0.25));
 	float const fwidth(min(depth, fheight)*rgen.rand_uniform(0.6, 0.9));
 	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_WAS_EXP);
-	add_row_of_cubes(parent, shelf, fwidth, fdepth, fheight, 0.2, TYPE_FOOD_BOX, flags, objects, rgen, dir);
+	unsigned const max_cols(parent.is_pantry() ? 3 : 1); // allow up to 3 deep for pantry
+	add_row_of_cubes(parent, shelf, fwidth, fdepth, fheight, 0.2, TYPE_FOOD_BOX, flags, objects, rgen, dir, 0, 1, max_cols); // inv_dim=0, height=1
 }
 void add_rows_of_bottles_or_cans(rand_gen_t &rgen, room_object_t const &parent, cube_t const &shelf, float height_val, float depth, bool no_alcohol, vect_room_object_t &objects) {
 	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_WAS_EXP);
@@ -472,7 +484,8 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vect_room_
 		
 		for (unsigned d = 0; d < 2; ++d) {
 			shelves[d+1].d[ dim][!dir] = back_shelf_edge;
-			shelves[d+1].d[!dim][!d  ] = ccubes[2*d].d[!dim][!d] + (d ? 1.0 : -1.0)*edge_gap; // edge of door + trim
+			shelves[d+1].d[!dim][!d  ] = ccubes[2*d].d[!dim][!d] + (d ? 1.0 : -1.0)*edge_gap; // edge of door + side trim
+			if (!is_freezer) {shelves[d+1].d[ dim][dir] -= (dir ? 1.0 : -1.0)*0.01*door_width;} // extra gap for inside face of door for pantry
 		}
 		if (is_freezer) { // add vertical bars at corners
 			float const vbar_hwidth(4.0*shelf_hthick);
