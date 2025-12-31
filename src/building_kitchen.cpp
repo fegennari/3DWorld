@@ -556,27 +556,41 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 	vector2d const room_sz(room.get_size_xy());
 	if (room_sz.get_min_val() < 2.0*floor_spacing || room_sz.get_max_val() < 3.0*floor_spacing) return 0; // too small
 	bool const in_mall(room.is_ext_basement() && has_mall()), dim(room_sz.x < room_sz.y); // long dim
-	bool const add_island(room.get_sz_dim(!dim) > 3.0*floor_spacing); // if room is wide enough, add a center island
+	float const room_len(room.get_sz_dim(!dim));
+	bool const add_island(room_len > 3.0*floor_spacing); // if room is wide enough, add a center island
+	bool const have_kitchen_models(enable_kitchen_app_models());
 	float const ceil_zval((in_mall ? room.z2() : (zval + floor_spacing)) - get_fc_thickness()), clearance(get_min_front_clearance_inc_people());
-	cube_t place_area(get_room_wall_bounds(room));
+	unsigned pa2_orient(4);
+	cube_t place_area(get_room_wall_bounds(room)), place_area2;
 	place_area.expand_by_xy(-trim_thick);
 	if (!has_tile_floor() && !in_mall) {zval = add_flooring(room, zval, room_id, light_amt, FLOORING_LGTILE);} // prison and maybe school
 	vect_room_object_t &objs(interior->room_geom->objs);
 
 	if (add_island) { // add a large table in the center of the room
-		float const room_len(room.get_sz_dim(!dim));
+		bool const add_apps(have_kitchen_models && room_len > 4.0*floor_spacing), app_side(add_apps ? rgen.rand_bool() : 0);
 		float const table_len(min(0.5f*room_len, (room_len - 2.0f*floor_spacing))), table_width(min(0.4f*table_len, 0.6f*floor_spacing));
 		unsigned const item_flags(get_table_item_flags(rgen, 0, 1)); // is_plastic=0, is_metal=1
 		cube_t table;
 		set_cube_zvals(table, zval, (zval + 0.3*floor_spacing + wall_thick));
 		set_wall_width(table, room.get_center_dim(!dim), 0.5*table_width, !dim);
 		set_wall_width(table, room.get_center_dim( dim), 0.5*table_len,    dim);
+
+		if (add_apps) { // extra wide; add another row of appliances along one side of the table
+			float const table_xlate(1.0*table_width), place_width(1.5*table_width);
+			table.translate_dim(!dim, (app_side ? -1.0 : 1.0)*table_xlate); // translate away from appliances
+			place_area2 = place_area; // copy zvals
+			for (unsigned d = 0; d < 2; ++d) {place_area2.d[dim][d] = table.d[dim][d];} // same length as table
+			float const app_back(table.d[!dim][app_side] + (app_side ? 1.0 : -1.0)*trim_thick); // add a small gap
+			place_area2.d[!dim][!app_side] = app_back;
+			place_area2.d[!dim][ app_side] = app_back + (app_side ? 1.0 : -1.0)*place_width;
+			pa2_orient = 2*(!dim) + app_side;
+		}
 		objs.emplace_back(table, TYPE_TABLE, room_id, dim, 0, RO_FLAG_ADJ_TOP, light_amt, SHAPE_CUBE, WHITE, item_flags); // metal; assumes table has something on it
 		unsigned const avoid_start(objs.size());
 		vect_cube_t avoid;
 		
 		// add microwave to table
-		bool const mdim(!dim), mdir(rgen.rand_bool());
+		bool const mdim(!dim), mdir(add_apps ? app_side : rgen.rand_bool());
 		float const mheight(rgen.rand_uniform(1.0, 1.2)*0.16*floor_spacing), mwidth(1.7*mheight), mdepth(1.2*mheight); // fixed AR=1.7 to match the texture
 		float const pos(rgen.rand_uniform((table.d[!mdim][0] + 0.6*mwidth), (table.d[!mdim][1] - 0.6*mwidth))), dsign(mdir ? 1.0 : -1.0);
 		cube_t mwave;
@@ -593,12 +607,12 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 		unsigned const model_id(combine_model_submodel_id(OBJ_MODEL_CK_APP, KCA_DEEP_FRYER));
 		float const dp_height(0.7*0.5*building_obj_model_loader.get_model(model_id).scale); // smaller version
 		
-		if (place_model_along_wall(model_id, TYPE_KITCH_APP, room, dp_height, rgen, table.z2(), room_id, light_amt, table, avoid_start)) {
+		if (place_model_along_wall(model_id, TYPE_KITCH_APP, room, dp_height, rgen, table.z2(), room_id, light_amt, table, avoid_start, 0.0, pa2_orient)) {
 			objs.back().dir ^= 1; // backwards
 			avoid.push_back(objs.back());
 		}
 		// add toaster to table
-		if (place_model_along_wall(OBJ_MODEL_TOASTER, TYPE_TOASTER, room, 0.09, rgen, table.z2(), room_id, light_amt, table, avoid_start)) {
+		if (place_model_along_wall(OBJ_MODEL_TOASTER, TYPE_TOASTER, room, 0.09, rgen, table.z2(), room_id, light_amt, table, avoid_start, 0.0, pa2_orient)) {
 			avoid.push_back(objs.back());
 		}
 		// place objects on the table; similar to building_t::add_restaurant_counter()
@@ -640,7 +654,7 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 		move_lights_to_not_intersect(objs, lights_start, objs_start, avoid); // or freezer?
 	}
 	// place commerial kitchen appliances (grills, deep fryers, ovens, sinks, etc.); only legal if all models have been loaded
-	if (enable_kitchen_app_models()) {
+	if (have_kitchen_models) {
 		set_specular_for_low_poly_kitchen_models();
 		float const app_gap(trim_thick); // must be large enough to prevent cube intersection
 		unsigned fail_count(0), num_fridge(0), cclass_counts[3] = {0, 1, 1}; // prefer hood items
@@ -652,18 +666,21 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 		for (unsigned n = 0; n < 20; ++n) { // place up to 20 kitchen appliance models groups; stop after enough failures
 			unsigned const cka_class(min_element(cclass_counts, cclass_counts+3) - cclass_counts);
 			bool const non_cook_class(cka_class == 2), add_fridge(non_cook_class && add_fridge_pass);
+			bool const use_pa2((pa2_orient < 4) && (rgen.rand()&3) == 0); // 25%
+			cube_t const &app_area(use_pa2 ? place_area2 : place_area);
+			unsigned const po(use_pa2 ? pa2_orient : 4);
 			unsigned obj_ix(objs.size());
 			bool success(0);
 			hood.set_to_zeros();
 
 			if (add_fridge) {
-				success = place_model_along_wall(OBJ_MODEL_FRIDGE, TYPE_FRIDGE, room, 0.75, rgen, zval, room_id, light_amt, place_area, objs_start, 1.2, 4, 0, WHITE, 1);
+				success = place_model_along_wall(OBJ_MODEL_FRIDGE, TYPE_FRIDGE, room, 0.75, rgen, zval, room_id, light_amt, app_area, objs_start, 1.2, po, 0, WHITE, 1, 0, use_pa2);
 				num_fridge += success;
 			}
 			else {
 				app_model.assign(rgen, cka_class);
 				float const height(app_model.get_height());
-				success = place_model_along_wall(app_model.model_id, TYPE_KITCH_APP, room, height, rgen, zval, room_id, light_amt, place_area, objs_start, 1.0, 4, 0, WHITE, 1);
+				success = place_model_along_wall(app_model.model_id, TYPE_KITCH_APP, room, height, rgen, zval, room_id, light_amt, app_area, objs_start, 1.0, po, 0, WHITE, 1, 0, use_pa2);
 			}
 			if (!success) {
 				if (++fail_count >= 10) break; // stop after 10 failures
@@ -693,7 +710,7 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 					float const front(app2.d[adim][adir]);
 					cube_t tc(app2);
 					tc.d[adim][adir] = front + (adir ? 1.0 : -1.0)*clearance; // extend in front
-					if (!place_area.contains_cube_xy(tc)        || is_obj_placement_blocked(tc, room, 1)) break;
+					if (!app_area.contains_cube_xy(tc)          || is_obj_placement_blocked(tc, room, 1)) break;
 					if (overlaps_other_room_obj(tc, objs_start) || check_if_against_window (tc, room, adim, !adir)) break;
 					app2.type = TYPE_KITCH_APP; // in case app was a fridge
 					app2.item_flags = app_model.app_type;
@@ -711,8 +728,19 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 				set_cube_zvals(hood, hood_z1, ceil_zval);
 				objs.emplace_back(hood, TYPE_VENT_HOOD, room_id, adim, adir, 0, light_amt, SHAPE_CUBE, WHITE);
 				set_obj_id(objs);
-				move_lights_to_not_intersect(objs, lights_start, objs_start, hood);
-				duct_avoid.push_back(hood);
+				cube_t blocker(hood);
+
+				if (use_pa2) { // extend hood over table and add back face (metal bar?)
+					unsigned const ext_side(!bool(pa2_orient & 1));
+					float const hood_back(hood.d[!dim][ext_side]);
+					cube_t hood_ext(hood);
+					hood_ext.d[!dim][!ext_side] = hood_back;
+					hood_ext.d[!dim][ ext_side] = hood_back + (ext_side ? 1.0 : -1.0)*0.5*hood.get_sz_dim(!dim);
+					objs.emplace_back(hood_ext, TYPE_METAL_BAR, room_id, adim, ext_side, 0, light_amt, SHAPE_CUBE, WHITE, (~get_face_mask(adim, !ext_side) | EF_Z2));
+					blocker.union_with_cube(hood_ext);
+				}
+				move_lights_to_not_intersect(objs, lights_start, objs_start, blocker);
+				duct_avoid.push_back(blocker);
 			}
 		} // for n
 	}
