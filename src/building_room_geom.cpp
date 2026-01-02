@@ -7039,9 +7039,10 @@ void building_room_geom_t::add_fishtank(room_object_t const &c) { // unshadowed,
 
 void building_room_geom_t::add_metal_bar(room_object_t const &c) {
 	bool const non_reflective(c.flags & RO_FLAG_UNTEXTURED); // used for trim
+	bool const extra_shiny   (c.flags & RO_FLAG_HAS_EXTRA ); // used in commercial kitchens
 	colorRGBA const color(apply_light_color(c)), spec_color((color.R == color.G && color.R == color.B) ? WHITE : color);
 	// untextured, shadowed, small, half metal; add an option to make it scratched?
-	rgeom_mat_t &mat(non_reflective ? get_untextured_material(1, 0, 1) : get_metal_material(1, 0, 1, 0, 0, spec_color, 0.8, 60.0, 0.5));
+	rgeom_mat_t &mat(non_reflective ? get_untextured_material(1, 0, 1) : get_metal_material(1, 0, 1, 0, 0, spec_color, 0.8, 60.0, (extra_shiny ? 1.0 : 0.5)));
 
 	if (c.shape == SHAPE_CUBE) {
 		mat.add_cube_to_verts_untextured(c, color, c.item_flags); // skip_faces is stored in item_flags

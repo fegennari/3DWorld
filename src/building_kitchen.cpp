@@ -731,12 +731,12 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 				cube_t blocker(hood);
 
 				if (use_pa2) { // extend hood over table and add back face (metal bar?)
-					unsigned const ext_side(!bool(pa2_orient & 1));
+					unsigned const ext_side(!bool(pa2_orient & 1)), shiny_flags(RO_FLAG_HAS_EXTRA);
 					float const hood_back(hood.d[!dim][ext_side]);
 					cube_t hood_ext(hood);
 					hood_ext.d[!dim][!ext_side] = hood_back;
 					hood_ext.d[!dim][ ext_side] = hood_back + (ext_side ? 1.0 : -1.0)*0.5*hood.get_sz_dim(!dim);
-					objs.emplace_back(hood_ext, TYPE_METAL_BAR, room_id, adim, ext_side, 0, light_amt, SHAPE_CUBE, WHITE, (~get_face_mask(adim, !ext_side) | EF_Z2));
+					objs.emplace_back(hood_ext, TYPE_METAL_BAR, room_id, adim, ext_side, shiny_flags, light_amt, SHAPE_CUBE, WHITE, (~get_face_mask(adim, !ext_side) | EF_Z2));
 					blocker.union_with_cube(hood_ext);
 				}
 				move_lights_to_not_intersect(objs, lights_start, objs_start, blocker);
