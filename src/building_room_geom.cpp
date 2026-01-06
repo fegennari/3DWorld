@@ -505,7 +505,7 @@ void building_room_geom_t::add_drawers(room_object_t const &c, float tscale, vec
 	get_metal_material(0, 0, 1); // ensure material exists so that door_mat reference is not invalidated
 	rgeom_mat_t &drawer_mat(is_wood ? get_wood_material(1.5*tscale, 1, 0, 1) : get_untextured_material(1, 0, 1)); // shadowed, small=1
 	rgeom_mat_t &handle_mat(get_metal_material(0, 0, 1)); // untextured, unshadowed, small=1
-	colorRGBA const drawer_color(apply_light_color(c, WHITE)); // lighter color than dresser
+	colorRGBA const drawer_color(apply_light_color(c, (is_wood ? WHITE : c.color*0.75))); // lighter color than dresser if wood, otherwise darker
 	colorRGBA const handle_color(apply_light_color(c, drawer_handle_color));
 	unsigned const door_skip_faces(~get_face_mask(c.dim, !c.dir));
 	vect_room_object_t &objects(get_temp_objects());
@@ -529,7 +529,8 @@ void building_room_geom_t::add_drawers(room_object_t const &c, float tscale, vec
 			right.d[!c.dim][0]    += 0.87*dwidth; // set width of right side
 			back.d[c.dim][c.dir]   = c.d[c.dim][c.dir] + 0.25f*dir_sign*drawer_thick; // flush with front face and narrow
 			unsigned const skip_mask_front_back(get_skip_mask_for_xy(c.dim));
-			colorRGBA const blr_color(is_wood ? (drawer_color*0.4 + apply_wood_light_color(c)*0.4) : drawer_color*0.8); // halfway between base and drawer colors, but slightly darker
+			// if wood: halfway between base and drawer colors, but slightly darker; if not wood: darker
+			colorRGBA const blr_color(is_wood ? (drawer_color*0.4 + apply_wood_light_color(c)*0.4) : drawer_color*0.5);
 			// swap the texture orientation of drawers to make them stand out more
 			drawer_mat.add_cube_to_verts(bottom, blr_color, tex_orig,  skip_mask_front_back, 1);
 			drawer_mat.add_cube_to_verts(left,   blr_color, tex_orig, (skip_mask_front_back | EF_Z1), 1);
@@ -4699,7 +4700,7 @@ room_object_t get_desk_top_back(room_object_t const &c) {
 }
 void building_room_geom_t::add_desk(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm) {
 	// desk top and legs, similar to add_table()
-	bool const is_wood(1/*c.is_house() || c.shape == SHAPE_TALL*/);
+	bool const is_wood(!(c.flags & RO_FLAG_UNTEXTURED)); // else untextured plastic
 	point const tex_origin(c.get_llc());
 	colorRGBA const color(is_wood ? apply_wood_light_color(c) : apply_light_color(c));
 	room_object_t drawers;

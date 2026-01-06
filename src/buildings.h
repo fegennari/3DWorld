@@ -650,9 +650,9 @@ unsigned const RO_FLAG_ADJ_BOT = 0x1000; // for door trim/railings/ext steps/etc
 unsigned const RO_FLAG_ADJ_TOP = 0x2000; // for door trim/railings
 unsigned const RO_FLAG_IS_HOUSE= 0x4000; // used for mirror reflections, shelves, tables, desks, beds, closets, and false doors
 unsigned const RO_FLAG_RAND_ROT= 0x8000; // random rotation; used for office chairs, papers, pictures, cups, balls, and ceiling tiles
-unsigned const RO_FLAG_UNTEXTURED= 0x1000; // for shirts, aliased with RO_FLAG_ADJ_BOT
-unsigned const RO_FLAG_FROM_SET  = 0x1000; // for books,  aliased with RO_FLAG_ADJ_BOT
-unsigned const RO_FLAG_HAS_VOL_IX= 0x2000; // for books,  aliased with RO_FLAG_ADJ_TOP
+unsigned const RO_FLAG_UNTEXTURED= 0x1000; // for shirts and desks, aliased with RO_FLAG_ADJ_BOT
+unsigned const RO_FLAG_FROM_SET  = 0x1000; // for books, aliased with RO_FLAG_ADJ_BOT
+unsigned const RO_FLAG_HAS_VOL_IX= 0x2000; // for books, aliased with RO_FLAG_ADJ_TOP
 unsigned const RO_FLAG_FOR_CAR   = 0x1000; // for car blockers, aliased with RO_FLAG_ADJ_BOT
 unsigned const RO_FLAG_WALKWAY   = 0x1000; // for walkway objects (outside of buildings), aliased with RO_FLAG_ADJ_BOT
 // object flags, third byte, for pickup/interact state

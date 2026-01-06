@@ -463,6 +463,7 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 	float const clearance(max(0.5f*depth, get_min_front_clearance_inc_people()));
 	float height(0.23*vspace*rgen.rand_uniform(1.08, 1.2)), comp_sz_scale(1.0);
 	if ((room_id & 3) == 1) {height += 0.05*vspace; comp_sz_scale *= 0.8;} // maybe make taller to add a center drawer if this desk is likely to have drawers (room_id test)
+	unsigned const floor_ix(room.get_floor_containing_zval(zval, vspace));
 	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t c;
 	set_cube_zvals(c, zval, zval+height);
@@ -481,7 +482,11 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 		// make short if against an exterior or open wall, in an office, or if there's a complex floorplan (in case there's no back wall)
 		bool const is_tall(!room.is_office && !has_complex_floorplan && !room.has_open_wall(dim, dir) && rgen.rand_float() < 0.5 &&
 			(is_basement || classify_room_wall(room, zval, dim, dir, 0) != ROOM_WALL_EXT));
-		room_object_t desk(c, TYPE_DESK, room_id, dim, !dir, (is_house ? RO_FLAG_IS_HOUSE : 0), tot_light_amt, (is_tall ? SHAPE_TALL : SHAPE_CUBE));
+		bool const is_plastic((is_hospital() || (is_office_bldg() && room.is_office && ((floor_ix + mat_ix) & 1))) && !is_tall);
+		unsigned flags(0);
+		if (is_house  ) {flags |= RO_FLAG_IS_HOUSE  ;}
+		if (is_plastic) {flags |= RO_FLAG_UNTEXTURED;}
+		room_object_t desk(c, TYPE_DESK, room_id, dim, !dir, flags, tot_light_amt, (is_tall ? SHAPE_TALL : SHAPE_CUBE));
 		cube_t desk_back;
 		
 		if (is_tall) { // Note: may block sign next to door
