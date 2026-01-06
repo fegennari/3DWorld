@@ -2241,8 +2241,9 @@ void building_t::add_restaurant_objs(rand_gen_t &rgen, room_t const &room, float
 {
 	float const window_vspace(get_window_vspace()), wall_thickness(get_wall_thickness()), wall_hthick(0.5*wall_thickness), fc_thick(get_fc_thickness());
 	float const clearance(get_min_front_clearance_inc_people()), trim_thickness(get_trim_thickness()), trim_height(get_trim_height());
-	int const style(no_doorway ? 2 : ((3*rgen.rand()) % 3)); // {open with dining, open with no dining, closed with counter}; must be closed with counter if no doorway
-	bool const has_dining(style == 0), is_open(style < 2);
+	// {open with dining, open with no dining, closed with counter, long with dining and no kitchen}; must be closed with counter if no doorway
+	int const style(no_doorway ? 2 : ((3*rgen.rand()) % 4));
+	bool const has_dining(style == 0 || style == 3), is_open(style != 2), has_kitchen(1/*style != 3*/), is_r90(style == 3);
 	float const front_wall(room.d[dim][dir]), bot_wall_z1(room.z1() + fc_thick), bot_wall_z2(zval + 0.35*window_vspace);
 	colorRGBA const &wall_color(interior->mall_info->mall_wall_color), &trim_color(get_trim_color());
 	vect_room_object_t &objs(interior->room_geom->objs);
@@ -2279,25 +2280,38 @@ void building_t::add_restaurant_objs(rand_gen_t &rgen, room_t const &room, float
 		}
 	}
 	// split between public space in the front and commercial kitchen in the back
-	float const fb_split(front_wall + (dir ? -1.0 : 1.0)*((has_dining ? 0.5 : 0.25) + rgen.rand_uniform(0.0, 0.1))*room.get_sz_dim(dim)); // front vs. back split pos
+	bool const sdim(dim ^ is_r90), pdir(is_r90 ? rgen.rand_bool() : dir); // split dim and public dir
+	float const pdsign(pdir ? -1.0 : 1.0), rlen(room.get_sz_dim(sdim));
+	float fb_split(0.0); // front/public vs. back/private split pos
+	// Note: for R90 restaurants, we ideally want the public area connected to the front door and the private area connected to the back door,
+	// but we can't move the doors at this point, and the wall/counter must be axis aligned, so make both doors in the public space;
+	// min shift is set to 1.5x doorway width + wall_thickness to allow for counter in the front and the back door to open
+	if (is_r90) {fb_split = room.d[sdim][pdir] + pdsign*(0.5 + rgen.rand_uniform(0.0, 0.05))*rlen + pdsign*(1.5*get_doorway_width() + wall_thickness);} // not too close to door
+	else        {fb_split = front_wall + pdsign*((has_dining ? 0.5 : 0.25) + rgen.rand_uniform(0.0, 0.1))*rlen;}
 	// add separator wall on top and bottom, and metal counter
 	bool const leave_end_gaps(1);
 	cube_t wall(room);
 	set_cube_zvals(wall, bot_wall_z1, bot_wall_z2);
-	set_wall_width(wall, fb_split, wall_hthick, dim);
+	set_wall_width(wall, fb_split, wall_hthick, sdim);
 	cube_t upper_wall(wall);
-	if (leave_end_gaps) {wall.expand_in_dim(!dim, -1.25*clearance);}
+	
+	if (leave_end_gaps) {
+		wall.expand_in_dim(!sdim, -1.25*clearance);
+		if (is_r90) {upper_wall.d[dim][dir] = wall.d[dim][dir];} // shrink upper wall at front as well
+	}
 	set_cube_zvals(upper_wall, (zval + get_floor_ceil_gap()), (room.z2() - fc_thick));
-	objs.emplace_back(upper_wall, TYPE_STAIR_WALL, room_id, dim, 0, 0, light_amt, SHAPE_CUBE, wall_color); // draw sides only
+	objs.emplace_back(upper_wall, TYPE_STAIR_WALL, room_id, sdim, 0, 0, light_amt, SHAPE_CUBE, wall_color); // draw sides only
 	div_wall = upper_wall; // store for use with placing ceiling lights, which happens later
 	// add upper wall bottom trim
 	cube_t trim(upper_wall);
 	set_cube_zvals(trim, upper_wall.z1()-trim_height, upper_wall.z1());
-	trim.expand_in_dim(dim, trim_thickness);
+	trim.expand_in_dim(sdim, trim_thickness);
+	if (is_r90) {trim.d[dim][dir] += (dir ? 1.0 : -1.0)*trim_thickness;} // extend the end
 	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_UNTEXTURED); // not reflective
-	interior->room_geom->objs.emplace_back(trim, TYPE_METAL_BAR, room_id, dim, 0, flags, light_amt, SHAPE_CUBE, trim_color, get_skip_mask_for_xy(!dim)); // skip ends
+	unsigned const skip_faces(is_r90 ? ~get_face_mask(dim, !dir) : get_skip_mask_for_xy(!sdim)); // skip end(s)
+	interior->room_geom->objs.emplace_back(trim, TYPE_METAL_BAR, room_id, sdim, 0, flags, light_amt, SHAPE_CUBE, trim_color, skip_faces);
 	unsigned const objs_start(objs.size());
-	cube_t const counter(add_restaurant_counter(wall, dim, dir, room_id, light_amt, leave_end_gaps, is_open, rgen)); // add_cash_registers=is_open
+	cube_t const counter(add_restaurant_counter(wall, sdim, pdir, room_id, light_amt, leave_end_gaps, is_open, rgen)); // add_cash_registers=is_open
 
 	if (is_open && !windows_area.is_all_zeros()) { // add a blocker for the windows and door
 		cube_t blocker(windows_area);
@@ -2307,24 +2321,29 @@ void building_t::add_restaurant_objs(rand_gen_t &rgen, room_t const &room, float
 	if (leave_end_gaps) { // add end gap blockers
 		for (unsigned d = 0; d < 2; ++d) {
 			cube_t blocker(room);
-			blocker.d[!dim][!d] = wall.d[!dim][d];
-			set_wall_width(blocker, fb_split, 1.5*clearance, dim);
+			blocker.d[!sdim][!d] = wall.d[!sdim][d];
+			set_wall_width(blocker, fb_split, 1.5*clearance, sdim);
 			objs.emplace_back(blocker, TYPE_BLOCKER, room_id, 0, 0, 0, 1.0);
 		}
 	}
 	// populate kitchen and public areas
 	room_t pub_area(room), kitchen(room);
-	pub_area.d[dim][!dir] = counter.d[dim][ dir];
-	kitchen .d[dim][ dir] = counter.d[dim][!dir];
-	add_commercial_kitchen_objs(rgen, kitchen, zval, room_id, 0, light_amt, objs_start, objs_start, light_ix_assign); // floor_ix=0, no lights_start
+	pub_area.d[sdim][!pdir] = counter.d[sdim][ pdir];
+	kitchen .d[sdim][ pdir] = counter.d[sdim][!pdir];
 
+	if (has_kitchen) {
+		add_commercial_kitchen_objs(rgen, kitchen, zval, room_id, 0, light_amt, objs_start, objs_start, light_ix_assign); // floor_ix=0, no lights_start
+	}
+	else {
+		// TODO: single row of appliances along the back wall?
+	}
 	if (is_open) { // add vending machines
 		cube_t const pub_room_bounds(get_walkable_room_bounds(pub_area));
 		unsigned const vend_types[2] = {VEND_DRINK, VEND_SNACK}; // one of each type
 		for (unsigned n = 0; n < 2; ++n) {add_vending_machine_type(rgen, room, zval, room_id, light_amt, objs_start, pub_room_bounds, vend_types[n]);}
 	}
 	if (has_dining) {add_cafeteria_objs(rgen, pub_area, zval, room_id, 0, light_amt, objs_start);} // floor_ix=0
-	else {add_corner_trashcans(rgen, pub_area, zval, room_id, light_amt, objs_start, !dim, 1);} // both_ends=1
+	else {add_corner_trashcans(rgen, pub_area, zval, room_id, light_amt, objs_start, !sdim, 1);} // both_ends=1
 }
 
 cube_t building_t::add_restaurant_counter(cube_t const &wall, bool dim, bool dir, unsigned room_id, float light_amt, bool leave_end_gaps, bool add_cash_registers, rand_gen_t &rgen) {
