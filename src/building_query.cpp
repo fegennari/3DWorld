@@ -2420,14 +2420,14 @@ template <typename T> bool has_cube_line_coll(point const &p1, point const &p2, 
 	return 0;
 }
 // and interior doors/windows/gates
-bool building_t::check_for_wall_ceil_floor_int(point const &p1, point const &p2, bool inc_pg_br_walls, bool inc_tranparent, bool inc_bars) const {
+bool building_t::check_for_wall_ceil_floor_int(point const &p1, point const &p2, bool inc_pg_br_walls, bool inc_tranparent, bool inc_bars, bool inc_doors) const {
 	if (!interior) return 0;
 
 	for (unsigned d = 0; d < 2; ++d) {
 		if (has_cube_line_coll(p1, p2, interior->walls[d])) return 1;
 	}
 	if (p1.z != p2.z && has_cube_line_coll(p1, p2, interior->fc_occluders)) return 1; // skip for horizontal lines
-	if (check_line_intersect_doors(p1, p2)) return 1;
+	if (inc_doors && check_line_intersect_doors(p1, p2)) return 1;
 
 	if (inc_pg_br_walls && has_parking_garage && has_room_geom() && min(p1.z, p2.z) < ground_floor_z1) {
 		// Note: not using get_pgbr_wall_ix_for_pos() because p1 and p2 can be on different floors, or one in PG and the other in BR; also, only called a few times per frame

@@ -501,7 +501,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 			float const dist_sq(p2p_dist_sq(closest_to, center));
 			if (found_item && dist_sq >= closest_dist_sq) continue; // not the closest
 			if (!check_obj_dir_dist(closest_to, in_dir, *i, center, (player_in_closet ? 0.5 : 1.0)*dmax)) continue; // door not in the correct direction or too far away
-			if (line_intersect_jail_walls_bars(closest_to, query_ray_end)) continue;
+			if (check_for_wall_ceil_floor_int(closest_to, query_ray_end, 0, 1, 1, 0)) continue; // pbgr_walls=0, transparent=1, bars=1, doors=0
 			cube_t const door_bcube(i->get_true_bcube()); // expand to nonzero area
 
 			if (!door_bcube.line_intersects(closest_to, query_ray_end)) { // if camera ray doesn't intersect the door frame, check for ray intersection with opened door
