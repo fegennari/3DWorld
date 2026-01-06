@@ -710,8 +710,8 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 					float const front(app2.d[adim][adir]);
 					cube_t tc(app2);
 					tc.d[adim][adir] = front + (adir ? 1.0 : -1.0)*clearance; // extend in front
-					if (!app_area.contains_cube_xy(tc)          || is_obj_placement_blocked(tc, room, 1)) break;
-					if (overlaps_other_room_obj(tc, objs_start) || check_if_against_window (tc, room, adim, !adir)) break;
+					if (!app_area.contains_cube_xy(tc) || is_obj_placement_blocked(tc, room, 1) || overlaps_other_room_obj(tc, objs_start)) break;
+					if (!use_pa2 && check_if_against_window (tc, room, adim, !adir)) break;
 					app2.type = TYPE_KITCH_APP; // in case app was a fridge
 					app2.item_flags = app_model.app_type;
 					objs.push_back(app2);
@@ -731,7 +731,8 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 				cube_t blocker(hood);
 
 				if (use_pa2) { // extend hood over table and add back face (metal bar?)
-					unsigned const ext_side(!bool(pa2_orient & 1)), shiny_flags(RO_FLAG_HAS_EXTRA);
+					bool const ext_side(!bool(pa2_orient & 1));
+					unsigned const shiny_flags(RO_FLAG_HAS_EXTRA);
 					float const hood_back(hood.d[!dim][ext_side]);
 					cube_t hood_ext(hood);
 					hood_ext.d[!dim][!ext_side] = hood_back;
