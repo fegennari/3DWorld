@@ -554,9 +554,10 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 	if (room_has_stairs_or_elevator(room, zval, floor_ix)) return 0; // works, but stairs may be blocked by a trolley
 	float const floor_spacing(get_window_vspace()), wall_thick(get_wall_thickness()), trim_thick(get_trim_thickness());
 	vector2d const room_sz(room.get_size_xy());
-	if (room_sz.get_min_val() < 2.0*floor_spacing || room_sz.get_max_val() < 3.0*floor_spacing) return 0; // too small
+	float const min_sz(room_sz.get_min_val());
+	if (min_sz < 1.4*floor_spacing || room_sz.get_max_val() < 3.0*floor_spacing) return 0; // too small
 	bool const in_mall(room.is_ext_basement() && has_mall()), dim(room_sz.x < room_sz.y); // long dim
-	float const room_len(room.get_sz_dim(!dim));
+	float const room_len(room_sz[!dim]);
 	bool const add_island(room_len > 3.0*floor_spacing); // if room is wide enough, add a center island
 	bool const have_kitchen_models(enable_kitchen_app_models());
 	float const ceil_zval((in_mall ? room.z2() : (zval + floor_spacing)) - get_fc_thickness()), clearance(get_min_front_clearance_inc_people());
@@ -656,6 +657,7 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 	// place commerial kitchen appliances (grills, deep fryers, ovens, sinks, etc.); only legal if all models have been loaded
 	if (have_kitchen_models) {
 		set_specular_for_low_poly_kitchen_models();
+		unsigned const max_group_sz(min(4, max(1, round_fp(2*min_sz/floor_spacing)-2)));
 		float const app_gap(trim_thick); // must be large enough to prevent cube intersection
 		unsigned fail_count(0), num_fridge(0), cclass_counts[3] = {0, 1, 1}; // prefer hood items
 		cclass_counts[rgen.rand_bool() + 1] = 2; // randomize second two classes
@@ -698,7 +700,7 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 			for (unsigned d = 0; d < 2; ++d) { // for each side of this appliance
 				cube_t prev(app);
 
-				for (unsigned m = 0; m < 4; ++m) { // up to 4 neighbors
+				for (unsigned m = 0; m < max_group_sz; ++m) { // up to N neighbors
 					app_model.assign(rgen, cka_class); // same class
 					vector3d const sz_scale(app_model.get_sz_scale()); // D, W, H
 					float const height(floor_spacing*app_model.get_height()), depth(height*sz_scale.x/sz_scale.z), width(height*sz_scale.y/sz_scale.z);
