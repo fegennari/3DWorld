@@ -1518,7 +1518,7 @@ bool building_t::add_mall_table_with_chairs(rand_gen_t &rgen, cube_t const &tabl
 				cube_t new_chair(chair);
 				rotate_obj_cube(new_chair, chair, !dim, dir);
 
-				if (!has_bcube_int(chair, blockers)) { // has space to fall
+				if (!has_bcube_int(new_chair, blockers)) { // has space to fall
 					chair  = new_chair;
 					flags |= RO_FLAG_ON_FLOOR;
 				}
