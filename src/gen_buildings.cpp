@@ -240,11 +240,11 @@ public:
 	int get_mplate_nm_tid() {return ensure_tid(mplate_nm_tid, "normal_maps/metal_plate_NRM.jpg", 1);} // is_normal_map=1
 	int get_met_roof_tid () {return ensure_tid(met_roof_tid,  "buildings/metal_roof.jpg");}
 	int get_tile_floor_tid   () {return ensure_tid(tile_floor_tid,    "interiors/mosaic_tiles.jpg");}
-	int get_tile_floor_nm_tid() {return ensure_tid(tile_floor_nm_tid, "interiors/mosaic_tiles_normal.jpg");}
+	int get_tile_floor_nm_tid() {return ensure_tid(tile_floor_nm_tid, "interiors/mosaic_tiles_normal.jpg", 1);} // is_normal_map=1
 	int get_marble_floor_tid () {return ensure_tid(marble_floor_tid,  "interiors/marble_floor.jpg");}
 	int get_granite_floor_tid() {return ensure_tid(granite_floor_tid, "interiors/granite_floor.jpg");}
 	int get_corr_metal_tid   () {return ensure_tid(corr_metal_tid,    "buildings/corrugated_metal.tif");}
-	int get_corr_metal_nm_tid() {return ensure_tid(corr_metal_nm_tid, "buildings/corrugated_metal_normal.tif");}
+	int get_corr_metal_nm_tid() {return ensure_tid(corr_metal_nm_tid, "buildings/corrugated_metal_normal.tif", 1);} // is_normal_map=1
 	// Note: backrooms_wall2.jpg and backrooms_wall3.jpg work as well, but they're lower resolution and lower contrast
 	int get_backrooms_wall_tid () {return ensure_tid(br_wall_tid,  "interiors/backrooms_wall.jpg");}
 	int get_backrooms_floor_tid() {return ensure_tid(br_floor_tid, "interiors/backrooms_carpet.jpg");}
