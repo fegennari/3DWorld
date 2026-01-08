@@ -675,7 +675,11 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 	if (inc_lg) { // draw closet walls and doors
 		if (is_freezer) {
 			// draw exterior surfaces with reflective metal
-			rgeom_mat_t &wall_mat(get_metal_material(1)); // shadowed
+			tid_nm_pair_t tex(-1, 2.0f/c.dz(), 1, 0); // shadowed
+			tex.nm_tid = get_texture_by_name("metals/metal_plate_normal.jpg", 1);
+			tex.set_metal_specular(WHITE, 0.8, 60.0);
+			tex.metalness = 1.0;
+			rgeom_mat_t &wall_mat(get_material(tex, 1)); // shadowed
 			unsigned const front_face(get_face_mask(dim, dir)), back_face(get_face_mask(dim, !dir));
 			bool const draw_top_surface(c.flags & RO_FLAG_IN_MALL);
 			cube_t const back(get_freezer_back_wall(c));
@@ -691,7 +695,8 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 				wall_mat.add_cube_to_verts(cubes[2*d  ], c.color, tex_origin, (EF_Z12 | ~back_face )); // front
 			}
 			// draw interior surfaces with 50% reflective white painted metal
-			rgeom_mat_t &int_mat(get_metal_material(1, 0, 0, 0, 0, WHITE, 0.8, 60.0, 0.5));
+			tex.metalness = 1.0;
+			rgeom_mat_t &int_mat(get_material(tex, 1)); // shadowed
 			int_mat.add_cube_to_verts(back, c.color, tex_origin, front_face);
 			int_mat.add_cube_to_verts(bot,  c.color, tex_origin, ~EF_Z2);
 			int_mat.add_cube_to_verts(top,  c.color, tex_origin, ~EF_Z1);
