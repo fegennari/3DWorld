@@ -142,6 +142,7 @@ void tid_nm_pair_t::set_gl(tid_nm_pair_dstate_t &state) const {
 	if (shininess > 0  ) {state.s.set_specular_color(spec_color.get_c3(), shininess);} // colored specular
 	if (no_cracks && state.crack_weight > 0.0) {state.s.add_uniform_float("crack_weight", 0.0);}
 	if (metalness > 0.0) {state.s.set_metalness(metalness);}
+	if (metalness > 0.0 && has_normal_map) {state.s.add_uniform_float("cube_map_normal_map_scale", 1.0);} // enable normal map for cube map metal reflections
 }
 void tid_nm_pair_t::unset_gl(tid_nm_pair_dstate_t &state) const {
 	if (tid == REFLECTION_TEXTURE_ID && room_mirror_ref_tid != 0) {state.s.make_current(); return;}
@@ -152,6 +153,7 @@ void tid_nm_pair_t::unset_gl(tid_nm_pair_dstate_t &state) const {
 	if (shininess          > 0  ) {state.s.clear_specular();} // clear specular
 	if (no_cracks && state.crack_weight > 0.0) {state.s.add_uniform_float("crack_weight", state.crack_weight);} // restore original value
 	if (metalness > 0.0) {state.s.set_metalness(0.0);} // clear metalness
+	if (metalness > 0.0 && has_normal_map) {state.s.add_uniform_float("cube_map_normal_map_scale", 0.0);} // reset to 0
 }
 void tid_nm_pair_t::toggle_transparent_windows_mode() { // hack
 	if      (tid == BLDG_WINDOW_TEX    ) {tid = BLDG_WIND_TRANS_TEX;}

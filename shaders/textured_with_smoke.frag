@@ -27,6 +27,7 @@ uniform float depth_trans_bias, clip_plane_z, ripple_time, rain_intensity, refle
 uniform float reflect_plane_ztop, reflect_plane_zbot;
 uniform float winding_normal_sign = 1.0;
 uniform float cube_map_reflect_mipmap_level = 0.0;
+uniform float cube_map_normal_map_scale = 1.0; // either 0.0 or 1.0
 uniform float puddle_scale        = 0.04;
 uniform float water_damage_zmax   = 0.0;
 uniform float water_damage_zscale = 1.0;
@@ -296,6 +297,17 @@ vec3 apply_cube_map_blur(in vec3 ref_dir, in int blur_val) { // blur_val ranges 
 }
 #endif // ENABLE_CUBE_MAP_REFLECT
 
+vec3 get_world_space_normal(vec3 ws_normal_in) {
+	vec3 ws_normal = normalize(ws_normal_in);
+#ifdef ENABLE_CUBE_MAP_BUMP_MAPS
+	if (cube_map_normal_map_scale > 0.0) {
+		mat3 TBN  = cotangent_frame(ws_normal, vpos, tc, 1.0); // in world space; bscale=1.0
+		ws_normal = TBN * get_bump_map_normal(); // inverse or transposed? seems to work better without either
+	}
+#endif // ENABLE_CUBE_MAP_BUMP_MAPS
+	return ws_normal;
+}
+
 // Note: This may seem like it can go into the vertex shader as well,
 //       but we don't have the tex0 value there and can't determine the full init color
 void main() {
@@ -461,8 +473,8 @@ void main() {
 #ifdef ENABLE_CUBE_MAP_REFLECT
 #ifdef ENABLE_BUILDING_CUBE_MAP // handle metal and glass reflections
 	if ((metalness > 0.0 && specular_color.rgb != vec3(0.0) && specular_color.a > 1.0 && gl_Color.rgb != vec3(0.0)) || refract_ix > 1.0) {
+		vec3 ws_normal = get_world_space_normal(normal_s);
 		vec3 view_dir  = normalize(vpos - camera_pos);
-		vec3 ws_normal = normalize(normal_s);
 		vec3 ref_dir   = reflect(view_dir, ws_normal);
 		vec3 boxMin    = cube_map_center - cube_map_near_clip;
 		vec3 boxMax    = cube_map_center + cube_map_near_clip;
@@ -500,11 +512,7 @@ void main() {
 		}
 	}
 #else // !ENABLE_BUILDING_CUBE_MAP
-#ifdef ENABLE_CUBE_MAP_BUMP_MAPS
-	vec3 ws_normal = get_bump_map_normal();
-#else
-	vec3 ws_normal = normalize(normal_s);
-#endif // ENABLE_CUBE_MAP_BUMP_MAPS
+	vec3 ws_normal  = get_world_space_normal(normal_s);
 	vec3 spec_scale = vec3(1.0);
 #ifdef USE_SPEC_MAP
 	spec_scale     *= get_spec_color();

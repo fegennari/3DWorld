@@ -76,8 +76,9 @@ void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights
 {
 	use_dlights &= (lights_bcube.is_strictly_normalized() && !dl_sources.empty());
 	have_indir_smoke_tex = indir_lighting; // assume someone is going to set the indir texture in this case; ***note that this breaks normal indir scene drawing***
-	if (indir_lighting    ) {s.set_prefix("#define USE_ALT_SCENE_BOUNDS",     1);} // FS; need to use different scene_llc_scale for dynamic lighting vs. building indir lighting
-	if (enable_int_reflect) {s.set_prefix("#define ENABLE_BUILDING_CUBE_MAP", 1);} // FS
+	if (indir_lighting    ) {s.set_prefix("#define USE_ALT_SCENE_BOUNDS",      1);} // FS; need to use different scene_llc_scale for dynamic lighting vs. building indir lighting
+	if (enable_int_reflect) {s.set_prefix("#define ENABLE_BUILDING_CUBE_MAP",  1);} // FS
+	if (enable_int_reflect) {s.set_prefix("#define ENABLE_CUBE_MAP_BUMP_MAPS", 1);} // FS
 	// increase shadow map precision for small light far from origin, but much slower for rooms with dense lights such as factories and warehouses
 	//if (use_dlights && camera_in_building) {s.set_prefix("#define DLIGHT_SMAP_DOUBLE_PRECISION", 1);}
 	// Note: here use_texgen mode 5 is used as a hack so that the shader still has binding points for tex coords (can't optimize it out)
@@ -92,6 +93,7 @@ void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights
 	if (indir_lighting) {s.add_uniform_float("max_indir_light", 0.8);} // clamp to avoid over saturation with both direct and indir light
 	//if (use_smap) {bind_default_sun_moon_smap_textures();} // bind default sun/moon smap textures
 	if (enable_int_reflect) {bind_player_building_cube_map(s);}
+	s.add_uniform_float("cube_map_normal_map_scale", 0.0); // off by default
 }
 
 void draw_state_t::begin_tile(point const &pos, bool will_emit_now, bool ensure_active) {

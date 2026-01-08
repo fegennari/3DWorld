@@ -12,20 +12,11 @@ vec3 bump_map_blend(in vec3 n1, in vec3 n2) {
 	return normalize(vec3(n1.xy + n2.xy, n1.z*n2.z)); // Whiteout blending; drop the n2.z term for UDN blending
 }
 
-#ifdef USE_TANGENT_VECTOR
-in vec4 tangent_v;
-
-mat3 get_tbn_default(in float bscale, in vec3 n) {
-	return transpose(mat3(tangent_v.xyz*tangent_v.w, bscale*cross(n, tangent_v.xyz), n));
-}
-
-#else // !USE_TANGENT_VECTOR
 uniform float bump_tb_scale =  1.0;
 uniform float bump_b_scale  = -1.0;
 
 // http://www.thetenthplanet.de/archives/1180
-mat3 cotangent_frame(in vec3 N, in vec3 p, in vec2 uv, in float bscale)
-{
+mat3 cotangent_frame(in vec3 N, in vec3 p, in vec2 uv, in float bscale) {
     // get edge vectors of the pixel triangle
     vec3 dp1  = dFdx(p);
     vec3 dp2  = dFdy(p);
@@ -43,11 +34,18 @@ mat3 cotangent_frame(in vec3 N, in vec3 p, in vec2 uv, in float bscale)
     return mat3((T * invmax), (bump_b_scale * B * (bscale * invmax)), N);
 }
 
+#ifdef USE_TANGENT_VECTOR
+in vec4 tangent_v;
+
+mat3 get_tbn_default(in float bscale, in vec3 n) {
+	return transpose(mat3(tangent_v.xyz*tangent_v.w, bscale*cross(n, tangent_v.xyz), n));
+}
+#else // !USE_TANGENT_VECTOR
+
 mat3 get_tbn_default(in float bscale, in vec3 n) {
 	// assume N, the interpolated vertex normal and V, the view vector (vertex to eye / camera pos - vertex pos) from VS
     return transpose(cotangent_frame(n, epos.xyz, tc, bscale));
 }
-
 #endif // USE_TANGENT_VECTOR
 
 
