@@ -4825,6 +4825,7 @@ public:
 		}
 	}
 	void create_vbos(bool is_tile=0) {
+		if (buildings.empty()) return; // nothing to do
 		if (vbos_created) return; // already created
 		vbos_created = 1;
 		building_texture_mgr.check_windows_texture();
