@@ -8,7 +8,7 @@
 extern object_model_loader_t building_obj_model_loader;
 
 
-int select_lab_model();
+int select_lab_model(rand_gen_t &rgen, unsigned &types_used);
 
 bool can_create_hospital_room() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_HOSP_BED);}
 
@@ -399,6 +399,30 @@ void building_t::place_chairs_along_walls(rand_gen_t &rgen, room_t const &room, 
 	}
 }
 
+void building_t::add_test_tubes_to_surface(rand_gen_t &rgen, unsigned room_id, float tot_light_amt, unsigned obj_ix) {
+	unsigned const num_tubes(rgen.rand() % 3); // 0-2
+	if (num_tubes == 0) return;
+	float const floor_spacing(get_window_vspace());
+	float const radius(rgen.rand_uniform(0.0025, 0.003)*floor_spacing), length(rgen.rand_uniform(0.03, 0.04)*floor_spacing); // ~13-16mm x ~75-100mm
+	vect_room_object_t &objs(interior->room_geom->objs);
+	assert(obj_ix < objs.size());
+	cube_t const surface(objs[obj_ix]); // deep copy
+	if (length > 0.5*min(surface.dx(), surface.dy())) return; // too large for the surface; should always fail
+	bool const dim(rgen.rand_bool()), dir(rgen.rand_bool());
+
+	for (unsigned n = 0; n < num_tubes; ++n) {
+		for (unsigned N = 0; N < 10; ++N) { // 10 attempts to place test tube on the surface
+			cube_t ttube;
+			set_cube_zvals(ttube, surface.z2(), surface.z2()+2.0*radius);
+			set_wall_width(ttube, rgen.rand_uniform((surface.d[ dim][0] + 0.75*length), (surface.d[ dim][1] - 0.75*length)), 0.5*length, dim);
+			set_wall_width(ttube, rgen.rand_uniform((surface.d[!dim][0] + 2.50*radius), (surface.d[!dim][1] - 2.50*radius)), radius,    !dim);
+			if (overlaps_other_room_obj(ttube, obj_ix+1, 1)) continue; // check objects placed after the surface; check_all=1
+			objs.emplace_back(ttube, TYPE_TESTTUBE, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, DK_RED, rgen.rand()); // blood, random cap color
+			break; // success/done
+		} // for N
+	} // for n
+}
+
 bool building_t::add_exam_room_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start) {
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	cube_t const room_area(get_walkable_room_bounds(room));
@@ -412,29 +436,7 @@ bool building_t::add_exam_room_objs(rand_gen_t rgen, room_t &room, float zval, u
 	
 	// should the room be re-assigned if we can't fit a desk? this would require removing the bed
 	if (add_desk_to_room(rgen, room, vect_cube_t(), chair_color, zval, room_id, tot_light_amt, objs_start, 0, 0, 0, 1, 1)) { // force_computer=1, add_phone=1
-		assert(desk_obj_ix < objs.size());
-		room_object_t const desk(objs[desk_obj_ix]); // deep copy
-		unsigned const num_tubes(rgen.rand() % 3); // 0-2
-
-		if (num_tubes > 0) {
-			float const radius(rgen.rand_uniform(0.0025, 0.003)*floor_spacing), length(rgen.rand_uniform(0.03, 0.04)*floor_spacing); // ~13-16mm x ~75-100mm
-
-			if (length < 0.5*min(desk.dx(), desk.dy())) { // it fits on the desk; should always be true
-				bool const dim(rgen.rand_bool()), dir(rgen.rand_bool());
-
-				for (unsigned n = 0; n < num_tubes; ++n) {
-					for (unsigned N = 0; N < 10; ++N) { // 10 attempts to place test tube on the desk
-						cube_t ttube;
-						set_cube_zvals(ttube, desk.z2(), desk.z2()+2.0*radius);
-						set_wall_width(ttube, rgen.rand_uniform((desk.d[ dim][0] + 0.75*length), (desk.d[ dim][1] - 0.75*length)), 0.5*length, dim);
-						set_wall_width(ttube, rgen.rand_uniform((desk.d[!dim][0] + 2.50*radius), (desk.d[!dim][1] - 2.50*radius)), radius,    !dim);
-						if (overlaps_other_room_obj(ttube, desk_obj_ix+1, 1)) continue; // check objects placed after the desk; check_all=1
-						objs.emplace_back(ttube, TYPE_TESTTUBE, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, DK_RED, rgen.rand()); // blood, random cap color
-						break; // success/done
-					} // for N
-				} // for n
-			}
-		}
+		add_test_tubes_to_surface(rgen, room_id, tot_light_amt, desk_obj_ix);
 	}
 	if (rgen.rand_bool()) { // add a simple sink
 		place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, room, 0.45, rgen, zval, room_id, tot_light_amt, room_area, objs_start, 0.6);
@@ -599,19 +601,49 @@ bool building_t::add_trolley(rand_gen_t &rgen, cube_t const &place_area, cube_t 
 }
 
 bool building_t::add_lab_room_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start) {
-	cube_t place_area(get_walkable_room_bounds(room));
+	cube_t place_area(get_walkable_room_bounds(room)), avoid;
 	place_area.expand_by_xy(-get_trim_thickness());
-	cube_t avoid;
 	vect_room_object_t &objs(interior->room_geom->objs);
+	// add plastic desk and chair
+	unsigned cur_obj_ix(objs.size());
 	colorRGBA const &chair_color(chair_colors[rgen.rand() % NUM_CHAIR_COLORS]);
-	if (add_desk_to_room(rgen, room, vect_cube_t(), chair_color, zval, room_id, tot_light_amt, objs_start, 0)) {} // is_basement=0
-	int const model_id(select_lab_model());
-
-	if (model_id >= 0) { // add fridge/freezer model from commercial kitchens
-		float const height(0.7*0.5*building_obj_model_loader.get_model(model_id).scale);
-		if (place_model_along_wall(model_id, TYPE_KITCH_APP, room, height, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 4, 0, WHITE, 1)) {}
+	
+	if (add_desk_to_room(rgen, room, vect_cube_t(), chair_color, zval, room_id, tot_light_amt, objs_start, 0)) { // is_basement=0
+		add_test_tubes_to_surface(rgen, room_id, tot_light_amt, cur_obj_ix);
 	}
-	// TODO: second desk, plastic or metal table, TYPE_TESTTUBE
+	// add fridge/freezer/oven/sink models from commercial kitchens
+	unsigned const num_ka_models(2 + (rgen.rand() % 3)); // 2-4
+	unsigned cclass_counts[3]={0}; // unused
+	unsigned types_used(0);
+	cube_t hood; // unused
+
+	for (unsigned n = 0; n < num_ka_models; ++n) {
+		int const model_id(select_lab_model(rgen, types_used));
+		if (model_id < 0) break;
+		float const height(0.5*building_obj_model_loader.get_model(model_id).scale);
+		unsigned obj_ix(objs.size());
+		if (!place_model_along_wall(model_id, TYPE_KITCH_APP, room, height, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 4, 0, WHITE, 1)) continue;
+		add_commercial_kitchen_app_post(obj_ix, get_sub_model_id(model_id), hood, cclass_counts, rgen, 0); // is_kitchen=0
+	} // for n
+	float const floor_spacing(get_window_vspace());
+	vector2d const room_sz(room.get_size_xy());
+	bool const dim(room_sz.x < room_sz.y); // long dim
+	// try to add a metal table
+	bool added_table(0);
+
+	if (room_sz[!dim] > 2.0*floor_spacing) { // wide room; add a central table
+		// TODO
+	}
+	else { // narrow room; add a table along the wall opposite the door
+		// TODO
+	}
+	if (!added_table) { // no table? add a second desk
+		cur_obj_ix = objs.size();
+		
+		if (add_desk_to_room(rgen, room, vect_cube_t(), chair_color, zval, room_id, tot_light_amt, objs_start, 0)) { // is_basement=0
+			add_test_tubes_to_surface(rgen, room_id, tot_light_amt, cur_obj_ix);
+		}
+	}
 	add_trolley(rgen, place_area, avoid, zval, room_id, tot_light_amt, objs_start); // add hospital trolley
 	add_numbered_door_sign("LAB ", room, zval, room_id, floor_ix);
 	return 1;

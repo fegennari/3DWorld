@@ -2970,6 +2970,7 @@ private:
 	void add_short_wall_with_trim(cube_t const &wall, bool dim, unsigned room_id, float tot_light_amt, colorRGBA const &wall_color=WHITE);
 	void place_chairs_along_walls(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
 		colorRGBA const &chair_color, bool is_plastic, unsigned num);
+	void add_test_tubes_to_surface(rand_gen_t &rgen, unsigned room_id, float tot_light_amt, unsigned obj_ix);
 	bool add_exam_room_objs     (rand_gen_t rgen, room_t &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start);
 	bool add_operating_room_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, unsigned floor_ix, float &tot_light_amt, unsigned objs_start, unsigned lights_start);
 	bool add_trolley(rand_gen_t &rgen, cube_t const &place_area, cube_t const &avoid, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
@@ -2991,7 +2992,7 @@ private:
 	bool add_kitchen_objs    (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt,
 		unsigned objs_start, bool allow_adj_ext_door, light_ix_assign_t &light_ix_assign);
 	void add_objects_in_sink (rand_gen_t &rgen, cube_t const &sink, bool dim, bool dir, unsigned room_id, float tot_light_amt);
-	void add_commercial_kitchen_app_post(unsigned obj_ix, unsigned app_type, cube_t &hood, unsigned cclass_counts[3], rand_gen_t &rgen);
+	void add_commercial_kitchen_app_post(unsigned obj_ix, unsigned app_type, cube_t &hood, unsigned cclass_counts[3], rand_gen_t &rgen, bool is_kitchen=1);
 	bool add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, unsigned floor_ix, float light_amt,
 		unsigned objs_start, unsigned lights_start, light_ix_assign_t &light_ix_assign);
 	void add_fridge_sticky_notes(rand_gen_t rgen, unsigned fridge_obj_ix, float zval, unsigned room_id, float tot_light_amt);

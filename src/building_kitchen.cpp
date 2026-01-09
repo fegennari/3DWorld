@@ -397,8 +397,18 @@ unsigned const cka_classes[NUM_KC_APP] = {1, 0, 2, 2, 1, 1, 0, 2, 2, 0, 1, 0}; /
 bool enable_kitchen_app_models() {
 	return (building_obj_model_loader.is_model_valid(OBJ_MODEL_CK_APP) && building_obj_model_loader.get_num_sub_models(OBJ_MODEL_CK_APP) == NUM_KC_APP);
 }
-int select_lab_model() { // currently only the fridge
-	return (enable_kitchen_app_models() ? combine_model_submodel_id(OBJ_MODEL_CK_APP, KCA_LP_FRIDGE) : -1);
+int select_lab_model(rand_gen_t &rgen, unsigned &types_used) {
+	if (!enable_kitchen_app_models()) return -1; // no model
+	unsigned const num_avail_models(3);
+	unsigned const avail_models[num_avail_models] = {KCA_LP_FRIDGE, KCA_LP_OVEN, KCA_SINK};
+	unsigned type_ix(0);
+
+	for (unsigned n = 0; n < 10; ++n) { // 10 attempts to choose an unused type
+		type_ix = (rgen.rand() % num_avail_models);
+		if (!(types_used & (1 << type_ix))) break; // type not used, done
+	}
+	types_used |= (1 << type_ix);
+	return combine_model_submodel_id(OBJ_MODEL_CK_APP, avail_models[type_ix]);
 }
 
 cube_t get_com_kitchen_app_coll_bcube(room_object_t const &app) {
@@ -480,7 +490,7 @@ void move_lights_to_not_intersect(vect_room_object_t &objs, unsigned objs_start,
 	}
 }
 
-void building_t::add_commercial_kitchen_app_post(unsigned obj_ix, unsigned app_type, cube_t &hood, unsigned cclass_counts[3], rand_gen_t &rgen) {
+void building_t::add_commercial_kitchen_app_post(unsigned obj_ix, unsigned app_type, cube_t &hood, unsigned cclass_counts[3], rand_gen_t &rgen, bool is_kitchen) {
 	vect_room_object_t &objs(interior->room_geom->objs);
 	assert(obj_ix < objs.size());
 	room_object_t const app(objs[obj_ix]); // deep copy
@@ -532,7 +542,7 @@ void building_t::add_commercial_kitchen_app_post(unsigned obj_ix, unsigned app_t
 		sink.d[!dim][rgen.rand_bool()] = sink.get_center_dim(!dim); // select one half
 		sink.expand_by_xy(-0.1*depth); // avoid sides
 		frame.d[dim][!dir] += (dir ? 1.0 : -1.0)*0.1*depth; // more space toward back
-		add_objects_in_sink(rgen, sink, dim, dir, app.room_id, app.light_amt);
+		if (is_kitchen) {add_objects_in_sink(rgen, sink, dim, dir, app.room_id, app.light_amt);} // only for kitchens, not hospital labs
 	}
 	if (add_platform) { // place this object on a platform/table; should this be merged across adjacent objects at the same height?
 		assert(z_shift > 0.0);
