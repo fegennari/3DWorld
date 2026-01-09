@@ -117,7 +117,7 @@ buildings add_metal_texture metals/249_iron_metal_plate.jpg
 buildings add_metal_texture metals/214_industrial_aluminium_metal_plate.jpg
 buildings add_metal_texture metals/203_industrial_iron_metal_plate.jpg
 buildings add_metal_texture metals/metal_plate_diff.jpg
-# TODO: metal_plate_normal.jpg
+buildings set_nmap_texture  metals/metal_plate_normal.jpg # for previous metal texture
 
 buildings add_food_box_texture food_boxes/cracker_box.png "box of crackers"
 buildings add_food_box_texture food_boxes/pianos_cereal.png "Pianos Cereal"

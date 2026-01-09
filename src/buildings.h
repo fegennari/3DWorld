@@ -407,6 +407,8 @@ struct building_params_t {
 	vector<unsigned> mat_gen_ix, mat_gen_ix_city, mat_gen_ix_nocity, mat_gen_ix_res; // {any, city_only, non_city, residential}
 	vector<unsigned> rug_tids, picture_tids, desktop_tids, sheet_tids, paper_tids, food_box_tids, flag_tids, metal_tids;
 	vector<std::string> food_box_names; // same size as food_box_tids
+	map<unsigned, unsigned> tid_to_nmap_tid;
+	int last_read_tid=-1;
 	// use for option reading
 	int read_error=0;
 	kw_to_val_map_t<bool     >  kwmb;
@@ -438,6 +440,7 @@ struct building_params_t {
 	float get_max_house_size() const;
 	void set_pos_range(cube_t const &pos_range);
 	void restore_prev_pos_range();
+	int get_nm_tid_for(unsigned tid) const;
 private:
 	void init_kw_maps();
 	int read_building_texture(FILE *fp, std::string const &str, bool is_normal_map, int &error, bool check_filename=0, bool *no_cracks=nullptr);

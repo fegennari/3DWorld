@@ -170,7 +170,7 @@ int building_params_t::read_building_texture(FILE *fp, string const &str, bool i
 void building_params_t::read_texture_and_add_if_valid(FILE *fp, string const &str, int &error, vector<unsigned> &tids) {
 	// Note: this version doesn't accept numbered texture IDs, but it also doesn't fail on missing files
 	int const tid(read_building_texture(fp, str, 0, error, 1)); // is_normal_map=0, check_filename=1
-	if (tid >= 0) {tids.push_back(tid);}
+	if (tid >= 0) {tids.push_back(tid); last_read_tid = tid;}
 }
 void read_building_tscale(FILE *fp, tid_nm_pair_t &tex, string const &str, int &error) {
 	if (!read_float(fp, tex.tscale_x)) {buildings_file_err(str, error);}
@@ -436,6 +436,16 @@ bool building_params_t::parse_buildings_option(FILE *fp) {
 		if (food_name.empty()) {buildings_file_err(str, read_error);}
 		food_box_names.push_back(food_name);
 	}
+	else if (str == "set_nmap_texture") { // applies to above textures, in particular metals
+		if (last_read_tid < 0) {
+			cerr << "set_nmap_texture used without a previous texture" << endl;
+			read_error = 1;
+		}
+		else {
+			int const nm_tid(read_building_texture(fp, str, 1, read_error, 1)); // is_normal_map=1, check_filename=1
+			if (nm_tid > 0) {tid_to_nmap_tid[last_read_tid] = nm_tid;}
+		}
+	}
 	// special commands
 	else if (str == "add_material") {add_cur_mat();}
 	else {
@@ -487,6 +497,10 @@ void building_params_t::set_pos_range(cube_t const &pos_range) {
 void building_params_t::restore_prev_pos_range() {
 	cur_mat.restore_prev_pos_range();
 	for (auto i = materials.begin(); i != materials.end(); ++i) {i->restore_prev_pos_range();}
+}
+int building_params_t::get_nm_tid_for(unsigned tid) const {
+	auto it(tid_to_nmap_tid.find(tid));
+	return ((it == tid_to_nmap_tid.end()) ? -1 : it->second);
 }
 void building_params_t::finalize() {
 	//if (materials.empty()) {add_cur_mat();} // add current (maybe default) material - seems not to be needed

@@ -177,6 +177,7 @@ int room_object_t::get_paper_tid       () const {return select_tid_from_list(glo
 int room_object_t::get_food_box_tid    () const {return select_tid_from_list(global_building_params.food_box_tids,obj_id);}
 int get_metal_texture(unsigned id)              {return select_tid_from_list(global_building_params.metal_tids,       id);}
 int get_flag_texture (unsigned id)              {return select_tid_from_list(global_building_params.flag_tids,        id);} // food_box_names
+int get_nm_tid_for   (unsigned id)              {return global_building_params.get_nm_tid_for(id);}
 
 string const &select_str_from_list(vector<string> const &strs, unsigned ix) {
 	static string empty_str;

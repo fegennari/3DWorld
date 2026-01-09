@@ -10,6 +10,7 @@ int get_cylin_duct_tid();
 int get_cube_duct_tid ();
 int get_ac_unit_tid   (unsigned ix);
 int get_metal_texture (unsigned id);
+int get_nm_tid_for    (unsigned id);
 tid_nm_pair_t get_metal_plate_tex(float tscale, bool shadowed);
 colorRGBA apply_light_color(room_object_t const &o, colorRGBA const &c);
 float get_merged_pipe_radius(float r1, float r2, float exponent);
@@ -194,7 +195,10 @@ tid_nm_pair_t get_machine_part_texture(bool is_cylin, vector3d const sz, float &
 		nm_tid  = get_mplate_nm_tid();
 		tscale *= 2.0;
 	}
-	else {tid = get_metal_texture(rgen.rand());}
+	else {
+		tid    = get_metal_texture(rgen.rand());
+		nm_tid = get_nm_tid_for(tid);
+	}
 	tid_nm_pair_t tex(tid, nm_tid, tscale, tscale, 0.0, 0.0, 1); // shadowed
 	tex.set_specular(0.1, 20.0);
 	return tex;
