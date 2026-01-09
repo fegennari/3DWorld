@@ -37,12 +37,12 @@ mat3 cotangent_frame(in vec3 N, in vec3 p, in vec2 uv, in float bscale) {
 #ifdef USE_TANGENT_VECTOR
 in vec4 tangent_v;
 
-mat3 get_tbn_default(in float bscale, in vec3 n) {
+mat3 get_tbn_default(in float bscale, in vec3 n) { // Note: transpose is the same as inverse
 	return transpose(mat3(tangent_v.xyz*tangent_v.w, bscale*cross(n, tangent_v.xyz), n));
 }
 #else // !USE_TANGENT_VECTOR
 
-mat3 get_tbn_default(in float bscale, in vec3 n) {
+mat3 get_tbn_default(in float bscale, in vec3 n) { // Note: transpose is the same as inverse
 	// assume N, the interpolated vertex normal and V, the view vector (vertex to eye / camera pos - vertex pos) from VS
     return transpose(cotangent_frame(n, epos.xyz, tc, bscale));
 }
@@ -54,7 +54,7 @@ uniform sampler2D depth_map;
 uniform float hole_depth = 1.0;
 
 vec2 apply_parallax_map() {
-    mat3 TBN    = get_tbn(-1.0, eye_norm); // FIXME: why is binormal inverted from bump map case?
+    mat3 TBN    = get_tbn(-1.0, eye_norm); // why is binormal inverted from bump map case?
 #ifdef PARALLAX_MAP_OFFSET_ADJ
 	vec2 offset = hole_depth * (TBN * -normalize(epos.xyz)).st;
 	float depth_at_1 = texture(depth_map, tc+offset).w;

@@ -302,7 +302,7 @@ vec3 get_world_space_normal(vec3 ws_normal_in) {
 #ifdef ENABLE_CUBE_MAP_BUMP_MAPS
 	if (cube_map_normal_map_scale > 0.0) {
 		mat3 TBN  = cotangent_frame(ws_normal, vpos, tc, 1.0); // in world space; bscale=1.0
-		ws_normal = TBN * get_bump_map_normal(); // inverse or transposed? seems to work better without either
+		ws_normal = TBN * get_bump_map_normal(); // Note: no transpose/inverse vs. get_tbn_default() because this is tangent to world space
 	}
 #endif // ENABLE_CUBE_MAP_BUMP_MAPS
 	return ws_normal;
