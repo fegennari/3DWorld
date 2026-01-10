@@ -956,6 +956,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 
 					for (unsigned N = 0; N < 10 && !added_obj; ++N) { // 10 tries to select a valid room type
 						unsigned const rand_val(must_be_waiting ? 0 : (rgen.rand() % 8));
+						//unsigned const rand_val(must_be_waiting ? 0 : ((f > 0) ? 7 : (rgen.rand() % 8))); // TESTING: force lab
 
 						if (rand_val == 0) { // waiting room; should there be at most one per floor?
 							added_obj = no_whiteboard = add_waiting_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start, nested_room_ix);

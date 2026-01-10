@@ -8,7 +8,8 @@
 extern object_model_loader_t building_obj_model_loader;
 
 
-int select_lab_model(rand_gen_t &rgen, unsigned &types_used);
+unsigned get_metal_table_num_legs_per_side(room_object_t const &c);
+int select_lab_model(rand_gen_t &rgen, unsigned &types_used, float &height);
 
 bool can_create_hospital_room() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_HOSP_BED);}
 
@@ -601,12 +602,79 @@ bool building_t::add_trolley(rand_gen_t &rgen, cube_t const &place_area, cube_t 
 }
 
 bool building_t::add_lab_room_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start) {
+	float const floor_spacing(get_window_vspace()), wall_thick(get_wall_thickness());
+	vector2d const room_sz(room.get_size_xy());
+	bool const dim(room_sz.x < room_sz.y); // long dim
 	cube_t place_area(get_walkable_room_bounds(room)), avoid;
 	place_area.expand_by_xy(-get_trim_thickness());
 	vect_room_object_t &objs(interior->room_geom->objs);
-	// add plastic desk and chair
-	unsigned cur_obj_ix(objs.size());
 	colorRGBA const &chair_color(chair_colors[rgen.rand() % NUM_CHAIR_COLORS]);
+	// try to add a metal table
+	float const room_len(room_sz[dim]), room_width(room_sz[!dim]), table_z2(zval + 0.3*floor_spacing);
+	bool added_table(0), table_dim(!dim), table_dir(0), chair_sides[2]={1,1};
+	cube_t table;
+
+	if (room_width > 2.5*floor_spacing && room_len > 3.0*floor_spacing) { // large room; add a central table
+		float const table_len(min(0.5f*room_len, (room_len - 2.2f*floor_spacing))), table_width(min(0.4f*table_len, 0.5f*floor_spacing));
+		set_cube_zvals(table, zval, table_z2);
+		set_wall_width(table, room.get_center_dim(!dim), 0.5*table_width, !dim);
+		set_wall_width(table, room.get_center_dim( dim), 0.5*table_len,    dim);
+		added_table = 1;
+	}
+	else { // narrow room; add a table along the wall not blocking a door
+		float const table_width(0.4*floor_spacing);
+
+		for (unsigned d = 0; d < 2 && !added_table; ++d) { // long wall then short wall
+			bool const wdim(d ? dim : !dim), dir0(rgen.rand_bool());
+
+			for (unsigned side = 0; side < 2; ++side) { // try both sides of the wall
+				bool const wdir(bool(side) ^ dir0);
+				table = place_area;
+				set_cube_zvals(table, zval, table_z2);
+				table.d[wdim][!wdir] = place_area.d[wdim][wdir] + (wdir ? -1.0 : 1.0)*table_width;
+				if (is_obj_placement_blocked(table, room, 1, 1)) continue;
+				chair_sides[wdir] = 0; // chairs only on one side
+				table_dim   = wdim;
+				table_dir   = wdir;
+				added_table = 1;
+				break;
+			} // for side
+		} // for d
+	}
+	if (added_table) {
+		unsigned table_obj_ix(objs.size());
+		unsigned const item_flags(get_table_item_flags(rgen, 0, 1)); // is_plastic=0, is_metal=1
+		vect_cube_t blockers; // empty
+		objs.emplace_back(table, TYPE_TABLE, room_id, dim, table_dir, RO_FLAG_ADJ_TOP, tot_light_amt, SHAPE_CUBE, WHITE, item_flags); // metal; assumes table has something on it
+		if (rgen.rand_bool()) {place_laptop_on_obj(rgen, objs.back(), room_id, tot_light_amt, blockers, 0);} // use_dim_dir=0
+		add_test_tubes_to_surface(rgen, room_id, tot_light_amt, table_obj_ix); // placeholder
+		// TODO: add more lab table items
+		// add chairs at the table between the legs
+		unsigned const num_chairs((get_metal_table_num_legs_per_side(objs[table_obj_ix])-1));
+		float const chair_spacing(table.get_sz_dim(!table_dim)/num_chairs); // average
+		bool const alt_chair(rgen.rand_bool());
+		point chair_pos(0.0, 0.0, zval);
+
+		for (unsigned dir = 0; dir < 2; ++dir) { // each side of table
+			if (!chair_sides[dir]) continue; // against the wall
+			chair_pos[table_dim] = table.d[table_dim][dir];
+
+			for (unsigned n = 0; n < num_chairs; ++n) {
+				if (num_chairs > 3 && (n&1) == alt_chair) continue; // alternate if there are too many
+				chair_pos[!table_dim] = table.d[!table_dim][0] + (n + 0.5 + 0.1*rgen.signed_rand_float())*chair_spacing; // randomized
+				add_chair(rgen, room, blockers, room_id, chair_pos, chair_color, table_dim, !dir, tot_light_amt, 0); // office_chair=0
+			}
+		} // for dir
+	}
+	else { // no table? add a second desk
+		unsigned const cur_obj_ix(objs.size());
+
+		if (add_desk_to_room(rgen, room, vect_cube_t(), chair_color, zval, room_id, tot_light_amt, objs_start, 0)) { // is_basement=0
+			add_test_tubes_to_surface(rgen, room_id, tot_light_amt, cur_obj_ix);
+		}
+	}
+	// add plastic desk and chair
+	unsigned const cur_obj_ix(objs.size());
 	
 	if (add_desk_to_room(rgen, room, vect_cube_t(), chair_color, zval, room_id, tot_light_amt, objs_start, 0)) { // is_basement=0
 		add_test_tubes_to_surface(rgen, room_id, tot_light_amt, cur_obj_ix);
@@ -618,33 +686,17 @@ bool building_t::add_lab_room_objs(rand_gen_t rgen, room_t &room, float zval, un
 	cube_t hood; // unused
 
 	for (unsigned n = 0; n < num_ka_models; ++n) {
-		int const model_id(select_lab_model(rgen, types_used));
+		float height(0.0);
+		int const model_id(select_lab_model(rgen, types_used, height));
 		if (model_id < 0) break;
-		float const height(0.5*building_obj_model_loader.get_model(model_id).scale);
 		unsigned obj_ix(objs.size());
 		if (!place_model_along_wall(model_id, TYPE_KITCH_APP, room, height, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 4, 0, WHITE, 1)) continue;
 		add_commercial_kitchen_app_post(obj_ix, get_sub_model_id(model_id), hood, cclass_counts, rgen, 0); // is_kitchen=0
 	} // for n
-	float const floor_spacing(get_window_vspace());
-	vector2d const room_sz(room.get_size_xy());
-	bool const dim(room_sz.x < room_sz.y); // long dim
-	// try to add a metal table
-	bool added_table(0);
-
-	if (room_sz[!dim] > 2.0*floor_spacing) { // wide room; add a central table
-		// TODO
-	}
-	else { // narrow room; add a table along the wall opposite the door
-		// TODO
-	}
-	if (!added_table) { // no table? add a second desk
-		cur_obj_ix = objs.size();
-		
-		if (add_desk_to_room(rgen, room, vect_cube_t(), chair_color, zval, room_id, tot_light_amt, objs_start, 0)) { // is_basement=0
-			add_test_tubes_to_surface(rgen, room_id, tot_light_amt, cur_obj_ix);
-		}
-	}
-	add_trolley(rgen, place_area, avoid, zval, room_id, tot_light_amt, objs_start); // add hospital trolley
+	// TYPE_VENT_HOOD?
+	add_filing_cabinet_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);
+	if (room_width > 2.0*floor_spacing) {add_trolley(rgen, place_area, avoid, zval, room_id, tot_light_amt, objs_start);} // add hospital trolley
+	add_trashcan_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, 0); // add a second trashcan for sharps
 	add_numbered_door_sign("LAB ", room, zval, room_id, floor_ix);
 	return 1;
 }

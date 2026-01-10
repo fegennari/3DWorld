@@ -397,7 +397,7 @@ unsigned const cka_classes[NUM_KC_APP] = {1, 0, 2, 2, 1, 1, 0, 2, 2, 0, 1, 0}; /
 bool enable_kitchen_app_models() {
 	return (building_obj_model_loader.is_model_valid(OBJ_MODEL_CK_APP) && building_obj_model_loader.get_num_sub_models(OBJ_MODEL_CK_APP) == NUM_KC_APP);
 }
-int select_lab_model(rand_gen_t &rgen, unsigned &types_used) {
+int select_lab_model(rand_gen_t &rgen, unsigned &types_used, float &height) {
 	if (!enable_kitchen_app_models()) return -1; // no model
 	unsigned const num_avail_models(3);
 	unsigned const avail_models[num_avail_models] = {KCA_LP_FRIDGE, KCA_LP_OVEN, KCA_SINK};
@@ -408,7 +408,11 @@ int select_lab_model(rand_gen_t &rgen, unsigned &types_used) {
 		if (!(types_used & (1 << type_ix))) break; // type not used, done
 	}
 	types_used |= (1 << type_ix);
-	return combine_model_submodel_id(OBJ_MODEL_CK_APP, avail_models[type_ix]);
+	unsigned const sub_model(avail_models[type_ix]), model_id(combine_model_submodel_id(OBJ_MODEL_CK_APP, sub_model));
+	height = 0.5*building_obj_model_loader.get_model(model_id).scale; // sink must be full height
+	if      (sub_model == KCA_LP_FRIDGE) {height *= 0.7;} // smaller
+	else if (sub_model == KCA_LP_OVEN  ) {height *= 0.8;} // slightly smaller
+	return model_id;
 }
 
 cube_t get_com_kitchen_app_coll_bcube(room_object_t const &app) {

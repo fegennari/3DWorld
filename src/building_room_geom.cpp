@@ -275,6 +275,9 @@ unsigned get_table_item_flags(rand_gen_t &rgen, bool is_plastic, bool is_metal) 
 	assert(!(is_plastic && is_metal)); // can't be both
 	return (is_plastic ? (rgen.rand() + 2) : (is_metal ? 1 : 0)); // 0 = wood, 1 = metal, >=2 = plastic
 }
+unsigned get_metal_table_num_legs_per_side(room_object_t const &c) {
+	return max(2U, (unsigned)(c.get_length()/max(c.get_width(), 1.5f*c.dz())));
+}
 
 // 6 quads for top + 4 quads per leg = 22 quads = 88 verts for rectangular wooden table; round wooden and plastic tables have a single cylinder support
 void building_room_geom_t::add_table(room_object_t const &c, float tscale, float top_dz, float leg_width) {
@@ -307,10 +310,9 @@ void building_room_geom_t::add_table(room_object_t const &c, float tscale, float
 		assert(c.shape == SHAPE_CUBE || c.shape == SHAPE_SHORT);
 
 		if (c.type == TYPE_TABLE && c.item_flags == 1) { // metal (commercial kitchen) table
-			float const length(c.get_length()), width(c.get_width());
-			unsigned const num_legs_per_side(max(2U, (unsigned)(length/width)));
-			leg_width *= 0.7*width; // narrower than wooden table
-			float const leg_hwidth(0.5*leg_width), leg_spacing((length - 2.0*leg_width)/(num_legs_per_side - 1));
+			unsigned const num_legs_per_side(get_metal_table_num_legs_per_side(c));
+			leg_width *= 0.7*c.get_width(); // narrower than wooden table
+			float const leg_hwidth(0.5*leg_width), leg_spacing((c.get_length() - 2.0*leg_width)/(num_legs_per_side - 1));
 			cube_t top(c), leg(c);
 			top.z1() = leg.z2() = c.z2() - top_dz*dz;
 			colorRGBA const color(apply_light_color(c));
