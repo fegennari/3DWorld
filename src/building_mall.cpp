@@ -2076,6 +2076,7 @@ unsigned building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zv
 								sz.y     = 1.05*sz.x;
 								model_type_id = 26; // unused index < 32
 							}
+							// TYPE_KITCH_APP?
 						}
 						else if (val < 0.5) { // 20% laundry appliances; 0.3 - 0.5
 							if (val < 0.4) {obj_type = TYPE_WASHER; hscale = 0.42;} // 0.3 - 0.4
@@ -2085,7 +2086,7 @@ unsigned building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zv
 							if      (val < 0.6) {obj_type = TYPE_TUB   ; hscale = 0.20;} // 0.5 - 0.6
 							else if (val < 0.7) {obj_type = TYPE_TOILET; hscale = 0.35;} // 0.6 - 0.7
 							else                {obj_type = TYPE_SINK  ; hscale = 0.45;} // 0.7 - 0.8
-							// TYPE_SHOWERTUB? TYPE_URINAL?
+							// TYPE_SHOWERTUB? TYPE_URINAL? TYPE_KITCH_APP with a sink?
 						}
 						else { // 20% HVAC/WH; 0.8 - 1.0
 							if (val < 0.9) { // 0.8 - 0.9
@@ -2104,7 +2105,7 @@ unsigned building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zv
 								model_type_id = 25; // unused index < 32
 							}
 						}
-						// TYPE_CEIL_FAN?
+						// TYPE_CEIL_FAN (if ceiling is low)?
 						if (obj_type == TYPE_NONE) continue;
 						
 						if (obj_type >= TYPE_TOILET) { // 3D model object

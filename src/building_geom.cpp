@@ -262,8 +262,8 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 		return;
 	}
 	// determine building shape (cube, cylinder, other)
-	if (rgen.rand_probability(mat.round_prob)) {num_sides = MAX_CYLIN_SIDES;} // max number of sides for drawing rounded (cylinder) buildings
-	else if (rgen.rand_probability(mat.cube_prob)) {num_sides = 4;} // cube
+	if      (rgen.rand_probability(mat.round_prob)) {num_sides = MAX_CYLIN_SIDES;} // max number of sides for drawing rounded (cylinder) buildings
+	else if (rgen.rand_probability(mat.cube_prob )) {num_sides = 4;} // cube
 	else { // N-gon
 		num_sides = mat.min_sides;
 		if (mat.min_sides != mat.max_sides) {num_sides += (rgen.rand() % (1 + abs((int)mat.max_sides - (int)mat.min_sides)));}
