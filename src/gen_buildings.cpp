@@ -1687,7 +1687,7 @@ tid_nm_pair_t building_t::get_tile_floor_texture() const {
 	//return tid_nm_pair_t(building_texture_mgr.get_tile_floor_tid(), building_texture_mgr.get_tile_floor_nm_tid(), 0.125*tscale, 0.125*tscale);
 }
 bool building_t::has_tile_floor() const { // all hospitals and 50% of schools
-	return (is_hospital() || (is_school() && ((mat_ix + hallway_dim + doors.size() + parts.size()) & 1)));
+	return (is_hospital() || (is_school() && ((mat_ix + hallway_dim + doors.size() + parts.size()) & 1)) || is_restaurant());
 }
 colorRGBA building_t::get_floor_tex_and_color(cube_t const &floor_cube, tid_nm_pair_t &tex) const {
 	if (has_attic() && floor_cube.z2() > interior->attic_access.z1()) { // attic floor
@@ -1747,9 +1747,9 @@ colorRGBA building_t::get_ceil_tex_and_color(cube_t const &ceil_cube, tid_nm_pai
 		return WHITE;
 	}
 	// normal ceiling texture
-	bool const residential(is_residential()); // apartments and hotels use house ceiling textures and colors
-	tex =  (residential ? mat.house_ceil_tex   : mat.ceil_tex  );
-	return (residential ? mat.house_ceil_color : mat.ceil_color);
+	bool const use_house_tex(is_residential() || is_restaurant()); // apartments, hotels, and restaurants use house ceiling textures and colors
+	tex =  (use_house_tex ? mat.house_ceil_tex   : mat.ceil_tex  );
+	return (use_house_tex ? mat.house_ceil_color : mat.ceil_color);
 }
 colorRGBA building_t::get_int_wall_tex_and_color(bool in_basement, bool in_ext_basement, bool in_mall_stores, tid_nm_pair_t &tex) const {
 	building_mat_t const &mat(get_material());

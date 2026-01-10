@@ -12,6 +12,7 @@ using std::string;
 bool is_shirt_model     (room_object_t const &obj);
 bool is_long_shirt_model(room_object_t const &obj);
 string gen_random_full_name(rand_gen_t &rgen); // from pedestrians.cpp
+string choose_store_name(unsigned store_type, unsigned item_category, rand_gen_t &rgen);
 
 string choose_family_name(rand_gen_t rgen) { // Note: deep copying so as not to update the state of the rgen that was passed in
 	return gen_random_name(rgen); // use a generic random name to start with
@@ -39,9 +40,10 @@ namespace pixel_city {
 
 string choose_business_name(rand_gen_t rgen, building_type_t btype) {
 	assert(btype < NUM_BUILDING_TYPES);
-	if (btype  == BTYPE_PARKING ) {return "Parking";} // for now, parking structures only have "Parking" signs
-	if (btype >= BTYPE_APARTMENT) {return gen_random_name(rgen, 4) + " " + btype_names[btype];} // specialized building type
-	if (rgen.rand_bool())         {return pixel_city::gen_company_name(rgen);}
+	if (btype == BTYPE_PARKING   ) {return "Parking";} // for now, parking structures only have "Parking" signs
+	if (btype == BTYPE_RESTAURANT) {return choose_store_name(STORE_FOOD, 0, rgen);} // probably should do something better/custom here
+	if (btype >= BTYPE_APARTMENT ) {return gen_random_name(rgen, 4) + " " + btype_names[btype];} // specialized building type
+	if (rgen.rand_bool())          {return pixel_city::gen_company_name(rgen);}
 	int const v(rgen.rand()%10);
 
 	if (v == 0) { // 3 letter acronym
@@ -114,7 +116,7 @@ public:
 };
 store_name_gen_t store_name_gen;
 
-string choose_store_name(unsigned store_type, unsigned item_category, rand_gen_t &rgen) { // for malls
+string choose_store_name(unsigned store_type, unsigned item_category, rand_gen_t &rgen) { // for malls and possibly restaurants
 	return store_name_gen.gen_name(store_type, item_category, rgen);
 }
 
@@ -307,6 +309,11 @@ void building_t::add_exterior_door_items(rand_gen_t &rgen) { // mostly signs; ad
 		else if (!address.empty() && rgen.rand_bool()) { // add a house number sign
 			add_sign_by_door(front_door, 1, to_string(get_street_house_number()), choose_sign_color(rgen), 0); // front door only, outside
 		}
+	}
+	else if (is_restaurant()) { // neither a house nor an office building
+		if (doors.empty()) return; // shouldn't happen
+		tquad_with_ix_t const &front_door(doors.front());
+		add_sign_by_door(front_door, 1, name, choose_sign_color(rgen), 0); // front door only, outside
 	}
 	else { // office building; add signs
 		float const floor_spacing(get_window_vspace());
@@ -584,20 +591,21 @@ void building_t::add_company_sign(rand_gen_t &rgen) {
 bool building_t::add_sign_by_door(tquad_with_ix_t const &door, bool outside, std::string const &text, colorRGBA const &color, bool emissive) {
 	assert(!text.empty());
 	cube_t const door_bcube(door.get_bcube());
-	bool const dim(door_bcube.dy() < door_bcube.dx());
+	bool const dim(door_bcube.dy() < door_bcube.dx()), is_lg(is_restaurant());
 	int const dir_ret(get_ext_door_dir(door_bcube, dim));
 	if (dir_ret > 1) return 0; // not found, skip sign
 	bool dir(dir_ret != 0);
 	float const width(door_bcube.get_sz_dim(!dim)), height(door_bcube.dz());
 	cube_t c(door_bcube);
 
-	if (outside) { // outside, place above the door
+	if (outside) { // outside, place above the door; larger for restaurants
 		c.z2() = door_bcube.z2() + 0.1*height;
 	}
 	else { // inside, place hanging near the top of the door
 		c.z2() = c.z1() + get_floor_ceil_gap(); // right against the ceiling; applies to ground floor and walkway doors
 	}
 	c.z1() = c.z2() - 0.05*height;
+	if (outside && is_lg && parts.front().dz() > 1.5*get_window_vspace()) {c.z2() += 0.15*height;} // make it taller if large and has space
 	float const sign_width(0.8*text.size()*c.dz()), shrink(0.5f*(width - sign_width));
 	c.expand_in_dim(!dim, -shrink);
 	if (!outside) {dir ^= 1; c.translate_dim(dim, (dir ? 1.0 : -1.0)*0.1*height);} // move inside the building

@@ -177,6 +177,11 @@ void building_t::clear_existing_room_geom() {
 	ladder.set_to_zeros(); // will be re-placed
 }
 
+void make_sphere_light(cube_t &light) {
+	light.z2() += 0.5f*light.dz();
+	light.z1() -= 0.22f*(light.dx() + light.dy());
+}
+
 void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 
 	assert(has_room_geom());
@@ -277,13 +282,14 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		bool const is_jail_room     (init_rtype_f0 == RTYPE_JAIL);
 		bool const is_jail_cell     (init_rtype_f0 == RTYPE_JAIL_CELL || r->get_room_type(1) == RTYPE_JAIL_CELL); // check second floor as well in case of ground floor door
 		bool const is_prison_room   (init_rtype_f0 == RTYPE_NOTSET && is_prison() && !r->is_hallway);
+		bool const is_restaurant_room(init_rtype_f0 == RTYPE_RESTAURANT);
 		bool const is_office(r->is_office && (!is_hospital() || r->interior)); // hospital offices are converted to patient rooms, etc. if they have windows
 		bool const is_ext_basement(r->is_ext_basement()), is_backrooms(r->is_backrooms()), is_apt_or_hotel_room(r->is_apt_or_hotel_room());
 		bool const residential_room(is_house || (residential && !r->is_hallway && !is_basement && !is_retail_room)), industrial_room(r->is_industrial());
 		bool const is_mall_room(is_ext_basement && has_mall()), is_mall_bathroom(is_mall_room && is_bathroom(init_rtype_f0)), single_floor(is_mall || industrial_room);
 		unsigned const num_floors(single_floor ? 1 : calc_num_floors_room(*r, floor_height, floor_thickness)); // consider mall and factory a single floor
 		unsigned const min_br(multi_family ? num_floors : 1); // multi-family house requires one per floor; can apply to both bedrooms and bathrooms
-		room_obj_shape const light_shape((residential_room || industrial_room) ? SHAPE_CYLIN : SHAPE_CUBE);
+		room_obj_shape const light_shape((residential_room || industrial_room) ? SHAPE_CYLIN : (is_restaurant_room ? SHAPE_SPHERE : SHAPE_CUBE));
 		bool const square_light(is_backrooms);
 		float light_density(0.0), light_size(def_light_size); // default size for houses
 		unsigned const room_objs_start(objs.size());
@@ -353,6 +359,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		}
 		else if (is_prison_room) { // prison nested room
 			light_density = 0.5;
+		}
+		else if (is_restaurant_room) {
+			light_density = 0.6;
+			light_size   *= 0.9;
 		}
 		else if (r->is_single_floor) {
 			light_size *= sqrt(r->dz()/window_vspacing); // larger lights for taller rooms
@@ -496,6 +506,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			// must check lights vs. backrooms walls and pillars, and mall pillars
 			unsigned const lcheck_start_ix(is_backrooms ? floor_objs_start : (is_mall ? pillars_start : objs.size()));
 			set_cube_zvals(light, (light_z2 - light_thick), light_z2);
+			if (light_shape == SHAPE_SPHERE) {make_sphere_light(light);} // TODO: hanging?
 			valid_lights.clear();
 
 			if (num_lights > 1 && !is_backrooms && !is_mall) { // r->is_hallway or ext basement
@@ -655,6 +666,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			}
 			if (industrial_room) { // factory, warehouse, etc.
 				add_industrial_objs(rgen, *r, room_center.z, room_id, objs_start_inc_lights);
+				continue; // nothing else to add
+			}
+			if (is_restaurant_room) {
+				add_restaurant_objs(rgen, *r, room_center.z, room_id);
 				continue; // nothing else to add
 			}
 			if (is_parking_garage || is_retail_room || is_mall_store) continue; // generated above, done; no outlets or light switches
@@ -1106,8 +1121,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 						light_exp.expand_by_xy(doorway_width + 0.5*wall_thickness);
 						if (!r->contains_cube_xy(light_exp)) continue; // light too close to door, skip; can't recess spherical lights
 						light.shape = SHAPE_SPHERE;
-						light.z2() += 0.5f*light.dz();
-						light.z1() -= 0.22f*(light.dx() + light.dy());
+						make_sphere_light(light);
 					} // for ix
 					if (!added_dining) {add_diningroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);} // only one room is the primary dining room
 					r->assign_to(RTYPE_DINING, f);

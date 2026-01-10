@@ -1098,7 +1098,13 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		num_floors = calc_num_floors(parts[0], floor_spacing, get_floor_thickness());
 		// make it a multi-family house if it's a single large part with at least three floors
 		multi_family = (num_floors > 2 && parts[0].dx()*parts[0].dy() > 50.0*floor_spacing*floor_spacing);
+
 		if (multi_family) {btype = BTYPE_MULT_FAM;}
+		else if (0 && num_floors == 2 && bcube.get_size_xy().get_min_val() > 8.0*floor_spacing) { // large 2 floor rectangular house can be a restaurant
+			btype    = BTYPE_RESTAURANT;
+			is_house = 0;
+			assign_name(rgen);
+		}
 		maybe_add_basement(rgen);
 
 		if (gen_door) { // have exterior doors and windows
@@ -1272,7 +1278,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		hipped_roof[ix] = hipped;
 		any_hipped     |= hipped;
 	} // for i
-	if ((rgen.rand()%3) != 0) { // add a chimney 67% of the time
+	if (is_house && (rgen.rand()%3) != 0) { // add a chimney 67% of the time
 		add_chimney(two_parts, stacked_parts, hipped_roof, roof_dz, force_dim, rgen); // Note: return value is ignored
 	}
 	// Note: driveway collisions are handled through check_road_seg_sphere_coll()
@@ -1481,6 +1487,7 @@ void try_expand_into_xy(cube_t &c1, cube_t const &c2) {
 bool building_t::can_have_basement() const {
 	if (!is_cube())          return 0; // simple cube shaped buildings only
 	if (!interior_enabled()) return 0; // if there's no interior, there's no point in adding a basement
+	if (is_restaurant())     return 0; // not yet supported
 	return 1;
 }
 

@@ -362,8 +362,10 @@ void building_t::gen_interior_int(rand_gen_t &rgen, unsigned gen_index, bool has
 		bool const is_basement_part(is_basement(p)), first_part(part_id == 0), first_part_this_stack(first_part || is_basement_part || (p-1)->z1() < p->z1());
 		// office building hallways only; house hallways are added later
 		bool const is_industrial_part(is_industrial() && first_part);
-		if (is_industrial_part) {num_floors = 1;} // industrial buildings are a single floor
-		bool const use_hallway(!is_industrial_part && can_use_hallway_for_part(part_id)), min_dim(psz.y < psz.x);
+		bool const is_restaurant_part(is_restaurant() && first_part);
+		bool const is_single_floor(is_industrial_part || is_restaurant_part);
+		if (is_single_floor) {num_floors = 1;} // industrial buildings and restaurants are a single floor
+		bool const use_hallway(!is_industrial_part && !is_restaurant_part && can_use_hallway_for_part(part_id)), min_dim(psz.y < psz.x);
 		unsigned const rooms_start(rooms.size()), doors_start(interior->doors.size()), num_doors_per_stack(num_floors);
 		cube_t hall, place_area(*p);
 		place_area.expand_by_xy(-wall_edge_spacing); // shrink slightly to avoid z-fighting with walls
@@ -448,6 +450,9 @@ void building_t::gen_interior_int(rand_gen_t &rgen, unsigned gen_index, bool has
 		} // end non-cube room
 		else if (is_industrial_part) { // first part is industrial space: factory, warehouse, power plant, etc.
 			create_industrial_floorplan(part_id, window_hspacing, window_border, rgen);
+		}
+		else if (is_restaurant_part) { // first part is main restaurant
+			create_restaurant_floorplan(part_id, rgen);
 		}
 		else if (!is_house && is_basement_part && min(psz.x, psz.y) > 5.0*car_sz.x && max(psz.x, psz.y) > 12.0*car_sz.y) { // make this a parking garage
 			add_room(*p, part_id); // add entire part as a room; num_lights will be calculated later
@@ -1142,7 +1147,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, unsigned gen_index, bool has
 			} // end while()
 			add_part_sep_walls(p, place_area, rooms_start, must_split);
 		} // end wall placement
-		add_ceilings_floors_stairs(rgen, *p, hall, part_id, num_floors, rooms_start, use_hallway, first_part_this_stack, window_hspacing, window_border, is_industrial_part);
+		add_ceilings_floors_stairs(rgen, *p, hall, part_id, num_floors, rooms_start, use_hallway, first_part_this_stack, window_hspacing, window_border, is_single_floor);
 		assign_special_room_types(utility_room_cands, special_room_cands, doors_start, rgen); // for rooms with hallways
 		
 		if (no_split_walls_this_part) { // don't split any walls added up to this point (for fixed floorplans with primary hallways)

@@ -2464,6 +2464,7 @@ struct building_t : public building_geom_t {
 	bool maybe_create_nested_bathroom(room_t &room, rand_gen_t &rgen);
 	void create_industrial_floorplan(unsigned part_id, float window_hspacing[2], float window_border, rand_gen_t &rgen);
 	void setup_industrial_wall_occluders();
+	void create_restaurant_floorplan(unsigned part_id, rand_gen_t &rgen);
 	bool maybe_assign_interior_garage(bool &gdim, bool &gdir);
 	void add_parking_garage_ramp(rand_gen_t &rgen);
 	bool add_machines_to_room(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool less_clearance=0);
@@ -3058,6 +3059,7 @@ private:
 	void add_warehouse_shelves(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start,
 		float light_amt, float support_width, cube_t const &place_area, vect_cube_t const &supports);
 	void add_industrial_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start_inc_lights);
+	void add_restaurant_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id);
 	void add_retail_pillar(cube_t const &pillar, float zval, unsigned room_id, bool is_tall);
 	void add_U_stair_landing_lights(stairwell_t const &s, unsigned room_id, unsigned light_ix, float floor_zval);
 	void add_checkout_objs   (cube_t const &place_area, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool dim, bool dir, bool cr_dir);
@@ -3107,7 +3109,7 @@ private:
 		unsigned room_id, float tot_light_amt, bool dim, unsigned tid_tag, vect_cube_t &blockers);
 	bool add_food_court_objs(rand_gen_t &rgen, cube_t const &place_area, float zval, unsigned room_id, float tot_light_amt, vect_cube_t const &blockers);
 	unsigned add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, unsigned &type_mask, cube_t &div_wall, light_ix_assign_t &light_ix_assign);
-	void add_restaurant_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, bool dim, bool dir,
+	void add_mall_restaurant_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, bool dim, bool dir,
 		bool no_doorway, float light_amt, cube_t &div_wall, light_ix_assign_t &light_ix_assign);
 	cube_t add_restaurant_counter(cube_t const &wall, bool dim, bool dir, unsigned room_id, float light_amt, bool leave_end_gaps, bool add_cash_registers, rand_gen_t &rgen);
 	bool add_object_to_tray(cube_t const &tray, bool dim, unsigned room_id, float light_amt, bool no_alcohol, vect_cube_t const &avoid, rand_gen_t &rgen, unsigned &prev_type);

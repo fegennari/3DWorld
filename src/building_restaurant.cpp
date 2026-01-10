@@ -10,6 +10,20 @@ extern object_model_loader_t building_obj_model_loader;
 colorRGBA get_stain_color(rand_gen_t &rgen, bool is_food=0);
 
 
+void building_t::create_restaurant_floorplan(unsigned part_id, rand_gen_t &rgen) {
+	assert(part_id < parts.size());
+	cube_t const &part(parts[part_id]);
+	vector<room_t> &rooms(interior->rooms);
+	// TODO: divide into main restaurant area, kitchen, bathrooms, storage, entryway, etc.
+	add_room(part, part_id); // num_lights will be calculated later
+	rooms.back().assign_all_to(RTYPE_RESTAURANT);
+	rooms.back().is_single_floor = 1;
+}
+
+void building_t::add_restaurant_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id) {
+	// TODO
+}
+
 template<typename T> void remove_if_intersects(vector<T> &objs, cube_t const &c) {
 	auto i(objs.begin()), o(i);
 
@@ -19,7 +33,7 @@ template<typename T> void remove_if_intersects(vector<T> &objs, cube_t const &c)
 	objs.erase(o, objs.end());
 }
 
-void building_t::add_restaurant_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, bool dim, bool dir,
+void building_t::add_mall_restaurant_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, bool dim, bool dir,
 	bool no_doorway, float light_amt, cube_t &div_wall, light_ix_assign_t &light_ix_assign)
 {
 	float const window_vspace(get_window_vspace()), wall_thickness(get_wall_thickness()), wall_hthick(0.5*wall_thickness), fc_thick(get_fc_thickness());
