@@ -138,6 +138,7 @@ building_parking.o
 building_jail.o
 building_bathroom.o
 building_kitchen.o
+building_restaurant.o
 simplifier.o
 city_model.o
 city_building_params.o
