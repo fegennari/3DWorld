@@ -555,7 +555,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					}
 				}
 			}
-			else if (nx > 1 || ny > 1) { // office, parking garage, backrooms, mall, prison, or industrial with multiple lights
+			else if (nx > 1 || ny > 1) { // office, parking garage, backrooms, mall, prison, industrial, or restaurant with multiple lights
 				vector3d const shrink(0.5*light.dx()*sqrt((nx - 1)/nx), 0.5*light.dy()*sqrt((ny - 1)/ny), 0.0);
 				float xstep(dx/nx), ystep(dy/ny), xs(-0.5f*dx + 0.5*xstep), ys(-0.5f*dy + 0.5*ystep);
 

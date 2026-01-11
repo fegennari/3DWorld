@@ -2328,7 +2328,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	if (!has_roof_access) { // roof ceiling, full area
 		set_cube_zvals(C, (z - fc_thick), z);
 		
-		if (is_house && part_ix == get_attic_part_ix() && add_attic_access_door(C, part_ix, num_floors, rooms_start, rgen)) { // primary/upper part only
+		if (is_house && !is_restaurant() && part_ix == get_attic_part_ix() && add_attic_access_door(C, part_ix, num_floors, rooms_start, rgen)) { // primary/upper part only
 			cube_t ceiling_parts[4];
 			subtract_cube_xy(C, interior->attic_access, ceiling_parts);
 			float const fc_mid_z(C.zc()); // split between the ceiling and floor parts

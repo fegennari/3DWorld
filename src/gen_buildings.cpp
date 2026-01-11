@@ -1746,8 +1746,13 @@ colorRGBA building_t::get_ceil_tex_and_color(cube_t const &ceil_cube, tid_nm_pai
 		tex = get_corr_metal_texture(0.75*mat.ceil_tex.tscale_x);
 		return WHITE;
 	}
+	if (is_restaurant()) {
+		float const tscale(0.25*mat.house_ceil_tex.tscale_x);
+		tex = tid_nm_pair_t(get_rect_panel_tid(), -1, tscale, tscale);
+		return WHITE;
+	}
 	// normal ceiling texture
-	bool const use_house_tex(is_residential() || is_restaurant()); // apartments, hotels, and restaurants use house ceiling textures and colors
+	bool const use_house_tex(is_residential()); // apartments, hotels, and restaurants use house ceiling textures and colors
 	tex =  (use_house_tex ? mat.house_ceil_tex   : mat.ceil_tex  );
 	return (use_house_tex ? mat.house_ceil_color : mat.ceil_color);
 }
