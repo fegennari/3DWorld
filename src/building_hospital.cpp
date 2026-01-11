@@ -9,7 +9,7 @@ extern object_model_loader_t building_obj_model_loader;
 
 
 unsigned get_metal_table_num_legs_per_side(room_object_t const &c);
-int select_lab_model(rand_gen_t &rgen, unsigned &types_used, float &height);
+int select_lab_model(rand_gen_t &rgen, unsigned &types_used, float &hscale);
 
 bool can_create_hospital_room() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_HOSP_BED);}
 
@@ -686,11 +686,11 @@ bool building_t::add_lab_room_objs(rand_gen_t rgen, room_t &room, float zval, un
 	cube_t hood; // unused
 
 	for (unsigned n = 0; n < num_ka_models; ++n) {
-		float height(0.0);
-		int const model_id(select_lab_model(rgen, types_used, height));
+		float hscale(0.0);
+		int const model_id(select_lab_model(rgen, types_used, hscale));
 		if (model_id < 0) break;
 		unsigned obj_ix(objs.size());
-		if (!place_model_along_wall(model_id, TYPE_KITCH_APP, room, height, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 4, 0, WHITE, 1)) continue;
+		if (!place_model_along_wall(model_id, TYPE_KITCH_APP, room, hscale, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 4, 0, WHITE, 1)) continue;
 		add_commercial_kitchen_app_post(obj_ix, get_sub_model_id(model_id), hood, cclass_counts, rgen, 0); // is_kitchen=0
 	} // for n
 	// TYPE_VENT_HOOD?

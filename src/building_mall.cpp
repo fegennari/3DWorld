@@ -21,6 +21,7 @@ void rotate_obj_cube(cube_t &c, cube_t const &bc, bool in_dim, bool dir);
 void add_button(point const &pos, float button_radius, bool dim, bool dir, unsigned function_id, unsigned flags, vect_room_object_t &objs);
 bool try_add_lamp(cube_t const &place_area, float floor_spacing, unsigned room_id, unsigned flags, float light_amt,
 	vect_cube_t &cubes, vect_room_object_t &objects, rand_gen_t &rgen);
+int select_app_store_model(rand_gen_t &rgen, float &hscale, bool plumbing);
 
 extern object_model_loader_t building_obj_model_loader;
 
@@ -2063,12 +2064,16 @@ unsigned building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zv
 						room_obj_shape shape(SHAPE_CUBE);
 						colorRGBA color(WHITE);
 						unsigned model_type_id(0);
+						int model_id(-1); // used for kitchen appliances
 						float hscale(1.0);
+						bool add_ck_app_post(0);
 						vector3d sz(1.0, 1.0, 1.0); // D, W, H
 
 						if (val < 0.3) { // 30% kitchen appliances; 0.0 - 0.3
-							if      (val < 0.1) {obj_type = TYPE_FRIDGE; hscale = 0.75;} // 0.0 - 0.1
-							else if (val < 0.2) {obj_type = TYPE_STOVE ; hscale = 0.46;} // 0.1 - 0.2
+							if ((rgen.rand() % 3) == 0) {model_id = select_app_store_model(rgen, hscale, 0);} // plumbing=0
+							if (model_id >= 0)  {obj_type = TYPE_KITCH_APP;} // use kitchen appliance model
+							else if (val < 0.1) {obj_type = TYPE_FRIDGE   ; hscale = 0.75;} // 0.0 - 0.1
+							else if (val < 0.2) {obj_type = TYPE_STOVE    ; hscale = 0.46;} // 0.1 - 0.2
 							else { // 0.2 - 0.3
 								obj_type = TYPE_DWASHER;
 								hscale   = 0.345*(1.0 - 0.06 - 0.05); // see get_dishwasher_for_ksink()
@@ -2076,17 +2081,17 @@ unsigned building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zv
 								sz.y     = 1.05*sz.x;
 								model_type_id = 26; // unused index < 32
 							}
-							// TYPE_KITCH_APP?
 						}
 						else if (val < 0.5) { // 20% laundry appliances; 0.3 - 0.5
 							if (val < 0.4) {obj_type = TYPE_WASHER; hscale = 0.42;} // 0.3 - 0.4
 							else           {obj_type = TYPE_DRYER ; hscale = 0.38;} // 0.4 - 0.5
 						}
 						else if (val < 0.8) { // 30% bathroom plumbing fixtures; 0.5 - 0.8
-							if      (val < 0.6) {obj_type = TYPE_TUB   ; hscale = 0.20;} // 0.5 - 0.6
-							else if (val < 0.7) {obj_type = TYPE_TOILET; hscale = 0.35;} // 0.6 - 0.7
-							else                {obj_type = TYPE_SINK  ; hscale = 0.45;} // 0.7 - 0.8
-							// TYPE_SHOWERTUB? TYPE_URINAL? TYPE_KITCH_APP with a sink?
+							if ((rgen.rand() % 3) == 0) {model_id = select_app_store_model(rgen, hscale, 1);} // plumbing=1
+							if (model_id >= 0)  {obj_type = TYPE_KITCH_APP; add_ck_app_post = 1;} // use kitchen appliance model with sink frame
+							else if (val < 0.6) {obj_type = TYPE_TUB      ; hscale = 0.20;} // 0.5 - 0.6
+							else if (val < 0.7) {obj_type = TYPE_TOILET   ; hscale = 0.35;} // 0.6 - 0.7
+							else                {obj_type = TYPE_SINK     ; hscale = 0.45;} // 0.7 - 0.8
 						}
 						else { // 20% HVAC/WH; 0.8 - 1.0
 							if (val < 0.9) { // 0.8 - 0.9
@@ -2104,15 +2109,15 @@ unsigned building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zv
 								sz.y     = 2.0*0.182;
 								model_type_id = 25; // unused index < 32
 							}
+							// TYPE_CEIL_FAN (if ceiling is low)?
 						}
-						// TYPE_CEIL_FAN (if ceiling is low)?
 						if (obj_type == TYPE_NONE) continue;
 						
 						if (obj_type >= TYPE_TOILET) { // 3D model object
 							model_type_id = (obj_type - TYPE_TOILET);
-							unsigned const model_id(model_type_id + OBJ_MODEL_TOILET);
-							if (!building_obj_model_loader.is_model_valid(model_id)) continue; // no model
-							sz = building_obj_model_loader.get_model_world_space_size(model_id);
+							unsigned const app_model_id(((model_id >= 0) ? model_id : (model_type_id + OBJ_MODEL_TOILET)));
+							if (!building_obj_model_loader.is_model_valid(app_model_id)) continue; // no model
+							sz = building_obj_model_loader.get_model_world_space_size(app_model_id);
 						}
 						if (N < 10 && (types_used & (1 << model_type_id))) continue; // type already placed
 						float const height(hscale*window_vspace);
@@ -2145,6 +2150,13 @@ unsigned building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zv
 									if (door_blocker.intersects_xy(app))             continue; // blocking front door
 									if (has_bcube_int(app, blockers))                continue; // blocked
 									objs.emplace_back(app, obj_type, room_id, !sdim, sdir, RO_FLAG_IN_MALL, light_amt, shape, color);
+									if (model_id >= 0) {objs.back().item_flags = get_sub_model_id(model_id);}
+
+									if (add_ck_app_post) {
+										cube_t hood; // unused
+										unsigned cclass_counts[3]={}; // unused
+										add_commercial_kitchen_app_post(objs.size()-1, objs.back().item_flags, hood, cclass_counts, rgen, 0); // is_kitchen=0
+									}
 									blockers.push_back(app);
 									any_placed = 1;
 
