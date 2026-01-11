@@ -545,7 +545,7 @@ void building_t::add_commercial_kitchen_app_post(unsigned obj_ix, unsigned app_t
 		sink.z2() = sink.z1() = app.z1() + z_shift + ((app_type == KCA_SINK) ? 0.08 : 0.12)*height; // shrink to zero area at the bottom
 		sink.d[!dim][rgen.rand_bool()] = sink.get_center_dim(!dim); // select one half
 		sink.expand_by_xy(-0.1*depth); // avoid sides
-		frame.d[dim][!dir] += (dir ? 1.0 : -1.0)*0.1*depth; // more space toward back
+		sink.d[dim][!dir] += (dir ? 1.0 : -1.0)*0.1*depth; // more space toward back
 		if (is_kitchen) {add_objects_in_sink(rgen, sink, dim, dir, app.room_id, app.light_amt);} // only for kitchens, not hospital labs
 	}
 	if (add_platform) { // place this object on a platform/table; should this be merged across adjacent objects at the same height?
