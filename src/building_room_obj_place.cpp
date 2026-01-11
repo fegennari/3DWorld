@@ -4265,10 +4265,10 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 			ext_doors.emplace_back(door_t(bc, dim, 0), 0); // dir=0, first_door_ix=0 because it's unused
 		}
 	}
-	for (unsigned ei = 0; ei < 2; ++ei) { // exterior, interior
+	for (unsigned ei = 0; ei < 2; ++ei) { // {exterior, interior}
 		vect_door_stack_t const &cands(ei ? doorways : ext_doors);
-		// place up to 2 light switches in this room if it's a hallway, or residential and not a bathroom, otherwise place only 1
-		unsigned const max_ls(((is_residential() && !is_bathroom) || room.is_hallway) ? 2 : 1);
+		// place up to 2 light switches in this room if it's a hallway, or residential and not a bathroom, or an exterior door; otherwise place only 1
+		unsigned const max_ls(((is_residential() && !is_bathroom) || room.is_hallway || ei == 0) ? 2 : 1);
 		unsigned num_ls(0);
 
 		for (auto i = cands.begin(); i != cands.end() && num_ls < max_ls; ++i) {

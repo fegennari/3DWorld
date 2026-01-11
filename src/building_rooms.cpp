@@ -665,7 +665,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				continue; // nothing else to add
 			}
 			if (is_restaurant_room) {
-				add_restaurant_objs(rgen, *r, room_center.z, room_id);
+				add_restaurant_objs(rgen, *r, room_center.z, room_id, is_lit);
 				continue; // nothing else to add
 			}
 			if (is_parking_garage || is_retail_room || is_mall_store) continue; // generated above, done; no outlets or light switches
