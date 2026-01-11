@@ -396,6 +396,8 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 	// use a consistent depth for each side + floor so that walls can be shared
 	float depths[4] = {}; // for two sides and two ends
 	for (unsigned n = 0; n < 4; ++n) {depths[n] = rgen.rand_uniform(min_depth, max_depth);}
+	// make sure depth is at least as wide as the basement so that outside hallways can fit
+	for (unsigned d = 0; d < 2; ++d) {max_eq(depths[d], (fabs(basement.d[!dim][d] - room.d[!dim][d]) + 2.0f*wall_thickness));}
 
 	// pre-split walls into horizontal strips for each floor
 	for (unsigned d = 0; d < 2; ++d) {
