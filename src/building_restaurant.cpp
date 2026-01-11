@@ -24,6 +24,16 @@ void building_t::add_restaurant_objs(rand_gen_t rgen, room_t const &room, float 
 	// TODO
 }
 
+void building_t::make_restaurant_light(room_object_t &light) {
+	assert(has_room_geom());
+	float const radius(0.25*(light.dx() + light.dy())), rod_radius(0.08*radius), rod_len(0.75*light.dz());
+	cube_t rod;
+	set_cube_zvals(rod, (light.z2() - 1.2*rod_len), light.z2());
+	light.translate_dim(2, -rod_len);
+	for (unsigned d = 0; d < 2; ++d) {set_wall_width(rod, light.get_center_dim(d), rod_radius, d);}
+	interior->room_geom->objs.emplace_back(rod, TYPE_METAL_BAR, light.room_id, 0, 1, RO_FLAG_NOCOLL, light.light_amt, SHAPE_CYLIN, BKGRAY); // vertical
+}
+
 template<typename T> void remove_if_intersects(vector<T> &objs, cube_t const &c) {
 	auto i(objs.begin()), o(i);
 

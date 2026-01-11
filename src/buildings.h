@@ -3060,6 +3060,7 @@ private:
 		float light_amt, float support_width, cube_t const &place_area, vect_cube_t const &supports);
 	void add_industrial_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start_inc_lights);
 	void add_restaurant_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id);
+	void make_restaurant_light(room_object_t &light);
 	void add_retail_pillar(cube_t const &pillar, float zval, unsigned room_id, bool is_tall);
 	void add_U_stair_landing_lights(stairwell_t const &s, unsigned room_id, unsigned light_ix, float floor_zval);
 	void add_checkout_objs   (cube_t const &place_area, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool dim, bool dir, bool cr_dir);

@@ -177,11 +177,6 @@ void building_t::clear_existing_room_geom() {
 	ladder.set_to_zeros(); // will be re-placed
 }
 
-void make_sphere_light(cube_t &light) {
-	light.z2() += 0.5f*light.dz();
-	light.z1() -= 0.22f*(light.dx() + light.dy());
-}
-
 void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 
 	assert(has_room_geom());
@@ -362,7 +357,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		}
 		else if (is_restaurant_room) {
 			light_density = 0.6;
-			light_size   *= 0.9;
+			light_size   *= 0.8;
 		}
 		else if (r->is_single_floor) {
 			light_size *= sqrt(r->dz()/window_vspacing); // larger lights for taller rooms
@@ -506,7 +501,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			// must check lights vs. backrooms walls and pillars, and mall pillars
 			unsigned const lcheck_start_ix(is_backrooms ? floor_objs_start : (is_mall ? pillars_start : objs.size()));
 			set_cube_zvals(light, (light_z2 - light_thick), light_z2);
-			if (light_shape == SHAPE_SPHERE) {make_sphere_light(light);} // TODO: hanging?
+			if (light_shape == SHAPE_SPHERE) {light.z1() = light.z2() - 0.5*(light.dx() + light.dy());} // make spherical
 			valid_lights.clear();
 
 			if (num_lights > 1 && !is_backrooms && !is_mall) { // r->is_hallway or ext basement
@@ -637,6 +632,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				if (has_bcube_int(l, interior->stairwells)) {l_flags |= RO_FLAG_TOS;} // assumes light at top of stairs, since other cases are illegal
 				if (industrial_room) {l_flags |= RO_FLAG_IN_FACTORY;}
 				room_object_t light_obj(l, TYPE_LIGHT, room_id, dim, dir, l_flags, light_amt, light_shape, color);
+				if (is_restaurant_room) {make_restaurant_light(light_obj);}
 				light_obj.obj_id = light_ix_assign.get_ix_for_light(l, walls_not_shared);
 				// flicker 2% chance parking garage, 5% chance ext basement/backrooms except for mall and its stores
 				unsigned const flicker_mod((is_parking_garage && is_basement) ? 50 : ((is_ext_basement && !is_mall_room) ? 20 : 0));
@@ -1120,8 +1116,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 						cube_t light_exp(light);
 						light_exp.expand_by_xy(doorway_width + 0.5*wall_thickness);
 						if (!r->contains_cube_xy(light_exp)) continue; // light too close to door, skip; can't recess spherical lights
-						light.shape = SHAPE_SPHERE;
-						make_sphere_light(light);
+						light.shape = SHAPE_SPHERE; // but squished in Z
+						light.z2() += 0.5f*light.dz();
+						light.z1() -= 0.22f*(light.dx() + light.dy());
 					} // for ix
 					if (!added_dining) {add_diningroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);} // only one room is the primary dining room
 					r->assign_to(RTYPE_DINING, f);
