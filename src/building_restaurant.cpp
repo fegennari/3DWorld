@@ -20,10 +20,11 @@ void building_t::create_restaurant_floorplan(unsigned part_id, rand_gen_t &rgen)
 	rooms.back().is_single_floor = 1;
 }
 
-void building_t::add_restaurant_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, bool is_lit) {
+void building_t::add_restaurant_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float light_amt, bool is_lit) {
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const objs_start(objs.size());
-	// TODO
+	bool const plastic_tc(0); // TODO: custom material?
+	fill_room_with_tables_and_chairs(rgen, room, zval, room_id, light_amt, objs_start, plastic_tc);
 	add_outlets_to_room(rgen, room, zval, room_id, objs_start, 1, 0);
 	add_light_switches_to_room(rgen, room, zval, room_id, objs_start, 1, 0, is_lit);
 }

@@ -483,6 +483,7 @@ void building_t::place_cards_on_table(rand_gen_t rgen, unsigned room_id, float t
 	}
 }
 
+// for libraries, prison lounges, restaurants, etc.
 bool building_t::fill_room_with_tables_and_chairs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt,
 	unsigned objs_start, bool plastic_tc, unsigned max_books, unsigned max_num_xy)
 {
@@ -516,8 +517,17 @@ bool building_t::fill_room_with_tables_and_chairs(rand_gen_t rgen, room_t const 
 	// place objects on tables
 	vector<room_object_t> tables;
 
-	for (auto i = objs.begin()+tc_start; i != objs.end(); ++i) {
-		if (i->type == TYPE_TABLE) {tables.push_back(*i);}
+	if (is_restaurant()) { // add eating items
+		unsigned const tc_end(objs.size());
+
+		for (unsigned i = tc_start; i < tc_end; ++i) {
+			if (objs[i].type == TYPE_TABLE) {place_eating_items_on_table(rgen, i);}
+		}
+	}
+	else { // gather tables for item placement
+		for (auto i = objs.begin()+tc_start; i != objs.end(); ++i) {
+			if (i->type == TYPE_TABLE) {tables.push_back(*i);}
+		}
 	}
 	for (room_object_t const &table : tables) {
 		unsigned const pp_start(objs.size());
