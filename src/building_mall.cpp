@@ -363,7 +363,7 @@ void building_t::add_mall_store(cube_t const &store, cube_t const &window_area, 
 	cube_t doorway(opening), storefront(wall_cut);
 	set_wall_width(doorway,    wall_pos, 0.5*wall_thickness, !dim);
 	set_wall_width(storefront, wall_pos, 0.5*wall_thickness, !dim);
-	bool const closed(rgen.rand_float() < 0.1); // 10% of the time
+	bool const closed(rgen.rand_float() < 0.1); // 10% of the time; will be made open later if there's no back door to this store
 	interior->mall_info->store_doorways.emplace_back(doorway, room_ix, !dim, dir, closed);
 	interior->mall_info->storefronts.push_back(storefront);
 	
@@ -551,7 +551,14 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 			if (room.d[!dim][d] == wall_pos) continue; // no stores added to this side, skip; excludes bathrooms
 			hall.d[!dim][0]  = hall.d[!dim][1] = wall_pos; // move to outside of rooms
 			hall.d[!dim][d] += (d ? 1.0 : -1.0)*hall_width;
-			if (is_store_placement_invalid(hall)) continue;
+
+			if (is_store_placement_invalid(hall)) { // can't place hall; should we try to shorten each end?
+				// make sure none of the store gates on this section are closed because they'll be unreachable
+				for (store_doorway_t &dw : interior->mall_info->store_doorways) {
+					if (dw.dim == !dim && dw.dir == d && dw.zc() > hall.z1() && dw.zc() < hall.z2()) {dw.closed = 0; dw.open_amt = 1.0;}
+				}
+				continue;
+			}
 			rooms.emplace_back(hall, basement_part_ix, 0, 1, 0, 0, 2); // num_lights=0, is_hallway=1, is_office=0, is_sec_floor=0, interior=1 (extb)
 			add_extb_room_floor_and_ceil(hall);
 			unsigned const hall_walls_start(side_walls.size());
