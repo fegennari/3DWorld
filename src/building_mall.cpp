@@ -557,7 +557,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 			if (is_store_placement_invalid(hall)) { // can't place hall; should we try to shorten each end?
 				// make sure none of the store gates on this section are closed because they'll be unreachable
 				for (store_doorway_t &dw : interior->mall_info->store_doorways) {
-					if (dw.dim == !dim && dw.dir == d && dw.zc() > hall.z1() && dw.zc() < hall.z2()) {dw.closed = 0; dw.open_amt = 1.0;}
+					if (dw.dim == !dim && dw.dir == bool(d) && dw.zc() > hall.z1() && dw.zc() < hall.z2()) {dw.closed = 0; dw.open_amt = 1.0;}
 				}
 				continue;
 			}

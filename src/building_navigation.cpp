@@ -935,7 +935,7 @@ cube_t building_t::get_room_bounds(room_t const &room, bool exc_window_bars, boo
 	if (floor_space_only && room.is_industrial() && interior->ind_info) return interior->ind_info->floor_space; // currently unused
 	// regular house rooms start and end at the walls;
 	// offices, hallways, and extended basement rooms tile exactly and include half the walls, so we have to subtract those back off
-	if (!room.inc_half_walls()) return room;
+	if (!room_inc_half_walls(room)) return room;
 	cube_t c(room);
 	float const wall_thick(get_wall_thickness()), wall_hthick(0.5*wall_thick);
 

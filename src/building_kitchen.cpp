@@ -582,7 +582,7 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 	float const room_len(room_sz[!dim]);
 	bool const add_island(room_len > 3.0*floor_spacing); // if room is wide enough, add a center island
 	bool const have_kitchen_models(enable_kitchen_app_models());
-	float const ceil_zval((in_mall ? room.z2() : (zval + floor_spacing)) - get_fc_thickness()), clearance(get_min_front_clearance_inc_people());
+	float const ceil_zval((room.is_single_floor ? room.z2() : (zval + floor_spacing)) - get_fc_thickness()), clearance(get_min_front_clearance_inc_people());
 	unsigned pa2_orient(4);
 	cube_t place_area(get_room_wall_bounds(room)), place_area2;
 	place_area.expand_by_xy(-trim_thick);

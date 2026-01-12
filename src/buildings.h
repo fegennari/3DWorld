@@ -2306,6 +2306,7 @@ struct building_t : public building_geom_t {
 	bool can_extend_stairs_to_pg(unsigned &stairs_ix) const;
 	bool is_basement(vect_cube_t::const_iterator it) const {return (int(it - parts.begin()) == basement_part_ix);}
 	bool is_pos_in_basement(point const &pos) const {return ((has_basement() && parts[basement_part_ix].contains_pt(pos)) || point_in_extended_basement(pos));}
+	bool room_inc_half_walls(room_t const &room) const {return (is_restaurant() || room.inc_half_walls());}
 	bool maybe_has_ext_door_this_floor(float part_z1, unsigned floor_ix) const;
 	void get_garage_dim_dir(cube_t const &garage, bool &dim, bool &dir) const;
 	unsigned get_attic_part_ix   () const;
@@ -2500,7 +2501,7 @@ struct building_t : public building_geom_t {
 	colorRGBA get_int_wall_tex_and_color(bool in_basement, bool in_ext_basement, bool in_mall_stores, tid_nm_pair_t &tex) const;
 	colorRGBA get_avg_floor_color(cube_t const &floor_cube) const;
 	colorRGBA get_avg_ceil_color (cube_t const &ceil_cube ) const;
-	colorRGBA const &get_trim_color() const {return (is_house ? WHITE : DK_GRAY);}
+	colorRGBA const &get_trim_color() const {return ((is_house || is_restaurant()) ? WHITE : DK_GRAY);}
 	bool has_tile_floor() const;
 	void get_all_drawn_exterior_verts(building_draw_t &bdraw);
 	void get_detail_shadow_casters   (building_draw_t &bdraw);
@@ -2886,6 +2887,7 @@ private:
 	void add_ceiling_cube_no_skylights(cube_t const &c);
 	void calc_room_ext_sides(room_t &room) const;
 	unsigned add_room(cube_t const &room, unsigned part_id, unsigned num_lights=1, bool is_hallway=0, bool is_office=0, bool is_sec_bldg=0);
+	unsigned add_assigned_room(cube_t const &room, unsigned part_id, room_type rtype, unsigned num_lights=1);
 	void add_or_extend_elevator(elevator_t const &elevator, bool add);
 	void remove_intersecting_roof_cubes(cube_t const &c);
 	bool overlaps_other_room_obj(cube_t const &c, unsigned objs_start=0, bool check_all=0, unsigned const *objs_end=nullptr) const;
@@ -2905,7 +2907,7 @@ private:
 	bool add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id, point const &place_pos, colorRGBA const &chair_color, bool dim,
 		bool dir, float tot_light_amt, bool office_chair=0, bool enable_rotation=0, bool bar_stool=0, bool no_push_out=0, int wooden_or_plastic=2, bool reduced_clearance=0);
 	unsigned add_table_and_chairs(rand_gen_t rgen, room_t const &room, vect_cube_t &blockers, unsigned room_id, point const &place_pos, colorRGBA const &chair_color,
-		float rand_place_off, float tot_light_amt, unsigned max_chairs=4, bool use_tall_table=0, int wooden_or_plastic=2, int chair_rand_add=0);
+		float rand_place_off, float tot_light_amt, unsigned max_chairs=4, bool use_tall_table=0, int wooden_or_plastic=2, int chair_rand_add=0, bool is_rest=0);
 	void shorten_chairs_in_region(cube_t const &region, unsigned objs_start);
 	bool fill_room_with_tables_and_chairs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt,
 		unsigned objs_start, bool plastic_tc, unsigned max_books=0, unsigned max_num_xy=0);
@@ -3059,7 +3061,7 @@ private:
 	void add_warehouse_shelves(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start,
 		float light_amt, float support_width, cube_t const &place_area, vect_cube_t const &supports);
 	void add_industrial_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start_inc_lights);
-	void add_restaurant_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float light_amt, bool is_lit);
+	void add_restaurant_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float light_amt);
 	void make_restaurant_light(room_object_t &light);
 	void add_retail_pillar(cube_t const &pillar, float zval, unsigned room_id, bool is_tall);
 	void add_U_stair_landing_lights(stairwell_t const &s, unsigned room_id, unsigned light_ix, float floor_zval);

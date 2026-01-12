@@ -282,6 +282,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		bool const is_ext_basement(r->is_ext_basement()), is_backrooms(r->is_backrooms()), is_apt_or_hotel_room(r->is_apt_or_hotel_room());
 		bool const residential_room(is_house || (residential && !r->is_hallway && !is_basement && !is_retail_room)), industrial_room(r->is_industrial());
 		bool const is_mall_room(is_ext_basement && has_mall()), is_mall_bathroom(is_mall_room && is_bathroom(init_rtype_f0)), single_floor(is_mall || industrial_room);
+		bool const is_rest_kitchen(is_restaurant() && init_rtype_f0 == RTYPE_KITCHEN);
 		unsigned const num_floors(single_floor ? 1 : calc_num_floors_room(*r, floor_height, floor_thickness)); // consider mall and factory a single floor
 		unsigned const min_br(multi_family ? num_floors : 1); // multi-family house requires one per floor; can apply to both bedrooms and bathrooms
 		room_obj_shape const light_shape((residential_room || industrial_room) ? SHAPE_CYLIN : (is_restaurant_room ? SHAPE_SPHERE : SHAPE_CUBE));
@@ -358,6 +359,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		else if (is_restaurant_room) {
 			light_density = 0.6;
 			light_size   *= 0.8;
+		}
+		else if (is_rest_kitchen) {
+			light_density = 0.7;
+			light_size   *= 0.9;
 		}
 		else if (r->is_single_floor) {
 			light_size *= sqrt(r->dz()/window_vspacing); // larger lights for taller rooms
@@ -664,10 +669,6 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				add_industrial_objs(rgen, *r, room_center.z, room_id, objs_start_inc_lights);
 				continue; // nothing else to add
 			}
-			if (is_restaurant_room) {
-				add_restaurant_objs(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit);
-				continue; // nothing else to add
-			}
 			if (is_parking_garage || is_retail_room || is_mall_store) continue; // generated above, done; no outlets or light switches
 			if (is_unfinished) continue; // no objects for now; if adding objects later, need to make sure they stay inside the building bounds
 			uint64_t const floor_mask(uint64_t(1) << min(63U, f));
@@ -715,6 +716,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 						else {add_false_door_to_extb_room_if_needed(*r, room_center.z, room_id);} // extended basement hallway
 					}
 					if (is_house) { // allow pictures, rugs, and light switches in the hallways of houses; no pref orient
+						// Note: pictures are added before outlets and light switches, which differs from normal room placement below; should this be changed?
 						hang_pictures_whiteboard_chalkboard_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f, is_basement);
 						if (rgen.rand_bool()) {add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);} // 50% of the time; not all rugs will be placed
 					}
@@ -891,6 +893,21 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				}
 				added_obj = 1; // assume something was added above, and don't place any other furniture or try to assign to another room type
 			} // end is_apt_or_hotel_room
+			if (is_restaurant()) {
+				if (is_restaurant_room) {
+					add_restaurant_objs(rgen, *r, room_center.z, room_id, tot_light_amt);
+					added_obj = 1;
+				}
+				else if (is_rest_kitchen) {
+					added_obj = add_commercial_kitchen_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start, objs_start_inc_lights, light_ix_assign);
+					if (added_obj) {added_kitchen_mask |= 1;}
+				}
+				else if (init_rtype_f0 == RTYPE_MENS || init_rtype_f0 == RTYPE_WOMENS) {
+					added_obj = is_bathroom = add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt,
+						objs_start_inc_lights, objs_start, f, is_basement, 0, added_bathroom_objs_mask);
+					added_bathroom |= is_bathroom;
+				}
+			}
 			if (r->get_room_type(f) == RTYPE_CONF) { // already assigned to a conference room
 				if (add_conference_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f)) {added_obj = can_place_onto = 1;}
 				else if (f < NUM_RTYPE_SLOTS) { // failed, maybe because stairs were added to the room
@@ -2046,7 +2063,8 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	// ceiling trim disabled for large office buildings with outside corners because there's a lot of trim to add, and outside corners don't join correctly;
 	// ceiling trim also disabled for non-houses (all office buildings), because it doesn't really work with acoustic paneling
 	// industrial/hospitals have nested rooms with outside corners; hotels may have L-shaped rooms with missing walls that form outside corners
-	bool const has_outside_corners(interior->has_sec_hallways || is_industrial() || is_hospital() || is_hotel()), has_ceil_trim(!has_outside_corners && is_house);
+	bool const has_outside_corners(interior->has_sec_hallways || is_industrial() || is_hospital() || is_hotel());
+	bool const is_rest(is_restaurant()), has_ceil_trim(!has_outside_corners && (is_house || is_rest));
 	colorRGBA const trim_color(get_trim_color());
 	vect_room_object_t &objs(interior->room_geom->trim_objs);
 	vect_cube_t trim_cubes, trim_parts;
@@ -2163,6 +2181,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 			bool const in_basement(w->zc() < ground_floor_z1);
 			if (!in_basement && is_parking())  continue; // skip trim for parking structures
 			if (w->dz() < 0.5*window_vspacing) continue; // short wall segment from tall room extension, no trim
+			if (is_rest && w->z1() > ground_floor_z1 + floor_thickness) continue; // no trim on restaurant upper wall segments
 			bool const in_ext_basement(in_basement && !get_basement().intersects_no_adj(*w));
 			float floor_spacing(window_vspacing), ref_z1(bcube.z1());
 			
@@ -2192,7 +2211,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 				} // for W
 			}
 			// at least one floor (to include mall bathrooms and hallways); pool room is single floor even if tall
-			bool const single_floor(in_ext_basement && !interior->has_backrooms && !has_mall());
+			bool const single_floor(is_rest || (in_ext_basement && !interior->has_backrooms && !has_mall()));
 			unsigned const num_floors(single_floor ? 1U : max(1U, (unsigned)calc_num_floors(*w, floor_spacing, floor_thickness)));
 			// snap to the nearest floor to handle short walls due to cut out stairs
 			float const ground_wall_z1(ref_z1 + fc_thick);
@@ -2255,7 +2274,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 				} // for dir
 				if (!has_ceil_trim) continue;
 				// add ceiling trim
-				trim.z2() = z + floor_to_ceil_height; // ceil height
+				trim.z2() = (single_floor ? ((is_rest ? parts[0].z2() : w->z2()) - fc_thick) : (z + floor_to_ceil_height)); // ceil height
 				trim.z1() = trim.z2() - trim_height;
 
 				for (unsigned dir = 0; dir < 2; ++dir) { // for each side of wall
@@ -2285,8 +2304,8 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	// add trim for exterior walls
 	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {
 		if (is_basement(i) || is_parking()) continue; // skip basement and parking structure walls because they're bare concrete
-		bool const is_sec_bldg(i == get_real_parts_end());
-		unsigned const num_floors(is_sec_bldg ? 1 : calc_num_floors(*i, window_vspacing, floor_thickness));
+		bool const is_sec_bldg(i == get_real_parts_end()), is_single_floor(is_sec_bldg || is_industrial() || is_rest);
+		unsigned const num_floors(is_single_floor ? 1 : calc_num_floors(*i, window_vspacing, floor_thickness));
 
 		if (!is_cube()) { // add floor trim around the interior of the exterior walls for each floor
 			float const toler(0.1*wall_thickness); // add a bit of tolerance to account for FP error
@@ -2337,7 +2356,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 					set_cube_zvals(trim, z, z+trim_height); // starts at floor height
 					trim_cubes.clear();
 					trim_cubes.push_back(trim); // start with entire length
-					float const room_height(is_sec_bldg ? (i->dz() - floor_thickness) : floor_to_ceil_height);
+					float const room_height(is_single_floor ? (i->dz() - floor_thickness) : floor_to_ceil_height);
 					float const ceil_trim_z2(z + room_height), ceil_trim_z1(ceil_trim_z2 - trim_height); // ceil height
 
 					for (auto j = parts.begin(); j != get_real_parts_end(); ++j) { // clip against other parts
@@ -2354,7 +2373,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 							for (cube_t const &t : trim_parts) {objs.emplace_back(t, TYPE_WALL_TRIM, 0, dim, !dir, flags, 1.0, SHAPE_ANGLED, trim_color);} // ceiling trim
 						}
 					}
-					if (maybe_has_ext_door_this_floor(i->z1(), f)) { // cut out areas for ext doors
+					if (room_height < window_vspacing && maybe_has_ext_door_this_floor(i->z1(), f)) { // cut out areas for ext doors if not a tall room
 						cut_trim_around_doors(doors, trim_cubes, (expand_val + wall_thickness), dim);
 					}
 					for (cube_t &c : trim_cubes) {

@@ -7,26 +7,69 @@
 
 extern object_model_loader_t building_obj_model_loader;
 
+void create_wall(cube_t &wall, bool dim, float wall_pos, float fc_thick, float wall_half_thick, float wall_edge_spacing);
 colorRGBA get_stain_color(rand_gen_t &rgen, bool is_food=0);
 
 
 void building_t::create_restaurant_floorplan(unsigned part_id, rand_gen_t &rgen) {
+	// Note: exterior doors have not yet been placed
 	assert(part_id < parts.size());
 	cube_t const &part(parts[part_id]);
 	vector<room_t> &rooms(interior->rooms);
-	// TODO: divide into main restaurant area, kitchen, bathrooms, storage, entryway, etc.
-	add_room(part, part_id); // num_lights will be calculated later
-	rooms.back().assign_all_to(RTYPE_RESTAURANT);
-	rooms.back().is_single_floor = 1;
+	assert(rooms.empty()); // must call this first
+	// divide into main restaurant area vs. {kitchen, bathrooms, storage}
+	bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // room split dim/dir
+	float const h_space(get_hspacing_for_part(part, dim)), h_border(get_window_h_border()), part_sz(part.get_sz_dim(dim));
+	float const floor_spacing(get_window_vspace()), fc_thick(get_fc_thickness());
+	float const wall_thick(get_wall_thickness()), wall_half_thick(0.5*wall_thick), wall_edge_spacing(0.05*wall_thick);
+	float split_pos(0.0);
+	
+	for (unsigned n = 0; n < 100; ++n) { // 100 tries for a valid split pos
+		split_pos = part.d[dim][dir] + rgen.rand_uniform(0.25, 0.35)*part_sz*(dir ? -1.0 : 1.0);
+		if (!is_val_inside_window(part, dim, split_pos, h_space, h_border)) break;
+	}
+	cube_t wall(part);
+	create_wall(wall, dim, split_pos, fc_thick, wall_half_thick, wall_edge_spacing);
+	cube_t wall_lo(wall), wall_hi(wall);
+	wall_lo.z2() = wall_hi.z1() = part.z1() + floor_spacing - fc_thick; // top wall contains the space that would be between the upper ceiling and lower floor
+	interior->walls[dim].push_back(wall_hi);
+	cube_t main_room(part), side_area(part);
+	main_room.d[dim][dir] = side_area.d[dim][!dir] = split_pos;
+	add_assigned_room(main_room, part_id, RTYPE_RESTAURANT); // num_lights will be calculated later
+	// split side room into {kitchen, men's room, women's room, and maybe storage}
+	int const num_side_windows(get_num_windows_on_side(part, !dim)); // in other dim; typically 5-8
+	assert(num_side_windows >= 3);
+	bool const add_storage(num_side_windows >= 7), br_side(rgen.rand_bool()), mw_side(rgen.rand_bool());
+	unsigned const num_kitchen_windows(num_side_windows - add_storage - 2); // typically 3-5
+	float const wspace(part.get_sz_dim(!dim)/num_side_windows), window_step((br_side ? -1.0 : 1.0)*wspace);
+	float const br_split(side_area.d[!dim][br_side] + window_step); // split point between men's and women's bathrooms
+	float const k_br_split(br_split + window_step); // split point between kitchens and bathrooms
+	float const k_s_split(side_area.d[!dim][!br_side] - window_step); // split point between kitchen and storage, or end of kitchen
+	cout << side_area.d[!dim][br_side] << " " << br_split << " " << k_br_split << " " << k_s_split << " " << side_area.d[!dim][!br_side] << endl;
+	cube_t kitchen(side_area), br1(side_area), br2(side_area), storage(side_area);
+	br1.d[!dim][!br_side] = br2    .d[!dim][br_side] = br_split;
+	br2.d[!dim][!br_side] = kitchen.d[!dim][br_side] = k_br_split;
+	if (add_storage) {kitchen.d[!dim][!br_side] = storage.d[!dim][br_side] = k_s_split;}
+	cout << TXT(br1.str()) << TXT(br2.str()) << TXT(kitchen.str()) << TXT(storage.str()) << endl;
+	add_assigned_room(kitchen, part_id, RTYPE_KITCHEN); // num_lights will be calculated later
+	add_assigned_room(br1,     part_id, (mw_side ? RTYPE_MENS : RTYPE_WOMENS));
+	add_assigned_room(br2,     part_id, (mw_side ? RTYPE_WOMENS : RTYPE_MENS));
+	if (add_storage) {add_assigned_room(storage, part_id, RTYPE_STORAGE);}
+	// add doors to wall_lo
+	// TODO
+	interior->walls[dim].push_back(wall_lo);
+	// add walls separating rooms
+	// TODO
+	// all main part restaurant rooms are a single floor
+	for (room_t &room : rooms) {room.is_single_floor = 1;}
 }
 
-void building_t::add_restaurant_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float light_amt, bool is_lit) {
+void building_t::add_restaurant_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float light_amt) {
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const objs_start(objs.size());
 	bool const plastic_tc(0); // TODO: custom material?
 	fill_room_with_tables_and_chairs(rgen, room, zval, room_id, light_amt, objs_start, plastic_tc);
-	add_outlets_to_room(rgen, room, zval, room_id, objs_start, 1, 0);
-	add_light_switches_to_room(rgen, room, zval, room_id, objs_start, 1, 0, is_lit);
+	hang_pictures_whiteboard_chalkboard_in_room(rgen, room, zval, room_id, light_amt, objs_start, 0, 0);
 }
 
 void building_t::make_restaurant_light(room_object_t &light) {

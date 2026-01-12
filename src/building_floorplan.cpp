@@ -1181,7 +1181,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, unsigned gen_index, bool has
 
 			for (unsigned nsplits = 0; nsplits < 4; ++nsplits) { // at most 4 splits
 				cube_t &wall(walls[w]); // take a reference here because a prev iteration push_back() may have invalidated it
-				if (is_industrial() && wall.z1() >= ground_floor_z1) break; // don't split warehouse/factory walls as they already have doors
+				if ((is_industrial() || is_restaurant()) && wall.z1() >= ground_floor_z1) break; // don't split warehouse/factory/restaurant walls as they already have doors
 				float const len(wall.get_sz_dim(!d)), min_split_len((pref_split ? 0.5 : 1.5)*min_wall_len); // = 2.0/6.0 * doorway_width
 				if (len < min_split_len) break; // not long enough to split - done
 				float min_dist_abs(min(1.5f*doorway_width, max(0.5f*doorway_width, 0.5f*min_split_len)));
@@ -3187,6 +3187,11 @@ unsigned building_t::add_room(cube_t const &room, unsigned part_id, unsigned num
 	if (check_skylight_intersection(room)) {r.set_has_skylight();}
 	unsigned const room_id(interior->rooms.size());
 	interior->rooms.push_back(r);
+	return room_id;
+}
+unsigned building_t::add_assigned_room(cube_t const &room, unsigned part_id, room_type rtype, unsigned num_lights) {
+	unsigned const room_id(add_room(room, part_id, num_lights));
+	interior->rooms.back().assign_all_to(rtype);
 	return room_id;
 }
 

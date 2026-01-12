@@ -147,19 +147,29 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 
 // Note: must be first placed objects; returns the number of total objects added (table + optional chairs)
 // wooden_or_plastic: 0=wood, 1=plastic, 2=pastic for 50% of offices, 3=metal, otherwise wood
-unsigned building_t::add_table_and_chairs(rand_gen_t rgen, room_t const &room, vect_cube_t &blockers, unsigned room_id, point const &place_pos,
-	colorRGBA const &chair_color, float rand_place_off, float tot_light_amt, unsigned max_chairs, bool use_tall_table, int wooden_or_plastic, int chair_rand_add)
+unsigned building_t::add_table_and_chairs(rand_gen_t rgen, room_t const &room, vect_cube_t &blockers, unsigned room_id, point const &place_pos, colorRGBA const &chair_color,
+	float rand_place_off, float tot_light_amt, unsigned max_chairs, bool use_tall_table, int wooden_or_plastic, int chair_rand_add, bool is_rest)
 {
 	bool const use_bar_stools(use_tall_table), is_store(room.is_store());
-	float const table_rscale(use_tall_table ? 0.12 : 0.18), room_dx(room.dx()), room_dy(room.dy());
+	float const table_rscale(use_tall_table ? 0.12 : 0.18);
 	float const window_vspacing(get_window_vspace()), room_pad(room.is_store() ? 0.0f : max(4.0f*get_wall_thickness(), get_min_front_clearance_inc_people()));
+	vector2d const room_sz(room.get_size_xy());
+	bool const long_dim(room_sz.x < room_sz.y);
 	// use a long table for a large room 50% of the time
-	bool const use_long_table(!use_tall_table && max(room_dx, room_dy) > 3.0*window_vspacing && min(room_dx, room_dy) > 2.0*window_vspacing && rgen.rand_bool());
-	bool const long_dim(room_dx < room_dy);
+	bool const use_long_table(!use_tall_table && !is_rest && room_sz[long_dim] > 3.0*window_vspacing && room_sz[!long_dim] > 2.0*window_vspacing && rgen.rand_bool());
+	bool const square_table(is_rest && rgen.rand_bool());
 	vect_room_object_t &objs(interior->room_geom->objs);
 	point table_pos(place_pos);
 	vector3d table_sz; // half size
-	for (unsigned d = 0; d < 2; ++d) {table_sz [d]  = table_rscale*window_vspacing*(1.0 + rgen.rand_float());} // half size relative to window_vspacing
+	
+	if (square_table) {
+		table_sz[0] = table_sz[1] = table_rscale*window_vspacing*(1.3 + 0.4*rgen.rand_float());
+	}
+	else {
+		for (unsigned d = 0; d < 2; ++d) { // half size relative to window_vspacing
+			table_sz[d] = table_rscale*window_vspacing*(is_rest ? (1.2 + 0.7*rgen.rand_float()) : (1.0 + rgen.rand_float()));
+		}
+	}
 	for (unsigned d = 0; d < 2; ++d) {table_pos[d] += rand_place_off*room.get_sz_dim(d)*rgen.rand_uniform(-1.0, 1.0);} // near the center of the room
 	if (use_long_table) {table_sz[long_dim] *= 1.5;}
 	float const long_edge_len(2.0*max(table_sz.x, table_sz.y));
@@ -180,7 +190,11 @@ unsigned building_t::add_table_and_chairs(rand_gen_t rgen, room_t const &room, v
 	// basements can have broken glass tables 50% of the time; these are short cube tables
 	if (!is_round && !use_tall_table && !is_plastic && place_pos.z < ground_floor_z1 && (rgen.rand_float() < 0.5)) {flags |= RO_FLAG_BROKEN;}
 	objs.emplace_back(table, TYPE_TABLE, room_id, 0, 0, flags, tot_light_amt, (is_round ? SHAPE_CYLIN : SHAPE_CUBE), WHITE, item_flags);
-	set_obj_id(objs);
+	if (!is_rest) {set_obj_id(objs);} // set to select style such as round table wood vs. marble; don't set for restaurants to keep all tables consistent
+
+	if (is_rest) { // add table cloths of some sort? as rugs?
+		// TODO
+	}
 	if (max_chairs == 0) return 1; // table only
 	// maybe place some chairs around the table
 	rgen.rseed1 += chair_rand_add; // used to make chair placement unique for duplicate tables
@@ -215,7 +229,7 @@ unsigned building_t::add_table_and_chairs(rand_gen_t rgen, room_t const &room, v
 			for (unsigned n = 0; n < num_this_orient; ++n) {
 				if (num_chairs == max_chairs) break; // done
 				if (prev_not_added) {prev_not_added = 0;} // if the previous chair failed to be added, make sure to try the next orient
-				else if (is_store) {} // don't skip chairs in furniture stores
+				else if (is_store || is_rest) {} // don't skip chairs in furniture stores or restaurants
 				else if (orient == 3 && num_chairs == 0 && n+1 == num_this_orient) {} // make sure to place a chair if we have none and this is our last orient/chair
 				else if (rgen.rand_float() > 0.25*(num_this_orient + 1)) continue; // skip 50% of the time for single chair, 25% of the time for double
 				point chair_pos(table_pos); // same starting center and z1
@@ -3973,7 +3987,7 @@ bool building_t::hang_pictures_whiteboard_chalkboard_in_room(rand_gen_t rgen, ro
 	}
 	if (room.is_sec_bldg) return 0; // no pictures in secondary buildings
 	if (room.get_room_type(0) == RTYPE_STORAGE) return 0; // no pictures or whiteboards in storage rooms (always first floor)
-	bool const add_whiteboards(!is_residential() || room.is_office);
+	bool const add_whiteboards(!(is_residential() || is_restaurant()) || room.is_office);
 	if (!add_whiteboards && !room_object_t::enable_pictures()) return 0; // pictures are disabled
 	cube_t const &part(get_part_for_room(room));
 	float const floor_height(get_window_vspace()), wall_thickness(get_wall_thickness());
@@ -3998,7 +4012,7 @@ bool building_t::hang_pictures_whiteboard_chalkboard_in_room(rand_gen_t rgen, ro
 				set_cube_zvals(c, zval+0.25*floor_height, zval+0.9*floor_height-floor_thick);
 				c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*0.6*wall_thickness;
 				// translate by half wall thickness if not interior hallway or office wall
-				if (!(room.inc_half_walls() && classify_room_wall(room, zval, dim, dir, 0) != ROOM_WALL_EXT)) {c.translate_dim(dim, (dir ? 1.0 : -1.0)*0.5*wall_thickness);}
+				if (!(room_inc_half_walls(room) && classify_room_wall(room, zval, dim, dir, 0) != ROOM_WALL_EXT)) {c.translate_dim(dim, (dir ? 1.0 : -1.0)*0.5*wall_thickness);}
 				float const room_len(room.get_sz_dim(!dim));
 				if (room_len < 1.0*floor_height) continue; // wall too short for a whiteboard
 				c.expand_in_dim(!dim, -0.2*room_len); // xy_space
@@ -4081,7 +4095,7 @@ bool building_t::hang_pictures_whiteboard_chalkboard_in_room(rand_gen_t rgen, ro
 				c.expand_in_z(0.5*height);
 				c.d[dim][!dir] += 0.2*base_shift; // move out to prevent z-fighting
 				// add an additional half wall thickness for interior hallway and office walls
-				if (room.inc_half_walls() && classify_room_wall(room, zval, dim, dir, 0) != ROOM_WALL_EXT) {c.translate_dim(dim, base_shift);}
+				if (room_inc_half_walls(room) && classify_room_wall(room, zval, dim, dir, 0) != ROOM_WALL_EXT) {c.translate_dim(dim, base_shift);}
 				c.expand_in_dim(!dim, 0.5*width);
 				int const ret(check_valid_picture_placement(room, c, width, zval, dim, dir, objs_start));
 				if (ret == 0) continue; // invalid, retry
