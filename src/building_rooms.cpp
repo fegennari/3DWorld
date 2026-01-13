@@ -907,6 +907,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 						objs_start_inc_lights, objs_start, f, is_basement, 0, added_bathroom_objs_mask);
 					added_bathroom |= is_bathroom;
 				}
+				else if (init_rtype_f0 == RTYPE_STORAGE) {
+					added_obj = is_storage = add_storage_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement, has_stairs);
+				}
 			}
 			if (r->get_room_type(f) == RTYPE_CONF) { // already assigned to a conference room
 				if (add_conference_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f)) {added_obj = can_place_onto = 1;}
@@ -2181,7 +2184,6 @@ void building_t::add_wall_and_door_trim() { // and window trim
 			bool const in_basement(w->zc() < ground_floor_z1);
 			if (!in_basement && is_parking())  continue; // skip trim for parking structures
 			if (w->dz() < 0.5*window_vspacing) continue; // short wall segment from tall room extension, no trim
-			if (is_rest && w->z1() > ground_floor_z1 + floor_thickness) continue; // no trim on restaurant upper wall segments
 			bool const in_ext_basement(in_basement && !get_basement().intersects_no_adj(*w));
 			float floor_spacing(window_vspacing), ref_z1(bcube.z1());
 			
@@ -2196,6 +2198,18 @@ void building_t::add_wall_and_door_trim() { // and window trim
 			cube_t trim(*w);
 			trim.expand_in_dim(dim, trim_thickness);
 
+			if (is_rest && w->z1() > ground_floor_z1 + floor_thickness) {
+				// add ceiling trim
+				trim.z2() = w->  z2(); // ceil height
+				trim.z1() = trim.z2() - trim_height;
+
+				for (unsigned dir = 0; dir < 2; ++dir) { // for each side of wall
+					cube_t ceil_trim(trim);
+					ceil_trim.d[dim][!dir] = w->d[dim][dir];
+					objs.emplace_back(ceil_trim, TYPE_WALL_TRIM, 0, dim, dir, flags, 1.0, SHAPE_ANGLED, trim_color); // ceiling trim
+				}
+				continue; // no lower trim on restaurant upper wall segments
+			}
 			// handle outside corners of office building hallway intersections; not needed for basements
 			if (has_outside_corners && !in_basement) {
 				auto const end(interior->walls[!dim].begin()+interior->extb_walls_start[!dim]); // exclude extended basement walls
@@ -2273,6 +2287,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 					objs.emplace_back(end_trim, TYPE_WALL_TRIM, 0, !dim, 0, flags, 1.0, SHAPE_TALL, trim_color); // floor trim
 				} // for dir
 				if (!has_ceil_trim) continue;
+				if (is_rest && w->z1() >= ground_floor_z1 && w->dz() < 1.5*floor_spacing) continue; // no upper trim on lower wall section of restaurant
 				// add ceiling trim
 				trim.z2() = (single_floor ? ((is_rest ? parts[0].z2() : w->z2()) - fc_thick) : (z + floor_to_ceil_height)); // ceil height
 				trim.z1() = trim.z2() - trim_height;

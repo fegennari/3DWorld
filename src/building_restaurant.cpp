@@ -45,21 +45,35 @@ void building_t::create_restaurant_floorplan(unsigned part_id, rand_gen_t &rgen)
 	float const br_split(side_area.d[!dim][br_side] + window_step); // split point between men's and women's bathrooms
 	float const k_br_split(br_split + window_step); // split point between kitchens and bathrooms
 	float const k_s_split(side_area.d[!dim][!br_side] - window_step); // split point between kitchen and storage, or end of kitchen
-	cout << side_area.d[!dim][br_side] << " " << br_split << " " << k_br_split << " " << k_s_split << " " << side_area.d[!dim][!br_side] << endl;
 	cube_t kitchen(side_area), br1(side_area), br2(side_area), storage(side_area);
 	br1.d[!dim][!br_side] = br2    .d[!dim][br_side] = br_split;
 	br2.d[!dim][!br_side] = kitchen.d[!dim][br_side] = k_br_split;
 	if (add_storage) {kitchen.d[!dim][!br_side] = storage.d[!dim][br_side] = k_s_split;}
-	cout << TXT(br1.str()) << TXT(br2.str()) << TXT(kitchen.str()) << TXT(storage.str()) << endl;
 	add_assigned_room(kitchen, part_id, RTYPE_KITCHEN); // num_lights will be calculated later
 	add_assigned_room(br1,     part_id, (mw_side ? RTYPE_MENS : RTYPE_WOMENS));
 	add_assigned_room(br2,     part_id, (mw_side ? RTYPE_WOMENS : RTYPE_MENS));
 	if (add_storage) {add_assigned_room(storage, part_id, RTYPE_STORAGE);}
 	// add doors to wall_lo
-	// TODO
+	float const doorway_width(get_nominal_doorway_width()), doorway_hwidth(0.5*doorway_width), edge_pad(doorway_hwidth + wall_thick);
+	cube_t room_bcs[4] = {br1, br2, kitchen, storage};
+	
+	for (unsigned n = 0; n < (add_storage ? 4 : 3); ++n) {
+		bool const is_br(n < 2);
+		float const v1(room_bcs[n].d[!dim][0] + edge_pad), v2(room_bcs[n].d[!dim][1] - edge_pad);
+		assert(v1 < v2); // assumes window is wider than door
+		float const door_pos(rgen.rand_uniform(v1, v2));
+		insert_door_in_wall_and_add_seg(wall_lo, (door_pos - doorway_hwidth), (door_pos + doorway_hwidth), !dim, dir, !br_side, is_br); // opens into room
+		interior->door_stacks.back().set_mult_floor(); // counts as multi-floor (for drawing top edge)
+		if (is_br) {interior->doors.back().rtype = ((bool(n) ^ mw_side) ? RTYPE_MENS : RTYPE_WOMENS);}
+	}
 	interior->walls[dim].push_back(wall_lo);
+
 	// add walls separating rooms
-	// TODO
+	for (unsigned n = 0; n < (add_storage ? 3 : 2); ++n) {
+		wall = side_area;
+		create_wall(wall, !dim, room_bcs[n].d[!dim][!br_side], fc_thick, wall_half_thick, wall_edge_spacing);
+		interior->walls[!dim].push_back(wall);
+	}
 	// all main part restaurant rooms are a single floor
 	for (room_t &room : rooms) {room.is_single_floor = 1;}
 }
