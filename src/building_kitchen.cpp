@@ -95,7 +95,7 @@ colorRGBA get_toaster_color(rand_gen_t &rgen) {
 	if (cube_map_reflect_active()) return WHITE; // reflective metal
 	return toaster_colors[rgen.rand()%NUM_TOASTER_COLORS]; // matte colored
 }
-bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt,
+bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt,
 	unsigned objs_start, bool allow_adj_ext_door, light_ix_assign_t &light_ix_assign)
 {
 	// Note: table and chairs have already been placed
@@ -108,15 +108,33 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 	cube_t room_bounds(get_walkable_room_bounds(room)), place_area(room_bounds), stove_bc;
 	place_area.expand_by(-0.25*wall_thickness); // common spacing to wall for appliances
 	vect_room_object_t &objs(interior->room_geom->objs);
+	// add flooring to apartment kitchens; there may be no trim if there's a living room split
+	unsigned const orig_objs_sz(objs.size());
+	float const orig_zval(zval);
 	
-	if (residential && min(room.dx(), room.dy()) > 2.0*vspace) { // add a pantry if large, which is of type TYPE_CLOSET
+	if (is_apartment()) {
+		zval = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_LGTILE);
+
+		// add trim at room edge for open walls in the form of a non-reflective metal bar
+		for (unsigned dim = 0; dim < 2; ++dim) {
+			for (unsigned dir = 0; dir < 2; ++dir) {
+				if (!room.has_open_wall(dim, dir)) continue;
+				cube_t bar(room);
+				set_cube_zvals(bar, orig_zval, (zval + get_flooring_thick()));
+				set_wall_width(bar, room.d[dim][dir], get_trim_thickness(), dim);
+				objs.emplace_back(bar, TYPE_METAL_BAR, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_UNTEXTURED),
+					tot_light_amt, SHAPE_CUBE, get_trim_color(), (EF_Z1 | get_skip_mask_for_xy(!dim)));
+			}
+		}
+	}
+	if (residential && min(room.dx(), room.dy()) > 2.0*vspace) { // add a pantry if large, which is of type TYPE_CLOSET; should this be only for houses?
 		float const clearance(get_min_front_clearance_inc_people());
 		unsigned closet_obj_id(0); // unused
 		add_closet_to_room(rgen, room, zval, room_id, objs_start, RTYPE_KITCHEN, 0, clearance, closet_obj_id, light_ix_assign); // bed_obj_ix=0 (not set)
 	}
 	// place a fridge
 	unsigned const fridge_obj_ix(objs.size());
-	bool placed_obj(0);
+	bool placed_obj(0); // must have a fridge or stove to be a kitchen
 
 	if (place_model_along_wall(OBJ_MODEL_FRIDGE, TYPE_FRIDGE, room, 0.75, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.2, 4, 0, WHITE, 1)) { // not at window
 		if (is_house) {add_fridge_sticky_notes(rgen, fridge_obj_ix, zval, room_id, tot_light_amt);}
@@ -162,13 +180,18 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 			}
 			placed_obj = 1;
 		}
-	}	
-	if (residential && placed_obj) { // if we have at least a fridge or stove, try to add countertops
+	}
+	if (!placed_obj) {
+		zval = orig_zval;
+		objs.resize(orig_objs_sz);
+		return 0;
+	}
+	if (residential) { // try to add countertops
 		float const height(0.345*vspace), depth(0.74*height), floor_thickness(get_floor_thickness()), min_clearance(get_min_front_clearance_inc_people());
 		float min_hwidth(0.6*height), front_clearance(max(0.6f*height, min_clearance));
 		cube_t cabinet_area(room_bounds);
 		cabinet_area.expand_by(-0.05*wall_thickness); // smaller gap than place_area; this is needed to prevent z-fighting with exterior walls
-		if (min(cabinet_area.dx(), cabinet_area.dy()) < 4.0*min_hwidth) return placed_obj; // no space for cabinets, room is too small
+		if (min(cabinet_area.dx(), cabinet_area.dy()) < 4.0*min_hwidth) return 1; // no space for cabinets, room is too small, but still a kitchen
 		unsigned const counters_start(objs.size());
 		cube_t c;
 		set_cube_zvals(c, zval, zval+height);
@@ -343,7 +366,7 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 			}
 		}
 	}
-	if (placed_obj && building_obj_model_loader.is_model_valid(OBJ_MODEL_BAN_PEEL) && rgen.rand_bool()) { // maybe place a banana peel on the floor
+	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_BAN_PEEL) && rgen.rand_bool()) { // maybe place a banana peel on the floor
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_BAN_PEEL));
 		float length(0.083*vspace), width(length*sz.y/sz.x), height(length*sz.z/sz.x);
 		cube_t valid_area(place_area);
@@ -363,7 +386,7 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 			} // for n
 		}
 	}
-	return placed_obj;
+	return 1;
 }
 
 void building_t::add_objects_in_sink(rand_gen_t &rgen, cube_t const &sink, bool dim, bool dir, unsigned room_id, float tot_light_amt) {
