@@ -16,10 +16,11 @@ void add_stack_of_plates(cube_t const &place_area, float radius, unsigned room_i
 
 
 void add_door_if_blocker(cube_t const &door, cube_t const &room, bool inc_open, bool dir, bool hinge_side, bool exterior, vect_cube_t &blockers) {
+	if (door.z1() >= room.z2() || door.z2() <= room.z1()) return; // no Z overlap
 	bool const dim(door.dy() < door.dx()), edir(dim ^ dir ^ hinge_side ^ 1);
 	float const width(door.get_sz_dim(!dim));
 	cube_t door_exp(door);
-	door_exp.expand_in_dim(dim, width); // width
+	door_exp.expand_in_dim(dim, width); // expand sides by width
 	if (!door_exp.intersects(room)) return; // check against room before expanding along wall to exclude doors in adjacent rooms
 	if (exterior) {door_exp.expand_in_dim(dim, width);} // add extra clearance in front
 	door_exp.expand_in_dim(!dim, width*0.25); // min expand value
@@ -27,7 +28,7 @@ void add_door_if_blocker(cube_t const &door, cube_t const &room, bool inc_open, 
 	blockers.push_back(door_exp);
 }
 // used for kitchen cabinets
-int building_t::gather_room_placement_blockers(cube_t const &room, unsigned objs_start, vect_cube_t &blockers, bool inc_open_doors, bool ignore_chairs) const {
+int building_t::gather_room_placement_blockers(room_t const &room, cube_t const &room_area, unsigned objs_start, vect_cube_t &blockers, bool inc_open_doors, bool ignore_chairs) const {
 	assert(has_room_geom());
 	vect_room_object_t &objs(interior->room_geom->objs);
 	assert(objs_start <= objs.size());
@@ -37,16 +38,22 @@ int building_t::gather_room_placement_blockers(cube_t const &room, unsigned objs
 	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
 		if (ignore_chairs && i->type == TYPE_CHAIR) continue;
 		
-		if (!i->no_coll() && i->intersects(room)) {
+		if (!i->no_coll() && i->intersects(room_area)) {
 			if (i->type == TYPE_TABLE) {table_blocker_ix = int(blockers.size());} // track which blocker is the table, for use with kitchen counters
 			blockers.push_back(*i);
 		}
 	}
-	for (auto const &door : doors) { // exterior doors
-		add_door_if_blocker(door.get_bcube(), room, 0, 0, 0, 1, blockers);
+	for (auto const &door : doors) {add_door_if_blocker(door.get_bcube(), room_area, 0, 0, 0, 1, blockers);} // exterior doors
+	// rooms with open walls such as apartments must include doorways that may open into this room
+	cube_t int_door_area(room_area);
+
+	for (unsigned dim = 0; dim < 2; ++dim) {
+		for (unsigned dir = 0; dir < 2; ++dir) {
+			if (room.has_open_wall(dim, dir)) {int_door_area.d[dim][dir] += (dir ? 1.0 : -1.0)*get_doorway_width();}
+		}
 	}
 	for (door_stack_t const &ds : interior->door_stacks) { // interior doors
-		add_door_if_blocker(ds, room, door_opens_inward(ds, room), ds.open_dir, ds.hinge_side, 0, blockers);
+		add_door_if_blocker(ds, int_door_area, door_opens_inward(ds, room), ds.open_dir, ds.hinge_side, 0, blockers);
 	}
 	// Note: caller must call is_blocked_by_stairs_or_elevator() to handle stairs and elevators
 	return table_blocker_ix;
@@ -197,7 +204,7 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float &zv
 		set_cube_zvals(c, zval, zval+height);
 		set_cube_zvals(cabinet_area, zval, (zval + vspace - floor_thickness));
 		static vect_cube_t blockers;
-		int const table_blocker_ix(gather_room_placement_blockers(cabinet_area, objs_start, blockers, 1, 1)); // inc_open_doors=1, ignore_chairs=1
+		int const table_blocker_ix(gather_room_placement_blockers(room, cabinet_area, objs_start, blockers, 1, 1)); // inc_open_doors=1, ignore_chairs=1
 		bool const have_toaster(building_obj_model_loader.is_model_valid(OBJ_MODEL_TOASTER));
 		bool const have_milk   (building_obj_model_loader.is_model_valid(OBJ_MODEL_MILK   ));
 		vector3d const toaster_sz(have_toaster ? building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TOASTER) : zero_vector); // L, D, H
