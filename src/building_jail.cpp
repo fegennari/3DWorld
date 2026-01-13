@@ -40,8 +40,7 @@ bool building_t::divide_part_into_jail_cells(cube_t const &part, unsigned part_i
 		}
 		if (skip_side == 2) { // if we didn't decide to skip a side above
 			if (!try_short_dim) {return divide_part_into_jail_cells(part, part_id, gen_index, rgen, 1);} // try the other dim; try_short_dim=1
-			add_room(part, part_id); // add a single room for the entire part
-			rooms.back().assign_all_to(RTYPE_JAIL); // maybe shouldn't be a jail in this case?
+			add_assigned_room(part, part_id, RTYPE_JAIL); // add a single room for the entire part; maybe shouldn't be a jail in this case?
 			return 0;
 		}
 	}
@@ -337,8 +336,7 @@ void building_t::add_prison_cells(vect_cube_with_ix_t const &cells, cube_t const
 		set_wall_width(bars, bars_depth_pos, bars_hthick, dim);
 		add_jail_cell_door(bars, room_id, parent_room_id, !dim, dir, hinge_side);
 	} // for cell
-	add_room(cell_block, part_id); // add a single room for the entire cell block (hallway + cells), last, since cells are sub-rooms
-	rooms.back().assign_all_to(RTYPE_JAIL);
+	add_assigned_room(cell_block, part_id, RTYPE_JAIL); // add a single room for the entire cell block (hallway + cells), last, since cells are sub-rooms
 	rooms.back().set_has_subroom();
 }
 

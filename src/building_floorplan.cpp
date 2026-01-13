@@ -455,20 +455,17 @@ void building_t::gen_interior_int(rand_gen_t &rgen, unsigned gen_index, bool has
 			create_restaurant_floorplan(part_id, rgen);
 		}
 		else if (!is_house && is_basement_part && min(psz.x, psz.y) > 5.0*car_sz.x && max(psz.x, psz.y) > 12.0*car_sz.y) { // make this a parking garage
-			add_room(*p, part_id); // add entire part as a room; num_lights will be calculated later
-			rooms.back().assign_all_to(RTYPE_PARKING); // make it a parking garage
+			add_assigned_room(*p, part_id, RTYPE_PARKING); // add entire part as a room (parking garage); num_lights will be calculated later
 			has_parking_garage = 1;
 		}
 		else if (has_retail() && part_id == 0) {
-			add_room(*p, part_id); // add entire part as a room; num_lights will be calculated later
-			rooms.back().assign_all_to(RTYPE_RETAIL);
+			add_assigned_room(*p, part_id, RTYPE_RETAIL); // add entire part as a room; num_lights will be calculated later
 			rooms.back().is_single_floor = 1;
 		}
 		else if (is_parking() && part_id == 0) { // parking structure
 			cube_t room(*p); // start with full part
 			room.expand_by_xy(-get_park_struct_wall_thick()); // shrink off exterior walls
-			add_room(room, part_id); // add entire part as a room; num_lights will be calculated later
-			rooms.back().assign_all_to(RTYPE_PARKING);
+			add_assigned_room(room, part_id, RTYPE_PARKING); // add entire part as a room; num_lights will be calculated later
 		}
 		else if (use_hallway) {
 			// building with rectangular slice (no adjacent exterior walls at this level), generate rows of offices
@@ -1536,9 +1533,9 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 		calc_room_ext_sides(room); // update since ext_sides may have changed
 		room.assign_all_to(is_hotel() ? RTYPE_COMMON : RTYPE_LIVING); // public first; common room is similar to living room but without the table
 		room.set_is_entryway();
-		unsigned const living_rid(new_rooms_start), bed_rid(add_room(bed, part_id)), bath_rid(add_room(bath, part_id));
-		get_room(bed_rid ).assign_all_to(RTYPE_BED);
-		get_room(bath_rid).assign_all_to(make_small_apt ? RTYPE_KITCHEN : RTYPE_BATH); // small apartment uses a kitchen rather than a bathroom for this room
+		unsigned const living_rid(new_rooms_start);
+		unsigned const bed_rid (add_assigned_room(bed,  part_id, RTYPE_BED));
+		unsigned const bath_rid(add_assigned_room(bath, part_id, (make_small_apt ? RTYPE_KITCHEN : RTYPE_BATH))); // small apartment uses kitchen rather than bathroom
 		// add interior walls and doors; all doors are unlocked
 		bool const no_div_wall_or_door(is_hotel() && rgen.rand_float() < 0.75); // open wall 75% of the time; should this be consistent per building?
 		float const living_center(living.get_center_dim(hall_dim));
@@ -1587,7 +1584,7 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 			bath.d[hall_dim][!lg_door_side] = bed.d[hall_dim][lg_door_side] = bed_bath_split_pos;
 			get_room(bed_rid).copy_from(bed); // update with smaller bedroom
 			calc_room_ext_sides(get_room(bed_rid)); // update since ext_sides may have changed
-			get_room(add_room(bath, part_id)).assign_all_to(RTYPE_BATH);
+			add_assigned_room(bath, part_id, RTYPE_BATH);
 			// add wall and door
 			bath_center = bath.get_center_dim(!hall_dim);
 			for (unsigned d = 0; d < 2; ++d) {bath_wall.d[!hall_dim][d] = bath.d[!hall_dim][d];} // move to new bathroom pos
@@ -1634,11 +1631,10 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 		calc_room_ext_sides(room); // update since ext_sides may have changed
 		room.assign_all_to(RTYPE_ENTRY);
 		room.set_is_entryway();
-		unsigned const bed_rid(add_room(bed, part_id)), bath_rid(add_room(bath, part_id)), kitchen_rid(add_room(kitchen, part_id)), living_rid(add_room(living, part_id));
-		get_room(bed_rid    ).assign_all_to(RTYPE_BED    );
-		get_room(bath_rid   ).assign_all_to(RTYPE_BATH   );
-		get_room(kitchen_rid).assign_all_to(RTYPE_KITCHEN);
-		get_room(living_rid ).assign_all_to(RTYPE_LIVING );
+		add_assigned_room(bed,     part_id, RTYPE_BED);
+		add_assigned_room(bath,    part_id, RTYPE_BATH);
+		add_assigned_room(kitchen, part_id, RTYPE_KITCHEN);
+		add_assigned_room(living,  part_id, RTYPE_LIVING);
 		// add interior walls
 		cube_t fb_wall(room_area), lb_wall(bed), ke_wall(kitchen), be_wall(bath); // front-back, living room-bedroom, kitchen-entryway, bathroom-entryway
 		clip_wall_to_ceil_floor(fb_wall, fc_thick);

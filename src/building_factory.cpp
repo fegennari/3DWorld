@@ -83,8 +83,7 @@ void building_t::create_industrial_floorplan(unsigned part_id, float window_hspa
 		interior->ceilings.push_back(room_ceil );
 		interior->floors  .push_back(room_floor);
 		// add room itself; will overlap main open room
-		add_room(room_inner, part_id, (is_larger ? 2 : 1)); // 2 lights in larger room; not a typical office building office
-		rooms.back().assign_all_to(is_larger ? RTYPE_OFFICE : RTYPE_BATH); // office or bathroom
+		add_assigned_room(room_inner, part_id, (is_larger ? RTYPE_OFFICE : RTYPE_BATH), (is_larger ? 2 : 1)); // 2 lights in larger room; not a typical office building office
 		rooms.back().set_is_nested();
 		interior->ind_info->sub_rooms.push_back(room_inner);
 		// warehouse has the entrance in the office room rather than between the office and bathroom
@@ -92,8 +91,8 @@ void building_t::create_industrial_floorplan(unsigned part_id, float window_hspa
 	} // for d
 	// should there be an entryway room, then the main room doesn't overlap the sub-rooms? but then there will be empty space above them
 	// add entire part as a room (open floor); must be done last so that smaller contained rooms are picked up in early exit queries (model occlusion, light toggle, door conn)
-	add_room(part, part_id); // num_lights will be calculated later
-	rooms.back().assign_all_to(is_warehouse() ? RTYPE_WAREHOUSE : RTYPE_FACTORY); // what about RTYPE_POWERPLANT (which has not yet been added)?
+	// what about RTYPE_POWERPLANT (which has not yet been added)?
+	add_assigned_room(part, part_id, (is_warehouse() ? RTYPE_WAREHOUSE : RTYPE_FACTORY)); // num_lights will be calculated later
 	rooms.back().set_has_subroom();
 	rooms.back().is_single_floor = 1;
 	setup_industrial_wall_occluders();
