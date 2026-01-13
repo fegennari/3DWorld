@@ -703,7 +703,7 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 		cube_t avoid(freezer);
 		avoid.expand_in_dim(freezer.dim, 1.1*get_doorway_width()); // allow space for door to open
 		duct_avoid.push_back(avoid);
-		if (in_mall) {freezer.flags |= RO_FLAG_IN_MALL;}
+		if (in_mall || is_restaurant()) {freezer.flags |= RO_FLAG_IN_MALL;} // draw top of freezer in tall rooms (mall and restaurant)
 		move_lights_to_not_intersect(objs, lights_start, objs_start, avoid); // or freezer?
 	}
 	// place commerial kitchen appliances (grills, deep fryers, ovens, sinks, etc.); only legal if all models have been loaded

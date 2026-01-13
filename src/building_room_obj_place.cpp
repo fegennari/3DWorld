@@ -1352,7 +1352,7 @@ bool building_t::add_closet_to_room(rand_gen_t &rgen, room_t const &room, float 
 			//if ((rgen.rand() % 10) == 0) {flags |= RO_FLAG_OPEN;} // 10% chance of open closet; unclear if this adds any value, but it works
 			closet_obj_id = objs.size();
 			// closet door is always white; sides should match interior walls; store room type in item flags
-			objs.emplace_back(c, TYPE_CLOSET, room_id, dim, !dir, flags, tot_light_amt, SHAPE_CUBE, wall_color, room_type);
+			objs.emplace_back(c, TYPE_CLOSET, room_id, dim, !dir, flags, tot_light_amt, SHAPE_CUBE, (is_freezer ? WHITE : wall_color), room_type);
 			set_obj_id(objs);
 			if (flags & RO_FLAG_OPEN) {interior->room_geom->expand_object(objs.back(), *this);} // expand opened closets immediately
 			// add a light inside the closet
