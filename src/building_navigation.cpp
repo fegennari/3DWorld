@@ -939,7 +939,7 @@ cube_t building_t::get_room_bounds(room_t const &room, bool exc_window_bars, boo
 	cube_t c(room);
 	float const wall_thick(get_wall_thickness()), wall_hthick(0.5*wall_thick);
 
-	if ((room.is_hallway && !room.is_ext_basement()) || room.get_office_floorplan()) { // office building room; only shrink interior walls
+	if ((room.is_hallway && !room.is_ext_basement()) || room.get_office_floorplan() || is_restaurant()) { // office building room or restaurant; only shrink interior walls
 		cube_t const &part(get_part_for_room(room));
 		float min_shrink(0.0);
 
