@@ -1199,13 +1199,15 @@ float extend_fence_to_house(cube_t &fence, cube_t const &house, float fence_hwid
 	fence_end = house.d[!dim][side]; // adjacent to the house
 	set_wall_width(fence, house.d[dim][dir], fence_hwidth, dim);
 	// try to expand to the wall edge of two part houses by doing a line intersection query
+	float const wall_edge_gap((side ? -1.0 : 1.0)*fence_hwidth);
 	point p1, p2;
 	p1.z     = p2.z    = fence.z1() + 0.25*fence_height; // slightly up from the bottom edge of the fence
 	p1[ dim] = p2[dim] = fence.d[dim][!dir]; // use the side that overlaps the house bcube
-	p1[!dim] = fence_end - (side ? -1.0 : 1.0)*fence_hwidth; // pull back slightly so that the start point isn't exactly at the house edge
+	p1[!dim] = fence_end - wall_edge_gap; // pull back slightly so that the start point isn't exactly at the house edge
 	p2[!dim] = house.d[!dim][!side]; // end point is the opposite side of the house
 	point p_int;
 	if (!check_city_building_line_coll_bs(p1, p2, p_int)) return 0.0; // if this fails, house bcube must be wrong; should this be asserted?
+	p_int[!dim] -= wall_edge_gap; // add a small gap to prevent Z-fighting
 	float const dist(fabs(fence_end - p_int[!dim]));
 	fence_end = p_int[!dim];
 	assert(fence.is_strictly_normalized());
