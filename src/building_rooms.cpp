@@ -2057,7 +2057,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	assert(has_room_geom());
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness), wall_thickness(get_wall_thickness());
 	float const trim_height(get_trim_height()), trim_thickness(get_trim_thickness()), expand_val(2.0*trim_thickness), door_trim_offset(0.025*window_vspacing);
-	float const door_trim_width(0.5*wall_thickness), door_trim_exp(2.0*trim_thickness + door_trim_width);
+	float const door_trim_width(0.5*wall_thickness), door_trim_exp(2.0*trim_thickness + door_trim_width), door_clip_expand(expand_val + wall_thickness);
 	float const ext_door_trim_exp(2.0*trim_thickness + (is_parking() ? 1.5*wall_thickness : door_trim_width)); // parking garages have thick exterior walls
 	float const fc_gap(get_floor_ceil_gap()), floor_to_ceil_height(window_vspacing - floor_thickness);
 	float const trim_toler(0.1*trim_thickness); // required to handle wall intersections that were calculated with FP math and may misalign due to FP rounding error
@@ -2343,7 +2343,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 						trim.d[d][!dir] = side_pos + (dir ? -1.0 : 1.0)*trim_thickness;
 						trim_cubes.clear();
 						trim_cubes.push_back(trim); // start with entire length
-						if (maybe_has_ext_door_this_floor(i->z1(), f)) {cut_trim_around_doors(doors, trim_cubes, (expand_val + wall_thickness), d);} // cut out areas for ext doors
+						if (maybe_has_ext_door_this_floor(i->z1(), f)) {cut_trim_around_doors(doors, trim_cubes, door_clip_expand, d);} // cut out areas for ext doors
 						for (cube_t const &c : trim_cubes) {objs.emplace_back(c, TYPE_WALL_TRIM, 0, d, dir, flags, 1.0, SHAPE_CUBE, trim_color);}
 						added = 1;
 						break;
@@ -2388,11 +2388,12 @@ void building_t::add_wall_and_door_trim() { // and window trim
 							for (cube_t const &t : trim_parts) {objs.emplace_back(t, TYPE_WALL_TRIM, 0, dim, !dir, flags, 1.0, SHAPE_ANGLED, trim_color);} // ceiling trim
 						}
 					}
-					if (room_height < window_vspacing && maybe_has_ext_door_this_floor(i->z1(), f)) { // cut out areas for ext doors if not a tall room
-						cut_trim_around_doors(doors, trim_cubes, (expand_val + wall_thickness), dim);
-					}
+					bool const check_doors(maybe_has_ext_door_this_floor(i->z1(), f)), clip_top_trim(room_height < window_vspacing);
+					if (check_doors && clip_top_trim) {cut_trim_around_doors(doors, trim_cubes, door_clip_expand, dim);} // cut out areas for ext doors
+
 					for (cube_t &c : trim_cubes) {
 						clip_trim_cube(c, trim_exclude, trim_parts);
+						if (check_doors && !clip_top_trim) {cut_trim_around_doors(doors, trim_parts, door_clip_expand, dim);} // cut out bottom trim only
 						for (cube_t const &t : trim_parts) {objs.emplace_back(t, TYPE_WALL_TRIM, 0, dim, 0, ext_flags, 1.0, SHAPE_CUBE, trim_color);} // floor trim
 						if (!has_ceil_trim || is_house) continue;
 						set_cube_zvals(c, ceil_trim_z1, ceil_trim_z2); // okay to edit in-place here
