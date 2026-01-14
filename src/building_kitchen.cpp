@@ -115,11 +115,11 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float &zv
 	cube_t room_bounds(get_walkable_room_bounds(room)), place_area(room_bounds), stove_bc;
 	place_area.expand_by(-0.25*wall_thickness); // common spacing to wall for appliances
 	vect_room_object_t &objs(interior->room_geom->objs);
-	// add flooring to apartment kitchens; there may be no trim if there's a living room split
+	// add flooring to apartment and office building kitchens; there may be no trim if there's a living room split
 	unsigned const orig_objs_sz(objs.size());
 	float const orig_zval(zval);
 	
-	if (is_apartment()) {
+	if (is_apartment() || is_office_bldg()) {
 		zval = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_LGTILE);
 
 		// add trim at room edge for open walls in the form of a non-reflective metal bar
