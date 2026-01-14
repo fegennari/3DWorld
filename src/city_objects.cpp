@@ -2671,6 +2671,32 @@ void gas_station_t::leave_output_lane() const {
 	out_reserved = 0;
 }
 
+// car wash
+
+car_wash_t::car_wash_t(cube_t const &c, bool dim_, bool dir_) : oriented_city_obj_t(c, dim_, dir_) {
+	// TODO: set walls
+	walls.push_back(bcube);
+}
+/*static*/ void car_wash_t::pre_draw (draw_state_t &dstate, bool shadow_only) {
+	if (!shadow_only) {
+		select_texture(get_texture_by_name("bricks_tan.png"));
+		select_texture(get_texture_by_name("normal_maps/bricks_tan_norm.png", 1), 5);
+	}
+}
+/*static*/ void car_wash_t::post_draw(draw_state_t &dstate, bool shadow_only) {
+	if (!shadow_only) {bind_default_flat_normal_map();}
+}
+void car_wash_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
+	float const tscale(1.0/bcube.dz());
+	for (cube_t const &w : walls) {dstate.draw_cube(qbds.qbd, w, WHITE, 1, tscale);}
+	// TODO: roof
+}
+bool car_wash_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
+	bool ret(0);
+	for (cube_t const &w : walls) {ret |= sphere_cube_int_update_pos(pos_, radius_, (w + xlate), p_last, 0, cnorm);}
+	return ret;
+}
+
 // birds/pigeons
 
 // pos is at the feet; ignore dir.z

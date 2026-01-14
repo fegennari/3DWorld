@@ -487,6 +487,16 @@ struct gs_reservation_t {
 	gs_reservation_t(unsigned gix, unsigned lix, point const &epos) : valid(1), gs_ix(gix), lane_ix(lix), entrance_pos(epos) {}
 };
 
+struct car_wash_t : public oriented_city_obj_t {
+	vect_cube_t walls;
+
+	car_wash_t(cube_t const &c, bool dim_, bool dir_);
+	static void pre_draw (draw_state_t &dstate, bool shadow_only);
+	static void post_draw(draw_state_t &dstate, bool shadow_only);
+	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
+	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
+};
+
 struct wind_turbine_t : public model_city_obj_t {
 	float rot_rate=0.0, rot_angle=0.0, base_radius=0.0;
 
@@ -776,14 +786,15 @@ private:
 	vector<ug_elevator_t> ug_elevs;
 	vector<parking_solar_t> p_solars;
 	vector<gas_station_t> gstations;
+	vector<car_wash_t> cwashes;
 	vector<beach_ball_t> bballs;
 	vector<pool_float_t> pfloats;
 	// index is last obj in group
 	city_obj_groups_t bench_groups, planter_groups, trashcan_groups, fhydrant_groups, sstation_groups, fountain_groups, statue_groups, divider_groups, pool_groups,
 		plad_groups, chair_groups, pdeck_groups, ppole_groups, hcap_groups, manhole_groups, mbox_groups, tcone_groups, pigeon_groups, bird_groups, sign_groups,
 		stopsign_groups, flag_groups, nrack_groups, cline_groups, ppath_groups, swing_groups, tramp_groups, umbrella_groups, bike_groups, dumpster_groups, plant_groups,
-		flower_groups, picnic_groups, bb_hoop_groups, pond_groups, walkway_groups, pillar_groups, wwe_groups, uge_groups, p_solar_groups, gass_groups, bball_groups,
-		pfloat_groups, sewer_groups, sculpt_groups;
+		flower_groups, picnic_groups, bb_hoop_groups, pond_groups, walkway_groups, pillar_groups, wwe_groups, uge_groups, p_solar_groups, gass_groups, cwash_groups,
+		bball_groups, pfloat_groups, sewer_groups, sculpt_groups;
 	skyway_t skyway; // optional
 	vect_parking_space_t pspaces;
 	bird_poop_manager_t bird_poop_manager;
