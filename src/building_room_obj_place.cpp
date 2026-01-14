@@ -2060,7 +2060,12 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 				if (!is_garage_or_shed && interior->is_blocked_by_stairs_or_elevator(cand)) continue;
 				if (overlaps_other_room_obj(cand, objs_start)) continue; // can be blocked by bookcase, etc.
 				bool const is_empty(rgen.rand_float() < 0.05); // 5% empty
-				unsigned const shelf_flags((is_house ? RO_FLAG_IS_HOUSE : 0) | (is_garage_or_shed ? 0 : RO_FLAG_INTERIOR) | (is_empty ? 0 : RO_FLAG_NONEMPTY));
+				unsigned shelf_flags(0);
+				bool at_window(is_garage_or_shed);
+				if (is_restaurant() && !is_basement) {at_window |= (room.d[dim][dir] == parts[room.part_id].d[dim][dir]);}
+				if (is_house  ) {shelf_flags |= RO_FLAG_IS_HOUSE;}
+				if (!is_empty ) {shelf_flags |= RO_FLAG_NONEMPTY;}
+				if (!at_window) {shelf_flags |= RO_FLAG_INTERIOR;} // will draw support brackets
 				add_shelves(cand, dim, dir, room_id, tot_light_amt, shelf_flags, 0, rgen); // item_flags=0
 				break; // done
 			} // for n
