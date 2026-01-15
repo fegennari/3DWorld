@@ -10,6 +10,7 @@ extern object_model_loader_t building_obj_model_loader;
 void get_stove_burner_locs(room_object_t const &stove, point locs[4]);
 float get_cockroach_height_from_radius(float radius);
 float get_plate_radius(rand_gen_t &rgen, cube_t const &place_on, float window_vspacing);
+float get_radius_for_square_model(unsigned model_id);
 bool cube_map_reflect_active();
 void add_stack_of_plates(cube_t const &place_area, float radius, unsigned room_id, float light_amt, unsigned flags,
 	rand_gen_t &rgen, vect_cube_t &blockers, vect_room_object_t &objects);
@@ -921,6 +922,7 @@ bool building_t::place_eating_items_on_table(rand_gen_t &rgen, unsigned table_ob
 	assert(table_obj_id < objs.size());
 	room_object_t const table(objs[table_obj_id]); // deep copy to avoid invalidating the reference
 	float const floor_spacing(get_window_vspace()), plate_radius(get_plate_radius(rgen, table, floor_spacing)), plate_height(0.1*plate_radius), spacing(1.33*plate_radius);
+	bool const has_silverware(building_obj_model_loader.is_model_valid(OBJ_MODEL_SILVER)), has_cup(building_obj_model_loader.is_model_valid(OBJ_MODEL_CUP));
 	unsigned const objs_size(objs.size());
 	bool added_obj(0);
 
@@ -945,17 +947,28 @@ bool building_t::place_eating_items_on_table(rand_gen_t &rgen, unsigned table_ob
 		objs.emplace_back(plate, TYPE_PLATE, table.room_id, 0, 0, plate_flags, table.light_amt, SHAPE_CYLIN); // or bowl?
 		set_obj_id(objs);
 		place_food_on_plate(rgen, plate, table.room_id, table.light_amt);
+		bool const dim(objs[i].dim), dir(!objs[i].dir); // use chair dim/dir
 
-		if (building_obj_model_loader.is_model_valid(OBJ_MODEL_SILVER)) {
+		if (has_silverware) { // add silverware
 			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SILVER)); // D, W, H
 			float const sw_height(0.0075*floor_spacing), sw_hwidth(0.5*sw_height*sz.x/sz.z), sw_hlen(0.5*sw_height*sz.y/sz.z); // Note: x/y swapped
-			vector3d const offset(pos - table_center);
-			bool const dim(objs[i].dim), dir(!objs[i].dir); // use chair dim/dir
 			cube_t sw_bc;
 			set_cube_zvals(sw_bc, table.z2()+0.1*sw_height, table.z2()+sw_height);
 			set_wall_width(sw_bc, pos[!dim] + ((dim ^ dir) ? 1.0 : -1.0)*1.2*(plate_radius + sw_hlen), sw_hlen, !dim);
 			set_wall_width(sw_bc, pos[ dim], sw_hwidth, dim);
 			objs.emplace_back(sw_bc, TYPE_SILVER, table.room_id, dim, dir, RO_FLAG_NOCOLL, table.light_amt, SHAPE_CUBE, GRAY);
+		}
+		if (has_cup) { // add cup (or glass?)
+			float const height(0.06*get_window_vspace()), radius(height*get_radius_for_square_model(OBJ_MODEL_CUP)); // almost square
+			point cup_center(pos);
+			cup_center[!dim] -= ((dim ^ dir) ? 1.0 : -1.0)*1.1*(plate_radius + radius); // opposite the silverware
+			cup_center[ dim] -= (dir ? 1.0 : -1.0)*2*radius; // move toward the center of the table
+			cube_t cup;
+			cup.set_from_sphere(cup_center, radius);
+			set_cube_zvals(cup, table.z2(), table.z2()+height);
+			unsigned flags(RO_FLAG_NOCOLL | RO_FLAG_RAND_ROT);
+			if (rgen.rand_float() < 0.3) {flags |= RO_FLAG_NONEMPTY;} // add coffee to the cup
+			interior->room_geom->objs.emplace_back(cup, TYPE_CUP, table.room_id, rgen.rand_bool(), rgen.rand_bool(), flags, table.light_amt, SHAPE_CYLIN);
 		}
 		added_obj = 1;
 	} // for i
@@ -968,7 +981,7 @@ bool building_t::place_eating_items_on_table(rand_gen_t &rgen, unsigned table_ob
 			objs.emplace_back(candle, TYPE_CANDLE, table.room_id, 0, 0, RO_FLAG_NOCOLL, table.light_amt, SHAPE_CYLIN, candle_color);
 		}
 		else { // vase (more expensive)
-			float const vase_radius(rgen.rand_uniform(0.35, 0.6)*plate_radius), vase_height(rgen.rand_uniform(2.0, 6.0)*vase_radius);
+			float const vase_radius(rgen.rand_uniform(0.35, 0.6)*plate_radius), vase_height(rgen.rand_uniform(3.0, 6.0)*vase_radius);
 			cube_t vase;
 			vase.set_from_sphere(table.get_cube_center(), vase_radius);
 			set_cube_zvals(vase, table.z2(), table.z2()+vase_height); // place on the table
