@@ -89,7 +89,22 @@ void building_t::add_restaurant_objs(rand_gen_t rgen, room_t const &room, float 
 	if (rgen.rand_bool()) {add_fishtank_to_room(rgen, room, zval, room_id, light_amt, objs_start, place_area);}
 	unsigned const num_plants(4 + (rgen.rand() & 5)); // 4-8
 	add_plants_to_room(rgen, room, zval, room_id, light_amt, objs_start, num_plants);
-	// TODO: rug by the door
+	// add rugs (door mats?) by the door(s)
+	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
+
+	for (tquad_with_ix_t const &door : doors) {
+		cube_t bc(door.get_bcube());
+		bc.expand_by_xy(wall_thickness); // make nonzero area
+		if (!bc.intersects_no_adj(room)) continue; // not for this room
+		bool const ddim(bc.dy() < bc.dx()), ddir(bc.get_center_dim(ddim) < room.get_center_dim(ddim)); // dir into room
+		float const rug_hwidth(rgen.rand_uniform(0.18, 0.22)*floor_spacing), rug_hlen(rgen.rand_uniform(1.5, 1.7)*rug_hwidth);
+		cube_t rug;
+		set_cube_zvals(rug, zval, (zval + get_rug_thickness()));
+		set_wall_width(rug, bc.get_center_dim(!ddim), rug_hlen, !ddim);
+		set_wall_width(rug, (bc.d[ddim][ddir] + (ddir ? 1.0 : -1.0)*rgen.rand_uniform(1.1, 1.3)*rug_hwidth), rug_hwidth, ddim); // move away from the door
+		objs.emplace_back(rug, TYPE_RUG, room_id, 0, 0, RO_FLAG_NOCOLL, light_amt);
+		objs.back().obj_id = uint16_t(11*objs.size() + 17*mat_ix); // determines rug texture
+	} // for door
 	// TODO: ceiling fans?
 	// TVs for sports bar?
 	// add additional pictures, likely only on the wall separating dining from kitchen and bathrooms

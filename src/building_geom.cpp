@@ -1100,7 +1100,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		multi_family = (num_floors > 2 && parts[0].dx()*parts[0].dy() > 50.0*floor_spacing*floor_spacing);
 
 		if (multi_family) {btype = BTYPE_MULT_FAM;}
-		else if (0 && num_floors == 2 && bcube.get_size_xy().get_min_val() > 8.0*floor_spacing) { // large 2 floor rectangular house can be a restaurant
+		else if (num_floors == 2 && bcube.get_size_xy().get_min_val() > 8.0*floor_spacing) { // large 2 floor rectangular house can be a restaurant
 			btype    = BTYPE_RESTAURANT;
 			is_house = 0;
 			assign_name(rgen);
