@@ -266,6 +266,13 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 		added_bathroom_objs_mask |= bathroom_objs_mask;
 		break;
 	} // for n
+	if (!is_house && floor <= NUM_RTYPE_SLOTS && room.get_room_type(floor) == RTYPE_MENS && building_obj_model_loader.is_model_valid(OBJ_MODEL_URINAL)) {
+		// assigned to men's room; add a urinal at the wall, not against an exterior wall
+		float const urinal_zval(zval + 0.1*floor_spacing); // shift it up
+		cube_t bounds(room_bounds);
+		bounds.expand_by(-0.01*wall_thickness); // shrink slightly to prevent Z-figthing
+		place_model_along_wall(OBJ_MODEL_URINAL, TYPE_URINAL, room, 0.4, rgen, urinal_zval, room_id, tot_light_amt, bounds, objs_start, 2.0, 4, 0, WHITE, 0, 0, 0, 0, 0.0, 1);
+	}
 	if (room.is_office && !room.is_nested()) {add_door_sign("Restroom", room, zval, room_id);} // add office bathroom sign; not for hospital rooms
 	return placed_obj;
 }

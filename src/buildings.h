@@ -2704,7 +2704,7 @@ public:
 		colorRGBA const &color=WHITE, bool not_at_window=0, room_obj_shape shape=SHAPE_CUBE, float side_clearance=0.0, unsigned extra_flags=0, bool not_ext_wall=0, bool force_pref=0);
 	bool place_model_along_wall(unsigned model_id, room_object type, room_t const &room, float height, rand_gen_t &rgen, float zval, unsigned room_id,
 		float tot_light_amt, cube_t const &place_area, unsigned objs_start, float front_clearance=0.0, unsigned pref_orient=4, bool pref_centered=0,
-		colorRGBA const &color=WHITE, bool not_at_window=0, unsigned extra_flags=0, bool force_pref=0, bool sideways=0, float side_clearance=0.0);
+		colorRGBA const &color=WHITE, bool not_at_window=0, unsigned extra_flags=0, bool force_pref=0, bool sideways=0, float side_clearance=0.0, bool not_ext_wall=0);
 	int check_valid_picture_placement(room_t const &room, cube_t const &c, float width, float zval, bool dim, bool dir, unsigned objs_start) const;
 	void update_player_interact_objects(point const &player_pos);
 	void update_creepy_sounds(point const &player_pos) const;

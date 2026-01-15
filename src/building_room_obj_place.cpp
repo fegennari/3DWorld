@@ -1769,7 +1769,7 @@ bool building_t::place_obj_along_wall(room_object type, room_t const &room, floa
 }
 bool building_t::place_model_along_wall(unsigned model_id, room_object type, room_t const &room, float height, rand_gen_t &rgen, float zval, unsigned room_id,
 	float tot_light_amt, cube_t const &place_area, unsigned objs_start, float front_clearance, unsigned pref_orient, bool pref_centered, colorRGBA const &color,
-	bool not_at_window, unsigned extra_flags, bool force_pref, bool sideways, float side_clearance)
+	bool not_at_window, unsigned extra_flags, bool force_pref, bool sideways, float side_clearance, bool not_ext_wall)
 {
 	if (place_area.is_all_zeros()) return 0;
 	if (!building_obj_model_loader.is_model_valid(model_id)) return 0; // don't have a model of this type
@@ -1778,7 +1778,7 @@ bool building_t::place_model_along_wall(unsigned model_id, room_object type, roo
 	if (sideways) {swap(sz[0], sz[1]);}
 	unsigned const obj_id(objs.size());
 	if (!place_obj_along_wall(type, room, height*get_window_vspace(), sz, rgen, zval, room_id, tot_light_amt, place_area, objs_start,
-		front_clearance, 0, pref_orient, pref_centered, color, not_at_window, SHAPE_CUBE, side_clearance, extra_flags, 0, force_pref)) return 0;
+		front_clearance, 0, pref_orient, pref_centered, color, not_at_window, SHAPE_CUBE, side_clearance, extra_flags, not_ext_wall, force_pref)) return 0;
 	if (sideways) {objs[obj_id].dim ^= 1;}
 	objs[obj_id].item_flags = get_sub_model_id(model_id);
 	return 1;
