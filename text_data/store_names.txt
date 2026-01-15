@@ -1,10 +1,13 @@
-# sources
+# Sources
 # https://www.rontar.com/blog/store-name-ideas/
 # https://www.shopify.com/ca/blog/4660242-what-should-i-name-my-online-store
 # https://litextension.com/blog/good-store-names/
 # https://www.shopify.com/tools/business-name-generator?mode=search
+# https://www.fantasynamegenerators.com/restaurant-names.php
+# https://www.wix.com/blog/restaurant-names
+# Many of these are AI Generated
 
-# shelfrack categories
+# Shelfrack Categories
 
 boxed items:
 Boxies
@@ -387,7 +390,7 @@ Footwear Fusion
 The Shoe Shop
 
 
-# general
+# General
 
 general:
 Red Skies
@@ -415,3 +418,67 @@ Malltopia
 Mallgaze
 Shopland
 
+# Restaurants
+
+restaurant:
+Crimson Garden
+Fiery Fusion
+Kingsize
+The Salty Fiddler
+The Urban Diner
+The Aroma Mission
+The First Market
+The Sugar Fence
+FlavorFusion Bistro
+Urban Eats
+Culinary Canvas
+ZestZenith Bistro
+Grub & Giggles
+Pita Pan
+Fry Me to the Moon
+Lord of the Wings
+The Codfather
+Wok This Way
+Uptown Olive
+Italy Cantina
+Reel & Real
+Hook & Bite
+Shipwrecked Seafood
+The Fish Dish
+The Dinner Table
+The Crispy Biscuit
+Good Eats Diner
+Grits & Gravy
+The Burger Barn
+The Sizzling Skillet
+Aroma Thai
+Salt & Thyme Bistro
+Ember Elegance Grill
+Velvet Vineyard Dining
+Big Bites
+Fast & Friendly
+Taste of Heaven
+Ember & Ivory
+The Gilded Fork
+The Velvet Table
+Celeste Fine Cuisine
+Royale Blossom
+Opulent Harvest
+Golden Elm
+Aurelian Bistro
+Elysian Plate
+The Carriage Room
+Baroque Banquet
+Obsidian & Pearl
+The Ivory Candle
+Esquire's Table
+Azure Tides
+The Scarlet Truffle
+Monarch’s Feast
+Serenade Supperhouse
+Vista Royale
+Velvet Fig
+Opus Culinary
+FlavorFusion Bistro
+Bolt Burger Bar
+Pizza Rocket

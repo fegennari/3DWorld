@@ -57,7 +57,7 @@ void building_t::create_restaurant_floorplan(unsigned part_id, rand_gen_t &rgen)
 	float const doorway_width(get_nominal_doorway_width()), doorway_hwidth(0.5*doorway_width), edge_pad(doorway_hwidth + wall_thick);
 	cube_t room_bcs[4] = {br1, br2, kitchen, storage};
 	
-	for (unsigned n = 0; n < (add_storage ? 4 : 3); ++n) {
+	for (unsigned n = 0; n < (add_storage ? 4U : 3U); ++n) {
 		bool const is_br(n < 2);
 		float const v1(room_bcs[n].d[!dim][0] + edge_pad), v2(room_bcs[n].d[!dim][1] - edge_pad);
 		assert(v1 < v2); // assumes window is wider than door
@@ -69,7 +69,7 @@ void building_t::create_restaurant_floorplan(unsigned part_id, rand_gen_t &rgen)
 	interior->walls[dim].push_back(wall_lo);
 
 	// add walls separating rooms
-	for (unsigned n = 0; n < (add_storage ? 3 : 2); ++n) {
+	for (unsigned n = 0; n < (add_storage ? 3U : 2U); ++n) {
 		wall = side_area;
 		create_wall(wall, !dim, room_bcs[n].d[!dim][!br_side], fc_thick, wall_half_thick, wall_edge_spacing);
 		interior->walls[!dim].push_back(wall);

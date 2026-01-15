@@ -38,35 +38,6 @@ namespace pixel_city {
 	}
 }
 
-string choose_business_name(rand_gen_t rgen, building_type_t btype) {
-	assert(btype < NUM_BUILDING_TYPES);
-	if (btype == BTYPE_PARKING   ) {return "Parking";} // for now, parking structures only have "Parking" signs
-	if (btype == BTYPE_RESTAURANT) {return choose_store_name(STORE_FOOD, 0, rgen);} // probably should do something better/custom here
-	if (btype >= BTYPE_APARTMENT ) {return gen_random_name(rgen, 4) + " " + btype_names[btype];} // specialized building type
-	if (rgen.rand_bool())          {return pixel_city::gen_company_name(rgen);}
-	int const v(rgen.rand()%10);
-
-	if (v == 0) { // 3 letter acronym
-		string name;
-		for (unsigned n = 0; n < 3; ++n) {name.push_back('A' + rand()%26);}
-		return name;
-	}
-	string const base(gen_random_name(rgen, 4));
-	switch (v) { // select a random suffix format
-	case 1: return base;
-	case 2: return base + (rgen.rand_bool() ? " Co" : " Company");
-	case 3: return base + " Inc";
-	case 4: return base + (rgen.rand_bool() ? " Ltd" : " Corp");
-	case 5: return base + " & " + gen_random_name(rgen);
-	case 6: return base + ", " + gen_random_name(rgen) + ", & " + gen_random_name(rgen);
-	case 7: return (rgen.rand_bool() ? (rgen.rand_bool() ? "National " : "Global ") : (rgen.rand_bool() ? "United " : "American ")) + base;
-	case 8: return base + (rgen.rand_bool() ? (rgen.rand_bool() ? " Bank" : " Trust") : (rgen.rand_bool() ? " Holdings" : " Industries")); // tower, if tall?
-	case 9: return base + " " + gen_random_name(rgen);
-	default: assert(0);
-	}
-	return ""; // never gets here
-}
-
 // similar to book_title_gen_t in draw_text.cpp
 class store_name_gen_t {
 	map<string, vector<string>> cat_map; // category => list of names
@@ -94,9 +65,12 @@ class store_name_gen_t {
 		assert(!i->second.empty());
 		return i->second[rgen.rand() % i->second.size()];
 	}
+	void ensure_loaded() {
+		if (!loaded) {load_from_file("text_data/store_names.txt");} // should this come from a config file?
+	}
 public:
 	string gen_name(unsigned store_type, unsigned item_category, rand_gen_t &rgen) {
-		if (!loaded) {load_from_file("text_data/store_names.txt");} // should this come from a config file?
+		ensure_loaded();
 		if (rgen.rand_float() < 0.1) {return gen_random_name(rgen, 5);} // 10% purely random generated name
 
 		if (store_type == STORE_RETAIL && rgen.rand_float() < 0.5) { // query shelfrack type
@@ -113,11 +87,46 @@ public:
 		if (!name.empty()) return name;
 		return gen_random_name(rgen, 5); // fallback case
 	}
+	string gen_restaurant_name(rand_gen_t &rgen) {
+		ensure_loaded();
+		string const name(choose_category("restaurant", rgen));
+		if (!name.empty()) return name;
+		return gen_name(STORE_FOOD, RETAIL_FOOD, rgen); // fall back to food store if there are no restaurants
+	}
 };
 store_name_gen_t store_name_gen;
 
 string choose_store_name(unsigned store_type, unsigned item_category, rand_gen_t &rgen) { // for malls and possibly restaurants
 	return store_name_gen.gen_name(store_type, item_category, rgen);
+}
+
+string choose_business_name(rand_gen_t rgen, building_type_t btype) {
+	assert(btype < NUM_BUILDING_TYPES);
+	if (btype == BTYPE_PARKING   ) {return "Parking";} // for now, parking structures only have "Parking" signs
+	if (btype == BTYPE_RESTAURANT) {return store_name_gen.gen_restaurant_name(rgen);}
+	if (btype >= BTYPE_APARTMENT ) {return gen_random_name(rgen, 4) + " " + btype_names[btype];} // specialized building type
+	if (rgen.rand_bool())          {return pixel_city::gen_company_name(rgen);}
+	int const v(rgen.rand()%10);
+
+	if (v == 0) { // 3 letter acronym
+		string name;
+		for (unsigned n = 0; n < 3; ++n) {name.push_back('A' + rand()%26);}
+		return name;
+	}
+	string const base(gen_random_name(rgen, 4));
+	switch (v) { // select a random suffix format
+	case 1: return base;
+	case 2: return base + (rgen.rand_bool() ? " Co" : " Company");
+	case 3: return base + " Inc";
+	case 4: return base + (rgen.rand_bool() ? " Ltd" : " Corp");
+	case 5: return base + " & " + gen_random_name(rgen);
+	case 6: return base + ", " + gen_random_name(rgen) + ", & " + gen_random_name(rgen);
+	case 7: return (rgen.rand_bool() ? (rgen.rand_bool() ? "National " : "Global ") : (rgen.rand_bool() ? "United " : "American ")) + base;
+	case 8: return base + (rgen.rand_bool() ? (rgen.rand_bool() ? " Bank" : " Trust") : (rgen.rand_bool() ? " Holdings" : " Industries")); // tower, if tall?
+	case 9: return base + " " + gen_random_name(rgen);
+	default: assert(0);
+	}
+	return ""; // never gets here
 }
 
 string store_info_t::get_full_name() const {
@@ -605,8 +614,8 @@ bool building_t::add_sign_by_door(tquad_with_ix_t const &door, bool outside, std
 		c.z2() = c.z1() + get_floor_ceil_gap(); // right against the ceiling; applies to ground floor and walkway doors
 	}
 	c.z1() = c.z2() - 0.05*height;
-	if (outside && is_lg && parts.front().dz() > 1.5*get_window_vspace()) {c.z2() += 0.16*height;} // make it taller if large and has space
-	float const sign_width(0.8*text.size()*c.dz()), shrink(0.5f*(width - sign_width));
+	if (outside && is_lg && parts.front().dz() > 1.5*get_window_vspace()) {c.z2() += 0.15*height;} // make it taller if large and has space
+	float const sign_width(0.6*(text.size() + 2)*c.dz()), shrink(0.5f*(width - sign_width));
 	c.expand_in_dim(!dim, -shrink);
 	if (!outside) {dir ^= 1; c.translate_dim(dim, (dir ? 1.0 : -1.0)*0.1*height);} // move inside the building
 	else {c.translate_dim(dim, (dir ? -1.0 : 1.0)*0.45*get_wall_thickness());} // translate from front of door nearly to building wall
