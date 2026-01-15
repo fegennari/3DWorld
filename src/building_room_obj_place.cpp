@@ -1024,7 +1024,7 @@ bool building_t::add_vending_machine_type(rand_gen_t &rgen, room_t const &room, 
 	unsigned const obj_id(interior->room_geom->objs.size());
 	vending_info_t const &vtype(get_vending_type(vtype_id));
 	float const floor_spacing(get_window_vspace()), height(0.75*floor_spacing*(vtype.size.z/72)); // normalized to 72"
-	if (!place_obj_along_wall(TYPE_VENDING, room, height, vtype.size, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 0, 4, 0, vtype.color)) return 0;
+	if (!place_obj_along_wall(TYPE_VENDING, room, height, vtype.size, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 0, 4, 0, vtype.color, 1)) return 0;
 	room_object_t &vm(interior->room_geom->objs[obj_id]);
 	vm.item_flags = vtype_id;
 

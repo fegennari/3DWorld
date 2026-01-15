@@ -372,6 +372,10 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float &zv
 				}
 			}
 		}
+	} // end residential counter tops
+	else { // commercial building
+		add_mwave_on_table (rgen, room, zval, room_id, tot_light_amt, objs_start, place_area);
+		add_vending_machine(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area);
 	}
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_BAN_PEEL) && rgen.rand_bool()) { // maybe place a banana peel on the floor
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_BAN_PEEL));
