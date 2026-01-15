@@ -955,13 +955,22 @@ bool building_t::place_eating_items_on_table(rand_gen_t &rgen, unsigned table_ob
 		}
 		added_obj = 1;
 	} // for i
-	if (added_obj && !is_school()) { // place a vase in the center of the table, but not for schools
-		float const vase_radius(rgen.rand_uniform(0.35, 0.6)*plate_radius), vase_height(rgen.rand_uniform(2.0, 6.0)*vase_radius);
-		cube_t vase;
-		vase.set_from_sphere(table.get_cube_center(), vase_radius);
-		set_cube_zvals(vase, table.z2(), table.z2()+vase_height); // place on the table
-		objs.emplace_back(vase, TYPE_VASE, table.room_id, 0, 0, RO_FLAG_NOCOLL, table.light_amt, SHAPE_CYLIN, gen_vase_color(rgen));
-		set_obj_id(objs);
+	if (added_obj && !is_school()) { // place a vase or candle in the center of the table, but not for schools
+		if (is_restaurant() && rgen.rand_bool()) { // candle
+			float const candle_radius(0.0125*floor_spacing), candle_height(rgen.rand_uniform(6.0, 8.0)*candle_radius);
+			cube_t candle;
+			candle.set_from_sphere(table.get_cube_center(), candle_radius);
+			set_cube_zvals(candle, table.z2(), table.z2()+candle_height); // place on the table
+			objs.emplace_back(candle, TYPE_CANDLE, table.room_id, 0, 0, RO_FLAG_NOCOLL, table.light_amt, SHAPE_CYLIN, candle_color);
+		}
+		else { // vase (more expensive)
+			float const vase_radius(rgen.rand_uniform(0.35, 0.6)*plate_radius), vase_height(rgen.rand_uniform(2.0, 6.0)*vase_radius);
+			cube_t vase;
+			vase.set_from_sphere(table.get_cube_center(), vase_radius);
+			set_cube_zvals(vase, table.z2(), table.z2()+vase_height); // place on the table
+			objs.emplace_back(vase, TYPE_VASE, table.room_id, 0, 0, RO_FLAG_NOCOLL, table.light_amt, SHAPE_CYLIN, gen_vase_color(rgen));
+			set_obj_id(objs);
+		}
 	}
 	return added_obj;
 }
