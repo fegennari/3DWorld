@@ -1954,11 +1954,12 @@ bool building_t::add_livingroom_objs(rand_gen_t rgen, room_t const &room, float 
 void building_t::add_diningroom_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	//if (!is_house || room.is_hallway || room.is_sec_bldg || room.is_office) return; // still applies, but unnecessary
 	if ((rgen.rand()&3) == 0) return; // no additional objects 25% of the time
+	add_wine_rack(rgen, room, zval, room_id, tot_light_amt, objs_start);
+}
+void building_t::add_wine_rack(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	cube_t const room_bounds(get_room_bounds_inside_trim(room));
 	float const vspace(get_window_vspace()), clearance(max(0.2f*vspace, get_min_front_clearance_inc_people()));
-	vect_room_object_t &objs(interior->room_geom->objs);
-	// add a wine rack
-	float const width(0.3*vspace*rgen.rand_uniform(1.0, 1.5)), depth(0.16*vspace), height(0.4*vspace*rgen.rand_uniform(1.0, 1.5)); // depth is based on bottle length, which is constant
+	float const width(0.3*vspace*rgen.rand_uniform(1.0, 1.5)), depth(0.16*vspace), height(0.4*vspace*rgen.rand_uniform(1.0, 1.5)); // depth based on bottle length, which is constant
 	cube_t c;
 	set_cube_zvals(c, zval, zval+height);
 
@@ -1971,8 +1972,8 @@ void building_t::add_diningroom_objs(rand_gen_t rgen, room_t const &room, float 
 		cube_t tc(c);
 		tc.d[dim][!dir] += (dir ? -1.0 : 1.0)*clearance; // increase space to add clearance
 		if (is_obj_placement_blocked(tc, room, 1) || overlaps_other_room_obj(tc, objs_start)) continue; // bad placement
-		objs.emplace_back(c, TYPE_WINE_RACK, room_id, dim, !dir, 0, tot_light_amt); // Note: dir faces into the room, not the wall
-		set_obj_id(objs);
+		interior->room_geom->objs.emplace_back(c, TYPE_WINE_RACK, room_id, dim, !dir, 0, tot_light_amt); // Note: dir faces into the room, not the wall
+		set_obj_id(interior->room_geom->objs);
 		break; // done/success
 	} // for n
 }

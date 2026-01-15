@@ -79,10 +79,20 @@ void building_t::create_restaurant_floorplan(unsigned part_id, rand_gen_t &rgen)
 }
 
 void building_t::add_restaurant_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float light_amt) {
+	cube_t place_area(get_walkable_room_bounds(room));
+	place_area.expand_by(-0.25*get_wall_thickness()); // common spacing to wall
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const objs_start(objs.size());
-	bool const plastic_tc(0); // TODO: custom material?
+	bool const plastic_tc(0); // custom material?
 	fill_room_with_tables_and_chairs(rgen, room, zval, room_id, light_amt, objs_start, plastic_tc);
+	add_wine_rack(rgen, room, zval, room_id, light_amt, objs_start);
+	if (rgen.rand_bool()) {add_fishtank_to_room(rgen, room, zval, room_id, light_amt, objs_start, place_area);}
+	unsigned const num_plants(4 + (rgen.rand() & 5)); // 4-8
+	add_plants_to_room(rgen, room, zval, room_id, light_amt, objs_start, num_plants);
+	// TODO: rug by the door
+	// TODO: ceiling fans?
+	// TVs for sports bar?
+	// add additional pictures, likely only on the wall separating dining from kitchen and bathrooms
 	hang_pictures_whiteboard_chalkboard_in_room(rgen, room, zval, room_id, light_amt, objs_start, 0, 0);
 }
 
