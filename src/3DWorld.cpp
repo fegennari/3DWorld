@@ -86,7 +86,7 @@ bool disable_model_textures(0), start_in_inf_terrain(0), allow_shader_invariants
 bool enable_timing_profiler(0), fast_transparent_spheres(0), force_ref_cmap_update(0), use_instanced_pine_trees(0), enable_postproc_recolor(0), draw_building_interiors(0);
 bool toggle_room_light(0), teleport_to_screenshot(0), merge_model_objects(0), reverse_3ds_vert_winding_order(1), disable_dlights(0), voxel_add_remove(0), enable_ground_csm(0);
 bool enable_hcopter_shadows(0), pre_load_full_tiled_terrain(0), disable_blood(0), enable_model_animations(1), rotate_trees(0), invert_model3d_faces(0), play_gameplay_alert(1);
-bool player_custom_start_pos(0), enable_spec_map(1), enable_shine_map(1), enable_ssao(0), assert_on_gl_error(0);
+bool player_custom_start_pos(0), enable_spec_map(1), enable_shine_map(1), enable_ssao(0), assert_on_gl_error(0), gl_errors_nonfatal(0);
 int xoff(0), yoff(0), xoff2(0), yoff2(0), rand_gen_index(0), mesh_rgen_index(0), camera_change(1), camera_in_air(0), auto_time_adv(0), program_start_time(0);
 int animate(1), animate2(1), draw_model(0), init_x(STARTING_INIT_X), fire_key(0), do_run(0), init_num_balls(-1), change_wmode_frame(0);
 int game_mode(0), map_mode(0), load_hmv(0), load_coll_objs(1), read_landscape(0), screen_reset(0), mesh_seed(0), rgen_seed(1);
@@ -198,17 +198,22 @@ void regen_buildings();
 bool get_gl_error(unsigned loc_id, const char* stmt, const char* fname) {
 
 	bool had_error(0);
+	static set<pair<unsigned, int>> errors_seen;
 
 	while (1) {
 		int const error(glGetError());
 		if (!error) break;
+		had_error = 1;
 		const GLubyte *const error_str(gluErrorString(error));
 		cerr << "GL Error " << error;
+		
 		if (fname) {cerr << " in statement " << stmt << " file " << fname << " line " << loc_id << ": ";} // from source file
-		else {cerr << " at location id " << loc_id << ": ";} // from check_gl_error()
+		else {
+			if (gl_errors_nonfatal && !errors_seen.insert(make_pair(loc_id, error)).second) continue; // error already printed, skip
+			cerr << " at location id " << loc_id << ": "; // from check_gl_error()
+		}
 		if (error_str) {cerr << error_str << "." << endl;} else {cerr << "<NULL>." << endl;}
-		had_error = 1;
-	}
+	} // end while
 	if (fname) {assert(!had_error);} // caller ignores return code in this case, add the assert here
 	return had_error;
 }
@@ -217,7 +222,7 @@ bool check_gl_error(unsigned loc_id) {
 	bool had_error(0);
 #ifdef _DEBUG
 	had_error = get_gl_error(loc_id);
-	assert(!had_error); // currently fatal
+	if (!gl_errors_nonfatal) {assert(!had_error);}
 #endif
 	return had_error;
 }
@@ -1856,6 +1861,7 @@ int load_config(string const &config_file) {
 	kwmb.add("enable_shine_map",  enable_shine_map);
 	kwmb.add("enable_ssao", enable_ssao);
 	kwmb.add("assert_on_gl_error", assert_on_gl_error);
+	kwmb.add("gl_errors_nonfatal", gl_errors_nonfatal);
 
 	kw_to_val_map_t<int> kwmi(error);
 	kwmi.add("verbose", verbose_mode);
