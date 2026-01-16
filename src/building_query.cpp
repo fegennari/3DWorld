@@ -974,6 +974,27 @@ unsigned check_com_kitchen_app_collision(room_object_t const &c, point &pos, poi
 	return check_cubes_collision(cubes, get_com_kitchen_app_coll_cubes(c, cubes), pos, p_last, radius, cnorm);
 }
 
+unsigned get_toilet_cubes(room_object_t const &c, cube_t cubes[3]) { // {bowl, tank, base}, overlapping
+	float const height(c.dz()), width(c.get_width()), depth((c.dir ? 1.0 : -1.0)*c.get_depth());
+	cubes[0] = cubes[1] = c;
+	cubes[0].z2() = c.z1() + 0.67*height; // top of bowl; really should be a cylinder
+	cubes[1].z1() = c.z1() + 0.46*height; // bottom of tank
+	cubes[0].expand_in_dim(!c.dim, -0.075*width); // shrink bowl sides
+	cubes[0].d[c.dim][!c.dir] += 0.06*depth; // back  of bowl/base
+	cubes[1].d[c.dim][ c.dir] -= 0.73*depth; // front of tank
+	cubes[2] = cubes[0]; // split base from bowl
+	cubes[0].z1() = c.z1() + 0.36*height; // bottom of bowl
+	cubes[2].z2() = cubes[1].z1(); // top of base meets top of tank
+	cubes[0].d[c.dim][!c.dir] += 0.06*depth; // back of bowl
+	cubes[2].expand_in_dim(!c.dim, -0.17*width); // shrink base sides
+	cubes[2].d[c.dim][ c.dir] -= 0.09*depth; // front of base
+	return 3;
+}
+unsigned check_toilet_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
+	cube_t cubes[3];
+	return check_cubes_collision(cubes, get_toilet_cubes(c, cubes), pos, p_last, radius, cnorm);
+}
+
 bool maybe_inside_room_object(room_object_t const &obj, point const &pos, float radius) {
 	return ((obj.is_open() && sphere_cube_intersect(pos, radius, obj)) || obj.contains_pt(pos));
 }
@@ -1723,6 +1744,7 @@ bool building_interior_t::check_sphere_coll_room_objects(building_t const &build
 			else if (type == TYPE_SHELFRACK ) {coll_ret |= check_shelf_rack_collision(*c, pos, p_last, radius, &cnorm);}
 			else if (type == TYPE_COUCH     ) {coll_ret |= check_couch_collision     (*c, pos, p_last, radius, &cnorm);}
 			else if (type == TYPE_CHECKOUT  ) {coll_ret |= check_checkout_collision  (*c, pos, p_last, radius, &cnorm);}
+			else if (type == TYPE_TOILET    ) {coll_ret |= check_toilet_collision    (*c, pos, p_last, radius, &cnorm);}
 			else if (type == TYPE_VENT_HOOD ) {coll_ret |= check_vent_hood_collision (*c, pos, p_last, radius, &cnorm);}
 			else if (type == TYPE_KITCH_APP ) {coll_ret |= check_com_kitchen_app_collision   (*c, pos, p_last, radius, &cnorm);}
 			else if (type == TYPE_CUBICLE   ) {coll_ret |= (unsigned)check_cubicle_collision (*c, pos, p_last, radius, &cnorm);}
@@ -2787,6 +2809,10 @@ void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, ve
 		get_checkout_cubes(c, cubes);
 		lg_cubes .push_back(cubes[0]); // walk on the body
 		non_cubes.push_back(cubes[1]); // avoid the screen
+	}
+	else if (type == TYPE_TOILET) {
+		cube_t cubes[3]; // bowl, tank, base
+		lg_cubes.insert(lg_cubes.end(), cubes, cubes+get_toilet_cubes(c, cubes));
 	}
 	else if (type == TYPE_CUBICLE) {
 		cube_t cubes[8];

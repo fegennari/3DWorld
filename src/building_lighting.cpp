@@ -46,6 +46,7 @@ bool is_flashing_light_on();
 void get_pool_table_cubes(room_object_t const &c, cube_t cubes[5]);
 unsigned get_couch_cubes(room_object_t const &c, cube_t cubes[4]);
 unsigned get_checkout_cubes(room_object_t const &c, cube_t cubes[2]);
+unsigned get_toilet_cubes(room_object_t const &c, cube_t cubes[3]);
 void get_fishtank_cubes(room_object_t const &c, cube_t sides[4], cube_t &substrate, cube_t &lid, cube_t &light);
 unsigned get_machine_part_cubes(room_object_t const &c, float floor_ceil_gap, cube_t cubes[4]);
 vect_cube_t const &get_cabinet_interior_cubes(room_object_t const &c, float wall_thickness, float z1_adj, float back_adj, float shelf_height);
@@ -492,6 +493,11 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			get_checkout_cubes(*c, cubes);
 			cc.emplace_back(cubes[0], color); // only add the body
 		}
+		else if (type == TYPE_TOILET) {
+			cube_t cubes[3]; // bowl, tank, base
+			unsigned const num_cubes(get_toilet_cubes(*c, cubes));
+			for (unsigned n = 0; n < num_cubes; ++n) {cc.emplace_back(cubes[n], color);}
+		}
 		else if (type == TYPE_FISHTANK) { // add lid and substrate only
 			cube_t substrate, lid, light, sides[4];
 			get_fishtank_cubes(*c, sides, substrate, lid, light);
@@ -579,7 +585,6 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 				bc.z2() = sink.z1(); // remainder will be the bottom half
 			}
 			else if (type == TYPE_STOVE     ) {bc.z2() -= 0.22*bc.dz();}
-			else if (type == TYPE_TOILET    ) {bc.z2() -= 0.33*bc.dz();}
 			else if (type == TYPE_SINK      ) {bc.z2() -= 0.20*bc.dz(); bc.z1() += 0.65*bc.dz();}
 			else if (c->is_tv_or_monitor()  ) {bc.expand_in_dim(dim, -0.3*bc.get_sz_dim(dim));} // reduce thickness
 			else if (type == TYPE_BRSINK    ) {bc.z1() += 0.60*bc.dz();}
