@@ -190,11 +190,13 @@ unsigned building_t::add_table_and_chairs(rand_gen_t rgen, room_t const &room, v
 	// basements can have broken glass tables 50% of the time; these are short cube tables
 	if (!is_round && !use_tall_table && !is_plastic && place_pos.z < ground_floor_z1 && (rgen.rand_float() < 0.5)) {flags |= RO_FLAG_BROKEN;}
 	objs.emplace_back(table, TYPE_TABLE, room_id, 0, 0, flags, tot_light_amt, (is_round ? SHAPE_CYLIN : SHAPE_CUBE), WHITE, item_flags);
-	if (!is_rest) {set_obj_id(objs);} // set to select style such as round table wood vs. marble; don't set for restaurants to keep all tables consistent
-
-	if (is_rest) { // add table cloths of some sort? as rugs?
-		// TODO
+	
+	if (is_rest) { // custom per-building/room value for restaurants to keep all tables consistent
+		objs.back().obj_id       = (17*mat_ix + 13*room_id + 31*name.size());  // sets material and table cloth color
+		objs.back().drawer_flags = 1 + ((mat_ix + room_id + name.size()) & 1); // sets table cloth style
 	}
+	else {set_obj_id(objs);} // set to select style such as round table wood vs. marble
+
 	if (max_chairs == 0) return 1; // table only
 	// maybe place some chairs around the table
 	rgen.rseed1 += chair_rand_add; // used to make chair placement unique for duplicate tables

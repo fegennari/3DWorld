@@ -283,6 +283,9 @@ unsigned get_metal_table_num_legs_per_side(room_object_t const &c) {
 void building_room_geom_t::add_table(room_object_t const &c, float tscale, float top_dz, float leg_width) {
 	float const dz(c.dz());
 	min_eq(top_dz, get_tc_leg_width(c, leg_width)/dz); // reduce the top thickness of tall tables
+	unsigned const has_table_cloth(c.drawer_flags); // 0=none, 1=top only, 2=top + sides
+	bool const use_tc_sides(has_table_cloth == 2);
+	cube_t tc_shape;
 
 	if (c.shape == SHAPE_CYLIN) { // round table
 		bool const marble((c.item_flags > 0) || (c.obj_id & 1)); // 50% marble top with metal base; always for tables flagged as plastic; else wood
@@ -305,6 +308,7 @@ void building_room_geom_t::add_table(room_object_t const &c, float tscale, float
 			foot.expand_in_dim(d, -0.27*size[d]);
 			base_mat.add_cube_to_verts(foot, base_color, c.get_llc(), EF_Z1); // skip bottom surface
 		}
+		if (has_table_cloth && !marble) {tc_shape = top;}
 	}
 	else { // rectangular or short table
 		assert(c.shape == SHAPE_CUBE || c.shape == SHAPE_SHORT);
@@ -378,6 +382,28 @@ void building_room_geom_t::add_table(room_object_t const &c, float tscale, float
 			rgeom_mat_t &mat(get_wood_material(tscale));
 			mat.add_cube_to_verts(top, color, c.get_llc()); // all faces drawn
 			add_tc_legs(legs_bc, c, color, leg_width, 1, tscale);
+			if (has_table_cloth) {tc_shape = top;}
+		}
+	}
+	if (!tc_shape.is_all_zeros()) { // add table cloth
+		float const edge_border(0.02*(c.dx() + c.dy()));
+		colorRGBA const tc_color(apply_light_color(c, WHITE)); // or light blue/green/pink/etc. if untextured?
+		rgeom_mat_t &tc_mat(get_material(tid_nm_pair_t(c.get_sheet_tid(), tscale, 0), 0)); // unshadowed
+		cube_t tcloth(tc_shape);
+		tcloth.z2() += 0.001*dz; // place on the table
+
+		if (use_tc_sides) { // draw sides as well
+			tcloth.expand_by_xy(0.1*edge_border); // place over the table edges
+			tcloth.z1() -= 0.15*dz; // extends down (maybe clipping through a chair?)
+		}
+		else {
+			tcloth.expand_by_xy(-edge_border); // shrink
+		}
+		if (c.shape == SHAPE_CYLIN) {
+			tc_mat.add_vcylin_to_verts(tcloth, tc_color, 0, 1, use_tc_sides, 0, 1.0, 1.0, tscale, 0.25*tscale, !use_tc_sides); // draw top and maybe sides
+		}
+		else {
+			tc_mat.add_cube_to_verts(tcloth, tc_color, tcloth.get_llc(), (use_tc_sides ? EF_Z1 : ~EF_Z2)); // draw top and maybe sides
 		}
 	}
 }
