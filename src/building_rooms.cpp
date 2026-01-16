@@ -895,7 +895,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			} // end is_apt_or_hotel_room
 			if (is_restaurant()) {
 				if (is_restaurant_room) {
-					add_restaurant_objs(rgen, *r, room_center.z, room_id, tot_light_amt);
+					add_restaurant_objs(rgen, *r, room_center.z, room_id, tot_light_amt, nx, ny);
 					added_obj = 1;
 				}
 				else if (is_rest_kitchen) {

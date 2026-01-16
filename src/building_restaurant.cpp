@@ -78,7 +78,7 @@ void building_t::create_restaurant_floorplan(unsigned part_id, rand_gen_t &rgen)
 	for (room_t &room : rooms) {room.is_single_floor = 1;}
 }
 
-void building_t::add_restaurant_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float light_amt) {
+void building_t::add_restaurant_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float light_amt, unsigned light_nx, unsigned light_ny) {
 	cube_t place_area(get_walkable_room_bounds(room));
 	place_area.expand_by(-0.25*get_wall_thickness()); // common spacing to wall
 	vect_room_object_t &objs(interior->room_geom->objs);
@@ -105,8 +105,27 @@ void building_t::add_restaurant_objs(rand_gen_t rgen, room_t const &room, float 
 		objs.emplace_back(rug, TYPE_RUG, room_id, 0, 0, RO_FLAG_NOCOLL, light_amt);
 		objs.back().obj_id = uint16_t(11*objs.size() + 17*mat_ix); // determines rug texture
 	} // for door
-	// TODO: ceiling fans?
-	// TVs for sports bar?
+	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_CEIL_FAN)) { // add ceiling fans between the ceiling lights
+		float const dx(room.dx()), dy(room.dy()), ceil_zval(room.z2() - get_fc_thickness());
+		float const xstep(dx/light_nx), ystep(dy/light_ny);
+		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_CEIL_FAN)); // D, W, H
+		float const diameter(0.75*min(min(xstep, ystep), floor_spacing)), height(diameter*sz.z/sz.y); // assumes width = depth = diameter
+		bool skip(1);
+
+		for (unsigned y = 1; y < light_ny; ++y) {
+			for (unsigned x = 1; x < light_nx; ++x) {
+				skip ^= 1;
+				if (skip) continue; // only add every other fan
+				cube_t fan(point((room.x1() + x*xstep), (room.y1() + y*ystep), ceil_zval));
+				fan.expand_by_xy(0.5*diameter);
+				fan.z1() -= height;
+				unsigned flags(RO_FLAG_NOCOLL | RO_FLAG_IN_FACTORY); // set factory flag so that fans rotate
+				if (rgen.rand_float() < 0.5) {flags |= RO_FLAG_ROTATING;} // make fan rotate when turned on 50% of the time
+				objs.emplace_back(fan, TYPE_CEIL_FAN, room_id, 0, 0, flags, light_amt, SHAPE_CYLIN, WHITE);
+			} // for x
+		} // for y
+	}
+	if (rgen.rand_bool()) {add_wall_tv(rgen, room, zval, room_id, light_amt, objs_start);} // maybe TV for sports bar
 	// add additional pictures, likely only on the wall separating dining from kitchen and bathrooms
 	hang_pictures_whiteboard_chalkboard_in_room(rgen, room, zval, room_id, light_amt, objs_start, 0, 0);
 }
