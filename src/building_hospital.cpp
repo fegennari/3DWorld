@@ -602,7 +602,7 @@ bool building_t::add_trolley(rand_gen_t &rgen, cube_t const &place_area, cube_t 
 }
 
 bool building_t::add_lab_room_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start) {
-	float const floor_spacing(get_window_vspace()), wall_thick(get_wall_thickness());
+	float const floor_spacing(get_window_vspace());
 	vector2d const room_sz(room.get_size_xy());
 	bool const dim(room_sz.x < room_sz.y); // long dim
 	cube_t place_area(get_walkable_room_bounds(room)), avoid;

@@ -27,7 +27,6 @@ bool building_t::divide_part_into_jail_cells(cube_t const &part, unsigned part_i
 	float const hall_centerline(part.get_center_dim(!hall_dim));
 	float min_room_width(2*min_cell_depth + min_hall_width), extra_width(room_width - min_room_width);
 	unsigned skip_side(2); // 2=neither
-	vector<room_t> &rooms(interior->rooms);
 	cube_t hall_room(part);
 	if (interior->prison_halls.empty()) {interior->prison_halls = parts;} // start as entire part
 

@@ -37,10 +37,9 @@ void building_t::create_restaurant_floorplan(unsigned part_id, rand_gen_t &rgen)
 	main_room.d[dim][dir] = side_area.d[dim][!dir] = split_pos;
 	add_assigned_room(main_room, part_id, RTYPE_RESTAURANT); // num_lights will be calculated later
 	// split side room into {kitchen, men's room, women's room, and maybe storage}
-	int const num_side_windows(get_num_windows_on_side(part, !dim)); // in other dim; typically 5-8
+	int const num_side_windows(get_num_windows_on_side(part, !dim)); // in other dim; typically 5-8 total windows and 3-5 kitchen windows
 	assert(num_side_windows >= 3);
 	bool const add_storage(num_side_windows >= 7), br_side(rgen.rand_bool()), mw_side(rgen.rand_bool());
-	unsigned const num_kitchen_windows(num_side_windows - add_storage - 2); // typically 3-5
 	float const wspace(part.get_sz_dim(!dim)/num_side_windows), window_step((br_side ? -1.0 : 1.0)*wspace);
 	float const br_split(side_area.d[!dim][br_side] + window_step); // split point between men's and women's bathrooms
 	float const k_br_split(br_split + window_step); // split point between kitchens and bathrooms
