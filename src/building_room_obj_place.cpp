@@ -17,6 +17,7 @@ void get_pool_ball_rot_matrix(room_object_t const &c, xform_matrix &rot_matrix);
 void rotate_obj_cube(cube_t &c, cube_t const &bc, bool in_dim, bool dir);
 cube_t get_whiteboard_marker_ledge(room_object_t const &c);
 cube_t get_freezer_ac_unit(room_object_t const &freezer);
+vector3d get_pallet_hsize(float one_inch, bool dim);
 
 
 class door_path_checker_t {
@@ -2087,6 +2088,25 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 		if (!has_bcube_int(chair, exclude) && !is_obj_placement_blocked(chair, room, 1)) {
 			objs.emplace_back(chair, TYPE_OFF_CHAIR, room_id, rgen.rand_bool(), rgen.rand_bool(), RO_FLAG_RAND_ROT, tot_light_amt, SHAPE_CYLIN, GRAY_BLACK);
 		}
+	}
+	// add pallets if there's space
+	if ((!is_house || is_basement) && min(crate_bounds.dx(), crate_bounds.dy()) > 1.5*window_vspacing) {
+		unsigned const num_pallets(rgen.rand() % (is_house ? 2 : 4)); // 0-3 for office buildings; 0-1 for house basements
+		float const one_inch(get_one_inch());
+		cube_t pallet_bounds(crate_bounds), pallet;
+		pallet_bounds.z1() = zval;
+
+		for (unsigned n = 0; n < num_pallets; ++n) {
+			bool const pdim(rgen.rand_bool());
+			vector3d const pallet_sz(get_pallet_hsize(one_inch, pdim));
+
+			for (unsigned N = 0; N < 10; ++N) { // 10 place attempts
+				gen_xy_pos_for_cube_obj(pallet, pallet_bounds, pallet_sz, pallet_sz.z, rgen, 1); // place_at_z1=1
+				if (overlaps_obj_or_placement_blocked(pallet, room, objs_start)) continue; // bad placement
+				objs.emplace_back(pallet, TYPE_PALLET, room_id, pdim, 0, 0, tot_light_amt);
+				break; // success
+			}
+		} // for n
 	}
 	unsigned const num_max(is_house ? (is_basement ? 12 : 5) : 30); // 4-33 for offices, 4-8 for houses, 4-16 for house basements
 	add_boxes_and_crates(rgen, room, zval, room_id, tot_light_amt, objs_start, num_max, is_basement, room_bounds, crate_bounds, exclude);
