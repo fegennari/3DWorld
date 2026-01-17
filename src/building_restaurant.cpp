@@ -82,28 +82,42 @@ void building_t::add_restaurant_objs(rand_gen_t rgen, room_t const &room, float 
 	place_area.expand_by(-0.25*get_wall_thickness()); // common spacing to wall
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const objs_start(objs.size());
-	bool const plastic_tc(0); // custom material?
-	fill_room_with_tables_and_chairs(rgen, room, zval, room_id, light_amt, objs_start, plastic_tc);
-	add_wine_rack(rgen, room, zval, room_id, light_amt, objs_start);
-	if (rgen.rand_bool()) {add_fishtank_to_room(rgen, room, zval, room_id, light_amt, objs_start, place_area);}
-	unsigned const num_plants(4 + (rgen.rand() & 5)); // 4-8
-	add_plants_to_room(rgen, room, zval, room_id, light_amt, objs_start, num_plants);
-	// add rugs (door mats?) by the door(s)
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
+	bool added_desk(0);
 
 	for (tquad_with_ix_t const &door : doors) {
 		cube_t bc(door.get_bcube());
 		bc.expand_by_xy(wall_thickness); // make nonzero area
 		if (!bc.intersects_no_adj(room)) continue; // not for this room
 		bool const ddim(bc.dy() < bc.dx()), ddir(bc.get_center_dim(ddim) < room.get_center_dim(ddim)); // dir into room
+		float const door_edge(bc.d[ddim][ddir]);
+
+		if (!added_desk) { // place a small desk/table/podium by the front (first) door
+			bool const tside(rgen.rand_bool());
+			float const table_sz(0.12*floor_spacing);
+			cube_t table;
+			set_cube_zvals(table, zval, zval+0.36*floor_spacing);
+			set_wall_width(table, (door_edge + (ddir ? 1.0 : -1.0)*1.5*table_sz), table_sz, ddim);
+			set_wall_width(table, (bc.d[!ddim][tside] + (tside ? 1.0 : -1.0)*1.5*table_sz), table_sz, !ddim);
+			objs.emplace_back(table, TYPE_TABLE, room_id, !ddim, tside, 0, light_amt, SHAPE_CUBE, WHITE); // wood
+			added_desk = 1;
+		}
+		// add rugs (door mats?) by the door(s)
 		float const rug_hwidth(rgen.rand_uniform(0.18, 0.22)*floor_spacing), rug_hlen(rgen.rand_uniform(1.5, 1.7)*rug_hwidth);
 		cube_t rug;
 		set_cube_zvals(rug, zval, (zval + get_rug_thickness()));
 		set_wall_width(rug, bc.get_center_dim(!ddim), rug_hlen, !ddim);
-		set_wall_width(rug, (bc.d[ddim][ddir] + (ddir ? 1.0 : -1.0)*rgen.rand_uniform(1.1, 1.3)*rug_hwidth), rug_hwidth, ddim); // move away from the door
+		set_wall_width(rug, (door_edge + (ddir ? 1.0 : -1.0)*rgen.rand_uniform(1.1, 1.3)*rug_hwidth), rug_hwidth, ddim); // move away from the door
 		objs.emplace_back(rug, TYPE_RUG, room_id, 0, 0, RO_FLAG_NOCOLL, light_amt);
 		objs.back().obj_id = uint16_t(11*objs.size() + 17*mat_ix); // determines rug texture
 	} // for door
+	bool const plastic_tc(0); // custom material?
+	fill_room_with_tables_and_chairs(rgen, room, zval, room_id, light_amt, objs_start, plastic_tc);
+	add_wine_rack(rgen, room, zval, room_id, light_amt, objs_start);
+	if (rgen.rand_bool()) {add_fishtank_to_room(rgen, room, zval, room_id, light_amt, objs_start, place_area);}
+	unsigned const num_plants(4 + (rgen.rand() & 5)); // 4-8
+	add_plants_to_room(rgen, room, zval, room_id, light_amt, objs_start, num_plants);
+
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_CEIL_FAN)) { // add ceiling fans between the ceiling lights
 		float const dx(room.dx()), dy(room.dy()), ceil_zval(room.z2() - get_fc_thickness());
 		float const xstep(dx/light_nx), ystep(dy/light_ny);
