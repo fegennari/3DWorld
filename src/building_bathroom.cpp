@@ -218,10 +218,22 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 		if (!no_tub && add_shower_tub && (!is_basement || rgen.rand_bool())) { // 50% of the time if in the basement
 			cube_t place_area_tub(room_bounds);
 			place_area_tub.expand_by(-get_trim_thickness()); // just enough to prevent z-fighting and intersecting the wall trim
+			unsigned const tub_obj_ix(objs.size());
 		
 			if (place_model_along_wall(OBJ_MODEL_TUB, TYPE_TUB, room, tub_height_factor, rgen, zval, room_id, tot_light_amt, place_area_tub, objs_start, 0.4)) {
 				placed_obj = 1;
 				bathroom_objs_mask |= PLACED_TUB;
+
+				if (rgen.rand_bool()) { // add a bar of soap on the edge of the tub
+					room_object_t const &tub(objs[tub_obj_ix]);
+					float const one_inch(get_one_inch()), soap_hlen(2.0*one_inch), soap_hwidth(1.25*one_inch), soap_height(1.0*one_inch); // 4x2.5x1
+					colorRGBA const soap_color(soap_colors[rgen.rand() % NUM_SOAP_COLORS]);
+					cube_t soap;
+					set_cube_zvals(soap, tub.z2(), tub.z2()+soap_height);
+					set_wall_width(soap, (tub.d[tub.dim][!tub.dir] + (tub.dir ? 1.0 : -1.0)*1.75*soap_hwidth), soap_hwidth, tub.dim);
+					set_wall_width(soap, (rgen.rand_uniform((tub.d[!tub.dim][0] + 2.0*soap_hlen), (tub.d[!tub.dim][1] - 2.0*soap_hlen))), soap_hlen, !tub.dim);
+					objs.emplace_back(soap, TYPE_BAR_SOAP, room_id, !tub.dim, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_ROUNDED_CUBE, soap_color);
+				}
 			}
 		}
 		unsigned const sink_obj_ix(objs.size());
