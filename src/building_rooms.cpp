@@ -2067,7 +2067,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	// ceiling trim also disabled for non-houses (all office buildings), because it doesn't really work with acoustic paneling
 	// industrial/hospitals have nested rooms with outside corners; hotels may have L-shaped rooms with missing walls that form outside corners
 	bool const has_outside_corners(interior->has_sec_hallways || is_industrial() || is_hospital() || is_hotel());
-	bool const is_rest(is_restaurant()), has_ceil_trim(!has_outside_corners && (is_house || is_rest));
+	bool const is_rest(is_restaurant()), is_house_ext(is_house || is_rest), has_ceil_trim(!has_outside_corners && is_house_ext);
 	colorRGBA const trim_color(get_trim_color());
 	vect_room_object_t &objs(interior->room_geom->trim_objs);
 	vect_cube_t trim_cubes, trim_parts;
@@ -2127,7 +2127,8 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		trim.expand_in_dim(dim, ext_door_trim_exp);
 		bool dir(0);
 		unsigned ext_flags(flags);
-		colorRGBA const &ext_trim_color(is_house ? (garage_door ? WHITE : door_color) : trim_color); // house garage door trim is always white
+		// houses and restaurants have colored doors/trim while office doors use white trim; house garage door trim is always white
+		colorRGBA const &ext_trim_color(is_house_ext ? (garage_door ? WHITE : door_color) : trim_color);
 		float trim_width(garage_door ? 0.016*door.get_sz_dim(!dim) : door_trim_width); // garage door trim is based on width
 		if (have_walkway_ext_door && door.zc() > ground_floor_z1 + window_vspacing) {trim_width *= 1.1;} // slight extra inward expand for walkway doors to remove wall slivers
 
@@ -2380,22 +2381,15 @@ void building_t::add_wall_and_door_trim() { // and window trim
 						clip_cube.expand_in_dim(dim, expand_val); // expand to clip trim on the other side of the split wall
 						subtract_cube_from_cubes(clip_cube, trim_cubes); // subtract this part from current trim cubes by clipping in XY
 					}
-					if (has_ceil_trim && is_house) { // houses have shorter doors and ceiling trim extends above the door, so draw full range
-						for (auto c = trim_cubes.begin(); c != trim_cubes.end(); ++c) {
-							cube_t trim2(*c); // copy so that we can modify it
-							set_cube_zvals(trim2, ceil_trim_z1, ceil_trim_z2);
-							clip_trim_cube(trim2, trim_exclude, trim_parts);
-							for (cube_t const &t : trim_parts) {objs.emplace_back(t, TYPE_WALL_TRIM, 0, dim, !dir, flags, 1.0, SHAPE_ANGLED, trim_color);} // ceiling trim
-						}
-					}
-					bool const check_doors(maybe_has_ext_door_this_floor(i->z1(), f)), clip_top_trim(room_height < window_vspacing);
+					bool const check_doors(maybe_has_ext_door_this_floor(i->z1(), f));
+					bool const clip_top_trim(!is_house_ext && room_height < window_vspacing); // houses have shorter doors and ceiling trim extends above door, so draw full range
 					if (check_doors && clip_top_trim) {cut_trim_around_doors(doors, trim_cubes, door_clip_expand, dim);} // cut out areas for ext doors
 
 					for (cube_t &c : trim_cubes) {
 						clip_trim_cube(c, trim_exclude, trim_parts);
 						if (check_doors && !clip_top_trim) {cut_trim_around_doors(doors, trim_parts, door_clip_expand, dim);} // cut out bottom trim only
 						for (cube_t const &t : trim_parts) {objs.emplace_back(t, TYPE_WALL_TRIM, 0, dim, 0, ext_flags, 1.0, SHAPE_CUBE, trim_color);} // floor trim
-						if (!has_ceil_trim || is_house) continue;
+						if (!has_ceil_trim) continue;
 						set_cube_zvals(c, ceil_trim_z1, ceil_trim_z2); // okay to edit in-place here
 						clip_trim_cube(c, trim_exclude, trim_parts);
 						for (cube_t const &t : trim_parts) {objs.emplace_back(t, TYPE_WALL_TRIM, 0, dim, !dir, flags, 1.0, SHAPE_ANGLED, trim_color);} // ceiling trim
@@ -2433,7 +2427,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, ds.dim, 0, flags, 1.0, SHAPE_CUBE, trim_color);
 		} // for ds
 	} // for i
-	if (!is_house) { // office building
+	if (!is_house_ext) { // office building, etc.
 		// add trim to elevators and stairs, at the bottom of each floor
 		unsigned const draw_end_flags(flags | RO_FLAG_ADJ_BOT); // trim with exposed ends will use SHAPE_TALL and set RO_FLAG_ADJ_BOT to skip the bottom
 		unsigned const dir_flags[2] = {RO_FLAG_ADJ_LO, RO_FLAG_ADJ_HI};
