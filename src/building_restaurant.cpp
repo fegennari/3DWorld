@@ -8,6 +8,7 @@
 extern object_model_loader_t building_obj_model_loader;
 
 void create_wall(cube_t &wall, bool dim, float wall_pos, float fc_thick, float wall_half_thick, float wall_edge_spacing);
+float get_radius_for_square_model(unsigned model_id);
 colorRGBA get_stain_color(rand_gen_t &rgen, bool is_food=0);
 
 
@@ -96,10 +97,19 @@ void building_t::add_restaurant_objs(rand_gen_t rgen, room_t const &room, float 
 			bool const tside(rgen.rand_bool());
 			float const table_sz(0.12*floor_spacing);
 			cube_t table;
-			set_cube_zvals(table, zval, zval+0.36*floor_spacing);
+			set_cube_zvals(table, zval, zval+0.4*floor_spacing);
 			set_wall_width(table, (door_edge + (ddir ? 1.0 : -1.0)*1.5*table_sz), table_sz, ddim);
 			set_wall_width(table, (bc.d[!ddim][tside] + (tside ? 1.0 : -1.0)*1.5*table_sz), table_sz, !ddim);
-			objs.emplace_back(table, TYPE_TABLE, room_id, !ddim, tside, 0, light_amt, SHAPE_CUBE, WHITE); // wood
+			objs.emplace_back(table, TYPE_TABLE, room_id, !ddim, !tside, 0, light_amt, SHAPE_TALL, WHITE); // wood
+
+			if (building_obj_model_loader.is_model_valid(OBJ_MODEL_BAR_STOOL)) { // add a stool
+				float const chair_height(0.45*floor_spacing), chair_hwidth(chair_height*get_radius_for_square_model(OBJ_MODEL_BAR_STOOL));
+				cube_t chair;
+				set_cube_zvals(chair, zval, (zval + chair_height));
+				set_wall_width(chair, table.get_center_dim(ddim), chair_hwidth, ddim);
+				set_wall_width(chair, (table.d[!ddim][tside] + (tside ? 1.0 : -1.0)*1.5*chair_hwidth), chair_hwidth, !ddim);
+				objs.emplace_back(chair, TYPE_BAR_STOOL, room_id, !ddim, !tside, 0, light_amt, SHAPE_CUBE);
+			}
 			added_desk = 1;
 		}
 		// add rugs (door mats?) by the door(s)
@@ -113,7 +123,8 @@ void building_t::add_restaurant_objs(rand_gen_t rgen, room_t const &room, float 
 	} // for door
 	bool const plastic_tc(0); // custom material?
 	fill_room_with_tables_and_chairs(rgen, room, zval, room_id, light_amt, objs_start, plastic_tc);
-	add_wine_rack(rgen, room, zval, room_id, light_amt, objs_start);
+	unsigned const num_wine_racks(rgen.rand_bool() ? 2 : 1);
+	for (unsigned n = 0; n < num_wine_racks; ++n) {add_wine_rack(rgen, room, zval, room_id, light_amt, objs_start);}
 	if (rgen.rand_bool()) {add_fishtank_to_room(rgen, room, zval, room_id, light_amt, objs_start, place_area);}
 	unsigned const num_plants(4 + (rgen.rand() & 5)); // 4-8
 	add_plants_to_room(rgen, room, zval, room_id, light_amt, objs_start, num_plants);

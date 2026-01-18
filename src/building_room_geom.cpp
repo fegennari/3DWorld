@@ -311,7 +311,8 @@ void building_room_geom_t::add_table(room_object_t const &c, float tscale, float
 		if (has_table_cloth && !marble) {tc_shape = top;}
 	}
 	else { // rectangular or short table
-		assert(c.shape == SHAPE_CUBE || c.shape == SHAPE_SHORT);
+		assert(c.shape == SHAPE_CUBE || c.shape == SHAPE_SHORT || c.shape == SHAPE_TALL);
+		bool const has_sides(c.shape == SHAPE_TALL); // podium, should be square; currently only supported for wood tables
 
 		if (c.type == TYPE_TABLE && c.item_flags == 1) { // metal (commercial kitchen) table
 			unsigned const num_legs_per_side(get_metal_table_num_legs_per_side(c));
@@ -381,6 +382,14 @@ void building_room_geom_t::add_table(room_object_t const &c, float tscale, float
 			colorRGBA const color(apply_wood_light_color(c));
 			rgeom_mat_t &mat(get_wood_material(tscale));
 			mat.add_cube_to_verts(top, color, c.get_llc()); // all faces drawn
+
+			if (has_sides) {
+				cube_t sides(c);
+				sides.expand_by_xy(-0.5*leg_width*c.get_width());
+				set_cube_zvals(sides, (c.z1() + 0.25*dz), top.z1()); // nearly down to the floor
+				// really should draw bottom edges, but they're likely not visible
+				mat.add_cube_to_verts(sides, color*0.75, all_zeros, EF_Z12, 1); // hollow; skip top and bottom; darker color with rotated texture
+			}
 			add_tc_legs(legs_bc, c, color, leg_width, 1, tscale);
 			if (has_table_cloth) {tc_shape = top;}
 		}
