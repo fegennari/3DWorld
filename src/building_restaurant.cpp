@@ -53,16 +53,18 @@ void building_t::create_restaurant_floorplan(unsigned part_id, rand_gen_t &rgen)
 	add_assigned_room(br1,     part_id, (mw_side ? RTYPE_MENS : RTYPE_WOMENS));
 	add_assigned_room(br2,     part_id, (mw_side ? RTYPE_WOMENS : RTYPE_MENS));
 	if (add_storage) {add_assigned_room(storage, part_id, RTYPE_STORAGE);}
-	// add doors to wall_lo
+	// add doors to wall_lo; all doors are unlocked since restaurants have no keys
+	bool storage_conn_to_kitchen(1);
+	unsigned const num_wall_doors((add_storage && !storage_conn_to_kitchen) ? 4U : 3U);
 	float const doorway_width(get_nominal_doorway_width()), doorway_hwidth(0.5*doorway_width), edge_pad(doorway_hwidth + wall_thick);
 	cube_t room_bcs[4] = {br1, br2, kitchen, storage};
 	
-	for (unsigned n = 0; n < (add_storage ? 4U : 3U); ++n) {
+	for (unsigned n = 0; n < num_wall_doors; ++n) {
 		bool const is_br(n < 2);
 		float const v1(room_bcs[n].d[!dim][0] + edge_pad), v2(room_bcs[n].d[!dim][1] - edge_pad);
 		assert(v1 < v2); // assumes window is wider than door
 		float const door_pos(rgen.rand_uniform(v1, v2));
-		insert_door_in_wall_and_add_seg(wall_lo, (door_pos - doorway_hwidth), (door_pos + doorway_hwidth), !dim, dir, !br_side, is_br); // opens into room
+		insert_door_in_wall_and_add_seg(wall_lo, (door_pos - doorway_hwidth), (door_pos + doorway_hwidth), !dim, dir, !br_side, is_br, 1); // opens into room; unlocked
 		interior->door_stacks.back().set_mult_floor(); // counts as multi-floor (for drawing top edge)
 		if (is_br) {interior->doors.back().rtype = ((bool(n) ^ mw_side) ? RTYPE_MENS : RTYPE_WOMENS);}
 	}
@@ -72,8 +74,19 @@ void building_t::create_restaurant_floorplan(unsigned part_id, rand_gen_t &rgen)
 	for (unsigned n = 0; n < (add_storage ? 3U : 2U); ++n) {
 		wall = side_area;
 		create_wall(wall, !dim, room_bcs[n].d[!dim][!br_side], fc_thick, wall_half_thick, wall_edge_spacing);
+
+		if (storage_conn_to_kitchen && n == 2) { // storage room door
+			cube_t wall_hi(wall);
+			wall.z2() = wall_hi.z1() = wall_lo.z2(); // must split into lo and hi parts again to add the door
+			interior->walls[!dim].push_back(wall_hi);
+			float const v1(storage.d[dim][0] + edge_pad), v2(storage.d[dim][1] - edge_pad);
+			assert(v1 < v2); // assumes room is wider than door
+			float const door_pos(rgen.rand_uniform(v1, v2));
+			insert_door_in_wall_and_add_seg(wall, (door_pos - doorway_hwidth), (door_pos + doorway_hwidth), dim, !br_side, 0, 0, 1); // opens into storage; unlocked
+			interior->door_stacks.back().set_mult_floor(); // counts as multi-floor (for drawing top edge)
+		}
 		interior->walls[!dim].push_back(wall);
-	}
+	} // for n
 	// all main part restaurant rooms are a single floor
 	for (room_t &room : rooms) {room.is_single_floor = 1;}
 }

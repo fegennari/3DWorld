@@ -2078,7 +2078,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 	if (is_garage_or_shed) return 1; // no chair, crates, or boxes in garages or sheds
 
 	// add a random office chair if there's space
-	if (!is_house && min(crate_bounds.dx(), crate_bounds.dy()) > 1.2*window_vspacing && has_office_chair_model()) {
+	if (!is_house && !is_restaurant() && min(crate_bounds.dx(), crate_bounds.dy()) > 1.2*window_vspacing && has_office_chair_model()) {
 		vector3d const chair_sz(get_office_chair_size());
 		float const chair_height(chair_sz.z), chair_radius(chair_sz.x);
 		point const pos(gen_xy_pos_in_area(crate_bounds, chair_radius, rgen, zval));
