@@ -94,7 +94,11 @@ void building_t::add_restaurant_objs(rand_gen_t rgen, room_t const &room, float 
 		float const door_edge(bc.d[ddim][ddir]);
 
 		if (!added_desk) { // place a small desk/table/podium by the front (first) door
-			bool const tside(rgen.rand_bool());
+			float const dlo(bc.d[!ddim][0] - room.d[!ddim][0]), dhi(room.d[!ddim][1] - bc.d[!ddim][1]);
+			bool tside(0);
+			if      (dlo < 0.5*dhi) {tside = 1;} // door close to lo wall, put desk on hi side
+			else if (dhi < 0.5*dlo) {tside = 0;} // door close to hi wall, put desk on lo side
+			else {tside = rgen.rand_bool();} // door not near a wall, choose a random side
 			float const table_sz(0.12*floor_spacing);
 			cube_t table;
 			set_cube_zvals(table, zval, zval+0.4*floor_spacing);
