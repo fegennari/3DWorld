@@ -723,9 +723,8 @@ class building_indir_light_mgr_t {
 					base_num_rays *= 2; // more rays to reduce noise, since windows are large and few
 					surface_area  *= 0.5; // less indir light
 				}
-				else if (b.has_attic() && window.z1() >= b.get_attic_part().z2()) { // attic window
-					base_num_rays *= 8;
-				}
+				else if (b.is_restaurant() && b.interior->rooms.front().intersects(light_cube)) {base_num_rays /= 4;} // fewer rays in restaurant dining area
+				else if (b.has_attic() && window.z1() >= b.get_attic_part().z2()) {base_num_rays *= 8;} // attic window
 			}
 			// light intensity scales with surface area, since incoming light is a constant per unit area (large windows = more light)
 			weight *= surface_area/0.0016f; // a fraction the surface area weight of lights
@@ -756,6 +755,7 @@ class building_indir_light_mgr_t {
 			if (in_jail_cell)         {weight *= 0.25;} // lower weight for jail cell lights since there are so many
 			if (in_attic)             {weight *= ATTIC_LIGHT_RADIUS_SCALE*ATTIC_LIGHT_RADIUS_SCALE;} // based on surface area rather than radius
 			else if (b.point_in_industrial(light_center)) {base_num_rays /= 4; half_step_sz = 0;} // many lights in industrial areas, fewer rays needed
+			else if (b.is_restaurant() && b.interior->rooms.front().contains_pt(cube_bot_center(ro))) {base_num_rays /= 4;} // fewer rays in restaurant dining area
 			else if (light_in_basement) {
 				if (in_ext_basement) {
 					if      (b.interior->has_backrooms) {weight *= 0.2; base_num_rays /= 4;} // darker and fewer rays
