@@ -2034,7 +2034,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			// on the same floor (not separated by stairs) of the same part (not visible across windows), then the object isn't visible
 			if ((last_room_closed || camera_in_closed_room) && !in_camera_room && (room.part_id == camera_part || !has_windows)) continue;
 		}
-		apply_room_obj_rotate(obj, *i, objs); // Note: may modify obj by clearing flags and inst by updating dir
+		if (!shadow_only && !reflection_pass) {apply_room_obj_rotate(obj, *i, objs);} // Note: may modify obj by clearing flags and inst by updating dir
 		
 		if (bbd_in && !shadow_only && !is_rotated && (type == TYPE_WALL_LAMP || obj.is_exterior())) { // draw exterior objects later; not for rotated buildings
 			// wall lamp has transparent glass and must be drawn last; fire escape and wall lamp use outdoor lighting
