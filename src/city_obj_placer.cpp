@@ -34,6 +34,10 @@ bool enable_instanced_pine_trees();
 
 bool are_birds_enabled() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_BIRD_ANIM);}
 
+void add_cube_to_colliders_and_blockers(cube_t const &cube, vect_cube_t &blockers, vect_cube_t &colliders) {
+	colliders.push_back(cube);
+	blockers .push_back(cube);
+}
 
 // Note: copies rgen by value to avoid disrupting the original sequence
 bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, unsigned plot_ix, vect_cube_t const &plot_cuts,
@@ -50,16 +54,16 @@ bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, unsigne
 	gs.d[1][!cy] = plot.d[1][cy] + (cy ? -1.0 : 1.0)*(dim ? gs_width : gs_len);
 	if (gs.contains_pt_xy(plot.get_cube_center())) return 0; // plot too small? shouldn't fail
 	if (has_bcube_int_xy(gs, bcubes, pad_dist))    return 0; // too close to a building
-	cube_t gs_exp(gs);
-	gs_exp.expand_by_xy(2.0*(plot.dx() + plot.dy())); // don't place within 4 plot widths of another gas station
+	cube_t gs_service_area(gs), gs_exp(gs);
+	gs_exp.expand_by_xy(pad_dist); // add building gap
+	gs_service_area.expand_by_xy(2.0*(plot.dx() + plot.dy())); // don't place within 4 plot widths of another gas station
 	bool too_close(0);
-	for (gas_station_t const &g : gstations) {too_close |= g.bcube.intersects(gs_exp);}
+	for (gas_station_t const &g : gstations) {too_close |= g.bcube.intersects(gs_service_area);}
 	if (too_close) return 0; // too close to another gas station
 	bool const dir(dim ? cy : cx), ent_dir(dim ? cx : cy);
-	gass_groups.add_obj(gas_station_t(gs, dim, dir, ent_dir, plot_ix, gstations.size(), rgen.rand()), gstations);
-	bcubes.push_back(gs);
-	bcubes.back().expand_by_xy(pad_dist);
-	gstations.back().add_ped_colliders(colliders);
+	gas_station_t gstation(gs, dim, dir, ent_dir, plot_ix, gstations.size(), rgen.rand());
+	gass_groups.add_obj(gstation, gstations);
+	gstation.add_ped_colliders(colliders);
 	// add price sign near the corner by the intersection
 	float const sign_height(0.26*city_params.road_width), sign_width(0.3*sign_height), sign_depth(0.12*sign_width), sidewalk_width(get_sidewalk_width());
 	cube_t sign_bcube;
@@ -71,10 +75,32 @@ bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, unsigne
 	pole.expand_in_dim(!dim, -0.45*sign_width);
 	pole.expand_in_dim( dim, -0.10*sign_depth);
 	string const text("   GAS\nRegular  4.69\nPlus    4.79\nSupreme 4.99");
-	sign_t sign(sign_bcube, dim, dir, text, WHITE, BLACK, 1, 0, 0, 0, 1, 0, pole); // two_sided=1, emissive=0, small=0, scrolling=0, free_standing=1, in_skyway=0
-	sign.set_frame(0.015, BLUE);
-	sign_groups.add_obj(sign, signs);
+	sign_t gs_sign(sign_bcube, dim, dir, text, WHITE, BLACK, 1, 0, 0, 0, 1, 0, pole); // two_sided=1, emissive=0, small=0, scrolling=0, free_standing=1, in_skyway=0
+	gs_sign.set_frame(0.015, BLUE);
+	sign_groups.add_obj(gs_sign, signs);
 	colliders.push_back(pole); // only add the pole as a collider since the sign itself is above pedestrian heads
+	// add a nearby car wash if there's space
+	float const gs_far_edge(gstation.pavement.d[dim][!dir]); // away from road
+	float const cw_len(4*2.2*nom_car_size.y), cw_depth(1.6*nom_car_size.x), cw_height(0.2*city_params.road_width);
+	cube_t cw(gstation.pavement);
+	cw.z2() = plot.z1() + cw_height; // set roof height
+	cw.d[dim][ dir] = gs_far_edge;
+	cw.d[dim][!dir] = gs_far_edge - (dir ? 1.0 : -1.0)*cw_depth; // set depth
+	float const len_delta(gstation.pavement.get_sz_dim(dim) - cw_len);
+	if (len_delta > 0.0) {cw.expand_in_dim(!dim, -0.5*len_delta);} // shrink ends of carwash is shorter than gas station; should be true
+
+	if (!has_bcube_int_xy(cw, bcubes, pad_dist)) { // not too close to a building
+		cwash_groups.add_obj(car_wash_t(cw, dim, dir), cwashes);
+		add_cube_to_colliders_and_blockers(cw, colliders, bcubes);
+		// add car wash sign on the side facing the road
+		float const cw_road_side(cw.d[!dim][ent_dir]); // away from road
+		sign_bcube.d[!dim][!ent_dir] = cw_road_side;
+		sign_bcube.d[!dim][ ent_dir] = cw_road_side + (ent_dir ? 1.0 : -1.0)*0.25*sign_depth;
+		set_cube_zvals(sign_bcube, cw.z1()+0.6*cw_height, cw.z1()+0.85*cw_height);
+		set_wall_width(sign_bcube, cw.get_center_dim(dim), 0.3*cw_depth, dim);
+		sign_groups.add_obj(sign_t(sign_bcube, !dim, ent_dir, "Car Wash", WHITE, BLACK), signs);
+	}
+	bcubes.push_back(gs_exp); // add after placing car wash
 	return 1;
 }
 
@@ -510,10 +536,6 @@ template<typename T> void city_obj_groups_t::create_groups(vector<T> &objs, cube
 	by_tile.clear(); // no longer needed
 }
 
-void add_cube_to_colliders_and_blockers(cube_t const &cube, vect_cube_t &blockers, vect_cube_t &colliders) {
-	colliders.push_back(cube);
-	blockers .push_back(cube);
-}
 vect_bird_place_t *select_bird_loc_dest(bool add_pigeons, bool add_birds, vect_bird_place_t &pigeon_locs, vect_bird_place_t &bird_locs, rand_gen_t &rgen) {
 	if (!add_pigeons && !add_birds) return nullptr; // error?
 	if (!add_pigeons) return &bird_locs; // always a bird
