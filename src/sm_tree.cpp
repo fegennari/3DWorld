@@ -694,7 +694,7 @@ void small_tree_group::draw(bool shadow_only, int reflection_pass) {
 		setup_smoke_shaders(s, 0.0, 0, 0, tree_indir_lighting, 1, 1, 0, 0, 2, use_bump_map, 0, 1, 0, 0.0, 0.0, 0, 0, 1); // dynamic lights, but no smoke, is_outside=1
 		s.add_uniform_float("tex_scale_t", 5.0);
 	}
-	if (use_bump_map) {select_texture(BARK2_NORMAL_TEX, 5);}
+	if (use_bump_map) {select_texture_nmap(BARK2_NORMAL_TEX);}
 	draw_trunks(shadow_only);
 	if (!shadow_only) {s.add_uniform_float("tex_scale_t", 1.0);}
 	s.end_shader();

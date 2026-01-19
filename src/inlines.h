@@ -760,6 +760,5 @@ template<typename T> void set_bit_flag_to(T &flags, unsigned mask, bool val) {
 	if (val) {flags |= mask;} else {flags &= ~mask;}
 }
 
-
-inline void bind_default_flat_normal_map() {select_texture(FLAT_NMAP_TEX, 5);}
+inline void bind_default_flat_normal_map() {select_texture(FLAT_NMAP_TEX, NMAP_TU_ID);}
 

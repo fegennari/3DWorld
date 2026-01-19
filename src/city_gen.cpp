@@ -1472,7 +1472,7 @@ public:
 	}
 	vector<bridge_t> const &get_bridges() const {return bridges;}
 	bool have_animations() const {return city_obj_placer.have_animations();}
-	static void set_road_normal_map  () {select_texture(get_texture_by_name("normal_maps/dirt_normal.jpg", 1), 5);}
+	static void set_road_normal_map  () {select_texture_nmap(get_texture_by_name("normal_maps/dirt_normal.jpg", 1));}
 	static void reset_road_normal_map() {bind_default_flat_normal_map();} // no normal map
 
 	void draw(road_draw_state_t &dstate, bool shadow_only, bool is_connector_road, bool reflection_pass) {

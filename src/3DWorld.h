@@ -139,6 +139,7 @@ float const SQRT_ZOOMF      = sqrt(ZOOM_FACTOR);
 float const SQRT_ZOOMF_INV  = 1.0/SQRT_ZOOMF;
 
 unsigned const MAX_SHADER_LIGHTS = 8;
+unsigned const NMAP_TU_ID        = 5; // for smoke shader, etc.
 
 unsigned const quad_to_tris_ixs [6] = {0,1,2, 0,2,3};
 unsigned const cube_dim_table[2][3] = {{1, 2, 0}, {2, 0, 1}};

@@ -1395,7 +1395,7 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 			select_texture((default_tid >= 0) ? default_tid : WHITE_TEX); // no texture specified - use white texture
 		}
 		if (use_bump_map()) {
-			bind_texture_tu(tmgr.get_texture(bump_tid).get_tid(), 5);
+			bind_texture_tu(tmgr.get_texture(bump_tid).get_tid(), NMAP_TU_ID);
 		}
 		else if (is_bmap_pass) {
 			if (enable_bump_map()) {bind_default_flat_normal_map();} // use default normal map in this case instead of leaving it unbound, or bound to the previous material

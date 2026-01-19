@@ -43,7 +43,7 @@ void textured_mat_t::pre_draw(bool shadow_only) {
 	}
 	if (nm_tid < 0 && !nm_tex_name.empty()) {nm_tid = get_texture_by_name(nm_tex_name, 1);} // load/lookup texture if needed
 	select_texture(tid);
-	if (nm_tid >= 0) {select_texture(nm_tid, 5);} // bind normal map if it was specified
+	if (nm_tid >= 0) {select_texture_nmap(nm_tid);} // bind normal map if it was specified
 }
 void textured_mat_t::post_draw(bool shadow_only) {
 	if (!shadow_only && nm_tid >= 0) {bind_default_flat_normal_map();} // restore default flat normal map
@@ -155,7 +155,7 @@ cube_t bench_t::get_bird_bcube() const {
 /*static*/ void bench_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {
 		select_texture(FENCE_TEX);
-		select_texture(get_normal_map_for_bldg_tid(FENCE_TEX), 5);
+		select_texture_nmap(get_normal_map_for_bldg_tid(FENCE_TEX));
 	}
 }
 /*static*/ void bench_t::post_draw(draw_state_t &dstate, bool shadow_only) {
@@ -262,7 +262,7 @@ trashcan_t::trashcan_t(point const &pos_, float radius_, float height, bool is_c
 void set_corrugated_metal_texture() {
 	tid_nm_pair_t const tex(get_corr_metal_texture(1.0)); // tscale is unused
 	select_texture(tex.tid);
-	select_texture(tex.nm_tid, 5);
+	select_texture_nmap(tex.nm_tid);
 }
 /*static*/ void trashcan_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	if (shadow_only) {} // nothing to do
@@ -501,7 +501,7 @@ void hedge_draw_t::draw_and_clear(shader_t &s) {
 void begin_water_surface_draw(shader_t &s) { // used for swimming pools and ponds
 	if (0) {
 		select_texture(WHITE_TEX);
-		select_texture(get_texture_by_name("normal_maps/ocean_water_normal.png", 1), 5);
+		select_texture_nmap(get_texture_by_name("normal_maps/ocean_water_normal.png", 1));
 	}
 	else {select_texture(get_texture_by_name("snow2.jpg"));}
 	enable_blend(); // transparent water
@@ -942,7 +942,7 @@ bool clothesline_t::add_item(unsigned id, float dz, float hwidth, float hthick, 
 	if (shadow_only) return;
 	if (dstate.pass_ix == 0) { // line
 		select_texture(get_texture_by_name("interiors/blinds.jpg"));
-		select_texture(get_texture_by_name("interiors/blinds_hn.jpg", 1), 5);
+		select_texture_nmap(get_texture_by_name("interiors/blinds_hn.jpg", 1));
 		dstate.s.set_cur_color(LT_GRAY);
 	}
 	else if (dstate.pass_ix == 1) {
@@ -1124,7 +1124,7 @@ bool power_pole_t::add_wire(point const &p1, point const &p2, bool add_pole) { /
 /*static*/ void power_pole_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	if (shadow_only) return;
 	select_texture(WOOD2_TEX);
-	select_texture(get_texture_by_name("normal_maps/wood_NRM.jpg", 1), 5);
+	select_texture_nmap(get_texture_by_name("normal_maps/wood_NRM.jpg", 1));
 }
 /*static*/ void power_pole_t::post_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {bind_default_flat_normal_map();} // restore to default
@@ -2700,7 +2700,7 @@ car_wash_t::car_wash_t(cube_t const &c, bool dim_, bool dir_) : oriented_city_ob
 	if (shadow_only) {} // nothing to do
 	else if (dstate.pass_ix == 0) { // walls
 		select_texture(get_texture_by_name("bricks_tan.png"));
-		select_texture(get_texture_by_name("normal_maps/bricks_tan_norm.png", 1), 5);
+		select_texture_nmap(get_texture_by_name("normal_maps/bricks_tan_norm.png", 1));
 	}
 	else {set_corrugated_metal_texture();} // roof
 }

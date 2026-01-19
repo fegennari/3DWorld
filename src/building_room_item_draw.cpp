@@ -2950,7 +2950,7 @@ void paint_draw_t::draw_paint(shader_t &s) const { // and markers and bullet hol
 	}
 	if (!bullet_qbd.empty()) { // Note: not using parallax mapping as in draw_cracks_and_decals() because it doesn't work with TT buildings
 		select_texture(BULLET_D_TEX);
-		select_texture(BULLET_N_TEX, 5); // apply normal map
+		select_texture_nmap(BULLET_N_TEX); // apply normal map
 		s.add_uniform_float("bump_tb_scale", -1.0); // invert the coordinate system (something backwards?)
 		bullet_qbd.draw();
 		s.add_uniform_float("bump_tb_scale", 1.0); // restore
@@ -3012,7 +3012,7 @@ void building_decal_manager_t::draw_building_interior_decals(shader_t &s, bool p
 	if (!tp_qbd.empty()) { // toilet paper squares: double sided, lit from top
 		glDisable(GL_CULL_FACE); // draw both sides
 		select_texture(WHITE_TEX);
-		select_texture(get_toilet_paper_nm_id(), 5); // apply normal map
+		select_texture_nmap(get_toilet_paper_nm_id()); // apply normal map
 		tp_qbd.draw(); // use a VBO for this if the player leaves the building and then comes back?
 		bind_default_flat_normal_map(); // no normal map
 		glEnable(GL_CULL_FACE);

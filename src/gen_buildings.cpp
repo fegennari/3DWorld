@@ -121,7 +121,7 @@ void tid_nm_pair_t::set_specular_color(colorRGB const &color, float mag, float s
 void tid_nm_pair_t::set_gl(tid_nm_pair_dstate_t &state) const {
 	// Note: normal map bind must be done first because it will bind to TU=0 on first load, which will overwrite the bound diffuse texture
 	bool const has_normal_map(get_nm_tid() != FLAT_NMAP_TEX);
-	if (has_normal_map) {select_texture(get_nm_tid(), 5);} // else we set bump_map_mag=0.0
+	if (has_normal_map) {select_texture_nmap(get_nm_tid());} // else we set bump_map_mag=0.0
 	state.set_for_shader(has_normal_map ? 1.0 : 0.0); // enable or disable normal map (only ~25% of calls have a normal map)
 
 	if (state.no_set_texture) {} // nothing to do
@@ -273,8 +273,8 @@ int get_mplate_nm_tid () {return building_texture_mgr.get_mplate_nm_tid();}
 int get_ac_unit_tid   (unsigned ix) {return ((ix & 1) ? building_texture_mgr.get_ac_unit_tid1() : building_texture_mgr.get_ac_unit_tid2());}
 
 void set_tile_floor_texture() {
-	select_texture(building_texture_mgr.get_tile_floor_tid   ());
-	select_texture(building_texture_mgr.get_tile_floor_nm_tid(), 5);
+	select_texture     (building_texture_mgr.get_tile_floor_tid   ());
+	select_texture_nmap(building_texture_mgr.get_tile_floor_nm_tid());
 }
 unsigned choose_backrooms_wall_tex(rand_gen_t &rgen) {
 	if (rgen.rand_bool()) return 0; // use default concrete texture

@@ -1521,7 +1521,7 @@ void road_draw_state_t::draw_tunnel(tunnel_t const &tunnel, bool shadow_only) { 
 	if (!shadow_only) {
 		s.add_uniform_float("hemi_lighting_scale", 0.5); // set back to the default of 0.5
 		select_texture(get_texture_by_name("cblock2.jpg"));
-		select_texture(get_texture_by_name("normal_maps/cblock2_NRM.jpg", 1), 5); // set normal map
+		select_texture_nmap(get_texture_by_name("normal_maps/cblock2_NRM.jpg", 1)); // set normal map
 		tscale *= 4.0;
 	}
 	for (unsigned n = 0; n < 2; ++n) { // add tunnel facades

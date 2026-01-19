@@ -668,7 +668,7 @@ void draw_cobjs_group(vector<unsigned> const &cobjs, cobj_draw_buffer &cdb, int 
 			if (c.cp.normal_map != nm_tid) { // normal map change
 				cdb.flush();
 				nm_tid = c.cp.normal_map;
-				select_texture(nm_tid, 5);
+				select_texture_nmap(nm_tid);
 			}
 			if (bbs != bump_b_scale) {
 				cdb.flush();
