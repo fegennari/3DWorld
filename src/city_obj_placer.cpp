@@ -931,9 +931,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			float const radius(car_length*rgen.rand_uniform(0.15, 0.3));
 			point pos;
 			if (!try_place_obj(plot, blockers, rgen, (radius + spacing), spacing, 20, pos, 0)) continue; // 20 tries
-			cube_t bc(pos);
-			bc.expand_by_xy(radius);
-			bc.z2() += radius*rgen.rand_uniform(2.0, 4.0); // set height
+			cube_t const bc(get_cube_height_radius(pos, radius, radius*rgen.rand_uniform(2.0, 4.0))); // random height
 			sculpture_t const sculpture(bc, rgen.rand());
 			sculpt_groups.add_obj(sculpture, sculptures);
 			add_cube_to_colliders_and_blockers(bc, colliders, blockers);

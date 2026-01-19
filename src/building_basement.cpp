@@ -1025,9 +1025,7 @@ void building_t::add_basement_room_detail_objs(rand_gen_t &rgen) {
 				pos[!dim] = rgen.rand_uniform(place_area.d[!dim][0]+edge_pad, place_area.d[!dim][1]-edge_pad);
 				assert(room.contains_pt(pos));
 			}
-			cube_t mushroom(pos);
-			mushroom.expand_by_xy(radius);
-			mushroom.z2() += height;
+			cube_t const mushroom(get_cube_height_radius(pos, radius, height));
 			if (is_obj_placement_blocked(mushroom, room, 1, 1)) continue; // Note: doesn't check other previously placed room objects
 			colorRGBA const colors[4] = {WHITE, RED, WHITE, PINK}; // pink is red with white dots
 			colorRGBA const &color(colors[rgen.rand() & 3]);

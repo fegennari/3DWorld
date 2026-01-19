@@ -876,10 +876,7 @@ void building_t::add_pan_on_stove(room_object_t const &stove, rand_gen_t &rgen) 
 	cube_t burner(top);
 	for (unsigned d = 0; d < 2; ++d) {burner.d[d][rgen.rand_bool()] = top.get_center_dim(d);} // pick a random quadrant
 	float const floor_spacing(get_window_vspace()), height(rgen.rand_uniform(0.02, 0.025)*floor_spacing), radius(rgen.rand_uniform(0.05, 0.06)*floor_spacing);
-	cube_t pan;
-	pan.set_from_point(cube_top_center(burner));
-	pan.expand_by_xy(radius);
-	pan.z2() += height;
+	cube_t const pan(get_cube_height_radius(cube_top_center(burner), radius, height));
 	interior->room_geom->objs.emplace_back(pan, TYPE_PAN, stove.room_id, stove.dim, rgen.rand_bool(), RO_FLAG_NOCOLL, stove.light_amt, SHAPE_CYLIN, DK_GRAY);
 }
 bool building_t::place_milk_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid) {

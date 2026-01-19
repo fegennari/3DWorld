@@ -1647,17 +1647,13 @@ void building_t::add_solar_panels(rand_gen_t &rgen) { // for houses
 	}
 }
 void building_t::add_rooftop_sat_dish(cube_t const &top, float radius, rand_gen_t &rgen) {
-	point dish_center;
+	point dish_center(0.0, 0.0, top.z2());
 
 	for (unsigned d = 0; d < 2; ++d) {
 		bool const ddir(rgen.rand_bool());
 		dish_center[d] = top.d[d][ddir] + (ddir ? -1.0 : 1.0)*1.0*radius;
 	}
-	roof_obj_t dish(ROOF_OBJ_SAT_DISH);
-	dish.set_from_point(dish_center);
-	dish.expand_by_xy(radius);
-	set_cube_zvals(dish, top.z2(), (top.z2() + 2.5*radius));
-	details.push_back(dish);
+	details.emplace_back(get_cube_height_radius(dish_center, radius, 2.5*radius), ROOF_OBJ_SAT_DISH);
 }
 cube_t building_t::get_top_building_part() const {
 	cube_t top; // uppermost part

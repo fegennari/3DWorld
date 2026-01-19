@@ -429,7 +429,7 @@ void building_t::add_ceiling_tile_objects(rand_gen_t rgen) {
 				bool const cx(rgen.rand_bool()), cy(rgen.rand_bool()); // choose a random corner
 				float const radius(rgen.rand_uniform(0.04, 0.08)*fc_thick);
 				point const corner((tile.d[0][cx] + (cx ? -1.0 : 1.0)*radius), (tile.d[1][cy] + (cy ? -1.0 : 1.0)*radius), cs.z2()); // starts at ceiling
-				cube_t wire(corner, corner);
+				cube_t wire(corner);
 				wire.expand_by_xy(radius);
 
 				if (!has_bcube_int_xy(wire, light_bcs)) {

@@ -781,11 +781,8 @@ bool building_t::create_office_cubicles(rand_gen_t rgen, room_t const &room, flo
 						place_book_on_obj(rgen, desk, room_id, tot_light_amt, pp_start, 1, 0, 1); // use_dim_dir=1; skip_if_overlaps=1
 					}
 					if (!has_trashcan && rgen.rand_float() < 0.25) { // maybe add a trashcan under the cubicle
-						float const radius(0.5*rgen.rand_uniform(0.6, 0.8)*min(surface.dx(), surface.dy()));
-						cube_t tc;
-						tc.set_from_point(gen_xy_pos_in_area(surface, radius, rgen));
-						set_cube_zvals(tc, trashcan_z1, zval+rgen.rand_uniform(0.5, 0.75)*(surface.z1() - zval));
-						tc.expand_by_xy(radius);
+						float const radius(0.5*rgen.rand_uniform(0.6, 0.8)*min(surface.dx(), surface.dy())), height(rgen.rand_uniform(0.5, 0.75)*(surface.z1() - zval));
+						cube_t const tc(get_cube_height_radius(gen_xy_pos_in_area(surface, radius, rgen, trashcan_z1), radius, height));
 						// no trash, no objects to intersect with
 						objs.emplace_back(tc, TYPE_TCAN, room_id, sdim, sdir, RO_FLAG_NOCOLL, tot_light_amt,
 							(rgen.rand_bool() ? SHAPE_CYLIN : SHAPE_CUBE), tcan_colors[rgen.rand() % NUM_TCAN_COLORS]);
