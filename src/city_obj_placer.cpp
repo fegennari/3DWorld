@@ -2486,7 +2486,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(bballs,    bball_groups,    dstate, 0.12, shadow_only, 1);
 	draw_objects(pfloats,   pfloat_groups,   dstate, 0.15, shadow_only, 1);
 	draw_objects(gstations, gass_groups,     dstate, 0.25, shadow_only, 1);
-	draw_objects(cwashes,   cwash_groups,    dstate, 0.25, shadow_only, 0);
+	draw_objects(cwashes,   cwash_groups,    dstate, 0.25, shadow_only, 1);
 	
 	if (!shadow_only) { // non shadow casting objects
 		draw_objects(hcaps,    hcap_groups,    dstate, 0.12, shadow_only, 0);
@@ -2593,26 +2593,30 @@ void city_obj_placer_t::draw_transparent_objects(draw_state_t &dstate) {
 void city_obj_placer_t::add_lights(vector3d const &xlate, cube_t &lights_bcube) const {
 	skyway.add_lights(xlate, lights_bcube);
 
-	// add sculpture and gas station lights if night time
-	if (is_night() && !sculpt_groups.empty() && sculpt_groups.get_bcube().intersects_xy(lights_bcube)) {
-		unsigned start_ix(0);
+	if (is_night()) { // add sculpture, gas station, and car wash lights if night time
+		if (!sculpt_groups.empty() && sculpt_groups.get_bcube().intersects_xy(lights_bcube)) {
+			unsigned start_ix(0);
 
-		for (auto i = sculpt_groups.begin(); i != sculpt_groups.end(); start_ix = i->ix, ++i) {
-			if (!i->intersects_xy(lights_bcube)) continue;
-			assert(start_ix <= i->ix && i->ix <= sculptures.size());
+			for (auto i = sculpt_groups.begin(); i != sculpt_groups.end(); start_ix = i->ix, ++i) {
+				if (!i->intersects_xy(lights_bcube)) continue;
+				assert(start_ix <= i->ix && i->ix <= sculptures.size());
 
-			for (auto p = sculptures.begin()+start_ix; p != sculptures.begin()+i->ix; ++p) {
-				if (!p->bcube.intersects_xy(lights_bcube)) continue;
-				point const lpos(p->pos + 0.25*p->bcube.dz()*plus_z); // 75% of the way up
-				float const ldist(4.0*p->radius);
-				min_eq(lights_bcube.z1(), lpos.z-ldist);
-				max_eq(lights_bcube.z2(), lpos.z-ldist);
-				dl_sources.emplace_back(ldist, lpos, lpos, p->color, 0); // omnidirectional point light, no shadows
-			}
-		} // for i
-	}
-	if (is_night() && !gstations.empty() && gass_groups.get_bcube().intersects_xy(lights_bcube)) {
-		for (gas_station_t const &gs : gstations) {gs.add_night_time_lights(xlate, lights_bcube);}
+				for (auto p = sculptures.begin()+start_ix; p != sculptures.begin()+i->ix; ++p) {
+					if (!p->bcube.intersects_xy(lights_bcube)) continue;
+					point const lpos(p->pos + 0.25*p->bcube.dz()*plus_z); // 75% of the way up
+					float const ldist(4.0*p->radius);
+					min_eq(lights_bcube.z1(), lpos.z-ldist);
+					max_eq(lights_bcube.z2(), lpos.z-ldist);
+					dl_sources.emplace_back(ldist, lpos, lpos, p->color, 0); // omnidirectional point light, no shadows
+				}
+			} // for i
+		}
+		if (!gstations.empty() && gass_groups.get_bcube().intersects_xy(lights_bcube)) {
+			for (gas_station_t const &gs : gstations) {gs.add_night_time_lights(xlate, lights_bcube);}
+		}
+		if (!cwashes.empty() && cwash_groups.get_bcube().intersects_xy(lights_bcube)) {
+			for (car_wash_t const &cw : cwashes) {cw.add_night_time_lights(xlate, lights_bcube);}
+		}
 	}
 }
 
