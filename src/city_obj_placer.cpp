@@ -2486,6 +2486,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(bballs,    bball_groups,    dstate, 0.12, shadow_only, 1);
 	draw_objects(pfloats,   pfloat_groups,   dstate, 0.15, shadow_only, 1);
 	draw_objects(gstations, gass_groups,     dstate, 0.25, shadow_only, 1);
+	draw_objects(cwashes,   cwash_groups,    dstate, 0.25, shadow_only, 0);
 	
 	if (!shadow_only) { // non shadow casting objects
 		draw_objects(hcaps,    hcap_groups,    dstate, 0.12, shadow_only, 0);
@@ -2509,9 +2510,6 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	for (dstate.pass_ix = 0; dstate.pass_ix < 3; ++dstate.pass_ix) { // {line, poles, clothes}
 		if (shadow_only && dstate.pass_ix == 0) continue; // skip line in the shadow pass because its too narrow to cast a good shadow
 		draw_objects(clines, cline_groups, dstate, 0.09, shadow_only, 1); // has_immediate_draw=1
-	}
-	for (dstate.pass_ix = 0; dstate.pass_ix < 2; ++dstate.pass_ix) { // {walls, roof}
-		draw_objects(cwashes, cwash_groups, dstate, 0.25, shadow_only, 0);
 	}
 	dstate.s.add_uniform_float("min_alpha", DEF_CITY_MIN_ALPHA); // reset back to default after drawing 3D models such as fire hydrants and substations
 	

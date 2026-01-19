@@ -2494,6 +2494,11 @@ gas_station_t::gas_station_t(cube_t const &c, bool dim_, bool dir_, bool edir, u
 		}
 	}
 }
+void draw_road_pavement(draw_state_t &dstate, city_draw_qbds_t &qbds, cube_t const &pavement) {
+	select_texture(get_texture_by_name("roads/concrete.jpg"));
+	dstate.draw_cube(qbds.qbd, pavement, GRAY, 1, 8.0, 3); // draw top surface only
+	qbds.qbd.draw_and_clear();
+}
 void gas_station_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	// Note: most geometry is drawn immediately rather than in multiple passes since there are several materials and likely only one or two visible gas stations
 	dstate.draw_cube(qbds.untex_qbd, roof, WHITE); // draw all sides
@@ -2501,12 +2506,7 @@ void gas_station_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dis
 	roof_edge.expand_by_xy(0.0035*roof.get_sz_dim(dim));
 	roof_edge.expand_in_z(-0.2*roof.dz());
 	dstate.draw_cube(qbds.untex_qbd, roof_edge, RED); // draw all sides
-
-	if (!shadow_only) { // draw pavement surface
-		select_texture(get_texture_by_name("roads/concrete.jpg"));
-		dstate.draw_cube(qbds.qbd, pavement, GRAY, 1, 8.0, 3); // draw top surface only
-		qbds.qbd.draw_and_clear();
-	}
+	if (!shadow_only) {draw_road_pavement(dstate, qbds, pavement);} // draw pavement surface
 	float const dmax(dist_scale*dstate.draw_tile_dist);
 	if (!shadow_only && !bcube.closest_dist_less_than(dstate.camera_bs, 0.50*dmax)) return; // only draw the roof and pavement
 	colorRGBA const pillar_color(0.25, 0.25, 1.0); // light blue
@@ -2684,10 +2684,12 @@ car_wash_t::car_wash_t(cube_t const &c, bool dim_, bool dir_) : oriented_city_ob
 	float const height(bcube.dz()), width(get_width()), depth(get_depth()), wall_thick(0.04*depth);
 	float const bay_spacing((width - wall_thick)/num_cwash_bays);
 	cube_t back_wall(bcube), side_wall(bcube);
-	roof = bcube;
+	roof = pavement = bcube;
+	pavement .z2() = bcube.z1() + 0.0075*bcube.dz(); // shift slightly up
 	side_wall.z2() = back_wall.z2() = roof.z1() = bcube.z2() - 1.5*wall_thick; // roof is thicker than walls
-	side_wall.d[!dim][1]  = side_wall.d[!dim][0] + wall_thick;
-	back_wall.d[dim][dir] = side_wall.d[dim][!dir] = bcube.d[dim][!dir] + (dir ? 1.0 : -1.0)*wall_thick;
+	side_wall.d[!dim][1]    = side_wall.d[!dim][0] + wall_thick;
+	back_wall.d[ dim][dir]  = side_wall.d[dim][!dir] = bcube.d[dim][!dir] + (dir ? 1.0 : -1.0)*wall_thick;
+	pavement .d[ dim][dir] += (dir ? 1.0 : -1.0)*0.01*depth; // extend slightly under gas station to avoid a gap if heights are different
 	walls.push_back(roof);
 	walls.push_back(back_wall);
 
@@ -2696,28 +2698,25 @@ car_wash_t::car_wash_t(cube_t const &c, bool dim_, bool dir_) : oriented_city_ob
 		side_wall.translate_dim(!dim, bay_spacing);
 	}
 }
-/*static*/ void car_wash_t::pre_draw (draw_state_t &dstate, bool shadow_only) {
-	if (shadow_only) {} // nothing to do
-	else if (dstate.pass_ix == 0) { // walls
+void car_wash_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
+	// Note: most geometry is drawn immediately rather than in multiple passes since there are several materials and likely only one or two visible car washes
+	float const tscale(1.0/bcube.dz());
+	// draw walls and sides of roof
+	if (!shadow_only) {
 		select_texture(get_texture_by_name("bricks_tan.png"));
 		select_texture_nmap(get_texture_by_name("normal_maps/bricks_tan_norm.png", 1));
 	}
-	else {set_corrugated_metal_texture();} // roof
-}
-/*static*/ void car_wash_t::post_draw(draw_state_t &dstate, bool shadow_only) {
+	dstate.draw_cube(qbds.qbd, roof, WHITE, 0, tscale, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1); // skip_bottom=0, skip_top=1
+	// can skip the back edges of side walls as well?
+	for (cube_t const &w : walls) {dstate.draw_cube(qbds.qbd, w, WHITE, 1, tscale);} // skip_bottom=1
+	if (!shadow_only) {qbds.qbd.draw_and_clear();}
+	// draw roof
+	if (!shadow_only) {set_corrugated_metal_texture();}
+	dstate.draw_cube(qbds.qbd, roof, GRAY, 1, 0.75*tscale, 3, 0, 0, !dim); // skip_bottom=1, Z only, swap_tc_xy=!dim
+	qbds.qbd.draw_and_clear();
 	if (!shadow_only) {bind_default_flat_normal_map();}
-}
-void car_wash_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
-	float const tscale(1.0/bcube.dz());
-
-	if (dstate.pass_ix == 0) { // walls and sides of roof
-		dstate.draw_cube(qbds.qbd, roof, WHITE, 0, tscale, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1); // skip_bottom=0, skip_top=1
-		// can skip the back edges of side walls as well?
-		for (cube_t const &w : walls) {dstate.draw_cube(qbds.qbd, w, WHITE, 1, tscale);} // skip_bottom=1
-	}
-	else { // roof
-		dstate.draw_cube(qbds.qbd, roof, GRAY, 1, 0.75*tscale, 3); // skip_bottom=1, Z only
-	}
+	// draw pavement
+	if (!shadow_only) {draw_road_pavement(dstate, qbds, pavement);} // draw pavement surface
 }
 bool car_wash_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
 	bool ret(0);
