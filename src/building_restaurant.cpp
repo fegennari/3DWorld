@@ -92,7 +92,8 @@ void building_t::create_restaurant_floorplan(unsigned part_id, rand_gen_t &rgen)
 }
 
 void building_t::add_restaurant_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float light_amt, unsigned light_nx, unsigned light_ny) {
-	cube_t place_area(get_walkable_room_bounds(room));
+	cube_t const room_bounds(get_walkable_room_bounds(room));
+	cube_t place_area(room_bounds);
 	place_area.expand_by(-0.25*get_wall_thickness()); // common spacing to wall
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const objs_start(objs.size());
@@ -145,10 +146,10 @@ void building_t::add_restaurant_objs(rand_gen_t rgen, room_t const &room, float 
 	if (rgen.rand_bool()) {add_fishtank_to_room(rgen, room, zval, room_id, light_amt, objs_start, place_area);}
 	unsigned const num_plants(4 + (rgen.rand() & 5)); // 4-8
 	add_plants_to_room(rgen, room, zval, room_id, light_amt, objs_start, num_plants);
+	float const ceil_zval(room.z2() - get_fc_thickness());
 
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_CEIL_FAN)) { // add ceiling fans between the ceiling lights
-		float const dx(room.dx()), dy(room.dy()), ceil_zval(room.z2() - get_fc_thickness());
-		float const xstep(dx/light_nx), ystep(dy/light_ny);
+		float const dx(room.dx()), dy(room.dy()), xstep(dx/light_nx), ystep(dy/light_ny);
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_CEIL_FAN)); // D, W, H
 		float const diameter(0.75*min(min(xstep, ystep), floor_spacing)), height(diameter*sz.z/sz.y); // assumes width = depth = diameter
 		bool skip(1);
@@ -166,6 +167,28 @@ void building_t::add_restaurant_objs(rand_gen_t rgen, room_t const &room, float 
 			} // for x
 		} // for y
 	}
+	// add wooden ceiling beams
+	float const beam_hwidth(0.025*floor_spacing), beam_height(3.0*beam_hwidth);
+	bool const pri_dim(rgen.rand_bool());
+
+	for (unsigned d = 0; d < 2; ++d) {
+		bool const is_pri(bool(d) == pri_dim);
+		unsigned const num_beams((d ? light_nx : light_ny) + 2); // includes beams along room edges
+		float const beam_spacing(room.get_sz_dim(!d)/(num_beams - 2));
+		float const beams_start(room.d[!d][0] - 0.5*beam_spacing);
+		float const clamp_lo(room_bounds.d[!d][0] + beam_hwidth), clamp_hi(room_bounds.d[!d][1] - beam_hwidth); // clamp to room walls
+		cube_t beam(room_bounds); // spans the entire room, excluding the walls
+		set_cube_zvals(beam, (ceil_zval - (is_pri ? 1.2 : 1.0)*beam_height), ceil_zval); // primary dim beams are slightly lower to prevent Z-fighting
+		if (!is_pri) {beam.expand_in_dim(0, -2.0*beam_hwidth);} // remove overlaps at ends
+
+		for (unsigned n = 0; n < num_beams; ++n) {
+			unsigned skip_faces(EF_Z2 | get_skip_mask_for_xy(d));
+			if (n   == 0        ) {skip_faces |= ~get_face_mask(!d, 0);} // skip face against the wall
+			if (n+1 == num_beams) {skip_faces |= ~get_face_mask(!d, 1);} // skip face against the wall
+			set_wall_width(beam, max(clamp_lo, min(clamp_hi, (beams_start + n*beam_spacing))), beam_hwidth, !d);
+			objs.emplace_back(beam, TYPE_IBEAM, room_id, d, 0, (RO_FLAG_NOCOLL | RO_FLAG_IS_HOUSE), light_amt, SHAPE_CUBE, WHITE, skip_faces); // house == wood
+		}
+	} // for d
 	if (rgen.rand_bool()) {add_wall_tv(rgen, room, zval, room_id, light_amt, objs_start);} // maybe TV for sports bar
 	// add additional pictures, likely only on the wall separating dining from kitchen and bathrooms
 	hang_pictures_whiteboard_chalkboard_in_room(rgen, room, zval, room_id, light_amt, objs_start, 0, 0);

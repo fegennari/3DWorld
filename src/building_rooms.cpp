@@ -358,7 +358,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		}
 		else if (is_restaurant_room) {
 			light_density = 0.6;
-			light_size   *= 0.8;
+			light_size   *= 0.75;
 		}
 		else if (is_rest_kitchen) {
 			light_density = 0.7;

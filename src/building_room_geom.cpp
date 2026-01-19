@@ -7102,6 +7102,11 @@ void building_room_geom_t::add_metal_bar(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_ibeam(room_object_t const &c) {
+	if (c.is_house()) { // simple wooden beam in a house or restaurant (house floorplan)
+		float const tscale(0.12/c.get_min_dim_sz());
+		get_wood_material(tscale).add_cube_to_verts(c, apply_wood_light_color(c), c.get_llc(), c.item_flags, !c.dim);
+		return;
+	}
 	unsigned const bdim(c.get_pipe_dim()); // same as pipes
 	unsigned const idim(c.dir ? unsigned(c.dim) : 2); // I-shape dim
 	unsigned const wdim(!c.dim); // width dim
