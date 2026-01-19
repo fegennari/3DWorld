@@ -643,6 +643,7 @@ struct cube_t { // size = 24; Note: AABB, not actually a cube
 		return mextent;
 	}
 	float get_max_dim_sz() const {return max(dz(), max(dx(), dy()));}
+	float get_min_dim_sz() const {return min(dz(), min(dx(), dy()));}
 
 	float furthest_dist_to_pt(point const &pos) const {
 		vector3d dmax;
