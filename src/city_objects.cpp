@@ -2436,7 +2436,7 @@ vect_cube_t const &parking_solar_t::get_legs() const {
 float const GS_LIGHT_COLOR_TEMP = 0.6; // bluish
 
 gas_station_t::gas_station_t(cube_t const &c, bool dim_, bool dir_, bool edir, unsigned rand_val, unsigned pix, unsigned gix) :
-	oriented_city_obj_t(c, dim_, dir_), ent_dir(edir), plot_ix(pix), gs_ix(gix)
+	obj_with_roof_and_pavement_t(c, dim_, dir_), ent_dir(edir), plot_ix(pix), gs_ix(gix)
 {
 	vector2d const sz(bcube.get_size_xy());
 	float const height(bcube.dz()), length(sz[!dim]), pavement_zval(bcube.z1() + 0.005*bcube.dz());
@@ -2494,7 +2494,7 @@ gas_station_t::gas_station_t(cube_t const &c, bool dim_, bool dir_, bool edir, u
 		}
 	}
 }
-void draw_road_pavement(draw_state_t &dstate, city_draw_qbds_t &qbds, cube_t const &pavement) {
+void obj_with_roof_and_pavement_t::draw_road_pavement(draw_state_t &dstate, city_draw_qbds_t &qbds) const {
 	select_texture(get_texture_by_name("roads/concrete.jpg"));
 	dstate.draw_cube(qbds.qbd, pavement, GRAY, 1, 8.0, 3); // draw top surface only
 	qbds.qbd.draw_and_clear();
@@ -2506,7 +2506,7 @@ void gas_station_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dis
 	roof_edge.expand_by_xy(0.0035*roof.get_sz_dim(dim));
 	roof_edge.expand_in_z(-0.2*roof.dz());
 	dstate.draw_cube(qbds.untex_qbd, roof_edge, RED); // draw all sides
-	if (!shadow_only) {draw_road_pavement(dstate, qbds, pavement);} // draw pavement surface
+	if (!shadow_only) {draw_road_pavement(dstate, qbds);} // draw pavement surface
 	float const dmax(dist_scale*dstate.draw_tile_dist);
 	if (!shadow_only && !bcube.closest_dist_less_than(dstate.camera_bs, 0.50*dmax)) return; // only draw the roof and pavement
 	colorRGBA const pillar_color(0.25, 0.25, 1.0); // light blue
@@ -2534,7 +2534,7 @@ void gas_station_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dis
 	}
 	model_city_obj_t::post_draw(dstate, shadow_only);
 }
-bool gas_station_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
+bool obj_with_roof_and_pavement_t::proc_roof_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
 	cube_t coll_bcube(roof); // all the collidable parts are under the roof
 	coll_bcube.z1() = bcube.z1();
 	if (!sphere_cube_intersect((pos_ - xlate), radius_, coll_bcube)) return 0; // optimization
@@ -2545,7 +2545,10 @@ bool gas_station_t::proc_sphere_coll(point &pos_, point const &p_last, float rad
 		if (cnorm) {*cnorm = plus_z;}
 		return 1;
 	}
-	if (sphere_cube_int_update_pos(pos_, radius_, (roof + xlate), p_last, 0, cnorm)) return 1; // needed for ball collision?
+	return sphere_cube_int_update_pos(pos_, radius_, (roof + xlate), p_last, 0, cnorm); // needed for ball collision?
+}
+bool gas_station_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
+	if (proc_roof_sphere_coll(pos_, p_last, radius_, xlate, cnorm)) return 1;
 
 	for (unsigned n = 0; n < num_pillars; ++n) {
 		if (sphere_cube_int_update_pos(pos_, radius_, pillars[n], p_last, 0, cnorm)) return 1;
@@ -2680,7 +2683,7 @@ void gas_station_t::leave_output_lane() const {
 
 unsigned const num_cwash_bays = 4;
 
-car_wash_t::car_wash_t(cube_t const &c, bool dim_, bool dir_) : oriented_city_obj_t(c, dim_, dir_) {
+car_wash_t::car_wash_t(cube_t const &c, bool dim_, bool dir_) : obj_with_roof_and_pavement_t(c, dim_, dir_) {
 	float const height(bcube.dz()), width(get_width()), depth(get_depth()), wall_thick(0.04*depth);
 	float const bay_spacing((width - wall_thick)/num_cwash_bays);
 	cube_t back_wall(bcube), side_wall(bcube);
@@ -2690,7 +2693,6 @@ car_wash_t::car_wash_t(cube_t const &c, bool dim_, bool dir_) : oriented_city_ob
 	side_wall.d[!dim][1]    = side_wall.d[!dim][0] + wall_thick;
 	back_wall.d[ dim][dir]  = side_wall.d[dim][!dir] = bcube.d[dim][!dir] + (dir ? 1.0 : -1.0)*wall_thick;
 	pavement .d[ dim][dir] += (dir ? 1.0 : -1.0)*0.01*depth; // extend slightly under gas station to avoid a gap if heights are different
-	walls.push_back(roof);
 	walls.push_back(back_wall);
 
 	for (unsigned n = 0; n <= num_cwash_bays; ++n) { // add side walls
@@ -2716,9 +2718,10 @@ void car_wash_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_s
 	qbds.qbd.draw_and_clear();
 	if (!shadow_only) {bind_default_flat_normal_map();}
 	// draw pavement
-	if (!shadow_only) {draw_road_pavement(dstate, qbds, pavement);} // draw pavement surface
+	if (!shadow_only) {draw_road_pavement(dstate, qbds);} // draw pavement surface
 }
 bool car_wash_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
+	if (proc_roof_sphere_coll(pos_, p_last, radius_, xlate, cnorm)) return 1;
 	bool ret(0);
 	for (cube_t const &w : walls) {ret |= sphere_cube_int_update_pos(pos_, radius_, (w + xlate), p_last, 0, cnorm);}
 	return ret;

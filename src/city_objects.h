@@ -451,11 +451,17 @@ struct parking_solar_t : public oriented_city_obj_t {
 struct gas_pump_t : public multi_model_city_obj_t {
 	gas_pump_t(point const &pos_, float height, bool dim_, bool dir_, unsigned model_sel) : multi_model_city_obj_t(pos_, height, dim_, dir_, OBJ_MODEL_GAS_PUMP, model_sel) {}
 };
-struct gas_station_t : public oriented_city_obj_t {
+struct obj_with_roof_and_pavement_t : public oriented_city_obj_t {
+	cube_t roof, pavement;
+
+	obj_with_roof_and_pavement_t(cube_t const &bcube_, bool dim_, bool dir_) : oriented_city_obj_t(bcube_, dim_, dir_) {}
+	void draw_road_pavement(draw_state_t &dstate, city_draw_qbds_t &qbds) const;
+	bool proc_roof_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
+};
+struct gas_station_t : public obj_with_roof_and_pavement_t {
 	static unsigned const num_pillars=4, num_lights=5, num_lanes=4;
 	bool ent_dir;
 	unsigned plot_ix, gs_ix;
-	cube_t roof, pavement;
 	cube_t pillars[num_pillars], lights[num_lights];
 	mutable bool cached_smaps[num_lights]={}; // for lights
 	vector<gas_pump_t> pumps;
@@ -487,8 +493,7 @@ struct gs_reservation_t {
 	gs_reservation_t(unsigned gix, unsigned lix, point const &epos) : valid(1), gs_ix(gix), lane_ix(lix), entrance_pos(epos) {}
 };
 
-struct car_wash_t : public oriented_city_obj_t {
-	cube_t roof, pavement;
+struct car_wash_t : public obj_with_roof_and_pavement_t {
 	vect_cube_t walls;
 
 	car_wash_t(cube_t const &c, bool dim_, bool dir_);
