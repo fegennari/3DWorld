@@ -40,7 +40,6 @@ unsigned get_L_stairs_first_flight_count(stairs_landing_base_t const &s, float l
 void get_L_stairs_entrances(stairs_landing_base_t const &s, float doorway_width, bool for_placement, cube_t entrances[2]);
 bool bed_is_wide(room_object_t const &c);
 
-point get_cube_center_zval(cube_t const &c, float zval) {return point(c.xc(), c.yc(), zval);}
 float get_ped_coll_radius() {return COLL_RADIUS_SCALE*ped_manager_t::get_ped_radius();}
 
 
@@ -1478,7 +1477,7 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 			if (nearest_elevator >= 0) {
 				elevator_t const &e(get_elevator(nearest_elevator));
 				point const pos_to_stand(get_pos_to_stand_for_elevator(e, window_vspace, person.pos.z));
-				int elevator_room(get_room_containing_pt(point(e.xc(), e.yc(), person.pos.z))); // room containing elevator center at person zval
+				int elevator_room(get_room_containing_pt(get_cube_center_zval(e, person.pos.z))); // room containing elevator center at person zval
 				// if elevator is outside all rooms, choose the point where this person would stand; needed for mall back hallway elevators; should we always do this?
 				if (elevator_room < 0) {elevator_room = get_room_containing_pt(pos_to_stand);}
 				assert(elevator_room >= 0); // elevator must be in a valid room

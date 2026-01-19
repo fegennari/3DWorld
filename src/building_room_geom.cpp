@@ -2271,7 +2271,7 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom, f
 
 		if (dim == 2) { // draw as a vertical cone using existing verts from the body cylinder
 			unsigned const center_ix(mat.itri_verts.size());
-			mat.itri_verts.emplace_back(point(c.xc(), c.yc(), (mid.z2() + 0.04*length)), plus_z, 0.0, 0.0, color); // top center
+			mat.itri_verts.emplace_back(get_cube_center_zval(c, (mid.z2() + 0.04*length)), plus_z, 0.0, 0.0, color); // top center
 
 			for (unsigned s = 0; s < bottle_ndiv; ++s) {
 				mat.indices.push_back(center_ix); // center
@@ -3549,7 +3549,7 @@ void building_room_geom_t::add_duct(room_object_t const &c) {
 }
 
 point get_warning_light_src_pos(room_object_t const &c) {
-	return point(c.xc(), c.yc(), (c.z1() + 0.825*c.dz())); // center of light at [0.65, 1.0]*height
+	return get_cube_center_zval(c, (c.z1() + 0.825*c.dz())); // center of light at [0.65, 1.0]*height
 }
 void building_room_geom_t::add_warning_light(room_object_t const &c) {
 	// red emissive vertical cylinder on a light gray cylinder on a tall thin gray pole
@@ -5087,7 +5087,7 @@ void building_room_geom_t::add_trashcan(room_object_t const &c) {
 			rgeom_mat_t &mat(get_metal_material(1, 0, 1, 0, 0, WHITE, 0.8, 70.0, (is_recycling ? 0.0 : 1.0))); // inc_shadows=1, dynamic=0, small=1; recycling bin non reflective
 			mat.add_vcylin_to_verts(c, color, 0, 0); // outer, sides only, untextured
 			// draw black torus rim; half_or_quarter=3 (top half)
-			mat.add_vert_torus_to_verts(point(c.xc(), c.yc(), c.z2()), torus_ri, torus_ro, apply_light_color(c, BKGRAY), 1.0, 0, 3);
+			mat.add_vert_torus_to_verts(cube_top_center(c), torus_ri, torus_ro, apply_light_color(c, BKGRAY), 1.0, 0, 3);
 			unsigned const verts_start(mat.itri_verts.size()), ixs_start(mat.indices.size());
 			mat.add_vcylin_to_verts(inner, apply_light_color(c, GRAY_BLACK), 1, 0); // inner, sides + bottom, untextured
 			invert_triangles(mat, verts_start, ixs_start); // invert inner surface
@@ -5190,7 +5190,7 @@ void building_room_geom_t::add_bucket(room_object_t const &c, bool draw_metal, b
 		mat.add_vcylin_to_verts(c, color, 1, 0, 1, 1, bot_rscale, 1.0); // untextured, bottom only, two_sided truncated cone with inverted bottom normal
 		// draw a half torus handle
 		float const r_outer(c.get_radius()), r_inner(0.05*r_outer);
-		point const handle_center(c.xc(), c.yc(), c.z2());
+		point const handle_center(cube_top_center(c));
 		mat.add_ortho_torus_to_verts(handle_center, r_inner, r_outer, c.dim, color, 1.0, 0, 1, (c.dim ? 0.0 : 0.75)); // half (half_or_quarter=1)
 	}
 	if (draw_liquid) { // maybe add liquid to the bucket

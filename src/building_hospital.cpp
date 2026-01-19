@@ -158,7 +158,7 @@ bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, flo
 	bool const add_tall_table(rgen.rand_bool());
 	bool const add_curtains(num_beds > 1 && building_obj_model_loader.is_model_valid(OBJ_MODEL_HOSP_CURT));
 	unsigned const beds_end(objs.size());
-	point const table_pos(room.xc(), room.yc(), zval); // approximate
+	point const table_pos(get_cube_center_zval(room, zval)); // approximate
 	// add curtains between beds
 	vect_cube_t blockers, tv_blockers;
 	vect_cube_with_ix_t curtains;
@@ -483,7 +483,7 @@ bool building_t::add_operating_room_objs(rand_gen_t rgen, room_t &room, float zv
 	bool const long_dim(room.dx() < room.dy());
 	vect_room_object_t &objs(interior->room_geom->objs);
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(table_model_type)); // D, W, H
-	point table_center(room.xc(), room.yc(), zval); // start at the center of the room
+	point table_center(get_cube_center_zval(room, zval)); // start at the center of the room
 	// determine table_dir based on door pos if in same dim
 	bool table_dir(rgen.rand_bool());
 	vect_door_stack_t doorways;

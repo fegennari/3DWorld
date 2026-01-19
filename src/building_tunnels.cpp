@@ -337,7 +337,7 @@ void building_t::add_tunnel_objects(rand_gen_t rgen) {
 						avoid_vals [num_avoid  ] = pos;
 						avoid_radii[num_avoid++] = radius;
 						// add a manhole above the ground if it doesn't intersect the building
-						point const top_center(point(shaft.xc(), shaft.yc(), ground_floor_z1));
+						point const top_center(get_cube_center_zval(shaft, ground_floor_z1));
 						if (!bcube.contains_pt_xy(top_center)) {add_city_manhole(top_center, 0.6*radius);}
 					}
 				}

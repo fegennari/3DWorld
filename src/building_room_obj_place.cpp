@@ -285,7 +285,7 @@ void building_t::get_all_door_centers_for_room(room_t const &room, unsigned room
 
 		for (tquad_with_ix_t const &door : doors) {
 			cube_t door_bcube(door.get_bcube());
-			if (door_bcube.intersects(room_exp)) {door_centers.emplace_back(door_bcube.xc(), door_bcube.yc(), zval);}
+			if (door_bcube.intersects(room_exp)) {door_centers.emplace_back(get_cube_center_zval(door_bcube, zval));}
 		}
 	}
 	if (room.has_tunnel_conn()) { // tunnel entrance counts as a door, but not false doors
@@ -705,7 +705,7 @@ bool building_t::add_office_objs(rand_gen_t rgen, room_t const &room, vect_cube_
 	}
 	if (!is_basement && is_industrial()) {add_industrial_office_objs(rgen, room, zval, room_id, tot_light_amt, objs_start);} // industrial office
 	else if (min(room.dx(), room.dy()) > 3.5*get_window_vspace()) { // large room, add a table and chairs in the center
-		add_table_and_chairs(rgen, room, blockers, room_id, point(room.xc(), room.yc(), zval), chair_color, 0.1, tot_light_amt);
+		add_table_and_chairs(rgen, room, blockers, room_id, get_cube_center_zval(room, zval), chair_color, 0.1, tot_light_amt);
 	}
 	return 1;
 }
@@ -808,7 +808,7 @@ void building_t::add_office_pillars(rand_gen_t rgen, room_t const &room, float z
 	if (room.has_stairs_on_floor(floor_ix)) return; // no pillar if there are stairs since they're likely to intersect; I guess the stairs are structural supports?
 	// add one pillar in the center of the room; room should be empty at this point (except for ceiling lights), so no collision checking is needed
 	cube_t pillar;
-	pillar.set_from_point(point(room.xc(), room.yc(), zval));
+	pillar.set_from_point(get_cube_center_zval(room, zval));
 	pillar.z2() += get_floor_ceil_gap();
 	pillar.expand_by_xy(1.8*get_wall_thickness());
 	if (!check_cube_within_part_sides(pillar)) return; // handle non-cube buildings

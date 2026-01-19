@@ -4434,7 +4434,7 @@ public:
 					vector3d texgen_origin;
 
 					if (diag_texgen_mode) { // use building player part center
-						texgen_origin.assign(player_part.xc(), player_part.yc(), 0.0);
+						texgen_origin = get_cube_center_zval(player_part, 0.0);
 					}
 					else { // translate texture near the camera to get better tex coord resolution; make a multiple of tscale to avoid visible shift
 						texgen_origin.assign(xoff2*DX_VAL, yoff2*DY_VAL, 0.0);

@@ -653,7 +653,7 @@ void obj_dynamic_to_static(room_object_t &obj, building_interior_t &interior) {
 
 bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, point const &query_ray_end, vector3d const &int_dir) {
 	auto &obj(interior->room_geom->get_room_object_by_index(obj_ix));
-	point const sound_origin(obj.xc(), obj.yc(), int_pos.z), local_center(local_to_camera_space(sound_origin)); // generate sound from the player height
+	point const sound_origin(get_cube_center_zval(obj, int_pos.z)), local_center(local_to_camera_space(sound_origin)); // generate sound from the player height
 	room_object const type(obj.type);
 	float sound_scale(0.0); // for building sound level
 	bool update_draw_data(0);

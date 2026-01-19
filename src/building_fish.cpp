@@ -293,7 +293,7 @@ class fish_manager_t {
 			pool_ramp = pool_ramp_;
 			present   = 1;
 			fish_cont_t::init(pool, water_bcube, rseed, 2, 5); // 2-5 fish
-			float const max_fish_radius(0.05*min(min(pool.dx(), pool.dy()), pool.dz()));
+			float const max_fish_radius(0.05*pool.get_min_dim_sz());
 			populate(max_fish_radius, 0.003);
 		}
 		virtual bool check_fish_coll(point const &pos, float radius, unsigned id, point &coll_pos) const {

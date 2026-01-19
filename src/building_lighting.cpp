@@ -1678,8 +1678,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			for (stairwell_t const &s : interior->stairwells) { // check stairs
 				if (s.is_l_shape()) {
 					// if stairs span stacked parts there will be different rooms at the top and bottom, and both should be included
-					int stairs_room[2] = {get_room_containing_pt(point(s.xc(), s.yc(), s.z1()+0.5*window_vspacing)),
-						                  get_room_containing_pt(point(s.xc(), s.yc(), s.z2()-0.5*window_vspacing))};
+					int stairs_room[2] = {get_room_containing_pt(get_cube_center_zval(s, s.z1()+0.5*window_vspacing)),
+						                  get_room_containing_pt(get_cube_center_zval(s, s.z2()-0.5*window_vspacing))};
 					if (stairs_room[1] == stairs_room[0]) {stairs_room[1] = -1;} // only need to check one room
 
 					for (unsigned d = 0; d < 2; ++d) {

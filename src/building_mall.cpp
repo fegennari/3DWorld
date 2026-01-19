@@ -1238,7 +1238,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 			bool const is_pine(0); // 0=palm, 1=pine; palm trees look better up close
 			// make pine tree taller; palm tree has to be shorter since fronds are added to the top to increase the effective height
 			float const height((is_pine ? 1.1 : 1.0)*rgen.rand_uniform(0.35, 0.4)*room.dz());
-			cube_t tree_bc(point(opening.xc(), opening.yc(), zval));
+			cube_t tree_bc(get_cube_center_zval(opening, zval));
 			tree_bc.z2() += height;
 			tree_bc.expand_by_xy(rgen.rand_uniform(0.20, 0.24)*height); // set radius
 			objs.emplace_back(tree_bc, TYPE_TREE, room_id, 0, 0, RO_FLAG_IN_MALL, light_amt, SHAPE_CYLIN, choose_pot_color(rgen), (is_pine ? 1 : 0));

@@ -694,7 +694,7 @@ bool building_t::add_machines_to_room(rand_gen_t rgen, room_t const &room, float
 	cube_t const place_area(get_walkable_room_bounds(room)); // ignore trim?
 	if (is_house) {zval = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_CONCRETE);} // add concrete over the carpet for houses
 	cube_t avoid;
-	avoid.set_from_sphere(point(place_area.xc(), place_area.yc(), zval), min_clearance);
+	avoid.set_from_sphere(get_cube_center_zval(place_area, zval), min_clearance);
 	bool any_placed(0), no_opposite_sides(0), used_orients[4] = {};
 	vect_room_object_t &objs(interior->room_geom->objs);
 	vector2d max_sz(get_machine_max_sz(place_area, min_gap, max_place_sz, 0.5)); // start with a larger gap that allows two opposing machines
