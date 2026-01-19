@@ -2728,13 +2728,13 @@ void car_wash_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_s
 		select_texture(get_texture_by_name("bricks_tan.png"));
 		select_texture_nmap(get_texture_by_name("normal_maps/bricks_tan_norm.png", 1));
 	}
-	dstate.draw_cube(qbds.qbd, roof, WHITE, 0, tscale, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1); // skip_bottom=0, skip_top=1
+	dstate.draw_cube(qbds.qbd, roof, WHITE, 0, tscale, 4); // skip_dims=4/XY only
 	// can skip the back edges of side walls as well?
 	for (cube_t const &w : walls) {dstate.draw_cube(qbds.qbd, w, WHITE, 1, tscale);} // skip_bottom=1
 	if (!shadow_only) {qbds.qbd.draw_and_clear();}
 	// draw roof
 	if (!shadow_only) {set_corrugated_metal_texture();}
-	dstate.draw_cube(qbds.qbd, roof, GRAY, 1, 0.75*tscale, 3, 0, 0, !dim); // skip_bottom=1, Z only, swap_tc_xy=!dim
+	dstate.draw_cube(qbds.qbd, roof, LT_GRAY, 0, 0.75*tscale, 3, 0, 0, !dim); // skip_bottom=0, Z only, swap_tc_xy=!dim
 	qbds.qbd.draw_and_clear();
 	if (!shadow_only) {bind_default_flat_normal_map();}
 	// draw pavement
