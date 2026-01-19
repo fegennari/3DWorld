@@ -22,6 +22,7 @@ bool do_line_clip_xy(point &v1, point &v2, float const d[3][2]);
 float get_power_pole_offset() {return 0.045*city_params.road_width;}
 size_t get_building_models_gpu_mem() {return building_obj_model_loader.get_gpu_mem();}
 int get_solarp_tid();
+tid_nm_pair_t get_corr_metal_texture(float tscale);
 bool is_pants_model(unsigned model_id);
 bool is_shirt_model(unsigned model_id);
 int select_tid_from_list(vector<unsigned> const &tids, unsigned ix);
@@ -258,12 +259,16 @@ trashcan_t::trashcan_t(point const &pos_, float radius_, float height, bool is_c
 	set_bcube_from_vcylin(pos, height, radius);
 	set_bsphere_from_bcube(); // recompute bsphere from bcube
 }
+void set_corrugated_metal_texture() {
+	tid_nm_pair_t const tex(get_corr_metal_texture(1.0)); // tscale is unused
+	select_texture(tex.tid);
+	select_texture(tex.nm_tid, 5);
+}
 /*static*/ void trashcan_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	if (shadow_only) {} // nothing to do
 	else if (dstate.pass_ix == 0) {select_texture(get_texture_by_name("roads/asphalt.jpg"));} // cube city/park
 	else { // cylinder residential
-		select_texture(get_texture_by_name("buildings/corrugated_metal.tif"));
-		select_texture(get_texture_by_name("buildings/corrugated_metal_normal.tif", 1), 5);
+		set_corrugated_metal_texture();
 		dstate.s.set_cur_color(GRAY);
 	}
 }
@@ -2673,23 +2678,46 @@ void gas_station_t::leave_output_lane() const {
 
 // car wash
 
+unsigned const num_cwash_bays = 4;
+
 car_wash_t::car_wash_t(cube_t const &c, bool dim_, bool dir_) : oriented_city_obj_t(c, dim_, dir_) {
-	// TODO: set walls
-	walls.push_back(bcube);
+	float const height(bcube.dz()), width(get_width()), depth(get_depth()), wall_thick(0.04*depth);
+	float const bay_spacing((width - wall_thick)/num_cwash_bays);
+	cube_t back_wall(bcube), side_wall(bcube);
+	roof = bcube;
+	side_wall.z2() = back_wall.z2() = roof.z1() = bcube.z2() - 1.5*wall_thick; // roof is thicker than walls
+	side_wall.d[!dim][1]  = side_wall.d[!dim][0] + wall_thick;
+	back_wall.d[dim][dir] = side_wall.d[dim][!dir] = bcube.d[dim][!dir] + (dir ? 1.0 : -1.0)*wall_thick;
+	walls.push_back(roof);
+	walls.push_back(back_wall);
+
+	for (unsigned n = 0; n <= num_cwash_bays; ++n) { // add side walls
+		walls.push_back(side_wall);
+		side_wall.translate_dim(!dim, bay_spacing);
+	}
 }
 /*static*/ void car_wash_t::pre_draw (draw_state_t &dstate, bool shadow_only) {
-	if (!shadow_only) {
+	if (shadow_only) {} // nothing to do
+	else if (dstate.pass_ix == 0) { // walls
 		select_texture(get_texture_by_name("bricks_tan.png"));
 		select_texture(get_texture_by_name("normal_maps/bricks_tan_norm.png", 1), 5);
 	}
+	else {set_corrugated_metal_texture();} // roof
 }
 /*static*/ void car_wash_t::post_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {bind_default_flat_normal_map();}
 }
 void car_wash_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	float const tscale(1.0/bcube.dz());
-	for (cube_t const &w : walls) {dstate.draw_cube(qbds.qbd, w, WHITE, 1, tscale);}
-	// TODO: roof
+
+	if (dstate.pass_ix == 0) { // walls and sides of roof
+		dstate.draw_cube(qbds.qbd, roof, WHITE, 0, tscale, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1); // skip_bottom=0, skip_top=1
+		// can skip the back edges of side walls as well?
+		for (cube_t const &w : walls) {dstate.draw_cube(qbds.qbd, w, WHITE, 1, tscale);} // skip_bottom=1
+	}
+	else { // roof
+		dstate.draw_cube(qbds.qbd, roof, GRAY, 1, 0.75*tscale, 3); // skip_bottom=1, Z only
+	}
 }
 bool car_wash_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
 	bool ret(0);

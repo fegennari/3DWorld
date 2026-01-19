@@ -488,6 +488,7 @@ struct gs_reservation_t {
 };
 
 struct car_wash_t : public oriented_city_obj_t {
+	cube_t roof;
 	vect_cube_t walls;
 
 	car_wash_t(cube_t const &c, bool dim_, bool dir_);
