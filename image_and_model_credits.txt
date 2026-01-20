@@ -71,3 +71,4 @@ Oven: https://sketchfab.com/3d-models/low-poly-commercial-oven-f7c235ac783244808
 Fridge: https://sketchfab.com/3d-models/low-poly-commercial-fridge-c38d498836de42c5ba50fb68fc8fc23a
 Stove: https://sketchfab.com/3d-models/low-poly-commercial-stove-ef058208ff4a45538616dde7517a0f11
 Milk Carton: https://sketchfab.com/3d-models/super-awesome-milk-carton-9bbcdc63cb7c44d6bb4236e33f324c21
+Radiator: https://sketchfab.com/3d-models/old-radiator-8a1a2e0263aa401591c1e87d824a79ef

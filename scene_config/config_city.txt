@@ -262,6 +262,7 @@ city handgun_model      ../models/interiors/guns/walther_p88_gun.glb     0 0 0  
 city shop_cart_model    ../models/interiors/shopping_cart.glb            0 0 0  -1 -1 90  1 1.0 1.0
 city fish_model         model_data/fish/fishOBJ.model3d                  0 0 0  -1 -1 0   1 1.0 1.0 # Note: will load this twice
 city milk_carton_model  ../models/interiors/kitchen/milk_carton.glb      0 0 0  -1 -1 0   1 1.0 1.0
+city radiator_model     ../models/interiors/radiators/old_radiator.glb   0 0 0  -1 -1 90  1 1.0 1.0
 
 # models with multiple sub-types; size value determines height relative to half a floor's spacing
 # filename recalc_normals two_sided centered body_material_id fixed_color_id xy_rot swap_xyz scale lod_mult [keywords] [shadow_mat_ids]
