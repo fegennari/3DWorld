@@ -38,10 +38,16 @@ void add_cube_to_colliders_and_blockers(cube_t const &cube, vect_cube_t &blocker
 	colliders.push_back(cube);
 	blockers .push_back(cube);
 }
+void setup_parked_car(car_t &car, unsigned city_id, unsigned plot_ix) {
+	car.park();
+	car.cur_city = city_id;
+	car.cur_road = plot_ix; // store plot_ix in road field
+	car.cur_road_type = TYPE_PLOT;
+}
 
 // Note: copies rgen by value to avoid disrupting the original sequence
-bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, unsigned plot_ix, vect_cube_t const &plot_cuts,
-	vect_cube_t &bcubes, vect_cube_t &colliders, rand_gen_t rgen)
+bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, unsigned city_id, unsigned plot_ix, vect_cube_t const &plot_cuts,
+	vector<car_t> &cars, vect_cube_t &bcubes, vect_cube_t &colliders, rand_gen_t rgen, bool add_cars)
 {
 	if (!plot.is_commercial())   return 0;
 	if (rgen.rand_float() < 0.5) return 0; // no gas station in this plot
@@ -81,7 +87,7 @@ bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, unsigne
 	colliders.push_back(pole); // only add the pole as a collider since the sign itself is above pedestrian heads
 	// add a nearby car wash if there's space
 	float const gs_far_edge(gstation.pavement.d[dim][!dir]); // away from road
-	float const cw_len(4*2.2*nom_car_size.y), cw_depth(1.6*nom_car_size.x), cw_height(0.2*city_params.road_width);
+	float const cw_len(4*2.2*nom_car_size.y), cw_depth(1.6*nom_car_size.x), cw_height(0.225*city_params.road_width);
 	cube_t cw(gstation.pavement);
 	cw.z2() = plot.z1() + cw_height; // set roof height
 	cw.d[dim][ dir] = gs_far_edge;
@@ -93,7 +99,8 @@ bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, unsigne
 		cw.d[!dim][!ent_dir] += (ent_dir ? 1.0 : -1.0)*0.25*len_delta;
 	}
 	if (!has_bcube_int_xy(cw, bcubes, pad_dist)) { // not too close to a building
-		cwash_groups.add_obj(car_wash_t(cw, dim, dir, rgen), cwashes);
+		car_wash_t car_wash(cw, dim, dir, rgen);
+		cwash_groups.add_obj(car_wash, cwashes);
 		add_cube_to_colliders_and_blockers(cw, colliders, bcubes);
 		// add car wash sign on the side facing the road
 		float const cw_road_side(cw.d[!dim][ent_dir]); // away from road
@@ -102,6 +109,20 @@ bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, unsigne
 		set_cube_zvals(sign_bcube, cw.z1()+0.6*cw_height, cw.z1()+0.85*cw_height);
 		set_wall_width(sign_bcube, cw.get_center_dim(dim), 0.3*cw_depth, dim);
 		sign_groups.add_obj(sign_t(sign_bcube, !dim, ent_dir, "Car Wash", WHITE, BLACK), signs);
+
+		if (add_cars) { // add some cars in the car wash
+			car_t car;
+			setup_parked_car(car, city_id, plot_ix);
+			car.dim = dim;
+
+			for (unsigned n = 0; n < car_wash.num_bays; ++n) {
+				if (rgen.rand_bool()) continue; // 50% chance of a car
+				car.dir = (dir ^ rgen.rand_bool()); // 50% chance of pulled in or backed in
+				car.set_bcube(cube_bot_center(car_wash.bays[n]), nom_car_size);
+				cars.push_back(car);
+				car_wash.bay_in_use[n] = 1;
+			}
+		}
 	}
 	bcubes.push_back(gs_exp); // add after placing car wash
 	return 1;
@@ -126,10 +147,7 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t const &full_plot, vecto
 	unsigned const bcubes_coll_end(bcubes.size());
 	vector<hcap_with_dist_t> hcap_cands;
 	car_t car;
-	car.park();
-	car.cur_city = city_id;
-	car.cur_road = plot_ix; // store plot_ix in road field
-	car.cur_road_type = TYPE_PLOT;
+	setup_parked_car(car, city_id, plot_ix);
 
 	for (unsigned c = 0; c < 4; ++c) { // generate 0-4 parking lots per plot, starting at the corners, in random order
 		unsigned const cix((first_corner + c) & 3), xdir(cix & 1), ydir(cix >> 1), wdir(car_dim ? xdir : ydir), rdir(car_dim ? ydir : xdir);
@@ -259,7 +277,7 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t const &full_plot, vecto
 					}
 					car.set_bcube(pos, nom_car_size);
 					cars.push_back(car);
-					if ((rgen.rand()&7) == 0) {cars.back().dir ^= 1;} // pack backwards 1/8 of the time
+					if ((rgen.rand()&7) == 0) {cars.back().dir ^= 1;} // park backwards 1/8 of the time
 					used_spaces[row*park.row_sz + col] = 1;
 					has_parking     = 1;
 					pspace.occupied = 1;
@@ -2137,7 +2155,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 		size_t const plot_id(i - plots.begin()), buildings_end(blockers.size());
 		assert(plot_id < plot_colliders.size());
 		vect_cube_t &colliders(plot_colliders[plot_id]); // used for pedestrians
-		if (add_gas_stations) {maybe_place_gas_station(*i, plot_id, plot_cuts, blockers, colliders, rgen);} // add gas stations first, since they're large
+		if (add_gas_stations) {maybe_place_gas_station(*i, city_id, plot_id, plot_cuts, cars, blockers, colliders, rgen, have_cars);} // add gas stations first, since they're large
 		if (add_parking_lots && !i->is_park) {i->has_parking = gen_parking_lots_for_plot(*i, cars, city_id, plot_id, blockers, colliders, plot_cuts, rgen, have_cars);}
 		unsigned const driveways_start(driveways.size());
 		/*if (is_residential)*/ {add_building_driveways(*i, temp_cubes, detail_rgen, plot_id);} // driveways always added now that cities have parking structures
@@ -2730,6 +2748,12 @@ bool city_obj_placer_t::line_intersect(point const &p1, point const &p2, float &
 
 bool city_obj_placer_t::intersects_parking_lot(cube_t const &c) const { // Note: currently called before parking lots and driveways are added
 	return (has_bcube_int_xy(c, parking_lots) || has_bcube_int_xy(c, driveways)); // no acceleration structure for these, so do a linear iteration
+}
+bool city_obj_placer_t::intersects_car_wash(cube_t const &c) const {
+	for (car_wash_t const &cw : cwashes) {
+		if (cw.bcube.intersects(c)) return 1;
+	}
+	return 0;
 }
 
 template<typename T> bool check_city_obj_pt_xy_contains(city_obj_groups_t const &groups, vector<T> const &objs, point const &pos, unsigned &obj_ix, bool is_cylin=0) {

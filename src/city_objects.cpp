@@ -2712,8 +2712,8 @@ car_wash_t::car_wash_t(cube_t const &c, bool dim_, bool dir_, rand_gen_t &rgen) 
 	float const bay_spacing((width - wall_thick)/num_bays), dsign(dir ? 1.0 : -1.0);
 	cube_t back_wall(bcube), side_wall(bcube);
 	roof = pavement = bcube;
-	pavement .z2() = bcube.z1() + 0.009*bcube.dz(); // shift slightly up
-	side_wall.z2() = back_wall.z2() = roof.z1() = bcube.z2() - 1.5*wall_thick; // roof is thicker than walls
+	pavement .z2() = bcube.z1() + 0.008*bcube.dz(); // shift slightly up
+	side_wall.z2() = back_wall.z2() = roof.z1() = bcube.z2() - 1.2*wall_thick; // roof is thicker than walls
 	side_wall.d[!dim][1]    = side_wall.d[!dim][0] + wall_thick;
 	back_wall.d[ dim][dir]  = side_wall.d[dim][!dir] = bcube.d[dim][!dir] + dsign*wall_thick;
 	pavement .d[ dim][dir] += dsign*0.01*depth; // extend slightly under gas station to avoid a gap if heights are different
@@ -2731,7 +2731,7 @@ car_wash_t::car_wash_t(cube_t const &c, bool dim_, bool dir_, rand_gen_t &rgen) 
 		}
 	} // for n
 	// add lights in center of bays
-	float const light_radius(0.065*bay_spacing), light_thick(0.025*height);
+	float const light_radius(0.065*bay_spacing), light_thick(0.02*height);
 	cube_t light;
 	set_cube_zvals(light, roof.z1()-light_thick, roof.z1());
 	set_wall_width(light, bcube.get_center_dim(dim), light_radius, dim);

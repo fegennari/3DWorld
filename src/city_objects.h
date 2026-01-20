@@ -501,6 +501,7 @@ struct gs_reservation_t {
 struct car_wash_t : public obj_with_roof_pavement_lights_t {
 	static unsigned const num_bays=4;
 	cube_t bays[num_bays], lights[num_bays], light_clip_cubes[num_bays];
+	bool bay_in_use[num_bays]={}; // for parked cars; not yet used
 	mutable bool cached_smaps[num_bays]={}; // for lights
 	vect_cube_t walls;
 
@@ -819,7 +820,8 @@ private:
 	float plot_subdiv_sz=0.0;
 	bool has_residential_plots=0;
 	
-	bool maybe_place_gas_station(road_plot_t const &plot, unsigned plot_ix, vect_cube_t const &plot_cuts, vect_cube_t &bcubes, vect_cube_t &colliders, rand_gen_t rgen);
+	bool maybe_place_gas_station(road_plot_t const &plot, unsigned city_id, unsigned plot_ix, vect_cube_t const &plot_cuts,
+		vector<car_t> &cars, vect_cube_t &bcubes, vect_cube_t &colliders, rand_gen_t rgen, bool add_cars);
 	bool gen_parking_lots_for_plot(cube_t const &full_plot, vector<car_t> &cars, unsigned city_id, unsigned plot_ix,
 		vect_cube_t &bcubes, vect_cube_t &colliders, vect_cube_t const &plot_cuts, rand_gen_t &rgen, bool add_cars);
 	void add_cars_to_driveways(vector<car_t> &cars, vector<road_plot_t> const &plots, vector<vect_cube_t> &plot_colliders, unsigned city_id, rand_gen_t &rgen);
@@ -870,6 +872,7 @@ public:
 	bool proc_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, vector3d *cnorm) const;
 	bool line_intersect(point const &p1, point const &p2, float &t) const;
 	bool intersects_parking_lot(cube_t const &c) const;
+	bool intersects_car_wash   (cube_t const &c) const;
 	bool player_under_roof(point const &camera_bs) const;
 	bool get_color_at_xy(point const &pos, vect_cube_t const &plot_cuts, colorRGBA &color, bool skip_in_road) const;
 	bool get_color_at_xy_pre_road(point const &pos, colorRGBA &color) const;

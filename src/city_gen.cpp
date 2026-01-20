@@ -1423,7 +1423,9 @@ public:
 		return 0;
 	}
 	bool cube_overlaps_pl_or_dw_xy(cube_t const &c) const {
-		return (cube_overlaps_tile_group_xy(city_obj_placer.parking_lots, c, TYPE_PARK_LOT) || cube_overlaps_tile_group_xy(city_obj_placer.driveways, c, TYPE_DRIVEWAY));
+		return (cube_overlaps_tile_group_xy(city_obj_placer.parking_lots, c, TYPE_PARK_LOT) ||
+			    cube_overlaps_tile_group_xy(city_obj_placer.driveways,    c, TYPE_DRIVEWAY) ||
+			    city_obj_placer.intersects_car_wash(c));
 	}
 	int get_color_at_xy(point const &pos, colorRGBA &color) const { // Note: return value is currently unused, but it could be used for something in the future
 		// Note: query results are mutually exclusive since there's no overlap, so can early terminate on true
