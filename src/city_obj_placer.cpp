@@ -87,7 +87,7 @@ bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, unsigne
 	colliders.push_back(pole); // only add the pole as a collider since the sign itself is above pedestrian heads
 	// add a nearby car wash if there's space
 	float const gs_far_edge(gstation.pavement.d[dim][!dir]); // away from road
-	float const cw_len(4*2.2*nom_car_size.y), cw_depth(1.6*nom_car_size.x), cw_height(0.225*city_params.road_width);
+	float const cw_len(4*2.2*nom_car_size.y), cw_depth(1.6*nom_car_size.x), cw_height(0.225*city_params.road_width); // just large enough to fit the box truck
 	cube_t cw(gstation.pavement);
 	cw.z2() = plot.z1() + cw_height; // set roof height
 	cw.d[dim][ dir] = gs_far_edge;
@@ -2870,9 +2870,20 @@ void city_obj_placer_t::get_occluders(pos_dir_up const &pdu, vector3d const &xla
 			if ((w.bcube + xlate).contains_pt(pdu.pos)) {occluders.push_back(w.get_floor_occluder() + xlate); break;} // can be only one
 		}
 	}
+	float const dmax(0.25f*(X_SCENE_SIZE + Y_SCENE_SIZE)); // set far clipping plane to 1/4 a tile (currently 2.0)
+
+	if (city_params.num_cars > 0) { // add car washes as occluders for their cars
+		for (car_wash_t const &cw : cwashes) {
+			cube_t const bc(cw.bcube + xlate);
+			if (!dist_less_than(pdu.pos, bc.closest_pt(pdu.pos), dmax) || !pdu.cube_visible(bc)) continue;
+			assert(cw.walls.size() >= 3); // include walls; roof isn't a good occluder; won't help for cars in car wash far from player
+			occluders.push_back(cw.walls[0]     + xlate); // back  wall
+			occluders.push_back(cw.walls[1]     + xlate); // left  wall
+			occluders.push_back(cw.walls.back() + xlate); // right wall
+		} // for cw
+	}
 	//if (player_in_elevator) {}
 	if (dividers.empty()) return; // dividers are currently the only other occluders
-	float const dmax(0.25f*(X_SCENE_SIZE + Y_SCENE_SIZE)); // set far clipping plane to 1/4 a tile (currently 2.0)
 	unsigned start_ix(0);
 
 	for (auto i = divider_groups.begin(); i != divider_groups.end(); start_ix = i->ix, ++i) { // no divider_groups.get_bcube() test here?
