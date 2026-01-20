@@ -593,7 +593,7 @@ void draw_and_clear_blur_qbd(quad_batch_draw &qbd) {
 	glDepthMask(GL_FALSE); // disable depth write
 	select_texture(BLUR_CENT_TEX);
 	qbd.draw_and_clear();
-	select_texture(WHITE_TEX); // reset back to default/untextured
+	select_no_texture(); // reset back to default/untextured
 	glDepthMask(GL_TRUE);
 	disable_blend();
 }
@@ -607,7 +607,7 @@ colorRGBA car_draw_state_t::get_headlight_color(car_t const &car) const {
 void car_draw_state_t::pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only_) {
 	//set_enable_normal_map(use_model3d_bump_maps()); // used only for some car models, and currently doesn't work
 	ao_draw_state_t::pre_draw(xlate_, use_dlights_, shadow_only_);
-	select_texture(WHITE_TEX);
+	select_no_texture();
 	last_smap_tile_id_valid = 0;
 }
 

@@ -340,7 +340,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 	vector3d v_trans;
 	point const pos0(get_final_pos(pos, dir, cradius, scale, rxy, v_trans));
 	float const tx(-cradius*dir.x/rxy), ty(-cradius*dir.y/rxy);
-	select_texture(WHITE_TEX);
+	select_no_texture();
 	
 	if (draw_pass == 0) { // draw solid objects
 		int ndiv(fixed_lod ? 24 : int(get_zoom_scale()*300.0f*cradius/(distance_to_camera(pos) + SMALL_NUMBER)));
@@ -399,7 +399,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				shader.set_cur_color(WHITE);
 				select_texture(HAZARD_TEX);
 				draw_cube(all_zeros, 1.6*radius, 1.0*radius, 2.4*radius, 1, 0.5); // hazard textured remote control box
-				select_texture(WHITE_TEX);
+				select_no_texture();
 				shader.set_cur_color(colorRGBA(1.0, 0.15, 0.0, 1.0)); // reddish orange
 				draw_sphere_vbo(vector3d(0.0, -0.4*radius, 0.5*radius), 0.48*radius, 32, 0); // fire button
 				shader.set_cur_color(RED);
@@ -476,7 +476,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			rotate_to_dir(dir, 0.0, 1.0);
 			draw_cylinder(6.8*radius, 0.8*radius, 0.8*radius, 2*ndiv);
 			draw_circle_normal(0.0, 0.8*radius, ndiv, 1, 5.0*radius);
-			select_texture(WHITE_TEX);
+			select_no_texture();
 			// draw the sight
 			fgTranslate(0.8*radius, 0.0, 6.5*radius);
 			fgRotate(90.0, 0.0, 1.0, 0.0);
@@ -496,7 +496,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			draw_cylinder(5.8*radius, 0.8*radius, 0.8*radius, 2*ndiv);
 			draw_circle_normal(0.0, 0.8*radius, ndiv, 1, 4.0*radius);
 			shader.clear_specular();
-			select_texture(WHITE_TEX);
+			select_no_texture();
 			break;
 
 		case W_RAPTOR: { // similar to rocket
@@ -702,7 +702,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			break;
 		}
 	}
-	select_texture(WHITE_TEX);
+	select_no_texture();
 	fgPopMatrix();
 	disable_blend();
 	//glEnable(GL_DEPTH_TEST);
@@ -782,7 +782,7 @@ void draw_weapon_in_hand_real(int shooter, bool draw_pass, shader_t &shader, int
 	float const fire_val((float)sstate.fire_frame/(float)delay);
 	point const pos((draw_pass == 0 && wid == W_BLADE) ? sstate.cb_pos : (reflection_pass ? pre_ref_camera_pos : get_sstate_draw_pos(shooter)));
 	float const scale(CAMERA_RADIUS/0.06); // weapons scale with camera radius (Note: inverse scale is pre-applied to cradius so that it cancels out inside draw_weapon())
-	select_texture(WHITE_TEX); // always textured
+	select_no_texture(); // always textured
 	draw_weapon(pos, dir, cradius/scale, cid, wid, sstate.wmode, sstate.fire_frame, sstate.plasma_loaded, sstate.p_ammo[wid],
 		sstate.rot_counter, delay, shooter, (sstate.cb_hurt > 20), alpha, sstate.dpos, fire_val, scale, draw_pass, shader);
 	if (cull_face) {glDisable(GL_CULL_FACE);}
@@ -846,7 +846,7 @@ void draw_plasmaball(point const &pos0, int shooter, shader_t &shader) { // and 
 	obj_group &objg(obj_groups[cid]);
 	if (shooter == CAMERA_ID || (objg.get_obj(shooter).flags & CAMERA_VIEW)) ndiv *= 3;
 	draw_plasma(pos, (pos + pos0), radius, psize, ndiv, 1, 0, 0, shader);
-	select_texture(WHITE_TEX);
+	select_no_texture();
 	glDisable(GL_CULL_FACE);
 	if (psize < 0.9*MAX_PLASMA_SIZE) return;
 
@@ -994,7 +994,7 @@ void draw_inventory() {
 		qbd.add_quad_dirs(pos, quad_sz*plus_x, quad_sz*plus_y, colorRGBA(0.1, 0.1, 0.1, alpha)); // add near-black square background
 		pos.x += dx;
 	}
-	select_texture(WHITE_TEX);
+	select_no_texture();
 	glDisable(GL_DEPTH_TEST);
 	enable_blend();
 	qbd.draw();

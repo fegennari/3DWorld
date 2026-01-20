@@ -295,7 +295,7 @@ void skyway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_on
 		select_texture(get_walkway_track_tid());
 		for (moving_walkway_t const &mww : mwws) {mww.draw(dstate, qbds, td, shadow_only, reflection_pass, 1, 0);} // draw_track=1, draw_sides=0
 		qbds.qbd.draw_and_clear();
-		select_texture(WHITE_TEX);
+		select_no_texture();
 	}
 	// draw ramps, entryway frames, lights, and roof
 	if (!shadow_only) {
@@ -393,7 +393,7 @@ void skyway_t::draw_glass_surfaces(draw_state_t &dstate, city_draw_qbds_t &qbds)
 	if (!valid || !dstate.check_cube_visible(bcube, dist_scale)) return; // VFC/distance culling
 	// draw transparent top glass panel; Z only
 	bind_default_flat_normal_map();
-	select_texture(WHITE_TEX);
+	select_no_texture();
 	dstate.s.set_refract_ix(1.6); // refractive glass
 	tile_drawer_t td;
 	enable_blend();

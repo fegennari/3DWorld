@@ -404,7 +404,7 @@ void draw_blasts(shader_t &s) {
 				if (pos2 == br.pos) continue; // skip to avoid assertion
 				exp_rays.push_back(usw_ray(rgen.rand_uniform(0.01, 0.05)*br.size, rgen.rand_uniform(0.2, 0.4)*br.size, br.pos, pos2, br.cur_color, colorRGBA(br.cur_color, 0.0)));
 			}
-			if (begin_type) {glEnable(GL_CULL_FACE); select_texture(WHITE_TEX);} // texture is procedural
+			if (begin_type) {glEnable(GL_CULL_FACE); select_no_texture();} // texture is procedural
 			int const ndiv(get_exp_ndiv(br.pos, br.cur_size));
 			colorRGBA color2(br.cur_color, 0.5*br.cur_color.A);
 			draw_one_star(br.cur_color, color2, make_pt_global(br.pos), 0.5*br.cur_size, ndiv, 0); // slow, but not used often

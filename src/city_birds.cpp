@@ -65,7 +65,7 @@ void bird_poop_manager_t::draw(shader_t &s, vector3d const &xlate) {
 
 	if (!poops.empty()) {
 		s.set_cur_color(WHITE);
-		select_texture(WHITE_TEX);
+		select_no_texture();
 		begin_sphere_draw(0); // textured=0
 		unsigned const ndiv = 16;
 
@@ -115,7 +115,7 @@ void city_bird_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_
 		vector<vert_color> pts;
 		pts.emplace_back(pos,  BLUE);
 		pts.emplace_back(dest, BLUE);
-		select_texture(WHITE_TEX);
+		select_no_texture();
 		draw_verts(pts, GL_LINES);
 		dstate.s.set_cur_color(BLUE);
 		draw_sphere_vbo(dest, radius, N_SPHERE_DIV, 0); // draw destination

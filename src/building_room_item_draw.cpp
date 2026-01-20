@@ -1460,7 +1460,7 @@ void building_t::draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	if (0 && (display_mode & 0x20) && !shadow_only && player_in_building && bcube.contains_pt(camera_pdu.pos - xlate)) { // debug visualization of light occluders
 		vect_colored_cube_t cc;
 		gather_interior_cubes(cc, get_bcube_inc_extensions());
-		select_texture(WHITE_TEX);
+		select_no_texture();
 		for (colored_cube_t const &c : cc) {s.set_cur_color(c.color); draw_simple_cube(c);}
 		return;
 	}
@@ -2425,7 +2425,7 @@ particle_texture_manager_t particle_texture_manager;
 void draw_bubbles(vector<sphere_t> const &bubbles, shader_t &s, bool in_fishtank) {
 	if (bubbles.empty()) return;
 	if (in_fishtank) {s.add_uniform_float("animation_time", 0.0);} // not animated
-	select_texture(WHITE_TEX);
+	select_no_texture();
 	bind_default_flat_normal_map(); // no normal map
 	s.set_cur_color(colorRGBA(0.6, 0.8, 1.0)); // blue-green tinted
 	begin_sphere_draw(0); // untextured
@@ -3011,14 +3011,14 @@ void building_decal_manager_t::draw_building_interior_decals(shader_t &s, bool p
 
 	if (!tp_qbd.empty()) { // toilet paper squares: double sided, lit from top
 		glDisable(GL_CULL_FACE); // draw both sides
-		select_texture(WHITE_TEX);
+		select_no_texture();
 		select_texture_nmap(get_toilet_paper_nm_id()); // apply normal map
 		tp_qbd.draw(); // use a VBO for this if the player leaves the building and then comes back?
 		bind_default_flat_normal_map(); // no normal map
 		glEnable(GL_CULL_FACE);
 	}
 	if (!tape_qbd.empty() || !pend_tape_qbd.empty()) { // tape lines: single sided so that lighting works, both sides drawn independently
-		select_texture(WHITE_TEX);
+		select_no_texture();
 		tape_qbd.draw();
 		pend_tape_qbd.draw();
 	}

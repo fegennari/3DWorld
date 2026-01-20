@@ -1098,7 +1098,7 @@ void shader_t::begin_simple_textured_shader(float min_alpha, bool include_2_ligh
 
 void shader_t::begin_untextured_lit_glcolor_shader() {
 	begin_simple_textured_shader(0.0, 1); // lighting (not actually textured)
-	select_texture(WHITE_TEX); // untextured
+	select_no_texture(); // untextured
 }
 
 

@@ -2951,7 +2951,7 @@ void tile_draw_t::draw_shadow_pass(point const &lpos, tile_t *tile, bool decid_t
 	camera_pdu.near_ = 0.0; // move the near clipping plane to zero to prevent clipping of tiles that are between the light and the target but not in the shadow frustum
 	fog_enabled      = 0; // optimization?
 	to_draw.clear();
-	select_texture(WHITE_TEX); // make sure TU 0 is valid and not left as a shadow map texture
+	select_no_texture(); // make sure TU 0 is valid and not left as a shadow map texture
 
 	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) { // 0.03ms
 		if (decid_trees_only && i->second->num_decid_trees() == 0) continue; // no decid trees to draw, don't bother checking visibility
@@ -3102,7 +3102,7 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass, bool shadow_pass) { // a
 	if (!shadow_pass && !to_draw_trunk_pts.empty()) { // color/texture already set above
 		enable_blend(); // for fog transparency
 		set_pine_tree_shader(s, "xy_billboard");
-		select_texture(WHITE_TEX);
+		select_no_texture();
 		s.set_cur_color(get_tree_trunk_color(T_PINE, 1));
 		for (auto i = to_draw_trunk_pts.begin(); i != to_draw_trunk_pts.end(); ++i) {(*i)->draw_trunk_pts(s);}
 		s.add_uniform_vector3d("xlate", zero_vector);

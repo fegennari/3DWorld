@@ -2438,7 +2438,7 @@ bool ustar::draw(point_d pos_, ushader_group &usg, pt_line_drawer_no_lighting_t 
 			disable_blend();
 		}
 		usg.enable_star_shader(colorA, colorB, radius, 1.0);
-		select_texture(WHITE_TEX);
+		select_no_texture();
 		draw_sphere_vbo(all_zeros, 1.0, ndiv, 0); // use vbo if ndiv is small enough
 		if (world_mode == WMODE_UNIVERSE && size >= 64) {select_texture(BLUR_TEX); draw_flares(ndiv, 1);}
 		usg.disable_star_shader();

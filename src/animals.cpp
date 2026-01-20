@@ -606,7 +606,7 @@ void butterfly_t::draw(shader_t &s, tile_t const *const tile, bool &first_draw) 
 	}
 	if (debug_lines) { // debug draw line to destination
 		vector<vert_norm_color> line_pts;
-		select_texture(WHITE_TEX);
+		select_no_texture();
 
 		if (dest_valid) {
 			colorRGBA const color(blend_color((is_mating ? YELLOW : RED), (is_mating ? ORANGE : BLUE), dest_alignment, 0));
@@ -627,7 +627,7 @@ void butterfly_t::draw(shader_t &s, tile_t const *const tile, bool &first_draw) 
 	}
 	if (debug_spheres && distance_check(pos_, 1.0)) { // debug draw path as spheres
 		if (path.empty() || !dist_less_than(pos, path.back(), 2.0*radius)) {path.push_back(pos);}
-		select_texture(WHITE_TEX);
+		select_no_texture();
 		s.set_cur_color(WHITE);
 		begin_sphere_draw(0); // untextured
 		for (auto const &p : path) {draw_sphere_vbo((p + get_camera_coord_space_xlate()), 0.25*radius, 8, 0);}

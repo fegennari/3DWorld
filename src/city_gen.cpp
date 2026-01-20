@@ -140,7 +140,7 @@ void draw_state_t::end_draw() {
 }
 void draw_state_t::set_untextured_material() {
 	if (shadow_only) return;
-	select_texture(WHITE_TEX);
+	select_no_texture();
 	if (normal_maps_enabled()) {s.add_uniform_float("bump_map_mag", 0.0);} // disable bump map
 }
 void draw_state_t::unset_untextured_material() {

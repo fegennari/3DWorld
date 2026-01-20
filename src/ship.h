@@ -149,14 +149,8 @@ inline u_ship &player_ship() {
 	assert(player_ship_inited());
 	return *player_ship_ptr;
 }
-
-inline bool TEAM_ALIGNED(unsigned const a) {
-	return (a != ALIGN_NEUTRAL && a != ALIGN_GOV && (a != ALIGN_PLAYER || player_enemy));
-}
-
-inline void end_texture() {
-	select_texture(WHITE_TEX); // texturing is always enabled
-}
+inline bool TEAM_ALIGNED(unsigned const a) {return (a != ALIGN_NEUTRAL && a != ALIGN_GOV && (a != ALIGN_PLAYER || player_enemy));}
+inline void end_texture() {select_no_texture();} // texturing is always enabled
 
 void merge_weapons(vector<ship_weapon> &weapons, ship_weapon const &w); // has to be here in the header
 bool have_excess_credits(unsigned align);

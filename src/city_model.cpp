@@ -347,7 +347,7 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	fgPopMatrix();
 	camera_pdu.valid = camera_pdu_valid;
 	camera_pdu.pos   = orig_camera_pos;
-	select_texture(WHITE_TEX); // reset back to default/untextured
+	select_no_texture(); // reset back to default/untextured
 	if (use_custom_color   ) {model.set_color_for_material     (model_file.body_mat_id, orig_color);} // restore original color
 	if (use_custom_texture ) {model.set_texture_for_material   (model_file.body_mat_id, orig_tid  );} // restore original texture
 	if (use_custom_emissive) {model.set_material_emissive_color(model_file.body_mat_id, BLACK     );} // reset

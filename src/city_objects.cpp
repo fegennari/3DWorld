@@ -380,7 +380,7 @@ plot_divider_type_t plot_divider_types[DIV_NUM_TYPES] = {
 /*static*/ void divider_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	if (dstate.pass_ix == DIV_NUM_TYPES) { // fence post pass - untextured
 		if (!shadow_only) {
-			select_texture(WHITE_TEX);
+			select_no_texture();
 			dstate.s.set_specular(0.8, 60.0); // specular metal surface
 		}
 		return;
@@ -500,7 +500,7 @@ void hedge_draw_t::draw_and_clear(shader_t &s) {
 
 void begin_water_surface_draw(shader_t &s) { // used for swimming pools and ponds
 	if (0) {
-		select_texture(WHITE_TEX);
+		select_no_texture();
 		select_texture_nmap(get_texture_by_name("normal_maps/ocean_water_normal.png", 1));
 	}
 	else {select_texture(get_texture_by_name("snow2.jpg"));}
@@ -518,7 +518,7 @@ void end_water_surface_draw(shader_t &s) {
 // passes: 0=in-ground walls, 1=in-ground water, 2=above ground sides, 3=above ground water
 /*static*/ void swimming_pool_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	if (shadow_only) {} // nothing
-	else if (dstate.pass_ix == 2) {select_texture(WHITE_TEX);} // sides/untextured
+	else if (dstate.pass_ix == 2) {select_no_texture();} // sides/untextured
 	else if (dstate.pass_ix == 0) {select_texture(get_texture_by_name("bathroom_tile.jpg"));} // walls and maybe ladder
 	else if (dstate.pass_ix == 1 || dstate.pass_ix == 3) {begin_water_surface_draw(dstate.s);} // water surface
 	else if (dstate.pass_ix == 4) {} // caustics pass - handled by the caller
@@ -778,7 +778,7 @@ pool_float_t::pool_float_t(point const &pos_, float radius_, colorRGBA const &co
 	pos.z = bcube.zc(); // re-center
 }
 /*static*/ void pool_float_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
-	if (!shadow_only) {select_texture(WHITE_TEX);}
+	if (!shadow_only) {select_no_texture();}
 	if (!shadow_only) {bind_default_flat_normal_map();}
 }
 void pool_float_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
@@ -946,7 +946,7 @@ bool clothesline_t::add_item(unsigned id, float dz, float hwidth, float hthick, 
 		dstate.s.set_cur_color(LT_GRAY);
 	}
 	else if (dstate.pass_ix == 1) {
-		select_texture(WHITE_TEX); // poles
+		select_no_texture(); // poles
 		dstate.s.set_cur_color(colorRGBA(0.0, 0.15, 0.0, 1.0)); // very dark green
 		dstate.s.set_specular(0.4, 40.0); // specular painted metal surface
 	}
@@ -1653,7 +1653,7 @@ sculpture_t::sculpture_t(cube_t const &bcube_, int rseed_) : city_obj_t(bcube_),
 	else {color = colorRGBA(rgen.rand_float(), rgen.rand_float(), rgen.rand_float());} // random pastel color
 }
 /*static*/ void sculpture_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
-	if (!shadow_only) {select_texture(WHITE_TEX);}
+	if (!shadow_only) {select_no_texture();}
 	if (!shadow_only) {bind_default_flat_normal_map();}
 }
 float closest_dist_to_cube_edge(point const &p, cube_t const &c) {
@@ -1998,7 +1998,7 @@ void building_walkway_t::attach_elevator(cube_t const &e) {
 	if (shadow_only) {} // nothing to do
 	else if (dstate.pass_ix == 0) {select_texture(get_texture_by_name("roads/concrete.jpg"));} // concrete cube
 	else { // untextured steel cylinder
-		select_texture(WHITE_TEX);
+		select_no_texture();
 		dstate.s.set_specular(0.8, 60.0, 0.25); // specular metal surface; partially reflective
 		dstate.s.set_cur_color(WHITE);
 	}
@@ -2436,7 +2436,7 @@ vect_cube_t const &parking_solar_t::get_legs() const {
 float const GS_LIGHT_COLOR_TEMP = 0.6; // bluish
 
 /*static*/ void obj_with_roof_pavement_lights_t::post_draw(draw_state_t &dstate, bool shadow_only) {
-	if (!shadow_only) {select_texture(WHITE_TEX);}
+	if (!shadow_only) {select_no_texture();}
 }
 void obj_with_roof_pavement_lights_t::draw_road_pavement(draw_state_t &dstate, city_draw_qbds_t &qbds) const {
 	select_texture(get_texture_by_name("roads/concrete.jpg"));
@@ -2848,7 +2848,7 @@ void sign_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale
 
 	if (emissive && bkg_color == RED) { // special case for emissive emergency room sign
 		dstate.draw_cube(temp_qbd, frame_bcube, bkg_color); // untextured, matte back
-		select_texture(WHITE_TEX);
+		select_no_texture();
 		dstate.s.add_uniform_float("emissive_scale", 1.0); // 100% emissive
 		temp_qbd.draw_and_clear();
 		dstate.s.add_uniform_float("emissive_scale", 0.0); // reset

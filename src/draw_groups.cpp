@@ -115,10 +115,6 @@ inline bool get_cull_face(int type, colorRGBA const &color) {
 	return (color.alpha < 1.0 && type != ROCKET && type != STAR5 && type != GRENADE && type != LANDMINE);
 }
 
-void select_no_texture() {
-	select_texture(WHITE_TEX);
-}
-
 void scale_color_uw(colorRGBA &color, point const &pos) {
 	water_color_atten_at_pos(color, pos); // ???
 	if (underwater) {color.R *= 0.45; color.G *= 0.45; color.B *= 0.85;}
@@ -994,7 +990,7 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 	translate_to(pos);
 	rotate_to_dir(orient);
 	point pos2(-0.4*radius, 0.85*radius, 0.3*radius);
-	select_texture(WHITE_TEX);
+	select_no_texture();
 
 	// draw eyes
 	for (unsigned i = 0; i < 2; ++i) {
@@ -1321,7 +1317,7 @@ void draw_plasma(point const &pos, point const &part_pos, float radius, float si
 	if (animate2) {radius *= rand_uniform(0.99, 1.01) + 0.1*(0.5 + 0.1*(abs((time % 20) - 10)));}
 
 	if (1) { // slower, but looks much nicer
-		select_texture(WHITE_TEX); // texture is procedural
+		select_no_texture(); // texture is procedural
 		draw_one_star(RED, YELLOW, pos, size*radius, ndiv, add_halo);
 		shader.make_current();
 	}
@@ -1487,7 +1483,7 @@ void draw_keycard(point const &pos, vector3d const &orient, vector3d const &init
 	float const dx(1.7*radius), dy(1.0*radius), dz(0.1*radius);
 	translate_to(pos - vector3d(0.0, 0.0, (1.0 - dz)*radius));
 	rotate_from_v2v(init_dir, plus_x); // should rotate about z axis
-	//select_texture(WHITE_TEX);
+	//select_no_texture();
 	//draw_cube(all_zeros, 2*dx, 2*dy, 2*dz, 1);
 	select_texture(KEYCARD_TEX);
 	draw_one_tquad(-dx, -dy, dx, dy, 0.0);

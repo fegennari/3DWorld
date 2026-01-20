@@ -139,7 +139,7 @@ public:
 				if (!is_setup) {init();}
 				mat.vao_setup(shadow_only);
 				s.set_specular(0.5, 80.0);
-				select_texture(WHITE_TEX);
+				select_no_texture();
 				int const animation_id = ANIM_ID_SPIDER; // custom spider animation; not using animation_state_t here
 				s.add_uniform_int("animation_id", animation_id);
 				s.add_uniform_float("animation_scale",    1.0); // not using a model, nominal size is 1.0
@@ -183,7 +183,7 @@ public:
 			indexed_vao_manager_with_shadow_t::post_render();
 		}
 		if (!web_mat.empty()) {
-			select_texture(WHITE_TEX);
+			select_no_texture();
 			tid_nm_pair_dstate_t state(s);
 			web_mat.upload_draw_and_clear(state);
 		}
@@ -297,7 +297,7 @@ public:
 			any_drawn = 1;
 		}
 		if (!any_drawn) return;
-		select_texture(WHITE_TEX);
+		select_no_texture();
 		s.add_uniform_float("bump_map_mag", 0.0); // no normal maps
 
 		if (!to_draw[INSECT_TYPE_FLY].empty()) { // draw flies
@@ -565,7 +565,7 @@ void building_room_geom_t::draw_animals(shader_t &s, building_t const &building,
 			if (rat.attacking) { // draw red glowing eyes
 				s.set_color_e(colorRGBA(0.5, 0.0, 0.0, 1.0)); // light emissive red
 				s.set_cur_color(RED);
-				select_texture(WHITE_TEX);
+				select_no_texture();
 				anim_state.clear_animation_id(s); // clear animations
 				point eyes_center(pos + vector3d(0.0, 0.0, 0.09*rat.height) + 0.85*rat.get_hlength()*dir);
 				vector3d const eye_sep_dir(0.21*rat.hwidth*cross_product(dir, plus_z).get_norm());

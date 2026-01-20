@@ -1519,14 +1519,14 @@ void scenery_group::draw_opaque_objects(shader_t &s, shader_t &vrs, bool shadow_
 		draw_scenery_vector(stumps, sscale, shadow_only, reflection_pass, xlate, scale_val);
 	}
 	if (!shadow_only && !mushrooms.empty()) { // mushrooms are too small to cast shadows
-		select_texture(WHITE_TEX);
+		select_no_texture();
 		draw_scenery_vector(mushrooms, sscale, shadow_only, reflection_pass, xlate, scale_val);
 	}
 	if (!shadow_only) {select_texture(WOOD_TEX);} // plant stems use wood texture
 	for (unsigned i = 0; i < plants.size(); ++i) {plants[i].draw_stem(sscale, shadow_only, reflection_pass, xlate);}
 
 	if (!shadow_only && !plants.empty()) { // no berry shadows
-		select_texture(WHITE_TEX); // berries are untextured
+		select_no_texture(); // berries are untextured
 		s.set_specular(0.9, 80.0);
 		begin_sphere_draw(0); // textured=0
 		for (unsigned i = 0; i < plants.size(); ++i) {plants[i].draw_berries(s, xlate);}

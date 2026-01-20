@@ -356,7 +356,7 @@ void building_t::draw_water(vector3d const &xlate) const {
 	bind_depth_buffer( 9); // tu_id=9
 	setup_depth_tex(s, 9); // tu_id=9
 	// Note: this must be *after* bind_frame_buffer_RGB() and bind_depth_buffer() because it changes the texture
-	if (room_mirror_ref_tid > 0) {bind_texture_tu(room_mirror_ref_tid, 0);} else {select_texture(WHITE_TEX);}
+	if (room_mirror_ref_tid > 0) {bind_texture_tu(room_mirror_ref_tid, 0);} else {select_no_texture();}
 	s.add_uniform_int("reflection_tex", 0);
 	enable_blend(); // no longer needed?
 	float const x1(water.x1()), y1(water.y1()), x2(water.x2()), y2(water.y2()), z(water.z2()), tx(1.0), ty(1.0);

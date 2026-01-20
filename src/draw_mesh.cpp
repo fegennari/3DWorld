@@ -1008,7 +1008,7 @@ void draw_water_plane(float zval, float terrain_zmin, unsigned reflection_tid) {
 	static lava_bubble_manager_t lava_bubble_manager;
 
 	if (water_is_lava && !camera_underwater && (camera.z - zval) < 50.0f*CAMERA_RADIUS) { // camera just above lava surface
-		select_texture(WHITE_TEX); // no reflections
+		select_no_texture(); // no reflections
 		setup_water_plane_shader(s, no_specular, 0, 0, 0, 0, 0, color, BLACK, 0); // reflections=0, add_waves=0, rain_mode=0, use_depth=0, use_tess=0
 		// Note: bound uniforms and textures should be set to valid values from above
 		s.set_cur_color(WHITE);

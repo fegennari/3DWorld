@@ -273,7 +273,7 @@ void jump_pad::draw(shader_t &s) const {
 	select_texture(HAZARD_TEX);
 	draw_fast_cylinder((pos + len*dir), (pos + (len + thickness)*dir), radius, radius, ndiv, 1, 1, 0, nullptr, 0.15);
 	s.set_cur_color(GRAY);
-	select_texture(WHITE_TEX);
+	select_no_texture();
 	draw_fast_cylinder(pos, (pos + len*dir), radius2, radius2, ndiv, 0, 0);
 }
 

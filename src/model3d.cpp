@@ -1380,13 +1380,13 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		if (has_amask) {tmgr.bind_texture(tex_id);} // enable alpha mask texture
 		geom.render(shader, 1, xlate);
 		geom_tan.render(shader, 1, xlate);
-		if (has_amask) {select_texture(WHITE_TEX);} // back to a default white texture
+		if (has_amask) {select_no_texture();} // back to a default white texture
 	}
 	else {
 		int bump_map_mag_ix(-1);
 		
 		if (disable_model_textures) {
-			select_texture(WHITE_TEX);
+			select_no_texture();
 		}
 		else if (tex_id >= 0) {
 			tmgr.bind_texture(tex_id);
@@ -2266,7 +2266,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass,
 		else if (reflect_mode == 2 && model_refl_tid) { // using the reflection texture
 			setup_shader_cube_map_params(shader, bcube_xf, model_refl_tid, model_refl_tsize); // Note: xlate should be all zeros
 #if 0 // TESTING
-			select_texture(WHITE_TEX);
+			select_no_texture();
 			set_def_spec_map();
 			shader.set_cur_color(WHITE); // or BLACK
 			shader.set_specular_color(WHITE, 60.0);
@@ -2289,7 +2289,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass,
 	// we need the vbo to be created here even in the shadow pass,
 	// and the textures are needed for determining whether or not we need to build the tanget_vectors for bump mapping
 	bind_all_used_tids();
-	if (is_shadow_pass) {select_texture(WHITE_TEX);} // make sure a valid texture is enabled for the shadow pass
+	if (is_shadow_pass) {select_no_texture();} // make sure a valid texture is enabled for the shadow pass
 
 	if (transforms.empty()) { // no transforms case
 		render_materials_def(shader, is_shadow_pass, reflection_pass, is_z_prepass, enable_alpha_mask, bmap_pass_mask, trans_op_mask, &xlate, &mvm);

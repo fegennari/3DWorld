@@ -460,7 +460,7 @@ namespace streetlight_ns {
 void streetlights_t::draw_streetlights(road_draw_state_t &dstate, bool shadow_only, bool always_on) const {
 	if (streetlights.empty()) return;
 	//timer_t t("Draw Streetlights");
-	select_texture(WHITE_TEX);
+	select_no_texture();
 	bool const is_local_shadow(camera_pdu.far_ < 0.1*FAR_CLIP); // Note: somewhat of a hack, but I don't have a better way to determine this
 	for (auto i = streetlights.begin(); i != streetlights.end(); ++i) {i->draw(dstate, shadow_only, is_local_shadow, always_on);}
 }
@@ -1137,7 +1137,7 @@ void road_draw_state_t::draw_city_skirt(cube_t const &bcube, bool shadow_only) {
 		if (sun_pos.z >= bcube.z1()) return; // sun above city, skirt not needed
 		cube_t skirt(bcube);
 		skirt.z1() = sun_pos.z - FAR_CLIP; // Note: unclear why FAR_CLIP is needed for low light angle, but it works
-		select_texture(WHITE_TEX);
+		select_no_texture();
 		draw_cube(qbd_skirt, skirt, WHITE, 1, 0.0, 4); // skip zvals
 	}
 	else {
@@ -1210,7 +1210,7 @@ void road_draw_state_t::end_cur_tile() {
 		disable_blend();
 		s.add_uniform_float("min_alpha", DEF_CITY_MIN_ALPHA);
 	}
-	if (!shadow_only && !qbd_untextured.empty()) {select_texture(WHITE_TEX);}
+	if (!shadow_only && !qbd_untextured.empty()) {select_no_texture();}
 	qbd_untextured.draw_and_clear();
 	
 	if (!text_verts.empty()) { // draw street names on signs; must be after qbd_untextured due to alpha blending
@@ -1295,7 +1295,7 @@ void road_draw_state_t::draw_bridge(bridge_t const &bridge, bool shadow_only) { 
 	uint64_t prev_tile_id(0);
 	point query_pt(bridge.get_cube_center());
 	ensure_shader_active(); // needed for use_smap=0 case
-	if (!shadow_only) {select_texture(WHITE_TEX);}
+	if (!shadow_only) {select_no_texture();}
 
 	if (bridge.over_water) {
 		float const pylon_hwidth(0.3*scale), pylon_hdepth(0.1*scale);
@@ -1607,7 +1607,7 @@ void road_draw_state_t::draw_transmission_line(transmission_line_t const &tline)
 			}
 			if (!shadow_only) {
 				s.clear_specular();
-				select_texture(WHITE_TEX);
+				select_no_texture();
 			}
 			if (!shadow_only && draw_supports && tower_bcube.closest_dist_less_than(camera_bs, standoff_dmax)) { // draw standoffs
 				s.set_cur_color(LT_GRAY);

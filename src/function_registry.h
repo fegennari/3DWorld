@@ -618,6 +618,7 @@ int get_texture_by_name(string const &name, bool is_normal_map=0, bool invert_y=
 unsigned load_cube_map_texture(string const &name);
 bool select_texture(int id, unsigned tu_id=0);
 inline bool select_texture_nmap(int id) {return select_texture(id, NMAP_TU_ID);}
+inline void select_no_texture() {select_texture(WHITE_TEX);}
 void update_player_bbb_texture(float extra_blood, bool recreate);
 float get_tex_ar(int id);
 void bind_1d_texture(unsigned tid, bool is_array=0);

@@ -1919,7 +1919,7 @@ bool ped_manager_t::choose_dest_parked_car(unsigned city_id, unsigned &plot_id, 
 // drawing
 void begin_ped_sphere_draw(shader_t &s, colorRGBA const &color, bool &in_sphere_draw, bool textured) {
 	if (in_sphere_draw) return;
-	if (!textured) {select_texture(WHITE_TEX);} // currently not textured
+	if (!textured) {select_no_texture();} // currently not textured
 	s.set_cur_color(color);
 	begin_sphere_draw(textured);
 	in_sphere_draw = 1;

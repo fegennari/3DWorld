@@ -897,7 +897,7 @@ public:
 		if (it == tex_map.end()) { // not found, must create
 			tex_params_t const tp(name, bg_color, text_color, fb, bb, style);
 			if (pending.empty() || !(tp == pending.back())) {pending.push_back(tp);} // don't add duplicates
-			select_texture(WHITE_TEX); // make it white until the logo texture is generated
+			select_no_texture(); // make it white until the logo texture is generated
 			return 1;
 		}
 		unsigned const tid(it->second);

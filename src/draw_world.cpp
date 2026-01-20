@@ -942,7 +942,7 @@ bool portal::is_visible(int reflection_pass) const {
 }
 
 void portal::pre_draw(vector<vert_wrap_t> &verts) {
-	select_texture(WHITE_TEX);
+	select_no_texture();
 	ALPHA0.set_for_cur_shader();
 	assert(verts.empty());
 }
@@ -1673,7 +1673,7 @@ void draw_cracks_and_decals() {
 	if (!blood_tqd.empty() || !crack_qbd.empty()) { // use normal lighting shader
 		setup_smoke_shaders(lighting_shader, 0.01, 0, 1, 1, 1, 1, 1, 0, 1); // no rain/snow
 		lighting_shader.enable();
-		select_texture(WHITE_TEX);
+		select_no_texture();
 		lighting_shader.set_cur_normal(plus_z); // +z is default normal for blood trails
 		blood_tqd.draw_tri_verts();
 		blood_tqd.clear();
@@ -1990,7 +1990,7 @@ void draw_icon(shader_t &s, unsigned icon_id, float x1, float x2, float y1, floa
 	s.set_cur_color(WHITE);
 	select_texture(get_icon_tid(icon_id));
 	draw_one_tquad(x1, y1, x2, y2, zval);
-	select_texture(WHITE_TEX);
+	select_no_texture();
 }
 void draw_stats_bar(shader_t &s, colorRGBA const &color, float max_val, float cur_val, float x, float y1, float y2, float zval) {
 	s.set_cur_color(colorRGBA(color, 0.2));
@@ -2001,7 +2001,7 @@ void draw_stats_bar(shader_t &s, colorRGBA const &color, float max_val, float cu
 void draw_health_bar(float health, float shields, float pu_time, colorRGBA const &pu_color, float poisoned, vector<status_bar_t> const &extra_bars) {
 	shader_t s;
 	s.begin_simple_textured_shader();
-	select_texture(WHITE_TEX);
+	select_no_texture();
 	glDisable(GL_DEPTH_TEST);
 	enable_blend();
 	bool const building_gameplay_mode(world_mode == WMODE_INF_TERRAIN && game_mode == GAME_MODE_BUILDINGS);

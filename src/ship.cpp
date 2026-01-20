@@ -1067,7 +1067,7 @@ void draw_univ_objects() {
 	} // for i
 	sort(sorted.begin(), sorted.end()); // sort uobjs by distance to camera
 	//PRINT_TIME("Sort");
-	select_texture(WHITE_TEX); // always textured (see end_texture())
+	select_no_texture(); // always textured (see end_texture())
 	enable_blend(); // doesn't hurt
 
 	// setup emissive shader, which is used for ship shields and EMP (will be disabled by ship draw shader)

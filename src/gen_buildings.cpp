@@ -132,10 +132,10 @@ void tid_nm_pair_t::set_gl(tid_nm_pair_dstate_t &state) const {
 	else if (tid == ABST_ART_TEXTURE_ID) {
 		if (abstract_art_shader.is_setup()) {abstract_art_shader.make_current();}
 		else {setup_building_draw_shader(abstract_art_shader, 0.0, 1, 0, 3);} // enable_indir=1, force_tsl=0, use_texgen=3 (abstract art)
-		select_texture(WHITE_TEX); // probably not needed, but just to be safe
+		select_no_texture(); // probably not needed, but just to be safe
 		bind_default_flat_normal_map(); // for some reason, this one is needed
 	}
-	else if (tid == NO_SHADOW_WHITE_TEX || tid == SHADOW_ONLY_TEX) {select_texture(WHITE_TEX);}
+	else if (tid == NO_SHADOW_WHITE_TEX || tid == SHADOW_ONLY_TEX) {select_no_texture();}
 	else {select_texture(tid);}
 	float const e_val(get_emissive_val());
 	if (e_val     > 0.0) {state.s.add_uniform_float("emissive_scale", e_val);} // enable emissive
@@ -3097,7 +3097,7 @@ void building_t::write_basement_entrance_depth_pass(shader_t &s) const {
 	glPolygonOffset(-1.0, -1.0); // useful for avoiding z-fighting
 	glEnable(GL_POLYGON_OFFSET_FILL);
 	s.set_cur_color(ALPHA0); // fully transparent
-	select_texture(WHITE_TEX);
+	select_no_texture();
 	enable_blend();
 	glEnable(GL_CULL_FACE);
 	if (!depth_clamp_enabled) {glEnable(GL_DEPTH_CLAMP);}
@@ -4192,7 +4192,7 @@ public:
 							if (debug_color != WHITE) { // special building type
 								cube_t debug_cube(b.bcube); // Note: if b.is_rotated(), this will be the AABB of the rotated building
 								set_cube_zvals(debug_cube, b.bcube.z2(), (b.bcube.z2() + 4.0*b.get_window_vspace()));
-								select_texture(WHITE_TEX);
+								select_no_texture();
 								bind_default_flat_normal_map();
 								s.set_cur_color(debug_color);
 								s.set_color_e  (debug_color);
