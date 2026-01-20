@@ -2407,6 +2407,13 @@ bool is_movable(room_object_t const &obj) {
 	if (type == TYPE_TROLLEY || type == TYPE_WHEELCHAIR || type == TYPE_SHOP_CART) return 1; // wheeled objects can always be pushed
 	return (bot.weight >= 40.0 && !bot.attached); // heavy non-attached objects, including tables
 }
+void adjust_push_pull_delta_for_obj(room_object_t const &obj, vector3d &delta) {
+	if (obj.type == TYPE_WHEELCHAIR || obj.type == TYPE_SHOP_CART) {
+		delta[!obj.dim] *= 0.1; // little side movement
+		delta[ obj.dim] *= 2.0; // large front/back movement
+	}
+	else if (obj.type == TYPE_OFF_CHAIR || obj.type == TYPE_TROLLEY) {delta *= 2.0;} // easy to push
+}
 bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir, float range, int mode) { // mode: 0=normal, 1=pull
 	assert(has_room_geom());
 	int closest_obj_id(-1);
@@ -2456,6 +2463,7 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 	delta.z = 0.0; // XY only
 	delta.normalize();
 	if (mode == 1) {delta.negate();} // changes push to pull ('r' key vs 'e' key)
+	adjust_push_pull_delta_for_obj(obj, delta);
 	cube_t player_bcube;
 	player_bcube.set_from_sphere(at_pos, get_scaled_player_radius());
 	player_bcube.z1() -= get_player_height();
