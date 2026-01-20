@@ -87,10 +87,13 @@ bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, unsigne
 	cw.d[dim][ dir] = gs_far_edge;
 	cw.d[dim][!dir] = gs_far_edge - (dir ? 1.0 : -1.0)*cw_depth; // set depth
 	float const len_delta(gstation.pavement.get_sz_dim(dim) - cw_len);
-	if (len_delta > 0.0) {cw.expand_in_dim(!dim, -0.5*len_delta);} // shrink ends of carwash is shorter than gas station; should be true
-
+	
+	if (len_delta > 0.0) { // shrink ends if carwash is shorter than gas station; should be true
+		cw.d[!dim][ ent_dir] -= (ent_dir ? 1.0 : -1.0)*0.75*len_delta; // shrink more on entrance side to make room for pedestrians
+		cw.d[!dim][!ent_dir] += (ent_dir ? 1.0 : -1.0)*0.25*len_delta;
+	}
 	if (!has_bcube_int_xy(cw, bcubes, pad_dist)) { // not too close to a building
-		cwash_groups.add_obj(car_wash_t(cw, dim, dir), cwashes);
+		cwash_groups.add_obj(car_wash_t(cw, dim, dir, rgen), cwashes);
 		add_cube_to_colliders_and_blockers(cw, colliders, bcubes);
 		// add car wash sign on the side facing the road
 		float const cw_road_side(cw.d[!dim][ent_dir]); // away from road

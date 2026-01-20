@@ -6,7 +6,7 @@
 #include "lightmap.h" // for light_source
 #include "openal_wrap.h"
 
-extern bool player_in_walkway, player_in_ww_elevator, enable_hcopter_shadows;
+extern bool player_in_walkway, player_in_ww_elevator, enable_hcopter_shadows, city_lights_custom_bcube;
 extern int animate2, display_mode;
 extern float fticks, water_plane_z;
 extern double camera_zh;
@@ -2435,6 +2435,9 @@ vect_cube_t const &parking_solar_t::get_legs() const {
 
 float const GS_LIGHT_COLOR_TEMP = 0.6; // bluish
 
+/*static*/ void obj_with_roof_pavement_lights_t::post_draw(draw_state_t &dstate, bool shadow_only) {
+	if (!shadow_only) {select_texture(WHITE_TEX);}
+}
 void obj_with_roof_pavement_lights_t::draw_road_pavement(draw_state_t &dstate, city_draw_qbds_t &qbds) const {
 	select_texture(get_texture_by_name("roads/concrete.jpg"));
 	dstate.draw_cube(qbds.qbd, pavement, GRAY, 1, 8.0, 3); // draw top surface only
@@ -2442,26 +2445,18 @@ void obj_with_roof_pavement_lights_t::draw_road_pavement(draw_state_t &dstate, c
 }
 void obj_with_roof_pavement_lights_t::draw_lights(draw_state_t &dstate, city_draw_qbds_t &qbds, cube_t const *lights, unsigned num_lights) const {
 	colorRGBA const lights_color(get_light_color_temp(GS_LIGHT_COLOR_TEMP)); // bluish
-	quad_batch_draw &lights_qbd(is_night() ? qbds.emissive_qbd : qbds.untex_qbd); // lights on/emissive at night
-	select_texture(WHITE_TEX);
-	for (unsigned n = 0; n < num_lights; ++n) {dstate.draw_cube(lights_qbd, lights[n], lights_color, 0, 0.0, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1);} // skip_top=1
-}
-bool obj_with_roof_pavement_lights_t::proc_roof_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
-	cube_t coll_bcube(roof); // all the collidable parts are under the roof
-	coll_bcube.z1() = bcube.z1();
-	if (!sphere_cube_intersect((pos_ - xlate), radius_, coll_bcube)) return 0; // optimization
-	float const pos_z(max(pos_.z, p_last.z));
-
-	if (pos_z > roof.z2() - radius_ && pos_z < roof.z2() + 1.1*radius_) { // check for player on roof; must be first
-		pos_.z = roof.z2() + radius_; // on roof
-		if (cnorm) {*cnorm = plus_z;}
-		return 1;
+	bool const enable_lights(is_night());
+	
+	for (unsigned n = 0; n < num_lights; ++n) {
+		quad_batch_draw &lights_qbd((enable_lights && !(lights_disabled & (1<<n))) ? qbds.emissive_qbd : qbds.untex_qbd); // lights on/emissive at night
+		dstate.draw_cube(lights_qbd, lights[n], lights_color, 0, 0.0, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1); // skip_top=1
 	}
-	return sphere_cube_int_update_pos(pos_, radius_, (roof + xlate), p_last, 0, cnorm); // needed for ball collision?
 }
-void obj_with_roof_pavement_lights_t::add_night_time_lights(vector3d const &xlate, cube_t &lights_bcube,
-	float ldist, cube_t const *lights, bool *cached_smaps, unsigned num_lights, bool car_is_using) const
+void obj_with_roof_pavement_lights_t::add_night_time_lights(vector3d const &xlate, cube_t &lights_bcube, float ldist,
+	cube_t const *lights, bool *cached_smaps, cube_t const *clip_cubes, unsigned num_lights, bool car_is_using) const
 {
+	unsigned const all_lights_mask((1<<num_lights)-1);
+	if ((lights_disabled & all_lights_mask) == all_lights_mask) return; // all lights disabled
 	if (!lights_bcube.intersects(bcube)) return; // not contained within the light volume
 	bool cache_shadow_maps(!car_is_using);
 	ldist *= city_params.road_width;
@@ -2476,6 +2471,7 @@ void obj_with_roof_pavement_lights_t::add_night_time_lights(vector3d const &xlat
 		cache_shadow_maps = pts.empty();
 	}
 	for (unsigned n = 0; n < num_lights; ++n) {
+		if (lights_disabled & (1<<n)) continue; // this light disabled
 		point const lpos(cube_bot_center(lights[n]));
 		if (!lights_bcube.contains_pt(lpos)) continue;
 		if (!camera_pdu.sphere_visible_test((lpos + xlate), ldist)) continue; // VFC
@@ -2483,6 +2479,7 @@ void obj_with_roof_pavement_lights_t::add_night_time_lights(vector3d const &xlat
 		min_eq(lights_bcube.z1(), (lpos.z - ldist));
 		max_eq(lights_bcube.z2(), (lpos.z + 0.1f*ldist)); // pointed down - don't extend as far up
 		dl_sources.emplace_back(ldist, lpos, lpos, color, 0, -plus_z, 0.2); // points down; default radius far clip
+		//if (clip_cubes) {dl_sources.back().set_custom_bcube(clip_cubes[n]);} // no, don't block lights spreading from the exit; shadow map should work here
 
 		if (cache_shadow_maps) { // cache shadow maps if there are no dynamic cars or pedestrians (player doesn't cast a shadow)
 			if (cached_smaps[n]) {dl_sources.back().assign_smap_id(uintptr_t(lights+n)/sizeof(void *));} // cache on second frame
@@ -2491,16 +2488,34 @@ void obj_with_roof_pavement_lights_t::add_night_time_lights(vector3d const &xlat
 
 		// add a small unshadowed point light to illuminate the underside of the roof, similar to building room lights
 		point const lpos2(lpos.x, lpos.y, (lpos.z - 2.0*lights[n].dz())); // slightly below the light
-		dl_sources.emplace_back(0.6*ldist, lpos2, lpos2, color, 0, plus_z, 1.0);
+		dl_sources.emplace_back(0.6*ldist, lpos2, lpos2, color, 0);
 		dl_sources.back().disable_shadows();
+		
+		if (clip_cubes) { // clip needed since there's no shadow map
+			dl_sources.back().set_custom_bcube(clip_cubes[n]);
+			city_lights_custom_bcube = 1;
+		}
 	} // for n
+}
+bool obj_with_roof_pavement_lights_t::proc_roof_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
+	cube_t coll_bcube(roof); // all the collidable parts are under the roof
+	coll_bcube.z1() = bcube.z1();
+	if (!sphere_cube_intersect((pos_ - xlate), radius_, coll_bcube)) return 0; // optimization
+	float const pos_z(max(pos_.z, p_last.z));
+
+	if (pos_z > roof.z2() - radius_ && pos_z < roof.z2() + 1.1*radius_) { // check for player on roof; must be first
+		pos_.z = roof.z2() + radius_; // on roof
+		if (cnorm) {*cnorm = plus_z;}
+		return 1;
+	}
+	return sphere_cube_int_update_pos(pos_, radius_, (roof + xlate), p_last, 0, cnorm); // needed for ball collision?
 }
 
 gas_station_t::gas_station_t(cube_t const &c, bool dim_, bool dir_, bool edir, unsigned rand_val, unsigned pix, unsigned gix) :
 	obj_with_roof_pavement_lights_t(c, dim_, dir_), ent_dir(edir), plot_ix(pix), gs_ix(gix)
 {
 	vector2d const sz(bcube.get_size_xy());
-	float const height(bcube.dz()), length(sz[!dim]), pavement_zval(bcube.z1() + 0.005*bcube.dz());
+	float const height(bcube.dz()), length(sz[!dim]), pavement_zval(bcube.z1() + 0.006*bcube.dz());
 	roof = bcube;
 	roof.z1() = bcube.z2() - 0.1*height;
 	roof.expand_by_xy(-0.1*length); // roof slightly smaller than footprint/pavement
@@ -2562,9 +2577,9 @@ void gas_station_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dis
 	roof_edge.expand_by_xy(0.0035*roof.get_sz_dim(dim));
 	roof_edge.expand_in_z(-0.2*roof.dz());
 	dstate.draw_cube(qbds.untex_qbd, roof_edge, RED); // draw all sides
-	if (!shadow_only) {draw_road_pavement(dstate, qbds);} // draw pavement surface
 	float const dmax(dist_scale*dstate.draw_tile_dist);
-	if (!shadow_only && !bcube.closest_dist_less_than(dstate.camera_bs, 0.50*dmax)) return; // only draw the roof and pavement
+	if (!shadow_only && !bcube.closest_dist_less_than(dstate.camera_bs, 0.50*dmax)) return; // only draw the roof (pavement has Z-fighting problems anyway)
+	if (!shadow_only) {draw_road_pavement(dstate, qbds);} // draw pavement surface
 	colorRGBA const pillar_color(0.25, 0.25, 1.0); // light blue
 	for (unsigned n = 0; n < num_pillars; ++n) {dstate.draw_cube(qbds.untex_qbd, pillars[n], pillar_color, 1, 0.0, 4);} // skip top and bottom
 	if (!shadow_only && !bcube.closest_dist_less_than(dstate.camera_bs, 0.25*dmax)) return; // skip small/detailed objects
@@ -2617,7 +2632,7 @@ void gas_station_t::add_ped_colliders(vect_cube_t &colliders) const {
 void gas_station_t::add_night_time_lights(vector3d const &xlate, cube_t &lights_bcube) const {
 	bool car_is_using(out_reserved); // assume a car may be casting shadows if a line is reserved; conservative
 	for (unsigned n = 0; n < num_lanes; ++n) {car_is_using |= lane_reserved[n];}
-	obj_with_roof_pavement_lights_t::add_night_time_lights(xlate, lights_bcube, 1.0, lights, cached_smaps, num_lights, car_is_using);
+	obj_with_roof_pavement_lights_t::add_night_time_lights(xlate, lights_bcube, 1.0, lights, cached_smaps, nullptr, num_lights, car_is_using); // no clip cubes
 }
 // ^
 // ^ LANE1  => V
@@ -2692,23 +2707,29 @@ void gas_station_t::leave_output_lane() const {
 
 // car wash
 
-car_wash_t::car_wash_t(cube_t const &c, bool dim_, bool dir_) : obj_with_roof_pavement_lights_t(c, dim_, dir_) {
+car_wash_t::car_wash_t(cube_t const &c, bool dim_, bool dir_, rand_gen_t &rgen) : obj_with_roof_pavement_lights_t(c, dim_, dir_) {
 	float const height(bcube.dz()), width(get_width()), depth(get_depth()), wall_thick(0.04*depth);
-	float const bay_spacing((width - wall_thick)/num_bays);
+	float const bay_spacing((width - wall_thick)/num_bays), dsign(dir ? 1.0 : -1.0);
 	cube_t back_wall(bcube), side_wall(bcube);
 	roof = pavement = bcube;
-	pavement .z2() = bcube.z1() + 0.0075*bcube.dz(); // shift slightly up
+	pavement .z2() = bcube.z1() + 0.009*bcube.dz(); // shift slightly up
 	side_wall.z2() = back_wall.z2() = roof.z1() = bcube.z2() - 1.5*wall_thick; // roof is thicker than walls
 	side_wall.d[!dim][1]    = side_wall.d[!dim][0] + wall_thick;
-	back_wall.d[ dim][dir]  = side_wall.d[dim][!dir] = bcube.d[dim][!dir] + (dir ? 1.0 : -1.0)*wall_thick;
-	pavement .d[ dim][dir] += (dir ? 1.0 : -1.0)*0.01*depth; // extend slightly under gas station to avoid a gap if heights are different
+	back_wall.d[ dim][dir]  = side_wall.d[dim][!dir] = bcube.d[dim][!dir] + dsign*wall_thick;
+	pavement .d[ dim][dir] += dsign*0.01*depth; // extend slightly under gas station to avoid a gap if heights are different
 	walls.push_back(back_wall);
 
-	// add side walls
+	// add side walls and bays
 	for (unsigned n = 0; n <= num_bays; ++n) {
 		walls.push_back(side_wall);
-		side_wall.translate_dim(!dim, bay_spacing);
-	}
+
+		if (n < num_bays) {
+			bays[n] = side_wall;
+			bays[n].d[!dim][0] = side_wall.d[!dim][1]; // left side of bay at right side of left wall
+			side_wall.translate_dim(!dim, bay_spacing);
+			bays[n].d[!dim][1] = side_wall.d[!dim][0]; // right side of bay at left side of right wall
+		}
+	} // for n
 	// add lights in center of bays
 	float const light_radius(0.065*bay_spacing), light_thick(0.025*height);
 	cube_t light;
@@ -2718,7 +2739,11 @@ car_wash_t::car_wash_t(cube_t const &c, bool dim_, bool dir_) : obj_with_roof_pa
 	for (unsigned n = 0; n < num_bays; ++n) {
 		set_wall_width(light, (bcube.d[!dim][0] + 0.5*wall_thick + (n + 0.5)*bay_spacing), light_radius, !dim);
 		lights[n] = light;
-	}
+		light_clip_cubes[n] = bays[n];
+		light_clip_cubes[n].expand_by(0.5*wall_thick); // light includes wall surfaces but doesn't pass through walls
+		light_clip_cubes[n].d[dim][dir] += dsign*depth; // extends out the opening since there's no wall
+	} // for n
+	lights_disabled = rgen.rand(); // 50% chance of each light being disabled
 }
 void car_wash_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	// Note: most geometry is drawn immediately rather than in multiple passes since there are several materials and likely only one or two visible car washes
@@ -2734,11 +2759,13 @@ void car_wash_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_s
 	if (!shadow_only) {qbds.qbd.draw_and_clear();}
 	// draw roof
 	if (!shadow_only) {set_corrugated_metal_texture();}
-	dstate.draw_cube(qbds.qbd, roof, LT_GRAY, 0, 0.75*tscale, 3, 0, 0, !dim); // skip_bottom=0, Z only, swap_tc_xy=!dim
+	dstate.draw_cube(qbds.qbd, roof, LT_GRAY, 0, 0.75*tscale, 3, 0, 0, dim); // skip_bottom=0, Z only, swap_tc_xy=dim
 	qbds.qbd.draw_and_clear();
 	if (!shadow_only) {bind_default_flat_normal_map();}
-	// draw pavement
+	float const dmax(dist_scale*dstate.draw_tile_dist);
+	if (!shadow_only && !bcube.closest_dist_less_than(dstate.camera_bs, 0.4*dmax)) return; // no pavements or lights (pavement has Z-fighting problems anyway)
 	if (!shadow_only) {draw_road_pavement(dstate, qbds);} // draw pavement surface
+	if (!shadow_only && !bcube.closest_dist_less_than(dstate.camera_bs, 0.2*dmax)) return; // no lights
 	if (!shadow_only) {draw_lights(dstate, qbds, lights, num_bays);} // draw lights
 }
 bool car_wash_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
@@ -2748,7 +2775,7 @@ bool car_wash_t::proc_sphere_coll(point &pos_, point const &p_last, float radius
 	return ret;
 }
 void car_wash_t::add_night_time_lights(vector3d const &xlate, cube_t &lights_bcube) const {
-	obj_with_roof_pavement_lights_t::add_night_time_lights(xlate, lights_bcube, 0.6, lights, cached_smaps, num_bays, 0); // car_is_using=0
+	obj_with_roof_pavement_lights_t::add_night_time_lights(xlate, lights_bcube, 0.6, lights, cached_smaps, light_clip_cubes, num_bays, 0); // car_is_using=0
 }
 
 // birds/pigeons

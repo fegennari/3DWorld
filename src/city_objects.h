@@ -452,13 +452,16 @@ struct gas_pump_t : public multi_model_city_obj_t {
 	gas_pump_t(point const &pos_, float height, bool dim_, bool dir_, unsigned model_sel) : multi_model_city_obj_t(pos_, height, dim_, dir_, OBJ_MODEL_GAS_PUMP, model_sel) {}
 };
 struct obj_with_roof_pavement_lights_t : public oriented_city_obj_t {
+	unsigned lights_disabled=0; // bit mask per light
 	cube_t roof, pavement;
 
 	obj_with_roof_pavement_lights_t(cube_t const &bcube_, bool dim_, bool dir_) : oriented_city_obj_t(bcube_, dim_, dir_) {}
+	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw_road_pavement(draw_state_t &dstate, city_draw_qbds_t &qbds) const;
 	void draw_lights(draw_state_t &dstate, city_draw_qbds_t &qbds, cube_t const *lights, unsigned num_lights) const;
+	void add_night_time_lights(vector3d const &xlate, cube_t &lights_bcube, float ldist, cube_t const *lights,
+		bool *cached_smaps, cube_t const *clip_cubes, unsigned num_lights, bool car_is_using) const;
 	bool proc_roof_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
-	void add_night_time_lights(vector3d const &xlate, cube_t &lights_bcube, float ldist, cube_t const *lights, bool *cached_smaps, unsigned num_lights, bool car_is_using) const;
 };
 struct gas_station_t : public obj_with_roof_pavement_lights_t {
 	static unsigned const num_pillars=4, num_lights=5, num_lanes=4;
@@ -497,11 +500,11 @@ struct gs_reservation_t {
 
 struct car_wash_t : public obj_with_roof_pavement_lights_t {
 	static unsigned const num_bays=4;
-	cube_t lights[num_bays];
+	cube_t bays[num_bays], lights[num_bays], light_clip_cubes[num_bays];
 	mutable bool cached_smaps[num_bays]={}; // for lights
 	vect_cube_t walls;
 
-	car_wash_t(cube_t const &c, bool dim_, bool dir_);
+	car_wash_t(cube_t const &c, bool dim_, bool dir_, rand_gen_t &rgen);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 	void add_night_time_lights(vector3d const &xlate, cube_t &lights_bcube) const;
