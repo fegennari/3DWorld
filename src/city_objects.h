@@ -500,12 +500,13 @@ struct gs_reservation_t {
 
 struct car_wash_t : public obj_with_roof_pavement_lights_t {
 	static unsigned const num_bays=4;
+	bool has_back_wall=0;
 	cube_t bays[num_bays], lights[num_bays], light_clip_cubes[num_bays];
 	bool bay_in_use[num_bays]={}; // for parked cars; not yet used
 	mutable bool cached_smaps[num_bays]={}; // for lights
 	vect_cube_t walls;
 
-	car_wash_t(cube_t const &c, bool dim_, bool dir_, rand_gen_t &rgen);
+	car_wash_t(cube_t const &c, bool dim_, bool dir_, bool hbw, rand_gen_t &rgen);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 	void add_night_time_lights(vector3d const &xlate, cube_t &lights_bcube) const;

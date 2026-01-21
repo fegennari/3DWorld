@@ -2707,18 +2707,22 @@ void gas_station_t::leave_output_lane() const {
 
 // car wash
 
-car_wash_t::car_wash_t(cube_t const &c, bool dim_, bool dir_, rand_gen_t &rgen) : obj_with_roof_pavement_lights_t(c, dim_, dir_) {
+car_wash_t::car_wash_t(cube_t const &c, bool dim_, bool dir_, bool hbw, rand_gen_t &rgen) : obj_with_roof_pavement_lights_t(c, dim_, dir_), has_back_wall(hbw) {
 	float const height(bcube.dz()), width(get_width()), depth(get_depth()), wall_thick(0.04*depth);
 	float const bay_spacing((width - wall_thick)/num_bays), dsign(dir ? 1.0 : -1.0);
-	cube_t back_wall(bcube), side_wall(bcube);
+	cube_t side_wall(bcube);
 	roof = pavement = bcube;
-	pavement .z2() = bcube.z1() + 0.008*bcube.dz(); // shift slightly up
-	side_wall.z2() = back_wall.z2() = roof.z1() = bcube.z2() - 1.2*wall_thick; // roof is thicker than walls
+	pavement .z2() = bcube.z1() + 0.005*bcube.dz(); // shift slightly up
+	side_wall.z2() = roof.z1() = bcube.z2() - 1.2*wall_thick; // roof is thicker than walls
 	side_wall.d[!dim][1]    = side_wall.d[!dim][0] + wall_thick;
-	back_wall.d[ dim][dir]  = side_wall.d[dim][!dir] = bcube.d[dim][!dir] + dsign*wall_thick;
 	pavement .d[ dim][dir] += dsign*0.01*depth; // extend slightly under gas station to avoid a gap if heights are different
-	walls.push_back(back_wall);
 
+	if (has_back_wall) {
+		cube_t back_wall(bcube);
+		back_wall.z2() = roof.z1();
+		side_wall.d[dim][!dir] = back_wall.d[dim][dir] = bcube.d[dim][!dir] + dsign*wall_thick; // shorten to remove overlap with back wall
+		walls.push_back(back_wall);
+	}
 	// add side walls and bays
 	for (unsigned n = 0; n <= num_bays; ++n) {
 		walls.push_back(side_wall);
@@ -2741,7 +2745,8 @@ car_wash_t::car_wash_t(cube_t const &c, bool dim_, bool dir_, rand_gen_t &rgen) 
 		lights[n] = light;
 		light_clip_cubes[n] = bays[n];
 		light_clip_cubes[n].expand_by(0.5*wall_thick); // light includes wall surfaces but doesn't pass through walls
-		light_clip_cubes[n].d[dim][dir] += dsign*depth; // extends out the opening since there's no wall
+		if (has_back_wall) {light_clip_cubes[n].d[dim][dir] += dsign*depth;} // extends out the opening since there's no wall
+		else {light_clip_cubes[n].expand_in_dim(dim, depth);} // no back wall, extend out both openings
 	} // for n
 	lights_disabled = rgen.rand(); // 50% chance of each light being disabled
 }
@@ -2754,7 +2759,7 @@ void car_wash_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_s
 		select_texture_nmap(get_texture_by_name("normal_maps/bricks_tan_norm.png", 1));
 	}
 	dstate.draw_cube(qbds.qbd, roof, WHITE, 0, tscale, 4); // skip_dims=4/XY only
-	// can skip the back edges of side walls as well?
+	// can skip the back edges of side walls as well if has_back_wall?
 	for (cube_t const &w : walls) {dstate.draw_cube(qbds.qbd, w, WHITE, 1, tscale);} // skip_bottom=1
 	if (!shadow_only) {qbds.qbd.draw_and_clear();}
 	// draw roof

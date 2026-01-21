@@ -71,11 +71,12 @@ bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, unsigne
 	gass_groups.add_obj(gstation, gstations);
 	gstation.add_ped_colliders(colliders);
 	// add price sign near the corner by the intersection
-	float const sign_height(0.26*city_params.road_width), sign_width(0.3*sign_height), sign_depth(0.12*sign_width), sidewalk_width(get_sidewalk_width());
+	float const sign_height(0.26*city_params.road_width), sign_width(0.3*sign_height), sign_depth(0.12*sign_width);
+	float const sidewalk_width(get_sidewalk_width()), dscale(dir ? 1.0 : -1.0);
 	cube_t sign_bcube;
 	set_cube_zvals(sign_bcube, plot.z1(), (plot.z1() + sign_height));
 	set_wall_width(sign_bcube, gs.get_center_dim(!dim), 0.5*sign_width, !dim); // center of edge
-	set_wall_width(sign_bcube, (gs.d[dim][dir] + (dir ? 1.0 : -1.0)*sidewalk_width), 0.5*sign_depth, dim); // along the road
+	set_wall_width(sign_bcube, (gs.d[dim][dir] + dscale*sidewalk_width), 0.5*sign_depth, dim); // along the road
 	cube_t pole(sign_bcube);
 	pole.z2() = sign_bcube.z1() = sign_bcube.z1() + 0.6*sign_bcube.dz();
 	pole.expand_in_dim(!dim, -0.45*sign_width);
@@ -91,7 +92,7 @@ bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, unsigne
 	cube_t cw(gstation.pavement);
 	cw.z2() = plot.z1() + cw_height; // set roof height
 	cw.d[dim][ dir] = gs_far_edge;
-	cw.d[dim][!dir] = gs_far_edge - (dir ? 1.0 : -1.0)*cw_depth; // set depth
+	cw.d[dim][!dir] = gs_far_edge - dscale*cw_depth; // set depth
 	float const len_delta(gstation.pavement.get_sz_dim(dim) - cw_len);
 	
 	if (len_delta > 0.0) { // shrink ends if carwash is shorter than gas station; should be true
@@ -99,9 +100,9 @@ bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, unsigne
 		cw.d[!dim][!ent_dir] += (ent_dir ? 1.0 : -1.0)*0.25*len_delta;
 	}
 	if (!has_bcube_int_xy(cw, bcubes, pad_dist)) { // not too close to a building
-		car_wash_t car_wash(cw, dim, dir, rgen);
+		bool const has_back_wall(0);
+		car_wash_t car_wash(cw, dim, dir, has_back_wall, rgen);
 		cwash_groups.add_obj(car_wash, cwashes);
-		add_cube_to_colliders_and_blockers(cw, colliders, bcubes);
 		// add car wash sign on the side facing the road
 		float const cw_road_side(cw.d[!dim][ent_dir]); // away from road
 		sign_bcube.d[!dim][!ent_dir] = cw_road_side;
@@ -110,6 +111,18 @@ bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, unsigne
 		set_wall_width(sign_bcube, cw.get_center_dim(dim), 0.3*cw_depth, dim);
 		sign_groups.add_obj(sign_t(sign_bcube, !dim, ent_dir, "Car Wash", WHITE, BLACK), signs);
 
+		if (!has_back_wall) { // add exit driveway if there's space; cars don't yet use these
+			float const cwash_far_edge(cw.d[dim][!dir]);
+			cube_t driveway(car_wash.pavement); // copy zvals and width
+			driveway.d[!dim][ent_dir] = gstation.pavement.d[!dim][ent_dir]; // extend to the road
+			driveway.d[ dim][ dir] = cwash_far_edge + dscale*0.1*nom_car_size.y; // slight overlap
+			driveway.d[ dim][!dir] = cwash_far_edge - dscale*2.0*nom_car_size.y; // set width
+
+			if (!has_bcube_int_xy(driveway, bcubes, 0.5*pad_dist)) { // not too close to a building
+				driveways.emplace_back(driveway, !dim, ent_dir, plot_ix);
+				bcubes.push_back(driveway);
+			}
+		}
 		if (add_cars) { // add some cars in the car wash
 			car_t car;
 			setup_parked_car(car, city_id, plot_ix);
@@ -117,12 +130,13 @@ bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, unsigne
 
 			for (unsigned n = 0; n < car_wash.num_bays; ++n) {
 				if (rgen.rand_bool()) continue; // 50% chance of a car
-				car.dir = (dir ^ rgen.rand_bool()); // 50% chance of pulled in or backed in
+				car.dir = (has_back_wall ? (dir ^ rgen.rand_bool()) : !dir); // 50% chance of pulled in or backed in if back wall, otherwise always pulled in
 				car.set_bcube(cube_bot_center(car_wash.bays[n]), nom_car_size);
 				cars.push_back(car);
 				car_wash.bay_in_use[n] = 1;
 			}
 		}
+		add_cube_to_colliders_and_blockers(cw, colliders, bcubes);
 	}
 	bcubes.push_back(gs_exp); // add after placing car wash
 	return 1;
@@ -187,9 +201,9 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t const &full_plot, vecto
 			for (unsigned d = 0; d < 2; ++d) { // try both dirs
 				float const back_of_lot(park.d[car_dim][!cdir]); // driveway connects to this side
 				cube_t driveway(park);
-				driveway.d[ car_dim][ cdir] = back_of_lot;
-				driveway.d[ car_dim][!cdir] = back_of_lot + (cdir ? -1.0 : 1.0)*1.25*space_width;
-				driveway.d[!car_dim][  dw_dir] = full_plot.d[!car_dim][dw_dir] + (dw_dir ? 1.0 : -1.0)*sidewalk_width; // extend to the road, with a small gap for the curb
+				driveway.d[ car_dim][  cdir] = back_of_lot;
+				driveway.d[ car_dim][ !cdir] = back_of_lot + (cdir ? -1.0 : 1.0)*1.25*space_width;
+				driveway.d[!car_dim][dw_dir] = full_plot.d[!car_dim][dw_dir] + (dw_dir ? 1.0 : -1.0)*sidewalk_width; // extend to the road, with a small gap for the curb
 
 				if (has_bcube_int_xy(driveway, bcubes, dw_pad_dist)) { // too close to an object such as a building (or its door); try other dir
 					cdir ^= 1;
@@ -2874,6 +2888,7 @@ void city_obj_placer_t::get_occluders(pos_dir_up const &pdu, vector3d const &xla
 
 	if (city_params.num_cars > 0) { // add car washes as occluders for their cars
 		for (car_wash_t const &cw : cwashes) {
+			if (!cw.has_back_wall) continue; // open on both ends, doesn't make a good occluder
 			cube_t const bc(cw.bcube + xlate);
 			if (!dist_less_than(pdu.pos, bc.closest_pt(pdu.pos), dmax) || !pdu.cube_visible(bc)) continue;
 			assert(cw.walls.size() >= 3); // include walls; roof isn't a good occluder; won't help for cars in car wash far from player
