@@ -1324,7 +1324,7 @@ bool building_t::select_person_dest_in_room(person_t &person, rand_gen_t &rgen, 
 	vect_cube_t &avoid(reused_avoid_cubes[0]);
 	get_avoid_cubes(person.target_pos.z, height, radius, avoid, 0); // following_player=0
 	add_sub_rooms_to_avoid_if_needed(room_id, avoid); // must avoid sub-rooms
-	bool const no_use_init(room.is_single_large_room_or_store()); // don't use the room center for a parking garage, backrooms, retail area, mall, or store
+	bool const no_use_init(room.is_single_large_room_or_store()); // don't use the room center for a parking garage, backrooms, retail area, mall, store, or restaurant
 	if (!interior->nav_graph->find_valid_pt_in_room(avoid, *this, radius, person.target_pos.z, valid_area, rgen, dest_pos, no_use_init)) return 0;
 	
 	if (!is_cube()) { // non-cube building
@@ -1509,7 +1509,7 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 			if (select_person_dest_in_room(person, rgen, loc.room_ix)) return 1;
 		}
 	}
-	// sometimes use stairs in backrooms, parking garages, retail areas, and malls
+	// sometimes use stairs in backrooms, parking garages, retail areas, malls, and restaurants
 	bool const try_use_stairs(single_large_room && cur_room.has_stairs && (must_leave_room || (!person.last_changed_floor() && rgen.rand_bool())));
 	unsigned const num_tries(try_use_stairs ? 0 : 100);
 	// handle special rooms that should have more traffic
@@ -1577,7 +1577,7 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 		return 1;
 	} // for n
 
-	// how about a different floor of the same room? only check this 50% of the time for parking garages/backrooms/retail to allow movement within a level
+	// how about a different floor of the same room? only check this 50% of the time for parking garages/backrooms/retail/mall to allow movement within a level
 	if (try_use_stairs || (cur_room.has_stairs == 255 && (!single_large_room || rgen.rand_bool()))) {
 		// use person.prev_walked_down?
 		float const floor_spacing(cur_room.is_mall_or_store() ? get_mall_floor_spacing() : window_vspace);
@@ -2172,8 +2172,9 @@ bool building_t::place_people_if_needed(unsigned building_ix, float radius) cons
 	if (interior->placed_people) return 0; // already placed
 	interior->placed_people = 1; // set, even if no people are placed below
 	if (!global_building_params.gen_building_interiors) return 0; // no interiors, no people
-	unsigned num_min(is_house ? global_building_params.people_per_house_min : global_building_params.people_per_office_min);
-	unsigned num_max(is_house ? global_building_params.people_per_house_max : global_building_params.people_per_office_max);
+	bool const treat_as_house(has_house_floorplan());
+	unsigned num_min(treat_as_house ? global_building_params.people_per_house_min : global_building_params.people_per_office_min);
+	unsigned num_max(treat_as_house ? global_building_params.people_per_house_max : global_building_params.people_per_office_max);
 	if (num_max < num_min) {swap(num_min, num_max);} // or error? if so, it should be checked during option processing
 	if (num_max == 0) return 0;
 	rand_gen_t rgen;
@@ -2339,7 +2340,7 @@ bool building_t::is_player_visible(person_t const &person, unsigned vis_test) co
 	if (same_room_and_floor) {
 		room_t const &room(get_room(person.cur_room));
 
-		if (room.is_single_large_room() && has_room_geom() && !room.is_mall()) { // rooms with additional occluders
+		if (room.is_single_large_room() && has_room_geom() && !room.is_mall() && !room.is_restaurant()) { // rooms with additional occluders
 			point const viewer(person.get_eye_pos());
 			cube_t occ_area(target.pos);
 			occ_area.expand_by(player_radius);
@@ -2930,7 +2931,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 			if (!play_sound && (person_ix & 1)) {play_sound |= is_player_visible(person, 1);} // 50% of zombies use line of sight test
 			if (!play_sound && (person_ix & 2)) {play_sound |= has_nearby_sound (person, floor_spacing);} // 50% of zombies use sound test
 			
-			if (play_sound) { // alert other zombies if in the same room and floor as the player, except in backrooms/parking garage/retail/mall, unless the player is visible
+			if (play_sound) { // alert other zombies if in the same room and floor as player, except in backrooms/parking garage/retail/mall/restaurant, unless player is visible
 				bool const alert_other_zombies(same_room_and_floor && (!is_single_large_room(person.cur_room) || is_player_visible(person, 1)));
 				maybe_play_zombie_sound(person.pos, person_ix, alert_other_zombies);
 			}
@@ -2958,7 +2959,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 			}
 			else {
 				float const wait_time(is_single_large_room(person.cur_room) ? 0.1 : 0.5);
-				person.wait_for(wait_time); // stop for 0.5 second (0.1s for parking garage/backrooms/retail/mall), then try again
+				person.wait_for(wait_time); // stop for 0.5 second (0.1s for parking garage/backrooms/retail/mall/restaurant), then try again
 				person.goal_type = GOAL_TYPE_NONE; // reset just to be safe
 			}
 			return AI_WAITING;
@@ -3285,7 +3286,7 @@ void building_t::ai_room_lights_update(person_t const &person) {
 	if (room_ix >= 0) {set_room_light_state_to(get_room(room_ix), person.pos.z, 1);} // make sure current room light is on when entering
 	if (person.cur_room < 0)        return; // no old room (error?)
 	room_t const &room(get_room(person.cur_room));
-	if (room.is_single_large_room_or_store()) return; // don't turn off parking garage/backrooms/retail/mall/store lights since they affect a large area
+	if (room.is_single_large_room_or_store()) return; // don't turn off parking garage/backrooms/retail/mall/store/restaurant lights since they affect a large area
 	float const floor_spacing(get_window_vspace());
 	bool other_person_in_room(cur_player_building_loc.building_ix == person.cur_bldg && same_room_and_floor_as_player(person)); // player counts
 

@@ -487,7 +487,7 @@ void building_t::place_cards_on_table(rand_gen_t rgen, unsigned room_id, float t
 bool building_t::fill_room_with_tables_and_chairs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt,
 	unsigned objs_start, bool plastic_tc, unsigned max_books, unsigned max_num_xy)
 {
-	bool const is_rest(room.get_room_type(0) == RTYPE_RESTAURANT); // only need to check ground floor for restaurants
+	bool const is_rest(room.is_restaurant()); // only need to check ground floor for restaurants
 	float const vspace(get_window_vspace()), clearance(get_min_front_clearance_inc_people());
 	float const table_spacing(0.5*vspace + (is_rest ? 2.25 : 2.0)*clearance); // placed tables may be rectangular, but we use square spacing; more spacing for restaurants
 	cube_t place_area(get_walkable_room_bounds(room));

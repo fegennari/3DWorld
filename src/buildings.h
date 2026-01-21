@@ -1252,10 +1252,11 @@ struct room_t : public cube_t, public room_assignment_t { // size=56
 	bool is_factory          () const {return (get_room_type(0) == RTYPE_FACTORY  );}
 	bool is_warehouse        () const {return (get_room_type(0) == RTYPE_WAREHOUSE);}
 	bool is_jail_cell        () const {return (get_room_type(0) == RTYPE_JAIL_CELL);}
+	bool is_restaurant       () const {return (get_room_type(0) == RTYPE_RESTAURANT);}
 	bool is_bathroom_rtype   () const {return is_bathroom(get_room_type(0));}
 	bool is_industrial       () const {return (is_factory() || is_warehouse());}
 	bool is_mall_or_store    () const {return (is_mall() || is_store());}
-	bool is_single_large_room() const {return(is_parking() || is_backrooms() || is_retail() || is_mall() || is_industrial());}
+	bool is_single_large_room() const {return(is_parking() || is_backrooms() || is_retail() || is_mall() || is_industrial() || is_restaurant());}
 	bool is_single_large_room_or_store() const {return (is_single_large_room() || is_store());}
 	bool is_secret_room      () const {return (is_ext_basement() && has_cut_wall() && !is_hallway);}
 	bool has_non_door_vis    () const {return (open_wall_mask || has_interior_window() || has_cut_wall());}
@@ -2299,6 +2300,7 @@ struct building_t : public building_geom_t {
 	bool is_residential () const {return (is_house || is_apt_or_hotel());}
 	bool is_industrial  () const {return (is_factory() || is_warehouse() || is_powerplant());}
 	bool is_commercial  () const {return (!is_residential() && !is_industrial());}
+	bool has_house_floorplan() const {return (is_house || is_restaurant());}
 	bool is_retail_part(cube_t const &part) const {return (has_retail() && part.z1() == ground_floor_z1);}
 	bool skip_top_of_ceilings() const {return (roof_type == ROOF_TYPE_FLAT || !is_house || has_attic());}
 	bool enable_driveway_coll() const {return !is_rotated();} // no collision with rotated driveways/porches for now
@@ -2501,7 +2503,7 @@ struct building_t : public building_geom_t {
 	colorRGBA get_int_wall_tex_and_color(bool in_basement, bool in_ext_basement, bool in_mall_stores, tid_nm_pair_t &tex) const;
 	colorRGBA get_avg_floor_color(cube_t const &floor_cube) const;
 	colorRGBA get_avg_ceil_color (cube_t const &ceil_cube ) const;
-	colorRGBA const &get_trim_color() const {return ((is_house || is_restaurant()) ? WHITE : DK_GRAY);}
+	colorRGBA const &get_trim_color() const {return (has_house_floorplan() ? WHITE : DK_GRAY);}
 	bool has_tile_floor() const;
 	void get_all_drawn_exterior_verts(building_draw_t &bdraw);
 	void get_detail_shadow_casters   (building_draw_t &bdraw);
