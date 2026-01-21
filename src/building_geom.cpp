@@ -1297,8 +1297,9 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	if (roof_obj_type == 2) {add_tv_antenna  (rgen);} // add a TV antenna - 1/8
 	if (rgen.rand_bool()) {add_outdoor_ac_unit(rgen);} // place an outdoor AC unit against an exterior wall 50% of the time, not actually on the roof
 	if (has_basement()) {has_basement_pipes = rgen.rand_bool();}
+	if (parts[0].dz() < 2.5*floor_spacing && bcube.get_size_xy().get_min_val() < 6.0*floor_spacing) {has_radiators = 1;} // some small houses
 	if (interior) {interior->finalize();}
-}
+} // end gen_house()
 
 bool building_t::add_outdoor_ac_unit(rand_gen_t &rgen) { // for houses
 	float const door_height(get_door_height());

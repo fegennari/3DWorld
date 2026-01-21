@@ -278,7 +278,8 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 		added_bathroom_objs_mask |= bathroom_objs_mask;
 		break;
 	} // for n
-	if (!is_house && floor <= NUM_RTYPE_SLOTS && room.get_room_type(floor) == RTYPE_MENS && building_obj_model_loader.is_model_valid(OBJ_MODEL_URINAL)) {
+	if (is_house) {maybe_add_radiator_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);}
+	else if (floor <= NUM_RTYPE_SLOTS && room.get_room_type(floor) == RTYPE_MENS && building_obj_model_loader.is_model_valid(OBJ_MODEL_URINAL)) {
 		// assigned to men's room; add a urinal at the wall, not against an exterior wall
 		float const urinal_zval(zval + 0.1*floor_spacing); // shift it up
 		cube_t bounds(room_bounds);

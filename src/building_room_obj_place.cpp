@@ -707,6 +707,7 @@ bool building_t::add_office_objs(rand_gen_t rgen, room_t const &room, vect_cube_
 	else if (min(room.dx(), room.dy()) > 3.5*get_window_vspace()) { // large room, add a table and chairs in the center
 		add_table_and_chairs(rgen, room, blockers, room_id, get_cube_center_zval(room, zval), chair_color, 0.1, tot_light_amt);
 	}
+	if (is_house) {maybe_add_radiator_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);}
 	return 1;
 }
 
@@ -1064,6 +1065,12 @@ bool building_t::check_valid_closet_placement(cube_t const &c, room_t const &roo
 	if (has_attic() && c.intersects_xy(interior->attic_access) && (c.z2() + get_floor_thickness()) > interior->attic_access.z1()) return 0;
 	return 1;
 }
+void building_t::maybe_add_radiator_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	if (!has_radiators) return;
+	cube_t place_area(get_walkable_room_bounds(room));
+	place_area.expand_by(-2.0*get_trim_thickness()); // shrink to leave a small gap
+	place_model_along_wall(OBJ_MODEL_RADIATOR, TYPE_RADIATOR, room, 0.28, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 2.0, 4, 0, WHITE, 1); // not at window
+}
 
 float get_lamp_width_scale() {
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_LAMP)); // L, W, H
@@ -1235,6 +1242,8 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t &bl
 		}
 	}
 	else { // not a hotel
+		maybe_add_radiator_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);
+		
 		// maybe add a flashlight or candle on a dresser, night stand, or desk; or in a drawer?
 		for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
 			if (!((i->type == TYPE_DRESSER || i->type == TYPE_NIGHTSTAND || i->type == TYPE_DESK) && !(i->flags & RO_FLAG_ADJ_TOP))) continue; // not empty dresser/nightstand/desk
@@ -1945,6 +1954,7 @@ bool building_t::add_livingroom_objs(rand_gen_t rgen, room_t const &room, float 
 	if ((is_house || is_apartment()) && (rgen.rand()%3) == 0) { // add fishtank on a tall table 33% of the time
 		add_fishtank_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area);
 	}
+	maybe_add_radiator_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);
 	add_entryway_objs(rgen, room, zval, room_id, tot_light_amt, objs_start);
 	if (room.is_single_floor && objs_start > 0) {replace_light_with_ceiling_fan(rgen, room, cube_t(), room_id, tot_light_amt, objs_start-1);} // light is prev placed object
 	return 1;
@@ -1976,6 +1986,7 @@ void building_t::add_wine_rack(rand_gen_t &rgen, room_t const &room, float zval,
 		set_obj_id(interior->room_geom->objs);
 		break; // done/success
 	} // for n
+	maybe_add_radiator_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);
 }
 
 void gen_crate_sz(vector3d &sz, rand_gen_t &rgen, float window_vspacing) {
