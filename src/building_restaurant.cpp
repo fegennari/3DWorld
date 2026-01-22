@@ -24,6 +24,7 @@ void building_t::create_restaurant_floorplan(unsigned part_id, rand_gen_t &rgen)
 	float const floor_spacing(get_window_vspace()), fc_thick(get_fc_thickness());
 	float const wall_thick(get_wall_thickness()), wall_half_thick(0.5*wall_thick), wall_edge_spacing(0.05*wall_thick);
 	float split_pos(0.0);
+	interior->restaurant_orient = 2*dim + dir;
 	
 	for (unsigned n = 0; n < 100; ++n) { // 100 tries for a valid split pos
 		split_pos = part.d[dim][dir] + rgen.rand_uniform(0.25, 0.35)*part_sz*(dir ? -1.0 : 1.0);
