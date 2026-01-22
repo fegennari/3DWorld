@@ -1716,6 +1716,7 @@ colorRGBA building_t::get_floor_tex_and_color(cube_t const &floor_cube, tid_nm_p
 		if (retail_or_mall) {tex = get_tile_floor_texture();}
 		else if (in_ext_basement && has_backrooms_texture()) {tex = tid_nm_pair_t(building_texture_mgr.get_backrooms_floor_tid(), 32.0);}
 		else if (in_basement && (has_parking_garage || in_ext_basement || is_prison())) {tex = get_concrete_texture();} // parking garage/ext basement/prison is concrete
+		else if (in_basement && has_house_floorplan()) {tex = mat.basement_floor_tex;} // basement
 		else if (is_industrial ()) {tex = get_concrete_texture  ();} // industrial floor is always concrete; could also use a dark tile texture
 		else if (has_tile_floor()) {tex = get_tile_floor_texture();}
 		else {tex = mat.floor_tex;} // office block
@@ -1749,7 +1750,7 @@ colorRGBA building_t::get_ceil_tex_and_color(cube_t const &ceil_cube, tid_nm_pai
 		tex = get_corr_metal_texture(0.75*mat.ceil_tex.tscale_x);
 		return WHITE;
 	}
-	if (is_restaurant()) {
+	if (!in_basement && is_restaurant()) {
 		float const tscale(0.25*mat.house_ceil_tex.tscale_x);
 		tex = tid_nm_pair_t(get_rect_panel_tid(), -1, tscale, tscale);
 		return WHITE;

@@ -1495,8 +1495,9 @@ bool building_t::can_have_basement() const {
 // for houses or office buildings
 void building_t::maybe_add_basement(rand_gen_t rgen) { // rgen passed by value so that the original isn't modified
 	if (!can_have_basement()) return;
-	float basement_prob(is_house ? global_building_params.basement_prob_house : global_building_params.basement_prob_office);
-	if (is_in_city && !is_house) {basement_prob *= 2.0;} // double the basement/parking garage probability for city office buildings
+	bool const house_floorplan(has_house_floorplan());
+	float basement_prob(house_floorplan ? global_building_params.basement_prob_house : global_building_params.basement_prob_office);
+	if (is_in_city && !house_floorplan) {basement_prob *= 2.0;} // double the basement/parking garage probability for city office buildings
 	if (!rgen.rand_probability(basement_prob)) return; // no basement
 	float const floor_spacing(get_window_vspace()), max_sea_level(get_max_sea_level());
 	float basement_z1(ground_floor_z1 - floor_spacing);
@@ -1504,7 +1505,7 @@ void building_t::maybe_add_basement(rand_gen_t rgen) { // rgen passed by value s
 	basement_part_ix = (int8_t)parts.size(); // index of part that will be added below
 	cube_t basement;
 	
-	if (is_house) {
+	if (house_floorplan) {
 		basement = parts[0]; // start at first part
 
 		if (real_num_parts == 2) {

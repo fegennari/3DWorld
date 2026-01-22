@@ -2226,7 +2226,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 				} // for W
 			}
 			// at least one floor (to include mall bathrooms and hallways); pool room is single floor even if tall
-			bool const single_floor(is_rest || (in_ext_basement && !interior->has_backrooms && !has_mall()));
+			bool const single_floor((is_rest && !in_basement) || (in_ext_basement && !interior->has_backrooms && !has_mall()));
 			unsigned const num_floors(single_floor ? 1U : max(1U, (unsigned)calc_num_floors(*w, floor_spacing, floor_thickness)));
 			// snap to the nearest floor to handle short walls due to cut out stairs
 			float const ground_wall_z1(ref_z1 + fc_thick);
@@ -2288,6 +2288,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 					objs.emplace_back(end_trim, TYPE_WALL_TRIM, 0, !dim, 0, flags, 1.0, SHAPE_TALL, trim_color); // floor trim
 				} // for dir
 				if (!has_ceil_trim) continue;
+				if (is_rest && in_ext_basement) continue;
 				if (is_rest && w->z1() >= ground_floor_z1 && w->dz() < 1.5*floor_spacing) continue; // no upper trim on lower wall section of restaurant
 				// add ceiling trim
 				trim.z2() = (single_floor ? ((is_rest ? parts[0].z2() : w->z2()) - fc_thick) : (z + floor_to_ceil_height)); // ceil height

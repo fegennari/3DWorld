@@ -660,6 +660,7 @@ void building_t::add_door_sign(string const &text, room_t const &room, float zva
 		if (!i->is_connected_to_room(room_id)) continue;
 		if (room_inner.contains_cube(*i))      continue; // skip interior door such as nested bathroom
 		if (i == skip_door)                    continue; // skip extended basement door, since sign is likely not visible
+		if (i->on_stairs)                      continue; // skip basement stairs door
 		bool const side(room_center[i->dim] < i->get_center_dim(i->dim));
 		float const door_width(i->get_width()), side_sign(side ? 1.0 : -1.0);
 		cube_t sign(*i);

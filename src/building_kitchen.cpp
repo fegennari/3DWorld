@@ -608,7 +608,7 @@ void building_t::add_commercial_kitchen_app_post(unsigned obj_ix, unsigned app_t
 bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, unsigned floor_ix,
 	float light_amt, unsigned objs_start, unsigned lights_start, light_ix_assign_t &light_ix_assign)
 {
-	if (room_has_stairs_or_elevator(room, zval, floor_ix)) return 0; // works, but stairs may be blocked by a trolley
+	if (!is_restaurant() && room_has_stairs_or_elevator(room, zval, floor_ix)) return 0; // works, but stairs may be blocked by a trolley; forced for a restaurant
 	float const floor_spacing(get_window_vspace()), wall_thick(get_wall_thickness()), trim_thick(get_trim_thickness());
 	vector2d const room_sz(room.get_size_xy());
 	float const min_sz(room_sz.get_min_val());
