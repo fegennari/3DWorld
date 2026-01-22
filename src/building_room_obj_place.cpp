@@ -2034,6 +2034,9 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 		}
 		exclude.back().union_with_cube(ds.get_open_door_bcube_for_room(room)); // include open door
 	}
+	if (is_restaurant() && !has_basement()) { // add a water heater in the corner for restaurants
+		add_water_heaters(rgen, room, zval, room_id, tot_light_amt, objs_start, 1); // single_only=1
+	}
 	// add shelves on walls (avoiding any door(s)), and have crates avoid them
 	bool const has_bike(is_int_garage && objs.size() >= 2 && objs[objs.size()-2].type == TYPE_GBIKE); // previously added bike, then blocker
 	unsigned const rgen_mod(is_int_garage ? (has_bike ? 5 : 3) : 2); // 50% of the walls, 67% for interior garages, 80% if there's a bike
@@ -2120,6 +2123,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 	add_boxes_and_crates(rgen, room, zval, room_id, tot_light_amt, objs_start, num_max, is_basement, room_bounds, crate_bounds, exclude);
 	// add a ladder leaning against the wall if storage room is on the ground floor or basement
 	if (zval < ground_floor_z1 + window_vspacing && rgen.rand_bool()) {add_ladder_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);}
+	if (is_restaurant()) {add_buckets_to_room(rgen, room_bounds, zval, room_id, tot_light_amt, objs_start, 2);} // add up to 2 buckets to restaurant storage
 	// add office building storage room sign, in a hallway, basement, etc.
 	if (!is_house) {add_door_sign((has_stairs ? "Stairs" : "Storage"), room, zval, room_id);}
 	return 1; // it's always a storage room, even if it's empty
