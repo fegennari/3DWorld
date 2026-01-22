@@ -3988,6 +3988,7 @@ int building_t::check_valid_picture_placement(room_t const &room, cube_t const &
 	if (interior->is_blocked_by_stairs_or_elevator(tc, se_clearance)) return 0; // check stairs and elevators
 	if (!check_cube_within_part_sides(tc)) return 0; // handle non-cube buildings
 	if (overlaps_or_adj_int_window   (tc)) return 0; // check interior windows
+	//if (check_if_against_window(tc, room, dim, dir)) return 0; // ext wall is normally skipped, and likely can't fit a picture anyway
 	if (!inc_open && !room.is_hallway && is_cube_close_to_doorway(tc, room, 0.0, 1)) return 2; // success, but could be better (doors never open into hallway)
 
 	if (has_complex_floorplan && c.z1() > ground_floor_z1) { // check for office building whiteboards placed on room sides that aren't true walls; skip basements

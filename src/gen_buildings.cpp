@@ -1686,6 +1686,9 @@ tid_nm_pair_t building_t::get_tile_floor_texture() const {
 	return select_tile_floor_texture(tid_set, get_material().floor_tex.tscale_x);
 	//return tid_nm_pair_t(building_texture_mgr.get_tile_floor_tid(), building_texture_mgr.get_tile_floor_nm_tid(), 0.125*tscale, 0.125*tscale);
 }
+colorRGBA const &building_t::get_trim_color() const {
+	return (is_house ? WHITE : (is_restaurant() ? DK_BROWN : DK_GRAY));
+}
 bool building_t::has_tile_floor() const { // all hospitals and 50% of schools
 	return (is_hospital() || (is_school() && ((mat_ix + hallway_dim + doors.size() + parts.size()) & 1)) || is_restaurant());
 }
