@@ -145,7 +145,7 @@ void building_t::add_restaurant_objs(rand_gen_t rgen, room_t const &room, float 
 	unsigned const num_wine_racks(rgen.rand_bool() ? 2 : 1);
 	for (unsigned n = 0; n < num_wine_racks; ++n) {add_wine_rack(rgen, room, zval, room_id, light_amt, objs_start);}
 	if (rgen.rand_bool()) {add_fishtank_to_room(rgen, room, zval, room_id, light_amt, objs_start, place_area);}
-	unsigned const num_plants(4 + (rgen.rand() & 5)); // 4-8
+	unsigned const num_plants(6 + (rgen.rand() & 5)); // 6-10
 	add_plants_to_room(rgen, room, zval, room_id, light_amt, objs_start, num_plants);
 	float const ceil_zval(room.z2() - get_fc_thickness());
 
