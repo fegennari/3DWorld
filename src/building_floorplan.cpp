@@ -2561,9 +2561,8 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 	//highres_timer_t timer("Connect Stairs", 1, 1, 1); // track_not_print=1; 256ms total
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness), wall_thickness(get_wall_thickness());
 	float const doorway_width(get_nominal_doorway_width()), stairs_len(4.0*doorway_width), railing_pad(0.5*wall_thickness);
-	bool const house_fplan(has_house_floorplan());
+	bool const house_fplan(has_house_floorplan()), is_retail(is_retail_part(part));
 	bool const is_basement(has_basement() && part == get_basement()), use_basement_stairs(is_basement && house_fplan); // office basement has regular stairs
-	bool const is_retail(is_retail_part(part));
 	bool const check_private_rooms = 0; // this could go either way; which is worse - an unconnected stacked part, or public stairs in a hotel room or apartment?
 	// use fewer iterations on tiled buildings to reduce the frame spikes when new tiles are generated
 	unsigned const iter_mult_factor(global_building_params.gen_inf_buildings() ? 5 : 10), num_iters(20*iter_mult_factor);
@@ -2587,6 +2586,12 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			// however, this does mean that the part above this one has already been processed; except for stacked houses, which are ordered {bottom, top}
 			float stairs_width(1.2*doorway_width); // relatively small
 			float stairs_pad(doorway_width), len_with_pad(stairs_len + 2.0*stairs_pad); // pad both ends of stairs to make sure player has space to enter/exit
+			float stairs_pad_shrink_mult(use_basement_stairs ? 1.2 : 1.0); // basement can have steeper stairs
+			
+			if (is_basement && is_restaurant()) {
+				len_with_pad -= 1.0*doorway_width; // restaurant basement stairs start steep since there's limited space
+				stairs_pad_shrink_mult = 0.8; // but they also shrink more slowly with iteration
+			}
 			if (max(shared.dx(), shared.dy()) < 1.0*len_with_pad || min(shared.dx(), shared.dy()) < 1.2*stairs_width) continue; // too small to add stairs between these parts
 
 			if (has_pri_hall() && part.contains_cube(pri_hall) && pri_hall.intersects_xy(shared)) { // have a primary hallway in this part
@@ -2682,7 +2687,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				if (n >= 4*iter_mult_factor && n < 16*iter_mult_factor && (n%iter_mult_factor) == 0) { // decrease stairs size slightly every 10 iterations, 12 times
 					stairs_width -= 0.025*doorway_width; // 1.2*DW => 0.90*DW
 					stairs_pad   -= 0.030*doorway_width; // 1.0*WD => 0.64*DW
-					len_with_pad -= 0.230*doorway_width*(use_basement_stairs ? 1.2 : 1.0); // 6.0*DW => 3.24*DW / 2.689*DW ; basement can have steeper stairs
+					len_with_pad -= 0.230*doorway_width*stairs_pad_shrink_mult; // 6.0*DW => 3.24*DW / 2.689*DW
 					// should this be get_min_front_clearance_inc_people()? that makes more sense, but using this value creates very steep stairs
 					float const min_clearance(get_min_front_clearance()); // ensure the player can fit
 					max_eq(stairs_width, min_clearance);

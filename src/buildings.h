@@ -2308,7 +2308,7 @@ struct building_t : public building_geom_t {
 	bool can_extend_stairs_to_pg(unsigned &stairs_ix) const;
 	bool is_basement(vect_cube_t::const_iterator it) const {return (int(it - parts.begin()) == basement_part_ix);}
 	bool is_pos_in_basement(point const &pos) const {return ((has_basement() && parts[basement_part_ix].contains_pt(pos)) || point_in_extended_basement(pos));}
-	bool room_inc_half_walls(room_t const &room) const {return (is_restaurant() || room.inc_half_walls());}
+	bool room_inc_half_walls(room_t const &room) const {return ((is_restaurant() && room.z1() >= ground_floor_z1) || room.inc_half_walls());}
 	bool maybe_has_ext_door_this_floor(float part_z1, unsigned floor_ix) const;
 	void get_garage_dim_dir(cube_t const &garage, bool &dim, bool &dir) const;
 	unsigned get_attic_part_ix   () const;
