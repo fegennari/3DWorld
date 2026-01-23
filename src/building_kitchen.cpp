@@ -496,25 +496,33 @@ unsigned get_com_kitchen_app_coll_cubes(room_object_t const &app, cube_t cubes[3
 
 struct ck_app_model_t {
 	unsigned app_type=0, model_id=0, obj_counts[NUM_KC_APP]={};
+	bool has_sink=0;
 	vector<unsigned> cands;
 
 	void assign(rand_gen_t &rgen, unsigned cka_class) {
-		unsigned min_count(1000);
-		cands.clear();
+		if (cka_class == 2 && !has_sink) {app_type = KCA_SINK;} // must add a sink type
+		else {
+			cands.clear();
+			unsigned min_count(1000);
 
-		for (unsigned n = 0; n < NUM_KC_APP; ++n) {
-			if (cka_classes[n] == cka_class) {min_eq(min_count, obj_counts[n]);}
+			for (unsigned n = 0; n < NUM_KC_APP; ++n) {
+				if (cka_classes[n] == cka_class) {min_eq(min_count, obj_counts[n]);}
+			}
+			for (unsigned n = 0; n < NUM_KC_APP; ++n) {
+				if (cka_classes[n] == cka_class && obj_counts[n] == min_count) {cands.push_back(n);}
+			}
+			assert(!cands.empty()); // must have at least one cand for each class
+			app_type = cands[rgen.rand() % cands.size()];
 		}
-		for (unsigned n = 0; n < NUM_KC_APP; ++n) {
-			if (cka_classes[n] == cka_class && obj_counts[n] == min_count) {cands.push_back(n);}
-		}
-		assert(!cands.empty()); // must have at least one cand for each class
-		app_type = cands[rgen.rand() % cands.size()];
 		model_id = combine_model_submodel_id(OBJ_MODEL_CK_APP, app_type);
 	}
 	float    get_height  () const {return 0.5*building_obj_model_loader.get_model(model_id).scale;} // in units of floor spacing
 	vector3d get_sz_scale() const {return     building_obj_model_loader.get_model_world_space_size(model_id);}
-	void post_add() {++obj_counts[app_type];}
+	
+	void post_add() {
+		has_sink |= (app_type == KCA_SINK);
+		++obj_counts[app_type];
+	}
 };
 
 void set_specular_for_low_poly_kitchen_models() {

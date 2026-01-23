@@ -220,7 +220,7 @@ void building_t::add_mall_restaurant_objs(rand_gen_t &rgen, room_t const &room, 
 	float const window_vspace(get_window_vspace()), wall_thickness(get_wall_thickness()), wall_hthick(0.5*wall_thickness), fc_thick(get_fc_thickness());
 	float const clearance(get_min_front_clearance_inc_people()), trim_thickness(get_trim_thickness()), trim_height(get_trim_height());
 	float const r90_center_bias(1.5*get_doorway_width() + wall_thickness);
-	bool const can_have_r90(0.45*room.get_sz_dim(!dim) - r90_center_bias > 1.4*window_vspace); // if enough space for kitchen appliances
+	bool const can_have_r90(0.45*room.get_sz_dim(!dim) - r90_center_bias > 1.5*window_vspace); // if enough space for kitchen appliances
 	rgen.rand_mix();
 	// {open with dining, open with no dining, closed with counter, long with dining and no kitchen}; must be closed with counter if no doorway
 	int const style(no_doorway ? 2 : (rgen.rand() % (can_have_r90 ? 4 : 3)));
