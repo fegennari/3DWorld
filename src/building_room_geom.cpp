@@ -5221,7 +5221,7 @@ void building_room_geom_t::add_water_heater(room_object_t const &c) {
 	body.z2() = top_z - 0.01*height; // overlap top to fill the gap
 	top .z2() = cone.z1() = vent.z1() = top_z;
 	cone.z2() = top_z + 0.08*height;
-	if (tall_vent) {vent.z2() += height*(1.0 + 1.5*FLOOR_THICK_VAL_OFFICE);} // extend one floor up
+	if (tall_vent) {vent.z2() += height/(1.0 - FLOOR_THICK_VAL_OFFICE);} // extend one floor up
 	set_cube_zvals(box, (c.z1() + 0.14*height), (c.z1() + 0.2*height));
 	pan .expand_by_xy(0.050*radius);
 	top .expand_by_xy(0.010*radius);
