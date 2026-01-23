@@ -558,9 +558,10 @@ void building_t::add_commercial_kitchen_app_post(unsigned obj_ix, unsigned app_t
 
 	if (app_type == KCA_BI_OVEN || app_type == KCA_OVEN || app_type == KCA_OMWC) { // front face only; add sides, top, and back
 		unsigned const front_face_mask(get_face_mask(dim, dir));
-		float const fb_shift((app_type == KCA_OMWC || app_type == KCA_OVEN) ? 0.06 : 0.09);
+		float const fb_shift((app_type == KCA_OMWC || app_type == KCA_OVEN) ? 0.06 : 0.09), signed_depth((dir ? 1.0 : -1.0)*app.get_depth());
 		skip_faces = ~front_face_mask | EF_Z1;
-		frame.d[dim][dir] -= (dir ? 1.0 : -1.0)*fb_shift*app.get_depth(); // shift front edge behind door
+		frame.d[dim][ dir] -= fb_shift*signed_depth; // shift front edge behind door
+		frame.d[dim][!dir] -= 0.002*signed_depth; // extend back surface out slightly to prevent Z-fighting
 
 		if (app_type != KCA_OMWC) {
 			z_shift      = 0.6*height;
