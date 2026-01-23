@@ -184,7 +184,7 @@ bool connect_furnace_to_breaker_panel(room_object_t const &furnace, cube_t const
 	return 1;
 }
 
-// Note: for houses
+// Note: for houses and restaurants
 bool building_t::add_basement_utility_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	if (!has_room_geom()) return 0;
 	// place water heater

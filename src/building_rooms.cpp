@@ -1230,7 +1230,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					is_play_art = 1;
 				}
 			}
-			if (is_house && is_basement && !added_basement_utility && !has_stairs && !is_machine && (is_storage || room_type_was_not_set) && rgen.rand_bool()) {
+			if (has_house_floorplan() && is_basement && !added_basement_utility && !has_stairs && !is_machine && (is_storage || room_type_was_not_set) && rgen.rand_bool()) {
 				// basement laundry, storage, or card room; should this be placed before adding boxes to the floor of storage rooms?
 				added_basement_utility = is_utility = no_plants = add_basement_utility_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 				if (added_basement_utility) {r->assign_to(RTYPE_UTILITY, f);}
