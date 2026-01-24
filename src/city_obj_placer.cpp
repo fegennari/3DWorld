@@ -226,6 +226,7 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t const &full_plot, vecto
 					} // for n
 					driveways.emplace_back(driveway, !car_dim, dw_dir, plot_ix, parking_lot_ix);
 					bcubes.push_back(driveway); // add to list of blocker bcubes
+					// TODO: maybe add parking gat near where driveway intersects road
 					break;
 				}
 			} // for d
@@ -1950,6 +1951,7 @@ void city_obj_placer_t::place_birds(cube_t const &city_bcube, rand_gen_t &rgen) 
 	add_objs_top_center(swings,    0, 0, 1, unused, bird_locs, rgen);
 	add_objs_top_center(picnics,   0, 0, 1, unused, bird_locs, rgen);
 	add_objs_top_center(clines,    0, 0, 1, unused, bird_locs, rgen);
+	add_objs_top_center(pgates,    0, 0, 1, unused, bird_locs, rgen);
 	// bb_hoops? pos would need to be closer to the front than center
 
 	for (sign_t const &sign : signs) {
@@ -2225,6 +2227,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	stopsign_groups.create_groups(stopsigns, all_objs_bcube);
 	flag_groups    .create_groups(flags,     all_objs_bcube);
 	nrack_groups   .create_groups(newsracks, all_objs_bcube);
+	pgate_groups   .create_groups(pgates,    all_objs_bcube);
 	cline_groups   .create_groups(clines,    all_objs_bcube);
 	ppath_groups   .create_groups(ppaths,    all_objs_bcube);
 	swing_groups   .create_groups(swings,    all_objs_bcube);
@@ -2522,6 +2525,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(pfloats,   pfloat_groups,   dstate, 0.15, shadow_only, 1);
 	draw_objects(gstations, gass_groups,     dstate, 0.25, shadow_only, 1);
 	draw_objects(cwashes,   cwash_groups,    dstate, 0.25, shadow_only, 1);
+	draw_objects(pgates,    pgate_groups,    dstate, 0.12, shadow_only, 0);
 	
 	if (!shadow_only) { // non shadow casting objects
 		draw_objects(hcaps,    hcap_groups,    dstate, 0.12, shadow_only, 0);
@@ -2697,6 +2701,7 @@ bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, vector
 	if (proc_vector_sphere_coll(stopsigns, stopsign_groups, pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(flags,     flag_groups,     pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(newsracks, nrack_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
+	if (proc_vector_sphere_coll(pgates,    pgate_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(swings,    swing_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(tramps,    tramp_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(umbrellas, umbrella_groups, pos, p_last, radius, xlate, cnorm)) return 1;
@@ -2746,6 +2751,7 @@ bool city_obj_placer_t::line_intersect(point const &p1, point const &p2, float &
 	check_vector_line_intersect(stopsigns, stopsign_groups, p1, p2, t, ret);
 	check_vector_line_intersect(flags,     flag_groups,     p1, p2, t, ret);
 	check_vector_line_intersect(newsracks, nrack_groups,    p1, p2, t, ret);
+	check_vector_line_intersect(pgates,    pgate_groups,    p1, p2, t, ret);
 	check_vector_line_intersect(walkways,  walkway_groups,  p1, p2, t, ret);
 	check_vector_line_intersect(pillars,   pillar_groups,   p1, p2, t, ret);
 	check_vector_line_intersect(elevators, wwe_groups,      p1, p2, t, ret);
@@ -2868,6 +2874,7 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, vect_cube_t const &plo
 	if (check_city_obj_pt_xy_contains(uge_groups,      ug_elevs,  pos, obj_ix, 0)) {color = LT_GRAY; return 1;}
 	if (check_city_obj_pt_xy_contains(gass_groups,     gstations, pos, obj_ix, 0)) {color = WHITE;   return 1;} // should be more detailed?
 	if (check_city_obj_pt_xy_contains(cwash_groups,    cwashes,   pos, obj_ix, 0)) {color = LT_BROWN;return 1;}
+	if (check_city_obj_pt_xy_contains(pgate_groups,    pgates,    pos, obj_ix, 0)) {color = YELLOW;  return 1;}
 	if (check_vect_cube_contains_pt_xy(plot_cuts, pos)) {color = colorRGBA(0.7, 0.7, 1.0); return 1;} // mall skylight; very light blue
 	// Note: ppoles, hcaps, manholes, sewers, mboxes, tcones, sculptures, flowers, pladders, chairs, stopsigns, flags, clines, pigeons, birds, swings,
 	// umbrellas, bikes, statues, and plants are skipped; pillars aren't visible under walkways;

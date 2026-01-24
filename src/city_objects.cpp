@@ -882,6 +882,22 @@ void newsrack_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_s
 	}
 }
 
+// parking gates
+
+parking_gate_t::parking_gate_t(cube_t const &c, bool dim_, bool dir_) : oriented_city_obj_t(c, dim_, dir_) {
+	// TODO: set arm
+}
+/*static*/ void parking_gate_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
+	if (shadow_only) {}
+	// TODO
+}
+/*static*/ void parking_gate_t::post_draw(draw_state_t &dstate, bool shadow_only) {
+	if (!shadow_only) {}
+}
+void parking_gate_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
+	// TODO: three materials: face, arm, and untextured top/back/sides
+}
+
 // clothes lines
 
 // Note: takes rgen by reference so that changes to clothes generation doesn't affect other city objects
