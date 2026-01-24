@@ -3343,8 +3343,24 @@ tid_nm_pair_t get_basement_texture(room_object_t const &c, tid_nm_pair_t const &
 	return (is_wall_or_pillar_concrete(c) ? tid_nm_pair_t(get_concrete_tid(), wall_tex.tscale_x, 1) : get_scaled_wall_tex(wall_tex));
 }
 void building_room_geom_t::add_stairs_wall(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex) {
-	unsigned const skip_faces(c.is_hanging() ? 0 : EF_Z1); // skip bottom, unless hanging (non-exit floor)
-	get_material(get_scaled_wall_tex(wall_tex), 1).add_cube_to_verts(c, c.color, tex_origin, skip_faces, !c.dim); // no room lighting color atten
+	if (c.flags & RO_FLAG_HAS_EXTRA) { // wood lattice wall
+		float const thick(c.get_sz_dim(c.dim)), hthick(0.5*thick);
+		rgeom_mat_t &mat(get_wood_material(1.0/c.dz(), 1)); // shadowed
+		colorRGBA const color(apply_wood_light_color(c));
+		// add outer frame as 2x2 grid, darker
+		add_grid_of_bars(mat, color*0.8, c, 2, 2, hthick, hthick, !c.dim, 2);
+		// add inner grid, lighter
+		cube_t inner(c);
+		inner.expand_in_dim(2,      -thick);
+		inner.expand_in_dim(!c.dim, -thick);
+		inner.expand_in_dim( c.dim, -0.25*thick);
+		unsigned const num_v_bars(4), num_h_bars(max(2, round_fp(num_v_bars*inner.get_sz_dim(!c.dim)/inner.dz())));
+		add_grid_of_bars(mat, color*1.2, inner, num_v_bars, num_h_bars, 0.6*hthick, 0.6*hthick, !c.dim, 2);
+	}
+	else { // plaster wall
+		unsigned const skip_faces(c.is_hanging() ? 0 : EF_Z1); // skip bottom, unless hanging (non-exit floor)
+		get_material(get_scaled_wall_tex(wall_tex), 1).add_cube_to_verts(c, c.color, tex_origin, skip_faces, !c.dim); // no room lighting color atten
+	}
 }
 void building_room_geom_t::add_wall_or_pillar(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex) {
 	bool const draw_top(c.flags & RO_FLAG_ADJ_TOP);

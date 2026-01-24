@@ -373,12 +373,21 @@ bool building_t::add_waiting_room_objs(rand_gen_t rgen, room_t const &room, floa
 
 void building_t::add_short_wall_with_trim(cube_t const &wall, bool dim, unsigned room_id, float tot_light_amt, colorRGBA const &wall_color) {
 	assert(wall.is_strictly_normalized());
-	interior->room_geom->objs.emplace_back(wall, TYPE_STAIR_WALL, room_id, dim, 0, RO_FLAG_ADJ_TOP, tot_light_amt, SHAPE_CUBE, wall_color); // draw top
+	vect_room_object_t &objs(interior->room_geom->objs);
+	cube_t bot_wall(wall);
+
+	if (is_restaurant()) { // split into lattice wall on top and plaster wall on bottom
+		cube_t lattice(wall);
+		bot_wall.z2() = lattice.z1() = wall.z1() + 0.45*wall.dz(); // a bit less than the halfway point
+		lattice.expand_in_dim(dim, -0.1*wall.get_sz_dim(dim)); // reduce the thickness
+		objs.emplace_back(lattice, TYPE_STAIR_WALL, room_id, dim, 0, RO_FLAG_HAS_EXTRA, tot_light_amt, SHAPE_CUBE, wall_color); // draw top
+	}
+	objs.emplace_back(bot_wall, TYPE_STAIR_WALL, room_id, dim, 0, RO_FLAG_ADJ_TOP, tot_light_amt, SHAPE_CUBE, wall_color); // draw top
 	cube_t trim(wall);
 	trim.expand_by_xy(get_trim_thickness());
 	trim.z2() = wall.z1() + get_trim_height();
 	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_UNTEXTURED); // not reflective
-	interior->room_geom->objs.emplace_back(trim, TYPE_METAL_BAR, room_id, dim, 0, flags, tot_light_amt, SHAPE_CUBE, get_trim_color(), EF_Z1); // draw all but the bottom
+	objs.emplace_back(trim, TYPE_METAL_BAR, room_id, dim, 0, flags, tot_light_amt, SHAPE_CUBE, get_trim_color(), EF_Z1); // draw all but the bottom
 }
 void building_t::place_chairs_along_walls(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt,
 	unsigned objs_start, colorRGBA const &chair_color, bool is_plastic, unsigned num)

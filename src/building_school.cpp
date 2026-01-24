@@ -522,23 +522,23 @@ bool building_t::fill_room_with_tables_and_chairs(rand_gen_t rgen, room_t const 
 	if (is_restaurant()) {
 		unsigned const tc_end(objs.size());
 
+		// add eating items
+		for (unsigned i = tc_start; i < tc_end; ++i) {
+			if (objs[i].type == TYPE_TABLE) {place_eating_items_on_table(rgen, i);}
+		}
 		if (rgen.rand_bool()) { // maybe add dividing walls
 			bool const wall_dim(!(interior->restaurant_orient & 2)); // dim in which walls divide the room
 			unsigned num_rows(wall_dim ? ny : nx);
-			float const wall_spacing(wall_dim ? yspace : xspace), wall_hthick(0.4*get_wall_thickness()); // thinner wall
+			float const wall_spacing(wall_dim ? yspace : xspace), wall_hthick(0.35*get_wall_thickness()); // thinner wall
 			float const wall_bias((rgen.rand_bool() ? 1.0 : -1.0)*0.25*clearance); // bias so that there's room to walk between the wall and table
 			cube_t wall(room);
-			set_cube_zvals(wall, zval, (zval + 0.45*vspace));
-			wall.expand_in_dim(!wall_dim, -max(2.5f*clearance, 0.5f*(wall_dim ? xspace : yspace))); // shorten the ends of the walls
+			set_cube_zvals(wall, zval, (zval + 0.6*vspace));
+			wall.expand_in_dim(!wall_dim, -max(2.8f*clearance, 0.5f*(wall_dim ? xspace : yspace))); // shorten the ends of the walls
 
 			for (unsigned n = 0; n < num_rows-1; ++n) {
 				set_wall_width(wall, (place_area.d[wall_dim][0] + wall_bias + (n+1)*wall_spacing), wall_hthick, wall_dim);
 				add_short_wall_with_trim(wall, wall_dim, room_id, tot_light_amt, WHITE);
 			}
-		}
-		// add eating items
-		for (unsigned i = tc_start; i < tc_end; ++i) {
-			if (objs[i].type == TYPE_TABLE) {place_eating_items_on_table(rgen, i);}
 		}
 	}
 	else { // gather tables for item placement
