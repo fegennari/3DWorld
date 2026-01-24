@@ -2034,8 +2034,13 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 		}
 		exclude.back().union_with_cube(ds.get_open_door_bcube_for_room(room)); // include open door
 	}
-	if (is_restaurant() && !has_basement()) { // add a water heater in the corner for restaurants
-		add_water_heaters(rgen, room, zval, room_id, tot_light_amt, objs_start, 1); // single_only=1
+	if (is_restaurant()) {
+		if (!has_basement()) { // add a water heater in the corner for restaurants
+			add_water_heaters(rgen, room, zval, room_id, tot_light_amt, objs_start, 1); // single_only=1
+		}
+		else { // janitorial closet, add a sink
+			place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, room, 0.45, rgen, zval, room_id, tot_light_amt, room_bounds, objs_start, 0.6);
+		}
 	}
 	// add shelves on walls (avoiding any door(s)), and have crates avoid them
 	bool const has_bike(is_int_garage && objs.size() >= 2 && objs[objs.size()-2].type == TYPE_GBIKE); // previously added bike, then blocker
