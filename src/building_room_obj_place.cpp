@@ -1398,7 +1398,7 @@ bool building_t::add_closet_to_room(rand_gen_t &rgen, room_t const &room, float 
 					Door.type = interior->door_stacks.back().type = DOOR_TYPE_METAL;
 				}
 			}
-			// add interior AC unit if this is a freezer
+			// add interior AC unit if this is a freezer; or could use TYPE_RAD_FAN?
 			if (is_freezer) {objs.emplace_back(get_freezer_ac_unit(closet), TYPE_HVAC_UNIT, room_id, dim, !dir, RO_FLAG_IN_FACTORY, tot_light_amt);}
 			return 1; // done
 		} // for d

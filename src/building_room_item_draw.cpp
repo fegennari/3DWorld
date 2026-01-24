@@ -1604,6 +1604,7 @@ void draw_obj_model(obj_model_inst_t const &i, room_object_t const &obj, shader_
 	else if (type == TYPE_TROLLEY  ) {metalness = 1.0; specular = 0.6; shine = 60.0;} // for hospitals
 	else if (type == TYPE_WFOUNTAIN) {metalness = 1.0; specular = 0.4; shine = 50.0;} // part metal and part painted metal
 	else if (type == TYPE_KITCH_APP) {metalness = 1.0; specular = 0.8; shine = 60.0;} // shiny metal
+	else if (type == TYPE_RAD_FAN  ) {metalness = 1.0; specular = 0.5; shine = 40.0;} // partially shiny metal
 	if (emissive_first_mat) {s.set_color_e(LAMP_COLOR*0.4);}
 	if (use_low_z_bias    ) {s.add_uniform_float("norm_bias_scale", 0.5*DEF_NORM_BIAS_SCALE);} // half the default value
 	if (refract_ix > 1.0  ) {s.set_refract_ix(refract_ix);}
