@@ -97,7 +97,7 @@ void building_room_geom_t::add_machine_pipe_in_region(room_object_t const &c, cu
 	}
 	tid_nm_pair_t tex(-1, 1.0f, 1, 0, 1); // shadowed, no_reflect=1
 	set_pipe_specular(spec_color, 0, 0, tex); // is_duct=0, is_dirty=0
-	rgeom_mat_t &pipe_mat(get_material(tex, 0, 0, 1)); // shadowed, small
+	rgeom_mat_t &pipe_mat(get_material(tex, 1, 0, 1)); // shadowed, small
 	pipe_mat.add_cylin_to_verts(p1, p2, radius, radius, apply_light_color(c, color), 0, 0, 0, 0, 1.0, 1.0, 0, 16); // shadowed, small
 
 	// maybe add a valve or gauge
