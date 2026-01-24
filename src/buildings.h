@@ -2828,6 +2828,7 @@ private:
 	void add_extb_room_floor_and_ceil(cube_t const &room);
 	void add_mall_stairs();
 	bool adjust_zval_for_mall_stairs(point const &pos, float &zval) const;
+	void select_mall_wall_color();
 	float get_mall_floor_spacing(cube_t const &room) const;
 	bool is_inside_mall_stores(point const &pos) const;
 	room_t const &get_mall_concourse() const {assert(has_mall()); return interior->get_extb_start_room();}

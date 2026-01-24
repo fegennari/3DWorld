@@ -26,6 +26,13 @@ int select_app_store_model(rand_gen_t &rgen, float &hscale, bool plumbing);
 extern object_model_loader_t building_obj_model_loader;
 
 
+void building_t::select_mall_wall_color() {
+	assert(has_mall());
+	// yellowish-brown, light brown, light yellow, peach, lt green, lt blue, lt blue-green
+	colorRGBA const mall_wall_colors[7] = {colorRGBA(1.0, 0.9, 0.7), colorRGBA(1.0, 0.8, 0.6), colorRGBA(1.0, 1.0, 0.7),
+		colorRGBA(1.0, 0.85, 0.75), colorRGBA(0.85, 1.0, 0.85), colorRGBA(0.85, 0.85, 1.0), colorRGBA(0.7, 0.9, 0.9)};
+	interior->mall_info->mall_wall_color = mall_wall_colors[(11*mat_ix + 3*interior->rooms.size() + 13*parts.size())%7]; // random-ish
+}
 float building_t::get_mall_floor_spacing(cube_t const &room) const { // special function that allows for larger than normal floor spacing
 	assert(has_mall());
 	return room.dz()/interior->num_extb_floors;

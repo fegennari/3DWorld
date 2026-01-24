@@ -2225,14 +2225,7 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 	building_mat_t const &mat(get_material());
 	auto const parts_end(get_real_parts_end());
 	float const floor_thickness(get_floor_thickness()), fc_thickness(get_fc_thickness());
-	colorRGBA mall_wall_color(WHITE);
-
-	if (has_mall()) { // choose a mall wall color
-		// yellowish-brown, light brown, light yellow, peach, lt green, lt blue, lt blue-green
-		colorRGBA const mall_wall_colors[7] = {colorRGBA(1.0, 0.9, 0.7), colorRGBA(1.0, 0.8, 0.6), colorRGBA(1.0, 1.0, 0.7), colorRGBA(1.0, 0.85, 0.75),
-			                                   colorRGBA(0.85, 1.0, 0.85), colorRGBA(0.85, 0.85, 1.0), colorRGBA(0.7, 0.9, 0.9)};
-		interior->mall_info->mall_wall_color = mall_wall_color = mall_wall_colors[(11*mat_ix + 3*interior->rooms.size() + 13*parts.size())%7]; // random-ish
-	}
+	if (has_mall()) {select_mall_wall_color();}
 	bdraw.begin_draw_range_capture();
 
 	for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) { // 600K T

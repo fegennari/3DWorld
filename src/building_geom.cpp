@@ -1284,13 +1284,22 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	// Note: driveway collisions are handled through check_road_seg_sphere_coll()
 	parts_generated = 1; // must be after adding chimney
 	roof_type = (any_hipped ? ROOF_TYPE_HIPPED : ROOF_TYPE_PEAK);
-	add_house_skylight(rgen); // must be after adding roof and setting roof_type
+	if (is_house) {add_house_skylight(rgen);} // must be after adding roof and setting roof_type
 	add_roof_to_bcube();
 	gen_grayscale_detail_color(rgen, 0.4, 0.8); // for roof
-	door_color = (rgen.rand_bool() ? LT_BROWN : WHITE);
-	// white, white, white, white, pink, peach, lt green, lt blue
-	colorRGBA const wall_colors[8] = {WHITE, WHITE, WHITE, WHITE, colorRGBA(1.0, 0.85, 0.85), colorRGBA(1.0, 0.85, 0.75), colorRGBA(0.85, 1.0, 0.85), colorRGBA(0.85, 0.85, 1.0)};
-	wall_color = wall_color.modulate_with(wall_colors[rgen.rand()%8]);
+
+	if (is_house) {
+		door_color = (rgen.rand_bool() ? LT_BROWN : WHITE);
+		// white, white, white, white, pink, peach, lt green, lt blue
+		colorRGBA const wall_colors[8] = {WHITE, WHITE, WHITE, WHITE, colorRGBA(1.0, 0.85, 0.85), colorRGBA(1.0, 0.85, 0.75), colorRGBA(0.85, 1.0, 0.85), colorRGBA(0.85, 0.85, 1.0)};
+		wall_color = wall_color.modulate_with(wall_colors[rgen.rand()%8]);
+	}
+	else { // restaurant
+		door_color = LT_BROWN;
+		// white, light gray, gray, yellowish-brown, light brown, light yellow
+		colorRGBA const wall_colors[6] = {WHITE, LT_GRAY, GRAY, colorRGBA(1.0, 0.9, 0.7), colorRGBA(1.0, 0.8, 0.6), colorRGBA(1.0, 1.0, 0.7)};
+		wall_color = wall_color.modulate_with(wall_colors[rgen.rand()%6]);
+	}
 	unsigned const roof_obj_type((rgen.rand() & 7));
 	if (roof_obj_type &  1) {add_solar_panels(rgen);} // maybe add solar panels - 50%
 	if (roof_obj_type == 0) {add_sat_dish    (rgen);} // add a satellite dish - 1/8
