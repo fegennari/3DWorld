@@ -295,7 +295,7 @@ public:
 	bool load_mat_lib(string const &fn) { // Note: could cache filename, but seems to never be included more than once
 		ifstream mat_in;
 		if (open_include_file(fn, "material library", mat_in).empty()) return 0;
-		cout << "Loading material library " << fn << endl;
+		//cout << "Loading material library " << fn << endl;
 		int cur_mat_id(-1); // not set
 		material_t *cur_mat(0);
 		string s, tfn, material_name;

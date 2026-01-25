@@ -649,7 +649,7 @@ public:
 		
 		if (verbose) {
 			if (!model.empty())   {model.show_stats();} // don't print these stats if empty (animations only)
-			if (num_textures > 0) {cout << "embedded_textures: " << num_textures << endl;}
+			//if (num_textures > 0) {cout << "embedded_textures: " << num_textures << endl;}
 			if (load_animations ) {cout << "animations: " << model.model_anim_data.animations.size() << ", anim_nodes: " << model.model_anim_data.anim_nodes.size() << endl;}
 		}
 		return 1;

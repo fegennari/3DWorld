@@ -629,37 +629,28 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 	if (generate_mesh) {
 		if (generate_mesh != 2) {
 		  gen_mesh(0, keep_sin_table, update_zvals);
-		  PRINT_TIME("Surface generation");
+		  PRINT_TIME("Terrain Mesh generation");
 		  if (!inf_terrain) {gen_buildings();} // called from tile_draw_t::update() in tiled terrain mode
 		}
 		gen_tex_height_tables();
 		clear_landscape_vbo = 1;
 	}
 	compute_matrices();
-	PRINT_TIME("Matrix generation");
 	
 	if (generate_mesh) {
 		create_landscape_texture();
-		PRINT_TIME("Landscape Texture generation");
 		has_snow_accum   = 0;
 		has_accumulation = 0;
 		start_ripple     = 0;
 	}
 	calc_motion_direction();
-	PRINT_TIME("Volume+Motion matrix generation");
 	
 	if (generate_mesh && !inf_terrain && create_voxel_landscape == 1) {
 		gen_voxel_landscape();
-		PRINT_TIME("Voxel Landscape Generation");
 	}
 	if (num_trees > 0) {
-		if (!inf_terrain && gen_trees) {
-			regen_trees(1);
-			PRINT_TIME("Tree generation");
-		}
-		else {
-			delete_trees();
-		}
+		if (!inf_terrain && gen_trees) {regen_trees(1);}
+		else {delete_trees();}
 	}
 	if (!inf_terrain) {
 		gen_scenery(t_trees); // must be generated after trees
@@ -667,15 +658,8 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 	}
 	add_all_coll_objects(coll_obj_file, (num_trees == 0));
 	PRINT_TIME("Collision object addition");
-
-	if (!inf_terrain && !rgt_only) {
-		calc_watershed();
-		PRINT_TIME("Water generation");
-	}
-	if (!inf_terrain && !scrolling) {
-		create_waypoints(user_waypoints);
-		PRINT_TIME("Waypoint Creation");
-	}
+	if (!inf_terrain && !rgt_only ) {calc_watershed();}
+	if (!inf_terrain && !scrolling) {create_waypoints(user_waypoints);}
 	reanimate_objects(); // allow stationary/stuck objects to move about the new terrain (fast so no timing)
 	invalidate_snow_coverage();
 

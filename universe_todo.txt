@@ -1,7 +1,3 @@
-Bump map in planet fragment shader using procedural noise
-
-http://developer.download.nvidia.com/SDK/10.5/opengl/src/cascaded_shadow_maps/doc/cascaded_shadow_maps.pdf
-
 Tile-Based planet surface generation:
 * Similar to tiled terrain mode, but with a different noise function,
 in 3D, and mapped to a sphere
