@@ -901,8 +901,8 @@ void parking_gate_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float di
 		unsigned untex_skip_dims(0);
 
 		if ((body.get_center_dim(dim) < dstate.camera_bs[dim]) == dir) { // front face visible, draw textured
-			dstate.draw_cube(qbds.qbd, body, WHITE, 1, 0.0, (4 | (1 << (!dim))));
-			untex_skip_dims = (1 << dim); // skip front face below
+			dstate.draw_cube(qbds.qbd, body, WHITE, 1, 0.0, (4 | (1 << unsigned(!dim))));
+			untex_skip_dims = (1 << (unsigned)dim); // skip front face below
 		}
 		dstate.draw_cube(qbds.untex_qbd, body, colorRGBA(0.9, 0.6, 0.0), 1, 0.0, untex_skip_dims); // yellow-orange
 	}
@@ -2734,9 +2734,15 @@ void gas_station_t::leave_output_lane() const {
 
 // car wash
 
-car_wash_t::car_wash_t(cube_t const &c, bool dim_, bool dir_, bool hbw, rand_gen_t &rgen) : obj_with_roof_pavement_lights_t(c, dim_, dir_), has_back_wall(hbw) {
+car_wash_t::car_wash_t(cube_t const &c, bool dim_, bool dir_, bool hbw, bool sloped, rand_gen_t &rgen) :
+	obj_with_roof_pavement_lights_t(c, dim_, dir_), has_back_wall(hbw), sloped_roof(sloped)
+{
 	float const height(bcube.dz()), width(get_width()), depth(get_depth()), wall_thick(0.04*depth);
 	float const bay_spacing((width - wall_thick)/num_bays), dsign(dir ? 1.0 : -1.0);
+
+	if (sloped_roof) {
+		// TODO: calculate roof height and used in bcube; uses of bcube below should use "bldg" instead
+	}
 	cube_t side_wall(bcube);
 	roof = pavement = bcube;
 	pavement .z2() = bcube.z1() + 0.005*bcube.dz(); // shift slightly up
@@ -2779,7 +2785,7 @@ car_wash_t::car_wash_t(cube_t const &c, bool dim_, bool dir_, bool hbw, rand_gen
 }
 void car_wash_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	// Note: most geometry is drawn immediately rather than in multiple passes since there are several materials and likely only one or two visible car washes
-	float const tscale(1.0/bcube.dz());
+	float const height(bcube.dz()), tscale(1.0/height);
 	// draw walls and sides of roof
 	if (!shadow_only) {
 		select_texture(get_texture_by_name("bricks_tan.png"));
@@ -2791,7 +2797,42 @@ void car_wash_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_s
 	if (!shadow_only) {qbds.qbd.draw_and_clear();}
 	// draw roof
 	if (!shadow_only) {set_corrugated_metal_texture();}
-	dstate.draw_cube(qbds.qbd, roof, LT_GRAY, 0, 0.75*tscale, 3, 0, 0, dim); // skip_bottom=0, Z only, swap_tc_xy=dim
+	color_wrapper const roof_color(LT_GRAY);
+
+	if (sloped_roof) {
+		bool const rdim(dim); // dim of slope
+		float const peak_height(0.55*height), edge_exp(0.1*bcube.get_sz_dim(rdim)), roof_thick(0.5*roof.dz());
+		float const peak_z2(bcube.z2() + peak_height), peak_z1(peak_z2 - roof_thick), angle(25.0*TO_RADIANS);
+		point const about(bcube.xc(), bcube.yc(), peak_z2);
+		vector3d const axis(vector_from_dim_dir(!rdim, 0));
+
+		for (unsigned d = 0; d < 2; ++d) { // each side quad
+			cube_t panel(bcube);
+			set_cube_zvals(panel, peak_z1, peak_z2);
+			panel.expand_in_dim(!rdim, 0.01*bcube.get_sz_dim(!rdim)); // slight expand to prevent Z-fighting
+			panel.d[rdim][!d]  = about[rdim]; // centerline
+			panel.d[rdim][ d] += (d ? 1.0 : -1.0)*edge_exp; // make sure it covers the entire building when rotated
+			unsigned const vs(qbds.qbd.verts.size());
+			dstate.draw_cube(qbds.qbd, panel, roof_color, 0, tscale, 0, 0, 0, dim, 1.0, 1.0, 1.0, 0, 1); // draw all sides; no_cull=1 since it's rotated
+			rotate_verts(qbds.qbd.verts, axis, ((bool(d) ^ rdim) ? 1.0 : -1.0)*angle, about, vs);
+		} // for d
+		for (unsigned d = 0; d < 2; ++d) { // each end triangle
+			vector3d const normal((d ? -1.0 : 1.0)*axis);
+			point pts[3]; // {lbot, rbot, peak}
+			pts[0].z = pts[1].z = bcube.z2();
+			pts[2].z = peak_z1;
+			pts[0][rdim] = bcube.d[rdim][ d];
+			pts[1][rdim] = bcube.d[rdim][!d];
+			pts[2][rdim] = about[rdim]; // center
+
+			for (unsigned n = 0; n < 3; ++n) {
+				point &p(pts[n]);
+				p[!rdim] = bcube.d[!rdim][d];
+				qbds.qbd.verts.emplace_back(p, normal, tscale*p[rdim], tscale*p.z, roof_color);
+			}
+		} // for d
+	}
+	dstate.draw_cube(qbds.qbd, roof, roof_color, 0, 0.75*tscale, 3, 0, 0, dim, 1.0, 1.0, 1.0, sloped_roof); // skip_bottom=0, skip_top=sloped_roof, Z only, swap_tc_xy=dim
 	qbds.qbd.draw_and_clear();
 	if (!shadow_only) {bind_default_flat_normal_map();}
 	float const dmax(dist_scale*dstate.draw_tile_dist);
@@ -2801,6 +2842,9 @@ void car_wash_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_s
 	if (!shadow_only) {draw_lights(dstate, qbds, lights, num_bays);} // draw lights
 }
 bool car_wash_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
+	if (sloped_roof) {
+		// TODO
+	}
 	if (proc_roof_sphere_coll(pos_, p_last, radius_, xlate, cnorm)) return 1;
 	bool ret(0);
 	for (cube_t const &w : walls) {ret |= sphere_cube_int_update_pos(pos_, radius_, (w + xlate), p_last, 0, cnorm);}

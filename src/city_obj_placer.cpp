@@ -99,9 +99,10 @@ bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, unsigne
 		cw.d[!dim][ ent_dir] -= (ent_dir ? 1.0 : -1.0)*0.75*len_delta; // shrink more on entrance side to make room for pedestrians
 		cw.d[!dim][!ent_dir] += (ent_dir ? 1.0 : -1.0)*0.25*len_delta;
 	}
-	if (!has_bcube_int_xy(cw, bcubes, pad_dist)) { // not too close to a building
-		bool const has_back_wall(0);
-		car_wash_t car_wash(cw, dim, dir, has_back_wall, rgen);
+	bool const has_back_wall(0), sloped_roof(1);
+	car_wash_t car_wash(cw, dim, dir, has_back_wall, sloped_roof, rgen);
+
+	if (!has_bcube_int_xy(car_wash.bcube, bcubes, pad_dist)) { // not too close to a building
 		cwash_groups.add_obj(car_wash, cwashes);
 		// add car wash sign on the side facing the road
 		float const cw_road_side(cw.d[!dim][ent_dir]); // away from road
