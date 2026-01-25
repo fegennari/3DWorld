@@ -235,25 +235,20 @@ void draw_state_t::draw_cube(quad_batch_draw &qbd, cube_t const &c, color_wrappe
 	if (!(skip_dims & 4)) { // Z
 		if (mirror_x) {tr_top.mirror_x();}
 		if (mirror_y) {tr_top.mirror_y();}
-
-		if (cview_dir.z >= 0.0) {
-			if (!skip_top   ) {qbd.add_quad_pts(p+4, cw,  plus_z, tr_top);} // top - not always drawn
-		}
-		if (cview_dir.z <= 0.0) {
-			if (!skip_bottom) {qbd.add_quad_pts(p+0, cw, -plus_z, tr_top);} // bottom - not always drawn
-		}
+		if (!skip_top    && cview_dir.z >= 0.0) {qbd.add_quad_pts(p+4, cw,  plus_z, tr_top);} // +z top
+		if (!skip_bottom && cview_dir.z <= 0.0) {qbd.add_quad_pts(p+0, cw, -plus_z, tr_top);} // -z bot
 	}
 	if (!(skip_dims & 1)) { // X
 		if (mirror_x) {tr_front.mirror_x();}
 		if (mirror_y) {tr_front.mirror_y();}
-		if (cview_dir.x <= 0.0) {point const pts[4] = {p[0], p[1], p[5], p[4]}; qbd.add_quad_pts(pts, cw, -plus_x, tr_front);} // back
-		if (cview_dir.x >= 0.0) {point const pts[4] = {p[2], p[3], p[7], p[6]}; qbd.add_quad_pts(pts, cw,  plus_x, tr_front);} // front
+		if (cview_dir.x <= 0.0) {point const pts[4] = {p[0], p[1], p[5], p[4]}; qbd.add_quad_pts(pts, cw, -plus_x, tr_front);} // -x back
+		if (cview_dir.x >= 0.0) {point const pts[4] = {p[2], p[3], p[7], p[6]}; qbd.add_quad_pts(pts, cw,  plus_x, tr_front);} // +x front
 	}
 	if (!(skip_dims & 2)) { // Y
 		if (mirror_x) {tr_right.mirror_x();}
 		if (mirror_y) {tr_right.mirror_y();}
-		if (cview_dir.y <= 0.0) {point const pts[4] = {p[1], p[2], p[6], p[5]}; qbd.add_quad_pts(pts, cw, -plus_y, tr_right);} // left
-		if (cview_dir.y >= 0.0) {point const pts[4] = {p[3], p[0], p[4], p[7]}; qbd.add_quad_pts(pts, cw,  plus_y, tr_right);} // right
+		if (cview_dir.y <= 0.0) {point const pts[4] = {p[1], p[2], p[6], p[5]}; qbd.add_quad_pts(pts, cw, -plus_y, tr_right);} // -y left
+		if (cview_dir.y >= 0.0) {point const pts[4] = {p[3], p[0], p[4], p[7]}; qbd.add_quad_pts(pts, cw,  plus_y, tr_right);} // +y right
 	}
 }
 bool draw_state_t::add_light_flare(point const &flare_pos, vector3d const &n, colorRGBA const &color, float alpha, float radius) {

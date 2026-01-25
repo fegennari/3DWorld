@@ -225,8 +225,31 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t const &full_plot, vecto
 						}
 					} // for n
 					driveways.emplace_back(driveway, !car_dim, dw_dir, plot_ix, parking_lot_ix);
+
+					if (rgen.rand_bool()) {
+						// maybe add parking gate near where driveway intersects road;
+						// ideally there should be two, one on each side of the road for cars entering vs. exiting,
+						// but that blocks peds on the sidewalk, so only add one on the inside of the plot
+						bool const gdir(!cdir), is_open(1); // for now, gate is always open so that cars can pass through;
+						float const gate_height(1.0*nom_car_size.z), gate_width(0.38*gate_height), gate_depth(0.24*gate_height);
+						float const dw_edge(driveway.d[car_dim][!gdir]), lot_edge(park.d[!car_dim][dw_dir]);
+						float const gate_pos(lot_edge + (dw_dir ?  1.0 : -1.0)*1.25*gate_width); // move away from the lot to avoid being blocked by a solar roof support
+						cube_t gate;
+						set_cube_zvals(gate, plot.z1(), plot.z1()+gate_height);
+						gate.d[ car_dim][ gdir  ] = dw_edge;
+						gate.d[ car_dim][!gdir  ] = dw_edge  + (gdir   ? -1.0 :  1.0)*gate_depth; // extend away from drivweay
+						gate.d[!car_dim][!dw_dir] = gate_pos;
+						gate.d[!car_dim][ dw_dir] = gate_pos + (dw_dir ?  1.0 : -1.0)*gate_width; // extend away from lot
+						parking_gate_t const pgate(gate, car_dim, gdir, is_open);
+						cube_t test_cube(pgate.bcube);
+						test_cube.union_with_cube(parking_gate_t(gate, car_dim, gdir, !is_open).bcube); // check union of arm in both up and down pos
+
+						if (!has_bcube_int_xy(test_cube, bcubes)) { // always true?
+							pgate_groups.add_obj(pgate, pgates);
+							add_cube_to_colliders_and_blockers(gate, bcubes, colliders);
+						}
+					}
 					bcubes.push_back(driveway); // add to list of blocker bcubes
-					// TODO: maybe add parking gat near where driveway intersects road
 					break;
 				}
 			} // for d
@@ -580,7 +603,8 @@ vect_bird_place_t *select_bird_loc_dest(bool add_pigeons, bool add_birds, vect_b
 	return nullptr;
 }
 template<typename T> void add_bird_loc(T const &obj, vect_bird_place_t &dest, rand_gen_t &rgen) {
-	dest.add_placement_top_center(obj.get_bird_bcube(), rgen);
+	cube_t const bbc(obj.get_bird_bcube());
+	if (!bbc.is_all_zeros()) {dest.add_placement_top_center(bbc, rgen);}
 }
 template<> void add_bird_loc(mailbox_t const &obj, vect_bird_place_t &dest, rand_gen_t &rgen) {
 	// for mailboxes, start the bird facing toward the road so that it doesn't fly into a house
@@ -2525,7 +2549,6 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(pfloats,   pfloat_groups,   dstate, 0.15, shadow_only, 1);
 	draw_objects(gstations, gass_groups,     dstate, 0.25, shadow_only, 1);
 	draw_objects(cwashes,   cwash_groups,    dstate, 0.25, shadow_only, 1);
-	draw_objects(pgates,    pgate_groups,    dstate, 0.12, shadow_only, 0);
 	
 	if (!shadow_only) { // non shadow casting objects
 		draw_objects(hcaps,    hcap_groups,    dstate, 0.12, shadow_only, 0);
@@ -2545,6 +2568,9 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	}
 	for (dstate.pass_ix = 0; dstate.pass_ix < (shadow_only ? 1U : 2U); ++dstate.pass_ix) { // {metal case, newspaper}; newspaper does not cast shadows
 		draw_objects(newsracks, nrack_groups, dstate, (dstate.pass_ix ? 0.06 : 0.10), shadow_only, 0);
+	}
+	for (dstate.pass_ix = 0; dstate.pass_ix < 2; ++dstate.pass_ix) { // {body, striped arm}
+		draw_objects(pgates, pgate_groups, dstate, 0.08, shadow_only, 0);
 	}
 	for (dstate.pass_ix = 0; dstate.pass_ix < 3; ++dstate.pass_ix) { // {line, poles, clothes}
 		if (shadow_only && dstate.pass_ix == 0) continue; // skip line in the shadow pass because its too narrow to cast a good shadow

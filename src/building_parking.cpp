@@ -438,18 +438,18 @@ void building_t::add_parking_struct_objs(rand_gen_t rgen, room_t const &room, fl
 		}
 		// add parking gate/ticket machine/barrier for each side
 		float const floor_spacing(get_window_vspace()), dsign(dir ? -1.0 : 1.0);
-		float const gate_height(0.42*floor_spacing), gate_width(0.1*floor_spacing), gate_depth(0.16*floor_spacing);
+		float const gate_height(0.42*floor_spacing), gate_width(0.16*floor_spacing), gate_depth(0.10*floor_spacing);
 		bool const first_is_open(rgen.rand_bool());
 		cube_t gate;
 		set_cube_zvals(gate, zval, zval+gate_height);
-		set_wall_width(gate, centerline, 0.5*gate_width, !dim);
+		set_wall_width(gate, centerline, 0.5*gate_depth, !dim);
 		gate.d[dim][ dir] = front_pos        + dsign*0.2*floor_spacing;
-		gate.d[dim][!dir] = gate.d[dim][dir] + dsign*gate_depth;
+		gate.d[dim][!dir] = gate.d[dim][dir] + dsign*gate_width;
 
 		for (unsigned d = 0; d < 2; ++d) { // shift back and alternate sides
 			bool const gdir(bool(d) ^ dim ^ dir), is_open(first_is_open ^ bool(d)); // one is open, the other is closed
 			objs.emplace_back(gate, TYPE_PARK_GATE, room_id, !dim, gdir, (is_open ? RO_FLAG_OPEN : 0), 1.0, SHAPE_CUBE, colorRGBA(0.9, 0.6, 0.0), unsigned(gdir ^ dim));
-			if (d == 0) {gate.translate_dim(dim, 1.5*dsign*gate_depth);}
+			if (d == 0) {gate.translate_dim(dim, 1.5*dsign*gate_width);}
 		}
 	}
 }

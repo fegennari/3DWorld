@@ -7246,8 +7246,8 @@ void building_room_geom_t::add_vent_fan_frame(room_object_t const &c) {
 }
 
 cube_t get_parking_gate_arm(room_object_t const &c) {
-	bool const arm_side(c.item_flags & 1);
-	float const height(c.dz()), arm_len(1.25*height), arm_width(0.08*arm_len), arm_depth(0.4*arm_width), arm_short_len(1.0*arm_width);
+	bool const arm_side(c.item_flags & 1), is_long(c.shape == SHAPE_TALL);
+	float const height(c.dz()), arm_len(1.25*height*(is_long ? 1.5 : 1.0)), arm_width(0.1*height), arm_depth(0.4*arm_width), arm_short_len(1.0*arm_width);
 	float const arm_face(c.d[!c.dim][arm_side]), arm_pivot_xy(c.get_center_dim(c.dim)), arm_pivot_z(c.z1() + 0.65*height);
 	cube_t arm;
 	arm.d[!c.dim][!arm_side] = arm_face;

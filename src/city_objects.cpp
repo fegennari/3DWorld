@@ -884,18 +884,29 @@ void newsrack_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_s
 
 // parking gates
 
-parking_gate_t::parking_gate_t(cube_t const &c, bool dim_, bool dir_) : oriented_city_obj_t(c, dim_, dir_) {
-	// TODO: set arm
+cube_t get_parking_gate_arm(room_object_t const &c); // borrow from building parking garage gate logic
+
+parking_gate_t::parking_gate_t(cube_t const &c, bool dim_, bool dir_, bool is_open_) : oriented_city_obj_t(c, dim_, dir_), is_open(is_open_), body(c) {
+	arm = get_parking_gate_arm(room_object_t(body, TYPE_PARK_GATE, 0, dim, dir, (is_open ? RO_FLAG_OPEN : 0), 1.0, SHAPE_TALL, WHITE, dir)); // long arm
+	bcube.union_with_cube(arm);
+	set_bsphere_from_bcube();
 }
 /*static*/ void parking_gate_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
-	if (shadow_only) {}
-	// TODO
-}
-/*static*/ void parking_gate_t::post_draw(draw_state_t &dstate, bool shadow_only) {
-	if (!shadow_only) {}
+	if (shadow_only) {} // nothing to do
+	else if (dstate.pass_ix == 0) {select_texture(get_texture_by_name("interiors/parking_ticket_machine.png"));} // front panel
+	else                          {select_texture(HAZARD_TEX);} // striped arm
 }
 void parking_gate_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
-	// TODO: three materials: face, arm, and untextured top/back/sides
+	if (dstate.pass_ix == 0) { // draw body
+		unsigned untex_skip_dims(0);
+
+		if ((body.get_center_dim(dim) < dstate.camera_bs[dim]) == dir) { // front face visible, draw textured
+			dstate.draw_cube(qbds.qbd, body, WHITE, 1, 0.0, (4 | (1 << (!dim))));
+			untex_skip_dims = (1 << dim); // skip front face below
+		}
+		dstate.draw_cube(qbds.untex_qbd, body, colorRGBA(0.9, 0.6, 0.0), 1, 0.0, untex_skip_dims); // yellow-orange
+	}
+	else {dstate.draw_cube(qbds.qbd, arm, WHITE, 1, 1.0/bcube.dz());} // draw arm
 }
 
 // clothes lines

@@ -619,12 +619,13 @@ struct newsrack_t : public oriented_city_obj_t {
 };
 
 struct parking_gate_t : public oriented_city_obj_t {
-	cube_t arm;
+	bool is_open;
+	cube_t body, arm;
 
-	parking_gate_t(cube_t const &c, bool dim_, bool dir_);
-	static void pre_draw (draw_state_t &dstate, bool shadow_only);
-	static void post_draw(draw_state_t &dstate, bool shadow_only);
+	parking_gate_t(cube_t const &c, bool dim_, bool dir_, bool is_open_);
+	static void pre_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
+	cube_t get_bird_bcube() const {return (is_open ? arm : body);} // land on arm if open, otherwise body
 };
 
 struct clothesline_t : public oriented_city_obj_t {
