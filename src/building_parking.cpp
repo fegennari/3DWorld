@@ -448,8 +448,11 @@ void building_t::add_parking_struct_objs(rand_gen_t rgen, room_t const &room, fl
 
 		for (unsigned d = 0; d < 2; ++d) { // shift back and alternate sides
 			bool const gdir(bool(d) ^ dim ^ dir), is_open(first_is_open ^ bool(d)); // one is open, the other is closed
-			objs.emplace_back(gate, TYPE_PARK_GATE, room_id, !dim, gdir, (is_open ? RO_FLAG_OPEN : 0), 1.0, SHAPE_CUBE, colorRGBA(0.9, 0.6, 0.0), unsigned(gdir ^ dim));
-			if (d == 0) {gate.translate_dim(dim, 1.5*dsign*gate_width);}
+			// arm is in the opposite dir because it's for the gate on the opposite side, so that cars have space to pull up before the bar
+			bool const arm_side(gdir ^ dim), swap_sides(1);
+			unsigned const item_flags((unsigned)arm_side | ((unsigned)swap_sides << 1));
+			objs.emplace_back(gate, TYPE_PARK_GATE, room_id, !dim, gdir, (is_open ? RO_FLAG_OPEN : 0), 1.0, SHAPE_CUBE, colorRGBA(0.9, 0.6, 0.0), item_flags);
+			if (d == 0) {gate.translate_dim(dim, 2.0*dsign*gate_width);}
 		}
 	}
 }

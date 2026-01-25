@@ -887,7 +887,7 @@ void newsrack_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_s
 cube_t get_parking_gate_arm(room_object_t const &c); // borrow from building parking garage gate logic
 
 parking_gate_t::parking_gate_t(cube_t const &c, bool dim_, bool dir_, bool is_open_) : oriented_city_obj_t(c, dim_, dir_), is_open(is_open_), body(c) {
-	arm = get_parking_gate_arm(room_object_t(body, TYPE_PARK_GATE, 0, dim, dir, (is_open ? RO_FLAG_OPEN : 0), 1.0, SHAPE_TALL, WHITE, dir)); // long arm
+	arm = get_parking_gate_arm(room_object_t(body, TYPE_PARK_GATE, 0, dim, dir, (is_open ? RO_FLAG_OPEN : 0), 1.0, SHAPE_TALL, WHITE, (dir ^ 1))); // long arm
 	bcube.union_with_cube(arm);
 	set_bsphere_from_bcube();
 }
