@@ -101,6 +101,7 @@ roads.o
 cars.o
 pedestrians.o
 texture_tile_blend.o
+logging.o
 building_geom.o
 building_lighting.o
 building_floorplan.o

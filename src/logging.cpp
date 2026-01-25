@@ -1,17 +1,15 @@
-// 3D World - Simple File Logger
+// 3D World - Logging
 // by Frank Gennari
-// 9/21/25
-#pragma once
+// 1/24/26
 
-#include <string>
-#include <iostream>
+#include "3DWorld.h"
 #include <fstream>
 
 class logger_t {
 	std::ofstream log;
 
 	void open_log_file() { // open file on first write
-		if (log.good()) return; // alredy open
+		if (log.good()) return; // already open
 		log.open("3DWorld.log");
 	}
 public:
@@ -33,4 +31,19 @@ public:
 	~logger_t() {log.close();}
 };
 logger_t global_logger;
+
+void global_logger_log(string const &str) {global_logger.log_str(str);}
+
+void log_location(point const &pos) {
+
+	static std::ofstream out;
+	static bool inited(0);
+
+	if (!inited) {
+		out.open("positions.log.txt");
+		inited = 1;
+	}
+	assert(out.good());
+	out << pos.x << " " << pos.y << " " << pos.z << endl;
+}
 

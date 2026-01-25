@@ -1595,7 +1595,7 @@ void keyboard(unsigned char key, int x, int y) {
 	add_uevent_keyboard(key, x, y);
 
 	if (keys.find(key) != keys.end()) { // can happen with control clicks
-		cout << "Warning: Keyboard event for key " << key << " (" << int(key) << ") which has alredy been pressed." << endl;
+		cout << "Warning: Keyboard event for key " << key << " (" << int(key) << ") which has already been pressed." << endl;
 		return;
 	}
 	keys.insert(key);

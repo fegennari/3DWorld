@@ -540,6 +540,9 @@
     <ClCompile Include="src\building_restaurant.cpp">
       <Filter>Source Files\City</Filter>
     </ClCompile>
+    <ClCompile Include="src\logging.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\3DWorld.h">
@@ -762,9 +765,6 @@
       <Filter>Source Files\City</Filter>
     </ClInclude>
     <ClInclude Include="src\format_text.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\logger.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

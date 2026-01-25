@@ -80,6 +80,7 @@ void toggle_fullscreen();
 void calc_cur_ambient_diffuse();
 void print_texture_memory_usage();
 void show_debug_event_pos(point const &pos);
+void log_location(point const &pos);
 point get_world_space_camera_pos();
 
 vector3d calc_camera_direction();
@@ -246,20 +247,6 @@ void draw_stuff(int draw_uw, int timer1, int reflection_pass=0) {
 		draw_voxel_edit_volume();
 		check_gl_error(25);
 	}
-}
-
-
-void log_location(point const &pos) {
-
-	static std::ofstream out;
-	static bool inited(0);
-
-	if (!inited) {
-		out.open("positions.log.txt");
-		inited = 1;
-	}
-	assert(out.good());
-	out << pos.x << " " << pos.y << " " << pos.z << endl;
 }
 
 
