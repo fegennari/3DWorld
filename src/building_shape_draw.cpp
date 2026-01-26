@@ -70,10 +70,15 @@ void rgeom_mat_t::add_cube_to_verts_untextured(cube_t const &c, colorRGBA const 
 	} // for i
 }
 
+template<typename T> void invert_triangles(T &verts, vector<unsigned> &indices, unsigned verts_start, unsigned ixs_start) {
+	for (auto i = verts.begin()+verts_start; i != verts.end(); ++i) {i->invert_normal();}
+	reverse(indices.begin()+ixs_start, indices.end());
+}
+template void invert_triangles(vector<vert_norm_comp_tc_color> &verts, vector<unsigned> &indices, unsigned verts_start, unsigned ixs_start); // explicit instantiation
+
 template<typename T> void add_inverted_triangles(T &verts, vector<unsigned> &indices, unsigned verts_start, unsigned ixs_start, bool replace_mode) {
 	if (replace_mode) { // replace existing verts with their inverse (inplace invert)
-		for (auto i = verts.begin()+verts_start; i != verts.end(); ++i) {i->invert_normal();}
-		std::reverse(indices.begin()+ixs_start, indices.end());
+		invert_triangles(verts, indices, verts_start, ixs_start);
 		return;
 	}
 	unsigned const verts_end(verts.size()), numv(verts_end - verts_start);

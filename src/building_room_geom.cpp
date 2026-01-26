@@ -140,10 +140,8 @@ void set_pipe_specular(colorRGBA const &spec_color, bool is_duct, bool is_dirty,
 	else {tex.metalness = (is_dirty ? 0.1 :    (is_duct ? 0.25 : 0.4));} // partially reflective
 }
 
-void invert_triangles(rgeom_mat_t &mat, unsigned verts_start, unsigned ixs_start) {
-	for (auto i = mat.itri_verts.begin()+verts_start; i != mat.itri_verts.end(); ++i) {i->invert_normal();}
-	reverse(mat.indices.begin()+ixs_start, mat.indices.end());
-}
+template<typename T> void invert_triangles(T &verts, vector<unsigned> &indices, unsigned verts_start, unsigned ixs_start);
+void invert_triangles(rgeom_mat_t &mat, unsigned verts_start, unsigned ixs_start) {invert_triangles(mat.itri_verts, mat.indices, verts_start, ixs_start);}
 
 void rotate_obj_cube(cube_t &c, cube_t const &bc, bool in_dim, bool dir) { // 90 degree rotations about X or Y axis; okay if c == bc
 	point pts[2] = {c.get_llc(), c.get_urc()};
@@ -6373,8 +6371,7 @@ void building_room_geom_t::add_plate(room_object_t const &c) { // is_small=1
 	if (is_bowl) { // top/inner surface
 		unsigned const verts_start(untex_mat.itri_verts.size()), ixs_start(untex_mat.indices.size());
 		untex_mat.add_sphere_to_verts(bowl, color, 0, plus_z); // low_detail=0, bottom half
-		reverse(untex_mat.indices.begin()+ixs_start, untex_mat.indices.end()); // reverse for top surface
-		for (auto i = untex_mat.itri_verts.begin()+verts_start; i != untex_mat.itri_verts.end(); ++i) {i->invert_normal();} // invert normal
+		invert_triangles(untex_mat, verts_start, ixs_start);
 		
 		if (!(c.flags & RO_FLAG_ADJ_TOP)) { // maybe add liquid in the bowl if otherwise empty (no apples)
 			rand_gen_t rgen(c.create_rgen());
