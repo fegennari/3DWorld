@@ -2739,21 +2739,19 @@ car_wash_t::car_wash_t(cube_t const &c, bool dim_, bool dir_, bool hbw, bool slo
 {
 	float const height(bcube.dz()), width(get_width()), depth(get_depth()), wall_thick(0.04*depth);
 	float const bay_spacing((width - wall_thick)/num_bays), dsign(dir ? 1.0 : -1.0);
-
-	if (sloped_roof) {
-		// TODO: calculate roof height and used in bcube; uses of bcube below should use "bldg" instead
-	}
-	cube_t side_wall(bcube);
-	roof = pavement = bcube;
-	pavement .z2() = bcube.z1() + 0.005*bcube.dz(); // shift slightly up
-	side_wall.z2() = roof.z1() = bcube.z2() - 1.2*wall_thick; // roof is thicker than walls
+	bldg = bcube;
+	if (sloped_roof) {bcube.z2() += 0.55*bldg.dz();} // expand to include the roof peak height
+	cube_t side_wall(bldg);
+	roof = pavement = bldg;
+	pavement .z2() = bldg.z1() + 0.005*height; // shift slightly up
+	side_wall.z2() = roof.z1() = bldg.z2() - 1.2*wall_thick; // roof is thicker than walls
 	side_wall.d[!dim][1]    = side_wall.d[!dim][0] + wall_thick;
 	pavement .d[ dim][dir] += dsign*0.01*depth; // extend slightly under gas station to avoid a gap if heights are different
 
 	if (has_back_wall) {
-		cube_t back_wall(bcube);
+		cube_t back_wall(bldg);
 		back_wall.z2() = roof.z1();
-		side_wall.d[dim][!dir] = back_wall.d[dim][dir] = bcube.d[dim][!dir] + dsign*wall_thick; // shorten to remove overlap with back wall
+		side_wall.d[dim][!dir] = back_wall.d[dim][dir] = bldg.d[dim][!dir] + dsign*wall_thick; // shorten to remove overlap with back wall
 		walls.push_back(back_wall);
 	}
 	// add side walls and bays
@@ -2771,10 +2769,10 @@ car_wash_t::car_wash_t(cube_t const &c, bool dim_, bool dir_, bool hbw, bool slo
 	float const light_radius(0.065*bay_spacing), light_thick(0.02*height);
 	cube_t light;
 	set_cube_zvals(light, roof.z1()-light_thick, roof.z1());
-	set_wall_width(light, bcube.get_center_dim(dim), light_radius, dim);
+	set_wall_width(light, bldg.get_center_dim(dim), light_radius, dim);
 
 	for (unsigned n = 0; n < num_bays; ++n) {
-		set_wall_width(light, (bcube.d[!dim][0] + 0.5*wall_thick + (n + 0.5)*bay_spacing), light_radius, !dim);
+		set_wall_width(light, (bldg.d[!dim][0] + 0.5*wall_thick + (n + 0.5)*bay_spacing), light_radius, !dim);
 		lights[n] = light;
 		light_clip_cubes[n] = bays[n];
 		light_clip_cubes[n].expand_by(0.5*wall_thick); // light includes wall surfaces but doesn't pass through walls
@@ -2785,7 +2783,7 @@ car_wash_t::car_wash_t(cube_t const &c, bool dim_, bool dir_, bool hbw, bool slo
 }
 void car_wash_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	// Note: most geometry is drawn immediately rather than in multiple passes since there are several materials and likely only one or two visible car washes
-	float const height(bcube.dz()), tscale(1.0/height);
+	float const tscale(1.0/bldg.dz());
 	// draw walls and sides of roof
 	if (!shadow_only) {
 		select_texture(get_texture_by_name("bricks_tan.png"));
@@ -2801,15 +2799,15 @@ void car_wash_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_s
 
 	if (sloped_roof) {
 		bool const rdim(dim); // dim of slope
-		float const peak_height(0.55*height), edge_exp(0.1*bcube.get_sz_dim(rdim)), roof_thick(0.5*roof.dz());
-		float const peak_z2(bcube.z2() + peak_height), peak_z1(peak_z2 - roof_thick), angle(25.0*TO_RADIANS);
-		point const about(bcube.xc(), bcube.yc(), peak_z2);
+		float const edge_exp(0.1*bldg.get_sz_dim(rdim)), roof_thick(0.5*roof.dz());
+		float const peak_z2(bcube.z2()), peak_z1(peak_z2 - roof_thick), angle(25.0*TO_RADIANS);
+		point const about(bldg.xc(), bldg.yc(), peak_z2);
 		vector3d const axis(vector_from_dim_dir(!rdim, 0));
 
 		for (unsigned d = 0; d < 2; ++d) { // each side quad
 			cube_t panel(bcube);
-			set_cube_zvals(panel, peak_z1, peak_z2);
-			panel.expand_in_dim(!rdim, 0.01*bcube.get_sz_dim(!rdim)); // slight expand to prevent Z-fighting
+			panel.z1() = peak_z1;
+			panel.expand_in_dim(!rdim, 0.01*bldg.get_sz_dim(!rdim)); // slight expand to prevent Z-fighting
 			panel.d[rdim][!d]  = about[rdim]; // centerline
 			panel.d[rdim][ d] += (d ? 1.0 : -1.0)*edge_exp; // make sure it covers the entire building when rotated
 			unsigned const vs(qbds.qbd.verts.size());
@@ -2819,15 +2817,15 @@ void car_wash_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_s
 		for (unsigned d = 0; d < 2; ++d) { // each end triangle
 			vector3d const normal((d ? -1.0 : 1.0)*axis);
 			point pts[3]; // {lbot, rbot, peak}
-			pts[0].z = pts[1].z = bcube.z2();
+			pts[0].z = pts[1].z = bldg.z2();
 			pts[2].z = peak_z1;
-			pts[0][rdim] = bcube.d[rdim][ d];
-			pts[1][rdim] = bcube.d[rdim][!d];
+			pts[0][rdim] = bldg.d[rdim][ d];
+			pts[1][rdim] = bldg.d[rdim][!d];
 			pts[2][rdim] = about[rdim]; // center
 
 			for (unsigned n = 0; n < 3; ++n) {
 				point &p(pts[n]);
-				p[!rdim] = bcube.d[!rdim][d];
+				p[!rdim] = bldg.d[!rdim][d];
 				qbds.qbd.verts.emplace_back(p, normal, tscale*p[rdim], tscale*p.z, roof_color);
 			}
 		} // for d
@@ -2842,10 +2840,18 @@ void car_wash_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_s
 	if (!shadow_only) {draw_lights(dstate, qbds, lights, num_bays);} // draw lights
 }
 bool car_wash_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
-	if (sloped_roof) {
-		// TODO
+	if (sloped_roof && bcube.contains_pt_xy(pos_ - xlate)) { // handle sloped roof coll; approximate
+		bool const rdim(dim); // dim of slope
+		float const t(fabs(pos_[rdim] - bldg.get_center_dim(rdim) - xlate[rdim])/(0.5*bldg.get_sz_dim(rdim))); // 0 at peak, 1 at edge
+		float const rz1(bldg.z2()), rz2(bcube.z2()), zval(rz2 + t*(rz1 - rz2)), pos_z(max(pos_.z, p_last.z));
+
+		if (pos_z > zval - radius_ && pos_z < zval + 1.5*radius_) { // check for player on roof; must be first
+			pos_.z = zval + radius_; // on roof
+			if (cnorm) {*cnorm = plus_z;} // inaccurate, but probably doesn't matter
+			return 1;
+		}
 	}
-	if (proc_roof_sphere_coll(pos_, p_last, radius_, xlate, cnorm)) return 1;
+	else if (proc_roof_sphere_coll(pos_, p_last, radius_, xlate, cnorm)) return 1;
 	bool ret(0);
 	for (cube_t const &w : walls) {ret |= sphere_cube_int_update_pos(pos_, radius_, (w + xlate), p_last, 0, cnorm);}
 	return ret;

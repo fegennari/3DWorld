@@ -501,7 +501,7 @@ struct gs_reservation_t {
 struct car_wash_t : public obj_with_roof_pavement_lights_t {
 	static unsigned const num_bays=4;
 	bool has_back_wall=0, sloped_roof=0;
-	cube_t bays[num_bays], lights[num_bays], light_clip_cubes[num_bays];
+	cube_t bldg, bays[num_bays], lights[num_bays], light_clip_cubes[num_bays];
 	bool bay_in_use[num_bays]={}; // for parked cars; not yet used
 	mutable bool cached_smaps[num_bays]={}; // for lights
 	vect_cube_t walls;
