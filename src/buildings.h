@@ -942,15 +942,15 @@ public:
 	void add_cube_to_verts_two_sided(cube_t const &c, colorRGBA const &color, point const &tex_origin=all_zeros, unsigned skip_faces=0,
 		bool swap_tex_st=0, bool mirror_x=0, bool mirror_y=0);
 	void add_cube_to_verts_untextured(cube_t const &c, colorRGBA const &color, unsigned skip_faces=0);
-	void add_ortho_cylin_to_verts(cube_t const &c, colorRGBA const &color, int dim, bool draw_bot, bool draw_top, bool two_sided=0, bool inv_tb=0,
+	void add_ortho_cylin_to_verts(cube_t const &c, colorRGBA const &color, int dim, bool draw_bot, bool draw_top, int two_sided=0, bool inv_tb=0,
 		float rs_bot=1.0, float rs_top=1.0, float side_tscale=1.0, float end_tscale=1.0, bool skip_sides=0, unsigned ndiv=N_CYL_SIDES, float side_tscale_add=0.0,
 		bool swap_txy=0, float len_tc2=1.0, float len_tc1=0.0, int half_or_quarter=0, int swap_end_txy=0);
-	void add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, bool draw_bot, bool draw_top, bool two_sided=0, bool inv_tb=0,
+	void add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, bool draw_bot, bool draw_top, int two_sided=0, bool inv_tb=0,
 		float rs_bot=1.0, float rs_top=1.0, float side_tscale=1.0, float end_tscale=1.0, bool skip_sides=0, unsigned ndiv=N_CYL_SIDES, float side_tscale_add=0.0,
 		bool swap_txy=0, float len_tc2=1.0, float len_tc1=0.0, int half_or_quarter=0, int swap_end_txy=0);
 	void add_vcylin_to_verts_tscale(cube_t const &c, colorRGBA const &color, bool draw_bot, bool draw_top);
 	void add_cylin_to_verts(point const &bot, point const &top, float bot_radius, float top_radius, colorRGBA const &color, bool draw_bot, bool draw_top,
-		bool two_sided=0, bool inv_tb=0, float side_tscale=1.0, float end_tscale=1.0, bool skip_sides=0, unsigned ndiv=N_CYL_SIDES, float side_tscale_add=0.0,
+		int two_sided=0, bool inv_tb=0, float side_tscale=1.0, float end_tscale=1.0, bool skip_sides=0, unsigned ndiv=N_CYL_SIDES, float side_tscale_add=0.0,
 		bool swap_txy=0, float len_tc2=1.0, float len_tc1=0.0, int half_or_quarter=0, int swap_end_txy=0);
 	void add_disk_to_verts(point const &pos, float radius, vector3d const &dir, colorRGBA const &color, bool swap_txy=0, bool inv_ts=0, bool inv_tt=0, unsigned ndiv=N_CYL_SIDES);
 	void add_vert_disk_to_verts(point const &pos, float radius, bool normal_z_neg, colorRGBA const &color, bool swap_txy=0, bool inv_ts=0, bool inv_tt=0, unsigned ndiv=N_CYL_SIDES) {
@@ -3406,7 +3406,7 @@ template<typename T> void add_to_and_clear(T &src, T &dest) {
 	vector_add_to(src, dest);
 	src.clear();
 }
-template<typename T> void add_inverted_triangles(T &verts, vector<unsigned> &indices, unsigned verts_start, unsigned ixs_start);
+template<typename T> void add_inverted_triangles(T &verts, vector<unsigned> &indices, unsigned verts_start, unsigned ixs_start, bool replace_mode=0);
 template<typename T> void reserve_extra(vector<T> &v, unsigned num) {v.reserve(v.size() + num);}
 
 colorRGBA const DARK_BRASS_C(0.4, 0.35, 0.15, 1.0);

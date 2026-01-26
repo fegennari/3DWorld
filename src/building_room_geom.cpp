@@ -1031,7 +1031,7 @@ void building_room_geom_t::add_vert_roll_to_material(room_object_t const &c, rge
 	cube_t hole(c);
 	hole.expand_by_xy(-hole_shrink*c.dx());
 	cube_t tube(hole);
-	mat.add_vcylin_to_verts(tube, apply_light_color(c, LT_BROWN), 0, 0, 1, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv); // tube, sides only, two sided (only need inside)
+	mat.add_vcylin_to_verts(tube, apply_light_color(c, LT_BROWN), 0, 0, 2, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv); // tube, sides only, two_sided=2 (inside only)
 	if (sz_ratio == 0.0) return; // empty, tube only, don't need to draw the rest of the roll
 	cube_t roll(c);
 	if (sz_ratio < 1.0) {roll.expand_by_xy(-hole_shrink*(1.0 - sz_ratio)*c.dx());} // partially used
@@ -1041,7 +1041,7 @@ void building_room_geom_t::add_vert_roll_to_material(room_object_t const &c, rge
 	mat.add_vcylin_to_verts(hole, ALPHA0,               player_held, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1, ndiv); // hole; should not shadow, but must be drawn first in this material
 	mat.add_vcylin_to_verts(roll, apply_light_color(c), player_held, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv, 0.0, swap_txy); // paper/plastic roll
 }
-void building_room_geom_t::add_tproll(room_object_t const &c) { // is_small=1
+void building_room_geom_t::add_tproll(room_object_t const &c) { // or paper towel roll; is_small=1
 	bool const is_paper_towel(c.has_extra());
 
 	if (c.was_expanded() || is_paper_towel) { // bare TP roll from a box or shelf rack, or paper towel roll
@@ -7533,7 +7533,7 @@ void building_room_geom_t::add_gym_weight(room_object_t const &c) {
 		hole.expand_by_xy(bar_shrink);
 		hole.expand_in_z(0.01*height); // to avoid Z-fighting
 		// draw the inside surface first
-		mat.add_vcylin_to_verts(hole, color, 0, 0, 1); // two sided (only need inside)
+		mat.add_vcylin_to_verts(hole, color, 0, 0, 2); // two_sided=2 (inside only)
 		// draw the hole as a transparent circle before the outer surface
 		mat.add_vcylin_to_verts(hole, ALPHA0, 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // draw top only, skip_sides=1
 		// draw the top + outer surface

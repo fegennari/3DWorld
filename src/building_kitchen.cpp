@@ -324,7 +324,7 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float &zv
 
 				if (min(c.dx(), c.dy()) > 2.5*ptradius) { // add if it fits
 					gen_xy_pos_for_round_obj(ptroll, c, ptradius, ptheight, 1.2*ptradius, rgen);
-					objs.emplace_back(ptroll, TYPE_TPROLL, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_HAS_EXTRA), tot_light_amt);
+					objs.emplace_back(ptroll, TYPE_TPROLL, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_HAS_EXTRA), tot_light_amt, SHAPE_CYLIN);
 					objs[cabinet_id].flags |= RO_FLAG_ADJ_TOP; // flag as having an object so that we don't add a book or bottle that could overlap it
 					++num_paper_towels;
 				}

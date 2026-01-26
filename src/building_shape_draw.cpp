@@ -70,7 +70,12 @@ void rgeom_mat_t::add_cube_to_verts_untextured(cube_t const &c, colorRGBA const 
 	} // for i
 }
 
-template<typename T> void add_inverted_triangles(T &verts, vector<unsigned> &indices, unsigned verts_start, unsigned ixs_start) {
+template<typename T> void add_inverted_triangles(T &verts, vector<unsigned> &indices, unsigned verts_start, unsigned ixs_start, bool replace_mode) {
+	if (replace_mode) { // replace existing verts with their inverse (inplace invert)
+		for (auto i = verts.begin()+verts_start; i != verts.end(); ++i) {i->invert_normal();}
+		std::reverse(indices.begin()+ixs_start, indices.end());
+		return;
+	}
 	unsigned const verts_end(verts.size()), numv(verts_end - verts_start);
 	verts.resize(verts_end + numv);
 
@@ -92,7 +97,7 @@ void apply_half_or_quarter(int half_or_quarter, unsigned &s_end) { // 0=full cir
 	else {assert(0);}
 }
 
-void rgeom_mat_t::add_ortho_cylin_to_verts(cube_t const &c, colorRGBA const &color, int dim, bool draw_bot, bool draw_top, bool two_sided,
+void rgeom_mat_t::add_ortho_cylin_to_verts(cube_t const &c, colorRGBA const &color, int dim, bool draw_bot, bool draw_top, int two_sided,
 	bool inv_tb, float rs_bot, float rs_top, float side_tscale, float end_tscale, bool skip_sides, unsigned ndiv, float side_tscale_add,
 	bool swap_txy, float len_tc2, float len_tc1, int half_or_quarter, int swap_end_txy)
 {
@@ -109,7 +114,7 @@ void rgeom_mat_t::add_ortho_cylin_to_verts(cube_t const &c, colorRGBA const &col
 	for (auto v = itri_verts.begin()+itri_verts_start_ix; v != itri_verts.end(); ++v) {v->swap_dims(2, dim);} // swap triangle vertices and normals
 	std::reverse(indices.begin()+ixs_start_ix, indices.end()); // fix winding order
 }
-void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, bool draw_bot, bool draw_top, bool two_sided,
+void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, bool draw_bot, bool draw_top, int two_sided,
 	bool inv_tb, float rs_bot, float rs_top, float side_tscale, float end_tscale, bool skip_sides, unsigned ndiv, float side_tscale_add,
 	bool swap_txy, float len_tc2, float len_tc1, int half_or_quarter, int swap_end_txy)
 {
@@ -124,11 +129,14 @@ void rgeom_mat_t::add_vcylin_to_verts_tscale(cube_t const &c, colorRGBA const &c
 	float const side_tscale(round_fp(max(1.0, tex.tscale_x*0.5*PI*(sz.x + sz.y)))), len_tscale(tex.tscale_y*sz.z), end_tscale(0.25*(tex.tscale_x*sz.x + tex.tscale_y*sz.y));
 	add_vcylin_to_verts(c, color, draw_bot, draw_top, 0, 0, 1.0, 1.0, side_tscale, end_tscale, 0, N_CYL_SIDES, 0.0, 0, len_tscale);
 }
+// two_sided: 0=outside only, 1=both inside and outside, 2=inside only
 void rgeom_mat_t::add_cylin_to_verts(point const &bot, point const &top, float bot_radius, float top_radius, colorRGBA const &color,
-	bool draw_bot, bool draw_top, bool two_sided, bool inv_tb, float side_tscale, float end_tscale, bool skip_sides, unsigned ndiv,
+	bool draw_bot, bool draw_top, int two_sided, bool inv_tb, float side_tscale, float end_tscale, bool skip_sides, unsigned ndiv,
 	float side_tscale_add, bool swap_txy, float len_tc2, float len_tc1, int half_or_quarter, int swap_end_txy)
 {
 	assert((!skip_sides) || draw_bot || draw_top); // must draw something
+	if (ndiv == 0) {ndiv = N_CYL_SIDES;} // set the default
+	bool const inside_only(two_sided == 2);
 	point const ce[2] = {bot, top};
 	float const ndiv_inv(1.0/ndiv), half_end_tscale(0.5*end_tscale);
 	vector3d v12;
@@ -176,7 +184,7 @@ void rgeom_mat_t::add_cylin_to_verts(point const &bot, point const &top, float b
 			for (unsigned j = 0; j < 6; ++j) {indices[iix++] = ix0 + ixs_off[j];}
 		}
 		// room object drawing uses back face culling and single sided lighting; to make lighting two sided, need to add verts with inverted normals/winding dirs
-		if (two_sided) {add_inverted_triangles(itri_verts, indices, itris_start, ixs_start);}
+		if (two_sided) {add_inverted_triangles(itri_verts, indices, itris_start, ixs_start, inside_only);} // inside + outside or just inside
 	}
 	// maybe add top and bottom end cap using triangles
 	unsigned const num_ends((unsigned)draw_top + (unsigned)draw_bot);
@@ -216,7 +224,7 @@ void rgeom_mat_t::add_cylin_to_verts(point const &bot, point const &top, float b
 		}
 	} // for bt
 	if (inv_tb) {std::reverse(indices.begin()+ixs_start, indices.end());} // reverse the order to swap triangle winding order
-	if (two_sided) {add_inverted_triangles(itri_verts, indices, itris_start, ixs_start);}
+	if (two_sided) {add_inverted_triangles(itri_verts, indices, itris_start, ixs_start, inside_only);} // inside + outside or just inside
 }
 
 void rgeom_mat_t::add_disk_to_verts(point const &pos, float radius, vector3d const &dir, colorRGBA const &color, bool swap_txy, bool inv_ts, bool inv_tt, unsigned ndiv) {
