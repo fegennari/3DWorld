@@ -227,25 +227,43 @@ void rgeom_mat_t::add_cylin_to_verts(point const &bot, point const &top, float b
 	if (two_sided) {add_inverted_triangles(itri_verts, indices, itris_start, ixs_start, inside_only);} // inside + outside or just inside
 }
 
-void rgeom_mat_t::add_disk_to_verts(point const &pos, float radius, vector3d const &dir, colorRGBA const &color, bool swap_txy, bool inv_ts, bool inv_tt, unsigned ndiv) {
-	assert(radius > 0.0);
+void rgeom_mat_t::add_disk_to_verts(point const &pos, float radius, vector3d const &dir, colorRGBA const &color,
+	bool swap_txy, bool inv_ts, bool inv_tt, unsigned ndiv, float r_inner)
+{
+	assert(radius > 0.0 && r_inner < radius);
+	if (ndiv == 0) {ndiv = N_CYL_SIDES;} // set the default
+	bool const disk(r_inner > 0.0);
 	color_wrapper const cw(color);
 	norm_comp const nc(dir);
 	unsigned const itris_start(itri_verts.size());
-	float const css(-1.0*TWO_PI/(float)ndiv), sin_ds(sin(css)), cos_ds(cos(css));
+	float const css(-1.0*TWO_PI/(float)ndiv), sin_ds(sin(css)), cos_ds(cos(css)), inner_tscale(r_inner/radius);
 	float sin_s(0.0), cos_s(1.0);
 	vector3d const v1(cross_product(dir, (fabs(dir.x) > fabs(dir.y) ? plus_y : plus_x)).get_norm()), v2(cross_product(dir, v1).get_norm());
-	itri_verts.emplace_back(pos, nc, 0.5, 0.5, cw);
+	if (!disk) {itri_verts.emplace_back(pos, nc, 0.5, 0.5, cw);} // center
 
-	for (unsigned i = 0; i < ndiv; ++i) {
-		float const s(sin_s), c(cos_s), ts(0.5*(1.0 + (swap_txy ? c : s))), tt(0.5*(1.0 + (swap_txy ? s : c)));
-		itri_verts.emplace_back((pos + (radius*s)*v1 + (radius*c)*v2), nc, (inv_ts ? 1.0-ts : ts), (inv_tt ? 1.0-tt : tt), cw);
-		indices.push_back(itris_start); // center
-		indices.push_back(itris_start + i + 1);
-		indices.push_back(itris_start + ((i+1)%ndiv) + 1);
+	for (unsigned i = 0; i < ndiv; ++i) { // triangle fan
+		float const s(sin_s), c(cos_s), sc(swap_txy ? c : s), cs(swap_txy ? s : c), ts(0.5*(1.0 + sc)), tt(0.5*(1.0 + cs));
+		itri_verts.emplace_back((pos + (radius*s)*v1 + (radius*c)*v2), nc, (inv_ts ? 1.0-ts : ts), (inv_tt ? 1.0-tt : tt), cw); // outer
+
+		if (disk) { // add two triangles
+			float const tsi(0.5f*(1.0f + inner_tscale*sc)), tti(0.5f*(1.0f + inner_tscale*cs));
+			itri_verts.emplace_back((pos + (r_inner*s)*v1 + (r_inner*c)*v2), nc, (inv_ts ? 1.0-tsi : tsi), (inv_tt ? 1.0-tti : tti), cw); // inner
+			unsigned const cur_o(itris_start + 2*i), nex_o(itris_start + 2*((i+1)%ndiv)), cur_i(cur_o + 1), nex_i(nex_o + 1);
+			indices.push_back(cur_o);
+			indices.push_back(nex_i);
+			indices.push_back(cur_i);
+			indices.push_back(cur_o);
+			indices.push_back(nex_o);
+			indices.push_back(nex_i);
+		}
+		else { // center, cur, next
+			indices.push_back(itris_start); // center
+			indices.push_back(itris_start + i + 1);
+			indices.push_back(itris_start + ((i+1)%ndiv) + 1);
+		}
 		sin_s = s*cos_ds + c*sin_ds;
 		cos_s = c*cos_ds - s*sin_ds;
-	}
+	} // for i
 }
 
 // Note: intended for untextured materials

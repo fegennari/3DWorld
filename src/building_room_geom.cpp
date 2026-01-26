@@ -1035,11 +1035,12 @@ void building_room_geom_t::add_vert_roll_to_material(room_object_t const &c, rge
 	if (sz_ratio == 0.0) return; // empty, tube only, don't need to draw the rest of the roll
 	cube_t roll(c);
 	if (sz_ratio < 1.0) {roll.expand_by_xy(-hole_shrink*(1.0 - sz_ratio)*c.dx());} // partially used
-	hole.expand_in_z(0.0025*c.dz()); // expand slightly to avoid z-fighting
 	bool const swap_txy(c.type == TYPE_TPROLL); // TP texture is horizontal rather than vertical
-	// draw top/bottom surface only to mask off the outer part of the roll when held by the player; when resting on an object, draw the top surface only
-	mat.add_vcylin_to_verts(hole, ALPHA0,               player_held, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1, ndiv); // hole; should not shadow, but must be drawn first in this material
-	mat.add_vcylin_to_verts(roll, apply_light_color(c), player_held, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv, 0.0, swap_txy); // paper/plastic roll
+	float const radius(0.5*roll.dx()), r_inner(0.5*hole.dx());
+	colorRGBA const color(apply_light_color(c));
+	mat.add_vcylin_to_verts(roll, color, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv, 0.0, swap_txy); // paper/plastic roll; sides only
+	mat.add_vert_disk_to_verts(cube_top_center(c), radius, 0, color, 0, 0, 0, 0, r_inner); // draw top
+	if (player_held) {mat.add_vert_disk_to_verts(cube_bot_center(c), radius, 1, color, 0, 0, 0, 0, r_inner);} // draw bottom
 }
 void building_room_geom_t::add_tproll(room_object_t const &c) { // or paper towel roll; is_small=1
 	bool const is_paper_towel(c.has_extra());
@@ -1095,17 +1096,7 @@ void building_room_geom_t::add_tproll(room_object_t const &c) { // or paper towe
 	}
 }
 void building_room_geom_t::add_tape(room_object_t const &c) { // is_small=1
-	rgeom_mat_t &mat(get_untextured_material(1, 0, 1));
-	
-	if (c.was_expanded()) {
-		// if tape was in a drawer, then the hole won't properly blend with the wood under it, making the floor visible; this applies to some boxes as well;
-		// draw a cardboard colored circle under the hole before drawing the roll to sort of cover this up (though it's not textured);
-		cube_t bot_fill(c);
-		bot_fill.expand_by_xy(-0.1*c.dx());
-		bot_fill.z2() -= 0.8*c.dz();
-		mat.add_vcylin_to_verts(bot_fill, apply_light_color(c, texture_color(get_box_tid())), 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // top side only
-	}
-	add_vert_roll_to_material(c, mat); // shadowed, small
+	add_vert_roll_to_material(c, get_untextured_material(1, 0, 1)); // shadowed, small
 }
 
 void building_room_geom_t::add_spraycan_to_material(room_object_t const &c, rgeom_mat_t &side_mat, rgeom_mat_t &cap_mat, bool draw_bottom) { // should this have specular?
@@ -7526,18 +7517,16 @@ void building_room_geom_t::add_gym_weight(room_object_t const &c) {
 	float const height(c.dz()), width(c.get_width()), length(c.get_length());
 	bool const hand_weight(c.item_flags == 1), texture_ends(!hand_weight), vertical(height < 0.5*width);
 	float const radius(0.25*((vertical ? length : height) + width)), bar_radius((hand_weight ? 0.4 : 0.12)*radius), bar_shrink(bar_radius - radius);
+	float r_inner(0.0); // for holes
 	cube_t weights[2];
 
 	if (vertical) { // single weight, vertical; probably not a hand weight, but we allow it
 		cube_t hole(c);
 		hole.expand_by_xy(bar_shrink);
-		hole.expand_in_z(0.01*height); // to avoid Z-fighting
-		// draw the inside surface first
-		mat.add_vcylin_to_verts(hole, color, 0, 0, 2); // two_sided=2 (inside only)
-		// draw the hole as a transparent circle before the outer surface
-		mat.add_vcylin_to_verts(hole, ALPHA0, 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // draw top only, skip_sides=1
-		// draw the top + outer surface
-		mat.add_vcylin_to_verts(c, color, 0, !texture_ends); // draw top only if ends are untextured
+		r_inner = 0.5*hole.dx();
+		mat.add_vcylin_to_verts(hole, color, 0, 0, 2); // inside surface; two_sided=2 (inside only)
+		mat.add_vert_disk_to_verts(cube_top_center(c), radius, 0, color, 0, 0, 0, 0, r_inner); // top surface
+		mat.add_vcylin_to_verts(c, color, 0, 0); // outer surface; sides only
 	}
 	else if (length < radius) { // single weight, horizontal
 		mat.add_ortho_cylin_to_verts(c, color, c.dim, 1, 1); // draw ends
@@ -7563,7 +7552,7 @@ void building_room_geom_t::add_gym_weight(room_object_t const &c) {
 		rgeom_mat_t &end_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/weight_tex.jpg"), 0.0, 1), 1, 0, 1)); // shadowed, small=1
 		colorRGBA const tex_color(texture_color(end_mat.tex.tid));
 		colorRGBA const end_color(apply_light_color(c, WHITE*(c.color.get_luminance()/tex_color.get_luminance()))); // match the sides color; won't quite match if > 1.0
-		if (vertical) {end_mat.add_vcylin_to_verts(c, end_color, 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1);} // draw top only; skip_sides=1
+		if (vertical) {end_mat.add_vert_disk_to_verts(cube_top_center(c), radius, 0, end_color, 0, 0, 0, 0, r_inner);}
 		else { // draw ends only
 			for (unsigned d = 0; d < 2; ++d) {
 				for (unsigned e = 0; e < 2; ++e) { // draw ends separately and invert the texture on the upper end with swap_end_txy=1 (x); words will be rotated for dim=1
