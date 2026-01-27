@@ -2539,7 +2539,7 @@ bool obj_with_roof_pavement_lights_t::proc_roof_sphere_coll(point &pos_, point c
 }
 
 gas_station_t::gas_station_t(cube_t const &c, bool dim_, bool dir_, bool edir, unsigned rand_val, unsigned pix, unsigned gix) :
-	obj_with_roof_pavement_lights_t(c, dim_, dir_), ent_dir(edir), plot_ix(pix), gs_ix(gix)
+	obj_with_roof_pavement_lights_t(c, dim_, dir_), reservable_t(edir, pix, gix)
 {
 	vector2d const sz(bcube.get_size_xy());
 	float const height(bcube.dz()), length(sz[!dim]), pavement_zval(bcube.z1() + 0.006*bcube.dz());
@@ -2686,40 +2686,44 @@ driveway_t gas_station_t::get_entrance_for_lane(unsigned lane_ix) const {
 		lane.d[dim][ side] = lane.d[dim][!side] + (side ? 1.0 : -1.0)*lane_width;
 	}
 	lane.d[!dim][!ent_dir] = pavement.d[!dim][!ent_dir] + (ent_dir ? 1.0 : -1.0)*2.0*car_width; // clip to exit lane
-	bool const which_pump((gs_ix + lane_ix) & 1); // random-ish, but consistent per gas station and lane
+	bool const which_pump((obj_ix + lane_ix) & 1); // random-ish, but consistent per gas station and lane
 	float stop_loc(pumps[which_pump ? 3 : 0].bcube.get_center_dim(!dim)); // select between opposite corner pumps
 	stop_loc += (ent_dir ? -1.0 : 1.0)*0.2*car_size.x; // shift up so that the pump is near the rear of the car
-	return driveway_t(lane, !dim, ent_dir, plot_ix, -1, gs_ix, stop_loc); // parking_lot_ix=-1
+	return driveway_t(lane, !dim, ent_dir, plot_ix, -1, obj_ix, stop_loc); // parking_lot_ix=-1
 }
 driveway_t gas_station_t::get_exit_lane() const {
 	float const car_width(city_params.get_nom_car_size().y);
 	cube_t lane(pavement);
 	lane.d[!dim][ent_dir] = pavement.d[!dim][!ent_dir] + (ent_dir ? 1.0 : -1.0)*2.0*car_width; // clip to exit lane
-	return driveway_t(lane, dim, dir, plot_ix, -1, gs_ix); // parking_lot_ix=-1
+	return driveway_t(lane, dim, dir, plot_ix, -1, obj_ix); // parking_lot_ix=-1
 }
 driveway_t gas_station_t::get_driveway_for_lane(unsigned lane_ix) const {
 	return ((lane_ix == num_lanes) ? get_exit_lane() : get_entrance_for_lane(lane_ix)); // lane_ix=num_lanes is the exit lane
 }
 int gas_station_t::get_avail_lane(point &entrance_pos, rand_gen_t &rgen) const {
 	bool const skip_lane_closest_to_road(city_params.num_peds > 0); // pedestrians stand in this lane when waiting at the crosswalk, so skip it if they're enabled
+	int const skip_lane_ix(skip_lane_closest_to_road ? int(dir ? num_lanes-1 : 0) : -1);
+	int const lix(reservable_t::get_avail_lane(rgen, skip_lane_ix));
+	if (lix >= 0) {entrance_pos = get_entrance_for_lane(lix).get_cube_center();}
+	return lix;
+}
+
+// these are const even though they modify reserved lane flags, as that doesn't count as modifying the building (and is required for the car/city API)
+int reservable_t::get_avail_lane(rand_gen_t &rgen, int skip_lane_ix) const {
 	unsigned const first_lane_ix(rgen.rand()); // randomize lane selection
-	
+
 	for (unsigned i = 0; i < num_lanes; ++i) {
 		unsigned const lix((i + first_lane_ix) % num_lanes);
-		if (lane_reserved[lix]) continue;
-		if (skip_lane_closest_to_road && lix == unsigned(dir)) continue;
-		entrance_pos = get_entrance_for_lane(lix).get_cube_center();
-		return lix;
+		if (!lane_reserved[lix] && int(lix) != skip_lane_ix) return lix;
 	}
 	return -1; // no lanes available
 }
-// these are const even though they modify reserved lane flags, as that doesn't count as modifying the gas station (and is required for the car/city API)
-void gas_station_t::reserve_lane(unsigned lane_ix) const { // lane_ix is the lane we want to reserve returned by get_avail_lane()
+void reservable_t::reserve_lane(unsigned lane_ix) const { // lane_ix is the lane we want to reserve returned by get_avail_lane()
 	assert(lane_ix < num_lanes);
 	assert(!lane_reserved[lane_ix]); // not reserved by someone else
 	lane_reserved[lane_ix] = 1;
 }
-bool gas_station_t::reserve_output_lane(unsigned cur_lane_ix) const { // cur_lane_ix is the input lane we're currently in
+bool reservable_t::reserve_output_lane(unsigned cur_lane_ix) const { // cur_lane_ix is the input lane we're currently in
 	if (out_reserved) return 0; // someone else has this lane reserved - wait
 	assert(cur_lane_ix < num_lanes);
 	assert(lane_reserved[cur_lane_ix]); // must be in a valid input lane
@@ -2727,18 +2731,18 @@ bool gas_station_t::reserve_output_lane(unsigned cur_lane_ix) const { // cur_lan
 	out_reserved = 1;
 	return 1;
 }
-void gas_station_t::leave_output_lane() const {
+void reservable_t::leave_output_lane() const {
 	assert(out_reserved);
 	out_reserved = 0;
 }
 
 // city buildings (car wash, service center, convenience store, etc.)
 
-city_bldg_t::city_bldg_t(cube_t const &c, bool dim_, bool dir_, uint8_t btype_, rand_gen_t &rgen) :
-	obj_with_roof_pavement_lights_t(c, dim_, dir_), btype(btype_)
+city_bldg_t::city_bldg_t(cube_t const &c, bool dim_, bool dir_, bool edir, unsigned pix, unsigned bix, uint8_t btype_, rand_gen_t &rgen) :
+	obj_with_roof_pavement_lights_t(c, dim_, dir_), btype(btype_), reservable_t(edir, pix, bix)
 {
 	float const height(bcube.dz()), width(get_width()), depth(get_depth()), wall_thick(0.04*depth);
-	float const bay_spacing((width - wall_thick)/num_bays), dsign(dir ? 1.0 : -1.0);
+	float const bay_spacing((width - wall_thick)/num_lanes), dsign(dir ? 1.0 : -1.0);
 	has_back_wall = (btype == CITY_BLDG_SERVICE);
 	sloped_roof   = (btype == CITY_BLDG_CARWASH || btype == CITY_BLDG_SERVICE); // both
 	bldg = bcube;
@@ -2757,10 +2761,10 @@ city_bldg_t::city_bldg_t(cube_t const &c, bool dim_, bool dir_, uint8_t btype_, 
 		walls.push_back(back_wall);
 	}
 	// add side walls and bays
-	for (unsigned n = 0; n <= num_bays; ++n) {
+	for (unsigned n = 0; n <= num_lanes; ++n) {
 		walls.push_back(side_wall);
 
-		if (n < num_bays) {
+		if (n < num_lanes) {
 			bays[n] = side_wall;
 			bays[n].d[!dim][0] = side_wall.d[!dim][1]; // left side of bay at right side of left wall
 			side_wall.translate_dim(!dim, bay_spacing);
@@ -2773,7 +2777,7 @@ city_bldg_t::city_bldg_t(cube_t const &c, bool dim_, bool dir_, uint8_t btype_, 
 	set_cube_zvals(light, roof.z1()-light_thick, roof.z1());
 	set_wall_width(light, bldg.get_center_dim(dim), light_radius, dim);
 
-	for (unsigned n = 0; n < num_bays; ++n) {
+	for (unsigned n = 0; n < num_lanes; ++n) {
 		set_wall_width(light, (bldg.d[!dim][0] + 0.5*wall_thick + (n + 0.5)*bay_spacing), light_radius, !dim);
 		lights[n] = light;
 		light_clip_cubes[n] = bays[n];
@@ -2839,7 +2843,7 @@ void city_bldg_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_
 	if (!shadow_only && !bcube.closest_dist_less_than(dstate.camera_bs, 0.4*dmax)) return; // no pavements or lights (pavement has Z-fighting problems anyway)
 	if (!shadow_only) {draw_road_pavement(dstate, qbds);} // draw pavement surface
 	if (!shadow_only && !bcube.closest_dist_less_than(dstate.camera_bs, 0.2*dmax)) return; // no lights
-	if (!shadow_only) {draw_lights(dstate, qbds, lights, num_bays);} // draw lights
+	if (!shadow_only) {draw_lights(dstate, qbds, lights, num_lanes);} // draw lights
 }
 bool city_bldg_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
 	if (sloped_roof && bcube.contains_pt_xy(pos_ - xlate)) { // handle sloped roof coll; approximate
@@ -2859,7 +2863,31 @@ bool city_bldg_t::proc_sphere_coll(point &pos_, point const &p_last, float radiu
 	return ret;
 }
 void city_bldg_t::add_night_time_lights(vector3d const &xlate, cube_t &lights_bcube) const {
-	obj_with_roof_pavement_lights_t::add_night_time_lights(xlate, lights_bcube, 0.6, lights, cached_smaps, light_clip_cubes, num_bays, 0); // car_is_using=0
+	obj_with_roof_pavement_lights_t::add_night_time_lights(xlate, lights_bcube, 0.6, lights, cached_smaps, light_clip_cubes, num_lanes, 0); // car_is_using=0
+}
+driveway_t city_bldg_t::get_entrance_for_lane(unsigned lane_ix) const {
+	assert(lane_ix < num_lanes);
+	assert(has_exit()); // can't enter if there's no exit; also uses the exit lane to get road pos
+	vector3d const car_size(city_params.get_nom_car_size());
+	float const car_width(car_size.y), lane_width(1.5*car_width), front_face(bldg.d[dim][dir]);
+	cube_t lane(exit_driveway);
+	lane.d[dim][!dir] = front_face; // abuts building
+	lane.d[dim][ dir] = front_face + (dir ? 1.0 : -1.0)*lane_width;
+	float const turn_loc(bays[lane_ix].get_center_dim(!dim));
+	return driveway_t(lane, !dim, ent_dir, plot_ix, -1, obj_ix, turn_loc); // parking_lot_ix=-1
+}
+driveway_t city_bldg_t::get_exit_lane() const {
+	return driveway_t(exit_driveway, !dim, ent_dir, plot_ix, -1, obj_ix); // parking_lot_ix=-1
+}
+driveway_t city_bldg_t::get_driveway_for_lane(unsigned lane_ix) const {
+	return ((lane_ix == num_lanes) ? get_exit_lane() : get_entrance_for_lane(lane_ix)); // lane_ix=num_lanes is the exit lane
+}
+// Note: there's a single shared input lane, but we don't need to reserve it because cars can't stop there,
+// and they can only enter from the input road single file, which means they can never intersect
+int city_bldg_t::get_avail_lane(point &entrance_pos, rand_gen_t &rgen) const {
+	int const lix(reservable_t::get_avail_lane(rgen));
+	if (lix >= 0) {entrance_pos = get_entrance_for_lane(lix).get_cube_center();}
+	return lix;
 }
 
 // birds/pigeons

@@ -100,7 +100,7 @@ bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, unsigne
 		cw.d[!dim][!ent_dir] += (ent_dir ? 1.0 : -1.0)*0.25*len_delta;
 	}
 	uint8_t const btype(rgen.rand_bool() ? CITY_BLDG_CARWASH : CITY_BLDG_SERVICE);
-	city_bldg_t building(cw, dim, dir, btype, rgen);
+	city_bldg_t building(cw, dim, dir, ent_dir, plot_ix, bldgs.size(), btype, rgen);
 
 	if (!has_bcube_int_xy(building.bcube, bcubes, pad_dist)) { // not too close to a building
 		bldg_groups.add_obj(building, bldgs);
@@ -120,21 +120,22 @@ bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, unsigne
 			driveway.d[ dim][!dir] = building_far_edge - dscale*2.0*nom_car_size.y; // set width
 
 			if (!has_bcube_int_xy(driveway, bcubes, 0.5*pad_dist)) { // not too close to a building
-				driveways.emplace_back(driveway, !dim, ent_dir, plot_ix);
+				driveways.emplace_back(driveway, !dim, ent_dir, plot_ix); // exit driveway only; no gsix or stop_loc
+				bldgs.back().exit_driveway = driveway;
 				bcubes.push_back(driveway);
 			}
 		}
-		if (add_cars) { // add some cars in the building
+		if (add_cars && building.btype == CITY_BLDG_SERVICE) { // add some cars to service stations since they don't use dynamic cars
 			car_t car;
 			setup_parked_car(car, city_id, plot_ix);
 			car.dim = dim;
 
-			for (unsigned n = 0; n < building.num_bays; ++n) {
+			for (unsigned n = 0; n < building.num_lanes; ++n) {
 				if (rgen.rand_bool()) continue; // 50% chance of a car
 				car.dir = (building.has_back_wall ? (dir ^ rgen.rand_bool()) : !dir); // 50% chance of pulled in or backed in if back wall, otherwise always pulled in
 				car.set_bcube(cube_bot_center(building.bays[n]), nom_car_size);
 				cars.push_back(car);
-				building.bay_in_use[n] = 1;
+				building.reserve_lane(n); // will never be un-reserved
 			}
 		}
 		add_cube_to_colliders_and_blockers(cw, colliders, bcubes);
@@ -2998,6 +2999,38 @@ bool city_obj_placer_t::reserve_gas_station_exit_lane(car_t const &car) const {
 void city_obj_placer_t::leave_gas_station(unsigned gsix) const {
 	assert(gsix < gstations.size());
 	gstations[gsix].leave_output_lane();
+}
+
+gs_reservation_t city_obj_placer_t::reserve_nearest_car_wash_lane(point const &pos, rand_gen_t &rgen, float max_dist) const {
+	gs_reservation_t ret;
+	float dmin_sq(max_dist*max_dist); // Note: max_dist=0.0 is unlimited
+
+	for (unsigned i = 0; i < bldgs.size(); ++i) {
+		city_bldg_t const &b(bldgs[i]);
+		if (b.btype != CITY_BLDG_CARWASH || !b.has_exit()) continue;
+		point cand_pos; // should the lane be the one closest to pos?
+		int const lane_ix(b.get_avail_lane(cand_pos, rgen)); // Note: can't reserve this lane until we have the closest gas station
+		if (lane_ix < 0) continue; // no lanes available
+		float const dsq(p2p_dist_xy_sq(pos, cand_pos)); // should we take into account the current direction to avoid backtracking?
+		if (dmin_sq > 0.0 && dmin_sq < dsq) continue; // not closer
+		ret     = gs_reservation_t(i, lane_ix, point(cand_pos.x, cand_pos.y, pos.z));
+		dmin_sq = dsq;
+	} // for i
+	if (ret.valid) {bldgs[ret.gs_ix].reserve_lane(ret.lane_ix);}
+	return ret;
+}
+driveway_t city_obj_placer_t::get_car_wash_driveway(car_t const &car) const {
+	unsigned const bix((car.dest_cwash >= 0) ? (unsigned)car.dest_cwash : car.cur_seg); // use cur_seg if dest_cwash isn't set
+	assert(bix < bldgs.size());
+	return bldgs[bix].get_driveway_for_lane(car.dest_cw_lane);
+}
+bool city_obj_placer_t::reserve_car_wash_exit_lane(car_t const &car) const {
+	assert(car.dest_cwash >= 0 && car.dest_cwash < (short)bldgs.size());
+	return bldgs[car.dest_cwash].reserve_output_lane(car.dest_cw_lane);
+}
+void city_obj_placer_t::leave_car_wash(unsigned bix) const {
+	assert(bix < bldgs.size());
+	bldgs[bix].leave_output_lane();
 }
 
 bool city_obj_placer_t::update_depth_if_underwater(point const &pos, float &depth) const {

@@ -119,10 +119,11 @@ struct road_gen_base_t {
 
 struct car_base_t { // the part needed for the pedestrian interface (size = 48); could use oriented_cube_t
 	cube_t bcube;
-	bool dim=0, dir=0, stopped_at_light=0, stopped_for_ssign=0, need_gas=0; // Note: stopped_at_light also applies to stopped at stop sign
+	bool dim=0, dir=0, stopped_at_light=0, stopped_for_ssign=0, need_gas=0, need_wash=0; // Note: stopped_at_light also applies to stopped at stop sign
 	uint8_t cur_road_type=TYPE_RSEG, turn_dir=TURN_NONE;
 	uint16_t cur_city=0, cur_road=0, cur_seg=0;
-	short dest_driveway=-1, dest_gstation=-1; // -1 is unset
+	short dest_driveway=-1; // -1 is unset
+	int8_t dest_gstation=-1, dest_cwash=-1; // -1 is unset
 	float max_speed=0.0, cur_speed=0.0;
 
 	point get_center() const {return bcube.get_cube_center();}
@@ -145,8 +146,8 @@ struct car_base_t { // the part needed for the pedestrian interface (size = 48);
 struct car_t : public car_base_t, public waiting_obj_t { // size = 136
 	bool is_truck=0, is_police=0, is_ambulance=0, is_emergency=0, entering_city=0, in_tunnel=0, dest_valid=0, destroyed=0;
 	bool in_reverse=0, engine_running=0, is_braking=0, in_parking_lot=0;
-	uint8_t color_id=0, front_car_turn_dir=TURN_UNSPEC, model_id=0, headlight_color=0;
-	uint16_t dest_city=0, dest_isec=0, dest_gs_lane=0;
+	uint8_t color_id=0, front_car_turn_dir=TURN_UNSPEC, model_id=0, headlight_color=0, dest_gs_lane=0, dest_cw_lane=0;
+	uint16_t dest_city=0, dest_isec=0;
 	float height=0.0, dz=0.0, rot_z=0.0, turn_val=0.0, waiting_pos=0.0, wake_time=0.0, fuel_amt=0.0;
 	vector2d park_space_cent; // or gas station pos
 	cube_t prev_bcube;
@@ -155,7 +156,9 @@ struct car_t : public car_base_t, public waiting_obj_t { // size = 136
 	void set_bcube(point const &center, vector3d const &sz);
 	bool is_valid   () const {return !bcube.is_all_zeros();}
 	bool is_sleeping() const {return (wake_time > 0.0);}
+	bool has_dest_dw_gs_cw() const {return (dest_driveway >= 0 || dest_gstation >= 0 || dest_cwash >= 0);}
 	bool in_gs_exit_lane() const;
+	bool in_cw_exit_lane() const;
 	float get_max_lookahead_dist() const;
 	bool headlights_on() const;
 	float get_turn_rot_z(float dist_to_turn) const;

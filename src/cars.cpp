@@ -30,6 +30,7 @@ float get_clamped_fticks() {return min(fticks, 4.0f);} // clamp to 100ms
 float car_t::get_max_lookahead_dist() const {return (get_length() + city_params.road_width);} // extend one car length + one road width in front
 float car_t::get_turn_rot_z(float dist_to_turn) const {return (1.0 - CLIP_TO_01(4.0f*fabs(dist_to_turn)/city_params.road_width));}
 bool car_t::in_gs_exit_lane() const {return (dest_gs_lane == gas_station_t::num_lanes);}
+bool car_t::in_cw_exit_lane() const {return (dest_cw_lane == city_bldg_t  ::num_lanes);}
 
 void car_t::set_bcube(point const &center, vector3d const &sz) {
 	height = sz.z;
@@ -305,7 +306,10 @@ bool car_t::run_enter_driveway_logic(vector<car_t> const &cars, driveway_t const
 		// change to being in driveway even though we may not be onto the driveway yet (especially when turning left)
 		// leave cur_road unchanged until we pull into the driveway so that cars will stop if we're still in the road (possibly waiting for a ped to move)
 		cur_road_type = TYPE_DRIVEWAY;
-		cur_seg       = ((dest_driveway >= 0) ? dest_driveway : dest_gstation); // store driveway or gas station index in cur_seg
+		if      (dest_driveway >= 0) {cur_seg = dest_driveway;} // store driveway or gas station/car wash index in cur_seg
+		else if (dest_gstation >= 0) {cur_seg = dest_gstation;}
+		else if (dest_cwash    >= 0) {cur_seg = dest_cwash   ;}
+		else                         {assert(0);}
 	}
 	return 1;
 }
@@ -330,11 +334,11 @@ void car_t::pull_into_driveway(driveway_t const &driveway, rand_gen_t &rgen) {
 		set_target_speed(0.4); // 40% of max speed - reset in case we stopped due to a pedestrian in the way
 	}
 	else { // not a parking lot
-		if (driveway.is_gas_station()) { // gas station entrance
+		if (driveway.is_gas_station()) { // gas station or car wash entrance
 			// reset speed in case we stopped due to a pedestrian in the way; this may run someone over, but that's better than getting stuck
 			set_target_speed(0.4);
-			if (!need_gas) return; // continue moving until it's time to turn
-			stop_pos = driveway.stop_loc; // not yet stopped, continue to gas pump
+			if (!need_gas && !need_wash) return; // continue moving until it's time to turn
+			stop_pos = driveway.stop_loc; // not yet stopped, continue to gas pump or wash bay
 		}
 		else { // house driveway; stop in the center
 			stop_pos = driveway.get_center_dim(driveway.dim);
@@ -353,12 +357,14 @@ void car_t::pull_into_driveway(driveway_t const &driveway, rand_gen_t &rgen) {
 			dest_valid      = engine_running = 0;
 			dest_driveway   = -1;
 			park_space_cent = vector2d();
+			if (dest_cwash >= 0) {need_wash = 0;}
 
 			if (dest_gstation >= 0) {
 				need_gas = 0; // we now have our gas
 				fuel_amt = 1.0;
 			}
-			sleep(rgen, ((dest_gstation >= 0) ? 30.0 : 60.0)); // sleep for 60-120s rather than permanently parking; 30-60s for gas stations
+			// sleep for 60-120s rather than permanently parking; 30-60s for gas stations and car washes
+			sleep(rgen, ((dest_gstation >= 0 || dest_cwash >= 0) ? 30.0 : 60.0));
 		}
 	}
 	else if (driveway.contains_cube_xy(bcube)) {cur_road = (unsigned short)driveway.plot_ix;} // store plot_ix in road field; is this actually needed?
@@ -396,7 +402,7 @@ bool car_t::exit_driveway_to_road(vector<car_t> const &cars, driveway_t const &d
 		if (in_reverse) {decelerate_fast();} // pause before going forward
 		driveway.in_use = 0; // Note: in_use flag is mutable
 		in_reverse      = in_parking_lot =  0;
-		dest_driveway   = dest_gstation  = -1;
+		dest_driveway   = dest_gstation  = dest_cwash = -1;
 		return 1; // driveway exit complete, continue forward
 	}
 	set_target_speed(in_reverse ? 0.25 : 0.35); // 25-35% of max speed
@@ -1713,7 +1719,7 @@ void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlig
 						city_bcube.z2() += 10.0*city_params.road_width; // increase height to make it more easily visible
 						draw_cube_verts_only(city_bcube + xlate);
 					}
-					if (sel_car->dest_driveway >= 0 || sel_car->dest_gstation >= 0) {
+					if (sel_car->has_dest_dw_gs_cw()) {
 						s.set_cur_color(CYAN);
 						cube_t dw_bcube(get_car_dest_bcube(*sel_car, 0)); // driveway or gas station lane
 						dw_bcube.z2() += 4.0*city_params.road_width; // increase height to make it more easily visible

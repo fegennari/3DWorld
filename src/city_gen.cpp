@@ -1885,17 +1885,16 @@ private:
 		}
 		return -1; // road not found - error?
 	}
+	bool dest_driveway_in_this_city(car_t const &car) const {return (car.has_dest_dw_gs_cw() && car.dest_city == city_id);}
 
-	bool dest_driveway_in_this_city(car_t const &car) const {
-		return ((car.dest_driveway >= 0 || car.dest_gstation >= 0) && car.dest_city == city_id);
-	}
 	driveway_t const &get_driveway(unsigned dix) const {
 		assert(dix < city_obj_placer.driveways.size());
 		return city_obj_placer.driveways[dix];
 	}
-	driveway_t get_driveway_or_gs_entrance(car_t const &car) const {
+	driveway_t get_driveway_or_gs_cw_entrance(car_t const &car) const {
 		if (car.dest_driveway >= 0) return get_driveway(car.dest_driveway); // entering driveway
 		if (car.dest_gstation >= 0 || car.in_gs_exit_lane()) return city_obj_placer.get_gas_station_driveway(car); // entering or exiting gas station
+		if (car.dest_cwash    >= 0 || car.in_cw_exit_lane()) return city_obj_placer.get_car_wash_driveway   (car); // entering or exiting car wash
 		return get_driveway(car.cur_seg); // exiting driveway
 	}
 	cube_t get_driveway_cube_inc_parking_lot(driveway_t const &driveway) const { // Note: currently unused
@@ -1912,12 +1911,14 @@ private:
 			driveway_t driveway(city_obj_placer.get_gas_station_driveway(car));
 			
 			if (!car.need_gas) { // done at the pump, continue to the exit
-				if (car.is_stopped() && !car.in_gs_exit_lane()) { // waiting to leave the pump
+				bool const in_exit_lane(car.in_gs_exit_lane());
+
+				if (car.is_stopped() && !in_exit_lane) { // waiting to leave the pump
 					if (!city_obj_placer.reserve_gas_station_exit_lane(car)) return 1; // wait to exit
 				}
-				if (car.in_gs_exit_lane() && car.dim == driveway.dim) return car_leave_driveway(car, cars, driveway, rgen); // fully in exit lane
+				if (in_exit_lane && car.dim == driveway.dim) {return car_leave_driveway(car, cars, driveway, rgen);} // fully in exit lane
 
-				if (car.turn_dir == TURN_NONE && !car.in_gs_exit_lane()) { // time to turn into exit lane
+				if (car.turn_dir == TURN_NONE && !in_exit_lane) { // time to turn into exit lane
 					car.dest_gs_lane = gas_station_t::num_lanes; // next lane is the gas station exit
 					driveway         = city_obj_placer.get_gas_station_driveway(car); // update driveway from entrance to exit
 					car.turn_dir     = ((car.dim ^ car.dir ^ driveway.dir) ? (uint8_t)TURN_RIGHT : (uint8_t)TURN_LEFT);
@@ -1929,6 +1930,33 @@ private:
 				}
 				car.set_target_speed(0.30); // 30% of max speed
 			}
+			car.pull_into_driveway(driveway, rgen); // may be before or after stopping
+			return 1; // no other logic to run here
+		}
+		if (car.dest_cwash >= 0) { // car wash
+			driveway_t driveway(city_obj_placer.get_car_wash_driveway(car));
+
+			if (!car.need_wash) { // done with the wash, continue to the exit
+				bool const in_exit_lane(car.in_cw_exit_lane());
+
+				if (car.is_stopped() && !in_exit_lane) { // waiting to leave the pump
+					if (!city_obj_placer.reserve_car_wash_exit_lane(car)) return 1; // wait to exit
+				}
+				if (in_exit_lane && car.dim == driveway.dim) {return car_leave_driveway(car, cars, driveway, rgen);} // fully in exit lane
+
+				if (car.turn_dir == TURN_NONE && !in_exit_lane) { // time to turn into exit lane
+					car.dest_cw_lane = city_bldg_t::num_lanes; // next lane is the gas station exit
+					driveway         = city_obj_placer.get_car_wash_driveway(car); // update driveway from entrance to exit
+					car.turn_dir     = ((car.dim ^ car.dir ^ driveway.dir) ? (uint8_t)TURN_RIGHT : (uint8_t)TURN_LEFT);
+					car.begin_turn(); // capture car centerline before the turn
+				}
+				if (car.maybe_apply_turn(driveway.get_centerline(), 1)) { // turn into exit lane; for_driveway=1
+					car.set_target_speed(0.25); // 25% of max speed when turning
+					return 1; // continue to turn
+				}
+				car.set_target_speed(0.30); // 30% of max speed
+			}
+			// TODO: extra turn from driveway into bay
 			car.pull_into_driveway(driveway, rgen); // may be before or after stopping
 			return 1; // no other logic to run here
 		}
@@ -1947,8 +1975,9 @@ private:
 		bool in_driveway(driveway.contains_cube_xy(car.bcube));
 		// for cars in parking lots, we only need to check the bounds of the car inside the driveway dim, since parking spaces are to the side
 		in_driveway |= (driveway.is_parking_lot() && car.bcube.d[ddim][0] >= driveway.d[ddim][0] && car.bcube.d[ddim][1] <= driveway.d[ddim][1]);
-		// if exiting the gas station lane nearest the road, we may not have had a chance to turn yet, so do it now
-		in_driveway |= (car.dest_gstation >= 0 && car.in_gs_exit_lane() && car.turn_dir == TURN_NONE && driveway.intersects_xy(car.bcube));
+		// if exiting the gas station lane nearest the road or a car wash, we may not have had a chance to turn yet, so do it now
+		in_driveway |= (((car.dest_gstation >= 0 && car.in_gs_exit_lane()) || (car.dest_cwash >= 0 && car.in_cw_exit_lane())) &&
+			car.turn_dir == TURN_NONE && driveway.intersects_xy(car.bcube));
 		
 		if (in_driveway) { // car still in driveway or parking lot, continue to pull/back out
 			car.back_or_pull_out_of_driveway(driveway);
@@ -1957,15 +1986,17 @@ private:
 		int const road_ix(find_road_for_car(car, !ddim));
 
 		if (road_ix < 0) {
-			cout << TXT(car.dest_driveway) << TXT(car.dest_gstation) << TXT(car.dest_gs_lane) << TXT(car.need_gas) << endl;
+			cout << TXT(car.dest_driveway) << TXT(car.dest_gstation) << TXT(car.dest_cwash) << TXT(car.dest_gs_lane)
+				 << TXT(car.dest_cw_lane) << TXT(car.need_gas) << TXT(car.need_wash) << endl;
 			cerr << car.str() << TXT(driveway.str()) << endl;
 			assert(0);
 		}
 		float const road_center(roads[road_ix].get_center_dim(car.dim));
 		float const centerline(road_center + (driveway.dir ? -1.0 : 1.0)*get_car_lane_offset());
-		int const gsix(car.dest_gstation); // cache because exit_driveway_to_road() will reset it
+		int const gsix(car.dest_gstation), cwix(car.dest_cwash); // cache because exit_driveway_to_road() will reset it
 		if (!car.exit_driveway_to_road(cars, driveway, centerline, road_ix, rgen)) return 1; // still exiting driveway
 		if (gsix >= 0) {city_obj_placer.leave_gas_station(gsix);}
+		if (cwix >= 0) {city_obj_placer.leave_car_wash   (cwix);}
 		find_and_set_car_road_and_seg(car);
 		return 0; // done, continue with car logic in update_car() below
 	}
@@ -1979,7 +2010,7 @@ public:
 			if (run_car_in_driveway_logic(car, cars, rgen)) return;
 		}
 		if (dest_driveway_in_this_city(car) && !car.in_isect() && !car.stopped_at_light) { // turning into an intersection is not the same as a driveway
-			if (car.run_enter_driveway_logic(cars, get_driveway_or_gs_entrance(car))) return;
+			if (car.run_enter_driveway_logic(cars, get_driveway_or_gs_cw_entrance(car))) return;
 		}
 		if (car.in_isect()) {
 			road_isec_t const &isec(get_car_isec(car));
@@ -2030,7 +2061,7 @@ public:
 		}
 		if (city_params.cars_use_driveways && car.turn_dir != TURN_NONE && !car.in_isect()) {
 			assert(dest_driveway_in_this_city(car));
-			cout << "Car missed driveway turn: " << car.str() << TXT(car.prev_bcube.str()) << TXT(get_driveway_or_gs_entrance(car).str()) << endl;
+			cout << "Car missed driveway turn: " << car.str() << TXT(car.prev_bcube.str()) << TXT(get_driveway_or_gs_cw_entrance(car).str()) << endl;
 			car.turn_dir = TURN_NONE; // hack to handle misbehaving cars turning into driveways (maybe missed the turn because it was blocked?)
 		}
 		if (car.turn_dir != TURN_NONE) {
@@ -2079,7 +2110,7 @@ public:
 						
 					if (is_car_at_dest_isec(car)) { // this intersection is our destination
 						if (dest_driveway_in_this_city(car)) { // drive toward the dest driveway
-							driveway_t const driveway(get_driveway_or_gs_entrance(car));
+							driveway_t const driveway(get_driveway_or_gs_cw_entrance(car));
 							point dest_pos(driveway.get_cube_center());
 							dest_pos[driveway.dim] = driveway.get_edge_at_road();
 							dest_dir = dest_pos - isec.get_cube_center();
@@ -2154,7 +2185,7 @@ public:
 		return get_car_dest_isec(car, road_networks).get_cube_center();
 	}
 	cube_t get_car_dest(car_t const &car, vector<road_network_t> const &road_networks, bool isec_only) const { // isec or driveway
-		if (!isec_only && dest_driveway_in_this_city(car)) {return get_driveway_or_gs_entrance(car);} // driveway or gas station in this city
+		if (!isec_only && dest_driveway_in_this_city(car)) {return get_driveway_or_gs_cw_entrance(car);} // driveway or gas station in this city
 		return get_car_dest_isec(car, road_networks); // else assume we want andest intersection
 	}
 	int get_parking_lot_ix_for_car(car_t const &car) const {
@@ -2241,11 +2272,20 @@ private:
 		find_isec_to_enter_driveway(car, city_obj_placer.get_gas_station_driveway(car));
 		return 1;
 	}
+	bool select_avail_car_wash_lane(car_t &car, rand_gen_t &rgen) const {
+		float const max_dist(0.5*max(bcube.dx(), bcube.dy())); // half the city length
+		gs_reservation_t const dest(city_obj_placer.reserve_nearest_car_wash_lane(car.get_center(), rgen, max_dist));
+		if (!dest.valid) return 0;
+		car.dest_cwash    = dest.gs_ix; // what about dest.entrance_pos?
+		car.dest_cw_lane  = dest.lane_ix;
+		car.need_wash     = 1; // flag so that we know we haven't stopped yet
+		find_isec_to_enter_driveway(car, city_obj_placer.get_car_wash_driveway(car));
+		return 1;
+	}
 public:
 	bool choose_new_car_dest(car_t &car, rand_gen_t &rgen) const {
-		car.dest_driveway = -1; // reset; if nonzero, that may mean this driveway is never used after this point
-		car.dest_gstation = -1;
-		car.dest_gs_lane  =  0;
+		car.dest_driveway = car.dest_gstation = car.dest_cwash = -1; // reset; if nonzero, that may mean this driveway is never used after this point
+		car.dest_gs_lane  = car.dest_cw_lane  = 0;
 		// select a gas station if low on fuel and a slot is open; fuel to be added later; or select if nearby
 		if (city_params.cars_use_driveways && car.fuel_amt < 0.2 && select_avail_gas_station_lane(car, rgen)) return 1;
 		// select a driveway if one is available and we're in the dest city; otherwise, select an intersection
@@ -2261,7 +2301,7 @@ public:
 		if (!dest_driveway_in_this_city(car)) {return get_isec_by_ix(car.dest_isec).contains_pt_xy(car.get_center());} // dest isec
 		cube_t car_bcube(car.bcube);
 		car_bcube.d[car.dim][!car.dir] -= (car.dir ? 1.0 : -1.0)*0.2*car.get_length(); // add some space behind the car
-		return get_driveway_or_gs_entrance(car).contains_cube_xy(car_bcube);
+		return get_driveway_or_gs_cw_entrance(car).contains_cube_xy(car_bcube);
 	}
 	road_isec_t const &get_isec_by_ix(unsigned ix) const {
 		for (unsigned n = 0; n < 3; ++n) {

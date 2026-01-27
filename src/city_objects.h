@@ -448,9 +448,6 @@ struct parking_solar_t : public oriented_city_obj_t {
 	vect_cube_t const &get_legs() const;
 };
 
-struct gas_pump_t : public multi_model_city_obj_t {
-	gas_pump_t(point const &pos_, float height, bool dim_, bool dir_, unsigned model_sel) : multi_model_city_obj_t(pos_, height, dim_, dir_, OBJ_MODEL_GAS_PUMP, model_sel) {}
-};
 struct obj_with_roof_pavement_lights_t : public oriented_city_obj_t {
 	unsigned lights_disabled=0; // bit mask per light
 	cube_t roof, pavement;
@@ -463,28 +460,14 @@ struct obj_with_roof_pavement_lights_t : public oriented_city_obj_t {
 		bool *cached_smaps, cube_t const *clip_cubes, unsigned num_lights, bool car_is_using) const;
 	bool proc_roof_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };
-struct gas_station_t : public obj_with_roof_pavement_lights_t {
-	static unsigned const num_pillars=4, num_lights=5, num_lanes=4;
+struct reservable_t { // shared with gas stations and car wash/service station buildings
+	static unsigned const num_lanes=4;
 	bool ent_dir;
-	unsigned plot_ix, gs_ix;
-	cube_t pillars[num_pillars], lights[num_lights];
-	mutable bool cached_smaps[num_lights]={}; // for lights
-	vector<gas_pump_t> pumps;
-	vector<manhole_t> manholes;
+	unsigned plot_ix, obj_ix;
 	mutable bool lane_reserved[num_lanes]={}, out_reserved=0; // for car logic
-	//mutable unsigned last_ped_frame[num_lanes+1]={}; // for future work with car/ped coll; not easy to implement
 
-	gas_station_t(cube_t const &c, bool dim_, bool dir_, bool edir, unsigned pix, unsigned gix, unsigned rand_val);
-	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
-	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
-	bool line_intersect(point const &p1, point const &p2, float &t) const;
-	void add_ped_colliders(vect_cube_t &colliders) const;
-	void add_night_time_lights(vector3d const &xlate, cube_t &lights_bcube) const;
-	// car lane management logic
-	driveway_t get_entrance_for_lane(unsigned lane_ix) const;
-	driveway_t get_exit_lane() const;
-	driveway_t get_driveway_for_lane(unsigned lane_ix) const;
-	int get_avail_lane(point &entrance_pos, rand_gen_t &rgen) const;
+	reservable_t(bool edir, unsigned pix, unsigned oix) : ent_dir(edir), plot_ix(pix), obj_ix(oix) {}
+	int get_avail_lane(rand_gen_t &rgen, int skip_lane_ix=-1) const;
 	void reserve_lane(unsigned lane_ix) const;
 	bool reserve_output_lane(unsigned cur_lane_ix) const;
 	void leave_output_lane() const;
@@ -498,22 +481,50 @@ struct gs_reservation_t {
 	gs_reservation_t(unsigned gix, unsigned lix, point const &epos) : valid(1), gs_ix(gix), lane_ix(lix), entrance_pos(epos) {}
 };
 
+struct gas_pump_t : public multi_model_city_obj_t {
+	gas_pump_t(point const &pos_, float height, bool dim_, bool dir_, unsigned model_sel) : multi_model_city_obj_t(pos_, height, dim_, dir_, OBJ_MODEL_GAS_PUMP, model_sel) {}
+};
+struct gas_station_t : public obj_with_roof_pavement_lights_t, public reservable_t {
+	static unsigned const num_pillars=4, num_lights=5;
+	cube_t pillars[num_pillars], lights[num_lights];
+	mutable bool cached_smaps[num_lights]={}; // for lights
+	vector<gas_pump_t> pumps;
+	vector<manhole_t > manholes;
+	//mutable unsigned last_ped_frame[num_lanes+1]={}; // for future work with car/ped coll; not easy to implement
+
+	gas_station_t(cube_t const &c, bool dim_, bool dir_, bool edir, unsigned pix, unsigned gix, unsigned rand_val);
+	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
+	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
+	bool line_intersect(point const &p1, point const &p2, float &t) const;
+	void add_ped_colliders(vect_cube_t &colliders) const;
+	void add_night_time_lights(vector3d const &xlate, cube_t &lights_bcube) const;
+	// car lane management logic
+	driveway_t get_entrance_for_lane(unsigned lane_ix) const;
+	driveway_t get_exit_lane() const;
+	driveway_t get_driveway_for_lane(unsigned lane_ix) const;
+	int get_avail_lane(point &entrance_pos, rand_gen_t &rgen) const;
+};
+
 enum {CITY_BLDG_CARWASH=0, CITY_BLDG_SERVICE, CITY_BLDG_CONVSTORE, NUM_CITY_BLDG_TYPES};
 string const city_btype_names[NUM_CITY_BLDG_TYPES] = {"Car Wash", "Service", "Store"};
 
-struct city_bldg_t : public obj_with_roof_pavement_lights_t {
-	static unsigned const num_bays=4;
+struct city_bldg_t : public obj_with_roof_pavement_lights_t, public reservable_t {
 	uint8_t btype=0;
-	bool has_back_wall=0, sloped_roof=0;
-	cube_t bldg, bays[num_bays], lights[num_bays], light_clip_cubes[num_bays];
-	bool bay_in_use[num_bays]={}; // for parked cars; not yet used
-	mutable bool cached_smaps[num_bays]={}; // for lights
+	bool ent_dir=0, has_back_wall=0, sloped_roof=0;
+	cube_t bldg, exit_driveway, bays[num_lanes], lights[num_lanes], light_clip_cubes[num_lanes];
+	mutable bool cached_smaps[num_lanes]={}; // for lights
 	vect_cube_t walls;
 
-	city_bldg_t(cube_t const &c, bool dim_, bool dir_, uint8_t btype_, rand_gen_t &rgen);
+	city_bldg_t(cube_t const &c, bool dim_, bool dir_, bool edir, unsigned pix, unsigned bix, uint8_t btype_, rand_gen_t &rgen);
+	bool has_exit() const {return !exit_driveway.is_all_zeros();}
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 	void add_night_time_lights(vector3d const &xlate, cube_t &lights_bcube) const;
+	// car lane management logic
+	driveway_t get_entrance_for_lane(unsigned lane_ix) const;
+	driveway_t get_exit_lane() const;
+	driveway_t get_driveway_for_lane(unsigned lane_ix) const;
+	int get_avail_lane(point &entrance_pos, rand_gen_t &rgen) const;
 };
 
 struct wind_turbine_t : public model_city_obj_t {
@@ -896,10 +907,16 @@ public:
 	void get_plot_cuts(cube_t const &plot, vect_cube_t &cuts) const;
 	bool cube_int_underground_obj(cube_t const &c) const;
 	void get_ponds_in_xy_range(cube_t const &range, vect_cube_t &pond_bcs) const;
+	// gas station and car wash logic
 	gs_reservation_t reserve_nearest_gas_station_lane(point const &pos, rand_gen_t &rgen, float max_dist=0.0) const;
 	driveway_t get_gas_station_driveway(car_t const &car) const;
 	bool reserve_gas_station_exit_lane(car_t const &car) const;
 	void leave_gas_station(unsigned gsix) const;
+	gs_reservation_t reserve_nearest_car_wash_lane(point const &pos, rand_gen_t &rgen, float max_dist=0.0) const;
+	driveway_t get_car_wash_driveway(car_t const &car) const;
+	bool reserve_car_wash_exit_lane(car_t const &car) const;
+	void leave_car_wash(unsigned bix) const;
+
 	bool update_depth_if_underwater(point const &pos, float &depth) const;
 	bool move_to_not_intersect_driveway(point &pos, float radius, bool dim) const;
 	void next_frame();
