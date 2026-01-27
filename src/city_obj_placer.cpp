@@ -86,7 +86,7 @@ bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, unsigne
 	gs_sign.set_frame(0.015, BLUE);
 	sign_groups.add_obj(gs_sign, signs);
 	colliders.push_back(pole); // only add the pole as a collider since the sign itself is above pedestrian heads
-	// add a nearby car wash if there's space
+	// add a nearby car wash, service station, etc. if there's space
 	float const gs_far_edge(gstation.pavement.d[dim][!dir]); // away from road
 	float const cw_len(4*2.2*nom_car_size.y), cw_depth(1.6*nom_car_size.x), cw_height(0.225*city_params.road_width); // just large enough to fit the box truck
 	cube_t cw(gstation.pavement);
@@ -95,51 +95,51 @@ bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, unsigne
 	cw.d[dim][!dir] = gs_far_edge - dscale*cw_depth; // set depth
 	float const len_delta(gstation.pavement.get_sz_dim(dim) - cw_len);
 	
-	if (len_delta > 0.0) { // shrink ends if carwash is shorter than gas station; should be true
+	if (len_delta > 0.0) { // shrink ends if building is shorter than gas station; should be true
 		cw.d[!dim][ ent_dir] -= (ent_dir ? 1.0 : -1.0)*0.75*len_delta; // shrink more on entrance side to make room for pedestrians
 		cw.d[!dim][!ent_dir] += (ent_dir ? 1.0 : -1.0)*0.25*len_delta;
 	}
-	bool const has_back_wall(0), sloped_roof(1);
-	car_wash_t car_wash(cw, dim, dir, has_back_wall, sloped_roof, rgen);
+	uint8_t const btype(rgen.rand_bool() ? CITY_BLDG_CARWASH : CITY_BLDG_SERVICE);
+	city_bldg_t building(cw, dim, dir, btype, rgen);
 
-	if (!has_bcube_int_xy(car_wash.bcube, bcubes, pad_dist)) { // not too close to a building
-		cwash_groups.add_obj(car_wash, cwashes);
-		// add car wash sign on the side facing the road
+	if (!has_bcube_int_xy(building.bcube, bcubes, pad_dist)) { // not too close to a building
+		bldg_groups.add_obj(building, bldgs);
+		// add car building sign on the side facing the road
 		float const cw_road_side(cw.d[!dim][ent_dir]); // away from road
 		sign_bcube.d[!dim][!ent_dir] = cw_road_side;
 		sign_bcube.d[!dim][ ent_dir] = cw_road_side + (ent_dir ? 1.0 : -1.0)*0.25*sign_depth;
 		set_cube_zvals(sign_bcube, cw.z1()+0.6*cw_height, cw.z1()+0.85*cw_height);
 		set_wall_width(sign_bcube, cw.get_center_dim(dim), 0.3*cw_depth, dim);
-		sign_groups.add_obj(sign_t(sign_bcube, !dim, ent_dir, "Car Wash", WHITE, BLACK), signs);
+		sign_groups.add_obj(sign_t(sign_bcube, !dim, ent_dir, city_btype_names[building.btype], WHITE, BLACK), signs);
 
-		if (!has_back_wall) { // add exit driveway if there's space; cars don't yet use these
-			float const cwash_far_edge(cw.d[dim][!dir]);
-			cube_t driveway(car_wash.pavement); // copy zvals and width
+		if (!building.has_back_wall) { // add exit driveway if there's space; cars don't yet use these
+			float const building_far_edge(cw.d[dim][!dir]);
+			cube_t driveway(building.pavement); // copy zvals and width
 			driveway.d[!dim][ent_dir] = gstation.pavement.d[!dim][ent_dir]; // extend to the road
-			driveway.d[ dim][ dir] = cwash_far_edge + dscale*0.1*nom_car_size.y; // slight overlap
-			driveway.d[ dim][!dir] = cwash_far_edge - dscale*2.0*nom_car_size.y; // set width
+			driveway.d[ dim][ dir] = building_far_edge + dscale*0.1*nom_car_size.y; // slight overlap
+			driveway.d[ dim][!dir] = building_far_edge - dscale*2.0*nom_car_size.y; // set width
 
 			if (!has_bcube_int_xy(driveway, bcubes, 0.5*pad_dist)) { // not too close to a building
 				driveways.emplace_back(driveway, !dim, ent_dir, plot_ix);
 				bcubes.push_back(driveway);
 			}
 		}
-		if (add_cars) { // add some cars in the car wash
+		if (add_cars) { // add some cars in the building
 			car_t car;
 			setup_parked_car(car, city_id, plot_ix);
 			car.dim = dim;
 
-			for (unsigned n = 0; n < car_wash.num_bays; ++n) {
+			for (unsigned n = 0; n < building.num_bays; ++n) {
 				if (rgen.rand_bool()) continue; // 50% chance of a car
-				car.dir = (has_back_wall ? (dir ^ rgen.rand_bool()) : !dir); // 50% chance of pulled in or backed in if back wall, otherwise always pulled in
-				car.set_bcube(cube_bot_center(car_wash.bays[n]), nom_car_size);
+				car.dir = (building.has_back_wall ? (dir ^ rgen.rand_bool()) : !dir); // 50% chance of pulled in or backed in if back wall, otherwise always pulled in
+				car.set_bcube(cube_bot_center(building.bays[n]), nom_car_size);
 				cars.push_back(car);
-				car_wash.bay_in_use[n] = 1;
+				building.bay_in_use[n] = 1;
 			}
 		}
 		add_cube_to_colliders_and_blockers(cw, colliders, bcubes);
 	}
-	bcubes.push_back(gs_exp); // add after placing car wash
+	bcubes.push_back(gs_exp); // add after placing building
 	return 1;
 }
 
@@ -2271,7 +2271,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	uge_groups     .create_groups(ug_elevs,  all_objs_bcube);
 	p_solar_groups .create_groups(p_solars,  all_objs_bcube);
 	gass_groups    .create_groups(gstations, all_objs_bcube);
-	cwash_groups   .create_groups(cwashes,   all_objs_bcube);
+	bldg_groups    .create_groups(bldgs,     all_objs_bcube);
 	bball_groups   .create_groups(bballs,    all_objs_bcube);
 	pfloat_groups  .create_groups(pfloats,   all_objs_bcube);
 	if (skyway.valid) {all_objs_bcube.assign_or_union_with_cube(skyway.bcube);}
@@ -2549,7 +2549,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(bballs,    bball_groups,    dstate, 0.12, shadow_only, 1);
 	draw_objects(pfloats,   pfloat_groups,   dstate, 0.15, shadow_only, 1);
 	draw_objects(gstations, gass_groups,     dstate, 0.25, shadow_only, 1);
-	draw_objects(cwashes,   cwash_groups,    dstate, 0.25, shadow_only, 1);
+	draw_objects(bldgs,     bldg_groups,     dstate, 0.25, shadow_only, 1);
 	
 	if (!shadow_only) { // non shadow casting objects
 		draw_objects(hcaps,    hcap_groups,    dstate, 0.12, shadow_only, 0);
@@ -2659,7 +2659,7 @@ void city_obj_placer_t::draw_transparent_objects(draw_state_t &dstate) {
 void city_obj_placer_t::add_lights(vector3d const &xlate, cube_t &lights_bcube) const {
 	skyway.add_lights(xlate, lights_bcube);
 
-	if (is_night()) { // add sculpture, gas station, and car wash lights if night time
+	if (is_night()) { // add sculpture, gas station, car wash, and service station lights if night time
 		if (!sculpt_groups.empty() && sculpt_groups.get_bcube().intersects_xy(lights_bcube)) {
 			unsigned start_ix(0);
 
@@ -2680,8 +2680,8 @@ void city_obj_placer_t::add_lights(vector3d const &xlate, cube_t &lights_bcube) 
 		if (!gstations.empty() && gass_groups.get_bcube().intersects_xy(lights_bcube)) {
 			for (gas_station_t const &gs : gstations) {gs.add_night_time_lights(xlate, lights_bcube);}
 		}
-		if (!cwashes.empty() && cwash_groups.get_bcube().intersects_xy(lights_bcube)) {
-			for (car_wash_t const &cw : cwashes) {cw.add_night_time_lights(xlate, lights_bcube);}
+		if (!bldgs.empty() && bldg_groups.get_bcube().intersects_xy(lights_bcube)) {
+			for (city_bldg_t const &cw : bldgs) {cw.add_night_time_lights(xlate, lights_bcube);}
 		}
 	}
 }
@@ -2745,7 +2745,7 @@ bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, vector
 	if (proc_vector_sphere_coll(pdecks,    pdeck_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(p_solars,  p_solar_groups,  pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(gstations, gass_groups,     pos, p_last, radius, xlate, cnorm)) return 1;
-	if (proc_vector_sphere_coll(cwashes,   cwash_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
+	if (proc_vector_sphere_coll(bldgs,     bldg_groups,     pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(clines,    cline_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(sculptures,sculpt_groups,   pos, p_last, radius, xlate, cnorm)) return 1;
 	// Note: no coll with tree_planters because the tree coll should take care of it;
@@ -2785,7 +2785,7 @@ bool city_obj_placer_t::line_intersect(point const &p1, point const &p2, float &
 	check_vector_line_intersect(ug_elevs,  uge_groups,      p1, p2, t, ret);
 	check_vector_line_intersect(dumpsters, dumpster_groups, p1, p2, t, ret);
 	check_vector_line_intersect(picnics,   picnic_groups,   p1, p2, t, ret);
-	check_vector_line_intersect(cwashes,   cwash_groups,    p1, p2, t, ret);
+	check_vector_line_intersect(bldgs,     bldg_groups,     p1, p2, t, ret);
 	for (gas_station_t const &gs : gstations) {ret |= gs.line_intersect(p1, p2, t);}
 	// Note: nothing to do for parking lots, tree_planters, hcaps, manholes, sewers, tcones, sculptures, flowers, pladders, chairs, pdecks, bballs, pfloats,
 	// clines, pigeons, ppaths, or birds;
@@ -2796,8 +2796,8 @@ bool city_obj_placer_t::line_intersect(point const &p1, point const &p2, float &
 bool city_obj_placer_t::intersects_parking_lot(cube_t const &c) const { // Note: currently called before parking lots and driveways are added
 	return (has_bcube_int_xy(c, parking_lots) || has_bcube_int_xy(c, driveways)); // no acceleration structure for these, so do a linear iteration
 }
-bool city_obj_placer_t::intersects_car_wash(cube_t const &c) const {
-	for (car_wash_t const &cw : cwashes) {
+bool city_obj_placer_t::intersects_city_building(cube_t const &c) const {
+	for (city_bldg_t const &cw : bldgs) {
 		if (cw.bcube.intersects(c)) return 1;
 	}
 	return 0;
@@ -2900,7 +2900,7 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, vect_cube_t const &plo
 	if (check_city_obj_pt_xy_contains(wwe_groups,      elevators, pos, obj_ix, 0)) {color = colorRGBA(0.8, 1.0, 0.8, 1.0); return 1;} // slightly blue-green glass; transparent?
 	if (check_city_obj_pt_xy_contains(uge_groups,      ug_elevs,  pos, obj_ix, 0)) {color = LT_GRAY; return 1;}
 	if (check_city_obj_pt_xy_contains(gass_groups,     gstations, pos, obj_ix, 0)) {color = WHITE;   return 1;} // should be more detailed?
-	if (check_city_obj_pt_xy_contains(cwash_groups,    cwashes,   pos, obj_ix, 0)) {color = LT_BROWN;return 1;}
+	if (check_city_obj_pt_xy_contains(bldg_groups,     bldgs,     pos, obj_ix, 0)) {color = LT_BROWN;return 1;}
 	if (check_city_obj_pt_xy_contains(pgate_groups,    pgates,    pos, obj_ix, 0)) {color = YELLOW;  return 1;}
 	if (check_vect_cube_contains_pt_xy(plot_cuts, pos)) {color = colorRGBA(0.7, 0.7, 1.0); return 1;} // mall skylight; very light blue
 	// Note: ppoles, hcaps, manholes, sewers, mboxes, tcones, sculptures, flowers, pladders, chairs, stopsigns, flags, clines, pigeons, birds, swings,
@@ -2920,12 +2920,12 @@ void city_obj_placer_t::get_occluders(pos_dir_up const &pdu, vector3d const &xla
 	}
 	float const dmax(0.25f*(X_SCENE_SIZE + Y_SCENE_SIZE)); // set far clipping plane to 1/4 a tile (currently 2.0)
 
-	if (city_params.num_cars > 0) { // add car washes as occluders for their cars
-		for (car_wash_t const &cw : cwashes) {
+	if (city_params.num_cars > 0) { // add city buildings as occluders for their parked cars
+		for (city_bldg_t const &cw : bldgs) {
 			if (!cw.has_back_wall) continue; // open on both ends, doesn't make a good occluder
 			cube_t const bc(cw.bcube + xlate);
 			if (!dist_less_than(pdu.pos, bc.closest_pt(pdu.pos), dmax) || !pdu.cube_visible(bc)) continue;
-			assert(cw.walls.size() >= 3); // include walls; roof isn't a good occluder; won't help for cars in car wash far from player
+			assert(cw.walls.size() >= 3); // include walls; roof isn't a good occluder; won't help for cars inside far from player
 			occluders.push_back(cw.walls[0]     + xlate); // back  wall
 			occluders.push_back(cw.walls[1]     + xlate); // left  wall
 			occluders.push_back(cw.walls.back() + xlate); // right wall

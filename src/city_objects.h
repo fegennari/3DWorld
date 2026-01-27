@@ -498,15 +498,19 @@ struct gs_reservation_t {
 	gs_reservation_t(unsigned gix, unsigned lix, point const &epos) : valid(1), gs_ix(gix), lane_ix(lix), entrance_pos(epos) {}
 };
 
-struct car_wash_t : public obj_with_roof_pavement_lights_t {
+enum {CITY_BLDG_CARWASH=0, CITY_BLDG_SERVICE, CITY_BLDG_CONVSTORE, NUM_CITY_BLDG_TYPES};
+string const city_btype_names[NUM_CITY_BLDG_TYPES] = {"Car Wash", "Service", "Store"};
+
+struct city_bldg_t : public obj_with_roof_pavement_lights_t {
 	static unsigned const num_bays=4;
+	uint8_t btype=0;
 	bool has_back_wall=0, sloped_roof=0;
 	cube_t bldg, bays[num_bays], lights[num_bays], light_clip_cubes[num_bays];
 	bool bay_in_use[num_bays]={}; // for parked cars; not yet used
 	mutable bool cached_smaps[num_bays]={}; // for lights
 	vect_cube_t walls;
 
-	car_wash_t(cube_t const &c, bool dim_, bool dir_, bool hbw, bool sloped, rand_gen_t &rgen);
+	city_bldg_t(cube_t const &c, bool dim_, bool dir_, uint8_t btype_, rand_gen_t &rgen);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 	void add_night_time_lights(vector3d const &xlate, cube_t &lights_bcube) const;
@@ -812,7 +816,7 @@ private:
 	vector<ug_elevator_t> ug_elevs;
 	vector<parking_solar_t> p_solars;
 	vector<gas_station_t> gstations;
-	vector<car_wash_t> cwashes;
+	vector<city_bldg_t> bldgs;
 	vector<beach_ball_t> bballs;
 	vector<pool_float_t> pfloats;
 	// index is last obj in group
@@ -820,7 +824,7 @@ private:
 		plad_groups, chair_groups, pdeck_groups, ppole_groups, hcap_groups, manhole_groups, mbox_groups, tcone_groups, pigeon_groups, bird_groups, sign_groups,
 		stopsign_groups, flag_groups, nrack_groups, pgate_groups, cline_groups, ppath_groups, swing_groups, tramp_groups, umbrella_groups, bike_groups, dumpster_groups,
 		plant_groups, flower_groups, picnic_groups, bb_hoop_groups, pond_groups, walkway_groups, pillar_groups, wwe_groups, uge_groups, p_solar_groups, gass_groups,
-		cwash_groups, bball_groups, pfloat_groups, sewer_groups, sculpt_groups;
+		bldg_groups, bball_groups, pfloat_groups, sewer_groups, sculpt_groups;
 	skyway_t skyway; // optional
 	vect_parking_space_t pspaces;
 	bird_poop_manager_t bird_poop_manager;
@@ -883,8 +887,8 @@ public:
 	void add_lights(vector3d const &xlate, cube_t &lights_bcube) const;
 	bool proc_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, vector3d *cnorm) const;
 	bool line_intersect(point const &p1, point const &p2, float &t) const;
-	bool intersects_parking_lot(cube_t const &c) const;
-	bool intersects_car_wash   (cube_t const &c) const;
+	bool intersects_parking_lot  (cube_t const &c) const;
+	bool intersects_city_building(cube_t const &c) const;
 	bool player_under_roof(point const &camera_bs) const;
 	bool get_color_at_xy(point const &pos, vect_cube_t const &plot_cuts, colorRGBA &color, bool skip_in_road) const;
 	bool get_color_at_xy_pre_road(point const &pos, colorRGBA &color) const;

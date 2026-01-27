@@ -2732,13 +2732,15 @@ void gas_station_t::leave_output_lane() const {
 	out_reserved = 0;
 }
 
-// car wash
+// city buildings (car wash, service center, convenience store, etc.)
 
-car_wash_t::car_wash_t(cube_t const &c, bool dim_, bool dir_, bool hbw, bool sloped, rand_gen_t &rgen) :
-	obj_with_roof_pavement_lights_t(c, dim_, dir_), has_back_wall(hbw), sloped_roof(sloped)
+city_bldg_t::city_bldg_t(cube_t const &c, bool dim_, bool dir_, uint8_t btype_, rand_gen_t &rgen) :
+	obj_with_roof_pavement_lights_t(c, dim_, dir_), btype(btype_)
 {
 	float const height(bcube.dz()), width(get_width()), depth(get_depth()), wall_thick(0.04*depth);
 	float const bay_spacing((width - wall_thick)/num_bays), dsign(dir ? 1.0 : -1.0);
+	has_back_wall = (btype == CITY_BLDG_SERVICE);
+	sloped_roof   = (btype == CITY_BLDG_CARWASH || btype == CITY_BLDG_SERVICE); // both
 	bldg = bcube;
 	if (sloped_roof) {bcube.z2() += 0.55*bldg.dz();} // expand to include the roof peak height
 	cube_t side_wall(bldg);
@@ -2781,7 +2783,7 @@ car_wash_t::car_wash_t(cube_t const &c, bool dim_, bool dir_, bool hbw, bool slo
 	} // for n
 	lights_disabled = rgen.rand(); // 50% chance of each light being disabled
 }
-void car_wash_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
+void city_bldg_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	// Note: most geometry is drawn immediately rather than in multiple passes since there are several materials and likely only one or two visible car washes
 	float const tscale(1.0/bldg.dz());
 	// draw walls and sides of roof
@@ -2839,7 +2841,7 @@ void car_wash_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_s
 	if (!shadow_only && !bcube.closest_dist_less_than(dstate.camera_bs, 0.2*dmax)) return; // no lights
 	if (!shadow_only) {draw_lights(dstate, qbds, lights, num_bays);} // draw lights
 }
-bool car_wash_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
+bool city_bldg_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
 	if (sloped_roof && bcube.contains_pt_xy(pos_ - xlate)) { // handle sloped roof coll; approximate
 		bool const rdim(dim); // dim of slope
 		float const t(fabs(pos_[rdim] - bldg.get_center_dim(rdim) - xlate[rdim])/(0.5*bldg.get_sz_dim(rdim))); // 0 at peak, 1 at edge
@@ -2856,7 +2858,7 @@ bool car_wash_t::proc_sphere_coll(point &pos_, point const &p_last, float radius
 	for (cube_t const &w : walls) {ret |= sphere_cube_int_update_pos(pos_, radius_, (w + xlate), p_last, 0, cnorm);}
 	return ret;
 }
-void car_wash_t::add_night_time_lights(vector3d const &xlate, cube_t &lights_bcube) const {
+void city_bldg_t::add_night_time_lights(vector3d const &xlate, cube_t &lights_bcube) const {
 	obj_with_roof_pavement_lights_t::add_night_time_lights(xlate, lights_bcube, 0.6, lights, cached_smaps, light_clip_cubes, num_bays, 0); // car_is_using=0
 }
 
