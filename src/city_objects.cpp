@@ -2881,7 +2881,6 @@ driveway_t city_bldg_t::get_exit_lane() const {
 	return driveway_t(exit_driveway, !dim, ent_dir, plot_ix, -1, obj_ix); // parking_lot_ix=-1
 }
 driveway_t city_bldg_t::get_driveway_for_lane(unsigned lane_ix, bool car_dim, bool car_in_driveway) const {
-	//cout << TXT(lane_ix) << TXT(car_dim) << TXT(car_in_driveway) << TXT(dim) << TXT(dir) << TXT(ent_dir) << TXT(bcube.str()) << endl; // TESTING
 	if (lane_ix == num_lanes) {return get_exit_lane();} // lane_ix=num_lanes is the exit lane; ignores dim
 	if (!car_in_driveway || car_dim != dim) {return get_entrance_for_lane(lane_ix);} // entrance lane parallel to building, not yet turned into car wash
 	// turned into car wash; this is the driveway into the bay

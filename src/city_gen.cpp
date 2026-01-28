@@ -1939,7 +1939,7 @@ private:
 			if (!car.need_wash) { // done with the wash, continue to the exit
 				bool const in_exit_lane(car.in_cw_exit_lane());
 
-				if (car.is_stopped() && !in_exit_lane) { // waiting to leave the pump
+				if (car.is_stopped() && !in_exit_lane) { // waiting to leave the car wash area
 					if (!city_obj_placer.reserve_car_wash_exit_lane(car)) return 1; // wait to exit
 				}
 				if (in_exit_lane && car.dim == driveway.dim) {return car_leave_driveway(car, cars, driveway, rgen);} // fully in exit lane
@@ -2287,10 +2287,10 @@ public:
 		car.dest_gs_lane  = car.dest_cw_lane  = 0;
 
 		if (city_params.cars_use_driveways) {
-			// select a gas station if low on fuel and a slot is open; fuel to be added later; or select if nearby
+			// select a gas station if low on fuel and a slot is open; fuel to be added later
 			if (car.fuel_amt < 0.2 && select_avail_gas_station_lane(car, rgen)) return 1;
-			// select a gas station if low on fuel and a slot is open; fuel to be added later; or select if nearby
-			if (car.dirt_amt > 1.0 && select_avail_car_wash_lane   (car, rgen)) return 1;
+			// select a car wash if dirty, a small car, and a slot is open; will be cleaned
+			if (car.dirt_amt > 1.0 && !car.is_truck && !car.is_ambulance && select_avail_car_wash_lane(car, rgen)) return 1;
 			// select a driveway if one is available and we're in the dest city; otherwise, select an intersection
 			//assert(car.dest_driveway < 0); // generally okay, but could maybe fail due to floating-point error? better to reset below?
 			if (car.cur_city == car.dest_city && select_avail_driveway_or_parking_space(car, rgen)) return 1;
