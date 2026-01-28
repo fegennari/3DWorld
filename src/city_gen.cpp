@@ -1934,7 +1934,7 @@ private:
 			return 1; // no other logic to run here
 		}
 		if (car.dest_cwash >= 0) { // car wash
-			driveway_t driveway(city_obj_placer.get_car_wash_driveway(car));
+			driveway_t driveway(city_obj_placer.get_car_wash_driveway(car, 1)); // car_in_driveway=1
 
 			if (!car.need_wash) { // done with the wash, continue to the exit
 				bool const in_exit_lane(car.in_cw_exit_lane());
@@ -1946,7 +1946,7 @@ private:
 
 				if (car.turn_dir == TURN_NONE && !in_exit_lane) { // time to turn into exit lane
 					car.dest_cw_lane = city_bldg_t::num_lanes; // next lane is the gas station exit
-					driveway         = city_obj_placer.get_car_wash_driveway(car); // update driveway from entrance to exit
+					driveway         = city_obj_placer.get_car_wash_driveway(car, 1); // update driveway from entrance to exit; car_in_driveway=1
 					car.turn_dir     = ((car.dim ^ car.dir ^ driveway.dir) ? (uint8_t)TURN_RIGHT : (uint8_t)TURN_LEFT);
 					car.begin_turn(); // capture car centerline before the turn
 				}
@@ -1956,7 +1956,6 @@ private:
 				}
 				car.set_target_speed(0.30); // 30% of max speed
 			}
-			// TODO: extra turn from driveway into bay
 			car.pull_into_driveway(driveway, rgen); // may be before or after stopping
 			return 1; // no other logic to run here
 		}
@@ -2209,9 +2208,9 @@ private:
 	}
 	void find_isec_to_enter_driveway(car_t &car, driveway_t const &driveway) const {
 		// find intersection before the driveway such that driving on the road exiting this intersection will encounter the driveway on the right
+		assert(!plots.empty());
 		bool const dim(driveway.dim), dir(driveway.dir), extend_dir(dim ^ dir); // extend_dir is the direction of the last intersection before our right turn
 		float const dw_road_meet(driveway.d[dim][dir]); // point at which the road and driveway meet
-		assert(!plots.empty());
 		float const road_spacing(plots.front().get_sz_dim(!dim)); // use actual segment length (should be the same across segments)
 		cube_t query_cube(driveway.extend_across_road()); // segment of road connected to driveway
 		query_cube.d[ dim][!dir] = dw_road_meet;
@@ -2286,11 +2285,16 @@ public:
 	bool choose_new_car_dest(car_t &car, rand_gen_t &rgen) const {
 		car.dest_driveway = car.dest_gstation = car.dest_cwash = -1; // reset; if nonzero, that may mean this driveway is never used after this point
 		car.dest_gs_lane  = car.dest_cw_lane  = 0;
-		// select a gas station if low on fuel and a slot is open; fuel to be added later; or select if nearby
-		if (city_params.cars_use_driveways && car.fuel_amt < 0.2 && select_avail_gas_station_lane(car, rgen)) return 1;
-		// select a driveway if one is available and we're in the dest city; otherwise, select an intersection
-		//assert(car.dest_driveway < 0); // generally okay, but could maybe fail due to floating-point error? better to reset below?
-		if (city_params.cars_use_driveways && car.cur_city == car.dest_city && select_avail_driveway_or_parking_space(car, rgen)) return 1;
+
+		if (city_params.cars_use_driveways) {
+			// select a gas station if low on fuel and a slot is open; fuel to be added later; or select if nearby
+			if (car.fuel_amt < 0.2 && select_avail_gas_station_lane(car, rgen)) return 1;
+			// select a gas station if low on fuel and a slot is open; fuel to be added later; or select if nearby
+			if (car.dirt_amt > 1.0 && select_avail_car_wash_lane   (car, rgen)) return 1;
+			// select a driveway if one is available and we're in the dest city; otherwise, select an intersection
+			//assert(car.dest_driveway < 0); // generally okay, but could maybe fail due to floating-point error? better to reset below?
+			if (car.cur_city == car.dest_city && select_avail_driveway_or_parking_space(car, rgen)) return 1;
+		}
 		unsigned const num_tot(isecs[0].size() + isecs[1].size() + isecs[2].size()); // include 2-way, 3-way, and 4-way intersections
 		if (num_tot == 0) return 0; // no isecs to select
 		car.dest_isec = (unsigned short)(rgen.rand() % num_tot);

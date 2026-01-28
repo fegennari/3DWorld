@@ -353,12 +353,19 @@ void car_t::pull_into_driveway(driveway_t const &driveway, rand_gen_t &rgen) {
 			turn_dir = (dw_turn_dir ? (uint8_t)TURN_RIGHT : (uint8_t)TURN_LEFT);
 			begin_turn(); // capture car centerline before the turn
 		}
+		else if (driveway.turn_dir != TURN_NONE) { // turn into car wash
+			turn_dir = driveway.turn_dir;
+			begin_turn(); // capture car centerline before the turn
+		}
 		else { // transitioned to parked and wait before leaving
 			dest_valid      = engine_running = 0;
 			dest_driveway   = -1;
 			park_space_cent = vector2d();
-			if (dest_cwash >= 0) {need_wash = 0;}
 
+			if (dest_cwash >= 0) {
+				need_wash = 0;
+				dirt_amt  = 0.0;
+			}
 			if (dest_gstation >= 0) {
 				need_gas = 0; // we now have our gas
 				fuel_amt = 1.0;

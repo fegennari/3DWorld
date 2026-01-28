@@ -3019,10 +3019,10 @@ gs_reservation_t city_obj_placer_t::reserve_nearest_car_wash_lane(point const &p
 	if (ret.valid) {bldgs[ret.gs_ix].reserve_lane(ret.lane_ix);}
 	return ret;
 }
-driveway_t city_obj_placer_t::get_car_wash_driveway(car_t const &car) const {
+driveway_t city_obj_placer_t::get_car_wash_driveway(car_t const &car, bool car_in_driveway) const {
 	unsigned const bix((car.dest_cwash >= 0) ? (unsigned)car.dest_cwash : car.cur_seg); // use cur_seg if dest_cwash isn't set
 	assert(bix < bldgs.size());
-	return bldgs[bix].get_driveway_for_lane(car.dest_cw_lane);
+	return bldgs[bix].get_driveway_for_lane(car.dest_cw_lane, car.dim, car_in_driveway);
 }
 bool city_obj_placer_t::reserve_car_wash_exit_lane(car_t const &car) const {
 	assert(car.dest_cwash >= 0 && car.dest_cwash < (short)bldgs.size());

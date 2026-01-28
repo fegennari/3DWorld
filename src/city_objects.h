@@ -510,7 +510,7 @@ string const city_btype_names[NUM_CITY_BLDG_TYPES] = {"Car Wash", "Service", "St
 
 struct city_bldg_t : public obj_with_roof_pavement_lights_t, public reservable_t {
 	uint8_t btype=0;
-	bool ent_dir=0, has_back_wall=0, sloped_roof=0;
+	bool has_back_wall=0, sloped_roof=0;
 	cube_t bldg, exit_driveway, bays[num_lanes], lights[num_lanes], light_clip_cubes[num_lanes];
 	mutable bool cached_smaps[num_lanes]={}; // for lights
 	vect_cube_t walls;
@@ -523,7 +523,7 @@ struct city_bldg_t : public obj_with_roof_pavement_lights_t, public reservable_t
 	// car lane management logic
 	driveway_t get_entrance_for_lane(unsigned lane_ix) const;
 	driveway_t get_exit_lane() const;
-	driveway_t get_driveway_for_lane(unsigned lane_ix) const;
+	driveway_t get_driveway_for_lane(unsigned lane_ix, bool car_dim, bool car_in_driveway) const;
 	int get_avail_lane(point &entrance_pos, rand_gen_t &rgen) const;
 };
 
@@ -913,7 +913,7 @@ public:
 	bool reserve_gas_station_exit_lane(car_t const &car) const;
 	void leave_gas_station(unsigned gsix) const;
 	gs_reservation_t reserve_nearest_car_wash_lane(point const &pos, rand_gen_t &rgen, float max_dist=0.0) const;
-	driveway_t get_car_wash_driveway(car_t const &car) const;
+	driveway_t get_car_wash_driveway(car_t const &car, bool car_in_driveway=0) const;
 	bool reserve_car_wash_exit_lane(car_t const &car) const;
 	void leave_car_wash(unsigned bix) const;
 

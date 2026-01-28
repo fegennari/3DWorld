@@ -2702,7 +2702,7 @@ driveway_t gas_station_t::get_driveway_for_lane(unsigned lane_ix) const {
 }
 int gas_station_t::get_avail_lane(point &entrance_pos, rand_gen_t &rgen) const {
 	bool const skip_lane_closest_to_road(city_params.num_peds > 0); // pedestrians stand in this lane when waiting at the crosswalk, so skip it if they're enabled
-	int const skip_lane_ix(skip_lane_closest_to_road ? int(dir ? num_lanes-1 : 0) : -1);
+	int const skip_lane_ix(skip_lane_closest_to_road ? int(dir ? 1 : 0) : -1); // lanes 0 and 1 are the outer/end lanes
 	int const lix(reservable_t::get_avail_lane(rgen, skip_lane_ix));
 	if (lix >= 0) {entrance_pos = get_entrance_for_lane(lix).get_cube_center();}
 	return lix;
@@ -2739,7 +2739,7 @@ void reservable_t::leave_output_lane() const {
 // city buildings (car wash, service center, convenience store, etc.)
 
 city_bldg_t::city_bldg_t(cube_t const &c, bool dim_, bool dir_, bool edir, unsigned pix, unsigned bix, uint8_t btype_, rand_gen_t &rgen) :
-	obj_with_roof_pavement_lights_t(c, dim_, dir_), btype(btype_), reservable_t(edir, pix, bix)
+	obj_with_roof_pavement_lights_t(c, dim_, dir_), reservable_t(edir, pix, bix), btype(btype_)
 {
 	float const height(bcube.dz()), width(get_width()), depth(get_depth()), wall_thick(0.04*depth);
 	float const bay_spacing((width - wall_thick)/num_lanes), dsign(dir ? 1.0 : -1.0);
@@ -2874,13 +2874,21 @@ driveway_t city_bldg_t::get_entrance_for_lane(unsigned lane_ix) const {
 	lane.d[dim][!dir] = front_face; // abuts building
 	lane.d[dim][ dir] = front_face + (dir ? 1.0 : -1.0)*lane_width;
 	float const turn_loc(bays[lane_ix].get_center_dim(!dim));
-	return driveway_t(lane, !dim, ent_dir, plot_ix, -1, obj_ix, turn_loc); // parking_lot_ix=-1
+	uint8_t const turn_dir((dim ^ dir ^ ent_dir) ? TURN_LEFT : TURN_RIGHT);
+	return driveway_t(lane, !dim, ent_dir, plot_ix, -1, obj_ix, turn_loc, turn_dir); // parking_lot_ix=-1
 }
 driveway_t city_bldg_t::get_exit_lane() const {
 	return driveway_t(exit_driveway, !dim, ent_dir, plot_ix, -1, obj_ix); // parking_lot_ix=-1
 }
-driveway_t city_bldg_t::get_driveway_for_lane(unsigned lane_ix) const {
-	return ((lane_ix == num_lanes) ? get_exit_lane() : get_entrance_for_lane(lane_ix)); // lane_ix=num_lanes is the exit lane
+driveway_t city_bldg_t::get_driveway_for_lane(unsigned lane_ix, bool car_dim, bool car_in_driveway) const {
+	//cout << TXT(lane_ix) << TXT(car_dim) << TXT(car_in_driveway) << TXT(dim) << TXT(dir) << TXT(ent_dir) << TXT(bcube.str()) << endl; // TESTING
+	if (lane_ix == num_lanes) {return get_exit_lane();} // lane_ix=num_lanes is the exit lane; ignores dim
+	if (!car_in_driveway || car_dim != dim) {return get_entrance_for_lane(lane_ix);} // entrance lane parallel to building, not yet turned into car wash
+	// turned into car wash; this is the driveway into the bay
+	assert(lane_ix < num_lanes);
+	cube_t const &bay(bays[lane_ix]);
+	float const turn_loc(bay.get_center_dim(dim));
+	return driveway_t(bay, dim, dir, plot_ix, -1, obj_ix, turn_loc); // parking_lot_ix=-1
 }
 // Note: there's a single shared input lane, but we don't need to reserve it because cars can't stop there,
 // and they can only enter from the input road single file, which means they can never intersect

@@ -148,7 +148,7 @@ struct car_t : public car_base_t, public waiting_obj_t { // size = 136
 	bool in_reverse=0, engine_running=0, is_braking=0, in_parking_lot=0;
 	uint8_t color_id=0, front_car_turn_dir=TURN_UNSPEC, model_id=0, headlight_color=0, dest_gs_lane=0, dest_cw_lane=0;
 	uint16_t dest_city=0, dest_isec=0;
-	float height=0.0, dz=0.0, rot_z=0.0, turn_val=0.0, waiting_pos=0.0, wake_time=0.0, fuel_amt=0.0;
+	float height=0.0, dz=0.0, rot_z=0.0, turn_val=0.0, waiting_pos=0.0, wake_time=0.0, fuel_amt=0.0, dirt_amt=0.0;
 	vector2d park_space_cent; // or gas station pos
 	cube_t prev_bcube;
 	car_t const *car_in_front=nullptr;
@@ -305,15 +305,16 @@ struct road_seg_t : public road_t {
 struct driveway_t : public oriented_cube_t {
 	// dim/dir: direction to road; d[dim][dir] is the edge shared with the road
 	// in_use is modified by car_manager in a different thread - must be mutable, maybe should be atomic
-	mutable uint8_t in_use=0; // either reserves the spot, or a car is parked there; 1=temporary, 2=permanent
 	mutable unsigned last_ped_frame=0;
+	mutable uint8_t in_use=0; // either reserves the spot, or a car is parked there; 1=temporary, 2=permanent
+	uint8_t turn_dir=TURN_NONE; // for driveway with a turn or bend, such as entering a car wash
 	unsigned plot_ix=0;
 	int park_lot_ix=-1, gstation_ix=-1; // driveway may be part of a parking lot or gas station
 	float stop_loc=0.0; // used for gas stations
 
 	driveway_t() {}
-	driveway_t(cube_t const &c, bool dim_, bool dir_, unsigned pix, int plix=-1, int gsix=-1, float sl=0.0) :
-		oriented_cube_t(c, dim_, dir_), plot_ix(pix), park_lot_ix(plix), gstation_ix(gsix), stop_loc(sl) {}
+	driveway_t(cube_t const &c, bool dim_, bool dir_, unsigned pix, int plix=-1, int gsix=-1, float sl=0.0, uint8_t tdir=TURN_NONE) :
+		oriented_cube_t(c, dim_, dir_), turn_dir(tdir), plot_ix(pix), park_lot_ix(plix), gstation_ix(gsix), stop_loc(sl) {}
 	float get_edge_at_road() const {return d[dim][dir];}
 	float get_centerline  () const {return get_center_dim(!dim);}
 	void mark_ped_this_frame() const;
