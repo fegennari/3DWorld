@@ -1380,7 +1380,8 @@ void car_manager_t::next_frame(ped_manager_t const &ped_manager, float car_speed
 	}
 	entering_city.clear();
 	car_blocks.clear();
-	float const speed(CAR_SPEED_SCALE*car_speed*get_clamped_fticks());
+	float const fticks_stable(get_clamped_fticks()), speed(CAR_SPEED_SCALE*car_speed*fticks_stable);
+	float const dirt_update_rate(fticks_stable/(600.0*TICKS_PER_SECOND)); // fully dirty on average every 10 min
 	bool saw_parked(0);
 
 	for (auto i = cars.begin(); i != cars.end(); ++i) { // move cars
@@ -1405,6 +1406,7 @@ void car_manager_t::next_frame(ped_manager_t const &ped_manager, float car_speed
 		if (!i->stopped_at_light && i->is_almost_stopped() && i->in_isect()) {get_car_isec(*i).stoplight.mark_blocked(i->dim, i->dir);} // blocking intersection
 		register_car_at_city(*i);
 		if (is_active_emergency_vehicle(car_model_loader, *i, 0, 1)) {play_car_sound_if_close(i->get_center(), SOUND_POLICE);} // lights=0, siren=1
+		else if (!i->is_truck) {i->dirt_amt += dirt_update_rate;} // non-emergency vehicles and non-trucks get dirty (since trucks are too large for car wash)
 	} // for i
 	if (!saw_parked && !car_blocks.empty()) {car_blocks.back().first_parked = cars.size();} // no parked cars in final city
 	car_blocks.emplace_back(cars.size(), 0, cube_t()); // add terminator

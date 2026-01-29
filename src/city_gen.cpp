@@ -1614,6 +1614,7 @@ public:
 			car.choose_max_speed(rgen);
 			// start with random fuel, but not full or empty; use a higher value if no gas station in this city (use is_residential, gas stations not yet placed)
 			car.fuel_amt = (/*has_gas_station()*/!is_residential ? rgen.rand_uniform(0.1, 0.9) : rgen.rand_uniform(0.5, 0.9));
+			car.dirt_amt = rgen.rand_uniform(0.0, 1.0); // random starting dirtyness
 			car.cur_road = seg.road_ix;
 			car.cur_seg  = seg_ix;
 			car.cur_road_type = TYPE_RSEG;
@@ -2272,7 +2273,7 @@ private:
 		return 1;
 	}
 	bool select_avail_car_wash_lane(car_t &car, rand_gen_t &rgen) const {
-		float const max_dist(0.5*max(bcube.dx(), bcube.dy())); // half the city length
+		float const max_dist(0.33*max(bcube.dx(), bcube.dy())); // 1/3 the city length
 		gs_reservation_t const dest(city_obj_placer.reserve_nearest_car_wash_lane(car.get_center(), rgen, max_dist));
 		if (!dest.valid) return 0;
 		car.dest_cwash    = dest.gs_ix; // what about dest.entrance_pos?
