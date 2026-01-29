@@ -2872,11 +2872,11 @@ bool city_bldg_t::proc_sphere_coll(point &pos_, point const &p_last, float radiu
 void city_bldg_t::add_night_time_lights(vector3d const &xlate, cube_t &lights_bcube) const {
 	obj_with_roof_pavement_lights_t::add_night_time_lights(xlate, lights_bcube, 0.6, lights, cached_smaps, light_clip_cubes, num_lanes, 0); // car_is_using=0
 }
-driveway_t city_bldg_t::get_entrance_for_lane(unsigned lane_ix) const {
+driveway_t city_bldg_t::get_entrance_for_lane(unsigned lane_ix) const { // single entrance driveway, but stop pos is per-lane
 	assert(lane_ix < num_lanes);
 	assert(has_exit()); // can't enter if there's no exit; also uses the exit lane to get road pos
 	vector3d const car_size(city_params.get_nom_car_size());
-	float const car_width(car_size.y), lane_width(1.5*car_width), front_face(bldg.d[dim][dir]);
+	float const car_width(car_size.y), lane_width(1.8*car_width), front_face(bldg.d[dim][dir]);
 	cube_t lane(exit_driveway);
 	lane.d[dim][!dir] = front_face; // abuts building
 	lane.d[dim][ dir] = front_face + (dir ? 1.0 : -1.0)*lane_width;

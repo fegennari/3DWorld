@@ -87,12 +87,13 @@ bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, unsigne
 	sign_groups.add_obj(gs_sign, signs);
 	colliders.push_back(pole); // only add the pole as a collider since the sign itself is above pedestrian heads
 	// add a nearby car wash, service station, etc. if there's space
-	float const gs_far_edge(gstation.pavement.d[dim][!dir]); // away from road
 	float const cw_len(4*2.2*nom_car_size.y), cw_depth(1.6*nom_car_size.x), cw_height(0.225*city_params.road_width); // just large enough to fit the box truck
+	// add extra entrance lane width for car wash or service station for more clearance from gas station lanes; can't move much due to streetlights
+	float const bldg_start(gstation.pavement.d[dim][!dir] - 0.2*dscale*nom_car_size.y); // away from road
 	cube_t cw(gstation.pavement);
 	cw.z2() = plot.z1() + cw_height; // set roof height
-	cw.d[dim][ dir] = gs_far_edge;
-	cw.d[dim][!dir] = gs_far_edge - dscale*cw_depth; // set depth
+	cw.d[dim][ dir] = bldg_start;
+	cw.d[dim][!dir] = bldg_start - dscale*cw_depth; // set depth
 	float const len_delta(gstation.pavement.get_sz_dim(dim) - cw_len);
 	
 	if (len_delta > 0.0) { // shrink ends if building is shorter than gas station; should be true
@@ -104,6 +105,7 @@ bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, unsigne
 
 	if (!has_bcube_int_xy(building.bcube, bcubes, pad_dist)) { // not too close to a building
 		bldg_groups.add_obj(building, bldgs);
+		gstations.back().pavement.d[dim][!dir] = bldg_start; // shift gas station pavement to edge of building
 		// add car building sign on the side facing the road
 		float const cw_road_side(cw.d[!dim][ent_dir]); // away from road
 		sign_bcube.d[!dim][!ent_dir] = cw_road_side;
@@ -116,8 +118,8 @@ bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, unsigne
 			float const building_far_edge(cw.d[dim][!dir]);
 			cube_t driveway(building.pavement); // copy zvals and width
 			driveway.d[!dim][ent_dir] = gstation.pavement.d[!dim][ent_dir]; // extend to the road
-			driveway.d[ dim][ dir] = building_far_edge + dscale*0.1*nom_car_size.y; // slight overlap
-			driveway.d[ dim][!dir] = building_far_edge - dscale*2.0*nom_car_size.y; // set width
+			driveway.d[ dim][ dir] = building_far_edge + dscale*0.01*nom_car_size.y; // slight overlap
+			driveway.d[ dim][!dir] = building_far_edge - dscale*2.00*nom_car_size.y; // set width
 
 			if (!has_bcube_int_xy(driveway, bcubes, 0.5*pad_dist)) { // not too close to a building
 				driveways.emplace_back(driveway, !dim, ent_dir, plot_ix); // exit driveway only; no gsix or stop_loc

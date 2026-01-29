@@ -188,8 +188,9 @@ bool car_t::maybe_apply_turn(float centerline, bool for_driveway) {
 	bool const tdir(dir ^ in_reverse); // direction of movement
 	point const car_center(get_center()), prev_center(prev_bcube.get_cube_center());
 	float const prev_val(prev_center[dim]), cur_val(car_center[dim]);
-	float const turn_radius_mult(for_driveway ? 1.0 : ((cur_road_type == TYPE_ISEC2) ? 2.0 : 1.0)); // larger turn radius for 2-way intersections (bends)
-	float const turn_radius((for_driveway ? 0.75 : 1.0)*(right_turn ? 0.15 : 0.25)*turn_radius_mult*city_params.road_width); // right turn has smaller radius; driveway has smaller radius
+	float const turn_radius_mult((cur_road_type == TYPE_ISEC2 && !for_driveway) ? 2.0 : 1.0); // larger turn radius for 2-way intersections (bends)
+	// right turn has smaller radius; driveway has smaller radius
+	float const turn_radius((for_driveway ? 0.11 : (right_turn ? 0.15 : 0.25))*turn_radius_mult*city_params.road_width);
 	float const dist_to_turn(max(0.0f, (cur_val - centerline)*(tdir ? -1.0f : 1.0f))); // Note: can be negative if we overshot the turn, so clamp to 0
 	if (dist_to_turn > turn_radius) return 0; // not yet time to turn
 	// Note: cars turn around their center points, not their front wheels, which looks odd
