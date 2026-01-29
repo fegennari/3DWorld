@@ -442,7 +442,7 @@ struct draw_state_t {
 	shader_t s;
 	vector3d xlate;
 	point camera_bs;
-	bool use_building_lights=0;
+	bool use_building_lights=0, enable_dirt=0;
 	unsigned pass_ix=0;
 	float draw_tile_dist=0.0;
 	hedge_draw_t hedge_draw;
@@ -722,7 +722,7 @@ public:
 	void draw_remaining_cars();
 	void add_car_headlights(vector<car_t> const &cars, vector3d const &xlate_, cube_t &lights_bcube);
 	static void gen_car_pts(car_t const &car, bool include_top, point pb[8], point pt[8]);
-	void draw_car(car_t const &car, bool is_dlight_shadows);
+	void draw_car(car_t const &car, bool is_dlight_shadows, int dirt_shader_loc, int dpos_shader_loc);
 	void draw_helicopter(helicopter_t const &h, bool shadow_only);
 	void add_car_headlights(car_t const &car, cube_t &lights_bcube) const;
 }; // car_draw_state_t

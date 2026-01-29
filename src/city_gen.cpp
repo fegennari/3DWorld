@@ -37,6 +37,7 @@ void add_dynamic_lights_city(cube_t const &scene_bcube, float &dlight_add_thresh
 void add_buildings_exterior_lights(vector3d const &xlate, cube_t &lights_bcube);
 void get_building_rooftop_cars(vector<car_t> &cars);
 void disable_shadow_maps(shader_t &s);
+void setup_puddles_texture(shader_t &s);
 vector3d get_tt_xlate_val();
 float get_max_house_size();
 bool proc_buildings_sphere_coll(point &pos, point const &p_last, float radius, vector3d *cnorm=nullptr, bool check_interior=0, bool exclude_city=0);
@@ -71,14 +72,15 @@ void set_city_lighting_shader_opts(shader_t &s, cube_t const &lights_bcube, bool
 }
 
 // use_smap: 0=no, 1=sun/moon + dynamic lights; enable in shader and set shadow map uniforms, 2=dynamic lights only; disable in shader but set shadow map uniforms
-void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights, int use_smap, int use_bmap,
-	float min_alpha, bool force_tsl, float pcf_scale, int use_texgen, bool indir_lighting, bool is_outside, bool enable_int_reflect)
+void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights, int use_smap, int use_bmap, float min_alpha, bool force_tsl,
+	float pcf_scale, int use_texgen, bool indir_lighting, bool is_outside, bool enable_int_reflect, bool enable_dirt)
 {
 	use_dlights &= (lights_bcube.is_strictly_normalized() && !dl_sources.empty());
 	have_indir_smoke_tex = indir_lighting; // assume someone is going to set the indir texture in this case; ***note that this breaks normal indir scene drawing***
 	if (indir_lighting    ) {s.set_prefix("#define USE_ALT_SCENE_BOUNDS",      1);} // FS; need to use different scene_llc_scale for dynamic lighting vs. building indir lighting
 	if (enable_int_reflect) {s.set_prefix("#define ENABLE_BUILDING_CUBE_MAP",  1);} // FS
 	if (enable_int_reflect) {s.set_prefix("#define ENABLE_CUBE_MAP_BUMP_MAPS", 1);} // FS
+	if (enable_dirt       ) {s.set_prefix("#define ENABLE_DIRT_EFFECT",        1);} // FS
 	// increase shadow map precision for small light far from origin, but much slower for rooms with dense lights such as factories and warehouses
 	//if (use_dlights && camera_in_building) {s.set_prefix("#define DLIGHT_SMAP_DOUBLE_PRECISION", 1);}
 	// Note: here use_texgen mode 5 is used as a hack so that the shader still has binding points for tex coords (can't optimize it out)
@@ -94,6 +96,12 @@ void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights
 	//if (use_smap) {bind_default_sun_moon_smap_textures();} // bind default sun/moon smap textures
 	if (enable_int_reflect) {bind_player_building_cube_map(s);}
 	s.add_uniform_float("cube_map_normal_map_scale", 0.0); // off by default
+
+	if (enable_dirt) { // uses puddle texture logic
+		s.add_uniform_float("dirtiness",    0.0); // reset to 0
+		s.add_uniform_float("puddle_scale", 1.0);
+		setup_puddles_texture(s);
+	}
 }
 
 void draw_state_t::begin_tile(point const &pos, bool will_emit_now, bool ensure_active) {
@@ -123,8 +131,9 @@ void draw_state_t::pre_draw(vector3d const &xlate_, bool use_dlights_, bool shad
 	}
 	else {
 		bool const force_tsl = 0; // helps with hedges and flags, but causes problems with other models
+		bool const use_bmap(use_bmap && !shadow_only);
 		cube_t const &lights_bcube(use_building_lights ? get_building_lights_bcube() : get_city_lights_bcube());
-		city_shader_setup(s, lights_bcube, use_dlights, use_smap, (use_bmap && !shadow_only), DEF_CITY_MIN_ALPHA, force_tsl, 0.5, 0, 0, 1, enable_reflect); // is_outside=1
+		city_shader_setup(s, lights_bcube, use_dlights, use_smap, use_bmap, DEF_CITY_MIN_ALPHA, force_tsl, 0.5, 0, 0, 1, enable_reflect, enable_dirt); // is_outside=1
 	}
 }
 void draw_state_t::end_draw() {

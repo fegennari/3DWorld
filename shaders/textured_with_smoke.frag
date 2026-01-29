@@ -35,7 +35,9 @@ uniform float crack_scale  = 1.0;
 uniform float crack_sharp  = 100.0;
 uniform float crack_weight = 0.0;
 uniform float crack_zmax   = 0.0;
-uniform float crack_normal_zmax   = -2.0; // default is all normals
+uniform float crack_normal_zmax = -2.0; // default is all normals
+uniform float dirtiness   = 0.0;
+uniform vec3  dirt_origin = vec3(0.0);
 uniform int cube_map_texture_size = 0;
 uniform vec4 emission = vec4(0,0,0,1);
 uniform bool two_sided_lighting = true;
@@ -567,6 +569,20 @@ void main() {
 #ifdef APPLY_BURN_MASK
 	if (burn_offset > -1.0) {color = apply_black_body_burn_mask(color, tc);}
 #endif
+
+#ifdef ENABLE_DIRT_EFFECT
+	if (dirtiness > 0.0) { // add dirt similar to puddles
+		vec3 dirt_tex_off = puddle_scale*(vpos - dirt_origin);
+		float dirt_ratio1 = 0.5*min(dirtiness, 1.0); // at most 50% dirt
+		float dirt_ratio2 = 0.2*dirt_ratio1; // at most 10% dirt
+		float dirt_rval1  = noise_lookup_4_octaves( 2.5*dirt_tex_off); // low freq
+		float dirt_rval2  = noise_lookup_4_octaves(12.1*dirt_tex_off); // hi  freq
+		float dirt_scale1 = 0.4*sqrt(min(1.0, 8.0*dirt_ratio1))*min(1.0, pow((dirt_ratio1 + max(dirt_rval1, 0.6) - 0.6), 8.0)); // large areas
+		float dirt_scale2 = 1.0*sqrt(min(1.0, 8.0*dirt_ratio2))*min(1.0, pow((dirt_ratio2 + max(dirt_rval2, 0.6) - 0.6), 8.0)); // smaller spots
+		float dirt_amt    = min(sqrt(dirtiness)*(dirt_scale1 + dirt_scale2), 1.0);
+		color = mix(color, vec4(0.0, 0.0, 0.0, 1.0), dirt_amt); // dirt_scale transitions color to black
+	}
+#endif // ENABLE_DIRT_EFFECT
 
 #ifndef SMOKE_ENABLED
 #ifndef NO_ALPHA_TEST

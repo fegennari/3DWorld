@@ -761,7 +761,7 @@ unsigned get_ambulance_flashing_lights(car_model_loader_t const &car_model_loade
 	return 4;
 }
 
-void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows) { // Note: all quads
+void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows, int dirt_shader_loc, int dpos_shader_loc) { // Note: all quads
 	if (car.destroyed) return;
 	point const center(car.get_center());
 
@@ -797,10 +797,13 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows) { // N
 
 	if (draw_model) {
 		vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
-		bool const low_detail(!shadow_only && dist_val > 0.035);
+		bool const low_detail(!shadow_only && dist_val > 0.035), add_dirt(dirt_shader_loc >= 0 && car.dirt_amt > 0.0);
 		cube_t non_rot_bcube(car.bcube);
 		set_wall_width(non_rot_bcube, car.bcube.zc(), 0.5*car.height, 2);
+		if (add_dirt) {s.set_uniform_vector3d(dpos_shader_loc, center);} // or center_xlated?
+		if (add_dirt) {s.set_uniform_float(dirt_shader_loc, car.dirt_amt);} // TODO: 0.5*dirt_amt?
 		car_model_loader.draw_model(s, center, non_rot_bcube, front_n, car.get_color(), xlate, car.model_id, shadow_only, low_detail);
+		if (add_dirt) {s.set_uniform_float(dirt_shader_loc, 0.0);} // reset to 0
 		++num_cars_drawn;
 	}
 	else { // draw simple 1-2 cube model
@@ -1693,11 +1696,15 @@ void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlig
 		if (is_dlight_shadows && !city_params.car_shadows) return;
 		//timer_t timer(string("Draw Cars") + (shadow_only ? " Shadow" : "")); // 10K cars = 1.5ms / 2K cars = 0.33ms
 		bool const only_parked(shadow_only && !is_dlight_shadows); // sun/moon shadows are precomputed and cached, so only include static objects such as parked cars
+		bool const enable_dirt(display_mode & 0x10);
 		setup_occluders();
 		fgPushMatrix();
 		translate_to(xlate);
 		dstate.xlate = xlate;
+		dstate.enable_dirt = enable_dirt;
 		dstate.pre_draw(xlate, use_dlights, shadow_only);
+		int const dirt_shader_loc(enable_dirt ? dstate.s.get_uniform_loc("dirtiness"  ) : -1);
+		int const dpos_shader_loc(enable_dirt ? dstate.s.get_uniform_loc("dirt_origin") : -1);
 		// disable hemispherical lighting normal because the transforms make it incorrect
 		if (!shadow_only) {dstate.s.add_uniform_float("hemi_lighting_normal_scale", 0.0);}
 		float const draw_tile_dist(dstate.draw_tile_dist), block_draw_dist(0.5*draw_tile_dist); // dist_scale=0.5
@@ -1713,7 +1720,7 @@ void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlig
 				car_t const &car(cars[c]);
 				if (only_parked && !(car.is_parked() && !car.is_sleeping())) continue; // skip non-parked cars
 				if (skip_car_draw(car)) continue;
-				dstate.draw_car(car, is_dlight_shadows);
+				dstate.draw_car(car, is_dlight_shadows, dirt_shader_loc, dpos_shader_loc);
 			}
 		} // for cb
 		dstate.draw_remaining_cars(); // draw cars from last shadow tile
