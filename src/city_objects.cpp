@@ -2848,12 +2848,19 @@ void city_bldg_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_
 bool city_bldg_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
 	if (sloped_roof && bcube.contains_pt_xy(pos_ - xlate)) { // handle sloped roof coll; approximate
 		bool const rdim(dim); // dim of slope
-		float const t(fabs(pos_[rdim] - bldg.get_center_dim(rdim) - xlate[rdim])/(0.5*bldg.get_sz_dim(rdim))); // 0 at peak, 1 at edge
+		float const delta_rdim(pos_[rdim] - bldg.get_center_dim(rdim) - xlate[rdim]), roof_len(0.5*bldg.get_sz_dim(rdim));
+		float const t(fabs(delta_rdim)/roof_len); // 0 at peak, 1 at edge
 		float const rz1(bldg.z2()), rz2(bcube.z2()), zval(rz2 + t*(rz1 - rz2)), pos_z(max(pos_.z, p_last.z));
 
 		if (pos_z > zval - radius_ && pos_z < zval + 1.5*radius_) { // check for player on roof; must be first
 			pos_.z = zval + radius_; // on roof
-			if (cnorm) {*cnorm = plus_z;} // inaccurate, but probably doesn't matter
+			
+			if (cnorm) { // unclear if cnorm is ever needed, but we can calculate it
+				vector3d roof_v;
+				roof_v[rdim] = -SIGN(delta_rdim)*roof_len;
+				roof_v.z = rz2 - rz1;
+				*cnorm = cross_product(vector_from_dim_dir(!rdim, ((delta_rdim > 0.0) ^ dim)), roof_v).get_norm();
+			}
 			return 1;
 		}
 	}
