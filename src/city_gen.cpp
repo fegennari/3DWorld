@@ -89,7 +89,7 @@ void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights
 	int const use_texgen_val(use_texgen ? (use_texgen + 4) : 0);
 	bool const keep_alpha = 1; // required for fog on windows
 	setup_smoke_shaders(s, min_alpha, use_texgen_val, keep_alpha, indir_lighting, 1, use_dlights, 0, 0, ((use_smap == 1) ? 2 : 0),
-		use_bmap, 0, (use_dlights || indir_lighting), force_tsl, 0.0, 0.0, 0, (enable_int_reflect ? 2 : 0), is_outside); // use_spec_map=0
+		use_bmap, 0, (use_dlights || indir_lighting || enable_dirt), force_tsl, 0.0, 0.0, 0, (enable_int_reflect ? 2 : 0), is_outside); // use_spec_map=0
 	set_city_lighting_shader_opts(s, lights_bcube, use_dlights, (use_smap != 0), pcf_scale);
 	if (use_texgen    ) {s.add_uniform_float("tc_texgen_mix",   0.0);} // always uses texgen in this mode
 	if (indir_lighting) {s.add_uniform_float("max_indir_light", 0.8);} // clamp to avoid over saturation with both direct and indir light
