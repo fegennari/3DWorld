@@ -2876,16 +2876,20 @@ driveway_t city_bldg_t::get_entrance_for_lane(unsigned lane_ix) const { // singl
 	assert(lane_ix < num_lanes);
 	assert(has_exit()); // can't enter if there's no exit; also uses the exit lane to get road pos
 	vector3d const car_size(city_params.get_nom_car_size());
-	float const car_width(car_size.y), lane_width(1.8*car_width), front_face(bldg.d[dim][dir]);
-	cube_t lane(exit_driveway);
+	float const car_width(car_size.y), lane_width(2.0*car_width), front_face(bldg.d[dim][dir]);
+	cube_t lane(exit_driveway); // copy length and zvals
 	lane.d[dim][!dir] = front_face; // abuts building
-	lane.d[dim][ dir] = front_face + (dir ? 1.0 : -1.0)*lane_width;
+	lane.d[dim][ dir] = front_face + (dir ? 1.0 : -1.0)*lane_width; // shift away from building
 	float const turn_loc(bays[lane_ix].get_center_dim(!dim));
 	uint8_t const turn_dir((dim ^ dir ^ ent_dir) ? TURN_LEFT : TURN_RIGHT);
 	return driveway_t(lane, !dim, ent_dir, plot_ix, -1, obj_ix, turn_loc, turn_dir); // parking_lot_ix=-1
 }
 driveway_t city_bldg_t::get_exit_lane() const {
-	return driveway_t(exit_driveway, !dim, ent_dir, plot_ix, -1, obj_ix); // parking_lot_ix=-1
+	// shift centerline away from the building so that the back ends of cars don't clip through a wall when turning
+	float const extra_width(exit_driveway.get_sz_dim(dim) - city_params.get_nom_car_size().y);
+	cube_t exit_lane(exit_driveway);
+	if (extra_width > 0.0) {exit_lane.d[dim][dir] -= (dir ? 1.0 : -1.0)*0.5*extra_width;}
+	return driveway_t(exit_lane, !dim, ent_dir, plot_ix, -1, obj_ix); // parking_lot_ix=-1
 }
 driveway_t city_bldg_t::get_driveway_for_lane(unsigned lane_ix, bool car_dim, bool car_in_driveway) const {
 	if (lane_ix == num_lanes) {return get_exit_lane();} // lane_ix=num_lanes is the exit lane; ignores dim

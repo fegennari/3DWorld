@@ -89,7 +89,7 @@ bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, unsigne
 	// add a nearby car wash, service station, etc. if there's space
 	float const cw_len(4*2.2*nom_car_size.y), cw_depth(1.6*nom_car_size.x), cw_height(0.225*city_params.road_width); // just large enough to fit the box truck
 	// add extra entrance lane width for car wash or service station for more clearance from gas station lanes; can't move much due to streetlights
-	float const bldg_start(gstation.pavement.d[dim][!dir] - 0.2*dscale*nom_car_size.y); // away from road
+	float const bldg_start(gstation.pavement.d[dim][!dir] - 0.5*dscale*nom_car_size.y); // away from road
 	cube_t cw(gstation.pavement);
 	cw.z2() = plot.z1() + cw_height; // set roof height
 	cw.d[dim][ dir] = bldg_start;
@@ -115,13 +115,17 @@ bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, unsigne
 		sign_groups.add_obj(sign_t(sign_bcube, !dim, ent_dir, city_btype_names[building.btype], WHITE, BLACK), signs);
 
 		if (!building.has_back_wall) { // add exit driveway if there's space; cars don't yet use these
-			float const building_far_edge(cw.d[dim][!dir]);
+			float const building_far_edge(cw.d[dim][!dir]), signed_car_width(dscale*nom_car_size.y);
 			cube_t driveway(building.pavement); // copy zvals and width
 			driveway.d[!dim][ent_dir] = gstation.pavement.d[!dim][ent_dir]; // extend to the road
-			driveway.d[ dim][ dir] = building_far_edge + dscale*0.01*nom_car_size.y; // slight overlap
-			driveway.d[ dim][!dir] = building_far_edge - dscale*2.00*nom_car_size.y; // set width
+			driveway.d[ dim][ dir] = building_far_edge + 0.01*signed_car_width; // slight overlap
+			driveway.d[ dim][!dir] = building_far_edge - 2.00*signed_car_width; // set width
 
 			if (!has_bcube_int_xy(driveway, bcubes, 0.5*pad_dist)) { // not too close to a building
+				// try to expand width if there's space
+				cube_t driveway_exp(driveway);
+				driveway_exp.d[dim][!dir] -= 0.8*signed_car_width;
+				if (!has_bcube_int_xy(driveway, bcubes, 0.5*pad_dist)) {driveway = driveway_exp;}
 				driveways.emplace_back(driveway, !dim, ent_dir, plot_ix); // exit driveway only; no gsix or stop_loc
 				bldgs.back().exit_driveway = driveway;
 				bcubes.push_back(driveway);
@@ -2403,39 +2407,46 @@ void city_obj_placer_t::connect_power_to_buildings(vector<road_plot_t> const &pl
 	for (point const &p : ppts) {connect_power_to_point(p, 1);} // near_power_pole=1
 }
 
+bool move_pos_to_avoid(cube_t const &c, cube_t const &test_cube, point &pos, bool dim) {
+	if (!c.intersects_xy(test_cube)) return 0;
+	bool const dir((c.d[dim][1] - pos[dim]) < (pos[dim] - c.d[dim][0]));
+	pos[dim] = c.d[dim][dir] + (dir ? 1.0 : -1.0)*0.1*city_params.road_width;
+	return 1;
+}
 bool city_obj_placer_t::move_to_not_intersect_driveway(point &pos, float radius, bool dim) const {
 	cube_t test_cube;
 	test_cube.set_from_sphere(pos, radius);
 
 	// Note: this could be accelerated by iterating by plot, but this seems to already be fast enough (< 1ms)
-	for (auto d = driveways.begin(); d != driveways.end(); ++d) {
-		if (!d->intersects_xy(test_cube)) continue;
-		bool const dir((d->d[dim][1] - pos[dim]) < (pos[dim] - d->d[dim][0]));
-		pos[dim] = d->d[dim][dir] + (dir ? 1.0 : -1.0)*0.1*city_params.road_width;
-		return 1; // maybe we should check for an adjacent driveway, but that would be rare and moving could result in oscillation
+	for (cube_t const &dw : driveways) {
+		// maybe we should check for an adjacent driveway, but that would be rare and moving could result in oscillation
+		if (move_pos_to_avoid(dw, test_cube, pos, dim)) return 1;
+	}
+	for (gas_station_t const &gs : gstations) { // gas stations have driveways/pavement, and that counts as well
+		if (move_pos_to_avoid(gs.pavement, test_cube, pos, dim)) return 1;
 	}
 	return 0;
 }
 void city_obj_placer_t::finalize_streetlights_and_power(streetlights_t &sl, vector<vect_cube_t> &plot_colliders) {
 	bool was_moved(0);
 
-	for (auto s = sl.streetlights.begin(); s != sl.streetlights.end(); ++s) {
-		if (!driveways.empty()) { // move to avoid driveways
-			bool const dim(s->dir.y == 0.0); // direction to move in
-			was_moved |= move_to_not_intersect_driveway(s->pos, 0.25*city_params.road_width, dim);
-		}
+	for (auto &s : sl.streetlights) {
+		// move to avoid driveways
+		bool const dim(s.dir.y == 0.0); // direction to move in
+		was_moved |= move_to_not_intersect_driveway(s.pos, 0.25*city_params.road_width, dim);
+		
 		if (!ppoles.empty()) { // connect power
-			point top(s->get_lpos());
+			point top(s.get_lpos());
 			top.z += 1.05f*streetlight_ns::light_radius*city_params.road_width; // top of light
 			connect_power_to_point(top, 0); // near_power_pole=0 because it may be too far away
 		}
-		if (s->on_bridge_or_tunnel) continue; // not inside a plot
-		assert(s->plot_ix < plot_colliders.size());
+		if (s.on_bridge_or_tunnel) continue; // not inside a plot
+		assert(s.plot_ix < plot_colliders.size());
 		cube_t collider;
-		collider.set_from_point(s->pos);
+		collider.set_from_point(s.pos);
 		collider.expand_by_xy(streetlight_ns::get_streetlight_pole_radius());
 		collider.z2() += streetlight_ns::get_streetlight_height();
-		plot_colliders[s->plot_ix].push_back(collider);
+		plot_colliders[s.plot_ix].push_back(collider);
 	} // for s
 	if (was_moved) {sl.sort_streetlights_by_yx();} // must re-sort if a streetlight was moved
 }
