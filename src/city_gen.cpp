@@ -2300,7 +2300,7 @@ public:
 			// select a gas station if low on fuel and a slot is open; fuel to be added later
 			if (car.fuel_amt < 0.2 && select_avail_gas_station_lane(car, rgen)) return 1;
 			// select a car wash if dirty, a small car, and a slot is open; will be cleaned
-			if (car.dirt_amt > 1.0 && !car.is_truck && !car.is_ambulance && select_avail_car_wash_lane(car, rgen)) return 1;
+			if (car.dirt_amt > 1.0 && !car.is_large() && select_avail_car_wash_lane(car, rgen)) return 1;
 			// select a driveway if one is available and we're in the dest city; otherwise, select an intersection
 			//assert(car.dest_driveway < 0); // generally okay, but could maybe fail due to floating-point error? better to reset below?
 			if (car.cur_city == car.dest_city && select_avail_driveway_or_parking_space(car, rgen)) return 1;

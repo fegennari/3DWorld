@@ -797,11 +797,12 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows, int di
 
 	if (draw_model) {
 		vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
-		bool const low_detail(!shadow_only && dist_val > 0.035), add_dirt(dirt_shader_loc >= 0 && car.dirt_amt > 0.0);
+		float const dirt_show_amt(min(1.0, 4.0*(car.dirt_amt - 0.75))); // only show if > 75% dirty
+		bool const low_detail(!shadow_only && dist_val > 0.035), add_dirt(dirt_shader_loc >= 0 && dirt_show_amt > 0.0 && !car.is_ambulance);
 		cube_t non_rot_bcube(car.bcube);
 		set_wall_width(non_rot_bcube, car.bcube.zc(), 0.5*car.height, 2);
 		if (add_dirt) {s.set_uniform_vector3d(dpos_shader_loc, center);} // or center_xlated?
-		if (add_dirt) {s.set_uniform_float(dirt_shader_loc, car.dirt_amt);} // TODO: 0.5*dirt_amt?
+		if (add_dirt) {s.set_uniform_float(dirt_shader_loc, dirt_show_amt);}
 		car_model_loader.draw_model(s, center, non_rot_bcube, front_n, car.get_color(), xlate, car.model_id, shadow_only, low_detail);
 		if (add_dirt) {s.set_uniform_float(dirt_shader_loc, 0.0);} // reset to 0
 		++num_cars_drawn;
@@ -849,7 +850,7 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows, int di
 		}
 	}
 	if ((brake_lights_on || headlights_on || car.in_reverse) && dist_val < 0.2) { // brake/tail/backup lights
-		float const bv1((car.is_truck || car.is_ambulance) ? 0.15 : 0.2), bv2(1.0 - bv1);
+		float const bv1(car.is_large() ? 0.15 : 0.2), bv2(1.0 - bv1);
 
 		for (unsigned d = 0; d < 2; ++d) { // L, R
 			unsigned const lr(d ^ lr_xor);
@@ -1384,8 +1385,9 @@ void car_manager_t::next_frame(ped_manager_t const &ped_manager, float car_speed
 	entering_city.clear();
 	car_blocks.clear();
 	float const fticks_stable(get_clamped_fticks()), speed(CAR_SPEED_SCALE*car_speed*fticks_stable);
-	float const dirt_update_rate(fticks_stable/(600.0*TICKS_PER_SECOND)); // fully dirty on average every 10 min
+	float const dirt_add_rate(fticks_stable/(1200.0*TICKS_PER_SECOND)); // fully dirty on average every 20 min
 	bool saw_parked(0);
+	unsigned tot_cars(0), dirty_cars(0);
 
 	for (auto i = cars.begin(); i != cars.end(); ++i) { // move cars
 		unsigned const cix(i - cars.begin());
@@ -1409,8 +1411,16 @@ void car_manager_t::next_frame(ped_manager_t const &ped_manager, float car_speed
 		if (!i->stopped_at_light && i->is_almost_stopped() && i->in_isect()) {get_car_isec(*i).stoplight.mark_blocked(i->dim, i->dir);} // blocking intersection
 		register_car_at_city(*i);
 		if (is_active_emergency_vehicle(car_model_loader, *i, 0, 1)) {play_car_sound_if_close(i->get_center(), SOUND_POLICE);} // lights=0, siren=1
-		else if (!i->is_truck) {i->dirt_amt += dirt_update_rate;} // non-emergency vehicles and non-trucks get dirty (since trucks are too large for car wash)
+		else if (!i->is_large()) { // non-emergency vehicles and non-trucks/ambulances get dirty (since trucks are too large for car wash)
+			if (increase_dirt_amt) {i->dirt_amt += dirt_add_rate;}
+			if (i->dirt_amt > 1.0) {++dirty_cars;}
+			++tot_cars; // eligible for dirt
+		}
 	} // for i
+	// self-balance dirty car ratio by toggling dirt accumulation on and off until it's between 5% and 10%
+	float const dirty_car_ratio(float(dirty_cars)/tot_cars);
+	if (dirty_car_ratio > 0.1) {increase_dirt_amt = 0;} else if (dirty_car_ratio < 0.05) {increase_dirt_amt = 1;}
+	//cout << TXT(tot_cars) << TXT(dirty_cars) << TXT(increase_dirt_amt) << endl; // TESTING
 	if (!saw_parked && !car_blocks.empty()) {car_blocks.back().first_parked = cars.size();} // no parked cars in final city
 	car_blocks.emplace_back(cars.size(), 0, cube_t()); // add terminator
 
@@ -1696,7 +1706,7 @@ void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlig
 		if (is_dlight_shadows && !city_params.car_shadows) return;
 		//timer_t timer(string("Draw Cars") + (shadow_only ? " Shadow" : "")); // 10K cars = 1.5ms / 2K cars = 0.33ms
 		bool const only_parked(shadow_only && !is_dlight_shadows); // sun/moon shadows are precomputed and cached, so only include static objects such as parked cars
-		bool const enable_dirt(display_mode & 0x10);
+		bool const enable_dirt(1);
 		setup_occluders();
 		fgPushMatrix();
 		translate_to(xlate);

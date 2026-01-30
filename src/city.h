@@ -156,6 +156,7 @@ struct car_t : public car_base_t, public waiting_obj_t { // size = 136
 	void set_bcube(point const &center, vector3d const &sz);
 	bool is_valid   () const {return !bcube.is_all_zeros();}
 	bool is_sleeping() const {return (wake_time > 0.0);}
+	bool is_large   () const {return (is_truck || is_ambulance);}
 	bool has_dest_dw_gs_cw() const {return (dest_driveway >= 0 || dest_gstation >= 0 || dest_cwash >= 0);}
 	bool in_gs_exit_lane() const;
 	bool in_cw_exit_lane() const;
@@ -810,7 +811,7 @@ class car_manager_t { // and trucks and helicopters
 	rand_gen_t rgen;
 	vector<unsigned> entering_city;
 	unsigned first_parked_car=0;
-	bool car_destroyed=0;
+	bool car_destroyed=0, increase_dirt_amt=1;
 
 	road_isec_t const &get_car_isec(car_t const &car) const;
 	bool check_collision(car_t &c1, car_t &c2) const;
