@@ -641,7 +641,6 @@ public:
 		model_dir = fn;
 		while (!model_dir.empty() && model_dir.back() != '/' && model_dir.back() != '\\') {model_dir.pop_back();} // remove filename from end, but leave the slash
 		if (scene->mRootNode) {process_node_recur(scene->mRootNode, scene, model.model_anim_data);}
-		unsigned const num_textures(to_load.size());
 		load_embedded_textures();
 		if (load_animations) {extract_animation_data(scene, model.model_anim_data);}
 		model.finalize(); // optimize vertices, remove excess capacity, compute bounding sphere, subdivide, compute LOD blocks
@@ -649,7 +648,7 @@ public:
 		
 		if (verbose) {
 			if (!model.empty())   {model.show_stats();} // don't print these stats if empty (animations only)
-			//if (num_textures > 0) {cout << "embedded_textures: " << num_textures << endl;}
+			//if (!to_load.empty()) {cout << "embedded_textures: " << to_load.size() << endl;}
 			if (load_animations ) {cout << "animations: " << model.model_anim_data.animations.size() << ", anim_nodes: " << model.model_anim_data.anim_nodes.size() << endl;}
 		}
 		return 1;

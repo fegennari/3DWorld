@@ -131,9 +131,9 @@ void draw_state_t::pre_draw(vector3d const &xlate_, bool use_dlights_, bool shad
 	}
 	else {
 		bool const force_tsl = 0; // helps with hedges and flags, but causes problems with other models
-		bool const use_bmap(use_bmap && !shadow_only);
 		cube_t const &lights_bcube(use_building_lights ? get_building_lights_bcube() : get_city_lights_bcube());
-		city_shader_setup(s, lights_bcube, use_dlights, use_smap, use_bmap, DEF_CITY_MIN_ALPHA, force_tsl, 0.5, 0, 0, 1, enable_reflect, enable_dirt); // is_outside=1
+		city_shader_setup(s, lights_bcube, use_dlights, use_smap, (use_bmap && !shadow_only),
+			DEF_CITY_MIN_ALPHA, force_tsl, 0.5, 0, 0, 1, enable_reflect, enable_dirt); // is_outside=1
 	}
 }
 void draw_state_t::end_draw() {
