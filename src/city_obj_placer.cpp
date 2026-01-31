@@ -67,7 +67,7 @@ bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, unsigne
 	for (gas_station_t const &g : gstations) {too_close |= g.bcube.intersects(gs_service_area);}
 	if (too_close) return 0; // too close to another gas station
 	bool const dir(dim ? cy : cx), ent_dir(dim ? cx : cy);
-	gas_station_t gstation(gs, dim, dir, ent_dir, plot_ix, gstations.size(), rgen.rand());
+	gas_station_t const gstation(gs, dim, dir, ent_dir, plot_ix, gstations.size(), rgen.rand());
 	gass_groups.add_obj(gstation, gstations);
 	gstation.add_ped_colliders(colliders);
 	// add price sign near the corner by the intersection
@@ -101,7 +101,7 @@ bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, unsigne
 		cw.d[!dim][!ent_dir] += (ent_dir ? 1.0 : -1.0)*0.25*len_delta;
 	}
 	uint8_t const btype(rgen.rand_bool() ? CITY_BLDG_CARWASH : CITY_BLDG_SERVICE);
-	city_bldg_t building(cw, dim, dir, ent_dir, plot_ix, bldgs.size(), btype, rgen);
+	city_bldg_t const building(cw, dim, dir, ent_dir, plot_ix, bldgs.size(), btype, rgen);
 
 	if (!has_bcube_int_xy(building.bcube, bcubes, pad_dist)) { // not too close to a building
 		bldg_groups.add_obj(building, bldgs);
@@ -141,7 +141,8 @@ bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, unsigne
 				car.dir = (building.has_back_wall ? (dir ^ rgen.rand_bool()) : !dir); // 50% chance of pulled in or backed in if back wall, otherwise always pulled in
 				car.set_bcube(cube_bot_center(building.bays[n]), nom_car_size);
 				cars.push_back(car);
-				building.reserve_lane(n); // will never be un-reserved
+				bldgs.back().reserve_lane(n); // will never be un-reserved
+				bldgs.back().enable_light(n);
 			}
 		}
 		add_cube_to_colliders_and_blockers(cw, colliders, bcubes);
@@ -3044,6 +3045,16 @@ bool city_obj_placer_t::reserve_car_wash_exit_lane(car_t const &car) const {
 void city_obj_placer_t::leave_car_wash(unsigned bix) const {
 	assert(bix < bldgs.size());
 	bldgs[bix].leave_output_lane();
+}
+void city_obj_placer_t::register_car_state(car_t const &car) const {
+	if (car.dest_gstation >= 0) {
+		assert(car.dest_gstation < gstations.size());
+		//gstations[car.dest_gstation]; // nothing to do yet
+	}
+	else if (car.dest_cwash >= 0) {
+		assert(car.dest_cwash < bldgs.size());
+		bldgs[car.dest_cwash].register_car(car);
+	}
 }
 
 bool city_obj_placer_t::update_depth_if_underwater(point const &pos, float &depth) const {

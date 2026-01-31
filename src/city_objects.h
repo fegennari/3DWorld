@@ -449,10 +449,12 @@ struct parking_solar_t : public oriented_city_obj_t {
 };
 
 struct obj_with_roof_pavement_lights_t : public oriented_city_obj_t {
-	unsigned lights_disabled=0; // bit mask per light
+	mutable unsigned lights_enabled=0; // bit mask per light; mutable so that cars can change light state in their update logic
 	cube_t roof, pavement;
 
 	obj_with_roof_pavement_lights_t(cube_t const &bcube_, bool dim_, bool dir_) : oriented_city_obj_t(bcube_, dim_, dir_) {}
+	void enable_light (unsigned lane_ix) const {lights_enabled |=  (1 << lane_ix);} // must be const
+	void disable_light(unsigned lane_ix) const {lights_enabled &= ~(1 << lane_ix);} // must be const
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw_road_pavement(draw_state_t &dstate, city_draw_qbds_t &qbds) const;
 	void draw_lights(draw_state_t &dstate, city_draw_qbds_t &qbds, cube_t const *lights, unsigned num_lights) const;
@@ -525,6 +527,7 @@ struct city_bldg_t : public obj_with_roof_pavement_lights_t, public reservable_t
 	driveway_t get_exit_lane() const;
 	driveway_t get_driveway_for_lane(unsigned lane_ix, bool car_dim, bool car_in_driveway) const;
 	int get_avail_lane(point &entrance_pos, rand_gen_t &rgen) const;
+	void register_car(car_t const &car) const;
 };
 
 struct wind_turbine_t : public model_city_obj_t {
@@ -912,6 +915,7 @@ public:
 	driveway_t get_gas_station_driveway(car_t const &car) const;
 	bool reserve_gas_station_exit_lane(car_t const &car) const;
 	void leave_gas_station(unsigned gsix) const;
+	void register_car_state(car_t const &car) const;
 	gs_reservation_t reserve_nearest_car_wash_lane(point const &pos, rand_gen_t &rgen, float max_dist=0.0) const;
 	driveway_t get_car_wash_driveway(car_t const &car, bool car_in_driveway=0) const;
 	bool reserve_car_wash_exit_lane(car_t const &car) const;

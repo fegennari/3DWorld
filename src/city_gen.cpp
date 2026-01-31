@@ -2014,6 +2014,7 @@ public:
 		assert(car.cur_city == city_id);
 		if (car.is_parked()) return; // stopped, no update (for now)
 		car.is_braking = 0; // reset for this frame
+		city_obj_placer.register_car_state(car);
 			
 		if (car.cur_road_type == TYPE_DRIVEWAY) { // moving in a driveway; could also be TYPE_PARK_LOT
 			if (run_car_in_driveway_logic(car, cars, rgen)) return;

@@ -2475,15 +2475,14 @@ void obj_with_roof_pavement_lights_t::draw_lights(draw_state_t &dstate, city_dra
 	bool const enable_lights(is_night());
 	
 	for (unsigned n = 0; n < num_lights; ++n) {
-		quad_batch_draw &lights_qbd((enable_lights && !(lights_disabled & (1<<n))) ? qbds.emissive_qbd : qbds.untex_qbd); // lights on/emissive at night
+		quad_batch_draw &lights_qbd((enable_lights && (lights_enabled & (1<<n))) ? qbds.emissive_qbd : qbds.untex_qbd); // lights on/emissive at night
 		dstate.draw_cube(lights_qbd, lights[n], lights_color, 0, 0.0, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1); // skip_top=1
 	}
 }
 void obj_with_roof_pavement_lights_t::add_night_time_lights(vector3d const &xlate, cube_t &lights_bcube, float ldist,
 	cube_t const *lights, bool *cached_smaps, cube_t const *clip_cubes, unsigned num_lights, bool car_is_using) const
 {
-	unsigned const all_lights_mask((1<<num_lights)-1);
-	if ((lights_disabled & all_lights_mask) == all_lights_mask) return; // all lights disabled
+	if (lights_enabled == 0) return; // all lights disabled
 	if (!lights_bcube.intersects(bcube)) return; // not contained within the light volume
 	bool cache_shadow_maps(!car_is_using);
 	ldist *= city_params.road_width;
@@ -2498,7 +2497,7 @@ void obj_with_roof_pavement_lights_t::add_night_time_lights(vector3d const &xlat
 		cache_shadow_maps = pts.empty();
 	}
 	for (unsigned n = 0; n < num_lights; ++n) {
-		if (lights_disabled & (1<<n)) continue; // this light disabled
+		if (!(lights_enabled & (1<<n))) continue; // this light disabled
 		point const lpos(cube_bot_center(lights[n]));
 		if (!lights_bcube.contains_pt(lpos)) continue;
 		if (!camera_pdu.sphere_visible_test((lpos + xlate), ldist)) continue; // VFC
@@ -2551,6 +2550,7 @@ gas_station_t::gas_station_t(cube_t const &c, bool dim_, bool dir_, bool edir, u
 	pavement.expand_by_xy(1.24*get_sidewalk_width()); // right up to the road edge; extends outside of bcube
 	bcube.union_with_cube(pavement); // must include pavement for VFC
 	set_bsphere_from_bcube();
+	lights_enabled = (1<<num_lights)-1; // all lights are on
 	// place pillars
 	float const pillar_hwidth(0.02*length), pillar_z2(roof.z1());
 
@@ -2785,7 +2785,7 @@ city_bldg_t::city_bldg_t(cube_t const &c, bool dim_, bool dir_, bool edir, unsig
 		if (has_back_wall) {light_clip_cubes[n].d[dim][dir] += dsign*depth;} // extends out the opening since there's no wall
 		else {light_clip_cubes[n].expand_in_dim(dim, depth);} // no back wall, extend out both openings
 	} // for n
-	lights_disabled = rgen.rand(); // 50% chance of each light being disabled
+	if (city_params.num_cars == 0) {lights_enabled = (rgen.rand() & ((1<<num_lanes)-1));} // 50% chance of each light being enabled when there are no cars
 }
 void city_bldg_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	// Note: most geometry is drawn immediately rather than in multiple passes since there are several materials and likely only one or two visible car washes
@@ -2906,6 +2906,17 @@ int city_bldg_t::get_avail_lane(point &entrance_pos, rand_gen_t &rgen) const {
 	int const lix(reservable_t::get_avail_lane(rgen));
 	if (lix >= 0) {entrance_pos = get_entrance_for_lane(lix).get_cube_center();}
 	return lix;
+}
+void city_bldg_t::register_car(car_t const &car) const {
+	assert(car.dest_cw_lane <= num_lanes);
+	if (!car.bcube.intersects_xy(bcube)) return;
+	cube_t cbc_inner(car.bcube);
+	cbc_inner.expand_in_dim(car.dim, -0.2*car.bcube.get_sz_dim(car.dim)); // clip off the ends
+
+	for (unsigned n = 0; n < num_lanes; ++n) { // iterate over all lanes, in case the car has entered the exit lane
+		if      (cbc_inner.intersects_xy(bays[n])) {enable_light (n);} // enter bay
+		else if (car.bcube.intersects_xy(bays[n])) {disable_light(n);} // exit  bay
+	}
 }
 
 // birds/pigeons
