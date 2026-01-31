@@ -450,7 +450,7 @@ void car_t::honk_horn_if_close() const {
 	play_car_sound_if_close(get_center(), SOUND_HORN);
 }
 void car_t::honk_horn_if_close_and_fast() const {
-	if (cur_speed > 0.25*max_speed) {honk_horn_if_close();}
+	if (cur_speed > 0.25*max_speed && !is_sleeping()) {honk_horn_if_close();}
 }
 
 void car_t::on_alternate_turn_dir(rand_gen_t &rgen) {
