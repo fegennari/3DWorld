@@ -2425,6 +2425,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			if (camera_in_basement)                     continue; // not drawn
 			if (!lights_bcube.intersects_xy(sl))        continue; // not contained within the light volume
 			if (camera_z < sl.z1() - camera_zval_check) continue; // player below the floor with the skylight or the one below; invalid when flying outside the building?
+			if (sun_moon_pos.z < sl.z2())               continue; // skip if light is too low on the horizon as it may assert later
 			cube_t lit_area(sl);
 			lit_area.z2() += fc_thick; // include the tops of the skylight
 			point lpos(sl.get_cube_center());

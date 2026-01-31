@@ -105,9 +105,11 @@ cube_t light_source::calc_bcube(bool add_pad, float sqrt_thresh, bool clip_to_sc
 		bcube.intersect_with_cube(bcube2);
 	}
 	if (has_custom_bcube()) {
+		if (!bcube.intersects(custom_bcube)) {
+			cout << TXT(pos.str()) << TXT(pos2.str()) << TXT(radius) << TXT(bcube.str()) << TXT(custom_bcube.str()) << endl;
+			assert(0);
+		}
 		//assert(bcube.contains_cube(custom_bcube)); // too strong?
-		if (!bcube.intersects(custom_bcube)) {cout << TXT(pos.str()) << TXT(pos2.str()) << TXT(radius) << TXT(bcube.str()) << TXT(custom_bcube.str()) << endl;}
-		assert(bcube.intersects(custom_bcube));
 		bcube.intersect_with_cube(custom_bcube);
 	}
 	return bcube;
