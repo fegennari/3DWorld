@@ -1768,12 +1768,15 @@ tquad_with_ix_t building_t::set_door_from_cube(cube_t const &c, bool dim, bool d
 					tquad_with_ix_t door_rot(door); // cache orig 90 degree open door in case we need to revert it
 					rotate_and_shift_door(door_rot, max_angle, drot.shift, dim, swap_sides);
 					cube_t test_bcube(door_rot.get_bcube());
+					if (!in_ext_basement && !bcube.contains_cube_xy(test_bcube)) continue; // extends outside bcube; fast/simple test; duplicate of below
 					test_bcube.expand_in_dim(dim, -wall_thickness ); // shrink in other dim to avoid intersecting with other part/walls when this door separates two parts
 					test_bcube.expand_in_dim(2,   -floor_thickness); // shrink a bit in z to avoid picking up objects from stacks above or below
-					if (!in_ext_basement && !check_cube_contained_in_part(test_bcube)) continue; // extends outside part
+					cube_t tc_exp(test_bcube);
+					tc_exp.expand_in_dim(!dim, 0.5*wall_thickness); // expand width for part test to avoid door edge clipping through exterior wall
+					if (!in_ext_basement && !check_cube_contained_in_part(tc_exp)) continue; // extends outside part
 					cube_t walls_test_bcube(test_bcube);
 					walls_test_bcube.expand_in_dim(!dim, wall_thickness); // expand slightly to leave a bit of a gap between walls, and space for whiteboards
-					if (has_bcube_int(walls_test_bcube, interior->walls[!dim]))            continue; // hits perp wall
+					if (has_bcube_int(walls_test_bcube, interior->walls[!dim])) continue; // hits perp wall
 					// open doors don't really block the player from entering or exiting stairs since they can be walked through or closed
 					if (interior->is_blocked_by_stairs_or_elevator(test_bcube, 0.0, 0, 1)) continue; // hits stairs or elevator; dmin=0, elevators_only=0, no_check_enter_exit=1
 					if (check_backroom_walls && interior->room_geom->cube_int_backrooms_walls(walls_test_bcube)) continue;
