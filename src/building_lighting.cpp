@@ -91,9 +91,8 @@ public:
 		cobj_tree_simple_type_t<colored_cube_t>::clear();
 		roof_tquads.clear();
 	}
-	bool ray_cast(point const &p1, point const &p2, vector3d &cnorm, colorRGBA &ccolor, float &t) const {
-		if (nodes.empty()) return 0;
-		bool ret(0);
+	void ray_cast(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &ccolor, float &t) const {
+		if (nodes.empty()) return;
 		node_ix_mgr nixm(nodes, p1, p2);
 		unsigned const num_nodes((unsigned)nodes.size());
 
@@ -102,10 +101,14 @@ public:
 			if (!nixm.check_node(nix)) continue; // Note: modifies nix
 
 			for (unsigned i = n.start; i < n.end; ++i) { // check leaves
-				if (ray_cast_cube(p1, p2, objects[i], cnorm, t)) {ccolor = objects[i].color; ret = 1;}
+				auto const &obj(objects[i]);
+				if (!ray_cast_cube(p1, p2, obj, cnorm, t)) continue;
+				cpos   = p1 + (p2 - p1)*t;
+				ccolor = obj.color;
+				nixm.dinv = vector3d(cpos - p1);
+				nixm.dinv.invert();
 			}
-		}
-		return ret;
+		} // for nix
 	}
 };
 
@@ -213,15 +216,12 @@ bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, ray_ca
 			return 1;
 		}
 	}
-	args.bvh.ray_cast(p1, p2, cnorm, ccolor, t);
+	args.bvh.ray_cast(p1, p2, cpos, cnorm, ccolor, t);
 
 	if (t == 1.0) { // no intersection with bvh
-		cpos = p2;
 		if (!hit) return 0;
 		if (rgen && p2.z > ground_floor_z1 && has_int_windows() && rgen->rand_bool()) return 0; // 50% chance of exiting through a window
-		return 1;
 	}
-	cpos = p1 + (p2 - p1)*t;
 	return 1;
 }
 
@@ -649,7 +649,7 @@ class building_indir_light_mgr_t {
 			needs_to_join = 1;
 		}
 		else {
-			highres_timer_t timer("Ray Cast Building Light"); // 4569 in mall with 368 lights
+			highres_timer_t timer("Ray Cast Building Light"); // 4474 in mall with 368 lights
 			cast_light_rays(b);
 		}
 	}
