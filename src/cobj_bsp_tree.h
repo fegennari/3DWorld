@@ -11,16 +11,13 @@ class cobj_tree_base {
 protected:
 	struct tree_node : public cube_t { // size = 36
 		unsigned start, end; // index into cixs for leaves
-		unsigned next_node_id;
+		unsigned next_node_id=0;
 
-		tree_node(unsigned s=0, unsigned e=0) : start(s), end(e), next_node_id(0) {
-			UNROLL_3X(d[i_][0] = d[i_][1] = 0.0;)
-		}
-		tree_node(unsigned s, unsigned e, cube_t const &cube) : cube_t(cube), start(s), end(e), next_node_id(0) {}
+		tree_node(unsigned s=0, unsigned e=0) : start(s), end(e) {}
+		tree_node(unsigned s, unsigned e, cube_t const &cube) : cube_t(cube), start(s), end(e) {}
 	};
-
 	vector<tree_node> nodes;
-	unsigned max_depth, max_leaf_count, num_leaf_nodes;
+	unsigned max_depth=0, max_leaf_count=0, num_leaf_nodes=0;
 
 	inline void register_leaf(unsigned num) {
 		++num_leaf_nodes;
@@ -38,23 +35,19 @@ protected:
 		bool check_node(unsigned &nix) const;
 		bool (* get_line_clip_func) (point const &p1, vector3d const &dinv, float const d[3][2]); // function pointer
 	};
-
 public:
-	cobj_tree_base() : max_depth(0), max_leaf_count(0), num_leaf_nodes(0) {}
 	bool is_empty() const {return nodes.empty();}
-	void clear() {nodes.resize(0);}
+	void clear() {nodes.clear();}
 	bool get_root_bcube(cube_t &bc) const;
 };
 
 
 template<typename T> class cobj_tree_simple_type_t : public cobj_tree_base {
-
 protected:
 	vector<T> objects, temp_bins[3];
 
 	virtual void calc_node_bbox(tree_node &n) const = 0;
 	void build_tree(unsigned nix, unsigned skip_dims, unsigned depth);
-
 public:
 	virtual ~cobj_tree_simple_type_t() {}
 	
@@ -67,9 +60,7 @@ public:
 
 
 class cobj_tree_tquads_t : public cobj_tree_simple_type_t<coll_tquad> {
-
 	virtual void calc_node_bbox(tree_node &n) const;
-
 public:
 	vector<coll_tquad> &get_tquads_ref() {return objects;}
 	void add_cobjs(coll_obj_group const &cobjs, bool verbose);
@@ -87,8 +78,8 @@ public:
 
 
 struct sphere_with_id_t : public sphere_t {
-	unsigned id;
-	sphere_with_id_t() : id(0) {}
+	unsigned id=0;
+	sphere_with_id_t() {}
 	sphere_with_id_t(point const &p, float r, unsigned id_) : sphere_t(p, r), id(id_) {}
 	float get_center_dim(unsigned dim) const {return pos[dim];}
 };
@@ -103,7 +94,6 @@ public:
 
 
 class cobj_bvh_tree : public cobj_tree_base {
-
 	coll_obj_group const *cobjs;
 	vector<unsigned> cixs;
 	bool is_static, is_dynamic, occluders_only, cubes_only, inc_voxel_cobjs;
@@ -119,7 +109,6 @@ class cobj_bvh_tree : public cobj_tree_base {
 		unsigned get_next_node_ix() const {assert(cur_nix < end_nix); return cur_nix;}
 		void increment_node_ix() {assert(cur_nix >= start_nix); cur_nix++;}
 	};
-
 	void add_cobj(unsigned ix) {if (obj_ok((*cobjs)[ix])) {cixs.push_back(ix);}}
 	coll_obj const &get_cobj(unsigned ix) const {return (*cobjs)[cixs[ix]];}
 	bool create_cixs();
@@ -135,7 +124,6 @@ class cobj_bvh_tree : public cobj_tree_base {
 public:
 	cobj_bvh_tree(coll_obj_group const *cobjs_, bool s, bool d, bool o, bool c, bool v)
 		: cobjs(cobjs_), is_static(s), is_dynamic(d), occluders_only(o), cubes_only(c), inc_voxel_cobjs(v) {assert(cobjs);}
-
 	unsigned get_num_objs() const {return cixs.size();}
 	void clear();
 	void add_cobj_ids(vector<unsigned> const &cids) {assert(cixs.empty() && !cids.empty()); cixs = cids;}

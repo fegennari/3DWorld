@@ -641,8 +641,7 @@ class building_indir_light_mgr_t {
 			needs_to_join = 1;
 		}
 		else {
-			// per-light time for large office building: orig: 194ms, per-floor BVH: 96ms, clip rays to floor: 44ms, now 37ms
-			highres_timer_t timer("Ray Cast Building Light"); // 5600ms / 11000ms bkg in mall with 471 lights
+			highres_timer_t timer("Ray Cast Building Light"); // 4569 in mall with 368 lights
 			cast_light_rays(b);
 		}
 	}
@@ -1101,7 +1100,7 @@ public:
 		need_bvh_rebuild = 0;
 	}
 	void invalidate_bvh    () {need_bvh_rebuild = 1;} // Note: can't directly clear bvh because a thread may be using it
-	void invalidate_windows() {update_windows = 1;}
+	void invalidate_windows() {update_windows   = 1;}
 	cube_bvh_t const &get_bvh() const {return bvh;}
 };
 
