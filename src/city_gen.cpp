@@ -3329,13 +3329,17 @@ void car_manager_t::setup_occluders() {
 vector<bridge_t      > const &car_manager_t::get_bridges      () const {return road_gen.get_bridges      ();}
 vector<wind_turbine_t> const &car_manager_t::get_wind_turbines() const {return road_gen.get_wind_turbines();}
 
-void sort_lights_by_dist_size(vector<light_source> &lights, point const &cpos) {
+void calc_lights_efective_brightness(vector<light_source> &lights, point const &cpos) {
 	for (light_source &ls : lights) {ls.calc_effective_brightness(cpos);}
+}
+void sort_lights_by_dist_size(vector<light_source> &lights, point const &cpos) {
+	calc_lights_efective_brightness(lights, cpos);
 	stable_sort(lights.begin(), lights.end(), [](light_source const &a, light_source const &b) {return (a.get_eff_bright() > b.get_eff_bright());});
 }
 void filter_dlights_to(vector<light_source> &lights, unsigned max_num, point const &cpos) {
 	if (lights.size() <= max_num) return;
-	sort_lights_by_dist_size(lights, cpos);
+	calc_lights_efective_brightness(lights, cpos);
+	partial_sort(lights.begin(), lights.begin()+max_num, lights.end(), [](light_source const &a, light_source const &b) {return (a.get_eff_bright() > b.get_eff_bright());});
 	lights.resize(max_num); // remove lowest scoring lights
 }
 
