@@ -2199,6 +2199,7 @@ struct colored_cube_t;
 typedef vector<colored_cube_t> vect_colored_cube_t;
 class cube_bvh_t;
 class building_indir_light_mgr_t;
+struct ray_cast_args_t;
 
 struct colored_sphere_t : public sphere_t {
 	colorRGBA color;
@@ -2419,8 +2420,7 @@ struct building_t : public building_geom_t {
 	bool player_can_see_inside_mall(vector3d const &xlate) const;
 	void set_building_colors(building_colors_t &bcolors) const;
 	bool ray_cast_exterior_walls(point const &p1, point const &p2, vector3d &cnorm, float &t) const;
-	bool ray_cast_interior(point const &pos, vector3d const &dir, cube_t const &valid_area, cube_bvh_t const &bvh, bool in_attic, bool in_ext_basement,
-		building_colors_t const &bcolors, point &cpos, vector3d &cnorm, colorRGBA &ccolor, rand_gen_t *rgen=nullptr) const;
+	bool ray_cast_interior(point const &pos, vector3d const &dir, ray_cast_args_t const &args, point &cpos, vector3d &cnorm, colorRGBA &ccolor, rand_gen_t *rgen=nullptr) const;
 	void create_building_volume_light_texture(unsigned bix, point const &target, unsigned &tid) const;
 	bool ray_cast_camera_dir(point const &camera_bs, point &cpos, colorRGBA &ccolor) const;
 	cube_t calc_parts_bcube() const;
