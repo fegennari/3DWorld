@@ -83,6 +83,7 @@ class cube_bvh_t : public cobj_tree_simple_type_t<colored_cube_t> {
 		for (unsigned i = n.start; i < n.end; ++i) {n.assign_or_union_with_cube(objects[i]);} // bcube union
 	}
 public:
+	cube_bvh_t() {add_node_overlap = 0;} // not needed for cubes
 	vect_tquad_with_ix_t roof_tquads; // these aren't cubes, so they don't go into the BVH; should only be 2-4 of these
 	vect_colored_cube_t &get_objs() {return objects;}
 

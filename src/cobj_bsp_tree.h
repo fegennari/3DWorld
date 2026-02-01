@@ -45,6 +45,7 @@ public:
 template<typename T> class cobj_tree_simple_type_t : public cobj_tree_base {
 protected:
 	vector<T> objects, temp_bins[3];
+	bool add_node_overlap=1;
 
 	virtual void calc_node_bbox(tree_node &n) const = 0;
 	void build_tree(unsigned nix, unsigned skip_dims, unsigned depth);
