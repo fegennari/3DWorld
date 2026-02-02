@@ -7,6 +7,7 @@
 #include "lightmap.h" // for light_source
 #include "cobj_bsp_tree.h"
 #include "profiler.h"
+#include "mesh.h" // for get_{x,y}pos_round_down()
 #include <thread>
 #include <omp.h>
 
@@ -29,6 +30,7 @@ extern cube_t reflection_light_cube;
 extern std::string lighting_update_text;
 extern vector<light_source> dl_sources;
 extern building_t const *player_building;
+extern float light_int_scale[NUM_LIGHTING_TYPES];
 
 bool enable_building_people_ai();
 bool check_cube_occluded(cube_t const &cube, vect_cube_t const &occluders, point const &viewer);
@@ -615,6 +617,47 @@ colorRGBA get_outdoor_light_color() {
 
 unsigned const IS_WINDOW_BIT = (1<<24); // if this bit is set, the light is from a window; if not, it's from a light room object
 
+class lmap_manager_local_t {
+protected:
+	vector<colorRGB> data;
+	unsigned xsize=0, ysize=0, zsize=0;
+public:
+	bool was_updated=0;
+	cube_t update_bcube;
+
+	void reset_all() {
+		for (colorRGB &c : data) {c = BLACK;}
+	}
+	bool is_valid_cell(int x, int y, int z) const {return (x >= 0 && x < (int)xsize && y >= 0 && y < (int)ysize && z >= 0 && z < (int)zsize);}
+
+	colorRGB *get_lmcell_round_down(point const &p) {
+		int const x(get_xpos_round_down(p.x)), y(get_ypos_round_down(p.y)), z(get_zpos(p.z));
+		return (is_valid_cell(x, y, z) ? &data[(y*xsize + x)*zsize + z] : nullptr);
+	}
+	void alloc(unsigned xsize_, unsigned ysize_, unsigned zsize_) {
+		xsize = xsize_; ysize = ysize_; zsize = zsize_;
+		data.resize(xsize*ysize*zsize, BLACK);
+	}
+	void update_indir_light_texture(unsigned &tid, vector<unsigned char> &tex_data) const {
+		tex_data.resize(4*data.size(), 0);
+		assert(!data.empty()); // must call alloc() first
+		bool const apply_sqrt(indir_light_exp > 0.49 && indir_light_exp < 0.51), apply_exp(!apply_sqrt && indir_light_exp != 1.0);
+
+#pragma omp parallel for schedule(static, 128) num_threads(4)
+		for (int i = 0; i < (int)data.size(); ++i) {
+			colorRGB const &c(data[i]);
+			unsigned const off2(4*i);
+			colorRGB color;
+			UNROLL_3X(color[i_] = min(1.0f, c[i_]*light_int_scale[LIGHTING_LOCAL]);)
+			if      (apply_sqrt) {UNROLL_3X(color[i_] = sqrt(color[i_]););}
+			else if (apply_exp)  {UNROLL_3X(color[i_] = pow (color[i_], indir_light_exp););}
+			UNROLL_3X(tex_data[off2+i_] = (unsigned char)(255*color[i_]);)
+		} // for i
+		if (tid == 0) {tid = create_3d_texture(zsize, xsize, ysize, 4, tex_data, GL_LINEAR, GL_CLAMP_TO_EDGE);} // see update_smoke_indir_tex_range
+		else {update_3d_texture(tid, 0, 0, 0, zsize, xsize, ysize, 4, tex_data.data());} // stored {Z,X,Y}
+	}
+};
+
 class building_indir_light_mgr_t {
 	bool is_running=0, kill_thread=0, lighting_updated=0, needs_to_join=0, need_bvh_rebuild=0, update_windows=0, is_negative_light=0, in_ext_basement=0;
 	int cur_bix=-1, cur_light=-1, cur_floor=-1;
@@ -628,15 +671,12 @@ class building_indir_light_mgr_t {
 	set<unsigned> lights_complete, lights_seen;
 	vect_cube_with_ix_t windows;
 	cube_bvh_t bvh;
-	lmap_manager_t lmgr;
+	lmap_manager_local_t lmgr;
 	std::thread rt_thread;
 
 	void init_lmgr(bool clear_lighting) {
 		if (clear_lighting) {lmgr.reset_all();}
-		if (lmgr.is_allocated()) return; // already setup
-		unsigned const tot_sz(XY_MULT_SIZE*MESH_SIZE[2]); // Note: MESH_SIZE[2], not MESH_Z_SIZE; want clipped size that lmap uses rather than user-specified size
-		lmcell init_lmcell;
-		lmgr.alloc(tot_sz, MESH_X_SIZE, MESH_Y_SIZE, MESH_SIZE[2], (unsigned char **)nullptr, init_lmcell);
+		lmgr.alloc(MESH_X_SIZE, MESH_Y_SIZE, MESH_SIZE[2]); // Note: MESH_SIZE[2], not MESH_Z_SIZE; want clipped size that lmap uses rather than user-specified size
 	}
 	void start_lighting_compute(building_t const &b) {
 		assert(cur_light >= 0);
@@ -649,7 +689,7 @@ class building_indir_light_mgr_t {
 			needs_to_join = 1;
 		}
 		else {
-			highres_timer_t timer("Ray Cast Building Light"); // 4474 in mall with 368 lights
+			highres_timer_t timer("Ray Cast Building Light"); // 4049 in mall with 368 lights
 			cast_light_rays(b);
 		}
 	}
@@ -672,8 +712,8 @@ class building_indir_light_mgr_t {
 
 		for (unsigned s = 0; s < nsteps; ++s) {
 			p1 += step; // don't double count the first step
-			lmcell *lmc(lmgr.get_lmcell_round_down(p1));
-			if (lmc != NULL) {ADD_LIGHT_CONTRIB(cw, lmc->lc);}
+			colorRGB *c(lmgr.get_lmcell_round_down(p1));
+			if (c != nullptr) {*c += cw;}
 		}
 		lmgr.was_updated = 1;
 	}
@@ -870,8 +910,8 @@ class building_indir_light_mgr_t {
 	}
 	void update_volume_light_texture() { // full update, 6.6ms for z=128
 		init_lmgr(0); // init on first call; clear_lighting=0
-		//highres_timer_t timer("Lighting Tex Create"); // 1400ms in mall with 4 threads and 471 lights
-		indir_light_tex_from_lmap(cur_tid, lmgr, tex_data, MESH_X_SIZE, MESH_Y_SIZE, MESH_SIZE[2], indir_light_exp, 1); // local_only=1
+		//highres_timer_t timer("Lighting Tex Create"); // 823ms in mall with 4 threads and 368 lights
+		lmgr.update_indir_light_texture(cur_tid, tex_data);
 	}
 	void maybe_join_thread() {
 		if (needs_to_join) {rt_thread.join(); needs_to_join = 0;}
