@@ -9,7 +9,6 @@
 #include "profiler.h"
 #include "model3d.h"
 #include "format_text.h"
-#include <fstream>
 
 
 /* lights used:

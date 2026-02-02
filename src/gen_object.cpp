@@ -5,7 +5,6 @@
 #include "3DWorld.h"
 #include "mesh.h"
 #include "physics_objects.h"
-#include "tree_leaf.h"
 
 
 float    const SMOKE_ZVEL      = 3.0;

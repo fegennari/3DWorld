@@ -7,7 +7,6 @@
 #include "transform_obj.h"
 #include "player_state.h"
 #include "physics_objects.h"
-#include "shape_line3d.h"
 #include "openal_wrap.h"
 
 

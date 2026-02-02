@@ -6,7 +6,6 @@
 #include "mesh.h"
 #include "physics_objects.h"
 #include "textures.h"
-#include "lightmap.h"
 #include "shaders.h"
 #include "draw_utils.h"
 

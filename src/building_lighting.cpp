@@ -7,7 +7,6 @@
 #include "lightmap.h" // for light_source
 #include "cobj_bsp_tree.h"
 #include "profiler.h"
-#include "mesh.h" // for get_{x,y}pos_round_down()
 #include <thread>
 #include <omp.h>
 

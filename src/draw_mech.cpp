@@ -3,7 +3,6 @@
 // 9/27/02
 
 #include "3DWorld.h"
-#include "textures.h"
 #include "shape_line3d.h"
 #include "collision_detect.h"
 
