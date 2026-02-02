@@ -620,6 +620,7 @@ unsigned const IS_WINDOW_BIT = (1<<24); // if this bit is set, the light is from
 class lmap_manager_local_t {
 protected:
 	vector<colorRGB> data;
+	vector<unsigned char> tex_data;
 	unsigned xsize=0, ysize=0, zsize=0;
 public:
 	bool was_updated=0;
@@ -628,25 +629,24 @@ public:
 	void reset_all() {
 		for (colorRGB &c : data) {c = BLACK;}
 	}
-	bool is_valid_cell(int x, int y, int z) const {return (x >= 0 && x < (int)xsize && y >= 0 && y < (int)ysize && z >= 0 && z < (int)zsize);}
-
 	colorRGB *get_lmcell_round_down(point const &p) {
 		int const x(get_xpos_round_down(p.x)), y(get_ypos_round_down(p.y)), z(get_zpos(p.z));
-		return (is_valid_cell(x, y, z) ? &data[(y*xsize + x)*zsize + z] : nullptr);
+		return ((x >= 0 && x < (int)xsize && y >= 0 && y < (int)ysize && z >= 0 && z < (int)zsize) ? &data[(y*xsize + x)*zsize + z] : nullptr);
 	}
 	void alloc(unsigned xsize_, unsigned ysize_, unsigned zsize_) {
 		xsize = xsize_; ysize = ysize_; zsize = zsize_;
 		data.resize(xsize*ysize*zsize, BLACK);
 	}
-	void update_indir_light_texture(unsigned &tid, vector<unsigned char> &tex_data) const {
+	void update_indir_light_texture(unsigned &tid) {
 		tex_data.resize(4*data.size(), 0);
 		assert(!data.empty()); // must call alloc() first
 		bool const apply_sqrt(indir_light_exp > 0.49 && indir_light_exp < 0.51), apply_exp(!apply_sqrt && indir_light_exp != 1.0);
 
-#pragma omp parallel for schedule(static, 128) num_threads(4)
+#pragma omp parallel for schedule(static, 128) num_threads(min(NUM_THREADS, 4U))
 		for (int i = 0; i < (int)data.size(); ++i) {
-			colorRGB const &c(data[i]);
 			unsigned const off2(4*i);
+			colorRGB const &c(data[i]);
+			if (c == BLACK) {UNROLL_3X(tex_data[off2+i_] = 0;) continue;}
 			colorRGB color;
 			UNROLL_3X(color[i_] = min(1.0f, c[i_]*light_int_scale[LIGHTING_LOCAL]);)
 			if      (apply_sqrt) {UNROLL_3X(color[i_] = sqrt(color[i_]););}
@@ -664,7 +664,6 @@ class building_indir_light_mgr_t {
 	unsigned cur_tid=0;
 	colorRGBA outdoor_color;
 	cube_t valid_area, light_bounds;
-	vector<unsigned char> tex_data;
 	vector<unsigned> light_ids;
 	vector<pair<float, unsigned>> lights_to_sort;
 	deque<unsigned> remove_queue;
@@ -910,8 +909,8 @@ class building_indir_light_mgr_t {
 	}
 	void update_volume_light_texture() { // full update, 6.6ms for z=128
 		init_lmgr(0); // init on first call; clear_lighting=0
-		//highres_timer_t timer("Lighting Tex Create"); // 823ms in mall with 4 threads and 368 lights
-		lmgr.update_indir_light_texture(cur_tid, tex_data);
+		//highres_timer_t timer("Lighting Tex Create"); // 706ms in mall with 4 threads and 368 lights
+		lmgr.update_indir_light_texture(cur_tid);
 	}
 	void maybe_join_thread() {
 		if (needs_to_join) {rt_thread.join(); needs_to_join = 0;}
@@ -966,7 +965,6 @@ public:
 		lighting_updated = need_bvh_rebuild = update_windows = 0;
 		cur_bix = cur_floor = -1;
 		invalidate_lighting();
-		tex_data.clear();
 		light_ids.clear();
 		lights_to_sort.clear();
 		windows.clear();
