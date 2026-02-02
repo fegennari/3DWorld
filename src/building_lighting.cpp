@@ -616,9 +616,9 @@ colorRGBA get_outdoor_light_color() {
 unsigned const IS_WINDOW_BIT = (1<<24); // if this bit is set, the light is from a window; if not, it's from a light room object
 
 class building_indir_light_mgr_t {
-	bool is_running, kill_thread, lighting_updated, needs_to_join, need_bvh_rebuild, update_windows, is_negative_light, in_ext_basement;
-	int cur_bix, cur_light, cur_floor;
-	unsigned cur_tid;
+	bool is_running=0, kill_thread=0, lighting_updated=0, needs_to_join=0, need_bvh_rebuild=0, update_windows=0, is_negative_light=0, in_ext_basement=0;
+	int cur_bix=-1, cur_light=-1, cur_floor=-1;
+	unsigned cur_tid=0;
 	colorRGBA outdoor_color;
 	cube_t valid_area, light_bounds;
 	vector<unsigned char> tex_data;

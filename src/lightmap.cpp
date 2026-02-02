@@ -217,7 +217,7 @@ lmcell *lmap_manager_t::get_lmcell(point const &p) { // round to center
 }
 
 void lmap_manager_t::reset_all(lmcell const &init_lmcell) {
-	for (auto i = vldata_alloc.begin(); i != vldata_alloc.end(); ++i) {*i = init_lmcell;}
+	for (lmcell &c : vldata_alloc) {c = init_lmcell;}
 }
 
 template<typename T> void lmap_manager_t::alloc(unsigned nbins, unsigned xsize, unsigned ysize, unsigned zsize, T **nonempty_bins, lmcell const &init_lmcell) {
@@ -835,10 +835,10 @@ void update_indir_light_tex_range(lmap_manager_t const &lmap, vector<unsigned ch
 				}
 				else {
 					lmc.get_final_color(color, 1.0, 1.0);
+					UNROLL_3X(color[i_] = CLIP_TO_01(color[i_]);) // map to [0,1] range before calling pow()/sqrt()
 				}
-				UNROLL_3X(color[i_] = CLIP_TO_01(color[i_]);) // map to [0,1] range before calling pow()/sqrt()
 				if      (apply_sqrt) {UNROLL_3X(color[i_] = sqrt(color[i_]););}
-				else if (apply_exp)  {UNROLL_3X(color[i_] = pow(color[i_], lighting_exponent););}
+				else if (apply_exp)  {UNROLL_3X(color[i_] = pow (color[i_], lighting_exponent););}
 				UNROLL_3X(tex_data[off2+i_] = (unsigned char)(255*color[i_]);)
 			} // for z
 		} // for x
