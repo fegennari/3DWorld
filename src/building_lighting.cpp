@@ -621,6 +621,8 @@ class lmap_manager_local_t {
 	vector<colorRGB> data;
 	vector<unsigned char> tex_data;
 	unsigned xsize=0, ysize=0, zsize=0;
+	vector3d ray_scale, ray_offset;
+	float step_sz_inv=0.0;
 public:
 	void alloc(unsigned xsize_, unsigned ysize_, unsigned zsize_) {
 		xsize = xsize_; ysize = ysize_; zsize = zsize_;
@@ -629,14 +631,21 @@ public:
 	void reset_all() {
 		for (colorRGB &c : data) {c = BLACK;}
 	}
-	void add_path_to_lmcs(point p1, point const &p2, float weight, colorRGBA const &color, float step_sz_inv) {
+	void set_light_bounds(cube_t const &bounds, bool half_step_sz) {
+		ray_scale   = vector3d(xsize, ysize, zsize)/bounds.get_size();
+		ray_offset  = -bounds.get_llc()*ray_scale;
+		step_sz_inv = (half_step_sz ? 2.0 : 1.0); // 1-2 steps per grid on average
+	}
+	void add_path_to_lmcs(point p1, point p2, float weight, colorRGBA const &color) {
+		p1 = ray_scale*p1 + ray_offset;
+		p2 = ray_scale*p2 + ray_offset;
 		colorRGBA const cw(color*weight);
 		unsigned const nsteps(1 + unsigned(p2p_dist(p1, p2)*step_sz_inv)); // round up (dist can be 0)
 		vector3d const step((p2 - p1)/nsteps); // at least two points
 
 		for (unsigned s = 0; s < nsteps; ++s) {
 			p1 += step; // don't double count the first step
-			int const x(p1.x*DX_VAL_INV), y(p1.y*DY_VAL_INV), z(p1.z*DZ_VAL_INV2);
+			int const x(p1.x), y(p1.y), z(p1.z);
 			if ((x >= 0 && x < (int)xsize && y >= 0 && y < (int)ysize && z >= 0 && z < (int)zsize)) {data[(y*xsize + x)*zsize + z] += cw;}
 		}
 	}
@@ -712,7 +721,6 @@ class building_indir_light_mgr_t {
 		bool const reserve_draw_thread(USE_BKG_THREAD && (int)NUM_THREADS >= omp_get_max_threads()); // reserve a thread for drawing if needed
 		unsigned const num_rt_threads(max(1U, (NUM_THREADS - reserve_draw_thread)));
 		unsigned base_num_rays(LOCAL_RAYS), dim(2), dir(0); // default dim is z; dir=2 is omnidirectional
-		vector3d const ray_scale(get_scene_bounds_bcube().get_size()/light_bounds.get_size()), llc_shift(-light_bounds.get_llc()*ray_scale);
 		float const tolerance(1.0E-5*valid_area.get_max_dim_sz());
 		bool const is_window(cur_light & IS_WINDOW_BIT);
 		bool in_attic(0), in_ext_basement(0), is_skylight(0), in_jail_cell(0), half_step_sz(1), hanging(0);
@@ -817,10 +825,10 @@ class building_indir_light_mgr_t {
 		unsigned NUM_PRI_SPLITS(is_window ? 4 : 16); // we're counting primary rays for windows, use fewer primary splits to reduce noise at the cost of increased time
 		max_eq(base_num_rays, NUM_PRI_SPLITS);
 		int const num_rays(base_num_rays/NUM_PRI_SPLITS);
-		float const step_sz_inv((half_step_sz ? 6.0 : 3.0)/(DX_VAL + DY_VAL + DZ_VAL)); // 1-2 steps per grid on average
 		building_colors_t bcolors;
 		b.set_building_colors(bcolors);
 		ray_cast_args_t const args(valid_area, bvh, in_attic, in_ext_basement, bcolors);
+		lmgr.set_light_bounds(light_bounds, half_step_sz);
 		
 		// Note: dynamic scheduling is faster, and using blocks doesn't help
 #pragma omp parallel for schedule(dynamic) num_threads(num_rt_threads)
@@ -859,8 +867,7 @@ class building_indir_light_mgr_t {
 
 			// room lights already contribute direct lighting, so we skip this ray; however, windows don't, so we add their primary ray contribution
 			if (is_window && /*!is_skylight_dir*/!is_skylight && init_cpos != origin) {
-				point const p1(origin*ray_scale + llc_shift), p2(init_cpos*ray_scale + llc_shift); // transform building space to global scene space
-				lmgr.add_path_to_lmcs(p1, p2, weight, ray_lcolor*NUM_PRI_SPLITS, step_sz_inv); // scale color based on splits
+				lmgr.add_path_to_lmcs(origin, init_cpos, weight, ray_lcolor*NUM_PRI_SPLITS); // scale color based on splits
 			}
 			if (!hit) continue; // done
 			colorRGBA const init_color(ray_lcolor.modulate_with(ccolor));
@@ -876,11 +883,8 @@ class building_indir_light_mgr_t {
 				for (unsigned bounce = 1; bounce < MAX_RAY_BOUNCES; ++bounce) { // allow up to MAX_RAY_BOUNCES bounces
 					cpos = pos; // init value
 					bool const hit(b.ray_cast_interior(pos, dir, args, cpos, cnorm, ccolor, &rgen));
-
-					if (cpos != pos) { // accumulate light along the ray from pos to cpos (which is always valid) with color cur_color
-						point const p1(pos*ray_scale + llc_shift), p2(cpos*ray_scale + llc_shift); // transform building space to global scene space
-						lmgr.add_path_to_lmcs(p1, p2, weight, cur_color, step_sz_inv);
-					}
+					// accumulate light along the ray from pos to cpos (which is always valid) with color cur_color
+					if (cpos != pos) {lmgr.add_path_to_lmcs(pos, cpos, weight, cur_color);}
 					if (!hit) break; // done
 					cur_color = cur_color.modulate_with(ccolor);
 					if (cur_color.get_luminance() < lum_thresh) break; // done
