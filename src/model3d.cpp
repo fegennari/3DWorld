@@ -2901,7 +2901,8 @@ void model3ds::render(bool is_shadow_pass, int reflection_pass, int trans_op_mas
 						if (use_bmap && invert_model_nmap_bscale) {s.add_uniform_float("bump_b_scale", 1.0); reset_bscale = 1;}
 						if (ref_pass && any_planar_reflective) {bind_texture_tu(reflection_tid, 14);}
 						if (model3d_wn_normal) {s.add_uniform_float("winding_normal_sign", (cull_front_faces(reflection_pass) ? -1.0 : 1.0));}
-						s.add_uniform_float("hemi_lighting_scale", model_hemi_lighting_scale);
+						bool const no_hemi_lighting(enable_tt_model_indir && tt_mode); // conflicts with indir lighting
+						s.add_uniform_float("hemi_lighting_scale", (no_hemi_lighting ? 0.0 : model_hemi_lighting_scale));
 					}
 					else {
 						s.begin_simple_textured_shader(0.0, 1); // with lighting

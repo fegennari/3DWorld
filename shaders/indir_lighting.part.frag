@@ -73,8 +73,7 @@ vec3 get_indir_lighting(in float normal_sign) {
 
 		if (hemi_lighting && hemi_lighting_scale > 0.0) {
 			float sky_lum   = max(get_luminance(sky_color), 0.33); // or use indir_color?
-			spos            = map_to_indir_space(spos);
-			vec3 gnd_color  = sky_lum*textureLod(ground_tex, spos.xy, 4).rgb; // use 4th LOD mipmap (64x64)
+			vec3 gnd_color  = sky_lum*textureLod(ground_tex, map_to_indir_space(spos).xy, 4).rgb; // use 4th LOD mipmap (64x64)
 			vec3 hemi_color = mix(gnd_color, sky_color, (0.5*normal_sign*hemi_lighting_normal_scale*normal.z + 0.5));
 			indir_color     = mix(indir_color, hemi_color, hemi_lighting_scale); // blend between the two
 		}
