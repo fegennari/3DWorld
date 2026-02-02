@@ -1156,8 +1156,8 @@ bool lmap_manager_t::read_data_from_file(char const *const fn, int ltype) {
 		cerr << "Error reading data from ligthing file " << fn << endl;
 		return 0;
 	}
-	for (vector<lmcell>::iterator i = vldata_alloc.begin(); i != vldata_alloc.end(); ++i) {
-		float *ptr(i->get_offset(ltype));
+	for (lmcell &c : vldata_alloc) {
+		float *ptr(c.get_offset(ltype));
 		for (unsigned n = 0; n < sz; ++n) {ptr[n] = data[pos++];}
 	}
 	assert(pos == data.size());

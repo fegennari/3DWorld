@@ -2396,8 +2396,7 @@ void model3d::create_indir_texture() {
 	else {
 		// TODO: run raytracing to fill in local_lmap_manager, use bcube for bounds (scale to get_scene_bounds_bcube())
 	}
-	vector<unsigned char> tex_data;
-	indir_light_tex_from_lmap(model_indir_tid, local_lmap_manager, tex_data, xsize, ysize, zsize);
+	indir_light_tex_from_lmap(model_indir_tid, local_lmap_manager, xsize, ysize, zsize);
 	light_int_scale[LIGHTING_SKY] = init_weight; // restore orig value
 }
 

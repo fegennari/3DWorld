@@ -19,7 +19,7 @@ mapx/config_mapx.txt # office building scene; F2 changes gameplay mode, 'b' enab
 #config_gym.txt
 #config_berkeley.txt # UC Berkeley heightmap
 #config_puget_sound.txt
-#config_puget_sound_tt.txt # for tiled terrain mode; use F1 to toggle modes
+#config_puget_sound_tt.txt # for tiled terrain mode
 #config_grand_canyon.txt
 #config_grand_canyon_tt.txt
 #sponza/config_sponza2.txt # Sponza atrium; press 'v' to spawn inside, 'm' maximizes, 'V' toggles mouse look

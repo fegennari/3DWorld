@@ -808,14 +808,14 @@ void update_flow_for_voxels(vector<cube_t> const &cubes) {
 	//PRINT_TIME("Update Flow");
 }
 
-void update_indir_light_tex_range(lmap_manager_t const &lmap, vector<unsigned char> &tex_data,
-	unsigned xsize, unsigned y1, unsigned y2, unsigned zsize, float lighting_exponent, bool local_only, bool mt)
-{
-	bool const apply_sqrt(lighting_exponent > 0.49 && lighting_exponent < 0.51), apply_exp(!apply_sqrt && lighting_exponent != 1.0);
+void indir_light_tex_from_lmap(unsigned &tid, lmap_manager_t const &lmap, unsigned xsize, unsigned ysize, unsigned zsize, float lighting_exponent) {
+	vector<unsigned char> tex_data(4*xsize*ysize*zsize, 0);
+	assert(!tex_data.empty()); // size must be nonzero
+	bool const apply_sqrt(lighting_exponent > 0.49 && lighting_exponent < 0.51), apply_exp(!apply_sqrt && lighting_exponent != 1.0); // Note: not currently used
 	assert(lmap.is_allocated());
 
-#pragma omp parallel for schedule(static) num_threads(4) if (mt)
-	for (int y = y1; y < (int)y2; ++y) {
+#pragma omp parallel for schedule(static) num_threads(4)
+	for (int y = 0; y < (int)ysize; ++y) {
 		for (unsigned x = 0; x < xsize; ++x) {
 			unsigned const off(zsize*(y*xsize + x));
 			lmcell const *const vlm(lmap.get_column(x, y));
@@ -825,31 +825,14 @@ void update_indir_light_tex_range(lmap_manager_t const &lmap, vector<unsigned ch
 			for (unsigned z = 0; z < zsize; ++z) {
 				unsigned const off2(4*(off + z));
 				lmcell const &lmc(vlm[z]);
-				
-				if (local_only) { // optimization
-					if (lmc.lc[0] == 0.0 && lmc.lc[1] == 0.0 && lmc.lc[2] == 0.0) { // special case for all zeros
-						tex_data[off2+0] = tex_data[off2+1] = tex_data[off2+2] = 0;
-						continue;
-					}
-					lmc.get_final_color_local(color);
-				}
-				else {
-					lmc.get_final_color(color, 1.0, 1.0);
-					UNROLL_3X(color[i_] = CLIP_TO_01(color[i_]);) // map to [0,1] range before calling pow()/sqrt()
-				}
+				lmc.get_final_color(color, 1.0, 1.0);
+				UNROLL_3X(color[i_] = CLIP_TO_01(color[i_]);) // map to [0,1] range before calling pow()/sqrt()
 				if      (apply_sqrt) {UNROLL_3X(color[i_] = sqrt(color[i_]););}
 				else if (apply_exp)  {UNROLL_3X(color[i_] = pow (color[i_], lighting_exponent););}
 				UNROLL_3X(tex_data[off2+i_] = (unsigned char)(255*color[i_]);)
 			} // for z
 		} // for x
 	} // for y
-}
-void indir_light_tex_from_lmap(unsigned &tid, lmap_manager_t const &lmap, vector<unsigned char> &tex_data,
-	unsigned xsize, unsigned ysize, unsigned zsize, float lighting_exponent, bool local_only)
-{
-	tex_data.resize(4*xsize*ysize*zsize, 0);
-	assert(!tex_data.empty()); // size must be nonzero
-	update_indir_light_tex_range(lmap, tex_data, xsize, 0, ysize, zsize, lighting_exponent, local_only, 1); // mt=1
 	if (tid == 0) {tid = create_3d_texture(zsize, xsize, ysize, 4, tex_data, GL_LINEAR, GL_CLAMP_TO_EDGE);} // see update_smoke_indir_tex_range
 	else {update_3d_texture(tid, 0, 0, 0, zsize, xsize, ysize, 4, tex_data.data());} // stored {Z,X,Y}
 }
