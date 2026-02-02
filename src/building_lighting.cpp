@@ -618,24 +618,27 @@ colorRGBA get_outdoor_light_color() {
 unsigned const IS_WINDOW_BIT = (1<<24); // if this bit is set, the light is from a window; if not, it's from a light room object
 
 class lmap_manager_local_t {
-protected:
 	vector<colorRGB> data;
 	vector<unsigned char> tex_data;
 	unsigned xsize=0, ysize=0, zsize=0;
 public:
-	bool was_updated=0;
-	cube_t update_bcube;
-
-	void reset_all() {
-		for (colorRGB &c : data) {c = BLACK;}
-	}
-	colorRGB *get_lmcell_round_down(point const &p) {
-		int const x(get_xpos_round_down(p.x)), y(get_ypos_round_down(p.y)), z(get_zpos(p.z));
-		return ((x >= 0 && x < (int)xsize && y >= 0 && y < (int)ysize && z >= 0 && z < (int)zsize) ? &data[(y*xsize + x)*zsize + z] : nullptr);
-	}
 	void alloc(unsigned xsize_, unsigned ysize_, unsigned zsize_) {
 		xsize = xsize_; ysize = ysize_; zsize = zsize_;
 		data.resize(xsize*ysize*zsize, BLACK);
+	}
+	void reset_all() {
+		for (colorRGB &c : data) {c = BLACK;}
+	}
+	void add_path_to_lmcs(point p1, point const &p2, float weight, colorRGBA const &color, float step_sz_inv) {
+		colorRGBA const cw(color*weight);
+		unsigned const nsteps(1 + unsigned(p2p_dist(p1, p2)*step_sz_inv)); // round up (dist can be 0)
+		vector3d const step((p2 - p1)/nsteps); // at least two points
+
+		for (unsigned s = 0; s < nsteps; ++s) {
+			p1 += step; // don't double count the first step
+			int const x(p1.x*DX_VAL_INV), y(p1.y*DY_VAL_INV), z(p1.z*DZ_VAL_INV2);
+			if ((x >= 0 && x < (int)xsize && y >= 0 && y < (int)ysize && z >= 0 && z < (int)zsize)) {data[(y*xsize + x)*zsize + z] += cw;}
+		}
 	}
 	void update_indir_light_texture(unsigned &tid) {
 		tex_data.resize(4*data.size(), 0);
@@ -688,7 +691,7 @@ class building_indir_light_mgr_t {
 			needs_to_join = 1;
 		}
 		else {
-			highres_timer_t timer("Ray Cast Building Light"); // 4049 in mall with 368 lights
+			highres_timer_t timer("Ray Cast Building Light"); // 2834 in mall with 368 lights
 			cast_light_rays(b);
 		}
 	}
@@ -704,25 +707,12 @@ class building_indir_light_mgr_t {
 		if (dot_product(dir, cnorm) < 0.0) {dir.negate();} // make sure it points away from the surface (is this needed?)
 		pos = cpos + tolerance*dir; // move slightly away from the surface
 	}
-	void add_path_to_lmcs(point p1, point const &p2, float weight, colorRGBA const &color, float step_sz_inv) {
-		colorRGBA const cw(color*weight);
-		unsigned const nsteps(1 + unsigned(p2p_dist(p1, p2)*step_sz_inv)); // round up (dist can be 0)
-		vector3d const step((p2 - p1)/nsteps); // at least two points
-
-		for (unsigned s = 0; s < nsteps; ++s) {
-			p1 += step; // don't double count the first step
-			colorRGB *c(lmgr.get_lmcell_round_down(p1));
-			if (c != nullptr) {*c += cw;}
-		}
-		lmgr.was_updated = 1;
-	}
 	void cast_light_rays(building_t const &b) {
 		// Note: modifies lmgr, but otherwise thread safe
 		bool const reserve_draw_thread(USE_BKG_THREAD && (int)NUM_THREADS >= omp_get_max_threads()); // reserve a thread for drawing if needed
 		unsigned const num_rt_threads(max(1U, (NUM_THREADS - reserve_draw_thread)));
 		unsigned base_num_rays(LOCAL_RAYS), dim(2), dir(0); // default dim is z; dir=2 is omnidirectional
-		cube_t const scene_bounds(get_scene_bounds_bcube()); // expected by lmap update code
-		vector3d const ray_scale(scene_bounds.get_size()/light_bounds.get_size()), llc_shift(scene_bounds.get_llc() - light_bounds.get_llc()*ray_scale);
+		vector3d const ray_scale(get_scene_bounds_bcube().get_size()/light_bounds.get_size()), llc_shift(-light_bounds.get_llc()*ray_scale);
 		float const tolerance(1.0E-5*valid_area.get_max_dim_sz());
 		bool const is_window(cur_light & IS_WINDOW_BIT);
 		bool in_attic(0), in_ext_basement(0), is_skylight(0), in_jail_cell(0), half_step_sz(1), hanging(0);
@@ -870,7 +860,7 @@ class building_indir_light_mgr_t {
 			// room lights already contribute direct lighting, so we skip this ray; however, windows don't, so we add their primary ray contribution
 			if (is_window && /*!is_skylight_dir*/!is_skylight && init_cpos != origin) {
 				point const p1(origin*ray_scale + llc_shift), p2(init_cpos*ray_scale + llc_shift); // transform building space to global scene space
-				add_path_to_lmcs(p1, p2, weight, ray_lcolor*NUM_PRI_SPLITS, step_sz_inv); // scale color based on splits
+				lmgr.add_path_to_lmcs(p1, p2, weight, ray_lcolor*NUM_PRI_SPLITS, step_sz_inv); // scale color based on splits
 			}
 			if (!hit) continue; // done
 			colorRGBA const init_color(ray_lcolor.modulate_with(ccolor));
@@ -889,7 +879,7 @@ class building_indir_light_mgr_t {
 
 					if (cpos != pos) { // accumulate light along the ray from pos to cpos (which is always valid) with color cur_color
 						point const p1(pos*ray_scale + llc_shift), p2(cpos*ray_scale + llc_shift); // transform building space to global scene space
-						add_path_to_lmcs(p1, p2, weight, cur_color, step_sz_inv);
+						lmgr.add_path_to_lmcs(p1, p2, weight, cur_color, step_sz_inv);
 					}
 					if (!hit) break; // done
 					cur_color = cur_color.modulate_with(ccolor);
