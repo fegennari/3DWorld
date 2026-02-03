@@ -103,6 +103,7 @@ public:
 
 			for (unsigned i = n.start; i < n.end; ++i) { // check leaves
 				auto const &obj(objects[i]);
+				if (!nixm.get_line_clip_func(p1, nixm.dinv, obj.d)) continue; // early reject test
 				if (!ray_cast_cube(p1, p2, obj, cnorm, t)) continue;
 				cpos   = p1 + (p2 - p1)*t;
 				ccolor = obj.color;
@@ -695,7 +696,7 @@ class building_indir_light_mgr_t {
 			needs_to_join = 1;
 		}
 		else {
-			highres_timer_t timer("Ray Cast Building Light"); // 2834 in mall with 368 lights
+			highres_timer_t timer("Ray Cast Building Light"); // 2779 in mall with 368 lights
 			cast_light_rays(b);
 		}
 	}
@@ -706,8 +707,16 @@ class building_indir_light_mgr_t {
 		return v_ref;
 	}
 	void calc_reflect_ray(point &pos, point const &cpos, vector3d &dir, vector3d const &cnorm, vector3d const &v_ref, rand_gen_t &rgen, float tolerance) const {
-		vector3d const rand_dir(rgen.signed_rand_vector().get_norm());
-		dir = (v_ref + rand_dir).get_norm(); // diffuse reflection: new dir is mix 50% specular with 50% random
+		vector3d rand_dir;
+		float mag_sq(0.0);
+
+		while (1) { // spherical distribution
+			rand_dir = rgen.signed_rand_vector();
+			mag_sq   = rand_dir.mag_sq();
+			if (mag_sq < 1.0) break;
+		}
+		// optimization: multiply v_ref by mag rather than dividing rand_dir by mag, since we normalize the sum anyway
+		dir = (sqrt(mag_sq)*v_ref + rand_dir).get_norm(); // diffuse reflection: new dir is mix 50% specular with 50% random
 		if (dot_product(dir, cnorm) < 0.0) {dir.negate();} // make sure it points away from the surface (is this needed?)
 		pos = cpos + tolerance*dir; // move slightly away from the surface
 	}
