@@ -380,11 +380,6 @@ void openal_source::stop()   const {alSourceStop  (source);}
 void openal_source::pause()  const {alSourcePause (source);}
 void openal_source::rewind() const {alSourceRewind(source);}
 
-void openal_source::blocking_play() const {
-	play();
-	do {sleep_for_ms(10);} while (is_active()); // sleep 10ms
-}
-
 int get_source_state(unsigned source) {
 	int state;
 	alGetSourcei(source, AL_SOURCE_STATE, &state);

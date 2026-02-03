@@ -902,7 +902,7 @@ class building_indir_light_mgr_t {
 	void wait_for_finish(bool force_kill) {
 		// Note: for now the time taken to process a light should be pretty fast so we just block until finished; set kill_thread=1 to be faster
 		if (force_kill) {kill_thread = 1;}
-		while (is_running) {sleep_for_ms(10);}
+		while (is_running) {sleep_for_ms(1);}
 		kill_thread = 0;
 	}
 	void update_volume_light_texture() { // full update, 6.6ms for z=128
@@ -945,9 +945,6 @@ class building_indir_light_mgr_t {
 		lights_to_sort.clear();
 	}
 public:
-	building_indir_light_mgr_t() : is_running(0), kill_thread(0), lighting_updated(0), needs_to_join(0), need_bvh_rebuild(0),
-		update_windows(0), is_negative_light(0), in_ext_basement(0), cur_bix(-1), cur_light(-1), cur_floor(-1), cur_tid(0) {}
-
 	cube_t get_light_bounds() const {return light_bounds;}
 
 	void invalidate_lighting() {

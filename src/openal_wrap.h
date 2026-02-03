@@ -116,7 +116,6 @@ public:
 	void set_gain(float gain);
 	void set_buffer(openal_buffer const &buffer) {set_buffer_ix(buffer.get_buffer_ix());}
 	void set_buffer_ix(unsigned buffer_ix);
-	void blocking_play() const;
 	void play_if_not_playing() const;
 	void play()   const;
 	void stop()   const;
