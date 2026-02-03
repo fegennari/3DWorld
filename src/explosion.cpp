@@ -8,7 +8,6 @@
 #include "ship.h"
 #include "ship_util.h"
 #include "mesh.h"
-#include "gl_ext_arb.h"
 #include "shaders.h"
 #include "draw_utils.h"
 

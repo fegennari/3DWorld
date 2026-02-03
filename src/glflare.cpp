@@ -1,12 +1,7 @@
 // http://www.opengl.org/resources/features/KilgardTechniques/LensFlare/
 #include "function_registry.h"
-#include "textures.h"
 #include "draw_utils.h"
 #include "shaders.h"
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <sstream>
 
 
 struct Flare {

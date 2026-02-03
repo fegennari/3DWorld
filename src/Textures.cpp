@@ -3,7 +3,6 @@
 // 4/25/02
 #include "3DWorld.h"
 #include "mesh.h"
-#include "sinf.h"
 #include "textures.h"
 #include "gl_ext_arb.h"
 #include "shaders.h"

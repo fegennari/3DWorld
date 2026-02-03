@@ -8,7 +8,6 @@
 #include "sinf.h"
 #include "heightmap.h"
 #include "shaders.h"
-#include "gl_ext_arb.h"
 #include <glm/gtc/noise.hpp>
 
 

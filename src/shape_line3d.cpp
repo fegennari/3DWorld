@@ -6,7 +6,6 @@
 #include "shape_line3d.h"
 #include "collision_detect.h"
 #include "draw_utils.h"
-#include <fstream>
 
 
 extern int display_mode;

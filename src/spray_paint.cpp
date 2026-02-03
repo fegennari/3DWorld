@@ -4,7 +4,6 @@
 
 #include "collision_detect.h"
 #include "gameplay.h"
-#include "tree_3dw.h"
 #include "openal_wrap.h"
 #include "shaders.h"
 

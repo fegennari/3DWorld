@@ -7,8 +7,6 @@
 #include "gl_ext_arb.h"
 #include "shaders.h"
 #include "binary_file_io.h"
-#include "profiler.h"
-#include <functional>
 
 using std::cerr;
 

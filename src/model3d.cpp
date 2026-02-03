@@ -7,12 +7,10 @@
 #include "gl_ext_arb.h"
 #include "voxels.h"
 #include "vertex_opt.h"
-#include "voxels.h" // for get_cur_model_edges_as_cubes
 #include "csg.h" // for clip_polygon_to_cube
 #include "lightmap.h" // for lmap_manager_t
 #include <queue>
 #include "meshoptimizer.h"
-#include "profiler.h"
 #include "format_text.h"
 #include "binary_file_io.h"
 
@@ -3107,8 +3105,6 @@ void get_cur_model_edges_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &
 	PRINT_TIME("Model3d Polygons to Cubes");
 	cout << "grid size: " << grid.size() << ", cubes out: " << cubes.size() << endl;
 }
-
-//void get_cur_model_edges_as_spheres(vector<sphere_t> &spheres, model3d_xform_t const &xf, float grid_spacing) {}
 
 void get_cur_model_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf) { // Note: only xf.scale is used
 	RESET_TIME;

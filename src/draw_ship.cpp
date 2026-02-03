@@ -5,7 +5,6 @@
 #include "ship.h"
 #include "ship_util.h"
 #include "explosion.h"
-#include "gl_ext_arb.h"
 #include "draw_utils.h"
 #include "shaders.h"
 #include <unordered_map>

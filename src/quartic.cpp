@@ -2,7 +2,6 @@
 // similar to: http://chem.skku.ac.kr/~wkpark/tutor/chem/pdb2pov/povray31/source/polysolv.c
 
 #include "globals.h"
-#include <stdio.h>
 #include <math.h>
 #include <iostream>
 

@@ -7,7 +7,6 @@
 #include "gl_ext_arb.h"
 #include "shaders.h"
 #include "draw_utils.h"
-#include "physics_objects.h" // for fire_elem_t
 
 
 bool const DYNAMIC_SMOKE     = 1; // looks cool

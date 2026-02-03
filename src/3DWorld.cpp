@@ -4,7 +4,6 @@
 
 #include "mesh.h"
 #include "main.h"
-#include "sinf.h"
 #include "ship.h"
 #include "ship_util.h"
 #include "player_state.h"

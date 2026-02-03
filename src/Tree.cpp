@@ -10,7 +10,6 @@
 #include "physics_objects.h"
 #include "shaders.h"
 #include "sinf.h"
-#include "cobj_bsp_tree.h"
 #include "draw_utils.h"
 
 float const BURN_RADIUS      = 0.2;

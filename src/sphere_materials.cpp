@@ -4,7 +4,6 @@
 
 #include "sphere_materials.h"
 #include "physics_objects.h"
-#include "gameplay.h"
 #include "openal_wrap.h"
 #include "lightmap.h"
 #include "file_utils.h"

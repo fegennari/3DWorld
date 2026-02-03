@@ -1,8 +1,5 @@
 // found at: http://research.microsoft.com/%7Eawf/graphics/ray-torus.html
 
-#include "3DWorld.h" // for PI
-
-
 int solve_quartic(const double *poly,double *roots); // quartic.cpp
 
 bool line_intersect_torus(double ax, double ay, double az,

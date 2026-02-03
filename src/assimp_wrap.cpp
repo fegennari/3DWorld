@@ -5,7 +5,6 @@
 
 #include "3DWorld.h"
 #include "model3d.h"
-#include "profiler.h"
 #include "format_text.h"
 
 extern bool enable_spec_map, enable_shine_map;

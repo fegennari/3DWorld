@@ -4,7 +4,6 @@
 
 #include "3DWorld.h"
 #include "mesh.h"
-#include "physics_objects.h"
 
 
 int cobj_counter(0);
