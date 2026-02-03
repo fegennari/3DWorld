@@ -189,8 +189,8 @@ void lmcell::get_final_color(colorRGB &color, float max_indir, float indir_scale
 	bool const apply_sqrt(indir_light_exp > 0.49 && indir_light_exp < 0.51), apply_exp(!apply_sqrt && indir_light_exp != 1.0);
 
 	UNROLL_3X(float indir_term((sv_scaled*sc[i_] + extra_ambient)*cur_ambient[i_] + gv_scaled*gc[i_]*cur_diffuse[i_]); \
-			  if (indir_term > 0.0 && apply_sqrt) {indir_term = sqrt(indir_term);} \
-			  else if (indir_term > 0.0 && apply_exp) {indir_term = pow(indir_term, indir_light_exp);} \
+			  if      (indir_term > 0.0 && apply_sqrt) {indir_term = sqrt(indir_term);} \
+			  else if (indir_term > 0.0 && apply_exp ) {indir_term = pow (indir_term, indir_light_exp);} \
 			  color[i_] = min(max_indir, indir_scale*indir_term) + min(1.0f, lc[i_]*light_int_scale[LIGHTING_LOCAL]);)
 }
 
@@ -808,10 +808,9 @@ void update_flow_for_voxels(vector<cube_t> const &cubes) {
 	//PRINT_TIME("Update Flow");
 }
 
-void indir_light_tex_from_lmap(unsigned &tid, lmap_manager_t const &lmap, unsigned xsize, unsigned ysize, unsigned zsize, float lighting_exponent) {
+void indir_light_tex_from_lmap(unsigned &tid, lmap_manager_t const &lmap, unsigned xsize, unsigned ysize, unsigned zsize) {
 	vector<unsigned char> tex_data(4*xsize*ysize*zsize, 0);
 	assert(!tex_data.empty()); // size must be nonzero
-	bool const apply_sqrt(lighting_exponent > 0.49 && lighting_exponent < 0.51), apply_exp(!apply_sqrt && lighting_exponent != 1.0); // Note: not currently used
 	assert(lmap.is_allocated());
 
 #pragma omp parallel for schedule(static) num_threads(4)
@@ -826,10 +825,7 @@ void indir_light_tex_from_lmap(unsigned &tid, lmap_manager_t const &lmap, unsign
 				unsigned const off2(4*(off + z));
 				lmcell const &lmc(vlm[z]);
 				lmc.get_final_color(color, 1.0, 1.0);
-				UNROLL_3X(color[i_] = CLIP_TO_01(color[i_]);) // map to [0,1] range before calling pow()/sqrt()
-				if      (apply_sqrt) {UNROLL_3X(color[i_] = sqrt(color[i_]););}
-				else if (apply_exp)  {UNROLL_3X(color[i_] = pow (color[i_], lighting_exponent););}
-				UNROLL_3X(tex_data[off2+i_] = (unsigned char)(255*color[i_]);)
+				UNROLL_3X(tex_data[off2+i_] = (unsigned char)(255*CLIP_TO_01(color[i_]));) // map to [0,1] range
 			} // for z
 		} // for x
 	} // for y

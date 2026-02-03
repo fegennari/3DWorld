@@ -22,7 +22,7 @@ vector<point> enabled_bldg_lights;
 extern bool camera_in_building, player_in_walkway, player_in_uge, some_person_has_idle_animation;
 extern int MESH_Z_SIZE, display_mode, display_framerate, camera_surf_collide, animate2, frame_counter, building_action_key, player_in_basement, player_in_elevator, player_in_attic;
 extern unsigned LOCAL_RAYS, MAX_RAY_BOUNCES, NUM_THREADS;
-extern float indir_light_exp, fticks, DZ_VAL;
+extern float fticks, DZ_VAL;
 extern double tfticks;
 extern colorRGB cur_ambient, cur_diffuse;
 extern cube_t reflection_light_cube;
@@ -648,23 +648,19 @@ public:
 			if ((x >= 0 && x < (int)xsize && y >= 0 && y < (int)ysize && z >= 0 && z < (int)zsize)) {data[(y*xsize + x)*zsize + z] += cw;}
 		}
 	}
-	void update_indir_light_texture(unsigned &tid) {
+	void update_indir_light_texture(unsigned &tid) { // Note: takes sqrt(), similar to gamma correction
 		tex_data.resize(4*data.size(), 0);
 		assert(!data.empty()); // must call alloc() first
-		bool const apply_sqrt(indir_light_exp > 0.49 && indir_light_exp < 0.51), apply_exp(!apply_sqrt && indir_light_exp != 1.0);
+		float const light_scale(light_int_scale[LIGHTING_LOCAL]);
 
 #pragma omp parallel for schedule(static, 128) num_threads(min(NUM_THREADS, 4U))
 		for (int i = 0; i < (int)data.size(); ++i) {
 			unsigned const off2(4*i);
 			colorRGB const &c(data[i]);
 			if (c == BLACK) {UNROLL_3X(tex_data[off2+i_] = 0;) continue;}
-			colorRGB color;
-			UNROLL_3X(color[i_] = min(1.0f, c[i_]*light_int_scale[LIGHTING_LOCAL]);)
-			if      (apply_sqrt) {UNROLL_3X(color[i_] = sqrt(color[i_]););}
-			else if (apply_exp)  {UNROLL_3X(color[i_] = pow (color[i_], indir_light_exp););}
-			UNROLL_3X(tex_data[off2+i_] = (unsigned char)(255*color[i_]);)
-		} // for i
-		if (tid == 0) {tid = create_3d_texture(zsize, xsize, ysize, 4, tex_data, GL_LINEAR, GL_CLAMP_TO_EDGE);} // see update_smoke_indir_tex_range
+			for (unsigned j = 0; j < 3; ++j) {tex_data[off2+j] = (unsigned char)(255*sqrt(CLIP_TO_01(c[j]*light_scale)));}
+		}
+		if (tid == 0) {tid = create_3d_texture(zsize, xsize, ysize, 4, tex_data, GL_LINEAR, GL_CLAMP_TO_EDGE);}
 		else {update_3d_texture(tid, 0, 0, 0, zsize, xsize, ysize, 4, tex_data.data());} // stored {Z,X,Y}
 	}
 };
