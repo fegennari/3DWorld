@@ -107,14 +107,9 @@ cobj_tree_base::node_ix_mgr::node_ix_mgr(vector<tree_node> const &nodes_, point 
 }
 bool cobj_tree_base::node_ix_mgr::check_node(unsigned &nix) const {
 	tree_node const &n(nodes[nix]);
-
-	if (!get_line_clip_func(p1, dinv, n.d)) {
-		assert(n.next_node_id > nix);
-		nix = n.next_node_id; // failed the bbox test
-		return 0;
-	}
-	++nix;
-	return 1;
+	bool const ret(get_line_clip_func(p1, dinv, n.d));
+	nix = (ret ? nix+1 : n.next_node_id); // skip to next node if bbox clip test fails
+	return ret;
 }
 
 

@@ -696,7 +696,7 @@ class building_indir_light_mgr_t {
 			needs_to_join = 1;
 		}
 		else {
-			highres_timer_t timer("Ray Cast Building Light"); // 2779 in mall with 368 lights
+			highres_timer_t timer("Ray Cast Building Light"); // 2722 in mall with 368 lights
 			cast_light_rays(b);
 		}
 	}
