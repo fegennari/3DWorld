@@ -696,7 +696,7 @@ class building_indir_light_mgr_t {
 			needs_to_join = 1;
 		}
 		else {
-			highres_timer_t timer("Ray Cast Building Light"); // 2722 in mall with 368 lights
+			highres_timer_t timer("Ray Cast Building Light"); // 2654 in mall with 368 lights
 			cast_light_rays(b);
 		}
 	}
@@ -889,7 +889,7 @@ class building_indir_light_mgr_t {
 					bool const hit(b.ray_cast_interior(pos, dir, args, cpos, cnorm, ccolor, &rgen));
 					// accumulate light along the ray from pos to cpos (which is always valid) with color cur_color
 					if (cpos != pos) {lmgr.add_path_to_lmcs(pos, cpos, weight, cur_color);}
-					if (!hit) break; // done
+					if (!hit || bounce+1 == MAX_RAY_BOUNCES) break; // done on hit or last iteration
 					cur_color = cur_color.modulate_with(ccolor);
 					if (cur_color.get_luminance() < lum_thresh) break; // done
 					calc_reflect_ray(pos, cpos, dir, cnorm, get_reflect_dir(dir, cnorm), rgen, tolerance);
