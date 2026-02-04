@@ -1068,9 +1068,12 @@ public:
 			VA = b.get_industrial_area();
 		}
 		else {
+			// Note: the valid area changes when the player crosses between the basement and extended basement,
+			// which causes lights to not remove themselves properly; however, clearing and rebuilding lighting will break immersion
 			bool const in_ext_basement(b.point_in_extended_basement_not_basement(target));
+			bool const in_basement(b.has_basement() && b.get_basement().contains_pt(target));
 			float const floor_spacing(b.get_window_vspace()), building_z1(b.get_bcube_z1_inc_ext_basement());
-			VA = (in_ext_basement ? b.interior->basement_ext_bcube : b.bcube);
+			VA = (in_ext_basement ? b.interior->basement_ext_bcube : (in_basement ? b.get_basement() : b.bcube));
 			VA.z1() = building_z1 + target_floor*floor_spacing;
 			VA.z2() = VA.z1() + floor_spacing;
 
