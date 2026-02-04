@@ -687,7 +687,7 @@ class building_indir_light_mgr_t {
 		light_job_t(unsigned l=-1, bool n=0) : lix(l), neg(n) {}
 		bool is_valid() const {return (lix >= 0);}
 	};
-	vector<light_job_t> light_batch_t;
+	typedef vector<light_job_t> light_batch_t;
 	light_job_t cur_job;
 
 	void init_lmgr(bool clear_lighting) {
@@ -1034,8 +1034,19 @@ public:
 	}
 	light_job_t get_next_light(building_t const &b, point const &target) {
 		if (!remove_queue.empty()) { // remove an existing light; must run even when player_in_elevator>=2 (doors closed/moving) to remove elevator light at old pos
-			light_job_t const job(remove_queue.front(), 1); // is_neg=1
-			remove_queue.pop_front();
+			// find and remove the closest light to the target; important for large open rooms such as backrooms
+			vect_room_object_t const &objs(b.interior->room_geom->objs);
+			light_job_t job(-1, 1); // is_neg=1
+			auto to_remove(remove_queue.end());
+			float dmin_sq(0.0);
+
+			for (auto i = remove_queue.begin(); i != remove_queue.end(); ++i) {
+				assert((unsigned)*i < objs.size());
+				float const dsq(p2p_dist_sq(target, objs[*i].get_cube_center()));
+				if (!job.is_valid() || dsq < dmin_sq) {job.lix = *i; to_remove = i; dmin_sq = dsq;}
+			}
+			assert(job.is_valid());
+			remove_queue.erase(to_remove);
 			return job;
 		}
 		// find a new light to add
