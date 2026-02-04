@@ -10,12 +10,13 @@
 #include <thread>
 #include <omp.h>
 
-bool  const USE_BKG_THREAD      = 1;
-bool  const INDIR_BASEMENT_EN   = 1;
-bool  const INDIR_ATTIC_ENABLE  = 1;
-bool  const INDIR_BLDG_ENABLE   = 1;
-unsigned INDIR_LIGHT_FLOOR_SPAN = 5; // in number of floors, generally an odd number to represent current floor and floors above/below; 0 is unlimited
-float const ATTIC_LIGHT_RADIUS_SCALE = 2.0; // larger radius in attic, since space is larger
+bool  const USE_BKG_THREAD     = 1;
+bool  const INDIR_BASEMENT_EN  = 1;
+bool  const INDIR_ATTIC_ENABLE = 1;
+bool  const INDIR_BLDG_ENABLE  = 1;
+unsigned const INDIR_LIGHT_FLOOR_SPAN = 5; // in number of floors, generally an odd number to represent current floor and floors above/below; 0 is unlimited
+unsigned const INDIR_LIGHT_BATCH_SIZE = 4; // for USE_BKG_THREAD=1 mode
+float const ATTIC_LIGHT_RADIUS_SCALE  = 2.0; // larger radius in attic, since space is larger
 
 vector<point> enabled_bldg_lights;
 
@@ -689,6 +690,7 @@ class building_indir_light_mgr_t {
 	};
 	typedef vector<light_job_t> light_batch_t;
 	light_job_t cur_job;
+	light_batch_t cur_batch;
 
 	void init_lmgr(bool clear_lighting) {
 		if (clear_lighting) {lmgr.reset_all();}
@@ -890,8 +892,7 @@ class building_indir_light_mgr_t {
 				} // for bounce
 			} // for splits
 		} // for n
-		is_running = 0; // flag as done
-		register_reflection_update();
+		register_reflection_update(); // sets some flags; should be thread safe
 	}
 	void wait_for_finish(bool force_kill) {
 		// Note: for now the time taken to process a light should be pretty fast so we just block until finished; set kill_thread=1 to be faster
@@ -944,6 +945,7 @@ public:
 	void invalidate_lighting() {
 		in_ext_basement = 0;
 		cur_job = light_job_t();
+		cur_batch.clear();
 		remove_queue.clear();
 		lights_complete.clear();
 		lights_seen.clear();
@@ -1015,22 +1017,39 @@ public:
 		if (!need_rebuild) {need_bvh_rebuild |= floor_change;} // rebuild on player floor change if not rebuilt above
 		if (need_bvh_rebuild) {build_bvh(b, target);}
 		tid = cur_tid;
-		mark_light_done(cur_job);
-		cur_job = get_next_light(b, target);
-		if (!cur_job.is_valid()) return; // no lights to update
-		init_lmgr(0); // clear_lighting=0
-		is_running = 1;
-		lighting_updated = 1;
 
-		if (USE_BKG_THREAD) { // start a thread to compute cur_light for building b
+		if (USE_BKG_THREAD) { // background batch mode
+			for (light_job_t const &j : cur_batch) {mark_light_done(j);}
+			cur_batch.clear();
+
+			for (unsigned n = 0; n < INDIR_LIGHT_BATCH_SIZE; ++n) {
+				light_job_t const job(get_next_light(b, target));
+				if (!job.is_valid()) break; // no more lights
+				cur_batch.push_back(job);
+			}
+			if (cur_batch.empty()) return; // no lights to update
+			init_lmgr(0); // clear_lighting=0
+			is_running = lighting_updated = 1;
 			assert(!needs_to_join); // must have joined previous thread
-			rt_thread = std::thread(&building_indir_light_mgr_t::cast_light_rays, this, b, cur_job);
+			rt_thread = std::thread(&building_indir_light_mgr_t::run_light_batch, this, b);
 			needs_to_join = 1;
 		}
-		else {
+		else { // serial mode
+			mark_light_done(cur_job);
+			cur_job = get_next_light(b, target);
+			if (!cur_job.is_valid()) return; // no lights to update
+			init_lmgr(0); // clear_lighting=0
+			lighting_updated = 1;
 			highres_timer_t timer("Ray Cast Building Light"); // 2654 in mall with 368 lights
 			cast_light_rays(b, cur_job);
 		}
+	}
+	void run_light_batch(building_t const &b) { // background thread task
+		for (light_job_t const &j : cur_batch) {
+			cur_job = j;
+			cast_light_rays(b, j);
+		}
+		is_running = 0; // thread job is done
 	}
 	light_job_t get_next_light(building_t const &b, point const &target) {
 		if (!remove_queue.empty()) { // remove an existing light; must run even when player_in_elevator>=2 (doors closed/moving) to remove elevator light at old pos
@@ -1056,9 +1075,15 @@ public:
 		sort_lights_by_priority();
 		light_job_t job; // is_neg=0
 
-		for (auto i = light_ids.begin(); i != light_ids.end(); ++i) {
-			lights_seen.insert(*i); // must track lights across all floors seen for correct progress update
-			if (job.lix < 0 && lights_complete.find(*i) == lights_complete.end()) {job.lix = *i;} // find an incomplete light
+		for (unsigned id : light_ids) {
+			bool found(0);
+			
+			for (light_job_t const &j : cur_batch) {
+				if (j.lix == id) {found = 1; break;}
+			}
+			if (found) continue; // already part of the current batch; skip
+			lights_seen.insert(id); // must track lights across all floors seen for correct progress update
+			if (job.lix < 0 && lights_complete.find(id) == lights_complete.end()) {job.lix = id;} // find an incomplete light
 		}
 		return job;
 	}
