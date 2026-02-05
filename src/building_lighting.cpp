@@ -669,7 +669,7 @@ public:
 
 class building_indir_light_mgr_t {
 	bool is_running=0, kill_thread=0, lighting_updated=0, needs_to_join=0, need_bvh_rebuild=0, update_windows=0, in_ext_basement=0;
-	int cur_bix=-1, cur_floor=-1;
+	int cur_bix=-1, cur_floor=-1, timer_val=0;
 	unsigned cur_tid=0;
 	colorRGBA outdoor_color;
 	cube_t valid_area, light_bounds;
@@ -1027,7 +1027,12 @@ public:
 				if (!job.is_valid()) break; // no more lights
 				cur_batch.push_back(job);
 			}
-			if (cur_batch.empty()) return; // no lights to update
+			if (cur_batch.empty()) { // no lights to update
+				if (timer_val) {register_timing_value("lighting update", (GET_TIME_MS() - timer_val));}
+				timer_val = 0; // prevent printout from re-triggering until more lights are processed
+				return;
+			}
+			if (!timer_val) {timer_val = GET_TIME_MS();} // start a new block of lights
 			init_lmgr(0); // clear_lighting=0
 			is_running = lighting_updated = 1;
 			assert(!needs_to_join); // must have joined previous thread
