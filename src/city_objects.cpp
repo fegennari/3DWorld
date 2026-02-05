@@ -2842,6 +2842,10 @@ void city_bldg_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_
 	float const dmax(dist_scale*dstate.draw_tile_dist);
 	if (!shadow_only && !bcube.closest_dist_less_than(dstate.camera_bs, 0.4*dmax)) return; // no pavements or lights (pavement has Z-fighting problems anyway)
 	if (!shadow_only) {draw_road_pavement(dstate, qbds);} // draw pavement surface
+
+	if (btype == CITY_BLDG_SERVICE) { // draw a stack of tires
+		// TODO
+	}
 	if (!shadow_only && !bcube.closest_dist_less_than(dstate.camera_bs, 0.2*dmax)) return; // no lights
 	if (!shadow_only) {draw_lights(dstate, qbds, lights, num_lanes);} // draw lights
 }
