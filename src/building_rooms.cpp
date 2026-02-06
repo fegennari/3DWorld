@@ -3760,7 +3760,7 @@ int building_t::get_ext_door_dir(cube_t const &door_bcube, bool dim) const { // 
 		else if (fabs(p->d[dim][1] - door_bcube.d[dim][1]) < 0.1*width) return 1;
 	} // for p
 	if (is_cube()) { // some non-cube buildings have no exterior doors
-		cout << "Warning: Failed to find building exterior door: " << TXT(bcube.str()) << TXT(door_bcube.str()) << TXT(is_house) << endl; // debug printout
+		cout << "Warning: Failed to find building exterior door: " << TXTS(bcube) << TXTS(door_bcube) << TXT(is_house) << endl; // debug printout
 		//assert(0); // never gets here (too strong?)
 	}
 	return 2; // not found

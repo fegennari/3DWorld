@@ -394,7 +394,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 				base.expand_by_xy(0.5*(radius - shrink) - radius); // half radius, shrunk
 				cc.emplace_back(base, color);
 			}
-			if (!inner_cube.is_strictly_normalized()) {cout << TXT(c->str()) << TXT(inner_cube.str()) << TXTi(type) << endl;}
+			if (!inner_cube.is_strictly_normalized()) {cout << TXTS((*c)) << TXTS(inner_cube) << TXTi(type) << endl;}
 			assert(inner_cube.is_strictly_normalized());
 			cc.emplace_back(inner_cube, color);
 		}
@@ -2201,8 +2201,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		min_eq(clipped_bc.z2(), (ceil_z + z2_adj)); // ceiling is always valid, since lights point downward
 
 		if (!clipped_bc.is_strictly_normalized()) {
-			cout << "Error: Invalid light bcube: " << TXT(clipped_bc.str()) << TXT(sphere_bc.str()) << TXT(light_clip_cube.str())
-				 << TXT(lpos.str()) << TXT(floor_z) << TXT(ceil_z) << TXT(is_lamp) << TXT(is_in_elevator) << TXT(light_in_basement) << endl;
+			cout << "Error: Invalid light bcube: " << TXTS(clipped_bc) << TXTS(sphere_bc) << TXTS(light_clip_cube)
+				 << TXTS(lpos) << TXT(floor_z) << TXT(ceil_z) << TXT(is_lamp) << TXT(is_in_elevator) << TXT(light_in_basement) << endl;
 			assert(0);
 		}
 		if (!is_visible_in_reflection && !is_rot_cube_visible(clipped_bc, xlate, 1)) continue; // VFC; inc_mirror_reflections=1
@@ -2350,7 +2350,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			static bool had_invalid_light_bcube_warning = 0;
 
 			if (!had_invalid_light_bcube_warning) { // only print once
-				cout << "Error: Invalid light bcube: " << TXT(clipped_bc.str()) << TXT(lpos.str()) << TXT(room.str()) << TXT(bcube.str()) << TXT(is_lamp) << TXT(is_in_elevator) << endl;
+				cout << "Error: Invalid light bcube: " << TXTS(clipped_bc) << TXTS(lpos) << TXTS(room) << TXTS(bcube) << TXT(is_lamp) << TXT(is_in_elevator) << endl;
 				had_invalid_light_bcube_warning = 1;
 			}
 			continue; // can fail in rare cases when very far from the origin, likely due to FP error, so skip light in this case

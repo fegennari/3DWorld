@@ -1917,7 +1917,7 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 				if (cur.z > prev.z && cur.z == next.z) {top_dim = (cur.x == next.x); top_lo = min(cur[top_dim], next[top_dim]); top_hi = max(cur[top_dim], next[top_dim]);}
 			}
 			if (top_dim == 2 || top_dim != bot_dim) {
-				cout << "Bad house roof: " << TXT(top_dim) << TXT(bot_dim) << TXT(bcube.str()) << endl;
+				cout << "Bad house roof: " << TXT(top_dim) << TXT(bot_dim) << TXTS(bcube) << endl;
 				assert(0);
 			}
 			else if (top_lo == bot_lo || top_hi == bot_hi) { // peaked, maybe clipped at one end, not hipped

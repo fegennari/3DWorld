@@ -855,7 +855,7 @@ void building_t::maybe_assign_extb_room_as_swimming(rand_gen_t &rgen) {
 	// cut out a space in the floor for the pool
 	for (cube_t &f : interior->floors) {
 		if (!room.contains_cube(f)) continue;
-		if (!f.contains_cube_xy(pool)) {cout << TXT(room.str()) << TXT(f.str()) << TXT(pool.str()) << endl;}
+		if (!f.contains_cube_xy(pool)) {cout << TXTS(room) << TXTS(f) << TXTS(pool) << endl;}
 		assert(f.contains_cube_xy(pool));
 		vect_cube_t floor_parts;
 		subtract_cube_from_cube(f, pool, floor_parts); // should only get here for one floor

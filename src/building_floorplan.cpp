@@ -2861,7 +2861,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 					test_pt[dim] = stairwell.d[dim][stairs_dir];
 					if (r.contains_pt_xy(test_pt)) {r.has_stairs |= 1;} // bottom floor
 				}
-				else {cout << TXT(stairwell.str()) << TXT(r.str()) << TXT(part.str()) << TXT(p.str()) << endl; assert(0);} // something bad happened
+				else {cout << TXTS(stairwell) << TXTS(r) << TXTS(part) << TXTS(p) << endl; assert(0);} // something bad happened
 			} // for r
 			if (use_basement_stairs) { // add a basement door at the bottom of the stairs
 				float const pos_shift((stairs_dir ? 1.0 : -1.0)*0.8*wall_thickness);

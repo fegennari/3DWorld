@@ -98,7 +98,7 @@ void building_t::move_door_to_other_side_of_wall(tquad_with_ix_t &door, float di
 			if (fabs(dist) < fabs(door_shift)) {door_shift = dist;}
 		} // for p
 		if (door_shift == large_val) { // not found
-			std::cerr << TXT(c.str()) << TXT(dim) << TXT(dir) << TXTi(real_num_parts) << TXT(is_cube()) << endl;
+			std::cerr << TXTS(c) << TXT(dim) << TXT(dir) << TXTi(real_num_parts) << TXT(is_cube()) << endl;
 			assert(0);
 		}
 	}
@@ -1382,7 +1382,7 @@ bool extend_existing_driveway(cube_t const &driveway, cube_t const &plot, cube_t
 	else if (driveway.x2() > bcube.x2()) {dim = 0; dir = 1;}
 	else if (driveway.y1() < bcube.y1()) {dim = 1; dir = 0;}
 	else if (driveway.y2() > bcube.y2()) {dim = 1; dir = 1;}
-	else {cout << TXT(driveway.str()) << TXT(bcube.str()) << endl; assert(0); return 0;} // not adjacent?
+	else {cout << TXTS(driveway) << TXTS(bcube) << endl; assert(0); return 0;} // not adjacent?
 	if (extend_existing_driveway_in_dim(driveway, plot, bcube, bcubes, ret, dim, dir)) return 1;
 	// what about making a right angle turn?
 	dim ^= 1; // try the other dim
@@ -2634,7 +2634,7 @@ bool building_interior_t::is_cube_close_to_doorway(cube_t const &c, cube_t const
 	test_cube.expand_by_xy(1.5*door_width);
 	
 	if (!room.is_all_zeros()) { // don't go outside the original room
-		if (!room.intersects_xy(c)) {cout << "Bad room cube: " << TXT(room.str()) << TXT(c.str()) << endl;}
+		if (!room.intersects_xy(c)) {cout << "Bad room cube: " << TXTS(room) << TXTS(c) << endl;}
 		assert(room.intersects_xy(c)); // can't test zval in case of ball in pool
 		cube_t room_exp(room);
 		room_exp.expand_by_xy(0.1*door_width); // small amount to include wall width

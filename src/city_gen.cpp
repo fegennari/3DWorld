@@ -926,7 +926,7 @@ public:
 
 		if (is_4_way) {
 			int const int3_ix(find_3way_int_at(c, dim, dir));
-			if (int3_ix < 0) {cout << TXT(dim) << TXT(dir) << TXT(bcube.str()) << TXT(c.str()) << endl;}
+			if (int3_ix < 0) {cout << TXT(dim) << TXT(dir) << TXTS(bcube) << TXTS(c) << endl;}
 			assert(int3_ix >= 0); // must be found
 			align_isec3_to(int3_ix, c, dim);
 			make_4way_int(int3_ix, dim, dir, dest_city_id, encode_neg_ix(grn_rix));
@@ -969,7 +969,7 @@ public:
 		heightmap_query_t &hq(crc.hq);
 
 		if (delta_z/road_len > city_params.max_road_slope) { // slope is too high (split segments will have even higher slopes)
-			if (!check_only) {cout << TXT(dim) << TXT(road_len) << TXT(delta_z) << TXT(bcube1.str()) << TXT(bcube2.str()) << TXT(p1.str()) << TXT(p2.str()) << endl;}
+			if (!check_only) {cout << TXT(dim) << TXT(road_len) << TXT(delta_z) << TXTS(bcube1) << TXTS(bcube2) << TXTS(p1) << TXTS(p2) << endl;}
 			assert(check_only);
 			return -1.0;
 		}
@@ -1874,7 +1874,7 @@ private:
 			car.cur_road_type = TYPE_RSEG;
 			return;
 		} // for i
-		cout << "Warning: Car exiting driveway not centered on a road segment: " << TXT(car.str()) << endl;
+		cout << "Warning: Car exiting driveway not centered on a road segment: " << TXTS(car) << endl;
 
 		// cars exiting a driveway by backing up and turning right may end in the intersection rather than the road segment;
 		// find the road segment the car overlaps - there should be only one; technically we should only need to check the front of the car, but this is safer
@@ -1997,7 +1997,7 @@ private:
 		if (road_ix < 0) {
 			cout << TXT(car.dest_driveway) << TXT(car.dest_gstation) << TXT(car.dest_cwash) << TXT(car.dest_gs_lane)
 				 << TXT(car.dest_cw_lane) << TXT(car.need_gas) << TXT(car.need_wash) << endl;
-			cerr << car.str() << TXT(driveway.str()) << endl;
+			cerr << car.str() << TXTS(driveway) << endl;
 			assert(0);
 		}
 		float const road_center(roads[road_ix].get_center_dim(car.dim));
@@ -2071,7 +2071,7 @@ public:
 		}
 		if (city_params.cars_use_driveways && car.turn_dir != TURN_NONE && !car.in_isect()) {
 			assert(dest_driveway_in_this_city(car));
-			cout << "Car missed driveway turn: " << car.str() << TXT(car.prev_bcube.str()) << TXT(get_driveway_or_gs_cw_entrance(car).str()) << endl;
+			cout << "Car missed driveway turn: " << car.str() << TXTS(car.prev_bcube) << TXTS(get_driveway_or_gs_cw_entrance(car)) << endl;
 			car.turn_dir = TURN_NONE; // hack to handle misbehaving cars turning into driveways (maybe missed the turn because it was blocked?)
 		}
 		if (car.turn_dir != TURN_NONE) {
@@ -2234,7 +2234,7 @@ private:
 				if (i->intersects_xy(query_cube)) return; // car.dest_isec is the correct value
 			}
 		}
-		cout << TXT(dim) << TXT(dir) << TXT(extend_dir) << TXT(road_spacing) << TXT(dw_road_meet) << TXT(driveway.str()) << TXT(query_cube.str()) << endl;
+		cout << TXT(dim) << TXT(dir) << TXT(extend_dir) << TXT(road_spacing) << TXT(dw_road_meet) << TXTS(driveway) << TXTS(query_cube) << endl;
 		assert(0); // should never get here
 	}
 	bool select_avail_driveway_or_parking_space(car_t &car, rand_gen_t &rgen) const {
@@ -2602,7 +2602,7 @@ public:
 		for (auto p = best_cand.pts.begin(); p+1 != best_cand.pts.end(); ++p, fdim ^= 1) {
 			bool const is_first(p == best_cand.pts.begin()), is_last(p+2 == best_cand.pts.end());
 			point const &p1(*p), &p2(*(p+1));
-			//cout << (p-best_cand.pts.begin()) << " " << best_cand.pts.size() << " " << TXT(fdim) << TXT(p1.str()) << TXT(p2.str()) << TXT(is_first) << TXT(is_last) << endl;
+			//cout << (p-best_cand.pts.begin()) << " " << best_cand.pts.size() << " " << TXT(fdim) << TXTS(p1) << TXTS(p2) << TXT(is_first) << TXT(is_last) << endl;
 			assert(!bcube1.contains_pt(p2));
 			assert(!bcube2.contains_pt(p1));
 			assert(p1[!fdim] == p2[!fdim]); // must be a straight road in this dim
@@ -3438,7 +3438,7 @@ void city_lights_manager_t::tighten_light_bcube_bounds(vector<light_source> cons
 	cube_t tight_bcube;
 	for (light_source const &l : lights) {tight_bcube.assign_or_union_with_sphere(l.get_pos(), l.get_radius());}
 	//cout << TXT(bcube.dx()) << TXT(bcube.dy()) << TXT(tight_bcube.dx()) << TXT(tight_bcube.dy()) << endl;
-	if (!lights_bcube.intersects(tight_bcube)) {cerr << "Invalid bcubes: " << TXT(lights_bcube.str()) << TXT(tight_bcube.str()) << endl;}
+	if (!lights_bcube.intersects(tight_bcube)) {cerr << "Invalid bcubes: " << TXTS(lights_bcube) << TXTS(tight_bcube) << endl;}
 	else {lights_bcube.intersect_with_cube(tight_bcube);} // clip the original cube to the tight cube (better to just set to tight cube?)
 }
 

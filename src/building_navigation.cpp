@@ -466,7 +466,7 @@ public:
 		node_t const &node(get_node(node_ix));
 		assert(node.is_stairs || node.is_ramp);
 		assert(!node.bcube.is_all_zeros()); // must have been filled in during graph building
-		if (node.conn_rooms.empty()) {cout << TXT(node.is_stairs) << TXT(node.is_ramp) << TXT(node_ix) << TXT(node.bcube.str()) << endl;}
+		if (node.conn_rooms.empty()) {cout << TXT(node.is_stairs) << TXT(node.is_ramp) << TXT(node_ix) << TXTS(node.bcube) << endl;}
 		assert(!node.conn_rooms.empty());
 		vector2d const &pt(node.conn_rooms.front().pt[up_or_down]); // Note: all conn_rooms should be the same x/y value
 		return point(pt.x, pt.y, zval);
@@ -1993,9 +1993,9 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 			}
 			if (!point_in_building_or_basement_bcube(seg2_start)) {
 				cerr << TXT(s) << TXT(num_stairwells) TXT(stairs_end) << TXT(sre_room_ix) << TXT(is_ramp) << TXT(is_escalator) << endl;
-				cerr << TXT(seg2_start.str()) << TXT(bcube.str());
-				if (has_basement()) {cerr << TXT(get_basement().str());}
-				cerr << TXT(interior->basement_ext_bcube.str()) << TXT(from.str()) << TXT(to.str()) << endl;
+				cerr << TXTS(seg2_start) << TXTS(bcube);
+				if (has_basement()) {cerr << TXTS(get_basement());}
+				cerr << TXTS(interior->basement_ext_bcube) << TXTS(from) << TXTS(to) << endl;
 			}
 			assert(point_in_building_or_basement_bcube(seg2_start));
 			
@@ -2845,7 +2845,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		}
 	}
 	if (!point_in_building_or_basement_bcube(person.pos)) { // person must be inside the building
-		cout << TXT(person.pos.str()) << TXT(bcube.str()) << TXT(interior->basement_ext_bcube.str()) << endl;
+		cout << TXTS(person.pos) << TXTS(bcube) << TXTS(interior->basement_ext_bcube) << endl;
 		// this can happen when people push each other through prison corner elevators, so clamp pos to building bounds rather than failing
 		cube_t clamp_cube;
 		if (person.pos.z > ground_floor_z1) {clamp_cube = bcube;}
@@ -3044,7 +3044,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	point new_pos;
 
 	if (dir_dp < 0.9999) { // dir not perfectly aligned
-		//if (person.is_close_to_player()) {cout << TXT(new_dir.str()) << TXT(person.dir.str()) << TXT(new_dir_mag) << TXT(delta_dir) << TXT(max_dist) << TXT(radius) << endl;}
+		//if (person.is_close_to_player()) {cout << TXTS(new_dir) << TXTS(person.dir) << TXT(new_dir_mag) << TXT(delta_dir) << TXT(max_dist) << TXT(radius) << endl;}
 		assert(new_dir != zero_vector); // should be guaranteed by dist_less_than() test, assuming zvals are equal (which they should be)
 		float const step_scale(max(0.1f, dot_product(person.dir, new_dir))); // move more slowly when direction misaligns to avoid overshooting target_pos
 		
@@ -3125,8 +3125,8 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		}
 	}
 	if (!point_in_building_or_basement_bcube(new_pos)) { // person must be inside the building
-		cout << TXT(new_pos.str()) << TXT(person.pos.str()) << TXT(bcube.str()) << TXT(interior->basement_ext_bcube.str())
-			 << TXT(person.on_stairs()) << TXT(max_dist) << TXT(person.dir.str()) << TXT(prev_in_pool) << TXT(person.in_pool) << endl;
+		cout << TXTS(new_pos) << TXTS(person.pos) << TXTS(bcube) << TXTS(interior->basement_ext_bcube)
+			 << TXT(person.on_stairs()) << TXT(max_dist) << TXTS(person.dir) << TXT(prev_in_pool) << TXT(person.in_pool) << endl;
 		assert(0);
 	}
 	// don't do collision detection while on stairs/ramp/escalator because it doesn't work properly; just let people walk through each other
@@ -3319,7 +3319,7 @@ void building_t::move_person_to_not_collide(person_t &person, person_t const &ot
 		}
 	}
 	if (!point_in_building_or_basement_bcube(person.pos)) { // this can happen on rare occasions, due to fp inaccuracy or multiple collisions
-		//cout << TXT(rsum) << TXT(sep_dist) << TXT(move_dist) << TXT(room_ix) << TXT(other.pos.str()) << TXT(person.pos.str()) << TXT(bcube.str()) << endl;
+		//cout << TXT(rsum) << TXT(sep_dist) << TXT(move_dist) << TXT(room_ix) << TXTS(other.pos) << TXTS(person.pos) << TXTS(bcube) << endl;
 		clamp_person_to_building_bcube(person.pos, bcube, person.radius, get_fc_thickness()); // just clamp pos so that it doesn't assert later
 	}
 }

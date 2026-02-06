@@ -131,7 +131,7 @@ public:
 			if (check_occlusion && building.check_obj_occluded(bcube, camera_bs, oc, reflection_pass, 0, 0, 1)) continue; // inc_extra_occluders=1
 			
 			if (S.dir == zero_vector || S.upv == zero_vector) {
-				if (!had_inval_spider_warn) {cout << "Error: Invalid spider: " << TXT(S.pos.str()) << TXT(S.dir.str()) << TXT(S.upv.str()) << endl;} // print only once
+				if (!had_inval_spider_warn) {cout << "Error: Invalid spider: " << TXTS(S.pos) << TXTS(S.dir) << TXTS(S.upv) << endl;} // print only once
 				had_inval_spider_warn = 1;
 				continue; // seems like this can occasionally happen with too many objects and low framerate; maybe FP error; make it nonfatal
 			}

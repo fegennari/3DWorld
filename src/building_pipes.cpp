@@ -654,7 +654,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		pipe_t main_pipe(mp[0], mp[1], r_main, dim, PIPE_MAIN, main_pipe_end_flags);
 	
 		if (!main_pipe.get_bcube().is_strictly_normalized()) {
-			cout << "Error: Invalid main pipe: " << TXT(r_main) << TXT(mp[0].str()) << TXT(mp[1].str()) << TXT(main_pipe.get_bcube().str()) << endl;
+			cout << "Error: Invalid main pipe: " << TXT(r_main) << TXTS(mp[0]) << TXTS(mp[1]) << TXTS(main_pipe.get_bcube()) << endl;
 			assert(0);
 		}
 		pipes.push_back(main_pipe);
