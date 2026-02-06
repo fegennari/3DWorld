@@ -480,6 +480,11 @@ void building_t::run_player_interact_logic(point const &camera_bs) {
 	if (animate2) {update_player_interact_objects(camera_bs);} // update dynamic objects if the player is in the building
 }
 
+point ray_ortho_plane_int(point const &p1, point const &p2, float plane_val, unsigned dim) {
+	float const t((plane_val - p1[dim])/(p2[dim] - p1[dim]));
+	return p1 + t*(p2 - p1);
+}
+
 // called for the player; mode: 0=normal, 1=pull
 bool building_t::apply_player_action_key(point const &closest_to_in, vector3d const &in_dir_in, int mode, bool check_only, bool no_check_conn_building) {
 	if (!interior) return 0; // error?
@@ -501,7 +506,8 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 			float const dist_sq(p2p_dist_sq(closest_to, center));
 			if (found_item && dist_sq >= closest_dist_sq) continue; // not the closest
 			if (!check_obj_dir_dist(closest_to, in_dir, *i, center, (player_in_closet ? 0.5 : 1.0)*dmax)) continue; // door not in the correct direction or too far away
-			if (check_for_wall_ceil_floor_int(closest_to, query_ray_end, 0, 1, 1, 0)) continue; // pbgr_walls=0, transparent=1, bars=1, doors=0
+			point const p_int(ray_ortho_plane_int(closest_to, query_ray_end, i->get_center_dim(i->dim), i->dim)); // use intersect point to avoid intersecting far wall
+			if (check_for_wall_ceil_floor_int(closest_to, p_int, 0, 1, 1, 0)) continue; // pbgr_walls=0, transparent=1, bars=1, doors=0
 			cube_t const door_bcube(i->get_true_bcube()); // expand to nonzero area
 
 			if (!door_bcube.line_intersects(closest_to, query_ray_end)) { // if camera ray doesn't intersect the door frame, check for ray intersection with opened door
