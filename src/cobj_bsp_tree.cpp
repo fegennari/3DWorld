@@ -139,7 +139,7 @@ template<typename T> void cobj_tree_simple_type_t<T>::build_tree(unsigned nix, u
 	assert(nix < nodes.size());
 	tree_node &n(nodes[nix]);
 	calc_node_bbox(n);
-	unsigned const num(n.end - n.start);
+	unsigned const num(n.size());
 	max_depth = max(max_depth, depth);
 	if (check_for_leaf(num, skip_dims)) return; // base case
 
@@ -147,7 +147,7 @@ template<typename T> void cobj_tree_simple_type_t<T>::build_tree(unsigned nix, u
 	float max_sz(0), sval(0);
 	unsigned const dim(n.get_split_dim(max_sz, sval, skip_dims));
 	float const sval_lo(add_node_overlap ? sval+OVERLAP_AMT*max_sz : sval), sval_hi(add_node_overlap ? sval-OVERLAP_AMT*max_sz : sval);
-	unsigned pos(n.start), bin_count[3];
+	unsigned pos(n.start), bin_count[3]={};
 	if (temp_bins[1].capacity() == 0) {temp_bins[1].reserve(11*num/20);} // reserve to 55% to hopefully avoid vector doubling
 
 	// split in this dimension
@@ -557,7 +557,7 @@ void cobj_bvh_tree::build_tree_top_level_omp() { // single octtree level
 	vector<unsigned> top_temp_bins[8];
 	unsigned const nix(0);
 	tree_node &n(nodes[nix]);
-	unsigned const num(n.end - n.start);
+	unsigned const num(n.size());
 
 	// calculate bbox and determine mean values
 	point sval(all_zeros);
@@ -622,7 +622,7 @@ void cobj_bvh_tree::build_tree(unsigned nix, unsigned skip_dims, unsigned depth,
 	assert(nix < nodes.size());
 	tree_node &n(nodes[nix]);
 	calc_node_bbox(n);
-	unsigned const num(n.end - n.start);
+	unsigned const num(n.size());
 	max_depth = max(max_depth, depth);
 	if (check_for_leaf(num, skip_dims)) return; // base case
 	
@@ -630,7 +630,7 @@ void cobj_bvh_tree::build_tree(unsigned nix, unsigned skip_dims, unsigned depth,
 	float max_sz(0), sval(0);
 	unsigned const dim(n.get_split_dim(max_sz, sval, skip_dims));
 	float const sval_lo(sval+OVERLAP_AMT*max_sz), sval_hi(sval-OVERLAP_AMT*max_sz);
-	unsigned pos(n.start), bin_count[3];
+	unsigned pos(n.start), bin_count[3]={};
 
 	// split in this dimension: use upper 2 bits of cixs for storing bin index
 	for (unsigned i = n.start; i < n.end; ++i) {

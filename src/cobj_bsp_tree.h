@@ -15,6 +15,7 @@ protected:
 
 		tree_node(unsigned s=0, unsigned e=0) : start(s), end(e) {}
 		tree_node(unsigned s, unsigned e, cube_t const &cube) : cube_t(cube), start(s), end(e) {}
+		unsigned size() const {return (end - start);}
 	};
 	vector<tree_node> nodes;
 	unsigned max_depth=0, max_leaf_count=0, num_leaf_nodes=0;
