@@ -529,9 +529,10 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vect_room_
 						blockers.clear();
 						for (unsigned m = 0; m < num_plates; ++m) {add_stack_of_plates(shelf, plate_radius, c.room_id, c.light_amt, flags, rgen, blockers, objects);}
 					}
-					else { // paper towels
-						float const oheight(0.67*height_val), radius(min(0.45f*shelf_depth, 0.25f*oheight));
-						add_rows_of_vcylinders(c2, shelf, radius, oheight, 0.2, TYPE_TPROLL, 1, (flags | RO_FLAG_HAS_EXTRA), objects, rgen); // 1 column
+					else { // paper towels or toilet paper
+						bool const paper_towel(rand_val < 0.97); // small chance of toilet paper
+						float const oheight((paper_towel ? 0.64 : 0.3)*height_val), radius(min(0.45*shelf_depth, (paper_towel ? 0.25 : 0.5)*oheight));
+						add_rows_of_vcylinders(c2, shelf, radius, oheight, 0.2, TYPE_TPROLL, 1, (flags | (paper_towel ? RO_FLAG_HAS_EXTRA : 0)), objects, rgen); // 1 column
 					}
 				}
 				else { // freezer
