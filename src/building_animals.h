@@ -7,8 +7,8 @@
 
 template<typename T> cube_t get_cube_height_radius(point const &center, T radius, float height);
 
-// define separate types so that we can differentiate fly vs. roach from TYPE_INSECT
-enum {ATYPE_RAT=0, ATYPE_SNAKE, ATYPE_SPIDER, ATYPE_FLY, ATYPE_ROACH};
+// define separate types so that we can differentiate {fly, roach, centipede} from TYPE_INSECT
+enum {ATYPE_RAT=0, ATYPE_SNAKE, ATYPE_SPIDER, ATYPE_FLY, ATYPE_ROACH, ATYPE_CENTIPEDE};
 
 struct building_animal_t {
 	point pos, last_pos;
@@ -134,9 +134,8 @@ struct insect_t : public building_animal_t {
 };
 
 template<typename T> struct vect_animal_t : public vector<T> {
-	bool placed;
-	float max_radius, max_xmove;
-	vect_animal_t() : placed(0), max_radius(0.0), max_xmove(0.0) {}
+	bool placed=0;
+	float max_radius=0.0, max_xmove=0.0;
 	
 	void add(T const &animal) {
 		this->push_back(animal);

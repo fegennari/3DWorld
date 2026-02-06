@@ -408,7 +408,7 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 
 	if (otype == TYPE_INSECT) { // unused
 		bool const is_fly(obj.is_hanging());
-		string const name(string(broken ? "dead " : "") + (is_fly ? "fly" : "cockroach"));
+		string const name(string(broken ? "dead " : "") + (is_fly ? "fly" : "cockroach")); // or centipede?
 		return bldg_obj_type_t(0, 0, 0, 1, 0, !is_fly, (is_fly ? 2 : 0), 0.0, 0.01, name);
 	}
 	if (obj.is_a_drink()) {
