@@ -5526,12 +5526,12 @@ void building_room_geom_t::add_br_stall(room_object_t const &c, bool inc_lg, boo
 	door.expand_in_dim(!dim, -frame_thick);
 	front1.d[!dim][1] = door.d[!dim][0];
 	front2.d[!dim][0] = door.d[!dim][1];
+	cube_t const fronts[2] = {front1, front2}, side12[2] = {side1, side2};
 	unsigned const side_skip_mask(get_skip_mask_for_xy(dim));
 	unsigned const front_skip_mask((c.shape == SHAPE_TALL) ? EF_Z1 : EF_Z12); // draw tops if placed in a tall room
-	mat.add_cube_to_verts_untextured(side1,  color, side_skip_mask);
-	mat.add_cube_to_verts_untextured(side2,  color, side_skip_mask);
-	mat.add_cube_to_verts_untextured(front1, color, front_skip_mask);
-	mat.add_cube_to_verts_untextured(front2, color, front_skip_mask);
+	for (unsigned d = 0; d < 2; ++d) {mat.add_cube_to_verts_untextured(side12[d], color, side_skip_mask );}
+	for (unsigned d = 0; d < 2; ++d) {mat.add_cube_to_verts_untextured(fronts[d], color, front_skip_mask);}
+	cube_t const door_opening(door);
 	door.expand_in_dim(!dim, -door_gap);
 
 	if (c.is_open()) { // make the door open
@@ -5540,6 +5540,35 @@ void building_room_geom_t::add_br_stall(room_object_t const &c, bool inc_lg, boo
 		door.d[ dim][ dir       ] -= (dir        ? -1.0 : 1.0)*(door_width - wall_thick); // thickness => width
 	}
 	mat.add_cube_to_verts_untextured(door, color);
+	// add metal trim at the top and bottom
+	colorRGBA const metal_color(apply_light_color(c, WHITE));
+	rgeom_mat_t &metal_mat(get_metal_material(1, 0, 0)); // shadowed
+	float const top_trim_z1(c.z2() - 0.03*dz);
+
+	for (unsigned d = 0; d < 2; ++d) {
+		cube_t trim_b(fronts[d]), trim_s(side12[d]);
+		trim_b.z2() = c.z1() + 0.05*dz;
+		trim_b.expand_by_xy(0.25*wall_thick); // Note: may clip into room walls
+		metal_mat.add_cube_to_verts_untextured(trim_b, metal_color, EF_Z1); // bottom trim
+		set_cube_zvals(trim_s, top_trim_z1, c.z2());
+		trim_s.expand_in_dim(!dim, -0.2*wall_thick);
+		metal_mat.add_cube_to_verts_untextured(trim_s, metal_color, side_skip_mask); // trim front to back wall
+	}
+	// add trim above the door
+	cube_t trim_d(door_opening);
+	set_cube_zvals(trim_d, top_trim_z1, c.z2());
+	trim_d.expand_in_dim(dim, -0.2*wall_thick);
+	metal_mat.add_cube_to_verts_untextured(trim_d, metal_color, get_skip_mask_for_xy(!dim));
+	// add hinges
+	cube_t hinge(fronts[!hinge_side]);
+	hinge.expand_in_dim(dim, 0.25*wall_thick);
+	set_wall_width(hinge, door_opening.d[!dim][hinge_side], 1.6*wall_thick, !dim);
+
+	for (unsigned d = 0; d < 2; ++d) {
+		set_wall_width(hinge, (door.d[2][d] + (d ? -1.0 : 1.0)*0.1*dz), 2.4*wall_thick, 2); // Z
+		metal_mat.add_cube_to_verts_untextured(hinge, metal_color); // draw all sides
+	}
+	// add door handle and lock
 }
 
 void get_cubicle_parts(room_object_t const &c, cube_t sides[2], cube_t fronts[2], cube_t &back, cube_t surfaces[3]) {
