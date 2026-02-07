@@ -5939,8 +5939,9 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale, boo
 		subtract_cube_from_cube(top, sink, cubes);
 		for (cube_t const &i : cubes) {top_mat.add_cube_to_verts(i, top_color, tex_origin);} // should always be 4 cubes
 		colorRGBA const faucet_color(apply_light_color(c, LT_GRAY)), sink_color(is_vanity ? apply_light_color(c) : apply_light_color(c, LT_GRAY));
-		rgeom_mat_t &basin_mat(is_vanity ? get_painted_metal_material(0, 0, 0, 0, 0, 0.6, 30.0) : get_scratched_metal_material(4.0/c.dz(), 0)); // unshadowed
-		basin_mat.add_cube_to_verts(sink, sink_color, tex_origin, EF_Z2, 0, 0, 0, 1); // basin: inverted, skip top face, unshadowed
+		bool const basin_shadows(c.type == TYPE_BRSINK); // basin casts shadows for bathroom sinks, since there's no cabinet/enclosure
+		rgeom_mat_t &basin_mat(is_vanity ? get_painted_metal_material(basin_shadows, 0, 0, 0, 0, 0.6, 30.0) : get_scratched_metal_material(4.0/c.dz(), basin_shadows));
+		basin_mat.add_cube_to_verts(sink, sink_color, tex_origin, EF_Z2, 0, 0, 0, 1); // basin: inverted, skip top face
 		float const water_level((c.state_flags & sink_water_state_bit) ? 0.3 : 0.0); // may be 30% filled
 		if (water_level > 0.0) {add_water_plane(c, sink, water_level);} // draw water
 		// drain
