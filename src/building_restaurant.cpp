@@ -41,18 +41,21 @@ void building_t::create_restaurant_floorplan(unsigned part_id, rand_gen_t &rgen)
 	// split side room into {kitchen, men's room, women's room, and maybe storage}
 	int const num_side_windows(get_num_windows_on_side(part, !dim)); // in other dim; typically 5-8 total windows and 3-5 kitchen windows
 	assert(num_side_windows >= 3);
-	bool const add_storage(num_side_windows >= 7), br_side(rgen.rand_bool()), mw_side(rgen.rand_bool());
-	float const wspace(part.get_sz_dim(!dim)/num_side_windows), window_step((br_side ? -1.0 : 1.0)*wspace);
-	float const br_split(side_area.d[!dim][br_side] + window_step); // split point between men's and women's bathrooms
-	float const k_br_split(br_split + window_step); // split point between kitchens and bathrooms
-	float const k_s_split(side_area.d[!dim][!br_side] - window_step); // split point between kitchen and storage, or end of kitchen
+	bool const add_storage(num_side_windows >= 7);
+	bool const br_side(rgen.rand_bool());
+	float const wspace(part.get_sz_dim(!dim)/num_side_windows);
+	// allow an extra half window border for bathrooms so that there's space for stalls
+	float const room_max_width((br_side ? -1.0 : 1.0)*((1.0 + 0.5*get_window_h_border())*wspace - 0.75*wall_thick));
+	float const br_split(side_area.d[!dim][br_side] + room_max_width); // split point between men's and women's bathrooms
+	float const k_br_split(br_split + room_max_width); // split point between kitchens and bathrooms
+	float const k_s_split(side_area.d[!dim][!br_side] - room_max_width); // split point between kitchen and storage, or end of kitchen
 	cube_t kitchen(side_area), br1(side_area), br2(side_area), storage(side_area);
 	br1.d[!dim][!br_side] = br2    .d[!dim][br_side] = br_split;
 	br2.d[!dim][!br_side] = kitchen.d[!dim][br_side] = k_br_split;
 	if (add_storage) {kitchen.d[!dim][!br_side] = storage.d[!dim][br_side] = k_s_split;}
 	add_assigned_room(kitchen, part_id, RTYPE_KITCHEN); // num_lights will be calculated later
-	add_assigned_room(br1,     part_id, (mw_side ? RTYPE_MENS : RTYPE_WOMENS));
-	add_assigned_room(br2,     part_id, (mw_side ? RTYPE_WOMENS : RTYPE_MENS));
+	add_assigned_room(br1,     part_id, RTYPE_WOMENS );
+	add_assigned_room(br2,     part_id, RTYPE_MENS   ); // put men's room on the interior to avoid urinals against exterior windows
 	if (add_storage) {add_assigned_room(storage, part_id, RTYPE_STORAGE);}
 	// add doors to wall_lo; all doors are unlocked since restaurants have no keys
 	bool storage_conn_to_kitchen(1);
@@ -67,7 +70,7 @@ void building_t::create_restaurant_floorplan(unsigned part_id, rand_gen_t &rgen)
 		float const door_pos(rgen.rand_uniform(v1, v2));
 		insert_door_in_wall_and_add_seg(wall_lo, (door_pos - doorway_hwidth), (door_pos + doorway_hwidth), !dim, dir, !br_side, is_br, 1); // opens into room; unlocked
 		interior->door_stacks.back().set_mult_floor(); // counts as multi-floor (for drawing top edge)
-		if (is_br) {interior->doors.back().rtype = ((bool(n) ^ mw_side) ? RTYPE_MENS : RTYPE_WOMENS);}
+		if (is_br) {interior->doors.back().rtype = (n ? RTYPE_MENS : RTYPE_WOMENS);}
 	}
 	interior->walls[dim].push_back(wall_lo);
 

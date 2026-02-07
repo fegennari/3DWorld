@@ -43,7 +43,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 			zval = add_flooring(room, zval, room_id, tot_light_amt, flooring_type); // move the effective floor up
 		}
 	}
-	if (have_toilet && (room.is_office || (!is_basement && is_prison()))) { // office or above ground prison bathroom
+	if (have_toilet && (room.is_office || (!is_basement && is_prison()) || is_restaurant())) { // office, above ground prison bathroom, and restaurant have stalls
 		if (min(place_area_sz.x, place_area_sz.y) > 1.5*floor_spacing && max(place_area_sz.x, place_area_sz.y) > 2.0*floor_spacing) {
 			if (divide_bathroom_into_stalls(rgen, room, zval, room_id, tot_light_amt, floor, lights_start, objs_start)) { // large enough, divide into bathroom stalls
 				added_bathroom_objs_mask |= (PLACED_TOILET | PLACED_SINK);
@@ -518,7 +518,8 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 	//if (!sink_side_set) return 0;
 	assert(sink_side_set);
 	float const room_len(place_area.get_sz_dim(!br_dim)), room_width(place_area.get_sz_dim(br_dim));
-	float const sinks_len(0.4*room_len), stalls_len(room_len - sinks_len), req_depth(2.0f*max(stall_depth, slength));
+	float const sinks_len(0.4*room_len), stalls_len(room_len - sinks_len);
+	float const req_depth((has_house_floorplan() ? 1.5 : 2.0)*max(stall_depth, slength)); // allow slightly tighter spaces in restaurant
 	if (room_width < req_depth) return 0;
 	if (sinks_len < 2.0*sink_spacing) {sink_spacing *= 0.8;} // reduce sink spacing a bit to try and fit at least two
 	unsigned const num_stalls(std::floor(stalls_len/stall_width)), num_sinks(std::floor(sinks_len/sink_spacing));
@@ -544,6 +545,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 		// add stalls or showers
 		float const dir_sign(dir ? -1.0 : 1.0), wall_pos(place_area.d[br_dim][dir]), stall_from_wall(wall_pos + dir_sign*(0.5*tlength + wall_thickness));
 		float stall_pos(place_area.d[!br_dim][!sink_side] + 0.5*stall_step);
+		bool last_ooo(0);
 
 		for (unsigned n = 0; n < num_stalls; ++n, stall_pos += stall_step) {
 			point center(stall_from_wall, stall_pos, zval);
@@ -562,8 +564,9 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 				if (!check_cube_within_part_sides(stall_exp)) continue; // outside the building
 			}
 			bool const is_open(rgen.rand_bool()); // 50% chance of stall door being open
-			bool const out_of_order(!is_open && !room.is_ext_basement() && rgen.rand_float() < 0.2); // not for mall bathrooms
+			bool const out_of_order(!last_ooo && !is_open && !room.is_ext_basement() && rgen.rand_float() < 0.2); // not for mall bathrooms
 			unsigned flags(out_of_order ? RO_FLAG_BROKEN : 0); // toilet can't be flushed and door can't be opened if out of order
+			last_ooo = out_of_order; // no two OOO in a row
 
 			if (dir == showers_dir) { // add shower rather than stall
 				flags |= RO_FLAG_IN_JAIL;
@@ -712,8 +715,8 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 	string const sign_text(/*is_school() ? (mens_room ? "Boys" : "Girls") :*/ (mens_room ? "Men" : "Women"));
 	add_door_sign(sign_text, room, zval, room_id, 1); // no_check_adj_walls=1
 
-	// make this door/room out of order 10% of the time; only for cube buildings (others need the connectivity), and not for mall bathrooms
-	if (is_cube() && !(has_mall() && room.is_ext_basement()) && rgen.rand_float() < 0.1) {
+	// make this door/room out of order 10% of the time; only for cube buildings (others need the connectivity), and not for mall or restaurant bathrooms
+	if (is_cube() && !(has_mall() && room.is_ext_basement()) && !is_restaurant() && rgen.rand_float() < 0.1) {
 		make_door_out_or_order(room, zval, room_id, br_door_stack_ix);
 		room.set_has_out_of_order(); // flag if any floor is out of order
 	}
