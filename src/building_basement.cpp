@@ -94,7 +94,7 @@ unsigned building_t::add_water_heaters(rand_gen_t &rgen, room_t const &room, flo
 		if (overlaps_other_room_obj(c_exp, objs_start)) continue; // check existing objects, in particular storage room boxes that will have already been placed
 		if (zval > ground_floor_z1 && check_if_against_window(c, room, dim, dir)) continue; // can fail for apartment and hotel utility rooms
 		unsigned flags((is_house ? RO_FLAG_IS_HOUSE : 0) | RO_FLAG_INTERIOR);
-		if (room.is_single_floor && room.dz() > 1.5*floor_spacing) {flags |= RO_FLAG_ADJ_HI;} // tall ceiling room, flag so that vent extends further up
+		if (room.has_tall_ceil(floor_spacing)) {flags |= RO_FLAG_ADJ_HI;} // tall ceiling room, flag so that vent extends further up
 		objs.emplace_back(c, TYPE_WHEATER, room_id, dim, !dir, flags, tot_light_amt, SHAPE_CYLIN, WATER_HEATER_COLOR);
 		unsigned num_added(1);
 

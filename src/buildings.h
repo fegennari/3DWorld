@@ -1267,6 +1267,7 @@ struct room_t : public cube_t, public room_assignment_t { // size=56
 	bool any_lit_floors      () const {return bool(lit_by_floor);}
 	bool is_lit_on_floor (unsigned floor) const {return (lit_by_floor & (1ULL << (floor&31)));}
 	void set_lit_on_floor(unsigned floor) {lit_by_floor |= (1ULL << (floor&31));}
+	bool has_tall_ceil(float floor_spacing) const {return (is_single_floor && dz() > 1.5*floor_spacing);}
 	float get_light_amt() const;
 	unsigned get_floor_containing_zval(float zval, float floor_spacing) const {return (is_single_floor ? 0 : unsigned((zval - z1())/floor_spacing));}
 	room_type get_room_type_for_zval  (float zval, float floor_spacing) const {return get_room_type(get_floor_containing_zval(zval, floor_spacing));}

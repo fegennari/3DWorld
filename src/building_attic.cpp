@@ -131,7 +131,7 @@ bool building_t::add_attic_access_door(cube_t const &ceiling, unsigned part_ix, 
 		room_t const &room(interior->rooms[r]);
 		if (room.part_id != part_ix) continue;
 		if (room.has_stairs_on_floor(num_floors-1)) continue; // skip room with stairs
-		if (room.is_single_floor && room.dz() > 1.5*floor_spacing) continue; // skip tall room such as restaurant
+		if (room.has_tall_ceil(floor_spacing))      continue; // skip tall room such as restaurant
 		if (max(room.dx(), room.dy()) < 2.5*half_len || min(room.dx(), room.dy()) < 2.5*half_wid) continue; // too small
 		if (room.is_hallway) {best_room = room; in_hallway = 1; break;} // hallway is always preferred
 		// should we reject this room if there's not enough head clearance above it in the attic?

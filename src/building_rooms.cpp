@@ -221,7 +221,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		for (auto r = rooms.begin(); r != rooms.end(); ++r) {
 			if (r->is_sec_bldg) continue; // garage/shed excluded - not a normal room
 			if (has_basement() && r->part_id == (int)basement_part_ix) continue; // skip the basement
-			if (r->is_single_floor && r->dz() > 1.5*window_vspacing)   continue; // no tall ceiling rooms
+			if (r->has_tall_ceil(window_vspacing)) continue; // no tall ceiling rooms
 			unsigned const num_floors(calc_num_floors_room(*r, window_vspacing, floor_thickness));
 
 			// find best bathroom with no hard size constraints;
@@ -744,7 +744,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			//if (has_stairs && has_pri_hall()) continue; // no other geometry in office building base part rooms that have stairs
 			// must be a BR if cand bathroom, and BR not already placed; applies to all floors of this room; if multi-family, we check for a BR prev placed on this floor
 			bool const must_be_bathroom(room_id == cand_bathroom && (multi_family ? !(added_bath_mask & floor_mask) : (num_bathrooms == 0)));
-			bool const is_tall_room(r->is_single_floor && r->dz() > 1.5*window_vspacing);
+			bool const is_tall_room(r->has_tall_ceil(window_vspacing));
 			bool added_tc(0), added_desk(0), added_obj(0), can_place_onto(0), no_whiteboard(0), no_plants(0), no_trashcan(0), is_laundry(0), is_bathroom(0), is_bedroom(0);
 			bool is_kitchen(0), is_living(0), is_dining(0), is_storage(0), is_utility(0), is_machine(0), is_play_art(0), is_library(0), is_inter(0), is_jail(0);
 			unsigned num_chairs(0), pref_hang_orient(4); // no pref orient=4
@@ -2075,7 +2075,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 
 	// exclude trim at intermediate floors of tall rooms (excluding mall because it has partial floors at each level)
 	for (room_t const &room : interior->rooms) {
-		if (room.is_single_floor && !room.is_mall() && room.dz() > 1.5*window_vspacing) {
+		if (room.has_tall_ceil(window_vspacing) && !room.is_mall()) {
 			trim_exclude = room;
 			trim_exclude.expand_by_xy(0.5*wall_thickness); // include half the wall
 			trim_exclude.expand_in_z (-0.5*window_vspacing); // allow trim at floor and ceiling, but not at floors in between
