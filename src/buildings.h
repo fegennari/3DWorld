@@ -1181,6 +1181,7 @@ unsigned const ROOM_FLAG_TUNNEL   = 0x0100; // room has a tunnel connection at o
 unsigned const ROOM_FLAG_NESTED   = 0x0200; // room is nested inside another room
 unsigned const ROOM_FLAG_HAS_SUB  = 0x0400; // room has a sub-room nested inside it
 unsigned const ROOM_FLAG_CUT_WALL = 0x0800; // wall has sections cut from it
+unsigned const ROOM_FLAG_BR_STALL = 0x1000; // has bathroom stalls
 
 struct room_assignment_t {
 protected:
@@ -1207,6 +1208,7 @@ public:
 	void set_is_nested        () {flags |= ROOM_FLAG_NESTED  ;}
 	void set_has_subroom      () {flags |= ROOM_FLAG_HAS_SUB ;}
 	void set_has_cut_wall     () {flags |= ROOM_FLAG_CUT_WALL;}
+	void set_has_br_stalls    () {flags |= ROOM_FLAG_BR_STALL;}
 	bool get_has_center_stairs() const {return (flags & ROOM_FLAG_CSTAIRS );}
 	bool get_office_floorplan () const {return (flags & ROOM_FLAG_OFF_FP  );}
 	bool get_has_skylight     () const {return (flags & ROOM_FLAG_SKYLIGHT);}
@@ -1219,6 +1221,7 @@ public:
 	bool is_nested            () const {return (flags & ROOM_FLAG_NESTED  );}
 	bool has_subroom          () const {return (flags & ROOM_FLAG_HAS_SUB );}
 	bool has_cut_wall         () const {return (flags & ROOM_FLAG_CUT_WALL);}
+	bool has_br_stalls        () const {return (flags & ROOM_FLAG_BR_STALL);}
 };
 
 struct room_t : public cube_t, public room_assignment_t { // size=56

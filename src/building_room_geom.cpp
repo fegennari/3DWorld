@@ -5525,10 +5525,11 @@ void building_room_geom_t::add_br_stall(room_object_t const &c, bool inc_lg, boo
 	front1.d[!dim][1] = door.d[!dim][0];
 	front2.d[!dim][0] = door.d[!dim][1];
 	unsigned const side_skip_mask(get_skip_mask_for_xy(dim));
+	unsigned const front_skip_mask((c.shape == SHAPE_TALL) ? EF_Z1 : EF_Z12); // draw tops if placed in a tall room
 	mat.add_cube_to_verts_untextured(side1,  color, side_skip_mask);
 	mat.add_cube_to_verts_untextured(side2,  color, side_skip_mask);
-	mat.add_cube_to_verts_untextured(front1, color, EF_Z12);
-	mat.add_cube_to_verts_untextured(front2, color, EF_Z12);
+	mat.add_cube_to_verts_untextured(front1, color, front_skip_mask);
+	mat.add_cube_to_verts_untextured(front2, color, front_skip_mask);
 	door.expand_in_dim(!dim, -door_gap);
 
 	if (c.is_open()) { // make the door open

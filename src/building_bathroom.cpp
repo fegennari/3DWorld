@@ -525,13 +525,16 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 	if (num_stalls < 2 || num_sinks < 1) return 0; // not enough space for 2 stalls and a sink
 	stall_width  = stalls_len/num_stalls; // reclaculate to fill the gaps
 	sink_spacing = sinks_len/num_sinks;
-	bool const two_rows(room_width > 1.5*req_depth), skip_stalls_side(room_id & 1); // put stalls on a side consistent across floors
+	bool const two_rows(room_width > 1.5*req_depth);
+	bool skip_stalls_side(room_id & 1); // put stalls on a side consistent across floors
+	if (classify_room_wall(room, zval, br_dim, !skip_stalls_side, 0) == ROOM_WALL_EXT) {skip_stalls_side ^= 1;} // no stalls/sinks along exterior walls
 	unsigned const showers_dir(is_prison() ? skip_stalls_side : 2); // one side of prison bathroom has showers rather than stalls
 	float const sink_side_sign(sink_side ? 1.0 : -1.0), stall_step(sink_side_sign*stall_width), sink_step(-sink_side_sign*sink_spacing);
 	float const floor_thickness(get_floor_thickness());
 	unsigned const NUM_STALL_COLORS = 4;
 	colorRGBA const stall_colors[NUM_STALL_COLORS] = {colorRGBA(0.75, 1.0, 0.9, 1.0), colorRGBA(0.7, 0.8, 1.0), WHITE, DK_GRAY}; // blue-green, light blue
 	colorRGBA const stall_color(stall_colors[interior->doors.size() % NUM_STALL_COLORS]); // random, but constant for each building
+	room_obj_shape const stall_shape(room.has_tall_ceil(floor_spacing) ? SHAPE_TALL : SHAPE_CUBE); // tall for tall ceiling rooms like restaurants
 	vect_room_object_t &objs(interior->room_geom->objs);
 	room_object_t mirrors[2]; // candidate mirrors for each dir
 	++(mens_room ? interior->room_geom->mens_count : interior->room_geom->womens_count);
@@ -591,7 +594,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 				stall_inner.expand_in_dim(!br_dim, -0.0125*stall.dz()); // subtract off stall wall thickness
 				add_tp_roll(stall_inner, room_id, tot_light_amt, !br_dim, dir, tp_length, (zval + 0.7*theight), wall_pos);
 			}
-			objs.emplace_back(stall, TYPE_STALL, room_id, br_dim, dir, (flags | (is_open ? RO_FLAG_OPEN : 0)), tot_light_amt, SHAPE_CUBE, stall_color);
+			objs.emplace_back(stall, TYPE_STALL, room_id, br_dim, dir, (flags | (is_open ? RO_FLAG_OPEN : 0)), tot_light_amt, stall_shape, stall_color);
 			if (dir == showers_dir) {objs.back().obj_id = room_id;} // sets shower style (handles); matches across rooms
 
 			if (out_of_order) { // add out-of-order sign
@@ -687,6 +690,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 	}
 	room_type const rtype(mens_room ? RTYPE_MENS : RTYPE_WOMENS);
 	room.assign_to(rtype, floor);
+	room.set_has_br_stalls();
 	
 	// make sure doors start closed and unlocked, and flag them as auto_close;
 	// if (!is_cube()) we also want to make sure the door opens inward, but we can't change it for only one door in the stack
@@ -720,8 +724,8 @@ void building_t::add_bathroom_window(cube_t const &window, bool dim, bool dir, u
 	if (!has_int_windows()) return; // no interior (or exterior) drawn windows
 	room_t const &room(get_room(room_id));
 	// exterior looks odd to have window block walls at the corner of a building,
-	// so only enable this for single exterior walls, or when there are no exterior windows, or for industrial bathrooms (which look odd without it)
-	if (!is_industrial() && has_windows() && count_ext_walls_for_room(room, window.z1()) != 1) return;
+	// so only enable this for single exterior walls, or when there are no exterior windows, or when there are stalls, or for industrial bathrooms (which look odd without it)
+	if (!is_industrial() && has_windows() && !room.has_br_stalls() && count_ext_walls_for_room(room, window.z1()) != 1) return;
 	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t c(window);
 	c.translate_dim(dim, (dir ? 1.0 : -1.0)*0.5*get_trim_thickness()); // half the previous translate to prevent Z-fighting in mirror reflections

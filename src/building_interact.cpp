@@ -560,7 +560,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 				}
 				else if (!player_in_closet) {
 					if      ((type == TYPE_TOILET || type == TYPE_URINAL) && !i->is_broken() && !i->in_mall()) {keep = 1;} // toilet/urinal can be flushed unless broken or in store
-					else if (type == TYPE_STALL && i->shape == SHAPE_CUBE && can_open_or_use_bathroom_stall_or_shower(*i, closest_to, in_dir)) {keep = 1;} // bathroom stall can be opened
+					else if (type == TYPE_STALL && i->shape != SHAPE_SHORT && can_open_or_use_bathroom_stall_or_shower(*i, closest_to, in_dir)) {keep = 1;} // bathroom stall can be opened
 					else if ((i->is_sink_type() || type == TYPE_TUB) && !i->in_mall()) {keep = 1;} // sink/tub, not in mall appliance/plumbing store
 					else if (i->is_light_type() || type == TYPE_LAVALAMP) {keep = 1;} // room light or lamp
 					else if (type == TYPE_FISHTANK && i->has_lid()) {keep = 1;} // fishtank with a lid and light
