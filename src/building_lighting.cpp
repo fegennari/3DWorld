@@ -1084,7 +1084,7 @@ public:
 			bool found(0);
 			
 			for (light_job_t const &j : cur_batch) {
-				if (j.lix == id) {found = 1; break;}
+				if (j.lix == (int)id) {found = 1; break;}
 			}
 			if (found) continue; // already part of the current batch; skip
 			lights_seen.insert(id); // must track lights across all floors seen for correct progress update

@@ -3048,11 +3048,11 @@ void city_obj_placer_t::leave_car_wash(unsigned bix) const {
 }
 void city_obj_placer_t::register_car_state(car_t const &car) const {
 	if (car.dest_gstation >= 0) {
-		assert(car.dest_gstation < gstations.size());
+		assert((unsigned)car.dest_gstation < gstations.size());
 		//gstations[car.dest_gstation]; // nothing to do yet
 	}
 	else if (car.dest_cwash >= 0) {
-		assert(car.dest_cwash < bldgs.size());
+		assert((unsigned)car.dest_cwash < bldgs.size());
 		bldgs[car.dest_cwash].register_car(car);
 	}
 }
