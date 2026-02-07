@@ -687,7 +687,7 @@ void building_t::add_door_sign(string const &text, room_t const &room, float zva
 		unsigned const num_chars(text.size());
 		float const sign_hwidth((0.05 + 0.03*min(num_chars, 6U))*(place_above_door ? 1.5 : 1.0)); // relative to door width
 		sign.expand_in_dim(!i->dim, -(0.5 - sign_hwidth)*door_width); // shrink a bit
-		sign.d[i->dim][side] += side_sign*0.1*wall_thickness; // make nonzero area
+		sign.d[i->dim][side] += side_sign*0.06*wall_thickness; // make nonzero area; less than picture depth so that picture goes over sign
 
 		// skip this check for rooms that require signs such as bathrooms, and in cases where we know there are no inside corners
 		if (!no_check_adj_walls && interior->has_sec_hallways) {

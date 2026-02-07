@@ -4355,7 +4355,7 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 					if (wall_pos < room_bounds.d[!dim][0] + min_wall_spacing || wall_pos > room_bounds.d[!dim][1] - min_wall_spacing) continue; // too close to the adjacent wall
 					cube_t c(get_light_switch_bounds(zval, wall_bounds.d[dim][dir], wall_pos, dim, dir)), c_test(c); // should have enough thickness for pool tile
 					c_test.d[dim][!dir] += dir_sign*wall_thickness; // expand out more so that it's guaranteed to intersect appliances placed near the wall
-					if (overlaps_other_room_obj(c_test, objs_start))                     continue;
+					if (overlaps_other_room_obj(c_test, objs_start, 1))                  continue; // check_all=1 to handle pictures and whiteboards
 					if (!is_gdoor && is_obj_placement_blocked(c_test, room, (ei==1), 1)) continue; // inc_open_doors=1/check_open_dir=1 for inside, to avoid placing behind open door
 					if (!check_if_placed_on_wall(c, room, dim, dir))                     continue; // ensure the switch is on a wall
 					if (overlaps_or_adj_int_window(c))                                   continue; // check interior windows
@@ -4464,7 +4464,7 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 					break;
 				} // for i
 				if (!hit_cabinet) continue; // hit something else
-				if (overlaps_other_room_obj(c_exp, objs_start, 1)) continue;
+				if (overlaps_other_room_obj(c_exp, objs_start, 1)) continue; // check_all=1
 			}
 			if (interior->is_blocked_by_stairs_or_elevator(c_exp)) continue; // check stairs and elevators
 			if (!check_cube_within_part_sides(c_exp))              continue; // handle non-cube buildings
