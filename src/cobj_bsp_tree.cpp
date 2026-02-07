@@ -145,7 +145,8 @@ template<typename T> void cobj_tree_simple_type_t<T>::build_tree(unsigned nix, u
 
 	// determine split dimension and value
 	float max_sz(0), sval(0);
-	unsigned const dim(n.get_split_dim(max_sz, sval, skip_dims));
+	unsigned dim(n.get_split_dim(max_sz, sval, skip_dims));
+	refine_split_pos(n, skip_dims, dim, sval);
 	float const sval_lo(add_node_overlap ? sval+OVERLAP_AMT*max_sz : sval), sval_hi(add_node_overlap ? sval-OVERLAP_AMT*max_sz : sval);
 	unsigned pos(n.start), bin_count[3]={};
 	if (temp_bins[1].capacity() == 0) {temp_bins[1].reserve(11*num/20);} // reserve to 55% to hopefully avoid vector doubling

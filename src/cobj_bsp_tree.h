@@ -49,6 +49,7 @@ protected:
 	bool add_node_overlap=1;
 
 	virtual void calc_node_bbox(tree_node &n) const = 0;
+	virtual void refine_split_pos(tree_node const &n, unsigned skip_dims, unsigned &dim, float &sval) {};
 	void build_tree(unsigned nix, unsigned skip_dims, unsigned depth);
 public:
 	virtual ~cobj_tree_simple_type_t() {}

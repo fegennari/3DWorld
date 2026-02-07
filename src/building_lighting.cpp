@@ -80,9 +80,35 @@ bool ray_cast_cube(point const &p1, point const &p2, cube_t const &c, vector3d &
 }
 
 class cube_bvh_t : public cobj_tree_simple_type_t<colored_cube_t> {
+	struct cube_by_lower_dim {
+		unsigned d;
+		cube_by_lower_dim(unsigned dim) : d(dim) {}
+		bool operator()(cube_t const &a, cube_t const &b) const {return (a.d[d][0] < b.d[d][0]);}
+	};
+	float eval_sah_cost(tree_node const &n, unsigned split_ix) {
+		assert(n.start < split_ix && split_ix < n.end);
+		cube_t left_bbox, right_bbox;
+		for (unsigned i = n.start ; i < split_ix; ++i) {left_bbox .assign_or_union_with_cube(objects[i]);}
+		for (unsigned i = split_ix; i < n.end   ; ++i) {right_bbox.assign_or_union_with_cube(objects[i]);}
+		return left_bbox.get_area()*(split_ix - n.start) + right_bbox.get_area()*(n.end - split_ix);
+	}
 	virtual void calc_node_bbox(tree_node &n) const {
 		assert(n.start < n.end);
 		for (unsigned i = n.start; i < n.end; ++i) {n.assign_or_union_with_cube(objects[i]);} // bcube union
+	}
+	virtual void refine_split_pos(tree_node const &n, unsigned skip_dims, unsigned &dim, float &sval) override {
+		return; // not yet enabled
+		if (n.size() < 3) return; // no choice for split point; shouldn't get here
+		float min_cost(0.0);
+		unsigned split_ix(0);
+		sort(objects.begin()+n.start, objects.begin()+n.end, cube_by_lower_dim(dim));
+		
+		// evaluate all potential split points; this can be optimized with a prefix sum in each direction
+		for (unsigned i = n.start+1; i < n.end-1; ++i) {
+			float const cost(eval_sah_cost(n, i));
+			if (min_cost == 0.0 || cost < min_cost) {min_cost = cost; split_ix = i;}
+		}
+		sval = objects[split_ix].d[dim][0]; // split at left edge of first object in right bin
 	}
 public:
 	cube_bvh_t() {add_node_overlap = 0;} // not needed for cubes
