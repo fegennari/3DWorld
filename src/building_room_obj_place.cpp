@@ -1292,14 +1292,14 @@ bool building_t::add_closet_to_room(rand_gen_t &rgen, room_t const &room, float 
 	float const min_dist_to_wall(1.0*doorway_width), min_bed_space(front_clearance);
 	float const tot_light_amt=1.0; // expanded closed items aren't updated when room lights change, and closet lights don't update anything, so set to 1.0
 	unsigned const first_corner(rgen.rand() & 3);
-	bool const first_dim(rgen.rand_bool());
+	bool const first_dim(rgen.rand_bool()), chk_windows(has_int_windows());
 	cube_t const &part(get_part_for_room(room));
 	cube_t room_bounds(get_walkable_room_bounds(room));
-	bool chk_windows[2][2] = {}; // precompute which walls are exterior and can have windows, {dim}x{dir}
+	bool ext_walls[2][2] = {}; // precompute which walls are exterior and can have windows, {dim}x{dir}
 	vect_room_object_t &objs(interior->room_geom->objs);
 
-	if (zval > ground_floor_z1 && has_int_windows()) { // are bedrooms/kitchens ever placed in the basement?
-		for (unsigned d = 0; d < 4; ++d) {chk_windows[d>>1][d&1] = (classify_room_wall(room, zval, (d>>1), (d&1), 0) == ROOM_WALL_EXT);}
+	if (zval > ground_floor_z1) { // are bedrooms/kitchens ever placed in the basement?
+		for (unsigned d = 0; d < 4; ++d) {ext_walls[d>>1][d&1] = (classify_room_wall(room, zval, (d>>1), (d&1), 0) == ROOM_WALL_EXT);}
 	}
 	for (unsigned n = 0; n < 4; ++n) { // try 4 room corners
 		unsigned const corner_ix((first_corner + n)&3);
@@ -1309,19 +1309,21 @@ bool building_t::add_closet_to_room(rand_gen_t &rgen, room_t const &room, float 
 		for (unsigned d = 0; d < 2; ++d) { // try both dims
 			bool const dim(bool(d) ^ first_dim), dir(dim ? ydir : xdir), other_dir(dim ? xdir : ydir); // dir is against the wall
 			if (room_bounds.get_sz_dim(!dim) < closet_min_width + min_dist_to_wall) continue; // room is too narrow to add a closet here
-			if (chk_windows[dim][dir]) continue; // don't place closets against exterior walls where they would block a window
+			if ((chk_windows || is_freezer) && ext_walls[dim][dir]) continue; // don't place closets against exterior walls where they would block a window
+			//if (is_freezer && ext_walls[!dim][other_dir])           continue; // freezers can block windows on the side and Z-fight with exterior wall
 			float const dir_sign(dir ? -1.0 : 1.0), signed_front_clearance(dir_sign*front_clearance); // faces outward
 			float const window_hspacing(get_hspacing_for_part(part, dim));
 			cube_t c(corner, corner);
+			if (is_freezer && ext_walls[!dim][other_dir]) {c.d[!dim][other_dir] -= (other_dir ? 1.0 : -1.0)*get_trim_thickness();} // add ext wall gap to prevent Z-fighting
 			c.d[0][!xdir] += (xdir ? -1.0 : 1.0)*(dim ? closet_min_width : closet_min_depth);
 			c.d[1][!ydir] += (ydir ? -1.0 : 1.0)*(dim ? closet_min_depth : closet_min_width);
-			if (chk_windows[!dim][other_dir] && is_val_inside_window(part, dim, c.d[dim][!dir], window_hspacing, window_h_border)) continue; // check for window intersection
+			if (chk_windows && ext_walls[!dim][other_dir] && is_val_inside_window(part, dim, c.d[dim][!dir], window_hspacing, window_h_border)) continue; // windows
 			c.z2()         += fc_gap; // uo to the ceiling
 			c.d[dim][!dir] += signed_front_clearance; // extra padding in front, to avoid placing too close to bed, etc.
 			if (!check_valid_closet_placement(c, room, objs_start, bed_obj_ix, min_bed_space)) continue; // bad placement
 			// good placement, see if we can make the closet larger
 			unsigned const num_steps(is_freezer ? 4 : 10);
-			float const req_dist(chk_windows[!dim][!other_dir] ? (other_dir ? -1.0 : 1.0)*min_dist_to_wall : 0.0); // signed; at least min dist from opposite wall if exterior
+			float const req_dist(ext_walls[!dim][!other_dir] ? (other_dir ? -1.0 : 1.0)*min_dist_to_wall : 0.0); // signed; at least min dist from opposite wall if exterior
 			float const grow_limit((is_freezer ? 0.3f : 1.5f)*window_vspacing); // limit to a reasonable length; less for a freezer
 			float max_grow((room_bounds.d[!dim][!other_dir] - req_dist) - c.d[!dim][!other_dir]);
 			max_grow = max(-grow_limit, min(grow_limit, max_grow));
@@ -1343,7 +1345,7 @@ bool building_t::add_closet_to_room(rand_gen_t &rgen, room_t const &room, float 
 			for (unsigned s2 = 0; s2 < num_steps; ++s2) { // now try increasing depth
 				cube_t c2(c);
 				c2.d[dim][!dir] += depth_step;
-				if (chk_windows[!dim][other_dir] && is_val_inside_window(part, dim, (c2.d[dim][!dir] - signed_front_clearance),
+				if (chk_windows && ext_walls[!dim][other_dir] && is_val_inside_window(part, dim, (c2.d[dim][!dir] - signed_front_clearance),
 					window_hspacing, get_window_h_border())) break; // bad placement
 				if (!check_valid_closet_placement(c2, room, objs_start, bed_obj_ix, min_bed_space)) break; // bad placement
 				c = c2; // valid placement, update with larger cube
