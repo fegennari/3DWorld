@@ -5510,7 +5510,9 @@ void building_room_geom_t::add_br_stall(room_object_t const &c, bool inc_lg, boo
 		mat.add_cube_to_verts_untextured(c, color, ~get_face_mask(dim, dir));
 		return;
 	}
-	float const dz(c.dz()), wall_thick(0.0125*dz), frame_thick(6.0*wall_thick), door_gap(0.3*wall_thick);
+	float const dz(c.dz()), wall_thick(0.0125*dz), door_gap(0.3*wall_thick);
+	// limit door width to 0.5*depth to avoid door intersecting toilet
+	float const dwidth_max(0.5*c.get_depth()), frame_thick(max(6.0*wall_thick, 0.5*(c.get_width() - dwidth_max)));
 	cube_t sides(c), front(c);
 	sides.z2() -= 0.35*dz;
 	sides.z1() += 0.15*dz;
