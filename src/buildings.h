@@ -145,6 +145,8 @@ class s_plant;
 typedef vector<point> vect_point;
 typedef vector<sphere_t> vect_sphere_t;
 
+struct zi_unsigned {unsigned v=0;}; // for counting map values
+
 struct bottle_params_t {
 	std::string name, texture_fn;
 	colorRGBA glass_color, empty_color, liquid_color; // glass_color is filled glass or plastic, while empty_color is for empty bottles

@@ -363,7 +363,9 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 	//for (cube_t const &i : interior->room_geom->glass_floors) {if (i.intersects(ext_bcube)) {cc.emplace_back(i, GLASS_COLOR);}}
 	add_colored_cubes(details, detail_color.modulate_with(mat.roof_tex.get_avg_color()), ext_bcube, cc); // should this be included?
 	if (!has_room_geom()) return; // nothing else to add
+	float const sz_thresh(1.0*get_wall_thickness());
 	vect_room_object_t const &objs(interior->room_geom->objs);
+	//map<unsigned, zi_unsigned> counts;
 		
 	for (auto c = objs.begin(); c != objs.end(); ++c) { // Note: ignores expanded objects (including shelf rack objects)
 		room_object const type(c->type);
@@ -390,11 +392,20 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			type == TYPE_STICK_NOTE || type == TYPE_GYM_WEIGHT || type == TYPE_FOOD_TRAY || type == TYPE_EX_MACHINE || type == TYPE_BAR_SOAP || type == TYPE_COAT_RACK ||
 			type == TYPE_VIS_PHONE || type == TYPE_JUMPSUIT || type == TYPE_O_SHOWER || type == TYPE_CARD_DECK || type == TYPE_CIGARETTE || type == TYPE_BULLETS ||
 			type == TYPE_MUSHROOM || type == TYPE_POOL_CUE || type == TYPE_CEIL_TILE || type == TYPE_SHELL_CASE || type == TYPE_SHOP_CART || type == TYPE_JAR ||
-			type == TYPE_RADIATOR || type == TYPE_RAD_FAN) continue;
-		bool const is_stairs(type == TYPE_STAIR || type == TYPE_STAIR_WALL || type == TYPE_FOOD_FISH || type == TYPE_MILK);
+			type == TYPE_RADIATOR || type == TYPE_RAD_FAN || type == TYPE_FIRE_EXT || type == TYPE_FOLD_SHIRT || type == TYPE_CASHREG || type == TYPE_FOOD_FISH ||
+			type == TYPE_MILK || type == TYPE_TRASH || type == TYPE_PLATE || type == TYPE_SPRINKLER || type == TYPE_TOASTER) continue;
+		if (type == TYPE_FISHTANK && c->z1() < ground_floor_z1) continue; // skip mall fishtanks
+		if (type >= TYPE_RAT) continue; // skip animals (for example, roaches in sinks)
+		bool const is_stairs(type == TYPE_STAIR || type == TYPE_STAIR_WALL);
 		if (c->z1() > (is_stairs ? stairs_z2 : z2) || c->z2() < (is_stairs ? stairs_z1 : z1)) continue;
 		if (!c->intersects_xy(ext_bcube)) continue;
+		
+		if (type == TYPE_METAL_BAR) { // potentially small object; skip if small in at least 2 dims
+			if (unsigned(c->dx() > sz_thresh) + unsigned(c->dy() > sz_thresh) + unsigned(c->dz() > sz_thresh) < 2) continue;
+		}
+		if (type == TYPE_DUCT && c->get_depth() < c->get_width()) continue; // skip short ducts/vents 376
 		colorRGBA const color(c->get_color());
+		//++counts[type].v;
 		
 		if (c->is_round()) {
 			cube_t inner_cube(*c);
@@ -638,6 +649,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			cc.emplace_back(bc, color);
 		}
 	} // for c
+	//for (auto const &c : counts) {cout << c.first << " " << c.second.v << endl;}
 }
 
 
@@ -1075,7 +1087,7 @@ public:
 			if (!cur_job.is_valid()) return; // no lights to update
 			init_lmgr(0); // clear_lighting=0
 			lighting_updated = 1;
-			highres_timer_t timer("Ray Cast Building Light"); // 2531 in mall with 368 lights
+			highres_timer_t timer("Ray Cast Building Light"); // 2408 in mall with 368 lights
 			cast_light_rays(b, cur_job);
 		}
 	}
@@ -1221,6 +1233,8 @@ public:
 		bvh.clear();
 		b.gather_interior_cubes(bvh.get_objs(), valid_area);
 		if (b.point_in_attic(target)) {b.get_attic_roof_tquads(bvh.roof_tquads);}
+		//cout << TXT(bvh.get_objs().size()) << endl; // TESTING
+		//highres_timer_t timer("Build BVH");
 		bvh.build_tree_top(0); // verbose=0
 		need_bvh_rebuild = 0;
 	}
