@@ -673,6 +673,7 @@ public:
 		for (unsigned s = 0; s < nsteps; ++s) {
 			p1 += step; // don't double count the first step
 			int const x(p1.x), y(p1.y), z(p1.z);
+			// Note: this is run by multiple threads writing to the same values, so is nondeterministic; removing light won't reset values to exactly 0
 			if ((x >= 0 && x < (int)xsize && y >= 0 && y < (int)ysize && z >= 0 && z < (int)zsize)) {data[(y*xsize + x)*zsize + z] += cw;}
 		}
 	}
@@ -969,7 +970,6 @@ public:
 	cube_t get_light_bounds() const {return light_bounds;}
 
 	void invalidate_lighting() {
-		in_ext_basement = 0;
 		cur_job = light_job_t();
 		cur_batch.clear();
 		remove_queue.clear();
@@ -979,7 +979,7 @@ public:
 		lmgr.reset_all(); // clear lighting values back to 0
 	}
 	void clear() {
-		lighting_updated = need_bvh_rebuild = update_windows = 0;
+		lighting_updated = need_bvh_rebuild = update_windows = in_ext_basement = 0;
 		cur_bix = cur_floor = -1;
 		invalidate_lighting();
 		light_ids.clear();
