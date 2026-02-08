@@ -8,6 +8,9 @@
 #include "cobj_bsp_tree.h"
 #include "profiler.h"
 #include <thread>
+#include <queue>
+#include <mutex>
+#include <condition_variable>
 #include <omp.h>
 
 bool  const USE_BKG_THREAD     = 1;
@@ -710,6 +713,38 @@ public:
 	}
 };
 
+template <typename T> class ConcurrentQueue {
+	std::queue<T> Q;
+	mutable std::mutex M;
+	std::condition_variable cond_var;
+public:
+	void push(const T& item) {
+		std::lock_guard<std::mutex> lock(M);
+		Q.push(item);
+		cond_var.notify_one(); // Notify one waiting thread that an item is available
+	}
+	T wait_and_pop() {
+		std::unique_lock<std::mutex> lock(M);
+		// Wait until the queue is not empty
+		cond_var.wait(lock, [this]{return !Q.empty();});
+		T item = std::move(Q.front());
+		Q.pop();
+		return item;
+	}
+	bool try_pop(T& item) { // non-blocking
+		std::lock_guard<std::mutex> lock(M);
+		if (Q.empty()) return false;
+		item = std::move(Q.front());
+		Q.pop();
+		return true;
+	}
+	size_t size() const {
+		std::lock_guard<std::mutex> lock(M);
+		return Q.size();
+	}
+	bool empty() const {return (size() == 0);}
+};
+
 class building_indir_light_mgr_t {
 	bool is_running=0, kill_thread=0, lighting_updated=0, needs_to_join=0, need_bvh_rebuild=0, update_windows=0, in_ext_basement=0;
 	int cur_bix=-1, cur_floor=-1, timer_val=0;
@@ -719,7 +754,7 @@ class building_indir_light_mgr_t {
 	vector<unsigned> light_ids;
 	vector<pair<float, unsigned>> lights_to_sort;
 	deque<unsigned> remove_queue;
-	set<unsigned> lights_complete, lights_seen;
+	set<unsigned> lights_complete, lights_seen, lights_pend;
 	vect_cube_with_ix_t windows;
 	cube_bvh_t bvh;
 	lmap_manager_local_t lmgr;
@@ -731,9 +766,8 @@ class building_indir_light_mgr_t {
 		light_job_t(unsigned l=-1, bool n=0) : lix(l), neg(n) {}
 		bool is_valid() const {return (lix >= 0);}
 	};
-	typedef vector<light_job_t> light_batch_t;
 	light_job_t cur_job;
-	light_batch_t cur_batch;
+	ConcurrentQueue<light_job_t> light_queue, lights_done;
 
 	void init_lmgr(bool clear_lighting) {
 		if (clear_lighting) {lmgr.reset_all();}
@@ -759,14 +793,14 @@ class building_indir_light_mgr_t {
 		if (dot_product(dir, cnorm) < 0.0) {dir.negate();} // make sure it points away from the surface (is this needed?)
 		pos = cpos + tolerance*dir; // move slightly away from the surface
 	}
-	void cast_light_rays(building_t const &b, light_job_t const &job) {
+	void cast_light_rays(building_t const &b) {
 		// Note: modifies lmgr, but otherwise thread safe
-		assert(job.is_valid());
+		assert(cur_job.is_valid());
 		bool const reserve_draw_thread(USE_BKG_THREAD && (int)NUM_THREADS >= omp_get_max_threads()); // reserve a thread for drawing if needed
 		unsigned const num_rt_threads(max(1U, (NUM_THREADS - reserve_draw_thread)));
 		unsigned base_num_rays(LOCAL_RAYS), dim(2), dir(0); // default dim is z; dir=2 is omnidirectional
 		float const tolerance(1.0E-5*valid_area.get_max_dim_sz());
-		bool const is_window(job.lix & IS_WINDOW_BIT);
+		bool const is_window(cur_job.lix & IS_WINDOW_BIT);
 		bool in_attic(0), in_ext_basement(0), is_skylight(0), in_jail_cell(0), half_step_sz(1), hanging(0);
 		float weight(100.0), light_radius(0.0);
 		point light_center;
@@ -775,7 +809,7 @@ class building_indir_light_mgr_t {
 		vector3d light_dir; // points toward the light
 
 		if (is_window) { // window
-			unsigned const window_ix(job.lix & ~IS_WINDOW_BIT);
+			unsigned const window_ix(cur_job.lix & ~IS_WINDOW_BIT);
 			assert(window_ix < windows.size());
 			cube_with_ix_t const &window(windows[window_ix]);
 			float surface_area(0.0);
@@ -819,8 +853,8 @@ class building_indir_light_mgr_t {
 		} // end window case
 		else { // room light or lamp, pointing downward (unless on the wall)
 			vect_room_object_t const &objs(b.interior->room_geom->objs);
-			assert((unsigned)job.lix < objs.size());
-			room_object_t const &ro(objs[job.lix]);
+			assert((unsigned)cur_job.lix < objs.size());
+			room_object_t const &ro(objs[cur_job.lix]);
 			// maybe light was removed by the player and re-assigned as another object
 			if (!ro.is_light_type() && ro.type != TYPE_BLOCKER) {is_running = 0; return;} // nothing to do?
 			bool const light_in_basement(ro.z1() < b.ground_floor_z1), is_lamp(ro.type == TYPE_LAMP);
@@ -861,8 +895,8 @@ class building_indir_light_mgr_t {
 			}
 		} // end room light case
 		if (b.check_pt_in_retail_room(light_center)) {weight *= 0.5; base_num_rays /= 5; half_step_sz = 0;} // many lights, fewer rays
-		if (b.is_house) {weight *=  2.0;} // houses have dimmer lights and seem to work better with more indir
-		if (job.neg   ) {weight *= -1.0;}
+		if (b.is_house ) {weight *=  2.0;} // houses have dimmer lights and seem to work better with more indir
+		if (cur_job.neg) {weight *= -1.0;}
 		weight /= base_num_rays; // normalize to the number of rays
 		if (half_step_sz) {weight *= 0.5;}
 		unsigned NUM_PRI_SPLITS(is_window ? 4 : 16); // we're counting primary rays for windows, use fewer primary splits to reduce noise at the cost of increased time
@@ -878,7 +912,7 @@ class building_indir_light_mgr_t {
 		for (int n = 0; n < num_rays; ++n) {
 			if (kill_thread) continue;
 			rand_gen_t rgen;
-			rgen.set_state(n+1, job.lix); // should be deterministic, though add_path_to_lmcs() is not (due to thread races)
+			rgen.set_state(n+1, cur_job.lix); // should be deterministic, though add_path_to_lmcs() is not (due to thread races)
 			vector3d pri_dir;
 			colorRGBA ray_lcolor(lcolor), ccolor(WHITE);
 			bool const is_skylight_dir(is_skylight && (n&1)); // alternate between sky ambient and sun/moon directional
@@ -988,10 +1022,10 @@ public:
 
 	void invalidate_lighting() {
 		cur_job = light_job_t();
-		cur_batch.clear();
 		remove_queue.clear();
 		lights_complete.clear();
 		lights_seen.clear();
+		lights_pend.clear();
 		end_rt_job();
 		lmgr.reset_all(); // clear lighting values back to 0
 	}
@@ -1034,6 +1068,7 @@ public:
 		if (need_rebuild) { // handle floor change
 			invalidate_lighting();
 			build_bvh(b, target);
+			floor_change = 0;
 		}
 		calc_cur_ambient_diffuse(); // needed for correct outdoor color
 		colorRGBA const cur_outdoor_color(get_outdoor_light_color());
@@ -1051,24 +1086,23 @@ public:
 			lighting_update_text = oss.str();
 		}
 		if (lighting_updated) {update_volume_light_texture();} // update lighting texture based on incremental progress
-		if (is_running) return; // still running, let it continue
+		while (!lights_done.empty()) {mark_light_done(lights_done.wait_and_pop());} // shouldn't have to wait
+		
+		if (is_running) { // still running in USE_BKG_THREAD=1 mode
+			if (!need_bvh_rebuild && !floor_change) {add_light_jobs(b, target);} // lighting is still valid, top off the queue
+			return; // let it continue
+		}
 		maybe_join_thread();
 		// nothing is running and there is more work to do, find the nearest light to the target and process it
-		if (!need_rebuild) {need_bvh_rebuild |= floor_change;} // rebuild on player floor change if not rebuilt above
+		need_bvh_rebuild |= floor_change; // rebuild on player floor change if not rebuilt above
 		if (need_bvh_rebuild) {build_bvh(b, target);}
 		tid = cur_tid;
 
 		if (USE_BKG_THREAD) { // background batch mode
-			for (light_job_t const &j : cur_batch) {mark_light_done(j);}
-			cur_batch.clear();
+			add_light_jobs(b, target);
 
-			for (unsigned n = 0; n < INDIR_LIGHT_BATCH_SIZE; ++n) {
-				light_job_t const job(get_next_light(b, target));
-				if (!job.is_valid()) break; // no more lights
-				cur_batch.push_back(job);
-			}
-			if (cur_batch.empty()) { // no lights to update
-				if (timer_val) {register_timing_value("lighting update", (GET_TIME_MS() - timer_val));}
+			if (light_queue.empty()) { // no lights to update
+				//if (timer_val) {register_timing_value("lighting update", (GET_TIME_MS() - timer_val));}
 				timer_val = 0; // prevent printout from re-triggering until more lights are processed
 				return;
 			}
@@ -1085,13 +1119,29 @@ public:
 			init_lmgr(0); // clear_lighting=0
 			lighting_updated = 1;
 			highres_timer_t timer("Ray Cast Building Light"); // 2408 in mall with 368 lights
-			cast_light_rays(b, cur_job);
+			cast_light_rays(b);
 		}
 	}
+	unsigned add_light_jobs(building_t const &b, point const &target) {
+		unsigned const num_pend(light_queue.size());
+		assert(num_pend <= INDIR_LIGHT_BATCH_SIZE);
+		unsigned const num_to_add(INDIR_LIGHT_BATCH_SIZE - num_pend);
+		unsigned num_added(0);
+
+		for (unsigned n = 0; n < num_to_add; ++n) {
+			light_job_t const job(get_next_light(b, target));
+			if (!job.is_valid()) break; // no more lights
+			light_queue.push(job);
+			if (!job.neg) {lights_pend.insert(job.lix);} // don't need to track pending status of negative lights
+			++num_added;
+		}
+		//if (num_pend || num_added) {cout << "pend " << num_pend << " of " << INDIR_LIGHT_BATCH_SIZE << " add " << num_added << " of " << num_to_add << endl;}
+		return num_added;
+	}
 	void run_light_batch(building_t const &b) { // background thread task
-		for (light_job_t const &j : cur_batch) {
-			cur_job = j;
-			cast_light_rays(b, j);
+		while (light_queue.try_pop(cur_job)) {
+			cast_light_rays(b);
+			lights_done.push(cur_job);
 			lighting_updated = 1;
 		}
 		is_running    = 0; // thread job is done
@@ -1122,19 +1172,16 @@ public:
 		light_job_t job; // is_neg=0
 
 		for (unsigned id : light_ids) {
-			bool found(0);
-			
-			for (light_job_t const &j : cur_batch) {
-				if (j.lix == (int)id) {found = 1; break;}
-			}
-			if (found) continue; // already part of the current batch; skip
 			lights_seen.insert(id); // must track lights across all floors seen for correct progress update
-			if (job.lix < 0 && lights_complete.find(id) == lights_complete.end()) {job.lix = id;} // find an incomplete light
+			if (job.lix < 0 && lights_complete.find(id) == lights_complete.end() && lights_pend.find(id) == lights_pend.end()) {job.lix = id;} // find an incomplete light
 		}
 		return job;
 	}
 	void mark_light_done(light_job_t const &job) {
-		if (job.is_valid() && !job.neg) {lights_complete.insert(job.lix);} // mark the most recent light as complete if not a light removal
+		if (job.is_valid()) {
+			if (!job.neg) {lights_complete.insert(job.lix);} // mark the most recent light as complete if not a light removal
+			lights_pend.erase (job.lix);
+		}
 	}
 	void register_light_state_change(unsigned light_ix, bool light_is_on, bool in_elevator, bool geom_changed) {
 		if (geom_changed) {
