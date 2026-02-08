@@ -2291,7 +2291,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 				if (is_rest && in_ext_basement) continue;
 				if (is_rest && w->z1() >= ground_floor_z1 && w->dz() < 1.5*floor_spacing) continue; // no upper trim on lower wall section of restaurant
 				// add ceiling trim
-				trim.z2() = (single_floor ? ((is_rest ? parts[0].z2() : w->z2()) - fc_thick) : (z + floor_to_ceil_height)); // ceil height
+				trim.z2() = ((single_floor && !in_ext_basement) ? ((is_rest ? parts[0].z2() : w->z2()) - fc_thick) : (z + floor_to_ceil_height)); // ceil height
 				trim.z1() = trim.z2() - trim_height;
 
 				for (unsigned dir = 0; dir < 2; ++dir) { // for each side of wall
