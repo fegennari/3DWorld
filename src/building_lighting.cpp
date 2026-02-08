@@ -1236,16 +1236,6 @@ void building_t::create_building_volume_light_texture(unsigned bix, point const 
 	building_indir_light_mgr.register_cur_building(*this, bix, target, tid);
 }
 
-bool building_t::ray_cast_camera_dir(point const &camera_bs, point &cpos, colorRGBA &ccolor) const { // unused - for debugging; excludes attic and extended basement
-	assert(!USE_BKG_THREAD); // not legal to call when running lighting in a background thread
-	building_indir_light_mgr.build_bvh(*this, camera_bs);
-	bool const in_attic(point_in_attic(camera_bs)), in_ext_basement(point_in_extended_basement_not_basement(camera_bs));
-	building_colors_t bcolors;
-	set_building_colors(bcolors);
-	vector3d cnorm; // unused
-	return ray_cast_interior(camera_bs, cview_dir, ray_cast_args_t(bcube, building_indir_light_mgr.get_bvh(), in_attic, in_ext_basement, bcolors), cpos, cnorm, ccolor);
-}
-
 // Note: target is building space camera
 void building_t::get_lights_with_priorities(point const &target, cube_t const &valid_area, vector<pair<float, unsigned>> &lights_to_sort) const {
 	if (!has_room_geom()) return; // error?

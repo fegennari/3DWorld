@@ -2426,7 +2426,6 @@ struct building_t : public building_geom_t {
 	bool ray_cast_exterior_walls(point const &p1, point const &p2, vector3d &cnorm, float &t) const;
 	bool ray_cast_interior(point const &pos, vector3d const &dir, ray_cast_args_t const &args, point &cpos, vector3d &cnorm, colorRGBA &ccolor, rand_gen_t *rgen=nullptr) const;
 	void create_building_volume_light_texture(unsigned bix, point const &target, unsigned &tid) const;
-	bool ray_cast_camera_dir(point const &camera_bs, point &cpos, colorRGBA &ccolor) const;
 	cube_t calc_parts_bcube() const;
 	cube_t get_unrotated_parts_bcube() const {return (is_rotated() ? calc_parts_bcube() : bcube);}
 	void calc_bcube_from_parts();
