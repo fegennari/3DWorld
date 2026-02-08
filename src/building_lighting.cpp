@@ -947,6 +947,7 @@ class building_indir_light_mgr_t {
 		init_lmgr(0); // init on first call; clear_lighting=0
 		//highres_timer_t timer("Lighting Tex Create"); // 706ms in mall with 4 threads and 368 lights
 		lmgr.update_indir_light_texture(cur_tid);
+		lighting_updated = 0;
 	}
 	void maybe_join_thread() {
 		if (needs_to_join) {rt_thread.join(); needs_to_join = 0;}
@@ -996,7 +997,8 @@ public:
 	}
 	void clear() {
 		lighting_updated = need_bvh_rebuild = update_windows = in_ext_basement = 0;
-		cur_bix = cur_floor = -1;
+		cur_bix   = cur_floor = -1;
+		timer_val = 0;
 		invalidate_lighting();
 		light_ids.clear();
 		lights_to_sort.clear();
@@ -1048,13 +1050,9 @@ public:
 			oss << "Lights: " << lights_complete.size() << " / " << (max(light_ids.size(), lights_seen.size()) + remove_queue.size());
 			lighting_update_text = oss.str();
 		}
+		if (lighting_updated) {update_volume_light_texture();} // update lighting texture based on incremental progress
 		if (is_running) return; // still running, let it continue
-
-		if (lighting_updated) { // update lighting texture based on incremental progress
-			maybe_join_thread();
-			update_volume_light_texture();
-			lighting_updated = 0;
-		}
+		maybe_join_thread();
 		// nothing is running and there is more work to do, find the nearest light to the target and process it
 		if (!need_rebuild) {need_bvh_rebuild |= floor_change;} // rebuild on player floor change if not rebuilt above
 		if (need_bvh_rebuild) {build_bvh(b, target);}
@@ -1076,10 +1074,9 @@ public:
 			}
 			if (!timer_val) {timer_val = GET_TIME_MS();} // start a new block of lights
 			init_lmgr(0); // clear_lighting=0
-			is_running = lighting_updated = 1;
 			assert(!needs_to_join); // must have joined previous thread
-			rt_thread = std::thread(&building_indir_light_mgr_t::run_light_batch, this, b);
-			needs_to_join = 1;
+			is_running = 1;
+			rt_thread  = std::thread(&building_indir_light_mgr_t::run_light_batch, this, b);
 		}
 		else { // serial mode
 			mark_light_done(cur_job);
@@ -1095,8 +1092,10 @@ public:
 		for (light_job_t const &j : cur_batch) {
 			cur_job = j;
 			cast_light_rays(b, j);
+			lighting_updated = 1;
 		}
-		is_running = 0; // thread job is done
+		is_running    = 0; // thread job is done
+		needs_to_join = 1;
 	}
 	light_job_t get_next_light(building_t const &b, point const &target) {
 		if (!remove_queue.empty()) { // remove an existing light; must run even when player_in_elevator>=2 (doors closed/moving) to remove elevator light at old pos
