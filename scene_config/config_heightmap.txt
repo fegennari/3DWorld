@@ -100,7 +100,7 @@ model_hemi_lighting_scale 0.3 # reduced from the default of 0.5 for Ferris wheel
 coll_obj_file coll_objs/coll_objs_heightmap.txt
 
 mesh_size  128 128 128 # need zsize > 0 for building lighting
-num_threads 16 # trade-off: 8 threads has faster update than 4 threads but introduces more lag
+num_threads 16 # set <= the number of available cores/threads
 max_ray_bounces 3
 num_light_rays 0 0 500000 # npts nrays local_rays
 lighting_file_local "" 1 1.0 0.0 # <filename> <write_mode> <light_scale> [<first_ray_weight>]

@@ -2257,10 +2257,14 @@ int load_config(string const &config_file) {
 		}
 		else if (str == "num_threads") {
 			if (!read_uint(fp, NUM_THREADS) || NUM_THREADS > 100) cfg_err("num_threads", error);
+			unsigned const num_hw_threads(std::thread::hardware_concurrency()); // includes hyperthreading
 			
 			if (NUM_THREADS == 0) { // auto special case
-				unsigned const num_hw_threads(std::thread::hardware_concurrency()); // includes hyperthreading
 				NUM_THREADS = ((num_hw_threads > 0) ? num_hw_threads : 4); // default to 4 if the call returns 0
+			}
+			else if (num_hw_threads > 0 && NUM_THREADS > num_hw_threads) {
+				cout << "Warning: Reducing the number of threads from " << NUM_THREADS << " to the hardware max of " << num_hw_threads << endl;
+				NUM_THREADS = num_hw_threads;
 			}
 		}
 		else if (str == "ambient_lighting_scale") {
