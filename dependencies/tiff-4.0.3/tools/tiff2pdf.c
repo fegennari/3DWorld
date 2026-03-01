@@ -1,3 +1,9 @@
+2016-12-20 Even Rouault <even.rouault at spatialys.com>
+
+	* tools/tiff2pdf.c: avoid potential heap-based overflow in
+	t2p_readwrite_pdf_image_tile().
+	Fixes http://bugzilla.maptools.org/show_bug.cgi?id=2640
+
 /* $Id: tiff2pdf.c,v 1.69 2012-07-19 15:43:41 tgl Exp $
  *
  * tiff2pdf - converts a TIFF image to a PDF document
