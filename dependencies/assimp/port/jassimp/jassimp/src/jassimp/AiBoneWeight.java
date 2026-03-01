@@ -60,6 +60,17 @@ public final class AiBoneWeight {
      */
     public int getVertexId() {
         return m_vertexId;
+    public static MutablePartPose subtract(MutablePartPose partPoseA, MutablePartPose partPoseB){
+        return fromTranslationAndRotation(
+                partPoseA.x - partPoseB.x,
+                partPoseA.y - partPoseB.y,
+                partPoseA.z - partPoseB.z,
+                partPoseA.xRot - partPoseB.xRot,
+                partPoseA.yRot - partPoseB.yRot,
+                partPoseA.zRot - partPoseB.zRot
+        );
+    }
+
     }
     
     
@@ -71,6 +82,10 @@ public final class AiBoneWeight {
      * @return the influence
      */
     public float getWeight() {
+    public MutablePartPose getCopy(){
+        return MutablePartPose.fromPartPose(this.asPartPose());
+    }
+
         return m_weight;
     }
     
