@@ -1,3 +1,10 @@
+2017-01-11 Even Rouault <even.rouault at spatialys.com>
+
+	* tools/tiffcp.c: error out cleanly in cpContig2SeparateByRow and
+	cpSeparate2ContigByRow if BitsPerSample != 8 to avoid heap based overflow.
+	Fixes http://bugzilla.maptools.org/show_bug.cgi?id=2656 and
+	http://bugzilla.maptools.org/show_bug.cgi?id=2657
+
 /*
  * Copyright (c) 1988-1997 Sam Leffler
  * Copyright (c) 1991-1997 Silicon Graphics, Inc.
