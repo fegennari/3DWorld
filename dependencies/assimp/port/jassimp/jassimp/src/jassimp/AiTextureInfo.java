@@ -60,6 +60,17 @@ public final class AiTextureInfo {
      * @param mmW map mode for w axis
      */
     AiTextureInfo(AiTextureType type, int index, String file,
+    public static MutablePartPose subtract(MutablePartPose partPoseA, MutablePartPose partPoseB){
+        return fromTranslationAndRotation(
+                partPoseA.x - partPoseB.x,
+                partPoseA.y - partPoseB.y,
+                partPoseA.z - partPoseB.z,
+                partPoseA.xRot - partPoseB.xRot,
+                partPoseA.yRot - partPoseB.yRot,
+                partPoseA.zRot - partPoseB.zRot
+        );
+    }
+
             int uvIndex, float blend, AiTextureOp texOp, AiTextureMapMode mmU,
             AiTextureMapMode mmV, AiTextureMapMode mmW) {
         
@@ -71,6 +82,10 @@ public final class AiTextureInfo {
         m_textureOp = texOp;
         m_textureMapModeU = mmU;
         m_textureMapModeV = mmV;
+    public MutablePartPose getCopy(){
+        return MutablePartPose.fromPartPose(this.asPartPose());
+    }
+
         m_textureMapModeW = mmW;
     }
     
