@@ -1909,9 +1909,17 @@ void t2p_read_tiff_size(T2P* t2p, TIFF* input){
 #endif
 		(void) 0;
 	}
-	k = checkMultiply64(TIFFScanlineSize(input), t2p->tiff_length, t2p);
-	if(t2p->tiff_planar==PLANARCONFIG_SEPARATE){
-		k = checkMultiply64(k, t2p->tiff_samplesperpixel, t2p);
+#ifdef JPEG_SUPPORT
+	if(t2p->pdf_compression == T2P_COMPRESS_JPEG
+	   && t2p->tiff_photometric == PHOTOMETRIC_YCBCR) {
+		k = checkMultiply64(TIFFNumberOfStrips(input), TIFFStripSize(input), t2p);
+	} else
+#endif
+	{
+		k = checkMultiply64(TIFFScanlineSize(input), t2p->tiff_length, t2p);
+		if(t2p->tiff_planar==PLANARCONFIG_SEPARATE){
+			k = checkMultiply64(k, t2p->tiff_samplesperpixel, t2p);
+		}
 	}
 	if (k == 0) {
 		/* Assume we had overflow inside TIFFScanlineSize */
