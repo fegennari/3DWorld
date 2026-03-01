@@ -3596,7 +3596,7 @@ static int readContigStripsIntoBuffer (TIFF* in, uint8* buf)
   {
   uint8* bufp = buf;
   int32  bytes_read = 0;
-  uint16 strip, nstrips   = TIFFNumberOfStrips(in);
+        uint32 strip, nstrips   = TIFFNumberOfStrips(in);
   uint32 stripsize = TIFFStripSize(in);
   uint32 rows = 0;
   uint32 rps = TIFFGetFieldDefaulted(in, TIFFTAG_ROWSPERSTRIP, &rps);
@@ -4675,9 +4675,12 @@ static int readSeparateStripsIntoBuffer (TIFF *in, uint8 *obuf, uint32 length,
                                          uint32 width, uint16 spp,
                                          struct dump_opts *dump)
   {
-  int i, j, bytes_per_sample, bytes_per_pixel, shift_width, result = 1;
+  int i, bytes_per_sample, bytes_per_pixel, shift_width, result = 1;
+  uint32 j;
   int32  bytes_read = 0;
-  uint16 bps, nstrips, planar, strips_per_sample;
+  uint16 bps, planar;
+  uint32 nstrips;
+  uint32 strips_per_sample;
   uint32 src_rowsize, dst_rowsize, rows_processed, rps;
   uint32 rows_this_strip = 0;
   tsample_t s;
