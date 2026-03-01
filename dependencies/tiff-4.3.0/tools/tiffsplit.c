@@ -1,3 +1,11 @@
+2016-11-11 Even Rouault <even.rouault at spatialys.com>
+
+	* tools/tiffcrop.c: fix multiple uint32 overflows in
+	writeBufferToSeparateStrips(), writeBufferToContigTiles() and
+	writeBufferToSeparateTiles() that could cause heap buffer overflows.
+	Reported by Henri Salo from Nixu Corporation.
+	Fixes http://bugzilla.maptools.org/show_bug.cgi?id=2592
+
 /*
  * Copyright (c) 1992-1997 Sam Leffler
  * Copyright (c) 1992-1997 Silicon Graphics, Inc.
