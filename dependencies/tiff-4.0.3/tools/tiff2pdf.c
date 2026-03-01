@@ -1647,7 +1647,12 @@ void t2p_read_tiff_data(T2P* t2p, TIFF* input){
 	t2p_compose_pdf_page(t2p);
 
 	t2p->pdf_transcode = T2P_TRANSCODE_ENCODE;
-	if(t2p->pdf_nopassthrough==0){
+        /* It seems that T2P_TRANSCODE_RAW mode doesn't support separate->contig */
+        /* conversion. At least t2p_read_tiff_size and t2p_read_tiff_size_tile */
+        /* do not take into account the number of samples, and thus */
+        /* that can cause heap buffer overflows such as in */
+        /* http://bugzilla.maptools.org/show_bug.cgi?id=2715 */
+	if(t2p->pdf_nopassthrough==0 && t2p->tiff_planar!=PLANARCONFIG_SEPARATE){
 #ifdef CCITT_SUPPORT
 		if(t2p->tiff_compression==COMPRESSION_CCITTFAX4  
 			){
