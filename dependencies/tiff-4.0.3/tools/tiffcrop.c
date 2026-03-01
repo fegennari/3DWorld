@@ -1,3 +1,10 @@
+2016-12-03 Even Rouault <even.rouault at spatialys.com>
+
+	* tools/tiffcp.c: fix uint32 underflow/overflow that can cause heap-based
+	buffer overflow.
+	Reported by Agostino Sarubbo.
+	Fixes http://bugzilla.maptools.org/show_bug.cgi?id=2610
+
 /* $Id: tiffcrop.c,v 1.20 2010-12-14 02:03:24 faxguy Exp $ */
 
 /* tiffcrop.c -- a port of tiffcp.c extended to include manipulations of
