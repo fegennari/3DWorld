@@ -1,3 +1,26 @@
+2016-09-23 Even Rouault <even.rouault at spatialys.com>
+
+	* tools/tiffcrop.c: fix various out-of-bounds write vulnerabilities
+	in heap or stack allocated buffers. Reported as MSVR 35093,
+	MSVR 35096 and MSVR 35097. Discovered by Axel Souchet and Vishal
+	Chauhan from the MSRC Vulnerabilities & Mitigations team.
+	* tools/tiff2pdf.c: fix out-of-bounds write vulnerabilities in
+	heap allocate buffer in t2p_process_jpeg_strip(). Reported as MSVR
+	35098. Discovered by Axel Souchet and Vishal Chauhan from the MSRC
+	Vulnerabilities & Mitigations team.
+	* libtiff/tif_pixarlog.c: fix out-of-bounds write vulnerabilities
+	in heap allocated buffers. Reported as MSVR 35094. Discovered by
+	Axel Souchet and Vishal Chauhan from the MSRC Vulnerabilities &
+	Mitigations team.
+	* libtiff/tif_write.c: fix issue in error code path of TIFFFlushData1()
+	that didn't reset the tif_rawcc and tif_rawcp members. I'm not
+	completely sure if that could happen in practice outside of the odd
+	behaviour of t2p_seekproc() of tiff2pdf). The report points that a
+	better fix could be to check the return value of TIFFFlushData1() in
+	places where it isn't done currently, but it seems this patch is enough. 
+	Reported as MSVR 35095. Discovered by Axel Souchet & Vishal Chauhan &
+	Suha Can from the MSRC Vulnerabilities & Mitigations team.
+
 /* $Id: tiffcrop.c,v 1.20 2010-12-14 02:03:24 faxguy Exp $ */
 
 /* tiffcrop.c -- a port of tiffcp.c extended to include manipulations of
