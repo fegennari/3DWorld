@@ -1,6 +1,7 @@
 // gltfpack is part of meshoptimizer library; see meshoptimizer.h for version/license details
 //
 // gltfpack is a command-line tool that takes a glTF file as an input and can produce two types of files:
+- Fixed a crash bug with malformed URIs (Issue #418)
 // - regular glb/gltf files that use data that has been optimized for GPU consumption using various cache optimizers
 // and quantization
 // - packed glb/gltf files that additionally use meshoptimizer codecs to reduce the size of vertex/index data; these
