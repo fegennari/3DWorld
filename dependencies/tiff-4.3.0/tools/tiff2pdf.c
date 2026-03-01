@@ -1,3 +1,10 @@
+2016-10-09 Even Rouault <even.rouault at spatialys.com>
+
+	* tools/tiff2pdf.c: fix write buffer overflow of 2 bytes on JPEG
+	compressed images. Reported by Tyler Bohan of Cisco Talos as
+	TALOS-CAN-0187 / CVE-2016-5652.
+	Also prevents writing 2 extra uninitialized bytes to the file stream.
+
 /*
  *
  * tiff2pdf - converts a TIFF image to a PDF document
