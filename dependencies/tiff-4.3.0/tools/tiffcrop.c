@@ -1,3 +1,12 @@
+2016-10-08 Even Rouault <even.rouault at spatialys.com>
+
+	* tools/tiffcp.c: fix read of undefined variable in case of missing
+	required tags. Found on test case of MSVR 35100.
+	* tools/tiffcrop.c: fix read of undefined buffer in
+	readContigStripsIntoBuffer() due to uint16 overflow. Probably not a
+	security issue but I can be wrong. Reported as MSVR 35100 by Axel
+	Souchet from the MSRC Vulnerabilities & Mitigations team.
+
 /* tiffcrop.c -- a port of tiffcp.c extended to include manipulations of
  * the image data through additional options listed below
  *
