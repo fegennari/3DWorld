@@ -1,3 +1,12 @@
+2016-10-31 Even Rouault <even.rouault at spatialys.com>
+
+	* libtiff/tif_predict.h, libtiff/tif_predict.c:
+	Replace assertions by runtime checks to avoid assertions in debug mode,
+	or buffer overflows in release mode. Can happen when dealing with
+	unusual tile size like YCbCr with subsampling. Reported as MSVR 35105
+	by Axel Souchet	& Vishal Chauhan from the MSRC Vulnerabilities & Mitigations
+	team.
+
 /* $Id: tif_predict.c,v 1.32 2010-03-10 18:56:49 bfriesen Exp $ */
 
 /*
