@@ -374,10 +374,11 @@ fpAcc(TIFF* tif, uint8* cp0, tmsize_t cc)
 	tmsize_t wc = cc / bps;
 	tmsize_t count = cc;
 	uint8 *cp = (uint8 *) cp0;
-	uint8 *tmp = (uint8 *)_TIFFmalloc(cc);
+	uint8 *tmp;
 
 	assert((cc%(bps*stride))==0);
 
+    tmp = (uint8 *)_TIFFmalloc(cc);
 	if (!tmp)
 		return;
 
@@ -549,7 +550,7 @@ fpDiff(TIFF* tif, uint8* cp0, tmsize_t cc)
 	tmsize_t wc = cc / bps;
 	tmsize_t count;
 	uint8 *cp = (uint8 *) cp0;
-	uint8 *tmp = (uint8 *)_TIFFmalloc(cc);
+	uint8 *tmp;
 
 	assert((cc%(bps*stride))==0);
 
@@ -557,6 +558,8 @@ fpDiff(TIFF* tif, uint8* cp0, tmsize_t cc)
 		return;
 
 	_TIFFmemcpy(tmp, cp0, cc);
+
+    tmp = (uint8 *)_TIFFmalloc(cc);
 	for (count = 0; count < wc; count++) {
 		uint32 byte;
 		for (byte = 0; byte < bps; byte++) {
@@ -631,6 +634,7 @@ PredictorEncodeTile(TIFF* tif, uint8* bp0, tmsize_t cc0, uint16 s)
 
         _TIFFfree( working_copy );
 
+        _TIFFfree( working_copy );
         return result_code;
 }
 
