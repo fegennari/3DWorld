@@ -355,7 +355,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 	} // for c
 	// should glass floors be included? maybe not, since we want refractions rather than reflections; plus they're mostly transparent and near white
 	//for (cube_t const &i : interior->room_geom->glass_floors) {if (i.intersects(ext_bcube)) {cc.emplace_back(i, GLASS_COLOR);}}
-	add_colored_cubes(details, detail_color.modulate_with(mat.roof_tex.get_avg_color()), ext_bcube, cc); // should this be included?
+	// Note: roof details are excluded since they're outside the building
 	if (!has_room_geom()) return; // nothing else to add
 	float const sz_thresh(1.0*get_wall_thickness());
 	vect_room_object_t const &objs(interior->room_geom->objs);
