@@ -179,7 +179,7 @@ void get_tc_leg_cubes_abs_width(cube_t const &c, float leg_width, bool recessed,
 	} // for y
 }
 void get_tc_leg_cubes(cube_t const &c, room_object_t const &obj, float width, bool recessed, cube_t cubes[4], bool abs_width) {
-	get_tc_leg_cubes_abs_width(c, (abs_width ? width : get_tc_leg_width(c, width)), recessed, cubes);
+	get_tc_leg_cubes_abs_width(c, (abs_width ? width : get_tc_leg_width(obj, width)), recessed, cubes);
 
 	if (obj.is_on_floor()) { // handle legs of fallen over furniture
 		point const center(c.get_cube_center());
@@ -235,16 +235,19 @@ colorRGBA apply_light_color(room_object_t const &o, colorRGBA const &c) {return 
 colorRGBA building_room_geom_t::apply_wood_light_color(room_object_t const &o) const {return apply_light_color(o, wood_color);}
 colorRGBA apply_light_color(room_object_t const &o) {return apply_light_color(o, o.color);} // use object color
 
+bool is_wood_desk(room_object_t const &c) {return !(c.flags & RO_FLAG_UNTEXTURED);}
+
 // actually applies to tables, desks, dressers, and nightstands
 void get_table_cubes(room_object_t const &c, cube_t cubes[5]) {
 	assert(c.shape != SHAPE_CYLIN); // can't call this on cylindrical table
-	bool const is_desk(c.type == TYPE_DESK), is_dns(c.type == TYPE_DRESSER || c.type == TYPE_NIGHTSTAND);
+	bool const is_desk(c.type == TYPE_DESK), is_dns(c.type == TYPE_DRESSER || c.type == TYPE_NIGHTSTAND), glass_table(c.is_glass_table());
 	cube_t top(c), legs_bcube(c);
 	// Note: default table with top_dz=0.12, leg_width=0.08; desk is 0.15/0.06; dresser is 0.88/0.10
-	top.z1() += (is_desk ? (1.0 - DESK_TOP_THICK) : (is_dns ? 0.12 : 0.88))*c.dz();
+	top.z1() += (is_desk ? (1.0 - DESK_TOP_THICK) : (is_dns ? 0.94 : 0.88))*c.dz();
 	legs_bcube.z2() = top.z1();
 	cubes[0] = top;
-	get_tc_leg_cubes(legs_bcube, c, (is_desk ? 0.06 : (is_dns ? 0.10 : 0.08)), 1, (cubes+1)); // legs are inexact for glass tables
+	if (glass_table) {legs_bcube.expand_by_xy(-0.05*min(c.dx(), c.dy()));} // inset the legs
+	get_tc_leg_cubes(legs_bcube, c, (glass_table ? 0.045 : (is_desk ? (is_wood_desk(c) ? 0.06 : 0.04) : (is_dns ? 0.10 : 0.08))), 1, (cubes+1)); // glass table legs are inexact
 }
 
 colorRGBA const table_glass_color(0.7, 1.0, 0.85, 0.25); // greenish tint, semi transparent
@@ -4778,7 +4781,7 @@ room_object_t get_desk_top_back(room_object_t const &c) {
 }
 void building_room_geom_t::add_desk(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm) {
 	// desk top and legs, similar to add_table()
-	bool const is_wood(!(c.flags & RO_FLAG_UNTEXTURED)); // else untextured plastic
+	bool const is_wood(is_wood_desk(c)); // else untextured plastic
 	point const tex_origin(c.get_llc());
 	colorRGBA const color(is_wood ? apply_wood_light_color(c) : apply_light_color(c));
 	room_object_t drawers;
@@ -7951,7 +7954,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_BCASE:    return get_textured_wood_color();
 	case TYPE_WINE_RACK:return get_textured_wood_color();
 	case TYPE_COAT_RACK:return get_textured_wood_color();
-	case TYPE_DESK:     return get_textured_wood_color();
+	case TYPE_DESK:     return (is_wood_desk(*this) ? get_textured_wood_color() : color);
 	case TYPE_RDESK:    return (texture_color(PANELING_TEX)*0.5 + texture_color(get_counter_tid())*0.5);
 	case TYPE_CONF_TABLE:return (get_textured_wood_color() *0.5 + texture_color(get_counter_tid())*0.5);
 	case TYPE_BED:      return (color.modulate_with(texture_color(get_sheet_tid())) + get_textured_wood_color())*0.5; // half wood and half cloth
@@ -7969,7 +7972,8 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_BOX:      return texture_color(get_box_tid()).modulate_with(color);
 	case TYPE_CUBICLE:  return texture_color(get_carpet_tid(*this));
 	case TYPE_STALL:    return ((shape == SHAPE_SHORT && !is_hanging()) ? texture_color(get_carpet_tid(*this)).modulate_with(color) : color); // visit room separator is textured
-	case TYPE_SHELVES:  return get_textured_wood_color();
+	case TYPE_SHELVES:  return texture_color(WOOD2_TEX);
+	case TYPE_PALLET:   return get_textured_wood_color();
 	case TYPE_KEYBOARD: return BKGRAY;
 	case TYPE_COMPUTER: return BKGRAY;
 	case TYPE_MWAVE:    return GRAY;
