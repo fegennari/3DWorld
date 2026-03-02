@@ -101,6 +101,22 @@ void building_t::get_attic_windows(vect_tquad_with_ix_t &tquads, float offset_sc
 		tquads.push_back(window);
 	} // for i
 }
+void building_t::get_attic_window_holes(vect_cube_t &window_holes, float offset_scale) const {
+	vect_tquad_with_ix_t window_tquads;
+	get_attic_windows(window_tquads, offset_scale);
+	if (window_tquads.empty()) return; // no attic windows
+	float const window_expand(get_wall_thickness());
+	float const window_h_border(1.05*get_window_h_border()), window_v_border(1.05*get_window_v_border()); // (0, 1) range, slightly expanded
+
+	for (tquad_with_ix_t const &w : window_tquads) {
+		cube_t bc(w.get_bcube());
+		bool const dim(bc.dy() < bc.dx()); // should be zero size in X or Y
+		bc.expand_in_dim(!dim, -window_h_border*bc.get_sz_dim(!dim));
+		bc.expand_in_dim(2,    -window_v_border*bc.dz());
+		bc.expand_by(window_expand);
+		window_holes.push_back(bc);
+	}
+}
 
 bool building_t::has_L_shaped_roof_area() const {
 	if (real_num_parts == 1) return 0; // not L-shaped
@@ -729,23 +745,12 @@ void building_room_geom_t::add_attic_interior_and_rafters(building_t const &b, f
 	if (!b.has_attic()) return;
 	if (!detail_pass && !b.has_attic_window) return; // nothing to do
 	// determine attic window hole locations
-	vect_tquad_with_ix_t window_tquads;
-	b.get_attic_windows(window_tquads, 0.0); // offset_scale=0.0
-	unsigned const small(window_tquads.empty() ? 2 : 1); // small if there are attic windows, otherwise detail
+	vect_cube_t window_holes;
+	b.get_attic_window_holes(window_holes, 0.0); // offset_scale=0.0
+	unsigned const small(window_holes.empty() ? 2 : 1); // small if there are attic windows, otherwise detail
 	if (!detail_pass && small == 2) return; // nothing to do
 	unsigned const attic_type(b.interior->attic_type);
-	float const window_expand(b.get_wall_thickness());
-	float const window_h_border(1.05*b.get_window_h_border()), window_v_border(1.05*b.get_window_v_border()); // (0, 1) range, slightly expanded
-	vect_cube_t window_holes;
 
-	for (tquad_with_ix_t const &w : window_tquads) {
-		cube_t bc(w.get_bcube());
-		bool const dim(bc.dy() < bc.dx()); // should be zero size in X or Y
-		bc.expand_in_dim(!dim, -window_h_border*bc.get_sz_dim(!dim));
-		bc.expand_in_dim(2,    -window_v_border*bc.dz());
-		bc.expand_by(window_expand);
-		window_holes.push_back(bc);
-	}
 	if (detail_pass == (small == 2)) { // draw the attic interior
 		if (attic_type == ATTIC_TYPE_WOOD) {
 			add_attic_roof_geom(get_material(tid_nm_pair_t(get_plywood_tid()), 0, 0, small), WHITE, 1.0, 16.0, 0, window_holes, b); // no shadows

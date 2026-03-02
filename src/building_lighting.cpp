@@ -1444,6 +1444,8 @@ void building_t::get_all_windows(vect_cube_with_ix_t &windows) const { // Note: 
 		}
 	}
 	vect_vnctcc_t const &wall_quad_verts(get_all_drawn_window_verts_as_quads());
+	vect_cube_t window_holes;
+	get_attic_window_holes(window_holes);
 
 	for (unsigned i = 0; i < wall_quad_verts.size(); i += 4) { // iterate over each quad
 		cube_t c;
@@ -1479,7 +1481,12 @@ void building_t::get_all_windows(vect_cube_with_ix_t &windows) const { // Note: 
 				bool is_blocked(window.dz() <= 0.0 || window.get_sz_dim(!dim) <= 0.0);
 				cube_t window_clipped(window);
 
-				if (!is_blocked && !walkways.empty()) {
+				if (is_attic_window(window)) { // attic windows are special
+					for (cube_t const &h : window_holes) {
+						if (window.intersects(h)) {window_clipped = h; break;}
+					}
+				}
+				else if (!is_blocked && !walkways.empty()) {
 					// check for windows blocked by walkways and clip them, even though some light could come through if not blocked by a door
 					float const wz(window.zc()), wpos(window_clipped.d[dim][dir]);
 					float &wlo(window_clipped.d[!dim][0]), &whi(window_clipped.d[!dim][1]);
