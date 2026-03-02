@@ -3621,7 +3621,7 @@ void building_room_geom_t::add_pallet(room_object_t const &c_in) {
 		c.translate_dim(dim, (c.dir ? -1.0 : 1.0)*0.142*height); // shift away from the wall so that the edge touches when rotated
 		c.swap_dims(dim, 2); // swap dims to make horizontal for creating the pallet geometry, then swap back at the end
 	}
-	tid_nm_pair_t const nail_tex(get_rust_met_tid(), 0.0, 0);
+	tid_nm_pair_t const nail_tex(get_rust_met_tid(), 0.0, false, false, true); // no_reflect=1
 	get_material(nail_tex, 0, 0, 1); // make sure it's in the map
 	rgeom_mat_t &wood_mat(get_wood_material(2.0/c.get_length(), 1, 0, 1)); // shadowed, small
 	rgeom_mat_t &nail_mat(get_material(nail_tex, 0, 0, 1)); // unshadowed, small
@@ -6599,7 +6599,7 @@ void building_room_geom_t::add_comp_mouse(room_object_t const &c) {
 		cube_t mouse(c);
 		set_wall_width(mouse, center[ c.dim], 0.28*depth,  c.dim); // length
 		set_wall_width(mouse, center[!c.dim], 0.16*depth, !c.dim); // width
-		tid_nm_pair_t tex(-1, 1.0, 1); // shadowed
+		tid_nm_pair_t tex(-1, 1.0, true, false, true); // shadowed, no_reflect=1
 		tex.set_specular(0.4, 75.0);
 		rgeom_mat_t &mat(get_material(tex, 1, 0, 1)); // shadowed, small
 		colorRGBA const color(apply_light_color(c, BKGRAY));
