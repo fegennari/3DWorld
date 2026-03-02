@@ -3100,6 +3100,11 @@ bool building_t::apply_paint(point const &pos_, vector3d const &dir_, colorRGBA 
 			if (n[i->dim] != 0) {walls_blocked = 1; continue;} // only the side walls count; avoids dealing with open doors
 			tmin = tmin0; normal = n; target = c; hit_color = i->color;
 		}
+		else if (i->type == TYPE_STAIR_WALL && !(i->flags & RO_FLAG_HAS_EXTRA) && line_int_cube_get_t(pos, pos2, *i, tmin)) { // plaster (non-lattice stair wall)
+			normal    = get_coll_normal(i->dim, dir);
+			target    = *i;
+			hit_color = i->color;
+		}
 	} // for i
 	for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) { // check elevators
 		float tmin0(tmin);
