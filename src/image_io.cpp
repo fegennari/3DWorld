@@ -213,7 +213,7 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 		write_to_bmp(fn);
 	}
 #endif
-	//if (startswith(name, "metals")) {write_texture2d_binary();} // TESTING
+	//if (startswith(name, "metals") && is_texture_compressed()) {calc_color(); write_texture2d_binary();} // TESTING
 }
 
 void texture_t::set_image_size(int w, int h, bool allow_diff_width_height) {

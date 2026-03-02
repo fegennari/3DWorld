@@ -738,7 +738,7 @@ void texture_t::fill_transparent_with_avg_color() { // unused
 	assert(ncolors == 4);
 	assert(is_allocated());
 	unsigned const size(num_pixels());
-	colorRGBA avg_color(0.0, 0.0, 0.0, 1.0);
+	colorRGBA avg_color(BLACK);
 
 	for(unsigned i = 0; i < size; ++i) {
 		float const cscale(data[(i<<2)+3]/255.0); // alpha scale
