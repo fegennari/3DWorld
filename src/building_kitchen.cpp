@@ -159,10 +159,12 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float &zv
 				vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_HOOD)); // D, W, H
 				float const width(stove.get_sz_dim(!stove.dim)), height(width*sz.z/sz.y), depth(width*sz.x/sz.y); // scale to the width of the stove
 				float const ceiling_z(zval + get_floor_ceil_gap()), z_top(ceiling_z + get_fc_thickness()); // shift up a bit because it's too low
+				float const back_wall(room_bounds.d[stove.dim][!stove.dir]); // hood is against the wall even if the stove has a gap
 				stove_bc = stove;
 				cube_t hood(stove);
 				set_cube_zvals(hood, z_top-height, z_top);
-				hood.d[stove.dim][stove.dir] = stove.d[stove.dim][!stove.dir] + (stove.dir ? 1.0 : -1.0)*depth;
+				hood.d[stove.dim][!stove.dir] = back_wall;
+				hood.d[stove.dim][ stove.dir] = back_wall + (stove.dir ? 1.0 : -1.0)*depth;
 
 				if (!check_if_against_window(hood, room, stove.dim, !stove.dir)) { // don't place hoods against windows
 					objs.emplace_back(hood, TYPE_HOOD, room_id, stove.dim, stove.dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, LT_GRAY);
