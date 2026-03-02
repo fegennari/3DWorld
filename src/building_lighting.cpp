@@ -897,7 +897,7 @@ class building_indir_light_mgr_t {
 					surface_area  *= 0.5; // less indir light
 				}
 				else if (b.is_restaurant() && b.interior->rooms.front().intersects(light_cube)) {base_num_rays = 2*base_num_rays/3;} // fewer rays in restaurant dining area
-				else if (b.has_attic() && window.z1() >= b.get_attic_part().z2()) {base_num_rays *= 8;} // attic window
+				else if (b.is_attic_window(window)) {in_attic = 1; base_num_rays *= 8;} // attic window
 			}
 			light_room_id = b.get_room_containing_pt(window.get_cube_center());
 			// light intensity scales with surface area, since incoming light is a constant per unit area (large windows = more light)
@@ -978,8 +978,8 @@ class building_indir_light_mgr_t {
 			}
 			else { // omidirectional or sky ambient from windows
 				pri_dir = get_ray_dir(dir_ix); // should this be cosine weighted for windows? and clipped to the beamwidth for ceiling lights?
-				if (is_window && ((pri_dir[dim] > 0.0) ^ dir)) {pri_dir[dim] *= -1.0;} // reflect light if needed about window plane to ensure it enters the room
-				//if (!is_window && dir < 2 && (pri_dir[dim] > 0) != bool(dir)) {pri_dir[dim] *= -1.0;} // point in general light dir/hemisphere; doesn't seem to improve quality
+				if ( is_window && ((pri_dir[dim] > 0.0) ^ dir))               {pri_dir[dim] *= -1.0;} // reflect light if needed about window plane to ensure it enters the room
+				if (!is_window && dir < 2 && (pri_dir[dim] > 0) != bool(dir)) {pri_dir[dim] *= -1.0;} // point in general light dir/hemisphere; doesn't seem to improve quality
 				if (hanging && dot_product(pri_dir, light_dir) < 0.0) {pri_dir.negate();}
 			}
 			float const lum_thresh(0.1*ray_lcolor.get_luminance());

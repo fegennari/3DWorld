@@ -2335,6 +2335,7 @@ struct building_t : public building_geom_t {
 	bool is_pos_in_basement(point const &pos) const {return ((has_basement() && parts[basement_part_ix].contains_pt(pos)) || point_in_extended_basement(pos));}
 	bool room_inc_half_walls(room_t const &room) const {return (((is_restaurant() || is_conv_store()) && room.z1() >= ground_floor_z1) || room.inc_half_walls());}
 	bool maybe_has_ext_door_this_floor(float part_z1, unsigned floor_ix) const;
+	bool is_attic_window(cube_t const &window) const {return (has_attic() && window.z1() >= get_attic_part().z2());}
 	void get_garage_dim_dir(cube_t const &garage, bool &dim, bool &dir) const;
 	bool get_street_dim () const {return (street_dir ? ((street_dir-1) >> 1) : 0);}
 	bool get_street_side() const {return (street_dir ? ((street_dir-1) &  1) : 0);}
