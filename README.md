@@ -126,6 +126,8 @@ There is no further documentation for 3DWorld.
 However, I do have a blog that includes descriptions of the algorithms and lots of screenshots:
 https://3dworldgen.blogspot.com
 
+Please do not send me bot/AI generated pull requests. Please do not make suggestions related to the dependencies directory. This is included as a reference and the user is expected to update and/or build these libraries themselves.
+
 Here are some screenshots linked from my blog:
 
 ![alt text](https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEiXdx3c9m1WFQm68JOPsoYzLE7DkXxGrEEwuvzo0VupI23hMSzuW8DDnqsWYD85cy-EV92BacvNky0vsgEgHnO3vgnGW4WYZ3Nj3Z1vSCM5y4IfdLrYg2JaaYzXf6dRonqosb7t7lmQZZ7ZJ9LlK_t3TUYJKWiyJUk0gmIfaC0hs0gOA_I8Uj9bDtO6RYaA/w640-h360/factory_office_roof.jpg)
