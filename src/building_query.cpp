@@ -1057,6 +1057,12 @@ cube_t get_true_room_obj_bcube(room_object_t const &c) { // for collisions, etc.
 		C.z1() = c.z2() - 0.2*c.dz(); // shrink to top platform only and ignore the legs
 		return C;
 	}
+	if (c.type == TYPE_HOOD) {
+		cube_t C(c);
+		C.expand_in_dim(!c.dim, -0.12*c.get_sz_dim(!c.dim)); // shrink width
+		C.d[c.dim][c.dir] -= (c.dir ? 1.0 : -1.0)*0.3*c.get_sz_dim(c.dim); // shift front in
+		return C;
+	}
 	if (c.type == TYPE_TREE)      {} // bcubes are not a good fit for trees; cube covers the pot and trunk, but not leaves; should not be colliding with leaves anyway
 	if (c.type == TYPE_SHOWERTUB) {return get_shower_tub_wall   (c);} // only the end wall is a collider; the tub handles the bottom (what about curtains?)
 	if (c.type == TYPE_SHELVES  ) {return get_shelves_no_bot_gap(c);}
