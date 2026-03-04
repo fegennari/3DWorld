@@ -3059,22 +3059,24 @@ bool building_t::apply_paint(point const &pos_, vector3d const &dir_, colorRGBA 
 	float target_obj_tmin(0.0);
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
+		room_object const type(i->type);
 		float const pre_tmin(tmin);
 
- 		if ((is_wall && (i->type == TYPE_PICTURE || i->type == TYPE_WBOARD || i->type == TYPE_MIRROR)) ||
-			(is_floor && (i->type == TYPE_RUG || i->type == TYPE_FLOORING)) ||
-			(i->type == TYPE_POOL_TILE && i->shape == SHAPE_CUBE))
+ 		if ((is_wall  && (type == TYPE_PICTURE || type == TYPE_WBOARD || type == TYPE_MIRROR || type == TYPE_DRESS_MIR)) ||
+			(is_floor && (type == TYPE_RUG || type == TYPE_FLOORING)) ||
+			(type == TYPE_POOL_TILE && i->shape == SHAPE_CUBE))
 		{
 			if (!line_int_cube_get_t(pos, pos2, *i, tmin)) continue;
 			target = *i; // Note: we only need to update tmin and target; normal should be unchanged
 
-			if (i->type == TYPE_PICTURE || i->type == TYPE_RUG) { // record pictures and rugs as they can be damaged
-				target_obj = &*i;
+			if (type == TYPE_PICTURE || type == TYPE_RUG) { // record pictures and rugs as they can be damaged
+				target_obj      = &*i;
 				target_obj_tmin = tmin;
 			}
-			if (i->type == TYPE_WBOARD || i->type == TYPE_MIRROR || i->type == TYPE_FLOORING || i->type == TYPE_POOL_TILE) {hit_color = i->get_color();}
+			if (type == TYPE_WBOARD || type == TYPE_MIRROR || type == TYPE_DRESS_MIR || type == TYPE_FLOORING || type == TYPE_POOL_TILE) {hit_color = i->get_color();}
 		}
-		else if (i->type == TYPE_CLOSET && line_int_cube_get_t(pos, pos2, *i, tmin)) {
+		else if (type == TYPE_CLOSET) {
+			if (!line_int_cube_get_t(pos, pos2, *i, tmin)) continue;
 			point const cand_p_int(pos + tmin*delta);
 
 			if (i->is_open()) { // exclude open doors
@@ -3086,24 +3088,28 @@ bool building_t::apply_paint(point const &pos_, vector3d const &dir_, colorRGBA 
 			target    = *i;
 			hit_color = int_wall_color; // wall hit color
 		}
-		else if (i->type == TYPE_STALL || i->type == TYPE_CUBICLE /*|| i->type == TYPE_FISHTANK*/) { // fishtank doesn't really work and can be moved or taken
+		else if (type == TYPE_STALL || type == TYPE_CUBICLE /*|| type == TYPE_FISHTANK*/) { // fishtank doesn't really work and can be moved or taken
 			cube_t c(*i);
 
-			if (i->type == TYPE_STALL && i->shape != SHAPE_SHORT) { // toilet stall, clip cube to wall height
+			if (type == TYPE_STALL && i->shape != SHAPE_SHORT) { // toilet stall, clip cube to wall height
 				float const dz(c.dz());
 				c.z2() -= 0.35*dz; c.z1() += 0.15*dz;
 			}
 			float tmin0(tmin);
 			if (!line_int_cube_get_t(pos, pos2, c, tmin0)) continue;
-			if (i->contains_pt(pos)) continue; // inside stall/cubicle, can't paint the exterior
+			if (i->contains_pt(pos))                       continue; // inside stall/cubicle, can't paint the exterior
 			vector3d const n(get_normal_for_ray_cube_int_xy((pos + tmin0*delta), c, tolerance)); // should always return a valid normal
 			if (n[i->dim] != 0) {walls_blocked = 1; continue;} // only the side walls count; avoids dealing with open doors
 			tmin = tmin0; normal = n; target = c; hit_color = i->color;
 		}
-		else if (i->type == TYPE_STAIR_WALL && !(i->flags & RO_FLAG_HAS_EXTRA) && line_int_cube_get_t(pos, pos2, *i, tmin)) { // plaster (non-lattice stair wall)
-			normal    = get_coll_normal(i->dim, dir);
+		else if ((type == TYPE_STAIR_WALL && !(i->flags & RO_FLAG_HAS_EXTRA)) || // plaster (non-lattice stair wall)
+			type == TYPE_WINDOW || type == TYPE_PG_WALL || type == TYPE_PG_PILLAR || type == TYPE_FALSE_DOOR ||
+			type == TYPE_OFF_PILLAR || type == TYPE_SHELF_WALL || type == TYPE_VENDING)
+		{
+			if (!line_int_cube_get_t(pos, pos2, *i, tmin)) continue;
+			normal    = get_normal_for_ray_cube_int_xy((pos + tmin*delta), *i, tolerance); // should always return a valid normal
 			target    = *i;
-			hit_color = i->color;
+			hit_color = i->get_color();
 		}
 	} // for i
 	for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) { // check elevators
