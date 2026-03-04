@@ -365,9 +365,9 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 	for (auto c = objs.begin(); c != objs.end(); ++c) { // Note: ignores expanded objects (including shelf rack objects)
 		room_object const type(c->type);
 		if (!c->is_visible())         continue;
-		if (type  == TYPE_ELEVATOR)   continue; // elevator cars/internals can move so should not contribute to lighting
-		if (type  == TYPE_SHOWER  || type == TYPE_INT_WINDOW) continue; // transparent + small objects
-		if (type  == TYPE_BLOCKER || type == TYPE_COLLIDER  ) continue; // blockers and colliders are not drawn
+		if (type == TYPE_ELEVATOR)    continue; // elevator cars/internals can move so should not contribute to lighting
+		if (type == TYPE_INT_WINDOW)  continue; // transparent + small objects
+		if (type == TYPE_BLOCKER || type == TYPE_COLLIDER) continue; // blockers and colliders are not drawn
 		if (c->shape == SHAPE_ANGLED) continue; // sloped objects such as parking garage and pool ramps aren't cubes
 		if (c->is_exterior())         continue; // interior objects only
 		// skip other object types that are too small, not cube shaped, transparent, or not interior
@@ -379,7 +379,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			type == TYPE_PAPER || type == TYPE_WALL_LAMP || type == TYPE_RCHAIR || type == TYPE_SILVER || type == TYPE_STAPLER || type == TYPE_WIND_SILL || type == TYPE_BALCONY ||
 			type == TYPE_TOY_MODEL || type == TYPE_CEIL_FAN || type == TYPE_PLANT_MODEL || type == TYPE_POOL_FLOAT || type == TYPE_PAINTCAN || type == TYPE_DIV_BOARD ||
 			type == TYPE_POOL_LAD || type == TYPE_FLASHLIGHT || type == TYPE_CANDLE || type == TYPE_CAMERA || type == TYPE_CLOCK || type == TYPE_BAR_STOOL || type == TYPE_PADLOCK ||
-			type == TYPE_WFOUNTAIN || type == TYPE_BANANA || type == TYPE_BAN_PEEL || type == TYPE_VALVE || type == TYPE_INT_LADDER || type == TYPE_CONF_PHONE ||
+			type == TYPE_PAN || type == TYPE_BANANA || type == TYPE_BAN_PEEL || type == TYPE_VALVE || type == TYPE_INT_LADDER || type == TYPE_CONF_PHONE ||
 			type == TYPE_SPIWEB || type == TYPE_TREE || type == TYPE_THEFT_SENS || type == TYPE_ELEC_WIRE || type == TYPE_ERASER || type == TYPE_PET_CAGE || type == TYPE_SHOE ||
 			type == TYPE_SHOEBOX || type == TYPE_LADDER || type == TYPE_CATWALK || type == TYPE_WARN_LIGHT || type == TYPE_GAUGE || type == TYPE_FORKLIFT || type == TYPE_TESTTUBE ||
 			type == TYPE_US_FLAG || type == TYPE_BLDG_FOUNT || type == TYPE_WHEELCHAIR || type == TYPE_OP_TABLE || type == TYPE_TROLLEY || type == TYPE_STRETCHER ||
@@ -402,6 +402,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 		}
 		if (type == TYPE_DUCT && c->get_depth() < c->get_width()) continue; // skip short ducts/vents 376
 		colorRGBA const color(c->get_color());
+		bool const dim(c->dim), dir(c->dir);
 		//++counts[type].v;
 		
 		if (c->is_round()) {
@@ -513,7 +514,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			inside.expand_by_xy(-0.0125*dz); // shrink by wall thickness
 			subtract_cube_from_cube(sides, inside, temp, 1); // clear_out=1
 			assert(temp.size() == 4); // -y, +y, -x, +x
-			unsigned const front_ix(3 - (2*c->dim + c->dir)); // dim|dir:front_ix: 00:3, 01:2, 10:1, 11:0
+			unsigned const front_ix(3 - (2*dim + dir)); // dim|dir:front_ix: 00:3, 01:2, 10:1, 11:0
 
 			for (unsigned n = 0; n < 4; ++n) { // front at dim,!dir
 				if (c->is_open() && n == front_ix) continue; // open front, skip
@@ -564,7 +565,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 		}
 		else if (type == TYPE_VENT_FAN && c->in_factory()) { // exterior fan: modeled as sides + center
 			float const radius(0.5*c->dz()), side_thick(0.2*radius), center_radius(0.2*radius);
-			unsigned dims[2] = {!c->dim, 2};
+			unsigned dims[2] = {!dim, 2};
 
 			for (unsigned d = 0; d < 2; ++d) {
 				unsigned const dim(dims[d]);
@@ -577,7 +578,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			}
 			cube_t center(*c);
 			set_wall_width(center, c->zc(), center_radius, 2);
-			set_wall_width(center, c->get_center_dim(!c->dim), center_radius, !c->dim);
+			set_wall_width(center, c->get_center_dim(!dim), center_radius, !dim);
 			cc.emplace_back(center, color);
 		}
 		else if (type == TYPE_HOSP_BED) { // horizontal cube around mattress
@@ -588,7 +589,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 		}
 		else if (type == TYPE_HOSP_CURT) { // vertical cube around the center
 			cube_t C(get_true_room_obj_bcube(*c));
-			C.expand_in_dim(c->dim, -0.25*C.get_sz_dim(c->dim)); // very narrow
+			C.expand_in_dim(dim, -0.25*C.get_sz_dim(dim)); // very narrow
 			cc.emplace_back(C, color);
 		}
 		// handle open medicine cabinets and lockers; should they always be treated as open? should the open doors be included?
@@ -634,9 +635,23 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			}
 			add_colored_cubes(cubes+1, 2, (c->in_mall() ? BKGRAY : LT_GRAY), cc); // legs
 		}
+		else if (type == TYPE_WFOUNTAIN) {
+			cube_t back(*c), top(*c);
+			top.z1()  = back.z2() = c->z1() + 0.65*c->dz();
+			top.z2() -= 0.1*c->dz();
+			back.d[dim][!dir] += (dir ? 1.0 : -1.0)*0.5*c->get_sz_dim(dim); // shift front in
+			cc.emplace_back(back, color);
+			cc.emplace_back(top,  GRAY );
+		}
+		else if (type  == TYPE_SHOWER) {
+			// TODO: back, side, and floor tile
+		}
+		else if (type == TYPE_SHOWERTUB) {
+			cc.emplace_back(get_shower_tub_wall(*c), color);
+			// TODO: back and side wall tile
+		}
 		else { // single cube
 			cube_t bc(*c); // handle 3D models that don't fill the entire cube
-			bool const dim(c->dim), dir(c->dir);
 
 			if (type == TYPE_TUB) {
 				bc.z2() -= 0.9*bc.dz(); // bottom
@@ -650,8 +665,14 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			}
 			else if (type == TYPE_HOOD) {
 				bc.expand_in_dim(!dim, -0.25*c->get_sz_dim(!dim)); // shrink width
-				bc.d[dim][dir] -= (dir ? 1.0 : -1.0)*0.5*c->get_sz_dim(dim); // shift front in
-				bc.z2() += 0.25*bc.dz(); // shift bottom up
+				bc.d[dim][dir] -= (dir ? 1.0 : -1.0)*0.45*c->get_sz_dim(dim); // shift front in
+				bc.z1() += 0.1*bc.dz(); // shift bottom up
+			}
+			else if (type == TYPE_URINAL) {
+				bc.expand_in_dim(!dim, -0.1*c->get_sz_dim(!dim)); // shrink width
+				bc.d[dim][dir] -= (dir ? 1.0 : -1.0)*0.4*c->get_sz_dim(dim); // shift front in
+				bc.z1() += 0.1*bc.dz(); // shift bottom up
+				bc.z2() -= 0.2*bc.dz(); // shift top down
 			}
 			else if (type == TYPE_KSINK || type == TYPE_VANITY) {
 				cube_t const sink(get_sink_cube(*c));
@@ -665,9 +686,8 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			else if (c->is_tv_or_monitor()  ) {bc.expand_in_dim(dim, -0.3*bc.get_sz_dim(dim));} // reduce thickness
 			else if (type == TYPE_BRSINK    ) {bc.z1() += 0.60*bc.dz();}
 			else if (type == TYPE_ATTIC_DOOR) {bc = get_attic_access_door_cube(*c, 0);} // inc_ladder=0: includes door but not ladder
-			else if (type == TYPE_SHOWERTUB ) {bc = get_shower_tub_wall(*c);}
 			else if (type == TYPE_CONV_BELT ) {bc = get_true_room_obj_bcube(*c);}
-			// what about open microwaves and dishwashers?
+			// what about dishwashers and cabinet backsplashes?
 			assert(bc.is_strictly_normalized());
 			cc.emplace_back(bc, color);
 		}
