@@ -1296,6 +1296,11 @@ struct person_place_t {
 	vector3d dir;
 	person_place_t(point const &p, vector3d const &d) : pos(p), dir(d) {}
 };
+struct point_of_interest_t {
+	cube_t c; // zero area if a point
+	unsigned room_id=0;
+	point_of_interest_t(cube_t const &c_, unsigned rid) : c(c_), room_id(rid) {}
+};
 
 struct building_room_geom_t {
 
@@ -1318,6 +1323,7 @@ struct building_room_geom_t {
 	vector<door_handle_t> door_handles; // for 3D model drawing
 	vector<room_assignment_t> orig_assigned_rooms;
 	vector<person_place_t> people_place;
+	vector<point_of_interest_t> pois;
 	vector<unsigned> moved_obj_ids;
 	vect_rat_t    rats, sewer_rats, pet_rats;
 	vect_spider_t spiders, sewer_spiders;
@@ -2672,6 +2678,7 @@ private:
 	bool no_stairs_exit_on_floor(stairwell_t const &stairs, float zval) const;
 	void find_nearest_stairs_ramp_esc(point const &p1, point const &p2, vector<unsigned> &nearest_stairs, int part_ix=-1) const;
 	int find_nearest_elevator_this_floor(point const &pos) const;
+	void set_look_dir(person_t &person) const;
 	void ai_room_lights_update(person_t const &person);
 	void move_person_to_not_collide(person_t &person, person_t const &other, point const &new_pos, float rsum, float coll_dist) const;
 	void register_player_hiding(room_object_t const &hiding_obj) const;

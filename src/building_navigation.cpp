@@ -2870,6 +2870,17 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 
 			if (person.ai_state != AI_WAIT_ELEVATOR) { // don't reset goal and return here if waiting at an elevator
 				person.goal_type = GOAL_TYPE_NONE; // our orig goal is invalid
+				
+				if (person.look_dir != vector2d()) { // turn and look in target direction
+					vector3d const look_dir(person.look_dir.x, person.look_dir.y, 0.0);
+
+					if (dot_product(look_dir, person.dir) > 0.9999) {person.look_dir = vector2d();} // close enough; done
+					else {
+						float const ddir_turn(0.5*delta_dir); // slower than normal turn
+						person.dir = ddir_turn*look_dir + (1.0 - ddir_turn)*person.dir; // merge new_dir into dir gradually for smooth turning
+						person.dir.normalize();
+					}
+				}
 				return AI_WAITING;
 			}
 		}
@@ -3067,6 +3078,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 			// don't wait if we can follow the player
 			else if (!(global_building_params.ai_target_player && (can_target_player(person) || has_nearby_sound(person, floor_spacing))) && !person.in_tunnel) {
 				person.wait_for(rgen.rand_uniform(1.0, (can_ai_follow_player(person) ? 2.0 : 10.0))); // stop for 1-10s, 1-2s if player is in this building in gameplay mode
+				set_look_dir(person);
 			}
 			person.on_new_path_seg    = 1; // allow player following AI update logic to rerun this frame
 			person.last_used_elevator = 0;
@@ -3313,6 +3325,25 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		}
 	}
 	return (person.in_pool ? AI_IN_POOL : AI_MOVING);
+}
+
+void building_t::set_look_dir(person_t &person) const {
+	if (!has_room_geom() || person.cur_room < 0) return;
+	float const z1(person.get_z1()), z2(person.get_z2()), max_poi_dist(0.75*(z2 - z1));
+	float dmin_sq(max_poi_dist*max_poi_dist); // max dist is 75% of height
+
+	for (point_of_interest_t const &p : interior->room_geom->pois) {
+		if ((int)p.room_id != person.cur_room) continue; // wrong room
+		if (p.c.z1() > z2 || p.c.z2() < z1)    continue; // no Z overlap
+		point const closest_pt(p.c.closest_pt(person.pos));
+		float const dist_sq(p2p_dist_xy_sq(person.pos, closest_pt));
+		if (dist_sq >= dmin_sq) continue; // not better
+		// look at the closest point if outside the POI bounds, otherwise look at the center
+		point const look_pt(p.c.contains_pt(person.pos) ? p.c.get_cube_center() : closest_pt);
+		person.look_dir.assign((look_pt.x - person.pos.x), (look_pt.y - person.pos.y));
+		person.look_dir.normalize();
+		dmin_sq = dist_sq;
+	} // for p
 }
 
 void building_t::ai_room_lights_update(person_t const &person) {

@@ -580,6 +580,7 @@ cube_t building_t::add_shelf_rack(cube_t const &c, bool dim, unsigned style_id, 
 		interior->room_geom->shelf_rack_occluders[0].push_back(back);
 		interior->room_geom->shelf_rack_occluders[1].push_back(top.is_all_zeros() ? shelves[num_shelves-1] : top); // top, or top shelf
 	}
+	interior->room_geom->pois.emplace_back(c, room_id); // add point of interest so that people will look at shelf racks when idle/stopped
 	return back; // return back for mall stores so that they can be used as occluders
 }
 
