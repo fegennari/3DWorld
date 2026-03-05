@@ -57,7 +57,7 @@ void create_one_mipmap(uint8_t const *const idata, vector<uint8_t> &odata, unsig
 	odata.resize(ncolors*w2*h2);
 
 	if (use_mipmaps == 3 || use_mipmaps == 4) { // custom mipmap path
-		color_wrapper cw(color); // for use_mipmaps == 4 with RGBA
+		color_wrapper cw(color); // average texture color; for use_mipmaps == 4 with RGBA
 
 #pragma omp parallel for schedule(static)
 		for (int y = 0; y < (int)h2; ++y) {

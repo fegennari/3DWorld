@@ -7008,7 +7008,10 @@ void get_security_camera_info(room_object_t const &c, point &lens_pt, point &rot
 	rot_pt.assign(mount.xc(), mount.yc(), body.zc());
 	rot_angle = ((c.dim ^ c.dir) ? -1.0 : 1.0)*15*TO_RADIANS; // in radians
 }
-void building_room_geom_t::add_camera(room_object_t const &c) { // Note: camera does not cast shadows because it's too high up
+
+// Note: camera does not cast shadows because it's too high up
+// should cameras rotate to follow the player? maybe only the nearest one? but then they would need to be handled as dynamic objects
+void building_room_geom_t::add_camera(room_object_t const &c) {
 	rgeom_mat_t &mat(get_painted_metal_material(0, 0, 1)); // unshadowed, small
 	colorRGBA const color(apply_light_color(c));
 	cube_t mount, body, shaft;
