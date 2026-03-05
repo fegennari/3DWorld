@@ -61,6 +61,9 @@ cube_t get_tv_screen(room_object_t const &c);
 int get_tv_or_monitor_tid(room_object_t const &c);
 colored_cube_t get_indir_lighting_wall_gap_cube(room_object_t const &c);
 void get_bed_leg_cubes_from_bed_cubes(room_object_t const &c, cube_t cubes[6]);
+colorRGBA get_shower_tile_color(room_object_t const &c);
+void get_shower_tile_cubes(room_object_t const &c, cube_t cubes[3]);
+cube_t get_shower_tub_tiled_area(room_object_t const &c, cube_t const &wall);
 
 bool check_indir_enabled(bool in_basement, bool in_attic) {
 	if (in_basement) return INDIR_BASEMENT_EN;
@@ -644,11 +647,19 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			cc.emplace_back(top,  GRAY );
 		}
 		else if (type  == TYPE_SHOWER) {
-			// TODO: back, side, and floor tile
+			cube_t cubes[3];
+			get_shower_tile_cubes(*c, cubes);
+			add_colored_cubes(cubes, 3, get_shower_tile_color(*c), cc);
 		}
-		else if (type == TYPE_SHOWERTUB) {
-			cc.emplace_back(get_shower_tub_wall(*c), color);
-			// TODO: back and side wall tile
+		else if (type == TYPE_SHOWERTUB) { // includes wall and tile, but not curtains since they're dynamic
+			cube_t const wall(get_shower_tub_wall(*c));
+			cc.emplace_back(wall, color);
+			float const thickness(0.1*wall.get_sz_dim(!dim));
+			cube_t const tiled_area(get_shower_tub_tiled_area(*c, wall));
+			cube_t sides[3] = {tiled_area, tiled_area, tiled_area}; // side, side, back
+			for (unsigned d = 0; d < 2; ++d) {sides[d].d[!dim][!d] = tiled_area.d[!dim][d] - (d ? 1.0 : -1.0)*thickness;} // sides
+			sides[2].d[dim][dir] = tiled_area.d[dim][!dir] + (dir ? 1.0 : -1.0)*thickness;
+			add_colored_cubes(sides, 3, get_shower_tile_color(*c), cc);
 		}
 		else { // single cube
 			cube_t bc(*c); // handle 3D models that don't fill the entire cube

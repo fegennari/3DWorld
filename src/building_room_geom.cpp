@@ -1950,6 +1950,11 @@ void building_room_geom_t::add_med_cab(room_object_t const &c) {
 	}
 }
 
+colorRGBA get_shower_tile_color(room_object_t const &c) { // for indir lighting
+	bool const tile_type2(c.obj_id & 1);
+	if (tile_type2) {return texture_color(TILE_TEX);}
+	return colorRGBA(0.8, 0.6, 0.4).modulate_with(texture_color(get_texture_by_name("bathroom_tile.jpg")));
+}
 rgeom_mat_t &building_room_geom_t::get_shower_tile_mat(room_object_t const &c, float tscale, colorRGBA &color) {
 	bool const tile_type2(c.obj_id & 1);
 	color = apply_light_color(c);
@@ -2035,6 +2040,17 @@ void building_room_geom_t::add_shower_head(room_object_t const &shower, float wi
 	head_mat.add_cylin_to_verts(base_pos, head_pos, 0.07*width, 0.07*width, color, 0, 1, 0, 0, 1.0, 0.5, 1); // skip_sides=1; draw top/end only
 }
 
+void get_shower_tile_cubes(room_object_t const &c, cube_t cubes[3]) { // 2 walls + bottom
+	vector3d const sz(c.get_size());
+	cubes[0] = cubes[1] = cubes[2] = c;
+	cubes[2].z2() = c.z1() + 0.025*sz.z; // bottom
+
+	for (unsigned d = 0; d < 2; ++d) { // walls
+		bool const dir(d ? c.dir : c.dim);
+		cubes[d].d[d][!dir] -= (dir ? -1.0f : 1.0f)*0.98*sz[d];
+		cubes[d].z1() = cubes[2].z2();
+	}
+}
 void building_room_geom_t::add_shower(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm) {
 	vector3d const sz(c.get_size());
 	float const width(0.5f*(sz.x + sz.y));
@@ -2058,13 +2074,10 @@ void building_room_geom_t::add_shower(room_object_t const &c, float tscale, bool
 	// house shower enclosed in glass with door
 	bool const xdir(c.dim), ydir(c.dir), dirs[2] = {xdir, ydir}; // placed in this corner
 	float const signs[2] = {(xdir ? -1.0f : 1.0f), (ydir ? -1.0f : 1.0f)};
-	cube_t bottom(c), sides[2] = {c, c};
-	bottom.z2() = c.z1() + 0.025*sz.z;
+	cube_t sides[3]; // sides + bottom
+	get_shower_tile_cubes(c, sides);
+	cube_t const &bottom(sides[2]);
 
-	for (unsigned d = 0; d < 2; ++d) { // walls
-		sides[d].d[d][!dirs[d]] -= signs[d]*0.98*sz[d];
-		sides[d].z1() = bottom.z2();
-	}
 	if (inc_lg) { // frame, glass, and handle are drawn as large objects so that we don't need to update small objects when doors are opened or closed
 		// add tile material along walls and floor
 		int const skip_faces[2] = {(EF_Z1 | (xdir ? EF_X2 : EF_X1)), (EF_Z1 | (ydir ? EF_Y2 : EF_Y1))};
@@ -2177,19 +2190,27 @@ void building_room_geom_t::add_shower(room_object_t const &c, float tscale, bool
 	}
 }
 
-cube_t get_shower_tub_wall(room_object_t const &c) {
+cube_t get_shower_tub_wall(room_object_t const &c) { // end plaster wall
 	bool const shower_dir(c.flags & RO_FLAG_ADJ_HI); // adjacent wall
 	float const width(c.get_width()), tub_len(width/1.05), wall_thick(width - tub_len);
 	cube_t wall(c);
 	wall.d[!c.dim][shower_dir] = c.d[!c.dim][!shower_dir] + (shower_dir ? 1.0 : -1.0)*wall_thick; // inner wall pos
 	return wall;
 }
+cube_t get_shower_tub_tiled_area(room_object_t const &c, cube_t const &wall) { // bounds of tile area (inverted)
+	bool const shower_dir(c.flags & RO_FLAG_ADJ_HI); // adjacent wall
+	float const tile_thickness(0.05*wall.get_sz_dim(!c.dim)); // nonzero to avoid Z-fighing with room walls
+	cube_t tiled_area(c); // must extend entire Z-range and behind the tub since the inside face of the wall isn't drawn
+	tiled_area.d[!c.dim][!shower_dir]  = wall.d[!c.dim][shower_dir];
+	tiled_area.d[!c.dim][ shower_dir] += (shower_dir ? -1.0 :  1.0)*tile_thickness;
+	tiled_area.d[ c.dim][     !c.dir] += (     c.dir ?  1.0 : -1.0)*tile_thickness;
+	return tiled_area;
+}
 void building_room_geom_t::add_shower_tub(room_object_t const &c, tid_nm_pair_t const &wall_tex, colorRGBA const &trim_color, float tscale, bool inc_lg, bool inc_sm) {
 	bool const shower_dir(c.flags & RO_FLAG_ADJ_HI); // adjacent wall
 	float const width(c.get_width()), depth(c.get_depth()), height(c.dz());
 	cube_t const wall(get_shower_tub_wall(c));
-	float const inner_wall_pos(wall.d[!c.dim][shower_dir]);
-	float const crod_radius(0.025*depth);
+	float const inner_wall_pos(wall.d[!c.dim][shower_dir]), crod_radius(0.025*depth);
 	cube_t crod;
 	set_wall_width(crod, (c.z1() + 0.9*height), crod_radius, 2);
 	set_wall_width(crod, (c.d[c.dim][c.dir] + (c.dir ? -1.0 : 1.0)*1.2*crod_radius), crod_radius, c.dim);
@@ -2199,13 +2220,9 @@ void building_room_geom_t::add_shower_tub(room_object_t const &c, tid_nm_pair_t 
 		rgeom_mat_t &wall_mat(get_material(get_scaled_wall_tex(wall_tex), 1));
 		wall_mat.add_cube_to_verts(wall, c.color, tex_origin, (EF_Z12 | ~get_face_mask(c.dim, !c.dir) | ~get_face_mask(!c.dim, shower_dir))); // draw front and outside
 		// draw tile on 3 sides
-		float const tile_thickness(0.05*wall.get_sz_dim(!c.dim)); // nonzero to avoid Z-fighing with room walls
 		colorRGBA tile_color;
 		rgeom_mat_t &tile_mat(get_shower_tile_mat(c, tscale, tile_color));
-		cube_t tiled_area(c); // must extend entier Z-range and behind the tub since the inside face of the wall isn't drawn
-		tiled_area.d[!c.dim][!shower_dir]  = inner_wall_pos;
-		tiled_area.d[!c.dim][ shower_dir] += (shower_dir ? -1.0 :  1.0)*tile_thickness;
-		tiled_area.d[ c.dim][     !c.dir] += (     c.dir ?  1.0 : -1.0)*tile_thickness;
+		cube_t const tiled_area(get_shower_tub_tiled_area(c, wall));
 		tile_mat.add_cube_to_verts(tiled_area, tile_color, zero_vector, (EF_Z12 | ~get_face_mask(c.dim, c.dir)), 0, 0, 0, 1); // inverted; skip top, bottom, and front
 		// draw curtains using blinds texture
 		cube_t curtains(c);
