@@ -3327,22 +3327,46 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	return (person.in_pool ? AI_IN_POOL : AI_MOVING);
 }
 
+// *** points of interest ***
+
+float building_t::get_poi_act_dist() const {return 0.4*get_window_vspace();} // about arm's reach distance
+
+void building_t::add_poi(cube_t const &c, cube_t const &act_area, unsigned room_id) {
+	assert(has_room_geom());
+	interior->room_geom->pois.emplace_back(c, act_area, room_id);
+}
+void building_t::add_poi_xy(cube_t const &c, unsigned room_id) {
+	cube_t act_area(c);
+	act_area.expand_by_xy(get_poi_act_dist());
+	add_poi(c, act_area, room_id);
+}
+void building_t::add_poi_dim(cube_t const &c, unsigned room_id, bool dim) {
+	cube_t act_area(c);
+	act_area.expand_in_dim(dim, get_poi_act_dist());
+	add_poi(c, act_area, room_id);
+}
+void building_t::add_poi_dim_dir(cube_t const &c, unsigned room_id, bool dim, bool dir, float dscale) {
+	cube_t act_area(c);
+	act_area.d[dim][dir] += (dir ? 1.0 : -1.0)*max(dscale*get_poi_act_dist(), 0.5f*get_min_front_clearance_inc_people());
+	add_poi(c, act_area, room_id);
+}
 void building_t::set_look_dir(person_t &person) const {
 	if (!has_room_geom() || person.cur_room < 0) return;
-	float const z1(person.get_z1()), z2(person.get_z2()), max_poi_dist(0.75*(z2 - z1));
-	float dmin_sq(max_poi_dist*max_poi_dist); // max dist is 75% of height
+	float dmin_sq(0.0);
+	bool found(0);
 
 	for (point_of_interest_t const &p : interior->room_geom->pois) {
-		if ((int)p.room_id != person.cur_room) continue; // wrong room
-		if (p.c.z1() > z2 || p.c.z2() < z1)    continue; // no Z overlap
-		point const closest_pt(p.c.closest_pt(person.pos));
+		if ((int)p.room_id != person.cur_room)   continue; // wrong room
+		if (!p.act_area.contains_pt(person.pos)) continue;
+		point const closest_pt(p.look_area.closest_pt(person.pos));
 		float const dist_sq(p2p_dist_xy_sq(person.pos, closest_pt));
-		if (dist_sq >= dmin_sq) continue; // not better
+		if (found && dist_sq >= dmin_sq) continue; // not better
 		// look at the closest point if outside the POI bounds, otherwise look at the center
-		point const look_pt(p.c.contains_pt(person.pos) ? p.c.get_cube_center() : closest_pt);
+		point const look_pt(p.look_area.contains_pt(person.pos) ? p.look_area.get_cube_center() : closest_pt);
 		person.look_dir.assign((look_pt.x - person.pos.x), (look_pt.y - person.pos.y));
 		person.look_dir.normalize();
 		dmin_sq = dist_sq;
+		found   = 1;
 	} // for p
 }
 

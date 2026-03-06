@@ -1297,9 +1297,9 @@ struct person_place_t {
 	person_place_t(point const &p, vector3d const &d) : pos(p), dir(d) {}
 };
 struct point_of_interest_t {
-	cube_t c; // zero area if a point
+	cube_t look_area, act_area; // look_area is zero area if a point
 	unsigned room_id=0;
-	point_of_interest_t(cube_t const &c_, unsigned rid) : c(c_), room_id(rid) {}
+	point_of_interest_t(cube_t const &la, cube_t const &aa, unsigned rid) : look_area(la), act_area(aa), room_id(rid) {}
 };
 
 struct building_room_geom_t {
@@ -2678,13 +2678,18 @@ private:
 	bool no_stairs_exit_on_floor(stairwell_t const &stairs, float zval) const;
 	void find_nearest_stairs_ramp_esc(point const &p1, point const &p2, vector<unsigned> &nearest_stairs, int part_ix=-1) const;
 	int find_nearest_elevator_this_floor(point const &pos) const;
-	void set_look_dir(person_t &person) const;
 	void ai_room_lights_update(person_t const &person);
 	void move_person_to_not_collide(person_t &person, person_t const &other, point const &new_pos, float rsum, float coll_dist) const;
 	void register_player_hiding(room_object_t const &hiding_obj) const;
 	elevator_t       &get_elevator(unsigned eix)       {assert(interior); assert(eix < interior->elevators.size()); return interior->elevators[eix];}
 	elevator_t const &get_elevator(unsigned eix) const {assert(interior); assert(eix < interior->elevators.size()); return interior->elevators[eix];}
-
+	// points of interest
+	float get_poi_act_dist() const;
+	void add_poi(cube_t const &c, cube_t const &act_area, unsigned room_id);
+	void add_poi_xy(cube_t const &c, unsigned room_id);
+	void add_poi_dim(cube_t const &c, unsigned room_id, bool dim);
+	void add_poi_dim_dir(cube_t const &c, unsigned room_id, bool dim, bool dir, float dscale=1.0);
+	void set_look_dir(person_t &person) const;
 	// animals
 public:
 	template<typename T> void add_animals_on_floor(T &animals, unsigned building_ix, unsigned num_min, unsigned num_max, float sz_min, float sz_max) const;

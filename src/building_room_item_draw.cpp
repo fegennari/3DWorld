@@ -2672,6 +2672,17 @@ void building_t::debug_people_in_building(shader_t &s, point const &camera_bs) c
 		if (!p.path.empty ()) {draw_sphere_vbo(p.path.front(), sradius, ndiv, 0);} // draw last point/dest
 		if (p.target_valid()) {draw_sphere_vbo(p.target_pos,   sradius, ndiv, 0);} // draw target pos
 	} // for p
+	if (has_room_geom() && !interior->room_geom->pois.empty()) { // show points of interest
+		ensure_outlined_polygons();
+
+		for (point_of_interest_t const &p : interior->room_geom->pois) {
+			color_shader.set_cur_color(GREEN);
+			draw_simple_cube(p.look_area);
+			color_shader.set_cur_color(RED);
+			draw_simple_cube(p.act_area);
+		}
+		set_fill_mode(); // reset
+	}
 	if (DEBUG_AI_COLLIDERS && (frame_counter & 1)) { // debug avoid cubes on alternating frames
 		vect_cube_t avoid;
 		interior->get_avoid_cubes(avoid, (camera_bs.z - get_bldg_player_height()), (camera_bs.z + CAMERA_RADIUS),

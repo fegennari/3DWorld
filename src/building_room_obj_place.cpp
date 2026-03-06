@@ -1032,6 +1032,7 @@ bool building_t::add_vending_machine_type(rand_gen_t &rgen, room_t const &room, 
 	if (!place_obj_along_wall(TYPE_VENDING, room, height, vtype.size, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 0, pref_orient, 0, vtype.color, 1)) return 0;
 	room_object_t &vm(interior->room_geom->objs[obj_id]);
 	vm.item_flags = vtype_id;
+	add_poi_dim_dir(vm, room_id, vm.dim, vm.dir);
 
 	if (vtype.size.z < 48) { // short objects are placed on a small table; this assumes we have space to raise it up
 		float const table_height(0.3*floor_spacing);
@@ -2215,6 +2216,7 @@ void building_t::add_shelves(cube_t const &c, bool dim, bool dir, unsigned room_
 	vect_room_object_t &objs(interior->room_geom->objs);
 	objs.emplace_back(c, TYPE_SHELVES, room_id, dim, dir, flags, tot_light_amt, SHAPE_CUBE, WHITE, item_flags);
 	set_obj_id(objs);
+	add_poi_dim_dir(c, room_id, dim, !dir);
 	unsigned const objs_start(objs.size());
 	interior->room_geom->expand_shelves(objs.back(), 1); // add_models_mode=1
 
@@ -2775,6 +2777,7 @@ bool building_t::add_pool_room_objs(rand_gen_t rgen, room_t const &room, float z
 	bool const table_dir(rgen.rand_bool()); // dir doesn't much matter, though the ends of the table are slightly different
 	room_object_t const pool_table(ptable, TYPE_POOL_TABLE, room_id, long_dim, table_dir, 0, tot_light_amt, SHAPE_CUBE);
 	objs.push_back(pool_table);
+	add_poi_xy(ptable, room_id);
 
 	// place pool balls
 	float const ball_radius(0.0117*length), ball_diameter(2.0*ball_radius); // pool ball diameter is 2.25", 1.125" radius; length is 8', so radius is ~0.0117*length
@@ -3334,6 +3337,7 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 					wf.d[dim][ dir] = wall_pos;
 					wf.d[dim][!dir] = wall_pos - (dir ? 1.0 : -1.0)*depth;
 					objs.emplace_back(wf, TYPE_WFOUNTAIN, room_id, dim, dir, 0, tot_light_amt, SHAPE_CUBE);
+					add_poi_dim_dir(wf, room_id, dim, !dir, 0.5); // dscale=0.5
 					break;
 				}
 			} // for n
@@ -3405,6 +3409,7 @@ bool building_t::add_reception_desk(rand_gen_t &rgen, cube_t const &desk, bool d
 	}
 	unsigned const rdesk_ix(objs.size());
 	objs.emplace_back(desk, TYPE_RDESK, room_id, dim, dir, 0, tot_light_amt, SHAPE_CUBE);
+	add_poi_dim_dir(desk, room_id, dim, dir);
 
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_PHONE) && rgen.rand_float() < 0.75) { // add phone 75% of the time
 		unsigned sel_ix(0);

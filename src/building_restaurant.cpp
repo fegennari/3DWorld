@@ -357,6 +357,9 @@ cube_t building_t::add_restaurant_counter(cube_t const &wall, bool dim, bool dir
 	counter.expand_in_dim(dim, 2.5*wall_thickness);
 	unsigned const skip_faces(leave_end_gaps ? 0 : get_skip_mask_for_xy(!dim)); // skip ends if no gaps
 	objs.emplace_back(counter, TYPE_METAL_BAR, room_id, dim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, LT_GRAY, skip_faces);
+	cube_t poi(counter);
+	poi.z1() = wall.z1(); // extend to the floor
+	add_poi_dim_dir(poi, room_id, dim, dir);
 	// add a collider + blocker around the counter and the windows/entrance
 	cube_t blocker(counter);
 	blocker.z1() = wall.z1();

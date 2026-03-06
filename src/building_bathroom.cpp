@@ -90,6 +90,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 					objs.emplace_back(c,  TYPE_TOILET,  room_id, dim, !dir, 0, tot_light_amt);
 					add_bathroom_plumbing(objs.back());
 					objs.emplace_back(c2, TYPE_BLOCKER, room_id, 0, 0, RO_FLAG_INVIS); // add blocker cube to ensure no other object overlaps this space
+					add_poi_dim_dir(c, room_id, dim, !dir, 0.5); // dscale=0.5
 					placed_obj = placed_toilet = 1; // done
 					added_bathroom_objs_mask  |= PLACED_TOILET;
 
@@ -114,6 +115,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 
 			if (placed_toilet) { // if toilet was placed, try to place a roll of toilet paper on the same wall as the toilet
 				room_object_t const &toilet(objs.back()); // okay if this is the blocker
+				add_poi_dim_dir(toilet, room_id, toilet.dim, toilet.dir, 0.5); // dscale=0.5
 				
 				// Note: not calling is_val_inside_window() here because I don't have a test case for that and it may not even be possible to get here when the toilet is next to a window
 				if (is_basement || !has_int_windows() || classify_room_wall(room, zval, toilet.dim, !toilet.dir, 0) != ROOM_WALL_EXT) { // check for possible windows
@@ -264,6 +266,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 			bathroom_objs_mask |= PLACED_SINK;
 			assert(sink_obj_ix < objs.size());
 			room_object_t const &sink(objs[sink_obj_ix]); // sink, not blocker
+			add_poi_dim_dir(sink, room_id, sink.dim, sink.dir, 0.5); // dscale=0.5
 		
 			if (point_in_water_area(sink.get_cube_center())) {} // no medicine cabinet, because the reflection system doesn't support both a mirror and water reflection
 			else if (is_parking() && !is_basement) {} // no mirror in parking structure since reflections don't work there
@@ -357,6 +360,7 @@ bool building_t::add_vanity_to_room(rand_gen_t &rgen, room_t &room, float &zval,
 		unsigned const vanity_obj_ix(objs.size());
 		objs.emplace_back(vanity,  TYPE_VANITY,  room_id, dim, !dir, flags, tot_light_amt);
 		objs.emplace_back(blocker, TYPE_BLOCKER, room_id, 0, 0, RO_FLAG_INVIS); // add blocker in front
+		add_poi_dim_dir(vanity, room_id, dim, !dir, 0.75); // dscale=0.75
 		// add a mirror/medicine cabinet above the sink; shouldn't need to check for overlaps since vanity is placed first
 		cube_t mirror(vanity); // start with the sink left and right position
 		mirror.z1() = vanity.z2() + 0.14*floor_spacing;
@@ -683,7 +687,8 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 				if (!interior->is_cube_close_to_doorway(sep_wall, room, 0.0, 1)) { // check for doors, when the bathroom door is not centered on the room
 					objs.emplace_back(sep_wall, TYPE_STALL, room_id, br_dim, !dir, RO_FLAG_HANGING, tot_light_amt, SHAPE_SHORT, stall_color);
 				}
-				objs.emplace_back(urinal, TYPE_URINAL, room_id, br_dim,  dir, 0, tot_light_amt);
+				objs.emplace_back(urinal, TYPE_URINAL, room_id, br_dim, dir, 0, tot_light_amt);
+				add_poi_dim_dir(urinal, room_id, br_dim, dir, 0.5); // dscale=0.5
 				add_bathroom_plumbing(objs.back());
 			} // for n
 			if (!two_rows) { // skip first wall if adjacent to a stall
@@ -700,6 +705,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 			mirror.z1() = sinks_bcube.z2() + 0.25*floor_thickness;
 			mirror.z2() = zval + 0.9*floor_spacing - floor_thickness;
 			if (mirror.is_strictly_normalized()) {mirrors[dir] = room_object_t(mirror, TYPE_MIRROR, room_id, br_dim, !dir, RO_FLAG_NOCOLL, tot_light_amt);}
+			add_poi_dim_dir(sinks_bcube, room_id, br_dim, !dir, 0.75); // dscale=0.75
 		}
 	} // for dir
 	for (unsigned d = 0; d < 2; ++d) { // each candidate mirror
