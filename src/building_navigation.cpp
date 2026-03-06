@@ -471,23 +471,30 @@ public:
 		vector2d const &pt(node.conn_rooms.front().pt[up_or_down]); // Note: all conn_rooms should be the same x/y value
 		return point(pt.x, pt.y, zval);
 	}
+	static void choose_room_pos_prefer_poi(building_t const &building, cube_t const &place_area, unsigned room_id, bool has_poi, rand_gen_t &rgen, point &pos) {
+		for (unsigned n = 0; n < 10; ++n) { // 10 attempts to find a pos within the room's POI set, if nonempty
+			gen_xy_pos_in_cube(pos, place_area, rgen);
+			if (!has_poi || building.is_pos_in_poi(pos, room_id, 1)) break; // not_in_look_area=1
+		}
+	}
 	static bool find_valid_pt_in_room(vect_cube_t const &avoid, building_t const &building, float radius, float zval,
-		cube_t const &room, rand_gen_t &rgen, point &pos, bool no_use_init=0)
+		cube_t const &room, unsigned room_id, rand_gen_t &rgen, point &pos, bool no_use_init=0)
 	{
-		if (!no_use_init && avoid.empty()) return 1; // no colliders, any point is valid, choose the initial point (which should be the room center)
+		bool const has_poi(building.room_has_poi(room_id));
+		if (!no_use_init && !has_poi && avoid.empty()) return 1; // no colliders, any point is valid, choose the initial point (which should be the room center)
 		cube_t place_area(room);
 		place_area.expand_by_xy(-2.0*radius); // shrink by twice the radius
 		if (!place_area.is_strictly_normalized()) return 0; // should generally not be true
 
 		if (no_use_init) { // chose a new initial point
-			gen_xy_pos_in_cube(pos, place_area, rgen);
+			choose_room_pos_prefer_poi(building, place_area, room_id, has_poi, rgen, pos);
 			if (avoid.empty() && building.is_cube()) return 1; // no collision checks needed
 		}
 		point orig_pos(pos);
 
 		for (unsigned n = 0; n < 100; ++n) { // 100 random tries to find a valid dest_pos
 			if (is_valid_pos(avoid, building, pos, radius)) return 1; // success
-			gen_xy_pos_in_cube(pos, place_area, rgen); // choose a random new point in the room
+			choose_room_pos_prefer_poi(building, place_area, room_id, has_poi, rgen, pos); // choose a random new point in the room
 		}
 		pos = orig_pos; // use orig value as failed point
 		return 0;
@@ -520,7 +527,7 @@ public:
 			//zval += (up_or_down ? -1.0 : 1.0)*floor_spacing; // one floor above or below so that we skip the blocked floor; but this asserts
 			return point(landing_pos.x, landing_pos.y, zval);
 		}
-		if (find_valid_pt_in_room(avoid, building, radius, zval, node.bcube, rgen, pos, no_use_init)) {not_room_center = 1;} // success
+		if (find_valid_pt_in_room(avoid, building, radius, zval, node.bcube, node_ix, rgen, pos, no_use_init)) {not_room_center = 1;} // success
 		return pos;
 	}
 
@@ -1325,7 +1332,7 @@ bool building_t::select_person_dest_in_room(person_t &person, rand_gen_t &rgen, 
 	get_avoid_cubes(person.target_pos.z, height, radius, avoid, 0); // following_player=0
 	add_sub_rooms_to_avoid_if_needed(room_id, avoid); // must avoid sub-rooms
 	bool const no_use_init(room.is_single_large_room_or_store()); // don't use the room center for a parking garage, backrooms, retail area, mall, store, or restaurant
-	if (!interior->nav_graph->find_valid_pt_in_room(avoid, *this, radius, person.target_pos.z, valid_area, rgen, dest_pos, no_use_init)) return 0;
+	if (!interior->nav_graph->find_valid_pt_in_room(avoid, *this, radius, person.target_pos.z, valid_area, room_id, rgen, dest_pos, no_use_init)) return 0;
 	
 	if (!is_cube()) { // non-cube building
 		cube_t const person_bcube(person.get_bcube() + (dest_pos - person.pos)); // bcube, but translated to dest_pos
@@ -1437,7 +1444,7 @@ int building_t::maybe_use_escalator(person_t &person, building_loc_t const &loc,
 				person.target_pos.assign(dest_floor.xc(), dest_floor.yc(), zval); // init dest is center
 				vect_cube_t &avoid(reused_avoid_cubes[0]);
 				get_avoid_cubes(person.target_pos.z, height, radius, avoid, 0); // following_player=0
-				if (!interior->nav_graph->find_valid_pt_in_room(avoid, *this, radius, zval, dest_floor, rgen, person.target_pos, 1)) continue; // no_use_init=1
+				if (!interior->nav_graph->find_valid_pt_in_room(avoid, *this, radius, zval, dest_floor, loc.room_ix, rgen, person.target_pos, 1)) continue; // no_use_init=1
 			}
 			//assert(person.target_pos.z > person.pos.z);
 			if (person.target_pos.z <= person.pos.z) {register_debug_event(person.target_pos, "invalid target_pos");}
@@ -3349,6 +3356,19 @@ void building_t::add_poi_dim_dir(cube_t const &c, unsigned room_id, bool dim, bo
 	cube_t act_area(c);
 	act_area.d[dim][dir] += (dir ? 1.0 : -1.0)*max(dscale*get_poi_act_dist(), 0.5f*get_min_front_clearance_inc_people());
 	add_poi(c, act_area, room_id);
+}
+bool building_t::room_has_poi(unsigned room_id) const {
+	return (has_room_geom() && !interior->room_geom->pois.empty() && get_room(room_id).get_has_pois());
+}
+bool building_t::is_pos_in_poi(point const &pos, unsigned room_id, bool not_in_look_area) const {
+	if (!room_has_poi(room_id)) return 0;
+	
+	for (point_of_interest_t const &p : interior->room_geom->pois) {
+		if (!p.act_area.contains_pt(pos)) continue;
+		if (not_in_look_area && p.look_area.contains_pt(pos)) continue;
+		return 1;
+	}
+	return 0;
 }
 void building_t::set_look_dir(person_t &person) const {
 	if (!has_room_geom() || person.cur_room < 0) return;

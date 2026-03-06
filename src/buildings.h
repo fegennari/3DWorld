@@ -1188,6 +1188,7 @@ unsigned const ROOM_FLAG_NESTED   = 0x0200; // room is nested inside another roo
 unsigned const ROOM_FLAG_HAS_SUB  = 0x0400; // room has a sub-room nested inside it
 unsigned const ROOM_FLAG_CUT_WALL = 0x0800; // wall has sections cut from it
 unsigned const ROOM_FLAG_BR_STALL = 0x1000; // has bathroom stalls
+unsigned const ROOM_FLAG_HAS_POI  = 0x2000; // has point(s) of interest
 
 struct room_assignment_t {
 protected:
@@ -1215,6 +1216,7 @@ public:
 	void set_has_subroom      () {flags |= ROOM_FLAG_HAS_SUB ;}
 	void set_has_cut_wall     () {flags |= ROOM_FLAG_CUT_WALL;}
 	void set_has_br_stalls    () {flags |= ROOM_FLAG_BR_STALL;}
+	void set_has_pois         () {flags |= ROOM_FLAG_HAS_POI ;}
 	bool get_has_center_stairs() const {return (flags & ROOM_FLAG_CSTAIRS );}
 	bool get_office_floorplan () const {return (flags & ROOM_FLAG_OFF_FP  );}
 	bool get_has_skylight     () const {return (flags & ROOM_FLAG_SKYLIGHT);}
@@ -1228,6 +1230,7 @@ public:
 	bool has_subroom          () const {return (flags & ROOM_FLAG_HAS_SUB );}
 	bool has_cut_wall         () const {return (flags & ROOM_FLAG_CUT_WALL);}
 	bool has_br_stalls        () const {return (flags & ROOM_FLAG_BR_STALL);}
+	bool get_has_pois         () const {return (flags & ROOM_FLAG_HAS_POI );}
 };
 
 struct room_t : public cube_t, public room_assignment_t { // size=56
@@ -2690,8 +2693,10 @@ private:
 	void add_poi_dim(cube_t const &c, unsigned room_id, bool dim);
 	void add_poi_dim_dir(cube_t const &c, unsigned room_id, bool dim, bool dir, float dscale=1.0);
 	void set_look_dir(person_t &person) const;
-	// animals
 public:
+	bool room_has_poi(unsigned room_id) const;
+	bool is_pos_in_poi(point const &pos, unsigned room_id, bool not_in_look_area) const;
+	// animals
 	template<typename T> void add_animals_on_floor(T &animals, unsigned building_ix, unsigned num_min, unsigned num_max, float sz_min, float sz_max) const;
 	void update_animals      (point const &camera_bs, unsigned building_ix);
 	void update_rats         (point const &camera_bs, unsigned building_ix);
