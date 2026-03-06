@@ -7465,6 +7465,10 @@ void building_room_geom_t::add_vent_hood(room_object_t const &c) {
 	back_mat.add_cube_to_verts(grid_back, grid_color, grid_back.get_llc(), front_face_mask, !dim); // front of back surface only
 }
 
+void building_room_geom_t::add_commercial_fridge(room_object_t const &c) {
+	// TODO: metal sides, top, bottom and back; glass doors that slide to the sides
+}
+
 void add_grid_of_bars(rgeom_mat_t &mat, colorRGBA const &color, cube_t const &c, unsigned num_vbars, unsigned num_hbars, float vbar_hthick,
 	float hbar_hthick, unsigned vdim, unsigned hdim, unsigned adj_dim, float h_adj_val, bool cylin_vbars, float tscale)
 {

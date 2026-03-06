@@ -671,6 +671,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		case TYPE_CONV_BELT: add_conveyor_belt(*i, 0); break; // draw_dynamic=0
 		case TYPE_COAT_RACK: add_coat_rack(*i, tscale); break;
 		case TYPE_VENT_HOOD: add_vent_hood(*i); break;
+		case TYPE_COM_FRIDGE:add_commercial_fridge(*i); break;
 		//case TYPE_FRIDGE: if (i->is_open()) {} break; // draw open fridge?
 		case TYPE_ELEVATOR: break; // not handled here
 		case TYPE_BLOCKER:  break; // not drawn
