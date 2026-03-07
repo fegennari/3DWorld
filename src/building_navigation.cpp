@@ -1887,7 +1887,7 @@ void remove_escalator_from_avoid_cubes(person_t const &person, float radius, vec
 
 void building_t::get_avoid_cubes(float zval, float height, float radius, vect_cube_t &avoid, bool following_player, cube_t const *const fires_select_cube) const {
 	assert(interior);
-	float const z1(zval - radius);
+	float const z1(zval - radius/COLL_RADIUS_SCALE); // radius is coll_radius, but we want person.radius
 	interior->get_avoid_cubes(avoid, z1, (z1 + height), 0.5*radius, get_floor_thickness(), get_floor_ceil_gap(), following_player, 0, fires_select_cube); // skip_stairs=0
 }
 void building_t::add_sub_rooms_to_avoid_if_needed(unsigned room_id, vect_cube_t &avoid) const {
