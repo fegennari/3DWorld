@@ -2680,8 +2680,10 @@ void building_t::debug_people_in_building(shader_t &s, point const &camera_bs) c
 			color_shader.set_cur_color(GREEN);
 			draw_simple_cube(p.look_area);
 			color_shader.set_cur_color(RED);
-			draw_simple_cube(p.act_area);
-		}
+			cube_t sa[4];
+			unsigned const num(p.get_stand_areas(sa, get_ped_coll_radius()));
+			for (unsigned n = 0; n < num; ++n) {draw_simple_cube(sa[n]);}
+		} // for p
 		set_fill_mode(); // reset
 	}
 	if (DEBUG_AI_COLLIDERS && (frame_counter & 1)) { // debug avoid cubes on alternating frames

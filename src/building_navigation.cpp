@@ -471,30 +471,33 @@ public:
 		vector2d const &pt(node.conn_rooms.front().pt[up_or_down]); // Note: all conn_rooms should be the same x/y value
 		return point(pt.x, pt.y, zval);
 	}
-	static void choose_room_pos_prefer_poi(building_t const &building, cube_t const &place_area, unsigned room_id, bool has_poi, rand_gen_t &rgen, point &pos) {
-		for (unsigned n = 0; n < 10; ++n) { // 10 attempts to find a pos within the room's POI set, if nonempty
-			gen_xy_pos_in_cube(pos, place_area, rgen);
-			if (!has_poi || building.is_pos_in_poi(pos, room_id, 1)) break; // not_in_look_area=1
+	static void choose_room_pos_prefer_poi(building_t const &building, cube_t const &place_area, float radius, unsigned room_id, bool has_poi, rand_gen_t &rgen, point &pos) {
+		if (has_poi) {
+			for (unsigned n = 0; n < 10; ++n) { // 10 attempts to find a POI inside place_area
+				if (building.select_person_poi(room_id, radius, pos, rgen) && place_area.contains_pt_xy(pos)) return; // done
+			}
 		}
+		gen_xy_pos_in_cube(pos, place_area, rgen);
 	}
 	static bool find_valid_pt_in_room(vect_cube_t const &avoid, building_t const &building, float radius, float zval,
 		cube_t const &room, unsigned room_id, rand_gen_t &rgen, point &pos, bool no_use_init=0)
 	{
 		bool const has_poi(building.room_has_poi(room_id));
-		if (!no_use_init && !has_poi && avoid.empty()) return 1; // no colliders, any point is valid, choose the initial point (which should be the room center)
+		if (has_poi) {no_use_init = 1;}
+		if (!no_use_init && avoid.empty()) return 1; // no colliders, any point is valid, choose the initial point (which should be the room center)
 		cube_t place_area(room);
 		place_area.expand_by_xy(-2.0*radius); // shrink by twice the radius
 		if (!place_area.is_strictly_normalized()) return 0; // should generally not be true
 
 		if (no_use_init) { // chose a new initial point
-			choose_room_pos_prefer_poi(building, place_area, room_id, has_poi, rgen, pos);
+			choose_room_pos_prefer_poi(building, place_area, radius, room_id, has_poi, rgen, pos);
 			if (avoid.empty() && building.is_cube()) return 1; // no collision checks needed
 		}
 		point orig_pos(pos);
 
 		for (unsigned n = 0; n < 100; ++n) { // 100 random tries to find a valid dest_pos
 			if (is_valid_pos(avoid, building, pos, radius)) return 1; // success
-			choose_room_pos_prefer_poi(building, place_area, room_id, has_poi, rgen, pos); // choose a random new point in the room
+			if (n+1 < 100) {choose_room_pos_prefer_poi(building, place_area, radius, room_id, has_poi, rgen, pos);} // choose a random new point in the room
 		}
 		pos = orig_pos; // use orig value as failed point
 		return 0;
@@ -3336,6 +3339,25 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 
 // *** points of interest ***
 
+unsigned point_of_interest_t::get_stand_areas(cube_t sa[4], float radius) const {
+	cube_t avoid_area(look_area);
+	avoid_area.expand_by_xy(radius);
+	unsigned num(0);
+
+	for (unsigned dim = 0; dim < 2; ++dim) {
+		for (unsigned dir = 0; dir < 2; ++dir) {
+			float const act_edge(act_area.d[dim][dir]), avoid_edge(avoid_area.d[dim][dir]);
+			if (act_edge == avoid_edge || ((avoid_edge < act_edge) ^ dir)) continue; // active edge doesn't extend beyond avoid edge
+			sa[num] = act_area;
+			sa[num].d[dim][!dir] = avoid_edge;
+			// trim off the far edge if there's space to put the person closer to the object
+			if (radius > 0.0 && sa[num].get_sz_dim(dim) > radius) {sa[num].d[dim][dir] -= (dir ? 1.0 : -1.0)*radius;}
+			++num;
+		} // for dir
+	} // for dim
+	return num;
+}
+
 float building_t::get_poi_act_dist() const {return 0.4*get_window_vspace();} // about arm's reach distance
 
 void building_t::add_poi(cube_t const &c, cube_t const &act_area, unsigned room_id) {
@@ -3364,11 +3386,55 @@ bool building_t::is_pos_in_poi(point const &pos, unsigned room_id, bool not_in_l
 	if (!room_has_poi(room_id)) return 0;
 	
 	for (point_of_interest_t const &p : interior->room_geom->pois) {
-		if (!p.act_area.contains_pt(pos)) continue;
-		if (not_in_look_area && p.look_area.contains_pt(pos)) continue;
+		if (p.room_id != room_id || !p.act_area .contains_pt(pos)) continue;
+		if (not_in_look_area &&      p.look_area.contains_pt(pos)) continue;
 		return 1;
 	}
 	return 0;
+}
+void building_t::get_poi_stand_areas_for_room(unsigned room_id, float radius, float zval, vect_cube_t &stand_areas) const {
+	if (!room_has_poi(room_id)) return;
+	cube_t sa[4];
+
+	for (point_of_interest_t const &p : interior->room_geom->pois) {
+		if (p.room_id != room_id || p.act_area.z1() > zval || p.act_area.z2() < zval) continue;
+		unsigned const num(p.get_stand_areas(sa, radius));
+		for (unsigned n = 0; n < num; ++n) {stand_areas.push_back(sa[n]);}
+	}
+}
+struct poi_cache_t {
+	vect_cube_t stand_areas;
+	vector<unsigned> rpool;
+	float last_zval=0.0, last_radius=0.0;
+	int last_room_id=-1;
+
+	bool select_stand_area(building_t const &b, unsigned room_id, float radius, point &pos, rand_gen_t &rgen) {
+		if (room_id < 0) return 0;
+		float const split_len(20.0*radius);
+
+		if (room_id != last_room_id || pos.z != last_zval || radius != last_radius) { // recompute POIs
+			stand_areas.clear();
+			rpool.clear();
+			b.get_poi_stand_areas_for_room(room_id, radius, pos.z, stand_areas);
+			if (stand_areas.empty()) return 0;
+
+			for (unsigned i = 0; i < stand_areas.size(); ++i) {
+				// longer stand areas are added multiple times for higher probability
+				unsigned const num_add(max(1U, min(4U, unsigned(stand_areas[i].get_size_xy().get_max_val()/split_len))));
+				for (unsigned n = 0; n < num_add; ++n) {rpool.push_back(i);}
+			}
+			last_room_id = room_id; last_zval = pos.z; last_radius = radius;
+		}
+		if (rpool.empty()) return 0; // shouldn't fail
+		cube_t const &area(stand_areas[rpool[rgen.rand() % rpool.size()]]);
+		gen_xy_pos_in_cube(pos, area, rgen);
+		return 1;
+	}
+};
+poi_cache_t poi_cache;
+
+bool building_t::select_person_poi(unsigned room_id, float radius, point &pos, rand_gen_t &rgen) const {
+	return poi_cache.select_stand_area(*this, room_id, radius, pos, rgen);
 }
 void building_t::set_look_dir(person_t &person) const {
 	if (!has_room_geom() || person.cur_room < 0) return;

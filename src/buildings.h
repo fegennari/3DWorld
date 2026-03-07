@@ -1303,6 +1303,7 @@ struct point_of_interest_t {
 	cube_t look_area, act_area; // look_area is zero area if a point
 	unsigned room_id=0;
 	point_of_interest_t(cube_t const &la, cube_t const &aa, unsigned rid) : look_area(la), act_area(aa), room_id(rid) {}
+	unsigned get_stand_areas(cube_t sa[4], float radius=0.0) const;
 };
 
 struct building_room_geom_t {
@@ -2698,6 +2699,8 @@ private:
 public:
 	bool room_has_poi(unsigned room_id) const;
 	bool is_pos_in_poi(point const &pos, unsigned room_id, bool not_in_look_area) const;
+	void get_poi_stand_areas_for_room(unsigned room_id, float radius, float zval, vect_cube_t &stand_areas) const;
+	bool select_person_poi(unsigned room_id, float radius, point &pos, rand_gen_t &rgen) const;
 	// animals
 	template<typename T> void add_animals_on_floor(T &animals, unsigned building_ix, unsigned num_min, unsigned num_max, float sz_min, float sz_max) const;
 	void update_animals      (point const &camera_bs, unsigned building_ix);
