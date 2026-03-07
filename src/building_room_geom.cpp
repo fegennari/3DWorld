@@ -1756,7 +1756,7 @@ void building_room_geom_t::add_pizza_top(room_object_t const &c) {
 	get_untextured_material(0, 0, 1).add_vcylin_to_verts(c, apply_light_color(c), 0, 1); // draw sides and top; unshadowed, small
 }
 
-// used for drawing open microwave and dishwasher
+// used for drawing open microwave, dishwasher, and commercial fridge interior
 void add_interior_and_front_face(room_object_t const &c, cube_t const &body, rgeom_mat_t &mat, float wall_width, unsigned front_mask, colorRGBA const &color) {
 	cube_t interior(body);
 	interior.expand_by(-wall_width);
@@ -7466,7 +7466,26 @@ void building_room_geom_t::add_vent_hood(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_commercial_fridge(room_object_t const &c) {
-	// TODO: metal sides, top, bottom and back; glass doors that slide to the sides
+	unsigned const front_face(get_face_mask(c.dim, c.dir));
+	float const width(c.get_width()), depth(c.get_depth()), height(c.dz()), wall_width(0.05*min(width, depth));
+	rgeom_mat_t &metal_mat(get_metal_material(1)); // shadowed
+	metal_mat.add_cube_to_verts_untextured(c, apply_light_color(c), ~front_face); // exterior; skip front face
+#if 1
+	add_interior_and_front_face(c, c, metal_mat, wall_width, front_face, apply_light_color(c, WHITE));
+#else
+	cube_t interior(c);
+	interior.z1() += 0.2*height;
+	interior.z2() -= 0.1*height;
+	interior.expand_in_dim(!c.dim, -wall_width);
+	interior.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*wall_width; // move back inward
+	metal_mat.add_cube_to_verts(interior, apply_light_color(c, WHITE), all_zeros, ~front_face, 0, 0, 0, 1); // interior, inverted; skip front face
+#endif
+	// draw glass doors with handles that slide to the sides
+	float const center(c.get_center_dim(!c.dim));
+
+	for (unsigned d = 0; d < 2; ++d) { // each side
+		// TODO
+	} // for d
 }
 
 void add_grid_of_bars(rgeom_mat_t &mat, colorRGBA const &color, cube_t const &c, unsigned num_vbars, unsigned num_hbars, float vbar_hthick,
@@ -7497,7 +7516,7 @@ void add_grid_of_bars(rgeom_mat_t &mat, colorRGBA const &color, cube_t const &c,
 
 	for (unsigned n = 0; n < num_hbars; ++n) { // horizontal
 		set_wall_width(bar, (c.d[vdim][0] + hbar_hthick + n*h_step), hbar_hthick, vdim);
-		if (textured) {mat.add_cube_to_verts(bar, color, origin, skip_faces_h);}
+		if (textured) {mat.add_cube_to_verts  (bar, color, origin, skip_faces_h);}
 		else {mat.add_cube_to_verts_untextured(bar, color, skip_faces_h);}
 	}
 }

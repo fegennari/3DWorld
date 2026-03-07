@@ -1611,6 +1611,7 @@ struct building_room_geom_t {
 	// functions for expanding nested objects
 	void expand_shelves(room_object_t const &c, bool add_models_mode=0);
 	void expand_shelfrack(room_object_t const &c);
+	void expand_comm_fridge(room_object_t const &c);
 	void get_bookcase_books(room_object_t const &c, vect_room_object_t &books) {add_bookcase(c, 0, 0, 0, 1.0, 0, 1.0, nullptr, &books);} // Note: technically const
 	void expand_closet(room_object_t const &c);
 	void expand_cabinet(room_object_t const &c);

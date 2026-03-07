@@ -1508,6 +1508,10 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 
 void building_room_geom_t::expand_shelfrack(room_object_t const &c) {get_shelfrack_objects(c, expanded_objs);}
 
+void building_room_geom_t::expand_comm_fridge(room_object_t const &c) {
+	// TODO
+}
+
 void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_gen_t &rgen) {
 	assert(c.get_sz_dim( dim) >= length);
 	assert(c.get_sz_dim(!dim) >= width );
@@ -2231,6 +2235,7 @@ bool building_room_geom_t::expand_object(room_object_t &c, building_t const &bui
 	case TYPE_SHELVES:   expand_shelves  (c); break;
 	case TYPE_SHELFRACK: expand_shelfrack(c); break;
 	case TYPE_WINE_RACK: expand_wine_rack(c); break;
+	case TYPE_COM_FRIDGE:expand_comm_fridge(c); break;
 	case TYPE_CABINET: case TYPE_COUNTER: case TYPE_KSINK: case TYPE_VANITY: expand_cabinet(c); break;
 	case TYPE_MED_CAB:   expand_med_cab(c); break;
 	case TYPE_LOCKER:    expand_locker (c, building.btype); break;

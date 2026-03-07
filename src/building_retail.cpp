@@ -383,6 +383,8 @@ bool building_t::add_small_retail_room_objs(rand_gen_t rgen, room_t const &room,
 			} // for d
 			// block off this area from shelf racks
 			place_area.d[dim][dir] = counter_front; // add a gap for shelf racks
+			// add commercial fridge
+			// TODO: TYPE_COM_FRIDGE with TYPE_MILK
 
 			if (1) { // add a clock on the wall behind the counter
 				bool const digital(1); // fits better above the window
@@ -420,7 +422,6 @@ bool building_t::add_small_retail_room_objs(rand_gen_t rgen, room_t const &room,
 				set_wall_width(gun, rgen.rand_uniform(counter.d[!dim][0]+hwidth, counter.d[!dim][1]-hwidth), hwidth, !dim);
 				objs.emplace_back(gun, TYPE_HANDGUN, room_id, dim, dir, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, WHITE, sub_model_id);
 			}
-			// TODO: TYPE_MILK in fridge?
 		}
 		place_area.expand_by_xy(-0.4*door_width); // add extra padding along the sides for doors
 	}
