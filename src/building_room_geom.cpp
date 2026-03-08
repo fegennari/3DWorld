@@ -7468,7 +7468,7 @@ void building_room_geom_t::add_vent_hood(room_object_t const &c) {
 void building_room_geom_t::add_commercial_fridge(room_object_t const &c) {
 	unsigned const front_face(get_face_mask(c.dim, c.dir));
 	float const width(c.get_width()), depth(c.get_depth()), height(c.dz()), wall_width(0.05*min(width, depth));
-	rgeom_mat_t &metal_mat(get_metal_material(1)); // shadowed
+	rgeom_mat_t &metal_mat(get_painted_metal_material(1)); // shadowed
 	metal_mat.add_cube_to_verts_untextured(c, apply_light_color(c), ~front_face); // exterior; skip front face
 #if 1
 	add_interior_and_front_face(c, c, metal_mat, wall_width, front_face, apply_light_color(c, WHITE));

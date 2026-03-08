@@ -1719,9 +1719,9 @@ bool building_t::check_if_against_window(cube_t const &c, room_t const &room, bo
 		    is_val_inside_window(part, !dim, c.get_center_dim(!dim), hspacing, border));
 }
 // Note: front_clearance is relative to depth, while side_clearance is an absolute distance
-bool building_t::place_obj_along_wall(room_object type, room_t const &room, float height, vector3d const &sz_scale, rand_gen_t &rgen, float zval,
-	unsigned room_id, float tot_light_amt, cube_t const &place_area, unsigned objs_start, float front_clearance, bool add_door_clearance, unsigned pref_orient,
-	bool pref_centered, colorRGBA const &color, bool not_at_window, room_obj_shape shape, float side_clearance, unsigned extra_flags, bool not_ext_wall, bool force_pref)
+bool building_t::place_obj_along_wall(room_object type, room_t const &room, float height, vector3d const &sz_scale, rand_gen_t &rgen, float zval, unsigned room_id,
+	float tot_light_amt, cube_t const &place_area, unsigned objs_start, float front_clearance, bool add_door_clearance, unsigned pref_orient, bool pref_centered,
+	colorRGBA const &color, bool not_at_window, room_obj_shape shape, float side_clearance, unsigned extra_flags, bool not_ext_wall, bool force_pref, unsigned skip_walls_mask)
 {
 	float const hwidth(0.5*height*sz_scale.y/sz_scale.z), depth(height*sz_scale.x/sz_scale.z);
 	float const min_space(max(2.8f*hwidth, 2.1f*(max(hwidth, 0.5f*depth) + get_scaled_player_radius()))); // make sure the player can get around the object
@@ -1738,6 +1738,7 @@ bool building_t::place_obj_along_wall(room_object type, room_t const &room, floa
 		bool const use_pref(pref_orient < 4 && (force_pref || n < 10)); // use pref orient for first 10 tries unless force_pref=1
 		bool const dim((force_dim < 2) ? force_dim : (use_pref ? (pref_orient >> 1) : rgen.rand_bool())); // choose a random wall unless forced
 		bool const dir(use_pref ? !(pref_orient & 1) : rgen.rand_bool()); // dir is inverted for the model, so we invert pref dir as well
+		if (skip_walls_mask & (1 << (2*dim + dir))) continue;
 		if (!use_pref && !is_residential() && room.has_open_wall(dim, dir)) continue; // don't place against an open wall such as prison bars
 		unsigned const orient(2*dim + dir);
 		float center(0.0);

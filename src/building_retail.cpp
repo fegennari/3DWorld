@@ -437,8 +437,12 @@ void building_t::add_conv_store_objs(rand_gen_t &rgen, room_t const &room, float
 	// block off this area from shelf racks
 	place_area.d[dim][dir] = counter_front; // add a gap for shelf racks
 	// add commercial fridge
-	// TODO: TYPE_COM_FRIDGE with TYPE_MILK
+	unsigned const objs_start(objs.size()), skip_walls_mask(1 << (2*dim + dir)), num_cf(2);
 
+	for (unsigned n = 0; n < num_cf; ++n) { // not at window
+		place_obj_along_wall(TYPE_COM_FRIDGE, room, 0.75*window_vspace, vector3d(0.2, 0.8, 1.0), rgen, zval, room_id,
+			light_amt, place_area, objs_start, 1.0, 1, 4, 0, GRAY, 1, SHAPE_CUBE, 0.0, 0, 0, 0, skip_walls_mask);
+	}
 	if (1) { // add a clock on the wall behind the counter
 		bool const digital(1); // fits better above the window
 		float const place_pos(room.get_center_dim(!dim)), clock_z1(zval + 0.78*window_vspace);

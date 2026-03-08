@@ -1509,7 +1509,7 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 void building_room_geom_t::expand_shelfrack(room_object_t const &c) {get_shelfrack_objects(c, expanded_objs);}
 
 void building_room_geom_t::expand_comm_fridge(room_object_t const &c) {
-	// TODO
+	// TODO: TYPE_MILK, bottles and cans
 }
 
 void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_gen_t &rgen) {
