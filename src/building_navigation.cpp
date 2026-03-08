@@ -714,6 +714,7 @@ public:
 		unsigned n(start_ix);
 		rand_gen_t rgen;
 		rgen.set_state((ped_ix + 17*start_ix + 1), (ped_rseed + 1));
+		rgen.rand_mix();
 		vect_cube_t keepout; // reused across rooms
 
 		while (1) {
@@ -802,6 +803,7 @@ public:
 		if (clamp_area.dx() <= 0 || clamp_area.dy() <= 0.0) return 0; // area too small; shouldn't happen
 		rand_gen_t rgen;
 		rgen.set_state((ped_ix + 13*room_ix + 1), (ped_rseed + 1));
+		rgen.rand_mix();
 		vect_cube_t keepout;
 		unsigned const sub_path_start(path.size());
 		path.add(to); // Note: path is constructed backwards, so "to" is added first and connect_room_endpoints takes swapped arguments
