@@ -1680,7 +1680,8 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 	}
 	if (!room_geom) return; // no room objects
 	auto objs_end(room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
-	float const z_thresh(z1 + 0.35*(z2 - z1)); // used with r_shrink_if_low
+	float const height(z2 - z1), z_thresh(z1 + 0.35*height); // used with r_shrink_if_low
+	float const obj_z1(z1 + (same_as_player ? 0.08*height : 0.0)); // allow stepping onto/through a low object such as a pallet on the floor when chasing the player
 
 	for (auto c = room_geom->objs.begin(); c != objs_end; ++c) {
 		if (!is_ai_coll_obj(*c, same_as_player)) continue;
@@ -1691,7 +1692,7 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 		//if (skip_stairs && c->type == TYPE_RAMP) continue;
 		//if (c->type == TYPE_ATTIC_DOOR && (c->in_hallway())) continue; // skip open attic doors in hallways because they block the path too much
 		cube_t bc(get_true_room_obj_bcube(*c)); // needed for open attic door
-		if (bc.z1() > z2 || bc.z2() < z1) continue;
+		if (bc.z1() > z2 || bc.z2() < obj_z1) continue;
 		if (c->type == TYPE_RAMP && bc.z2() < z1 + floor_thickness) continue; // ramp top is exactly at the floor; add floor_thickness to prevent coll when walking above
 		
 		if (global_building_params.ai_sees_player_hide >= 2 && c->is_open()) { // open hiding spot that we can enter
