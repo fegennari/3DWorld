@@ -347,81 +347,13 @@ bool building_t::add_small_retail_room_objs(rand_gen_t rgen, room_t const &room,
 	// Note: simplified version of mall retail stores from building_t::add_mall_store_objs()
 	bool const conv_store(is_conv_store()); // else prison store
 	bool dim(room.dx() < room.dy()); // long dim
-	float const window_vspace(get_window_vspace()), door_width(get_doorway_width()), wall_thick(get_wall_thickness());
+	float const window_vspace(get_window_vspace()), door_width(get_doorway_width());
 	cube_t place_area(get_walkable_room_bounds(room));
 	vect_room_object_t &objs(interior->room_geom->objs);
 	
 	if (conv_store) {
-		if (place_area.get_sz_dim(!dim) > 4.0*door_width) { // add counter; should be true
-			cube_t const &part(parts[room.part_id]);
-			dim = (part.dx() < part.dy()); // long dim of part
-			bool const ext_lo(room.d[dim][0] == bcube.d[dim][0]), ext_hi(room.d[dim][1] == bcube.d[dim][1]);
-			bool const dir((ext_lo == ext_hi) ? rgen.rand_bool() : ext_hi); // along edge of building if only one side is
-			float const dscale(dir ? 1.0 : -1.0), wall_pos(place_area.d[dim][dir] - dscale*1.5*door_width);
-			cube_t wall(room);
-			set_cube_zvals(wall, zval, (zval + 0.35*window_vspace));
-			set_wall_width(wall, wall_pos, 0.5*wall_thick, dim);
-			wall.expand_in_dim(!dim, -2.2*door_width);
-			cube_t const counter(add_restaurant_counter(wall, dim, !dir, room_id, light_amt, 1, 1, 0, rgen)); // add_cash_registers=1, leave_end_gaps=1, store_is_closed=0
-			float const counter_front(counter.d[dim][!dir]);
-			// add vending machines to either side of the counter
-			bool const side(rgen.rand_bool());
-			unsigned const vend_types[2] = {VEND_DRINK, VEND_SNACK}; // one of each type
-			cube_t vm_area(place_area);
-			vm_area.expand_by_xy(-get_trim_thickness());
-			
-			for (unsigned d = 0; d < 2; ++d) {
-				unsigned const vtype_id(vend_types[bool(d) ^ side]);
-				vending_info_t const &vtype(get_vending_type(vtype_id));
-				float const height(0.75*window_vspace*(vtype.size.z/72)), width(height*(vtype.size.x/vtype.size.z)), depth(height*(vtype.size.y/vtype.size.z)); // normalized to 72"
-				cube_t vm(vm_area);
-				set_cube_zvals(vm, zval, (zval + height));
-				vm.d[ dim][!dir] = vm_area.d[ dim][dir] -           dscale*depth; // set depth
-				vm.d[!dim][!d  ] = vm_area.d[!dim][d  ] - (d ? 1.0 : -1.0)*width; // set width
-				objs.emplace_back(vm, TYPE_VENDING, room_id, dim, !dir, 0, light_amt, SHAPE_CUBE, vtype.color, vtype_id);
-				add_poi_dim_dir(vm, room_id, dim, !dir);
-			} // for d
-			// block off this area from shelf racks
-			place_area.d[dim][dir] = counter_front; // add a gap for shelf racks
-			// add commercial fridge
-			// TODO: TYPE_COM_FRIDGE with TYPE_MILK
-
-			if (1) { // add a clock on the wall behind the counter
-				bool const digital(1); // fits better above the window
-				float const place_pos(room.get_center_dim(!dim)), clock_z1(zval + 0.78*window_vspace);
-				float const clock_height(0.08*window_vspace), clock_width(4.0*clock_height), clock_depth(0.04*clock_width);
-				cube_t clock;
-				set_cube_zvals(clock, clock_z1, clock_z1+clock_height);
-				set_wall_width(clock, place_pos, 0.5*clock_width, !dim);
-				float const wall_pos(room.d[dim][dir]);
-				clock.d[dim][ dir] = wall_pos;
-				clock.d[dim][!dir] = wall_pos + (dir ? -1.0 : 1.0)*clock_depth;
-				add_clock(clock, room_id, light_amt, dim, !dir, digital);
-			}
-			if (1) { // add a trashcan under the counter; there shouldn't be anything it can collide with
-				unsigned const shapes[3] = {SHAPE_CUBE, SHAPE_CYLIN, SHAPE_ROUNDED_CUBE};
-				float const radius(min(0.02f*rgen.rand_uniform(3.0, 6.0)*window_vspace, 0.25f*(min(counter.dx(), counter.dy()) - wall_thick)));
-				float const height(min(0.55f*rgen.rand_uniform(3.0, 6.0)*radius, 0.75f*wall.dz()));
-				float const inside_edge(wall.d[dim][dir] + dscale*0.25*wall_thick);
-				cube_t tc;
-				set_cube_zvals(tc, zval+get_flooring_thick(), zval+height);
-				tc.d[dim][!dir] = inside_edge;
-				tc.d[dim][ dir] = inside_edge + dscale*2.0*radius;
-				set_wall_width(tc, rgen.rand_uniform(counter.d[!dim][0]+radius, counter.d[!dim][1]-radius), radius, !dim);
-				objs.emplace_back(tc, TYPE_TCAN, room_id, dim, dir, 0, light_amt, shapes[rgen.rand() % 3], tcan_colors[rgen.rand() % NUM_TCAN_COLORS]);
-				add_trash_to_trashcan(rgen, tc, room_id, light_amt);
-			}
-			if (building_obj_model_loader.is_model_valid(OBJ_MODEL_HANDGUN)) { // add a handgun under the counter
-				uint16_t const sub_model_id(rgen.rand()); // gun model
-				vector3d const sz(building_obj_model_loader.get_model_world_space_size(combine_model_submodel_id(OBJ_MODEL_HANDGUN, sub_model_id))); // D, W, H
-				float const height(0.02*window_vspace), hwidth(0.5*height*sz.y/sz.z), depth(height*sz.x/sz.z), outside_edge(counter.d[dim][dir]);
-				cube_t gun;
-				set_cube_zvals(gun, wall.z2()-height, wall.z2());
-				gun.d[dim][ dir] = outside_edge;
-				gun.d[dim][!dir] = outside_edge - dscale*depth;
-				set_wall_width(gun, rgen.rand_uniform(counter.d[!dim][0]+hwidth, counter.d[!dim][1]-hwidth), hwidth, !dim);
-				objs.emplace_back(gun, TYPE_HANDGUN, room_id, dim, dir, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, WHITE, sub_model_id);
-			}
+		if (place_area.get_sz_dim(!dim) > 4.0*door_width) { // should be true
+			add_conv_store_objs(rgen, room, zval, room_id, light_amt, place_area, dim);
 		}
 		place_area.expand_by_xy(-0.4*door_width); // add extra padding along the sides for doors
 	}
@@ -468,6 +400,81 @@ bool building_t::add_small_retail_room_objs(rand_gen_t rgen, room_t const &room,
 	// add cash register/checkout counter for prison store?
 	if (is_prison()) {add_door_sign("Store", room, zval, room_id);}
 	return 1;
+}
+
+void building_t::add_conv_store_objs(rand_gen_t &rgen, room_t const &room, float &zval, unsigned room_id, float light_amt, cube_t &place_area, bool &dim) {
+	float const window_vspace(get_window_vspace()), door_width(get_doorway_width()), wall_thick(get_wall_thickness());
+	cube_t const &part(parts[room.part_id]);
+	dim = (part.dx() < part.dy()); // long dim of part
+	bool const ext_lo(room.d[dim][0] == bcube.d[dim][0]), ext_hi(room.d[dim][1] == bcube.d[dim][1]);
+	bool const dir((ext_lo == ext_hi) ? rgen.rand_bool() : ext_hi); // along edge of building if only one side is
+	float const dscale(dir ? 1.0 : -1.0), wall_pos(place_area.d[dim][dir] - dscale*1.5*door_width);
+	// add counter
+	cube_t wall(room);
+	set_cube_zvals(wall, zval, (zval + 0.35*window_vspace));
+	set_wall_width(wall, wall_pos, 0.5*wall_thick, dim);
+	wall.expand_in_dim(!dim, -2.2*door_width);
+	cube_t const counter(add_restaurant_counter(wall, dim, !dir, room_id, light_amt, 1, 1, 0, rgen)); // add_cash_registers=1, leave_end_gaps=1, store_is_closed=0
+	float const counter_front(counter.d[dim][!dir]);
+	// add vending machines to either side of the counter
+	bool const side(rgen.rand_bool());
+	unsigned const vend_types[2] = {VEND_DRINK, VEND_SNACK}; // one of each type
+	cube_t vm_area(place_area);
+	vm_area.expand_by_xy(-get_trim_thickness());
+	vect_room_object_t &objs(interior->room_geom->objs);
+
+	for (unsigned d = 0; d < 2; ++d) {
+		unsigned const vtype_id(vend_types[bool(d) ^ side]);
+		vending_info_t const &vtype(get_vending_type(vtype_id));
+		float const height(0.75*window_vspace*(vtype.size.z/72)), width(height*(vtype.size.x/vtype.size.z)), depth(height*(vtype.size.y/vtype.size.z)); // normalized to 72"
+		cube_t vm(vm_area);
+		set_cube_zvals(vm, zval, (zval + height));
+		vm.d[ dim][!dir] = vm_area.d[ dim][dir] -           dscale*depth; // set depth
+		vm.d[!dim][!d  ] = vm_area.d[!dim][d  ] - (d ? 1.0 : -1.0)*width; // set width
+		objs.emplace_back(vm, TYPE_VENDING, room_id, dim, !dir, 0, light_amt, SHAPE_CUBE, vtype.color, vtype_id);
+		add_poi_dim_dir(vm, room_id, dim, !dir);
+	} // for d
+	// block off this area from shelf racks
+	place_area.d[dim][dir] = counter_front; // add a gap for shelf racks
+	// add commercial fridge
+	// TODO: TYPE_COM_FRIDGE with TYPE_MILK
+
+	if (1) { // add a clock on the wall behind the counter
+		bool const digital(1); // fits better above the window
+		float const place_pos(room.get_center_dim(!dim)), clock_z1(zval + 0.78*window_vspace);
+		float const clock_height(0.08*window_vspace), clock_width(4.0*clock_height), clock_depth(0.04*clock_width);
+		cube_t clock;
+		set_cube_zvals(clock, clock_z1, clock_z1+clock_height);
+		set_wall_width(clock, place_pos, 0.5*clock_width, !dim);
+		float const wall_pos(room.d[dim][dir]);
+		clock.d[dim][ dir] = wall_pos;
+		clock.d[dim][!dir] = wall_pos + (dir ? -1.0 : 1.0)*clock_depth;
+		add_clock(clock, room_id, light_amt, dim, !dir, digital);
+	}
+	if (1) { // add a trashcan under the counter; there shouldn't be anything it can collide with
+		unsigned const shapes[3] = {SHAPE_CUBE, SHAPE_CYLIN, SHAPE_ROUNDED_CUBE};
+		float const radius(min(0.02f*rgen.rand_uniform(3.0, 6.0)*window_vspace, 0.25f*(min(counter.dx(), counter.dy()) - wall_thick)));
+		float const height(min(0.55f*rgen.rand_uniform(3.0, 6.0)*radius, 0.75f*wall.dz()));
+		float const inside_edge(wall.d[dim][dir] + dscale*0.25*wall_thick);
+		cube_t tc;
+		set_cube_zvals(tc, zval+get_flooring_thick(), zval+height);
+		tc.d[dim][!dir] = inside_edge;
+		tc.d[dim][ dir] = inside_edge + dscale*2.0*radius;
+		set_wall_width(tc, rgen.rand_uniform(counter.d[!dim][0]+radius, counter.d[!dim][1]-radius), radius, !dim);
+		objs.emplace_back(tc, TYPE_TCAN, room_id, dim, dir, 0, light_amt, shapes[rgen.rand() % 3], tcan_colors[rgen.rand() % NUM_TCAN_COLORS]);
+		add_trash_to_trashcan(rgen, tc, room_id, light_amt);
+	}
+	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_HANDGUN)) { // add a handgun under the counter
+		uint16_t const sub_model_id(rgen.rand()); // gun model
+		vector3d const sz(building_obj_model_loader.get_model_world_space_size(combine_model_submodel_id(OBJ_MODEL_HANDGUN, sub_model_id))); // D, W, H
+		float const height(0.02*window_vspace), hwidth(0.5*height*sz.y/sz.z), depth(height*sz.x/sz.z), outside_edge(counter.d[dim][dir]);
+		cube_t gun;
+		set_cube_zvals(gun, wall.z2()-height, wall.z2());
+		gun.d[dim][ dir] = outside_edge;
+		gun.d[dim][!dir] = outside_edge - dscale*depth;
+		set_wall_width(gun, rgen.rand_uniform(counter.d[!dim][0]+hwidth, counter.d[!dim][1]-hwidth), hwidth, !dim);
+		objs.emplace_back(gun, TYPE_HANDGUN, room_id, dim, dir, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, WHITE, sub_model_id);
+	}
 }
 
 void building_t::add_retail_pillar(cube_t const &pillar, float zval, unsigned room_id, bool is_tall) {

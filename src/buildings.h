@@ -3111,6 +3111,7 @@ private:
 	bool add_retail_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, light_ix_assign_t &light_ix_assign);
 	void add_shopping_carts_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float light_amt, unsigned objs_start, unsigned max_carts);
 	bool add_small_retail_room_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float light_amt);
+	void add_conv_store_objs(rand_gen_t &rgen, room_t const &room, float &zval, unsigned room_id, float light_amt, cube_t &place_area, bool &dim);
 	float gather_room_lights(unsigned objs_start_inc_lights, vect_cube_t &lights) const;
 	void add_ladders_to_nested_room_roofs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float light_amt, cube_t const &place_area);
 	cube_t add_factory_ladders_and_catwalks(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float light_amt, cube_t const &place_area,
