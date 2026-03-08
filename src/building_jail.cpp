@@ -1294,7 +1294,7 @@ void building_t::populate_jail_cell(rand_gen_t &rgen, cube_t const &cell, cube_t
 		toilet.z2() = zval + height;
 		set_wall_width(toilet, center_pos, 0.5*width, dim);
 		toilet.d[!dim][!dir] = ts_space.d[!dim][dir] - dsign*length;
-		objs.emplace_back(toilet, TYPE_TOILET, room_id, !dim, !dir, 0, tot_light_amt);
+		objs.emplace_back(toilet, TYPE_TOILET, room_id, !dim, !dir, 0, tot_light_amt); // Note: no POI since people outside the cell won't use it
 		if (zval < ground_floor_z1) {add_bathroom_plumbing(objs.back());} // only for basement toilets; above ground toilets may be near a window
 		float const tp_zval(zval + 0.7*height), tp_length(0.18*height);
 
@@ -1305,7 +1305,7 @@ void building_t::populate_jail_cell(rand_gen_t &rgen, cube_t const &cell, cube_t
 			add_tp_roll(cell, room_id, tot_light_amt, dim, !bed_side, tp_length, tp_zval, toilet.get_center_dim(!dim));
 		}
 	}
-	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_SINK)) {
+	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_SINK)) { // Note: no POI since people outside the cell won't use it
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SINK)); // D, W, H
 		float const height(0.45*floor_spacing), width(height*sz.y/sz.z), depth(height*sz.x/sz.z);
 		cube_t sink(ts_space);

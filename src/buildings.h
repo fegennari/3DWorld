@@ -1302,6 +1302,7 @@ struct person_place_t {
 struct point_of_interest_t {
 	cube_t look_area, act_area; // look_area is zero area if a point
 	unsigned room_id=0;
+	mutable unsigned use_count=0; // or last frame used?
 	point_of_interest_t(cube_t const &la, cube_t const &aa, unsigned rid) : look_area(la), act_area(aa), room_id(rid) {}
 	unsigned get_stand_areas(cube_t const &room_bounds, cube_t sas[4], float radius=0.0) const;
 };

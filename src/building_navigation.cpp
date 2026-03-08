@@ -3404,7 +3404,7 @@ void building_t::get_poi_stand_areas_for_room(unsigned room_id, float radius, fl
 	for (point_of_interest_t const &p : interior->room_geom->pois) {
 		if (p.room_id != room_id || p.act_area.z1() > zval || p.act_area.z2() < zval) continue;
 		unsigned const num(p.get_stand_areas(room_area, sa, radius));
-		for (unsigned n = 0; n < num; ++n) {stand_areas.push_back(sa[n]);}
+		for (unsigned n = 0; n < num; ++n) {stand_areas.push_back(sa[n]);} // should we be weighting based on p.use_count here?
 	}
 }
 struct poi_cache_t {
@@ -3440,6 +3440,7 @@ struct poi_cache_t {
 poi_cache_t poi_cache;
 
 bool building_t::select_person_poi(unsigned room_id, float radius, point &pos, rand_gen_t &rgen) const {
+	// some other ideas: select least used or least recently used POI? use sink after toilet in bathroom? return false sometimes if there's only one?
 	return poi_cache.select_stand_area(*this, room_id, radius, pos, rgen);
 }
 void building_t::set_look_dir(person_t &person) const {
@@ -3457,6 +3458,7 @@ void building_t::set_look_dir(person_t &person) const {
 		point const look_pt(p.look_area.contains_pt(person.pos) ? p.look_area.get_cube_center() : closest_pt);
 		person.look_dir.assign((look_pt.x - person.pos.x), (look_pt.y - person.pos.y));
 		person.look_dir.normalize();
+		++p.use_count;
 		dmin_sq = dist_sq;
 		found   = 1;
 	} // for p
