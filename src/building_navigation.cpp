@@ -473,9 +473,7 @@ public:
 		return point(pt.x, pt.y, zval);
 	}
 	static void choose_room_pos_prefer_poi(building_t const &building, cube_t const &place_area, float radius, unsigned room_id, bool has_poi, rand_gen_t &rgen, point &pos) {
-		if (has_poi) {
-			if (building.select_person_poi(room_id, radius, pos, rgen)) return; // done; no need to check place_area
-		}
+		if (has_poi && building.select_person_poi(room_id, radius, pos, rgen)) return; // done; no need to check place_area
 		gen_xy_pos_in_cube(pos, place_area, rgen);
 	}
 	static bool find_valid_pt_in_room(vect_cube_t const &avoid, building_t const &building, float radius, float zval,
@@ -3398,8 +3396,7 @@ bool building_t::is_pos_in_poi(point const &pos, unsigned room_id, bool not_in_l
 }
 void building_t::get_poi_stand_areas_for_room(unsigned room_id, float radius, float zval, vect_cube_t &stand_areas) const {
 	if (!room_has_poi(room_id)) return;
-	room_t const &room(get_room(room_id));
-	cube_t const room_area(get_walkable_room_bounds(room));
+	cube_t const room_area(get_walkable_room_bounds(get_room(room_id)));
 	cube_t sa[4];
 
 	for (point_of_interest_t const &p : interior->room_geom->pois) {
@@ -3432,7 +3429,8 @@ struct poi_cache_t {
 			last_room_id = room_id; last_zval = pos.z; last_radius = radius;
 		}
 		if (rpool.empty()) return 0; // shouldn't fail
-		cube_t const &area(stand_areas[rpool[rgen.rand() % rpool.size()]]);
+		unsigned const ix((rpool.size() == 1) ? 0 : (rgen.rand() % rpool.size()));
+		cube_t const &area(stand_areas[rpool[ix]]);
 		gen_xy_pos_in_cube(pos, area, rgen);
 		return 1;
 	}

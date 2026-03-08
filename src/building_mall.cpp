@@ -1921,7 +1921,7 @@ unsigned building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zv
 		float const shelf_height(0.63*window_vspace), shelf_depth(0.25*window_vspace); // set height so that the top shelf is below the camera height
 		add_shelves_along_walls(room_area, zval, room_id, light_amt, !dim, store_type, shelf_height, shelf_depth, 1, rgen); // place_inside=1
 	}
-	else if (store_type == STORE_FURNITURE || store_type == STORE_APPLIANCE) {
+	else if (store_type == STORE_FURNITURE || store_type == STORE_APPLIANCE) { // no POIs
 		// divide the store up into a 2D square grid of "rooms": bedrooms, dining rooms, living rooms, etc. and populate these
 		float const trim_thick(get_trim_thickness()), room_pad(1.0*door_width), room_size(1.5*window_vspace), room_spacing(room_size + room_pad);
 		float const size_delta(room_pad - wall_thickness - 2.0*trim_thick), pad_len(room_len + size_delta - wall_thickness), pad_width(room_width + size_delta);
@@ -2074,7 +2074,7 @@ unsigned building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zv
 						}
 					}
 				} // end STORE_FURNITURE
-				else if (store_type == STORE_APPLIANCE) {
+				else if (store_type == STORE_APPLIANCE) { // no POIs
 					for (unsigned N = 0; N < 20; ++N) { // 20 attempts to place a new and valid model type
 						float const val(rgen.rand_float());
 						room_object obj_type(TYPE_NONE);
@@ -2260,6 +2260,7 @@ void building_t::add_clothing_rack(cube_t const &rack, unsigned room_id, bool di
 	float const rack_length(rack.get_sz_dim(dim)), rack_width(rack.get_sz_dim(!dim)), rack_center(rack.get_center_dim(!dim));
 	float const hr_radius(0.007*window_vspace), frame_hwidth(1.2*hr_radius), frame_width(2.0*frame_hwidth);
 	unsigned const flags(RO_FLAG_INTERIOR | RO_FLAG_NOCOLL | RO_FLAG_IN_MALL);
+	bool const add_jumpsuits(rtype == RTYPE_JAIL);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	// add an invisible collider around the clothes rack for player and AI collisions
 	objs.emplace_back(rack, TYPE_COLLIDER, room_id, !dim, 0, (RO_FLAG_IN_MALL | RO_FLAG_INVIS), light_amt);
@@ -2308,9 +2309,9 @@ void building_t::add_clothing_rack(cube_t const &rack, unsigned room_id, bool di
 		} // for d
 		// add hangers and hanging clothes
 		unsigned const num_hangers(round_fp(15.0*rgen.rand_uniform(1.0, 1.5)*rack_length/(num_segs*window_vspace)));
-		bool const add_jumpsuits(rtype == RTYPE_JAIL);
 		building_room_geom_t::add_hangers_and_clothing(window_vspace, num_hangers, flags, hanger_model_id, clothing_model_id, hanger_rod, objs, rgen, add_jumpsuits);
 	} // for n
+	if (!add_jumpsuits) {add_poi_dim(rack, room_id, !dim);} // mall clothing stores only
 }
 
 void building_t::add_mall_back_hallway_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float light_amt) {
@@ -2439,6 +2440,8 @@ void building_t::add_row_of_bookcases(cube_t const &row, float zval, unsigned ro
 			objs.emplace_back(c, TYPE_BCASE, room_id, dim, d, RO_FLAG_IN_MALL, light_amt);
 			set_obj_id(objs);
 		}
+		for (unsigned e = 0; e < 2; ++e) {c.d[!dim][e] = row.d[!dim][e];} // expand POI to full row
+		add_poi_dim_dir(c, room_id, dim, d);
 	} // for d
 }
 

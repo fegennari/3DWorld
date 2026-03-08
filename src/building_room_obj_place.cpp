@@ -2216,7 +2216,7 @@ void building_t::add_shelves(cube_t const &c, bool dim, bool dir, unsigned room_
 	vect_room_object_t &objs(interior->room_geom->objs);
 	objs.emplace_back(c, TYPE_SHELVES, room_id, dim, dir, flags, tot_light_amt, SHAPE_CUBE, WHITE, item_flags);
 	set_obj_id(objs);
-	add_poi_dim_dir(c, room_id, dim, !dir);
+	if (objs.back().is_nonempty()) {add_poi_dim_dir(c, room_id, dim, !dir);}
 	unsigned const objs_start(objs.size());
 	interior->room_geom->expand_shelves(objs.back(), 1); // add_models_mode=1
 
