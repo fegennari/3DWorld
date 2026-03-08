@@ -477,9 +477,9 @@ public:
 		gen_xy_pos_in_cube(pos, place_area, rgen);
 	}
 	static bool find_valid_pt_in_room(vect_cube_t const &avoid, building_t const &building, float radius, float zval,
-		cube_t const &room, unsigned room_id, rand_gen_t &rgen, point &pos, bool no_use_init=0)
+		cube_t const &room, unsigned room_id, rand_gen_t &rgen, point &pos, bool no_use_init=0, bool no_poi=0)
 	{
-		bool const has_poi(building.room_has_poi(room_id));
+		bool const has_poi(!no_poi && building.room_has_poi(room_id));
 		if (has_poi) {no_use_init = 1;}
 		if (!no_use_init && avoid.empty()) return 1; // no colliders, any point is valid, choose the initial point (which should be the room center)
 		cube_t place_area(room);
@@ -516,10 +516,11 @@ public:
 	point find_valid_room_dest(vect_cube_t const &avoid, building_t const &building, float radius, float zval, unsigned node_ix,
 		bool up_or_down, bool &not_room_center, rand_gen_t &rgen, bool no_use_init, point const *const custom_dest) const
 	{
+		bool const has_custom_dest(custom_dest != nullptr);
 		node_t const &node(get_node(node_ix));
 		assert(!node.is_vert_conn()); // must be room, not stairs or ramp
 		point pos;
-		if (custom_dest != nullptr) {pos = *custom_dest;}
+		if (has_custom_dest) {pos = *custom_dest;}
 		else {pos = get_room_center(building, node.bcube, zval);} // first candidate is the center of the room
 		
 		if (building.is_above_retail_area(pos) && !building.point_over_glass_floor(pos)) {
@@ -527,7 +528,7 @@ public:
 			//zval += (up_or_down ? -1.0 : 1.0)*floor_spacing; // one floor above or below so that we skip the blocked floor; but this asserts
 			return point(landing_pos.x, landing_pos.y, zval);
 		}
-		if (find_valid_pt_in_room(avoid, building, radius, zval, node.bcube, node_ix, rgen, pos, no_use_init)) {not_room_center = 1;} // success
+		if (find_valid_pt_in_room(avoid, building, radius, zval, node.bcube, node_ix, rgen, pos, no_use_init, has_custom_dest)) {not_room_center = 1;} // no_poi=has_custom_dest
 		return pos;
 	}
 
@@ -575,9 +576,9 @@ public:
 		keepout.clear();
 		building.add_sub_rooms_to_avoid_if_needed(room_ix, keepout); // must avoid sub-rooms
 
-		for (auto i = avoid.begin(); i != avoid.end(); ++i) {
-			if (!i->intersects_xy(walk_area_exp)) continue;
-			cube_t c(*i);
+		for (cube_t const &a : avoid) {
+			if (!a.intersects_xy(walk_area_exp)) continue;
+			cube_t c(a);
 			c.expand_by_xy(radius);
 			bool skip(0), failed(0);
 
@@ -732,7 +733,7 @@ public:
 				if (node.is_vert_conn()) { // stairs or ramp (end point of starting floor)
 					path.add(get_stairs_entrance_pt(cur_pt.z, n, up_or_down)); // likely == next
 				}
-				else { // room/doorway/elevator/player
+				else { // room/doorway/elevator/escalator/player
 					unsigned const num_tries(req_custom_dest ? 1 : 10); // only try custom_dest if req_custom_dest is set
 					bool const is_lg_room(building.is_single_large_room_or_store(n));
 					bool success(0);
@@ -795,7 +796,6 @@ public:
 	{
 		// used for reaching a goal such as the player within the same room;
 		// assumes the building shape is convex and the goal is inside the building so that the path to the goal never leaves a non-cube building
-		if (!building.are_points_in_room_reachable(from, to, room_ix)) return 0; // unclear if this helps
 		cube_t walk_area(calc_walkable_room_area(get_node(room_ix), radius));
 		if (!constrain_area.is_all_zeros()) {walk_area.intersect_with_cube_xy(constrain_area);}
 		cube_t clamp_area(walk_area);
@@ -1305,8 +1305,8 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const { //
 		for (unsigned n = 0; n < 4; ++n) { // iterate a few times in case a collision moves pos into another object
 			bool any_updated(0);
 
-			for (auto i = avoid.begin(); i != avoid.end(); ++i) { // move target_pos to avoid room objects
-				any_updated |= move_sphere_to_not_int_cube_xy(person.target_pos, 1.2*coll_dist, *i); // add an extra 20% buffer
+			for (cube_t const &a : avoid) { // move target_pos to avoid room objects
+				any_updated |= move_sphere_to_not_int_cube_xy(person.target_pos, 1.2*coll_dist, a); // add an extra 20% buffer
 			}
 			if (!any_updated) break; // done
 		} // for n
