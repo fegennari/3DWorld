@@ -348,8 +348,9 @@ cube_t building_t::add_restaurant_counter(cube_t const &wall, bool dim, bool dir
 	bool leave_end_gaps, bool add_cash_registers, bool store_is_closed, rand_gen_t &rgen)
 {
 	bool const conv_store(is_conv_store()); // convenience store counter rather than mall restaurant counter
+	bool const in_mall(!conv_store && has_mall());
 	float const window_vspace(get_window_vspace()), wall_thickness(get_wall_thickness()), clearance(get_min_front_clearance_inc_people());
-	colorRGBA const color((conv_store || !has_mall()) ? WHITE : interior->mall_info->mall_wall_color);
+	colorRGBA const color(in_mall ? interior->mall_info->mall_wall_color : WHITE);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	add_short_wall_with_trim(wall, dim, room_id, light_amt, color); // bottom wall
 	cube_t counter(wall);
@@ -357,9 +358,11 @@ cube_t building_t::add_restaurant_counter(cube_t const &wall, bool dim, bool dir
 	counter.expand_in_dim(dim, 2.5*wall_thickness);
 	unsigned const skip_faces(leave_end_gaps ? 0 : get_skip_mask_for_xy(!dim)); // skip ends if no gaps
 	objs.emplace_back(counter, TYPE_METAL_BAR, room_id, dim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, LT_GRAY, skip_faces);
+	// create POI for the counter; mall restaurant counter POI may be in the mall concourse rather than the restaurant
+	unsigned const poi_room_id((in_mall && get_mall_concourse().intersects(counter)) ? (unsigned)interior->ext_basement_hallway_room_id : room_id);
 	cube_t poi(counter);
 	poi.z1() = wall.z1(); // extend to the floor
-	add_poi_dim_dir(poi, room_id, dim, dir);
+	add_poi_dim_dir(poi, poi_room_id, dim, dir);
 	// add a collider + blocker around the counter and the windows/entrance
 	cube_t blocker(counter);
 	blocker.z1() = wall.z1();

@@ -25,6 +25,7 @@ extern bool player_is_hiding, player_on_escalator, player_in_tunnel;
 extern int frame_counter, display_mode, animate2, player_in_elevator;
 extern float fticks;
 extern building_params_t global_building_params;
+extern building_t const *player_building;
 extern bldg_obj_type_t bldg_obj_types[];
 
 bool ai_follow_player() {return (global_building_params.ai_follow_player || in_building_gameplay_mode());}
@@ -473,9 +474,7 @@ public:
 	}
 	static void choose_room_pos_prefer_poi(building_t const &building, cube_t const &place_area, float radius, unsigned room_id, bool has_poi, rand_gen_t &rgen, point &pos) {
 		if (has_poi) {
-			for (unsigned n = 0; n < 10; ++n) { // 10 attempts to find a POI inside place_area
-				if (building.select_person_poi(room_id, radius, pos, rgen) && place_area.contains_pt_xy(pos)) return; // done
-			}
+			if (building.select_person_poi(room_id, radius, pos, rgen)) return; // done; no need to check place_area
 		}
 		gen_xy_pos_in_cube(pos, place_area, rgen);
 	}
@@ -3340,19 +3339,23 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 
 // *** points of interest ***
 
-unsigned point_of_interest_t::get_stand_areas(cube_t sa[4], float radius) const {
-	cube_t avoid_area(look_area);
-	avoid_area.expand_by_xy(radius);
+unsigned point_of_interest_t::get_stand_areas(cube_t const &room_bounds, cube_t sas[4], float radius) const {
+	cube_t avoid_area(look_area), clip_area(room_bounds);
+	avoid_area.expand_by_xy( radius);
+	clip_area .expand_by_xy(-radius);
 	unsigned num(0);
 
 	for (unsigned dim = 0; dim < 2; ++dim) {
 		for (unsigned dir = 0; dir < 2; ++dir) {
 			float const act_edge(act_area.d[dim][dir]), avoid_edge(avoid_area.d[dim][dir]);
 			if (act_edge == avoid_edge || ((avoid_edge < act_edge) ^ dir)) continue; // active edge doesn't extend beyond avoid edge
-			sa[num] = act_area;
-			sa[num].d[dim][!dir] = avoid_edge;
+			cube_t &sa(sas[num]);
+			sa = act_area;
+			sa.d[dim][!dir] = avoid_edge;
 			// trim off the far edge if there's space to put the person closer to the object
-			if (radius > 0.0 && sa[num].get_sz_dim(dim) > radius) {sa[num].d[dim][dir] -= (dir ? 1.0 : -1.0)*radius;}
+			if (radius > 0.0 && sa.get_sz_dim(dim) > radius) {sa.d[dim][dir] -= (dir ? 1.0 : -1.0)*radius;}
+			if (!sa.intersects(clip_area)) {cout << "invalid " << sa.str() << endl; continue;}
+			sa.intersect_with_cube(clip_area);
 			++num;
 		} // for dir
 	} // for dim
@@ -3395,11 +3398,13 @@ bool building_t::is_pos_in_poi(point const &pos, unsigned room_id, bool not_in_l
 }
 void building_t::get_poi_stand_areas_for_room(unsigned room_id, float radius, float zval, vect_cube_t &stand_areas) const {
 	if (!room_has_poi(room_id)) return;
+	room_t const &room(get_room(room_id));
+	cube_t const room_area(get_walkable_room_bounds(room));
 	cube_t sa[4];
 
 	for (point_of_interest_t const &p : interior->room_geom->pois) {
 		if (p.room_id != room_id || p.act_area.z1() > zval || p.act_area.z2() < zval) continue;
-		unsigned const num(p.get_stand_areas(sa, radius));
+		unsigned const num(p.get_stand_areas(room_area, sa, radius));
 		for (unsigned n = 0; n < num; ++n) {stand_areas.push_back(sa[n]);}
 	}
 }

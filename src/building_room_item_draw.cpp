@@ -2681,7 +2681,7 @@ void building_t::debug_people_in_building(shader_t &s, point const &camera_bs) c
 			draw_simple_cube(p.look_area);
 			color_shader.set_cur_color(RED);
 			cube_t sa[4];
-			unsigned const num(p.get_stand_areas(sa, get_ped_coll_radius()));
+			unsigned const num(p.get_stand_areas(get_walkable_room_bounds(get_room(p.room_id)), sa, get_ped_coll_radius()));
 			for (unsigned n = 0; n < num; ++n) {draw_simple_cube(sa[n]);}
 		} // for p
 		set_fill_mode(); // reset
