@@ -168,7 +168,7 @@ point building_t::gen_animal_floor_pos(float radius, bool place_in_attic, bool n
 			}
 			if (near_door) continue; // bad placement; don't spawn venemous spiders and snakes near the door that the player could run into immediately
 		}
-		if (not_player_visible && n < 50 && fabs(camera_bs.z - pos.z) < floor_spacing && camera_pdu.sphere_visible_test((pos + xlate), radius)) {
+		if (not_player_visible && n < 75 && fabs(camera_bs.z - pos.z) < floor_spacing && camera_pdu.sphere_visible_test((pos + xlate), radius)) {
 			// may be visible to the player; checked for the first 50 iterations
 			bool const same_room(get_room_containing_pt(pos) == get_room_containing_camera(camera_bs));
 			if (!line_intersect_walls(pos, camera_bs, same_room)) continue; // line of sight, skip
@@ -2106,7 +2106,8 @@ void building_t::update_roach(insect_t &roach, point const &camera_bs, float tim
 			else if (roach.stuck_counter++ > 60) {spawn_new_pos = 1;} // respawn if stuck colliding for 60 consecutive frames
 		}
 		if (spawn_new_pos) {
-			pos = gen_animal_floor_pos(roach.radius, 0, 1, 1, 0, rgen); // place_in_attic=0, not_player_visible=1, pref_dark_room=1, not_by_ext_door=0
+			point const new_pos(gen_animal_floor_pos(roach.radius, 0, 1, 1, 0, rgen)); // place_in_attic=0, not_player_visible=1, pref_dark_room=1, not_by_ext_door=0
+			if (new_pos != all_zeros) {pos = new_pos;}
 			roach.is_scared = roach.no_scare = 0; // no longer scared
 			return;
 		}
