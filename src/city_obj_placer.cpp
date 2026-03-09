@@ -48,8 +48,8 @@ void setup_parked_car(car_t &car, unsigned city_id, unsigned plot_ix) {
 }
 
 // Note: copies rgen by value to avoid disrupting the original sequence
-bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, unsigned city_id, unsigned plot_ix, vect_cube_t const &plot_cuts,
-	vector<car_t> &cars, vect_cube_t &bcubes, vect_cube_t &colliders, rand_gen_t rgen, bool add_cars)
+bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, unsigned city_id, unsigned plot_ix, unsigned plot_id_offset,
+	vect_cube_t const &plot_cuts, vector<car_t> &cars, vect_cube_t &bcubes, vect_cube_t &colliders, rand_gen_t rgen, bool add_cars)
 {
 	if (!plot.is_commercial())   return 0;
 	if (rgen.rand_float() < 0.5) return 0; // no gas station in this plot
@@ -190,7 +190,7 @@ bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, unsigne
 			b.was_custom_placed = 1;
 			b.gen_roof_and_side_color(rgen);
 			b.set_z_range(cs.z1(), cs.z2());
-			if (place_city_building_at(b, plot_ix, rgen)) {new_bcubes.push_back(cs);}
+			if (place_city_building_at(b, (plot_ix + plot_id_offset), rgen)) {new_bcubes.push_back(cs);}
 		}
 	}
 	vector_add_to(new_bcubes, bcubes); // add at the end so that they don't block each other
@@ -2212,8 +2212,9 @@ template<typename T> void city_obj_placer_t::draw_objects(vector<T> const &objs,
 	T::post_draw(dstate, shadow_only);
 }
 
-void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<vect_cube_t> &plot_colliders, vector<car_t> &cars, vector<road_t> const &roads,
-	vector<road_isec_t> isecs[3], cube_t const &city_bcube, vect_cube_t const &plot_cuts, unsigned city_id, bool have_cars, bool is_residential, bool have_streetlights)
+void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<vect_cube_t> &plot_colliders, vector<car_t> &cars,
+	vector<road_t> const &roads, vector<road_isec_t> isecs[3], cube_t const &city_bcube, vect_cube_t const &plot_cuts,
+	unsigned city_id, unsigned plot_id_offset, bool have_cars, bool is_residential, bool have_streetlights)
 {
 	// Note: fills in plots.has_parking
 	//highres_timer_t timer("Gen Parking Lots and Place Objects");
@@ -2250,7 +2251,8 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 		size_t const plot_id(i - plots.begin()), buildings_end(blockers.size());
 		assert(plot_id < plot_colliders.size());
 		vect_cube_t &colliders(plot_colliders[plot_id]); // used for pedestrians
-		if (add_gas_stations) {maybe_place_gas_station(*i, city_id, plot_id, plot_cuts, cars, blockers, colliders, rgen, have_cars);} // add gas stations first, since they're large
+		// add gas stations first, since they're large
+		if (add_gas_stations) {maybe_place_gas_station(*i, city_id, plot_id, plot_id_offset, plot_cuts, cars, blockers, colliders, rgen, have_cars);}
 		if (add_parking_lots && !i->is_park) {i->has_parking = gen_parking_lots_for_plot(*i, cars, city_id, plot_id, blockers, colliders, plot_cuts, rgen, have_cars);}
 		unsigned const driveways_start(driveways.size());
 		/*if (is_residential)*/ {add_building_driveways(*i, temp_cubes, detail_rgen, plot_id);} // driveways always added now that cities have parking structures

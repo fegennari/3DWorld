@@ -853,8 +853,8 @@ private:
 	float plot_subdiv_sz=0.0;
 	bool has_residential_plots=0;
 	
-	bool maybe_place_gas_station(road_plot_t const &plot, unsigned city_id, unsigned plot_ix, vect_cube_t const &plot_cuts,
-		vector<car_t> &cars, vect_cube_t &bcubes, vect_cube_t &colliders, rand_gen_t rgen, bool add_cars);
+	bool maybe_place_gas_station(road_plot_t const &plot, unsigned city_id, unsigned plot_ix, unsigned plot_id_offset,
+		vect_cube_t const &plot_cuts, vector<car_t> &cars, vect_cube_t &bcubes, vect_cube_t &colliders, rand_gen_t rgen, bool add_cars);
 	bool gen_parking_lots_for_plot(cube_t const &full_plot, vector<car_t> &cars, unsigned city_id, unsigned plot_ix,
 		vect_cube_t &bcubes, vect_cube_t &colliders, vect_cube_t const &plot_cuts, rand_gen_t &rgen, bool add_cars);
 	void add_cars_to_driveways(vector<car_t> &cars, vector<road_plot_t> const &plots, vector<vect_cube_t> &plot_colliders, unsigned city_id, rand_gen_t &rgen);
@@ -886,8 +886,9 @@ public:
 	bool has_gas_station  () const {return !gstations.empty();}
 	vector<power_pole_t> const &get_power_poles() const {return ppoles;} // used for city connectivity
 	void set_plot_subdiv_sz(float sz) {plot_subdiv_sz = sz;}
-	void gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<vect_cube_t> &plot_colliders, vector<car_t> &cars, vector<road_t> const &roads,
-		vector<road_isec_t> isecs[3], cube_t const &city_bcube, vect_cube_t const &plot_cuts, unsigned city_id, bool have_cars, bool is_residential, bool have_streetlights);
+	void gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<vect_cube_t> &plot_colliders, vector<car_t> &cars,
+		vector<road_t> const &roads, vector<road_isec_t> isecs[3], cube_t const &city_bcube, vect_cube_t const &plot_cuts,
+		unsigned city_id, unsigned plot_id_offset, bool have_cars, bool is_residential, bool have_streetlights);
 	void remap_parking_lot_ixs();
 	int select_dest_parking_space(unsigned driveway_ix, bool allow_hcap, bool reserve_spot, float car_len, rand_gen_t &rgen) const;
 	point get_parking_space_center(unsigned pspace_ix) const {assert(pspace_ix < pspaces.size()); return pspaces[pspace_ix].center;}

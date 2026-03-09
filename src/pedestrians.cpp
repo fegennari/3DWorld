@@ -974,6 +974,8 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 				cube_t dest_cube;
 				if      (has_dest_bldg) {dest_cube = get_building_bcube(dest_bldg);}
 				else if (has_dest_car ) {dest_cube.set_from_sphere(dest_car_center, city_params.get_nom_car_size().x);} // somewhat approximate/conservative
+				else {assert(0);} // must have a dest
+				if (!dest_cube.intersects_xy(plot_bcube)) {cout << TXT(has_dest_bldg) << TXT(has_dest_car) << TXTS(dest_cube) << TXTS(plot_bcube) << endl;}
 				assert(dest_cube.intersects_xy(plot_bcube)); // or contains, or is that too strong?
 				bool dim(0), dir(0), use_proxy_pt(0);
 				cube_t target_cube(dest_cube); // default is to use the side of the building closest to the road, which is where the front/driveway generally is
