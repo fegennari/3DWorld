@@ -733,19 +733,24 @@ public:
 				if (node.is_vert_conn()) { // stairs or ramp (end point of starting floor)
 					path.add(get_stairs_entrance_pt(cur_pt.z, n, up_or_down)); // likely == next
 				}
+				else if (req_custom_dest) { // elevator or escalator
+					path.add(*custom_dest); // guaranteed to be valid
+					point const room_exit(closest_room_pt(walk_area, next)); // first doorway, or stairs/ramp in this room
+					if (!connect_room_endpoints(avoid, building, walk_area, n, *custom_dest, room_exit, radius, path, keepout, rgen)) {path.clear(); return 0;}
+					path.add(room_exit);
+				}
 				else { // room/doorway/elevator/escalator/player
-					unsigned const num_tries(req_custom_dest ? 1 : 10); // only try custom_dest if req_custom_dest is set
 					bool const is_lg_room(building.is_single_large_room_or_store(n));
 					bool success(0);
 
-					for (unsigned N = 0; N < num_tries; ++N) { // keep retrying until we find a point that is reachable from the room or doorway
+					for (unsigned N = 0; N < 10; ++N) { // keep retrying until we find a point that is reachable from the room or doorway
 						// choose a random new point on iterations after the first one, and on first iteration for large rooms unless we have a custom dest
-						bool const no_use_init(N > 0 || (is_lg_room && !req_custom_dest));
+						bool const no_use_init(N > 0 || is_lg_room);
 						bool not_room_center(0);
 						unsigned const avoid_size(avoid.size());
 						building.add_sub_rooms_to_avoid_if_needed(n, avoid); // must avoid sub-rooms
 						point const end_point(find_valid_room_dest(avoid, building, radius, cur_pt.z, n, up_or_down, not_room_center, rgen, no_use_init, custom_dest));
-						avoid.resize(avoid_size); // remove added sub-rooms
+						avoid.resize(avoid_size); // remove added sub-rooms; will be re-added below
 						path.add(end_point);
 						point const room_exit(closest_room_pt(walk_area, next)); // first doorway, or stairs/ramp in this room
 						if (connect_room_endpoints(avoid, building, walk_area, n, end_point, room_exit, radius, path, keepout, rgen)) {path.add(room_exit); success = 1; break;}
@@ -791,8 +796,8 @@ public:
 		} // end while()
 		return 0; // never gets here
 	}
-	bool complete_path_within_room(point const &from, point const &to, unsigned room_ix, unsigned ped_ix, float radius, unsigned ped_rseed,
-		bool is_first_path, bool following_player, cube_t const &constrain_area, vect_cube_t const &avoid, building_t const &building, ai_path_t &path) const
+	bool complete_path_within_room(point const &from, point const &to, unsigned room_ix, unsigned ped_ix, float radius, unsigned ped_rseed, bool is_first_path,
+		bool following_player, bool allow_nearby_to, cube_t const &constrain_area, vect_cube_t const &avoid, building_t const &building, ai_path_t &path) const
 	{
 		// used for reaching a goal such as the player within the same room;
 		// assumes the building shape is convex and the goal is inside the building so that the path to the goal never leaves a non-cube building
@@ -816,7 +821,7 @@ public:
 			if (!is_first_path) { // ignore failure on first path to allow person to get out from an object they spawn in
 				bool success(0);
 
-				if (following_player) {
+				if (following_player && allow_nearby_to) {
 					// try to find a partial path, starting at "to" and working toward "from"; since rooms are rectangular, all points on the line will be contained
 					for (unsigned n = 0; n <= 9; ++n) { // {0% ... 90%}
 						if (n == 0 && clamp_area.contains_pt_xy(to)) continue; // if <to> is already inside the walk area, there's no need to test it again
@@ -1931,12 +1936,12 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 		assert(clamp_area.is_strictly_normalized()); // glass floors must be nonempty
 		bool const going_up(to.z > from.z);
 		if (!interior->nav_graph->complete_path_within_room(eexit, to, loc1.room_ix, person.ssn, radius, person.cur_rseed,
-			is_first_path, following_player, (going_up ? clamp_area : cube_t()), avoid, *this, path)) return 0; // escalator to target
+			is_first_path, following_player, 1, (going_up ? clamp_area : cube_t()), avoid, *this, path)) return 0; // escalator to target; allow_nearby_to=1
 		path.add(epath); // add escalator segment
 		get_avoid_cubes(from.z, height, radius, avoid, following_player);
 		remove_escalator_from_avoid_cubes(person, radius, interior->escalators, avoid); // check if already intersecting the escalator; if so, remove it from avoid
 		return interior->nav_graph->complete_path_within_room(from, eenter, loc1.room_ix, person.ssn, radius, person.cur_rseed,
-			is_first_path, following_player, (going_up ? cube_t() : clamp_area), avoid, *this, path); // person to escalator
+			is_first_path, following_player, 0, (going_up ? cube_t() : clamp_area), avoid, *this, path); // person to escalator; allow_nearby_to=0
 	}
 	room_t const &start_room(get_room(loc1.room_ix));
 	get_avoid_cubes(from.z, height, radius, avoid, following_player, &start_room); // include fires in the current room
@@ -1959,7 +1964,7 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 		add_sub_rooms_to_avoid_if_needed(loc1.room_ix, avoid); // must avoid sub-rooms
 		cube_t const constrain_area(point_over_glass_floor(from) ? get_bcubes_union(interior->room_geom->glass_floors) : cube_t());
 		if (!interior->nav_graph->complete_path_within_room(from, dest, loc1.room_ix, person.ssn, radius,
-			person.cur_rseed, is_first_path, following_player, constrain_area, avoid, *this, path)) return 0;
+			person.cur_rseed, is_first_path, following_player, 1, constrain_area, avoid, *this, path)) return 0; // allow_nearby_to=1
 		return 1;
 	}
 	bool have_goal_pos(0), req_custom_dest(0);
@@ -2013,7 +2018,7 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 			if (is_escalator && (int)sre_room_ix == loc1.room_ix) {
 				remove_escalator_from_avoid_cubes(person, radius, interior->escalators, avoid); // check if already intersecting the escalator
 				if (!interior->nav_graph->complete_path_within_room(from, enter_pt, loc1.room_ix, person.ssn, radius, person.cur_rseed,
-					is_first_path, following_player, cube_t(), avoid, *this, from_path)) continue; // person to escalator
+					is_first_path, following_player, 0, cube_t(), avoid, *this, from_path)) continue; // person to escalator; allow_nearby_to=0
 			}
 			else {
 				point const *const seg1_dest(is_escalator ? &enter_pt : nullptr); // must enter the escalator exactly at this point
@@ -2028,7 +2033,7 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 			// stairs/ramp/escalator => to
 			if (is_escalator && (int)sre_room_ix == loc2.room_ix) {
 				if (!interior->nav_graph->complete_path_within_room(seg2_start, to, loc2.room_ix, person.ssn, radius, person.cur_rseed,
-					is_first_path, following_player, cube_t(), avoid2, *this, path)) continue; // escalator to target
+					is_first_path, following_player, 1, cube_t(), avoid2, *this, path)) continue; // escalator to target; allow_nearby_to=1
 			}
 			else {
 				if (!interior->nav_graph->find_path_points(sre_room_ix, loc2.room_ix, person.ssn, radius, 0, is_first_path,
