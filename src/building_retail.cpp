@@ -426,7 +426,7 @@ void building_t::add_conv_store_objs(rand_gen_t &rgen, room_t const &room, float
 	for (unsigned d = 0; d < 2; ++d) {
 		unsigned const vtype_id(vend_types[bool(d) ^ side]);
 		vending_info_t const &vtype(get_vending_type(vtype_id));
-		float const height(0.75*window_vspace*(vtype.size.z/72)), width(height*(vtype.size.x/vtype.size.z)), depth(height*(vtype.size.y/vtype.size.z)); // normalized to 72"
+		float const height(0.8*window_vspace*(vtype.size.z/72)), width(height*(vtype.size.x/vtype.size.z)), depth(height*(vtype.size.y/vtype.size.z)); // normalized to 72"
 		cube_t vm(vm_area);
 		set_cube_zvals(vm, zval, (zval + height));
 		vm.d[ dim][!dir] = vm_area.d[ dim][dir] -           dscale*depth; // set depth
@@ -441,7 +441,7 @@ void building_t::add_conv_store_objs(rand_gen_t &rgen, room_t const &room, float
 
 	for (unsigned n = 0; n < num_cf; ++n) { // not at window
 		place_obj_along_wall(TYPE_COM_FRIDGE, room, 0.75*window_vspace, vector3d(0.2, 0.8, 1.0), rgen, zval, room_id,
-			light_amt, place_area, objs_start, 1.0, 1, 4, 0, GRAY, 1, SHAPE_CUBE, 0.0, 0, 0, 0, skip_walls_mask);
+			light_amt, place_area, objs_start, 1.0, 1, 4, 0, GRAY_BLACK, 1, SHAPE_CUBE, 0.0, 0, 0, 0, skip_walls_mask);
 	}
 	if (1) { // add a clock on the wall behind the counter
 		bool const digital(1); // fits better above the window

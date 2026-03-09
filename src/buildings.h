@@ -1595,7 +1595,7 @@ struct building_room_geom_t {
 	void add_parking_gate (room_object_t const &c);
 	void add_conveyor_belt(room_object_t const &c, bool draw_dynamic);
 	void add_vent_hood(room_object_t const &c);
-	void add_commercial_fridge(room_object_t const &c);
+	void add_commercial_fridge(room_object_t const &c, bool inc_lg, bool inc_sm);
 	void add_store_gate(cube_t const &c, bool dim, float open_amt);
 	void add_jail_bars(room_object_t const &c);
 	void add_theft_sensor(room_object_t const &c, bool alarm_mode=0);

@@ -7465,27 +7465,63 @@ void building_room_geom_t::add_vent_hood(room_object_t const &c) {
 	back_mat.add_cube_to_verts(grid_back, grid_color, grid_back.get_llc(), front_face_mask, !dim); // front of back surface only
 }
 
-void building_room_geom_t::add_commercial_fridge(room_object_t const &c) {
-	unsigned const front_face(get_face_mask(c.dim, c.dir));
-	float const width(c.get_width()), depth(c.get_depth()), height(c.dz()), wall_width(0.05*min(width, depth));
-	rgeom_mat_t &metal_mat(get_painted_metal_material(1)); // shadowed
-	metal_mat.add_cube_to_verts_untextured(c, apply_light_color(c), ~front_face); // exterior; skip front face
-#if 1
-	add_interior_and_front_face(c, c, metal_mat, wall_width, front_face, apply_light_color(c, WHITE));
-#else
-	cube_t interior(c);
-	interior.z1() += 0.2*height;
-	interior.z2() -= 0.1*height;
-	interior.expand_in_dim(!c.dim, -wall_width);
-	interior.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*wall_width; // move back inward
-	metal_mat.add_cube_to_verts(interior, apply_light_color(c, WHITE), all_zeros, ~front_face, 0, 0, 0, 1); // interior, inverted; skip front face
-#endif
-	// draw glass doors with handles that slide to the sides
-	float const center(c.get_center_dim(!c.dim));
+void building_room_geom_t::add_commercial_fridge(room_object_t const &c, bool inc_lg, bool inc_sm) {
+	bool const dim(c.dim), dir(c.dir);
+	unsigned const front_face(get_face_mask(dim, dir));
+	float const height(c.dz()), wall_width(0.05*min(c.get_width(), c.get_depth())), dsign(dir ? 1.0 : -1.0);
+	cube_t bot(c), top(c), body(c);
+	bot.z2() = body.z1() = c.z1() + 0.25*height;
+	top.z1() = body.z2() = c.z2() - 0.10*height;
+	colorRGBA const int_color(apply_light_color(c, WHITE));
 
-	for (unsigned d = 0; d < 2; ++d) { // each side
-		// TODO
-	} // for d
+	if (inc_lg) { // draw exterior and interior metal surfaces
+		colorRGBA const ext_color(apply_light_color(c));
+		rgeom_mat_t &metal_mat(get_painted_metal_material(1)); // shadowed
+		metal_mat.add_cube_to_verts_untextured(c,   ext_color, ~front_face); // exterior; skip front face
+		metal_mat.add_cube_to_verts_untextured(bot, ext_color,  EF_Z12    ); // skip top and bottom
+		metal_mat.add_cube_to_verts_untextured(top, ext_color,  EF_Z1     ); // skip bottom
+		add_interior_and_front_face(c, body, metal_mat, wall_width, front_face, int_color);
+	}
+	if (inc_sm) {
+		// draw shelves
+		cube_t interior(body);
+		interior.expand_by(-wall_width);
+		unsigned const num_shelves(5);
+		float const shelf_spacing(interior.dz()/num_shelves), shelf_hthick(0.01*shelf_spacing);
+		rgeom_mat_t &shelf_mat(get_untextured_material(0, 0, 1)); // unshadowed, small
+
+		for (unsigned n = 1; n < num_shelves; ++n) { // bottom shelf not drawn
+			cube_t shelf(interior);
+			shelf.d[dim][dir] -= dsign*0.5*wall_width; // shift inside away from door
+			set_wall_width(shelf, (interior.z1() + n*shelf_spacing), shelf_hthick, 2);
+			unsigned num_xy_bars[2] = {};
+			for (unsigned d = 0; d < 2; ++d) {num_xy_bars[d] = max(2U, unsigned(0.05*shelf.get_sz_dim(d ^ dim)/shelf_hthick));}
+			add_grid_of_bars(shelf_mat, int_color, shelf, num_xy_bars[0]*2, num_xy_bars[1]/2, shelf_hthick, shelf_hthick, 0, 1);
+		} // for n
+		// draw glass doors with handles that slide to the sides
+		cube_t front(interior), glass_panels[2];
+		front.d[dim][ dir] -= dsign*0.5*wall_width;
+		front.d[dim][!dir]  = interior.d[dim][dir];
+		float const lr_center(c.get_center_dim(!dim)), fb_center(front.get_center_dim(dim));
+		colorRGBA const handle_color(apply_light_color(c, GRAY));
+		rgeom_mat_t &metal_mat(get_painted_metal_material(1, 0, 1)); // shadowed, small
+
+		for (unsigned d = 0; d < 2; ++d) { // each side
+			// TODO: handle either side being open
+			cube_t glass(front);
+			glass.d[!dim][!d] = lr_center;
+			glass.d[ dim][ d] = fb_center;
+			glass_panels[d] = glass;
+			cube_t handle(glass);
+			handle.d[dim][dir] += dsign*1.6*wall_width;
+			handle.d[!dim][!d] = glass.d[!dim][d] + (d ? -1.0 : 1.0)*1.2*wall_width;
+			handle.expand_in_dim(2, -0.3*handle.dz());
+			metal_mat.add_cube_to_verts_untextured(handle, handle_color, ~get_face_mask(dim, !dir)); // skip back/interior face
+		} // for d
+		colorRGBA const glass_color(0.8, 1.0, 0.9, 0.25); // greenish tint, semi transparent
+		rgeom_mat_t &glass_mat(get_transparent_material(GLASS_IOR, 1)); // small
+		for (unsigned d = 0; d < 2; ++d) {glass_mat.add_cube_to_verts_untextured(glass_panels[d], glass_color, EF_Z12);}
+	}
 }
 
 void add_grid_of_bars(rgeom_mat_t &mat, colorRGBA const &color, cube_t const &c, unsigned num_vbars, unsigned num_hbars, float vbar_hthick,

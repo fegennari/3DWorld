@@ -671,7 +671,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		case TYPE_CONV_BELT: add_conveyor_belt(*i, 0); break; // draw_dynamic=0
 		case TYPE_COAT_RACK: add_coat_rack(*i, tscale); break;
 		case TYPE_VENT_HOOD: add_vent_hood(*i); break;
-		case TYPE_COM_FRIDGE:add_commercial_fridge(*i); break;
+		case TYPE_COM_FRIDGE:add_commercial_fridge(*i, 1, 0); break; // inc_lg=1, inc_sm=0
 		//case TYPE_FRIDGE: if (i->is_open()) {} break; // draw open fridge?
 		case TYPE_ELEVATOR: break; // not handled here
 		case TYPE_BLOCKER:  break; // not drawn
@@ -845,6 +845,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_WALL_GAP:   add_wall_gap   (c, wall_tex); break; // wall_tscale should always be available here
 		case TYPE_MUSHROOM:   add_mushroom   (c); break;
 		case TYPE_PAN_SHELF:  add_pantry_shelf(c); break;
+		case TYPE_COM_FRIDGE: add_commercial_fridge(c, 0, 1); break; // inc_lg=0, inc_sm=1
 		case TYPE_DBG_SHAPE:  add_debug_shape(c); break;
 		// 3D model objects
 		case TYPE_KEY:       if (has_key_3d_model()) {model_objs.push_back(c);} else {add_key(c);} break; // draw or add as 3D model
