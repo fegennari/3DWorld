@@ -19,6 +19,8 @@ float get_locker_wall_thickness (room_object_t const &c);
 float get_radius_for_square_model(unsigned model_id);
 bool add_shelf_rack_top(room_object_t const &c);
 colorRGBA get_toaster_color(rand_gen_t &rgen);
+float get_comm_fridge_cubes(room_object_t const &c, cube_t &bot, cube_t &top, cube_t &body, cube_t &interior);
+unsigned get_comm_fridge_shelves(room_object_t const &c, cube_t const &interior, float wall_width, cube_t shelves[5]);
 bool place_bottle_on_obj(rand_gen_t &rgen, cube_t const &place_on, vect_room_object_t &objs, float vspace,
 	unsigned rid, float lamt, unsigned max_type, vect_cube_t const &avoid, bool at_z1, bool allow_transparent=0);
 bool place_dcan_on_obj  (rand_gen_t &rgen, cube_t const &place_on, vect_room_object_t &objs, float vspace,
@@ -346,8 +348,10 @@ void add_rows_of_food_boxes(rand_gen_t &rgen, room_object_t const &parent, cube_
 		if (is_pantry) {} // mix up the orientations and put some boxes on their sides?
 	}
 }
-void add_rows_of_bottles_or_cans(rand_gen_t &rgen, room_object_t const &parent, cube_t const &shelf, float height_val, float depth, bool no_alcohol, vect_room_object_t &objects) {
-	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_WAS_EXP);
+void add_rows_of_bottles_or_cans(rand_gen_t &rgen, room_object_t const &parent, cube_t const &shelf, float height_val, float depth,
+	bool no_alcohol, vect_room_object_t &objects, unsigned extra_flags=0)
+{
+	unsigned const flags(extra_flags | RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_WAS_EXP);
 
 	if (rgen.rand_float() < 0.65) { // add bottles; these aren't consumable by the player because that would be too powerful
 		float const bot_height(height_val*rgen.rand_uniform(0.7, 0.9)), bot_radius(min(0.25f*depth, bot_height*rgen.rand_uniform(0.12, 0.18)));
@@ -1508,8 +1512,33 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 
 void building_room_geom_t::expand_shelfrack(room_object_t const &c) {get_shelfrack_objects(c, expanded_objs);}
 
-void building_room_geom_t::expand_comm_fridge(room_object_t const &c) {
-	// TODO: TYPE_MILK, bottles and cans
+void building_room_geom_t::expand_comm_fridge(room_object_t const &c) { // Note: expanded on placement
+	cube_t bot, top, body, interior, shelves[5];
+	float const wall_width(get_comm_fridge_cubes(c, bot, top, body, interior));
+	unsigned const num_shelves(get_comm_fridge_shelves(c, interior, wall_width, shelves));
+	bool const has_milk(building_obj_model_loader.is_model_valid(OBJ_MODEL_MILK));
+	unsigned num_milk(0);
+	rand_gen_t rgen;
+	rgen.set_state(7*c.obj_id, (2*c.dim + c.dir + 4*c.room_id));
+	rgen.rand_mix();
+
+	for (unsigned n = 0; n < num_shelves; ++n) {
+		cube_t const &shelf(shelves[n]);
+		float const z2((n+1 == num_shelves) ? interior.z2() : shelves[n+1].z1()), height(z2 - shelf.z1());
+		assert(height > 0.0);
+		cube_t shelf_space(shelf);
+		set_cube_zvals(shelf_space, shelf.z2(), z2);
+
+		if (has_milk && num_milk < 2 && (rgen.rand() & 3) == 0) { // 25% chance of milk cartons; at most 2 rows
+			float const mheight(0.95*height), radius(mheight*get_radius_for_square_model(OBJ_MODEL_MILK));
+			add_rows_of_vcylinders(c, shelf_space, radius, mheight, 0.1, TYPE_MILK, 2, 0, objs, rgen); // up to 2 columns, but generally will be 1
+			++num_milk;
+		}
+		else { // bottles or cans
+			unsigned const flags((n == 0) ? 0 : RO_FLAG_ADJ_BOT); // tag upper shelves as adj_bot so that the bottle and can bottoms are drawn
+			add_rows_of_bottles_or_cans(rgen, c, shelf_space, height, shelf.get_sz_dim(c.dim), 0, objs, flags); // no_alcohol=0
+		}
+	} // for n
 }
 
 void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_gen_t &rgen) {
@@ -2235,7 +2264,6 @@ bool building_room_geom_t::expand_object(room_object_t &c, building_t const &bui
 	case TYPE_SHELVES:   expand_shelves  (c); break;
 	case TYPE_SHELFRACK: expand_shelfrack(c); break;
 	case TYPE_WINE_RACK: expand_wine_rack(c); break;
-	case TYPE_COM_FRIDGE:expand_comm_fridge(c); break;
 	case TYPE_CABINET: case TYPE_COUNTER: case TYPE_KSINK: case TYPE_VANITY: expand_cabinet(c); break;
 	case TYPE_MED_CAB:   expand_med_cab(c); break;
 	case TYPE_LOCKER:    expand_locker (c, building.btype); break;

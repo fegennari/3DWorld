@@ -2283,7 +2283,7 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom, f
 	rgeom_mat_t &mat(get_material(tex, mat_shadow, 0, 1, transparent)); // dynamic=0, small=1
 	vector3d const sz(c.get_size());
 	unsigned const dim(get_max_dim(sz)), dim1((dim+1)%3), dim2((dim+2)%3);
-	add_bottom |= (dim != 2); // add bottom if bottle is on its side
+	add_bottom |= (dim != 2 || (c.flags & RO_FLAG_ADJ_BOT)); // add bottom if bottle is on its side or tagged as adj_bot
 	float const dir_sign(c.dir ? -1.0 : 1.0), radius(0.25f*(sz[dim1] + sz[dim2])); // base should be square (default/avg radius is 0.15*height)
 	float const length(sz[dim]); // AKA height, if standing up
 	cube_t mid(c), body(c), neck(c);
@@ -2371,7 +2371,7 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom, f
 void building_room_geom_t::add_drink_can(room_object_t const &c) {
 	unsigned const ndiv(get_rgeom_sphere_ndiv(1)); // use smaller ndiv (16) to reduce vertex count
 	unsigned const dim(get_max_dim(c.get_size()));
-	bool const add_bottom(dim != 2); // draw bottom if not vertical
+	bool const add_bottom(dim != 2 || (c.flags & RO_FLAG_ADJ_BOT)); // draw bottom if not vertical or tagged as adj_bot
 	bool const shadowed(!c.is_on_srack()), is_empty(c.is_bottle_empty());
 	drink_can_params_t const &cp(drink_can_params[c.get_drink_can_type()]);
 	float const tscale_add(0.123*c.obj_id + get_obj_rand_tscale_add(c)); // add a pseudo-random rotation to the texture
@@ -7465,13 +7465,31 @@ void building_room_geom_t::add_vent_hood(room_object_t const &c) {
 	back_mat.add_cube_to_verts(grid_back, grid_color, grid_back.get_llc(), front_face_mask, !dim); // front of back surface only
 }
 
+float get_comm_fridge_cubes(room_object_t const &c, cube_t &bot, cube_t &top, cube_t &body, cube_t &interior) {
+	float const height(c.dz()), wall_width(0.05*min(c.dx(), c.dy())), dsign(c.dir ? 1.0 : -1.0);
+	top = bot = body = c;
+	bot.z2() = body.z1() = c.z1() + 0.25*height;
+	top.z1() = body.z2() = c.z2() - 0.10*height;
+	interior = body;
+	interior.expand_by(-wall_width);
+	return wall_width;
+}
+unsigned get_comm_fridge_shelves(room_object_t const &c, cube_t const &interior, float wall_width, cube_t shelves[5]) {
+	unsigned const num_shelves(5);
+	float const shelf_spacing(interior.dz()/num_shelves), shelf_hthick(0.01*shelf_spacing);
+
+	for (unsigned n = 0; n < num_shelves; ++n) {
+		shelves[n] = interior;
+		shelves[n].d[c.dim][c.dir] -= (c.dir ? 1.0 : -1.0)*0.5*wall_width; // shift inside away from door
+		set_wall_width(shelves[n], (interior.z1() + n*shelf_spacing), shelf_hthick, 2);
+	}
+	return num_shelves;
+}
 void building_room_geom_t::add_commercial_fridge(room_object_t const &c, bool inc_lg, bool inc_sm) {
 	bool const dim(c.dim), dir(c.dir);
 	unsigned const front_face(get_face_mask(dim, dir));
-	float const height(c.dz()), wall_width(0.05*min(c.get_width(), c.get_depth())), dsign(dir ? 1.0 : -1.0);
-	cube_t bot(c), top(c), body(c);
-	bot.z2() = body.z1() = c.z1() + 0.25*height;
-	top.z1() = body.z2() = c.z2() - 0.10*height;
+	cube_t bot, top, body, interior;
+	float const wall_width(get_comm_fridge_cubes(c, bot, top, body, interior));
 	colorRGBA const int_color(apply_light_color(c, WHITE));
 
 	if (inc_lg) { // draw exterior and interior metal surfaces
@@ -7484,23 +7502,19 @@ void building_room_geom_t::add_commercial_fridge(room_object_t const &c, bool in
 	}
 	if (inc_sm) {
 		// draw shelves
-		cube_t interior(body);
-		interior.expand_by(-wall_width);
-		unsigned const num_shelves(5);
-		float const shelf_spacing(interior.dz()/num_shelves), shelf_hthick(0.01*shelf_spacing);
+		cube_t shelves[5];
+		unsigned const num_shelves(get_comm_fridge_shelves(c, interior, wall_width, shelves));
 		rgeom_mat_t &shelf_mat(get_untextured_material(0, 0, 1)); // unshadowed, small
 
 		for (unsigned n = 1; n < num_shelves; ++n) { // bottom shelf not drawn
-			cube_t shelf(interior);
-			shelf.d[dim][dir] -= dsign*0.5*wall_width; // shift inside away from door
-			set_wall_width(shelf, (interior.z1() + n*shelf_spacing), shelf_hthick, 2);
+			float const shelf_hthick(0.5*shelves[n].dz());
 			unsigned num_xy_bars[2] = {};
-			for (unsigned d = 0; d < 2; ++d) {num_xy_bars[d] = max(2U, unsigned(0.05*shelf.get_sz_dim(d ^ dim)/shelf_hthick));}
-			add_grid_of_bars(shelf_mat, int_color, shelf, num_xy_bars[0]*2, num_xy_bars[1]/2, shelf_hthick, shelf_hthick, 0, 1);
-		} // for n
+			for (unsigned d = 0; d < 2; ++d) {num_xy_bars[d] = max(2U, unsigned(0.05*shelves[n].get_sz_dim(d ^ dim)/shelf_hthick));}
+			add_grid_of_bars(shelf_mat, int_color, shelves[n], num_xy_bars[0]*2, num_xy_bars[1]/2, shelf_hthick, shelf_hthick, 0, 1);
+		}
 		// draw glass doors with handles that slide to the sides
 		cube_t front(interior), glass_panels[2];
-		front.d[dim][ dir] -= dsign*0.5*wall_width;
+		front.d[dim][ dir] -= (dir ? 1.0 : -1.0)*0.5*wall_width;
 		front.d[dim][!dir]  = interior.d[dim][dir];
 		float const lr_center(c.get_center_dim(!dim)), fb_center(front.get_center_dim(dim));
 		colorRGBA const handle_color(apply_light_color(c, GRAY));
@@ -7513,7 +7527,7 @@ void building_room_geom_t::add_commercial_fridge(room_object_t const &c, bool in
 			glass.d[ dim][ d] = fb_center;
 			glass_panels[d] = glass;
 			cube_t handle(glass);
-			handle.d[dim][dir] += dsign*1.6*wall_width;
+			handle.d[dim][dir] += (dir ? 1.0 : -1.0)*1.6*wall_width;
 			handle.d[!dim][!d] = glass.d[!dim][d] + (d ? -1.0 : 1.0)*1.2*wall_width;
 			handle.expand_in_dim(2, -0.3*handle.dz());
 			metal_mat.add_cube_to_verts_untextured(handle, handle_color, ~get_face_mask(dim, !dir)); // skip back/interior face

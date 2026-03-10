@@ -443,6 +443,12 @@ void building_t::add_conv_store_objs(rand_gen_t &rgen, room_t const &room, float
 		place_obj_along_wall(TYPE_COM_FRIDGE, room, 0.75*window_vspace, vector3d(0.2, 0.8, 1.0), rgen, zval, room_id,
 			light_amt, place_area, objs_start, 1.0, 1, 4, 0, GRAY_BLACK, 1, SHAPE_CUBE, 0.0, 0, 0, 0, skip_walls_mask);
 	}
+	unsigned const objs_end(objs.size());
+
+	for (unsigned i = objs_start; i < objs_end; ++i) { // add objects now
+		room_object_t const obj(objs[i]); // deep copy to avoid invalidating the reference
+		if (obj.type == TYPE_COM_FRIDGE) {interior->room_geom->expand_comm_fridge(obj);}
+	}
 	if (1) { // add a clock on the wall behind the counter
 		bool const digital(1); // fits better above the window
 		float const place_pos(room.get_center_dim(!dim)), clock_z1(zval + 0.78*window_vspace);
