@@ -1255,7 +1255,7 @@ void building_t::doors_next_frame(point const &player_pos) { // player_pos is in
 		if (!updated || dsq < dmin_sq) {interior->last_active_door_ix = (d - interior->doors.begin()); dmin_sq = dsq;} // closest to the player
 		updated = 1;
 	} // for d
-	if (updated) {register_reflection_update();} // update reflections for moving doors
+	if (updated && sqrt(dmin_sq) < 20.0*get_window_vspace()) {register_reflection_update();} // update reflections for moving doors within the reflection bcube area
 
 	if (interior->door_state_updated && has_mall()) { // check mall store gates
 		for (store_doorway_t &d : interior->mall_info->store_doorways) {
