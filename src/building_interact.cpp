@@ -1223,8 +1223,10 @@ int store_doorway_t::next_frame() { // returns true if gate moved
 	return 1; // partially open
 }
 
-void building_t::doors_next_frame(point const &player_pos) {
+void building_t::doors_next_frame(point const &player_pos) { // player_pos is in building space
 	if (!has_room_geom()) return;
+	bool updated(0);
+	float dmin_sq(0.0);
 	interior->last_active_door_ix = -1;
 
 	for (auto d = interior->doors.begin(); d != interior->doors.end(); ++d) {
@@ -1249,9 +1251,10 @@ void building_t::doors_next_frame(point const &player_pos) {
 			play_door_open_close_sound(point(d->xc(), d->yc(), camera_pos.z), 0, 1.0, 1.0, d->type); // play close sound at player z; open=0
 			notify_door_fully_closed_state(*d);
 		}
-		interior->last_active_door_ix = (d - interior->doors.begin());
+		float const dsq(p2p_dist_sq(d->closest_pt(player_pos), player_pos));
+		if (!updated || dsq < dmin_sq) {interior->last_active_door_ix = (d - interior->doors.begin()); dmin_sq = dsq;} // closest to the player
+		updated = 1;
 	} // for d
-	bool updated(interior->last_active_door_ix >= 0);
 	if (updated) {register_reflection_update();} // update reflections for moving doors
 
 	if (interior->door_state_updated && has_mall()) { // check mall store gates
