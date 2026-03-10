@@ -1095,9 +1095,9 @@ void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_buildin
 	if (!door.get_for_closet()) {interior->door_state_updated = 1;} // required for AI navigation logic to adjust to this change; what about backrooms doors?
 	if (has_room_geom()) {interior->room_geom->invalidate_door_geom();} // need to recreate doors VBO
 	check_for_water_splash(cube_bot_center(door), 2.0); // big splash
-	register_reflection_update();
 
 	if (player_in_this_building || by_player) { // is it really safe to call this from the AI thread?
+		register_reflection_update();
 		point door_center(door.xc(), door.yc(), actor_pos.z);
 		// if door was opened or is fully closed play a sound; otherwise, play the close sound later when fully closed
 		if (door.open || door.open_amt == 0.0) {play_door_open_close_sound(door_center, door.open, 1.0, 1.0, door.type);}
