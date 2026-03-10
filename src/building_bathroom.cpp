@@ -228,8 +228,9 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 				hdim ^= 1;
 			} // for ar
 		}
-		// place a tub, but not in office buildings; placed before the sink because it's the largest and the most limited in valid locations
-		if (!no_tub && add_shower_tub && (!is_basement || rgen.rand_bool())) { // 50% of the time if in the basement
+		// place a tub, but not in office buildings; placed before the sink because it's the largest and the most limited in valid locations;
+		// skip for the last 5 iterations so that we can add a sink instead
+		if (!no_tub && add_shower_tub && n < 15 && (!is_basement || rgen.rand_bool())) { // 50% of the time if in the basement
 			cube_t place_area_tub(room_bounds);
 			place_area_tub.expand_by(-get_trim_thickness()); // just enough to prevent z-fighting and intersecting the wall trim
 			unsigned const tub_obj_ix(objs.size());
@@ -259,7 +260,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 		unsigned const sink_obj_ix(objs.size());
 
 		if (added_vanity) { // added vanity, no need to place a sink
-			added_bathroom_objs_mask |= PLACED_SINK; // vanity includes a sink
+			bathroom_objs_mask |= PLACED_SINK; // vanity includes a sink
 		}
 		else if (place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, room, sink_height_factor, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.6)) {
 			placed_obj = 1;
@@ -297,7 +298,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 			continue;
 		}
 		added_bathroom_objs_mask |= bathroom_objs_mask;
-		break;
+		break; // success or last try
 	} // for n
 	if (is_house) {maybe_add_radiator_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);}
 	else if (floor <= NUM_RTYPE_SLOTS && room.get_room_type(floor) == RTYPE_MENS && building_obj_model_loader.is_model_valid(OBJ_MODEL_URINAL)) {
