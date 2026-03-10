@@ -357,12 +357,12 @@ class cube_map_reflection_manager_t {
 		float const angle(0.5*perspective_fovy*TO_RADIANS); // 90 degree FOV
 		camera_pdu = pos_dir_up(center, cview_dir, up_vector, angle, near_plane, far_plane, 1.0, 1);
 	}
-	bool has_reflected_person(building_t const &building, pos_dir_up const &pdu, cube_t const &clip_cube) {
+	bool has_reflected_person(building_t const &building, pos_dir_up const &pdu, cube_t const &clip_cube, vector3d const &xlate) {
 		assert(building.interior);
 		if (!animate2) return 0; // no reflection update when paused
 
 		for (person_t const &p : building.interior->people) {
-			if (!p.is_waiting_or_stopped() && clip_cube.contains_pt(p.pos) && pdu.point_visible_test(p.pos)) return 1;
+			if (!p.is_waiting_or_stopped() && clip_cube.contains_pt(p.pos) && pdu.point_visible_test(p.pos + xlate)) return 1;
 		}
 		return 0;
 	}
@@ -431,7 +431,7 @@ public:
 				set_view_frustum(dim, dir);
 				reflection_clip_cube = ref_cube;
 				reflection_clip_cube.d[dim][!dir] = pos_bs[dim]; // clip to half space in front of cube map face
-				if (!center_moved && !has_reflected_person(building, camera_pdu, reflection_clip_cube)) continue; // no pos change; skip if no reflected people
+				if (!center_moved && !has_reflected_person(building, camera_pdu, reflection_clip_cube, xlate)) continue; // no pos change; skip if no reflected people
 				pre_render_face();
 				draw_buildings(0, reflection_pass, xlate);
 				post_render_face(face_id);
