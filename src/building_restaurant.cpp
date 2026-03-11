@@ -400,7 +400,8 @@ cube_t building_t::add_restaurant_counter(cube_t const &wall, bool dim, bool dir
 			} // for n
 			if (!store_is_closed && !cregs.empty() && global_building_params.people_per_office_max > 0) { // place people at a cash register if store is open
 				rand_gen_t rgen2(rgen); // don't modify rgen so that restaurants are the same with or without people
-				unsigned const num_people(min(size_t(rgen2.rand() % 3), cregs.size())); // 0-2
+				unsigned num_people(min(size_t(rgen2.rand() % 3), cregs.size())); // 0-2
+				if (is_conv_store()) {max_eq(num_people, 1U);} // always place a person at the convenience store counter
 
 				if (num_people > 0) {
 					float const radius(get_ped_coll_radius());
