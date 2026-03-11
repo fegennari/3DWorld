@@ -64,7 +64,6 @@ void get_bed_leg_cubes_from_bed_cubes(room_object_t const &c, cube_t cubes[6]);
 colorRGBA get_shower_tile_color(room_object_t const &c);
 void get_shower_tile_cubes(room_object_t const &c, cube_t cubes[3]);
 cube_t get_shower_tub_tiled_area(room_object_t const &c, cube_t const &wall);
-float get_comm_fridge_cubes(room_object_t const &c, cube_t &bot, cube_t &top, cube_t &body, cube_t &interior);
 
 bool check_indir_enabled(bool in_basement, bool in_attic) {
 	if (in_basement) return INDIR_BASEMENT_EN;
@@ -663,11 +662,13 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			add_colored_cubes(sides, 3, get_shower_tile_color(*c), cc);
 		}
 		else if (type == TYPE_COM_FRIDGE) {
-			cube_t bot, top, body, interior;
-			get_comm_fridge_cubes(*c, bot, top, body, interior);
+			cube_t bot, top, body, cf_int;
+			float const wall_width(get_comm_fridge_cubes(*c, bot, top, body, cf_int));
+			cube_t body_back(body);
+			body_back.d[dim][dir] = c->d[dim][!dir] + (dir ? 1.0 : -1.0)*wall_width; // thin back wall
 			cc.emplace_back(bot, color);
 			cc.emplace_back(top, color);
-			// interior is open in the front and excluded so that the objects inside are lit
+			cc.emplace_back(body_back, WHITE); // Note: ignoring body sides, which are small
 		}
 		else { // single cube
 			cube_t bc(*c); // handle 3D models that don't fill the entire cube

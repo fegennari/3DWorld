@@ -19,7 +19,6 @@ float get_locker_wall_thickness (room_object_t const &c);
 float get_radius_for_square_model(unsigned model_id);
 bool add_shelf_rack_top(room_object_t const &c);
 colorRGBA get_toaster_color(rand_gen_t &rgen);
-float get_comm_fridge_cubes(room_object_t const &c, cube_t &bot, cube_t &top, cube_t &body, cube_t &interior);
 unsigned get_comm_fridge_shelves(room_object_t const &c, cube_t const &interior, float wall_width, cube_t shelves[5]);
 bool place_bottle_on_obj(rand_gen_t &rgen, cube_t const &place_on, vect_room_object_t &objs, float vspace,
 	unsigned rid, float lamt, unsigned max_type, vect_cube_t const &avoid, bool at_z1, bool allow_transparent=0);
@@ -1513,9 +1512,9 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 void building_room_geom_t::expand_shelfrack(room_object_t const &c) {get_shelfrack_objects(c, expanded_objs);}
 
 void building_room_geom_t::expand_comm_fridge(room_object_t const &c) { // Note: expanded on placement
-	cube_t bot, top, body, interior, shelves[5];
-	float const wall_width(get_comm_fridge_cubes(c, bot, top, body, interior));
-	unsigned const num_shelves(get_comm_fridge_shelves(c, interior, wall_width, shelves));
+	cube_t bot, top, body, cf_int, shelves[5];
+	float const wall_width(get_comm_fridge_cubes(c, bot, top, body, cf_int));
+	unsigned const num_shelves(get_comm_fridge_shelves(c, cf_int, wall_width, shelves));
 	bool const has_milk(building_obj_model_loader.is_model_valid(OBJ_MODEL_MILK));
 	unsigned num_milk(0);
 	rand_gen_t rgen;
@@ -1524,7 +1523,7 @@ void building_room_geom_t::expand_comm_fridge(room_object_t const &c) { // Note:
 
 	for (unsigned n = 0; n < num_shelves; ++n) {
 		cube_t const &shelf(shelves[n]);
-		float const z2((n+1 == num_shelves) ? interior.z2() : shelves[n+1].z1()), height(z2 - shelf.z1());
+		float const z2((n+1 == num_shelves) ? cf_int.z2() : shelves[n+1].z1()), height(z2 - shelf.z1());
 		assert(height > 0.0);
 		cube_t shelf_space(shelf);
 		set_cube_zvals(shelf_space, shelf.z2(), z2);

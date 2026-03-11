@@ -233,7 +233,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_JAR       ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 5.0,   0.25,  "jar of spice");
 	bldg_obj_types[TYPE_FOOD_TUB  ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 25.0,  8.0,   "tub of food");
 	bldg_obj_types[TYPE_VENT_HOOD ] = bldg_obj_type_t(0, 0, 1, 0, 1, 0, 1, 500,  200.00, "ventilation hood"); // rat_coll set since it's spider collidable
-	bldg_obj_types[TYPE_COM_FRIDGE] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 3, 400.0, 200.0, "commercial fridge");
+	bldg_obj_types[TYPE_COM_FRIDGE] = bldg_obj_type_t(1, 1, 1, 1, 1, 0, 3, 400.0, 200.0, "commercial fridge"); // pickup=1 because it can be picked from (doors occlude objects)
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");
@@ -1954,6 +1954,15 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 				if (!i->is_open() && !i->contains_pt(at_pos)) { // stalls/closets block the player from taking toilets/boxes unless open, or the player is inside
 					closest_obj_id = -1;
 					dmin_sq = dsq;
+				}
+				continue;
+			}
+			if (type == TYPE_COM_FRIDGE) { // blocks pickup of objects inside through closed glass doors
+				cube_t doors[2];
+				get_comm_fridge_doors(*i, doors);
+
+				for (unsigned d = 0; d < 2; ++d) { // check for line hit closed door
+					if (!(i->drawer_flags & (1<<d)) && doors[d].line_intersects(p1c, p2c)) {closest_obj_id = -1; dmin_sq = dsq; break;}
 				}
 				continue;
 			}

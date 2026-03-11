@@ -740,9 +740,8 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 	}
 	else if (type == TYPE_MWAVE) {
 		cube_t const panel(get_mwave_panel_bcube(obj));
-		float cur_tmin(0.0), cur_tmax(1.0);
 
-		if (!get_line_clip(int_pos, query_ray_end, panel.d, cur_tmin, cur_tmax)) { // not pointing at the panel - open and close the door
+		if (!panel.line_intersects(int_pos, query_ray_end)) { // not pointing at the panel - open and close the door
 			obj.flags       ^= RO_FLAG_OPEN; // toggle open/closed
 			update_draw_data = 1;
 			gen_sound_thread_safe((obj.is_open() ? (unsigned)SOUND_DOOR_OPEN : (unsigned)SOUND_DOOR_CLOSE), local_center, 0.5, 1.6);
@@ -765,8 +764,21 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 			sound_scale = 0.6;
 		}
 	}
-	else if (type == TYPE_COM_FRIDGE) {
-		// TODO
+	else if (type == TYPE_COM_FRIDGE) { // toggle glass panel doors on two sides
+		cube_t doors[2];
+		get_comm_fridge_doors(obj, doors);
+		unsigned hit_door(2); // 0=lo, 1=hi, 2=neither
+		float best_tmin(1.0), tmin(0.0), tmax(1.0);
+
+		for (unsigned d = 0; d < 2; ++d) {
+			if (get_line_clip(int_pos, query_ray_end, doors[d].d, tmin, tmax) && tmin < best_tmin) {best_tmin = tmin; hit_door = d;}
+		}
+		if (hit_door < 2) { // one door was hit
+			obj.drawer_flags ^= (1 << hit_door);
+			sound_scale       = 0.2;
+			gen_sound_thread_safe_at_player(SOUND_SLIDING, 0.4);
+			interior->room_geom->invalidate_small_geom(); // only small objs changed
+		}
 	}
 	else if (type == TYPE_LOCKER) {
 		if (!obj.is_open() && (obj.flags & RO_FLAG_NONEMPTY)) { // RO_FLAG_NONEMPTY indicates locked
