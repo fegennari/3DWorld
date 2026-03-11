@@ -441,7 +441,7 @@ void building_t::add_conv_store_objs(rand_gen_t &rgen, room_t const &room, float
 
 	for (unsigned n = 0; n < num_cf; ++n) { // not at window
 		place_obj_along_wall(TYPE_COM_FRIDGE, room, 0.75*window_vspace, vector3d(0.2, 0.8, 1.0), rgen, zval, room_id,
-			light_amt, place_area, objs_start, 1.0, 1, 4, 0, GRAY_BLACK, 1, SHAPE_CUBE, 0.0, 0, 0, 0, skip_walls_mask);
+			light_amt, place_area, objs_start, 1.0, 1, 4, 0, GRAY_BLACK, 1, SHAPE_CUBE, 0.0, RO_FLAG_LIT, 0, 0, skip_walls_mask);
 	}
 	unsigned const objs_end(objs.size());
 

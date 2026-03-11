@@ -7522,7 +7522,7 @@ void building_room_geom_t::add_commercial_fridge(room_object_t const &c, bool in
 		// draw shelves
 		cube_t shelves[5];
 		unsigned const num_shelves(get_comm_fridge_shelves(c, interior, wall_width, shelves));
-		rgeom_mat_t &shelf_mat(get_untextured_material(0, 0, 1)); // unshadowed, small
+		rgeom_mat_t &shelf_mat(get_untextured_material(1, 0, 1)); // shadowed, small
 
 		for (unsigned n = 1; n < num_shelves; ++n) { // bottom shelf not drawn
 			float const shelf_hthick(0.5*shelves[n].dz());

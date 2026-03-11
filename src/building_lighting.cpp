@@ -2127,7 +2127,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			bool const is_tv_or_monitor_thats_on(i->is_tv_or_monitor() && i->is_tv_monitor_on()); // TV or monitor that's on, powered, and not broken
 
 			// should we do an occlusion query?
-			if (((type == TYPE_LAVALAMP || type == TYPE_FISHTANK || type == TYPE_WARN_LIGHT) && i->is_light_on()) || is_tv_or_monitor_thats_on) {
+			if (((type == TYPE_LAVALAMP || type == TYPE_FISHTANK || type == TYPE_WARN_LIGHT || type == TYPE_COM_FRIDGE) && i->is_light_on()) || is_tv_or_monitor_thats_on) {
 				room_t const &room(get_room(i->room_id)); // should we clip to the current floor in Z?
 				if ((camera_room_tall || room.is_industrial() || room.is_retail() || room.is_mall_or_store()) && camera_room == (int)i->room_id) {} // player in a tall room
 				else if (camera_in_mall && room.is_store()) {} // store visible from another floor of the mall
@@ -2142,6 +2142,15 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				else if (type == TYPE_WARN_LIGHT) {
 					if (!is_flashing_light_on()) continue; // not on
 					if (!add_dlight_if_visible(get_warning_light_src_pos(*i), 25.0*i->get_radius(), RED, xlate, lights_bcube)) continue; // point light
+				}
+				else if (type == TYPE_COM_FRIDGE) {
+					cube_t bot, top, body, cf_int;
+					float const wall_thickness(get_comm_fridge_cubes(*i, bot, top, body, cf_int));
+					if (!add_dlight_if_visible(cube_top_center(cf_int), 10.0*cf_int.get_sz_dim(i->dim), colorRGBA(0.9, 0.85, 1.0), xlate, lights_bcube, -plus_z, 0.4)) continue;
+					cube_t light_area(cf_int);
+					light_area.expand_by(wall_thickness); // make sure to include the walls
+					dl_sources.back().set_custom_bcube(light_area);
+					continue;
 				}
 				else if (is_tv_or_monitor_thats_on) {
 					vector3d const dir(vector_from_dim_dir(i->dim, i->dir));
