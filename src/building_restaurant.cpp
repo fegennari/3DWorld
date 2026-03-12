@@ -264,7 +264,7 @@ void building_t::add_mall_restaurant_objs(rand_gen_t &rgen, room_t const &room, 
 		cube_t wall(windows_area);
 		set_wall_width(wall, room.d[dim][dir], wall_hthick, dim);
 		set_cube_zvals(wall, bot_wall_z1, bot_wall_z2);
-		add_restaurant_counter(wall, dim, dir, room_id, light_amt, 1, 1, store_is_closed, rgen); // leave_end_gaps=1 (doesn't span the entire room), add_cash_registers=1
+		add_restaurant_counter(wall, dim, dir, room_id, light_amt, 0, 1, 1, store_is_closed, rgen); // leave_end_gaps=0, draw_ends=1 (doesn't span room), add_cash_registers=1
 		set_cube_zvals(wall, windows_area.z2()-wall_thickness, windows_area.z2()); // narrow strip to fill the bottom edge of the top wall
 		objs.emplace_back(wall, TYPE_STAIR_WALL, room_id, dim, 0, RO_FLAG_HANGING, light_amt, SHAPE_CUBE, wall_color); // upper wall; draw bottom
 		// add trim around the opening
@@ -309,7 +309,7 @@ void building_t::add_mall_restaurant_objs(rand_gen_t &rgen, room_t const &room, 
 	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_UNTEXTURED); // not reflective
 	interior->room_geom->objs.emplace_back(trim, TYPE_METAL_BAR, room_id, sdim, 0, flags, light_amt, SHAPE_CUBE, trim_color, get_skip_mask_for_xy(!sdim)); // skip ends
 	unsigned const objs_start(objs.size());
-	cube_t const counter(add_restaurant_counter(wall, sdim, pdir, room_id, light_amt, leave_end_gaps, is_open, store_is_closed, rgen)); // add_cash_registers=is_open
+	cube_t const counter(add_restaurant_counter(wall, sdim, pdir, room_id, light_amt, leave_end_gaps, leave_end_gaps, is_open, store_is_closed, rgen)); // add_cash_registers=is_open
 
 	if (is_open && has_windows) { // add a blocker for the windows and door
 		cube_t blocker(windows_area);
@@ -345,7 +345,7 @@ void building_t::add_mall_restaurant_objs(rand_gen_t &rgen, room_t const &room, 
 }
 
 cube_t building_t::add_restaurant_counter(cube_t const &wall, bool dim, bool dir, unsigned room_id, float light_amt,
-	bool leave_end_gaps, bool add_cash_registers, bool store_is_closed, rand_gen_t &rgen)
+	bool leave_end_gaps, bool draw_ends, bool add_cash_registers, bool store_is_closed, rand_gen_t &rgen)
 {
 	bool const conv_store(is_conv_store()); // convenience store counter rather than mall restaurant counter
 	bool const in_mall(!conv_store && has_mall());
@@ -356,7 +356,7 @@ cube_t building_t::add_restaurant_counter(cube_t const &wall, bool dim, bool dir
 	cube_t counter(wall);
 	set_cube_zvals(counter, wall.z2(), (wall.z2() + 0.6*wall_thickness));
 	counter.expand_in_dim(dim, 2.5*wall_thickness);
-	unsigned const skip_faces(leave_end_gaps ? 0 : get_skip_mask_for_xy(!dim)); // skip ends if no gaps
+	unsigned const skip_faces(draw_ends ? 0 : get_skip_mask_for_xy(!dim)); // skip ends if no gaps
 	objs.emplace_back(counter, TYPE_METAL_BAR, room_id, dim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, LT_GRAY, skip_faces);
 	// create POI for the counter; mall restaurant counter POI may be in the mall concourse rather than the restaurant
 	unsigned const poi_room_id((in_mall && get_mall_concourse().intersects(counter)) ? (unsigned)interior->ext_basement_hallway_room_id : room_id);
@@ -371,7 +371,7 @@ cube_t building_t::add_restaurant_counter(cube_t const &wall, bool dim, bool dir
 	objs.emplace_back(blocker, TYPE_BLOCKER,  room_id, dim, RO_FLAG_NOCOLL, 0, light_amt, SHAPE_CUBE); // for objects
 	cube_t place_area(counter);
 	place_area.expand_in_dim(!dim, -wall_thickness); // skip ends, which may be inside the wall trim
-	float const counter_len(place_area.get_sz_dim(!dim));
+	float const wall_center(wall.get_center_dim(dim)), counter_len(place_area.get_sz_dim(!dim));
 	vect_cube_t avoid;
 	
 	if (add_cash_registers && building_obj_model_loader.is_model_valid(OBJ_MODEL_CASHREG)) {
@@ -384,7 +384,7 @@ cube_t building_t::add_restaurant_counter(cube_t const &wall, bool dim, bool dir
 			vect_cube_t cregs;
 			cube_t cr;
 			set_cube_zvals(cr, place_area.z2(), place_area.z2()+height);
-			set_wall_width(cr, place_area.get_center_dim(dim), hdepth, dim); // centered on the counter
+			set_wall_width(cr, wall_center, hdepth, dim); // centered on the counter
 
 			for (unsigned n = 0; n < num_cr; ++n) {
 				for (unsigned N = 0; N < 10; ++N) {
@@ -480,6 +480,20 @@ cube_t building_t::add_restaurant_counter(cube_t const &wall, bool dim, bool dir
 	for (unsigned n = 0; n < num_fruit; ++n) { // fruit; apples in a bowl?
 		if (rgen.rand_bool() ? place_banana_on_obj(rgen, place_area, room_id, light_amt, avoid) :
 			                   place_apple_on_obj (rgen, place_area, room_id, light_amt, avoid)) {avoid.push_back(objs.back());}
+	}
+	if (0 && leave_end_gaps) { // add path nodes at each end of the counter
+		float const wall_end_space(0.6*get_min_front_clearance_inc_people());
+		cube_t const room_bounds(get_walkable_room_bounds(get_room(room_id)));
+		point pos;
+		pos[dim] = wall_center;
+		pos.z = wall.z1() + get_ped_radius(); // approximate height of person
+
+		for (unsigned d = 0; d < 2; ++d) {
+			pos[!dim] = wall.d[!dim][d] + (d ? 1.0 : -1.0)*wall_end_space;
+			if (!room_bounds.contains_pt(pos)) {cout << TXTS(room_bounds) << TXTS(pos) << endl;} // TESTING
+			assert(room_bounds.contains_pt(pos));
+			interior->room_geom->path_nodes.emplace_back(pos, room_id);
+		}
 	}
 	return counter;
 }

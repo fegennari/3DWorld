@@ -1306,6 +1306,10 @@ struct point_of_interest_t {
 	point_of_interest_t(cube_t const &la, cube_t const &aa, unsigned rid) : look_area(la), act_area(aa), room_id(rid) {}
 	unsigned get_stand_areas(cube_t const &room_bounds, cube_t sas[4], float radius=0.0) const;
 };
+struct path_node_t : public point {
+	unsigned room_id;
+	path_node_t(point const &p, unsigned rid) : point(p), room_id(rid) {}
+};
 
 struct building_room_geom_t {
 
@@ -1327,8 +1331,9 @@ struct building_room_geom_t {
 	vector<obj_model_inst_t> obj_model_insts;
 	vector<door_handle_t> door_handles; // for 3D model drawing
 	vector<room_assignment_t> orig_assigned_rooms;
-	vector<person_place_t> people_place;
-	vector<point_of_interest_t> pois;
+	vector<person_place_t> people_place; // for building AI
+	vector<point_of_interest_t> pois; // for building AI
+	vector<path_node_t> path_nodes; // for building AI
 	vector<unsigned> moved_obj_ids;
 	vect_rat_t    rats, sewer_rats, pet_rats;
 	vect_spider_t spiders, sewer_spiders;
@@ -1639,6 +1644,7 @@ struct building_room_geom_t {
 	void set_factory_machine_seed(unsigned rseed1, unsigned rseed2);
 	void set_factory_machine_seed_from_obj(room_object_t const &obj) {set_factory_machine_seed(obj.item_flags, obj.obj_id);}
 	void update_draw_state_for_room_object(room_object_t const &obj, building_t &building, bool was_taken);
+	void get_path_nodes_for_pt_and_room(cube_t const &path_area, float zval, float max_dz, unsigned room_id, vector<point> &cand_nodes) const;
 	
 	room_object_t &get_room_object_by_index(unsigned obj_id) { // inlined for performance
 		if (obj_id < objs.size()) {return objs[obj_id];}
@@ -3179,7 +3185,7 @@ private:
 	void add_mall_restaurant_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, bool dim, bool dir,
 		bool no_doorway, bool store_is_closed, float light_amt, cube_t &div_wall, light_ix_assign_t &light_ix_assign);
 	cube_t add_restaurant_counter(cube_t const &wall, bool dim, bool dir, unsigned room_id, float light_amt,
-		bool leave_end_gaps, bool add_cash_registers, bool store_is_closed, rand_gen_t &rgen);
+		bool leave_end_gaps, bool draw_ends, bool add_cash_registers, bool store_is_closed, rand_gen_t &rgen);
 	bool add_object_to_tray(cube_t const &tray, bool dim, unsigned room_id, float light_amt, bool no_alcohol, vect_cube_t const &avoid, rand_gen_t &rgen, unsigned &prev_type);
 	unsigned add_objects_to_tray(cube_t const &tray, bool dim, unsigned room_id, float light_amt, bool no_alcohol, rand_gen_t &rgen, unsigned max_num);
 	void add_cafeteria_tray(cube_t const &tray, bool dim, unsigned room_id, float light_amt, bool no_alcohol, rand_gen_t &rgen);
@@ -3607,6 +3613,7 @@ float get_player_eye_height();
 cube_t get_stairs_bcube_expanded(stairwell_t const &s, float ends_clearance, float sides_clearance, float doorway_width);
 float get_door_open_dist();
 float get_lamp_width_scale();
+float get_ped_radius     ();
 float get_ped_coll_radius();
 unsigned get_face_mask(unsigned dim, bool dir);
 unsigned get_skip_mask_for_xy(bool dim);

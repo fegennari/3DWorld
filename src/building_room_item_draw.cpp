@@ -2687,6 +2687,11 @@ void building_t::debug_people_in_building(shader_t &s, point const &camera_bs) c
 		} // for p
 		set_fill_mode(); // reset
 	}
+	if (has_room_geom()) { // draw path nodes
+		float const pn_radius(1.0*get_wall_thickness());
+		color_shader.set_cur_color(MAGENTA);
+		for (path_node_t const &pn : interior->room_geom->path_nodes) {draw_sphere_vbo(pn, pn_radius, ndiv, 0);}
+	}
 	if (DEBUG_AI_COLLIDERS && (frame_counter & 1)) { // debug avoid cubes on alternating frames
 		vect_cube_t avoid;
 		interior->get_avoid_cubes(avoid, (camera_bs.z - get_bldg_player_height()), (camera_bs.z + CAMERA_RADIUS),

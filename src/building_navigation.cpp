@@ -41,7 +41,8 @@ unsigned get_L_stairs_first_flight_count(stairs_landing_base_t const &s, float l
 void get_L_stairs_entrances(stairs_landing_base_t const &s, float doorway_width, bool for_placement, cube_t entrances[2]);
 bool bed_is_wide(room_object_t const &c);
 
-float get_ped_coll_radius() {return COLL_RADIUS_SCALE*ped_manager_t::get_ped_radius();}
+float get_ped_radius     () {return ped_manager_t::get_ped_radius();}
+float get_ped_coll_radius() {return COLL_RADIUS_SCALE*get_ped_radius();}
 
 
 bool check_line_int_xy(vect_cube_t const &c, point const &p1, point const &p2) {
@@ -531,8 +532,10 @@ public:
 		if (find_valid_pt_in_room(avoid, building, radius, zval, node.bcube, node_ix, rgen, pos, no_use_init, has_custom_dest)) {not_room_center = 1;} // no_poi=has_custom_dest
 		return pos;
 	}
-
-	static void choose_pt_xy_in_room_avoid_pool(point &pos, cube_t const &c, building_t const &building, unsigned room_ix, unsigned pt_ix, rand_gen_t &rgen) {
+	// used by connect_room_endpoints() to select intermediate path points
+	static void choose_pt_xy_in_room_avoid_pool(point &pos, cube_t const &c, building_t const &building,
+		unsigned room_ix, unsigned pt_ix, vector<point> const &cand_nodes, rand_gen_t &rgen)
+	{
 		if (pt_ix < 4 && building.has_pool()) { // check for and handle the pool with a special case, since it can be difficult to navigate around
 			indoor_pool_t const &pool(building.interior->pool);
 
@@ -547,7 +550,8 @@ public:
 				}
 			}
 		}
-		gen_xy_pos_in_cube(pos, c, rgen);
+		if (pt_ix < cand_nodes.size()) {pos = cand_nodes[pt_ix];}
+		else {gen_xy_pos_in_cube(pos, c, rgen);}
 	}
 	static bool maybe_shorten_path(point const &p1, point const &p2, point &p, vect_cube_t const &keepout) {
 		float const t(get_closest_pt_on_line_t(p1, p, p2));
@@ -611,7 +615,12 @@ public:
 		cube_t pts_bcube(p1, p2);
 		bool const use_pts_bcube(min(pts_bcube.dx(), pts_bcube.dy()) > 2.0*radius && pts_bcube.intersects_xy(walk_area)); // don't use if too small/narrow
 		if (use_pts_bcube) {pts_bcube.intersect_with_cube_xy(walk_area);} // must be contained in walkable area of the current room (in case p1 or p2 is in adjacent room)
-
+		vector<point> cand_nodes;
+		
+		if (building.has_room_geom()) {
+			building.interior->room_geom->get_path_nodes_for_pt_and_room(walk_area, p1.z, radius, room_ix, cand_nodes);
+			vector_random_shuffle(cand_nodes, rgen);
+		}
 		// do something simple and brute force:
 		// since rooms tend to only have objects in the middle, try to find the best point that creates the shortest non-intersecting 2-part or 3-part path
 		for (unsigned npts = 1; npts <= 2; ++npts) { // try to add 1 point; if that fails, try to add 2 points
@@ -624,7 +633,7 @@ public:
 				point pos, pos2;
 				pos.z = pos2.z = p1.z;
 				cube_t const &pref_bcube((use_pts_bcube && n < num_tries/2) ? pts_bcube : walk_area); // prefer point inside p1/p2 bcube (for backrooms)
-				choose_pt_xy_in_room_avoid_pool(pos, pref_bcube, building, room_ix, n, rgen); // choose a rand point in the room
+				choose_pt_xy_in_room_avoid_pool(pos, pref_bcube, building, room_ix, n, cand_nodes, rgen); // choose a rand point in the room
 				if (check_vect_cube_contains_pt_xy(keepout, pos)) continue; // bad point
 				if (!building.check_pt_within_part_sides(pos))    continue; // outside non-cube building
 				bool const seg1_bad(check_line_int_xy(keepout, p1, pos)), seg2_bad(check_line_int_xy(keepout, pos, p2));
@@ -639,7 +648,7 @@ public:
 					bool success(0);
 
 					for (unsigned m = 0; m < 20; ++m) { // make 20 random attempts
-						choose_pt_xy_in_room_avoid_pool(pos2, pref_bcube, building, room_ix, m, rgen); // choose a rand point in the room
+						choose_pt_xy_in_room_avoid_pool(pos2, pref_bcube, building, room_ix, m, cand_nodes, rgen); // choose a rand point in the room
 						if (!building.check_pt_within_part_sides(pos2)) continue; // outside non-cube building
 						if (!check_vect_cube_contains_pt_xy(keepout, pos2) && !check_line_int_xy(keepout, pos, pos2)) {success = 1; break;} // good point
 					}
@@ -3467,6 +3476,18 @@ void building_t::set_look_dir(person_t &person) const {
 		dmin_sq = dist_sq;
 		found   = 1;
 	} // for p
+}
+
+void building_room_geom_t::get_path_nodes_for_pt_and_room(cube_t const &path_area, float zval, float max_dz, unsigned room_id, vector<point> &cand_nodes) const {
+	if (path_nodes.empty()) return;
+	cube_t pn_bc(path_area);
+	set_wall_width(pn_bc, zval, max_dz, 2); // zval within radius of pos.z
+
+	for (path_node_t const &pn : path_nodes) {
+		if (pn.room_id != room_id)  continue;
+		if (!pn_bc.contains_pt(pn)) continue;
+		cand_nodes.emplace_back(pn.x, pn.y, zval); // keep same zval
+	}
 }
 
 void building_t::ai_room_lights_update(person_t const &person) {

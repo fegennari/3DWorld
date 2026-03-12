@@ -414,7 +414,7 @@ void building_t::add_conv_store_objs(rand_gen_t &rgen, room_t const &room, float
 	set_cube_zvals(wall, zval, (zval + 0.35*window_vspace));
 	set_wall_width(wall, wall_pos, 0.5*wall_thick, dim);
 	wall.expand_in_dim(!dim, -2.2*door_width);
-	cube_t const counter(add_restaurant_counter(wall, dim, !dir, room_id, light_amt, 1, 1, 0, rgen)); // add_cash_registers=1, leave_end_gaps=1, store_is_closed=0
+	cube_t const counter(add_restaurant_counter(wall, dim, !dir, room_id, light_amt, 1, 1, 1, 0, rgen)); // leave_end_gaps=1, draw_nds=1, add_cash_registers=1, store_is_closed=0
 	float const counter_front(counter.d[dim][!dir]);
 	// add vending machines to either side of the counter
 	bool const side(rgen.rand_bool());
