@@ -7527,7 +7527,7 @@ void building_room_geom_t::add_commercial_fridge(room_object_t const &c, bool in
 		for (unsigned n = 1; n < num_shelves; ++n) { // bottom shelf not drawn
 			float const shelf_hthick(0.5*shelves[n].dz());
 			unsigned num_xy_bars[2] = {};
-			for (unsigned d = 0; d < 2; ++d) {num_xy_bars[d] = max(2U, unsigned(0.05*shelves[n].get_sz_dim(d ^ dim)/shelf_hthick));}
+			for (unsigned d = 0; d < 2; ++d) {num_xy_bars[d] = max(2U, unsigned(0.05*shelves[n].get_sz_dim(bool(d) ^ dim)/shelf_hthick));}
 			add_grid_of_bars(shelf_mat, int_color, shelves[n], num_xy_bars[0]*2, num_xy_bars[1]/2, shelf_hthick, shelf_hthick, 0, 1);
 		}
 		// draw glass doors with handles that slide to the sides

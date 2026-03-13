@@ -550,8 +550,8 @@ public:
 				}
 			}
 		}
-		if (pt_ix < cand_nodes.size()) {pos = cand_nodes[pt_ix];}
-		else {gen_xy_pos_in_cube(pos, c, rgen);}
+		if (pt_ix < cand_nodes.size()) {pos = cand_nodes[pt_ix];} // choose a path node
+		else {gen_xy_pos_in_cube(pos, c, rgen);} // choose a random point
 	}
 	static bool maybe_shorten_path(point const &p1, point const &p2, point &p, vect_cube_t const &keepout) {
 		float const t(get_closest_pt_on_line_t(p1, p, p2));
