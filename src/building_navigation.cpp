@@ -3428,10 +3428,9 @@ struct poi_cache_t {
 	int last_room_id=-1;
 
 	bool select_stand_area(building_t const &b, unsigned room_id, float radius, point &pos, rand_gen_t &rgen) {
-		if (room_id < 0) return 0;
 		float const split_len(20.0*radius);
 
-		if (room_id != last_room_id || pos.z != last_zval || radius != last_radius) { // recompute POIs
+		if ((int)room_id != last_room_id || pos.z != last_zval || radius != last_radius) { // recompute POIs
 			stand_areas.clear();
 			rpool.clear();
 			b.get_poi_stand_areas_for_room(room_id, radius, pos.z, stand_areas);

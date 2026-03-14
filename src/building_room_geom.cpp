@@ -7466,7 +7466,7 @@ void building_room_geom_t::add_vent_hood(room_object_t const &c) {
 }
 
 float get_comm_fridge_cubes(room_object_t const &c, cube_t &bot, cube_t &top, cube_t &body, cube_t &interior) {
-	float const height(c.dz()), wall_width(0.05*min(c.dx(), c.dy())), dsign(c.dir ? 1.0 : -1.0);
+	float const height(c.dz()), wall_width(0.05*min(c.dx(), c.dy()));
 	top = bot = body = c;
 	bot.z2() = body.z1() = c.z1() + 0.25*height;
 	top.z1() = body.z2() = c.z2() - 0.10*height;
