@@ -193,11 +193,12 @@ bool car_t::maybe_apply_turn(float centerline, bool for_driveway) {
 	float const turn_radius((for_driveway ? 0.11 : (right_turn ? 0.15 : 0.25))*turn_radius_mult*city_params.road_width);
 	float const dist_to_turn(max(0.0f, (cur_val - centerline)*(tdir ? -1.0f : 1.0f))); // Note: can be negative if we overshot the turn, so clamp to 0
 	if (dist_to_turn > turn_radius) return 0; // not yet time to turn
-	// Note: cars turn around their center points, not their front wheels, which looks odd
+	// Note: cars turn around their center points, not their rear axles, which looks odd;
+	// however, the actual path of the car through the turn depends on the axles and geometry, which we don't get from the model and varies per model
+	rot_z = (right_turn ? -1.0 : 1.0)*(1.0 - CLIP_TO_01(dist_to_turn/turn_radius)); // turn angle = 0.5f*PI*rot_z
 	float const dist_from_turn_start(turn_radius - dist_to_turn);
 	float const dev(turn_radius - sqrt(max((turn_radius*turn_radius - dist_from_turn_start*dist_from_turn_start), 0.0f))); // clamp to 0 to avoid NAN due to FP error
 	float const new_center(turn_val + dev*((right_turn ^ tdir ^ dim) ? 1.0 : -1.0));
-	rot_z = (right_turn ? -1.0 : 1.0)*(1.0 - CLIP_TO_01(dist_to_turn/turn_radius));
 	bcube.translate_dim(!dim, (new_center - car_center[!dim])); // translate to new center point
 	vector3d const move_dir(get_center() - prev_center); // total movement from car + turn
 	float const move_dist(move_dir.mag());
@@ -301,7 +302,7 @@ bool car_t::run_enter_driveway_logic(vector<car_t> const &cars, driveway_t const
 		begin_turn(); // capture car centerline before the turn
 	}
 	set_target_speed(0.4); // 40% of max speed
-	maybe_apply_turn(driveway.get_centerline(), 1); // for_driveway=1
+	maybe_apply_turn(driveway.get_centerline(), 0); // for_driveway=0, since it's still in the road
 
 	if (turn_dir == TURN_NONE) { // turn has been completed
 		// change to being in driveway even though we may not be onto the driveway yet (especially when turning left)
@@ -394,7 +395,7 @@ void car_t::back_or_pull_out_of_driveway(driveway_t const &driveway) {
 		bool const dw_turn_dir(dir ^ driveway.dir ^ dim);
 		in_reverse = 1; // always back out, since we pulled in
 		turn_dir   = (dw_turn_dir ? (uint8_t)TURN_RIGHT : (uint8_t)TURN_LEFT); // Note: if we turn the other way, we need to back out of the driveway
-		if (maybe_apply_turn(driveway.get_centerline(), 1)) return;
+		if (maybe_apply_turn(driveway.get_centerline(), 1)) return; // for driveway=1
 	}
 	else { // normal driveway or parking lot exit driveway
 		assert(dim == driveway.dim);
