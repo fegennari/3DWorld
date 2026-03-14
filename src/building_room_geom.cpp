@@ -1021,7 +1021,7 @@ tid_nm_pair_t get_phone_tex(room_object_t const &c) {
 cube_t building_room_geom_t::add_phone_frame_and_return_screen_if_on(room_object_t const &c, rgeom_mat_t &mat, bool in_hand) {
 	float const corner_radius(0.05*c.get_width());
 	mat.add_round_rect_to_verts(c, corner_radius, apply_light_color(c),        0, in_hand, 0); // sides + bottom if in hand
-	mat.add_round_rect_to_verts(c, corner_radius, apply_light_color(c, BLACK), 1, 0, 1); // top, unlit
+	mat.add_round_rect_to_verts(c, corner_radius, apply_light_color(c, BLACK), 1, 0,       1); // top, unlit
 	if (!(c.flags & (RO_FLAG_EMISSIVE | RO_FLAG_OPEN))) return cube_t(); // no screen to draw
 	cube_t screen(c);
 	screen.expand_by_xy(-0.8*corner_radius); // small shrink
@@ -4909,7 +4909,6 @@ void building_room_geom_t::add_conference_table(room_object_t const &c, float ts
 	tid_nm_pair_t top_tex(get_counter_tid(), 2.5*tscale, 1);
 	top_tex.set_specular(0.5, 80.0);
 	get_material(top_tex, 1).add_cube_to_verts(cubes[0], color, all_zeros, 0); // shadowed; draw all faces
-	//get_material(top_tex, 1).add_round_rect_to_verts(cubes[0], 0.1*c.get_width(), color, 1, 1, 0); // draw all sides; not textured correctly
 	get_wood_material(2.0*tscale).add_cube_to_verts(cubes[1], color, all_zeros, EF_Z12); // shadowed; skip top and bottom
 }
 

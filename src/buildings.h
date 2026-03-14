@@ -965,8 +965,8 @@ public:
 	{
 		add_disk_to_verts(pos, radius, (normal_z_neg ? -plus_z : plus_z), color, swap_txy, inv_ts, inv_tt, ndiv, r_inner);
 	}
-	void add_round_rect_to_verts(cube_t const &c, float corner_radius, colorRGBA const &color, bool draw_top=1, bool draw_bot=1, bool skip_sides=0,
-		bool two_sided=0, float rs_bot=1.0, float rs_top=1.0, float side_tscale=1.0, float end_tscale=1.0, unsigned ndiv=N_CYL_SIDES);
+	void add_round_rect_to_verts(cube_t const &c, float corner_radius, colorRGBA const &color, bool draw_top=1, bool draw_bot=1,
+		bool skip_sides=0, bool two_sided=0, float rs_bot=1.0, float rs_top=1.0, unsigned ndiv=N_CYL_SIDES);
 	void add_sphere_to_verts(point const &center, vector3d const &size, colorRGBA const &color, bool low_detail=0,
 		vector3d const &skip_hemi_dir=zero_vector, tex_range_t const &tr=tex_range_t(), xform_matrix const *const matrix=nullptr, float ts_add=0.0, float tt_add=0.0);
 	void add_sphere_to_verts(point const &center, float radius, colorRGBA const &color, bool low_detail=0, tex_range_t const &tr=tex_range_t()) {
