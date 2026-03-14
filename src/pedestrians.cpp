@@ -2189,8 +2189,8 @@ void ped_manager_t::gen_and_draw_people_in_building(ped_draw_vars_t const &pdv) 
 	if (pdv.building.place_people_if_needed(pdv.bix, get_ped_radius())) {
 		for (person_t &p : people) { // people were added - set up their params
 			p.is_prisoner = is_prisoner;
+			p.cur_bldg    = pdv.bix; // store building index in dest_bldg field
 			assign_ped_model(p);
-			p.cur_bldg = pdv.bix; // store building index in dest_bldg field
 
 			if (p.lying_down) { // person lying in a bed: direction is already set and speed is 0
 				p.pos.z += 0.35*p.get_hwidth(); // somewhat sunk into the bed; better than floating above it

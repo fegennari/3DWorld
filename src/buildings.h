@@ -2656,7 +2656,7 @@ struct building_t : public building_geom_t {
 
 	// building AI people
 	unsigned count_connected_room_components();
-	void add_person(person_t &person) const;
+	void add_person(person_t &person, rand_gen_t &rgen) const;
 	bool place_people_if_needed(unsigned building_ix, float radius) const;
 	void place_stationary_people(float radius, unsigned max_people, rand_gen_t &rgen) const;
 	void place_random_people(unsigned num_people, unsigned building_ix, float radius, rand_gen_t &rgen) const;

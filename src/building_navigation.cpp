@@ -2191,9 +2191,10 @@ struct room_cand_t {
 	room_cand_t(unsigned r, unsigned f) : room_ix(r), floor_ix(f) {}
 };
 
-void building_t::add_person(person_t &person) const { // not really const?
+void building_t::add_person(person_t &person, rand_gen_t &rgen) const { // not really const?
 	assert(interior);
 	person.ssn = interior->people.size();
+	person.model_rand_seed = rgen.rand(); // assign here for determinism
 	interior->people.push_back(person);
 }
 bool building_t::place_people_if_needed(unsigned building_ix, float radius) const {
@@ -2231,7 +2232,7 @@ void building_t::place_stationary_people(float radius, unsigned max_people, rand
 		person.pos = pp.pos;
 		person.dir = pp.dir;
 		person.is_stationary = 1;
-		add_person(person);
+		add_person(person, rgen);
 		if (++num_added == max_people) break;
 	}
 }
@@ -2306,7 +2307,7 @@ void building_t::place_random_people(unsigned num_people, unsigned building_ix, 
 				room_type const rtype(room.get_room_type(cand.floor_ix));
 				if      (rtype == RTYPE_MENS  ) {person.is_female = 0;} // must be male
 				else if (rtype == RTYPE_WOMENS) {person.is_female = 1;} // must be female
-				add_person(person); // other params will be filled in later
+				add_person(person, rgen); // other params will be filled in later
 				success = 1;
 				break; // done/success
 			} // for n
@@ -2350,7 +2351,7 @@ void building_t::place_people_in_beds(float radius, rand_gen_t &rgen) const {
 		else {continue;}
 		person.dir = vector_from_dim_dir(i->dim, (i->dir ^ (i->type != TYPE_HOSP_BED))); // hospital bed dir is backwards from bed/OR table
 		person.lying_down = 1;
-		add_person(person);
+		add_person(person, rgen);
 		i->flags |= RO_FLAG_USED; // mark bed as occupied
 	} // for i
 }
