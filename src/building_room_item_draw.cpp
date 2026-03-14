@@ -87,7 +87,7 @@ public:
 	}
 	size_t get_mem_usage() const {
 		size_t mem(free_list.size()*sizeof(rgeom_storage_t));
-		for (auto i = free_list.begin(); i != free_list.end(); ++i) {mem += i->get_mem_usage();}
+		for (auto const &f : free_list) {mem += f.get_mem_usage();}
 		return mem;
 	}
 	size_t size() const {return free_list.size();}
@@ -420,28 +420,28 @@ void rgeom_mat_t::upload_draw_and_clear(tid_nm_pair_dstate_t &state) { // Note: 
 
 void building_materials_t::clear() {
 	invalidate();
-	for (iterator m = begin(); m != end(); ++m) {m->clear();}
+	for (rgeom_mat_t &m : *this) {m.clear();}
 	vector<rgeom_mat_t>::clear();
 }
 unsigned building_materials_t::count_all_verts(bool shadow_only, bool reflect_only) const {
 	unsigned num_verts(0);
 	
-	for (const_iterator m = begin(); m != end(); ++m) {
-		if (shadow_only  && !m->en_shadows    ) continue;
-		if (reflect_only &&  m->tex.no_reflect) continue;
-		num_verts += m->num_verts;
+	for (rgeom_mat_t const &m : *this) {
+		if (shadow_only  && !m.en_shadows    ) continue;
+		if (reflect_only &&  m.tex.no_reflect) continue;
+		num_verts += m.num_verts;
 	}
 	return num_verts;
 }
 rgeom_mat_t &building_materials_t::get_material(tid_nm_pair_t const &tex, bool inc_shadows) {
 	// for now we do a simple linear search because there shouldn't be too many unique materials
-	for (iterator m = begin(); m != end(); ++m) {
-		if (!m->tex.is_compatible(tex)) continue;
-		if (inc_shadows) {m->enable_shadows();} // Note: m->en_shadows should already be set
+	for (rgeom_mat_t &m : *this) {
+		if (!m.tex.is_compatible(tex)) continue;
+		if (inc_shadows) {m.enable_shadows();} // Note: m.en_shadows should already be set
 		// tscale diffs don't make new materials; copy tscales from incoming tex; this field may be used locally by the caller, but isn't used for drawing
-		m->tex.tscale_x = tex.tscale_x; m->tex.tscale_y = tex.tscale_y;
-		if (m->get_tot_vert_capacity() == 0) {rgeom_alloc.alloc_safe(*m);} // existing but empty entry, allocate capacity from the allocator free list
-		return *m;
+		m.tex.tscale_x = tex.tscale_x; m.tex.tscale_y = tex.tscale_y;
+		if (m.get_tot_vert_capacity() == 0) {rgeom_alloc.alloc_safe(m);} // existing but empty entry, allocate capacity from the allocator free list
+		return m;
 	}
 	emplace_back(tex); // not found, add a new material
 	if (inc_shadows) {back().enable_shadows();}
@@ -449,18 +449,18 @@ rgeom_mat_t &building_materials_t::get_material(tid_nm_pair_t const &tex, bool i
 	return back();
 }
 void building_materials_t::create_vbos(building_t const &building) { // up to ~100 materials and ~2M verts
-	for (iterator m = begin(); m != end(); ++m) {m->create_vbo(building);}
+	for (rgeom_mat_t &m : *this) {m.create_vbo(building);}
 	valid = 1;
 }
 void building_materials_t::draw(brg_batch_draw_t *bbd, shader_t &s, int shadow_only, int reflection_pass, bool exterior_geom) {
 	if (!valid) return; // pending generation of data, don't draw yet
 	//highres_timer_t timer("Draw Materials"); // 0.0168
 	tid_nm_pair_dstate_t state(s);
-	for (iterator m = begin(); m != end(); ++m) {m->draw(state, bbd, shadow_only, reflection_pass, exterior_geom);}
+	for (rgeom_mat_t &m : *this) {m.draw(state, bbd, shadow_only, reflection_pass, exterior_geom);}
 }
 void building_materials_t::upload_draw_and_clear(shader_t &s) {
 	tid_nm_pair_dstate_t state(s);
-	for (iterator m = begin(); m != end(); ++m) {m->upload_draw_and_clear(state);}
+	for (rgeom_mat_t &m : *this) {m.upload_draw_and_clear(state);}
 }
 
 void building_room_geom_t::add_tquad(building_geom_t const &bg, tquad_with_ix_t const &tquad, cube_t const &bcube, tid_nm_pair_t const &tex,
