@@ -4739,7 +4739,7 @@ public:
 				
 				for (auto j = b.details.begin(); j != b.details.end(); ++j) {
 					if (j->type != ROOF_OBJ_ANT) continue; // not an antenna
-					unsigned const num_segs(max(1U, (((123*i->ix) & 3) + unsigned(6.0*j->dz()/max_extent.z)))); // some mix of height and randomness
+					unsigned const num_segs(max(1U, (((127*i->ix) & 3) + unsigned(6.0*j->dz()/max_extent.z)))); // some mix of height and randomness
 					point const center(j->get_cube_center());
 					point pos(point(center.x, center.y, j->z2()) + xlate);
 					float const radius(1.2f*(j->dx() + j->dy())), z_step(0.6*j->dz()/num_segs);

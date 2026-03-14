@@ -518,7 +518,7 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 		unsigned const desk_obj_ix(objs.size());
 		objs.push_back(desk);
 		set_obj_id(objs);
-		objs.back().obj_id += 123*desk_ix; // set even more differently per-desk so that they have different drawer contents
+		objs.back().obj_id += 127*desk_ix; // set even more differently per-desk so that they have different drawer contents
 		bool const add_computer(!no_computer && (force_computer || rgen.rand_bool()) &&
 			add_computer_to_desk(desk, desk_obj_ix, dim, dir, rgen, room_id, tot_light_amt, comp_sz_scale));
 		bool has_chair(0);
@@ -4168,7 +4168,7 @@ bool building_t::hang_pictures_whiteboard_chalkboard_in_room(rand_gen_t rgen, ro
 			unsigned flags(RO_FLAG_NOCOLL);
 			if (rgen.rand_bool()) {flags |= RO_FLAG_HAS_EXTRA;} // flag as being abstract (shader) art
 			objs.emplace_back(best_pos, TYPE_PICTURE, room_id, dim, !dir, flags, tot_light_amt); // picture faces dir opposite the wall
-			objs.back().obj_id = uint16_t(objs.size() + 13*room_id + 17*floor_ix + 31*mat_ix + 61*dim + 123*dir); // determines picture texture
+			objs.back().obj_id = uint16_t(objs.size() + 13*room_id + 17*floor_ix + 31*mat_ix + 61*dim + 127*dir); // determines picture texture
 			was_hung = 1;
 		} // for dir
 	} // for dim

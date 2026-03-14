@@ -97,7 +97,7 @@ bool building_t::add_classroom_desk(rand_gen_t &rgen, room_t const &room, cube_t
 	unsigned const desk_obj_ix(objs.size()), flags(teacher_desk ? RO_FLAG_HAS_EXTRA : 0); // teacher's desk always has drawers
 	objs.emplace_back(desk, TYPE_DESK, room_id, dim, dir, flags, tot_light_amt, SHAPE_CUBE); // no tall desks
 	set_obj_id(objs);
-	objs.back().obj_id += 123*desk_ix; // more random variation
+	objs.back().obj_id += 127*desk_ix; // more random variation
 	// add paper, pens, and pencils
 	unsigned const objs_start(objs.size()); // excludes the desk
 	if (rgen.rand_float() < 0.7) {add_papers_to_surface      (desk, dim,  dir, 7, rgen, room_id, tot_light_amt);} // add 0-7 sheet(s) of paper

@@ -4531,7 +4531,7 @@ void building_room_geom_t::add_bcase_book(room_object_t const &c, cube_t const &
 	room_object_t obj(book, TYPE_BOOK, c.room_id, c.dim, book_dir, (c.flags & ~RO_FLAG_OPEN), c.light_amt, SHAPE_CUBE, color);
 
 	if (in_set) {
-		obj.obj_id = c.obj_id + 123*set_start_ix;
+		obj.obj_id = c.obj_id + 127*set_start_ix;
 		obj.flags |= RO_FLAG_FROM_SET; // set a flag so that books are consistent: title on front and spine, no author, no picture
 		obj.drawer_flags = (book_ix - set_start_ix + 1); // first book starts at 1
 		// only assign volume index when placed left to right, otherwise the order is backwards;
@@ -4539,7 +4539,7 @@ void building_room_geom_t::add_bcase_book(room_object_t const &c, cube_t const &
 		if (obj.dim ^ obj.dir ^ 1) {obj.flags |= RO_FLAG_HAS_VOL_IX;}
 	}
 	else { // individual book; book_ix/obj_id is unique
-		obj.obj_id = 777*c.obj_id + 123*book_ix;
+		obj.obj_id = 773*c.obj_id + 127*book_ix;
 	}
 	obj.item_flags = (uint16_t)book_ix; // always unique per bookcase book; used for removing books from bookcases
 	if (inc_lg || inc_sm || inc_text) {add_book(obj, inc_lg, inc_sm, inc_text, tilt_angle, skip_faces, backwards);} // detailed book, no title if backwards
