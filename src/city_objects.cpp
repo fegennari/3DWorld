@@ -2789,8 +2789,9 @@ city_bldg_t::city_bldg_t(cube_t const &c, bool dim_, bool dir_, bool edir, unsig
 	} // for n
 	if (city_params.num_cars == 0) {lights_enabled = (rgen.rand() & ((1<<num_lanes)-1));} // 50% chance of each light being enabled when there are no cars
 
-	if (btype == CITY_BLDG_SERVICE) { // add a stack of tires; extends outside the bcube
-		float const tradius(0.24*city_params.get_nom_car_size().z), theight(0.55*tradius), wall_pos(bldg.d[!dim][edir]);
+	if (btype == CITY_BLDG_SERVICE) {
+		// add a stack of tires; extends outside the bcube
+		float const car_height(city_params.get_nom_car_size().z), tradius(0.24*car_height), theight(0.55*tradius), wall_pos(bldg.d[!dim][edir]);
 		cube_t place_area(bldg); // copy width and zvals of building
 		// keep it pretty close to avoid blocking peds; should have enough clearance to road
 		place_area.d[!dim][!edir] = wall_pos;
@@ -2816,6 +2817,17 @@ city_bldg_t::city_bldg_t(cube_t const &c, bool dim_, bool dir_, bool edir, unsig
 				tire_stacks.push_back(stack_bc);
 				bcube_with_extras.union_with_cube(stack_bc);
 			}
+		} // for n
+		// add barrels (55 gal drums)
+		unsigned const num_barrels(1 + (rgen.rand() & 3)); // 1-3
+		float const bradius(0.22*car_height), bheight(0.64*car_height);
+
+		for (unsigned n = 0; n < num_barrels; ++n) {
+			cube_t barrel;
+			gen_xy_pos_for_round_obj(barrel, place_area, bradius, bheight, 1.02*bradius, rgen, 1); // place_at_z1=1
+			if (has_bcube_int(barrel, tire_stacks) || has_bcube_int(barrel, barrels)) continue; // check both tires and other barrels
+			barrels.push_back(barrel);
+			bcube_with_extras.union_with_cube(barrel);
 		} // for n
 	}
 }
@@ -2874,9 +2886,9 @@ void city_bldg_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_
 	
 	if (!shadow_only) { // draw pavement and lights; not shadow casters
 		bind_default_flat_normal_map();
-		if (!bcube.closest_dist_less_than(dstate.camera_bs, 0.4*dmax)) return; // no pavements, lights, or tires (pavement has Z-fighting problems anyway)
+		if (!bcube.closest_dist_less_than(dstate.camera_bs, 0.4*dmax)) return; // no pavements, lights, tires, or barrels (pavement has Z-fighting problems anyway)
 		draw_road_pavement(dstate, qbds); // draw pavement surface
-		if (!bcube.closest_dist_less_than(dstate.camera_bs, 0.2*dmax)) return; // no lights or tires
+		if (!bcube.closest_dist_less_than(dstate.camera_bs, 0.2*dmax)) return; // no lights, tires, or barrels
 		draw_lights(dstate, qbds, lights, num_lanes); // draw lights
 	}
 	if (!tires.empty()) { // draw tires
@@ -2894,6 +2906,28 @@ void city_bldg_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_
 			draw_circle_normal(hradius, tradius, ndiv, 0, top, 0.0, 0.0); // invert_normals=0; single texel
 			if (!on_ground) {draw_circle_normal(hradius, tradius, ndiv, 0, bot, 0.0, 0.0);} // draw bottom surface of stacked tires
 		} // for tire
+	}
+	if (!barrels.empty()) { // draw barrels (55 gal drums)
+		dstate.s.set_cur_color(WHITE);
+		select_texture     (get_met_plate_tid());
+		select_texture_nmap(get_mplate_nm_tid());
+
+		for (cube_t const &barrel : barrels) { // draw sides textured
+			float const bradius(0.5*barrel.dx());
+			point const top(cube_top_center(barrel));
+			unsigned const ndiv(shadow_only ? 16 : max(4U, min(32U, unsigned(0.4f*dist_scale*dstate.get_lod_factor(top)))));
+			draw_fast_cylinder(cube_bot_center(barrel), top, bradius, bradius, ndiv, 1, 0, 0, nullptr, 2.0, 0.0, nullptr, 0, 2.0); // sides only
+		}
+		dstate.s.set_cur_color(texture_color(get_met_plate_tid()));
+		select_no_texture();
+		bind_default_flat_normal_map();
+
+		for (cube_t const &barrel : barrels) { // draw top untextured
+			float const bradius(0.5*barrel.dx());
+			point const top(cube_top_center(barrel));
+			unsigned const ndiv(shadow_only ? 16 : max(4U, min(32U, unsigned(0.4f*dist_scale*dstate.get_lod_factor(top)))));
+			draw_circle_normal(0.0, bradius, ndiv, 0, top);
+		}
 	}
 	if (!shadow_only && btype == CITY_BLDG_CARWASH && lane_in_use && bcube.closest_dist_less_than(dstate.camera_bs, 0.16*dmax)) {
 		// at least one lane is in use; draw water
