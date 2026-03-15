@@ -210,34 +210,34 @@ void rotate_verts(vector<rgeom_mat_t::vertex_t> &verts, building_t const &buildi
 	}
 }
 
+bool rgeom_mat_t::compute_and_check_hash() { // Note: can use multiple threads, but makes little difference overall
+	if (num_verts == 0) return 1;
+	// in most cases when num_verts starts out nonzero there is no actual update for this material;
+	// simply summing the verts is inaccurate for things like light switch rotations and buildings far from the origin, so we must hash them
+	// if we've already allocated this material, compute the hashval to see if it's changed since last time; this saves a bit of time (230ms => 205ms)
+	uint32_t hash(0);
+	update_hashval(itri_verts, hash);
+	update_hashval(quad_verts, hash);
+	if (hash != hashval) {hashval = hash; return 1;} // must update VBO data; caller must update num_verts
+	return !(vao_mgr.vbo && num_verts == quad_verts.size() + itri_verts.size()); // same vert data, no need to update
+}
 void rgeom_mat_t::create_vbo(building_t const &building) {
-	if (building.is_rotated()) { // rotate all vertices to match the building rotation
-		rotate_verts(quad_verts, building);
-		rotate_verts(itri_verts, building);
+	if (compute_and_check_hash()) {
+		if (building.is_rotated()) { // rotate all vertices to match the building rotation
+			rotate_verts(quad_verts, building);
+			rotate_verts(itri_verts, building);
+		}
+		create_vbo_inner();
 	}
-	create_vbo_inner();
 	rgeom_alloc.free(*this); // vertex and index data is no longer needed and can be returned to the free list
 }
 void rgeom_mat_t::create_vbo_inner() {
 	assert(itri_verts.empty() == indices.empty());
-	unsigned const qsz(quad_verts.size()*sizeof(vertex_t)), itsz(itri_verts.size()*sizeof(vertex_t)), tot_verts_sz(qsz + itsz);
-	// in most cases when num_verts starts out nonzero there is no actual update for this material, but accurately skipping the VBO update is difficult;
-	// hashing the vertex data is too slow, and simply summing the verts is inaccurate for things like light switch rotations and buildings far from the origin
-	unsigned const new_num_verts(quad_verts.size() + itri_verts.size());
-
-	if (num_verts > 0) {
-		// if we've already allocated this material, compute the hashval to see if it's changed since last time; this saves a bit of time (230ms => 205ms)
-		uint32_t hash(0);
-		update_hashval(itri_verts, hash);
-		update_hashval(quad_verts, hash);
-		if (hash != hashval) {hashval = hash;}
-		else if (vao_mgr.vbo && num_verts == new_num_verts) return; // same vert data, no need to update
-	}
-	num_verts = new_num_verts;
+	num_verts = quad_verts.size() + itri_verts.size();
 	if (num_verts == 0) return; // nothing to do
 	gen_quad_ixs(indices, 6*(quad_verts.size()/4), itri_verts.size()); // append indices for quad_verts
 	num_ixs = indices.size();
-	unsigned const ix_data_sz(num_ixs*sizeof(unsigned));
+	unsigned const qsz(quad_verts.size()*sizeof(vertex_t)), itsz(itri_verts.size()*sizeof(vertex_t)), tot_verts_sz(qsz + itsz), ix_data_sz(num_ixs*sizeof(unsigned));
 
 	if (vao_mgr.vbo && tot_verts_sz <= vert_vbo_sz && vao_mgr.ivbo && ix_data_sz <= ixs_vbo_sz) { // reuse previous VBOs
 		update_indices(vao_mgr.ivbo, indices);
