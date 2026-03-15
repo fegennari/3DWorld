@@ -1895,8 +1895,13 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 			use_last_pickup_object = 0; // reset for next frame
 		}
 		maybe_update_tape(camera_rot, 0); // end_of_tape=0
-		if (interior->room_geom->fire_manager.get_closest_fire(camera_rot, player_radius, player_z1, player_z2)) {player_take_damage(0.006);} // small amount of fire damage
 
+		if (interior->room_geom->fire_manager.get_closest_fire(camera_rot, player_radius, player_z1, player_z2)) {
+			player_take_damage(0.006); // small amount of fire damage
+		}
+		if (interior->room_geom->particle_manager.get_closest_particle(camera_rot, player_radius, player_z1, player_z2, PART_EFFECT_STEAM)) {
+			player_take_damage(0.001); // very small amount of steam damage
+		}
 		if (!player_room_no_power && player_room_ix >= 0 /*&& !is_house*/) { // check for sounds; should this be for office buildings only?
 			room_t const &room(get_room(player_room_ix));
 			unsigned const camera_floor(room.get_floor_containing_zval(camera_rot.z, get_window_vspace()));
@@ -1946,6 +1951,23 @@ cube_t particle_manager_t::get_bcube() const {
 	cube_t bcube;
 	for (particle_t const &p : particles) {bcube.assign_or_union_with_sphere(p.pos, p.radius);}
 	return bcube;
+}
+
+bool particle_manager_t::get_closest_particle(point const &pos, float xy_radius, float z1, float z2, unsigned type, point *part_pos) const {
+	bool found(0);
+	float dmin_sq(0.0);
+
+	for (particle_t const &p : particles) {
+		if (p.effect != type) continue;
+		if (!dist_xy_less_than(pos, p.pos, (xy_radius + p.radius))) continue;
+		if (p.pos.z < z1 || p.pos.z > z2) continue;
+		float const dist_sq(p2p_dist_xy_sq(pos, p.pos));
+		if (found && dist_sq >= dmin_sq)  continue; // not the closest
+		dmin_sq = dist_sq;
+		found   = 1;
+		if (part_pos != nullptr) {*part_pos = p.pos;}
+	} // for p
+	return found;
 }
 
 void particle_manager_t::next_frame(building_t &building) {
@@ -2070,7 +2092,7 @@ bool fire_manager_t::get_closest_fire(point const &pos, float xy_radius, float z
 		dmin_sq = dist_sq;
 		found   = 1;
 		if (fire_pos != nullptr) {*fire_pos = f.pos;}
-	}
+	} // for f
 	return found;
 }
 void fire_manager_t::add_fire_bcubes_for_cube(cube_t const &sel_cube, vect_cube_t &fire_bcubes) const {

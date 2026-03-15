@@ -1098,6 +1098,7 @@ public:
 	}
 	void add_for_obj(room_object_t &obj, float pradius, vector3d const &dir, float part_vel, unsigned min_parts, unsigned max_parts, unsigned effect, int parent_obj_id);
 	cube_t get_bcube() const;
+	bool get_closest_particle(point const &pos, float xy_radius, float z1, float z2, unsigned type, point *part_pos=nullptr) const;
 	void next_frame(building_t &building);
 	void add_lights(vector3d const &xlate, building_t const &building, occlusion_checker_noncity_t const &oc, cube_t &lights_bcube) const;
 	void draw(shader_t &s, vector3d const &xlate);
