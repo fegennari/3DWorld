@@ -2737,7 +2737,7 @@ void reservable_t::leave_output_lane() const {
 	out_reserved = 0;
 }
 
-// city buildings (car wash, service center, convenience store, etc.)
+// city buildings (car wash and service center)
 
 city_bldg_t::city_bldg_t(cube_t const &c, bool dim_, bool dir_, bool edir, unsigned pix, unsigned bix, uint8_t btype_, rand_gen_t &rgen) :
 	obj_with_roof_pavement_lights_t(c, dim_, dir_), reservable_t(edir, pix, bix), btype(btype_)

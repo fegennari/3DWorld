@@ -508,8 +508,8 @@ struct gas_station_t : public obj_with_roof_pavement_lights_t, public reservable
 	int get_avail_lane(point &entrance_pos, rand_gen_t &rgen) const;
 };
 
-enum {CITY_BLDG_CARWASH=0, CITY_BLDG_SERVICE, CITY_BLDG_CONVSTORE, NUM_CITY_BLDG_TYPES};
-string const city_btype_names[NUM_CITY_BLDG_TYPES] = {"Car Wash", "Service", "Store"};
+enum {CITY_BLDG_CARWASH=0, CITY_BLDG_SERVICE, NUM_CITY_BLDG_TYPES};
+string const city_btype_names[NUM_CITY_BLDG_TYPES] = {"Car Wash", "Service"};
 
 struct city_bldg_t : public obj_with_roof_pavement_lights_t, public reservable_t {
 	uint8_t btype=0;
