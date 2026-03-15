@@ -4327,7 +4327,8 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 	// only shadowed if dropped by the player or on a glass table, since otherwise shadows are too small to have much effect; skip held objects (don't work)
 	bool const shadowed((was_dropped || on_glass_table) && !is_held);
 	unsigned const tdim(upright ? !c.dim : 2), hdim(upright ? 2 : !c.dim); // thickness dim, height dim (c.dim is width dim)
-	float const thickness(c.get_sz_dim(tdim)), width(c.get_length()), cov_thickness(0.125*thickness), indent(0.02*width); // Note: length/width are sort of backwards here
+	float const thickness(c.get_sz_dim(tdim)), width(c.get_length()), height(c.get_sz_dim(hdim)); // Note: length/width are sort of backwards here
+	float const cov_thickness(0.125*thickness), indent(0.02*width);
 	cube_t bot(c), top(c), spine(c), pages(c), cover(c);
 	bot.d[tdim][1] = c.d[tdim][0] + cov_thickness;
 	top.d[tdim][0] = c.d[tdim][1] - cov_thickness;
@@ -4387,7 +4388,6 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 
 	if (has_cover) { // add picture to book cover
 		vector3d expand;
-		float const height(c.get_sz_dim(hdim));
 		float const img_width(0.9*width), img_height(min(0.8f*height, 0.65f*img_width)); // use correct aspect ratio
 		expand[ hdim] = -0.5f*(height - img_height);
 		expand[c.dim] = -0.5f*(width  - img_width);
@@ -4491,12 +4491,15 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 				title_area_fc.expand_in_dim(!c.dim, -1.0*indent);
 			}
 			else if (add_author) { // add the author if there's no cover picture
-				float const translate_val((top_dir ? -1.0 : 1.0)*0.15*c.get_width());
-				cube_t author_area(title_area_fc);
-				author_area.translate_dim(!c.dim, translate_val); // shift down to not overlap the title
-				author_area.expand_by_xy(-0.25*author_area.get_size()); // make author smaller than the title
-				add_book_title(author, author_area, mat, text_color, c.dim, !c.dim, 2, !c.dir, !top_dir, 0); // {columns, lines, normal}
-				title_area_fc.translate_dim(!c.dim, -translate_val); // shift the title up in the other direction
+				// skip author for books that are short and wide with multi-line titles in case the title and author overlap
+				if (!(height < width && title.find('\n') != string::npos)) {
+					float const translate_val((top_dir ? -1.0 : 1.0)*0.15*c.get_width());
+					cube_t author_area(title_area_fc);
+					author_area.translate_dim(!c.dim, translate_val); // shift down to not overlap the title
+					author_area.expand_by_xy(-0.25*author_area.get_size()); // make author smaller than the title
+					add_book_title(author, author_area, mat, text_color, c.dim, !c.dim, 2, !c.dir, !top_dir, 0); // {columns, lines, normal}
+					title_area_fc.translate_dim(!c.dim, -translate_val); // shift the title up in the other direction
+				}
 			}
 			add_book_title(title, title_area_fc, mat, text_color, c.dim, !c.dim, 2, !c.dir, !top_dir, 0); // {columns, lines, normal}
 		}
