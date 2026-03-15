@@ -720,7 +720,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				if (r->is_hallway) { // add special hallway objects
 					if (is_ext_basement) {
 						if (has_mall()) {add_mall_back_hallway_objs(rgen, *r, room_center.z, room_id, tot_light_amt);} // mall back hallway
-						else {add_false_door_to_extb_room_if_needed(*r, room_center.z, room_id);} // extended basement hallway
+						else { // extended basement hallway
+							add_false_door_to_extb_room_if_needed(*r, room_center.z, room_id);
+							add_hallway_steam_pipes(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
+						}
 					}
 					if (is_house) { // allow pictures, rugs, and light switches in the hallways of houses; no pref orient
 						// Note: pictures are added before outlets and light switches, which differs from normal room placement below; should this be changed?

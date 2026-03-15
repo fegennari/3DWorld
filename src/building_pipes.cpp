@@ -824,6 +824,13 @@ void building_t::add_ext_basement_hallway_pipes_recur(unsigned room_id, bool hal
 	} // for ds
 }
 
+void building_t::add_hallway_steam_pipes(rand_gen_t rgen, cube_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	bool const dim(room.dx() < room.dy()); // long dim
+	float const window_vspace(get_window_vspace()), fc_gap(get_floor_ceil_gap());
+	vect_room_object_t &objs(interior->room_geom->objs);
+	// TODO: maybe add a steam pipe near the ceiling
+}
+
 // return value: 0=failed to place, 1=placed full length, 2=placed partial length
 // Note: beams are for the top floor, even though we may be routing sprinkler pipes on a floor below
 int add_sprinkler_pipe(building_t const &b, point const &p1, float end_val, float radius, bool dim, bool dir, vect_cube_t const &obstacles,
