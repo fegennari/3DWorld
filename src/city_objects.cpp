@@ -2744,6 +2744,7 @@ city_bldg_t::city_bldg_t(cube_t const &c, bool dim_, bool dir_, bool edir, unsig
 {
 	float const height(bcube.dz()), width(get_width()), depth(get_depth()), wall_thick(0.04*depth);
 	float const bay_spacing((width - wall_thick)/num_lanes), dsign(dir ? 1.0 : -1.0);
+	bool const has_short_walls(btype == CITY_BLDG_SERVICE && rgen.rand_bool());
 	has_back_wall = (btype == CITY_BLDG_SERVICE);
 	sloped_roof   = (btype == CITY_BLDG_CARWASH || btype == CITY_BLDG_SERVICE); // both
 	has_daytime_lights = 1;
@@ -2763,9 +2764,15 @@ city_bldg_t::city_bldg_t(cube_t const &c, bool dim_, bool dir_, bool edir, unsig
 		walls.push_back(back_wall);
 	}
 	// add side walls and bays
+	float const front_inner_wall_edge(bldg.d[dim][dir] - dsign*wall_thick), wall_widen(0.67*wall_thick); // used for short walls
+
 	for (unsigned n = 0; n <= num_lanes; ++n) {
 		walls.push_back(side_wall);
 
+		if (has_short_walls && n > 0 && n < num_lanes) { // shorten interior walls to just the front
+			walls.back().d[dim][!dir] = front_inner_wall_edge;
+			walls.back().expand_in_dim(!dim, wall_widen); // make slightly wider
+		}
 		if (n < num_lanes) {
 			bays[n] = side_wall;
 			bays[n].d[!dim][0] = side_wall.d[!dim][1]; // left side of bay at right side of left wall
@@ -2773,6 +2780,15 @@ city_bldg_t::city_bldg_t(cube_t const &c, bool dim_, bool dir_, bool edir, unsig
 			bays[n].d[!dim][1] = side_wall.d[!dim][0]; // right side of bay at left side of right wall
 		}
 	} // for n
+	if (has_short_walls) { // add wall pillars at the exterior edges
+		side_wall.d[dim][!dir] = front_inner_wall_edge;
+
+		for (unsigned d = 0; d < 2; ++d) {
+			side_wall.d[!dim][ d] = bldg     .d[!dim][d] + (d ? -1.0 : 1.0)*wall_thick;
+			side_wall.d[!dim][!d] = side_wall.d[!dim][d] + (d ? -1.0 : 1.0)*wall_widen;
+			walls.push_back(side_wall);
+		}
+	}
 	// add lights in center of bays
 	float const light_radius(0.065*bay_spacing), light_thick(0.02*height);
 	cube_t light;
@@ -2841,7 +2857,7 @@ void city_bldg_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_
 		select_texture_nmap(get_texture_by_name("normal_maps/bricks_tan_norm.png", 1));
 	}
 	dstate.draw_cube(qbds.qbd, roof, WHITE, 0, tscale, 4); // skip_dims=4/XY only
-	// can skip the back edges of side walls as well if has_back_wall?
+	// can skip the back edges of side walls as well if has_back_wall and they extend the full building depth?
 	for (cube_t const &w : walls) {dstate.draw_cube(qbds.qbd, w, WHITE, 1, tscale);} // skip_bottom=1
 	if (!shadow_only) {qbds.qbd.draw_and_clear();}
 	// draw roof
