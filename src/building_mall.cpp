@@ -1678,7 +1678,7 @@ unsigned building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zv
 	// select store type
 	bool const dim(room.unit_id >> 1), dir(room.unit_id & 1); // points from room center toward doorway; doorway wall
 	bool const mall_dim(interior->extb_wall_dim), is_end_store(dim == mall_dim), tall_retail(floor_spacing > 1.5*window_vspace);
-	float const room_len(room.get_sz_dim(dim)), room_width(room.get_sz_dim(!dim)), pillar_z2(room.z2() - fc_thick);
+	float const room_len(room.get_sz_dim(dim)), room_width(room.get_sz_dim(!dim)), pillar_z2(room.z2() - fc_thick), dsign(dir ? 1.0 : -1.0);
 	room_t const &mall_room(get_mall_concourse());
 	vect_room_object_t &objs(interior->room_geom->objs);
 	assert(room_id > 0); // can't be the first room
@@ -1752,7 +1752,7 @@ unsigned building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zv
 	// place items
 	if (1) { // add store name on sign above the entrance
 		float const sign_z1(room.z1() + 0.7*floor_spacing), sign_height(0.3*window_vspace), sign_thick(wall_hthick);
-		float const ext_wall_pos(mall_room.d[dim][!dir] + (dir ? 1.0 : -1.0)*(is_end_store ? 1.0 : 0.5)*wall_thickness);
+		float const ext_wall_pos(mall_room.d[dim][!dir] + dsign*(is_end_store ? 1.0 : 0.5)*wall_thickness);
 		// stores to the sides of mall concourses have their doors centered, but stores on the end may not be centered on the door, but the mall concourse is
 		float const door_center((is_end_store ? mall_room : room).get_center_dim(!dim));
 		float sign_hwidth(0.25*sign_height*(store_name.size() + 2));
@@ -1760,7 +1760,7 @@ unsigned building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zv
 		cube_t sign;
 		set_cube_zvals(sign, sign_z1, sign_z1+sign_height);
 		sign.d[dim][!dir] = ext_wall_pos;
-		sign.d[dim][ dir] = ext_wall_pos + (dir ? 1.0 : -1.0)*sign_thick;
+		sign.d[dim][ dir] = ext_wall_pos + dsign*sign_thick;
 		set_wall_width(sign, door_center, sign_hwidth, !dim);
 		unsigned const flags(RO_FLAG_LIT | RO_FLAG_NOCOLL | (emissive ? RO_FLAG_EMISSIVE : 0) | RO_FLAG_HANGING);
 		unsigned item_flags(0);
@@ -1772,8 +1772,8 @@ unsigned building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zv
 	if (store_type == STORE_RETAIL || store_type == STORE_CLOTHING || store_type == STORE_SHOE) {
 		cube_t ts_area(doorway);
 		ts_area.z2() = doorway.z1() + 0.6*window_vspace; // set height
-		ts_area.d[dim][ dir] = doorway.d[dim][!dir] + (dir ? -1.0 : 1.0)*0.75*wall_thickness; // move slightly away from the doorway
-		ts_area.d[dim][!dir] = ts_area.d[dim][ dir] + (dir ? -1.0 : 1.0)*0.22*window_vspace ; // extend into the store
+		ts_area.d[dim][ dir] = doorway.d[dim][!dir] - dsign*0.75*wall_thickness; // move slightly away from the doorway
+		ts_area.d[dim][!dir] = ts_area.d[dim][ dir] - dsign*0.22*window_vspace ; // extend into the store
 		ts_area.expand_in_dim(!dim, 0.07*window_vspace);
 
 		for (unsigned e = 0; e < 2; ++e) {
@@ -1889,14 +1889,14 @@ unsigned building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zv
 					}
 					if (n > 0 && n+1 < nrows && (n & 1)) { // use alternating/odd rows, skipping ends
 						pillar.d[dim][0] = pillar.d[dim][1] = rack.d[dim][dir]; // end of back rack facing front of store - less likely to be blocked by checkout counter
-						pillar.d[dim][dir] += (dir ? 1.0 : -1.0)*pillar_width;
+						pillar.d[dim][dir] += dsign*pillar_width;
 						if (pillar_area.contains_cube_xy(pillar)) {add_retail_pillar(pillar, zval, room_id, tall_retail);}
 					}
 				} // for r
 			} // for n
 			if (store_type == STORE_CLOTHING) { // add tall narrow mirrors along a back wall
 				bool const side(rgen.rand_bool());
-				float const wall_thick_signed((dir ? 1.0 : -1.0)*wall_thickness), back_wall(room.d[dim][!dir] + 0.5*wall_thick_signed);
+				float const wall_thick_signed(dsign*wall_thickness), back_wall(room.d[dim][!dir] + 0.5*wall_thick_signed);
 				cube_t mirror;
 				set_cube_zvals(mirror, zval+0.1*window_vspace, zval+0.7*window_vspace);
 				set_wall_width(mirror, (room.d[!dim][side] + (side ? -1.0 : 1.0)*0.5*aisle_spacing), 0.15*window_vspace, !dim);
@@ -1931,7 +1931,7 @@ unsigned building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zv
 		cube_t door_blocker(doorway), div_area(room);
 		door_blocker.expand_by_xy(0.2*window_vspace);
 		div_area.expand_by_xy(0.5*size_delta); // offset for the shrink of rooms
-		div_area.d[dim][dir] -= (dir ? 1.0 : -1.0)*wall_thickness; // shink for front window/wall clearance
+		div_area.d[dim][dir] -= dsign*wall_thickness; // shink for front window/wall clearance
 		vect_cube_t blockers; // may be empty
 		cube_t r; // sub-room bounds
 		set_cube_zvals(r, room.z1(), room.z1()+window_vspace);
@@ -1993,7 +1993,7 @@ unsigned building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zv
 							wall.d[wdim][!wdir] = wall_pos;
 							wall.d[wdim][ wdir] = wall_pos + (wdir ? 1.0 : -1.0)*0.5*wall_thickness; // shift outward from room
 							cube_t wall_area(room);
-							wall_area.d[dim][dir] -= (dir ? 1.0 : -1.0)*0.5*rlen; // shink to avoid blocking front window
+							wall_area.d[dim][dir] -= dsign*0.5*rlen; // shink to avoid blocking front window
 
 							// only if interior; skip if overlaps the room wall; check for back hallway doorway
 							if (wall_area.contains_cube_xy_exp(wall, wall_thickness) && !is_cube_close_to_doorway(wall, sub_room, 0.0, 1, 1)) {
@@ -2225,7 +2225,7 @@ unsigned building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zv
 		// add a few more fishtanks if there's any extra space along front and back walls
 		unsigned const num_fishtanks(rgen.rand() % 5); // 0-4
 		cube_t place_area(room_area);
-		place_area.d[dim][dir] -= (dir ? 1.0 : -1.0)*0.5*wall_thickness; // shink for front window frame clearance
+		place_area.d[dim][dir] -= dsign*0.5*wall_thickness; // shink for front window frame clearance
 		for (unsigned n = 0; n < num_fishtanks; ++n) {add_fishtank_to_room(rgen, room, zval, room_id, light_amt, objs_start, place_area);}
 	}
 	if (store_type == STORE_RETAIL && item_category == RETAIL_ELECTRONICS && building_obj_model_loader.is_model_valid(OBJ_MODEL_TV)) {
