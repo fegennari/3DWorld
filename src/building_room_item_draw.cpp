@@ -1848,23 +1848,30 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		else if (reflection_pass) {
 			mats_amask.draw(nullptr, s, 0, 1); // no brg_batch_draw
 		}
-		// this is expensive: only enable for the main draw pass and skip for buildings the player isn't in, except for industrial building metal grates
-		else if (inc_small >= 2 && (player_in_building || is_industrial)) {
-			// without the special shader these won't look correct when drawn through windows
-			// used for both plant/tree leaves and spider webs;
-			// plants are above ground and in malls with high min_alpha; metal stairs are above ground and in basements with high min_alpha;
-			// spider webs are in ext basement with low min_alpha
-			float const min_alpha((player_in_basement >= 3 && !building.has_mall()) ? 0.1 : 0.9);
+		else if (inc_small >= 2 && !mats_amask.empty()) {
+			// expensive: only enable for main draw pass and skip for buildings the player isn't in/near; further for industrial metal grates and restaurant plants
+			bool draw_amask(0);
+			if (player_in_building) {draw_amask = 1;}
+			else if (!camera_in_building) { // player not in some other building
+				draw_amask = (p2p_dist(camera_bs, building.bcube.closest_pt(camera_bs)) < ((is_industrial || building.is_restaurant()) ? 20 : 10)*floor_spacing);
+			}
+			if (draw_amask) {
+				// without the special shader these won't look correct when drawn through windows
+				// used for both plant/tree leaves and spider webs;
+				// plants are above ground and in malls with high min_alpha; metal stairs are above ground and in basements with high min_alpha;
+				// spider webs are in ext basement with low min_alpha
+				float const min_alpha((player_in_basement >= 3 && !building.has_mall()) ? 0.1 : 0.9);
 
-			if (!amask_shader.is_setup()) {
-				setup_building_draw_shader(amask_shader, min_alpha, 1, 1, 0); // enable_indir=1, force_tsl=1, use_texgen=0, water_damage=0.0
+				if (!amask_shader.is_setup()) {
+					setup_building_draw_shader(amask_shader, min_alpha, 1, 1, 0); // enable_indir=1, force_tsl=1, use_texgen=0, water_damage=0.0
+				}
+				else {
+					amask_shader.make_current();
+					amask_shader.add_uniform_float("min_alpha", min_alpha); // set min_alpha in case it changed
+				}
+				mats_amask.draw(nullptr, amask_shader, 0, 0); // no brg_batch_draw
+				s.make_current(); // switch back to the normal shader
 			}
-			else {
-				amask_shader.make_current();
-				amask_shader.add_uniform_float("min_alpha", min_alpha); // set min_alpha in case it changed
-			}
-			mats_amask.draw(nullptr, amask_shader, 0, 0); // no brg_batch_draw
-			s.make_current(); // switch back to the normal shader
 		}
 	}
 	if (draw_int_detail_objs) {mats_text.draw(bbd, s, shadow_only, ref_pass);} // text must be drawn last; drawn as interior detail objects
