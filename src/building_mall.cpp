@@ -2281,7 +2281,7 @@ unsigned building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zv
 			sign.d[ dim][ dir] = window_edge + dsign*sign_depth; // front
 			set_wall_width(sign, (w.d[!dim][!door_dir] + (door_dir ? 1.0 : -1.0)*0.75*sign_width), 0.5*sign_width, !dim); // on side closer to the door
 			// red text on white background; flag as hanging so that the back is drawn
-			objs.emplace_back(sign, TYPE_SIGN, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), light_amt, SHAPE_CUBE, text_color, item_flags);
+			objs.emplace_back(sign, TYPE_SIGN, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_HANGING | RO_FLAG_IN_MALL), light_amt, SHAPE_CUBE, text_color, item_flags);
 			objs.back().obj_id = text_id;
 		} // for w
 		assert(num_windows == 2);

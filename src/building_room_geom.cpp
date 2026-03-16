@@ -5687,10 +5687,11 @@ void building_room_geom_t::add_sign(room_object_t const &c, bool inc_back, bool 
 	if (exterior != exterior_only) return; // wrong pass
 
 	if (inc_back) {
-		bool const hanging(c.is_hanging()), draw_top(c.flags & RO_FLAG_ADJ_TOP); // for exit sign and floor signs
-		bool const dark_mode(c.color == WHITE); // white text on black background
-		unsigned const skip_back_face(~get_face_mask(c.dim, !c.dir));
-		unsigned const skip_faces(hanging ? (draw_top ? 0 : EF_Z2) : skip_back_face); // skip back face, top face if hanging and !draw_top
+		bool const hanging(c.is_hanging()), sale_sign(c.in_mall()), draw_top(c.flags & RO_FLAG_ADJ_TOP); // for exit sign and floor signs
+		bool const dim(c.dim), dir(c.dir), dark_mode(c.color == WHITE); // white text on black background
+		unsigned const skip_back_face(~get_face_mask(dim, !dir));
+		// skip back face, top face if hanging and !draw_top; only draw front and back for mall sale signs
+		unsigned const skip_faces(sale_sign ? ~get_skip_mask_for_xy(dim) : (hanging ? (draw_top ? 0 : EF_Z2) : skip_back_face));
 		// back of the sign; unshadowed; what about transparent plastic back for hanging signs?
 		rgeom_mat_t &mat(get_untextured_material(0, 0, small, 0, exterior));
 		colorRGBA bkg_col;
@@ -5702,21 +5703,23 @@ void building_room_geom_t::add_sign(room_object_t const &c, bool inc_back, bool 
 			if (c.item_flags < NUM_RAND_SIGN_BKG_COLORS) {bkg_col = blend_color(bkg_col, WHITE, 0.5, 0);} // 50% mix with white, for good contrast against dark text; calc_alpha=0
 		}
 		colorRGBA const color(apply_light_color(c, bkg_col));
+		cube_t body(c);
+		if (sale_sign) {body.d[dim][!dir] = body.d[dim][dir];} // shrink to zero area at front face
 		mat.add_cube_to_verts_untextured(c, color, skip_faces);
 
 		if (c.has_extra()) { // add a black-ish frame (or white in dark mode)
 			unsigned const skip_faces_frame(hanging ? 0 : skip_back_face);
 			colorRGBA const frame_color(apply_light_color(c, (dark_mode ? WHITE : BKGRAY)));
-			float const frame_width(0.1*c.dz()), frame_thickness(0.5*c.get_sz_dim(c.dim)); // actual thickness is 2x
+			float const frame_width(0.1*c.dz()), frame_thickness(0.5*c.get_sz_dim(dim)); // actual thickness is 2x
 			cube_t frame(c);
-			frame.d[c.dim][c.dir] += (c.dir ? 1.0 : -1.0)*frame_thickness; // extend outward
-			frame.expand_in_dim(!c.dim, frame_width);
-			frame.expand_in_dim(2,      frame_width); // z
+			frame.d[dim][dir] += (dir ? 1.0 : -1.0)*frame_thickness; // extend outward
+			frame.expand_in_dim(!dim, frame_width);
+			frame.expand_in_dim(2,    frame_width); // z
 
 			for (unsigned d = 0; d < 2; ++d) { // top/bot an sides
 				cube_t tb(frame), side(frame);
 				tb.d[2][d] = c.d[2][!d] + (d ? 1.0 : -1.0)*frame_thickness; // clip in z
-				side.d[!c.dim][d] = c.d[!c.dim][!d] + (d ? 1.0 : -1.0)*frame_thickness; // clip
+				side.d[!dim][d] = c.d[!dim][!d] + (d ? 1.0 : -1.0)*frame_thickness; // clip
 				side.z1() = c.z1(); side.z2() = c.z2();
 				mat.add_cube_to_verts_untextured(tb,   frame_color,  skip_faces_frame);
 				mat.add_cube_to_verts_untextured(side, frame_color, (skip_faces_frame | EF_Z12));
