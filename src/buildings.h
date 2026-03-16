@@ -3212,7 +3212,7 @@ private:
 		unsigned room_id, unsigned num_floors, unsigned objs_start, float ceil_zval, rand_gen_t &rgen, unsigned pipe_type, bool allow_place_fail=0);
 	void add_ext_basement_hallway_pipes_recur(unsigned room_id, bool hall_dim, unsigned pipe_type, float radius_factor,
 		pipe_t const &parent, vector<pipe_t> &pipes, vector<pipe_t> &fittings, rand_gen_t &rgen) const;
-	void add_hallway_steam_pipes(rand_gen_t rgen, cube_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
+	void add_hallway_steam_pipes(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	bool add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vect_cube_t const &pipe_cubes,
 		unsigned room_id, unsigned num_floors, unsigned objs_start, rand_gen_t &rgen,
 		float custom_floor_spacing=0.0, float wall_pad=0.0, unsigned pref_dim=2, vect_cube_t const &vpipe_avoid=vect_cube_t());

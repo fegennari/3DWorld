@@ -824,11 +824,23 @@ void building_t::add_ext_basement_hallway_pipes_recur(unsigned room_id, bool hal
 	} // for ds
 }
 
-void building_t::add_hallway_steam_pipes(rand_gen_t rgen, cube_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+void building_t::add_hallway_steam_pipes(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	//if (is_house) return;
 	bool const dim(room.dx() < room.dy()); // long dim
 	float const window_vspace(get_window_vspace()), fc_gap(get_floor_ceil_gap());
+	float const pipe_radius(0.05*window_vspace), pipe_zval(zval + fc_gap - pipe_radius);
+	cube_t const room_bounds(get_room_wall_bounds(room));
 	vect_room_object_t &objs(interior->room_geom->objs);
-	// TODO: maybe add a steam pipe near the ceiling
+	unsigned flags(RO_FLAG_HANGING | RO_FLAG_LIT | RO_FLAG_BROKEN); // shadow casting, no ends, dirty
+
+	// maybe add a steam pipe near the ceiling on either wall along the hallway
+	for (unsigned d = 0; d < 2; ++d) { // side of hallway
+		cube_t pipe(room_bounds);
+		set_wall_width(pipe, pipe_zval, pipe_radius, 2);
+		pipe.d[!dim][!d] = room_bounds.d[!dim][d] - (d ? 1.0 : -1.0)*2.0*pipe_radius; // extend outward from wall
+		if (is_obj_placement_blocked(pipe, room, 1, 1) || overlaps_other_room_obj(pipe, objs_start)) continue; // bad placement
+		objs.emplace_back(pipe, TYPE_PIPE, room_id, dim, 0, flags, tot_light_amt, SHAPE_CYLIN, WHITE);
+	} // for d
 }
 
 // return value: 0=failed to place, 1=placed full length, 2=placed partial length
