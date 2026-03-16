@@ -22,6 +22,7 @@ void add_button(point const &pos, float button_radius, bool dim, bool dir, unsig
 bool try_add_lamp(cube_t const &place_area, float floor_spacing, unsigned room_id, unsigned flags, float light_amt,
 	vect_cube_t &cubes, vect_room_object_t &objects, rand_gen_t &rgen);
 int select_app_store_model(rand_gen_t &rgen, float &hscale, bool plumbing);
+void count_sign_rows_cols(string const &text, unsigned &nrows, unsigned &ncols);
 
 extern object_model_loader_t building_obj_model_loader;
 
@@ -1764,7 +1765,7 @@ unsigned building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zv
 		set_wall_width(sign, door_center, sign_hwidth, !dim);
 		unsigned const flags(RO_FLAG_LIT | RO_FLAG_NOCOLL | (emissive ? RO_FLAG_EMISSIVE : 0) | RO_FLAG_HANGING);
 		unsigned item_flags(0);
-		if (rgen.rand_bool()) {item_flags = (rgen.rand() % (NUM_SIGN_BKG_COLORS-1)) + 1;} // set a custom background color 50% of the time; light colors, excludes black
+		if (rgen.rand_bool()) {item_flags = (rgen.rand() % NUM_RAND_SIGN_BKG_COLORS) + 1;} // set a custom background color 50% of the time; light colors only
 		objs.emplace_back(sign, TYPE_SIGN, interior->ext_basement_hallway_room_id, dim, dir, flags, light_amt, SHAPE_CUBE, logo_color, item_flags); // always lit
 		objs.back().obj_id = register_sign_text(store_name);
 	}
@@ -2248,6 +2249,42 @@ unsigned building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zv
 			add_tv_to_wall(tv, room_id, light_amt, !dim, !d, 0, 2); // use_monitor_image=0, on_off=1 (on)
 			objs.emplace_back(tv, TYPE_BLOCKER, 0, 0, 0, (RO_FLAG_INVIS | RO_FLAG_NOCOLL)); // add a placeholder blocker so that screens cycle through different images
 		} // for n
+	}
+	// maybe add sale sign to 33% of stores
+	if ((store_type == STORE_CLOTHING || store_type == STORE_SHOE || store_type == STORE_FURNITURE || store_type == STORE_APPLIANCE) && rgen.rand_float() < 0.33) {
+		// find an interior window for this store; there should be two; there's no mapping from store to window, so we must iterate
+		assert(!doorway.is_all_zeros());
+		unsigned const window_mask(1 + (rgen.rand() % 3)); // 1: first window, 2=second window, 3=both windows
+		string const &text(sale_sign_text[rgen.rand() % NUM_SALE_SIGN_TEXTS]);
+		unsigned const text_id(register_sign_text(text));
+		float const door_center(doorway.get_center_dim(!dim)), sign_depth(get_trim_thickness());
+		colorRGBA text_color(RED);
+		unsigned item_flags(0); // sets sign color from sign_bkg_colors; 0 is WHITE
+		unsigned num_windows(0), num_rows(1), num_cols(0);
+		count_sign_rows_cols(text, num_rows, num_cols); // determine sign size based on characters
+		float const sz_scale(sqrt(num_rows)), sign_height(0.22*window_vspace*sz_scale), sign_width(0.06*window_vspace*(num_cols + 2)/sz_scale);
+
+		if (rgen.rand_bool()) { // white text on red background, rather than red text on white background
+			text_color = WHITE;
+			item_flags = SIGN_BKG_COLOR_RED+1; // Note: 1 will be subtracted off during draw
+		}
+		for (cube_with_ix_t const &w : interior->int_windows) {
+			if (w.ix != room_id) {
+				if (num_windows > 0) {break;} else {continue;} // can stop after moving past our store
+			}
+			if (!(window_mask & (1 << num_windows++))) continue; // no sign in this window
+			bool const door_dir(door_center < w.get_center_dim(!dim));
+			float const window_edge(w.d[dim][dir]); // outside edge; sign is placed on exterior of window facing out (though it would work on the interior as well)
+			cube_t sign;
+			set_wall_width(sign, w.zc(), 0.5*sign_height, 2); // set zvals
+			sign.d[ dim][!dir] = window_edge; // back
+			sign.d[ dim][ dir] = window_edge + dsign*sign_depth; // front
+			set_wall_width(sign, (w.d[!dim][!door_dir] + (door_dir ? 1.0 : -1.0)*0.75*sign_width), 0.5*sign_width, !dim); // on side closer to the door
+			// red text on white background; flag as hanging so that the back is drawn
+			objs.emplace_back(sign, TYPE_SIGN, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), light_amt, SHAPE_CUBE, text_color, item_flags);
+			objs.back().obj_id = text_id;
+		} // for w
+		assert(num_windows == 2);
 	}
 	if (max_shopping_carts > 0) {add_shopping_carts_to_room(rgen, room, zval, room_id, light_amt, objs_start, max_shopping_carts);}
 	unsigned const skip_dir((room_width < 0.8*room_len) ? rgen.rand_bool() : 2); // skip one side if room is narrow

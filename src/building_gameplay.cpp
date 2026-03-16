@@ -522,6 +522,13 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 		string const contents[num_contents] = {"ice cream", "lard", "mashed potatoes", "mystery meat", "frozen yogurt"};
 		type.name = "tub of " + contents[obj.item_flags % num_contents];
 	}
+	else if (otype == TYPE_SIGN) { // sale signs are worth $1 rather than $10
+		string const &sign_text(get_sign_text(obj));
+
+		for (unsigned n = 0; n < NUM_SALE_SIGN_TEXTS; ++n) {
+			if (sign_text == sale_sign_text[n]) {type.value = 1.0; type.weight = 0.25; break;}
+		}
+	}
 	if (wv_factor != 1.0) { // scale weight and value by this factor, rounded to the nearest pound and dollar
 		type.weight = int(wv_factor*type.weight);
 		type.value  = int(wv_factor*type.value );

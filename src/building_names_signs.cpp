@@ -196,7 +196,8 @@ colorRGBA choose_sign_color(rand_gen_t &rgen, bool emissive=0) {
 	return (emissive ? emissive_colors[rgen.rand() % 5] : sign_colors[rgen.rand() % 8]);
 }
 
-unsigned register_sign_text(string const &text) {return sign_helper.register_text(text);}
+unsigned register_sign_text(string        const &text) {return sign_helper.register_text(text);}
+string const &get_sign_text(room_object_t const &obj ) {return sign_helper.get_text(obj.obj_id);}
 
 // here dim and dir are the direction the text is read
 float clip_char_quad(vector<vert_tc_t> &verts, unsigned start_ix, bool dim, bool dir, float lo_val, float hi_val) {
@@ -288,7 +289,22 @@ void add_sign_text_verts_both_sides(string const &text, cube_t const &sign, bool
 }
 
 void add_room_obj_sign_text_verts(room_object_t const &c, colorRGBA const &color, vector<vert_norm_comp_tc_color> &verts_out) {
-	add_sign_text_verts(sign_helper.get_text(c.obj_id), c, c.dim, c.dir, color, verts_out);
+	add_sign_text_verts(get_sign_text(c), c, c.dim, c.dir, color, verts_out);
+}
+
+void count_sign_rows_cols(string const &text, unsigned &nrows, unsigned &ncols) {
+	unsigned col_ix(0);
+	nrows = 1; ncols = 0;
+
+	for (char c : text) {
+		if (c == '\n') {
+			max_eq(ncols, col_ix);
+			++nrows;
+			col_ix = 0;
+		}
+		else {++col_ix;}
+	}
+	max_eq(ncols, col_ix); // for final row
 }
 
 void building_t::set_rgen_state_for_building(rand_gen_t &rgen) const {

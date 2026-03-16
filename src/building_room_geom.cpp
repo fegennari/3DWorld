@@ -5698,7 +5698,8 @@ void building_room_geom_t::add_sign(room_object_t const &c, bool inc_back, bool 
 		if (c.item_flags == 0) {bkg_col = (dark_mode ? (c.is_exterior() ? colorRGBA(0.2, 0.2, 0.8) : BKGRAY) : WHITE);} // blue background for exterior parking sign
 		else { // custom color
 			assert(c.item_flags <= NUM_SIGN_BKG_COLORS);
-			bkg_col = blend_color(sign_bkg_colors[c.item_flags-1], WHITE, 0.5, 0); // 50% mix of color and white, to keep good contrast against dark text; calc_alpha=0
+			bkg_col = sign_bkg_colors[c.item_flags-1];
+			if (c.item_flags < NUM_RAND_SIGN_BKG_COLORS) {bkg_col = blend_color(bkg_col, WHITE, 0.5, 0);} // 50% mix with white, for good contrast against dark text; calc_alpha=0
 		}
 		colorRGBA const color(apply_light_color(c, bkg_col));
 		mat.add_cube_to_verts_untextured(c, color, skip_faces);

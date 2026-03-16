@@ -79,7 +79,8 @@ unsigned const NUM_HANDLE_COLORS  = 4;
 unsigned const NUM_SOAP_COLORS    = 5;
 unsigned const NUM_SPICE_COLORS   = 7;
 unsigned const NUM_FOOD_TUB_COLORS= 3;
-unsigned const NUM_SIGN_BKG_COLORS= 9; // Note: 0 is auto
+unsigned const NUM_RAND_SIGN_BKG_COLORS = 8; // Note: 0 is auto
+enum {SIGN_BKG_COLOR_BLACK=NUM_RAND_SIGN_BKG_COLORS, SIGN_BKG_COLOR_RED, NUM_SIGN_BKG_COLORS};
 unsigned const NUM_MALL_CHAIR_COLORS  = 5;
 unsigned const NUM_SP_EMISSIVE_COLORS = 2;
 colorRGBA const GD_SP_COLOR(0.5, 1.0, 1.0); // used for glow-in-the-dark spraypaint
@@ -107,7 +108,7 @@ colorRGBA const handle_colors [NUM_HANDLE_COLORS ] = {DK_RED, colorRGBA(0.1, 0.2
 colorRGBA const soap_colors   [NUM_SOAP_COLORS   ] = {WHITE, cream, vlt_yellow, colorRGBA(1.0, 0.8, 0.6), colorRGBA(0.7, 1.0, 0.7)};
 colorRGBA const spice_colors  [NUM_SPICE_COLORS  ] = {WHITE, BLACK, LT_BROWN, BROWN, DK_BROWN, DK_GREEN, OLIVE};
 colorRGBA const food_tub_colors[NUM_FOOD_TUB_COLORS] = {WHITE, cream, colorRGBA(0.8, 0.7, 0.5)}; // tan
-colorRGBA const sign_bkg_colors[NUM_SIGN_BKG_COLORS] = {WHITE, CYAN, MAGENTA, YELLOW, LT_RED, LT_BLUE, LT_GREEN, LT_BROWN, BLACK};
+colorRGBA const sign_bkg_colors[NUM_SIGN_BKG_COLORS] = {WHITE, CYAN, MAGENTA, YELLOW, LT_RED, LT_BLUE, LT_GREEN, LT_BROWN, BLACK, RED};
 colorRGBA const mall_chair_colors[NUM_MALL_CHAIR_COLORS] = {WHITE, LT_GRAY, GRAY, ORANGE, LT_BROWN};
 colorRGBA const LAMP_COLOR(1.0, 0.8, 0.6); // soft white
 colorRGBA const WALL_LAMP_COLOR(1.0, 0.9, 0.8);
@@ -203,6 +204,9 @@ ball_type_t const ball_types[NUM_BALL_TYPES] = {
 	ball_type_t("beach ball",  "balls/beachball.jpg",           "",                            10.0, 0.01, 10.0, 0.10, 1, 0, 0, 0.5, 80.0, 0.8, 1.0)
 };
 ball_type_t const pool_ball_type("pool ball", "balls/pool_balls.png", "",                     1.125, 1.70,  2.0, 0.37, 0, 1, 1, 0.9, 100.0,0.5, 2.5);
+
+unsigned const NUM_SALE_SIGN_TEXTS = 5;
+std::string const sale_sign_text[NUM_SALE_SIGN_TEXTS] = {"SALE", "SALE", "CLEARANCE", " STORE\nCLOSING\n SALE", "50% OFF"};
 
 class light_ix_assign_t {
 	vector<pair<point2d<float>, unsigned>> cur;
@@ -3589,6 +3593,7 @@ int get_mplate_nm_tid ();
 int get_normal_map_for_bldg_tid(int tid);
 bool has_office_chair_model();
 unsigned register_sign_text(std::string const &text);
+std::string const &get_sign_text(room_object_t const &obj);
 void setup_building_draw_shader(shader_t &s, float min_alpha, bool enable_indir, bool force_tsl, int use_texgen,
 	float water_damage=0.0, float crack_damage=0.0, bool enable_int_reflect=0);
 void rotate_verts(vector<rgeom_mat_t::vertex_t> &verts, building_t const &building);
