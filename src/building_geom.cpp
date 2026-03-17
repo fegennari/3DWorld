@@ -619,8 +619,10 @@ cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door
 			min_eq(door_center, (base_hi - min_wall_spacing));
 		}
 		if (calc_center || door_pos == 0.0) {door_pos = base.d[dim][dir];}
+		bool const pref_stairs_or_hallway(pref_near_stairs && n < 15); // check if room has stairs or is a hallway; basement stairs stairs don't count
+		bool const check_for_bathroom(is_restaurant()); // restaurant bathrooms are placed before doors; don't add a door to them
 
-		if (pref_near_stairs && n < 15) { // check if room has stairs or is a hallway; basement stairs stairs don't count
+		if (pref_stairs_or_hallway || check_for_bathroom) { // two cases where we need to check the room
 			point center;
 			center.z     = door.zc();
 			center[ dim] = door_pos - wall_thickness*(dir ? 1.0 : -1.0); // move into the house interior
@@ -629,8 +631,10 @@ cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door
 			//assert(room_ix >= 0);
 			if (room_ix < 0) continue; // should never fail, but if it does, then the door placement must be bad
 			room_t const &room(interior->get_room(room_ix));
+			if (room.is_bathroom_rtype()) continue;
 			
-			if (!room.has_stairs_on_floor(1)) { // check for stairs on second floor to exclude basement stairs; we know there must be at least two floors
+			// check for stairs on second floor to exclude basement stairs; we know there must be at least two floors
+			if (pref_stairs_or_hallway && !room.has_stairs_on_floor(1)) {
 				if (n < base_num_tries || !room.is_hallway) continue; // allow hallways as well for n=[10, 14]
 			}
 		}
