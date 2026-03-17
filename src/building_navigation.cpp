@@ -1778,10 +1778,20 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 			}
 		} // for c
 	}
-	if (fires_select_cube != nullptr) {
+	if (fires_select_cube != nullptr) { // check for fires
 		cube_t sel_cube(*fires_select_cube);
 		set_cube_zvals(sel_cube, z1, z2); // clip to the current Z-range
 		room_geom->fire_manager.add_fire_bcubes_for_cube(sel_cube, avoid);
+	}
+	if (!ai_follow_player()) { // people avoid steam, but zombies don't
+		for (particle_source_t const &ps : room_geom->steam_emitters) {
+			if (ps.pos.z < z1) continue;
+			point const end_pt(ps.pos + ps.velocity.get_norm()*SQRT2*floor_ceil_gap); // should be enough to cross through the hallway or at least hit the floor
+			if (end_pt.z > z2) continue;
+			cube_t steam_avoid(ps.pos, end_pt); // extend to full width of hallway
+			steam_avoid.expand_by(4.0*ps.radius);
+			avoid.push_back(steam_avoid);
+		} // for ps
 	}
 }
 

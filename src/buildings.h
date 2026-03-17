@@ -1318,6 +1318,14 @@ struct path_node_t : public point {
 	path_node_t(point const &p, unsigned rid) : point(p), room_id(rid) {}
 };
 
+struct particle_source_t {
+	point pos;
+	vector3d velocity;
+	float radius=0.0, time=0.0, next_time=0.0;
+	int pid; // parent obj_id, for handling collisions
+	particle_source_t(point const &p, vector3d const v, float radius_, int pid_=-1) : pos(p), velocity(v), radius(radius_), pid(pid_) {}
+};
+
 struct building_room_geom_t {
 
 	bool has_pictures=0, has_garage_car=0, modified_by_player=0, have_clock=0, have_conv_belt=0, glass_floor_split=0, mall_geom_drawn=0, has_locker=0;
@@ -1343,6 +1351,7 @@ struct building_room_geom_t {
 	vector<point_of_interest_t> pois; // for building AI
 	vector<path_node_t> path_nodes; // for building AI
 	vector<unsigned> moved_obj_ids;
+	vector<particle_source_t> steam_emitters;
 	vect_rat_t    rats, sewer_rats, pet_rats;
 	vect_spider_t spiders, sewer_spiders;
 	vect_snake_t  snakes, pet_snakes;
@@ -1653,6 +1662,7 @@ struct building_room_geom_t {
 	void set_factory_machine_seed_from_obj(room_object_t const &obj) {set_factory_machine_seed(obj.item_flags, obj.obj_id);}
 	void update_draw_state_for_room_object(room_object_t const &obj, building_t &building, bool was_taken);
 	void get_path_nodes_for_pt_and_room(cube_t const &path_area, float zval, float max_dz, unsigned room_id, vector<point> &cand_nodes) const;
+	void next_frame(building_t &building, point const &player_pos);
 	
 	room_object_t &get_room_object_by_index(unsigned obj_id) { // inlined for performance
 		if (obj_id < objs.size()) {return objs[obj_id];}
@@ -2112,14 +2122,8 @@ struct bldg_industrial_info_t {
 	vect_cube_t sub_rooms, pg_extended_pipes;
 
 	// specifically for factories
-	struct smoke_source_t {
-		point pos;
-		float radius=0.0, time=0.0, next_smoke_time=0.0;
-		int pid;
-		smoke_source_t(point const &pos_, float radius_, int pid_=-1) : pos(pos_), radius(radius_), pid(pid_) {}
-	};
 	vector2d machine_row_spacing;
-	vector<smoke_source_t> smoke_emitters;
+	vector<particle_source_t> smoke_emitters;
 
 	bldg_industrial_info_t(bool dim, bool dir, float epos, cube_t const &fs, cube_t const &ee) :
 		entrance_dim(dim), entrance_dir(dir), entrance_pos(epos), floor_space(fs), entrance_area(ee) {}

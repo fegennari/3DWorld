@@ -1899,8 +1899,10 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 		if (interior->room_geom->fire_manager.get_closest_fire(camera_rot, player_radius, player_z1, player_z2)) {
 			player_take_damage(0.006); // small amount of fire damage
 		}
-		if (interior->room_geom->particle_manager.get_closest_particle(camera_rot, player_radius, player_z1, player_z2, PART_EFFECT_STEAM)) {
-			player_take_damage(0.001); // very small amount of steam damage
+		if (point_in_extended_basement_not_basement(camera_rot) &&
+			interior->room_geom->particle_manager.get_closest_particle(camera_rot, player_radius, player_z1, player_z2, PART_EFFECT_STEAM))
+		{
+			player_take_damage(0.002); // very small amount of steam damage; only for extended basements (not prison showers)
 		}
 		if (!player_room_no_power && player_room_ix >= 0 /*&& !is_house*/) { // check for sounds; should this be for office buildings only?
 			room_t const &room(get_room(player_room_ix));
@@ -1918,10 +1920,32 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 	} // end player_in_this_building
 	if (hum_amt > 0.0) {play_hum_sound(player_pos, hum_amt, 0.01*hum_freq);}
 	doors_next_frame(player_pos); // run for current and connected buildings
-	interior->room_geom->particle_manager.next_frame(*this);
-	interior->room_geom->fire_manager.next_frame(interior->room_geom->particle_manager);
+	interior->room_geom->next_frame(*this, player_pos);
 	if (is_factory()) {interior->ind_info->next_frame(interior->room_geom->particle_manager);} // update factory smoke
 	if (player_in_this_building && player_in_basement == 3) {update_droplet_spawners();} // only for player in extended basement of this building
+}
+
+void building_room_geom_t::next_frame(building_t &building, point const &player_pos) {
+	particle_manager.next_frame(building);
+	fire_manager.next_frame(particle_manager);
+	// update steam emitters
+	if (steam_emitters.empty() || player_in_basement < 3) return; // only update if player in extended basement
+	int const room_id(building.get_room_containing_pt(player_pos));
+	if (room_id < 0) return; // player not in a room of this building
+	room_t const &room(building.get_room(room_id));
+	static rand_gen_t rgen;
+	static unsigned sound_iter(0);
+
+	for (particle_source_t &s : steam_emitters) { // generate smoke
+		s.time += fticks;
+		if (s.time < s.next_time) continue;
+		particle_manager.add_particle(s.pos, s.velocity, colorRGBA(WHITE, 0.75), s.radius, PART_EFFECT_STEAM, s.pid, 0.5); // coll_radius=0.5
+		s.next_time = s.time + rgen.rand_uniform(0.08, 0.12)*TICKS_PER_SECOND;
+
+		if (room.contains_pt(s.pos) && (sound_iter++ & 1) == 0) { // same room as player
+			gen_sound_thread_safe(SOUND_HISS, building.local_to_camera_space(s.pos), 0.25, 1.0, 1.0, 0); // skip if playing?
+		}
+	} // for s
 }
 
 // particle_manager_t
@@ -2000,8 +2024,8 @@ void particle_manager_t::next_frame(building_t &building) {
 			p.color  = colorRGBA(DK_GRAY*(1.0 - lifetime), p.alpha*(1.0 - lifetime)); // dark gray => transparent black
 			//if (building.is_factory() && p.pos.z > building.ground_floor_z1) {} // should factory smoke be different?
 		}
-		else if (p.effect == PART_EFFECT_STEAM) {
-			p.radius = p.init_radius*(1.0 + 3.0*lifetime); // radius increases over lifetime; color remains constant
+		else if (p.effect == PART_EFFECT_STEAM) { // color remains constant
+			p.radius = p.init_radius*(1.0 + ((p.vel.z < 0.0) ? 15.0 : 3.0)*lifetime); // radius increases over lifetime, faster for steam leaks pointed down (not showers)
 		}
 		else if (p.effect == PART_EFFECT_SPLASH) {
 			p.radius  = p.init_radius*(1.0 + 1.0*lifetime); // radius increases over lifetime

@@ -834,12 +834,26 @@ void building_t::add_hallway_steam_pipes(rand_gen_t rgen, room_t const &room, fl
 	unsigned flags(RO_FLAG_HANGING | RO_FLAG_LIT | RO_FLAG_BROKEN); // shadow casting, no ends, dirty
 
 	// maybe add a steam pipe near the ceiling on either wall along the hallway
+	// TODO: better material
+	// TODO: extend through rooms connect to hallways?
+	// TODO: boilers in machine rooms
 	for (unsigned d = 0; d < 2; ++d) { // side of hallway
 		cube_t pipe(room_bounds);
 		set_wall_width(pipe, pipe_zval, pipe_radius, 2);
-		pipe.d[!dim][!d] = room_bounds.d[!dim][d] - (d ? 1.0 : -1.0)*2.0*pipe_radius; // extend outward from wall
+		float const outside_edge(room_bounds.d[!dim][d] - (d ? 1.0 : -1.0)*2.0*pipe_radius); // extend outward from wall
+		pipe.d[!dim][!d] = outside_edge;
 		if (is_obj_placement_blocked(pipe, room, 1, 1) || overlaps_other_room_obj(pipe, objs_start)) continue; // bad placement
+		unsigned const obj_id(objs.size());
 		objs.emplace_back(pipe, TYPE_PIPE, room_id, dim, 0, flags, tot_light_amt, SHAPE_CYLIN, WHITE);
+		// maybe add steam emitter
+		if (rgen.rand_bool()) continue;
+		float const steam_radius(0.5*pipe_radius), edge_spacing(4.0*steam_radius), lo(room_bounds.d[d][0] + edge_spacing), hi(room_bounds.d[d][1] - edge_spacing);
+		if (hi <= lo) continue; // hallway too short; shouldn't happen
+		point pos(0.0, 0.0, pipe.z1());
+		pos[!dim] = outside_edge;
+		pos[ dim] = rgen.rand_uniform(lo, hi);
+		vector3d const velocity(0.001*(vector_from_dim_dir(!dim, !d) - plus_z)); // aimed down at 45 degrees
+		interior->room_geom->steam_emitters.emplace_back(pos, velocity, steam_radius, obj_id); // store pipe obj id
 	} // for d
 }
 
