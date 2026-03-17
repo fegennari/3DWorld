@@ -2570,7 +2570,7 @@ struct building_t : public building_geom_t {
 	void get_all_drawn_window_verts  (building_draw_t &bdraw, bool lights_pass=0, float offset_scale=1.0,
 		point const *only_cont_pt_in=nullptr, bool no_skylights=0, bool draw_int_windows=0, bool for_gen_not_draw=0) const;
 	vect_vnctcc_t const &get_all_drawn_window_verts_as_quads() const;
-	bool get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, point const &pos, vector3d const &view_dir, float dist, bool update_state, bool only_open);
+	bool get_nearby_ext_door_verts(building_draw_t *bdraw, shader_t &s, point const &pos, vector3d const &view_dir, float dist, bool update_state, bool only_open);
 	void get_ext_door_verts(building_draw_t &bdraw, point const &viewer, vector3d const &view_dir, int skip_door_ix) const;
 	bool get_all_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, vector<point> const &pts, float dist);
 	bool add_parking_structure_entrance(rand_gen_t rgen);
