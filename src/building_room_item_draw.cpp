@@ -1051,15 +1051,52 @@ colorRGBA building_t::get_door_handle_color() const {
 	colorRGBA const office_handle_colors[3] = {GRAY, DK_GRAY, BLACK};
 	return (is_house ? house_handle_colors : office_handle_colors)[(interior->doors.size() + interior->rooms.size() + mat_ix) % 3];
 }
+void add_handle_models_for_door(door_t const &d, door_rotation_t const &drot, bool residential, bool is_exterior, vector<door_handle_t> &door_handles) {
+	bool const handle_side(d.get_handle_side());
+	float const handle_height(0.04*d.dz());
+	point const door_center(d.get_cube_center());
+	vector3d handle_dir;
+	handle_dir[!d.dim] = (handle_side ? -1.0 : 1.0);
+	point handle_center(door_center);
+	handle_center.z += (is_exterior ? (d.open ? -0.08 : -0.2) : (residential ? 0.15 : -0.18))*handle_height;
+	handle_center   -= (is_exterior ? 0.33 : 0.393)*d.get_width()*handle_dir;
+	float sin_term(0.0), cos_term(0.0);
+	point pivot;
+
+	if (d.open_amt > 0.0) { // rotate handle_dir and handle_center
+		// similar to rotate_and_shift_door()
+		float const rot_angle(-float(drot.angle)*TO_RADIANS*(d.hinge_side ? -1.0 : 1.0));
+		sin_term = sin(rot_angle);
+		cos_term = cos(rot_angle);
+		pivot    = door_center;
+		pivot[!d.dim] = d.d[!d.dim][!handle_side];
+		do_xy_rotate_normal(sin_term, cos_term, handle_dir);
+	}
+	for (unsigned side = 0; side < 2; ++side) {
+		if (is_exterior && bool(side) != d.open_dir) continue; // skip outside handle of exterior door for now
+		//if (d.is_bars() && bool(side) != d.open_dir) continue; // no handle on the inside/cell side of the door
+		point side_pos(handle_center);
+		side_pos[d.dim] += (side ? 1.0 : -1.0)*(is_exterior ? (d.open ? -0.08 : 0.42) : 0.68)*handle_height;
+
+		if (d.open_amt > 0.0) {
+			do_xy_rotate(sin_term, cos_term, pivot, side_pos);
+			side_pos[d.dim] += drot.shift;
+		}
+		bool const mirror(bool(side) ^ d.open_dir ^ d.hinge_side ^ 1);
+		door_handles.emplace_back(side_pos, handle_height, d.dim, bool(side), mirror, (d.open_amt == 0.0), is_exterior, handle_dir);
+	} // for side
+}
+bool use_door_handle_model() {
+	return (global_building_params.add_door_handles && building_obj_model_loader.is_model_valid(OBJ_MODEL_DOOR_HANDLE));
+}
 void building_room_geom_t::create_door_vbos(building_t const &building) {
 	//highres_timer_t timer("Gen Room Geom Doors"); // 0.1ms
-	vect_door_t const &doors(building.interior->doors);
-	bool const have_door_handle_model(global_building_params.add_door_handles && building_obj_model_loader.is_model_valid(OBJ_MODEL_DOOR_HANDLE));
+	bool const use_model(use_door_handle_model());
 	colorRGBA const handle_color(global_building_params.add_door_handles ? building.get_door_handle_color() : WHITE);
 	bool const residential(building.is_residential()), has_br_tex(building.has_backrooms_texture());
 	door_handles.clear();
 
-	for (door_t const &d : doors) { // interior doors; opens_out=0, exterior=0
+	for (door_t const &d : building.interior->doors) { // interior doors; opens_out=0, exterior=0
 		door_rotation_t drot;
 		if (d.is_metal()) {add_metal_door(d, building, drot);} // metal door types
 		else { // normal interior door
@@ -1072,45 +1109,11 @@ void building_room_geom_t::create_door_vbos(building_t const &building) {
 		maybe_add_door_sign(d, drot);
 		if (!global_building_params.add_door_handles) continue;
 		if (d.on_stairs) continue; // skip basement stairs doors since they're not drawn when open anyway
-		
 		if (d.is_metal()) {} // handle drawn inside add_metal_door()
-		else if (have_door_handle_model) { // add model to door_handles
-			bool const handle_side(d.get_handle_side());
-			float const handle_height(0.04*d.dz());
-			point const door_center(d.get_cube_center());
-			vector3d handle_dir;
-			handle_dir[!d.dim] = (handle_side ? -1.0 : 1.0);
-			point handle_center(door_center);
-			handle_center.z += (residential ? 0.15 : -0.18)*handle_height;
-			handle_center   -= 0.393*d.get_width()*handle_dir;
-			float sin_term(0.0), cos_term(0.0);
-			point pivot;
-			
-			if (d.open_amt > 0.0) { // rotate handle_dir and handle_center
-				// similar to rotate_and_shift_door()
-				float const rot_angle(-float(drot.angle)*TO_RADIANS*(d.hinge_side ? -1.0 : 1.0));
-				sin_term = sin(rot_angle);
-				cos_term = cos(rot_angle);
-				pivot    = d.get_cube_center();
-				pivot[!d.dim] = d.d[!d.dim][!handle_side];
-				do_xy_rotate_normal(sin_term, cos_term, handle_dir);
-			}
-			for (unsigned side = 0; side < 2; ++side) {
-				//if (d.is_bars() && bool(side) != d.open_dir) continue; // no handle on the inside/cell side of the door
-				point side_pos(handle_center);
-				side_pos[d.dim] += (side ? 1.0 : -1.0)*0.68*handle_height;
-
-				if (d.open_amt > 0.0) {
-					do_xy_rotate(sin_term, cos_term, pivot, side_pos);
-					side_pos[d.dim] += drot.shift;
-				}
-				bool const mirror(bool(side) ^ d.open_dir ^ d.hinge_side ^ 1);
-				door_handles.emplace_back(side_pos, handle_height, d.dim, bool(side), mirror, (d.open_amt == 0.0), handle_dir);
-			}
-		}
+		else if (use_model) {add_handle_models_for_door(d, drot, residential, 0, door_handles);} // add model to door_handles; is_exterior=0
 		else {add_door_handle(d, drot, handle_color, residential);}
 	} // for d
-	if (building.has_mall()) {
+	if (building.has_mall()) { // include store gates
 		float const window_vspace(building.get_window_vspace()), wall_thickness(building.get_wall_thickness()), trim_thick(building.get_trim_thickness());
 
 		for (store_doorway_t const &d : building.interior->mall_info->store_doorways) {
@@ -1124,7 +1127,26 @@ void building_room_geom_t::create_door_vbos(building_t const &building) {
 			add_store_gate(gate, d.dim, d.open_amt);
 		} // for d
 	}
+	update_exterior_door_vbos(building);
 	mats_doors.create_vbos(building);
+}
+void building_room_geom_t::update_exterior_door_vbos(building_t const &building) {
+	if (!use_door_handle_model() || !building.has_house_floorplan()) return; // no exterior door handles
+	while (!door_handles.empty() && door_handles.back().is_exterior) {door_handles.pop_back();} // remove any previously added exterior door handles
+
+	for (unsigned dix = 0; dix < building.doors.size(); ++dix) { // add exterior door handles for house doors
+		// add_door_handle() takes a door_t, so we have to construct one from the exterior door tquad
+		tquad_with_ix_t const &d(building.doors[dix]);
+		if (d.type != tquad_with_ix_t::TYPE_HDOOR) continue; // skip garage doors
+		cube_t const dbc(d.get_bcube());
+		vector3d const normal(d.get_norm());
+		bool const open(building.open_door_ix >= 0 && (int)dix == building.open_door_ix);
+		bool const dim(dbc.dy() < dbc.dx()), dir(normal[dim] < 0), hinge_side(1);
+		door_t door(dbc, dim, dir, open, 0, hinge_side); // on_stairs=0
+		door_rotation_t drot;
+		if (open) {drot.angle = 90.0; drot.shift = 0.05*(dir ? -1.0 : 1.0)*door.get_width();}
+		add_handle_models_for_door(door, drot, building.is_residential(), 1, door_handles); // is_exterior=1
+	} // for d
 }
 
 bool ceiling_fan_is_on(room_object_t &obj, vect_room_object_t const &objs) {
@@ -1796,6 +1818,10 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			create_detail_vbos(building);
 			if (!shadow_only) {++num_geom_this_frame;}
 		}
+	}
+	if (building.open_door_ix != prev_open_door_ix) { // open exterior door state change; re-add models
+		update_exterior_door_vbos(building);
+		prev_open_door_ix = building.open_door_ix;
 	}
 	if (draw_lights && !mats_lights .valid) {create_lights_vbos (building);} // create lights  materials if needed (no limit)
 	if (inc_small   && !mats_dynamic.valid) {create_dynamic_vbos(building, camera_bs, xlate, update_clocks);} // create dynamic materials if needed (no limit)
