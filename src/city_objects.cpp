@@ -3371,9 +3371,11 @@ void park_path_t::calc_bcube_bsphere() {
 	set_bsphere_from_bcube();
 }
 /*static*/ void park_path_t::pre_draw(draw_state_t &dstate, bool shadow_only) { // Note: not drawn in shadow pass
-	select_texture(get_texture_by_name("roads/concrete.jpg"));
+	bool const creek_pass(dstate.pass_ix == 1);
+	select_texture(creek_pass ? WATER_TEX : get_texture_by_name("roads/concrete.jpg"));
 }
 void park_path_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
+	if (is_creek != (dstate.pass_ix == 1)) return; // wrong pass
 	assert(!shadow_only);
 	assert(pts.size() >= 2);
 	float const tscale(0.5/hwidth), z_offset(1.0E-4*p2p_dist(pos, dstate.camera_bs));

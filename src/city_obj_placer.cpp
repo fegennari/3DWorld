@@ -771,6 +771,8 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 				} // for N
 			} // for n
 		}
+		bool added_pond(0);
+
 		if (1) { // try to place pond(s)
 			float const pond_border(max(sidewalk_width, path_hwidth));
 			vect_cube_t active_pond_blockers;
@@ -807,8 +809,12 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 				pond_groups.add_obj(pond_obj, ponds);
 				add_cube_to_colliders_and_blockers(pond, colliders, blockers);
 				max_eq(pond_max_depth, depth);
+				added_pond = 1;
 				break; // success
 			} // for n
+		}
+		if (added_pond) { // add a creek connecting to the pond, if present
+			// TODO
 		}
 		// place picnic tables
 		if (building_obj_model_loader.is_model_valid(OBJ_MODEL_PICNIC)) {

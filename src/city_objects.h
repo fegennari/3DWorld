@@ -674,8 +674,9 @@ struct park_path_t : public city_obj_t {
 	float hwidth;
 	colorRGBA color;
 	cube_t plot;
+	bool is_creek; // else sidewalk
 
-	park_path_t(float hwidth_, colorRGBA const &color_, cube_t const &plot_) : hwidth(hwidth_), color(color_), plot(plot_) {}
+	park_path_t(float hwidth_, colorRGBA const &color_, cube_t const &plot_, bool is_creek_=0) : hwidth(hwidth_), color(color_), plot(plot_), is_creek(is_creek_) {}
 	void calc_bcube_bsphere();
 	static void pre_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
