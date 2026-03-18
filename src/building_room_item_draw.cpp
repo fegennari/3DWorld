@@ -1641,6 +1641,7 @@ void draw_obj_model(obj_model_inst_t const &i, room_object_t const &obj, shader_
 	if (dir != obj.get_dir()) { // handle models that have rotating parts; similar to car_draw_state_t::draw_helicopter()
 		if      (type == TYPE_CEIL_FAN ) {rot_only_mat_mask =  1;} // only the first material (fan blades) rotate
 		else if (type == TYPE_OFF_CHAIR) {rot_only_mat_mask = ~1;} // all but the first material (base) rotates
+		//else if (type == TYPE_VENT_FAN ) {} // currently a single material, so can't rotate unless a different model is used
 
 		if (rot_only_mat_mask > 0) { // draw the rotated part
 			building_obj_model_loader.draw_model(s, obj_center, obj, dir, obj.color, xlate, model_id, shadow_only,

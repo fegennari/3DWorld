@@ -7301,7 +7301,7 @@ void building_room_geom_t::add_hvac_unit(room_object_t const &c) {
 void building_room_geom_t::add_vent_fan_frame(room_object_t const &c) {
 	// draw sides of fan housing
 	bool const extends_outside(c.in_factory()); // visible from outside the building
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_rust_met_tid(), 0.0, 1), 1)); // shadowed; same material as I-Beam; not specular/reflective
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_rust_met_tid(), 1.0/c.dz(), 1), 1)); // shadowed; same material as I-Beam; not specular/reflective
 	cube_t housing(c);
 	if (extends_outside) {housing.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*0.36*c.get_depth();} // part inside the building
 	colorRGBA const color(apply_light_color(c));
