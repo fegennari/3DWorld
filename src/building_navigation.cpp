@@ -3292,9 +3292,10 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	handle_vert_cylin_tape_collision(new_pos, person.pos, person.get_z1(), person.get_z2(), radius, 0); // should be okay to use zvals from old pos; is_player=0
 	// logic to clip this person to correct room Z-bounds in case something went wrong; remove if/when this is fixed
 	// Note: we probably can't use the room Z bounds here becase the person may be on the stairs connecting two stacked parts
+	bool const in_ext_basement(point_in_extended_basement_not_basement(new_pos));
 	float true_z1(bcube.z1());
 
-	if (point_in_extended_basement_not_basement(new_pos)) {
+	if (in_ext_basement) {
 		// round to an exact floor; needed for shallow swimming pools less than a floor in depth
 		float const extb_depth(bcube.z1() - interior->basement_ext_bcube.z1());
 		int const extb_num_floors(round_fp(extb_depth/floor_spacing + 0.25)); // bias larger to capture pool depth slightly less than half a floor
@@ -3333,6 +3334,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	person.pos        = new_pos; // Note: new_pos.z should equal person.poz.z unless on stairs, which is difficult to accurately check for in this function
 	person.anim_time += max_dist; // * (person.on_escalator() ? 0.75 : 1.0); // slower walking on escalator; TODO: should we reduce speed and use the idle animation?
 	person.idle_time  = 0.0; // reset idle time if we actually move
+	float const pz1(person.get_z1()), pz2(person.get_z2());
 	bool enable_bl_update(display_mode & 0x20); // disabled by default, enable with key '6'
 	if (in_building_gameplay_mode()) {enable_bl_update = 0;} // zombies don't turn on and off lights
 	if (ai_follow_player() && global_building_params.ai_player_vis_test >= 3) {enable_bl_update = 0;} // if AI tests that player is lit, don't turn on/off lights
@@ -3340,11 +3342,15 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	// update cur_room after moving and lights update; needed if player is in the room and for ai_room_lights_update() same room optimization
 	if (player_in_this_building || enable_bl_update) {person.cur_room = get_room_containing_pt(person.pos);}
 
+	// check for steam damage; only zombies should get here
+	if (in_ext_basement && has_room_geom() && interior->room_geom->particle_manager.get_closest_particle(new_pos, coll_dist, pz1, pz2, PART_EFFECT_STEAM)) {
+		building_person_hurt_sound(person_ix, 1); // is_steam=1
+	}
 	// create splashes if just fell in the pool, or if head is above the water
 	if (!prev_in_pool && person.in_pool) { // fell in
 		check_for_water_splash(person.pos, 1.5, 1, 1, 1); // full_room_height=1, draw_splash=1, alert_zombies=1
 	}
-	else if (point_in_water_area(point(person.pos.x, person.pos.y, person.get_z1()), 0) && person.get_z2() > interior->water_zval) { // full_room_height=0
+	else if (point_in_water_area(point(person.pos.x, person.pos.y, pz1), 0) && pz2 > interior->water_zval) { // full_room_height=0
 		float const splash_dist(2.0*radius);
 
 		if (round_fp(old_anim_time/splash_dist) != round_fp(person.anim_time/splash_dist)) { // update every splash_dist
@@ -3628,15 +3634,22 @@ int building_t::room_or_adj_room_has_stairs(int room_ix, float zval, bool inc_ad
 	return 0;
 }
 
+void building_t::building_person_hurt_sound(unsigned person_ix, bool is_steam) const {
+	if (is_steam) { // play less frequently since steam damage is continuous
+		static double next_time(0.0);
+		static rand_gen_t rgen;
+		if (tfticks < next_time) return; // too soon
+		next_time = tfticks + double(rgen.rand_uniform(1.0, 1.5))*TICKS_PER_SECOND; 
+	}
+	person_t &person(interior->people[person_ix]);
+	if (in_building_gameplay_mode()) {maybe_play_zombie_sound(person.pos, person_ix, !is_steam, 1, 1.0, 1.25);} // zombie
+	else {gen_sound_thread_safe((person.is_female ? SOUND_SCREAM3 : SOUND_SCREAM1), (person.pos + get_camera_coord_space_xlate()), 1.0, 1.0, 1.0, is_steam);} // human
+}
 bool building_t::maybe_zombie_retreat(unsigned person_ix, point const &hit_pos, unsigned hit_obj_type) {
 	bool const play_hurt_sound(hit_obj_type == TYPE_HANDGUN);
 	assert(interior && person_ix < interior->people.size());
 	person_t &person(interior->people[person_ix]);
-
-	if (play_hurt_sound) {
-		if (in_building_gameplay_mode()) {maybe_play_zombie_sound(person.pos, person_ix, 1, 1, 1.0, 1.25);} // zombie
-		else {gen_sound_thread_safe((person.is_female ? SOUND_SCREAM3 : SOUND_SCREAM1), (person.pos + get_camera_coord_space_xlate()));} // human
-	}
+	if (play_hurt_sound) {building_person_hurt_sound(person_ix, 0);} // is_steam=0
 	if (!ai_follow_player   ()) return 0; // not in gameplay mode, ignore it
 	if (person.on_fixed_path()) return 0; // ignore when on stairs/ramp/escalator as this doesn't work correctly
 	if (is_ball_type(hit_obj_type) && hit_pos.z < (person.get_z1() + 0.25*person.get_height())) return 0; // less than 25% up, coll with legs, assume kicking ball on the floor
