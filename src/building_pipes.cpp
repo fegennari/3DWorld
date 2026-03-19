@@ -827,32 +827,92 @@ void building_t::add_ext_basement_hallway_pipes_recur(unsigned room_id, bool hal
 void building_t::add_hallway_steam_pipes(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	//if (is_house) return;
 	bool const dim(room.dx() < room.dy()); // long dim
-	float const window_vspace(get_window_vspace()), fc_gap(get_floor_ceil_gap());
+	float const window_vspace(get_window_vspace()), fc_gap(get_floor_ceil_gap()), wall_thick(get_wall_thickness());
 	float const pipe_radius(0.05*window_vspace), pipe_zval(zval + fc_gap - pipe_radius);
 	cube_t const room_bounds(get_room_wall_bounds(room));
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned flags(RO_FLAG_HANGING | RO_FLAG_LIT | RO_FLAG_BROKEN); // shadow casting, no ends, dirty
+	bool const first_side(rgen.rand_bool());
+	bool added_pipe(0);
 
 	// maybe add a steam pipe near the ceiling on either wall along the hallway
-	// TODO: better material
-	// TODO: extend through rooms connect to hallways?
+	// TODO: extend through rooms connect to hallways
+	// TODO: bend 90 degrees into ceiling or floor
 	// TODO: boilers in machine rooms
-	for (unsigned d = 0; d < 2; ++d) { // side of hallway
+	for (unsigned d = 0; d < 2 && !added_pipe; ++d) { // side of hallway; only need to add to one side
+		bool const dir(bool(d) ^ first_side);
 		cube_t pipe(room_bounds);
 		set_wall_width(pipe, pipe_zval, pipe_radius, 2);
-		float const outside_edge(room_bounds.d[!dim][d] - (d ? 1.0 : -1.0)*2.0*pipe_radius); // extend outward from wall
-		pipe.d[!dim][!d] = outside_edge;
+		float const outside_edge(room_bounds.d[!dim][dir] - (dir ? 1.0 : -1.0)*2.0*pipe_radius); // extend outward from wall
+		pipe.d[!dim][!dir] = outside_edge;
 		if (is_obj_placement_blocked(pipe, room, 1, 1) || overlaps_other_room_obj(pipe, objs_start)) continue; // bad placement
-		unsigned const obj_id(objs.size());
+		unsigned const pipe_mat_ix(rgen.rand_bool());
+		cube_t const pipe_base(pipe); // part of pipe inside this room
+		bool cont_mask[2] = {0,0}, ext_mask[2] = {0,0};
+
+		// extend ends into nearby rooms if possible
+		for (unsigned e = 0; e < 2; ++e) {
+			point test_pt(0.0, 0.0, pipe_zval);
+			test_pt[!dim] = pipe.get_center_dim(!dim);
+			test_pt[ dim] = room.d[dim][e] + (e ? 1.0 : -1.0)*wall_thick;
+			int const next_room_id(get_room_containing_pt(test_pt));
+			if (next_room_id < 0) {cont_mask[e] = 1; continue;} // no adjacent room on this side
+			assert(next_room_id != (int)room_id);
+			room_t const &room2(get_room(next_room_id));
+			cube_t const room_bounds2(get_room_wall_bounds(room2));
+			cube_t pipe_ext(pipe);
+			for (unsigned f = 0; f < 2; ++f) {pipe_ext.d[dim][f] = room_bounds2.d[dim][f];} // copy room width
+			if (!room_bounds2.contains_cube(pipe_ext))           continue; // pipe partially outside of room (in !dim or Z)
+			if (is_obj_placement_blocked(pipe_ext, room2, 1, 0)) continue; // check both door dirs so that we don't end the pipe at a door
+			// we should check other objects in room2, but they may not have been placed yet, and if they were, we don't know the obj index;
+			// it should be okay to intersect other steam pipes because they're the same height and radius and will make a cross shape, though there's no fitting
+			//pipe.union_with_cube(pipe_ext);
+			//ext_mask[e] = 1;
+		} // for e
+		// maybe add right angle turn into ceiling or floor
+		for (unsigned e = 0; e < 2; ++e) {
+			if (cont_mask[e] || ext_mask[e]) continue; // extends/doesn't end in this dim
+			float const pipe_end(room_bounds.d[dim][e] - (e ? 1.0 : -1.0)*pipe_radius); // against the end wall
+			bool const zdir(rgen.rand_bool()); // 0=down, 1=up
+			cube_t pipe_ext(pipe);
+			pipe_ext.d[2][!zdir] = pipe_zval; // connects to horizontal pipe
+			pipe_ext.d[2][ zdir] = (zdir ? pipe.z2() : zval); // ceiling or floor
+			set_wall_width(pipe_ext, pipe_end, pipe_radius, dim);
+			if (is_obj_placement_blocked(pipe_ext, room, 1, 1) || overlaps_other_room_obj(pipe_ext, objs_start)) continue; // bad placement
+			unsigned const end_flags(zdir ? RO_FLAG_ADJ_BOT : RO_FLAG_ADJ_TOP);
+			pipe.d[dim][e] = pipe_end;
+			objs.emplace_back(pipe_ext, TYPE_PIPE, room_id, 0, 1, (flags | end_flags), tot_light_amt, SHAPE_CYLIN, WHITE); // vertical
+			objs.back().obj_id = pipe_mat_ix;
+		} // for e
+		unsigned const obj_id(objs.size()); // main pipe obj_id for steam emitter
 		objs.emplace_back(pipe, TYPE_PIPE, room_id, dim, 0, flags, tot_light_amt, SHAPE_CYLIN, WHITE);
+		objs.back().obj_id = pipe_mat_ix;
+		added_pipe = 1;
+		// add brackets
+		float const pipe_len(pipe_base.get_sz_dim(dim)); // only the segment of pipe in this room
+		unsigned const num_brackets(pipe_len/(2.0*window_vspace));
+		unsigned const bracket_obj_id(objs.back().obj_id + 1);
+
+		if (num_brackets > 0) { // likely true
+			unsigned const bracket_flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING | RO_FLAG_BROKEN | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI);
+			float const bracket_spacing(pipe_len/(num_brackets+1));
+			cube_t bracket(pipe_base);
+			bracket.expand_by(0.05*pipe_radius);
+
+			for (unsigned n = 0; n < num_brackets; ++n) {
+				set_wall_width(bracket, (pipe_base.d[dim][0] + (n+1)*bracket_spacing), 0.5*pipe_radius, dim);
+				objs.emplace_back(bracket, TYPE_PIPE, room_id, dim, 0, bracket_flags, tot_light_amt, SHAPE_CYLIN, LT_GRAY);
+				objs.back().obj_id = pipe_mat_ix+1; // opposite dirty metal material of pipe
+			}
+		}
 		// maybe add steam emitter
 		if (rgen.rand_bool()) continue;
-		float const steam_radius(0.5*pipe_radius), edge_spacing(4.0*steam_radius), lo(room_bounds.d[d][0] + edge_spacing), hi(room_bounds.d[d][1] - edge_spacing);
+		float const steam_radius(0.5*pipe_radius), edge_spacing(4.0*steam_radius), lo(room_bounds.d[dir][0] + edge_spacing), hi(room_bounds.d[dir][1] - edge_spacing);
 		if (hi <= lo) continue; // hallway too short; shouldn't happen
 		point pos(0.0, 0.0, pipe.z1());
 		pos[!dim] = outside_edge;
 		pos[ dim] = rgen.rand_uniform(lo, hi);
-		vector3d const velocity(0.001*(vector_from_dim_dir(!dim, !d) - plus_z)); // aimed down at 45 degrees
+		vector3d const velocity(0.001*(vector_from_dim_dir(!dim, !dir) - plus_z)); // aimed down at 45 degrees
 		interior->room_geom->steam_emitters.emplace_back(pos, velocity, steam_radius, obj_id); // store pipe obj id
 	} // for d
 }

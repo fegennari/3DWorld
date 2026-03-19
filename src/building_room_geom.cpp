@@ -3534,7 +3534,7 @@ void building_room_geom_t::add_pipe(room_object_t const &c, bool add_exterior) {
 	// draw sides and possibly one or both ends
 	int tid(-1);
 	if (is_duct || factory_rod) {tid = get_cylin_duct_tid();}
-	else if (is_dirty) {tid = get_texture_by_name("metals/67_rusty_dirty_metal.jpg");} // "metals/65_Painted_dirty_metal.jpg" works as well
+	else if (is_dirty) {tid = get_texture_by_name((c.obj_id & 1) ? "metals/67_rusty_dirty_metal.jpg" : "metals/65_Painted_dirty_metal.jpg");}
 	tid_nm_pair_t tex(tid, 1.0f, shadowed, 0, 1); // custom specular color, no_reflect=1
 	set_pipe_specular(get_specular_color(c.color), is_duct, is_dirty, tex); // special case metals
 	rgeom_mat_t &mat(get_material(tex, shadowed, 0, (exterior ? 0 : (is_duct ? 1 : 2)), 0, exterior)); // detail, small, or exterior object
