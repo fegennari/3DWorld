@@ -1366,8 +1366,7 @@ public:
 					}
 				}
 				else if (b.has_mall()) { // mall concourse is full room height
-					min_eq(VA.z1(), b.interior->basement_ext_bcube.z1());
-					max_eq(VA.z2(), b.interior->basement_ext_bcube.z2());
+					union_dim(VA, b.interior->basement_ext_bcube, 2);
 				}
 				for (cube_t const &c : b.interior->ceiling_spaces) {max_eq(VA.z2(), c.z2());} // extend up to include ceiling spaces
 			}
@@ -2693,8 +2692,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 						if (!room.has_open_wall(d, 0)) {max_eq(light_bc2.d[d][0], room_exp.d[d][0]);} // clamp lo
 						if (!room.has_open_wall(d, 1)) {min_eq(light_bc2.d[d][1], room_exp.d[d][1]);} // clamp hi
 					}
-					max_eq(light_bc2.z1(), room_exp.z1());
-					min_eq(light_bc2.z2(), room_exp.z2()); // not needed?
+					intersect_dim(light_bc2, room_exp, 2); // z2 increase not needed?
 				}
 				else {
 					light_bc2.intersect_with_cube(room_exp); // upward facing light is for this room only

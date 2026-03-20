@@ -950,7 +950,7 @@ bool building_t::add_shower_room_objs(rand_gen_t rgen, room_t const &room, float
 			objs.back().obj_id = shower_style; // sets single vs. two handles
 			
 			if (i < ext_wall_tile_end && dim == wdim) { // maybe add bench for exterior wall showers
-				for (unsigned d = 0; d < 2; ++d) {bench.d[!dim][d] = shower.d[!dim][d];}
+				copy_dim(bench, shower, !dim);
 				bench.expand_in_dim(!dim, 0.1*shower_width);
 				set_wall_width(bench, (entry_area.d[dim][!dir] + dsign*bench_hwidth), bench_hwidth, dim);
 				cube_t bench_exp(bench);

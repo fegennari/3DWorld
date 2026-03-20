@@ -1263,8 +1263,7 @@ cube_t bridge_t::get_drawn_bcube() const {
 	float const w_expand(0.25*scale); // expand width to add space for supports
 	bcube.d[ dim][0] -= l_expand; bcube.d[ dim][1] += l_expand;
 	bcube.d[!dim][0] -= w_expand; bcube.d[!dim][1] += w_expand;
-	max_eq(bcube.d[dim][0], src_road.d[dim][0]); // clamp to orig road segment length
-	min_eq(bcube.d[dim][1], src_road.d[dim][1]);
+	intersect_dim(bcube, src_road, dim); // clamp to orig road segment length
 	if (!over_water) {bcube.z2() += BRIDGE_HEIGHT_TO_LEN*bcube.get_sz_dim(dim);} // make it higher
 	return bcube; // approximate
 }

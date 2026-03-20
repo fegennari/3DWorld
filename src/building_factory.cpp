@@ -724,7 +724,7 @@ void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float 
 		} // for dir
 		// add horizontal beams in the roof
 		unsigned const num_hdiv(2*num_windows); // add intermediate beams and hang lights on them
-		for (unsigned d = 0; d < 2; ++d) {beam.d[dim][d] = room.d[dim][d];}
+		copy_dim(beam, room, dim);
 		if (short_dim) {beam.expand_in_dim(beam_dim, -support_hwidth);} // half overlap of vert supports
 
 		for (unsigned n = 0; n <= num_hdiv; ++n) {

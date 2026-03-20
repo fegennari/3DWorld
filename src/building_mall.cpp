@@ -515,7 +515,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 		for (unsigned d = 0; d < 2; ++d) { // ends of mall
 			bool const entrance_side(bool(d) == entrance_dir);
 			if (entrance_side && is_top_floor) continue; // blocked by top floor entrance
-			for (unsigned e = 0; e < 2; ++e) {store.d[!dim][e] = room.d[!dim][e];} // width of mall concourse
+			copy_dim(store, room, !dim); // width of mall concourse
 			float const wall_pos(room.d[dim][d]), depth(depths[d+2]);
 			store.d[dim][!d] = wall_pos + (d ? 1.0 : -1.0)*(entrance_side ? -0.5*wall_thickness : 0.0); // shift slightly on entrance side
 			store.d[dim][ d] = wall_pos + (d ? 1.0 : -1.0)*depth;
@@ -612,7 +612,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 				cube_t hall(hall_union);
 				hall.d[dim][!d] = wall_pos;
 				hall.d[dim][ d] = wall_pos + dsign*hall_width;
-				for (unsigned e = 0; e < 2; ++e) {hall_center.d[dim][e] = hall.d[dim][e];} // update hall_center as well so that the end store door is placed correctly
+				copy_dim(hall_center, hall, dim); // update hall_center as well so that the end store door is placed correctly
 				if (basement.intersects_no_adj(hall)) continue; // intersects basement
 				if (is_store_placement_invalid(hall)) continue;
 				unsigned const hall_room_ix(rooms.size()), end_walls_start(end_walls.size());
@@ -2477,7 +2477,7 @@ void building_t::add_row_of_bookcases(cube_t const &row, float zval, unsigned ro
 			objs.emplace_back(c, TYPE_BCASE, room_id, dim, d, RO_FLAG_IN_MALL, light_amt);
 			set_obj_id(objs);
 		}
-		for (unsigned e = 0; e < 2; ++e) {c.d[!dim][e] = row.d[!dim][e];} // expand POI to full row
+		copy_dim(c, row, !dim); // expand POI to full row
 		add_poi_dim_dir(c, room_id, dim, d);
 	} // for d
 }

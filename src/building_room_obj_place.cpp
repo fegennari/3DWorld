@@ -2838,7 +2838,7 @@ bool building_t::add_pool_room_objs(rand_gen_t rgen, room_t const &room, float z
 			for (unsigned d = 0; d < 2; ++d) { // add tiny blocks on each side of the cue, even if not present
 				room_object_t block(mount);
 				block.expand_in_z(-0.2*mount.dz()); // shrink in Z
-				for (unsigned e = 0; e < 2; ++e) {block.d[cdim][e] = cue.d[cdim][e];}
+				copy_dim(block, cue, cdim);
 				set_wall_width(block, (pos[!cdim] + (d ? 1.0 : -1.0)*(0.7*cue_radius + block_hwidth)), block_hwidth, !cdim);
 				objs.push_back(block);
 			}
@@ -2916,8 +2916,7 @@ void building_t::add_room_wall_tile(cube_t const &room, unsigned room_id, float 
 			tile.d[d][!dir]  = wall.d[d][dir]; // edge of wall facing the room
 			tile.d[d][ dir] += (dir ? 1.0 : -1.0)*tile_thickness;
 			tile.intersect_with_cube_xy(room);
-			max_eq(tile.z1(), room.z1()); // clip zvals to room bounds
-			min_eq(tile.z2(), room.z2());
+			intersect_dim(tile, room, 2); // clip zvals to room bounds
 			expand_to_nonzero_area(tile, tile_thickness, d);
 			objs.emplace_back(tile, TYPE_POOL_TILE, room_id, d, !dir, RO_FLAG_NOCOLL);
 		} // for wall

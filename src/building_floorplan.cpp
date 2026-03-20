@@ -1453,8 +1453,7 @@ void building_t::add_conference_room_window(unsigned room_ix) {
 			for (room_t &r : interior->rooms) {
 				if (!r.is_hallway || !r.intersects(wall_area)) continue;
 				cube_t shared_area(wall_area); // shared wall between conference room and hallway
-				max_eq(shared_area.d[!dim][0], r.d[!dim][0]);
-				min_eq(shared_area.d[!dim][1], r.d[!dim][1]);
+				intersect_dim(shared_area, r, !dim);
 
 				for (cube_t &w : interior->walls[dim]) {
 					if (!w.intersects(shared_area)) continue;
@@ -1592,7 +1591,7 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 			add_assigned_room(bath, part_id, RTYPE_BATH);
 			// add wall and door
 			bath_center = bath.get_center_dim(!hall_dim);
-			for (unsigned d = 0; d < 2; ++d) {bath_wall.d[!hall_dim][d] = bath.d[!hall_dim][d];} // move to new bathroom pos
+			copy_dim(bath_wall, bath, !hall_dim); // move to new bathroom pos
 			if (bath_wall.get_sz_dim(!hall_dim) <= door_width) {cout << "bathroom 2 too small: " << bath.str() << endl;} // error?
 			else {insert_door_in_wall_and_add_seg(bath_wall, bath_center-door_hwidth, bath_center+door_hwidth, !hall_dim, lg_door_side, 0, 1, 1);} // opens into bathroom
 			hall_perp_walls.push_back(bath_wall);
@@ -2663,7 +2662,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 						if (allow_clip_walls) { // Note: conservative and not well tested, but this case is likely to be disabled anyway
 							cube_t clip_cube(cand);
 							if (ab) {clip_cube.z2() += window_vspacing;} else {clip_cube.z1() -= window_vspacing;}
-							for (unsigned d = 0; d < 2; ++d) {clip_cube.d[s.dim][d] = ext_cube.d[s.dim][d];} // include padding
+							copy_dim(clip_cube, ext_cube, s.dim); // include padding
 							for (unsigned d = 0; d < 2; ++d) {has_clipped_wall |= (uint8_t)subtract_cube_from_cubes(clip_cube, interior->walls[d], nullptr, 1);}
 						}
 						break; // done
@@ -2957,7 +2956,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				}
 			}
 			float const shift((is_above ? -1.1 : 1.1)*fc_thick);
-			min_eq(e->z1(), extension.z1()); max_eq(e->z2(), extension.z2()); // perform extension in Z
+			union_dim(*e, extension, 2); // perform extension in Z
 			extension.z1() += shift; extension.z2() += shift; // also cut a hole in the lower ceiling/upper floor
 			holes.clear();
 			subtract_cube_from_cubes(extension, interior->ceilings);

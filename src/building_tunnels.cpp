@@ -729,7 +729,7 @@ void building_room_geom_t::add_tunnel_water(tunnel_seg_t const &t) {
 		// should we add an arc of water? Or let it run down the pipe in a slightly less than quarter cylinder? or a particle effect?
 		cube_t cylin_bc(t.bcube);
 		cylin_bc.expand_by(-0.001*t.radius); // slight shrink
-		for (unsigned d = 0; d < 2; ++d) {cylin_bc.d[dim][d] = w.d[dim][d];} // clip to water range
+		copy_dim(cylin_bc, w, dim); // clip to water range
 		float const side_tscale(2.0), len_tscale(2.0*water_hwidth/t.radius), tscale_add(fract(PI_TWO*fabs(flow_val2))*((dim ^ c.dir) ? -1.0 : 1.0));
 		unsigned const start_ix(mat.indices.size()), start_vix(mat.itri_verts.size());
 		mat.add_ortho_cylin_to_verts(cylin_bc, DK_BROWN, dim, 0, 0, 0, 0, 1.0, 1.0, side_tscale, 1.0, 0, 48, tscale_add, 0, len_tscale, 0.0, 2); // half_or_quarter=2 (quarter)

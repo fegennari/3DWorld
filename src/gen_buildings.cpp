@@ -2751,9 +2751,8 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 						if (i->d[ d][0] != cont_part.d[ d][1] && i->d[ d][1] != cont_part.d[ d][0]) continue; // not adj in dim d
 						if (i->d[!d][0] >= cont_part.d[!d][1] || i->d[!d][1] <= cont_part.d[!d][0]) continue; // no overlap in dim !d
 						if (i->d[!d][1] < only_cont_pt[!d] || i->d[!d][0] > only_cont_pt[!d]) {skip = 1; break;} // other dim range not contained, skip
-						draw_part = part; // deep copy
-						max_eq(draw_part.d[!d][0], cont_part.d[!d][0]); // clamp to contained part in dim !d
-						min_eq(draw_part.d[!d][1], cont_part.d[!d][1]);
+						draw_part  = part; // deep copy
+						intersect_dim(draw_part, cont_part, !d); // clamp to contained part in dim !d
 						clamp_cube = &draw_part;
 						break;
 					} // for d
@@ -5473,8 +5472,7 @@ public:
 				conn_area.d[conn_dim][ dir] = p      .d[conn_dim][!dir]; // flush with part
 				conn_area.d[conn_dim][!dir] = m_bcube.d[conn_dim][ dir]; // connect to skyway
 				// clamp to shared range in the skyway dim; really should not change the part width since the skyway should run the entire length of the city
-				max_eq(conn_area.d[!conn_dim][0], m_bcube.d[!conn_dim][0]);
-				min_eq(conn_area.d[!conn_dim][1], m_bcube.d[!conn_dim][1]);
+				intersect_dim(conn_area, m_bcube, !conn_dim);
 				float const width(conn_area.get_sz_dim(!conn_dim));
 				if (width < min_ww_width) continue; // too narrow
 				unsigned const floor_ix(ceil((m_bcube.z1() - p.z1())/floor_spacing)); // round up
@@ -5504,7 +5502,7 @@ public:
 		if (cands.size() < 2) return 0; // need at least two connected buildings
 		if (all_conn_bc.get_sz_dim(m_dim) < 0.5*m_bcube.get_sz_dim(m_dim)) return 0; // less than half the length is connected: fail
 		float const ww_conn_width(2.5*m_bcube.get_sz_dim(conn_dim));
-		for (unsigned d = 0; d < 2; ++d) {m_bcube.d[m_dim][d] = all_conn_bc.d[m_dim][d];} // clip to shared connection sub-length
+		copy_dim(m_bcube, all_conn_bc, m_dim); // clip to shared connection sub-length
 		m_bcube.expand_in_dim(m_dim, 0.25*m_bcube.get_sz_dim(conn_dim)); // extend slightly
 		m_bcube.translate_dim(2, (ww_zmin - m_bcube.z1() - 0.05*m_bcube.dz())); // translate to the bottom of the lowest walkway; walkways are often all the same zval
 		ww_conns.reserve(cands.size());

@@ -1890,8 +1890,7 @@ bool city_obj_placer_t::place_swimming_pool(road_plot_t const &plot, city_zone_t
 						roof = deck;
 						roof.z2() = deck_with_roof.z2();
 						roof.z1() = roof.z2() - 0.035*roof.dz();
-						max_eq(roof.d[d][0], part_bounds.d[d][0]); // clip to range of house part(s)
-						min_eq(roof.d[d][1], part_bounds.d[d][1]);
+						intersect_dim(roof, part_bounds, d); // clip to range of house part(s)
 						assert(roof.is_strictly_normalized());
 						if (roof.get_sz_dim(d) < 2.0*roof_height) {roof.set_to_zeros();} // disable if roof it too short
 					}

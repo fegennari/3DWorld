@@ -948,8 +948,7 @@ void car_draw_state_t::add_car_headlights(car_t const &car, cube_t &lights_bcube
 		pl_bcube.expand_by(light_dist);
 
 		if (lights_bcube.contains_cube_xy(pl_bcube) && camera_pdu.cube_visible(pl_bcube + xlate)) {
-			min_eq(lights_bcube.z1(), pl_bcube.z1());
-			max_eq(lights_bcube.z2(), pl_bcube.z2());
+			union_dim(lights_bcube, pl_bcube, 2);
 
 			if (POLICE_LIGHT_SHADOW) { // shadowed
 				for (unsigned bf = 0; bf < 2; ++bf) { // back, front
@@ -974,8 +973,7 @@ void car_draw_state_t::add_car_headlights(car_t const &car, cube_t &lights_bcube
 			pl_bcube.expand_by(light_dist);
 
 			if (lights_bcube.contains_cube_xy(pl_bcube) && camera_pdu.cube_visible(pl_bcube + xlate)) {
-				min_eq(lights_bcube.z1(), pl_bcube.z1());
-				max_eq(lights_bcube.z2(), pl_bcube.z2());
+				union_dim(lights_bcube, pl_bcube, 2);
 
 				if (POLICE_LIGHT_SHADOW) { // shadowed
 					dl_sources.emplace_back(light_dist, lpos, lpos, RED, 1, aldir[n], 0.35);
@@ -994,8 +992,7 @@ void car_draw_state_t::add_car_headlights(car_t const &car, cube_t &lights_bcube
 	hl_bcube.d[car.dim][!car.dir] = car.bcube.d[car.dim][car.dir]; // in front of the car only
 	if (!lights_bcube.contains_cube_xy(hl_bcube))   return; // not contained within the light volume
 	if (!camera_pdu.cube_visible(hl_bcube + xlate)) return; // VFC
-	min_eq(lights_bcube.z1(), hl_bcube.z1());
-	max_eq(lights_bcube.z2(), hl_bcube.z2());
+	union_dim(lights_bcube, hl_bcube, 2);
 	float const sign((car.dim ^ car.dir) ? -1.0 : 1.0);
 	point pb[8], pt[8]; // bottom and top sections
 	gen_car_pts(car, 0, pb, pt); // draw_top=0

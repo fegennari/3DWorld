@@ -3424,6 +3424,17 @@ public:
 	void finalize();
 };
 
+inline void copy_dim(cube_t &c1, cube_t const &c2, unsigned dim) {
+	for (unsigned d = 0; d < 2; ++d) {c1.d[dim][d] = c2.d[dim][d];}
+}
+inline void intersect_dim(cube_t &c1, cube_t const &c2, unsigned dim) {
+	max_eq(c1.d[dim][0], c2.d[dim][0]);
+	min_eq(c1.d[dim][1], c2.d[dim][1]);
+}
+inline void union_dim(cube_t &c1, cube_t const &c2, unsigned dim) {
+	min_eq(c1.d[dim][0], c2.d[dim][0]);
+	max_eq(c1.d[dim][1], c2.d[dim][1]);
+}
 inline void clip_low_high_tc(float &t0, float &t1) {
 	if (fabs(t0 - t1) < 0.5) {t0 = t1 = 0.0;} // too small to have a window
 	else {t0 = round_fp(t0); t1 = round_fp(t1);} // Note: round() is much faster than nearbyint(), and round_fp() is faster than round()

@@ -1077,8 +1077,7 @@ void extb_room_t::clip_hallway_to_conn_bcube(bool dim) { // clip off the unconne
 	if (!is_hallway) return;
 	assert(conn_bcube.is_strictly_normalized());
 	assert(conn_bcube.intersects(*this));
-	max_eq(d[dim][0], conn_bcube.d[dim][0]);
-	min_eq(d[dim][1], conn_bcube.d[dim][1]);
+	intersect_dim(*this, conn_bcube, dim);
 	assert(is_strictly_normalized());
 }
 

@@ -1495,12 +1495,8 @@ bool building_t::maybe_add_city_driveway(cube_t const &plot, unsigned building_i
 void try_expand_into_xy(cube_t &c1, cube_t const &c2) {
 	for (unsigned d = 0; d < 2; ++d) { // attempt to merge in this dim
 		if (c2.d[d][0] > c1.d[d][0] || c2.d[d][1] < c1.d[d][1]) continue; // edge not contained
-
-		if (c2.d[!d][0] <= c1.d[!d][1] && c1.d[!d][0] <= c2.d[!d][1]) { // overlap - take the union in this dim
-			min_eq(c1.d[!d][0], c2.d[!d][0]);
-			max_eq(c1.d[!d][1], c2.d[!d][1]);
-		}
-	} // for d
+		if (c2.d[!d][0] <= c1.d[!d][1] && c1.d[!d][0] <= c2.d[!d][1]) {union_dim(c1, c2, !d);} // overlap; take the union in this dim
+	}
 }
 
 bool building_t::can_have_basement() const {

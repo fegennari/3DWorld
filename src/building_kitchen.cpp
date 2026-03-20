@@ -236,7 +236,7 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float &zv
 			c.d[!dim][   0] = center - min_hwidth;
 			c.d[!dim][   1] = center + min_hwidth;
 			cube_t c_min(c); // min runlength - used for collision tests
-			for (unsigned e = 0; e < 2; ++e) {c.d[!dim][e] = cabinet_area.d[!dim][e];} // start at full room width
+			copy_dim(c, cabinet_area, !dim); // start at full room width
 			bool bad_place(0);
 
 			for (auto i = blockers.begin(); i != blockers.end(); ++i) {
@@ -652,7 +652,7 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 			float const table_xlate(1.0*table_width), place_width(1.5*table_width);
 			table.translate_dim(!dim, (app_side ? -1.0 : 1.0)*table_xlate); // translate away from appliances
 			place_area2 = place_area; // copy zvals
-			for (unsigned d = 0; d < 2; ++d) {place_area2.d[dim][d] = table.d[dim][d];} // same length as table
+			copy_dim(place_area2, table, dim); // same length as table
 			float const app_back(table.d[!dim][app_side] + (app_side ? 1.0 : -1.0)*trim_thick); // add a small gap
 			place_area2.d[!dim][!app_side] = app_back;
 			place_area2.d[!dim][ app_side] = app_back + (app_side ? 1.0 : -1.0)*place_width;

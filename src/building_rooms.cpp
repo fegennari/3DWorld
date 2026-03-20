@@ -1700,10 +1700,9 @@ void building_t::add_gutter_downspouts(rand_gen_t &rgen, vect_cube_t const &balc
 			// in this case we skip the downspout because it may be too close to a lower window
 			if (g.d[!dim][0] > p->d[!dim][0]) {skip_ends[0] = 1;}
 			if (g.d[!dim][1] < p->d[!dim][1]) {skip_ends[1] = 1;}
-			max_eq(int_gutter.d[!dim][0], p->d[!dim][0]); // clip !dim range to the building part
-			min_eq(int_gutter.d[!dim][1], p->d[!dim][1]);
+			intersect_dim(int_gutter, *p, !dim); // clip !dim range to the building part
 			assert(part.is_all_zeros());
-			part  = *p; // part may be useful to have below
+			part = *p; // part may be useful to have below
 		} // for p
 		if (part.is_all_zeros()) { // must be found
 			cout << "failed to add gutter at " << g.str() << endl;
@@ -2696,8 +2695,7 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 								if (!is_split && is_bathroom(get_room_type_and_floor(room_id, window.zc(), floor_ix))) continue;
 								cube_t trim(window);
 								set_wall_width(trim, edge, 0.5*max(window_trim_width, 1.1f*wall_thickness), !dim);
-								max_eq(trim.d[!dim][0], window.d[!dim][0]); // clamp to window bounds
-								min_eq(trim.d[!dim][1], window.d[!dim][1]);
+								intersect_dim(trim, window, !dim); // clamp to window bounds
 								if (!trim.is_strictly_normalized()) continue;
 								trim_objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL, trim_color);
 							} // for d

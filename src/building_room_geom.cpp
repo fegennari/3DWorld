@@ -7905,7 +7905,7 @@ void building_room_geom_t::add_metal_door(door_t const &D, building_t const &bui
 				side.d[!dim][!d] = opening.d[!dim][d];
 				mat.add_cube_to_verts(side, plate_color, origin, fb_mask);
 			}
-			for (unsigned d = 0; d < 2; ++d) {opening.d[dim][d] = c.d[dim][d];} // expand to full thickness
+			copy_dim(opening, c, dim); // expand to full thickness
 			add_grid_of_bars(mat, bar_color, opening, 4, 4, vbar_hthick, hbar_hthick, 2, !dim, dim, 0.0, 1, 12.0);
 		}
 		else { // metal freezer door

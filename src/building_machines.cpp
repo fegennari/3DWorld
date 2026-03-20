@@ -657,8 +657,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 			region.expand_in_dim(dim, exp_val);
 		} // for d
 		min_eq(region.z2(), region2.z2()); // shared Z range
-		max_eq(region.d[dim][0], region2.d[dim][0]); // shared range
-		min_eq(region.d[dim][1], region2.d[dim][1]);
+		intersect_dim(region, region2, dim); // shared range
 
 		if (region.is_strictly_normalized() && side_pos[0] != side_pos[1]) {
 			bool const either_cylin(is_cylins[0] || is_cylins[1]), allow_valve(!either_cylin);
