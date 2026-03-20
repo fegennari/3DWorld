@@ -720,10 +720,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				if (r->is_hallway) { // add special hallway objects
 					if (is_ext_basement) {
 						if (has_mall()) {add_mall_back_hallway_objs(rgen, *r, room_center.z, room_id, tot_light_amt);} // mall back hallway
-						else { // extended basement hallway
-							add_false_door_to_extb_room_if_needed(*r, room_center.z, room_id);
-							add_hallway_steam_pipes(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
-						}
+						else       {add_false_door_to_extb_room_if_needed(*r, room_center.z, room_id);} // extended basement hallway
 					}
 					if (is_house) { // allow pictures, rugs, and light switches in the hallways of houses; no pref orient
 						// Note: pictures are added before outlets and light switches, which differs from normal room placement below; should this be changed?
@@ -1342,6 +1339,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	if (!is_rotated()) {add_window_trim_and_coverings(0, 1, 1);} // add_trim=0, add_coverings=1, add_ext_sills=1
 	if (is_house && has_basement()) {add_basement_electrical_house(rgen);}
 	if (is_house && has_basement_pipes) {add_house_basement_pipes (rgen);}
+	if (has_ext_basement() && !has_mall() && !has_backrooms()) {add_extb_steam_pipes(rgen);}
 	if (has_basement()) {add_basement_room_detail_objs(rgen);}
 	if (has_attic()) {add_attic_objects(rgen);}
 	add_exterior_ac_pipes(rgen);
