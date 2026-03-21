@@ -816,6 +816,9 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 		if (added_pond) { // add a creek connecting to the pond, if present
 			// TODO
 		}
+		cube_t obj_place_area(plot); // for picnic tables and benches
+		obj_place_area.expand_by_xy(-sidewalk_width); // add a border around the edge of the park
+
 		// place picnic tables
 		if (building_obj_model_loader.is_model_valid(OBJ_MODEL_PICNIC)) {
 			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_PICNIC)); // W, D, H
@@ -823,7 +826,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 
 			for (unsigned n = 0; n < city_params.max_benches_per_plot; ++n) { // use the same max count as benches
 				point pos;
-				if (!try_place_obj(plot, blockers, rgen, 0.5*max(pt_len, pt_width), 0.0, 1, pos, 0)) continue; // 1 try
+				if (!try_place_obj(obj_place_area, blockers, rgen, 0.5*max(pt_len, pt_width), 0.0, 1, pos, 0)) continue; // 1 try
 				picnic_t const pt(pos, pt_height, rgen.rand_bool(), 0); // random dim; dir=0 since picnic tables are symmetric
 				if (check_path_coll_xy(pt.bcube, ppaths, paths_start)) continue; // check park path collision
 				picnic_groups.add_obj(pt, picnics);
@@ -841,6 +844,22 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 					bike_groups.add_obj(bike, bikes);
 					add_cube_to_colliders_and_blockers(bike.bcube, colliders, blockers); // not needed because it's inside the picnic table bcube?
 				}
+			} // for n
+		}
+		// place a swingset for the (future) playground area
+		if (building_obj_model_loader.is_model_valid(OBJ_MODEL_SWINGSET)) {
+			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SWINGSET)); // W, D, H
+			float const ss_height(0.2*city_params.road_width), ss_len(ss_height*sz.x/sz.z), ss_width(ss_height*sz.y/sz.z);
+
+			for (unsigned n = 0; n < 10; ++n) { // make some attempts to generate a valid swingset location
+				point pos;
+				if (!try_place_obj(obj_place_area, blockers, rgen, 0.5*max(ss_len, ss_width), 0.0, 1, pos, 0)) continue; // 1 try
+				swingset_t const ss(pos, ss_height, rgen.rand_bool(), rgen.rand_bool()); // random dim; random dir, though dir doesn't really matter
+				if (check_path_coll_xy(ss.bcube, ppaths, paths_start)) continue; // check park path collision
+				swing_groups.add_obj(ss, swings);
+				add_cube_to_colliders_and_blockers(ss.bcube, colliders, blockers);
+				blockers.back().expand_by_xy(0.5*ss_width); // add extra padding to the sides and ends
+				break; // success
 			} // for n
 		}
 	} // end is_park
