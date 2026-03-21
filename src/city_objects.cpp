@@ -2839,11 +2839,15 @@ city_bldg_t::city_bldg_t(cube_t const &c, bool dim_, bool dir_, bool edir, unsig
 		float const bradius(0.22*car_height), bheight(0.64*car_height);
 
 		for (unsigned n = 0; n < num_barrels; ++n) {
-			cube_t barrel;
-			gen_xy_pos_for_round_obj(barrel, place_area, bradius, bheight, 1.02*bradius, rgen, 1); // place_at_z1=1
-			if (has_bcube_int(barrel, tire_stacks) || has_bcube_int(barrel, barrels)) continue; // check both tires and other barrels
-			barrels.push_back(barrel);
-			bcube_with_extras.union_with_cube(barrel);
+			for (unsigned N = 0; N < 4; ++n) { // 4 tries
+				cube_with_ix_t barrel;
+				gen_xy_pos_for_round_obj(barrel, place_area, bradius, bheight, 1.02*bradius, rgen, 1); // place_at_z1=1
+				if (has_bcube_int(barrel, tire_stacks) || has_bcube_int(barrel, barrels)) continue; // check both tires and other barrels
+				barrel.ix = rgen.rand(); // choose a random material
+				barrels.push_back(barrel);
+				bcube_with_extras.union_with_cube(barrel);
+				break; // success
+			} // for N
 		} // for n
 	}
 }
@@ -2928,7 +2932,8 @@ void city_bldg_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_
 		select_texture     (get_met_plate_tid());
 		select_texture_nmap(get_mplate_nm_tid());
 
-		for (cube_t const &barrel : barrels) { // draw sides textured
+		for (cube_with_ix_t const &barrel : barrels) { // draw sides textured
+			if (barrel.ix & 1) continue; // untextured blue barrel, skip
 			float const bradius(0.5*barrel.dx());
 			point const top(cube_top_center(barrel));
 			unsigned const ndiv(shadow_only ? 16 : max(4U, min(32U, unsigned(0.4f*dist_scale*dstate.get_lod_factor(top)))));
@@ -2938,12 +2943,18 @@ void city_bldg_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_
 		select_no_texture();
 		bind_default_flat_normal_map();
 
-		for (cube_t const &barrel : barrels) { // draw top untextured
+		for (cube_with_ix_t const &barrel : barrels) { // draw sides and tops untextured
 			float const bradius(0.5*barrel.dx());
 			point const top(cube_top_center(barrel));
 			unsigned const ndiv(shadow_only ? 16 : max(4U, min(32U, unsigned(0.4f*dist_scale*dstate.get_lod_factor(top)))));
+			
+			if (barrel.ix & 1) { // blue sides
+				dstate.s.set_cur_color(colorRGBA(0.08, 0.3, 0.9));
+				draw_fast_cylinder(cube_bot_center(barrel), top, bradius, bradius, ndiv, 0); // sides only, untextured
+				dstate.s.set_cur_color(WHITE);
+			}
 			draw_circle_normal(0.0, bradius, ndiv, 0, top);
-		}
+		} // for barrel
 	}
 	if (!shadow_only && btype == CITY_BLDG_CARWASH && lane_in_use && bcube.closest_dist_less_than(dstate.camera_bs, 0.16*dmax)) {
 		// at least one lane is in use; draw water
