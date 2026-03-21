@@ -1656,7 +1656,7 @@ bool building_t::all_room_int_doors_closed(unsigned room_ix, float zval) const {
 
 // Note: called on balls and particles
 bool building_interior_t::check_sphere_coll(building_t const &building, point &pos, point const &p_last, float radius,
-	vect_room_object_t::const_iterator self, vector3d &cnorm, float &hardness, int &obj_ix, bool is_ball) const
+	vect_room_object_t::const_iterator self, vector3d &cnorm, float &hardness, int &obj_ix, bool is_ball, bool skip_objects) const
 {
 	bool had_coll(check_sphere_coll_walls_elevators_doors(building, pos, p_last, radius, 0.0, 0, &cnorm)); // is_player=0
 	if (had_coll) {hardness = 1.0;}
@@ -1687,7 +1687,7 @@ bool building_interior_t::check_sphere_coll(building_t const &building, point &p
 			if (sphere_cube_int_update_pos(pos, radius, c, p_last, 0, &cnorm)) {had_coll = 1; hardness = 1.0;} // skip_z=0
 		}
 	}
-	had_coll |= check_sphere_coll_room_objects(building, pos, p_last, radius, self, cnorm, hardness, obj_ix, is_ball);
+	if (!skip_objects) {had_coll |= check_sphere_coll_room_objects(building, pos, p_last, radius, self, cnorm, hardness, obj_ix, is_ball);}
 	return had_coll;
 }
 bool building_interior_t::check_sphere_coll_room_objects(building_t const &building, point &pos, point const &p_last, float radius,

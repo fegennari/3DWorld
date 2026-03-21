@@ -2201,7 +2201,7 @@ struct building_interior_t {
 	void finalize();
 	bool update_elevators(building_t const &building, point const &player_pos);
 	bool check_sphere_coll(building_t const &building, point &pos, point const &p_last, float radius,
-		vect_room_object_t::const_iterator self, vector3d &cnorm, float &hardness, int &obj_ix, bool is_ball=0) const;
+		vect_room_object_t::const_iterator self, vector3d &cnorm, float &hardness, int &obj_ix, bool is_ball=0, bool skip_objects=0) const;
 	bool check_sphere_coll_room_objects(building_t const &building, point &pos, point const &p_last, float radius,
 		vect_room_object_t::const_iterator self, vector3d &cnorm, float &hardness, int &obj_ix, bool is_ball=0) const;
 	room_object_t const &get_elevator_car(elevator_t const &e) const;

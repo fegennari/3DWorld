@@ -2062,8 +2062,9 @@ void particle_manager_t::next_frame(building_t &building) {
 		float hardness(0.0);
 		auto self(objs.end());
 		if (p.parent_obj_id >= 0) {assert((unsigned)p.parent_obj_id < objs.size()); self = objs.begin() + p.parent_obj_id;}
+		bool const skip_objects(p.effect == PART_EFFECT_STEAM); // steam passes through objects, so skip them; also used as an optimization
 
-		if (building.interior->check_sphere_coll(building, p.pos, p_last, p.radius*p.coll_radius, self, cnorm, hardness, obj_ix)) {
+		if (building.interior->check_sphere_coll(building, p.pos, p_last, p.radius*p.coll_radius, self, cnorm, hardness, obj_ix, 0, skip_objects)) { // is_ball=0
 			if (p.effect == PART_EFFECT_CLOUD || p.effect == PART_EFFECT_SMOKE || p.effect == PART_EFFECT_DROPLET || p.effect == PART_EFFECT_STEAM) { // no bounce
 				p.effect = PART_EFFECT_NONE;
 				continue;

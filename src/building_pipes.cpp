@@ -842,6 +842,7 @@ void building_t::add_extb_steam_pipes(rand_gen_t rgen) {
 
 void building_t::add_hallway_steam_pipes(rand_gen_t &rgen, unsigned room_id, unsigned objs_start, unsigned objs_end, unsigned pipe_mat_ix, vect_cube_t &steam_pipes) {
 	room_t const &room(get_room(room_id));
+	if (!room.is_hallway) return; // hallways only
 	bool const dim(room.dx() < room.dy()); // long dim
 	float const window_vspace(get_window_vspace()), fc_gap(get_floor_ceil_gap()), fc_thick(get_fc_thickness()), wall_thick(get_wall_thickness());
 	float const zval(room.z1() + fc_thick), pipe_radius(0.05*window_vspace), pipe_zval(zval + fc_gap - pipe_radius);
@@ -944,7 +945,6 @@ void building_t::add_hallway_steam_pipes(rand_gen_t &rgen, unsigned room_id, uns
 		// add brackets/fittings
 		float const pipe_len(pipe_base.get_sz_dim(dim)); // only the segment of pipe in this room
 		unsigned const num_brackets(pipe_len/(2.0*window_vspace));
-		unsigned const bracket_obj_id(objs.back().obj_id + 1);
 
 		if (num_brackets > 0) { // likely true
 			bool const add_lo(cont_mask[0] || ext_mask[0]), add_hi(cont_mask[1] || ext_mask[1]);
