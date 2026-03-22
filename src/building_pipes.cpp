@@ -855,6 +855,7 @@ void building_t::add_hallway_steam_pipes(rand_gen_t &rgen, unsigned room_id, uns
 	bool const first_side(rgen.rand_bool());
 	bool added_pipe(0);
 	vect_room_object_t &objs(interior->room_geom->objs);
+	vector<pair<float, unsigned>> moids; // {score, machine obj ID}
 
 	// maybe add a steam pipe near the ceiling on either wall along the hallway
 	for (unsigned d = 0; d < 2 && !added_pipe; ++d) { // side of hallway; only need to add to one side
@@ -864,70 +865,131 @@ void building_t::add_hallway_steam_pipes(rand_gen_t &rgen, unsigned room_id, uns
 		float const outside_edge(room_bounds.d[!dim][dir] - (dir ? 1.0 : -1.0)*2.0*pipe_radius); // extend outward from wall
 		pipe.d[!dim][!dir] = outside_edge;
 		if (is_obj_placement_blocked(pipe, room, 1, 1) || overlaps_other_room_obj(pipe, objs_start, 1, &objs_end)) continue; // bad placement
+		float const pipe_centerline(pipe.get_center_dim(!dim));
 		cube_t const pipe_base(pipe); // part of pipe inside this room
 		bool cont_mask[2] = {0,0}; // continues into wall at each end
 		bool ext_mask [2] = {0,0}; // exits into adjacent room at each end
+		bool end_mask [2] = {0,0}; // ends (at a machine)
 
 		// extend ends into nearby rooms if possible
 		for (unsigned e = 0; e < 2; ++e) {
 			point test_pt(0.0, 0.0, pipe_zval);
-			test_pt[!dim] = pipe.get_center_dim(!dim);
+			test_pt[!dim] = pipe_centerline;
 			test_pt[ dim] = room.d[dim][e] + (e ? 1.0 : -1.0)*wall_thick;
 			int const next_room_id(get_room_containing_pt(test_pt));
 			if (next_room_id < 0) {cont_mask[e] = 1; continue;} // no adjacent room on this side
 			assert(next_room_id != (int)room_id);
 			room_t const &room2(get_room(next_room_id));
-			
-			if (!room2.is_hallway) {
-				if (room2.get_room_type(0) == RTYPE_MACHINE) {
-					// TODO: boilers in machine rooms
-				}
-				continue; // for now only allow pipes crossing hallways, since they have no blocking objects other than doors; should usually be a hallway
-			}
+			bool const is_machine_room(room2.get_room_type(0) == RTYPE_MACHINE);
+			if (!room2.is_hallway && !is_machine_room) continue; // not hallway and not machine room: no extension
 			cube_t const room_bounds2(get_room_wall_bounds(room2));
 			cube_t pipe_ext(pipe);
 			copy_dim(pipe_ext, room_bounds2, dim); // copy room width
 			if (!room_bounds2.contains_cube(pipe_ext)) continue; // pipe partially outside of room (in !dim or Z)
-			unsigned const fittings_start(objs.size());
-			bool skip(0), no_end_bracket(0);
+			bool no_end_bracket(0);
 			
-			// it should be okay to intersect other steam pipes because they're the same height and radius and will make a cross shape, but we need to add the fittings
-			for (cube_t const &p : steam_pipes) {
-				if (!p.intersects(pipe_ext)) continue;
-				bool const dim2(p.dx() < p.dy());
-				// must intersect at right angles and be contained in the pipe's length
-				if (dim2 == dim || pipe_ext.d[!dim][0] < p.d[!dim][0] || pipe_ext.d[!dim][1] > p.d[!dim][1]) {skip = 1; break;}
+			if (is_machine_room) {
+				float const near_wall(room_bounds2.d[dim][!e]);
 
-				if (1/*pipe_ext.d[dim][e] == p.d[dim][e]*/) { // assume there's at most one intersected pipe and end the extension here
-					pipe_ext.d[dim][e] = p.get_center_dim(dim); // end at pipe centerline rather than room2 wall
-					no_end_bracket = 1;
+				if (0) { // place a boiler; this rarely succeeds due to machines in the way so is currently disabled
+					float const boiler_radius(rgen.rand_uniform(0.2, 0.24)*window_vspace), boiler_len(rgen.rand_uniform(2.4, 2.8)*boiler_radius);
+					cube_t boiler;
+					set_cube_zvals(boiler, zval, (zval + 2.0*boiler_radius));
+					boiler.d[dim][!e] = near_wall;
+					boiler.d[dim][ e] = near_wall + (e ? 1.0 : -1.0)*boiler_len;
+					set_wall_width(boiler, pipe_centerline, boiler_radius, !dim);
+					if (is_obj_placement_blocked(boiler, room2, 1, 0) || overlaps_other_room_obj(boiler, objs_start, 1, &objs_end)) continue;
+					//objs.emplace_back(boiler, TYPE_PIPE, next_room_id, dim, 0, bracket_flags, light_amt, SHAPE_CYLIN, RED);
+					continue;
 				}
-				cube_t fitting1(pipe_ext), fitting2(p);
-				fitting1.expand_by(fitting_expand);
-				fitting2.expand_by(fitting_expand);
-				set_wall_width(fitting1, p.       get_center_dim( dim), fitting_hlen,  dim);
-				set_wall_width(fitting2, pipe_ext.get_center_dim(!dim), fitting_hlen, !dim);
-				intersect_dim(fitting1, room_bounds2,  dim); // clip to room bounds
-				intersect_dim(fitting2, room_bounds2, !dim);
-				intersect_dim(fitting1, pipe_ext,      dim); // clip to pipe bounds
-				intersect_dim(fitting2, p,            !dim);
-				objs.emplace_back(fitting1, TYPE_PIPE, next_room_id,  dim, 0, bracket_flags, light_amt, SHAPE_CYLIN, WHITE);
-				objs.back().obj_id = bracket_mat_ix;
-				objs.emplace_back(fitting2, TYPE_PIPE, next_room_id, !dim, 0, bracket_flags, light_amt, SHAPE_CYLIN, WHITE);
-				objs.back().obj_id = bracket_mat_ix;
-			} // for p
-			// now check for valid placement, in case the extension was clipped above
-			skip |= is_obj_placement_blocked(pipe_ext, room2, 1, 0); // check both door dirs so that we don't end the pipe at a door
-			skip |= overlaps_other_room_obj (pipe_ext, objs_start, 1, &objs_end); // check_all=1 to include lights
+				// find a nearby machine to connect to
+				moids.clear();
 
-			if (skip) {
-				objs.resize(fittings_start); // remove any fittings we added for pipe_ext
-				continue;
-			}
+				for (unsigned i = objs_start; i < objs_end; ++i) {
+					room_object_t const &c(objs[i]);
+							
+					if (c.room_id == next_room_id) {
+						if (c.type != TYPE_MACHINE) continue;
+						float score(0.0);
+						if (pipe.d[!dim][0] < c.d[!dim][1] && pipe.d[!dim][1] > c.d[!dim][0]) {score += 10.0*window_vspace;} // high score if pipe crosses over this machine
+						if (c.dim == dim) {score += 1.0*window_vspace;} // higher score if on same or opposite wall as pipe
+						moids.emplace_back((p2p_dist_xy(test_pt, c.get_cube_center()) - score), i); // add distance and negate score so that highest score is first
+					}
+					else if (!moids.empty()) break; // moved past this room
+				} // for i
+				sort(moids.begin(), moids.end());
+				bool added_ext(0);
+
+				for (auto const &m : moids) {
+					// run along the wall/ceiling above the machine and drop down to its center
+					room_object_t const &c(objs[m.second]);
+					float const turn_val(c.get_center_dim(dim)), end_val(c.get_center_dim(!dim));
+					bool const turn_dir(pipe_centerline < end_val);
+					pipe_ext.d[dim][e] = turn_val;
+					if (is_obj_placement_blocked(pipe_ext, room2, 1, 0) || overlaps_other_room_obj(pipe_ext, objs_start, 1, &objs_end)) continue;
+					cube_t h_pipe(pipe);
+					h_pipe.d[!dim][!turn_dir] = pipe_centerline;
+					h_pipe.d[!dim][ turn_dir] = end_val;
+					set_wall_width(h_pipe, turn_val, pipe_radius, dim);
+					if (is_obj_placement_blocked(h_pipe, room2, 1, 0) || overlaps_other_room_obj(h_pipe, objs_start, 1, &objs_end)) continue;
+					cube_t v_pipe(h_pipe);
+					set_cube_zvals(v_pipe, c.zc(), h_pipe.zc());
+					set_wall_width(v_pipe, end_val, pipe_radius, !dim);
+					// Note: don't need to check for valid placement of v_pipe because it should intersect the machine
+					assert(h_pipe.is_strictly_normalized());
+					assert(v_pipe.is_strictly_normalized());
+					objs.emplace_back(h_pipe, TYPE_PIPE, next_room_id, !dim, 0, (flags | RO_FLAG_ADJ_BOT | RO_FLAG_ADJ_TOP), light_amt, SHAPE_CYLIN, WHITE); // round at both ends
+					objs.back().obj_id = pipe_mat_ix;
+					objs.emplace_back(v_pipe, TYPE_PIPE, next_room_id, 0, 1, flags, light_amt, SHAPE_CYLIN, WHITE); // vertical
+					objs.back().obj_id = pipe_mat_ix;
+					end_mask[e] = 1;
+					added_ext   = no_end_bracket = 1;
+					break; // only connect to one machine
+				} // for m
+				if (!added_ext) continue; // failed to connect to a machine
+			} // end is_machine_room
+			else { // hallway
+				unsigned const fittings_start(objs.size());
+				bool skip(0);
+			
+				// it should be okay to intersect other steam pipes because they're the same height and radius and will make a cross shape, but we need to add the fittings
+				for (cube_t const &p : steam_pipes) {
+					if (!p.intersects(pipe_ext)) continue;
+					bool const dim2(p.dx() < p.dy());
+					// must intersect at right angles and be contained in the pipe's length
+					if (dim2 == dim || pipe_ext.d[!dim][0] < p.d[!dim][0] || pipe_ext.d[!dim][1] > p.d[!dim][1]) {skip = 1; break;}
+
+					if (1/*pipe_ext.d[dim][e] == p.d[dim][e]*/) { // assume there's at most one intersected pipe and end the extension here
+						pipe_ext.d[dim][e] = p.get_center_dim(dim); // end at pipe centerline rather than room2 wall
+						no_end_bracket = 1;
+					}
+					cube_t fitting1(pipe_ext), fitting2(p);
+					fitting1.expand_by(fitting_expand);
+					fitting2.expand_by(fitting_expand);
+					set_wall_width(fitting1, p.       get_center_dim( dim), fitting_hlen,  dim);
+					set_wall_width(fitting2, pipe_ext.get_center_dim(!dim), fitting_hlen, !dim);
+					intersect_dim(fitting1, room_bounds2,  dim); // clip to room bounds
+					intersect_dim(fitting2, room_bounds2, !dim);
+					intersect_dim(fitting1, pipe_ext,      dim); // clip to pipe bounds
+					intersect_dim(fitting2, p,            !dim);
+					objs.emplace_back(fitting1, TYPE_PIPE, next_room_id,  dim, 0, bracket_flags, light_amt, SHAPE_CYLIN, WHITE);
+					objs.back().obj_id = bracket_mat_ix;
+					objs.emplace_back(fitting2, TYPE_PIPE, next_room_id, !dim, 0, bracket_flags, light_amt, SHAPE_CYLIN, WHITE);
+					objs.back().obj_id = bracket_mat_ix;
+				} // for p
+				// now check for valid placement, in case the extension was clipped above
+				skip |= is_obj_placement_blocked(pipe_ext, room2, 1, 0); // check both door dirs so that we don't end the pipe at a door
+				skip |= overlaps_other_room_obj (pipe_ext, objs_start, 1, &objs_end); // check_all=1 to include lights
+
+				if (skip) {
+					objs.resize(fittings_start); // remove any fittings we added for pipe_ext
+					continue;
+				}
+				ext_mask[e] = 1;
+			} // end hallway
 			pipe.union_with_cube(pipe_ext);
-			ext_mask[e] = 1;
 
-			// add brackets at the walls for the extension
+			// add brackets at the wall(s) for the extension
 			for (unsigned f = 0; f < 2; ++f) {
 				if (no_end_bracket && f == e) continue; // skip bracket on far end
 				float const wall_edge(room_bounds2.d[dim][f]);
@@ -937,11 +999,11 @@ void building_t::add_hallway_steam_pipes(rand_gen_t &rgen, unsigned room_id, uns
 				bracket.d[dim][!f] = wall_edge + (f ? -1.0 : 1.0)*bracket_hlen;
 				objs.emplace_back(bracket, TYPE_PIPE, room_id, dim, 0, bracket_flags, light_amt, SHAPE_CYLIN, WHITE);
 				objs.back().obj_id = bracket_mat_ix;
-			}
+			} // for f
 		} // for e
 		// maybe add right angle turn into ceiling or floor
 		for (unsigned e = 0; e < 2; ++e) {
-			if (cont_mask[e] || ext_mask[e]) continue; // extends/doesn't end in this dim
+			if (cont_mask[e] || ext_mask[e] || end_mask[e]) continue; // extends/connects/doesn't end in this dim
 			float const pipe_end(room_bounds.d[dim][e] - (e ? 1.0 : -1.0)*pipe_radius); // against the end wall
 			bool const zdir(rgen.rand_bool()); // 0=down, 1=up
 			cube_t v_pipe(pipe);
@@ -952,7 +1014,7 @@ void building_t::add_hallway_steam_pipes(rand_gen_t &rgen, unsigned room_id, uns
 			if (zdir == 0) { // only need to check for placement of downward pipe because upward pipe is short
 				if (is_obj_placement_blocked(v_pipe, room, 1, 1) || overlaps_other_room_obj(v_pipe, objs_start, 1, &objs_end)) continue; // bad placement
 			}
-			unsigned const end_flags(zdir ? RO_FLAG_ADJ_BOT : RO_FLAG_ADJ_TOP);
+			unsigned const end_flags(zdir ? RO_FLAG_ADJ_BOT : RO_FLAG_ADJ_TOP); // rounded bend at one end
 			pipe.d[dim][e] = pipe_end;
 			objs.emplace_back(v_pipe, TYPE_PIPE, room_id, 0, 1, (flags | end_flags), light_amt, SHAPE_CYLIN, WHITE); // vertical
 			objs.back().obj_id = pipe_mat_ix;
