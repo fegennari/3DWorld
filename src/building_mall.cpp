@@ -2284,6 +2284,7 @@ unsigned building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zv
 			objs.emplace_back(sign, TYPE_SIGN, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_HANGING | RO_FLAG_IN_MALL), light_amt, SHAPE_CUBE, text_color, item_flags);
 			objs.back().obj_id = text_id;
 		} // for w
+		if (num_windows != 2) {cout << TXTS(room) << TXT(num_windows) << endl;}
 		assert(num_windows == 2);
 	}
 	if (max_shopping_carts > 0) {add_shopping_carts_to_room(rgen, room, zval, room_id, light_amt, objs_start, max_shopping_carts);}

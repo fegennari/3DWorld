@@ -183,7 +183,8 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 	bool added_lg_room(0);
 
 	if (!is_house && has_parking_garage) { // office building with parking garage
-		bool const add_mall(global_building_params.max_mall_levels > 0 && global_building_params.mall_prob > 0.0 && (!global_building_params.no_retail_and_mall || !has_retail()));
+		bool const add_mall(global_building_params.max_mall_levels > 0 && global_building_params.mall_prob > 0.0 &&
+			(!global_building_params.no_retail_and_mall || !has_retail()) && !is_prison());
 		bool const try_mall_first(add_mall && rgen.rand_probability(global_building_params.mall_prob));
 
 		for (unsigned n = 0; n < 2; ++n) {
