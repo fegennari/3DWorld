@@ -433,6 +433,8 @@ bool divider_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_
 	return sphere_cube_int_update_pos(pos_, radius_, bcube_wide, p_last, 0, cnorm);
 }
 
+// hedge_draw_t
+
 void hedge_draw_t::create(cube_t const &bc) {
 	bcube = bc - bc.get_cube_center(); // centered on the origin
 	unsigned const target_num_leaves(40000);
@@ -486,7 +488,6 @@ void hedge_draw_t::draw_and_clear(shader_t &s) {
 		scale_by(sz_mult*sz); // scale to match the size
 		s.upload_mvm();
 		draw_quads_as_tris(num_verts);
-		++num_frame_draw_calls;
 		fgPopMatrix();
 	} // for c
 	post_render();
