@@ -435,6 +435,7 @@ class hedge_draw_t : public vao_manager_t {
 	void create(cube_t const &bc);
 public:
 	bool empty() const {return to_draw.empty();}
+	size_t get_gpu_mem() const {return (vbo_valid() ? num_verts*sizeof(vert_norm_comp_tc) : 0);}
 	void add(cube_t const &bc) {to_draw.push_back(bc);}
 	void draw_and_clear(shader_t &s);
 };
@@ -463,6 +464,7 @@ public:
 	bool is_visible_and_unoccluded(cube_t const &c, float dist_scale=1.0) const {return (check_cube_visible(c, dist_scale) && !is_occluded(c));}
 	bool is_occluded(cube_t const &c) const {return (!shadow_only && occlusion_checker.is_occluded(c));}
 	float get_lod_factor(point const &pos) const {return draw_tile_dist/p2p_dist(camera_bs, pos);}
+	size_t get_gpu_mem() const {return hedge_draw.get_gpu_mem();}
 	virtual bool has_unshadowed () const {return 0;}
 	virtual void draw_unshadowed() {}
 	void begin_tile(point const &pos, bool will_emit_now=0, bool ensure_active=0);
