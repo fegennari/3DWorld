@@ -7,6 +7,8 @@
 #include "lightmap.h" // for light_source
 //#include "profiler.h"
 
+bool const ADD_CREEKS = 0;
+
 float pond_max_depth(0.0);
 
 extern bool enable_model3d_custom_mipmaps, player_in_walkway, player_in_skyway;
@@ -717,6 +719,33 @@ bool check_close_to_door(point const &pos, float min_dist, unsigned building_ix)
 	return (get_building_door_pos_closest_to(building_ix, pos, door_pos, 1) && dist_xy_less_than(pos, door_pos, min_dist)); // close to door; inc_garage_door=1
 }
 
+void gen_park_path(park_path_t &path, point &start, point &end, float hwidth, cube_t const &plot, cube_t const &path_area, bool dim, bool dir, rand_gen_t &rgen) {
+	float const len_ratio(min(1.0f, fabs(start[dim] - end[dim])/plot.get_sz_dim(dim))); // < 1.0 for a creek
+	unsigned const num_path_segs(round_fp(100*len_ratio)), max_cycles((len_ratio > 0.8) ? 3 : ((len_ratio > 0.4) ? 2 : 1)); // 1-3 cycles
+	float const path_curve(rgen.rand_uniform(0.1, 1.0)*20.0*len_ratio*hwidth);
+	float const sine_mult((1 + (rgen.rand()%max_cycles))*TWO_PI);
+	float const extend((dir ? 1.0 : -1.0)*hwidth);
+	vector3d const seg_delta((end - start)/num_path_segs);
+	cube_t valid_region(path_area);
+	valid_region.expand_in_dim(!dim, -2.0f*hwidth); // shrink to keep path inside the park on the opposite edges
+	path.pts.clear();
+	path.pts.push_back(start);
+	point cur(start);
+	start[dim] += extend; // extend outside the plot to avoid a gap; will be clipped during drawing
+	end  [dim] -= extend;
+
+	for (unsigned s = 0; s+1 < num_path_segs; ++s) {
+		cur += seg_delta;
+		point p(cur);
+		float const t(float(s+1)/num_path_segs), tc(2.0*fabs(t - 0.5)); // t is the position along the path in [0.0, 1.0]
+		p[!dim] += path_curve * sin(sine_mult*t) * (1.0 - tc*tc*tc); // sine wave in cubic envelope
+		valid_region.clamp_pt_xy(p);
+		path.pts.push_back(p);
+	} // for s
+	path.pts.push_back(end);
+	path.calc_bcube_bsphere();
+}
+
 // Note: blockers are used for placement of objects within this plot; colliders are used for pedestrian AI
 void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders,
 	vector<point> const &tree_pos, vect_cube_t const &pond_blockers, vect_cube_t const &plot_cuts, rand_gen_t &rgen, bool have_streetlights)
@@ -734,37 +763,19 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 		unsigned const num_path_segs = 100;
 		float const path_hwidth(0.08*city_params.road_width), path_height(0.01*path_hwidth);
 		float const plot_min_edge(min(plot.dx(), plot.dy())), edge_border(max(2.0f*path_hwidth, 0.2f*plot_min_edge));
+		bool const can_add_path(plot_min_edge > 3.0*edge_border); // park has enough space for a path; should always be true
 
-		if (plot_min_edge > 3.0*edge_border) { // park has enough space for a path; should always be true
+		if (can_add_path) {
 			point start, end;
 			start.z = end.z = plot.z2() + path_height;
 			bool dim(rgen.rand_bool());
+			park_path_t path(path_hwidth, GRAY, plot);
 
 			for (unsigned n = 0; n < num_paths; ++n, dim ^= 1) { // alternate dims for each path
 				for (unsigned N = 0; N < 100; ++N) { // make 100 tries
 					choose_edge_pos(plot, edge_border, dim, 0, start, rgen); // choose starting point
 					choose_edge_pos(plot, edge_border, dim, 1, end,   rgen); // choose ending point on the opposite edge
-					float const path_curve(rgen.rand_float()*20.0*path_hwidth);
-					float const sine_mult((1 + (rgen.rand()%3))*TWO_PI); // 1-3 cycles
-					vector3d const seg_delta((end - start)/num_path_segs);
-					cube_t valid_region(plot);
-					valid_region.expand_in_dim(!dim, -2.0f*path_hwidth); // shrink to keep path inside the park on the opposite edges
-					park_path_t path(path_hwidth, GRAY, plot);
-					point cur(start);
-					start[dim] -= path_hwidth; // extend outside the plot to avoid a gap; will be clipped during drawing
-					end  [dim] += path_hwidth;
-					path.pts.push_back(start);
-
-					for (unsigned s = 0; s+1 < num_path_segs; ++s) {
-						cur += seg_delta;
-						point p(cur);
-						float const t(float(s+1)/num_path_segs), tc(2.0*fabs(t - 0.5)); // t is the position along the path in [0.0, 1.0]
-						p[!dim] += path_curve * sin(sine_mult*t) * (1.0 - tc*tc*tc); // sine wave in cubic envelope
-						valid_region.clamp_pt_xy(p);
-						path.pts.push_back(p);
-					} // for s
-					path.pts.push_back(end);
-					path.calc_bcube_bsphere();
+					gen_park_path(path, start, end, path_hwidth, plot, plot, dim, 0, rgen); // dir=0
 					if (check_path_tree_coll(path, tree_pos)) continue;
 					ppath_groups.add_obj(path, ppaths);
 					break; // success
@@ -813,10 +824,35 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 				break; // success
 			} // for n
 		}
-		if (added_pond) { // add a creek connecting to the pond, if present
-			// TODO
+		if (ADD_CREEKS && added_pond && can_add_path) { // add a creek connecting to the pond, if present
+			float const creek_hwidth(rgen.rand_uniform(0.03, 0.05)*city_params.road_width); // about half the path width
+			cube_t const &pond(ponds.back().bcube);
+			point start, end;
+			start.z = end.z = pond.z2();
+			bool dim(0), dir(0);
+			float dmax(0.0);
+
+			for (unsigned d = 0; d < 4; ++d) { // choose furthest dim/dir for max creek length
+				bool const dim_(d>>1), dir_(d&1);
+				float const dist(abs(plot.d[dim_][dir_] - pond.d[dim_][dir_]));
+				if (dist > dmax) {dim = dim_; dir = dir_; dmax = dist;}
+			}
+			park_path_t creek(creek_hwidth, WATER_C, plot, 1); // is_creek=1
+
+			for (unsigned N = 0; N < 100; ++N) { // make 100 tries
+				choose_edge_pos(plot, edge_border, dim, dir, start, rgen); // choose starting point
+				end[ dim] = pond.d[dim][dir];
+				end[!dim] = pond.get_center_dim(!dim); // center of pond, to avoid dealing with ellipse logic
+				cube_t path_area(plot);
+				path_area.d[dim][!dir] = end[dim]; // clip to side of pond
+				gen_park_path(creek, start, end, creek_hwidth, plot, path_area, dim, dir, rgen);
+				if (check_path_tree_coll(creek, tree_pos)) continue;
+				ppath_groups.add_obj(creek, ppaths);
+				has_creek = 1;
+				break; // success
+			} // for N
 		}
-		cube_t obj_place_area(plot); // for picnic tables and benches
+		cube_t obj_place_area(plot); // for picnic tables, benches, and swing sets
 		obj_place_area.expand_by_xy(-sidewalk_width); // add a border around the edge of the park
 
 		// place picnic tables
@@ -2645,8 +2681,10 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 		draw_objects(pigeons,  pigeon_groups,  dstate, 0.03, shadow_only, 1);
 		draw_objects(birds,    bird_groups,    dstate, 0.03, shadow_only, 1);
 		draw_objects(pladders, plad_groups,    dstate, 0.06, shadow_only, 1);
-		draw_objects(ppaths,   ppath_groups,   dstate, 0.25, shadow_only, 0, 1); // draw_qbd_as_quads=1
 
+		for (dstate.pass_ix = 0; dstate.pass_ix < (has_creek ? 2 : 1); ++dstate.pass_ix) { // {paths, creeks}
+			draw_objects(ppaths, ppath_groups, dstate, 0.25, shadow_only, 0, 1); // draw_qbd_as_quads=1
+		}
 		for (dstate.pass_ix = 0; dstate.pass_ix < 3; ++dstate.pass_ix) { // {dirt bottom, dark blur, lily pads}
 			draw_objects(ponds, pond_groups, dstate, 0.30, shadow_only, 1); // dist_scale=0.30, has_immediate_draw=1
 		}
@@ -2979,8 +3017,8 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, vect_cube_t const &plo
 	}
 	if (check_city_obj_pt_xy_contains(sstation_groups, sstations, pos, obj_ix, 0)) {color = colorRGBA(0.6, 0.8, 0.4, 1.0); return 1;} // light olive
 	if (check_city_obj_pt_xy_contains(trashcan_groups, trashcans, pos, obj_ix, 0)) {color = colorRGBA(0.8, 0.6, 0.3, 1.0); return 1;} // tan
-	if (check_city_obj_pt_xy_contains(ppath_groups,    ppaths,    pos, obj_ix, 0)) {color = GRAY ; return 1;} // can/should we restrict this to only run when inside a park?
-	if (check_city_obj_pt_xy_contains(fountain_groups, fountains, pos, obj_ix, 1)) {color = GRAY ; return 1;} // is_cylin=1
+	if (check_city_obj_pt_xy_contains(ppath_groups,    ppaths,    pos, obj_ix, 0)) {color = (ppaths[obj_ix].is_creek ? BLUE : GRAY); return 1;} // only when inside a park?
+	if (check_city_obj_pt_xy_contains(fountain_groups, fountains, pos, obj_ix, 1)) {color = GRAY; return 1;} // is_cylin=1
 	if (check_city_obj_pt_xy_contains(tramp_groups,    tramps,    pos, obj_ix, 1)) {color = (BKGRAY*0.75 + tramps[obj_ix].color*0.25); return 1;} // is_cylin=1
 	if (check_city_obj_pt_xy_contains(dumpster_groups, dumpsters, pos, obj_ix, 0)) {color = colorRGBA(0.1, 0.4, 0.1, 1.0); return 1;} // dark green
 	if (check_city_obj_pt_xy_contains(umbrella_groups, umbrellas, pos, obj_ix, 1)) {color = WHITE; return 1;} // is_cylin=1

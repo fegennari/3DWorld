@@ -3384,9 +3384,17 @@ void park_path_t::calc_bcube_bsphere() {
 /*static*/ void park_path_t::pre_draw(draw_state_t &dstate, bool shadow_only) { // Note: not drawn in shadow pass
 	bool const creek_pass(dstate.pass_ix == 1);
 	select_texture(creek_pass ? WATER_TEX : get_texture_by_name("roads/concrete.jpg"));
+	if (creek_pass) {enable_blend();}
+}
+/*static*/ void park_path_t::post_draw(draw_state_t &dstate, bool shadow_only) {
+	bool const creek_pass(dstate.pass_ix == 1);
+	if (creek_pass) {disable_blend();}
 }
 void park_path_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	if (is_creek != (dstate.pass_ix == 1)) return; // wrong pass
+	// TODO: for creeks, we really need to draw in multiple passes like ponds with dirt + maybe dark blur + water surface;
+	// the sloped bottom isn't easy to calculate from a path, and it wouldn't look right when connecting to the pond or going under the path and sidewalk at the park edge;
+	// maybe this would work if the park was drawn as a heightmap with the pond and creek at lower points and using a dirt texture rather than grass?
 	assert(!shadow_only);
 	assert(pts.size() >= 2);
 	float const tscale(0.5/hwidth), z_offset(1.0E-4*p2p_dist(pos, dstate.camera_bs));
