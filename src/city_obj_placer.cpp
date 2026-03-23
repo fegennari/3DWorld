@@ -2242,10 +2242,13 @@ template<typename T> void city_obj_placer_t::draw_objects(vector<T> const &objs,
 			T const &obj(objs[i]);
 			if (dstate.check_sphere_visible(obj.pos, obj.get_bsphere_radius(shadow_only))) {obj.draw(dstate, *this, dist_scale, shadow_only);}
 		}
-		if (!city_draw_qbds_t::empty() || !dstate.hedge_draw.empty()) { // we have something to draw
+		bool const have_hedges_or_ivy(!dstate.hedge_draw.empty() || !dstate.ivy_manager.empty());
+
+		if (!city_draw_qbds_t::empty() || have_hedges_or_ivy) { // we have something to draw
 			if (!has_immediate_draw) {dstate.begin_tile(g->get_cube_center(), 1, 1);} // will_emit_now=1, ensure_active=1
-			bool must_restore_state(!dstate.hedge_draw.empty());
-			dstate.hedge_draw.draw_and_clear(dstate.s);
+			bool must_restore_state(have_hedges_or_ivy);
+			dstate.hedge_draw .draw_and_clear(dstate.s);
+			dstate.ivy_manager.draw_and_clear(dstate.s);
 
 			if (has_untex_verts()) { // draw untextured verts before qbd so that textures such as text can alpha blend on top
 				dstate.set_untextured_material();
@@ -2682,7 +2685,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 		draw_objects(birds,    bird_groups,    dstate, 0.03, shadow_only, 1);
 		draw_objects(pladders, plad_groups,    dstate, 0.06, shadow_only, 1);
 
-		for (dstate.pass_ix = 0; dstate.pass_ix < (has_creek ? 2 : 1); ++dstate.pass_ix) { // {paths, creeks}
+		for (dstate.pass_ix = 0; dstate.pass_ix < (has_creek ? 2U : 1U); ++dstate.pass_ix) { // {paths, creeks}
 			draw_objects(ppaths, ppath_groups, dstate, 0.25, shadow_only, 0, 1); // draw_qbd_as_quads=1
 		}
 		for (dstate.pass_ix = 0; dstate.pass_ix < 3; ++dstate.pass_ix) { // {dirt bottom, dark blur, lily pads}

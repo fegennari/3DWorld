@@ -426,6 +426,12 @@ void divider_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_sc
 	if (!shadow_only && type == DIV_HEDGE && bcube.closest_dist_less_than(dstate.camera_bs, 0.5f*(X_SCENE_SIZE + Y_SCENE_SIZE))) {
 		dstate.hedge_draw.add(bcube); // draw detailed leaves for nearby hedges
 	}
+	if (!shadow_only && type == DIV_WALL && bcube.closest_dist_less_than(dstate.camera_bs, 0.35f*(X_SCENE_SIZE + Y_SCENE_SIZE))) {
+		unsigned face_mask(dim ? 12 : 3); // either both X sides or both Y sides
+		//if (!(skip_dims & 1)) {face_mask |= 3 ;} // +/- X
+		//if (!(skip_dims & 2)) {face_mask |= 12;} // +/- Y
+		//dstate.ivy_manager.add_wall(bcube, face_mask, divider_ix, city_ix); // TODO: need to store divider_ix and city_ix in divider_t
+	}
 }
 bool divider_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
 	cube_t bcube_wide(bcube + xlate);
@@ -435,6 +441,14 @@ bool divider_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_
 
 // hedge_draw_t
 
+void add_leaf_verts(point const &pos, vector3d const &normal, float angle, float leaf_sz, vector<vert_norm_comp_tc_comp> &verts) {
+	vector3d tangent;
+	rotate_vector3d(cross_product(normal, plus_x), normal, angle, tangent);
+	vector3d const binormal(cross_product(normal, tangent)), dx(leaf_sz*tangent), dy(leaf_sz*binormal);
+	point const pts[4] = {(pos - dx - dy), (pos + dx - dy), (pos + dx + dy), (pos - dx + dy)};
+	float const ts [4] = {0.0, 1.0, 1.0, 0.0}, tt[4] = {0.0, 0.0, 1.0, 1.0};
+	for (unsigned i = 0; i < 4; ++i) {verts.emplace_back(pts[i], normal, ts[i], tt[i]);}
+}
 void hedge_draw_t::create(cube_t const &bc) {
 	bcube = bc - bc.get_cube_center(); // centered on the origin
 	unsigned const target_num_leaves(40000);
@@ -456,24 +470,29 @@ void hedge_draw_t::create(cube_t const &bc) {
 			pos[d2] = rgen.rand_uniform(bcube.d[d2][0], bcube.d[d2][1]);
 			vector3d const normal(rgen.signed_rand_vector_spherical_norm());
 			float const angle(TWO_PI*rgen.rand_float());
-			vector3d tangent;
-			rotate_vector3d(cross_product(normal, plus_x), normal, angle, tangent);
-			vector3d const binormal(cross_product(normal, tangent)), dx(leaf_sz*tangent), dy(leaf_sz*binormal);
-			point const pts[4] = {(pos - dx - dy), (pos + dx - dy), (pos + dx + dy), (pos - dx + dy)};
-			float const ts [4] = {0.0, 1.0, 1.0, 0.0}, tt[4] = {0.0, 0.0, 1.0, 1.0};
-			for (unsigned i = 0; i < 4; ++i) {verts.emplace_back(pts[i], normal, ts[i], tt[i]);}
-		} // for n
+			add_leaf_verts(pos, normal, angle, leaf_sz, verts);
+		}
 	} // for s
 	num_verts = verts.size();
 	create_and_upload(verts, 0, 1);
 }
-void hedge_draw_t::draw_and_clear(shader_t &s) {
-	if (empty()) return;
-	if (!vbo_valid()) {create(to_draw.front());}
-	select_texture(get_texture_by_name("pine2.jpg"));
+
+void begin_leaf_draw(shader_t &s, int tid) {
+	select_texture(tid);
 	enable_blend(); // slightly smoother, but a bit of background shows through
 	s.add_uniform_float("min_alpha", 0.9);
 	s.add_uniform_int("two_sided_lighting", 1);
+}
+void end_leaf_draw(shader_t &s) {
+	drawable_t::post_render();
+	s.add_uniform_int("two_sided_lighting", 0); // reset
+	s.add_uniform_float("min_alpha", DEF_CITY_MIN_ALPHA); // restore to the default
+	disable_blend();
+}
+void hedge_draw_t::draw_and_clear(shader_t &s) {
+	if (empty()) return;
+	if (!vbo_valid()) {create(to_draw.front());}
+	begin_leaf_draw(s, get_texture_by_name("pine2.jpg"));
 	pre_render();
 	vector3d const sz_mult(bcube.get_size().inverse());
 	// we can almost use an instance_render here, but that requires changes to the shader or a custom shader
@@ -490,10 +509,75 @@ void hedge_draw_t::draw_and_clear(shader_t &s) {
 		draw_quads_as_tris(num_verts);
 		fgPopMatrix();
 	} // for c
-	post_render();
-	s.add_uniform_int("two_sided_lighting", 0); // reset
-	s.add_uniform_float("min_alpha", DEF_CITY_MIN_ALPHA); // restore to the default
-	disable_blend();
+	end_leaf_draw(s);
+	to_draw.clear();
+}
+
+// ivy_manager_t
+
+void ivy_manager_t::ivy_wall_t::gen(cube_t const &c, unsigned face_mask, rand_gen_t &rgen) {
+	bcube = c;
+	float const leaf_sz(0.05*bcube.dz());
+	vector<vert_norm_comp_tc_comp> verts;
+
+	for (unsigned n = 0; n < 4; ++n) { // {+X, -X, +Y, -Y} sides
+		if (!(face_mask & (1<<n))) continue; // face not enabled
+		unsigned const dim(n>>1), dir(n&1), d1((dim+1)%3), d2((dim+2)%3), num(rgen.rand() % 100);
+		point pos;
+		pos[dim] = bcube.d[dim][!dir] + 0.1*leaf_sz*(dir ? 1.0 : -1.0); // move slightly away from the surface
+		vector3d const normal(vector_from_dim_dir(dim, dir));
+
+		for (unsigned n = 0; n < num; ++n) {
+			pos[d1] = rgen.rand_uniform(bcube.d[d1][0], bcube.d[d1][1]);
+			pos[d2] = rgen.rand_uniform(bcube.d[d2][0], bcube.d[d2][1]);
+			float const angle(TWO_PI*rgen.rand_float());
+			add_leaf_verts(pos, normal, angle, leaf_sz, verts);
+		}
+	} // for s
+	num_verts = verts.size();
+	create_and_upload(verts, 0, 1);
+}
+
+size_t ivy_manager_t::get_gpu_mem() const {
+	size_t mem(0);
+	for (auto const &kv : ivy_walls) {mem += kv.second.get_gpu_mem();}
+	return mem;
+}
+void ivy_manager_t::clear() {
+	assert(to_draw.empty()); // can't clear mid-draw
+	for (auto &kv : ivy_walls) {kv.second.clear();}
+	ivy_walls.clear();
+}
+void ivy_manager_t::add_wall(cube_t const &wall, unsigned face_mask, unsigned wall_ix, unsigned city_ix) {
+	if (city_ix != cur_city_ix) { // city change
+		clear();
+		cur_city_ix = city_ix;
+	}
+	ivy_wall_t &w(ivy_walls[wall_ix]);
+
+	if (w.bcube.is_all_zeros()) { // new wall
+		rand_gen_t rgen;
+		rgen.set_state(wall_ix+1, wall_ix+1);
+		w.gen(wall, face_mask, rgen);
+	}
+	else { // existing wall
+		assert(w.bcube == wall);
+	}
+	to_draw.push_back(wall_ix); // not checked for duplicates
+}
+void ivy_manager_t::draw_and_clear(shader_t &s) {
+	if (to_draw.empty()) return;
+	begin_leaf_draw(s, PLANT1_TEX);
+
+	for (uint32_t wix : to_draw) {
+		auto it(ivy_walls.find(wix));
+		assert(it != ivy_walls.end()); // must be found
+		ivy_wall_t const &w(it->second);
+		if (w.num_verts == 0) continue; // no ivy for this wall
+		w.pre_render();
+		draw_quads_as_tris(w.num_verts);
+	} // for wix
+	end_leaf_draw(s);
 	to_draw.clear();
 }
 

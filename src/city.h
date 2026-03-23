@@ -427,16 +427,35 @@ namespace stoplight_ns {
 	};
 } // end stoplight_ns
 
-class hedge_draw_t : public vao_manager_t {
+struct drawable_t : public vao_manager_t {
 	unsigned num_verts=0;
 	cube_t bcube;
-	vect_cube_t to_draw;
+	size_t get_gpu_mem() const {return (vbo_valid() ? num_verts*sizeof(vert_norm_comp_tc_comp) : 0);}
+};
 
+class hedge_draw_t : private drawable_t {
+	vect_cube_t to_draw;
 	void create(cube_t const &bc);
 public:
 	bool empty() const {return to_draw.empty();}
-	size_t get_gpu_mem() const {return (vbo_valid() ? num_verts*sizeof(vert_norm_comp_tc_comp) : 0);}
+	size_t get_gpu_mem() const {return drawable_t::get_gpu_mem();}
 	void add(cube_t const &bc) {to_draw.push_back(bc);}
+	void draw_and_clear(shader_t &s);
+};
+
+class ivy_manager_t { // stores ivy for one residential city
+	struct ivy_wall_t : public drawable_t {
+		void gen(cube_t const &c, unsigned face_mask, rand_gen_t &rgen);
+	};
+	unordered_map<unsigned, ivy_wall_t> ivy_walls;
+	unsigned cur_city_ix=NO_CITY_IX;
+	vector<uint32_t> to_draw; // by wall index
+public:
+	bool empty() const {return to_draw.empty();}
+	size_t get_gpu_mem() const;
+	void clear();
+	//void set_cur_city(unsigned ix) {if (ix != cur_city_ix) {clear(); cur_city_ix = ix;}}
+	void add_wall(cube_t const &wall, unsigned face_mask, unsigned wall_ix, unsigned city_ix);
 	void draw_and_clear(shader_t &s);
 };
 
@@ -448,6 +467,7 @@ struct draw_state_t {
 	unsigned pass_ix=0;
 	float draw_tile_dist=0.0;
 	hedge_draw_t hedge_draw;
+	ivy_manager_t ivy_manager;
 	vector<vert_wrap_t> temp_verts; // used for sphere drawing
 protected:
 	bool use_smap=0, use_bmap=0, shadow_only=0, use_dlights=0, emit_now=0;
@@ -464,7 +484,7 @@ public:
 	bool is_visible_and_unoccluded(cube_t const &c, float dist_scale=1.0) const {return (check_cube_visible(c, dist_scale) && !is_occluded(c));}
 	bool is_occluded(cube_t const &c) const {return (!shadow_only && occlusion_checker.is_occluded(c));}
 	float get_lod_factor(point const &pos) const {return draw_tile_dist/p2p_dist(camera_bs, pos);}
-	size_t get_gpu_mem() const {return hedge_draw.get_gpu_mem();}
+	size_t get_gpu_mem() const {return (hedge_draw.get_gpu_mem() + ivy_manager.get_gpu_mem());}
 	virtual bool has_unshadowed () const {return 0;}
 	virtual void draw_unshadowed() {}
 	void begin_tile(point const &pos, bool will_emit_now=0, bool ensure_active=0);
