@@ -423,7 +423,7 @@ void divider_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_sc
 	plot_divider_type_t const &pdt(plot_divider_types[dstate.pass_ix]);
 	dstate.draw_cube(qbds.qbd, bcube, color_wrapper(pdt.color), 1, pdt.tscale/bcube.dz(), skip_dims); // skip bottom, scale texture to match the height
 
-	if (!shadow_only && type == DIV_HEDGE && bcube.closest_dist_less_than(dstate.camera_bs, 0.35f*(X_SCENE_SIZE + Y_SCENE_SIZE))) {
+	if (!shadow_only && type == DIV_HEDGE && bcube.closest_dist_less_than(dstate.camera_bs, 0.5f*(X_SCENE_SIZE + Y_SCENE_SIZE))) {
 		dstate.hedge_draw.add(bcube); // draw detailed leaves for nearby hedges
 	}
 }
@@ -440,7 +440,7 @@ void hedge_draw_t::create(cube_t const &bc) {
 	float const leaf_sz(0.05*sz.z), surf_area(sz.x*sz.y + 2.0f*sz.z*(sz.x + sz.y));
 	float const side_areas[5] = {sz.y*sz.z, sz.y*sz.z, sz.x*sz.z, sz.x*sz.z, sz.x*sz.y};
 	rand_gen_t rgen;
-	vector<vert_norm_comp_tc> verts;
+	vector<vert_norm_comp_tc_comp> verts;
 	verts.reserve(4*target_num_leaves);
 
 	for (unsigned n = 0; n < 5; ++n) { // {+X, -X, +Y, -Y, +Z} sides

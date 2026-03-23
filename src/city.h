@@ -435,7 +435,7 @@ class hedge_draw_t : public vao_manager_t {
 	void create(cube_t const &bc);
 public:
 	bool empty() const {return to_draw.empty();}
-	size_t get_gpu_mem() const {return (vbo_valid() ? num_verts*sizeof(vert_norm_comp_tc) : 0);}
+	size_t get_gpu_mem() const {return (vbo_valid() ? num_verts*sizeof(vert_norm_comp_tc_comp) : 0);}
 	void add(cube_t const &bc) {to_draw.push_back(bc);}
 	void draw_and_clear(shader_t &s);
 };
