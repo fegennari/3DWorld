@@ -140,11 +140,11 @@ struct statue_t : public multi_model_city_obj_t {
 };
 
 struct divider_t : public oriented_city_obj_t {
-	unsigned type;
-	uint8_t skip_dims;
-	divider_t() : type(0), skip_dims(0) {}
-	divider_t(cube_t const &c, unsigned type_, bool dim_, bool dir_, unsigned sd=0) :
-		oriented_city_obj_t(c.get_cube_center(), c.get_bsphere_radius(), dim_, dir_), type(type_), skip_dims(sd) {bcube = c;}
+	unsigned type=0, divider_ix=0, city_ix=0;
+	uint8_t skip_dims=0;
+	divider_t() {}
+	divider_t(cube_t const &c, unsigned type_, bool dim_, bool dir_, unsigned sd, unsigned dix, unsigned cix) :
+		oriented_city_obj_t(c.get_cube_center(), c.get_bsphere_radius(), dim_, dir_), type(type_), skip_dims(sd), divider_ix(dix), city_ix(cix) {bcube = c;}
 	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
@@ -868,7 +868,7 @@ private:
 	void place_residential_plot_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<road_t> const &roads,
 		vect_cube_t const &pool_blockers, unsigned driveways_start, unsigned city_ix, rand_gen_t &rgen);
 	bool place_swimming_pool(road_plot_t const &plot, city_zone_t const &yard, cube_with_ix_t const &house, bool dim, bool dir, bool shrink_dim, unsigned prev_blockers_end,
-		float divider_hwidth, float const translate_dist[2], vect_cube_t const &pool_blockers, vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen);
+		unsigned city_ix, float divider_hwidth, float const translate_dist[2], vect_cube_t const &pool_blockers, vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen);
 	bool check_bird_walkway_clearance(cube_t const &bc) const;
 	void place_birds(cube_t const &city_bcube, rand_gen_t &rgen);
 	void add_building_driveways(road_plot_t const &plot, vect_cube_t &temp_cubes, rand_gen_t &rgen, unsigned plot_ix);

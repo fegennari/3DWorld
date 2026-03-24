@@ -426,11 +426,9 @@ void divider_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_sc
 	if (!shadow_only && type == DIV_HEDGE && bcube.closest_dist_less_than(dstate.camera_bs, 0.5f*(X_SCENE_SIZE + Y_SCENE_SIZE))) {
 		dstate.hedge_draw.add(bcube); // draw detailed leaves for nearby hedges
 	}
-	if (!shadow_only && type == DIV_WALL && bcube.closest_dist_less_than(dstate.camera_bs, 0.35f*(X_SCENE_SIZE + Y_SCENE_SIZE))) {
+	if (0 && !shadow_only && type == DIV_WALL && bcube.closest_dist_less_than(dstate.camera_bs, 0.35f*(X_SCENE_SIZE + Y_SCENE_SIZE))) {
 		unsigned face_mask(dim ? 12 : 3); // either both X sides or both Y sides
-		//if (!(skip_dims & 1)) {face_mask |= 3 ;} // +/- X
-		//if (!(skip_dims & 2)) {face_mask |= 12;} // +/- Y
-		//dstate.ivy_manager.add_wall(bcube, face_mask, divider_ix, city_ix); // TODO: need to store divider_ix and city_ix in divider_t
+		dstate.ivy_manager.add_wall(bcube, face_mask, divider_ix, city_ix);
 	}
 }
 bool divider_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
@@ -443,7 +441,7 @@ bool divider_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_
 
 void add_leaf_verts(point const &pos, vector3d const &normal, float angle, float leaf_sz, vector<vert_norm_comp_tc_comp> &verts) {
 	vector3d tangent;
-	rotate_vector3d(cross_product(normal, plus_x), normal, angle, tangent);
+	rotate_vector3d(cross_product(normal, ((fabs(normal.x) < fabs(normal.y)) ? plus_x : plus_y)), normal, angle, tangent);
 	vector3d const binormal(cross_product(normal, tangent)), dx(leaf_sz*tangent), dy(leaf_sz*binormal);
 	point const pts[4] = {(pos - dx - dy), (pos + dx - dy), (pos + dx + dy), (pos - dx + dy)};
 	float const ts [4] = {0.0, 1.0, 1.0, 0.0}, tt[4] = {0.0, 0.0, 1.0, 1.0};
@@ -479,6 +477,7 @@ void hedge_draw_t::create(cube_t const &bc) {
 
 void begin_leaf_draw(shader_t &s, int tid) {
 	select_texture(tid);
+	bind_default_flat_normal_map();
 	enable_blend(); // slightly smoother, but a bit of background shows through
 	s.add_uniform_float("min_alpha", 0.9);
 	s.add_uniform_int("two_sided_lighting", 1);
@@ -522,9 +521,10 @@ void ivy_manager_t::ivy_wall_t::gen(cube_t const &c, unsigned face_mask, rand_ge
 
 	for (unsigned n = 0; n < 4; ++n) { // {+X, -X, +Y, -Y} sides
 		if (!(face_mask & (1<<n))) continue; // face not enabled
-		unsigned const dim(n>>1), dir(n&1), d1((dim+1)%3), d2((dim+2)%3), num(rgen.rand() % 100);
+		unsigned const dim(n>>1), dir(n&1), d1(1-dim), d2(2);
+		unsigned const num(50 + (rgen.rand() % 50)); // temp placeholder
 		point pos;
-		pos[dim] = bcube.d[dim][!dir] + 0.1*leaf_sz*(dir ? 1.0 : -1.0); // move slightly away from the surface
+		pos[dim] = bcube.d[dim][dir] + 0.1*leaf_sz*(dir ? 1.0 : -1.0); // move slightly away from the surface
 		vector3d const normal(vector_from_dim_dir(dim, dir));
 
 		for (unsigned n = 0; n < num; ++n) {
@@ -567,6 +567,7 @@ void ivy_manager_t::add_wall(cube_t const &wall, unsigned face_mask, unsigned wa
 }
 void ivy_manager_t::draw_and_clear(shader_t &s) {
 	if (to_draw.empty()) return;
+	//cout << TXT(to_draw.size()) << TXT(ivy_walls.size()) << endl;
 	begin_leaf_draw(s, PLANT1_TEX);
 
 	for (uint32_t wix : to_draw) {

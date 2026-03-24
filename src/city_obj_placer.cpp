@@ -1489,7 +1489,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 						}
 						if (overlaps) continue; // overlaps a previous divider, skip this one
 					}
-					divider_groups.add_obj(divider_t(c, type, dim, dir, skip_dims), dividers);
+					divider_groups.add_obj(divider_t(c, type, dim, dir, skip_dims, dividers.size(), city_ix), dividers);
 					add_cube_to_colliders_and_blockers(c, colliders, blockers);
 				} // for dir
 			} // for dim
@@ -1507,8 +1507,8 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 		float const plot_z(i->z2());
 
 		// attempt place swimming pool; often unsuccessful
-		bool const placed_pool(add_divider && place_swimming_pool(plot, *i, house, sdim, sdir, shrink_dim, prev_blockers_end, hwidth,
-			translate_dist, pool_blockers, blockers, colliders, rgen));
+		bool const placed_pool(add_divider && place_swimming_pool(plot, *i, house, sdim, sdir, shrink_dim, prev_blockers_end,
+			city_ix, hwidth, translate_dist, pool_blockers, blockers, colliders, rgen));
 		bool const add_umbrella(building_obj_model_loader.is_model_valid(OBJ_MODEL_BIG_UMBRELLA) && rgen.rand_float() < 0.25); // 25% of the time
 		bool placed_obj(placed_pool);
 
@@ -1801,8 +1801,8 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 	}
 }
 
-bool city_obj_placer_t::place_swimming_pool(road_plot_t const &plot, city_zone_t const &yard, cube_with_ix_t const &house,
-	bool dim, bool dir, bool shrink_dim, unsigned prev_blockers_end, float divider_hwidth, float const translate_dist[2],
+bool city_obj_placer_t::place_swimming_pool(road_plot_t const &plot, city_zone_t const &yard, cube_with_ix_t const &house, bool dim, bool dir,
+	bool shrink_dim, unsigned prev_blockers_end, unsigned city_ix, float divider_hwidth, float const translate_dist[2],
 	vect_cube_t const &pool_blockers, vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen)
 {
 	if (rgen.rand_float() < 0.05) return 0; // add pools 95% of the time (since placing them often fails anyway)
@@ -1886,7 +1886,8 @@ bool city_obj_placer_t::place_swimming_pool(road_plot_t const &plot, city_zone_t
 					if (is_placement_blocked(fence, blockers, house, prev_blockers_end, expand, !fence_dim)) {bad_fence_place = 1; break;} // blocked by a driveway, etc.
 				}
 			}
-			fences[side] = divider_t(fence, DIV_CHAINLINK, fence_dim, dir, 0); // Note: dir is unused in divider_t so doesn't have to be set correctly
+			// Note: dir is unused in divider_t so doesn't have to be set correctly
+			fences[side] = divider_t(fence, DIV_CHAINLINK, fence_dim, dir, 0, (dividers.size() + side), city_ix);
 		} // for side
 		if (bad_fence_place) continue; // failed to fence off the pool, don't place it here
 		cube_t pool_full_height(pool);
