@@ -367,6 +367,17 @@ struct parking_lot_t : public oriented_cube_t {
 	tex_range_t get_tex_range(float ar) const;
 };
 
+// for future use in storing park heightmaps that contains lower areas for ponds and creeks
+class park_heightmap_t {
+	unsigned nx=0, ny=0;
+	vector<float> heights;
+public:
+	park_heightmap_t(unsigned nx_, unsigned ny_) : nx(nx_), ny(ny_) {}
+	void create(rand_gen_t &rgen) {heights.resize(nx*ny, 0.0);}
+	void draw(shader_t &s) const {}
+	// TODO
+};
+
 
 namespace stoplight_ns {
 
