@@ -481,6 +481,7 @@ void begin_leaf_draw(shader_t &s, int tid) {
 	enable_blend(); // slightly smoother, but a bit of background shows through
 	s.add_uniform_float("min_alpha", 0.9);
 	s.add_uniform_int("two_sided_lighting", 1);
+	s.set_cur_color(WHITE);
 }
 void end_leaf_draw(shader_t &s) {
 	drawable_t::post_render();
@@ -514,28 +515,46 @@ void hedge_draw_t::draw_and_clear(shader_t &s) {
 
 // ivy_manager_t
 
-void ivy_manager_t::ivy_wall_t::gen(cube_t const &c, unsigned face_mask, rand_gen_t &rgen) {
-	bcube = c;
-	float const leaf_sz(0.05*bcube.dz());
-	vector<vert_norm_comp_tc_comp> verts;
+void ivy_manager_t::ivy_wall_t::gen(cube_t const &bcube, unsigned face_mask, rand_gen_t &rgen) {
+	leaves.bcube = branches.bcube = bcube; // both the same
+	float const leaf_sz(0.05*bcube.dz()), branch_radius(0.1*leaf_sz);
+	vector<vert_norm_comp_tc_comp> leaf_verts, branch_verts;
 
 	for (unsigned n = 0; n < 4; ++n) { // {+X, -X, +Y, -Y} sides
 		if (!(face_mask & (1<<n))) continue; // face not enabled
 		unsigned const dim(n>>1), dir(n&1), d1(1-dim), d2(2);
 		unsigned const num(50 + (rgen.rand() % 50)); // temp placeholder
+		float const wall_face(bcube.d[dim][dir]), shift_dist(0.1*leaf_sz*(dir ? 1.0 : -1.0));
 		point pos;
-		pos[dim] = bcube.d[dim][dir] + 0.1*leaf_sz*(dir ? 1.0 : -1.0); // move slightly away from the surface
+		pos[dim] = wall_face + shift_dist; // move slightly away from the surface
 		vector3d const normal(vector_from_dim_dir(dim, dir));
+		vert_norm_comp_tc_comp bv;
+		bv.set_norm(normal);
+		bv.v[dim] = wall_face + 0.5*shift_dist; // in front of the wall but behind the leaf
 
-		for (unsigned n = 0; n < num; ++n) {
+		for (unsigned n = 0; n < num; ++n) { // TODO: handle Z-fighting of overlapping leaves
 			pos[d1] = rgen.rand_uniform(bcube.d[d1][0], bcube.d[d1][1]);
 			pos[d2] = rgen.rand_uniform(bcube.d[d2][0], bcube.d[d2][1]);
 			float const angle(TWO_PI*rgen.rand_float());
-			add_leaf_verts(pos, normal, angle, leaf_sz, verts);
-		}
+			add_leaf_verts(pos, normal, angle, leaf_sz, leaf_verts);
+			// add placeholder vertical branch quad
+			float const p1a(pos[d1] - branch_radius), p1b(pos[d1] + branch_radius);
+			float const p2a(bcube.z1()), p2b(pos[d2] - 0.5*leaf_sz), tscale1(0.5), tscale2(1.0); // Note: tscale must be in [0.0, 1.0]
+			float const vd1[4] = {p1a, p1b, p1b, p1a}, vd2[4] = {p2a, p2a, p2b, p2b};
+			float const tcs[4] = {0.0, 1.0, 1.0, 0.0}, tct[4] = {0.0, 0.0, 1.0, 1.0};
+			
+			for (unsigned i = 0; i < 4; ++i) {
+				bv.v[d1] = vd1[i];
+				bv.v[d2] = vd2[i];
+				bv.set_tcs(tscale1*tcs[i], tscale2*tct[i]);
+				branch_verts.push_back(bv);
+			}
+		} // for n
 	} // for s
-	num_verts = verts.size();
-	create_and_upload(verts, 0, 1);
+	leaves  .num_verts = leaf_verts  .size();
+	branches.num_verts = branch_verts.size();
+	leaves  .create_and_upload(leaf_verts,   0, 1);
+	branches.create_and_upload(branch_verts, 0, 1);
 }
 
 size_t ivy_manager_t::get_gpu_mem() const {
@@ -555,29 +574,37 @@ void ivy_manager_t::add_wall(cube_t const &wall, unsigned face_mask, unsigned wa
 	}
 	ivy_wall_t &w(ivy_walls[wall_ix]);
 
-	if (w.bcube.is_all_zeros()) { // new wall
+	if (w.leaves.bcube.is_all_zeros()) { // new wall
 		rand_gen_t rgen;
 		rgen.set_state(wall_ix+1, wall_ix+1);
 		w.gen(wall, face_mask, rgen);
 	}
 	else { // existing wall
-		assert(w.bcube == wall);
+		assert(w.leaves.bcube == wall && w.branches.bcube == wall);
 	}
 	to_draw.push_back(wall_ix); // not checked for duplicates
+}
+void drawable_t::draw() const {
+	if (num_verts == 0) return;
+	pre_render();
+	draw_quads_as_tris(num_verts);
 }
 void ivy_manager_t::draw_and_clear(shader_t &s) {
 	if (to_draw.empty()) return;
 	//cout << TXT(to_draw.size()) << TXT(ivy_walls.size()) << endl;
-	begin_leaf_draw(s, PLANT1_TEX);
-
+	// draw branches first
+	select_texture(BARK1_TEX); // TODO: another (custom) texture?
+	bind_default_flat_normal_map();
+	s.set_cur_color(LT_BROWN); // darker than the texture
+	
 	for (uint32_t wix : to_draw) {
 		auto it(ivy_walls.find(wix));
 		assert(it != ivy_walls.end()); // must be found
-		ivy_wall_t const &w(it->second);
-		if (w.num_verts == 0) continue; // no ivy for this wall
-		w.pre_render();
-		draw_quads_as_tris(w.num_verts);
-	} // for wix
+		it->second.branches.draw();
+	}
+	// draw leaves second
+	begin_leaf_draw(s, PLANT1_TEX);
+	for (uint32_t wix : to_draw) {ivy_walls.find(wix)->second.leaves.draw();}
 	end_leaf_draw(s);
 	to_draw.clear();
 }

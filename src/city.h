@@ -442,6 +442,7 @@ struct drawable_t : public vao_manager_t {
 	unsigned num_verts=0;
 	cube_t bcube;
 	size_t get_gpu_mem() const {return (vbo_valid() ? num_verts*sizeof(vert_norm_comp_tc_comp) : 0);}
+	void draw() const;
 };
 
 class hedge_draw_t : private drawable_t {
@@ -455,8 +456,11 @@ public:
 };
 
 class ivy_manager_t { // stores ivy for one residential city
-	struct ivy_wall_t : public drawable_t {
-		void gen(cube_t const &c, unsigned face_mask, rand_gen_t &rgen);
+	struct ivy_wall_t {
+		drawable_t leaves, branches;
+		size_t get_gpu_mem() const {return (leaves.get_gpu_mem() + branches.get_gpu_mem());}
+		void clear() {leaves.clear(); branches.clear();}
+		void gen(cube_t const &bcube, unsigned face_mask, rand_gen_t &rgen);
 	};
 	unordered_map<unsigned, ivy_wall_t> ivy_walls;
 	unsigned cur_city_ix=NO_CITY_IX;
@@ -465,7 +469,6 @@ public:
 	bool empty() const {return to_draw.empty();}
 	size_t get_gpu_mem() const;
 	void clear();
-	//void set_cur_city(unsigned ix) {if (ix != cur_city_ix) {clear(); cur_city_ix = ix;}}
 	void add_wall(cube_t const &wall, unsigned face_mask, unsigned wall_ix, unsigned city_ix);
 	void draw_and_clear(shader_t &s);
 };

@@ -97,7 +97,8 @@ struct vert_norm_comp_tc : public vert_norm_comp { // size = 24
 struct vert_norm_comp_tc_comp : public vert_norm_comp { // size = 20
 	short t[2]; // could even use char
 	vert_norm_comp_tc_comp() {t[0] = t[1] = 0;}
-	vert_norm_comp_tc_comp(point const &v_, vector3d const &n_, float ts, float tt) : vert_norm_comp(v_, n_) {t[0] = 32767*ts; t[1] = 32767*tt;}
+	vert_norm_comp_tc_comp(point const &v_, vector3d const &n_, float ts, float tt) : vert_norm_comp(v_, n_) {set_tcs(ts, tt);}
+	void set_tcs(float ts, float tt) {t[0] = 32767*ts; t[1] = 32767*tt;}
 	static void set_vbo_arrays(bool set_state=1, void const *vbo_ptr_offset=NULL);
 };
 
