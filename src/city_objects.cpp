@@ -428,7 +428,7 @@ void divider_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_sc
 	}
 	if (0 && !shadow_only && type == DIV_WALL && bcube.closest_dist_less_than(dstate.camera_bs, 0.35f*(X_SCENE_SIZE + Y_SCENE_SIZE))) {
 		unsigned face_mask(dim ? 12 : 3); // either both X sides or both Y sides
-		dstate.ivy_manager.add_wall(bcube, face_mask, divider_ix, city_ix);
+		dstate.ivy_manager.add_wall(bcube, face_mask, divider_ix, plot_ix, city_ix);
 	}
 }
 bool divider_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
@@ -521,7 +521,8 @@ void ivy_manager_t::ivy_wall_t::gen(cube_t const &bcube, unsigned face_mask, ran
 	vector<vert_norm_comp_tc_comp> leaf_verts, branch_verts;
 
 	for (unsigned n = 0; n < 4; ++n) { // {+X, -X, +Y, -Y} sides
-		if (!(face_mask & (1<<n))) continue; // face not enabled
+		if (!(face_mask & (1<<n)))   continue; // face not enabled
+		if (rgen.rand_float() < 0.3) continue; // no ivy on this face
 		unsigned const dim(n>>1), dir(n&1), d1(1-dim), d2(2);
 		unsigned const num(50 + (rgen.rand() % 50)); // temp placeholder
 		float const wall_face(bcube.d[dim][dir]), shift_dist(0.1*leaf_sz*(dir ? 1.0 : -1.0));
@@ -551,6 +552,8 @@ void ivy_manager_t::ivy_wall_t::gen(cube_t const &bcube, unsigned face_mask, ran
 			}
 		} // for n
 	} // for s
+	assert(leaf_verts.empty() == branch_verts.empty());
+	if (leaf_verts.empty()) return; // empty
 	leaves  .num_verts = leaf_verts  .size();
 	branches.num_verts = branch_verts.size();
 	leaves  .create_and_upload(leaf_verts,   0, 1);
@@ -563,26 +566,29 @@ size_t ivy_manager_t::get_gpu_mem() const {
 	return mem;
 }
 void ivy_manager_t::clear() {
-	assert(to_draw.empty()); // can't clear mid-draw
+	//assert(to_draw.empty()); // can't clear mid-draw; but maybe this can happen if two cities are placed close together and the player is between them, so we allow it
+	to_draw.clear();
 	for (auto &kv : ivy_walls) {kv.second.clear();}
 	ivy_walls.clear();
 }
-void ivy_manager_t::add_wall(cube_t const &wall, unsigned face_mask, unsigned wall_ix, unsigned city_ix) {
+void ivy_manager_t::add_wall(cube_t const &wall, unsigned face_mask, unsigned wall_ix, unsigned plot_ix, unsigned city_ix) {
 	if (city_ix != cur_city_ix) { // city change
 		clear();
 		cur_city_ix = city_ix;
 	}
+	if (((13*plot_ix) % 5) == 0) return; // some plots have no ivy
+	if (((17*wall_ix) % 5) == 0) return; // some walls have no ivy
 	ivy_wall_t &w(ivy_walls[wall_ix]);
 
 	if (w.leaves.bcube.is_all_zeros()) { // new wall
 		rand_gen_t rgen;
-		rgen.set_state(wall_ix+1, wall_ix+1);
+		rgen.set_state(wall_ix+1, plot_ix+1);
 		w.gen(wall, face_mask, rgen);
 	}
 	else { // existing wall
 		assert(w.leaves.bcube == wall && w.branches.bcube == wall);
 	}
-	to_draw.push_back(wall_ix); // not checked for duplicates
+	if (!w.empty()) {to_draw.push_back(wall_ix);} // not checked for duplicates, but there shouldn't be any
 }
 void drawable_t::draw() const {
 	if (num_verts == 0) return;

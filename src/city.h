@@ -371,6 +371,8 @@ struct parking_lot_t : public oriented_cube_t {
 class park_heightmap_t {
 	unsigned nx=0, ny=0;
 	vector<float> heights;
+	//indexed_mesh_draw<vert_norm_comp_tc>; // something similar, but using a VBO
+	indexed_vao_manager_t vao_mgr;
 public:
 	park_heightmap_t(unsigned nx_, unsigned ny_) : nx(nx_), ny(ny_) {}
 	void create(rand_gen_t &rgen) {heights.resize(nx*ny, 0.0);}
@@ -458,6 +460,7 @@ public:
 class ivy_manager_t { // stores ivy for one residential city
 	struct ivy_wall_t {
 		drawable_t leaves, branches;
+		bool empty() const {return (leaves.num_verts == 0);} // assumes branches are empty iff leaves are empty
 		size_t get_gpu_mem() const {return (leaves.get_gpu_mem() + branches.get_gpu_mem());}
 		void clear() {leaves.clear(); branches.clear();}
 		void gen(cube_t const &bcube, unsigned face_mask, rand_gen_t &rgen);
@@ -469,7 +472,7 @@ public:
 	bool empty() const {return to_draw.empty();}
 	size_t get_gpu_mem() const;
 	void clear();
-	void add_wall(cube_t const &wall, unsigned face_mask, unsigned wall_ix, unsigned city_ix);
+	void add_wall(cube_t const &wall, unsigned face_mask, unsigned wall_ix, unsigned plot_ix, unsigned city_ix);
 	void draw_and_clear(shader_t &s);
 };
 
