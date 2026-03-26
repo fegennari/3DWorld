@@ -303,7 +303,6 @@ struct water_vertex_calc_t {
 unsigned const RESERVED_IX = 0xFFFFFFFF;
 
 class mesh_strip_drawer : public indexed_vao_manager_t {
- 
 protected:
 	vector<vert_norm_color> verts; // vertex data
 private:

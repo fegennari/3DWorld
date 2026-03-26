@@ -501,7 +501,6 @@ void quad_batch_draw::draw_as_flares_and_clear(int flare_tex) { // Note: used in
 
 
 template<typename T> void indexed_mesh_draw<T>::clear() {
-
 	verts.clear();
 	free_context();
 	nx = ny = ivbo_size = 0;
@@ -634,7 +633,6 @@ public:
 
 // Note: these classes are actually declared in gl_ext_arb.h
 icosphere_drawer_t::icosphere_drawer_t(unsigned ndiv) {
-
 	assert(!vbo);
 	assert(ndiv > 0);
 	icosphere_creator creator;
@@ -646,7 +644,6 @@ icosphere_drawer_t::icosphere_drawer_t(unsigned ndiv) {
 }
 
 void icosphere_drawer_t::draw() const {
-
 	pre_render(1, 1); // using_index, do_bind_vbo=1
 	vert_wrap_t::set_vbo_arrays();
 	glDrawRangeElements((using_tess_shader ? GL_PATCHES : GL_TRIANGLES), 0, nverts, nindices, GL_UNSIGNED_INT, nullptr);
@@ -654,15 +651,12 @@ void icosphere_drawer_t::draw() const {
 	post_render();
 }
 
-template<typename T> 
-void subdiv_sphere_manager_t<T>::draw_sphere(unsigned ndiv) {
+template<typename T> void subdiv_sphere_manager_t<T>::draw_sphere(unsigned ndiv) {
 	auto it(cached.find(ndiv));
 	if (it == cached.end()) {it = cached.insert(make_pair(ndiv, T(ndiv))).first;} // create a new one
 	it->second.draw();
 }
-
-template<typename T> 
-void subdiv_sphere_manager_t<T>::clear() {
+template<typename T> void subdiv_sphere_manager_t<T>::clear() {
 	for (auto i = cached.begin(); i != cached.end(); ++i) {i->second.clear_vbos();}
 	cached.clear();
 }
@@ -671,9 +665,7 @@ void subdiv_sphere_manager_t<T>::clear() {
 template class subdiv_sphere_manager_t<icosphere_drawer_t>;
 
 
-template< typename vert_type_t >
-unsigned vbo_block_manager_t<vert_type_t>::get_offset_for_last_points_added() {
-
+template< typename vert_type_t > unsigned vbo_block_manager_t<vert_type_t>::get_offset_for_last_points_added() {
 	if (offsets.empty()) {offsets.push_back(0);} // start at 0
 	unsigned const next_ix(offsets.size() - 1);
 	offsets.push_back(pts.size()); // range will be [start_ix, start_ix+p.size()]
@@ -695,8 +687,7 @@ template<> void vbo_block_manager_t<vert_norm_comp_tc>::add_points_int(vector<ve
 	copy(p, p+npts, back_inserter(dest)); // color is ignored
 }
 
-template< typename vert_type_t >
-unsigned vbo_block_manager_t<vert_type_t>::get_fill_start(unsigned npts, unsigned six) const {
+template< typename vert_type_t > unsigned vbo_block_manager_t<vert_type_t>::get_fill_start(unsigned npts, unsigned six) const {
 	unsigned const eix(six + 1);
 	assert(eix < offsets.size());
 	assert((offsets[eix] - offsets[six]) == npts);
@@ -718,8 +709,7 @@ template<> void vbo_block_manager_t<vert_norm_comp_tc>::fill_pts_from(vert_norm_
 	for (unsigned i = 0; i < npts; ++i) {pts[i+start] = p[i];}
 }
 
-template< typename vert_type_t >
-void vbo_block_manager_t<vert_type_t>::render_range(unsigned six, unsigned eix, unsigned num_instances) const {
+template< typename vert_type_t > void vbo_block_manager_t<vert_type_t>::render_range(unsigned six, unsigned eix, unsigned num_instances) const {
 
 	assert(six < eix && eix < offsets.size());
 	assert(offsets[six] <= offsets[eix]);
@@ -736,8 +726,7 @@ void vbo_block_manager_t<vert_type_t>::render_range(unsigned six, unsigned eix, 
 	}
 }
 
-template< typename vert_type_t >
-bool vbo_block_manager_t<vert_type_t>::upload() {
+template< typename vert_type_t > bool vbo_block_manager_t<vert_type_t>::upload() {
 
 	if (vbo || !has_data()) return 0; // already uploaded or empty
 	assert(!pts.empty());
@@ -761,15 +750,13 @@ void vbo_block_manager_t<vert_type_t>::update_range(typename vert_type_t::non_co
 	post_render();
 }
 
-template< typename vert_type_t >
-void vbo_block_manager_t<vert_type_t>::begin_render() const {
+template< typename vert_type_t > void vbo_block_manager_t<vert_type_t>::begin_render() const {
 	if (!has_data()) return;
 	pre_render();
 	vert_type_t::set_vbo_arrays();
 }
 
-template< typename vert_type_t >
-void vbo_block_manager_t<vert_type_t>::clear(bool free_pts_mem) {
+template< typename vert_type_t > void vbo_block_manager_t<vert_type_t>::clear(bool free_pts_mem) {
 	if (free_pts_mem) {clear_points();} else {pts.clear();}
 	offsets.clear();
 	clear_vbo();
@@ -798,9 +785,8 @@ template void gen_quad_ixs(vector<unsigned> &ixs, unsigned size, unsigned ix_off
 template void gen_quad_ixs(vector<unsigned short> &ixs, unsigned size, unsigned ix_offset);
 
 class quad_ix_buffer_t {
-
-	unsigned ivbo_16, ivbo_32;
-	unsigned size_16, size_32;
+	unsigned ivbo_16=0, ivbo_32=0;
+	unsigned size_16=0, size_32=0;
 
 	template< typename T > static void ensure_quad_ixs(unsigned &ivbo, unsigned size) {
 		if (ivbo != 0) return; // vbo already valid
@@ -809,7 +795,6 @@ class quad_ix_buffer_t {
 		create_vbo_and_upload(ivbo, ixs, 1);
 	}
 public:
-	quad_ix_buffer_t() : ivbo_16(0), ivbo_32(0), size_16(0), size_32(0) {}
 	unsigned get_alloced_size() const {return (size_16*sizeof(unsigned short) + size_32*sizeof(unsigned));}
 
 	void free_context() {
@@ -863,9 +848,7 @@ void draw_quads_as_tris(unsigned num_quad_verts, unsigned start_quad_vert, unsig
 }
 bool bind_quads_as_tris_ivbo(unsigned num_quad_verts) {return quad_ix_buffer.bind_quads_as_tris_ivbo(num_quad_verts);}
 
-
 void convert_quad_ixs_to_tri_ixs(vector<unsigned> const &qixs, vector<unsigned> &tixs) { // what about 16-bit indices?
-
 	tixs.resize(6*qixs.size()/4);
 
 	for (unsigned i = 0, j = 0; i < qixs.size(); i += 4) { // step a quad at a time

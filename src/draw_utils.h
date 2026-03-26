@@ -19,17 +19,16 @@ template<class vert_type_t> struct sized_vert_t : public vert_type_t { // size =
 
 
 class pt_line_drawer {
-
 	vector<vert_norm_color> points, lines;
 
 public:
 	void clear() {
-		points.resize(0);
-		lines.resize(0);
+		points.clear();
+		lines. clear();
 	}
 	void free_mem() {
 		clear_cont(points);
-		clear_cont(lines);
+		clear_cont(lines );
 	}
 	void add_pt(point const &v, vector3d const &n, colorRGBA const &c) {
 		points.emplace_back(v, n, c);
@@ -46,9 +45,7 @@ public:
 	bool empty() const {return (points.empty() && lines.empty());}
 };
 
-
 class pt_line_drawer_no_lighting_t { // uses vbo for static points/lines; used for universe mode stars
-
 	vector<vert_color> points, lines;
 	unsigned vbo[2]={};
 
@@ -69,7 +66,6 @@ public:
 
 // Note: we may want versions with and without normals
 template<class vert_type_t> class point_sprite_drawer_t {
-
 	vector<vert_type_t> points;
 
 public:
@@ -91,7 +87,6 @@ typedef point_sprite_drawer_t<sized_vert_t<vert_norm_color>> point_sprite_drawer
 
 
 struct quad_batch_draw { // Note: might want an indexed version of this
-
 	vector<vert_norm_tc_color> verts;
 
 	void add_quad_pts(point const pts[4], color_wrapper const &cw, vector3d const &n=plus_z, tex_range_t const &tr=tex_range_t());
@@ -117,7 +112,6 @@ struct quad_batch_draw { // Note: might want an indexed version of this
 
 
 class line_tquad_draw_t {
-
 	vector<vert_tc_color> verts;
 
 public:
@@ -134,13 +128,11 @@ public:
 
 
 template<typename T> class indexed_mesh_draw { // quads
-
 protected:
-	unsigned ivbo, ivbo_size, nx, ny; // in quads
+	unsigned ivbo=0, ivbo_size=0, nx=0, ny=0; // in quads
 	vector<T> verts;
 
 public:
-	indexed_mesh_draw() : ivbo(0), ivbo_size(0), nx(0), ny(0) {}
 	void clear();
 	void init(unsigned nx_, unsigned ny_);
 
@@ -155,17 +147,16 @@ public:
 };
 
 
-template< typename vert_type_t > class vbo_block_manager_t : public vbo_wrap_t {
+template<typename vert_type_t> class vbo_block_manager_t : public vbo_wrap_t {
 
 	vector<vert_type_t> pts;
 	vector<unsigned> offsets;
-	int prim_type;
+	int prim_type=GL_QUADS; // default is quads
 
 	bool has_data() const {return (!pts.empty() || offsets.size() > 1);}
 	void add_points_int(vector<vert_type_t> &dest, typename vert_type_t::non_color_class const *const p, unsigned npts, colorRGBA const &color);
 public:
 	// can't free in the destructor because the gl context may be destroyed before this point
-	vbo_block_manager_t() : prim_type(GL_QUADS) {} // default is quads
 	//~vbo_block_manager_t() {clear_vbo();}
 	void set_prim_type(int type) {prim_type = type;}
 	bool is_uploaded() const {return (vbo != 0);}
@@ -216,14 +207,12 @@ typedef vbo_block_manager_t<vert_norm_comp_tc   > vbo_vnct_block_manager_t;
 
 
 class lt_atten_manager_t {
-
 	shader_t &shader;
 	int ulocs[5];
-	float last_light_atten, last_refract_ix;
+	float last_light_atten=-2.0, last_refract_ix=0.0; // set to invalid values to start
 
 public:
-	lt_atten_manager_t(shader_t &shader_) : shader(shader_), last_light_atten(-2.0), last_refract_ix(0.0) // set to invalid values to start
-	{ulocs[0] = ulocs[1] = ulocs[2] = ulocs[3] = ulocs[4] = -1;}
+	lt_atten_manager_t(shader_t &shader_) : shader(shader_) {ulocs[0] = ulocs[1] = ulocs[2] = ulocs[3] = ulocs[4] = -1;}
 	void enable();
 	void next_object(float light_atten, float refract_ix);
 	void next_cube(float light_atten, float refract_ix, cube_t const &cube);
@@ -231,14 +220,11 @@ public:
 	bool is_enabled() const {return (ulocs[0] >= 0);} // check that first uniform loc is assigned
 };
 
-
 class reflect_plane_selector {
-
 	vector<cube_t> bcubes;
-	int sel_cube;
+	int sel_cube=-1;
 
 public:
-	reflect_plane_selector() : sel_cube(-1) {}
 	bool empty() const {return bcubes.empty();}
 	bool enabled() const {return (!empty() && sel_cube >= 0);}
 	void add(cube_t const &c) {bcubes.push_back(c);}
@@ -247,9 +233,7 @@ public:
 	void select_best_reflection_plane();
 };
 
-
 struct fire_drawer_t {
-
 	quad_batch_draw qbd;
 
 	void add_fire(point const &pos, float radius, int frame_ix, float alpha=1.0);
