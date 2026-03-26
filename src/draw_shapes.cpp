@@ -370,13 +370,9 @@ void coll_obj::draw_extruded_polygon(int tid, cobj_draw_buffer &cdb) const {
 		unsigned const nsides(unsigned(npoints)+2);
 		float const tscale[2] = {cp.tscale, get_tex_ar(tid)*cp.tscale}; // used for was_cube case
 		float tcs[2][2] = {}; // {s,t} x {min,max}
-		vector3d cube_size(zero_vector);
+		vector3d cube_size;
+		if (treat_as_cube) {cube_size.assign(p2p_dist(points[0], points[1]), p2p_dist(points[1], points[2]), thickness);}
 
-		if (treat_as_cube) {
-			cube_size.x = p2p_dist(points[0], points[1]);
-			cube_size.y = p2p_dist(points[1], points[2]);
-			cube_size.z = thickness;
-		}
 		for (unsigned fi = 0; fi < nsides; ++fi) { // draw back to front
 			unsigned const s(faces[fi].second);
 
