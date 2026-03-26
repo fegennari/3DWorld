@@ -186,8 +186,7 @@ void coll_obj::draw_coll_cube(int tid, cobj_draw_buffer &cdb, bool force_draw_al
 			unsigned const fi(faces[i].second), dim(fi>>1), dir(fi&1);
 			unsigned const d0((dim+1)%3), d1((dim+2)%3), t0((2-dim)>>1), t1(1+((2-dim)>0));
 			vert_norm_texp vnt;
-			vnt.n      = zero_vector;
-			vnt.n[dim] = (dir ? 1.0 : -1.0);
+			vnt.n = vector_from_dim_dir(dim, dir);
 			setup_cube_face_texgen(vnt, t0, t1, tscale);
 
 			if (!((sides & EFLAGS[dim][dir]) || (!draw_all_faces && !((camera[dim] < d[dim][dir]) ^ dir)))) { // 6 faces
@@ -236,8 +235,7 @@ void coll_obj::draw_coll_cube(int tid, cobj_draw_buffer &cdb, bool force_draw_al
 			p[d1 ] = d[d1][1]; pts[dir ? 2 : 1] = p;
 			p[d0 ] = d[d0][0]; pts[dir ? 3 : 0] = p;
 			vert_norm_texp vnt;
-			vnt.n      = zero_vector;
-			vnt.n[dim] = (dir ? 1.0 : -1.0);
+			vnt.n = vector_from_dim_dir(dim, dir);
 			setup_cube_face_texgen(vnt, t0, t1, tscale);
 			cdb.add_polygon<6>(vnt, pts);
 		} // for i

@@ -247,8 +247,7 @@ unsigned create_reflection_cube_map(unsigned tid, unsigned tex_size, int cobj_id
 			unsigned const dir_mask(EFLAGS[dim][dir]), face_id(2*dim + !dir);
 			if ((skip_mask & dir_mask) != 0) {faces_drawn |= dir_mask; continue;} // mark it as drawn but skip it
 			if (only_front_facing && ((prev_camera_pdu.pos[dim] > center[dim]) ^ dir)) continue; // back facing
-			vector3d view_dir, upv(-plus_y);
-			view_dir[dim] = (dir ? 1.0 : -1.0);
+			vector3d view_dir(vector_from_dim_dir(dim, dir)), upv(-plus_y);
 			if (dim == 1) {upv = (dir ? plus_z : -plus_z);} // Note: in OpenGL, the cube map top/bottom is in Y, and up dir is special in this dim
 			float const angle(0.5*perspective_fovy*TO_RADIANS); // 90 degree FOV
 			faces.push_back(face_draw_params_t(pos_dir_up(center, view_dir, upv, angle, near_plane, far_plane, 1.0, 1), face_id));

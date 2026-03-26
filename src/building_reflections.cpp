@@ -350,9 +350,8 @@ class cube_map_reflection_manager_t {
 		check_gl_error(531);
 	}
 	void set_view_frustum(unsigned dim, unsigned dir) {
-		cview_dir = zero_vector;
+		cview_dir = vector_from_dim_dir(dim, dir);
 		up_vector = -plus_y;
-		cview_dir[dim] = (dir ? 1.0 : -1.0);
 		if (dim == 1) {up_vector = (dir ? plus_z : -plus_z);} // Note: in OpenGL, the cube map top/bottom is in Y, and up dir is special in this dim
 		float const angle(0.5*perspective_fovy*TO_RADIANS); // 90 degree FOV
 		camera_pdu = pos_dir_up(center, cview_dir, up_vector, angle, near_plane, far_plane, 1.0, 1);

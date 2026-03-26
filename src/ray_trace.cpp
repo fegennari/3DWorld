@@ -918,8 +918,7 @@ void ray_trace_local_light_source(lmap_manager_t *lmgr, light_source const &ls, 
 
 			for (unsigned dir = 0; dir < 2; ++dir) {
 				if (ls.get_cube_eflags() & EFLAGS[dim][dir]) continue; // this surface is disabled
-				vector3d normal;
-				normal[dim] = (dir ? 1.0 : -1.0);
+				vector3d const normal(vector_from_dim_dir(dim, dir));
 				point start_pt;
 				start_pt[dim] = cube.d[dim][dir] + 1.0E-5*radius*normal[dim]; // move slightly away from cube edge
 				//cout << TXT(dim) << TXT(dir) << TXT(d1) << TXT(d2) << TXT(side_area[dim]) << TXT(side_rays) << endl;

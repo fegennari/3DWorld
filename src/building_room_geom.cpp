@@ -3547,8 +3547,7 @@ void building_room_geom_t::add_pipe(room_object_t const &c, bool add_exterior) {
 			if ((flat_ends || !draw_joints[d]) && !(c.flags & (d ? RO_FLAG_ADJ_TOP : RO_FLAG_ADJ_BOT))) continue; // ADJ_BOT/ADJ_TOP flags are for pipes with one round end
 			point center(c.get_cube_center());
 			center[dim] = c.d[dim][d]; // move to one end along the cylinder
-			vector3d skip_hemi_dir;
-			skip_hemi_dir[dim] = (d ? -1.0 : 1.0); // use the correct hemisphere
+			vector3d const skip_hemi_dir(vector_from_dim_dir(dim, !d)); // use the correct hemisphere
 			mat.add_sphere_to_verts(center, vector3d(radius, radius, radius), color, 0, skip_hemi_dir); // low_detail=0
 		} // for d
 	}

@@ -710,12 +710,6 @@ unsigned const REF_PASS_GLASS_FLOOR = 0x80;
 unsigned const REF_PASS_CITY_ONLY   = 0x100;
 unsigned const REF_PASS_EXT_ONLY    = 0x200;
 
-inline vector3d vector_from_dim_dir(int dim, bool dir) {
-	vector3d v;
-	v[dim] = (dir ? 1.0 : -1.0);
-	return v;
-}
-
 struct bldg_obj_type_t {
 	bool player_coll=0, ai_coll=0, rat_coll=0, pickup=0, attached=0, is_model=0;
 	uint8_t lg_sm=0; // 0=neither (model or detail), 1=large item, 2=small item, 3=split into large and small

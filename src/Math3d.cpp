@@ -1216,25 +1216,19 @@ unsigned get_cube_corners(float const d[3][2], point corners[8], point const &vi
 
 
 void get_closest_cube_norm(float const d[3][2], point const &p, vector3d &norm) {
-
 	unsigned dim(2), dir(0);
 	float dmin(fabs(p[2] - d[2][0]));
 	UNROLL_2X({float const dist(fabs(p[i_] - d[i_][0])); if (dist < dmin) {dmin = dist; dim = i_;}})
 	UNROLL_3X({float const dist(fabs(p[i_] - d[i_][1])); if (dist < dmin) {dmin = dist; dim = i_; dir = 1;}})
-	norm      = all_zeros;
-	norm[dim] = (dir ? 1.0 : -1.0);
+	norm = vector_from_dim_dir(dim, dir);
 }
 
-
 void cylinder_bounding_sphere(point const *const p, float r1, float r2, point &center, float &radius) {
-
 	center = get_center_n2(p);
 	radius = sqrt(p2p_dist_sq(center, p[0]) + 2.0*max(r1, r2)*max(r1, r2));
 }
 
-
 void polygon_bounding_sphere(const point *pts, int npts, float thick, point &center, float &radius) {
-
 	center = get_center(pts, npts);
 	radius = 0.0;
 	for (int i = 0; i < npts; ++i) {radius = max(radius, p2p_dist_sq(center, pts[i]));}

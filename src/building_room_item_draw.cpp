@@ -3031,8 +3031,7 @@ void building_decal_manager_t::add_blood_or_stain(point const &pos, float radius
 	assert(dim <= 2);
 	tex_range_t tex_range(tex_range_t::from_atlas((rgen.rand()&1), (rgen.rand()&1), 2, 2)); // 2x2 texture atlas
 	tex_range.swap_xy = rgen.rand_bool();
-	vector3d ds, dt, dn;
-	dn[dim] = (dir ? 1.0 : -1.0);
+	vector3d ds, dt, dn(vector_from_dim_dir(dim, dir));
 	ds[(dim+1)%3] = -1.0;
 	dt[(dim+2)%3] =  1.0;
 	if (!dir) {swap(ds, dt);} // use correct winding order

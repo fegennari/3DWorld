@@ -109,17 +109,14 @@ inline point gen_rand_scene_pos() {
 				 rand_uniform(min(zbottom, czmin), max(ztop, czmax)));
 }
 
-
 template <rand_func rfunc> float gen_rand_phi() {
 	return safe_acosf(2.0*rfunc(0.0, 1.0) - 1.0);
 }
-
 
 inline vector3d signed_rand_vector(float scale=1.0) {
 	assert(scale > 0.0);
 	return vector3d(scale*signed_rand_float(), scale*signed_rand_float(), scale*signed_rand_float());
 }
-
 
 inline vector3d signed_rand_vector_norm(float scale=1.0) {
 	assert(scale > 0.0);
@@ -131,7 +128,6 @@ inline vector3d signed_rand_vector_norm(float scale=1.0) {
 	return zero_vector; // never gets here
 }
 
-
 inline vector3d signed_rand_vector_spherical(float scale=1.0) {
 	assert(scale > 0.0);
 
@@ -142,12 +138,17 @@ inline vector3d signed_rand_vector_spherical(float scale=1.0) {
 	return zero_vector; // never gets here
 }
 
-
 inline void vadd_rand(vector3d &v, float rval, bool spherical=0) {v += (spherical ? signed_rand_vector_spherical(rval) : signed_rand_vector(rval));}
 
 
 // ***************** VECTOR MATH ********************
 
+
+inline vector3d vector_from_dim_dir(int dim, bool dir) {
+	vector3d v;
+	v[dim] = (dir ? 1.0 : -1.0);
+	return v;
+}
 
 template<typename T> inline void cross_product(pointT<T> const &v1, pointT<T> const &v2, pointT<T> &v3) {
 	v3.x = v1.y*v2.z - v1.z*v2.y;
@@ -163,7 +164,6 @@ template<typename T> inline pointT<T> cross_product(pointT<T> const &v1, pointT<
 inline float cross_product   (vector2d const &a, vector2d const &b) {return (a.x*b.y - a.y*b.x);}
 inline float cross_product_xy(vector3d const &a, vector3d const &b) {return (a.x*b.y - a.y*b.x);} // result is z-value
 inline float dot_product_xy  (vector3d const &a, vector3d const &b) {return (a.x*b.x + a.y*b.y);}
-
 
 inline float vector_determinant(vector3d const &v1, vector3d const &v2, vector3d const &v3) { // 3x3
 	return v1.x*(v2.y*v3.z - v3.y*v2.z) - v2.x*(v1.y*v3.z - v3.y*v1.z) + v3.x*(v1.y*v2.z - v2.y*v1.z);
