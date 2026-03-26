@@ -158,21 +158,18 @@ float get_wealthy_value (unsigned align);
 
 
 class ushadow_volume {
-
 public:
-	bool invalid;
-	ushadow_volume() : invalid(0) {}
+	bool invalid=0;
 	virtual ~ushadow_volume() {}
 	virtual void draw(upos_point_type const &pos) const = 0;
 	void draw_geom(upos_point_type const &pos) const {if (!invalid) {draw(pos);}}
 };
 
 class ushadow_sphere : public ushadow_volume { // currently only supports spheres/cylinder shadow projections
-
 	int nsides;
 	double rad[2];
 	upos_point_type spos[2];
-	float const *pmap;
+	float const *pmap=nullptr;
 
 public:
 	ushadow_sphere(upos_point_type const &sobj_pos, float sobj_r, upos_point_type const &cur_pos, float cur_radius,
@@ -182,7 +179,6 @@ public:
 };
 
 class ushadow_polygon : public ushadow_volume { // currently only supports triangles and quads
-
 	unsigned npts;
 	upos_point_type p[2][4];
 
@@ -193,7 +189,6 @@ public:
 };
 
 class ushadow_triangle_mesh : public ushadow_volume {
-
 	struct voxel_triangle_t {
 		upos_point_type p[2][3];
 	};
@@ -213,12 +208,11 @@ public:
 struct quad_batch_draw;
 
 class uobj_draw_data {
-
 public:
 	int ndiv;
-	unsigned time, on_time, lifetime, eflags, nengines;
+	unsigned time, on_time, lifetime=0, eflags=0, nengines=0;
 	bool powered, specular_en, dlights, first_pass, final_pass, phase1, phase2;
-	float t_exp, dist, radius, crs, cloakval;
+	float t_exp, dist, radius, crs, cloakval=0.0;
 	upos_point_type pos;
 	vector3d vel, dir, upv, tdir;
 	colorRGBA color_a, color_b, engine_color;
@@ -230,9 +224,8 @@ public:
 	uobj_draw_data(free_obj const *const obj_, shader_t *shader_, vpc_shader_t *upc_shader_, int ndiv_, unsigned t, bool power, bool spec_en, float texp,
 		upos_point_type const &pos_, vector3d const &vel_, vector3d const &dir_, vector3d const &upv_, float dist_,
 		float radius_, float crs_, bool dlights_, bool first, bool final, bool p1, bool p2)
-		: ndiv(ndiv_), time(t), on_time(t), lifetime(0), eflags(0), nengines(0), powered(power), specular_en(spec_en),
-		dlights(dlights_), first_pass(first), final_pass(final), phase1(p1), phase2(p2), t_exp(texp), dist(dist_), radius(radius_),
-		crs(crs_), cloakval(0.0), pos(pos_), vel(vel_), dir(dir_), upv(upv_), tdir(dir),
+		: ndiv(ndiv_), time(t), on_time(t), powered(power), specular_en(spec_en), dlights(dlights_), first_pass(first), final_pass(final),
+		phase1(p1), phase2(p2), t_exp(texp), dist(dist_), radius(radius_), crs(crs_), pos(pos_), vel(vel_), dir(dir_), upv(upv_), tdir(dir),
 		color_a(WHITE), color_b(WHITE), engine_color(BLACK), obj(obj_), shader(shader_), upc_shader(upc_shader_) {}
 
 	inline bool is_moving() const {return (powered && (vel.mag_sq() > TOLERANCE));}
@@ -329,41 +322,33 @@ public:
 
 
 struct ship_explosion {
-
-  float bradius, damage;
+  float bradius=0.0, damage=0.0;
   point pos;
   
-  ship_explosion() : bradius(0.0), damage(0.0), pos(all_zeros) {}
+  ship_explosion() {}
   ship_explosion(float r, float d, point const &p) : bradius(r), damage(d), pos(p) {}
 };
 
-
 struct temp_source {
-
-	float temp, radius;
+	float temp=0.0, radius=0.0;
 	point pos;
-	free_obj const *source;
+	free_obj const *source=nullptr;
 
-	temp_source() : temp(0.0f), radius(0.0f), source(nullptr) {}
-	temp_source(point const &pos_, float radius_, float temp_, free_obj const *source_)
-		: temp(temp_), radius(radius_), pos(pos_), source(source_)
-	{
+	temp_source() {}
+	temp_source(point const &pos_, float radius_, float temp_, free_obj const *source_) : temp(temp_), radius(radius_), pos(pos_), source(source_) {
 		assert(radius > TOLERANCE && temp > 0.0);
 	}
 };
 
-
 struct hyper_inhibit_t : public uobject_base {
+	u_ship *parent=nullptr;
 
-	u_ship *parent;
-
-	hyper_inhibit_t() : parent(nullptr) {}
+	hyper_inhibit_t() {}
 	hyper_inhibit_t(upos_point_type const &pos_, float radius_, u_ship *parent_) : uobject_base(pos_, radius_), parent(parent_) {}
 };
 
 
 class ship_coll_obj {
-
 	float dscale;
 
 public:
@@ -386,11 +371,10 @@ public:
 };
 
 class ship_cylinder : public cylinder_3dw, public ship_coll_obj { // more accurately a truncated cone
-
-	bool check_ends;
+	bool check_ends=0;
 
 public:
-	ship_cylinder() : check_ends(0) {}
+	ship_cylinder() {}
 	ship_cylinder(cylinder_3dw const &c, bool check_ends_) : cylinder_3dw(c), check_ends(check_ends_) {}
 	ship_cylinder(point const &p1_, point const &p2_, float r1_, float r2_, bool check_ends_, float ds=1.0)
 		: cylinder_3dw(p1_, p2_, r1_, r2_), ship_coll_obj(ds), check_ends(check_ends_) {}
@@ -408,7 +392,6 @@ public:
 };
 
 class ship_cube : public ship_coll_obj, public cube_t {
-
 public:
 	ship_cube(float x1=0.0, float x2=0.0, float y1=0.0, float y2=0.0, float z1=0.0, float z2=0.0, float ds=1.0)
 		: ship_coll_obj(ds), cube_t(x1, x2, y1, y2, z1, z2) {}
@@ -426,7 +409,6 @@ public:
 };
 
 class ship_sphere : public sphere_t, public ship_coll_obj {
-
 public:
 	ship_sphere(point const &c=all_zeros, float r=0.0, float ds=1.0) : sphere_t(c, r), ship_coll_obj(ds) {}
 	ship_sphere* clone() const {return new ship_sphere(*this);}
@@ -442,7 +424,6 @@ public:
 };
 
 class ship_torus : public ship_coll_obj {
-
 	point center;
 	float ri, ro;
 
@@ -462,7 +443,6 @@ public:
 };
 
 class ship_bounded_cylinder : public ship_cylinder { // cylinder AND cube (can almost inherit from ship_cube as well)
-
 	ship_cube bcube;
 
 public:
@@ -484,7 +464,6 @@ public:
 
 // Note: we generally use r1 == r1 for a true cylinder (not a truncated cone)
 class ship_capsule : public cylinder_3dw, public ship_coll_obj { // cylinder with hemispheres at either end
-
 public:
 	ship_capsule() {}
 	ship_capsule(point const &p1_, point const &p2_, float radius_, float ds=1.0)
@@ -503,7 +482,6 @@ public:
 
 // triangle_list inherits from sphere (used as bounding sphere) and only overrides some functions
 class ship_triangle_list : public ship_sphere {
-
 	vector<triangle> triangles;
 	vector<vert_norm> verts; // for drawing
 
@@ -525,33 +503,25 @@ public:
 
 
 class us_class {
-
 public:
-	bool inited, has_pt_def;
+	bool inited=0, has_pt_def=0;
+	float radius=0, cr_scale=0, mass=0, cargo=0, exp_scale=0, accel=0, decel=0, roll_rate=0, max_speed=0, max_turn=0, stability=0;
+	float max_shields=0, max_armor=0, shield_re=0, armor_re=0, max_t=0, hull_str=0, damage_abs=0;
+	float min_att_dist=0, min_app_dist=0, sensor_dist=0, fire_dist=0, stray_dist=0;
+	mutable float offense=-1.0, defense=-1.0, weap_range=-1.0; // cached
+	bool reversible=0, stoppable=0, has_hyper=0, has_fast_speed=0, mpredict=0, has_cloak=0, regen_fighters=0, regen_ammo=0, regen_crew=0;
+	bool parallel_fire=0, symmetric=0, self_shadow=0, cont_frag=0, for_boarding=0, can_board=0, orbiting_dock=0, dynamic_cobjs=0, uses_tdir=0;
+	bool emits_light=0, suicides=0, kamikaze=0, no_disable=0, uses_mesh2d=0, mesh_deform=0, mesh_remove=0, mesh_expand=0, mu_expand=0, mesh_trans=0, exp_disint=0;
+	int turreted=0;
+	unsigned sclass=0, weap_spread=0, shield_sects=0, draw_passes=0, fire_speed=FSPEED_SLOW, exp_type=0, exp_subtype=0, death_delay=0, regen_delay=0;
+	unsigned cost=0, ncrew=0, nengines=0, engine_lights=0;
 	string name;
-	float radius, cr_scale, mass, cargo, exp_scale, accel, decel, roll_rate, max_speed, max_turn, stability;
-	float max_shields, max_armor, shield_re, armor_re, max_t, hull_str, damage_abs;
-	float min_att_dist, min_app_dist, sensor_dist, fire_dist, stray_dist;
-	mutable float offense, defense, weap_range; // cached
-	bool reversible, stoppable, has_hyper, has_fast_speed, mpredict, has_cloak, regen_fighters, regen_ammo, regen_crew;
-	bool parallel_fire, symmetric, self_shadow, cont_frag, for_boarding, can_board, orbiting_dock, dynamic_cobjs, uses_tdir;
-	bool emits_light, suicides, kamikaze, no_disable, uses_mesh2d, mesh_deform, mesh_remove, mesh_expand, mu_expand, mesh_trans, exp_disint;
-	int turreted;
-	unsigned sclass, weap_spread, shield_sects, draw_passes, fire_speed, exp_type, exp_subtype, death_delay, regen_delay;
-	unsigned cost, ncrew, nengines, engine_lights;
 	colorRGBA base_color, engine_color;
 	ship_sphere bnd_sphere;
 	cobj_vector_t cobjs;
 	vector<triangle> cobj_triangles;
 	vector<ship_weapon> weapons;
 
-	us_class() : inited(0), has_pt_def(0), radius(0), cr_scale(0), mass(0), cargo(0), exp_scale(0), accel(0), decel(0), roll_rate(0), max_speed(0), max_turn(0), stability(0),
-		max_shields(0), max_armor(0), shield_re(0), armor_re(0), max_t(0), hull_str(0), damage_abs(0), min_att_dist(0), min_app_dist(0), sensor_dist(0), fire_dist(0), stray_dist(0),
-		offense(-1.0), defense(-1.0), weap_range(-1.0), reversible(0), stoppable(0), has_hyper(0), has_fast_speed(0), mpredict(0), has_cloak(0), regen_fighters(0), regen_ammo(0), regen_crew(0),
-		parallel_fire(0), symmetric(0), self_shadow(0), cont_frag(0), for_boarding(0), can_board(0), orbiting_dock(0), dynamic_cobjs(0), uses_tdir(0),
-		emits_light(0), suicides(0), kamikaze(0), no_disable(0), uses_mesh2d(0), mesh_deform(0), mesh_remove(0), mesh_expand(0), mu_expand(0), mesh_trans(0), exp_disint(0),
-		turreted(0), sclass(0), weap_spread(0), shield_sects(0), draw_passes(0), fire_speed(FSPEED_SLOW), exp_type(0), exp_subtype(0), death_delay(0), regen_delay(0),
-		cost(0), ncrew(0), nengines(0), engine_lights(0) {}
 	void clear_cobjs();
 	bool read_from_ifstream(ifstream &in, string_to_color_map_t const &string_to_color);
 	void setup(unsigned sclass_);
@@ -583,39 +553,28 @@ extern vector<us_class> sclasses; // required for specs()
 
 
 struct beam_weap_params {
-
 	colorRGBA brc[2], beamc[2];
-	float bw_escale;
-	bool energy_drain, temp_src, paralyze, mind_control, multi_segment;
+	float bw_escale=0.0;
+	bool energy_drain=0, temp_src=0, paralyze=0, mind_control=0, multi_segment=0;
 
-	beam_weap_params() : bw_escale(0.0), energy_drain(0), temp_src(0),
-		paralyze(0), mind_control(0), multi_segment(0) {} // start at an invalid value
 	bool read(ifstream &in, string_to_color_map_t const &string_to_color);
 };
 
 
 class us_weapon {
-
 	beam_weap_params bwp; // not used in all cases
 
 public:
-	bool inited;
+	bool inited=0;
+	int btime=0;
+	unsigned wclass=0, def_ammo=0, ammo_type=0, exp_type=0, nshots=0, cost=0, ammo_cost=0;
+	float lifetime=0, radius=0, c_radius=0, bradius=0, damage=0, range=0, speed=0, seek_dist=0, fire_delay=0, firing_error=0, regen_time=0;
+	float max_t=0, mass=0, w_mass=0, a_mass=0, force=0, f_inv=0, armor=0, preference=0;
+	bool seeking=0, hit_proj=0, hit_all=0, c2_flag=0, no_exp_dam=0, is_beam=0, secondary=0, hyper_fire=0, symmetric=0, is_fighter=0, do_regen=0;
+	bool no_coll=0, const_dam=0, no_ffire=0, point_def=0, is_decoy=0, ignores_shields=0, shield_d_only=0, no_light=0, parallel_fire=0, det_on_exp=0, no_ship_vel=0;
+	int turreted=0, auto_orient=0;
 	string name;
-	int btime;
-	unsigned wclass, def_ammo, ammo_type, exp_type, nshots, cost, ammo_cost;
-	float lifetime, radius, c_radius, bradius, damage, range, speed, seek_dist, fire_delay, firing_error, regen_time;
-	float max_t, mass, w_mass, a_mass, force, f_inv, armor, preference;
-	bool seeking, hit_proj, hit_all, c2_flag, no_exp_dam, is_beam, secondary, hyper_fire, symmetric, is_fighter, do_regen;
-	bool no_coll, const_dam, no_ffire, point_def, is_decoy, ignores_shields, shield_d_only, no_light, parallel_fire;
-	bool det_on_exp, no_ship_vel;
-	int turreted, auto_orient;
 
-	us_weapon() : inited(0), btime(0), wclass(0), def_ammo(0), ammo_type(0), exp_type(0), nshots(0), cost(0), ammo_cost(0),
-		lifetime(0), radius(0), c_radius(0), bradius(0), damage(0), range(0), speed(0), seek_dist(0), fire_delay(0), firing_error(0), regen_time(0),
-		max_t(0), mass(0), w_mass(0), a_mass(0), force(0), f_inv(0), armor(0), preference(0),
-		seeking(0), hit_proj(0), hit_all(0), c2_flag(0), no_exp_dam(0), is_beam(0), secondary(0), hyper_fire(0), symmetric(0), is_fighter(0), do_regen(0),
-		no_coll(0), const_dam(0), no_ffire(0), point_def(0), is_decoy(0), ignores_shields(0), shield_d_only(0), no_light(0), parallel_fire(0),
-		det_on_exp(0), no_ship_vel(0), turreted(0), auto_orient(0) {}
 	bool read_from_ifstream(ifstream &in);
 	bool read_beam_params_from_ifstream(ifstream &in, string_to_color_map_t const &string_to_color);
 	void setup(unsigned wclass_);
@@ -630,16 +589,15 @@ public:
 
 
 struct intersect_params {
-
 	bool calc_int, calc_dscale;
 	point const p_last;
 	point p_int;
 	vector3d norm;
-	float dscale;
+	float dscale=1.0;
 
-	intersect_params() : calc_int(0), calc_dscale(0), p_last(all_zeros), p_int(all_zeros), norm(plus_z), dscale(1.0) {}
+	intersect_params() : calc_int(0), calc_dscale(0), norm(plus_z) {}
 	intersect_params(point const &p_last_, point const &p_int_=all_zeros, vector3d const &norm_=plus_z)
-		: calc_int(1), calc_dscale(1), p_last(p_last_), p_int(p_int_), norm(norm_), dscale(1.0) {}
+		: calc_int(1), calc_dscale(1), p_last(p_last_), p_int(p_int_), norm(norm_) {}
 		
 	void update_int_pn(point const &p_int_, vector3d const &norm_, float dscale_) {
 		p_int = p_int_; norm = norm_; dscale = dscale_;
@@ -650,7 +608,6 @@ extern intersect_params def_int_params; // default value for option function arg
 
 
 class free_obj : public uobject { // freely moving object
-
 protected:
 	bool near_b_hole;
 	unsigned flags, reset_timer, time, obj_id;
@@ -865,7 +822,6 @@ public:
 
 
 class stationary_obj : public free_obj { // a free_obj that doesn't actually move?
-
 	unsigned type, lifetime;
 
 public:
@@ -884,7 +840,6 @@ public:
 
 
 class uobj_asteroid : public stationary_obj {
-
 protected:
 	int tex_id;
 
@@ -904,16 +859,15 @@ public:
 
 
 class rand_spawn_mixin {
-
 protected:
 	upos_point_type &obj_pos;
 	float obj_radius;
-	bool first_pos, pos_valid;
+	bool first_pos=1, pos_valid=0;
 	float max_cdist; // max distance to camera
 
 public:
 	rand_spawn_mixin(upos_point_type &pos_, float obj_radius_, float dmax) :
-	  obj_pos(pos_), obj_radius(obj_radius_), first_pos(1), pos_valid(0), max_cdist(dmax) {assert(max_cdist > 0.0);}
+	  obj_pos(pos_), obj_radius(obj_radius_), max_cdist(dmax) {assert(max_cdist > 0.0);}
 	void gen_rand_pos();
 	bool okay_to_respawn() const; // static?
 	bool needs_respawned() const;
@@ -921,7 +875,6 @@ public:
 
 
 class uobject_rand_spawn_t : public free_obj, public rand_spawn_mixin {
-
 protected:
 	void mark_pos_invalid();
 	virtual void gen_pos();
@@ -929,7 +882,6 @@ protected:
 public:
 	static uobject_rand_spawn_t *create(unsigned type, float radius_, float dmax, float vmag);
 	uobject_rand_spawn_t(float radius_, float dmax, float vmag);
-
 	// virtuals
 	//float damage(float val, int type, point const &hit_pos, free_obj const *source, int wc);
 	void explode(float damage, float bradius, int etype, vector3d const &edir, int exp_time, int wclass, int align, unsigned eflags, free_obj const *parent_);
@@ -938,13 +890,11 @@ public:
 
 
 class ucomet : public uobject_rand_spawn_t {
-
 	point sun_pos;
 	unsigned inst_ids[2];
 
 	virtual void gen_pos();
 	void gen_inst_ids();
-
 public:
 	ucomet(float radius_, float dmax, float vmag);
 
@@ -959,21 +909,20 @@ public:
 
 
 class uparticle : public free_obj {
-
-	unsigned ptype, lifetime;
-	int texture_id;
-	float angle, rrate, damage_v;
+	unsigned ptype=0, lifetime=0;
+	int texture_id=-1;
+	float angle=0, rrate=0, damage_v=0;
 	vector3d axis;
 	colorRGBA color1, color2;
-	free_obj_block<uparticle> *alloc_block;
+	free_obj_block<uparticle> *alloc_block=nullptr;
 
 public:
 	friend class free_obj_allocator<uparticle>;
 	static unsigned const max_type = NUM_PTYPES;
 
-	uparticle() : ptype(0), lifetime(0), texture_id(-1), angle(0), rrate(0), damage_v(0), alloc_block(NULL) {}
+	uparticle() {}
 	uparticle(unsigned ptype_, point const &pos_, vector3d const &vel, vector3d const &d, float radius_, colorRGBA const &c1,
-		colorRGBA const &c2, unsigned lt, float damage_, unsigned align, bool coll_, int tid) : alloc_block(NULL) {
+		colorRGBA const &c2, unsigned lt, float damage_, unsigned align, bool coll_, int tid) {
 		set_params(ptype_, pos_, vel, d, radius_, c1, c2, lt, damage_, align, coll_, tid);
 	}
 	void reset() {alloc_block = NULL; free_obj::reset();}
@@ -997,13 +946,12 @@ public:
 
 
 class uparticle_cloud : public free_obj, public volume_part_cloud {
-
-	unsigned lifetime;
-	float rmin, rmax, damage_v, expand_exp, noise_scale, hashval; // or damage_v temperature? unused
+	unsigned lifetime=0;
+	float rmin=0, rmax=0, damage_v=0, expand_exp=0, noise_scale=0, hashval=0; // or damage_v temperature? unused
 	colorRGBA colors[2][2]; // {inner, outer} x {start, end}
 
 public:
-	uparticle_cloud() : lifetime(0), rmin(0), rmax(0), damage_v(0), expand_exp(0), noise_scale(0), hashval(0) {}
+	uparticle_cloud() {}
 	uparticle_cloud(point const &pos_, float rmin_, float rmax_, colorRGBA const &ci1, colorRGBA const &co1, colorRGBA const &ci2,
 		colorRGBA const &co2, unsigned lt, float damage_, float expand_exp_, float noise_scale_);
 	float get_lt_scale() const {return CLIP_TO_01((float)time/(float)lifetime);}
@@ -1029,7 +977,6 @@ public:
 
 
 class us_projectile : public free_obj { // for a weapon
-
 private:
 	unsigned wclass;
 	unsigned tup_time;
@@ -1075,7 +1022,6 @@ public:
 
 // used for regen (docked fighters and ships themselves)
 class u_ship_base { // Note: Can be created on the stack and copied
-
 public:
 	unsigned sclass, ncrew, ncredits, kills, tot_kills, deaths;
 	bool docked, regened, o_docked;
@@ -1131,7 +1077,6 @@ protected:
 
 
 class ship_weapon {
-
 public:
 	unsigned wclass, init_ammo, ammo, wcount, rtime, nregen, ndamaged, cur_wpt;
 	int last_fframe;
@@ -1152,7 +1097,6 @@ public:
 
 
 class sobj_manager : public sphere_t {
-
 	int uobj_id, old_uobj_id, otype, owner;
 	string name;
 
@@ -1174,7 +1118,6 @@ public:
 
 
 class u_ship : public free_obj, public u_ship_base {
-
 	unsigned ai_type; // us_class of this ship
 	bool lhyper, damaged, target_set, fire_primary, has_obstacle, captured, dest_override, is_flagship;
 	float tow_mass, exp_val, cloaked, roll_val, pitch_r, yaw_r, roll_r, cached_rsv, child_stray_dist;
@@ -1372,7 +1315,6 @@ private:
 
 
 class orbiting_ship : public u_ship { // planetary defense, defense sat, antimiss drone
-
 private:
 	bool GSO, fixed_pos, has_sobj, sobj_liveable, has_decremented_owner;
 	unsigned orbiting_type, last_build_time;
@@ -1397,7 +1339,6 @@ public:
 
 
 class multipart_ship : public u_ship {
-
 	float state_val;
 	cobj_vector_t cobjs;
 	vector<ship_sphere> coll_spheres;
@@ -1415,7 +1356,6 @@ public:
 
 
 class rand_spawn_ship : public u_ship, public rand_spawn_mixin {
-
 	bool will_respawn;
 	unsigned orig_align;
 

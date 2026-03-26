@@ -405,7 +405,7 @@ class water_surface_draw : public water_vertex_calc_t {
 		vector3d n;
 		color_wrapper cw;
 		int ix;
-		color_scale_ix() : n(zero_vector), ix(-1) {}
+		color_scale_ix() : ix(-1) {}
 		color_scale_ix(color_wrapper const &cw_, vector3d const &n_, int ix_) : n(n_), cw(cw_), ix(ix_) {}
 	};
 

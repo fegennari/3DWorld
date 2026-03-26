@@ -388,7 +388,7 @@ public:
 
 
 class ugalaxy : public uobj_rgen, public named_obj, public ellipsoid_t { // size = 288
-	mutable float lrq_rad;
+	mutable float lrq_rad=0.0;
 	mutable point lrq_pos;
 
 	void apply_scale_transform(point &pos_) const;
@@ -407,7 +407,7 @@ public:
 	deque<system_cluster> clusters;
 	vector<uasteroid_field> asteroid_fields;
 	unebula nebula;
-	colorRGBA color;
+	colorRGBA color=BLACK;
 
 	ugalaxy();
 	~ugalaxy();

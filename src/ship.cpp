@@ -933,7 +933,7 @@ void create_univ_cube_map() {
 	for (unsigned dim = 0; dim < 3; ++dim) {
 		for (unsigned dir = 0; dir < 2; ++dir) {
 			unsigned const face_id(2*dim + !dir);
-			vector3d view_dir(zero_vector), up(-plus_y);
+			vector3d view_dir, up(-plus_y);
 			view_dir[dim] = (dir ? 1.0 : -1.0);
 			if (dim == 1) {up = (dir ? plus_z : -plus_z);} // Note: in OpenGL, the cube map top/bottom is in Y, and up dir is special in this dim
 			float const angle(0.5*90.0*TO_RADIANS); // 90 degree FOV

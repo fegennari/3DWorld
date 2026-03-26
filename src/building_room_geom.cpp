@@ -3879,7 +3879,7 @@ void building_room_geom_t::add_elevator(room_object_t const &c, elevator_t const
 	text_pos[ c.dim] = panel.d[c.dim][!c.dir] - 0.01*signed_thickness; // slightly in front of the panel
 	text_pos[!c.dim] = max((panel.d[!c.dim][0] + 0.05f*panel_width), (panel.get_center_dim(!c.dim) - (1.5f*inner_button_radius + text_height))) +
 		0.6f*ldir*text_height; // shift by approx width of font character(s) because we're aligning to the right side rather than the left
-	vector3d col_dir(zero_vector), normal(zero_vector);
+	vector3d col_dir, normal;
 	col_dir[!c.dim] = (ldir ? -1.0 : 1.0);
 	normal [ c.dim] = -dir_sign; // opposite dir from front of elevator
 	static vector<vert_tc_t> verts;
@@ -4285,7 +4285,7 @@ void building_room_geom_t::add_picture(room_object_t const &c) { // also whitebo
 /*static*/ void building_room_geom_t::add_book_title(string const &title, cube_t const &title_area, rgeom_mat_t &mat, colorRGBA const &color,
 	unsigned hdim, unsigned tdim, unsigned wdim, bool cdir, bool ldir, bool wdir) // or author
 {
-	vector3d column_dir(zero_vector), line_dir(zero_vector), normal(zero_vector);
+	vector3d column_dir, line_dir, normal;
 	column_dir[hdim] = (cdir ? -1.0 : 1.0); // along book height
 	line_dir  [tdim] = (ldir ? -1.0 : 1.0); // along book thickness
 	normal    [wdim] = (wdir ? -1.0 : 1.0); // along book width
@@ -4334,7 +4334,7 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 	top.d[tdim][0] = c.d[tdim][1] - cov_thickness;
 	pages.d[tdim][0] = spine.d[tdim][0] = bot.d[tdim][1];
 	pages.d[tdim][1] = spine.d[tdim][1] = top.d[tdim][0];
-	vector3d shrink(zero_vector);
+	vector3d shrink;
 	shrink[c.dim] = shrink[upright ? 2 : !c.dim] = -indent;
 	pages.expand_by(shrink);
 	spine.d[c.dim][c.dir] = pages.d[c.dim][!c.dir];
@@ -4940,7 +4940,7 @@ void add_pillow(cube_t const &c, rgeom_mat_t &mat, colorRGBA const &color, point
 		for (unsigned x = 0; x <= ndiv; ++x) {
 			unsigned const off(start + y*stride + x);
 			vector3d const &v(verts[off].v);
-			vector3d normal(zero_vector);
+			vector3d normal;
 			if (x > 0    && y >    0) {normal += cross_product((v - verts[off-stride].v), (verts[off-1].v - v));} // LL
 			if (x < ndiv && y >    0) {normal += cross_product((v - verts[off+1].v), (verts[off-stride].v - v));} // LR
 			if (x < ndiv && y < ndiv) {normal += cross_product((v - verts[off+stride].v), (verts[off+1].v - v));} // UR

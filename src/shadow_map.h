@@ -51,7 +51,7 @@ struct smap_data_t : public smap_data_state_t { // used for all types of lights:
 	vector<xform_matrix> cascade_matrices; // light space matrices, for CSMs
 
 	smap_data_t(unsigned tu_id_, unsigned smap_sz_, smap_data_state_t const &init_state=smap_data_state_t())
-	  : smap_data_state_t(init_state), tu_id(tu_id_), smap_sz(smap_sz_), last_lpos(all_zeros), texture_matrix(glm::mat4(1.0)) {}
+	  : smap_data_state_t(init_state), tu_id(tu_id_), smap_sz(smap_sz_), texture_matrix(glm::mat4(1.0)) {}
 	virtual ~smap_data_t() {} // free_gl_state()?
 	bool set_smap_shader_for_light(shader_t &s, int light, xform_matrix const *const mvm=nullptr) const;
 	bool bind_smap_texture(bool light_valid=1) const;
@@ -91,7 +91,7 @@ struct rotation_t {
 	vector3d axis;
 	float angle; // in degrees
 
-	rotation_t() : axis(zero_vector), angle(0.0) {}
+	rotation_t() : angle(0.0) {}
 	rotation_t(vector3d const &axis_, float angle_) : axis(axis_), angle(angle_) {}
 	bool operator==(rotation_t const &r) const {return (r.axis == axis && r.angle == angle);}
 	bool operator< (rotation_t const &r) const {return ((angle == r.angle) ? (axis < r.axis) : (angle < r.angle));}

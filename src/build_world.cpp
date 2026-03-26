@@ -283,7 +283,7 @@ bool check_player_proximity(point const &pos, float radius, bool use_bottom) {
 
 void object_line_coll(dwobject &obj, point const &old_pos, float radius, unsigned obj_index, int &cindex) {
 
-	vector3d cnorm(zero_vector);
+	vector3d cnorm;
 	point cpos(obj.pos);
 
 	//if (coll_objects[cindex].line_int_exact(old_pos, pos, t, cnorm)) {
@@ -1193,8 +1193,8 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 	unsigned line_num(1), npoints(0), indir_dlight_ix(0), prev_light_ix_start(0);
 	int end(0), use_z(0), use_vel(0), ivals[3];
 	float fvals[3] = {}, light_rotate(0.0), model_lod_scale(1.0);
-	point pos(all_zeros);
-	vector3d tv0(zero_vector), vel(zero_vector), light_axis(zero_vector);
+	point pos;
+	vector3d tv0, vel, light_axis;
 	polygon_t poly;
 	vector<coll_tquad> ppts;
 	// tree state
@@ -1294,7 +1294,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				}
 				else if (keyword == "transform_array_1d") {
 					unsigned num(0);
-					vector3d step(zero_vector);
+					vector3d step;
 					if (fscanf(fp, "%u%f%f%f", &num, &step.x, &step.y, &step.z) != 4 || num == 0) {return read_error(fp, keyword, coll_obj_file);}
 					if (skip_cur_model) break; // don't apply the transform
 					if (!have_cur_model()) {cerr << "Error: No model loaded, can't apply transform_array_1d" << endl; break;}
@@ -1307,7 +1307,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				}
 				else if (keyword == "transform_array_2d") {
 					unsigned num1(0), num2(0);
-					vector3d step1(zero_vector), step2(zero_vector);
+					vector3d step1, step2;
 					if (fscanf(fp, "%u%u%f%f%f%f%f%f", &num1, &num2, &step1.x, &step1.y, &step1.z, &step2.x, &step2.y, &step2.z) != 8 || num1 == 0 || num2 == 0) {
 						return read_error(fp, keyword, coll_obj_file);
 					}
@@ -1589,7 +1589,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				prev_light_ix_start = light_sources_d.size(); // capture start of range so that we can allow binding of grouped lights (from cube map)
 				xf.xform_pos(pos);
 				float beamwidth(1.0), r_inner(0.0);
-				vector3d dir(zero_vector); // defaults to (0,0,0)
+				vector3d dir; // defaults to (0,0,0)
 				ivals[0] = 0; // default is point/spotlight
 				point pos2(pos);
 				int use_smap(0); // 0=none, 1=spotlight, 2=point light/cube map
@@ -1865,7 +1865,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				float const r(0.5f*xf.scale*(ro + ri)), step(TWO_PI/float(npoints)), edist(0.5f*cobj.thickness*tanf(0.5f*step));
 				vector3d const vc((pt[1] - pt[0]).get_norm());
 				unsigned const dmin((vc.x < vc.y) ? ((vc.x < vc.z) ? 0 : 2) : ((vc.y < vc.z) ? 1 : 2));
-				vector3d vn(zero_vector), dirs[2];
+				vector3d vn, dirs[2];
 				vn[dmin] = 1.0;
 				cross_product(vc, vn,      dirs[0]); // first ortho dir
 				cross_product(vc, dirs[0], dirs[1]); // second ortho dir

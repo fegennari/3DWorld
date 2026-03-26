@@ -223,7 +223,7 @@ vector3d cube_t::closest_side_dir(point const &pos, unsigned skip_dims) const {
 
 	int dir(-1);
 	float mdist(0.0);
-	vector3d dv(zero_vector);
+	vector3d dv;
 
 	for (unsigned i = 0; i < 3; ++i) {
 		if (skip_dims & (1<<i)) continue;

@@ -1337,7 +1337,7 @@ void add_borg_cube_verts(vector<vert_norm_tc> &verts, point const &pos, float si
 		unsigned const d[2] = {i, ((i+1)%3)}, n((i+2)%3);
 
 		for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
-			vector3d norm(zero_vector);
+			vector3d norm;
 			point pt;
 			norm[n] = (2.0*j - 1.0); // -1 or 1
 			pt[n]   = j;

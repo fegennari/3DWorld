@@ -217,7 +217,7 @@ bool car_t::maybe_apply_turn(float centerline, bool for_driveway) {
 void car_t::complete_turn_and_swap_dim() {
 	vector2d const car_sz(bcube.get_size_xy());
 	float const size_adj(0.5f*(car_sz[dim] - car_sz[!dim]));
-	vector3d expand(zero_vector);
+	vector3d expand;
 	expand[dim] -= size_adj; expand[!dim] += size_adj;
 	bcube.expand_by(expand); // fix aspect ratio
 	if ((dim == 0) ^ (turn_dir == TURN_LEFT)) {dir ^= 1;}
@@ -1831,7 +1831,7 @@ void car_manager_t::draw_car_in_pspace(car_t &car, shader_t &s, vector3d const &
 	set_car_model_color(car, btype);
 	
 	if (car_model_loader.is_model_valid(car.model_id)) { // else error?
-		vector3d dir(zero_vector);
+		vector3d dir;
 		dir[car.dim] = (car.dir ? 1.0 : -1.0);
 		// force_high_detail=1 (even for shadows); not animated
 		car_model_loader.draw_model(s, car.get_center(), car.bcube, dir, car.get_color(), xlate, car.model_id, shadow_only, 0, nullptr, 0, 0, 1);

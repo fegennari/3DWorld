@@ -129,22 +129,18 @@ class csg_cube;
 
 
 class coll_obj : public cube_t { // size = 252
-
 public:
-	char type, destroy, status;
-	unsigned char last_coll, coll_type;
-	bool fixed, is_billboard, falling;
+	char type=COLL_NULL, destroy=NON_DEST, status=COLL_UNUSED;
+	unsigned char last_coll=0, coll_type=0;
+	bool fixed=0, is_billboard=0, falling=0;
 	cobj_params cp; // could store unique cps in a set of material properties to reduce memory requirements slightly
-	float radius, radius2, thickness, volume, v_fall;
-	int counter, id;
-	short platform_id, group_id, cgroup_id, dgroup_id, waypt_id, npoints;
+	float radius=0, radius2=0, thickness=0, volume=0, v_fall=0;
+	int counter=0, id=-1;
+	short platform_id=-1, group_id=-1, cgroup_id=-1, dgroup_id=-1, waypt_id=-1, npoints=0;
 	point points[N_COLL_POLY_PTS];
 	vector3d norm, texture_offset;
 	vector<int> occluders;
 
-	coll_obj() : type(COLL_NULL), destroy(NON_DEST), status(COLL_UNUSED), last_coll(0), coll_type(0), fixed(0), is_billboard(0),
-		falling(0), radius(0.0), radius2(0.0), thickness(0.0), volume(0.0), v_fall(0.0), counter(0), id(-1), platform_id(-1),
-		group_id(-1), cgroup_id(-1), dgroup_id(-1), waypt_id(-1), npoints(0), norm(zero_vector), texture_offset(zero_vector) {}
 	void init();
 	void clear_internal_data();
 	void setup_internal_state();
@@ -281,11 +277,9 @@ struct cobj_id_set_t : public set<unsigned, std::less<unsigned>, single_free_lis
 };
 
 struct cgroup_props_t {
-
-	bool valid;
-	float volume, mass;
+	bool valid=0;
+	float volume=0.0, mass=0.0;
 	point center_of_mass;
-	cgroup_props_t() : valid(0), volume(0.0), mass(0.0), center_of_mass(all_zeros) {}
 };
 
 struct cobj_group_t : public cobj_id_set_t, public cgroup_props_t {
@@ -349,11 +343,10 @@ public:
 class cobj_draw_groups {
 
 	struct cobj_draw_group {
-		int parent; // -1 is unset
+		int parent=-1; // -1 is unset
 		point parent_pos;
 		vector<unsigned> ids; // typically a contiguous range within dcobjs
 
-		cobj_draw_group() : parent(-1), parent_pos(all_zeros) {}
 		bool empty() const {return ids.empty();}
 	};
 	vector<coll_obj> dcobjs;

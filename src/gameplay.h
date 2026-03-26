@@ -38,12 +38,9 @@ unsigned const SMILEY_LM_ACT_TIME = unsigned(5 *TICKS_PER_SECOND);
 
 
 struct blood_spot { // size = 20
-
-	int time;
-	float size;
+	int time=0;
+	float size=0.0;
 	point pos;
-
-	blood_spot() : time(0), size(0.0), pos(all_zeros) {}
 };
 
 

@@ -96,7 +96,7 @@ bool decal_obj::is_on_cobj(int cobj, vector3d *delta) const {
 void decal_obj::check_cobj() {
 
 	if (!status || cid < 0) return; // already disabled, or no bound cobj
-	vector3d delta(zero_vector);
+	vector3d delta;
 	
 	if (is_on_cobj(cid, &delta)) { // try to find the cobj this is attached to (likely a split part of the original)
 		pos += delta; ipos += delta; cobj_cent_mass += delta; // move by this delta
@@ -1261,7 +1261,7 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 	if (type == LEAF && cobj.is_tree_leaf()) {
 		return; // skip leaf-leaf collisions, since they don't really make sense in the real world (leaves will bend to allow another leaf to fall)
 	}
-	vector3d norm(zero_vector), pvel(zero_vector);
+	vector3d norm, pvel;
 	bool coll_top(0), coll_bot(0);
 	if (cobj.platform_id >= 0) {pvel = platforms.get_cobj_platform(cobj).get_velocity();} // calculate platform velocity
 	vector3d const mdir(motion_dir - pvel*fticks); // not sure if this helps
@@ -1449,7 +1449,7 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 		smiley_collision(ix, NO_SOURCE, norm, pos, fticks*cobj.cp.damage, COLLISION); // damage can be positive or negative
 	}
 	if (animate2 && !player && obj.health <= 0.1) {obj.disable();}
-	vector3d v_old(zero_vector), v0(obj.velocity);
+	vector3d v_old, v0(obj.velocity);
 	bool const static_top_coll(lcoll == 2 && cobj.truly_static());
 	point const decal_pos(obj.pos); // capture actual coll pos for use in decals before applying friction stick adjustment
 

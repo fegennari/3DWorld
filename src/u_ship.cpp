@@ -976,7 +976,7 @@ void u_ship::ai_action() {
 
 	// too close to the sun or a hot object, or too much gravity from a black hole, move away at full speed
 	if (can_move_) {
-		vector3d orient(zero_vector);
+		vector3d orient;
 		bool const is_docking(target_obj == parent && is_fighter()); // any more conditionals?
 
 		if (get_over_temp_factor() > 0.0) { // actually taking damage

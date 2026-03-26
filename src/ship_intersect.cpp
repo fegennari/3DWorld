@@ -237,8 +237,8 @@ bool ship_bounded_cylinder::line_intersect(point const &lp1, point const &lp2, f
 
 bool ship_bounded_cylinder::sphere_intersect(point const &sc, float sr, point const &p_last, point &p_int, vector3d &norm, bool calc_int) const {
 
-	point pi_test(all_zeros);
-	vector3d norm_test(zero_vector);
+	point pi_test;
+	vector3d norm_test;
 
 	if (bcube.sphere_intersect(sc, sr, p_last, p_int, norm, calc_int) &&
 		ship_cylinder::sphere_intersect(sc, sr, p_last, pi_test, norm_test, calc_int))
@@ -390,8 +390,8 @@ bool u_ship::do_sphere_int(point const &sc, float sr, intersect_params &ip, bool
 
 	for (unsigned i = 0; i < cobjs.size(); ++i) {
 		assert(cobjs[i]);
-		point pi_test(all_zeros);
-		vector3d norm_test(zero_vector);
+		point pi_test;
+		vector3d norm_test;
 
 		if (cobjs[i]->sphere_intersect(sc, sr, p_last, pi_test, norm_test, ip.calc_int)) {
 			if (!ip.calc_int && !ip.calc_dscale) return 1;
@@ -490,7 +490,7 @@ bool u_ship::cobjs_int_obj(cobj_vector_t const &cobjs2, free_obj const *const ob
 
 
 ushadow_sphere::ushadow_sphere(upos_point_type const &sobj_pos, float sobj_r, upos_point_type const &cur_pos, float cur_radius,
-							   point const &sun_pos, int ndiv, bool player, free_obj const *const obj, float rmin) : nsides(ndiv), pmap(NULL)
+							   point const &sun_pos, int ndiv, bool player, free_obj const *const obj, float rmin) : nsides(ndiv)
 {
 	rad[0] = rad[1] = 0.0;
 	assert(sobj_r > TOLERANCE && cur_radius > TOLERANCE);
@@ -646,7 +646,7 @@ ushadow_triangle_mesh::ushadow_triangle_mesh(point const &circle_center, float c
 	}
 	vector3d const dir(center - sun_pos);
 	double const dp(dot_product(normal, dir)), min_dist(MIN_SHADOW_DIST*(double)circle_radius);
-	vector3d vref(zero_vector);
+	vector3d vref;
 	vref[fabs(normal.x) > fabs(normal.y)] = 1.0;
 	point const cp1(cross_product(normal, vref).get_norm()), cp2(cross_product(normal, cp1).get_norm());
 	upos_point_type last(center);

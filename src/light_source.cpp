@@ -515,7 +515,7 @@ pos_dir_up light_source::calc_pdu(bool dynamic_cobj, bool is_cube_face, float fa
 	float const cos_theta(1.0 - min((is_cube_face ? 0.35f : MAX_SMAP_FOV), 2.0f*(bwidth + falloff))); // Note: cube face is 49.5 degrees (must be > 45)
 	float const angle(acosf(cos_theta)); // half FOV
 	int const dim(get_min_dim(dir));
-	vector3d temp(zero_vector), up_dir;
+	vector3d temp, up_dir;
 	temp[dim] = 1.0; // choose up axis
 	orthogonalize_dir(temp, dir, up_dir, 1);
 	int cindex(-1);

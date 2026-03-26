@@ -257,7 +257,7 @@ void apply_roll_to_matrix(xform_matrix &matrix, point const &pos, point const &l
 void apply_obj_mesh_roll(xform_matrix &matrix, point const &pos, point const &lpos, float radius, float a_add, float a_mult) {
 
 	if (!dist_less_than(pos, lpos, 0.01*radius)) {
-		vector3d normal(zero_vector);
+		vector3d normal;
 
 		if (world_mode == WMODE_INF_TERRAIN) {
 			normal = get_interpolated_terrain_normal(pos);

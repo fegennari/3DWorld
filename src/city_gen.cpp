@@ -316,7 +316,7 @@ point rand_xy_pt_in_cube(cube_t const &c, float radius, rand_gen_t &rgen) {
 
 class city_plot_gen_t : public heightmap_query_t {
 protected:
-	int last_rgi;
+	int last_rgi=0;
 	rand_gen_t rgen;
 	vector<rect_t> used;
 	vect_cube_t plots; // same size as used
@@ -361,7 +361,6 @@ protected:
 		return diff;
 	}
 public:
-	city_plot_gen_t() : last_rgi(0), bcube(all_zeros) {}
 	void invalidate_heightmap() {heightmap = nullptr;}
 
 	void init(float *heightmap_, unsigned xsize_, unsigned ysize_) {

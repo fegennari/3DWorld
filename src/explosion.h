@@ -71,14 +71,14 @@ struct blastr { // size = 118 (120)
 
 struct explosion {
 
-	unsigned flags;
-	int time, wclass;
-	float radius, intensity;
+	unsigned flags=0;
+	int time=0, wclass=-1;
+	float radius=0.0, intensity=0.0;
 	point pos;
-	uobject *source;
-	free_obj const *parent;
+	uobject *source=nullptr;
+	free_obj const *parent=nullptr;
 
-	explosion() : flags(0), time(0), wclass(-1), radius(0.0), intensity(0.0), pos(all_zeros), source(NULL), parent(NULL) {}
+	explosion() {}
 	explosion(point const &pos_, float radius_, float intensity_, unsigned flags_, int wclass_, uobject *src=NULL, free_obj const *parent_=NULL)
 		: flags(flags_), time(0), wclass(wclass_), radius(radius_), intensity(intensity_), pos(pos_), source(src), parent(parent_) {}
 	void check_pointers();

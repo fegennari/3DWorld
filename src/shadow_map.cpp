@@ -434,7 +434,7 @@ pos_dir_up get_pt_cube_frustum_pdu(point const &pos_, cube_t const &bounds) { //
 	}
 	float const dist(p2p_dist(pos, center));
 	vector3d const light_dir((center - pos)/dist); // almost equal to lpos (point light)
-	vector3d up_dir(zero_vector);
+	vector3d up_dir;
 	up_dir[get_min_dim(light_dir)] = 1.0;
 	point corners[8];
 	get_cube_corners(bounds.d, corners);

@@ -670,7 +670,6 @@ typedef vector<cube_with_ix_t> vect_cube_with_ix_t;
 vector3d get_poly_norm(point const *const points, bool normalize=1);
 
 struct tquad_t { // size = 52
-
 	point pts[4];
 	unsigned npts;
 	
@@ -685,10 +684,9 @@ struct tquad_t { // size = 52
 
 
 struct line_3dw {
-
 	point p1, p2;
 
-	line_3dw() : p1(all_zeros), p2(all_zeros) {}
+	line_3dw() {}
 	line_3dw(point const &p1_, point const &p2_) : p1(p1_), p2(p2_) {assert(p1 != p2);}
 	vector3d get_norm_dir_vect() const {return (p2 - p1).get_norm();}
 	float get_length() const {return (p1 - p2).mag();}
@@ -1169,7 +1167,6 @@ struct portal {
 	point pts[4]; // quads only, for now
 	vector3d normal; // for back face determination
 
-	portal() : normal(zero_vector) {}
 	static void pre_draw(vector<vert_wrap_t> &verts);
 	static void post_draw(vector<vert_wrap_t> &verts);
 	void draw(vector<vert_wrap_t> &verts) const;
@@ -1236,12 +1233,11 @@ struct text_string_t {
 };
 
 class popup_text_t : public text_string_t {
-	float dist, time, tfticks_last_drawn;
-	unsigned mode; // 0=one time, 1=on enter, 2=continuous
-	bool any_active, prev_active;
+	float dist=0.0, time=1.0, tfticks_last_drawn=0.0;
+	unsigned mode=0; // 0=one time, 1=on enter, 2=continuous
+	bool any_active=0, prev_active=0;
 
 public:
-	popup_text_t() : dist(0.0), time(1.0), tfticks_last_drawn(0.0), mode(0), any_active(0), prev_active(0) {}
 	bool read(FILE *fp, unsigned &line_num);
 	void write(std::ostream &out) const;
 	void check_player_prox();

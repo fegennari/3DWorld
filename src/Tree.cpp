@@ -1236,7 +1236,7 @@ void tree::update_leaf_orients_wind() { // leaves move in wind (somewhat slow)
 	bool const priv_data(td_is_private());
 	bool const heal_pass(priv_data && LEAF_HEAL_RATE > 0 && world_mode == WMODE_GROUND && (rgen.rand()&7) == 0); // only update healed color every 8 frames
 	int last_xpos(0), last_ypos(0);
-	vector3d local_wind(zero_vector);
+	vector3d local_wind;
 
 	for (unsigned i = 0; i < leaves.size(); ++i) { // process leaf wind and collisions
 		point p0(leaves[i].pts[0]);

@@ -200,7 +200,7 @@ void coll_obj::draw_coll_cube(int tid, cobj_draw_buffer &cdb, bool force_draw_al
 				cdb.add_polygon<6>(vnt, pts);
 			}
 			for (unsigned e = 0; e < 2; ++e) { // 12 edges
-				vector3d n0(zero_vector);
+				vector3d n0;
 				n0[d0] = (e ? 1.0 : -1.0);
 				vert_norm_texp v[4];
 				point p;

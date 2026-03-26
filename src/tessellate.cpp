@@ -30,7 +30,7 @@ void fgCALLBACK tess_error(GLenum errno) {
 void fgCALLBACK do_combine(GLdouble c[3], vert_norm_tc *vertex_data[4], GLfloat weight[4], vert_norm_tc **out) { // self-intersecting polygon
 
 	self_int = 1;
-	vector3d norm(zero_vector);
+	vector3d norm;
 	float tc[2] = {0.0, 0.0};
 
 	for (unsigned i = 0; i < 4; ++i) {
@@ -172,7 +172,7 @@ template<typename T> bool split_polygon(polygon_t const &poly, vector<T> &ppts, 
 	tessellate_polygon(poly); // could special case convex quads, but that might not help much
 
 	// calculate polygon normal (assuming planar polygon)
-	vector3d n(poly.get_planar_normal()), cp_sum(zero_vector);
+	vector3d n(poly.get_planar_normal()), cp_sum;
 	for (unsigned i = 0; i < npts; ++i) {cp_sum += cross_product(poly[i].v, poly[(i+1)%npts].v);}
 	if (dot_product(n, cp_sum) < 0.0) {n *= -1.0;}
 	static polygon_t new_poly;

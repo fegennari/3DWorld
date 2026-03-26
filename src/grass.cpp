@@ -271,7 +271,7 @@ class grass_manager_dynamic_t : public grass_manager_t {
 	vector<unsigned> mesh_to_grass_map; // maps mesh x,y index to starting index in grass vector
 	vector<int> last_occluder;
 	mutable vector<grass_data_t> vertex_data_buffer;
-	bool has_voxel_grass;
+	bool has_voxel_grass=0;
 	point last_lpos;
 
 	bool hcm_chk(int x, int y) const {
@@ -285,8 +285,6 @@ class grass_manager_dynamic_t : public grass_manager_t {
 	}
 
 public:
-	grass_manager_dynamic_t() : has_voxel_grass(0), last_lpos(all_zeros) {}
-	
 	void clear() {
 		grass_manager_t::clear();
 		mesh_to_grass_map.clear();

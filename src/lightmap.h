@@ -255,7 +255,7 @@ public:
 	light_source_trig() {}
 	light_source_trig(light_source const &ls, bool smap=0, short platform_id_=-1, unsigned lix=0, sensor_t const &cur_sensor=sensor_t(), bool outdoor_shadows_=0, unsigned sm_size_=0)
 		: light_source(ls), use_smap(smap), outdoor_shadows(outdoor_shadows_), platform_id(platform_id_), indir_dlight_ix(lix), sm_size(sm_size_),
-		last_pos(pos), last_dir(dir), sensor(cur_sensor), rot_axis(zero_vector)
+		last_pos(pos), last_dir(dir), sensor(cur_sensor)
 	{user_placed = 1; dynamic = (platform_id >= 0); if (is_cube_face) {assert(use_smap);}}
 	void add_triggers(multi_trigger_t const &t) {triggers.add_triggers(t);} // deep copy
 	void set_rotate(vector3d const &axis, float rotate);

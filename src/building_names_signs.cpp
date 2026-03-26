@@ -240,7 +240,7 @@ template<typename T> void add_sign_text_verts(string const &text, cube_t const &
 		ct.expand_in_dim(!dim, -0.10*sign.get_sz_dim(!dim));
 		ct.expand_in_dim(2,    -0.05*height);
 	}
-	vector3d col_dir(zero_vector), normal(zero_vector);
+	vector3d col_dir, normal;
 	bool const ldir(dim ^ dir);
 	col_dir[!dim] = (ldir ? 1.0 : -1.0);
 	normal [ dim] = (dir  ? 1.0 : -1.0);

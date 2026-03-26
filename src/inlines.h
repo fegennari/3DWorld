@@ -309,13 +309,13 @@ inline bool sphere_intersect_cylinder(point const &sc, float sr, point const &cp
 }
 
 inline bool sphere_torus_intersect(point const &sc, float sr, point const &tc, float ri, float ro) {
-	point p_int(all_zeros); // unused
-	vector3d norm(zero_vector); // unused
+	point p_int; // unused
+	vector3d norm; // unused
 	return sphere_torus_intersect(sc, sr, tc, ri, ro, p_int, norm, 0);
 }
 inline bool sphere_torus_intersect(point const &sc, float sr, point const &tc, vector3d const &dir, float ri, float ro) {
-	point p_int(all_zeros); // unused
-	vector3d norm(zero_vector); // unused
+	point p_int; // unused
+	vector3d norm; // unused
 	return sphere_torus_intersect(sc, sr, tc, dir,ri, ro, p_int, norm, 0);
 }
 

@@ -644,7 +644,7 @@ point get_hull_closest_pt(vector<point> const &hull, point const &pt) {
 struct rot_val_t {
 	point pt;
 	vector3d axis;
-	rot_val_t() : pt(all_zeros), axis(zero_vector) {}
+	rot_val_t() {}
 	rot_val_t(point const &pt_, vector3d const &axis_) : pt(pt_), axis(axis_) {}
 };
 
@@ -929,7 +929,7 @@ vector3d get_cobj_drop_delta(unsigned index) {
 
 	// see if this cobj's bottom edge is colliding with a platform that's moving up (elevator)
 	// also, if the cobj is currently intersecting another movable cobj, try to resolve the intersection so that stacking works by moving the cobj up
-	vector3d delta_max(zero_vector);
+	vector3d delta_max;
 	point const center_of_mass(cobj.get_center_of_mass());
 
 	for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {

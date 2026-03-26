@@ -671,7 +671,7 @@ void water_renderer::draw_vert(float x, float y, float z, bool in_y, bool neg_ed
 		atten_by_water_depth(&c.R, atten);
 		c.A = CLIP_TO_01(atten);
 	}
-	vector3d normal(zero_vector);
+	vector3d normal;
 	normal[in_y] = (neg_edge ? -1.0 : 1.0);
 	qbd.verts.emplace_back(point(x, y, z), normal, tex_scale*(in_y ? z : x), tex_scale*(in_y ? y : z), c);
 }

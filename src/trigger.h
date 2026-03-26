@@ -44,15 +44,15 @@ struct geom_xform_t;
 
 class sensor_t {
 	point pos;
-	float radius; // only used by some sensor types (sound, metal, pressure)
-	float thresh; // only used by some sensor types (light?, sound?, heat, smoke)
+	float radius=0.0; // only used by some sensor types (sound, metal, pressure)
+	float thresh=0.0; // only used by some sensor types (light?, sound?, heat, smoke)
 	int type;
-	bool invert;
+	bool invert=0;
 
 	bool check_active_int() const;
 
 public:
-	sensor_t() : pos(all_zeros), radius(0.0), thresh(0.0), type(SENSOR_DISABLED), invert(0) {}
+	sensor_t() : type(SENSOR_DISABLED) {}
 	sensor_t(point const &pos_, int type_, bool invert_=0, float radius_=0.0, float thresh_=0.0) : pos(pos_), radius(radius_), thresh(thresh_), type(type_), invert(invert_) {
 		assert(type >= SENSOR_DISABLED && type < NUM_SENSOR_TYPES);
 	}

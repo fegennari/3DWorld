@@ -104,14 +104,13 @@ struct base_query_data {
 struct closeness_data : public base_query_data {
 
 	vector3d q_dir;
-	float dmin, min_dist_sq, init_dmin, dscale;
-	free_obj *closest;
+	float dmin, min_dist_sq, init_dmin, dscale=1.0;
+	free_obj *closest=nullptr;
 	bool req_shields, req_dock, friendly;
 
 	closeness_data(vector<cached_obj> const *const objs_, point const &pos_, float dmin_, float min_dist_sq_,
 		free_obj const *const questioner_, bool req_sh=0, bool rdock=0, bool fr=0) :
-		base_query_data(objs_, pos_, questioner_), q_dir(zero_vector), dmin(dmin_), min_dist_sq(min_dist_sq_), init_dmin(dmin),
-		dscale(1.0), closest(NULL), req_shields(req_sh), req_dock(rdock), friendly(fr) {}
+		base_query_data(objs_, pos_, questioner_), dmin(dmin_), min_dist_sq(min_dist_sq_), init_dmin(dmin), req_shields(req_sh), req_dock(rdock), friendly(fr) {}
 };
 
 
@@ -128,18 +127,17 @@ struct all_query_data : public base_query_data {
 
 struct line_int_data {
 
-	bool first_only, even_ncoll, visible_only, use_lpos;
+	bool first_only=0, even_ncoll=0, visible_only=0, use_lpos=0;
 	int check_parent;
-	float length, line_radius, dist;
+	float length, line_radius, dist=0.0;
 	point start, end, lpos;
 	vector3d dir;
 	uobject const *curr;
 	free_obj const *ignore_obj;
-	vector<uobject const*> *sobjs;
+	vector<uobject const*> *sobjs=nullptr;
 
-	line_int_data(point const &st, vector3d const &d, float len, uobject const *cur, free_obj const *ig, bool fo, int cp,
-		float line_r=0.0) : first_only(fo), even_ncoll(0), visible_only(0), use_lpos(0), check_parent(cp), length(len),
-		line_radius(line_r), dist(0.0), start(st), lpos(all_zeros), dir(d), curr(cur), ignore_obj(ig), sobjs(NULL) {}
+	line_int_data(point const &st, vector3d const &d, float len, uobject const *cur, free_obj const *ig, bool fo, int cp, float line_r=0.0)
+		: first_only(fo), check_parent(cp), length(len), line_radius(line_r), start(st), dir(d), curr(cur), ignore_obj(ig) {}
 };
 
 

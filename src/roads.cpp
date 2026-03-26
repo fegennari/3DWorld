@@ -979,7 +979,7 @@ void road_connector_t::add_streetlights(unsigned num_per_side, bool staggered, f
 		pos1[ dim] = pos2[dim] = d[dim][0] + v*dsz;
 		pos1[!dim] = d[!dim][0] - dn_shift; pos2[!dim] = d[!dim][1] + dn_shift;
 		pos1.z = pos2.z = za + v*(zb - za);
-		vector3d dir(zero_vector); dir[!dim] = 1.0;
+		vector3d dir; dir[!dim] = 1.0;
 		if (!staggered || (n&1) == 0) {streetlights.emplace_back(pos1,  dir, 1);} // on_bridge_or_tunnel=1
 		if (!staggered || (n&1) == 1) {streetlights.emplace_back(pos2, -dir, 1);} // on_bridge_or_tunnel=1
 	} // for n
@@ -1400,7 +1400,7 @@ void road_draw_state_t::draw_bridge(bridge_t const &bridge, bool shadow_only) { 
 			} // for e
 			if (zval > cur_zpos + 0.5*scale) { // add horizontal connectors if high enough
 				cube_t c(conn_pts[0], conn_pts[1]);
-				vector3d exp(zero_vector);
+				vector3d exp;
 				exp.z  = 0.75*conn_thick;
 				exp[d] = conn_thick;
 				c.expand_by(exp);

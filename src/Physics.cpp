@@ -990,7 +990,7 @@ int dwobject::surface_advance() {
 	}
 	float const radius(get_true_radius());
 	float mh(0.0), friction(otype.friction_factor);
-	vector3d snorm(zero_vector);
+	vector3d snorm;
 
 	if (world_mode == WMODE_INF_TERRAIN) {
 		snorm = get_interpolated_terrain_normal(pos, &mh);
@@ -1016,7 +1016,7 @@ int dwobject::surface_advance() {
 		snorm = (n11*t + n10*(1.0-t))*s + (n01*t + n00*(1.0-t))*(1.0-s); // interpolate across the quad
 	}
 	float const dzn(sqrt(snorm.x*snorm.x + snorm.y*snorm.y));
-	vector3d mesh_vel(zero_vector);
+	vector3d mesh_vel;
 	int val(0);
 
 	if (dzn > TOLERANCE && dzn > friction) {

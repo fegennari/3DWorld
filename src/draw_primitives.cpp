@@ -204,7 +204,7 @@ void sd_sphere_d::gen_points_norms(sphere_point_norm &cur_spn, float s_beg, floa
 		for (unsigned s = s0; s < s1; ++s) {
 			for (unsigned t = max(1U, t0); t <= min(t1, ndiv-1); ++t) { // skip the poles
 				point const p(cur_spn.points[s][t]);
-				vector3d n(zero_vector);
+				vector3d n;
 
 				for (unsigned d = 0; d < 4; ++d) { // s+,t+  t-,s+  s-,t-  t+,s-
 					unsigned const si((d==0||d==1) ? (s+1)%ndiv : (s+ndiv-1)%ndiv);
@@ -1190,7 +1190,7 @@ void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, flo
 
 		for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
 			if (view_dir && (((*view_dir)[n] < 0.0) ^ j)) continue; // back facing
-			vector3d norm(zero_vector);
+			vector3d norm;
 			point pt;
 			norm[n] = (2.0*j - 1.0); // -1 or 1
 			pt[n]   = j;

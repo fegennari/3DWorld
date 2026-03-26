@@ -349,8 +349,8 @@ void process_univ_objects() {
 		bool const lod_coll(PLAYER_SLOW_PLANET_APPROACH && is_ship && uobj->is_player_ship()); // enable if we want to do close planet flyby
 		float const radius(uobj->get_c_radius()*(no_coll ? 0.5 : 1.0));
 		upos_point_type const &obj_pos(uobj->get_pos());
-		vector3d gravity(zero_vector); // sum of gravity from sun, planets, possibly some moons, and possibly asteroids
-		point sun_pos(all_zeros);
+		vector3d gravity; // sum of gravity from sun, planets, possibly some moons, and possibly asteroids
+		point sun_pos;
 
 		// skip orbiting objects (no collisions or gravity effects, temperature is mostly constant)
 		s_object clobj; // closest object
@@ -444,7 +444,7 @@ void process_univ_objects() {
 		}
 		if (calc_gravity) {
 			bool near_b_hole(0);
-			vector3d swp_accel(zero_vector);
+			vector3d swp_accel;
 
 			if (!stat_objs.empty()) {
 				all_query_data qdata(&stat_objs, obj_pos, 10.0, urm_static, uobj, stat_obj_query_res);
@@ -523,7 +523,7 @@ void check_shift_universe() {
 	static bool had_init_shift(0);
 	if (no_shift_universe && had_init_shift) return;
 	point camera(get_player_pos2());
-	vector3d move(zero_vector);
+	vector3d move;
 	bool moved(0);
 
 	for (unsigned d = 0; d < 3; ++d) { // max move distance is CELL_SIZE

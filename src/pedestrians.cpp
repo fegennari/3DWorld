@@ -556,7 +556,7 @@ bool pedestrian_t::check_ped_ped_coll(ped_manager_t const &ped_mgr, vector<pedes
 	assert(pid < peds.size());
 	float const lookahead_dist(LOOKAHEAD_TICKS*speed); // how far we can travel in 2s
 	float const prox_radius(1.2*radius + lookahead_dist); // assume other ped has a similar radius
-	vector3d force(zero_vector);
+	vector3d force;
 	if (check_ped_ped_coll_range(peds, pid, pid+1, plot, prox_radius, force)) return 1;
 
 	if (camera_surf_collide && !camera_in_building) {

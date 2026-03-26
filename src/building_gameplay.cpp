@@ -2515,7 +2515,7 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 
 	// attempt to move the object
 	for (unsigned mdir = 0; mdir < 3; ++mdir) { // X+Y, closer dim, further dim
-		vector3d move_vector(zero_vector);
+		vector3d move_vector;
 		if (mdir == 0) {move_vector = delta*move_dist;} // move diag in XY
 		else { // move in one dim
 			if (delta.x == 0.0 || delta.y == 0.0) break; // no more dims to try (only one mdir iteration)
@@ -2964,7 +2964,7 @@ template<typename T> bool line_int_cubes_get_t(point const &p1, point const &p2,
 	return had_int;
 }
 vector3d get_normal_for_ray_cube_int_xy(point const &p, cube_t const &c, float tolerance) {
-	vector3d n(zero_vector);
+	vector3d n;
 
 	for (unsigned d = 0; d < 2; ++d) { // find the closest intersecting cube XY edge, which will determine the normal vector
 		if (fabs(p[d] - c.d[d][0]) < tolerance) {n[d] = -1.0; break;} // test low  edge

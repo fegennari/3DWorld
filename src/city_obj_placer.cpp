@@ -972,7 +972,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 				pos[dim] = plot.d[dim][dir] - (dir ? 1.0 : -1.0)*dist_from_road; // move into the sidewalk along the road
 				// Note: will skip placement if too close to a previously placed tree, but that should be okay as it is relatively uncommon
 				if (!check_pt_and_place_blocker(pos, blockers, radius, 2.0*radius)) continue; // bad placement, skip
-				vector3d orient(zero_vector);
+				vector3d orient;
 				orient[!dim] = (dir ? 1.0 : -1.0); // oriented perpendicular to the road
 				fire_hydrant_t const fire_hydrant(pos, radius, height, orient);
 				fhydrant_groups.add_obj(fire_hydrant, fhydrants);

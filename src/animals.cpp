@@ -306,7 +306,7 @@ void vect_bird_t::flock(tile_t const *const tile, adj_tiles_t &adj_tiles) { // b
 	for (auto i = this->begin(); i != this->end(); ++i) {
 		if (!i->is_enabled()) continue;
 		point const cs_pos(i->get_camera_space_pos());
-		vector3d avg_pos(zero_vector), avg_vel(zero_vector), tot_force(zero_vector);
+		vector3d avg_pos, avg_vel, tot_force;
 		unsigned pcount(0), vcount(0);
 
 		for (unsigned adj_ix = 0; adj_ix < 9; ++adj_ix) {

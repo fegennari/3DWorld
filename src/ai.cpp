@@ -659,7 +659,7 @@ int player_state::drop_weapon(vector3d const &coll_dir, vector3d const &nfront, 
 vector3d get_avoid_dir(point const &pos, int smiley_id, pos_dir_up const &pdu) {
 
 	// look for landmines and [c]grenades and avoid them
-	point avoid_dir(zero_vector);
+	point avoid_dir;
 	int const check_ids[3] = {  GRENADE,   CGRENADE,   LANDMINE};
 	int const weap_ids [3] = {W_GRENADE, W_CGRENADE, W_LANDMINE};
 
@@ -854,7 +854,7 @@ struct dir_cost_t {
 	float cost, dp;
 	vector3d dir;
 
- 	dir_cost_t() : cost(0.0), dp(0.0), dir(zero_vector) {}
+ 	dir_cost_t() : cost(0.0), dp(0.0) {}
 	dir_cost_t(float cost_, vector3d const &dir_, vector3d const &opt_dir)
 		: cost(cost_), dp(dot_product(dir_, opt_dir)), dir(dir_) {}
 

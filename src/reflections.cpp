@@ -15,7 +15,7 @@ bool enable_clip_plane_z(0);
 unsigned reflection_tid(0), max_cube_map_tex_sz(DEF_CUBE_MAP_TEX_SZ);
 float clip_plane_z(0.0);
 vector3d pre_ref_cview_dir(plus_z);
-point pre_ref_camera_pos(zero_vector);
+point pre_ref_camera_pos;
 reflect_plane_selector reflect_planes;
 reflective_cobjs_t reflective_cobjs;
 
@@ -97,7 +97,7 @@ void apply_dim_mirror(unsigned dim, float val) {
 	assert(dim < 3);
 	fgMatrixMode(FG_MODELVIEW);
 	fgPushMatrix();
-	vector3d xlate(zero_vector), normal(zero_vector);
+	vector3d xlate, normal;
 	xlate [dim] = val;
 	normal[dim] = 1.0;
 	mirror_about_plane(normal, xlate);
@@ -247,7 +247,7 @@ unsigned create_reflection_cube_map(unsigned tid, unsigned tex_size, int cobj_id
 			unsigned const dir_mask(EFLAGS[dim][dir]), face_id(2*dim + !dir);
 			if ((skip_mask & dir_mask) != 0) {faces_drawn |= dir_mask; continue;} // mark it as drawn but skip it
 			if (only_front_facing && ((prev_camera_pdu.pos[dim] > center[dim]) ^ dir)) continue; // back facing
-			vector3d view_dir(zero_vector), upv(-plus_y);
+			vector3d view_dir, upv(-plus_y);
 			view_dir[dim] = (dir ? 1.0 : -1.0);
 			if (dim == 1) {upv = (dir ? plus_z : -plus_z);} // Note: in OpenGL, the cube map top/bottom is in Y, and up dir is special in this dim
 			float const angle(0.5*perspective_fovy*TO_RADIANS); // 90 degree FOV

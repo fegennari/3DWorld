@@ -49,9 +49,9 @@ struct face_ray_accum_t {
 
 	colorRGBA color; // +weight
 	cube_t bcube;
-	unsigned num_rays;
+	unsigned num_rays=0;
 
-	face_ray_accum_t() : color(0,0,0,0), bcube(all_zeros), num_rays(0) {}
+	face_ray_accum_t() : color(0,0,0,0) {}
 
 	void add_ray(point const &pos, colorRGBA const &c, float weight) {
 		if (num_rays == 0) {bcube.set_from_point(pos);} else {bcube.union_with_pt(pos);}
@@ -465,7 +465,7 @@ void cast_light_ray(lmap_manager_t *lmgr, point p1, point p2, float weight, floa
 
 	// create reflected ray and make recursive call(s)
 	unsigned const num_splits(((depth == 0) ? INIT_RAY_SPLITS : NUM_RAY_SPLITS)[clamp_ltype_range(ltype)]);
-	vector3d v_new, v_ref(zero_vector);
+	vector3d v_new, v_ref;
 
 	for (unsigned n = 0; n < num_splits; ++n) {
 		vector3d const rand_dir(rgen.signed_rand_vector().get_norm());
@@ -918,7 +918,7 @@ void ray_trace_local_light_source(lmap_manager_t *lmgr, light_source const &ls, 
 
 			for (unsigned dir = 0; dir < 2; ++dir) {
 				if (ls.get_cube_eflags() & EFLAGS[dim][dir]) continue; // this surface is disabled
-				vector3d normal(zero_vector);
+				vector3d normal;
 				normal[dim] = (dir ? 1.0 : -1.0);
 				point start_pt;
 				start_pt[dim] = cube.d[dim][dir] + 1.0E-5*radius*normal[dim]; // move slightly away from cube edge

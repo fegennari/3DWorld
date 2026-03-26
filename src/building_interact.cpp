@@ -2446,7 +2446,7 @@ void get_sphere_boundary_pts(point const &center, float radius, point *pts, bool
 	pts[0] = center;
 
 	for (unsigned dim = 0, ix = 1; dim < (skip_z ? 2U : 3U); ++dim) {
-		vector3d dir(zero_vector);
+		vector3d dir;
 		dir[dim]  = radius;
 		pts[ix++] = center - dir;
 		pts[ix++] = center + dir;

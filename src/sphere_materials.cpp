@@ -39,7 +39,7 @@ extern vector<texture_t> textures;
 void cube_map_lix_t::add_cube_face_lights(point const &pos, float radius, colorRGBA const &color, float near_clip, bool outdoor_shadows) {
 
 	for (unsigned ldim = 0; ldim < 3; ++ldim) { // setup 6 light sources, one per cube face
-		vector3d dir(zero_vector);
+		vector3d dir;
 		for (unsigned ldir = 0; ldir < 2; ++ldir) {
 			dir[ldim] = (ldir ? 1.0 : -1.0);
 			unsigned const ix(ixs[2*ldim + ldir]);
@@ -332,7 +332,7 @@ void add_static_material_object(cobj_params &cp, sphere_mat_t const &mat, point 
 		float const near_clip(1.01*sphere_radius);
 
 		for (unsigned ldim = 0; ldim < 3; ++ldim) {
-			vector3d dir(zero_vector);
+			vector3d dir;
 			for (unsigned ldir = 0; ldir < 2; ++ldir) {
 				dir[ldim] = (ldir ? 1.0 : -1.0);
 				lss.push_back(light_source(mat.light_radius, pos, pos, mat.diff_c, 0, dir, cube_map_beamwidth, sphere_radius, 1, near_clip)); // add lights for each cube face

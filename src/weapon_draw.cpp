@@ -855,7 +855,7 @@ void draw_plasmaball(point const &pos0, int shooter, shader_t &shader) { // and 
 	}
 	// lightning eminating from plasma
 	radius *= psize;
-	vector3d target(zero_vector);
+	vector3d target;
 	float min_dist(4.0*radius + object_types[SMILEY].radius);
 			
 	for (unsigned i = 0; i < objg.end_id; ++i) { // test smileys

@@ -426,7 +426,7 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 			s.add_uniform_int("cloud_noise_tex", 11);
 			s.add_uniform_float("smoke_noise_mag", SMOKE_NOISE_MAG);
 			s.add_uniform_float("noise_scale", 0.45);
-			static vector3d fog_time(zero_vector);
+			static vector3d fog_time;
 			static int update_frame(0);
 			if (animate2 && frame_counter > update_frame) {fog_time += 0.001*fticks*wind; update_frame = frame_counter;} // fog moves with the wind (once per frame)
 			s.add_uniform_vector3d("fog_time", fog_time);
@@ -1519,11 +1519,11 @@ void water_particle_manager::draw() const {
 struct crack_point {
 
 	point pos, orig_pos;
-	int cid, face, time;
-	float alpha;
+	int cid=0, face=0, time=0;
+	float alpha=0.0;
 	colorRGBA color;
 	
-	crack_point() : pos(all_zeros), orig_pos(all_zeros), cid(0), face(0), time(0), alpha(0.0f), color(BLACK) {}
+	crack_point() : color(BLACK) {}
 	crack_point(point const &pos_, point const &opos, int cid_, int face_, int time_, float alpha_, colorRGBA const &color_)
 		: pos(pos_), orig_pos(opos), cid(cid_), face(face_), time(time_), alpha(alpha_), color(color_) {}
 	

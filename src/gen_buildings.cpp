@@ -903,7 +903,7 @@ public:
 	vector<float> temp_wall_edges;
 	vect_tquad_with_ix_t temp_tquads;
 
-	building_draw_t(bool is_city_=0) : cur_camera_pos(zero_vector), is_city(is_city_) {}
+	building_draw_t(bool is_city_=0) : is_city(is_city_) {}
 	void init_draw_frame() {cur_camera_pos = get_camera_pos();} // capture camera pos during non-shadow pass to use for shadow pass
 	bool empty() const {return to_draw.empty();}
 	void reserve_verts(tid_nm_pair_t const &tex, size_t num, bool quads_or_tris=0) {get_verts(tex, quads_or_tris, 1).reserve(num);} // no_register_tile=1
@@ -3309,7 +3309,7 @@ class building_creator_t {
 	};
 
 public:
-	building_creator_t(bool is_city_=0) : is_city(is_city_), max_extent(zero_vector), building_draw(is_city), building_draw_vbo(is_city) {}
+	building_creator_t(bool is_city_=0) : is_city(is_city_), building_draw(is_city), building_draw_vbo(is_city) {}
 	bool empty() const {return buildings.empty();}
 	bool get_is_city() const {return is_city;}
 	bool has_interior_to_draw() const {return (has_interior_geom && !building_draw_interior.empty());}
@@ -5650,7 +5650,6 @@ class building_tiles_t {
 		return tiles.find(make_pair(x, y));
 	}
 public:
-	building_tiles_t() : max_extent(zero_vector) {}
 	bool     empty() const {return tiles.empty();}
 	unsigned size()  const {return tiles.size();}
 	vector3d get_max_extent() const {return max_extent;}
