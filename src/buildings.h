@@ -3682,6 +3682,9 @@ std::string gen_random_name(rand_gen_t &rgen, unsigned min_len=0, bool for_unive
 void do_xy_rotate(float rot_sin, float rot_cos, point const &center, point &pos);
 void do_xy_rotate_normal(float rot_sin, float rot_cos, point &pos);
 void register_debug_event(point const &pos, std::string const &str="");
+// functions in city_terrain.cpp
+template<typename vertex_t> void calc_heightmap_normals(vector<vertex_t> &verts, unsigned nx, unsigned ny, unsigned verts_start=0);
+void calc_heightmap_indices(vector<unsigned> &indices, unsigned nx, unsigned ny, unsigned verts_start=0);
 
 struct cmp_by_tile { // not the most efficient solution, but no memory overhead
 	bool operator()(cube_t const &a, cube_t const &b) const {return (get_tile_id_for_cube(a) < get_tile_id_for_cube(b));}

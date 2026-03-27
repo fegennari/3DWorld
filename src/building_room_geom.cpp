@@ -4935,29 +4935,8 @@ void add_pillow(cube_t const &c, rgeom_mat_t &mat, colorRGBA const &color, point
 			verts.emplace_back(point(xval, yval, zval), nc, mat.tex.tscale_x*(xval - tex_origin.x), mat.tex.tscale_y*(yval - tex_origin.y), cw);
 		} // for x
 	} // for y
-	for (unsigned y = 0; y <= ndiv; ++y) {
-		for (unsigned x = 0; x <= ndiv; ++x) {
-			unsigned const off(start + y*stride + x);
-			vector3d const &v(verts[off].v);
-			vector3d normal;
-			if (x > 0    && y >    0) {normal += cross_product((v - verts[off-stride].v), (verts[off-1].v - v));} // LL
-			if (x < ndiv && y >    0) {normal += cross_product((v - verts[off+1].v), (verts[off-stride].v - v));} // LR
-			if (x < ndiv && y < ndiv) {normal += cross_product((v - verts[off+stride].v), (verts[off+1].v - v));} // UR
-			if (x > 0    && y < ndiv) {normal += cross_product((v - verts[off-1].v), (verts[off+stride].v - v));} // UL
-			verts[off].set_norm(normal.get_norm()); // this is the slowest line
-		} // for x
-	} // for y
-	for (unsigned y = 0; y < ndiv; ++y) {
-		for (unsigned x = 0; x < ndiv; ++x) {
-			unsigned const off(start + y*stride + x);
-			mat.indices.push_back(off + 0); // T1
-			mat.indices.push_back(off + 1);
-			mat.indices.push_back(off + stride+1);
-			mat.indices.push_back(off + 0); // T2
-			mat.indices.push_back(off + stride+1);
-			mat.indices.push_back(off + stride);
-		} // for x
-	} // for y
+	calc_heightmap_normals(verts,       ndiv, ndiv, start);
+	calc_heightmap_indices(mat.indices, ndiv, ndiv, start);
 }
 
 bool is_bunk_bed       (room_object_t const &c) {return (c.flags & (RO_FLAG_ADJ_TOP | RO_FLAG_ADJ_BOT));}

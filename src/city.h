@@ -369,14 +369,15 @@ struct parking_lot_t : public oriented_cube_t {
 
 // for future use in storing park heightmaps that contains lower areas for ponds and creeks
 class park_heightmap_t {
-	unsigned nx=0, ny=0;
+	unsigned nx=0, ny=0, nverts=0, nindices=0;
+	cube_t bcube;
 	vector<float> heights;
 	//indexed_mesh_draw<vert_norm_comp_tc>; // something similar, but using a VBO
 	indexed_vao_manager_t vao_mgr;
 public:
-	park_heightmap_t(unsigned nx_, unsigned ny_) : nx(nx_), ny(ny_) {}
-	void create(rand_gen_t &rgen) {heights.resize(nx*ny, 0.0);}
-	void draw(shader_t &s) const {}
+	park_heightmap_t(cube_t const &c, unsigned nx_, unsigned ny_) : nx(nx_), ny(ny_), bcube(c) {assert(nx > 0 && ny > 0);}
+	void create(rand_gen_t &rgen);
+	void draw(shader_t &s) const;
 	// TODO
 };
 

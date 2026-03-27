@@ -438,3 +438,82 @@ bool city_road_connector_t::route_transmission_line(transmission_line_t &tline, 
 	return 1;
 }
 
+// park_heightmap_t
+
+// Note: vertex_t must have a vertex v and a set_norm()
+template<typename vertex_t> void calc_heightmap_normals(vector<vertex_t> &verts, unsigned nx, unsigned ny, unsigned verts_start) {
+	unsigned const stride(nx + 1);
+	assert(verts_start + stride*(ny+1) <= verts.size());
+
+	for (unsigned y = 0; y <= ny; ++y) {
+		for (unsigned x = 0; x <= nx; ++x) {
+			unsigned const off(verts_start + y*stride + x);
+			vector3d const &v(verts[off].v);
+			vector3d normal;
+			if (x > 0  && y >  0) {normal += cross_product((v - verts[off-stride].v), (verts[off-1].v - v));} // LL
+			if (x < nx && y >  0) {normal += cross_product((v - verts[off+1].v), (verts[off-stride].v - v));} // LR
+			if (x < nx && y < ny) {normal += cross_product((v - verts[off+stride].v), (verts[off+1].v - v));} // UR
+			if (x > 0  && y < ny) {normal += cross_product((v - verts[off-1].v), (verts[off+stride].v - v));} // UL
+			verts[off].set_norm(normal.get_norm()); // this is the slowest line
+		} // for x
+	} // for y
+}
+template void calc_heightmap_normals(vector<vert_norm_comp_tc_color> &verts, unsigned nx, unsigned ny, unsigned verts_start); // explicit instantiation
+
+void calc_heightmap_indices(vector<unsigned> &indices, unsigned nx, unsigned ny, unsigned verts_start) {
+	unsigned const stride(nx + 1);
+
+	for (unsigned y = 0; y < ny; ++y) {
+		for (unsigned x = 0; x < nx; ++x) {
+			unsigned const off(verts_start + y*stride + x);
+			indices.push_back(off + 0); // T1
+			indices.push_back(off + 1);
+			indices.push_back(off + stride+1);
+			indices.push_back(off + 0); // T2
+			indices.push_back(off + stride+1);
+			indices.push_back(off + stride);
+		} // for x
+	} // for y
+}
+
+void park_heightmap_t::create(rand_gen_t &rgen) {
+	nverts   = (nx+1)*(ny+1); // generally, nx == ny, but it's not required
+	nindices = 6*nx*ny; // 1 quad = 2 triangles per grid
+	heights.resize(nx*ny, bcube.z2());
+	vector<vert_norm_comp_tc> verts;
+	verts.reserve(nverts);
+	vector<unsigned> indices; // could be unsigned short?
+	indices.reserve(nindices);
+	float const nx_inv(1.0/nx), ny_inv(1.0/ny), dx(nx_inv*bcube.dx()), dy(ny_inv*bcube.dy());
+	norm_comp const normal(plus_z); // default normal; will be recalculated
+	// TODO: add pond, creek, etc. to heights; should range between bcube.z1() and bcube.z2()
+
+	for (unsigned y = 0; y <= ny; ++y) {
+		unsigned const y0(max(y, 1U)-1), y1(min(y, ny-1));
+		float const yval(bcube.y1() + dy*y), tcy(ny_inv*y);
+
+		for (unsigned x = 0; x <= nx; ++x) {
+			unsigned const x0(max(x, 1U)-1), x1(min(x, nx-1));
+			float const xval(bcube.x1() + dx*x), tcx(nx_inv*x);
+			float const h00(heights[nx*y0 + x0]), h01(heights[nx*y0 + x1]), h10(heights[nx*y1 + x0]), h11(heights[nx*y1 + x1]);
+			float const zval(0.25*(h00 + h01 + h10 + h11)); // interpolate from 4 corners; edge quads will always be flat/horizontal
+			verts.emplace_back(point(xval, yval, zval), normal, tcx, tcy);
+		} // for x
+	} // for y
+	calc_heightmap_normals(verts,   nx, ny);
+	calc_heightmap_indices(indices, nx, ny);
+	vao_mgr.create_and_upload(verts, indices);
+}
+void park_heightmap_t::draw(shader_t &s) const {
+	if (nverts == 0) return; // not allocated
+	assert(vao_mgr.is_valid());
+	vao_mgr.pre_render();
+	bind_default_flat_normal_map();
+	s.set_cur_color(WHITE);
+	// TODO: grass texture for high ground, dirt texture for low ground
+	// TODO: distance-based LOD
+	vert_norm_comp_tc::set_vbo_arrays();
+	glDrawRangeElements(GL_TRIANGLES, 0, nverts, nindices, GL_UNSIGNED_INT, nullptr);
+	vao_mgr.post_render();
+}
+
