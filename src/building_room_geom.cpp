@@ -4919,7 +4919,7 @@ void add_pillow(cube_t const &c, rgeom_mat_t &mat, colorRGBA const &color, point
 	float const ndiv_inv(1.0/ndiv), dx_inv(1.0/c.dx()), dy_inv(1.0/c.dy());
 	color_wrapper cw(color);
 	auto &verts(mat.itri_verts); // Note: could cache verts
-	unsigned const start(verts.size()), stride(ndiv + 1);
+	unsigned const start(verts.size());
 	float dists[ndiv+1] = {};
 	norm_comp const nc(plus_z);
 

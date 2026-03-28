@@ -144,7 +144,7 @@ struct divider_t : public oriented_city_obj_t {
 	uint8_t skip_dims=0;
 	divider_t() {}
 	divider_t(cube_t const &c, unsigned type_, bool dim_, bool dir_, unsigned sd, unsigned dix, unsigned pix, unsigned cix) :
-		oriented_city_obj_t(c.get_cube_center(), c.get_bsphere_radius(), dim_, dir_), type(type_), skip_dims(sd), divider_ix(dix), plot_ix(pix), city_ix(cix) {bcube = c;}
+		oriented_city_obj_t(c.get_cube_center(), c.get_bsphere_radius(), dim_, dir_), type(type_), divider_ix(dix), plot_ix(pix), city_ix(cix), skip_dims(sd) {bcube = c;}
 	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
