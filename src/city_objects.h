@@ -690,13 +690,13 @@ struct park_path_t : public city_obj_t {
 class park_heightmap_t {
 	unsigned nx=0, ny=0, nverts=0, nindices=0;
 	cube_t bcube;
-	pond_t const *pond;
-	park_path_t const *creek;
 	vector<float> heights;
 	indexed_vao_manager_t vao_mgr;
+
+	void xy_from_pt(point const &p, unsigned &x, unsigned &y) const;
+	point pt_from_xy(unsigned x, unsigned y) const;
 public:
-	park_heightmap_t(cube_t const &c, unsigned nx_, unsigned ny_, pond_t const *const pond_, park_path_t const *const creek_) :
-		nx(nx_), ny(ny_), bcube(c), pond(pond_), creek(creek_) {assert(nx > 0 && ny > 0);}
+	park_heightmap_t(cube_t const &c, unsigned nx_, unsigned ny_, pond_t const *const pond, park_path_t const *const creek);
 	size_t get_gpu_mem() const {return vao_mgr.gpu_mem;}
 	void create();
 	void draw(draw_state_t &dstate);

@@ -477,11 +477,61 @@ void calc_heightmap_indices(vector<unsigned> &indices, unsigned nx, unsigned ny,
 	} // for y
 }
 
+park_heightmap_t::park_heightmap_t(cube_t const &c, unsigned nx_, unsigned ny_, pond_t const *const pond, park_path_t const *const creek) : nx(nx_), ny(ny_), bcube(c) {
+	//highres_timer_t timer("Park Heightmap Heights"); // ~1ms
+	assert(nx > 0 && ny > 0);
+	// we must create heights from the pond and creek now because they may be invalidated by sorting
+	heights.resize(nx*ny, bcube.z2());
+
+	if (pond != nullptr) {
+		cube_t const &pbc(pond->bcube);
+		assert(bcube.contains_cube_xy(pbc));
+		unsigned x1(0), y1(0), x2(0), y2(0);
+		xy_from_pt(pbc.get_llc(), x1, y1);
+		xy_from_pt(pbc.get_urc(), x2, y2);
+		cout << TXT(x1) << TXT(y1) << TXT(x2) << TXT(y2) << endl;
+
+		for (unsigned y = y1; y <= y2; ++y) {
+			for (unsigned x = x1; x <= x2; ++x) {
+				point const p(pt_from_xy(x, y));
+				// TODO: smooth
+				cout << pond->point_contains_xy(p);
+				if (pond->point_contains_xy(p)) {heights[y*nx + x] = pbc.z1();}
+			} // for x
+		} // for y
+	}
+	if (creek != nullptr) {
+		assert(!creek->pts.empty());
+
+		for (auto p = creek->pts.begin(); p+1 != creek->pts.end(); ++p) {
+			point const &p1(*p), &p2(*(p+1));
+			cube_t const sbc(p1, p2);
+			unsigned x1(0), y1(0), x2(0), y2(0);
+			xy_from_pt(sbc.get_llc(), x1, y1);
+			xy_from_pt(sbc.get_urc(), x2, y2);
+			// TODO: add creek segment to heights
+		} // for p
+	}
+}
+
+void park_heightmap_t::xy_from_pt(point const &p, unsigned &x, unsigned &y) const {
+	x = max(0, min((int)nx-1, round_fp(nx*(p.x - bcube.x1())/bcube.dx())));
+	y = max(0, min((int)ny-1, round_fp(ny*(p.y - bcube.y1())/bcube.dy())));
+}
+point park_heightmap_t::pt_from_xy(unsigned x, unsigned y) const {
+	assert(x < nx && y < ny);
+	point p;
+	p.x = bcube.x1() + x*bcube.dx()/nx;
+	p.y = bcube.y1() + y*bcube.dy()/ny;
+	//p.z = heights[y*nx + x]; // not needed?
+	return p;
+}
+
 void park_heightmap_t::create() {
 	if (nverts > 0) return; // already created
+	//highres_timer_t timer("Park Heightmap VBO"); // ~1ms
 	nverts   = (nx+1)*(ny+1); // generally, nx == ny, but it's not required
 	nindices = 6*nx*ny; // 1 quad = 2 triangles per grid
-	heights.resize(nx*ny, bcube.z2());
 	vector<vert_norm_comp_tc> verts;
 	verts.reserve(nverts);
 	vector<unsigned> indices; // could be unsigned short?
@@ -489,12 +539,6 @@ void park_heightmap_t::create() {
 	float const nx_inv(1.0/nx), ny_inv(1.0/ny), dx(nx_inv*bcube.dx()), dy(ny_inv*bcube.dy()), tscale(city_params.get_road_ar());
 	norm_comp const normal(plus_z); // default normal; will be recalculated
 
-	if (pond != nullptr) {
-		// TODO: add pond to heights; should range between bcube.z1() and bcube.z2()
-	}
-	if (creek != nullptr) {
-		// TODO: add creek to heights
-	}
 	for (unsigned y = 0; y <= ny; ++y) {
 		unsigned const y0(max(y, 1U)-1), y1(min(y, ny-1));
 		float const yval(bcube.y1() + dy*y), tcy(tscale*ny_inv*y);
@@ -505,6 +549,7 @@ void park_heightmap_t::create() {
 			float const h00(heights[nx*y0 + x0]), h01(heights[nx*y0 + x1]), h10(heights[nx*y1 + x0]), h11(heights[nx*y1 + x1]);
 			float const zval(0.25*(h00 + h01 + h10 + h11)); // interpolate from 4 corners; edge quads will always be flat/horizontal
 			verts.emplace_back(point(xval, yval, zval), normal, tcx, tcy);
+			min_eq(bcube.z1(), zval); // extend bcube to cover the lowest point
 		} // for x
 	} // for y
 	calc_heightmap_normals(verts,   nx, ny);
@@ -512,16 +557,25 @@ void park_heightmap_t::create() {
 	vao_mgr.create_and_upload(verts, indices, 0, 1); // setup_pointers=1
 	vao_mgr.post_render(); // unbind
 }
+
 // Note: there is no park_heightmap_t::pre_draw() because there is often at most one visible at any time
 void park_heightmap_t::draw(draw_state_t &dstate) {
 	if (!dstate.check_cube_visible(bcube, 0.0)) return; // VFC; dist_scale=0.0
-	create(); // create verts/VBO/VAO when first visible
-	assert(vao_mgr.is_valid());
-	dstate.begin_tile(bcube.get_cube_center(), 1, 1); // must setup shader and tile shadow map before drawing
-	vao_mgr.pre_render();
+	colorRGBA const &color(road_colors[TYPE_PARK]);
 	bind_road_texture(TYPE_PARK);
 	bind_default_flat_normal_map();
-	dstate.s.set_cur_color(road_colors[TYPE_PARK]);
+	dstate.begin_tile(bcube.get_cube_center(), 1, 1); // must setup shader and tile shadow map before drawing
+
+	if (!bcube.closest_dist_less_than(dstate.camera_bs, 0.1*dstate.draw_tile_dist)) { // draw single quad in the distance
+		static quad_batch_draw qbd;
+		dstate.draw_cube(qbd, bcube, color, 1, city_params.get_road_ar(), 3); // top only
+		qbd.draw_and_clear();
+		return;
+	}
+	dstate.s.set_cur_color(color);
+	create(); // create verts/VBO/VAO when first visible
+	assert(vao_mgr.is_valid());
+	vao_mgr.pre_render();
 	// TODO: grass texture for high ground, dirt texture for low ground
 	// TODO: distance-based LOD
 	glDrawRangeElements(GL_TRIANGLES, 0, nverts, nindices, GL_UNSIGNED_INT, nullptr);
