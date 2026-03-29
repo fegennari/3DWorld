@@ -1124,6 +1124,8 @@ bool tunnel_t::line_intersect(point const &p1, point const &p2, float &t) const 
 
 road_mat_mgr_t road_mat_mgr;
 
+void bind_road_texture(unsigned type) {road_mat_mgr.set_texture(type);}
+
 void road_draw_state_t::draw_city_region_int(quad_batch_draw &cache, unsigned type_ix) {
 	if (cache.verts.empty()) return; // nothing to draw
 
@@ -1245,6 +1247,7 @@ void road_draw_state_t::add_city_quad(road_t      const &r, quad_batch_draw &qbd
 	r.add_road_quad(qbd, color, ar/TRACKS_WIDTH);
 }
 void road_draw_state_t::add_city_quad(road_plot_t const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix, bool draw_all) { // plots and parks
+	if (r.no_draw) return; // park drawn as heightmap rather than quad
 	if (!draw_all && (type_ix == TYPE_PARK) != r.is_park) return;
 	
 	if (!plot_cuts.empty()) {

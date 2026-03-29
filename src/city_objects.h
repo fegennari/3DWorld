@@ -686,6 +686,22 @@ struct park_path_t : public city_obj_t {
 	bool check_point_contains_xy(point const &p) const;
 };
 
+// for future use in storing park heightmaps that contains lower areas for ponds and creeks
+class park_heightmap_t {
+	unsigned nx=0, ny=0, nverts=0, nindices=0;
+	cube_t bcube;
+	pond_t const *pond;
+	park_path_t const *creek;
+	vector<float> heights;
+	indexed_vao_manager_t vao_mgr;
+public:
+	park_heightmap_t(cube_t const &c, unsigned nx_, unsigned ny_, pond_t const *const pond_, park_path_t const *const creek_) :
+		nx(nx_), ny(ny_), bcube(c), pond(pond_), creek(creek_) {assert(nx > 0 && ny > 0);}
+	size_t get_gpu_mem() const {return vao_mgr.gpu_mem;}
+	void create();
+	void draw(draw_state_t &dstate);
+};
+
 class tile_drawer_t;
 
 struct moving_walkway_t : public cube_t {
@@ -846,6 +862,7 @@ private:
 		bldg_groups, bball_groups, pfloat_groups, sewer_groups, sculpt_groups;
 	skyway_t skyway; // optional
 	vect_parking_space_t pspaces;
+	vector<park_heightmap_t> park_hmaps;
 	bird_poop_manager_t bird_poop_manager;
 	vector<city_zone_t> sub_plots; // reused across calls
 	cube_t all_objs_bcube;
@@ -862,7 +879,7 @@ private:
 	void add_cars_to_driveways(vector<car_t> &cars, vector<road_plot_t> const &plots, vector<vect_cube_t> &plot_colliders, unsigned city_id, rand_gen_t &rgen);
 	void place_trees_in_plot(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders,
 		vector<point> &tree_pos, vect_cube_t const &plot_cuts, rand_gen_t &rgen, unsigned buildings_end);
-	void place_detail_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<point> const &tree_pos,
+	void place_detail_objects(road_plot_t &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<point> const &tree_pos,
 		vect_cube_t const &pond_blockers, vect_cube_t const &plot_cuts, rand_gen_t &rgen, bool have_streetlights);
 	void place_residential_plot_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<road_t> const &roads,
 		vect_cube_t const &pool_blockers, unsigned driveways_start, unsigned plot_ix, unsigned city_ix, rand_gen_t &rgen);
@@ -887,6 +904,7 @@ public:
 	bool have_animations  () const {return !birds   .empty();} // only birds are animated
 	bool has_residential  () const {return has_residential_plots;}
 	bool has_gas_station  () const {return !gstations.empty();}
+	size_t get_gpu_mem() const;
 	vector<power_pole_t> const &get_power_poles() const {return ppoles;} // used for city connectivity
 	void set_plot_subdiv_sz(float sz) {plot_subdiv_sz = sz;}
 	void gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<vect_cube_t> &plot_colliders, vector<car_t> &cars,

@@ -518,6 +518,7 @@ public:
 	bool has_gas_station   () const {return city_obj_placer.has_gas_station();}
 	cube_t const &get_bcube() const {return bcube;}
 	cube_t const &get_plot_bcube(unsigned plot_ix) const {assert(plot_ix < plots.size()); return plots[plot_ix];}
+	size_t get_gpu_mem() const {return city_obj_placer.get_gpu_mem();}
 	vector<power_pole_t> const &get_power_poles() const {return city_obj_placer.get_power_poles();} // used for city connectivity
 	void set_bcube(cube_t const &bcube_) {bcube = bcube_;}
 	unsigned num_roads() const {return roads.size();}
@@ -2490,7 +2491,6 @@ public:
 	bool empty() const {return road_networks.empty();}
 	bool has_tunnels() const {return global_rn.has_tunnels();}
 	bool point_in_tunnel(point const &pos) const {return global_rn.point_in_tunnel(pos);}
-	size_t get_gpu_mem() const {return dstate.get_gpu_mem();}
 	road_network_t const &get_city(unsigned city_ix) const {return road_network_t::get_city(city_ix, road_networks, global_rn);} // call the static function
 	cube_t const &get_city_bcube(unsigned city_ix) const {return get_city(city_ix).get_bcube();}
 	cube_t const &get_city_plot_bcube(unsigned city_ix, unsigned plot_ix) const {return get_city(city_ix).get_plot_bcube(plot_ix);}
@@ -2498,6 +2498,11 @@ public:
 	cube_t get_car_dest_bcube(car_t const &car, bool isec_only) const {return get_city(car.cur_city).get_car_dest(car, road_networks, isec_only);}
 	int get_parking_lot_ix_for_car(car_t const &car)            const {return get_city(car.cur_city).get_parking_lot_ix_for_car(car);}
 
+	size_t get_gpu_mem() const {
+		unsigned mem(dstate.get_gpu_mem() + global_rn.get_gpu_mem());
+		for (road_network_t const &rn : road_networks) {mem += rn.get_gpu_mem();}
+		return mem;
+	}
 	bool cube_int_underground_obj(cube_t const &c) const {
 		if (global_rn.cube_intersect_tunnel(c)) return 1;
 

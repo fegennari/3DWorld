@@ -324,7 +324,7 @@ struct dw_query_t {
 
 struct road_plot_t : public cube_t {
 	uint8_t xpos, ypos; // position within the city grid
-	bool is_residential=0, has_parking=0, is_park=0;
+	bool is_residential=0, has_parking=0, is_park=0, no_draw=0;
 	road_plot_t(cube_t const &c, uint8_t xpos_, uint8_t ypos_, bool is_res=0) : cube_t(c), xpos(xpos_), ypos(ypos_), is_residential(is_res) {}
 	tex_range_t get_tex_range(float ar) const {return tex_range_t(0.0, 0.0, ar, ar);}
 	bool is_residential_not_park() const {return ( is_residential && !is_park);}
@@ -354,20 +354,6 @@ struct parking_lot_t : public oriented_cube_t {
 	parking_lot_t(cube_t const &c, bool dim_, bool dir_, bool rdir, unsigned row_sz_, unsigned num_rows_, unsigned ix) :
 		oriented_cube_t(c, dim_, dir_), row_dir(rdir), row_sz(row_sz_), num_rows(num_rows_), orig_ix(ix) {}
 	tex_range_t get_tex_range(float ar) const;
-};
-
-// for future use in storing park heightmaps that contains lower areas for ponds and creeks
-class park_heightmap_t {
-	unsigned nx=0, ny=0, nverts=0, nindices=0;
-	cube_t bcube;
-	vector<float> heights;
-	//indexed_mesh_draw<vert_norm_comp_tc>; // something similar, but using a VBO
-	indexed_vao_manager_t vao_mgr;
-public:
-	park_heightmap_t(cube_t const &c, unsigned nx_, unsigned ny_) : nx(nx_), ny(ny_), bcube(c) {assert(nx > 0 && ny > 0);}
-	void create(rand_gen_t &rgen);
-	void draw(shader_t &s) const;
-	// TODO
 };
 
 
@@ -1058,4 +1044,5 @@ void init_city_spectate_manager(car_manager_t &car_manager, ped_manager_t &ped_m
 bool skip_bai_draw(person_t     const &bai);
 bool skip_ped_draw(pedestrian_t const &ped);
 bool skip_car_draw(car_t        const &car);
+void bind_road_texture(unsigned type);
 

@@ -3,6 +3,7 @@
 // 08/22/21
 
 #include "city_terrain.h"
+#include "city_objects.h" // for park_heightmap_t
 
 extern float water_plane_z;
 extern city_params_t city_params;
@@ -476,7 +477,8 @@ void calc_heightmap_indices(vector<unsigned> &indices, unsigned nx, unsigned ny,
 	} // for y
 }
 
-void park_heightmap_t::create(rand_gen_t &rgen) {
+void park_heightmap_t::create() {
+	if (nverts > 0) return; // already created
 	nverts   = (nx+1)*(ny+1); // generally, nx == ny, but it's not required
 	nindices = 6*nx*ny; // 1 quad = 2 triangles per grid
 	heights.resize(nx*ny, bcube.z2());
@@ -484,17 +486,22 @@ void park_heightmap_t::create(rand_gen_t &rgen) {
 	verts.reserve(nverts);
 	vector<unsigned> indices; // could be unsigned short?
 	indices.reserve(nindices);
-	float const nx_inv(1.0/nx), ny_inv(1.0/ny), dx(nx_inv*bcube.dx()), dy(ny_inv*bcube.dy());
+	float const nx_inv(1.0/nx), ny_inv(1.0/ny), dx(nx_inv*bcube.dx()), dy(ny_inv*bcube.dy()), tscale(city_params.get_road_ar());
 	norm_comp const normal(plus_z); // default normal; will be recalculated
-	// TODO: add pond, creek, etc. to heights; should range between bcube.z1() and bcube.z2()
 
+	if (pond != nullptr) {
+		// TODO: add pond to heights; should range between bcube.z1() and bcube.z2()
+	}
+	if (creek != nullptr) {
+		// TODO: add creek to heights
+	}
 	for (unsigned y = 0; y <= ny; ++y) {
 		unsigned const y0(max(y, 1U)-1), y1(min(y, ny-1));
-		float const yval(bcube.y1() + dy*y), tcy(ny_inv*y);
+		float const yval(bcube.y1() + dy*y), tcy(tscale*ny_inv*y);
 
 		for (unsigned x = 0; x <= nx; ++x) {
 			unsigned const x0(max(x, 1U)-1), x1(min(x, nx-1));
-			float const xval(bcube.x1() + dx*x), tcx(nx_inv*x);
+			float const xval(bcube.x1() + dx*x), tcx(tscale*nx_inv*x);
 			float const h00(heights[nx*y0 + x0]), h01(heights[nx*y0 + x1]), h10(heights[nx*y1 + x0]), h11(heights[nx*y1 + x1]);
 			float const zval(0.25*(h00 + h01 + h10 + h11)); // interpolate from 4 corners; edge quads will always be flat/horizontal
 			verts.emplace_back(point(xval, yval, zval), normal, tcx, tcy);
@@ -502,17 +509,21 @@ void park_heightmap_t::create(rand_gen_t &rgen) {
 	} // for y
 	calc_heightmap_normals(verts,   nx, ny);
 	calc_heightmap_indices(indices, nx, ny);
-	vao_mgr.create_and_upload(verts, indices);
+	vao_mgr.create_and_upload(verts, indices, 0, 1); // setup_pointers=1
+	vao_mgr.post_render(); // unbind
 }
-void park_heightmap_t::draw(shader_t &s) const {
-	if (nverts == 0) return; // not allocated
+// Note: there is no park_heightmap_t::pre_draw() because there is often at most one visible at any time
+void park_heightmap_t::draw(draw_state_t &dstate) {
+	if (!dstate.check_cube_visible(bcube, 0.0)) return; // VFC; dist_scale=0.0
+	create(); // create verts/VBO/VAO when first visible
 	assert(vao_mgr.is_valid());
+	dstate.begin_tile(bcube.get_cube_center(), 1, 1); // must setup shader and tile shadow map before drawing
 	vao_mgr.pre_render();
+	bind_road_texture(TYPE_PARK);
 	bind_default_flat_normal_map();
-	s.set_cur_color(WHITE);
+	dstate.s.set_cur_color(road_colors[TYPE_PARK]);
 	// TODO: grass texture for high ground, dirt texture for low ground
 	// TODO: distance-based LOD
-	vert_norm_comp_tc::set_vbo_arrays();
 	glDrawRangeElements(GL_TRIANGLES, 0, nverts, nindices, GL_UNSIGNED_INT, nullptr);
 	vao_mgr.post_render();
 }

@@ -49,6 +49,12 @@ void setup_parked_car(car_t &car, unsigned city_id, unsigned plot_ix) {
 	car.cur_road_type = TYPE_PLOT;
 }
 
+size_t city_obj_placer_t::get_gpu_mem() const {
+	unsigned mem(0);
+	for (park_heightmap_t const &h : park_hmaps) {mem += h.get_gpu_mem();}
+	return mem;
+}
+
 // Note: copies rgen by value to avoid disrupting the original sequence
 bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, unsigned city_id, unsigned plot_ix, unsigned plot_id_offset,
 	vect_cube_t const &plot_cuts, vector<car_t> &cars, vect_cube_t &bcubes, vect_cube_t &colliders, rand_gen_t rgen, bool add_cars)
@@ -746,8 +752,8 @@ void gen_park_path(park_path_t &path, point &start, point &end, float hwidth, cu
 	path.calc_bcube_bsphere();
 }
 
-// Note: blockers are used for placement of objects within this plot; colliders are used for pedestrian AI
-void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders,
+// Note: blockers are used for placement of objects within this plot; colliders are used for pedestrian AI; plot is non-const so that we can set no_draw flag for parks
+void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blockers, vect_cube_t &colliders,
 	vector<point> const &tree_pos, vect_cube_t const &pond_blockers, vect_cube_t const &plot_cuts, rand_gen_t &rgen, bool have_streetlights)
 {
 	bool const is_residential(plot.is_residential), is_park(plot.is_park);
@@ -2637,7 +2643,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	float const dist_scale((player_in_basement >= 2) ? 0.1 : (reflection_pass ? 0.4 : 1.0));
 	if (!dstate.check_cube_visible(all_objs_bcube, dist_scale)) return; // check bcube
 	dstate.pass_ix = 0;
-	draw_objects(walkways,  walkway_groups,  dstate, 0.25, shadow_only, 1);
+	draw_objects(walkways, walkway_groups, dstate, 0.25, shadow_only, 1);
 
 	for (dstate.pass_ix = 0; dstate.pass_ix < 2; ++dstate.pass_ix) { // {concrete cube, metal cylinder}
 		bool const is_cylin(dstate.pass_ix > 0);
@@ -2648,6 +2654,9 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	if (reflection_pass) {
 		if (dstate.camera_bs.z > city_zval + skyway.bcube.dz()) {skyway.draw(dstate, *this, shadow_only, reflection_pass);} // draw skyway if player is in the air
 		return; // that's it
+	}
+	if (!shadow_only) {
+		for (park_heightmap_t &h : park_hmaps) {h.draw(dstate);}
 	}
 	draw_objects(benches,   bench_groups,    dstate, 0.16, shadow_only, 0); // dist_scale=0.16, has_immediate_draw=0
 	draw_objects(fhydrants, fhydrant_groups, dstate, 0.06, shadow_only, 1);
