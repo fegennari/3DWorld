@@ -76,26 +76,30 @@ public:
 road_name_gen_t road_name_gen;
 string road_t::get_name(unsigned city_ix) const {return road_name_gen.gen_name(*this, city_ix);}
 
-void road_mat_mgr_t::ensure_road_textures() {
-	if (inited) return;
-	string const img_names[NUM_RD_TIDS] = {"sidewalk.jpg", "straight_road.jpg", "bend_90.jpg", "int_3_way.jpg", "int_4_way.jpg",
-		                                   "parking_lot.png", "rail_tracks.jpg", "grass_park.jpg", "concrete.jpg", "asphalt.jpg", "asphalt.jpg"};
-	float const aniso   [NUM_RD_TIDS] = {4.0, 16.0, 8.0, 8.0, 8.0, 4.0, 16.0, 4.0, 4.0, 16.0, 16.0};
-	int   const wrap_mir[NUM_RD_TIDS] = {1,   1,    0,   0,   0,   1,   1,    1,   1,   1,    1}; // bend and intersections are clamped, and the others are wrapped
-	for (unsigned i = 0; i < NUM_RD_TIDS; ++i) {tids[i] = get_texture_by_name(("roads/" + img_names[i]), 0, 0, wrap_mir[i], aniso[i]);}
-	sl_tid = get_texture_by_name("roads/traffic_light.png");
-	inited = 1;
-}
-
-void road_mat_mgr_t::set_texture(unsigned type) {
-	assert(type < NUM_RD_TIDS);
-	ensure_road_textures();
-	select_texture(tids[type]);
-}
-void road_mat_mgr_t::set_stoplight_texture() {
-	ensure_road_textures();
-	select_texture(sl_tid);
-}
+class road_mat_mgr_t {
+	bool inited=0;
+	unsigned tids[NUM_RD_TIDS] = {}, sl_tid=0; // stoplight tid
+public:
+	void ensure_road_textures() {
+		if (inited) return;
+		string const img_names[NUM_RD_TIDS] = {"sidewalk.jpg", "straight_road.jpg", "bend_90.jpg", "int_3_way.jpg", "int_4_way.jpg",
+											   "parking_lot.png", "rail_tracks.jpg", "grass_park.jpg", "concrete.jpg", "asphalt.jpg", "asphalt.jpg"};
+		float const aniso   [NUM_RD_TIDS] = {4.0, 16.0, 8.0, 8.0, 8.0, 4.0, 16.0, 4.0, 4.0, 16.0, 16.0};
+		int   const wrap_mir[NUM_RD_TIDS] = {1,   1,    0,   0,   0,   1,   1,    1,   1,   1,    1}; // bend and intersections are clamped, and the others are wrapped
+		for (unsigned i = 0; i < NUM_RD_TIDS; ++i) {tids[i] = get_texture_by_name(("roads/" + img_names[i]), 0, 0, wrap_mir[i], aniso[i]);}
+		sl_tid = get_texture_by_name("roads/traffic_light.png");
+		inited = 1;
+	}
+	void set_texture(unsigned type) {
+		assert(type < NUM_RD_TIDS);
+		ensure_road_textures();
+		select_texture(tids[type]);
+	}
+	void set_stoplight_texture() {
+		ensure_road_textures();
+		select_texture(sl_tid);
+	}
+};
 
 tex_range_t get_uniform_tscale_ar(float length, float width, float base_tscale, bool dim) { // for driveways and road skirts
 	float txy[2] = {base_tscale, base_tscale};

@@ -251,17 +251,6 @@ struct helicopter_t {
 	void invalidate_tile_shadow_map(vector3d const &shadow_offset, bool repeat_next_frame) const;
 };
 
-
-class road_mat_mgr_t {
-
-	bool inited=0;
-	unsigned tids[NUM_RD_TIDS] = {}, sl_tid=0; // stoplight tid
-public:
-	void ensure_road_textures();
-	void set_texture(unsigned type);
-	void set_stoplight_texture();
-};
-
 template<typename T> static void add_flat_city_quad(T const &r, quad_batch_draw &qbd, colorRGBA const &color, float ar) { // z1 == z2
 	float const z(r.z1());
 	point const pts[4] = {point(r.x1(), r.y1(), z), point(r.x2(), r.y1(), z), point(r.x2(), r.y2(), z), point(r.x1(), r.y2(), z)};
