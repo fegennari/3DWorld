@@ -462,6 +462,7 @@ struct draw_state_t {
 	hedge_draw_t hedge_draw;
 	ivy_manager_t ivy_manager;
 	vector<vert_wrap_t> temp_verts; // used for sphere drawing
+	quad_batch_draw qbd; // for park heightmaps and clotheslines
 protected:
 	bool use_smap=0, use_bmap=0, shadow_only=0, use_dlights=0, emit_now=0;
 	point_sprite_drawer_sized light_psd; // for car/traffic lights

@@ -1116,9 +1116,8 @@ void clothesline_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dis
 			}
 			else { // sheet
 				select_texture(c.id);
-				static quad_batch_draw temp_qbd;
-				dstate.draw_cube(temp_qbd, c, c.color, 0);
-				temp_qbd.draw_and_clear();
+				dstate.draw_cube(dstate.qbd, c, c.color, 0);
+				dstate.qbd.draw_and_clear();
 			}
 		} // for c
 		return;
