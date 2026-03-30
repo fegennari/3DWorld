@@ -1931,6 +1931,7 @@ pond_t::pond_t(point const &pos_, float x_radius, float y_radius, float depth, u
 }
 void pond_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	assert(!shadow_only);
+	if (using_hmap && dstate.pass_ix != 2) return; // only draw lily pads for heightmap park ponds
 	float const dist(p2p_dist(dstate.camera_bs, pos)), dz_off(max(0.0001f*bcube.dz(), 0.00025f*dist));
 	unsigned const ndiv(max(4U, min(64U, unsigned(6.0f*dist_scale*dstate.draw_tile_dist/dist))));
 	vector2d const R(0.5*bcube.get_size_xy());

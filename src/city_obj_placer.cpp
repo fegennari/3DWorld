@@ -7,7 +7,7 @@
 #include "lightmap.h" // for light_source
 //#include "profiler.h"
 
-bool const ADD_CREEKS = 0;
+bool const ADD_CREEKS = 1;
 
 float pond_max_depth(0.0);
 
@@ -831,7 +831,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 			} // for n
 		}
 		if (ADD_CREEKS && added_pond && can_add_path) { // add a creek connecting to the pond, if present
-			float const creek_hwidth(rgen.rand_uniform(0.03, 0.05)*city_params.road_width); // about half the path width
+			float const creek_hwidth(rgen.rand_uniform(0.055, 0.065)*city_params.road_width); // somewhat less than the path width
 			cube_t const &pond(ponds.back().bcube);
 			point start, end;
 			start.z = end.z = pond.z2();
@@ -857,6 +857,11 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 				added_creek = 1;
 				break; // success
 			} // for N
+		}
+		if (added_creek) { // use a heightmap if we added a creek, since it doesn't look good with a flat park quad
+			unsigned const park_nxy = 256;
+			park_hmaps.emplace_back(plot, park_nxy, park_nxy, (added_pond ? &ponds.back() : nullptr), (added_creek ? &ppaths.back() : nullptr));
+			plot.no_draw = 1; // drawn as heightmap rather than quad
 		}
 		cube_t obj_place_area(plot); // for picnic tables, benches, and swing sets
 		obj_place_area.expand_by_xy(-sidewalk_width); // add a border around the edge of the park
@@ -2655,9 +2660,6 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 		if (dstate.camera_bs.z > city_zval + skyway.bcube.dz()) {skyway.draw(dstate, *this, shadow_only, reflection_pass);} // draw skyway if player is in the air
 		return; // that's it
 	}
-	if (!shadow_only) {
-		for (park_heightmap_t &h : park_hmaps) {h.draw(dstate);}
-	}
 	draw_objects(benches,   bench_groups,    dstate, 0.16, shadow_only, 0); // dist_scale=0.16, has_immediate_draw=0
 	draw_objects(fhydrants, fhydrant_groups, dstate, 0.06, shadow_only, 1);
 	draw_objects(sstations, sstation_groups, dstate, 0.15, shadow_only, 1);
@@ -2784,6 +2786,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 }
 void city_obj_placer_t::draw_transparent_objects(draw_state_t &dstate) {
 	if (!dstate.check_cube_visible(all_objs_bcube, 1.0)) return; // check bcube, dist_scale=1.0
+	for (park_heightmap_t &h : park_hmaps) {h.draw(dstate, 0, 1);} // water only
 	dstate.pass_ix = 3; // water surface
 	draw_objects(ponds, pond_groups, dstate, 0.30, 0, 1); // dist_scale=0.30, shadow_only=0, has_immediate_draw=1
 	dstate.pass_ix = 1; // transparent glass surfaces

@@ -371,6 +371,7 @@ struct sculpture_t : public city_obj_t {
 
 struct pond_t : public city_obj_t {
 	vector<sphere_t> lily_pads;
+	bool using_hmap=0;
 
 	pond_t(point const &pos_, float x_radius, float y_radius, float depth, unsigned rseed);
 	static void pre_draw(draw_state_t &dstate, bool shadow_only);
@@ -694,11 +695,12 @@ class park_heightmap_t {
 
 	void xy_from_pt(point const &p, unsigned &x, unsigned &y) const;
 	point pt_from_xy(unsigned x, unsigned y) const;
+	void lower_height(unsigned x, unsigned y, float zval);
 public:
-	park_heightmap_t(cube_t const &c, unsigned nx_, unsigned ny_, pond_t const *const pond, park_path_t const *const creek);
+	park_heightmap_t(cube_t const &c, unsigned nx_, unsigned ny_, pond_t *const pond, park_path_t *const creek);
 	size_t get_gpu_mem() const {return vao_mgr.gpu_mem;}
 	void create();
-	void draw(draw_state_t &dstate);
+	void draw(draw_state_t &dstate, bool draw_terrain, bool draw_water);
 };
 
 class tile_drawer_t;
