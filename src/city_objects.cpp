@@ -1916,72 +1916,26 @@ pond_t::pond_t(point const &pos_, float x_radius, float y_radius, float depth, u
 }
 /*static*/ void pond_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	assert(!shadow_only);
-	if      (dstate.pass_ix == 0) {select_texture(DIRT_TEX);} // dirt below
-	else if (dstate.pass_ix == 1) {select_texture(BLUR_CENT_TEX); enable_blend();} // dark blur
-	else if (dstate.pass_ix == 2) {select_texture(get_texture_by_name("lilypad.png")); enable_blend();} // lily pads
-	else if (dstate.pass_ix == 3) {begin_water_surface_draw(dstate.s);} // water above
-	else {assert(0);}
+	select_texture(get_texture_by_name("lilypad.png")); // lily pads
+	enable_blend();
 }
 /*static*/ void pond_t::post_draw(draw_state_t &dstate, bool shadow_only) {
-	if      (dstate.pass_ix == 0) {} // dirt below
-	else if (dstate.pass_ix == 1) {disable_blend();} // dark blur
-	else if (dstate.pass_ix == 2) {disable_blend();} // lily pads
-	else if (dstate.pass_ix == 3) {end_water_surface_draw(dstate.s);} // water above
-	else {assert(0);}
+	disable_blend(); // lily pads
 }
 void pond_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	assert(!shadow_only);
-	if (using_hmap && dstate.pass_ix != 2) return; // only draw lily pads for heightmap park ponds
 	float const dist(p2p_dist(dstate.camera_bs, pos)), dz_off(max(0.0001f*bcube.dz(), 0.00025f*dist));
-	unsigned const ndiv(max(4U, min(64U, unsigned(6.0f*dist_scale*dstate.draw_tile_dist/dist))));
-	vector2d const R(0.5*bcube.get_size_xy());
-
-	if (dstate.pass_ix == 0) { // dirt below
-		float const tscale(4.0);
-		// bottom
-		dstate.s.set_cur_color(GRAY_BLACK); // darker
-		draw_xy_oval(0.5*R.x, 0.5*R.y, ndiv, point(pos.x, pos.y, bcube.z1()), tscale, tscale); // half the total radius
-		// sloped sides
-		point const ce[2] = {point(0.0, 0.0, bcube.z1()), point(0.0, 0.0, bcube.z2())};
-		vector_point_norm const &vpn(gen_cylinder_data(ce, 0.5, 1.0, ndiv));
-		static vector<vert_norm_tc_color> verts;
-		verts.resize(2U*(ndiv+1U));
-		color_wrapper const cw_outer(GRAY), cw_inner(GRAY_BLACK);
-
-		for (unsigned S = 0; S <= ndiv; ++S) {
-			unsigned const s(S%ndiv), vix(2*S);
-			vector3d const normal(vpn.n[s] + vpn.n[(S+ndiv-1)%ndiv]); // points down, must negate
-			point const &p1(vpn.p[(s<<1)+0]), &p2(vpn.p[(s<<1)+1]);
-			verts[vix+0].assign(point((pos.x + p1.x*R.x), (pos.y + p1.y*R.y), p1.z), -normal, tscale*p1.x, tscale*p1.y, cw_inner.c);
-			verts[vix+1].assign(point((pos.x + p2.x*R.x), (pos.y + p2.y*R.y), p2.z), -normal, tscale*p2.x, tscale*p2.y, cw_outer.c);
-		}
-		draw_and_clear_verts(verts, GL_TRIANGLE_STRIP);
-	}
-	else if (dstate.pass_ix == 1) {
-		float const tscale(1.0);
-		dstate.s.set_cur_color(BLACK);
-		draw_xy_oval(R.x, R.y, ndiv, point(pos.x, pos.y, bcube.z2()+dz_off), tscale, tscale);
-	}
-	else if (dstate.pass_ix == 2) { // lily pads
-		if (ndiv < 20) return; // skip if far
-		float const z1(bcube.z2() + 2.0*dz_off), z2(z1 + dz_off);
-		color_wrapper const cw(WHITE);
+	float const z1(bcube.z2() + 2.0*dz_off), z2(z1 + dz_off);
+	color_wrapper const cw(WHITE);
 		
-		for (sphere_t const &cr : lily_pads) {
-			unsigned const orient(round_fp(cr.pos.z));
-			bool const mx(orient & 1), my(orient & 2), swap_xy(orient & 4);
-			cube_t lpad;
-			lpad.set_from_sphere(cr);
-			set_cube_zvals(lpad, z1, z2);
-			dstate.draw_cube(qbds.qbd, lpad, cw, 1, 0.0, 3, mx, my, swap_xy); // top only
-		} // for cr
-	}
-	else if (dstate.pass_ix == 3) { // water above
-		float const tscale(2.0);
-		dstate.s.set_cur_color(colorRGBA(0.2, 0.3, 0.5, 0.5)); // semi-transparent
-		draw_xy_oval(R.x, R.y, ndiv, point(pos.x, pos.y, bcube.z2()+2.0*dz_off), tscale, tscale);
-	}
-	else {assert(0);}
+	for (sphere_t const &cr : lily_pads) { // draw lily pads
+		unsigned const orient(round_fp(cr.pos.z));
+		bool const mx(orient & 1), my(orient & 2), swap_xy(orient & 4);
+		cube_t lpad;
+		lpad.set_from_sphere(cr);
+		set_cube_zvals(lpad, z1, z2);
+		dstate.draw_cube(qbds.qbd, lpad, cw, 1, 0.0, 3, mx, my, swap_xy); // top only
+	} // for cr
 }
 bool pond_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const { // pos_ is in camera space
 	point const pos_bs(pos_ - xlate);

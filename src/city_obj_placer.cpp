@@ -7,7 +7,6 @@
 #include "lightmap.h" // for light_source
 //#include "profiler.h"
 
-bool const ADD_CREEKS = 1;
 
 float pond_max_depth(0.0);
 
@@ -830,7 +829,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 				break; // success
 			} // for n
 		}
-		if (ADD_CREEKS && added_pond && can_add_path) { // add a creek connecting to the pond, if present
+		if (added_pond && can_add_path) { // add a creek connecting to the pond, if present
 			float const creek_hwidth(rgen.rand_uniform(0.055, 0.065)*city_params.road_width); // somewhat less than the path width
 			cube_t const &pond(ponds.back().bcube);
 			point start, end;
@@ -858,7 +857,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 				break; // success
 			} // for N
 		}
-		if (added_creek) { // use a heightmap if we added a creek, since it doesn't look good with a flat park quad
+		if (added_pond || added_creek) { // use a heightmap if we added a creek, since it doesn't look good with a flat park quad
 			unsigned const park_nxy = 256;
 			park_hmaps.emplace_back(plot, park_nxy, park_nxy, (added_pond ? &ponds.back() : nullptr), (added_creek ? &ppaths.back() : nullptr));
 			plot.no_draw = 1; // drawn as heightmap rather than quad
@@ -2697,10 +2696,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 		draw_objects(birds,    bird_groups,    dstate, 0.03, shadow_only, 1);
 		draw_objects(pladders, plad_groups,    dstate, 0.06, shadow_only, 1);
 		draw_objects(ppaths,   ppath_groups,   dstate, 0.25, shadow_only, 0, 1); // draw_qbd_as_quads=1; paths only, not creeks
-		
-		for (dstate.pass_ix = 0; dstate.pass_ix < 3; ++dstate.pass_ix) { // {dirt bottom, dark blur, lily pads}
-			draw_objects(ponds, pond_groups, dstate, 0.30, shadow_only, 1); // dist_scale=0.30, has_immediate_draw=1
-		}
+		draw_objects(ponds,    pond_groups,    dstate, 0.08, shadow_only, 1); // draw lily pads only; dist_scale=0.08, has_immediate_draw=1
 	}
 	for (dstate.pass_ix = (shadow_only ? 1 : 0); dstate.pass_ix < 2; ++dstate.pass_ix) { // {solar panel, metal frame}; panel does not cast shadows
 		draw_objects(p_solars, p_solar_groups, dstate, (dstate.pass_ix ? 0.25 : 0.45), shadow_only, 0);
@@ -2787,8 +2783,6 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 void city_obj_placer_t::draw_transparent_objects(draw_state_t &dstate) {
 	if (!dstate.check_cube_visible(all_objs_bcube, 1.0)) return; // check bcube, dist_scale=1.0
 	for (park_heightmap_t &h : park_hmaps) {h.draw(dstate, 0, 1);} // water only
-	dstate.pass_ix = 3; // water surface
-	draw_objects(ponds, pond_groups, dstate, 0.30, 0, 1); // dist_scale=0.30, shadow_only=0, has_immediate_draw=1
 	dstate.pass_ix = 1; // transparent glass surfaces
 	draw_objects(elevators, wwe_groups, dstate, 0.20, 0, 0); // dist_scale=0.20, shadow_only=0, has_immediate_draw=0
 	dstate.pass_ix = 0; // reset back to 0

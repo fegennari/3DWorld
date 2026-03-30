@@ -495,7 +495,7 @@ void park_heightmap_t::lower_height(unsigned x, unsigned y, float zval) {
 	min_eq(bcube.z1(),        zval);
 }
 
-park_heightmap_t::park_heightmap_t(cube_t const &c, unsigned nx_, unsigned ny_, pond_t *const pond, park_path_t *const creek) : nx(nx_), ny(ny_), bcube(c) {
+park_heightmap_t::park_heightmap_t(cube_t const &c, unsigned nx_, unsigned ny_, pond_t const *const pond, park_path_t const *const creek) : nx(nx_), ny(ny_), bcube(c) {
 	//highres_timer_t timer("Park Heightmap Heights"); // ~0.1ms
 	assert(nx > 0 && ny > 0);
 	// we must create heights from the pond and creek now because they may be invalidated by sorting
@@ -520,7 +520,6 @@ park_heightmap_t::park_heightmap_t(cube_t const &c, unsigned nx_, unsigned ny_, 
 				lower_height(x, y, (ztop - sin(dx*dy*PI_TWO)*dz));
 			} // for x
 		} // for y
-		pond->using_hmap = 1; // don't draw interior/dirt
 	}
 	if (creek != nullptr) {
 		float const hwidth(creek->hwidth), depth(1.0*hwidth);
@@ -592,7 +591,7 @@ void end_water_surface_draw  (shader_t &s);
 // Note: there is no park_heightmap_t::pre_draw() because there is often at most one visible at any time
 void park_heightmap_t::draw(draw_state_t &dstate, bool draw_terrain, bool draw_water) {
 	if (!dstate.check_cube_visible(bcube, 0.0)) return; // VFC; dist_scale=0.0
-	bool const is_distant(!bcube.closest_dist_less_than(dstate.camera_bs, 0.2*dstate.draw_tile_dist));
+	bool const is_distant(!bcube.closest_dist_less_than(dstate.camera_bs, 0.25*dstate.draw_tile_dist));
 	if (is_distant && !draw_terrain) return; // no distant water
 	dstate.begin_tile(bcube.get_cube_center(), 1, 1); // must setup shader and tile shadow map before drawing
 	bind_default_flat_normal_map();
