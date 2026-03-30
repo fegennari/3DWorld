@@ -611,6 +611,7 @@ void park_heightmap_t::draw(draw_state_t &dstate, bool draw_terrain, bool draw_w
 		vao_mgr.pre_render(1, 1);
 		vert_norm_comp_tc_color::set_vbo_arrays();
 		glDrawRangeElements(GL_TRIANGLES, 0, nverts, nindices, GL_UNSIGNED_INT, nullptr);
+		++num_frame_draw_calls;
 		vao_mgr.post_render();
 
 		if (creek_end.r1 > 0.0) { // draw pipes at creek end
