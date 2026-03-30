@@ -751,6 +751,44 @@ void gen_park_path(park_path_t &path, point &start, point &end, float hwidth, cu
 	path.calc_bcube_bsphere();
 }
 
+cube_t get_path_seg_bcube(point const &p1, point const &p2, float hwidth) {
+	vector3d const cv(hwidth*cross_product((p2 - p1), plus_z).get_norm());
+	cube_t bcube(p1-cv, p1+cv);
+	bcube.union_with_cube(cube_t(p2-cv, p2+cv));
+	return bcube;
+}
+
+// Returns: 0 for collinear, 1 for Clockwise, 2 for Counter-Clockwise
+int get_orientation(point const &p, point const &q, point const &r) {
+	float val((q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y));
+	if (val == 0) return 0;
+	return (val > 0) ? 1 : 2;
+}
+// Checks if point q lies on segment pr
+bool on_segment(point const &p, point const &q, point const &r) {
+	return (q.x <= max(p.x, r.x) && q.x >= min(p.x, r.x) && q.y <= max(p.y, r.y) && q.y >= min(p.y, r.y));
+}
+bool line_line_intersect(point const &p1, point const &q1, point const &p2, point const &q2) {
+	int const o1(get_orientation(p1, q1, p2)), o2(get_orientation(p1, q1, q2)), o3(get_orientation(p2, q2, p1)), o4(get_orientation(p2, q2, q1));
+	if (o1 != o2 && o3 != o4) return 1; // General case: Endpoints are on opposite sides
+	// Special Collinear cases; may not be needed
+	if (o1 == 0 && on_segment(p1, p2, q1)) return 1;
+	if (o2 == 0 && on_segment(p1, q2, q1)) return 1;
+	if (o3 == 0 && on_segment(p2, p1, q2)) return 1;
+	if (o4 == 0 && on_segment(p2, q1, q2)) return 1;
+	return 0;
+}
+// Returns the intersection point, assuming lines are not parallel
+point line_line_intersect_xy(point const &p1, point const &q1, point const &p2, point const &q2) {
+	float const a1(q1.y - p1.y), b1(p1.x - q1.x), c1(a1 * p1.x + b1 * p1.y); // Line 1: a1x + b1y = c1
+	float const a2(q2.y - p2.y), b2(p2.x - q2.x), c2(a2 * p2.x + b2 * p2.y); // Line 2: a2x + b2y = c2
+	float const determinant(a1 * b2 - a2 * b1);
+	assert(determinant != 0.0);
+	float const x((b2 * c1 - b1 * c2) / determinant);
+	float const y((a1 * c2 - a2 * c1) / determinant);
+	return point(x, y, p1.z); // pick an arbitrary point zval
+}
+
 // Note: blockers are used for placement of objects within this plot; colliders are used for pedestrian AI; plot is non-const so that we can set no_draw flag for parks
 void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blockers, vect_cube_t &colliders,
 	vector<point> const &tree_pos, vect_cube_t const &pond_blockers, vect_cube_t const &plot_cuts, rand_gen_t &rgen, bool have_streetlights)
@@ -788,7 +826,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 			} // for n
 		}
 		bool added_pond(0), added_creek(0);
-		cylinder_3dw creek_end;
+		vector<cylinder_3dw> creek_crossings;
 
 		if (1) { // try to place pond(s)
 			float const pond_border(max(sidewalk_width, path_hwidth));
@@ -797,7 +835,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 			for (cube_t const &pb : pond_blockers) {
 				if (pb.intersects_xy(plot)) {active_pond_blockers.push_back(pb);}
 			}
-			for (unsigned n = 0; n < 100; ++n) { // 100 tries to place a pond
+			for (unsigned n = 0; n < 200; ++n) { // 200 tries to place a pond
 				float const sz(city_params.road_width*rgen.rand_uniform(0.5, 1.0));
 				vector3d pond_sz; // radius
 				for (unsigned d = 0; d < 2; ++d) {pond_sz[d] = sz*rgen.rand_uniform(1.0, 1.5);}
@@ -832,6 +870,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 		}
 		if (added_pond && can_add_path) { // add a creek connecting to the pond, if present
 			float const creek_hwidth(rgen.rand_uniform(0.055, 0.065)*city_params.road_width); // somewhat less than the path width
+			float const pipe_radius(0.75*creek_hwidth); // for path crossings; end pipe is smaller
 			cube_t const &pond(ponds.back().bcube);
 			point start, end;
 			start.z = end.z = pond.z2();
@@ -854,19 +893,45 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 				point const pipe_pos(start);
 				gen_park_path(creek, start, end, creek_hwidth, plot, path_area, dim, dir, rgen);
 				if (check_path_tree_coll(creek, tree_pos)) continue;
+				// check that the creek doesn't intersect a park path at a shallow angle;
+				// these nested loops may seem quadratic and slow, but in practice they only take 1-3ms
+				bool is_bad(0);
+				creek_crossings.clear();
+
+				for (auto p = ppaths.begin()+paths_start; p != ppaths.end() && !is_bad; ++p) {
+					for (auto cp = creek.pts.begin(); cp+1 != creek.pts.end() && !is_bad; ++cp) {
+						point const &cp1(*cp), &cp2(*(cp+1));
+						cube_t const cp_bc(get_path_seg_bcube(cp1, cp2, creek_hwidth));
+
+						for (auto pp = p->pts.begin(); pp+1 != p->pts.end() && !is_bad; ++pp) {
+							point const &pp1(*pp), &pp2(*(pp+1));
+							cube_t const pp_bc(get_path_seg_bcube(pp1, pp2, p->hwidth));
+							if (!cp_bc.intersects_xy(pp_bc)) continue;
+							if (fabs(dot_product((pp2 - pp1).get_norm(), (cp2 - cp1).get_norm())) > 0.7) {is_bad = 1;} // not orthogonal enough
+							if (!line_line_intersect(cp1, cp2, pp1, pp2)) continue;
+							vector3d const pipe_ext((1.25*p->hwidth)*(cp2 - cp1).get_norm());
+							point ppc(line_line_intersect_xy(cp1, cp2, pp1, pp2)); // center of creek crossing
+							ppc.z -= pipe_radius;
+							creek_crossings.emplace_back(ppc-pipe_ext, ppc+pipe_ext, pipe_radius, pipe_radius);
+						} // for pp
+					} // for cp
+				} // for p
+				if (is_bad) continue;
 				ppath_groups.add_obj(creek, ppaths);
+				cylinder_3dw creek_end;
 				creek_end.r1 = creek_end.r2 = 0.5*creek_hwidth;
 				creek_end.p1 = pipe_pos;
 				creek_end.p1.z -= creek_end.r1; // top touches top of park
 				creek_end.p2 = creek_end.p1;
 				creek_end.p2[dim] += (dir ? -1.0 : 1.0)*0.8*creek_hwidth; // set pipe length
+				creek_crossings.push_back(creek_end);
 				added_creek  = 1;
 				break; // success
 			} // for N
 		}
 		if (added_pond || added_creek) { // use a heightmap if we added a creek, since it doesn't look good with a flat park quad
 			unsigned const park_nxy = 256;
-			park_hmaps.emplace_back(plot, park_nxy, park_nxy, (added_pond ? &ponds.back() : nullptr), (added_creek ? &ppaths.back() : nullptr), creek_end);
+			park_hmaps.emplace_back(plot, park_nxy, park_nxy, (added_pond ? &ponds.back() : nullptr), (added_creek ? &ppaths.back() : nullptr), creek_crossings);
 			plot.no_draw = 1; // drawn as heightmap rather than quad
 		}
 		cube_t obj_place_area(plot); // for picnic tables, benches, and swing sets
