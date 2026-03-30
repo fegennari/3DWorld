@@ -788,7 +788,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 				} // for N
 			} // for n
 		}
-		bool added_pond(0);
+		bool added_pond(0), added_creek(0);
 
 		if (1) { // try to place pond(s)
 			float const pond_border(max(sidewalk_width, path_hwidth));
@@ -854,7 +854,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 				gen_park_path(creek, start, end, creek_hwidth, plot, path_area, dim, dir, rgen);
 				if (check_path_tree_coll(creek, tree_pos)) continue;
 				ppath_groups.add_obj(creek, ppaths);
-				has_creek = 1;
+				added_creek = 1;
 				break; // success
 			} // for N
 		}
@@ -2687,16 +2687,15 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(bldgs,     bldg_groups,     dstate, 0.25, shadow_only, 1);
 	
 	if (!shadow_only) { // non shadow casting objects
+		for (park_heightmap_t &h : park_hmaps) {h.draw(dstate, 1, 0);} // terrain only
 		draw_objects(hcaps,    hcap_groups,    dstate, 0.12, shadow_only, 0);
 		draw_objects(manholes, manhole_groups, dstate, 0.07, shadow_only, 1);
 		draw_objects(sewers,   sewer_groups,   dstate, 0.06, shadow_only, 1);
 		draw_objects(pigeons,  pigeon_groups,  dstate, 0.03, shadow_only, 1);
 		draw_objects(birds,    bird_groups,    dstate, 0.03, shadow_only, 1);
 		draw_objects(pladders, plad_groups,    dstate, 0.06, shadow_only, 1);
-
-		for (dstate.pass_ix = 0; dstate.pass_ix < (has_creek ? 2U : 1U); ++dstate.pass_ix) { // {paths, creeks}
-			draw_objects(ppaths, ppath_groups, dstate, 0.25, shadow_only, 0, 1); // draw_qbd_as_quads=1
-		}
+		draw_objects(ppaths,   ppath_groups,   dstate, 0.25, shadow_only, 0, 1); // draw_qbd_as_quads=1; paths only, not creeks
+		
 		for (dstate.pass_ix = 0; dstate.pass_ix < 3; ++dstate.pass_ix) { // {dirt bottom, dark blur, lily pads}
 			draw_objects(ponds, pond_groups, dstate, 0.30, shadow_only, 1); // dist_scale=0.30, has_immediate_draw=1
 		}
