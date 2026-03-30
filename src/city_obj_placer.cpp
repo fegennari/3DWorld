@@ -734,11 +734,11 @@ void gen_park_path(park_path_t &path, point &start, point &end, float hwidth, cu
 	vector3d const seg_delta((end - start)/num_path_segs);
 	cube_t valid_region(path_area);
 	valid_region.expand_in_dim(!dim, -2.0f*hwidth); // shrink to keep path inside the park on the opposite edges
-	path.pts.clear();
-	path.pts.push_back(start);
 	point cur(start);
 	start[dim] += extend; // extend outside the plot to avoid a gap; will be clipped during drawing
 	end  [dim] -= extend;
+	path.pts.clear();
+	path.pts.push_back(start);
 
 	for (unsigned s = 0; s+1 < num_path_segs; ++s) {
 		cur += seg_delta;
