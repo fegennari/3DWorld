@@ -495,7 +495,9 @@ void park_heightmap_t::lower_height(unsigned x, unsigned y, float zval) {
 	min_eq(bcube.z1(),        zval);
 }
 
-park_heightmap_t::park_heightmap_t(cube_t const &c, unsigned nx_, unsigned ny_, pond_t const *const pond, park_path_t const *const creek) : nx(nx_), ny(ny_), bcube(c) {
+park_heightmap_t::park_heightmap_t(cube_t const &c, unsigned nx_, unsigned ny_, pond_t const *const pond, park_path_t const *const creek, cylinder_3dw const &creek_end_)
+	: nx(nx_), ny(ny_), bcube(c), creek_end(creek_end_)
+{
 	//highres_timer_t timer("Park Heightmap Heights"); // ~0.1ms
 	assert(nx > 0 && ny > 0);
 	// we must create heights from the pond and creek now because they may be invalidated by sorting
@@ -610,6 +612,17 @@ void park_heightmap_t::draw(draw_state_t &dstate, bool draw_terrain, bool draw_w
 		vert_norm_comp_tc_color::set_vbo_arrays();
 		glDrawRangeElements(GL_TRIANGLES, 0, nverts, nindices, GL_UNSIGNED_INT, nullptr);
 		vao_mgr.post_render();
+
+		if (creek_end.r1 > 0.0) { // draw pipes at creek end
+			unsigned const ndiv(min(32U, unsigned(0.25f*dstate.draw_tile_dist/p2p_dist(dstate.camera_bs, creek_end.p1))));
+
+			if (ndiv >= 4) {
+				dstate.s.set_cur_color(GRAY);
+				select_texture(get_texture_by_name("buildings/metal_roof.jpg"));
+				// set draw_sides_ends=5 for sides with swapped texture coords
+				draw_fast_cylinder(creek_end.p1, creek_end.p2, creek_end.r1, creek_end.r2, ndiv, 1, 5); // textured, no ends, two sided
+			}
+		}
 	}
 	if (draw_water) { // draw water surface over whole park; not for distant terrain
 		begin_water_surface_draw(dstate.s);

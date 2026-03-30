@@ -788,6 +788,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 			} // for n
 		}
 		bool added_pond(0), added_creek(0);
+		cylinder_3dw creek_end;
 
 		if (1) { // try to place pond(s)
 			float const pond_border(max(sidewalk_width, path_hwidth));
@@ -850,16 +851,22 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 				end[!dim] = pond.get_center_dim(!dim); // center of pond, to avoid dealing with ellipse logic
 				cube_t path_area(plot);
 				path_area.d[dim][!dir] = end[dim]; // clip to side of pond
+				point const pipe_pos(start);
 				gen_park_path(creek, start, end, creek_hwidth, plot, path_area, dim, dir, rgen);
 				if (check_path_tree_coll(creek, tree_pos)) continue;
 				ppath_groups.add_obj(creek, ppaths);
-				added_creek = 1;
+				creek_end.r1 = creek_end.r2 = 0.5*creek_hwidth;
+				creek_end.p1 = pipe_pos;
+				creek_end.p1.z -= creek_end.r1; // top touches top of park
+				creek_end.p2 = creek_end.p1;
+				creek_end.p2[dim] += (dir ? -1.0 : 1.0)*0.8*creek_hwidth; // set pipe length
+				added_creek  = 1;
 				break; // success
 			} // for N
 		}
 		if (added_pond || added_creek) { // use a heightmap if we added a creek, since it doesn't look good with a flat park quad
 			unsigned const park_nxy = 256;
-			park_hmaps.emplace_back(plot, park_nxy, park_nxy, (added_pond ? &ponds.back() : nullptr), (added_creek ? &ppaths.back() : nullptr));
+			park_hmaps.emplace_back(plot, park_nxy, park_nxy, (added_pond ? &ponds.back() : nullptr), (added_creek ? &ppaths.back() : nullptr), creek_end);
 			plot.no_draw = 1; // drawn as heightmap rather than quad
 		}
 		cube_t obj_place_area(plot); // for picnic tables, benches, and swing sets

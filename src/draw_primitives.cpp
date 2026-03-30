@@ -463,6 +463,11 @@ public:
 		draw_and_clear_verts(sverts, GL_TRIANGLE_STRIP);
 		buffering_enabled = 0;
 	}
+	void swap_verts_tex_st() {
+		for (vert_norm_tc &v : tverts) {swap(v.t[0], v.t[1]);}
+		for (vert_norm_tc &v : sverts) {swap(v.t[0], v.t[1]);}
+		for (vert_norm_tc &v : cverts) {swap(v.t[0], v.t[1]);}
+	}
 };
 
 cylin_vertex_buffer_t cylin_vertex_buffer;
@@ -499,7 +504,7 @@ void add_cylin_ends(float radius1, float radius2, int ndiv, bool texture, int dr
 	}
 }
 
-// draw_sides_ends: 0 = draw sides only, 1 = draw sides and ends, 2 = draw ends only, 3 = sides + pt1 end, 4 = sides + pt2 end
+// draw_sides_ends: 0 = draw sides only, 1 = draw sides and ends, 2 = draw ends only, 3 = sides + pt1 end, 4 = sides + pt2 end, 5 = sides with swapped texture coords
 void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float radius2, int ndiv, bool texture, int draw_sides_ends,
 	bool two_sided_lighting, float const *const perturb_map, float tex_scale_len, float tex_t_start, point const *inst_pos, unsigned num_insts, float tex_width_scale)
 {
@@ -521,8 +526,11 @@ void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float r
 		else {
 			gen_cylinder_triangle_strip(cvb.sverts, vpn, two_sided_lighting, tex_t_start, tex_scale_len+tex_t_start, tex_width_scale, inst_pos[inst]); // triangle strip
 		}
-		if (draw_sides_ends != 0) {add_cylin_ends(radius1, radius2, ndiv, texture, draw_sides_ends, v12, ce, inst_pos[inst], vpn);} // triangle fan; Note: TSL doesn't apply here
+		if (draw_sides_ends != 0 && draw_sides_ends != 5) {
+			add_cylin_ends(radius1, radius2, ndiv, texture, draw_sides_ends, v12, ce, inst_pos[inst], vpn); // triangle fan; Note: TSL doesn't apply here
+		}
 	} // for inst
+	if (draw_sides_ends == 5) {cvb.swap_verts_tex_st();}
 	cvb.end_cylinder();
 }
 
