@@ -617,7 +617,7 @@ void park_heightmap_t::draw(draw_state_t &dstate, bool draw_terrain, bool draw_w
 		for (cylinder_3dw const &c : creek_crossings) { // draw pipes at creek crossings and end
 			point const center(c.get_center());
 			if (!dstate.check_sphere_visible(center, c.get_bounding_radius())) continue;
-			unsigned const ndiv(min(32U, unsigned(0.25f*dstate.draw_tile_dist/p2p_dist(dstate.camera_bs, center))));
+			unsigned const ndiv(min(64U, unsigned(0.25f*dstate.draw_tile_dist/p2p_dist(dstate.camera_bs, center))));
 			if (ndiv < 4) continue; // too small/far
 			dstate.s.set_cur_color(GRAY);
 			select_texture(get_texture_by_name("buildings/metal_roof.jpg"));
