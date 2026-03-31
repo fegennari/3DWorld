@@ -3457,6 +3457,15 @@ void park_path_t::calc_bcube_bsphere() {
 /*static*/ void park_path_t::pre_draw(draw_state_t &dstate, bool shadow_only) { // Note: not drawn in shadow pass
 	select_texture(get_texture_by_name("roads/concrete.jpg"));
 }
+
+void add_side_quads(vert_norm_tc_color &vert, vector<vert_norm_tc_color> &verts, unsigned const *ixs, unsigned num, point const qpts[4], vector3d const &normal, float thickness) {
+	for (unsigned n = 0; n < num; ++n) { // 2 quads / 8 verts
+		vert.v = qpts[ixs[n]];
+		if (n & 2) {vert.v.z -= thickness;} // bottom vert
+		verts.push_back(vert);
+		verts.back().set_norm(normal*((n & 4) ? -1.0 : 1.0));
+	}
+}
 void park_path_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	if (is_creek) return; // creeks not drawn here
 	// TODO: for creeks, we really need to draw in multiple passes like ponds with dirt + maybe dark blur + water surface;
@@ -3464,24 +3473,27 @@ void park_path_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_
 	// maybe this would work if the park was drawn as a heightmap with the pond and creek at lower points and using a dirt texture rather than grass?
 	assert(!shadow_only);
 	assert(pts.size() >= 2);
-	float const tscale(0.5/hwidth), z_offset(1.0E-4*p2p_dist(pos, dstate.camera_bs));
+	float const tscale(0.5/hwidth), z_offset(1.0E-4*p2p_dist(pos, dstate.camera_bs)), thickness(0.04*hwidth);
+	bool const draw_sides((1 || has_creek_crossing) && bcube.closest_dist_less_than(dstate.camera_bs, 0.1*dist_scale*dstate.draw_tile_dist));
+	unsigned const npts(pts.size());
+	auto &verts(qbds.qbd.verts);
 	vector3d prev_ortho;
 	point prev_lo, prev_hi;
 	vert_norm_tc_color vert;
 	vert.set_norm(plus_z); // common across all verts
 	vert.set_c4(color);
 
-	for (unsigned i = 0; i < pts.size(); ++i) {
+	for (unsigned i = 0; i < npts; ++i) {
 		point cur(pts[i]);
 		cur.z += z_offset; // to reduce Z-fighting
-		vector3d const ortho((i+1 == pts.size()) ? prev_ortho : cross_product((pts[i+1] - cur), plus_z).get_norm());
+		vector3d const ortho((i+1 == npts) ? prev_ortho : cross_product((pts[i+1] - cur), plus_z).get_norm());
 		vector3d const v_side(hwidth*((i == 0) ? ortho : (ortho + prev_ortho).get_norm()));
 		point const lo(cur - v_side), hi(cur + v_side);
 
 		if (i > 0) { // emit a quad
 			point qpts[4] = {prev_hi, prev_lo, lo, hi};
 
-			if (i == 1 || i+1 == pts.size()) { // clip edges to plot
+			if (i == 1 || i+1 == npts) { // clip edges to plot
 				do_line_clip_xy(qpts[0], qpts[3], plot.d); // hi
 				do_line_clip_xy(qpts[1], qpts[2], plot.d); // lo
 			}
@@ -3489,7 +3501,22 @@ void park_path_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_
 				vert.v = qpts[n];
 				vert.t[0] = tscale*(vert.v.x - bcube.x1());
 				vert.t[1] = tscale*(vert.v.y - bcube.y1());
-				qbds.qbd.verts.push_back(vert);
+				verts.push_back(vert);
+			}
+			if (draw_sides) {
+				// draw sides of the quad so that it has nonzero thickness; only needed for creek crossings, but we don't track all of the crossed segments
+				vert.t[0] = vert.t[1] = 0.0; // single texel
+				unsigned const ixs[8] = {0, 3, 3, 0, 2, 1, 1, 2};
+				add_side_quads(vert, verts, ixs, 8, qpts, ortho, thickness);
+
+				if (i == 1) { // first end
+					unsigned const ixs[4] = {0, 1, 1, 0};
+					add_side_quads(vert, verts, ixs, 4, qpts, (pts[0] - pts[1]).get_norm(), thickness);
+				}
+				if (i+1 == npts) { // last end
+					unsigned const ixs[4] = {2, 3, 3, 2};
+					add_side_quads(vert, verts, ixs, 4, qpts, (pts[npts-1] - pts[npts-2]).get_norm(), thickness);
+				}
 			}
 		}
 		prev_ortho = ortho;

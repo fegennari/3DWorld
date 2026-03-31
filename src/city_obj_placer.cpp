@@ -913,6 +913,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 							point ppc(line_line_intersect_xy(cp1, cp2, pp1, pp2)); // center of creek crossing
 							ppc.z -= pipe_radius;
 							creek_crossings.emplace_back(ppc-pipe_ext, ppc+pipe_ext, pipe_radius, pipe_radius);
+							p->has_creek_crossing = 1;
 						} // for pp
 					} // for cp
 				} // for p
