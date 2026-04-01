@@ -554,6 +554,7 @@
     <ClCompile Include="src\city_model.cpp" />
     <ClCompile Include="src\city_objects.cpp" />
     <ClCompile Include="src\city_obj_placer.cpp" />
+    <ClCompile Include="src\city_plants.cpp" />
     <ClCompile Include="src\city_skyway.cpp" />
     <ClCompile Include="src\city_terrain.cpp" />
     <ClCompile Include="src\clouds.cpp" />
