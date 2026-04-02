@@ -433,14 +433,16 @@ public:
 	void draw_and_clear(shader_t &s);
 };
 
+struct ivy_wall_t {
+	typedef vert_norm_comp_tc_comp vertex_t;
+	drawable_t leaves, branches;
+	bool empty() const {return (leaves.num_verts == 0);} // assumes branches are empty iff leaves are empty
+	size_t get_gpu_mem() const {return (leaves.get_gpu_mem() + branches.get_gpu_mem());}
+	void clear() {leaves.clear(); branches.clear();}
+	void gen(cube_t const &wall, unsigned face_mask, rand_gen_t &rgen);
+	void place_on_wall_face(cube_t const &wall, bool dim, bool dir, vector<vertex_t> &lverts, vector<vertex_t> &bverts, rand_gen_t &rgen);
+};
 class ivy_manager_t { // stores ivy for one residential city
-	struct ivy_wall_t {
-		drawable_t leaves, branches;
-		bool empty() const {return (leaves.num_verts == 0);} // assumes branches are empty iff leaves are empty
-		size_t get_gpu_mem() const {return (leaves.get_gpu_mem() + branches.get_gpu_mem());}
-		void clear() {leaves.clear(); branches.clear();}
-		void gen(cube_t const &bcube, unsigned face_mask, rand_gen_t &rgen);
-	};
 	unordered_map<unsigned, ivy_wall_t> ivy_walls;
 	unsigned cur_city_ix=NO_CITY_IX;
 	vector<uint32_t> to_draw; // by wall index

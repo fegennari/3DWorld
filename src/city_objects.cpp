@@ -426,7 +426,7 @@ void divider_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_sc
 	if (!shadow_only && type == DIV_HEDGE && bcube.closest_dist_less_than(dstate.camera_bs, 0.5f*(X_SCENE_SIZE + Y_SCENE_SIZE))) {
 		dstate.hedge_draw.add(bcube); // draw detailed leaves for nearby hedges
 	}
-	if (0 && !shadow_only && type == DIV_WALL && bcube.closest_dist_less_than(dstate.camera_bs, 0.35f*(X_SCENE_SIZE + Y_SCENE_SIZE))) {
+	if (!shadow_only && type == DIV_WALL && bcube.closest_dist_less_than(dstate.camera_bs, 0.35f*(X_SCENE_SIZE + Y_SCENE_SIZE))) {
 		unsigned face_mask(dim ? 12 : 3); // either both X sides or both Y sides
 		dstate.ivy_manager.add_wall(bcube, face_mask, divider_ix, plot_ix, city_ix);
 	}
