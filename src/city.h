@@ -416,10 +416,10 @@ namespace stoplight_ns {
 	};
 } // end stoplight_ns
 
-struct drawable_t : public vao_manager_t {
-	unsigned num_verts=0;
+struct drawable_t : public indexed_vao_manager_t {
+	unsigned num_verts=0, num_ixs=0;
 	cube_t bcube;
-	size_t get_gpu_mem() const {return (vbo_valid() ? num_verts*sizeof(vert_norm_comp_tc_comp) : 0);}
+	size_t get_gpu_mem() const {return gpu_mem;}
 	void draw() const;
 };
 
@@ -438,9 +438,9 @@ struct ivy_wall_t {
 	drawable_t leaves, branches;
 	bool empty() const {return (leaves.num_verts == 0);} // assumes branches are empty iff leaves are empty
 	size_t get_gpu_mem() const {return (leaves.get_gpu_mem() + branches.get_gpu_mem());}
-	void clear() {leaves.clear(); branches.clear();}
+	void clear() {leaves.clear_vbos(); branches.clear_vbos();}
 	void gen(cube_t const &wall, unsigned face_mask, rand_gen_t &rgen);
-	void place_on_wall_face(cube_t const &wall, bool dim, bool dir, vector<vertex_t> &lverts, vector<vertex_t> &bverts, rand_gen_t &rgen);
+	void place_on_wall_face(cube_t const &wall, bool dim, bool dir, vector<vertex_t> &lverts, vector<vertex_t> &bverts, vector<unsigned> &bixs, rand_gen_t &rgen);
 };
 class ivy_manager_t { // stores ivy for one residential city
 	unordered_map<unsigned, ivy_wall_t> ivy_walls;

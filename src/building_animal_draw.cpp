@@ -380,7 +380,7 @@ void draw_segment(rgeom_mat_t &mat, point const &p1, point const &p2, float radi
 			vector3d const n(0.5f*(vpn.n[S] + vpn.n[(S+ndiv-1)%ndiv])); // average face normals to get vert normals, don't need to normalize
 			mat.itri_verts.emplace_back(vpn.p[(S<<1)+j], n, tx, ty, cw);
 		}
-	}
+	} // for j
 	add_cylin_indices_tris(mat.indices, ndiv, data_pos); // create index data
 	data_pos += ndiv;
 }

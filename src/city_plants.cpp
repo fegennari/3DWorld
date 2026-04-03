@@ -5,6 +5,8 @@
 #include "city_objects.h"
 
 
+void add_cylin_indices_tris(vector<unsigned> &idata, unsigned ndiv, unsigned ix_start); // from animal_draw.cpp
+
 // hedge_draw_t
 
 void add_leaf_verts(point const &pos, vector3d const &normal, float angle, float leaf_sz, vector<vert_norm_comp_tc_comp> &verts) {
@@ -41,7 +43,7 @@ void hedge_draw_t::create(cube_t const &bc) {
 		}
 	} // for s
 	num_verts = verts.size();
-	create_and_upload(verts, 0, 1);
+	create_and_upload(verts, vector<unsigned>(), 0, 1); // no indices
 }
 
 void begin_leaf_draw(shader_t &s, int tid) {
@@ -88,18 +90,20 @@ void hedge_draw_t::draw_and_clear(shader_t &s) {
 void ivy_wall_t::gen(cube_t const &wall, unsigned face_mask, rand_gen_t &rgen) {
 	leaves.bcube = branches.bcube = wall; // both the same
 	vector<vertex_t> leaf_verts, branch_verts;
+	vector<unsigned> branch_ixs;
 
 	for (unsigned n = 0; n < 4; ++n) { // {+X, -X, +Y, -Y} sides
 		if (!(face_mask & (1<<n)))   continue; // face not enabled
 		if (rgen.rand_float() < 0.3) continue; // no ivy on this face
-		place_on_wall_face(wall, (n>>1), (n&1), leaf_verts, branch_verts, rgen);
+		place_on_wall_face(wall, (n>>1), (n&1), leaf_verts, branch_verts, branch_ixs, rgen);
 	}
 	assert(leaf_verts.empty() == branch_verts.empty());
 	if (leaf_verts.empty()) return; // empty
 	leaves  .num_verts = leaf_verts  .size();
 	branches.num_verts = branch_verts.size();
-	leaves  .create_and_upload(leaf_verts,   0, 1);
-	branches.create_and_upload(branch_verts, 0, 1);
+	branches.num_ixs   = branch_ixs  .size();
+	leaves  .create_and_upload(leaf_verts,   vector<unsigned>(), 0, 1); // no indices
+	branches.create_and_upload(branch_verts, branch_ixs,         0, 1);
 }
 
 class ivy_builder_t {
@@ -130,13 +134,13 @@ public:
 		tquad_t leaf(4);
 
 		for (unsigned i = 0; i < 4; ++i) {
-			// should leaves be angled away from the wall to add variety and reduce the chance of Z-fighting?
-			leaf.pts[i] = pos + radius*(((i>>1) ? 1.0 : -1.0)*branch_dir + ((bool(i&1) ^ bool(i&2)) ? 1.0 : -1.0)*side_dir);
+			// TODO: should leaves be angled away from the wall to add variety and reduce the chance of Z-fighting?
+			leaf.pts[i] = pos + radius*(((bool(i&1) ^ bool(i&2)) ? 1.0 : -1.0)*branch_dir + ((i>>1) ? -1.0 : 1.0)*side_dir);
 		}
 		cube_t const leaf_bc(leaf.get_bcube());
 		if (!check_contained_on_wall(leaf_bc)) return 0; // off the wall
 
-		for (auto i = leaves.begin(); i < leaves.begin()+cur_branch_leaves_start; ++i) {
+		for (auto i = leaves.begin(); i < leaves.begin()+cur_branch_leaves_start; ++i) { // Note: only checks leaves of this vine plant
 			if (i->get_bcube().intersects(leaf_bc)) return 0; // intersects a leaf from a different branch; too restrictive?
 		}
 		leaves.push_back(leaf);
@@ -144,7 +148,8 @@ public:
 	}
 	void add_leaves_to_branch(cylinder_3dw const &c) {
 		float const blen(c.get_length());
-		unsigned const nleaves(unsigned(0.75 * blen / leaf_sz) + rgen.rand_bool());
+		unsigned nleaves(unsigned(0.75 * blen / leaf_sz) + rgen.rand_bool());
+		if (leaves.empty()) {max_eq(nleaves, 1U);} // seed branch must have at least one leaf so that leaves is never empty
 		if (nleaves == 0) return; // short branch, no leaves
 		unsigned const cur_branch_leaves_start(leaves.size());
 		vector3d const branch_delta(c.p2 - c.p1), branch_dir(branch_delta.get_norm()), wall_normal(vector_from_dim_dir(dim, dir));
@@ -157,42 +162,74 @@ public:
 		for (unsigned n = 0; n < nleaves; ++n) {
 			float const lsz(rgen.rand_uniform(0.8, 1.2)*leaf_sz); // leaf size +/- 20%
 			bool const side((leaves.size() & 1) ^ first_side);
+			vector3d const side_dir_leaf((side ? 1.0 : -1.0)*side_dir); // in correct direction
 			point leaf_pt(cur_pt);
-			leaf_pt += (radius + 0.5*leaf_sz)*(side ? 1.0 : -1.0)*side_dir; // offset to the side of the branch, alternating sides
-			add_leaf(leaf_pt, branch_dir, side_dir, lsz, cur_branch_leaves_start);
+			leaf_pt += (radius + 0.5*leaf_sz)*side_dir_leaf; // offset to the side of the branch, alternating sides
+			add_leaf(leaf_pt, branch_dir, side_dir_leaf, lsz, cur_branch_leaves_start);
 			cur_pt  += pos_step;
 			radius  += r_step;
 		} // for n
 	}
-	bool add_branch(point const &p1, point const &p2, float r1, float r2) {
-		cube_t pt_bc;
-		pt_bc.set_from_sphere(p1, r1);
-		if (!check_contained_on_wall(pt_bc)) return 0; // p1 off the wall
-		pt_bc.set_from_sphere(p2, r2);
-		if (!check_contained_on_wall(pt_bc)) return 0; // p2 off the wall
+	bool add_branch_seg(point const &p1, point const &p2, float r1, float r2, bool is_new_branch) {
+		// skip placement check for root cylinder; it will be < wall.z2(), the caller should guarantee it's valid, and it's illegal to have empty cylins
+		if (!cylins.empty()) {
+			cube_t pt_bc;
+			pt_bc.set_from_sphere(p1, r1);
+			if (!check_contained_on_wall(pt_bc)) return 0; // p1 off the wall
+			pt_bc.set_from_sphere(p2, r2);
+			if (!check_contained_on_wall(pt_bc)) return 0; // p2 off the wall
 
-		for (cylinder_3dw const &c : cylins) {
-			if (p1 == c.p1 || p1 == c.p2) continue; // skip the cylinder we're connected to
-			// TODO: cylinder-cylinder intersection test
+			for (cylinder_3dw const &c : cylins) { // does this check is_new_branch?
+				if (p1 == c.p1 || p1 == c.p2) continue; // skip the cylinder we're connected to
+				// TODO: cylinder-cylinder intersection test
+			}
 		}
 		cylins.emplace_back(p1, p2, r1, r2);
 		return 1;
 	}
-	void add_leaves() {
-		for (cylinder_3dw const &c : cylins) {add_leaves_to_branch(c);}
+	cylinder_3dw const &select_random_cylin() const {
+		assert(!cylins.empty());
+		return cylins[rgen.rand() % cylins.size()];
 	}
-	void create_branch_verts(vector<vertex_t> &verts) const {
+	void add_leaves() {
+		//cout << TXT(cylins.size()) << endl; // TESTING
+		assert(!cylins.empty());
+		for (cylinder_3dw const &c : cylins) {add_leaves_to_branch(c);}
+		//cout << TXT(leaves.size()) << endl; // TESTING
+		assert(!leaves.empty());
+	}
+	void create_branch_verts(vector<vertex_t> &verts, vector<unsigned> &ixs) const {
 		unsigned const ndiv = 12; // should this vary by branch radius?
+		float const ndiv_inv(1.0/ndiv);
+		unsigned data_pos(verts.size()), cylin_ix(0);
 		point prev_p2;
+		assert(!cylins.empty());
 
 		for (cylinder_3dw const &c : cylins) {
 			bool const is_join(c.p1 == prev_p2); // this cylinder is joined to the previous cylinder (part of the same branch)
-			// TODO: see tree and snake code that joins cylinders
-			prev_p2 = c.p2;
+			point const ce[2] = {c.p1, c.p2};
+			vector3d v12;
+			vector_point_norm const &vpn(gen_cylinder_data(ce, c.r1, c.r2, ndiv, v12));
+			if (!is_join) {cylin_ix = 0;} // reset for new branch
+
+			for (unsigned j = is_join; j < 2; ++j) {
+				float const ty(((cylin_ix + j) & 1) ? 1.0 : 0.0); // alternates between texture ends (mirrors); tc_comp is limited to [0.0, 1.0] range
+
+				for (unsigned S = 0; S < ndiv; ++S) {
+					float const tx(fabs(S*ndiv_inv - 0.5f)); // [0.0, 1.0]
+					vector3d const n(0.5f*(vpn.n[S] + vpn.n[(S+ndiv-1)%ndiv])); // average face normals to get vert normals, don't need to normalize
+					verts.emplace_back(vpn.p[(S<<1)+j], n, tx, ty);
+				}
+			} // for j
+			add_cylin_indices_tris(ixs, ndiv, data_pos); // create index data
+			data_pos += ndiv;
+			prev_p2   = c.p2;
+			++cylin_ix;
 		} // for c
 	}
 	void create_leaf_verts(vector<vertex_t> &verts) const {
 		float const tcs[4] = {0.0, 1.0, 1.0, 0.0}, tct[4] = {0.0, 0.0, 1.0, 1.0};
+		assert(!leaves.empty());
 
 		for (tquad_t const &l : leaves) {
 			vector3d const leaf_normal(l.get_norm());
@@ -201,57 +238,79 @@ public:
 	}
 }; // end ivy_builder_t
 
-void ivy_wall_t::place_on_wall_face(cube_t const &wall, bool dim, bool dir, vector<vertex_t> &lverts, vector<vertex_t> &bverts, rand_gen_t &rgen) {
+void ivy_wall_t::place_on_wall_face(cube_t const &wall, bool dim, bool dir, vector<vertex_t> &lverts, vector<vertex_t> &bverts, vector<unsigned> &bixs, rand_gen_t &rgen) {
 	// generation steps:
 	// * select random start points at the base of the wall
 	// * create branch with upward direction and random curve
-	// * clamp to or stop at wall bounds
 	// * starting at random points along a branch, create a split point that becomes a new branch and widens the branch segments below
 	// * place leaves along branches with stem touching the branch
 	// * give leaves random orients, but not enough that they clip through walls
-	// * check that branches don't intersect
 	// * check that leaves don't intersect -or- handle Z-fighting of overlapping leaves
-#if 1
+	float const leaf_sz(0.05*wall.dz());
+	float const wall_len(wall.get_sz_dim(!dim)), wall_edge_space(4.0*leaf_sz), root_spacing(4.0*leaf_sz);
+	if (wall_len <= 2.0*wall_edge_space) return; // wall too short; shouldn't happen
+	float const pos_lo(wall.d[!dim][0] + wall_edge_space), pos_hi(wall.d[!dim][1] - wall_edge_space), wall_face(wall.d[dim][dir]);
 	unsigned const num_roots(4 + (rgen.rand() % 5)); // 4-8
-	float const leaf_sz(0.05*wall.dz()), branch_radius(0.1*leaf_sz);
 	ivy_builder_t builder(leaf_sz, wall, dim, dir, rgen);
+	vector<float> root_vals;
 
 	for (unsigned n = 0; n < num_roots; ++n) {
+		// find root pos at base of wall that's not too close to a previous root
+		bool root_valid(0);
+		point root;
+
+		for (unsigned N = 0; N < 100 && !root_valid; ++N) {
+			root[!dim] = rgen.rand_uniform(pos_lo, pos_hi);
+			root_valid = 1;
+
+			for (float const &v : root_vals) {
+				if (fabs(root[!dim] - v) < root_spacing) {root_valid = 0; break;}
+			}
+		} // for N
+		if (!root_valid) break; // no more roots can be placed
+		// determine branch size
+		float const branch_radius(rgen.rand_uniform(0.08, 0.12)*leaf_sz), seg_len(10.0*branch_radius);
+		root.z    = wall.z1(); // assume this is the ground
+		root[dim] = wall_face + branch_radius*(dir ? 1.0 : -1.0); // move slightly away from the surface
+		// add branches; main branch in cylinder segments, then connect secondary branches
+		unsigned const num_branches(3 + (rgen.rand() % 3)); // 3-5
+		point pos(root);
+		float radius(branch_radius);
 		builder.next_plant();
-		// TODO: add branches
+
+		for (unsigned B = 0; B < num_branches; ++B) {
+			unsigned const num_segs(4 + (rgen.rand() % 5)); // 4-8
+			vector3d split_from_dir;
+			
+			if (B > 0) {
+				cylinder_3dw const &c(builder.select_random_cylin());
+				pos    = c.p2; // splits at top of cylinder
+				radius = c.r2; // same radius as cylinder; TODO: or smaller, and closer to wall? does the widen the previous branch?
+				split_from_dir = (c.p2 - c.p1).get_norm();
+			}
+			for (unsigned S = 0; S < num_segs; ++S) {
+				point pos2(pos);
+				pos2.z += rgen.rand_uniform(0.8, 1.2)*seg_len; // increase height
+
+				if (S == 0) { // new branch
+					if (B == 0) {pos2[!dim] += rgen.signed_rand_float()*0.25*seg_len;} // root; nearly vertical
+					else { // branching point
+						// TODO: should be 30-60 degrees from split_from_dir
+						pos2[!dim] += rgen.rand_uniform(0.5, 1.5)*(rgen.rand_bool() ? 1.0 : -1.0)*seg_len; // shift to the side
+					}
+				}
+				else { // continuation
+					// TODO: branch should form a curve, not be completely random
+					pos2[!dim] += rgen.signed_rand_float()*0.5*seg_len; // up to 22.5 degrees
+				}
+				if (!builder.add_branch_seg(pos, pos2, radius, radius, (S == 0))) break; // constant radius; stop if branch can't be placed
+				pos = pos2;
+			} // for S
+		} // for B
 		builder.add_leaves();
-		builder.create_branch_verts(bverts);
+		builder.create_branch_verts(bverts, bixs);
 		builder.create_leaf_verts  (lverts);
 	} // for n
-#else
-	unsigned const d1(1-dim), d2(2), num(50 + (rgen.rand() % 50));
-	float const wall_face(wall.d[dim][dir]), shift_dist(0.1*leaf_sz*(dir ? 1.0 : -1.0));
-	point pos;
-	pos[dim] = wall_face + shift_dist; // move slightly away from the surface
-	vector3d const normal(vector_from_dim_dir(dim, dir));
-	vertex_t bv;
-	bv.set_norm(normal);
-	bv.v[dim] = wall_face + 0.5*shift_dist; // in front of the wall but behind the leaf
-
-	for (unsigned n = 0; n < num; ++n) {
-		pos[d1] = rgen.rand_uniform(wall.d[d1][0], wall.d[d1][1]);
-		pos[d2] = rgen.rand_uniform(wall.d[d2][0], wall.d[d2][1]);
-		float const angle(TWO_PI*rgen.rand_float());
-		add_leaf_verts(pos, normal, angle, leaf_sz, lverts);
-		// add placeholder vertical branch quad
-		float const p1a(pos[d1] - branch_radius), p1b(pos[d1] + branch_radius);
-		float const p2a(wall.z1()), p2b(pos[d2] - 0.5*leaf_sz), tscale1(0.5), tscale2(1.0); // Note: tscale must be in [0.0, 1.0]
-		float const vd1[4] = {p1a, p1b, p1b, p1a}, vd2[4] = {p2a, p2a, p2b, p2b};
-		float const tcs[4] = {0.0, 1.0, 1.0, 0.0}, tct[4] = {0.0, 0.0, 1.0, 1.0};
-
-		for (unsigned i = 0; i < 4; ++i) {
-			bv.v[d1] = vd1[i];
-			bv.v[d2] = vd2[i];
-			bv.set_tcs(tscale1*tcs[i], tscale2*tct[i]);
-			bverts.push_back(bv);
-		}
-	} // for n
-#endif
 }
 
 size_t ivy_manager_t::get_gpu_mem() const {
@@ -282,17 +341,22 @@ void ivy_manager_t::add_wall(cube_t const &wall, unsigned face_mask, unsigned wa
 	else { // existing wall
 		assert(w.leaves.bcube == wall && w.branches.bcube == wall);
 	}
+	// TODO: check if all wall faces are back facing
 	if (!w.empty()) {to_draw.push_back(wall_ix);} // not checked for duplicates, but there shouldn't be any
 }
 
 void drawable_t::draw() const {
 	if (num_verts == 0) return;
 	pre_render();
-	draw_quads_as_tris(num_verts);
+	if (num_ixs == 0) {draw_quads_as_tris(num_verts);} // quads
+	else { // indexed triangles
+		// TODO: factor this out as a function!
+		glDrawRangeElements(GL_TRIANGLES, 0, num_verts, num_ixs, GL_UNSIGNED_INT, nullptr);
+		++num_frame_draw_calls;
+	}
 }
 void ivy_manager_t::draw_and_clear(shader_t &s) {
 	if (to_draw.empty()) return;
-	//cout << TXT(to_draw.size()) << TXT(ivy_walls.size()) << endl;
 	// draw branches first
 	select_texture(BARK1_TEX); // TODO: another (custom) texture?
 	bind_default_flat_normal_map();
