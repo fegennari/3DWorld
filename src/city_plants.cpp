@@ -197,6 +197,10 @@ public:
 		cylins.push_back(cand);
 		return 1;
 	}
+	void end_branch() {
+		assert(!cylins.empty());
+		cylins.back().r2 = 0.0; // taper the end of the branch
+	}
 	cylinder_3dw const &select_random_cylin() const {
 		assert(!cylins.empty());
 		return cylins[rgen.rand() % cylins.size()];
@@ -292,8 +296,16 @@ void ivy_wall_t::place_on_wall_face(cube_t const &wall, bool dim, bool dir, vect
 			
 			if (B > 0) {
 				cylinder_3dw const &c(builder.select_random_cylin());
-				pos    = c.p2; // splits at top of cylinder
-				radius = c.r2; // same radius as cylinder; TODO: or smaller, and closer to wall? does the widen the previous branch?
+				
+				if (c.r2 == 0.0) { // if top is a point/branch end, split at the bottom of the cylinder
+					pos    = c.p1; // splits at bottom of cylinder
+					radius = c.r1;
+				}
+				else {
+					pos    = c.p2; // splits at top of cylinder
+					radius = c.r2; // same radius as cylinder
+				}
+				// TODO: smaller radius, and closer to wall? does this widen the previous branch?
 				split_from_dir = (c.p2 - c.p1).get_norm();
 			}
 			for (unsigned S = 0; S < num_segs; ++S) {
@@ -321,6 +333,7 @@ void ivy_wall_t::place_on_wall_face(cube_t const &wall, bool dim, bool dir, vect
 				} // for N
 				if (!placed) break; // can't place any more segments on this branch
 			} // for S
+			builder.end_branch();
 		} // for B
 		builder.add_leaves();
 		builder.create_branch_verts(bverts, bixs);
