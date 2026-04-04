@@ -803,7 +803,6 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 	if (is_park) {
 		//highres_timer_t timer("Add Park Paths"); // < 1ms
 		unsigned const num_paths(1 + (rgen.rand_float() < 0.67)); // 1-2
-		unsigned const num_path_segs = 100;
 		float const path_hwidth(0.08*city_params.road_width), path_height(0.01*path_hwidth);
 		float const plot_min_edge(min(plot.dx(), plot.dy())), edge_border(max(2.0f*path_hwidth, 0.2f*plot_min_edge));
 		bool const can_add_path(plot_min_edge > 3.0*edge_border); // park has enough space for a path; should always be true
