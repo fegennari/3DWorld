@@ -120,6 +120,14 @@ class ivy_builder_t {
 		if (c.z1() < wall.z1() || c.z2() > wall.z2()) return 0; // off the wall vertically
 		return 1;
 	}
+	point swap_not_dim_z_to_xy(point const &p) const {
+		return point(p[!dim], p.z, p[dim]);
+	}
+	bool cylins_intersect(cylinder_3dw const &c1, cylinder_3dw const &c2) const { // conservative
+		float const r_sum(max(c1.r1, c1.r2) + max(c2.r1, c2.r2)); // works best for fixed radius cylinders
+		// line_seg_line_seg_dist_2d() expects lines to be in the same XY plane, so swap dims to make that happen; this won't change the distance
+		return (line_seg_line_seg_dist_2d(swap_not_dim_z_to_xy(c1.p1), swap_not_dim_z_to_xy(c1.p2), swap_not_dim_z_to_xy(c2.p1), swap_not_dim_z_to_xy(c2.p2)) < r_sum);
+	}
 public:
 	ivy_builder_t(float leaf_sz_, cube_t const &wall_, bool dim_, bool dir_, rand_gen_t &rgen_) :
 		dim(dim_), dir(dir_), leaf_sz(leaf_sz_), wall(wall_), rgen(rgen_) {}
@@ -171,6 +179,8 @@ public:
 		} // for n
 	}
 	bool add_branch_seg(point const &p1, point const &p2, float r1, float r2, bool is_new_branch) {
+		cylinder_3dw const cand(p1, p2, r1, r2);
+
 		// skip placement check for root cylinder; it will be < wall.z2(), the caller should guarantee it's valid, and it's illegal to have empty cylins
 		if (!cylins.empty()) {
 			cube_t pt_bc;
@@ -181,10 +191,10 @@ public:
 
 			for (cylinder_3dw const &c : cylins) { // does this check is_new_branch?
 				if (p1 == c.p1 || p1 == c.p2) continue; // skip the cylinder we're connected to
-				// TODO: cylinder-cylinder intersection test
+				if (cylins_intersect(cand, c)) return 0; // intersects an existing cylinder
 			}
 		}
-		cylins.emplace_back(p1, p2, r1, r2);
+		cylins.push_back(cand);
 		return 1;
 	}
 	cylinder_3dw const &select_random_cylin() const {
@@ -287,22 +297,29 @@ void ivy_wall_t::place_on_wall_face(cube_t const &wall, bool dim, bool dir, vect
 				split_from_dir = (c.p2 - c.p1).get_norm();
 			}
 			for (unsigned S = 0; S < num_segs; ++S) {
-				point pos2(pos);
-				pos2.z += rgen.rand_uniform(0.8, 1.2)*seg_len; // increase height
+				bool placed(0);
 
-				if (S == 0) { // new branch
-					if (B == 0) {pos2[!dim] += rgen.signed_rand_float()*0.25*seg_len;} // root; nearly vertical
-					else { // branching point
-						// TODO: should be 30-60 degrees from split_from_dir
-						pos2[!dim] += rgen.rand_uniform(0.5, 1.5)*(rgen.rand_bool() ? 1.0 : -1.0)*seg_len; // shift to the side
+				for (unsigned N = 0; N < 10; ++N) { // 10 tries to place a branch segment
+					point pos2(pos);
+					pos2.z += rgen.rand_uniform(0.8, 1.2)*seg_len; // increase height
+
+					if (S == 0) { // new branch
+						if (B == 0) {pos2[!dim] += rgen.signed_rand_float()*0.25*seg_len;} // root; nearly vertical
+						else { // branching point
+							// TODO: should be 30-60 degrees from split_from_dir
+							pos2[!dim] += rgen.rand_uniform(0.5, 1.5)*(rgen.rand_bool() ? 1.0 : -1.0)*seg_len; // shift to the side
+						}
 					}
-				}
-				else { // continuation
-					// TODO: branch should form a curve, not be completely random
-					pos2[!dim] += rgen.signed_rand_float()*0.5*seg_len; // up to 22.5 degrees
-				}
-				if (!builder.add_branch_seg(pos, pos2, radius, radius, (S == 0))) break; // constant radius; stop if branch can't be placed
-				pos = pos2;
+					else { // continuation
+						// TODO: branch should form a curve, not be completely random
+						pos2[!dim] += rgen.signed_rand_float()*0.5*seg_len; // up to 22.5 degrees
+					}
+					if (!builder.add_branch_seg(pos, pos2, radius, radius, (S == 0))) continue; // constant radius; reject if branch can't be placed
+					pos    = pos2;
+					placed = 1;
+					break; // done
+				} // for N
+				if (!placed) break; // can't place any more segments on this branch
 			} // for S
 		} // for B
 		builder.add_leaves();

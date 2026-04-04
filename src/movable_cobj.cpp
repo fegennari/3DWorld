@@ -108,6 +108,7 @@ int cylin_cylin_int(coll_obj const &c1, coll_obj const &c2) {
 	if (!cylin_cube_int_aa_via_circle_rect(c2, c1))    return 0;
 	if (!vert_cylin_cylin_SAT_test(c1, c2) || !vert_cylin_cylin_SAT_test(c2, c1)) return 0;
 	// see http://www.geometrictools.com/Documentation/IntersectionOfCylinders.pdf
+	// can also use line_seg_line_seg_dist_2d() if they're in the same X/Y/Z plane and constant radius
 	return 2; // TODO: finish
 }
 
