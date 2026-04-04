@@ -108,15 +108,12 @@ void small_tree_group::finalize_upload_and_clear_pts(bool low_detail) { // calle
 		tree_instances.finalize_upload_and_clear_pts(0); // high detail
 		return;
 	}
-	//RESET_TIME;
 	static vector<vert_norm_comp_color> reused_pts;
 	vbo_vnc_block_manager_t &vbo_mgr(vbo_manager[low_detail]);
 	vbo_mgr.swap_points(reused_pts); // use the possibly pre-allocated points rather than allocating a new vector
 	finalize(low_detail);
-	//if (!low_detail) {PRINT_TIME("Finalize");}
 	vbo_mgr.upload();
 	vbo_mgr.swap_points(reused_pts); // make reused_pts available to other tiles
-	//if (!low_detail) {PRINT_TIME("Finalize + Upload");}
 }
 
 
@@ -138,7 +135,6 @@ void small_tree_group::draw_trunk_pts() {
 
 
 void small_tree_group::clear_vbos() {
-
 	trunk_pts_vbo.clear_vbo();
 	for (unsigned i = 0; i < 2; ++i) {vbo_manager[i].clear_vbo();}
 	if (num_palm_trees == 0) return; // no palm tree vbos to clear
@@ -146,14 +142,12 @@ void small_tree_group::clear_vbos() {
 }
 
 void small_tree_group::clear_vbo_manager(int which) {
-	
 	for (unsigned d = 0; d < 2; ++d) {
 		if (which & (1<<d)) {vbo_manager[d].clear();}
 	}
 }
 
 void small_tree_group::clear_vbo_manager_and_ids(int which) {
-
 	if (which & 1) { // high detail
 		for (iterator i = begin(); i != end(); ++i) {i->clear_vbo_mgr_ix();}
 	}

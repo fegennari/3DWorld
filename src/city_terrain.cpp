@@ -610,8 +610,7 @@ void park_heightmap_t::draw(draw_state_t &dstate, bool draw_terrain, bool draw_w
 		assert(vao_mgr.is_valid());
 		vao_mgr.pre_render(1, 1);
 		vert_norm_comp_tc_color::set_vbo_arrays();
-		glDrawRangeElements(GL_TRIANGLES, 0, nverts, nindices, GL_UNSIGNED_INT, nullptr);
-		++num_frame_draw_calls;
+		draw_indexed_tri_verts(nverts, nindices, GL_TRIANGLES);
 		vao_mgr.post_render();
 
 		for (cylinder_3dw const &c : creek_crossings) { // draw pipes at creek crossings and end

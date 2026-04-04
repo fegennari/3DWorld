@@ -442,8 +442,7 @@ public:
 		vbo_mgr.create_and_upload(data, indices, 0, 1); // set_vbo_arrays() is called internally
 		vbo_mgr.pre_render();
 		vert_norm::set_vbo_arrays();
-		glDrawRangeElements(GL_TRIANGLE_STRIP, 0, (unsigned)data.size(), (unsigned)indices.size(), GL_UNSIGNED_INT, 0);
-		++num_frame_draw_calls;
+		draw_indexed_tri_verts(data.size(), indices.size(), GL_TRIANGLE_STRIP);
 		vbo_mgr.post_render();
 	}
 

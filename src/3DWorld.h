@@ -934,6 +934,7 @@ template <typename T> void draw_and_clear_verts(vector<T> &verts, int gl_type) {
 void draw_quads_as_tris(unsigned num_quad_verts, unsigned start_quad_vert=0, unsigned num_instances=1);
 bool bind_quads_as_tris_ivbo(unsigned num_quad_verts);
 void convert_quad_ixs_to_tri_ixs(vector<unsigned> const &qixs, vector<unsigned> &tixs);
+void draw_indexed_tri_verts(unsigned num_verts, unsigned num_ixs, int prim_type=GL_TRIANGLES, void *index_ptr=nullptr, unsigned num_index_bytes=4);
 
 template <typename T> void draw_quad_verts_as_tris(T const *const verts, unsigned count, unsigned start_ix=0, unsigned num_instances=1, bool set_array_client_state=1) {
 	assert(count > 0);

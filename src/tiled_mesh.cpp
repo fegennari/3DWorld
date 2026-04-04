@@ -1928,8 +1928,7 @@ void tile_t::draw_mesh_vbo(indexed_vbo_manager_t const &vbo_mgr, unsigned const 
 	assert(start_ix < end_ix);
 	vbo_mgr.pre_render();
 	vert_wrap_t::set_vbo_arrays(0); // normals are stored in normal_tid, tex coords come from texgen, color is constant
-	glDrawRangeElements(GL_TRIANGLE_STRIP, 0, stride*stride, num_ixs, GL_UNSIGNED_INT, (void *)(start_ix*sizeof(unsigned)));
-	++num_frame_draw_calls;
+	draw_indexed_tri_verts(stride*stride, num_ixs, GL_TRIANGLE_STRIP, (void *)(start_ix*sizeof(unsigned)));
 }
 
 void tile_t::draw(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned const ivbo_ixs[NUM_LODS+1], crack_ibuf_t const &crack_ibuf, int reflection_pass, int shader_locs[2]) const {
@@ -1968,8 +1967,7 @@ void tile_t::draw(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned co
 			//if (!adj->is_visible() || !adj->rel_dist_to_camera_xy_lt(DRAW_DIST_TILES)) continue;
 			ix_sz_pair const &ixsz(crack_ibuf.lookup(crack_ibuf.get_index(dim, dir, lod_level, adj->get_lod_level(reflection_pass))));
 			if (ixsz.sz == 0) continue;
-			glDrawRangeElements(GL_TRIANGLES, 0, stride*stride, ixsz.sz, GL_UNSIGNED_INT, (void *)(ixsz.ix*sizeof(unsigned)));
-			++num_frame_draw_calls;
+			draw_indexed_tri_verts(stride*stride, ixsz.sz, GL_TRIANGLES, (void *)(ixsz.ix*sizeof(unsigned)));
 		} // for dir
 	} // for dim
 	bind_vbo(0, 0); // unbind vertex buffer

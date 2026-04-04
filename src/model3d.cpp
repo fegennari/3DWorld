@@ -809,16 +809,12 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 	check_mvm_update();
 	
 	if (is_shadow_pass || blocks.empty() || no_vfc || camera_pdu.sphere_completely_visible_test(bsphere.pos, bsphere.radius)) { // draw the entire range
-		glDrawRangeElements(prim_type, 0, (unsigned)size(), (unsigned)(ixn*end_ix/ixd), GL_UNSIGNED_INT, 0);
-		++num_frame_draw_calls;
+		draw_indexed_tri_verts(size(), (ixn*end_ix/ixd), prim_type);
 	}
 	else { // draw each block independently
 		// could use glDrawElementsIndirect(), but the draw calls don't seem to add any significant overhead for the current set of models
 		for (auto i = blocks.begin(); i != blocks.end(); ++i) {
-			if (camera_pdu.cube_visible(i->bcube)) {
-				glDrawRangeElements(prim_type, 0, (unsigned)size(), (ixn*i->num/ixd), GL_UNSIGNED_INT, (void *)((ixn*i->start_ix/ixd)*sizeof(unsigned)));
-				++num_frame_draw_calls;
-			}
+			if (camera_pdu.cube_visible(i->bcube)) {draw_indexed_tri_verts(size(), (ixn*i->num/ixd), prim_type, (void *)((ixn*i->start_ix/ixd)*sizeof(unsigned)));}
 		}
 	}
 	this->post_render();

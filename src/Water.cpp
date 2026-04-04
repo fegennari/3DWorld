@@ -334,8 +334,7 @@ public:
 		vert_norm_color::set_vbo_arrays();
 		glEnable(GL_PRIMITIVE_RESTART);
 		glPrimitiveRestartIndex(RESERVED_IX);
-		glDrawRangeElements(GL_TRIANGLE_STRIP, 0, verts.size(), indices.size(), GL_UNSIGNED_INT, NULL);
-		++num_frame_draw_calls;
+		draw_indexed_tri_verts(verts.size(), indices.size(), GL_TRIANGLE_STRIP);
 		glDisable(GL_PRIMITIVE_RESTART);
 		post_render();
 	}

@@ -534,8 +534,7 @@ template<typename T> void indexed_mesh_draw<T>::render() const {
 	assert(ivbo && ivbo_size > 0);
 	bind_vbo(ivbo, 1);
 	set_ptr_state(verts.data(), verts.size());
-	glDrawRangeElements(GL_TRIANGLES, 0, verts.size(), ivbo_size, GL_UNSIGNED_INT, NULL);
-	++num_frame_draw_calls;
+	draw_indexed_tri_verts(verts.size(), ivbo_size, GL_TRIANGLES);
 	bind_vbo(0, 1);
 	unset_ptr_state(&verts.front());
 }
@@ -646,8 +645,7 @@ icosphere_drawer_t::icosphere_drawer_t(unsigned ndiv) {
 void icosphere_drawer_t::draw() const {
 	pre_render(1, 1); // using_index, do_bind_vbo=1
 	vert_wrap_t::set_vbo_arrays();
-	glDrawRangeElements((using_tess_shader ? GL_PATCHES : GL_TRIANGLES), 0, nverts, nindices, GL_UNSIGNED_INT, nullptr);
-	++num_frame_draw_calls;
+	draw_indexed_tri_verts(nverts, nindices, (using_tess_shader ? GL_PATCHES : GL_TRIANGLES));
 	post_render();
 }
 
@@ -856,6 +854,11 @@ void convert_quad_ixs_to_tri_ixs(vector<unsigned> const &qixs, vector<unsigned> 
 		tixs[j++] = qixs[i+0];
 		tixs[j++] = qixs[i+2];
 	}
+}
+
+void draw_indexed_tri_verts(unsigned num_verts, unsigned num_ixs, int prim_type, void *index_ptr, unsigned num_index_bytes) { // assumes VBO for indices
+	glDrawRangeElements(prim_type, 0, num_verts, num_ixs, ((num_index_bytes == 2) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT), index_ptr);
+	++num_frame_draw_calls;
 }
 
 

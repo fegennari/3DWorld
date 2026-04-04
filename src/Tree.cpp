@@ -1134,10 +1134,8 @@ void tree_data_t::draw_branches(float size_scale, bool force_low_detail, bool sh
 	ensure_branch_vbo();
 	branch_manager.pre_render();
 	vert_norm_comp_tc::set_vbo_arrays(0);
-	int const index_type((branch_index_bytes == 2) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT);
 	unsigned const idata_sz(6*num_branch_quads*branch_index_bytes);
-	glDrawRangeElements(GL_TRIANGLES, 0, num_unique_pts, (low_detail ? 3 : 6)*num, index_type, (void *)size_t(low_detail ? idata_sz : 0));
-	++num_frame_draw_calls;
+	draw_indexed_tri_verts(num_unique_pts, (low_detail ? 3 : 6)*num, GL_TRIANGLES, (void *)size_t(low_detail ? idata_sz : 0), branch_index_bytes);
 	branch_manager.post_render();
 }
 

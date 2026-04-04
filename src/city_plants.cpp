@@ -349,11 +349,7 @@ void drawable_t::draw() const {
 	if (num_verts == 0) return;
 	pre_render();
 	if (num_ixs == 0) {draw_quads_as_tris(num_verts);} // quads
-	else { // indexed triangles
-		// TODO: factor this out as a function!
-		glDrawRangeElements(GL_TRIANGLES, 0, num_verts, num_ixs, GL_UNSIGNED_INT, nullptr);
-		++num_frame_draw_calls;
-	}
+	else {draw_indexed_tri_verts(num_verts, num_ixs, GL_TRIANGLES);} // indexed triangles
 }
 void ivy_manager_t::draw_and_clear(shader_t &s) {
 	if (to_draw.empty()) return;
