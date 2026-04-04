@@ -192,10 +192,8 @@ public:
 		return cylins[rgen.rand() % cylins.size()];
 	}
 	void add_leaves() {
-		//cout << TXT(cylins.size()) << endl; // TESTING
 		assert(!cylins.empty());
 		for (cylinder_3dw const &c : cylins) {add_leaves_to_branch(c);}
-		//cout << TXT(leaves.size()) << endl; // TESTING
 		assert(!leaves.empty());
 	}
 	void create_branch_verts(vector<vertex_t> &verts, vector<unsigned> &ixs) const {
@@ -210,7 +208,7 @@ public:
 			point const ce[2] = {c.p1, c.p2};
 			vector3d v12;
 			vector_point_norm const &vpn(gen_cylinder_data(ce, c.r1, c.r2, ndiv, v12));
-			if (!is_join) {cylin_ix = 0;} // reset for new branch
+			if (!is_join) {cylin_ix = 0; data_pos = verts.size();} // reset for new branch
 
 			for (unsigned j = is_join; j < 2; ++j) {
 				float const ty(((cylin_ix + j) & 1) ? 1.0 : 0.0); // alternates between texture ends (mirrors); tc_comp is limited to [0.0, 1.0] range
