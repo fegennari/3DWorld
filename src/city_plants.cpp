@@ -353,7 +353,7 @@ void ivy_wall_t::place_on_wall_face(cube_t const &wall, bool dim, bool dir, vect
 		builder.create_branch_verts(bverts, bixs);
 		builder.create_leaf_verts  (lverts);
 	} // for n
-	ivy_faces |= (1 << dir); // mark face as having ivy
+	ivy_faces |= (1 << (unsigned)dir); // mark face as having ivy
 }
 
 size_t ivy_manager_t::get_gpu_mem() const {

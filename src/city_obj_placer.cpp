@@ -1570,7 +1570,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 						}
 						if (overlaps) continue; // overlaps a previous divider, skip this one
 					}
-					divider_groups.add_obj(divider_t(c, type, dim, dir, skip_dims, dividers.size(), plot_ix, city_ix), dividers);
+					divider_groups.add_obj(divider_t(c, type, dim, dir, (dim == shrink_dim), skip_dims, dividers.size(), plot_ix, city_ix, i->street_dir), dividers);
 					add_cube_to_colliders_and_blockers(c, colliders, blockers);
 				} // for dir
 			} // for dim
@@ -1968,7 +1968,7 @@ bool city_obj_placer_t::place_swimming_pool(road_plot_t const &plot, city_zone_t
 				}
 			}
 			// Note: dir is unused in divider_t so doesn't have to be set correctly
-			fences[side] = divider_t(fence, DIV_CHAINLINK, fence_dim, dir, 0, (dividers.size() + side), plot_ix, city_ix);
+			fences[side] = divider_t(fence, DIV_CHAINLINK, fence_dim, dir, 0, 0, (dividers.size() + side), plot_ix, city_ix);
 		} // for side
 		if (bad_fence_place) continue; // failed to fence off the pool, don't place it here
 		cube_t pool_full_height(pool);

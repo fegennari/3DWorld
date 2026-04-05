@@ -141,10 +141,12 @@ struct statue_t : public multi_model_city_obj_t {
 
 struct divider_t : public oriented_city_obj_t {
 	unsigned type=0, divider_ix=0, plot_ix=0, city_ix=0;
-	uint8_t skip_dims=0;
+	uint8_t skip_dims=0, street_dir=0;
+	bool ends_clipped=0;
 	divider_t() {}
-	divider_t(cube_t const &c, unsigned type_, bool dim_, bool dir_, unsigned sd, unsigned dix, unsigned pix, unsigned cix) :
-		oriented_city_obj_t(c.get_cube_center(), c.get_bsphere_radius(), dim_, dir_), type(type_), divider_ix(dix), plot_ix(pix), city_ix(cix), skip_dims(sd) {bcube = c;}
+	divider_t(cube_t const &c, unsigned type_, bool dim_, bool dir_, bool ec, unsigned sd, unsigned dix, unsigned pix, unsigned cix, unsigned sdir=0) :
+		oriented_city_obj_t(c.get_cube_center(), c.get_bsphere_radius(), dim_, dir_), type(type_),
+		divider_ix(dix), plot_ix(pix), city_ix(cix), skip_dims(sd), street_dir(sdir), ends_clipped(ec) {bcube = c;}
 	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;

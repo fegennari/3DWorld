@@ -427,7 +427,15 @@ void divider_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_sc
 		dstate.hedge_draw.add(bcube); // draw detailed leaves for nearby hedges
 	}
 	if (!shadow_only && type == DIV_WALL && bcube.closest_dist_less_than(dstate.camera_bs, 0.35f*(X_SCENE_SIZE + Y_SCENE_SIZE))) {
-		dstate.ivy_manager.add_wall(bcube, dim, divider_ix, plot_ix, city_ix, dstate.camera_bs);
+		// if this is a residential plot wall, clip off the back yard ends as they may overlap adjacent walls
+		cube_t wall_clipped(bcube);
+		
+		if (!ends_clipped && street_dir) { // clip off ends not along the street that may abut perpendicular walls
+			bool const sdim((street_dir-1) >> 1), sdir((street_dir-1) & 1);
+			if (sdim == dim || sdir == 1) {wall_clipped.d[!dim][0] += get_depth();}
+			if (sdim == dim || sdir == 0) {wall_clipped.d[!dim][1] -= get_depth();}
+		}
+		dstate.ivy_manager.add_wall(wall_clipped, dim, divider_ix, plot_ix, city_ix, dstate.camera_bs);
 	}
 }
 bool divider_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
