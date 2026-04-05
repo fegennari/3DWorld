@@ -105,6 +105,7 @@ void ivy_wall_t::gen(cube_t const &wall, unsigned face_mask, rand_gen_t &rgen) {
 	branches.num_ixs   = branch_ixs  .size();
 	leaves  .create_and_upload(leaf_verts,   vector<unsigned>(), 0, 1); // no indices
 	branches.create_and_upload(branch_verts, branch_ixs,         0, 1);
+	indexed_vao_manager_t::post_render();
 }
 
 class ivy_builder_t {
@@ -394,9 +395,10 @@ void ivy_manager_t::add_wall(cube_t const &wall, bool dim, unsigned wall_ix, uns
 
 void drawable_t::draw() const {
 	if (num_verts == 0) return;
-	pre_render();
-	if (num_ixs == 0) {draw_quads_as_tris(num_verts);} // quads
-	else {draw_indexed_tri_verts(num_verts, num_ixs, GL_TRIANGLES);} // indexed triangles
+	bool const indexed(num_ixs > 0);
+	pre_render(indexed, indexed); // do_bind_vbo=indexed
+	if (indexed) {draw_indexed_tri_verts(num_verts, num_ixs, GL_TRIANGLES);} // indexed triangles
+	else {draw_quads_as_tris(num_verts);} // quads
 }
 void ivy_manager_t::draw_and_clear(shader_t &s) {
 	if (to_draw.empty()) return;
@@ -410,6 +412,7 @@ void ivy_manager_t::draw_and_clear(shader_t &s) {
 		assert(it != ivy_walls.end()); // must be found
 		it->second.branches.draw();
 	}
+	bind_vbo(0, 1); // unbind index VBO
 	// draw leaves second
 	begin_leaf_draw(s, PLANT1_TEX);
 	for (uint32_t wix : to_draw) {ivy_walls.find(wix)->second.leaves.draw();}

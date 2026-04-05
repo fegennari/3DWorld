@@ -2325,6 +2325,7 @@ template<typename T> void city_obj_placer_t::draw_objects(vector<T> const &objs,
 			if (dstate.check_sphere_visible(obj.pos, obj.get_bsphere_radius(shadow_only))) {obj.draw(dstate, *this, dist_scale, shadow_only);}
 		}
 		bool const have_hedges_or_ivy(!dstate.hedge_draw.empty() || !dstate.ivy_manager.empty());
+		if (shadow_only) {assert(!have_hedges_or_ivy);}
 
 		if (!city_draw_qbds_t::empty() || have_hedges_or_ivy) { // we have something to draw
 			if (!has_immediate_draw) {dstate.begin_tile(g->get_cube_center(), 1, 1);} // will_emit_now=1, ensure_active=1
