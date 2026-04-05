@@ -268,7 +268,7 @@ void ivy_wall_t::place_on_wall_face(cube_t const &wall, bool dim, bool dir, vect
 	if (wall_len <= 2.0*wall_edge_space) return; // wall too short; shouldn't happen
 	float const pos_lo(wall.d[!dim][0] + wall_edge_space), pos_hi(wall.d[!dim][1] - wall_edge_space), wall_face(wall.d[dim][dir]), dsign(dir ? 1.0 : -1.0);
 	vector3d const wall_normal(vector_from_dim_dir(dim, dir));
-	unsigned const num_roots(4 + (rgen.rand() % 5)); // 4-8
+	unsigned const num_roots(4 + (rgen.rand() % 9)); // 4-12
 	ivy_builder_t builder(leaf_sz, wall, dim, dir, rgen);
 	vector<float> root_vals;
 
@@ -291,13 +291,13 @@ void ivy_wall_t::place_on_wall_face(cube_t const &wall, bool dim, bool dir, vect
 		root.z    = wall.z1(); // assume this is the ground
 		root[dim] = wall_face + branch_radius*dsign; // move slightly away from the surface
 		// add branches; main branch in cylinder segments, then connect secondary branches
-		unsigned const num_branches(4 + (rgen.rand() % 3)); // 4-6
+		unsigned const num_branches(6 + (rgen.rand() % 3)); // 6-8
 		point pos(root);
 		float radius(branch_radius);
 		builder.next_plant();
 
 		for (unsigned B = 0; B < num_branches; ++B) {
-			unsigned const num_segs(8 + (rgen.rand() % 5)); // 8-12
+			unsigned const num_segs(10 + (rgen.rand() % 6)); // 10-15
 			vector3d prev_dir;
 			
 			if (B > 0) { // add secondary branch
