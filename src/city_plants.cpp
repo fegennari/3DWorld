@@ -6,6 +6,7 @@
 
 
 void add_cylin_indices_tris(vector<unsigned> &idata, unsigned ndiv, unsigned ix_start); // from animal_draw.cpp
+void rotate_verts(point *verts, unsigned num_verts, vector3d const &axis, float angle, vector3d const &about);
 
 // hedge_draw_t
 
@@ -137,14 +138,14 @@ public:
 		leaves.clear();
 		first_side = rgen.rand_bool();
 	}
-	bool add_leaf(point const &pos, vector3d const &branch_dir, vector3d const &side_dir, float lsz, unsigned cur_branch_leaves_start) {
-		float const radius(0.5*lsz);
+	bool add_leaf(point const &pos, vector3d const &branch_dir, vector3d const &side_dir, bool side, float lsz, unsigned cur_branch_leaves_start) {
 		tquad_t leaf(4);
 
 		for (unsigned i = 0; i < 4; ++i) {
-			// TODO: should leaves be angled away from the wall to add variety and reduce the chance of Z-fighting?
-			leaf.pts[i] = pos + radius*(((bool(i&1) ^ bool(i&2)) ? 1.0 : -1.0)*branch_dir + ((i>>1) ? -1.0 : 1.0)*side_dir);
+			leaf.pts[i] = pos + (0.5*lsz*((bool(i&1) ^ bool(i&2)) ? 1.0 : -1.0))*branch_dir; // set width
+			if (!(i>>1)) {leaf.pts[i] += lsz*side_dir;} // extend away from branch
 		}
+		rotate_verts(leaf.pts, 2, branch_dir, 0.75*PI_TWO*rgen.rand_float()*(side ? -1.0 : 1.0), pos); // rotate tip away from wall
 		cube_t const leaf_bc(leaf.get_bcube());
 		if (!check_contained_on_wall(leaf_bc)) return 0; // off the wall
 		point const center(leaf_bc.get_cube_center());
@@ -176,8 +177,8 @@ public:
 			vector3d const side_dir_leaf((side ? 1.0 : -1.0)*side_dir); // in correct direction
 			point leaf_pt(cur_pt);
 			leaf_pt += 0.1*rgen.signed_rand_float()*pos_step; // add some random position jitter
-			leaf_pt += (radius + 0.5*leaf_sz)*side_dir_leaf; // offset to the side of the branch, alternating sides
-			add_leaf(leaf_pt, branch_dir, side_dir_leaf, lsz, cur_branch_leaves_start);
+			leaf_pt += radius*side_dir_leaf; // offset to the side of the branch, alternating sides
+			add_leaf(leaf_pt, branch_dir, side_dir_leaf, side, lsz, cur_branch_leaves_start);
 			cur_pt  += pos_step;
 			radius  += r_step;
 		} // for n
