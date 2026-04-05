@@ -351,6 +351,7 @@ void ivy_wall_t::place_on_wall_face(cube_t const &wall, bool dim, bool dir, vect
 		builder.create_branch_verts(bverts, bixs);
 		builder.create_leaf_verts  (lverts);
 	} // for n
+	ivy_faces |= (1 << dir); // mark face as having ivy
 }
 
 size_t ivy_manager_t::get_gpu_mem() const {
@@ -364,7 +365,7 @@ void ivy_manager_t::clear() {
 	for (auto &kv : ivy_walls) {kv.second.clear();}
 	ivy_walls.clear();
 }
-void ivy_manager_t::add_wall(cube_t const &wall, unsigned face_mask, unsigned wall_ix, unsigned plot_ix, unsigned city_ix) {
+void ivy_manager_t::add_wall(cube_t const &wall, bool dim, unsigned wall_ix, unsigned plot_ix, unsigned city_ix, point const &camera_bs) {
 	if (city_ix != cur_city_ix) { // city change
 		clear();
 		cur_city_ix = city_ix;
@@ -374,6 +375,7 @@ void ivy_manager_t::add_wall(cube_t const &wall, unsigned face_mask, unsigned wa
 	ivy_wall_t &w(ivy_walls[wall_ix]);
 
 	if (w.leaves.bcube.is_all_zeros()) { // new wall
+		unsigned face_mask(dim ? 12 : 3); // either both X sides or both Y sides
 		rand_gen_t rgen;
 		rgen.set_state(wall_ix+1, plot_ix+1);
 		w.gen(wall, face_mask, rgen);
@@ -381,8 +383,11 @@ void ivy_manager_t::add_wall(cube_t const &wall, unsigned face_mask, unsigned wa
 	else { // existing wall
 		assert(w.leaves.bcube == wall && w.branches.bcube == wall);
 	}
-	// TODO: check if all wall faces are back facing
-	if (!w.empty()) {to_draw.push_back(wall_ix);} // not checked for duplicates, but there shouldn't be any
+	if (w.empty()) return; // no ivy
+	assert(w.ivy_faces);
+	if (w.ivy_faces == 1 && camera_bs[dim] > wall.d[dim][1]) return; // facing opposite side
+	if (w.ivy_faces == 2 && camera_bs[dim] < wall.d[dim][0]) return; // facing opposite side
+	to_draw.push_back(wall_ix); // not checked for duplicates, but there shouldn't be any
 }
 
 void drawable_t::draw() const {
