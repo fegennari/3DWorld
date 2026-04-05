@@ -309,17 +309,23 @@ framerate_tracker_t framerate_tracker;
 
 void show_gpu_mem_info() {
 	check_gl_error(10111); // in case there was an incoming error
-	int ded_vmem(0), tot_vmem(0), avail_vmem(0), vbo_free_mem(0), texture_free_mem(0), rbuf_free_mem(0);
-	glGetIntegerv(GPU_MEMORY_INFO_DEDICATED_VIDMEM_NVX,         &ded_vmem);
-	glGetIntegerv(GPU_MEMORY_INFO_TOTAL_AVAILABLE_MEMORY_NVX,   &tot_vmem);
-	glGetIntegerv(GPU_MEMORY_INFO_CURRENT_AVAILABLE_VIDMEM_NVX, &avail_vmem);
-	glGetIntegerv(VBO_FREE_MEMORY_ATI,                          &vbo_free_mem);
-	glGetIntegerv(TEXTURE_FREE_MEMORY_ATI,                      &texture_free_mem);
-	glGetIntegerv(RENDERBUFFER_FREE_MEMORY_ATI,                 &rbuf_free_mem);
+
+	if (has_extension("GL_NVX_gpu_memory_info")) { // Nvidia
+		int ded_vmem(0), tot_vmem(0), avail_vmem(0);
+		glGetIntegerv(GPU_MEMORY_INFO_DEDICATED_VIDMEM_NVX,         &ded_vmem  );
+		glGetIntegerv(GPU_MEMORY_INFO_TOTAL_AVAILABLE_MEMORY_NVX,   &tot_vmem  );
+		glGetIntegerv(GPU_MEMORY_INFO_CURRENT_AVAILABLE_VIDMEM_NVX, &avail_vmem);
+		int const used_mem(tot_vmem - avail_vmem);
+		cout << TXT(ded_vmem) << TXT(tot_vmem) << TXT(avail_vmem) << TXT(used_mem) << endl;
+	}
+	if (has_extension("GL_ATI_meminfo")) { // ATI
+		int vbo_free_mem(0), texture_free_mem(0), rbuf_free_mem(0);
+		glGetIntegerv(VBO_FREE_MEMORY_ATI,          &vbo_free_mem    );
+		glGetIntegerv(TEXTURE_FREE_MEMORY_ATI,      &texture_free_mem);
+		glGetIntegerv(RENDERBUFFER_FREE_MEMORY_ATI, &rbuf_free_mem   );
+		cout << TXT(vbo_free_mem) << TXT(texture_free_mem) << TXT(rbuf_free_mem) << endl;
+	}
 	glGetError(); // clear the error state
-	int const used_mem(tot_vmem - avail_vmem);
-	if (ded_vmem     > 0) {cout << TXT(ded_vmem) << TXT(tot_vmem) << TXT(avail_vmem) << TXT(used_mem) << endl;} // Nvidia
-	if (vbo_free_mem > 0) {cout << TXT(vbo_free_mem) << TXT(texture_free_mem) << TXT(rbuf_free_mem)   << endl;} // ATI
 }
 
 
