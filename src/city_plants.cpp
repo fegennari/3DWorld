@@ -265,7 +265,7 @@ void ivy_wall_t::place_on_wall_face(cube_t const &wall, bool dim, bool dir, vect
 	float const leaf_sz(0.05*wall.dz());
 	float const wall_len(wall.get_sz_dim(!dim)), wall_edge_space(4.0*leaf_sz), root_spacing(4.0*leaf_sz);
 	if (wall_len <= 2.0*wall_edge_space) return; // wall too short; shouldn't happen
-	float const pos_lo(wall.d[!dim][0] + wall_edge_space), pos_hi(wall.d[!dim][1] - wall_edge_space), wall_face(wall.d[dim][dir]);
+	float const pos_lo(wall.d[!dim][0] + wall_edge_space), pos_hi(wall.d[!dim][1] - wall_edge_space), wall_face(wall.d[dim][dir]), dsign(dir ? 1.0 : -1.0);
 	vector3d const wall_normal(vector_from_dim_dir(dim, dir));
 	unsigned const num_roots(4 + (rgen.rand() % 5)); // 4-8
 	ivy_builder_t builder(leaf_sz, wall, dim, dir, rgen);
@@ -288,7 +288,7 @@ void ivy_wall_t::place_on_wall_face(cube_t const &wall, bool dim, bool dir, vect
 		// determine branch size
 		float const branch_radius(rgen.rand_uniform(0.08, 0.12)*leaf_sz), seg_len(12.0*branch_radius);
 		root.z    = wall.z1(); // assume this is the ground
-		root[dim] = wall_face + branch_radius*(dir ? 1.0 : -1.0); // move slightly away from the surface
+		root[dim] = wall_face + branch_radius*dsign; // move slightly away from the surface
 		// add branches; main branch in cylinder segments, then connect secondary branches
 		unsigned const num_branches(4 + (rgen.rand() % 3)); // 4-6
 		point pos(root);
@@ -299,7 +299,7 @@ void ivy_wall_t::place_on_wall_face(cube_t const &wall, bool dim, bool dir, vect
 			unsigned const num_segs(8 + (rgen.rand() % 5)); // 8-12
 			vector3d prev_dir;
 			
-			if (B > 0) {
+			if (B > 0) { // add secondary branch
 				cylinder_3dw const &c(builder.select_random_cylin());
 				
 				if (c.r2 == 0.0) { // if top is a point/branch end, split at the bottom of the cylinder
@@ -310,7 +310,8 @@ void ivy_wall_t::place_on_wall_face(cube_t const &wall, bool dim, bool dir, vect
 					pos    = c.p2; // splits at top of cylinder
 					radius = c.r2; // same radius as cylinder
 				}
-				// TODO: smaller radius, and closer to wall? does this widen the previous branch?
+				radius   = max(0.65f*branch_radius, rgen.rand_uniform(0.7, 0.9)*radius); // smaller radius
+				pos[dim] = wall_face + branch_radius*dsign; // move closer to wall
 				prev_dir = (c.p2 - c.p1).get_norm();
 			}
 			for (unsigned S = 0; S < num_segs; ++S) {
