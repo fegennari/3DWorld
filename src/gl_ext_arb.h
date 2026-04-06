@@ -256,27 +256,6 @@ public:
 	static void post_render() {bind_vao(0); indexed_vbo_manager_t::post_render();}
 };
 
-template<unsigned N> struct indexed_vao_multi_manager_t : public indexed_vbo_manager_t { // unused
-
-	vao_wrap_t vaos[N];
-
-	void clear_vbos() {
-		indexed_vbo_manager_t::clear_vbos();
-		for (unsigned i = 0; i < N; ++i) {vaos[i].clear();}
-	}
-	void ensure_vao_bound(unsigned ix) {
-		assert(ix < N);
-		vaos[ix].ensure_vao_bound();
-	}
-	template<typename vert_type_t, typename index_type_t>
-	void create_and_upload(unsigned ix, vector<vert_type_t> const &data, vector<index_type_t> const &idata, int dynamic_level=0, bool setup_pointers=0) {
-		assert(ix < N);
-		create_and_upload_vbo_with_vao(data, idata, vaos[ix], dynamic_level, setup_pointers);
-	}
-	void enable_vao(unsigned ix) const {assert(ix < N); vaos[ix].enable_vao();}
-	void pre_render(unsigned ix, bool using_index=1) const {enable_vao(ix); indexed_vbo_manager_t::pre_render(using_index);}
-};
-
 
 class subdiv_sphere_drawer_t : public indexed_vao_manager_t {
 protected:
@@ -339,21 +318,6 @@ struct texture_pair_t {
 	bool operator==(texture_pair_t const &tp) const {return (tids[0] == tp.tids[0] && tids[1] == tp.tids[1]);}
 	bool operator!=(texture_pair_t const &tp) const {return !operator==(tp);}
 	bool operator< (texture_pair_t const &tp) const {return ((tids[0] == tp.tids[0]) ? (tids[1] < tp.tids[1]) : (tids[0] < tp.tids[0]));}
-};
-
-struct texture_atlas_t { // unused
-	unsigned tid=0, nx=1, ny=1;
-	bool multisample;
-
-	texture_atlas_t(bool multisample_=0) : multisample(multisample_) {}
-	texture_atlas_t(unsigned nx_, unsigned ny_, bool multisample_=0) : nx(nx_), ny(ny_), multisample(multisample_) {}
-	bool is_valid() const {return (tid > 0);}
-	void free_context();
-	void bind_texture() const;
-	void ensure_tid(unsigned base_tsize, bool mipmap);
-	bool operator==(texture_atlas_t const &tp) const {return (tid == tp.tid && nx == tp.nx && ny == tp.ny);} // do we need to compare nx and ny?
-	bool operator!=(texture_atlas_t const &tp) const {return !operator==(tp);}
-	bool operator< (texture_atlas_t const &tp) const {return (tid < tp.tid);}
 };
 
 class render_to_texture_t {

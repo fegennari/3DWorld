@@ -235,7 +235,6 @@ point pos_dir_up::get_frustum_center() const {
 }
 
 void pos_dir_up::rotate(vector3d const &axis, float angle) { // unused, but could use in model3d_xform_t::apply_inv_xform_to_pdu() (may require handling pos)
-
 	if (angle == 0.0) return;
 	vector3d v[2] = {dir, upv};
 	rotate_vector3d_multi(axis, TO_RADIANS*(double)angle, v, 2); // angle is in degrees
@@ -245,7 +244,6 @@ void pos_dir_up::rotate(vector3d const &axis, float angle) { // unused, but coul
 }
 
 void pos_dir_up::apply_dim_mirror(unsigned dim, float val) {
-
 	assert(dim < 3);
 	pos[dim] = 2*val - pos[dim];
 	dir[dim] = -dir[dim]; // mirror

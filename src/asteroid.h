@@ -121,7 +121,6 @@ protected:
 	mutable vector<pair<float, cloud_inst>> clouds_to_draw;
 
 	void xform_to_local_torus_coord_space(point &pt) const;
-	void xform_from_local_torus_coord_space(point &pt) const;
 	void gen_belt_placements(unsigned max_num, float belt_width, float belt_thickness, float max_ast_radius);
 
 public:

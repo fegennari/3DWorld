@@ -82,10 +82,6 @@ struct local_smap_data_t : public cached_dynamic_smap_data_t { // for point/spot
 	virtual bool is_local() const {return 1;} // for debugging only
 };
 
-struct local_cube_map_smap_data_t : public local_smap_data_t { // unused; to be implemented/used later
-	local_cube_map_smap_data_t(unsigned tu_id_, unsigned smap_sz_=DEF_LOCAL_SMAP_SZ) : local_smap_data_t(tu_id_, smap_sz_) {}
-};
-
 
 struct rotation_t {
 	vector3d axis;

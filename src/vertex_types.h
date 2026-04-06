@@ -15,7 +15,6 @@ struct vert_norm { // size = 24
 	bool operator< (vert_norm const &p) const {return ((v == p.v) ? (n < p.n) : (v < p.v));}
 	bool operator==(vert_norm const &p) const {return (v == p.v && n == p.n);}
 	static void set_vbo_arrays(bool set_state=1, void const *vbo_ptr_offset=NULL);
-	static void set_vbo_arrays_shadow(bool include_tcs);
 	static void unset_attrs() {}
 };
 
@@ -34,17 +33,6 @@ struct norm_comp { // size = 4
 	vector3d get_norm() const {return vector3d(n[0]/127.0, n[1]/127.0, n[2]/127.0);}
 	void invert_normal_dim(unsigned d) {assert(d < 3); n[d] = ((n[d] == -128) ? 127 : ((n[d] == 127) ? -128 : -n[d]));} // careful to not wraparound for -128 => 128
 	void invert_normal() {UNROLL_3X(invert_normal_dim(i_);)}
-};
-
-
-// unused
-struct norm_xy { // size = 8
-	float x, y; // z can be calculated in the shader as sqrt(1 - x*x - y*y), as long as z >= 0.0
-	norm_xy() : x(0.0f), y(0.0f) {}
-	norm_xy(vector3d const &n) {set_norm(n);}
-	void set_norm(vector3d const &n) {assert(n.z >= 0.0); x = n.x; y = n.y;} 
-	void ensure_normalized_and_set(vector3d const &n) {assert(n.z >= 0.0); float const mag(n.mag()); x = n.x/mag; y = n.y/mag;}
-	vector3d get_norm() const {return vector3d(x, y, sqrt(max(0.0f, (1.0f - x*x - y*y))));}
 };
 
 
@@ -123,7 +111,6 @@ struct vert_norm_tc : public vert_norm { // size = 32
 	}
 	bool operator==(vert_norm_tc const &p) const {return (v == p.v && n == p.n && t[0] == p.t[0] && t[1] == p.t[1]);}
 	static void set_vbo_arrays(bool set_state=1, void const *vbo_ptr_offset=NULL);
-	static void set_vbo_arrays_shadow(bool include_tcs);
 };
 
 
@@ -147,9 +134,7 @@ struct vert_norm_tc_tan : public vert_norm_tc { // size = 48
 		if (p.t[1] < t[1]) return 0;
 		return (tangent < p.tangent);
 	}
-	//bool operator==(vert_norm_tc_tan const &p) const {}
 	static void set_vbo_arrays(bool set_state=1, void const *vbo_ptr_offset=NULL);
-	static void set_vbo_arrays_shadow(bool include_tcs);
 	static void unset_attrs();
 };
 

@@ -733,7 +733,7 @@ void texture_t::fill_to_grayscale_color(unsigned char color_val) {
 }
 
 
-void texture_t::fill_transparent_with_avg_color() { // unused
+void texture_t::fill_transparent_with_avg_color() { // unused, but may be useful
 
 	assert(ncolors == 4);
 	assert(is_allocated());
@@ -1944,17 +1944,6 @@ void texture_pair_t::bind_texture() const {
 void texture_pair_t::ensure_tid(unsigned tsize, bool mipmap) {
 	ensure_texture_loaded(tids[0], tsize, tsize, mipmap, 0, multisample); // color
 	ensure_texture_loaded(tids[1], tsize, tsize, mipmap, 0, multisample); // normal
-}
-
-void texture_atlas_t::free_context() {free_texture(tid);}
-
-void texture_atlas_t::bind_texture() const {
-	assert(tid);
-	bind_2d_texture(tid, 0, multisample);
-}
-void texture_atlas_t::ensure_tid(unsigned base_tsize, bool mipmap) {
-	assert(nx > 0 && ny > 0);
-	ensure_texture_loaded(tid, nx*base_tsize, ny*base_tsize, mipmap, 0, multisample);
 }
 
 

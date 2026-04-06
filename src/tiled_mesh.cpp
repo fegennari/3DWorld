@@ -359,14 +359,6 @@ float tile_t::get_min_dist_to_pt(point const &pt, bool xy_only, bool mesh_only) 
 	return sqrt(dsq);
 }
 
-float tile_t::get_max_xy_dist_to_pt(point const &pt) const { // unused
-
-	cube_t const bc(get_mesh_bcube());
-	float const dx(max(fabs(pt.x - bc.d[0][0]), fabs(pt.x - bc.d[0][1])));
-	float const dy(max(fabs(pt.y - bc.d[1][0]), fabs(pt.y - bc.d[1][1])));
-	return sqrt(dx*dx + dy*dy);
-}
-
 float tile_t::get_bsphere_radius_inc_water() const {
 	return ((is_water_enabled() && mzmax < water_plane_z) ? max(radius, (water_plane_z - 0.5f*(mzmin + mzmax))) : radius); // include water
 }

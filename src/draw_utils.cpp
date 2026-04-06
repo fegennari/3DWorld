@@ -175,27 +175,6 @@ void vert_norm_texp::unset_attrs() {
 }
 
 
-// unused, but could be used for model3d shadow pass
-void vert_norm::set_vbo_arrays_shadow(bool include_tcs) {
-	set_array_client_state(1, 0, 0, 0);
-	assert(cur_shader);
-	cur_shader->set_vertex_ptr(sizeof(vert_norm), nullptr);
-}
-void vert_norm_tc::set_vbo_arrays_shadow(bool include_tcs) {
-	set_array_client_state(1, include_tcs, 0, 0);
-	unsigned const stride(sizeof(vert_norm_tc));
-	assert(cur_shader);
-	cur_shader->set_vertex_ptr(stride, nullptr);
-	if (include_tcs) {cur_shader->set_tcoord_ptr(stride, ptr_add(nullptr, sizeof(vert_norm)), 0);}
-}
-void vert_norm_tc_tan::set_vbo_arrays_shadow(bool include_tcs) {
-	set_array_client_state(1, include_tcs, 0, 0);
-	unsigned const stride(sizeof(vert_norm_tc_tan));
-	cur_shader->set_vertex_ptr(stride, nullptr);
-	if (include_tcs) {cur_shader->set_tcoord_ptr(stride, ptr_add(nullptr, sizeof(vert_norm)), 0);}
-}
-
-
 // required when using a core context, but slow
 vbo_ring_buffer_t vbo_ring_buffer[2] = {vbo_ring_buffer_t(1 << 23), vbo_ring_buffer_t(1 << 23)}; // 2x8MB
 unsigned active_buffer(0);
@@ -444,17 +423,6 @@ void quad_batch_draw::add_quad_dirs(point const &pos, vector3d const &dx, vector
 		point const pts[4] = {(pos - dx - dy), (pos + dx - dy), (pos + dx + dy), (pos - dx + dy)};
 		add_quad_pts(pts, cw, n, tr);
 	}
-}
-
-// unused
-void quad_batch_draw::add_quad_dirs_single_tri(point const &pos, vector3d const &dx, vector3d const &dy, colorRGBA const &c, vector3d const &n) {
-
-	// add a single triangle with an inscribed square, using tex coords outside the [0,1] range
-	color_wrapper cw;
-	cw.set_c4(c);
-	verts.emplace_back(pos-2*dx-dy, n, -0.5, 0.0, cw.c, true);
-	verts.emplace_back(pos+2*dx-dy, n,  1.5, 0.0, cw.c, true);
-	verts.emplace_back(pos+3*dy,    n,  0.0, 2.0, cw.c, true);
 }
 
 void quad_batch_draw::add_xlated_billboard(point const &pos, point const &xlate, point const &viewer, vector3d const &up_dir,
