@@ -160,20 +160,22 @@ public:
 		return 1;
 	}
 	void add_leaves_to_branch(cylinder_3dw const &c) {
+		bool const at_branch_end(c.r2 == 0.0);
 		float const blen(c.get_length());
-		unsigned nleaves(unsigned(1.0 * blen / leaf_sz) + rgen.rand_bool());
+		unsigned nleaves(unsigned(1.0 * blen / leaf_sz) + at_branch_end + rgen.rand_bool());
 		if (leaves.empty()) {max_eq(nleaves, 1U);} // seed branch must have at least one leaf so that leaves is never empty
 		if (nleaves == 0) return; // short branch, no leaves
 		unsigned const cur_branch_leaves_start(leaves.size());
 		vector3d const branch_delta(c.p2 - c.p1), branch_dir(branch_delta.get_norm()), wall_normal(vector_from_dim_dir(dim, dir));
 		vector3d const side_dir(cross_product(wall_normal, branch_dir)); // should be normalized
-		vector3d const pos_step(branch_delta/(nleaves + 1)); // skip last slot because it may be the tip or leaf loc of next segment
-		float const r_step((c.r2 - c.r1)/nleaves);
+		vector3d const pos_step(branch_delta/(nleaves + !at_branch_end)); // skip last slot if not at branch end because it may be the tip or leaf loc of next segment
+		float const r_step((c.r2 - c.r1)/nleaves), rmax(max(c.r1, c.r2));
 		point cur_pt(c.p1); // first leaf is at starting point
 		float radius(c.r1);
 
 		for (unsigned n = 0; n < nleaves; ++n) {
-			float const lsz(rgen.rand_uniform(0.8, 1.2)*leaf_sz); // leaf size +/- 20%
+			float const lsz_scale(max(0.1f, radius/rmax)); // smaller leaves near ends of branches
+			float const lsz(rgen.rand_uniform(0.8, 1.2)*lsz_scale*leaf_sz); // leaf size +/- 20%
 			bool const side((leaves.size() & 1) ^ first_side);
 			vector3d const side_dir_leaf((side ? 1.0 : -1.0)*side_dir); // in correct direction
 			point leaf_pt(cur_pt);
@@ -334,9 +336,9 @@ void ivy_wall_t::place_on_wall_face(cube_t const &wall, bool dim, bool dir, vect
 						}
 					}
 					else { // continuation
-						// TODO: branch should form a curve, not be completely random
 						vector3d new_dir(prev_dir);
-						rotate_vector3d(wall_normal, 10.0*TO_RADIANS*rgen.signed_rand_float(), new_dir); // +/- 10 deg from prev branch
+						// +/- 10 deg from prev branch; should this be a curve rather than random?
+						rotate_vector3d(wall_normal, 10.0*TO_RADIANS*rgen.signed_rand_float(), new_dir);
 						new_dir.z = fabs(new_dir.z); // must move upward
 						pos2 += (rgen.rand_uniform(0.8, 1.2)*seg_len)*new_dir;
 					}
