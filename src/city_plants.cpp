@@ -335,11 +335,16 @@ void ivy_wall_t::place_on_wall_face(cube_t const &wall, bool dim, bool dir, vect
 							pos2 += (rgen.rand_uniform(0.8, 1.2)*seg_len)*new_dir; // start in the new direction
 						}
 					}
-					else { // continuation
+					else { // continuation; should this be a curve rather than random?
 						vector3d new_dir(prev_dir);
-						// +/- 10 deg from prev branch; should this be a curve rather than random?
-						rotate_vector3d(wall_normal, 10.0*TO_RADIANS*rgen.signed_rand_float(), new_dir);
-						new_dir.z = fabs(new_dir.z); // must move upward
+						float const rot_angle(10.0*TO_RADIANS*rgen.signed_rand_float()); // +/- 10 deg from prev branch
+						rotate_vector3d(wall_normal, rot_angle, new_dir);
+
+						if (new_dir.z < 0.0 && new_dir.z < prev_dir.z) { // should move upward
+							// can't clamp because angle may be too sharp from prev_dir, so rotate in the other dir if we pointed more downward
+							new_dir = prev_dir;
+							rotate_vector3d(wall_normal, -rot_angle, new_dir);
+						}
 						pos2 += (rgen.rand_uniform(0.8, 1.2)*seg_len)*new_dir;
 					}
 					if (!builder.add_branch_seg(pos, pos2, radius, radius, (S == 0))) continue; // constant radius; reject if branch can't be placed
