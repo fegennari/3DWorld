@@ -342,7 +342,7 @@ public:
 		clear_vbos();
 		verts.clear();
 		indices.clear();
-		for (auto i = pt_to_ix.begin(); i != pt_to_ix.end(); ++i) {*i = RESERVED_IX;}
+		fill(pt_to_ix.begin(), pt_to_ix.end(), RESERVED_IX);
 	}
 };
 
