@@ -140,10 +140,11 @@ public:
 		first_side = rgen.rand_bool();
 	}
 	bool add_leaf(point const &pos, vector3d const &branch_dir, vector3d const &side_dir, bool side, float lsz, unsigned cur_branch_leaves_start) {
+		float const radius(0.5*lsz);
 		tquad_t leaf(4);
 
 		for (unsigned i = 0; i < 4; ++i) {
-			leaf.pts[i] = pos + (0.5*lsz*((bool(i&1) ^ bool(i&2)) ? 1.0 : -1.0))*branch_dir; // set width
+			leaf.pts[i] = pos + (radius*((bool(i&1) ^ bool(i&2)) ? 1.0 : -1.0))*branch_dir; // set width
 			if (!(i>>1)) {leaf.pts[i] += lsz*side_dir;} // extend away from branch
 		}
 		rotate_verts(leaf.pts, 2, branch_dir, 0.75*PI_TWO*rgen.rand_float()*(side ? -1.0 : 1.0), pos); // rotate tip away from wall
@@ -153,8 +154,7 @@ public:
 
 		// check for overlaps with leaves previously added for this plant; allow some amount of overlap; shouldn't Z-fight because dist from wall is random
 		for (auto i = leaves.begin(); i < leaves.begin()+cur_branch_leaves_start; ++i) {
-			cube_t const ibc(i->get_bcube());
-			if (center.z > ibc.z1() && center.z < ibc.z2() && center[!dim] > ibc.d[!dim][0] && center[!dim] < ibc.d[!dim][1]) return 0; // too much overlap
+			if (dist_less_than(center, i->get_bcube().get_cube_center(), radius)) return 0; // too much overlap
 		}
 		leaves.push_back(leaf);
 		return 1;
@@ -162,7 +162,7 @@ public:
 	void add_leaves_to_branch(cylinder_3dw const &c) {
 		bool const at_branch_end(c.r2 == 0.0);
 		float const blen(c.get_length());
-		unsigned nleaves(unsigned(1.0 * blen / leaf_sz) + at_branch_end + rgen.rand_bool());
+		unsigned nleaves(unsigned(1.5 * blen / leaf_sz) + at_branch_end + rgen.rand_bool());
 		if (leaves.empty()) {max_eq(nleaves, 1U);} // seed branch must have at least one leaf so that leaves is never empty
 		if (nleaves == 0) return; // short branch, no leaves
 		unsigned const cur_branch_leaves_start(leaves.size());
