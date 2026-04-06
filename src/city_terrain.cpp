@@ -583,7 +583,7 @@ void park_heightmap_t::create() {
 	} // for y
 	calc_heightmap_normals(verts,   nx, ny);
 	calc_heightmap_indices(indices, nx, ny);
-	vao_mgr.create_and_upload(verts, indices, 0, 1); // setup_pointers=1
+	vao_mgr.create_and_upload(verts, indices, 0, 0); // setup_pointers=0
 	vao_mgr.post_render(); // unbind
 }
 
@@ -608,8 +608,8 @@ void park_heightmap_t::draw(draw_state_t &dstate, bool draw_terrain, bool draw_w
 		}
 		create(); // create verts/VBO/VAO when first visible
 		assert(vao_mgr.is_valid());
-		vao_mgr.pre_render(1, 1);
-		vert_norm_comp_tc_color::set_vbo_arrays();
+		vao_mgr.pre_render(1, 1); // using_index=1, do_bind_vbo=1
+		vert_norm_comp_tc_color::set_vbo_arrays(); // Note: unclear why this is needed, but some parks randomly disappear on occasion without it
 		draw_indexed_tri_verts(nverts, nindices, GL_TRIANGLES);
 		vao_mgr.post_render();
 

@@ -434,7 +434,7 @@ public:
 
 	void draw() {
 		assert(!indices.empty());
-		vbo_mgr.create_and_upload(data, indices, 0, 1); // set_vbo_arrays() is called internally
+		vbo_mgr.create_and_upload(data, indices, 0, 0); // set_vbo_arrays() is called internally
 		vbo_mgr.pre_render();
 		vert_norm::set_vbo_arrays();
 		draw_indexed_tri_verts(data.size(), indices.size(), GL_TRIANGLE_STRIP);
