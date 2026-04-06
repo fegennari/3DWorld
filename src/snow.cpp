@@ -52,7 +52,7 @@ struct zval_avg {
 
 
 struct voxel_t {
-	coord_type p[3] = {0};
+	coord_type p[3] = {};
 
 	voxel_t(void) {}
 	voxel_t(coord_type x, coord_type y, coord_type z) {p[0] = x; p[1] = y; p[2] = z;}
@@ -92,11 +92,9 @@ struct strip_entry {
 };
 
 class strip_vect_t : public vector<strip_entry> {
-	float zval;
-	bool z_valid;
+	float zval=0.0;
+	bool z_valid=0;
 public:
-	strip_vect_t() : zval(0.0), z_valid(0) {}
-
 	void add(voxel_z_pair const &vz, float d) {
 		point p(vz.v.get_pt());
 		
@@ -131,10 +129,9 @@ unsigned const BLOCK_SZ = 65536; // 1.5MB blocks
 class strip_block_alloc {
 
 	vector<strip_entry *> blocks;
-	unsigned pos;
+	unsigned pos=0;
 
 public:
-	strip_block_alloc() : pos(0) {}
 	unsigned get_pos() const {return pos;}
 
 	~strip_block_alloc() {
@@ -175,14 +172,13 @@ class snow_renderer; // forward declaration
 
 class strip_t {
 
-	strip_entry *strips; // block allocated
-	unsigned size, block_id, block_pos;
-
+	strip_entry *strips=nullptr; // block allocated
+	unsigned size=0, block_id=0, block_pos=0;
 public:
-	bool is_edge;
-	int xval, y_start;
+	bool is_edge=0;
+	int xval=0, y_start=0;
 
-	strip_t(bool edge=0) : strips(NULL), size(0), block_id(0), block_pos(0), is_edge(edge), xval(0), y_start(0) {}
+	strip_t(bool edge=0) : is_edge(edge) {}
 	unsigned get_size() const {return size;}
 	strip_entry const *get_strips() const {return strips;}
 
@@ -240,8 +236,8 @@ public:
 
 struct data_block { // packed voxel_z_pair for read/write
 	coord_type p[3] = {};
-	count_type c = 0;
-	float z = 0.0;
+	count_type c=0;
+	float z=0.0;
 
 	void add_to_map(voxel_map &vmap) const {
 		voxel_t v;
@@ -337,14 +333,13 @@ bool voxel_map::write(char const *const fn) const {
 class snow_renderer {
 
 	indexed_vbo_manager_t vbo_mgr;
-	float last_x;
-	unsigned nquads;
+	float last_x=0.0;
+	unsigned nquads=0;
 	vector<vert_norm> data;
 	vector<unsigned> indices, strip_offsets;
 	map<point, unsigned> vmap[2]; // {prev, next} rows
 
 public:
-	snow_renderer() : last_x(0.0), nquads(0) {}
 	// can't free in the destructor because the gl context may be destroyed before this point
 	//~snow_renderer() {free_vbos();}
 	bool empty() const {return data.empty();}
@@ -785,7 +780,6 @@ bool get_snow_height(point const &p, float radius, float &zval, vector3d &norm, 
 }
 
 bool crush_snow_at_pt(point const &p, float radius) {
-
 	float zval; // unused
 	vector3d norm; // unused
 	return get_snow_height(p, radius, zval, norm, 1);
