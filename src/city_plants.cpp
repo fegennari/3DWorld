@@ -3,6 +3,7 @@
 // 03/31/26
 
 #include "city_objects.h"
+//#include "profiler.h"
 
 
 void add_cylin_indices_tris(vector<unsigned> &idata, unsigned ndiv, unsigned ix_start); // from animal_draw.cpp
@@ -89,6 +90,7 @@ void hedge_draw_t::draw_and_clear(shader_t &s) {
 // ivy_manager_t
 
 void ivy_wall_t::gen(cube_t const &wall, unsigned face_mask, rand_gen_t &rgen) {
+	//highres_timer_t timer("Gen Ivy"); // 124 88.5087 2.023 0.71378
 	leaves.bcube = branches.bcube = wall; // both the same
 	vector<vertex_t> leaf_verts, branch_verts;
 	vector<unsigned> branch_ixs;
@@ -125,7 +127,13 @@ class ivy_builder_t {
 	point swap_not_dim_z_to_xy(point const &p) const {
 		return point(p[!dim], p.z, p[dim]);
 	}
+	static cube_t cylin_bcube_conservative(cylinder_3dw const &c) {
+		cube_t bc(c.p1, c.p2);
+		bc.expand_by(max(c.r1, c.r2));
+		return bc;
+	}
 	bool cylins_intersect(cylinder_3dw const &c1, cylinder_3dw const &c2) const { // conservative
+		if (!cylin_bcube_conservative(c1).intersects(cylin_bcube_conservative(c2))) return 0;
 		float const r_sum(max(c1.r1, c1.r2) + max(c2.r1, c2.r2)); // works best for fixed radius cylinders
 		// line_seg_line_seg_dist_2d() expects lines to be in the same XY plane, so swap dims to make that happen; this won't change the distance
 		return (line_seg_line_seg_dist_2d(swap_not_dim_z_to_xy(c1.p1), swap_not_dim_z_to_xy(c1.p2), swap_not_dim_z_to_xy(c2.p1), swap_not_dim_z_to_xy(c2.p2)) < r_sum);
@@ -140,7 +148,7 @@ public:
 		first_side = rgen.rand_bool();
 	}
 	bool add_leaf(point const &pos, vector3d const &branch_dir, vector3d const &side_dir, bool side, float lsz, unsigned cur_branch_leaves_start) {
-		float const radius(0.5*lsz);
+		float const radius(0.5*lsz), r_test(3.0*radius); // conservative for r_test
 		tquad_t leaf(4);
 
 		for (unsigned i = 0; i < 4; ++i) {
@@ -154,7 +162,7 @@ public:
 
 		// check for overlaps with leaves previously added for this plant; allow some amount of overlap; shouldn't Z-fight because dist from wall is random
 		for (auto i = leaves.begin(); i < leaves.begin()+cur_branch_leaves_start; ++i) {
-			if (dist_less_than(center, i->get_bcube().get_cube_center(), radius)) return 0; // too much overlap
+			if (dist_less_than(center, i->pts[0], r_test) && dist_less_than(center, i->get_bcube().get_cube_center(), radius)) return 0; // too much overlap
 		}
 		leaves.push_back(leaf);
 		return 1;
