@@ -14,18 +14,15 @@ class instance_render_t;
 
 
 class sphere_point_norm { // size = 12
-
 protected:
-	unsigned ndiv;
-	bool is_full;
-	float radius;
+	unsigned ndiv=0;
+	bool is_full=0;
+	float radius=0.0;
 	point center;
-	point **points;
-	vector3d **norms;
-
+	point **points=nullptr;
+	vector3d **norms=nullptr;
 public:
 	friend class sd_sphere_d;
-	sphere_point_norm() : ndiv(0), is_full(0), radius(0.0), points(NULL), norms(NULL) {}
 	void alloc(unsigned ndiv_);
 	void set_pointer_stride(unsigned ndiv_);
 	void free_data();
@@ -36,7 +33,6 @@ public:
 
 
 class sd_sphere_d : public sphere_point_norm { // size = 40
-
 protected:
 	point pos;
 	float radius=0.0, def_pert=0.0;
@@ -68,20 +64,18 @@ public:
 
 
 class sd_sphere_vbo_d : public sd_sphere_d, public indexed_vao_manager_t {
-
 	vector<unsigned> ix_offsets;
-	bool faceted;
+	bool faceted=0;
 
 	void ensure_vbos();
 	unsigned draw_setup(unsigned draw_ndiv);
 	unsigned get_index_type_enum()          const {return ((sizeof(index_type_t) == 4) ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT);}
 	unsigned get_count       (unsigned lod) const {assert(lod+1 < ix_offsets.size()); return (ix_offsets[lod+1] - ix_offsets[lod]);}
 	void const* get_index_ptr(unsigned lod) const {assert(lod+1 < ix_offsets.size()); return (void const *)(ix_offsets[lod]*sizeof(index_type_t));}
-
 public:
-	sd_sphere_vbo_d() : faceted(0) {}
+	sd_sphere_vbo_d() {}
 	sd_sphere_vbo_d(point const &p, float r, int n, float const *pm=NULL, float dp=0.0, upsurface const *const s=NULL)
-		: sd_sphere_d(p, r, n, pm, dp, s), faceted(0) {}
+		: sd_sphere_d(p, r, n, pm, dp, s) {}
 	void make_faceted() {faceted = 1;}
 	void clear_vbos();
 	void draw_ndiv_pow2_vbo(unsigned draw_ndiv);
