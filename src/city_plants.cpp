@@ -3,6 +3,7 @@
 // 03/31/26
 
 #include "city_objects.h"
+#include "subdiv.h" // for sd_sphere_d
 //#include "profiler.h"
 
 
@@ -112,16 +113,24 @@ void ivy_wall_t::gen(cube_t const &wall, unsigned face_mask, rand_gen_t &rgen) {
 
 class ivy_builder_t {
 	typedef ivy_wall_t::vertex_t vertex_t;
-	bool dim, dir, first_side=0;
+	bool dim, dir, first_side=0, has_horizontal=0;
 	float leaf_sz;
 	cube_t const &wall;
 	rand_gen_t &rgen;
 	vector<cylinder_3dw> cylins; // for branches
 	vector<tquad_t> leaves; // 4 points
+	vector<sphere_t> branch_bends; // vertical <=> horizontal transitions
+	sphere_point_norm spn;
+	vector<unsigned> sphere_ixs;
+	vector<vert_norm_tc> sphere_verts;
 
+	bool check_contained_on_wall_xy(cube_t const &c) const {
+		return (c.d[!dim][0] > wall.d[!dim][0] && c.d[!dim][1] < wall.d[!dim][1]); // check if off the wall horizontally
+	}
 	bool check_contained_on_wall(cube_t const &c) const {
-		if (c.d[!dim][0] < wall.d[!dim][0] || c.d[!dim][1] > wall.d[!dim][1]) return 0; // off the wall horizontally
-		if (c.z1() < wall.z1() || c.z2() > wall.z2()) return 0; // off the wall vertically
+		if (!check_contained_on_wall_xy(c))        return 0; // off the wall horizontally
+		if (!has_horizontal && c.z2() > wall.z2()) return 0; // above the wall; allow if we already have a horizontal branch on the wall
+		if (c.z1() < wall.z1()) return 0; // below the wall; unlikely
 		return 1;
 	}
 	point swap_not_dim_z_to_xy(point const &p) const {
@@ -147,7 +156,7 @@ public:
 		leaves.clear();
 		first_side = rgen.rand_bool();
 	}
-	bool add_leaf(point const &pos, vector3d const &branch_dir, vector3d const &side_dir, bool side, float lsz, unsigned cur_branch_leaves_start) {
+	bool add_leaf(point const &pos, vector3d const &branch_dir, vector3d const &side_dir, bool side, float lsz, unsigned cur_branch_leaves_start, bool is_horizontal) {
 		float const radius(0.5*lsz), r_test(3.0*radius); // conservative for r_test
 		tquad_t leaf(4);
 
@@ -157,7 +166,7 @@ public:
 		}
 		rotate_verts(leaf.pts, 2, branch_dir, 0.75*PI_TWO*rgen.rand_float()*(side ? -1.0 : 1.0), pos); // rotate tip away from wall
 		cube_t const leaf_bc(leaf.get_bcube());
-		if (!check_contained_on_wall(leaf_bc)) return 0; // off the wall
+		if (!is_horizontal && !check_contained_on_wall(leaf_bc)) return 0; // off the wall; allow if horizontal
 		point const center(leaf_bc.get_cube_center());
 
 		// check for overlaps with leaves previously added for this plant; allow some amount of overlap; shouldn't Z-fight because dist from wall is random
@@ -168,13 +177,14 @@ public:
 		return 1;
 	}
 	void add_leaves_to_branch(cylinder_3dw const &c) {
-		bool const at_branch_end(c.r2 == 0.0);
+		bool const at_branch_end(c.r2 == 0.0), is_horizontal(c.p1.z == c.p2.z);
 		float const blen(c.get_length());
 		unsigned nleaves(unsigned(1.5 * blen / leaf_sz) + at_branch_end + rgen.rand_bool());
 		if (leaves.empty()) {max_eq(nleaves, 1U);} // seed branch must have at least one leaf so that leaves is never empty
 		if (nleaves == 0) return; // short branch, no leaves
 		unsigned const cur_branch_leaves_start(leaves.size());
-		vector3d const branch_delta(c.p2 - c.p1), branch_dir(branch_delta.get_norm()), wall_normal(vector_from_dim_dir(dim, dir));
+		vector3d const branch_delta(c.p2 - c.p1), branch_dir(branch_delta.get_norm());
+		vector3d const wall_normal(is_horizontal ? plus_z : vector_from_dim_dir(dim, dir));
 		vector3d const side_dir(cross_product(wall_normal, branch_dir)); // should be normalized
 		vector3d const pos_step(branch_delta/(nleaves + !at_branch_end)); // skip last slot if not at branch end because it may be the tip or leaf loc of next segment
 		float const r_step((c.r2 - c.r1)/nleaves), rmax(max(c.r1, c.r2));
@@ -189,26 +199,31 @@ public:
 			point leaf_pt(cur_pt);
 			leaf_pt += 0.1*rgen.signed_rand_float()*pos_step; // add some random position jitter
 			leaf_pt += radius*side_dir_leaf; // offset to the side of the branch, alternating sides
-			add_leaf(leaf_pt, branch_dir, side_dir_leaf, side, lsz, cur_branch_leaves_start);
+			add_leaf(leaf_pt, branch_dir, side_dir_leaf, side, lsz, cur_branch_leaves_start, is_horizontal);
 			cur_pt  += pos_step;
 			radius  += r_step;
 		} // for n
 	}
-	bool add_branch_seg(point const &p1, point const &p2, float r1, float r2, bool is_new_branch) {
-		cylinder_3dw const cand(p1, p2, r1, r2);
-
-		// skip placement check for root cylinder; it will be < wall.z2(), the caller should guarantee it's valid, and it's illegal to have empty cylins
-		if (!cylins.empty()) {
+	bool add_branch_seg(point const &p1, point &p2, float r1, float r2, bool is_new_branch, bool &is_horizontal) {
+		if (is_horizontal) {
+			if (!wall.contains_pt_xy(p2)) return 0; // p2 off the top of the wall; allow extending over but check the centerline; p1 is assumed to be valid
+		}
+		else { // vertical
 			cube_t pt_bc;
-			pt_bc.set_from_sphere(p1, r1);
-			if (!check_contained_on_wall(pt_bc)) return 0; // p1 off the wall
 			pt_bc.set_from_sphere(p2, r2);
-			if (!check_contained_on_wall(pt_bc)) return 0; // p2 off the wall
+			if (!check_contained_on_wall_xy(pt_bc)) return 0; // p2 off the wall; p1 is assumed to be valid
+		}
+		cylinder_3dw cand(p1, p2, r1, r2);
 
-			for (cylinder_3dw const &c : cylins) { // does this check is_new_branch?
-				if (p1 == c.p1 || p1 == c.p2) continue; // skip the cylinder we're connected to
-				if (cylins_intersect(cand, c)) return 0; // intersects an existing cylinder
-			}
+		for (cylinder_3dw const &c : cylins) { // does this check is_new_branch?
+			if (p1 == c.p1 || p1 == c.p2)  continue; // skip the cylinder we're connected to
+			if (cylins_intersect(cand, c)) return 0; // intersects an existing cylinder
+		}
+		if (!is_horizontal && p2.z > wall.z2()) { // off the top of the wall; make horizontal
+			// add right angle bend and continue along the top of the wall
+			p2.z = cand.p2.z = wall.z2() + r2;
+			is_horizontal = has_horizontal = 1;
+			branch_bends.emplace_back(p2, r2);
 		}
 		cylins.push_back(cand);
 		return 1;
@@ -216,6 +231,7 @@ public:
 	void end_branch() {
 		assert(!cylins.empty());
 		cylins.back().r2 = 0.0; // taper the end of the branch
+		if (!branch_bends.empty() && cylins.back().p2 == branch_bends.back().pos) {branch_bends.pop_back();} // remove if branch ends at the bend
 	}
 	cylinder_3dw const &select_random_cylin() const {
 		assert(!cylins.empty());
@@ -226,15 +242,18 @@ public:
 		for (cylinder_3dw const &c : cylins) {add_leaves_to_branch(c);}
 		assert(!leaves.empty());
 	}
-	void create_branch_verts(vector<vertex_t> &verts, vector<unsigned> &ixs) const {
+	void create_branch_verts(vector<vertex_t> &verts, vector<unsigned> &ixs) {
 		unsigned const ndiv = 8; // or could go up to 12, but 8 seems like enough
 		float const ndiv_inv(1.0/ndiv);
 		unsigned data_pos(verts.size()), cylin_ix(0);
+		bool prev_horizontal(0);
 		point prev_p2;
 		assert(!cylins.empty());
 
 		for (cylinder_3dw const &c : cylins) {
-			bool const is_join(c.p1 == prev_p2); // this cylinder is joined to the previous cylinder (part of the same branch)
+			bool const is_horizontal(c.p1.z == c.p2.z);
+			bool is_join(c.p1 == prev_p2); // this cylinder is joined to the previous cylinder (part of the same branch)
+			if (is_horizontal && !prev_horizontal) {is_join = 0;} // vertical => horizontal transition is drawn as a sphere and doesn't join
 			point const ce[2] = {c.p1, c.p2};
 			vector3d v12;
 			vector_point_norm const &vpn(gen_cylinder_data(ce, c.r1, c.r2, ndiv, v12));
@@ -252,10 +271,26 @@ public:
 			add_cylin_indices_tris(ixs, ndiv, data_pos); // create index data
 			data_pos += ndiv;
 			prev_p2   = c.p2;
+			prev_horizontal = is_horizontal;
 			++cylin_ix;
 		} // for c
+		for (sphere_t const &s : branch_bends) {
+			if (sphere_verts.empty()) { // generate unit sphere data for branch bends if we haven't already
+				sd_sphere_d sd(all_zeros, 1.0, ndiv);
+				sd.gen_points_norms(spn);	
+				sd.get_quad_points(sphere_verts, &sphere_ixs);
+				assert(!(sphere_ixs.size() & 1)); // quads
+			}
+			unsigned const verts_start(verts.size());
+
+			for (unsigned i = 0; i < sphere_ixs.size(); i += 4) { // convert quad ixs to triangle ixs
+				for (unsigned j = 0; j < 6; ++j) {ixs.push_back(verts_start + sphere_ixs[i + quad_to_tris_ixs[j]]);}
+			}
+			for (auto const &v : sphere_verts) {verts.emplace_back((s.radius*v.v + s.pos), v.n, v.t[0], v.t[1]);}
+		} // for s
 	}
 	void create_leaf_verts(vector<vertex_t> &verts) const {
+		// Note: no reserve(), since we're adding to existing ivy plant leaves
 		float const tcs[4] = {0.0, 1.0, 1.0, 0.0}, tct[4] = {0.0, 0.0, 1.0, 1.0};
 		assert(!leaves.empty());
 
@@ -277,7 +312,8 @@ void ivy_wall_t::place_on_wall_face(cube_t const &wall, bool dim, bool dir, vect
 	float const leaf_sz(0.05*wall.dz());
 	float const wall_len(wall.get_sz_dim(!dim)), wall_edge_space(4.0*leaf_sz), root_spacing(4.0*leaf_sz);
 	if (wall_len <= 2.0*wall_edge_space) return; // wall too short; shouldn't happen
-	float const pos_lo(wall.d[!dim][0] + wall_edge_space), pos_hi(wall.d[!dim][1] - wall_edge_space), wall_face(wall.d[dim][dir]), dsign(dir ? 1.0 : -1.0);
+	float const pos_lo(wall.d[!dim][0] + wall_edge_space), pos_hi(wall.d[!dim][1] - wall_edge_space);
+	float const wall_thick(wall.get_sz_dim(dim)), wall_face(wall.d[dim][dir]), dsign(dir ? 1.0 : -1.0);
 	vector3d const wall_normal(vector_from_dim_dir(dim, dir));
 	unsigned const num_roots(4 + (rgen.rand() % 9)); // 4-12
 	ivy_builder_t builder(leaf_sz, wall, dim, dir, rgen);
@@ -308,8 +344,9 @@ void ivy_wall_t::place_on_wall_face(cube_t const &wall, bool dim, bool dir, vect
 		builder.next_plant();
 
 		for (unsigned B = 0; B < num_branches; ++B) {
-			unsigned const num_segs(10 + (rgen.rand() % 6)); // 10-15
+			unsigned num_segs(10 + (rgen.rand() % 6)); // 10-15
 			vector3d prev_dir;
+			bool is_horizontal(0);
 			
 			if (B > 0) { // add secondary branch
 				cylinder_3dw const &c(builder.select_random_cylin());
@@ -322,9 +359,11 @@ void ivy_wall_t::place_on_wall_face(cube_t const &wall, bool dim, bool dir, vect
 					pos    = c.p2; // splits at top of cylinder
 					radius = c.r2; // same radius as cylinder
 				}
-				radius   = max(0.65f*branch_radius, rgen.rand_uniform(0.7, 0.9)*radius); // smaller radius
-				pos[dim] = wall_face + branch_radius*dsign; // move closer to wall
+				is_horizontal = (c.p1.z == c.p2.z);
 				prev_dir = (c.p2 - c.p1).get_norm();
+				radius   = max(0.65f*branch_radius, rgen.rand_uniform(0.7, 0.9)*radius); // smaller radius
+				if (is_horizontal) {pos.z = wall.z2() + branch_radius;} // move closer to top of wall
+				else {pos[dim] = wall_face + branch_radius*dsign;} // move closer to side of wall
 			}
 			for (unsigned S = 0; S < num_segs; ++S) {
 				bool placed(0);
@@ -338,27 +377,43 @@ void ivy_wall_t::place_on_wall_face(cube_t const &wall, bool dim, bool dir, vect
 							pos2[!dim] += rgen.signed_rand_float()*0.25*seg_len;
 						}
 						else { // branching point
+							vector3d const vrot(is_horizontal ? plus_z : wall_normal);
 							vector3d new_dir(prev_dir);
-							rotate_vector3d(wall_normal, TO_RADIANS*rgen.rand_uniform(30.0, 60.0)*(rgen.rand_bool() ? 1.0 : -1.0), new_dir); // 30-60 deg from prev branch
+							rotate_vector3d(vrot, TO_RADIANS*rgen.rand_uniform(30.0, 60.0)*(rgen.rand_bool() ? 1.0 : -1.0), new_dir); // 30-60 deg from prev branch
 							pos2 += (rgen.rand_uniform(0.8, 1.2)*seg_len)*new_dir; // start in the new direction
 						}
 					}
 					else { // continuation; should this be a curve rather than random?
 						vector3d new_dir(prev_dir);
 						float const rot_angle(10.0*TO_RADIANS*rgen.signed_rand_float()); // +/- 10 deg from prev branch
-						rotate_vector3d(wall_normal, rot_angle, new_dir);
 
-						if (new_dir.z < 0.0 && new_dir.z < prev_dir.z) { // should move upward
-							// can't clamp because angle may be too sharp from prev_dir, so rotate in the other dir if we pointed more downward
-							new_dir = prev_dir;
-							rotate_vector3d(wall_normal, -rot_angle, new_dir);
+						if (is_horizontal) {
+							rotate_vector3d(plus_z, rot_angle, new_dir);
+						}
+						else { // vertical
+							rotate_vector3d(wall_normal, rot_angle, new_dir);
+
+							if (new_dir.z < 0.0 && new_dir.z < prev_dir.z) { // should move upward
+								// can't clamp because angle may be too sharp from prev_dir, so rotate in the other dir if we pointed more downward
+								new_dir = prev_dir;
+								rotate_vector3d(wall_normal, -rot_angle, new_dir);
+							}
 						}
 						pos2 += (rgen.rand_uniform(0.8, 1.2)*seg_len)*new_dir;
 					}
-					if (!builder.add_branch_seg(pos, pos2, radius, radius, (S == 0))) continue; // constant radius; reject if branch can't be placed
-					prev_dir = (pos2 - pos).get_norm();
-					pos      = pos2;
-					placed   = 1;
+					bool const was_horizontal(is_horizontal);
+					if (!builder.add_branch_seg(pos, pos2, radius, radius, (S == 0), is_horizontal)) continue; // constant radius; reject if branch can't be placed
+					
+					if (is_horizontal && !was_horizontal) { // crossing the top of the wall; choose a new random XY dir that won't cross the opposite side of the wall
+						prev_dir[dim] = rgen.rand_uniform(0.1, 1.0)*min(wall_thick, seg_len); // move toward the opposite side of the wall
+						prev_dir.z    = 0.0; // prev_dir[!dim] remains unchanged
+						prev_dir.normalize();
+						if (S+1 == num_segs) {++num_segs;} // don't end on the bend point
+						ivy_faces |= 3; // mark both faces as having ivy since the top of the wall will be visible from both sides
+					}
+					else {prev_dir = (pos2 - pos).get_norm();} // vertical
+					pos    = pos2;
+					placed = 1;
 					break; // done
 				} // for N
 				if (!placed) break; // can't place any more segments on this branch
