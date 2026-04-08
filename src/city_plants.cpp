@@ -91,7 +91,7 @@ void hedge_draw_t::draw_and_clear(shader_t &s) {
 // ivy_manager_t
 
 void ivy_wall_t::gen(cube_t const &wall, unsigned face_mask, rand_gen_t &rgen) {
-	//highres_timer_t timer("Gen Ivy"); // 124 88.5087 2.023 0.71378
+	//highres_timer_t timer("Gen Ivy"); // 127 147.263 3.2178 1.15955
 	leaves.bcube = branches.bcube = wall; // both the same
 	vector<vertex_t> leaf_verts, branch_verts;
 	vector<unsigned> branch_ixs;
@@ -141,8 +141,8 @@ class ivy_builder_t {
 		bc.expand_by(max(c.r1, c.r2));
 		return bc;
 	}
-	bool cylins_intersect(cylinder_3dw const &c1, cylinder_3dw const &c2) const { // conservative
-		if (!cylin_bcube_conservative(c1).intersects(cylin_bcube_conservative(c2))) return 0;
+	bool cylins_intersect(cylinder_3dw const &c1, cylinder_3dw const &c2, cube_t const &c1_bc) const { // conservative
+		if (!c1_bc.intersects(cylin_bcube_conservative(c2))) return 0;
 		float const r_sum(max(c1.r1, c1.r2) + max(c2.r1, c2.r2)); // works best for fixed radius cylinders
 		// line_seg_line_seg_dist_2d() expects lines to be in the same XY plane, so swap dims to make that happen; this won't change the distance
 		return (line_seg_line_seg_dist_2d(swap_not_dim_z_to_xy(c1.p1), swap_not_dim_z_to_xy(c1.p2), swap_not_dim_z_to_xy(c2.p1), swap_not_dim_z_to_xy(c2.p2)) < r_sum);
@@ -214,10 +214,11 @@ public:
 			if (!check_contained_on_wall_xy(pt_bc)) return 0; // p2 off the wall; p1 is assumed to be valid
 		}
 		cylinder_3dw cand(p1, p2, r1, r2);
+		cube_t const cand_bc(cylin_bcube_conservative(cand));
 
 		for (cylinder_3dw const &c : cylins) { // does this check is_new_branch?
 			if (p1 == c.p1 || p1 == c.p2)  continue; // skip the cylinder we're connected to
-			if (cylins_intersect(cand, c)) return 0; // intersects an existing cylinder
+			if (cylins_intersect(cand, c, cand_bc)) return 0; // intersects an existing cylinder
 		}
 		if (!is_horizontal && p2.z > wall.z2()) { // off the top of the wall; make horizontal
 			// add right angle bend and continue along the top of the wall
@@ -249,6 +250,7 @@ public:
 		bool prev_horizontal(0);
 		point prev_p2;
 		assert(!cylins.empty());
+		ixs.reserve(ixs.size() + 6*ndiv*(cylins.size() + ndiv*branch_bends.size())); // exact; verts size depends on joins
 
 		for (cylinder_3dw const &c : cylins) {
 			bool const is_horizontal(c.p1.z == c.p2.z);
@@ -293,6 +295,7 @@ public:
 		// Note: no reserve(), since we're adding to existing ivy plant leaves
 		float const tcs[4] = {0.0, 1.0, 1.0, 0.0}, tct[4] = {0.0, 0.0, 1.0, 1.0};
 		assert(!leaves.empty());
+		verts.reserve(verts.size() + 4*leaves.size()); // exact
 
 		for (tquad_t const &l : leaves) {
 			vector3d const leaf_normal(l.get_norm());
@@ -483,7 +486,7 @@ void ivy_manager_t::draw_and_clear(shader_t &s) {
 		it->second.branches.draw();
 	}
 	bind_vbo(0, 1); // unbind index VBO
-	// draw leaves second
+	// draw leaves second; ideally we want these to have two sided leaf lighting, but that's not available in this shader
 	begin_leaf_draw(s, PLANT1_TEX);
 	for (uint32_t wix : to_draw) {ivy_walls.find(wix)->second.leaves.draw();}
 	end_leaf_draw(s);
