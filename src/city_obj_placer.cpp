@@ -931,7 +931,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 		}
 		if (added_pond || added_creek) { // use a heightmap if we added a creek, since it doesn't look good with a flat park quad
 			unsigned const park_nxy = 256;
-			park_hmaps.emplace_back(plot, park_nxy, park_nxy, (added_pond ? &ponds.back() : nullptr), (added_creek ? &ppaths.back() : nullptr), creek_crossings);
+			park_hmaps.emplace_back(plot, park_nxy, park_nxy, (added_pond ? &ponds.back() : nullptr), ppaths, paths_start, creek_crossings, rgen);
 			plot.no_draw = 1; // drawn as heightmap rather than quad
 		}
 		cube_t obj_place_area(plot); // for picnic tables, benches, and swing sets

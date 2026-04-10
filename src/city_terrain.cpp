@@ -481,6 +481,10 @@ void park_heightmap_t::xy_from_pt(point const &p, unsigned &x, unsigned &y) cons
 	x = max(0, min((int)nx-1, round_fp(nx*(p.x - bcube.x1())/bcube.dx())));
 	y = max(0, min((int)ny-1, round_fp(ny*(p.y - bcube.y1())/bcube.dy())));
 }
+void park_heightmap_t::xy_range_from_cube(cube_t const &c, unsigned &x1, unsigned &y1, unsigned &x2, unsigned &y2) const {
+	xy_from_pt(c.get_llc(), x1, y1);
+	xy_from_pt(c.get_urc(), x2, y2);
+}
 point park_heightmap_t::pt_from_xy(unsigned x, unsigned y) const {
 	assert(x < nx && y < ny);
 	point p;
@@ -494,24 +498,27 @@ void park_heightmap_t::lower_height(unsigned x, unsigned y, float zval) {
 	min_eq(heights[y*nx + x], zval);
 	min_eq(bcube.z1(),        zval);
 }
+void park_heightmap_t::raise_height(unsigned x, unsigned y, float zval) {
+	max_eq(heights[y*nx + x], zval);
+	max_eq(bcube.z1(),        zval);
+}
 
-park_heightmap_t::park_heightmap_t(cube_t const &c, unsigned nx_, unsigned ny_, pond_t const *const pond, park_path_t const *const creek, vector<cylinder_3dw> const &ccs)
-	: nx(nx_), ny(ny_), bcube(c), creek_crossings(ccs)
+park_heightmap_t::park_heightmap_t(cube_t const &c, unsigned nx_, unsigned ny_, pond_t const *const pond,
+	vector<park_path_t> const &ppaths, unsigned ppath_start, vector<cylinder_3dw> const &ccs, rand_gen_t &rgen)
+	: nx(nx_), ny(ny_), z_ground(c.z2()), bcube(c), creek_crossings(ccs)
 {
 	//highres_timer_t timer("Park Heightmap Heights"); // ~0.1ms
 	assert(nx > 0 && ny > 0);
 	// we must create heights from the pond and creek now because they may be invalidated by sorting
-	float const ztop(bcube.z2());
-	heights.resize(nx*ny, ztop);
+	heights.resize(nx*ny, z_ground);
 
-	if (pond != nullptr) {
+	if (pond != nullptr) { // lower height around pond
 		cube_t const &pbc(pond->bcube);
 		assert(bcube.contains_cube_xy(pbc));
+		float const zlow(pbc.zc()), dz(z_ground - zlow); // half the depth of the pond itself
 		float const xc(pbc.xc()), yc(pbc.yc()), xscale(2.0/pbc.dx()), yscale(2.0/pbc.dy());
-		float const zlow(pbc.zc()), dz(ztop - zlow); // half the depth of the pond itself
 		unsigned x1(0), y1(0), x2(0), y2(0);
-		xy_from_pt(pbc.get_llc(), x1, y1);
-		xy_from_pt(pbc.get_urc(), x2, y2);
+		xy_range_from_cube(pbc, x1, y1, x2, y2);
 
 		for (unsigned y = y1; y <= y2; ++y) {
 			for (unsigned x = x1; x <= x2; ++x) {
@@ -519,20 +526,20 @@ park_heightmap_t::park_heightmap_t(cube_t const &c, unsigned nx_, unsigned ny_, 
 				if (!pond->point_contains_xy(p)) continue;
 				float const dx(CLIP_TO_01(1.0f - xscale*fabs(p.x - xc)));
 				float const dy(CLIP_TO_01(1.0f - yscale*fabs(p.y - yc)));
-				lower_height(x, y, (ztop - sin(dx*dy*PI_TWO)*dz));
+				lower_height(x, y, (z_ground - sin(dx*dy*PI_TWO)*dz));
 			} // for x
 		} // for y
 	}
-	if (creek != nullptr) {
-		float const hwidth(creek->hwidth), depth(1.0*hwidth);
-		assert(!creek->pts.empty());
+	for (auto P = ppaths.begin() + ppath_start; P != ppaths.end(); ++P) { // lower height under creek
+		if (!P->is_creek) continue;
+		float const hwidth(P->hwidth), depth(1.0*hwidth);
+		assert(!P->pts.empty());
 
-		for (auto p = creek->pts.begin(); p+1 != creek->pts.end(); ++p) {
+		for (auto p = P->pts.begin(); p+1 != P->pts.end(); ++p) {
 			point const &p1(*p), &p2(*(p+1));
 			cube_t const sbc(p1, p2);
 			unsigned x1(0), y1(0), x2(0), y2(0);
-			xy_from_pt(sbc.get_llc(), x1, y1);
-			xy_from_pt(sbc.get_urc(), x2, y2);
+			xy_range_from_cube(sbc, x1, y1, x2, y2);
 			// skip edges of the terrain to leave a skirt by the sidewalk so that the empty space below isn't visible
 			max_eq(x1, 1U);
 			max_eq(y1, 1U);
@@ -544,11 +551,46 @@ park_heightmap_t::park_heightmap_t(cube_t const &c, unsigned nx_, unsigned ny_, 
 					point const pt(pt_from_xy(x, y));
 					float const dist(pt_line_dist(pt, p1, p2));
 					if (dist > hwidth) continue;
-					lower_height(x, y, (ztop - depth*(1.0f - dist/hwidth)));
+					lower_height(x, y, (z_ground - depth*(1.0f - dist/hwidth)));
 				} // for x
 			} // for y
 		} // for p
-	}
+	} // for P
+#if 0 // must update placement of picnic tables, benches, statues, etc. and fix ped and player collisions before enabling this
+	// maybe add a round hill
+	vector3d const bcube_sz(bcube.get_size());
+	cube_t hill_area(bcube);
+	hill_area.expand_by(-0.1*bcube_sz);
+	point center(0.0, 0.0, z_ground);
+
+	for (unsigned n = 0; n < 100; ++n) {
+		float const hill_radius(rgen.rand_uniform(0.2, 0.3)*min(bcube_sz.x, bcube_sz.y));
+		gen_xy_pos_in_cube(center, hill_area, rgen);
+		cube_t hill(center);
+		hill.expand_by_xy(hill_radius);
+		if (pond && pond ->bcube.intersects(hill)) continue;
+		bool valid(1);
+		
+		for (auto P = ppaths.begin() + ppath_start; P != ppaths.end(); ++P) {
+			if (P->check_cube_coll_xy(hill)) {valid = 0; break;} // intersects path or creek
+		}
+		if (!valid) continue;
+		float const hill_height(rgen.rand_uniform(0.15, 0.25)*hill_radius), xy_scale(2.0/hill_radius);
+		unsigned x1(0), y1(0), x2(0), y2(0);
+		xy_range_from_cube(hill, x1, y1, x2, y2);
+
+		for (unsigned y = y1; y <= y2; ++y) {
+			for (unsigned x = x1; x <= x2; ++x) {
+				point const p(pt_from_xy(x, y));
+				if (!dist_less_than(p, center, hill_radius)) continue;
+				float const dx(CLIP_TO_01(1.0f - xy_scale*fabs(p.x - center.x)));
+				float const dy(CLIP_TO_01(1.0f - xy_scale*fabs(p.y - center.y)));
+				raise_height(x, y, (z_ground + sin(dx*dy*PI_TWO)*hill_height));
+			} // for x
+		} // for y
+		break; // only need one
+	} // for n
+#endif
 }
 
 void park_heightmap_t::create() {
@@ -561,7 +603,7 @@ void park_heightmap_t::create() {
 	vector<unsigned> indices; // could be unsigned short?
 	indices.reserve(nindices);
 	float const nx_inv(1.0/nx), ny_inv(1.0/ny), dx(nx_inv*bcube.dx()), dy(ny_inv*bcube.dy());
-	float const tscale(city_params.get_road_ar()), zbot(bcube.z1()), ztop(bcube.z2()), z_dark(0.5*zbot + 0.5*ztop);
+	float const tscale(city_params.get_road_ar()), zbot(bcube.z1()), ztop(z_ground), z_dark(0.5*zbot + 0.5*ztop);
 	norm_comp const normal(plus_z); // default normal; will be recalculated
 	colorRGBA const top_color(road_colors[TYPE_PARK]), bot_color(0.3, 0.2, 0.1); // fades to dark brown
 
@@ -575,7 +617,7 @@ void park_heightmap_t::create() {
 			float const h00(heights[nx*y0 + x0]), h01(heights[nx*y0 + x1]), h10(heights[nx*y1 + x0]), h11(heights[nx*y1 + x1]);
 			float const zval(0.25*(h00 + h01 + h10 + h11)); // interpolate from 4 corners; edge quads will always be flat/horizontal
 			colorRGBA color;
-			if (zval == ztop) {color = top_color;} // grass
+			if (zval >= ztop) {color = top_color;} // grass
 			else {color = bot_color * CLIP_TO_01((zval - z_dark)/(ztop - z_dark));} // dirt; darken with depth
 			verts.emplace_back(point(xval, yval, zval), normal, tcx, tcy, color);
 			min_eq(bcube.z1(), zval); // extend bcube to cover the lowest point
@@ -591,6 +633,7 @@ void begin_water_surface_draw(shader_t &s);
 void end_water_surface_draw  (shader_t &s);
 
 // Note: there is no park_heightmap_t::pre_draw() because there is often at most one visible at any time
+// should this be drawn in the shadow pass if (bcube.z2() > z_ground)?
 void park_heightmap_t::draw(draw_state_t &dstate, bool draw_terrain, bool draw_water) {
 	if (!dstate.check_cube_visible(bcube, 0.0)) return; // VFC; dist_scale=0.0
 	bool const is_distant(!bcube.closest_dist_less_than(dstate.camera_bs, 0.25*dstate.draw_tile_dist));

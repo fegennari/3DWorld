@@ -691,16 +691,20 @@ struct park_path_t : public city_obj_t {
 // for future use in storing park heightmaps that contains lower areas for ponds and creeks
 class park_heightmap_t {
 	unsigned nx=0, ny=0, nverts=0, nindices=0;
+	float z_ground;
 	cube_t bcube;
-	vector<cylinder_3dw> creek_crossings;
+	vector<cylinder_3dw> creek_crossings; // used for drawing pipes
 	vector<float> heights;
 	indexed_vao_manager_t vao_mgr;
 
 	void xy_from_pt(point const &p, unsigned &x, unsigned &y) const;
+	void xy_range_from_cube(cube_t const &c, unsigned &x1, unsigned &y1, unsigned &x2, unsigned &y2) const;
 	point pt_from_xy(unsigned x, unsigned y) const;
 	void lower_height(unsigned x, unsigned y, float zval);
+	void raise_height(unsigned x, unsigned y, float zval);
 public:
-	park_heightmap_t(cube_t const &c, unsigned nx_, unsigned ny_, pond_t const *const pond, park_path_t const *const creek, vector<cylinder_3dw> const &ccs);
+	park_heightmap_t(cube_t const &c, unsigned nx_, unsigned ny_, pond_t const *const pond, vector<park_path_t> const &ppaths,
+		unsigned ppath_start, vector<cylinder_3dw> const &ccs, rand_gen_t &rgen);
 	size_t get_gpu_mem() const {return vao_mgr.gpu_mem;}
 	void create();
 	void draw(draw_state_t &dstate, bool draw_terrain, bool draw_water);
