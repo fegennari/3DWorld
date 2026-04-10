@@ -3283,8 +3283,8 @@ void park_path_t::calc_bcube_bsphere() {
 	bcube.z2() += hwidth; // make sure it's nonzero height
 	set_bsphere_from_bcube();
 }
-/*static*/ void park_path_t::pre_draw(draw_state_t &dstate, bool shadow_only) { // Note: not drawn in shadow pass
-	select_texture(get_texture_by_name("roads/concrete.jpg"));
+/*static*/ void park_path_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
+	if (!shadow_only) {select_texture(get_texture_by_name("roads/concrete.jpg"));}
 }
 
 void add_side_quads(vert_norm_tc_color &vert, vector<vert_norm_tc_color> &verts, unsigned const *ixs, unsigned num, point const qpts[4], vector3d const &normal, float thickness) {
@@ -3297,13 +3297,10 @@ void add_side_quads(vert_norm_tc_color &vert, vector<vert_norm_tc_color> &verts,
 }
 void park_path_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	if (is_creek) return; // creeks not drawn here
-	// TODO: for creeks, we really need to draw in multiple passes like ponds with dirt + maybe dark blur + water surface;
-	// the sloped bottom isn't easy to calculate from a path, and it wouldn't look right when connecting to the pond or going under the path and sidewalk at the park edge;
-	// maybe this would work if the park was drawn as a heightmap with the pond and creek at lower points and using a dirt texture rather than grass?
-	assert(!shadow_only);
+	if (shadow_only && !has_creek_crossing) return; // only casts shadows if there's a creek below
 	assert(pts.size() >= 2);
-	float const tscale(0.5/hwidth), z_offset(1.0E-4*p2p_dist(pos, dstate.camera_bs)), thickness(0.04*hwidth);
-	bool const draw_sides((1 || has_creek_crossing) && bcube.closest_dist_less_than(dstate.camera_bs, 0.1*dist_scale*dstate.draw_tile_dist));
+	float const tscale(0.5/hwidth), thickness(0.04*hwidth), z_offset(shadow_only ? thickness : 1.0E-4*p2p_dist(pos, dstate.camera_bs));
+	bool const draw_sides(!shadow_only && (1 || has_creek_crossing) && bcube.closest_dist_less_than(dstate.camera_bs, 0.1*dist_scale*dstate.draw_tile_dist));
 	unsigned const npts(pts.size());
 	auto &verts(qbds.qbd.verts);
 	vector3d prev_ortho;
