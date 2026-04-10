@@ -217,7 +217,7 @@ public:
 		cube_t const cand_bc(cylin_bcube_conservative(cand));
 
 		for (cylinder_3dw const &c : cylins) { // does this check is_new_branch?
-			if (p1 == c.p1 || p1 == c.p2)  continue; // skip the cylinder we're connected to
+			if (p1 == c.p1 || p1 == c.p2)           continue; // skip the cylinder we're connected to
 			if (cylins_intersect(cand, c, cand_bc)) return 0; // intersects an existing cylinder
 		}
 		if (!is_horizontal && p2.z > wall.z2()) { // off the top of the wall; make horizontal
@@ -231,12 +231,23 @@ public:
 	}
 	void end_branch() {
 		assert(!cylins.empty());
-		cylins.back().r2 = 0.0; // taper the end of the branch
-		if (!branch_bends.empty() && cylins.back().p2 == branch_bends.back().pos) {branch_bends.pop_back();} // remove if branch ends at the bend
+		cylinder_3dw &tip(cylins.back());
+		tip.r2 = 0.0; // taper the end of the branch
+		
+		if (!branch_bends.empty() &&tip.p2 == branch_bends.back().pos) { // branch ends at the bend
+			branch_bends.pop_back(); // remove bend
+			if (tip.get_length() < 4.0*tip.r1) {tip.p2.z += 2.0*tip.r1;} // extend up slightly so that tip isn't too blunt
+		}
 	}
 	cylinder_3dw const &select_random_cylin() const {
 		assert(!cylins.empty());
 		return cylins[rgen.rand() % cylins.size()];
+	}
+	bool is_at_bend_pt(point const &p) const {
+		for (sphere_t const &s : branch_bends) {
+			if (p == s.pos) return 1;
+		}
+		return 0;
 	}
 	void add_leaves() {
 		assert(!cylins.empty());
@@ -313,7 +324,7 @@ void ivy_wall_t::place_on_wall_face(cube_t const &wall, bool dim, bool dir, vect
 	// * give leaves random orients, but not enough that they clip through walls
 	// * check that leaves don't overlap too much with other leaves
 	float const leaf_sz(0.05*wall.dz());
-	float const wall_len(wall.get_sz_dim(!dim)), wall_edge_space(4.0*leaf_sz), root_spacing(4.0*leaf_sz);
+	float const wall_len(wall.get_sz_dim(!dim)), wall_edge_space(4.0*leaf_sz), root_spacing(8.0*leaf_sz);
 	if (wall_len <= 2.0*wall_edge_space) return; // wall too short; shouldn't happen
 	float const pos_lo(wall.d[!dim][0] + wall_edge_space), pos_hi(wall.d[!dim][1] - wall_edge_space);
 	float const wall_thick(wall.get_sz_dim(dim)), wall_face(wall.d[dim][dir]), dsign(dir ? 1.0 : -1.0);
@@ -334,6 +345,7 @@ void ivy_wall_t::place_on_wall_face(cube_t const &wall, bool dim, bool dir, vect
 			for (float const &v : root_vals) {
 				if (fabs(root[!dim] - v) < root_spacing) {root_valid = 0; break;}
 			}
+			root_vals.push_back(root[!dim]);
 		} // for N
 		if (!root_valid) break; // no more roots can be placed
 		// determine branch size
@@ -362,7 +374,7 @@ void ivy_wall_t::place_on_wall_face(cube_t const &wall, bool dim, bool dir, vect
 					pos    = c.p2; // splits at top of cylinder
 					radius = c.r2; // same radius as cylinder
 				}
-				is_horizontal = (c.p1.z == c.p2.z);
+				is_horizontal = (c.p1.z == c.p2.z || builder.is_at_bend_pt(c.p1)); // starting at bend point will be horizontal since it can't ascend any more
 				prev_dir = (c.p2 - c.p1).get_norm();
 				radius   = max(0.65f*branch_radius, rgen.rand_uniform(0.7, 0.9)*radius); // smaller radius
 				if (is_horizontal) {pos.z = wall.z2() + branch_radius;} // move closer to top of wall
@@ -406,13 +418,13 @@ void ivy_wall_t::place_on_wall_face(cube_t const &wall, bool dim, bool dir, vect
 					}
 					bool const was_horizontal(is_horizontal);
 					if (!builder.add_branch_seg(pos, pos2, radius, radius, (S == 0), is_horizontal)) continue; // constant radius; reject if branch can't be placed
+					if (was_horizontal) {ivy_faces |= 3;} // mark both faces as having ivy since the top of the wall will be visible from both sides
 					
 					if (is_horizontal && !was_horizontal) { // crossing the top of the wall; choose a new random XY dir that won't cross the opposite side of the wall
 						prev_dir[dim] = rgen.rand_uniform(0.1, 1.0)*min(wall_thick, seg_len); // move toward the opposite side of the wall
 						prev_dir.z    = 0.0; // prev_dir[!dim] remains unchanged
 						prev_dir.normalize();
 						if (S+1 == num_segs) {++num_segs;} // don't end on the bend point
-						ivy_faces |= 3; // mark both faces as having ivy since the top of the wall will be visible from both sides
 					}
 					else {prev_dir = (pos2 - pos).get_norm();} // vertical
 					pos    = pos2;
