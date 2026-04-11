@@ -1869,10 +1869,6 @@ template<typename T> void get_animal_shadow_casters(vector<T> &animals, vect_cub
 		if (!i->shadow_non_visible) {moving_objs.emplace_back(bcube, (i - animals.begin() + base_ix));} // only add if shadow visible
 	} // for i
 }
-void expand_cube_zvals(cube_t &c, float z1, float z2) {
-	min_eq(c.z1(), z1);
-	max_eq(c.z2(), z2);
-}
 
 bool check_cube_visible_through_cut(vect_cube_t const &cuts, cube_t const &light_bounds, point const &lpos, point const &camera_bs, float light_radius, bool floor_is_above) {
 	float const light_dist(p2p_dist(camera_bs, lpos)); // upper bound on line length
