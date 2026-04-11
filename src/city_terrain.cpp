@@ -500,7 +500,7 @@ void park_heightmap_t::lower_height(unsigned x, unsigned y, float zval) {
 }
 void park_heightmap_t::raise_height(unsigned x, unsigned y, float zval) {
 	max_eq(heights[y*nx + x], zval);
-	max_eq(bcube.z1(),        zval);
+	max_eq(bcube.z2(),        zval);
 }
 
 park_heightmap_t::park_heightmap_t(cube_t const &c, unsigned nx_, unsigned ny_, pond_t const *const pond,
@@ -556,7 +556,7 @@ park_heightmap_t::park_heightmap_t(cube_t const &c, unsigned nx_, unsigned ny_, 
 			} // for y
 		} // for p
 	} // for P
-#if 0 // must update placement of picnic tables, benches, statues, etc. and fix ped and player collisions before enabling this
+#if 0 // must update placement of picnic tables, benches, statues, etc. and fix ped collisions before enabling this
 	// maybe add a round hill
 	vector3d const bcube_sz(bcube.get_size());
 	cube_t hill_area(bcube);
@@ -568,7 +568,7 @@ park_heightmap_t::park_heightmap_t(cube_t const &c, unsigned nx_, unsigned ny_, 
 		gen_xy_pos_in_cube(center, hill_area, rgen);
 		cube_t hill(center);
 		hill.expand_by_xy(hill_radius);
-		if (pond && pond ->bcube.intersects(hill)) continue;
+		if (pond && pond->bcube.intersects(hill)) continue;
 		bool valid(1);
 		
 		for (auto P = ppaths.begin() + ppath_start; P != ppaths.end(); ++P) {
@@ -603,7 +603,7 @@ void park_heightmap_t::create() {
 	vector<unsigned> indices; // could be unsigned short?
 	indices.reserve(nindices);
 	float const nx_inv(1.0/nx), ny_inv(1.0/ny), dx(nx_inv*bcube.dx()), dy(ny_inv*bcube.dy());
-	float const tscale(city_params.get_road_ar()), zbot(bcube.z1()), ztop(z_ground), z_dark(0.5*zbot + 0.5*ztop);
+	float const tscale(city_params.get_road_ar()), zbot(bcube.z1()), ztop(z_ground), z_dark(0.5*(zbot + ztop));
 	norm_comp const normal(plus_z); // default normal; will be recalculated
 	colorRGBA const top_color(road_colors[TYPE_PARK]), bot_color(0.3, 0.2, 0.1); // fades to dark brown
 
@@ -620,7 +620,6 @@ void park_heightmap_t::create() {
 			if (zval >= ztop) {color = top_color;} // grass
 			else {color = bot_color * CLIP_TO_01((zval - z_dark)/(ztop - z_dark));} // dirt; darken with depth
 			verts.emplace_back(point(xval, yval, zval), normal, tcx, tcy, color);
-			min_eq(bcube.z1(), zval); // extend bcube to cover the lowest point
 		} // for x
 	} // for y
 	calc_heightmap_normals(verts,   nx, ny);
@@ -670,10 +669,23 @@ void park_heightmap_t::draw(draw_state_t &dstate, bool draw_terrain, bool draw_w
 	if (draw_water) { // draw water surface over whole park; not for distant terrain
 		begin_water_surface_draw(dstate.s);
 		cube_t water(bcube);
-		water.z2() -= 0.05*bcube.dz(); // shift slightly down below the surface of the mesh
+		water.z2() = z_ground - 0.05*(z_ground - bcube.z1()); // shift slightly down below the surface of the mesh
 		dstate.draw_cube(dstate.qbd, water, colorRGBA(0.2, 0.3, 0.5, 0.5), 1, 4.0, 3); // semi-transparent; top only
 		dstate.qbd.draw_and_clear();
 		end_water_surface_draw(dstate.s);
 	}
+}
+
+bool park_heightmap_t::set_pos_zval(point &pos, float radius, point const &xlate) const {
+	point const pos_bs(pos - xlate);
+	if (!bcube.contains_pt_xy(pos_bs)) return 0; // not in this park
+	unsigned x(0), y(0);
+	xy_from_pt(pos_bs, x, y);
+	unsigned const ix(y*nx + x);
+	assert(ix < heights.size());
+	float const height(heights[ix]);
+	// only increase height for hills; allowing the player to fall into creeks is too distracting, in particular when on walkways, and the player can't walk into ponds anyway
+	if (height > z_ground) {pos.z = (height + radius);}
+	return 1;
 }
 
