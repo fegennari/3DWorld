@@ -63,8 +63,7 @@ public:
 	vector<pair<unsigned, unsigned> > ships; // sclass, count
 
 	us_fleet() : align(0), ai(0), targ(0), spread(0.0f), flagship(nullptr) {}
-	us_fleet(string const &name_, unsigned align_, unsigned ai_, unsigned targ_, float spread_,
-		point const &pos_, unsigned counts[], unsigned multiplier=0);
+	us_fleet(string const &name_, unsigned align_, unsigned ai_, unsigned targ_, float spread_, point const &pos_, unsigned counts[], unsigned multiplier=0);
 	void set_flagship(unsigned sclass, float child_stray_dist);
 	void spawn();
 };
@@ -75,17 +74,16 @@ struct query_data {
 	vector<cached_obj> const *objs;
 	point const pos;
 	float const urm;
-	float radius, damage, dist;
-	unsigned eflags, index;
-	int wclass, align;
+	float radius, damage=0.0, dist=0.0;
+	unsigned eflags=0, index=0;
+	int wclass=-1, align=-1;
 	point ipos;
-	free_obj const *parent, *fobj;
-	uobject *ptr;
-	bool exit_query, skip_self;
+	free_obj const *parent=nullptr, *fobj=nullptr;
+	uobject *ptr=nullptr;
+	bool exit_query=0, skip_self=0;
 
 	query_data(vector<cached_obj> const *const objs_, point const &pos_, float radius_, float urm_)
-		: objs(objs_), pos(pos_), urm(urm_), radius(radius_), damage(0.0), dist(0.0), eflags(0), index(0),
-		wclass(-1), align(-1), parent(NULL), fobj(NULL), ptr(NULL), exit_query(0), skip_self(0) {}
+		: objs(objs_), pos(pos_), urm(urm_), radius(radius_) {}
 };
 
 
@@ -94,10 +92,10 @@ struct base_query_data {
 	vector<cached_obj> const *objs;
 	point const pos; // compiler bug if const& ???
 	free_obj const *const questioner;
-	bool exit_query;
+	bool exit_query=0;
 
 	base_query_data(vector<cached_obj> const *const objs_, point const &pos_, free_obj const *const questioner_) :
-		objs(objs_), pos(pos_),	questioner(questioner_), exit_query(0) {}
+		objs(objs_), pos(pos_),	questioner(questioner_) {}
 };
 
 
@@ -144,11 +142,9 @@ struct line_int_data {
 template<typename T> class free_obj_block {
 
 	T objs[BLOCK_SIZE];
-	unsigned used, freed;
-	bool in_use, valid;
+	unsigned used=0, freed=0;
+	bool in_use=0, valid=1;
 public:
-	free_obj_block() : used(0), freed(0), in_use(0), valid(1) {}
-
 	T *alloc(unsigned type) {
 		assert(valid);
 		if (used == BLOCK_SIZE) return NULL;
@@ -205,7 +201,6 @@ public:
 		if (VERIFY_REFS) ptr->verify_status();
 		return ptr;
 	}
-
 	~free_obj_allocator() { // Note: last should free itself when its reference count drops to zero
 	  //delete last; // what about the other pointers?
 	}

@@ -34,15 +34,13 @@ protected:
 	};
 
 	vector<grass_t> grass;
-	bool data_valid;
+	bool data_valid=0;
 	rand_gen_pregen_t rgen;
 	typedef vert_norm_comp_color grass_data_t;
 
 	vector3d interpolate_mesh_normal(point const &pos) const;
 	void add_grass_blade_int(point const &pos, float cscale, bool on_mesh, vector<grass_t> &grass_, rand_gen_pregen_t &rgen_) const;
-
 public:
-	grass_manager_t() : data_valid(0) {}
 	// can't free in the destructor because the gl context may be destroyed before this point
 	//~grass_manager_t() {clear();}
 	size_t size() const {return grass.size ();} // 2 points per grass blade
@@ -60,13 +58,11 @@ public:
 class grass_tile_manager_t : public grass_manager_t {
 
 	vector<unsigned> vbo_offsets[NUM_GRASS_LODS];
-	unsigned start_render_ix, end_render_ix;
+	unsigned start_render_ix=0, end_render_ix=0;
 
 	void gen_block(unsigned bix);
 	void gen_lod_block(unsigned bix, unsigned lod);
-
 public:
-	grass_tile_manager_t() : start_render_ix(0), end_render_ix(0) {}
 	void clear();
 	size_t get_gpu_mem() const {return (vbo ? 3*size()*sizeof(grass_data_t) : 0);}
 	void upload_data();
@@ -93,13 +89,11 @@ protected:
 
 	vector<flower_t> flowers;
 	rand_gen_t rgen;
-	bool generated;
+	bool generated=0;
 
 	void create_verts_range(vector<vert_norm_comp_color> &verts, unsigned start, unsigned end) const;
 	void upload_range(unsigned start, unsigned end) const;
-
 public:
-	flower_manager_t() : generated(0) {}
 	size_t size() const {return flowers.size ();}
 	bool empty () const {return flowers.empty();}
 	bool skip_generate() const;

@@ -45,10 +45,10 @@ struct obj_type { // size = 88
 
 struct basic_physics_obj { // size = 20
 	point pos;
-	int time;
+	int time=0;
 	char status;
 
-	basic_physics_obj(point const &pos_=all_zeros, int status_=0) : pos(pos_), time(0), status(status_) {}
+	basic_physics_obj(point const &pos_=all_zeros, int status_=0) : pos(pos_), status(status_) {}
 	void init(point const &p);
 	void init_gen_rand(point const &p, float rxy, float rz);
 	point const &get_pos() const {return pos;}

@@ -74,8 +74,7 @@ class sd_sphere_vbo_d : public sd_sphere_d, public indexed_vao_manager_t {
 	void const* get_index_ptr(unsigned lod) const {assert(lod+1 < ix_offsets.size()); return (void const *)(ix_offsets[lod]*sizeof(index_type_t));}
 public:
 	sd_sphere_vbo_d() {}
-	sd_sphere_vbo_d(point const &p, float r, int n, float const *pm=NULL, float dp=0.0, upsurface const *const s=NULL)
-		: sd_sphere_d(p, r, n, pm, dp, s) {}
+	sd_sphere_vbo_d(point const &p, float r, int n, float const *pm=NULL, float dp=0.0, upsurface const *const s=NULL) : sd_sphere_d(p, r, n, pm, dp, s) {}
 	void make_faceted() {faceted = 1;}
 	void clear_vbos();
 	void draw_ndiv_pow2_vbo(unsigned draw_ndiv);

@@ -45,20 +45,20 @@ struct cloud_explosion : public volume_part_cloud {
 
 struct blastr { // size = 118 (120)
 
-	int time, st_time, type, src;
-	float size, cur_size, damage, exp_sphere_scale;
+	int time=0, st_time=0, type=0, src=-1;
+	float size=0, cur_size=0, damage=0, exp_sphere_scale=0;
 	point pos;
 	vector3d dir, up_vector;
 	colorRGBA color1, color2, cur_color;
-	free_obj const *parent;
-	bool one_frame_only, one_frame_seen, emits_light;
+	free_obj const *parent=nullptr;
+	bool one_frame_only=0, one_frame_seen=0, emits_light=0;
 	cloud_explosion cloud_exp; // not always used
 
-	blastr() : time(0), st_time(0), type(0), src(-1), size(0), cur_size(0), damage(0), exp_sphere_scale(0), parent(nullptr), one_frame_only(0), one_frame_seen(0), emits_light(0) {}
+	blastr() {}
 	blastr(int tm, int ty, int sr, float sz, float dam, point const &p, vector3d const &d,
-		colorRGBA const &c1, colorRGBA const &c2, free_obj const *const pa=NULL, bool ofo=0, bool elight=0, float esc=0.0)
-		: time(tm), st_time(tm), type(ty), src(sr), size(sz), cur_size(sz), damage(dam), exp_sphere_scale(esc), pos(p), dir(d.get_norm()), up_vector(plus_y),
-		color1(c1), color2(c2), cur_color(c1), parent(pa), one_frame_only(ofo), one_frame_seen(0), emits_light(elight) {}
+		colorRGBA const &c1, colorRGBA const &c2, free_obj const *const pa=NULL, bool ofo=0, bool elight=0, float esc=0.0) :
+		time(tm), st_time(tm), type(ty), src(sr), size(sz), cur_size(sz), damage(dam), exp_sphere_scale(esc), pos(p), dir(d.get_norm()),
+		up_vector(plus_y), color1(c1), color2(c2), cur_color(c1), parent(pa), one_frame_only(ofo), emits_light(elight) {}
 	void setup();
 	void check_pointers();
 	void update();
@@ -86,7 +86,6 @@ struct explosion {
 
 
 inline float calc_damage_scale(float dist, float radius, float bradius) {
-
   return ((dist < radius) ? 1.0 : min(1.0, max(0.1, (1.0 - (dist - radius)/(bradius + TOLERANCE)))));
 }
 

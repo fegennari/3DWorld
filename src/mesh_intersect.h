@@ -11,9 +11,8 @@ struct bsp_tree_node {
 };
 
 struct mesh_query_ret {
-	int xpos, ypos;
-	float zval;
-	mesh_query_ret() : xpos(0), ypos(0), zval(0.0) {}
+	int xpos=0, ypos=0;
+	float zval=0.0;
 };
 
 

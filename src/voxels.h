@@ -58,7 +58,6 @@ struct voxel_brush_t : public voxel_brush_params_t {
 class voxel_query_tree {
 
 	template <typename T> struct bvh_tree_group : public vector<T> {
-
 		bool bcube_valid=0;
 		cube_t bcube;
 		
@@ -171,7 +170,6 @@ protected:
 		int ix[3]; // x, y, z
 		vert_ix_cache_entry() {ix[0] = ix[1] = ix[2] = -1;}
 	};
-
 	typedef voxel_grid<vert_ix_cache_entry> voxel_ix_cache;
 
 	struct pt_ix_t {

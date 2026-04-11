@@ -80,13 +80,13 @@ unsigned const COBJ_EXPANDED_PLATFORM = 0x80;
 
 struct cobj_params : public obj_layer { // size = 88
 
-	int cf_index;
-	unsigned char surfs, flags, destroy_prob;
+	int cf_index=-1;
+	unsigned char surfs=0, flags=0, destroy_prob=0;
 	//obj_layer *layer;
 
-	cobj_params() : cf_index(-1), surfs(0), flags(0), destroy_prob(0) {}
+	cobj_params() {}
 	cobj_params(float e, colorRGBA const &c, bool d, bool id, const collision_func cf=NULL, int ci=0, int ti=-1, float ts=1.0, int s=0,
-		float spec=0.0, float shi=0.0, bool nc=0) : obj_layer(e, c, d, cf, ti, ts, spec, shi), cf_index(ci), surfs(s), flags(0), destroy_prob(0)
+		float spec=0.0, float shi=0.0, bool nc=0) : obj_layer(e, c, d, cf, ti, ts, spec, shi), cf_index(ci), surfs(s)
 	{
 		if (id) {flags |= COBJ_DYNAMIC;}
 		if (nc) {flags |= COBJ_NO_COLL;}
@@ -103,10 +103,9 @@ class cobj_draw_buffer {
 	vector<vert_norm_tc> tc_verts, tc_tri_verts;
 
 public:
-	int is_wet; // 0=no, 1=yes, 2=unknown
+	int is_wet=2; // 0=no, 1=yes, 2=unknown
 	cube_t light_atten_cube;
 
-	cobj_draw_buffer() : is_wet(2) {} // initial value of is_wet is unknown
 	bool empty() const {return (tri_verts.empty() && quad_verts.empty() && tc_verts.empty() && tc_tri_verts.empty());}
 	void add_vert(vert_norm_texp const &vnt, bool is_quad=0) {(is_quad ? quad_verts : tri_verts).push_back(vnt);}
 	void add_vert(vert_norm const &vn, texgen_params_t const &tp, bool is_quad=0) {(is_quad ? quad_verts : tri_verts).emplace_back(vn, tp);}
@@ -305,13 +304,13 @@ struct cobj_groups_t : public deque<cobj_group_t> { // use deque rather than vec
 class coll_obj_group : public vector<coll_obj> {
 
 public:
-	bool has_lt_atten, has_voxel_cobjs;
+	bool has_lt_atten=0, has_voxel_cobjs=0;
 	cobj_id_set_t dynamic_ids, drawn_ids, platform_ids;
 	vector<vector<unsigned>> to_draw_streams;
-	unsigned cur_draw_stream_id;
+	unsigned cur_draw_stream_id=0;
 	vector<unsigned> temp_cobjs; // temporary to avoid repeated memory allocation
 
-	coll_obj_group() : has_lt_atten(0), has_voxel_cobjs(0), cur_draw_stream_id(0) {to_draw_streams.resize(6);}
+	coll_obj_group() {to_draw_streams.resize(6);}
 	void clear_ids();
 	void clear();
 	void finalize();
@@ -523,9 +522,8 @@ public:
 
 struct platform_cont : public deque<platform> {
 
-	int cur_sound_id;
+	int cur_sound_id=-1;
 
-	platform_cont() : cur_sound_id(-1) {}
 	bool add_from_file(FILE *fp, geom_xform_t const &xf, multi_trigger_t const &triggers, sensor_t const &cur_sensor);
 	void read_sound_filename(std::string const &name);
 	void check_activate(point const &p, float radius, int activator);
@@ -565,12 +563,12 @@ struct shadow_sphere : public sphere_t {
 
 class obj_draw_group { // vbo_wrap_t?
 
-	unsigned start_cix, end_cix, vbo, num_verts;
-	bool use_vbo, inside_beg_end;
+	unsigned start_cix=0, end_cix=0, vbo=0, num_verts=0;
+	bool use_vbo=0, inside_beg_end=0;
 	vector<vert_norm> verts;
 
 public:
-	obj_draw_group(bool use_vbo_=0) : start_cix(0), end_cix(0), vbo(0), num_verts(0), use_vbo(use_vbo_), inside_beg_end(0) {}
+	obj_draw_group(bool use_vbo_=0) : use_vbo(use_vbo_) {}
 	void free_vbo();
 	void draw_vbo() const;
 	bool begin_render(unsigned &cix);

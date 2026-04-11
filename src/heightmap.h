@@ -45,8 +45,7 @@ public:
 	struct tex_xy_t {
 		tex_ix_t x, y;
 
-		tex_xy_t() {x = y = 0;}
-		tex_xy_t(tex_ix_t x_, tex_ix_t y_) : x(x_), y(y_) {}
+		tex_xy_t(tex_ix_t x_=0, tex_ix_t y_=0) : x(x_), y(y_) {}
 		bool operator==(tex_xy_t const &t) const {return (x == t.x && y == t.y);}
 		bool operator< (tex_xy_t const &t) const {return ((x == t.x) ? (y < t.y) : (x < t.x));}
 	};
@@ -144,12 +143,11 @@ public:
 
 struct hmap_brush_param_t {
 
-	unsigned delay; // placement delay in ticks
-	int shape;
-	int radius_exp;
-	unsigned delta_exp;
+	unsigned delay=1; // placement delay in ticks
+	int shape=BSHAPE_COSINE;
+	int radius_exp=5;
+	unsigned delta_exp=4;
 
-	hmap_brush_param_t() : delay(1), shape(BSHAPE_COSINE), radius_exp(5), delta_exp(4) {}
 	unsigned get_radius() const {return ((radius_exp < 0) ? 0 : (1 << radius_exp));}
 	float get_delta_mag() const {return 0.001*pow(2.0f, (float)delta_exp);}
 };

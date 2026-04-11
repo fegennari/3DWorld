@@ -9,12 +9,12 @@ struct trigger_t {
 
 	point act_pos;
 	float act_dist, auto_off_time, auto_on_time;
-	int req_keycard_id, obj_type_id;
-	bool player_only, use_act_region, requires_action;
+	int req_keycard_id=-1, obj_type_id=-1;
+	bool player_only=0, use_act_region=0, requires_action=0;
 	cube_t act_region;
 
 	trigger_t(point const &ap=all_zeros, float ad=0.0, float off_ti=0.0, float on_t=0.0, bool po=0) :
-	act_pos(ap), act_dist(ad), auto_off_time(off_ti), auto_on_time(on_t), req_keycard_id(-1), obj_type_id(-1), player_only(po), use_act_region(0), requires_action(0) {}
+	act_pos(ap), act_dist(ad), auto_off_time(off_ti), auto_on_time(on_t), player_only(po) {}
 	void set_keycard_or_obj_id(int id) {(player_only ? req_keycard_id : obj_type_id) = id;}
 	void set_act_region(cube_t const ar) {act_region = ar; use_act_region = 1; act_dist = 0.0;}
 	unsigned register_activator_pos(point const &p, float act_radius, int activator, bool clicks=0) const;
@@ -23,7 +23,6 @@ struct trigger_t {
 	void shift_by(vector3d const &val) {act_pos += val; if (use_act_region) {act_region.translate(val);}}
 	void write_to_cobj_file(std::ostream &out) const;
 };
-
 
 struct multi_trigger_t : public vector<trigger_t> {
 	void add_triggers(multi_trigger_t const &t) {copy(t.begin(), t.end(), back_inserter(*this));}
@@ -50,7 +49,6 @@ class sensor_t {
 	bool invert=0;
 
 	bool check_active_int() const;
-
 public:
 	sensor_t() : type(SENSOR_DISABLED) {}
 	sensor_t(point const &pos_, int type_, bool invert_=0, float radius_=0.0, float thresh_=0.0) : pos(pos_), radius(radius_), thresh(thresh_), type(type_), invert(invert_) {

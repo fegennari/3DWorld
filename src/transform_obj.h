@@ -61,12 +61,11 @@ struct transform_data {
 class matrix_stack_t {
 
 	vector<xform_matrix> m;
-
 public:
-	matrix_stack_t() {m.push_back(xform_matrix());} // will be identity
+	matrix_stack_t() {m.emplace_back();} // will be identity
 	void push() {assert(!m.empty()); m.push_back(m.back());} // duplicate top element
 	void pop()  {assert(!m.empty()); m.pop_back(); assert(!m.empty());} // can't start or end as an empty matrix stack
-	void push_identity() {m.push_back(xform_matrix());}
+	void push_identity() {m.emplace_back();}
 	xform_matrix const &top() const {assert(!m.empty()); return m.back();}
 	void assign(xform_matrix const &v) {assert(!m.empty()); m.back() = v;}
 	void identity() {assert(!m.empty()); m.back() = glm::mat4(1.0);}
@@ -84,7 +83,6 @@ class instance_render_t {
 
 	vector<xform_matrix> inst_xforms;
 	int loc;
-
 public:
 	instance_render_t(int loc_=-1) : loc(loc_) {}
 	void set_loc(int loc_) {loc = loc_;}

@@ -8,8 +8,8 @@
 int const NTEX_DIRT = 5;
 
 struct ttex {
-	int id;
-	float zval;
+	int id=0;
+	float zval=0.0;
 };
 
 extern ttex lttex_dirt[];

@@ -43,10 +43,10 @@ public:
 class uobject_base { // size = 32
 
 public:
-	float radius;
+	float radius=0.0;
 	upos_point_type pos; // required for high precision universe coordinates (can't use a sphere_t)
 
-	uobject_base() : radius(0.0) {}
+	uobject_base() {}
 	uobject_base(upos_point_type const &pos_, float radius_) : radius(radius_), pos(pos_) {}
 	upos_point_type const &get_pos() const {return pos;}
 	float           get_radius()     const {return radius;}
@@ -57,9 +57,8 @@ public:
 class uobject : public uobject_base { // size = 48
 
 public:
-	char status;
+	char status=0;
 
-	uobject() : status(0) {}
 	virtual ~uobject() {}
 	virtual void explode(float damage, float bradius, int etype, vector3d const &edir, int exp_time, int wclass,
 		int align, unsigned eflags=0, free_obj const *parent_=NULL);
@@ -91,9 +90,8 @@ public:
 
 struct ellipsoid_t {
 
-	float xy_angle;
+	float xy_angle=0.0;
 	vector3d scale, axis;
-	ellipsoid_t() : xy_angle(0.0f) {}
 };
 
 

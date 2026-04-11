@@ -27,10 +27,9 @@ public:
 
 class ref_counted_obj {
 
-	unsigned ref_count;
+	unsigned ref_count=0; // starts at 0, not 1
 
 public:
-	ref_counted_obj() : ref_count(0) {} // not 1
 	void inc_ref() {++ref_count;}
 	void dec_ref() {assert(ref_count > 0); --ref_count;}
 	bool unrefed() const {return (ref_count == 0);}
@@ -39,11 +38,10 @@ public:
 
 class noise_gen_3d {
 public:
-	unsigned num_sines;
+	unsigned num_sines=0;
 	float rdata[SINE_DATA_SIZE] = {0};
 	rand_gen_t rgen;
 
-	noise_gen_3d() : num_sines(0) {}
 	void set_rand_seeds(int rs1, int rs2) {rgen.set_state(rs1, rs2);}
 	void gen_sines(float mag, float freq);
 	void gen_xyz_vals(point const &start, vector3d const &step, unsigned const xyz_num[3], vector<float> xyz_vals[3]);
@@ -57,9 +55,9 @@ class upsurface : public ref_counted_obj, public noise_gen_3d { // size = 104 + 
 private:
 	struct cache_entry {
 		point p;
-		float val;
+		float val=0.0;
 
-		cache_entry(point const &pt=all_zeros) : p(pt), val(0.0) {}
+		cache_entry(point const &pt=all_zeros) : p(pt) {}
 		size_t hash() const {return (10831*(*(int const*)(&p[0])) + 15601*(*(int const*)(&p[1])) + 21401*(*(int const*)(&p[2])));}
 	};
 
@@ -67,13 +65,13 @@ private:
 
 public:
 	int type;
-	unsigned ssize;
-	float max_mag, rmax, min_cutoff;
+	unsigned ssize=0;
+	float max_mag=0.0, rmax=0.0, min_cutoff=0.0;
 	vector<float> heightmap;
 	sphere_point_norm spn;
 	sd_sphere_vbo_d sd;
 
-	upsurface(int type_=0) : type(type_), ssize(0), max_mag(0.0), rmax(0.0), min_cutoff(0.0) {}
+	upsurface(int type_=0) : type(type_) {}
 	~upsurface();
 	void gen(float mag, float freq, unsigned ntests=N_RAND_MAG_TESTS, float mm_scale=1.0);
 	void setup(unsigned size, float mcut, bool alloc_hmap);

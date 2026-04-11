@@ -30,9 +30,8 @@ extern vector<light_source_trig> light_sources_d;
 // ************ dynamic_particle ************
 
 
-dynamic_particle::dynamic_particle() : sphere_t(all_zeros, rand_uniform(dp_params.rmin, dp_params.rmax)), moves(1), lighted(1),
-	collides(1), chdir(0), gravity(0), shadows_setup(0), tid(-1), cid(-1), intensity(rand_uniform(dp_params.imin, dp_params.imax)*XY_SCENE_SIZE),
-	bwidth(1.0), velocity(signed_rand_vector(rand_uniform(dp_params.vmin, dp_params.vmax)))
+dynamic_particle::dynamic_particle() : sphere_t(all_zeros, rand_uniform(dp_params.rmin, dp_params.rmax)),
+	intensity(rand_uniform(dp_params.imin, dp_params.imax)*XY_SCENE_SIZE), velocity(signed_rand_vector(rand_uniform(dp_params.vmin, dp_params.vmax)))
 {
 	colorRGBA const colors[] = {WHITE, RED, GREEN, BLUE, YELLOW};
 	color = colors[rand() % (sizeof(colors)/sizeof(colorRGBA))];

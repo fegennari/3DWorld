@@ -13,12 +13,12 @@ class base_file_reader {
 
 protected:
 	std::string filename;
-	FILE *fp; // Note: we use a FILE* here instead of an ifstream because it's ~2.2x faster in MSVS
+	FILE *fp=nullptr; // Note: we use a FILE* here instead of an ifstream because it's ~2.2x faster in MSVS
 	static unsigned const MAX_CHARS = 1024;
-	bool verbose;
+	bool verbose=0;
 	char buffer[MAX_CHARS] = {0};
 	char *file_buf; // size FILE_BUF_SZ, allocated on the heap to avoid a large stack size
-	unsigned file_buf_pos, file_buf_end;
+	unsigned file_buf_pos=0, file_buf_end=0;
 
 	bool open_file(bool binary=0);
 	void close_file();
@@ -81,9 +81,8 @@ protected:
 	bool read_int(int &v);
 	bool read_uint(unsigned &v);
 	bool read_string(char *s, unsigned max_len);
-
 public:
-	base_file_reader(std::string const &fn) : filename(fn), fp(NULL), verbose(0), file_buf(new char [FILE_BUF_SZ]), file_buf_pos(0), file_buf_end(0) {assert(!fn.empty());}
+	base_file_reader(std::string const &fn) : filename(fn), file_buf(new char [FILE_BUF_SZ]) {assert(!fn.empty());}
 	~base_file_reader() {close_file(); delete [] file_buf;}
 };
 

@@ -208,9 +208,10 @@ void sensor_t::write_end_sensor_to_cobj_file(std::ostream &out) const {
 
 // ***** platforms *****
 
-platform::platform(float fs, float rs, float sd, float rd, float dst, float ad, point const &o, vector3d const &dir_, bool c, bool ir, bool ul, bool destroys_, int sid, sensor_t const &cur_sensor) :
+platform::platform(float fs, float rs, float sd, float rd, float dst, float ad, point const &o, vector3d const &dir_,
+	bool c, bool ir, bool ul, bool destroys_, int sid, sensor_t const &cur_sensor) :
 	cont(c), is_rot(ir), update_light(ul), destroys(destroys_), fspeed(fs), rspeed(rs), sdelay(sd), rdelay(rd), ext_dist(dst), act_dist(ad),
-	origin(o), dir(dir_.get_norm()), sound_id(sid), delta(all_zeros), sensor(cur_sensor)
+	origin(o), dir(dir_.get_norm()), sound_id(sid), sensor(cur_sensor)
 {
 	assert(dir_ != all_zeros);
 	assert(fspeed > 0.0 && sdelay >= 0.0 && act_dist >= 0.0);

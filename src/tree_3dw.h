@@ -23,22 +23,21 @@ enum {TREE_CLASS_NONE=0, TREE_CLASS_PINE, TREE_CLASS_DECID, TREE_CLASS_PALM, TRE
 class tree_lod_render_t {
 
 	struct entry_t {
-		tree_data_t const *td;
+		tree_data_t const *td=nullptr;
 		point pos;
 		color_wrapper cw;
 
-		entry_t() : td(NULL) {}
+		entry_t() {}
 		entry_t(tree_data_t const *td_, point const &pos_, colorRGBA const &color) : td(td_), pos(pos_) {assert(td); cw.set_c4(color);}
 		bool operator<(entry_t const &e) const {return (td < e.td);} // compare tree data pointer values
 	};
-
 	vector<entry_t> leaf_vect, branch_vect;
 	bool enabled;
 public:
 	int leaf_opacity_loc=-1, branch_opacity_loc=-1;
 
 	tree_lod_render_t(bool enabled_) : enabled(enabled_) {}
-	void set_enabled(bool enabled_) {enabled = enabled_;} // to be called before use, not during rendering
+	void set_enabled (bool enabled_) {enabled = enabled_;} // to be called before use, not during rendering
 	bool is_enabled()   const {return enabled;}
 	bool has_leaves()   const {return !leaf_vect.empty();}
 	bool has_branches() const {return !branch_vect.empty();}
@@ -115,7 +114,6 @@ class tree_builder_t : public tree_xform_t {
 	static vector<tree_cylin >   cylin_cache;
 	static vector<tree_branch>   branch_cache;
 	static vector<tree_branch *> branch_ptr_cache;
-
 	tree_branch base, roots, *branches_34[2]={}, **branches=nullptr;
 	int base_num_cylins=0, root_num_cylins=0, ncib=0, num_1_branches=0, num_big_branches_min=0, num_big_branches_max=0;
 	int num_2_branches_min=0, num_2_branches_max=0, num_34_branches[2]={}, num_3_branches_min=0, num_3_branches_max=0;
@@ -140,7 +138,6 @@ class tree_builder_t : public tree_xform_t {
 	void generate_4th_order_branch(tree_branch &src_branch, int j, float rotate_start, float temp_deg, int branch_num);
 	int generate_next_cylin(int cylin_num, int ncib, bool branch_just_created, bool &branch_deflected);
 	void add_leaves_to_cylin(unsigned cylin_ix, int tree_type, float rel_leaf_size, float deadness, vector<tree_leaf> &leaves);
-
 public:
 	tree_builder_t(cube_t const *clip_cube_, rand_gen_t &rgen_) : clip_cube(clip_cube_), rgen(rgen_) {}
 	float create_tree_branches(int tree_type, int size, float tree_depth, colorRGBA &base_color,
@@ -156,7 +153,6 @@ class tree_data_t {
 
 	typedef vert_norm_comp_color leaf_vert_type_t;
 	typedef vert_norm_comp_tc branch_vert_type_t;
-
 	indexed_vbo_manager_t branch_manager;
 	unsigned leaf_vbo=0, num_branch_quads=0, num_unique_pts=0, branch_index_bytes=0;
 	int tree_type=-1;
@@ -171,7 +167,6 @@ class tree_data_t {
 
 	void clear_vbo_ixs();
 	template<typename branch_index_t> void create_branch_vbo();
-
 public:
 	float base_radius=0, sphere_radius=0, sphere_center_zoff=0, br_scale=1.0, b_tex_scale=1.0;
 	float lr_z_cent=0, lr_x=0, lr_y=0, lr_z=0, br_x=0, br_y=0, br_z=0; // bounding cylinder data for leaves and branches
@@ -246,7 +241,6 @@ class tree_fire_t {
 	float fire_radius;
 	unsigned update_ix;
 	bool has_fire;
-
 public:
 	tree_fire_t(vector<draw_cylin> const &branches_, point const &tree_center_, float tree_base_radius);
 	bool is_burning() const {return has_fire;}

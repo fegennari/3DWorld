@@ -71,31 +71,22 @@ bool waypt_used_set::is_valid(unsigned wp) { // called to determine whether or n
 // ********** waypoint_t **********
 
 
-waypoint_t::waypoint_t(point const &p, int cid, bool up, bool i, bool g, bool t)
-	: user_placed(up), placed_item(i), goal(g), temp(t), visited(0), disabled(0), next_valid(0),
-	came_from(-1), item_group(-1), item_ix(-1), coll_id(cid), connected_to(-1), g_score(0), f_score(0), pos(p)
-{
+waypoint_t::waypoint_t(point const &p, int cid, bool up, bool i, bool g, bool t) : user_placed(up), placed_item(i), goal(g), temp(t), coll_id(cid), pos(p) {
 	clear();
 }
 
-
 void waypoint_t::mark_visited_by_smiley(unsigned const smiley_id) {
-
 	last_smiley_time = tfticks; // for now, we don't care which smiley
 	visited = 1;
 }
 
-
 float waypoint_t::get_time_since_last_visited(unsigned const smiley_id) const {
-
 	float const delta_t(tfticks - last_smiley_time); // for now, we don't care which smiley
 	assert(delta_t >= 0.0);
 	return delta_t;
 }
 
-
 void waypoint_t::clear() {
-
 	last_smiley_time = tfticks;
 	next_wpts.clear();
 	prev_wpts.clear();

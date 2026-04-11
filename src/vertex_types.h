@@ -21,9 +21,9 @@ struct vert_norm { // size = 24
 
 struct norm_comp { // size = 4
 	char n[3];
-	char pad; // unused padding
-	norm_comp() : pad(0) {set_norm_to_zero();}
-	norm_comp(vector3d const &n_) : pad(0) {set_norm(n_);}
+	char pad=0; // unused padding
+	norm_comp() {set_norm_to_zero();}
+	norm_comp(vector3d const &n_) {set_norm(n_);}
 	void set_norm_to_zero() {n[0] = n[1] = n[2] = 0;}
 	void set_ortho_norm(unsigned dim, bool dir) {assert(dim < 3); set_norm_to_zero(); n[dim] = (dir ? 127 : -128);}
 	void set_norm(norm_comp const &n_) {UNROLL_3X(n[i_] = n_.n[i_];)}
@@ -118,10 +118,8 @@ struct vert_norm_tc_tan : public vert_norm_tc { // size = 48
 	vector4d tangent;
 
 	vert_norm_tc_tan() {}
-	vert_norm_tc_tan(vert_norm_tc const &vntc, vector4d const &tangent_=vector4d(0,0,0,0))
-		: vert_norm_tc(vntc), tangent(tangent_) {}
-	vert_norm_tc_tan(point const &v_, vector3d const &n_, float ts, float tt, vector4d const &tangent_=vector4d(0,0,0,0))
-		: vert_norm_tc(v_, n_, ts, tt), tangent(tangent_) {}
+	vert_norm_tc_tan(vert_norm_tc const &vntc, vector4d const &tangent_=vector4d()) : vert_norm_tc(vntc), tangent(tangent_) {}
+	vert_norm_tc_tan(point const &v_, vector3d const &n_, float ts, float tt, vector4d const &tangent_=vector4d()) : vert_norm_tc(v_, n_, ts, tt), tangent(tangent_) {}
 
 	bool operator<(vert_norm_tc_tan const &p) const {
 		if (v < p.v) return 1;
@@ -286,8 +284,7 @@ struct vert_norm_color_tangent : public vert_norm_color {
 
 
 struct texgen_params_t { // size = 32
-	float st[2][4];
-	texgen_params_t() {UNROLL_4X(st[0][i_] = st[1][i_] = 0.0;)} // zero initialized
+	float st[2][4]={};
 };
 
 // Note: could probably use norm_comp, since used for cubes, cylinder ends, and polygons, but won't save much

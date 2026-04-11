@@ -22,22 +22,20 @@ class compute_shader_comp_t;
 class mesh_xy_grid_cache_t {
 
 	vector<float> xyterms, sine_mag_terms, cached_vals;
-	unsigned cur_nx, cur_ny, yterms_start, tid;
-	float mx0, my0, mdx, mdy, sine_offset;
-	int gen_mode, gen_shape;
-	bool do_glaciate;
+	unsigned cur_nx=0, cur_ny=0, yterms_start=0, tid=0;
+	float mx0=0, my0=0, mdx=0, mdy=0, sine_offset=0;
+	int gen_mode=MGEN_SINE, gen_shape=0;
+	bool do_glaciate=0;
 
 	// compute_shader_t or compute_shader_comp_t, but only compute_shader_t works for tiled terrain (size not a multiple of block_size=16)
 	typedef compute_shader_t grid_gen_shader_t;
 	//typedef compute_shader_comp_t grid_gen_shader_t;
-	grid_gen_shader_t *cshader;
+	grid_gen_shader_t *cshader=nullptr;
 
 	void run_gpu_simplex();
 	void cache_gpu_simplex_vals();
 
 public:
-	mesh_xy_grid_cache_t() : cur_nx(0), cur_ny(0), yterms_start(0), tid(0), mx0(0.0), my0(0.0), mdx(0.0), mdy(0.0), sine_offset(0.0),
-		gen_mode(MGEN_SINE), gen_shape(0), do_glaciate(0), cshader(nullptr) {}
 	~mesh_xy_grid_cache_t() {clear_context();}
 	bool build_arrays(float x0, float y0, float dx, float dy, unsigned nx, unsigned ny, bool cache_values=0, bool force_sine_mode=0, bool no_wait=0);
 	void enable_glaciate();
@@ -55,18 +53,15 @@ struct valley { // size = 70
 		float z_over;
 
 		spill_func() : index(-1), i(0), j(0), si(0), sj(0), spill(0), z_over(0.0) {}
-		spill_func(short ix, short i_, short j_, short si_, short sj_, short s, float z)
-			: index(ix), i(i_), j(j_), si(si_), sj(sj_), spill(s), z_over(z) {}
+		spill_func(short ix, short i_, short j_, short si_, short sj_, short s, float z) : index(ix), i(i_), j(j_), si(si_), sj(sj_), spill(s), z_over(z) {}
 	};
 
-	short x, y, spill_index;
-	bool has_spilled;
-	float w_volume, spill_vol, lwv, zval, min_zval, dz, area, fvol, depth, blood_mix, mud_mix, spill_integral;
+	short x, y, spill_index=-1;
+	bool has_spilled=0;
+	float w_volume=0, spill_vol=0, lwv=0, zval=0, min_zval=0, dz=0, area=0, fvol=0, depth=0, blood_mix=0, mud_mix=0, spill_integral=0;
 	spill_func sf;
 
-	valley(short x_=0, short y_=0) : x(x_), y(y_), spill_index(-1), has_spilled(0),
-		w_volume(0.0), spill_vol(0.0), lwv(0.0), zval(0.0), min_zval(0.0), dz(0.0),
-		area(0.0), fvol(0.0), depth(0.0), blood_mix(0.0), mud_mix(0.0), spill_integral(0.0) {}
+	valley(short x_=0, short y_=0) : x(x_), y(y_) {}
 	void copy_state_from(valley const &v);
 	void create(int wsi);
 	float get_volume() const;
@@ -74,10 +69,8 @@ struct valley { // size = 70
 
 
 struct valley_w { // size = 8
-	short wsi, x, y, inside8;
-	valley_w() : wsi(0), x(0), y(0), inside8(0) {}
+	short wsi=0, x=0, y=0, inside8=0;
 };
-
 
 struct surf_adv { // size = 4
 	short x, y;
@@ -89,10 +82,8 @@ struct surf_adv { // size = 4
 float const hmap_large_zval = 1000.0;
 
 struct hmap_params_t {
-	//int mode, shape;
-	float plat_bot, plat_h, plat_s, plat_max, crat_h, crat_s, crack_lo, crack_hi, crack_d, sine_mag, sine_freq, sine_bias, volcano_width, volcano_height;
-	hmap_params_t() : plat_bot(hmap_large_zval), plat_h(0), plat_s(0), plat_max(0), crat_h(hmap_large_zval), crat_s(0), crack_lo(0), crack_hi(0), crack_d(0),
-		sine_mag(0), sine_freq(0), sine_bias(0), volcano_width(0), volcano_height(0) {}
+	float plat_bot=hmap_large_zval, plat_h=0, plat_s=0, plat_max=0, crat_h=hmap_large_zval, crat_s=0;
+	float crack_lo=0, crack_hi=0, crack_d=0, sine_mag=0, sine_freq=0, sine_bias=0, volcano_width=0, volcano_height=0;
 	bool need_postproc() const {return (plat_bot < hmap_large_zval || crat_h < hmap_large_zval || crack_lo < crack_hi);}
 };
 

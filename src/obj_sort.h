@@ -29,7 +29,6 @@ struct cached_obj : public sphere_t {
 	inline void refresh() {set_obj(obj);}
 };
 
-
 struct interval {
 
 	float val;
@@ -40,10 +39,7 @@ struct interval {
 	bool operator<(interval const &iv) const {return (val < iv.val);}
 };
 
-
 struct comp_co_fast_x {
-	bool operator()(cached_obj const &o1, cached_obj const &o2) {
-		return (o1.pos.x < o2.pos.x);
-	}
+	bool operator()(cached_obj const &o1, cached_obj const &o2) {return (o1.pos.x < o2.pos.x);}
 };
 

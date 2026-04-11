@@ -11,10 +11,9 @@ unsigned const AF_GRID_SZ = 12;
 struct asteroid_belt_cloud : public volume_part_cloud {
 
 	point pos;
-	float radius;
-	unsigned vbo_pos;
+	float radius=0.0;
+	unsigned vbo_pos=0;
 
-	asteroid_belt_cloud() : radius(0.0f), vbo_pos(0) {}
 	void gen(rand_gen_t &rgen, float def_radius);
 	static void pre_draw(vpc_shader_t &s, colorRGBA const &color, float noise_scale);
 	static void post_draw(vpc_shader_t &s);
@@ -24,15 +23,13 @@ struct asteroid_belt_cloud : public volume_part_cloud {
 
 class uasteroid : public uobject, public rotated_obj {
 
-	unsigned inst_id;
+	unsigned inst_id=0;
 	vector3d scale, velocity;
-	float orbital_dist; // for asteroid_belt asteroids
-
+	float orbital_dist=0.0; // for asteroid_belt asteroids
 public:
-	int last_coll_id;
-	bool is_ice;
+	int last_coll_id=-1;
+	bool is_ice=0;
 
-	uasteroid() : inst_id(0), orbital_dist(0.0), last_coll_id(-1), is_ice(0) {}
 	void gen_base(float max_radius);
 	void gen_spherical(upos_point_type const &pos_offset, float max_dist, float max_radius);
 	void gen_belt(upos_point_type const &pos_offset, vector3d const &orbital_plane_normal, vector3d const vxy[2],
@@ -61,7 +58,6 @@ class shadowed_uobject {
 protected:
 	vector<sphere_t> shadow_casters;
 	sphere_t sun_pos_radius;
-
 public:
 	void calc_shadowers_for_planet(uplanet const &planet);
 	void upload_shadow_casters(shader_t &s) const;
@@ -70,15 +66,13 @@ public:
 
 class uasteroid_cont : public uobject_base, public shadowed_uobject, public vector<uasteroid> {
 
-	int rseed;
+	int rseed=0;
 protected:
 	pt_line_drawer pld; // for drawing
 
 	virtual void gen_asteroid_placements() = 0;
 	virtual void remove_asteroid(unsigned ix);
-
 public:
-	uasteroid_cont() : rseed(0) {}
 	virtual ~uasteroid_cont() {}
 	void init(point const &pos, float radius);
 	virtual bool get_is_ice() const {return 0;}
@@ -98,7 +92,6 @@ public:
 class uasteroid_field : public uasteroid_cont {
 
 	vector<unsigned short> grid[AF_GRID_SZ][AF_GRID_SZ][AF_GRID_SZ];
-
 public:
 	void apply_physics(point_d const &pos_, point const &camera);
 	virtual void gen_asteroid_placements();
@@ -116,7 +109,7 @@ protected:
 		bool operator()(pair<float, cloud_inst> const &a, pair<float, cloud_inst> const &b) const {return (a.first < b.first);}
 	};
 	vector3d orbital_plane_normal, orbit_scale;
-	float max_asteroid_radius, inner_radius, outer_radius, temperature;
+	float max_asteroid_radius=0.0, inner_radius=0.0, outer_radius=0.0, temperature=0.0;
 	vector<cloud_inst> cloud_insts;
 	mutable vector<pair<float, cloud_inst>> clouds_to_draw;
 
@@ -124,8 +117,7 @@ protected:
 	void gen_belt_placements(unsigned max_num, float belt_width, float belt_thickness, float max_ast_radius);
 
 public:
-	uasteroid_belt(vector3d const &opn, vector3d const &scale_) :
-	orbital_plane_normal(opn), orbit_scale(scale_), max_asteroid_radius(0.0), inner_radius(0.0), outer_radius(0.0), temperature(0.0) {}
+	uasteroid_belt(vector3d const &opn, vector3d const &scale_) : orbital_plane_normal(opn), orbit_scale(scale_) {}
 	virtual bool is_planet_ab() const {return 0;}
 	virtual void gen_asteroids();
 	virtual void apply_physics(point_d const &pos_, point const &camera) = 0;
@@ -149,7 +141,6 @@ class uasteroid_belt_system : public uasteroid_belt {
 	bool might_cast_shadow(uobject const &uobj) const;
 	void calc_colliders();
 	void calc_shadowers();
-
 public:
 	uasteroid_belt_system(vector3d const &opn, ussystem *system_) : uasteroid_belt(opn, system_->orbit_scale), system(system_) {}
 	virtual bool get_is_ice() const {return (temperature < 6.0);} // 50% of FREEZE_TEMP
@@ -159,14 +150,13 @@ public:
 
 class uasteroid_belt_planet : public uasteroid_belt {
 
-	float bwidth;
+	float bwidth=0.0;
 	uplanet *planet;
 
 	virtual void gen_asteroid_placements();
 	void calc_shadowers();
-
 public:
-	uasteroid_belt_planet(vector3d const &opn, uplanet *planet_) : uasteroid_belt(opn, planet_->rscale), bwidth(0.0), planet(planet_) {}
+	uasteroid_belt_planet(vector3d const &opn, uplanet *planet_) : uasteroid_belt(opn, planet_->rscale), planet(planet_) {}
 	virtual bool is_planet_ab() const {return 1;}
 	virtual bool get_is_ice  () const {return planet->has_ice_debris();}
 	void init_rings(point const &pos);

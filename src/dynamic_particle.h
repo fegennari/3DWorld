@@ -9,18 +9,15 @@
 struct dpart_params_t {
 	float rmin, rmax, vmin, vmax, imin, imax; // {min, max}x{radius, velocity, intensity}
 	vector3d sdist[2]; // low, high spawn distances
-
-	dpart_params_t() : rmin(0.03), rmax(0.07), vmin(0.6), vmax(3.0), imin(0.12), imax(0.26) {
-		sdist[0] = sdist[1] = vector3d(1,1,1);
-	}
+	dpart_params_t() : rmin(0.03), rmax(0.07), vmin(0.6), vmax(3.0), imin(0.12), imax(0.26) {sdist[0] = sdist[1] = vector3d(1,1,1);}
 };
 
 
 class dynamic_particle : public sphere_t { // size = 68
 
-	bool moves, lighted, collides, chdir, gravity, shadows_setup;
-	int tid, cid;
-	float intensity, bwidth;
+	bool moves=1, lighted=1, collides=1, chdir=0, gravity=0, shadows_setup=0;
+	int tid=-1, cid=-1;
+	float intensity=0.0, bwidth=1.0;
 	vector3d velocity;
 	colorRGBA color;
 
@@ -41,10 +38,9 @@ class dynamic_particle_system : public cube_map_shadow_manager { // size = 16
 
 	vector<dynamic_particle>  particles;
 	vector<vector<unsigned> > bins;
-	int valid_frame;
+	int valid_frame=-1;
 
 public:
-	dynamic_particle_system() : valid_frame(-1) {}
 	void add_particle(dynamic_particle const &p) {particles.push_back(p);}
 	size_t size() const {return particles.size();}
 	void clear() {remove_lights(); particles.clear();}

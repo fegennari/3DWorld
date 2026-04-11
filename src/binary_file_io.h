@@ -14,10 +14,9 @@ using std::ostream;
 
 class binary_file_io {
 protected:
-	FILE *fp;
-	gzFile gzf;
+	FILE *fp=nullptr;
+	gzFile gzf=nullptr;
 public:
-	binary_file_io() : fp(nullptr), gzf(nullptr) {}
 	~binary_file_io() {close();}
 
 	bool open(string const &filename, char const *const mode, string const &purpose) {

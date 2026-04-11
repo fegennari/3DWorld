@@ -13,14 +13,12 @@ struct mesh2d {
 	vector<unsigned char> rmap; // render map (actually a bool)
 	vector<float> emap; // expand map
 	vector<point> ptsh; // point shift map
-	unsigned size;
+	unsigned size=0;
 
 	unsigned get_index(unsigned s, unsigned t) const {assert(s < size && t <= size); return (s*(size+1) + t);}
-
 public:
-	float expand;
+	float expand=0.0;
 
-	mesh2d() : size(0), expand(0.0) {}
 	void clear();
 	unsigned get_num()     const {assert(size > 0); return size*(size+1);} // square, with an extra row
 	unsigned choose_rand() const {return (rand() % get_num());}

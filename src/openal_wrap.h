@@ -31,11 +31,11 @@ struct openal_orient {
 struct sound_params_t {
 
 	point pos;
-	float gain, pitch;
-	int sound_id;
-	bool rel_to_listener;
+	float gain=1.0, pitch=1.0;
+	int sound_id=-1;
+	bool rel_to_listener=0;
 
-	sound_params_t() : gain(1.0), pitch(1.0), sound_id(-1), rel_to_listener(0) {}
+	sound_params_t() {}
 	sound_params_t(point const &P, unsigned sid, float g, float p, bool r) : pos(P), gain(g), pitch(p), sound_id(sid), rel_to_listener(r) {}
 	float get_loudness() const;
 	bool read_from_file(FILE *fp);
@@ -45,9 +45,8 @@ struct sound_params_t {
 
 struct delayed_sound_t : public sound_params_t {
 
-	int id, time;
-
-	delayed_sound_t() : id(-1), time(0) {}
+	int id=-1, time=0;
+	delayed_sound_t() {}
 	delayed_sound_t(sound_params_t const &p, int i, int t) : sound_params_t(p), id(i), time(t) {}
 };
 
@@ -55,10 +54,9 @@ struct delayed_sound_t : public sound_params_t {
 class openal_buffer {
 
 	unsigned buffer;
-	float time;
-
+	float time=0.0;
 public:
-	openal_buffer(unsigned buffer_=0) : buffer(buffer_), time(0.0) {}
+	openal_buffer(unsigned buffer_=0) : buffer(buffer_) {}
 	//~openal_buffer() {free_buffer();}
 	bool load_check();
 	bool load_from_file(std::string const &fn);
@@ -75,7 +73,6 @@ public:
 class buffer_manager_t {
 
 	vector<openal_buffer> buffers;
-
 public:
 	openal_buffer &get_buffer(unsigned id) {assert(id < buffers.size()); return buffers[id];}
 
@@ -98,7 +95,6 @@ class openal_source {
 
 	unsigned source;
 	sound_params_t params;
-
 public:
 	openal_source(unsigned source_=0) : source(source_) {}
 	//~openal_source() {free_source();}
@@ -128,12 +124,10 @@ public:
 class source_manager_t {
 
 	vector<openal_source> sources;
-	unsigned next_source;
-
+	unsigned next_source=0;
 public:
 	std::set<unsigned> used_this_frame;
 
-	source_manager_t() : next_source(0) {}
 	void create_channels(unsigned num_channels);
 	unsigned new_source();
 	openal_source &get_least_loud_source();
@@ -154,12 +148,12 @@ public:
 
 struct placed_sound_t {
 
-	int sound_id;
+	int sound_id=-1;
 	sound_params_t params;
 	sensor_t sensor;
 	//multi_trigger_t triggers;
 
-	placed_sound_t() : sound_id(-1) {}
+	placed_sound_t() {}
 	placed_sound_t(unsigned id, sound_params_t const &params_, sensor_t const &sensor_=sensor_t()) : sound_id(id), params(params_), sensor(sensor_) {}
 	bool enabled() const {return (sound_id >= 0);}
 	void next_frame();

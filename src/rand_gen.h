@@ -50,10 +50,9 @@ inline uint32_t pcg32_random_r(pcg32_random_t* rng) {
 class rgen_pregen_t : public rgen_core_t {
 
 	std::shared_ptr<std::vector<double>> pregen_rand_reals;
-	unsigned cur_pos;
+	unsigned cur_pos=0;
 
 public:
-	rgen_pregen_t() : cur_pos(0) {}
 	void pregen_floats(unsigned num);
 	double randd();
 };

@@ -53,15 +53,14 @@ public:
 
 class csg_cube : public cube_t {
 
-	unsigned char eflags;
+	unsigned char eflags=0;
 
 	csg_cube(unsigned char eflags0) : eflags(eflags0) {} // eflags constructor (internal)
 	bool subtract_from_internal(const csg_cube &cube, vector<csg_cube> &output, bool do_merge=1) const;
 
 public:
-	csg_cube() : eflags(0) {}
-	csg_cube(float x1, float x2, float y1, float y2, float z1, float z2)
-		: cube_t(x1, x2, y1, y2, z1, z2), eflags(0) {} // float constructor
+	csg_cube() {}
+	csg_cube(float x1, float x2, float y1, float y2, float z1, float z2) : cube_t(x1, x2, y1, y2, z1, z2) {} // float constructor
 	csg_cube(const coll_obj &cobj, bool use_bounding_cube=0);
 	csg_cube(cube_t const &cube, unsigned char eflags0=0) : cube_t(cube), eflags(eflags0) {}
 	void write_to_cobj(coll_obj &cobj) const;
@@ -79,20 +78,17 @@ public:
 
 class r_profile {
 
-	bool filled;
+	bool filled=0;
 	rect bb;
-	float tot_area, avg_alpha;
+	float tot_area=0.0, avg_alpha=1.0;
 	vector<rect> rects;
 	deque<rect> pend;
 
 	void add_rect_int(rect const &r);
 
 public:
-	r_profile() : filled(0), tot_area(0.0), avg_alpha(1.0) {}
-
-	r_profile(float const bb_[2][2]) : filled(0), bb(bb_), tot_area(bb.area()), avg_alpha(1.0) {	
-		assert(tot_area > 0.0);
-	}
+	r_profile() {}
+	r_profile(float const bb_[2][2]) : bb(bb_), tot_area(bb.area()) {assert(tot_area > 0.0);}
 	bool is_filled() const {return filled;}
 	void reset_bbox(float const bb_[2][2]);
 	bool add_rect(float const d[3][2], unsigned d0, unsigned d1, float alpha);

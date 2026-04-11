@@ -181,7 +181,6 @@ public:
 class ushadow_polygon : public ushadow_volume { // currently only supports triangles and quads
 	unsigned npts;
 	upos_point_type p[2][4];
-
 public:
 	ushadow_polygon(upos_point_type const *const pts, unsigned np, upos_point_type const &cur_pos, float cur_radius,
 		point const &sun_pos, bool player, free_obj const *const obj=NULL, float rmin=0.0);
@@ -196,7 +195,6 @@ class ushadow_triangle_mesh : public ushadow_volume {
 	static tri_vect_t tris; // static to avoid excessive memory allocations
 
 	void set_triangle(unsigned t, upos_point_type const pts[3], point const &sun_pos, upos_point_type const &cur_pos, double min_dist, double cur_radius);
-
 public:
 	ushadow_triangle_mesh(vector<triangle> const &triangles, upos_point_type const &cur_pos, float cur_radius,
 		point const &sun_pos, float obj_radius, point const &obj_center, free_obj const *const obj=NULL);
@@ -394,7 +392,7 @@ public:
 class ship_cube : public ship_coll_obj, public cube_t {
 public:
 	ship_cube(float x1=0.0, float x2=0.0, float y1=0.0, float y2=0.0, float z1=0.0, float z2=0.0, float ds=1.0)
-		: ship_coll_obj(ds), cube_t(x1, x2, y1, y2, z1, z2) {}
+	: ship_coll_obj(ds), cube_t(x1, x2, y1, y2, z1, z2) {}
 	ship_cube* clone() const {return new ship_cube(*this);}
 	void translate(point const &p);
 	void draw(unsigned ndiv) const;

@@ -12,12 +12,10 @@ class vert_optimizer {
 	unsigned num_verts, npts_per_prim;
 
 	struct vbuf_entry_t {
-		unsigned ix, pos;
-		vbuf_entry_t() : ix((unsigned)-1), pos(0) {}
+		unsigned ix=(unsigned)-1, pos=0;
 	};
-
 	template<unsigned N> struct vert_block_t {
-		unsigned v[N];
+		unsigned v[N]={};
 
 		unsigned min_ix() const {assert(N == 3 || N == 4); return min(min(v[0], v[1]), ((N == 3) ? v[2] : min(v[2], v[3])));}
 		bool operator<(vert_block_t<N> const &b) const {return (min_ix() < b.min_ix());}
@@ -30,7 +28,6 @@ class vert_optimizer {
 	};
 
 	float calc_acmr() const;
-
 public:
 	vert_optimizer(vector<unsigned> &indices_, unsigned num_verts_, unsigned npts_per_prim_) :
 	  indices(indices_), num_verts(num_verts_), npts_per_prim(npts_per_prim_) {}

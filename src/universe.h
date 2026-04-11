@@ -190,7 +190,7 @@ struct rotated_obj { // size = 48
 
 class urev_body : public uobj_solid, public color_gen_class, public rotated_obj { // size = 360
 	// for textures/colors
-	unsigned char a[3], b[3];
+	unsigned char a[3]={}, b[3]={};
 	
 protected:
 	void calc_snow_thresh();
@@ -205,7 +205,7 @@ public:
 	std::shared_ptr<upsurface> surface;
 	string comment;
 
-	urev_body(char type_) : uobj_solid(type_), orbit_scale(all_ones) {a[0] = a[1] = a[2] = b[0] = b[1] = b[2] = 0;}
+	urev_body(char type_) : uobj_solid(type_), orbit_scale(all_ones) {}
 	virtual ~urev_body() {unset_owner();}
 	void gen_rotrev();
 	template<typename T> bool create_orbit(vector<T> const &objs, int i, point const &pos0, vector3d const &raxis,

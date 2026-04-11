@@ -24,19 +24,15 @@ enum {SF_EYE=0, SF_NOSE, SF_TONGUE, SF_HEADBAND, NUM_SMILEY_PARTS};
 
 
 struct bbox { // size = 20
-	float x1, y1, x2, y2;
-	int index;
-	bbox() : x1(0), y1(0), x2(0), y2(0), index(0) {}
+	float x1=0, y1=0, x2=0, y2=0;
+	int index=0;
 };
-
 
 struct team_info { // size = 20
 	bbox bb; // add others?
 };
 
-
 struct od_data { // size = 12
-
 	int id, type, val;
 	float dist;
 
@@ -52,9 +48,9 @@ typedef vector<wpt_ix_t> waypt_adj_vect;
 
 struct waypoint_t {
 
-	bool user_placed, placed_item, goal, temp, visited, disabled, next_valid;
-	int came_from, item_group, item_ix, coll_id, connected_to;
-	float g_score, f_score;
+	bool user_placed, placed_item, goal, temp, visited=0, disabled=0, next_valid=0;
+	int came_from=-1, item_group=-1, item_ix=-1, coll_id=-1, connected_to=-1;
+	float g_score=0.0, f_score=0.0;
 	point pos;
 	double last_smiley_time;
 	waypt_adj_vect next_wpts, prev_wpts;
@@ -70,7 +66,6 @@ struct waypoint_t {
 class waypoint_vector : public vector<waypoint_t> {
 
 	vector<wpt_ix_t> free_list;
-
 public:
 	wpt_ix_t add(waypoint_t const &w);
 	void remove(wpt_ix_t ix);
@@ -91,12 +86,10 @@ struct wpt_goal {
 
 class waypt_used_set {
 
-	unsigned last_wp;
-	int last_frame;
+	unsigned last_wp=0;
+	int last_frame=0;
 	map<unsigned, int> used;
-
 public:
-	waypt_used_set() : last_wp(0), last_frame(0) {}	
 	void clear();
 	void insert(unsigned wp);
 	bool is_valid(unsigned wp);
@@ -105,13 +98,10 @@ public:
 
 class unreachable_pts {
 
-	int try_counts;
-	float try_dist_sq;
+	int try_counts=0;
+	float try_dist_sq=0.0;
 	vector<point> cant_get;
-
 public:
-	unreachable_pts() : try_counts(0), try_dist_sq(0.0) {}
-	
 	void clear() {
 		reset_try();
 		cant_get.clear();
@@ -129,11 +119,10 @@ public:
 
 struct destination_marker {
 
-	int xpos, ypos, dmin_sq;
-	float min_depth;
-	bool valid;
+	int xpos=0, ypos=0, dmin_sq=0;
+	float min_depth=0.0;
+	bool valid=0;
 
-	destination_marker() : xpos(0), ypos(0), dmin_sq(0), min_depth(0.0), valid(0) {}
 	bool add_candidate(int x1, int y1, int x2, int y2, float depth, float radius);
 	void update_dmin(int x, int y) {if (valid) dmin_sq = (xpos - x)*(xpos - x) + (ypos - y)*(ypos - y);}
 	point get_pos() const;
@@ -161,7 +150,6 @@ struct player_state { // size = big
 		unsigned c;
 		count_t(unsigned c_=0) : c(c_) {}
 	};
-
 	bool plasma_loaded=0, on_waypt_path=0, is_jumping=0;
 	int target=-1, objective=-1, weapon=0, wmode=0, powerup=PU_NONE, powerup_time=0, cb_hurt=0;
 	int kills=0, deaths=0, suicides=0, team_kills=0, max_kills=0, tot_kills=0, killer=NO_SOURCE;
