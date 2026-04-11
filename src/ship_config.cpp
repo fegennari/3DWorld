@@ -14,7 +14,7 @@ bool const SHOW_SHIP_RATINGS = 0;
 bool allow_add_ship(0), allow_spawn_ship(0), regen_uses_credits(0), respawn_req_hw(0), player_enemy(0), build_any(0), no_shift_universe(0);
 float spawn_dist(1.0), global_regen(0.0), ship_build_delay(1.0), hyperspeed_mult(200.0), ship_speed_scale(1.0), player_turn_rate(1.0), rand_spawn_ship_dmax(0.0), player_sensor_dist_mult(1.0);
 unsigned gen_counts  [NUM_ALIGNMENT] = {0};
-point ustart_pos(all_zeros);
+point ustart_pos;
 u_ship *player_ship_ptr = NULL; // easiest to just make this global
 unsigned ship_add_prob[3][NUM_ALIGNMENT][NUM_US_CLASS] = {}; // {gen, init, rand spawn}
 vector<unsigned> build_types[NUM_ALIGNMENT];

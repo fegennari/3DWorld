@@ -2006,7 +2006,7 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflec
 		if (is_normal_pass && has_specular) {shader.clear_specular();}
 	}
 	bool check_lod(force_lod);
-	point center(all_zeros);
+	point center;
 	float const lod_thresh(1.0E6*model_mat_lod_thresh*model_lod_mult*lod_scale);
 
 	if ((world_mode == WMODE_INF_TERRAIN || use_model_lod_blocks) && !is_shadow_pass) { // setup LOD/distance culling
@@ -3040,7 +3040,7 @@ size_t get_loaded_models_gpu_mem() {return all_models.get_gpu_mem();}
 
 cube_t get_polygons_bcube(vector<coll_tquad> const &ppts) {
 
-	cube_t bcube(all_zeros);
+	cube_t bcube;
 
 	for (auto i = ppts.begin(); i != ppts.end(); ++i) { // rasterize ppts to cubes in {x,y,z}
 		if (i == ppts.begin()) {bcube = i->get_bcube();} else {bcube.union_with_cube(i->get_bcube());}

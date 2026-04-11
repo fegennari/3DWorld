@@ -38,7 +38,7 @@ struct text_message_params {
 
 int following(0), camera_flight(0), blood_spilled(0), camera_invincible(0), br_source(0), UNLIMITED_WEAPONS(0), last_inventory_frame(0);
 float camera_health(100.0), team_damage(1.0), self_damage(1.0), player_damage(1.0), smiley_damage(1.0);
-point orig_camera(all_zeros), orig_cdir(plus_z);
+point orig_camera, orig_cdir(plus_z);
 vector<spark_t> sparks;
 vector<beam3d> beams;
 text_message_params msg_params;

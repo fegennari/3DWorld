@@ -554,7 +554,7 @@ bool car_t::check_collision(car_t &c, road_gen_base_t const &road_gen) {
 	//cout << "Collision between " << cmove.str() << " and " << cstay.str() << endl;
 	if (cstay.is_stopped()) {cmove.decelerate_fast();} else {cmove.decelerate();}
 	float const dist(cstay.get_back_end() - cmove.get_front_end()); // signed distance between the back of the car in front, and the front of the car in back
-	point delta(all_zeros);
+	point delta;
 	delta[dim] += dist + (cmove.dir ? -sep_dist : sep_dist); // force separation between cars
 	cube_t const &bcube(road_gen.get_bcube_for_car(cmove));
 	if (cstay.max_speed < cmove.max_speed) {cmove.front_car_turn_dir = cstay.turn_dir;} // record the turn dir of this slow car in front of us so we can turn a different way

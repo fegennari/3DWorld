@@ -21,7 +21,7 @@ float const CAMERA_MESH_DZ   = 0.1; // max dz on mesh
 bool camera_on_snow(0);
 int camera_coll_id(-1), last_fall_frame(0);
 float czmin(FAR_DISTANCE), czmax(-FAR_DISTANCE), coll_rmax(0.0);
-point camera_last_pos(all_zeros); // not sure about this, need to reset sometimes
+point camera_last_pos; // not sure about this, need to reset sometimes
 coll_obj_group coll_objects;
 cobj_groups_t cobj_groups;
 cobj_draw_groups cdraw_groups;
@@ -1700,7 +1700,7 @@ void play_camera_footstep_sound() { // tiled terrain mode
 	if (player_on_moving_ww || player_on_escalator) return; // player is moving, but may not be walking - no footsteps
 	if (last_fall_frame == frame_counter) return; // no footsteps when falling
 	static double fs_time(0.0);
-	static point last_pos(all_zeros), prev_frame_pos(all_zeros);
+	static point last_pos, prev_frame_pos;
 	point const pos(get_camera_pos());
 	if (pos.z < water_plane_z) return; // underwater, no sound
 	if (dist_less_than(pos, prev_frame_pos, 0.001*CAMERA_RADIUS)) {fs_time = tfticks;} // reset timer if camera hasn't moved

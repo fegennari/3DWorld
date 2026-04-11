@@ -437,7 +437,7 @@ void get_occluders() {
 	static bool first_run(1);
 	unsigned const skipval(first_run ? 0 : 8); // spread update across many frames
 	if (++startval >= skipval) startval = 0;
-	static point last_camera(all_zeros);
+	static point last_camera;
 	point const camera(get_camera_pos());
 	
 	if (!first_run && p2p_dist(camera, last_camera) < 0.1*HALF_DXY) { // camera hasn't moved much

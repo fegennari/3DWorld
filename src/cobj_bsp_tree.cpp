@@ -546,7 +546,7 @@ void cobj_bvh_tree::build_tree_top_level_omp() { // single octtree level
 	unsigned const num(n.size());
 
 	// calculate bbox and determine mean values
-	point sval(all_zeros);
+	point sval;
 	n.copy_from(get_cobj(n.start));
 
 	for (unsigned i = n.start; i < n.end; ++i) {

@@ -248,7 +248,7 @@ void tree::add_tree_collision_objects() {
 		colorRGBA const lcolor(get_avg_leaf_color(type)); // will be reset in update_leaf_cobj_color()
 		cobj_params cpl(0.3, lcolor, 0, 0, NULL, 0, ltid, 1.0, 0, 0);
 		cpl.flags |= COBJ_DESTROYABLE; // so that truly_static() returns false
-		point const xlate(all_zeros); // for now
+		point const xlate; // all zeros for now
 		vector<tree_leaf> const &leaves(tdata().get_leaves());
 		leaf_cobjs.resize(leaves.size());
 
@@ -385,7 +385,7 @@ void setup_leaf_wind(shader_t &s, float wind_mag, bool underwater) {
 void set_leaf_shader(shader_t &s, float min_alpha, unsigned tc_start_ix, bool enable_opacity, bool no_dlights, float wind_mag,
 	bool underwater, bool use_fs_smap, bool enable_smap, bool enable_tex_coord_weight, bool shadow_only)
 {
-	cube_t lights_bcube(all_zeros);
+	cube_t lights_bcube;
 
 	if (world_mode == WMODE_INF_TERRAIN && !shadow_only) {
 		if (!no_dlights) {

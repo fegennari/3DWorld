@@ -203,7 +203,7 @@ struct car_t : public car_base_t, public waiting_obj_t { // size = 136
 	void honk_horn_if_close_and_fast() const;
 	void on_alternate_turn_dir(rand_gen_t &rgen);
 	void register_adj_car(car_t &c);
-	unsigned count_cars_in_front(cube_t const &range=cube_t(all_zeros)) const;
+	unsigned count_cars_in_front(cube_t const &range=cube_t()) const;
 	float get_sum_len_space_for_cars_in_front(cube_t const &range) const;
 	cube_t get_parking_space_debug_marker() const;
 	cube_t get_ped_coll_check_area() const;

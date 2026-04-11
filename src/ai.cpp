@@ -678,7 +678,7 @@ void player_state::smiley_select_target(dwobject &obj, int smiley_id) {
 	float diste(0.0), disth(0.0), health(obj.health);
 	vector<type_wt_t> &types(target_types);
 	types.clear();
-	point targete(all_zeros), targeth(all_zeros);
+	point targete, targeth;
 	int const last_target_visible(target_visible), last_target_type(target_type);
 	target_visible = 0;
 	target_type    = 0; // 0 = none, 1 = enemy, 2 = health/powerup, 3 = waypoint

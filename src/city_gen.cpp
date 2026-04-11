@@ -20,7 +20,7 @@ bool had_building_interior_coll(0), city_lights_custom_bcube(0), has_transmissio
 unsigned num_cars_drawn(0), num_peds_drawn(0);
 vector2d actual_max_road_seg_len;
 city_params_t city_params;
-point pre_smap_player_pos(all_zeros), actual_player_pos(all_zeros); // Note: pre_smap_player_pos can be security cameras, but actual_player_pos is always the player
+point pre_smap_player_pos, actual_player_pos; // Note: pre_smap_player_pos can be security cameras, but actual_player_pos is always the player
 
 extern bool enable_dlight_shadows, dl_smap_enabled, enable_dlight_bcubes, flashlight_on, camera_in_building, have_indir_smoke_tex, disable_city_shadow_maps;
 extern bool player_in_walkway, player_in_skyway, player_on_moving_ww, player_in_ww_elevator, player_in_tunnel, player_in_mall;
@@ -303,7 +303,7 @@ template<typename T> void get_bcubes_region_coll_xy(vector<T> const &bcubes, vec
 	}
 }
 template<typename T> cube_t calc_cubes_bcube(vector<T> const &cubes) {
-	if (cubes.empty()) return cube_t(all_zeros);
+	if (cubes.empty()) return cube_t();
 	cube_t bcube(cubes.front()); // first cube
 	for (auto r = cubes.begin()+1; r != cubes.end(); ++r) {bcube.union_with_cube(*r);} // skip first cube
 	return bcube;
@@ -3562,7 +3562,7 @@ public:
 	}
 	void gen_cities() { // Note: params better be city_params
 		if (city_params.num_cities == 0) return;
-		cube_t cities_bcube(all_zeros);
+		cube_t cities_bcube;
 		{ // open a scope
 			timer_t t("Choose City Location");
 			for (unsigned n = 0; n < city_params.num_cities; ++n) {gen_city(city_params, cities_bcube);}

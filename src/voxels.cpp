@@ -715,11 +715,11 @@ void voxel_model::remove_unconnected_outside_modified_blocks(bool postproc_brush
 	}
 	if (postproc_brushes_mode) return; // no fragments or sound
 	float const fragment_radius(0.5*vsz.mag());
-	point center(all_zeros);
+	point center;
 
-	for (vector<pt_ix_t>::const_iterator i = updated_pts.begin(); i != updated_pts.end(); ++i) {
-		if (!falling_voxels_shift_down) {maybe_create_fragments(i->pt, fragment_radius, NO_SOURCE, 1, 0);}
-		center += i->pt; // center of mass
+	for (pt_ix_t const &p : updated_pts) {
+		if (!falling_voxels_shift_down) {maybe_create_fragments(p.pt, fragment_radius, NO_SOURCE, 1, 0);}
+		center += p.pt; // center of mass
 	}
 	center /= updated_pts.size();
 	gen_sound(SOUND_ROCK_FALL, center, CLIP_TO_01(0.05f*updated_pts.size()), 2.0);
@@ -1644,7 +1644,7 @@ void voxel_model_space::extract_shadow_edges(voxel_grid<unsigned char> const &sh
 	for (unsigned n = 0; n <= ndiv; ++n) { // first and last ray are the same
 		float const angle(TWO_PI*((float)n/(float)ndiv)), dx(cosf(angle)), dy(sinf(angle));
 		vector3d const step(step_delta*point(dx, dy, 0.0));
-		point pos(center), shadow_edge_pos(all_zeros);
+		point pos(center), shadow_edge_pos;
 		bool last_unshadowed(0);
 
 		while (1) {

@@ -1214,7 +1214,7 @@ void small_tree::draw_leaves(bool shadow_only, int xlate_loc, int scale_loc, vec
 	if (type == T_PALM) {draw_palm_leaves(); return;}
 	float const size_scale((do_zoom ? ZOOM_FACTOR : 1.0)*stt[type].ss*width*window_width);
 	vector3d scale;
-	point xl(all_zeros);
+	point xl;
 
 	switch (type) { // draw leaves (palm or deciduous)
 	case T_DECID: // decidious tree

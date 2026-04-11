@@ -1377,7 +1377,7 @@ void draw_borg_layer(bool is_cube, bool is_small, float scale, int ndiv, vector3
 				for (unsigned e = 0; e < 2; ++e) { // dir
 					for (unsigned s = 0; s < ndiv; ++s) {
 						for (unsigned t = 0; t < ndiv; ++t) {
-							point p(all_zeros);
+							point p;
 							float const dist(sz - 0.05*rgen.signed_rand_float());
 							p[d0] = (e ? -dist : dist);
 							p[d1] = spacing*(s + 0.5) - 1.0 + 0.025*rgen.signed_rand_float();

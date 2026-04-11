@@ -1448,7 +1448,7 @@ void building_t::run_dynamic_obj_update(vect_room_object_t::iterator obj_it, poi
 	} // for p
 	if (kicked) {
 		static float last_sound_tfticks(0);
-		static point last_sound_pt(all_zeros);
+		static point last_sound_pt;
 		ball.flags |= RO_FLAG_DYNAMIC; // make it dynamic
 
 		if ((tfticks - last_sound_tfticks) > 1.0*TICKS_PER_SECOND && !dist_less_than(new_center, last_sound_pt, radius)) { // play at most once per second
@@ -1779,7 +1779,7 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 	float const floor_spacing(get_window_vspace());
 	float const player_radius(get_scaled_player_radius()), player_z1(player_pos.z - get_bldg_player_height()), player_z2(player_pos.z);
 	bool const player_in_this_building(this == player_building);
-	static point last_player_pos(all_zeros);
+	static point last_player_pos;
 	bool const player_is_moving(player_pos != last_player_pos);
 	point camera_rot(player_pos);
 	int player_room_ix(-1);

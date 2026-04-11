@@ -100,8 +100,9 @@ struct cobj_ray_accum_t {
 		return n;
 	}
 	cube_t get_bcube(bool const expand=0) const {
-		cube_t bcube(all_zeros);
+		cube_t bcube;
 		bool is_first(0);
+
 		for (unsigned i = 0; i < 6; ++i) {
 			if (vals[i].num_rays == 0) continue;
 			if (is_first) {bcube = vals[i].bcube; is_first = 0;} else {bcube.union_with_cube(vals[i].bcube);}

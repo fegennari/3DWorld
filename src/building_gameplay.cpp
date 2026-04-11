@@ -3228,7 +3228,7 @@ bool building_t::apply_paint(point const &pos_, vector3d const &dir_, colorRGBA 
 		unsigned const d(e ? d2 : d1);
 		if (p_int[d] - 0.9*radius < target.d[d][0] || p_int[d] + 0.9*radius > target.d[d][1]) return 0; // extends outside the target surface in this dim
 	}
-	static point last_p_int(all_zeros);
+	static point last_p_int;
 	if (dist_less_than(p_int, last_p_int, 0.25*radius)) return 1; // too close to previous point, skip (to avoid overlapping sprays at the same location); still return 1
 	last_p_int = p_int;
 	vector3d dir1, dir2; // unit vectors

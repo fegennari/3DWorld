@@ -1217,7 +1217,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 		} // for n
 	}
 	// place power poles if there are houses or streetlights
-	point corner_pole_pos(all_zeros);
+	point corner_pole_pos;
 
 	if ((is_residential && have_city_buildings()) || have_streetlights) {
 		float const road_width(city_params.road_width), pole_radius(0.015*road_width), height(get_power_pole_height());

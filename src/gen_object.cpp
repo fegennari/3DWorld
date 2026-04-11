@@ -256,7 +256,7 @@ bool gen_fire(point const &pos, float size, int source, bool allow_close, bool i
 void gen_decal(point const &pos, float radius, vector3d const &orient, int tid, int cid, colorRGBA const &color,
 	bool is_glass, bool rand_angle, int lifetime, float min_dist_scale, tex_range_t const &tr)
 {
-	static point last_pos(all_zeros);
+	static point last_pos;
 	static unsigned last_element(0);
 	float const min_dist(min_dist_scale*radius);
 	

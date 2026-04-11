@@ -425,7 +425,7 @@ class mesh_shadow_gen {
 		bool const dim(fabs(dir.x) < fabs(dir.y));
 		double const dir_ratio(dir.z/dir[dim]);
 		bool inited(0);
-		point cur(all_zeros);
+		point cur;
 		// Bresenham's line drawing algorithm
 		int x(xa), y(ya);
 		int dx1(0), dy1(0), dx2(0), dy2(0);

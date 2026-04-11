@@ -1204,7 +1204,7 @@ void power_pole_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist
 	bool const pole_visible(camera_pdu.cube_visible(bcube + dstate.xlate));
 	float const wire_radius(get_wire_radius()), pole_height(bcube.dz());
 	cube_t tf_bcube;
-	point conduit_top(all_zeros);
+	point conduit_top;
 	quad_batch_draw &m_qbd(qbds.untex_qbd), &s_qbd(qbds.untex_spec_qbd); // {matte, specular}
 
 	if (pole_visible) {

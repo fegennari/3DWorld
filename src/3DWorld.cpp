@@ -118,7 +118,7 @@ float model_hemi_lighting_scale(0.5), pine_tree_radius_scale(1.0), sunlight_brig
 float mouse_smooth_factor(0.0), tree_depth_scale(1.0), head_bob_amount(0.0);
 float light_int_scale[NUM_LIGHTING_TYPES] = {1.0, 1.0, 1.0, 1.0, 1.0}, first_ray_weight[NUM_LIGHTING_TYPES] = {1.0, 1.0, 1.0, 1.0, 1.0};
 double camera_zh(0.0);
-point mesh_origin(all_zeros), camera_pos(all_zeros), cube_map_center(all_zeros);
+point mesh_origin, camera_pos, cube_map_center;
 string user_text, cobjs_out_fn, sphere_materials_fn, hmap_out_fn, skybox_cube_map_name, coll_damage_name, assimp_alpha_exclude_str;
 colorRGB ambient_lighting_scale(1,1,1), mesh_color_scale(1,1,1);
 colorRGBA flower_color(ALPHA0);
@@ -129,8 +129,8 @@ vector<cube_t> smoke_bounds;
 // camera variables
 double c_radius(DEF_CRADIUS), c_theta(DEF_CTHETA), c_phi(DEF_CPHI), up_theta(DEF_UPTHETA), camera_y(DEF_CAMY);
 float sun_rot(0.2), moon_rot(-0.2), sun_theta(1.2), moon_theta(0.3), light_factor, ball_velocity(15.0), cview_radius(1.0), player_speed(1.0);
-vector3d up_vector(plus_y), cview_dir(all_zeros);
-point camera_origin(all_zeros), surface_pos(all_zeros), cpos2;
+vector3d up_vector(plus_y), cview_dir;
+point camera_origin, surface_pos, cpos2;
 char player_name[MAX_CHARS] = "Player";
 bool vert_opt_flags[3] = {0}; // {enable, full_opt, verbose}
 
@@ -531,7 +531,7 @@ void change_world_mode() { // switch terrain mode: 0 = normal/ground, 1 = univer
 
 	if (map_mode || universe_only || tiled_terrain_only || (disable_universe && disable_inf_terrain)) return;
 	static int xoff_(0), yoff_(0), xoff2_(0), yoff2_(0);
-	static point camera_pos_(all_zeros);
+	static point camera_pos_;
 	last_temp = -100.0; // force update
 
 	if (world_mode == WMODE_UNIVERSE) { // restore saved parameters and recalculate sun and moon pos
@@ -640,7 +640,7 @@ struct player_height_mgr_t {
 			static double bob_time(0.0);
 
 			if (!player_on_moving_ww && !player_on_escalator) { // player is walking if moving
-				static point prev_frame_pos(all_zeros);
+				static point prev_frame_pos;
 				point const pos(get_camera_pos());
 				if (!dist_xy_less_than(pos, prev_frame_pos, 0.001*CAMERA_RADIUS)) {bob_time += fticks;} // update if player has moved
 				prev_frame_pos = pos;

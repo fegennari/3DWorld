@@ -610,8 +610,7 @@ void play_thunder(point const &pos, float gain, float delay) {
 void set_openal_listener_as_player() {
 	// Note: velocity is zero for now because the actual player velocity is not constant,
 	// and passing it into the listener setup as a constant is incorrect
-	vector3d const cvel(zero_vector);
-	setup_openal_listener(get_camera_all(), cvel, openal_orient(get_vdir_all(), get_upv_all()));
+	setup_openal_listener(get_camera_all(), zero_vector, openal_orient(get_vdir_all(), get_upv_all()));
 }
 
 int read_sound_file(string const &name) {

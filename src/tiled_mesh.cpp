@@ -2131,8 +2131,8 @@ point lightning_strike_t::get_pos() const {
 
 	assert(path.points.size() >= 2);
 	//return path.points[path.points.size()-2];
-	point avg_pos(all_zeros);
-	for (vector<point>::const_iterator i = path.points.begin(); i != path.points.end(); ++i) {avg_pos += *i;}
+	point avg_pos;
+	for (point const &p : path.points) {avg_pos += p;}
 	return avg_pos / path.points.size();
 }
 
@@ -2338,7 +2338,7 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 		cout << "update: tiles: " << init_tiles << " to " << tiles.size() << ", erased: " << num_erased << endl;
 	}
 	// Note: could skip shadow computation (but not weight calc/texture upload) if (max(sun_pos.z,  last_sun.z) > zbottom) or (sun.get_norm().z > 0.9) or something like that
-	static point last_sun(all_zeros), last_moon(all_zeros);
+	static point last_sun, last_moon;
 	bool sun_change (sun_pos  != last_sun  && light_factor >= 0.4);
 	bool moon_change(moon_pos != last_moon && light_factor <= 0.6 && max(moon_pos.z, last_moon.z) > zmin); // only when the moon is up
 	float const toler = 0.9999; // only update when sun/moon has changed significantly
@@ -3125,7 +3125,7 @@ void tile_draw_t::billboard_tree_shader_setup(shader_t &s) {
 
 void tile_draw_t::tree_branch_shader_setup(shader_t &s, bool enable_shadow_maps, bool enable_opacity, bool shadow_only, bool enable_dlights) {
 
-	cube_t lights_bcube(all_zeros);
+	cube_t lights_bcube;
 
 	if (enable_dlights) {
 		lights_bcube = get_city_lights_bcube();
@@ -3667,7 +3667,7 @@ void invalidate_tile_smap_at_pt(point const &pos, float radius, bool repeat_next
 
 void tile_draw_t::add_or_remove_trees_at(point const &pos, float radius, bool add_trees, int brush_shape) {
 
-	static point last_pos(all_zeros);
+	static point last_pos;
 	static float last_radius(0.0);
 
 	if (add_trees) {
@@ -3675,7 +3675,7 @@ void tile_draw_t::add_or_remove_trees_at(point const &pos, float radius, bool ad
 		last_pos = pos; last_radius = radius;
 	}
 	//timer_t timer("Add/Remove Trees"); // add pine=4.4 add decid=3.5
-	cube_t update_bcube(all_zeros);
+	cube_t update_bcube;
 	vector<tile_t *> near_tiles;
 
 	// Note: not suitable for openmp because it modifies shared state (smap_manager, near_tiles, shared_tree_data, VBOs, xoff2, yoff2)

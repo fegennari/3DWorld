@@ -10,7 +10,7 @@
 float const wheelr = 0.118;
 
 float hmv_scale(1.0);
-point hmv_pos(all_zeros);
+point hmv_pos;
 shape3d hmv_shape;
 std::vector<int> hmv_coll_obj;
 

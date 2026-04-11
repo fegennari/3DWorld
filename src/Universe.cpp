@@ -60,7 +60,7 @@ int uxyz[3] = {0, 0, 0};
 unsigned char water_c[3] = {0}, ice_c[3] = {0};
 unsigned char const *const wic[2] = {water_c, ice_c};
 float univ_sun_rad(AVG_STAR_SIZE), univ_temp(0.0), cloud_time(0.0), universe_ambient_scale(1.0), planet_update_rate(1.0);
-point univ_sun_pos(all_zeros);
+point univ_sun_pos;
 colorRGBA sun_color(SUN_LT_C);
 s_object current;
 universe_t universe; // the top level universe
@@ -1193,7 +1193,7 @@ bool ugalaxy::create(ucell const &cell, int index) {
 	lrq_pos  = all_zeros;
 	gen_name(current);
 	cube_t const cube(-radius*scale, radius*scale);
-	point galaxy_ext(all_zeros), pts[8];
+	point galaxy_ext, pts[8];
 	cube.get_points(pts);
 	rotate_vector3d_multi(axis, -xy_angle, pts, 8);
 

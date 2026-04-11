@@ -392,7 +392,7 @@ void process_groups() {
 		for (size_t jj = 0; jj < iter_count; ++jj) {
 			unsigned const j(unsigned((type == SMILEY) ? (jj + scounter)%max_objs : jj)); // handle smiley permutation
 			dwobject &obj(objg.get_obj(j));
-			point cobj_pos(all_zeros);
+			point cobj_pos;
 			assert(!defer_remove_cobj); // prev iter should have handled this
 
 			if (large_radius && obj.coll_id >= 0) {

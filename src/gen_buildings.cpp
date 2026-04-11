@@ -3465,7 +3465,7 @@ public:
 		bool const use_city_plots(!valid_city_plot_ixs.empty()), check_plot_coll(!avoid_bcubes.empty());
 		vect_city_prob_t city_prob(use_city_plots); // calculated and reused once per city
 		bix_by_plot.resize(city_plot_bcubes.size());
-		point center(all_zeros);
+		point center;
 		unsigned num_consec_fail(0), max_consec_fail(0);
 		vect_cube_t temp_parts;
 
@@ -5662,7 +5662,7 @@ public:
 		building_creator_t &bc(tiles[make_pair(x, y)]); // insert it
 		assert(bc.empty());
 		int const border(allow_flatten ? 1 : 0); // add a 1 pixel border around the tile to avoid creating a seam when an adjacent tile's edge height is modified
-		cube_t bcube(all_zeros);
+		cube_t bcube;
 		bcube.x1() = get_xval(x*MESH_X_SIZE + border);
 		bcube.y1() = get_yval(y*MESH_Y_SIZE + border);
 		bcube.x2() = get_xval((x+1)*MESH_X_SIZE - border);

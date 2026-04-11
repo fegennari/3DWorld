@@ -22,7 +22,7 @@ int onscreen_display(0);
 unsigned univ_reflection_tid(0);
 unsigned alloced_fobjs[3] = {0}; // testing
 float uobj_rmax(0.0), urm_ship(0.0), urm_static(0.0), urm_proj(0.0);
-point player_death_pos(all_zeros), universe_origin(all_zeros);
+point player_death_pos, universe_origin;
 vector<free_obj *> uobjs; // ships, projectiles, etc.
 vector<cached_obj> coll_objs; // only collision objects
 vector<cached_obj> ships[NUM_ALIGNMENT], all_ships; // ships only - do we want vectors of u_ship*?
