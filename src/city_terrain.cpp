@@ -679,9 +679,11 @@ float park_heightmap_t::get_zval_at_pos(point const &pos_bs) const {
 	if (!bcube.contains_pt_xy(pos_bs)) return pos_bs.z; // not in this park; return existing zval
 	unsigned x(0), y(0);
 	xy_from_pt(pos_bs, x, y);
-	unsigned const ix(y*nx + x);
-	assert(ix < heights.size());
-	return heights[ix];
+	point const pt_at_xy(pt_from_xy(x, y));
+	float const dx(bcube.dx()/nx), dy(bcube.dy()/ny), xv((pt_at_xy.x - pos_bs.x)/dx), yv((pt_at_xy.y - pos_bs.y)/dy);
+	unsigned const xp(x ? x-1 : 0), yp(y ? y-1 : 0);
+	assert((y*nx + x) < heights.size()); // only check largest values
+	return (yv*(xv*heights[yp*nx + xp] + (1.0f-xv)*heights[yp*nx + x]) + (1.0f-yv)*(xv*heights[y*nx + xp] + (1.0f-xv)*heights[y*nx + x])); // lerp
 }
 bool park_heightmap_t::set_pos_zval(point &pos, float radius, point const &xlate, vector<park_path_t> const &ppaths) const {
 	point const pos_bs(pos - xlate);
