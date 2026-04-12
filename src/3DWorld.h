@@ -1331,13 +1331,6 @@ void timing_profiler_stats();
 #define TXTi(x) #x"=" << (int)x << " "
 #define TXTin(x) #x"=" << (int)x << "\n"
 
-#if 0 // still only ms accuracy in windows
-#include <time.h>
-#define GET_TIME_CLOCK()  clock()
-#define RESET_TIME2       clock_t const timer1(GET_TIME_CLOCK());
-#define GET_DELTA_TIME2   double(GET_TIME_CLOCK() - timer1)/double(CLOCKS_PER_SEC)
-#define PRINT_TIME2(str) {cout << str << " time = " << GET_DELTA_TIME << endl;}
-#endif
 
 class timer_t {
 	string name;

@@ -376,12 +376,6 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 			get_all_connected(to_remove[i], start);
 			check_cobjs_anchored(start, anchored);
 		}
-#if 0
-		// additional optional error check that no cobj is both anchored and unanchored - can fail for polygons due to inexact intersection test
-		for (auto i = anchored[0].begin(); i != anchored[0].end(); ++i) {
-			assert(anchored[1].find(*i) == anchored[1].end());
-		}
-#endif
 		if (REMOVE_UNANCHORED) {
 			for (auto i = anchored[0].begin(); i != anchored[0].end(); ++i) {
 				coll_obj &cobj(coll_objects.get_cobj(*i));

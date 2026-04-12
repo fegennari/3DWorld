@@ -145,18 +145,10 @@ protected:
 		return 1;
 	}
 
-	bool read_matrix(xform_matrix &matrix, unsigned short chunk_len) {
+	bool read_matrix(xform_matrix &matrix, unsigned short chunk_len) { // Note: may not be in correct coordinate space
 		assert(chunk_len == 54); // header + 4*3 floats
 		float m[12];
 		if (!read_data(m, sizeof(float), 12, "transform matrix")) return 0;
-#if 0
-		float *mp(matrix.get_ptr());
-
-		for (unsigned i = 0; i < 4; ++i) {
-			for (unsigned j = 0; j < 3; ++j) {mp[4*i+j] = m[3*i+j];}
-		}
-		//UNROLL_3X(mp[12+i_] = m[9+i_];) // copy translate only
-#endif
 		return 1;
 	}
 

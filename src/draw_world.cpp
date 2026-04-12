@@ -1701,7 +1701,7 @@ void draw_cracks_and_decals() {
 		else { // use normal lighting shader
 			if (!lighting_shader.is_setup()) {setup_smoke_shaders(lighting_shader, 0.01, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0.0, 0.0, 0, 0, 0, 0);} // no rain/snow
 			lighting_shader.enable();
-			if (0 && !is_emissive) {lighting_shader.add_uniform_float("emissive_scale", 1.0); is_emissive = 1;} // make colors emissive
+			//if (!is_emissive) {lighting_shader.add_uniform_float("emissive_scale", 1.0); is_emissive = 1;} // make colors emissive
 		}
 		select_texture(tid);
 		i->second.draw();

@@ -55,20 +55,11 @@ vec4 add_light_comp(in vec3 normal, in vec4 epos, in int i, in float ds_scale, i
 	//bump_scale *= pow(texture(detail_tex, 11.0*tc + fract(vec2(0.0, 0.002*wave_time))).r, 3.0); // moving specular when rainy?
 	ds_scale *= clamp(5.0*dot(normal, light_dir), 0.0, 1.0); // fix self-shadowing
 	bump_map_setup(light_dir, epos_final, normal);
-
-#if 0 // Note: has artifacts and looks worse
-	float dist = length(epos.xyz);
-	if      (dist < 10.0) {normal = get_raw_nm_normal(weights, weights4, 1.0);}
-	else if (dist > 20.0) {normal = get_raw_nm_normal(weights, weights4, 0.25);}
-	else                  {normal = mix(get_raw_nm_normal(weights, weights4, 1.0), get_raw_nm_normal(weights, weights4, 0.25), 0.1*(dist - 10.0));}
-#else
 	normal = get_raw_nm_normal(weights, weights4, 1.0);
-#endif
-
 	normal = normalize(mix(vec3(0,0,1), (2.0*normal - 1.0), bump_scale));
 	//normal = apply_bump_map(light_dir, epos_final, normal, bump_scale);
 
-#if 0 // toksvig antialiasing
+#if 0 // Toksvig antialiasing
 	float nmag = min(1.0, length(2.0*texture(detail_normal_tex, detail_normal_tex_scale*tc).rgb - 1.0));
 	float ft   = nmag/(nmag + shininess*(1.0 - nmag));
 	spec      *= (1.0 + ft*shininess)/(1.0 + shininess);

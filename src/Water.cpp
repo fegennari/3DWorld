@@ -650,45 +650,28 @@ void calc_water_normals() {
 		// if we have ice, the normals can't change and don't need to be updated;
 		// however, if they were never calculated, they do need to be update on the first frame;
 		// since we can't tell if the normals are valid, it's safest to always just update them
-		// *** but it's certainly not right to always set them to plus_z ***
-#if 0
-		if (temperature <= W_FREEZE_POINT) { // ice
-			for (int j = 0; j < MESH_X_SIZE; ++j) {
-				if (!point_interior_to_mesh(j, i) || wminside[i][j]) {wsn1[j] = wat_vert_normals[i][j] = plus_z;}
+		for (int j = 0; j < MESH_X_SIZE; ++j) {
+			if (point_interior_to_mesh(j, i) && wminside[i][j] && water_matrix[i][j] >= z_min_matrix[i][j]) { // inside
+				wsn1[j] = get_matrix_surf_norm(water_matrix, NULL, MESH_X_SIZE, MESH_Y_SIZE, j, i);
+				vector3d nv(wsn1[j]);
+				if (i > 0)          {nv += wsn0[j];}
+				if (i > 0 && j > 0) {nv += wsn0[j-1];}
+				if (j > 0)          {nv += wsn1[j-1];}
+				wat_vert_normals[i][j] = nv.get_norm();
 			}
-		} else
-#endif
-		{ // water
-			for (int j = 0; j < MESH_X_SIZE; ++j) {
-				if (point_interior_to_mesh(j, i) && wminside[i][j] && water_matrix[i][j] >= z_min_matrix[i][j]) { // inside
-					wsn1[j] = get_matrix_surf_norm(water_matrix, NULL, MESH_X_SIZE, MESH_Y_SIZE, j, i);
-					vector3d nv(wsn1[j]);
-					if (i > 0)          {nv += wsn0[j];}
-					if (i > 0 && j > 0) {nv += wsn0[j-1];}
-					if (j > 0)          {nv += wsn1[j-1];}
-					wat_vert_normals[i][j] = nv.get_norm();
-				}
-				else {
-					wsn1[j] = wat_vert_normals[i][j] = plus_z;
-				}
-			} // for j
-		}
+			else {
+				wsn1[j] = wat_vert_normals[i][j] = plus_z;
+			}
+		} // for j
 		swap(wsn0, wsn1);
 	} // for i
 }
 
 
 inline void update_water_edges(int i, int j) {
-
-	if (i > 0 && wminside[i-1][j] == 1) {
-		water_matrix[i][j] = valleys[watershed_matrix[i-1][j].wsi].zval;
-	}
-	else if (j > 0 && wminside[i][j-1] == 1) {
-		water_matrix[i][j] = valleys[watershed_matrix[i][j-1].wsi].zval;
-	}
-	else {
-		water_matrix[i][j] = def_water_level;
-	}
+	if (i > 0 && wminside[i-1][j] == 1)      {water_matrix[i][j] = valleys[watershed_matrix[i-1][j].wsi].zval;}
+	else if (j > 0 && wminside[i][j-1] == 1) {water_matrix[i][j] = valleys[watershed_matrix[i][j-1].wsi].zval;}
+	else                                     {water_matrix[i][j] = def_water_level;}
 }
 
 
@@ -818,12 +801,8 @@ void compute_ripples() {
 					water_matrix[i][j] = max(water_matrix[i][j], zbottom);
 				}
 				else if (update_iter) {
-					if (get_water_enabled(j, i)) {
-						update_water_edges(i, j);
-					}
-					else {
-						ripples[i][j].rval = 0.0; // not sure if this is correct, or if there is something else that should be done here
-					}
+					if (get_water_enabled(j, i)) {update_water_edges(i, j);}
+					else {ripples[i][j].rval = 0.0;} // not sure if this is correct, or if there is something else that should be done here
 				}
 			} // for j
 		} // for i
@@ -836,13 +815,9 @@ void compute_ripples() {
 		if (NO_ICE_RIPPLES || counter == 0 || temperature > W_FREEZE_POINT) {
 			for (int i = 0; i < MESH_Y_SIZE; ++i) {
 				for (int j = 0; j < MESH_X_SIZE; ++j) {
-					if (wminside[i][j] == 1) {
-						water_matrix[i][j] = valleys[watershed_matrix[i][j].wsi].zval;
-					}
-					else {
-						update_water_edges(i, j);
-					}
-				} // for j
+					if (wminside[i][j] == 1) {water_matrix[i][j] = valleys[watershed_matrix[i][j].wsi].zval;}
+					else {update_water_edges(i, j);}
+				}
 			} // for i
 		}
 	} // ripple

@@ -1195,7 +1195,7 @@ void add_dynamic_lights_ground(float &dlight_add_thresh) {
 #if 0
 	for (unsigned i = 0; i < 10; ++i) { // add some random lights (omnidirectional)
 		point const pos(gen_rand_scene_pos());
-		dl_sources.push_back(light_source(0.94, pos, pos, BLUE, 1));
+		dl_sources.emplace_back(0.94, pos, pos, BLUE, 1);
 	}
 #endif
 	// Note: do we want to sort by y/x position to minimize cache misses?

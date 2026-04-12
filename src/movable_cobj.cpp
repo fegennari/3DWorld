@@ -1002,7 +1002,7 @@ vector3d get_cobj_drop_delta(unsigned index) {
 			if (!on_elevator) {gen_sound(SOUND_OBJ_FALL, center, 0.5, 1.2);} // elevators cause no falling sound when descending
 		}
 		// check for rolling cobjs that can roll downhill
-		if (cobjs.size() != 1) return zero_vector; // can only handle a single supporting cobj
+		if (cobjs.size() != 1)      return zero_vector; // can only handle a single supporting cobj
 		if (!is_rolling_cobj(cobj)) return zero_vector; // not rolling
 		coll_obj const &c(coll_objects.get_cobj(cobjs.front()));
 		if (c.is_point_supported(center_of_mass)) return zero_vector; // center of mass is resting stably, it's stuck

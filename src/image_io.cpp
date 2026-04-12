@@ -203,16 +203,6 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 			}
 		}
 	} // end non-generated texture case
-#if 0
-	if (name.size() > 4 && name.front() != '@') {
-		string fn(name);
-		fn.erase(fn.begin()+fn.size()-4, fn.end());
-		fn += ".bmp";
-		fn  = texture_dir + "/gen/";
-		cout << "Writing " << fn << endl;
-		write_to_bmp(fn);
-	}
-#endif
 	//if (startswith(name, "metals") && is_texture_compressed()) {calc_color(); write_texture2d_binary();} // TESTING
 }
 
@@ -325,20 +315,6 @@ void texture_t::load_raw_bmp(int index, bool allow_diff_width_height, bool allow
 		}
 		auto_insert_alpha_channel(index);
 	}
-#if 0 // untested, enable if/when can be tested
-	else if (format == 1 && (ncolors*width & 3)) { // not a multiple of 4 bytes - need to handle BMP padding
-		unsigned const row_bytes(ncolors*width), stride(row_bytes + 4 - (row_bytes & 3)), nbytes(num_bytes());
-
-		for (unsigned row = 0, pos = 0; row < (unsigned)height; ++row, pos += row_bytes) {
-			assert(pos < nbytes);
-
-			if (fread(data+pos, min(stride, nbytes-pos), 1, file) != 1) { // skip the padding bytes on the final scanline
-				cerr << "Error loading data from texture image " << name << endl;
-				exit(1);
-			}
-		}
-	}
-#endif
 	else { // RGB or grayscale luminance
 		if (fread(data, ncolors*size, 1, file) != 1) {
 			cerr << "Error loading data from texture image " << name << endl;

@@ -762,20 +762,9 @@ void flower_manager_t::check_vbo() {
 
 	if (vbo != 0 || empty()) return; // nothing to update
 	//RESET_TIME;
-
-	if (0 && world_mode == WMODE_INF_TERRAIN) {
-		vector<sized_vert_t<vert_norm_color> > verts(flowers.size());
-
-		for (auto i = flowers.begin(); i != flowers.end(); ++i) {
-			verts[i-flowers.begin()] = sized_vert_t<vert_norm_color>(vert_norm_color(i->pos, i->normal, i->color), i->radius);
-		}
-		create_vbo_and_upload(vbo, verts);
-	}
-	else {
-		vector<vert_norm_comp_color> verts;
-		create_verts_range(verts, 0, size());
-		create_vbo_and_upload(vbo, verts);
-	}
+	vector<vert_norm_comp_color> verts;
+	create_verts_range(verts, 0, size());
+	create_vbo_and_upload(vbo, verts);
 	//PRINT_TIME("Flowers VBO");
 }
 
@@ -820,16 +809,8 @@ void flower_manager_t::draw_triangles(shader_t &shader) const {
 
 	pre_render();
 	select_texture((draw_model == 1) ? (int)WHITE_TEX : (int)DAISY_TEX);
-
-	if (0 && world_mode == WMODE_INF_TERRAIN) {
-		sized_vert_t<vert_norm_color>::set_vbo_arrays();
-		glDrawArrays(GL_POINTS, 0, flowers.size());
-		++num_frame_draw_calls;
-	}
-	else {
-		vert_norm_comp_color::set_vbo_arrays();
-		draw_quads_as_tris(4*flowers.size());
-	}
+	vert_norm_comp_color::set_vbo_arrays();
+	draw_quads_as_tris(4*flowers.size());
 	post_render();
 }
 
