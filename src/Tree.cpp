@@ -2152,7 +2152,6 @@ void tree_cont_t::post_scroll_remove() {
 
 void tree_cont_t::gen_deterministic(int x1, int y1, int x2, int y2, float vegetation_, float mesh_dz, tile_t const *const cur_tile) { // default full tile generation function
 	gen_trees_tt_within_radius(x1, y1, x2, y2, all_zeros, 0.0, 0, mesh_dz, cur_tile, vegetation_, 1); // not using bounding sphere
-	//cout << TXT(mod_num_trees) << TXT(size()) << endl;
 }
 
 void tree_cont_t::add_new_tree(rand_gen_t &rgen, int &ttype) {
@@ -2170,7 +2169,6 @@ void tree_cont_t::add_new_tree(rand_gen_t &rgen, int &ttype) {
 		ttype   = tree_id % NUM_TREE_TYPES;
 	}
 	if (shared_tree_data[tree_id].is_created()) {ttype = shared_tree_data[tree_id].get_tree_type();} // in case there weren't enough generated to get the requested type
-	//cout << "selected tree " << tree_id << " of " << shared_tree_data.size() << " type " << ttype << endl;
 	if (tree_id >= 0) {back().bind_to_td(&shared_tree_data[tree_id]);}
 }
 
@@ -2634,7 +2632,6 @@ int tree_fire_t::add_fire(point const &pos, float radius, float val) { // return
 	} // for i
 	if (dmin_sq == 0.0) return damaged; // no fire was started
 	tree_fire_elem_t &elem(fires[best_ix]);
-	//cout << TXT(radius) << TXT(val) << TXT(dmin_sq) << TXT(best_ix) << TXT(elem.hp) << TXT(elem.fuel);
 	if (!elem.burn(val)) return 1;
 	rand_gen_t rgen;
 	rgen.set_state(best_ix, update_ix);

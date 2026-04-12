@@ -61,7 +61,6 @@ int shader_t::get_uniform_loc(char const *const name) const {
 	if (!program) {cerr << "Error: Attempt to set shader uniform name " << name << " without program" << endl;}
 	assert(program);
 	int const loc(glGetUniformLocation(program, name));
-	//cout << "name: " << name << ", loc: " << loc << endl;
 	//assert(loc >= 0); // Note: if variable is unused, loc will be -1
 	return loc;
 }
@@ -648,9 +647,6 @@ bool setup_shaders() {
 		glGetIntegerv(GL_PATCH_DEFAULT_OUTER_LEVEL, &def_o);
 		glGetIntegerv(GL_PATCH_DEFAULT_INNER_LEVEL, &def_i);
 		cout << "max_pv: " << max_pv << ", max_level: " << max_level << ", def levels: " << def_o << " " << def_i << endl; // 32 64 1 1
-		//glPatchParameteri(GL_PATCH_VERTICES, v);
-		//glPatchParameteri(GL_PATCH_DEFAULT_OUTER_LEVEL, v);
-		//glPatchParameteri(GL_PATCH_DEFAULT_INNER_LEVEL, v);
 	}
 	cout << "OpenGL Version: " << glGetString(GL_VERSION) << endl;
 	cout << "Renderer: " << glGetString(GL_RENDERER) << endl;
@@ -857,7 +853,6 @@ bool shader_t::begin_shader(bool do_enable) {
 void shader_t::get_program_binary(vector<unsigned char> &binary_data, GLenum &binary_format) const {
 	int prog_length(0), length(0);
 	glGetProgramiv(program, GL_PROGRAM_BINARY_LENGTH, &prog_length);
-	//cout << TXT(prog_length) << endl;
 	assert(prog_length > 0);
 	binary_data.resize(prog_length);
 	glGetProgramBinary(program, prog_length, &length, &binary_format, &binary_data.front());

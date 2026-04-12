@@ -1163,7 +1163,6 @@ void purge_old_objs() {
 
 
 us_class const &get_sclass_obj(unsigned sclass) {
-
 	assert(sclass < NUM_US_CLASS);
 	return sclasses[sclass];
 }
@@ -1180,18 +1179,14 @@ void cobj_vector_t::add_no_delete(ship_coll_obj const *const o) {push_back(p_con
 
 
 float get_ship_cost(unsigned sclass, unsigned align, unsigned reserve_credits, float discount) {
-
 	assert(discount <= 1.0);
 	if (init_credits[align] == 0) return 0.0; // no credits allocated, none used
 	float const cost(unsigned(sclasses[sclass].cost*(1.0 - discount)));
-	//cout << cost << " req for " << get_name() << ", have " << team_credits[align] << endl;
 	if (team_credits[align] < (cost + reserve_credits)) return -1.0; // can't afford
 	return cost;
 }
 
-
 bool alloc_resources_for(unsigned sclass, unsigned align, unsigned reserve_credits, float discount) {
-
 	float const cost(get_ship_cost(sclass, align, reserve_credits, discount));
 	if (cost < 0.0) return 0;
 	team_credits[align] -= cost;

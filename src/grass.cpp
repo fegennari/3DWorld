@@ -193,7 +193,6 @@ void grass_tile_manager_t::gen_lod_block(unsigned bix, unsigned lod) {
 			used[merge_ix-start_ix] = 1;
 		}
 	} // for i
-	//cout << TXT(lod) << TXT(search_dist) << "num=" << (grass.size() - vbo_offsets[lod][bix]) << endl;
 	vbo_offsets[lod][bix+1] = grass.size(); // end of current LOD block/beginning of next LOD block
 }
 

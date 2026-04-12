@@ -190,7 +190,6 @@ void distribute_smoke() { // called at most once per frame
 	static rand_gen_t rgen;
 	
 	if (cur_skip == 0) {
-		//cout << "tot_smoke: " << smoke_man.tot_smoke << ", enabled: " << smoke_exists << ", visible: " << smoke_visible << endl;
 		smoke_man     = next_smoke_man;
 		smoke_man.adj_bbox();
 		smoke_visible = smoke_man.smoke_vis;
@@ -411,7 +410,6 @@ bool upload_smoke_indir_texture() {
 
 
 bool fire_elem_t::burn(float val) {
-	//cout << TXT(val) << TXT(fuel) << TXT(hp) << TXT(burn_amt) << endl;
 	if (fuel == 0.0) return 0; // no fuel, no burning
 	if (hp >= val) {hp -= val; return 0;} // not yet burning
 	val -= hp; // remove remaining HP

@@ -101,7 +101,6 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, int damage_t
 		unsigned const max_parts(tri_fragments ? min(500U, max(group.max_objs/10, num_avail/4)) : 100);
 		unsigned const num(min(max_parts, max(((tri_fragments && !cts[i].is_2d) ? 6U : 1U), unsigned(num_parts)))); // no more than 100-500
 		if (tri_fragments && num < num_parts) {size_scale *= sqrt(num_parts/(float)num);} // if need more than the max parts, make them larger to preserve area/volume
-		//cout << "shattered: " << shattered << ", tri: " << tri_fragments << ", volume: " << cts[i].volume << ", num_parts: " << num_parts << ", num: " << num << ", ss: " << size_scale << endl;
 		bool const non_csg(shattered || cts[i].unanchored);
 		csg_cube frag_cube(cts[i]);
 		if (!non_csg && !cube.cube_intersection(frag_cube, frag_cube)) {frag_cube = cts[i];} // intersect frag_cube with cube (should pass)

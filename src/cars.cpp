@@ -1126,7 +1126,6 @@ void car_manager_t::add_helicopters(vect_cube_t const &hp_locs) {
 		helicopters.push_back(helicopter);
 		helipad.in_use = 1;
 	} // for i
-	//cout << TXT(helipads.size()) << TXT(helicopters.size()) << endl; // 55/30
 }
 
 void car_city_vect_t::clear_cars() { // Note: not clearing parked_car_bcubes()
@@ -1289,7 +1288,6 @@ int car_manager_t::find_next_car_after_turn(car_t &car) {
 	unsigned const dest_orient(isec.get_dest_orient_for_car_in_isec(car, 0)); // Note: may be before, during, or after turning
 	int road_ix(isec.rix_xy[dest_orient]), seg_ix(isec.conn_ix[dest_orient]);
 	unsigned city_ix(car.cur_city);
-	//cout << TXT(car.get_orient()) << TXT(dest_orient) << TXT(city_ix) << TXT(road_ix) << TXT(seg_ix) << endl;
 	assert((road_ix < 0) == (seg_ix < 0));
 
 	if (road_ix < 0) { // goes to connector road
@@ -1325,7 +1323,6 @@ int car_manager_t::find_next_car_after_turn(car_t &car) {
 			if (it->get_orient() != dest_orient) continue; // wrong orient
 			float const dist_sq(p2p_dist_sq(car_center, it->get_center()));
 			if (p2p_dist_sq(car_center, it->get_front()) < dist_sq) continue; // front is closer than back - this car is not in front of us (waiting on other side of isect?)
-			//cout << TXT(dmin_sq) << TXT(dist_sq) << (dist_sq < dmin_sq) << endl;
 
 			if (dist_sq < dmin_sq) { // new closest car
 				if (&(*it) != car.car_in_front) {ret_car_ix = (it - cars.begin());} // record index if set to a new value

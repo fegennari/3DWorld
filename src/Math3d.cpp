@@ -1516,7 +1516,6 @@ vector3d get_firing_dir(vector3d const &src, vector3d const &dest, float fvel, f
 	}
 	assert(vz_sq >= 0.0 && vz_sq <= vsq+TOLERANCE);
 	float const vz(sqrt(vz_sq)), v_xy(sqrt(vsq - vz_sq));
-	//cout << "fvel: " << fvel << ", dist: " << dist << ", height: " << height << ", g: " << gravity << ", a: " << a << ", b: " << b << ", c: " << c << ", vz: " << vz << ", t: " << dist/v_xy << endl;
 	vector3d dir_xy(vector3d(dest.x-src.x, dest.y-src.y, 0.0).get_norm());
 	return (dir_xy*v_xy + vector3d(0.0, 0.0, vz)).get_norm();
 }

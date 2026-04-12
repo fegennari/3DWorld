@@ -493,10 +493,8 @@ vector3d get_mesh_normal_at(point const &pt) {
 }
 
 void adjust_cobj_resting_normal(coll_obj &c, vector3d const &supp_norm) {
-	//cout << "supp_norm: " << supp_norm.str() << endl;
 	if (supp_norm == zero_vector) return; // invalid (can this happen?)
 	vector3d const rest_norm(-c.get_cobj_resting_normal()); // negate so that it points up
-	//cout << "rest_norm: " << rest_norm.str() << endl;
 	if (rest_norm == zero_vector) return; // invalid (can this happen?)
 	if (dot_product(supp_norm, rest_norm) > 0.999) return; // normals already align, no rotation needed
 	c.rotate_about(c.get_center_of_mass(), cross_product(supp_norm, rest_norm).get_norm(), get_norm_angle(rest_norm, supp_norm));
@@ -550,7 +548,6 @@ void coll_obj::rotate_about(point const &pt, vector3d const &axis, float angle, 
 	assert(axis != zero_vector);
 	remove_coll_object(id, 0);
 	//point const prev_pts0(points[0]);
-	//cout << "pt: " << pt.str() << ", axis: " << axis.str() << ", angle: " << angle << endl;
 
 	switch (type) {
 	case COLL_TORUS:
@@ -661,9 +658,6 @@ rot_val_t get_cobj_rot_axis(vector<point> const &support_pts, point const &norma
 		if (point_in_convex_planar_polygon(hull, normal, center_of_mass)) return rot_val_t();
 		// Note: if closest point is on an edge, we could use the edge dir for the rot axis; however, that doesn't work if the closest point is a corner on the convex hull
 		closest_pt = get_hull_closest_pt(hull, center_of_mass);
-		//cout << "support pts: " << endl; for (auto i = support_pts.begin(); i != support_pts.end(); ++i) {cout << i->str() << endl;}
-		//cout << "hull: " << endl; for (auto i = hull.begin(); i != hull.end(); ++i) {cout << i->str() << endl;}
-		//cout << "closest_pt: " << closest_pt.str() << endl << "center_of_mass: " << center_of_mass.str() << endl;
 	}
 	if (dist_less_than(closest_pt, center_of_mass, TOLERANCE)) return rot_val_t(); // perfect balance (avoid div-by-zero)
 	return rot_val_t(closest_pt, get_lever_rot_axis(closest_pt, center_of_mass, gravity)); // zero_vector means point is supported
@@ -867,7 +861,6 @@ void check_cobj_alignment(unsigned index) {
 		}
 		if (!supported && !support_pts.empty()) { // can rotate due to gravity and maybe fall
 			rot_val_t const rot_val(get_cobj_rot_axis(support_pts, normal, center_of_mass));
-			//cout << TXT(supported) << TXT(support_pts.size())<< ", normal: " << normal.str() << ", rot axis: " << rot_val.axis.str() << endl;
 		
 			if (rot_val.axis != zero_vector) { // apply rotation if not stable at rest
 				float const angle(0.1); // need to calculate this

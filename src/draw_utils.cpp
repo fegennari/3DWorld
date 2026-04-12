@@ -231,7 +231,6 @@ void pt_line_drawer::draw() const {
 	assert(!(lines.size() & 1));
 	if (!points.empty()) {draw_verts(points, GL_POINTS);}
 	if (!lines.empty ()) {draw_verts(lines,  GL_LINES );}
-	//cout << "mem: " << get_mem() << endl;
 }
 
 

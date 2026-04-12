@@ -337,7 +337,6 @@ class file_reader_assimp {
 			// is_alpha_mask=0, verbose=0, invert_alpha=0, wrap=1, mirror=0, force_grayscale=0, invert_y=1
 			unsigned const tid(model.tmgr.create_texture(full_path, 0, 0, 0, 1, 0, 0, is_normal_map, 1));
 			texture_t &t(model.tmgr.get_texture(tid));
-			//cout << TXT(width) << TXT(height) << TXT(tid) << TXT(t.is_allocated()) << endl;
 			if (t.is_allocated()) return tid; // duplicate
 
 			if (texture->mHeight > 0) { // texture stored uncompressed, size is {width, height}

@@ -528,7 +528,6 @@ void update_temperature(bool verbose) {
 	}
 	float const cur_z((camera_mode == 1) ? get_camera_pos().z : 0.5f*(ztop + zbottom));
 	float const rel_h((cur_z - zmin)/(zmax - zmin));
-	//cout << "z: " << cur_z << ", rh: " << rel_h << ", wpz: " << water_plane_z << ", zmin: " << zmin << ", zmax: " << zmax << ", ztop: " << ztop << ", zbot: " << zbottom << endl;
 
 	if (cur_z < water_plane_z) {
 		float const znorm(min(1.0f, (water_plane_z - cur_z)/(water_plane_z - zmin)));

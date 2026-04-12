@@ -299,7 +299,6 @@ class texture_id_mapper_t {
 		if (tid < 0) return; // not allocated
 		if (tid >= (int)tid_to_slot_ix.size()) {tid_to_slot_ix.resize(tid+1, 0);}
 		if (tid_to_slot_ix[tid] == 0) {tid_to_slot_ix[tid] = next_slot_ix++;}
-		//cout << "register " << tid << " slot " << tid_to_slot_ix[tid] << endl;
 	}
 	void register_tex(tid_nm_pair_t const &tex) {
 		register_tid(tex.tid);
@@ -3668,7 +3667,6 @@ public:
 				//if (b->is_house) continue;
 				unsigned num_comp(b->count_connected_room_components());
 				if (b->has_sec_bldg()) {--num_comp;} // exclude garage/shed
-				//cout << num_comp;
 				if (num_comp > 1) {cout << num_comp << ": " << b->bcube.get_cube_center().str() << endl;}
 			}
 			cout << endl;

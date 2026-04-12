@@ -164,7 +164,6 @@ cylinder_3dw light_source::calc_bounding_cylin(float sqrt_thresh, bool clip_to_s
 			t = new_max_len/max_len;
 			end_radius *= t; // scale end_radius by the clipped line length again
 			pos2 = pos1 + t*(pos2 - pos1); // clip the line again
-			//cout << TXT(len1) << TXT(max_len) << TXT(new_max_len) << endl;
 		}
 	}
 	return cylinder_3dw(pos, pos2, 0.0, end_radius);

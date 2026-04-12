@@ -318,7 +318,6 @@ template<typename T> void indexed_vntc_vect_t<T>::gen_lod_blocks(unsigned npts) 
 	amin = max(amin, amax/1024.0f); // limit to a reasonable number of blocks
 	assert(amin > 0.0);
 	unsigned const num_blocks(get_area_pow2(amax, amin) + 1);
-	//cout << TXT(amin) << TXT(amax) << TXT(num_blocks) << endl;
 	if (num_blocks == 1) return; // all triangles have similar area, don't subdivide
 	lod_blocks.resize(num_blocks);
 

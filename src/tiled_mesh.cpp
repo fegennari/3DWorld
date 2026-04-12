@@ -174,7 +174,6 @@ float get_tt_fog_based_far_clip(float min_camera_dist) {
 		dfavg = 0.5f*(zf + z0) - zm;
 	}
 	float const fog_dist((zc - zm)*sqrt(max((FD*FD/(dfavg*dfavg) - 1.0), 0.0)));
-	//cout << "FD: " << FD << ", fog_dist: " << fog_dist << ", FAR_CLIP: " << FAR_CLIP << ", final: " << max(FAR_CLIP, 1.1f*fog_dist) << endl;
 	return max(uniform_fog_far_clip, 1.1f*fog_dist); // add 10% padding
 }
 
@@ -991,7 +990,6 @@ void tile_t::setup_shadow_maps(tile_shadow_map_manager &smap_manager, bool clean
 			for (unsigned i = 0; i < NUM_LIGHT_SRC; ++i) { // uses tu_id 21 and 22
 				smap_data.push_back(smap_manager.new_smap_data(TILE_SMAP_START_TU_ID+i, this, i, lod_level));
 			}
-			//cout << "*** LOD: " << lod_level << " curLOD: " << smap_lod_level << " LODf: " << lod_level_f << " dist: " << smap_dist_scale << endl;
 			smap_lod_level = lod_level;
 		}
 	}
@@ -3398,7 +3396,6 @@ void tile_draw_t::draw_tile_clouds(bool reflection_pass) { // reflection_pass is
 	unsigned num(0);
 	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {num += i->second->update_tile_clouds();}
 	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->get_cloud_draw_list(to_draw_clouds);}
-	//cout << "clouds: " << num << endl;
 	if (to_draw_clouds.empty()) return;
 	sort(to_draw_clouds.begin(), to_draw_clouds.end()); // back-to-front
 	vpc_shader_t s; // see draw_scenery()

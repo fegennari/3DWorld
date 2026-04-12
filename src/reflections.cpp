@@ -429,11 +429,9 @@ void reflect_plane_selector::select_best_reflection_plane() {
 		// Note: reflection planes should not overlap in z; if this holds, we can use either z1 or z2 for determining ordering
 		cube_t const &c(bcubes[i]);
 		float const zval(c.d[2][0]), dist(camera.z - zval);
-		//cout << TXT(dist) << endl;
 		if (dist <= 0.0) continue; // above the camera
 		if (best_dist == 0.0 || dist < best_dist) {best_dist = dist; sel_cube = i;}
 	}
-	//cout << TXT(sel_cube) << endl;
 }
 
 

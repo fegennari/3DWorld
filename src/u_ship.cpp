@@ -2087,7 +2087,6 @@ bool u_ship::board_ship(u_ship *ship) { // returns whether or not boarding was a
 	if (is_related(ship)) return 0; // boarding a friendly, what else can we do here? transfer crew/ammo/shields?
 	ship->register_attacker(this); // counts as attacking the ship
 	if (ship->shields_up() || ship->get_damage() < 0.25) return 1; // not damaged enough, maybe don't even target it in this case?
-	//cout << this << " is boarding " << ship << ", strength: " << get_crew_strength() << " vs. " << ship->get_crew_strength() << endl; // testing
 	assert(ncrew > 0);
 	
 	// capture crew and ammo?
@@ -3010,7 +3009,6 @@ void orbiting_ship::ai_action() {
 			}
 			for (unsigned i = 0; i < scs.size(); ++i) { // try each suggested build sclass until one can be built
 				unsigned const sc(scs[i].second);
-				//cout << get_name() << " " << i << ": trying " << sclasses[sc].name << ", cost = " << -scs[i].first << endl;
 
 				if (sclasses[sc].can_move() && alloc_resources_for(sc, alignment, reserve_credits)) {
 					point const pos2(pos + dir*(c_radius + sclasses[sc].radius*sclasses[sc].cr_scale));
@@ -3043,15 +3041,11 @@ rand_spawn_ship::rand_spawn_ship(unsigned sclass_, point const &pos0, unsigned a
 	: u_ship(sclass_, all_zeros, align, ai_type_, target_mode_, rand_orient), rand_spawn_mixin(pos, radius, rand_spawn_ship_dmax), will_respawn(will_respawn_), orig_align(align)
 {
 	if (pos == all_zeros) {gen_valid_pos();} // otherwise we assume pos is where we want to start
-	//cout << "spawn " << get_name() << endl;
 }
-
 
 void rand_spawn_ship::gen_valid_pos() {
-
 	do {gen_rand_pos();} while (!is_valid_starting_ship_pos(pos, sclass));
 }
-
 
 void rand_spawn_ship::destroy_or_respawn() {
 
@@ -3063,13 +3057,11 @@ void rand_spawn_ship::destroy_or_respawn() {
 		sclass = sclasses.front();
 		reset();
 		gen_valid_pos();
-		//cout << "respawn " << get_name() << endl;
 	}
 	else {
 		status = 1; // mark for removal
 	}
 }
-
 
 void rand_spawn_ship::apply_physics() {
 
@@ -3085,7 +3077,6 @@ void rand_spawn_ship::apply_physics() {
 		}
 	}
 }
-
 
 void rand_spawn_ship::explode(float damage, float bradius, int etype, vector3d const &edir, int exp_time,
 	int wclass, int align, unsigned eflags, free_obj const *parent)

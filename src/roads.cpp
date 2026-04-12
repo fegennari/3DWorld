@@ -600,7 +600,6 @@ bool road_isec_t::is_orient_currently_valid(unsigned orient, unsigned turn_dir) 
 
 unsigned road_isec_t::get_dest_orient_for_car_in_isec(car_base_t const &car, bool is_entering) const {
 	unsigned const orient_in(car.get_orient_in_isec()); // invert dir (incoming, not outgoing)
-	//cout << TXT(car.rot_z) << TXT(car.turn_val) << TXT(unsigned(car.turn_dir)) << TXT(car.dim) << TXT(car.dir) << TXT(orient_in) << hex << unsigned(conn) << dec << endl;
 	if (is_entering) {assert(conn & (1<<orient_in));} // car must come from an enabled orient
 	unsigned new_orient(0);
 	switch (car.turn_dir) {

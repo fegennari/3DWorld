@@ -288,7 +288,6 @@ void rock_shape3d::gen_rock(unsigned nverts, float size, int rand_seed, int type
 			} // while
 		} // for cv
 		faces.resize(face);
-		//cout << "nverts = " << nverts << ", nfaces = " << faces.size() << endl;
 	}
 	else {
 		assert(0);

@@ -777,7 +777,6 @@ void find_optimal_waypoint(point const &pos, vector<od_data> &oddatav, wpt_goal 
 	vector<unsigned> path;
 	ws.run_a_star(start, path, set<unsigned>());
 	//PRINT_TIME("Find Optimal Waypoint");
-	//cout << "query size: " << oddatav.size() << ", start size: " << start.size() << ", path length: " << path.size() << endl;
 	if (path.empty()) return; // no path found, nothing to do
 	unsigned const best(path[0]);
 

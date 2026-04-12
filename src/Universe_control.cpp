@@ -764,7 +764,6 @@ bool sphere_intersect_uobject(point const &pos, float radius, bool include_aster
 	if (!universe.get_closest_object(result, pos, UTYPE_MOON, include_asteroids, 1, 1.0, 0, 1.0, radius)) return 0;
 	if (!result.object || !result.object->is_ok()) return 0; // can this happen?
 	if (!result.object->sphere_intersection(pos, radius)) return 0;
-	//cout << "intersects with " << result.object->get_name() << endl;
 	return 1;
 }
 

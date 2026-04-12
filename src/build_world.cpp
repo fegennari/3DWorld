@@ -374,7 +374,6 @@ void process_groups() {
 		case XLOCATOR: coll_func = translocator_collision; break;
 		case KEYCARD:  coll_func = keycard_collision;   break;
 		}
-		//cout << "group %d %d\n", i, GET_DELTA_TIME);
 		RESET_TIME;
 		unsigned gen_count(0);
 		num_objs = 0;

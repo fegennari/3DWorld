@@ -922,7 +922,6 @@ void ray_trace_local_light_source(lmap_manager_t *lmgr, light_source const &ls, 
 				vector3d const normal(vector_from_dim_dir(dim, dir));
 				point start_pt;
 				start_pt[dim] = cube.d[dim][dir] + 1.0E-5*radius*normal[dim]; // move slightly away from cube edge
-				//cout << TXT(dim) << TXT(dir) << TXT(d1) << TXT(d2) << TXT(side_area[dim]) << TXT(side_rays) << endl;
 
 				for (unsigned n = 0; n < side_rays; ++n) {
 					if (kill_raytrace) break;

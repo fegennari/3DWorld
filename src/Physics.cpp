@@ -598,11 +598,8 @@ void init_objects() {
 
 
 void set_coll_rmax(float rmax) {
-
 	max_obj_radius = rmax; // only used to cache the init value of rmax for use in later calls
-	//cout << "rmax = " << max_obj_radius << ", DXY = " << max(DX_VAL, DY_VAL) << ", ratio: " << max_obj_radius/max(DX_VAL, DY_VAL) << endl;
 }
-
 
 void change_timestep(float mult_factor) {
 

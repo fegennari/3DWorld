@@ -1142,7 +1142,6 @@ public:
 		add_tile_blocks(track_segs, tile_to_block_map, TYPE_TRACKS);
 		for (unsigned i = 0; i < 3; ++i) {add_tile_blocks(isecs[i], tile_to_block_map, (TYPE_ISEC2 + i));}
 		plot_xy.gen_adj_plots(plots);
-		//cout << "tile_to_block_map: " << tile_to_block_map.size() << ", tile_blocks: " << tile_blocks.size() << endl;
 	}
 	void gen_parking_lots_and_place_objects(vector<car_t> &cars, bool have_cars, bool &have_plot_dividers) {
 		city_obj_placer = city_obj_placer_t(); // clear; should be empty anyway, since city_obj_placer is not reused
@@ -1819,7 +1818,6 @@ public:
 		cube_t region(seg);
 		if (car.in_isect()) {region.union_with_cube(get_car_isec(car));} // include cars in the current intersection as well
 		float const req_space(car.get_sum_len_space_for_cars_in_front(region)), avail_space(seg.get_length());
-		//cout << "num_in_front: " << car.count_cars_in_front(region) << ", avail_space: " << avail_space << ", req_space: " << req_space << ", fits: " << (avail_space > req_space) << endl;
 		return (avail_space > req_space); // check if there's enough space in straight segment
 	}
 	bool car_can_go_now(car_t const &car, road_network_t const &global_rn) const {
@@ -2611,7 +2609,6 @@ public:
 		for (auto p = best_cand.pts.begin(); p+1 != best_cand.pts.end(); ++p, fdim ^= 1) {
 			bool const is_first(p == best_cand.pts.begin()), is_last(p+2 == best_cand.pts.end());
 			point const &p1(*p), &p2(*(p+1));
-			//cout << (p-best_cand.pts.begin()) << " " << best_cand.pts.size() << " " << TXT(fdim) << TXTS(p1) << TXTS(p2) << TXT(is_first) << TXT(is_last) << endl;
 			assert(!bcube1.contains_pt(p2));
 			assert(!bcube2.contains_pt(p1));
 			assert(p1[!fdim] == p2[!fdim]); // must be a straight road in this dim
@@ -3446,7 +3443,6 @@ void city_lights_manager_t::tighten_light_bcube_bounds(vector<light_source> cons
 	if (lights.empty()) return; // nothing to do
 	cube_t tight_bcube;
 	for (light_source const &l : lights) {tight_bcube.assign_or_union_with_sphere(l.get_pos(), l.get_radius());}
-	//cout << TXT(bcube.dx()) << TXT(bcube.dy()) << TXT(tight_bcube.dx()) << TXT(tight_bcube.dy()) << endl;
 	if (!lights_bcube.intersects(tight_bcube)) {cerr << "Invalid bcubes: " << TXTS(lights_bcube) << TXTS(tight_bcube) << endl;}
 	else {lights_bcube.intersect_with_cube(tight_bcube);} // clip the original cube to the tight cube (better to just set to tight cube?)
 }

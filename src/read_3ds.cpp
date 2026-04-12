@@ -90,7 +90,6 @@ protected:
 			// flags: 3 LSB are edge orderings (AB BC CA): ignored
 			if (!read_data(faces[i].ix, sizeof(unsigned short), 4, "face data")) return 0;
 			if (reverse_3ds_vert_winding_order) {std::swap(faces[i].ix[0], faces[i].ix[2]);} // reverse triangle vertex ordering to agree with 3DWorld coordinate system
-			//cout << "flags: " << faces[i].flags << endl;
 		}
 		return 1;
 	}

@@ -804,7 +804,6 @@ bool ship_defs_file_reader::read_file(const char *fn) {
 	string str;
 
 	while (!saw_end && (cfg >> str)) {
-		//cout << "str = " << str << endl;
 		if (!cfg.good()) {
 			cerr << "Error: Bad file stream or improperly terminated file." << endl;
 			return 0;

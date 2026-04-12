@@ -1122,7 +1122,6 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		if (do_run > 3) {do_run = 0;}
 		if (world_mode == WMODE_UNIVERSE) {change_speed_mode(do_run);}
 		else {show_speed();} // onscreen printout
-		//cout << "run mode = " << do_run << endl;
 		break;
 
 	case 'K': // toggle overhead map mode / ship reflections

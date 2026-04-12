@@ -490,7 +490,6 @@ float building_params_t::get_max_house_size() const {
 	return max_sz;
 }
 void building_params_t::set_pos_range(cube_t const &pos_range) {
-	//cout << "pos_range: " << pos_range.str() << endl;
 	cur_mat.set_pos_range(pos_range);
 	for (auto i = materials.begin(); i != materials.end(); ++i) {i->set_pos_range(pos_range);}
 }
