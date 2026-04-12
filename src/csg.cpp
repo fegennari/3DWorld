@@ -687,7 +687,7 @@ bool csg_cube::subtract_from_thick_polygon(coll_obj_group &new_cobjs, coll_obj c
 	}
 	if (cur == pts.size()) return 0; // nothing was removed, no changes to make
 	for (unsigned i = 0; i < cur; ++i) {new_cobjs.push_back(polys[i]);}
-	// TODO: add polygons to fill the gaps between the cube and the remaining polygons
+	// add polygons to fill the gaps between the cube and the remaining polygons?
 	return 1;
 }
 

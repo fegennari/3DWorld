@@ -138,7 +138,7 @@ void add_ssao() {
 		// blur SSAO
 		ssao_state_manager.bind();
 		s.set_vert_shader("no_lighting_tex_coord");
-		s.set_frag_shader("screen_space_ao_blur"); // TODO: 2x 1D blurs?
+		s.set_frag_shader("screen_space_ao_blur"); // would 2x 1D blurs be faster? seems to not be the critical path
 		s.begin_shader();
 		s.add_uniform_int("frame_buffer_tex", 0);
 		set_xy_step(s);

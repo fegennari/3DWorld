@@ -1389,8 +1389,8 @@ void voxel_model::proc_pending_updates(bool postproc_brushes_mode) {
 	bool something_removed(0);
 	vector<unsigned> blocks_to_update(modified_blocks.begin(), modified_blocks.end());
 	
-	// TODO: can we only remove/add voxels within the modified region of each block?
-	//       or, create the block first and only remove triangles that don't exist in the new block + add triangles that don't exist in the old block?
+	// can we only remove/add voxels within the modified region of each block?
+	// or, create the block first and only remove triangles that don't exist in the new block + add triangles that don't exist in the old block?
 	for (auto i = blocks_to_update.begin(); i != blocks_to_update.end(); ++i) {something_removed |= clear_block(*i);}
 	if (something_removed) {purge_coll_freed(0);} // unecessary?
 	vector<unsigned> num_added(blocks_to_update.size(), 0);

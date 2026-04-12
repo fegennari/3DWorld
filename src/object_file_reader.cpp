@@ -749,7 +749,7 @@ public:
 					if (!colors.empty()) {assert(V.vix < colors.size()); color += colors[V.vix];}
 				} // for p
 				if (!colors.empty()) {color = color/j->npts; color.A = 1.0;} // uses average vertex color for each face/polygon, with alpha=1.0
-				// TODO: use color; model3d doesn't support per-vertex colors
+				// Note: model3d doesn't support per-vertex colors, so color is unused here
 				num_faces += model.add_polygon(poly, vmap, vmap_tan, j->mat_id, j->obj_id);
 				pix += j->npts;
 			} // for j

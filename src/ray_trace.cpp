@@ -382,8 +382,7 @@ void cast_light_ray(lmap_manager_t *lmgr, point p1, point p2, float weight, floa
 	else if (model_coll) {
 		weight  *= model_color.get_luminance();
 		color    = color.modulate_with(model_color); // Note: model texture coords not available here - use average color
-		// TODO: get this from the model?
-		// requires storing material id in each coll_tquad and calculating approx specular component from specular color and textures
+		// get this from the model? requires storing material id in each coll_tquad and calculating approx specular component from specular color and textures
 		specular = 0.0;
 		shine    = 1.0;
 	}

@@ -745,7 +745,7 @@ bool sphere_int_cylinder_pretest(point const &sc, float sr, point const &cp1, po
 		is_axis_aligned = 1;
 		break;
 	} // for d
-	if (!is_axis_aligned) {rad += sr;} // add sphere radius; FIXME: inaccurate
+	if (!is_axis_aligned) {rad += sr;} // add sphere radius; inaccurate
 	
 	if (check_ends || (t >= 0.0 && t <= 1.0)) {
 		v2 -= v1*t; // vector from point to collision point along cylinder axis

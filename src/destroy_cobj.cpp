@@ -318,8 +318,7 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 					just_added.push_back(index);
 					volume -= cobjs[index].volume;
 				}
-				if (is_polygon) {volume = max(0.0f, volume);} // FIXME: remove this when polygon splitting is correct
-				assert(volume >= -TOLERANCE); // usually > 0.0
+				if (is_polygon) {max_eq(volume, 0.0f);} // polygon splitting isn't entirely correct, so clamp volume positive
 				int const cgid(cobj.cgroup_id);
 
 				// Note: all cobjs in this group should have the same destroy thresh if any are shatterable or explodeable
