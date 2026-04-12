@@ -676,7 +676,7 @@ void park_heightmap_t::draw(draw_state_t &dstate, bool draw_terrain, bool draw_w
 	}
 }
 
-bool park_heightmap_t::set_pos_zval(point &pos, float radius, point const &xlate) const {
+bool park_heightmap_t::set_pos_zval(point &pos, float radius, point const &xlate, vector<park_path_t> const &ppaths) const {
 	point const pos_bs(pos - xlate);
 	if (!bcube.contains_pt_xy(pos_bs)) return 0; // not in this park
 	unsigned x(0), y(0);
@@ -684,8 +684,12 @@ bool park_heightmap_t::set_pos_zval(point &pos, float radius, point const &xlate
 	unsigned const ix(y*nx + x);
 	assert(ix < heights.size());
 	float const height(heights[ix]);
-	// only increase height for hills; allowing the player to fall into creeks is too distracting, in particular when on walkways, and the player can't walk into ponds anyway
-	if (height > z_ground) {pos.z = (height + radius);}
+	if (height == z_ground) return 0; // default height value, same as city zval
+
+	for (park_path_t const &P : ppaths) {
+		if (!P.is_creek && P.check_point_contains_xy(pos_bs)) return 0; // use city/path height
+	}
+	pos.z = (height + radius); // may be lower (pond or creek) or higher (hill)
 	return 1;
 }
 

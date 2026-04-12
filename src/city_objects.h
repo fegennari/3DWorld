@@ -708,7 +708,7 @@ public:
 	size_t get_gpu_mem() const {return vao_mgr.gpu_mem;}
 	void create();
 	void draw(draw_state_t &dstate, bool draw_terrain, bool draw_water);
-	bool set_pos_zval(point &pos, float radius, point const &xlate) const;
+	bool set_pos_zval(point &pos, float radius, point const &xlate, vector<park_path_t> const &ppaths) const;
 };
 
 class tile_drawer_t;
