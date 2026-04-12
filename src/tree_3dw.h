@@ -412,6 +412,7 @@ struct tree_placer_t {
 	bool have_decid_trees() const;
 	void begin_block(bool is_sm_tree, bool in_city) {(is_sm_tree ? sm_blocks : blocks).emplace_back(in_city);}
 	void add(point const &pos, float size, int type, bool allow_bush, bool add_bush, bool is_sm_tree, float pine_xy_sz=1.0);
+	void adjust_zval(point const &pos);
 	void clear() {blocks.clear(); sm_blocks.clear(); bcube = sm_bcube = cube_t();}
 	void clear_city();
 };

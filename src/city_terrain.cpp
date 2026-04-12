@@ -556,15 +556,14 @@ park_heightmap_t::park_heightmap_t(cube_t const &c, unsigned nx_, unsigned ny_, 
 			} // for y
 		} // for p
 	} // for P
-#if 0 // must update placement of picnic tables, benches, statues, etc. and fix ped collisions before enabling this
-	// maybe add a round hill
+	// maybe add a round hill if it can fit
 	vector3d const bcube_sz(bcube.get_size());
-	cube_t hill_area(bcube);
-	hill_area.expand_by(-0.1*bcube_sz);
 	point center(0.0, 0.0, z_ground);
 
 	for (unsigned n = 0; n < 100; ++n) {
-		float const hill_radius(rgen.rand_uniform(0.2, 0.3)*min(bcube_sz.x, bcube_sz.y));
+		float const hill_radius(rgen.rand_uniform(0.12, 0.16)*min(bcube_sz.x, bcube_sz.y));
+		cube_t hill_area(bcube);
+		hill_area.expand_by(-(0.02*bcube_sz + hill_radius));
 		gen_xy_pos_in_cube(center, hill_area, rgen);
 		cube_t hill(center);
 		hill.expand_by_xy(hill_radius);
@@ -575,7 +574,7 @@ park_heightmap_t::park_heightmap_t(cube_t const &c, unsigned nx_, unsigned ny_, 
 			if (P->check_cube_coll_xy(hill)) {valid = 0; break;} // intersects path or creek
 		}
 		if (!valid) continue;
-		float const hill_height(rgen.rand_uniform(0.15, 0.25)*hill_radius), xy_scale(2.0/hill_radius);
+		float const hill_height(rgen.rand_uniform(0.12, 0.24)*hill_radius), xy_scale(1.2/hill_radius); // with 20% edge padding
 		unsigned x1(0), y1(0), x2(0), y2(0);
 		xy_range_from_cube(hill, x1, y1, x2, y2);
 
@@ -588,9 +587,9 @@ park_heightmap_t::park_heightmap_t(cube_t const &c, unsigned nx_, unsigned ny_, 
 				raise_height(x, y, (z_ground + sin(dx*dy*PI_TWO)*hill_height));
 			} // for x
 		} // for y
+		hill_bc = hill; // record so that we can handle collisions/avoid the hill
 		break; // only need one
 	} // for n
-#endif
 }
 
 void park_heightmap_t::create() {
@@ -676,14 +675,18 @@ void park_heightmap_t::draw(draw_state_t &dstate, bool draw_terrain, bool draw_w
 	}
 }
 
-bool park_heightmap_t::set_pos_zval(point &pos, float radius, point const &xlate, vector<park_path_t> const &ppaths) const {
-	point const pos_bs(pos - xlate);
-	if (!bcube.contains_pt_xy(pos_bs)) return 0; // not in this park
+float park_heightmap_t::get_zval_at_pos(point const &pos_bs) const {
+	if (!bcube.contains_pt_xy(pos_bs)) return pos_bs.z; // not in this park; return existing zval
 	unsigned x(0), y(0);
 	xy_from_pt(pos_bs, x, y);
 	unsigned const ix(y*nx + x);
 	assert(ix < heights.size());
-	float const height(heights[ix]);
+	return heights[ix];
+}
+bool park_heightmap_t::set_pos_zval(point &pos, float radius, point const &xlate, vector<park_path_t> const &ppaths) const {
+	point const pos_bs(pos - xlate);
+	if (!bcube.contains_pt_xy(pos_bs)) return 0; // not in this park
+	float const height(get_zval_at_pos(pos_bs));
 	if (height == z_ground) return 0; // default height value, same as city zval
 
 	for (park_path_t const &P : ppaths) {

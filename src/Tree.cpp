@@ -2183,6 +2183,21 @@ void tree_placer_t::add(point const &pos, float size, int type, bool allow_bush,
 	(is_sm_tree ? sm_bcube : bcube).assign_or_union_with_pt(pos);
 	block.trees.emplace_back(pos, size, pine_xy_sz, type, allow_bush, add_bush);
 }
+void tree_placer_t::adjust_zval(point const &pos) {
+	// find the tree in the current block matching pos.xy and adjust its zval to pos.z; since we don't know which type it is, search both blocks
+	for (unsigned d = 0; d < 2; ++d) {
+		vector<tree_block> &vtb(d ? sm_blocks : blocks);
+		assert(!vtb.empty());
+		tree_block &tb(vtb.back());
+
+		for (auto &t : tb.trees) {
+			if (t.pos.x != pos.x || t.pos.y != pos.y) continue;
+			t.pos.z = pos.z;
+			tb.bcube.union_with_pt(pos); // include new zvals
+			return; // only one tree
+		}
+	}
+}
 void tree_placer_t::clear_city() {
 	for (unsigned d = 0; d < 2; ++d) {
 		auto &v(d ? sm_blocks : blocks);

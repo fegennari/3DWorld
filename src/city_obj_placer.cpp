@@ -791,7 +791,7 @@ point line_line_intersect_xy(point const &p1, point const &q1, point const &p2, 
 
 // Note: blockers are used for placement of objects within this plot; colliders are used for pedestrian AI; plot is non-const so that we can set no_draw flag for parks
 void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blockers, vect_cube_t &colliders,
-	vector<point> const &tree_pos, vect_cube_t const &pond_blockers, vect_cube_t const &plot_cuts, rand_gen_t &rgen, bool have_streetlights)
+	vector<point> &tree_pos, vect_cube_t const &pond_blockers, vect_cube_t const &plot_cuts, rand_gen_t &rgen, bool have_streetlights)
 {
 	bool const is_residential(plot.is_residential), is_park(plot.is_park);
 	float const car_length(city_params.get_nom_car_size().x); // used as a size reference for other objects
@@ -932,6 +932,17 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 		if (added_pond || added_creek) { // use a heightmap if we added a creek, since it doesn't look good with a flat park quad
 			unsigned const park_nxy = 256;
 			park_hmaps.emplace_back(plot, park_nxy, park_nxy, (added_pond ? &ponds.back() : nullptr), ppaths, paths_start, creek_crossings, rgen);
+			cube_t const &hill(park_hmaps.back().get_hill());
+			
+			if (!hill.is_all_zeros()) { // park hill is present
+				add_cube_to_colliders_and_blockers(hill, colliders, blockers); // object placement and peds should avoid the hill
+
+				for (point &p : tree_pos) {
+					if (!hill.contains_pt_xy(p)) continue; // tree is outside the hill
+					p.z = park_hmaps.back().get_zval_at_pos(p); // technically we don't need to set this, since the hill is a collider and there are no planters
+					tree_placer.adjust_zval(p); // update the actual tree pos
+				}
+			}
 			plot.no_draw = 1; // drawn as heightmap rather than quad
 		}
 		cube_t obj_place_area(plot); // for picnic tables, benches, and swing sets

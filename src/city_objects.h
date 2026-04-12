@@ -692,7 +692,7 @@ struct park_path_t : public city_obj_t {
 class park_heightmap_t {
 	unsigned nx=0, ny=0, nverts=0, nindices=0;
 	float z_ground;
-	cube_t bcube;
+	cube_t bcube, hill_bc; // at the moment we can only have a single hill per park
 	vector<cylinder_3dw> creek_crossings; // used for drawing pipes
 	vector<float> heights;
 	indexed_vao_manager_t vao_mgr;
@@ -705,9 +705,11 @@ class park_heightmap_t {
 public:
 	park_heightmap_t(cube_t const &c, unsigned nx_, unsigned ny_, pond_t const *const pond, vector<park_path_t> const &ppaths,
 		unsigned ppath_start, vector<cylinder_3dw> const &ccs, rand_gen_t &rgen);
+	cube_t const &get_hill() const {return hill_bc;}
 	size_t get_gpu_mem() const {return vao_mgr.gpu_mem;}
 	void create();
 	void draw(draw_state_t &dstate, bool draw_terrain, bool draw_water);
+	float get_zval_at_pos(point const &pos_bs) const;
 	bool set_pos_zval(point &pos, float radius, point const &xlate, vector<park_path_t> const &ppaths) const;
 };
 
@@ -888,7 +890,7 @@ private:
 	void add_cars_to_driveways(vector<car_t> &cars, vector<road_plot_t> const &plots, vector<vect_cube_t> &plot_colliders, unsigned city_id, rand_gen_t &rgen);
 	void place_trees_in_plot(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders,
 		vector<point> &tree_pos, vect_cube_t const &plot_cuts, rand_gen_t &rgen, unsigned buildings_end);
-	void place_detail_objects(road_plot_t &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<point> const &tree_pos,
+	void place_detail_objects(road_plot_t &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<point> &tree_pos,
 		vect_cube_t const &pond_blockers, vect_cube_t const &plot_cuts, rand_gen_t &rgen, bool have_streetlights);
 	void place_residential_plot_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<road_t> const &roads,
 		vect_cube_t const &pool_blockers, unsigned driveways_start, unsigned plot_ix, unsigned city_ix, rand_gen_t &rgen);
