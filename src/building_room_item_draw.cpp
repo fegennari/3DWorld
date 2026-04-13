@@ -433,6 +433,8 @@ unsigned building_materials_t::count_all_verts(bool shadow_only, bool reflect_on
 	return num_verts;
 }
 rgeom_mat_t &building_materials_t::get_material(tid_nm_pair_t const &tex, bool inc_shadows) {
+	//assert(tex.shadowed == inc_shadows); // should be true, but not required
+
 	// for now we do a simple linear search because there shouldn't be too many unique materials
 	for (rgeom_mat_t &m : *this) {
 		if (!m.tex.is_compatible(tex)) continue;

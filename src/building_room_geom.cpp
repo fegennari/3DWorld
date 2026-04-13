@@ -780,7 +780,7 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 			int const tid(get_rect_panel_tid());
 			float tx(1.0/doors_width), ty(0.25/doors.dz());
 			if (!dim) {swap(tx, ty);} // swap so that ty is always in Z
-			tid_nm_pair_t const door_tex(tid, get_normal_map_for_bldg_tid(tid), tx, ty); // 4x1 panels
+			tid_nm_pair_t const door_tex(tid, get_normal_map_for_bldg_tid(tid), tx, ty, 0.0, 0.0, 1); // 4x1 panels; shadowed
 			rgeom_mat_t &door_mat(get_material(door_tex, 1));
 			bool const doors_fold(c.is_hanging()); // else doors slide
 
@@ -1164,7 +1164,7 @@ void building_room_geom_t::add_crate(room_object_t const &c) { // is_small=1
 	// Note: draw as "small", not because crates are small, but because they're only added to windowless rooms and can't be easily seen from outside a building
 	unsigned skip_faces((c.is_open() ? EF_Z2 : 0) | (c.is_hanging() ? 0 : EF_Z1)); // skip bottom face if not on a mesh shelf; skip top if opened
 	colorRGBA const color(apply_light_color(c));
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_crate_tid(c), 0.0), 1, 0, 1));
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_crate_tid(c), 0.0, 1), 1, 0, 1)); // shadowed, small
 	mat.add_cube_to_verts(c, color, zero_vector, skip_faces);
 	
 	if (c.is_open()) { // draw inside faces of open crate
@@ -1180,7 +1180,7 @@ void building_room_geom_t::add_crate(room_object_t const &c) { // is_small=1
 
 void building_room_geom_t::add_box(room_object_t const &c) { // is_small=1
 	// Note: draw as "small", not because boxes are small, but because they're only added to windowless rooms and can't be easily seen from outside a building
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_box_tid(), get_texture_by_name("interiors/box_normal.jpg", 1), 0.0, 0.0), 1, 0, 1)); // is_small=1
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_box_tid(), get_texture_by_name("interiors/box_normal.jpg", 1), 0.0, 0.0, 0.0, 0.0, 1), 1, 0, 1)); // shadowed, small
 	float const sz(2048), x1(12/sz), x2(576/sz), x3(1458/sz), y1(1-1667/sz), y2(1-1263/sz), y3(1-535/sz); //, x4(2032/sz), y4(1-128/sz); // Note: don't use all parts of the texture
 	unsigned verts_start(mat.quad_verts.size());
 	colorRGBA const color(apply_light_color(c));
@@ -1275,7 +1275,7 @@ float get_obj_rand_tscale_add(room_object_t const &c) {
 	return fract(21111*c.x1() + 29222*c.y1() + 25333*c.z1()); // somewhat random
 }
 void building_room_geom_t::add_paint_can(room_object_t const &c) {
-	rgeom_mat_t &side_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/paint_can_label.png")), 1, 0, 1)); // shadows, small
+	rgeom_mat_t &side_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/paint_can_label.png"), 0.0f, 1), 1, 0, 1)); // shadows, small
 	side_mat.add_vcylin_to_verts(c, apply_light_color(c), 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 24, get_obj_rand_tscale_add(c)); // draw sides only; random texture rotation
 	point top(c.get_cube_center());
 	top.z = c.z2();
@@ -1630,9 +1630,9 @@ void building_room_geom_t::add_catwalk(room_object_t const &c) {
 void building_room_geom_t::add_obj_with_top_texture(room_object_t const &c, string const &text_name, colorRGBA const &sides_color, bool is_small,
 	float spec, float shine, float metalness, float tscale)
 {
-	tid_nm_pair_t tex(get_texture_by_name(text_name), tscale);
+	tid_nm_pair_t tex(get_texture_by_name(text_name), tscale, 1); // shadowed
 	tex.set_specular(spec, shine, metalness);
-	rgeom_mat_t &mat(get_material(tex, 1, 0, is_small)); // shadows
+	rgeom_mat_t &mat(get_material(tex, 1, 0, is_small)); // shadowed
 	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, ~EF_Z2, c.dim, (c.dim ^ c.dir ^ 1), c.dir); // top face only
 	unsigned const skip_faces(c.is_hanging() ? EF_Z2 : EF_Z12); // hanging keyboards, laptops, and pizza boxes on wire shelves must draw the Z1 face
 	rgeom_mat_t &sides_mat((metalness > 0.0) ? get_painted_metal_material(1, 0, is_small, 0, 0, spec, shine, metalness) : get_untextured_material(1, 0, is_small));
@@ -1660,7 +1660,7 @@ void building_room_geom_t::add_bullet_box(room_object_t const &c) {add_obj_with_
 void building_room_geom_t::add_ceil_tile(room_object_t const &c) {
 	float const tscale(1.0/c.get_length()), rot_angle(c.color.A);
 	colorRGBA const color(apply_light_color(c, colorRGBA(c.color, 1.0)));
-	tid_nm_pair_t const tex((c.is_lit() ? (int)PLASTER_TEX : get_texture_by_name("noise.png")), tscale);
+	tid_nm_pair_t const tex((c.is_lit() ? (int)PLASTER_TEX : get_texture_by_name("noise.png")), tscale, 1); // shadowed
 	rgeom_mat_t &mat(get_material(tex, 1, 0, 1)); // shadows, small
 	unsigned const verts_start(mat.quad_verts.size());
 	mat.add_cube_to_verts(c, color, zero_vector, EF_Z1, c.dim); // top and sides
@@ -2856,7 +2856,7 @@ void building_room_geom_t::add_wall_gap(room_object_t const &c, tid_nm_pair_t co
 	} // for n
 	// draw partial plaster/stucco parts on the studs at each side
 	get_untextured_material(0, 0, 1); // make sure edge material is loaded
-	rgeom_mat_t &wall_mat(get_material(wall_tex, 1, 0, 1)); // shadowed, small
+	rgeom_mat_t &wall_mat(get_material(tid_nm_pair_t(wall_tex, 1), 1, 0, 1)); // shadowed, small
 	rgeom_mat_t &edge_mat(get_untextured_material(0, 0, 1)); // unshadowed, small
 	auto &fverts(wall_mat.itri_verts);
 	auto &everts(edge_mat.quad_verts);
@@ -3374,7 +3374,7 @@ bool is_wall_or_pillar_concrete(room_object_t const &c) {
 	// backroom and parking garage pillars, and upper (ADJ_HI) sections of retail room pillars are concrete; other objects are plaster/stucco
 	return (c.type == TYPE_PG_PILLAR || (c.flags & (RO_FLAG_BACKROOM | RO_FLAG_ADJ_HI)));
 }
-tid_nm_pair_t get_basement_texture(room_object_t const &c, tid_nm_pair_t const &wall_tex) {
+tid_nm_pair_t get_basement_texture(room_object_t const &c, tid_nm_pair_t const &wall_tex) { // shadowed
 	// item_flags holds custom texture ID, except for exterior parking structure pillars, where item_flags stores the skip_faces
 	if (c.item_flags > 0 && !c.is_exterior()) {return tid_nm_pair_t(c.item_flags, wall_tex.tscale_x, 1);}
 	return (is_wall_or_pillar_concrete(c) ? tid_nm_pair_t(get_concrete_tid(), wall_tex.tscale_x, 1) : get_scaled_wall_tex(wall_tex));
@@ -3409,7 +3409,7 @@ void building_room_geom_t::add_wall_or_pillar(room_object_t const &c, vector3d c
 	
 	if (c.shape == SHAPE_CUBE && c.is_exterior()) { // exterior visible parking garage pillar; draw the back side
 		unsigned ext_faces(c.item_flags);
-		if (ext_faces > 0) {get_material(tex, 0, 0, 0, 0, 1).add_cube_to_verts(c, c.color, tex_origin, ~ext_faces);} // unshadowed; exterior=1
+		if (ext_faces > 0) {get_material(tid_nm_pair_t(tex, 0), 0, 0, 0, 0, 1).add_cube_to_verts(c, c.color, tex_origin, ~ext_faces);} // unshadowed; exterior=1
 		skip_faces |= ext_faces;
 	}
 	if      (c.shape == SHAPE_CUBE ) {mat.add_cube_to_verts(c, c.color, tex_origin, skip_faces, 0, 0, 0, 0, 1);} // z_dim_uses_ty=1
@@ -3507,7 +3507,7 @@ void building_room_geom_t::add_ramp(room_object_t const &c, float thickness, boo
 	} // for s
 }
 void building_room_geom_t::add_pg_ramp(room_object_t const &c, float tscale) {
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_concrete_tid(), tscale, 1), 1, 0, 1)); // small
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_concrete_tid(), tscale, 1), 1, 0, 1)); // shadowed, small
 	float const thickness(RAMP_THICKNESS_SCALE*c.dz());
 	add_ramp(c, thickness, 0, mat); // skip_bottom=0
 }
@@ -3573,7 +3573,7 @@ void building_room_geom_t::add_duct(room_object_t const &c) {
 		tscales[dim] = 1.0/tile_len_mod;
 		tscales[w1 ] = 1.0/width1;
 		tscales[w2 ] = 1.0/width2;
-		tid_nm_pair_t tex(get_cube_duct_tid(), -1, 0.0, 0.0, 1); // shadowed
+		tid_nm_pair_t tex(get_cube_duct_tid(), -1, 0.0, 0.0, 0.0, 0.0, 1); // shadowed
 		tex.set_specular(0.8, 60.0, 0.25); // set metal specular, slightly reflective
 		colorRGBA const color(apply_light_color(c));
 
@@ -5443,7 +5443,7 @@ void building_room_geom_t::add_toaster_proxy(room_object_t const &c) { // draw a
 
 void building_room_geom_t::add_laundry_basket(room_object_t const &c) {
 	// Note: no alpha test is enabled in the shader when drawing this, so the holes in the material may not be drawn correctly against objects such as exterior walls
-	rgeom_mat_t &tex_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/plastic_mesh.png"), 0.0), 1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
+	rgeom_mat_t &tex_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/plastic_mesh.png"), 0.0, 1), 1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
 	float const height(c.dz());
 	cube_t bot(c), mid(c), top(c);
 	bot.z2() = mid.z1() = c.z1() + 0.12*height;
@@ -5498,7 +5498,7 @@ void building_room_geom_t::add_br_stall(room_object_t const &c, bool inc_lg, boo
 			shelf .z2()  = c.z1() + 0.28*height;
 			bottom.z2()  = c.z1() + 0.02*height; // shrink to small height
 			colorRGBA const tile_color(apply_light_color(c, WHITE));
-			tid_nm_pair_t tex(get_texture_by_name("bathroom_tile.jpg"), 2.0/width, 0);
+			tid_nm_pair_t tex(get_texture_by_name("bathroom_tile.jpg"), 2.0/width, 1);
 			tex.set_specular(0.8, 60.0);
 			rgeom_mat_t &tile_mat(get_material(tex, 1, 0, 1)); // shadows, small
 			tile_mat.add_cube_to_verts(bottom, tile_color, llc, skip_faces);
@@ -5515,7 +5515,7 @@ void building_room_geom_t::add_br_stall(room_object_t const &c, bool inc_lg, boo
 			for (unsigned d = 0; d < 2; ++d) {set_wall_width(base, seat.get_center_dim(d), 0.025*width, d);}
 			pool_texture_params_t &params(pool_texture_params[POOL_TILE_FLOOR]);
 			float const tscale(8.0*params.tscale/width);
-			tid_nm_pair_t tex2(params.get_tid(), params.get_nm_tid(), tscale, tscale);
+			tid_nm_pair_t tex2(params.get_tid(), params.get_nm_tid(), tscale, tscale, 0.0, 0.0, 1); // shadowed
 			tex2.set_specular(params.spec_mag, params.spec_shine);
 			get_material(tex2, 1, 0, 1).add_cube_to_verts(seat, tile_color, all_zeros, ~get_face_mask(!dim, side)); // shadowed, small
 			get_untextured_material(1, 0, 1).add_cube_to_verts_untextured(base, BKGRAY, EF_Z12); // untextured, shadowed, small
@@ -6055,7 +6055,7 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale, boo
 		top_mat.add_cube_to_verts(top, top_color, tex_origin); // top surface, all faces
 	}
 	if (c.has_extra()) { // add backsplash, 50% chance of tile vs. matching marble
-		tid_nm_pair_t const bs_tex((c.room_id & 1) ? marble_tex : tid_nm_pair_t(get_texture_by_name("bathroom_tile.jpg"), 2.5*tscale));
+		tid_nm_pair_t const bs_tex(((c.room_id & 1) ? get_counter_tid() : get_texture_by_name("bathroom_tile.jpg")), 2.5*tscale);
 		rgeom_mat_t &bs_mat(get_material(bs_tex, 0)); // no shadows
 		cube_t bsz(c);
 		bsz.z1()  = c.z2();
@@ -7136,7 +7136,7 @@ void building_room_geom_t::add_fishtank(room_object_t const &c) { // unshadowed,
 	default: assert(0); // unsupported
 	}
 	colorRGBA const color(apply_light_color(c, WHITE));
-	rgeom_mat_t &gravel_mat(get_material(tid_nm_pair_t(tid, tscale/height), 1));
+	rgeom_mat_t &gravel_mat(get_material(tid_nm_pair_t(tid, tscale/height, 1), 1)); // shadowed
 	gravel_mat.add_cube_to_verts(substrate, color, c.get_llc(), EF_Z1);
 
 	// add animal hides; there's no easy way to store this per fishtank, so we can have collision detection, which means this only works for stationary animals
@@ -7145,7 +7145,7 @@ void building_room_geom_t::add_fishtank(room_object_t const &c) { // unshadowed,
 		hide.expand_in_dim( c.dim, -0.20*c.get_length());
 		hide.expand_in_dim(!c.dim, -0.35*c.get_width ());
 		set_wall_width(hide, substrate.z2(), 0.5*hide.get_sz_dim(c.dim), 2);
-		rgeom_mat_t &hide_mat(get_material(tid_nm_pair_t(BARK2_TEX), 1)); // shadowed, though the tank light doesn't cast a shadow
+		rgeom_mat_t &hide_mat(get_material(tid_nm_pair_t(BARK2_TEX, 1.0, 1), 1)); // shadowed, though the tank light doesn't cast a shadow
 		unsigned const verts_start(hide_mat.itri_verts.size());
 		hide_mat.add_ortho_cylin_to_verts(hide, color, !c.dim, 0, 0, 1, 0, 1.0, 1.0, 3.0, 1.0, 0, N_CYL_SIDES, 0.0, 0, 1.5, 0.0, 1); // draw sides only, two sided, half
 
@@ -7231,7 +7231,7 @@ void building_room_geom_t::add_chem_tank(room_object_t const &c, bool draw_label
 	}
 	colorRGBA const color(apply_light_color(c));
 	int const tid(get_chem_tank_tid(c));
-	tid_nm_pair_t tex(tid);
+	tid_nm_pair_t tex(tid, 1.0, 1); // shadowed
 	tex.set_specular(0.5, 40.0, 0.2); // applies to textured case; slightly reflective if not painted
 	rgeom_mat_t &mat((tid < 0) ? get_painted_metal_material(1) : get_material(tex, 1)); // shadowed
 	// capsule shape
@@ -7777,7 +7777,7 @@ void building_room_geom_t::add_pet_cage(room_object_t const &c) {
 	// add bottom plastic tray
 	get_untextured_material(1, 0, 1).add_cube_to_verts_untextured(tray, apply_light_color(c, BKGRAY), EF_Z12); // shadowed, small; skip top and bottom
 	// add wood chips in tray
-	rgeom_mat_t &gravel_mat(get_material(tid_nm_pair_t(get_texture_by_name("wood_chips.jpg"), 2.0/sz.z), 1, 0, 1)); // shadowed, small
+	rgeom_mat_t &gravel_mat(get_material(tid_nm_pair_t(get_texture_by_name("wood_chips.jpg"), 2.0/sz.z, 1), 1, 0, 1)); // shadowed, small
 	gravel_mat.add_cube_to_verts(tray, apply_light_color(c, WHITE), c.get_llc(), ~EF_Z2); // draw top only
 
 	if (c.item_flags == TYPE_BIRD) { // add a wooden bar for birds to stand on

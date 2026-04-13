@@ -316,7 +316,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 	unsigned base_skip_faces(EF_Z1); // skip bottom
 	if (!in_factory) {base_skip_faces |= ~get_face_mask(c.dim, !c.dir);} // skip back face of base against wall for non-factory machines
 	int const base_tid(metal_base ? get_texture_by_name("metals/249_iron_metal_plate.jpg") : get_concrete_tid());
-	rgeom_mat_t &base_mat(get_material(tid_nm_pair_t(base_tid, 3.0/(width + depth)), 1, 0, 1)); // shadowed, small
+	rgeom_mat_t &base_mat(get_material(tid_nm_pair_t(base_tid, 3.0/(width + depth), 1), 1, 0, 1)); // shadowed, small
 	base_mat.add_cube_to_verts(base, apply_light_color(c, (metal_base ? WHITE : c.color)), all_zeros, base_skip_faces);
 	vect_cube_t avoid, shapes;
 	vect_sphere_t pipe_ends;

@@ -522,9 +522,10 @@ bool building_interior_t::get_tunnel_path(unsigned tix1, unsigned tix2, int prev
 
 // tunnels really should be drawn as building interior verts rather than small static objects, but the code here is much more flexible and more efficient
 void building_room_geom_t::add_tunnel(tunnel_seg_t const &t) {
-	bool const shadowed(0), dim(t.dim); // not shadowed, since there's no light
+	bool const shadowed(0), dim(t.dim); // not shadowed, since there's no light, and player flaslight shouldn't be shadowed by transparent pipe caps
 	unsigned const ndiv(48);
 	colorRGBA const wall_color(WHITE);
+	// Note: not marked as transparent for end caps because we want them drawn first so that they write depth values before drawing the rest of the tunnel
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_concrete_tid(), 16.0, shadowed), shadowed, 0, 1));
 
 	// draw smaller connecting tunnels; must be drawn before the main tunnel
@@ -538,7 +539,8 @@ void building_room_geom_t::add_tunnel(tunnel_seg_t const &t) {
 		if (!vertical) { // draw black interior end cap for horizontal tunnels; vertical tunnel ends are drawn above
 			mat.add_ortho_cylin_to_verts(pipe, BLACK, c.dim, !c.dir, c.dir, 0, 1, 1.0, 1.0, 1.0, 1.0, 1, c_ndiv); // skip_sides=1
 		}
-		// draw the open/interior end transparent to create a hole in the outer pipe
+		// draw the open/interior end transparent to create a hole in the outer pipe;
+		// this will unfortunately also hide the bottom of the manhole for vertical pipes since it's drawn later
 		mat.add_ortho_cylin_to_verts(pipe, ALPHA0, c.dim, c.dir, !c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 1, c_ndiv); // transparent cut; skip_sides=1
 
 		if (vertical) {
@@ -633,7 +635,8 @@ void building_room_geom_t::add_tunnel(tunnel_seg_t const &t) {
 		unsigned const num_bars(8), bar_ndiv(16);
 		float const bar_radius(t.get_bar_radius()), bar_spacing(2*t.radius/(num_bars + 1)), zc(t.bcube.zc()), rsq(t.radius*t.radius);
 		float bar_pos(t.bcube.d[!dim][0] + bar_spacing);
-		rgeom_mat_t &bar_mat(get_material(tid_nm_pair_t(get_texture_by_name("metals/67_rusty_dirty_metal.jpg")), 0, 0, 1)); // unshadowed, small=1
+		bool const shadowed(0); // not needed? only for player flashlight, which is vertically aligned with the camera
+		rgeom_mat_t &bar_mat(get_material(tid_nm_pair_t(get_texture_by_name("metals/67_rusty_dirty_metal.jpg"), 1.0, shadowed), shadowed, 0, 1)); // small=1
 		colorRGBA const bar_color(DK_GRAY);
 
 		for (unsigned n = 0; n < num_bars; ++n, bar_pos += bar_spacing) {

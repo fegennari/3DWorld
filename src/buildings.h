@@ -303,6 +303,7 @@ struct tid_nm_pair_t { // size=48
 		tscale_x(txy), tscale_y(txy), shadowed(shadowed_), transparent(transparent_), no_reflect(no_reflect_) {} // non-normal mapped 1:1 texture AR
 	tid_nm_pair_t(int tid_, int nm_tid_, float tx, float ty, float xo=0.0, float yo=0.0, bool shadowed_=0, bool transparent_=0, bool no_reflect_=0) :
 		tid(tid_), nm_tid(nm_tid_), tscale_x(tx), tscale_y(ty), txoff(xo), tyoff(yo), shadowed(shadowed_), transparent(transparent_), no_reflect(no_reflect_) {}
+	tid_nm_pair_t(tid_nm_pair_t const &t, bool shadowed_) : tid_nm_pair_t(t) {shadowed = shadowed_;} // constructor to change the shadowed flag
 	void set_shininess(float shine) {shininess = (unsigned char)max(1, min(255, round_fp(shine)));}
 	void set_specular(float mag, float shine) {set_specular_color(WHITE, mag, shine);}
 	void set_specular(float mag, float shine, float metalness_) {set_specular(mag, shine); metalness = metalness_;}
