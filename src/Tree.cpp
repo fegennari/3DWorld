@@ -2196,7 +2196,8 @@ void tree_placer_t::adjust_zval(point const &pos) {
 			tb.bcube.union_with_pt(pos); // include new zvals
 			return; // only one tree
 		}
-	}
+	} // for d
+	assert(0); // tree should be found above
 }
 void tree_placer_t::clear_city() {
 	for (unsigned d = 0; d < 2; ++d) {
