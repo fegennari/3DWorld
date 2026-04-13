@@ -635,7 +635,7 @@ void building_room_geom_t::add_tunnel(tunnel_seg_t const &t) {
 		unsigned const num_bars(8), bar_ndiv(16);
 		float const bar_radius(t.get_bar_radius()), bar_spacing(2*t.radius/(num_bars + 1)), zc(t.bcube.zc()), rsq(t.radius*t.radius);
 		float bar_pos(t.bcube.d[!dim][0] + bar_spacing);
-		bool const shadowed(0); // not needed? only for player flashlight, which is vertically aligned with the camera
+		bool const shadowed(1); // only needed for player flashlight, but doesn't make a big difference
 		rgeom_mat_t &bar_mat(get_material(tid_nm_pair_t(get_texture_by_name("metals/67_rusty_dirty_metal.jpg"), 1.0, shadowed), shadowed, 0, 1)); // small=1
 		colorRGBA const bar_color(DK_GRAY);
 
