@@ -3832,7 +3832,7 @@ public:
 				point const lpos(get_camera_pos() - xlate); // Note: camera_pos is actually the light pos
 				bool const light_in_player_building_extb(player_in_basement && player_building && player_building->point_in_extended_basement(lpos));
 				// don't draw the player model in the flashlight shadow
-				bool const no_player_model(player_holding_lit_flashlight() && !sec_camera_mode &&
+				bool const no_player_model((flashlight_on || player_holding_lit_flashlight()) && !sec_camera_mode &&
 					lpos.z < pre_smap_player_pos.z && dist_less_than(lpos, pre_smap_player_pos, CAMERA_RADIUS));
 				bool found_building(0);
 
