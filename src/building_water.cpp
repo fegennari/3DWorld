@@ -11,6 +11,7 @@ unsigned const MAX_SPLASHES = 40; // must agree with fragment shader code
 float const BUBBLE_VELOCITY = 0.0002;
 
 
+extern bool player_in_tunnel;
 extern int player_in_basement, player_in_water, animate2, display_mode, color_buffer_frame;
 extern unsigned room_mirror_ref_tid;
 extern float fticks, CAMERA_RADIUS, water_plane_z;
@@ -270,6 +271,7 @@ void building_t::update_droplet_spawners() {
 
 void building_t::draw_water(vector3d const &xlate) const {
 	if (!(display_mode & 0x04)) return; // water disabled
+	if (player_in_tunnel)       return;
 	
 	if (!water_visible_to_player()) {
 		if (player_in_basement < 3) {clear_building_water_splashes();} // clear if player has exited the extended basement
@@ -286,7 +288,8 @@ void building_t::draw_water(vector3d const &xlate) const {
 	point const camera_pos(get_camera_pos()), camera_bs(camera_pos - xlate);
 	if (animate2) {building_splash_manager.next_frame(floor_spacing, is_pool);} // maybe should do this somewhere else? or update even if water isn't visible?
 
-	if (camera_pos.z < interior->water_zval) { // player under the water; could also check (player_in_water == 2)
+	// check for player under the water; could also check (player_in_water == 2)
+	if (camera_bs.z < interior->water_zval && water.contains_pt_xy(camera_bs)) {
 		if (animate2 && has_room_geom()) { // add bubbles
 			static float next_bubble_time(0.0);
 
