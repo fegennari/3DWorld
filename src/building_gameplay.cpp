@@ -2965,15 +2965,17 @@ template<typename T> bool line_int_cubes_get_t(point const &p1, point const &p2,
 	}
 	return had_int;
 }
-vector3d get_normal_for_ray_cube_int_xy(point const &p, cube_t const &c, float tolerance) {
+template <unsigned NDIM> vector3d get_normal_for_ray_cube_int(point const &p, cube_t const &c, float tolerance) {
 	vector3d n;
 
-	for (unsigned d = 0; d < 2; ++d) { // find the closest intersecting cube XY edge, which will determine the normal vector
+	for (unsigned d = 0; d < NDIM; ++d) { // find the closest intersecting cube edge, which will determine the normal vector
 		if (fabs(p[d] - c.d[d][0]) < tolerance) {n[d] = -1.0; break;} // test low  edge
 		if (fabs(p[d] - c.d[d][1]) < tolerance) {n[d] =  1.0; break;} // test high edge
 	}
 	return n;
 }
+vector3d get_normal_for_ray_cube_int_xy (point const &p, cube_t const &c, float tolerance) {return get_normal_for_ray_cube_int<2>(p, c, tolerance);}
+vector3d get_normal_for_ray_cube_int_xyz(point const &p, cube_t const &c, float tolerance) {return get_normal_for_ray_cube_int<3>(p, c, tolerance);}
 
 class paint_manager_t : public paint_draw_t { // for paint on exterior walls/windows, viewed from inside the building
 	building_t const *paint_bldg = nullptr;
@@ -3067,14 +3069,16 @@ bool building_t::apply_paint(point const &pos_, vector3d const &dir_, colorRGBA 
 		hit_color = WHITE; // assume interior doors are white
 	}
 	// check for rugs, pictures, and whiteboards, which can all be painted over; also check for walls from closets
+	vect_room_object_t &objs(interior->room_geom->objs);
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 	float const floor_spacing(get_window_vspace());
 	bool const is_wall(normal.x != 0.0 || normal.y != 0.0), is_floor(normal == plus_z);
 	bool walls_blocked(0);
 	room_object_t *target_obj=nullptr;
 	float target_obj_tmin(0.0);
+	int spark_obj_id(-1);
 
-	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
+	for (auto i = objs.begin(); i != objs_end; ++i) {
 		room_object const type(i->type);
 		float const pre_tmin(tmin);
 
@@ -3126,6 +3130,15 @@ bool building_t::apply_paint(point const &pos_, vector3d const &dir_, colorRGBA 
 			normal    = get_normal_for_ray_cube_int_xy((pos + tmin*delta), *i, tolerance); // should always return a valid normal
 			target    = *i;
 			hit_color = i->get_color();
+		}
+		else if (is_bullet) { // bullets are small and can hit smaller objects
+			if (i->type == TYPE_METAL_BAR /*|| i->is_metal_model()*/) { // add sparks
+				if (!line_int_cube_get_t(pos, pos2, *i, tmin)) continue;
+				normal    = get_normal_for_ray_cube_int_xyz((pos + tmin*delta), *i, tolerance); // should always return a valid normal
+				target    = *i;
+				hit_color = colorRGBA((i->get_color() + WHITE)*0.5, 2.0); // make lighter and set alpha=2.0 as special flag for spark emitter
+				spark_obj_id = (i - objs.begin());
+			}
 		}
 	} // for i
 	for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) { // check elevators
@@ -3189,21 +3202,21 @@ bool building_t::apply_paint(point const &pos_, vector3d const &dir_, colorRGBA 
 			bool const dim(w.dy() < w.dx());
 			target   = w;
 			normal   = get_coll_normal(dim, dir);
-			hit_color= GLASS_COLOR;
+			hit_color= colorRGBA(GLASS_COLOR, 0.5); // higher alpha
 			on_glass = 1;
 		}
 	}
 	if (line_int_cubes_get_t(pos, pos2, interior->room_geom->glass_floors, tmin, target)) { // check glass floors last
 		normal   = get_coll_normal(2, dir); // Z
-		hit_color= GLASS_COLOR;
+		hit_color= colorRGBA(GLASS_COLOR, 0.5); // higher alpha
 		on_glass = 1;
 	}
 	if (hit_pos) {*hit_pos = pos + tmin*delta;}
 	if (normal == zero_vector)            return 0; // no walls, ceilings, floors, etc. hit
 	if (walls_blocked && normal.z == 0.0) return 0; // can't spraypaint walls through elevator, stairs, etc.
 	point p_int(pos + tmin*delta);
-	if (check_line_intersect_doors(pos, p_int, 1))       return 0; // blocked by door, no spraypaint; can't add spraypaint over door in case door is opened; inc_open=1
-	if (has_pool() && interior->pool.contains_pt(p_int)) return 0; // can't use in the pool
+	if (check_line_intersect_doors(pos, p_int, 1))       return 0; // blocked by door, no paint; can't add paint over door in case door is opened; inc_open=1
+	if (has_pool() && interior->pool.contains_pt(p_int)) return 0; // can't use in the pool; what about handgun?
 	float const radius(get_paint_radius(pos, p_int, is_spraypaint, is_bullet));
 	static double next_sound_time(0.0);
 
@@ -3220,9 +3233,15 @@ bool building_t::apply_paint(point const &pos_, vector3d const &dir_, colorRGBA 
 		}
 		return 1;
 	}
-	float const max_radius(get_paint_max_radius(is_spraypaint, is_bullet));
 	p_int += 0.01*radius*normal; // move slightly away from the surface
 	assert(get_bcube_inc_extensions().contains_pt(p_int));
+
+	if (is_bullet && hit_color.A > 1.0) { // bullet hit metal
+		assert((unsigned)spark_obj_id < objs.size());
+		interior->room_geom->particle_manager.add_at_point(p_int, 0.15*radius, normal, 0.0025, 20, 25, PART_EFFECT_SPARK, spark_obj_id);
+		hit_color.A = 1.0; // should this use a different texture such as a black flare? it doesn't look as good
+	}
+	float const max_radius(get_paint_max_radius(is_spraypaint, is_bullet));
 	unsigned const dim(get_max_dim(normal)), d1((dim+1)%3), d2((dim+2)%3);
 
 	// check that entire circle is contained in the target

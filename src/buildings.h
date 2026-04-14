@@ -1095,7 +1095,8 @@ public:
 	void add_particle(point const &pos, vector3d const &vel, colorRGBA const &color, float radius, unsigned effect, int pid=-1, float coll_radius=1.0) {
 		particles.emplace_back(pos, vel, color, radius, effect, pid, coll_radius);
 	}
-	void add_for_obj(room_object_t &obj, float pradius, vector3d const &dir, float part_vel, unsigned min_parts, unsigned max_parts, unsigned effect, int parent_obj_id);
+	void add_for_obj(room_object_t const &obj, float pradius, vector3d const &dir, float part_vel, unsigned min_parts, unsigned max_parts, unsigned effect, int parent_obj_id);
+	void add_at_point(point const &center, float pradius, vector3d const &dir, float part_vel, unsigned min_parts, unsigned max_parts, unsigned effect, int parent_obj_id);
 	cube_t get_bcube() const;
 	bool get_closest_particle(point const &pos, float xy_radius, float z1, float z2, unsigned type, point *part_pos=nullptr) const;
 	void next_frame(building_t &building);

@@ -1950,7 +1950,7 @@ void building_room_geom_t::next_frame(building_t &building, point const &player_
 
 // particle_manager_t
 
-void particle_manager_t::add_for_obj(room_object_t &obj, float pradius, vector3d const &dir, float part_vel,
+void particle_manager_t::add_for_obj(room_object_t const &obj, float pradius, vector3d const &dir, float part_vel,
 	unsigned min_parts, unsigned max_parts, unsigned effect, int parent_obj_id)
 {
 	assert(min_parts > 0 && min_parts <= max_parts);
@@ -1969,6 +1969,14 @@ void particle_manager_t::add_for_obj(room_object_t &obj, float pradius, vector3d
 		vector3d const v(part_vel*rgen.rand_uniform(0.8, 1.25)*part_dir);
 		particles.emplace_back(pos, v, WHITE, pradius*rgen.rand_uniform(0.8, 1.25), effect, parent_obj_id);
 	}
+}
+void particle_manager_t::add_at_point(point const &center, float pradius, vector3d const &dir, float part_vel,
+	unsigned min_parts, unsigned max_parts, unsigned effect, int parent_obj_id)
+{
+	room_object_t obj;
+	obj.set_from_sphere(center, pradius);
+	obj.shape = SHAPE_SPHERE;
+	add_for_obj(obj, pradius, dir, part_vel, min_parts, max_parts, effect, parent_obj_id);
 }
 
 cube_t particle_manager_t::get_bcube() const {
