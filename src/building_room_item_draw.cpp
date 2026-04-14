@@ -373,7 +373,7 @@ void brg_batch_draw_t::clear_ext_tile_bboxes() {
 // shadow_only: 0=non-shadow pass, 1=shadow pass, 2=shadow pass with alpha mask texture
 void rgeom_mat_t::draw(tid_nm_pair_dstate_t &state, brg_batch_draw_t *bbd, int shadow_only, int reflection_pass, bool exterior_geom) {
 	assert(!(exterior_geom && shadow_only)); // exterior geom shadows are not yet supported
-	if (shadow_only && !en_shadows)             return; // shadows not enabled for this material (picture, whiteboard, rug, etc.)
+	if (shadow_only && !tex.shadowed)           return; // shadows not enabled for this material (picture, whiteboard, rug, etc.)
 	if (shadow_only && tex.emissive == 1.0)     return; // assume this is a light source and shouldn't produce shadows
 	if (reflection_pass == 2 && tex.no_reflect) return; // disable for cube map reflections (optimization)
 	if (reflection_pass && tex.tid == REFLECTION_TEXTURE_ID) return; // don't draw reflections of mirrors as this doesn't work correctly
@@ -426,26 +426,22 @@ unsigned building_materials_t::count_all_verts(bool shadow_only, bool reflect_on
 	unsigned num_verts(0);
 	
 	for (rgeom_mat_t const &m : *this) {
-		if (shadow_only  && !m.en_shadows    ) continue;
+		if (shadow_only  && !m.tex.shadowed  ) continue;
 		if (reflect_only &&  m.tex.no_reflect) continue;
 		num_verts += m.num_verts;
 	}
 	return num_verts;
 }
-rgeom_mat_t &building_materials_t::get_material(tid_nm_pair_t const &tex, bool inc_shadows) {
-	//assert(tex.shadowed == inc_shadows); // should be true, but not required
-
+rgeom_mat_t &building_materials_t::get_material(tid_nm_pair_t const &tex) {
 	// for now we do a simple linear search because there shouldn't be too many unique materials
 	for (rgeom_mat_t &m : *this) {
 		if (!m.tex.is_compatible(tex)) continue;
-		if (inc_shadows) {m.enable_shadows();} // Note: m.en_shadows should already be set
 		// tscale diffs don't make new materials; copy tscales from incoming tex; this field may be used locally by the caller, but isn't used for drawing
 		m.tex.tscale_x = tex.tscale_x; m.tex.tscale_y = tex.tscale_y;
 		if (m.get_tot_vert_capacity() == 0) {rgeom_alloc.alloc_safe(m);} // existing but empty entry, allocate capacity from the allocator free list
 		return m;
 	}
 	emplace_back(tex); // not found, add a new material
-	if (inc_shadows) {back().enable_shadows();}
 	rgeom_alloc.alloc_safe(back());
 	return back();
 }
@@ -468,7 +464,7 @@ void building_room_geom_t::add_tquad(building_geom_t const &bg, tquad_with_ix_t 
 	colorRGBA const &color, bool invert_tc_x, bool exclude_frame, bool no_tc)
 {
 	assert(tquad.npts == 4); // quads only, for doors
-	add_tquad_to_verts(bg, tquad, bcube, tex, color, mats_doors.get_material(tex, 1).quad_verts, invert_tc_x, exclude_frame, no_tc, 1); // inc_shadows=1, no_rotate=1
+	add_tquad_to_verts(bg, tquad, bcube, tex, color, mats_doors.get_material(tex).quad_verts, invert_tc_x, exclude_frame, no_tc, 1); // shadowed, no_rotate=1
 }
 
 void building_room_geom_t::clear() {

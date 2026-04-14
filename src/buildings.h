@@ -933,12 +933,10 @@ class rgeom_mat_t : public rgeom_storage_t { // simplified version of building_d
 public:
 	unsigned num_verts=0, num_ixs=0, vert_vbo_sz=0, ixs_vbo_sz=0; // for drawing
 	uint8_t dir_mask=0; // {-x, +x, -y, +y, -z, +z}
-	bool en_shadows=0;
 
 	rgeom_mat_t(tid_nm_pair_t const &tex_=tid_nm_pair_t()) : rgeom_storage_t(tex_) {}
 	//~rgeom_mat_t() {assert(vao_mgr.vbo == 0); assert(vao_mgr.ivbo == 0);} // VBOs should be freed before destruction
 	static void print_vbo_cache_stats();
-	void enable_shadows() {en_shadows = 1;}
 	void clear();
 	void clear_vbos();
 	void clear_vectors(bool free_memory=0) {rgeom_storage_t::clear(free_memory);}
@@ -999,7 +997,7 @@ struct building_materials_t : public vector<rgeom_mat_t> {
 	void clear();
 	void invalidate() {valid = 0;}
 	unsigned count_all_verts(bool shadow_only=0, bool reflect_only=0) const;
-	rgeom_mat_t &get_material(tid_nm_pair_t const &tex, bool inc_shadows);
+	rgeom_mat_t &get_material(tid_nm_pair_t const &tex);
 	void create_vbos(building_t const &building);
 	void draw(brg_batch_draw_t *bbd, shader_t &s, int shadow_only, int reflection_pass, bool exterior_geom=0);
 	void upload_draw_and_clear(shader_t &s);
@@ -1382,7 +1380,7 @@ struct building_room_geom_t {
 	void invalidate_draw_data_for_obj(room_object_t const &obj, bool was_taken=0);
 	unsigned get_num_verts() const;
 	rgeom_mat_t &get_material(tid_nm_pair_t const &tex, bool inc_shadows=0, bool dynamic=0, unsigned small=0, bool transparent=0, bool exterior=0) {
-		return get_building_mat(tex, dynamic, small, transparent, exterior).get_material(tex, inc_shadows);
+		return get_building_mat(tex, dynamic, small, transparent, exterior).get_material(tex);
 	}
 	rgeom_mat_t &get_untextured_material(bool inc_shadows=0, bool dynamic=0, unsigned small=0, bool transparent=0, bool exterior=0, bool no_reflect=0) {
 		return get_material(tid_nm_pair_t(-1, 1.0f, inc_shadows, transparent, no_reflect), inc_shadows, dynamic, small, transparent, exterior);

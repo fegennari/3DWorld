@@ -1332,7 +1332,7 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 	// skip back face at wall unless it's a house because it could be against a window (though it really shouldn't be), or unless it's a shelf mid store/warehouse
 	unsigned const skip_back_face(~get_face_mask(c.dim, c.dir)), skip_faces((is_house || in_room_center) ? 0 : skip_back_face);
 	// inc_shadows=1, dynamic=0, small=1
-	rgeom_mat_t &shelf_mat(in_warehouse ? mats_amask.get_material(get_metal_grate_tex(2.6*tscale, unsigned(1000.0*c.z1())), 1) : get_wood_material(tscale, 1, 0, 1));
+	rgeom_mat_t &shelf_mat(in_warehouse ? mats_amask.get_material(get_metal_grate_tex(2.6*tscale, unsigned(1000.0*c.z1()))) : get_wood_material(tscale, 1, 0, 1));
 	colorRGBA const shelf_color(apply_light_color(c));
 
 	for (unsigned s = 0; s < num_shelves; ++s) {
@@ -1569,7 +1569,7 @@ void building_room_geom_t::add_catwalk(room_object_t const &c) {
 	cube_t bot(c);
 	set_cube_zvals(bot, (c.z1() + 0.2*bot_thick), (c.z1() + 0.4*bot_thick));
 	bot.expand_in_dim(!dim, -(hbar_width + hbar_inset)); // abut inside of bottom bars
-	mats_amask.get_material(tex, 1).add_cube_to_verts(bot, apply_light_color(c), c.get_llc(), ~EF_Z12, !dim); // draw top and bottom only
+	mats_amask.get_material(tex).add_cube_to_verts(bot, apply_light_color(c), c.get_llc(), ~EF_Z12, !dim); // draw top and bottom only
 	// add side railings
 	unsigned const num_vbars(max(2U, unsigned(length/width)));
 	unsigned const hbar_sf(get_skip_mask_for_xy(dim)), ends_sf(get_skip_mask_for_xy(!dim)); // skip ends
@@ -3215,7 +3215,7 @@ void building_room_geom_t::add_fire_ext_sign(room_object_t const &c) {
 // Note: alpha mask materials, but not using mats_amask unless has_extra() because blending works correctly without it in most cases (on floor, bed, drawer, etc.)
 void building_room_geom_t::add_teeshirt(room_object_t const &c) {
 	tid_nm_pair_t const tex(get_texture_by_name("interiors/teeshirt.png"), 0.0);
-	rgeom_mat_t& mat(c.has_extra() ? mats_amask.get_material(tex, 0) : get_material(tex, 0, 0, 1)); // unshadowed, small
+	rgeom_mat_t& mat(c.has_extra() ? mats_amask.get_material(tex) : get_material(tex, 0, 0, 1)); // unshadowed, small
 
 	if (c.is_hanging()) { // vertical hanging shirt in locker
 		unsigned qv_start(mat.quad_verts.size());
@@ -3228,7 +3228,7 @@ void building_room_geom_t::add_teeshirt(room_object_t const &c) {
 }
 void building_room_geom_t::add_pants(room_object_t const &c) {
 	tid_nm_pair_t const tex(get_texture_by_name((c.room_id & 1) ? "interiors/folded_jeans.png" : "interiors/folded_jeans2.png"), 0.0);
-	rgeom_mat_t& mat(c.has_extra() ? mats_amask.get_material(tex, 0) : get_material(tex, 0, 0, 1)); // unshadowed, small
+	rgeom_mat_t& mat(c.has_extra() ? mats_amask.get_material(tex) : get_material(tex, 0, 0, 1)); // unshadowed, small
 	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, ~EF_Z2, c.dim, (c.dim ^ c.dir ^ 1), c.dir); // top face only
 }
 
@@ -3241,7 +3241,7 @@ void building_room_geom_t::add_ceiling_fan_light(room_object_t const &fan, room_
 	cube_t light_bcube;
 	light_bcube.set_from_sphere(light.get_cube_center(), 0.035*(fan.dx() + fan.dy()));
 	light_bcube.expand_in_z(-0.4*light_bcube.dz()); // shrink in Z
-	mats_lights.get_material(tp, 0).add_sphere_to_verts(light_bcube, apply_light_color(fan), 0, plus_z); // no shadows, bottom hemisphere
+	mats_lights.get_material(tp).add_sphere_to_verts(light_bcube, apply_light_color(fan), 0, plus_z); // no shadows, bottom hemisphere
 }
 
 float get_railing_height(room_object_t const &c) {
@@ -3311,7 +3311,7 @@ void building_room_geom_t::add_stair(room_object_t const &c, float tscale, vecto
 	if (is_metal != is_small_pass) return; // wrong pass; metal stairs are small, regular stairs are not
 
 	if (is_metal) {
-		rgeom_mat_t &mat(mats_amask.get_material(get_metal_grate_tex(1.0, (c.dim ^ c.dir)), 1)); // shadowed, alpha mask
+		rgeom_mat_t &mat(mats_amask.get_material(get_metal_grate_tex(1.0, (c.dim ^ c.dir)))); // shadowed, alpha mask
 		point const llc(c.get_llc()), sz(c.get_size());
 		unsigned const long_dim(!c.dim); // width
 
@@ -4117,10 +4117,10 @@ void building_room_geom_t::add_escalator(escalator_t const &e, float floor_spaci
 void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
 	bool const is_on(c.is_light_on()), on_but_dim(is_on && c.light_is_out());
 	bool const missing_cover(c.flags & RO_FLAG_ADJ_BOT), hanging(c.flags & RO_FLAG_ROTATING);
-	tid_nm_pair_t tp(((is_on || missing_cover || c.shape == SHAPE_SPHERE) ? (int)WHITE_TEX : (int)PLASTER_TEX), tscale);
+	tid_nm_pair_t tp(((is_on || missing_cover || c.shape == SHAPE_SPHERE) ? (int)WHITE_TEX : (int)PLASTER_TEX), tscale); // no shadows
 	tp.emissive = (is_on ? 1.0 : 0.0);
 	colorRGBA const color(c.color*(on_but_dim ? 0.4 : 1.0));
-	rgeom_mat_t &mat(mats_lights.get_material(tp, 0)); // no shadows
+	rgeom_mat_t &mat(mats_lights.get_material(tp));
 
 	if (c.flags & RO_FLAG_ADJ_HI) { // wall light
 		assert(c.shape == SHAPE_CYLIN);
@@ -4151,8 +4151,8 @@ void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
 				mat.add_ortho_cylin_to_verts(tube, color, c.dim, 0, 0); // no ends
 			} // for d
 			// draw the ends
-			tid_nm_pair_t tex(-1, 1.0f, 0);
-			rgeom_mat_t &untex_mat(mats_lights.get_material(tex, 0)); // unshadowed
+			tid_nm_pair_t tex(-1, 1.0f, 0); // unshadowed
+			rgeom_mat_t &untex_mat(mats_lights.get_material(tex));
 
 			for (unsigned d = 0; d < 2; ++d) {
 				for (unsigned e = 0; e < 2; ++e) {
@@ -4162,7 +4162,7 @@ void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
 			}
 			// draw the reflector
 			tex.set_specular(1.0, 80.0, 1.0); // fully reflective
-			rgeom_mat_t &ref_mat(mats_lights.get_material(tex, 0)); // unshadowed
+			rgeom_mat_t &ref_mat(mats_lights.get_material(tex));
 
 			for (unsigned d = 0; d < 2; ++d) {
 				cube_t ref(c); // reflector
@@ -4176,7 +4176,7 @@ void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
 			} // for d
 			// draw the frame; can't resize the frame in XY because it must meet the top part above the ceiling
 			tex.set_specular(0.8, 60.0, 0.5); // partially reflective (same as metal bar)
-			mats_lights.get_material(tex, 0).add_cube_to_verts_untextured(frame, LT_GRAY, EF_Z2); // unshadowed
+			mats_lights.get_material(tex).add_cube_to_verts_untextured(frame, LT_GRAY, EF_Z2); // unshadowed
 		}
 		else if (hanging) {
 			float const length(c.get_length());
@@ -4187,7 +4187,7 @@ void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
 			mat.add_cube_to_verts(light, color, c.get_llc(), (EF_Z2 | ~get_face_mask(c.dim, !c.dir)));
 			tid_nm_pair_t tex(-1, 1.0f, 0);
 			tex.set_specular(0.8, 60.0, 0.5); // partially reflective (same as metal bar)
-			mats_lights.get_material(tex, 0).add_cube_to_verts_untextured(back, LT_GRAY, (EF_Z2 | ~get_face_mask(c.dim, c.dir))); // unshadowed
+			mats_lights.get_material(tex).add_cube_to_verts_untextured(back, LT_GRAY, (EF_Z2 | ~get_face_mask(c.dim, c.dir))); // unshadowed
 		}
 		else {mat.add_cube_to_verts(c, color, c.get_llc(), EF_Z2);} // sometimes textured, skip top face
 	}
@@ -4196,8 +4196,8 @@ void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
 	else {assert(0);}
 
 	if ((c.flags & RO_FLAG_ADJ_TOP) && (c.shape == SHAPE_CUBE || c.shape == SHAPE_CYLIN)) { // on skylight; draw top surface
-		tid_nm_pair_t top_tp(PLASTER_TEX, tscale, 1); // yes shadows
-		rgeom_mat_t &top_mat(mats_lights.get_material(top_tp, 1)); // yes shadows
+		tid_nm_pair_t top_tp(PLASTER_TEX, tscale, 1); // shadowed
+		rgeom_mat_t &top_mat(mats_lights.get_material(top_tp));
 		if (c.shape == SHAPE_CUBE) {top_mat.add_cube_to_verts  (c, color, c.get_llc(), ~EF_Z2);} // textured, top face only
 		else                       {top_mat.add_vcylin_to_verts(c, color, 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1);} // bottom only, skip sides
 	}
@@ -6648,7 +6648,7 @@ void building_room_geom_t::add_plant(s_plant const &plant, float light_amt, bool
 	static vector<vert_norm_comp> points;
 	points.clear();
 	plant.create_leaf_points(points, 10.0, 1.5, 4); // plant_scale=10.0 seems to work well; more levels and rings
-	auto &leaf_verts(mats_amask.get_material(tid_nm_pair_t(plant.get_leaf_tid(), 1.0, 1), 1).quad_verts); // shadowed
+	auto &leaf_verts(mats_amask.get_material(tid_nm_pair_t(plant.get_leaf_tid(), 1.0, 1)).quad_verts); // shadowed
 	unsigned const leaf_verts_start(leaf_verts.size());
 	color_wrapper const leaf_cw(apply_light_color(light_amt, plant.get_leaf_color()));
 	float const ts[4] = {0,1,1,0}, tt[4] = {0,0,1,1};
@@ -6673,7 +6673,7 @@ void building_room_geom_t::add_potted_plant(room_object_t const &c, bool inc_pot
 		add_plant(plant, c.light_amt, draw_leaf_bot_surf);
 		// draw plant stem; shadowed
 		colorRGBA const stem_color(plant.get_stem_color());
-		mats_amask.get_material(get_tex_auto_nm(WOOD2_TEX), 1).add_cylin_to_verts(base_pos, point(cx, cy, c.z2()), stem_radius, 0.0f, stem_color, 0, 0);
+		mats_amask.get_material(get_tex_auto_nm(WOOD2_TEX)).add_cylin_to_verts(base_pos, point(cx, cy, c.z2()), stem_radius, 0.0f, stem_color, 0, 0);
 	}
 }
 
@@ -6691,7 +6691,7 @@ void building_room_geom_t::add_fishtank_plants(room_object_t const &c) { // curr
 	// draw plant stem; shadowed
 	colorRGBA const stem_color(plant.get_stem_color());
 	point const p2(base_pos.x, base_pos.y, (base_pos.z + plant_height));
-	mats_amask.get_material(tid_nm_pair_t(-1, 1.0f, 1), 1).add_cylin_to_verts(base_pos, p2, stem_radius, 0.0f, stem_color, 0, 0);
+	mats_amask.get_material(tid_nm_pair_t(-1, 1.0f, 1)).add_cylin_to_verts(base_pos, p2, stem_radius, 0.0f, stem_color, 0, 0); // shadowed
 }
 
 void building_room_geom_t::add_tree(room_object_t const &c, bool inc_pot, bool inc_tree) {
@@ -6701,7 +6701,7 @@ void building_room_geom_t::add_tree(room_object_t const &c, bool inc_pot, bool i
 		bool const is_palm(c.item_flags == 0); // else pine
 		rand_gen_t rgen(c.create_rgen());
 		small_tree tree(cube_bot_center(c), c.dz(), 2.0*radius, (is_palm ? T_PALM : T_PINE), 0, rgen); // calc_z=0
-		auto &leaf_verts(mats_amask.get_material(tid_nm_pair_t((is_palm ? PALM_FROND_TEX : PINE_TEX), 1.0, 1), 1).quad_verts); // shadowed
+		auto &leaf_verts(mats_amask.get_material(tid_nm_pair_t((is_palm ? PALM_FROND_TEX : PINE_TEX), 1.0, 1)).quad_verts); // shadowed
 		unsigned const leaf_verts_start(leaf_verts.size());
 
 		if (is_palm) { // palm tree leaves
@@ -6713,7 +6713,7 @@ void building_room_geom_t::add_tree(room_object_t const &c, bool inc_pot, bool i
 		}
 		add_inverted_quads(leaf_verts, leaf_verts_start); // make double sided
 		// add trunk; extends below the floor, but there should be nothing else down there
-		rgeom_mat_t &mat(mats_amask.get_material(tid_nm_pair_t((is_palm ? PALM_BARK_TEX : BARK2_TEX), 1.0, 1), 1)); // shadowed
+		rgeom_mat_t &mat(mats_amask.get_material(tid_nm_pair_t((is_palm ? PALM_BARK_TEX : BARK2_TEX), 1.0, 1))); // shadowed
 		tree.get_trunk_verts(mat.quad_verts, mat.itri_verts, mat.indices, N_CYL_SIDES);
 	}
 	if (inc_pot) {add_plant_pot(c, 0.9*radius, 1.04*radius, 0);} // no_dirt=0
@@ -6893,7 +6893,7 @@ void building_room_geom_t::add_bench(room_object_t const &c) {
 	}
 	if (use_mesh) { // metal mesh material
 		colorRGBA const color(apply_light_color(c));
-		rgeom_mat_t &metal_mat(mats_amask.get_material(get_metal_grate_tex(1.0/c.get_depth(), c.room_id), 1));
+		rgeom_mat_t &metal_mat(mats_amask.get_material(get_metal_grate_tex(1.0/c.get_depth(), c.room_id))); // shadowed
 		metal_mat.add_cube_to_verts_two_sided(cubes[0], color, cubes[0].get_llc(), 0, c.dim); // top
 		if (num == 4) {metal_mat.add_cube_to_verts_two_sided(cubes[3], color, cubes[3].get_llc(), EF_Z1, c.dim);} // back; skip bottom
 	}
@@ -7225,7 +7225,7 @@ void building_room_geom_t::add_chem_tank(room_object_t const &c, bool draw_label
 		label.expand_by_xy(0.001*radius);
 		set_wall_width(label, (mid.z1() + 0.35*mid.dz()), radius/PI, 2);
 		string const tex_fn((c.dim ^ c.dir) ? "interiors/flammable_sign.png" : "interiors/hazardous_chemicals.png"); // select one of two textures
-		rgeom_mat_t &label_mat(mats_amask.get_material(tid_nm_pair_t(get_texture_by_name(tex_fn)), 0)); // unshadowed
+		rgeom_mat_t &label_mat(mats_amask.get_material(tid_nm_pair_t(get_texture_by_name(tex_fn)))); // unshadowed
 		label_mat.add_vcylin_to_verts(label, apply_light_color(c, WHITE), 0, 0, 0, 0, 1.0, 1.0, 8.0, 1.0, 0, N_CYL_SIDES, 0.0, 0, 1.0, 0.0, 4); // sides, eighth
 		return;
 	}
@@ -7745,7 +7745,7 @@ void building_room_geom_t::add_trash(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_spider_web(room_object_t const &c) {
-	rgeom_mat_t &mat(mats_amask.get_material(tid_nm_pair_t(get_texture_by_name("spider_web.png"), 0.0), 0)); // unshadowed, alpha masked
+	rgeom_mat_t &mat(mats_amask.get_material(tid_nm_pair_t(get_texture_by_name("spider_web.png"), 0.0))); // unshadowed, alpha masked
 	mat.add_cube_to_verts(c, apply_light_color(c), c.get_llc(), ~get_skip_mask_for_xy(c.dim), !c.dim, !c.dir, 0); // draw front and back faces
 }
 
@@ -7831,7 +7831,7 @@ void building_room_geom_t::add_door_handle(door_t const &door, door_rotation_t c
 	tid_nm_pair_t tex(-1, 1.0, 1); // untextured, shadowed
 	tex.set_specular_color(((color == BRASS_C) ? BRASS_C : WHITE), 0.7, 60.0); // metal
 	tex.metalness = 1.0;
-	rgeom_mat_t &mat(mats_doors.get_material(tex, 1)); // untextured, shadowed
+	rgeom_mat_t &mat(mats_doors.get_material(tex)); // untextured, shadowed
 	unsigned const qv_start(mat.quad_verts.size());
 	mat.add_cube_to_verts_untextured(base,  color); // all faces
 	mat.add_cube_to_verts_untextured(shaft, color, get_skip_mask_for_xy(dim)); // skip ends
@@ -7848,7 +7848,7 @@ void building_room_geom_t::add_metal_door(door_t const &D, building_t const &bui
 	float const height(D.dz()), width(D.get_width()), tscale(4.0/height);
 	bool const is_bars(D.is_bars()), is_jail_door(D.type == DOOR_TYPE_JAIL), handle_side(D.get_handle_side());
 	bool const dim(D.dim), rusty((is_bars || is_jail_door) && (D.conn_room[0] & 1)); // 50% chance; same as jail bars
-	rgeom_mat_t &mat(mats_doors.get_material((rusty ? tid_nm_pair_t(get_rust_met_tid(), tscale, 1) : get_scratched_metal_tex(tscale, 1)), 1)); // shadowed
+	rgeom_mat_t &mat(mats_doors.get_material((rusty ? tid_nm_pair_t(get_rust_met_tid(), tscale, 1) : get_scratched_metal_tex(tscale, 1)))); // shadowed
 	float const thickness(D.get_thickness()), vbar_hthick(0.25*thickness), hbar_hthick(0.15*thickness);
 	unsigned const qv_start(mat.quad_verts.size()), tv_start(mat.itri_verts.size());
 	cube_t const c(D.get_true_bcube());
@@ -7937,7 +7937,7 @@ void building_room_geom_t::maybe_add_door_sign(door_t const &door, door_rotation
 	set_wall_width(sign, door.get_center_dim(!dim),    0.5*width, !dim);
 	sign.d[dim][!dir] = door_edge;
 	sign.d[dim][ dir] = door_edge + 0.025*dsign*width;
-	rgeom_mat_t &mat(mats_doors.get_material(tid_nm_pair_t(tid, -1, 1.0/(dim ? width : height), 1.0/(dim ? height : width)), 0)); // unshadowed
+	rgeom_mat_t &mat(mats_doors.get_material(tid_nm_pair_t(tid, -1, 1.0/(dim ? width : height), 1.0/(dim ? height : width)))); // unshadowed
 	unsigned const qv_start(mat.quad_verts.size());
 	mat.add_cube_to_verts(sign, WHITE, sign.get_llc(), ~get_face_mask(dim, !dir), !dim, (dim ^ dir ^ 1));
 	maybe_rotate_door_verts(mat.quad_verts, qv_start, door, drot);
