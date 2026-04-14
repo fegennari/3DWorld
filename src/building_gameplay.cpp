@@ -3119,8 +3119,8 @@ bool building_t::apply_paint(point const &pos_, vector3d const &dir_, colorRGBA 
 			tmin = tmin0; normal = n; target = c; hit_color = i->color;
 		}
 		else if ((type == TYPE_STAIR_WALL && !(i->flags & RO_FLAG_HAS_EXTRA)) || // plaster (non-lattice stair wall)
-			type == TYPE_WINDOW || type == TYPE_PG_WALL || type == TYPE_PG_PILLAR || type == TYPE_FALSE_DOOR ||
-			type == TYPE_OFF_PILLAR || type == TYPE_SHELF_WALL || type == TYPE_VENDING)
+			type == TYPE_WINDOW || type == TYPE_PG_WALL || ((type == TYPE_PG_PILLAR || type == TYPE_OFF_PILLAR) && i->shape == SHAPE_CUBE) ||
+			type == TYPE_FALSE_DOOR || type == TYPE_SHELF_WALL || type == TYPE_VENDING /*|| type == TYPE_SIGN*/) // signs have text overlays, so they don't work
 		{
 			if (!line_int_cube_get_t(pos, pos2, *i, tmin)) continue;
 			normal    = get_normal_for_ray_cube_int_xy((pos + tmin*delta), *i, tolerance); // should always return a valid normal
