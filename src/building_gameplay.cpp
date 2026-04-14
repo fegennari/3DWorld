@@ -3124,12 +3124,13 @@ bool building_t::apply_paint(point const &pos_, vector3d const &dir_, colorRGBA 
 		}
 		else if ((type == TYPE_STAIR_WALL && !(i->flags & RO_FLAG_HAS_EXTRA)) || // plaster (non-lattice stair wall)
 			type == TYPE_WINDOW || type == TYPE_PG_WALL || ((type == TYPE_PG_PILLAR || type == TYPE_OFF_PILLAR) && i->shape == SHAPE_CUBE) ||
-			type == TYPE_FALSE_DOOR || type == TYPE_SHELF_WALL || type == TYPE_VENDING /*|| type == TYPE_SIGN*/) // signs have text overlays, so they don't work
+			type == TYPE_FALSE_DOOR || type == TYPE_SHELF_WALL || type == TYPE_VENDING || type == TYPE_INT_WINDOW /*|| type == TYPE_SIGN*/) // sign text overlays and don't work
 		{
 			if (!line_int_cube_get_t(pos, pos2, *i, tmin)) continue;
 			normal    = get_normal_for_ray_cube_int_xy((pos + tmin*delta), *i, tolerance); // should always return a valid normal
 			target    = *i;
 			hit_color = i->get_color();
+			on_glass |= (type == TYPE_INT_WINDOW); // okay if we hit something else later
 		}
 		else if (is_bullet) { // bullets are small and can hit smaller objects
 			if (i->type == TYPE_METAL_BAR /*|| i->is_metal_model()*/) { // add sparks
@@ -3200,16 +3201,16 @@ bool building_t::apply_paint(point const &pos_, vector3d const &dir_, colorRGBA 
 	for (cube_t const &w : interior->int_windows) { // check interior windows
 		if (line_int_cube_get_t(pos, pos2, w, tmin)) {
 			bool const dim(w.dy() < w.dx());
-			target   = w;
-			normal   = get_coll_normal(dim, dir);
-			hit_color= colorRGBA(GLASS_COLOR, 0.5); // higher alpha
-			on_glass = 1;
+			target    = w;
+			normal    = get_coll_normal(dim, dir);
+			hit_color = GLASS_COLOR;
+			on_glass  = 1;
 		}
 	}
 	if (line_int_cubes_get_t(pos, pos2, interior->room_geom->glass_floors, tmin, target)) { // check glass floors last
-		normal   = get_coll_normal(2, dir); // Z
-		hit_color= colorRGBA(GLASS_COLOR, 0.5); // higher alpha
-		on_glass = 1;
+		normal    = get_coll_normal(2, dir); // Z
+		hit_color = GLASS_COLOR;
+		on_glass  = 1;
 	}
 	if (hit_pos) {*hit_pos = pos + tmin*delta;}
 	if (normal == zero_vector)            return 0; // no walls, ceilings, floors, etc. hit
@@ -3219,6 +3220,7 @@ bool building_t::apply_paint(point const &pos_, vector3d const &dir_, colorRGBA 
 	if (has_pool() && interior->pool.contains_pt(p_int)) return 0; // can't use in the pool; what about handgun?
 	float const radius(get_paint_radius(pos, p_int, is_spraypaint, is_bullet));
 	static double next_sound_time(0.0);
+	if (on_glass) {hit_color.A = 0.5;} // higher alpha for glass
 
 	if (is_eraser) { // erase mode; only applies to marker
 		unsigned num_removed(remove_nearby_quads(p_int, radius, interior->room_geom->decal_manager.paint_draw[exterior_wall].get_paint_qbd(1, 0, emissive_color_id))); // is_marker=1
