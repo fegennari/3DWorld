@@ -1854,7 +1854,9 @@ float get_combined_stacked_obj_weights(room_object_t const &obj, vect_room_objec
 }
 
 cube_t get_true_obj_bcube(room_object_t const &obj) { // for player object pickup and move
-	if (obj.type == TYPE_PEN || obj.type == TYPE_PENCIL || obj.type == TYPE_POOL_CUE || obj.type == TYPE_TESTTUBE || obj.type == TYPE_CIGARETTE || obj.type == TYPE_SHELL_CASE) {
+	if (obj.type == TYPE_PEN || obj.type == TYPE_PENCIL || obj.type == TYPE_MARKER || obj.type == TYPE_POOL_CUE ||
+		obj.type == TYPE_TESTTUBE || obj.type == TYPE_CIGARETTE || obj.type == TYPE_SHELL_CASE)
+	{
 		cube_t obj_bcube(obj);
 		obj_bcube.expand_in_dim(!obj.dim, obj.get_width()); // make narrow objects wider and easier for the player to pick up
 		return obj_bcube;
