@@ -113,8 +113,8 @@ public:
 	rand_gen_t &rgen;
 	rand_gen_wrap_t(rand_gen_t &rgen_) : rgen(rgen_) {}
 	typedef unsigned result_type;
-	static result_type min() {return 0;}
-	static result_type max() {return 2147483647;} // max signed int
+	static constexpr result_type min() {return 0;}
+	static constexpr result_type max() {return 2147483647;} // max signed int
 	size_t operator()() {return rgen.rand();}
 };
 
