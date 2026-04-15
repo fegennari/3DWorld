@@ -526,7 +526,7 @@ void building_room_geom_t::add_tunnel(tunnel_seg_t const &t) {
 	unsigned const ndiv(48);
 	colorRGBA const wall_color(WHITE);
 	// Note: not marked as transparent for end caps because we want them drawn first so that they write depth values before drawing the rest of the tunnel
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_concrete_tid(), 16.0, shadowed), shadowed, 0, 1));
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_concrete_tid(), 16.0, shadowed), 0, 1));
 
 	// draw smaller connecting tunnels; must be drawn before the main tunnel
 	for (tunnel_conn_t const &c : t.conns) {
@@ -627,7 +627,7 @@ void building_room_geom_t::add_tunnel(tunnel_seg_t const &t) {
 		if (c.dim != 2) continue; // not vertical
 		point pos(t.get_conn_pt(c));
 		pos.z += 0.999*c.length; // almost to the top
-		get_material(tid_nm_pair_t(MANHOLE_TEX, 0.0), 0, 0, 1).add_disk_to_verts(pos, 0.6*c.radius, -plus_z, BROWN, 0, 1); // unshadowed, small=1, inverted
+		get_material(tid_nm_pair_t(MANHOLE_TEX, 0.0), 0, 1).add_disk_to_verts(pos, 0.6*c.radius, -plus_z, BROWN, 0, 1); // unshadowed, small=1, inverted
 	}
 	// draw gate if present
 	if (t.has_gate) {
@@ -636,7 +636,7 @@ void building_room_geom_t::add_tunnel(tunnel_seg_t const &t) {
 		float const bar_radius(t.get_bar_radius()), bar_spacing(2*t.radius/(num_bars + 1)), zc(t.bcube.zc()), rsq(t.radius*t.radius);
 		float bar_pos(t.bcube.d[!dim][0] + bar_spacing);
 		bool const shadowed(1); // only needed for player flashlight, but doesn't make a big difference
-		rgeom_mat_t &bar_mat(get_material(tid_nm_pair_t(get_texture_by_name("metals/67_rusty_dirty_metal.jpg"), 1.0, shadowed), shadowed, 0, 1)); // small=1
+		rgeom_mat_t &bar_mat(get_material(tid_nm_pair_t(get_texture_by_name("metals/67_rusty_dirty_metal.jpg"), 1.0, shadowed), 0, 1)); // small=1
 		colorRGBA const bar_color(DK_GRAY);
 
 		for (unsigned n = 0; n < num_bars; ++n, bar_pos += bar_spacing) {
@@ -669,7 +669,7 @@ void building_room_geom_t::add_tunnel_water(tunnel_seg_t const &t) {
 	// draw water/sewage surface
 	bool const dim(t.dim);
 	float const def_tscale(1.0/t.radius);
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(FOAM_TEX, def_tscale), 0, 1)); // unshadowed, dynamic
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(FOAM_TEX, def_tscale), 1)); // unshadowed, dynamic
 	cube_t water(t.bcube_draw);
 	water.z2() = t.bcube.z1() + t.water_level;
 	float const dist(t.radius - t.water_level), water_hwidth(sqrt(t.radius*t.radius - dist*dist));

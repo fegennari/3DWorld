@@ -566,7 +566,7 @@ rgeom_mat_t &building_room_geom_t::get_metal_material(bool inc_shadows, bool dyn
 	tid_nm_pair_t tex(-1, 1.0f, inc_shadows, 0, no_reflect);
 	tex.set_metal_specular(spec_color, mag, shine);
 	tex.metalness = metalness;
-	return get_material(tex, inc_shadows, dynamic, small, 0, exterior);
+	return get_material(tex, dynamic, small, 0, exterior);
 }
 tid_nm_pair_t get_scratched_metal_tex(float tscale, bool inc_shadows) {
 	tid_nm_pair_t tex(get_texture_by_name("metals/60_scratch_metal.jpg"), tscale, inc_shadows);
@@ -575,7 +575,7 @@ tid_nm_pair_t get_scratched_metal_tex(float tscale, bool inc_shadows) {
 	return tex;
 }
 rgeom_mat_t &building_room_geom_t::get_scratched_metal_material(float tscale, bool inc_shadows, bool dynamic, unsigned small, bool exterior) {
-	return get_material(get_scratched_metal_tex(tscale, inc_shadows), inc_shadows, dynamic, small, 0, exterior);
+	return get_material(get_scratched_metal_tex(tscale, inc_shadows), dynamic, small, 0, exterior);
 }
 
 void room_object_t::set_as_bottle(unsigned rand_id, unsigned max_type, bool no_empty, unsigned exclude_mask, bool make_empty, bool allow_transparent) {

@@ -753,16 +753,16 @@ void building_room_geom_t::add_attic_interior_and_rafters(building_t const &b, f
 
 	if (detail_pass == (small == 2)) { // draw the attic interior
 		if (attic_type == ATTIC_TYPE_WOOD) {
-			add_attic_roof_geom(get_material(tid_nm_pair_t(get_plywood_tid()), 0, 0, small), WHITE, 1.0, 16.0, 0, window_holes, b); // no shadows
+			add_attic_roof_geom(get_material(tid_nm_pair_t(get_plywood_tid()), 0, small), WHITE, 1.0, 16.0, 0, window_holes, b); // no shadows
 		}
 		else if (attic_type == ATTIC_TYPE_PLASTER) { // or gypsum?
-			add_attic_roof_geom(get_material(b.get_material().wall_tex, 0, 0, small), WHITE, 1.0, 16.0, 0, window_holes, b); // no shadows
+			add_attic_roof_geom(get_material(b.get_material().wall_tex, 0, small), WHITE, 1.0, 16.0, 0, window_holes, b); // no shadows
 		}
 		else if (attic_type == ATTIC_TYPE_FIBERGLASS) {
-			add_attic_roof_geom(get_material(tid_nm_pair_t(get_insulation_tid()), 0, 0, small), colorRGBA(1.0, 0.7, 0.6), 0.5, 16.0, 0, window_holes, b); // no shadows
+			add_attic_roof_geom(get_material(tid_nm_pair_t(get_insulation_tid()), 0, small), colorRGBA(1.0, 0.7, 0.6), 0.5, 16.0, 0, window_holes, b); // no shadows
 		}
 		else if (attic_type == ATTIC_TYPE_RAFTERS) {
-			add_attic_roof_geom(get_material(b.get_attic_texture(), 0, 0, small), WHITE, 0.1, 8.0, 1, window_holes, b); // no shadows, swap_st=1
+			add_attic_roof_geom(get_material(b.get_attic_texture(), 0, small), WHITE, 0.1, 8.0, 1, window_holes, b); // no shadows, swap_st=1
 		}
 		else {assert(0);} // unsupported type
 	}
@@ -1294,7 +1294,7 @@ void building_room_geom_t::add_chimney(room_object_t const &c, tid_nm_pair_t con
 	tid_nm_pair_t tex2(tex);
 	tex2.shadowed = 1;
 	tex2.tscale_x *= 4.0; tex2.tscale_y *= 4.0;
-	rgeom_mat_t &mat(get_material(tex2, 1, 0, 2));
+	rgeom_mat_t &mat(get_material(tex2, 0, 2));
 	mat.add_cube_to_verts(c, c.color, c.get_llc(), (EF_Z12 | EF_Y12), 1); // X sides, swap_tex_st=1
 	mat.add_cube_to_verts(c, c.color, c.get_llc(), (EF_Z12 | EF_X12), 0); // Y sides, swap_tex_st=0
 }

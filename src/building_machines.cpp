@@ -97,7 +97,7 @@ void building_room_geom_t::add_machine_pipe_in_region(room_object_t const &c, cu
 	}
 	tid_nm_pair_t tex(-1, 1.0f, 1, 0, 1); // shadowed, no_reflect=1
 	set_pipe_specular(spec_color, 0, 0, tex); // is_duct=0, is_dirty=0
-	rgeom_mat_t &pipe_mat(get_material(tex, 1, 0, 1)); // shadowed, small
+	rgeom_mat_t &pipe_mat(get_material(tex, 0, 1)); // small
 	pipe_mat.add_cylin_to_verts(p1, p2, radius, radius, apply_light_color(c, color), 0, 0, 0, 0, 1.0, 1.0, 0, 16); // shadowed, small
 
 	// maybe add a valve or gauge
@@ -316,7 +316,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 	unsigned base_skip_faces(EF_Z1); // skip bottom
 	if (!in_factory) {base_skip_faces |= ~get_face_mask(c.dim, !c.dir);} // skip back face of base against wall for non-factory machines
 	int const base_tid(metal_base ? get_texture_by_name("metals/249_iron_metal_plate.jpg") : get_concrete_tid());
-	rgeom_mat_t &base_mat(get_material(tid_nm_pair_t(base_tid, 3.0/(width + depth), 1), 1, 0, 1)); // shadowed, small
+	rgeom_mat_t &base_mat(get_material(tid_nm_pair_t(base_tid, 3.0/(width + depth), 1), 0, 1)); // shadowed, small
 	base_mat.add_cube_to_verts(base, apply_light_color(c, (metal_base ? WHITE : c.color)), all_zeros, base_skip_faces);
 	vect_cube_t avoid, shapes;
 	vect_sphere_t pipe_ends;
@@ -338,7 +338,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 		if (1) { // create a new scope for local variables
 			float tscale(1.0);
 			tid_nm_pair_t const part_tex(get_machine_part_texture(is_cylin, part_sz, tscale, untextured, rgen));
-			rgeom_mat_t &part_mat(get_material(part_tex, 1, 0, 1)); // shadowed, small
+			rgeom_mat_t &part_mat(get_material(part_tex, 0, 1)); // shadowed, small
 			colorRGBA const part_color(apply_light_color(c, choose_machine_part_color(rgen, (part_tex.tid >= 0))));
 			
 			if (is_cylin) {
@@ -347,7 +347,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 
 				if (!support.is_all_zeros()) { // add/draw cylinder support; should only be for the first part
 					tid_nm_pair_t const tex(get_machine_part_texture(0, support.get_size(), tscale, untextured, rgen)); // is_cylin=0
-					rgeom_mat_t &support_mat(get_material(tex, 1, 0, 1)); // shadowed, small
+					rgeom_mat_t &support_mat(get_material(tex, 0, 1)); // shadowed, small
 					colorRGBA const support_color(apply_light_color(c, choose_machine_part_color(rgen, (part_tex.tid >= 0))));
 					support_mat.add_cube_to_verts(support, support_color, part.get_llc(), EF_Z12); // skip top and bottom
 				}
@@ -372,7 +372,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 
 				if (bp.is_open()) { // draw breakers inside as a texured quad
 					avoid.back().expand_in_dim(!dim, 0.1*panel_hwidth); // add space for the open door
-					rgeom_mat_t &breaker_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/breaker_panel.jpg"), 0.0), 0, 0, 1)); // unshadowed, small
+					rgeom_mat_t &breaker_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/breaker_panel.jpg"), 0.0), 0, 1)); // unshadowed, small
 					float const border(0.1*min(panel_hwidth, panel_hheight)), new_hheight(panel_hheight - border), new_hwidth(panel_hwidth - border);
 					panel.expand_in_dim(!dim, -border); // shrink
 					panel.expand_in_dim(2,    -border);
@@ -514,7 +514,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 			float const radius(rgen.rand_uniform(2.0, 4.0)*pipe_rmax); // wider than a pipe
 			point p1, p2;
 			select_pipe_location(p1, p2, region, radius, dim, rgen);
-			rgeom_mat_t &duct_mat(get_material(tid_nm_pair_t(get_cylin_duct_tid(), 1.0, 1), 1, 0, 1)); // shadowed, small
+			rgeom_mat_t &duct_mat(get_material(tid_nm_pair_t(get_cylin_duct_tid(), 1.0, 1), 0, 1)); // shadowed, small
 			duct_mat.add_cylin_to_verts(p1, p2, radius, radius, apply_light_color(c, LT_GRAY), 0, 0, two_sided, 0, 1.0, 1.0, 0, 32, 1.0, 1); // ndiv=32, swap_txy=1
 			cube_t vent_bc(p1, p2);
 			vent_bc.expand_by(radius); // close enough
@@ -586,7 +586,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 				if (bad_place) continue;
 				float tscale(1.0);
 				tid_nm_pair_t const tex(get_machine_part_texture(add_cylin, 2.0*half_sz, tscale, untextured, rgen));
-				rgeom_mat_t &mat(get_material(tex, 1, 0, 1)); // shadowed, small
+				rgeom_mat_t &mat(get_material(tex, 0, 1)); // shadowed, small
 				colorRGBA const pcolor(choose_machine_part_color(rgen, (tex.tid >= 0))), spec_color(get_specular_color(pcolor)), lcolor(apply_light_color(c, pcolor));
 				
 				if (add_cylin) {

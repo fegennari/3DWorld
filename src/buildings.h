@@ -1379,11 +1379,11 @@ struct building_room_geom_t {
 	void check_invalid_draw_data();
 	void invalidate_draw_data_for_obj(room_object_t const &obj, bool was_taken=0);
 	unsigned get_num_verts() const;
-	rgeom_mat_t &get_material(tid_nm_pair_t const &tex, bool inc_shadows=0, bool dynamic=0, unsigned small=0, bool transparent=0, bool exterior=0) {
+	rgeom_mat_t &get_material(tid_nm_pair_t const &tex, bool dynamic=0, unsigned small=0, bool transparent=0, bool exterior=0) {
 		return get_building_mat(tex, dynamic, small, transparent, exterior).get_material(tex);
 	}
 	rgeom_mat_t &get_untextured_material(bool inc_shadows=0, bool dynamic=0, unsigned small=0, bool transparent=0, bool exterior=0, bool no_reflect=0) {
-		return get_material(tid_nm_pair_t(-1, 1.0f, inc_shadows, transparent, no_reflect), inc_shadows, dynamic, small, transparent, exterior);
+		return get_material(tid_nm_pair_t(-1, 1.0f, inc_shadows, transparent, no_reflect), dynamic, small, transparent, exterior);
 	}
 	rgeom_mat_t &get_transparent_material(float refract_ix=1.0, bool small=0, bool no_reflect=0);
 	rgeom_mat_t &get_crack_material(room_object_t const &c, int alpha);
