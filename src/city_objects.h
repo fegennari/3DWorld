@@ -642,6 +642,17 @@ struct newsrack_t : public oriented_city_obj_t {
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 };
 
+struct park_water_fountain_t : public oriented_city_obj_t {
+	colorRGBA color;
+	float cradius;
+
+	park_water_fountain_t(point const &pos_, float height, float cradius_, bool dim_, bool dir_, colorRGBA const &color_);
+	static void pre_draw (draw_state_t &dstate, bool shadow_only);
+	static void post_draw(draw_state_t &dstate, bool shadow_only);
+	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
+	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
+};
+
 struct parking_gate_t : public oriented_city_obj_t {
 	bool is_open;
 	cube_t body, arm;
@@ -843,6 +854,7 @@ private:
 	vector<stopsign_t> stopsigns;
 	vector<city_flag_t> flags;
 	vector<newsrack_t> newsracks;
+	vector<park_water_fountain_t> park_wfs;
 	vector<parking_gate_t> pgates;
 	vector<clothesline_t> clines;
 	vector<park_path_t> ppaths;
@@ -868,9 +880,9 @@ private:
 	// index is last obj in group
 	city_obj_groups_t bench_groups, planter_groups, trashcan_groups, fhydrant_groups, sstation_groups, fountain_groups, statue_groups, divider_groups, pool_groups,
 		plad_groups, chair_groups, pdeck_groups, ppole_groups, hcap_groups, manhole_groups, mbox_groups, tcone_groups, pigeon_groups, bird_groups, sign_groups,
-		stopsign_groups, flag_groups, nrack_groups, pgate_groups, cline_groups, ppath_groups, swing_groups, tramp_groups, umbrella_groups, bike_groups, dumpster_groups,
-		plant_groups, flower_groups, picnic_groups, bb_hoop_groups, pond_groups, walkway_groups, pillar_groups, wwe_groups, uge_groups, p_solar_groups, gass_groups,
-		bldg_groups, bball_groups, pfloat_groups, sewer_groups, sculpt_groups;
+		stopsign_groups, flag_groups, nrack_groups, park_wf_groups, pgate_groups, cline_groups, ppath_groups, swing_groups, tramp_groups, umbrella_groups, bike_groups,
+		dumpster_groups, plant_groups, flower_groups, picnic_groups, bb_hoop_groups, pond_groups, walkway_groups, pillar_groups, wwe_groups, uge_groups, p_solar_groups,
+		gass_groups, bldg_groups, bball_groups, pfloat_groups, sewer_groups, sculpt_groups;
 	skyway_t skyway; // optional
 	vect_parking_space_t pspaces;
 	vector<park_heightmap_t> park_hmaps;

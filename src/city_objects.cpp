@@ -830,6 +830,34 @@ void newsrack_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_s
 	}
 }
 
+// park water fountains
+
+park_water_fountain_t::park_water_fountain_t(point const &pos_, float height, float cradius_, bool dim_, bool dir_, colorRGBA const &color_)
+	: oriented_city_obj_t(pos_, max(cradius_, 0.5f*height), dim_, dir_), cradius(cradius_), color(color_)
+{
+	set_bcube_from_vcylin(pos, height, cradius);
+	pos.z += 0.5*height;
+}
+/*static*/ void park_water_fountain_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
+	if (!shadow_only) {dstate.s.set_specular(0.75, 80.0, 0.5);} // painted metal; should be different for the two colors, but that would require two draw passes
+}
+/*static*/ void park_water_fountain_t::post_draw(draw_state_t &dstate, bool shadow_only) {
+	if (!shadow_only) {dstate.s.clear_specular_and_metalness();}
+}
+void park_water_fountain_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
+	// vertical cylinder at center with low (dog) and high (person) fountains on 90 degree sides connected by short cubes, with vert cylinder spouts and horiz metal buttons
+	colorRGBA const metal_color(LT_GRAY);
+	float const f_radius(0.35*cradius), dscale(dist_scale*dstate.draw_tile_dist);
+	vector2d const center(pos.x, pos.y);
+	unsigned const ndiv(shadow_only ? 8 : max(4U, min(32U, unsigned(0.5f*dscale/p2p_dist(dstate.camera_bs, pos)))));
+	dstate.s.set_cur_color(color);
+	draw_fast_cylinder(point(center.x, center.y, bcube.z1()), point(center.x, center.y, bcube.z2()), f_radius, f_radius, ndiv, 0, 4);
+	// TODO
+}
+bool park_water_fountain_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
+	return sphere_city_obj_cylin_coll(pos, radius, pos_, p_last, radius_, xlate, cnorm);
+}
+
 // parking gates
 
 cube_t get_parking_gate_arm(room_object_t const &c); // borrow from building parking garage gate logic

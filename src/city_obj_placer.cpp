@@ -991,6 +991,29 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 				break; // success
 			} // for n
 		}
+		// place a water fountain along each park path
+		float const pwf_height(0.25*car_length), pwf_radius(0.35*pwf_height), pwf_pad(0.5*pwf_radius);
+
+		for (auto p = ppaths.begin()+paths_start; p != ppaths.end(); ++p) {
+			if (p->is_creek) continue;
+			unsigned const npts(p->pts.size());
+			if (npts < 3)    continue; // shouldn't happen
+			float const path_dist(p->hwidth + pwf_radius + pwf_pad);
+
+			for (unsigned N = 0; N < 100; ++N) { // 100 attempts
+				unsigned const seg_ix(1 + (rgen.rand() % (npts-1))); // select a random segment, skipping the ends
+				vector3d const pdir(p->pts[seg_ix+1] - p->pts[seg_ix-1]); // use adjacent points
+				vector3d const fdir((path_dist*rgen.rand_sign())*cross_product(pdir, plus_z).get_norm());
+				point const pos(p->pts[seg_ix] + fdir);
+				park_water_fountain_t pwf(pos, pwf_height, pwf_radius, rgen.rand_bool(), rgen.rand_bool(), colorRGBA(0.1, 0.3, 0.1));
+				if (has_bcube_int_xy  (pwf.bcube, blockers, pwf_pad  )) continue;
+				//if (check_path_coll_xy(pwf.bcube, ppaths, paths_start)) continue; // check other paths
+				park_wf_groups.add_obj(pwf, park_wfs);
+				add_cube_to_colliders_and_blockers(pwf.bcube, colliders, blockers);
+				break; // done
+			} // for n
+			//park_water_fountain_t
+		} // for p
 	} // end is_park
 	if (!walkways.empty()) {
 		// place vertical pillars supporting walkways connecting buildings, and elevators leading up to walkways
@@ -2465,6 +2488,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	stopsign_groups.create_groups(stopsigns, all_objs_bcube);
 	flag_groups    .create_groups(flags,     all_objs_bcube);
 	nrack_groups   .create_groups(newsracks, all_objs_bcube);
+	park_wf_groups .create_groups(park_wfs,  all_objs_bcube);
 	pgate_groups   .create_groups(pgates,    all_objs_bcube);
 	cline_groups   .create_groups(clines,    all_objs_bcube);
 	ppath_groups   .create_groups(ppaths,    all_objs_bcube);
@@ -2770,6 +2794,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(pfloats,   pfloat_groups,   dstate, 0.15, shadow_only, 1);
 	draw_objects(gstations, gass_groups,     dstate, 0.25, shadow_only, 1);
 	draw_objects(bldgs,     bldg_groups,     dstate, 0.25, shadow_only, 1);
+	draw_objects(park_wfs,  park_wf_groups,  dstate, 0.08, shadow_only, 1);
 	draw_objects(ppaths,    ppath_groups,    dstate, 0.25, shadow_only, 0, 1); // draw_qbd_as_quads=1; paths only, not creeks; not always drawn in the shadow pass
 	
 	if (!shadow_only) { // non shadow casting objects
@@ -2952,6 +2977,7 @@ bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, vector
 	if (proc_vector_sphere_coll(stopsigns, stopsign_groups, pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(flags,     flag_groups,     pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(newsracks, nrack_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
+	if (proc_vector_sphere_coll(park_wfs,  park_wf_groups,  pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(pgates,    pgate_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(swings,    swing_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(tramps,    tramp_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
@@ -3011,7 +3037,7 @@ bool city_obj_placer_t::line_intersect(point const &p1, point const &p2, float &
 	check_vector_line_intersect(bldgs,     bldg_groups,     p1, p2, t, ret);
 	for (gas_station_t const &gs : gstations) {ret |= gs.line_intersect(p1, p2, t);}
 	// Note: nothing to do for parking lots, tree_planters, hcaps, manholes, sewers, tcones, sculptures, flowers, pladders, chairs, pdecks, bballs, pfloats,
-	// clines, pigeons, ppaths, or birds;
+	// clines, pigeons, ppaths, park_wfs, or birds;
 	// mboxes, swings, tramps, umbrellas, bikes, plants, ponds, p_solars, bb_hoops, statues, and skyways are ignored because they're small or not simple shapes
 	return ret;
 }
@@ -3121,10 +3147,11 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, vect_cube_t const &plo
 	if (check_city_obj_pt_xy_contains(umbrella_groups, umbrellas, pos, obj_ix, 1)) {color = WHITE; return 1;} // is_cylin=1
 	if (check_city_obj_pt_xy_contains(picnic_groups,   picnics,   pos, obj_ix, 0)) {color = BROWN; return 1;}
 	if (check_city_obj_pt_xy_contains(wwe_groups,      elevators, pos, obj_ix, 0)) {color = colorRGBA(0.8, 1.0, 0.8, 1.0); return 1;} // slightly blue-green glass; transparent?
-	if (check_city_obj_pt_xy_contains(uge_groups,      ug_elevs,  pos, obj_ix, 0)) {color = LT_GRAY; return 1;}
-	if (check_city_obj_pt_xy_contains(gass_groups,     gstations, pos, obj_ix, 0)) {color = WHITE;   return 1;} // should be more detailed?
-	if (check_city_obj_pt_xy_contains(bldg_groups,     bldgs,     pos, obj_ix, 0)) {color = LT_BROWN;return 1;}
-	if (check_city_obj_pt_xy_contains(pgate_groups,    pgates,    pos, obj_ix, 0)) {color = YELLOW;  return 1;}
+	if (check_city_obj_pt_xy_contains(uge_groups,      ug_elevs,  pos, obj_ix, 0)) {color = LT_GRAY;  return 1;}
+	if (check_city_obj_pt_xy_contains(gass_groups,     gstations, pos, obj_ix, 0)) {color = WHITE;    return 1;} // should be more detailed?
+	if (check_city_obj_pt_xy_contains(bldg_groups,     bldgs,     pos, obj_ix, 0)) {color = LT_BROWN; return 1;}
+	if (check_city_obj_pt_xy_contains(pgate_groups,    pgates,    pos, obj_ix, 0)) {color = YELLOW;   return 1;}
+	if (check_city_obj_pt_xy_contains(park_wf_groups,  park_wfs,  pos, obj_ix, 1)) {color = colorRGBA(0.1, 0.3, 0.1); return 1;} // is_cylin=1
 	if (check_vect_cube_contains_pt_xy(plot_cuts, pos)) {color = colorRGBA(0.7, 0.7, 1.0); return 1;} // mall skylight; very light blue
 	// Note: ppoles, hcaps, manholes, sewers, mboxes, tcones, sculptures, flowers, pladders, chairs, stopsigns, flags, clines, pigeons, birds, swings,
 	// umbrellas, bikes, statues, and plants are skipped; pillars aren't visible under walkways;
