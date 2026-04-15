@@ -3325,7 +3325,7 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 
 		if (side_space - depth > hall_side_clearance) { // add if there's enough clearance for people to pass by
 			float const z1(zval+0.18*window_vspacing), wall_pos(room.d[dim][dir] + (dir ? -1.0 : 1.0)*0.5*wall_thickness);
-			float const hall_center(room.get_center_dim(!dim)), pref_offset((room_rgen.rand_bool() ? 1.0 : -1.0)*0.8*window_vspacing);
+			float const hall_center(room.get_center_dim(!dim)), pref_offset(rgen.rand_sign()*0.8*window_vspacing);
 			float const test_offsets[3] = {0.0, pref_offset, -pref_offset};
 
 			for (unsigned n = 0; n < 3; ++n) { // try center plus one offset in each direction (in case there's a central door or hallway)

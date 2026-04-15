@@ -2129,7 +2129,7 @@ public:
 						}
 						else { // prefer to go straight, otherwise random
 							dest_dir[ dim] = (car.dir ? 1.0 : -1.0); // straight
-							dest_dir[!dim] = 0.1*(rgen.rand_bool() ? 1.0 : -1.0);
+							dest_dir[!dim] = 0.1*rgen.rand_sign();
 						}
 					}
 					else { // drive toward the destination intersection

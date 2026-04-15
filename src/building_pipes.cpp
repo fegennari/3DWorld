@@ -1481,7 +1481,7 @@ void building_t::get_pipe_basement_water_connections(vect_riser_pos_t &sewer, ve
 	} // for s
 	// generate hot and cold water pipes
 	// choose a shift direction 45 degrees diagonally in the XY plane to avoid collisions with sewer pipes placed in either dim
-	vector3d const shift_dir(vector3d((rgen.rand_bool() ? -1.0 : 1.0), (rgen.rand_bool() ? -1.0 : 1.0), 0.0).get_norm());
+	vector3d const shift_dir(vector3d(rgen.rand_sign(), rgen.rand_sign(), 0.0).get_norm());
 	cold_water.reserve(water_risers.size()); // one cold water pipe per sewer pipe
 
 	for (riser_pos_t &s : water_risers) {

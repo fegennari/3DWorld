@@ -394,7 +394,7 @@ void ivy_wall_t::place_on_wall_face(cube_t const &wall, bool dim, bool dir, vect
 						else { // branching point
 							vector3d const vrot(is_horizontal ? plus_z : wall_normal);
 							vector3d new_dir(prev_dir);
-							rotate_vector3d(vrot, TO_RADIANS*rgen.rand_uniform(30.0, 60.0)*(rgen.rand_bool() ? 1.0 : -1.0), new_dir); // 30-60 deg from prev branch
+							rotate_vector3d(vrot, TO_RADIANS*rgen.rand_uniform(30.0, 60.0)*rgen.rand_sign(), new_dir); // 30-60 deg from prev branch
 							pos2 += (rgen.rand_uniform(0.8, 1.2)*seg_len)*new_dir; // start in the new direction
 						}
 					}

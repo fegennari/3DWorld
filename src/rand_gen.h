@@ -85,7 +85,8 @@ public:
 	void rand_mix() {rand(); std::swap(rseed1, rseed2);}
 	float rand_float() {return 0.000001*(rand()%1000000);} // uniform 0 to 1
 	float signed_rand_float() {return 2.0*float(base::randd()) - 1.0;}
-	bool rand_bool() {return ((rand()&1) != 0);}
+	bool rand_bool () {return ((rand()&1) != 0);}
+	float rand_sign() {return (rand_bool() ? 1.0 : -1.0);}
 	float rand_uniform(float val1, float val2) {assert(val1 <= val2); return val1 + (val2 - val1)*float(base::randd());}
 	unsigned rand_uniform_uint(unsigned min_val, unsigned max_val) {assert(min_val <= max_val); return (min_val + (rand() % (max_val - min_val + 1)));}
 	int rand_int(int start, int end) {return (rand()%(end - start + 1) + start);} // used for trees; start and end should be positive

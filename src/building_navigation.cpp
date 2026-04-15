@@ -2342,7 +2342,7 @@ void building_t::place_people_in_beds(float radius, rand_gen_t &rgen) const {
 			get_bed_cubes(*i, cubes);
 			person.pos = cube_top_center(cubes[3]); // center of the mattress
 			// if there are two pillows, move to a random side
-			if (bed_is_wide(*i)) {person.pos[!i->dim] += (rgen.rand_bool() ? -1.0 : 1.0)*0.265*cubes[4].get_sz_dim(!i->dim);}
+			if (bed_is_wide(*i)) {person.pos[!i->dim] += rgen.rand_sign()*0.265*cubes[4].get_sz_dim(!i->dim);}
 		}
 		else if (i->type == TYPE_HOSP_BED) {
 			if (rgen.rand_float() > 0.2) continue; // 20% chance

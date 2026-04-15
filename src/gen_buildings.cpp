@@ -5481,7 +5481,7 @@ public:
 				if (space_to_sides > 0.0) {conn_area.expand_in_dim(!conn_dim, -space_to_sides);} // shrink the width if needed
 				assert(conn_area.is_strictly_normalized());
 				// first try placing centered on the part; if there's extra space to the sides, and centered fails, then try to a random side, then the other side
-				float const first_xlate((rgen.rand_bool() ? 1.0 : -1.0)*space_to_sides), xlate_vals[3] = {0.0f, first_xlate, -2.0f*first_xlate};
+				float const first_xlate(rgen.rand_sign()*space_to_sides), xlate_vals[3] = {0.0f, first_xlate, -2.0f*first_xlate};
 				bool success(0);
 
 				for (unsigned n = 0; n < ((space_to_sides > 0.0) ? 3U : 1U); ++n) {

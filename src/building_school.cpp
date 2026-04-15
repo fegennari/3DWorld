@@ -530,7 +530,7 @@ bool building_t::fill_room_with_tables_and_chairs(rand_gen_t rgen, room_t const 
 			bool const wall_dim(!(interior->restaurant_orient & 2)); // dim in which walls divide the room
 			unsigned num_rows(wall_dim ? ny : nx);
 			float const wall_spacing(wall_dim ? yspace : xspace), wall_hthick(0.35*get_wall_thickness()); // thinner wall
-			float const wall_bias((rgen.rand_bool() ? 1.0 : -1.0)*0.25*clearance); // bias so that there's room to walk between the wall and table
+			float const wall_bias(rgen.rand_sign()*0.25*clearance); // bias so that there's room to walk between the wall and table
 			cube_t wall(room);
 			set_cube_zvals(wall, zval, (zval + 0.6*vspace));
 			wall.expand_in_dim(!wall_dim, -max(2.8f*clearance, 0.5f*(wall_dim ? xspace : yspace))); // shorten the ends of the walls

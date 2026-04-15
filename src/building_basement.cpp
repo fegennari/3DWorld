@@ -548,7 +548,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	if (interior->room_geom->wall_ps_start == 0) {interior->room_geom->wall_ps_start = objs.size();} // set if not set, on first level
 	float center_pos(wall.get_center_dim(dim));
 	// if there's an odd number of pillars, move the gap between two pillars on one side or the other
-	if (split_sep_wall && (num_pillars & 1)) {center_pos += (rgen.rand_bool() ? -1.0 : 1.0)*0.5*pillar_spacing;}
+	if (split_sep_wall && (num_pillars & 1)) {center_pos -= rgen.rand_sign()*0.5*pillar_spacing;}
 	vect_cube_t sep_walls, pillars; // pillars are added after wall segments
 
 	for (unsigned n = 0; n < num_walls+2; ++n) { // includes room far walls
@@ -588,7 +588,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 			if (has_bcube_int_xy(pillar, obstacles_exp)) { // skip or move entire pillar if it intersects stairs, elevator, or ramp
 				if (in_basement) continue; // skip
 				// parking structure, try to move the pillar
-				float shift_amt((rgen.rand_bool() ? 1.0 : -1.0)*max(pillar_hwidth, 0.1f*pillar_spacing));
+				float shift_amt(rgen.rand_sign()*max(pillar_hwidth, 0.1f*pillar_spacing));
 				bool valid(0);
 
 				for (unsigned n = 0; n < 6; ++n) { // three attempts to shift in each direction

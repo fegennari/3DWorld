@@ -20,7 +20,7 @@ void building_t::create_industrial_floorplan(unsigned part_id, float window_hspa
 	float const wall_thick(get_wall_thickness()), wall_hthick(0.5*wall_thick), floor_thick(get_floor_thickness()), fc_thick(get_fc_thickness());
 	float const door_ent_pad(2.2*door_width), room_len(part.get_sz_dim(dim)), room_width(part.get_sz_dim(!dim)), dsign(dir ? -1.0 : 1.0);
 	float const sub_room_len(max(1.5*floor_spacing, min(3.0*floor_spacing, 0.2*room_len))*rgen.rand_uniform(0.9, 1.0));
-	float const centerline(part.get_center_dim(!dim) + (rgen.rand_bool() ? 1.0 : -1.0)*rgen.rand_uniform(0.15, 0.25)*room_width); // biased to a random side
+	float const centerline(part.get_center_dim(!dim) + rgen.rand_sign()*rgen.rand_uniform(0.15, 0.25)*room_width); // biased to a random side
 	unsigned const num_floors(calc_num_floors(part, floor_spacing, floor_thick));
 	assert(num_floors >= 2); // main open area must be at least 2 floors tall (and generally is 3-4 floors)
 	// add bathroom and office to either side of a potential placement of the front entrance door
@@ -204,7 +204,7 @@ cube_t building_t::add_factory_ladders_and_catwalks(rand_gen_t &rgen, room_t con
 		// find a location near the center not obstructed by a door, stairs, or beam
 		vector2d const room_sz(room.get_size_xy());
 		float const max_shift(0.3*room_sz[!edim]), wall_pos(room.d[edim][!edir]); // wall opposite the main entrance; don't shift so much that we intersect ceiling fans
-		float catwalk_center(room_center_short), cur_shift(1.0*support_width*(rgen.rand_bool() ? 1.0 : -1.0));
+		float catwalk_center(room_center_short), cur_shift(1.0*support_width*rgen.rand_sign());
 		bool add_catwalk(0);
 		cube_t cand(room); // copy zvals
 		//cand.translate_dim(edim, -edir_sign*doorway_width);
@@ -383,7 +383,7 @@ void building_t::add_industrial_ducts_and_hvac(rand_gen_t &rgen, room_t const &r
 				vduct_placed = !has_bcube_int(vduct, beams);
 
 				if (!vduct_placed) {
-					float const offset((rgen.rand_bool() ? 1.0 : -1.0)*(0.5*length - 1.25*hwidth));
+					float const offset(rgen.rand_sign()*(0.5*length - 1.25*hwidth));
 
 					for (unsigned d = 0; d < 2; ++d) {
 						set_wall_width(vduct, (hvac_pos + (d ? -1.0 : 1.0)*offset), hwidth, edim);
@@ -426,7 +426,7 @@ void building_t::add_industrial_ducts_and_hvac(rand_gen_t &rgen, room_t const &r
 				break; // success/done
 			} // for n
 			if (!vduct_placed) { // not placed; use room center; if odd number of vertical supports, offset to a random side to avoid intersecting the center support
-				set_wall_width(vduct, (duct.get_center_dim(edim) + (rgen.rand_bool() ? 1.0 : -1.0)*(0.5*support_width + hwidth)), hwidth, edim);
+				set_wall_width(vduct, (duct.get_center_dim(edim) + rgen.rand_sign()*(0.5*support_width + hwidth)), hwidth, edim);
 			}
 			assert(vduct.is_strictly_normalized());
 			objs.emplace_back(vduct, TYPE_DUCT, room_id, 0, 1, duct_flags, light_amt, duct_shape); // vertical, same shape

@@ -1075,7 +1075,7 @@ void building_t::update_sewer_spiders(point const &camera_bs, unsigned building_
 			pos[ t.dim] = val;
 			pos[!t.dim] = t.p[0][!t.dim]; // either point should work
 			pos.z       = t.p[0].z + t.radius - radius; // on the top of the tunnel
-			dir[t.dim]  = (rgen.rand_bool() ? 1.0 : -1.0); // face a random direction
+			dir[t.dim]  = rgen.rand_sign(); // face a random direction
 			spider_t spider(pos, radius, dir, 0, (i - interior->tunnels.begin())); // id=0, store tunnel index
 			spider.upv  = -plus_z; // upside down
 			set_spider_speed(spider, rgen, floor_spacing);
@@ -1683,7 +1683,7 @@ void building_t::update_pet_snakes(point const &camera_bs, unsigned building_ix)
 			sz[!obj.dim] = 1.2*radius;
 			point const pos(gen_xy_pos_in_area(obj, sz, rgen, zval));
 			vector3d dir;
-			dir[!obj.dim] = (rgen.rand_bool() ? 1.0 : -1.0);
+			dir[!obj.dim] = rgen.rand_sign();
 			snakes.emplace_back(pos, radius, dir, t.obj_ix);
 		} // for t
 		snakes.placed = 1;

@@ -372,7 +372,7 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t const &full_plot, vecto
 					cpos[!car_dim] += 0.12*dw*rgen.rand_uniform(-1.0, 1.0); // randomness of side  amount
 
 					if (col+1 != park.row_sz && (rgen.rand()&15) == 0) { // occasional bad parking job
-						cpos[!car_dim] += dw*rgen.rand_uniform(0.3, 0.35)*(rgen.rand_bool() ? 1.0 : -1.0);
+						cpos[!car_dim] += dw*rgen.rand_uniform(0.3, 0.35)*rgen.rand_sign();
 						prev_was_bad    = 1;
 					}
 					car.set_bcube(pos, nom_car_size);
@@ -2680,7 +2680,7 @@ bool city_obj_placer_t::add_skyway(cube_t const &city_bcube, vect_bldg_walkway_t
 	float const road_width(city_params.road_width);
 
 	if (num_plots_wide & 1) { // odd number of plots - skyway is off-center
-		centerline += (rgen.rand_bool() ? 1.0 : -1.0)*0.5*(city_bcube.get_sz_dim(!dim) - road_width)/num_plots_wide; // shift half a plot to a random side
+		centerline += rgen.rand_sign()*0.5*(city_bcube.get_sz_dim(!dim) - road_width)/num_plots_wide; // shift half a plot to a random side
 	}
 	cube_t skyway_bc(city_bcube);
 	skyway_bc.expand_in_dim(dim, -road_width); // shrink ends
