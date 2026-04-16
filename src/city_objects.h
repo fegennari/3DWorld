@@ -649,8 +649,8 @@ struct park_water_fountain_t : public oriented_city_obj_t {
 	park_water_fountain_t(point const &pos_, float height, float cradius_, bool dim_, bool dir_, colorRGBA const &color_);
 	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
+	float get_overlay_radius() const {return cradius;} // for overhead map mode
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
-	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };
 
 struct parking_gate_t : public oriented_city_obj_t {

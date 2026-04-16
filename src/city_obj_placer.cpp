@@ -992,7 +992,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 			} // for n
 		}
 		// place a water fountain along each park path
-		float const pwf_height(0.25*car_length), pwf_radius(0.35*pwf_height), pwf_pad(0.5*pwf_radius);
+		float const pwf_height(0.25*car_length), pwf_radius(0.4*pwf_height), pwf_pad(0.5*pwf_radius);
 
 		for (auto p = ppaths.begin()+paths_start; p != ppaths.end(); ++p) {
 			if (p->is_creek) continue;
@@ -1004,10 +1004,11 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 				unsigned const seg_ix(1 + (rgen.rand() % (npts-1))); // select a random segment, skipping the ends
 				vector3d const pdir(p->pts[seg_ix+1] - p->pts[seg_ix-1]); // use adjacent points
 				vector3d const fdir((path_dist*rgen.rand_sign())*cross_product(pdir, plus_z).get_norm());
+				bool const dim(fabs(pdir.x) < fabs(pdir.y)); // in path dir
 				point const pos(p->pts[seg_ix] + fdir);
-				park_water_fountain_t pwf(pos, pwf_height, pwf_radius, rgen.rand_bool(), rgen.rand_bool(), colorRGBA(0.1, 0.3, 0.1));
+				park_water_fountain_t pwf(pos, pwf_height, pwf_radius, dim, rgen.rand_bool(), colorRGBA(0.1, 0.3, 0.1));
 				if (has_bcube_int_xy  (pwf.bcube, blockers, pwf_pad  )) continue;
-				//if (check_path_coll_xy(pwf.bcube, ppaths, paths_start)) continue; // check other paths
+				if (check_path_coll_xy(pwf.bcube, ppaths, paths_start)) continue; // check other paths
 				park_wf_groups.add_obj(pwf, park_wfs);
 				add_cube_to_colliders_and_blockers(pwf.bcube, colliders, blockers);
 				break; // done
