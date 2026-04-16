@@ -762,3 +762,7 @@ void building_t::add_bathroom_window(cube_t const &window, bool dim, bool dir, u
 	objs.emplace_back(c, TYPE_WINDOW, room_id, dim, dir, flags, 1.0, SHAPE_CUBE, WHITE); // always lit
 }
 
+void building_t::create_restroom_floorplan(unsigned part_id, rand_gen_t &rgen) {
+	// TODO
+}
+

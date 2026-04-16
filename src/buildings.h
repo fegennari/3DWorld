@@ -512,13 +512,13 @@ struct draw_range_t {
 
 // building types/functions; these are for primary buildings, not basements/rooms (such as malls or parking garages)
 enum {BTYPE_UNSET=0, BTYPE_HOUSE, BTYPE_MULT_FAM, BTYPE_OFFICE, BTYPE_APARTMENT, BTYPE_HOTEL, BTYPE_HOSPITAL, BTYPE_PARKING, BTYPE_MALL, BTYPE_FACTORY,
-	BTYPE_WAREHOUSE, BTYPE_POWERPLANT, BTYPE_SCHOOL, BTYPE_POLICE, BTYPE_FIRE_STAT, BTYPE_PRISON, BTYPE_RESTAURANT, BTYPE_CONV_STORE, NUM_BUILDING_TYPES};
+	BTYPE_WAREHOUSE, BTYPE_POWERPLANT, BTYPE_SCHOOL, BTYPE_POLICE, BTYPE_FIRE_STAT, BTYPE_PRISON, BTYPE_RESTAURANT, BTYPE_CONV_STORE, BTYPE_RESTROOM, NUM_BUILDING_TYPES};
 std::string const btype_names[NUM_BUILDING_TYPES] =
 {"", "House", "Multi-Family House", "Office", "Apartments", "Hotel", "Hospital", "Parking", "Mall", "Factory", "Warehouse", "Power Plant",
- "School", "Police Station", "Fire Station", "Prison", "Restaurant", "Store"};
+ "School", "Police Station", "Fire Station", "Prison", "Restaurant", "Store", "Restroom"};
 colorRGBA const  btype_colors[NUM_BUILDING_TYPES] =
 {WHITE, WHITE, YELLOW,               WHITE,    GREEN,        GREEN,   BLUE,       BROWN,     ORANGE, RED,       RED,         RED,
- PURPLE,   MAGENTA,          MAGENTA,        BLACK,    CYAN,         WHITE};
+ PURPLE,   MAGENTA,          MAGENTA,        BLACK,    CYAN,         WHITE,   PINK};
 typedef uint8_t building_type_t;
 
 enum { // room object types
@@ -2347,6 +2347,7 @@ struct building_t : public building_geom_t {
 	bool is_prison      () const {return (btype == BTYPE_PRISON    );}
 	bool is_restaurant  () const {return (btype == BTYPE_RESTAURANT);}
 	bool is_conv_store  () const {return (btype == BTYPE_CONV_STORE);}
+	bool is_restroom    () const {return (btype == BTYPE_RESTROOM  );}
 	bool is_apt_or_hotel() const {return (is_apartment() || is_hotel());}
 	bool is_residential () const {return (is_house || is_apt_or_hotel());}
 	bool is_industrial  () const {return (is_factory() || is_warehouse() || is_powerplant());}
@@ -2521,6 +2522,7 @@ struct building_t : public building_geom_t {
 	void setup_industrial_wall_occluders();
 	void create_restaurant_floorplan(unsigned part_id, rand_gen_t &rgen);
 	void create_conv_store_floorplan(unsigned part_id, rand_gen_t &rgen);
+	void create_restroom_floorplan  (unsigned part_id, rand_gen_t &rgen);
 	bool maybe_assign_interior_garage(bool &gdim, bool &gdir);
 	void add_parking_garage_ramp(rand_gen_t &rgen);
 	bool add_machines_to_room(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool less_clearance=0);
