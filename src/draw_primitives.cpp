@@ -128,7 +128,6 @@ vector_point_norm const &gen_cylinder_data(point const ce[2], float radius1, flo
 
 
 void sd_sphere_d::gen_points_norms_static(float s_beg, float s_end, float t_beg, float t_end) {
-
 	static sphere_point_norm temp_spn;
 	gen_points_norms(temp_spn, s_beg, s_end, t_beg, t_end);
 }
@@ -252,15 +251,12 @@ void sd_sphere_d::set_data(point const &p, float r, int n, float const *pm, floa
 
 
 void sphere_point_norm::alloc(unsigned ndiv_) {
-
 	ndiv = ndiv_;
 	matrix_base_alloc_2d(points, (ndiv+1), 2*ndiv);
 	set_pointer_stride(ndiv);
 }
 
-
 void sphere_point_norm::set_pointer_stride(unsigned ndiv_) {
-
 	ndiv     = ndiv_;
 	norms    = points    + ndiv; // assumes point and vector3d are the same
 	norms[0] = points[0] + ndiv*(ndiv+1); // num_alloc
@@ -268,9 +264,7 @@ void sphere_point_norm::set_pointer_stride(unsigned ndiv_) {
 	matrix_ptr_fill_2d(norms,  (ndiv+1), ndiv);
 }
 
-
 void sphere_point_norm::free_data() {
-
 	if (points == NULL) {assert(norms == NULL); return;} // already freed (okay)
 	assert(points && norms && points[0] && norms[0]);
 	matrix_delete_2d(points);
@@ -449,12 +443,11 @@ void gen_cylinder_quads(vector<vert_norm_texp> &verts, vector_point_norm const &
 
 class cylin_vertex_buffer_t {
 
-	bool buffering_enabled;
+	bool buffering_enabled=0;
 public:
 	vector<vert_norm_tc> tverts, sverts, cverts; // public so they can be accessed from within draw_fast_cylinder()
 	vector<vert_wrap_t> verts;
 
-	cylin_vertex_buffer_t() : buffering_enabled(0) {}
 	void begin_buffering() {buffering_enabled = 1;}
 	void end_cylinder() {if (!buffering_enabled) {draw_and_clear_buffers();}}
 
@@ -467,6 +460,11 @@ public:
 		for (vert_norm_tc &v : tverts) {swap(v.t[0], v.t[1]);}
 		for (vert_norm_tc &v : sverts) {swap(v.t[0], v.t[1]);}
 		for (vert_norm_tc &v : cverts) {swap(v.t[0], v.t[1]);}
+	}
+	void invert_normals() {
+		for (vert_norm_tc &v : tverts) {v.invert_normal();}
+		for (vert_norm_tc &v : sverts) {v.invert_normal();}
+		for (vert_norm_tc &v : cverts) {v.invert_normal();}
 	}
 };
 
@@ -505,8 +503,9 @@ void add_cylin_ends(float radius1, float radius2, int ndiv, bool texture, int dr
 }
 
 // draw_sides_ends: 0 = draw sides only, 1 = draw sides and ends, 2 = draw ends only, 3 = sides + pt1 end, 4 = sides + pt2 end, 5 = sides with swapped texture coords
+// two_sided_lighting: 0=single sided, 1=two sided, 2=inverted
 void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float radius2, int ndiv, bool texture, int draw_sides_ends,
-	bool two_sided_lighting, float const *const perturb_map, float tex_scale_len, float tex_t_start, point const *inst_pos, unsigned num_insts, float tex_width_scale)
+	int two_sided_lighting, float const *const perturb_map, float tex_scale_len, float tex_t_start, point const *inst_pos, unsigned num_insts, float tex_width_scale)
 {
 	assert(radius1 > 0.0 || radius2 > 0.0);
 	point const ce[2] = {p1, p2};
@@ -521,15 +520,16 @@ void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float r
 			// draw ends only - nothing to do here
 		}
 		else if (radius2 == 0.0) { // cone (Note: still not perfect for pine tree trunks and enforcer ships)
-			gen_cone_triangles(cvb.tverts, vpn, two_sided_lighting, tex_t_start, tex_scale_len+tex_t_start, tex_width_scale, inst_pos[inst]); // triangles
+			gen_cone_triangles(cvb.tverts, vpn, (two_sided_lighting == 1), tex_t_start, tex_scale_len+tex_t_start, tex_width_scale, inst_pos[inst]); // triangles
 		}
 		else {
-			gen_cylinder_triangle_strip(cvb.sverts, vpn, two_sided_lighting, tex_t_start, tex_scale_len+tex_t_start, tex_width_scale, inst_pos[inst]); // triangle strip
+			gen_cylinder_triangle_strip(cvb.sverts, vpn, (two_sided_lighting == 1), tex_t_start, tex_scale_len+tex_t_start, tex_width_scale, inst_pos[inst]); // triangle strip
 		}
 		if (draw_sides_ends != 0 && draw_sides_ends != 5) {
 			add_cylin_ends(radius1, radius2, ndiv, texture, draw_sides_ends, v12, ce, inst_pos[inst], vpn); // triangle fan; Note: TSL doesn't apply here
 		}
 	} // for inst
+	if (two_sided_lighting == 2) {cvb.invert_normals();} // invert normals
 	if (draw_sides_ends == 5) {cvb.swap_verts_tex_st();}
 	cvb.end_cylinder();
 }
@@ -569,7 +569,6 @@ void draw_shadow_cylinder(point const &p1, point const &p2, float radius1, float
 void draw_cylin_fast(float r1, float r2, float l, int ndiv, bool texture, float tex_scale_len, float z_offset) {
 	draw_fast_cylinder(point(0.0, 0.0, z_offset), point(0.0, 0.0, z_offset+l), r1, r2, ndiv, texture, 0, 0, NULL, tex_scale_len);
 }
-
 
 void draw_cylindrical_section(float length, float r_inner, float r_outer, int ndiv, bool texture, float tex_scale_len, float z_offset) {
 
@@ -826,10 +825,7 @@ void sd_sphere_d::get_triangle_vertex_list(vector<vertex_type_t> &verts) const {
 
 	for (unsigned s = 0; s <= ndiv; ++s) {
 		unsigned const six(s%ndiv);
-
-		for (unsigned t = 0; t <= ndiv; ++t) {
-			verts.emplace_back(points[six][t], norms[six][t], (1.0f - s*ndiv_inv), (1.0f - t*ndiv_inv));
-		}
+		for (unsigned t = 0; t <= ndiv; ++t) {verts.emplace_back(points[six][t], norms[six][t], (1.0f - s*ndiv_inv), (1.0f - t*ndiv_inv));}
 	}
 	//assert(verts.size() < (1ULL << 8*sizeof(index_type_t)));
 }
@@ -902,7 +898,6 @@ void sd_sphere_vbo_d::clear_vbos() {
 }
 
 unsigned calc_lod_pow2(unsigned max_ndiv, unsigned ndiv) {
-
 	ndiv = max(ndiv, 4U);
 	unsigned lod(0);
 	for (unsigned n = (max_ndiv >> 1); ndiv <= n; n >>= 1, ++lod) {}
@@ -910,7 +905,6 @@ unsigned calc_lod_pow2(unsigned max_ndiv, unsigned ndiv) {
 }
 
 unsigned sd_sphere_vbo_d::draw_setup(unsigned draw_ndiv) {
-
 	ensure_vbos();
 	pre_render(!faceted, 1); // do_bind_vbo=1
 	vertex_type_t::set_vbo_arrays();
@@ -918,7 +912,6 @@ unsigned sd_sphere_vbo_d::draw_setup(unsigned draw_ndiv) {
 }
 
 void sd_sphere_vbo_d::draw_ndiv_pow2_vbo(unsigned draw_ndiv) {
-
 	unsigned const lod(draw_setup(draw_ndiv));
 	if (faceted) {glDrawArrays(GL_TRIANGLES, 0, 6*ndiv*ndiv);} // ndiv is ignored
 	else {glDrawRangeElements(GL_TRIANGLE_STRIP, 0, (ndiv+1)*(ndiv+1), get_count(lod), get_index_type_enum(), get_index_ptr(lod));}
@@ -927,7 +920,6 @@ void sd_sphere_vbo_d::draw_ndiv_pow2_vbo(unsigned draw_ndiv) {
 }
 
 void sd_sphere_vbo_d::draw_instances(unsigned draw_ndiv, instance_render_t &inst_render) {
-
 	unsigned const lod(draw_setup(draw_ndiv));
 	if (faceted) {inst_render.draw_and_clear(GL_TRIANGLES, 6*ndiv*ndiv, vbo);} // ndiv is ignored
 	else {inst_render.draw_and_clear(GL_TRIANGLE_STRIP, get_count(lod), vbo, get_index_type_enum(), get_index_ptr(lod));}
@@ -936,7 +928,6 @@ void sd_sphere_vbo_d::draw_instances(unsigned draw_ndiv, instance_render_t &inst
 
 
 void get_sphere_triangles(vector<vert_wrap_t> &verts, point const &pos, float radius, int ndiv) {
-
 	sd_sphere_d sd(pos, radius, ndiv);
 	sd.gen_points_norms_static();
 	sd.get_triangles(verts);
@@ -977,7 +968,6 @@ void rotate_sphere_tex_to_dir(vector3d const &dir) { // dir must be normalized
 
 
 void draw_single_colored_sphere(point const &pos, float radius, int ndiv, colorRGBA const &color) {
-
 	shader_t s;
 	s.begin_color_only_shader(color);
 	draw_sphere_vbo(pos, radius, ndiv, 0);

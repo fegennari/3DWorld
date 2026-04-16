@@ -209,7 +209,7 @@ void gen_cylinder_quads(vector<vert_norm_tc> &verts, vector_point_norm const &vp
 void gen_cylinder_quads(vector<vert_norm_texp> &verts, vector_point_norm const &vpn, texgen_params_t const &tp, bool two_sided_lighting=0);
 void add_cylin_ends(float radius1, float radius2, int ndiv, bool texture, int draw_sides_ends, vector3d const &v12, point const ce[2], point const &xlate, vector_point_norm const &vpn);
 void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float radius2, int ndiv, bool texture,
-	int draw_sides_ends=0, bool two_sided_lighting=0, float const *const perturb_map=NULL, float tex_scale_len=1.0,
+	int draw_sides_ends=0, int two_sided_lighting=0, float const *const perturb_map=NULL, float tex_scale_len=1.0,
 	float tex_t_start=0.0, point const *inst_pos=NULL, unsigned num_insts=0, float tex_width_scale=1.0);
 void draw_shadow_cylinder(point const &p1, point const &p2, float radius1, float radius2, int ndiv, int draw_ends, float const *const perturb_map);
 void draw_cylindrical_section(float length, float r_inner, float r_outer, int ndiv, bool texture=0, float tex_scale_len=1.0, float z_offset=0.0);
