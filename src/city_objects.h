@@ -889,6 +889,7 @@ private:
 	bird_poop_manager_t bird_poop_manager;
 	vector<city_zone_t> sub_plots; // reused across calls
 	cube_t all_objs_bcube;
+	vect_cube_t park_restrooms;
 	vect_bird_place_t bird_locs;
 	rand_gen_t bird_rgen;
 	unsigned num_spaces=0, filled_spaces=0, num_x_plots=0, num_y_plots=0;
@@ -902,8 +903,8 @@ private:
 	void add_cars_to_driveways(vector<car_t> &cars, vector<road_plot_t> const &plots, vector<vect_cube_t> &plot_colliders, unsigned city_id, rand_gen_t &rgen);
 	void place_trees_in_plot(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders,
 		vector<point> &tree_pos, vect_cube_t const &plot_cuts, rand_gen_t &rgen, unsigned buildings_end);
-	void place_detail_objects(road_plot_t &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<point> &tree_pos,
-		vect_cube_t const &pond_blockers, vect_cube_t const &plot_cuts, rand_gen_t &rgen, bool have_streetlights);
+	void place_detail_objects(road_plot_t &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<point> &tree_pos, vect_cube_t const &pond_blockers,
+		vect_cube_t const &plot_cuts, unsigned city_id, unsigned plot_ix, unsigned plot_id_offset, rand_gen_t &rgen, bool have_streetlights);
 	void place_residential_plot_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<road_t> const &roads,
 		vect_cube_t const &pool_blockers, unsigned driveways_start, unsigned plot_ix, unsigned city_ix, rand_gen_t &rgen);
 	bool place_swimming_pool(road_plot_t const &plot, city_zone_t const &yard, cube_with_ix_t const &house, bool dim, bool dir, bool shrink_dim,

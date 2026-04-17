@@ -184,16 +184,14 @@ bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, unsigne
 				cs = cand;
 			}
 			building_t b;
-			b.is_house   = 0;
 			b.is_in_city = 1;
 			b.city_ix    = city_id;
 			b.bcube      = cs; // copy XY; zvals set below
-			b.num_sides  = 4; // simple cube
 			b.street_dir = 2*(!dim) + ent_dir + 1; // facing gas station
 			b.street_side= dir;
 			b.btype      = BTYPE_CONV_STORE;
-			b.mat_ix     = global_building_params.choose_rand_mat(rgen, 0, 1, 0); // use brick or concrete: city_only=0, non_city_only=1, residential=0
 			b.roof_type  = ROOF_TYPE_PEAK;
+			b.mat_ix     = global_building_params.choose_rand_mat(rgen, 0, 1, 0); // use brick or concrete: city_only=0, non_city_only=1, residential=0
 			b.was_custom_placed = 1;
 			b.gen_roof_and_side_color(rgen);
 			b.set_z_range(cs.z1(), cs.z2());
@@ -790,8 +788,8 @@ point line_line_intersect_xy(point const &p1, point const &q1, point const &p2, 
 }
 
 // Note: blockers are used for placement of objects within this plot; colliders are used for pedestrian AI; plot is non-const so that we can set no_draw flag for parks
-void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blockers, vect_cube_t &colliders,
-	vector<point> &tree_pos, vect_cube_t const &pond_blockers, vect_cube_t const &plot_cuts, rand_gen_t &rgen, bool have_streetlights)
+void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<point> &tree_pos, vect_cube_t const &pond_blockers,
+	vect_cube_t const &plot_cuts, unsigned city_id, unsigned plot_ix, unsigned plot_id_offset, rand_gen_t &rgen, bool have_streetlights)
 {
 	bool const is_residential(plot.is_residential), is_park(plot.is_park);
 	float const car_length(city_params.get_nom_car_size().x); // used as a size reference for other objects
@@ -944,6 +942,51 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 				}
 			}
 			plot.no_draw = 1; // drawn as heightmap rather than quad
+		}
+		// add a public restroom; not for two adjacent parks; may have a dumpster placed next to it
+		cube_t rr_test_range(plot);
+		rr_test_range.expand_by(plot.get_size()); // include adjacent plots
+
+		if (!has_bcube_int(rr_test_range, park_restrooms)) {
+			float const bheight(0.2*city_params.road_width), bhlen(1.5*bheight), bhdepth(1.0*bheight);
+			cube_t bc;
+			set_cube_zvals(bc, plot.z2(), plot.z2()+bheight);
+
+			for (unsigned N = 0; N < 200; ++N) { // 200 random tries
+				bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()), doors_at_front(rgen.rand_bool());
+				cube_t place_area(plot); // should we prefer to place by the path like water fountains?
+				place_area.expand_in_dim( dim, -bhdepth-sidewalk_width);
+				place_area.expand_in_dim(!dim, -bhlen  -sidewalk_width);
+				if (place_area.dx() <= 0.0 || place_area.dy() <= 0.0) break; // no space for restroom; shouldn't fail
+				point center(0.0, 0.0, plot.z2());
+				for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform(place_area.d[d][0], place_area.d[d][1]);}
+				set_wall_width(bc, center[ dim], bhdepth, dim);
+				set_wall_width(bc, center[!dim], bhlen,  !dim);
+				cube_t bc_pad(bc);
+				bc_pad.expand_by_xy(0.5*bhdepth);
+				if (doors_at_front) {bc_pad.d[dim][dir] += (dir ? 1.0 : -1.0)*bhdepth;} // add extra padding to front entrance
+				else {bc_pad.expand_in_dim(!dim, bhdepth); } // add extra padding to door sides
+				if (has_bcube_int(bc_pad, blockers)) continue; // invalid placement
+				if (check_path_coll_xy(bc_pad, ppaths, paths_start)) continue; // check park path collision
+				building_t b;
+				b.is_in_city = 1;
+				b.city_ix    = city_id;
+				b.bcube      = bc;
+				b.street_dir = 2*dim + dir + 1; // front side (not actually a street)
+				b.street_side= doors_at_front;
+				b.btype      = BTYPE_RESTROOM;
+				b.roof_type  = ROOF_TYPE_PEAK;
+				b.mat_ix     = global_building_params.choose_rand_mat(rgen, 0, 1, 0); // use brick or concrete: city_only=0, non_city_only=1, residential=0
+				b.was_custom_placed = 1;
+				b.gen_roof_and_side_color(rgen);
+				b.set_z_range(bc.z1(), bc.z2());
+				
+				if (place_city_building_at(b, (plot_ix + plot_id_offset), rgen)) {
+					blockers.push_back(bc_pad);
+					park_restrooms.push_back(bc);
+				}
+				break; // done
+			} // for N
 		}
 		cube_t obj_place_area(plot); // for picnic tables, benches, and swing sets
 		obj_place_area.expand_by_xy(-sidewalk_width); // add a border around the edge of the park
@@ -2450,7 +2493,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 			place_residential_plot_objects(*i, blockers, colliders, roads, underground_blockers, driveways_start, plot_id, city_id, detail_rgen); // before placing trees
 		}
 		place_trees_in_plot  (*i, blockers, colliders, tree_pos, plot_cuts, detail_rgen, buildings_end);
-		place_detail_objects (*i, blockers, colliders, tree_pos, underground_blockers, plot_cuts, detail_rgen, have_streetlights);
+		place_detail_objects (*i, blockers, colliders, tree_pos, underground_blockers, plot_cuts, city_id, plot_id, plot_id_offset, detail_rgen, have_streetlights);
 		add_objs_on_buildings(*i, blockers, colliders, hospital_signs);
 	} // for i (plot)
 	for (unsigned n = 0; n < 3; ++n) {

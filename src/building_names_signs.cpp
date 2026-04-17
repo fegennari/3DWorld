@@ -102,7 +102,8 @@ string choose_store_name(unsigned store_type, unsigned item_category, rand_gen_t
 
 string choose_business_name(rand_gen_t rgen, building_type_t btype) {
 	assert(btype < NUM_BUILDING_TYPES);
-	if (btype == BTYPE_PARKING   ) {return "Parking";} // for now, parking structures only have "Parking" signs
+	if (btype == BTYPE_PARKING   ) {return "Parking" ;} // for now, parking structures only have "Parking" signs
+	if (btype == BTYPE_RESTROOM  ) {return "Restroom";} // or no name/sign?
 	if (btype == BTYPE_RESTAURANT) {return store_name_gen.gen_restaurant_name(rgen);}
 	if (btype >= BTYPE_APARTMENT ) {return gen_random_name(rgen, 4) + " " + btype_names[btype];} // specialized building type
 	if (rgen.rand_bool())          {return pixel_city::gen_company_name(rgen);}
@@ -340,6 +341,7 @@ void building_t::add_exterior_door_items(rand_gen_t &rgen) { // mostly signs; ad
 		tquad_with_ix_t const &front_door(doors.front());
 		add_sign_by_door(front_door, 1, name, choose_sign_color(rgen), 0); // front door only, outside
 	}
+	else if (is_restroom()) {} // no sign
 	else { // office building; add signs
 		float const floor_spacing(get_window_vspace());
 		vect_room_object_t &objs(interior->room_geom->objs);
@@ -513,7 +515,8 @@ void building_t::add_signs(vector<sign_t> &signs) const { // added as exterior c
 		} // for d
 		// what about placing hospital signs with arrows at intersections?
 	} // end hospital
-	if (name.empty())  return; // no company name; shouldn't get here
+	if (name.empty ()) return; // no company name; shouldn't get here
+	if (is_restroom()) return; // no signs for restrooms
 	if (num_sides & 1) return; // odd number of sides, may not be able to place a sign correctly (but maybe we can check this with a collision test with conn?)
 	if (half_offset || flat_side_amt != 0.0 || alt_step_factor != 0.0 || start_angle != 0.0) return; // not a shape that's guanrateed to reach the bcube edge
 	bool const is_rotated_non_cube(is_rotated() && !is_cube());

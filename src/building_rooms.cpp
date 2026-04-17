@@ -909,11 +909,6 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					added_obj = is_kitchen = add_commercial_kitchen_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start, objs_start_inc_lights, light_ix_assign);
 					if (added_obj) {added_kitchen_mask |= 1;}
 				}
-				else if (init_rtype_f0 == RTYPE_MENS || init_rtype_f0 == RTYPE_WOMENS) {
-					added_obj = is_bathroom = add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt,
-						objs_start_inc_lights, objs_start, f, is_basement, 0, added_bathroom_objs_mask);
-					added_bathroom |= is_bathroom;
-				}
 				else if (init_rtype_f0 == RTYPE_STORAGE) {
 					added_obj = is_storage = add_storage_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement, has_stairs);
 				}
@@ -928,6 +923,11 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				else if (f < NUM_RTYPE_SLOTS) { // failed, maybe because stairs were added to the room
 					r->assign_to(RTYPE_OFFICE, f); // if room is on a lower floor where we can assign a type, re-assign to an office
 				}
+			}
+			if ((is_restaurant() || is_restroom()) && (init_rtype_f0 == RTYPE_MENS || init_rtype_f0 == RTYPE_WOMENS)) {
+				added_obj = is_bathroom = add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt,
+					objs_start_inc_lights, objs_start, f, is_basement, 0, added_bathroom_objs_mask);
+				added_bathroom |= is_bathroom;
 			}
 			// bedroom or bathroom case; need to check first floor even if must_be_bathroom;
 			if (!added_obj && allow_br && !is_tall_room && !has_walkway && !floor_will_alias && can_be_bedroom_or_bathroom(*r, f)) {

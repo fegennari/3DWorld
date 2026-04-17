@@ -2277,7 +2277,7 @@ struct building_t : public building_geom_t {
 	building_type_t btype=BTYPE_UNSET;
 	bool is_house=0, has_garage=0, has_shed=0, has_int_garage=0, has_courtyard=0, has_complex_floorplan=0, has_helipad=0, has_ac=0, has_fake_roof_door=0;
 	bool has_tline_conn=0, has_smokestack=0, has_antenna=0, has_radiators=0, was_custom_placed=0;
-	bool street_side=0; // for convenience stores
+	bool street_side=0; // for convenience stores and restrooms
 	mutable bool has_attic_window=0; // make mutable so that drawing code can update/cache this value
 	bool multi_family=0; // apartments, multi-family house, duplex, etc. - split by floor
 	bool has_int_fplace=0, has_parking_garage=0, has_small_part=0, has_basement_door=0, has_basement_pipes=0, parts_generated=0, is_in_city=0, has_skylight_light=0;
@@ -2360,7 +2360,7 @@ struct building_t : public building_geom_t {
 	bool can_extend_stairs_to_pg(unsigned &stairs_ix) const;
 	bool is_basement(vect_cube_t::const_iterator it) const {return (int(it - parts.begin()) == basement_part_ix);}
 	bool is_pos_in_basement(point const &pos) const {return ((has_basement() && parts[basement_part_ix].contains_pt(pos)) || point_in_extended_basement(pos));}
-	bool room_inc_half_walls(room_t const &room) const {return (((is_restaurant() || is_conv_store()) && room.z1() >= ground_floor_z1) || room.inc_half_walls());}
+	bool room_inc_half_walls(room_t const &room) const {return (((is_restaurant() || is_conv_store() || is_restroom()) && room.z1() >= ground_floor_z1) || room.inc_half_walls());}
 	bool maybe_has_ext_door_this_floor(float part_z1, unsigned floor_ix) const;
 	bool is_attic_window(cube_t const &window) const {return (has_attic() && window.z1() >= get_attic_part().z2());}
 	void get_garage_dim_dir(cube_t const &garage, bool &dim, bool &dir) const;

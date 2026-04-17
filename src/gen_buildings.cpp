@@ -3593,7 +3593,7 @@ public:
 			}
 		} // for i
 		if (buildings.capacity() > 2*buildings.size()) {
-			unsigned const orig_sz(buildings.size()), num_extra(32); // for custom placed buildings
+			unsigned const orig_sz(buildings.size()), num_extra(128); // for custom placed buildings
 			buildings.resize(buildings.size() + num_extra);
 			buildings.shrink_to_fit();
 			buildings.resize(orig_sz);

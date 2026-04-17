@@ -2209,6 +2209,7 @@ void building_t::add_person(person_t &person, rand_gen_t &rgen) const { // not r
 }
 bool building_t::place_people_if_needed(unsigned building_ix, float radius) const {
 	if (!interior || interior->rooms.empty() || is_rotated()) return 0; // no people in these cases
+	if (is_restroom())           return 0; // no people (too small)
 	if (interior->placed_people) return 0; // already placed
 	interior->placed_people = 1; // set, even if no people are placed below
 	if (!global_building_params.gen_building_interiors) return 0; // no interiors, no people

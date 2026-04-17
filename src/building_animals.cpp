@@ -102,10 +102,10 @@ float select_animal_radius(float sz_min, float sz_max, float floor_spacing, rand
 	return 0.5f*floor_spacing*((sz_min >= sz_max) ? sz_min : rgen.rand_uniform(sz_min, sz_max));
 }
 template<typename T> void building_t::add_animals_on_floor(T &animals, unsigned building_ix, unsigned num_min, unsigned num_max, float sz_min, float sz_max) const {
-	if (is_conv_store()) return; // no animals in convenience store since it's so small
-	if (animals.placed)  return; // already placed
+	if (is_conv_store() || is_restroom()) return; // no animals in convenience store or restroom since it's so small
+	if (animals.placed) return; // already placed
 	animals.placed = 1; // even if there were no animals placed
-	if (num_max == 0)    return; // none to place
+	if (num_max == 0)   return; // none to place
 	rand_gen_t rgen;
 	rgen.set_state(building_ix+1, mat_ix+1); // unique per building
 	float const floor_spacing(get_window_vspace());

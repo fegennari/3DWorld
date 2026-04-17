@@ -477,7 +477,7 @@ void building_t::create_per_part_ext_verts() {
 }
 void building_t::finish_gen_geometry(rand_gen_t &rgen, bool has_overlapping_cubes) { // for office buildings
 	if (coll_bcube.is_all_zeros()) {coll_bcube = bcube;} // calculate if it hasn't been calculated yet
-	if (global_building_params.add_office_basements && !is_conv_store()) {maybe_add_basement(rgen);}
+	if (global_building_params.add_office_basements) {maybe_add_basement(rgen);} // not legal for custom placed buildings
 	assert(parts.size() > 0 && parts.size() < 256);
 	real_num_parts = uint8_t(parts.size()); // no parts can be added after this point
 	create_per_part_ext_verts();
@@ -613,7 +613,7 @@ cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door
 
 	for (unsigned n = 0; n < num_tries; ++n) { // make up to 10 tries to place a valid door
 		if (calc_center) { // add door to first part of house/building
-			float const offset(centered ? 0.5 : rgen.rand_uniform(0.5-door_center_shift, 0.5+door_center_shift));
+			float const offset(centered ? 0.5 : (is_restroom() ? door_center_shift : rgen.rand_uniform(0.5-door_center_shift, 0.5+door_center_shift)));
 			door_center = offset*base_lo + (1.0 - offset)*base_hi;
 			max_eq(door_center, (base_lo + min_wall_spacing)); // door must be contained in base
 			min_eq(door_center, (base_hi - min_wall_spacing));
@@ -1502,7 +1502,7 @@ void try_expand_into_xy(cube_t &c1, cube_t const &c2) {
 bool building_t::can_have_basement() const {
 	if (!is_cube())          return 0; // simple cube shaped buildings only
 	if (!interior_enabled()) return 0; // if there's no interior, there's no point in adding a basement
-	if (is_conv_store())     return 0;
+	if (was_custom_placed)   return 0; // not legal
 	return 1;
 }
 
@@ -2025,6 +2025,23 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office 
 		}
 		return;
 	}
+	if (is_restroom()) { // two doors on the ends or front side
+		assert(street_dir);
+		bool const dim(get_street_dim()), dir(get_street_side());
+		cube_t const part(parts.front());
+
+		for (unsigned d = 0; d < 2; ++d) {
+			if (street_side) { // doors at front
+				cube_t const door(place_door(part, dim, dir, door_height, 0.0, 0.0, (d ? 0.75 : 0.25), wscale, 0, 0, rgen));
+				if (add_door(door, 0, dim, dir, 1)) {floor_ext_door_mask |= 1;}
+			}
+			else { // doors at ends
+				cube_t const door(place_door(part, !dim, d, door_height, 0.0, 0.0, 0.0, wscale, 0, 0, rgen));
+				if (add_door(door, 0, !dim, d, 1)) {floor_ext_door_mask |= 1;}
+			}
+		} // for d
+		return;
+	}
 	bool pref_dim(0), pref_dir(0); // for first door
 
 	if (street_dir > 0) { // prefer first door along the street
@@ -2491,11 +2508,11 @@ void building_t::maybe_add_special_roof(rand_gen_t &rgen) {
 
 	if (was_custom_placed) { // use existing roof type
 		if (roof_type == ROOF_TYPE_PEAK) {
-			assert(parts.size() == 1); // should be a single above ground part; basement not yet added
+			assert(parts.size() == 1); // should be a single above ground part; basement not yet added (and won't be added)
 			cube_t const &main_part(parts.front());
 			bool const dim(main_part.dx() < main_part.dy());
 			unsigned skip_side_tri(2); // skip neither
-			float const peak_height(0.5), extend_to(0.0), max_dz(main_part.dz());
+			float const peak_height(is_restroom() ? 0.25 : 0.5), extend_to(0.0), max_dz(main_part.dz());
 			gen_peaked_roof(main_part, peak_height, dim, extend_to, max_dz, skip_side_tri);
 		}
 		else if (roof_type == ROOF_TYPE_SLOPE) {gen_sloped_roof(rgen, top);}

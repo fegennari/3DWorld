@@ -44,7 +44,8 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 			zval = add_flooring(room, zval, room_id, tot_light_amt, flooring_type); // move the effective floor up
 		}
 	}
-	if (have_toilet && (room.is_office || (!is_basement && is_prison()) || is_restaurant())) { // office, above ground prison bathroom, and restaurant have stalls
+	if (have_toilet && (room.is_office || (!is_basement && is_prison()) || is_restaurant() /*|| is_restroom()*/)) {
+		// office, above ground prison bathroom, restaurant, and park restroom have stalls
 		if (min_room_dim > 1.5*floor_spacing && max(place_area_sz.x, place_area_sz.y) > 2.0*floor_spacing) {
 			if (divide_bathroom_into_stalls(rgen, room, zval, room_id, tot_light_amt, floor, lights_start, objs_start)) { // large enough, divide into bathroom stalls
 				added_bathroom_objs_mask |= (PLACED_TOILET | PLACED_SINK);
@@ -753,7 +754,7 @@ void building_t::add_bathroom_window(cube_t const &window, bool dim, bool dir, u
 	room_t const &room(get_room(room_id));
 	// exterior looks odd to have window block walls at the corner of a building,
 	// so only enable this for single exterior walls, when there are no exterior windows, when there are stalls, or for industrial/rest/conv bathrooms (which look odd without it)
-	if (!is_industrial() && !is_restaurant() && !is_conv_store() && has_windows() && !room.has_br_stalls() && count_ext_walls_for_room(room, window.z1()) != 1) return;
+	if (!is_industrial() && !is_restaurant() && !is_conv_store() && !is_restroom() && has_windows() && !room.has_br_stalls() && count_ext_walls_for_room(room, window.z1()) != 1) return;
 	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t c(window);
 	c.translate_dim(dim, (dir ? 1.0 : -1.0)*0.5*get_trim_thickness()); // half the previous translate to prevent Z-fighting in mirror reflections
@@ -763,6 +764,21 @@ void building_t::add_bathroom_window(cube_t const &window, bool dim, bool dir, u
 }
 
 void building_t::create_restroom_floorplan(unsigned part_id, rand_gen_t &rgen) {
-	// TODO
+	assert(part_id < parts.size());
+	cube_t const &part(parts[part_id]);
+	assert(interior->rooms.empty()); // must call this first
+	// divide into men's and women's rooms
+	bool const dim(!get_street_dim()), wm_dir(rgen.rand_bool()); // split dim
+	float const wall_thick(get_wall_thickness()), split_pos(part.get_center_dim(dim));
+	cube_t wall(part);
+	create_wall(wall, dim, split_pos, get_fc_thickness(), 0.5*wall_thick, 0.05*wall_thick);
+	interior->walls[dim].push_back(wall);
+
+	for (unsigned d = 0; d < 2; ++d) {
+		cube_t room(part);
+		room.d[dim][!d] = split_pos;
+		add_assigned_room(room, part_id, ((bool(d) ^ wm_dir) ? RTYPE_MENS : RTYPE_WOMENS));
+		interior->rooms.back().is_single_floor = 1; // probably not needed
+	}
 }
 
