@@ -37,14 +37,15 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 	bool const have_toilet(building_obj_model_loader.is_model_valid(OBJ_MODEL_TOILET)), have_sink(building_obj_model_loader.is_model_valid(OBJ_MODEL_SINK));
 	vect_room_object_t &objs(interior->room_geom->objs);
 
-	if ((have_toilet || have_sink) && is_cube() && !is_industrial()) { // bathroom with at least a toilet or sink; cube shaped parts only; no industrial; add flooring
+	if ((have_toilet || have_sink) && is_cube() && !is_industrial() && !is_restroom()) {
+		// bathroom with at least a toilet or sink; cube shaped parts only; no industrial or park restroom; add flooring
 		int const flooring_type(is_residential() ? (is_basement ? (int)FLOORING_CONCRETE : (int)FLOORING_TILE) : (int)FLOORING_MARBLE);
 		if (flooring_type == FLOORING_CONCRETE && get_material().basement_floor_tex.tid == get_concrete_tid()) {} // already concrete
 		else { // replace carpet/wood with marble/tile/concrete
 			zval = add_flooring(room, zval, room_id, tot_light_amt, flooring_type); // move the effective floor up
 		}
 	}
-	if (have_toilet && (room.is_office || (!is_basement && is_prison()) || is_restaurant() /*|| is_restroom()*/)) {
+	if (have_toilet && (room.is_office || (!is_basement && is_prison()) || is_restaurant() || is_restroom())) {
 		// office, above ground prison bathroom, restaurant, and park restroom have stalls
 		if (min_room_dim > 1.5*floor_spacing && max(place_area_sz.x, place_area_sz.y) > 2.0*floor_spacing) {
 			if (divide_bathroom_into_stalls(rgen, room, zval, room_id, tot_light_amt, floor, lights_start, objs_start)) { // large enough, divide into bathroom stalls
@@ -457,6 +458,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 {
 	// Note: assumes no prior placed objects
 	bool const use_sink_model(0);
+	bool const is_park_restroom(is_restroom());
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	vector3d const tsz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TOILET)); // L, W, H
 	float const theight(0.35*floor_spacing), twidth(theight*tsz.y/tsz.z), tlength(theight*tsz.x/tsz.z), stall_depth(2.2*tlength);
@@ -516,29 +518,43 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 		vector3d const usz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_URINAL)); // L, W, H
 		uheight = 0.4*floor_spacing; uwidth = uheight*usz.y/usz.z; ulength = uheight*usz.x/usz.z;
 	}
-	for (unsigned d = 0; d < 2 && !sink_side_set; ++d) { // try long then short dim
-		bool first_sink_side(0);
+	if (is_park_restroom) { // restroom only, check exterior doors
+		for (tquad_t const &door : doors) {
+			cube_t const door_bc(door.get_bcube());
+			cube_t door_exp(door_bc);
+			door_exp.expand_by_xy(wall_thickness);
+			if (!room.intersects(door_exp)) continue;
+			sink_side = (door_bc.get_center_dim(!br_dim) > room.get_center_dim(!br_dim));
+			sink_side_set = 1;
+			place_area.d[!br_dim][sink_side] += (sink_side ? -1.0 : 1.0)*(door_bc.get_sz_dim(br_dim) - 0.25*swidth); // add sink clearance for the door to close
+			break; // should only have one door
+		} // for door
+	}
+	else { // check interior doors
+		for (unsigned d = 0; d < 2 && !sink_side_set; ++d) { // try long then short dim
+			bool first_sink_side(0);
 
-		if (d == 0 && point_in_mall(room.get_cube_center())) { // place sink on the side closer to the mall concourse
-			first_sink_side = (room.get_center_dim(!br_dim) < get_mall_concourse().get_center_dim(!br_dim));
-		}
-		for (unsigned e = 0; e < 2 && !sink_side_set; ++e) {
-			bool const side(bool(e) ^ first_sink_side);
-			cube_t c(room);
-			set_cube_zvals(c, zval, zval+wall_thickness); // reduce to a small z strip for this floor to avoid picking up doors on floors above or below
-			c.d[!br_dim][!side] = c.d[!br_dim][side] + (side ? -1.0 : 1.0)*wall_thickness; // shrink to near zero area in this dim
-
-			for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) {
-				if (i->dim == br_dim) continue; // door in wrong dim
-				if (!i->is_connected_to_room(room_id) || !is_cube_close_to_door(c, 0.0, 0, *i, 2)) continue; // check both dirs
-				sink_side = side; sink_side_set = 1;
-				place_area.d[!br_dim][side] += (sink_side ? -1.0 : 1.0)*(i->get_sz_dim(br_dim) - 0.25*swidth); // add sink clearance for the door to close
-				br_door_stack_ix = (i - interior->door_stacks.begin());
-				break; // sinks are on the side closest to the door
+			if (d == 0 && point_in_mall(room.get_cube_center())) { // place sink on the side closer to the mall concourse
+				first_sink_side = (room.get_center_dim(!br_dim) < get_mall_concourse().get_center_dim(!br_dim));
 			}
-		} // for e
-		if (d == 0 && !sink_side_set) {br_dim ^= 1;} // door not found on long dim - R90 and try short dim
-	} // for d
+			for (unsigned e = 0; e < 2 && !sink_side_set; ++e) {
+				bool const side(bool(e) ^ first_sink_side);
+				cube_t c(room);
+				set_cube_zvals(c, zval, zval+wall_thickness); // reduce to a small z strip for this floor to avoid picking up doors on floors above or below
+				c.d[!br_dim][!side] = c.d[!br_dim][side] + (side ? -1.0 : 1.0)*wall_thickness; // shrink to near zero area in this dim
+
+				for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) {
+					if (i->dim == br_dim) continue; // door in wrong dim
+					if (!i->is_connected_to_room(room_id) || !is_cube_close_to_door(c, 0.0, 0, *i, 2)) continue; // check both dirs
+					sink_side = side; sink_side_set = 1;
+					place_area.d[!br_dim][sink_side] += (sink_side ? -1.0 : 1.0)*(i->get_sz_dim(br_dim) - 0.25*swidth); // add sink clearance for the door to close
+					br_door_stack_ix = (i - interior->door_stacks.begin());
+					break; // sinks are on the side closest to the door
+				}
+			} // for e
+			if (d == 0 && !sink_side_set) {br_dim ^= 1;} // door not found on long dim - R90 and try short dim
+		} // for d
+	}
 	//if (!sink_side_set) return 0;
 	assert(sink_side_set);
 	float const room_len(place_area.get_sz_dim(!br_dim)), room_width(place_area.get_sz_dim(br_dim));
@@ -656,6 +672,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 			if (interior->is_cube_close_to_doorway(sink, room, 0.0, 0)) continue; // skip if close to a door
 			if (!check_cube_within_part_sides(sink))                    continue; // outside the building
 			if (!avoid.is_all_zeros() && sink.intersects(avoid))        continue;
+			if (!room.contains_cube(sink))                              continue; // needed for park restroom
 			if (use_sink_model) {objs.emplace_back(sink, TYPE_SINK,   room_id, br_dim, !dir, 0, tot_light_amt);} // sink 3D model
 			else                {objs.emplace_back(sink, TYPE_BRSINK, room_id, br_dim, !dir, 0, tot_light_amt);} // flat basin sink
 			if (use_sink_model) {add_bathroom_plumbing(objs.back());}
@@ -685,9 +702,14 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 				if (interior->is_cube_close_to_doorway(urinal, room, 0.0, 1)) continue; // skip if close to a door
 				if (!check_cube_within_part_sides(urinal))                    continue; // outside the building
 				if (!avoid.is_all_zeros() && urinal.intersects(avoid))        continue;
+				if (is_park_restroom && is_cube_close_to_exterior_doorway(urinal, 0.0, 1)) continue; // inc_open=1
 				
 				if (!interior->is_cube_close_to_doorway(sep_wall, room, 0.0, 1)) { // check for doors, when the bathroom door is not centered on the room
-					objs.emplace_back(sep_wall, TYPE_STALL, room_id, br_dim, !dir, RO_FLAG_HANGING, tot_light_amt, SHAPE_SHORT, stall_color);
+					if (!is_park_restroom || !is_cube_close_to_exterior_doorway(sep_wall, 0.0, 1)) {
+						if (room.contains_cube_xy(sep_wall)) { // needed for park restroom
+							objs.emplace_back(sep_wall, TYPE_STALL, room_id, br_dim, !dir, RO_FLAG_HANGING, tot_light_amt, SHAPE_SHORT, stall_color);
+						}
+					}
 				}
 				objs.emplace_back(urinal, TYPE_URINAL, room_id, br_dim, dir, 0, tot_light_amt);
 				add_poi_dim_dir(urinal, room_id, br_dim, dir, 0.5); // dscale=0.5
@@ -696,6 +718,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 			if (!two_rows) { // skip first wall if adjacent to a stall
 				set_wall_width(sep_wall, (u_pos - 0.5*sink_step), 0.2*wall_thickness, !br_dim);
 				if (!avoid.is_all_zeros() && sep_wall.intersects(avoid)) {} // skip
+				else if (is_park_restroom && is_cube_close_to_exterior_doorway(sep_wall, 0.0, 1)) {} // skip
 				else {objs.emplace_back(sep_wall, TYPE_STALL, room_id, br_dim, !dir, RO_FLAG_HANGING, tot_light_amt, SHAPE_SHORT, stall_color);}
 			}
 		}
@@ -742,7 +765,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 	add_door_sign(sign_text, room, zval, room_id, 1); // no_check_adj_walls=1
 
 	// make this door/room out of order 10% of the time; only for cube buildings (others need the connectivity), and not for mall or restaurant bathrooms
-	if (is_cube() && !(has_mall() && room.is_ext_basement()) && !is_restaurant() && rgen.rand_float() < 0.1) {
+	if (is_cube() && !(has_mall() && room.is_ext_basement()) && !is_restaurant() && !is_restroom() && rgen.rand_float() < 0.1) {
 		make_door_out_or_order(room, zval, room_id, br_door_stack_ix);
 		room.set_has_out_of_order(); // flag if any floor is out of order
 	}

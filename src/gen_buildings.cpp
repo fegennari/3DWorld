@@ -1714,7 +1714,7 @@ colorRGBA building_t::get_floor_tex_and_color(cube_t const &floor_cube, tid_nm_p
 		else if (in_basement) {tex = mat.basement_floor_tex;} // basement
 		else {tex = mat.house_floor_tex;}
 	}
-	else if (!in_basement && (is_parking() || is_prison())) {
+	else if (!in_basement && (is_parking() || is_prison() || is_restroom())) {
 		tex = get_concrete_texture();
 		return WHITE;
 	}
@@ -1746,7 +1746,7 @@ colorRGBA building_t::get_ceil_tex_and_color(cube_t const &ceil_cube, tid_nm_pai
 		else {tex = get_concrete_texture();}
 		return WHITE;
 	}
-	if (!in_basement && is_parking()) {
+	if (!in_basement && (is_parking() || is_restroom())) {
 		tex = get_concrete_texture();
 		return WHITE;
 	}

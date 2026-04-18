@@ -2352,7 +2352,7 @@ struct building_t : public building_geom_t {
 	bool is_residential () const {return (is_house || is_apt_or_hotel());}
 	bool is_industrial  () const {return (is_factory() || is_warehouse() || is_powerplant());}
 	bool is_commercial  () const {return (!is_residential() && !is_industrial());}
-	bool has_house_floorplan() const {return (is_house || is_restaurant());}
+	bool has_house_floorplan() const {return (is_house || is_restaurant() || is_restroom());}
 	bool is_retail_part(cube_t const &part) const {return (has_retail() && part.z1() == ground_floor_z1);}
 	bool skip_top_of_ceilings() const {return (roof_type == ROOF_TYPE_FLAT || !is_house || has_attic());}
 	bool enable_driveway_coll() const {return !is_rotated();} // no collision with rotated driveways/porches for now
