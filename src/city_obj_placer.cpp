@@ -948,7 +948,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 		rr_test_range.expand_by(plot.get_size()); // include adjacent plots
 
 		if (!has_bcube_int(rr_test_range, park_restrooms)) {
-			float const bheight(0.2*city_params.road_width), bhlen(1.5*bheight), bhdepth(1.0*bheight);
+			float const bheight(0.2*city_params.road_width), bhlen(1.6*bheight), bhdepth(1.2*bheight);
 			cube_t bc;
 			set_cube_zvals(bc, plot.z2(), plot.z2()+bheight);
 
@@ -963,9 +963,9 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 				set_wall_width(bc, center[ dim], bhdepth, dim);
 				set_wall_width(bc, center[!dim], bhlen,  !dim);
 				cube_t bc_pad(bc);
-				bc_pad.expand_by_xy(0.5*bhdepth);
-				if (doors_at_front) {bc_pad.d[dim][dir] += (dir ? 1.0 : -1.0)*bhdepth;} // add extra padding to front entrance
-				else {bc_pad.expand_in_dim(!dim, bhdepth); } // add extra padding to door sides
+				bc_pad.expand_by_xy(0.25*bhdepth);
+				if (doors_at_front) {bc_pad.d[dim][dir] += (dir ? 1.0 : -1.0)*0.5*bhdepth;} // add extra padding to front entrance
+				else {bc_pad.expand_in_dim(!dim, 0.5*bhdepth);} // add extra padding to door sides
 				if (has_bcube_int(bc_pad, blockers)) continue; // invalid placement
 				if (check_path_coll_xy(bc_pad, ppaths, paths_start)) continue; // check park path collision
 				building_t b;

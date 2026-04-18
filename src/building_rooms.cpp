@@ -305,6 +305,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			light_density = 0.5;
 			light_size   *= 0.7; // smaller, since the ceiling is lower
 		}
+		else if (is_restroom()) {
+			light_size *= 0.7;
+		}
 		else if (r->is_office || (r->get_has_skylight() && !industrial_room)) {
 			// more lights for large offices; light size varies by office size; parking garages are handled later
 			light_density = 0.5;
@@ -416,6 +419,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		else if (is_jail_room)      {color = get_light_color_temp(0.44);} // prison - yellowish white
 		else if (r->is_office)      {color = get_light_color_temp(0.60);} // office - blueish
 		else if (r->is_hallway)     {color = get_light_color_temp(0.60);} // office building hallway - blueish
+		else if (is_restroom())     {color = get_light_color_temp(0.42);} // restroom - yellowish white
 		else                        {color = get_light_color_temp(0.50);} // small office - white
 		
 		// place objects on each floor for this room
