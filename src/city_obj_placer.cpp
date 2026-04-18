@@ -980,11 +980,29 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 				b.was_custom_placed = 1;
 				b.gen_roof_and_side_color(rgen);
 				b.set_z_range(bc.z1(), bc.z2());
-				
-				if (place_city_building_at(b, (plot_ix + plot_id_offset), rgen)) {
-					blockers.push_back(bc_pad);
-					park_restrooms.push_back(bc);
-				}
+				if (!place_city_building_at(b, (plot_ix + plot_id_offset), rgen)) continue;
+				blockers.push_back(bc_pad);
+				park_restrooms.push_back(bc);
+				// add divider walls outside the restroom
+				float const fence_thick(0.025*bhdepth);
+				unsigned skip_dims(0);
+
+				for (unsigned d = 0; d < 2; ++d) {
+					cube_t divider(bc);
+					divider.z2() = bc.z1() + 0.72*bheight;
+
+					if (doors_at_front) {
+						float const front_edge(bc.d[dim][dir]);
+						divider.d[ dim][!dir] = front_edge;
+						divider.d[ dim][ dir] = front_edge + (dir ? 1.0 : -1.0)*0.6*bhdepth;
+						divider.d[!dim][!d  ] = bc.d[!dim][d] - (d ? 1.0 : -1.0)*fence_thick;
+					}
+					else { // doors at sides
+						set_wall_width(divider, (bc.d[!dim][d] + (d ? 1.0 : -1.0)*0.6*bhdepth), 0.5*fence_thick, !dim);
+					}
+					divider_groups.add_obj(divider_t(divider, DIV_FENCE, !dim, bool(d), 0, skip_dims, dividers.size(), plot_ix, city_id, 0), dividers);
+					add_cube_to_colliders_and_blockers(divider, colliders, blockers);
+				} // for d
 				break; // done
 			} // for N
 		}
