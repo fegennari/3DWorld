@@ -833,7 +833,7 @@ void newsrack_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_s
 // park water fountains
 
 park_water_fountain_t::park_water_fountain_t(point const &pos_, float height, float cradius_, bool dim_, bool dir_, colorRGBA const &color_)
-	: oriented_city_obj_t(pos_, max(1.25f*cradius_, 0.5f*height), dim_, dir_), cradius(cradius_), color(color_)
+	: oriented_city_obj_t(pos_, max(1.25f*cradius_, 0.5f*height), dim_, dir_), color(color_), cradius(cradius_)
 {
 	bcube.set_from_point(pos);
 	set_cube_zvals(bcube, pos.z, pos.z+height);
@@ -860,7 +860,7 @@ void park_water_fountain_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, f
 	pos_lo.z = pos_mid.z = z1;
 	pos_hi.z = z1 + 0.6*height;
 	point const cylins  [3] = {pos_mid, pos_lo, pos_hi};
-	float const cheights[3] = {0.93*height, 0.15*height, 0.15*height};
+	float const cheights[3] = {0.93f*height, 0.15f*height, 0.15f*height};
 
 	// vertical cylinders
 	for (unsigned n = 0; n < 3; ++n) { // middle, low (dog), high
