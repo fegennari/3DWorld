@@ -478,7 +478,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 	cube_t place_area(room), avoid;
 
 	if (is_park_restroom || is_restaurant()) { // handle exterior walls
-		cube_t room_border(room);
+		cube_t room_border(parts[room.part_id]);
 		room_border.expand_by_xy(-get_trim_thickness()); // add padding around the walls
 		place_area = get_walkable_room_bounds(room);
 		place_area.intersect_with_cube_xy(room_border);
@@ -532,9 +532,16 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 			cube_t door_exp(door_bc);
 			door_exp.expand_by_xy(wall_thickness);
 			if (!room.intersects(door_exp)) continue;
-			sink_side = (door_bc.get_center_dim(!br_dim) > room.get_center_dim(!br_dim));
+			bool const door_dim(door_bc.dy() < door_bc.dx());
+			
+			if (door_dim == br_dim) { // door opens to short end of bathroom, choose a random dir
+				sink_side = rgen.rand_bool();
+			}
+			else {
+				sink_side = (door_bc.get_center_dim(!br_dim) > room.get_center_dim(!br_dim));
+				place_area.d[!br_dim][sink_side] += (sink_side ? -1.0 : 1.0)*(door_bc.get_sz_dim(br_dim) - 0.25*swidth); // add sink clearance for the door to close
+			}
 			sink_side_set = 1;
-			place_area.d[!br_dim][sink_side] += (sink_side ? -1.0 : 1.0)*(door_bc.get_sz_dim(br_dim) - 0.25*swidth); // add sink clearance for the door to close
 			break; // should only have one door
 		} // for door
 	}
@@ -680,7 +687,6 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 			if (interior->is_cube_close_to_doorway(sink, room, 0.0, 0)) continue; // skip if close to a door
 			if (!check_cube_within_part_sides(sink))                    continue; // outside the building
 			if (!avoid.is_all_zeros() && sink.intersects(avoid))        continue;
-			if (!room.contains_cube(sink))                              continue; // needed for park restroom
 			if (use_sink_model) {objs.emplace_back(sink, TYPE_SINK,   room_id, br_dim, !dir, 0, tot_light_amt);} // sink 3D model
 			else                {objs.emplace_back(sink, TYPE_BRSINK, room_id, br_dim, !dir, 0, tot_light_amt);} // flat basin sink
 			if (use_sink_model) {add_bathroom_plumbing(objs.back());}
