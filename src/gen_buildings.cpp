@@ -71,18 +71,18 @@ void get_pedestrians_in_area(cube_t const &area, int building_ix, vector<point> 
 void setup_puddles_texture(shader_t &s);
 void setup_player_building_cube_map();
 void setup_city_cube_map(cube_t const &city_bcube);
-bool camera_in_city_bounds(unsigned rc_mask, cube_t *city_bcube);
+bool camera_in_city_bounds(unsigned rcp_mask, cube_t *city_bcube);
 
 float get_door_open_dist    () {return 3.5*CAMERA_RADIUS;}
 float get_interior_draw_dist() {return global_building_params.interior_view_dist_scale*2.0f*(X_SCENE_SIZE + Y_SCENE_SIZE);}
 bool player_in_ext_basement () {return (player_in_basement == 3 && player_building != nullptr);}
 bool cube_map_reflect_active() {return (display_mode & 0x100);} // key 9; on by default
 
-bool enable_cube_map_reflect() {
+bool enable_cube_map_reflect() { // building interiors
 	return (cube_map_reflect_active() && camera_in_building && !player_in_uge && player_building != nullptr && !player_building->is_rotated());
 }
-bool enable_cube_map_city(cube_t *city_bcube) {
-	return (cube_map_reflect_active() && !camera_in_building && camera_in_city_bounds(2, city_bcube)); // rc_mask=2 (commercial)
+bool enable_cube_map_city(cube_t *city_bcube) { // building exteriors
+	return (cube_map_reflect_active() && !camera_in_building && camera_in_city_bounds(6, city_bcube)); // rcp_mask=2+4 (commercial or park)
 }
 
 void update_lights_bcube_zvals(cube_t &lights_bcube, point const &lpos, float radius) {

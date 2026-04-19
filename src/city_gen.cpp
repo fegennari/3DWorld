@@ -532,6 +532,7 @@ public:
 	bool is_connected_to(unsigned id) const {return (connected_to.find(id) != connected_to.end());}
 	float get_traffic_density() const {return ((tot_road_len == 0.0) ? 0.0 : num_cars/tot_road_len);} // cars per unit road
 	void register_car() const {++num_cars;} // Note: must be const; num_cars is mutable
+	bool point_in_park_xy(point const &pos) const {return check_vect_cube_contains_pt_xy(parks, pos);}
 
 	cube_t get_bcube_inc_stoplights_and_streetlights() const {
 		cube_t c(bcube); // deep copy
@@ -3035,16 +3036,20 @@ public:
 		}
 		return 0;
 	}
-	bool check_inside_city(point const &pos, float radius, unsigned rc_mask, cube_t *city_bcube) const { // Note: pos is in camera space
+	// rcp_mask: 1 bit=residential, 2 bit=commercial, 4 bit=park
+	bool check_inside_city(point const &pos, float radius, unsigned rcp_mask, cube_t *city_bcube) const { // Note: pos is in camera space
+		bool const inc_park(rcp_mask & 4);
 		cube_t query; query.set_from_sphere((pos - get_camera_coord_space_xlate()), radius);
 
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {
-			if (!(rc_mask & (1 << unsigned(!r->get_is_residential())))) continue;
+			bool const wrong_type(!(rcp_mask & (1 << unsigned(!r->get_is_residential()))));
+			if (wrong_type && !inc_park)     continue;
 			cube_t const &bc(r->get_bcube());
 			if (!bc.contains_cube_xy(query)) continue;
+			if (wrong_type && !r->point_in_park_xy(pos)) continue; // check if in a park
 			if (city_bcube) {*city_bcube = bc;}
 			return 1;
-		}
+		} // for r
 		return 0;
 	}
 	bool update_depth_if_underwater(point const &pos, float &depth) const { // Note: pos is in camera space
@@ -3625,8 +3630,8 @@ public:
 		ret |= ped_manager.line_intersect_peds(p1x, p2x, t);
 		return ret;
 	}
-	bool check_inside_city (point const &pos, float radius, unsigned rc_mask=3, cube_t *city_bcube=nullptr) const {
-		return road_gen.check_inside_city(pos, radius, rc_mask, city_bcube);
+	bool check_inside_city (point const &pos, float radius, unsigned rcp_mask=3, cube_t *city_bcube=nullptr) const {
+		return road_gen.check_inside_city(pos, radius, rcp_mask, city_bcube);
 	}
 	bool choose_pt_in_park (point const &pos, point &park_pos, rand_gen_t &rgen) const {return road_gen.choose_pt_in_park(pos, park_pos, rgen);}
 	bool check_mesh_disable(point const &pos, float radius) const {return road_gen.check_mesh_disable(pos, radius);}
@@ -3860,7 +3865,7 @@ bool check_mesh_disable(point const &pos, float radius) { // Note: pos is in glo
 bool check_inside_city(point const &pos, float radius) { // Note: pos is in global space
 	return (have_cities() && city_gen.check_inside_city((pos + get_tt_xlate_val()), radius)); // apply xlate for all static objects
 }
-bool camera_in_city_bounds(unsigned rc_mask, cube_t *city_bcube) {return (have_cities() && city_gen.check_inside_city(camera_pos, CAMERA_RADIUS, rc_mask, city_bcube));}
+bool camera_in_city_bounds(unsigned rcp_mask, cube_t *city_bcube) {return (have_cities() && city_gen.check_inside_city(camera_pos, CAMERA_RADIUS, rcp_mask, city_bcube));}
 bool cube_int_underground_obj(cube_t const &c) {return city_gen.cube_int_underground_obj(c);} // Note: cube is in global space
 bool is_invalid_city_placement_for_cube(cube_t const &c) {return city_gen.is_invalid_placement_for_cube(c);}
 void add_city_plot_cut(cube_t const &cut) {city_gen.add_plot_cut(cut);}
