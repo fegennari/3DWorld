@@ -2634,8 +2634,8 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 	rgen.rand_mix();
 	vect_cube_t trims;
 	
-	// add exterior window sills 50% of the time, but only if add_ext_trim=1; always add to prisons
-	if (add_ext_sills && (!add_ext_trim || (!prison && !rgen.rand_bool()))) {
+	// add exterior window sills 50% of the time, except for restrooms (with high windows), but only if add_ext_trim=1; always add to prisons
+	if (add_ext_sills && (!add_ext_trim || is_restroom() || (!prison && !rgen.rand_bool()))) {
 		add_ext_sills = 0;
 		if (!add_trim && !add_coverings) return; // nothing else to add
 	}
@@ -3067,7 +3067,10 @@ void building_t::add_window_coverings(cube_t const &window, bool dim, bool dir) 
 	// add blinds to some windows based on the containing room type for this floor
 	bool is_split(0);
 	int const room_id(get_room_id_for_window(window, dim, dir, is_split));
-	if (is_split && !is_prison()) return; // window split across multiple rooms - how do we handle this? for now skip it, but ignore for prison jail cells
+	
+	if (is_split && !is_prison() && !is_restroom()) { // window split across multiple rooms
+		return; // how do we handle this? for now skip it, but ignore for prison jail cells and restrooms, both of which must always have window coverings
+	}
 	unsigned floor_ix(0);
 
 	switch (get_room_type_and_floor(room_id, window.zc(), floor_ix)) {

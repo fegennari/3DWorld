@@ -6323,11 +6323,14 @@ void building_room_geom_t::add_window(room_object_t const &c, float tscale) { //
 	//   - Drawing windows in world space on the CPU (like blast effects) doesn't correctly handle occlusion by fragments of lower depth (such as interior walls).
 	cube_t window(c);
 	tid_nm_pair_t tex(get_bath_wind_tid(), 0.0); // fit texture to the window front/back faces
+	float const width(c.get_width());
+	if (c.get_width() > 2.0*c.dz()) {(c.dim ? tex.tscale_x : tex.tscale_y) = 2.0/width;} // if window is wide (park restroom), repeat texture 2x in X
 	if (c.is_light_on()) {tex.emissive = 0.33;} // one third emissive
-	get_material(tex, 0, 0, 0, 0).add_cube_to_verts(window, c.color, c.get_llc(), get_face_mask(c.dim, !c.dir)); // interior face, no apply_light_color()
+	point const llc(c.get_llc());
+	get_material(tex, 0, 0, 0, 0).add_cube_to_verts(window, c.color, llc, get_face_mask(c.dim, !c.dir), c.dim); // interior face, no apply_light_color()
 
 	if (c.has_extra()) { // only draw exterior for buildings with exterior windows
-		get_material(tex, 0, 0, 0, 1).add_cube_to_verts(window, c.color, c.get_llc(), get_face_mask(c.dim,  c.dir)); // exterior face, no apply_light_color()
+		get_material(tex, 0, 0, 0, 1).add_cube_to_verts(window, c.color, llc, get_face_mask(c.dim,  c.dir), c.dim); // exterior face, no apply_light_color()
 	}
 }
 

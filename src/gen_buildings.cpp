@@ -2663,7 +2663,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 		tex = tid_nm_pair_t(window_tid, -1, window_tx, window_ty);
 	}
 	else {
-		tex = tid_nm_pair_t(window_tid, -1, mat.get_window_tx(), mat.get_window_ty(), mat.wind_xoff, -mat.wind_yoff); // Note: wind_yoff is negated
+		tex = tid_nm_pair_t(window_tid, -1, mat.get_window_tx(), (is_restroom() ? 2.0 : 1.0)*mat.get_window_ty(), mat.wind_xoff, -mat.wind_yoff); // Note: wind_yoff is negated
 	}
 	if (lights_pass) { // slight yellow-blue tinting using bcube x1/y1 as a hash
 		float const tint(0.2*fract(100.0f*(bcube.x1() + bcube.y1())));
@@ -2672,6 +2672,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	int const clip_windows(draw_windows ? (is_house ? 2 : 1) : 0);
 	float const floor_spacing(get_window_vspace()), first_floor_z1(ground_floor_z1 + floor_spacing);
 	float const gf_door_ztop(doors.empty() ? 0.0f : (EXACT_MULT_FLOOR_HEIGHT ? first_floor_z1 : doors.front().pts[2].z));
+	float const window_z1_off(is_restroom() ? 0.5*floor_spacing : 0.0); // restroom has upper windows above the urinals
 	unsigned draw_parts_mask(0);
 	bool room_with_stairs(0);
 	cube_t cont_part; // part containing the point
@@ -2726,7 +2727,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 		unsigned const num_splits(split_per_floor ? calc_num_floors(*i, floor_spacing, get_floor_thickness()) : 1);
 
 		for (unsigned f = 0; f < num_splits; ++f) {
-			float const floor_offset(f*floor_spacing), slice_z1(i->z1() + floor_offset);
+			float const floor_offset(f*floor_spacing), slice_z1(i->z1() + floor_offset + window_z1_off);
 			float const slice_z2((split_per_floor && f+1 < num_splits) ? (i->z1() + (f+1)*floor_spacing) : i->z2()); // Note: last slice must end at exactly i->z2()
 			float const door_ztop((split_per_floor && EXACT_MULT_FLOOR_HEIGHT) ? slice_z2 : (gf_door_ztop + floor_offset));
 			cube_t part(*i), draw_part;
