@@ -690,7 +690,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			}
 			else if (type == TYPE_URINAL) {
 				bc.expand_in_dim(!dim, -0.1*c->get_sz_dim(!dim)); // shrink width
-				bc.d[dim][dir] -= (dir ? 1.0 : -1.0)*0.4*c->get_sz_dim(dim); // shift front in
+				bc.d[dim][dir] -= (dir ? 1.0 : -1.0)*(is_restroom() ? 0.8 : 0.4)*c->get_sz_dim(dim); // shift front in; more for restrooms, since they're small
 				bc.z1() += 0.1*bc.dz(); // shift bottom up
 				bc.z2() -= 0.2*bc.dz(); // shift top down
 			}
@@ -1013,6 +1013,7 @@ class building_indir_light_mgr_t {
 				hanging   = 1;
 			}
 		} // end room light case
+		if (b.is_restroom()) {base_num_rays *= 4;} // more rays, since there are only 2 lights and 2-5 windows
 		if (b.check_pt_in_retail_room(light_center)) {weight *= 0.5; base_num_rays /= 5; half_step_sz = 0;} // many lights, fewer rays; windows or ceiling lights
 		if (b.is_house ) {weight *=  2.0;} // houses have dimmer lights and seem to work better with more indir
 		if (cur_job.neg) {weight *= -1.0;}
