@@ -2655,6 +2655,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	int const window_tid(building_texture_mgr.get_window_tid());
 	if (window_tid < 0 && !for_gen_not_draw) return; // not allocated - error?
 	if (mat.wind_xscale == 0.0 || mat.wind_yscale == 0.0) return; // no windows for this material?
+	bool const restroom(is_restroom());
 	tid_nm_pair_t tex;
 	colorRGBA color(mat.window_color);
 
@@ -2663,7 +2664,8 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 		tex = tid_nm_pair_t(window_tid, -1, window_tx, window_ty);
 	}
 	else {
-		tex = tid_nm_pair_t(window_tid, -1, mat.get_window_tx(), (is_restroom() ? 2.0 : 1.0)*mat.get_window_ty(), mat.wind_xoff, -mat.wind_yoff); // Note: wind_yoff is negated
+		float const tscale_x(restroom ? 0.5*RESTROOM_WIN_TSCALE_X : mat.get_window_tx()), tscale_y((restroom ? 2.0 : 1.0)*mat.get_window_ty());
+		tex = tid_nm_pair_t(window_tid, -1, tscale_x, tscale_y, mat.wind_xoff, -mat.wind_yoff); // Note: wind_yoff is negated
 	}
 	if (lights_pass) { // slight yellow-blue tinting using bcube x1/y1 as a hash
 		float const tint(0.2*fract(100.0f*(bcube.x1() + bcube.y1())));
@@ -2672,7 +2674,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	int const clip_windows(draw_windows ? (is_house ? 2 : 1) : 0);
 	float const floor_spacing(get_window_vspace()), first_floor_z1(ground_floor_z1 + floor_spacing);
 	float const gf_door_ztop(doors.empty() ? 0.0f : (EXACT_MULT_FLOOR_HEIGHT ? first_floor_z1 : doors.front().pts[2].z));
-	float const window_z1_off(is_restroom() ? 0.5*floor_spacing : 0.0); // restroom has upper windows above the urinals
+	float const window_z1_off(restroom ? 0.5*floor_spacing : 0.0); // restroom has upper windows above the urinals
 	unsigned draw_parts_mask(0);
 	bool room_with_stairs(0);
 	cube_t cont_part; // part containing the point

@@ -125,7 +125,7 @@ float cube_rand_side_pos(cube_t const &c, bool dim, float min_dist_param, float 
 // see global_building_params.window_xspace/window_width
 int building_t::get_num_windows_on_side(float xy1, float xy2) const {
 	assert(xy1 < xy2);
-	float const tscale(get_material().floorplan_wind_xscale);
+	float const tscale(is_restroom() ? RESTROOM_WIN_TSCALE_X : get_material().floorplan_wind_xscale);
 	float t0(tscale*xy1), t1(tscale*xy2);
 	clip_low_high_tc(t0, t1);
 	return round_fp(t1 - t0);
