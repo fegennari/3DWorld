@@ -993,8 +993,8 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 
 					if (doors_at_front) {
 						float const front_edge(bc.d[dim][dir]);
-						divider.d[ dim][!dir] = front_edge;
-						divider.d[ dim][ dir] = front_edge + (dir ? 1.0 : -1.0)*0.6*bhdepth;
+						divider.d[ dim][!dir] = front_edge + (dir ? 1.0 : -1.0)*0.01*bhdepth; // slight gap to prevent Z-fighting
+						divider.d[ dim][ dir] = front_edge + (dir ? 1.0 : -1.0)*0.60*bhdepth;
 						divider.d[!dim][!d  ] = bc.d[!dim][d] - (d ? 1.0 : -1.0)*fence_thick;
 					}
 					else { // doors at sides
