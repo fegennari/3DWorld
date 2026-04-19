@@ -4095,7 +4095,7 @@ public:
 		vector<pair<building_t *, bool>> buildings_with_cars; // {building, player_in_building}
 		vector<point> pts;
 		static brg_batch_draw_t bbd; // allocated memory is reused across building interiors
-		assert(!bbd.has_ext_geom());
+		//assert(!bbd.has_ext_geom()); // assert is valid, but is disabled because the debugger stops here rather than at an earlier assert
 		bool const defer_people_draw_player_bldg(global_building_params.people_min_alpha > 0.0);
 		vis_conn_bldg = nullptr;
 

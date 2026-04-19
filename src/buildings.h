@@ -374,8 +374,6 @@ struct building_mat_t : public building_tex_params_t {
 	void finalize();
 	float get_window_tx() const;
 	float get_window_ty() const;
-	float get_floor_spacing() const {return floor_spacing;}
-	float get_floorplan_window_xscale() const {return floorplan_wind_xscale;}
 };
 
 struct building_params_t {
@@ -2383,7 +2381,7 @@ struct building_t : public building_geom_t {
 	bool has_int_windows     () const {return (DRAW_CITY_INT_WINDOWS || has_windows());}
 	float get_floor_thick_val() const {return (is_house ? FLOOR_THICK_VAL_HOUSE : (has_windows() ? FLOOR_THICK_VAL_OFFICE : FLOOR_THICK_VAL_WINDOWLESS));}
 	float get_elevator_fc_thick_scale() const {return 1.005*0.5*get_floor_thick_val();}
-	float get_window_vspace  () const {return get_material().get_floor_spacing();}
+	float get_window_vspace  () const {return get_material().floor_spacing;}
 	float get_floor_thickness() const {return get_floor_thick_val()*get_window_vspace();}
 	float get_fc_thickness   () const {return 0.5*get_floor_thickness();} // floor/ceiling thickness
 	float get_wall_thickness () const {return WALL_THICK_VAL*get_window_vspace();}

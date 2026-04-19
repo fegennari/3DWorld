@@ -1938,6 +1938,7 @@ float building_t::gen_peaked_roof(cube_t const &top_, float peak_height, bool di
 		}
 		roof_tquads.emplace_back(tquad, (unsigned)tquad_with_ix_t::TYPE_ROOF_PEAK); // tag as peaked roof
 	} // for n
+	if (!is_house) {add_roof_to_bcube();} // house has already been added
 	has_attic_window = 1; // if there's an attic, it may have windows with this roof type
 	return roof_dz;
 }

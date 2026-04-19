@@ -290,6 +290,7 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 	cube_t light;
 	point light_pos[2] = {light_center, light_center}; // start centered
 	unsigned num_lights(1);
+	assert(attic_height > 0.0);
 
 	if (sep_dist > 0.25*attic_height) { // consider adding two lights
 		float const move_dist(0.5*sep_dist - light_radius - beam_depth); // allow extra space for vertical beams
