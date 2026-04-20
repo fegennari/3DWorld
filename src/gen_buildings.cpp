@@ -4276,6 +4276,8 @@ public:
 							}
 							else if ((display_mode & 0x08) && !player_in_building_bcube && b.is_entire_building_occluded(camera_bs, oc)) continue; // check occlusion
 						}
+						bool const camera_not_near_building(!camera_near_building && !ext_basement_conn_visible);
+						if (camera_not_near_building && !reflection_pass) {b.player_not_near_building();}
 						// draw interior detail objects if player is in the building (inc ext basement), even if far from the building center
 						unsigned inc_small(bdist_sq < ddist_scale*rgeom_sm_draw_dist_sq || mall_elevator_visible);
 						if      (cant_see_inside)                                    {inc_small = 4;} // only exterior detail objects
@@ -4332,11 +4334,8 @@ public:
 							b.get_all_nearby_ext_door_verts(ext_door_draw, s, pts, ped_od);
 						}
 						// check the bcube rather than check_point_or_cylin_contained() so that it works with roof doors that are outside any part?
-						if (!camera_near_building && !ext_basement_conn_visible) { // camera not near building or ext basement conn
-							if (!reflection_pass) {b.player_not_near_building();}
-							continue;
-						}
-						if (ref_pass_interior) continue; // interior room, don't need to draw windows and exterior doors
+						if (camera_not_near_building) continue; // camera not near building or ext basement conn
+						if (ref_pass_interior)        continue; // interior room, don't need to draw windows and exterior doors
 						// and draw opened door; update_state if not ref pass
 						bool const had_open_door(b.get_nearby_ext_door_verts(&ext_door_draw, s, camera_bs, cview_dir, door_open_dist, !reflection_pass, 0)); // only_open=0
 						bool const camera_in_this_building(b.check_point_or_cylin_contained(camera_bs, 0.0, points, 1, 1, 1)); // inc_attic=1, inc_ext_basement=1, inc_roof_acc=1
