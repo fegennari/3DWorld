@@ -4644,6 +4644,7 @@ bool building_t::add_ceil_vent_to_room(rand_gen_t rgen, room_t const &room, floa
 		if (is_cube_close_to_doorway(c, room, 0.0, 1, 1))  continue;
 		if (vent_in_attic_test(c, dim) == 2)               continue; // not enough clearance in attic for duct
 		if (has_attic() && c.intersects(attic_access))     continue; // check attic access door
+		if (check_skylight_intersection(c_exp))            continue;
 		interior->room_geom->objs.emplace_back(c, TYPE_VENT, room_id, dim, 0, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), 1.0); // dir=0; fully lit
 		return 1; // done
 	} // for n
