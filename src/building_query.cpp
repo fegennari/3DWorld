@@ -2195,8 +2195,11 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, float &t,
 		}
 	} // for i
 	if (occlusion_only) return BLDG_COLL_NONE;
-	if (check_line_int_cubes(details, p1r, p2r, t)) {coll = BLDG_COLL_DETAIL;} // details cube
 
+	for (roof_obj_t const &c : details) {
+		if (c.type == ROOF_OBJ_SAT_DISH || c.type == ROOF_OBJ_TV_ANT) continue; // no line coll for this type
+		if (get_line_clip_update_t(p1r, p2r, c, t)) {coll = BLDG_COLL_DETAIL;} // details cube
+	}
 	if (!no_coll_pt || !vert) { // vert line already tested building cylins/cubes, and marked coll roof, no need to test again unless we need correct coll_pt t-val
 		for (tquad_with_ix_t const &tq : roof_tquads) {
 			if (tq.is_trim()) continue;
