@@ -18,7 +18,7 @@ void narrow_furnace_intake(cube_t &duct, room_object_t const &c);
 
 unsigned building_t::get_attic_part_ix() const { // Note: can be called before adding the attic, so can't check has_attic()
 	assert(!parts.empty());
-	return ((real_num_parts >= 2 && parts[1].z2() > parts[0].z2()) ? 1 : 0); // if there are at least two parts, use the taller one
+	return ((get_num_main_parts() >= 2 && parts[1].z2() > parts[0].z2()) ? 1 : 0); // if there are at least two parts, use the taller one
 }
 
 // Note: may incorrectly return 0 for points exactly between roof tquads, such as those on the centerline of the roof
@@ -119,11 +119,11 @@ void building_t::get_attic_window_holes(vect_cube_t &window_holes, float offset_
 }
 
 bool building_t::has_L_shaped_roof_area() const {
-	if (real_num_parts == 1) return 0; // not L-shaped
+	if (get_num_main_parts() == 1) return 0; // not L-shaped
 	cube_t const &A(parts[0]), &B(parts[1]);
-	if (A.z2() != B.z2())    return 0; // not at same level
-	if (roof_dims == 2)      return 0; // parallel roof
-	if (roof_dims == 1)      return 1; // perpendicular roof
+	if (A.z2() != B.z2()) return 0; // not at same level
+	if (roof_dims == 2)   return 0; // parallel roof
+	if (roof_dims == 1)   return 1; // perpendicular roof
 	// secondary part's roof is oriented in long dim; if this is the dim adjacent to the primary part,
 	// then the two attic areas are connected forming in L-shape; otherwise, there will be two parallel roof peaks with a valley in between
 	bool const adj_x(A.x1() == B.x2() || A.x2() == B.x1()), adj_y(A.y1() == B.y2() || A.y2() == B.y1());
@@ -1194,6 +1194,7 @@ void building_t::add_house_skylight(rand_gen_t rgen) {
 	if (!is_house || !interior || interior->rooms.empty()) return; // houses only
 	if (has_attic()) return; // sort of works; shaft may be tall, lighting isn't really correct, and may block attic area; disabled for now
 	if (roof_type == ROOF_TYPE_HIPPED) return; // not handling hipped roof/triangles
+	unsigned const num_main_parts(get_num_main_parts()); // above ground only
 	float const floor_spacing(get_window_vspace()), fc_thick(get_fc_thickness()), light_hwidth(0.1*floor_spacing);
 	vector2d skylight_sz;
 	for (unsigned d = 0; d < 2; ++d) {skylight_sz[d] = rgen.rand_uniform(0.25, 0.5)*floor_spacing;}
@@ -1201,9 +1202,9 @@ void building_t::add_house_skylight(rand_gen_t rgen) {
 
 	for (unsigned n = 0; n < 4; ++n) { // select room cands
 		room_t &room(get_room(rgen.rand() % interior->rooms.size()));
-		if (room.part_id >= real_num_parts) continue; // skip garage/shed/basement
+		if (room.part_id >= num_main_parts) continue; // skip garage/shed/basement
 		cube_t const &part(parts[room.part_id]);
-		if (real_num_parts == 2 && part.z2() < parts[1-room.part_id].z2())  continue; // upper/taller part only
+		if (num_main_parts == 2 && part.z2() < parts[1-room.part_id].z2()) continue; // upper/taller part only
 		cube_t place_area(part);
 		place_area.expand_by_xy(-0.5*floor_spacing); // not too close to the edge
 		place_area.intersect_with_cube(room);

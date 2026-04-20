@@ -1706,7 +1706,7 @@ void building_t::add_gutter_downspouts(rand_gen_t &rgen, vect_cube_t const &balc
 			assert(part.is_all_zeros());
 			part = *p; // part may be useful to have below
 		} // for p
-		if (part.is_all_zeros()) { // must be found
+		if (part.is_all_zeros()) { // must be found; maybe can fail for skylight close to edge?
 			cout << "failed to add gutter at " << g.str() << endl;
 			assert(0);
 		}
