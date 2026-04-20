@@ -1002,6 +1002,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 					}
 					divider_groups.add_obj(divider_t(divider, DIV_FENCE, !dim, bool(d), 0, skip_dims, dividers.size(), plot_ix, city_id, 0), dividers);
 					add_cube_to_colliders_and_blockers(divider, colliders, blockers);
+					// place restroom sign on divider side facing away from the building?
 				} // for d
 				break; // done
 			} // for N

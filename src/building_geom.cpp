@@ -2033,7 +2033,7 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office 
 
 		for (unsigned d = 0; d < 2; ++d) {
 			if (street_side) { // doors at front
-				cube_t const door(place_door(part, dim, dir, door_height, 0.0, 0.0, (d ? 0.75 : 0.25), DOOR_WIDTH_SCALE, 0, 0, rgen));
+				cube_t const door(place_door(part, dim, dir, door_height, 0.0, 0.0, (d ? 0.25 : 0.75), DOOR_WIDTH_SCALE, 0, 0, rgen));
 				if (add_door(door, 0, dim, dir, 0)) {floor_ext_door_mask |= 1;} // for_office_building=0
 			}
 			else { // doors at ends

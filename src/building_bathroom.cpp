@@ -809,7 +809,8 @@ void building_t::create_restroom_floorplan(unsigned part_id, rand_gen_t &rgen) {
 	cube_t const &part(parts[part_id]);
 	assert(interior->rooms.empty()); // must call this first
 	// divide into men's and women's rooms
-	bool const dim(!get_street_dim()), wm_dir(rgen.rand_bool()); // split dim
+	mw_restroom_side = rgen.rand_bool();
+	bool const dim(!get_street_dim()); // split dim
 	float const wall_thick(get_wall_thickness()), split_pos(part.get_center_dim(dim));
 	cube_t wall(part);
 	create_wall(wall, dim, split_pos, get_fc_thickness(), 0.5*wall_thick, 0.05*wall_thick);
@@ -818,7 +819,7 @@ void building_t::create_restroom_floorplan(unsigned part_id, rand_gen_t &rgen) {
 	for (unsigned d = 0; d < 2; ++d) {
 		cube_t room(part);
 		room.d[dim][!d] = split_pos;
-		add_assigned_room(room, part_id, ((bool(d) ^ wm_dir) ? RTYPE_MENS : RTYPE_WOMENS));
+		add_assigned_room(room, part_id, ((bool(d) ^ mw_restroom_side) ? RTYPE_MENS : RTYPE_WOMENS));
 		interior->rooms.back().is_single_floor = 1; // probably not needed
 	}
 }

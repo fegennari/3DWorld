@@ -3110,6 +3110,7 @@ void sign_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale
 	if (in_skyway && dstate.camera_bs.z < draw_zmin) return; // camera below the skyway
 	float const dmax(dist_scale*dstate.draw_tile_dist);
 	if (small && !bcube.closest_dist_less_than(dstate.camera_bs, 0.4*dmax)) return; // 40% view dist
+	bool const is_restroom(text == "Men" || text == "Women");
 	static quad_batch_draw temp_qbd;
 
 	if (emissive && bkg_color == RED) { // special case for emissive emergency room sign
@@ -3121,7 +3122,8 @@ void sign_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale
 		text_drawer::bind_font_texture(); // restore
 	}
 	else {
-		dstate.draw_cube(qbds.untex_qbd, frame_bcube, bkg_color); // untextured, matte back
+		unsigned const skip_dims(is_restroom ? (1 << dim) : 0); // skip front and back for restroom
+		dstate.draw_cube(qbds.untex_qbd, frame_bcube, bkg_color, 0, 0.0, skip_dims); // untextured, matte back
 	}
 	if (frame_width > 0.0) { // draw frame
 		cube_t frame_exp(frame_bcube);
@@ -3155,6 +3157,13 @@ void sign_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale
 	}
 	if (!(emissive && is_night()) && !bcube.closest_dist_less_than(dstate.camera_bs, 0.9*(small ? 0.4 : 1.0)*dmax)) return; // too far to see the text in daytime
 
+	if (is_restroom) { // restroom sign
+		if ((dstate.camera_bs[dim] < bcube.d[dim][dir]) == dir) return; // back facing, skip
+		select_texture(get_texture_by_name((text == "Men") ? "interiors/men_restroom.png" : "interiors/women_restroom.png"));
+		dstate.draw_cube(temp_qbd, bcube, WHITE, 1, 0.0, (dim ? 5 : 6)); // only draw faces in <dim>
+		temp_qbd.draw_and_clear();
+		return;
+	}
 	if (scrolling && animate2) { // 4 characters per second
 		// add pos x/y so that signs scroll at different points per building; make sure it's positive
 		double const scroll_val(0.25*tfticks/TICKS_PER_SECOND + fabs(pos.x) + fabs(pos.y));

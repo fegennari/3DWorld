@@ -2275,7 +2275,7 @@ struct building_t : public building_geom_t {
 	uint8_t next_room_num=0; // room numbers per floor
 	building_type_t btype=BTYPE_UNSET;
 	bool is_house=0, has_garage=0, has_shed=0, has_int_garage=0, has_courtyard=0, has_complex_floorplan=0, has_helipad=0, has_ac=0, has_fake_roof_door=0;
-	bool has_tline_conn=0, has_smokestack=0, has_antenna=0, has_radiators=0, was_custom_placed=0;
+	bool has_tline_conn=0, has_smokestack=0, has_antenna=0, has_radiators=0, was_custom_placed=0, mw_restroom_side=0;
 	bool street_side=0; // for convenience stores and restrooms
 	mutable bool has_attic_window=0; // make mutable so that drawing code can update/cache this value
 	bool multi_family=0; // apartments, multi-family house, duplex, etc. - split by floor

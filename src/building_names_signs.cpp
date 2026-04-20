@@ -515,8 +515,45 @@ void building_t::add_signs(vector<sign_t> &signs) const { // added as exterior c
 		} // for d
 		// what about placing hospital signs with arrows at intersections?
 	} // end hospital
+	if (is_restroom()) { // add men/women signs next to doors
+		float const floor_spacing(get_window_vspace()), sign_z1(ground_floor_z1 + 0.5*floor_spacing);
+		float const sign_width(0.15*floor_spacing), sign_height(1.33*sign_width), sign_thick(0.02*sign_width), sign_offset(1.0*sign_width);
+		colorRGBA const sign_color(0.13, 0.2, 0.43);
+		cube_t sign;
+		set_cube_zvals(sign, sign_z1, sign_z1+sign_height);
+
+		if (street_side) { // doors at front; signs by the door
+			bool is_mens(mw_restroom_side);
+
+			for (tquad_t const &door : doors) {
+				cube_t const door_bc(door.get_bcube());
+				bool const dim(door_bc.dy() < door_bc.dx()), dir(bcube.get_center_dim(dim) < door_bc.get_center_dim(dim));
+				bool const side(bcube.get_center_dim(!dim) < door_bc.get_center_dim(!dim));
+				float const wall_pos(bcube.d[dim][dir]);
+				sign.d[dim][!dir] = wall_pos;
+				sign.d[dim][ dir] = wall_pos + (dir ? 1.0 : -1.0)*sign_thick;
+				set_wall_width(sign, (door_bc.d[!dim][!side] + (side ? -1.0 : 1.0)*sign_offset), 0.5*sign_width, !dim);
+				signs.emplace_back(sign, dim, dir, (is_mens ? "Men" : "Women"), sign_color, WHITE, 0, 0, 1); // two_sided=0, emissive=0, small=1
+				is_mens ^= 1;
+			} // for door
+		}
+		else { // doors at the endsl signs at the 4 corners
+			bool const dim(bcube.dy() < bcube.dx()); // doors on longer dim, signs facing shorter dim
+
+			for (unsigned dir = 0; dir < 2; ++dir) {
+				float const wall_pos(bcube.d[dim][dir]);
+				sign.d[dim][!dir] = wall_pos;
+				sign.d[dim][ dir] = wall_pos + (dir ? 1.0 : -1.0)*sign_thick;
+
+				for (unsigned side = 0; side < 2; ++side) {
+					set_wall_width(sign, (bcube.d[!dim][!side] + (side ? 1.0 : -1.0)*sign_offset), 0.5*sign_width, !dim);
+					signs.emplace_back(sign, dim, dir, ((mw_restroom_side ^ side ^ 1) ? "Men" : "Women"), sign_color, WHITE, 0, 0, 1); // two_sided=0, emissive=0, small=1
+				}
+			} // for dir
+		}
+		return;
+	}
 	if (name.empty ()) return; // no company name; shouldn't get here
-	if (is_restroom()) return; // no signs for restrooms
 	if (num_sides & 1) return; // odd number of sides, may not be able to place a sign correctly (but maybe we can check this with a collision test with conn?)
 	if (half_offset || flat_side_amt != 0.0 || alt_step_factor != 0.0 || start_angle != 0.0) return; // not a shape that's guanrateed to reach the bcube edge
 	bool const is_rotated_non_cube(is_rotated() && !is_cube());

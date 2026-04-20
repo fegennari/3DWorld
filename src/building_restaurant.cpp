@@ -44,6 +44,7 @@ void building_t::create_restaurant_floorplan(unsigned part_id, rand_gen_t &rgen)
 	bool const add_storage(num_side_windows >= 7);
 	bool const br_side(rgen.rand_bool());
 	float const wspace(part.get_sz_dim(!dim)/num_side_windows);
+	mw_restroom_side = br_side; // not currently used, but may be useful in the future
 	// allow an extra half window border for bathrooms so that there's space for stalls
 	float const room_max_width((br_side ? -1.0 : 1.0)*((1.0 + 0.5*get_window_h_border())*wspace - 0.75*wall_thick));
 	float const br_split(side_area.d[!dim][br_side] + room_max_width); // split point between men's and women's bathrooms
