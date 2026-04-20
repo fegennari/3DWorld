@@ -1260,7 +1260,7 @@ void building_t::add_house_skylight(rand_gen_t rgen) {
 					new_roof_tquads.push_back(tq2);
 				} // for c
 				// add interior sides and top cap
-				tquad_with_ix_t side  (4, tquad_with_ix_t::TYPE_WHITE_TRIM  );
+				tquad_with_ix_t side  (4, tquad_with_ix_t::TYPE_SKYLIGHT_INT);
 				tquad_with_ix_t sl_cap(4, tquad_with_ix_t::TYPE_SKYLIGHT_CAP);
 
 				for (unsigned sdim = 0; sdim < 2; ++sdim) {

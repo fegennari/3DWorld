@@ -1908,8 +1908,9 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 		}
 		else if (i->type == tquad_with_ix_t::TYPE_SKYLIGHT_CAP) continue; // drawn in get_all_drawn_window_verts()
 		else if (i->is_trim()) {
+			bool const is_shadowed(i->type == tquad_with_ix_t::TYPE_SKYLIGHT_INT);
 			colorRGBA const color((i->type == tquad_with_ix_t::TYPE_MET_TRIM) ? LT_GRAY : WHITE); // gutters and skylight interior=white, solar panel edges=light gray
-			bdraw.add_tquad(*this, *i, bcube, tid_nm_pair_t(NO_SHADOW_WHITE_TEX), color); // untextured, no shadows
+			bdraw.add_tquad(*this, *i, bcube, tid_nm_pair_t(is_shadowed ? WHITE_TEX : NO_SHADOW_WHITE_TEX), color); // untextured, no shadows for some
 		}
 		else if (is_house && (i->type == tquad_with_ix_t::TYPE_ROOF_PEAK || i->type == tquad_with_ix_t::TYPE_ROOF_SLOPE) && i->npts == 4) {
 			// house peaked/sloped trapezoid roof: extend lower zvals out a bit
@@ -2411,7 +2412,7 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 
 		if (!skylights.empty()) { // add interior of skylight trim
 			for (tquad_with_ix_t const &tq : roof_tquads) {
-				if (tq.type != tquad_with_ix_t::TYPE_WHITE_TRIM)   continue;
+				if (tq.type != tquad_with_ix_t::TYPE_SKYLIGHT_INT) continue;
 				if (!tq.get_bcube().intersects(skylights.front())) continue;
 				tquad_with_ix_t tq_rev(tq);
 				tq_rev.reverse_pts(); // draw outside faces
