@@ -45,7 +45,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 			zval = add_flooring(room, zval, room_id, tot_light_amt, flooring_type); // move the effective floor up
 		}
 	}
-	if (have_toilet && (room.is_office || (!is_basement && is_prison()) || is_restaurant() || is_restroom())) {
+	if (have_toilet && (room.is_office || (!is_basement && (is_prison() || is_restaurant() || is_restroom())))) {
 		// office, above ground prison bathroom, restaurant, and park restroom have stalls
 		if (min_room_dim > 1.5*floor_spacing && max(place_area_sz.x, place_area_sz.y) > 2.0*floor_spacing) {
 			if (divide_bathroom_into_stalls(rgen, room, zval, room_id, tot_light_amt, floor, lights_start, objs_start)) { // large enough, divide into bathroom stalls
@@ -477,7 +477,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 	bool br_dim(room.dy() < room.dx()), sink_side(0), sink_side_set(0), mens_room(0); // br_dim is the smaller dim
 	cube_t place_area(room), avoid;
 
-	if (is_park_restroom || is_restaurant()) { // handle exterior walls
+	if ((is_park_restroom || is_restaurant()) && zval >= ground_floor_z1) { // handle exterior walls if above ground
 		cube_t room_border(parts[room.part_id]);
 		room_border.expand_by_xy(-get_trim_thickness()); // add padding around the walls
 		place_area = get_walkable_room_bounds(room);
@@ -575,7 +575,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 	float const room_len(place_area.get_sz_dim(!br_dim)), room_width(place_area.get_sz_dim(br_dim));
 	float const sinks_len((is_park_restroom ? 0.4 : 0.4)*room_len), stalls_len(room_len - sinks_len), depth_val(max(stall_depth, slength));
 	float const req_depth((has_house_floorplan() ? 1.5 : 2.0)*depth_val); // allow slightly tighter spaces in restaurants and restrooms
-	if (room_width < req_depth) return 0;
+	if (stalls_len <= 0.0 || room_width < req_depth) return 0;
 	if (sinks_len < 2.0*sink_spacing) {sink_spacing *= 0.8;} // reduce sink spacing a bit to try and fit at least two
 	unsigned const num_stalls(std::floor(stalls_len/stall_width)), num_sinks(std::floor(sinks_len/sink_spacing));
 	if (num_stalls < 2 || num_sinks < 1) return 0; // not enough space for 2 stalls and a sink
@@ -652,6 +652,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 				stall_inner.expand_in_dim(!br_dim, -0.0125*stall.dz()); // subtract off stall wall thickness
 				add_tp_roll(stall_inner, room_id, tot_light_amt, !br_dim, dir, tp_length, (zval + 0.7*theight), wall_pos);
 			}
+			assert(stall.is_strictly_normalized());
 			objs.emplace_back(stall, TYPE_STALL, room_id, br_dim, dir, (flags | (is_open ? RO_FLAG_OPEN : 0)), tot_light_amt, stall_shape, stall_color);
 			if (dir == showers_dir) {objs.back().obj_id = room_id;} // sets shower style (handles); matches across rooms
 
