@@ -1287,6 +1287,7 @@ void building_t::add_house_skylight(rand_gen_t rgen) {
 			if (has_attic()) {subtract_cube_from_cubes(skylight, interior->floors);} // subtract from attic floor as well
 			room.set_has_skylight();
 			skylights.push_back(skylight);
+			details.emplace_back(skylight, DETAIL_OBJ_SHAD_ONLY); // sun/moon shadow caster for bottom surface of skylight
 			return; // success/done
 		} // for N
 	} // for n
