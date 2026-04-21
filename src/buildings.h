@@ -602,7 +602,8 @@ unsigned const room_priorities[NUM_RTYPES] = { // for breaker labels; higher val
 	2, 2, 3, 3, 0, 3, 3, 0, 4, 3,
 	4, 4, 4, 0, 1, 2, 1, 3, 2, 2,
 	1, 3, 4, 3, 1, 1, 2, 3, 3, 2,
-	2, 3, 4, 3, 3, 1, 4, 3, 3, 4
+	2, 3, 4, 3, 3, 1, 4, 3, 3, 4,
+	4
 };
 
 // store types, for use with object placement and naming
