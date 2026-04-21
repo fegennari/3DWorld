@@ -299,6 +299,10 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_MILK      ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 3.0,   4.0,   "carton of milk"); // half gallon, though box says pint
 	bldg_obj_types[TYPE_RADIATOR  ] = bldg_obj_type_t(1, 1, 1, 0, 1, 1, 0, 100.0, 100.0, "radiator");
 	bldg_obj_types[TYPE_RAD_FAN   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 1, 0, 100.0, 100.0, "radiator fan");
+	bldg_obj_types[TYPE_SURG_TOOLS] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 200.0, 1.0,   "surgical tools");
+	bldg_obj_types[TYPE_TOWEL_DISP] = bldg_obj_type_t(0, 0, 0, 1, 1, 1, 0, 30.0,  10.0,  "paper towel dispenser");
+	bldg_obj_types[TYPE_SOAP_DISP ] = bldg_obj_type_t(0, 0, 0, 1, 1, 1, 0, 20.0,  2.0,   "soap dispenser");
+	bldg_obj_types[TYPE_HAND_DRYER] = bldg_obj_type_t(0, 1, 0, 1, 1, 1, 0, 100.0, 20.0,  "hand dryer");
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// animals; not room objects
 	bldg_obj_types[TYPE_RAT       ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 8.99,  1.0,   "rat"); // can be picked up
@@ -1811,7 +1815,7 @@ bool is_obj_in_or_on_obj(room_object_t const &parent, room_object_t const &child
 	if (parent.type == TYPE_BOX       && parent.is_open() && parent.contains_cube(child)) return 1; // open box with an object inside
 	if (parent.type == TYPE_STOVE     && parent.contains_cube(child))                     return 1; // pan, etc. on a stove
 	if (parent.type == TYPE_COAT_RACK && parent.intersects(child))                        return 1; // top hat on coat rack
-	if (parent.type == TYPE_TROLLEY   && parent.intersects(child))                        return 1; // plates on trolley
+	if (parent.type == TYPE_TROLLEY   && parent.intersects(child))                        return 1; // plates or tools on trolley
 	// check for object on the mattress of a bed, excluding stacked bunk bed
 	if (parent.type == TYPE_BED && child.type != TYPE_BED && child.z1() <= parent.z2() && child.z1() > parent.zc() && child.intersects_xy(parent)) return 1;
 	if ((parent.type == TYPE_FOOD_TRAY || parent.type == TYPE_PLATE) && child.z1() >= parent.z1() && parent.intersects(child)) return 1; // tray or plate with food

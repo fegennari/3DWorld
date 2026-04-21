@@ -265,6 +265,13 @@ city milk_carton_model  ../models/interiors/kitchen/milk_carton.glb      0 0 0  
 city radiator_model     ../models/interiors/radiators/old_radiator.glb   0 0 0  -1 -1 90  1 1.0 1.0
 city engine_fan_model   ../models/interiors/radiators/engine_radiator.glb 0 0 0  -1 -1 90  1 1.0 1.0
 
+city surgical_tools_model ../models/interiors/hospital/surgical_tool_set.glb 0 0 0  -1 -1 0   1 1.0 1.0
+#city towel_dispenser_model ../models/interiors/bathroom/towel_dispenser .glb 0 0 0  -1 -1 0   1 1.0 1.0
+#city towel_dispenser_model ../models/interiors/bathroom/towel_dispenser2.glb 0 0 0  -1 -1 0   1 1.0 1.0
+#city soap_dispenser_model  ../models/interiors/bathroom/hand_dryer.glb       0 0 0  -1 -1 0   1 1.0 1.0
+#city hand_dryer_model      ../models/interiors/bathroom/hand_dryer.glb       0 0 0  -1 -1 0   1 1.0 1.0
+#city hand_dryer_model      ../models/interiors/bathroom/hand_dryer2.glb      0 0 0  -1 -1 0   1 1.0 1.0
+
 # models with multiple sub-types; size value determines height relative to half a floor's spacing
 # filename recalc_normals two_sided centered body_material_id fixed_color_id xy_rot swap_xyz scale lod_mult [keywords] [shadow_mat_ids]
 # gym exercise machine models

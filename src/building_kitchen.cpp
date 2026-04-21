@@ -620,6 +620,14 @@ void building_t::add_commercial_kitchen_app_post(unsigned obj_ix, unsigned app_t
 	if (app_cclass == 0) {hood.assign_or_union_with_cube(app);}
 }
 
+cube_t get_trolley_place_area(room_object_t const &trolley) {
+	cube_t place_area(trolley);
+	place_area.expand_in_dim( trolley.dim, -0.2*trolley.get_sz_dim( trolley.dim)); // shorten length
+	place_area.expand_in_dim(!trolley.dim, -0.1*trolley.get_sz_dim(!trolley.dim)); // shorten width
+	place_area.z1() = trolley.z2() - 0.13*trolley.dz();
+	return place_area;
+}
+
 bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, unsigned floor_ix,
 	float light_amt, unsigned objs_start, unsigned lights_start, light_ix_assign_t &light_ix_assign)
 {
@@ -846,12 +854,10 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 		unsigned const obj_ix(objs.size());
 		if (!add_trolley(rgen, place_area, cube_t(), zval, room_id, light_amt, objs_start)) continue;
 		if (rgen.rand_float() < 0.35) continue; // no plates
-		room_object_t const trolley(objs[obj_ix]);
-		cube_t plate_area(trolley);
-		plate_area.expand_in_dim( trolley.dim, -0.2*trolley.get_sz_dim( trolley.dim)); // shorten length
-		plate_area.expand_in_dim(!trolley.dim, -0.1*trolley.get_sz_dim(!trolley.dim)); // shorten width
-		float const height(trolley.dz()), plate_radius(rgen.rand_uniform(0.25, 0.3)*min(plate_area.dx(), plate_area.dy()));
-		set_cube_zvals(plate_area, plate_area.z2()-0.13*height, plate_area.z2()+0.4*height);
+		room_object_t const &trolley(objs[obj_ix]);
+		cube_t plate_area(get_trolley_place_area(trolley));
+		plate_area.z2() = trolley.z2()+0.4*trolley.dz();
+		float const plate_radius(rgen.rand_uniform(0.25, 0.3)*min(plate_area.dx(), plate_area.dy()));
 		add_stack_of_plates(plate_area, plate_radius, room_id, light_amt, RO_FLAG_NOCOLL, rgen, blockers, objs);
 	} // for i
 	if (rgen.rand_bool()) {add_buckets_to_room(rgen, place_area, zval, room_id, light_amt, objs_start, 1);} // maybe add a bucket

@@ -10,6 +10,7 @@ extern object_model_loader_t building_obj_model_loader;
 
 unsigned get_metal_table_num_legs_per_side(room_object_t const &c);
 int select_lab_model(rand_gen_t &rgen, unsigned &types_used, float &hscale);
+cube_t get_trolley_place_area(room_object_t const &trolley);
 
 bool can_create_hospital_room() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_HOSP_BED);}
 
@@ -521,7 +522,21 @@ bool building_t::add_operating_room_objs(rand_gen_t rgen, room_t &room, float zv
 			place_area, objs_start, 0.0, 0, 4, 0, WHITE, 1, SHAPE_CUBE, 0.0, RO_FLAG_UNTEXTURED); // not_at_window=1
 	}
 	place_area.expand_by_xy(-get_trim_thickness());
-	add_trolley(rgen, place_area, op_table, zval, room_id, tot_light_amt, objs_start); // add hospital trolley
+	
+	if (add_trolley(rgen, place_area, op_table, zval, room_id, tot_light_amt, objs_start)) { // add hospital trolley
+		if (building_obj_model_loader.is_model_valid(OBJ_MODEL_SURG_TOOLS)) {
+			room_object_t const &trolley(objs.back());
+			bool const dim(trolley.dim);
+			cube_t const place_area(get_trolley_place_area(trolley));
+			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SURG_TOOLS)); // L, W, H
+			float const width(0.9*place_area.get_sz_dim(!dim)), depth(width*sz.y/sz.x), height(width*sz.z/sz.x);
+			cube_t tools;
+			set_cube_zvals(tools, place_area.z1(), place_area.z1()+height);
+			set_wall_width(tools, place_area.get_center_dim(!dim), 0.5*width, !dim);
+			set_wall_width(tools, place_area.get_center_dim( dim), 0.5*depth,  dim);
+			objs.emplace_back(tools, TYPE_SURG_TOOLS, room_id, dim, rgen.rand_bool(), RO_FLAG_NOCOLL, tot_light_amt); // random dir
+		}
+	}
 	if (rgen.rand_bool()) {place_model_along_wall(OBJ_MODEL_STRETCHER, TYPE_STRETCHER, room, 0.15, rgen, zval, room_id, tot_light_amt, place_area, objs_start);}
 	// add a gas tank along a wall
 	unsigned const num_tank_colors = 3;
