@@ -584,9 +584,14 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 	//if (!sink_side_set) return 0;
 	assert(sink_side_set);
 	float const room_len(place_area.get_sz_dim(!br_dim));
-	float const sinks_len((is_park_restroom ? 0.4 : 0.4)*room_len), stalls_len(room_len - sinks_len);
+	float sinks_len((is_park_restroom ? 0.4 : 0.4)*room_len), stalls_len(room_len - sinks_len);
 	if (stalls_len <= 0.0) return 0; // shouldn't happen
 	if (sinks_len < 2.0*sink_spacing) {sink_spacing *= 0.8;} // reduce sink spacing a bit to try and fit at least two
+
+	if (sinks_len < 2.0*sink_spacing) { // still too small; allocate more space to sinks/urinals and less to stalls; target 2 of each
+		float const targ_sinks_len(2.01*sink_spacing), new_stalls_len(room_len - targ_sinks_len);
+		if (new_stalls_len > 2.0*stall_width) {sinks_len = targ_sinks_len; stalls_len = new_stalls_len;}
+	}
 	unsigned const num_stalls(std::floor(stalls_len/stall_width)), num_sinks(std::floor(sinks_len/sink_spacing));
 	if (num_stalls < 2 || num_sinks < 1) return 0; // not enough space for 2 stalls and a sink
 	stall_width  = stalls_len/num_stalls; // reclaculate to fill the gaps
