@@ -474,7 +474,8 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 		//slength = (has_parking_garage ? (tlength + 2.0*wall_thickness) : 0.32*floor_spacing); // align sink drain to toilets for parking garage pipes?
 	}
 	float stall_width(2.0*twidth), sink_spacing(1.75*swidth);
-	float const depth_val(max(stall_depth, slength)), req_depth((has_house_floorplan() ? 1.5 : 2.0)*depth_val); // allow slightly tighter spaces in restaurants and restrooms
+	// depth_val is around 2*clearance; allow slightly tighter spaces in restaurants and restrooms
+	float const depth_val(max(stall_depth, slength)), req_depth((has_house_floorplan() ? 1.5 : 2.0)*depth_val);
 	bool br_dim(room.dy() < room.dx()), sink_side(0), sink_side_set(0), mens_room(0); // br_dim is the smaller dim
 	cube_t place_area(room), avoid;
 
@@ -596,7 +597,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 	if (num_stalls < 2 || num_sinks < 1) return 0; // not enough space for 2 stalls and a sink
 	stall_width  = stalls_len/num_stalls; // reclaculate to fill the gaps
 	sink_spacing = sinks_len/num_sinks;
-	bool const two_rows(room_width > 3.0*depth_val);
+	bool const two_rows(room_width > 3.0*depth_val); // could be as small as 2.6x
 	bool skip_stalls_side(room_id & 1); // put stalls on a side consistent across floors
 	if (classify_room_wall(room, zval, br_dim, !skip_stalls_side, 0) == ROOM_WALL_EXT) {skip_stalls_side ^= 1;} // no stalls/sinks along exterior walls
 	unsigned const showers_dir(is_prison() ? skip_stalls_side : 2); // one side of prison bathroom has showers rather than stalls
@@ -715,17 +716,20 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 		if (add_urinals) {
 			// add urinals opposite the sinks, using same spacing as sinks;
 			// should urinals be on the same wall as sinks between sinks and stalls when long and thin such as mall restrooms?
+			float const div_wall_len(0.25*floor_spacing);
+			bool const extra_urinals(!two_rows && room_width > 2.0*depth_val + max(ulength, div_wall_len)); // add urinals opposite stalls if wide enough
+			unsigned num_urinals((extra_urinals ? 2 : 1)*num_sinks); // should be able to fit twice as many
 			float const u_wall(place_area.d[br_dim][!dir]), u_from_wall(u_wall - dir_sign*(0.5*ulength + 0.01*wall_thickness));
 			float u_pos(sink_start);
 			cube_t sep_wall;
 			set_cube_zvals(sep_wall, zval+0.15*uheight, zval+1.25*uheight);
 			sep_wall.d[br_dim][!dir] = u_wall;
-			sep_wall.d[br_dim][ dir] = u_wall - dir_sign*0.25*floor_spacing;
+			sep_wall.d[br_dim][ dir] = u_wall - dir_sign*div_wall_len;
 			// school bathrooms have a short urinal at one end if there is more than one urinal
-			unsigned const short_urinal_ix((is_school() && num_sinks > 1) ? ((room_id & 1) ? 0 : num_sinks-1) : num_sinks);
+			unsigned const short_urinal_ix((is_school() && num_urinals > 1) ? ((room_id & 1) ? 0 : num_urinals-1) : num_urinals);
 			bool last_added_urinal(0);
 
-			for (unsigned n = 0; n < num_sinks; ++n, u_pos += sink_step) {
+			for (unsigned n = 0; n < num_urinals; ++n, u_pos += sink_step) {
 				set_wall_width(sep_wall, (u_pos - 0.5*sink_step), 0.2*wall_thickness, !br_dim);
 				point center(u_from_wall, u_pos, (zval + ((n == short_urinal_ix) ? 0.125 : 0.25)*uheight));
 				if (br_dim) {swap(center.x, center.y);} // R90 about z
