@@ -607,6 +607,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 	colorRGBA const stall_color(stall_colors[interior->doors.size() % NUM_STALL_COLORS]); // random, but constant for each building
 	room_obj_shape const stall_shape(room.has_tall_ceil(floor_spacing) ? SHAPE_TALL : SHAPE_CUBE); // tall for tall ceiling rooms like restaurants
 	vect_room_object_t &objs(interior->room_geom->objs);
+	unsigned const objs_start(objs.size());
 	room_object_t mirrors[2]; // candidate mirrors for each dir
 	++(mens_room ? interior->room_geom->mens_count : interior->room_geom->womens_count);
 
@@ -776,6 +777,18 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 		set_obj_id(objs); // for crack texture selection/orient
 		room.set_has_mirror();
 	}
+	// add wall items
+	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_TOWEL_DISP)) { // paper towel dispenser
+		// TODO
+	}
+	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_SOAP_DISP)) { // soap dispenser
+		// TODO
+	}
+	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_HAND_DRYER)) { // hand dryer
+		// TODO
+	}
+	// add a large round trashcan; should we not add a smaller trashcan if this is placed?
+	add_corner_trashcans(rgen, room, zval, room_id, tot_light_amt, objs_start, !br_dim, 0); // both_ends=0
 	room_type const rtype(mens_room ? RTYPE_MENS : RTYPE_WOMENS);
 	room.assign_to(rtype, floor);
 	room.set_has_br_stalls();

@@ -3350,14 +3350,14 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 	add_cameras_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);
 }
 
-void building_t::add_corner_trashcans(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool dim, bool both_ends) {
+bool building_t::add_corner_trashcans(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool dim, bool both_ends) {
 	// add one or more trashcan to a corner; use a large cylinder, the same as a mall trashcan
 	float const window_vspacing(get_window_vspace());
 	float const tcan_height(0.26*window_vspacing), tcan_radius(0.1*window_vspacing), wall_spacing(1.2*tcan_radius);
 	cube_t const place_area(get_walkable_room_bounds(room));
 	cube_t tcan;
 	set_cube_zvals(tcan, zval, zval+tcan_height); // set height
-	bool add_to_ends[2] = {1, 1}; // defaults to both ends
+	bool was_added(0), add_to_ends[2] = {1, 1}; // defaults to both ends
 	if (!both_ends) {add_to_ends[rgen.rand_bool()] = 0;} // add only one trashcan
 
 	for (unsigned end_dir = 0; end_dir < 2; ++end_dir) {
@@ -3373,9 +3373,11 @@ void building_t::add_corner_trashcans(rand_gen_t &rgen, room_t const &room, floa
 			room_object_t const tcan_obj(tcan, TYPE_TCAN, room_id, dim, end_dir, RO_FLAG_IN_HALLWAY, tot_light_amt, SHAPE_CYLIN, LT_GRAY);
 			interior->room_geom->objs.push_back(tcan_obj);
 			add_large_trashcan_contents(rgen, tcan_obj, room_id, tot_light_amt);
+			was_added = 1;
 			break; // success/done
 		} // for d
 	} // for end_dir
+	return was_added;
 }
 
 void building_t::add_wall_us_flag(float wall_pos, float flag_pos, float zval, bool dim, bool dir, unsigned room_id, float tot_light_amt) {
