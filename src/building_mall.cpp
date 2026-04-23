@@ -1490,7 +1490,7 @@ void building_t::add_large_trashcan_contents(rand_gen_t &rgen, room_object_t con
 	for (unsigned n = 0; n < num_objs; ++n) {
 		float trash_radius(tc_radius*rgen.rand_uniform(0.18, 0.3));
 		cube_t trash;
-		gen_xy_pos_for_round_obj(trash, tcan, trash_radius, 2.0*trash_radius, (trash_radius + (is_cylin ? 0.2 : 0.1)*tc_radius), rgen, 1); // place_at_z1=1
+		gen_xy_pos_for_round_obj(trash, tcan, trash_radius, 2.0*trash_radius, (trash_radius + (is_cylin ? 0.25 : 0.1)*tc_radius), rgen, 1); // place_at_z1=1
 		trash.translate_dim(2, (trash_radius + (is_cylin ? 0.75 : 0.1)*tc_radius)); // shift up, more for cylinders
 		colorRGBA const color(trash_colors[rgen.rand() % NUM_TRASH_COLORS]);
 		objs.emplace_back(trash, TYPE_TRASH, room_id, rgen.rand_bool(), rgen.rand_bool(), RO_FLAG_NOCOLL, tot_light_amt, SHAPE_SPHERE, color);
