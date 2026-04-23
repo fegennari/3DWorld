@@ -981,7 +981,7 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 				cube_t target_cube(dest_cube); // default is to use the side of the building closest to the road, which is where the front/driveway generally is
 				// if there's a nearby door, use this as our target rather than the closest building edge
 				point door_pos;
-				if (has_dest_bldg && get_building_door_pos_closest_to(dest_bldg, pos, door_pos)) {target_cube.set_from_point(door_pos);}
+				if (has_dest_bldg && get_building_door_pos_closest_to(dest_bldg, pos, door_pos, 0, (is_female ? 1 : 0))) {target_cube.set_from_point(door_pos);}
 				get_closest_dim_dir_xy(target_cube, plot_bcube, dim, dir);
 				cube_t approach_area(dest_cube);
 				approach_area.d[dim][dir] = plot_bcube.d[dim][dir]; // expand out to the plot
@@ -1033,7 +1033,7 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 		// target a building door; if it's on the wrong side of the building we'll still collide with the building when walking to it;
 		// it would be nice to have the door open when the ped enters, but it's not easy to do this with the way peds and buildings are separate and in different threads
 		point door_pos;
-		if (get_building_door_pos_closest_to(dest_bldg, pos, door_pos)) {dest_pos.x = door_pos.x; dest_pos.y = door_pos.y;}
+		if (get_building_door_pos_closest_to(dest_bldg, pos, door_pos, 0, (is_female ? 1 : 0))) {dest_pos.x = door_pos.x; dest_pos.y = door_pos.y;}
 	}
 	unsigned const start_ix(avoid.size()); // skip parked car avoid cubes
 	get_building_bcubes(cur_plot, avoid);

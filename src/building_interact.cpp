@@ -386,8 +386,9 @@ bool building_t::point_near_ext_door(point const &pos, float dist) const { // si
 	}
 	return 0;
 }
-// used for pedestrians; pos should be outside the building
-bool building_t::get_building_door_pos_closest_to(point const &target_pos, point &door_pos, bool inc_garage_door) const {
+// used for pedestrians; pos should be outside the building;
+// mf_pref: 0=prefer male, 1=prefer female, 2+=no preference
+bool building_t::get_building_door_pos_closest_to(point const &target_pos, point &door_pos, bool inc_garage_door, int mf_pref) const {
 	float dmin_sq(0.0);
 
 	for (auto d = doors.begin(); d != doors.end(); ++d) {
@@ -395,8 +396,9 @@ bool building_t::get_building_door_pos_closest_to(point const &target_pos, point
 		if (d->type == tquad_with_ix_t::TYPE_RDOOR) continue; // skip rooftop doors
 		point const center(d->get_bcube().get_cube_center());
 		float const dsq(p2p_dist_xy_sq(target_pos, center)); // ignore zval
+		if (mf_pref < 2 && is_restroom() && doors.size() == 2 && (mw_restroom_side ^ bool((d - doors.begin()) & 1)) == bool(mf_pref)) continue; // wrong gender
 		if (dmin_sq == 0.0 || dsq < dmin_sq) {door_pos = center; dmin_sq = dsq;}
-	}
+	} // for d
 	if (dmin_sq == 0.0) return 0; // doors not added for some reason
 	return 1;
 }

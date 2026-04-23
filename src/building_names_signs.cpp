@@ -537,7 +537,7 @@ void building_t::add_signs(vector<sign_t> &signs) const { // added as exterior c
 				is_mens ^= 1;
 			} // for door
 		}
-		else { // doors at the endsl signs at the 4 corners
+		else { // doors at the ends, signs at the 4 corners
 			bool const dim(bcube.dy() < bcube.dx()); // doors on longer dim, signs facing shorter dim
 
 			for (unsigned dir = 0; dir < 2; ++dir) {

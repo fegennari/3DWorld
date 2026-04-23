@@ -3335,8 +3335,8 @@ public:
 	cube_t const &get_building_bcube(unsigned ix) const {return get_building(ix).bcube;}
 	void flag_has_room_geom() {has_room_geom = 1;}
 	
-	bool get_building_door_pos_closest_to(unsigned ix, point const &target_pos, point &door_pos, bool inc_garage_door) const {
-		return get_building(ix).get_building_door_pos_closest_to(target_pos, door_pos, inc_garage_door);
+	bool get_building_door_pos_closest_to(unsigned ix, point const &target_pos, point &door_pos, bool inc_garage_door, int mf_pref) const {
+		return get_building(ix).get_building_door_pos_closest_to(target_pos, door_pos, inc_garage_door, mf_pref);
 	}
 	cube_t register_deck_and_get_part_bounds(unsigned ix, cube_t const &deck) {return get_building(ix).register_deck_and_get_part_bounds(deck);}
 	cube_t const &get_bcube() const {return buildings_bcube;}
@@ -6025,8 +6025,8 @@ cube_t get_building_lights_bcube() {return building_lights_manager.get_lights_bc
 // used for pedestrians in cities
 cube_t get_building_bcube(unsigned building_id) {return building_creator_city.get_building_bcube(building_id);}
 
-bool get_building_door_pos_closest_to(unsigned building_id, point const &target_pos, point &door_pos, bool inc_garage_door) { // for city buildings only
-	return building_creator_city.get_building_door_pos_closest_to(building_id, target_pos, door_pos, inc_garage_door);
+bool get_building_door_pos_closest_to(unsigned building_id, point const &target_pos, point &door_pos, bool inc_garage_door, int mf_pref) { // for city buildings only
+	return building_creator_city.get_building_door_pos_closest_to(building_id, target_pos, door_pos, inc_garage_door, mf_pref);
 }
 cube_t register_deck_and_get_part_bounds(unsigned building_id, cube_t const &deck) {
 	return building_creator_city.register_deck_and_get_part_bounds(building_id, deck);
