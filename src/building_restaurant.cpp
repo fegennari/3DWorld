@@ -41,12 +41,15 @@ void building_t::create_restaurant_floorplan(unsigned part_id, rand_gen_t &rgen)
 	// split side room into {kitchen, men's room, women's room, and maybe storage}
 	int const num_side_windows(get_num_windows_on_side(part, !dim)); // in other dim; typically 5-8 total windows and 3-5 kitchen windows
 	assert(num_side_windows >= 3);
-	bool const add_storage(num_side_windows >= 7);
-	bool const br_side(rgen.rand_bool());
+	bool const add_storage(num_side_windows >= 7), br_side(rgen.rand_bool());
 	float const wspace(part.get_sz_dim(!dim)/num_side_windows);
 	mw_restroom_side = br_side; // not currently used, but may be useful in the future
-	// allow an extra half window border for bathrooms so that there's space for stalls
-	float const room_max_width((br_side ? -1.0 : 1.0)*((1.0 + 0.5*get_window_h_border())*wspace - 0.75*wall_thick));
+	// allow an extra half window border for bathrooms so that there's space for stalls; subtract a border off for 2-window bathrooms
+	float br_num_windows(0.0);
+	if      (num_side_windows >= 10) {br_num_windows = (2.0 - 0.25*h_border);} // 2 windows; not generally enabled, as restaurants aren't this large, and looks odd
+	else if (num_side_windows >= 8 ) {br_num_windows = 1.5;} // 1.5 windows; center window is split between bathrooms
+	else                             {br_num_windows = (1.0 + 0.5*h_border);} // 1 window for small restaurants
+	float const room_max_width((br_side ? -1.0 : 1.0)*(br_num_windows*wspace - 0.75*wall_thick));
 	float const br_split(side_area.d[!dim][br_side] + room_max_width); // split point between men's and women's bathrooms
 	float const k_br_split(br_split + room_max_width); // split point between kitchens and bathrooms
 	float const k_s_split(side_area.d[!dim][!br_side] - room_max_width); // split point between kitchen and storage, or end of kitchen
@@ -66,13 +69,19 @@ void building_t::create_restaurant_floorplan(unsigned part_id, rand_gen_t &rgen)
 	
 	for (unsigned n = 0; n < num_wall_doors; ++n) {
 		bool const is_br(n < 2);
-		float const v1(room_bcs[n].d[!dim][0] + edge_pad), v2(room_bcs[n].d[!dim][1] - edge_pad);
+		float v1(room_bcs[n].d[!dim][0] + edge_pad), v2(room_bcs[n].d[!dim][1] - edge_pad);
+		
+		if (is_br) { // bathroom should be more centered; split the range in half
+			float const vc(0.5*(v1 + v2));
+			v1 = 0.5*(v1 + vc);
+			v2 = 0.5*(v2 + vc);
+		}
 		assert(v1 < v2); // assumes window is wider than door
 		float const door_pos(rgen.rand_uniform(v1, v2));
 		insert_door_in_wall_and_add_seg(wall_lo, (door_pos - doorway_hwidth), (door_pos + doorway_hwidth), !dim, dir, !br_side, is_br, 1); // opens into room; unlocked
 		interior->door_stacks.back().set_mult_floor(); // counts as multi-floor (for drawing top edge)
 		if (is_br) {interior->doors.back().rtype = (n ? RTYPE_MENS : RTYPE_WOMENS);}
-	}
+	} // for n
 	interior->walls[dim].push_back(wall_lo);
 
 	// add walls separating rooms

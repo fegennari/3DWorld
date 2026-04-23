@@ -3068,8 +3068,8 @@ void building_t::add_window_coverings(cube_t const &window, bool dim, bool dir) 
 	bool is_split(0);
 	int const room_id(get_room_id_for_window(window, dim, dir, is_split));
 	
-	if (is_split && !is_prison() && !is_restroom()) { // window split across multiple rooms
-		return; // how do we handle this? for now skip it, but ignore for prison jail cells and restrooms, both of which must always have window coverings
+	if (is_split && !is_prison() && !is_restaurant() && !is_restroom()) { // window split across multiple rooms
+		return; // how do we handle this? for now skip it, but ignore for prison jail cells, restaurants, and restrooms, which must always have window coverings
 	}
 	unsigned floor_ix(0);
 
