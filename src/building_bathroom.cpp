@@ -573,7 +573,9 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 					assert(door_wall_space > 0.0); // too strong?
 
 					if (door_wall_space < door_width + slength + get_min_front_clearance()) { // add sink clearance for the door to close if needed
-						place_area.d[!br_dim][sink_side] += (sink_side ? -1.0 : 1.0)*(door_width - 0.25*swidth);
+						cube_t const door_bc(i->get_open_door_path_bcube()); // add full clearance if sink in door path
+						bool const in_door_path(door_bc.d[br_dim][0] < place_area.d[br_dim][0]+slength || door_bc.d[br_dim][1] > place_area.d[br_dim][1]-slength);
+						place_area.d[!br_dim][sink_side] += (sink_side ? -1.0 : 1.0)*(door_width - (in_door_path ? 0.0 : 0.25*swidth)); // allow closer if not blocked
 					}
 					else {no_end_urinal_divider = 1;}
 					break; // sinks are on the side closest to the door
@@ -620,6 +622,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 		bool last_ooo(0);
 
 		for (unsigned n = 0; n < num_stalls; ++n, stall_pos += stall_step) {
+			//if (n == 0 && num_stalls > 2) {} // what about larger handicap stall?
 			point center(stall_from_wall, stall_pos, zval);
 			if (br_dim) {swap(center.x, center.y);} // R90 about z
 			cube_t stall(center);
