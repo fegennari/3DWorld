@@ -882,7 +882,9 @@ void building_t::maybe_gen_chimney_smoke() const {
 void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 
 	assert(parts.empty());
-	int const type(rgen.rand()%3); // 0=single cube, 1=L-shape, 2=two-part
+	float const floor_spacing(get_window_vspace());
+	bool const is_small(max(bcube.dx(), bcube.dy()) < 5.0*floor_spacing);
+	int const type(is_small ? 0 : (rgen.rand()%3)); // 0=single cube, 1=L-shape, 2=two-part; force cube if small, otherwise it may not have space for stairs
 	bool const two_parts(type != 0);
 	unsigned force_dim[2] = {2,2}; // force roof dim to this value, per part; 2 = unforced/auto
 	num_sides = 4;
@@ -891,7 +893,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	bool const gen_door(global_building_params.windows_enabled());
 	unsigned const rand_num(rgen.rand()); // bits used for random bools: {1=door_dim, 2=fence1, 4=fence2, 8=garage1, 16=garage2, 32=stacked_parts}
 	float door_height(get_door_height()), door_center(0.0), door_pos(0.0), dist1(0.0), dist2(0.0);
-	float const floor_spacing(get_window_vspace()), driveway_dz(0.004*door_height);
+	float const driveway_dz(0.004*door_height);
 	bool const stacked_parts(!two_parts && (rand_num & 32) && bcube.dz() > 1.8*floor_spacing); // single part and at least two floors
 	bool const pref_street_dim(get_street_dim()), pref_street_dir(get_street_side());
 	bool door_dim(street_dir ? pref_street_dim : (rand_num & 1)), door_dir(0), dim(0), dir(0), dir2(0), skip_last_roof(0);
