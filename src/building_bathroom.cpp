@@ -47,7 +47,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 	}
 	if (have_toilet && (room.is_office || (!is_basement && (is_prison() || is_restaurant() || is_restroom())))) {
 		// office, above ground prison bathroom, restaurant, and park restroom have stalls
-		if (min_room_dim > 1.5*floor_spacing && max(place_area_sz.x, place_area_sz.y) > 2.0*floor_spacing) {
+		if (min_room_dim > (has_house_floorplan() ? 1.4 : 1.5)*floor_spacing && max(place_area_sz.x, place_area_sz.y) > 2.0*floor_spacing) {
 			if (divide_bathroom_into_stalls(rgen, room, zval, room_id, tot_light_amt, floor, lights_start, objs_start)) { // large enough, divide into bathroom stalls
 				added_bathroom_objs_mask |= (PLACED_TOILET | PLACED_SINK);
 				return 1;
@@ -457,9 +457,8 @@ bool building_t::add_tp_roll(cube_t const &room, unsigned room_id, float tot_lig
 bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, float zval, unsigned room_id,
 	float tot_light_amt, unsigned floor, unsigned lights_start, unsigned lights_end)
 {
-	// Note: assumes no prior placed objects
-	bool const use_sink_model(0);
-	bool const is_park_restroom(is_restroom());
+	// Note: assumes no prior placed objects other than ceiling lights
+	bool const use_sink_model(0), is_park_restroom(is_restroom());
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	vector3d const tsz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TOILET)); // L, W, H
 	float const theight(0.35*floor_spacing), twidth(theight*tsz.y/tsz.z), tlength(theight*tsz.x/tsz.z), stall_depth(2.2*tlength);
@@ -475,7 +474,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 	}
 	float stall_width(2.0*twidth), sink_spacing(1.75*swidth);
 	// depth_val is around 2*clearance; allow slightly tighter spaces in restaurants and restrooms
-	float const depth_val(max(stall_depth, slength)), req_depth((has_house_floorplan() ? 1.5 : 2.0)*depth_val);
+	float const depth_val(max(stall_depth, slength)), req_depth((has_house_floorplan() ? 1.6 : 2.0)*depth_val);
 	bool br_dim(room.dy() < room.dx()), sink_side(0), sink_side_set(0), mens_room(0); // br_dim is the smaller dim
 	cube_t place_area(room), avoid;
 
@@ -719,6 +718,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 		if (add_urinals) {
 			// add urinals opposite the sinks, using same spacing as sinks;
 			// should urinals be on the same wall as sinks between sinks and stalls when long and thin such as mall restrooms?
+			bool const is_tight(room_width < 1.3*req_depth);
 			float const div_wall_len(0.25*floor_spacing);
 			bool const extra_urinals(!two_rows && room_width > 2.0*depth_val + max(ulength, div_wall_len)); // add urinals opposite stalls if wide enough
 			unsigned num_urinals((extra_urinals ? 2 : 1)*num_sinks); // should be able to fit twice as many
@@ -744,7 +744,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 				if (interior->is_cube_close_to_doorway(urinal, room, 0.0, 1)) continue; // skip if close to a door
 				if (!check_cube_within_part_sides(urinal))                    continue; // outside the building
 				if (!avoid.is_all_zeros() && urinal.intersects(avoid))        continue;
-				if (is_park_restroom && is_cube_close_to_exterior_doorway(urinal, 0.0, 0  )) continue; // inc_open=0
+				if (is_park_restroom && is_cube_close_to_exterior_doorway(urinal, 0.0, 0)) continue; // inc_open=0
 				
 				if (no_end_urinal_divider && n == 0) {} // no starting divider if against a wall
 				else if (!interior->is_cube_close_to_doorway(sep_wall, room, 0.0, 1)) { // check for doors, when the bathroom door is not centered on the room
@@ -759,7 +759,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 				add_bathroom_plumbing(objs.back());
 				last_added_urinal = 1;
 			} // for n
-			if (!two_rows && last_added_urinal) { // skip first wall if adjacent to a stall
+			if (!two_rows && !is_tight && last_added_urinal) { // skip first wall if adjacent to a stall, or opposite a stall if space is tight
 				set_wall_width(sep_wall, (u_pos - 0.5*sink_step), 0.2*wall_thickness, !br_dim);
 				if (!avoid.is_all_zeros() && sep_wall.intersects(avoid)) {} // skip
 				else if (is_park_restroom && is_cube_close_to_exterior_doorway(sep_wall, 0.0, 0)) {} // skip
