@@ -599,6 +599,8 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 	stall_width  = stalls_len/num_stalls; // reclaculate to fill the gaps
 	sink_spacing = sinks_len/num_sinks;
 	bool const two_rows(room_width > 3.0*depth_val); // could be as small as 2.6x
+	// put stalls on back wall rather than sides if short and wide? but most likely the end opposite the door is an exterior wall, and we can't put stalls there
+	//if (!two_rows && room_width > stalls_len && stalls_len > stall_depth && zval > ground_floor_z1 && !is_prison()) {}
 	bool skip_stalls_side(room_id & 1); // put stalls on a side consistent across floors
 	if (classify_room_wall(room, zval, br_dim, !skip_stalls_side, 0) == ROOM_WALL_EXT) {skip_stalls_side ^= 1;} // no stalls/sinks along exterior walls
 	unsigned const showers_dir(is_prison() ? skip_stalls_side : 2); // one side of prison bathroom has showers rather than stalls

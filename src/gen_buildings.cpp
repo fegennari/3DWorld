@@ -1910,7 +1910,7 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 		else if (i->is_trim()) {
 			bool const is_shadowed(i->type == tquad_with_ix_t::TYPE_SKYLIGHT_INT);
 			colorRGBA const color((i->type == tquad_with_ix_t::TYPE_MET_TRIM) ? LT_GRAY : WHITE); // gutters and skylight interior=white, solar panel edges=light gray
-			bdraw.add_tquad(*this, *i, bcube, tid_nm_pair_t(is_shadowed ? WHITE_TEX : NO_SHADOW_WHITE_TEX), color); // untextured, no shadows for some
+			bdraw.add_tquad(*this, *i, bcube, tid_nm_pair_t(is_shadowed ? (unsigned)WHITE_TEX : NO_SHADOW_WHITE_TEX), color); // untextured, no shadows for some
 		}
 		else if (is_house && (i->type == tquad_with_ix_t::TYPE_ROOF_PEAK || i->type == tquad_with_ix_t::TYPE_ROOF_SLOPE) && i->npts == 4) {
 			// house peaked/sloped trapezoid roof: extend lower zvals out a bit
