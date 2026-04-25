@@ -859,7 +859,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				else if (not_private_room) { // make it an office
 					can_place_onto = added_desk = add_office_objs(rgen, *r, blockers, chair_color, room_center.z, room_id, f, tot_light_amt, objs_start, is_basement);
 				}
-				else if (rtype == RTYPE_BED) { // assigned bedroom
+				else if (::is_bedroom(rtype)) { // assigned bedroom
 					can_place_onto |= add_bedroom_objs(rgen, *r, blockers, chair_color, room_center.z, room_id, f, tot_light_amt, objs_start, is_lit, 0, 1, light_ix_assign);
 					added_bedroom = is_bedroom = 1;
 				}
@@ -941,7 +941,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				float const bedroom_prob(pref_sec_bath ? 0.25 : 0.75), bathroom_prob((pref_sec_bath ? 2.0 : 1.0)*extra_bathroom_prob);
 				// place a bedroom 75% of the time unless this must be a bathroom; if we got to the second floor and haven't placed a bedroom, always place it;
 				// houses only, and must have a window (exterior wall)
-				if (is_house && !must_be_bathroom && !is_basement && (init_rtype_f0 == RTYPE_BED || (f > 0 && !added_bedroom) || rgen.rand_float() < bedroom_prob)) {
+				if (is_house && !must_be_bathroom && !is_basement && (::is_bedroom(init_rtype_f0) || (f > 0 && !added_bedroom) || rgen.rand_float() < bedroom_prob)) {
 					// if haven't added a bedroom, force if last floor of last room (excluding the extended basement)
 					bool const force(!added_bedroom && f+1 == num_floors && (r+1 == rooms.end() || (r+1)->is_ext_basement()));
 					added_obj = can_place_onto = added_bedroom = is_bedroom =

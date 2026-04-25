@@ -571,6 +571,7 @@ enum {RTYPE_NOTSET=0, RTYPE_HALL, RTYPE_STAIRS, RTYPE_OFFICE, RTYPE_BATH, RTYPE_
 typedef uint8_t room_type;
 
 inline bool is_bathroom (room_type   const rtype) {return (rtype == RTYPE_BATH   || rtype == RTYPE_MENS || rtype == RTYPE_WOMENS);}
+inline bool is_bedroom  (room_type   const rtype) {return (rtype == RTYPE_BED    || rtype == RTYPE_MASTER_BED);}
 inline bool is_jail_room(room_type   const rtype) {return (rtype == RTYPE_JAIL   || rtype == RTYPE_JAIL_CELL);}
 inline bool is_ball_type(room_object const type ) {return (type  == TYPE_LG_BALL || type  == TYPE_POOL_BALL );}
 

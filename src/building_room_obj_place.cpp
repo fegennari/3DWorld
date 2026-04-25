@@ -1291,7 +1291,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t &bl
 bool building_t::add_closet_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start,
 	unsigned room_type, unsigned bed_obj_ix, float front_clearance, unsigned &closet_obj_id, light_ix_assign_t &light_ix_assign)
 {
-	bool const is_bedroom(room_type == RTYPE_BED), is_pantry(!is_bedroom && is_house), is_freezer(!is_bedroom && !is_house);
+	bool const is_bedroom(is_bedroom(room_type)), is_pantry(!is_bedroom && is_house), is_freezer(!is_bedroom && !is_house);
 	float const window_vspacing(get_window_vspace()), doorway_width(get_doorway_width()), fc_gap(get_floor_ceil_gap()), window_h_border(get_window_h_border());
 	float const closet_min_depth((is_freezer ? 1.5 : (is_pantry ? 0.8 : 0.65))*doorway_width), closet_min_width(1.5*doorway_width);
 	float const min_dist_to_wall(1.0*doorway_width), min_bed_space(front_clearance);
