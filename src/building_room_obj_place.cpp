@@ -1490,16 +1490,16 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 	if (force || is_store) { // no room is too large
 		if (room_len < 1.0*vspace || room_width < 0.55*vspace) return 0; // room is too small to fit a bed
 	}
-	else if (floor == 0) { // special case for ground floor
-		if (room_len < 1.3*vspace || room_width < 0.7*vspace) return 0; // room is too small to fit a bed
-		if (room_len > 4.0*vspace || room_width > 2.5*vspace) return 0; // room is too large to be a bedroom
-	}
-	else { // more relaxed constraints
-		if (room_len < 1.1*vspace || room_width < 0.6*vspace) return 0; // room is too small to fit a bed
+	else {
+		bool const is_multi_floor(!room.is_single_floor && room.dz() > 1.5*vspace);
+		bool const gf(is_multi_floor && floor == 0 && room.z1() == ground_floor_z1); // ground floor is more restrictive unless house is a single floor
+		float const min_len((gf ? 1.3 : 1.1)*vspace), min_width((gf ? 0.7 : 0.6)*vspace);
+		float const max_len((gf ? 4.0 : 4.5)*vspace), max_width((gf ? 2.5 : 3.5)*vspace);
+		if (room_len < min_len || room_width < min_width) return 0; // room is too small to fit a bed
 		
-		if (room_len > 4.5*vspace || room_width > 3.5*vspace) { // room is too large to be a bedroom
+		if (room_len > max_len || room_width > max_width) { // room is too large to be a bedroom
 			if (!is_house || zval < ground_floor_z1) return 0; // is this possible?
-			// handle the case of all rooms being too large or too small
+			// handle the case of all rooms being too large and choose the smallest of them
 			bool has_better_room(0);
 
 			for (room_t const &r : interior->rooms) {
@@ -1513,7 +1513,7 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 				if (dim2 != dim) {swap(expand2.x, expand2.y);}
 				room_bounds2.expand_by_xy(expand2);
 				float const room_len2(room_bounds2.get_sz_dim(dim2)), room_width2(room_bounds2.get_sz_dim(!dim2));
-				if (room_len2 < 1.1*vspace || room_width2 < 0.6*vspace) continue; // too small
+				if (room_len2 < min_len || room_width2 < min_width) continue; // too small
 				if (room_len2*room_width2 < room_len*room_width) {has_better_room = 1; break;} // smaller room is better
 			} // for r
 			if (has_better_room) return 0;

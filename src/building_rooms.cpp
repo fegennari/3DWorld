@@ -51,7 +51,7 @@ bool building_t::can_be_bedroom_or_bathroom(room_t const &room, unsigned floor_i
 		float const floor_spacing(get_window_vspace()), zval(room.z1() + floor_ix*floor_spacing);
 		if (is_room_adjacent_to_ext_door(room, zval)) return 0; // exterior door does not open into a bedroom/bathroom
 		if (skip_conn_check) return 1;
-		bool const is_multi_floor(room.dz() > 1.5*floor_spacing);
+		bool const is_multi_floor(!room.is_single_floor && room.dz() > 1.5*floor_spacing);
 		bool const has_stairs(is_multi_floor && !interior->stairwells.empty()); // more than one floor and stairs placement didn't fail
 
 		// check paths if there are stairs or an interior garage; skip for single floor houses since there may be no valid bed/bath placement with these constraints
