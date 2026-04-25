@@ -3434,28 +3434,30 @@ void building_t::print_building_manifest() const { // Note: skips expanded_objs
 	}
 	else {cout << endl;}
 }
-void building_t::print_building_stats() const {
-	if (!interior) return;
+
+building_info_t building_t::get_building_info() const {
+	assert(interior);
+	building_info_t s;
 	float const floor_thickness(get_floor_thickness()), floor_spacing(get_window_vspace());
-	float const feet_per_unit(8.0/floor_spacing), feet_per_unit_sq(feet_per_unit*feet_per_unit);
-	unsigned num_rooms(0), num_bedrooms(0), num_bathrooms(0);
-	float square_footage(0.0);
 
 	for (room_t const &room : interior->rooms) {
-		if (room.is_sec_bldg)       continue; // garage/shed not included in count
+		if (room.is_sec_bldg)       continue; // detached garage/shed not included in count, but interior garage is included
 		if (room.is_ext_basement()) continue; // extended basement not included in count
 		if (room.is_hallway)        continue; // hallway not included in count
-		unsigned const num_floors(calc_num_floors_room(room, floor_spacing, floor_thickness));
+		unsigned num_floors(calc_num_floors_room(room, floor_spacing, floor_thickness));
 		assert(num_floors > 0);
-		num_rooms += num_floors;
-		if (room.z1() >= ground_floor_z1) {square_footage += num_floors*feet_per_unit_sq*room.get_area_xy();} // basement doesn't count
-
-		for (unsigned f = 0; f < num_floors; ++f) {
-			room_type const rtype(room.get_room_type(f));
-			if (rtype == RTYPE_BED || rtype == RTYPE_MASTER_BED) {++num_bedrooms;}
-			else if (is_bathroom(rtype)) {++num_bathrooms;}
-		}
+		max_eq(s.max_floors, num_floors);
+		s.num_rooms += num_floors;
+		if (room.z1() >= ground_floor_z1) {s.square_footage += num_floors*room.get_area_xy();} // basement doesn't count
+		s.num_bedrooms  += room.count_room_of_type(RTYPE_BED ) + room.count_room_of_type(RTYPE_MASTER_BED);
+		s.num_bathrooms += room.count_room_of_type(RTYPE_BATH);
 	} // for room
-	cout << TXT(num_rooms) << TXT(num_bedrooms) << TXT(num_bathrooms) << TXT(square_footage) << endl;
+	s.square_footage /= get_one_foot()*get_one_foot(); // convert to square feet
+	return s;
+}
+void building_t::print_building_stats() const {
+	if (!interior) return;
+	building_info_t const s(get_building_info());
+	cout << TXT(s.num_rooms) << TXT(s.num_bedrooms) << TXT(s.num_bathrooms) << TXT(s.square_footage) << endl;
 }
 

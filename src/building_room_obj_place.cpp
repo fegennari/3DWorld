@@ -2757,7 +2757,7 @@ bool check_dist_and_add_center(point const &pos, float diameter_xy, vector<point
 }
 // room with pool table, not swimming pool, that one is below
 bool building_t::add_pool_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt) {
-	float const floor_spacing(get_window_vspace()), sz_in_feet(floor_spacing/8.0), clearance(get_min_front_clearance_inc_people());
+	float const floor_spacing(get_window_vspace()), sz_in_feet(get_one_foot()), clearance(get_min_front_clearance_inc_people());
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const objs_start(objs.size()), pool_table_obj_ix(objs_start);
 	bool const long_dim(room.dx() < room.dy());

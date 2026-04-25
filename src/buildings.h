@@ -1205,7 +1205,8 @@ public:
 	void assign_to(room_type rt, unsigned floor, bool locked=0); // unlocked by default
 	void clear_room_type(unsigned floor);
 	room_type get_room_type (unsigned floor) const {return rtype[wrap_room_floor(floor)];}
-	bool has_room_of_type(room_type type) const;
+	bool     has_room_of_type  (room_type type) const;
+	unsigned count_room_of_type(room_type type) const;
 
 	void set_has_center_stairs() {flags |= ROOM_FLAG_CSTAIRS ;}
 	void set_office_floorplan () {flags |= ROOM_FLAG_OFF_FP  ;}
@@ -2266,6 +2267,11 @@ struct building_colors_t {
 	colorRGBA side_color, wall_color, basement_wall_color, attic_color;
 };
 
+struct building_info_t {
+	unsigned max_floors=0, num_rooms=0, num_bedrooms=0, num_bathrooms=0;
+	float square_footage=0.0;
+};
+
 struct building_t : public building_geom_t {
 
 	unsigned mat_ix=0;
@@ -2406,7 +2412,8 @@ struct building_t : public building_geom_t {
 	float get_flooring_thick () const {return 0.0012*get_window_vspace();}
 	float get_doorway_width  () const;
 	float get_landing_width  () const {return 1.0*get_doorway_width();} // for L-shaped stairs
-	float get_one_inch       () const {return get_window_vspace()/(8*12);}
+	float get_one_foot       () const {return get_window_vspace()/8;}
+	float get_one_inch       () const {return get_one_foot()/12;}
 	float get_nominal_doorway_width   () const {return DOOR_WIDTH_SCALE*get_window_vspace();} // constant per-building, but not exactly the same as get_doorway_width()
 	float get_office_ext_doorway_width() const {return DOOR_WIDTH_SCALE_OFFICE*get_window_vspace();}
 	float get_parking_road_width      () const;
@@ -2863,6 +2870,7 @@ public:
 	float get_elevator_floor_spacing(elevator_t            const &e) const {return ( e.in_mall       ? get_mall_floor_spacing() : get_window_vspace());}
 	float get_stairs_floor_spacing  (stairs_landing_base_t const &s) const {return ((s.in_mall == 1) ? get_mall_floor_spacing() : get_window_vspace());}
 	float get_room_floor_spacing    (room_t                const &r) const {return ( r.is_mall()     ? get_mall_floor_spacing() : get_window_vspace());}
+	building_info_t get_building_info() const;
 	void print_building_manifest() const;
 	void print_building_stats() const;
 private:

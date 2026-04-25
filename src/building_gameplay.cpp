@@ -1795,8 +1795,14 @@ void building_t::register_player_enter_building() const {
 		if (is_house) {str += " Residence";}
 		str += "\nType: " + btype_names[btype];
 		if (!address.empty()) {str += "\n" + address;} // add address on a second line if known
-		if (interior && !interior->people.empty()) {str += "\nPopulation " + std::to_string(interior->people.size());}
-		//str += " water: " + std::to_string(water_damage);
+
+		if (interior) {
+			if (!interior->people.empty()) {str += "\nPopulation " + std::to_string(interior->people.size());}
+			building_info_t const s(get_building_info());
+			str += "\nFloors: " + std::to_string(s.max_floors) + " Rooms: " + std::to_string(s.num_rooms) + " SF: " + std::to_string(unsigned(s.square_footage));
+			if (is_house) {str += " Beds: " + std::to_string(s.num_bedrooms) + " Baths: " + std::to_string(s.num_bathrooms);} // show bed/bath
+		}
+		//str += "\nWater: " + std::to_string(water_damage);
 		print_entering_building(str);
 	}
 	reset_creepy_sounds();

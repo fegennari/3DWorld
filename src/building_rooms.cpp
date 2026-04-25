@@ -3910,6 +3910,11 @@ bool room_assignment_t::has_room_of_type(room_type type) const {
 	}
 	return 0;
 }
+unsigned room_assignment_t::count_room_of_type(room_type type) const {
+	unsigned num(0);
+	for (unsigned n = 0; n < NUM_RTYPE_SLOTS; ++n) {num += (rtype[n] == type);}
+	return num;
+}
 
 room_t::room_t(cube_t const &c, unsigned p, unsigned nl, bool is_hallway_, bool is_office_, bool is_sec_bldg_, uint8_t interior_) :
 	cube_t(c), is_hallway(is_hallway_), is_office(is_office_), is_sec_bldg(is_sec_bldg_),
