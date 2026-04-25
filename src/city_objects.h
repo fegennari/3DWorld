@@ -129,6 +129,11 @@ struct substation_t : public model_city_obj_t {
 	virtual unsigned get_model_id() const {return OBJ_MODEL_SUBSTATION;}
 };
 
+struct wfountain_t : public model_city_obj_t {
+	wfountain_t(point const &pos_, float height, bool dim_, bool dir_) : model_city_obj_t(pos_, height, dim_, dir_, get_model_id()) {}
+	virtual unsigned get_model_id() const {return OBJ_MODEL_WFOUNTAIN;}
+};
+
 struct fountain_t : public multi_model_city_obj_t {
 	fountain_t(point const &pos_, float height, unsigned model_select) :
 		multi_model_city_obj_t(pos_, height, 0, 0, OBJ_MODEL_FOUNTAIN, model_select, 1) {} // dim=0, dir=0, is_cylinder=1
@@ -835,6 +840,7 @@ private:
 	vector<fire_hydrant_t> fhydrants;
 	vector<substation_t> sstations;
 	vector<fountain_t> fountains;
+	vector<wfountain_t> wfounts;
 	vector<statue_t> statues;
 	vector<divider_t> dividers; // dividers for residential plots
 	vector<swimming_pool_t> pools;
@@ -878,8 +884,8 @@ private:
 	vector<beach_ball_t> bballs;
 	vector<pool_float_t> pfloats;
 	// index is last obj in group
-	city_obj_groups_t bench_groups, planter_groups, trashcan_groups, fhydrant_groups, sstation_groups, fountain_groups, statue_groups, divider_groups, pool_groups,
-		plad_groups, chair_groups, pdeck_groups, ppole_groups, hcap_groups, manhole_groups, mbox_groups, tcone_groups, pigeon_groups, bird_groups, sign_groups,
+	city_obj_groups_t bench_groups, planter_groups, trashcan_groups, fhydrant_groups, sstation_groups, fountain_groups, wfount_groups, statue_groups, divider_groups,
+		pool_groups, plad_groups, chair_groups, pdeck_groups, ppole_groups, hcap_groups, manhole_groups, mbox_groups, tcone_groups, pigeon_groups, bird_groups, sign_groups,
 		stopsign_groups, flag_groups, nrack_groups, park_wf_groups, pgate_groups, cline_groups, ppath_groups, swing_groups, tramp_groups, umbrella_groups, bike_groups,
 		dumpster_groups, plant_groups, flower_groups, picnic_groups, bb_hoop_groups, pond_groups, walkway_groups, pillar_groups, wwe_groups, uge_groups, p_solar_groups,
 		gass_groups, bldg_groups, bball_groups, pfloat_groups, sewer_groups, sculpt_groups;

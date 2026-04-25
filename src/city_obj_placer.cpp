@@ -984,7 +984,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 				blockers.push_back(bc_pad);
 				park_restrooms.push_back(bc);
 				// add divider walls outside the restroom
-				float const fence_thick(0.025*bhdepth);
+				float const front_edge(bc.d[dim][dir]), fence_thick(0.025*bhdepth);
 				unsigned skip_dims(0);
 
 				for (unsigned d = 0; d < 2; ++d) {
@@ -992,7 +992,6 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 					divider.z2() = bc.z1() + 0.72*bheight;
 
 					if (doors_at_front) {
-						float const front_edge(bc.d[dim][dir]);
 						divider.d[ dim][!dir] = front_edge + (dir ? 1.0 : -1.0)*0.01*bhdepth; // slight gap to prevent Z-fighting
 						divider.d[ dim][ dir] = front_edge + (dir ? 1.0 : -1.0)*0.60*bhdepth;
 						divider.d[!dim][!d  ] = bc.d[!dim][d] - (d ? 1.0 : -1.0)*fence_thick;
@@ -1004,6 +1003,18 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 					add_cube_to_colliders_and_blockers(divider, colliders, blockers);
 					// place restroom sign on divider side facing away from the building?
 				} // for d
+				if (doors_at_front && building_obj_model_loader.is_model_valid(OBJ_MODEL_WFOUNTAIN)) { // place a water fountain between the doors
+					float const wf_height(0.25*bheight);
+					point wf_pos(center);
+					wf_pos[dim] = front_edge;
+					wf_pos.z   += 0.75*wf_height;
+					wfountain_t wf(wf_pos, wf_height, dim, !dir);
+					float const xlate(front_edge - wf.bcube.d[dim][!dir] + (dir ? 1.0 : -1.0)*0.01*wf_height); // shift slightly away from wall to avoid clipping through building
+					wf.pos[dim] += xlate;
+					wf.bcube.translate_dim(dim, xlate);
+					wfount_groups.add_obj(wf, wfounts);
+					add_cube_to_colliders_and_blockers(wf.bcube, colliders, blockers);
+				}
 				break; // done
 			} // for N
 		}
@@ -1075,7 +1086,6 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 				add_cube_to_colliders_and_blockers(pwf.bcube, colliders, blockers);
 				break; // done
 			} // for n
-			//park_water_fountain_t
 		} // for p
 	} // end is_park
 	if (!walkways.empty()) {
@@ -2532,6 +2542,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	fhydrant_groups.create_groups(fhydrants, all_objs_bcube);
 	sstation_groups.create_groups(sstations, all_objs_bcube);
 	fountain_groups.create_groups(fountains, all_objs_bcube);
+	wfount_groups  .create_groups(wfounts,   all_objs_bcube);
 	statue_groups  .create_groups(statues,   all_objs_bcube);
 	divider_groups .create_groups(dividers,  all_objs_bcube);
 	pool_groups    .create_groups(pools,     all_objs_bcube);
@@ -2834,6 +2845,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(fhydrants, fhydrant_groups, dstate, 0.06, shadow_only, 1);
 	draw_objects(sstations, sstation_groups, dstate, 0.15, shadow_only, 1);
 	draw_objects(fountains, fountain_groups, dstate, 0.20, shadow_only, 1);
+	draw_objects(wfounts,   wfount_groups,   dstate, 0.06, shadow_only, 1);
 	draw_objects(statues,   statue_groups,   dstate, 0.12, shadow_only, 1);
 	draw_objects(mboxes,    mbox_groups,     dstate, 0.04, shadow_only, 1);
 	draw_objects(ppoles,    ppole_groups,    dstate, 0.20, shadow_only, 0);
@@ -3030,6 +3042,7 @@ bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, vector
 	if (proc_vector_sphere_coll(fhydrants, fhydrant_groups, pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(sstations, sstation_groups, pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(fountains, fountain_groups, pos, p_last, radius, xlate, cnorm)) return 1;
+	if (proc_vector_sphere_coll(wfounts,   wfount_groups,   pos, p_last, radius, xlate, cnorm)) return 1; // is this needed?
 	if (proc_vector_sphere_coll(statues,   statue_groups,   pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(dividers,  divider_groups,  pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(pools,     pool_groups,     pos, p_last, radius, xlate, cnorm)) return 1;
@@ -3082,6 +3095,7 @@ bool city_obj_placer_t::line_intersect(point const &p1, point const &p2, float &
 	check_vector_line_intersect(fhydrants, fhydrant_groups, p1, p2, t, ret); // check bounding cube; cylinder intersection may be more accurate, but likely doesn't matter much
 	check_vector_line_intersect(sstations, sstation_groups, p1, p2, t, ret);
 	check_vector_line_intersect(fountains, fountain_groups, p1, p2, t, ret);
+	check_vector_line_intersect(wfounts,   wfount_groups,   p1, p2, t, ret);
 	check_vector_line_intersect(dividers,  divider_groups,  p1, p2, t, ret);
 	check_vector_line_intersect(pools,     pool_groups,     p1, p2, t, ret);
 	check_vector_line_intersect(ppoles,    ppole_groups,    p1, p2, t, ret); // inaccurate, could be customized if needed
@@ -3203,7 +3217,7 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, vect_cube_t const &plo
 	if (check_city_obj_pt_xy_contains(sstation_groups, sstations, pos, obj_ix, 0)) {color = colorRGBA(0.6, 0.8, 0.4, 1.0); return 1;} // light olive
 	if (check_city_obj_pt_xy_contains(trashcan_groups, trashcans, pos, obj_ix, 0)) {color = colorRGBA(0.8, 0.6, 0.3, 1.0); return 1;} // tan
 	if (check_city_obj_pt_xy_contains(ppath_groups,    ppaths,    pos, obj_ix, 0)) {color = (ppaths[obj_ix].is_creek ? BLUE : GRAY); return 1;} // only when inside a park?
-	if (check_city_obj_pt_xy_contains(fountain_groups, fountains, pos, obj_ix, 1)) {color = GRAY; return 1;} // is_cylin=1
+	if (check_city_obj_pt_xy_contains(fountain_groups, fountains, pos, obj_ix, 1)) {color = GRAY;  return 1;} // is_cylin=1
 	if (check_city_obj_pt_xy_contains(tramp_groups,    tramps,    pos, obj_ix, 1)) {color = (BKGRAY*0.75 + tramps[obj_ix].color*0.25); return 1;} // is_cylin=1
 	if (check_city_obj_pt_xy_contains(dumpster_groups, dumpsters, pos, obj_ix, 0)) {color = colorRGBA(0.1, 0.4, 0.1, 1.0); return 1;} // dark green
 	if (check_city_obj_pt_xy_contains(umbrella_groups, umbrellas, pos, obj_ix, 1)) {color = WHITE; return 1;} // is_cylin=1
@@ -3216,7 +3230,7 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, vect_cube_t const &plo
 	if (check_city_obj_pt_xy_contains(park_wf_groups,  park_wfs,  pos, obj_ix, 1)) {color = colorRGBA(0.1, 0.3, 0.1); return 1;} // is_cylin=1
 	if (check_vect_cube_contains_pt_xy(plot_cuts, pos)) {color = colorRGBA(0.7, 0.7, 1.0); return 1;} // mall skylight; very light blue
 	// Note: ppoles, hcaps, manholes, sewers, mboxes, tcones, sculptures, flowers, pladders, chairs, stopsigns, flags, clines, pigeons, birds, swings,
-	// umbrellas, bikes, statues, and plants are skipped; pillars aren't visible under walkways;
+	// umbrellas, bikes, statues, plants, and wfounts are skipped; pillars aren't visible under walkways;
 	// free standing signs can be added, but they're small and expensive to iterate over and won't contribute much
 	return 0;
 }
