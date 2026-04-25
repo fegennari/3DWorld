@@ -1423,7 +1423,7 @@ unsigned get_street_dir(cube_t const &inner, cube_t const &outer) {
 bool building_t::maybe_add_city_driveway(cube_t const &plot, unsigned building_ix) const {
 	// handle parking structure entrance driveways as a special case
 	if (is_parking() && has_driveway() && extend_existing_driveway(driveway, plot, bcube, vect_cube_t(), city_driveway)) return 1;
-	// below is for houses only
+	// below is for houses only; excludes park restroom concrete pads
 	if (!is_house) return 0;
 	assert(plot.contains_cube_xy(bcube));
 	cube_t sub_plot(plot);

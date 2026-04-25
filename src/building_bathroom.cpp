@@ -862,5 +862,14 @@ void building_t::create_restroom_floorplan(unsigned part_id, rand_gen_t &rgen) {
 		add_assigned_room(room, part_id, ((bool(d) ^ mw_restroom_side) ? RTYPE_MENS : RTYPE_WOMENS));
 		interior->rooms.back().is_single_floor = 1; // probably not needed
 	}
+	if (street_side) { // doors at front case; add a walkway in front in the form of a driveway
+		bool const dim(get_street_dim()), dir(get_street_side());
+		float const front_wall(bcube.d[dim][dir]);
+		set_cube_zvals(driveway, ground_floor_z1, ground_floor_z1+0.5*get_fc_thickness());
+		driveway.d[dim][!dir] = front_wall;
+		driveway.d[dim][ dir] = front_wall + (dir ? 1.0 : -1.0)*0.75*get_window_vspace(); // extend outward in front of the building
+		for (unsigned d = 0; d < 2; ++d) {driveway.d[!dim][d] = bcube.d[!dim][d];}
+		driveway.expand_in_dim(!dim, -0.5*wall_thick); // shrink inward slightly inside the exterior fences/walls
+	}
 }
 
