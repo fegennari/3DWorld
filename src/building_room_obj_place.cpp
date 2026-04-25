@@ -1083,7 +1083,7 @@ float get_lamp_width_scale() {
 }
 
 bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t &blockers, colorRGBA const &chair_color, float zval, unsigned room_id,
-	unsigned floor, float tot_light_amt, unsigned objs_start, bool room_is_lit, bool is_basement, bool force, light_ix_assign_t &light_ix_assign)
+	unsigned floor, float tot_light_amt, unsigned objs_start, bool room_is_lit, bool is_basement, bool force, light_ix_assign_t &light_ix_assign, int cand_bath)
 {
 	// bedrooms should have at least one window; if windowless/interior, it can't be a bedroom; faster than checking count_ext_walls_for_room(room, zval) > 0
 	if (room.interior) return 0;
@@ -1091,7 +1091,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t &bl
 	unsigned const bed_obj_ix(objs.size()); // if placed, it will be this index
 	int bed_size_ix(-1); // unset
 	room_object_t other_bed; // unset
-	if (!add_bed_to_room(rgen, room, blockers, zval, room_id, tot_light_amt, floor, force, bed_size_ix, other_bed)) return 0; // it's only a bedroom if there's bed
+	if (!add_bed_to_room(rgen, room, blockers, zval, room_id, tot_light_amt, floor, force, bed_size_ix, other_bed, cand_bath)) return 0; // it's only a bedroom if there's bed
 	assert(bed_obj_ix < objs.size());
 	room_object_t const bed(objs[bed_obj_ix]); // deep copy so that we don't need to worry about invalidating the reference below
 	float const doorway_width(get_doorway_width()), front_clearance(max(0.6f*doorway_width, get_min_front_clearance_inc_people()));
@@ -1474,8 +1474,8 @@ colorRGBA get_bed_sheet_color(int tid, rand_gen_t &rgen) {
 }
 
 // Note: must be first placed object
-bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers, float zval,
-	unsigned room_id, float tot_light_amt, unsigned floor, bool force, int &bed_size_ix, room_object_t const &other_bed)
+bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers, float zval, unsigned room_id,
+	float tot_light_amt, unsigned floor, bool force, int &bed_size_ix, room_object_t const &other_bed, int cand_bath)
 {
 	cube_t room_bounds(get_walkable_room_bounds(room));
 	float const vspace(get_window_vspace()), wall_thick(get_wall_thickness());
@@ -1496,7 +1496,28 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 	}
 	else { // more relaxed constraints
 		if (room_len < 1.1*vspace || room_width < 0.6*vspace) return 0; // room is too small to fit a bed
-		if (room_len > 4.5*vspace || room_width > 3.5*vspace) return 0; // room is too large to be a bedroom
+		
+		if (room_len > 4.5*vspace || room_width > 3.5*vspace) { // room is too large to be a bedroom
+			if (!is_house || zval < ground_floor_z1) return 0; // is this possible?
+			// handle the case of all rooms being too large or too small
+			bool has_better_room(0);
+
+			for (room_t const &r : interior->rooms) {
+				if (r == room) continue; // skip self
+				if (cand_bath >= 0 && r == get_room(cand_bath)) continue; // skip pre-assigned bathroom
+				if (r.z1() > zval || r.z2() < zval)             continue; // no Z overlap
+				if (!can_be_bedroom_or_bathroom(r, floor))      continue;
+				cube_t room_bounds2(get_walkable_room_bounds(r));
+				bool const dim2(room_bounds2.dx() < room_bounds2.dy());
+				vector3d expand2(expand);
+				if (dim2 != dim) {swap(expand2.x, expand2.y);}
+				room_bounds2.expand_by_xy(expand2);
+				float const room_len2(room_bounds2.get_sz_dim(dim2)), room_width2(room_bounds2.get_sz_dim(!dim2));
+				if (room_len2 < 1.1*vspace || room_width2 < 0.6*vspace) continue; // too small
+				if (room_len2*room_width2 < room_len*room_width) {has_better_room = 1; break;} // smaller room is better
+			} // for r
+			if (has_better_room) return 0;
+		}
 	}
 	bool first_head_dir(0);
 	// place hotel room bed head by an exterior wall so that both beds can be placed there without blocking a door

@@ -547,7 +547,7 @@ void building_t::add_signs(vector<sign_t> &signs) const { // added as exterior c
 
 				for (unsigned side = 0; side < 2; ++side) {
 					set_wall_width(sign, (bcube.d[!dim][!side] + (side ? 1.0 : -1.0)*sign_offset), 0.5*sign_width, !dim);
-					signs.emplace_back(sign, dim, dir, ((mw_restroom_side ^ side ^ 1) ? "Men" : "Women"), sign_color, WHITE, 0, 0, 1); // two_sided=0, emissive=0, small=1
+					signs.emplace_back(sign, dim, dir, ((mw_restroom_side ^ bool(side) ^ 1) ? "Men" : "Women"), sign_color, WHITE, 0, 0, 1); // two_sided=0, emissive=0, small=1
 				}
 			} // for dir
 		}
