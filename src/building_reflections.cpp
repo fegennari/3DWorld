@@ -38,7 +38,7 @@ bool cube_visible_in_building_mirror_reflection(cube_t const &c) {
 	return pdu.cube_visible(c);
 }
 
-void draw_scene_for_building_reflection(unsigned &ref_tid, unsigned dim, bool dir, float reflect_plane, bool is_house,
+void draw_scene_for_building_reflection(unsigned &ref_tid, unsigned dim, bool dir, float reflect_plane,
 	bool interior_room, bool draw_exterior, bool is_extb, bool is_water, bool is_glass_floor, cube_t const &mirror)
 {
 	int reflection_pass(REF_PASS_ENABLED);
@@ -141,24 +141,25 @@ void create_mirror_reflection_if_needed(building_t const *vis_conn_bldg, vector3
 				cube_t water_cube(bldg->get_water_cube(0));
 				water_cube.z1() = water_cube.z2(); // top surface only
 				mirror_in_ext_basement = 1; // required when extended basement goes outside the building's tile
-				draw_scene_for_building_reflection(room_mirror_ref_tid, 2, 1, water_cube.z2(), 0, 1, 0, 1, 1, 0, water_cube); // +z, not house, interior, basement, no exterior
+				draw_scene_for_building_reflection(room_mirror_ref_tid, 2, 1, water_cube.z2(), 1, 0, 1, 1, 0, water_cube); // +z, interior, basement, no exterior
 				return;
 			}
 		}
 		if (ENABLE_GLASS_FLOOR_REF && n == 0 && bldg->glass_floor_visible(xlate) && bldg->point_over_glass_floor(camera_bs, 1)) { // only check player building; inc_escalator=1
 			cube_t const ref_cube(get_bcubes_union(bldg->interior->room_geom->glass_floors));
-			draw_scene_for_building_reflection(room_mirror_ref_tid, 2, 1, ref_cube.z2(), 0, 0, 1, 0, 0, 1, ref_cube); // +z, not house, not interior, draw exterior, glass floor
+			draw_scene_for_building_reflection(room_mirror_ref_tid, 2, 1, ref_cube.z2(), 0, 1, 0, 0, 1, ref_cube); // +z, not interior, draw exterior, glass floor
 			return;
 		}
 		if (!have_mirror) continue; // not enabled
 		bool const interior_room(cur_room_mirror.is_interior()), is_house(cur_room_mirror.is_house()), is_open(cur_room_mirror.is_open());
 		// assumes mirror is not facing the doorway to a room with a window; assumes cube-shaped office buildings always use opaque glass block windows
-		bool const can_see_out_windows(cur_room_mirror.z2() > bldg->ground_floor_z1 && (is_house || bldg->is_prison() || !bldg->is_cube()) && !interior_room && bldg->has_int_windows());
+		bool can_see_out_windows(cur_room_mirror.z2() > bldg->ground_floor_z1 && (is_house || bldg->is_prison() || !bldg->is_cube()) && !interior_room && bldg->has_int_windows());
+		can_see_out_windows |= (bldg->is_restroom() && bldg->open_door_ix >= 0); // handle mirror in restroom with open door; but this is out of sync by one frame
 		bool const is_extb(bldg->point_in_extended_basement_not_basement(cur_room_mirror.get_cube_center()));
 		bool const dim(cur_room_mirror.dim ^ is_open), dir(is_open ? 1 : cur_room_mirror.dir); // always opens in +dir
 		cube_t const mirror_surface(get_mirror_surface(cur_room_mirror));
 		float const reflect_plane(is_open ? mirror_surface.d[dim][1] : cur_room_mirror.d[dim][dir]);
-		draw_scene_for_building_reflection(room_mirror_ref_tid, dim, dir, reflect_plane, is_house, interior_room, can_see_out_windows, is_extb, 0, 0, mirror_surface);
+		draw_scene_for_building_reflection(room_mirror_ref_tid, dim, dir, reflect_plane, interior_room, can_see_out_windows, is_extb, 0, 0, mirror_surface);
 		cur_room_mirror = room_object_t(); // reset for next frame
 		return;
 	} // for n
