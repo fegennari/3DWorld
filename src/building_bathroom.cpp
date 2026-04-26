@@ -578,7 +578,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 						place_area.d[!br_dim][sink_side] += (sink_side ? -1.0 : 1.0)*(door_width - (in_door_path ? 0.0 : 0.25*swidth)); // allow closer if not blocked
 					}
 					else {no_end_urinal_divider = 1;}
-					break; // sinks are on the side closest to the door
+					break; // sinks are on the side closest to the first door
 				}
 			} // for e
 			if (d == 0 && !sink_side_set) {br_dim ^= 1;} // door not found on long dim - R90 and try short dim
@@ -893,7 +893,9 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 
 	// make this door/room out of order 10% of the time; only for cube buildings (others need the connectivity), and not for mall or restaurant bathrooms
 	if (is_cube() && !(has_mall() && room.is_ext_basement()) && !is_restaurant() && !is_restroom() && rgen.rand_float() < 0.1) {
-		make_door_out_or_order(room, zval, room_id, br_door_stack_ix);
+		// there may be multiple doors, and they must all have the OOO sign
+		vect_door_stack_t &doorways(get_doorways_for_room(room, zval));
+		for (door_stack_t &ds : doorways) {make_door_out_of_order(room, zval, room_id, ds);}
 		room.set_has_out_of_order(); // flag if any floor is out of order
 	}
 	return 1;

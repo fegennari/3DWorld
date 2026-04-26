@@ -789,10 +789,7 @@ void building_t::add_out_or_order_sign(cube_t const &door_bc, bool dim, bool dir
 	sign.d[dim][ dir] = door_pos + (dir ? 1.0 : -1.0)*0.1*get_wall_thickness(); // extend outward
 	add_sign_outside_door(interior->room_geom->objs, sign, "OUT OF\nORDER", BLACK, room_id, dim, dir, 0); // add_frame=0
 }
-void building_t::make_door_out_or_order(room_t const &room, float zval, unsigned room_id, unsigned door_stack_ix) {
-	assert(interior && door_stack_ix < interior->door_stacks.size());
-	door_stack_t const &ds(interior->door_stacks[door_stack_ix]);
-
+void building_t::make_door_out_of_order(room_t const &room, float zval, unsigned room_id, door_stack_t &ds) {
 	for (unsigned dix = ds.first_door_ix; dix < interior->doors.size(); ++dix) {
 		door_t &door(interior->doors[dix]);
 		if (!ds.is_same_stack(door)) break; // moved to a different stack, done
@@ -803,6 +800,10 @@ void building_t::make_door_out_or_order(room_t const &room, float zval, unsigned
 		add_out_or_order_sign(door.get_true_bcube(), dim, dir, room_id);
 		break; // done
 	} // for dix
+}
+void building_t::make_door_out_of_order(room_t const &room, float zval, unsigned room_id, unsigned door_stack_ix) {
+	assert(interior && door_stack_ix < interior->door_stacks.size());
+	make_door_out_of_order(room, zval, room_id, interior->door_stacks[door_stack_ix]);
 }
 
 city_flag_t create_flag(bool dim, bool dir, point const &base_pt, float height, float length, int flag_id=-1) {
