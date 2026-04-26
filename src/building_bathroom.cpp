@@ -487,6 +487,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 	else {place_area.expand_by(-0.5*wall_thickness);}
 	float const room_width(place_area.get_sz_dim(br_dim));
 	if (room_width < req_depth) return 0; // too narrow
+	cube_t const place_area_uc(place_area); // capture before clipping
 	unsigned br_door_stack_ix(0);
 
 	// check for any stairs or elevators that may partiall overlap a bathroom wall from the adjacent room and avoid them; there should be at most one
@@ -542,7 +543,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 				sink_side = rgen.rand_bool();
 			}
 			else {
-				sink_side = (door_bc.get_center_dim(!br_dim) > room.get_center_dim(!br_dim));
+				sink_side = (door_bc.get_center_dim(!br_dim) > room.get_center_dim(!br_dim)); // side the door is on
 				place_area.d[!br_dim][sink_side] += (sink_side ? -1.0 : 1.0)*(door_bc.get_sz_dim(br_dim) - 0.25*swidth); // add sink clearance for the door to close
 			}
 			sink_side_set = 1;
@@ -778,6 +779,84 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 			if (mirror.is_strictly_normalized()) {mirrors[dir] = room_object_t(mirror, TYPE_MIRROR, room_id, br_dim, !dir, RO_FLAG_NOCOLL, tot_light_amt);}
 			add_poi_dim_dir(sinks_bcube, room_id, br_dim, !dir, 0.75); // dscale=0.75
 		}
+		// add wall items on each side that has sinks
+		float const side_wall_pos(place_area_uc.d[!br_dim][sink_side]), sink_edge(place_area.d[!br_dim][sink_side]);
+		float const z1(zval + max((sheight + 0.15*floor_spacing), 0.5*floor_spacing)); // for paper towel and soap dispensers
+		cube_t gap_area(place_area_uc);
+		gap_area.d[!br_dim][!sink_side] = sink_edge; // ends at edge of sink
+		float const gap_width(gap_area.get_sz_dim(!br_dim));
+		float hd_dist_from_wall(((gap_width > 0.25*floor_spacing) ? 0.3 : 1.0)*slength); // start at sink length (depth) if no gap, less if there's a gap
+
+		if (building_obj_model_loader.is_model_valid(OBJ_MODEL_TOWEL_DISP)) { // paper towel dispenser
+			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TOWEL_DISP)); // D, W, H
+			float const height(0.21*floor_spacing), hwidth(0.5*height*sz.y/sz.z), depth(height*sz.x/sz.z);
+			bool const place_on_sink_wall(gap_width > 3.2*hwidth);
+			cube_t td;
+			set_cube_zvals(td, z1, z1+height);
+			bool td_dim(0), td_dir(0);
+
+			if (place_on_sink_wall) { // have space to place between sink and door wall
+				td_dim = br_dim; td_dir = !dir;
+				td.d[td_dim][!td_dir] = wall_pos;
+				td.d[td_dim][ td_dir] = wall_pos + dir_sign*depth;
+				set_wall_width(td, (side_wall_pos - sink_side_sign*2.0*hwidth), hwidth, !td_dim); // close to side wall
+			}
+			else { // not enough space; try side wall next to door
+				td_dim = !br_dim; td_dir = !sink_side;
+				td.d[td_dim][!td_dir] = side_wall_pos;
+				td.d[td_dim][ td_dir] = side_wall_pos - sink_side_sign*depth;
+				set_wall_width(td, (wall_pos + dir_sign*3.0*hwidth), hwidth, !td_dim); // width from back wall
+			}
+			if (!is_cube_close_to_doorway(td, room, 0.0, 1, 1)) { // inc_open=1, check_open_dir=1
+				objs.emplace_back(td, TYPE_TOWEL_DISP, room_id, td_dim, td_dir, 0, tot_light_amt);
+				if ( place_on_sink_wall) {gap_area.d[!br_dim][!sink_side] = td.d[!br_dim][!sink_side] - sink_side_sign*hwidth;} // shrink gap for soap dispenser placement
+				if (!place_on_sink_wall) {hd_dist_from_wall = 4.0f*hwidth;} // update if placed on side wall (no/small gap case)
+			}
+		}
+		if (building_obj_model_loader.is_model_valid(OBJ_MODEL_SOAP_DISP)) { // soap dispenser
+			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SOAP_DISP)); // D, W, H
+			float const height(0.12*floor_spacing), hwidth(0.5*height*sz.y/sz.z), depth(height*sz.x/sz.z);
+
+			if (gap_area.get_sz_dim(!br_dim) > 3.2*hwidth) { // have space to place between sink and [paper towel dispenser or door wall]
+				bool const sd_dim(br_dim), sd_dir(!dir);
+				cube_t sd;
+				set_cube_zvals(sd, z1, z1+height);
+				sd.d[sd_dim][!sd_dir] = wall_pos;
+				sd.d[sd_dim][ sd_dir] = wall_pos + dir_sign*depth;
+				set_wall_width(sd, (sink_edge + sink_side_sign*2.0*hwidth), hwidth, !sd_dim); // close to sink
+				// it really shouldn't be possible for the soap dispenser to intersect a door or another object; no check needed?
+				objs.emplace_back(sd, TYPE_SOAP_DISP, room_id, sd_dim, sd_dir, 0, tot_light_amt); // nocoll?
+			}
+		}
+		if (building_obj_model_loader.is_model_valid(OBJ_MODEL_HAND_DRYER)) { // hand dryer
+			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_HAND_DRYER)); // D, W, H
+			float const height(0.16*floor_spacing), hwidth(0.5*height*sz.y/sz.z), depth(height*sz.x/sz.z), z1(zval + 0.36*floor_spacing);
+			bool const hd_dim(!br_dim), hd_dir(!sink_side);
+			cube_t hd;
+			set_cube_zvals(hd, z1, z1+height); // below the park restroom window
+			hd.d[hd_dim][!hd_dir] = side_wall_pos;
+			hd.d[hd_dim][ hd_dir] = side_wall_pos - sink_side_sign*depth;
+			set_wall_width(hd, (wall_pos + dir_sign*(hd_dist_from_wall + 3.0*hwidth)), hwidth, !hd_dim);
+
+			if (!is_cube_close_to_doorway(hd, room, 0.0, 1, 1)) { // inc_open=1, check_open_dir=1
+				// try to push closer to the door
+				float const stop_pos(room.get_center_dim(br_dim) - dir_sign*hwidth), step_val(dir_sign*hwidth);
+
+				for (unsigned n = 0; n < 10; ++n) { // up to 10 steps
+					cube_t hd2(hd);
+					hd2.translate_dim(br_dim, step_val);
+					if (hd2.d[br_dim][1] > stop_pos && hd2.d[br_dim][0] < stop_pos) break; // reached stop_pos; done
+					cube_t hd_tc(hd2);
+					hd_tc.expand_in_dim(br_dim, 0.25*hwidth); // extra padding for door frame
+					if (is_cube_close_to_doorway(hd_tc, room, 0.0, 1, 1)) break; // can't step this far
+					hd = hd2; // valid step
+				} // for n
+				objs.emplace_back(hd, TYPE_HAND_DRYER, room_id, hd_dim, hd_dir, 0, tot_light_amt);
+				cube_t hd_blocker(hd); // add a blocker under the hand dryer to avoid placing a trashcan there
+				set_cube_zvals(hd_blocker, hd.z1()-height, hd.z1());
+				objs.emplace_back(hd_blocker, TYPE_BLOCKER, room_id, hd_dim, hd_dir, 0, tot_light_amt);
+			}
+		}
 	} // for dir
 	for (unsigned d = 0; d < 2; ++d) { // each candidate mirror
 		if (mirrors[d].is_all_zeros()) continue;
@@ -785,16 +864,6 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 		objs.push_back(mirrors[d]);
 		set_obj_id(objs); // for crack texture selection/orient
 		room.set_has_mirror();
-	}
-	// add wall items
-	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_TOWEL_DISP)) { // paper towel dispenser
-		// TODO
-	}
-	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_SOAP_DISP)) { // soap dispenser
-		// TODO
-	}
-	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_HAND_DRYER)) { // hand dryer
-		// TODO
 	}
 	// add a large round trashcan; should we not add a smaller trashcan if this is placed?
 	add_corner_trashcans(rgen, room, zval, room_id, tot_light_amt, objs_start, !br_dim, 0); // both_ends=0

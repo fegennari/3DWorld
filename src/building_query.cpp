@@ -2672,6 +2672,11 @@ bool room_object_t::is_vert_cylinder() const {
 	if (type != TYPE_DUCT   && type != TYPE_PIPE)        return 1; // only ducts and pipes can be horizontal cylinders
 	return dir; // duct/pipe encoding for vertical is dim=x, dir=1
 }
+bool room_object_t::is_metal_model() const {
+	if (type == TYPE_SILVER || type == TYPE_KEY || type == TYPE_HANDGUN || type == OBJ_MODEL_HAND_DRYER) return 1; // only really applied to silverware and keys
+	//if (type == TYPE_KITCH_APP || type == TYPE_SURG_TOOLS || type == TYPE_TOWEL_DISP) return 1; // not completely metal, doesn't really work
+	return 0;
+}
 
 bool building_t::is_ground_floor_excluding_retail(float zval) const {
 	if (zval == ground_floor_z1) return 1;

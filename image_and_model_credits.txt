@@ -74,3 +74,6 @@ Milk Carton: https://sketchfab.com/3d-models/super-awesome-milk-carton-9bbcdc63c
 Radiator: https://sketchfab.com/3d-models/old-radiator-8a1a2e0263aa401591c1e87d824a79ef
 Engine radiator: https://sketchfab.com/3d-models/engine-radiator-590a29882e764c368c857ebaba4fd01b
 Surgical Tools: https://sketchfab.com/3d-models/vr-surgical-tool-set-c61f5a8aa3c14ec192428de4b1ad9c42
+Paper Towel Dispenser: https://sketchfab.com/3d-models/towel-dispenser-8c2e6ea787a04578bed2042f3cddd5ff
+Hand Dryer: https://sketchfab.com/3d-models/hand-dryer-clean-9a1e606c238540798c48b0ed79d6325a
+Soap Dispenser: https://sketchfab.com/3d-models/soap-dispenser-e340facc59394713aaff25f10cbdb050
