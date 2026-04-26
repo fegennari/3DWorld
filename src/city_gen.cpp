@@ -3039,14 +3039,15 @@ public:
 	// rcp_mask: 1 bit=residential, 2 bit=commercial, 4 bit=park
 	bool check_inside_city(point const &pos, float radius, unsigned rcp_mask, cube_t *city_bcube) const { // Note: pos is in camera space
 		bool const inc_park(rcp_mask & 4);
-		cube_t query; query.set_from_sphere((pos - get_camera_coord_space_xlate()), radius);
+		point const pos_bs(pos - get_camera_coord_space_xlate());
+		cube_t query; query.set_from_sphere(pos_bs, radius);
 
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {
 			bool const wrong_type(!(rcp_mask & (1 << unsigned(!r->get_is_residential()))));
 			if (wrong_type && !inc_park)     continue;
 			cube_t const &bc(r->get_bcube());
 			if (!bc.contains_cube_xy(query)) continue;
-			if (wrong_type && !r->point_in_park_xy(pos)) continue; // check if in a park
+			if (wrong_type && !r->point_in_park_xy(pos_bs)) continue; // check if in a park
 			if (city_bcube) {*city_bcube = bc;}
 			return 1;
 		} // for r
