@@ -2663,18 +2663,20 @@ bool is_cube_close_to_door(cube_t const &c, float dmin, bool inc_open, cube_t co
 	}
 	return (c.d[dim][0] < door.d[dim][1]+dmin_hi && c.d[dim][1] > door.d[dim][0]-dmin_lo); // within min_dist
 }
+// Note: inc_open is conservative as it doesn't check open_dir or if the door open inward or outward
 bool building_t::is_cube_close_to_exterior_doorway(cube_t const &c, float dmin, bool inc_open) const {
 	for (auto i = doors.begin(); i != doors.end(); ++i) { // test exterior doors
-		bool const is_garage_door(i->type == tquad_with_ix_t::TYPE_GDOOR), check_open(inc_open && !is_garage_door); // garage doors open up, not sideways
+		// only need to check open house doors: garage doors open up, not sideways; rooftop and office doors open outward
+		bool const check_open(inc_open && i->type == tquad_with_ix_t::TYPE_HDOOR);
 		if (is_cube_close_to_door(c, dmin, check_open, i->get_bcube(), 2)) return 1; // check both dirs
 	}
 	return 0;
 }
-// Note: inc_open only applies to interior doors
-bool building_t::is_cube_close_to_doorway(cube_t const &c, cube_t const &room, float dmin, bool inc_open, bool check_open_dir) const {
+// inc_open: 0=closed only, 1=exterior, and interior (with check_open_dir), 2=interior only
+bool building_t::is_cube_close_to_doorway(cube_t const &c, cube_t const &room, float dmin, int inc_open, bool check_open_dir) const {
 	// Note: we want to test this for things like stairs, but exterior doors likely haven't been allocated at this point, so we have to check for that during door placement
-	if (is_cube_close_to_exterior_doorway(c, dmin, inc_open)) return 1;
-	return (interior ? interior->is_cube_close_to_doorway(c, room, dmin, inc_open, check_open_dir) : 0); // test interior doors
+	if (is_cube_close_to_exterior_doorway(c, dmin, (inc_open == 1))) return 1;
+	return (interior ? interior->is_cube_close_to_doorway(c, room, dmin, bool(inc_open), check_open_dir) : 0); // test interior doors
 }
 bool building_interior_t::is_cube_close_to_doorway(cube_t const &c, cube_t const &room, float dmin, bool inc_open, bool check_open_dir) const { // ignores zvals
 	if (door_stacks.empty()) return 0; // single room house with no door?

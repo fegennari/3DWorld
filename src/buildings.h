@@ -2958,7 +2958,7 @@ private:
 	void cut_holes_for_ext_doors(building_draw_t &bdraw, point const &contain_pt, unsigned draw_parts_mask, vect_cube_t const &clamp_cubes=vect_cube_t()) const;
 	bool is_valid_door_pos(cube_t const &door, float door_width, bool dim) const;
 	bool is_cube_close_to_exterior_doorway(cube_t const &c, float dmin=0.0, bool inc_open=0) const;
-	bool is_cube_close_to_doorway(cube_t const &c, cube_t const &room, float dmin=0.0, bool inc_open=0, bool check_open_dir=0) const;
+	bool is_cube_close_to_doorway(cube_t const &c, cube_t const &room, float dmin=0.0, int inc_open=0, bool check_open_dir=0) const;
 	bool is_obj_placement_blocked(cube_t const &c, cube_t const &room, bool inc_open_doors, bool check_open_dir=0, float dmin=0.0) const;
 	bool is_valid_placement_for_room(cube_t const &c, cube_t const &room, vect_cube_t const &blockers, bool inc_open_doors, vector2d const &room_pad=vector2d()) const;
 	bool stairs_or_elevator_blocked_by_nested_room(cube_t const &c, unsigned room_id) const;

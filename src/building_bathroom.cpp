@@ -807,7 +807,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 				td.d[td_dim][ td_dir] = side_wall_pos - sink_side_sign*depth;
 				set_wall_width(td, (wall_pos + dir_sign*3.0*hwidth), hwidth, !td_dim); // width from back wall
 			}
-			if (!is_cube_close_to_doorway(td, room, 0.0, 1, 1)) { // inc_open=1, check_open_dir=1
+			if (!is_cube_close_to_doorway(td, room, 0.0, 2, 1)) { // inc_open=2 (interior only), check_open_dir=1
 				objs.emplace_back(td, TYPE_TOWEL_DISP, room_id, td_dim, td_dir, 0, tot_light_amt);
 				if ( place_on_sink_wall) {gap_area.d[!br_dim][!sink_side] = td.d[!br_dim][!sink_side] - sink_side_sign*hwidth;} // shrink gap for soap dispenser placement
 				if (!place_on_sink_wall) {hd_dist_from_wall = 4.0f*hwidth;} // update if placed on side wall (no/small gap case)
@@ -838,7 +838,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 			hd.d[hd_dim][ hd_dir] = side_wall_pos - sink_side_sign*depth;
 			set_wall_width(hd, (wall_pos + dir_sign*(hd_dist_from_wall + 3.0*hwidth)), hwidth, !hd_dim);
 
-			if (!is_cube_close_to_doorway(hd, room, 0.0, 1, 1)) { // inc_open=1, check_open_dir=1
+			if (!is_cube_close_to_doorway(hd, room, 0.0, 2, 1)) { // inc_open=2 (interior only), check_open_dir=1
 				// try to push closer to the door
 				float const stop_pos(room.get_center_dim(br_dim) - dir_sign*hwidth), step_val(dir_sign*hwidth);
 
@@ -848,7 +848,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 					if (hd2.d[br_dim][1] > stop_pos && hd2.d[br_dim][0] < stop_pos) break; // reached stop_pos; done
 					cube_t hd_tc(hd2);
 					hd_tc.expand_in_dim(br_dim, 0.25*hwidth); // extra padding for door frame
-					if (is_cube_close_to_doorway(hd_tc, room, 0.0, 1, 1)) break; // can't step this far
+					if (is_cube_close_to_doorway(hd_tc, room, 0.0, 2, 1)) break; // can't step this far
 					hd = hd2; // valid step
 				} // for n
 				objs.emplace_back(hd, TYPE_HAND_DRYER, room_id, hd_dim, hd_dir, 0, tot_light_amt);
