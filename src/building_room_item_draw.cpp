@@ -1967,7 +1967,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			if (obj.is_exterior())     continue; // outdoors; no indoor shadow
 			if (player_in_mall && type == TYPE_HANGER) continue; // too small to cast a shadow for lights high above
 			if (player_in_mall && type == TYPE_CLOTHES && !in_camera_room) continue; // optimization for expensive clothing
-			if (type == TYPE_KEY || type == TYPE_SILVER || type == TYPE_FOLD_SHIRT)                 continue; // small
+			if (type == TYPE_KEY || type == TYPE_SILVER || type == TYPE_FOLD_SHIRT || type == TYPE_SURG_TOOLS) continue; // small and flat
 			if (obj.z1() > camera_bs.z || (obj.z2() < two_floors_below && type != TYPE_BLDG_FOUNT)) continue; // above or more than 2 floors below light, except mall fountains
 		}
 		else if (cube_map_ref) {
@@ -1978,7 +1978,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 					type == TYPE_FOLD_SHIRT || type == TYPE_FIRE_EXT || type == TYPE_TOASTER || type == TYPE_LAMP) continue;
 			}
 		}
-		else if ((type == TYPE_SILVER /*|| type == TYPE_FOLD_SHIRT*/) && camera_bs.z < obj.z1()) continue; // not visible from below (except on glass table?)
+		else if ((type == TYPE_SILVER || type == TYPE_SURG_TOOLS /*|| type == TYPE_FOLD_SHIRT*/) && camera_bs.z < obj.z1()) continue; // not visible from below (except on glass table?)
 		point obj_center(obj.get_cube_center());
 
 		if (!shadow_only && !building.is_house && !has_windows && !building.point_in_mall(obj_center)) { // windowless building or parking structure
