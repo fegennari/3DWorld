@@ -572,7 +572,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 					else if (type == TYPE_PICTURE || type == TYPE_TPROLL || type == TYPE_MWAVE || type == TYPE_TV || type == TYPE_MONITOR || type == TYPE_BLINDS ||
 						type == TYPE_SWITCH || type == TYPE_BOOK || type == TYPE_BRK_PANEL || type == TYPE_BREAKER || type == TYPE_ATTIC_DOOR || type == TYPE_OFF_CHAIR ||
 						type == TYPE_WFOUNTAIN || type == TYPE_VENDING || type == TYPE_MED_CAB || type == TYPE_LOCKER || type == TYPE_TCAN || type == TYPE_CASHREG ||
-						type == TYPE_COM_FRIDGE) {keep = 1;}
+						type == TYPE_COM_FRIDGE || type == TYPE_HAND_DRYER) {keep = 1;}
 					else if ((type == TYPE_STOVE || type == TYPE_SHOWER || type == TYPE_SHOWERTUB /*|| type == TYPE_FRIDGE*/) && !i->in_mall()) {keep = 1;} // not in plumbing store
 					else if (type == TYPE_O_SHOWER && i->contains_pt(closest_to)) {keep = 1;} // only if standing inside
 					else if (type == TYPE_LG_BALL && i->has_dstate()) {keep = 1;}
@@ -1041,6 +1041,13 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 	else if (type == TYPE_SHELFRACK) { // expand shelfrack
 		interior->room_geom->expand_object(obj, *this);
 	}
+	else if (type == TYPE_TOWEL_DISP) { // paper towel dispenser
+		// take a paper towel? but that would be for the take key rather than interact key; should taking a paper towel dispenser allow dropping paper towels?
+	}
+	else if (type == TYPE_HAND_DRYER) { // hand dryer
+		gen_sound_thread_safe(SOUND_HAND_DRYER, local_center, 1.0, 1.0, 1.0, 1); // skip_if_already_playing=1
+		sound_scale = 0.5; // very little sound
+	}
 	else if (is_ball_type(type)) { // push the ball
 		assert(obj.has_dstate());
 		interior->room_geom->get_dstate(obj).velocity += 0.5*KICK_VELOCITY*vector3d(int_dir.x, int_dir.y, 0.0);
@@ -1055,7 +1062,10 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		sound_scale = 1.0; // loud sound, but no update of draw data
 		interior->room_geom->modified_by_player = 1;
 	}
-	else {assert(0);} // unhandled type
+	else { // unhandled type
+		cout << "Unhandled interact of object type " << int(type) << endl;
+		assert(0);
+	}
 	if (update_draw_data) {interior->room_geom->update_draw_state_for_room_object(obj, *this, 0);}
 	if (sound_scale > 0.0) {register_building_sound(sound_origin, sound_scale);}
 	if (type == TYPE_BOX) {add_box_contents(obj);} // must be done last to avoid reference invalidation

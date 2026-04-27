@@ -88,7 +88,7 @@ public:
 	}
 
 	// supported: au, wav
-	// not supported: mp3, aif
+	// not supported: mp3, aif, ogg
 	void setup_sounds() {
 
 		cout << endl << "Loading Sounds"; cout.flush();
@@ -173,6 +173,7 @@ public:
 		add_new_sound("alarm.wav"      ); // SOUND_ALARM
 		add_new_sound("scratch.wav"    ); // SOUND_SCRATCH
 		add_new_sound("gunshot2.wav"   ); // SOUND_HANDGUN
+		add_new_sound("hand_dryer.wav" ); // SOUND_HAND_DRYER
 		cout << endl;
 
 		// create sources
