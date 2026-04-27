@@ -1068,6 +1068,11 @@ cube_t get_true_room_obj_bcube(room_object_t const &c) { // for collisions, etc.
 		C.z2() -= 0.2*c.dz(); // shift top down
 		return C;
 	}
+	if (c.type == TYPE_BRSINK) {
+		cube_t C(c);
+		C.z1() += 0.6*c.dz(); // shift bottom up
+		return C;
+	}
 	if (c.type == TYPE_TREE)      {} // bcubes are not a good fit for trees; cube covers the pot and trunk, but not leaves; should not be colliding with leaves anyway
 	if (c.type == TYPE_SHOWERTUB) {return get_shower_tub_wall   (c);} // only the end wall is a collider; the tub handles the bottom (what about curtains?)
 	if (c.type == TYPE_SHELVES  ) {return get_shelves_no_bot_gap(c);}
@@ -2870,7 +2875,7 @@ void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, ve
 	else if (type == TYPE_ATTIC_DOOR) {lg_cubes.push_back(get_true_room_obj_bcube(c));}
 	else if (type == TYPE_CATWALK   ) {lg_cubes.push_back(get_catwalk_bottom(c));}
 	// otherwise, treat as a large object; this includes: TYPE_BCASE, TYPE_KSINK (with dishwasher), TYPE_COUCH, TYPE_COLLIDER (cars)
-	else {lg_cubes.push_back(c);}
+	else {lg_cubes.push_back(get_true_room_obj_bcube(c));}
 }
 
 // interior collision query used for rats, snakes, and insects: p1 and p2 are line end points; radius applies in X and Y, hheight is half height and applies in +/- z
