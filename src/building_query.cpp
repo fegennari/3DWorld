@@ -836,7 +836,8 @@ bool check_ramp_collision(room_object_t const &c, point &pos, float radius, vect
 	return 1;
 }
 
-unsigned get_stall_cubes(room_object_t const &c, cube_t sides[3]) { // {side, side, door}
+unsigned get_stall_cubes(room_object_t const &c, cube_t sides[3]) { // {side, side, [door]}
+	if (c.shape == SHAPE_SHORT) {sides[0] = c; return 1;} // urinal divider
 	sides[0] = sides[1] = sides[2] = c;
 	float const width(c.get_width());
 	sides[0].d[!c.dim][1] -= 0.95*width;
@@ -846,7 +847,7 @@ unsigned get_stall_cubes(room_object_t const &c, cube_t sides[3]) { // {side, si
 }
 // Note: these next two are intended to be called when maybe_inside_room_object() returns true
 bool check_stall_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
-	cube_t sides[3];
+	cube_t sides[3]; // {side, side, [door]}
 	unsigned const num_cubes(get_stall_cubes(c, sides));
 	return check_cubes_collision(sides, num_cubes, pos, p_last, radius, cnorm);
 }
@@ -1385,7 +1386,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 					if (c->is_open()) {player_in_closet |= RO_FLAG_OPEN;} else {register_player_hiding(*c);} // player is hiding if the closet door is closed
 				}
 			}
-			else if (type == TYPE_STALL && maybe_inside_room_object(*c, pos, xy_radius)) {
+			else if (type == TYPE_STALL && c->shape != SHAPE_SHORT && maybe_inside_room_object(*c, pos, xy_radius)) {
 				// stall is open and intersecting player, or player is inside stall; perform collision test with sides only
 				had_coll |= check_stall_collision(*c, pos, p_last, xy_radius, cnorm);
 				if (!c->is_open() && c->contains_pt(pos)) {register_in_closed_bathroom_stall();}
@@ -2832,6 +2833,11 @@ void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, ve
 			}
 		}
 	}
+	else if (type == TYPE_STALL) {
+		cube_t sides[3]; // {side, side, [door]}
+		unsigned const num_cubes(get_stall_cubes(c, sides));
+		lg_cubes.insert(lg_cubes.end(), sides, sides+num_cubes);
+	}
 	else if (type == TYPE_COUCH) {
 		cube_t cubes[4]; // bottom, back, arm, arm
 		lg_cubes.insert(lg_cubes.end(), cubes, cubes+get_couch_cubes(c, cubes));
@@ -3080,7 +3086,12 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 				get_approx_car_cubes(*c, cubes);
 				if (line_int_cubes_exp(p1, p2, cubes, 5, expand)) return 9;
 			}
-			//else if (c->type == TYPE_STALL && maybe_inside_room_object(*c, p2, radius)) {} // is this useful? inside test only applied to end point
+			else if (c->type == TYPE_STALL /*&& maybe_inside_room_object(*c, p2, radius)*/) {
+				if (animal_type == ATYPE_RAT) continue; // rats can fit under stalls
+				cube_t sides[3]; // {side, side, [door]}
+				unsigned const num_cubes(get_stall_cubes(*c, sides));
+				if (line_int_cubes_exp(p1, p2, sides, num_cubes, expand)) return 9;
+			}
 			else {
 				return ((c->type == TYPE_COUNTER || c->type == TYPE_CABINET) ? 11 : 9); // intersection
 			}
