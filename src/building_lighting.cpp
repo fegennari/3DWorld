@@ -694,6 +694,8 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			else if (c->is_tv_or_monitor()  ) {bc.expand_in_dim(dim, -0.3*bc.get_sz_dim(dim));} // reduce thickness
 			else if (type == TYPE_BRSINK    ) {bc.z1() += 0.60*bc.dz();}
 			else if (type == TYPE_ATTIC_DOOR) {bc = get_attic_access_door_cube(*c, 0);} // inc_ladder=0: includes door but not ladder
+			else if (type == TYPE_TOWEL_DISP) {bc.expand_in_z(-0.1*c->dz());}
+			else if (type == TYPE_HAND_DRYER) {bc.d[dim][dir] -= (dir ? 1.0 : -1.0)*0.5*c->get_depth();} // shorten outer edge
 			else {bc = get_true_room_obj_bcube(*c);} // TYPE_CONV_BELT, TYPE_BRSINK, etc.
 			// what about dishwashers and cabinet backsplashes?
 			assert(bc.is_strictly_normalized());
