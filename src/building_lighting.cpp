@@ -508,21 +508,9 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			add_colored_cubes(surfaces,  3, texture_color(MARBLE_TEX        ).modulate_with(LT_GRAY ), cc);
 		}
 		else if (type == TYPE_STALL && c->shape != SHAPE_SHORT) { // bathroom stall - hollow
-			cube_t sides(*c);
-			float const dz(c->dz());
-			// set halfway between sides and door height for simplicity
-			sides.z2() -= 0.365*dz;
-			sides.z1() += 0.165*dz;
-			cube_t inside(sides);
-			inside.expand_by_xy(-0.0125*dz); // shrink by wall thickness
-			subtract_cube_from_cube(sides, inside, temp, 1); // clear_out=1
-			assert(temp.size() == 4); // -y, +y, -x, +x
-			unsigned const front_ix(3 - (2*dim + dir)); // dim|dir:front_ix: 00:3, 01:2, 10:1, 11:0
-
-			for (unsigned n = 0; n < 4; ++n) { // front at dim,!dir
-				if (c->is_open() && n == front_ix) continue; // open front, skip
-				cc.emplace_back(temp[n], color);
-			}
+			cube_t cubes[5]; // {front, front, side, side, [door opening]}
+			unsigned const num_cubes(get_stall_detail_cubes(*c, cubes));
+			add_colored_cubes(cubes, num_cubes, color, cc);
 		}
 		else if (type == TYPE_POOL_TABLE) {
 			cube_t const top(get_pool_table_top_surface(*c));

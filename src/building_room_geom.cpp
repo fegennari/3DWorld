@@ -5477,6 +5477,30 @@ void building_room_geom_t::add_laundry_basket(room_object_t const &c) {
 	else {assert(0);}
 }
 
+unsigned get_stall_detail_cubes(room_object_t const &c, cube_t cubes[5]) { // {front, front, side, side, [door]}
+	if (c.shape == SHAPE_SHORT) {cubes[0] = c; return 1;} // urinal divider
+	bool const dim(c.dim), dir(c.dir);
+	float const dz(c.dz()), wall_thick(0.0125*dz);
+	// limit door width to 0.5*depth to avoid door intersecting toilet
+	float const dwidth_max(0.5*c.get_depth()), frame_thick(max(6.0*wall_thick, 0.5*(c.get_width() - dwidth_max)));
+	cube_t sides(c), front(c);
+	sides.z2() -= 0.35*dz;
+	sides.z1() += 0.15*dz;
+	sides.d[dim][!dir] += (dir ? 1.0 : -1.0)*wall_thick; // shorten for door
+	front.d[dim][ dir] = sides.d[dim][!dir]; // dir points toward the inside of the stall
+	cube_t side1(sides), side2(sides), front1(front), front2(front), door(front);
+	door.z2() -= 0.38*dz;
+	door.z1() += 0.18*dz;
+	side1.d[!dim][1] = side1.d[!dim][0] + wall_thick;
+	side2.d[!dim][0] = side2.d[!dim][1] - wall_thick;
+	door.expand_in_dim(!dim, -frame_thick);
+	front1.d[!dim][1] = door.d[!dim][0];
+	front2.d[!dim][0] = door.d[!dim][1];
+	//if (c.shape == SHAPE_TALL) {} // what about top supports?
+	cubes[0] = front1; cubes[1] = front2; cubes[2] = side1; cubes[3] = side2; cubes[4] = door;
+	return (c.is_open() ? 4U : 5U); // collisions ignore the open door
+}
+
 void building_room_geom_t::add_br_stall(room_object_t const &c, bool inc_lg, bool inc_sm) {
 	bool const dim(c.dim), dir(c.dir), hinge_side(0); // does hinge_side matter?
 
@@ -5539,28 +5563,15 @@ void building_room_geom_t::add_br_stall(room_object_t const &c, bool inc_lg, boo
 		return;
 	}
 	float const dz(c.dz()), wall_thick(0.0125*dz), door_gap(0.3*wall_thick);
-	// limit door width to 0.5*depth to avoid door intersecting toilet
-	float const dwidth_max(0.5*c.get_depth()), frame_thick(max(6.0*wall_thick, 0.5*(c.get_width() - dwidth_max)));
-	cube_t sides(c), front(c);
-	sides.z2() -= 0.35*dz;
-	sides.z1() += 0.15*dz;
-	sides.d[dim][!dir] += (dir ? 1.0 : -1.0)*wall_thick; // shorten for door
-	front.d[dim][ dir] = sides.d[dim][!dir]; // dir points toward the inside of the stall
-	cube_t side1(sides), side2(sides), front1(front), front2(front), door(front);
-	door.z2() -= 0.38*dz;
-	door.z1() += 0.18*dz;
-	side1.d[!dim][1] = side1.d[!dim][0] + wall_thick;
-	side2.d[!dim][0] = side2.d[!dim][1] - wall_thick;
-	door.expand_in_dim(!dim, -frame_thick);
-	front1.d[!dim][1] = door.d[!dim][0];
-	front2.d[!dim][0] = door.d[!dim][1];
-	cube_t const fronts[2] = {front1, front2}, side12[2] = {side1, side2};
+	cube_t cubes[5];
+	get_stall_detail_cubes(c, cubes);
+	cube_t const door_opening(cubes[4]), fronts[2] = {cubes[0], cubes[1]}, side12[2] = {cubes[2], cubes[3]};
 	bool const is_tall(c.shape == SHAPE_TALL);
 	unsigned const side_skip_mask(get_skip_mask_for_xy(dim));
 	unsigned const front_skip_mask(is_tall ? EF_Z1 : EF_Z12); // draw tops if placed in a tall room
 	for (unsigned d = 0; d < 2; ++d) {mat.add_cube_to_verts_untextured(side12[d], color, side_skip_mask );}
 	for (unsigned d = 0; d < 2; ++d) {mat.add_cube_to_verts_untextured(fronts[d], color, front_skip_mask);}
-	cube_t const door_opening(door);
+	cube_t door(door_opening);
 	door.expand_in_dim(!dim, -door_gap);
 
 	if (c.is_open()) { // make the door open

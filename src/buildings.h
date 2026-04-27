@@ -3555,6 +3555,7 @@ void get_bookcase_cubes(room_object_t const &c, cube_t &top, cube_t &middle, cub
 float get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_only, bool inside_only);
 unsigned get_bench_cubes(room_object_t const &c, cube_t cubes[4]);
 void get_diving_board_cubes(room_object_t const &c, cube_t cubes[2]);
+unsigned get_stall_detail_cubes(room_object_t const &c, cube_t cubes[5]);
 unsigned get_shelves_for_object(room_object_t const &c, cube_t shelves[MAX_SHELVES]);
 unsigned get_shelf_rack_cubes(room_object_t const &c, cube_t &back, cube_t &top, cube_t sides[2], cube_t shelves[5]);
 void get_cubicle_parts(room_object_t const &c, cube_t sides[2], cube_t fronts[2], cube_t &back, cube_t surfaces[3]);

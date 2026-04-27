@@ -838,18 +838,17 @@ bool check_ramp_collision(room_object_t const &c, point &pos, float radius, vect
 
 unsigned get_stall_cubes(room_object_t const &c, cube_t sides[3]) { // {side, side, [door]}
 	if (c.shape == SHAPE_SHORT) {sides[0] = c; return 1;} // urinal divider
-	sides[0] = sides[1] = sides[2] = c;
-	float const width(c.get_width());
-	sides[0].d[!c.dim][1] -= 0.95*width;
-	sides[1].d[!c.dim][0] += 0.95*width;
-	if (!c.is_open()) {sides[2].d[c.dim][c.dir] += (c.dir ? -1.0 : 1.0)*0.975*c.get_length();} // include closed door
-	return (c.is_open() ? 2U : 3U);
+	cube_t cubes[5]; // {side, side, [door]} or {front, front, side, side, [door]}
+	unsigned const num_cubes(get_stall_detail_cubes(c, cubes));
+	for (unsigned d = 0; d < 3; ++d) {sides[d] = cubes[d+2];} // skip front
+	return (num_cubes - 2);
 }
+
 // Note: these next two are intended to be called when maybe_inside_room_object() returns true
-bool check_stall_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
-	cube_t sides[3]; // {side, side, [door]}
-	unsigned const num_cubes(get_stall_cubes(c, sides));
-	return check_cubes_collision(sides, num_cubes, pos, p_last, radius, cnorm);
+bool check_stall_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm, bool detailed) {
+	cube_t cubes[5]; // {side, side, [door]} or {front, front, side, side, [door]}
+	unsigned const num_cubes(detailed ? get_stall_detail_cubes(c, cubes) : get_stall_cubes(c, cubes));
+	return check_cubes_collision(cubes, num_cubes, pos, p_last, radius, cnorm);
 }
 bool check_cubicle_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
 	cube_t cubes[8];
@@ -1347,6 +1346,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 				// continue below to check the main gate machine body
 			}
 			if (!sphere_cube_intersect(pos, xy_radius, c_extended)) continue; // optimization
+			bool const is_stall(type == TYPE_STALL && c->shape != SHAPE_SHORT);
 
 			if (type == TYPE_RAILING && !(c->flags & RO_FLAG_IN_POOL)) { // stairs railing, not on a pool
 				// only collide with railing at top of stairs, not when walking under stairs
@@ -1386,9 +1386,9 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 					if (c->is_open()) {player_in_closet |= RO_FLAG_OPEN;} else {register_player_hiding(*c);} // player is hiding if the closet door is closed
 				}
 			}
-			else if (type == TYPE_STALL && c->shape != SHAPE_SHORT && maybe_inside_room_object(*c, pos, xy_radius)) {
+			else if (is_stall && maybe_inside_room_object(*c, pos, xy_radius)) {
 				// stall is open and intersecting player, or player is inside stall; perform collision test with sides only
-				had_coll |= check_stall_collision(*c, pos, p_last, xy_radius, cnorm);
+				had_coll |= check_stall_collision(*c, pos, p_last, xy_radius, cnorm, 0); // detailed=0
 				if (!c->is_open() && c->contains_pt(pos)) {register_in_closed_bathroom_stall();}
 			}
 			else if (type == TYPE_SHOWER && maybe_inside_room_object(*c, pos, xy_radius)) {
@@ -1415,7 +1415,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 				if (type == TYPE_TOILET || (type == TYPE_URINAL && !is_player_model_female())) {player_near_toilet = 1;} // females can't use urinals
 				had_coll = 1;
 			}
-			if ((type == TYPE_STALL || type == TYPE_SHOWER) && !c->is_open() && c->contains_pt(pos)) {register_player_hiding(*c);} // player is hiding in the stall/shower
+			if ((is_stall || type == TYPE_SHOWER) && !c->is_open() && c->contains_pt(pos)) {register_player_hiding(*c);} // player is hiding in the stall/shower
 		} // for c
 	} // end interior->room_geom
 	if (!player_wait_respawn) { // zombies push player, but not when player is dead
@@ -1773,7 +1773,7 @@ bool building_interior_t::check_sphere_coll_room_objects(building_t const &build
 			else if (type == TYPE_VENT_HOOD ) {coll_ret |= check_vent_hood_collision (*c, pos, p_last, radius, &cnorm);}
 			else if (type == TYPE_KITCH_APP ) {coll_ret |= check_com_kitchen_app_collision   (*c, pos, p_last, radius, &cnorm);}
 			else if (type == TYPE_CUBICLE   ) {coll_ret |= (unsigned)check_cubicle_collision (*c, pos, p_last, radius, &cnorm);}
-			else if (type == TYPE_STALL  && maybe_inside_room_object(*c, pos, radius)) {coll_ret |= (unsigned)check_stall_collision (*c, pos, p_last, radius, &cnorm);}
+			else if (type == TYPE_STALL  && c->shape != SHAPE_SHORT) {coll_ret |= (unsigned)check_stall_collision(*c, pos, p_last, radius, &cnorm, 1);} // detailed=1
 			else if (type == TYPE_SHOWER && maybe_inside_room_object(*c, pos, radius)) {coll_ret |= (unsigned)check_shower_collision(*c, pos, p_last, radius, &cnorm);}
 			else {coll_ret |= (unsigned)sphere_cube_int_update_pos(pos, radius, bc, p_last, 0, &cnorm);} // skip_z=0
 		}
@@ -2834,9 +2834,9 @@ void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, ve
 		}
 	}
 	else if (type == TYPE_STALL) {
-		cube_t sides[3]; // {side, side, [door]}
-		unsigned const num_cubes(get_stall_cubes(c, sides));
-		lg_cubes.insert(lg_cubes.end(), sides, sides+num_cubes);
+		cube_t cubes[5]; // {front, front, side, side, [door]}
+		unsigned const num_cubes(get_stall_detail_cubes(c, cubes));
+		lg_cubes.insert(lg_cubes.end(), cubes, cubes+num_cubes);
 	}
 	else if (type == TYPE_COUCH) {
 		cube_t cubes[4]; // bottom, back, arm, arm
@@ -3088,9 +3088,9 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 			}
 			else if (c->type == TYPE_STALL /*&& maybe_inside_room_object(*c, p2, radius)*/) {
 				if (animal_type == ATYPE_RAT) continue; // rats can fit under stalls
-				cube_t sides[3]; // {side, side, [door]}
-				unsigned const num_cubes(get_stall_cubes(*c, sides));
-				if (line_int_cubes_exp(p1, p2, sides, num_cubes, expand)) return 9;
+				cube_t cubes[5]; // {front, front, side, side, [door]}
+				unsigned const num_cubes(get_stall_detail_cubes(*c, cubes));
+				if (line_int_cubes_exp(p1, p2, cubes, num_cubes, expand)) return 9;
 			}
 			else {
 				return ((c->type == TYPE_COUNTER || c->type == TYPE_CABINET) ? 11 : 9); // intersection
