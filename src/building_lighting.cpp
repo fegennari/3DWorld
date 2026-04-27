@@ -1912,7 +1912,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	bool walkway_only(0), same_floor_only(0), same_or_adj_floor_only(0), player_by_ext_door(0), camera_can_see_ext_basement(0), player_can_see_mall(0);
 
 	if (!camera_in_building) {
-		player_by_ext_door  = point_near_ext_door(camera_bs, get_door_open_dist());
+		player_by_ext_door  = point_near_ext_door(camera_bs);
 		player_can_see_mall = player_can_see_in_mall_skylight(xlate);
 		camera_can_see_ext_basement = (interior_visible_from_other_building_ext_basement(xlate, 1) || player_can_see_mall); // expand_for_light=1
 

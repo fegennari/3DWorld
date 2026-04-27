@@ -2590,7 +2590,7 @@ struct building_t : public building_geom_t {
 	void get_parking_struct_ext_walls(vect_cube_with_ix_t &walls, bool exterior_surfaces) const;
 	void player_not_near_building() {register_open_ext_door_state(-1);}
 	int find_ext_door_close_to_point(tquad_with_ix_t &door, point const &pos, float dist) const;
-	bool point_near_ext_door(point const &pos, float dist) const;
+	bool point_near_ext_door(point const &pos, float dist=0.0) const;
 	bool get_building_door_pos_closest_to(point const &target_pos, point &door_pos, bool inc_garage_door, int mf_pref=2) const;
 	cube_t register_deck_and_get_part_bounds(cube_t const &deck);
 	void get_split_int_window_wall_verts(building_draw_t &bdraw_front, building_draw_t &bdraw_back, point const &only_cont_pt_in, bool make_all_front=0) const;

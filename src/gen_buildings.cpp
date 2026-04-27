@@ -5581,7 +5581,7 @@ public:
 					// if player is inside this building, skip occlusion so that objects are visible through windows
 					if (state.skip_cont_camera && !(player_in_basement || player_in_attic) && c.contains_pt(pdu.pos)) {
 						building_t const &bldg(get_building(b.ix));
-						if (bldg.has_int_windows() || bldg.point_near_ext_door((state.pos - state.xlate), get_door_open_dist())) continue;
+						if (bldg.has_int_windows() || bldg.point_near_ext_door((state.pos - state.xlate))) continue;
 					}
 					// skip parking structures because they don't have solid exterior walls
 					if (dist_less_than(pdu.pos, c.closest_pt(pdu.pos), pdu.far_) && pdu.cube_visible(c) && !get_building(b.ix).is_parking()) {state.building_ids.push_back(b);}

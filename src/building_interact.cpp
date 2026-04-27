@@ -379,6 +379,7 @@ int building_t::find_ext_door_close_to_point(tquad_with_ix_t &door, point const 
 }
 bool building_t::point_near_ext_door(point const &pos, float dist) const { // simplified version of above function
 	if (doors.empty()) return 0;
+	if (dist == 0.0) {dist = get_door_open_dist();} // default distance if not specified
 	point const query_pt(get_inv_rot_pos(pos));
 
 	for (auto d = doors.begin(); d != doors.end(); ++d) {

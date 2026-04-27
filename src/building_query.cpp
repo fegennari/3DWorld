@@ -40,7 +40,7 @@ bool building_t::player_can_see_outside() const {
 	bool const in_basement(camera_bs.z < ground_floor_z1);
 	if (is_parking() && !in_basement) return 1; // open walls
 
-	if (!has_int_windows()) { // no windows looking out
+	if (!has_int_windows() || (is_restroom() && !point_near_ext_door(camera_bs))) { // no windows looking out, or restroom with block windows
 		if (building_has_open_ext_door && !doors.empty()) { // maybe can see out a door
 			// maybe can see out open door on first floor or a walkway
 			if (have_walkway_ext_door || (camera_pos.z < (ground_floor_z1 + floor_spacing) && !in_basement)) {
@@ -1515,7 +1515,7 @@ bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &
 
 	if (pos.z > ground_floor_z1 && (pos.z < ground_floor_z1 + floor_spacing || !walkways.empty())) { // on the ground floor or have walkways
 		// handle windowless office building open exterior doors; we don't really have a floor zval to pass into the first query
-		if (is_room_adjacent_to_ext_door(room) && point_near_ext_door(pos, get_door_open_dist())) return 0;
+		if (is_room_adjacent_to_ext_door(room) && point_near_ext_door(pos)) return 0;
 	}
 	// check if all lights are off
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
