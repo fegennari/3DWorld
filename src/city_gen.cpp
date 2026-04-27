@@ -28,6 +28,7 @@ extern int rand_gen_index, display_mode, animate2, draw_model, player_in_basemen
 extern unsigned shadow_map_sz, cur_display_iter;
 extern float cobj_z_bias, rain_wetness, NEAR_CLIP;
 extern vector3d wind;
+extern vector4d clip_plane;
 extern building_params_t global_building_params;
 extern object_model_loader_t building_obj_model_loader;
 extern vector<light_source> dl_sources;
@@ -89,7 +90,8 @@ void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights
 	// use texgen mode 6 instead for cylinder buildings
 	int const use_texgen_val(use_texgen ? (use_texgen + 4) : 0);
 	bool const keep_alpha = 1; // required for fog on windows
-	bool const use_mvm(use_dlights || indir_lighting || enable_dirt || enable_foam || enable_int_reflect);
+	bool const use_clip_plane(clip_plane != vector4d());
+	bool const use_mvm(use_dlights || indir_lighting || enable_dirt || enable_foam || enable_int_reflect || use_clip_plane);
 	setup_smoke_shaders(s, min_alpha, use_texgen_val, keep_alpha, indir_lighting, 1, use_dlights, 0, 0, ((use_smap == 1) ? 2 : 0),
 		use_bmap, 0, use_mvm, force_tsl, 0.0, 0.0, 0, (enable_int_reflect ? 2 : 0), is_outside); // use_spec_map=0
 	set_city_lighting_shader_opts(s, lights_bcube, use_dlights, (use_smap != 0), pcf_scale);
