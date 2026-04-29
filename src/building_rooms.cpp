@@ -193,7 +193,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	room_geom.obj_scale = window_vspacing; // used to scale room object textures
 	room_geom.orig_assigned_rooms.reserve(rooms.size());
 	//room_geom.has_computers = (is_house || is_office_bldg() || is_school() || is_hospital() || is_police_stat());
-	unsigned tot_num_rooms(0), num_bathrooms(0), num_bedrooms(0), num_storage_rooms(0);
+	unsigned tot_num_rooms(0), num_bathrooms(0), num_bathroom_rooms(0), num_bedrooms(0), num_storage_rooms(0);
 	
 	for (room_t &r : rooms) {
 		tot_num_rooms += calc_num_floors_room(r, window_vspacing, floor_thickness);
@@ -395,7 +395,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		r->light_intensity = light_val*light_val/r->get_area_xy(); // average for room, unitless; light surface area divided by room surface area with some fudge constant
 		cube_t light;
 		set_light_xy(light, room_center, light_size, room_dim, light_shape, square_light);
-		bool added_bathroom(0), is_numbered_room(0);
+		bool room_had_bathroom(0), is_numbered_room(0);
 		float z(r->z1());
 		if (!r->interior) {r->interior = (is_basement || is_room_windowless(*r));} // AKA windowless; calculate if not already set
 		bool const has_window(!r->interior), is_secret(r->is_secret_room());
@@ -431,7 +431,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			bool const floor_will_alias(num_floors > NUM_RTYPE_SLOTS && f+1 >= NUM_RTYPE_SLOTS); // this floor will alias with later floors in room type assignment
 			unsigned const floor_objs_start(objs.size()); // needed for backrooms lights and mall stores
 			unsigned pillars_start(0); // needed for mall lights
-			bool is_lit(0), light_dim(room_dim), wall_light(0), has_stairs(has_stairs_this_floor), top_of_stairs(has_stairs && top_floor);
+			bool is_lit(0), added_bathroom(0), light_dim(room_dim), wall_light(0), has_stairs(has_stairs_this_floor), top_of_stairs(has_stairs && top_floor);
 			float light_delta_z(0.0);
 			cube_t div_wall;
 			vect_cube_t rooms_to_light;
@@ -754,7 +754,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			}
 			//if (has_stairs && has_pri_hall()) continue; // no other geometry in office building base part rooms that have stairs
 			// must be a BR if cand bathroom, and BR not already placed; applies to all floors of this room; if multi-family, we check for a BR prev placed on this floor
-			bool const must_be_bathroom(room_id == cand_bathroom && (multi_family ? !(added_bath_mask & floor_mask) : (num_bathrooms == 0)));
+			bool const must_be_bathroom(room_id == cand_bathroom && (multi_family ? !(added_bath_mask & floor_mask) :
+				(num_bathrooms == 0 || (num_bathroom_rooms == 0 && num_bedrooms > 0)))); // if no bedroom was placed, allow a bathroom on only one floor
 			bool const is_tall_room(r->has_tall_ceil(window_vspacing));
 			bool added_tc(0), added_desk(0), added_obj(0), can_place_onto(0), no_whiteboard(0), no_plants(0), no_trashcan(0), is_laundry(0), is_bathroom(0), is_bedroom(0);
 			bool is_kitchen(0), is_living(0), is_dining(0), is_storage(0), is_utility(0), is_machine(0), is_play_art(0), is_library(0), is_inter(0), is_jail(0);
@@ -937,7 +938,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			if (!added_obj && allow_br && !is_tall_room && !has_walkway && !floor_will_alias && can_be_bedroom_or_bathroom(*r, f)) {
 				// Note: num_bedrooms is summed across all floors, while num_bathrooms is per-floor
 				// Note: min_br is applied to bedrooms, but could be applied to bathrooms in the same way
-				bool const pref_sec_bath(is_house && num_bathrooms == 1 && num_bedrooms > min_br && rooms.size() >= 6 && !must_be_bathroom && !has_fireplace && can_be_bathroom(*r));
+				bool const pref_sec_bath(is_house && num_bathroom_rooms == 1 && num_bedrooms > min_br && rooms.size() >= 6 && !must_be_bathroom && !has_fireplace && can_be_bathroom(*r));
 				float const bedroom_prob(pref_sec_bath ? 0.25 : 0.75), bathroom_prob((pref_sec_bath ? 2.0 : 1.0)*extra_bathroom_prob);
 				// place a bedroom 75% of the time unless this must be a bathroom; if we got to the second floor and haven't placed a bedroom, always place it;
 				// houses only, and must have a window (exterior wall)
@@ -950,7 +951,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					if (is_bedroom) {r->assign_to(RTYPE_BED, f);}
 					num_bedrooms += is_bedroom;
 				}
-				if (!added_obj && !has_fireplace && (must_be_bathroom || (can_be_bathroom(*r) && (num_bathrooms == 0 || rgen.rand_float() < bathroom_prob)))) {
+				if (!added_obj && !has_fireplace && (must_be_bathroom || (can_be_bathroom(*r) && (num_bathroom_rooms == 0 || rgen.rand_float() < bathroom_prob)))) {
 					// bathrooms can be in both houses and office buildings
 					bool const add_shower_tub(is_residential()); // residential buildings have showers and/or tubs; office buildings have only toilets and sinks
 					added_obj = is_bathroom = add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt,
@@ -1283,9 +1284,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			}
 			if (has_stairs_this_floor && r->get_room_type(f) == RTYPE_NOTSET) {r->assign_to(RTYPE_STAIRS, f);} // default to stairs if not set above
 			if (is_bathroom) {added_bath_mask |= floor_mask;}
+			if (added_bathroom) {room_had_bathroom = 1; ++num_bathrooms;} // counted per-floor
 		} // for f (floor)
-		if (added_bathroom  ) {++num_bathrooms      ;}
-		if (is_numbered_room) {++numbered_rooms_seen;}
+		if (room_had_bathroom) {++num_bathroom_rooms;}
+		if (is_numbered_room ) {++numbered_rooms_seen;}
 
 		if (r->interior) { // tag objects as interior if room is interior
 			for (auto i = objs.begin() + room_objs_start; i != objs.end(); ++i) {i->flags |= RO_FLAG_INTERIOR;}
