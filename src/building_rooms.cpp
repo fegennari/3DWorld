@@ -1293,6 +1293,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			for (auto i = objs.begin() + room_objs_start; i != objs.end(); ++i) {i->flags |= RO_FLAG_INTERIOR;}
 		}
 	} // for r (room)
+	if (is_house && num_bedrooms == 0) {reassign_room_as_bedroom(rgen, light_ix_assign, num_bathrooms);} // attempt to place at least one bedroom in each house
 #if 0
 	vector<room_t> const &r1(interior->prev_rooms), &r2(rooms);
 	vect_room_object_t const &o1(interior->prev_objs), &o2(objs);
@@ -1387,6 +1388,28 @@ void building_interior_t::assign_master_bedroom(float window_vspacing, float flo
 		}
 	} // for r
 	if (best_area > 0) {rooms[master_br].assign_to(RTYPE_MASTER_BED, mbr_floor);}
+}
+
+void building_interior_t::remove_objects_in_room(unsigned room_id, unsigned objs_end_ix, float z1, float z2) {
+	assert(room_id < rooms.size());
+	assert(room_geom);
+	auto &objs(room_geom->objs);
+	assert(objs_end_ix <= objs.size());
+	// assumes objects were added in room order, we haven't already removed and re-added objects for this room, and the player hasn't moved anything yet
+	auto objs_end(objs.begin() + objs_end_ix); // let the caller pass in objs_end_ix because we don't know if room_geom->buttons_start was set yet
+	room_object_t ref;
+	ref.room_id = room_id; // that's all we need to set
+	auto i(lower_bound(objs.begin(), objs_end, ref, [](room_object_t const &a, room_object_t const &b) {return (a.room_id < b.room_id);}));
+	if (i == objs_end) return; // no objects for this room; error?
+
+	for (; i != objs_end; ++i) {
+		if (i->room_id < room_id) continue; // wrong room; should not occur with lower_bound() unless something is out of order
+		if (i->room_id > room_id) break; // done with this room
+		if (i->z2() < z1 || i->z2() >= z2) continue; // not in Z-range using bottom edge
+		if (i->type == TYPE_LIGHT) continue; // lights can (must?) stay as they're mostly placed independent of room type
+		//if (i->type == TYPE_OUTLET || i->type == TYPE_SWITCH) continue; // what about wall outlets and light switches?
+		i->remove(); // make it a blocker; can't actually remove as this will break indexing, and can't reuse this obj slot as it will break room sort order
+	} // for i
 }
 
 // *** Exterior Objects - not really room objects ***
@@ -3893,12 +3916,12 @@ void room_assignment_t::assign_all_to(room_type rt, bool locked) {
 	for (unsigned n = 0; n < NUM_RTYPE_SLOTS; ++n) {rtype[n] = rt;}
 	if (locked) {rtype_locked = ALL_RTYPES_MASK;} // room type is locked on all floors
 }
-void room_assignment_t::assign_to(room_type rt, unsigned floor, bool locked) {
+void room_assignment_t::assign_to(room_type rt, unsigned floor, bool locked, bool force) {
 	assert(!(locked && rt == RTYPE_NOTSET));
 	// room types are only tracked up to the 8th floor, and every floor above that has the same type as the 8th floor; good enough for houses at least
 	floor = wrap_room_floor(floor);
-	// assign unless already set to a bathroom, unless we're refining the bathroom type to men's or women's
-	if (is_bathroom(rtype[floor]) && !is_bathroom(rt)) return;
+	// assign unless already set to a bathroom, unless we're refining the bathroom type to men's or women's, or unless forced
+	if (!force && is_bathroom(rtype[floor]) && !is_bathroom(rt)) return;
 	rtype[floor] = rt;
 	if (locked) {rtype_locked |= (1 << floor);} // lock this floor
 }

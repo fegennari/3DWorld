@@ -1413,6 +1413,62 @@ bool building_t::add_closet_to_room(rand_gen_t &rgen, room_t const &room, float 
 	return 0; // failed
 }
 
+struct room_cand_t {
+	unsigned room_id, floor_id;
+	float xy_area;
+	room_cand_t(unsigned r, unsigned f, float a) : room_id(r), floor_id(f), xy_area(a) {}
+	// prefer larger area, or higher floor if tied
+	bool operator<(room_cand_t const &c) const {return ((xy_area == c.xy_area) ? (floor_id > c.floor_id) : (xy_area > c.xy_area));}
+};
+
+bool building_t::reassign_room_as_bedroom(rand_gen_t rgen, light_ix_assign_t &light_ix_assign, unsigned num_bathrooms) {
+	assert(has_room_geom());
+	float const floor_spacing(get_window_vspace()), fc_thick(get_fc_thickness());
+	vector<room_cand_t> cands;
+
+	for (unsigned r = 0; r < interior->rooms.size(); ++r) {
+		room_t const &room(interior->rooms[r]);
+		if (room.interior || room.z1() < ground_floor_z1) continue; // no windows or basement
+		unsigned const num_floors(calc_num_floors_room(room, floor_spacing, 2.0*fc_thick));
+
+		for (unsigned f = 0; f < num_floors; ++f) {
+			room_type const rtype(room.get_room_type(f));
+			if (num_bathrooms == 1 && is_bathroom(rtype)) continue; // don't make the only bathroom a bedroom
+			if (!can_be_bedroom_or_bathroom(room, f))     continue;
+			cands.emplace_back(r, f, room.get_area_xy());
+		}
+	} // for r
+	//cout << TXT(cands.size()) << endl; // TESTING
+	if (cands.empty()) return 0;
+	sort(cands.begin(), cands.end());
+	unsigned const objs_start(interior->room_geom->objs.size());
+	colorRGBA const &chair_color(chair_colors[rgen.rand() % NUM_CHAIR_COLORS]);
+	vect_cube_t blockers;
+
+	for (room_cand_t const &c : cands) {
+		room_t &room(get_room(c.room_id));
+		//cout << TXTS(room) << endl; // TESTING
+		float const z1(room.z1() + c.floor_id*floor_spacing), z2(z1 + floor_spacing), zval(z1 + fc_thick);
+		assert(z2 < room.z2() + fc_thick); // floor within room range, with some added padding
+		bool const is_lit(room.is_lit_on_floor(c.floor_id));
+		float light_amt(floor_spacing*room.get_light_amt()); // assuming not in basement
+		if (is_lit) {light_amt += room.light_intensity;}
+		if (!add_bedroom_objs(rgen, room, blockers, chair_color, zval, c.room_id, c.floor_id, light_amt, objs_start, is_lit, 0, 1, light_ix_assign)) continue; // is_basement=0, force=1
+		interior->remove_objects_in_room(c.room_id, objs_start, z1, z2); // only remove objects from old room if valid placement, and don't remove newly added objects
+		//cout << "added" << endl; // TESTING
+		room.assign_to(RTYPE_BED, c.floor_id, 0, 1); // locked=0, force=1
+		bool const is_ground_floor(room.z1() == ground_floor_z1 && c.floor_id == 0);
+		add_outlets_to_room       (rgen, room, zval, c.room_id, objs_start, is_ground_floor, 0);
+		add_light_switches_to_room(rgen, room, zval, c.room_id, objs_start, is_ground_floor, 0, is_lit);
+		add_ceil_vent_to_room     (rgen, room, zval, c.room_id, objs_start); // house vents; we can't easily avoid lights here
+		hang_pictures_whiteboard_chalkboard_in_room(rgen, room, zval, c.room_id, light_amt, objs_start, c.floor_id, 0);
+		add_trashcan_to_room      (rgen, room, zval, c.room_id, light_amt, objs_start, 0); // check_last_obj=0
+		add_floor_clutter_objs    (rgen, room, zval, c.room_id, light_amt, objs_start);
+		return 1;
+	} // for c
+	return 0; // failed
+}
+
 void building_t::place_shirt_pants_on_floor(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt,
 	cube_t const &place_area, unsigned objs_start, unsigned type)
 {

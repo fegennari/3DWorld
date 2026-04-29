@@ -1202,7 +1202,7 @@ protected:
 	room_type rtype[NUM_RTYPE_SLOTS]={}; // this applies to the first N floors because some rooms can have variable per-floor assignment
 public:
 	void assign_all_to(room_type rt, bool locked=1); // locked by default
-	void assign_to(room_type rt, unsigned floor, bool locked=0); // unlocked by default
+	void assign_to(room_type rt, unsigned floor, bool locked=0, bool force=0); // unlocked by default
 	void clear_room_type(unsigned floor);
 	room_type get_room_type (unsigned floor) const {return rtype[wrap_room_floor(floor)];}
 	bool     has_room_of_type  (room_type type) const;
@@ -2234,6 +2234,7 @@ struct building_interior_t {
 	bool cube_in_ext_basement_room(cube_t const &c, bool xy_only) const;
 	door_t const &get_ext_basement_door() const;
 	void assign_master_bedroom(float window_vspacing, float floor_thickness);
+	void remove_objects_in_room(unsigned room_id, unsigned objs_end_ix, float z1, float z2);
 	void assign_door_conn_rooms(unsigned start_ds_ix=0);
 	breaker_zone_t get_circuit_breaker_info(unsigned zone_id, unsigned num_zones, float floor_spacing) const;
 	void connect_and_add_tunnel_seg(tunnel_seg_t &parent, point const &conn_pt, bool parent_conn_dir, bool child_conn_dir, float gate_dist_from_end);
@@ -3030,6 +3031,7 @@ private:
 	void maybe_add_radiator_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	bool add_bedroom_objs    (rand_gen_t rgen, room_t &room, vect_cube_t &blockers, colorRGBA const &chair_color, float zval, unsigned room_id, unsigned floor,
 		float tot_light_amt, unsigned objs_start, bool room_is_lit, bool is_basement, bool force, light_ix_assign_t &light_ix_assign, int cand_bath=-1);
+	bool reassign_room_as_bedroom(rand_gen_t rgen, light_ix_assign_t &light_ix_assign, unsigned num_bathrooms);
 	bool add_closet_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start,
 		unsigned room_type, unsigned bed_obj_ix, float front_clearance, unsigned &closet_obj_id, light_ix_assign_t &light_ix_assign);
 	void place_shirt_pants_on_floor(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt,
