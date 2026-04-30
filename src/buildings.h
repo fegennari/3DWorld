@@ -2234,7 +2234,7 @@ struct building_interior_t {
 	bool cube_in_ext_basement_room(cube_t const &c, bool xy_only) const;
 	door_t const &get_ext_basement_door() const;
 	void assign_master_bedroom(float window_vspacing, float floor_thickness);
-	void remove_objects_in_room(unsigned room_id, unsigned objs_end_ix, float z1, float z2);
+	void remove_objects_in_room(unsigned room_id, unsigned objs_end_ix, float z1, float z2, vect_cube_t &lights_bcubes);
 	void assign_door_conn_rooms(unsigned start_ds_ix=0);
 	breaker_zone_t get_circuit_breaker_info(unsigned zone_id, unsigned num_zones, float floor_spacing) const;
 	void connect_and_add_tunnel_seg(tunnel_seg_t &parent, point const &conn_pt, bool parent_conn_dir, bool child_conn_dir, float gate_dist_from_end);

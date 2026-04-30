@@ -1390,7 +1390,7 @@ void building_interior_t::assign_master_bedroom(float window_vspacing, float flo
 	if (best_area > 0) {rooms[master_br].assign_to(RTYPE_MASTER_BED, mbr_floor);}
 }
 
-void building_interior_t::remove_objects_in_room(unsigned room_id, unsigned objs_end_ix, float z1, float z2) {
+void building_interior_t::remove_objects_in_room(unsigned room_id, unsigned objs_end_ix, float z1, float z2, vect_cube_t &lights_bcubes) {
 	assert(room_id < rooms.size());
 	assert(room_geom);
 	auto &objs(room_geom->objs);
@@ -1406,7 +1406,10 @@ void building_interior_t::remove_objects_in_room(unsigned room_id, unsigned objs
 		if (i->room_id < room_id) continue; // wrong room; should not occur with lower_bound() unless something is out of order
 		if (i->room_id > room_id) break; // done with this room
 		if (i->z2() < z1 || i->z2() >= z2) continue; // not in Z-range using bottom edge
-		if (i->type == TYPE_LIGHT) continue; // lights can (must?) stay as they're mostly placed independent of room type
+		if (i->type == TYPE_LIGHT) {
+			lights_bcubes.push_back(*i); // record so that it can be used as a blocker when placing other objects on the ceiling
+			continue; // lights can (must?) stay as they're mostly placed independent of room type
+		}
 		//if (i->type == TYPE_OUTLET || i->type == TYPE_SWITCH) continue; // what about wall outlets and light switches?
 		i->remove(); // make it a blocker; can't actually remove as this will break indexing, and can't reuse this obj slot as it will break room sort order
 	} // for i

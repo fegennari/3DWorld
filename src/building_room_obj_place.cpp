@@ -1438,29 +1438,28 @@ bool building_t::reassign_room_as_bedroom(rand_gen_t rgen, light_ix_assign_t &li
 			cands.emplace_back(r, f, room.get_area_xy());
 		}
 	} // for r
-	//cout << TXT(cands.size()) << endl; // TESTING
 	if (cands.empty()) return 0;
 	sort(cands.begin(), cands.end());
 	unsigned const objs_start(interior->room_geom->objs.size());
 	colorRGBA const &chair_color(chair_colors[rgen.rand() % NUM_CHAIR_COLORS]);
-	vect_cube_t blockers;
+	vect_cube_t blockers, lights_bcubes;
 
 	for (room_cand_t const &c : cands) {
 		room_t &room(get_room(c.room_id));
-		//cout << TXTS(room) << endl; // TESTING
 		float const z1(room.z1() + c.floor_id*floor_spacing), z2(z1 + floor_spacing), zval(z1 + fc_thick);
 		assert(z2 < room.z2() + fc_thick); // floor within room range, with some added padding
 		bool const is_lit(room.is_lit_on_floor(c.floor_id));
 		float light_amt(floor_spacing*room.get_light_amt()); // assuming not in basement
 		if (is_lit) {light_amt += room.light_intensity;}
 		if (!add_bedroom_objs(rgen, room, blockers, chair_color, zval, c.room_id, c.floor_id, light_amt, objs_start, is_lit, 0, 1, light_ix_assign)) continue; // is_basement=0, force=1
-		interior->remove_objects_in_room(c.room_id, objs_start, z1, z2); // only remove objects from old room if valid placement, and don't remove newly added objects
-		//cout << "added" << endl; // TESTING
+		interior->remove_objects_in_room(c.room_id, objs_start, z1, z2, lights_bcubes); // only remove objects from old room if valid placement, and don't remove newly added objects
 		room.assign_to(RTYPE_BED, c.floor_id, 0, 1); // locked=0, force=1
+		// add lights as blockers so that we don't place house vents over them
+		for (cube_t const &l : lights_bcubes) {interior->room_geom->objs.emplace_back(l, TYPE_BLOCKER, c.room_id, 0, 0, RO_FLAG_NOCOLL, light_amt);}
 		bool const is_ground_floor(room.z1() == ground_floor_z1 && c.floor_id == 0);
 		add_outlets_to_room       (rgen, room, zval, c.room_id, objs_start, is_ground_floor, 0);
 		add_light_switches_to_room(rgen, room, zval, c.room_id, objs_start, is_ground_floor, 0, is_lit);
-		add_ceil_vent_to_room     (rgen, room, zval, c.room_id, objs_start); // house vents; we can't easily avoid lights here
+		add_ceil_vent_to_room     (rgen, room, zval, c.room_id, objs_start); // house vents
 		hang_pictures_whiteboard_chalkboard_in_room(rgen, room, zval, c.room_id, light_amt, objs_start, c.floor_id, 0);
 		add_trashcan_to_room      (rgen, room, zval, c.room_id, light_amt, objs_start, 0); // check_last_obj=0
 		add_floor_clutter_objs    (rgen, room, zval, c.room_id, light_amt, objs_start);
