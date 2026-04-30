@@ -982,12 +982,12 @@ void building_t::gen_interior_int(rand_gen_t &rgen, unsigned gen_index, bool has
 				split_cube_t const c(to_split.back()); // Note: non-const because door_lo/door_hi is modified during T-junction insert
 				to_split.pop_back();
 				vector3d const csz(c.get_size());
-				bool wall_dim(0); // which dim the room is split by
+				bool wall_dim(0), can_use_either_dim(0); // which dim the room is split by
 				if      (csz.y > min_wall_len2 && csz.x > 1.25*csz.y) {wall_dim = 0;} // split long room in x
 				else if (csz.x > min_wall_len2 && csz.y > 1.25*csz.x) {wall_dim = 1;} // split long room in y
-				else {wall_dim = rgen.rand_bool();} // choose a random split dim for nearly square rooms
+				else {wall_dim = rgen.rand_bool(); can_use_either_dim = 1;} // choose a random split dim for nearly square rooms
 
-				if (min(csz.x, csz.y) < min_wall_len2) {
+				if (csz[wall_dim] < min_wall_len2) {
 					add_room(c, part_id, 1);
 					continue; // not enough space to add a wall
 				}
@@ -1053,38 +1053,44 @@ void building_t::gen_interior_int(rand_gen_t &rgen, unsigned gen_index, bool has
 					}
 				} // end whirl pattern
 				float const min_dist_abs(1.5*doorway_width + wall_thick);
-				bool const on_edge(c.d[!wall_dim][0] == p->d[!wall_dim][0] || c.d[!wall_dim][1] == p->d[!wall_dim][1]); // at edge of the building - walls don't intersect windows
 				// create a wall to split up this room
 				// what about allowing adjacent rooms not separated by a wall?
 				// this would work for connected public rooms (living, dining, kitchen), but would limit our ability to later assign these rooms as bed, bath, etc.
 				float wall_pos(0.0), min_dist_param(0.25);
-				bool pos_valid(0);
+				bool pos_valid(0), on_edge(0);
 				cube_t wall, wall2; // copy from cube; shared zvals, but X/Y will be overwritten per wall
+				unsigned const num_dim_passes(can_use_either_dim ? 2 : 1);
 
-				for (unsigned num = 0; num < 20; ++num) { // 20 tries to choose a wall pos that's not inside a window or skylight or intersecting a wall
-					wall_pos = cube_rand_side_pos(c, wall_dim, min_dist_param, min_dist_abs, rgen, 0); // for_door=0
-					if (on_edge && is_val_inside_window(*p, wall_dim, wall_pos, window_hspacing[wall_dim], window_border)) continue; // try a new wall_pos
-					if (c.bad_pos(wall_pos, wall_dim)) continue; // intersects doorway from prev wall, try a new wall_pos
-					wall = c;
-					create_wall(wall, wall_dim, wall_pos, fc_thick, wall_half_thick, wall_edge_spacing);
+				for (unsigned dim_pass = 0; dim_pass < num_dim_passes; ++dim_pass) { // if room is near square and can't split in one dim, can try the other dim
+					on_edge = (c.d[!wall_dim][0] == p->d[!wall_dim][0] || c.d[!wall_dim][1] == p->d[!wall_dim][1]); // at edge of the building - walls don't intersect windows
+
+					for (unsigned num = 0; num < 20; ++num) { // 20 tries to choose a wall pos that's not inside a window or skylight or intersecting a wall
+						wall_pos = cube_rand_side_pos(c, wall_dim, min_dist_param, min_dist_abs, rgen, 0); // for_door=0
+						if (on_edge && is_val_inside_window(*p, wall_dim, wall_pos, window_hspacing[wall_dim], window_border)) continue; // try a new wall_pos
+						if (c.bad_pos(wall_pos, wall_dim)) continue; // intersects doorway from prev wall, try a new wall_pos
+						wall = c;
+						create_wall(wall, wall_dim, wall_pos, fc_thick, wall_half_thick, wall_edge_spacing);
 					
-					if (has_bcube_int_xy(wall, part_skylights)) { // check for skylight intersection
-						if (num >= 10 && min_dist_param > 0.1) {min_dist_param -= 0.05;} // allow walls further from the center to avoid the skylight
-						continue;
-					}
-					pos_valid = 1;
-
-					if (added_whirl) { // check for wall intersection with center room door of whirl
-						cube_t test_cube(wall);
-						test_cube.expand_by_xy(wall_thick);
-
-						for (auto ds = interior->door_stacks.begin()+ds_start; ds != interior->door_stacks.end(); ++ds) {
-							if (ds->get_true_bcube().intersects(test_cube)) {pos_valid = 0; break;}
+						if (has_bcube_int_xy(wall, part_skylights)) { // check for skylight intersection
+							if (num >= 10 && min_dist_param > 0.1) {min_dist_param -= 0.05;} // allow walls further from the center to avoid the skylight
+							continue;
 						}
-					}
-					if (pos_valid) break; // done, keep wall_pos
-				} // for num
-				if (!pos_valid) { // no valid pos, skip this split
+						pos_valid = 1;
+
+						if (added_whirl) { // check for wall intersection with center room door of whirl
+							cube_t test_cube(wall);
+							test_cube.expand_by_xy(wall_thick);
+
+							for (auto ds = interior->door_stacks.begin()+ds_start; ds != interior->door_stacks.end(); ++ds) {
+								if (ds->get_true_bcube().intersects(test_cube)) {pos_valid = 0; break;}
+							}
+						}
+						if (pos_valid) break; // done, keep wall_pos
+					} // for num
+					if (pos_valid) break; // success
+					wall_dim ^= 1; // try the other split dim
+				} // for dim_pass
+				if (!pos_valid) { // no valid pos in either dim, skip this split
 					add_room(c, part_id, 1);
 					continue;
 				}
@@ -1139,14 +1145,15 @@ void building_t::gen_interior_int(rand_gen_t &rgen, unsigned gen_index, bool has
 					}
 				}
 				// split into two smaller rooms; ensure we can split at least once per dim
-				bool const do_split(csz[wall_dim] > min(min_split_len, max(min_wall_len, 0.9f*bcube.get_sz_dim(wall_dim))));
+				bool const do_split(csz[!wall_dim] > min(min_split_len, max(min_wall_len, 0.9f*bcube.get_sz_dim(!wall_dim))));
 
 				for (unsigned d = 0; d < 2; ++d) { // still have space to split in other dim, add the two parts to the stack
 					split_cube_t c_sub(c);
 					c_sub.d[wall_dim][d] = wall.d[wall_dim][!d]; // clip to wall pos
 					c_sub.door_lo[!wall_dim][d] = door_lo[!d] - wall_half_thick; // set new door pos in this dim (keep door pos in other dim, if set)
 					c_sub.door_hi[!wall_dim][d] = door_hi[!d] + wall_half_thick;
-					if (do_split) {to_split.push_back(c_sub);} else {add_room(c_sub, part_id, 1);} // leaf case (unsplit), add a new room
+					if (do_split) {to_split.push_back(c_sub);}
+					else {add_room(c_sub, part_id, 1);} // leaf case (unsplit), add a new room
 				}
 				is_first_split = 0;
 			} // end while()
