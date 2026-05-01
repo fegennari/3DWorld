@@ -839,7 +839,7 @@ park_water_fountain_t::park_water_fountain_t(point const &pos_, float height, fl
 	set_cube_zvals(bcube, pos.z, pos.z+height);
 	bcube.expand_in_dim( dim, 1.10*cradius);
 	bcube.expand_in_dim(!dim, 0.35*cradius);
-	bcube.d[dim][dir] += (dim ? 1.0 : 1.0)*0.15*cradius; // slightly off-center
+	bcube.d[dim][dir] += (dir ? 1.0 : -1.0)*0.15*cradius; // slightly off-center
 	pos.z += 0.5*height;
 }
 /*static*/ void park_water_fountain_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
