@@ -1089,6 +1089,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, unsigned gen_index, bool has
 					} // for num
 					if (pos_valid) break; // success
 					wall_dim ^= 1; // try the other split dim
+					if (csz[wall_dim] < min_wall_len2) break; // other dim is too small
 				} // for dim_pass
 				if (!pos_valid) { // no valid pos in either dim, skip this split
 					add_room(c, part_id, 1);
@@ -1152,7 +1153,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, unsigned gen_index, bool has
 					c_sub.d[wall_dim][d] = wall.d[wall_dim][!d]; // clip to wall pos
 					c_sub.door_lo[!wall_dim][d] = door_lo[!d] - wall_half_thick; // set new door pos in this dim (keep door pos in other dim, if set)
 					c_sub.door_hi[!wall_dim][d] = door_hi[!d] + wall_half_thick;
-					if (do_split) {to_split.push_back(c_sub);}
+					if (do_split /*|| c_sub.dx() > 2.0*c_sub.dy() || c_sub.dy() > 2.0*c_sub.dx()*/) {to_split.push_back(c_sub);} // also split if high aspect ratio?
 					else {add_room(c_sub, part_id, 1);} // leaf case (unsplit), add a new room
 				}
 				is_first_split = 0;
