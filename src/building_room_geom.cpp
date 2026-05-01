@@ -4338,7 +4338,7 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 	pages.expand_by(shrink);
 	spine.d[c.dim][c.dir] = pages.d[c.dim][!c.dir];
 	vector3d const axis(vector_from_dim_dir(c.dim, 1)), tilt_about(c.get_urc()), zrot_about(c.get_cube_center()); // axis along book width
-	tilt_angle *= (c.dim ? -1.0 : 1.0);
+	tilt_angle *= (c.dim ? -1.0 : 1.0); // Note: use of dim rather than dir here is intentional
 	colorRGBA const color(apply_light_color(c));
 	// skip top face, bottom face if not tilted, thickness dim if upright
 	unsigned const sides_mask(upright ? get_skip_mask_for_xy(tdim) : (is_held ? EF_Z12 : EF_Z2));

@@ -260,7 +260,7 @@ void building_t::get_parking_garage_wall_openings(vect_cube_with_ix_t &openings)
 		bool const dim(entrance.ix >> 1), dir(entrance.ix & 1);
 		entrance.d[dim][!dir] = inner.d[dim][dir];
 		openings.push_back(entrance);
-		entrance.d[dim][!dir] += (dim ? -1.0 : 1.0)*0.5*floor_spacing; // extend back
+		entrance.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.5*floor_spacing; // extend back
 		door_cuts.push_back(entrance);
 	}
 	for (cube_t &c : door_cuts) {c.expand_in_dim(!(c.dy() < c.dx()), 0.75*floor_spacing);} // widen
