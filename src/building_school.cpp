@@ -166,10 +166,14 @@ void building_t::add_hallway_lockers(rand_gen_t rgen, room_t const &room, float 
 // functions below this point are used in other building types such as hospitals, prisons, and industrial
 
 bool building_t::add_room_lockers(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
-	cube_t const &place_area, room_type rtype, bool dim, int dir_skip_mask, bool add_padlocks)
+	cube_t const &place_area_in, room_type rtype, bool dim, int dir_skip_mask, bool add_padlocks)
 {
 	float const floor_spacing(get_window_vspace()), locker_height(0.75*floor_spacing), locker_depth(0.25*locker_height);
 	float locker_width(0.22*locker_height);
+	cube_t place_area(place_area_in), valid_area(parts[room.part_id]);
+	valid_area.expand_by_xy(-get_trim_thickness()); // leave a small gap around exterior walls to prevent Z-fighting
+	assert(place_area.intersects(valid_area));
+	place_area.intersect_with_cube(valid_area);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	float const room_len(place_area.get_sz_dim(dim)); // long dim
 	unsigned const lockers_start(objs.size()), num_lockers(room_len/locker_width); // floor
