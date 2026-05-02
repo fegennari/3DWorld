@@ -1066,6 +1066,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 		}
 		// place a water fountain along each park path
 		float const pwf_height(0.25*car_length), pwf_radius(0.4*pwf_height), pwf_pad(0.5*pwf_radius);
+		unsigned const wfs_start(park_wfs.size());
 
 		for (auto p = ppaths.begin()+paths_start; p != ppaths.end(); ++p) {
 			if (p->is_creek) continue;
@@ -1082,6 +1083,12 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 				park_water_fountain_t pwf(pos, pwf_height, pwf_radius, dim, rgen.rand_bool(), colorRGBA(0.1, 0.3, 0.1));
 				if (has_bcube_int_xy  (pwf.bcube, blockers, pwf_pad  )) continue;
 				if (check_path_coll_xy(pwf.bcube, ppaths, paths_start)) continue; // check other paths
+				// check if too close to a previous path's water fountain
+				cube_t check_area(pwf.bcube);
+				check_area.expand_by_xy(0.4*plot_min_edge);
+				bool is_bad(0);
+				for (auto w = park_wfs.begin()+wfs_start; w != park_wfs.end(); ++w) {is_bad |= check_area.intersects(w->bcube);}
+				if (is_bad) continue; // too close
 				park_wf_groups.add_obj(pwf, park_wfs);
 				add_cube_to_colliders_and_blockers(pwf.bcube, colliders, blockers);
 				break; // done
