@@ -20,7 +20,9 @@ void building_t::create_industrial_floorplan(unsigned part_id, float window_hspa
 	float const wall_thick(get_wall_thickness()), wall_hthick(0.5*wall_thick), floor_thick(get_floor_thickness()), fc_thick(get_fc_thickness());
 	float const door_ent_pad(2.2*door_width), room_len(part.get_sz_dim(dim)), room_width(part.get_sz_dim(!dim)), dsign(dir ? -1.0 : 1.0);
 	float const sub_room_len(max(1.5*floor_spacing, min(3.0*floor_spacing, 0.2*room_len))*rgen.rand_uniform(0.9, 1.0));
-	float const centerline(part.get_center_dim(!dim) + rgen.rand_sign()*rgen.rand_uniform(0.15, 0.25)*room_width); // biased to a random side
+	bool const short_side(rgen.rand_bool());
+	float const targ_br_width(min(0.4f*room_width, rgen.rand_uniform(1.4, 2.4)*floor_spacing));
+	float const centerline(part.d[!dim][short_side] + (short_side ? -1.0 : 1.0)*(targ_br_width + door_ent_pad)); // biased to a random side
 	unsigned const num_floors(calc_num_floors(part, floor_spacing, floor_thick));
 	assert(num_floors >= 2); // main open area must be at least 2 floors tall (and generally is 3-4 floors)
 	// add bathroom and office to either side of a potential placement of the front entrance door
@@ -34,9 +36,14 @@ void building_t::create_industrial_floorplan(unsigned part_id, float window_hspa
 	cube_t entrance_area(sub_rooms);
 
 	for (unsigned d = 0; d < 2; ++d) { // determine wall positions to avoid intersecting windows
-		wall_edge[d] = shift_val_to_not_intersect_window(part, wall_edge[d], window_hspacing[!dim], window_border, !dim);
-		sub_room[d].d[!dim][!d] = entrance_area.d[!dim][d] = wall_edge[d];
-	}
+		float const orig_wall_edge(wall_edge[d]);
+
+		for (unsigned shift_side = 0; shift_side < 2; ++shift_side) { // try shifting in both dirs to avoid windows
+			wall_edge[d] = shift_val_to_not_intersect_window(part, orig_wall_edge, window_hspacing[!dim], window_border, !dim, shift_side); // opposite dir for shift_side==1
+			sub_room[d].d[!dim][!d] = entrance_area.d[!dim][d] = wall_edge[d];
+			if (shift_side == 0 && sub_room[d].get_sz_dim(!dim) > 2.0*door_width) break; // room is large enough
+		}
+	} // for d
 	floor_space.expand_in_z(-fc_thick); // shrink to remove ceiling and floor
 	float const entrance_pos(0.5*(wall_edge[0] + wall_edge[1]));
 	interior->ind_info.reset(new bldg_industrial_info_t(dim, dir, entrance_pos, floor_space, entrance_area));
