@@ -488,7 +488,6 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 	float const room_width(place_area.get_sz_dim(br_dim));
 	if (room_width < req_depth) return 0; // too narrow
 	cube_t const place_area_uc(place_area); // capture before clipping
-	unsigned br_door_stack_ix(0);
 
 	// check for any stairs or elevators that may partiall overlap a bathroom wall from the adjacent room and avoid them; there should be at most one
 	for (stairwell_t const &s : interior->stairwells) {
@@ -567,7 +566,6 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 					if (i->dim == br_dim) continue; // door in wrong dim
 					if (!i->is_connected_to_room(room_id) || !is_cube_close_to_door(c, 0.0, 0, *i, 2)) continue; // check both dirs
 					sink_side = side; sink_side_set = 1;
-					br_door_stack_ix = (i - interior->door_stacks.begin());
 					float const door_width(i->get_sz_dim(br_dim));
 					float const door_wall_space(max((i->d[br_dim][0] - place_area.d[br_dim][0]), (place_area.d[br_dim][1] - i->d[br_dim][1])));
 					assert(door_wall_space > 0.0); // too strong?
@@ -830,10 +828,10 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 		}
 		if (building_obj_model_loader.is_model_valid(OBJ_MODEL_HAND_DRYER)) { // hand dryer
 			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_HAND_DRYER)); // D, W, H
-			float const height(0.16*floor_spacing), hwidth(0.5*height*sz.y/sz.z), depth(height*sz.x/sz.z), z1(zval + 0.36*floor_spacing);
+			float const height(0.16*floor_spacing), hwidth(0.5*height*sz.y/sz.z), depth(height*sz.x/sz.z), hd_z1(zval + 0.36*floor_spacing);
 			bool const hd_dim(!br_dim), hd_dir(!sink_side);
 			cube_t hd;
-			set_cube_zvals(hd, z1, z1+height); // below the park restroom window
+			set_cube_zvals(hd, hd_z1, hd_z1+height); // below the park restroom window
 			hd.d[hd_dim][!hd_dir] = side_wall_pos;
 			hd.d[hd_dim][ hd_dir] = side_wall_pos - sink_side_sign*depth;
 			set_wall_width(hd, (wall_pos + dir_sign*(hd_dist_from_wall + 3.0*hwidth)), hwidth, !hd_dim);
@@ -853,7 +851,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 				} // for n
 				objs.emplace_back(hd, TYPE_HAND_DRYER, room_id, hd_dim, hd_dir, 0, tot_light_amt);
 				cube_t hd_blocker(hd); // add a blocker under the hand dryer to avoid placing a trashcan there
-				set_cube_zvals(hd_blocker, hd.z1()-height, hd.z1());
+				set_cube_zvals(hd_blocker, hd_z1-height, hd_z1);
 				objs.emplace_back(hd_blocker, TYPE_BLOCKER, room_id, hd_dim, hd_dir, 0, tot_light_amt);
 			}
 		}
@@ -934,13 +932,13 @@ void building_t::create_restroom_floorplan(unsigned part_id, rand_gen_t &rgen) {
 		interior->rooms.back().is_single_floor = 1; // probably not needed
 	}
 	if (street_side) { // doors at front case; add a walkway in front in the form of a driveway
-		bool const dim(get_street_dim()), dir(get_street_side());
-		float const front_wall(bcube.d[dim][dir]);
+		bool const dir(get_street_side());
+		float const front_wall(bcube.d[!dim][dir]);
 		set_cube_zvals(driveway, ground_floor_z1, ground_floor_z1+0.5*get_fc_thickness());
-		driveway.d[dim][!dir] = front_wall;
-		driveway.d[dim][ dir] = front_wall + (dir ? 1.0 : -1.0)*0.75*get_window_vspace(); // extend outward in front of the building
-		for (unsigned d = 0; d < 2; ++d) {driveway.d[!dim][d] = bcube.d[!dim][d];}
-		driveway.expand_in_dim(!dim, -0.5*wall_thick); // shrink inward slightly inside the exterior fences/walls
+		driveway.d[!dim][!dir] = front_wall;
+		driveway.d[!dim][ dir] = front_wall + (dir ? 1.0 : -1.0)*0.75*get_window_vspace(); // extend outward in front of the building
+		for (unsigned d = 0; d < 2; ++d) {driveway.d[dim][d] = bcube.d[dim][d];}
+		driveway.expand_in_dim(dim, -0.5*wall_thick); // shrink inward slightly inside the exterior fences/walls
 	}
 }
 

@@ -3375,7 +3375,7 @@ void park_path_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_
 	if (shadow_only && !has_creek_crossing) return; // only casts shadows if there's a creek below
 	assert(pts.size() >= 2);
 	float const tscale(0.5/hwidth), thickness(0.04*hwidth), z_offset(shadow_only ? thickness : 1.0E-4*p2p_dist(pos, dstate.camera_bs));
-	bool const draw_sides(!shadow_only && (1 || has_creek_crossing) && bcube.closest_dist_less_than(dstate.camera_bs, 0.1*dist_scale*dstate.draw_tile_dist));
+	bool const draw_sides(!shadow_only && (1/*has_creek_crossing*/) && bcube.closest_dist_less_than(dstate.camera_bs, 0.1*dist_scale*dstate.draw_tile_dist));
 	unsigned const npts(pts.size());
 	auto &verts(qbds.qbd.verts);
 	vector3d prev_ortho;
