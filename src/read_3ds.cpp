@@ -16,13 +16,12 @@ class file_reader_3ds : public base_file_reader {
 
 protected:
 	geom_xform_t cur_xf;
-	float master_scale;
+	float master_scale=1.0;
 	string name; // unused?
 
 	struct face_t {
-		unsigned short ix[3] = {0}, flags;
-		int mat;
-		face_t() : flags(0), mat(-1) {}
+		unsigned short ix[3]={}, flags=0;
+		int mat=-1;
 	};
 
 	long get_end_pos(unsigned read_len) {return (ftell(fp) + read_len - 6);}
@@ -163,7 +162,7 @@ protected:
 	virtual int proc_other_chunks(unsigned short chunk_id, unsigned chunk_len) {return 2;}
 
 public:
-	file_reader_3ds(string const &fn) : base_file_reader(fn), master_scale(1.0) {}
+	file_reader_3ds(string const &fn) : base_file_reader(fn) {}
 	virtual ~file_reader_3ds() {}
 
 	bool read(geom_xform_t const &xf, bool verbose_) {
@@ -209,7 +208,7 @@ public:
 class file_reader_3ds_triangles : public file_reader_3ds {
 
 	colorRGBA def_color;
-	vector<coll_tquad> *ppts;
+	vector<coll_tquad> *ppts=nullptr;
 
 	virtual int proc_other_chunks(unsigned short chunk_id, unsigned chunk_len) {
 		assert(ppts != nullptr);
@@ -273,7 +272,7 @@ class file_reader_3ds_triangles : public file_reader_3ds {
 	}
 
 public:
-	file_reader_3ds_triangles(string const &fn) : file_reader_3ds(fn), ppts(nullptr) {}
+	file_reader_3ds_triangles(string const &fn) : file_reader_3ds(fn) {}
 
 	bool read(vector<coll_tquad> *ppts_, geom_xform_t const &xf, colorRGBA const &def_c, bool verbose) {
 		assert(ppts_ != nullptr);
@@ -290,7 +289,7 @@ public:
 class file_reader_3ds_model : public file_reader_3ds, public model_from_file_t {
 
 	int use_vertex_normals;
-	unsigned obj_id;
+	unsigned obj_id=0;
 
 	virtual int proc_other_chunks(unsigned short chunk_id, unsigned chunk_len) {
 
@@ -545,7 +544,7 @@ class file_reader_3ds_model : public file_reader_3ds, public model_from_file_t {
 
 public:
 	file_reader_3ds_model(string const &fn, int use_vertex_normals_, model3d &model_) :
-	  file_reader_3ds(fn), model_from_file_t(fn, model_), use_vertex_normals(use_vertex_normals_), obj_id(0) {}
+	  file_reader_3ds(fn), model_from_file_t(fn, model_), use_vertex_normals(use_vertex_normals_) {}
 
 	bool read(geom_xform_t const &xf, bool verbose) {
 		if (!file_reader_3ds::read(xf, verbose)) return 0;

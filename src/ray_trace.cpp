@@ -1158,8 +1158,8 @@ bool lmap_manager_t::write_data_to_file(char const *const fn, int ltype) const {
 	if (!writer.write(&data_size, sizeof(unsigned), 1)) return 0;
 	unsigned const sz(lmcell::get_dsz(ltype));
 
-	for (vector<lmcell>::const_iterator i = vldata_alloc.begin(); i != vldata_alloc.end(); ++i) { // const_iterator?
-		if (!writer.write(i->get_offset(ltype), sizeof(float), sz)) {
+	for (lmcell const &c : vldata_alloc) { // const_iterator?
+		if (!writer.write(c.get_offset(ltype), sizeof(float), sz)) {
 			cerr << "Error writing data to ligthing file " << fn << endl;
 			return 0;
 		}
@@ -1173,8 +1173,8 @@ void lmap_manager_t::clear_lighting_values(int ltype) {
 	assert(ltype < NUM_LIGHTING_TYPES && !is_ltype_dynamic(ltype));
 	unsigned const num(lmcell::get_dsz(ltype));
 
-	for (vector<lmcell>::iterator i = vldata_alloc.begin(); i != vldata_alloc.end(); ++i) {
-		float *color(i->get_offset(ltype));
+	for (lmcell &c : vldata_alloc) {
+		float *color(c.get_offset(ltype));
 		for (unsigned j = 0; j < num; ++j) {color[j] = 0.0;}
 	}
 }
