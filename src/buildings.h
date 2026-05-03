@@ -3084,7 +3084,7 @@ private:
 	void add_office_door_sign(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id);
 	void add_out_or_order_sign(cube_t const &door_bc, bool dim, bool dir, unsigned room_id);
 	void make_door_out_of_order(room_t const &room, float zval, unsigned room_id, unsigned door_stack_ix);
-	void make_door_out_of_order(room_t const &room, float zval, unsigned room_id, door_stack_t &ds);
+	void make_door_out_of_order(room_t const &room, float zval, unsigned room_id, door_stack_t const &ds);
 	bool add_kitchen_objs    (rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt,
 		unsigned objs_start, bool allow_adj_ext_door, light_ix_assign_t &light_ix_assign);
 	void add_objects_in_sink (rand_gen_t &rgen, cube_t const &sink, bool dim, bool dir, unsigned room_id, float tot_light_amt);

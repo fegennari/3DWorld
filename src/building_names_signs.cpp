@@ -789,7 +789,7 @@ void building_t::add_out_or_order_sign(cube_t const &door_bc, bool dim, bool dir
 	sign.d[dim][ dir] = door_pos + (dir ? 1.0 : -1.0)*0.1*get_wall_thickness(); // extend outward
 	add_sign_outside_door(interior->room_geom->objs, sign, "OUT OF\nORDER", BLACK, room_id, dim, dir, 0); // add_frame=0
 }
-void building_t::make_door_out_of_order(room_t const &room, float zval, unsigned room_id, door_stack_t &ds) {
+void building_t::make_door_out_of_order(room_t const &room, float zval, unsigned room_id, door_stack_t const &ds) {
 	for (unsigned dix = ds.first_door_ix; dix < interior->doors.size(); ++dix) {
 		door_t &door(interior->doors[dix]);
 		if (!ds.is_same_stack(door)) break; // moved to a different stack, done

@@ -527,13 +527,13 @@ bool building_t::add_operating_room_objs(rand_gen_t rgen, room_t &room, float zv
 		if (building_obj_model_loader.is_model_valid(OBJ_MODEL_SURG_TOOLS)) {
 			room_object_t const &trolley(objs.back());
 			bool const dim(trolley.dim);
-			cube_t const place_area(get_trolley_place_area(trolley));
-			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SURG_TOOLS)); // L, W, H
-			float const width(0.9*place_area.get_sz_dim(!dim)), depth(width*sz.y/sz.x), height(width*sz.z/sz.x);
+			cube_t const trolley_area(get_trolley_place_area(trolley));
+			vector3d const tsz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SURG_TOOLS)); // L, W, H
+			float const width(0.9*trolley_area.get_sz_dim(!dim)), depth(width*tsz.y/tsz.x), height(width*tsz.z/tsz.x);
 			cube_t tools;
-			set_cube_zvals(tools, place_area.z1(), place_area.z1()+height);
-			set_wall_width(tools, place_area.get_center_dim(!dim), 0.5*width, !dim);
-			set_wall_width(tools, place_area.get_center_dim( dim), 0.5*depth,  dim);
+			set_cube_zvals(tools, trolley_area.z1(), trolley_area.z1()+height);
+			set_wall_width(tools, trolley_area.get_center_dim(!dim), 0.5*width, !dim);
+			set_wall_width(tools, trolley_area.get_center_dim( dim), 0.5*depth,  dim);
 			objs.emplace_back(tools, TYPE_SURG_TOOLS, room_id, dim, rgen.rand_bool(), RO_FLAG_NOCOLL, tot_light_amt); // random dir
 		}
 	}
