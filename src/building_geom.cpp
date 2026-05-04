@@ -599,7 +599,8 @@ cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door
 	float const door_width(width_scale*door_height), door_half_width(0.5*door_width);
 	if (can_fail && base.get_sz_dim(!dim) < 2.0*door_width) return cube_t(); // part is too small to place a door
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness()), fc_thickness(get_fc_thickness());
-	float const door_shift(get_door_shift_dist()), min_wall_spacing(1.2*door_half_width), base_lo(base.d[!dim][0]), base_hi(base.d[!dim][1]);
+	float const door_shift(get_door_shift_dist()), min_wall_spacing(1.2*door_half_width + (is_house ? wall_thickness : 0.0)); // add extra spacing for house doors that open inward
+	float const base_lo(base.d[!dim][0]), base_hi(base.d[!dim][1]);
 	bool const calc_center(door_center == 0.0); // door not yet calculated
 	// center doors connected to primary hallways, garages/sheds, or industrial buildings
 	bool const centered(door_center_shift == 0.0 || hallway_dim == (uint8_t)dim);
