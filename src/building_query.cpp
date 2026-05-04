@@ -3340,7 +3340,7 @@ bool building_t::is_room_adjacent_to_ext_door(cube_t const &room, float zval, bo
 	if (zval != 0.0) {set_cube_zvals(room_exp, zval, zval+get_floor_ceil_gap());}
 
 	for (tquad_with_ix_t const &d : doors) { // exterior doors
-		if (!d.is_exterior_door() || d.type == tquad_with_ix_t::TYPE_RDOOR) continue;
+		if (!d.is_ext_not_roof_door()) continue;
 		
 		if (room_exp.contains_pt(d.get_bcube().get_cube_center())) {
 			if (ext_door) {*ext_door = d;} // record the door if requested
@@ -3352,8 +3352,7 @@ bool building_t::is_room_adjacent_to_ext_door(cube_t const &room, float zval, bo
 }
 bool building_t::cube_int_ext_door(cube_t const &c) const {
 	for (tquad_with_ix_t const &d : doors) { // exterior doors
-		if (!d.is_exterior_door() || d.type == tquad_with_ix_t::TYPE_RDOOR) continue;
-		if (c.intersects(d.get_bcube())) return 1;
+		if (d.is_ext_not_roof_door() && c.intersects(d.get_bcube())) return 1;
 	}
 	return 0;
 }

@@ -1844,8 +1844,11 @@ bool building_t::add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir,
 	vector3d const sz(c.get_size());
 	assert(sz[dim] == 0.0 && sz[!dim] > 0.0 && sz.z > 0.0);
 	// if it's an office building with two doors already added, make this third door a back metal door
-	unsigned const type(for_office_building ? ((doors.size() == 2 && !courtyard && !for_walkway) ?
-		(unsigned)tquad_with_ix_t::TYPE_BDOOR2 : (unsigned)tquad_with_ix_t::TYPE_BDOOR) : (unsigned)tquad_with_ix_t::TYPE_HDOOR);
+	bool const is_back_door(doors.size() == 2 && !courtyard && !for_walkway);
+	unsigned type(0); // TYPE_ODOOR_IN
+	if (for_office_building) {type = (is_back_door ? (unsigned)tquad_with_ix_t::TYPE_BDOOR2 : (unsigned)tquad_with_ix_t::TYPE_BDOOR);}
+	else if (is_restroom())  {type = (unsigned)tquad_with_ix_t::TYPE_ODOOR;}
+	else                     {type = (unsigned)tquad_with_ix_t::TYPE_HDOOR;} // residential
 	door_rotation_t drot; // return value is unused
 	// exterior=1, open_amt=0.0, opens_out=opens_up=swap_sides=open_min_amt=0
 	doors.push_back(set_door_from_cube(c, dim, dir, type, 1.5*get_door_shift_dist(), 1, 0.0, 0, 0, 0, 0, drot));
@@ -2667,7 +2670,7 @@ bool is_cube_close_to_door(cube_t const &c, float dmin, bool inc_open, cube_t co
 bool building_t::is_cube_close_to_exterior_doorway(cube_t const &c, float dmin, bool inc_open) const {
 	for (auto i = doors.begin(); i != doors.end(); ++i) { // test exterior doors
 		// only need to check open house doors: garage doors open up, not sideways; rooftop and office doors open outward
-		bool const check_open(inc_open && i->type == tquad_with_ix_t::TYPE_HDOOR);
+		bool const check_open(inc_open && is_house && i->door_opens_inward());
 		if (is_cube_close_to_door(c, dmin, check_open, i->get_bcube(), 2)) return 1; // check both dirs
 	}
 	return 0;

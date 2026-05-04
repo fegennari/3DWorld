@@ -4408,7 +4408,7 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 		set_cube_zvals(room_exp, zval, ceil_zval); // limit to this floor of the room
 
 		for (auto d = doors.begin(); d != doors.end(); ++d) {
-			if (!d->is_exterior_door() || d->type == tquad_with_ix_t::TYPE_RDOOR) continue;
+			if (!d->is_ext_not_roof_door()) continue;
 			cube_t bc(d->get_bcube());
 			if (!room_exp.contains_pt(bc.get_cube_center())) continue;
 			if (d->type == tquad_with_ix_t::TYPE_GDOOR) {garage_door_mask |= (1 << ext_doors.size());}
@@ -4569,7 +4569,7 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 
 				if (is_ground_floor || !walkways.empty()) { // handle exterior doors
 					for (auto d = doors.begin(); d != doors.end(); ++d) {
-						if (!d->is_exterior_door() || d->type == tquad_with_ix_t::TYPE_RDOOR) continue;
+						if (!d->is_ext_not_roof_door()) continue;
 						cube_t bc(d->get_bcube());
 						bc.expand_in_dim(dim, wall_thickness); // make sure it's nonzero area
 						if (bc.intersects(c_exp)) {bad_place = 1; break;}

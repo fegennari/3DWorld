@@ -127,7 +127,7 @@ void building_t::add_restaurant_objs(rand_gen_t rgen, room_t const &room, float 
 			bool tside(0);
 			if      (dlo < min_wall_spacing) {tside = 1;} // door close to lo wall, put desk on hi side
 			else if (dhi < min_wall_spacing) {tside = 0;} // door close to hi wall, put desk on lo side
-			else                             {tside = (ddim ^ ddir ^ 1);} // door not near a wall, make it opposite the door open side
+			else                             {tside = (ddim ^ ddir ^ 1);} // door not near a wall, make it opposite the door open side (no longer required since doors open outward)
 			float const table_sz(0.12*floor_spacing), ts_scale(tside ? 1.0 : -1.0), centerline(door_edge + (ddir ? 1.0 : -1.0)*1.5*table_sz);
 			cube_t table;
 			set_cube_zvals(table, zval, zval+0.4*floor_spacing);

@@ -2216,7 +2216,8 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		set_cube_zvals(trim, door.z1(), (door.z1() + 0.1*fc_thick + trim_thickness)); // floor height + extend slightly above
 		objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, dir, (ext_flags | (draw_bot ? 0 : RO_FLAG_ADJ_BOT)), 1.0, SHAPE_SHORT, ext_trim_color);
 
-		if (d->type == tquad_with_ix_t::TYPE_HDOOR || d->is_building_door() || garage_door) { // add trim at top of exterior door, houses and office buildings
+		if (d->type == tquad_with_ix_t::TYPE_HDOOR || d->type == tquad_with_ix_t::TYPE_ODOOR || d->is_building_door() || garage_door) {
+			// add trim at top of exterior door, houses and office buildings
 			set_cube_zvals(trim, door.z2()-0.03*door.dz(), door.z2()); // ends at top of door texture; see logic in clip_door_to_interior()
 		}
 		if (d->is_building_door() && trim.z1() < ground_floor_z1) { // different logic for building ground floor (non-walkway) doors
@@ -2704,7 +2705,7 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 					window_exp.expand_by_xy(window_trim_width);
 
 					for (tquad_with_ix_t const &d : doors) { // exterior doors
-						if (!d.is_exterior_door() || d.type == tquad_with_ix_t::TYPE_RDOOR) continue;
+						if (!d.is_ext_not_roof_door()) continue;
 						cube_t const door_bc(d.get_bcube());
 						if (!window_exp.intersects(door_bc)) continue;
 						at_walkway = 1;

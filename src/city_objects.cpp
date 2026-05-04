@@ -3122,7 +3122,7 @@ void sign_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale
 		text_drawer::bind_font_texture(); // restore
 	}
 	else {
-		unsigned const skip_dims(is_restroom ? (1 << dim) : 0); // skip front and back for restroom
+		unsigned const skip_dims(is_restroom ? (1 << (unsigned)dim) : 0); // skip front and back for restroom
 		dstate.draw_cube(qbds.untex_qbd, frame_bcube, bkg_color, 0, 0.0, skip_dims); // untextured, matte back
 	}
 	if (frame_width > 0.0) { // draw frame
