@@ -31,6 +31,7 @@ void invalidate_tile_smap_in_region(cube_t const &region, bool repeat_next_frame
 void draw_xy_oval(float rx, float ry, int ndiv, point const &pos, float tscale_s, float tscale_t);
 bool get_sphere_poly_int_val(point const &sc, float sr, point const *const points, unsigned npoints, vector3d const &normal, float thickness, float &val, vector3d &cnorm);
 void get_pedestrians_in_area(cube_t const &area, int building_ix, vector<point> &pts);
+void register_fish_pond_visible(cube_t const &pond, unsigned pond_id);
 
 
 void textured_mat_t::pre_draw(bool shadow_only) {
@@ -1781,7 +1782,7 @@ bool has_circle_overlap(sphere_t const &circle, vector<sphere_t> const &circles)
 	}
 	return 0;
 }
-pond_t::pond_t(point const &pos_, float x_radius, float y_radius, float depth, unsigned rseed) : city_obj_t(pos_, max(x_radius, y_radius)) {
+pond_t::pond_t(point const &pos_, float x_radius, float y_radius, float depth, unsigned rseed_) : city_obj_t(pos_, max(x_radius, y_radius)), rseed(rseed_) {
 	bcube.set_from_point(pos);
 	bcube.expand_in_x(x_radius);
 	bcube.expand_in_y(y_radius);
@@ -1831,6 +1832,10 @@ void pond_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale
 		set_cube_zvals(lpad, z1, z2);
 		dstate.draw_cube(qbds.qbd, lpad, cw, 1, 0.0, 3, mx, my, swap_xy); // top only
 	} // for cr
+	if (dist < 0.02*dstate.draw_tile_dist) {
+		// use rseed as pond_id; we don't have an ID that's unique across cities that we can use; it's used as a map key, so doesn't need to be sequential, as long as it's unique
+		register_fish_pond_visible(bcube, rseed);
+	}
 }
 bool pond_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const { // pos_ is in camera space
 	point const pos_bs(pos_ - xlate);

@@ -24,7 +24,7 @@ point pre_smap_player_pos, actual_player_pos; // Note: pre_smap_player_pos can b
 
 extern bool enable_dlight_shadows, dl_smap_enabled, enable_dlight_bcubes, flashlight_on, camera_in_building, have_indir_smoke_tex, disable_city_shadow_maps;
 extern bool player_in_walkway, player_in_skyway, player_on_moving_ww, player_in_ww_elevator, player_in_tunnel, player_in_mall;
-extern int rand_gen_index, display_mode, animate2, draw_model, player_in_basement;
+extern int rand_gen_index, display_mode, animate2, map_mode, draw_model, player_in_basement;
 extern unsigned shadow_map_sz, cur_display_iter;
 extern float cobj_z_bias, rain_wetness, NEAR_CLIP;
 extern vector3d wind;
@@ -47,6 +47,8 @@ void draw_player_building_transparent(int reflection_pass, vector3d const &xlate
 void bind_player_building_cube_map(shader_t &s);
 bool enable_cube_map_city(cube_t *city_bcube);
 bool enable_player_flashlight();
+void next_fish_frame();
+void draw_fish_in_ponds(shader_t &s);
 
 
 template<typename S, typename T> void get_all_bcubes(vector<T> const &v, S &bcubes) {
@@ -3176,6 +3178,7 @@ public:
 				draw_transmission_lines();
 				draw_wind_turbines(shadow_only);
 			}
+			if (!shadow_only && !reflection_pass) {draw_fish_in_ponds(dstate.s);}
 			dstate.post_draw();
 			if (!shadow_only) {enable_dlight_bcubes = 0;}
 			set_std_depth_func();
@@ -3666,22 +3669,24 @@ public:
 			car_manager.next_frame(ped_manager, city_params.car_speed);
 		}
 		if (!use_threads_2_3 || omp_get_thread_num_3dw() == 2) {ped_manager.next_frame();} // thread=2
+		if (!map_mode) {next_fish_frame();}
 	}
 	void draw(int shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate) { // shadow_only: 0=non-shadow pass, 1=sun/moon shadow, 2=dynamic shadow
 		// if player is fully in the basement, not on stairs, don't draw anything; query building for skylight if in mall
 		if (player_in_basement >= 2 && (reflection_pass || !player_in_mall)) return;
 		if (player_cant_see_outside_building()) return; // player can't see outside the building (in ext basement, parking garage, attic, or windowless building)
-		if (!shadow_only && !reflection_pass && (trans_op_mask & 1)) {setup_city_lights(xlate);} // setup lights on first (opaque) non-shadow pass
+		bool const draw_opaque(trans_op_mask & 1);
+		if (!shadow_only && !reflection_pass && draw_opaque) {setup_city_lights(xlate);} // setup lights on first (opaque) non-shadow pass
 		bool const use_dlights(enable_lights()), is_dlight_shadows(shadow_only == 2);
 		// roads don't cast shadows/aren't reflected in water, but stoplights cast shadows
 		if (reflection_pass == 0) {road_gen.draw(trans_op_mask, xlate, use_dlights, (shadow_only != 0), reflection_pass);}
 		if (player_in_basement >= 2) return; // cars/people/labels are not even drawn when visible from a mall skylight because they're slower and usually not in view
 		car_manager.draw(trans_op_mask, xlate, use_dlights, (shadow_only != 0), is_dlight_shadows);
-		if  (trans_op_mask & 1) {ped_manager.draw(xlate, use_dlights, (shadow_only != 0), is_dlight_shadows);} // opaque
-		if ((trans_op_mask & 1) && !shadow_only) {road_gen.draw_label();} // after drawing cars so that it's in front
+		if (draw_opaque) {ped_manager.draw(xlate, use_dlights, (shadow_only != 0), is_dlight_shadows);} // opaque
+		if (draw_opaque && !shadow_only) {road_gen.draw_label();} // after drawing cars so that it's in front
 		// Note: buildings are drawn through draw_buildings()
 
-		if (0 && (trans_op_mask & 1) && !shadow_only && !reflection_pass && (display_mode & 0x20)) {
+		if (0 && draw_opaque && !shadow_only && !reflection_pass && (display_mode & 0x20)) {
 			ostringstream oss;
 			oss << "Cars: " << num_cars_drawn << " Peds: " << num_peds_drawn;
 			print_text_onscreen(oss.str(), GREEN, 0.8, 1);

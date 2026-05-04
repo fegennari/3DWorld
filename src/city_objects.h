@@ -377,6 +377,7 @@ struct sculpture_t : public city_obj_t {
 };
 
 struct pond_t : public city_obj_t {
+	unsigned rseed;
 	vector<sphere_t> lily_pads;
 
 	pond_t(point const &pos_, float x_radius, float y_radius, float depth, unsigned rseed);
