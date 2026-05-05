@@ -1133,7 +1133,7 @@ void building_room_geom_t::update_exterior_door_vbos(building_t const &building)
 	if (!use_door_handle_model() || !building.has_house_floorplan()) return; // no exterior door handles
 	while (!door_handles.empty() && door_handles.back().is_exterior) {door_handles.pop_back();} // remove any previously added exterior door handles
 
-	for (unsigned dix = 0; dix < building.doors.size(); ++dix) { // add exterior door handles for house doors
+	for (unsigned dix = 0; dix < building.doors.size(); ++dix) { // add exterior door handles for house and restroom doors
 		// add_door_handle() takes a door_t, so we have to construct one from the exterior door tquad
 		tquad_with_ix_t const &d(building.doors[dix]);
 		bool const is_odoor(d.type == tquad_with_ix_t::TYPE_ODOOR);

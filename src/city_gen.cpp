@@ -5,7 +5,6 @@
 #include "city.h"
 #include "city_objects.h"
 #include "city_terrain.h"
-#include "heightmap.h"
 #include "lightmap.h"
 #include "buildings.h"
 #include "profiler.h"

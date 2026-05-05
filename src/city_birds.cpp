@@ -4,7 +4,6 @@
 
 #include "city_objects.h"
 #include "openal_wrap.h"
-//#include "profiler.h"
 
 float const BIRD_ACCEL       = 0.00025;
 float const BIRD_MAX_VEL     = 0.002;

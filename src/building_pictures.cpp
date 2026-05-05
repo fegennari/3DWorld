@@ -3,7 +3,6 @@
 // 10/31/20
 #include "3DWorld.h"
 #include "mesh.h"
-#include "textures.h"
 #include "buildings.h"
 #include "openal_wrap.h" // for teleport sound
 

@@ -3,7 +3,6 @@
 // 11/19/18
 #include "city.h"
 #include "city_objects.h" // for wind_turbine_t
-#include "file_utils.h"
 #include "openal_wrap.h"
 #include "explosion.h" // for add_blastr()
 #include "lightmap.h" // for light_source

@@ -5,7 +5,6 @@
 #include "city_objects.h"
 #include "tree_3dw.h" // for tree_placer_t
 #include "lightmap.h" // for light_source
-//#include "profiler.h"
 
 
 float pond_max_depth(0.0);

@@ -4,7 +4,6 @@
 
 #include "city_objects.h"
 #include "subdiv.h" // for sd_sphere_d
-//#include "profiler.h"
 
 
 void add_cylin_indices_tris(vector<unsigned> &idata, unsigned ndiv, unsigned ix_start); // from animal_draw.cpp

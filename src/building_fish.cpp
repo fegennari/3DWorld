@@ -5,7 +5,6 @@
 #include "function_registry.h"
 #include "buildings.h"
 #include "city_model.h" // for animation_state_t
-//#include "profiler.h"
 
 extern int animate2, frame_counter, player_in_water;
 extern float fticks;

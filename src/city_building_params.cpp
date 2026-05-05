@@ -3,7 +3,6 @@
 // 09/04/20
 
 #include "city.h"
-#include "buildings.h"
 #include "format_text.h"
 
 
