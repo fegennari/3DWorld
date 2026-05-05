@@ -118,7 +118,7 @@ void building_t::clip_door_to_interior(tquad_with_ix_t &door) const {
 	float xy_border(0.0), z_border(0.0);
 	if      (door.type == tquad_with_ix_t::TYPE_GDOOR) {xy_border = 0.016; z_border = 0.02;} // garage door
 	else if (door.is_building_door())                  {xy_border = 0.04;  z_border = 0.03;} // building door
-	else {xy_border = 0.06; z_border = 0.03;} // house door
+	else {xy_border = 0.06; z_border = 0.03;} // house or office door
 	// clip off bottom for floor if clip_to_floor==1 and not a roof door; somewhat arbitrary, should we use interior->floors.back().z2() instead?
 	if (door.type != tquad_with_ix_t::TYPE_RDOOR) {clip_cube.z1() += 0.1*get_floor_thickness();}
 	clip_cube.z2() -= z_border*dz;
