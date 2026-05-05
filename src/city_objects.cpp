@@ -1820,8 +1820,11 @@ pond_t::pond_t(point const &pos_, float x_radius, float y_radius, float depth, u
 }
 void pond_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	assert(!shadow_only);
+	cube_t water_bc(bcube); // TODO: duplicate of logic from park_heightmap_t; should have a get_water_bcube() member function
+	water_bc.z1()  = bcube.zc(); // spawn in upper half
+	water_bc.z2() -= 0.05*water_bc.dz(); // top of water lower than terrain
 	float const dist(p2p_dist(dstate.camera_bs, pos)), dz_off(max(0.0001f*bcube.dz(), 0.00025f*dist));
-	float const z1(bcube.z2() + 2.0*dz_off), z2(z1 + dz_off);
+	float const z1(water_bc.z2() + 2.0*dz_off), z2(z1 + dz_off);
 	color_wrapper const cw(WHITE);
 		
 	for (sphere_t const &cr : lily_pads) { // draw lily pads
@@ -1834,7 +1837,7 @@ void pond_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale
 	} // for cr
 	if (dist < 0.02*dstate.draw_tile_dist) {
 		// use rseed as pond_id; we don't have an ID that's unique across cities that we can use; it's used as a map key, so doesn't need to be sequential, as long as it's unique
-		register_fish_pond_visible(bcube, rseed);
+		register_fish_pond_visible(water_bc, rseed);
 	}
 }
 bool pond_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const { // pos_ is in camera space

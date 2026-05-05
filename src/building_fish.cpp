@@ -13,6 +13,7 @@ bool check_ramp_collision(room_object_t const &c, point &pos, float radius, vect
 void draw_animated_fish_model(shader_t &s, vector3d const &pos, float radius, vector3d const &dir, float anim_time, colorRGBA const &color);
 bool play_attack_sound(point const &pos, float gain, float pitch, rand_gen_t &rgen);
 void draw_bubbles(vector<sphere_t> const &bubbles, shader_t &s, bool in_fishtank);
+bool point_in_ellipse(point const &p, cube_t const &c);
 
 
 int get_future_frame(float min_secs, float max_secs, rand_gen_t &rgen) {
@@ -336,7 +337,16 @@ public:
 	fish_pond_t(cube_t const &bcube_, unsigned pond_id) {
 		present = 1; // unused?
 		init(bcube_, bcube_, pond_id, 3, 5); // 3-5 fish
-		populate(0.05*bcube.dz(), 0.002); // size based on depth
+		populate(0.05*bcube.dz(), 0.004); // size based on depth
+	}
+	virtual bool check_fish_coll(point const &pos, float radius, unsigned id, point &coll_pos) const {
+		if (fish_cont_t::check_fish_coll(pos, radius, id, coll_pos)) return 1;
+		if (!point_in_ellipse(pos, bcube)) return 1; // outside pond bounds
+		// calculate terrain height under pond
+		float const dx(CLIP_TO_01(1.0f - (2.0f/bcube.dx())*fabs(pos.x - bcube.xc())));
+		float const dy(CLIP_TO_01(1.0f - (2.0f/bcube.dy())*fabs(pos.y - bcube.yc())));
+		float const bot_zval(bcube.z2() - sin(dx*dy*PI_TWO)*bcube.dz());
+		return (pos.z - radius < bot_zval);
 	}
 	void next_frame() {
 		// TODO: use correct pond volume
