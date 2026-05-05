@@ -3664,12 +3664,14 @@ public:
 	void next_frame(bool use_threads_2_3) { // Note: threads: 0=draw, 1=roads and cars, 2=pedestrians
 		if (!city_params.enabled()) return;
 
-		if (!use_threads_2_3 || omp_get_thread_num_3dw() == 1) { // thread 1
+		if (!use_threads_2_3 || omp_get_thread_num_3dw() == 1) { // thread 1: traffic lights and cars
 			road_gen.next_frame(); // update stoplights; must be before car_manager next_frame() call
 			car_manager.next_frame(ped_manager, city_params.car_speed);
 		}
-		if (!use_threads_2_3 || omp_get_thread_num_3dw() == 2) {ped_manager.next_frame();} // thread=2
-		if (!map_mode) {next_fish_frame();}
+		if (!use_threads_2_3 || omp_get_thread_num_3dw() == 2) { // thread=2: pedestrians and fish
+			ped_manager.next_frame();
+			if (!map_mode) {next_fish_frame();}
+		}
 	}
 	void draw(int shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate) { // shadow_only: 0=non-shadow pass, 1=sun/moon shadow, 2=dynamic shadow
 		// if player is fully in the basement, not on stairs, don't draw anything; query building for skylight if in mall
