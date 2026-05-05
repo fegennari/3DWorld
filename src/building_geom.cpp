@@ -1126,6 +1126,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	}
 	calc_bcube_from_parts(); // maybe calculate a tighter bounding cube
 	gen_interior(rgen, 0); // before adding door
+	bool const use_office_door(is_restaurant());
 
 	if (gen_door) { // add exterior doors and possibly a garage + driveway and extended basement
 		// attempt to add an interior garage when legal, always when along a street, else 75% of the time; not for multi-family, since we can't make them one per resident
@@ -1147,13 +1148,14 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				if (!assigned_plot.is_all_zeros()) {driveway.intersect_with_cube_xy(assigned_plot);} // clip driveway to the assigned plot, if one was specified
 			}
 		}
+		float const wscale(use_office_door ? DOOR_WIDTH_SCALE_OFFICE : DOOR_WIDTH_SCALE);
 		cube_t door;
 		bool door_valid(0);
 		unsigned const num_tries = 10;
 		
 		for (unsigned n = 0; n < num_tries; ++n) { // make several attempts at generating a valid interior where this door can be placed; this still fails a few times
 			for (unsigned d = 0; d < 2; ++d) { // try both dims
-				door = place_door(parts[door_part], door_dim, door_dir, door_height, door_center, door_pos, 0.25, DOOR_WIDTH_SCALE, 0, 0, rgen); // keep door_height
+				door = place_door(parts[door_part], door_dim, door_dir, door_height, door_center, door_pos, 0.25, wscale, 0, 0, rgen); // keep door_height
 				if (is_valid_door_pos(door, 0.5*door_height, door_dim)) {door_valid = 1; break;} // done
 				if (d == 1 && n+1 == num_tries) break; // no more tries available
 				// swap door_dim and calculate new door_dir; this is duplicated from the code above, but not easier to factor out
@@ -1197,7 +1199,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 					for (unsigned door2_dir = 0; door2_dir < 2 && !added_door; ++door2_dir) {
 						if (door2_dim == door_dim && door_dir == bool(door2_dir) /*&& door2_part == door_part*/) continue; // don't place second door on the same side
 						if (part.d[door2_dim][door2_dir] != bcube.d[door2_dim][door2_dir]) continue; // door on building bcube is always exterior/never interior face between two parts
-						cube_t const door2(place_door(part, door2_dim, door2_dir, door_height, 0.0, 0.0, 0.25, DOOR_WIDTH_SCALE, 1, 0, rgen));
+						cube_t const door2(place_door(part, door2_dim, door2_dir, door_height, 0.0, 0.0, 0.25, wscale, 1, 0, rgen));
 						if (!is_valid_door_pos(door2, 0.5*door_height, door2_dim)) continue; // bad placement
 						added_door |= add_door(door2, door2_part, door2_dim, door2_dir, 0);
 					} // for door_dir2
@@ -1215,7 +1217,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				for (unsigned d = 0; d < 2 && !added_door; ++d) {
 					for (unsigned e = 0; e < 2 && !added_door; ++e) {
 						unsigned const dim(dim0 ^ bool(d)), dir(dir0 ^ bool(e));
-						cube_t const door2(place_door(parts[0], dim, dir, door_height, 0.0, 0.0, 0.25, DOOR_WIDTH_SCALE, 1, 0, rgen, f));
+						cube_t const door2(place_door(parts[0], dim, dir, door_height, 0.0, 0.0, 0.25, wscale, 1, 0, rgen, f));
 						if (is_valid_door_pos(door2, 0.5*door_height, dim)) {added_door |= add_door(door2, 0, dim, dir, 0);}
 					}
 				}
@@ -1307,7 +1309,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		wall_color = wall_color.modulate_with(wall_colors[rgen.rand()%8]);
 	}
 	else { // restaurant
-		door_color = LT_BROWN;
+		door_color = (use_office_door ? WHITE : LT_BROWN); // office door
 		// white, light gray, gray, yellowish-brown, light brown, light yellow
 		colorRGBA const wall_colors[6] = {WHITE, LT_GRAY, GRAY, colorRGBA(1.0, 0.9, 0.7), colorRGBA(1.0, 0.8, 0.6), colorRGBA(1.0, 1.0, 0.7)};
 		wall_color = wall_color.modulate_with(wall_colors[rgen.rand()%6]);
@@ -1847,9 +1849,10 @@ bool building_t::add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir,
 	// if it's an office building with two doors already added, make this third door a back metal door
 	bool const is_back_door(doors.size() == 2 && !courtyard && !for_walkway);
 	unsigned type(0); // TYPE_ODOOR_IN
-	if (for_office_building) {type = (is_back_door ? (unsigned)tquad_with_ix_t::TYPE_BDOOR2 : (unsigned)tquad_with_ix_t::TYPE_BDOOR);}
-	else if (is_restroom())  {type = (unsigned)tquad_with_ix_t::TYPE_ODOOR;}
-	else                     {type = (unsigned)tquad_with_ix_t::TYPE_HDOOR;} // residential
+	if (for_office_building)  {type = (is_back_door ? (unsigned)tquad_with_ix_t::TYPE_BDOOR2 : (unsigned)tquad_with_ix_t::TYPE_BDOOR);}
+	else if (is_restroom  ()) {type = (unsigned)tquad_with_ix_t::TYPE_ODOOR;}
+	else if (is_restaurant()) {type = (unsigned)tquad_with_ix_t::TYPE_BDOOR;}
+	else                      {type = (unsigned)tquad_with_ix_t::TYPE_HDOOR;} // residential/house
 	door_rotation_t drot; // return value is unused
 	// exterior=1, open_amt=0.0, opens_out=opens_up=swap_sides=open_min_amt=0
 	doors.push_back(set_door_from_cube(c, dim, dir, type, 1.5*get_door_shift_dist(), 1, 0.0, 0, 0, 0, 0, drot));
