@@ -1313,6 +1313,7 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool 
 	float const min_stump_z(water_plane_z + 0.010*zmax_est);
 	float const min_plant_z(water_plane_z + 0.016*zmax_est);
 	float const min_log_z  (water_plane_z - 0.040*zmax_est);
+	float const min_mushroom_z(water_plane_z);
 	//if (inside_city) {y2 = y1;} // optimization if we can query city bcubes: shrink y to empty range if completely contained in a city
 	generated = 1;
 
@@ -1388,7 +1389,7 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool 
 			}
 			if (add_mushroom) {
 				mushroom m;
-				if (m.create(j, i, 1, min_log_z)) {
+				if (m.create(j, i, 1, min_mushroom_z)) {
 					if (!check_valid_scenery_pos(m)) continue;
 					mushrooms.push_back(m);
 					m.add_bounds_to_bcube(all_bcube);
