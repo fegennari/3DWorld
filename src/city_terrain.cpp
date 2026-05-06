@@ -505,7 +505,7 @@ void park_heightmap_t::raise_height(unsigned x, unsigned y, float zval) {
 
 park_heightmap_t::park_heightmap_t(cube_t const &c, unsigned nx_, unsigned ny_, pond_t const *const pond,
 	vector<park_path_t> const &ppaths, unsigned ppath_start, vector<cylinder_3dw> const &ccs, rand_gen_t &rgen)
-	: nx(nx_), ny(ny_), z_ground(c.z2()), bcube(c), creek_crossings(ccs)
+	: nx(nx_), ny(ny_), z_ground(c.z2()), z_water(0.0), bcube(c), creek_crossings(ccs)
 {
 	//highres_timer_t timer("Park Heightmap Heights"); // ~0.1ms
 	assert(nx > 0 && ny > 0);
@@ -515,7 +515,7 @@ park_heightmap_t::park_heightmap_t(cube_t const &c, unsigned nx_, unsigned ny_, 
 	if (pond != nullptr) { // lower height around pond
 		cube_t const &pbc(pond->bcube);
 		assert(bcube.contains_cube_xy(pbc));
-		float const zlow(pbc.zc()), dz(z_ground - zlow); // half the depth of the pond itself
+		float const dz(z_ground - pbc.z1()); // bottom of pond to terrain elevation
 		float const xc(pbc.xc()), yc(pbc.yc()), xscale(2.0/pbc.dx()), yscale(2.0/pbc.dy());
 		unsigned x1(0), y1(0), x2(0), y2(0);
 		xy_range_from_cube(pbc, x1, y1, x2, y2);
@@ -529,6 +529,7 @@ park_heightmap_t::park_heightmap_t(cube_t const &c, unsigned nx_, unsigned ny_, 
 				lower_height(x, y, (z_ground - sin(dx*dy*PI_TWO)*dz));
 			} // for x
 		} // for y
+		z_water = pbc.z2(); // top of pond
 	}
 	for (auto P = ppaths.begin() + ppath_start; P != ppaths.end(); ++P) { // lower height under creek
 		if (!P->is_creek) continue;
@@ -665,10 +666,10 @@ void park_heightmap_t::draw(draw_state_t &dstate, bool draw_terrain, bool draw_w
 			draw_fast_cylinder(c.p1, c.p2, c.r1, c.r2, ndiv, 1, 5); // textured, no ends, two sided
 		} // for c
 	}
-	if (draw_water) { // draw water surface over whole park; not for distant terrain
+	if (draw_water && z_water != 0.0) { // draw water surface over whole park if there was a pond; not for distant terrain
 		begin_water_surface_draw(dstate.s);
 		cube_t water(bcube);
-		water.z2() = z_ground - 0.05*(z_ground - bcube.z1()); // shift slightly down below the surface of the mesh
+		water.z2() = z_water;
 		dstate.draw_cube(dstate.qbd, water, colorRGBA(0.2, 0.3, 0.5, 0.5), 1, 4.0, 3); // semi-transparent; top only
 		dstate.qbd.draw_and_clear();
 		end_water_surface_draw(dstate.s);

@@ -708,7 +708,7 @@ struct park_path_t : public city_obj_t {
 // for future use in storing park heightmaps that contains lower areas for ponds and creeks
 class park_heightmap_t {
 	unsigned nx=0, ny=0, nverts=0, nindices=0;
-	float z_ground;
+	float z_ground, z_water;
 	cube_t bcube, hill_bc; // at the moment we can only have a single hill per park
 	vector<cylinder_3dw> creek_crossings; // used for drawing pipes
 	vector<float> heights;

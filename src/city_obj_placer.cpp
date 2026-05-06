@@ -850,7 +850,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 				}
 				if (blocked) continue;
 				if (has_bcube_int_xy(pond, active_pond_blockers)) continue; // check underground basement rooms
-				float const depth(city_params.road_width*rgen.rand_uniform(0.1, 0.5));
+				float const depth(city_params.road_width*rgen.rand_uniform(0.1, 0.25));
 				pond_t const pond_obj(center, pond_sz.x, pond_sz.y, depth, rgen.rand());
 
 				for (point const &p : tree_pos) { // check trees; trees on the edge are okay
@@ -869,7 +869,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 			float const pipe_radius(0.75*creek_hwidth); // for path crossings; end pipe is smaller
 			cube_t const &pond(ponds.back().bcube);
 			point start, end;
-			start.z = end.z = pond.z2();
+			start.z = end.z = plot.z2();
 			bool dim(0), dir(0);
 			float dmax(0.0);
 

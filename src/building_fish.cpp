@@ -336,8 +336,8 @@ class fish_pond_t : public fish_cont_t {
 public:
 	fish_pond_t(cube_t const &bcube_, unsigned pond_id) {
 		present = 1; // unused?
-		init(bcube_, bcube_, pond_id, 3, 5); // 3-5 fish
-		populate(0.05*bcube.dz(), 0.004); // size based on depth
+		init(bcube_, bcube_, pond_id, 4, 6); // 4-6 fish
+		populate(0.1*bcube.dz(), 0.004); // size based on depth
 	}
 	virtual bool check_fish_coll(point const &pos, float radius, unsigned id, point &coll_pos) const {
 		if (fish_cont_t::check_fish_coll(pos, radius, id, coll_pos)) return 1;
