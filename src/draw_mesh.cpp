@@ -87,13 +87,14 @@ float integrate_water_dist(point const &targ_pos, point const &src_pos, float co
 	return p2p_dist(p_int, targ_pos)*mesh_scale;
 }
 
-
-void water_color_atten_pt(float *c, int x, int y, point const &pos, point const &p1, point const &p2) {
-
-	float const scale(WATER_COL_ATTEN*((world_mode != WMODE_GROUND || wminside[y][x] == 2) ? 1.0 : 4.0));
-	float const wh((world_mode == WMODE_GROUND) ? water_matrix[y][x] : water_plane_z); // higher for interior water
-	float const dist(scale*(integrate_water_dist(pos, p1, wh) + integrate_water_dist(pos, p2, wh)));
+void water_color_atten(float *c, point const &pos, point const &p1, point const &p2, float water_zval, float scale) {
+	float const dist(WATER_COL_ATTEN*scale*(integrate_water_dist(pos, p1, water_zval) + integrate_water_dist(pos, p2, water_zval)));
 	atten_by_water_depth(c, dist);
+}
+void water_color_atten_pt(float *c, int x, int y, point const &pos, point const &p1, point const &p2) {
+	float const scale((world_mode != WMODE_GROUND || wminside[y][x] == 2) ? 1.0 : 4.0);
+	float const water_zval((world_mode == WMODE_GROUND) ? water_matrix[y][x] : water_plane_z); // higher for interior water
+	water_color_atten(c, pos, p1, p2, water_zval, scale);
 }
 
 

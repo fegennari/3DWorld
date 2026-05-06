@@ -4,6 +4,7 @@ uniform float tex_scale_s   = 1.0;
 uniform float tex_scale_t   = 1.0;
 uniform float tc_texgen_mix = 0.0;
 uniform vec4 world_space_offset   = vec4(0.0); // {x, y, z, rot_angle}
+uniform vec4 color_modulate       = vec4(1.0);
 uniform float vertex_offset_scale = 0.0; // hack to make vertex_offset ignored when unused/unset
 
 in vec4 tex0_s, tex0_t;
@@ -36,7 +37,7 @@ void main() {
 	add_leaf_wind(vertex);
 	epos        = fg_ModelViewMatrix * vertex;
 	gl_Position = fg_ProjectionMatrix * epos;
-	fg_Color_vf = fg_Color;
+	fg_Color_vf = fg_Color * color_modulate;
 	eye_norm    = normalize(fg_NormalMatrix * normal_in);
 
 	if (use_fg_ViewMatrix) {

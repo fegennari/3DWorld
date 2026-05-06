@@ -14,6 +14,7 @@ void draw_animated_fish_model(shader_t &s, vector3d const &pos, float radius, ve
 bool play_attack_sound(point const &pos, float gain, float pitch, rand_gen_t &rgen);
 void draw_bubbles(vector<sphere_t> const &bubbles, shader_t &s, bool in_fishtank);
 bool point_in_ellipse(point const &p, cube_t const &c);
+void water_color_atten(float *c, point const &pos, point const &p1, point const &p2, float water_zval, float scale);
 
 
 int get_future_frame(float min_secs, float max_secs, rand_gen_t &rgen) {
@@ -30,10 +31,10 @@ struct fish_t {
 	vector3d dir, target_dir; // Note: fish only rotated about Z and remains in the XY plane
 	colorRGBA color=WHITE;
 
-	void draw(shader_t &s, animation_state_t &anim_state, float anim_time) const {
+	void draw(shader_t &s, animation_state_t &anim_state, float anim_time, colorRGBA const &color_mod=WHITE) const {
 		anim_state.anim_time = 0.5*sqrt(speed_mult)*tspeed*anim_time; // tail nominally moves twice per second
 		if (anim_state.enabled) {anim_state.set_animation_id_and_time(s, 0, 1.0);}
-		draw_animated_fish_model(s, pos, radius, dir, anim_state.anim_time, color);
+		draw_animated_fish_model(s, pos, radius, dir, anim_state.anim_time, color.modulate_with(color_mod));
 	}
 	bool can_splash(rand_gen_t &rgen) {
 		if (frame_counter < next_splash_frame) return 0;
@@ -337,7 +338,7 @@ public:
 	fish_pond_t(cube_t const &bcube_, unsigned pond_id) {
 		present = 1; // unused?
 		init(bcube_, bcube_, pond_id, 4, 6); // 4-6 fish
-		populate(0.1*bcube.dz(), 0.004); // size based on depth
+		populate(0.12*bcube.dz(), 0.004); // size based on depth
 	}
 	virtual bool check_fish_coll(point const &pos, float radius, unsigned id, point &coll_pos) const {
 		if (fish_cont_t::check_fish_coll(pos, radius, id, coll_pos)) return 1;
@@ -346,11 +347,21 @@ public:
 		float const dx(CLIP_TO_01(1.0f - (2.0f/bcube.dx())*fabs(pos.x - bcube.xc())));
 		float const dy(CLIP_TO_01(1.0f - (2.0f/bcube.dy())*fabs(pos.y - bcube.yc())));
 		float const bot_zval(bcube.z2() - sin(dx*dy*PI_TWO)*bcube.dz());
-		return (pos.z - radius < bot_zval);
+		return (pos.z - 1.5*radius < bot_zval);
 	}
-	void next_frame() {
-		// TODO: use correct pond volume
-		fish_cont_t::next_frame(1.5); // speed_mult_max=1.5
+	void next_frame() {fish_cont_t::next_frame(1.5);} // speed_mult_max=1.5
+
+	void draw(shader_t &s, animation_state_t &anim_state, float anim_time) const { // override fish_cont_t::draw() to include VFC and custom colors
+		if (fish.empty()) return;
+		vector3d const xlate(get_camera_coord_space_xlate());
+		point const camera_bs(get_camera_pos() - xlate), lpos(get_light_pos());
+
+		for (fish_t const &f : fish) {
+			if (!camera_pdu.sphere_visible_test((f.pos + xlate), f.radius)) continue; // VFC
+			colorRGBA color(WHITE);
+			water_color_atten(&(color.R), f.pos, camera_bs, lpos, bcube.z2(), 20.0);
+			f.draw(s, anim_state, anim_time, color);
+		}
 	}
 }; // fishtank_t
 
