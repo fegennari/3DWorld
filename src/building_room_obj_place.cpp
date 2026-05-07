@@ -927,7 +927,7 @@ cube_t get_table_blocker(vect_room_object_t const &objs, unsigned objs_start) {
 	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
 		if (i->type != TYPE_TABLE) continue;
 		cube_t table_blocker(*i);
-		table_blocker.expand_by_xy(2.05*building_t::get_scaled_player_radius());
+		table_blocker.expand_by_xy(2.05*get_scaled_player_radius());
 		return table_blocker; // there should only be one
 	}
 	return cube_t();

@@ -464,7 +464,6 @@ struct building_geom_t { // describes the physical shape of a building
 	uint8_t door_sides[4]={}; // bit mask for 4 door sides, one per base part
 	bool half_offset=0, is_pointed=0;
 	float rot_sin=0.0, rot_cos=0.0, flat_side_amt=0.0, alt_step_factor=0.0, start_angle=0.0; // rotation in XY plane, around Z (up) axis
-	//float roof_recess;
 
 	building_geom_t(unsigned ns=4, float rs=0.0, float rc=1.0, bool pointed=0) : num_sides(ns), is_pointed(pointed), rot_sin(rs), rot_cos(rc) {}
 	bool is_rotated() const {return (rot_sin != 0.0);}
@@ -2322,7 +2321,6 @@ struct building_t : public building_geom_t {
 
 	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_) {}
 	building_t(building_geom_t const &bg) : building_geom_t(bg) {}
-	static float get_scaled_player_radius();
 	static float get_min_front_clearance () {return 2.05f*get_scaled_player_radius();} // slightly larger than the player diameter
 	static float get_min_front_clearance_inc_people();
 	bool is_valid() const {return !bcube.is_all_zeros();}

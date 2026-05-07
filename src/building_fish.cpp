@@ -226,7 +226,7 @@ public:
 			if (f.can_splash(rgen) && camera_pdu.sphere_visible_test((f.pos + xlate), f.radius)) {add_water_splash(f.pos, 2.0*f.radius, 0.25);}
 		}
 		if (player_in_water) { // handle player interaction
-			float const player_radius(building_t::get_scaled_player_radius()), player_height(get_bldg_player_height());
+			float const player_radius(get_scaled_player_radius()), player_height(get_bldg_player_height());
 			point const camera_bs(get_camera_pos() - xlate);
 
 			for (fish_t &f : fish) {

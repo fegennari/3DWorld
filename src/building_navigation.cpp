@@ -2847,7 +2847,7 @@ bool zombie_in_attack_range(person_t &person) {
 	// use zval of the feet to handle cases where the person and the player are different heights
 	float const player_height(get_bldg_player_height());
 	point const feet_pos(person.pos.x, person.pos.y, person.get_z1()), player_feet_pos(cur_player_building_loc.pos - vector3d(0.0, 0.0, player_height));
-	return (fabs(feet_pos.z - player_feet_pos.z) < 0.5*player_height && dist_less_than(feet_pos, player_feet_pos, 1.2f*(person.radius + building_t::get_scaled_player_radius())));
+	return (fabs(feet_pos.z - player_feet_pos.z) < 0.5*player_height && dist_less_than(feet_pos, player_feet_pos, 1.2f*(person.radius + get_scaled_player_radius())));
 }
 void clamp_person_to_building_bcube(point &pos, cube_t bcube, float radius, float fc_thick) {
 	bcube.z1() += fc_thick + radius; // make sure feet are above the floor

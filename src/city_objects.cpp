@@ -441,7 +441,7 @@ void divider_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_sc
 }
 bool divider_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
 	cube_t bcube_wide(bcube + xlate);
-	bcube_wide.expand_in_dim(dim, max(0.0f, 0.5f*(0.5f*building_t::get_scaled_player_radius() - get_depth()))); // make sure it's at least half player radius in thickness
+	bcube_wide.expand_in_dim(dim, max(0.0f, 0.5f*(0.5f*get_scaled_player_radius() - get_depth()))); // make sure it's at least half player radius in thickness
 	return sphere_cube_int_update_pos(pos_, radius_, bcube_wide, p_last, 0, cnorm);
 }
 
@@ -2167,7 +2167,7 @@ void ww_elevator_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dis
 		if (dstate.check_cube_visible(gate, 0.4*dist_scale)) { // draw lower vertical gate when close
 			colorRGBA const gate_color(BLACK);
 			float const door_width(gate.get_sz_dim(!dim)), bar_thickness(gate.get_sz_dim(dim)), door_height(gate.dz());
-			unsigned const num_v_bars(door_width/building_t::get_scaled_player_radius() + 2), num_h_bars(3);
+			unsigned const num_v_bars(door_width/get_scaled_player_radius() + 2), num_h_bars(3);
 			float const bar_hthick(0.5*bar_thickness), vbar_spacing((door_width - bar_thickness)/(num_v_bars-1)), hbar_spacing((door_height - bar_thickness)/(num_h_bars-1));
 
 			for (unsigned n = 0; n < num_v_bars; ++n) { // vertical bars
@@ -2239,7 +2239,7 @@ void ww_elevator_t::next_frame(point const &camera_bs, float fticks_stable) {
 	bool const door_is_open(lo_door_open > 0.0 || hi_door_open > 0.0);
 	float const prev_ldo(lo_door_open), prev_hdo(hi_door_open);
 	float const elapsed_secs(fticks_stable/TICKS_PER_SECOND), door_change_amt(1.0*elapsed_secs); // 1s to full open or close
-	float const fc_thick(get_fc_thick()), player_radius(building_t::get_scaled_player_radius());
+	float const fc_thick(get_fc_thick()), player_radius(get_scaled_player_radius());
 	float const platform_zmin(bcube.z1() + fc_thick), platform_zmax(bcube.z2() - get_platform_height() - fc_thick);
 	bool const player_is_inside  (point_on_platform(camera_bs, -player_radius)); // fully inside
 	bool const player_overlapping(point_on_platform(camera_bs,  player_radius)); // partially inside
@@ -2902,8 +2902,9 @@ void city_bldg_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_
 		} // for tire
 	}
 	if (!barrels.empty()) { // draw barrels (55 gal drums)
+		int const barrel_tid(get_met_plate_tid());
 		dstate.s.set_cur_color(WHITE);
-		select_texture     (get_met_plate_tid());
+		select_texture     (barrel_tid);
 		select_texture_nmap(get_mplate_nm_tid());
 
 		for (cube_with_ix_t const &barrel : barrels) { // draw sides textured
@@ -2913,7 +2914,7 @@ void city_bldg_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_
 			unsigned const ndiv(shadow_only ? 16 : max(4U, min(32U, unsigned(0.4f*dist_scale*dstate.get_lod_factor(top)))));
 			draw_fast_cylinder(cube_bot_center(barrel), top, bradius, bradius, ndiv, 1, 0, 0, nullptr, 2.0, 0.0, nullptr, 0, 2.0); // sides only
 		}
-		dstate.s.set_cur_color(texture_color(get_met_plate_tid()));
+		dstate.s.set_cur_color(texture_color(barrel_tid));
 		select_no_texture();
 		bind_default_flat_normal_map();
 
