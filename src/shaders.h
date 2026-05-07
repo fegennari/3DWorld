@@ -32,8 +32,6 @@ struct gl_light_params_t {
 };
 
 
-struct zi_unsigned_t {unsigned v=0;};
-
 class property_map_t { // for storing user-defined shader properties
 	map<string, string> prop_map;
 	static string empty_str;

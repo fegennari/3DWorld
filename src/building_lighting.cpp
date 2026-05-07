@@ -363,6 +363,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 	if (!has_room_geom()) return; // nothing else to add
 	float const sz_thresh(1.0*get_wall_thickness());
 	vect_room_object_t const &objs(interior->room_geom->objs);
+	//struct zi_unsigned {unsigned v=0;};
 	//map<unsigned, zi_unsigned> counts;
 		
 	for (auto c = objs.begin(); c != objs.end(); ++c) { // Note: ignores expanded objects (including shelf rack objects)
