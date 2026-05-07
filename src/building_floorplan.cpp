@@ -134,10 +134,6 @@ float building_t::get_window_h_border() const {return 0.5*(1.0 - global_building
 float building_t::get_window_v_border() const {return 0.5*(1.0 - global_building_params.get_window_height_fract());} // (0.0, 1.0)
 float building_t::get_hspacing_for_part(cube_t const &part, bool dim) const {return part.get_sz_dim(dim)/get_num_windows_on_side(part, dim);}
 
-void set_wall_width(cube_t &wall, float pos, float half_thick, unsigned dim) {
-	wall.d[dim][0] = pos - half_thick;
-	wall.d[dim][1] = pos + half_thick;
-}
 void resize_around_center_xy(cube_t &c, float radius) {
 	for (unsigned d = 0; d < 2; ++d) {set_wall_width(c, c.get_center_dim(d), radius, d);}
 }

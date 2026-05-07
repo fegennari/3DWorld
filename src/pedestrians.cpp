@@ -2,6 +2,7 @@
 // by Frank Gennari
 // 12/6/18
 #include "city.h"
+#include "buildings.h" // for drawing building people
 #include "shaders.h"
 #include "nav_grid.h"
 #include "profiler.h"

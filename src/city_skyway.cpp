@@ -221,9 +221,9 @@ void skyway_t::init(cube_t const &c, bool dim_) {
 	mww_segs.push_back(ww_area);
 
 	for (skyway_conn_t const &conn : ww_conns) {
+		assert(conn.dim != dim);
 		cube_t sub(bcube);
-		float const mww_gap(conn.building ? 2.0*conn.building->get_doorway_width() : 0.75*conn.get_sz_dim(dim));
-		set_wall_width(sub, conn.get_center_dim(dim), 0.5*mww_gap, dim);
+		set_wall_width(sub, conn.get_center_dim(dim), 0.5*conn.get_doorway_width(), dim);
 		subtract_cube_from_cubes(sub, mww_segs);
 	}
 	for (cube_t ww : mww_segs) {
@@ -463,7 +463,8 @@ void skyway_t::get_building_signs(vector<sign_t> &signs) const {
 	float const sign_height(0.06*bcube.dz()), sign_hwidth(4.0*sign_height), sign_depth(0.2*sign_height);
 
 	for (skyway_conn_t const &conn : ww_conns) { // ramps
-		if (!conn.building || conn.building->name.empty()) continue; // no name, no sign
+		string const name(conn.get_building_name());
+		if (name.empty()) continue; // no building or no name, no sign
 		bool const dir(!conn.dir); // dir relative to skyway, not building
 		float const wall_pos(top.d[!dim][dir]); // inner wall of skyway
 		float const sign_z1(conn.z2() + 0.5*sign_height);
@@ -472,7 +473,7 @@ void skyway_t::get_building_signs(vector<sign_t> &signs) const {
 		sign.d[!dim][ dir] = wall_pos;
 		sign.d[!dim][!dir] = wall_pos + (dir ? -1.0 : 1.0)*sign_depth;
 		set_wall_width(sign, conn.get_center_dim(dim), sign_hwidth, dim);
-		signs.emplace_back(sign, !dim, !dir, conn.building->name, WHITE, BLACK, 0, 0, 1, 0, 0, 1); // two_sided=0, emissive=0, small=1, scrolling=0, fs=0, in_skyway=1
+		signs.emplace_back(sign, !dim, !dir, name, WHITE, BLACK, 0, 0, 1, 0, 0, 1); // two_sided=0, emissive=0, small=1, scrolling=0, fs=0, in_skyway=1
 		signs.back().draw_zmin = bcube.z1(); // skip draw if camera is below the bottom of the skyway
 	} // for conn
 }

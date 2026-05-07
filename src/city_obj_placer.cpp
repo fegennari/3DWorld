@@ -4,7 +4,7 @@
 
 #include "city_objects.h"
 #include "tree_3dw.h" // for tree_placer_t
-#include "lightmap.h" // for light_source
+#include "buildings.h"
 
 
 float pond_max_depth(0.0);
@@ -3409,5 +3409,9 @@ void city_obj_placer_t::play_sounds() {
 		}
 	} // for g
 }
+
+// these are here because they require buildings.h
+string skyway_conn_t::get_building_name() const {return (building ? building->name : "");}
+float  skyway_conn_t::get_doorway_width() const {return (building ? 2.0*building->get_doorway_width() : 0.75*get_sz_dim(!dim));}
 
 

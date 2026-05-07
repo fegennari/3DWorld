@@ -13,7 +13,6 @@ extern object_model_loader_t building_obj_model_loader;
 
 vect_cube_t &get_temp_cubes();
 bool get_dishwasher_for_ksink(room_object_t const &c, cube_t &dishwasher);
-void set_wall_width(cube_t &wall, float pos, float half_thick, unsigned dim);
 float get_med_cab_wall_thickness(room_object_t const &c);
 float get_locker_wall_thickness (room_object_t const &c);
 float get_radius_for_square_model(unsigned model_id);

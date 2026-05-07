@@ -442,7 +442,7 @@ bool city_road_connector_t::route_transmission_line(transmission_line_t &tline, 
 // park_heightmap_t
 
 // Note: vertex_t must have a vertex v and a set_norm()
-template<typename vertex_t> void calc_heightmap_normals(vector<vertex_t> &verts, unsigned nx, unsigned ny, unsigned verts_start) {
+template<typename vertex_t> void calc_heightmap_normals(vector<vertex_t> &verts, unsigned nx, unsigned ny, unsigned verts_start=0) {
 	unsigned const stride(nx + 1);
 	assert(verts_start + stride*(ny+1) <= verts.size());
 
@@ -461,7 +461,7 @@ template<typename vertex_t> void calc_heightmap_normals(vector<vertex_t> &verts,
 }
 template void calc_heightmap_normals(vector<vert_norm_comp_tc_color> &verts, unsigned nx, unsigned ny, unsigned verts_start); // explicit instantiation
 
-void calc_heightmap_indices(vector<unsigned> &indices, unsigned nx, unsigned ny, unsigned verts_start) {
+void calc_heightmap_indices(vector<unsigned> &indices, unsigned nx, unsigned ny, unsigned verts_start=0) {
 	unsigned const stride(nx + 1);
 
 	for (unsigned y = 0; y < ny; ++y) {

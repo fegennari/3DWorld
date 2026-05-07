@@ -770,6 +770,9 @@
     <ClInclude Include="src\format_text.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\building_defs.h">
+      <Filter>Source Files\City</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="icon1.ico">

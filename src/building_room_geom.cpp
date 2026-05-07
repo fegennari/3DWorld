@@ -44,6 +44,9 @@ tid_nm_pair_t get_scratched_metal_tex(float tscale, bool inc_shadows);
 colorRGBA get_liquid_food_color(rand_gen_t &rgen);
 void add_grid_of_bars(rgeom_mat_t &mat, colorRGBA const &color, cube_t const &c, unsigned num_vbars, unsigned num_hbars, float vbar_hthick,
 	float hbar_hthick, unsigned vdim, unsigned hdim, unsigned adj_dim=0, float h_adj_val=0.0, bool cylin_vbars=0, float tscale=1.0);
+// functions in city_terrain.cpp
+template<typename vertex_t> void calc_heightmap_normals(vector<vertex_t> &verts, unsigned nx, unsigned ny, unsigned verts_start=0);
+void calc_heightmap_indices(vector<unsigned> &indices, unsigned nx, unsigned ny, unsigned verts_start=0);
 
 unsigned get_face_mask(unsigned dim, bool dir) {return ~(1 << (2*(2-dim) + dir));} // draw only these faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2
 unsigned get_skip_mask_for_xy (bool       dim) {return (dim ? EF_Y12 : EF_X12);} // skip these faces
@@ -7334,6 +7337,9 @@ cube_t get_parking_gate_arm(room_object_t const &c) {
 	}
 	assert(arm.is_strictly_normalized());
 	return arm;
+}
+cube_t get_parking_gate_arm(cube_t const &c, bool dim, bool dir, bool is_open) { // for city parking_gate_t
+	return get_parking_gate_arm(room_object_t(c, TYPE_PARK_GATE, 0, dim, dir, (is_open ? RO_FLAG_OPEN : 0), 1.0, SHAPE_TALL, WHITE, (dir ^ 1))); // long arm
 }
 void building_room_geom_t::add_parking_gate(room_object_t const &c) {
 	add_obj_with_front_texture(c, "interiors/parking_ticket_machine.png", WHITE, c.color, 0, 0.5, 50.0, 0.5); // painted metal

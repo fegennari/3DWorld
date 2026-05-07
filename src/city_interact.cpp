@@ -2,6 +2,7 @@
 // by Frank Gennari
 // 11/23/21
 #include "city.h"
+#include "buildings.h"
 
 extern bool camera_in_building, enable_mouse_look, no_tt_footsteps;
 extern int spectate;

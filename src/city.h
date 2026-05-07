@@ -9,8 +9,10 @@
 #include "inlines.h"
 #include "shaders.h"
 #include "draw_utils.h"
-#include "buildings.h"
+#include "building_defs.h"
 #include "city_model.h"
+#include "file_utils.h" // for kw_to_val_map_t
+#include "pedestrians.h"
 
 using std::string;
 
