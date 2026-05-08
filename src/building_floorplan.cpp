@@ -2332,6 +2332,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		}
 	}
 	if (!has_roof_access) { // roof ceiling, full area
+		// if is_restroom(), should there be no ceiling and the roof open like an attic?
 		set_cube_zvals(C, (z - fc_thick), z);
 		
 		// add attic to some building types; primary/upper part only
@@ -2350,9 +2351,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 				interior->floors.push_back(c);
 			} // for i
 		}
-		else {
-			add_ceiling_cube_no_skylights(C);
-		}
+		else {add_ceiling_cube_no_skylights(C);}
 	}
 	std::reverse(interior->floors.begin()+floors_start, interior->floors.end()); // order floors top to bottom to reduce overdraw when viewed from above
 }

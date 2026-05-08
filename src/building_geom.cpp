@@ -2941,9 +2941,13 @@ void building_interior_t::create_fc_occluders() {
 }
 
 void building_interior_t::add_ceil_floor_pair(cube_t cf, float zc, float z, float zf) {
-	set_cube_zvals(cf, zc, z);
-	ceilings.push_back(cf);
-	set_cube_zvals(cf, z, zf);
-	floors.push_back(cf);
+	if (zc < z) { // floor nonzero dz
+		set_cube_zvals(cf, zc, z);
+		ceilings.push_back(cf);
+	}
+	if (z < zf) { // ceiling nonzero dz
+		set_cube_zvals(cf, z, zf);
+		floors.push_back(cf);
+	}
 }
 
