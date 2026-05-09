@@ -268,21 +268,23 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 			placed_obj = 1;
 			bathroom_objs_mask |= PLACED_SINK;
 			assert(sink_obj_ix < objs.size());
-			room_object_t const &sink(objs[sink_obj_ix]); // sink, not blocker
+			room_object_t const sink(objs[sink_obj_ix]); // sink, not blocker; deep copy to avoid invalidating the reference
 			add_poi_dim_dir(sink, room_id, sink.dim, sink.dir, 0.5); // dscale=0.5
+			bool const not_on_wall_with_window(is_basement || !has_int_windows() || classify_room_wall(room, zval, sink.dim, !sink.dir, 0) != ROOM_WALL_EXT);
+			float const wall_pos(room_bounds.d[sink.dim][!sink.dir]);
 		
 			if (point_in_water_area(sink.get_cube_center())) {} // no medicine cabinet, because the reflection system doesn't support both a mirror and water reflection
 			else if (is_parking() && !is_basement) {} // no mirror in parking structure since reflections don't work there
-			else if (is_basement || classify_room_wall(room, zval, sink.dim, !sink.dir, 0) != ROOM_WALL_EXT) { // interior wall only
-				// add a mirror/medicine cabinet above the sink
+			else if (not_on_wall_with_window) { // interior wall only
+				// add a mirror/medicine cabinet above the sink; should this only be for residential buildings?
 				float const mirror_expand(0.1*sink.get_sz_dim(!sink.dim));
 				cube_t mirror(sink); // start with the sink left and right position
 				mirror.expand_in_dim(!sink.dim, mirror_expand); // make slightly wider
 				set_cube_zvals(mirror, sink.z2(), sink.z2()+0.3*floor_spacing);
-				mirror.d[sink.dim][!sink.dir] = room_bounds.d[sink.dim][!sink.dir];
-				mirror.d[sink.dim][ sink.dir] = mirror.d[sink.dim][!sink.dir] + (sink.dir ? 1.0 : -1.0)*1.0*wall_thickness; // thickness
+				mirror.d[sink.dim][!sink.dir] = wall_pos;
+				mirror.d[sink.dim][ sink.dir] = wall_pos + (sink.dir ? 1.0 : -1.0)*1.0*wall_thickness; // thickness
 
-				if (!overlaps_other_room_obj(mirror, objs_start, 0, &sink_obj_ix)) { // check_all=0; skip sink + blocker
+				if (room_bounds.contains_cube(mirror) && !overlaps_other_room_obj(mirror, objs_start, 0, &sink_obj_ix)) { // check_all=0; skip sink + blocker
 					if (interior->is_cube_close_to_doorway(mirror, room, 0.0, 1, 1)) { // check doorways as well, since mirror is wider thank sink
 						mirror.expand_in_dim(!sink.dim, -mirror_expand); // undo expand and try for a narrow mirror
 					}
@@ -292,6 +294,37 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 					objs.emplace_back(mirror, TYPE_MED_CAB, room_id, sink.dim, sink.dir, flags, tot_light_amt); // Note: invalidates sink reference
 					set_obj_id(objs); // for crack texture selection/orient
 					room.set_has_mirror();
+				}
+			}
+			if (!is_residential() && not_on_wall_with_window) { // add paper towel and soap dispenser on either side of the sink, but not on walls with windows
+				bool const td_side(rgen.rand_bool());
+				float const td_sd_z1(sink.z2()), dir_sign(sink.dir ? 1.0 : -1.0), side_sign(td_side ? 1.0 : -1.0);
+
+				if (building_obj_model_loader.is_model_valid(OBJ_MODEL_TOWEL_DISP)) { // paper towel dispenser
+					vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TOWEL_DISP)); // D, W, H
+					float const height(0.21*floor_spacing), hwidth(0.5*height*sz.y/sz.z), depth(height*sz.x/sz.z);
+					cube_t td;
+					set_cube_zvals(td, td_sd_z1, td_sd_z1+height);
+					td.d[sink.dim][!sink.dir] = wall_pos;
+					td.d[sink.dim][ sink.dir] = wall_pos + dir_sign*depth;
+					set_wall_width(td, (sink.d[!sink.dim][td_side] + side_sign*2.0*hwidth), hwidth, !sink.dim); // next to sink
+
+					if (room_bounds.contains_cube(td) && !overlaps_other_room_obj(td, objs_start) && !is_cube_close_to_doorway(td, room, 0.0, 1, 1)) { // inc_open=1, check_odir=1
+						objs.emplace_back(td, TYPE_TOWEL_DISP, room_id, sink.dim, sink.dir, 0, tot_light_amt);
+					}
+				}
+				if (building_obj_model_loader.is_model_valid(OBJ_MODEL_SOAP_DISP)) { // soap dispenser
+					vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SOAP_DISP)); // D, W, H
+					float const height(0.12*floor_spacing), hwidth(0.5*height*sz.y/sz.z), depth(height*sz.x/sz.z);
+					cube_t sd;
+					set_cube_zvals(sd, td_sd_z1, td_sd_z1+height);
+					sd.d[sink.dim][!sink.dir] = wall_pos;
+					sd.d[sink.dim][ sink.dir] = wall_pos + dir_sign*depth;
+					set_wall_width(sd, (sink.d[!sink.dim][!td_side] - side_sign*3.0*hwidth), hwidth, !sink.dim); // next to sink
+					
+					if (room_bounds.contains_cube(sd) && !overlaps_other_room_obj(sd, objs_start) && !is_cube_close_to_doorway(sd, room, 0.0, 1, 1)) { // inc_open=1, check_odir=1
+						objs.emplace_back(sd, TYPE_SOAP_DISP, room_id, sink.dim, sink.dir, 0, tot_light_amt); // nocoll?
+					}
 				}
 			}
 		}
