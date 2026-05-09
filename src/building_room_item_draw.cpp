@@ -1141,7 +1141,7 @@ void building_room_geom_t::update_exterior_door_vbos(building_t const &building)
 		cube_t const dbc(d.get_bcube());
 		vector3d const normal(d.get_norm());
 		bool const open(building.open_door_ix >= 0 && (int)dix == building.open_door_ix), opens_inward(building.is_house && d.door_opens_inward());
-		bool const dim(dbc.dy() < dbc.dx()), dir(normal[dim] < 0), hinge_side(1);
+		bool const dim(dbc.dy() < dbc.dx()), dir(normal[dim] < 0), hinge_side(building.get_ext_door_hinge_side(d));
 		door_t door(dbc, dim, dir, open, 0, hinge_side); // on_stairs=0
 		door_rotation_t drot;
 		

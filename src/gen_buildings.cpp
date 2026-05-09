@@ -1784,8 +1784,9 @@ colorRGBA building_t::get_int_wall_tex_and_color(bool in_basement, bool in_ext_b
 }
 
 void draw_building_ext_door(building_draw_t &bdraw, tquad_with_ix_t const &door, building_t const &b) {
+	bool const hinge_side(b.get_ext_door_hinge_side(door));
 	colorRGBA const &dcolor((door.type == tquad_with_ix_t::TYPE_GDOOR) ? WHITE : b.door_color); // garage doors are always white
-	bdraw.add_tquad(b, door, b.bcube, tid_nm_pair_t(get_building_door_tid(door.type), -1, 1.0, 1.0), dcolor);
+	bdraw.add_tquad(b, door, b.bcube, tid_nm_pair_t(get_building_door_tid(door.type), -1, 1.0, 1.0), dcolor, !hinge_side);
 }
 void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exterior building parts
 	if (!is_valid()) return; // invalid building
@@ -2559,7 +2560,8 @@ template<typename T> void building_t::add_door_verts(cube_t const &D, T &drawer,
 		if (num_sides == 2) {dc.d[!dim][bool(side) ^ dim ^ dir ^ 1] = 0.5f*(D.d[!dim][0] + D.d[!dim][1]);} // split door in half
 		// we don't want to draw the open stairs door because it may get in the way, but we need to overwrite the previous verts, so make it zero area
 		if (opened && on_stairs) {dc.z2() = dc.z1();}
-		bool const int_other_side(exterior ? 0 : hinge_side), swap_sides(exterior ? (side == 0) : hinge_side); // swap sides for right half of exterior door
+		bool const swap_sides((exterior && side == 1) ^ hinge_side); // swap sides for right half of exterior door
+		bool const swap_tc_x(hinge_side && !opened);
 		// 0,1: bottom, 2,3: top; we pass in the same drot for both sides because the value is only filled in and used for interior doors, which have only one side
 		tquad_with_ix_t const door(set_door_from_cube(dc, dim, dir, type, 0.0, exterior, open_amt, opens_out, opens_up, swap_sides, open_min_amt, drot));
 		vector3d const normal(door.get_norm());
@@ -2581,7 +2583,7 @@ template<typename T> void building_t::add_door_verts(cube_t const &D, T &drawer,
 				door_side.type = (is_house ? (unsigned)tquad_with_ix_t::TYPE_IDOOR_IN :
 					(is_rooftop_door ? (unsigned)tquad_with_ix_t::TYPE_RDOOR_IN : (unsigned)tquad_with_ix_t::TYPE_ODOOR_IN));
 			}
-			drawer.add_tquad(*this, door_side, bcube, tp, color, (int_other_side && !opened), exclude_frame, 0); // invert_tc_x=xxx, no_tc=0
+			drawer.add_tquad(*this, door_side, bcube, tp, color, swap_tc_x, exclude_frame, 0); // no_tc=0
 		} // for d
 		if (opened || on_stairs) { // add untextured door edges; only needed for open doors or doors at the bottom of basement stairs
 			for (unsigned e = 0; e < num_edges; ++e) {
@@ -2905,9 +2907,9 @@ bool building_t::get_nearby_ext_door_verts(building_draw_t *bdraw, shader_t &s, 
 	door_rotation_t drot; // return value is unused
 	vector3d const normal(door.get_norm());
 	bool const opens_outward(!is_house || !door.door_opens_inward()); // non house, non grarage doors open outward
-	bool const dim(fabs(normal.x) < fabs(normal.y)), dir(normal[dim] < 0.0);
+	bool const dim(fabs(normal.x) < fabs(normal.y)), dir(normal[dim] < 0.0), hinge_side(get_ext_door_hinge_side(door));
 	// Note: outward opening doors should use exterior rather than interior lighting, though it's not too noticeable
-	add_door_verts(door.get_bcube(), door_draw, drot, door.type, dim, dir, 1.0, opens_outward, 1, 0); // open_amt=1.0, exterior=1, on_stairs=0
+	add_door_verts(door.get_bcube(), door_draw, drot, door.type, dim, dir, 1.0, opens_outward, 1, 0, hinge_side); // open_amt=1.0, exterior=1, on_stairs=0
 	// draw other exterior doors as closed in case they're visible through the open door; is this needed for pedestrians?
 	if (!only_open) {get_ext_door_verts(door_draw, pos, view_dir, door_ix);}
 	door_draw.draw(s, 0, 1); // direct_draw_no_vbo=1

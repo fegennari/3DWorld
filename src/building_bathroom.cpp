@@ -981,3 +981,11 @@ void building_t::create_restroom_floorplan(unsigned part_id, rand_gen_t &rgen) {
 	set_cube_zvals(driveway, ground_floor_z1, ground_floor_z1+0.5*get_fc_thickness());
 }
 
+bool building_t::get_ext_door_hinge_side(tquad_with_ix_t const &door) const {
+	if (is_restroom() && street_side) { // restroom with doors in front; always open toward the ends
+		bool const dim(!get_street_dim()), dir(get_street_side()); // split dim
+		return ((door.pts[0][dim] < bcube.get_center_dim(dim)) ^ dim ^ dir);
+	}
+	return 1;
+}
+
