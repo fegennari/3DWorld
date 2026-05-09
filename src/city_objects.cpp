@@ -1141,7 +1141,8 @@ point power_pole_t::get_transformer_center() const { // not checking has_transfo
 	tf_pos.y += y_sign*(tf_radius + pole_radius);
 	return tf_pos;
 }
-bool power_pole_t::add_wire(point const &p1, point const &p2, bool add_pole) { // Note: p1 connects to building or streetlight; p2 connects to wires on pole
+// Note: p1 connects to building or streetlight; p2 connects to wires on pole
+bool power_pole_t::add_wire(point const &p1, point const &p2, bool add_pole, bool power_only) {
 	float const pole_height(bcube.dz());
 	wire_t wire(p1, p2);
 	
@@ -1154,7 +1155,7 @@ bool power_pole_t::add_wire(point const &p1, point const &p2, bool add_pole) { /
 	for (unsigned d = 0; d < 2; ++d) {bcube_with_wires.union_with_sphere(wire.pts[d], get_wire_radius());} // okay to omit pole_base
 	bsphere_radius = bcube_with_wires.furthest_dist_to_pt(pos); // recompute
 
-	if (add_pole) { // add lower telephone or cable TV wire
+	if (add_pole && !power_only) { // add lower telephone or cable TV wire
 		wire.pts[0].z -= 0.020*pole_height; // halfway up the wire pole
 		wire.pts[1].z -= 0.042*pole_height + 2.0*get_vwire_spacing(); // connect to lower wire
 		wire.rscale    = 0.67; // smaller radius

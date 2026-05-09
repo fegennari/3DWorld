@@ -2687,7 +2687,7 @@ void city_obj_placer_t::add_objs_on_buildings(road_plot_t const &plot, vect_cube
 	return 1;
 }
 
-bool city_obj_placer_t::connect_power_to_point(point const &at_pos, bool near_power_pole) {
+bool city_obj_placer_t::connect_power_to_point(point const &at_pos, bool near_power_pole, bool power_only) {
 	float dmax_sq(0.0);
 
 	for (unsigned n = 0; n < 4; ++n) { // make up to 4 attempts to connect a to a power pole without intersecting a building
@@ -2703,7 +2703,7 @@ bool city_obj_placer_t::connect_power_to_point(point const &at_pos, bool near_po
 			if (dmin_sq == 0.0 || dsq < dmin_sq) {best_pos = cur_pos; dmin_sq = dsq; best_pole = (p - ppoles.begin());}
 		} // for p
 		if (dmin_sq == 0.0) return 0; // failed (no power poles?)
-		if (ppoles[best_pole].add_wire(at_pos, best_pos, near_power_pole)) return 1; // add a wire pole for houses
+		if (ppoles[best_pole].add_wire(at_pos, best_pos, near_power_pole, power_only)) return 1; // add a wire pole for houses
 		dmax_sq = dmin_sq; // prevent this pole from being used in the next iteration
 	} // for n
 	return 0; // failed
@@ -2714,7 +2714,14 @@ void city_obj_placer_t::connect_power_to_buildings(vector<road_plot_t> const &pl
 	for (auto p = plots.begin()+1; p != plots.end(); ++p) {all_plots_bcube.union_with_cube(*p);} // query all buildings in the entire city rather than per-plot
 	vector<point> ppts;
 	get_building_power_points(all_plots_bcube, ppts); // get points on house roofs
-	for (point const &p : ppts) {connect_power_to_point(p, 1);} // near_power_pole=1
+	vect_cube_t parks;
+
+	for (road_plot_t const &p : plots) {
+		if (p.is_park) {parks.push_back(p);}
+	}
+	for (point const &p : ppts) {
+		connect_power_to_point(p, 1, point_in_cubes_xy_exp(parks, p)); // near_power_pole=1; power_only=1 for park restrooms
+	}
 }
 
 bool move_pos_to_avoid(cube_t const &c, cube_t const &test_cube, point &pos, bool dim) {
@@ -2748,7 +2755,7 @@ void city_obj_placer_t::finalize_streetlights_and_power(streetlights_t &sl, vect
 		if (!ppoles.empty()) { // connect power
 			point top(s.get_lpos());
 			top.z += 1.05f*streetlight_ns::light_radius*city_params.road_width; // top of light
-			connect_power_to_point(top, 0); // near_power_pole=0 because it may be too far away
+			connect_power_to_point(top, 0, 1); // near_power_pole=0 because it may be too far away; power_only=1
 		}
 		if (s.on_bridge_or_tunnel) continue; // not inside a plot
 		assert(s.plot_ix < plot_colliders.size());

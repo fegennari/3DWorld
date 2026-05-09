@@ -254,7 +254,7 @@ public:
 	point get_nearest_connection_point(point const &to_pos, bool near_power_pole) const;
 	void get_top_wire_end_pts(point top_wires[2][3][2]) const;
 	point get_transformer_center() const;
-	bool add_wire(point const &p1, point const &p2, bool add_pole);
+	bool add_wire(point const &p1, point const &p2, bool add_pole, bool power_only);
 	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
@@ -926,7 +926,7 @@ private:
 	void add_objs_on_buildings(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<point> &hospital_signs);
 	template<typename T> void draw_objects(vector<T> const &objs, city_obj_groups_t const &groups, draw_state_t &dstate,
 		float dist_scale, bool shadow_only, bool has_immediate_draw=0, bool draw_qbd_as_quads=0, float specular=0.75, float shininess=50.0);
-	bool connect_power_to_point(point const &at_pos, bool near_power_pole);
+	bool connect_power_to_point(point const &at_pos, bool near_power_pole, bool power_only);
 	void connect_power_to_buildings(vector<road_plot_t> const &plots);
 	bool check_walkway_coll_xy(point const &pos, float radius) const;
 	void next_frame_birds(point const &camera_bs, float fticks_stable);

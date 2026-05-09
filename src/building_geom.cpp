@@ -1596,7 +1596,7 @@ int building_t::find_main_roof_tquad_ix(rand_gen_t &rgen, bool skip_if_has_other
 
 // Note: occasionally the chosen point will generate a wire that intersects some other part of the house for every nearby power pole and may be skipped
 bool building_t::get_power_point(vector<point> &ppts) const {
-	if (!is_house) return 0; // houses only for now
+	if (!is_house && !is_restroom()) return 0; // houses and park restrooms only for now
 	static rand_gen_t rgen; // used for tie breaker when both sides of the roof are symmetric
 	int const roof_tquad_ix(find_main_roof_tquad_ix(rgen, 0)); // skip_if_has_other_obj=0
 	if (roof_tquad_ix < 0) return 0; // not found
