@@ -4126,8 +4126,13 @@ void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
 	rgeom_mat_t &mat(mats_lights.get_material(tp));
 
 	if (c.flags & RO_FLAG_ADJ_HI) { // wall light
-		assert(c.shape == SHAPE_CYLIN);
-		mat.add_ortho_cylin_to_verts(c, color, c.dim, !c.dir, c.dir); // draw top but not bottom
+		if (c.shape == SHAPE_CUBE) {
+			mat.add_cube_to_verts(c, color, c.get_llc(), ~get_face_mask(c.dim, !c.dir)); // skip face against the wall
+		}
+		else { // cylinder
+			assert(c.shape == SHAPE_CYLIN);
+			mat.add_ortho_cylin_to_verts(c, color, c.dim, !c.dir, c.dir); // draw top but not bottom
+		}
 	}
 	else if (c.shape == SHAPE_CUBE) {
 		if (missing_cover) {
