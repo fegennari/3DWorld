@@ -1536,16 +1536,14 @@ void regrow_landscape_texture_amt0() {
 	int const y2(y1 + (tex.height/LANDSCAPE_REGEN_MOD));
 	assert(y2 <= tex.height);
 
-	//if (LANDSCAPE_REGEN_AMT > 0.0 || skip_regrow) {
-		for (int i = y1; i < y2; ++i) {
-			int const i_step(i*tex.width);
+	for (int i = y1; i < y2; ++i) {
+		int const i_step(i*tex.width);
 
-			for (int j = 0; j < tex.width; ++j) { // performance critical
-				int const offset(3*(i_step + j));
-				UNROLL_3X(tex_data[offset+i_] += (unsigned char)(((int)landscape0[offset+i_] - (int)tex_data[offset+i_]) >> regen_bshift);)
-			}
+		for (int j = 0; j < tex.width; ++j) { // performance critical
+			int const offset(3*(i_step + j));
+			UNROLL_3X(tex_data[offset+i_] += (unsigned char)(((int)landscape0[offset+i_] - (int)tex_data[offset+i_]) >> regen_bshift);)
 		}
-	//}
+	}
 	++counter;
 	skip_regrow = 0;
 	tex.update_texture_data(0, y1, tex.width, y2);
