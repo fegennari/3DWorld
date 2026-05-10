@@ -1072,10 +1072,23 @@ void add_handle_models_for_door(door_t const &d, door_rotation_t const &drot, bo
 		do_xy_rotate_normal(sin_term, cos_term, handle_dir);
 	}
 	for (unsigned side = 0; side < 2; ++side) {
-		if (is_exterior && bool(side) != d.open_dir) continue; // skip outside handle of exterior door for now
-		//if (d.is_bars() && bool(side) != d.open_dir) continue; // no handle on the inside/cell side of the door
+		bool const open_side(bool(side) == d.open_dir);
+		// skip outside handle of exterior door when closed since handles aren't drawn if player is outside the building and it has the wrong lighting,
+		// but draw it when door is open since it's visible
+		if (is_exterior && !open_side && !d.open) continue;
+		//if (d.is_bars() && !open_side) continue; // no handle on the inside/jail cell side of the door
 		point side_pos(handle_center);
-		side_pos[d.dim] += (side ? 1.0 : -1.0)*(is_exterior ? (d.open ? (opens_inward ? -0.08 : 1.3) : 0.42) : 0.68)*handle_height;
+		float xlate(0.68); // approx handle depth
+		
+		if (is_exterior) { // exterior doors are special because they have zero thickness when closed, they're clipped to the frame, and they always rotate 90 degrees
+			if (!d.open) {xlate = 0.42;} // closed door; handle only on inside
+			else { // open door; determined with trial-and error (I don't understand the logic here)
+				xlate = (opens_inward ? -0.08 : 1.3);
+				if (d.hinge_side == 0) {xlate += ((side ^ d.open_dir) ? -1.0 : 1.0)*0.08;} // swapped side restroom door
+				if (!open_side) {xlate += (opens_inward ? 1.0 : -1.0)*1.38;} // outside handle of open exterior door
+			}
+		}
+		side_pos[d.dim] += (side ? 1.0 : -1.0)*xlate*handle_height;
 
 		if (d.open_amt > 0.0) {
 			do_xy_rotate(sin_term, cos_term, pivot, side_pos);
@@ -1141,8 +1154,8 @@ void building_room_geom_t::update_exterior_door_vbos(building_t const &building)
 		cube_t const dbc(d.get_bcube());
 		vector3d const normal(d.get_norm());
 		bool const open(building.open_door_ix >= 0 && (int)dix == building.open_door_ix), opens_inward(building.is_house && d.door_opens_inward());
-		bool const dim(dbc.dy() < dbc.dx()), dir(normal[dim] < 0), hinge_side(building.get_ext_door_hinge_side(d));
-		door_t door(dbc, dim, dir, open, 0, hinge_side); // on_stairs=0
+		bool const dim(dbc.dy() < dbc.dx()), dir(normal[dim] < 0);
+		door_t const door(dbc, dim, dir, open, 0, building.get_ext_door_hinge_side(d)); // on_stairs=0
 		door_rotation_t drot;
 		
 		if (open) {
