@@ -2216,6 +2216,7 @@ public:
 	void get_all_door_centers_for_room(room_t const &room, unsigned room_id, float zval, vector<point> &door_centers) const;
 	void get_attic_windows(vect_tquad_with_ix_t &tquads, float offset_scale=1.0) const;
 	void get_attic_window_holes(vect_cube_t &window_holes, float offset_scale=1.0) const;
+	void add_attic_roof_geom(rgeom_mat_t &mat, colorRGBA const &color, float thickness, float tscale, bool swap_st, vect_cube_t const &window_holes) const;
 	void invalidate_nav_graph();
 	void invalidate_nav_grid (unsigned floor_ix);
 	point local_to_camera_space(point const &pos) const;

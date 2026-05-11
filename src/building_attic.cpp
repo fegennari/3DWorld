@@ -662,12 +662,12 @@ void interpolate_tcs(vert_norm_comp_tc_color const &p0, vert_norm_comp_tc_color 
 	vector3d const weights(barycentric_interpolate(vector2d(p0.v[d0], p0.v[d1]), vector2d(p1.v[d0], p1.v[d1]), vector2d(p2.v[d0], p2.v[d1]), vector2d(P.v[d0], P.v[d1])));
 	for (unsigned d = 0; d < 2; ++d) {P.t[d] = weights[0]*p0.t[d] + weights[1]*p1.t[d] + weights[2]*p2.t[d];}
 }
-void add_attic_roof_geom(rgeom_mat_t &mat, colorRGBA const &color, float thickness, float tscale, bool swap_st, vect_cube_t const &window_holes, building_t const &b) {
-	bool const no_floor(b.is_restroom());
-	thickness *= (no_floor ? 0.1 : 1.0)*b.get_attic_beam_depth();
+void building_t::add_attic_roof_geom(rgeom_mat_t &mat, colorRGBA const &color, float thickness, float tscale, bool swap_st, vect_cube_t const &window_holes) const {
+	bool const no_floor(is_restroom());
+	thickness *= (no_floor ? 0.1 : 1.0)*get_attic_beam_depth();
 
-	for (tquad_with_ix_t const &i : b.roof_tquads) {
-		if (!b.is_attic_roof(i, 0)) continue; // type_roof_only=0
+	for (tquad_with_ix_t const &i : roof_tquads) {
+		if (!is_attic_roof(i, 0)) continue; // type_roof_only=0
 		tquad_with_ix_t tq(i);
 		tq.reverse_pts(); // reverse the normal and winding order
 		vector3d const normal(tq.get_norm());
@@ -678,7 +678,7 @@ void add_attic_roof_geom(rgeom_mat_t &mat, colorRGBA const &color, float thickne
 			else if (!no_floor)                  {tq.pts[n]   += thickness*normal  ;} // wall: shift inward
 		}
 		vert_norm_comp_tc_color vert;
-		float const denom(0.5f*(b.bcube.dx() + b.bcube.dy())), tsx(tscale/denom), tsy(tscale/denom);
+		float const denom(0.5f*(bcube.dx() + bcube.dy())), tsx(tscale/denom), tsy(tscale/denom);
 		vert.set_c4(color);
 		vert.set_norm(normal);
 		unsigned const verts_start(mat.itri_verts.size());
@@ -687,7 +687,7 @@ void add_attic_roof_geom(rgeom_mat_t &mat, colorRGBA const &color, float thickne
 			vert.v = tq.pts[i];
 
 			if (is_roof) { // roof
-				if (tq.get_bcube().z1() <= b.get_attic_floor_z1()) { // tquad ends at or below attic floor
+				if (tq.get_bcube().z1() <= get_attic_floor_z1()) { // tquad ends at or below attic floor
 					// shrink bottom edge by thickness to avoid clipping through the floor below;
 					// since the quad is a loop, we can check both the previous and next points to see if they're above us, and use the vector delta for the shift
 					vector3d shift_dir;
@@ -754,16 +754,16 @@ void building_room_geom_t::add_attic_interior_and_rafters(building_t const &b, f
 
 	if (detail_pass == (small == 2)) { // draw the attic interior
 		if (attic_type == ATTIC_TYPE_WOOD) {
-			add_attic_roof_geom(get_material(tid_nm_pair_t(get_plywood_tid()), 0, small), WHITE, 1.0, 16.0, 0, window_holes, b); // no shadows
+			b.add_attic_roof_geom(get_material(tid_nm_pair_t(get_plywood_tid()), 0, small), WHITE, 1.0, 16.0, 0, window_holes); // no shadows
 		}
 		else if (attic_type == ATTIC_TYPE_PLASTER) { // or gypsum?
-			add_attic_roof_geom(get_material(b.get_material().wall_tex, 0, small), WHITE, 1.0, 16.0, 0, window_holes, b); // no shadows
+			b.add_attic_roof_geom(get_material(b.get_material().wall_tex, 0, small), WHITE, 1.0, 16.0, 0, window_holes); // no shadows
 		}
 		else if (attic_type == ATTIC_TYPE_FIBERGLASS) {
-			add_attic_roof_geom(get_material(tid_nm_pair_t(get_insulation_tid()), 0, small), colorRGBA(1.0, 0.7, 0.6), 0.5, 16.0, 0, window_holes, b); // no shadows
+			b.add_attic_roof_geom(get_material(tid_nm_pair_t(get_insulation_tid()), 0, small), colorRGBA(1.0, 0.7, 0.6), 0.5, 16.0, 0, window_holes); // no shadows
 		}
 		else if (attic_type == ATTIC_TYPE_RAFTERS) {
-			add_attic_roof_geom(get_material(b.get_attic_texture(), 0, small), WHITE, 0.1, 8.0, 1, window_holes, b); // no shadows, swap_st=1
+			b.add_attic_roof_geom(get_material(b.get_attic_texture(), 0, small), WHITE, 0.1, 8.0, 1, window_holes); // no shadows, swap_st=1
 		}
 		else {assert(0);} // unsupported type
 	}
