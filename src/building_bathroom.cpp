@@ -933,6 +933,27 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 	return 1;
 }
 
+void building_t::add_shared_restroom_objs() {
+	if (!RESTROOM_HIGH_CEIL) return;
+	assert(has_room_geom());
+	vect_room_object_t &objs(interior->room_geom->objs);
+
+	for (room_object_t &obj : objs) {
+		if (obj.type == TYPE_LIGHT) {obj.flags |= RO_FLAG_ADJ_TOP;} // draw top surface of light
+	}
+	// add edges of ceiling to block the gap between wall and roof; added for first room and spans both rooms
+	bool const gdim(get_street_dim()); // gap dim
+	cube_t walls(parts.front());
+	walls.z1() = walls.z2() - get_fc_thickness();
+
+	for (unsigned d = 0; d < 2; ++d) {
+		cube_t wall(walls);
+		wall.d[gdim][!d] = walls.d[gdim][d] + (d ? -1.0 : 1.0)*0.5*get_wall_thickness();
+		unsigned const skip_faces(~(EF_Z1 | ~get_face_mask(gdim, !d))); // only draw bottom and inside edge
+		objs.emplace_back(wall, TYPE_METAL_BAR, 0, gdim, d, 0, 1.0, SHAPE_CUBE, WHITE, skip_faces);
+	}
+}
+
 void building_t::add_bathroom_window(cube_t const &window, bool dim, bool dir, unsigned room_id, unsigned floor) { // frosted window blocks, for houses or office buildings
 	if (!has_int_windows()) return; // no interior (or exterior) drawn windows
 	room_t const &room(get_room(room_id));

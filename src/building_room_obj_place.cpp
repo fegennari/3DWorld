@@ -4897,7 +4897,8 @@ template<typename T> bool any_cube_contains(cube_t const &cube, T const &cubes) 
 	return 0;
 }
 bool building_t::is_light_placement_valid(cube_t const &light, room_t const &room, float pad) const {
-	if (room.is_industrial()) return 1; // industrial lights hang from the ceiling; assume they are placed correctly
+	if (room.is_industrial())         return 1; // industrial lights hang from the ceiling; assume they are placed correctly
+	if (is_restroom_with_high_ceil()) return 1; // can hang from ceiling
 	cube_t light_ext(light);
 	light_ext.expand_by_xy(pad);
 	if (!room.contains_cube(light_ext))             return 0; // room too small?

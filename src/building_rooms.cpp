@@ -1293,6 +1293,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			for (auto i = objs.begin() + room_objs_start; i != objs.end(); ++i) {i->flags |= RO_FLAG_INTERIOR;}
 		}
 	} // for r (room)
+	if (is_restroom()) {add_shared_restroom_objs();}
 	if (is_house && num_bedrooms == 0) {reassign_room_as_bedroom(rgen, light_ix_assign, num_bathrooms);} // attempt to place at least one bedroom in each house
 #if 0
 	vector<room_t> const &r1(interior->prev_rooms), &r2(rooms);
