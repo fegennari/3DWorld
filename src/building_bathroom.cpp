@@ -947,6 +947,7 @@ void building_t::add_bathroom_window(cube_t const &window, bool dim, bool dir, u
 }
 
 void building_t::create_restroom_floorplan(unsigned part_id, rand_gen_t &rgen) {
+	assert(interior);
 	assert(part_id < parts.size());
 	cube_t const &part(parts[part_id]);
 	assert(interior->rooms.empty()); // must call this first
@@ -963,6 +964,7 @@ void building_t::create_restroom_floorplan(unsigned part_id, rand_gen_t &rgen) {
 		room.d[dim][!d] = split_pos;
 		add_assigned_room(room, part_id, ((bool(d) ^ mw_restroom_side) ? RTYPE_MENS : RTYPE_WOMENS));
 		interior->rooms.back().is_single_floor = 1; // probably not needed
+		interior->rooms.back().num_lights = 2;
 	}
 	// add concrete patio as driveway
 	if (street_side) { // doors at front case; add a walkway in front in the form of a driveway

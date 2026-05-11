@@ -306,7 +306,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			light_size   *= 0.7; // smaller, since the ceiling is lower
 		}
 		else if (is_restroom()) {
-			light_size *= 0.7;
+			light_size *= 0.6;
 		}
 		else if (r->is_office || (r->get_has_skylight() && !industrial_room)) {
 			// more lights for large offices; light size varies by office size; parking garages are handled later
