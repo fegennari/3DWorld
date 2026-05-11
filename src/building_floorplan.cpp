@@ -2331,8 +2331,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			has_roof_access = 1;
 		}
 	}
-	if (!has_roof_access) { // roof ceiling, full area
-		// if is_restroom(), should there be no ceiling and the roof open like an attic?
+	if (!has_roof_access && !is_restroom_with_high_ceil()) { // roof ceiling, full area
 		set_cube_zvals(C, (z - fc_thick), z);
 		
 		// add attic to some building types; primary/upper part only

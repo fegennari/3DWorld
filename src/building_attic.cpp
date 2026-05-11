@@ -630,8 +630,9 @@ void building_room_geom_t::add_attic_door(room_object_t const &c, float tscale) 
 }
 
 bool building_t::is_attic_roof(tquad_with_ix_t const &tq, bool type_roof_only) const {
-	if (!has_attic()) return 0;
+	if (!has_attic_space()) return 0;
 	if (!tq.is_roof() && (type_roof_only || tq.type != tquad_with_ix_t::TYPE_WALL)) return 0;
+	if (is_restroom()) return 1; // all roof parts are considered the attic
 	cube_t const tq_bcube(tq.get_bcube());
 	if (tq_bcube.z1() < interior->attic_access.z1()) return 0; // not the top section that has the attic (porch roof, lower floor roof)
 	return get_attic_part().contains_pt_xy_inclusive(tq_bcube.get_cube_center()); // check for correct part
@@ -662,7 +663,8 @@ void interpolate_tcs(vert_norm_comp_tc_color const &p0, vert_norm_comp_tc_color 
 	for (unsigned d = 0; d < 2; ++d) {P.t[d] = weights[0]*p0.t[d] + weights[1]*p1.t[d] + weights[2]*p2.t[d];}
 }
 void add_attic_roof_geom(rgeom_mat_t &mat, colorRGBA const &color, float thickness, float tscale, bool swap_st, vect_cube_t const &window_holes, building_t const &b) {
-	thickness *= b.get_attic_beam_depth();
+	bool const no_floor(b.is_restroom());
+	thickness *= (no_floor ? 0.1 : 1.0)*b.get_attic_beam_depth();
 
 	for (tquad_with_ix_t const &i : b.roof_tquads) {
 		if (!b.is_attic_roof(i, 0)) continue; // type_roof_only=0
@@ -673,7 +675,7 @@ void add_attic_roof_geom(rgeom_mat_t &mat, colorRGBA const &color, float thickne
 		
 		for (unsigned n = 0; n < tq.npts; ++n) {
 			if (is_roof) {assert(normal.z < 0.0); tq.pts[n].z += thickness/normal.z;} // roof: shift downward
-			else {tq.pts[n] += thickness*normal;} // wall: shift inward
+			else if (!no_floor)                  {tq.pts[n]   += thickness*normal  ;} // wall: shift inward
 		}
 		vert_norm_comp_tc_color vert;
 		float const denom(0.5f*(b.bcube.dx() + b.bcube.dy())), tsx(tscale/denom), tsy(tscale/denom);
@@ -741,7 +743,7 @@ void add_attic_roof_geom(rgeom_mat_t &mat, colorRGBA const &color, float thickne
 }
 
 void building_room_geom_t::add_attic_interior_and_rafters(building_t const &b, float tscale, bool detail_pass) {
-	if (!b.has_attic()) return;
+	if (!b.has_attic_space()) return;
 	if (!detail_pass && !b.has_attic_window) return; // nothing to do
 	// determine attic window hole locations
 	vect_cube_t window_holes;

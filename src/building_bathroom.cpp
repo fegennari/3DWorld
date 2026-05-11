@@ -641,7 +641,8 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 	unsigned const NUM_STALL_COLORS = 4;
 	colorRGBA const stall_colors[NUM_STALL_COLORS] = {colorRGBA(0.75, 1.0, 0.9, 1.0), colorRGBA(0.7, 0.8, 1.0), WHITE, DK_GRAY}; // blue-green, light blue
 	colorRGBA const stall_color(stall_colors[(3*interior->doors.size() + 7*mat_ix) % NUM_STALL_COLORS]); // random, but constant for each building
-	room_obj_shape const stall_shape(room.has_tall_ceil(floor_spacing) ? SHAPE_TALL : SHAPE_CUBE); // tall for tall ceiling rooms like restaurants
+	bool const tall_ceil(room.has_tall_ceil(floor_spacing) || is_restroom_with_high_ceil());
+	room_obj_shape const stall_shape(tall_ceil ? SHAPE_TALL : SHAPE_CUBE); // tall for tall ceiling rooms like restaurants
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const objs_start(objs.size());
 	room_object_t mirrors[2]; // candidate mirrors for each dir
@@ -981,6 +982,7 @@ void building_t::create_restroom_floorplan(unsigned part_id, rand_gen_t &rgen) {
 		driveway.expand_in_dim(!dim, -wall_hthick); // shrink inward slightly
 	}
 	set_cube_zvals(driveway, ground_floor_z1, ground_floor_z1+0.5*get_fc_thickness());
+	interior->attic_type = ATTIC_TYPE_PLASTER;
 }
 
 bool building_t::get_ext_door_hinge_side(tquad_with_ix_t const &door) const {
