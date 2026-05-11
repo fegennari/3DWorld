@@ -289,7 +289,7 @@ public:
 
 	template<typename T> void *add_verts_bind_vbo(vector<T> const &v) {
 		assert(!v.empty());
-		return add_verts_bind_vbo(&v.front(), v.size()*sizeof(T));
+		return add_verts_bind_vbo(v.data(), v.size()*sizeof(T));
 	}
 	bool has_space_for(unsigned size_bytes) const {return (pos + size_bytes <= size);}
 	void mark_as_filled() {pos = size;}
@@ -342,7 +342,7 @@ struct depth_write_tracker_t {
 void set_temp_clear_color(colorRGBA const &clear_color, bool clear_depth=0, bool clear_stencil=0);
 
 template< typename T > void upload_to_dynamic_vbo(vector<T> const &v) {
-	T::set_vbo_arrays(1, get_dynamic_vbo_ptr(&v.front(), v.size()*sizeof(T)));
+	T::set_vbo_arrays(1, get_dynamic_vbo_ptr(v.data(), v.size()*sizeof(T)));
 }
 
 void bind_ssbo(unsigned ssbo=0);

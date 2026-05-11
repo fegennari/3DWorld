@@ -646,7 +646,7 @@ struct rot_val_t {
 	rot_val_t(point const &pt_, vector3d const &axis_) : pt(pt_), axis(axis_) {}
 };
 
-// could calculate normal = get_poly_norm(&support_pts.front(), 1);
+// could calculate normal = get_poly_norm(support_pts.data(), 1);
 rot_val_t get_cobj_rot_axis(vector<point> const &support_pts, point const &normal, point const &center_of_mass, vector3d const &gravity=plus_z) {
 
 	point closest_pt;

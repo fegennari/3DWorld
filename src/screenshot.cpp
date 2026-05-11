@@ -22,7 +22,7 @@ void read_depth_buffer(unsigned window_width, unsigned window_height, vector<flo
 
 	depth.resize(window_width*window_height, 0.0);
 	glReadBuffer(GL_FRONT);
-	glReadPixels(0, 0, window_width, window_height, GL_DEPTH_COMPONENT, GL_FLOAT, &depth.front());
+	glReadPixels(0, 0, window_width, window_height, GL_DEPTH_COMPONENT, GL_FLOAT, depth.data());
 	if (!normalize) return; // done
 	float dmin(1.0), dmax(0.0);
 	for (auto i = depth.begin(); i != depth.end(); ++i) {dmin = min(*i, dmin); dmax = max(*i, dmax);}
@@ -42,7 +42,7 @@ void read_pixels(unsigned window_width, unsigned window_height, vector<unsigned 
 #else
 	glReadBuffer(GL_FRONT);
 	glPixelStorei(GL_PACK_ALIGNMENT, 1);
-	glReadPixels(0, 0, window_width, window_height, GL_RGB, GL_UNSIGNED_BYTE, &buf.front());
+	glReadPixels(0, 0, window_width, window_height, GL_RGB, GL_UNSIGNED_BYTE, buf.data());
 #endif
 }
 
@@ -57,7 +57,7 @@ int screenshot(unsigned window_width, unsigned window_height, char const *const 
 	print_text_onscreen_default("Writing screenshot " + fn);
 	vector<unsigned char> buf((window_width+1)*(window_height+1)*3); // allocate extra size for alignment purposes - is this really needed?
 	read_pixels(window_width, window_height, buf);
-	if (write_bmp) {return write_rgb_bmp_image(fn, &buf.front(), window_width, window_height, 3);} // BMP, RGB (ncolors=3) (40ms)
-	else           {return write_jpeg_data    (fn, &buf.front(), window_width, window_height, 1);} // JPEG, invert_y=1 (110ms libjpeg, 226ms stb)
+	if (write_bmp) {return write_rgb_bmp_image(fn, buf.data(), window_width, window_height, 3);} // BMP, RGB (ncolors=3) (40ms)
+	else           {return write_jpeg_data    (fn, buf.data(), window_width, window_height, 1);} // JPEG, invert_y=1 (110ms libjpeg, 226ms stb)
 }
 

@@ -163,7 +163,7 @@ public:
 	void reserve_offsets(unsigned num) {assert(offsets.empty()); offsets.reserve(num);}
 	void add_point(vert_type_t const &pt) {pts.push_back(pt);}
 	void add_points(typename vert_type_t::non_color_class const *const p, unsigned npts, colorRGBA const &color) {add_points_int(pts, p, npts, color);}
-	void add_points(vector<typename vert_type_t::non_color_class> const &v, colorRGBA const &color) {add_points_int(pts, &v.front(), v.size(), color);}
+	void add_points(vector<typename vert_type_t::non_color_class> const &v, colorRGBA const &color) {add_points_int(pts, v.data(), v.size(), color);}
 	unsigned get_offset_for_last_points_added();
 	unsigned add_points_with_offset(typename vert_type_t::non_color_class const *const p, unsigned npts, colorRGBA const &color) {
 		add_points(p, npts, color);
@@ -171,7 +171,7 @@ public:
 	}
 	unsigned add_points_with_offset(vector<typename vert_type_t::non_color_class> const &v, colorRGBA const &color) {
 		assert(!v.empty());
-		return add_points_with_offset(&v.front(), v.size(), color);
+		return add_points_with_offset(v.data(), v.size(), color);
 	}
 	unsigned alloc_points_with_offset(unsigned npts) {
 		pts.resize(pts.size() + npts);
@@ -186,7 +186,7 @@ public:
 	void update_range(typename vert_type_t::non_color_class const *const p, unsigned npts, colorRGBA const &color, unsigned six, unsigned eix);
 	void update_range(vector<typename vert_type_t::non_color_class> const &v, colorRGBA const &color, unsigned six, unsigned eix) {
 		assert(!v.empty());
-		update_range(&v.front(), v.size(), color, six, eix);
+		update_range(v.data(), v.size(), color, six, eix);
 	}
 	void begin_render() const;
 	void end_render() const {post_render();}

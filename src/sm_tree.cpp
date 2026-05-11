@@ -280,7 +280,7 @@ void small_tree_group::draw_tree_insts(shader_t &s, bool draw_all, vector3d cons
 	vbo_vnc_block_manager_t const &vbomgr(tree_instances.vbo_manager[0]); // high detail, only used for pine trees
 	if (is_pine) {vbomgr.begin_render();}
 	select_texture((draw_model != 0) ? WHITE_TEX : stt[is_pine ? (unsigned)T_PINE : (unsigned)T_PALM].leaf_tid);
-	void const *vbo_ptr(get_dynamic_vbo_ptr(&inst_pts.front(), inst_pts.size()*sizeof(point)));
+	void const *vbo_ptr(get_dynamic_vbo_ptr(inst_pts.data(), inst_pts.size()*sizeof(point)));
 	unsigned ptr_offset(0), ix(0);
 	assert(xlate_loc >= 0);
 

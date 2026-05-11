@@ -1239,11 +1239,11 @@ unsigned create_3d_noise_texture(unsigned size, unsigned ncomp, unsigned bytes_p
 		noise_fill_01(data);
 		unsigned tid(0);
 		setup_3d_texture(tid, GL_LINEAR, GL_REPEAT);
-		glTexImage3D(GL_TEXTURE_3D, 0, GL_R32F, size, size, size, 0, get_texture_format(ncomp), GL_FLOAT, &data.front());
+		glTexImage3D(GL_TEXTURE_3D, 0, GL_R32F, size, size, size, 0, get_texture_format(ncomp), GL_FLOAT, data.data());
 		return tid;
 	}
 	vector<unsigned char> data(ncomp*bytes_per_pixel*size*size*size);
-	noise_fill(&data.front(), data.size());
+	noise_fill(data.data(), data.size());
 	return create_3d_texture(size, size, size, ncomp, data, GL_LINEAR, GL_REPEAT, 0, bytes_per_pixel); // compressed?
 }
 

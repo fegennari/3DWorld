@@ -157,7 +157,7 @@ public:
 	unsigned get_subroutine_uniform_loc(int shader_type, char const *const name) const;
 	void set_all_subroutines(int shader_type, unsigned count, char const *const *const uniforms, char const *const *const bindings);
 	void set_subroutines(int shader_type, unsigned count, unsigned const *const indices);
-	void set_subroutines(int shader_type, vector<unsigned> const &indices) {set_subroutines(shader_type, indices.size(), &indices.front());}
+	void set_subroutines(int shader_type, vector<unsigned> const &indices) {set_subroutines(shader_type, indices.size(), indices.data());}
 	void set_subroutine (int shader_type, unsigned index); // single subroutine
 	void set_subroutine (int shader_type, char const *const name) {set_subroutine(shader_type, get_subroutine_index(shader_type, name));}
 	void reset_subroutine(int shader_type, char const *const uniform, char const *const binding); // one of multiple

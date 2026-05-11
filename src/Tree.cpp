@@ -1350,7 +1350,7 @@ void tree_builder_t::create_all_cylins_and_leaves(vector<draw_cylin> &all_cylins
 {
 	// compact the cylinders into a contiguous block
 	assert(all_cylins.empty());
-	tree_cylin *cylins(&cylin_cache.front()), *cur_cylin(cylins);
+	tree_cylin *cylins(cylin_cache.data()), *cur_cylin(cylins);
 	assert(base.cylin == cur_cylin);
 	copy_cylins(base.cylin,  base_num_cylins, cur_cylin);
 	copy_cylins(roots.cylin, root_num_cylins, cur_cylin);
@@ -1661,15 +1661,15 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 	
 	// allocate all the memory required for the tree ------------------------------------------------
 	branch_ptr_cache.resize(num_1_branches);
-	branches = &branch_ptr_cache.front();
+	branches = branch_ptr_cache.data();
 	unsigned const tot_branches(nbr + nbranches + max(num_34_branches[1], 1)); // allocate at least one branches_34[1] so we can set the first cylin
 	branch_cache.resize(tot_branches);
-	branches[0]    = &branch_cache.front();
+	branches[0]    = branch_cache.data();
 	branches_34[0] = branches   [0] + nbr;
 	branches_34[1] = branches_34[0] + nbranches;
 	unsigned const tot_cylins(base_num_cylins+1 + CYLINS_PER_ROOT*max_num_roots + ncib*(nbr + nbranches + num_34_branches[1]));
 	cylin_cache.resize(tot_cylins);
-	base.cylin  = &cylin_cache.front();
+	base.cylin  = cylin_cache.data();
 	roots.cylin = base.cylin + base_num_cylins+1;
 	tree_cylin *cur_ptr(roots.cylin + CYLINS_PER_ROOT*max_num_roots);
 

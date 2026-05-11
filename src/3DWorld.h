@@ -923,7 +923,7 @@ template <typename T> void draw_verts(T const *const verts, unsigned count, int 
 	unset_ptr_state(verts);
 }
 template <typename T> void draw_verts(vector<T> const &verts, int gl_type, unsigned start_ix=0, bool set_array_client_state=1) {
-	if (!verts.empty()) {draw_verts(&verts.front(), verts.size(), gl_type, start_ix, set_array_client_state);}
+	if (!verts.empty()) {draw_verts(verts.data(), verts.size(), gl_type, start_ix, set_array_client_state);}
 }
 
 template <typename T> void draw_and_clear_verts(vector<T> &verts, int gl_type) {
@@ -943,7 +943,7 @@ template <typename T> void draw_quad_verts_as_tris(T const *const verts, unsigne
 	unset_ptr_state(verts);
 }
 template <typename T> void draw_quad_verts_as_tris(vector<T> const &verts, unsigned start_ix=0, unsigned num_instances=1, bool set_array_client_state=1) {
-	if (!verts.empty()) {draw_quad_verts_as_tris(&verts.front(), verts.size(), start_ix, num_instances, set_array_client_state);}
+	if (!verts.empty()) {draw_quad_verts_as_tris(verts.data(), verts.size(), start_ix, num_instances, set_array_client_state);}
 }
 
 template <typename T> void draw_quad_verts_as_tris_and_clear(vector<T> &verts) {

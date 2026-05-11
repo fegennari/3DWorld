@@ -817,7 +817,7 @@ void s_plant::create_leaf_points(vector<vert_norm_comp> &points, float plant_sca
 			float const theta(TWO_PI*(3.3*j + 0.2*k) + theta0);
 			int const val(int(((int(1.0E6f*height))*(5463*j + 537879*k))%301));
 			rdeg += 0.01f*(val - 150);
-			add_rotated_quad_pts(&points.front(), ix, theta, z, pos, sz*blwidth, sz*elwidth, sz*llen, sz*rdeg/45.0f);
+			add_rotated_quad_pts(points.data(), ix, theta, z, pos, sz*blwidth, sz*elwidth, sz*llen, sz*rdeg/45.0f);
 		}
 	}
 }

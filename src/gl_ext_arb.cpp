@@ -79,13 +79,13 @@ unsigned create_3d_texture(unsigned xsz, unsigned ysz, unsigned zsz, unsigned nc
 	setup_3d_texture(tid, filter, wrap);
 
 	if (bytes_per_pixel == 1) { // 8-bit texture
-		glTexImage3D(GL_TEXTURE_3D, 0, get_internal_texture_format(ncomp, compress), xsz, ysz, zsz, 0, get_texture_format(ncomp), GL_UNSIGNED_BYTE, &data.front());
+		glTexImage3D(GL_TEXTURE_3D, 0, get_internal_texture_format(ncomp, compress), xsz, ysz, zsz, 0, get_texture_format(ncomp), GL_UNSIGNED_BYTE, data.data());
 	}
 	else if (bytes_per_pixel == 2) { // 16-bit texture
 		assert(!compress);
 		assert(ncomp > 0 && ncomp <= 4);
 		GLenum const formats_16[4] = {GL_R16, GL_RG16, GL_RGB16, GL_RGBA16};
-		glTexImage3D(GL_TEXTURE_3D, 0, formats_16[ncomp-1], xsz, ysz, zsz, 0, get_texture_format(ncomp), GL_UNSIGNED_SHORT, &data.front());
+		glTexImage3D(GL_TEXTURE_3D, 0, formats_16[ncomp-1], xsz, ysz, zsz, 0, get_texture_format(ncomp), GL_UNSIGNED_SHORT, data.data());
 	}
 	else {assert(0);} // not supported
 	//gen_mipmaps(3);

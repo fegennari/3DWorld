@@ -855,11 +855,11 @@ void shader_t::get_program_binary(vector<unsigned char> &binary_data, GLenum &bi
 	glGetProgramiv(program, GL_PROGRAM_BINARY_LENGTH, &prog_length);
 	assert(prog_length > 0);
 	binary_data.resize(prog_length);
-	glGetProgramBinary(program, prog_length, &length, &binary_format, &binary_data.front());
+	glGetProgramBinary(program, prog_length, &length, &binary_format, binary_data.data());
 	assert(length == prog_length);
 }
 void shader_t::set_program_binary(vector<unsigned char> const &binary_data, GLenum const binary_format) {
-	glProgramBinary(program, binary_format, &binary_data.front(), binary_data.size());
+	glProgramBinary(program, binary_format, binary_data.data(), binary_data.size());
 }
 
 
@@ -870,7 +870,7 @@ void shader_t::print_shader_info_log(unsigned shader) {
 
 	if (len > 0) {
 		vector<char> info_log_msg(len);
-		glGetShaderInfoLog(shader, len, &len2, &info_log_msg.front()); 
+		glGetShaderInfoLog(shader, len, &len2, info_log_msg.data());
 		assert(len2 <= len);
 		cout << "Info log: " << string(info_log_msg.begin(), info_log_msg.end());
 	}
@@ -883,7 +883,7 @@ void shader_t::print_program_info_log() const {
 
 	if (len > 0) {
 		vector<char> info_log_msg(len);
-		glGetProgramInfoLog(program, len, &len2, &info_log_msg.front()); 
+		glGetProgramInfoLog(program, len, &len2, info_log_msg.data());
 		assert(len2 <= len);
 		cout << "Info log: " << string(info_log_msg.begin(), info_log_msg.end());
 	}
@@ -1174,7 +1174,7 @@ void compute_shader_t::gen_matrix_RGBA8(vector<float> &vals, unsigned &tid, bool
 	vals.resize(xsize*ysize);
 	vector<unsigned char> data(4*vals.size());
 	glReadBuffer(GL_COLOR_ATTACHMENT0);
-	glReadPixels(0, 0, xsize, ysize, GL_RGBA, GL_UNSIGNED_BYTE, &data.front()); // GL_BGRA?
+	glReadPixels(0, 0, xsize, ysize, GL_RGBA, GL_UNSIGNED_BYTE, data.data()); // GL_BGRA?
 
 	for (unsigned y = 0; y < ysize; ++y) {
 		for (unsigned x = 0; x < xsize; ++x) {
@@ -1199,7 +1199,7 @@ void compute_shader_t::read_float_vals(vector<float> &vals, bool is_last, bool k
 	assert(is_running);
 	vals.resize(xsize*ysize);
 	read_pixels(vals, is_last); // Note: slower on old cards, faster on new ones
-	//glReadBuffer(GL_COLOR_ATTACHMENT0); glReadPixels(0, 0, xsize, ysize, GL_RED, GL_FLOAT, &vals.front());
+	//glReadBuffer(GL_COLOR_ATTACHMENT0); glReadPixels(0, 0, xsize, ysize, GL_RED, GL_FLOAT, vals.data());
 	is_running = 0;
 	if (is_last) {unset_fbo(keep_fbo_for_reuse);}
 }
@@ -1294,7 +1294,7 @@ void compute_shader_comp_t::read_float_vals(vector<float> &vals, bool is_last, b
 	is_running = 0;
 	vals.resize(xsize*ysize*zsize);
 	glMemoryBarrier(GL_TEXTURE_UPDATE_BARRIER_BIT);
-	glGetTexImage((is_3d() ? GL_TEXTURE_3D : GL_TEXTURE_2D), 0, GL_RED, GL_FLOAT, &vals.front());
+	glGetTexImage((is_3d() ? GL_TEXTURE_3D : GL_TEXTURE_2D), 0, GL_RED, GL_FLOAT, vals.data());
 
 	if (xsize != xsize_req || ysize != ysize_req || zsize != zsize_req) { // need to copy a smaller sub-range from a larger texture
 		vector<float> temp(xsize_req*ysize_req*zsize_req);

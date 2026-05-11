@@ -565,7 +565,7 @@ void cobj_bvh_tree::build_tree_top_level_omp() { // single octtree level
 		top_temp_bins[bix].push_back(cixs[i]);
 	}
 	for (unsigned d = 0; d < 8; ++d) {
-		memcpy(&cixs[pos], &top_temp_bins[d].front(), top_temp_bins[d].size()*sizeof(unsigned));
+		memcpy(&cixs[pos], top_temp_bins[d].data(), top_temp_bins[d].size()*sizeof(unsigned));
 		pos += top_temp_bins[d].size();
 	}
 	assert(pos == n.end);

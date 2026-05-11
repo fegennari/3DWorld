@@ -85,12 +85,12 @@ inline unsigned read_uint(istream &in ) {
 
 template<typename V> void write_vector(ostream &out, V const &v) {
 	write_uint(out, (unsigned)v.size());
-	out.write((const char *)&v.front(), (std::streamsize)v.size()*sizeof(typename V::value_type));
+	out.write((const char *)v.data(), (std::streamsize)v.size()*sizeof(typename V::value_type));
 }
 template<typename V> void read_vector(istream &in, V &v) {
 	v.clear();
 	v.resize(read_uint(in));
-	in.read((char *)&v.front(), (std::streamsize)v.size()*sizeof(typename V::value_type));
+	in.read((char *)v.data(), (std::streamsize)v.size()*sizeof(typename V::value_type));
 }
 
 inline void write_string(ostream &out, string const &s) {

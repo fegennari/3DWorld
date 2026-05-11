@@ -21,8 +21,8 @@ class vert_optimizer {
 		bool operator<(vert_block_t<N> const &b) const {return (min_ix() < b.min_ix());}
 		
 		static void sort_by_min_ix(vector<unsigned> &ixs) {
-			vert_block_t<N> *start((vert_block_t<N> *)(&ixs.front()));
-			vert_block_t<N> *end  ((vert_block_t<N> *)(&ixs.front() + ixs.size()));
+			vert_block_t<N> *start((vert_block_t<N> *)(ixs.data()));
+			vert_block_t<N> *end  ((vert_block_t<N> *)(ixs.data() + ixs.size()));
 			std::sort(start, end);
 		}
 	};

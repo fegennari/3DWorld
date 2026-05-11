@@ -498,7 +498,7 @@ bool tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen, bool no_wait) {
 			}
 		} // for x
 	} // for y
-	if (!using_hmap) {apply_erosion(&zvals.front(), zvsize, zvsize, zmin, erosion_iters_tt);} // heightmap is eroded during load
+	if (!using_hmap) {apply_erosion(zvals.data(), zvsize, zvsize, zmin, erosion_iters_tt);} // heightmap is eroded during load
 
 	for (unsigned yy = 0; yy < 4; ++yy) {
 		for (unsigned xx = 0; xx < 4; ++xx) {
@@ -670,11 +670,11 @@ void tile_t::calc_shadows_for_light(unsigned l) {
 			adj_tile->calc_shadows((l == LIGHT_SUN), (l == LIGHT_MOON), 1); // recursive call on adjacent tile
 		}
 		assert(adj_sh_out.size() == zvsize);
-		sh_in[!d] = &adj_sh_out.front(); // chain our input to our neighbor's output
+		sh_in[!d] = adj_sh_out.data(); // chain our input to our neighbor's output
 	}
 	// calculate shadows of current tile
-	calc_mesh_shadows(l, lpos, &zvals.front(), &smask[l].front(), zvsize, zvsize,
-		sh_in[0], sh_in[1], &sh_out[l][0].front(), &sh_out[l][1].front());
+	calc_mesh_shadows(l, lpos, zvals.data(), smask[l].data(), zvsize, zvsize,
+		sh_in[0], sh_in[1], sh_out[l][0].data(), sh_out[l][1].data());
 	((l == LIGHT_SUN) ? sun_shadows_invalid : moon_shadows_invalid) = 1;
 }
 
@@ -842,10 +842,10 @@ void create_or_update_texture(unsigned &tid, bool tid_is_valid, unsigned stride,
 	bind_2d_texture(tid);
 
 	if (tid_is_valid) { // overwrite old data
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, stride, stride, GL_RGBA, GL_UNSIGNED_BYTE, &data.front());
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, stride, stride, GL_RGBA, GL_UNSIGNED_BYTE, data.data());
 	}
 	else { // allocate and write
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, stride, stride, 0, GL_RGBA, GL_UNSIGNED_BYTE, &data.front());
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, stride, stride, 0, GL_RGBA, GL_UNSIGNED_BYTE, data.data());
 	}
 }
 
@@ -1028,7 +1028,7 @@ void tile_t::ensure_height_tid() {
 	assert(zvals.size() == zvsize*zvsize);
 	setup_texture(height_tid, 0, 0, 0, 0, 0);
 	glPixelStorei(GL_UNPACK_ROW_LENGTH, zvsize);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, stride, stride, 0, GL_RED, GL_FLOAT, &zvals.front());
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, stride, stride, 0, GL_RED, GL_FLOAT, zvals.data());
 	glPixelStorei(GL_UNPACK_ROW_LENGTH, 0); // reset to 0
 }
 
@@ -1261,11 +1261,11 @@ void tile_t::create_or_update_weight_tex() {
 	if (weight_tid == 0) { // create weight texture
 		setup_texture(weight_tid, 0, 0, 0, 0, 0);
 		assert(weight_tid > 0 && glIsTexture(weight_tid));
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tsize, tsize, 0, GL_RGBA, GL_UNSIGNED_BYTE, &weight_data.front()); // internal_format = GL_COMPRESSED_RGBA - too slow
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tsize, tsize, 0, GL_RGBA, GL_UNSIGNED_BYTE, weight_data.data()); // internal_format = GL_COMPRESSED_RGBA - too slow
 	}
 	else { // update texture
 		bind_2d_texture(weight_tid);
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, tsize, tsize, GL_RGBA, GL_UNSIGNED_BYTE, &weight_data.front());
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, tsize, tsize, GL_RGBA, GL_UNSIGNED_BYTE, weight_data.data());
 	}
 }
 
@@ -1543,7 +1543,7 @@ unsigned tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool 
 		for (unsigned bix = 0; bix < insts[lod].size(); ++bix) {
 			vector<vector2d> &v(insts[lod][bix]);
 			if (v.empty()) continue;
-			glVertexAttribPointer(lt_loc, 2, GL_FLOAT, GL_FALSE, sizeof(vector2d), get_dynamic_vbo_ptr(&v.front(), v.size()*sizeof(vector2d)));
+			glVertexAttribPointer(lt_loc, 2, GL_FLOAT, GL_FALSE, sizeof(vector2d), get_dynamic_vbo_ptr(v.data(), v.size()*sizeof(vector2d)));
 			num_drawn += grass_tile_manager.render_block(bix, lod, 1.0, v.size(), enable_tess);
 			v.clear();
 		} // for bix

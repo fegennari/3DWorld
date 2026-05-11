@@ -2189,7 +2189,7 @@ void create_sky_vis_zval_texture(unsigned &tid) {
 		}
 	}
 	setup_texture(tid, 0, 0, 0, 0, 0, 0); // nearest=0
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, nx, ny, 0, GL_RED, GL_FLOAT, &zvals.front());
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, nx, ny, 0, GL_RED, GL_FLOAT, zvals.data());
 	PRINT_TIME("Sky Zval Matrix");
 }
 

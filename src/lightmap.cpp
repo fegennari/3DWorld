@@ -348,7 +348,7 @@ bool light_volume_local::read(string const &filename) {
 	data.resize(get_num_data());
 	assert(is_allocated());
 
-	if (!reader.read(&data.front(), sizeof(lmcell_local), data.size())) {
+	if (!reader.read(data.data(), sizeof(lmcell_local), data.size())) {
 		cerr << "Error: Failed to read data from light volume file '" << filename << "'." << endl;
 		return 0;
 	}
@@ -369,7 +369,7 @@ bool light_volume_local::write(string const &filename) const {
 		cerr << "Error: Failed to write header to light volume file '" << filename << "'." << endl;
 		return 0;
 	}
-	if (!writer.write(&data.front(), sizeof(lmcell_local), data.size())) {
+	if (!writer.write(data.data(), sizeof(lmcell_local), data.size())) {
 		cerr << "Error: Failed to write data to light volume file '" << filename << "'." << endl;
 		return 0;
 	}
@@ -984,16 +984,16 @@ void upload_dlights_textures(cube_t const &bounds, float &dlight_add_thresh) { /
 	bind_2d_texture(elem_tid);
 	unsigned const height(min(elem_tex_y, unsigned(elem_data.size()/elem_tex_x+1U))); // approximate ceiling
 	elem_data.reserve(elem_tex_x*height); // ensure it's large enough for the padded upload
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, elem_tex_x, height, GL_RED_INTEGER, GL_UNSIGNED_SHORT, &elem_data.front());
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, elem_tex_x, height, GL_RED_INTEGER, GL_UNSIGNED_SHORT, elem_data.data());
 
 	// step 3: grid bag(s)
 	if (gb_tid == 0) {
 		setup_2d_texture(gb_tid);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_R32UI, gbx, gby, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, &gb_data.front()); // Nx x Ny
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_R32UI, gbx, gby, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, gb_data.data()); // Nx x Ny
 	}
 	else {
 		bind_2d_texture(gb_tid);
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, gbx, gby, GL_RED_INTEGER, GL_UNSIGNED_INT, &gb_data.front());
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, gbx, gby, GL_RED_INTEGER, GL_UNSIGNED_INT, gb_data.data());
 	}
 	check_gl_error(440);
 	//cout << "ndl: " << ndl << ", elix: " << elem_data.size() << ", gb_sz: " << gb_data.size() << endl;

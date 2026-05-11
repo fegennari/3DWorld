@@ -139,7 +139,7 @@ struct cobj_ray_accum_map_t : public map<unsigned, cobj_ray_accum_t> {
 			unsigned nrays(0);
 			if (fread(&nrays, sizeof(unsigned), 1, fp) != 1) return 0; // read number of rays
 			val.second.rays.resize(nrays);
-			if (fread(&val.second.rays.front(), sizeof(rt_ray_t), nrays, fp) != nrays) return 0; // read ray data
+			if (fread(val.second.rays.data(), sizeof(rt_ray_t), nrays, fp) != nrays) return 0; // read ray data
 			bool const did_ins(insert(val).second);
 			assert(did_ins); // no duplicate ids
 		}
@@ -154,7 +154,7 @@ struct cobj_ray_accum_map_t : public map<unsigned, cobj_ray_accum_t> {
 			if (fwrite(&i->second, sizeof(face_ray_accum_t), 6, fp) != 6) return 0; // write 6 values
 			unsigned const nrays(i->second.rays.size());
 			if (fwrite(&nrays, sizeof(unsigned), 1, fp) != 1) return 0; // write number of rays
-			if (fwrite(&i->second.rays.front(), sizeof(rt_ray_t), nrays, fp) != nrays) return 0; // write ray data
+			if (fwrite(i->second.rays.data(), sizeof(rt_ray_t), nrays, fp) != nrays) return 0; // write ray data
 		}
 		return 1;
 	}
@@ -1135,7 +1135,7 @@ bool lmap_manager_t::read_data_from_file(char const *const fn, int ltype) {
 	vector<float> data(data_size*sz);
 	unsigned pos(0);
 
-	if (!reader.read(&data.front(), sizeof(float), data.size())) {
+	if (!reader.read(data.data(), sizeof(float), data.size())) {
 		cerr << "Error reading data from ligthing file " << fn << endl;
 		return 0;
 	}

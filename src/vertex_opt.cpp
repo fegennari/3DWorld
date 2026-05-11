@@ -46,7 +46,7 @@ void vert_optimizer::run(bool full_opt, bool verbose) {
 	else { // full optimization
 		assert((indices.size() % 3) == 0); // must be triangles
 		vector<unsigned> out_indices(indices.size());
-		TriListOpt::OptimizeTriangleOrdering(num_verts, indices.size(), &indices.front(), &out_indices.front());
+		TriListOpt::OptimizeTriangleOrdering(num_verts, indices.size(), indices.data(), out_indices.data());
 		indices.swap(out_indices);
 	}
 	if (verbose) { // verbose

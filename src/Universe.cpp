@@ -2087,9 +2087,9 @@ void urev_body::create_rocky_texture(unsigned size) {
 	tsize = size;
 	assert(tsize <= MAX_TEXTURE_SIZE);
 	vector<unsigned char> data(3*tsize*tsize);
-	gen_texture_data_and_heightmap(&data.front(), tsize);
+	gen_texture_data_and_heightmap(data.data(), tsize);
 	setup_texture(tid, 0, 1, 0);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, tsize, tsize, 0, GL_RGB, GL_UNSIGNED_BYTE, &data.front());
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, tsize, tsize, 0, GL_RGB, GL_UNSIGNED_BYTE, data.data());
 }
 
 
@@ -2111,7 +2111,7 @@ void urev_body::create_gas_giant_texture() {
 	}
 	bool const mipmap = 1; // Note: somewhat slow when the player is flying by quickly
 	setup_1d_texture(tid, mipmap, 0, 0, 0);
-	glTexImage1D(GL_TEXTURE_1D, 0, GL_RGB8, tsize, 0, GL_RGB, GL_UNSIGNED_BYTE, &data.front());
+	glTexImage1D(GL_TEXTURE_1D, 0, GL_RGB8, tsize, 0, GL_RGB, GL_UNSIGNED_BYTE, data.data());
 	if (mipmap) {gen_mipmaps(1);}
 }
 
@@ -2589,7 +2589,7 @@ void urev_body::draw_surface(point_d const &pos_, float size, int ndiv) {
 				perturb_map[j + offset] = hmap_scale*(omcinv*(max(cutoff, val) - cutoff) - 0.5f); // duplicated with urev_body::surface_test()
 			}
 		}
-		surface->setup_draw_sphere(all_zeros, 1.0, -0.5*hmap_scale, ndiv, &perturb_map.front());
+		surface->setup_draw_sphere(all_zeros, 1.0, -0.5*hmap_scale, ndiv, perturb_map.data());
 	}
 	surface->sd.draw_ndiv_pow2_vbo(ndiv); // sphere heightmap for rocky planet or moon
 	if (SD_TIMETEST) PRINT_TIME("Sphere Draw Fast");
@@ -2669,7 +2669,7 @@ void uplanet::ensure_rings_texture() {
 	if (ring_data.empty() || ring_tid > 0) return; // no rings, or texture already created
 	bool const mipmap = 1; // Note: somewhat slow when the player is flying by quickly
 	setup_1d_texture(ring_tid, mipmap, 0, 0, 0);
-	glTexImage1D(GL_TEXTURE_1D, 0, GL_RGBA8, RING_TEX_SZ, 0, GL_RGBA, GL_UNSIGNED_BYTE, &ring_data.front());
+	glTexImage1D(GL_TEXTURE_1D, 0, GL_RGBA8, RING_TEX_SZ, 0, GL_RGBA, GL_UNSIGNED_BYTE, ring_data.data());
 	if (mipmap) {gen_mipmaps(1);}
 }
 

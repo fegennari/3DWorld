@@ -128,7 +128,7 @@ void tessellate_polygon(polygon_t const &poly) {
 	added_pts.clear();
 	vector3d const norm(poly.get_planar_normal());
 	gluTessNormal(tobj, norm.x, norm.y, norm.z);
-	gluTessBeginPolygon(tobj, (void *)(&poly.front()));
+	gluTessBeginPolygon(tobj, (void *)poly.data());
 	gluTessBeginContour(tobj);
 	double coord[3];
 
@@ -196,9 +196,9 @@ template bool split_polygon<coll_tquad>(polygon_t const &poly, vector<coll_tquad
 
 void split_polygon_to_cobjs(coll_obj const &cobj, coll_obj_group &split_polygons, vector<point> const &poly_pts) {
 
-	if (poly_pts.size() == 3 && is_poly_valid(&poly_pts.front())) { // optimization
+	if (poly_pts.size() == 3 && is_poly_valid(poly_pts.data())) { // optimization
 		split_polygons.push_back(cobj);
-		split_polygons.back().set_from_pts(&poly_pts.front(), 3);
+		split_polygons.back().set_from_pts(poly_pts.data(), 3);
 		return;
 	}
 	static polygon_t poly;

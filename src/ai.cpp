@@ -1107,7 +1107,7 @@ void add_damage_to_smiley_texture(vector3d const &dir, float size, int smiley_id
 	colorRGBA color;
 	vector3d sdir(obj_groups[coll_id[SMILEY]].get_obj(smiley_id).orientation);
 	assert(!sstates[smiley_id].tdata.empty());
-	unsigned char *tdata(&sstates[smiley_id].tdata.front());
+	unsigned char *tdata(sstates[smiley_id].tdata.data());
 	int const tsize(int(size*SMILEY_TEX_SIZE/100.0f + 0.5f)), radsq(4*tsize*tsize);
 	int const tex_size(SMILEY_TEX_SIZE*SMILEY_TEX_SIZE);
 	int tx, ty;
@@ -1203,7 +1203,7 @@ void init_smiley_texture(int smiley_id) {
 	else {
 		bind_2d_texture(sstates[smiley_id].tid);
 	}
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, SMILEY_TEX_SIZE, SMILEY_TEX_SIZE, 0, GL_RGB, GL_UNSIGNED_BYTE, &tdata.front());
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, SMILEY_TEX_SIZE, SMILEY_TEX_SIZE, 0, GL_RGB, GL_UNSIGNED_BYTE, tdata.data());
 }
 
 

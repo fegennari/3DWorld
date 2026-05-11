@@ -362,7 +362,7 @@ class file_reader_3ds_model : public file_reader_3ds, public model_from_file_t {
 				// nfaces*4bytes: Long int where the nth bit indicates if the face belongs to the nth smoothing group
 				assert(chunk_len == sizeof(unsigned)*faces.size() + 6);
 				sgroups.resize(faces.size());
-				if (!read_data(&sgroups.front(), sizeof(unsigned), faces.size(), "smoothing groups")) return 0;
+				if (!read_data(sgroups.data(), sizeof(unsigned), faces.size(), "smoothing groups")) return 0;
 				break;
 				// TRI_VERTEXL: Vertices list
 				// Chunk Length: 1 x unsigned short (# vertices) + 3 x float (vertex coordinates) x (# vertices) + sub chunks

@@ -396,7 +396,7 @@ bool write_rgb_bmp_image(string const &fn, unsigned char *data, unsigned width, 
 
 int texture_t::write_to_bmp(string const &fn) const {
 	vector<unsigned char> data_swap_rb(data, data+num_bytes());
-	return write_rgb_bmp_image(fn, &data_swap_rb.front(), width, height, ncolors);
+	return write_rgb_bmp_image(fn, data_swap_rb.data(), width, height, ncolors);
 }
 
 
@@ -538,7 +538,7 @@ void texture_t::load_png(int index, bool allow_diff_width_height, bool allow_two
 	unsigned const scanline_size(ncolors*width);
 	alloc();
 	for (int i = 0; i < height; ++i) {rows[i] = data + (height - i - 1)*scanline_size;}
-	png_read_image(png_ptr, &rows.front());
+	png_read_image(png_ptr, rows.data());
 	png_read_end(png_ptr, end_info);
 	png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
 	checked_fclose(fp);

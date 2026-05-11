@@ -2189,7 +2189,7 @@ public:
 		brush_vect.resize(bsz);
 
 		if (!brush_vect.empty()) { // write brushes
-			unsigned const elem_read(fread(&brush_vect.front(), sizeof(voxel_brush_t), brush_vect.size(), fp));
+			unsigned const elem_read(fread(brush_vect.data(), sizeof(voxel_brush_t), brush_vect.size(), fp));
 			assert(elem_read == brush_vect.size()); // add error checking?
 		}
 		if (read_binary_uint(fp) != vtrailer_sig) {
@@ -2213,7 +2213,7 @@ public:
 		write_binary_uint(fp, brush_vect.size());
 
 		if (!brush_vect.empty()) { // write brushes
-			unsigned const elem_write(fwrite(&brush_vect.front(), sizeof(voxel_brush_t), brush_vect.size(), fp));
+			unsigned const elem_write(fwrite(brush_vect.data(), sizeof(voxel_brush_t), brush_vect.size(), fp));
 			assert(elem_write == brush_vect.size()); // add error checking?
 		}
 		write_binary_uint(fp, vtrailer_sig);

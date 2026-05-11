@@ -163,7 +163,7 @@ void heightmap_t::run_erosion(vector<float> &vals) {
 				}
 			}
 			vector<float> const orig_vals_ds(vals_ds); // deep copy
-			apply_erosion(&vals_ds.front(), dsx, dsy, min_zval, erosion_iters_tt/4); // use 4x fewer iterations as well
+			apply_erosion(vals_ds.data(), dsx, dsy, min_zval, erosion_iters_tt/4); // use 4x fewer iterations as well
 
 			for (int y = 0; y < height; ++y) {
 				for (int x = 0; x < width; ++x) {
@@ -266,7 +266,7 @@ bool tex_mod_map_manager_t::read_mod(string const &fn) {
 	brush_vect.resize(bsz);
 
 	if (!brush_vect.empty()) { // read brushes
-		unsigned const elem_read(fread(&brush_vect.front(), sizeof(brush_vect_t::value_type), brush_vect.size(), fp));
+		unsigned const elem_read(fread(brush_vect.data(), sizeof(brush_vect_t::value_type), brush_vect.size(), fp));
 		assert(elem_read == brush_vect.size()); // add error checking?
 	}
 	if (read_binary_uint(fp) != trailer_sig) {
@@ -296,7 +296,7 @@ bool tex_mod_map_manager_t::write_mod(string const &fn) const {
 	write_binary_uint(fp, brush_vect.size());
 
 	if (!brush_vect.empty()) { // write brushes
-		unsigned const elem_write(fwrite(&brush_vect.front(), sizeof(brush_vect_t::value_type), brush_vect.size(), fp));
+		unsigned const elem_write(fwrite(brush_vect.data(), sizeof(brush_vect_t::value_type), brush_vect.size(), fp));
 		assert(elem_write == brush_vect.size()); // add error checking?
 	}
 	write_binary_uint(fp, trailer_sig);

@@ -368,7 +368,7 @@ class mesh_vertex_draw : public mesh_data_store {
 public:
 	mesh_vertex_draw() {
 		data.resize(2*(MESH_X_SIZE+1));
-		vert_norm_color::set_vbo_arrays(1, &data.front());
+		vert_norm_color::set_vbo_arrays(1, data.data());
 	}
 	void emit_strip() {
 		if (c >= 3) {glDrawArrays(GL_TRIANGLE_STRIP, 0, c); ++num_frame_draw_calls;} // at least one triangle

@@ -195,8 +195,8 @@ void mesh2d::draw_perturbed_sphere(point const &pos, float radius, int ndiv, boo
 	else { // ndiv unused
 		if (!pmap.empty() || !rmap.empty() || !emap.empty() || !ptsh.empty()) {assert(size > 0);}
 		point const camera(get_camera_all());
-		draw_subdiv_sphere(pos, radius, size, camera, (pmap.empty() ? nullptr : &pmap.front()), tex_coord, 1,
-			(rmap.empty() ? nullptr : &rmap.front()), (emap.empty() ? nullptr : &emap.front()), (ptsh.empty() ? nullptr : &ptsh.front()), expand);
+		draw_subdiv_sphere(pos, radius, size, camera, (pmap.empty() ? nullptr : pmap.data()), tex_coord, 1,
+			(rmap.empty() ? nullptr : rmap.data()),   (emap.empty() ? nullptr : emap.data()), (ptsh.empty() ? nullptr : ptsh.data()), expand);
 	}
 }
 

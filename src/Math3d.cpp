@@ -162,7 +162,7 @@ bool point_in_convex_planar_polygon(vector<point> const &pts, point const &norma
 	if (pts.size() < 3) return 0; // not a polygon
 	// Note: use the 2D projection method; could also use the normal and cross products
 	int const proj_dim(get_min_dim(normal)), d1((proj_dim+1)%3), d2((proj_dim+2)%3);
-	return point_in_polygon_2d(pt[d1], pt[d2], &pts.front(), pts.size(), d1, d2);
+	return point_in_polygon_2d(pt[d1], pt[d2], pts.data(), pts.size(), d1, d2);
 }
 
 

@@ -503,7 +503,7 @@ template<typename T> void indexed_mesh_draw<T>::render() const {
 	set_ptr_state(verts.data(), verts.size());
 	draw_indexed_tri_verts(verts.size(), ivbo_size, GL_TRIANGLES);
 	bind_vbo(0, 1);
-	unset_ptr_state(&verts.front());
+	unset_ptr_state(verts.data());
 }
 
 template<typename T> void indexed_mesh_draw<T>::render_z_plane(float x1, float y1, float x2, float y2, float zval, unsigned nx_, unsigned ny_) {
