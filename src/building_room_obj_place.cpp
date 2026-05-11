@@ -5052,6 +5052,7 @@ void building_t::try_place_light_on_wall(cube_t const &light, room_t const &room
 			if (d.get_open_door_bcube_for_room(room).intersects(door_test_cube)) {bad_place = 1; break;}
 		}
 		if (bad_place) continue;
+		if (zval > ground_floor_z1 && check_if_against_window(c, room, dim, dir)) continue; // above ground; check for windows
 		if (!check_if_placed_on_wall(c, room, dim, dir)) continue; // ensure the light is on a wall; is this really needed?
 		if (!check_cube_within_part_sides(c)) continue; // handle non-cube buildings
 		lights.push_back(c);

@@ -1084,7 +1084,7 @@ void add_handle_models_for_door(door_t const &d, door_rotation_t const &drot, bo
 			if (!d.open) {xlate = 0.42;} // closed door; handle only on inside
 			else { // open door; determined with trial-and error (I don't understand the logic here)
 				xlate = (opens_inward ? -0.08 : 1.3);
-				if (d.hinge_side == 0) {xlate += ((side ^ d.open_dir) ? -1.0 : 1.0)*0.08;} // swapped side restroom door
+				if (d.hinge_side == 0) {xlate += ((bool(side) ^ d.open_dir) ? -1.0 : 1.0)*0.08;} // swapped side restroom door
 				if (!open_side) {xlate += (opens_inward ? 1.0 : -1.0)*1.38;} // outside handle of open exterior door
 			}
 		}
