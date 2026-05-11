@@ -678,7 +678,9 @@ void building_t::add_attic_roof_geom(rgeom_mat_t &mat, colorRGBA const &color, f
 			else if (!no_floor)                  {tq.pts[n]   += thickness*normal  ;} // wall: shift inward
 		}
 		vert_norm_comp_tc_color vert;
-		float const denom(0.5f*(bcube.dx() + bcube.dy())), tsx(tscale/denom), tsy(tscale/denom);
+		float const denom(0.5f*(bcube.dx() + bcube.dy()));
+		// if tscale==0.0, use the texture scales from the target material with the normal 2.0x scale for wall textures
+		float const tsx((tscale == 0.0) ? 2.0*mat.tex.tscale_x : tscale/denom), tsy((tscale == 0.0) ? 2.0*mat.tex.tscale_y : tscale/denom);
 		vert.set_c4(color);
 		vert.set_norm(normal);
 		unsigned const verts_start(mat.itri_verts.size());
@@ -757,7 +759,7 @@ void building_room_geom_t::add_attic_interior_and_rafters(building_t const &b, f
 			b.add_attic_roof_geom(get_material(tid_nm_pair_t(get_plywood_tid()), 0, small), WHITE, 1.0, 16.0, 0, window_holes); // no shadows
 		}
 		else if (attic_type == ATTIC_TYPE_PLASTER) { // or gypsum?
-			b.add_attic_roof_geom(get_material(b.get_material().wall_tex, 0, small), WHITE, 1.0, 16.0, 0, window_holes); // no shadows
+			b.add_attic_roof_geom(get_material(b.get_material().wall_tex, 0, small), WHITE, 1.0, 0.0, 0, window_holes); // no shadows
 		}
 		else if (attic_type == ATTIC_TYPE_FIBERGLASS) {
 			b.add_attic_roof_geom(get_material(tid_nm_pair_t(get_insulation_tid()), 0, small), colorRGBA(1.0, 0.7, 0.6), 0.5, 16.0, 0, window_holes); // no shadows
