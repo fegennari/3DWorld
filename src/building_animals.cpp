@@ -180,7 +180,7 @@ point building_t::gen_animal_floor_pos(float radius, bool place_in_attic, bool n
 
 bool building_t::is_pos_inside_building(point const &pos, float xy_pad, float hheight, bool inc_attic) const {
 	float bcube_pad(xy_pad);
-	if (inc_attic && has_attic() && pos.z >= interior->attic_access.z2()) {bcube_pad += get_attic_beam_depth();} // add extra spacing for attic beams (approximate)
+	if (inc_attic && has_attic() && pos.z >= get_attic_floor_z1()) {bcube_pad += get_attic_beam_depth();} // add extra spacing for attic beams (approximate)
 	
 	if (has_basement() && pos.z < ground_floor_z1) { // in the basement
 		cube_t const &basement(get_basement());

@@ -287,7 +287,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		bool const is_rest_kitchen(is_restaurant() && init_rtype_f0 == RTYPE_KITCHEN);
 		unsigned const num_floors(single_floor ? 1 : calc_num_floors_room(*r, floor_height, floor_thickness)); // consider mall and factory a single floor
 		unsigned const min_br(multi_family ? num_floors : 1); // multi-family house requires one per floor; can apply to both bedrooms and bathrooms
-		room_obj_shape const light_shape((residential_room || industrial_room) ? SHAPE_CYLIN : (is_restaurant_room ? SHAPE_SPHERE : SHAPE_CUBE));
+		room_obj_shape light_shape((residential_room || industrial_room) ? SHAPE_CYLIN : (is_restaurant_room ? SHAPE_SPHERE : SHAPE_CUBE));
 		bool const square_light(is_backrooms);
 		float light_density(0.0), light_size(def_light_size); // default size for houses
 		unsigned const room_objs_start(objs.size());

@@ -1787,6 +1787,7 @@ struct building_t : public building_geom_t {
 	float get_parking_road_width      () const;
 	float get_parking_ramp_width      () const;
 	float get_industrial_window_z1    () const;
+	float get_attic_floor_z1          () const {return (has_attic() ? interior->attic_access.z2() : parts.front().z2());} // handle case of "attic" with no access door
 	bool is_ground_floor_excluding_retail(float zval) const;
 	float get_ground_floor_z_thresh(bool for_spider) const;
 	void gen_roof_and_side_color(rand_gen_t &rgen);

@@ -2406,14 +2406,14 @@ void clamp_sphere_xy(point &pos, cube_t const &c, float radius) {
 bool building_t::move_sphere_to_valid_part(point &pos, point const &p_last, float radius) const {
 	point const init_pos(pos);
 
-	if (has_attic() && pos.z > interior->attic_access.z2()) { // special case handling for attic
+	if (has_attic() && pos.z > get_attic_floor_z1()) { // special case handling for attic
 		for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
 			if (!i->contains_pt_xy(p_last)) continue; // not the part containing the previous pos (assumes parts are not stacked)
 			clamp_sphere_xy(pos, *i, (4.0*radius + get_attic_beam_depth())); // include extra space for attics (approximate)
 			if (pos != init_pos) return 1;
 
 			if (pos.z > p_last.z) { // rising; check if above attic roof
-				float const move_zmin(max(p_last.z, interior->attic_access.z2()+radius));
+				float const move_zmin(max(p_last.z, get_attic_floor_z1()+radius));
 
 				while (pos.z > move_zmin && !point_under_attic_roof(point(pos.x, pos.y, pos.z+radius))) {
 					pos.z = min(pos.z-0.1f*radius, move_zmin); // shift down by 10% of radius until we hit the prev zval or attic floor, or we no longer collide with the roof

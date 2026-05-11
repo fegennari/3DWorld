@@ -42,11 +42,11 @@ bool building_t::is_blocked_by_open_attic_door(cube_t const &c) const {
 	return attic_door.intersects(c); // will be blocked by attic ladder when open
 }
 bool building_t::point_in_attic(point const &pos, vector3d *const cnorm) const {
-	if (!has_attic() || pos.z < interior->attic_access.z2() || pos.z > interior_z2) return 0; // test attic floor zval
+	if (!has_attic() || pos.z < get_attic_floor_z1() || pos.z > interior_z2) return 0; // test attic floor zval
 	return point_under_attic_roof(pos, cnorm);
 }
 bool building_t::cube_in_attic(cube_t const &c) const {
-	if (!has_attic() || c.z2() < interior->attic_access.z2() || c.z1() > interior_z2) return 0; // test attic floor zval
+	if (!has_attic() || c.z2() < get_attic_floor_z1() || c.z1() > interior_z2) return 0; // test attic floor zval
 	// test the 4 top corners of the cube
 	float const z2(c.z2() + 2.5*get_attic_beam_depth()); // account for attic beam depth, which reduces the ceiling height / increases our effective cube height (approximate)
 	return (point_under_attic_roof(point(c.x1(), c.y1(), z2)) || point_under_attic_roof(point(c.x1(), c.y2(), z2)) ||
@@ -241,7 +241,7 @@ void create_attic_posts(building_t const &b, cube_t const &beam, bool dim, cube_
 
 	for (unsigned d = 0; d < 2; ++d) {
 		cube_t post(beam);
-		set_cube_zvals(post, b.interior->attic_access.z2(), beam.z1()); // extends from attic floor to bottom of beam
+		set_cube_zvals(post, b.get_attic_floor_z1(), beam.z1()); // extends from attic floor to bottom of beam
 		post.d[!dim][!d] = post.d[!dim][d] + (d ? -1.0 : 1.0)*beam.dz();
 		assert(post.is_strictly_normalized());
 		if (!post.intersects_xy(avoid)) {posts[d] = post;} // skip if too close to attic access door
@@ -284,7 +284,7 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 	// add light(s)
 	cube_t const &part(get_part_for_room(room)); // Note: assumes attic is a single part
 	bool const long_dim(part.dx() < part.dy());
-	float const floor_spacing(get_window_vspace()), beam_depth(get_attic_beam_depth()), z_floor(interior->attic_access.z2());
+	float const floor_spacing(get_window_vspace()), beam_depth(get_attic_beam_depth()), z_floor(get_attic_floor_z1());
 	float const sep_dist(part.get_sz_dim(long_dim) - part.get_sz_dim(!long_dim)), attic_height(interior_z2 - z_floor), light_radius(0.03*attic_height);
 	point const light_center(part.xc(), part.yc(), (interior_z2 - 1.2*light_radius - beam_depth)); // center of the part near the ceiling
 	cube_t light;
@@ -486,8 +486,6 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 	float const box_sz(0.18*floor_spacing);
 	add_boxes_to_space(objs[attic_door_ix], objs, place_area, avoid_cubes, rgen, num_boxes, box_sz, 0.5*box_sz, 1.5*box_sz, 1, obj_flags); // allow_crates=1
 
-	// TYPE_BOOK, TYPE_BOTTLE, TYPE_PAPER?
-
 	// add rug last, under any previous movable items
 	point rug_center;
 	vector3d rug_hsz; // half length/width
@@ -687,7 +685,7 @@ void add_attic_roof_geom(rgeom_mat_t &mat, colorRGBA const &color, float thickne
 			vert.v = tq.pts[i];
 
 			if (is_roof) { // roof
-				if (tq.get_bcube().z1() <= b.interior->attic_access.z2()) { // tquad ends at or below attic floor
+				if (tq.get_bcube().z1() <= b.get_attic_floor_z1()) { // tquad ends at or below attic floor
 					// shrink bottom edge by thickness to avoid clipping through the floor below;
 					// since the quad is a loop, we can check both the previous and next points to see if they're above us, and use the vector delta for the shift
 					vector3d shift_dir;
