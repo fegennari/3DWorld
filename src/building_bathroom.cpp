@@ -943,12 +943,15 @@ void building_t::add_shared_restroom_objs() {
 	}
 	// add edges of ceiling to block the gap between wall and roof; added for first room and spans both rooms
 	bool const gdim(get_street_dim()); // gap dim
-	cube_t walls(parts.front());
-	walls.z1() = walls.z2() - get_fc_thickness();
+	float const wall_hthick(0.5*get_wall_thickness());
+	cube_t walls(parts.front()), top_wall(walls);
+	top_wall.z1() = walls.z1() = walls.z2() - get_fc_thickness();
+	set_wall_width(top_wall, top_wall.get_center_dim(!gdim), 1.5*wall_hthick, !gdim); // top of wall dividing the two rooms
+	objs.emplace_back(top_wall, TYPE_METAL_BAR, 0, !gdim, 0, 0, 1.0, SHAPE_CUBE, WHITE, get_skip_mask_for_xy(gdim));
 
 	for (unsigned d = 0; d < 2; ++d) {
 		cube_t wall(walls);
-		wall.d[gdim][!d] = walls.d[gdim][d] + (d ? -1.0 : 1.0)*0.5*get_wall_thickness();
+		wall.d[gdim][!d] = walls.d[gdim][d] + (d ? -1.0 : 1.0)*wall_hthick;
 		unsigned const skip_faces(~(EF_Z1 | ~get_face_mask(gdim, !d))); // only draw bottom and inside edge
 		objs.emplace_back(wall, TYPE_METAL_BAR, 0, gdim, d, 0, 1.0, SHAPE_CUBE, WHITE, skip_faces);
 	}
