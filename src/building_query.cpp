@@ -1712,6 +1712,7 @@ bool building_interior_t::check_sphere_coll_room_objects(building_t const &build
 			type == TYPE_ELEC_WIRE || type == TYPE_TESTTUBE || type == TYPE_O_SHOWER || type == TYPE_JAR) continue;
 		if (type == TYPE_RAILING && (!(c->flags & RO_FLAG_TOS) || !c->is_open())) continue; // only railings at the top of stairs (non-sloped) with balusters have collisions
 		if (type == TYPE_POOL_TILE && c->no_coll()) continue;
+		if (type == TYPE_PIPE && !is_ball) continue; // skip pipes when colliding with water droplets but not balls; skip for roaches as well?
 		cube_t bc(get_true_room_obj_bcube(*c));
 		if (type == TYPE_CATWALK) {bc = get_catwalk_bottom(*c);} // only bottom surface is collidable
 		if (!sphere_cube_intersect(pos, radius, bc)) continue; // no intersection (optimization)

@@ -1935,7 +1935,8 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 	doors_next_frame(player_pos); // run for current and connected buildings
 	interior->room_geom->next_frame(*this, player_pos);
 	if (is_factory()) {interior->ind_info->next_frame(interior->room_geom->particle_manager);} // update factory smoke
-	if (player_in_this_building && player_in_basement == 3) {update_droplet_spawners();} // only for player in extended basement of this building
+	// update droplet spawners; only for player in basement/extended basement of this building
+	if (player_in_this_building && player_in_basement) {update_droplet_spawners();}
 }
 
 void building_room_geom_t::next_frame(building_t &building, point const &player_pos) {
@@ -2015,6 +2016,11 @@ bool particle_manager_t::get_closest_particle(point const &pos, float xy_radius,
 	return found;
 }
 
+void maybe_play_drip_sound(point const &pos, building_t const &building, float gain, float dist) {
+	point const pos_cs(pos + get_camera_coord_space_xlate());
+	if (dist_less_than(pos_cs, get_camera_pos(), dist*building.get_window_vspace())) {gen_sound_thread_safe(SOUND_WATER_DROP, pos_cs, gain);}
+}
+
 void particle_manager_t::next_frame(building_t &building) {
 	if (particles.empty()) return;
 	float const fticks_stable(min(fticks, 4.0f)); // clamp to 0.1s
@@ -2068,8 +2074,7 @@ void particle_manager_t::next_frame(building_t &building) {
 				p.vel    = zero_vector;
 				p.color  = WHITE;
 				add_water_splash(p.pos, 1.5*p.radius, 0.25, 1); // is_droplet=1
-				point const pos_cs(p.pos + get_camera_coord_space_xlate());
-				if (dist_less_than(pos_cs, get_camera_pos(), 2.0*building.get_window_vspace())) {gen_sound_thread_safe(SOUND_WATER_DROP, pos_cs, 0.1);}
+				maybe_play_drip_sound(p.pos, building, 0.1, 2.0);
 				continue;
 			}
 			p.color = DK_BROWN;
@@ -2087,6 +2092,7 @@ void particle_manager_t::next_frame(building_t &building) {
 
 		if (building.interior->check_sphere_coll(building, p.pos, p_last, p.radius*p.coll_radius, self, cnorm, hardness, obj_ix, 0, skip_objects)) { // is_ball=0
 			if (p.effect == PART_EFFECT_CLOUD || p.effect == PART_EFFECT_SMOKE || p.effect == PART_EFFECT_DROPLET || p.effect == PART_EFFECT_STEAM) { // no bounce
+				if (p.effect == PART_EFFECT_DROPLET) {maybe_play_drip_sound(p.pos, building, 0.05, 1.0);} // droplet hitting something other than water
 				p.effect = PART_EFFECT_NONE;
 				continue;
 			}

@@ -253,14 +253,48 @@ void building_t::add_backrooms_droplet_spawners(rand_gen_t rgen) {
 		cube_t spawner_bc(pos);
 		spawner_bc.expand_by(radius);
 		if (interior->is_blocked_by_stairs_or_elevator(spawner_bc)) continue;
-		interior->room_geom->droplet_spawners.emplace_back(pos, radius, period);
+		interior->room_geom->droplet_spawners[0].emplace_back(pos, radius, period);
 	} // for n
+}
+void building_t::add_pipe_droplet_spawners(rand_gen_t rgen) {
+	// this should be called after all pipes have been placed
+	assert(has_room_geom());
+	vect_room_object_t const &objs(interior->room_geom->objs);
+	vector<unsigned> cands;
+
+	for (unsigned i = 0; i < objs.size(); ++i) {
+		room_object_t const &p(objs[i]);
+		if (p.type != TYPE_PIPE)      continue;
+		if (p.dir  == 1)              continue; // horizontal pipes only
+		if (p.z2() > ground_floor_z1) continue; // not in the basement
+		if (p.color != BRASS_C && p.color != SEWER_FIT_COLOR) continue; // only brass (water/sprinkler) and sewer fittings can leak
+		float const len(p.get_sz_dim(p.dim)), radius(p.dz());
+		if (len > 4.0*radius || len < radius) continue; // skip if too long or too short
+		cands.push_back(i);
+	} // for o
+	if (cands.empty()) return; // no pipes
+	unsigned const max_ds(min((size_t)32, (1 + cands.size()/8))), num_ds(rgen.rand() % max_ds);
+	float const rmax(0.5*get_wall_thickness());
+	vector_random_shuffle(cands, rgen);
+	cands.resize(num_ds);
+
+	for (unsigned i : cands) {
+		room_object_t const &p(objs[i]);
+		float const radius(rgen.rand_uniform(0.2, 0.25)*min(p.dz(), rmax)), period(rgen.rand_uniform(1.0, 4.0)*TICKS_PER_SECOND);
+		point pos;
+		pos.z = p.z1() - radius; // bottom of the fitting
+		pos[!p.dim] = p.get_center_dim(!p.dim); // fitting centerline
+		pos[ p.dim] = p.d[p.dim][rgen.rand_bool()]; // side of the connector/fitting that's dripping
+		// do we need to check for collisions? it definitely intersects the pipe, but shouldn't intersect stairs, elevators, etc. because pipes avoid these
+		interior->room_geom->droplet_spawners[1].emplace_back(pos, radius, period);
+	} // for i
 }
 void building_t::update_droplet_spawners() {
 	if (player_in_water == 2) return; // no droplets if the player is underwater
+	bool const spawner_ix(player_in_basement < 3); // update only one of {extended basement/backrooms, basement pipes}
 	assert(has_room_geom());
 
-	for (droplet_spawner_t &s : interior->room_geom->droplet_spawners) {
+	for (droplet_spawner_t &s : interior->room_geom->droplet_spawners[spawner_ix]) {
 		if (s.pos.z < camera_pos.z) continue; // skip if player is on a floor above
 		if ((tfticks - s.last_spawned) < s.period) continue;
 		point const pos(s.pos.x, s.pos.y, (s.pos.z - 1.2*s.radius)); // under the ceiling so as not to collide

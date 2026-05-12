@@ -119,6 +119,7 @@ colorRGBA const GLASS_COLOR(0.8, 1.0, 0.9, 0.25);
 colorRGBA const BREAKER_PANEL_COLOR(0.50, 0.60, 0.70);
 colorRGBA const WATER_HEATER_COLOR (0.50, 0.55, 0.60); // slightly blue-green tinted gray
 colorRGBA const DARK_BRASS_C(0.4, 0.35, 0.15, 1.0);
+colorRGBA const SEWER_FIT_COLOR(0.7, 0.6, 0.5, 1.0);
 colorRGBA const mall_tc_legs_color(BKGRAY);
 
 unsigned const NUM_LOCK_COLORS = 8;

@@ -660,8 +660,8 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		pipes.push_back(main_pipe);
 	}
 	// add pipe objects: sewer: dark gray pipes / gray-brown fittings; water: copper pipes / brass fittings; hot water: white insulation
-	colorRGBA const pcolors[4] = {DK_GRAY, COPPER_C, COPPER_C, GRAY}; // sewer, cw, hw, gas
-	colorRGBA const fcolors[4] = {colorRGBA(0.7, 0.6, 0.5, 1.0), BRASS_C, BRASS_C, DK_GRAY}; // sewer, cw, hw, gas
+	colorRGBA const pcolors[NUM_PIPE_TYPES] = {DK_GRAY,         COPPER_C, COPPER_C, GRAY   }; // sewer, cw, hw, gas
+	colorRGBA const fcolors[NUM_PIPE_TYPES] = {SEWER_FIT_COLOR, BRASS_C,  BRASS_C,  DK_GRAY}; // sewer, cw, hw, gas
 	colorRGBA const &pipes_color(pcolors[pipe_type]), &fittings_color(fcolors[pipe_type]);
 	float const tot_light_amt = 1.0; // to offset the darkness of the basement
 	vect_cube_t insul_exclude;

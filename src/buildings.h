@@ -770,7 +770,7 @@ struct building_room_geom_t {
 	building_decal_manager_t decal_manager;
 	particle_manager_t particle_manager;
 	fire_manager_t fire_manager;
-	vector<droplet_spawner_t> droplet_spawners; // for flooded basements
+	vector<droplet_spawner_t> droplet_spawners[2]; // {flooded extended basement/backrooms, basement pipes}
 
 	building_room_geom_t(point const &tex_origin_=all_zeros) : tex_origin(tex_origin_), wood_color(WHITE) {}
 	bool empty() const {return objs.empty();}
@@ -2273,6 +2273,7 @@ private:
 	void add_wall_section_above_pool_room_door(door_stack_t &ds, room_t const &room);
 	unsigned setup_multi_floor_room(extb_room_t &room, door_t const &door, bool wall_dim, bool wall_dir, rand_gen_t &rgen);
 	void add_backrooms_droplet_spawners(rand_gen_t rgen);
+	void add_pipe_droplet_spawners(rand_gen_t rgen);
 	void update_droplet_spawners();
 	bool add_ext_basement_rooms_recur(extb_room_t &parent_room, ext_basement_room_params_t &P, float door_width, bool dim, unsigned depth, rand_gen_t &rgen);
 	unsigned max_expand_underground_room(cube_t &room, bool dim, bool dir, bool is_mall, rand_gen_t &rgen) const;
