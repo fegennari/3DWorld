@@ -575,13 +575,13 @@ void change_world_mode() { // switch terrain mode: 0 = normal/ground, 1 = univer
 
 void update_sound_loops() {
 
-	bool const universe(world_mode == WMODE_UNIVERSE);
+	bool const universe(world_mode == WMODE_UNIVERSE), sound_enable(!universe && animate2); // disable looping sounds when time is paused
 	float const fire_gain(0.1/dist_to_fire_sq), rain_wind_volume(get_tt_building_sound_gain());
-	if (player_in_tunnel) {set_sound_loop_state(SOUND_LOOP_RAIN, 1, 0.5);} // light rain sound in tunnel
-	else {set_sound_loop_state(SOUND_LOOP_RAIN, (!universe && rain_wind_volume > 0.0 && is_rain_enabled()),    rain_wind_volume);}
-	set_sound_loop_state(SOUND_LOOP_WIND,       (!universe && rain_wind_volume > 0.0 && wind.mag() >= 1.0),    rain_wind_volume);
-	set_sound_loop_state(SOUND_LOOP_FIRE,       (!universe && dist_to_fire_sq > 0.0 && dist_to_fire_sq < 2.0), fire_gain);
-	set_sound_loop_state(SOUND_LOOP_UNDERWATER, (!universe && (underwater || player_in_water == 2) && frame_counter > change_wmode_frame+1));
+	if (sound_enable && player_in_tunnel) {set_sound_loop_state(SOUND_LOOP_RAIN, 1, 0.5);} // light rain sound in tunnel
+	else {set_sound_loop_state(SOUND_LOOP_RAIN, (sound_enable && rain_wind_volume > 0.0 && is_rain_enabled()),    rain_wind_volume);}
+	set_sound_loop_state(SOUND_LOOP_WIND,       (sound_enable && rain_wind_volume > 0.0 && wind.mag() >= 1.0),    rain_wind_volume);
+	set_sound_loop_state(SOUND_LOOP_FIRE,       (sound_enable && dist_to_fire_sq > 0.0 && dist_to_fire_sq < 2.0), fire_gain);
+	set_sound_loop_state(SOUND_LOOP_UNDERWATER, (sound_enable && (underwater || player_in_water == 2) && frame_counter > change_wmode_frame+1));
 	dist_to_fire_sq = 0.0;
 	proc_delayed_and_placed_sounds();
 }
