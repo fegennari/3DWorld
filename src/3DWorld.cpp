@@ -642,7 +642,9 @@ struct player_height_mgr_t {
 			if (!player_on_moving_ww && !player_on_escalator) { // player is walking if moving
 				static point prev_frame_pos;
 				point const pos(get_camera_pos());
-				if (!dist_xy_less_than(pos, prev_frame_pos, 0.001*CAMERA_RADIUS)) {bob_time += fticks;} // update if player has moved
+				vector3d const delta(pos - prev_frame_pos);
+				// update if player has moved primarily horizontally (not on a ladder)
+				if (!dist_xy_less_than(pos, prev_frame_pos, 0.001*CAMERA_RADIUS) && delta.xy_mag() > fabs(delta.z)) {bob_time += fticks;}
 				prev_frame_pos = pos;
 			}
 			cur_height = camera_zh*(1.0 + head_bob_amount*sin(5.0*PI*bob_time/TICKS_PER_SECOND));
