@@ -26,7 +26,7 @@ void atten_color(inout vec4 color, in float dist) {
 }
 
 float integrate_water_dist(in vec3 targ_pos, in vec3 src_pos, in float water_z) {
-	float t = clamp((water_z - targ_pos.z)/max(0.001, abs(src_pos.z - targ_pos.z)), 0.0, 1.0);
+	float t = clamp((water_z - min(src_pos.z, targ_pos.z))/max(0.001, abs(src_pos.z - targ_pos.z)), 0.0, 1.0);
 	return t*distance(src_pos, targ_pos);
 }
 
@@ -90,9 +90,11 @@ vec4 add_light_comp(in vec3 normal, in vec4 epos, in int i, in float ds_scale, i
 #endif
 	
 #ifdef HAS_WATER
-	if (vertex.z < water_plane_z) { // underwater
+	vec4 eye = fg_ModelViewMatrixInverse[3]; // local tile space
+
+	if (min(vertex.z, eye.z) < water_plane_z) { // underwater
 #ifdef WATER_CAUSTICS
-		if (i == 0) { // only for light0 (sun)
+		if (i == 0 && vertex.z < water_plane_z) { // only for light0 (sun)
 			// apply underwater caustics texture (Note: matches shallow water wave normal map, but not deep water wave normal map)
 			float cweight = ds_scale*wave_amplitude*caustics_weight*min(8.0*(water_plane_z - vertex.z), 0.5);
 			float ntime   = 2.0*abs(fract(0.005*wave_time) - 0.5);
@@ -119,9 +121,10 @@ vec4 add_light_comp(in vec3 normal, in vec4 epos, in int i, in float ds_scale, i
 #endif // WATER_CAUSTICS
 		// apply underwater attenuation
 		// Note: ok if vertex is above the water, dist will come out as 0
-		vec4 eye    = fg_ModelViewMatrixInverse[3]; // local tile space
-		float depth = water_plane_z - vertex.z;
-		float dist  = integrate_water_dist(vertex.xyz, eye.xyz, water_plane_z) + min(4.0*depth, integrate_water_dist(vertex.xyz, light.xyz, water_plane_z)); // clamp light pos dir
+		float dist_vl = integrate_water_dist(vertex.xyz, light.xyz, water_plane_z); // light => point
+		float dist_ve = integrate_water_dist(vertex.xyz,   eye.xyz, water_plane_z); // point => eye
+		float depth   = max((water_plane_z - vertex.z), 0.0);
+		float dist    = dist_ve +  min(4.0*depth, dist_vl); // clamp to a reasonable value for underwater terrain
 		atten_color(color, dist*water_atten);
 	}
 #endif // HAS_WATER
