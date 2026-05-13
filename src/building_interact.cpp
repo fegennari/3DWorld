@@ -2018,6 +2018,7 @@ bool particle_manager_t::get_closest_particle(point const &pos, float xy_radius,
 
 void maybe_play_drip_sound(point const &pos, building_t const &building, float gain, float dist) {
 	point const pos_cs(pos + get_camera_coord_space_xlate());
+	// what about checking if on the same floor as the player?
 	if (dist_less_than(pos_cs, get_camera_pos(), dist*building.get_window_vspace())) {gen_sound_thread_safe(SOUND_WATER_DROP, pos_cs, gain);}
 }
 
@@ -2077,8 +2078,7 @@ void particle_manager_t::next_frame(building_t &building) {
 				maybe_play_drip_sound(p.pos, building, 0.1, 2.0);
 				continue;
 			}
-			p.color = DK_BROWN;
-			apply_building_gravity(p.vel.z, fticks_stable); // full gravity
+			apply_building_gravity(p.vel.z, 0.67*fticks_stable); // 2/3 gravity
 		}
 		else {assert(0);}
 		// check for collisions and apply bounce, similar to balls
@@ -2088,7 +2088,9 @@ void particle_manager_t::next_frame(building_t &building) {
 		float hardness(0.0);
 		auto self(objs.end());
 		if (p.parent_obj_id >= 0) {assert((unsigned)p.parent_obj_id < objs.size()); self = objs.begin() + p.parent_obj_id;}
-		bool const skip_objects(p.effect == PART_EFFECT_STEAM); // steam passes through objects, so skip them; also used as an optimization
+		// steam passes through objects, so skip them; also used as an optimization;
+		// skip objects as well for droplets as an optimization since they fall quickly straight down and it won't be obvious if they're wrong
+		bool const skip_objects(p.effect == PART_EFFECT_STEAM || p.effect == PART_EFFECT_DROPLET);
 
 		if (building.interior->check_sphere_coll(building, p.pos, p_last, p.radius*p.coll_radius, self, cnorm, hardness, obj_ix, 0, skip_objects)) { // is_ball=0
 			if (p.effect == PART_EFFECT_CLOUD || p.effect == PART_EFFECT_SMOKE || p.effect == PART_EFFECT_DROPLET || p.effect == PART_EFFECT_STEAM) { // no bounce

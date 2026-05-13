@@ -543,7 +543,8 @@ public:
 struct droplet_spawner_t {
 	point pos;
 	float radius, period, last_spawned=0.0;
-	droplet_spawner_t(point const &pos_, float radius_, float period_) : pos(pos_), radius(radius_), period(period_) {}
+	colorRGBA color;
+	droplet_spawner_t(point const &pos_, float radius_, float period_, colorRGBA const &color_) : pos(pos_), radius(radius_), period(period_), color(color_) {}
 };
 
 struct index_pair_t {

@@ -253,13 +253,14 @@ void building_t::add_backrooms_droplet_spawners(rand_gen_t rgen) {
 		cube_t spawner_bc(pos);
 		spawner_bc.expand_by(radius);
 		if (interior->is_blocked_by_stairs_or_elevator(spawner_bc)) continue;
-		interior->room_geom->droplet_spawners[0].emplace_back(pos, radius, period);
+		interior->room_geom->droplet_spawners[0].emplace_back(pos, radius, period, DK_BROWN);
 	} // for n
 }
 void building_t::add_pipe_droplet_spawners(rand_gen_t rgen) {
 	// this should be called after all pipes have been placed
 	assert(has_room_geom());
 	vect_room_object_t const &objs(interior->room_geom->objs);
+	float const stain_height(1.5*get_flooring_thick());
 	vector<unsigned> cands;
 
 	for (unsigned i = 0; i < objs.size(); ++i) {
@@ -273,34 +274,46 @@ void building_t::add_pipe_droplet_spawners(rand_gen_t rgen) {
 		cands.push_back(i);
 	} // for o
 	if (cands.empty()) return; // no pipes
-	unsigned const max_ds(min((size_t)32, (1 + cands.size()/8))), num_ds(rgen.rand() % max_ds);
-	float const rmax(0.5*get_wall_thickness());
+	unsigned const max_ds(min((size_t)(is_house ? 12 : 24), (1 + cands.size()/16))), num_ds(rgen.rand() % max_ds);
+	float const rmax(0.4*get_wall_thickness());
 	vector_random_shuffle(cands, rgen);
 	cands.resize(num_ds);
 
 	for (unsigned i : cands) {
 		room_object_t const &p(objs[i]);
+		bool const is_water(p.color == BRASS_C); // else sewage
 		float const radius(rgen.rand_uniform(0.2, 0.25)*min(p.dz(), rmax)), period(rgen.rand_uniform(1.0, 4.0)*TICKS_PER_SECOND);
+		colorRGBA const &color(is_water ? colorRGBA(0.4, 0.6, 0.5, 0.5) : BROWN);
 		point pos;
 		pos.z = p.z1() - radius; // bottom of the fitting
 		pos[!p.dim] = p.get_center_dim(!p.dim); // fitting centerline
 		pos[ p.dim] = p.d[p.dim][rgen.rand_bool()]; // side of the connector/fitting that's dripping
 		// do we need to check for collisions? it definitely intersects the pipe, but shouldn't intersect stairs, elevators, etc. because pipes avoid these
-		interior->room_geom->droplet_spawners[1].emplace_back(pos, radius, period);
+		interior->room_geom->droplet_spawners[1].emplace_back(pos, radius, period, color);
+		// find the floor under this pipe to add a dark spot; highest zval under this point
+		float floor_zval(get_basement().z1());
+
+		for (cube_t const &f : interior->floors) {
+			if (f.contains_pt_xy(pos) && f.z2() < pos.z && f.z2()) {max_eq(floor_zval, f.z2());}
+		}
+		interior->room_geom->decal_manager.add_blood_or_stain(point(pos.x, pos.y, floor_zval+stain_height), 16.0*radius, color, 0, 2, 1); // is_blood=0; +z
 	} // for i
 }
 void building_t::update_droplet_spawners() {
 	if (player_in_water == 2) return; // no droplets if the player is underwater
 	bool const spawner_ix(player_in_basement < 3); // update only one of {extended basement/backrooms, basement pipes}
 	assert(has_room_geom());
+	float const update_dist(4.0*get_window_vspace());
+	point const camera_bs(get_camera_building_space());
 
 	for (droplet_spawner_t &s : interior->room_geom->droplet_spawners[spawner_ix]) {
 		if (s.pos.z < camera_pos.z) continue; // skip if player is on a floor above
 		if ((tfticks - s.last_spawned) < s.period) continue;
+		if (!dist_xy_less_than(s.pos, camera_bs, update_dist)) continue; // too far
 		point const pos(s.pos.x, s.pos.y, (s.pos.z - 1.2*s.radius)); // under the ceiling so as not to collide
-		interior->room_geom->particle_manager.add_particle(pos, zero_vector, WHITE, s.radius, PART_EFFECT_DROPLET);
+		interior->room_geom->particle_manager.add_particle(pos, zero_vector, s.color, s.radius, PART_EFFECT_DROPLET);
 		s.last_spawned = tfticks;
-	}
+	} // for s
 }
 
 void building_t::draw_water(vector3d const &xlate) const {
