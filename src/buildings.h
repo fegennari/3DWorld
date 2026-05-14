@@ -2240,6 +2240,7 @@ public:
 	bool find_mirror_needing_reflection(vector3d const &xlate) const;
 	void get_rooftop_cars(vector<car_t> &cars) const;
 	bool get_zval_for_obj_placement(point const &pos, float radius, float &zval, bool add_z_bias) const;
+	unsigned get_floor_for_zval(float zval) const {return unsigned((zval - get_bcube_z1_inc_ext_basement())/get_window_vspace());}
 	float get_elevator_floor_spacing(elevator_t            const &e) const {return ( e.in_mall       ? get_mall_floor_spacing() : get_window_vspace());}
 	float get_stairs_floor_spacing  (stairs_landing_base_t const &s) const {return ((s.in_mall == 1) ? get_mall_floor_spacing() : get_window_vspace());}
 	float get_room_floor_spacing    (room_t                const &r) const {return ( r.is_mall()     ? get_mall_floor_spacing() : get_window_vspace());}
@@ -2709,7 +2710,6 @@ private:
 		bool keep_high_side=0, bool is_bathroom=0, bool make_unlocked=0, bool make_closed=0, bool jail_door=0);
 	void reverse_door_hinges_if_needed();
 	void ensure_doors_to_room_are_closed(room_t const &room, unsigned doors_start, bool ensure_locked=0);
-	unsigned get_floor_for_zval(float zval) const {return unsigned((zval - get_bcube_z1_inc_ext_basement())/get_window_vspace());}
 	building_loc_t get_building_loc_for_pt(point const &pos) const;
 	bool same_room_and_floor_as_player(person_t const &person) const;
 	bool is_player_visible(person_t const &person, unsigned vis_test) const;

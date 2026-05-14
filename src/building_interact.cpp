@@ -2018,8 +2018,10 @@ bool particle_manager_t::get_closest_particle(point const &pos, float xy_radius,
 
 void maybe_play_drip_sound(point const &pos, building_t const &building, float gain, float dist) {
 	point const pos_cs(pos + get_camera_coord_space_xlate());
-	// what about checking if on the same floor as the player?
-	if (dist_less_than(pos_cs, get_camera_pos(), dist*building.get_window_vspace())) {gen_sound_thread_safe(SOUND_WATER_DROP, pos_cs, gain);}
+	if (!dist_less_than(pos_cs, get_camera_pos(), dist*building.get_window_vspace())) return; // too far away
+	if (building.get_floor_for_zval(pos_cs.z) != building.get_floor_for_zval(get_camera_pos().z)) return; // different floor
+	// Note: not checking view frustum because sound still plays when droplet is behind the player
+	gen_sound_thread_safe(SOUND_WATER_DROP, pos_cs, gain);
 }
 
 void particle_manager_t::next_frame(building_t &building) {
