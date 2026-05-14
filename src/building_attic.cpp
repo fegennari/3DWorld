@@ -665,6 +665,7 @@ void interpolate_tcs(vert_norm_comp_tc_color const &p0, vert_norm_comp_tc_color 
 void building_t::add_attic_roof_geom(rgeom_mat_t &mat, colorRGBA const &color, float thickness, float tscale, bool swap_st, vect_cube_t const &window_holes) const {
 	bool const no_floor(is_restroom());
 	thickness *= (no_floor ? 0.1 : 1.0)*get_attic_beam_depth();
+	bool const add_center_split(is_restroom_with_high_ceil());
 
 	for (tquad_with_ix_t const &i : roof_tquads) {
 		if (!is_attic_roof(i, 0)) continue; // type_roof_only=0
@@ -683,64 +684,73 @@ void building_t::add_attic_roof_geom(rgeom_mat_t &mat, colorRGBA const &color, f
 		float const tsx((tscale == 0.0) ? 2.0*mat.tex.tscale_x : tscale/denom), tsy((tscale == 0.0) ? 2.0*mat.tex.tscale_y : tscale/denom);
 		vert.set_c4(color);
 		vert.set_norm(normal);
-		unsigned const verts_start(mat.itri_verts.size());
+		bool const add_second_wall(add_center_split && !is_roof); // add a second wall in the center for each side triangle
 
-		for (unsigned i = 0; i < tq.npts; ++i) {
-			vert.v = tq.pts[i];
+		for (unsigned wall_ix = 0; wall_ix < (add_second_wall ? 2 : 1); ++wall_ix) {
+			unsigned const verts_start(mat.itri_verts.size());
 
-			if (is_roof) { // roof
-				if (tq.get_bcube().z1() <= get_attic_floor_z1()) { // tquad ends at or below attic floor
-					// shrink bottom edge by thickness to avoid clipping through the floor below;
-					// since the quad is a loop, we can check both the previous and next points to see if they're above us, and use the vector delta for the shift
-					vector3d shift_dir;
-					point const &prev(tq.pts[(i+tq.npts-1)%tq.npts]), &next(tq.pts[(i+1)%tq.npts]);
-					if      (vert.v.z < prev.z) {shift_dir = prev - vert.v;}
-					else if (vert.v.z < next.z) {shift_dir = next - vert.v;}
-					if (shift_dir.z > 0.0) {vert.v += shift_dir*(thickness/shift_dir.z);}
-				}
-				bool const swap_tc_xy((fabs(normal.x) < fabs(normal.y)) ^ swap_st);
-				vert.t[!swap_tc_xy] = vert.v.x*tsx;
-				vert.t[ swap_tc_xy] = vert.v.y*tsy;
+			if (wall_ix == 1) { // second wall
+				bool const dim(fabs(normal.x) < fabs(normal.y));
+				float const xlate(0.5*(bcube.get_sz_dim(dim) + get_wall_thickness())*normal[dim]);
+				for (unsigned n = 0; n < tq.npts; ++n) {tq.pts[n][dim] += xlate;}
 			}
-			else { // side wall
-				bool const dim(tq.pts[0].x == tq.pts[1].x); // use nonzero width dim
-				vert.t[ swap_st] = vert.v[dim]*tsx;
-				vert.t[!swap_st] = vert.v.z*tsy;
-			}
-			mat.itri_verts.push_back(vert);
-		} // for i
-		if (!is_roof && !window_holes.empty()) { // cut holes for windows; verts are ordered {top, left, right} viewed from inside
-			cube_t const bc(tq.get_bcube());
-			bool const dim(bc.dy() < bc.dx()), invert((normal[dim] < 0.0) ^ dim); // should be zero size in X or Y
-			float const wall_pos(bc.d[dim][0]);
-			cube_t holes_test(bc);
-			holes_test.expand_in_dim(dim, thickness);
-			bool added_window(0);
+			for (unsigned i = 0; i < tq.npts; ++i) {
+				vert.v = tq.pts[i];
 
-			for (cube_t const &w : window_holes) {
-				if (!w.intersects(holes_test)) continue;
-				point pts[4];
-				pts[0].z = pts[1].z = w.z1(); // bottom edge
-				pts[2].z = pts[3].z = w.z2(); // top edge
-				pts[0][!dim] = pts[3][!dim] = w.d[!dim][ invert];
-				pts[1][!dim] = pts[2][!dim] = w.d[!dim][!invert];
-
-				for (unsigned n = 0; n < 4; ++n) { // add 4 quad verts
-					pts[n][dim] = wall_pos; // set wall position
-					vert.v = pts[n];
-					interpolate_tcs(mat.itri_verts[verts_start+0], mat.itri_verts[verts_start+1], mat.itri_verts[verts_start+2], vert, !dim, 2);
-					mat.itri_verts.push_back(vert);
+				if (is_roof) { // roof
+					if (tq.get_bcube().z1() <= get_attic_floor_z1()) { // tquad ends at or below attic floor
+						// shrink bottom edge by thickness to avoid clipping through the floor below;
+						// since the quad is a loop, we can check both the previous and next points to see if they're above us, and use the vector delta for the shift
+						vector3d shift_dir;
+						point const &prev(tq.pts[(i+tq.npts-1)%tq.npts]), &next(tq.pts[(i+1)%tq.npts]);
+						if      (vert.v.z < prev.z) {shift_dir = prev - vert.v;}
+						else if (vert.v.z < next.z) {shift_dir = next - vert.v;}
+						if (shift_dir.z > 0.0) {vert.v += shift_dir*(thickness/shift_dir.z);}
+					}
+					bool const swap_tc_xy((fabs(normal.x) < fabs(normal.y)) ^ swap_st);
+					vert.t[!swap_tc_xy] = vert.v.x*tsx;
+					vert.t[ swap_tc_xy] = vert.v.y*tsy;
 				}
-				unsigned const ixs[7][3] = {{0,6,5}, {0,5,2}, {5,4,2}, {4,3,2}, {3,1,2}, {6,1,3}, {0,1,6}}; // indices for 7 triangles
-				for (unsigned t = 0; t < 7; ++t) {UNROLL_3X(mat.indices.push_back(verts_start + ixs[t][i_]);)}
-				added_window = 1;
-				break; // there should only be one
-			} // for w
-			if (added_window) continue; // indices already added, don't need to add below
-		}
-		for (unsigned i = 0; i < ((tq.npts == 4) ? 6U : 3U); ++i) { // 3 indices for triangles, 6 indices (2 triangles) for quads
-			mat.indices.push_back(verts_start + quad_to_tris_ixs[i]);
-		}
+				else { // side wall
+					bool const dim(tq.pts[0].x == tq.pts[1].x); // use nonzero width dim
+					vert.t[ swap_st] = vert.v[dim]*tsx;
+					vert.t[!swap_st] = vert.v.z*tsy;
+				}
+				mat.itri_verts.push_back(vert);
+			} // for i
+			if (!is_roof && wall_ix == 0 && !window_holes.empty()) { // cut holes for windows; verts are ordered {top, left, right} viewed from inside
+				cube_t const bc(tq.get_bcube());
+				bool const dim(bc.dy() < bc.dx()), invert((normal[dim] < 0.0) ^ dim); // should be zero size in X or Y
+				float const wall_pos(bc.d[dim][0]);
+				cube_t holes_test(bc);
+				holes_test.expand_in_dim(dim, thickness);
+				bool added_window(0);
+
+				for (cube_t const &w : window_holes) {
+					if (!w.intersects(holes_test)) continue;
+					point pts[4];
+					pts[0].z = pts[1].z = w.z1(); // bottom edge
+					pts[2].z = pts[3].z = w.z2(); // top edge
+					pts[0][!dim] = pts[3][!dim] = w.d[!dim][ invert];
+					pts[1][!dim] = pts[2][!dim] = w.d[!dim][!invert];
+
+					for (unsigned n = 0; n < 4; ++n) { // add 4 quad verts
+						pts[n][dim] = wall_pos; // set wall position
+						vert.v = pts[n];
+						interpolate_tcs(mat.itri_verts[verts_start+0], mat.itri_verts[verts_start+1], mat.itri_verts[verts_start+2], vert, !dim, 2);
+						mat.itri_verts.push_back(vert);
+					}
+					unsigned const ixs[7][3] = {{0,6,5}, {0,5,2}, {5,4,2}, {4,3,2}, {3,1,2}, {6,1,3}, {0,1,6}}; // indices for 7 triangles
+					for (unsigned t = 0; t < 7; ++t) {UNROLL_3X(mat.indices.push_back(verts_start + ixs[t][i_]);)}
+					added_window = 1;
+					break; // there should only be one
+				} // for w
+				if (added_window) continue; // indices already added, don't need to add below
+			}
+			for (unsigned i = 0; i < ((tq.npts == 4) ? 6U : 3U); ++i) { // 3 indices for triangles, 6 indices (2 triangles) for quads
+				mat.indices.push_back(verts_start + quad_to_tris_ixs[i]);
+			}
+		} // for wall_ix
 	} // for i
 }
 
