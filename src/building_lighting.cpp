@@ -1340,10 +1340,11 @@ public:
 			// which causes lights to not remove themselves properly; however, clearing and rebuilding lighting will break immersion
 			bool const in_ext_basement(b.point_in_extended_basement_not_basement(target));
 			bool const in_basement(b.has_basement() && b.get_basement().contains_pt(target));
+			bool const room_includes_roof(b.is_restroom_with_high_ceil());
 			float const floor_spacing(b.get_window_vspace()), building_z1(b.get_bcube_z1_inc_ext_basement());
 			VA = (in_ext_basement ? b.interior->basement_ext_bcube : (in_basement ? b.get_basement() : b.bcube));
 			VA.z1() = building_z1 + target_floor*floor_spacing;
-			VA.z2() = VA.z1() + floor_spacing;
+			VA.z2() = (room_includes_roof ? b.bcube.z2() : (VA.z1() + floor_spacing));
 
 			// handle multi-floor rooms; this is only called once when enabling indir lighting,
 			// so it will handle starting in a tall room, but it won't work if the player walks into a tall room later;
@@ -2102,6 +2103,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	}
 	//highres_timer_t timer("Lighting", camera_in_building); // 13.8ms => 13.1ms => 12.7ms => 3.6ms => 3.2ms => 0.81
 	//unsigned num_add(0);
+	bool const room_includes_roof(is_restroom_with_high_ceil());
 	unsigned last_room_ix(interior->rooms.size()); // start at an invalid value
 	bool last_room_closed(0);
 
@@ -2225,7 +2227,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			if (elevator.in_mall == 1 && lpos.z > ground_floor_z1 - fc_thick) {elevator_bounds = elevator;} // mall elevator above ground
 		}
 		else if (is_in_attic         ) {ceil_z = interior_z2;} // top of interior/attic
-		else if (room.is_single_floor) {ceil_z = room.z2();} // top of current room/part (garage shed, etc.)
+		else if (room_includes_roof)   {ceil_z = bcube.z2() ;} // top of roof/attic
+		else if (room.is_single_floor) {ceil_z = room .z2() ;} // top of current room/part (garage shed, etc.)
 		else                           {ceil_z = (level_z + window_vspacing - fc_thick);} // normal room light
 		float const floor_below_zval(floor_z - window_vspacing), ceil_above_zval(ceil_z + window_vspacing);
 		// Note: we use level_z rather than floor_z for floor_is_above test so that it agrees with the threshold logic for player_in_basement
@@ -2674,6 +2677,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				// expand slightly so that points exactly on the room bounds and exterior doors are included; not for backrooms because it already contains the wall width
 				cube_t room_exp(get_room_wall_bounds(room));
 				room_exp.expand_by((room.is_backrooms() ? 0.1 : 1.0)*room_xy_expand); // smaller expand for backrooms
+				if (room_includes_roof) {max_eq(room_exp.z2(), ceil_z);} // must include the roof/ceiling
 
 				if (room.open_wall_mask && !room.is_hallway) { // don't clamp on open wall sides, except for hallways
 					for (unsigned d = 0; d < 2; ++d) {
@@ -2721,6 +2725,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				assert(light_bc2.intersects(sphere_bc));
 				light_bc2.intersect_with_cube(sphere_bc);
 				dl_sources.back().set_custom_bcube(light_bc2);
+				max_eq(lights_bcube.z2(), light_bc2.z2()); // extend to reach the top of this light's influence
 			}
 			dl_sources.back().disable_shadows();
 		} // end upward light
