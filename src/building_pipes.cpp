@@ -294,7 +294,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	}
 	// shift pipe until it clears all obstacles
 	float step_dist(2.0*r_main);
-	float const step_area(bcube.get_sz_dim(!dim)); // step by pipe radius
+	float const step_area(basement.get_sz_dim(!dim)); // step by pipe radius
 	unsigned const max_steps(max(1U, min(unsigned(step_area/step_dist), 100U))); // limit to 100 steps
 	step_dist = step_area/max_steps;
 	bool success(0);
@@ -636,8 +636,8 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			}
 			else { // create a right angle bend
 				// extend by 2*radius to avoid overlapping a connector pipe or it's fittings, but keep it inside the building
-				if (exit_dir) {exit_conn[dim] = exit_pos[dim] = min(exit_conn[dim]+2.0f*r_main, bcube.d[dim][1]-r_main);}
-				else          {exit_conn[dim] = exit_pos[dim] = max(exit_conn[dim]-2.0f*r_main, bcube.d[dim][0]+r_main);}
+				if (exit_dir) {exit_conn[dim] = exit_pos[dim] = min(exit_conn[dim]+2.0f*r_main, basement.d[dim][1]-r_main);}
+				else          {exit_conn[dim] = exit_pos[dim] = max(exit_conn[dim]-2.0f*r_main, basement.d[dim][0]+r_main);}
 				pipes.emplace_back(exit_conn, exit_pos, r_main, !dim, PIPE_MEC, 3); // main exit connector, bends at both ends
 				exit_pipe_end_flags = 0; // the above pipe will provide the bend, so it's not needed at the top of the exit pipe
 				main_pipe_end_flags = (exit_dir ? 2 : 1); // connect the end going to the exit connector pipe
@@ -658,6 +658,16 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			assert(0);
 		}
 		pipes.push_back(main_pipe);
+
+		// add fittings where main pipe crosses through the basement wall, in the case where the bcube is larger than the basement
+		for (unsigned d = 0; d < 2; ++d) {
+			float const pipe_end(mp[d][dim]), wall_pos(basement.d[dim][d]), fitting_len(FITTING_LEN*r_main);
+			if (d ? (pipe_end <= wall_pos) : (pipe_end >= wall_pos)) continue; // not crossing through the wall
+			point p1(mp[d]), p2(p1);
+			p1[dim] = wall_pos - fitting_len;
+			p2[dim] = wall_pos + fitting_len;
+			fittings.emplace_back(p1, p2, FITTING_RADIUS*r_main, dim, PIPE_FITTING, (1 << d));
+		} // for d
 	}
 	// add pipe objects: sewer: dark gray pipes / gray-brown fittings; water: copper pipes / brass fittings; hot water: white insulation
 	colorRGBA const pcolors[NUM_PIPE_TYPES] = {DK_GRAY,         COPPER_C, COPPER_C, GRAY   }; // sewer, cw, hw, gas
@@ -770,6 +780,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			for (cube_t &i : insulation) {
 				if (i.d[d1][0] != pbc.d[d1][0] || i.d[d1][1] != pbc.d[d1][1] || i.d[d2][0] != pbc.d[d2][0] || i.d[d2][1] != pbc.d[d2][1]) continue; // clipped on any side
 				if (i.get_sz_dim(p.dim) < min_len) continue; // too short
+				if (p.type != PIPE_EXTB && !cube_intersects_basement_or_extb_room(i)) continue; // outside the basement
 				i.expand_in_dim(d1, radius_exp);
 				i.expand_in_dim(d2, radius_exp);
 				objs.emplace_back(i, TYPE_PIPE, room_id, pdim, pdir, flags, tot_light_amt, SHAPE_CYLIN, insul_color);
