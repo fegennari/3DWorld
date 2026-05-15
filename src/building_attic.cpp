@@ -800,7 +800,7 @@ void building_room_geom_t::add_attic_interior_and_rafters(building_t const &b, f
 		float const base_width(bcube.get_sz_dim(!dim)), run_len(bcube.get_sz_dim(dim)), height(bcube.dz()), height_scale(1.0/fabs(normal[dim]));
 		float const beam_width(0.04*floor_spacing), beam_hwidth(0.5*beam_width), beam_depth(2.0*beam_width);
 		float const epsilon(0.02*beam_hwidth), beam_edge_gap(beam_hwidth + epsilon), dir_sign(dir ? -1.0 : 1.0);
-		unsigned const num_beams(max(2, round_fp(3.0f*base_width/floor_spacing)));
+		unsigned const num_beams(max(2, round_fp(3.0f*base_width/floor_spacing)) & 0xFE); // srip off LSB to make even so that light is between beams
 		float const beam_spacing((base_width - 2.0f*beam_edge_gap)/(num_beams - 1));
 		// shift slightly for opposing roof sides to prevent Z-fighting on center beam
 		float const beam_pos_start(bcube.d[!dim][0] + beam_edge_gap + dir_sign*0.5*epsilon);
