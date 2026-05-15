@@ -663,9 +663,9 @@ void interpolate_tcs(vert_norm_comp_tc_color const &p0, vert_norm_comp_tc_color 
 	for (unsigned d = 0; d < 2; ++d) {P.t[d] = weights[0]*p0.t[d] + weights[1]*p1.t[d] + weights[2]*p2.t[d];}
 }
 void building_t::add_attic_roof_geom(rgeom_mat_t &mat, colorRGBA const &color, float thickness, float tscale, bool swap_st, vect_cube_t const &window_holes) const {
-	bool const no_floor(is_restroom());
-	thickness *= (no_floor ? 0.1 : 1.0)*get_attic_beam_depth();
-	bool const add_center_split(is_restroom_with_high_ceil());
+	bool const no_floor(is_restroom_with_high_ceil()), add_center_split(no_floor);
+	thickness *= get_attic_beam_depth();
+	float const shift_in_amt((no_floor ? 0.1 : 1.0)*thickness), shift_down_amt((no_floor ? 0.4 : 1.0)*thickness);
 
 	for (tquad_with_ix_t const &i : roof_tquads) {
 		if (!is_attic_roof(i, 0)) continue; // type_roof_only=0
@@ -675,8 +675,8 @@ void building_t::add_attic_roof_geom(rgeom_mat_t &mat, colorRGBA const &color, f
 		bool const is_roof(tq.is_roof());
 		
 		for (unsigned n = 0; n < tq.npts; ++n) {
-			if (is_roof) {assert(normal.z < 0.0); tq.pts[n].z += thickness/normal.z;} // roof: shift downward
-			else if (!no_floor)                  {tq.pts[n]   += thickness*normal  ;} // wall: shift inward
+			if (is_roof) {assert(normal.z < 0.0); tq.pts[n].z += shift_down_amt/normal.z;} // roof: shift downward
+			else if (!no_floor)                  {tq.pts[n]   += shift_in_amt  *normal  ;} // wall: shift inward
 		}
 		vert_norm_comp_tc_color vert;
 		float const denom(0.5f*(bcube.dx() + bcube.dy()));
@@ -699,13 +699,13 @@ void building_t::add_attic_roof_geom(rgeom_mat_t &mat, colorRGBA const &color, f
 
 				if (is_roof) { // roof
 					if (tq.get_bcube().z1() <= get_attic_floor_z1()) { // tquad ends at or below attic floor
-						// shrink bottom edge by thickness to avoid clipping through the floor below;
+						// shrink bottom edge by shift_in_amt to avoid clipping through the floor below;
 						// since the quad is a loop, we can check both the previous and next points to see if they're above us, and use the vector delta for the shift
 						vector3d shift_dir;
 						point const &prev(tq.pts[(i+tq.npts-1)%tq.npts]), &next(tq.pts[(i+1)%tq.npts]);
 						if      (vert.v.z < prev.z) {shift_dir = prev - vert.v;}
 						else if (vert.v.z < next.z) {shift_dir = next - vert.v;}
-						if (shift_dir.z > 0.0) {vert.v += shift_dir*(thickness/shift_dir.z);}
+						if (shift_dir.z > 0.0) {vert.v += shift_dir*(shift_in_amt/shift_dir.z);}
 					}
 					bool const swap_tc_xy((fabs(normal.x) < fabs(normal.y)) ^ swap_st);
 					vert.t[!swap_tc_xy] = vert.v.x*tsx;
@@ -723,7 +723,7 @@ void building_t::add_attic_roof_geom(rgeom_mat_t &mat, colorRGBA const &color, f
 				bool const dim(bc.dy() < bc.dx()), invert((normal[dim] < 0.0) ^ dim); // should be zero size in X or Y
 				float const wall_pos(bc.d[dim][0]);
 				cube_t holes_test(bc);
-				holes_test.expand_in_dim(dim, thickness);
+				holes_test.expand_in_dim(dim, shift_in_amt);
 				bool added_window(0);
 
 				for (cube_t const &w : window_holes) {
