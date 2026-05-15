@@ -274,8 +274,11 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 	for (unsigned d = 0; d < 2; ++d) {interior->extb_walls_start[d] = interior->walls[d].size();}
 	if (is_parking()) {add_parking_roof_lights();}
 	// calculate and cache interior_z2
-	interior_z2 = ground_floor_z1;
-	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {max_eq(interior_z2, i->z2());}
+	if (is_restroom_with_high_ceil()) {interior_z2 = bcube.z2();} // always up to the ceiling
+	else {
+		interior_z2 = ground_floor_z1;
+		for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {max_eq(interior_z2, i->z2());}
+	}
 }
 
 // Note: these are used in gen_interior_int() and maybe_add_skylight()

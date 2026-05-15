@@ -196,14 +196,14 @@ void building_t::set_building_colors(building_colors_t &bcolors) const {
 }
 
 struct ray_cast_args_t {
-	bool in_attic, in_ext_basement;
+	bool in_attic, in_ext_basement, in_tall_restroom;
 	float max_extent;
 	cube_t valid_area, room_area;
 	cube_bvh_t const &bvh, &room_bvh;
 	building_colors_t const &bcolors;
 
-	ray_cast_args_t(cube_t const &va, cube_t const &ra, cube_bvh_t const &bvh_, cube_bvh_t const &rbvh, bool ia, bool ieb, building_colors_t const &bcolors_)
-		: in_attic(ia), in_ext_basement(ieb), max_extent(va.get_max_dim_sz()), valid_area(va), room_area(ra), bvh(bvh_), room_bvh(rbvh), bcolors(bcolors_)
+	ray_cast_args_t(cube_t const &va, cube_t const &ra, cube_bvh_t const &bvh_, cube_bvh_t const &rbvh, bool ia, bool ieb, bool itr, building_colors_t const &bcolors_)
+		: in_attic(ia), in_ext_basement(ieb), in_tall_restroom(itr), max_extent(va.get_max_dim_sz()), valid_area(va), room_area(ra), bvh(bvh_), room_bvh(rbvh), bcolors(bcolors_)
 	{valid_area.expand_by(0.01*max_extent);} // expand slightly so that collisions with objects on the edge are still considered interior
 };
 
@@ -216,7 +216,7 @@ bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, ray_ca
 	bool hit(0);
 	cpos = p2; // use far clip point for clip cube if there is no hit
 
-	if (args.in_attic) {
+	if (args.in_attic || args.in_tall_restroom) { // check roof tquads
 		for (tquad_with_ix_t const &tq : args.bvh.roof_tquads) {
 			vector3d const normal(-tq.get_norm()); // negate because we're testing the inside of the roof
 			float t_tq(t);
@@ -225,7 +225,9 @@ bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, ray_ca
 		}
 		if (hit) {cpos = p2 = p1 + (p2 - p1)*t;} // clip p2 to t (minor optimization)
 	}
+	if (args.in_attic) {} // handled above
 	else if (args.in_ext_basement) {} // no exterior walls to check
+	else if (args.in_tall_restroom && cpos.z > parts.front().z2()) {} // if ray entered the roof area, this is handled by the "attic" case above
 	else if (line_contained_in_cube(p1, p2, parts, get_real_parts_end_inc_sec())) {} // both points in same part; no exterior wall hit
 	// check parts (exterior walls); should chimneys and porch roofs be included?
 	else if (follow_ray_through_cubes_recur(p1, p2, p1, parts, get_real_parts_end_inc_sec(), parts.end(), 0, cnorm, t)) { // interior ray (common case) - find furthest exit point
@@ -862,6 +864,7 @@ class building_indir_light_mgr_t {
 		if (room.get_volume() > 0.5*valid_area.get_volume()) return; // room accounts for most of the area (factory, rest, backrooms, PG, retail)
 		cube_t room_area(room);
 		room_area.expand_by(b.get_wall_thickness()); // include adjacent walls, ceilings, and floors
+		if (b.is_restroom_with_high_ceil()) {max_eq(room_area.z2(), b.interior_z2);} // extend up to the roof peak
 		if (room_id == last_room_id) {room_area_out = room_area; return;} // already valid
 		auto const &all_objs(bvh.get_objs());
 		auto &room_objs(room_bvh.get_objs());
@@ -1017,7 +1020,7 @@ class building_indir_light_mgr_t {
 		b.set_building_colors(bcolors);
 		cube_t room_area;
 		get_room_bvh(b, light_room_id, room_area); // build per-room BVH if needed
-		ray_cast_args_t const args(valid_area, room_area, bvh, room_bvh, in_attic, in_ext_basement, bcolors);
+		ray_cast_args_t const args(valid_area, room_area, bvh, room_bvh, in_attic, in_ext_basement, b.is_restroom_with_high_ceil(), bcolors);
 		lmgr.set_step_sz(half_step_sz);
 		
 		// Note: dynamic scheduling is faster, and using blocks doesn't help
@@ -1344,7 +1347,7 @@ public:
 			float const floor_spacing(b.get_window_vspace()), building_z1(b.get_bcube_z1_inc_ext_basement());
 			VA = (in_ext_basement ? b.interior->basement_ext_bcube : (in_basement ? b.get_basement() : b.bcube));
 			VA.z1() = building_z1 + target_floor*floor_spacing;
-			VA.z2() = (room_includes_roof ? b.bcube.z2() : (VA.z1() + floor_spacing));
+			VA.z2() = (room_includes_roof ? b.interior_z2 : (VA.z1() + floor_spacing));
 
 			// handle multi-floor rooms; this is only called once when enabling indir lighting,
 			// so it will handle starting in a tall room, but it won't work if the player walks into a tall room later;
@@ -2243,7 +2246,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			if (elevator.in_mall == 1 && lpos.z > ground_floor_z1 - fc_thick) {elevator_bounds = elevator;} // mall elevator above ground
 		}
 		else if (is_in_attic         ) {ceil_z = interior_z2;} // top of interior/attic
-		else if (room_includes_roof)   {ceil_z = bcube.z2() ;} // top of roof/attic
+		else if (room_includes_roof)   {ceil_z = interior_z2;} // top of roof/attic
 		else if (room.is_single_floor) {ceil_z = room .z2() ;} // top of current room/part (garage shed, etc.)
 		else                           {ceil_z = (level_z + window_vspacing - fc_thick);} // normal room light
 		float const floor_below_zval(floor_z - window_vspacing), ceil_above_zval(ceil_z + window_vspacing);
