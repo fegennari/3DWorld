@@ -1680,7 +1680,7 @@ void building_t::refine_light_bcube(point const &lpos, float light_radius, room_
 	for (unsigned d = 0; d < 2; ++d) {walls[d].clear();}
 	tight_bcube.z1() = tight_bcube.z2() - get_floor_ceil_gap(); // limit to a single floor to exclude walls on the floor below (for backrooms)
 
-	if (is_pos_in_pg_or_backrooms(lpos)) {
+	if (room.is_backrooms()) { // backrooms only; PG has different per-floor walls and can't be cached
 		index_pair_t start, end;
 		get_pgbr_wall_ix_for_pos(lpos, start, end);
 
@@ -1747,6 +1747,22 @@ void building_t::refine_light_bcube(point const &lpos, float light_radius, room_
 		rays_bcube.union_with_pt(p2);
 	} // for n
 	light_bcube = rays_bcube;
+}
+
+void building_t::refine_light_bcube_pg_walls(point const &lpos, cube_t &light_bcube) const {
+	index_pair_t start, end;
+	get_pgbr_wall_ix_for_pos(lpos, start, end);
+
+	for (unsigned d = 0; d < 2; ++d) {
+		vect_cube_t const &walls(interior->room_geom->pgbr_walls[d]);
+		
+		for (auto w = walls.begin()+start.ix[d]; w != walls.begin()+end.ix[d]; ++w) {
+			if (!w->intersects(light_bcube) || w->z1() > lpos.z || w->z2() < lpos.z)      continue;
+			if (w->d[!d][0] > light_bcube.d[!d][0] || w->d[!d][1] < light_bcube.d[!d][1]) continue; // wall doesn't cover entire cube range
+			float const centerline(w->get_center_dim(d));
+			if (lpos[d] < centerline) {min_eq(light_bcube.d[d][1], centerline);} else {max_eq(light_bcube.d[d][0], centerline);} // clip off wall side of the light
+		} // for w
+	} // for d
 }
 
 void assign_light_for_building_interior(light_source &ls, void const *obj, cube_t const &light_bcube, bool cache_shadows, bool is_lamp=0) {
@@ -2248,6 +2264,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		bool const has_stairs_this_floor(!is_in_attic && room.has_stairs_on_floor(cur_floor));
 		bool const light_room_has_stairs_or_ramp(i->has_stairs() || has_stairs_this_floor || (check_ramp && is_room_above_ramp(room, i->z1())));
 		bool const is_over_pool(has_pool() && (int)i->room_id == interior->pool.room_ix);
+		bool const is_parking_garage(light_in_basement && has_parking_garage && !in_ext_basement);
 		bool const light_and_camera_by_L_stairs((in_camera_room || (std::find(L_stairs_rooms.begin(), L_stairs_rooms.end(), i->room_id) != L_stairs_rooms.end())) &&
 			has_stairs_this_floor && camera_by_L_stairs);
 		//bool const light_room_is_tall(room.is_single_floor && lpos.z > room.z1() + window_vspacing);
@@ -2541,12 +2558,12 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				}
 				if (light_bcube.is_all_zeros()) { // not yet calculated - calculate and cache
 					light_bcube = clipped_bc;
-					bool const is_parking_garage(light_in_basement && has_parking_garage && !in_ext_basement);
 					refine_light_bcube(lpos, light_radius, room, light_bcube, is_parking_garage); // incorrect for rotated buildings?
 				}
 				was_refined     = (light_bcube.get_area_xy() < clipped_bc.get_area_xy());
 				clipped_bc.x1() = light_bcube.x1(); clipped_bc.x2() = light_bcube.x2(); // copy X/Y but keep orig zvals
 				clipped_bc.y1() = light_bcube.y1(); clipped_bc.y2() = light_bcube.y2();
+				if (is_parking_garage) {refine_light_bcube_pg_walls(lpos, clipped_bc);} // check parking garage walls; different per-floor, so can't cache
 				clipped_bc.expand_by_xy(light_bcube_expand);
 
 				if (!is_over_pool) {
@@ -2724,6 +2741,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				sphere_bc.set_from_sphere(sec_lpos, sec_light_radius);
 				assert(light_bc2.intersects(sphere_bc));
 				light_bc2.intersect_with_cube(sphere_bc);
+				if (is_parking_garage) {refine_light_bcube_pg_walls(lpos, light_bc2);} // check PG walls; won't shadow upward lights and might cover the smaller bounds
 				dl_sources.back().set_custom_bcube(light_bc2);
 				max_eq(lights_bcube.z2(), light_bc2.z2()); // extend to reach the top of this light's influence
 			}
