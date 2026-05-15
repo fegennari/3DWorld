@@ -939,7 +939,23 @@ void building_t::add_shared_restroom_objs() {
 	vect_room_object_t &objs(interior->room_geom->objs);
 
 	for (room_object_t &obj : objs) {
-		if (obj.type == TYPE_LIGHT) {obj.flags |= RO_FLAG_ADJ_TOP;} // draw top surface of light
+		if (obj.type != TYPE_LIGHT) continue;
+		obj.flags |= RO_FLAG_ADJ_TOP; // draw top surface of light
+		// add vertical support post up to the ceiling
+		point const pos(obj.get_cube_center());
+
+		for (auto const &tq : roof_tquads) {
+			if (!is_attic_roof(tq, 1)) continue; // type_roof_only=1
+			if (!point_in_polygon_2d(pos.x, pos.y, tq.pts, tq.npts)) continue; // check 2D XY point containment
+			vector3d const normal(tq.get_norm());
+			if (normal.z == 0.0) continue; // skip vertical sides
+			float const rdist(dot_product_ptv(normal, tq.pts[0], pos));
+			point const pos2(pos.x, pos.y, (pos.z + rdist));
+			cube_t post(pos, pos2);
+			post.expand_by_xy(0.4*obj.dz()); // set radius
+			objs.emplace_back(post, TYPE_METAL_BAR, obj.room_id, 0, 1, RO_FLAG_NOCOLL, obj.light_amt, SHAPE_CYLIN, WHITE); // vertical
+			break;
+		} // for tq
 	}
 	// add edges of ceiling to block the gap between wall and roof; added for first room and spans both rooms
 	bool const gdim(get_street_dim()); // gap dim
