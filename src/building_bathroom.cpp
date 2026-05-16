@@ -1026,7 +1026,7 @@ void building_t::create_restroom_floorplan(unsigned part_id, rand_gen_t &rgen) {
 		bool const dir(get_street_side());
 		float const front_wall(bcube.d[!dim][dir]);
 		driveway.d[!dim][!dir] = front_wall;
-		driveway.d[!dim][ dir] = front_wall + (dir ? 1.0 : -1.0)*0.75*get_window_vspace(); // extend outward in front of the building
+		driveway.d[!dim][ dir] = front_wall + (dir ? 1.0 : -1.0)*0.78*get_window_vspace(); // extend outward in front of the building
 		copy_dim(driveway, bcube, dim);
 		driveway.expand_in_dim(dim, -wall_hthick); // shrink inward slightly inside the exterior fences/walls
 	}

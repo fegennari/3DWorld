@@ -983,25 +983,41 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 				blockers.push_back(bc_pad);
 				park_restrooms.push_back(bc);
 				// add divider walls outside the restroom
+				unsigned const num_fence_pairs((doors_at_front && !rgen.rand_bool()) ? 2 : 1);
 				float const front_edge(bc.d[dim][dir]), fence_thick(0.025*bhdepth);
 				unsigned skip_dims(0);
 
-				for (unsigned d = 0; d < 2; ++d) {
-					cube_t divider(bc);
-					divider.z2() = bc.z1() + 0.72*bheight;
+				// restrooms with doors at the front have 4 fences (right angles at each side), while doors at sides have a single fence per side
+				for (unsigned D = 0; D < num_fence_pairs; ++D) {
+					for (unsigned d = 0; d < 2; ++d) {
+						bool const fdim(dim ^ bool(D) ^ 1), fdir(D ? dir : d);
+						float const dsign(d ? 1.0 : -1.0);
+						cube_t divider(bc);
+						divider.z2() = bc.z1() + 0.72*bheight;
 
-					if (doors_at_front) {
-						divider.d[ dim][!dir] = front_edge + (dir ? 1.0 : -1.0)*0.01*bhdepth; // slight gap to prevent Z-fighting
-						divider.d[ dim][ dir] = front_edge + (dir ? 1.0 : -1.0)*0.60*bhdepth;
-						divider.d[!dim][!d  ] = bc.d[!dim][d] - (d ? 1.0 : -1.0)*fence_thick;
-					}
-					else { // doors at sides
-						set_wall_width(divider, (bc.d[!dim][d] + (d ? 1.0 : -1.0)*0.6*bhdepth), 0.5*fence_thick, !dim);
-					}
-					divider_groups.add_obj(divider_t(divider, DIV_FENCE, !dim, bool(d), 0, skip_dims, dividers.size(), plot_ix, city_id, 0), dividers);
-					add_cube_to_colliders_and_blockers(divider, colliders, blockers);
-					// place restroom sign on divider side facing away from the building?
-				} // for d
+						if (doors_at_front) {
+							float const front_sign(dir ? 1.0 : -1.0), inside_end(bc.d[!dim][d] - dsign*fence_thick);
+							divider.d[dim][dir] = front_edge + front_sign*0.6*bhdepth; // front exterior
+
+							if (D) { // front fences
+								divider.d[ dim][!dir] = divider.d[dim][dir] - front_sign*fence_thick; // inside face
+								divider.d[!dim][ d  ] = inside_end; // abuts the side fence
+								divider.d[!dim][!d  ] = inside_end - dsign*0.7*bhdepth; // toward the front center
+							}
+							else { // side fences
+								divider.d[ dim][!dir] = front_edge + front_sign*0.01*bhdepth; // slight gap to prevent Z-fighting
+								divider.d[!dim][!d  ] = inside_end;
+							}
+						}
+						else { // doors at sides
+							set_wall_width(divider, (bc.d[!dim][d] + dsign*0.6*bhdepth), 0.5*fence_thick, !dim);
+						}
+						// street_dir=0, use_dir_for_birds=1 to keep birds from flying into the building
+						divider_groups.add_obj(divider_t(divider, DIV_FENCE, fdim, fdir, 0, skip_dims, dividers.size(), plot_ix, city_id, 0, 1), dividers);
+						add_cube_to_colliders_and_blockers(divider, colliders, blockers);
+						// place restroom sign on divider side facing away from the building?
+					} // for d
+				} // for D
 				if (doors_at_front && building_obj_model_loader.is_model_valid(OBJ_MODEL_WFOUNTAIN)) { // place a water fountain between the doors
 					float const wf_height(0.25*bheight);
 					point wf_pos(center);
@@ -2295,9 +2311,10 @@ void city_obj_placer_t::place_birds(cube_t const &city_bcube, rand_gen_t &rgen) 
 		if (dest != nullptr) {add_bird_loc(sign, *dest, rgen);}
 	}
 	// include houses/office buildings and streetlights?
-	for (auto i = dividers.begin(); i != dividers.end(); ++i) {
+	for (divider_t const &d : dividers) {
 		if (rgen.rand() & 3) continue; // only add one in 4, since there are so many
-		bird_locs.add_placement_centerline(i->get_bird_bcube(), i->dim, rgen.rand_bool(), rgen); // place somewhere along the divider with random dir
+		bool const dir(d.use_dir_for_birds ? d.dir : rgen.rand_bool()); // random dir unless tagged with a custom dir (restroom fences)
+		bird_locs.add_placement_centerline(d.get_bird_bcube(), d.dim, dir, rgen); // place somewhere along the divider
 	}
 	// place initial birds; some bird_locs may have been added by place_residential_plot_objects(), which is called first
 	unsigned const num_locs(bird_locs.size()), num_place(min(200U, num_locs/5U)), num_tries(2*num_place); // 2 tries on average per bird
