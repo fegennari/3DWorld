@@ -937,12 +937,18 @@ void building_t::add_shared_restroom_objs() {
 	if (!RESTROOM_HIGH_CEIL) return;
 	assert(has_room_geom());
 	vect_room_object_t &objs(interior->room_geom->objs);
+	vector<room_object_t> lights;
 
 	for (room_object_t &obj : objs) {
-		if (obj.type != TYPE_LIGHT) continue;
-		obj.flags |= RO_FLAG_ADJ_TOP; // draw top surface of light
+		if (obj.type == TYPE_LIGHT) {lights.push_back(obj);} // collect lights, but don't add to objs while iterating
+	}
+	for (room_object_t const &light : lights) {
+		// add top metal part of light frame
+		cube_t frame(light);
+		set_cube_zvals(frame, light.z2(), (light.z2() + 0.6*light.dz()));
+		objs.emplace_back(frame, TYPE_METAL_BAR, light.room_id, light.dim, 0, RO_FLAG_NOCOLL, light.light_amt, SHAPE_CUBE, WHITE, EF_Z1); // skip bottom
 		// add vertical support post up to the ceiling
-		point const pos(obj.get_cube_center());
+		point const pos(cube_top_center(light));
 
 		for (auto const &tq : roof_tquads) {
 			if (!is_attic_roof(tq, 1)) continue; // type_roof_only=1
@@ -952,12 +958,12 @@ void building_t::add_shared_restroom_objs() {
 			float const rdist(dot_product_ptv(normal, tq.pts[0], pos));
 			point const pos2(pos.x, pos.y, (pos.z + rdist));
 			cube_t post(pos, pos2);
-			post.expand_by_xy(0.4*obj.dz()); // set radius
-			objs.emplace_back(post, TYPE_METAL_BAR, obj.room_id, 0, 1, RO_FLAG_NOCOLL, obj.light_amt, SHAPE_CYLIN, WHITE); // vertical
+			post.expand_by_xy(0.4*light.dz()); // set radius
+			objs.emplace_back(post, TYPE_METAL_BAR, light.room_id, 0, 1, RO_FLAG_NOCOLL, light.light_amt, SHAPE_CYLIN, WHITE); // vertical
 			break;
 		} // for tq
 	}
-	// add edges of ceiling to block the gap between wall and roof; added for first room and spans both rooms
+	// add edges of ceiling to block the gap between wall and roof (though it's now covered by a triangle wall); added for first room and spans both rooms
 	bool const gdim(get_street_dim()); // gap dim
 	float const wall_hthick(0.5*get_wall_thickness());
 	cube_t walls(parts.front()), top_wall(walls);
@@ -971,6 +977,14 @@ void building_t::add_shared_restroom_objs() {
 		unsigned const skip_faces(~(EF_Z1 | ~get_face_mask(gdim, !d))); // only draw bottom and inside edge
 		objs.emplace_back(wall, TYPE_METAL_BAR, 0, gdim, d, 0, 1.0, SHAPE_CUBE, WHITE, skip_faces);
 	}
+	// add beam running the length of the roof
+	unsigned const skip_faces(EF_Z2 | get_skip_mask_for_xy(!gdim)); // draw only sides and bottom
+	float const beam_z2(interior_z2 - 1.0*wall_hthick);
+	cube_t beam(bcube);
+	set_wall_width(beam, bcube.get_center_dim(gdim), 1.2*wall_hthick, gdim);
+	set_cube_zvals(beam, (beam_z2 - 3.0*wall_hthick), beam_z2);
+	objs.emplace_back(beam, TYPE_METAL_BAR, 0, gdim, 0, (RO_FLAG_NOCOLL | RO_FLAG_UNTEXTURED), 1.0, SHAPE_CUBE, WHITE, skip_faces); // non-reflective
+	// add tile to interior walls below windows?
 }
 
 void building_t::add_bathroom_window(cube_t const &window, bool dim, bool dir, unsigned room_id, unsigned floor) { // frosted window blocks, for houses or office buildings
