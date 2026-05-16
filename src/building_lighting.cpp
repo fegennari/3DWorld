@@ -1803,11 +1803,13 @@ cube_t building_t::get_rotated_bcube(cube_t const &c, bool inv_rotate) const {
 	ret.z1() = c.z1();
 	return ret;
 }
-bool building_t::is_rot_cube_visible(cube_t const &c, vector3d const &xlate, bool inc_mirror_reflections) const {
-	cube_t const c_xf((is_rotated() ? get_rotated_bcube(c) : c) + xlate);
-	if (camera_pdu.cube_visible(c_xf)) return 1;
+bool building_t::is_cube_visible(cube_t const &c, vector3d const &xlate, bool inc_mirror_reflections) const {
+	if (camera_pdu.cube_visible(c + xlate)) return 1;
 	if (inc_mirror_reflections && cube_visible_in_building_mirror_reflection(c)) return 1;
 	return 0;
+}
+bool building_t::is_rot_cube_visible(cube_t const &c, vector3d const &xlate, bool inc_mirror_reflections) const {
+	return is_cube_visible((is_rotated() ? get_rotated_bcube(c) : c), xlate, inc_mirror_reflections);
 }
 
 float get_radius_for_room_light(room_object_t const &obj) {
@@ -2710,6 +2712,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 					light_bc2.intersect_with_cube(room_exp); // upward facing light is for this room only
 				}
 				min_eq(light_bc2.z2(), (ceil_z + fc_thick)); // doesn't reach higher than the ceiling of this room
+				max_eq(light_bc2.z1(), floor_z); // doesn't extend below the floor; could even set higher
 			}
 			if (is_rotated()) {light_bc2 = get_rotated_bcube(light_bc2);}
 			float sec_light_radius(0.0);
@@ -2739,16 +2742,18 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 					dl_sources.emplace_back(sec_light_radius, sec_lpos, sec_lpos, color, 0, plus_z, (in_industrial ? 0.6 : 0.5)); // hemisphere that points up
 				}
 			}
-			if (!light_bc2.is_all_zeros()) {
-				cube_t sphere_bc;
-				sphere_bc.set_from_sphere(sec_lpos, sec_light_radius);
-				assert(light_bc2.intersects(sphere_bc));
-				light_bc2.intersect_with_cube(sphere_bc);
-				if (is_parking_garage) {refine_light_bcube_pg_walls(lpos, light_bc2);} // check PG walls; won't shadow upward lights and might cover the smaller bounds
+			dl_sources.back().disable_shadows();
+			cube_t sphere_bc;
+			sphere_bc.set_from_sphere(sec_lpos, sec_light_radius);
+			assert(light_bc2.intersects(sphere_bc));
+			light_bc2.intersect_with_cube(sphere_bc);
+			// check PG walls; won't shadow upward lights and might cover the smaller bounds; not valid for rotated buildings because we're already in rotated space
+			if (is_parking_garage && !is_rotated()) {refine_light_bcube_pg_walls(lpos, light_bc2);}
+			if (!is_rot_cube_visible(light_bc2, xlate, 1)) {dl_sources.pop_back();} // light not actually visible, remove it
+			else { // light is visible
 				dl_sources.back().set_custom_bcube(light_bc2);
 				max_eq(lights_bcube.z2(), light_bc2.z2()); // extend to reach the top of this light's influence
 			}
-			dl_sources.back().disable_shadows();
 		} // end upward light
 	} // for i (objs)
 	//if (camera_in_building) {cout << name << ": " << num_add << endl;} // TESTING
