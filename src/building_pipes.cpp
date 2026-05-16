@@ -70,10 +70,10 @@ struct pipe_t {
 	point p1, p2;
 	float radius;
 	unsigned dim, type, end_flags; // end_flags: 1 bit is low end, 2 bit is high end; 4 bit for round lo end, 8 bit for round hi end
-	bool connected=0, conn_dir=0, outside_pg=0, for_extb=0;
+	bool connected=0, conn_dir=0, outside_pg=0, for_extb=0, flow_dir;
 
-	pipe_t(point const &p1_, point const &p2_, float radius_, unsigned dim_, unsigned type_, unsigned end_flags_, bool for_extb_=0) :
-		p1(p1_), p2(p2_), radius(radius_), dim(dim_), type(type_), end_flags(end_flags_), connected(type != PIPE_RISER), for_extb(for_extb_) {}
+	pipe_t(point const &p1_, point const &p2_, float radius_, unsigned dim_, unsigned type_, unsigned end_flags_, bool for_extb_=0, bool fdir=0) :
+		p1(p1_), p2(p2_), radius(radius_), dim(dim_), type(type_), end_flags(end_flags_), connected(type != PIPE_RISER), for_extb(for_extb_), flow_dir(fdir) {}
 	float get_length() const {return fabs(p2[dim] - p1[dim]);}
 
 	cube_t get_bcube() const {
@@ -207,15 +207,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	unsigned const NUM_SHIFTS = 21; // {0,0} + 20 random shifts
 	vector3d rshifts[NUM_SHIFTS] = {};
 	for (unsigned n = 1; n < NUM_SHIFTS; ++n) {rshifts[n][rgen.rand_bool()] = 0.25*window_vspacing*rgen.signed_rand_float();} // random shift in a random dir
-	// determine if we need to add an entrance/exit pipe
 	bool add_exit_pipe(1);
-
-	if (is_closed_loop) { // hot water pipes; sewer pipes always have an exit and cold water always has an entrance
-		for (riser_pos_t const &p : risers) {
-			if (p.flow_dir == 0) {add_exit_pipe = 0; break;} // hot water flowing out of a water heater
-		}
-		// if we got here and add_exit_pipe=1, just create the exit pipe and assume the hot water heater is somewhere else
-	}
 
 	// seed the pipe graph with valid vertical segments and build a graph of X/Y values
 	for (riser_pos_t const &p : risers) {
@@ -249,7 +241,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			} // for n
 			if (!valid) continue; // no valid shift, skip this connection
 		}
-		pipes.emplace_back(point(pos.x, pos.y, pipe_zval), pos, p.radius, 2, PIPE_RISER, 0, p.in_extb); // neither end capped
+		pipes.emplace_back(point(pos.x, pos.y, pipe_zval), pos, p.radius, 2, PIPE_RISER, 0, p.in_extb, p.flow_dir); // neither end capped
 		pipe_end_bcube.assign_or_union_with_cube(pipes.back().get_bcube());
 	} // for risers
 	if (pipes.empty()) return 0; // no valid pipes
@@ -439,6 +431,8 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			}
 			pipe.connected = 1;
 			had_extb_conn |= pipe.for_extb;
+			// if this is a closed loop system and water is flowing out (of a hot water heater), no exit pipe is needed
+			if (is_closed_loop && pipe.flow_dir == 0) {add_exit_pipe = 0;}
 			if (unconn_radius > 0.0) {pipe.radius = get_merged_pipe_radius(pipe.radius, unconn_radius, conn_pipe_merge_exp); unconn_radius = 0.0;} // add extra capacity
 			radius = get_merged_pipe_radius(radius, pipe.radius, conn_pipe_merge_exp);
 			++num_keep;
@@ -661,8 +655,8 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 
 		// add fittings where main pipe crosses through the basement wall, in the case where the bcube is larger than the basement
 		for (unsigned d = 0; d < 2; ++d) {
-			float const pipe_end(mp[d][dim]), wall_pos(basement.d[dim][d]), fitting_len(FITTING_LEN*r_main);
-			if (d ? (pipe_end <= wall_pos) : (pipe_end >= wall_pos)) continue; // not crossing through the wall
+			float const wall_pos(basement.d[dim][d]), fitting_len(FITTING_LEN*r_main);
+			if (mp[1][dim] < wall_pos || mp[0][dim] > wall_pos) continue; // not crossing through the wall
 			point p1(mp[d]), p2(p1);
 			p1[dim] = wall_pos - fitting_len;
 			p2[dim] = wall_pos + fitting_len;
