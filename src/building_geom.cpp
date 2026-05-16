@@ -1156,6 +1156,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		for (unsigned n = 0; n < num_tries; ++n) { // make several attempts at generating a valid interior where this door can be placed; this still fails a few times
 			for (unsigned d = 0; d < 2; ++d) { // try both dims
 				door = place_door(parts[door_part], door_dim, door_dir, door_height, door_center, door_pos, 0.25, wscale, 0, 0, rgen); // keep door_height
+				if (door.get_sz_dim(!door_dim) == 0) continue; // no door placed
 				if (is_valid_door_pos(door, 0.5*door_height, door_dim)) {door_valid = 1; break;} // done
 				if (d == 1 && n+1 == num_tries) break; // no more tries available
 				// swap door_dim and calculate new door_dir; this is duplicated from the code above, but not easier to factor out
@@ -1182,7 +1183,8 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				gen_interior(rgen, 0);
 			}
 		} // for n
-		if (/*door_valid &&*/ add_door(door, door_part, door_dim, door_dir, 0)) {floor_ext_door_mask |= 1;} // should we still add a door if it's invalid?
+		if (door.get_sz_dim(!door_dim) == 0) {cout << "bad door for house " << bcube.str() << endl;}
+		else if (/*door_valid &&*/ add_door(door, door_part, door_dim, door_dir, 0)) {floor_ext_door_mask |= 1;} // should we still add a door if it's invalid?
 		if (doors.size() == 2) {swap(doors[0], doors[1]);} // make sure the house door comes before the garage/shed door
 		float const tot_area(parts[0].get_area_xy() + (two_parts ? parts[1].get_area_xy() : 0.0f));
 
