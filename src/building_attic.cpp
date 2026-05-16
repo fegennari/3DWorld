@@ -20,6 +20,11 @@ unsigned building_t::get_attic_part_ix() const { // Note: can be called before a
 	assert(!parts.empty());
 	return ((get_num_main_parts() >= 2 && parts[1].z2() > parts[0].z2()) ? 1 : 0); // if there are at least two parts, use the taller one
 }
+cube_t const &building_t::get_attic_part() const {
+	if (is_restroom_with_high_ceil()) {assert(!parts.empty()); return parts.front();}
+	assert(has_attic());
+	return parts[get_attic_part_ix()];
+}
 
 // Note: may incorrectly return 0 for points exactly between roof tquads, such as those on the centerline of the roof
 bool building_t::point_under_attic_roof(point const &pos, vector3d *const cnorm) const {
@@ -42,7 +47,7 @@ bool building_t::is_blocked_by_open_attic_door(cube_t const &c) const {
 	return attic_door.intersects(c); // will be blocked by attic ladder when open
 }
 bool building_t::point_in_attic(point const &pos, vector3d *const cnorm) const {
-	if (!has_attic() || pos.z < get_attic_floor_z1() || pos.z > interior_z2) return 0; // test attic floor zval
+	if (!has_attic_space() || pos.z < get_attic_floor_z1() || pos.z > interior_z2) return 0; // test attic floor zval
 	return point_under_attic_roof(pos, cnorm);
 }
 bool building_t::cube_in_attic(cube_t const &c) const {

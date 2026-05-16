@@ -1751,7 +1751,7 @@ struct building_t : public building_geom_t {
 	room_t const &get_retail_room() const {assert(interior && !interior->rooms.empty()); assert(has_retail()); return interior->rooms.front();} // always the first room
 	cube_t const &get_retail_part() const {assert(has_retail()); assert(!parts.empty()); return parts.front();} // always the first part
 	cube_t const &get_basement   () const {assert(has_basement()); return parts[basement_part_ix   ];}
-	cube_t const &get_attic_part () const {assert(has_attic   ()); return parts[get_attic_part_ix()];}
+	cube_t const &get_attic_part () const;
 	bool get_retail_long_dim     () const;
 	int check_player_in_basement(point const &pos) const;
 	colorRGBA get_avg_side_color  () const {return side_color  .modulate_with(get_material().side_tex.get_avg_color());}

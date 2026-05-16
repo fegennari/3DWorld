@@ -2688,7 +2688,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		setup_light_for_building_interior(dl_sources.back(), *i, clipped_bc_rot, force_smap_update, shadow_caster_hash);
 		
 		// add upward pointing light (sideways for wall lights); only when player is near/inside a building (optimization); not for lights hanging on ceiling fans
-		if ((camera_near_building || in_walkway_near_camera) && (is_lamp || wall_light || lpos_rot.z > up_light_zmin) && !hanging && !i->is_hanging()) {
+		if ((camera_near_building || in_walkway_near_camera) && (is_lamp || wall_light || room_includes_roof || lpos_rot.z > up_light_zmin) && !hanging && !i->is_hanging()) {
 			cube_t light_bc2(clipped_bc);
 
 			if (is_in_elevator) {
