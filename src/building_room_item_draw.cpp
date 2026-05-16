@@ -2242,7 +2242,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 				lava_lamp_draw.add_lava_lamp(*i, camera_bs, building);
 			}
 			else if (i->type == TYPE_FISHTANK) {
-				if (draw_fish && i->item_flags == TYPE_FISH) { // fishtank with fish
+				if (draw_fish && i->item_flags == TYPE_FISH && !is_rotated) { // fishtank with fish; skip for rotated buildings since drawing is incorrect
 					bool visible(is_rotated ? building.is_rot_cube_visible(*i, xlate) : camera_pdu.cube_visible(*i + xlate)); // VFC
 					if (visible && check_occlusion && building.check_obj_occluded(*i, camera_bs, oc, reflection_pass)) {visible = 0;}
 					register_fishtank(*i, visible);
