@@ -2984,19 +2984,44 @@ void building_t::add_room_wall_tile(cube_t const &room, unsigned room_id, float 
 	float const tile_thickness(get_flooring_thick());
 	vect_room_object_t &objs(interior->room_geom->objs);
 
-	for (unsigned d = 0; d < 2; ++d) {
-		for (cube_t const &wall : interior->walls[d]) {
-			if (!wall.intersects_no_adj(room)) continue;
-			bool const dir(wall.get_center_dim(d) < room.get_center_dim(d)); // direction facing the center of the room
-			cube_t tile(wall);
-			tile.d[d][!dir]  = wall.d[d][dir]; // edge of wall facing the room
-			tile.d[d][ dir] += (dir ? 1.0 : -1.0)*tile_thickness;
-			tile.intersect_with_cube_xy(room);
-			intersect_dim(tile, room, 2); // clip zvals to room bounds
-			expand_to_nonzero_area(tile, tile_thickness, d);
-			objs.emplace_back(tile, TYPE_POOL_TILE, room_id, d, !dir, RO_FLAG_NOCOLL);
-		} // for wall
-	} // for d
+	if (is_restroom()) {
+		float const door_expand(get_wall_thickness()), tile_z2(ground_floor_z1 + 0.57*get_window_vspace()); // below windows in park restrooms
+		cube_t const tile_bounds(get_room_wall_bounds(get_room(room_id))); // Note: not using the room passed in
+
+		for (unsigned dim = 0; dim < 2; ++dim) {
+			for (unsigned dir = 0; dir < 2; ++dir) {
+				float const wall_pos(tile_bounds.d[dim][dir]);
+				cube_t tile(tile_bounds);
+				tile.d[dim][ dir] = wall_pos;
+				tile.d[dim][!dir] = wall_pos + (dir ? -1.0 : 1.0)*tile_thickness;
+				tile.z2() = tile_z2;
+				expand_to_nonzero_area(tile, tile_thickness, dim);
+				vect_cube_t tiles{tile};
+				
+				for (tquad_with_ix_t const &d : doors) { // subtract exterior doors
+					cube_t sub(d.get_bcube());
+					sub.expand_in_dim(dim, door_expand); // make nonzero thickness
+					if (sub.intersects(tile)) {subtract_cube_from_cubes(sub, tiles);}
+				}
+				for (cube_t const &t : tiles) {objs.emplace_back(t, TYPE_POOL_TILE, room_id, dim, dir, RO_FLAG_NOCOLL);}
+			} // for dir
+		} // for dim
+	}
+	else { // pool or shower room
+		for (unsigned dim = 0; dim < 2; ++dim) {
+			for (cube_t const &wall : interior->walls[dim]) {
+				if (!wall.intersects_no_adj(room)) continue;
+				bool const dir(wall.get_center_dim(dim) < room.get_center_dim(dim)); // direction facing the center of the room
+				cube_t tile(wall);
+				tile.d[dim][!dir]  = wall.d[dim][dir]; // edge of wall facing the room
+				tile.d[dim][ dir] += (dir ? 1.0 : -1.0)*tile_thickness;
+				tile.intersect_with_cube_xy(room);
+				intersect_dim(tile, room, 2); // clip zvals to room bounds; not per-floor
+				expand_to_nonzero_area(tile, tile_thickness, dim);
+				objs.emplace_back(tile, TYPE_POOL_TILE, room_id, dim, !dir, RO_FLAG_NOCOLL);
+			} // for wall
+		} // for d
+	}
 }
 
 // for indoor pools, currently only in extended basements

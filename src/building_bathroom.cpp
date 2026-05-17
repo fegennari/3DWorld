@@ -903,32 +903,37 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 	room.assign_to(rtype, floor);
 	room.set_has_br_stalls();
 	
-	// make sure doors start closed and unlocked, and flag them as auto_close;
-	// if (!is_cube()) we also want to make sure the door opens inward, but we can't change it for only one door in the stack
-	for (door_stack_t const &ds : interior->door_stacks) {
-		if (!ds.is_connected_to_room(room_id)) continue;
-		assert(ds.first_door_ix < interior->doors.size());
+	if (is_restroom()) { // park restrooms are special
+		add_room_wall_tile(room, room_id, tot_light_amt);
+	}
+	else {
+		// make sure doors start closed and unlocked, and flag them as auto_close;
+		// if (!is_cube()) we also want to make sure the door opens inward, but we can't change it for only one door in the stack
+		for (door_stack_t const &ds : interior->door_stacks) {
+			if (!ds.is_connected_to_room(room_id)) continue;
+			assert(ds.first_door_ix < interior->doors.size());
 
-		for (unsigned dix = ds.first_door_ix; dix < interior->doors.size(); ++dix) {
-			door_t &door(interior->doors[dix]);
-			if (!ds.is_same_stack(door)) break; // moved to a different stack, done
-			if (door.z1() > zval || door.z2() < zval) continue; // wrong floor
-			door.rtype  = rtype; // tag type so that the correct sign is added
-			door.locked = 0; // only needed for non-cube buildings
-			if (!door.is_bars()) {door.make_auto_close();} // what about DOOR_TYPE_JAIL?
-			if ((!is_cube() || is_prison()) && !door_opens_inward(ds, room)) {door.opens_out_of_br = 1;}
+			for (unsigned dix = ds.first_door_ix; dix < interior->doors.size(); ++dix) {
+				door_t &door(interior->doors[dix]);
+				if (!ds.is_same_stack(door)) break; // moved to a different stack, done
+				if (door.z1() > zval || door.z2() < zval) continue; // wrong floor
+				door.rtype  = rtype; // tag type so that the correct sign is added
+				door.locked = 0; // only needed for non-cube buildings
+				if (!door.is_bars()) {door.make_auto_close();} // what about DOOR_TYPE_JAIL?
+				if ((!is_cube() || is_prison()) && !door_opens_inward(ds, room)) {door.opens_out_of_br = 1;}
+			} // for ds
 		} // for ds
-	} // for ds
-	// add a sign outside the bathroom door; should schools use boys/girls? but it doesn't match the text on the signs placed on the doors
-	string const sign_text(/*is_school() ? (mens_room ? "Boys" : "Girls") :*/ (mens_room ? "Men" : "Women"));
-	add_door_sign(sign_text, room, zval, room_id, 1); // no_check_adj_walls=1
-
-	// make this door/room out of order 10% of the time; only for cube buildings (others need the connectivity), and not for mall or restaurant bathrooms
-	if (is_cube() && !(has_mall() && room.is_ext_basement()) && !is_restaurant() && !is_restroom() && rgen.rand_float() < 0.1) {
-		// there may be multiple doors, and they must all have the OOO sign
-		vect_door_stack_t &doorways(get_doorways_for_room(room, zval));
-		for (door_stack_t &ds : doorways) {make_door_out_of_order(room, zval, room_id, ds);}
-		room.set_has_out_of_order(); // flag if any floor is out of order
+		// add a sign outside the bathroom door; should schools use boys/girls? but it doesn't match the text on the signs placed on the doors
+		string const sign_text(/*is_school() ? (mens_room ? "Boys" : "Girls") :*/ (mens_room ? "Men" : "Women"));
+		add_door_sign(sign_text, room, zval, room_id, 1); // no_check_adj_walls=1
+	
+		// make this door/room out of order 10% of the time; only for cube buildings (others need the connectivity), and not for mall or restaurant bathrooms
+		if (is_cube() && !(has_mall() && room.is_ext_basement()) && !is_restaurant() && rgen.rand_float() < 0.1) {
+			// there may be multiple doors, and they must all have the OOO sign
+			vect_door_stack_t &doorways(get_doorways_for_room(room, zval));
+			for (door_stack_t &ds : doorways) {make_door_out_of_order(room, zval, room_id, ds);}
+			room.set_has_out_of_order(); // flag if any floor is out of order
+		}
 	}
 	return 1;
 }
