@@ -2649,7 +2649,8 @@ private:
 		float tot_light_amt, unsigned objs_start, unsigned num, float rmax, bool is_food=0);
 	void add_light_switches_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start,
 		bool is_ground_floor, bool is_basement, bool is_lit, bool is_jail=0, bool is_bathroom=0);
-	void add_outlets_to_room  (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start, bool is_ground_floor, bool is_basement, bool is_kitchen=0);
+	void add_outlets_to_room  (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start,
+		bool is_ground_floor, bool is_basement, bool is_kitchen=0, bool is_bathroom=0);
 	bool add_wall_vent_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start, bool check_for_ducts);
 	bool add_ceil_vent_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start);
 	bool check_if_near_missing_wall(cube_t const &c, room_t const &room) const;

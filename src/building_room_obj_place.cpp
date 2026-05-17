@@ -4495,7 +4495,7 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 }
 
 void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id,
-	unsigned objs_start, bool is_ground_floor, bool is_basement, bool is_kitchen)
+	unsigned objs_start, bool is_ground_floor, bool is_basement, bool is_kitchen, bool is_bathroom)
 {
 	float const wall_thickness(get_wall_thickness()), floor_spacing(get_window_vspace()), min_outlet_spacing(0.25*floor_spacing);
 	float const plate_height(1.8*wall_thickness), plate_hwidth(0.5*wall_thickness), min_wall_spacing(4.0*plate_hwidth);
@@ -4506,8 +4506,8 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 	if ((int)room_id == interior->pool.room_ix) {plate_thickness += 0.5*get_flooring_thick();} // add over pool tile, somewhat recessed
 	vect_door_stack_t const &doorways(get_doorways_for_room(room, zval));
 	vect_room_object_t &objs(interior->room_geom->objs);
-	bool const single_lg_room(room.is_single_large_room());
-	unsigned const num_outlets_per_wall((is_kitchen || single_lg_room) ? 2 : 1); // more outlets in kitchen and large rooms
+	bool const single_lg_room(room.is_single_large_room()), is_house_bathroom(is_bathroom && is_house);
+	unsigned const num_outlets_per_wall((is_kitchen || is_house_bathroom || single_lg_room) ? 2 : 1); // more outlets in kitchen, house bathroom, and large rooms
 	unsigned num_outlets(0);
 
 	for (unsigned N = 0; N < 4 && num_outlets == 0; ++N) { // 4 attempts to place at least one outlet
@@ -4546,12 +4546,18 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 				bool hit_cabinet(0);
 		
 				if (overlaps_other_room_obj(c_exp, objs_start, 1)) { // check for things like closets; check_all=1 to include blinds
-					if (!is_kitchen) continue;
+					if (!is_kitchen && !is_house_bathroom) continue;
 
-					for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) { // check for kitchen cabinets
-						if (i->type != TYPE_COUNTER && i->type != TYPE_KSINK) continue;
+					for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) { // check for kitchen cabinets and bathroom vanities
+						if (i->type != TYPE_COUNTER && i->type != TYPE_KSINK && i->type != TYPE_VANITY) continue;
 						if (!i->intersects(c_exp)) continue;
 						if (i->type == TYPE_KSINK && get_sink_cube(*i).intersects_xy(c_exp)) break; // don't place behind the kitchen sink
+
+						if (i->type == TYPE_VANITY) { // place to the side but not behind the sink
+							cube_t sink(*i);
+							sink.expand_in_dim(!i->dim, -0.35*i->get_width());
+							if (c_exp.intersects(sink)) break; // no outlet
+						}
 						float new_zval(i->z2());
 						if (i->has_extra() && (i->flags & RO_FLAG_ADJ_BOT)) {new_zval += BACKSPLASH_HEIGHT*i->dz();} // place above the backsplash if present
 						c.z1() = c_exp.z1() = new_zval + 0.1*plate_height; // slightly above counter
