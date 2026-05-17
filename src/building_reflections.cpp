@@ -200,11 +200,12 @@ bool building_t::find_mirror_in_room(unsigned room_id, vector3d const &xlate, fl
 	assert(has_room_geom());
 	point const camera_bs(get_inv_rot_pos(camera_pdu.pos - xlate)); // rotate camera pos into building space
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
+	bool const has_tall_ceil(is_restroom_with_high_ceil());
 	float const camera_z1(camera_bs.z - CAMERA_RADIUS), camera_z2(camera_bs.z + CAMERA_RADIUS);
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) { // see if that room contains a mirror
-		if (i->room_id != room_id || !i->is_mirror())     continue; // wrong room, or not a mirror
-		if (i->z1() > camera_z2   || i->z2() < camera_z1) continue; // wrong floor
+		if (i->room_id != room_id || !i->is_mirror())                              continue; // wrong room, or not a mirror
+		if (i->z1() > camera_z2   || (!has_tall_ceil && i->z2() < camera_z1))      continue; // wrong floor
 		// Note: we could probably return 0 rather than continuing after this point, but that may change if rooms with multiple mirrors are enabled
 		if (((camera_bs[i->dim] - i->get_center_dim(i->dim)) < 0.0f) ^ i->dir ^ 1) continue; // back facing
 		if (!camera_pdu.cube_visible(*i + xlate)) continue; // VFC
@@ -242,14 +243,15 @@ bool building_t::find_mirror_needing_reflection(vector3d const &xlate) const {
 	if (!has_room_geom())           return 0; // can't have mirrors; maybe interior wasn't generated yet
 	if (is_rotated())               return 0; // mirrors don't yet work in rotated buildings, so disable for now
 	point const camera_bs(camera_pdu.pos - xlate);
+	bool const inc_attic(is_restroom_with_high_ceil()); // include roof area above the room
 	vector<point> points;
-	if (!check_point_or_cylin_contained(camera_bs, 0.0, points, 0, 1, 0)) return 0; // camera not in the building; inc_attic=0, inc_ext_basement=1, inc_roof_acc=0
+	if (!check_point_or_cylin_contained(camera_bs, 0.0, points, 1, 1, 0)) return 0; // camera not in the building; inc_ext_basement=1, inc_roof_acc=0
 	int camera_room_ix(-1);
 	float dmin_sq(0.0);
 	
 	// find room containing the camera; note that this applies to the entire backrooms, since it's one room
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
-		if (!r->contains_pt(camera_bs)) continue; // not the room the camera is in
+		if (!(inc_attic ? r->contains_pt_xy(camera_bs) : r->contains_pt(camera_bs))) continue; // not the room the camera is in; skip zval check for restroom attic
 		unsigned const room_ix(r - interior->rooms.begin());
 		camera_room_ix = room_ix;
 		if (!r->get_has_mirror()) continue; // no mirror in this room stack
