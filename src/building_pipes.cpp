@@ -6,6 +6,8 @@
 #include <cfloat> // for FLT_MAX
 
 
+bool const CONNECT_WATER_HEATER = 0;
+
 bool line_int_cubes_exp(point const &p1, point const &p2, vect_cube_t const &cubes, vector3d const &expand);
 void add_pg_obstacles(vect_room_object_t const &objs, unsigned objs_start, unsigned objs_end, cube_t const &room, vect_cube_t &walls, vect_cube_t &beams, vect_cube_t &obstacles);
 void subtract_cubes_from_cube_split_in_dim(cube_t const &c, vect_cube_t const &sub, vect_cube_t &out, vect_cube_t &out2, unsigned dim);
@@ -1507,15 +1509,15 @@ void building_t::get_pipe_basement_water_connections(vect_riser_pos_t &sewer, ve
 		float const per_wh_radius(radius_hot*pow(1.0/water_heaters.size(), 1/4.0)); // distribute evenly among the water heaters using the same merge exponent
 
 		for (room_object_t const &wh : water_heaters) {
+			bool const in_house_basement(wh.z1() < ground_floor_z1);
 			float const radius(wh.get_radius()), shift_val(WHEATER_PIPE_SPACING*radius);
 			point center(wh.xc(), wh.yc(), ceil_zval);
 			vector3d wh_shift_dir(shift_dir);
 
-			if (wh.z1() < ground_floor_z1) { // house basement water heater
-				// should this connect directly? what if vent or other pipe is in the way? how to match pipe radius?
+			if (!in_house_basement) { // office building first floor water heater: use exact location where bent over pipes meet the floor
+				center[wh.dim] += (wh.dir ? 1.0 : -1.0)*radius*WHEATER_PIPE_H_DIST; // offset to front
 			}
-			else { // office building first floor water heater: use exact location where bent over pipes meet the floor
-				center[wh.dim] += (wh.dir ? 1.0 : -1.0)*radius*WHEATER_PIPE_H_DIST;
+			if (!in_house_basement || CONNECT_WATER_HEATER) { // shift to actual pipe offset from center
 				wh_shift_dir[ wh.dim] = 0.0;
 				wh_shift_dir[!wh.dim] = ((shift_dir[!wh.dim] < 0.0) ? -1.0 : 1.0);
 			}
@@ -1544,12 +1546,12 @@ void building_t::get_pipe_basement_gas_connections(vect_riser_pos_t &pipes) cons
 	}
 }
 
-void get_water_heater_cubes(room_object_t const &wh, cube_t cubes[2]) { // {tank, pipes}
+void get_water_heater_cubes(room_object_t const &wh, cube_t cubes[2], bool vent_only) { // {tank, pipes}
 	cubes[0] = cubes[1] = wh;
-	// shrink to include the pipes
+	// shrink to include only the pipes
 	float const radius(wh.get_radius());
-	set_wall_width(cubes[1], wh.get_center_dim( wh.dim), 0.2*radius,  wh.dim); // width of vent
-	set_wall_width(cubes[1], wh.get_center_dim(!wh.dim), 0.7*radius, !wh.dim); // width of top pipes extent
+	set_wall_width(cubes[1], wh.get_center_dim( wh.dim), 0.2*radius, wh.dim); // width of vent
+	set_wall_width(cubes[1], wh.get_center_dim(!wh.dim), (vent_only ? 0.2 : 0.7)*radius, !wh.dim); // width of top pipes extent
 	cubes[0].z2() -= 0.2*wh.dz(); // shorten the height for the tank; needed for vertical exit pipes
 }
 
@@ -1562,7 +1564,7 @@ void building_t::add_house_basement_pipes(rand_gen_t &rgen) {
 	// houses have smaller radius pipes, so we should have enough space to stack sewer below hot water below cold water
 	float const ceil_z(basement.z2()), sewer_zval(ceil_z - 1.8*fc_thick), cw_zval(ceil_z - 1.0*fc_thick), hw_zval(ceil_z - 1.4*fc_thick), gas_zval(ceil_z - 2.8*fc_thick);
 	float const trim_thickness(get_trim_thickness()), wall_thickness(get_wall_thickness());
-	vect_cube_t pipe_cubes, obstacles, walls, beams; // beams remains empty
+	vect_cube_t pipe_cubes, obstacles, walls, beams, wh_pipes; // beams remains empty
 	unsigned room_id(0);
 	if (has_ext_basement()) {obstacles.push_back(get_ext_basement_door_blocker());}
 
@@ -1592,8 +1594,13 @@ void building_t::add_house_basement_pipes(rand_gen_t &rgen) {
 		}
 		else if (i.type == TYPE_WHEATER) {
 			cube_t cubes[2];
-			get_water_heater_cubes(i, cubes);
+			get_water_heater_cubes(i, cubes, CONNECT_WATER_HEATER); // vent only if connecting to pipes
 			UNROLL_2X(obstacles.push_back(cubes[i_]);)
+
+			if (CONNECT_WATER_HEATER) { // add water heater pipe obstacles, only for sewage and gas pipes
+				get_water_heater_cubes(i, cubes, 0); // vent_only=0
+				wh_pipes.push_back(cubes[1]); // union of water and vent pipes
+			}
 		}
 		else if (no_blocking) {
 			cube_t c(i);
@@ -1629,14 +1636,21 @@ void building_t::add_house_basement_pipes(rand_gen_t &rgen) {
 		obstacles.push_back(s);
 	}
 	unsigned const objs_start(interior->room_geom->objs.size()); // no other basement objects added here that would interfere with pipes
+	unsigned const obstacles_start(obstacles.size());
 	vect_riser_pos_t sewer, cold_water, hot_water, gas_pipes;
 	get_pipe_basement_water_connections(sewer, cold_water, hot_water, rgen);
+	vector_add_to(wh_pipes, obstacles); // water heater pipes are blockers for sewer pipes
 	add_basement_pipes(obstacles, walls, beams, sewer,      pipe_cubes, room_id, num_floors, objs_start, sewer_zval, rgen, PIPE_TYPE_SEWER, 1); // sewer
+	// remove water heater pipes for adding hot and cold water;
+	// technically we should add the cold water pipe when routint hot water and the hot water pipe when routing cold water,
+	// but we don't know which is which, and we're unlikely to intersect the wrong pipe without also intersecting the vent pipe in the middle, which is in obstacles
+	obstacles.resize(obstacles_start);
 	add_to_and_clear(pipe_cubes, obstacles); // add sewer pipes to obstacles
 	add_basement_pipes(obstacles, walls, beams, cold_water, pipe_cubes, room_id, num_floors, objs_start, cw_zval,    rgen, PIPE_TYPE_CW,    1); // cold water
 	add_to_and_clear(pipe_cubes, obstacles); // add cold water pipes to obstacles
 	add_basement_pipes(obstacles, walls, beams, hot_water,  pipe_cubes, room_id, num_floors, objs_start, hw_zval,    rgen, PIPE_TYPE_HW,    1); // hot water
 	add_to_and_clear(pipe_cubes, obstacles); // add hot water pipes to obstacles
+	vector_add_to(wh_pipes, obstacles); // water heater pipes are blockers for gas pipes
 	get_pipe_basement_gas_connections(gas_pipes);
 	add_basement_pipes(obstacles, walls, beams, gas_pipes,  pipe_cubes, room_id, num_floors, objs_start, gas_zval,   rgen, PIPE_TYPE_GAS,   1); // gas
 }

@@ -45,7 +45,7 @@ int get_canopy_texture();
 int get_counter_tid   ();
 int get_carpet_tid(room_object_t const &c);
 colorRGBA get_canopy_base_color(room_object_t const &c);
-void get_water_heater_cubes(room_object_t const &wh, cube_t cubes[2]);
+void get_water_heater_cubes(room_object_t const &wh, cube_t cubes[2], bool vent_only);
 bool line_int_polygon_sides(point const &p1, point const &p2, cube_t const &bcube, vect_point const &points, float &t);
 bool is_flashing_light_on();
 void get_pool_table_cubes(room_object_t const &c, cube_t cubes[5]);
@@ -416,7 +416,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 
 			if (type == TYPE_WHEATER) { // {tank, pipes}
 				cube_t cubes[2];
-				get_water_heater_cubes(*c, cubes);
+				get_water_heater_cubes(*c, cubes, 1); // vent_only=1
 				cc.emplace_back(cubes[1], color); // add pipes directly
 				inner_cube = cubes[0]; // tank
 			}
