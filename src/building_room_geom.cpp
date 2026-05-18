@@ -5247,7 +5247,7 @@ void building_room_geom_t::add_bucket(room_object_t const &c, bool draw_metal, b
 
 void building_room_geom_t::add_water_heater(room_object_t const &c) {
 	bool const is_house(c.flags & RO_FLAG_IS_HOUSE), in_store(c.in_mall()), bend_pipes(!is_house && !in_store), tall_vent(c.flags & RO_FLAG_ADJ_HI);
-	float const height(c.dz()), radius(c.get_radius()), pipe_radius(0.05*radius);
+	float const height(c.dz()), radius(c.get_radius()), pipe_radius(WHEATER_PIPE_RADIUS*radius);
 	float const front_pos(c.d[c.dim][c.dir]), front_dir(c.dir ? 1.0 : -1.0), top_z(c.z1() + 0.8*height);
 	cube_t body(c), pan(c), top(c), vent(c), cone(c), box, pipes[2];
 

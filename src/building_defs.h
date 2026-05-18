@@ -44,6 +44,7 @@ float const CHAIR_LEG_WIDTH_MALL   = 0.07; // relative to chair width
 float const BED_HEAD_WIDTH         = 0.04; // headboard width; relative to bed width
 float const SHELF_RACK_HEIGHT_FS   = 0.85*(1.0 - FLOOR_THICK_VAL_OFFICE);
 float const WHEATER_PIPE_SPACING   = 0.65; // relative to radius
+float const WHEATER_PIPE_RADIUS    = 0.05; // relative to radius
 float const WHEATER_PIPE_H_DIST    = 0.92; // relative to radius
 float const PLANT_POT_RADIUS       = 0.75; // relative to plant bcube radius
 float const DEF_NORM_BIAS_SCALE    = 10.0; // see shadow_map.part

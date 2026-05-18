@@ -74,9 +74,10 @@ public:
 };
 
 struct riser_pos_t : public sphere_t {
-	bool has_hot=0, flow_dir=0, upper_floor=0, in_extb=0; // flow_dir: 0=out/down, 1=in/up
+	bool has_hot=0, flow_dir=0, upper_floor=0, in_extb=0, is_wh=0; // flow_dir: 0=out/down, 1=in/up
 	riser_pos_t() {}
-	riser_pos_t(point const &pos_, float radius_, bool hh=0, bool fd=0, bool uf=0, bool eb=0) : sphere_t(pos_, radius_), has_hot(hh), flow_dir(fd), upper_floor(uf), in_extb(eb) {}
+	riser_pos_t(point const &pos_, float radius_, bool hh=0, bool fd=0, bool uf=0, bool eb=0, bool wh=0) :
+		sphere_t(pos_, radius_), has_hot(hh), flow_dir(fd), upper_floor(uf), in_extb(eb), is_wh(wh) {}
 };
 typedef vector<riser_pos_t> vect_riser_pos_t;
 
