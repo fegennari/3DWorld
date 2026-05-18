@@ -206,7 +206,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	bool const no_placed_bathroom(is_industrial() || is_parking() || is_prison());
 	float const extra_bathroom_prob((is_house ? 2.0 : 1.0)*0.02*min((int(tot_num_rooms) - 4), 20));
 	unsigned cand_bathroom(rooms.size()); // start at an invalid value
-	unsigned added_bathroom_objs_mask(0), numbered_rooms_seen(0), store_type_mask(0), num_locker_rooms(0);
+	unsigned added_bathroom_objs_mask(0), numbered_rooms_seen(0), store_type_mask(0), num_locker_rooms(0), bed_floor_mask(0);
 	uint8_t last_unit_id(0);
 	uint64_t is_public_on_floor(0), library_floor_mask(0), added_kitchen_mask(0), added_living_mask(0), added_bath_mask(0), has_lounge_mask(0); // 64 bit masks, per floor
 	bool added_bedroom(0), added_library(0), added_dining(0), added_laundry(0), added_basement_utility(0), added_fireplace(0), added_pool_room(0);
@@ -220,6 +220,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		float min_score(0.0); // lower is better
 
 		// Note: assigning cand_bathroom when has_pri_hall() is not strictly necessary, but may help add a bathroom to an upper stacked part
+		// Note: not guaranteed to work for all floors of multi-family house if an upper floor has a door
 		for (auto r = rooms.begin(); r != rooms.end(); ++r) {
 			if (r->is_sec_bldg) continue; // garage/shed excluded - not a normal room
 			if (has_basement() && r->part_id == (int)basement_part_ix) continue; // skip the basement
@@ -235,7 +236,11 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					if (test_cube.intersects(get_fireplace())) continue;
 				}
 				float score(r->dx() + r->dy()); // starts as half the perimeter
-				score *= (1.0 + 10.0*(max(count_num_int_doors(*r), 1U) - 1U)); // multiply by a large value if there are mult doors so we only choose this if there are no alternatives
+				score *= (1.0 + 10.0*(max(count_num_int_doors(*r), 1U) - 1U)); // mult by a large value if there are mult doors so we only choose this if there are no alternatives
+
+				for (unsigned f = 0; f < num_floors; ++f) {
+					if (is_room_adjacent_to_ext_door(*r, (r->z1() + f*window_vspacing))) {score *= 2.0;} // penalty for ext doors on another floor; helps with multi family homes
+				}
 				if (num_floors > 1 && r->has_stairs_on_floor(0)) {score *= 4.0;} // penalty for ground floors stairs connecting to the basement or a stacked part
 				if (min_score == 0.0 || score < min_score) {cand_bathroom = (r - rooms.begin()); min_score = score;} // lower score is better
 			}
@@ -763,7 +768,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 
 			// place room objects
 			bool const added_living(added_living_mask & floor_mask), is_office_bathroom(!has_walkway && maybe_office_bathroom);
-			bool const allow_br(!is_house || must_be_bathroom || f > 0 || num_floors == 1 || (rgen.rand_float() < 0.33f*(added_living + (added_kitchen_mask&1) + 1))); // bed/bath
+			bool const allow_br(!is_house || must_be_bathroom || f > 0 || num_floors == 1 || multi_family ||
+				(rgen.rand_float() < 0.33f*(added_living + (added_kitchen_mask&1) + 1))); // bed/bath
 			bool has_fireplace(0);
 			if (is_ext_basement) {add_false_door_to_extb_room_if_needed(*r, room_center.z, room_id);}
 			
@@ -938,7 +944,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			if (!added_obj && allow_br && !is_tall_room && !has_walkway && !floor_will_alias && can_be_bedroom_or_bathroom(*r, f)) {
 				// Note: num_bedrooms is summed across all floors, while num_bathrooms is per-floor
 				// Note: min_br is applied to bedrooms, but could be applied to bathrooms in the same way
-				bool const pref_sec_bath(is_house && num_bathroom_rooms == 1 && num_bedrooms > min_br && rooms.size() >= 6 && !must_be_bathroom && !has_fireplace && can_be_bathroom(*r));
+				bool const pref_sec_bath(is_house && num_bathroom_rooms == 1 && num_bedrooms > min_br && !(multi_family && !(bed_floor_mask & floor_mask)) &&
+					rooms.size() >= 6 && !must_be_bathroom && !has_fireplace && can_be_bathroom(*r));
 				float const bedroom_prob(pref_sec_bath ? 0.25 : 0.75), bathroom_prob((pref_sec_bath ? 2.0 : 1.0)*extra_bathroom_prob);
 				// place a bedroom 75% of the time unless this must be a bathroom; if we got to the second floor and haven't placed a bedroom, always place it;
 				// houses only, and must have a window (exterior wall)
@@ -949,7 +956,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 						add_bedroom_objs(rgen, *r, blockers, chair_color, room_center.z, room_id, f, tot_light_amt,
 							objs_start, is_lit, is_basement, force, light_ix_assign, cand_bathroom);
 					if (is_bedroom) {r->assign_to(RTYPE_BED, f);}
-					num_bedrooms += is_bedroom;
+					num_bedrooms   += is_bedroom;
+					bed_floor_mask |= floor_mask;
 				}
 				if (!added_obj && !has_fireplace && (must_be_bathroom || (can_be_bathroom(*r) && (num_bathroom_rooms == 0 || rgen.rand_float() < bathroom_prob)))) {
 					// bathrooms can be in both houses and office buildings

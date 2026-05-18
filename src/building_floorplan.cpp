@@ -953,7 +953,8 @@ void building_t::gen_interior_int(rand_gen_t &rgen, unsigned gen_index, bool has
 		else { // generate random walls using recursive 2D slices
 			float const min_wall_len2(0.85*min_wall_len); // a somewhat shorter value that applies to some tests (but not wall_split_thresh)
 			bool const no_walls(min(p->dx(), p->dy()) < min_wall_len2); // not enough space to add a room (chimney, porch support, garage, shed, etc.)
-			float const min_split_len(max(global_building_params.wall_split_thresh, 1.0f)*min_wall_len);
+			// use smaller rooms in multi-family houses since they tend to have fewer bedroom/bathroom cands, and reassign_room_as_bed() doesn't help
+			float const min_split_len(max(global_building_params.wall_split_thresh*(multi_family ? 0.75f : 1.0f), 1.0f)*min_wall_len);
 			assert(to_split.empty());
 			if (no_walls) {add_room(*p, part_id, 1);} // add entire part as a room
 			else {to_split.emplace_back(*p);} // seed room is entire part, no door
