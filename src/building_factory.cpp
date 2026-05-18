@@ -1041,6 +1041,7 @@ void building_t::add_industrial_office_objs(rand_gen_t &rgen, room_t const &room
 		place_area.d[!edim][!place_end] = room_bounds.d[!edim][place_end] + (place_end ? -1.0 : 1.0)*locker_area_width;
 		add_room_lockers(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area, RTYPE_OFFICE, !edim, dir_skip_mask, 1); // add_padlocks=1
 	}
+	if (is_factory()) {add_valve_and_gauge_panel(rgen, room, zval, room_id, tot_light_amt, objs_start);} // add a row of valves and guages along a wall
 	add_clock_to_room_wall(rgen, room, zval, room_id, tot_light_amt, objs_start);
 	// add boxes and crates
 	vect_room_object_t &objs(interior->room_geom->objs);
