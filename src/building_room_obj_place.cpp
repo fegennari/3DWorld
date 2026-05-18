@@ -4938,11 +4938,12 @@ bool building_t::is_light_placement_valid(cube_t const &light, room_t const &roo
 	if (has_bcube_int(light, interior->escalators)) return 0; // conservative; is this needed?
 	if (!check_cube_within_part_sides(light))       return 0; // handle non-cube buildings
 	if (!interior->elevator_equip_room.is_all_zeros() && interior->elevator_equip_room.intersects(light)) return 0;
-
 	// the fc_occluders test below will handle stairs cutouts, but we still need to handle the ceiling above stairs;
 	// check stairs with walled sides because these may clip through ceiling lights; lights completely contained in the stairs look okay and are allowed
+	float const stairs_z2_adj(0.5*get_window_vspace()); // clip off the top of the stairs to allow lights on the ceiling above stairs
+
 	for (stairwell_t const &s : interior->stairwells) {
-		if (s.intersects(light) && !s.contains_cube_xy(light) && (s.has_walled_sides() || s.is_u_shape())) return 0;
+		if (s.intersects(light) && s.z2() - stairs_z2_adj > light.z2() && !s.contains_cube_xy(light) && (s.has_walled_sides() || s.is_u_shape())) return 0;
 	}
 	unsigned const pg_wall_start(interior->room_geom->wall_ps_start);
 
@@ -5008,7 +5009,8 @@ void building_t::try_place_light_on_ceiling(cube_t const &light, room_t const &r
 		for (unsigned D = 0; D < 2 && !light_placed; ++D) { // try both dims
 			bool const dim(room_dim ^ bool(D));
 			unsigned const num(room_dim ? ny : nx);
-			float const shift_step((0.5*(room.get_sz_dim(dim) - light_cand.get_sz_dim(dim)))/(num*num_shifts)); // shift within the bounds of placement grid based on num
+			// shift within the bounds of placement grid based on num
+			float const shift_step((0.5*(room.get_sz_dim(dim) - light_cand.get_sz_dim(dim) - get_wall_thickness()))/(num*num_shifts));
 
 			for (unsigned d = 0; d < 2; ++d) { // dir: see if we can place it by moving on one direction
 				for (unsigned n = 1; n <= num_shifts; ++n) { // try different shift values
