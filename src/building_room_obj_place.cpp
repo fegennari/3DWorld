@@ -2040,6 +2040,7 @@ bool building_t::add_livingroom_objs(rand_gen_t rgen, room_t const &room, float 
 	}
 	maybe_add_radiator_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);
 	add_entryway_objs(rgen, room, zval, room_id, tot_light_amt, objs_start);
+	if (is_house && rgen.rand_bool()) {add_clock_to_room_wall(rgen, room, zval, room_id, tot_light_amt, objs_start, 0);} // analog
 	if (room.is_single_floor && objs_start > 0) {replace_light_with_ceiling_fan(rgen, room, cube_t(), room_id, tot_light_amt, objs_start-1);} // light is prev placed object
 	return 1;
 }
