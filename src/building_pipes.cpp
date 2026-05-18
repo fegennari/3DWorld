@@ -6,7 +6,7 @@
 #include <cfloat> // for FLT_MAX
 
 
-bool const CONNECT_WATER_HEATER = 0;
+bool const CONNECT_WATER_HEATER = 1;
 
 bool line_int_cubes_exp(point const &p1, point const &p2, vect_cube_t const &cubes, vector3d const &expand);
 void add_pg_obstacles(vect_room_object_t const &objs, unsigned objs_start, unsigned objs_end, cube_t const &room, vect_cube_t &walls, vect_cube_t &beams, vect_cube_t &obstacles);
@@ -1377,6 +1377,23 @@ bool building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 	return 0; // failed
 }
 
+bool is_hot_cold_obj(room_object_t const &i) {
+	return (i.type == TYPE_SINK || i.type == TYPE_BRSINK || i.type == TYPE_KSINK || i.type == TYPE_TUB || i.is_shower() ||
+		    i.type == TYPE_SHOWERTUB || i.type == TYPE_WASHER || i.type == TYPE_DWASHER || i.type == TYPE_VANITY || (i.type == TYPE_STALL && i.in_jail()));
+}
+bool is_cold_only_obj(room_object_t const &i) {return (i.type == TYPE_TOILET || i.type == TYPE_URINAL || i.type == TYPE_DRAIN);}
+
+cube_t building_t::get_water_users_bcube() const { // for water heater dim
+	assert(has_room_geom() && has_basement());
+	cube_t bc;
+
+	for (room_object_t const &i : interior->room_geom->objs) { // check all objects placed so far
+		if (i.in_mall()) continue; // skip appliance/plumbing store objects
+		if (is_hot_cold_obj(i) || is_cold_only_obj(i)) {bc.assign_or_union_with_pt(i.get_cube_center());} // no random offset or risers merging
+	}
+	return bc;
+}
+
 // here each sphere represents the entry point of a pipe with this radius into the basement ceiling
 // find all plumbing fixtures such as toilets, urinals, sinks, and showers; these should have all been placed in rooms by now
 void building_t::get_pipe_basement_water_connections(vect_riser_pos_t &sewer, vect_riser_pos_t &cold_water, vect_riser_pos_t &hot_water, rand_gen_t &rgen) const {
@@ -1408,9 +1425,7 @@ void building_t::get_pipe_basement_water_connections(vect_riser_pos_t &sewer, ve
 			continue;
 		}
 		// Note: the dishwasher is always next to the kitchen sink and uses the same water connections
-		bool const hot_cold_obj (i.type == TYPE_SINK || i.type == TYPE_BRSINK || i.type == TYPE_KSINK || i.type == TYPE_TUB || i.is_shower() ||
-			i.type == TYPE_SHOWERTUB || i.type == TYPE_WASHER || i.type == TYPE_DWASHER || i.type == TYPE_VANITY || (i.type == TYPE_STALL && i.in_jail()));
-		bool const cold_only_obj(i.type == TYPE_TOILET || i.type == TYPE_URINAL || i.type == TYPE_DRAIN);
+		bool const hot_cold_obj(is_hot_cold_obj(i)), cold_only_obj(is_cold_only_obj(i));
 		if (!hot_cold_obj && !cold_only_obj) continue;
 
 		if (i.z1() < ground_floor_z1) { // object in the basement

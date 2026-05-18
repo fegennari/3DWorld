@@ -55,7 +55,10 @@ unsigned building_t::add_water_heaters(rand_gen_t &rgen, room_t const &room, flo
 	bool first_xdir(rgen.rand_bool()), first_ydir(rgen.rand_bool()), first_dim(0);
 
 	if (is_house) { // random corner selection
-		first_dim = rgen.rand_bool();
+		cube_t const water_bc(get_water_users_bcube());
+		if (water_bc.is_all_zeros()) {first_dim = rgen.rand_bool();} // no water users?
+		// orient water heater so that the two top/side pipes are in line with the larger dim (likely main pipe dim) so that connecters can be run without crossing the other pipe
+		else {first_dim = (water_bc.dy() < water_bc.dx());}
 	}
 	else { // select corners furthest from the door (back wall)
 		first_dim = (room.dy() < room.dx()); // face the shorter dim for office buildings so that we can place longer rows
