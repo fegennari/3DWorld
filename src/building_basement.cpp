@@ -246,6 +246,7 @@ bool building_t::add_office_utility_objs(rand_gen_t rgen, room_t const &room, fl
 			break; // done
 		} // for n
 	}
+	if (is_office_bldg()) {add_valve_and_gauge_panel(rgen, room, zval, room_id, tot_light_amt, objs_start);} // add a row of valves and guages along a wall
 	// don't add signs for interior utility rooms in apartments and hotels
 	if (!room.is_apt_or_hotel_room() || room.get_is_entryway()) {add_door_sign("Utility", room, zval, room_id);}
 	return 1;
