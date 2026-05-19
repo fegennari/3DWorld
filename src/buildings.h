@@ -2407,6 +2407,7 @@ private:
 	void maybe_add_radiator_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	bool add_bedroom_objs    (rand_gen_t rgen, room_t &room, vect_cube_t &blockers, colorRGBA const &chair_color, float zval, unsigned room_id, unsigned floor,
 		float tot_light_amt, unsigned objs_start, bool room_is_lit, bool is_basement, bool force, light_ix_assign_t &light_ix_assign, int cand_bath=-1);
+	void add_nightstand_clock(unsigned nightstand_obj_id, room_object_t const &bed, rand_gen_t &rgen);
 	bool reassign_room_as_bedroom(rand_gen_t rgen, light_ix_assign_t &light_ix_assign, unsigned num_bathrooms);
 	bool add_closet_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start,
 		unsigned room_type, unsigned bed_obj_ix, float front_clearance, unsigned &closet_obj_id, light_ix_assign_t &light_ix_assign);
@@ -2544,7 +2545,7 @@ private:
 	cube_t add_shelf_rack(cube_t const &c, bool dim, unsigned style_id, unsigned &rack_id, unsigned room_id,
 		unsigned extra_flags, unsigned item_category, bool add_occluders, rand_gen_t &rgen, bool make_nonempty=0);
 	bool maybe_add_walkway_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, light_ix_assign_t &light_ix_assign);
-	void add_clock(cube_t const &clock, unsigned room_id, float tot_light_amt, bool dim, bool dir, bool digital);
+	void add_clock(cube_t const &clock, unsigned room_id, float tot_light_amt, bool dim, bool dir, bool digital, colorRGBA const *custom_color=nullptr);
 	void add_clock_to_cube(cube_t const &c, float zval, unsigned room_id, float tot_light_amt, bool dim, bool dir, bool digital);
 	bool add_fire_ext_along_wall(cube_t const &room, float zval, unsigned room_id, float tot_light_amt, bool dim, bool dir, rand_gen_t &rgen);
 	bool add_fire_ext(float height, float radius, float zval, float wall_edge, float pos_along_wall,

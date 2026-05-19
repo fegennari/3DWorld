@@ -123,7 +123,7 @@ void building_room_geom_t::add_clock(room_object_t const &c, bool add_dynamic) {
 
 	if (c.item_flags & 1) { // digital clock
 		if (add_dynamic) {
-			colorRGBA const on_color(RED), off_color(on_color*0.05);
+			colorRGBA const on_color((c.is_house() && (c.obj_id & 1)) ? GREEN : RED), off_color(on_color*0.05);
 			cube_t face(c);
 			face.expand_in_dim(!c.dim, -0.1*c.get_width ());
 			face.expand_in_dim(2,      -0.1*c.get_height());
@@ -132,24 +132,32 @@ void building_room_geom_t::add_clock(room_object_t const &c, bool add_dynamic) {
 			tp.emissive = 1.0;
 			rgeom_mat_t &mat(get_material(tp, 1)); // dynamic
 			// format is HH:MM:SS ; colon_sz includes the spaces between digits and colons
-			bool const ddir(c.dim ^ c.dir ^ 1);
-			float const digit_to_colons_sz(3.5), colon_sz((ddir ? -1.0 : 1.0)*face.get_sz_dim(!c.dim)/(3*digit_to_colons_sz + 2)), digit_sz(digit_to_colons_sz*colon_sz);
+			bool const ddir(c.dim ^ c.dir ^ 1), show_seconds(!c.is_house());
+			unsigned const num_digits(2 + show_seconds), num_colons(1 + show_seconds);
+			float const digit_to_colons_sz(3.5);
+			float const colon_sz((ddir ? -1.0 : 1.0)*face.get_sz_dim(!c.dim)/(num_digits*digit_to_colons_sz + num_colons)), digit_sz(digit_to_colons_sz*colon_sz);
 			float const he(face.d[!c.dim][ddir] + digit_sz), ms(he + colon_sz), me(ms + digit_sz), ss(me + colon_sz);
 			cube_t dh(face), dm(face), ds(face), chm(face), cms(face); // digits, colons
 			dh .d[!c.dim][!ddir] = chm.d[!c.dim][ddir] = he;
 			chm.d[!c.dim][!ddir] = dm .d[!c.dim][ddir] = ms;
 			dm .d[!c.dim][!ddir] = cms.d[!c.dim][ddir] = me;
 			cms.d[!c.dim][!ddir] = ds .d[!c.dim][ddir] = ss;
-			bool const show_colons(cur_clock_time.secs & 1); // alternate each second
+			bool const show_colons(!show_seconds || (cur_clock_time.secs & 1)); // alternate each second
 			colorRGBA const &colon_color(show_colons ? on_color : off_color);
 			add_display_digit_pair(mat, dh, on_color, off_color, cur_clock_time.hours, c.dim, c.dir, ddir, 1);
 			add_display_colon(mat, chm, colon_color, c.dim, c.dir);
 			add_display_digit_pair(mat, dm, on_color, off_color, cur_clock_time.mins,  c.dim, c.dir, ddir, 0);
-			add_display_colon(mat, cms, colon_color, c.dim, c.dir);
-			add_display_digit_pair(mat, ds, on_color, off_color, cur_clock_time.secs,  c.dim, c.dir, ddir, 0);
+
+			if (show_seconds) {
+				add_display_colon(mat, cms, colon_color, c.dim, c.dir);
+				add_display_digit_pair(mat, ds, on_color, off_color, cur_clock_time.secs,  c.dim, c.dir, ddir, 0);
+			}
 		}
 		else {
-			get_untextured_material(1, 0, 1).add_cube_to_verts_untextured(c, apply_light_color(c), ~get_face_mask(c.dim, !c.dir)); // shadowed, small; skip back face
+			unsigned skip_faces(0);
+			if (c.flags & RO_FLAG_ADJ_BOT) {skip_faces = EF_Z1;} // on a surface; skip the bottom face
+			else {skip_faces = ~get_face_mask(c.dim, !c.dir);} // on the wall; skip the back face
+			get_untextured_material(1, 0, 1).add_cube_to_verts_untextured(c, apply_light_color(c), skip_faces); // shadowed, small
 		}
 	}
 	else { // analog clock
@@ -178,13 +186,15 @@ void building_room_geom_t::add_clock(room_object_t const &c, bool add_dynamic) {
 	}
 }
 
-void building_t::add_clock(cube_t const &clock, unsigned room_id, float tot_light_amt, bool dim, bool dir, bool digital) {
+void building_t::add_clock(cube_t const &clock, unsigned room_id, float tot_light_amt, bool dim, bool dir, bool digital, colorRGBA const *custom_color) {
 	assert(has_room_geom());
-	room_object_t obj(clock, TYPE_CLOCK, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt, (digital ? SHAPE_CUBE : SHAPE_CYLIN), (digital ? BLACK : WHITE));
+	colorRGBA const &color(custom_color ? *custom_color : (digital ? BLACK : WHITE));
+	room_object_t obj(clock, TYPE_CLOCK, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt, (digital ? SHAPE_CUBE : SHAPE_CYLIN), color);
 	if (digital) {obj.item_flags = 1;}
 	interior->room_geom->objs.push_back(obj);
 	interior->room_geom->have_clock = 1; // flag so that we know to update the draw state
 }
+
 void building_t::add_clock_to_cube(cube_t const &c, float zval, unsigned room_id, float tot_light_amt, bool dim, bool dir, bool digital) {
 	float const window_vspacing(get_window_vspace()), place_pos(c.get_center_dim(!dim)), clock_z1(zval + 0.6*window_vspacing);
 	float const clock_height((digital ? 0.08 : 0.25)*window_vspacing), clock_width((digital ? 4.0 : 1.0)*clock_height), clock_depth(0.08*clock_width);
@@ -195,6 +205,28 @@ void building_t::add_clock_to_cube(cube_t const &c, float zval, unsigned room_id
 	clock.d[dim][!dir] = wall_pos;
 	clock.d[dim][ dir] = wall_pos + (dir ? 1.0 : -1.0)*clock_depth;
 	add_clock(clock, room_id, tot_light_amt, dim, dir, digital);
+}
+
+void building_t::add_nightstand_clock(unsigned nightstand_obj_id, room_object_t const &bed, rand_gen_t &rgen) {
+	vect_room_object_t &objs(interior->room_geom->objs);
+	assert(nightstand_obj_id < objs.size());
+	room_object_t const &ns(objs[nightstand_obj_id]);
+	assert(ns.type == TYPE_NIGHTSTAND);
+	if (ns.flags & RO_FLAG_ADJ_TOP) return; // nightstand already has an object on it
+	vector3d const bed_dir(bed.get_cube_center() - ns.get_cube_center());
+	bool dim(fabs(bed_dir.x) < fabs(bed_dir.y)), dir(bed_dir[dim] > 0.0); // facing the bed
+	if (fabs(bed_dir[dim]) > 1.5*bed.get_length()) {dim = ns.dim; dir = ns.dir;} // too far from the bed, face toward the nightstand open drawers
+	vector2d const ns_sz(ns.get_size_xy());
+	float const clock_width(min(0.11f*get_window_vspace(), 0.8f*ns_sz.get_min_val())), clock_height(0.42*clock_width), clock_depth(0.2*clock_width);
+	float const width_rand(0.4*(ns_sz[!dim] - clock_width)), depth_rand(0.25*(ns_sz[dim] - clock_depth)), dsign(dir ? 1.0 : -1.0);
+	cube_t clock;
+	set_cube_zvals(clock, ns.z2(), (ns.z2() + clock_height));
+	set_wall_width(clock, (ns.get_center_dim(!dim) + width_rand* rgen.signed_rand_float()),          0.5*clock_width, !dim);
+	set_wall_width(clock, (ns.get_center_dim( dim) + depth_rand*(rgen.signed_rand_float() + dsign)), 0.5*clock_depth,  dim); // shift forward
+	add_clock(clock, ns.room_id, ns.light_amt, dim, dir, 1); // digital=1; should we pass in a custom color?
+	objs.back().flags |= (RO_FLAG_ADJ_BOT | RO_FLAG_IS_HOUSE); // flag as being on top of an object so that the back is drawn but not the bottom, and in house
+	set_obj_id(objs); // sets color
+	objs[nightstand_obj_id].flags |= RO_FLAG_ADJ_TOP; // flag this object as having something on it
 }
 
 

@@ -1147,7 +1147,9 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t &bl
 	unsigned const pref_orient(2*bed.dim + (!bed.dir)); // prefer the same orient as the bed so that it's placed on the same wall next to the bed
 	float const ns_height(rgen.rand_uniform(0.24, 0.26)*window_vspacing), ns_depth(rgen.rand_uniform(0.15, 0.2)*window_vspacing), ns_width(rgen.rand_uniform(1.0, 2.0)*ns_depth);
 	vector3d const ns_sz_scale(ns_depth/ns_height, ns_width/ns_height, 1.0);
-	place_obj_along_wall(TYPE_NIGHTSTAND, room, ns_height, ns_sz_scale, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 1, pref_orient); // door clearance
+	unsigned const nightstand_obj_id(objs.size());
+	bool const added_nightstand(place_obj_along_wall(TYPE_NIGHTSTAND, room, ns_height, ns_sz_scale, rgen, zval,
+		room_id, tot_light_amt, place_area, objs_start, 1.0, 1, pref_orient)); // door clearance
 
 	if (placed_closet) { // determine if there's space for the closet doors to fold outward
 		room_object_t &closet(objs[closet_obj_id]);
@@ -1221,6 +1223,8 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t &bl
 			break; // must break here as we've invalidated the iterator i
 		} // for i
 	}
+	if (added_nightstand && is_house && rgen.rand_bool()) {add_nightstand_clock(nightstand_obj_id, bed, rgen);} // maybe add a clock on the nightstand; houses only
+
 	if (min(room_bounds.dx(), room_bounds.dy()) > 2.5*window_vspacing && max(room_bounds.dx(), room_bounds.dy()) > 3.0*window_vspacing) {
 		// large room, try to add a desk and chair as well
 		add_desk_to_room(rgen, room, blockers, chair_color, zval, room_id, tot_light_amt, objs_start, is_basement);
