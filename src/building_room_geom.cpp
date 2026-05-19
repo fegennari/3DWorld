@@ -3927,7 +3927,7 @@ void building_room_geom_t::add_elevator(room_object_t const &c, elevator_t const
 		bool const need_swap(dot_product(normal, cross_product((verts[1].v - verts[0].v), (verts[2].v - verts[1].v))) < 0.0);
 		if (need_swap) {std::reverse(verts.begin(), verts.end());} // swap vertex winding order
 		rgeom_mat_t &cur_mat(is_lit ? get_material(lit_tp, 1) : mat);
-		for (auto i = verts.begin(); i != verts.end(); ++i) {cur_mat.quad_verts.emplace_back(i->v, nc, i->t[0], i->t[1], (is_lit ? lit_cw : cw));}
+		for (auto &v : verts) {cur_mat.quad_verts.emplace_back(v.v, nc, v.t[0], v.t[1], (is_lit ? lit_cw : cw));}
 		// add floor indicator lights and up/down lights outside elevators on each floor
 		float const zval(e.z1() + f*floor_spacing + 0.7*window_vspace);
 		set_cube_zvals(display, (zval - up_down_height), (zval + up_down_height + center_panel_height));
@@ -3938,8 +3938,8 @@ void building_room_geom_t::add_elevator(room_object_t const &c, elevator_t const
 		add_floor_number((cur_floor+1), floor_offset, has_parking_garage, e.in_mall, e.in_backrooms, oss);
 		gen_text_verts(verts, ext_text_pos, oss.str(), 1000.0*ext_text_height, -col_dir, plus_z, 1); // use_quads=1
 		if (need_swap) {std::reverse(verts.begin(), verts.end());} // swap vertex winding order
-		rgeom_mat_t &cur_ext_mat(is_powered ? get_material(lit_tp, 0, 1) : mat); // lit, as long as the elevator is powered
-		for (auto i = verts.begin(); i != verts.end(); ++i) {cur_ext_mat.quad_verts.emplace_back(i->v, nc, i->t[0], i->t[1], (is_powered ? lit_cw : cw));}
+		rgeom_mat_t &cur_ext_mat(is_powered ? get_material(lit_tp, 1) : mat); // lit, as long as the elevator is powered
+		for (auto &v : verts) {cur_ext_mat.quad_verts.emplace_back(v.v, nc, v.t[0], v.t[1], (is_powered ? lit_cw : cw));}
 		
 		// add up/down indicators
 		for (unsigned d = 0; d < 2; ++d) { // {down, up}
@@ -3949,7 +3949,7 @@ void building_room_geom_t::add_elevator(room_object_t const &c, elevator_t const
 			if (need_swap) {std::reverse(verts.begin(), verts.end());} // swap vertex winding order
 			bool const is_lit(bool(d) == e.going_up && e.may_be_moving());
 			rgeom_mat_t &cur_ud_mat(is_lit ? get_material(lit_tp, 1) : mat); // lit, as long as the elevator is powered
-			for (auto i = verts.begin(); i != verts.end(); ++i) {cur_ud_mat.quad_verts.emplace_back(i->v, nc, i->t[0], i->t[1], (is_lit ? lit_cw : cw));}
+			for (auto &v : verts) {cur_ud_mat.quad_verts.emplace_back(v.v, nc, v.t[0], v.t[1], (is_lit ? lit_cw : cw));}
 		} // for d
 	} // for f
 }
