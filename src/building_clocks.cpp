@@ -58,8 +58,8 @@ void add_display_digit(rgeom_mat_t &mat, cube_t const &face, colorRGBA const &on
 	e.d[!dim][!ddir] = f.d[!dim][!ddir] = a.d[!dim][ ddir] = d.d[!dim][ ddir] = g.d[!dim][ ddir] = x2;
 	b.d[!dim][ ddir] = c.d[!dim][ ddir] = a.d[!dim][!ddir] = d.d[!dim][!ddir] = g.d[!dim][!ddir] = x3;
 	cube_t const segs[7] = {a, b, c, d, e, f, g};
-	assert(number <= 9);
-	unsigned const num_to_segs[10] = {0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x6F};
+	assert(number < 16);
+	unsigned const num_to_segs[16] = {0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x6F, 0x77, 0x7C, 0x39, 0x5E, 0x79, 0x71}; // hex
 	unsigned const seg_mask(num_to_segs[number]), skip_faces(get_face_mask(dim, dir));
 
 	for (unsigned n = 0; n < 7; ++n) {
