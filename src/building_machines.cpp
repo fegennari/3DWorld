@@ -733,6 +733,13 @@ bool building_t::add_machines_to_room(rand_gen_t rgen, room_t const &room, float
 	} // for n
 	if (!any_placed) return 0; // no machines
 	// maybe add a ventilation and/or radiator fan on the wall
+	add_wall_fans_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);
+	return 1;
+}
+
+void building_t::add_wall_fans_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, cube_t const &avoid) {
+	float const floor_spacing(get_window_vspace()), wall_thick(get_wall_thickness());
+	cube_t const place_area(get_walkable_room_bounds(room));
 	unsigned const obj_types[2] = {TYPE_VENT_FAN, TYPE_RAD_FAN};
 	unsigned const mod_types[2] = {OBJ_MODEL_VENT_FAN, OBJ_MODEL_RAD_FAN};
 	float    const fan_sizes[2] = {0.5, 0.3}; // height relative to floor spacing
@@ -763,11 +770,10 @@ bool building_t::add_machines_to_room(rand_gen_t rgen, room_t const &room, float
 			space_behind.d[dim][ dir] = wall_pos - dir_sign*0.5*floor_spacing; // extend to other side of wall
 			space_behind.d[dim][!dir] = wall_pos - dir_sign*2.0*wall_thick; // shift to not intersect the room
 			if (interior->cube_in_ext_basement_room(space_behind, 0)) continue; // xy_only=0
-			objs.emplace_back(c, obj_types[M], room_id, dim, !dir, RO_FLAG_INTERIOR, tot_light_amt, SHAPE_CUBE);
+			interior->room_geom->objs.emplace_back(c, obj_types[M], room_id, dim, !dir, RO_FLAG_INTERIOR, tot_light_amt, SHAPE_CUBE);
 			break; // done
 		} // for t
 	} // for M
-	return 1;
 }
 
 bool cube_int_if_nonzero(cube_t const &c, cube_t const &C) {return (!C.is_all_zeros() && c.intersects(C));}
