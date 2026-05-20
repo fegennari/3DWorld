@@ -83,7 +83,7 @@ public:
 	colorRGBA get_avg_color(unsigned id, bool area_weighted=1);
 	bool model_filename_contains(unsigned id, string const &str, string const &str2="") const;
 	bool is_model_valid(unsigned id);
-	void load_model_id(unsigned id);
+	virtual void load_model_id(unsigned id);
 	bool check_anim_wrapped(unsigned model_id, unsigned model_anim_id, float old_time, float new_time);
 	float get_anim_duration(unsigned model_id, unsigned model_anim_id);
 	void draw_model(shader_t &s, vector3d const &pos, cube_t const &obj_bcube, vector3d const &dir, colorRGBA const &color, vector3d const &xlate, unsigned model_id,
@@ -95,7 +95,9 @@ public:
 
 class car_model_loader_t : public city_model_loader_t {
 public:
+	int police_model_id=-1, amb_model_id=-1, bus_model_id=-1;
 	virtual bool has_low_poly_model() {return 1;}
+	virtual void load_model_id(unsigned id);
 	virtual unsigned num_models() const;
 	virtual city_model_t const &get_model(unsigned id) const;
 	virtual city_model_t       &get_model(unsigned id);

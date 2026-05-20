@@ -365,6 +365,14 @@ unsigned car_model_loader_t       ::num_models() const {return city_params.car_m
 unsigned helicopter_model_loader_t::num_models() const {return city_params.hc_model_files .size();}
 unsigned object_model_loader_t    ::num_models() const {return NUM_OBJ_MODELS;}
 
+void car_model_loader_t::load_model_id(unsigned id) {
+	city_model_loader_t::load_model_id(id);
+	string const &fn(get_model(id).fn);
+	// the best we can do is to search for the string 'police' and 'ambulance' in the filename
+	if      (string_find(fn, "Police"   ) || string_find(fn, "police"   )) {police_model_id = id;}
+	else if (string_find(fn, "Ambulance") || string_find(fn, "ambulance")) {amb_model_id    = id;}
+	else if (string_find(fn, "Bus"      ) || string_find(fn, "bus"      )) {bus_model_id    = id;} // not yet used
+}
 city_model_t const &car_model_loader_t::get_model(unsigned id) const {
 	assert(id < num_models());
 	return city_params.car_model_files[id];

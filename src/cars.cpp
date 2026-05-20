@@ -1049,15 +1049,22 @@ void car_manager_t::assign_car_model_size_color(car_t &car, rand_gen_t &local_rg
 	if (num_models > 0) {
 		for (unsigned n = 0; n < 20; ++n) {
 			if (FORCE_MODEL_ID >= 0) {car.model_id = (unsigned char)FORCE_MODEL_ID;}
-			else {car.model_id = ((num_models > 1) ? (local_rgen.rand() % num_models) : 0);}
+			else {
+				// higher chance of some car types per-building, if loaded at this point;
+				// what about cars in city parking lots by these buildings?
+				if      (btype == BTYPE_HOSPITAL && car_model_loader.amb_model_id    >= 0 && local_rgen.rand_float() < 0.1) {car.model_id = car_model_loader.amb_model_id   ;}
+				else if (btype == BTYPE_POLICE   && car_model_loader.police_model_id >= 0 && local_rgen.rand_float() < 0.4) {car.model_id = car_model_loader.police_model_id;}
+				else {car.model_id = ((num_models > 1) ? (local_rgen.rand() % num_models) : 0);}
+			}
 			city_model_t const &model(car_model_loader.get_model(car.model_id));
 			
 			// if there are multiple models to choose from, and this car is in a garage, try for a model that's not scaled up (truck or ambulance) (what about driveways?)
 			if (FORCE_MODEL_ID < 0 && is_in_garage && model.scale > 1.0) {
-				if (btype == BTYPE_HOSPITAL && model.scale <= 1.5) {} // ambulance; allow it, scaled down; can we add a school bus to school parking garages?
+				// future work: can we add a school bus to school parking garages?
+				if (btype == BTYPE_HOSPITAL && car.model_id == car_model_loader.amb_model_id) {} // ambulance; allow it, scaled down
 				else if (num_models > 1 && n+1 < 20) continue; // try a different model
 				// don't scale the model because it may not fit; instead, add a small truck if we can't place a car
-				car.apply_scale(1.2); // that's about all that can fit
+				car.apply_scale(min(1.2f, model.scale)); // that's about all that can fit
 			}
 			else {
 				car.apply_scale(model.scale);
@@ -1079,11 +1086,9 @@ void car_manager_t::assign_car_model_size_color(car_t &car, rand_gen_t &local_rg
 	else                        {car.color_id = fixed_color;} // use this specific fixed color
 
 	if (num_models > 0) { // handle emergency vehicles
-		// the best we can do is to search for the string 'police' and 'ambulance' in the filename
-		string const &fn(car_model_loader.get_model(car.model_id).fn);
-		if      (string_find(fn, "Police"   ) || string_find(fn, "police"   )) {car.is_police    = 1;}
-		else if (string_find(fn, "Ambulance") || string_find(fn, "ambulance")) {car.is_ambulance = 1;}
-		//else if (string_find(fn, "Bus"      ) || string_find(fn, "bus"      )) {car.is_bus       = 1;} // future work
+		if      (car.model_id == car_model_loader.police_model_id) {car.is_police    = 1;}
+		else if (car.model_id == car_model_loader.amb_model_id   ) {car.is_ambulance = 1;}
+		//else if (car.model_id == car_model_loader.bus_model_id      ) {car.is_bus       = 1;} // future work
 		car.is_emergency = is_active_emergency_vehicle(car_model_loader, car, 1, 1); // both lights and siren
 	}
 	assert(car.is_valid());
