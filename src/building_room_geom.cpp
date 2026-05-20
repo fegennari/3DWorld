@@ -44,6 +44,7 @@ tid_nm_pair_t get_scratched_metal_tex(float tscale, bool inc_shadows);
 colorRGBA get_liquid_food_color(rand_gen_t &rgen);
 void add_grid_of_bars(rgeom_mat_t &mat, colorRGBA const &color, cube_t const &c, unsigned num_vbars, unsigned num_hbars, float vbar_hthick,
 	float hbar_hthick, unsigned vdim, unsigned hdim, unsigned adj_dim=0, float h_adj_val=0.0, bool cylin_vbars=0, float tscale=1.0);
+void elevator_floor_to_7seg_digit_pair(string const &str, rgeom_mat_t &mat, cube_t const &face, colorRGBA const &color, bool dim, bool dir, bool ddir);
 // functions in city_terrain.cpp
 template<typename vertex_t> void calc_heightmap_normals(vector<vertex_t> &verts, unsigned nx, unsigned ny, unsigned verts_start=0);
 void calc_heightmap_indices(vector<unsigned> &indices, unsigned nx, unsigned ny, unsigned verts_start=0);

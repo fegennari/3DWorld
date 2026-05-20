@@ -58,8 +58,9 @@ void add_display_digit(rgeom_mat_t &mat, cube_t const &face, colorRGBA const &on
 	e.d[!dim][!ddir] = f.d[!dim][!ddir] = a.d[!dim][ ddir] = d.d[!dim][ ddir] = g.d[!dim][ ddir] = x2;
 	b.d[!dim][ ddir] = c.d[!dim][ ddir] = a.d[!dim][!ddir] = d.d[!dim][!ddir] = g.d[!dim][!ddir] = x3;
 	cube_t const segs[7] = {a, b, c, d, e, f, g};
-	assert(number < 16);
-	unsigned const num_to_segs[16] = {0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x6F, 0x77, 0x7C, 0x39, 0x5E, 0x79, 0x71}; // hex
+	assert(number < 17);
+	//                                  0     1     2     3     4     5     6     7     8     9     A     b     C     d     E     F     p
+	unsigned const num_to_segs[17] = {0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x6F, 0x77, 0x7C, 0x39, 0x5E, 0x79, 0x71, 0x73}; // hex + 'p'
 	unsigned const seg_mask(num_to_segs[number]), skip_faces(get_face_mask(dim, dir));
 
 	for (unsigned n = 0; n < 7; ++n) {
@@ -227,6 +228,35 @@ void building_t::add_nightstand_clock(unsigned nightstand_obj_id, room_object_t 
 	objs.back().flags |= (RO_FLAG_ADJ_BOT | RO_FLAG_IS_HOUSE); // flag as being on top of an object so that the back is drawn but not the bottom, and in house
 	set_obj_id(objs); // sets color
 	objs[nightstand_obj_id].flags |= RO_FLAG_ADJ_TOP; // flag this object as having something on it
+}
+
+// [G], [digit], [digit digit], or [{B, P}, digit]
+void elevator_floor_to_7seg_digit_pair(string const &str, rgeom_mat_t &mat, cube_t const &face, colorRGBA const &color, bool dim, bool dir, bool ddir) {
+	if (str.size() == 1) { // single integer digit
+		char const c(str[0]);
+		unsigned n(0);
+		if      (c >= '0' && c <= '9') {n = (c - '0');} // digit
+		else if (c == 'G' || c == '0') {n = 0;} // ground floor; show as 0?
+		else {assert(0);}
+		add_display_digit(mat, face, color, color, n, dim, dir, ddir); // same on and off color
+	}
+	else if (str.size() == 2) { // double digit or letter + digit
+		char const c1(str[0]), c2(str[1]);
+		assert(c2 >= '0' && c2 <= '9'); // second char must be a digit
+		unsigned n1(0), n2(c2 - '0');
+		if      (c1 >= '0' && c1 <= '9') {n1 = (c1 - '0');} // digit
+		else if (c1 == 'B' || c1 == 'b') {n1 = 11;} // hex 'b' for basement
+		else if (c1 == 'P' || c1 == 'p') {n1 = 16;} // 'p' for parking
+		else {assert(0);}
+		cube_t face1(face), face2(face);
+		// TODO: split face
+		add_display_digit(mat, face1, color, color, n1, dim, dir, ddir); // same on and off color
+		add_display_digit(mat, face2, color, color, n2, dim, dir, ddir); // same on and off color
+	}
+	else {
+		cout << "Wrong number of elevator floor digits: " << str << endl;
+		assert(0);
+	}
 }
 
 
