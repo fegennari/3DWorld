@@ -3829,7 +3829,8 @@ void building_room_geom_t::add_elevator(room_object_t const &c, elevator_t const
 	unsigned floor_offset, float floor_spacing, float window_vspace, bool has_parking_garage, bool is_powered) // dynamic=1
 {
 	// elevator car, all materials are dynamic; no lighting scale
-	float const dz(c.dz()), thickness(fc_thick_scale*dz), dir_sign(c.dir ? 1.0 : -1.0), signed_thickness(dir_sign*thickness);
+	bool const dim(c.dim), dir(c.dir), ldir(dim ^ dir);
+	float const dz(c.dz()), thickness(fc_thick_scale*dz), dir_sign(dir ? 1.0 : -1.0), signed_thickness(dir_sign*thickness);
 	float const z2_offset(get_elevator_z2_offset(e, c, fc_thick_scale));
 	cube_t car(c);
 	min_eq(car.z2(), (e.z2() - z2_offset)); // prevent z-fighting when on the top floor of a building with a flat roof
@@ -3839,31 +3840,31 @@ void building_room_geom_t::add_elevator(room_object_t const &c, elevator_t const
 	min_eq(ceil_.z1(), min((ceil_.z2() - 0.05f*thickness), (e.z2() - 1.04f*thickness))); // make sure it's normalized and below the top floor ceiling
 	floor_.expand_by_xy(-0.5f*thickness);
 	ceil_ .expand_by_xy(-0.5f*thickness);
-	back.d[c.dim][c.dir] = c.d[c.dim][!c.dir] + signed_thickness;
+	back.d[dim][dir] = c.d[dim][!dir] + signed_thickness;
 	point const tex_origin(c.get_llc());
-	unsigned const front_face_mask(get_face_mask(c.dim, c.dir)), back_face_mask(get_face_mask(c.dim, !c.dir));
+	unsigned const front_face_mask(get_face_mask(dim, dir)), back_face_mask(get_face_mask(dim, !dir));
 	unsigned const floor_ceil_face_mask(front_face_mask & (EF_X12 | EF_Y12)); // +Z faces
 	tid_nm_pair_t paneling(get_tex_auto_nm(PANELING_TEX, 2.0f*tscale));
 	paneling.set_specular(0.1, 50.0);
 	get_material(get_tex_auto_nm(TILE_TEX,             tscale), 1).add_cube_to_verts(floor_, WHITE, tex_origin, floor_ceil_face_mask); // floor
 	get_material(get_tex_auto_nm(get_rect_panel_tid(), tscale), 1).add_cube_to_verts(ceil_,  WHITE, tex_origin, floor_ceil_face_mask); // ceiling
 	rgeom_mat_t &paneling_mat(get_material(paneling, 1));
-	paneling_mat.add_cube_to_verts(back, WHITE, tex_origin, front_face_mask, !c.dim);
-	float const width(c.get_width()), frame_width(ELEVATOR_FRAME_WIDTH*width), spacing(0.02*width), front_face(c.d[c.dim][c.dir] - signed_thickness);
+	paneling_mat.add_cube_to_verts(back, WHITE, tex_origin, front_face_mask, !dim);
+	float const width(c.get_width()), frame_width(ELEVATOR_FRAME_WIDTH*width), spacing(0.02*width), front_face(c.d[dim][dir] - signed_thickness);
 	cube_t front(car);
-	front.d[c.dim][ c.dir] -= (c.dir ? 1.0 : -1.0)*spacing; // slight gap with elevator doors
-	front.d[c.dim][!c.dir]  = front_face;
+	front.d[dim][ dir] -= (dir ? 1.0 : -1.0)*spacing; // slight gap with elevator doors
+	front.d[dim][!dir]  = front_face;
 
 	for (unsigned d = 0; d < 2; ++d) {
 		// side walls
-		unsigned const side_skip_faces(get_face_mask(!c.dim, !d));
+		unsigned const side_skip_faces(get_face_mask(!dim, !d));
 		cube_t side(car);
-		side.d[!c.dim][!d] = c.d[!c.dim][d] + (d ? -1.0 : 1.0)*thickness;
-		paneling_mat.add_cube_to_verts(side,  WHITE, tex_origin, side_skip_faces, c.dim);
+		side.d[!dim][!d] = c.d[!dim][d] + (d ? -1.0 : 1.0)*thickness;
+		paneling_mat.add_cube_to_verts(side,  WHITE, tex_origin, side_skip_faces, dim);
 		// front sides of doors
-		front.d[!c.dim][ d] = side.d[!c.dim][!d];
-		front.d[!c.dim][!d] = c   .d[!c.dim][ d] + (d ? -1.0 : 1.0)*frame_width;
-		paneling_mat.add_cube_to_verts(front, WHITE, tex_origin, (back_face_mask & side_skip_faces), !c.dim); // draw front and inside side
+		front.d[!dim][ d] = side.d[!dim][!d];
+		front.d[!dim][!d] = c   .d[!dim][ d] + (d ? -1.0 : 1.0)*frame_width;
+		paneling_mat.add_cube_to_verts(front, WHITE, tex_origin, (back_face_mask & side_skip_faces), !dim); // draw front and inside side
 	}
 	// add button panel
 	cube_t const panel(get_elevator_car_panel(c, fc_thick_scale));
@@ -3875,52 +3876,48 @@ void building_room_geom_t::add_elevator(room_object_t const &c, elevator_t const
 	assert(e.in_mall || e.in_backrooms || num_floors >= floor_offset); // no sub-basement only elevators, except for underground malls and backrooms
 	bool const use_small_text(floor_offset > 1 || (int(num_floors) - int(floor_offset)) >= 20); // need more space for two non-1 digits (B2 | 20)
 	float const button_spacing(panel.dz()/(num_floors + 1)); // add extra spacing on bottom and top of panel
-	float const panel_width(panel.get_sz_dim(!c.dim));
-	float const inner_button_radius(min(0.6f*thickness, min(0.35f*button_spacing, 0.25f*panel.get_sz_dim(!c.dim)))); // approx match to elevator
+	float const panel_width(panel.get_sz_dim(!dim));
+	float const inner_button_radius(min(0.6f*thickness, min(0.35f*button_spacing, 0.25f*panel.get_sz_dim(!dim)))); // approx match to elevator
 	float text_height(min(0.5f*panel_width, 0.8f*button_spacing));
-	bool const ldir(c.dim ^ c.dir);
 	point text_pos;
-	text_pos[ c.dim] = panel.d[c.dim][!c.dir] - 0.01*signed_thickness; // slightly in front of the panel
-	text_pos[!c.dim] = max((panel.d[!c.dim][0] + 0.05f*panel_width), (panel.get_center_dim(!c.dim) - (1.5f*inner_button_radius + text_height))) +
+	text_pos[ dim] = panel.d[dim][!dir] - 0.01*signed_thickness; // slightly in front of the panel
+	text_pos[!dim] = max((panel.d[!dim][0] + 0.05f*panel_width), (panel.get_center_dim(!dim) - (1.5f*inner_button_radius + text_height))) +
 		0.6f*ldir*text_height; // shift by approx width of font character(s) because we're aligning to the right side rather than the left
 	vector3d col_dir, normal;
-	col_dir[!c.dim] = (ldir ? -1.0 : 1.0);
-	normal [ c.dim] = -dir_sign; // opposite dir from front of elevator
+	col_dir[!dim] = (ldir ? -1.0 : 1.0);
+	normal [ dim] = -dir_sign; // opposite dir from front of elevator
 	static vector<vert_tc_t> verts;
 	static ostringstream oss; // reused across buttons
 	tid_nm_pair_t tp(get_small_font_tex()), lit_tp(tp); // unshadowed
-	lit_tp.emissive = 1.0;
-	get_material(lit_tp, 1); // make sure it's allocated
+	tid_nm_pair_t digits_tp(-1); // untextured
+	lit_tp   .emissive = 1.0;
+	digits_tp.emissive = 1.0;
+	get_material(lit_tp,    1); // make sure it's allocated
+	get_material(digits_tp, 1); // make sure it's allocated
 	rgeom_mat_t &mat(get_material(tp, 1)); // unshadowed, dynamic=1
-	color_wrapper const cw(BLACK), lit_cw(colorRGBA(1.0, 0.9, 0.5));
+	colorRGBA const lit_color(1.0, 0.9, 0.5);
+	color_wrapper const cw(BLACK), lit_cw(lit_color);
 	norm_comp const nc(normal);
 	if (use_small_text) {text_height *= 0.67;} // shrink text if there are two wide digits, but leave text alignment unchanged
 	// setup for exterior floor display
-	float const ext_text_height(0.5f*panel_width), center_panel_height(0.7*panel_width), up_down_height(0.4f*panel_width), up_down_text_height(0.6f*panel_width);
+	float const center_panel_height(0.7*panel_width), up_down_height(0.4f*panel_width), up_down_text_height(0.6f*panel_width);
 	cube_t display(panel);
-	display.expand_in_dim(!c.dim, -0.2*panel_width);
-	display.d[c.dim][0] = display.d[c.dim][1] = c.d[c.dim][c.dir]; // front face of elevator ext wall
-	display.d[c.dim][c.dir] += (c.dir ? 1.0 : -1.0)*0.01*panel_width;
+	display.expand_in_dim(!dim, -0.2*panel_width);
+	display.d[dim][0  ]  = display.d[dim][1] = c.d[dim][dir]; // front face of elevator ext wall
+	display.d[dim][dir] += (dir ? 1.0 : -1.0)*0.01*panel_width;
 	point ext_text_pos;
-	ext_text_pos[ c.dim] = display.d[ c.dim][c.dir] + 0.01*signed_thickness; // slightly in front of the display
-	ext_text_pos[!c.dim] = display.d[!c.dim][0] + 0.1*panel_width; // starting point of the text
+	ext_text_pos[ dim] = display.d[ dim][dir] + 0.01*signed_thickness; // slightly in front of the display
+	ext_text_pos[!dim] = display.d[!dim][0  ] + 0.10*panel_width; // starting point of the text
 	point up_down_pos(ext_text_pos);
-	
-	if (!ldir) { // mirror pos to the other side if needed
-		bool const two_digits(num_floors > 9 || floor_offset > 0); // double digits or basement/parking garage
-		ext_text_pos[!c.dim] += (two_digits ? 0.77f : 0.6f)*ext_text_height;
-		up_down_pos [!c.dim] -= 0.15f*up_down_text_height;
-	}
-	else {
-		up_down_pos [!c.dim] += 0.8f*up_down_text_height;
-	}
+	if (!ldir) {up_down_pos[!dim] -= 0.15*up_down_text_height;} // mirror pos to the other side if needed
+	else       {up_down_pos[!dim] += 0.80*up_down_text_height;}
 	float cur_z(panel.z1() + button_spacing - 0.5*text_height);
 
 	for (unsigned f = 0; f < num_floors; ++f) { // Note: floor number starts at 1 even if the elevator doesn't extend to the ground floor
 		if (e.skip_floor_ix(f)) continue; // also skips cur_z update to avoid a gap in the buttons, but there's still a gap in the floor numbers
 		bool const is_lit(is_powered && f == cur_floor);
 		text_pos.z = cur_z;
-		cur_z += button_spacing;
+		cur_z     += button_spacing;
 		verts.clear();
 		add_floor_number((f+1), floor_offset, has_parking_garage, e.in_mall, e.in_backrooms, oss);
 		gen_text_verts(verts, text_pos, oss.str(), 1000.0*text_height, col_dir, plus_z, 1); // use_quads=1
@@ -3932,19 +3929,21 @@ void building_room_geom_t::add_elevator(room_object_t const &c, elevator_t const
 		// add floor indicator lights and up/down lights outside elevators on each floor
 		float const zval(e.z1() + f*floor_spacing + 0.7*window_vspace);
 		set_cube_zvals(display, (zval - up_down_height), (zval + up_down_height + center_panel_height));
-		get_untextured_material(0, 1).add_cube_to_verts_untextured(display, DK_GRAY, ~back_face_mask); // exterior display panel
+		get_untextured_material(0, 1).add_cube_to_verts_untextured(display, DK_GRAY, ~back_face_mask); // exterior display panel; metal doesn't blend correctly with text
 		// add floor text
-		ext_text_pos.z = zval + 0.1*panel_width;
-		verts.clear();
 		add_floor_number((cur_floor+1), floor_offset, has_parking_garage, e.in_mall, e.in_backrooms, oss);
-		gen_text_verts(verts, ext_text_pos, oss.str(), 1000.0*ext_text_height, -col_dir, plus_z, 1); // use_quads=1
-		if (need_swap) {std::reverse(verts.begin(), verts.end());} // swap vertex winding order
-		rgeom_mat_t &cur_ext_mat(is_powered ? get_material(lit_tp, 1) : mat); // lit, as long as the elevator is powered
-		for (auto &v : verts) {cur_ext_mat.quad_verts.emplace_back(v.v, nc, v.t[0], v.t[1], (is_powered ? lit_cw : cw));}
+		bool const two_digits(num_floors > 9 || (floor_offset > 0 && !e.in_mall)); // double digits or basement/parking garage
+		string str(oss.str());
+		if (two_digits && str.size() == 1) {str = " " + str;} // add a leading space to make it two digits
+		cube_t text_area(display);
+		set_cube_zvals(text_area, (zval + 0.15*center_panel_height), (zval + 0.75*center_panel_height));
+		text_area.expand_in_dim(!dim, -(two_digits ? 0.08 : 0.16)*panel_width); // shrink width
+		text_area.d[dim][dir] += 0.01*signed_thickness; // translate slightly in front of panel
+		elevator_floor_to_7seg_digit_pair(str, get_material(digits_tp, 1), text_area, (is_powered ? lit_color : BLACK), dim, dir, !ldir);
 		
 		// add up/down indicators
 		for (unsigned d = 0; d < 2; ++d) { // {down, up}
-			up_down_pos.z = zval + (d ? center_panel_height : -0.75*up_down_height);
+			up_down_pos.z = zval + (d ? center_panel_height+0.1*up_down_height : -0.75*up_down_height);
 			verts.clear();
 			gen_text_verts(verts, up_down_pos, (d ? ">" : "<"), 1000.0*up_down_text_height, plus_z, col_dir, 1); // R90, use_quads=1
 			if (need_swap) {std::reverse(verts.begin(), verts.end());} // swap vertex winding order
@@ -4120,7 +4119,7 @@ void building_room_geom_t::add_escalator(escalator_t const &e, float floor_spaci
 }
 
 void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
-	bool const is_on(c.is_light_on()), on_but_dim(is_on && c.light_is_out());
+	bool const dim(c.dim), dir(c.dir), is_on(c.is_light_on()), on_but_dim(is_on && c.light_is_out());
 	bool const missing_cover(c.flags & RO_FLAG_ADJ_BOT), hanging(c.flags & RO_FLAG_ROTATING);
 	tid_nm_pair_t tp(((is_on || missing_cover || c.shape == SHAPE_SPHERE) ? (int)WHITE_TEX : (int)PLASTER_TEX), tscale); // no shadows
 	tp.emissive = (is_on ? 1.0 : 0.0);
@@ -4129,16 +4128,16 @@ void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
 
 	if (c.flags & RO_FLAG_ADJ_HI) { // wall light
 		if (c.shape == SHAPE_CUBE) {
-			mat.add_cube_to_verts(c, color, c.get_llc(), ~get_face_mask(c.dim, !c.dir)); // skip face against the wall
+			mat.add_cube_to_verts(c, color, c.get_llc(), ~get_face_mask(dim, !dir)); // skip face against the wall
 		}
 		else { // cylinder
 			assert(c.shape == SHAPE_CYLIN);
-			mat.add_ortho_cylin_to_verts(c, color, c.dim, !c.dir, c.dir); // draw top but not bottom
+			mat.add_ortho_cylin_to_verts(c, color, dim, !dir, dir); // draw top but not bottom
 		}
 	}
 	else if (c.shape == SHAPE_CUBE) {
 		if (missing_cover) {
-			float const height(c.dz()), width(c.get_width()), length(c.get_length()), frame_thick(0.16*height), center(c.get_center_dim(!c.dim));
+			float const height(c.dz()), width(c.get_width()), length(c.get_length()), frame_thick(0.16*height), center(c.get_center_dim(!dim));
 			cube_t frame(c), ends[4], caps[4];
 			frame.z1() = c.z2() - frame_thick;
 
@@ -4146,19 +4145,19 @@ void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
 				cube_t tube(c);
 				tube.z2()  = frame.z1();
 				tube.z1() += 0.5*frame_thick;
-				tube.expand_in_dim(c.dim, -0.1*length); // shorten
-				set_wall_width(tube, (center + (d ? 1.0 : -1.0)*0.15*width), 0.5*tube.dz(), !c.dim);
+				tube.expand_in_dim(dim, -0.1*length); // shorten
+				set_wall_width(tube, (center + (d ? 1.0 : -1.0)*0.15*width), 0.5*tube.dz(), !dim);
 
 				for (unsigned e = 0; e < 2; ++e) { // determine ends
 					float const shift((e ? -1.0 : 1.0)*0.025*length);
 					cube_t &end(ends[2*d + e]), &cap(caps[2*d + e]);
 					end = tube;
-					end.d[c.dim][!e] = tube.d[c.dim][e] = tube.d[c.dim][e] + shift;
+					end.d[dim][!e] = tube.d[dim][e] = tube.d[dim][e] + shift;
 					cap = end;
-					cap.expand_in_dim(!c.dim, -0.2*end.get_sz_dim(!c.dim));
-					cap.translate_dim(c.dim, -shift);
+					cap.expand_in_dim(!dim, -0.2*end.get_sz_dim(!dim));
+					cap.translate_dim(dim, -shift);
 				}
-				mat.add_ortho_cylin_to_verts(tube, color, c.dim, 0, 0); // no ends
+				mat.add_ortho_cylin_to_verts(tube, color, dim, 0, 0); // no ends
 			} // for d
 			// draw the ends
 			tid_nm_pair_t tex(-1, 1.0f, 0); // unshadowed
@@ -4166,7 +4165,7 @@ void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
 
 			for (unsigned d = 0; d < 2; ++d) {
 				for (unsigned e = 0; e < 2; ++e) {
-					untex_mat.add_ortho_cylin_to_verts    (ends[2*d + e], colorRGBA(0.0, 0.35, 0.0), c.dim, !e, e); // dark green
+					untex_mat.add_ortho_cylin_to_verts    (ends[2*d + e], colorRGBA(0.0, 0.35, 0.0), dim, !e, e); // dark green
 					untex_mat.add_cube_to_verts_untextured(caps[2*d + e], WHITE, EF_Z2); // skip top face
 				}
 			}
@@ -4178,11 +4177,11 @@ void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
 				cube_t ref(c); // reflector
 				ref.z2()  = frame.z1();
 				ref.z1() -= 0.2*height;
-				ref.expand_in_dim(c.dim, -0.02*length); // shorten slightly
-				set_wall_width(ref, (center + (d ? 1.0 : -1.0)*0.25*width), 0.005*width, !c.dim);
+				ref.expand_in_dim(dim, -0.02*length); // shorten slightly
+				set_wall_width(ref, (center + (d ? 1.0 : -1.0)*0.25*width), 0.005*width, !dim);
 				unsigned const verts_start(ref_mat.quad_verts.size());
 				ref_mat.add_cube_to_verts_untextured(ref, LT_GRAY, EF_Z2);
-				rotate_verts(ref_mat.quad_verts, vector_from_dim_dir(c.dim, (bool(d) ^ c.dim ^ 1)), 0.33*PI, cube_top_center(ref), verts_start);
+				rotate_verts(ref_mat.quad_verts, vector_from_dim_dir(dim, (bool(d) ^ dim ^ 1)), 0.33*PI, cube_top_center(ref), verts_start);
 			} // for d
 			// draw the frame; can't resize the frame in XY because it must meet the top part above the ceiling
 			tex.set_specular(0.8, 60.0, 0.5); // partially reflective (same as metal bar)
@@ -4193,11 +4192,11 @@ void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
 			cube_t light(c);
 			light.z2() -= 0.08*length; // subtract off frame thickness
 			cube_t back(light);
-			light.d[c.dim][!c.dir] = back.d[c.dim][c.dir] = c.d[c.dim][c.dir] + (c.dir ? -1.0 : 1.0)*0.92*length;
-			mat.add_cube_to_verts(light, color, c.get_llc(), (EF_Z2 | ~get_face_mask(c.dim, !c.dir)));
+			light.d[dim][!dir] = back.d[dim][dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*0.92*length;
+			mat.add_cube_to_verts(light, color, c.get_llc(), (EF_Z2 | ~get_face_mask(dim, !dir)));
 			tid_nm_pair_t tex(-1, 1.0f, 0);
 			tex.set_specular(0.8, 60.0, 0.5); // partially reflective (same as metal bar)
-			mats_lights.get_material(tex).add_cube_to_verts_untextured(back, LT_GRAY, (EF_Z2 | ~get_face_mask(c.dim, c.dir))); // unshadowed
+			mats_lights.get_material(tex).add_cube_to_verts_untextured(back, LT_GRAY, (EF_Z2 | ~get_face_mask(dim, dir))); // unshadowed
 		}
 		else {mat.add_cube_to_verts(c, color, c.get_llc(), EF_Z2);} // sometimes textured, skip top face
 	}
