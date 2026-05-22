@@ -2226,7 +2226,7 @@ void building_t::get_basement_ext_wall_verts(building_draw_t &bdraw) const {
 }
 
 void set_skip_faces_for_nearby_cube_edge(cube_t const &c, cube_t const &C, float dist, bool dim, unsigned &dim_mask) {
-	for (unsigned dir = 0; dir < 2; ++dir) { // skip faces along the edges of the building bcube or along an extended basement exterior facing wall
+	for (unsigned dir = 0; dir < 2; ++dir) { // skip faces along the edges of the building bcube, along an extended basement exterior facing wall, or inside a room
 		if (fabs(c.d[dim][dir] - C.d[dim][dir]) < dist) {dim_mask |= (1<<(2*dim+dir+3));}
 	}
 }
@@ -2304,7 +2304,6 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 		vect_cube_t const &wv(interior->walls[dim]);
 
 		for (auto i = wv.begin(); i != wv.end(); ++i) {
-			//unsigned const dim_mask(1 << dim); // doesn't work with office building hallway intersection corners and door frame shadows
 			unsigned dim_mask(3); // XY
 			set_skip_faces_for_nearby_cube_edge(*i, bcube, wall_thickness, !dim, dim_mask); // easy case: skip faces along the edges of the building bcube
 			bool const in_basement(i->z1() < ground_floor_z1), in_ext_basement(in_basement && i >= (wv.begin() + interior->extb_walls_start[dim]));
@@ -2314,25 +2313,35 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 			// skip for above ground complex floorplans because they may have unexpected wall ends visible at non-rectangular rooms;
 			// skip prisons except for extended basements because cell walls end at hallways
 			if ((!has_complex_floorplan || in_basement) && (!is_prison() || in_ext_basement)) {
-				unsigned const extb_room_start((interior->ext_basement_hallway_room_id >= 0) ? interior->ext_basement_hallway_room_id : interior->rooms.size());
-				unsigned const rooms_start(in_ext_basement ? extb_room_start : 0);
-				unsigned const rooms_end  (in_ext_basement ? interior->rooms.size() : extb_room_start);
-			
-				for (auto r = interior->rooms.begin()+rooms_start; r != interior->rooms.begin()+rooms_end; ++r) {
-					if (!r->intersects(*i)) continue; // wall doesn't intersect this room
-					// office hallways can have outside corners, and we need to draw the walls there
-					if (!is_house && has_pri_hall() && !in_basement && r->is_hallway) {dim_mask = 3; break;} // force all 4 sides
-					set_skip_faces_for_nearby_cube_edge(*i, *r, wall_thickness, !dim, dim_mask); // wall ends
+				bool was_clipped(0);
 
-					// ext basement rooms don't need to have their exterior wall surfaces drawn, but only valid for walls not shared between hallways and connected rooms
-					if (in_ext_basement && !has_mall()) { // also, skip for malls, because this doesn't work with store separators
-						if (fabs(i->d[!dim][0] - r->d[!dim][0]) < extb_wall_thresh && fabs(i->d[!dim][1] - r->d[!dim][1]) < extb_wall_thresh) {
-							// use slightly more than half wall_thickness here so that we pick up the edges of the current room but not nearby adjacent rooms;
-							// see building_t::is_basement_room_placement_valid() wall_expand_toler
-							set_skip_faces_for_nearby_cube_edge(*i, *r, 0.6*wall_thickness, dim, dim_mask); // wall side edges
+				if (has_clipped_wall) { // check if wall was created by clipping + joining stairs or elevators; ends may be visible even if interior to a room
+					cube_t wall_exp(*i);
+					wall_exp.expand_by_xy(0.5*wall_thickness);
+					was_clipped |= (bool(has_clipped_wall & 1) && has_bcube_int(wall_exp, interior->stairwells)); // wall clipped by stairs
+					was_clipped |= (bool(has_clipped_wall & 2) && has_bcube_int(wall_exp, interior->elevators )); // wall clipped by elevator
+				}
+				if (!was_clipped) {
+					unsigned const extb_room_start((interior->ext_basement_hallway_room_id >= 0) ? interior->ext_basement_hallway_room_id : interior->rooms.size());
+					unsigned const rooms_start(in_ext_basement ? extb_room_start : 0);
+					unsigned const rooms_end  (in_ext_basement ? interior->rooms.size() : extb_room_start);
+			
+					for (auto r = interior->rooms.begin()+rooms_start; r != interior->rooms.begin()+rooms_end; ++r) {
+						if (!r->intersects(*i)) continue; // wall doesn't intersect this room
+						// office hallways can have outside corners, and we need to draw the walls there
+						if (!is_house && has_pri_hall() && !in_basement && r->is_hallway) {dim_mask = 3; break;} // force all 4 sides
+						set_skip_faces_for_nearby_cube_edge(*i, *r, wall_thickness, !dim, dim_mask); // wall ends
+
+						// ext basement rooms don't need to have their exterior wall surfaces drawn, but only valid for walls not shared between hallways and connected rooms
+						if (in_ext_basement && !has_mall()) { // also, skip for malls, because this doesn't work with store separators
+							if (fabs(i->d[!dim][0] - r->d[!dim][0]) < extb_wall_thresh && fabs(i->d[!dim][1] - r->d[!dim][1]) < extb_wall_thresh) {
+								// use slightly more than half wall_thickness here so that we pick up the edges of the current room but not nearby adjacent rooms;
+								// see building_t::is_basement_room_placement_valid() wall_expand_toler
+								set_skip_faces_for_nearby_cube_edge(*i, *r, 0.6*wall_thickness, dim, dim_mask); // wall side edges
+							}
 						}
-					}
-				} // for r
+					} // for r
+				}
 			}
 			if (is_cube() && !in_basement && dim_mask != (1U << dim)) { // disable interior walls at building exteriors for cube buildings if we still have ends enabled
 				for (auto p = parts.begin(); p != parts_end; ++p) {
