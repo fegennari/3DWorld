@@ -2014,6 +2014,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			if (player_in_building_or_doorway) { // increase culling distance for player building
 				if (has_pri_hall && building.pri_hall.contains_pt(obj_center)) {cull_dist *= 10.0;} // primary hallway objects visible down a long hallway
 				else if (type == TYPE_FIRE_EXT || type == TYPE_PADLOCK)        {cull_dist *= 3.0 ;} // padlocks are small but can be seen from far away
+				else if (type == TYPE_CUP && building.is_restaurant())         {cull_dist *= 2.0 ;} // increase distance for cups in restaurants
 				else if (building.check_pt_in_retail_room(obj_center))         {cull_dist *= 2.5 ;} // increased culling distance for retail areas
 				else if (building.point_in_mall          (obj_center))         {cull_dist *= ((type == TYPE_HANGER) ? 1.2 : 2.0);} // increase dist for malls; less for hangers
 			}
