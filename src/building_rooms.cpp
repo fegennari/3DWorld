@@ -3282,7 +3282,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 	// add floor signs for U-shaped stairs
 	for (auto i = interior->landings.begin(); i != interior->landings.end(); ++i) {
 		if (i->for_elevator || i->for_ramp || !i->is_u_shape()) continue; // not U-shaped stairs, or no exit
-		bool const add_top_landing_sign(i->is_at_top && !i->roof_access);
+		bool const add_top_landing_sign(i->is_at_top && !i->roof_access), dim(i->dim), dir(i->dir);
 		if (i->not_an_exit && !add_top_landing_sign) continue; // no signs needed
 		// stacked conn stairs start at floor 0 but are really the top floor of the part below; i->floor is not a global index and can't be used
 		float const floor_z1((i->in_mall ? interior->basement_ext_bcube : bcube).z1());
@@ -3291,17 +3291,17 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		unsigned const real_floor(round_fp((i->z1() - floor_z1)/floor_spacing + (i->in_mall ? 0.5 : 0.0))); // mall back hallway landings start at odd floors
 		unsigned flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING);
 		point center;
-		center[ i->dim] = i->d[i->dim][!i->dir]; // front of stairs
-		center[!i->dim] = i->get_center_dim(!i->dim);
-		if (has_parking_garage && i->z1() < ground_floor_z1) {center[!i->dim] += 0.25*i->get_sz_dim(!i->dim);} // shift to the side for parking garages to avoid center beams
+		center[ dim] = i->d[dim][!dir]; // front of stairs
+		center[!dim] = i->get_center_dim(!dim);
+		if (has_parking_garage && i->z1() < ground_floor_z1) {center[!dim] += 0.25*i->get_sz_dim(!dim);} // shift to the side for parking garages to avoid center beams
 		center.z = i->z1();
 		cube_t sign(center);
-		sign.d[i->dim][!i->dir] += (i->dir ? -1.0 : 1.0)*0.25*wall_thickness; // set sign thickness
-		sign.expand_in_dim(!i->dim, stairs_sign_width); // set sign width
+		sign.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.25*wall_thickness; // set sign thickness
+		sign.expand_in_dim(!dim, stairs_sign_width); // set sign width
 		sign.z1() -= 2.5*wall_thickness; // set sign height
 
 		if (!i->not_an_exit) {
-			objs.emplace_back(sign, TYPE_SIGN, 0, i->dim, !i->dir, flags, 1.0, SHAPE_CUBE, DK_BLUE); // no room_id
+			objs.emplace_back(sign, TYPE_SIGN, 0, dim, !dir, flags, 1.0, SHAPE_CUBE, DK_BLUE); // no room_id
 			set_floor_text_for_sign(objs.back(), real_floor, floor_offset, has_parking_garage, i->in_mall, i->in_backrooms, oss);
 		}
 		// if this is the top landing, we need to add a floor sign on the ceiling above it for the top floor
@@ -3309,10 +3309,17 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			sign.translate_dim(2, window_vspacing); // move up one floor
 
 			if (check_skylight_intersection(sign)) { // check for sklight and move sign to the side
-				sign.translate_dim(!i->dim, 0.5*(i->get_width() - stairs_sign_width)); // translate to the positive side
-				flags |= RO_FLAG_ADJ_TOP; // dra the top surface
+				sign.translate_dim(!dim, 0.5*(i->get_width() - stairs_sign_width)); // translate to the positive side
+				flags |= RO_FLAG_ADJ_TOP; // draw the top surface
 			}
-			objs.emplace_back(sign, TYPE_SIGN, 0, i->dim, !i->dir, flags, 1.0, SHAPE_CUBE, DK_BLUE); // no room_id
+			else { // check for ceiling light intersection
+				for (room_object_t const &o : objs) {
+					if (o.type != TYPE_LIGHT || !o.intersects(sign)) continue;
+					bool const tdir(o.get_center_dim(!dim) < center[!dim]);
+					sign.translate_dim(!dim, 1.1*(o.d[!dim][tdir] - sign.d[!dim][!tdir])); // translate to the nearest side of the light
+				}
+			}
+			objs.emplace_back(sign, TYPE_SIGN, 0, dim, !dir, flags, 1.0, SHAPE_CUBE, DK_BLUE); // no room_id
 			set_floor_text_for_sign(objs.back(), (real_floor + 1), floor_offset, has_parking_garage, i->in_mall, i->in_backrooms, oss);
 		}
 	} // for i
