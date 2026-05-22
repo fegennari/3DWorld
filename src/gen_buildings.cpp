@@ -2895,10 +2895,9 @@ void building_t::cut_holes_for_ext_doors(building_draw_t &bdraw, point const &co
 	} // for d
 }
 
-bool building_t::get_nearby_ext_door_verts(building_draw_t *bdraw, shader_t &s, point const &pos, vector3d const &view_dir, float dist, bool update_state, bool only_open) {
+bool building_t::get_nearby_ext_door_verts(building_draw_t *bdraw, shader_t &s, point const &pos, vector3d const &view_dir, float dist, bool only_open) {
 	tquad_with_ix_t door;
 	int const door_ix(find_ext_door_close_to_point(door, pos, dist));
-	if (update_state) {register_open_ext_door_state(door_ix);}
 	if (door_ix < 0) return 0; // no nearby door
 	move_door_to_other_side_of_wall(door, -1.01, 0); // move a bit further away from the outside of the building to make it in front of the orig door
 	clip_door_to_interior(door);
@@ -2932,7 +2931,7 @@ void building_t::get_ext_door_verts(building_draw_t &bdraw, point const &viewer,
 bool building_t::get_all_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, vector<point> const &pts, float dist) { // for pedestrians
 	for (auto const &p : pts) {
 		// we currently only support drawing one open door, so stop when we find one; future work is to use a bit mask to keep track of which doors are open
-		if (get_nearby_ext_door_verts(&bdraw, s, p, zero_vector, dist, 0, 1)) return 1; // no view_dir, update_state=0, only_open=1
+		if (get_nearby_ext_door_verts(&bdraw, s, p, zero_vector, dist, 1)) return 1; // no view_dir, only_open=1
 	}
 	return 0;
 }
@@ -3878,7 +3877,7 @@ public:
 							if (b.get_basement().contains_pt(lpos)) {ext_two_sided = 1;} // draw back sides of basement walls to block light from basement to ext basement
 						}
 						if (camera_in_this_building && b.has_house_floorplan()) { // check for shadows from open exterior doors that open inward
-							b.get_nearby_ext_door_verts(nullptr, s, pre_smap_player_pos, cview_dir, get_door_open_dist(), 0, 1); // no door_draw, update_state=0, only_open=1
+							b.get_nearby_ext_door_verts(nullptr, s, pre_smap_player_pos, cview_dir, get_door_open_dist(), 1); // no door_draw, only_open=1
 						}
 						b.draw_cars_in_building(s, xlate, 1, 1); // player_in_this_building=1, shadow_only=1
 						is_house |= b.is_house;
@@ -4280,7 +4279,7 @@ public:
 							else if ((display_mode & 0x08) && !player_in_building_bcube && b.is_entire_building_occluded(camera_bs, oc)) continue; // check occlusion
 						}
 						bool const camera_not_near_building(!camera_near_building && !ext_basement_conn_visible);
-						if (camera_not_near_building && !reflection_pass) {b.player_not_near_building();}
+						if (!reflection_pass) {b.register_open_ext_door_state(!camera_not_near_building, camera_bs, door_open_dist);} // for door handle draw and doorbell sound
 						// draw interior detail objects if player is in the building (inc ext basement), even if far from the building center
 						unsigned inc_small(bdist_sq < ddist_scale*rgeom_sm_draw_dist_sq || mall_elevator_visible);
 						if      (cant_see_inside)                                    {inc_small = 4;} // only exterior detail objects
@@ -4340,7 +4339,7 @@ public:
 						if (camera_not_near_building) continue; // camera not near building or ext basement conn
 						if (ref_pass_interior)        continue; // interior room, don't need to draw windows and exterior doors
 						// and draw opened door; update_state if not ref pass
-						bool const had_open_door(b.get_nearby_ext_door_verts(&ext_door_draw, s, camera_bs, cview_dir, door_open_dist, !reflection_pass, 0)); // only_open=0
+						bool const had_open_door(b.get_nearby_ext_door_verts(&ext_door_draw, s, camera_bs, cview_dir, door_open_dist, 0)); // only_open=0
 						bool const camera_in_this_building(b.check_point_or_cylin_contained(camera_bs, 0.0, points, 1, 1, 1)); // inc_attic=1, inc_ext_basement=1, inc_roof_acc=1
 						bool const player_in_bldg_bc_or_door(player_in_building_bcube || had_open_door);
 						

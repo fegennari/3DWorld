@@ -1956,13 +1956,13 @@ struct building_t : public building_geom_t {
 	void get_all_drawn_window_verts  (building_draw_t &bdraw, bool lights_pass=0, float offset_scale=1.0,
 		point const *only_cont_pt_in=nullptr, bool no_skylights=0, bool draw_int_windows=0, bool for_gen_not_draw=0) const;
 	vect_vnctcc_t const &get_all_drawn_window_verts_as_quads() const;
-	bool get_nearby_ext_door_verts(building_draw_t *bdraw, shader_t &s, point const &pos, vector3d const &view_dir, float dist, bool update_state, bool only_open);
+	bool get_nearby_ext_door_verts(building_draw_t *bdraw, shader_t &s, point const &pos, vector3d const &view_dir, float dist, bool only_open);
 	void get_ext_door_verts(building_draw_t &bdraw, point const &viewer, vector3d const &view_dir, int skip_door_ix) const;
 	bool get_all_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, vector<point> const &pts, float dist);
 	bool add_parking_structure_entrance(rand_gen_t rgen);
 	bool add_parking_structure_bathroom(rand_gen_t rgen);
 	void get_parking_struct_ext_walls(vect_cube_with_ix_t &walls, bool exterior_surfaces) const;
-	void player_not_near_building() {register_open_ext_door_state(-1);}
+	void register_open_ext_door_state(bool camera_near_building, point const &camera_bs, float door_open_dist);
 	int find_ext_door_close_to_point(tquad_with_ix_t &door, point const &pos, float dist) const;
 	bool point_near_ext_door(point const &pos, float dist=0.0) const;
 	bool get_building_door_pos_closest_to(point const &target_pos, point &door_pos, bool inc_garage_door, int mf_pref=2) const;
@@ -2709,7 +2709,6 @@ private:
 	void add_bathroom_window(cube_t const &window, bool dim, bool dir, unsigned room_id, unsigned floor);
 	void add_window_bars(cube_t const &window, bool dim, bool dir, unsigned room_ix);
 	int get_room_id_for_window(cube_t const &window, bool dim, bool dir, bool &is_split) const;
-	void register_open_ext_door_state(int door_ix);
 	void add_interior_door(door_t &door, bool is_bathroom=0, bool make_unlocked=0, bool make_closed=0);
 	void add_interior_door_for_floor(door_t &door, bool is_bathroom=0, bool make_unlocked=0, bool make_closed=0);
 	void remove_section_from_cube_and_add_door(cube_t &c, cube_t &c2, float v1, float v2, bool xy,
