@@ -691,7 +691,7 @@ void building_t::add_attic_roof_geom(rgeom_mat_t &mat, colorRGBA const &color, f
 		vert.set_norm(normal);
 		bool const add_second_wall(add_center_split && !is_roof); // add a second wall in the center for each side triangle
 
-		for (unsigned wall_ix = 0; wall_ix < (add_second_wall ? 2 : 1); ++wall_ix) {
+		for (unsigned wall_ix = 0; wall_ix < (add_second_wall ? 2U : 1U); ++wall_ix) {
 			unsigned const verts_start(mat.itri_verts.size());
 
 			if (wall_ix == 1) { // second wall

@@ -564,7 +564,7 @@ bool building_t::add_operating_room_objs(rand_gen_t rgen, room_t &room, float zv
 	return 1;
 }
 
-bool building_t::add_valve_and_gauge_panel(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+void building_t::add_valve_and_gauge_panel(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	float const floor_spacing(get_window_vspace());
 	float const bar_z1(zval + floor_spacing*rgen.rand_uniform(0.24, 0.36)), bar_height(floor_spacing*rgen.rand_uniform(0.24, 0.32));
 	vector3d const bar_sz(0.05*floor_spacing*rgen.rand_uniform(0.5, 1.0), floor_spacing*rgen.rand_uniform(0.5, 0.8), bar_height); // D, W, H
