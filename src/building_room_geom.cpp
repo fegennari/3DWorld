@@ -32,7 +32,7 @@ string gen_random_full_name(rand_gen_t &rgen);
 void gen_text_verts(vector<vert_tc_t> &verts, point const &pos, string const &text, float tsize,
 	vector3d const &column_dir, vector3d const &line_dir, bool use_quads=0, bool include_space_chars=0);
 string const &gen_book_title(unsigned rand_id, string *author, unsigned split_len);
-void add_floor_number(unsigned floor_ix, unsigned floor_offset, bool has_parking_garage, bool in_mall, bool in_backrooms, ostringstream &oss);
+void add_floor_number(unsigned floor_ix, int floor_offset, bool has_parking_garage, bool in_mall, bool in_backrooms, ostringstream &oss);
 unsigned get_rgeom_sphere_ndiv(bool low_detail);
 void rotate_verts(point *verts, unsigned num_verts, vector3d const &axis, float angle, vector3d const &about);
 void add_pipe_with_bend(rgeom_mat_t &mat, colorRGBA const &color, point const &bot_pt, point const &top_pt, point const &bend, unsigned ndiv, float radius, bool draw_ends);
@@ -3826,7 +3826,7 @@ cube_t get_elevator_car_panel(room_object_t const &c, float fc_thick_scale) {
 	return panel;
 }
 void building_room_geom_t::add_elevator(room_object_t const &c, elevator_t const &e, float tscale, float fc_thick_scale,
-	unsigned floor_offset, float floor_spacing, float window_vspace, bool has_parking_garage, bool is_powered) // dynamic=1
+	int floor_offset, float floor_spacing, float window_vspace, bool has_parking_garage, bool is_powered) // dynamic=1
 {
 	// elevator car, all materials are dynamic; no lighting scale
 	bool const dim(c.dim), dir(c.dir), ldir(dim ^ dir);
@@ -3873,8 +3873,8 @@ void building_room_geom_t::add_elevator(room_object_t const &c, elevator_t const
 	unsigned const num_floors(c.drawer_flags), cur_floor(c.item_flags);
 	assert(num_floors > 1);
 	assert(cur_floor < num_floors);
-	assert(e.in_mall || e.in_backrooms || num_floors >= floor_offset); // no sub-basement only elevators, except for underground malls and backrooms
-	bool const use_small_text(floor_offset > 1 || (int(num_floors) - int(floor_offset)) >= 20); // need more space for two non-1 digits (B2 | 20)
+	assert(e.in_mall || e.in_backrooms || (int)num_floors >= floor_offset); // no sub-basement only elevators, except for underground malls and backrooms
+	bool const use_small_text(floor_offset > 1 || (int(num_floors) - floor_offset) >= 20); // need more space for two non-1 digits (B2 | 20)
 	float const button_spacing(panel.dz()/(num_floors + 1)); // add extra spacing on bottom and top of panel
 	float const panel_width(panel.get_sz_dim(!dim));
 	float const inner_button_radius(min(0.6f*thickness, min(0.35f*button_spacing, 0.25f*panel.get_sz_dim(!dim)))); // approx match to elevator
@@ -3932,7 +3932,7 @@ void building_room_geom_t::add_elevator(room_object_t const &c, elevator_t const
 		get_untextured_material(0, 1).add_cube_to_verts_untextured(display, DK_GRAY, ~back_face_mask); // exterior display panel; metal doesn't blend correctly with text
 		// add floor text
 		add_floor_number((cur_floor+1), floor_offset, has_parking_garage, e.in_mall, e.in_backrooms, oss);
-		bool const two_digits(num_floors > 9 || (floor_offset > 0 && !e.in_mall)); // double digits or basement/parking garage
+		bool const two_digits(((int)num_floors + max(-floor_offset, 0)) > 9 || (floor_offset > 0 && !e.in_mall)); // double digits or basement/parking garage
 		string str(oss.str());
 		if (two_digits && str.size() == 1) {str = " " + str;} // add a leading space to make it two digits
 		cube_t text_area(display);

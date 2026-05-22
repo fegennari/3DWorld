@@ -3214,8 +3214,8 @@ void add_elevator_button(point const &pos, float button_radius, bool dim, bool d
 	objs.back().obj_id = floor_id; // encode floor index as obj_id
 }
 // Note: floor_ix=1 is ground floor in the following two functions
-void add_floor_number(unsigned floor_ix, unsigned floor_offset, bool has_parking_garage, bool in_mall, bool in_backrooms, ostringstream &oss) {
-	int const adj_floor_ix(int(floor_ix) - int(floor_offset));
+void add_floor_number(unsigned floor_ix, int floor_offset, bool has_parking_garage, bool in_mall, bool in_backrooms, ostringstream &oss) {
+	int const adj_floor_ix(int(floor_ix) - floor_offset);
 	oss.str("");
 	
 	if (in_mall) {
@@ -3232,18 +3232,18 @@ void add_floor_number(unsigned floor_ix, unsigned floor_offset, bool has_parking
 		else {oss << adj_floor_ix;} // above ground floors
 	}
 }
-void set_floor_text_for_sign(room_object_t &sign, unsigned floor_ix, unsigned floor_offset, bool has_parking_garage, bool in_mall, bool in_backrooms, ostringstream &oss) {
+void set_floor_text_for_sign(room_object_t &sign, unsigned floor_ix, int floor_offset, bool has_parking_garage, bool in_mall, bool in_backrooms, ostringstream &oss) {
 	add_floor_number(floor_ix, floor_offset, has_parking_garage, in_mall, in_backrooms, oss);
 	sign.obj_id = register_sign_text(oss.str());
-	int const adj_floor_ix(int(floor_ix) - (in_mall ? 0 : int(floor_offset)));
+	int const adj_floor_ix(int(floor_ix) - (in_mall ? 0 : floor_offset));
 	float width_adj(0.0);
 	if      (adj_floor_ix <= 0 ) {width_adj =  ((adj_floor_ix <  0) ? 0.1 : 0.0);} // basement floors; widen if lower than B1
 	else if (adj_floor_ix <  10) {width_adj = -((adj_floor_ix == 1) ? 0.2 : 0.1);} // 1-10: make narrow
 	else if (adj_floor_ix >= 20) {width_adj =  0.1;} // 20+: widen
 	if (width_adj != 0.0) {sign.expand_in_dim(!sign.dim, width_adj*sign.get_sz_dim(!sign.dim));}
 }
-unsigned building_t::calc_floor_offset(float zval, float floor_spacing) const { // for basements
-	return ((zval < ground_floor_z1) ? round_fp((ground_floor_z1 - zval)/floor_spacing) : 0);
+int building_t::calc_floor_offset(float zval, float floor_spacing) const { // for basements
+	return round_fp((ground_floor_z1 - zval)/floor_spacing); // negative for basements, positive if starting on an upper floor
 }
 
 float stairs_landing_base_t::get_wall_hwidth(float floor_spacing) const {
@@ -3287,7 +3287,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		// stacked conn stairs start at floor 0 but are really the top floor of the part below; i->floor is not a global index and can't be used
 		float const floor_z1((i->in_mall ? interior->basement_ext_bcube : bcube).z1());
 		float const floor_spacing((i->in_mall ? get_mall_floor_spacing() : window_vspacing)); // uses mall floor spacing for back hallway stairs
-		unsigned const floor_offset(calc_floor_offset(floor_z1, window_vspacing)); // use building z1 - should return number of underground levels
+		int const floor_offset(calc_floor_offset(floor_z1, window_vspacing)); // use building z1 - should return number of underground levels
 		unsigned const real_floor(round_fp((i->z1() - floor_z1)/floor_spacing + (i->in_mall ? 0.5 : 0.0))); // mall back hallway landings start at odd floors
 		unsigned flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING);
 		point center;
@@ -3330,7 +3330,8 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		objs.back().obj_id = uint16_t(i - interior->elevators.begin()); // encode elevator index as obj_id
 		// add floor signs
 		float const floor_spacing(get_elevator_floor_spacing(*i));
-		unsigned const num_floors(calc_num_floors(*i, floor_spacing, floor_thickness)), floor_offset(calc_floor_offset(i->z1(), floor_spacing));
+		unsigned const num_floors(calc_num_floors(*i, floor_spacing, floor_thickness));
+		int const floor_offset(calc_floor_offset(i->z1(), floor_spacing));
 		float const ewidth(i->get_width()), dsign(dir ? 1.0 : -1.0), front_wall(i->d[dim][dir]);
 		cube_t sign;
 		sign.d[dim][0] = sign.d[dim][1] = front_wall;
