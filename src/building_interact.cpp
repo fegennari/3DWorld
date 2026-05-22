@@ -407,9 +407,8 @@ bool building_t::get_building_door_pos_closest_to(point const &target_pos, point
 void building_t::register_open_ext_door_state(bool camera_near_building, point const &camera_bs, float door_open_dist) {
 	tquad_with_ix_t open_door; // unused
 	int const door_ix(camera_near_building ? find_ext_door_close_to_point(open_door, camera_bs, door_open_dist) : -1);
-	bool const is_open(door_ix >= 0), was_open(open_door_ix >= 0);
-	bool const ring_doorbell(is_open && is_house && door_ix == 0 && city_action_key); // action key when front door of a house is open
-	if (is_open == was_open && !ring_doorbell) return; // no state change
+	bool const is_open(door_ix >= 0), ring_doorbell(is_open && is_house && door_ix == 0 && city_action_key); // action key when front door of a house is open
+	if (door_ix == open_door_ix && !ring_doorbell) return; // no state change
 	unsigned const dix(is_open ? (unsigned)door_ix : (unsigned)open_door_ix);
 	assert(dix < doors.size());
 	auto const &door(doors[dix]);
