@@ -983,7 +983,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					added_obj = no_whiteboard = is_inter = 1;
 				}
 			}
-			if (!added_obj && is_ext_basement && (is_prison() || rgen.rand_bool())) { // jail room 50% of the time, 100% for prisons
+			if (!added_obj && is_ext_basement && (is_prison() || is_police_stat() || rgen.rand_bool())) { // jail room 50% of the time, 100% for prisons and police stations
 				if (add_basement_jail_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_lit, color, light_ix_assign)) {
 					r->assign_to(RTYPE_JAIL, f);
 					added_obj = no_whiteboard = is_jail = 1;
