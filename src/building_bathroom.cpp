@@ -6,6 +6,8 @@
 #include "city.h" // for object_model_loader_t
 
 
+bool const ADD_RESTROOM_SKYLIGHTS = 0; // sort of works; causes problems with sun/moon shadows, model culling, and lack of indir/interior lighting
+
 extern object_model_loader_t building_obj_model_loader;
 
 
@@ -1014,9 +1016,9 @@ void building_t::create_restroom_floorplan(unsigned part_id, rand_gen_t &rgen) {
 	// divide into men's and women's rooms
 	mw_restroom_side = rgen.rand_bool();
 	bool const dim(!get_street_dim()); // split dim
-	float const wall_hthick(0.5*get_wall_thickness()), split_pos(part.get_center_dim(dim));
+	float const wall_hthick(0.5*get_wall_thickness()), fc_thick(get_fc_thickness()), split_pos(part.get_center_dim(dim));
 	cube_t wall(part);
-	create_wall(wall, dim, split_pos, get_fc_thickness(), wall_hthick, 0.1*wall_hthick);
+	create_wall(wall, dim, split_pos, fc_thick, wall_hthick, 0.1*wall_hthick);
 	interior->walls[dim].push_back(wall);
 
 	for (unsigned d = 0; d < 2; ++d) {
@@ -1040,8 +1042,25 @@ void building_t::create_restroom_floorplan(unsigned part_id, rand_gen_t &rgen) {
 		driveway.expand_in_dim( dim, 0.8*get_window_vspace()); // extend ends
 		driveway.expand_in_dim(!dim, -wall_hthick); // shrink inward slightly
 	}
-	set_cube_zvals(driveway, ground_floor_z1, ground_floor_z1+0.5*get_fc_thickness());
-	interior->attic_type = ((rgen.rand_float() < 0.33) ? ATTIC_TYPE_PLASTER : ATTIC_TYPE_OPEN); // more likely to be open than plaster
+	set_cube_zvals(driveway, ground_floor_z1, ground_floor_z1+0.5*fc_thick);
+	bool const add_attic_rafters(rgen.rand_float() < 0.67); // more likely to be open with rafters than plaster
+	interior->attic_type = (add_attic_rafters ? ATTIC_TYPE_OPEN : ATTIC_TYPE_PLASTER);
+	
+	if (ADD_RESTROOM_SKYLIGHTS && !add_attic_rafters) {
+		// add skylights to each side; skip if there are rafters so that we don't have to handle cutting and joining them
+		bool const side(rgen.rand_bool());
+		float const room_width(0.5*part.get_sz_dim(dim)), depth(part.get_sz_dim(!dim)), sl_depth(0.25*depth), sl_width(0.25*room_width);
+		cube_t skylight;
+		set_cube_zvals(skylight, (part.z2() - fc_thick), part.z2());
+		set_wall_width(skylight, (part.get_center_dim(!dim) + (side ? 1.0 : -1.0)*0.25*depth), 0.5*sl_depth, !dim);
+
+		for (unsigned d = 0; d < 2; ++d) {
+			set_wall_width(skylight, (split_pos + (d ? 1.0 : -1.0)*0.67*room_width), 0.5*sl_width, dim);
+			subtract_skylight_from_roof_tquads(skylight);
+		}
+		for (room_t &room : interior->rooms) {room.set_has_skylight();}
+		has_skylights = 1;
+	}
 }
 
 bool building_t::get_ext_door_hinge_side(tquad_with_ix_t const &door) const {

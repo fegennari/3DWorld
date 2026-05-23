@@ -38,7 +38,8 @@ bool building_t::player_can_see_outside() const {
 	point const camera_pos(get_camera_pos()), camera_bs(camera_pos - xlate);
 	float const floor_spacing(get_window_vspace());
 	bool const in_basement(camera_bs.z < ground_floor_z1);
-	if (is_parking() && !in_basement) return 1; // open walls
+	if (is_parking () && !in_basement ) return 1; // open walls
+	if (is_restroom() && has_skylights) return 1;
 
 	if (!has_int_windows() || (is_restroom() && !point_near_ext_door(camera_bs))) { // no windows looking out, or restroom with block windows
 		if (building_has_open_ext_door && !doors.empty()) { // maybe can see out a door
@@ -1597,7 +1598,7 @@ bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &
 	return 1;
 }
 
-bool building_t::is_room_windowless(room_t const &room) const { // or interior
+bool building_t::is_room_windowless(room_t const &room) const { // or interior; skylights don't count
 	if (room.z2() <= ground_floor_z1)         return 1; // basement, no windows
 	if (!bcube.contains_cube_xy_no_adj(room)) return 0; // adjacent to bcube, may have windows
 	cube_t const &part(get_part_for_room(room));

@@ -1254,61 +1254,7 @@ void building_t::add_house_skylight(rand_gen_t rgen) {
 				++num_int;
 			}
 			if (skip || num_int > 1) continue; // skip triangles and multiple roof quad hits
-			vect_tquad_with_ix_t new_roof_tquads;
-			vect_cube_t tq_parts;
-
-			// subtract from roof_tquads
-			for (tquad_with_ix_t &tq : roof_tquads) {
-				cube_t const bc(tq.get_bcube());
-				if (!bc.intersects_xy(skylight)) {new_roof_tquads.push_back(tq); continue;} // keep full tquad
-				vector3d const normal(tq.get_norm());
-				assert(normal.x == 0.0 || normal.y == 0.0); // must be tilted in either X or Y
-				bool const dim(normal.x == 0.0);
-				float z1(0.0), z2(0.0);
-
-				for (unsigned n = 0; n < tq.npts; ++n) {
-					point const &p(tq.pts[n]);
-					if      (p[dim] == bc.d[dim][0]) {z1 = p.z;}
-					else if (p[dim] == bc.d[dim][1]) {z2 = p.z;}
-				}
-				float const dz((z2 - z1)/bc.get_sz_dim(dim)), lo_edge(bc.d[dim][0]);
-				if (dim) {subtract_cube_from_cube_transpose(bc, skylight, tq_parts);}
-				else {subtract_cube_from_cube(bc, skylight, tq_parts, 1);} // clear_out=1
-
-				for (cube_t const &c : tq_parts) {
-					tquad_with_ix_t tq2(tq); // same type
-
-					for (unsigned n = 0; n < tq2.npts; ++n) {
-						point &p(tq2.pts[n]);
-						c.clamp_pt_xy(p);
-						p.z = z1 + (p[dim] - lo_edge)*dz;
-					}
-					new_roof_tquads.push_back(tq2);
-				} // for c
-				// add interior sides and top cap
-				tquad_with_ix_t side  (4, tquad_with_ix_t::TYPE_SKYLIGHT_INT);
-				tquad_with_ix_t sl_cap(4, tquad_with_ix_t::TYPE_SKYLIGHT_CAP);
-
-				for (unsigned sdim = 0; sdim < 2; ++sdim) {
-					for (unsigned sdir = 0; sdir < 2; ++sdir) {
-						bool const wind_dir(sdim ^ sdir);
-						float const epos(skylight.d[sdim][sdir]);
-						for (unsigned n = 0; n < 4; ++n) {side.pts[n][sdim] = epos;}
-						side.pts[0].z = side.pts[1].z = skylight.z2(); // lower edges
-						side.pts[0][!sdim] = side.pts[3][!sdim] = skylight.d[!sdim][ wind_dir];
-						side.pts[1][!sdim] = side.pts[2][!sdim] = skylight.d[!sdim][!wind_dir];
-						for (unsigned n = 2; n < 4; ++n) {side.pts[n].z = z1 + (side.pts[n][dim] - lo_edge)*dz;} // upper edges
-
-						if (sdim == 0) {
-							sl_cap.pts[sdir ? 1 : 3] = side.pts[2];
-							sl_cap.pts[sdir ? 2 : 0] = side.pts[3];
-						}
-						new_roof_tquads.push_back(side);
-					} // for sdir
-				} // for sdim
-				new_roof_tquads.push_back(sl_cap);
-			} // for tq
-			roof_tquads.swap(new_roof_tquads);
+			subtract_skylight_from_roof_tquads(skylight);
 			subtract_cube_from_cubes(skylight, interior->ceilings);
 			if (has_attic()) {subtract_cube_from_cubes(skylight, interior->floors);} // subtract from attic floor as well
 			room.set_has_skylight();
@@ -1317,6 +1263,69 @@ void building_t::add_house_skylight(rand_gen_t rgen) {
 			return; // success/done
 		} // for N
 	} // for n
+}
+
+void building_t::subtract_skylight_from_roof_tquads(cube_t const &skylight) {
+	vect_tquad_with_ix_t new_roof_tquads;
+	vect_cube_t tq_parts;
+
+	for (tquad_with_ix_t &tq : roof_tquads) {
+		cube_t const bc(tq.get_bcube());
+		if (!bc.intersects_xy(skylight)) {new_roof_tquads.push_back(tq); continue;} // keep full tquad
+		vector3d const normal(tq.get_norm());
+		assert(normal.x == 0.0 || normal.y == 0.0); // must be tilted in either X or Y
+		bool const dim(normal.x == 0.0);
+		float z1(0.0), z2(0.0);
+
+		for (unsigned n = 0; n < tq.npts; ++n) {
+			point const &p(tq.pts[n]);
+			if      (p[dim] == bc.d[dim][0]) {z1 = p.z;}
+			else if (p[dim] == bc.d[dim][1]) {z2 = p.z;}
+		}
+		float const dz((z2 - z1)/bc.get_sz_dim(dim)), lo_edge(bc.d[dim][0]);
+		if (dim) {subtract_cube_from_cube_transpose(bc, skylight, tq_parts);}
+		else {subtract_cube_from_cube(bc, skylight, tq_parts, 1);} // clear_out=1
+
+		for (cube_t const &c : tq_parts) {
+			tquad_with_ix_t tq2(tq); // same type
+
+			for (unsigned n = 0; n < tq2.npts; ++n) {
+				point &p(tq2.pts[n]);
+				c.clamp_pt_xy(p);
+				p.z = z1 + (p[dim] - lo_edge)*dz;
+			}
+			new_roof_tquads.push_back(tq2);
+		} // for c
+		// add top cap and maybe interior sides
+		tquad_with_ix_t side  (4, tquad_with_ix_t::TYPE_SKYLIGHT_INT);
+		tquad_with_ix_t sl_cap(4, tquad_with_ix_t::TYPE_SKYLIGHT_CAP);
+
+		for (unsigned sdim = 0; sdim < 2; ++sdim) {
+			for (unsigned sdir = 0; sdir < 2; ++sdir) {
+				bool const wind_dir(sdim ^ sdir);
+				float const epos(skylight.d[sdim][sdir]);
+				for (unsigned n = 0; n < 4; ++n) {side.pts[n][sdim] = epos;}
+				side.pts[0][!sdim] = side.pts[3][!sdim] = skylight.d[!sdim][ wind_dir];
+				side.pts[1][!sdim] = side.pts[2][!sdim] = skylight.d[!sdim][!wind_dir];
+				for (unsigned n = (is_house ? 2 : 0); n < 4; ++n) {side.pts[n].z = z1 + (side.pts[n][dim] - lo_edge)*dz;} // upper and maybe lower edges
+
+				if (is_house) { // && !has_attic()?
+					side.pts[0].z = side.pts[1].z = skylight.z2(); // lower edges
+				}
+				else { // park restroom or attic case; sides are fixed-width interior frames
+					float const bot_zval(0.5*get_attic_beam_depth());
+					for (unsigned n = 0; n < 2; ++n) {side.pts[n].z -= bot_zval;} // lower edges
+				}
+				if (sdim == 0) {
+					sl_cap.pts[sdir ? 1 : 3] = side.pts[2];
+					sl_cap.pts[sdir ? 2 : 0] = side.pts[3];
+				}
+				new_roof_tquads.push_back(side);
+			} // for sdir
+		} // for sdim
+		new_roof_tquads.push_back(sl_cap);
+	} // for tq
+	roof_tquads.swap(new_roof_tquads);
 }
 
 void building_room_geom_t::add_chimney(room_object_t const &c, tid_nm_pair_t const &tex) { // inside attic
