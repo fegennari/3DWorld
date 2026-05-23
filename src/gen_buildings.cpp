@@ -2876,7 +2876,7 @@ void building_t::cut_holes_for_ext_doors(building_draw_t &bdraw, point const &co
 			for (cube_t const &clamp_cube : clamp_cubes) {skip |= i->contains_cube(clamp_cube) && !clamp_cube.intersects(door_bcube);} // door outside clamped part
 			if (skip) continue;
 			contained = ((draw_parts_mask & (1<<(i-parts.begin()))) != 0);
-			if (contain_pt.z > door_z2 && !i->contains_pt(contain_pt)) {contained = 0;} // camera in a different part on a floor above the door
+			if (contain_pt.z > door_z2 && !i->contains_pt(contain_pt) && !is_restroom_with_high_ceil()) {contained = 0;} // camera in a different part on a floor above the door
 			break;
 		}
 		if (!contained) continue; // part skipped, skip door as well
