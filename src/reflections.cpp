@@ -48,8 +48,7 @@ bool use_reflect_plane_for_cobj(coll_obj const &c) {
 
 void proc_refl_bcube(cube_t const &c, cube_t &bcube, float &min_camera_dist, bool &bcube_set) {
 
-	point const camera(get_camera_pos());
-	float const dist(p2p_dist(camera, c.closest_pt(camera)));
+	float const dist(c.closest_pt_dist(get_camera_pos()));
 		
 	if (bcube_set) {
 		bcube.union_with_cube(c);

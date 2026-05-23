@@ -241,6 +241,9 @@ vector3d cube_t::closest_side_dir(point const &pos, unsigned skip_dims) const {
 	return dv;
 }
 
+float cube_t::closest_pt_dist_sq(point const &pos) const {
+	return p2p_dist_sq(closest_pt(pos), pos);
+}
 bool cube_t::closest_dist_less_than(point const &pos, float dist) const {
 	return dist_less_than(pos, closest_pt(pos), dist);
 }

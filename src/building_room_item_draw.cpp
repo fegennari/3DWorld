@@ -1899,7 +1899,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			bool draw_amask(0);
 			if (player_in_building) {draw_amask = 1;}
 			else if (!camera_in_building) { // player not in some other building
-				draw_amask = (p2p_dist(camera_bs, building.bcube.closest_pt(camera_bs)) < ((is_industrial || building.is_restaurant()) ? 20 : 10)*floor_spacing);
+				draw_amask = (building.bcube.closest_pt_dist(camera_bs) < ((is_industrial || building.is_restaurant()) ? 20 : 10)*floor_spacing);
 			}
 			if (draw_amask) {
 				// without the special shader these won't look correct when drawn through windows

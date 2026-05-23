@@ -337,7 +337,7 @@ void building_t::add_trashcan_to_room(rand_gen_t rgen, room_t const &room, float
 			if (doorways.empty()) break; // no doorways, keep this point
 				
 			for (auto i = doorways.begin(); i != doorways.end(); ++i) {
-				float const dmin(radius + i->dx() + i->dy()), dist_sq(p2p_dist_sq(center, i->closest_pt(center)));
+				float const dmin(radius + i->dx() + i->dy()), dist_sq(i->closest_pt_dist_sq(center));
 				if (dist_sq > 4.0*dmin*dmin) continue; // too far
 				if (dist_sq <     dmin*dmin) {is_good = 0; break;} // too close, reject this point
 				is_good = 1; // close enough, keep this point

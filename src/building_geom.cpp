@@ -152,7 +152,7 @@ cube_t building_t::get_part_containing_pt(point const &pt) const {
 	cube_t closest;
 
 	for (auto i = parts.begin(); i != parts_end; ++i) {
-		float const dist_sq(p2p_dist(pt, i->closest_pt(pt)));
+		float const dist_sq(i->closest_pt_dist_sq(pt));
 		if (dmin_sq == 0.0 || dist_sq < dmin_sq) {dmin_sq = dist_sq; closest = *i;}
 	}
 	assert(!closest.is_all_zeros()); // must be found
@@ -2617,7 +2617,7 @@ void building_t::get_exclude_cube(point const &pos, cube_t const &skip, cube_t &
 	for (auto p = parts.begin(); p != get_real_parts_end_inc_sec(); ++p) { // find closest part, including garages/sheds
 		if (p->z1() != ground_floor_z1) continue; // only count ground floor parts
 		if (skip.contains_cube_xy(*p))  continue; // already contained, skip
-		float const dist_sq(p2p_dist_sq(pos, p->closest_pt(pos)));
+		float const dist_sq(p->closest_pt_dist_sq(pos));
 		if (dist_sq < dmin_sq) {exclude = *p; dmin_sq = dist_sq;} // keep if closest part to pos
 	}
 	if (exclude.is_all_zeros()) return; // not found (only ground floor part was skipped)

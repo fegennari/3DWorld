@@ -1547,7 +1547,7 @@ cube_t building_conn_info_t::get_conn_room_closest_to(building_t const &parent, 
 		if (c.b != &target) continue; // wrong building
 		for (conn_room_t const &room : c.rooms) {
 			if (room.contains_pt(pos_bs)) return room; // contained case returns immediately
-			float const dist_sq(p2p_dist_sq(room.closest_pt(pos_bs), pos_bs));
+			float const dist_sq(room.closest_pt_dist_sq(pos_bs));
 			if (dmin_sq == 0.0 || dist_sq < dmin_sq) {dmin_sq = dist_sq; closest = room;}
 		}
 	}

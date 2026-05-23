@@ -42,7 +42,7 @@ class city_spectate_manager_t {
 
 		for (auto i = cars.begin(); i != cars.end(); ++i) {
 			if (i->is_parked()) continue; // skip parked cars; should never get here?
-			float const dsq(p2p_dist_sq(pos, i->bcube.closest_pt(pos)));
+			float const dsq(i->bcube.closest_pt_dist_sq(pos));
 			if (dsq < dmin_sq) {closest_ix = (i - cars.begin()); dmin_sq = dsq;}
 		}
 		return closest_ix;

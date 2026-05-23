@@ -1277,7 +1277,7 @@ void building_t::doors_next_frame(point const &player_pos) { // player_pos is in
 			play_door_open_close_sound(point(d->xc(), d->yc(), camera_pos.z), 0, 1.0, 1.0, d->type); // play close sound at player z; open=0
 			notify_door_fully_closed_state(*d);
 		}
-		float const dsq(p2p_dist_sq(d->closest_pt(player_pos), player_pos));
+		float const dsq(d->closest_pt_dist_sq(player_pos));
 		if (!updated || dsq < dmin_sq) {interior->last_active_door_ix = (d - interior->doors.begin()); dmin_sq = dsq;} // closest to the player
 		updated = 1;
 	} // for d

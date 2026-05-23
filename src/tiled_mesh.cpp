@@ -1517,7 +1517,7 @@ unsigned tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool 
 			if (gb.ix == 0) continue; // empty block
 			float const bcx1(llcx + x*dx_step), bcy1(llcy + y*dy_step);
 			cube_t const bcube(bcx1, bcx1+dx_step, bcy1, bcy1+dy_step, gb.zmin, (gb.zmax + grass_length));
-			float const dist_sq(p2p_dist_sq(camera, bcube.closest_pt(camera)));
+			float const dist_sq(bcube.closest_pt_dist_sq(camera));
 			if (dist_sq > bg_thresh_sq || (!all_visible && !camera_pdu.cube_visible(bcube))) continue;
 
 			if (dist_sq < 0.56*bg_thresh_sq) { // only do back face culling on nearby blocks (75% of max dist)

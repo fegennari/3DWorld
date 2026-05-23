@@ -1292,8 +1292,7 @@ void road_draw_state_t::draw_bridge(bridge_t const &bridge, bool shadow_only) { 
 	float const thickness(0.2*scale), conn_thick(0.25*thickness), wall_width(0.25*thickness), wall_height(0.25*thickness);
 	unsigned num_segs(max(16U, min(48U, unsigned(ceil(2.5*len/scale))))); // scale to fit the gap, with reasonable ranges
 	if (bridge.over_water) {num_segs /= 6;} // fewer pylons
-	point const closest_pt((bridge + xlate).closest_pt(camera_pdu.pos));
-	float const dist_val(shadow_only ? 1.0 : p2p_dist(camera_pdu.pos, closest_pt)/draw_tile_dist);
+	float const dist_val(shadow_only ? 1.0 : (bridge + xlate).closest_pt_dist(camera_pdu.pos)/draw_tile_dist);
 	float const step_sz(1.0/num_segs), delta_d(step_sz*delta[d]), delta_z(step_sz*delta.z), dz_scale(bridge.dz()/(bridge.get_sz_dim(d)));
 	float cur_dval(p1[d]); // resize zvals based on max num_segs
 	vector<float> sm_split_pos;

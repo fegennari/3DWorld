@@ -4208,7 +4208,7 @@ public:
 					cube_t const &grid_bcube(g->get_vis_bcube());
 					// for the reflection pass, we only need to look at the grid containing the building with the mirror, which must be the player's building
 					if (reflection_pass && !grid_bcube.contains_pt_xy(camera_bs)) continue; // not the correct tile
-					float const gdist_sq(p2p_dist_sq(camera_bs, grid_bcube.closest_pt(camera_bs)));
+					float const gdist_sq(grid_bcube.closest_pt_dist_sq(camera_bs));
 					unsigned const gix(g - (*i)->grid_by_tile.begin());
 
 					if (!reflection_pass && g->has_room_geom) { // maybe clear room geom (optimization)
@@ -4254,7 +4254,7 @@ public:
 						}
 						bool player_in_building_bcube(b.bcube.contains_pt_xy(camera_bs) && camera_bs.z < b.bcube.z2() + 2.0*b.get_window_vspace());
 						player_in_building_bcube |= b.point_in_extended_basement(camera_bs); // included extended basement; need this early to handle malls far from building
-						float const bdist_sq(p2p_dist_sq(camera_bs, b.bcube.closest_pt(camera_bs)));
+						float const bdist_sq(b.bcube.closest_pt_dist_sq(camera_bs));
 						if (player_in_building_bcube) {}
 						else if (bdist_sq > rgeom_clear_dist_sq) {b.clear_room_geom();} // optimization
 						else if (!camera_in_building && bdist_sq > rgeom_sm_clear_dist_sq) {b.clear_small_room_geom_vbos();} // memory optimization

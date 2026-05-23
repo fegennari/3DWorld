@@ -1300,11 +1300,11 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const { //
 
 		for (auto p = parts.begin(); p != get_real_parts_end_inc_sec(); ++p) { // there shouldn't be any people in secondary buildings, but include them anyway
 			if (p->contains_pt(person.target_pos)) {contained = 1; closest_part = *p; break;} // done
-			float const dsq(p2p_dist_sq(person.target_pos, p->closest_pt(person.target_pos))); // what about basements? should we check zvals?
+			float const dsq(p->closest_pt_dist_sq(person.target_pos)); // what about basements? should we check zvals?
 			if (dmin_sq == 0.0 || dsq < dmin_sq) {dmin_sq = dsq; closest_part = *p;}
 		}
 		if (!contained && person.target_pos.z < ground_floor_z1 && has_ext_basement()) { // check extended basement
-			float const dsq(p2p_dist_sq(person.target_pos, interior->basement_ext_bcube.closest_pt(person.target_pos)));
+			float const dsq(interior->basement_ext_bcube.closest_pt_dist_sq(person.target_pos));
 			if (dsq < dmin_sq) {closest_part = interior->basement_ext_bcube;}
 		}
 		if (!contained && !closest_part.is_all_zeros()) {closest_part.clamp_pt(person.target_pos);} // clamp to closest part

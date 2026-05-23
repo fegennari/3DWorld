@@ -167,7 +167,7 @@ float coll_obj::get_min_dist_to_pt(point const &pt) const {
 
 	switch (type) {
 	case COLL_CUBE:
-		return p2p_dist(pt, cube_t::closest_pt(pt));
+		return cube_t::closest_pt_dist(pt);
 	case COLL_SPHERE:
 		return max(0.0f, (p2p_dist(pt, points[0]) - radius));
 	case COLL_POLYGON: {

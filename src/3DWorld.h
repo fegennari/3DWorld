@@ -638,6 +638,9 @@ struct cube_t { // size = 24; Note: AABB, not actually a cube
 		clamp_pt(pt);
 		return pt;
 	}
+	float closest_pt_dist_sq(point const &pos) const;
+	float closest_pt_dist   (point const &pos) const {return sqrt(closest_pt_dist_sq(pos));}
+
 	float get_max_extent() const { // from (0,0,0)
 		float mextent(0.0);
 		UNROLL_3X(mextent = max(mextent, max(-d[i_][0], d[i_][1]));)
