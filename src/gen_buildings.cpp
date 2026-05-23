@@ -5570,6 +5570,29 @@ public:
 		} // for y
 	}
 
+	unsigned get_type_of_closest_building(point const &pos_bs, cube_t const &plot) const {
+		unsigned btype(BTYPE_UNSET);
+		if (empty()) return btype;
+		unsigned ixr[2][2];
+		get_grid_range(plot, ixr);
+		float dmin_sq(0.0);
+
+		for (unsigned y = ixr[0][1]; y <= ixr[1][1]; ++y) {
+			for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {
+				grid_elem_t const &ge(get_grid_elem(x, y));
+				if (ge.bc_ixs.empty() || !plot.intersects_xy(ge.bcube)) continue;
+
+				for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) {
+					if (!plot.intersects_xy(*b)) continue;
+					building_t const &bldg(get_building(b->ix));
+					float const dsq(bldg.bcube.closest_pt_dist_sq(pos_bs));
+					if (btype == BTYPE_UNSET || dsq < dmin_sq) {btype = bldg.btype; dmin_sq = dsq;}
+				}
+			} // for x
+		} // for y
+		return btype;
+	}
+
 	void get_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state, bool cur_building_only=0) const {
 		state.init(pdu.pos, get_camera_coord_space_xlate());
 		if (cur_building_only) return; // no grid/buildings iteration
@@ -5999,6 +6022,7 @@ void get_building_ext_basement_bcubes(cube_t const &city_bcube, vect_cube_t &bcu
 void get_walkways_for_city(cube_t const &city_bcube, vect_bldg_walkway_t &walkways ) {building_creator_city.get_walkways_for_city(city_bcube, walkways);}
 void get_building_power_points(cube_t const &xy_range, vector<point> &ppts         ) {building_creator_city.get_power_points(xy_range, ppts);}
 void add_building_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways    ) {building_creator_city.add_driveways_for_plot(plot, driveways);}
+unsigned get_type_of_closest_city_building(point const &pos_bs, cube_t const &plot ) {return building_creator_city.get_type_of_closest_building(pos_bs, plot);}
 
 void add_buildings_exterior_lights(vector3d const &xlate, cube_t &lights_bcube) {
 	building_creator     .add_exterior_lights(xlate, lights_bcube);

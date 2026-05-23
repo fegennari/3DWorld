@@ -26,6 +26,7 @@ city_flag_t create_flag(bool dim, bool dir, point const &base_pt, float height, 
 void get_building_ext_basement_bcubes(cube_t const &city_bcube, vect_cube_t &bcubes);
 void get_walkways_for_city(cube_t const &city_bcube, vect_bldg_walkway_t &walkway_cands);
 void add_building_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways);
+unsigned get_type_of_closest_city_building(point const &pos_bs, cube_t const &plot);
 bool connect_buildings_to_skyway(cube_t &m_bcube, bool m_dim, cube_t const &city_bcube, vector<skyway_conn_t> &ww_conns);
 void get_city_building_walkways(cube_t const &city_bcube, vector<building_walkway_t *> &bwws);
 bool place_city_building_at(building_t const &bldg, unsigned plot_ix, rand_gen_t &rgen);
@@ -234,6 +235,7 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t const &full_plot, vecto
 		cand.d[ car_dim][!rdir] += cand.num_rows*dr;
 		if (!plot.contains_cube_xy(cand)) {continue;} // can't fit a min size parking lot in this plot, so skip it (shouldn't happen)
 		if (has_bcube_int_xy(cand, bcubes, pad_dist)) continue; // intersects a building - skip (can't fit min size parking lot)
+		cand.btype = get_type_of_closest_city_building(cand.get_cube_center(), plot);
 		cand.z2() += plot.dz(); // probably unnecessary
 		parking_lot_t park(cand);
 

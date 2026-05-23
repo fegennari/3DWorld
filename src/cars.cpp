@@ -28,8 +28,8 @@ float get_clamped_fticks() {return min(fticks, 4.0f);} // clamp to 100ms
 
 float car_t::get_max_lookahead_dist() const {return (get_length() + city_params.road_width);} // extend one car length + one road width in front
 float car_t::get_turn_rot_z(float dist_to_turn) const {return (1.0 - CLIP_TO_01(4.0f*fabs(dist_to_turn)/city_params.road_width));}
-bool car_t::in_gs_exit_lane() const {return (dest_gs_lane == gas_station_t::num_lanes);}
-bool car_t::in_cw_exit_lane() const {return (dest_cw_lane == city_bldg_t  ::num_lanes);}
+bool  car_t::in_gs_exit_lane() const {return (dest_gs_lane == gas_station_t::num_lanes);}
+bool  car_t::in_cw_exit_lane() const {return (dest_cw_lane == city_bldg_t  ::num_lanes);}
 
 void car_t::set_bcube(point const &center, vector3d const &sz) {
 	height = sz.z;
