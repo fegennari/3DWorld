@@ -393,6 +393,7 @@ void building_t::get_rooftop_cars(vector<car_t> &cars) const {
 	// encode building index in cur_city, starting with CITY_BIX_START and incrementing with each new building
 	car.cur_city      = ((cars.empty() || cars.back().cur_city < CITY_BIX_START) ? CITY_BIX_START : cars.back().cur_city+1);
 	car.cur_road_type = TYPE_BUILDING;
+	car.park_btype    = BTYPE_PARKING;
 	car.dim           = !rdim;
 	vector3d car_sz(nom_car_sz);
 	if (!car.dim) {swap(car_sz.x, car_sz.y);}

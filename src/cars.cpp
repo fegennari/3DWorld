@@ -1045,7 +1045,10 @@ void car_manager_t::assign_car_model_size_color(car_t &car, rand_gen_t &local_rg
 	unsigned const num_models(car_model_loader.num_models());
 	int fixed_color(-1);
 	is_in_garage |= (car.cur_road_type == TYPE_BUILDING); // also applies to cars on parking structure roofs
-
+	if      (btype          == BTYPE_UNSET) {btype = car.park_btype;} // parking lot case
+	else if (car.park_btype == BTYPE_UNSET) {car.park_btype = btype;} // building car case
+	else {assert(car.park_btype == btype);} // if both are set, they must agree
+	
 	if (num_models > 0) {
 		for (unsigned n = 0; n < 20; ++n) {
 			if (FORCE_MODEL_ID >= 0) {car.model_id = (unsigned char)FORCE_MODEL_ID;}

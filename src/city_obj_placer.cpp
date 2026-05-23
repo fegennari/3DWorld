@@ -148,6 +148,7 @@ bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, unsigne
 				car_t car;
 				setup_parked_car(car, city_id, plot_ix);
 				car.dim = dim;
+				car.park_btype = BTYPE_CONV_STORE; // the closest we can get to a service station; should be unused in this case
 
 				for (unsigned n = 0; n < building.num_lanes; ++n) {
 					if (rgen.rand_bool()) continue; // 50% chance of a car
@@ -375,6 +376,7 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t const &full_plot, vecto
 						prev_was_bad    = 1;
 					}
 					car.set_bcube(pos, nom_car_size);
+					car.park_btype = park.btype; // for selecting specific cars
 					cars.push_back(car);
 					if ((rgen.rand()&7) == 0) {cars.back().dir ^= 1;} // park backwards 1/8 of the time
 					used_spaces[row*park.row_sz + col] = 1;
@@ -443,8 +445,9 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t const &full_plot, vecto
 void city_obj_placer_t::add_cars_to_driveways(vector<car_t> &cars, vector<road_plot_t> const &plots, vector<vect_cube_t> &plot_colliders, unsigned city_id, rand_gen_t &rgen) {
 	car_t car;
 	car.park();
-	car.cur_city = city_id;
+	car.cur_city      = city_id;
 	car.cur_road_type = TYPE_DRIVEWAY;
+	car.park_btype    = BTYPE_HOUSE; // likely a house driveway
 	vector3d const nom_car_size(city_params.get_nom_car_size()); // {length, width, height}
 
 	for (auto i = driveways.begin(); i != driveways.end(); ++i) {
