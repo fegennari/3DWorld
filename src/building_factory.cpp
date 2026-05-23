@@ -1069,11 +1069,11 @@ cube_t building_t::get_flat_roof_section_bcube() const {
 	}
 	return cube_t(); // not found
 }
-void building_t::add_smokestack(rand_gen_t &rgen) { // factory or power plant
+void building_t::add_smokestacks(rand_gen_t &rgen) { // factory or power plant
 	assert(!parts.empty());
 	cube_t const &base(parts[0]);
 	float const ss_radius(rgen.rand_uniform(0.01, 0.02)*(base.dx() + base.dy()));
-	unsigned const num(1 + (rgen.rand()&1)); // 1-2
+	unsigned const num(is_powerplant() ? (4 + (rgen.rand()%3)) : (1 + (rgen.rand()&1))); // 4-6 / 1-2
 
 	for (unsigned n = 0; n < num; ++n) {
 		for (unsigned m = 0; m < 10; ++m) { // 10 attempts to place smokestack
