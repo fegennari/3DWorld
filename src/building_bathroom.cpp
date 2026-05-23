@@ -938,7 +938,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 	return 1;
 }
 
-void building_t::add_shared_restroom_objs() {
+void building_t::add_shared_restroom_objs() { // in ceilings
 	if (!RESTROOM_HIGH_CEIL) return;
 	assert(has_room_geom());
 	vect_room_object_t &objs(interior->room_geom->objs);
@@ -982,14 +982,14 @@ void building_t::add_shared_restroom_objs() {
 		unsigned const skip_faces(~(EF_Z1 | ~get_face_mask(gdim, !d))); // only draw bottom and inside edge
 		objs.emplace_back(wall, TYPE_METAL_BAR, 0, gdim, d, 0, 1.0, SHAPE_CUBE, WHITE, skip_faces);
 	}
-	// add beam running the length of the roof
-	unsigned const skip_faces(EF_Z2 | get_skip_mask_for_xy(!gdim)); // draw only sides and bottom
-	float const beam_z2(interior_z2 - 1.0*wall_hthick);
-	cube_t beam(bcube);
-	set_wall_width(beam, bcube.get_center_dim(gdim), 1.2*wall_hthick, gdim);
-	set_cube_zvals(beam, (beam_z2 - 3.0*wall_hthick), beam_z2);
-	objs.emplace_back(beam, TYPE_METAL_BAR, 0, gdim, 0, (RO_FLAG_NOCOLL | RO_FLAG_UNTEXTURED), 1.0, SHAPE_CUBE, WHITE, skip_faces); // non-reflective
-	// add tile to interior walls below windows?
+	if (interior->attic_type == ATTIC_TYPE_PLASTER) { // add beam running the length of the roof if plaster/no rafters
+		unsigned const skip_faces(EF_Z2 | get_skip_mask_for_xy(!gdim)); // draw only sides and bottom
+		float const beam_z2(interior_z2 - 1.0*wall_hthick);
+		cube_t beam(bcube);
+		set_wall_width(beam, bcube.get_center_dim(gdim), 1.2*wall_hthick, gdim);
+		set_cube_zvals(beam, (beam_z2 - 3.0*wall_hthick), beam_z2);
+		objs.emplace_back(beam, TYPE_METAL_BAR, 0, gdim, 0, (RO_FLAG_NOCOLL | RO_FLAG_UNTEXTURED), 1.0, SHAPE_CUBE, WHITE, skip_faces); // non-reflective
+	}
 }
 
 void building_t::add_bathroom_window(cube_t const &window, bool dim, bool dir, unsigned room_id, unsigned floor) { // frosted window blocks, for houses or office buildings
@@ -1041,7 +1041,7 @@ void building_t::create_restroom_floorplan(unsigned part_id, rand_gen_t &rgen) {
 		driveway.expand_in_dim(!dim, -wall_hthick); // shrink inward slightly
 	}
 	set_cube_zvals(driveway, ground_floor_z1, ground_floor_z1+0.5*get_fc_thickness());
-	interior->attic_type = ATTIC_TYPE_PLASTER;
+	interior->attic_type = ((rgen.rand_float() < 0.33) ? ATTIC_TYPE_PLASTER : ATTIC_TYPE_OPEN); // more likely to be open than plaster
 }
 
 bool building_t::get_ext_door_hinge_side(tquad_with_ix_t const &door) const {

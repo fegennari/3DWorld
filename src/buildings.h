@@ -799,6 +799,7 @@ struct building_room_geom_t {
 	rgeom_mat_t &get_transparent_material(float refract_ix=1.0, bool small=0, bool no_reflect=0);
 	rgeom_mat_t &get_crack_material(room_object_t const &c, int alpha);
 	rgeom_mat_t &get_wood_material(float tscale=1.0, bool inc_shadows=1, bool dynamic=0, unsigned small=0, bool exterior=0, unsigned type=WOOD_TYPE_DARK);
+	rgeom_mat_t &get_rafters_material(float tscale, bool inc_shadows, unsigned small, bool is_painted);
 	rgeom_mat_t &get_metal_material(bool inc_shadows=0, bool dynamic=0, unsigned small=0, bool exterior=0, bool no_reflect=0,
 		colorRGBA const &spec_color=WHITE, float mag=0.8, float shine=60.0, float metalness=1.0);
 	rgeom_mat_t &get_painted_metal_material(bool inc_shadows=0, bool dynamic=0, unsigned small=0, bool exterior=0, bool no_reflect=0,

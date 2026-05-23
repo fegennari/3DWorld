@@ -175,6 +175,7 @@ colorRGBA building_interior_t::get_attic_ceiling_color() const {
 	case ATTIC_TYPE_WOOD      : return texture_color(get_plywood_tid());
 	case ATTIC_TYPE_PLASTER   : return texture_color(STUCCO_TEX);
 	case ATTIC_TYPE_FIBERGLASS: return texture_color(get_insulation_tid()).modulate_with(colorRGBA(1.0, 0.7, 0.6));
+	case ATTIC_TYPE_OPEN      : return WHITE;
 	default: assert(0);
 	}
 	return WHITE; // never gets here

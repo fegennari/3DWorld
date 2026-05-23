@@ -759,6 +759,10 @@ void building_t::add_attic_roof_geom(rgeom_mat_t &mat, colorRGBA const &color, f
 	} // for i
 }
 
+rgeom_mat_t &building_room_geom_t::get_rafters_material(float tscale, bool inc_shadows, unsigned small, bool is_painted) {
+	return (is_painted ? get_untextured_material(inc_shadows, 0, small) : get_wood_material(tscale, inc_shadows, 0, small));
+}
+
 void building_room_geom_t::add_attic_interior_and_rafters(building_t const &b, float tscale, bool detail_pass) {
 	if (!b.has_attic_space()) return;
 	if (!detail_pass && !b.has_attic_window) return; // nothing to do
@@ -773,7 +777,7 @@ void building_room_geom_t::add_attic_interior_and_rafters(building_t const &b, f
 		if (attic_type == ATTIC_TYPE_WOOD) {
 			b.add_attic_roof_geom(get_material(tid_nm_pair_t(get_plywood_tid()), 0, small), WHITE, 1.0, 16.0, 0, window_holes); // no shadows
 		}
-		else if (attic_type == ATTIC_TYPE_PLASTER) { // or gypsum?
+		else if (attic_type == ATTIC_TYPE_PLASTER || attic_type == ATTIC_TYPE_OPEN) { // or gypsum?
 			b.add_attic_roof_geom(get_material(b.get_material().wall_tex, 0, small), WHITE, 1.0, 0.0, 0, window_holes); // no shadows
 		}
 		else if (attic_type == ATTIC_TYPE_FIBERGLASS) {
@@ -787,15 +791,17 @@ void building_room_geom_t::add_attic_interior_and_rafters(building_t const &b, f
 	if (!detail_pass || attic_type == ATTIC_TYPE_WOOD || attic_type == ATTIC_TYPE_PLASTER) return; // no rafters to draw
 
 	// build the roof trusses
-	get_wood_material(tscale, 0, 0, 2); // ensure unshadowed material
-	rgeom_mat_t &wood_mat   (get_wood_material(tscale, 1, 0, 2)); // shadows + detail
-	rgeom_mat_t &wood_mat_us(get_wood_material(tscale, 0, 0, 2)); // no shadows + detail
+	bool const split_in_half(b.is_restroom()), is_open(attic_type == ATTIC_TYPE_OPEN), is_painted(is_open); // for park restrooms
+	get_rafters_material(tscale, 0, 2, is_painted); // ensure unshadowed material
+	rgeom_mat_t &wood_mat   (get_rafters_material(tscale, 1, 2, is_painted)); // shadows + detail
+	rgeom_mat_t &wood_mat_us(get_rafters_material(tscale, 0, 2, is_painted)); // no shadows + detail
 	float const floor_spacing(b.get_window_vspace()), delta_z(0.1*b.get_floor_thickness()); // matches value in get_all_drawn_verts()
 
 	// Note: there may be a chimney in the attic, but for now we ignore it
 	for (auto i = b.roof_tquads.begin(); i != b.roof_tquads.end(); ++i) {
 		if (!b.is_attic_roof(*i, 0)) continue; // type_roof_only=0
 		bool const is_roof(i->is_roof()); // roof tquad; not wall triangle
+		if (is_open && !is_roof) continue; // no beams/posts for triangle walls in open attics
 		// draw beams along inside of roof; start with a vertical cube and rotate to match roof angle
 		tquad_with_ix_t tq(*i);
 		for (unsigned n = 0; n < tq.npts; ++n) {tq.pts[n].z -= delta_z;} // shift down slightly
@@ -804,14 +810,16 @@ void building_room_geom_t::add_attic_interior_and_rafters(building_t const &b, f
 		bool const dim(fabs(normal.x) < fabs(normal.y)), dir(normal[dim] > 0.0); // dim this tquad is facing; beams run in the other dim
 		float const base_width(bcube.get_sz_dim(!dim)), run_len(bcube.get_sz_dim(dim)), height(bcube.dz()), height_scale(1.0/fabs(normal[dim]));
 		float const beam_width(0.04*floor_spacing), beam_hwidth(0.5*beam_width), beam_depth(2.0*beam_width);
+		float const rafter_hwidth((is_open ? 1.2 : 1.0)*beam_hwidth), rafter_depth((is_open ? 1.4 : 1.0)*beam_depth);
 		float const epsilon(0.02*beam_hwidth), beam_edge_gap(beam_hwidth + epsilon), dir_sign(dir ? -1.0 : 1.0);
-		unsigned const num_beams(max(2, round_fp(3.0f*base_width/floor_spacing)) & 0xFE); // srip off LSB to make even so that light is between beams
+		unsigned num_beams(max(2, round_fp(3.0f*base_width/floor_spacing)) & 0xFE); // srip off LSB to make even so that light is between beams
+		if (split_in_half) {num_beams += 1;} // use an odd number of beams for park restrooms so that we have a beam in the center wall
 		float const beam_spacing((base_width - 2.0f*beam_edge_gap)/(num_beams - 1));
 		// shift slightly for opposing roof sides to prevent Z-fighting on center beam
 		float const beam_pos_start(bcube.d[!dim][0] + beam_edge_gap + dir_sign*0.5*epsilon);
 		unsigned const qv_start(wood_mat.quad_verts.size());
 		cube_t beam(bcube); // set the z1 base and exterior edge d[dim][dir]
-		if (is_roof) {beam.z1() += beam_depth*run_len/height;} // shift up to avoid clipping through the ceiling of the room below
+		if (is_roof && !is_open) {beam.z1() += beam_depth*run_len/height;} // shift up to avoid clipping through the ceiling of the room below
 		// determine segments for our non-base edges
 		edge_t edges[3]; // non-base edge segments: start plus: 1 for rectangle, 2 for triangle, 3 for trapezoid
 		unsigned num_edges(0);
@@ -831,6 +839,7 @@ void building_room_geom_t::add_attic_interior_and_rafters(building_t const &b, f
 		for (unsigned n = 0; n < num_beams; ++n) {
 			float const roof_pos(beam_pos_start + n*beam_spacing);
 			set_wall_width(beam, roof_pos, beam_hwidth, !dim);
+			if (split_in_half && n == num_beams/2) {beam.expand_in_dim(!dim, b.get_wall_thickness());} // make center beam wider/double so that it crosses into both halves
 			beam.d[dim][!dir] = beam.d[dim][dir] + dir_sign*beam_depth;
 			bool found(0);
 
@@ -908,15 +917,15 @@ void building_room_geom_t::add_attic_interior_and_rafters(building_t const &b, f
 			// add rafter along the roofline for this quad; dim is long dim
 			float const centerline(bcube.d[dim][!dir]); // inside/middle edge
 			beam = bcube;
-			beam.z2() -= beam_hwidth*height/run_len; // shift to just touching the roof at the top
-			beam.z1()  = beam.z2() - beam_depth;
-			set_wall_width(beam, centerline, beam_hwidth, dim);
+			beam.z2() -= rafter_hwidth*height/run_len; // shift to just touching the roof at the top
+			beam.z1()  = beam.z2() - rafter_depth;
+			set_wall_width(beam, centerline, rafter_hwidth, dim);
 			assert(beam.is_strictly_normalized());
 			// determine span of beam along roofline for the trapezoid case/hipped roof; can be zero length for square houses with four triangle roof sections
 			if (is_hipped_side) {find_roofline_beam_span(beam, bcube.z2(), tq.pts, dim);}
 			beam.expand_in_dim(!dim, -epsilon); // prevent Z-fighting
 			
-			if (beam.get_sz_dim(!dim) > beam_depth) { // if it's long enough
+			if (beam.get_sz_dim(!dim) > rafter_depth) { // if it's long enough
 				unsigned skip_faces(EF_Z2); // skip top
 				if (tq.type == tquad_with_ix_t::TYPE_ROOF_PEAK) {skip_faces |= get_skip_mask_for_xy(!dim);} // don't draw ends for peaked roofs as they abut triangle walls
 				wood_mat_us.add_cube_to_verts(beam, WHITE, beam.get_llc(), skip_faces); // shadows not needed
@@ -930,7 +939,7 @@ void building_room_geom_t::add_attic_interior_and_rafters(building_t const &b, f
 					}
 				}
 			}
-			if (num_edges == 1) { // tilted rectangle (not trapezoid)
+			if (num_edges == 1 && !is_open) { // tilted rectangle (not trapezoid)
 				// add horizontal straining beams connecting each vertical beam to form an A-frame; make them unshadowed because shadows look bad when too close to the light
 				beam.z2() -= 3.0*beam_depth; // below roofline beam
 				beam.z1()  = beam.z2() - 0.8*beam_depth; // slightly smaller
