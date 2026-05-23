@@ -918,14 +918,14 @@ void building_t::add_hallway_steam_pipes(rand_gen_t &rgen, unsigned room_id, uns
 					//objs.emplace_back(boiler, TYPE_PIPE, next_room_id, dim, 0, bracket_flags, light_amt, SHAPE_CYLIN, RED);
 					continue;
 				}
-				// find a nearby machine to connect to
+				// find a nearby machine or boiler to connect to
 				moids.clear();
 
 				for (unsigned i = objs_start; i < objs_end; ++i) {
 					room_object_t const &c(objs[i]);
 							
 					if (c.room_id == next_room_id) {
-						if (c.type != TYPE_MACHINE) continue;
+						if (c.type != TYPE_MACHINE && c.type != TYPE_BOILER) continue;
 						float score(0.0);
 						if (pipe.d[!dim][0] < c.d[!dim][1] && pipe.d[!dim][1] > c.d[!dim][0]) {score += 10.0*window_vspace;} // high score if pipe crosses over this machine
 						if (c.dim == dim) {score += 1.0*window_vspace;} // higher score if on same or opposite wall as pipe

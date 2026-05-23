@@ -843,6 +843,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_MUSHROOM:   add_mushroom   (c); break;
 		case TYPE_PAN_SHELF:  add_pantry_shelf(c); break;
 		case TYPE_COM_FRIDGE: add_commercial_fridge(c, 0, 1); break; // inc_lg=0, inc_sm=1
+		case TYPE_BOILER:     add_boiler(c); break;
 		case TYPE_DBG_SHAPE:  add_debug_shape(c); break;
 		// 3D model objects
 		case TYPE_KEY:       if (has_key_3d_model()) {model_objs.push_back(c);} else {add_key(c);} break; // draw or add as 3D model
@@ -1706,7 +1707,8 @@ float get_ao_shadow(room_object_t const &c, bool enable_indir) {
 	if (type == TYPE_BED) {return ((c.taken_level > 2) ? 0.35 : 0.5);} // reduced AO when the mattress has been taken and light gets through the slats
 	if (type == TYPE_BCASE || type == TYPE_DRESSER || type == TYPE_NIGHTSTAND || type == TYPE_COUCH || type == TYPE_CONF_TABLE) return 0.75; // dense shadow
 	if (type == TYPE_SINK || type == TYPE_TOILET || type == TYPE_STALL) return 0.25; // light shadow
-	if (type == TYPE_CHAIR || type == TYPE_DESK || type == TYPE_RDESK || type == TYPE_POOL_TABLE || type == TYPE_MACHINE || type == TYPE_XFORMER) return 0.5; // med shadow
+	if (type == TYPE_CHAIR || type == TYPE_DESK || type == TYPE_RDESK || type == TYPE_POOL_TABLE || type == TYPE_MACHINE ||
+		type == TYPE_BOILER || type == TYPE_XFORMER) return 0.5; // med shadow
 	return 0.0; // no shadow
 }
 

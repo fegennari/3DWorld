@@ -7561,6 +7561,12 @@ void building_room_geom_t::add_commercial_fridge(room_object_t const &c, bool in
 	}
 }
 
+void building_room_geom_t::add_boiler(room_object_t const &c) {
+	colorRGBA const color(apply_light_color(c));
+	rgeom_mat_t &mat(get_metal_material(1)); // shadowed
+	mat.add_ortho_cylin_to_verts(c, color, c.dim, 1, 1); // draw ends
+}
+
 void add_grid_of_bars(rgeom_mat_t &mat, colorRGBA const &color, cube_t const &c, unsigned num_vbars, unsigned num_hbars, float vbar_hthick,
 	float hbar_hthick, unsigned vdim, unsigned hdim, unsigned adj_dim, float h_adj_val, bool cylin_vbars, float tscale)
 {
@@ -7582,7 +7588,7 @@ void add_grid_of_bars(rgeom_mat_t &mat, colorRGBA const &color, cube_t const &c,
 			mat.add_ortho_cylin_to_verts(bar, color, vdim, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, N_CYL_SIDES/2, 0.0, 0, tscale); // ends, low detail
 		}
 		else if (textured) {mat.add_cube_to_verts(bar, color, origin, skip_faces_v);}
-		else {mat.add_cube_to_verts_untextured(bar, color, skip_faces_v);}
+		else {mat.add_cube_to_verts_untextured   (bar, color,         skip_faces_v);}
 	}
 	cube_t bar(c);
 	if (h_adj_val != 0.0) {bar.expand_in_dim(adj_dim, h_adj_val);}
@@ -7590,7 +7596,7 @@ void add_grid_of_bars(rgeom_mat_t &mat, colorRGBA const &color, cube_t const &c,
 	for (unsigned n = 0; n < num_hbars; ++n) { // horizontal
 		set_wall_width(bar, (c.d[vdim][0] + hbar_hthick + n*h_step), hbar_hthick, vdim);
 		if (textured) {mat.add_cube_to_verts  (bar, color, origin, skip_faces_h);}
-		else {mat.add_cube_to_verts_untextured(bar, color, skip_faces_h);}
+		else {mat.add_cube_to_verts_untextured(bar, color,         skip_faces_h);}
 	}
 }
 void building_room_geom_t::add_store_gate(cube_t const &c, bool dim, float open_amt) {

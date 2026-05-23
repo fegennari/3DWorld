@@ -234,6 +234,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_FOOD_TUB  ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 25.0,  8.0,   "tub of food");
 	bldg_obj_types[TYPE_VENT_HOOD ] = bldg_obj_type_t(0, 0, 1, 0, 1, 0, 1, 500,  200.00, "ventilation hood"); // rat_coll set since it's spider collidable
 	bldg_obj_types[TYPE_COM_FRIDGE] = bldg_obj_type_t(1, 1, 1, 1, 1, 0, 3, 400.0, 200.0, "commercial fridge"); // pickup=1 because it can be picked from (doors occlude objects)
+	bldg_obj_types[TYPE_BOILER    ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 2,  0.0,  0.0,   "boiler");
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");
