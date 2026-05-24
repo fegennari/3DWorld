@@ -1935,7 +1935,7 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 	if (hum_amt > 0.0) {play_hum_sound(player_pos, hum_amt, 0.01*hum_freq);}
 	doors_next_frame(player_pos); // run for current and connected buildings
 	interior->room_geom->next_frame(*this, player_pos);
-	if (is_factory()) {interior->ind_info->next_frame(interior->room_geom->particle_manager);} // update factory smoke
+	if (is_heavy_industrial()) {interior->ind_info->next_frame(interior->room_geom->particle_manager);} // update factory/powerplant smoke
 	// update droplet spawners; only for player in basement/extended basement of this building
 	if (player_in_this_building && player_in_basement) {update_droplet_spawners();}
 }
@@ -2053,7 +2053,7 @@ void particle_manager_t::next_frame(building_t &building) {
 		else if (p.effect == PART_EFFECT_SMOKE) { // floats up
 			p.radius = p.init_radius*(1.0 + 3.0*lifetime); // radius increases over lifetime
 			p.color  = colorRGBA(DK_GRAY*(1.0 - lifetime), p.alpha*(1.0 - lifetime)); // dark gray => transparent black
-			//if (building.is_factory() && p.pos.z > building.ground_floor_z1) {} // should factory smoke be different?
+			//if (building.is_heavy_industrial() && p.pos.z > building.ground_floor_z1) {} // should factory/powerplant smoke be different?
 		}
 		else if (p.effect == PART_EFFECT_STEAM) { // color remains constant
 			p.radius = p.init_radius*(1.0 + ((p.vel.z < 0.0) ? 15.0 : 3.0)*lifetime); // radius increases over lifetime, faster for steam leaks pointed down (not showers)

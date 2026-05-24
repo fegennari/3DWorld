@@ -2499,7 +2499,7 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 		add_roof_walls(top, wall_width, 0, cubes); // overlap_corners=0
 		for (unsigned i = 0; i < 4; ++i) {details.emplace_back(cubes[i], (uint8_t)ROOF_OBJ_WALL);}
 	}
-	if (is_factory() || is_powerplant()) {add_smokestacks(rgen);}
+	if (is_heavy_industrial()) {add_smokestacks(rgen);}
 	for (roof_obj_t const &o : details) {assert(o.is_strictly_normalized()); max_eq(bcube.z2(), o.z2());} // extend bcube z2 to contain details
 	if (has_flat_top) {gen_grayscale_detail_color(rgen, 0.2, 0.6);} // for antenna and roof
 }

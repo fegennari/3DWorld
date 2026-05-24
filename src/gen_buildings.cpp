@@ -4721,7 +4721,7 @@ public:
 			player_building->draw_glass_surfaces(xlate);
 			pop_scene_xlate();
 		}
-		if (player_building->is_factory()) { // draw smoke in factory
+		if (player_building->is_heavy_industrial()) { // draw smoke in factory/powerplant
 			push_scene_xlate(xlate);
 			player_building->draw_factory_alpha(xlate);
 			pop_scene_xlate();

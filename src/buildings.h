@@ -1731,7 +1731,8 @@ struct building_t : public building_geom_t {
 	bool is_restroom    () const {return (btype == BTYPE_RESTROOM  );}
 	bool is_apt_or_hotel() const {return (is_apartment() || is_hotel());}
 	bool is_residential () const {return (is_house || is_apt_or_hotel());}
-	bool is_industrial  () const {return (is_factory() || is_warehouse() || is_powerplant());}
+	bool is_heavy_industrial() const {return (is_factory() || is_powerplant());}
+	bool is_industrial  () const {return (is_heavy_industrial() || is_warehouse());}
 	bool is_commercial  () const {return (!is_residential() && !is_industrial());}
 	bool has_house_floorplan() const {return (is_house || is_restaurant() || is_restroom());}
 	bool is_retail_part(cube_t const &part) const {return (has_retail() && part.z1() == ground_floor_z1);}

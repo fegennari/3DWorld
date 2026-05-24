@@ -2294,7 +2294,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		if (!reflection_pass) {lava_lamp_draw.next_frame();}
 		if (draw_fish) {end_fish_draw(s, inc_pools_and_fb);}
 		draw_and_clear_blur_qbd(ao_qbd);
-		if (!building.is_factory()) {draw_and_clear_flares(flare_qbd, s, RED);} // factory flares are drawn later
+		if (!building.is_heavy_industrial()) {draw_and_clear_flares(flare_qbd, s, RED);} // factory/powerplant flares are drawn later
 	}
 	if (!shadow_only && !reflection_pass) {water_sound_manager.finalize();}
 	water_draw.draw_and_clear(s);
@@ -2313,7 +2313,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	decal_manager.draw_building_interior_decals(s, player_in_building_or_doorway, shadow_only); // draw decals in this building
 	
 	if (player_in_building && !shadow_only) { // ideally should be drawn after all buildings, but the shaders won't be setup correctly
-		if (!building.is_factory()) {particle_manager.draw(s, xlate);} // factory smoke is drawn later
+		if (!building.is_heavy_industrial()) {particle_manager.draw(s, xlate);} // factory/powerplant smoke is drawn later
 		fire_manager.draw(s, xlate);
 	}
 	if (!shadow_only) { // draw last; not shadow casters
@@ -2412,7 +2412,7 @@ void building_t::draw_glass_surfaces(vector3d const &xlate) const {
 }
 
 void building_t::draw_factory_alpha(vector3d const &xlate) const { // smoke and light flares
-	if (!has_room_geom() || !is_factory()) return;
+	if (!has_room_geom() || !is_heavy_industrial()) return;
 	shader_t s;
 	s.begin_simple_textured_shader();
 	interior->room_geom->particle_manager.draw(s, xlate);
