@@ -956,7 +956,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 			cube_t bc;
 			set_cube_zvals(bc, plot.z2(), plot.z2()+bheight);
 
-			for (unsigned N = 0; N < 200; ++N) { // 200 random tries
+			for (unsigned N = 0; N < 500; ++N) { // 500 random tries
 				bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()), doors_at_front(rgen.rand_bool());
 				cube_t place_area(plot); // should we prefer to place by the path like water fountains?
 				place_area.expand_in_dim( dim, -bhdepth-sidewalk_width);
@@ -967,7 +967,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 				set_wall_width(bc, center[ dim], bhdepth, dim);
 				set_wall_width(bc, center[!dim], bhlen,  !dim);
 				cube_t bc_pad(bc);
-				bc_pad.expand_by_xy(0.25*bhdepth);
+				bc_pad.expand_by_xy(0.2*bhdepth);
 				if (doors_at_front) {bc_pad.d[dim][dir] += (dir ? 1.0 : -1.0)*0.5*bhdepth;} // add extra padding to front entrance
 				else {bc_pad.expand_in_dim(!dim, 0.5*bhdepth);} // add extra padding to door sides
 				if (has_bcube_int(bc_pad, blockers)) continue; // invalid placement

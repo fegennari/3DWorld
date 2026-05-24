@@ -1058,6 +1058,8 @@ void building_t::create_restroom_floorplan(unsigned part_id, rand_gen_t &rgen) {
 			set_wall_width(skylight, (split_pos + (d ? 1.0 : -1.0)*0.67*room_width), 0.5*sl_width, dim);
 			subtract_skylight_from_roof_tquads(skylight);
 		}
+		//skylights.push_back(skylight); // no, needs to be sliped, not a cube
+		details.emplace_back(skylight, DETAIL_OBJ_SHAD_ONLY); // sun/moon shadow caster for bottom surface of skylight; partial fix - need to block the entire opening
 		for (room_t &room : interior->rooms) {room.set_has_skylight();}
 		has_skylights = 1;
 	}
