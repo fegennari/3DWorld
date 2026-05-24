@@ -4162,11 +4162,11 @@ bool building_t::hang_pictures_whiteboard_chalkboard_in_room(rand_gen_t rgen, ro
 	cube_t const &part(get_part_for_room(room));
 	float const floor_height(get_window_vspace()), wall_thickness(get_wall_thickness());
 	bool const no_ext_walls(!is_basement && (has_int_windows() || !is_cube())); // don't place on ext walls with windows or non-square orients
+	room_type const rtype(room.get_room_type(floor_ix));
 	vect_room_object_t &objs(interior->room_geom->objs);
 	bool was_hung(0);
 
 	if (add_whiteboards) { // add whiteboards
-		room_type const rtype(room.get_room_type(floor_ix));
 		bool const is_conference(rtype == RTYPE_CONF); // conference rooms always have a whiteboard
 		if (!is_conference && pref_orient == 4 && rgen.rand_float() < 0.1) return 0; // skip 10% of the time; don't skip if pref_orient was set (classroom)
 		bool const pref_dim((pref_orient < 4) ? (pref_orient >> 1) : rgen.rand_bool()), pref_dir((pref_orient < 4) ? (pref_orient & 1) : rgen.rand_bool());
@@ -4240,45 +4240,50 @@ bool building_t::hang_pictures_whiteboard_chalkboard_in_room(rand_gen_t rgen, ro
 		return 0;
 	}
 	// add pictures
+	bool const is_art_room(rtype == RTYPE_ART);
+
 	for (unsigned dim = 0; dim < 2; ++dim) {
 		for (unsigned dir = 0; dir < 2; ++dir) {
 			float const wall_pos(room.d[dim][dir]);
 			if (no_ext_walls && fabs(room.d[dim][dir] - part.d[dim][dir]) < 1.1*wall_thickness) continue; // on part boundary, likely ext wall where there may be windows, skip
-			if (!room.is_hallway && rgen.rand_float() < 0.2) continue; // skip 20% of the time unless it's a hallway
-			float const height(floor_height*rgen.rand_uniform(0.3, 0.6)*(is_basement ? 0.8 : 1.0)); // smaller pictures in basement to avoid the pipes
-			float const width(height*rgen.rand_uniform(1.5, 2.0)); // width > height
-			if (width > 0.8*room.get_sz_dim(!dim)) continue; // not enough space
-			float const base_shift((dir ? -1.0 : 1.0)*0.5*wall_thickness); // half a wall's thickness in dir
-			point center;
-			center[ dim] = wall_pos;
-			center[!dim] = room.get_center_dim(!dim);
-			center.z     = zval + rgen.rand_uniform(0.45, 0.55)*floor_height; // move up
-			float const lo(room.d[!dim][0] + 0.7*width), hi(room.d[!dim][1] - 0.7*width);
-			cube_t best_pos;
+			if (!room.is_hallway && !is_art_room && rgen.rand_float() < 0.2) continue; // skip 20% of the time unless it's a hallway or art room
 
-			for (unsigned n = 0; n < 10; ++n) { // make 10 attempts to choose a position along the wall; first iteration is the center
-				if (n > 0) { // try centered first, then non-centered
-					if (hi - lo < width) break; // not enough space to shift, can't place this picture
-					center[!dim] = rgen.rand_uniform(lo, hi);
-				}
-				cube_t c(center);
-				c.expand_in_z(0.5*height);
-				c.d[dim][!dir] += 0.2*base_shift; // move out to prevent z-fighting
-				// add an additional half wall thickness for interior hallway and office walls
-				if (room_inc_half_walls(room) && classify_room_wall(room, zval, dim, dir, 0) != ROOM_WALL_EXT) {c.translate_dim(dim, base_shift);}
-				c.expand_in_dim(!dim, 0.5*width);
-				int const ret(check_valid_picture_placement(room, c, width, zval, dim, dir, objs_start));
-				if (ret == 0) continue; // invalid, retry
-				best_pos = c;
-				if (ret == 1) break; // valid and good - keep this pos
-			} // for n
-			if (best_pos.is_all_zeros()) continue; // failed placement
-			assert(best_pos.is_strictly_normalized());
-			unsigned flags(RO_FLAG_NOCOLL);
-			if (rgen.rand_bool()) {flags |= RO_FLAG_HAS_EXTRA;} // flag as being abstract (shader) art
-			objs.emplace_back(best_pos, TYPE_PICTURE, room_id, dim, !dir, flags, tot_light_amt); // picture faces dir opposite the wall
-			objs.back().obj_id = uint16_t(objs.size() + 13*room_id + 17*floor_ix + 31*mat_ix + 61*dim + 127*dir); // determines picture texture
-			was_hung = 1;
+			for (unsigned num = 0; num < (is_art_room ? 2 : 1); ++num) { // up to 2 pictures in art rooms
+				float const height(floor_height*rgen.rand_uniform(0.3, 0.6)*(is_basement ? 0.8 : 1.0)); // smaller pictures in basement to avoid the pipes
+				float const width(height*rgen.rand_uniform(1.5, 2.0)); // width > height
+				if (width > 0.8*room.get_sz_dim(!dim)) continue; // not enough space
+				float const base_shift((dir ? -1.0 : 1.0)*0.5*wall_thickness); // half a wall's thickness in dir
+				point center;
+				center[ dim] = wall_pos;
+				center[!dim] = room.get_center_dim(!dim);
+				center.z     = zval + rgen.rand_uniform(0.45, 0.55)*floor_height; // move up
+				float const lo(room.d[!dim][0] + 0.7*width), hi(room.d[!dim][1] - 0.7*width);
+				cube_t best_pos;
+
+				for (unsigned n = 0; n < (is_art_room ? 20 : 10); ++n) { // make 10/20 attempts to choose a position along the wall; first iteration is the center
+					if (n > 0 || num > 0) { // try centered first, then non-centered
+						if (hi - lo < width) break; // not enough space to shift, can't place this picture
+						center[!dim] = rgen.rand_uniform(lo, hi);
+					}
+					cube_t c(center);
+					c.expand_in_z(0.5*height);
+					c.d[dim][!dir] += 0.2*base_shift; // move out to prevent z-fighting
+					// add an additional half wall thickness for interior hallway and office walls
+					if (room_inc_half_walls(room) && classify_room_wall(room, zval, dim, dir, 0) != ROOM_WALL_EXT) {c.translate_dim(dim, base_shift);}
+					c.expand_in_dim(!dim, 0.5*width);
+					int const ret(check_valid_picture_placement(room, c, width, zval, dim, dir, objs_start));
+					if (ret == 0) continue; // invalid, retry
+					best_pos = c;
+					if (ret == 1) break; // valid and good - keep this pos
+				} // for n
+				if (best_pos.is_all_zeros()) continue; // failed placement
+				assert(best_pos.is_strictly_normalized());
+				unsigned flags(RO_FLAG_NOCOLL);
+				if (rgen.rand_bool()) {flags |= RO_FLAG_HAS_EXTRA;} // flag as being abstract (shader) art
+				objs.emplace_back(best_pos, TYPE_PICTURE, room_id, dim, !dir, flags, tot_light_amt); // picture faces dir opposite the wall
+				objs.back().obj_id = uint16_t(objs.size() + 13*room_id + 17*floor_ix + 31*mat_ix + 61*dim + 127*dir); // determines picture texture
+				was_hung = 1;
+			} // for num
 		} // for dir
 	} // for dim
 	return was_hung;
