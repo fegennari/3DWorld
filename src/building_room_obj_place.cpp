@@ -2320,6 +2320,17 @@ bool building_t::add_ladder_to_room(rand_gen_t &rgen, room_t const &room, float 
 	return place_obj_along_wall(TYPE_INT_LADDER, room, ladder_height, ladder_sz, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.0, 1, 4, 0, WHITE, 1); // not at window
 }
 
+void building_t::add_play_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	// currently nothing to add; room likely already has a table and chairs and maybe a desk
+}
+void building_t::add_art_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	// in addition to table, chairs, desk, etc.
+	cube_t place_area(get_walkable_room_bounds(room));
+	place_area.expand_by_xy(-get_trim_thickness());
+	unsigned const num(1 + rgen.rand_bool()); // 1-2
+	for (unsigned n = 0; n < num; ++n) {place_model_along_wall(OBJ_MODEL_EASEL, TYPE_EASEL, room, 0.8, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 2.0);}
+}
+
 bool building_t::add_interrogation_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	// find the direction to the main (first) door
 	bool dim(0), dir(0);

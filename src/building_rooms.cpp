@@ -1259,7 +1259,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				}
 				else { // unassigned room of house on upper floor with added object/table
 					// this case is relatively rare, and we've already added a table, so it's too late to make this a bedroom/bathroom if can_be_bedroom_or_bathroom(*r, f)
-					r->assign_to((rgen.rand_bool() ? (room_type)RTYPE_PLAY : (room_type)RTYPE_ART), f); // play room or art room
+					bool const is_play(rgen.rand_bool());
+					if (is_play) {add_play_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);}
+					else         {add_art_room_objs (rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);}
+					r->assign_to((is_play ? (room_type)RTYPE_PLAY : (room_type)RTYPE_ART), f); // play room or art room
 					is_play_art = 1;
 				}
 			}
