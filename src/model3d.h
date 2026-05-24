@@ -632,6 +632,7 @@ public:
 	void set_occlusion_cube(cube_t const &cube) {occlusion_cube = cube;}
 	geom_xform_t fit_to_scene();
 	void set_target_translate_scale(point const &target_pos, float target_radius, geom_xform_t &xf) const;
+	void clear_emissive_colors();
 	void render_materials_def(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, int enable_alpha_mask,
 		unsigned bmap_pass_mask, int trans_op_mask, point const *const xlate, xform_matrix const *const mvm=nullptr)
 	{

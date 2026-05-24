@@ -2218,6 +2218,10 @@ void model3d::set_target_translate_scale(point const &target_pos, float target_r
 	xf.tv    = target_pos - xf.scale*bcube.get_cube_center(); // scale is applied before translate
 }
 
+void model3d::clear_emissive_colors() {
+	for (material_t &m : materials) {m.ke = BLACK;}
+}
+
 void model3d::render_with_xform(shader_t &shader, model3d_xform_t &xf, xform_matrix const &mvm, bool is_shadow_pass,
 	int reflection_pass, bool is_z_prepass, int enable_alpha_mask, unsigned bmap_pass_mask, int reflect_mode, int trans_op_mask)
 {

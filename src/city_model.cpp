@@ -74,6 +74,9 @@ bool city_model_t::read(FILE *fp, bool is_helicopter, bool is_person) {
 		else if (keyword == "mirrored") {
 			if (!read_bool(fp, mirrored)) return 0;
 		}
+		else if (keyword == "allow_emissive") {
+			if (!read_bool(fp, allow_emissive)) return 0;
+		}
 		else {
 			cerr << "Error: Unrecognized keyword " << keyword << " in config file" << endl;
 			return 0;
@@ -134,7 +137,7 @@ bool city_model_loader_t::is_model_valid(unsigned id) {
 	return model.is_loaded();
 }
 
-void city_model_loader_t::load_model_id(unsigned id) { // currently up to 72 models loaded with people and cars
+void city_model_loader_t::load_model_id(unsigned id) { // building objects, people, and cars
 	unsigned const num_sub_models(get_num_sub_models(id));
 
 	for (unsigned sm = 0; sm < num_sub_models; ++sm) { // load all sub-models
@@ -159,6 +162,7 @@ void city_model_loader_t::load_model_id(unsigned id) { // currently up to 72 mod
 		}
 		assert(!empty()); // must have loaded a model
 		model3d &cur_model(back());
+		if (!model.allow_emissive) {cur_model.clear_emissive_colors();} // nothing should be emissive
 
 		if (model.shadow_mat_ids.empty()) { // empty shadow_mat_ids, create the list from all materials
 			unsigned const num_materials(max(cur_model.num_materials(), size_t(1))); // max with 1 for unbound material
