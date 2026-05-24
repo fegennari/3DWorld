@@ -2712,8 +2712,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				else {
 					light_bc2.intersect_with_cube(room_exp); // upward facing light is for this room only
 				}
-				min_eq(light_bc2.z2(), (ceil_z + fc_thick)); // doesn't reach higher than the ceiling of this room
-				max_eq(light_bc2.z1(), floor_z); // doesn't extend below the floor; could even set higher
+				min_eq(light_bc2.z2(), (ceil_z  + fc_thick)); // doesn't reach higher than the ceiling of this room
+				max_eq(light_bc2.z1(), (floor_z - fc_thick)); // doesn't extend below the floor; could even set higher if !wall_light
 			}
 			if (is_rotated()) {light_bc2 = get_rotated_bcube(light_bc2);}
 			float sec_light_radius(0.0);
