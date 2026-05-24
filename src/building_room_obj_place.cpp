@@ -1790,6 +1790,7 @@ bool building_t::maybe_add_fireplace_to_room(rand_gen_t rgen, room_t const &room
 }
 
 bool building_t::check_if_against_window(cube_t const &c, room_t const &room, bool dim, bool dir) const {
+	if (room.z1() < ground_floor_z1) return 0; // no windows in the basement
 	if (!has_int_windows() || classify_room_wall(room, c.zc(), dim, dir, 0) != ROOM_WALL_EXT) return 0;
 	cube_t const &part(get_part_for_room(room));
 	float const hspacing(get_hspacing_for_part(part, !dim)), border(get_window_h_border());
@@ -1975,6 +1976,7 @@ colorRGBA get_couch_color(rand_gen_t &rgen) {
 }
 bool building_t::add_livingroom_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	if (!is_residential() || room.is_hallway || room.is_sec_bldg || room.is_office) return 0; // these can't be living rooms
+	bool const is_basement(zval < ground_floor_z1);
 	float const wall_thickness(get_wall_thickness());
 	cube_t place_area(get_walkable_room_bounds(room)), tv_pref_area;
 	place_area.expand_by(-0.25*wall_thickness); // common spacing to wall
@@ -2039,11 +2041,11 @@ bool building_t::add_livingroom_objs(rand_gen_t rgen, room_t const &room, float 
 			}
 		}
 	}
-	if ((is_house || is_apartment()) && (rgen.rand()%3) == 0) { // add fishtank on a tall table 33% of the time
+	if (!is_basement && (is_house || is_apartment()) && (rgen.rand()%3) == 0) { // add fishtank on a tall table 33% of the time if above ground
 		add_fishtank_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area);
 	}
 	maybe_add_radiator_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);
-	add_entryway_objs(rgen, room, zval, room_id, tot_light_amt, objs_start);
+	if (!is_basement) {add_entryway_objs(rgen, room, zval, room_id, tot_light_amt, objs_start);}
 	if (is_house && rgen.rand_bool()) {add_clock_to_room_wall(rgen, room, zval, room_id, tot_light_amt, objs_start, 0);} // analog
 	if (room.is_single_floor && objs_start > 0) {replace_light_with_ceiling_fan(rgen, room, cube_t(), room_id, tot_light_amt, objs_start-1);} // light is prev placed object
 	return 1;

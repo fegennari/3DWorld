@@ -210,7 +210,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	uint8_t last_unit_id(0);
 	uint64_t is_public_on_floor(0), library_floor_mask(0), added_kitchen_mask(0), added_living_mask(0), added_bath_mask(0), has_lounge_mask(0); // 64 bit masks, per floor
 	bool added_bedroom(0), added_library(0), added_dining(0), added_laundry(0), added_basement_utility(0), added_fireplace(0), added_pool_room(0);
-	bool saw_mall(0), added_cafeteria(0), added_gym(0);
+	bool saw_mall(0), added_cafeteria(0), added_gym(0), added_family_room(0);
 	light_ix_assign_t light_ix_assign;
 	room_type prev_rtype(RTYPE_NOTSET); // used for prisons
 	clear_existing_room_geom();
@@ -1152,6 +1152,13 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 						r->assign_to(RTYPE_LIVING, f);
 						// if living room is next to a dining room or kitchen, do we want to remove the door and wall between the rooms? would need to regen VBOs
 					}
+				}
+			}
+			// house basement living room is represented at family room
+			if (is_house && is_basement && (added_tc || added_desk) && (!added_family_room || rgen.rand_bool()) && r->get_size_xy().get_min_val() > 2.0*window_vspacing) {
+				if (add_livingroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start)) {
+					is_living = added_family_room = no_plants = 1; // functionally the same as a living room, but no plants since there are no windows
+					r->assign_to(RTYPE_FAMILY, f);
 				}
 			}
 			if (is_house && added_tc && num_chairs > 0 && !is_living && !is_kitchen) { // room with table and chair that's not a kitchen
