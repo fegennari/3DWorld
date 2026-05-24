@@ -2222,20 +2222,20 @@ void building_room_geom_t::remove_objs_contained_in(cube_t const &c, vect_room_o
 		update_draw_state_for_room_object(old_obj, building, 1);
 	}
 }
-void building_room_geom_t::replace_with_hanging_wires(room_object_t &obj, room_object_t const &old_obj, float wire_radius, bool vertical) {
+void building_room_geom_t::replace_with_hanging_wires(room_object_t &obj, room_object_t const &old_obj, float wire_radius, bool vertical, float shorten_amt) {
 	bool dim(0), dir(0);
 	unsigned wire_flags(RO_FLAG_NOCOLL);
 	cube_t wire(old_obj);
 
 	if (vertical) {
-		wire.z1() += 0.1*old_obj.dz(); // shorten wires up from bottom
+		wire.z1() += shorten_amt*old_obj.dz(); // shorten wires up from bottom
 		wire.z2() += wire_radius; // slightly into wall so that end is not visible when rotated
 		resize_around_center_xy(wire, wire_radius);
 		wire_flags |= RO_FLAG_HANGING;
 	}
 	else { // horizontal - use object dim/dir
 		dim = old_obj.dim; dir = !old_obj.dir;
-		wire.d[dim][!dir] += (dir ? 1.0 : -1.0)*0.1*old_obj.get_sz_dim(dim); // pull back slightly
+		wire.d[dim][!dir] += (dir ? 1.0 : -1.0)*shorten_amt*old_obj.get_sz_dim(dim); // pull back
 		wire.d[dim][ dir] += (dir ? 1.0 : -1.0)*wire_radius; // slightly into wall so that end is not visible when rotated
 		set_wall_width(wire, wire.get_center_dim(!dim), wire_radius, !dim);
 		set_wall_width(wire, wire.zc(), wire_radius, 2);
@@ -2387,6 +2387,10 @@ void building_room_geom_t::remove_object(unsigned obj_id, point const &at_pos, b
 		cube_t rem_area(old_obj);
 		rem_area.z2() += old_obj.dz(); // extend to cover the area above
 		decal_manager.remove_blood_or_stain(rem_area, 0);
+	}
+	else if (type == TYPE_HAND_DRYER) {
+		float const wire_thickness(0.5f*building.get_trim_thickness());
+		replace_with_hanging_wires(obj, old_obj, wire_thickness, 0, 0.75); // vertical=0, shorten_amt=0.75
 	}
 	if (is_light) {
 		// if indir lighting is enabled, attempt to create a new object for the wires while the old light is being removed; otherwise, replace the light with wires
