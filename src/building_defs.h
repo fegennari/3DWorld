@@ -131,13 +131,14 @@ std::string const lock_color_names[NUM_LOCK_COLORS] = {"silver", "black", "red",
 
 // building types/functions; these are for primary buildings, not basements/rooms (such as malls or parking garages)
 enum {BTYPE_UNSET=0, BTYPE_HOUSE, BTYPE_MULT_FAM, BTYPE_OFFICE, BTYPE_APARTMENT, BTYPE_HOTEL, BTYPE_HOSPITAL, BTYPE_PARKING, BTYPE_MALL, BTYPE_FACTORY,
-	BTYPE_WAREHOUSE, BTYPE_POWERPLANT, BTYPE_SCHOOL, BTYPE_POLICE, BTYPE_FIRE_STAT, BTYPE_PRISON, BTYPE_RESTAURANT, BTYPE_CONV_STORE, BTYPE_RESTROOM, NUM_BUILDING_TYPES};
+	BTYPE_WAREHOUSE, BTYPE_POWERPLANT, BTYPE_SCHOOL, BTYPE_POLICE, BTYPE_FIRE_STAT, BTYPE_PRISON, BTYPE_RESTAURANT, BTYPE_CONV_STORE, BTYPE_RESTROOM, BTYPE_DATACENTER,
+	NUM_BUILDING_TYPES};
 std::string const btype_names[NUM_BUILDING_TYPES] =
 {"", "House", "Multi-Family House", "Office", "Apartments", "Hotel", "Hospital", "Parking", "Mall", "Factory", "Warehouse", "Power Plant",
-"School", "Police Station", "Fire Station", "Prison", "Restaurant", "Store", "Restroom"};
+"School", "Police Station", "Fire Station", "Prison", "Restaurant", "Store", "Restroom", "Data Center"};
 colorRGBA const  btype_colors[NUM_BUILDING_TYPES] =
 {WHITE, WHITE, YELLOW,               WHITE,    GREEN,        GREEN,   BLUE,       BROWN,     ORANGE, RED,       RED,         RED,
-PURPLE,   MAGENTA,          MAGENTA,        BLACK,    CYAN,         WHITE,   PINK};
+ PURPLE,   MAGENTA,          MAGENTA,        BLACK,    CYAN,         WHITE,   PINK,       ORANGE};
 typedef uint8_t building_type_t;
 
 enum { // room object types
