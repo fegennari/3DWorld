@@ -1062,7 +1062,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, unsigned gen_index, bool has
 				for (unsigned dim_pass = 0; dim_pass < num_dim_passes; ++dim_pass) { // if room is near square and can't split in one dim, can try the other dim
 					on_edge = (c.d[!wall_dim][0] == p->d[!wall_dim][0] || c.d[!wall_dim][1] == p->d[!wall_dim][1]); // at edge of the building - walls don't intersect windows
 
-					for (unsigned num = 0; num < 20; ++num) { // 20 tries to choose a wall pos that's not inside a window or skylight or intersecting a wall
+					for (unsigned num = 0; num < 100; ++num) { // try to choose a wall pos that's not inside a window or skylight or intersecting a wall
 						wall_pos = cube_rand_side_pos(c, wall_dim, min_dist_param, min_dist_abs, rgen, 0); // for_door=0
 						if (on_edge && is_val_inside_window(*p, wall_dim, wall_pos, window_hspacing[wall_dim], window_border)) continue; // try a new wall_pos
 						if (c.bad_pos(wall_pos, wall_dim, wall_half_thick)) continue; // intersects doorway from prev wall, try a new wall_pos
