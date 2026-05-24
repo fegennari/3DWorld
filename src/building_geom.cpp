@@ -328,8 +328,9 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 				adjust_part_zvals_for_floor_spacing(parts[0]);
 				parts[1].z1() = parts[0].z2();
 			}
-			else if (is_cube_office && num_floors <= 4) { // <= 4 floors
-				btype = (rgen.rand_bool() ? BTYPE_WAREHOUSE : BTYPE_FACTORY); // make this a factory or warehouse
+			else if (is_cube_office && num_floors <= 4) { // <= 4 floors, make this industrial
+				unsigned const btypes[3] = {BTYPE_WAREHOUSE, BTYPE_FACTORY, BTYPE_POWERPLANT};
+				btype = btypes[rgen.rand() % 3];
 				assign_name(rgen); // re-assign a name
 			}
 			// parking garages are large footprint, and <= 8 floors unless in a city
