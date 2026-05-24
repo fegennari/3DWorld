@@ -1041,7 +1041,7 @@ void building_t::add_industrial_office_objs(rand_gen_t &rgen, room_t const &room
 		place_area.d[!edim][!place_end] = room_bounds.d[!edim][place_end] + (place_end ? -1.0 : 1.0)*locker_area_width;
 		add_room_lockers(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area, RTYPE_OFFICE, !edim, dir_skip_mask, 1); // add_padlocks=1
 	}
-	if (is_factory()) {add_valve_and_gauge_panel(rgen, room, zval, room_id, tot_light_amt, objs_start);} // add a row of valves and guages along a wall
+	if (is_factory() || is_powerplant()) {add_valve_and_gauge_panel(rgen, room, zval, room_id, tot_light_amt, objs_start);} // add a row of valves and guages along a wall
 	add_clock_to_room_wall(rgen, room, zval, room_id, tot_light_amt, objs_start);
 	// add boxes and crates
 	vect_room_object_t &objs(interior->room_geom->objs);
@@ -1072,17 +1072,43 @@ cube_t building_t::get_flat_roof_section_bcube() const {
 void building_t::add_smokestacks(rand_gen_t &rgen) { // factory or power plant
 	assert(!parts.empty());
 	cube_t const &base(parts[0]);
-	float const ss_radius(rgen.rand_uniform(0.01, 0.02)*(base.dx() + base.dy()));
+	bool const long_dim(base.dx() < base.dy());
+	float const ss_radius(rgen.rand_uniform(0.01, 0.02)*(base.dx() + base.dy())), ss_height(rgen.rand_uniform(0.75, 1.0)*base.dz());
 	unsigned const num(is_powerplant() ? (4 + (rgen.rand()%3)) : (1 + (rgen.rand()&1))); // 4-6 / 1-2
+	cube_t const flat_roof(get_flat_roof_section_bcube());
+	bool const place_on_flat_roof(!flat_roof.is_all_zeros() && flat_roof.get_sz_dim(long_dim) > 0.5*base.get_sz_dim(long_dim));
+	cube_t const &place_area(place_on_flat_roof ? flat_roof : base);
+	unsigned ss_ix(0);
 
-	for (unsigned n = 0; n < num; ++n) {
+	if (num > 2) { // try to place in a line
+		float const spacing(place_area.get_sz_dim(long_dim)/(num+1));
+
+		if (spacing > 4.0*ss_radius) {
+			for (unsigned m = 0; m < 10 && ss_ix < num; ++m) { // 10 attempts
+				bool const place_dir(rgen.rand_bool());
+				float const step((place_dir ? -1.0 : 1.0)*spacing);
+				cube_t start_area(place_area);
+				start_area.d[long_dim][!place_dir] = place_area.d[long_dim][place_dir] + step; // reduce area to the first placement
+				cube_t smokestack(gen_xy_pos_in_area(start_area, 2.0*ss_radius, rgen, start_area.z2()));
+				smokestack.expand_by_xy(ss_radius);
+				smokestack.z2() += ss_height;
+				if (has_bcube_int(smokestack, details)) continue;
+				details.emplace_back(smokestack, (uint8_t)ROOF_OBJ_SMOKESTACK);
+
+				for (++ss_ix; ss_ix < num; ++ss_ix) { // try to place more
+					smokestack.translate_dim(long_dim, step);
+					if (has_bcube_int(smokestack, details)) break;
+					details.emplace_back(smokestack, (uint8_t)ROOF_OBJ_SMOKESTACK);
+				}
+				has_smokestack = 1;
+			} // for m
+		}
+	}
+	for (; ss_ix < num; ++ss_ix) { // randomly place the remainder
 		for (unsigned m = 0; m < 10; ++m) { // 10 attempts to place smokestack
-			point const ss_center(gen_xy_pos_in_area(base, 2.5*ss_radius, rgen, base.z2()));
-			cube_t smokestack(ss_center);
+			cube_t smokestack(gen_xy_pos_in_area(place_area, 2.5*ss_radius, rgen, place_area.z2()));
 			smokestack.expand_by_xy(ss_radius);
-			cube_t const flat_roof(get_flat_roof_section_bcube());
-			if (!flat_roof.is_all_zeros() && flat_roof.contains_cube_xy(smokestack)) {smokestack.z1() = smokestack.z2() = flat_roof.z2();} // place on top of roof
-			smokestack.z2() += rgen.rand_uniform(0.75, 1.0)*base.dz(); // set height; should be above roof peak
+			smokestack.z2() += ss_height; // set height; should be above roof peak
 			if (has_bcube_int(smokestack, details)) continue;
 			details.emplace_back(smokestack, (uint8_t)ROOF_OBJ_SMOKESTACK);
 			has_smokestack = 1;
