@@ -4583,9 +4583,9 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 				if (might_have_windows) { // check for window intersection
 					cube_t const &part(get_part_for_room(room));
 					float const window_hspacing(get_hspacing_for_part(part, !dim)), window_h_border(get_window_h_border());
-					// expand by the width of the window trim, plus some padded wall plate width, then check to the left and right;
+					// expand by the width of the window trim, plus wall plate hwidth, then check to the left and right;
 					// 2*xy_expand should be smaller than a window so we can't have a window fit in between the left and right sides
-					float const xy_expand(get_trim_thickness() + 1.2f*plate_hwidth);
+					float const xy_expand(get_wind_trim_thick() + plate_hwidth);
 					if (is_val_inside_window(part, !dim, (wall_pos - xy_expand), window_hspacing, window_h_border) ||
 						is_val_inside_window(part, !dim, (wall_pos + xy_expand), window_hspacing, window_h_border)) continue;
 				}
