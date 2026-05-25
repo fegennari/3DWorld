@@ -950,6 +950,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 		// add a public restroom; not for two adjacent parks; may have a dumpster placed next to it
 		cube_t rr_test_range(plot);
 		rr_test_range.expand_by(plot.get_size()); // include adjacent plots
+		rr_test_range.expand_by(city_params.road_width); // include roads as well - full adjacent plots
 
 		if (!has_bcube_int(rr_test_range, park_restrooms)) {
 			float const bheight(0.2*city_params.road_width), bhlen(1.6*bheight), bhdepth(1.2*bheight);
