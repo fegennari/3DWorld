@@ -4572,23 +4572,31 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 			cube_t exclude_area;
 
 			for (unsigned n = 0; n < num_outlets_per_wall; ++n) {
-				float const wall_pos(rgen.rand_uniform((room_bounds.d[!dim][0] + min_wall_spacing), (room_bounds.d[!dim][1] - min_wall_spacing)));
 				cube_t c;
 				set_cube_zvals(c, outlet_z1, (outlet_z1 + plate_height));
-				set_wall_width(c, wall_pos, plate_hwidth, !dim);
 				c.d[dim][ dir] = wall_face; // flush with wall
 				c.d[dim][!dir] = wall_face + dir_sign*plate_thickness; // expand out a bit
-				if (!exclude_area.is_all_zeros() && c.intersects(exclude_area)) continue; // too close to previous outlet (maybe same wall); doesn't apply to kitchen counters
+				float wall_pos(0.0);
+				bool is_valid(0);
 
-				if (might_have_windows) { // check for window intersection
-					cube_t const &part(get_part_for_room(room));
-					float const window_hspacing(get_hspacing_for_part(part, !dim)), window_h_border(get_window_h_border());
-					// expand by the width of the window trim, plus wall plate hwidth, then check to the left and right;
-					// 2*xy_expand should be smaller than a window so we can't have a window fit in between the left and right sides
-					float const xy_expand(get_wind_trim_thick() + plate_hwidth);
-					if (is_val_inside_window(part, !dim, (wall_pos - xy_expand), window_hspacing, window_h_border) ||
-						is_val_inside_window(part, !dim, (wall_pos + xy_expand), window_hspacing, window_h_border)) continue;
-				}
+				for (unsigned N = 0; N < 4; ++N) { // 4 attempts to avoid previous outlet and windows
+					wall_pos = rgen.rand_uniform((room_bounds.d[!dim][0] + min_wall_spacing), (room_bounds.d[!dim][1] - min_wall_spacing));
+					set_wall_width(c, wall_pos, plate_hwidth, !dim);
+					if (!exclude_area.is_all_zeros() && c.intersects(exclude_area)) continue; // too close to previous outlet (maybe same wall); doesn't apply to kitchen counters
+
+					if (might_have_windows) { // check for window intersection
+						cube_t const &part(get_part_for_room(room));
+						float const window_hspacing(get_hspacing_for_part(part, !dim)), window_h_border(get_window_h_border());
+						// expand by the width of the window trim, plus wall plate hwidth, then check to the left and right;
+						// 2*xy_expand should be smaller than a window so we can't have a window fit in between the left and right sides
+						float const xy_expand(get_wind_trim_thick() + plate_hwidth);
+						if (is_val_inside_window(part, !dim, (wall_pos - xy_expand), window_hspacing, window_h_border) ||
+							is_val_inside_window(part, !dim, (wall_pos + xy_expand), window_hspacing, window_h_border)) continue;
+					}
+					is_valid = 1;
+					break;
+				} // for N
+				if (!is_valid) continue;
 				cube_t c_exp(c);
 				c_exp.expand_by_xy(wall_thickness);
 				bool hit_cabinet(0);
