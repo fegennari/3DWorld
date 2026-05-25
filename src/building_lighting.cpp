@@ -2764,15 +2764,16 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		point sun_moon_pos;
 		if (!light_valid_and_enabled(l) || !get_light_pos(sun_moon_pos, l)) continue;
 		float const camera_zval_check((camera_somewhat_by_stairs ? 2.0 : 1.0)*window_vspacing); // allow two floors below if player can see skylight from stairs
+		bool const is_rr(is_restroom_with_high_ceil());
 		bool const dir_always_vert  = 1;
 		bool const add_sky_lighting = 1;
 
 		// add virtual spotlights for each skylight to simulate sun light
 		for (cube_with_ix_t &sl : skylights) {
-			if (camera_in_basement)                     continue; // not drawn
-			if (!lights_bcube.intersects_xy(sl))        continue; // not contained within the light volume
-			if (camera_z < sl.z1() - camera_zval_check) continue; // player below the floor with the skylight or the one below; invalid when flying outside the building?
-			if (sun_moon_pos.z < sl.z2())               continue; // skip if light is too low on the horizon as it may assert later
+			if (camera_in_basement)              continue; // not drawn
+			if (!lights_bcube.intersects_xy(sl)) continue; // not contained within the light volume
+			if (sun_moon_pos.z < sl.z2())        continue; // skip if light is too low on the horizon as it may assert later
+			if (!is_rr && camera_z < sl.z1() - camera_zval_check) continue; // player below floor with skylight or one below; skip when flying outside building?
 			cube_t lit_area(sl);
 			lit_area.z2() += fc_thick; // include the tops of the skylight
 			point lpos(sl.get_cube_center());
@@ -2783,7 +2784,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			bcube.clamp_pt_xy(lpos); // must be within the XY bounds of the bcube to pick up shadows from this building
 			bool room_has_stairs(0);
 
-			if (!is_house) { // expand light to include the room for office buildings; house skylights are constrainted to the vertical skylight shaft
+			if (!has_house_floorplan()) { // expand light to include the room for office buildings; house skylights are constrainted to the vertical skylight shaft
 				for (room_t const &room : interior->rooms) {
 					if (room.get_has_skylight() && room.intersects(sl)) {
 						lit_area.union_with_cube_xy(room);
@@ -2793,7 +2794,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				}
 			}
 			if (camera_somewhat_by_stairs && !room_has_stairs && camera_z < sl.z1() - window_vspacing) continue; // player below the floor with the skylight
-			lit_area.z1() -= (room_has_stairs ? 2.0 : 1.0)*window_vspacing; // floor below the skylight; two floors if a room has stairs
+			if (is_rr) {lit_area.z1() = ground_floor_z1;}
+			else {lit_area.z1() -= (room_has_stairs ? 2.0 : 1.0)*window_vspacing;} // floor below the skylight; two floors if a room has stairs
 			lit_area.expand_by_xy(room_xy_expand); // include walls
 			if (!is_rot_cube_visible(lit_area, xlate, 1)) continue; // VFC; inc_mirror_reflections=1
 			// further constrain bcube based on projected light rays through the corners of the skylight to prevent unshadowed light from passing through exterior walls

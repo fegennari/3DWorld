@@ -2627,12 +2627,14 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 		tp.transparent = 1; // doesn't do anything?
 		tp.refract_ix  = GLASS_IOR;
 
-		for (cube_t const &skylight : skylights) {
-			cube_t glass(skylight);
-			float const ceil_thickness(glass.dz());
-			glass.z1() += 0.50*ceil_thickness; // glass pane is only 25% of ceiling thickness
-			glass.z2() -= 0.25*ceil_thickness;
-			bdraw.add_cube(*this, glass, tp, skylight_color, 0, 4, 0, 0, 0); // top and bottom only, untextured
+		if (!is_restroom_with_high_ceil()) { // restrooms only have exterior skylight glass; skip interior draw
+			for (cube_t const &skylight : skylights) {
+				cube_t glass(skylight);
+				float const ceil_thickness(glass.dz());
+				glass.z1() += 0.50*ceil_thickness; // glass pane is only 25% of ceiling thickness
+				glass.z2() -= 0.25*ceil_thickness;
+				bdraw.add_cube(*this, glass, tp, skylight_color, 0, 4, 0, 0, 0); // top and bottom only, untextured
+			}
 		}
 		if (has_mall()) {
 			for (cube_t const &skylight : interior->mall_info->skylights) {

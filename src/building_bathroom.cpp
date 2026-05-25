@@ -6,7 +6,7 @@
 #include "city.h" // for object_model_loader_t
 
 
-bool const ADD_RESTROOM_SKYLIGHTS = 0; // sort of works; causes problems with sun/moon shadows, model culling, and lack of indir/interior lighting
+bool const ADD_RESTROOM_SKYLIGHTS = 1; // sort of works; causes problems model culling and lack of indir lighting
 
 extern object_model_loader_t building_obj_model_loader;
 
@@ -24,7 +24,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 	// Note: zval passed by reference due to add_flooring()
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 
-	if (!is_house && !skylights.empty()) { // check for skylights if it's an office building; houses can have bathroom skylights (my old house did)
+	if (!has_house_floorplan() && !skylights.empty()) { // check for skylights if it's an office building; houses can have bathroom skylights (my old house did)
 		// should we allow bathroom stalls (with ceilings?) even if there's a skylight?
 		cube_t test_cube(room);
 		set_cube_zvals(test_cube, zval, zval+floor_spacing);
@@ -1057,11 +1057,14 @@ void building_t::create_restroom_floorplan(unsigned part_id, rand_gen_t &rgen) {
 		for (unsigned d = 0; d < 2; ++d) {
 			set_wall_width(skylight, (split_pos + (d ? 1.0 : -1.0)*0.67*room_width), 0.5*sl_width, dim);
 			subtract_skylight_from_roof_tquads(skylight);
-		}
-		//skylights.push_back(skylight); // no, needs to be sliped, not a cube
-		details.emplace_back(skylight, DETAIL_OBJ_SHAD_ONLY); // sun/moon shadow caster for bottom surface of skylight; partial fix - need to block the entire opening
+		
+			if (!roof_tquads.empty() && roof_tquads.back().type == tquad_with_ix_t::TYPE_SKYLIGHT_CAP) {
+				skylight.translate_dim(2, (roof_tquads.back().get_bcube().z1() - skylight.z2())); // shift up to touch bottom of cutout
+			}
+			skylights.push_back(skylight); // no, needs to be sliped, not a cube
+			details.emplace_back(part, DETAIL_OBJ_SHAD_ONLY); // add full part as the sun/moon shadow caster to block the skylight hole; only the top surface is needed
+		} // for d
 		for (room_t &room : interior->rooms) {room.set_has_skylight();}
-		has_skylights = 1;
 	}
 }
 

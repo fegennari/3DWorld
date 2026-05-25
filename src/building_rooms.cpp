@@ -313,7 +313,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		else if (is_restroom()) {
 			light_size *= 0.6;
 		}
-		else if (r->is_office || (r->get_has_skylight() && !industrial_room)) {
+		else if (r->is_office || (r->get_has_skylight() && !industrial_room && !is_restroom())) {
 			// more lights for large offices; light size varies by office size; parking garages are handled later
 			light_density = 0.5;
 			float const room_size(dx + dy); // normalized to office size
