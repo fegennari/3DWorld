@@ -1792,6 +1792,7 @@ bool building_t::maybe_add_fireplace_to_room(rand_gen_t rgen, room_t const &room
 bool building_t::check_if_against_window(cube_t const &c, room_t const &room, bool dim, bool dir) const {
 	if (room.z1() < ground_floor_z1) return 0; // no windows in the basement
 	if (!has_int_windows() || classify_room_wall(room, c.zc(), dim, dir, 0) != ROOM_WALL_EXT) return 0;
+	if (is_industrial()) return 1; // windows are inconsistent across floors/zvals; assume it intesects a window
 	cube_t const &part(get_part_for_room(room));
 	float const hspacing(get_hspacing_for_part(part, !dim)), border(get_window_h_border());
 	// assume object is no larger than 2x window size and check left, right, and center positions
