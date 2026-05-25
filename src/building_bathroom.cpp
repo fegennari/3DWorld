@@ -6,7 +6,7 @@
 #include "city.h" // for object_model_loader_t
 
 
-bool const ADD_RESTROOM_SKYLIGHTS = 1; // sort of works; causes problems model culling and lack of indir lighting
+bool const ADD_RESTROOM_SKYLIGHTS = 1; // sort of works; causes problems model culling and imperfect interior lighting
 
 extern object_model_loader_t building_obj_model_loader;
 

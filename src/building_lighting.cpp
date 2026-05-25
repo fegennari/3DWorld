@@ -929,12 +929,13 @@ class building_indir_light_mgr_t {
 			light_cube = window;
 
 			if (window.dz() < min(window.dx(), window.dy())) { // skylight; we could encode skylights as a different ix, but testing aspect ratio is easier
-				bool const in_mall(window.z1() <= b.ground_floor_z1);
+				bool const in_mall(window.z1() <= b.ground_floor_z1), is_rr(b.is_restroom_with_high_ceil());
+				float const light_xlate(is_rr ? (b.ground_floor_z1 + b.get_fc_thickness() - window.z1()) : -b.get_fc_thickness());
 				is_skylight    = 1;
 				surface_area   = window.dx()*window.dy();
-				base_num_rays *= (in_mall ? 16 : 8); // more rays, since skylights are larger and can cover multiple rooms
-				weight        *= 10.0; // stronger due to direct sun/moon/cloud lighting and reduced occlusion from buildings and terrain
-				light_cube.translate_dim(2, -b.get_fc_thickness()); // shift slightly down into the building to avoid collision with the roof/ceiling
+				base_num_rays *= (in_mall ? 16 : (is_rr ? 4 : 8)); // more rays, since skylights are larger and can cover multiple rooms
+				weight        *= (is_rr ? 40.0 : 10.0); // stronger due to direct sun/moon/cloud lighting and reduced occlusion from buildings and terrain
+				light_cube.translate_dim(2, light_xlate); // shift slightly down into the building to avoid collision with the roof/ceiling
 				// select primary light rays oriented away from the sun/moon; doesn't work well due to reduced ray scattering
 				light_dir     = get_light_pos().get_norm(); // more accurate, but requires indir to be recomputed when sun/moon pos changes
 				//light_dir     = plus_z; // make it vertical so that it doesn't need to be updated when the sun/moon pos changes
@@ -961,7 +962,7 @@ class building_indir_light_mgr_t {
 				else if (b.is_restaurant() && b.interior->rooms.front().intersects(light_cube)) {base_num_rays = 2*base_num_rays/3;} // fewer rays in restaurant dining area
 				else if (b.is_attic_window(window)) {in_attic = 1; base_num_rays *= 8;} // attic window
 			}
-			light_room_id = b.get_room_containing_pt(window.get_cube_center());
+			light_room_id = b.get_room_containing_pt(light_cube.get_cube_center());
 			// light intensity scales with surface area, since incoming light is a constant per unit area (large windows = more light)
 			weight *= surface_area/0.0016f; // a fraction the surface area weight of lights
 		} // end window case
