@@ -420,7 +420,7 @@ void rgeom_mat_t::upload_draw_and_clear(tid_nm_pair_dstate_t &state) { // Note: 
 void building_materials_t::clear() {
 	invalidate();
 	for (rgeom_mat_t &m : *this) {m.clear();}
-	vector<rgeom_mat_t>::clear();
+	deque<rgeom_mat_t>::clear();
 }
 unsigned building_materials_t::count_all_verts(bool shadow_only, bool reflect_only) const {
 	unsigned num_verts(0);

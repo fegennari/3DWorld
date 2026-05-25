@@ -553,7 +553,6 @@ void building_room_geom_t::add_drawers(room_object_t const &c, float tscale, vec
 	assert(drawers.size() <= 16); // we only have 16 bits to store drawer flags
 	float const height(c.dz()), drawer_thick(get_drawer_wall_thick(height, c.get_depth()));
 	float const handle_thick(0.75*drawer_thick), dir_sign(c.dir ? 1.0 : -1.0), handle_width(0.07*height);
-	get_metal_material(0, 0, 1); // ensure material exists so that door_mat reference is not invalidated
 	rgeom_mat_t &drawer_mat(is_wood ? get_wood_material(1.5*tscale, 1, 0, 1) : get_untextured_material(1, 0, 1)); // shadowed, small=1
 	rgeom_mat_t &handle_mat(get_metal_material(0, 0, 1)); // untextured, unshadowed, small=1
 	colorRGBA const drawer_color(apply_light_color(c, (is_wood ? WHITE : c.color*0.75))); // lighter color than dresser if wood, otherwise darker
@@ -1124,7 +1123,6 @@ void building_room_geom_t::add_spraycan_to_material(room_object_t const &c, rgeo
 }
 void building_room_geom_t::add_spraycan(room_object_t const &c) { // is_small=1
 	bool const shadowed(!c.is_on_srack());
-	get_untextured_material(shadowed, 0, 1, 0, 0, 1); // make sure it's loaded
 	add_spraycan_to_material(c, get_painted_metal_material(shadowed, 0, 1, 0, 1), get_untextured_material(shadowed, 0, 1, 0, 0, 1)); // small, no_reflect=1
 }
 
@@ -2765,7 +2763,6 @@ void building_room_geom_t::add_wall_gap(room_object_t const &c, tid_nm_pair_t co
 	float const sr_thickness(0.1*depth), tb_shrink(0.2*dsign*depth);
 	float start_pos(c.d[!dim][0] + stud_hwidth);
 	tid_nm_pair_t const nail_tex(get_rust_met_tid(), 0.0, 0); // unshadowed
-	get_material(nail_tex, 0, 1); // make sure it's in the map
 	rgeom_mat_t &wood_mat(get_wood_material((use_plywood ? 1.0 : 2.0)/height, 1, 0, 1, 0, (use_plywood ? WOOD_TYPE_PLYWOOD : WOOD_TYPE_DARK))); // shadowed, small
 	rgeom_mat_t &nail_mat(get_material(nail_tex, 0, 1)); // small
 	cube_t stud(c);
@@ -2859,7 +2856,6 @@ void building_room_geom_t::add_wall_gap(room_object_t const &c, tid_nm_pair_t co
 		}
 	} // for n
 	// draw partial plaster/stucco parts on the studs at each side
-	get_untextured_material(0, 0, 1); // make sure edge material is loaded
 	rgeom_mat_t &wall_mat(get_material(tid_nm_pair_t(wall_tex, 1), 0, 1)); // shadowed, small
 	rgeom_mat_t &edge_mat(get_untextured_material(0, 0, 1)); // unshadowed, small
 	auto &fverts(wall_mat.itri_verts);
@@ -3056,7 +3052,6 @@ void building_room_geom_t::add_filing_cabinet(room_object_t const &c, bool inc_l
 		vect_room_object_t &objects(get_temp_objects());
 		tid_nm_pair_t tex(get_texture_by_name("interiors/filing_cabinet_drawer.png"), 0.0, 1); // shadowed
 		tex.metalness = 0.5; // somewhat reflective
-		get_material(tex, 0, 1); // ensure material is loaded
 		rgeom_mat_t &sides_mat(get_painted_metal_material(1, 0, 1, 0, 0, 0.7, 50.0)); // shadows, small, painted metal
 		rgeom_mat_t &front_mat(get_material(tex, 0, 1)); // small
 		unsigned const front_mask(get_face_mask(c.dim, c.dir)), fb_mask(~get_skip_mask_for_xy(c.dim)), sides_mask(~get_skip_mask_for_xy(!c.dim));
@@ -3168,7 +3163,6 @@ void building_room_geom_t::add_mushroom(room_object_t const &c) {
 	unsigned cap_verts_start(0);
 
 	if (has_spots) {
-		get_untextured_material(1, 0, 1, 0, 0, 1); // make sure material is loaded
 		cap_mat = &get_material(tid_nm_pair_t(get_texture_by_name("shrooms.png"), 1.0f, 1, 0, 1), 0, 1); // shadowed, small, no_reflect=1
 		cap_verts_start = cap_mat->itri_verts.size();
 	}
@@ -3646,7 +3640,6 @@ void building_room_geom_t::add_pallet(room_object_t const &c_in) {
 		c.swap_dims(dim, 2); // swap dims to make horizontal for creating the pallet geometry, then swap back at the end
 	}
 	tid_nm_pair_t const nail_tex(get_rust_met_tid(), 0.0, false, false, true); // no_reflect=1
-	get_material(nail_tex, 0, 1); // make sure it's in the map
 	rgeom_mat_t &wood_mat(get_wood_material(2.0/c.get_length(), 1, 0, 1)); // shadowed, small
 	rgeom_mat_t &nail_mat(get_material(nail_tex, 0, 1)); // unshadowed, small
 	unsigned const wood_verts_start(wood_mat.quad_verts.size()), nail_verts_start(nail_mat.itri_verts.size()), nail_ixs_start(nail_mat.indices.size()); // capture for rotate/swap
@@ -3725,7 +3718,6 @@ void building_room_geom_t::add_sprinkler(room_object_t const &c) { // vertical s
 void building_room_geom_t::add_valve(room_object_t const &c) {
 	// Note: we don't know which direction the pipe is in, so the valve handle must be symmetric
 	unsigned const dim(c.get_pipe_dim()); // same as pipes
-	get_metal_material(1, 0, 2); // make sure it's in the map
 	colorRGBA const color(apply_light_color(c)), spec_color(get_specular_color(c.color)); // special case metals
 	rgeom_mat_t &mat(get_metal_material(1, 0, 2, 0, 1, spec_color)); // detail object, no_reflect=1
 	draw_metal_handle_wheel(c, dim, color, apply_light_color(c, WHITE), mat, get_metal_material(1, 0, 2));
@@ -3888,12 +3880,8 @@ void building_room_geom_t::add_elevator(room_object_t const &c, elevator_t const
 	normal [ dim] = -dir_sign; // opposite dir from front of elevator
 	static vector<vert_tc_t> verts;
 	static ostringstream oss; // reused across buttons
-	tid_nm_pair_t tp(get_small_font_tex()), lit_tp(tp); // unshadowed
-	tid_nm_pair_t digits_tp(-1); // untextured
-	lit_tp   .emissive = 1.0;
-	digits_tp.emissive = 1.0;
-	get_material(lit_tp,    1); // make sure it's allocated
-	get_material(digits_tp, 1); // make sure it's allocated
+	tid_nm_pair_t tp(get_small_font_tex()), lit_tp(tp), digits_tp(-1); // unshadowed
+	lit_tp.emissive = digits_tp.emissive = 1.0;
 	rgeom_mat_t &mat(get_material(tp, 1)); // unshadowed, dynamic=1
 	colorRGBA const lit_color(1.0, 0.9, 0.5);
 	color_wrapper const cw(BLACK), lit_cw(lit_color);
@@ -4025,7 +4013,6 @@ void building_room_geom_t::add_escalator(escalator_t const &e, float floor_spaci
 		rgeom_mat_t &bot_mat(get_metal_material(1, 0, 0, 0, 0, WHITE, 0.5, 30.0, 0.25)); // shadowed=1
 		bot_mat.add_quad_to_verts(bot_pts, colorRGBA(0.85, 0.85, 0.85));
 		// draw metal surfaces
-		get_untextured_material(0); // ensure railing material is loaded
 		rgeom_mat_t &metal_mat(get_metal_material(1)); // shadowed=1
 		for (unsigned d = 0; d < 2; ++d) {metal_mat.add_cube_to_verts_untextured(floors[d], sides_color, (EF_Z1 | sides_skip));} // skip bottom and sides; skip inside end as well?
 		metal_mat.add_cube_to_verts_untextured(upper, sides_color, EF_Z2); // skip top surface
@@ -4261,7 +4248,6 @@ void building_room_geom_t::add_picture(room_object_t const &c) { // also whitebo
 	unsigned skip_faces(get_face_mask(c.dim, c.dir)); // only the face oriented outward
 	bool const mirror_x(c.dim ^ c.dir ^ 1);
 	point const tex_origin(c.get_llc());
-	if (whiteboard) {get_metal_material(0, 0, 0, 0, 0, WHITE, 0.5, 40.0);} else {get_untextured_material();} // ensure frame material is valid
 	tid_nm_pair_t picture_tex(picture_tid, 0.0);
 	if (reflective) {picture_tex.set_specular(0.2, 80.0, 0.25);} // slightly metal-ish; can we set IOR > 1.0?
 	rgeom_mat_t &picture_mat(get_material(picture_tex));
@@ -5278,7 +5264,6 @@ void building_room_geom_t::add_water_heater(room_object_t const &c) {
 	metal_mat.add_vcylin_to_verts(top,  apply_light_color(c, DK_GRAY), 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 64); // top - draw top; ndiv=64
 	metal_mat.add_vcylin_to_verts(vent, apply_light_color(c, LT_GRAY), 0, 0, in_store, 0, 1.0, 1.0, 1.0, 1.0, 0, 16); // ndiv=16; draw inside if in store
 	metal_mat.add_vcylin_to_verts(cone, apply_light_color(c, LT_GRAY), 0, 0, 0, 0, 1.8, 0.0); // cone
-	if (bend_pipes) {get_metal_material(1, 0, 1, 0, 1, BRASS_C);} // make sure it exists in the materials, no_reflect=1
 	rgeom_mat_t &copper_mat(get_metal_material(1, 0, 1, 0, 1, COPPER_C, 0.7, 60.0, 0.7)); // small=1, no_reflect=1
 	colorRGBA const copper_color(apply_light_color(c, COPPER_C));
 	bool const low_detail = 1;
@@ -6293,7 +6278,6 @@ void building_room_geom_t::add_cabinet(room_object_t const &c, room_object_t con
 	}
 	// add cabinet doors; maybe these should be small objects, but there are at most a few cabinets per house and none in office buildings
 	if (doors.empty() && drawers.empty()) return; // no doors or drawers
-	get_metal_material(0, 0, 1); // ensure material exists so that door_mat reference is not invalidated
 	bool const shadowed(1 || any_doors_open); // shadowed if a door is open? but shadows will change when doors are opened and closed, so always enable
 	rgeom_mat_t &door_mat(is_vanity ? get_untextured_material(shadowed, 0, 1) : get_wood_material(1.5*tscale, shadowed, 0, 1)); // shadowed if a door is open; small=1
 	rgeom_mat_t &handle_mat(get_metal_material(0, 0, 1)); // untextured, unshadowed, small
