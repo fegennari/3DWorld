@@ -677,11 +677,12 @@ struct room_t : public cube_t, public room_assignment_t { // size=56
 	bool is_store            () const {return (get_room_type(0) == RTYPE_STORE    );}
 	bool is_retail           () const {return (get_room_type(0) == RTYPE_RETAIL   );}
 	bool is_factory          () const {return (get_room_type(0) == RTYPE_FACTORY  );}
+	bool is_powergen         () const {return (get_room_type(0) == RTYPE_POWERGEN );}
 	bool is_warehouse        () const {return (get_room_type(0) == RTYPE_WAREHOUSE);}
 	bool is_jail_cell        () const {return (get_room_type(0) == RTYPE_JAIL_CELL);}
 	bool is_restaurant       () const {return (get_room_type(0) == RTYPE_RESTAURANT);}
 	bool is_bathroom_rtype   () const {return is_bathroom(get_room_type(0));}
-	bool is_industrial       () const {return (is_factory() || is_warehouse());}
+	bool is_industrial       () const {return (is_factory() || is_powergen() || is_warehouse());}
 	bool is_mall_or_store    () const {return (is_mall() || is_store());}
 	bool is_single_large_room() const {return(is_parking() || is_backrooms() || is_retail() || is_mall() || is_industrial() || is_restaurant());}
 	bool is_single_large_room_or_store() const {return (is_single_large_room() || is_store());}
@@ -1915,7 +1916,7 @@ struct building_t : public building_geom_t {
 	void add_parking_garage_ramp(rand_gen_t &rgen);
 	bool add_machines_to_room(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool less_clearance=0);
 	void add_wall_fans_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, cube_t const &avoid=cube_t());
-	void add_machines_to_factory(rand_gen_t rgen, room_t const &room, cube_t const &place_area, float zval,
+	void add_industrial_machines(rand_gen_t rgen, room_t const &room, cube_t const &place_area, float zval,
 		unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned objs_start_inc_beams, cube_t const &ladder);
 	void add_chem_tank_gauge(room_object_t const &tank, float radius, float height);
 	void add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part, cube_t const &hall, unsigned part_ix, unsigned num_floors,

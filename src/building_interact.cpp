@@ -1927,6 +1927,7 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 			else if (room_type == RTYPE_SERVER  ) {hum_amt += 0.20; hum_freq = 120.0;}
 			else if (room_type == RTYPE_MACHINE ) {hum_amt += 0.10; hum_freq =  60.0;}
 			else if (room_type == RTYPE_FACTORY ) {hum_amt += 0.05; hum_freq =  60.0;}
+			else if (room_type == RTYPE_POWERGEN) {hum_amt += 0.07; hum_freq =  60.0;}
 			//else if (room_type == RTYPE_SECURITY) {}
 			//else if (room_type == RTYPE_SWIM    ) {}
 			//else if (room_type == RTYPE_LAUNDRY ) {}

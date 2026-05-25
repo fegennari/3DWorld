@@ -99,7 +99,7 @@ void building_t::create_industrial_floorplan(unsigned part_id, float window_hspa
 	// should there be an entryway room, then the main room doesn't overlap the sub-rooms? but then there will be empty space above them
 	// add entire part as a room (open floor); must be done last so that smaller contained rooms are picked up in early exit queries (model occlusion, light toggle, door conn)
 	// what about RTYPE_POWERPLANT (which has not yet been added)?
-	add_assigned_room(part, part_id, (is_warehouse() ? RTYPE_WAREHOUSE : RTYPE_FACTORY)); // num_lights will be calculated later
+	add_assigned_room(part, part_id, (is_warehouse() ? RTYPE_WAREHOUSE : (is_powerplant() ? RTYPE_POWERGEN : RTYPE_FACTORY))); // num_lights will be calculated later
 	rooms.back().set_has_subroom();
 	rooms.back().is_single_floor = 1;
 	setup_industrial_wall_occluders();
@@ -646,7 +646,7 @@ vector3d get_pallet_hsize(float one_inch, bool dim) {
 
 void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start_inc_lights) { // ~0.25ms
 	assert(has_ind_info());
-	bool const room_is_factory(room.is_factory()), room_is_warehouse(room.is_warehouse());
+	bool const room_is_factory(room.is_factory()), room_is_powergen(room.is_powergen()), room_is_warehouse(room.is_warehouse());
 	bool const edim(interior->ind_info->entrance_dim), edir(interior->ind_info->entrance_dir), beam_dim(!edim); // edim is the long dim; beam_dim is short dim
 	float const window_vspace(get_window_vspace()), wall_thick(get_wall_thickness()), fc_thick(get_fc_thickness()), edir_sign(edir ? 1.0 : -1.0);
 	vect_room_object_t &objs(interior->room_geom->objs);
@@ -763,15 +763,19 @@ void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float 
 	unsigned const objs_start(objs.size());
 	add_ladders_to_nested_room_roofs(rgen, room, zval, room_id, light_amt, place_area_upper); // added for both factories and warehouses
 
-	if (room_is_factory) { // add factory-specific objects
+	if (room_is_factory || room_is_powergen) { // add factory-specific objects
 		cube_t const center_ladder(add_factory_ladders_and_catwalks(rgen, room, zval, room_id, light_amt, place_area, place_area_upper,
 			beams_z1, support_width, supports, lights, ladders, beam_pos));
-		// add transformer
+		// add transformer(s)
+		unsigned const num_transformers(room_is_powergen ? (4 + (rgen.rand()%5)) : 1); // 1 for factory, 4-8 for powerplant (though they may not all be placed)
 		float const tzval(zval - 0.02*window_vspace); // transformer is slightly below floor level
-		place_model_along_wall(OBJ_MODEL_SUBSTATION, TYPE_XFORMER, room, 0.6, rgen, tzval, room_id, light_amt, xfmr_fl_area, objs_start, 0.0, 4, 0, WHITE, 0, 0, 0, 1); // sideways
+
+		for (unsigned N = 0; N < num_transformers; ++N) {
+			place_model_along_wall(OBJ_MODEL_SUBSTATION, TYPE_XFORMER, room, 0.6, rgen, tzval, room_id, light_amt, xfmr_fl_area, objs_start, 0.0, 4, 0, WHITE, 0, 0, 0, 1); // sideways
+		}
 		// add machines
 		unsigned const machines_start(objs.size());
-		add_machines_to_factory(rgen, room, place_area, zval, room_id, light_amt, objs_start, objs_start_inc_beams, center_ladder);
+		add_industrial_machines(rgen, room, place_area, zval, room_id, light_amt, objs_start, objs_start_inc_beams, center_ladder);
 
 		for (auto i = objs.begin()+machines_start; i != objs.end(); ++i) { // add some smoke emitters
 			if (i->type != TYPE_MACHINE)  continue;
@@ -789,7 +793,7 @@ void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float 
 		bool const added_forklift(place_model_along_wall(OBJ_MODEL_FORKLIFT, TYPE_FORKLIFT, room, 0.9,
 			rgen, zval, room_id, light_amt, xfmr_fl_area, objs_start, 0.25, 4, 0, WHITE, 0, 0, 0));
 		
-		if (1) { // scatter some random pallets on the floor
+		if (1) { // scatter some random pallets on the floor; should these be in factories as well?
 			unsigned const num_pallets((rgen.rand() % 3) + 3); // 3-5
 			float const one_inch(get_one_inch());
 			cube_t pallet;
@@ -837,8 +841,9 @@ void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float 
 	// add breaker panel
 	if (!nested_rooms.empty()) {
 		float const bp_ceil_zval(zval + get_floor_ceil_gap());
+		unsigned const num_to_add(room_is_powergen ? 2 : 1);
 
-		for (unsigned n = 0; n < 10; ++n) { // 10 attempts
+		for (unsigned n = 0, num_added = 0; n < 10 && num_added < num_to_add; ++n) { // 10 attempts
 			unsigned const rix(rgen.rand() % nested_rooms.size());
 			cube_t const &bpr(nested_rooms[rix]);
 			bool const bpdim(rgen.rand_bool()), bpdir((bpdim == edim) ? !edir : (bpr.get_center_dim(bpdim) < entry.get_center_dim(bpdim)));
@@ -856,7 +861,7 @@ void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float 
 			if (is_cube_close_to_doorway(tc, room, 0.0, 1) || overlaps_other_room_obj(tc, objs_start)) continue; // avoid doors and machines
 			add_breaker_panel(rgen, breaker_panel, bp_ceil_zval, bpdim, !bpdir, room_id, light_amt);
 			objs.emplace_back(tc, TYPE_BLOCKER, room_id, bpdim, !bpdir, RO_FLAG_INVIS); // don't place objects such as boxes in front of the panel
-			break; // success
+			++num_added;
 		} // for n
 	}
 	// add water fountain
@@ -950,23 +955,24 @@ void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float 
 	// add fire sprinkler pipes
 	add_industrial_sprinkler_pipes(rgen, room, room_id, support_width, objs_start, lights, beams);
 	
-	// add boxes and crates in piles
-	unsigned const num_piles(4 + (rgen.rand() % 5)); // 4-8
-	vect_cube_t exclude; // empty
+	if (room_is_factory || room_is_warehouse) { // add boxes and crates in piles
+		unsigned const num_piles(4 + (rgen.rand() % 5)); // 4-8
+		vect_cube_t exclude; // empty
 
-	for (unsigned n = 0; n < num_piles; ++n) {
-		unsigned const side(rgen.rand() % 3); // all sides but the entrance
-		bool const pdim((side == 2) ? edim : !edim), pdir((pdim == edim) ? !edir : bool(side));
-		point center;
-		center[ pdim] = place_area.d[pdim][pdir]; // against the wall/pillars
-		center[!pdim] = rgen.rand_uniform(place_area.d[!pdim][0], place_area.d[!pdim][1]); // random pos along wall
-		cube_t crate_bounds(center);
-		crate_bounds.expand_in_dim( pdim, window_vspace*rgen.rand_uniform(0.5, 1.0)); // random depth; half the space is outside the bounds and wasted
-		crate_bounds.expand_in_dim(!pdim, window_vspace*rgen.rand_uniform(0.5, 1.0)); // random width; may be clipped at the corner of the building
-		crate_bounds.intersect_with_cube(place_area);
-		if (interior->is_blocked_by_stairs_or_elevator(crate_bounds)) continue; // don't block stairs
-		add_boxes_and_crates(rgen, room, zval, room_id, light_amt, objs_start, 13, 0, interior->ind_info->floor_space, crate_bounds, exclude); // 4-16; is_basement=0
-	} // for n
+		for (unsigned n = 0; n < num_piles; ++n) {
+			unsigned const side(rgen.rand() % 3); // all sides but the entrance
+			bool const pdim((side == 2) ? edim : !edim), pdir((pdim == edim) ? !edir : bool(side));
+			point center;
+			center[ pdim] = place_area.d[pdim][pdir]; // against the wall/pillars
+			center[!pdim] = rgen.rand_uniform(place_area.d[!pdim][0], place_area.d[!pdim][1]); // random pos along wall
+			cube_t crate_bounds(center);
+			crate_bounds.expand_in_dim( pdim, window_vspace*rgen.rand_uniform(0.5, 1.0)); // random depth; half the space is outside the bounds and wasted
+			crate_bounds.expand_in_dim(!pdim, window_vspace*rgen.rand_uniform(0.5, 1.0)); // random width; may be clipped at the corner of the building
+			crate_bounds.intersect_with_cube(place_area);
+			if (interior->is_blocked_by_stairs_or_elevator(crate_bounds)) continue; // don't block stairs
+			add_boxes_and_crates(rgen, room, zval, room_id, light_amt, objs_start, 13, 0, interior->ind_info->floor_space, crate_bounds, exclude); // 4-16; is_basement=0
+		} // for n
+	}
 	if (room_is_factory) {
 		// add buckets
 		unsigned const num_buckets((rgen.rand() % 4) + 1); // 1-4
@@ -1041,7 +1047,10 @@ void building_t::add_industrial_office_objs(rand_gen_t &rgen, room_t const &room
 		place_area.d[!edim][!place_end] = room_bounds.d[!edim][place_end] + (place_end ? -1.0 : 1.0)*locker_area_width;
 		add_room_lockers(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area, RTYPE_OFFICE, !edim, dir_skip_mask, 1); // add_padlocks=1
 	}
-	if (is_heavy_industrial()) {add_valve_and_gauge_panel(rgen, room, zval, room_id, tot_light_amt, objs_start);} // add a row of valves and guages along a wall
+	if (is_heavy_industrial()) { // add 1-2 rows of valves and guages along a wall
+		unsigned const num_panels(is_powerplant() ? 2 : 1);
+		for (unsigned N = 0; N < num_panels; ++N) {add_valve_and_gauge_panel(rgen, room, zval, room_id, tot_light_amt, objs_start);}
+	}
 	add_clock_to_room_wall(rgen, room, zval, room_id, tot_light_amt, objs_start);
 	// add boxes and crates
 	vect_room_object_t &objs(interior->room_geom->objs);

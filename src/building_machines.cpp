@@ -778,7 +778,7 @@ void building_t::add_wall_fans_to_room(rand_gen_t &rgen, room_t const &room, flo
 
 bool cube_int_if_nonzero(cube_t const &c, cube_t const &C) {return (!C.is_all_zeros() && c.intersects(C));}
 
-void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cube_t const &place_area, float zval,
+void building_t::add_industrial_machines(rand_gen_t rgen, room_t const &room, cube_t const &place_area, float zval,
 	unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned objs_start_inc_beams, cube_t const &ladder)
 {
 	assert(is_heavy_industrial() && has_ind_info());
@@ -865,6 +865,7 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 			for (unsigned nx = 0; nx < num_xy[0]; ++nx) {
 				bool const is_tank (add_tanks && (tank_dim ? ny : nx) == (tank_dir  ? num_xy[tank_dim]-1 : 0));
 				bool const is_cbelt(add_cbelt && (cb_dim   ? ny : nx) == (cbelt_dir ? num_xy[cb_dim  ]-1 : 0));
+				bool const is_boiler(0/*is_powerplant()*/);
 				point const center((center_area.x1() + (nx + 0.5)*spacing.x), (center_area.y1() + (ny + 0.5)*spacing.y), zval);
 				unsigned const gix(ny*num_xy[0] + nx);
 
@@ -901,6 +902,9 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 					if (cb.intersects(avoid) || cube_int_if_nonzero(cb, ladder) || overlaps_obj_or_placement_blocked(cb, room, objs_start)) continue;
 					objs.emplace_back(cb, TYPE_CONV_BELT, room_id, cb_dim, cbelt_dir, 0, tot_light_amt, SHAPE_CUBE, LT_GRAY);
 					obj_grid[gix] = TYPE_CONV_BELT;
+				}
+				else if (is_boiler) {
+					// add boiler
 				}
 				else { // make it a machine
 					unsigned flags(RO_FLAG_IN_FACTORY | RO_FLAG_FROM_SET); // tag as part of a group
