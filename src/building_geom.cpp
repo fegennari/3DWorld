@@ -2402,13 +2402,17 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 	bool const can_add_special_obj(has_flat_top && !has_helipad && !add_antenna && !is_parking() && skylights.empty()); // open roof space with no blocker
 	bool const add_water_tower(can_add_special_obj && (tsz.x < 2.0*tsz.y && tsz.y < 2.0*tsz.x) && (tsz.x > 0.5*tpsz.x && tsz.y > 0.5*tpsz.y) && rgen.rand_bool());
 	bool const add_sat_dish(can_add_special_obj && !add_water_tower && is_cube() && !is_industrial());
-	unsigned const num_details(num_blocks + num_ac_units + 4*add_walls + add_antenna + add_water_tower + add_sat_dish);
-	if (num_details == 0) return; // nothing to do
+	bool const add_smokestack(is_heavy_industrial() /*&& roof_type != ROOF_TYPE_CURVED*/); // for all roof types?
 	if (add_walls && min(tsz.x, tsz.y) < 4.0*wall_width) return; // too small
+
+	if (!add_smokestack) {
+		unsigned const num_details(num_blocks + num_ac_units + 4*add_walls + add_antenna + add_water_tower + add_sat_dish);
+		if (num_details == 0) return; // nothing to do
+		reserve_extra(details, num_details);
+	}
 	float const xy_sz(tpsz.xy_mag()); // better to use bcube for size?
 	cube_t bounds(top);
 	if (add_walls) {bounds.expand_by_xy(-wall_width);}
-	reserve_extra(details, num_details);
 
 	if (add_water_tower) {
 		float const radius(rgen.rand_uniform(0.04, 0.06)*(tpsz.x + tpsz.y)), height(rgen.rand_uniform(3.0, 5.0)*radius);
@@ -2499,7 +2503,7 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 		add_roof_walls(top, wall_width, 0, cubes); // overlap_corners=0
 		for (unsigned i = 0; i < 4; ++i) {details.emplace_back(cubes[i], (uint8_t)ROOF_OBJ_WALL);}
 	}
-	if (is_heavy_industrial()) {add_smokestacks(rgen);}
+	if (add_smokestack) {add_smokestacks(rgen);}
 	for (roof_obj_t const &o : details) {assert(o.is_strictly_normalized()); max_eq(bcube.z2(), o.z2());} // extend bcube z2 to contain details
 	if (has_flat_top) {gen_grayscale_detail_color(rgen, 0.2, 0.6);} // for antenna and roof
 }
@@ -2536,7 +2540,7 @@ void building_t::maybe_add_special_roof(rand_gen_t &rgen) {
 	else if (is_cube()) { // only simple cubes are handled, and no custom buildings
 		if (global_building_params.dome_roof && sz.x < 1.2*sz.y && sz.y < 1.2*sz.x && sz.z > max(sz.x, sz.y)) {roof_type = ROOF_TYPE_DOME;} // roughly square, not too short
 		else if (btype == BTYPE_OFFICE && parts.size() == 1 && round_fp(top.dz()/get_window_vspace()) <= 4 && rgen.rand_bool()) {
-			// shorter single cube building; likely to become factory or warehouse
+			// shorter single cube building; likely to become factory, warehouse, or powerplant
 			cube_t const &top(parts[0]);
 			roof_type = ROOF_TYPE_CURVED;
 			max_eq(bcube.z2(), (top.z2() + 0.125f*min(top.dx(), top.dy()))); // should curve in the short dim by 25% of radius

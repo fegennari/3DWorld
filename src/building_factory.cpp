@@ -1073,36 +1073,43 @@ void building_t::add_smokestacks(rand_gen_t &rgen) { // factory or power plant
 	assert(!parts.empty());
 	cube_t const &base(parts[0]);
 	bool const long_dim(base.dx() < base.dy());
-	float const ss_radius(rgen.rand_uniform(0.01, 0.02)*(base.dx() + base.dy())), ss_height(rgen.rand_uniform(0.75, 1.0)*base.dz());
+	float ss_radius(rgen.rand_uniform(0.01, 0.02)*(base.dx() + base.dy()));
+	float const ss_height(rgen.rand_uniform(0.75, 1.0)*base.dz()*((roof_type == ROOF_TYPE_CURVED) ? 1.5 : 1.0));
 	unsigned const num(is_powerplant() ? (4 + (rgen.rand()%3)) : (1 + (rgen.rand()&1))); // 4-6 / 1-2
 	cube_t const flat_roof(get_flat_roof_section_bcube());
 	bool const place_on_flat_roof(!flat_roof.is_all_zeros() && flat_roof.get_sz_dim(long_dim) > 0.5*base.get_sz_dim(long_dim));
 	cube_t const &place_area(place_on_flat_roof ? flat_roof : base);
+	unsigned const ss_start_ix(details.size());
 	unsigned ss_ix(0);
 
 	if (num > 2) { // try to place in a line
 		float const spacing(place_area.get_sz_dim(long_dim)/(num+1));
+		min_eq(ss_radius, 0.25f*spacing);
 
-		if (spacing > 4.0*ss_radius) {
-			for (unsigned m = 0; m < 10 && ss_ix < num; ++m) { // 10 attempts
-				bool const place_dir(rgen.rand_bool());
-				float const step((place_dir ? -1.0 : 1.0)*spacing);
-				cube_t start_area(place_area);
-				start_area.d[long_dim][!place_dir] = place_area.d[long_dim][place_dir] + step; // reduce area to the first placement
-				cube_t smokestack(gen_xy_pos_in_area(start_area, 2.0*ss_radius, rgen, start_area.z2()));
-				smokestack.expand_by_xy(ss_radius);
-				smokestack.z2() += ss_height;
-				if (has_bcube_int(smokestack, details)) continue;
+		for (unsigned m = 0; m < 20 && ss_ix < num; ++m) { // 20 attempts
+			bool const place_dir(rgen.rand_bool());
+			float const step((place_dir ? -1.0 : 1.0)*spacing);
+			cube_t start_area(place_area);
+			start_area.d[long_dim][!place_dir] = place_area.d[long_dim][place_dir] + step; // reduce area to the first placement
+			cube_t smokestack(gen_xy_pos_in_area(start_area, 1.6*ss_radius, rgen, start_area.z2()));
+			smokestack.expand_by_xy(ss_radius);
+			smokestack.z2() += ss_height;
+
+			if (m < 10) { // check the full row's path in the first 10 iterations to avoid objects such as the antenna
+				cube_t path(smokestack);
+				path.d[long_dim][!place_dir] += (num - ss_ix - 1)*step;
+				if (has_bcube_int(path, details)) continue;
+			}
+			else if (has_bcube_int(smokestack, details)) continue;
+			details.emplace_back(smokestack, (uint8_t)ROOF_OBJ_SMOKESTACK);
+
+			for (++ss_ix; ss_ix < num; ++ss_ix) { // try to place more
+				smokestack.translate_dim(long_dim, step);
+				if (has_bcube_int(smokestack, details)) break;
 				details.emplace_back(smokestack, (uint8_t)ROOF_OBJ_SMOKESTACK);
-
-				for (++ss_ix; ss_ix < num; ++ss_ix) { // try to place more
-					smokestack.translate_dim(long_dim, step);
-					if (has_bcube_int(smokestack, details)) break;
-					details.emplace_back(smokestack, (uint8_t)ROOF_OBJ_SMOKESTACK);
-				}
-				has_smokestack = 1;
-			} // for m
-		}
+			}
+			has_smokestack = 1;
+		} // for m
 	}
 	for (; ss_ix < num; ++ss_ix) { // randomly place the remainder
 		for (unsigned m = 0; m < 10; ++m) { // 10 attempts to place smokestack
@@ -1115,6 +1122,12 @@ void building_t::add_smokestacks(rand_gen_t &rgen) { // factory or power plant
 			break; // success/done
 		} // for m
 	} // for n
+	if (!place_on_flat_roof && !flat_roof.is_all_zeros()) { // move smokestacks up if some are on the flat part and some aren't
+		for (unsigned i = ss_start_ix; i < details.size(); ++i) {
+			cube_t &ss(details[i]);
+			if (flat_roof.contains_cube_xy(ss)) {ss.z2() = flat_roof.z2() + ss_height;} // place on top of flat roof
+		}
+	}
 }
 
 void bldg_industrial_info_t::next_frame(particle_manager_t &particle_manager) { // for factories
