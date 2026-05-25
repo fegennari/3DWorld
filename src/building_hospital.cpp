@@ -582,6 +582,7 @@ void building_t::add_valve_and_gauge_panel(rand_gen_t &rgen, room_t const &room,
 		unsigned const num_valves(max(1U, min(8U, unsigned(width/(2.8*valve_radius)))));
 		float const valve_spacing(width/num_valves);
 		colorRGBA const handle_color(handle_colors[rgen.rand() % NUM_HANDLE_COLORS]);
+		objs[bar_ix].item_flags = ~get_face_mask(dim, !dir); // skip back face
 
 		for (unsigned n = 0; n < num_valves; ++n) {
 			// valves on the bottom
