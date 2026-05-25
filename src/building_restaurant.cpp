@@ -222,8 +222,6 @@ void building_t::add_restaurant_objs(rand_gen_t rgen, room_t const &room, float 
 		}
 	} // for d
 	if (rgen.rand_bool()) {add_wall_tv(rgen, room, zval, room_id, light_amt, objs_start);} // maybe TV for sports bar
-	// add additional pictures, likely only on the wall separating dining from kitchen and bathrooms
-	hang_pictures_whiteboard_chalkboard_in_room(rgen, room, zval, room_id, light_amt, objs_start, 0, 0);
 }
 
 void building_t::make_restaurant_light(room_object_t &light) {

@@ -4251,15 +4251,15 @@ bool building_t::hang_pictures_whiteboard_chalkboard_in_room(rand_gen_t rgen, ro
 		return 0;
 	}
 	// add pictures
-	bool const is_art_room(rtype == RTYPE_ART);
+	bool const more_pictures(rtype == RTYPE_ART || rtype == RTYPE_RESTAURANT);
 
 	for (unsigned dim = 0; dim < 2; ++dim) {
 		for (unsigned dir = 0; dir < 2; ++dir) {
 			float const wall_pos(room.d[dim][dir]);
 			if (no_ext_walls && fabs(room.d[dim][dir] - part.d[dim][dir]) < 1.1*wall_thickness) continue; // on part boundary, likely ext wall where there may be windows, skip
-			if (!room.is_hallway && !is_art_room && rgen.rand_float() < 0.2) continue; // skip 20% of the time unless it's a hallway or art room
+			if (!room.is_hallway && !more_pictures && rgen.rand_float() < 0.2) continue; // skip 20% of the time unless it's a hallway, restaurant, or art room
 
-			for (unsigned num = 0; num < (is_art_room ? 2 : 1); ++num) { // up to 2 pictures in art rooms
+			for (unsigned num = 0; num < (more_pictures ? 2 : 1); ++num) { // up to 2 pictures in art rooms and restaurants
 				float const height(floor_height*rgen.rand_uniform(0.3, 0.6)*(is_basement ? 0.8 : 1.0)); // smaller pictures in basement to avoid the pipes
 				float const width(height*rgen.rand_uniform(1.5, 2.0)); // width > height
 				if (width > 0.8*room.get_sz_dim(!dim)) continue; // not enough space
@@ -4271,7 +4271,7 @@ bool building_t::hang_pictures_whiteboard_chalkboard_in_room(rand_gen_t rgen, ro
 				float const lo(room.d[!dim][0] + 0.7*width), hi(room.d[!dim][1] - 0.7*width);
 				cube_t best_pos;
 
-				for (unsigned n = 0; n < (is_art_room ? 20 : 10); ++n) { // make 10/20 attempts to choose a position along the wall; first iteration is the center
+				for (unsigned n = 0; n < (more_pictures ? 20 : 10); ++n) { // make 10/20 attempts to choose a position along the wall; first iteration is the center
 					if (n > 0 || num > 0) { // try centered first, then non-centered
 						if (hi - lo < width) break; // not enough space to shift, can't place this picture
 						center[!dim] = rgen.rand_uniform(lo, hi);
