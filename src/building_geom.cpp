@@ -342,6 +342,10 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 				roof_tquads.clear(); // in case it was assigned a sloped roof
 				assign_name(rgen); // re-assign a name
 			}
+			else if (is_cube_office && num_floors <= 6 && rgen.rand_bool()) {
+				btype = BTYPE_DATACENTER;
+				assign_name(rgen); // re-assign a name
+			}
 			else if (is_cube() && num_floors >= 3 && !is_hospital() && rgen.rand_probability(global_building_params.retail_floorplan_prob)) { // 3+ floors, consider retail
 				retail_floor_levels = 1;
 				// only create a tall retail area if there are at least 4 floors (2 below and 2 above), otherwise the top part won't have central stairs to extend below

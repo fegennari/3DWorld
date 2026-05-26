@@ -285,6 +285,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		bool const is_jail_cell     (init_rtype_f0 == RTYPE_JAIL_CELL || r->get_room_type(1) == RTYPE_JAIL_CELL); // check second floor as well in case of ground floor door
 		bool const is_prison_room   (init_rtype_f0 == RTYPE_NOTSET && is_prison() && !r->is_hallway);
 		bool const is_restaurant_room(init_rtype_f0 == RTYPE_RESTAURANT);
+		bool const is_dc_server_room(init_rtype_f0 == RTYPE_SERVER && is_datacenter());
 		bool const is_office(r->is_office && (!is_hospital() || r->interior)); // hospital offices are converted to patient rooms, etc. if they have windows
 		bool const is_ext_basement(r->is_ext_basement()), is_backrooms(r->is_backrooms()), is_apt_or_hotel_room(r->is_apt_or_hotel_room());
 		bool const residential_room(is_house || (residential && !r->is_hallway && !is_basement && !is_retail_room)), industrial_room(r->is_industrial());
@@ -374,6 +375,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		else if (is_rest_kitchen) {
 			light_density = 0.7;
 			light_size   *= 0.9;
+		}
+		else if (is_dc_server_room) {
+			light_density = 0.6;
+			light_size   *= 0.8;
 		}
 		else if (r->is_single_floor) {
 			light_size *= sqrt(r->dz()/window_vspacing); // larger lights for taller rooms
@@ -793,6 +798,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			else if (f == 0 && init_rtype_f0 == RTYPE_LAUNDRY) {
 				added_obj = no_whiteboard = no_plants = is_laundry = added_laundry =
 					add_laundry_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, added_bathroom_objs_mask);
+			}
+			else if (is_dc_server_room) {
+				added_obj = no_whiteboard = no_plants = add_server_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 			}
 			else if (!residential && f == 0) { // commercial building special pre-assigned first floor rooms; can be in a stacked part
 				if (init_rtype_f0 == RTYPE_UTILITY) {
