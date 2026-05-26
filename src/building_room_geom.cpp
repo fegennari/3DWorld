@@ -2571,6 +2571,7 @@ int get_flooring_texture(room_object_t const &c) {
 	case FLOORING_WOOD:     return ((c.obj_id & 1) ? (int)FENCE_TEX : (int)PANELING_TEX); // select between two textures
 	case FLOORING_LGTILE:   return select_tile_floor_texture((c.room_id & 1), 1.0).tid;
 	case FLOORING_RUBBER:   return get_texture_by_name("interiors/rubber_flooring.jpg"); // Note: doesn't tile, but looks okay
+	case FLOORING_METAL:    return get_texture_by_name("interiors/metal_floor_tile.png");
 	case FLOORING_ROCK:     return ROCK_TEX; // or DARK_ROCK_TEX or MOSSY_ROCK_TEX?
 	default: assert(0);
 	}
@@ -2587,7 +2588,8 @@ void building_room_geom_t::add_flooring(room_object_t const &c, float tscale) {
 	// open wall rooms are not colored by room lights as this can create seams in the floor lighting
 	colorRGBA const color(c.is_open() ? c.color : blend_color(c.color, apply_light_color(c), 0.5, 0.0)); // 50% mix
 	unsigned const skip_faces((c.flags & RO_FLAG_ADJ_TOP) ? ~EF_Z1 : ~EF_Z2); // top or bottom
-	get_material(tid_nm_pair_t(get_flooring_texture(c), get_flooring_nmap_texture(c), 0.8*tscale, 0.8*tscale)).add_cube_to_verts(c, color, tex_origin, skip_faces); // unshadowed
+	tscale *= ((c.item_flags == FLOORING_METAL) ? 1.6 : 0.8);
+	get_material(tid_nm_pair_t(get_flooring_texture(c), get_flooring_nmap_texture(c), tscale, tscale)).add_cube_to_verts(c, color, tex_origin, skip_faces); // unshadowed
 }
 
 tquad_t get_ramp_tquad(room_object_t const &c) { // Note: normal is for the bottom surface
