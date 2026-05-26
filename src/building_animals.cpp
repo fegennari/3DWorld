@@ -203,7 +203,7 @@ bool building_t::is_pos_inside_building(point const &pos, float xy_pad, float hh
 	cube_t req_area(pos);
 	req_area.expand_by_xy(xy_pad);
 	req_area.z2() += hheight;
-	if (!is_cube_contained_in_parts(req_area) && !(inc_attic && cube_in_attic(req_area))) return 0;
+	if (!is_cube_contained_in_parts  (req_area) && !(inc_attic && cube_in_attic(req_area))) return 0;
 	if (!check_cube_within_part_sides(req_area)) return 0; // handle non-cube walls; probably slow; room isn't known
 	return 1;
 }

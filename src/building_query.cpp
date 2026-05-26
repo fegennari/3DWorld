@@ -34,12 +34,12 @@ cube_t get_parking_gate_arm(room_object_t const &c);
 
 // called by player_in_windowless_building(); assumes player is in this building; handles windows and exterior doors but not attics and basements
 bool building_t::player_can_see_outside() const {
+	if (is_restroom() && !skylights.empty()) return 1;
 	vector3d const xlate(get_tiled_terrain_model_xlate());
 	point const camera_pos(get_camera_pos()), camera_bs(camera_pos - xlate);
-	float const floor_spacing(get_window_vspace());
 	bool const in_basement(camera_bs.z < ground_floor_z1);
-	if (is_parking () && !in_basement )      return 1; // open walls
-	if (is_restroom() && !skylights.empty()) return 1;
+	if (is_parking () && !in_basement ) return 1; // open walls
+	float const floor_spacing(get_window_vspace());
 
 	if (!has_int_windows() || (is_restroom() && !point_near_ext_door(camera_bs))) { // no windows looking out, or restroom with block windows
 		if (building_has_open_ext_door && !doors.empty()) { // maybe can see out a door
@@ -1179,7 +1179,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 				valid_area.clamp_pt_xy(pos);
 				break;
 			} // for i
-			player_in_attic = (has_attic_window ? 1 : 2);
+			player_in_attic = (attic_has_window_or_skylight() ? 1 : 2);
 			had_coll = 1;
 			obj_z    = max(pos.z, p_last.z);
 		}
