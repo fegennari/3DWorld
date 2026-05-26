@@ -377,8 +377,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			light_size   *= 0.9;
 		}
 		else if (is_dc_server_room) {
-			light_density = 0.6;
-			light_size   *= 0.8;
+			light_density = 0.7;
+			light_size   *= 0.7;
 		}
 		else if (r->is_single_floor) {
 			light_size *= sqrt(r->dz()/window_vspacing); // larger lights for taller rooms

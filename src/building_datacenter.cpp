@@ -24,10 +24,6 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 	bool const long_dim(room.dx() < room.dy()), mult_rows(is_datacenter());
 	cube_t place_area(get_walkable_room_bounds(room));
 	place_area.expand_by(-0.25*get_wall_thickness()); // server spacing from walls
-
-	if (mult_rows) {
-		// TODO
-	}
 	zval = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_METAL); // add server room metal tile and move the effective floor up
 	cube_t server, computer;
 	set_cube_zvals(server,   zval, (zval + server_height));
@@ -116,6 +112,56 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 		laptop.translate_dim(dim, xlate);
 		laptop.flags |= RO_FLAG_HANGING;
 	} // for i
+	// add interior rows of servers for data centers grouped into blocks
+	if (mult_rows) {
+		unsigned const num_per_block = 8;
+		float const room_len(place_area.get_sz_dim(long_dim)), room_width(place_area.get_sz_dim(!long_dim));
+		float const clearance(get_min_front_clearance_inc_people());
+		float const front_clearance(1.2*clearance), back_clearance(1.0*clearance), edge_gap(max(server_depth, 1.6f*clearance));
+		float const side_gap(0.02*server_width), block_width(num_per_block*server_width + (num_per_block-1)*side_gap);
+		float aisle_gap(max(server_depth, 1.5f*clearance)), block_gap(max(2.0f*server_width, 1.25f*clearance));
+		float row_spacing(server_depth + aisle_gap), block_spacing(block_width + block_gap);
+		float const avail_depth(room_width - 2*(server_depth + edge_gap) + aisle_gap), avail_width(room_len - 2*(server_width + edge_gap) + block_gap);
+		unsigned const num_rows(avail_depth/row_spacing), num_blocks(avail_width/block_spacing); // take floor
+		bool const sdim(!long_dim), sdir(rgen.rand_bool()); // consistent direction for center rows
+		float const dsign(sdir ? 1.0 : -1.0);
+
+		if (num_rows > 0 && num_blocks > 0) {
+			row_spacing   = avail_depth/num_rows;
+			block_spacing = avail_width/num_blocks;
+			aisle_gap     = row_spacing   - server_depth;
+			block_gap     = block_spacing - block_width;
+			float const block_start(place_area.d[!sdim][0] + server_width + edge_gap); // include servers along the wall and their gap
+			float row_pos(place_area.d[sdim][0] + server_depth + edge_gap);
+
+			for (unsigned r = 0; r < num_rows; ++r) {
+				float block_pos(block_start);
+				server.d[sdim][0] = row_pos;
+				server.d[sdim][1] = row_pos + server_depth;
+
+				for (unsigned b = 0; b < num_blocks; ++b) { // should culling be per-block?
+					float server_pos(block_pos);
+
+					for (unsigned n = 0; n < num_per_block; ++n) {
+						server.d[!sdim][0] = server_pos;
+						server.d[!sdim][1] = server_pos + server_width;
+						// check for front and back clearance, but no side clearance; only check for stairs, elevators, and doors, not other objects/servers
+						cube_t server_exp(server);
+						server_exp.d[sdim][ sdir] += dsign*front_clearance;
+						server_exp.d[sdim][!sdir] -= dsign*back_clearance;
+
+						if (!is_obj_placement_blocked(server_exp, room, 1)) {
+							objs.emplace_back(server, TYPE_SERVER, room_id, sdim, sdir, 0, tot_light_amt);
+							// TODO: add wire conduit?
+						}
+						server_pos += server_width + side_gap;
+					}
+					block_pos += block_spacing;
+				} // for b
+				row_pos += row_spacing;
+			} // for r
+		}
+	}
 	add_door_sign("Server Room", room, zval, room_id);
 	return 1;
 }

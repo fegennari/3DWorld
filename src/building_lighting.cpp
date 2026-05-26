@@ -1011,6 +1011,7 @@ class building_indir_light_mgr_t {
 		} // end room light case
 		if (b.is_restroom()) {base_num_rays *= 4;} // more rays, since there are only 2 lights and 2-5 windows
 		if (b.check_pt_in_retail_room(light_center)) {weight *= 0.5; base_num_rays /= 5; half_step_sz = 0;} // many lights, fewer rays; windows or ceiling lights
+		if (light_room_id >= 0 && b.is_datacenter() && b.get_room(light_room_id).get_room_type(0) == RTYPE_SERVER) {base_num_rays /= 5;}
 		if (b.is_house ) {weight *=  2.0;} // houses have dimmer lights and seem to work better with more indir
 		if (cur_job.neg) {weight *= -1.0;}
 		weight /= base_num_rays; // normalize to the number of rays
