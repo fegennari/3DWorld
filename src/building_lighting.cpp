@@ -2776,7 +2776,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			if (sun_moon_pos.z < sl.z2())        continue; // skip if light is too low on the horizon as it may assert later
 			if (!is_rr && camera_z < sl.z1() - camera_zval_check) continue; // player below floor with skylight or one below; skip when flying outside building?
 			cube_t lit_area(sl);
-			lit_area.z2() += fc_thick; // include the tops of the skylight
+			if (is_rr) {lit_area.z2() = bcube.z2();} // include the full roof peak and skylight frame
+			else {lit_area.z2() += fc_thick;} // include the tops of the skylight
 			point lpos(sl.get_cube_center());
 			if (is_rotated()) {do_xy_rotate(building_center, lpos);} // ???
 			vector3d const light_dir((sun_moon_pos - lpos).get_norm());
@@ -2805,6 +2806,12 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			point const corners[4] = {point(sl.x1(), sl.y1(), z), point(sl.x2(), sl.y1(), z), point(sl.x2(), sl.y2(), z), point(sl.x1(), sl.y2(), z)};
 			float const extend_amt(window_vspacing/light_dist); // length of light ray reaching the floor is this much longer than the length of the ray to the skylight
 			for (unsigned n = 0; n < 4; ++n) {proj_bcube.union_with_pt(corners[n] + extend_amt*(corners[n] - lpos));}
+			
+			if (is_rr) { // include the skylight frame
+				bool const dim(sl.dx() < sl.dy());
+				proj_bcube.expand_in_dim( dim, 0.8*room_xy_expand);
+				proj_bcube.expand_in_dim(!dim, 0.3*room_xy_expand);
+			}
 			cube_t clipped_area(lit_area);
 			clipped_area.intersect_with_cube_xy(proj_bcube);
 			colorRGBA const outdoor_color(get_outdoor_light_color()); // required to calculate cur_ambient and cur_diffuse

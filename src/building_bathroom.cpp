@@ -1056,12 +1056,9 @@ void building_t::create_restroom_floorplan(unsigned part_id, rand_gen_t &rgen) {
 
 		for (unsigned d = 0; d < 2; ++d) {
 			set_wall_width(skylight, (split_pos + (d ? 1.0 : -1.0)*0.67*room_width), 0.5*sl_width, dim);
-			subtract_skylight_from_roof_tquads(skylight);
-		
-			if (!roof_tquads.empty() && roof_tquads.back().type == tquad_with_ix_t::TYPE_SKYLIGHT_CAP) {
-				skylight.translate_dim(2, (roof_tquads.back().get_bcube().z1() - skylight.z2())); // shift up to touch bottom of cutout
-			}
-			skylights.push_back(skylight); // no, needs to be sliped, not a cube
+			float const sl_z_center(subtract_skylight_from_roof_tquads(skylight));
+			skylight.translate_dim(2, (sl_z_center - skylight.z2())); // center z2 on skylight roof cutout
+			skylights.push_back(skylight);
 			details.emplace_back(part, DETAIL_OBJ_SHAD_ONLY); // add full part as the sun/moon shadow caster to block the skylight hole; only the top surface is needed
 		} // for d
 		for (room_t &room : interior->rooms) {room.set_has_skylight();}

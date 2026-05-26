@@ -37,7 +37,7 @@ bool building_t::point_under_attic_roof(point const &pos, vector3d *const cnorm)
 		if (normal.z == 0.0) continue; // skip vertical sides
 		if (cnorm) {*cnorm = -normal;} // we're looking at the underside of the roof, so reverse the normal; set whether or not we're inside the attic
 		if (dot_product_ptv(normal, pos, tq.pts[0]) < 0.0) return 1;
-	}
+	} // for tq
 	return 0;
 }
 bool building_t::is_blocked_by_open_attic_door(cube_t const &c) const {
@@ -1265,9 +1265,10 @@ void building_t::add_house_skylight(rand_gen_t rgen) {
 	} // for n
 }
 
-void building_t::subtract_skylight_from_roof_tquads(cube_t const &skylight) {
+float building_t::subtract_skylight_from_roof_tquads(cube_t const &skylight) {
 	vect_tquad_with_ix_t new_roof_tquads;
 	vect_cube_t tq_parts;
+	float z_center(skylight.zc());
 
 	for (tquad_with_ix_t &tq : roof_tquads) {
 		cube_t const bc(tq.get_bcube());
@@ -1324,8 +1325,10 @@ void building_t::subtract_skylight_from_roof_tquads(cube_t const &skylight) {
 			} // for sdir
 		} // for sdim
 		new_roof_tquads.push_back(sl_cap);
+		z_center = sl_cap.get_bcube().zc();
 	} // for tq
 	roof_tquads.swap(new_roof_tquads);
+	return z_center;
 }
 
 void building_room_geom_t::add_chimney(room_object_t const &c, tid_nm_pair_t const &tex) { // inside attic
@@ -1339,7 +1342,7 @@ void building_room_geom_t::add_chimney(room_object_t const &c, tid_nm_pair_t con
 
 // I guess skylights are similar to attics, so this code goes here?
 void building_room_geom_t::add_skylights_details(building_t const &b) {
-	for (cube_t const &skylight : b.skylights) {add_skylight_details(skylight, b.has_skylight_light);}
+	for (cube_t const &skylight : b.skylights) {add_skylight_details(skylight, b);}
 }
 void add_skylight_bar_grid(cube_t const &skylight, float bar_hwidth, float spacing, unsigned num, bool dim, vect_cube_t &bars) {
 	for (unsigned i = 0; i < num+1; ++i) { // includes bar at the end
@@ -1354,17 +1357,27 @@ void add_skylight_bar_grid(cube_t const &skylight, float bar_hwidth, float spaci
 		bars.push_back(bar);
 	} // for i
 }
-void building_room_geom_t::add_skylight_details(cube_t const &skylight, bool has_skylight_light) {
-	vector3d const sz(skylight.get_size());
+void building_room_geom_t::add_skylight_details(cube_t const &skylight, building_t const &b) {
+	bool const is_sloped(b.is_restroom_with_high_ceil()), no_subdiv(is_sloped || b.is_house);
+	float const thickness((no_subdiv ? 0.75 : 1.0)*skylight.dz());
+	cube_t draw_area(skylight);
+
+	if (is_sloped) { // expand to fill the gap when rotated
+		vector3d const sz(skylight.get_size());
+		bool const dim(sz.x < sz.y);
+		draw_area.expand_in_dim( dim, 1.2*thickness); // close the gap at the ends after rotating
+		draw_area.expand_in_dim(!dim, 0.1*thickness);
+	}
+	vector3d const sz(draw_area.get_size());
 	bool const dmax(sz.x < sz.y);
-	float const thickness(skylight.dz()), length(sz[dmax]), width(sz[!dmax]), bar_width(min(0.06*min(length, width), 0.67*sz.z)), bar_hwidth(0.5*bar_width);
-	unsigned const num_rows((unsigned)ceil(0.1*length/thickness)), num_cols((unsigned)ceil(0.04*width/thickness));
+	float const length(sz[dmax]), width(sz[!dmax]), bar_width(min(0.06*min(length, width), 0.67*sz.z)), bar_hwidth(0.5*bar_width);
+	unsigned const num_rows(no_subdiv ? 1U : (unsigned)ceil(0.1*length/thickness)), num_cols(no_subdiv ? 1U : (unsigned)ceil(0.04*width/thickness));
 	float const row_spacing((length - bar_width)/num_rows), col_spacing((width - bar_width)/num_cols);
 	vect_cube_t bars[2]; // per dim
-	add_skylight_bar_grid(skylight, bar_hwidth, col_spacing, num_cols, !dmax, bars[!dmax]);
-	add_skylight_bar_grid(skylight, bar_hwidth, row_spacing, num_rows,  dmax, bars[ dmax]);
+	add_skylight_bar_grid(draw_area, bar_hwidth, col_spacing, num_cols, !dmax, bars[!dmax]);
+	add_skylight_bar_grid(draw_area, bar_hwidth, row_spacing, num_rows,  dmax, bars[ dmax]);
 
-	if (has_skylight_light) {
+	if (b.has_skylight_light) {
 		cube_t test_cube(skylight);
 		test_cube.z1() -= skylight.dz(); // shift down to include light z-val range
 		auto objs_end(get_placed_objs_end()); // skip buttons/stairs/elevators
@@ -1401,9 +1414,25 @@ void building_room_geom_t::add_skylight_details(cube_t const &skylight, bool has
 	// can draw only the top as exterior, but that's the face oriented toward the light that casts the shadow
 	bool const draw_as_exterior = 0;
 	rgeom_mat_t &bar_mat(get_untextured_material(!draw_as_exterior, 0, 0, 0, draw_as_exterior)); // inc_shadows=1
+	unsigned const verts_start(bar_mat.quad_verts.size());
 
 	for (unsigned d = 0; d < 2; ++d) {
-		for (cube_t const &bar : bars[d]) {bar_mat.add_cube_to_verts_untextured(bar, WHITE, get_skip_mask_for_xy(!d));} // skip ends
+		unsigned const skip_faces(get_skip_mask_for_xy(!d));
+		for (cube_t const &bar : bars[d]) {bar_mat.add_cube_to_verts_untextured(bar, WHITE, skip_faces);} // skip ends
+	}
+	if (is_sloped) { // rotate to match roof quad orient
+		vector3d rot_axis;
+		float rot_angle(0.0);
+
+		for (auto const &tq : b.roof_tquads) {
+			if (!b.is_attic_roof(tq, 1) || !tq.get_bcube().intersects(draw_area)) continue; // type_roof_only=1; tests expanded skylight since a hole will be cut in the roof
+			vector3d const normal(tq.get_norm());
+			rot_axis  = cross_product(normal, plus_z).get_norm();
+			rot_angle = acosf(normal.z);
+			break;
+		} // for tq
+		assert(rot_axis != zero_vector); // tquad must have been found above
+		rotate_verts(bar_mat.quad_verts, rot_axis, rot_angle, skylight.get_cube_center(), verts_start);
 	}
 }
 

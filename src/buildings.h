@@ -846,7 +846,7 @@ struct building_room_geom_t {
 	void add_attic_door(room_object_t const &c, float tscale);
 	void add_attic_interior_and_rafters(building_t const &b, float tscale, bool detail_pass);
 	void add_skylights_details(building_t const &b);
-	void add_skylight_details(cube_t const &skylight, bool has_skylight_light);
+	void add_skylight_details(cube_t const &skylight, building_t const &b);
 	void add_elevator(room_object_t const &c, elevator_t const &e, float tscale, float fc_thick_scale,
 		int floor_offset, float floor_spacing, float window_vspace, bool has_parking_garage, bool is_powered);
 	void add_escalator(escalator_t const &e, float floor_spacing, bool draw_dynamic);
@@ -2570,7 +2570,7 @@ private:
 	int vent_in_attic_test(cube_t const &vent, bool dim) const;
 	int choose_air_intake_room() const;
 	void add_house_skylight(rand_gen_t rgen);
-	void subtract_skylight_from_roof_tquads(cube_t const &skylight);
+	float subtract_skylight_from_roof_tquads(cube_t const &skylight);
 	void add_exterior_ac_pipes(rand_gen_t rgen);
 	void add_tunnel_objects   (rand_gen_t rgen);
 	void add_interior_window_objects();
