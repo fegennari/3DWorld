@@ -2175,10 +2175,9 @@ void building_room_geom_t::add_shower(room_object_t const &c, float tscale, bool
 				set_cube_zvals(bot, (glass.z1() - door_frame_width), (glass.z1() - 0.01*door_frame_width));
 				side.d[!d][!odir] = top.d[!d][!odir] = bot.d[!d][!odir] = glass.d[!d][!odir] + (odir ? -1.0 : 1.0)*door_frame_width;
 				side.d[!d][ odir] = glass.d[!d][!odir]; // flush with glass on this end
-				rgeom_mat_t &metal_mat2(get_metal_material(1)); // get the metal material again, in case the reference was invaldiated
-				metal_mat2.add_cube_to_verts_untextured(top,  metal_color); // draw all faces
-				metal_mat2.add_cube_to_verts_untextured(bot,  metal_color); // draw all faces
-				metal_mat2.add_cube_to_verts_untextured(side, metal_color, EF_Z12); // skip top and bottom faces
+				metal_mat.add_cube_to_verts_untextured(top,  metal_color); // draw all faces
+				metal_mat.add_cube_to_verts_untextured(bot,  metal_color); // draw all faces
+				metal_mat.add_cube_to_verts_untextured(side, metal_color, EF_Z12); // skip top and bottom faces
 			}
 			glass_mat.add_cube_to_verts(glass, glass_color, all_zeros, 0, 0, 0, 0, 1); // inside surface, inverted
 			glass_mat.add_cube_to_verts_untextured(glass, glass_color, (EF_Z1 | (d ? EF_Y12 : EF_X12))); // outside surface
@@ -3860,7 +3859,8 @@ void building_room_geom_t::add_elevator(room_object_t const &c, elevator_t const
 	}
 	// add button panel
 	cube_t const panel(get_elevator_car_panel(c, fc_thick_scale));
-	get_untextured_material(0, 1).add_cube_to_verts_untextured(panel, DK_GRAY, ~front_face_mask); // metal? if metal, this breaks the text alpha blending
+	rgeom_mat_t &panel_mat(get_untextured_material(0, 1));
+	panel_mat.add_cube_to_verts_untextured(panel, DK_GRAY, ~front_face_mask); // metal? if metal, this breaks the text alpha blending
 	// add floor numbers to the panel; buttons are added in building_t::add_stairs_and_elevators()
 	unsigned const num_floors(c.drawer_flags), cur_floor(c.item_flags);
 	assert(num_floors > 1);
@@ -3917,7 +3917,7 @@ void building_room_geom_t::add_elevator(room_object_t const &c, elevator_t const
 		// add floor indicator lights and up/down lights outside elevators on each floor
 		float const zval(e.z1() + f*floor_spacing + 0.7*window_vspace);
 		set_cube_zvals(display, (zval - up_down_height), (zval + up_down_height + center_panel_height));
-		get_untextured_material(0, 1).add_cube_to_verts_untextured(display, DK_GRAY, ~back_face_mask); // exterior display panel; metal doesn't blend correctly with text
+		panel_mat.add_cube_to_verts_untextured(display, DK_GRAY, ~back_face_mask); // exterior display panel; metal doesn't blend correctly with text
 		// add floor text
 		add_floor_number((cur_floor+1), floor_offset, has_parking_garage, e.in_mall, e.in_backrooms, oss);
 		bool const two_digits(((int)num_floors + max(-floor_offset, 0)) > 9 || (floor_offset > 0 && !e.in_mall)); // double digits or basement/parking garage
@@ -4592,7 +4592,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 		shelf.z2()  = shelf.z1() + shelf_thick;
 		cur_zval   += cur_dz;
 		shelf_heights[i] = (cur_dz - shelf_thick);
-		if (inc_lg) {get_wood_material(tscale).add_cube_to_verts(shelf, color, tex_origin, skip_faces_shelves);} // Note: mat reference may be invalidated by adding books
+		if (inc_lg) {get_wood_material(tscale).add_cube_to_verts(shelf, color, tex_origin, skip_faces_shelves);}
 	}
 	// add books
 	rand_gen_t rgen(c.create_rgen());
@@ -6043,7 +6043,7 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale, boo
 			front.z2() = top.z1();
 			front.z1() = sink.z1() - 0.1*dz; // slightly below the sink basin
 			front.d[dim][!dir] += dir_sign*0.94*depth;
-			get_material(marble_tex).add_cube_to_verts(front, top_color, tex_origin, EF_Z2); // front surface, no top face; same as top_mat
+			top_mat.add_cube_to_verts(front, top_color, tex_origin, EF_Z2); // front surface, no top face; same as top_mat
 		}
 		else if (has_dishwasher) { // add dishwasher
 			unsigned const dw_skip_faces(~get_face_mask(dim, !dir)); // skip back
