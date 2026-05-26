@@ -362,9 +362,11 @@ void building_t::gen_interior_int(rand_gen_t &rgen, unsigned gen_index, bool has
 		bool const is_restaurant_part(is_restaurant() && first_part);
 		bool const is_conv_store_part(is_conv_store() && first_part);
 		bool const is_restroom_part  (is_restroom  () && first_part);
+		bool const is_data_cent_part (is_datacenter() && first_part);
 		bool const is_single_floor(is_industrial_part || is_restaurant_part || is_conv_store_part || is_restroom_part);
 		if (is_single_floor) {num_floors = 1;} // industrial buildings and restaurants are a single floor
-		bool const use_hallway(!is_industrial_part && !is_restaurant_part && !is_conv_store_part && can_use_hallway_for_part(part_id)), min_dim(psz.y < psz.x);
+		bool const use_hallway(!is_industrial_part && !is_restaurant_part && !is_conv_store_part && !is_data_cent_part && can_use_hallway_for_part(part_id));
+		bool const min_dim(psz.y < psz.x);
 		unsigned const rooms_start(rooms.size()), doors_start(interior->doors.size()), num_doors_per_stack(num_floors);
 		cube_t hall, place_area(*p);
 		place_area.expand_by_xy(-wall_edge_spacing); // shrink slightly to avoid z-fighting with walls
@@ -458,6 +460,9 @@ void building_t::gen_interior_int(rand_gen_t &rgen, unsigned gen_index, bool has
 		}
 		else if (is_restroom_part) {
 			create_restroom_floorplan(part_id, rgen);
+		}
+		else if (is_data_cent_part) {
+			create_datacenter_floorplan(part_id, rgen);
 		}
 		else if (!has_house_floorplan() && is_basement_part && min(psz.x, psz.y) > 5.0*car_sz.x && max(psz.x, psz.y) > 12.0*car_sz.y) { // make this a parking garage
 			add_assigned_room(*p, part_id, RTYPE_PARKING); // add entire part as a room (parking garage); num_lights will be calculated later

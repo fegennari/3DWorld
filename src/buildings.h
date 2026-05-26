@@ -1730,6 +1730,7 @@ struct building_t : public building_geom_t {
 	bool is_restaurant  () const {return (btype == BTYPE_RESTAURANT);}
 	bool is_conv_store  () const {return (btype == BTYPE_CONV_STORE);}
 	bool is_restroom    () const {return (btype == BTYPE_RESTROOM  );}
+	bool is_datacenter  () const {return (btype == BTYPE_DATACENTER);}
 	bool is_apt_or_hotel() const {return (is_apartment() || is_hotel());}
 	bool is_residential () const {return (is_house || is_apt_or_hotel());}
 	bool is_heavy_industrial() const {return (is_factory() || is_powerplant());}
@@ -1913,6 +1914,7 @@ struct building_t : public building_geom_t {
 	void create_restaurant_floorplan(unsigned part_id, rand_gen_t &rgen);
 	void create_conv_store_floorplan(unsigned part_id, rand_gen_t &rgen);
 	void create_restroom_floorplan  (unsigned part_id, rand_gen_t &rgen);
+	void create_datacenter_floorplan(unsigned part_id, rand_gen_t &rgen);
 	bool maybe_assign_interior_garage(bool &gdim, bool &gdir);
 	void add_parking_garage_ramp(rand_gen_t &rgen);
 	bool add_machines_to_room(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool less_clearance=0);
