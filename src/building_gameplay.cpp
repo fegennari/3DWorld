@@ -1723,7 +1723,7 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 		// set flag bit to remove this book from the bookcase; supports up to 48 books
 		obj.set_combined_flags(obj.get_combined_flags() | obj.get_book_ix_mask(book.item_flags));
 		player_inventory.add_item(book);
-		update_draw_state_for_room_object(book, building, 1);
+		update_draw_state_for_room_object(book, building, 1); // was_taken=1
 		return 1;
 	}
 	if (obj.type == TYPE_SHOWERTUB) { // take curtains
@@ -2141,7 +2141,7 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 		if (!register_player_object_pickup(item, at_pos)) return 0;
 		obj.item_flags |= (1U << (closest_drawer_id + 4*sel_item_ix)); // flag item as taken
 		player_inventory.add_item(item);
-		update_draw_state_for_room_object(item, building, 1);
+		update_draw_state_for_room_object(item, building, 1); // was_taken=1
 	}
 	else { // open or close the drawer/door
 		cube_t c_test(drawer);
@@ -2220,7 +2220,7 @@ void building_room_geom_t::remove_objs_contained_in(cube_t const &c, vect_room_o
 		if (obj.type == TYPE_BLOCKER || !c.contains_pt(obj.get_cube_center())) continue;
 		room_object_t const old_obj(obj); // deep copy
 		obj.remove();
-		update_draw_state_for_room_object(old_obj, building, 1);
+		update_draw_state_for_room_object(old_obj, building, 1); // was_taken=1
 	}
 }
 void building_room_geom_t::replace_with_hanging_wires(room_object_t &obj, room_object_t const &old_obj, float wire_radius, bool vertical, float shorten_amt) {
@@ -2400,7 +2400,7 @@ void building_room_geom_t::remove_object(unsigned obj_id, point const &at_pos, b
 		replace_with_hanging_wires(to_replace, old_obj, 0.5*building.get_trim_thickness(), !(old_obj.flags & RO_FLAG_ADJ_HI));
 		invalidate_lights_geom();
 	}
-	update_draw_state_for_room_object(old_obj, building, 1);
+	update_draw_state_for_room_object(old_obj, building, 1); // was_taken=1
 	register_reflection_update();
 	building.check_for_water_splash(cube_bot_center(old_obj), 0.8);
 }
@@ -2441,7 +2441,7 @@ bool building_room_geom_t::add_room_object(room_object_t const &obj, building_t 
 		if (set_obj_id) {added_obj.obj_id = (uint16_t)(obj.has_dstate() ? allocate_dynamic_state() : obj_id);}
 		if (velocity != zero_vector) {assert(added_obj.has_dstate()); get_dstate(added_obj).velocity = velocity;}
 	}
-	update_draw_state_for_room_object(obj, building, 0);
+	update_draw_state_for_room_object(obj, building, 0); // was_taken=0
 	return 1;
 }
 
@@ -2789,6 +2789,7 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos, bool
 }
 
 void building_t::player_fire_handgun(point const &player_pos, float player_radius) {
+	assert(has_room_geom());
 	vector3d const dir(cview_dir);
 	gen_sound_thread_safe_at_player(SOUND_HANDGUN);
 	register_building_sound(player_pos, 1.0);
@@ -2834,11 +2835,23 @@ void building_t::player_fire_handgun(point const &player_pos, float player_radiu
 			assert(i->has_dstate());
 			interior->room_geom->get_dstate(*i).velocity += 0.004*vector3d(dir.x, dir.y, 0.0);
 			make_object_dynamic(*i, *interior);
+			continue;
+		}
+		if (i->type == TYPE_LIGHT) {
+			if (i->is_light_on()) {
+				i->flags &= ~RO_FLAG_LIT; // remove the lit flag so that it's indir light is removed
+				register_indir_lighting_state_change(i - objs.begin());
+			}
+			i->flags |= RO_FLAG_BROKEN2; // fully broken/slight flicker
+			interior->room_geom->update_draw_state_for_room_object(*i, *this, 0); // was_taken=0
+			register_reflection_update();
+			continue;
 		}
 		unsigned const obj_ix(i - objs.begin());
 		maybe_break_room_object(*i, p2, -dir, 0.0, obj_ix, 0.2); // should get here for at most one object, in most cases; min_dp=0.2
 	} // for i
 	shoot_gun_at_animals(ray_start, hit_pos);
+	interior->room_geom->modified_by_player = 1; // makes sense, especially if something was broken
 }
 
 // adds two back-to-back quads for two sided lighting
