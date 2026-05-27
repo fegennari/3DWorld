@@ -24,6 +24,7 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 	bool const long_dim(room.dx() < room.dy()), mult_rows(is_datacenter());
 	cube_t place_area(get_walkable_room_bounds(room));
 	place_area.expand_by(-0.25*get_wall_thickness()); // server spacing from walls
+	cube_t inner_area(place_area);
 	zval = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_METAL); // add server room metal tile and move the effective floor up
 	cube_t server, computer;
 	set_cube_zvals(server,   zval, (zval + server_height));
@@ -31,8 +32,9 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 	point center;
 	unsigned num_servers(0), num_comps(0);
 	vect_room_object_t &objs(interior->room_geom->objs);
+	unsigned const servers_start(objs.size());
 
-	// try to line servers up against each wall wherever they fit
+	// try to line servers up against each interior wall wherever they fit
 	for (unsigned D = 0; D < 2; ++D) {
 		bool const dim(bool(D) ^ long_dim); // place along walls in long dim first
 		float const room_len(place_area.get_sz_dim(dim));
@@ -40,11 +42,17 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 		if (num == 0) continue; // not enough space for a server in this dim
 		float const server_spacing(room_len/num);
 		center[dim] = place_area.d[dim][0] + 0.5*server_spacing; // first position at half spacing
-
+		bool is_ext_wall[2]={};
+		
+		for (unsigned dir = 0; dir < 2; ++dir) {
+			if (classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT) {is_ext_wall[dir] = 1;} // will skip placement on this wall
+			else {inner_area.d[dim][dir] += (dir ? 1.0 : -1.0)*server_depth;} // shrink inner area by server depth
+		}
 		for (unsigned n = 0; n < num; ++n, center[dim] += server_spacing) {
 			set_wall_width(server, center[dim], server_hwidth, dim); // position along the wall
 
 			for (unsigned dir = 0; dir < 2; ++dir) {
+				if (is_ext_wall[dir]) continue; // not against exterior walls
 				float const dir_sign(dir ? -1.0 : 1.0);
 				float const wall_pos(place_area.d[!dim][dir]);
 				center[!dim] = wall_pos + dir_sign*server_hdepth;
@@ -76,12 +84,10 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 			} // for dir
 		} // for n
 	} // for dim
-	if (num_servers == 0 && num_comps == 0) return 0; // both servers and computers count
-
 	if (num_servers > 0) { // add a keyboard to the master server
 		unsigned const master_server(rgen.rand() % num_servers);
 
-		for (unsigned i = objs_start, server_ix = 0; i < objs.size(); ++i) {
+		for (unsigned i = servers_start, server_ix = 0; i < objs.size(); ++i) {
 			room_object_t const &server(objs[i]);
 			if (server.type != TYPE_SERVER  ) continue;
 			if (server_ix++ != master_server) continue;
@@ -98,30 +104,32 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 			break;
 		} // for i
 	}
-	// maybe add laptops on top of some servers, to reward the player for finding this room
-	for (unsigned i = objs_start; i < objs.size(); ++i) {
-		room_object_t const &server(objs[i]);
-		if (server.type != TYPE_SERVER) continue;
-		if (rgen.rand_float() > 0.2)    continue; // place laptops 20% of the time
-		bool const dim(server.dim), dir(server.dir);
-		float const server_front(server.d[dim][dir]); // copy before reference is invalidated
-		if (!place_laptop_on_obj(rgen, server, room_id, tot_light_amt)) continue; // no avoid, use_dim_dir=0
-		// make the laptop hang over the edge of the front of the server so that the player can see and take it
-		room_object_t &laptop(objs.back());
-		float const xlate(server_front - laptop.d[dim][dir] + (dir ? 1.0 : -1.0)*rgen.rand_uniform(0.05, 0.35)*laptop.get_sz_dim(dim));
-		laptop.translate_dim(dim, xlate);
-		laptop.flags |= RO_FLAG_HANGING;
-	} // for i
-	// add interior rows of servers for data centers grouped into blocks
+	if (!mult_rows) {
+		// maybe add laptops on top of some servers, to reward the player for finding this room
+		for (unsigned i = servers_start; i < objs.size(); ++i) {
+			room_object_t const &server(objs[i]);
+			if (server.type != TYPE_SERVER) continue;
+			if (rgen.rand_float() > 0.2)    continue; // place laptops 20% of the time
+			bool const dim(server.dim), dir(server.dir);
+			float const server_front(server.d[dim][dir]); // copy before reference is invalidated
+			if (!place_laptop_on_obj(rgen, server, room_id, tot_light_amt)) continue; // no avoid, use_dim_dir=0
+			// make the laptop hang over the edge of the front of the server so that the player can see and take it
+			room_object_t &laptop(objs.back());
+			float const xlate(server_front - laptop.d[dim][dir] + (dir ? 1.0 : -1.0)*rgen.rand_uniform(0.05, 0.35)*laptop.get_sz_dim(dim));
+			laptop.translate_dim(dim, xlate);
+			laptop.flags |= RO_FLAG_HANGING;
+		} // for i
+	}
 	if (mult_rows) {
+		// add interior rows of servers for data centers grouped into blocks
 		unsigned const num_per_block = 8;
-		float const room_len(place_area.get_sz_dim(long_dim)), room_width(place_area.get_sz_dim(!long_dim));
+		float const inner_len(inner_area.get_sz_dim(long_dim)), inner_width(inner_area.get_sz_dim(!long_dim));
 		float const clearance(get_min_front_clearance_inc_people());
 		float const front_clearance(1.2*clearance), back_clearance(1.0*clearance), edge_gap(max(server_depth, 1.6f*clearance));
 		float const side_gap(0.02*server_width), block_width(num_per_block*server_width + (num_per_block-1)*side_gap);
 		float aisle_gap(max(server_depth, 1.5f*clearance)), block_gap(max(2.0f*server_width, 1.25f*clearance));
 		float row_spacing(server_depth + aisle_gap), block_spacing(block_width + block_gap);
-		float const avail_depth(room_width - 2*(server_depth + edge_gap) + aisle_gap), avail_width(room_len - 2*(server_width + edge_gap) + block_gap);
+		float const avail_depth(inner_width - 2*edge_gap + aisle_gap), avail_width(inner_len - 2*edge_gap + block_gap);
 		unsigned const num_rows(avail_depth/row_spacing), num_blocks(avail_width/block_spacing); // take floor
 		bool const sdim(!long_dim), sdir(rgen.rand_bool()); // consistent direction for center rows
 		float const dsign(sdir ? 1.0 : -1.0);
@@ -131,8 +139,8 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 			block_spacing = avail_width/num_blocks;
 			aisle_gap     = row_spacing   - server_depth;
 			block_gap     = block_spacing - block_width;
-			float const block_start(place_area.d[!sdim][0] + server_width + edge_gap); // include servers along the wall and their gap
-			float row_pos(place_area.d[sdim][0] + server_depth + edge_gap);
+			float const block_start(inner_area.d[!sdim][0] + edge_gap); // include servers along the wall and their gap
+			float row_pos(inner_area.d[sdim][0] + edge_gap);
 
 			for (unsigned r = 0; r < num_rows; ++r) {
 				float block_pos(block_start);
@@ -152,16 +160,18 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 
 						if (!is_obj_placement_blocked(server_exp, room, 1)) {
 							objs.emplace_back(server, TYPE_SERVER, room_id, sdim, sdir, 0, tot_light_amt);
-							// TODO: add wire conduit?
+							// TODO: add wire conduit? but what about ceiling lights?
+							++num_servers;
 						}
 						server_pos += server_width + side_gap;
-					}
+					} // for n
 					block_pos += block_spacing;
 				} // for b
 				row_pos += row_spacing;
 			} // for r
 		}
 	}
+	if (num_servers == 0 && num_comps == 0) return 0; // both servers and computers count
 	add_door_sign("Server Room", room, zval, room_id);
 	return 1;
 }
