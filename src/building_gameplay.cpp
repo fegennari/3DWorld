@@ -2830,6 +2830,7 @@ void building_t::player_fire_handgun(point const &player_pos, float player_radiu
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		point p1(ray_start), p2(hit_pos);
 		if (!do_line_clip(p1, p2, i->d)) continue; // actually clip the line
+		unsigned const obj_ix(i - objs.begin());
 
 		if (is_ball_type(i->type)) { // push the ball
 			assert(i->has_dstate());
@@ -2839,15 +2840,16 @@ void building_t::player_fire_handgun(point const &player_pos, float player_radiu
 		}
 		if (i->type == TYPE_LIGHT) {
 			if (i->is_light_on()) {
-				i->flags &= ~RO_FLAG_LIT; // remove the lit flag so that it's indir light is removed
-				register_indir_lighting_state_change(i - objs.begin());
+				i->flags ^= RO_FLAG_LIT; // remove the lit flag so that it's indir light is removed
+				register_indir_lighting_state_change(obj_ix);
+				i->flags ^= RO_FLAG_LIT; // still lit, but broken
 			}
 			i->flags |= RO_FLAG_BROKEN2; // fully broken/slight flicker
+			if (obj_ix & 1) {i->flags |= RO_FLAG_NO_POWER;} // completely off
 			interior->room_geom->update_draw_state_for_room_object(*i, *this, 0); // was_taken=0
 			register_reflection_update();
 			continue;
 		}
-		unsigned const obj_ix(i - objs.begin());
 		maybe_break_room_object(*i, p2, -dir, 0.0, obj_ix, 0.2); // should get here for at most one object, in most cases; min_dp=0.2
 	} // for i
 	shoot_gun_at_animals(ray_start, hit_pos);
