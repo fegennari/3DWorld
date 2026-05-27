@@ -2591,7 +2591,11 @@ void building_t::add_wall_and_door_trim() { // and window trim
 			
 			for (unsigned d = 0; d < 2; ++d) {
 				if (s.against_wall[d]) continue; // no wall, no trim
-				walls.emplace_back(get_trim_cube(stairs_with_wall, !s.dim, d, trim_thickness), (draw_end_flags | dir_flags[!d])); // sides; draw ends
+				cube_t const trim_cube(get_trim_cube(stairs_with_wall, !s.dim, d, trim_thickness));
+				cube_t trim_cube_exp(trim_cube);
+				trim_cube_exp.expand_in_dim(!s.dim, wall_thickness);
+				if (bcube.contains_cube(trim_cube) && !bcube.contains_cube(trim_cube_exp)) continue; // extends outside building; exterior wall (possibly in basement), skip
+				walls.emplace_back(trim_cube, (draw_end_flags | dir_flags[!d])); // sides; draw ends
 			}
 			if (s.is_u_shape()) {walls.emplace_back(get_trim_cube(stairs_with_wall, s.dim, s.dir, trim_thickness), (flags | dir_flags[!s.dir]));} // U-shaped stairs back wall
 
