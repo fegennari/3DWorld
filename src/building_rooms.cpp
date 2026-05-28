@@ -2581,8 +2581,14 @@ void building_t::add_wall_and_door_trim() { // and window trim
 				if (s.z1() <= prev_stairs.z2() && prev_stairs.z1() <= s.z2()) { // adjacent or overlapping in z
 					min_eq(prev_stairs.z1(), s.z1());
 					max_eq(prev_stairs.z2(), s.z2());
-					assert(walls_ix < walls.size());		
-					for (auto w = walls.begin()+walls_ix; w != walls.begin()+walls_end; ++w) {set_cube_zvals(*w, prev_stairs.z1(), prev_stairs.z2());}
+					assert(walls_ix < walls.size());
+
+					for (auto w = walls.begin()+walls_ix; w != walls.begin()+walls_end; ++w) {
+						// don't extend side trim if upper stairs are against an exterior wall
+						bool const tdim(w->dy() < w->dx());
+						if (tdim == !s.dim && s.against_wall[s.get_center_dim(tdim) < w->get_center_dim(tdim)]) continue;
+						set_cube_zvals(*w, prev_stairs.z1(), prev_stairs.z2());
+					}
 					continue;
 				}
 			}
