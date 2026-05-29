@@ -568,7 +568,7 @@ park_heightmap_t::park_heightmap_t(cube_t const &c, unsigned nx_, unsigned ny_, 
 		gen_xy_pos_in_cube(center, hill_area, rgen);
 		cube_t hill(center);
 		hill.expand_by_xy(hill_radius);
-		if (pond && pond->bcube.intersects(hill)) continue;
+		if (pond && pond->bcube.intersects_xy(hill)) continue;
 		bool valid(1);
 		
 		for (auto P = ppaths.begin() + ppath_start; P != ppaths.end(); ++P) {
