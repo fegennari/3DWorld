@@ -67,7 +67,6 @@ bool can_skip_small_shadow_objs() { // true if using tiled terrain shadows less 
 	return (smap_sz > 0 && smap_sz < shadow_map_sz);
 }
 
-
 bool skip_uw_draw(point const &pos, float radius) {
 	// used in tiled terrain mode to skip underwater rocks - otherwise, the fog calculation is incorrect (needs special air/water fog transition handling)
 	if (world_mode != WMODE_INF_TERRAIN || DISABLE_WATER || !(display_mode & 0x04)) return 0;
@@ -79,7 +78,6 @@ bool skip_uw_draw(point const &pos, float radius) {
 
 
 bool scenery_obj::check_sphere_coll(point &center, float sphere_radius) const { // sphere-sphere intersection
-
 	float const rsum(radius + sphere_radius);
 	if (!dist_less_than(center, pos, rsum)) return 0;
 	vector3d const normal((center - pos).get_norm());
@@ -87,14 +85,11 @@ bool scenery_obj::check_sphere_coll(point &center, float sphere_radius) const { 
 	return 1;
 }
 
-
 void scenery_obj::shift_by(vector3d const &vd) {
-		
 	pos   += vd;
 	pos.z -= dz; // reset to original z value
 	dz     = 0.0;
 }
-
 
 void scenery_obj::gen_spos(int x, int y, int use_xy) {
 
@@ -110,17 +105,13 @@ void scenery_obj::gen_spos(int x, int y, int use_xy) {
 	} while (pos.z <= zmin);
 }
 
-
 float get_new_zval(point const &pos, int x1, int y1, int x2, int y2) {
-
 	int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
 	if (xpos < x1 || ypos < y1 || xpos > x2 || ypos > y2 || point_outside_mesh(xpos, ypos)) return pos.z;
 	return interpolate_mesh_zval(pos.x, pos.y, 0.0, 1, 1);
 }
 
-
 bool scenery_obj::update_zvals(int x1, int y1, int x2, int y2) {
-
 	float const delta_z(get_new_zval(pos, x1, y1, x2, y2) - pos.z);
 	if (fabs(delta_z) < 1.0E-6) return 0; // no significant change
 	dz     = delta_z;
@@ -167,17 +158,13 @@ void rock_shape3d::create(int x, int y, bool use_xy) {
 
 
 struct edge {
-
 	unsigned face;
 	bool dir;
 	edge(unsigned f=0, bool d=0) : face(f), dir(d) {}
 };
 
-
 class edge_seen_set {
-
 	vector<uint64_t> seen;
-
 public:
 	edge_seen_set(unsigned const sz) {assert(sz <= 64); seen.resize(sz, 0);}
 	bool find(unsigned a, unsigned b) const {
@@ -301,7 +288,6 @@ void rock_shape3d::add_cobjs() {
 }
 
 bool rock_shape3d::do_impact_damage(point const &pos_, float radius_) {
-
 	if (radius < 0.02 || p2p_dist(pos_, pos) > (0.75*radius_ + 0.5*radius)) return 0;
 	float const size_scale(pow(0.99f, fticks));
 	radius *= size_scale; // chip off parts of the rock to make it smaller
@@ -312,7 +298,6 @@ bool rock_shape3d::do_impact_damage(point const &pos_, float radius_) {
 }
 
 void rock_shape3d::draw(bool shadow_only, bool reflection_pass, vector3d const &xlate) const { // Note: assumes texture is already setup
-
 	if (!is_visible(shadow_only, 0.0, xlate))     return;
 	if (reflection_pass && pos.z < water_plane_z) return;
 	(shadow_only ? WHITE : get_atten_color(color, xlate)).set_for_cur_shader();
@@ -337,7 +322,6 @@ void rock_shape3d::draw_using_vbo() const {
 }
 
 bool rock_shape3d::update_zvals(int x1, int y1, int x2, int y2) {
-
 	if (!scenery_obj::update_zvals(x1, y1, x2, y2)) return 0;
 	clear_vbo(); // clear and recreate points if pos changes
 	return 1;
@@ -372,7 +356,6 @@ p_upsurface surface_cache::get_surface(bool fixed_sz_rock_cache) {
 }
 
 void surface_cache::clear_unref() {
-
 	for (surface_map::iterator i = scache.begin(); i != scache.end(); ) { // Note: no ++i
 		assert(i->second);
 		if (i->second->unrefed()) {scache.erase(i++);} else {++i;}
@@ -381,7 +364,6 @@ void surface_cache::clear_unref() {
 
 
 surface_cache surface_rock_cache;
-
 
 void surface_rock::create(int x, int y, int use_xy, bool fixed_sz_rock_cache) {
 
@@ -481,7 +463,6 @@ void s_rock::draw(float sscale, bool shadow_only, bool reflection_pass, vector3d
 
 
 unsigned voxel_rock_manager_t::gen_model_ix(int rseed) {
-
 	models.resize(NUM_VROCK_MODELS);
 	unsigned const ix(rseed % models.size());
 	if (!models[ix]) {to_gen.insert(ix);} // mark new model for building
@@ -513,7 +494,6 @@ voxel_rock_manager_t voxel_rock_manager;
 
 
 void voxel_rock::create(int x, int y, int use_xy) {
-
 	gen_spos(x, y, use_xy);
 	radius   = 0.2*rand_uniform2(0.5, 1.0)*rand_float2()/tree_scale;
 	rseed    = rand2();
@@ -521,7 +501,6 @@ void voxel_rock::create(int x, int y, int use_xy) {
 }
 
 void voxel_rock::build_model() {
-
 	float const gen_radius(voxel_rock_manager.get_model(model_ix).get_bsphere().radius);
 	assert(gen_radius > 0.0);
 	radius /= gen_radius;
@@ -588,7 +567,6 @@ colorRGBA wood_scenery_obj::get_bark_color(vector3d const &xlate) const {
 
 
 void s_log::shift_by(vector3d const &vd) {
-
 	scenery_obj::shift_by(vd);
 	pt2   += vd;
 	pt2.z -= dz;
@@ -654,7 +632,6 @@ void s_log::draw(float sscale, bool shadow_only, bool reflection_pass, vector3d 
 }
 
 bool s_log::update_zvals(int x1, int y1, int x2, int y2) {
-
 	float const orig_pz(pos.z);
 	if (!scenery_obj::update_zvals(x1, y1, x2, y2)) return 0;
 	pt2.z += (pos.z - orig_pz); // apply the same offset to pt2 even though it might be at a different mesh location
@@ -741,7 +718,6 @@ colorRGBA plant_base::get_plant_color(vector3d const &xlate) const {
 
 
 int s_plant::create(int x, int y, int use_xy, float minz) {
-
 	vbo_mgr_ix = -1;
 	int const ret(plant_base::create(x, y, use_xy, minz));
 	if (ret == 0) return 0;
@@ -757,7 +733,6 @@ void s_plant::create2(point const &pos_, float height_, float radius_, int type_
 }
 
 void s_plant::create_no_verts(point const &pos_, float height_, float radius_, int type_, int calc_z, bool land_plants_only, bool water_plants_only) {
-
 	assert(!(land_plants_only && water_plants_only));
 	vbo_mgr_ix = -1;
 	type   = (water_plants_only ? SEAWEED : (abs(type_) % (land_plants_only ? (int)NUM_LAND_PLANT_TYPES : (int)NUM_PLANT_TYPES)));
@@ -785,7 +760,6 @@ colorRGBA const &s_plant::get_stem_color() const {return pltype[type].stemc;}
 int s_plant::get_leaf_tid() const {return pltype[type].tid;}
 
 void s_plant::add_cobjs() {
-
 	point cpos(pos), cpos2(pos), bpos(pos);
 	float const wscale(radius*tree_scale/0.004f), r2(radius+0.07f*wscale*(height+0.03f));
 	cpos.z  += height;
@@ -848,7 +822,6 @@ void s_plant::gen_points(vbo_vnc_block_manager_t &vbo_manager, vector<vert_norm_
 
 // to be called when the plant is translated or zval changes
 void s_plant::update_points_vbo(vbo_vnc_block_manager_t &vbo_manager) {
-
 	assert(vbo_mgr_ix >= 0);
 	static vector<vert_norm_comp> pts; // reused across calls
 	create_leaf_points(pts, tree_scale);
@@ -856,7 +829,6 @@ void s_plant::update_points_vbo(vbo_vnc_block_manager_t &vbo_manager) {
 }
 
 bool s_plant::update_zvals(int x1, int y1, int x2, int y2, vbo_vnc_block_manager_t &vbo_manager) {
-
 	float orig_z(pos.z);
 	if (!scenery_obj::update_zvals(x1, y1, x2, y2)) return 0;
 	for (vector<vert_wrap_t>::iterator i = berries.begin(); i != berries.end(); ++i) {i->v.z += (pos.z - orig_z);}
@@ -865,7 +837,6 @@ bool s_plant::update_zvals(int x1, int y1, int x2, int y2, vbo_vnc_block_manager
 }
 
 bool s_plant::is_shadowed() const {
-
 	if (world_mode != WMODE_GROUND) return 0;
 	int const light(get_light());
 
@@ -970,7 +941,6 @@ void s_plant::remove_cobjs() {
 
 
 int leafy_plant::create(int x, int y, int use_xy, float minz, unsigned plant_ix_) {
-	
 	vbo_mgr_ix = -1;
 	plant_ix   = plant_ix_;
 	int const ret(plant_base::create(x, y, use_xy, minz));
@@ -989,7 +959,6 @@ int leafy_plant::create(int x, int y, int use_xy, float minz, unsigned plant_ix_
 }
 
 void leafy_plant::create2(point const &pos_, float radius_, int type_, int calc_z, unsigned plant_ix_) {
-
 	vbo_mgr_ix = -1;
 	plant_ix   = plant_ix_;
 	type   = abs(type_)%NUM_LEAFY_PLANT_TYPES;
@@ -1000,7 +969,6 @@ void leafy_plant::create2(point const &pos_, float radius_, int type_, int calc_
 }
 
 void leafy_plant::gen_leaves() {
-
 	rand_gen_t rgen;
 	rgen.set_state(rand2(), 123);
 	leaves.resize(rgen.rand_uniform_uint(4, 8));
@@ -1019,7 +987,6 @@ void leafy_plant::gen_leaves() {
 }
 
 void leafy_plant::gen_points(vbo_vnt_block_manager_t &vbo_manager, vector<vert_norm_tc> const &sphere_verts) {
-
 	vector<vert_norm_tc> &verts(vbo_manager.get_pts_vector_for_adding());
 
 	for (auto i = leaves.begin(); i != leaves.end(); ++i) { // for each leaf
@@ -1038,7 +1005,6 @@ void leafy_plant::add_cobjs() {
 }
 
 void leafy_plant::next_frame() {
-
 	plant_base::next_frame();
 	float const delta_energy(abs(cur_motion_energy - prev_motion_energy));
 	if (delta_energy > 1.0) {motion_amt = min(1.0, (motion_amt + 0.05*delta_energy));} // increase wind effect to make leaves move
@@ -1050,7 +1016,6 @@ void leafy_plant::next_frame() {
 }
 
 bool leafy_plant::update_zvals(int x1, int y1, int x2, int y2, vbo_vnt_block_manager_t &vbo_manager) {
-	
 	if (!scenery_obj::update_zvals(x1, y1, x2, y2)) return 0;
 	//if (vbo_mgr_ix >= 0) {update_points_vbo(vbo_manager);}
 	delta_z += dz;
@@ -1063,7 +1028,6 @@ int leafy_plant::get_tid() const {
 }
 
 void leafy_plant::draw_leaves(shader_t &s, bool shadow_only, bool reflection_pass, vector3d const &xlate, shader_state_t &state, vbo_vnt_block_manager_t &vbo_manager) const {
-	
 	if (burn_amt == 1.0) return;
 	if (!is_visible(shadow_only, radius, xlate))  return;
 	if (reflection_pass && pos.z < water_plane_z) return;
@@ -1123,7 +1087,6 @@ void mushroom::draw(float sscale, bool shadow_only, bool reflection_pass, vector
 template<typename T> void draw_scenery_vector(vector<T> &v, float sscale, bool shadow_only, bool reflection_pass, vector3d const &xlate, float scale_val) {
 	for (unsigned i = 0; i < v.size(); ++i) {v[i].draw(sscale, shadow_only, reflection_pass, xlate, scale_val);}
 }
-
 template<typename T> void draw_scenery_vector_fires(vector<T> const &v, fire_drawer_t &fire_drawer, float rscale) {
 	for (unsigned i = 0; i < v.size(); ++i) {v[i].draw_fire(fire_drawer, rscale, i);}
 }
@@ -1153,7 +1116,6 @@ template<typename T> void update_bcube(vector<T> &v, cube_t &bcube) {
 }
 
 template<typename T> void update_scenery_zvals_vector(vector<T> &v, int x1, int y1, int x2, int y2, bool &updated) {
-	
 	for (unsigned i = 0; i < v.size(); ++i) { // zval has change, remove and re-add cobjs
 		if (v[i].update_zvals(x1, y1, x2, y2)) {
 			v[i].remove_cobjs();
@@ -1163,7 +1125,6 @@ template<typename T> void update_scenery_zvals_vector(vector<T> &v, int x1, int 
 	}
 }
 template<typename T, typename ARG> void update_scenery_zvals_vector(vector<T> &v, int x1, int y1, int x2, int y2, bool &updated, ARG &arg) {
-
 	for (unsigned i = 0; i < v.size(); ++i) { // zval has change, remove and re-add cobjs
 		if (v[i].update_zvals(x1, y1, x2, y2, arg)) {
 			v[i].remove_cobjs();
@@ -1182,7 +1143,6 @@ void scenery_group::clear_vbos() {
 }
 
 void scenery_group::clear() {
-
 	for (auto i = surface_rocks.begin(); i != surface_rocks.end(); ++i) {i->destroy();}
 	clear_vbos();
 	free_cobjs();
@@ -1201,7 +1161,6 @@ void scenery_group::clear() {
 }
 
 void scenery_group::free_cobjs() {
-
 	free_scenery_vector_cobjs(rock_shapes);
 	free_scenery_vector_cobjs(surface_rocks);
 	free_scenery_vector_cobjs(voxel_rocks);
@@ -1213,7 +1172,6 @@ void scenery_group::free_cobjs() {
 }
 
 void scenery_group::add_cobjs() {
-
 	add_scenery_vector_cobjs(rock_shapes);
 	add_scenery_vector_cobjs(surface_rocks);
 	add_scenery_vector_cobjs(voxel_rocks);
@@ -1227,7 +1185,6 @@ void scenery_group::add_cobjs() {
 
 
 bool scenery_group::check_sphere_coll(point &center, float radius) const {
-
 	bool coll(0);
 	coll |= check_scenery_vector_sphere_coll(rock_shapes,   center, radius);
 	coll |= check_scenery_vector_sphere_coll(surface_rocks, center, radius);
@@ -1242,7 +1199,6 @@ bool scenery_group::check_sphere_coll(point &center, float radius) const {
 }
 
 void scenery_group::shift(vector3d const &vd) {
-
 	shift_scenery_vector(rock_shapes,   vd);
 	shift_scenery_vector(surface_rocks, vd);
 	shift_scenery_vector(voxel_rocks,   vd);
@@ -1255,7 +1211,6 @@ void scenery_group::shift(vector3d const &vd) {
 }
 
 void scenery_group::calc_bcube() {
-
 	all_bcube.set_to_zeros();
 	update_bcube(rock_shapes,   all_bcube);
 	update_bcube(surface_rocks, all_bcube);
@@ -1270,7 +1225,6 @@ void scenery_group::calc_bcube() {
 
 // update region is inclusive: [x1,x2]x[y1,y2]
 bool scenery_group::update_zvals(int x1, int y1, int x2, int y2) { // inefficient, should use spatial subdivision
-
 	assert(x1 <= x2 && y1 <= y2);
 	bool updated(0);
 	update_scenery_zvals_vector(rock_shapes,   x1, y1, x2, y2, updated);
@@ -1546,7 +1500,6 @@ void scenery_group::draw_opaque_objects(shader_t &s, shader_t &vrs, bool shadow_
 }
 
 bool scenery_group::setup_voxel_rocks_shader(shader_t &vrs, bool shadow_only) const {
-
 	if (voxel_rocks.empty() || shadow_only) {return 0;} // setup not needed
 	if (vrs.is_setup()) {vrs.make_current(); return 1;} // already setup
 	// Note: no TT shadow maps (probably too slow for TT anyway), fog not setup (not needed?)
@@ -1581,7 +1534,6 @@ void scenery_group::draw(bool shadow_only, vector3d const &xlate) {
 }
 
 void scenery_group::draw_fires(shader_t &s) const {
-	
 	fire_drawer_t fire_drawer;
 	draw_scenery_vector_fires(logs,         fire_drawer, 1.8);
 	draw_scenery_vector_fires(stumps,       fire_drawer, 1.8);
@@ -1621,7 +1573,6 @@ scenery_group all_scenery;
 
 
 void gen_scenery(tree_cont_t const &trees) { // called in ground mode
-
 	if (has_scenery2) {all_scenery.post_gen_setup(trees); return;} // don't generate scenery if some has already been added
 	all_scenery.clear();
 	all_scenery = scenery_group(); // really force a clear
