@@ -856,7 +856,8 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 				if (blocked) continue;
 				if (has_bcube_int_xy(pond, active_pond_blockers)) continue; // check underground basement rooms
 				float const depth(city_params.road_width*rgen.rand_uniform(0.1, 0.25));
-				pond_t const pond_obj(center, pond_sz.x, pond_sz.y, depth, rgen.rand());
+				float const water_z(plot.z2() - city_params.road_width*rgen.rand_uniform(0.015, 0.018)); // set height of water surface below terrain
+				pond_t const pond_obj(center, pond_sz.x, pond_sz.y, depth, water_z, rgen.rand());
 
 				for (point const &p : tree_pos) { // check trees; trees on the edge are okay
 					if (pond.contains_pt_xy(p) && pond_obj.point_contains_xy(p)) {blocked = 1; break;}

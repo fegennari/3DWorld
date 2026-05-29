@@ -1789,11 +1789,11 @@ bool has_circle_overlap(sphere_t const &circle, vector<sphere_t> const &circles)
 	}
 	return 0;
 }
-pond_t::pond_t(point const &pos_, float x_radius, float y_radius, float depth, unsigned rseed_) : city_obj_t(pos_, max(x_radius, y_radius)), rseed(rseed_) {
+pond_t::pond_t(point const &pos_, float x_radius, float y_radius, float depth, float water_z, unsigned rseed_) : city_obj_t(pos_, max(x_radius, y_radius)), rseed(rseed_) {
 	bcube.set_from_point(pos);
 	bcube.expand_in_x(x_radius);
 	bcube.expand_in_y(y_radius);
-	bcube.z2() -= 0.08*depth; // set height of water surface below terrain
+	bcube.z2() = water_z;
 	bcube.z1() -= depth;
 	// add lily pads
 	rand_gen_t rgen;
