@@ -1793,7 +1793,7 @@ pond_t::pond_t(point const &pos_, float x_radius, float y_radius, float depth, u
 	bcube.set_from_point(pos);
 	bcube.expand_in_x(x_radius);
 	bcube.expand_in_y(y_radius);
-	bcube.z2() -= 0.1*depth; // set height of water surface below terrain
+	bcube.z2() -= 0.08*depth; // set height of water surface below terrain
 	bcube.z1() -= depth;
 	// add lily pads
 	rand_gen_t rgen;
