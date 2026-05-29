@@ -1583,6 +1583,15 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 				if (!p.on_ground) {p.pos.z -= 0.15*height;}
 				pigeon_t const pigeon(p.pos, height, p.orient);
 				if (p.on_ground && has_bcube_int_xy(pigeon.bcube, blockers, 2.0*pigeon.radius)) continue; // placed on the ground - check for collisions
+				
+				if (is_park) { // don't place pigeons over creeks
+					bool bad_place(0);
+
+					for (park_path_t const &p : ppaths) {
+						if (p.is_creek && p.check_cube_coll_xy(pigeon.bcube)) {bad_place = 1; break;}
+					}
+					if (bad_place) continue;
+				}
 				if (p.on_ground) {blockers.push_back(pigeon.bcube);} // not needed? don't need to add to pedestrian colliders
 				pigeon_groups.add_obj(pigeon, pigeons);
 
