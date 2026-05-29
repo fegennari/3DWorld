@@ -452,17 +452,21 @@ void ivy_manager_t::clear() {
 	for (auto &kv : ivy_walls) {kv.second.clear();}
 	ivy_walls.clear();
 }
-void ivy_manager_t::add_wall(cube_t const &wall, bool dim, unsigned wall_ix, unsigned plot_ix, unsigned city_ix, point const &camera_bs) {
+void ivy_manager_t::add_wall(cube_t const &wall, bool dim, unsigned skip_dirs, unsigned wall_ix, unsigned plot_ix, unsigned city_ix, point const &camera_bs) {
 	if (city_ix != cur_city_ix) { // city change
-		clear();
 		cur_city_ix = city_ix;
+		clear();
 	}
-	if (((13*plot_ix) % 5) == 0) return; // some plots have no ivy
-	if (((17*wall_ix) % 5) == 0) return; // some walls have no ivy
+	if (skip_dirs == 0) { // apply filtering for plot divider wall; house walls have skip_dirs set and all enabled have ivy
+		if (((13*plot_ix) % 5) == 0) return; // some plots have no ivy
+		if (((17*wall_ix) % 5) == 0) return; // some walls have no ivy
+	}
 	ivy_wall_t &w(ivy_walls[wall_ix]);
 
 	if (w.leaves.bcube.is_all_zeros()) { // new wall
 		unsigned face_mask(dim ? 12 : 3); // either both X sides or both Y sides
+		if (skip_dirs & 1) {face_mask &=  5;} // skip lo dirs
+		if (skip_dirs & 2) {face_mask &= 10;} // skip hi dirs
 		rand_gen_t rgen;
 		rgen.set_state(wall_ix+1, plot_ix+1);
 		w.gen(wall, face_mask, rgen);

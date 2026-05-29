@@ -26,7 +26,7 @@ struct plot_divider_type_t : public textured_mat_t {
 	plot_divider_type_t(string const &tn, string const &nm_tn, float ws, float hs, float ts, bool ic, bool ham, colorRGBA const &c, colorRGBA const &mc) :
 		textured_mat_t(tn, nm_tn, ham, c, mc), is_occluder(ic), wscale(ws), hscale(hs), tscale(ts) {}
 };
-enum {DIV_WALL=0, DIV_FENCE, DIV_HEDGE, DIV_CHAINLINK, DIV_NUM_TYPES}; // types of plot dividers, with end terminator
+enum {DIV_WALL=0, DIV_FENCE, DIV_HEDGE, DIV_CHAINLINK, DIV_HOUSE_WALL, DIV_NUM_TYPES}; // types of plot dividers, with end terminator; must match plot_divider_types[]
 enum {POOL_DECK_WOOD=0, POOL_DECK_CONCRETE, NUM_POOL_DECK_TYPES};
 unsigned const NUM_POOL_DECK_PASSES(NUM_POOL_DECK_TYPES + 2); // {deck types}, roof, pillars
 

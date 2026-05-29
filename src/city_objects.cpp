@@ -371,11 +371,14 @@ bool fire_hydrant_t::proc_sphere_coll(point &pos_, point const &p_last, float ra
 
 // plot dividers
 
+// Note: chainlink fence can't be taller than other fence types in case it intersects
+// texture_fn nm_fn, wscale, hscale, tscale is_occluder, has_alpha_mask, color, map_color
 plot_divider_type_t plot_divider_types[DIV_NUM_TYPES] = {
-	plot_divider_type_t("cblock2.jpg", "normal_maps/cblock2_NRM.jpg", 0.50, 2.5, 1.0, 1, 0, WHITE, GRAY    ), // wall
-	plot_divider_type_t("fence.jpg",   "normal_maps/fence_NRM.jpg",   0.15, 2.0, 1.0, 1, 0, WHITE, LT_BROWN), // fence
-	plot_divider_type_t("hedges.jpg",  "", 1.00, 1.6, 1.0, 0, 0, GRAY, GREEN), // hedge - too short to be an occluder
-	plot_divider_type_t("roads/chainlink_fence.png", "", 0.02, 1.55, 8.0, 0, 1, WHITE, GRAY) // chainlink fence with alpha mask; can't be taller than other fence types in case it intersects
+	plot_divider_type_t("cblock2.jpg", "normal_maps/cblock2_NRM.jpg", 0.50, 2.50, 1.0, 1, 0, WHITE, GRAY    ), // wall
+	plot_divider_type_t("fence.jpg",   "normal_maps/fence_NRM.jpg",   0.15, 2.00, 1.0, 1, 0, WHITE, LT_BROWN), // fence
+	plot_divider_type_t("hedges.jpg",  "",                            1.00, 1.60, 1.0, 0, 0, GRAY,  GREEN   ), // hedge - too short to be an occluder
+	plot_divider_type_t("roads/chainlink_fence.png", "",              0.02, 1.55, 8.0, 0, 1, WHITE, GRAY    ), // chainlink fence with alpha mask
+	plot_divider_type_t("",  "",                                      1.00, 1.00, 1.0, 0, 0, GRAY,  GREEN   )  // house wall; not drawn
 };
 
 /*static*/ void divider_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
@@ -418,25 +421,28 @@ void divider_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_sc
 		return;
 	}
 	if (type != dstate.pass_ix) return; // this type not enabled in this pass
+	if (type == DIV_HOUSE_WALL) return; // for ivy; not actually drawn
 	if (type == DIV_CHAINLINK) {dist_scale *= 0.5;} // less visible
 	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
 	assert(dstate.pass_ix < DIV_NUM_TYPES);
 	plot_divider_type_t const &pdt(plot_divider_types[dstate.pass_ix]);
 	dstate.draw_cube(qbds.qbd, bcube, color_wrapper(pdt.color), 1, pdt.tscale/bcube.dz(), skip_dims); // skip bottom, scale texture to match the height
+	if (shadow_only) return; // no hedges or ivy
 
-	if (!shadow_only && type == DIV_HEDGE && bcube.closest_dist_less_than(dstate.camera_bs, 0.5f*(X_SCENE_SIZE + Y_SCENE_SIZE))) {
+	if (type == DIV_HEDGE && bcube.closest_dist_less_than(dstate.camera_bs, 0.5f*(X_SCENE_SIZE + Y_SCENE_SIZE))) {
 		dstate.hedge_draw.add(bcube); // draw detailed leaves for nearby hedges
 	}
-	if (!shadow_only && type == DIV_WALL && bcube.closest_dist_less_than(dstate.camera_bs, 0.35f*(X_SCENE_SIZE + Y_SCENE_SIZE))) {
+	else if ((type == DIV_WALL || type == DIV_HOUSE_WALL) && bcube.closest_dist_less_than(dstate.camera_bs, 0.35f*(X_SCENE_SIZE + Y_SCENE_SIZE))) {
 		// if this is a residential plot wall, clip off the back yard ends as they may overlap adjacent walls
 		cube_t wall_clipped(bcube);
 		
-		if (!ends_clipped && street_dir) { // clip off ends not along the street that may abut perpendicular walls
+		if (type == DIV_WALL && !ends_clipped && street_dir) { // clip off ends not along the street that may abut perpendicular walls
 			bool const sdim((street_dir-1) >> 1), sdir((street_dir-1) & 1);
 			if (sdim == dim || sdir == 1) {wall_clipped.d[!dim][0] += get_depth();}
 			if (sdim == dim || sdir == 0) {wall_clipped.d[!dim][1] -= get_depth();}
 		}
-		dstate.ivy_manager.add_wall(wall_clipped, dim, divider_ix, plot_ix, city_ix, dstate.camera_bs);
+		unsigned const skip_dirs((type == DIV_HOUSE_WALL) ? (1<<(!dir)) : 0); // house walls skip the interior dir
+		dstate.ivy_manager.add_wall(wall_clipped, dim, skip_dirs, divider_ix, plot_ix, city_ix, dstate.camera_bs);
 	}
 }
 bool divider_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {

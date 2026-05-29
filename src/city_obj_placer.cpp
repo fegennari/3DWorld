@@ -2987,6 +2987,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	// Note: not the most efficient solution, as it required processing blocks and binding shadow maps multiple times
 	for (dstate.pass_ix = 0; dstate.pass_ix <= DIV_NUM_TYPES; ++dstate.pass_ix) { // {wall, fence, hedge, chainlink fence, chainlink fence posts}
 		if (dstate.pass_ix == DIV_CHAINLINK && shadow_only) continue; // chainlink fence not drawn in the shadow pass
+		if (dstate.pass_ix == DIV_HOUSE_WALL) continue; // not drawn
 		draw_objects(dividers, divider_groups, dstate, 0.2, shadow_only, 0); // dist_scale=0.2
 	}
 	for (dstate.pass_ix = 0; dstate.pass_ix < NUM_POOL_DECK_PASSES; ++dstate.pass_ix) { // {wood, concrete, roof, pillars}

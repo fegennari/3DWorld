@@ -453,7 +453,7 @@ public:
 	bool empty() const {return to_draw.empty();}
 	size_t get_gpu_mem() const;
 	void clear();
-	void add_wall(cube_t const &wall, bool dim, unsigned wall_ix, unsigned plot_ix, unsigned city_ix, point const &camera_bs);
+	void add_wall(cube_t const &wall, bool dim, unsigned skip_dirs, unsigned wall_ix, unsigned plot_ix, unsigned city_ix, point const &camera_bs);
 	void draw_and_clear(shader_t &s);
 };
 
