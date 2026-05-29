@@ -705,12 +705,20 @@ struct park_path_t : public city_obj_t {
 	bool check_point_contains_xy(point const &p) const;
 };
 
-// for future use in storing park heightmaps that contains lower areas for ponds and creeks
+struct park_rock_t {
+	point pos;
+	vector3d radius, dir;
+	float angle=0.0;
+	colorRGBA color;
+};
+
+// for storing park heightmaps that contains lower areas for ponds and creeks and drawing park objects
 class park_heightmap_t {
 	unsigned nx=0, ny=0, nverts=0, nindices=0;
 	float z_ground, z_water;
 	cube_t bcube, hill_bc; // at the moment we can only have a single hill per park
 	vector<cylinder_3dw> creek_crossings; // used for drawing pipes
+	vector<park_rock_t> rocks;
 	vector<float> heights;
 	indexed_vao_manager_t vao_mgr;
 
@@ -719,6 +727,7 @@ class park_heightmap_t {
 	point pt_from_xy(unsigned x, unsigned y) const;
 	void lower_height(unsigned x, unsigned y, float zval);
 	void raise_height(unsigned x, unsigned y, float zval);
+	void add_creek_rocks(park_path_t const &creek, rand_gen_t &rgen);
 public:
 	park_heightmap_t(cube_t const &c, unsigned nx_, unsigned ny_, pond_t const *const pond, vector<park_path_t> const &ppaths,
 		unsigned ppath_start, vector<cylinder_3dw> const &ccs, rand_gen_t &rgen);

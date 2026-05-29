@@ -556,6 +556,7 @@ park_heightmap_t::park_heightmap_t(cube_t const &c, unsigned nx_, unsigned ny_, 
 				} // for x
 			} // for y
 		} // for p
+		add_creek_rocks(*P, rgen);
 	} // for P
 	// maybe add a round hill if it can fit
 	vector3d const bcube_sz(bcube.get_size());
@@ -591,6 +592,39 @@ park_heightmap_t::park_heightmap_t(cube_t const &c, unsigned nx_, unsigned ny_, 
 		hill_bc = hill; // record so that we can handle collisions/avoid the hill
 		break; // only need one
 	} // for n
+}
+
+void park_heightmap_t::add_creek_rocks(park_path_t const &creek, rand_gen_t &rgen) {
+	assert(rocks.empty());
+	if (creek.pts.size() <= 2) return; // too short for rocks
+	unsigned const num_rocks(1 + (rgen.rand() % 25)); // 1-25
+	rocks.resize(num_rocks);
+
+	for (park_rock_t &rock : rocks) {
+		for (unsigned n = 0; n < 10; ++n) { // 10 attempts at valid placement
+			unsigned const seg_ix1(1 + (rgen.rand()%(creek.pts.size()-2))); // skip end segs
+			point const &pt1(creek.pts[seg_ix1]), &pt2(creek.pts[seg_ix1+1]);
+			vector3d const side_dir(cross_product((pt2 - pt1), plus_z).get_norm());
+			float const t(rgen.rand_float()), radius(rgen.rand_uniform(0.25, 0.4)*creek.hwidth);
+			rock.radius = radius*(rgen.rand_vector() + vector3d(0.5, 0.5, 0.5));
+			rock.pos    = pt1 + t*(pt2 - pt1);
+			rock.pos   += (rgen.rand_bool() ? 1.0 : -1.0)*rgen.rand_uniform(0.5, 0.75)*creek.hwidth*side_dir; // shift off to a random side
+			rock.pos.z -= rgen.rand_uniform(0.25, 1.0)*rock.radius.z; // shift down
+
+			if (n+1 < 10) { // skip if near a creek crossing to avoid clipping through a pipe (approximate)
+				bool is_valid(1);
+
+				for (cylinder_3dw const &cc : creek_crossings) {
+					if (dist_less_than(rock.pos, cc.get_center(), (rock.radius.get_max_val() + cc.get_bounding_radius()))) {is_valid = 0; break;}
+				}
+				if (!is_valid) continue;
+			}
+			rock.dir    = rgen.signed_rand_vector_spherical_norm();
+			rock.angle  = 360.0*rgen.rand_float();
+			rock.color  = WHITE;
+			break; // done
+		} // for n
+	} // for rock
 }
 
 void park_heightmap_t::create() {
@@ -665,6 +699,24 @@ void park_heightmap_t::draw(draw_state_t &dstate, bool draw_terrain, bool draw_w
 			// set draw_sides_ends=5 for sides with swapped texture coords
 			draw_fast_cylinder(c.p1, c.p2, c.r1, c.r2, ndiv, 1, 5); // textured, no ends, two sided
 		} // for c
+		if (!rocks.empty() && bcube.closest_dist_less_than(dstate.camera_bs, 0.05*dstate.draw_tile_dist)) { // draw rocks
+			select_texture(ROCK_SPHERE_TEX);
+			begin_sphere_draw(1); // textured=1
+
+			for (park_rock_t const &rock : rocks) {
+				dstate.s.set_cur_color(rock.color);
+				if (!dstate.check_sphere_visible(rock.pos, rock.radius.get_max_val())) continue;
+				unsigned const ndiv(min((unsigned)N_SPHERE_DIV, unsigned(0.15f*dstate.draw_tile_dist/p2p_dist(dstate.camera_bs, rock.pos))));
+				if (ndiv < 4) continue; // too small/far
+				fgPushMatrix();
+				translate_to(rock.pos);
+				rotate_about(rock.angle, rock.dir);
+				scale_by(rock.radius);
+				draw_sphere_vbo_raw(ndiv, 1);
+				fgPopMatrix();
+			} // for rock
+			end_sphere_draw();
+		}
 	}
 	if (draw_water && z_water != 0.0) { // draw water surface over whole park if there was a pond; not for distant terrain
 		begin_water_surface_draw(dstate.s);

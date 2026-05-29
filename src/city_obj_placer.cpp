@@ -920,6 +920,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 					} // for cp
 				} // for p
 				if (is_bad) continue;
+				//add_rocks_to_creek(creek); // future work: add custom scenery rocks, similar to tree_placer
 				ppath_groups.add_obj(creek, ppaths);
 				cylinder_3dw creek_end;
 				creek_end.r1 = creek_end.r2 = 0.5*creek_hwidth;

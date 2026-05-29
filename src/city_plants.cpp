@@ -95,7 +95,7 @@ void ivy_wall_t::gen(cube_t const &wall, unsigned face_mask, rand_gen_t &rgen) {
 	vector<vertex_t> leaf_verts, branch_verts;
 	vector<unsigned> branch_ixs;
 
-	for (unsigned n = 0; n < 4; ++n) { // {+X, -X, +Y, -Y} sides
+	for (unsigned n = 0; n < 4; ++n) { // {-X, +X, -Y, +Y} sides
 		if (!(face_mask & (1<<n)))   continue; // face not enabled
 		if (rgen.rand_float() < 0.3) continue; // no ivy on this face
 		place_on_wall_face(wall, (n>>1), (n&1), leaf_verts, branch_verts, branch_ixs, rgen);
