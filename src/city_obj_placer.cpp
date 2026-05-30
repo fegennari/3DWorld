@@ -1881,7 +1881,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 				pos.z = plot_z;
 				pos[ dim] = wall_pos + (dir ? 1.0 : -1.0)*0.6*bike_width; // place near this wall of the house (with a small gap for the window sill and FP error)
 				pos[!dim] = rgen.rand_uniform((house.d[!dim][0] + wall_extend), (house.d[!dim][1] - wall_extend));
-				bicycle_t const bike(pos, bike_height, !dim, rgen.rand_bool()); // random dir, against the wall
+				bicycle_t bike(pos, bike_height, !dim, rgen.rand_bool()); // random dir, against the wall
 				if (is_placement_blocked(bike.bcube, blockers, house, prev_blockers_end))   continue; // check blockers from prev step; no expand
 				if (is_placement_blocked_recent(bike.bcube, blockers, yard_blockers_start)) continue; // check prev blockers in this yard
 				point const center(bike.bcube.get_cube_center()); // pos shifted up
@@ -1895,6 +1895,11 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 				for (unsigned d = 0; d < 3; ++d) {blocked |= check_sphere_coll_building(p_exclude[d], 0.5*bike_width, 0, house.ix);}
 				if (blocked) continue;
 				if (check_close_to_door(pos, 1.0*bike_len, house.ix)) continue;
+
+				// check for driveways; currently doesn't work because these are the extended driveways, not the house driveways, and bikes don't always overlap them
+				/*for (auto dw = driveways.begin()+driveways_start; dw != driveways.end(); ++dw) {
+					if (dw->intersects_xy(bike.bcube)) {bike.translate_dim(2, 0.05*bike_height);} // shift up slighty onto driveway
+				}*/
 				bike_groups.add_obj(bike, bikes);
 				add_cube_to_colliders_and_blockers(bike.bcube, colliders, blockers);
 				break; // success
