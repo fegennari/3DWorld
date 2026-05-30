@@ -1669,7 +1669,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 		unsigned const yard_blockers_start(blockers.size());
 		// place plot dividers
 		float hwidth(0.0), translate_dist[2] = {0.0, 0.0};
-		unsigned const type(rgen.rand()%DIV_NUM_TYPES); // use a consistent divider type for all sides of this plot
+		unsigned const type(rgen.rand() % (DIV_NUM_TYPES-1)); // use a consistent divider type for all sides of this plot, excluding house walls
 		// chain link fence is not a primary divider; also, can't place a swimming pool here because it's not enclosed
 		bool const add_divider(type != DIV_CHAINLINK);
 
@@ -2998,7 +2998,6 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	// Note: not the most efficient solution, as it required processing blocks and binding shadow maps multiple times
 	for (dstate.pass_ix = 0; dstate.pass_ix <= DIV_NUM_TYPES; ++dstate.pass_ix) { // {wall, fence, hedge, chainlink fence, chainlink fence posts}
 		if (dstate.pass_ix == DIV_CHAINLINK && shadow_only) continue; // chainlink fence not drawn in the shadow pass
-		if (dstate.pass_ix == DIV_HOUSE_WALL) continue; // not drawn
 		draw_objects(dividers, divider_groups, dstate, 0.2, shadow_only, 0); // dist_scale=0.2
 	}
 	for (dstate.pass_ix = 0; dstate.pass_ix < NUM_POOL_DECK_PASSES; ++dstate.pass_ix) { // {wood, concrete, roof, pillars}

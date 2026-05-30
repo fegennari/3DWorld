@@ -378,7 +378,7 @@ plot_divider_type_t plot_divider_types[DIV_NUM_TYPES] = {
 	plot_divider_type_t("fence.jpg",   "normal_maps/fence_NRM.jpg",   0.15, 2.00, 1.0, 1, 0, WHITE, LT_BROWN), // fence
 	plot_divider_type_t("hedges.jpg",  "",                            1.00, 1.60, 1.0, 0, 0, GRAY,  GREEN   ), // hedge - too short to be an occluder
 	plot_divider_type_t("roads/chainlink_fence.png", "",              0.02, 1.55, 8.0, 0, 1, WHITE, GRAY    ), // chainlink fence with alpha mask
-	plot_divider_type_t("",  "",                                      1.00, 1.00, 1.0, 0, 0, GRAY,  GREEN   )  // house wall; not drawn
+	plot_divider_type_t("",  "",                                      1.00, 1.00, 1.0, 0, 0, RED,   RED     )  // house wall; not drawn
 };
 
 /*static*/ void divider_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
@@ -421,12 +421,14 @@ void divider_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_sc
 		return;
 	}
 	if (type != dstate.pass_ix) return; // this type not enabled in this pass
-	if (type == DIV_HOUSE_WALL) return; // for ivy; not actually drawn
 	if (type == DIV_CHAINLINK) {dist_scale *= 0.5;} // less visible
 	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
 	assert(dstate.pass_ix < DIV_NUM_TYPES);
-	plot_divider_type_t const &pdt(plot_divider_types[dstate.pass_ix]);
-	dstate.draw_cube(qbds.qbd, bcube, color_wrapper(pdt.color), 1, pdt.tscale/bcube.dz(), skip_dims); // skip bottom, scale texture to match the height
+
+	if (type != DIV_HOUSE_WALL) { // house walls are not drawn
+		plot_divider_type_t const &pdt(plot_divider_types[type]);
+		dstate.draw_cube(qbds.qbd, bcube, color_wrapper(pdt.color), 1, pdt.tscale/bcube.dz(), skip_dims); // skip bottom, scale texture to match the height
+	}
 	if (shadow_only) return; // no hedges or ivy
 
 	if (type == DIV_HEDGE && bcube.closest_dist_less_than(dstate.camera_bs, 0.5f*(X_SCENE_SIZE + Y_SCENE_SIZE))) {
