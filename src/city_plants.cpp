@@ -89,16 +89,16 @@ void hedge_draw_t::draw_and_clear(shader_t &s) {
 
 // ivy_manager_t
 
-void ivy_wall_t::gen(cube_t const &wall, unsigned face_mask, rand_gen_t &rgen) {
+void ivy_wall_t::gen(cube_t const &wall, float leaf_sz, unsigned face_mask, bool rand_select, rand_gen_t &rgen) {
 	//highres_timer_t timer("Gen Ivy"); // 127 147.263 3.2178 1.15955
 	leaves.bcube = branches.bcube = wall; // both the same
 	vector<vertex_t> leaf_verts, branch_verts;
 	vector<unsigned> branch_ixs;
 
 	for (unsigned n = 0; n < 4; ++n) { // {-X, +X, -Y, +Y} sides
-		if (!(face_mask & (1<<n)))   continue; // face not enabled
-		if (rgen.rand_float() < 0.3) continue; // no ivy on this face
-		place_on_wall_face(wall, (n>>1), (n&1), leaf_verts, branch_verts, branch_ixs, rgen);
+		if (!(face_mask & (1<<n))) continue; // face not enabled
+		if (rand_select && rgen.rand_float() < 0.3) continue; // no ivy on this face
+		place_on_wall_face(wall, (n>>1), (n&1), leaf_sz, leaf_verts, branch_verts, branch_ixs, rgen);
 	}
 	assert(leaf_verts.empty() == branch_verts.empty());
 	if (leaf_verts.empty()) return; // empty
@@ -220,6 +220,7 @@ public:
 			if (cylins_intersect(cand, c, cand_bc)) return 0; // intersects an existing cylinder
 		}
 		if (!is_horizontal && p2.z > wall.z2()) { // off the top of the wall; make horizontal
+			if (wall.get_sz_dim(dim) == 0.0) return 0; // zero width wall, can't place ivy on top of it
 			// add right angle bend and continue along the top of the wall
 			p2.z = cand.p2.z = wall.z2() + r2;
 			is_horizontal = has_horizontal = 1;
@@ -314,7 +315,9 @@ public:
 	}
 }; // end ivy_builder_t
 
-void ivy_wall_t::place_on_wall_face(cube_t const &wall, bool dim, bool dir, vector<vertex_t> &lverts, vector<vertex_t> &bverts, vector<unsigned> &bixs, rand_gen_t &rgen) {
+void ivy_wall_t::place_on_wall_face(cube_t const &wall, bool dim, bool dir, float leaf_sz,
+	vector<vertex_t> &lverts, vector<vertex_t> &bverts, vector<unsigned> &bixs, rand_gen_t &rgen)
+{
 	// generation steps:
 	// * select random start points at the base of the wall
 	// * create branch with upward direction and random curve
@@ -322,7 +325,6 @@ void ivy_wall_t::place_on_wall_face(cube_t const &wall, bool dim, bool dir, vect
 	// * place leaves along branches with stem touching the branch
 	// * give leaves random orients, but not enough that they clip through walls
 	// * check that leaves don't overlap too much with other leaves
-	float const leaf_sz(0.05*wall.dz());
 	float const wall_len(wall.get_sz_dim(!dim)), wall_edge_space(4.0*leaf_sz), root_spacing(8.0*leaf_sz);
 	if (wall_len <= 2.0*wall_edge_space) return; // wall too short; shouldn't happen
 	float const pos_lo(wall.d[!dim][0] + wall_edge_space), pos_hi(wall.d[!dim][1] - wall_edge_space);
@@ -452,12 +454,14 @@ void ivy_manager_t::clear() {
 	for (auto &kv : ivy_walls) {kv.second.clear();}
 	ivy_walls.clear();
 }
-void ivy_manager_t::add_wall(cube_t const &wall, bool dim, unsigned skip_dirs, unsigned wall_ix, unsigned plot_ix, unsigned city_ix, point const &camera_bs) {
+void ivy_manager_t::add_wall(cube_t const &wall, bool dim, unsigned skip_dirs, unsigned wall_ix, unsigned plot_ix, unsigned city_ix, float leaf_sz, point const &camera_bs) {
 	if (city_ix != cur_city_ix) { // city change
 		cur_city_ix = city_ix;
 		clear();
 	}
-	if (skip_dirs == 0) { // apply filtering for plot divider wall; house walls have skip_dirs set and all enabled have ivy
+	bool const rand_select(skip_dirs == 0); // house walls have skip_dirs set and all enabled have ivy
+
+	if (rand_select) { // apply filtering for plot divider wall
 		if (((13*plot_ix) % 5) == 0) return; // some plots have no ivy
 		if (((17*wall_ix) % 5) == 0) return; // some walls have no ivy
 	}
@@ -469,15 +473,18 @@ void ivy_manager_t::add_wall(cube_t const &wall, bool dim, unsigned skip_dirs, u
 		if (skip_dirs & 2) {face_mask &= 10;} // skip hi dirs
 		rand_gen_t rgen;
 		rgen.set_state(wall_ix+1, plot_ix+1);
-		w.gen(wall, face_mask, rgen);
+		w.gen(wall, leaf_sz, face_mask, rand_select, rgen);
 	}
 	else { // existing wall
 		assert(w.leaves.bcube == wall && w.branches.bcube == wall);
 	}
 	if (w.empty()) return; // no ivy
 	assert(w.ivy_faces);
-	if (w.ivy_faces == 1 && camera_bs[dim] > wall.d[dim][1]) return; // facing opposite side
-	if (w.ivy_faces == 2 && camera_bs[dim] < wall.d[dim][0]) return; // facing opposite side
+
+	if (skip_dirs == 0) { // back face culling is only for walls, since ivy may be visible through house windows
+		if (w.ivy_faces == 1 && camera_bs[dim] > wall.d[dim][1]) return; // facing opposite side
+		if (w.ivy_faces == 2 && camera_bs[dim] < wall.d[dim][0]) return; // facing opposite side
+	}
 	to_draw.push_back(wall_ix); // not checked for duplicates, but there shouldn't be any
 }
 

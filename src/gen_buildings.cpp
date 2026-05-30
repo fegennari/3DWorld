@@ -5279,9 +5279,9 @@ public:
 			} // for x
 		} // for y
 	}
-	void get_overlapping_bcubes(cube_t const &xy_range, vect_cube_t         &bcubes) const {return query_for_cube(xy_range, bcubes,    0);}
-	void get_overlapping_bcubes(cube_t const &xy_range, vect_cube_with_ix_t &bcubes) const {return query_for_cube(xy_range, bcubes,    0);}
-	void add_driveways_for_plot(cube_t const &plot,     vect_cube_t      &driveways) const {return query_for_cube(plot,     driveways, 1);}
+	void get_overlapping_bcubes(cube_t const &xy_range, vect_cube_t         &bcubes) const {query_for_cube(xy_range, bcubes,    0);}
+	void get_overlapping_bcubes(cube_t const &xy_range, vect_cube_with_ix_t &bcubes) const {query_for_cube(xy_range, bcubes,    0);}
+	void add_driveways_for_plot(cube_t const &plot,     vect_cube_t      &driveways) const {query_for_cube(plot,     driveways, 1);}
 
 	void get_building_ext_basement_bcubes(cube_t const &city_bcube, vect_cube_t &bcubes) const {
 		vector<cube_with_ix_t> cand_bldgs;
@@ -5293,6 +5293,51 @@ public:
 			for (auto r = building.interior->ext_basement_rooms_start(); r != building.interior->rooms.end(); ++r) {bcubes.push_back(*r);}
 			for (tunnel_seg_t const &t : building.interior->tunnels) {bcubes.push_back(t.bcube);}
 		}
+	}
+
+	void get_ivy_house_walls_for_plot(cube_t const &plot, vect_cube_with_ix_t &walls, rand_gen_t &rgen) const { // can't use query_for_cube() because we need rgen
+		if (empty()) return; // nothing to do
+		unsigned ixr[2][2];
+		get_grid_range(plot, ixr);
+
+		for (unsigned y = ixr[0][1]; y <= ixr[1][1]; ++y) {
+			for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {
+				grid_elem_t const &ge(get_grid_elem(x, y));
+				if (ge.bc_ixs.empty() || !plot.intersects_xy(ge.bcube)) continue;
+
+				for (cube_with_ix_t const &b : ge.bc_ixs) {
+					if (!plot.intersects_xy(b)) continue;
+					if (get_grid_ix(plot.get_llc().max(b.get_llc())) != (y*grid_sz + x)) continue; // add only if in home grid (to avoid duplicates)
+					building_t const &building(get_building(b.ix));
+
+					for (unsigned p = 0; p < min(4U, (unsigned)building.real_num_parts); ++p) {
+						for (unsigned dim = 0; dim < 2; ++dim) {
+							for (unsigned dir = 0; dir < 2; ++dir) {
+								if (building.door_sides[p] & (1U << (2*dim + dir))) continue; // skip walls with doors
+								cube_t const &part(building.parts[p]);
+								if (part.z1() != building.ground_floor_z1) continue; // skip upper parts and basements
+								float const wall_pos(b.d[dim][dir]), wall_thick(building.get_wall_thickness());
+								if (part.d[dim][dir] != wall_pos) continue; // edge of part not along building bcube perimeter; may be interior wall, skip
+								if (rgen.rand_float() > 0.1) continue; // no ivy on this wall
+								cube_t wall(part);
+								// shrink to zero area extended slightly away from wall, in front of the window
+								wall.d[dim][dir] = wall.d[dim][!dir] = wall_pos + (dir ? 1.0 : -1.0)*0.15*wall_thick;
+								
+								if (building.has_driveway()) {
+									cube_t wall_exp(wall);
+									wall_exp.expand_by_xy(wall_thick);
+									if (building.driveway.intersects_xy(wall_exp)) continue; // no ivy over driveway; only handles houses with garages
+								}
+								// clip to avoid windows?
+								wall.z2() -= building.get_fc_thickness(); // avoid clipping through the bottom of the roof/gutter
+								min_eq(wall.z2(), (building.ground_floor_z1 + 2.0f*building.get_window_vspace())); // limit to 2 floors
+								walls.emplace_back(wall, (2*dim + (!dir)));
+							} // for dim
+						} // for dim
+					} // for p
+				} // for b
+			} // for x
+		} // for y
 	}
 
 	// walkways
@@ -6024,6 +6069,7 @@ void get_building_ext_basement_bcubes(cube_t const &city_bcube, vect_cube_t &bcu
 void get_walkways_for_city(cube_t const &city_bcube, vect_bldg_walkway_t &walkways ) {building_creator_city.get_walkways_for_city(city_bcube, walkways);}
 void get_building_power_points(cube_t const &xy_range, vector<point> &ppts         ) {building_creator_city.get_power_points(xy_range, ppts);}
 void add_building_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways    ) {building_creator_city.add_driveways_for_plot(plot, driveways);}
+void get_ivy_house_walls_for_plot(cube_t const &plot, vect_cube_with_ix_t &walls, rand_gen_t &rgen) {building_creator_city.get_ivy_house_walls_for_plot(plot, walls, rgen);}
 unsigned get_type_of_closest_city_building(point const &pos_bs, cube_t const &plot ) {return building_creator_city.get_type_of_closest_building(pos_bs, plot);}
 
 void add_buildings_exterior_lights(vector3d const &xlate, cube_t &lights_bcube) {

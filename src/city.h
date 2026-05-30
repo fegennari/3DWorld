@@ -442,8 +442,8 @@ struct ivy_wall_t {
 	bool empty() const {return (leaves.num_verts == 0);} // assumes branches are empty iff leaves are empty
 	size_t get_gpu_mem() const {return (leaves.get_gpu_mem() + branches.get_gpu_mem());}
 	void clear() {leaves.clear_vbos(); branches.clear_vbos();}
-	void gen(cube_t const &wall, unsigned face_mask, rand_gen_t &rgen);
-	void place_on_wall_face(cube_t const &wall, bool dim, bool dir, vector<vertex_t> &lverts, vector<vertex_t> &bverts, vector<unsigned> &bixs, rand_gen_t &rgen);
+	void gen(cube_t const &wall, float leaf_sz, unsigned face_mask, bool rand_select, rand_gen_t &rgen);
+	void place_on_wall_face(cube_t const &wall, bool dim, bool dir, float leaf_sz, vector<vertex_t> &lverts, vector<vertex_t> &bverts, vector<unsigned> &bixs, rand_gen_t &rgen);
 };
 class ivy_manager_t { // stores ivy for one residential city
 	unordered_map<unsigned, ivy_wall_t> ivy_walls;
@@ -453,7 +453,7 @@ public:
 	bool empty() const {return to_draw.empty();}
 	size_t get_gpu_mem() const;
 	void clear();
-	void add_wall(cube_t const &wall, bool dim, unsigned skip_dirs, unsigned wall_ix, unsigned plot_ix, unsigned city_ix, point const &camera_bs);
+	void add_wall(cube_t const &wall, bool dim, unsigned skip_dirs, unsigned wall_ix, unsigned plot_ix, unsigned city_ix, float leaf_sz, point const &camera_bs);
 	void draw_and_clear(shader_t &s);
 };
 

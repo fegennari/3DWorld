@@ -29,6 +29,7 @@ void add_building_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways)
 unsigned get_type_of_closest_city_building(point const &pos_bs, cube_t const &plot);
 bool connect_buildings_to_skyway(cube_t &m_bcube, bool m_dim, cube_t const &city_bcube, vector<skyway_conn_t> &ww_conns);
 void get_city_building_walkways(cube_t const &city_bcube, vector<building_walkway_t *> &bwws);
+void get_ivy_house_walls_for_plot(cube_t const &plot, vect_cube_with_ix_t &walls, rand_gen_t &rgen);
 bool place_city_building_at(building_t const &bldg, unsigned plot_ix, rand_gen_t &rgen);
 float get_inner_sidewalk_width();
 cube_t get_plot_coll_region(cube_t const &plot_bcube);
@@ -2025,6 +2026,14 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 				}
 			}
 		} // for dw
+	}
+	// add house walls with ivy as dividers
+	vect_cube_with_ix_t house_walls;
+	get_ivy_house_walls_for_plot(plot, house_walls, rgen);
+
+	for (cube_with_ix_t const &w : house_walls) {
+		bool const dim(w.ix >> 1), dir(w.ix & 1);
+		divider_groups.add_obj(divider_t(w, DIV_HOUSE_WALL, dim, dir, 0, 0, dividers.size(), plot_ix, city_ix, 0), dividers); // ends_clipped=0, skip_dims=0, street_dir=0
 	}
 }
 

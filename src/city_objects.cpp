@@ -443,11 +443,13 @@ void divider_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_sc
 			if (sdim == dim || sdir == 1) {wall_clipped.d[!dim][0] += get_depth();}
 			if (sdim == dim || sdir == 0) {wall_clipped.d[!dim][1] -= get_depth();}
 		}
-		unsigned const skip_dirs((type == DIV_HOUSE_WALL) ? (1<<(!dir)) : 0); // house walls skip the interior dir
-		dstate.ivy_manager.add_wall(wall_clipped, dim, skip_dirs, divider_ix, plot_ix, city_ix, dstate.camera_bs);
+		unsigned const skip_dirs((type == DIV_HOUSE_WALL) ? (1<<unsigned(!dir)) : 0); // house walls skip the interior dir
+		float const leaf_sz(0.0075*city_params.road_width);
+		dstate.ivy_manager.add_wall(wall_clipped, dim, skip_dirs, divider_ix, plot_ix, city_ix, leaf_sz, dstate.camera_bs);
 	}
 }
 bool divider_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
+	if (type == DIV_HOUSE_WALL) return 0; // not a collider
 	cube_t bcube_wide(bcube + xlate);
 	bcube_wide.expand_in_dim(dim, max(0.0f, 0.5f*(0.5f*get_scaled_player_radius() - get_depth()))); // make sure it's at least half player radius in thickness
 	return sphere_cube_int_update_pos(pos_, radius_, bcube_wide, p_last, 0, cnorm);
