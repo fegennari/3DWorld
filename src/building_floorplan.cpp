@@ -365,7 +365,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, unsigned gen_index, bool has
 		bool const is_data_cent_part (is_datacenter() && first_part);
 		bool const is_single_floor(is_industrial_part || is_restaurant_part || is_conv_store_part || is_restroom_part);
 		if (is_single_floor) {num_floors = 1;} // industrial buildings and restaurants are a single floor
-		bool const use_hallway(!is_industrial_part && !is_restaurant_part && !is_conv_store_part && !is_data_cent_part && can_use_hallway_for_part(part_id));
+		bool use_hallway(!is_industrial_part && !is_restaurant_part && !is_conv_store_part && !is_data_cent_part && can_use_hallway_for_part(part_id));
 		bool const min_dim(psz.y < psz.x);
 		unsigned const rooms_start(rooms.size()), doors_start(interior->doors.size()), num_doors_per_stack(num_floors);
 		cube_t hall, place_area(*p);
@@ -462,7 +462,8 @@ void building_t::gen_interior_int(rand_gen_t &rgen, unsigned gen_index, bool has
 			create_restroom_floorplan(part_id, rgen);
 		}
 		else if (is_data_cent_part) {
-			create_datacenter_floorplan(part_id, rgen);
+			hall = create_datacenter_floorplan(part_id, window_hspacing, num_windows_per_side, rgen);
+			use_hallway = !hall.is_all_zeros();
 		}
 		else if (!has_house_floorplan() && is_basement_part && min(psz.x, psz.y) > 5.0*car_sz.x && max(psz.x, psz.y) > 12.0*car_sz.y) { // make this a parking garage
 			add_assigned_room(*p, part_id, RTYPE_PARKING); // add entire part as a room (parking garage); num_lights will be calculated later
@@ -502,7 +503,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, unsigned gen_index, bool has
 			int const num_rooms(((apt_or_hotel || is_a_school) ? num_windows : (num_windows+windows_per_room-1))/windows_per_room);
 			int const windows_per_side_od((num_windows_od - round_fp(num_hall_windows))/2); // of hallway
 			assert(num_rooms >= 0 && num_rooms < 1000); // sanity check
-			auto& room_walls(interior->walls[!min_dim]), & hall_walls(interior->walls[min_dim]); // room_walls: perpendicular to hallway; hall_walls: parallel to hallway
+			auto &room_walls(interior->walls[!min_dim]), &hall_walls(interior->walls[min_dim]); // room_walls: perpendicular to hallway; hall_walls: parallel to hallway
 			unsigned const hall_walls_start(hall_walls.size());
 			if (hallway_dim == 2) {hallway_dim = !min_dim;} // cache in building for later use, only for first part (ground floor)
 			
@@ -2178,7 +2179,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 					stairs_cut        = cutout;
 					s_room.has_stairs = 255; // stairs on all floors
 					if (!against_wall) {s_room.set_has_center_stairs();}
-					if (use_hallway || !pri_hall.is_all_zeros()) {s_room.set_no_geom();} // no geom in an office with stairs for buildings with hallways
+					if ((use_hallway || !pri_hall.is_all_zeros()) && !is_datacenter()) {s_room.set_no_geom();} // no geom in an office with stairs for buildings with hallways
 				}
 				break; // success - done
 			} // for n

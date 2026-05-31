@@ -5,23 +5,59 @@
 #include "buildings.h"
 //#include "city_model.h"
 
-void building_t::create_datacenter_floorplan(unsigned part_id, rand_gen_t &rgen) {
+// returns the hallway, if one was created
+cube_t building_t::create_datacenter_floorplan(unsigned part_id, float window_hspacing[2], int num_windows_per_side[2], rand_gen_t &rgen) {
+	// add hallway; two server rooms to either side or one in the center if small, office(s) at one end,
+	// power/AC room(s) at the other, plus bathroom, with stairs and elevator to the side of the hallway
+	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness);
+	float const doorway_width(get_nominal_doorway_width()), doorway_hwidth(0.5*doorway_width);
+	float const wall_thick(get_wall_thickness()), wall_half_thick(0.5*wall_thick), wall_edge_spacing(0.05*wall_thick), min_wall_len(get_min_wall_len());
 	cube_t const &part(parts[part_id]);
+	vector3d const psz(part.get_size());
+	bool const min_dim(psz.y < psz.x), max_dim(!min_dim);
 	assert(interior->rooms.empty()); // must call this first
-	cube_t room(part);
-	add_assigned_room(room, part_id, RTYPE_SERVER);
+
+	if (psz[min_dim] < 4.0*window_vspacing) { // too small, assign entire part to a single server room; shouldn't happen
+		add_assigned_room(part, part_id, RTYPE_SERVER);
+		return cube_t(); // no hallway
+	}
+	hallway_dim = max_dim; // long dim
+	float const centerline(part.get_center_dim(!hallway_dim));
+	float num_hall_windows, hall_width, room_width;
+	cube_t const hall(get_hallway_for_part(part, num_hall_windows, hall_width, room_width));
+	auto &room_walls(interior->walls[!min_dim]), &hall_walls(interior->walls[min_dim]); // room_walls: perpendicular to hallway; hall_walls: parallel to hallway
+	cube_t server_area(part);
+	// TODO: clip to subset of hallway length later
+	float const server_door_pos(rgen.rand_uniform(server_area.d[max_dim][0]+doorway_width, server_area.d[max_dim][1]-doorway_width));
+
+	for (unsigned d = 0; d < 2; ++d) { // each side of hallway
+		float const hall_side(hall.d[min_dim][d]);
+		// add rooms
+		cube_t server_room(server_area);
+		server_room.d[min_dim][!d] = hall_side;
+		add_assigned_room(server_room, part_id, RTYPE_SERVER);
+		// add walls
+		cube_t walls[2] = {part, part};
+		create_wall(walls[0], min_dim, hall_side, fc_thick, wall_half_thick, wall_edge_spacing);
+		remove_section_from_cube_and_add_door(walls[0], walls[1], (server_door_pos - doorway_hwidth), (server_door_pos + doorway_hwidth), max_dim, d);
+		for (unsigned e = 0; e < 2; ++e) {hall_walls.push_back(walls[e]);}
+	} // for d
+	add_room(hall, part_id, 3, 1, 0); // add primary hallway as room with 3+ lights
+	//interior->rooms.back().mark_open_wall_dim(min_dim); // flag primary hallway as open on sides if there are secondary hallways
+	pri_hall = hall;
+	return hall;
 }
 
 bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start) { // for office buildings
+	bool const long_dim(room.dx() < room.dy()), mult_rows(is_datacenter());
 	float const window_vspacing(get_window_vspace()), ceiling_zval(zval + get_floor_ceil_gap());
-	float const server_height(0.7*window_vspacing*rgen.rand_uniform(0.9, 1.1));
+	float const server_height(0.7*window_vspacing*rgen.rand_uniform(0.9, 1.1)*(mult_rows ? 0.9 : 1.0)); // slightly shorter if mulri-row to avoid blocking lights
 	float const server_width (0.3*window_vspacing*rgen.rand_uniform(0.9, 1.1)), server_hwidth(0.5*server_width);
 	float const server_depth (0.4*window_vspacing*rgen.rand_uniform(0.9, 1.1)), server_hdepth(0.5*server_depth);
 	float const comp_height  (0.2*window_vspacing*rgen.rand_uniform(0.9, 1.1));
 	float const min_spacing  (0.1*window_vspacing*rgen.rand_uniform(0.9, 1.1));
 	float const comp_hwidth(0.5*0.44*comp_height), comp_hdepth(0.5*0.9*comp_height); // fixed AR=0.44 to match the texture
 	float const server_period(server_width + min_spacing), conduit_radius(0.05*server_width);
-	bool const long_dim(room.dx() < room.dy()), mult_rows(is_datacenter());
 	cube_t place_area(get_walkable_room_bounds(room));
 	place_area.expand_by(-0.25*get_wall_thickness()); // server spacing from walls
 	cube_t inner_area(place_area);
@@ -45,8 +81,8 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 		bool is_ext_wall[2]={};
 		
 		for (unsigned dir = 0; dir < 2; ++dir) {
-			if (classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT) {is_ext_wall[dir] = 1;} // will skip placement on this wall
-			else {inner_area.d[dim][dir] += (dir ? 1.0 : -1.0)*server_depth;} // shrink inner area by server depth
+			if (classify_room_wall(room, zval, !dim, dir, 0) == ROOM_WALL_EXT) {is_ext_wall[dir] = 1;} // will skip placement on this wall
+			else {inner_area.d[!dim][dir] += (dir ? -1.0 : 1.0)*server_depth;} // shrink inner area by server depth
 		}
 		for (unsigned n = 0; n < num; ++n, center[dim] += server_spacing) {
 			set_wall_width(server, center[dim], server_hwidth, dim); // position along the wall
@@ -131,8 +167,12 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 		float row_spacing(server_depth + aisle_gap), block_spacing(block_width + block_gap);
 		float const avail_depth(inner_width - 2*edge_gap + aisle_gap), avail_width(inner_len - 2*edge_gap + block_gap);
 		unsigned const num_rows(avail_depth/row_spacing), num_blocks(avail_width/block_spacing); // take floor
-		bool const sdim(!long_dim), sdir(rgen.rand_bool()); // consistent direction for center rows
+		// use a consistent direction for center rows; face the room interior door if there is one
+		vect_door_stack_t const &doorways(get_doorways_for_room(room, zval)); // get interior doors
+		bool const sdim(!long_dim);
+		bool const sdir(doorways.empty() ? rgen.rand_bool() : (room.get_center_dim(sdim) < doorways.front().get_center_dim(sdim)));
 		float const dsign(sdir ? 1.0 : -1.0);
+		assert(place_area.contains_cube(inner_area));
 
 		if (num_rows > 0 && num_blocks > 0) {
 			row_spacing   = avail_depth/num_rows;

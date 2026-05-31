@@ -953,6 +953,9 @@ public:
 	}
 }; // end building_nav_graph_t
 
+bool building_t::room_inc_half_walls(room_t const &room) const {
+	return (((is_restaurant() || is_conv_store() || is_restroom() || is_datacenter()) && room.z1() >= ground_floor_z1) || room.inc_half_walls());
+}
 cube_t building_t::get_room_bounds(room_t const &room, bool exc_window_bars, bool floor_space_only) const {
 	if (floor_space_only && room.is_industrial() && interior->ind_info) return interior->ind_info->floor_space; // currently unused
 	// regular house rooms start and end at the walls;

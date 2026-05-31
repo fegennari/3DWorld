@@ -762,7 +762,6 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				if (has_stairs_this_floor && r->get_room_type(f) == RTYPE_NOTSET) {r->assign_to(RTYPE_STAIRS, f);}
 				continue; // no other geometry for this room
 			}
-			//if (has_stairs && has_pri_hall()) continue; // no other geometry in office building base part rooms that have stairs
 			// must be a BR if cand bathroom, and BR not already placed; applies to all floors of this room; if multi-family, we check for a BR prev placed on this floor
 			bool const must_be_bathroom(room_id == cand_bathroom && (multi_family ? !(added_bath_mask & floor_mask) :
 				(num_bathrooms == 0 || (num_bathroom_rooms == 0 && num_bedrooms > 0)))); // if no bedroom was placed, allow a bathroom on only one floor
