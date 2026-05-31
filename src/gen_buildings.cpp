@@ -5318,7 +5318,7 @@ public:
 								if (part.z1() != building.ground_floor_z1) continue; // skip upper parts and basements
 								float const wall_pos(b.d[dim][dir]), wall_thick(building.get_wall_thickness());
 								if (part.d[dim][dir] != wall_pos) continue; // edge of part not along building bcube perimeter; may be interior wall, skip
-								if (rgen.rand_float() > 0.1) continue; // no ivy on this wall
+								if (rgen.rand_float() > 0.1)      continue; // no ivy on this wall
 								cube_t wall(part);
 								// shrink to zero area extended slightly away from wall, in front of the window
 								wall.d[dim][dir] = wall.d[dim][!dir] = wall_pos + (dir ? 1.0 : -1.0)*0.15*wall_thick;

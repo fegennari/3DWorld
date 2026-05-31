@@ -2038,8 +2038,17 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 
 	for (cube_with_ix_t const &w : house_walls) {
 		bool const dim(w.ix >> 1), dir(w.ix & 1);
-		divider_groups.add_obj(divider_t(w, DIV_HOUSE_WALL, dim, dir, 0, 0, dividers.size(), plot_ix, city_ix, 0), dividers); // ends_clipped=0, skip_dims=0, street_dir=0
-	}
+		float const exp_val(0.1*w.get_sz_dim(!dim));
+		cube_t test_cube(w);
+		test_cube.expand_in_dim( dim,  exp_val); // expand to include adjacent driveway
+		test_cube.expand_in_dim(!dim, -exp_val); // shink to exclude side driveway at wall edge
+		bool skip(0);
+
+		for (auto dw = driveways.begin()+driveways_start; dw != driveways.end(); ++dw) {
+			if (dw->intersects_xy(test_cube)) {skip = 1; break;} // skip if there's a driveway adjacent to this wall
+		}
+		if (!skip) {divider_groups.add_obj(divider_t(w, DIV_HOUSE_WALL, dim, dir, 0, 0, dividers.size(), plot_ix, city_ix, 0), dividers);} // ends_clipped=0, skip_dims=0, street_dir=0
+	} // for w
 }
 
 bool city_obj_placer_t::place_swimming_pool(road_plot_t const &plot, city_zone_t const &yard, cube_with_ix_t const &house, bool dim, bool dir,
