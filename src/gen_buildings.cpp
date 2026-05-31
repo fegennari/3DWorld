@@ -5206,6 +5206,10 @@ public:
 		assert(building_id < buildings.size());
 		return buildings[building_id].check_point_or_cylin_contained(pos, radius, points, 0, 0, 0, inc_details, 1); // attic=0, extb=0, roof=0, for_pedestrian=1
 	}
+	cube_t get_building_driveway(unsigned building_id) const {
+		assert(building_id < buildings.size());
+		return buildings[building_id].driveway;
+	}
 
 	int get_building_bcube_contains_pos(point const &pos) { // Note: not thread safe due to static points
 		if (empty()) return -1;
@@ -6125,6 +6129,7 @@ int check_buildings_ped_coll(point const &pos, float bcube_radius, float detail_
 bool check_line_coll_building(point const &p1, point const &p2, unsigned building_id) {return building_creator_city.check_line_coll_building(p1, p2, building_id);}
 int get_building_bcube_contains_pos(point const &pos) {return building_creator_city.get_building_bcube_contains_pos(pos);}
 bool select_building_in_plot(unsigned plot_id, unsigned rand_val, unsigned &building_id) {return building_creator_city.select_building_in_plot(plot_id, rand_val, building_id);}
+cube_t get_city_building_driveway(unsigned building_id) {return building_creator_city.get_building_driveway(building_id);}
 
 // used for people in buildings
 cube_t get_sec_building_bcube(unsigned building_id) {return building_creator.get_building_bcube(building_id);} // unused

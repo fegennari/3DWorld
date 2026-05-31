@@ -31,6 +31,7 @@ bool connect_buildings_to_skyway(cube_t &m_bcube, bool m_dim, cube_t const &city
 void get_city_building_walkways(cube_t const &city_bcube, vector<building_walkway_t *> &bwws);
 void get_ivy_house_walls_for_plot(cube_t const &plot, vect_cube_with_ix_t &walls, rand_gen_t &rgen);
 bool place_city_building_at(building_t const &bldg, unsigned plot_ix, rand_gen_t &rgen);
+cube_t get_city_building_driveway(unsigned building_id);
 float get_inner_sidewalk_width();
 cube_t get_plot_coll_region(cube_t const &plot_bcube);
 void play_hum_sound(point const &pos, float gain, float pitch);
@@ -1646,8 +1647,10 @@ bool check_valid_house_obj_place(point const &pos, float height, float radius, f
 	if (check_sphere_coll_building(center, radius, 0, house.ix))           return 0; // xy_only=0
 	point p_include(center);
 	p_include[dim] = wall_pos - (dir ? 1.0 : -1.0)*0.25*radius; // slightly inside the wall
-	if (!check_sphere_coll_building(p_include, 0.0, 0, house.ix)) return 0; // *must* be next to an exterior wall or fence; radius=0.0, xy_only=0
-	if (check_close_to_door(pos, 4.0*radius, house.ix))           return 0;
+	if (!check_sphere_coll_building(p_include, 0.0, 0, house.ix))    return 0; // *must* be next to an exterior wall or fence; radius=0.0, xy_only=0
+	if (check_close_to_door(pos, 4.0*radius, house.ix))              return 0;
+	cube_t const driveway(get_city_building_driveway(house.ix)); // may be zero area if no driveway
+	if (!driveway.is_all_zeros() && driveway.contains_pt_xy(center)) return 0;
 	return 1;
 }
 
@@ -1895,11 +1898,8 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 				for (unsigned d = 0; d < 3; ++d) {blocked |= check_sphere_coll_building(p_exclude[d], 0.5*bike_width, 0, house.ix);}
 				if (blocked) continue;
 				if (check_close_to_door(pos, 1.0*bike_len, house.ix)) continue;
-
-				// check for driveways; currently doesn't work because these are the extended driveways, not the house driveways, and bikes don't always overlap them
-				/*for (auto dw = driveways.begin()+driveways_start; dw != driveways.end(); ++dw) {
-					if (dw->intersects_xy(bike.bcube)) {bike.translate_dim(2, 0.05*bike_height);} // shift up slighty onto driveway
-				}*/
+				cube_t const driveway(get_city_building_driveway(house.ix)); // may be zero area if no driveway
+				if (!driveway.is_all_zeros() && driveway.contains_pt_xy(pos)) {bike.translate_dim(2, 0.08*bike_height);} // shift up slighty onto driveway
 				bike_groups.add_obj(bike, bikes);
 				add_cube_to_colliders_and_blockers(bike.bcube, colliders, blockers);
 				break; // success
