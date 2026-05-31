@@ -329,24 +329,8 @@ void building_t::gen_interior_int(rand_gen_t &rgen, unsigned gen_index, bool has
 	uint64_t must_split[2] = {0,0};
 	unsigned first_wall_to_split[2] = {0,0};
 	cube_t pref_conn_to; // house hallway, etc.
-	// allocate space for all floors; this is now likely a large undercount of the actual number of objects needed
-	unsigned tot_num_floors(0), tot_num_stairwells(0), tot_num_landings(0); // num floor/ceiling cubes, not number of stories; used only for reserving vectors
-
-	for (auto p = parts.begin(); p != parts_end; ++p) {
-		bool const has_stairs(!is_house || p == parts.begin()); // assumes one set of stairs or elevator per part
-		unsigned const cubes_per_floor(has_stairs ? 4 : 1); // account for stairwell cutouts
-		unsigned const num_floors(calc_num_floors(*p, window_vspacing, floor_thickness));
-		tot_num_floors     += cubes_per_floor*(num_floors - 1) + 1; // first floor has no cutout
-		tot_num_stairwells += (has_stairs && num_floors > 1);
-		tot_num_landings   += (has_stairs ? (num_floors - 1) : 0);
-	}
-	if (has_sec_bldg()) {++tot_num_floors;}
-	interior->int_door_width = get_doorway_width(); // set the default value until doors are added
-	interior->ceilings  .reserve(tot_num_floors);
-	interior->floors    .reserve(tot_num_floors);
-	interior->landings  .reserve(tot_num_landings);
-	interior->stairwells.reserve(tot_num_stairwells);
 	vector<room_t> &rooms(interior->rooms);
+	interior->int_door_width = get_doorway_width(); // set the default value until doors are added
 	
 	// generate walls and floors for each part;
 	// this will need to be modified to handle buildings that have overlapping parts, or skip those building types completely
@@ -367,7 +351,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, unsigned gen_index, bool has
 		if (is_single_floor) {num_floors = 1;} // industrial buildings and restaurants are a single floor
 		bool use_hallway(!is_industrial_part && !is_restaurant_part && !is_conv_store_part && !is_data_cent_part && can_use_hallway_for_part(part_id));
 		bool const min_dim(psz.y < psz.x);
-		unsigned const rooms_start(rooms.size()), doors_start(interior->doors.size()), num_doors_per_stack(num_floors);
+		unsigned const rooms_start(rooms.size()), doors_start(interior->doors.size());
 		cube_t hall, place_area(*p);
 		place_area.expand_by_xy(-wall_edge_spacing); // shrink slightly to avoid z-fighting with walls
 		bool no_split_walls_this_part(0);
@@ -523,16 +507,8 @@ void building_t::gen_interior_int(rand_gen_t &rgen, unsigned gen_index, bool has
 					bool const add_doors_to_main_wall(rgen.rand_bool());
 					unsigned const num_cent_rooms(num_rooms - 2); // skip the rooms on each side
 					unsigned const num_doors_inner_rooms(add_doors_to_main_wall ? 3U : 2U);
-					unsigned const num_offices(4*(num_cent_rooms + 4)); // X/Y mirror symmetry
-					unsigned const min_num_doors(num_offices + 2*add_doors_to_main_wall*num_cent_rooms + 4); // at least one per office
-					assert(num_cent_rooms > 0);
-					hall_walls.reserve(2*(11 + num_doors_inner_rooms*num_cent_rooms)); // long dim (along hall dir)
-					room_walls.reserve(2*(10 + 2*num_cent_rooms)); // short dim
-					rooms.reserve(num_offices + 7); // num_offices + pri hall + 2 sec hall + 4 conn hall
-					interior->door_stacks.reserve(min_num_doors);
-					interior->doors.reserve(num_doors_per_stack*min_num_doors);
-					interior->exclusion.reserve(6); // 2 sec hallways + 4 conn hallways
 					unsigned const bathroom_ix(rgen.rand_bool() ? 0 : num_cent_rooms-1); // place bathrooms on one of the end center rooms
+					interior->exclusion.reserve(6); // 2 sec hallways + 4 conn hallways
 
 					for (unsigned d = 0; d < 2; ++d) { // for each side of main hallway
 						float const dsign(d ? -1.0 : 1.0);
@@ -727,17 +703,10 @@ void building_t::gen_interior_int(rand_gen_t &rgen, unsigned gen_index, bool has
 					}
 					float const sh_spacing(hall_len/num_sec_halls - sh_width), end_spacing(0.5*sh_spacing); // half spacing at both ends
 					assert(sh_spacing > min_wall_len); // I'm not sure if this can fail or what we should do in that case - use fewer secondary hallways?
-					float room_start(p->d[!min_dim][0]), wall_pos(room_start + end_spacing); // first sec hall wall pos
-					int const num_offices(4*rooms_per_side*num_sec_halls), rand_val(rgen.rand());
-					bool const add_div_wall_door(is_office_bldg() && rooms_per_side > 2 && (rand_val & 255)); // 50% of the time when conditions are met
-					int const min_num_door_stacks(num_offices + add_div_wall_door*2*(num_sec_halls-1)); // one per office + extras
 					auto &split_walls(hall_walls);
-					room_walls .reserve(4*(rooms_per_side+1)*num_sec_halls + 2*(num_sec_halls-1)); // walls with doors + room dividers
-					split_walls.reserve(2*rooms_per_side*(num_sec_halls+1));
-					rooms      .reserve(num_offices + 2*num_sec_halls + 1); // offices + sec hallways + pri hallway
-					interior->door_stacks.reserve(min_num_door_stacks);
-					interior->doors      .reserve(num_doors_per_stack*min_num_door_stacks);
-					interior->exclusion  .reserve(2*num_sec_halls);
+					float room_start(p->d[!min_dim][0]), wall_pos(room_start + end_spacing); // first sec hall wall pos
+					int const rand_val(rgen.rand());
+					bool const add_div_wall_door(is_office_bldg() && rooms_per_side > 2 && (rand_val & 255)); // 50% of the time when conditions are met
 					unsigned const bathroom_ix((num_sec_halls <= 2) ? 0 : (rand_val%(num_sec_halls-1))); // place bathrooms in rooms near the central hallway
 
 					for (int i = 0; i <= num_sec_halls; ++i) { // actually iterates over the number of room blocks between halls (num halls + 1)
@@ -869,9 +838,6 @@ void building_t::gen_interior_int(rand_gen_t &rgen, unsigned gen_index, bool has
 			} // end multiple hallways case
 
 			else { // single main hallway
-				// Note: these reserves may be unnecessary now that buildings commonly have stacked parts and basements
-				room_walls.reserve(2*(num_rooms-1));
-				hall_walls.reserve(2*(num_rooms+1));
 				cube_t rwall(*p); // copy from part; shared zvals, but X/Y will be overwritten per wall
 				create_wall(rwall, !min_dim, wall_pos, fc_thick, wall_half_thick, wall_edge_spacing); // room walls, create first wall
 				//bool const doors_in_corners(put_doors_in_corners && !apt_or_hotel && room_len > 2.0*doorway_width); // this case is more complex and has not been implemented
@@ -902,9 +868,6 @@ void building_t::gen_interior_int(rand_gen_t &rgen, unsigned gen_index, bool has
 					}
 				} // for s
 				// add rooms and doors
-				rooms.reserve(2*num_rooms + 1); // two rows of rooms + hallway
-				interior->door_stacks.reserve(2*num_rooms);
-				interior->doors      .reserve(num_doors_per_stack*2*num_rooms);
 				float const wall_end(p->d[!min_dim][1]);
 				float pos(p->d[!min_dim][0]);
 
@@ -966,14 +929,6 @@ void building_t::gen_interior_int(rand_gen_t &rgen, unsigned gen_index, bool has
 			else {to_split.emplace_back(*p);} // seed room is entire part, no door
 			bool is_first_split(1);
 			point part_door_open_dir_tp(p->get_cube_center()); // used to determine in which direction doors open; updated based on central hallway
-			
-			if (first_part) { // reserve walls/rooms/doors - take a guess at the correct size
-				unsigned const num_doors_est(4*real_num_parts + has_basement());
-				for (unsigned d = 0; d < 2; ++d) {interior->walls[d].reserve(8*real_num_parts);}
-				rooms.reserve(8*real_num_parts + has_sec_bldg()); // two rows of rooms + optional hallway
-				interior->door_stacks.reserve(num_doors_est);
-				interior->doors.reserve(num_doors_per_stack*num_doors_est);
-			}
 			unsigned const ds_start(interior->door_stacks.size());
 			// see if we have a skylight to work with
 			vect_cube_t part_skylights; // should be at most size 1 with currently skylight addition code
