@@ -1641,7 +1641,7 @@ void building_room_geom_t::add_obj_with_top_texture(room_object_t const &c, stri
 	sides_mat.add_cube_to_verts_untextured(c, apply_light_color(c, sides_color), skip_faces); // sides and maybe bottom, shadows
 }
 void building_room_geom_t::add_obj_with_front_texture(room_object_t const &c, string const &text_name, colorRGBA const &front_color,
-	colorRGBA const &sides_color, bool is_small, float spec, float shine, float metalness)
+	colorRGBA const &sides_color, bool is_small, float spec, float shine, float metalness, unsigned extra_skip_faces)
 {
 	tid_nm_pair_t tex(get_texture_by_name(text_name), 0.0, 1);
 	tex.set_specular(spec, shine, metalness);
@@ -1649,7 +1649,7 @@ void building_room_geom_t::add_obj_with_front_texture(room_object_t const &c, st
 	unsigned const front_mask(get_face_mask(c.dim, c.dir));
 	mat.add_cube_to_verts(c, apply_light_color(c, front_color), zero_vector, front_mask, !c.dim, (c.dim ^ c.dir ^ 1), 0); // front face only
 	rgeom_mat_t &sides_mat((metalness > 0.0) ? get_painted_metal_material(1, 0, is_small, 0, 0, spec, shine, metalness) : get_untextured_material(1, 0, is_small));
-	sides_mat.add_cube_to_verts_untextured(c, apply_light_color(c, sides_color), ~front_mask); // sides, shadows
+	sides_mat.add_cube_to_verts_untextured(c, apply_light_color(c, sides_color), (~front_mask | EF_Z1 | extra_skip_faces)); // sides, top, and back; shadows
 }
 
 void building_room_geom_t::add_keyboard  (room_object_t const &c) {add_obj_with_top_texture  (c, "interiors/keyboard.jpg", BKGRAY, 1);} // is_small=1; wireless
@@ -5373,7 +5373,16 @@ void building_room_geom_t::add_furnace(room_object_t const &c) {
 colorRGBA get_server_color() {return texture_color(get_texture_by_name("interiors/server_rack.png"));}
 
 void building_room_geom_t::add_server(room_object_t const &c) {
-	add_obj_with_front_texture(c, "interiors/server_rack.png", get_server_color(), 1); // small=1
+	colorRGBA const color(get_server_color());
+	unsigned extra_skip_faces(EF_Z1); // skip bottom
+
+	if (c.flags & RO_FLAG_ON_FLOOR) { // not against wall; draw back with custom texture
+		unsigned const back_face_mask(get_face_mask(c.dim, !c.dir));
+		rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_texture_by_name("metals/225_industrial_aluminium_metal_plate.jpg"), 0.0, 1))); // shadowed
+		mat.add_cube_to_verts(c, apply_light_color(c, color*2.0), c.get_llc(), back_face_mask, c.dim, 1, 1); // maybe swap, and mirror
+		extra_skip_faces |= ~back_face_mask; // skip back face in draw call below
+	}
+	add_obj_with_front_texture(c, "interiors/server_rack.png", color, 0, 0.0, 0.0, 0.0, extra_skip_faces); // small=0; not metal
 }
 
 void get_pool_ball_rot_matrix(room_object_t const &c, xform_matrix &rot_matrix) {

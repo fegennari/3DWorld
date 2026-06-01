@@ -670,6 +670,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		case TYPE_COAT_RACK: add_coat_rack(*i, tscale); break;
 		case TYPE_VENT_HOOD: add_vent_hood(*i); break;
 		case TYPE_COM_FRIDGE:add_commercial_fridge(*i, 1, 0); break; // inc_lg=1, inc_sm=0
+		case TYPE_SERVER:    add_server(*i); break;
 		//case TYPE_FRIDGE: if (i->is_open()) {} break; // draw open fridge?
 		case TYPE_ELEVATOR: break; // not handled here
 		case TYPE_BLOCKER:  break; // not drawn
@@ -799,7 +800,6 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_TEESHIRT:   add_teeshirt(c); break;
 		case TYPE_PANTS:      add_pants   (c); break;
 		case TYPE_BLANKET:    add_blanket (c); break;
-		case TYPE_SERVER:     add_server  (c); break;
 		case TYPE_POOL_BALL:  add_pool_ball(c); break;
 		case TYPE_POOL_CUE:   add_pool_cue (c); break;
 		case TYPE_WALL_MOUNT: add_wall_mount (c); break;

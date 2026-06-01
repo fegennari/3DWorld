@@ -943,10 +943,10 @@ struct building_room_geom_t {
 	void add_obj_with_top_texture  (room_object_t const &c, std::string const &text_name, colorRGBA const &sides_color,
 		bool is_small=0, float spec=0.0, float shine=0.0, float metalness=0.0, float tscale=0.0);
 	void add_obj_with_front_texture(room_object_t const &c, std::string const &text_name, colorRGBA const &front_color, colorRGBA const &sides_color,
-		bool is_small=0, float spec=0.0, float shine=0.0, float metalness=0.0);
+		bool is_small=0, float spec=0.0, float shine=0.0, float metalness=0.0, unsigned extra_skip_faces=0);
 	void add_obj_with_front_texture(room_object_t const &c, std::string const &text_name, colorRGBA const &sides_color,
-		bool is_small=0, float spec=0.0, float shine=0.0, float metalness=0.0) {
-		add_obj_with_front_texture(c, text_name, c.color, sides_color, is_small, spec, shine, metalness); // front_color = c.color
+		bool is_small=0, float spec=0.0, float shine=0.0, float metalness=0.0, unsigned extra_skip_faces=0) {
+		add_obj_with_front_texture(c, text_name, c.color, sides_color, is_small, spec, shine, metalness, extra_skip_faces); // front_color = c.color
 	}
 	void add_computer(room_object_t const &c);
 	void add_laptop(room_object_t const &c);

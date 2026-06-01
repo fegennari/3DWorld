@@ -153,7 +153,7 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 			room_object_t &laptop(objs.back());
 			float const xlate(server_front - laptop.d[dim][dir] + (dir ? 1.0 : -1.0)*rgen.rand_uniform(0.05, 0.35)*laptop.get_sz_dim(dim));
 			laptop.translate_dim(dim, xlate);
-			laptop.flags |= RO_FLAG_HANGING;
+			laptop.flags |= RO_FLAG_HANGING; // make sure bottom is drawn
 		} // for i
 	}
 	if (mult_rows) {
@@ -199,7 +199,7 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 						server_exp.d[sdim][!sdir] -= dsign*back_clearance;
 
 						if (!is_obj_placement_blocked(server_exp, room, 1)) {
-							objs.emplace_back(server, TYPE_SERVER, room_id, sdim, sdir, 0, tot_light_amt);
+							objs.emplace_back(server, TYPE_SERVER, room_id, sdim, sdir, RO_FLAG_ON_FLOOR, tot_light_amt); // flag so that back is drawn
 							// TODO: add wire conduit? but what about ceiling lights?
 							++num_servers;
 						}
