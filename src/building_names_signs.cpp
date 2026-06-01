@@ -105,6 +105,7 @@ string choose_business_name(rand_gen_t rgen, building_type_t btype) {
 	if (btype == BTYPE_PARKING   ) {return "Parking" ;} // for now, parking structures only have "Parking" signs
 	if (btype == BTYPE_RESTROOM  ) {return "Restroom";} // or no name/sign?
 	if (btype == BTYPE_RESTAURANT) {return store_name_gen.gen_restaurant_name(rgen);}
+	if (btype == BTYPE_DATACENTER && rgen.rand_float() < 0.1) {return "Skynet";} // 10% chance
 	if (btype >= BTYPE_APARTMENT ) {return gen_random_name(rgen, 4) + " " + btype_names[btype];} // specialized building type
 	if (rgen.rand_bool())          {return pixel_city::gen_company_name(rgen);}
 	int const v(rgen.rand()%10);
