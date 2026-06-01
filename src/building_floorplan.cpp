@@ -2198,8 +2198,9 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 
 	if (must_add_stairs && has_stairs && !is_house && roof_type == ROOF_TYPE_FLAT) { // add roof access for stairs
 		bool const is_sloped(sshape != SHAPE_U);
+		float const wall_thick_scale(is_parking() ? 0.25 : 1.0); // thinner walls for parking structure metal
 		cube_t box(stairs_cut);
-		if (!is_sloped) {box.expand_by_xy(fc_thick);}
+		if (!is_sloped) {box.expand_by_xy(wall_thick_scale*wall_thickness);}
 		box.z1()  = z + floor_thickness;
 		box.z2()  = z + window_vspacing - (is_sloped ? 0.15 : 0.2)*window_vspacing; // slightly lower than a normal floor
 		cube_t check_box(box);
@@ -2275,9 +2276,9 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 				} // for s
 				roof_tquads.emplace_back(frame_top, tquad_type);
 			}
-			else { // U-shaped stairs; box roof
+			else { // U-shaped stairs, possibly for parking structure; box roof
 				cube_t hole(stairs_cut), front(box);
-				hole.expand_by_xy(0.1*fc_thick); // to prevent z-fighting
+				hole.expand_by_xy(0.1*wall_thickness); // to prevent z-fighting
 				front.d[ stairs_dim][!dir   ] = hole.d[stairs_dim][dir];
 				hole .d[ stairs_dim][ dir   ] = box. d[stairs_dim][dir]; // move edge flush with box to remove this wall and create an opening
 				front.d[!stairs_dim][!u_side] = front.get_center_dim(!stairs_dim); // block off the non-opening half
@@ -2287,7 +2288,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 					cube_t &c(to_add[i]);
 					if (!c.is_zero_area()) {details.emplace_back(c, (uint8_t)ROOF_OBJ_SCAP);} // skip open side
 				}
-				box.z1() = front.z2() = box.z2() - fc_thick;
+				box.z1() = front.z2() = box.z2() - wall_thick_scale*fc_thick;
 				details.emplace_back(box,   (uint8_t)ROOF_OBJ_SCAP); // top
 				details.emplace_back(front, (uint8_t)ROOF_OBJ_SCAP); // front half
 				max_eq(bcube.z2(), box.z2());
