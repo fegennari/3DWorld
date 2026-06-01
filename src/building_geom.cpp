@@ -342,8 +342,10 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 				roof_tquads.clear(); // in case it was assigned a sloped roof
 				assign_name(rgen); // re-assign a name
 			}
-			else if (is_cube_office && num_floors <= 6 && rgen.rand_bool()) {
-				btype = BTYPE_DATACENTER;
+			else if (is_cube_office && num_floors >= 3 && num_floors <= 6 && can_use_hallway_for_part(0) && min(bcube.dx(), bcube.dy()) > 13.0*floor_spacing) {
+				btype     = BTYPE_DATACENTER;
+				roof_type = ROOF_TYPE_FLAT;
+				roof_tquads.clear(); // in case it was assigned a sloped roof
 				assign_name(rgen); // re-assign a name
 			}
 			else if (is_cube() && num_floors >= 3 && !is_hospital() && rgen.rand_probability(global_building_params.retail_floorplan_prob)) { // 3+ floors, consider retail
@@ -2321,7 +2323,11 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 	cube_t flat_roof_area(get_flat_roof_section_bcube());
 	bool const has_flat_upper_roof(!flat_roof_area.is_all_zeros()), has_flat_top(flat_roof || has_flat_upper_roof);
 	unsigned num_ac_units(0); // cube buildings only for now, no parking structures; 0-8 for industrial, otherwise 0-6
-	if (has_flat_top && is_cube() && !is_parking()) {num_ac_units = (rgen.rand() % (is_industrial() ? 9 : 7));}
+	
+	if (has_flat_top && is_cube() && !is_parking()) {
+		num_ac_units = (rgen.rand() % (is_industrial() ? 9 : 7)); // 0-6, 0-8 for industrial
+		if (is_datacenter()) {num_ac_units = max((2*num_ac_units + 8), 16U);} // more AC units
+	}
 	float const window_vspacing(get_window_vspace()), wall_width(0.049*window_vspacing); // slightly narrower than interior wall width to avoid z-fighting with roof access
 	assert(!parts.empty());
 	create_per_part_ext_verts(); // needed for roof containment queries
@@ -2359,7 +2365,8 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 			}
 		}
 		if (num_ac_units > 0) {
-			float const xy_sz(0.75*bcube.get_size_xy().mag()*rgen.rand_uniform(0.012, 0.02)); // size based on bcube
+			float xy_sz(0.75*bcube.get_size_xy().mag()*rgen.rand_uniform(0.012, 0.02)); // size based on bcube
+			if (is_datacenter()) {xy_sz *= 1.5;} // larger
 
 			for (auto p = parts.begin(); p != parts.end(); ++p) {
 				unsigned const num_this_part(min(num_ac_units, unsigned(num_ac_units*p->dx()*p->dy()/(bcube.dx()*bcube.dy()) + 1))); // distribute based on area
