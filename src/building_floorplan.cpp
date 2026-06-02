@@ -1771,6 +1771,17 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	}
 	// add stairwells and elevator shafts
 	if (num_floors == 1) {} // no need for stairs or elevator
+	else if (part_ix == 0 && is_datacenter() && has_pri_hall()) { // stairs and elevator have already been custom placed
+		assert(interior->elevators.size() == 1 && interior->stairwells.size() == 1);
+		stairwell_t const &stairs(interior->stairwells[0]);
+		stairs_cut       = stairs;
+		stairs_dim       = stairs.dim;
+		force_stairs_dir = stairs.dir;
+		sshape           = stairs.shape;
+		elevator_cut     = interior->elevators[0]; // already added
+		interior->stairwells.clear(); // will be re-added below
+		for (unsigned d = 0; d < 2; ++d) {stairs_against_wall[d] = stairs.against_wall[d];}
+	}
 	else if (use_hallway) { // part is the hallway cube
 		assert(!interior->rooms.empty());
 		room_t &room(interior->rooms.back()); // hallway is always the last room to be added
@@ -1780,7 +1791,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		else {sshape = SHAPE_WALLED_SIDES;} // walled sides to meet fire codes
 		cube_t stairs(hall); // start as hallway
 		// add elevator(s)
-		bool const add_side_elevator(!is_apt_or_hotel() && rgen.rand_bool()); // as opposed to central elevators; not valid for fixed floorplans of apartments and hotels
+		bool const add_side_elevator(!is_apt_or_hotel() && rgen.rand_bool()); // as opposed to central elevators; not valid for fixed floorplans of apartments/hotels/datacenters
 		float const hall_len(room.get_sz_dim(long_dim)), stairs_len(4.0*doorway_width), ehwidth(0.5*ewidth);
 		unsigned const num_elevators((hall_len > 10.0*ewidth) ? 2 : 1); // two elevators if there's space; will only add 1 if there's a side elevator
 		unsigned const room_ix(interior->rooms.size() - 1);
@@ -2200,7 +2211,13 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		bool const is_sloped(sshape != SHAPE_U);
 		float const wall_thick_scale(is_parking() ? 0.25 : 1.0); // thinner walls for parking structure metal
 		cube_t box(stairs_cut);
-		if (!is_sloped) {box.expand_by_xy(wall_thick_scale*wall_thickness);}
+		
+		if (!is_sloped) { // rectangular
+			box.expand_by_xy(wall_thick_scale*wall_thickness);
+			cube_t valid_bounds(part);
+			valid_bounds.expand_by_xy(-0.25*wall_thickness);
+			box.intersect_with_cube(valid_bounds); // can't extend outside of building exterior if placed at edge
+		}
 		box.z1()  = z + floor_thickness;
 		box.z2()  = z + window_vspacing - (is_sloped ? 0.15 : 0.2)*window_vspacing; // slightly lower than a normal floor
 		cube_t check_box(box);
@@ -3182,7 +3199,7 @@ void building_t::add_or_extend_elevator(elevator_t const &elevator, bool add) {
 	cube_t ecap(elevator);
 	ecap.z1()  = elevator.z2();
 	ecap.z2() += 0.25*window_vspacing; // set height
-	if (!elevator.at_edge) {ecap.expand_by_xy(0.025*window_vspacing);}
+	if (!elevator.at_edge && !is_datacenter()) {ecap.expand_by_xy(0.025*window_vspacing);} // not for datacenter because it's next to stairs
 	
 	// check to see if the elevator is at the top of the building
 	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {

@@ -3,7 +3,6 @@
 
 #include "function_registry.h"
 #include "buildings.h"
-//#include "city_model.h"
 
 // returns the hallway, if one was created
 cube_t building_t::create_datacenter_floorplan(unsigned part_id, float window_hspacing[2], int num_windows_per_side[2], rand_gen_t &rgen) {
@@ -21,14 +20,16 @@ cube_t building_t::create_datacenter_floorplan(unsigned part_id, float window_hs
 		add_assigned_room(part, part_id, RTYPE_SERVER);
 		return cube_t(); // no hallway
 	}
-	hallway_dim = max_dim; // long dim
-	float const centerline(part.get_center_dim(!hallway_dim));
+	if (part_id == 0) {hallway_dim = max_dim;} // long dim
+	float const centerline(part.get_center_dim(!max_dim));
 	float num_hall_windows, hall_width, room_width;
 	cube_t const hall(get_hallway_for_part(part, num_hall_windows, hall_width, room_width));
 	auto &room_walls(interior->walls[!min_dim]), &hall_walls(interior->walls[min_dim]); // room_walls: perpendicular to hallway; hall_walls: parallel to hallway
+	unsigned const hall_walls_start(hall_walls.size());
 	cube_t server_area(part);
 	// TODO: clip to subset of hallway length later
-	float const server_door_pos(rgen.rand_uniform(server_area.d[max_dim][0]+doorway_width, server_area.d[max_dim][1]-doorway_width));
+	float const server_area_len(server_area.get_sz_dim(max_dim)), door_end_space(max(doorway_width, 0.25f*server_area_len));
+	float const server_door_pos(rgen.rand_uniform(server_area.d[max_dim][0]+door_end_space, server_area.d[max_dim][1]-door_end_space));
 
 	for (unsigned d = 0; d < 2; ++d) { // each side of hallway
 		float const hall_side(hall.d[min_dim][d]);
@@ -42,9 +43,37 @@ cube_t building_t::create_datacenter_floorplan(unsigned part_id, float window_hs
 		remove_section_from_cube_and_add_door(walls[0], walls[1], (server_door_pos - doorway_hwidth), (server_door_pos + doorway_hwidth), max_dim, d);
 		for (unsigned e = 0; e < 2; ++e) {hall_walls.push_back(walls[e]);}
 	} // for d
-	add_room(hall, part_id, 3, 1, 0); // add primary hallway as room with 3+ lights
+	unsigned const hall_room_id(add_room(hall, part_id, 3, 1, 0)); // add primary hallway as room with 3+ lights
 	//interior->rooms.back().mark_open_wall_dim(min_dim); // flag primary hallway as open on sides if there are secondary hallways
-	pri_hall = hall;
+	if (part_id == 0) {pri_hall = hall;}
+
+	// place stairs and elevator along the hallway
+	bool const se_end(rgen.rand_bool()), se_side(rgen.rand_bool());
+	float const se_side_sign(se_side ? 1.0 : -1.0), se_end_sign(se_end ? 1.0 : -1.0);
+	float const se_wall_pos(hall.d[min_dim][se_side] - se_side_sign*wall_half_thick);
+	float const ewidth(1.8*doorway_width), edepth(1.8*doorway_width), stairs_width(2.5*doorway_width);
+	float stairs_depth(window_hspacing[min_dim]); // one window width
+	if (stairs_depth < 2.4*doorway_width) {stairs_depth *= 2.0;} // increase to 2 windows if needed
+	float const stairs_start(part.d[max_dim][se_end] - se_end_sign*wall_half_thick);
+	float const stairs_end(stairs_start - se_end_sign*stairs_width), elevator_start(stairs_end - 0.25*se_end_sign*wall_thick);
+	cube_t stairs(part), elevator(part);
+	stairs  .d[min_dim][!se_side] = elevator.d[min_dim][!se_side] = se_wall_pos;
+	stairs  .d[min_dim][ se_side] = se_wall_pos + se_side_sign*stairs_depth;
+	elevator.d[min_dim][ se_side] = se_wall_pos + se_side_sign*edepth;
+	stairs  .d[max_dim][ se_end ] = stairs_start;
+	stairs  .d[max_dim][!se_end ] = stairs_end;
+	elevator.d[max_dim][ se_end ] = elevator_start; // small gap between stairs and elevator
+	elevator.d[max_dim][!se_end ] = elevator_start - se_end_sign*ewidth;
+	interior->stairwells.emplace_back(stairs, 0, min_dim, se_side, SHAPE_U); // add temp stairs so that we can extract these variables later
+	get_room(hall_room_id).has_stairs = 255; // stairs on all floors
+	elevator_t E(elevator, hall_room_id, min_dim, !se_side, 0, 1); // elevator shaft; at_edge=0, interior_room=1 (considered interior-enough)
+	add_or_extend_elevator(E, 1);
+	get_room(hall_room_id).has_elevator = 1;
+
+	// remove wall in front of stairs/elevator
+	for (auto w = hall_walls.begin()+hall_walls_start; w != hall_walls.end(); ++w) {
+		if (w->intersects(stairs)) {w->d[max_dim][se_end] = elevator.d[max_dim][!se_end];} // end at edge of elevator
+	}
 	return hall;
 }
 
