@@ -3378,8 +3378,8 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 	float const hall_side_clearance(max(get_doorway_width(), get_min_front_clearance_inc_people())); // front clearance is generally slightly larger
 	vect_room_object_t &objs(interior->room_geom->objs);
 
-	// place ground floor/lobby objects + hospital per-floor desks; not for schools
-	if ((first_floor && room.z1() == ground_floor_z1 && !is_school()) || is_hospital()) {
+	// place ground floor/lobby objects + hospital per-floor desks; not for schools or datacenters
+	if ((first_floor && room.z1() == ground_floor_z1 && !is_school() && !is_datacenter()) || is_hospital()) {
 		// add lobby reception desks
 		float const nom_desk_width(0.9*window_vspacing);
 		

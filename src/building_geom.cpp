@@ -2038,9 +2038,16 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office 
 	float const door_height(get_office_bldg_door_height()), wscale(DOOR_WIDTH_SCALE_OFFICE); // a bit taller and a lot wider than house doors
 
 	if (has_pri_hall()) { // building has primary hallway, place doors at both ends of first part
+		rand_gen_t rgen2(rgen); // don't modify rgen
+		bool const dim(hallway_dim);
+		bool first_dir(rgen2.rand_bool());
+		// if this is a datacenter, make the front door the one closest to the stairs and elevator
+		if (is_datacenter() && interior && !interior->elevators.empty()) {first_dir = (bcube.get_center_dim(dim) < interior->elevators.front().get_center_dim(dim));}
+
 		for (unsigned d = 0; d < 2; ++d) {
-			cube_t const door(place_door(parts.front(), bool(hallway_dim), d, door_height, 0.0, 0.0, 0.0, wscale, 0, 0, rgen));
-			if (add_door(door, 0, bool(hallway_dim), d, 1)) {floor_ext_door_mask |= 1;}
+			bool const dir(bool(d) ^ first_dir);
+			cube_t const door(place_door(parts.front(), dim, dir, door_height, 0.0, 0.0, 0.0, wscale, 0, 0, rgen));
+			if (add_door(door, 0, dim, dir, 1)) {floor_ext_door_mask |= 1;}
 		}
 		return;
 	}
