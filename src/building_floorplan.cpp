@@ -2351,7 +2351,7 @@ bool building_t::can_extend_stairs_to_pg(unsigned &stairs_ix) const {
 		for (unsigned i = 0; i < interior->stairwells.size(); ++i) {
 			stairwell_t const &s(interior->stairwells[i]);
 			if (s.z1() < ground_floor_z1 || s.z1() > stairs_zmax) continue; // not ground floor stairs (or just above ground floor if retail)
-			if (has_pri_hall() && !pri_hall.contains_cube_xy(s))  continue; // not in primary hall or the retail room below
+			if (has_pri_hall() && !is_datacenter() && !pri_hall.contains_cube_xy(s)) continue; // not in primary hall or the retail room below
 			stairs_ix = i; // can be primary hall stairs or stairs extended into retail area below
 			return 1;
 		}
@@ -2902,7 +2902,8 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				adj.set_from_point(bcube.get_llc());
 			}
 			// Note: we've already added a doorway width of padding to the front of the elevator, so we don't need to add full padding in the call below
-			bool const is_valid(is_valid_stairs_elevator_placement(cand_test, cand_test_nopad, doorway_width, e->dim, !allow_clip_walls, 1)); // check_private_rooms=1
+			bool const skip_se_test(!is_basement && p->z1() < ground_floor_z1 && is_datacenter()); // allow datacenter elevator adjacent to stairs
+			bool const is_valid(skip_se_test || is_valid_stairs_elevator_placement(cand_test, cand_test_nopad, doorway_width, e->dim, !allow_clip_walls, 1)); // check_private_rooms=1
 			if (e->adj_elevator_ix >= 0) {interior->elevators[e->adj_elevator_ix].copy_from(orig_adj_elevator);} // restore original pos
 			if (!is_valid)                                     continue; // bad placement
 			if (!check_cube_within_part_sides(cand_test))      continue; // bad placement; do we need to check for clearance?
