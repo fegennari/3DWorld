@@ -21,7 +21,6 @@ cube_t building_t::create_datacenter_floorplan(unsigned part_id, float window_hs
 		return cube_t(); // no hallway
 	}
 	if (part_id == 0) {hallway_dim = max_dim;} // long dim
-	float const centerline(part.get_center_dim(!max_dim));
 	float num_hall_windows, hall_width, room_width;
 	cube_t const hall(get_hallway_for_part(part, num_hall_windows, hall_width, room_width));
 	auto &room_walls(interior->walls[!min_dim]), &hall_walls(interior->walls[min_dim]); // room_walls: perpendicular to hallway; hall_walls: parallel to hallway
@@ -48,7 +47,9 @@ cube_t building_t::create_datacenter_floorplan(unsigned part_id, float window_hs
 	if (part_id == 0) {pri_hall = hall;}
 
 	// place stairs and elevator along the hallway
-	bool const se_end(rgen.rand_bool()), se_side(rgen.rand_bool());
+	// use the side with more space (further from the part center), or random if centered
+	bool const se_side(hall.get_center_dim(min_dim) < part.get_center_dim(min_dim) + wall_thick*rgen.signed_rand_float());
+	bool const se_end(rgen.rand_bool());
 	float const se_side_sign(se_side ? 1.0 : -1.0), se_end_sign(se_end ? 1.0 : -1.0);
 	float const se_wall_pos(hall.d[min_dim][se_side] - se_side_sign*wall_half_thick);
 	float const ewidth(1.8*doorway_width), edepth(1.8*doorway_width), stairs_width(2.5*doorway_width);

@@ -2043,10 +2043,11 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office 
 		bool first_dir(rgen2.rand_bool());
 		// if this is a datacenter, make the front door the one closest to the stairs and elevator
 		if (is_datacenter() && interior && !interior->elevators.empty()) {first_dir = (bcube.get_center_dim(dim) < interior->elevators.front().get_center_dim(dim));}
+		cube_t const &door_part((is_datacenter() && has_pri_hall()) ? pri_hall : parts.front()); // center on datacenter primary hallway if present
 
 		for (unsigned d = 0; d < 2; ++d) {
 			bool const dir(bool(d) ^ first_dir);
-			cube_t const door(place_door(parts.front(), dim, dir, door_height, 0.0, 0.0, 0.0, wscale, 0, 0, rgen));
+			cube_t const door(place_door(door_part, dim, dir, door_height, 0.0, 0.0, 0.0, wscale, 0, 0, rgen));
 			if (add_door(door, 0, dim, dir, 1)) {floor_ext_door_mask |= 1;}
 		}
 		return;
@@ -2054,7 +2055,7 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office 
 	if (is_restroom()) { // two doors on the ends or front side
 		assert(street_dir);
 		bool const dim(get_street_dim()), dir(get_street_side());
-		cube_t const part(parts.front());
+		cube_t const &part(parts.front());
 
 		for (unsigned d = 0; d < 2; ++d) {
 			if (street_side) { // doors at front

@@ -300,15 +300,25 @@ bool building_t::can_use_hallway_for_part(unsigned part_id) const {
 cube_t building_t::get_hallway_for_part(cube_t const &part, float &num_hall_windows, float &hall_width, float &room_width) {
 	bool const min_dim(part.dy() < part.dx());
 	int const num_windows_od(get_num_windows_on_side(part, min_dim)); // in short dim
-	float const part_width(part.get_sz_dim(min_dim)), min_hall_width(get_min_hallway_width()); // need wider hallway for U-shaped stairs
 	bool const is_odd(num_windows_od & 1);
-	num_hall_windows = (is_odd ? 1.4 : 1.8); // hall either contains 1 (odd) or 2 (even) windows, wider for single window case to make room for stairs
-	max_eq(num_hall_windows, min_hall_width*num_windows_od/part_width); // enforce min_hall_width (may split a window, but this limit is only hit for non-window city office buildings)
-	//if (is_odd) {min_eq(num_hall_windows, 1.5f);} // hard limit for single window case to avoid hall walls clipping through windows
-	hall_width = num_hall_windows*part_width/num_windows_od;
-	room_width = 0.5f*(part_width - hall_width); // rooms are the same size on each side of the hallway
+	float const part_width(part.get_sz_dim(min_dim));
 	cube_t hall(part);
-	hall.expand_in_dim(min_dim, -room_width); // shink rooms off of each end
+
+	if (!is_odd && is_datacenter()) { // datacenter has side stairs and elevator and can use narrow but off-center hallway when the number of windows is even
+		bool const hall_side(round_fp(mat_ix + 123*part.dx()/part.dz()) & 1); // randon-ish without a rgen
+		float const window_width(part_width/num_windows_od);
+		float const hall_center(part.get_center_dim(min_dim) + (hall_side ? 1.0 : -1.0)*0.5*window_width); // offset by half a window width
+		set_wall_width(hall, hall_center, min(max(1.2f*get_nominal_doorway_width(), 0.45f*window_width), 0.65f*window_width), min_dim);
+	}
+	else {
+		float const min_hall_width(get_min_hallway_width()); // need wider hallway for U-shaped stairs
+		num_hall_windows = (is_odd ? 1.4 : 1.8); // hall either contains 1 (odd) or 2 (even) windows, wider for single window case to make room for stairs
+		max_eq(num_hall_windows, min_hall_width*num_windows_od/part_width); // enforce min_hall_width (may split a window, but this limit is only hit for non-window city office buildings)
+		//if (is_odd) {min_eq(num_hall_windows, 1.5f);} // hard limit for single window case to avoid hall walls clipping through windows
+		hall_width = num_hall_windows*part_width/num_windows_od;
+		room_width = 0.5f*(part_width - hall_width); // rooms are the same size on each side of the hallway
+		hall.expand_in_dim(min_dim, -room_width); // shink rooms off of each end
+	}
 	return hall;
 }
 
