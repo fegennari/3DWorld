@@ -3564,7 +3564,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		bool const extend_walls_up(i->is_at_top && !i->roof_access); // space above is open, add a wall so that people can't fall down the stairs
 		float const railing_z2(i->z2() + (i->roof_access ? 0.025*i->dz() : 0.0)); // capture z2 before we change it; move roof access railing up a bit to offset the shrink resize
 		float const wall_bottom(floor_z - half_thick), railing_side_dz(0.5*stair_dz); // for U-shaped stairs
-		cube_t wall(*i);
+		cube_t wall(*i); // back wall of U-shaped stairs or top wall of walled stairs
 		if (extend_walls_up) {wall.z2() += fc_gap;}
 		else {wall.z2() -= 0.5*floor_thickness;} // prevent z-fighting on top floor
 		wall.z1() = max((stairs_zmin + half_thick), wall_bottom); // full height
@@ -3572,7 +3572,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		assert(wall.is_strictly_normalized());
 		float walls_extend_to(0.0);
 
-		if ((i->shape == SHAPE_WALLED && !(i->against_wall[0] || i->against_wall[1]) && (!i->stack_conn || !i->is_at_top)) || is_U) {
+		if ((i->shape == SHAPE_WALLED && !(i->against_wall[0] || i->against_wall[1]) && (/*!i->stack_conn ||*/ !i->is_at_top)) || is_U) {
 			cube_t back_wall(wall);
 			back_wall.expand_in_dim(dim, wall_end_bias); // bias to match side walls
 			objs.emplace_back(back_wall, TYPE_STAIR_WALL, 0, dim, dir); // add wall at back/end of stairs
