@@ -648,7 +648,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	
 	if (!pillars.empty() && get_fire_ext_height_and_radius(window_vspacing, fe_height, fe_radius)) {
 		cube_t const &pillar(pillars[rand_gen_t(rgen).rand()%pillars.size()]); // create a new rgen to avoid changing rgen for existing buildings
-		bool const pdim(pillar.dy() < pillar.dx()); // short dim faces interior
+		bool const pdim(is_parking_str ? (pillar.dy() < pillar.dx()) : !dim); // short dim faces interior
 		bool const pdir(room.get_center_dim(pdim) < pillar.get_center_dim(pdim)); // place on side facing the room center
 		// is placement always valid? what about cars parked too close?
 		add_fire_ext(fe_height, fe_radius, zval, pillar.d[pdim][!pdir], pillar.get_center_dim(!pdim), room_id, tot_light_amt, pdim, pdir, 1); // center_mount=1
