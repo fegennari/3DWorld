@@ -29,10 +29,12 @@ cube_t building_t::create_datacenter_floorplan(unsigned part_id, float window_hs
 	// TODO: clip to subset of hallway length later
 	float const server_area_len(server_area.get_sz_dim(max_dim)), door_end_space(max(doorway_width, 0.25f*server_area_len));
 	float const server_door_pos(rgen.rand_uniform(server_area.d[max_dim][0]+door_end_space, server_area.d[max_dim][1]-door_end_space));
+	unsigned server_room_ids[2] = {};
 
 	for (unsigned d = 0; d < 2; ++d) { // each side of hallway
 		float const hall_side(hall.d[min_dim][d]);
 		// add rooms
+		server_room_ids[d] = interior->rooms.size();
 		cube_t server_room(server_area);
 		server_room.d[min_dim][!d] = hall_side;
 		add_assigned_room(server_room, part_id, RTYPE_SERVER);
@@ -48,7 +50,8 @@ cube_t building_t::create_datacenter_floorplan(unsigned part_id, float window_hs
 
 	// place stairs and elevator along the hallway
 	// use the side with more space (further from the part center), or random if centered
-	bool const se_side(hall.get_center_dim(min_dim) < part.get_center_dim(min_dim) + wall_thick*rgen.signed_rand_float()), se_end(rgen.rand_bool());
+	float const hall_center(hall.get_center_dim(min_dim));
+	bool const se_side(hall_center < part.get_center_dim(min_dim) + wall_thick*rgen.signed_rand_float()), se_end(rgen.rand_bool());
 	float const se_side_sign(se_side ? 1.0 : -1.0), se_end_sign(se_end ? 1.0 : -1.0);
 	float const se_wall_pos(hall.d[min_dim][se_side] - se_side_sign*wall_half_thick);
 	float const ewidth(1.8*doorway_width), edepth(1.8*doorway_width), stairs_width(2.5*doorway_width);
@@ -76,6 +79,25 @@ cube_t building_t::create_datacenter_floorplan(unsigned part_id, float window_hs
 	for (auto w = hall_walls.begin()+hall_walls_start; w != hall_walls.end(); ++w) {
 		if (w->intersects(stairs)) {w->d[max_dim][se_end] = elevator.d[max_dim][!se_end];} // end at edge of elevator
 	}
+	// add interior windows to walls separating server rooms from hallway
+	unsigned const hall_walls_end(hall_walls.size());
+
+	for (unsigned w = hall_walls_start; w < hall_walls_end; ++w) {
+		cube_t &wall(hall_walls[w]);
+		if (!wall.intersects(hall) || !wall.intersects(server_area)) continue;
+		float const wall_len(wall.get_sz_dim(max_dim)), window_edge_space(0.25*wall_len);
+		if (wall_len < 2.0*window_vspacing) continue; // too short
+		bool const wdir(hall_center < wall.get_center_dim(min_dim));
+		unsigned const room_id(server_room_ids[wdir]);
+		float const wind_lo(wall.d[max_dim][0] + window_edge_space), wind_hi(wall.d[max_dim][1] - window_edge_space);
+		cube_t wall2(wall), window(wall);
+		wall .d[max_dim][1] = window.d[max_dim][0] = wind_lo; // low  edge of window
+		wall2.d[max_dim][0] = window.d[max_dim][1] = wind_hi; // high edge of window
+		hall_walls.push_back(wall2);
+		get_room(     room_id).set_interior_window();
+		get_room(hall_room_id).set_interior_window();
+		interior->int_windows.emplace_back(window, room_id);
+	} // for w
 	return hall;
 }
 
@@ -128,10 +150,11 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 				server_exp.expand_in_dim(dim, server_hwidth); // check for more side/width spacing for doors
 
 				// Note: overlaps_other_room_obj includes previously placed servers, so we don't have to check for intersections at the corners of rooms
-				if (is_obj_placement_blocked(server_exp, room, 1) || overlaps_other_room_obj(server, objs_start)) { // no space for server; try computer instead
+				if (is_obj_placement_blocked(server_exp, room, 1) || overlaps_other_room_obj(server, objs_start) || overlaps_or_adj_int_window(server_exp)) {
+					// no space for server; try computer instead
 					set_wall_width(computer,  center[ dim], comp_hwidth, dim); // position along the wall
 					set_wall_width(computer, (wall_pos + 1.2*dir_sign*comp_hdepth), comp_hdepth, !dim); // position from the wall
-					if (is_obj_placement_blocked(computer, room, 1) || overlaps_other_room_obj(computer, objs_start)) continue;
+					if (is_obj_placement_blocked(computer, room, 1) || overlaps_other_room_obj(computer, objs_start) || overlaps_or_adj_int_window(computer)) continue;
 					objs.emplace_back(computer, TYPE_COMPUTER, room_id, !dim, !dir, 0, tot_light_amt);
 					++num_comps;
 					continue;
