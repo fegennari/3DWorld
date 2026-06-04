@@ -48,14 +48,13 @@ cube_t building_t::create_datacenter_floorplan(unsigned part_id, float window_hs
 
 	// place stairs and elevator along the hallway
 	// use the side with more space (further from the part center), or random if centered
-	bool const se_side(hall.get_center_dim(min_dim) < part.get_center_dim(min_dim) + wall_thick*rgen.signed_rand_float());
-	bool const se_end(rgen.rand_bool());
+	bool const se_side(hall.get_center_dim(min_dim) < part.get_center_dim(min_dim) + wall_thick*rgen.signed_rand_float()), se_end(rgen.rand_bool());
 	float const se_side_sign(se_side ? 1.0 : -1.0), se_end_sign(se_end ? 1.0 : -1.0);
 	float const se_wall_pos(hall.d[min_dim][se_side] - se_side_sign*wall_half_thick);
 	float const ewidth(1.8*doorway_width), edepth(1.8*doorway_width), stairs_width(2.5*doorway_width);
 	float stairs_depth(window_hspacing[min_dim]); // one window width
 	if (stairs_depth < 2.4*doorway_width) {stairs_depth *= 2.0;} // increase to 2 windows if needed
-	float const stairs_start(part.d[max_dim][se_end] - se_end_sign*wall_half_thick);
+	float const stairs_start(part.d[max_dim][se_end] - 0.8*se_end_sign*wall_half_thick);
 	float const stairs_end(stairs_start - se_end_sign*stairs_width), elevator_start(stairs_end - 0.25*se_end_sign*wall_thick);
 	cube_t stairs(part), elevator(part);
 	stairs  .d[min_dim][!se_side] = elevator.d[min_dim][!se_side] = se_wall_pos;
@@ -66,6 +65,7 @@ cube_t building_t::create_datacenter_floorplan(unsigned part_id, float window_hs
 	elevator.d[max_dim][ se_end ] = elevator_start; // small gap between stairs and elevator
 	elevator.d[max_dim][!se_end ] = elevator_start - se_end_sign*ewidth;
 	interior->stairwells.emplace_back(stairs, 0, min_dim, se_side, SHAPE_U); // add temp stairs so that we can extract these variables later
+	interior->stairwells.back().against_wall[se_end] = 1;
 	have_hall_side_stairs = 1;
 	get_room(hall_room_id).has_stairs = 255; // stairs on all floors
 	elevator_t E(elevator, hall_room_id, min_dim, !se_side, 0, 1); // elevator shaft; at_edge=0, interior_room=1 (considered interior-enough)

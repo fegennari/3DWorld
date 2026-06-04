@@ -3573,7 +3573,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		assert(wall.is_strictly_normalized());
 		float walls_extend_to(0.0);
 
-		if ((i->shape == SHAPE_WALLED && !(i->against_wall[0] || i->against_wall[1]) && (/*!i->stack_conn ||*/ !i->is_at_top)) || is_U) {
+		if ((i->shape == SHAPE_WALLED && !(i->against_wall[0] || i->against_wall[1]) && !i->is_at_top) || is_U) {
 			cube_t back_wall(wall);
 			back_wall.expand_in_dim(dim, wall_end_bias); // bias to match side walls
 			objs.emplace_back(back_wall, TYPE_STAIR_WALL, 0, dim, dir); // add wall at back/end of stairs
@@ -3640,10 +3640,11 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		wall.d[dim][!dir] = i->d[dim][!dir];
 
 		for (unsigned d = 0; d < 2; ++d) { // sides of stairs
-			if (i->is_l_shape()) continue; // nothing to add in this loop
+			if (i->is_l_shape()) continue; // nothing to add to L-shaped stairs in this loop
 			set_wall_width(wall, i->d[!dim][d], wall_hw, !dim);
 			wall.expand_in_dim(dim, wall_end_bias); // apply bias avoid z-fighting with stairs
-			bool const add_wall(has_side_walls && !i->against_wall[d]); // don't add a wall if the stairs are already against a wall
+			bool const add_wall(has_side_walls && !i->against_wall[d]);// don't add a wall if the stairs are already against a wall
+			bool const shift_railing(add_wall || is_U);
 			
 			if (add_wall) { // add walls around stairs for this floor
 				// clip basement stairs wall to the basement to avoid drawing artifacts at the bottom of a house exterior wall; or just skip drawing the wall?
@@ -3651,17 +3652,24 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 				if (walls_extend_to != 0.0) {wall_clipped.d[dim][!dir] = walls_extend_to;} // extend outward to meet front wall
 				if (i->z1() < ground_floor_z1 && !i->in_ext_basement) {wall_clipped.intersect_with_cube_xy(get_basement());}
 				assert(wall_clipped.is_strictly_normalized());
-				objs.emplace_back(wall_clipped, TYPE_STAIR_WALL, 0, dim, dir);
+				objs.emplace_back(wall_clipped, TYPE_STAIR_WALL, 0, !dim, d);
+			}
+			else if (is_U) { // add front and back vertical sections to connect the railings
+				for (unsigned e = 0; e < 2; ++e) {
+					cube_t wall_seg(wall);
+					wall_seg.d[dim][!e] = wall_seg.d[dim][e] + 0.12*(e ? -1.0 : 1.0)*i->get_length();
+					objs.emplace_back(wall_seg, TYPE_STAIR_WALL, 0, !dim, d);
+				}
 			}
 			if (i->has_railing) { // add railings
 				bool const hi_side(bool(d) == side);
 				bool railing_dir(dir);
 				cube_t railing(wall);
 				unsigned flags(base_rflags | (add_wall ? RO_FLAG_NOCOLL : 0));
-				if (!has_side_walls && !has_wall_both_sides/*!i->against_wall[d]*/) {flags |= RO_FLAG_OPEN;} // use this flag to indicate no walls, need balusters
+				if (!has_side_walls && !has_wall_both_sides) {flags |= RO_FLAG_OPEN;} // use this flag to indicate no walls, need balusters
 				railing.z2() = railing_z2;
 
-				if (add_wall || i->roof_access || i->in_ext_basement) {
+				if (shift_railing || i->roof_access || i->in_ext_basement) {
 					railing.translate_dim(!dim, (d ? -1.0 : 1.0)*2.0*wall_hw); // shift railing inside of walls
 					if (!i->in_ext_basement) {railing.expand_in_dim( dim, -(i->roof_access ? 2.0 : 1.0)*wall_hw);} // shrink slightly to avoid clipping through an end wall
 				}
