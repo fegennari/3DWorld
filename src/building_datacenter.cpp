@@ -66,6 +66,7 @@ cube_t building_t::create_datacenter_floorplan(unsigned part_id, float window_hs
 	elevator.d[max_dim][ se_end ] = elevator_start; // small gap between stairs and elevator
 	elevator.d[max_dim][!se_end ] = elevator_start - se_end_sign*ewidth;
 	interior->stairwells.emplace_back(stairs, 0, min_dim, se_side, SHAPE_U); // add temp stairs so that we can extract these variables later
+	have_hall_side_stairs = 1;
 	get_room(hall_room_id).has_stairs = 255; // stairs on all floors
 	elevator_t E(elevator, hall_room_id, min_dim, !se_side, 0, 1); // elevator shaft; at_edge=0, interior_room=1 (considered interior-enough)
 	add_or_extend_elevator(E, 1);

@@ -2699,6 +2699,12 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			}
 			// skip attic, exterior, and mall back hallway stairs wall lights because they're not in rooms
 			else if (!is_in_attic && !is_exterior && !(wall_light && room.is_mall())) {
+				if (have_hall_side_stairs && (!in_camera_room || camera_by_stairs) && !room.is_hallway && !light_in_basement && (display_mode & 0x20)) {
+					// handle lights behind hallway side U-shaped stairs that incorrectly light the stairs interior (for datacenters)
+					bool skip(0);
+					for (stairwell_t const &s : interior->stairwells) {skip |= (s.is_u_shape() && !s.contains_pt(lpos) && s.line_intersects(lpos, camera_bs));}
+					if (skip) continue;
+				}
 				// expand slightly so that points exactly on the room bounds and exterior doors are included; not for backrooms because it already contains the wall width
 				cube_t room_exp(get_room_wall_bounds(room));
 				room_exp.expand_by((room.is_backrooms() ? 0.1 : 1.0)*room_xy_expand); // smaller expand for backrooms

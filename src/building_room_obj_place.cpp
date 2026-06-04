@@ -1903,7 +1903,7 @@ float building_t::add_flooring(room_t const &room, float zval, unsigned room_id,
 	subtract_cubes_from_cube(flooring, interior->elevators, fparts, temp, 2); // check zval overlap
 
 	for (stairwell_t const &s : interior->stairwells) {
-		float const z1_test(s.z1() - (s.is_u_shape() ? get_fc_thickness() : 0.0)); // include bottom of U-shaped stairs, for datacenters
+		float const z1_test(s.z1() - ((have_hall_side_stairs && s.is_u_shape()) ? get_fc_thickness() : 0.0)); // include bottom of U-shaped stairs, for datacenters
 		if (z1_test >= zval || s.z2() <= zval) continue; // no zval overlap / doesn't cut through flooring
 		subtract_cube_from_cubes(s, fparts, nullptr, 0, 0, 1); // no holes, no_z_test=1
 	}
