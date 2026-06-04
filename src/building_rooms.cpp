@@ -3576,8 +3576,17 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		if ((i->shape == SHAPE_WALLED && !(i->against_wall[0] || i->against_wall[1]) && !i->is_at_top) || is_U) {
 			cube_t back_wall(wall);
 			back_wall.expand_in_dim(dim, wall_end_bias); // bias to match side walls
-			objs.emplace_back(back_wall, TYPE_STAIR_WALL, 0, dim, dir); // add wall at back/end of stairs
 
+			if (i->open_back_wall) { // add two narrow wall sections
+				for (unsigned e = 0; e < 2; ++e) {
+					cube_t wall_seg(wall);
+					wall_seg.d[!dim][!e] = wall_seg.d[!dim][e] + 0.12*(e ? -1.0 : 1.0)*i->get_width();
+					objs.emplace_back(wall_seg, TYPE_STAIR_WALL, 0, dim, dir);
+				}
+			}
+			else {
+				objs.emplace_back(back_wall, TYPE_STAIR_WALL, 0, dim, dir); // add wall at back/end of stairs
+			}
 			if (i->not_an_exit && is_U) { // blocked U-shaped stairs
 				cube_t front_wall(*i);
 				front_wall.z2() -= floor_thickness;

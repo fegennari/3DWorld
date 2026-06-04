@@ -1764,8 +1764,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	float min_ewidth(1.5*doorway_width), ewidth(min_ewidth); // square; for elevators
 	float z(part.z1());
 	cube_t stairs_cut, elevator_cut;
-	bool stairs_dim(0), bend_dir(0), stairs_have_railing(1), extended_from_above(0);
-	bool stairs_against_wall[2] = {0, 0};
+	bool stairs_dim(0), bend_dir(0), stairs_have_railing(1), extended_from_above(0), open_back_wall(0), stairs_against_wall[2] = {0, 0};
 	stairs_shape sshape(SHAPE_STRAIGHT); // straight by default
 	bool must_add_stairs(first_part_this_stack || (is_prison() && interior->stairwells.empty()));
 	bool const is_basement_room((int)part_ix == basement_part_ix);
@@ -1992,6 +1991,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 							stairs_cut = stairs;
 							stairs_dim = (dim ^ perp);
 							force_stairs_dir = (perp ? !sdir : dir);
+							(perp ? stairs_against_wall[dir] : open_back_wall) = 1;
 							get_room(get_sub_room_containing_pt(stairs.get_cube_center(), stairs_room)).has_stairs = 255; // stairs on all floors; flag the sub-room
 							break; // done - no need to add stairs below
 						}
@@ -2195,14 +2195,14 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
  				landing_t landing(stairs_cut, 0, f, stairs_dim, stairs_dir, stairs_have_railing,
 					((f == 1 && sshape == SHAPE_WALLED_SIDES) ? (stairs_shape)SHAPE_WALLED : sshape), 0, is_at_top);
 				set_cube_zvals(landing, zc, zf);
-				landing.set_against_wall(stairs_against_wall);
+				landing.set_against_wall(stairs_against_wall, open_back_wall);
 				landing.bend_dir = bend_dir;
 				last_landing_ix  = interior->landings.size();
 				interior->landings.push_back(landing);
 
 				if (f == 1) { // only add for first floor
 					interior->stairwells.emplace_back(stairs_cut, num_floors, stairs_dim, stairs_dir, sshape);
-					interior->stairwells.back().set_against_wall(stairs_against_wall);
+					interior->stairwells.back().set_against_wall(stairs_against_wall, open_back_wall);
 					interior->stairwells.back().bend_dir = bend_dir;
 				}
 			}
@@ -2242,7 +2242,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			interior->landings[last_landing_ix].is_at_top = 0; // previous landing is no longer at the top
 			landing_t landing(stairs_cut, 0, num_floors, stairs_dim, stairs_dir, 1, sshape, 1, 1); // stairs_have_railing=1, roof_access=1, is_at_top=1
 			set_cube_zvals(landing, zc, z); // no floor above
-			landing.set_against_wall(stairs_against_wall);
+			landing.set_against_wall(stairs_against_wall, open_back_wall);
 			interior->landings.push_back(landing);
 			interior->stairwells.back().z2() += fc_thick; // extend upward
 			interior->stairwells.back().z1() += fc_thick; // required to trick roof clipping into treating this as a stack connector stairwell
