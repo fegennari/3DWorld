@@ -306,6 +306,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			float const room_size(min(dx, dy)); // normalized to hallway width
 			light_size = max(0.06f*room_size, 0.67f*def_light_size);
 			if (is_mall_room) {light_density = 0.25;}
+			if (is_datacenter()) {light_size *= 1.5;} // lighter/brighter lights in datacenter hallway since it's narrow and windowless
 		}
 		else if (is_mall_bathroom) {
 			light_density = 0.5;
