@@ -2304,6 +2304,15 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 				roof_tquads.emplace_back(frame_top, tquad_type);
 			}
 			else { // U-shaped stairs, possibly for parking structure; box roof
+				for (roof_obj_t &rw : details) { // remove wall sections intersecting the stairs cap at the edge of datacenters, etc.
+					if (rw.type != ROOF_OBJ_WALL || !rw.intersects(box)) continue;
+					vect_cube_t wall_segs;
+					subtract_cube_from_cube((cube_t)rw, box, wall_segs);
+					swap(rw, details.back());
+					details.pop_back();
+					for (cube_t const &w : wall_segs) {details.emplace_back(w, ROOF_OBJ_WALL);}
+					break; // can only have one wall seg
+				} // for rw
 				cube_t hole(stairs_cut), front(box);
 				hole.expand_by_xy(0.1*wall_thickness); // to prevent z-fighting
 				front.d[ stairs_dim][!dir   ] = hole.d[stairs_dim][dir];
