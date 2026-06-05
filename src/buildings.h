@@ -600,6 +600,7 @@ unsigned const ROOM_FLAG_HAS_SUB  = 0x0400; // room has a sub-room nested inside
 unsigned const ROOM_FLAG_CUT_WALL = 0x0800; // wall has sections cut from it
 unsigned const ROOM_FLAG_BR_STALL = 0x1000; // has bathroom stalls
 unsigned const ROOM_FLAG_HAS_POI  = 0x2000; // has point(s) of interest
+unsigned const ROOM_FLAG_IS_LARGE = 0x4000; // large room; used for datacenter server rooms
 
 struct room_assignment_t {
 protected:
@@ -629,6 +630,7 @@ public:
 	void set_has_cut_wall     () {flags |= ROOM_FLAG_CUT_WALL;}
 	void set_has_br_stalls    () {flags |= ROOM_FLAG_BR_STALL;}
 	void set_has_pois         () {flags |= ROOM_FLAG_HAS_POI ;}
+	void set_is_large         () {flags |= ROOM_FLAG_IS_LARGE;}
 	bool get_has_center_stairs() const {return (flags & ROOM_FLAG_CSTAIRS );}
 	bool get_office_floorplan () const {return (flags & ROOM_FLAG_OFF_FP  );}
 	bool get_has_skylight     () const {return (flags & ROOM_FLAG_SKYLIGHT);}
@@ -643,6 +645,7 @@ public:
 	bool has_cut_wall         () const {return (flags & ROOM_FLAG_CUT_WALL);}
 	bool has_br_stalls        () const {return (flags & ROOM_FLAG_BR_STALL);}
 	bool get_has_pois         () const {return (flags & ROOM_FLAG_HAS_POI );}
+	bool get_is_large         () const {return (flags & ROOM_FLAG_IS_LARGE);}
 };
 
 struct room_t : public cube_t, public room_assignment_t { // size=56
@@ -684,7 +687,7 @@ struct room_t : public cube_t, public room_assignment_t { // size=56
 	bool is_bathroom_rtype   () const {return is_bathroom(get_room_type(0));}
 	bool is_industrial       () const {return (is_factory() || is_powergen() || is_warehouse());}
 	bool is_mall_or_store    () const {return (is_mall() || is_store());}
-	bool is_single_large_room() const {return(is_parking() || is_backrooms() || is_retail() || is_mall() || is_industrial() || is_restaurant());}
+	bool is_single_large_room() const {return(is_parking() || is_backrooms() || is_retail() || is_mall() || is_industrial() || is_restaurant() || get_is_large());}
 	bool is_single_large_room_or_store() const {return (is_single_large_room() || is_store());}
 	bool is_secret_room      () const {return (is_ext_basement() && has_cut_wall() && !is_hallway);}
 	bool has_non_door_vis    () const {return (open_wall_mask || has_interior_window() || has_cut_wall());}

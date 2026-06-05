@@ -14,7 +14,8 @@ cube_t building_t::create_datacenter_floorplan(unsigned part_id, float window_hs
 	cube_t const &part(parts[part_id]);
 	vector3d const psz(part.get_size());
 	bool const min_dim(psz.y < psz.x), max_dim(!min_dim);
-	assert(interior->rooms.empty()); // must call this first
+	vector<room_t> &rooms(interior->rooms);
+	assert(rooms.empty()); // must call this first
 
 	if (psz[min_dim] < 4.0*window_vspacing) { // too small, assign entire part to a single server room; shouldn't happen
 		add_assigned_room(part, part_id, RTYPE_SERVER);
@@ -34,10 +35,11 @@ cube_t building_t::create_datacenter_floorplan(unsigned part_id, float window_hs
 	for (unsigned d = 0; d < 2; ++d) { // each side of hallway
 		float const hall_side(hall.d[min_dim][d]);
 		// add rooms
-		server_room_ids[d] = interior->rooms.size();
+		server_room_ids[d] = rooms.size();
 		cube_t server_room(server_area);
 		server_room.d[min_dim][!d] = hall_side;
 		add_assigned_room(server_room, part_id, RTYPE_SERVER);
+		rooms.back().set_is_large(); // for AI navigation
 		// add walls
 		cube_t walls[2] = {part, part};
 		create_wall(walls[0], min_dim, hall_side, fc_thick, wall_half_thick, wall_edge_spacing);
@@ -45,7 +47,7 @@ cube_t building_t::create_datacenter_floorplan(unsigned part_id, float window_hs
 		for (unsigned e = 0; e < 2; ++e) {hall_walls.push_back(walls[e]);}
 	} // for d
 	unsigned const hall_room_id(add_room(hall, part_id, 3, 1, 0)); // add primary hallway as room with 3+ lights
-	//interior->rooms.back().mark_open_wall_dim(min_dim); // flag primary hallway as open on sides if there are secondary hallways
+	//rooms.back().mark_open_wall_dim(min_dim); // flag primary hallway as open on sides if there are secondary hallways
 	if (part_id == 0) {pri_hall = hall;}
 
 	// place stairs and elevator along the hallway
