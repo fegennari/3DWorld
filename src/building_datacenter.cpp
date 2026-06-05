@@ -6,11 +6,11 @@
 
 // returns the hallway, if one was created
 cube_t building_t::create_datacenter_floorplan(unsigned part_id, float window_hspacing[2], int num_windows_per_side[2], rand_gen_t &rgen) {
-	// add hallway; two server rooms to either side or one in the center if small, office(s) at one end,
-	// power/AC room(s) at the other, plus bathroom, with stairs and elevator to the side of the hallway
+	// add hallway; two server rooms to either side, office(s) at one end,
+	// power/AC utility room(s) at the other, plus bathroom, with stairs and elevator to the side of the hallway
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness);
 	float const doorway_width(get_nominal_doorway_width()), doorway_hwidth(0.5*doorway_width);
-	float const wall_thick(get_wall_thickness()), wall_half_thick(0.5*wall_thick), wall_edge_spacing(0.05*wall_thick), min_wall_len(get_min_wall_len());
+	float const wall_thick(get_wall_thickness()), wall_hthick(0.5*wall_thick), wall_edge_spacing(0.05*wall_thick), min_wall_len(get_min_wall_len());
 	cube_t const &part(parts[part_id]);
 	vector3d const psz(part.get_size());
 	bool const min_dim(psz.y < psz.x), max_dim(!min_dim);
@@ -22,44 +22,83 @@ cube_t building_t::create_datacenter_floorplan(unsigned part_id, float window_hs
 		return cube_t(); // no hallway
 	}
 	if (part_id == 0) {hallway_dim = max_dim;} // long dim
-	float num_hall_windows, hall_width, room_width;
+	float num_hall_windows, hall_width, room_width; // unused
 	cube_t const hall(get_hallway_for_part(part, num_hall_windows, hall_width, room_width));
-	auto &room_walls(interior->walls[!min_dim]), &hall_walls(interior->walls[min_dim]); // room_walls: perpendicular to hallway; hall_walls: parallel to hallway
+	auto &room_walls(interior->walls[max_dim]), &hall_walls(interior->walls[min_dim]); // room_walls: perpendicular to hallway; hall_walls: parallel to hallway
+	bool const se_end(rgen.rand_bool()); // also office end, opposite utility end, near front door
+	// place stairs/elevator/offices on the side with more space (further from the part center), or random if centered
+	float const hall_center(hall.get_center_dim(min_dim));
+	bool const se_side(hall_center < part.get_center_dim(min_dim) + wall_thick*rgen.signed_rand_float());
+	float const se_side_sign(se_side ? 1.0 : -1.0), se_end_sign(se_end ? 1.0 : -1.0), wind_space(window_hspacing[max_dim]);
 	unsigned const hall_walls_start(hall_walls.size());
-	cube_t server_area(part);
-	// TODO: clip to subset of hallway length later
+	unsigned const num_short_wind(num_windows_per_side[min_dim]); // 6-11
+	unsigned const num_long_wind (num_windows_per_side[max_dim]); // 6-12: {S,O,U}: 321 421 422 522 532 632 732
+	unsigned const num_office_wind((num_long_wind >= 10) ? 3 : 2), num_util_wind((num_long_wind >= 8) ? 2 : 1), num_bath_wind(1);
+	assert(num_office_wind + num_util_wind < num_long_wind);
+	float const office_pos(part.d[max_dim][ se_end] - se_end_sign*num_office_wind*wind_space);
+	float const util_pos  (part.d[max_dim][!se_end] + se_end_sign*num_util_wind  *wind_space);
+	float const bath_pos  (office_pos + se_end_sign*num_bath_wind*wind_space); // between server room and office on side opposite stairs/elevator
+
+	if (num_short_wind >= 9 && num_long_wind >= 9) { // larger building, at least 4 windows per side; add secondary hallway and two rows of side rooms
+		// TODO
+	}
+	// setup server room area
+	cube_t server_area(part), office_area(part), util_area(part);
+	server_area.d[max_dim][ se_end] = office_area.d[max_dim][!se_end] = office_pos;
+	server_area.d[max_dim][!se_end] = util_area  .d[max_dim][ se_end] = util_pos;
+	assert(server_area.is_strictly_normalized());
+	assert(office_area.is_strictly_normalized());
+	assert(util_area  .is_strictly_normalized());
 	float const server_area_len(server_area.get_sz_dim(max_dim)), door_end_space(max(doorway_width, 0.25f*server_area_len));
 	float const server_door_pos(rgen.rand_uniform(server_area.d[max_dim][0]+door_end_space, server_area.d[max_dim][1]-door_end_space));
 	unsigned server_room_ids[2] = {};
 
 	for (unsigned d = 0; d < 2; ++d) { // each side of hallway
 		float const hall_side(hall.d[min_dim][d]);
-		// add rooms
+		// add server rooms
 		server_room_ids[d] = rooms.size();
 		cube_t server_room(server_area);
 		server_room.d[min_dim][!d] = hall_side;
 		add_assigned_room(server_room, part_id, RTYPE_SERVER);
 		rooms.back().set_is_large(); // for AI navigation
-		// add walls
-		cube_t walls[2] = {part, part};
-		create_wall(walls[0], min_dim, hall_side, fc_thick, wall_half_thick, wall_edge_spacing);
+		// add offices and bathrooms
+		bool const is_br(bool(d) != se_side); // bathroom opposite stairs and elevator
+		cube_t office(office_area);
+		office.d[min_dim][!d] = hall_side;
+		add_assigned_room(office, part_id, (is_br ? RTYPE_BATH : RTYPE_OFFICE)); // TODO: force bathroom assignment
+		// add utility rooms
+		cube_t utility(util_area);
+		utility.d[min_dim][!d] = hall_side;
+		add_assigned_room(utility, part_id, RTYPE_UTILITY);
+		// add walls and doors along hallway
+		cube_t walls[2] = {part, part}; // {lo, hi} sides
+		create_wall(walls[0], min_dim, hall_side, fc_thick, wall_hthick, wall_edge_spacing);
 		remove_section_from_cube_and_add_door(walls[0], walls[1], (server_door_pos - doorway_hwidth), (server_door_pos + doorway_hwidth), max_dim, d);
-		for (unsigned e = 0; e < 2; ++e) {hall_walls.push_back(walls[e]);}
+		
+		for (unsigned e = 0; e < 2; ++e) {
+			bool const is_se_side(bool(e) == se_side);
+			// TODO: split for office, utility, and bathroom
+			hall_walls.push_back(walls[e]);
+		} // for d
+		// add walls and doors between rooms
+		for (unsigned e = 0; e < 2; ++e) {
+			cube_t rwall(part);
+			rwall.d[min_dim][!d] = hall_side + (d ? 1.0 : -1.0)*wall_hthick;
+			create_wall(rwall, max_dim, (e ? util_pos : office_pos), fc_thick, wall_hthick, wall_edge_spacing);
+			room_walls.push_back(rwall);
+		} // for e
+		// TODO: door between server room and utility/office?
 	} // for d
 	unsigned const hall_room_id(add_room(hall, part_id, 3, 1, 0)); // add primary hallway as room with 3+ lights
 	//rooms.back().mark_open_wall_dim(min_dim); // flag primary hallway as open on sides if there are secondary hallways
 	if (part_id == 0) {pri_hall = hall;}
 
 	// place stairs and elevator along the hallway
-	// use the side with more space (further from the part center), or random if centered
-	float const hall_center(hall.get_center_dim(min_dim));
-	bool const se_side(hall_center < part.get_center_dim(min_dim) + wall_thick*rgen.signed_rand_float()), se_end(rgen.rand_bool());
-	float const se_side_sign(se_side ? 1.0 : -1.0), se_end_sign(se_end ? 1.0 : -1.0);
-	float const se_wall_pos(hall.d[min_dim][se_side] - se_side_sign*wall_half_thick);
+	float const se_wall_pos(hall.d[min_dim][se_side] - se_side_sign*wall_hthick);
 	float const ewidth(1.8*doorway_width), edepth(1.8*doorway_width), stairs_width(2.5*doorway_width);
 	float stairs_depth(window_hspacing[min_dim]); // one window width
 	if (stairs_depth < 2.4*doorway_width) {stairs_depth *= 2.0;} // increase to 2 windows if needed
-	float const stairs_start(part.d[max_dim][se_end] - 0.8*se_end_sign*wall_half_thick);
+	float const stairs_start(part.d[max_dim][se_end] - 0.8*se_end_sign*wall_hthick);
 	float const stairs_end(stairs_start - se_end_sign*stairs_width), elevator_start(stairs_end - 0.25*se_end_sign*wall_thick);
 	cube_t stairs(part), elevator(part);
 	stairs  .d[min_dim][!se_side] = elevator.d[min_dim][!se_side] = se_wall_pos;
@@ -87,11 +126,13 @@ cube_t building_t::create_datacenter_floorplan(unsigned part_id, float window_hs
 	for (unsigned w = hall_walls_start; w < hall_walls_end; ++w) {
 		cube_t &wall(hall_walls[w]);
 		if (!wall.intersects(hall) || !wall.intersects(server_area)) continue;
-		float const wall_len(wall.get_sz_dim(max_dim)), window_edge_space(0.25*wall_len);
+		cube_t wind_area(wall);
+		wind_area.intersect_with_cube(server_area);
+		float const wall_len(wind_area.get_sz_dim(max_dim)), window_edge_space(0.25*wall_len);
 		if (wall_len < 2.0*window_vspacing) continue; // too short
 		bool const wdir(hall_center < wall.get_center_dim(min_dim));
 		unsigned const room_id(server_room_ids[wdir]);
-		float const wind_lo(wall.d[max_dim][0] + window_edge_space), wind_hi(wall.d[max_dim][1] - window_edge_space);
+		float const wind_lo(wind_area.d[max_dim][0] + window_edge_space), wind_hi(wind_area.d[max_dim][1] - window_edge_space);
 		cube_t wall2(wall), window(wall);
 		wall .d[max_dim][1] = window.d[max_dim][0] = wind_lo; // low  edge of window
 		wall2.d[max_dim][0] = window.d[max_dim][1] = wind_hi; // high edge of window
