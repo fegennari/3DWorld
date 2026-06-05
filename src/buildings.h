@@ -1872,6 +1872,7 @@ struct building_t : public building_geom_t {
 	void calc_bcube_from_parts();
 	void adjust_part_zvals_for_floor_spacing(cube_t &c) const;
 	void gen_geometry(int rseed1, int rseed2);
+	void change_roof_type_to_flat();
 	void setup_damage_vals();
 	cube_t place_door(cube_t const &base, bool dim, bool dir, float door_height, float door_center, float door_pos, float door_center_shift,
 		float width_scale, bool can_fail, bool opens_up, rand_gen_t &rgen, unsigned floor_ix=0, bool is_courtyard=0) const;

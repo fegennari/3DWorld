@@ -337,15 +337,13 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 			else if (is_cube_office && (roof_type == ROOF_TYPE_FLAT || is_in_city) && num_floors <= (is_in_city ? 20U : 8U) &&
 				min(bcube.dx(), bcube.dy()) > (is_in_city ? 11.0 : 12.0)*floor_spacing)
 			{
-				btype     = BTYPE_PARKING; // make a parking garage
-				roof_type = ROOF_TYPE_FLAT;
-				roof_tquads.clear(); // in case it was assigned a sloped roof
+				btype = BTYPE_PARKING; // make a parking garage
+				change_roof_type_to_flat();
 				assign_name(rgen); // re-assign a name
 			}
 			else if (is_cube_office && num_floors >= 3 && num_floors <= 6 && can_use_hallway_for_part(0) && min(bcube.dx(), bcube.dy()) > 13.0*floor_spacing) {
-				btype     = BTYPE_DATACENTER;
-				roof_type = ROOF_TYPE_FLAT;
-				roof_tquads.clear(); // in case it was assigned a sloped roof
+				btype = BTYPE_DATACENTER;
+				change_roof_type_to_flat();
 				assign_name(rgen); // re-assign a name
 			}
 			else if (is_cube() && num_floors >= 3 && !is_hospital() && rgen.rand_probability(global_building_params.retail_floorplan_prob)) { // 3+ floors, consider retail
@@ -465,6 +463,14 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 		if (num_levels <= 3) {gen_details(rgen, 1);}
 	}
 	finish_gen_geometry(rgen, 0);
+}
+
+void building_t::change_roof_type_to_flat() {
+	if (roof_type == ROOF_TYPE_FLAT) return; // already flat
+	roof_type = ROOF_TYPE_FLAT;
+	roof_tquads.clear(); // in case it was assigned a sloped roof
+	bcube.z2() = ground_floor_z1; // reset bcube z2 to remove the roof peak
+	for (cube_t const &part : parts) {max_eq(bcube.z2(), part.z2());}
 }
 
 void building_t::setup_damage_vals() {
