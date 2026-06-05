@@ -765,6 +765,7 @@ void building_t::add_wall_fans_to_room(rand_gen_t &rgen, room_t const &room, flo
 			tc.d[dim][!dir] += dir_sign*4.0*depth; // add 4*depth worth of clearance in the front to avoid blocking airflow
 			if (tc.intersects(avoid) || overlaps_other_room_obj(tc, objs_start) || is_obj_placement_blocked(tc, room, 1)) continue; // inc_open_doors=1
 			if (has_bcube_int(tc, interior->missing_wall_segs)) continue;
+			if (check_if_against_window(c, room, dim, dir))     continue;
 			// check for rooms opposite this wall that would block the fan exhaust
 			cube_t space_behind(c);
 			space_behind.d[dim][ dir] = wall_pos - dir_sign*0.5*floor_spacing; // extend to other side of wall
