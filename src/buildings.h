@@ -1869,6 +1869,8 @@ struct building_t : public building_geom_t {
 	void create_building_volume_light_texture(unsigned bix, point const &target, unsigned &tid) const;
 	cube_t calc_parts_bcube() const;
 	cube_t get_unrotated_parts_bcube() const {return (is_rotated() ? calc_parts_bcube() : bcube);}
+	float get_parts_z2() const;
+	float get_roof_peak_z2() const;
 	void calc_bcube_from_parts();
 	void adjust_part_zvals_for_floor_spacing(cube_t &c) const;
 	void gen_geometry(int rseed1, int rseed2);

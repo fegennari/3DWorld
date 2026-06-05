@@ -68,6 +68,19 @@ void building_t::calc_bcube_from_parts() {
 	coll_bcube = bcube; // initial value
 }
 
+float building_t::get_parts_z2() const {
+	float z2(ground_floor_z1); // reset bcube z2 to remove the roof peak
+	for (cube_t const &part : parts) {max_eq(z2, part.z2());}
+	return z2;
+}
+float building_t::get_roof_peak_z2() const {
+	assert(!parts.empty());
+	float z2(get_parts_z2());
+	if (roof_type == ROOF_TYPE_CURVED) {return (z2 + CURVED_ROOF_HSCALE*0.5*min(parts[0].dx(), parts[0].dy()));} // should curve in the short dim by 25% of radius
+	for (tquad_t const &t : roof_tquads) {max_eq(z2, t.get_bcube().z2());}
+	return z2;
+}
+
 void building_t::move_door_to_other_side_of_wall(tquad_with_ix_t &door, float dist_mult, bool invert_normal) const {
 	cube_t const c(door.get_bcube());
 	bool const dim(c.dy() < c.dx()), dir(door.get_norm()[dim] > 0.0); // closest cube side dir
@@ -467,10 +480,9 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 
 void building_t::change_roof_type_to_flat() {
 	if (roof_type == ROOF_TYPE_FLAT) return; // already flat
-	roof_type = ROOF_TYPE_FLAT;
+	roof_type  = ROOF_TYPE_FLAT;
+	bcube.z2() = get_parts_z2(); // reset bcube z2 to remove the roof peak
 	roof_tquads.clear(); // in case it was assigned a sloped roof
-	bcube.z2() = ground_floor_z1; // reset bcube z2 to remove the roof peak
-	for (cube_t const &part : parts) {max_eq(bcube.z2(), part.z2());}
 }
 
 void building_t::setup_damage_vals() {
@@ -2566,9 +2578,8 @@ void building_t::maybe_add_special_roof(rand_gen_t &rgen) {
 		if (global_building_params.dome_roof && sz.x < 1.2*sz.y && sz.y < 1.2*sz.x && sz.z > max(sz.x, sz.y)) {roof_type = ROOF_TYPE_DOME;} // roughly square, not too short
 		else if (btype == BTYPE_OFFICE && parts.size() == 1 && round_fp(top.dz()/get_window_vspace()) <= 4 && rgen.rand_bool()) {
 			// shorter single cube building; likely to become factory, warehouse, or powerplant
-			cube_t const &top(parts[0]);
 			roof_type = ROOF_TYPE_CURVED;
-			max_eq(bcube.z2(), (top.z2() + 0.125f*min(top.dx(), top.dy()))); // should curve in the short dim by 25% of radius
+			max_eq(bcube.z2(), get_roof_peak_z2());
 		}
 		else {gen_sloped_roof(rgen, top);} // sloped roof
 	}

@@ -1369,7 +1369,7 @@ public:
 		// add a squished cylindrical section on the top
 		bool const dim(c.dx() < c.dy()); // long dim
 		unsigned const ndiv(32); // more/smoother sides; only half are drawn
-		float const ndiv_inv(1.0/ndiv), radius(0.5*c.get_sz_dim(!dim)), roof_z(c.z2()), hscale(0.25);
+		float const ndiv_inv(1.0/ndiv), radius(0.5*c.get_sz_dim(!dim)), roof_z(c.z2());
 		color_wrapper const cwr(roof_color), cws(side_color);
 		auto &qverts(get_verts(roof_tex, 0));
 		unsigned const qverts_start(qverts.size());
@@ -1388,13 +1388,13 @@ public:
 				float const ts(4.0*S*roof_tex.tscale_x*ndiv_inv);
 				qverts.emplace_back(vpn.p[(s<<1)+ j], normal, ts, (1.0-j)*roof_tex.tscale_y, cwr);
 				qverts.emplace_back(vpn.p[(s<<1)+!j], normal, ts, j      *roof_tex.tscale_y, cwr);
-				if (hscale == 1.0) continue;
+				if (CURVED_ROOF_HSCALE == 1.0) continue;
 
 				for (unsigned k = 0; k < 2; ++k) { // scale the height
 					auto &v(qverts[vix+k]);
-					v.v.z = roof_z + hscale*(v.v.z - roof_z);
+					v.v.z = roof_z + CURVED_ROOF_HSCALE*(v.v.z - roof_z);
 					vector3d n(v.get_norm());
-					n.z /= hscale;
+					n.z /= CURVED_ROOF_HSCALE;
 					v.set_norm(n.get_norm());
 				} // for k
 			} // for j
@@ -1415,7 +1415,7 @@ public:
 				for (unsigned j = 0; j < 2; ++j) {
 					unsigned const s((i + (bool(j) ^ bool(d)))%ndiv); // use the correct winding order
 					point pt(vpn.p[(s<<1) + d]);
-					if (hscale != 1.0) {pt.z = roof_z + hscale*(pt.z - roof_z);} // scale the height
+					if (CURVED_ROOF_HSCALE != 1.0) {pt.z = roof_z + CURVED_ROOF_HSCALE*(pt.z - roof_z);} // scale the height
 					tverts.emplace_back(pt, normal, (pt[!dim] - c.d[!dim][0])*tscale_x, (pt.z - bcube.z1())*tscale_y, cws);
 				} // for j
 			} // for i
@@ -3699,10 +3699,11 @@ public:
 			float const tline_dist(10.0*get_road_max_width());
 
 			for (building_t &b : buildings) {
-				if (!b.is_industrial()) continue;
-				point const bldg_conn_pt(cube_top_center(b.bcube));
-				point tline_conn_pt; // not currently used, but could be used for building intersection query to cancel this connection
-				b.has_tline_conn = connect_to_nearest_transmission_line(bldg_conn_pt, tline_dist, tline_conn_pt);
+				if (b.is_heavy_industrial() || b.is_datacenter()) { // these building types require more power and have transmission lines
+					point const bldg_conn_pt(b.bcube.xc(), b.bcube.yc(), b.get_roof_peak_z2());
+					point tline_conn_pt; // not currently used, but could be used for building intersection query to cancel this connection
+					b.has_tline_conn = connect_to_nearest_transmission_line(bldg_conn_pt, tline_dist, tline_conn_pt);
+				}
 			}
 		}
 		if (!is_tile && (!city_only || maybe_residential)) {place_building_trees(rgen);}
