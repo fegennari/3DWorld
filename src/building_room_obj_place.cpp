@@ -488,6 +488,7 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t c;
 	set_cube_zvals(c, zval, zval+height);
+	force_computer |= is_datacenter();
 
 	for (unsigned n = 0; n < 20; ++n) { // make 20 attempts to place a desk
 		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
