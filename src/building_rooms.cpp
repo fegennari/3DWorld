@@ -502,11 +502,13 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			bool const maybe_office_bathroom(is_room_office_bathroom(*r, room_center.z, f));
 
 			// motion detection lights for large office building office, mall bathrooms, and office bathrooms; limit to interior rooms to have lit rooms viewed through windows
-			if ((!is_house && has_pri_hall() && r->is_office && !has_window) || is_mall_bathroom || (maybe_office_bathroom && !is_parking())) {flags |= RO_FLAG_IS_ACTIVE;}
+			if ((!is_house && has_pri_hall() && ((r->is_office && !has_window) || init_rtype_f0 == RTYPE_BATH)) || is_mall_bathroom || (maybe_office_bathroom && !is_parking())) {
+				flags |= RO_FLAG_IS_ACTIVE;
+			}
 			else if (r->is_sec_bldg || is_secret) {is_lit = 0;} // garage, shed, and secret room lights start off
 			else {
 				// 50% of lights are on, 75% for top of stairs, 100% for non-basement hallways, 100% for parking garages, backrooms, and malls
-				is_lit  = ((r->is_hallway && !is_basement) || is_parking_garage || is_backrooms || is_mall_room || is_retail_room || industrial_room);
+				is_lit  = ((r->is_hallway && !is_basement) || is_parking_garage || is_backrooms || is_mall_room || is_retail_room || industrial_room || is_dc_server_room);
 				is_lit |= ((rgen.rand() & (top_of_stairs ? 3 : 1)) != 0); // 75% for top of stairs light, 50% otherwise
 				is_lit |= (r->is_ext_basement_conn() || (r->is_ext_basement() && r->intersects(get_basement()))); // ext basement conn or primary hallway
 
@@ -802,6 +804,13 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			else if (is_dc_server_room) {
 				added_obj = no_whiteboard = no_plants = add_server_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 			}
+			else if (is_datacenter() && init_rtype_f0 == RTYPE_UTILITY) { // datacenter utility rooms are on each floor
+				added_obj = no_whiteboard = no_plants = is_utility = add_office_utility_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
+			}
+			else if (is_datacenter() && init_rtype_f0 == RTYPE_BATH) { // datacenter bathrooms are on each floor
+				added_obj = is_bathroom = added_bathroom = add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt,
+					objs_start_inc_lights, objs_start, f, is_basement, 0, added_bathroom_objs_mask); // add_shower_tub=0
+			}
 			else if (!residential && f == 0) { // commercial building special pre-assigned first floor rooms; can be in a stacked part
 				if (init_rtype_f0 == RTYPE_UTILITY) {
 					added_obj = no_whiteboard = no_plants = is_utility = add_office_utility_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
@@ -812,10 +821,6 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				else if (init_rtype_f0 == RTYPE_SECURITY) {
 					added_obj = no_whiteboard = no_plants = add_security_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 					if (added_obj) {no_trashcan = 1;} // trashcan shadow flickers when camera is floating, do disable trashcans
-				}
-				else if (init_rtype_f0 == RTYPE_BATH) {
-					added_obj = is_bathroom = added_bathroom = add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt,
-						objs_start_inc_lights, objs_start, f, is_basement, 0, added_bathroom_objs_mask); // add_shower_tub=0
 				}
 			}
 			// check if this room is adjacent to an exterior/walkway door, and if so, make it a lounge

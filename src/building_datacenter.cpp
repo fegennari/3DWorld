@@ -87,11 +87,20 @@ cube_t building_t::create_datacenter_floorplan(unsigned part_id, float window_hs
 		server_room.d[min_dim][!d] = hall_side;
 		add_assigned_room(server_room, part_id, RTYPE_SERVER);
 		rooms.back().set_is_large(); // for AI navigation
-		// add offices and bathrooms
-		bool const is_br(bool(d) != se_side); // bathroom opposite stairs and elevator
+		// add office and bathroom
+		bool const br_side(bool(d) != se_side);
 		cube_t office(office_area);
 		office.d[min_dim][!d] = hall_side;
-		add_assigned_room(office, part_id, (is_br ? RTYPE_BATH : RTYPE_OFFICE));
+		float br_door_pos(0.0);
+		
+		if (br_side) { // bathroom side is opposite stairs and elevator
+			cube_t bathroom(office);
+			bathroom.d[max_dim][se_end] = office.d[max_dim][!se_end] = bath_pos;
+			add_assigned_room(bathroom, part_id, RTYPE_BATH);
+			br_door_pos = bathroom.get_center_dim(max_dim); // centered
+		}
+		add_assigned_room(office, part_id, RTYPE_OFFICE);
+		if (br_side) {rooms.back().assign_to(RTYPE_SECURITY, 0, 1);} // small office next to bathroom is security room on the first floor
 		// add utility rooms
 		cube_t utility(util_area);
 		utility.d[min_dim][!d] = hall_side;
@@ -101,7 +110,12 @@ cube_t building_t::create_datacenter_floorplan(unsigned part_id, float window_hs
 		create_wall(walls[0], min_dim, hall_side, fc_thick, wall_hthick, wall_edge_spacing);
 		remove_section_from_cube_and_add_door(walls[0], walls[1], (server_door_pos - doorway_hwidth), (server_door_pos + doorway_hwidth), max_dim, d);
 		
-		for (unsigned e = 0; e < 2; ++e) {
+		if (br_side) { // add bathroom door
+			cube_t br_wall;
+			remove_section_from_cube_and_add_door(walls[se_end], br_wall, (br_door_pos - doorway_hwidth), (br_door_pos + doorway_hwidth), max_dim, d);
+			hall_walls.push_back(br_wall);
+		}
+		for (unsigned e = 0; e < 2; ++e) { // for each end of the hallway
 			bool const is_office_side(bool(e) == se_end);
 			cube_t &adj_room(is_office_side ? office : utility);
 			cube_t wall(walls[e]);
@@ -118,10 +132,12 @@ cube_t building_t::create_datacenter_floorplan(unsigned part_id, float window_hs
 			hall_walls.push_back(wall);
 		} // for d
 		// add walls and doors between rooms
-		for (unsigned e = 0; e < 2; ++e) {
+		float const room_split_wall_pos[3] = {office_pos, util_pos, bath_pos};
+
+		for (unsigned e = 0; e < (br_side ? 3 : 2); ++e) {
 			cube_t rwall(part);
 			rwall.d[min_dim][!d] = hall_side + (d ? 1.0 : -1.0)*wall_hthick;
-			create_wall(rwall, max_dim, (e ? util_pos : office_pos), fc_thick, wall_hthick, wall_edge_spacing);
+			create_wall(rwall, max_dim, room_split_wall_pos[e], fc_thick, wall_hthick, wall_edge_spacing);
 			room_walls.push_back(rwall);
 			// TODO: add doors in some cases
 		} // for e
