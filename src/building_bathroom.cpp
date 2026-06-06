@@ -47,7 +47,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 			zval = add_flooring(room, zval, room_id, tot_light_amt, flooring_type); // move the effective floor up
 		}
 	}
-	if (have_toilet && (room.is_office || (!is_basement && (is_prison() || is_restaurant() || is_restroom())))) {
+	if (have_toilet && (room.is_office || (!is_basement && (is_prison() || is_restaurant() || is_restroom() || is_datacenter())))) {
 		// office, above ground prison bathroom, restaurant, and park restroom have stalls
 		if (min_room_dim > (has_house_floorplan() ? 1.4 : 1.5)*floor_spacing && max(place_area_sz.x, place_area_sz.y) > 2.0*floor_spacing) {
 			if (divide_bathroom_into_stalls(rgen, room, zval, room_id, tot_light_amt, floor, lights_start, objs_start)) { // large enough, divide into bathroom stalls

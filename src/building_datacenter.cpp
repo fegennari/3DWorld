@@ -10,7 +10,7 @@ cube_t building_t::create_datacenter_floorplan(unsigned part_id, float window_hs
 	// power/AC utility room(s) at the other, plus bathroom, with stairs and elevator to the side of the hallway
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness);
 	float const doorway_width(get_nominal_doorway_width()), doorway_hwidth(0.5*doorway_width);
-	float const wall_thick(get_wall_thickness()), wall_hthick(0.5*wall_thick), wall_edge_spacing(0.05*wall_thick), min_wall_len(get_min_wall_len());
+	float const wall_thick(get_wall_thickness()), wall_hthick(0.5*wall_thick), wall_edge_spacing(0.05*wall_thick);
 	cube_t const &part(parts[part_id]);
 	vector3d const psz(part.get_size());
 	bool const min_dim(psz.y < psz.x), max_dim(!min_dim);
@@ -42,6 +42,32 @@ cube_t building_t::create_datacenter_floorplan(unsigned part_id, float window_hs
 	if (num_short_wind >= 9 && num_long_wind >= 9) { // larger building, at least 4 windows per side; add secondary hallway and two rows of side rooms
 		// TODO
 	}
+	// add hallway room
+	unsigned const hall_room_id(add_room(hall, part_id, 3, 1, 0)); // add primary hallway as room with 3+ lights
+	//rooms.back().mark_open_wall_dim(min_dim); // flag primary hallway as open on sides if there are secondary hallways
+	if (part_id == 0) {pri_hall = hall;}
+	// place stairs and elevator along the hallway
+	float const se_wall_pos(hall.d[min_dim][se_side] - se_side_sign*wall_hthick);
+	float const ewidth(1.8*doorway_width), edepth(1.8*doorway_width), stairs_width(2.5*doorway_width);
+	float stairs_depth(window_hspacing[min_dim]); // one window width
+	if (stairs_depth < 2.4*doorway_width) {stairs_depth *= 2.0;} // increase to 2 windows if needed
+	float const stairs_start(part.d[max_dim][se_end] - 0.8*se_end_sign*wall_hthick);
+	float const stairs_end(stairs_start - se_end_sign*stairs_width), elevator_start(stairs_end - 0.25*se_end_sign*wall_thick);
+	cube_t stairs(part), elevator(part);
+	stairs  .d[min_dim][!se_side] = elevator.d[min_dim][!se_side] = se_wall_pos;
+	stairs  .d[min_dim][ se_side] = se_wall_pos + se_side_sign*stairs_depth;
+	elevator.d[min_dim][ se_side] = se_wall_pos + se_side_sign*edepth;
+	stairs  .d[max_dim][ se_end ] = stairs_start;
+	stairs  .d[max_dim][!se_end ] = stairs_end;
+	elevator.d[max_dim][ se_end ] = elevator_start; // small gap between stairs and elevator
+	elevator.d[max_dim][!se_end ] = elevator_start - se_end_sign*ewidth;
+	interior->stairwells.emplace_back(stairs, 0, min_dim, se_side, SHAPE_U); // add temp stairs so that we can extract these variables later
+	interior->stairwells.back().against_wall[se_end] = 1;
+	have_hall_side_stairs = 1;
+	get_room(hall_room_id).has_stairs = 255; // stairs on all floors
+	elevator_t E(elevator, hall_room_id, min_dim, !se_side, 0, 1); // elevator shaft; at_edge=0, interior_room=1 (considered interior-enough)
+	add_or_extend_elevator(E, 1);
+	get_room(hall_room_id).has_elevator = 1;
 	// setup server room area
 	cube_t server_area(part), office_area(part), util_area(part);
 	server_area.d[max_dim][ se_end] = office_area.d[max_dim][!se_end] = office_pos;
@@ -65,7 +91,7 @@ cube_t building_t::create_datacenter_floorplan(unsigned part_id, float window_hs
 		bool const is_br(bool(d) != se_side); // bathroom opposite stairs and elevator
 		cube_t office(office_area);
 		office.d[min_dim][!d] = hall_side;
-		add_assigned_room(office, part_id, (is_br ? RTYPE_BATH : RTYPE_OFFICE)); // TODO: force bathroom assignment
+		add_assigned_room(office, part_id, (is_br ? RTYPE_BATH : RTYPE_OFFICE));
 		// add utility rooms
 		cube_t utility(util_area);
 		utility.d[min_dim][!d] = hall_side;
@@ -76,9 +102,20 @@ cube_t building_t::create_datacenter_floorplan(unsigned part_id, float window_hs
 		remove_section_from_cube_and_add_door(walls[0], walls[1], (server_door_pos - doorway_hwidth), (server_door_pos + doorway_hwidth), max_dim, d);
 		
 		for (unsigned e = 0; e < 2; ++e) {
-			bool const is_se_side(bool(e) == se_side);
-			// TODO: split for office, utility, and bathroom
-			hall_walls.push_back(walls[e]);
+			bool const is_office_side(bool(e) == se_end);
+			cube_t &adj_room(is_office_side ? office : utility);
+			cube_t wall(walls[e]);
+			if (wall.intersects(stairs)) {wall.d[max_dim][se_end] = elevator.d[max_dim][!se_end];} // shorten wall in front of stairs to end at edge of elevator
+			float const wall_lo(max(wall.d[max_dim][0], adj_room.d[max_dim][0])), wall_hi(min(wall.d[max_dim][1], adj_room.d[max_dim][1]));
+
+			if ((wall_hi - wall_lo) > 1.2*doorway_width) { // not too narrow for a door; should always get here
+				float const rgen_lo(wall_lo + doorway_hwidth + doorway_hwidth), rgen_hi(wall_hi - doorway_hwidth - doorway_hwidth);
+				float const door_pos((rgen_lo < rgen_hi) ? rgen.rand_uniform(rgen_lo, rgen_hi) : 0.5*(rgen_lo + rgen_hi)); // centered if wall is too narrow
+				cube_t wall2;
+				remove_section_from_cube_and_add_door(wall, wall2, (door_pos - doorway_hwidth), (door_pos + doorway_hwidth), max_dim, d);
+				hall_walls.push_back(wall2);
+			}
+			hall_walls.push_back(wall);
 		} // for d
 		// add walls and doors between rooms
 		for (unsigned e = 0; e < 2; ++e) {
@@ -86,40 +123,10 @@ cube_t building_t::create_datacenter_floorplan(unsigned part_id, float window_hs
 			rwall.d[min_dim][!d] = hall_side + (d ? 1.0 : -1.0)*wall_hthick;
 			create_wall(rwall, max_dim, (e ? util_pos : office_pos), fc_thick, wall_hthick, wall_edge_spacing);
 			room_walls.push_back(rwall);
+			// TODO: add doors in some cases
 		} // for e
 		// TODO: door between server room and utility/office?
 	} // for d
-	unsigned const hall_room_id(add_room(hall, part_id, 3, 1, 0)); // add primary hallway as room with 3+ lights
-	//rooms.back().mark_open_wall_dim(min_dim); // flag primary hallway as open on sides if there are secondary hallways
-	if (part_id == 0) {pri_hall = hall;}
-
-	// place stairs and elevator along the hallway
-	float const se_wall_pos(hall.d[min_dim][se_side] - se_side_sign*wall_hthick);
-	float const ewidth(1.8*doorway_width), edepth(1.8*doorway_width), stairs_width(2.5*doorway_width);
-	float stairs_depth(window_hspacing[min_dim]); // one window width
-	if (stairs_depth < 2.4*doorway_width) {stairs_depth *= 2.0;} // increase to 2 windows if needed
-	float const stairs_start(part.d[max_dim][se_end] - 0.8*se_end_sign*wall_hthick);
-	float const stairs_end(stairs_start - se_end_sign*stairs_width), elevator_start(stairs_end - 0.25*se_end_sign*wall_thick);
-	cube_t stairs(part), elevator(part);
-	stairs  .d[min_dim][!se_side] = elevator.d[min_dim][!se_side] = se_wall_pos;
-	stairs  .d[min_dim][ se_side] = se_wall_pos + se_side_sign*stairs_depth;
-	elevator.d[min_dim][ se_side] = se_wall_pos + se_side_sign*edepth;
-	stairs  .d[max_dim][ se_end ] = stairs_start;
-	stairs  .d[max_dim][!se_end ] = stairs_end;
-	elevator.d[max_dim][ se_end ] = elevator_start; // small gap between stairs and elevator
-	elevator.d[max_dim][!se_end ] = elevator_start - se_end_sign*ewidth;
-	interior->stairwells.emplace_back(stairs, 0, min_dim, se_side, SHAPE_U); // add temp stairs so that we can extract these variables later
-	interior->stairwells.back().against_wall[se_end] = 1;
-	have_hall_side_stairs = 1;
-	get_room(hall_room_id).has_stairs = 255; // stairs on all floors
-	elevator_t E(elevator, hall_room_id, min_dim, !se_side, 0, 1); // elevator shaft; at_edge=0, interior_room=1 (considered interior-enough)
-	add_or_extend_elevator(E, 1);
-	get_room(hall_room_id).has_elevator = 1;
-
-	// remove wall in front of stairs/elevator
-	for (auto w = hall_walls.begin()+hall_walls_start; w != hall_walls.end(); ++w) {
-		if (w->intersects(stairs)) {w->d[max_dim][se_end] = elevator.d[max_dim][!se_end];} // end at edge of elevator
-	}
 	// add interior windows to walls separating server rooms from hallway
 	unsigned const hall_walls_end(hall_walls.size());
 
