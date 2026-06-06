@@ -387,6 +387,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		else if (is_apt_or_hotel_room) { // apartments and hotel rooms are generally smaller and can have smaller lights
 			light_size *= ((init_rtype_f0 == RTYPE_BATH) ? 0.6 : 0.8); // bathroom light is even smaller
 		}
+		else if (is_datacenter()) {
+			light_density = 0.5;
+		}
 		if (light_density > 0.0) { // uniform 2D grid of lights
 			nx = max(1U, unsigned(light_density*dx/window_vspacing));
 			ny = max(1U, unsigned(light_density*dy/window_vspacing));

@@ -77,6 +77,7 @@ cube_t building_t::create_datacenter_floorplan(unsigned part_id, float window_hs
 	assert(util_area  .is_strictly_normalized());
 	float const server_area_len(server_area.get_sz_dim(max_dim)), door_end_space(max(doorway_width, 0.25f*server_area_len));
 	float const server_door_pos(rgen.rand_uniform(server_area.d[max_dim][0]+door_end_space, server_area.d[max_dim][1]-door_end_space));
+	bool const conn_office_to_server(rgen.rand_float() < 0.8), conn_util_to_server(rgen.rand_float() < 0.4);
 	unsigned server_room_ids[2] = {};
 
 	for (unsigned d = 0; d < 2; ++d) { // each side of hallway
@@ -134,14 +135,20 @@ cube_t building_t::create_datacenter_floorplan(unsigned part_id, float window_hs
 		// add walls and doors between rooms
 		float const room_split_wall_pos[3] = {office_pos, util_pos, bath_pos};
 
-		for (unsigned e = 0; e < (br_side ? 3 : 2); ++e) {
+		for (unsigned e = 0; e < (br_side ? 3 : 2); ++e) { // each room to split with a wall
 			cube_t rwall(part);
 			rwall.d[min_dim][!d] = hall_side + (d ? 1.0 : -1.0)*wall_hthick;
 			create_wall(rwall, max_dim, room_split_wall_pos[e], fc_thick, wall_hthick, wall_edge_spacing);
+
+			if ((conn_office_to_server && e == 0 && !br_side) || (conn_util_to_server && e == 1)) { // add a door between this room and the server room
+				bool const open_dir(bool(e) != se_end);
+				float const door_pos(rgen.rand_uniform(rwall.d[min_dim][0]+doorway_hwidth, rwall.d[min_dim][1]-doorway_hwidth));
+				cube_t rwall2;
+				remove_section_from_cube_and_add_door(rwall, rwall2, (door_pos - doorway_hwidth), (door_pos + doorway_hwidth), min_dim, open_dir);
+				room_walls.push_back(rwall2);
+			}
 			room_walls.push_back(rwall);
-			// TODO: add doors in some cases
 		} // for e
-		// TODO: door between server room and utility/office?
 	} // for d
 	// add interior windows to walls separating server rooms from hallway
 	unsigned const hall_walls_end(hall_walls.size());
