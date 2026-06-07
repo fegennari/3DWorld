@@ -463,6 +463,10 @@ int select_app_store_model(rand_gen_t &rgen, float &hscale, bool plumbing) {
 	if (sub_model == KCA_LP_FRIDGE) {hscale *= 0.7;} // make smaller so that we can fit more
 	return model_id;
 }
+int select_dc_battery_model() {
+	if (!enable_kitchen_app_models()) return -1; // no model
+	return combine_model_submodel_id(OBJ_MODEL_CK_APP, KCA_LP_FRIDGE); // seems like a fridge can pass as a data center battery
+}
 
 cube_t get_com_kitchen_app_coll_bcube(room_object_t const &app) {
 	cube_t c(app);

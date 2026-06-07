@@ -2401,6 +2401,7 @@ private:
 	bool add_filing_cabinet_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	bool add_office_objs     (rand_gen_t rgen, room_t const &room, vect_cube_t &blockers, colorRGBA const &chair_color,
 		float zval, unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start, bool is_basement);
+	void add_dc_office_objs(rand_gen_t rgen, room_t const &room, colorRGBA const &chair_color, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	void add_clock_to_room_wall(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, int type=2);
 	void add_industrial_office_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	bool create_office_cubicles(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
@@ -2524,6 +2525,7 @@ private:
 	bool add_furnace_to_room (rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	void add_breaker_panel   (rand_gen_t &rgen, cube_t const &c, float ceil_zval, bool dim, bool dir, unsigned room_id, float tot_light_amt);
 	bool add_office_utility_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
+	void add_dc_utility_objs (rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	bool add_server_room_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	bool add_security_room_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	void add_laundry_basket  (rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, cube_t place_area);

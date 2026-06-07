@@ -3,6 +3,12 @@
 
 #include "function_registry.h"
 #include "buildings.h"
+#include "city_model.h"
+
+extern object_model_loader_t building_obj_model_loader;
+
+int select_dc_battery_model();
+
 
 // returns the hallway, if one was created
 cube_t building_t::create_datacenter_floorplan(unsigned part_id, float window_hspacing[2], int num_windows_per_side[2], rand_gen_t &rgen) {
@@ -361,5 +367,65 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 	if (num_servers == 0 && num_comps == 0) return 0; // both servers and computers count
 	add_door_sign("Server Room", room, zval, room_id);
 	return 1;
+}
+
+void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	// TODO: multiple substations, rows of cylinder machines for generators, rows of batteries, rows of AC units, fans in windows
+	zval       = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_CONCRETE); // add concrete and move the effective floor up
+	objs_start = interior->room_geom->objs.size(); // exclude this from collision checks
+	auto &objs(interior->room_geom->objs);
+	cube_t const place_area(get_walkable_room_bounds(room));
+	float const floor_spacing(get_window_vspace());
+
+	// add ventilation fans between windows
+	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_VENT_FAN)) {
+		bool const dim(hallway_dim);
+		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_VENT_FAN)); // D, W, H
+		unsigned const num_windows(get_num_windows_on_side(room, !dim));
+		float const window_hspace(room.get_sz_dim(!dim)/num_windows), height(0.75*floor_spacing), hwidth(0.5*height*sz.y/sz.z), depth(height*sz.x/sz.z);
+		cube_t fan;
+		set_wall_width(fan, (zval + 0.5f*floor_spacing), 0.5*height, 2);
+
+		for (unsigned dir = 0; dir < 2; ++dir) { // end walls
+			if (classify_room_wall(room, zval, dim, dir, 0) != ROOM_WALL_EXT) continue; // exterior walls only
+			float const dsign(dir ? -1.0 : 1.0), wall_pos(room.d[dim][dir]), mount_pos(wall_pos - dsign*0.36*depth); // outside the window
+			fan.d[dim][ dir] = mount_pos;
+			fan.d[dim][!dir] = mount_pos + dsign*depth;
+
+			for (unsigned n = 0; n < num_windows; ++n) { // every window
+				set_wall_width(fan, (room.d[!dim][0] + (n + 0.5)*window_hspace), hwidth, !dim); // centered on the window
+				objs.emplace_back(fan, TYPE_VENT_FAN, room_id, dim, !dir, (RO_FLAG_IN_FACTORY | RO_FLAG_UNTEXTURED), tot_light_amt, SHAPE_CUBE);
+			}
+		} // for dir
+	}
+	// place transformers
+	unsigned const num_tf(4);
+	float const tzval(zval - 0.025*floor_spacing); // transformer is slightly below floor level
+
+	for (unsigned n = 0; n < num_tf; ++n) {
+		if (!place_model_along_wall(OBJ_MODEL_SUBSTATION, TYPE_XFORMER, room, 0.5, rgen, tzval, room_id, tot_light_amt, place_area, objs_start)) break;
+		objs.back().dir ^= 1; // back to front
+	}
+	// place batteries, represented as kitchen fridges
+	int const bat_model(select_dc_battery_model());
+
+	if (bat_model > 0 && building_obj_model_loader.is_model_valid(bat_model)) {
+		unsigned const num_bat(4);
+		// TODO: array
+
+		for (unsigned n = 0; n < num_bat; ++n) {
+			if (!place_model_along_wall(bat_model, TYPE_KITCH_APP, room, 0.6, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 4, 0, WHITE, 1)) break;
+		}
+	}
+	// add breaker panel
+	// TODO
+
+	// add fans
+	//add_wall_fans_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);
+	add_door_sign("Utility", room, zval, room_id);
+}
+
+void building_t::add_dc_office_objs(rand_gen_t rgen, room_t const &room, colorRGBA const &chair_color, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	// TODO
 }
 
