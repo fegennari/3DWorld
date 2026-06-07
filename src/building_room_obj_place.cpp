@@ -173,6 +173,7 @@ unsigned building_t::add_table_and_chairs(rand_gen_t rgen, room_t const &room, v
 	}
 	for (unsigned d = 0; d < 2; ++d) {table_pos[d] += rand_place_off*room.get_sz_dim(d)*rgen.rand_uniform(-1.0, 1.0);} // near the center of the room
 	if (use_long_table) {table_sz[long_dim] *= 1.5;}
+	if (wooden_or_plastic == 2 && is_datacenter()) {wooden_or_plastic = 1;} // plastic
 	float const long_edge_len(2.0*max(table_sz.x, table_sz.y));
 	bool const is_round(!use_tall_table && !use_long_table && rgen.rand_float() < 0.25); // 25% of the time
 	bool const is_plastic((wooden_or_plastic == 2) ? (room.is_office && rgen.rand_bool()) : bool(wooden_or_plastic)); // plastic table for offices 50% of the time unless forced
@@ -520,10 +521,11 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 		desk_pad.d[dim][!dir] += dsign*clearance; // ensure clearance in front of the desk so that a chair can be placed
 		if (!is_valid_placement_for_room(desk_pad, room, blockers, 1)) continue; // check proximity to doors and collision with blockers
 		if (overlaps_other_room_obj(desk_pad, objs_start))             continue; // check other objects (for bedroom desks or multiple office desks)
+		bool const not_wood(is_hospital() || is_datacenter());
 		// make short if against an exterior or open wall, in an office, or if there's a complex floorplan (in case there's no back wall)
-		bool const is_tall(!not_tall && !room.is_office && !has_complex_floorplan && !room.has_open_wall(dim, dir) && rgen.rand_float() < 0.5 &&
+		bool const is_tall(!not_tall && !not_wood && !room.is_office && !has_complex_floorplan && !room.has_open_wall(dim, dir) && rgen.rand_float() < 0.5 &&
 			(is_basement || classify_room_wall(room, zval, dim, dir, 0) != ROOM_WALL_EXT));
-		bool const is_plastic((is_hospital() || (is_office_bldg() && room.is_office && ((floor_ix + mat_ix) & 1))) && !is_tall);
+		bool const is_plastic((not_wood || (is_office_bldg() && room.is_office && ((floor_ix + mat_ix) & 1))) && !is_tall);
 		unsigned flags(0);
 		if (is_house  ) {flags |= RO_FLAG_IS_HOUSE  ;}
 		if (is_plastic) {flags |= RO_FLAG_UNTEXTURED;}

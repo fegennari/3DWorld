@@ -1235,8 +1235,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 				}
 			}
-			// office building part with primary hallway, first floor of first non-retail part
-			else if (has_pri_hall() && r->part_id == (has_retail() ? 1 : 0) && f == 0 && added_desk) {
+			// office building part with primary hallway, first floor of first non-retail part; not for data centers because they should be group offices
+			else if (has_pri_hall() && !is_datacenter() && r->part_id == (has_retail() ? 1 : 0) && f == 0 && added_desk) {
 				add_office_door_sign(rgen, *r, room_center.z, room_id);
 			}
 			// should mall bathrooms have stains? I suppose so
