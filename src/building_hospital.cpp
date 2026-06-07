@@ -446,7 +446,7 @@ bool building_t::add_exam_room_objs(rand_gen_t rgen, room_t &room, float zval, u
 	//objs[bed_ix].item_flags = rgen.rand(); // choose a random model?
 	
 	// should the room be re-assigned if we can't fit a desk? this would require removing the bed
-	if (add_desk_to_room(rgen, room, vect_cube_t(), chair_color, zval, room_id, tot_light_amt, objs_start, 0, 0, 0, 1, 1)) { // force_computer=1, add_phone=1
+	if (add_desk_to_room(rgen, room, vect_cube_t(), chair_color, zval, room_id, tot_light_amt, objs_start, 0, 0, 0, 1, 1, 1)) { // force_computer=1, add_phone=1, not_tall=1
 		add_test_tubes_to_surface(rgen, room_id, tot_light_amt, desk_obj_ix);
 	}
 	if (rgen.rand_bool()) { // add a simple sink

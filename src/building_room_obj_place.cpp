@@ -474,8 +474,9 @@ bool building_t::room_has_stairs_or_elevator(room_t const &room, float zval, uns
 	return 0;
 }
 
-bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube_t const &blockers, colorRGBA const &chair_color, float zval,
-	unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement, unsigned desk_ix, bool no_computer, bool force_computer, bool add_phone)
+// against_window_mode: 0=not against window, 1=against window, 2=don't care; desk will stil be placed if constraint can't be met with any walls
+bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube_t const &blockers, colorRGBA const &chair_color, float zval, unsigned room_id,
+	float tot_light_amt, unsigned objs_start, bool is_basement, unsigned desk_ix, bool no_computer, bool force_computer, bool add_phone, bool not_tall, int against_window_mode)
 {
 	cube_t const room_bounds(get_walkable_room_bounds(room));
 	float const vspace(get_window_vspace());
@@ -489,9 +490,27 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 	cube_t c;
 	set_cube_zvals(c, zval, zval+height);
 	force_computer |= is_datacenter();
+	bool enabled_dirs[4] = {1,1,1,1};
 
+	if (against_window_mode < 2 && has_int_windows()) { // have a window (exterior wall) preference; if no windows we can skip this
+		bool hw[4] = {};
+		for (unsigned n = 0; n < 4; ++n) {hw[n] = (classify_room_wall(room, zval, (n>>1), (n&1), 0) == ROOM_WALL_EXT);}
+		unsigned const num_ext(hw[0] + hw[1] + hw[2] + hw[3]);
+
+		if (num_ext > 0 && num_ext < 4) { // skip if all 4 walls are exterior or interior since we either trivially satisy the requirement or can't satisfy it with any walls
+			for (unsigned n = 0; n < 4; ++n) {enabled_dirs[n] = (hw[n] ^ (against_window_mode == 0));}
+		}
+	}
 	for (unsigned n = 0; n < 20; ++n) { // make 20 attempts to place a desk
-		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
+		bool dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
+
+		if (!enabled_dirs[2*dim + dir]) { // try all 4 dim/dir permutations until we find an enabled one
+			dir ^= 1;
+			if (!enabled_dirs[2*dim + dir]) {
+				dim ^=1;
+				if (!enabled_dirs[2*dim + dir]) {dir ^= 1;}
+			}
+		}
 		float const dsign(dir ? -1.0 : 1.0);
 		c.d[dim][ dir] = room_bounds.d[dim][dir] + rgen.rand_uniform(0.1, 1.0)*dsign*get_wall_thickness(); // almost against this wall
 		c.d[dim][!dir] = c.d[dim][dir] + dsign*depth;
@@ -502,7 +521,7 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 		if (!is_valid_placement_for_room(desk_pad, room, blockers, 1)) continue; // check proximity to doors and collision with blockers
 		if (overlaps_other_room_obj(desk_pad, objs_start))             continue; // check other objects (for bedroom desks or multiple office desks)
 		// make short if against an exterior or open wall, in an office, or if there's a complex floorplan (in case there's no back wall)
-		bool const is_tall(!room.is_office && !has_complex_floorplan && !room.has_open_wall(dim, dir) && rgen.rand_float() < 0.5 &&
+		bool const is_tall(!not_tall && !room.is_office && !has_complex_floorplan && !room.has_open_wall(dim, dir) && rgen.rand_float() < 0.5 &&
 			(is_basement || classify_room_wall(room, zval, dim, dir, 0) != ROOM_WALL_EXT));
 		bool const is_plastic((is_hospital() || (is_office_bldg() && room.is_office && ((floor_ix + mat_ix) & 1))) && !is_tall);
 		unsigned flags(0);
@@ -3632,7 +3651,8 @@ bool building_t::add_security_room_objs(rand_gen_t rgen, room_t const &room, flo
 		breaker_panel.d[dim][!dir] += (dir ? -1.0 : 1.0)*width; // add padding for desk placement
 		blockers.push_back(breaker_panel);
 	}
-	add_desk_to_room(rgen, room, blockers, DK_GRAY, zval, room_id, tot_light_amt, objs_start, 0, 0, 1); // is_basement=0, desk_ix=0, no_computer=1
+	// is_basement=0, desk_ix=0, no_computer=1, force_computer=0, add_phone=0, not_tall=1, against_window_mode=0 (not against window, since there are no monitors in that dir)
+	add_desk_to_room(rgen, room, blockers, DK_GRAY, zval, room_id, tot_light_amt, objs_start, 0, 0, 1, 0, 0, 1, 0);
 	// add computer monitors along all walls that don't have windows, avoiding doors
 	// count the number of cameras placed so far; there could be more placed later, but hallways are populated first for buildings such as prisons
 	unsigned num_cameras(0), num_monitors(0);
