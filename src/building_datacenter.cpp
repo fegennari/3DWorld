@@ -99,9 +99,26 @@ cube_t building_t::create_datacenter_floorplan(unsigned part_id, float window_hs
 			bathroom.d[max_dim][se_end] = office.d[max_dim][!se_end] = bath_pos;
 			add_assigned_room(bathroom, part_id, RTYPE_BATH);
 			br_door_pos = bathroom.get_center_dim(max_dim); // centered
+			// small office next to bathroom is security room on the first floor
+			float const rlen(office.get_sz_dim(min_dim)), rwidth(office.get_sz_dim(max_dim));
+
+			if (rlen > 4.0*window_vspacing && (rlen + rwidth) > 6.0*window_vspacing && rwidth > 2.0*doorway_width) { // if large, split into office and security room
+				float const split_pos(office.d[min_dim][0] + rgen.rand_uniform(0.4, 0.6)*rlen);
+				cube_t outer_office(office);
+				outer_office.d[min_dim][d] = office.d[min_dim][!d] = split_pos;
+				add_assigned_room(outer_office, part_id, RTYPE_OFFICE);
+				cube_t walls[2] = {office, office};
+				create_wall(walls[0], min_dim, split_pos, fc_thick, wall_hthick, wall_edge_spacing);
+				float const door_pos(rgen.rand_uniform(office.d[max_dim][0]+1.5*doorway_hwidth, office.d[max_dim][1]-1.5*doorway_hwidth));
+				remove_section_from_cube_and_add_door(walls[0], walls[1], (door_pos - doorway_hwidth), (door_pos + doorway_hwidth), max_dim, d);
+				for (unsigned e = 0; e < 2; ++e) {hall_walls.push_back(walls[e]);}
+			}
+			add_assigned_room(office, part_id, RTYPE_OFFICE);
+			rooms.back().assign_to(RTYPE_SECURITY, 0, 1, 1); // floor=0, locked=1, force=1
 		}
-		add_assigned_room(office, part_id, RTYPE_OFFICE);
-		if (br_side) {rooms.back().assign_to(RTYPE_SECURITY, 0, 1);} // small office next to bathroom is security room on the first floor
+		else { // stairs/elevator side; add a large office with stairs/elevator cut out
+			add_assigned_room(office, part_id, RTYPE_OFFICE); // TODO: some sort of control room or meeting room with rows of desks?
+		}
 		// add utility rooms
 		cube_t utility(util_area);
 		utility.d[min_dim][!d] = hall_side;
