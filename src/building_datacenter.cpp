@@ -109,11 +109,12 @@ cube_t building_t::create_datacenter_floorplan(unsigned part_id, float window_hs
 		// add walls and doors along hallway
 		cube_t walls[2] = {part, part}; // {lo, hi} sides
 		create_wall(walls[0], min_dim, hall_side, fc_thick, wall_hthick, wall_edge_spacing);
-		remove_section_from_cube_and_add_door(walls[0], walls[1], (server_door_pos - doorway_hwidth), (server_door_pos + doorway_hwidth), max_dim, d);
+		remove_section_from_cube_and_add_door(walls[0], walls[1], (server_door_pos - doorway_hwidth), (server_door_pos + doorway_hwidth), max_dim, d); // for security room
 		
 		if (br_side) { // add bathroom door
 			cube_t br_wall;
 			remove_section_from_cube_and_add_door(walls[se_end], br_wall, (br_door_pos - doorway_hwidth), (br_door_pos + doorway_hwidth), max_dim, d);
+			if (se_end) {swap(walls[se_end], br_wall);} // swap lo/hi order
 			hall_walls.push_back(br_wall);
 		}
 		for (unsigned e = 0; e < 2; ++e) { // for each end of the hallway
@@ -122,6 +123,7 @@ cube_t building_t::create_datacenter_floorplan(unsigned part_id, float window_hs
 			cube_t wall(walls[e]);
 			if (wall.intersects(stairs)) {wall.d[max_dim][se_end] = elevator.d[max_dim][!se_end];} // shorten wall in front of stairs to end at edge of elevator
 			float const wall_lo(max(wall.d[max_dim][0], adj_room.d[max_dim][0])), wall_hi(min(wall.d[max_dim][1], adj_room.d[max_dim][1]));
+			assert(wall_lo < wall_hi);
 
 			if ((wall_hi - wall_lo) > 1.2*doorway_width) { // not too narrow for a door; should always get here
 				float const rgen_lo(wall_lo + doorway_hwidth + doorway_hwidth), rgen_hi(wall_hi - doorway_hwidth - doorway_hwidth);

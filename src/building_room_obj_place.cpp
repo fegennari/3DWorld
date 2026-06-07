@@ -3634,10 +3634,10 @@ bool building_t::add_security_room_objs(rand_gen_t rgen, room_t const &room, flo
 	cube_t breaker_panel, tv;
 	vect_cube_t blockers;
 	interior->security_room_ix = room_id;
-	
-	if (1) { // add breaker panel
-		vect_door_stack_t const &doorways(get_doorways_for_room(room, zval)); // get interior doors
-		assert(!doorways.empty());
+	// add breaker panel
+	vect_door_stack_t const &doorways(get_doorways_for_room(room, zval)); // get interior doors
+		
+	if (!doorways.empty()) { // should always be true, unless we happen to have a security room in a small part at the top of a skyscraper?
 		door_stack_t const &door(doorways.front()); // choose the first door (there is likely only one)
 		bool const side(!door.get_check_dirs()), dim(door.dim), dir(door.get_center_dim(dim) > room.get_center_dim(dim)); // the wall the door is on
 		float const door_edge(door.d[!dim][side]), wall_edge(room_bounds.d[!dim][side]);
