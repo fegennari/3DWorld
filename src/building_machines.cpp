@@ -771,7 +771,10 @@ void building_t::add_wall_fans_to_room(rand_gen_t &rgen, room_t const &room, flo
 			space_behind.d[dim][ dir] = wall_pos - dir_sign*0.5*floor_spacing; // extend to other side of wall
 			space_behind.d[dim][!dir] = wall_pos - dir_sign*2.0*wall_thick; // shift to not intersect the room
 			if (interior->cube_in_ext_basement_room(space_behind, 0)) continue; // xy_only=0
-			interior->room_geom->objs.emplace_back(c, obj_types[M], room_id, dim, !dir, RO_FLAG_INTERIOR, tot_light_amt, SHAPE_CUBE);
+			unsigned flags(0);
+			if (zval < ground_floor_z1)    {flags |= RO_FLAG_INTERIOR  ;} // basement
+			if (M == 0 && is_datacenter()) {flags |= RO_FLAG_UNTEXTURED;} // data center vent fans are not rusty
+			interior->room_geom->objs.emplace_back(c, obj_types[M], room_id, dim, !dir, flags, tot_light_amt, SHAPE_CUBE);
 			break; // done
 		} // for t
 	} // for M
