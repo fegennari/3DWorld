@@ -43,7 +43,8 @@ cube_t building_t::create_datacenter_floorplan(unsigned part_id, float window_hs
 		// TODO
 	}
 	// add hallway room
-	unsigned const hall_room_id(add_room(hall, part_id, 3, 1, 0)); // add primary hallway as room with 3+ lights
+	unsigned const num_lights(num_long_wind); // likely will be reduced
+	unsigned const hall_room_id(add_room(hall, part_id, num_lights, 1, 0)); // add primary hallway
 	//rooms.back().mark_open_wall_dim(min_dim); // flag primary hallway as open on sides if there are secondary hallways
 	if (part_id == 0) {pri_hall = hall;}
 	// place stairs and elevator along the hallway

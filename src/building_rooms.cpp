@@ -307,6 +307,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			light_size = max(0.06f*room_size, 0.67f*def_light_size);
 			if (is_mall_room) {light_density = 0.25;}
 			if (is_datacenter()) {light_size *= 1.5;} // lighter/brighter lights in datacenter hallway since it's narrow and windowless
+			min_eq(light_size, 1.5f*def_light_size); // set a reasonable max
 		}
 		else if (is_mall_bathroom) {
 			light_density = 0.5;
@@ -400,7 +401,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			}
 		}
 		// hallway: place a light on each side (of the stairs if they exist), and also between stairs and elevator if there are both
-		if (r->is_hallway && r->has_elevator && r->has_stairs == 255) { // hall with elevator + stairs on all floors
+		if (r->is_hallway && r->has_elevator && r->has_stairs == 255 && !have_hall_side_stairs) { // hall with elevator + stairs on all floors
 			min_num_lights = 5; // 5+ lights, but slightly smaller
 			light_size    *= 0.75;
 		}
@@ -535,7 +536,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			assert(light.is_strictly_normalized());
 			valid_lights.clear();
 
-			if (num_lights > 1 && !is_backrooms && !is_mall) { // r->is_hallway or ext basement
+			if (num_lights > 1 && !is_backrooms && !is_mall) { // hallway, ext basement, etc.
 				max_eq(num_lights, min_num_lights);
 				min_eq(num_lights, 6U);
 				float const offsets[6] = {0.0, -0.2, -0.3, -0.36, -0.4, -0.43}, steps[6] = {0.0, 0.4, 0.3, 0.24, 0.2, 0.172}; // indexed by num_lights-1
@@ -549,7 +550,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					hall_light.translate_dim(light_dim, delta);
 					try_place_light_on_ceiling(hall_light, *r, room_id, room_dim, fc_thick, 0, 0, num[0], num[1], lcheck_start_ix, valid_lights, rgen); // allow_rot=0, allow_mult=0
 				}
-				if (r->is_hallway && has_pri_hall()) { // make sure to place lights between all stairs and elevators
+				if (r->is_hallway && has_pri_hall() && !have_hall_side_stairs) { // make sure to place lights between all stairs and elevators
 					float const light_len(light.get_sz_dim(room_dim));
 					cube_t centerline(*r);
 					set_wall_width(centerline, r->get_center_dim(!room_dim), wall_thickness, !room_dim);
