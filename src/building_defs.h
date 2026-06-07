@@ -228,7 +228,7 @@ std::string const room_names[NUM_RTYPES] =
 };
 // short room names for breaker panel labels (should be <= 8 characters)
 std::string const room_names_short[NUM_RTYPES] =
-{"", "Hall", "Stairs", "Office", "Bath", "Men", "Women", "Bed", "Kitchen", "Living",
+{"", "Hall", "Stairs", "Office", "Bath", "Restroom", "Restroom", "Bed", "Kitchen", "Living",
 "Dining", "Study", "Entry", "Library", "Storage", "Garage", "Shed", "Lobby", "Laundry", "Card",
 "Play", "Art", "Utility", "Garage", "Ramp", "Attic", "Bed", "", "Server", "Pool",
 "Swim", "Security", "Lounge", "Common", "Basement", "Retail", "Elevator", "Conference", "Machine", "Dungeon",
