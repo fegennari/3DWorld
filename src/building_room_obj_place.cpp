@@ -3621,7 +3621,7 @@ void building_t::add_cameras_to_room(rand_gen_t &rgen, room_t const &room, float
 
 bool building_t::add_security_room_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start) { // for office buildings
 	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_TV)) return 0; // no TV/monitor model, can't create a security room
-	float const floor_spacing(get_window_vspace()), ceil_zval(zval + get_floor_ceil_gap());
+	float const floor_spacing(get_window_vspace()), floor_thick(get_floor_thickness()), ceil_zval(zval + get_floor_ceil_gap());
 	float const start_zval(zval + 0.3*floor_spacing), place_z_range(ceil_zval - start_zval); // should be above the top of the desk
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TV)); // D, W, H
 	float const tv_height(0.23*floor_spacing*rgen.rand_uniform(1.0, 1.2)); // common height for all monitors
@@ -3651,14 +3651,21 @@ bool building_t::add_security_room_objs(rand_gen_t rgen, room_t const &room, flo
 		breaker_panel.d[dim][!dir] += (dir ? -1.0 : 1.0)*width; // add padding for desk placement
 		blockers.push_back(breaker_panel);
 	}
+	unsigned const desk_obj_id(objs.size());
 	// is_basement=0, desk_ix=0, no_computer=1, force_computer=0, add_phone=0, not_tall=1, against_window_mode=0 (not against window, since there are no monitors in that dir)
-	add_desk_to_room(rgen, room, blockers, DK_GRAY, zval, room_id, tot_light_amt, objs_start, 0, 0, 1, 0, 0, 1, 0);
+	bool const has_desk(add_desk_to_room(rgen, room, blockers, DK_GRAY, zval, room_id, tot_light_amt, objs_start, 0, 0, 1, 0, 0, 1, 0));
 	// add computer monitors along all walls that don't have windows, avoiding doors
 	// count the number of cameras placed so far; there could be more placed later, but hallways are populated first for buildings such as prisons
-	unsigned num_cameras(0), num_monitors(0);
+	unsigned num_cameras(0), num_monitors(0), num_floors(0);
 	for (auto i = objs.begin(); i != objs.begin()+objs_start; ++i) {num_cameras += (i->type == TYPE_CAMERA);}
-	unsigned const max_monitors(is_prison() ? num_cameras : max(num_cameras, 32U));
-	bool const first_dim(rgen.rand_bool()), first_dir(rgen.rand_bool()); // use random dim/dir to avoid bias when there are more monitor slots that cameras
+	unsigned max_monitors(num_cameras);
+
+	if (!is_prison() && !is_datacenter()) { // there may be more cameras placed later, if the hallway comes after the security room
+		for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {num_floors += ((i->z1() >= ground_floor_z1) ? calc_num_floors(*i, floor_spacing, floor_thick) : 0);}
+		max_eq(max_monitors, min(32U, 2U*num_floors)); // count the number of floors across all parts that could have hallways and may have 2 cameras each
+	}
+	// start with the wall the desk is on, otherwise use random dim/dir to avoid bias when there are more monitor slots that cameras
+	bool const first_dim(has_desk ? objs[desk_obj_id].dim : rgen.rand_bool()), first_dir(has_desk ? objs[desk_obj_id].dir : rgen.rand_bool());
 
 	for (unsigned D = 0; D < 2 && num_monitors < max_monitors; ++D) {
 		bool const dim(bool(D) ^ first_dim);
