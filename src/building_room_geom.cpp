@@ -84,22 +84,24 @@ struct pool_texture_params_t {
 		return tid;
 	}
 	int get_nm_tid() {
-		if (nm_tid < 0) {nm_tid = get_texture_by_name(nm_fn, 1);}
+		if (nm_tid < 0) {nm_tid = (nm_fn.empty() ? get_normal_map_for_bldg_tid(get_tid()) : get_texture_by_name(nm_fn, 1));}
 		return nm_tid;
 	}
 };
-enum {POOL_TILE_INSIDE1=0, POOL_TILE_INSIDE2, POOL_TILE_WALL, POOL_TILE_FLOOR, POOL_TYPE_CEIL, NUM_POOL_TILES};
+enum {POOL_TILE_INSIDE1=0, POOL_TILE_INSIDE2, POOL_TILE_WALL, POOL_TILE_FLOOR, POOL_TYPE_CEIL, POOL_TILE_NORMAL_WALL, NUM_POOL_TILES};
 pool_texture_params_t pool_texture_params[NUM_POOL_TILES] = {
 	pool_texture_params_t("interiors/glass_tiles.jpg",  "interiors/glass_tiles_normal.jpg",  0.5, 1.0, 100.0, 0.0), // pool inside walls/floor tile
-	pool_texture_params_t(STUCCO_TEX,                 FLAT_NMAP_TEX,                         1.5, 0.2,  40.0, 0.0), // pool inside walls/floor plaster; stucco, no normal map
+	pool_texture_params_t(STUCCO_TEX,                    FLAT_NMAP_TEX,                      1.5, 0.2,  40.0, 0.0), // pool inside walls/floor plaster; stucco, no normal map
 	pool_texture_params_t("interiors/glazed_tiles.jpg", "interiors/glazed_tiles_normal.jpg", 0.5, 0.8,  80.0, 0.1), // room walls
 	pool_texture_params_t("interiors/mosaic_tiles.jpg", "interiors/mosaic_tiles_normal.jpg", 0.2, 1.0, 100.0, 0.1), // room floor
-	pool_texture_params_t("interiors/mosaic_tiles.jpg", "interiors/mosaic_tiles_normal.jpg", 0.2, 0.2,  20.0, 0.1)  // room ceiling
+	pool_texture_params_t("interiors/mosaic_tiles.jpg", "interiors/mosaic_tiles_normal.jpg", 0.2, 0.2,  20.0, 0.1), // room ceiling
+	pool_texture_params_t(STUCCO_TEX,                   -1,                                  1.5, 0.0,   1.0, 0.0)  // normal plaster wall; auto normal map
 };
 int get_pool_tile_type(room_object_t const &obj) {
 	if (obj.flags & RO_FLAG_ADJ_LO ) return ((obj.room_id & 1) ? POOL_TILE_INSIDE1 : POOL_TILE_INSIDE2); // select randomly based on room
 	if (obj.flags & RO_FLAG_ADJ_BOT) return POOL_TILE_FLOOR;
 	if (obj.flags & RO_FLAG_ADJ_TOP) return POOL_TYPE_CEIL;
+	if (obj.flags & RO_FLAG_ADJ_HI ) return POOL_TILE_NORMAL_WALL; // plaster wall
 	return POOL_TILE_WALL;
 }
 pool_texture_params_t &get_pool_tile_params(room_object_t const &obj) {return pool_texture_params[get_pool_tile_type(obj)];}

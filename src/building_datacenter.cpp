@@ -396,6 +396,20 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 			} // for r
 		}
 	}
+	if (is_datacenter() && !check_windows && !interior->int_windows.empty()) {
+		// data center with windowless walls; add interior wall surfaces so that window blending works correctly (draw order is wrong for exterior walls)
+		cube_t const &part(parts[room.part_id]);
+		bool const dim(!bool(hallway_dim));
+		float const wall_thick(0.5*get_trim_thickness());
+
+		for (unsigned dir = 0; dir < 2; ++dir) {
+			float const wall_pos(room.d[dim][dir]);
+			if (wall_pos != part.d[dim][dir]) continue; // not an exterior wall
+			cube_t wall(room);
+			wall.d[dim][!dir] = wall_pos - (dir ? 1.0 : -1.0)*wall_thick;
+			objs.emplace_back(wall, TYPE_POOL_TILE, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_HI)); // flag as plaster wall
+		} // for dir
+	}
 	if (num_servers == 0 && num_comps == 0) return 0; // both servers and computers count
 	add_door_sign("Server Room", room, zval, room_id);
 	return 1;
