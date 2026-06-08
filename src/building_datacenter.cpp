@@ -172,10 +172,14 @@ cube_t building_t::create_datacenter_floorplan(unsigned part_id, float window_hs
 
 			if ((conn_office_to_server && e == 0 && !br_side) || (conn_util_to_server && e == 1)) { // add a door between this room and the server room
 				bool const open_dir(bool(e) != se_end);
-				float const door_pos(rgen.rand_uniform(rwall.d[min_dim][0]+doorway_hwidth, rwall.d[min_dim][1]-doorway_hwidth));
-				cube_t rwall2;
-				remove_section_from_cube_and_add_door(rwall, rwall2, (door_pos - doorway_hwidth), (door_pos + doorway_hwidth), min_dim, open_dir);
-				room_walls.push_back(rwall2);
+				float const lo(rwall.d[min_dim][0] + doorway_width), hi(rwall.d[min_dim][1] - doorway_width);
+
+				if (lo < hi) { // should be true
+					float const door_pos(rgen.rand_uniform(lo, hi));
+					cube_t rwall2;
+					remove_section_from_cube_and_add_door(rwall, rwall2, (door_pos - doorway_hwidth), (door_pos + doorway_hwidth), min_dim, open_dir);
+					room_walls.push_back(rwall2);
+				}
 			}
 			room_walls.push_back(rwall);
 		} // for e
