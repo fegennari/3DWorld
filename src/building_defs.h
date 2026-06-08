@@ -138,7 +138,7 @@ std::string const btype_names[NUM_BUILDING_TYPES] =
 {"", "House", "Multi-Family House", "Office", "Apartments", "Hotel", "Hospital", "Parking", "Mall", "Factory", "Warehouse", "Power Plant",
 "School", "Police Station", "Fire Station", "Prison", "Restaurant", "Store", "Restroom", "Data Center"};
 colorRGBA const  btype_colors[NUM_BUILDING_TYPES] =
-{WHITE, WHITE, YELLOW,               WHITE,    GREEN,        GREEN,   BLUE,       BROWN,     ORANGE, RED,       RED,         RED,
+{WHITE, WHITE, YELLOW,               WHITE,    GREEN,        DK_GREEN, BLUE,       BROWN,     ORANGE, RED,       RED,         RED,
  PURPLE,   MAGENTA,          MAGENTA,        BLACK,    CYAN,         WHITE,   PINK,       ORANGE};
 typedef uint8_t building_type_t;
 
