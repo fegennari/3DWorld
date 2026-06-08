@@ -3459,8 +3459,9 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 	bool const pri_dir(room_rgen.rand_bool()); // random, but the same across all floors
 	add_fire_ext_along_wall(room, zval, room_id, tot_light_amt, !long_dim, pri_dir, room_rgen);
 
-	// add a water fountain to the center of the hall (likely between stairs and elevator)
-	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_WFOUNTAIN)) {
+	// add a water fountain to the center of the hall (likely between stairs and elevator);
+	// only on first floor of data center, though there may be none placed at all due to the interior windows
+	if ((first_floor || !is_datacenter()) && building_obj_model_loader.is_model_valid(OBJ_MODEL_WFOUNTAIN)) {
 		float used_space_center(0.0); // calculate occupied hallway width near water fountain, assuming the first stairwell and elevator are in the primary hallway
 		if (!interior->stairwells.empty()) {max_eq(used_space_center, interior->stairwells.front().get_width());}
 		if (!interior->elevators .empty()) {max_eq(used_space_center, interior->elevators .front().get_width());}
