@@ -443,10 +443,10 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 		// TODO
 	}
 	// add breaker panel
-	// TODO
+	add_breaker_panel_by_door(rgen, room, zval, room_id, tot_light_amt);
 
-	// add fans
-	//add_wall_fans_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);
+	// add ducts
+	// TODO
 	add_door_sign("Utility", room, zval, room_id);
 }
 
@@ -478,6 +478,25 @@ bool building_t::add_row_of_models(cube_t const &place_area, float zval, unsigne
 		placed = 1;
 	}
 	return placed;
+}
+
+bool building_t::add_breaker_panel_by_door(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt) {
+	vect_door_stack_t const &doorways(get_doorways_for_room(room, zval)); // get interior doors
+	if (doorways.empty()) return 0; // should always have a door, unless we happen to have a room in a small part at the top of a skyscraper?
+	door_stack_t const &door(doorways.front()); // choose the first door (there is likely only one)
+	bool const side(!door.get_check_dirs()), dim(door.dim), dir(door.get_center_dim(dim) > room.get_center_dim(dim)); // the wall the door is on
+	cube_t const room_bounds(get_room_wall_bounds(room));
+	float const door_edge(door.d[!dim][side]), wall_edge(room_bounds.d[!dim][side]), ceil_zval(zval + get_floor_ceil_gap());
+	float const wall_len(fabs(door_edge - wall_edge)), wall_center(0.5*(door_edge + wall_edge)), wall_pos(room_bounds.d[dim][dir]);
+	float const floor_spacing(get_window_vspace()), width(min(0.5f*wall_len, rgen.rand_uniform(0.25, 0.35)*floor_spacing)), depth(0.04*floor_spacing);
+	cube_t breaker_panel;
+	set_cube_zvals(breaker_panel, (ceil_zval - 0.75*floor_spacing), (ceil_zval - rgen.rand_uniform(0.25, 0.3)*floor_spacing));
+	set_wall_width(breaker_panel, wall_center, 0.5*width, !dim);
+	breaker_panel.d[dim][ dir] = wall_pos;
+	breaker_panel.d[dim][!dir] = wall_pos + (dir ? -1.0 : 1.0)*depth;
+	add_breaker_panel(rgen, breaker_panel, ceil_zval, door.dim, dir, room_id, tot_light_amt);
+	breaker_panel.d[dim][!dir] += (dir ? -1.0 : 1.0)*width; // add padding for desk placement
+	return 1;
 }
 
 void building_t::add_dc_office_objs(rand_gen_t rgen, room_t const &room, colorRGBA const &chair_color, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {

@@ -3637,21 +3637,9 @@ bool building_t::add_security_room_objs(rand_gen_t rgen, room_t const &room, flo
 	cube_t breaker_panel, tv;
 	vect_cube_t blockers;
 	interior->security_room_ix = room_id;
-	// add breaker panel
-	vect_door_stack_t const &doorways(get_doorways_for_room(room, zval)); // get interior doors
-		
-	if (!doorways.empty()) { // should always be true, unless we happen to have a security room in a small part at the top of a skyscraper?
-		door_stack_t const &door(doorways.front()); // choose the first door (there is likely only one)
-		bool const side(!door.get_check_dirs()), dim(door.dim), dir(door.get_center_dim(dim) > room.get_center_dim(dim)); // the wall the door is on
-		float const door_edge(door.d[!dim][side]), wall_edge(room_bounds.d[!dim][side]);
-		float const wall_len(fabs(door_edge - wall_edge)), wall_center(0.5*(door_edge + wall_edge)), wall_pos(room_bounds.d[dim][dir]);
-		float const width(min(0.5f*wall_len, rgen.rand_uniform(0.25, 0.35)*floor_spacing)), depth(0.04*floor_spacing);
-		set_cube_zvals(breaker_panel, (ceil_zval - 0.75*floor_spacing), (ceil_zval - rgen.rand_uniform(0.25, 0.3)*floor_spacing));
-		set_wall_width(breaker_panel, wall_center, 0.5*width, !dim);
-		breaker_panel.d[dim][ dir] = wall_pos;
-		breaker_panel.d[dim][!dir] = wall_pos + (dir ? -1.0 : 1.0)*depth;
-		add_breaker_panel(rgen, breaker_panel, ceil_zval, door.dim, dir, room_id, tot_light_amt);
-		breaker_panel.d[dim][!dir] += (dir ? -1.0 : 1.0)*width; // add padding for desk placement
+	
+	if (add_breaker_panel_by_door(rgen, room, zval, room_id, tot_light_amt)) { // add breaker panel
+		breaker_panel = objs.back();
 		blockers.push_back(breaker_panel);
 	}
 	unsigned const desk_obj_id(objs.size());
