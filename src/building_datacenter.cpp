@@ -104,7 +104,9 @@ cube_t building_t::create_datacenter_floorplan(unsigned part_id, float window_hs
 		if (br_side) { // bathroom side is opposite stairs and elevator
 			cube_t bathroom(office);
 			bathroom.d[max_dim][se_end] = office.d[max_dim][!se_end] = bath_pos;
-			add_assigned_room(bathroom, part_id, RTYPE_BATH);
+			// only the bottom two floors are bathrooms (Men/Women); upper floors are offices
+			add_assigned_room(bathroom, part_id, RTYPE_OFFICE); // set the offices first
+			for (unsigned f = 0; f < 2; ++f) {rooms.back().assign_to(RTYPE_BATH, f, 1, 1);} // locked=1, force=1
 			br_door_pos = bathroom.get_center_dim(max_dim); // centered
 			// small office next to bathroom is security room on the first floor
 			float const rlen(office.get_sz_dim(min_dim)), rwidth(office.get_sz_dim(max_dim));
@@ -117,7 +119,7 @@ cube_t building_t::create_datacenter_floorplan(unsigned part_id, float window_hs
 				cube_t walls[2] = {office, office};
 				create_wall(walls[0], min_dim, split_pos, fc_thick, wall_hthick, wall_edge_spacing);
 				float const door_pos(rgen.rand_uniform(office.d[max_dim][0]+1.5*doorway_hwidth, office.d[max_dim][1]-1.5*doorway_hwidth));
-				remove_section_from_cube_and_add_door(walls[0], walls[1], (door_pos - doorway_hwidth), (door_pos + doorway_hwidth), max_dim, d);
+				remove_section_from_cube_and_add_door(walls[0], walls[1], (door_pos - doorway_hwidth), (door_pos + doorway_hwidth), max_dim, d, 0, 0, 1); // closed=1
 				for (unsigned e = 0; e < 2; ++e) {hall_walls.push_back(walls[e]);}
 			}
 			add_assigned_room(office, part_id, RTYPE_OFFICE);

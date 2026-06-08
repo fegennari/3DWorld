@@ -710,7 +710,7 @@ bool building_t::add_office_objs(rand_gen_t rgen, room_t const &room, vect_cube_
 	unsigned const desk_obj_id(objs.size());
 	if (!add_desk_to_room(rgen, room, blockers, chair_color, zval, room_id, tot_light_amt, objs_start, is_basement)) return 0;
 
-	if (!is_house && (is_prison() || rgen.rand_float() < 0.5) && !room_has_stairs_or_elevator(room, zval, floor_ix)) { // allow two desks in one office
+	if (!is_house && (is_prison() || is_datacenter() || rgen.rand_float() < 0.5) && !room_has_stairs_or_elevator(room, zval, floor_ix)) { // allow two desks in one office
 		room_object_t const &desk(objs[desk_obj_id]);
 		assert(desk.type == TYPE_DESK);
 		blockers.push_back(desk); // temporarily add the previous desk as a blocker for the new desk and its chair
