@@ -521,6 +521,7 @@ void building_t::finish_gen_geometry(rand_gen_t &rgen, bool has_overlapping_cube
 	if (interior) {interior->assign_door_conn_rooms();} // must be after adding extended basement and before adding room geom
 	if (interior) {interior->finalize();}
 	gen_building_doors_if_needed(rgen);
+	if (is_datacenter()) {add_datacenter_outdoor_objs(rgen);}
 }
 
 void building_t::split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen) {

@@ -202,6 +202,32 @@ cube_t building_t::create_datacenter_floorplan(unsigned part_id, float window_hs
 	return hall;
 }
 
+void building_t::add_datacenter_outdoor_objs(rand_gen_t &rgen) {
+	if ((real_num_parts - has_basement()) != 1) return; // only handles a single part
+	// add outdoor AC units
+	bool const dim(!bool(hallway_dim));
+	cube_t const &part(parts[0]);
+	float const floor_spacing(get_window_vspace()), bldg_length(part.get_sz_dim(!dim)), edge_space(rgen.rand_uniform(0.2, 0.3)*bldg_length);
+	float const depth(0.40*floor_spacing), width(1.5*depth), height(0.35*floor_spacing);
+	unsigned const num(min(16.0, rgen.rand_uniform(0.4, 0.6)*(bldg_length - 2.0*edge_space)/width));
+	if (num < 2) return; // shouldn't happen
+	float const start(part.d[!dim][0] + edge_space), end(part.d[!dim][1] - edge_space), spacing((end - start)/num);
+	roof_obj_t ac(ROOF_OBJ_AC);
+	set_cube_zvals(ac, part.z1(), (part.z1() + height));
+
+	for (unsigned dir = 0; dir < 2; ++dir) {
+		ac.d[dim][!dir] = part.d[dim][ dir] + (dir ? 1.0 : -1.0)*0.07*floor_spacing; // place slightly away from the exterior wall to avoid window sills
+		ac.d[dim][ dir] = ac  .d[dim][!dir] + (dir ? 1.0 : -1.0)*depth;
+
+		for (unsigned n = 0; n < num; ++n) {
+			set_wall_width(ac, (start + n*spacing), 0.5*width, !dim);
+			details.push_back(ac);
+			union_with_coll_bcube(ac);
+		}
+	} // for dir
+	has_ac = 1;
+}
+
 bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start) { // for office buildings
 	bool const long_dim(room.dx() < room.dy()), mult_rows(is_datacenter());
 	float const window_vspacing(get_window_vspace()), ceiling_zval(zval + get_floor_ceil_gap());

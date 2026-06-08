@@ -1921,6 +1921,7 @@ struct building_t : public building_geom_t {
 	void create_conv_store_floorplan(unsigned part_id, rand_gen_t &rgen);
 	void create_restroom_floorplan  (unsigned part_id, rand_gen_t &rgen);
 	cube_t create_datacenter_floorplan(unsigned part_id, float window_hspacing[2], int num_windows_per_side[2], rand_gen_t &rgen);
+	void add_datacenter_outdoor_objs(rand_gen_t &rgen);
 	bool maybe_assign_interior_garage(bool &gdim, bool &gdir);
 	void add_parking_garage_ramp(rand_gen_t &rgen);
 	bool add_machines_to_room(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool less_clearance=0);
