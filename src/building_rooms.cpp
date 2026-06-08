@@ -806,11 +806,11 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					add_laundry_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, added_bathroom_objs_mask);
 			}
 			else if (is_dc_server_room) {
-				added_obj = no_whiteboard = no_plants = add_server_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
+				added_obj = no_whiteboard = no_plants = no_trashcan = add_server_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 			}
 			else if (is_datacenter() && init_rtype_f0 == RTYPE_UTILITY) { // datacenter utility rooms are on each floor
 				add_dc_utility_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
-				added_obj = no_whiteboard = no_plants = is_utility = 1;
+				added_obj = no_whiteboard = no_plants = no_trashcan = is_utility = 1;
 			}
 			else if (is_datacenter() && r->get_room_type(f) == RTYPE_BATH) { // datacenter bathroom on this floor
 				added_obj = is_bathroom = added_bathroom = add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt,

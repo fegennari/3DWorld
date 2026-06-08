@@ -352,7 +352,7 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 		float const clearance(get_min_front_clearance_inc_people());
 		float const front_clearance(1.2*clearance), back_clearance(1.0*clearance), edge_gap(max(server_depth, 1.6f*clearance));
 		float const side_gap(0.02*server_width), block_width(num_per_block*server_width + (num_per_block-1)*side_gap);
-		float aisle_gap(max(server_depth, 1.5f*clearance)), block_gap(max(2.0f*server_width, 1.25f*clearance));
+		float aisle_gap(max(server_depth, 1.3f*clearance)), block_gap(max(2.0f*server_width, 1.25f*clearance));
 		float row_spacing(server_depth + aisle_gap), block_spacing(block_width + block_gap);
 		float const avail_depth(inner_width - 2*edge_gap + aisle_gap), avail_width(inner_len - 2*edge_gap + block_gap);
 		unsigned const num_rows(avail_depth/row_spacing), num_blocks(avail_width/block_spacing); // take floor
@@ -428,63 +428,16 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 	cube_t const place_area(get_walkable_room_bounds(room));
 	bool const dim(hallway_dim), dir(interior->dc_info->se_dir); // server room is in the direction of the stairs and elevators
 	float const floor_spacing(get_window_vspace()), clearance(get_min_front_clearance_inc_people());
-	float const room_len(place_area.get_sz_dim(dim)), room_width(place_area.get_sz_dim(!dim)), dsign(dir ? 1.0 : -1.0);
-
-	// add ventilation fans between windows; unfortunately, there's no way to make them non-rusty
-	if (0 && building_obj_model_loader.is_model_valid(OBJ_MODEL_VENT_FAN)) {
-		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_VENT_FAN)); // D, W, H
-		unsigned const num_windows(get_num_windows_on_side(room, !dim));
-		float const window_hspace(room.get_sz_dim(!dim)/num_windows), height(0.75*floor_spacing), hwidth(0.5*height*sz.y/sz.z), depth(height*sz.x/sz.z);
-		cube_t fan;
-		set_wall_width(fan, (zval + 0.5f*floor_spacing), 0.5*height, 2);
-
-		for (unsigned dir = 0; dir < 2; ++dir) { // end walls
-			if (classify_room_wall(room, zval, dim, dir, 0) != ROOM_WALL_EXT) continue; // exterior walls only
-			float const dsign(dir ? -1.0 : 1.0), wall_pos(room.d[dim][dir]), mount_pos(wall_pos - dsign*0.36*depth); // outside the window
-			fan.d[dim][ dir] = mount_pos;
-			fan.d[dim][!dir] = mount_pos + dsign*depth;
-
-			for (unsigned n = 0; n < num_windows; ++n) { // every window
-				set_wall_width(fan, (room.d[!dim][0] + (n + 0.5)*window_hspace), hwidth, !dim); // centered on the window
-				objs.emplace_back(fan, TYPE_VENT_FAN, room_id, dim, !dir, (RO_FLAG_IN_FACTORY | RO_FLAG_UNTEXTURED), tot_light_amt, SHAPE_CUBE);
-			}
-		} // for dir
-	}
-	float cur_place_pos(place_area.d[dim][dir]); // start at front wall adjacent to server room
+	float cur_place_pos(place_area.d[dim][ dir]); // start at front wall adjacent to server room
 	// place batteries, represented as kitchen fridges, against the wall shared with the server room
 	int const bat_model(select_dc_battery_model());
-
-	if (bat_model >= 0 && building_obj_model_loader.is_model_valid(bat_model)) {
-		vector3d const sz(building_obj_model_loader.get_model_world_space_size(bat_model)); // D, W, H
-		float const height(0.6*floor_spacing), hwidth(0.5*height*sz.y/sz.z), depth(height*sz.x/sz.z), min_spacing(2.2*hwidth);
-		unsigned const num_bat(room_width/min_spacing);
-
-		if (num_bat > 0) { // should be true
-			unsigned const item_flags(get_sub_model_id(bat_model));
-			float const spacing(room_width/num_bat);
-			float bpos(place_area.d[!dim][0] + 0.5*spacing);
-			cube_t bat;
-			set_cube_zvals(bat, zval, zval+height);
-			bat.d[dim][ dir] = cur_place_pos;
-			cur_place_pos   -= dsign*depth; // move away from the wall
-			bat.d[dim][!dir] = cur_place_pos;
-			cur_place_pos   += dsign*clearance;
-
-			for (unsigned n = 0; n < num_bat; ++n, bpos += spacing) {
-				set_wall_width(bat, bpos, hwidth, !dim);
-				if (is_cube_close_to_doorway(bat, room, 0.0, 1, 1)) continue; // inc_open_doors=1, check_open_dir=1
-				objs.emplace_back(bat, TYPE_KITCH_APP, room_id, dim, !dir, 0, tot_light_amt, SHAPE_CUBE, WHITE, item_flags);
-			} // for n
-		}
-	}
+	if (bat_model >= 0) {add_row_of_models(place_area, zval, room_id, tot_light_amt, 0.55*floor_spacing, bat_model,
+		TYPE_KITCH_APP, dim, dir, !dir, get_sub_model_id(bat_model), cur_place_pos);}
 	// place transformers
-	unsigned const num_tf(4);
-	float const tzval(zval - 0.025*floor_spacing); // transformer is slightly below floor level
-
-	for (unsigned n = 0; n < num_tf; ++n) {
-		if (!place_model_along_wall(OBJ_MODEL_SUBSTATION, TYPE_XFORMER, room, 0.5, rgen, tzval, room_id, tot_light_amt, place_area, objs_start)) break;
-		objs.back().dir ^= 1; // back to front
-	}
+	cube_t xfmr_area(place_area);
+	xfmr_area.expand_in_dim(!dim, -1.5*clearance);
+	add_row_of_models(xfmr_area, zval, room_id, tot_light_amt, 0.42*floor_spacing, OBJ_MODEL_SUBSTATION, TYPE_XFORMER, dim, dir, dir, 0, cur_place_pos);
+	
 	// place AC units
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_RAD_FAN)) {
 		// TODO
@@ -495,6 +448,36 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 	// add fans
 	//add_wall_fans_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);
 	add_door_sign("Utility", room, zval, room_id);
+}
+
+bool building_t::add_row_of_models(cube_t const &place_area, float zval, unsigned room_id, float tot_light_amt, float height,
+	unsigned model_id, unsigned type, bool dim, bool dir, bool obj_dir, unsigned item_flags, float &cur_pos)
+{
+	if (!building_obj_model_loader.is_model_valid(model_id)) return 0;
+	vector3d const sz(building_obj_model_loader.get_model_world_space_size(model_id)); // D, W, H
+	float const hwidth(0.5*height*sz.y/sz.z), depth(height*sz.x/sz.z), min_spacing(2.2*hwidth);
+	float const clearance(get_min_front_clearance_inc_people()), row_space(1.2*clearance), avail_width(place_area.get_sz_dim(!dim));
+	unsigned const num(avail_width/min_spacing);
+	if (num == 0) return 0;
+	float const spacing(avail_width/num), dsign(dir ? 1.0 : -1.0);
+	float tpos(place_area.d[!dim][0] + 0.5*spacing);
+	cube_t obj;
+	set_cube_zvals(obj, zval, zval+height);
+	obj.d[dim][ dir] = cur_pos;
+	float new_pos(cur_pos - dsign*depth); // move away from the wall
+	obj.d[dim][!dir] = new_pos;
+	new_pos -= dsign*row_space;
+	if (new_pos < place_area.d[dim][0] || new_pos > place_area.d[dim][1]) return 0; // can't fit in the space, with a gap
+	cur_pos = new_pos;
+	bool placed(0);
+
+	for (unsigned n = 0; n < num; ++n, tpos += spacing) {
+		set_wall_width(obj, tpos, hwidth, !dim);
+		if (is_cube_close_to_doorway(obj, place_area, 0.0, 1, 1)) continue; // inc_open_doors=1, check_open_dir=1
+		interior->room_geom->objs.emplace_back(obj, type, room_id, dim, obj_dir, 0, tot_light_amt, SHAPE_CUBE, WHITE, item_flags);
+		placed = 1;
+	}
+	return placed;
 }
 
 void building_t::add_dc_office_objs(rand_gen_t rgen, room_t const &room, colorRGBA const &chair_color, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
