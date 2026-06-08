@@ -421,15 +421,17 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 
 void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	// TODO: multiple substations, rows of cylinder machines for generators, rows of batteries, rows of AC units, fans in windows
+	assert(interior->dc_info);
 	zval       = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_CONCRETE); // add concrete and move the effective floor up
 	objs_start = interior->room_geom->objs.size(); // exclude this from collision checks
 	auto &objs(interior->room_geom->objs);
 	cube_t const place_area(get_walkable_room_bounds(room));
-	float const floor_spacing(get_window_vspace());
+	bool const dim(hallway_dim), dir(interior->dc_info->se_dir); // server room is in the direction of the stairs and elevators
+	float const floor_spacing(get_window_vspace()), clearance(get_min_front_clearance_inc_people());
+	float const room_len(place_area.get_sz_dim(dim)), room_width(place_area.get_sz_dim(!dim)), dsign(dir ? 1.0 : -1.0);
 
-	// add ventilation fans between windows
-	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_VENT_FAN)) {
-		bool const dim(hallway_dim);
+	// add ventilation fans between windows; unfortunately, there's no way to make them non-rusty
+	if (0 && building_obj_model_loader.is_model_valid(OBJ_MODEL_VENT_FAN)) {
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_VENT_FAN)); // D, W, H
 		unsigned const num_windows(get_num_windows_on_side(room, !dim));
 		float const window_hspace(room.get_sz_dim(!dim)/num_windows), height(0.75*floor_spacing), hwidth(0.5*height*sz.y/sz.z), depth(height*sz.x/sz.z);
@@ -448,6 +450,33 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 			}
 		} // for dir
 	}
+	float cur_place_pos(place_area.d[dim][dir]); // start at front wall adjacent to server room
+	// place batteries, represented as kitchen fridges, against the wall shared with the server room
+	int const bat_model(select_dc_battery_model());
+
+	if (bat_model >= 0 && building_obj_model_loader.is_model_valid(bat_model)) {
+		vector3d const sz(building_obj_model_loader.get_model_world_space_size(bat_model)); // D, W, H
+		float const height(0.6*floor_spacing), hwidth(0.5*height*sz.y/sz.z), depth(height*sz.x/sz.z), min_spacing(2.2*hwidth);
+		unsigned const num_bat(room_width/min_spacing);
+
+		if (num_bat > 0) { // should be true
+			unsigned const item_flags(get_sub_model_id(bat_model));
+			float const spacing(room_width/num_bat);
+			float bpos(place_area.d[!dim][0] + 0.5*spacing);
+			cube_t bat;
+			set_cube_zvals(bat, zval, zval+height);
+			bat.d[dim][ dir] = cur_place_pos;
+			cur_place_pos   -= dsign*depth; // move away from the wall
+			bat.d[dim][!dir] = cur_place_pos;
+			cur_place_pos   += dsign*clearance;
+
+			for (unsigned n = 0; n < num_bat; ++n, bpos += spacing) {
+				set_wall_width(bat, bpos, hwidth, !dim);
+				if (is_cube_close_to_doorway(bat, room, 0.0, 1, 1)) continue; // inc_open_doors=1, check_open_dir=1
+				objs.emplace_back(bat, TYPE_KITCH_APP, room_id, dim, !dir, 0, tot_light_amt, SHAPE_CUBE, WHITE, item_flags);
+			} // for n
+		}
+	}
 	// place transformers
 	unsigned const num_tf(4);
 	float const tzval(zval - 0.025*floor_spacing); // transformer is slightly below floor level
@@ -456,16 +485,9 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 		if (!place_model_along_wall(OBJ_MODEL_SUBSTATION, TYPE_XFORMER, room, 0.5, rgen, tzval, room_id, tot_light_amt, place_area, objs_start)) break;
 		objs.back().dir ^= 1; // back to front
 	}
-	// place batteries, represented as kitchen fridges
-	int const bat_model(select_dc_battery_model());
-
-	if (bat_model > 0 && building_obj_model_loader.is_model_valid(bat_model)) {
-		unsigned const num_bat(4);
-		// TODO: array
-
-		for (unsigned n = 0; n < num_bat; ++n) {
-			if (!place_model_along_wall(bat_model, TYPE_KITCH_APP, room, 0.6, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 4, 0, WHITE, 1)) break;
-		}
+	// place AC units
+	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_RAD_FAN)) {
+		// TODO
 	}
 	// add breaker panel
 	// TODO
