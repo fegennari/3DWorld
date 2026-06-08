@@ -44,6 +44,8 @@ cube_t building_t::create_datacenter_floorplan(unsigned part_id, float window_hs
 	float const office_pos(part.d[max_dim][ se_end] - se_end_sign*num_office_wind*wind_space);
 	float const util_pos  (part.d[max_dim][!se_end] + se_end_sign*num_util_wind  *wind_space);
 	float const bath_pos  (office_pos + se_end_sign*num_bath_wind*wind_space); // between server room and office on side opposite stairs/elevator
+	bool const skip_sr_util_windows = 1;
+	interior->dc_info.reset(new bldg_datacenter_info_t(se_end, office_pos, util_pos, bath_pos, skip_sr_util_windows)); // needed for window creation, etc.
 
 	if (num_short_wind >= 9 && num_long_wind >= 9) { // larger building, at least 4 windows per side; add secondary hallway and two rows of side rooms
 		// TODO
@@ -229,7 +231,9 @@ void building_t::add_datacenter_outdoor_objs(rand_gen_t &rgen) {
 }
 
 bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start) { // for office buildings
+	assert(has_room_geom());
 	bool const long_dim(room.dx() < room.dy()), mult_rows(is_datacenter());
+	bool const check_windows(!(interior->dc_info && interior->dc_info->skip_sr_util_windows));
 	float const window_vspacing(get_window_vspace()), ceiling_zval(zval + get_floor_ceil_gap());
 	float const server_height(0.7*window_vspacing*rgen.rand_uniform(0.9, 1.1)*(mult_rows ? 0.9 : 1.0)); // slightly shorter if mulri-row to avoid blocking lights
 	float const server_width (0.3*window_vspacing*rgen.rand_uniform(0.9, 1.1)), server_hwidth(0.5*server_width);
@@ -261,7 +265,7 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 		bool is_ext_wall[2]={};
 		
 		for (unsigned dir = 0; dir < 2; ++dir) {
-			if (classify_room_wall(room, zval, !dim, dir, 0) == ROOM_WALL_EXT) {is_ext_wall[dir] = 1;} // will skip placement on this wall
+			if (check_windows && classify_room_wall(room, zval, !dim, dir, 0) == ROOM_WALL_EXT) {is_ext_wall[dir] = 1;} // will skip placement on this wall
 			else {inner_area.d[!dim][dir] += (dir ? -1.0 : 1.0)*server_depth;} // shrink inner area by server depth
 		}
 		for (unsigned n = 0; n < num; ++n, center[dim] += server_spacing) {

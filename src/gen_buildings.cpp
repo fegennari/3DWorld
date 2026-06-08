@@ -2701,8 +2701,9 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) { // multiple cubes/parts/levels, excluding chimney/porch/etc.
 		if (is_basement(i)) continue; // skip the basement
 		unsigned const part_ix(i - parts.begin());
+		unsigned draw_dims_mask(3); // XY
 
-		if (part_ix == 0 && is_industrial()) { // industrial has top 1-2 rows of windows and bottom windows for bathroom and office
+		if (part_ix == 0 && interior && is_industrial()) { // industrial has top 1-2 rows of windows and bottom windows for bathroom and office
 			float const window_z1(get_industrial_window_z1()), wall_thickness(get_wall_thickness());
 			cube_t part(*i);
 			set_cube_zvals(part, max(i->z1(), window_z1), i->z2()); // top row only
@@ -2738,6 +2739,13 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 			} // for r
 			draw_parts_mask |= (1 << part_ix);
 			continue;
+		}
+		if (part_ix == 0 && interior && interior->dc_info && interior->dc_info->skip_sr_util_windows) { // datacenter has no windows on sides of server and utility rooms
+			bool const dim(hallway_dim);
+			cube_t wind_area(*i);
+			wind_area.d[dim][!interior->dc_info->se_dir] = interior->dc_info->office_pos; // only around offices end
+			bdraw.add_section(*this, 1, wind_area, tex, color, (1 << (!dim)), 0, 0, 1, clip_windows, 0.0, 0, offset_scale, 0, nullptr); // short dim, no_ao=1
+			draw_dims_mask = (1 << dim ); // draw long dim only, with door cutouts, below
 		}
 		bool const split_per_floor(part_ix == 0 && floor_ext_door_mask > 1); // for multi-family houses
 		unsigned const num_splits(split_per_floor ? calc_num_floors(*i, floor_spacing, get_floor_thickness()) : 1);
@@ -2778,7 +2786,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 			}
 			// skip windows on sides with doors, but only for buildings with windows
 			unsigned const dsides((part_ix < 4 && draw_windows && i->z1() == ground_floor_z1) ? door_sides[part_ix] : 0);
-			bdraw.add_section(*this, 1, part, tex, color, 3, 0, 0, 1, clip_windows, door_ztop, dsides, offset_scale, 0, clamp_cube); // XY, no_ao=1
+			bdraw.add_section(*this, 1, part, tex, color, draw_dims_mask, 0, 0, 1, clip_windows, door_ztop, dsides, offset_scale, 0, clamp_cube); // XY, no_ao=1
 			draw_parts_mask |= (1 << part_ix);
 
 			// add ground floor windows next to doors
@@ -2787,6 +2795,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 			float const space(0.25*floor_spacing), toler(0.1*floor_spacing);
 
 			for (unsigned dim = 0; dim < 2; ++dim) {
+				if (!(draw_dims_mask & (1 << dim))) continue; // this dim disabled
 				unsigned const num_windows(get_num_windows_on_side(*i, !dim));
 				if (num_windows <= 1) continue; // no space to split the windows on this wall
 				float const window_spacing(i->get_sz_dim(!dim)/num_windows), side_lo(i->d[!dim][0]), side_hi(i->d[!dim][1]);

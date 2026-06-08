@@ -1505,6 +1505,13 @@ struct bldg_industrial_info_t {
 	void clear_room_details() {smoke_emitters.clear(); pg_extended_pipes.clear();}
 };
 
+struct bldg_datacenter_info_t {
+	bool se_dir; // dir for stairs/elevator/offices/bathrooms
+	bool skip_sr_util_windows;
+	float office_pos, util_pos, bath_pos;
+	bldg_datacenter_info_t(bool sd, float op, float up, float bp, bool sw) : se_dir(sd), skip_sr_util_windows(sw), office_pos(op), util_pos(up), bath_pos(bp) {}
+};
+
 struct wall_seg_t : public cube_t {
 	bool dim=0, dir=0, open=0;
 	unsigned room_ix=0, conn_room_ix=0;
@@ -1536,6 +1543,7 @@ struct building_interior_t {
 	std::unique_ptr<building_conn_info_t  > conn_info;
 	std::unique_ptr<building_mall_info_t  > mall_info;
 	std::unique_ptr<bldg_industrial_info_t> ind_info ;
+	std::unique_ptr<bldg_datacenter_info_t> dc_info  ;
 	cube_with_ix_t pg_ramp, attic_access, parking_entrance; // ix stores {2*dim + dir}
 	indoor_pool_t pool;
 	cube_t basement_ext_bcube, elevator_equip_room, ps_bathroom;
