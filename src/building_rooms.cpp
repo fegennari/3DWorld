@@ -976,7 +976,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					bool const force(!added_bedroom && f+1 == num_floors && (r+1 == rooms.end() || (r+1)->is_ext_basement()));
 					added_obj = can_place_onto = added_bedroom = is_bedroom =
 						add_bedroom_objs(rgen, *r, blockers, chair_color, room_center.z, room_id, f, tot_light_amt,
-							objs_start, is_lit, is_basement, force, light_ix_assign, cand_bathroom);
+							objs_start, is_lit, is_basement, force, light_ix_assign, ((cand_bathroom < rooms.size()) ? cand_bathroom : -1));
 					if (is_bedroom) {r->assign_to(RTYPE_BED, f);}
 					num_bedrooms   += is_bedroom;
 					bed_floor_mask |= floor_mask;
