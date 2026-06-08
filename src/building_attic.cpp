@@ -1184,6 +1184,7 @@ int building_t::choose_air_intake_room() const { // for the air return
 void building_t::maybe_add_skylight(rand_gen_t &rgen) { // for office building
 	if (is_industrial()) return; // no industrial building skylights; they work, but factories, etc. have enough windows already
 	if (is_parking   ()) return; // not needed for parking structures
+	if (is_datacenter() && rgen.rand_bool()) return; // 50% chance for data centers
 	// maybe add skylights; cube roofs only for now, since we can't cut holes in other shapes; only for office buildings with interiors;
 	// could add skylights to house rooms such as bathrooms, but they haven't been assigned and we would need to cut holes in the roof and possibly attic
 	// note that at this point there has been no floorplanning, so we don't know where primary hallways, etc. will be
