@@ -2552,6 +2552,8 @@ private:
 	void add_shopping_carts_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float light_amt, unsigned objs_start, unsigned max_carts);
 	bool add_small_retail_room_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float light_amt);
 	void add_conv_store_objs(rand_gen_t &rgen, room_t const &room, float &zval, unsigned room_id, float light_amt, cube_t &place_area, bool &dim);
+	bool add_row_of_objects(cube_t const &place_area, float zval, unsigned room_id, float tot_light_amt, float height, float width, float depth,
+		float gap_mult, unsigned type, bool dim, bool dir, bool obj_dir, unsigned item_flags, colorRGBA const &color, float &cur_pos);
 	bool add_row_of_models(cube_t const &place_area, float zval, unsigned room_id, float tot_light_amt, float height,
 		unsigned model_id, unsigned type, bool dim, bool dir, bool obj_dir, unsigned item_flags, float &cur_pos);
 	float gather_room_lights(unsigned objs_start_inc_lights, vect_cube_t &lights) const;
