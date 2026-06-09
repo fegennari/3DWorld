@@ -203,7 +203,7 @@ enum {RTYPE_NOTSET=0, RTYPE_HALL, RTYPE_STAIRS, RTYPE_OFFICE, RTYPE_BATH, RTYPE_
 	RTYPE_SWIM, RTYPE_SECURITY, RTYPE_LOUNGE, RTYPE_COMMON, RTYPE_BACKROOMS, RTYPE_RETAIL, RTYPE_ELEVATOR, RTYPE_CONF, RTYPE_MACHINE, RTYPE_INTERR,
 	RTYPE_ELEV_EQUIP, RTYPE_STORE, RTYPE_MALL, RTYPE_RESTAURANT, RTYPE_FACTORY, RTYPE_WAREHOUSE, RTYPE_HOS_BED, RTYPE_HOS_OR, RTYPE_HOS_EXAM, RTYPE_CLASS,
 	RTYPE_WAITING, RTYPE_LAB, RTYPE_CAFETERIA, RTYPE_LOCKER, RTYPE_JAIL, RTYPE_JAIL_CELL, RTYPE_GYM, RTYPE_VISIT, RTYPE_SHOWER, RTYPE_INFIRMARY,
-	RTYPE_FAMILY, RTYPE_POWERGEN, RTYPE_CAVE,
+	RTYPE_FAMILY, RTYPE_POWERGEN, RTYPE_OP_CENTER, RTYPE_CAVE,
 	NUM_RTYPES};
 typedef uint8_t room_type;
 
@@ -224,7 +224,7 @@ std::string const room_names[NUM_RTYPES] =
 "Swimming Pool Room", "Security Room", "Lounge", "Common Room", "Backrooms", "Retail", "Elevator", "Conference Room", "Machine Room", "Interrogation Room",
 "Elev Equip Room", "Store", "Mall Concourse", "Restaurant", "Factory Floor", "Warehouse", "Hospital Bedroom", "Operating Room", "Exam Room", "Classroom",
 "Waiting Room", "Laboratory", "Cafeteria", "Locker Room", "Jailroom", "Jail Cell", "Gym", "Visitation", "Shower", "Infirmary",
-"Family Room", "Power Generator", "Cave"
+"Family Room", "Power Generator", "Operations Center", "Cave"
 };
 // short room names for breaker panel labels (should be <= 8 characters)
 std::string const room_names_short[NUM_RTYPES] =
@@ -234,7 +234,7 @@ std::string const room_names_short[NUM_RTYPES] =
 "Swim", "Security", "Lounge", "Common", "Basement", "Retail", "Elevator", "Conference", "Machine", "Dungeon",
 "Equipment", "Store", "Mall", "Restaurant", "Factory", "Warehouse", "Bedroom", "OR", "Exam", "Class",
 "Waiting", "Lab", "Cafeteria", "Locker", "Jail", "Cells", "Gym", "Visit", "Shower", "Infirm",
-"Family", "Power", "Cave"
+"Family", "Power", "Op Center", "Cave"
 };
 
 unsigned const room_priorities[NUM_RTYPES] = { // for breaker labels; higher values have higher priority
@@ -244,7 +244,7 @@ unsigned const room_priorities[NUM_RTYPES] = { // for breaker labels; higher val
 	4, 4, 4, 0, 1, 2, 1, 3, 2, 2,
 	1, 3, 4, 3, 1, 1, 2, 3, 3, 2,
 	2, 3, 4, 3, 3, 1, 4, 3, 3, 4,
-	3, 4, 4
+	3, 4, 4, 4
 };
 
 // store types, for use with object placement and naming

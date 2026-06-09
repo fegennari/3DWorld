@@ -410,7 +410,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		r->light_intensity = light_val*light_val/r->get_area_xy(); // average for room, unitless; light surface area divided by room surface area with some fudge constant
 		cube_t light;
 		set_light_xy(light, room_center, light_size, room_dim, light_shape, square_light);
-		bool room_had_bathroom(0), is_numbered_room(0);
+		bool room_had_bathroom(0), is_numbered_room(0), is_op_center(0);
 		float z(r->z1());
 		if (!r->interior) {r->interior = (is_basement || is_room_windowless(*r));} // AKA windowless; calculate if not already set
 		bool const has_window(!r->interior), is_secret(r->is_secret_room());
@@ -816,6 +816,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				added_obj = is_bathroom = added_bathroom = add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt,
 					objs_start_inc_lights, objs_start, f, is_basement, 0, added_bathroom_objs_mask); // add_shower_tub=0
 			}
+			else if (is_datacenter() && init_rtype_f0 == RTYPE_OP_CENTER) {
+				add_op_center_objs(rgen, *r, chair_color, room_center.z, room_id, f, tot_light_amt, objs_start);
+				added_obj = is_op_center = 1;
+			}
 			else if (!residential && f == 0) { // commercial building special pre-assigned first floor rooms; can be in a stacked part
 				if (init_rtype_f0 == RTYPE_UTILITY) {
 					added_obj = no_whiteboard = no_plants = is_utility = add_office_utility_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
@@ -963,7 +967,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				added_bathroom |= is_bathroom;
 			}
 			// bedroom or bathroom case; need to check first floor even if must_be_bathroom;
-			if (!added_obj && allow_br && !is_tall_room && !has_walkway && !floor_will_alias && can_be_bedroom_or_bathroom(*r, f)) {
+			if (!added_obj && allow_br && !is_tall_room && !has_walkway && !floor_will_alias && !is_datacenter() && can_be_bedroom_or_bathroom(*r, f)) {
 				// Note: num_bedrooms is summed across all floors, while num_bathrooms is per-floor
 				// Note: min_br is applied to bedrooms, but could be applied to bathrooms in the same way
 				bool const pref_sec_bath(is_house && num_bathroom_rooms == 1 && num_bedrooms > min_br && !(multi_family && !(bed_floor_mask & floor_mask)) &&
@@ -990,7 +994,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					if (is_bathroom) {r->assign_to(RTYPE_BATH, f);}
 				}
 			}
-			if (!added_obj && is_office && is_office_bldg()) { // add cubicles if this is a large office building office
+			if (!added_obj && is_office && (is_office_bldg() || is_datacenter() || is_police_stat())) { // add cubicles if this is a large office building office (or similar)
 				added_obj = no_whiteboard = create_office_cubicles(rgen, *r, room_center.z, room_id, tot_light_amt);
 			}
 			if (!added_obj && is_ext_basement && rgen.rand_float() < 0.5) { // machine room
@@ -1138,7 +1142,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					if ((added_tc && !has_stairs) || (is_house && (r+1) == rooms.end())) {
 						if (add_kitchen_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, added_living, light_ix_assign)) {
 							r->assign_to(RTYPE_KITCHEN, f);
-							added_kitchen_mask |= floor_mask;
+							added_kitchen_mask |= (is_datacenter() ? 0xFF : floor_mask); // one kitchen servers all data center floors
 							is_kitchen = added_obj = 1;
 						}
 					}
@@ -1211,7 +1215,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			if (r->has_subroom()) {no_whiteboard = 1;} // whiteboard placer ingores sub-rooms
 			if (is_prison     ()) {no_whiteboard = 1;} // not even in prison office
 
-			if (is_office && !no_whiteboard && !(library_floor_mask & floor_mask) && !floor_will_alias) {
+			if ((is_office || is_op_center) && !no_whiteboard && !(library_floor_mask & floor_mask) && !floor_will_alias) {
 				// office, no cubicles or bathroom, no library on this floor - maybe make it a library; applies to schools as well
 				bool make_library(0);
 				if (is_office_bldg()) {make_library = ((rgen.rand() % (!has_pri_hall() ? 30U : max(50U, (unsigned)rooms.size()))) == 0);} // library is rare

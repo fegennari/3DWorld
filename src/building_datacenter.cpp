@@ -128,7 +128,7 @@ cube_t building_t::create_datacenter_floorplan(unsigned part_id, float window_hs
 			rooms.back().assign_to(RTYPE_SECURITY, 0, 1, 1); // floor=0, locked=1, force=1
 		}
 		else { // stairs/elevator side; add a large office with stairs/elevator cut out
-			add_assigned_room(office, part_id, RTYPE_OFFICE); // TODO: some sort of control room or meeting room with rows of desks?
+			add_assigned_room(office, part_id, RTYPE_OP_CENTER);
 		}
 		// add utility rooms
 		cube_t utility(util_area);
@@ -542,7 +542,11 @@ bool building_t::add_breaker_panel_by_door(rand_gen_t &rgen, room_t const &room,
 	return 1;
 }
 
-void building_t::add_dc_office_objs(rand_gen_t rgen, room_t const &room, colorRGBA const &chair_color, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+void building_t::add_op_center_objs(rand_gen_t rgen, room_t const &room, colorRGBA const &chair_color, float zval,
+	unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start)
+{
 	// TODO
+	vect_cube_t blockers; // unused
+	add_office_objs(rgen, room, blockers, chair_color, zval, room_id, floor_ix, tot_light_amt, objs_start, 0); // is_basement=0; ignores return value
 }
 
