@@ -165,7 +165,7 @@ cube_t building_t::create_datacenter_floorplan(unsigned part_id, float window_hs
 		// add walls and doors between rooms
 		float const room_split_wall_pos[3] = {office_pos, util_pos, bath_pos};
 
-		for (unsigned e = 0; e < (br_side ? 3 : 2); ++e) { // each room to split with a wall
+		for (unsigned e = 0; e < (br_side ? 3U : 2U); ++e) { // each room to split with a wall
 			cube_t rwall(part);
 			rwall.d[min_dim][!d] = hall_side + (d ? 1.0 : -1.0)*wall_hthick;
 			create_wall(rwall, max_dim, room_split_wall_pos[e], fc_thick, wall_hthick, wall_edge_spacing);
@@ -425,7 +425,7 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 	objs_start = interior->room_geom->objs.size(); // exclude this from collision checks
 	auto &objs(interior->room_geom->objs);
 	cube_t const place_area(get_walkable_room_bounds(room));
-	bool const dim(hallway_dim), dir(interior->dc_info->se_dir); // server room is in the direction of the stairs and elevators
+	bool const dim(hallway_dim), dir(interior->dc_info->se_dir); // server room is opposite the stairs and elevators
 	float const floor_spacing(get_window_vspace()), clearance(get_min_front_clearance_inc_people());
 	float cur_place_pos(place_area.d[dim][ dir]); // start at front wall adjacent to server room
 	// place batteries, represented as kitchen fridges, against the wall shared with the server room
@@ -508,7 +508,7 @@ bool building_t::add_row_of_objects(cube_t const &place_area, float zval, unsign
 
 	for (unsigned n = 0; n < num; ++n, tpos += spacing) {
 		set_wall_width(obj, tpos, 0.5*width, !dim);
-		if (is_cube_close_to_doorway(obj, place_area, 0.0, 1, 1)) continue; // inc_open_doors=1, check_open_dir=1
+		if (is_obj_placement_blocked(obj, place_area, 1, 1)) continue; // inc_open_doors=1, check_open_dir=1
 		interior->room_geom->objs.emplace_back(obj, type, room_id, dim, obj_dir, 0, tot_light_amt, SHAPE_CUBE, color, item_flags);
 		placed = 1;
 	}
@@ -545,8 +545,35 @@ bool building_t::add_breaker_panel_by_door(rand_gen_t &rgen, room_t const &room,
 void building_t::add_op_center_objs(rand_gen_t rgen, room_t const &room, colorRGBA const &chair_color, float zval,
 	unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start)
 {
-	// TODO
-	vect_cube_t blockers; // unused
-	add_office_objs(rgen, room, blockers, chair_color, zval, room_id, floor_ix, tot_light_amt, objs_start, 0); // is_basement=0; ignores return value
+	vect_cube_t blockers;
+	auto &objs(interior->room_geom->objs);
+	bool const dim(hallway_dim), dir(!interior->dc_info->se_dir); // operation center room is in the direction of the stairs and elevators
+	float const floor_spacing(get_window_vspace()), width(0.8*floor_spacing*rgen.rand_uniform(1.0, 1.2));
+	float const depth(0.4*floor_spacing*rgen.rand_uniform(1.0, 1.2)), height(0.25*floor_spacing*rgen.rand_uniform(1.08, 1.2)); // slightly larger than normal
+	cube_t const place_area(get_walkable_room_bounds(room));
+	float cur_place_pos(place_area.d[dim][dir]); // start at front wall adjacent to server room
+	unsigned const desks_start(objs.size());
+	add_row_of_objects(place_area, zval, room_id, tot_light_amt, height, width, depth, 0.05, TYPE_DESK, dim, dir, !dir, 0, WHITE, cur_place_pos);
+
+	if (room.get_sz_dim(dim) > 2.0*depth + 0.5*floor_spacing + 3.0*get_min_front_clearance()) { // if wide enough, add a second row of desks along the windows
+		cur_place_pos = place_area.d[dim][!dir]; // opposite wall
+		add_row_of_objects(place_area, zval, room_id, tot_light_amt, height, width, depth, 0.05, TYPE_DESK, dim, !dir, dir, 0, WHITE, cur_place_pos);
+	}
+	unsigned const desks_end(objs.size());
+
+	for (unsigned i = desks_start; i < desks_end; ++i) {
+		objs[i].obj_id = rgen.rand(); // randomize drawer contents
+		objs[i].flags |= RO_FLAG_UNTEXTURED; // mark as plastic
+		add_desk_objects(rgen, i, chair_color, room, blockers, 1, 1, 1.0); // add_computer=1, add_phone=1, comp_sz_scale=1.0
+	}
+	// add up to to 8 random desks along other walls
+	for (unsigned n = 0; n < 8; ++n) {add_desk_to_room(rgen, room, blockers, chair_color, zval, room_id, tot_light_amt, objs_start, 0);} // is_basement=0
+	add_table_and_chairs(rgen, room, blockers, room_id, get_cube_center_zval(room, zval), chair_color, 0.1, tot_light_amt); // should fit in the center of the room
+	// add filing cabinets
+	unsigned const num_filing_cabinets(2 + (rgen.rand()%4)); // 2-5
+
+	for (unsigned n = 0; n < num_filing_cabinets; ++n) {
+		if (add_filing_cabinet_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start)) {blockers.push_back(objs.back());}
+	}
 }
 
