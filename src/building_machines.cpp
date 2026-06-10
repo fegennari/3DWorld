@@ -818,7 +818,7 @@ void building_t::add_industrial_machines(rand_gen_t rgen, room_t const &room, cu
 			num_xy [d] = center_sz[d]/(machine_sz[d] + aisle_spacing);
 			spacing[d] = center_sz[d]/num_xy[d];
 		}
-		bool add_tanks(num_xy[tank_dim] >= 3), add_cbelt(is_factory() && num_xy[cb_dim] >= 5);
+		bool add_tanks(num_xy[tank_dim] >= 3), add_cbelt(is_factory() && num_xy[cb_dim] >= 5), add_generators(is_powerplant() && num_xy[cb_dim] >= 5);
 
 		if (add_cbelt) { // add conveyor belt
 			add_cbelt = 0; // will be reset below if valid
@@ -851,6 +851,9 @@ void building_t::add_industrial_machines(rand_gen_t rgen, room_t const &room, cu
 				add_cbelt     = 1;
 				break; // done/success
 			} // for d
+		}
+		if (add_generators) {
+			// TODO: TYPE_GENERATOR
 		}
 		unsigned machine_range[2][2] = {{0, num_xy[0]-1}, {0, num_xy[1]-1}};
 
