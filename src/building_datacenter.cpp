@@ -112,9 +112,13 @@ cube_t building_t::create_datacenter_floorplan(unsigned part_id, float window_hs
 			br_door_pos = bathroom.get_center_dim(max_dim); // centered
 			// small office next to bathroom is security room on the first floor
 			float const rlen(office.get_sz_dim(min_dim)), rwidth(office.get_sz_dim(max_dim));
+			unsigned const num_windows_this_side(round_fp(office.get_sz_dim(min_dim)/window_hspacing[min_dim]));
 
-			if (rlen > 4.0*window_vspacing && (rlen + rwidth) > 6.0*window_vspacing && rwidth > 2.0*doorway_width) { // if large, split into office and security room
-				float const split_pos(office.d[min_dim][0] + rgen.rand_uniform(0.4, 0.6)*rlen);
+			if (num_windows_this_side >= 2 && rlen > 4.0*window_vspacing && (rlen + rwidth) > 6.0*window_vspacing && rwidth > 2.0*doorway_width) {
+				// if large, split into office and security room
+				// need to shift wall pos to handle odd number of windows; use half the border since we have plenty of space
+				float split_pos(office.d[min_dim][0] + rgen.rand_uniform(0.4, 0.6)*rlen);
+				split_pos = shift_val_to_not_intersect_window(part, split_pos, window_hspacing[min_dim], 0.5*get_window_h_border(), min_dim);
 				cube_t outer_office(office);
 				outer_office.d[min_dim][d] = office.d[min_dim][!d] = split_pos;
 				add_assigned_room(outer_office, part_id, RTYPE_OFFICE);
