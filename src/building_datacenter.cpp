@@ -238,7 +238,7 @@ void building_t::add_datacenter_outdoor_objs(rand_gen_t &rgen) {
 	has_ac = 1;
 }
 
-bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start) { // for office buildings
+bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned lights_start) {
 	assert(has_room_geom());
 	bool const long_dim(room.dx() < room.dy()), mult_rows(is_datacenter());
 	bool const check_windows(!(interior->dc_info && interior->dc_info->skip_sr_util_windows));
@@ -393,7 +393,7 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 
 						if (!is_obj_placement_blocked(server_exp, room, 1)) {
 							objs.emplace_back(server, TYPE_SERVER, room_id, sdim, sdir, RO_FLAG_ON_FLOOR, tot_light_amt); // flag so that back is drawn
-							// TODO: add wire conduit? but what about ceiling lights?
+							// no conduits, since there will be too many and they may block ceiling lights
 							++num_servers;
 						}
 						server_pos += server_width + side_gap;
@@ -430,14 +430,27 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 	auto &objs(interior->room_geom->objs);
 	cube_t const place_area(get_walkable_room_bounds(room));
 	bool const dim(hallway_dim), dir(interior->dc_info->se_dir); // server room is opposite the stairs and elevators
-	float const floor_spacing(get_window_vspace()), clearance(get_min_front_clearance_inc_people());
+	float const floor_spacing(get_window_vspace()), ceiling_zval(zval + get_floor_ceil_gap()), clearance(get_min_front_clearance_inc_people());
 	float cur_place_pos(place_area.d[dim][dir]); // start at front wall adjacent to server room
 	// place batteries, represented as kitchen fridges, against the wall shared with the server room
 	int const bat_model(select_dc_battery_model());
 
 	if (bat_model >= 0) {
-		add_row_of_models(place_area, zval, room_id, tot_light_amt, 0.55*floor_spacing, 0.08, bat_model, TYPE_KITCH_APP, dim, dir, dim, !dir, get_sub_model_id(bat_model), cur_place_pos);
-		// TODO: connect with wire conduits?
+		float const bat_height(0.55*floor_spacing);
+		unsigned const bat_start(objs.size());
+		add_row_of_models(place_area, zval, room_id, tot_light_amt, bat_height, 0.08, bat_model, TYPE_KITCH_APP, dim, dir, dim, !dir, get_sub_model_id(bat_model), cur_place_pos);
+		unsigned const bat_end(objs.size());
+		// add conduits to the top; maybe these should connect together?
+		float const conduit_radius(0.02*floor_spacing);
+		cube_t conduit;
+		set_cube_zvals(conduit, zval+bat_height, ceiling_zval);
+
+		for (unsigned i = bat_start; i != bat_end; ++i) {
+			room_object_t const &bat(objs[i]);
+			assert(bat.type == TYPE_KITCH_APP);
+			for (unsigned d = 0; d < 2; ++d) {set_wall_width(conduit, bat.get_center_dim(d), conduit_radius, d);}
+			objs.emplace_back(conduit, TYPE_PIPE, room_id, 0, 1, RO_FLAG_NOCOLL, 1.0, SHAPE_CYLIN, LT_GRAY); // vertical
+		}
 	}
 	cube_t inner_area(place_area);
 	inner_area.expand_in_dim(!dim, -1.5*clearance);
@@ -473,10 +486,6 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 				// what about placing something on the top?
 			} // for i
 		}
-		// add ducts connecting AC units
-		for (unsigned i = ac_start; i < ac_end; ++i) {
-			// TODO
-		} // for i
 	}
 	cube_t xfmr_area(inner_area), gen_area(inner_area);
 
@@ -505,7 +514,10 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 	add_breaker_panel_by_door(rgen, room, zval, room_id, tot_light_amt);
 
 	// add ducts
-	// TODO
+	// TODO: main duct
+	for (unsigned i = ac_start; i < ac_end; ++i) { // add ducts connecting AC units
+		// TODO
+	} // for i
 	add_door_sign("Utility", room, zval, room_id);
 }
 
