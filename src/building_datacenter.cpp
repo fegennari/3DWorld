@@ -427,27 +427,24 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 	cube_t const place_area(get_walkable_room_bounds(room));
 	bool const dim(hallway_dim), dir(interior->dc_info->se_dir); // server room is opposite the stairs and elevators
 	float const floor_spacing(get_window_vspace()), clearance(get_min_front_clearance_inc_people());
-	float cur_place_pos(place_area.d[dim][ dir]); // start at front wall adjacent to server room
+	float cur_place_pos(place_area.d[dim][dir]); // start at front wall adjacent to server room
 	// place batteries, represented as kitchen fridges, against the wall shared with the server room
 	int const bat_model(select_dc_battery_model());
 
 	if (bat_model >= 0) {
-		add_row_of_models(place_area, zval, room_id, tot_light_amt, 0.55*floor_spacing, bat_model, TYPE_KITCH_APP, dim, dir, !dir, get_sub_model_id(bat_model), cur_place_pos);
+		add_row_of_models(place_area, zval, room_id, tot_light_amt, 0.55*floor_spacing, 0.08, bat_model, TYPE_KITCH_APP, dim, dir, dim, !dir, get_sub_model_id(bat_model), cur_place_pos);
 		// TODO: connect with wire conduits?
 	}
-	// place transformers
 	cube_t inner_area(place_area);
 	inner_area.expand_in_dim(!dim, -1.5*clearance);
-	add_row_of_models(inner_area, zval, room_id, tot_light_amt, 0.42*floor_spacing, OBJ_MODEL_SUBSTATION, TYPE_XFORMER, dim, dir, dir, 0, cur_place_pos);
-	// TODO: connect with wire conduits?
 	
 	// place AC units
-	float const ac_height(rgen.rand_uniform(0.45, 0.55)*floor_spacing), ac_width(rgen.rand_uniform(0.2, 0.24)*floor_spacing), ac_depth(rgen.rand_uniform(0.4, 0.6)*floor_spacing);
+	float const ac_height(rgen.rand_uniform(0.45, 0.54)*floor_spacing), ac_width(rgen.rand_uniform(0.2, 0.24)*floor_spacing), ac_depth(rgen.rand_uniform(0.4, 0.6)*floor_spacing);
 	colorRGBA const ac_color(0.5, 0.55, 0.6, 1.0); // blue-gray
 	cube_t ac_area(inner_area);
 	ac_area.expand_in_dim(!dim, -0.25*ac_width); // add extra padding for fans
 	unsigned const ac_start(objs.size()), item_flags(0);
-	add_row_of_objects(ac_area, zval, room_id, tot_light_amt, ac_height, ac_width, ac_depth, 1.33, TYPE_METAL_BAR, dim, dir, dir, item_flags, ac_color, cur_place_pos);
+	add_row_of_objects(ac_area, zval, room_id, tot_light_amt, ac_height, ac_width, ac_depth, 1.33, TYPE_METAL_BAR, dim, dir, dim, dir, item_flags, ac_color, cur_place_pos);
 	unsigned const ac_end(objs.size());
 
 	if (ac_start < ac_end) {
@@ -477,9 +474,29 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 			// TODO
 		} // for i
 	}
-	// place generators as horizontal cylinder machines or 3D models
-	// TODO
+	cube_t xfmr_area(inner_area), gen_area(inner_area);
 
+	for (unsigned pass = 0; pass < 2; ++pass) {
+		float const pre_place_pos(cur_place_pos);
+		unsigned const xg_obj_size(objs.size());
+		// place transformers
+		add_row_of_models(xfmr_area, zval, room_id, tot_light_amt, 0.4*floor_spacing, 0.15, OBJ_MODEL_SUBSTATION, TYPE_XFORMER, dim, dir, dim, dir, 0, cur_place_pos);
+		// TODO: connect with wire conduits?
+		if (pass == 1) {cur_place_pos = pre_place_pos;} // use the same row
+	
+		// place generators near the back wall
+		float const gen_height(0.56*floor_spacing);
+		if (add_row_of_models(gen_area, zval, room_id, tot_light_amt, gen_height, 0.3, OBJ_MODEL_GENERATOR, TYPE_GENERATOR, dim, dir, dim, dir, 0, cur_place_pos)) break;
+		// can't place lengthwise; try sideways
+		bool const gdir(rgen.rand_bool()); // either facing toward or away from the door
+		if (add_row_of_models(gen_area, zval, room_id, tot_light_amt, gen_height, 0.15, OBJ_MODEL_GENERATOR, TYPE_GENERATOR, dim, dir, !dim, gdir, 0, cur_place_pos)) break;
+		if (pass == 1) break; // failed, done
+		// try again, but this time split the width in half and try to place each type
+		objs.resize(xg_obj_size); // remove any models added above
+		bool const xg_side(rgen.rand_bool());
+		xfmr_area.d[!dim][xg_side] = gen_area.d[!dim][!xg_side] = inner_area.get_center_dim(!dim);
+		cur_place_pos = pre_place_pos;
+	} // for pass
 	// add breaker panel
 	add_breaker_panel_by_door(rgen, room, zval, room_id, tot_light_amt);
 
@@ -489,7 +506,7 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 }
 
 bool building_t::add_row_of_objects(cube_t const &place_area, float zval, unsigned room_id, float tot_light_amt, float height, float width, float depth,
-	float gap_mult, unsigned type, bool dim, bool dir, bool obj_dir, unsigned item_flags, colorRGBA const &color, float &cur_pos)
+	float gap_mult, unsigned type, bool dim, bool dir, bool obj_dim, bool obj_dir, unsigned item_flags, colorRGBA const &color, float &cur_pos)
 {
 	float const clearance(get_min_front_clearance_inc_people()), min_spacing((1.0 + gap_mult)*width), row_space(1.2*clearance), avail_width(place_area.get_sz_dim(!dim));
 	unsigned const num(avail_width/min_spacing);
@@ -501,26 +518,26 @@ bool building_t::add_row_of_objects(cube_t const &place_area, float zval, unsign
 	obj.d[dim][ dir] = cur_pos;
 	float new_pos(cur_pos - dsign*depth); // move away from the wall
 	obj.d[dim][!dir] = new_pos;
-	new_pos -= dsign*row_space;
-	if (new_pos < place_area.d[dim][0] || new_pos > place_area.d[dim][1]) return 0; // can't fit in the space, with a gap
-	cur_pos = new_pos;
+	if (new_pos < place_area.d[dim][0] || new_pos > place_area.d[dim][1]) return 0; // can't fit in the space
+	cur_pos = new_pos - dsign*row_space; // add a gap between the next row; max extend outside the room, but that's okay
 	bool placed(0);
 
 	for (unsigned n = 0; n < num; ++n, tpos += spacing) {
 		set_wall_width(obj, tpos, 0.5*width, !dim);
 		if (is_obj_placement_blocked(obj, place_area, 1, 1)) continue; // inc_open_doors=1, check_open_dir=1
-		interior->room_geom->objs.emplace_back(obj, type, room_id, dim, obj_dir, 0, tot_light_amt, SHAPE_CUBE, color, item_flags);
+		interior->room_geom->objs.emplace_back(obj, type, room_id, obj_dim, obj_dir, 0, tot_light_amt, SHAPE_CUBE, color, item_flags);
 		placed = 1;
 	}
 	return placed;
 }
-bool building_t::add_row_of_models(cube_t const &place_area, float zval, unsigned room_id, float tot_light_amt, float height,
-	unsigned model_id, unsigned type, bool dim, bool dir, bool obj_dir, unsigned item_flags, float &cur_pos)
+bool building_t::add_row_of_models(cube_t const &place_area, float zval, unsigned room_id, float tot_light_amt, float height, float gap_mult,
+	unsigned model_id, unsigned type, bool dim, bool dir, bool obj_dim, bool obj_dir, unsigned item_flags, float &cur_pos)
 {
 	if (!building_obj_model_loader.is_model_valid(model_id)) return 0;
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(model_id)); // D, W, H
-	float const width(height*sz.y/sz.z), depth(height*sz.x/sz.z);
-	return add_row_of_objects(place_area, zval, room_id, tot_light_amt, height, width, depth, 0.1, type, dim, dir, obj_dir, item_flags, WHITE, cur_pos);
+	float width(height*sz.y/sz.z), depth(height*sz.x/sz.z);
+	if (obj_dim != dim) {swap(width, depth);}
+	return add_row_of_objects(place_area, zval, room_id, tot_light_amt, height, width, depth, gap_mult, type, dim, dir, obj_dim, obj_dir, item_flags, WHITE, cur_pos);
 }
 
 bool building_t::add_breaker_panel_by_door(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt) {
@@ -553,11 +570,11 @@ void building_t::add_op_center_objs(rand_gen_t rgen, room_t const &room, colorRG
 	cube_t const place_area(get_walkable_room_bounds(room));
 	float cur_place_pos(place_area.d[dim][dir]); // start at front wall adjacent to server room
 	unsigned const desks_start(objs.size());
-	add_row_of_objects(place_area, zval, room_id, tot_light_amt, height, width, depth, 0.05, TYPE_DESK, dim, dir, !dir, 0, WHITE, cur_place_pos);
+	add_row_of_objects(place_area, zval, room_id, tot_light_amt, height, width, depth, 0.05, TYPE_DESK, dim, dir, dim, !dir, 0, WHITE, cur_place_pos);
 
 	if (room.get_sz_dim(dim) > 2.0*depth + 0.5*floor_spacing + 3.0*get_min_front_clearance()) { // if wide enough, add a second row of desks along the windows
 		cur_place_pos = place_area.d[dim][!dir]; // opposite wall
-		add_row_of_objects(place_area, zval, room_id, tot_light_amt, height, width, depth, 0.05, TYPE_DESK, dim, !dir, dir, 0, WHITE, cur_place_pos);
+		add_row_of_objects(place_area, zval, room_id, tot_light_amt, height, width, depth, 0.05, TYPE_DESK, dim, !dir, dim, dir, 0, WHITE, cur_place_pos);
 	}
 	unsigned const desks_end(objs.size());
 
