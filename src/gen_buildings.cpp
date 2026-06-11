@@ -2744,8 +2744,8 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 			bool const dim(hallway_dim);
 			cube_t wind_area(*i);
 			wind_area.d[dim][!interior->dc_info->se_dir] = interior->dc_info->office_pos; // only around offices end
-			bdraw.add_section(*this, 1, wind_area, tex, color, (1 << (!dim)), 0, 0, 1, clip_windows, 0.0, 0, offset_scale, 0, nullptr); // short dim, no_ao=1
-			draw_dims_mask = (1 << dim ); // draw long dim only, with door cutouts, below
+			bdraw.add_section(*this, 1, wind_area, tex, color, (1 << unsigned(!dim)), 0, 0, 1, clip_windows, 0.0, 0, offset_scale, 0, nullptr); // short dim, no_ao=1
+			draw_dims_mask = (1 << (unsigned)dim); // draw long dim only, with door cutouts, below
 		}
 		bool const split_per_floor(part_ix == 0 && floor_ext_door_mask > 1); // for multi-family houses
 		unsigned const num_splits(split_per_floor ? calc_num_floors(*i, floor_spacing, get_floor_thickness()) : 1);
