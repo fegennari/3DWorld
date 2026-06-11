@@ -3562,8 +3562,8 @@ void building_room_geom_t::add_duct(room_object_t const &c) {
 		unsigned skip_faces(0);
 		if (c.flags & RO_FLAG_ADJ_BOT) {skip_faces |= EF_Z1;}
 		if (c.flags & RO_FLAG_ADJ_TOP) {skip_faces |= EF_Z2;}
-		if (c.flags & RO_FLAG_ADJ_LO ) {skip_faces |= ~get_face_mask(dim, 0);}
-		if (c.flags & RO_FLAG_ADJ_HI ) {skip_faces |= ~get_face_mask(dim, 1);}
+		if (c.flags & RO_FLAG_ADJ_LO ) {skip_faces |= ~get_face_mask(c.dim, 0);} // Note: uses raw c.dim
+		if (c.flags & RO_FLAG_ADJ_HI ) {skip_faces |= ~get_face_mask(c.dim, 1);}
 		// texture is 2 panels wide x 1 panel tall; for mapping of tiled duct sides we need tscale_x to be a multiple of 0.5 and tscale_y to be a multiple of 1.0
 		unsigned const w1((dim+1)%3), w2((dim+2)%3); // the two width dimensions
 		float const width1(c.get_sz_dim(w1)), width2(c.get_sz_dim(w2)), avg_width(0.5*(width1 + width2)); // maps to texture y

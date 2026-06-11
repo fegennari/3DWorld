@@ -345,7 +345,7 @@ void building_t::add_industrial_ducts_and_hvac(rand_gen_t &rgen, room_t const &r
 		room_object_t const duct(objs[i]); // deep copy to avoid invalidating the reference
 		if (duct.type != TYPE_DUCT || duct.dim != edim) continue; // not the long duct
 		room_obj_shape const duct_shape(duct.shape);
-		unsigned const duct_flags(RO_FLAG_IN_MALL | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI);
+		unsigned const duct_flags(RO_FLAG_IN_MALL | RO_FLAG_ADJ_TOP | RO_FLAG_ADJ_BOT); // skip top and bottom
 		float const hwidth(0.5*duct.dz());
 		cube_t vduct(duct);
 		set_cube_zvals(vduct, duct.zc(), ceil_zval);

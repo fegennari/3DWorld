@@ -423,13 +423,14 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 	return 1;
 }
 
-void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned lights_start) {
 	assert(interior->dc_info);
 	zval       = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_CONCRETE); // add concrete and move the effective floor up
 	objs_start = interior->room_geom->objs.size(); // exclude this from collision checks
 	auto &objs(interior->room_geom->objs);
 	cube_t const place_area(get_walkable_room_bounds(room));
 	bool const dim(hallway_dim), dir(interior->dc_info->se_dir); // server room is opposite the stairs and elevators
+	bool const bldg_side(pri_hall.get_center_dim(!dim) < room.get_center_dim(!dim));
 	float const floor_spacing(get_window_vspace()), ceiling_zval(zval + get_floor_ceil_gap()), clearance(get_min_front_clearance_inc_people());
 	float cur_place_pos(place_area.d[dim][dir]); // start at front wall adjacent to server room
 	// place batteries, represented as kitchen fridges, against the wall shared with the server room
@@ -514,9 +515,43 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 	add_breaker_panel_by_door(rgen, room, zval, room_id, tot_light_amt);
 
 	// add ducts
-	// TODO: main duct
+	float const h_duct_width(0.4*ac_width), h_duct_height(0.5*ac_width), v_duct_radius(0.25*ac_width), h_duct_z1(ceiling_zval - h_duct_height);
+	float const far_wall_pos(room.d[!dim][bldg_side]);
+	unsigned const h_duct_flags(RO_FLAG_NOCOLL | RO_FLAG_ADJ_TOP | RO_FLAG_ADJ_BOT); // skip top and bottom
+
 	for (unsigned i = ac_start; i < ac_end; ++i) { // add ducts connecting AC units
-		// TODO
+		bool const closest_to_door(i == (bldg_side ? ac_start : ac_end-1));
+		cube_t const ac(objs[i]);
+		cube_t duct;
+		set_cube_zvals(duct, ac.z2(), h_duct_z1);
+		for (unsigned d = 0; d < 2; ++d) {set_wall_width(duct, ac.get_center_dim(d), v_duct_radius, d);}
+		objs.emplace_back(duct, TYPE_DUCT, room_id, 0, 1, h_duct_flags, 1.0, SHAPE_CYLIN, WHITE); // vertical
+
+		if (closest_to_door) {
+			// add main duct for first AC unit
+			unsigned const skip_end_flag(bldg_side ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO); // end against the far wall
+			duct.d[!dim][!bldg_side] -= (bldg_side ? 1.0 : -1.0)*0.5*v_duct_radius; // extend out slightly
+			duct.d[!dim][ bldg_side]  = far_wall_pos;
+			set_cube_zvals(duct, h_duct_z1, ceiling_zval);
+			set_wall_width(duct, ac.get_center_dim(dim), h_duct_width, dim);
+			objs.emplace_back(duct, TYPE_DUCT, room_id, !dim, 0, (RO_FLAG_ADJ_TOP | skip_end_flag), 1.0, SHAPE_CUBE, WHITE); // horizontal; skip top and back
+			cube_t keepout(duct);
+			keepout.expand_in_dim(dim, 0.1*h_duct_width);
+			// add vertical duct connecting to the floor below
+			unsigned const v_duct_flags(RO_FLAG_ADJ_TOP | RO_FLAG_ADJ_BOT | skip_end_flag);
+			set_cube_zvals(duct, zval, h_duct_z1);
+			duct.d[!dim][!bldg_side] = far_wall_pos - (bldg_side ? 1.0 : -1.0)*h_duct_height;
+			objs.emplace_back(duct, TYPE_DUCT, room_id, !dim, 1, v_duct_flags, 1.0, SHAPE_CUBE, WHITE); // vertical; skip top, bottom, and back
+
+			// first in row; check if we need to move an entire row of lights
+			for (unsigned j = lights_start; j < objs_start; ++j) {
+				room_object_t& light(objs[j]);
+				if (light.type != TYPE_LIGHT) continue;
+				if (light.d[dim][0] > keepout.d[dim][1] || light.d[dim][1] < keepout.d[dim][0]) continue; // not overlapping AC unit row
+				bool const move_dir(keepout.get_center_dim(dim) < light.get_center_dim(dim)); // move away from AC
+				light.translate_dim(dim, (keepout.d[dim][move_dir] - light.d[dim][!move_dir]));
+			}
+		}
 	} // for i
 	add_door_sign("Utility", room, zval, room_id);
 }
