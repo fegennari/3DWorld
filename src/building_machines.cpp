@@ -732,6 +732,10 @@ bool building_t::add_machines_to_room(rand_gen_t rgen, room_t const &room, float
 		} // for i
 	} // for n
 	if (!any_placed) return 0; // no machines
+	
+	if (rgen.rand_bool()) { // maybe add a generator if it happens to fit, sideways
+		place_model_along_wall(OBJ_MODEL_GENERATOR, TYPE_GENERATOR, room, 0.56, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.0, 4, 0, WHITE, 0, 0, 0, 1);
+	}
 	// maybe add a ventilation and/or radiator fan on the wall
 	add_wall_fans_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);
 	return 1;
