@@ -822,7 +822,9 @@ void building_t::add_industrial_machines(rand_gen_t rgen, room_t const &room, cu
 			num_xy [d] = center_sz[d]/(machine_sz[d] + aisle_spacing);
 			spacing[d] = center_sz[d]/num_xy[d];
 		}
-		bool add_tanks(num_xy[tank_dim] >= 3), add_cbelt(is_factory() && num_xy[cb_dim] >= 5), add_generators(is_powerplant() && num_xy[cb_dim] >= 5);
+		bool const add_tanks(num_xy[tank_dim] >= 3);
+		bool add_cbelt(is_factory() && num_xy[cb_dim] >= 5);
+		bool const add_generators(is_powerplant() && num_xy[cb_dim] >= 5 && building_obj_model_loader.is_model_valid(OBJ_MODEL_GENERATOR));
 
 		if (add_cbelt) { // add conveyor belt
 			add_cbelt = 0; // will be reset below if valid
@@ -856,8 +858,13 @@ void building_t::add_industrial_machines(rand_gen_t rgen, room_t const &room, cu
 				break; // done/success
 			} // for d
 		}
-		if (add_generators) {
-			// TODO: TYPE_GENERATOR
+		else if (add_generators) {
+			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_GENERATOR)); // D, W, H
+			bool const gen_dim(cb_dim), gen_dir(cbelt_dir); // same side as conveyor belt
+			float const gen_length(machine_sz[gen_dim]), gen_height(gen_length*sz.z/sz.x); // set height so that length matches machine_sz
+			float const gen_width(gen_length*sz.y/sz.x), gen_spacing(1.1*min_gap/gen_width); // allow space between for player and building AI to walk
+			float place_pos(center_area.d[gen_dim][gen_dir] - (gen_dir ? 1.0 : -1.0)*0.5*(spacing[gen_dim] - gen_length));
+			add_row_of_models(center_area, zval, room_id, tot_light_amt, gen_height, gen_spacing, OBJ_MODEL_GENERATOR, TYPE_GENERATOR, gen_dim, gen_dir, gen_dim, !gen_dir, 0, place_pos);
 		}
 		unsigned machine_range[2][2] = {{0, num_xy[0]-1}, {0, num_xy[1]-1}};
 
@@ -874,8 +881,9 @@ void building_t::add_industrial_machines(rand_gen_t rgen, room_t const &room, cu
 
 		for (unsigned ny = 0; ny < num_xy[1]; ++ny) {
 			for (unsigned nx = 0; nx < num_xy[0]; ++nx) {
-				bool const is_tank (add_tanks && (tank_dim ? ny : nx) == (tank_dir  ? num_xy[tank_dim]-1 : 0));
-				bool const is_cbelt(add_cbelt && (cb_dim   ? ny : nx) == (cbelt_dir ? num_xy[cb_dim  ]-1 : 0));
+				bool const is_tank     (add_tanks      && (tank_dim ? ny : nx) == (tank_dir  ? num_xy[tank_dim]-1 : 0));
+				bool const is_cbelt    (add_cbelt      && (cb_dim   ? ny : nx) == (cbelt_dir ? num_xy[cb_dim  ]-1 : 0));
+				bool const is_generator(add_generators && (cb_dim   ? ny : nx) == (cbelt_dir ? num_xy[cb_dim  ]-1 : 0));
 				bool const is_boiler(0/*is_powerplant()*/);
 				point const center((center_area.x1() + (nx + 0.5)*spacing.x), (center_area.y1() + (ny + 0.5)*spacing.y), zval);
 				unsigned const gix(ny*num_xy[0] + nx);
@@ -900,6 +908,9 @@ void building_t::add_industrial_machines(rand_gen_t rgen, room_t const &room, cu
 					merged_pipe_radius = get_merged_pipe_radius(merged_pipe_radius, pipe_radius, 3.0);
 					tank_conn_pts.emplace_back(center.x, center.y, pipe.z2());
 					obj_grid[gix] = TYPE_CHEM_TANK;
+				}
+				else if (is_generator) {
+					// added above, nothing else to do (except for maybe adding pipes?)
 				}
 				else if (is_cbelt) { // make it a conveyor belt connecting the end machine to main CB
 					assert(conveyor_belt.is_strictly_normalized());
