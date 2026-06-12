@@ -273,7 +273,7 @@ struct room_object_t : public oriented_cube_t { // size=68
 	void remove() {type = TYPE_BLOCKER; flags = (RO_FLAG_NOCOLL | RO_FLAG_INVIS);} // replace it with an invisible blocker that won't collide with anything
 	colorRGBA get_color() const;
 	colorRGBA get_model_color() const;
-	vector3d get_dir() const {return vector_from_dim_dir(dim, dir);}
+	vector3d get_dir() const;
 	rand_gen_t create_rgen() const;
 	ball_type_t const &get_ball_type() const;
 }; // room_object_t

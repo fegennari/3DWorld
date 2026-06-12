@@ -431,26 +431,44 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 	cube_t const place_area(get_walkable_room_bounds(room));
 	bool const dim(hallway_dim), dir(interior->dc_info->se_dir); // server room is opposite the stairs and elevators
 	bool const bldg_side(pri_hall.get_center_dim(!dim) < room.get_center_dim(!dim));
+	bool const has_fan_model(building_obj_model_loader.is_model_valid(OBJ_MODEL_RAD_FAN));
 	float const floor_spacing(get_window_vspace()), ceiling_zval(zval + get_floor_ceil_gap()), clearance(get_min_front_clearance_inc_people());
 	float cur_place_pos(place_area.d[dim][dir]); // start at front wall adjacent to server room
 	// place batteries, represented as kitchen fridges, against the wall shared with the server room
 	int const bat_model(select_dc_battery_model());
 
 	if (bat_model >= 0) {
-		float const bat_height(0.55*floor_spacing);
+		float const bat_height(0.55*floor_spacing), wall_pos(cur_place_pos);
 		unsigned const bat_start(objs.size());
 		add_row_of_models(place_area, zval, room_id, tot_light_amt, bat_height, 0.08, bat_model, TYPE_KITCH_APP, dim, dir, dim, !dir, get_sub_model_id(bat_model), cur_place_pos);
 		unsigned const bat_end(objs.size());
 		// add conduits to the top; maybe these should connect together?
-		float const conduit_radius(0.02*floor_spacing);
+		bool const conduit_side(rgen.rand_bool());
+		float const conduit_radius(0.02*floor_spacing), dsign(dir ? 1.0 : -1.0), csign(conduit_side ? 1.0 : -1.0);
 		cube_t conduit;
 		set_cube_zvals(conduit, zval+bat_height, ceiling_zval);
 
 		for (unsigned i = bat_start; i != bat_end; ++i) {
 			room_object_t const &bat(objs[i]);
 			assert(bat.type == TYPE_KITCH_APP);
-			for (unsigned d = 0; d < 2; ++d) {set_wall_width(conduit, bat.get_center_dim(d), conduit_radius, d);}
-			objs.emplace_back(conduit, TYPE_PIPE, room_id, 0, 1, RO_FLAG_NOCOLL, 1.0, SHAPE_CYLIN, LT_GRAY); // vertical
+			set_wall_width(conduit, (wall_pos                  - 0.2*dsign*bat.get_depth()), conduit_radius,  dim); // further toward the back wall
+			set_wall_width(conduit, (bat.d[!dim][conduit_side] - 0.1*csign*bat.get_width()), conduit_radius, !dim); // off to one side
+			objs.emplace_back(conduit, TYPE_PIPE, room_id, 0, 1, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, LT_GRAY); // vertical
+		}
+		// add fans to the top; at the moment this only works for X-oriented batteries because the model system has no way to rotate about the Z axis
+		if (has_fan_model && dim == 0) {
+			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_RAD_FAN)); // D, W, H
+
+			for (unsigned i = bat_start; i != bat_end; ++i) {
+				room_object_t const &bat(objs[i]);
+				float const scale(0.67*min(bat.get_depth()/sz.z, bat.get_width()/sz.y)), height(scale*sz.x), width(scale*sz.y), depth(scale*sz.z);
+				float const fan_z1(bat.z2() - 1.2*height); // shift slightly down into the top of the battery, more than we normally would due to something wrong in the model translate
+				cube_t fan;
+				set_cube_zvals(fan, fan_z1, fan_z1+height);
+				set_wall_width(fan, bat.get_center_dim( dim), 0.5*depth,  dim);
+				set_wall_width(fan, bat.get_center_dim(!dim), 0.5*width, !dim);
+				objs.emplace_back(fan, TYPE_RAD_FAN, room_id, dim, dir, (RO_FLAG_ADJ_TOP | RO_FLAG_NOCOLL), tot_light_amt); // vertical
+			} // for i
 		}
 	}
 	cube_t inner_area(place_area);
@@ -466,7 +484,7 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 	unsigned const ac_end(objs.size());
 
 	if (ac_start < ac_end) {
-		if (building_obj_model_loader.is_model_valid(OBJ_MODEL_RAD_FAN)) {
+		if (has_fan_model) {
 			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_RAD_FAN)); // D, W, H
 			float const scale(0.85*min(ac_depth/sz.y, min(0.5f*ac_width/sz.x, 0.5f*ac_height/sz.z)));
 			float const height(scale*sz.z), width(scale*sz.y), depth(scale*sz.x);
@@ -484,7 +502,6 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 					fan.d[!dim][ d] = edge_pos + (d ? 1.0 : -1.0)*depth;
 					objs.emplace_back(fan, TYPE_RAD_FAN, room_id, !dim, d, 0, tot_light_amt, SHAPE_CUBE, WHITE);
 				}
-				// what about placing something on the top?
 			} // for i
 		}
 	}
@@ -495,9 +512,8 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 		unsigned const xg_obj_size(objs.size());
 		// place transformers
 		add_row_of_models(xfmr_area, zval, room_id, tot_light_amt, 0.4*floor_spacing, 0.15, OBJ_MODEL_SUBSTATION, TYPE_XFORMER, dim, dir, dim, dir, 0, cur_place_pos);
-		// TODO: connect with wire conduits?
+		// connect with wire conduits? but they already have conduits into the floor
 		if (pass == 1) {cur_place_pos = pre_place_pos;} // use the same row
-	
 		// place generators near the back wall
 		float const gen_height(0.56*floor_spacing);
 		if (add_row_of_models(gen_area, zval, room_id, tot_light_amt, gen_height, 0.3, OBJ_MODEL_GENERATOR, TYPE_GENERATOR, dim, dir, dim, dir, 0, cur_place_pos)) break;
@@ -525,7 +541,7 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 		cube_t duct;
 		set_cube_zvals(duct, ac.z2(), h_duct_z1);
 		for (unsigned d = 0; d < 2; ++d) {set_wall_width(duct, ac.get_center_dim(d), v_duct_radius, d);}
-		objs.emplace_back(duct, TYPE_DUCT, room_id, 0, 1, h_duct_flags, 1.0, SHAPE_CYLIN, WHITE); // vertical
+		objs.emplace_back(duct, TYPE_DUCT, room_id, 0, 1, h_duct_flags, tot_light_amt, SHAPE_CYLIN, WHITE); // vertical
 
 		if (closest_to_door) {
 			// add main duct for first AC unit
@@ -534,14 +550,14 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 			duct.d[!dim][ bldg_side]  = far_wall_pos;
 			set_cube_zvals(duct, h_duct_z1, ceiling_zval);
 			set_wall_width(duct, ac.get_center_dim(dim), h_duct_width, dim);
-			objs.emplace_back(duct, TYPE_DUCT, room_id, !dim, 0, (RO_FLAG_ADJ_TOP | skip_end_flag), 1.0, SHAPE_CUBE, WHITE); // horizontal; skip top and back
+			objs.emplace_back(duct, TYPE_DUCT, room_id, !dim, 0, (RO_FLAG_ADJ_TOP | skip_end_flag), tot_light_amt, SHAPE_CUBE, WHITE); // horizontal; skip top and back
 			cube_t keepout(duct);
 			keepout.expand_in_dim(dim, 0.1*h_duct_width);
 			// add vertical duct connecting to the floor below
 			unsigned const v_duct_flags(RO_FLAG_ADJ_TOP | RO_FLAG_ADJ_BOT | skip_end_flag);
 			set_cube_zvals(duct, zval, h_duct_z1);
 			duct.d[!dim][!bldg_side] = far_wall_pos - (bldg_side ? 1.0 : -1.0)*h_duct_height;
-			objs.emplace_back(duct, TYPE_DUCT, room_id, !dim, 1, v_duct_flags, 1.0, SHAPE_CUBE, WHITE); // vertical; skip top, bottom, and back
+			objs.emplace_back(duct, TYPE_DUCT, room_id, !dim, 1, v_duct_flags, tot_light_amt, SHAPE_CUBE, WHITE); // vertical; skip top, bottom, and back
 
 			// first in row; check if we need to move an entire row of lights
 			for (unsigned j = lights_start; j < objs_start; ++j) {

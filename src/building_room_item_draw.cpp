@@ -56,8 +56,6 @@ bool has_key_3d_model      () {return building_obj_model_loader.is_model_valid(O
 bool has_office_chair_model() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_OFFICE_CHAIR);}
 bool is_flashing_light_on  () {return (tid_nm_pair_t(RED_TEX).get_emissive_val() > 0.5);}
 
-colorRGBA room_object_t::get_model_color() const {return building_obj_model_loader.get_avg_color(get_model_id());}
-
 
 class rgeom_alloc_t {
 	deque<rgeom_storage_t> free_list; // one per unique texture ID/material
@@ -1494,6 +1492,12 @@ int room_object_t::get_model_id() const { // Note: first 8 bits is model ID, las
 		id += pack_sub_model_id(item_flags);
 	}
 	return id;
+}
+colorRGBA room_object_t::get_model_color() const {return building_obj_model_loader.get_avg_color(get_model_id());}
+
+vector3d room_object_t::get_dir() const {
+	if (type == TYPE_RAD_FAN && (flags & RO_FLAG_ADJ_TOP)) return plus_z; // point up
+	return vector_from_dim_dir(dim, dir);
 }
 
 void building_t::draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, shader_t &amask_shader, occlusion_checker_noncity_t &oc, vector3d const &xlate,
