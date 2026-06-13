@@ -242,7 +242,7 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 	assert(has_room_geom());
 	bool const long_dim(room.dx() < room.dy()), mult_rows(is_datacenter());
 	bool const check_windows(!(interior->dc_info && interior->dc_info->skip_sr_util_windows));
-	float const window_vspacing(get_window_vspace()), ceiling_zval(zval + get_floor_ceil_gap());
+	float const window_vspacing(get_window_vspace()), ceiling_zval(zval + get_floor_ceil_gap()), wall_thickness(get_wall_thickness());
 	float const server_height(0.7*window_vspacing*(mult_rows ? rgen.rand_uniform(0.9, 1.0) : rgen.rand_uniform(0.9, 1.1))); // slightly shorter if multi-row to avoid blocking lights
 	float       server_width (0.3*window_vspacing*rgen.rand_uniform(0.9, 1.1)), server_hwidth(0.5*server_width);
 	float const server_depth (0.4*window_vspacing*rgen.rand_uniform(0.9, 1.1)), server_hdepth(0.5*server_depth);
@@ -251,7 +251,7 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 	float const comp_hwidth(0.5*0.44*comp_height), comp_hdepth(0.5*0.9*comp_height); // fixed AR=0.44 to match the texture
 	float const server_period(server_width + min_spacing), conduit_radius(0.05*server_width);
 	cube_t place_area(get_walkable_room_bounds(room));
-	place_area.expand_by(-0.25*get_wall_thickness()); // server spacing from walls
+	place_area.expand_by(-0.25*wall_thickness); // server spacing from walls
 	cube_t inner_area(place_area);
 	zval = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_METAL); // add server room metal tile and move the effective floor up
 	cube_t server, computer;
@@ -413,6 +413,37 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 				} // for b
 				row_pos += row_spacing;
 			} // for r
+		}
+		// add an array of ceiling vents between the lights
+		vector3d light_edge, light_space;
+		cube_t ref_light;
+
+		for (unsigned i = lights_start; i < objs_start; ++i) {
+			room_object_t const &light(objs[i]);
+			if (light.type != TYPE_LIGHT) continue;
+			
+			if (ref_light.is_all_zeros()) {
+				ref_light  = light;
+				light_edge = light.get_cube_center() - room.get_llc();
+			}
+			if (light_space.x == 0.0 && light.x1() != ref_light.x1()) {light_space.x = light.x1() - ref_light.x1();}
+			if (light_space.y == 0.0 && light.y1() != ref_light.y1()) {light_space.y = light.y1() - ref_light.y1();}
+		} // for i
+		assert(!ref_light.is_all_zeros());
+
+		if (light_space.x > 0.0 && light_space.y > 0.0) {
+			float const thickness(0.1*wall_thickness), hlen(2.0*wall_thickness), hwid(2.0*wall_thickness);
+			cube_t vent;
+			set_cube_zvals(vent, ceiling_zval-thickness, ceiling_zval);
+
+			for (float x = place_area.x1()+0.5*light_edge.x; x < place_area.x2(); x += light_space.x) {
+				for (float y = place_area.y1()+0.5*light_edge.y; y < place_area.y2(); y += light_space.y) {
+					vector2d const vc(x, y);
+					set_wall_width(vent, vc[ long_dim], hlen,  long_dim);
+					set_wall_width(vent, vc[!long_dim], hwid, !long_dim);
+					objs.emplace_back(vent, TYPE_VENT, room_id, long_dim, 0, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), 1.0); // dir=0; fully lit
+				}
+			} // for x
 		}
 	}
 	if (is_datacenter() && !check_windows && !interior->int_windows.empty()) {
