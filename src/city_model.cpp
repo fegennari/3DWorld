@@ -234,7 +234,8 @@ float city_model_loader_t::get_anim_duration(unsigned model_id, unsigned model_a
 
 void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t const &obj_bcube, vector3d const &dir, colorRGBA const &color,
 	vector3d const &xlate, unsigned model_id, bool is_shadow_pass, bool low_detail, animation_state_t *anim_state, unsigned skip_mat_mask, bool untextured,
-	bool force_high_detail, bool upside_down, bool emissive, bool do_local_rotate, int mirror_dim, bool using_custom_tid, int swap_xy_mode, xform_matrix const *custom_xform)
+	bool force_high_detail, bool upside_down, bool emissive, bool do_local_rotate, int mirror_dim, bool using_custom_tid, int swap_xy_mode,
+	xform_matrix const *custom_xform, bool plus_z_xy_dir)
 {
 	assert(!(low_detail && force_high_detail));
 	bool const is_valid(is_model_valid(model_id)); // first 8 bits is model ID, last 8 bits is sub-model ID
@@ -308,8 +309,8 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	fgPushMatrix();
 	translate_to(pos + z_offset*sz_scale*plus_z - local_rotate); // z_offset is in model space, scale to world space
 	vector3d dir_xy(dir.x, dir.y, 0.0);
-	if (dir_xy == zero_vector) {dir_xy = plus_x;} else {dir_xy.normalize();}
-	if (dir.z != 0.0) {rotate_about(TO_DEG*asinf(dir.z), cross_product(dir_xy, plus_z));} // handle cars on a slope or objects tilted
+	if (dir_xy == zero_vector) {dir_xy = (plus_z_xy_dir ? plus_y : plus_x);} else {dir_xy.normalize();}
+	if (dir.z != 0.0) {rotate_about(TO_DEG*asinf(dir.z), cross_product(dir_xy, plus_z));} // handle cars on a slope or objects tilted or vertically oriented
 	rotate_to_plus_x(dir_xy);
 	if (local_rotate != all_zeros) {translate_to(local_rotate);}
 

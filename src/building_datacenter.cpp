@@ -455,8 +455,7 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 			set_wall_width(conduit, (bat.d[!dim][conduit_side] - 0.1*csign*bat.get_width()), conduit_radius, !dim); // off to one side
 			objs.emplace_back(conduit, TYPE_PIPE, room_id, 0, 1, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, LT_GRAY); // vertical
 		}
-		// add fans to the top; at the moment this only works for X-oriented batteries because the model system has no way to rotate about the Z axis
-		if (has_fan_model && dim == 0) {
+		if (has_fan_model) { // add fans to the top
 			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_RAD_FAN)); // D, W, H
 
 			for (unsigned i = bat_start; i != bat_end; ++i) {
