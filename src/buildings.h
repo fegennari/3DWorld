@@ -2417,7 +2417,9 @@ private:
 	void add_industrial_office_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	bool create_office_cubicles(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
 	void add_office_pillars(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, vect_cube_t const &lights, vect_cube_t &blockers);
+	vector2d get_conf_room_table_length_width(cube_t const &room, bool dim) const;
 	vector2d get_conf_room_table_length_width(cube_t const &room) const;
+	bool add_conference_table(rand_gen_t &rgen, cube_t const &room, float zval, unsigned room_id, float tot_light_amt, bool dim, cube_t const &place_area);
 	bool add_conference_objs (rand_gen_t rgen,  room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned floor_ix);
 	void add_lounge_objs     (rand_gen_t rgen,  room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_lobby);
 	bool add_vending_machine (rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start,

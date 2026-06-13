@@ -859,32 +859,27 @@ void offset_hanging_tv(room_object_t &obj) {
 	if (obj.is_hanging()) {obj.translate_dim(obj.dim, (obj.dir ? -1.0 : 1.0)*0.28*obj.get_depth());} // translate to the wall to account for the missing stand
 }
 
-vector2d building_t::get_conf_room_table_length_width(cube_t const &room) const {
+vector2d building_t::get_conf_room_table_length_width(cube_t const &room, bool dim) const {
 	float const doorway_width(get_doorway_width()), end_clearance(1.25*max(doorway_width, get_min_front_clearance_inc_people())), side_clearance(1.25*end_clearance);
-	bool const dim(room.dx() < room.dy()); // long dim
 	float const table_len(room.get_sz_dim(dim) - 2.0*end_clearance), table_width(1.1*doorway_width);
 	if (table_len < 1.5*table_width || room.get_sz_dim(!dim) < table_width + 2.0*side_clearance) return vector2d(); // too small to be a conference room
-	return vector2d(table_len, table_width);
+	return vector2d(min(table_len, 8.0f*table_width), table_width); // avoid extreme aspect ratio
 }
-bool building_t::add_conference_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned floor_ix) {
-	if (room.has_stairs_on_floor(floor_ix) || room.has_elevator || room.is_hallway) return 0; // not a valid conference room
-	float const floor_spacing(get_window_vspace());
-	cube_t room_this_floor(room); // clip to a single floor before checking if blocked by stairs or elevator
-	set_cube_zvals(room_this_floor, zval, zval+floor_spacing);
-	if (interior->is_blocked_by_stairs_or_elevator(room_this_floor)) return 0;
-	cube_t const room_bounds(get_walkable_room_bounds(room));
-	bool const dim(room.dx() < room.dy()); // long dim
-	vect_room_object_t &objs(interior->room_geom->objs);
-	// add conference table
-	vector2d const table_lw(get_conf_room_table_length_width(room_bounds));
+vector2d building_t::get_conf_room_table_length_width(cube_t const &room) const {
+	return get_conf_room_table_length_width(room, (room.dx() < room.dy())); // long dim
+}
+bool building_t::add_conference_table(rand_gen_t &rgen, cube_t const &room, float zval, unsigned room_id, float tot_light_amt, bool dim, cube_t const &place_area) {
+	vector2d const table_lw(get_conf_room_table_length_width(place_area, dim));
 	if (table_lw == vector2d()) return 0; // too small to be a conference room
+	float const floor_spacing(get_window_vspace());
+	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t table;
 	set_cube_zvals(table, zval, (zval + 0.30*rgen.rand_uniform(1.0, 1.05)*floor_spacing)); // set height
 	set_wall_width(table, room.get_center_dim( dim), 0.5*table_lw.x,  dim); // set length
 	set_wall_width(table, room.get_center_dim(!dim), 0.5*table_lw.y, !dim); // set width
 	objs.emplace_back(table, TYPE_CONF_TABLE, room_id, dim, 0, 0, tot_light_amt, SHAPE_CUBE, WHITE); // dir=0, flags=0
 	cube_t avoid; // avoid placing papers and pens/pencils under the phone
-	
+
 	if (rgen.rand_float() < 0.9) { // add conference phone with a random dir 90% of the time
 		cube_t table_center(table);
 		table_center.expand_in_dim( dim, -0.375*table_lw.x); // center 25%
@@ -903,7 +898,7 @@ bool building_t::add_conference_objs(rand_gen_t rgen, room_t const &room, float 
 	colorRGBA const chair_color(add_rolling_chair ? GRAY_BLACK : WHITE*rgen.rand_uniform(0.1, 1.0));
 	float const chair_spacing(table_lw.x/max(1U, num_chairs));
 	point chair_pos(0.0, 0.0, zval);
-	
+
 	for (unsigned side = 0; side < 2; ++side) {
 		for (unsigned n = 0; n < num_chairs; ++n) {
 			chair_pos[!dim] = table.d[!dim][side] + (side ? 1.0 : -1.0)*chair_sz.x*rgen.rand_uniform(0.2, 0.8);
@@ -918,6 +913,19 @@ bool building_t::add_conference_objs(rand_gen_t rgen, room_t const &room, float 
 			}
 		} // for n
 	} // for side
+	return 1;
+}
+
+bool building_t::add_conference_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned floor_ix) {
+	if (room.has_stairs_on_floor(floor_ix) || room.has_elevator || room.is_hallway) return 0; // not a valid conference room
+	float const floor_spacing(get_window_vspace());
+	cube_t room_this_floor(room); // clip to a single floor before checking if blocked by stairs or elevator
+	set_cube_zvals(room_this_floor, zval, zval+floor_spacing);
+	if (interior->is_blocked_by_stairs_or_elevator(room_this_floor)) return 0;
+	cube_t const room_bounds(get_walkable_room_bounds(room));
+	bool const dim(room.dx() < room.dy()); // long dim
+	if (!add_conference_table(rgen, room, zval, room_id, tot_light_amt, dim, room_bounds)) return 0; // only add if room is large enough
+
 	// add a big TV/monitor on the wall
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_TV)) {
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TV)); // D, W, H

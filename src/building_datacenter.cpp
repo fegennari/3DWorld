@@ -636,20 +636,24 @@ bool building_t::add_breaker_panel_by_door(rand_gen_t &rgen, room_t const &room,
 	return 1;
 }
 
+void clip_to_exclude(cube_t &c, cube_t const &exclude, bool dim) {
+	bool const dir(c.get_center_dim(dim) < exclude.get_center_dim(dim));
+	c.d[dim][dir] = exclude.d[dim][!dir];
+}
 void building_t::add_op_center_objs(rand_gen_t rgen, room_t const &room, colorRGBA const &chair_color, float zval,
 	unsigned room_id, unsigned floor_ix, float tot_light_amt, unsigned objs_start)
 {
 	vect_cube_t blockers;
 	auto &objs(interior->room_geom->objs);
 	bool const dim(hallway_dim), dir(!interior->dc_info->se_dir); // operation center room is in the direction of the stairs and elevators
-	float const floor_spacing(get_window_vspace()), width(0.8*floor_spacing*rgen.rand_uniform(1.0, 1.2));
+	float const floor_spacing(get_window_vspace()), clearance(get_min_front_clearance()), width(0.8*floor_spacing*rgen.rand_uniform(1.0, 1.2));
 	float const depth(0.4*floor_spacing*rgen.rand_uniform(1.0, 1.2)), height(0.25*floor_spacing*rgen.rand_uniform(1.08, 1.2)); // slightly larger than normal
 	cube_t const place_area(get_walkable_room_bounds(room));
 	float cur_place_pos(place_area.d[dim][dir]); // start at front wall adjacent to server room
 	unsigned const desks_start(objs.size());
 	add_row_of_objects(place_area, zval, room_id, tot_light_amt, height, width, depth, 0.05, TYPE_DESK, dim, dir, dim, !dir, 0, WHITE, cur_place_pos);
 
-	if (room.get_sz_dim(dim) > 2.0*depth + 0.5*floor_spacing + 3.0*get_min_front_clearance()) { // if wide enough, add a second row of desks along the windows
+	if (room.get_sz_dim(dim) > 2.0*depth + 0.5*floor_spacing + 3.0*clearance) { // if wide enough, add a second row of desks along the windows
 		cur_place_pos = place_area.d[dim][!dir]; // opposite wall
 		add_row_of_objects(place_area, zval, room_id, tot_light_amt, height, width, depth, 0.05, TYPE_DESK, dim, !dir, dim, dir, 0, WHITE, cur_place_pos);
 	}
@@ -662,7 +666,26 @@ void building_t::add_op_center_objs(rand_gen_t rgen, room_t const &room, colorRG
 	}
 	// add up to to 8 random desks along other walls
 	for (unsigned n = 0; n < 8; ++n) {add_desk_to_room(rgen, room, blockers, chair_color, zval, room_id, tot_light_amt, objs_start, 0);} // is_basement=0
-	add_table_and_chairs(rgen, room, blockers, room_id, get_cube_center_zval(room, zval), chair_color, 0.1, tot_light_amt); // should fit in the center of the room
+	// maybe add a conference table in the center of the room
+	cube_t room_clipped(room);
+
+	for (stairwell_t const &s : interior->stairwells) { // avoid stairs
+		if (s.intersects(room_clipped)) {clip_to_exclude(room_clipped, s, !dim);}
+	}
+	for (elevator_t const &e : interior->elevators) { // avoid elevator
+		if (e.intersects(room_clipped)) {clip_to_exclude(room_clipped, e, !dim);}
+	}
+	cube_t ct_area(place_area), room_inner(place_area);
+	room_inner.expand_in_dim(!dim, -depth); // add space around edges of room for desks
+	room_clipped.intersect_with_cube(room_inner);
+	room_clipped.expand_in_dim(!dim, -clearance);
+	ct_area.intersect_with_cube(room_clipped);
+	bool added_conf_table(0);
+	if (ct_area.is_strictly_normalized()) {added_conf_table = add_conference_table(rgen, room_clipped, zval, room_id, tot_light_amt, !dim, ct_area);}
+
+	if (!added_conf_table) { // if no conference table, add table with up to 6 chairs; should fit in the center of the room
+		add_table_and_chairs(rgen, room, blockers, room_id, get_cube_center_zval(room_clipped, zval), chair_color, 0.1, tot_light_amt, 6);
+	}
 	// add filing cabinets
 	unsigned const num_filing_cabinets(2 + (rgen.rand()%4)); // 2-5
 
