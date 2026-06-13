@@ -243,7 +243,7 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 	bool const long_dim(room.dx() < room.dy()), mult_rows(is_datacenter());
 	bool const check_windows(!(interior->dc_info && interior->dc_info->skip_sr_util_windows));
 	float const window_vspacing(get_window_vspace()), ceiling_zval(zval + get_floor_ceil_gap());
-	float const server_height(0.7*window_vspacing*rgen.rand_uniform(0.9, 1.1)*(mult_rows ? 0.9 : 1.0)); // slightly shorter if mulri-row to avoid blocking lights
+	float const server_height(0.7*window_vspacing*(mult_rows ? rgen.rand_uniform(0.9, 1.0) : rgen.rand_uniform(0.9, 1.1))); // slightly shorter if multi-row to avoid blocking lights
 	float const server_width (0.3*window_vspacing*rgen.rand_uniform(0.9, 1.1)), server_hwidth(0.5*server_width);
 	float const server_depth (0.4*window_vspacing*rgen.rand_uniform(0.9, 1.1)), server_hdepth(0.5*server_depth);
 	float const comp_height  (0.2*window_vspacing*rgen.rand_uniform(0.9, 1.1));
