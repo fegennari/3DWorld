@@ -372,8 +372,10 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 			block_spacing = avail_width/num_blocks;
 			aisle_gap     = row_spacing   - server_depth;
 			block_gap     = block_spacing - block_width;
-			float const block_start(inner_area.d[!sdim][0] + edge_gap); // include servers along the wall and their gap
-			float row_pos(inner_area.d[sdim][0] + edge_gap);
+			float const block_edge_gap(0.5*(inner_len   + block_gap - avail_width));
+			float const row_edge_gap  (0.5*(inner_width + aisle_gap - avail_depth));
+			float const block_start(inner_area.d[!sdim][0] + block_edge_gap); // include servers along the wall and their gap
+			float row_pos(inner_area.d[sdim][0] + row_edge_gap);
 
 			for (unsigned r = 0; r < num_rows; ++r) {
 				float block_pos(block_start);
