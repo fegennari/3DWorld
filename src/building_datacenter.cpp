@@ -244,7 +244,7 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 	bool const check_windows(!(interior->dc_info && interior->dc_info->skip_sr_util_windows));
 	float const window_vspacing(get_window_vspace()), ceiling_zval(zval + get_floor_ceil_gap());
 	float const server_height(0.7*window_vspacing*(mult_rows ? rgen.rand_uniform(0.9, 1.0) : rgen.rand_uniform(0.9, 1.1))); // slightly shorter if multi-row to avoid blocking lights
-	float const server_width (0.3*window_vspacing*rgen.rand_uniform(0.9, 1.1)), server_hwidth(0.5*server_width);
+	float       server_width (0.3*window_vspacing*rgen.rand_uniform(0.9, 1.1)), server_hwidth(0.5*server_width);
 	float const server_depth (0.4*window_vspacing*rgen.rand_uniform(0.9, 1.1)), server_hdepth(0.5*server_depth);
 	float const comp_height  (0.2*window_vspacing*rgen.rand_uniform(0.9, 1.1));
 	float const min_spacing  (0.1*window_vspacing*rgen.rand_uniform(0.9, 1.1));
@@ -354,12 +354,21 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 		unsigned const num_per_block = 8;
 		float const inner_len(inner_area.get_sz_dim(long_dim)), inner_width(inner_area.get_sz_dim(!long_dim));
 		float const clearance(get_min_front_clearance_inc_people());
-		float const front_clearance(1.2*clearance), back_clearance(1.0*clearance), edge_gap(max(server_depth, 1.6f*clearance));
-		float const side_gap(0.02*server_width), block_width(num_per_block*server_width + (num_per_block-1)*side_gap);
+		float const front_clearance(1.2*clearance), back_clearance(1.0*clearance), edge_gap(max(server_depth, 1.6f*clearance)), side_gap(0.02*server_width);
+		float block_width(num_per_block*server_width + (num_per_block-1)*side_gap);
 		float aisle_gap(max(server_depth, 1.3f*clearance)), block_gap(max(2.0f*server_width, 1.25f*clearance));
 		float row_spacing(server_depth + aisle_gap), block_spacing(block_width + block_gap);
 		float const avail_depth(inner_width - 2*edge_gap + aisle_gap), avail_width(inner_len - 2*edge_gap + block_gap);
-		unsigned const num_rows(avail_depth/row_spacing), num_blocks(avail_width/block_spacing); // take floor
+		float const num_blocks_fp(avail_width/block_spacing); // take floor
+		unsigned const num_rows(avail_depth/row_spacing); // take floor
+		unsigned num_blocks(num_blocks_fp);
+
+		if (num_blocks <= 3 && num_blocks_fp - num_blocks > 0.75) { // close to having space for an extra block
+			server_width *= 0.9; // shrink servers slightly and try again
+			block_width   = num_per_block*server_width + (num_per_block-1)*side_gap;
+			block_spacing = block_width + block_gap;
+			num_blocks    = avail_width/block_spacing;
+		}
 		// use a consistent direction for center rows; face the room interior door if there is one
 		vect_door_stack_t const &doorways(get_doorways_for_room(room, zval)); // get interior doors
 		bool const sdim(!long_dim);
