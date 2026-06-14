@@ -585,8 +585,8 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 	colorRGBA const ac_color(0.5, 0.55, 0.6, 1.0); // blue-gray
 	cube_t ac_area(inner_area);
 	ac_area.expand_in_dim(!dim, -0.25*ac_width); // add extra padding for fans
-	unsigned const ac_start(objs.size()), item_flags(0);
-	add_row_of_objects(ac_area, zval, room_id, tot_light_amt, ac_height, ac_width, ac_depth, 1.33, TYPE_METAL_BAR, dim, dir, dim, dir, item_flags, ac_color, cur_place_pos);
+	unsigned const ac_start(objs.size()), item_flags(0), obj_flags(RO_FLAG_IN_FACTORY); // flag as factor so that metal is painted and less reflective
+	add_row_of_objects(ac_area, zval, room_id, tot_light_amt, ac_height, ac_width, ac_depth, 1.33, TYPE_METAL_BAR, dim, dir, dim, dir, item_flags, obj_flags, ac_color, cur_place_pos);
 	unsigned const ac_end(objs.size());
 
 	if (ac_start < ac_end && has_fan_model) { // add AC side fans
@@ -713,7 +713,7 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 }
 
 bool building_t::add_row_of_objects(cube_t const &place_area, float zval, unsigned room_id, float tot_light_amt, float height, float width, float depth,
-	float gap_mult, unsigned type, bool dim, bool dir, bool obj_dim, bool obj_dir, unsigned item_flags, colorRGBA const &color, float &cur_pos)
+	float gap_mult, unsigned type, bool dim, bool dir, bool obj_dim, bool obj_dir, unsigned item_flags, unsigned obj_flags, colorRGBA const &color, float &cur_pos)
 {
 	float const clearance(get_min_front_clearance_inc_people()), min_spacing((1.0 + gap_mult)*width), row_space(1.2*clearance), avail_width(place_area.get_sz_dim(!dim));
 	unsigned const num(avail_width/min_spacing);
@@ -732,7 +732,7 @@ bool building_t::add_row_of_objects(cube_t const &place_area, float zval, unsign
 	for (unsigned n = 0; n < num; ++n, tpos += spacing) {
 		set_wall_width(obj, tpos, 0.5*width, !dim);
 		if (is_obj_placement_blocked(obj, place_area, 1, 1)) continue; // inc_open_doors=1, check_open_dir=1
-		interior->room_geom->objs.emplace_back(obj, type, room_id, obj_dim, obj_dir, 0, tot_light_amt, SHAPE_CUBE, color, item_flags);
+		interior->room_geom->objs.emplace_back(obj, type, room_id, obj_dim, obj_dir, obj_flags, tot_light_amt, SHAPE_CUBE, color, item_flags);
 		placed = 1;
 	}
 	return placed;
@@ -744,7 +744,7 @@ bool building_t::add_row_of_models(cube_t const &place_area, float zval, unsigne
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(model_id)); // D, W, H
 	float width(height*sz.y/sz.z), depth(height*sz.x/sz.z);
 	if (obj_dim != dim) {swap(width, depth);}
-	return add_row_of_objects(place_area, zval, room_id, tot_light_amt, height, width, depth, gap_mult, type, dim, dir, obj_dim, obj_dir, item_flags, WHITE, cur_pos);
+	return add_row_of_objects(place_area, zval, room_id, tot_light_amt, height, width, depth, gap_mult, type, dim, dir, obj_dim, obj_dir, item_flags, 0, WHITE, cur_pos);
 }
 
 bool building_t::add_breaker_panel_by_door(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt) {
@@ -781,11 +781,11 @@ void building_t::add_op_center_objs(rand_gen_t rgen, room_t const &room, colorRG
 	cube_t const place_area(get_walkable_room_bounds(room));
 	float cur_place_pos(place_area.d[dim][dir]); // start at front wall adjacent to server room
 	unsigned const desks_start(objs.size());
-	add_row_of_objects(place_area, zval, room_id, tot_light_amt, height, width, depth, 0.05, TYPE_DESK, dim, dir, dim, !dir, 0, WHITE, cur_place_pos);
+	add_row_of_objects(place_area, zval, room_id, tot_light_amt, height, width, depth, 0.05, TYPE_DESK, dim, dir, dim, !dir, 0, 0, WHITE, cur_place_pos);
 
 	if (room.get_sz_dim(dim) > 2.0*depth + 0.5*floor_spacing + 3.0*clearance) { // if wide enough, add a second row of desks along the windows
 		cur_place_pos = place_area.d[dim][!dir]; // opposite wall
-		add_row_of_objects(place_area, zval, room_id, tot_light_amt, height, width, depth, 0.05, TYPE_DESK, dim, !dir, dim, dir, 0, WHITE, cur_place_pos);
+		add_row_of_objects(place_area, zval, room_id, tot_light_amt, height, width, depth, 0.05, TYPE_DESK, dim, !dir, dim, dir, 0, 0, WHITE, cur_place_pos);
 	}
 	unsigned const desks_end(objs.size());
 
