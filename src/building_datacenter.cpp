@@ -564,7 +564,13 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 	inner_area.expand_in_dim(!dim, -1.5*clearance);
 	
 	// place AC units
-	float const ac_height(rgen.rand_uniform(0.45, 0.54)*floor_spacing), ac_width(rgen.rand_uniform(0.2, 0.24)*floor_spacing), ac_depth(rgen.rand_uniform(0.4, 0.6)*floor_spacing);
+	float &ac_height(interior->dc_info->ac_height), &ac_width(interior->dc_info->ac_width), &ac_depth(interior->dc_info->ac_depth); // shared across all building utility rooms
+
+	if (ac_height == 0.0) { // assign these values on the first floor of the first utility room
+		ac_height = rgen.rand_uniform(0.45, 0.54)*floor_spacing;
+		ac_width  = rgen.rand_uniform(0.20, 0.24)*floor_spacing;
+		ac_depth  = rgen.rand_uniform(0.40, 0.60)*floor_spacing;
+	}
 	colorRGBA const ac_color(0.5, 0.55, 0.6, 1.0); // blue-gray
 	cube_t ac_area(inner_area);
 	ac_area.expand_in_dim(!dim, -0.25*ac_width); // add extra padding for fans
