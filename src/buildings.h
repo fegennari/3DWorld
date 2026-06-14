@@ -1509,6 +1509,8 @@ struct bldg_datacenter_info_t {
 	bool se_dir; // dir for stairs/elevator/offices/bathrooms
 	bool skip_sr_util_windows;
 	float office_pos, util_pos, bath_pos;
+	cube_t air_intake_shaft[2];
+
 	bldg_datacenter_info_t(bool sd, float op, float up, float bp, bool sw) : se_dir(sd), skip_sr_util_windows(sw), office_pos(op), util_pos(up), bath_pos(bp) {}
 };
 
@@ -1788,6 +1790,7 @@ struct building_t : public building_geom_t {
 	float get_fc_thickness   () const {return 0.5*get_floor_thickness();} // floor/ceiling thickness
 	float get_wall_thickness () const {return WALL_THICK_VAL*get_window_vspace();}
 	float get_park_struct_wall_thick() const {return 1.2*get_wall_thickness();} // slightly wider than interior walls, to prevent Z-fighting
+	float get_roof_wall_thick() const {return 0.98*get_wall_thickness();} // slightly narrower than interior wall width to avoid z-fighting with roof access
 	float get_wind_trim_thick() const {return 0.75*get_wall_thickness();}
 	float get_trim_thickness () const {return 0.1 *get_wall_thickness();}
 	float get_window_trim_thick() const {return (is_prison() ? 4.0 : 1.0)*get_trim_thickness();}

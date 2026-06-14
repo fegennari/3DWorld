@@ -2355,7 +2355,7 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 		num_ac_units = (rgen.rand() % (is_industrial() ? 9 : 7)); // 0-6, 0-8 for industrial
 		if (is_datacenter()) {num_ac_units = max((2*num_ac_units + 8), 16U);} // more AC units
 	}
-	float const window_vspacing(get_window_vspace()), wall_width(0.049*window_vspacing); // slightly narrower than interior wall width to avoid z-fighting with roof access
+	float const window_vspacing(get_window_vspace()), wall_width(get_roof_wall_thick());
 	assert(!parts.empty());
 	create_per_part_ext_verts(); // needed for roof containment queries
 	add_company_sign(rgen);
