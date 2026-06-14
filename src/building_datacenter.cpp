@@ -512,6 +512,17 @@ void move_lights_to_not_intersect(vect_room_object_t &objs, cube_t const &keepou
 		light.translate_dim(dim, (keepout.d[dim][move_dir] - light.d[dim][!move_dir]));
 	}
 }
+cube_t get_exhaust_duct_for_generator(room_object_t const &generator, float duct_z2) {
+	assert(generator.type == TYPE_GENERATOR);
+	assert(duct_z2 > generator.z2());
+	bool const gdim(generator.dim), gdir(generator.dir);
+	float const gen_width(generator.get_width()), gen_length(generator.get_length());
+	cube_t duct;
+	set_cube_zvals(duct, generator.z2(), duct_z2);
+	set_wall_width(duct, generator.get_center_dim(!gdim), 0.2*gen_width, !gdim);
+	set_wall_width(duct, generator.d[gdim][gdir] - (gdir ? 1.0 : -1.0)*0.68*gen_length, 0.03*gen_length, gdim);
+	return duct;
+}
 
 void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned lights_start) {
 	assert(interior->dc_info);
@@ -600,8 +611,8 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 	}
 	// add AC ducts and pipes
 	float const h_duct_width(0.4*ac_width), h_duct_height(0.5*ac_width), v_duct_radius(0.25*ac_width), h_duct_z1(ceiling_zval - h_duct_height);
-	float const far_wall_pos(room.d[!dim][bldg_side]);
-	unsigned const h_duct_flags(RO_FLAG_NOCOLL | RO_FLAG_ADJ_TOP | RO_FLAG_ADJ_BOT); // skip top and bottom
+	float const far_wall_pos(room.d[!dim][bldg_side]), ac_pipe_radius(0.1*ac_width);
+	unsigned const duct_flags(RO_FLAG_ADJ_TOP | RO_FLAG_ADJ_BOT); // skip top and bottom
 
 	for (unsigned i = ac_start; i < ac_end; ++i) { // add ducts connecting AC units
 		bool const closest_to_door(i == (bldg_side ? ac_start : ac_end-1));
@@ -610,7 +621,10 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 		cube_t duct;
 		set_cube_zvals(duct, ac.z2(), h_duct_z1);
 		for (unsigned d = 0; d < 2; ++d) {set_wall_width(duct, ac.get_center_dim(d), v_duct_radius, d);}
-		objs.emplace_back(duct, TYPE_DUCT, room_id, 0, 1, h_duct_flags, tot_light_amt, SHAPE_CYLIN, WHITE); // vertical
+		objs.emplace_back(duct, TYPE_DUCT, room_id, 0, 1, duct_flags, tot_light_amt, SHAPE_CYLIN, WHITE); // vertical
+		// add vertical pipe(s)
+		cube_t pipe;
+		// TODO: ac_pipe_radius
 
 		if (closest_to_door) {
 			// add main duct for first AC unit
@@ -631,9 +645,8 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 			duct.d[!dim][ bldg_side] = far_wall_pos;
 			cube_t const &air_intake(interior->dc_info->air_intake_shaft[bldg_side]);
 			copy_dim(duct, air_intake, dim); // same width as exterior ducts
-			unsigned const v_duct_flags(RO_FLAG_ADJ_TOP | RO_FLAG_ADJ_BOT | skip_end_flag);
-			objs.emplace_back(duct, TYPE_DUCT, room_id, !dim, 1, v_duct_flags, tot_light_amt, SHAPE_CUBE, WHITE); // vertical; skip top, bottom, and back
-			// add vertical pipe(s)
+			objs.emplace_back(duct, TYPE_DUCT, room_id, !dim, 1, (duct_flags | skip_end_flag), tot_light_amt, SHAPE_CUBE, WHITE); // vertical; skip top, bottom, and back
+			// add horizontal pipe(s)
 			// TODO
 		}
 	} // for i
@@ -666,21 +679,16 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 		unsigned const gen_end(objs.size());
 
 		for (unsigned i = gen_start; i < gen_end; ++i) {
-			room_object_t const &generator(objs[i]);
-			assert(generator.type == TYPE_GENERATOR);
-			bool const gdim(generator.dim), gdir(generator.dir);
-			float const gen_width(generator.get_width()), gen_length(generator.get_length());
-			cube_t duct;
-			set_cube_zvals(duct, generator.z2(), ceiling_zval);
-			set_wall_width(duct, generator.get_center_dim(!gdim), 0.2*gen_width, !gdim);
-			set_wall_width(duct, generator.d[gdim][gdir] - (gdir ? 1.0 : -1.0)*0.68*gen_length, 0.03*gen_length, gdim);
-			objs.emplace_back(duct, TYPE_DUCT, room_id, 0, 1, h_duct_flags, tot_light_amt, SHAPE_CUBE, WHITE); // vertical
+			cube_t const duct(get_exhaust_duct_for_generator(objs[i], ceiling_zval));
+			objs.emplace_back(duct, TYPE_DUCT, room_id, 0, 1, duct_flags, tot_light_amt, SHAPE_CUBE, WHITE); // vertical
 
 			if (i == gen_start) { // first in row; check if we need to move an entire row of lights
 				cube_t keepout(duct);
 				keepout.expand_in_dim(dim, 0.1*h_duct_width);
 				move_lights_to_not_intersect(objs, keepout, dim, objs_start, lights_start);
 			}
+			// add fuel pipe
+			// TODO: pipe_radius
 		} // for i
 	}
 	// add breaker panel

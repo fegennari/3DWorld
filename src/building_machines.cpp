@@ -734,7 +734,12 @@ bool building_t::add_machines_to_room(rand_gen_t rgen, room_t const &room, float
 	if (!any_placed) return 0; // no machines
 	
 	if (rgen.rand_bool()) { // maybe add a generator if it happens to fit, sideways
-		place_model_along_wall(OBJ_MODEL_GENERATOR, TYPE_GENERATOR, room, 0.56, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.0, 4, 0, WHITE, 0, 0, 0, 1);
+		if (place_model_along_wall(OBJ_MODEL_GENERATOR, TYPE_GENERATOR, room, 0.56, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.0, 4, 0, WHITE, 0, 0, 0, 1)) {
+			float const ceiling_zval(zval + fc_gap);
+			// TODO: chance of right angle turn into wall
+			cube_t const duct(get_exhaust_duct_for_generator(objs.back(), ceiling_zval));
+			objs.emplace_back(duct, TYPE_DUCT, room_id, 0, 1, (RO_FLAG_ADJ_TOP | RO_FLAG_ADJ_BOT), tot_light_amt, SHAPE_CUBE, WHITE); // vertical
+		}
 	}
 	// maybe add a ventilation and/or radiator fan on the wall
 	add_wall_fans_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);
@@ -864,7 +869,15 @@ void building_t::add_industrial_machines(rand_gen_t rgen, room_t const &room, cu
 			float const gen_length(machine_sz[gen_dim]), gen_height(gen_length*sz.z/sz.x); // set height so that length matches machine_sz
 			float const gen_width(gen_length*sz.y/sz.x), gen_spacing(1.1*min_gap/gen_width); // allow space between for player and building AI to walk
 			float place_pos(center_area.d[gen_dim][gen_dir] - (gen_dir ? 1.0 : -1.0)*0.5*(spacing[gen_dim] - gen_length));
+			unsigned const gen_start(objs.size());
 			add_row_of_models(center_area, zval, room_id, tot_light_amt, gen_height, gen_spacing, OBJ_MODEL_GENERATOR, TYPE_GENERATOR, gen_dim, gen_dir, gen_dim, !gen_dir, 0, place_pos);
+			unsigned const gen_end(objs.size());
+			float const duct_z2(zval + floor_spacing); // TODO: does this to up to the ceiling/roof, right angle to the exterior wall, or merge and out to the top and side?
+
+			for (unsigned i = gen_start; i < gen_end; ++i) {
+				cube_t const duct(get_exhaust_duct_for_generator(objs[i], duct_z2));
+				objs.emplace_back(duct, TYPE_DUCT, room_id, 0, 1, (RO_FLAG_ADJ_TOP | RO_FLAG_ADJ_BOT), tot_light_amt, SHAPE_CUBE, WHITE); // vertical
+			}
 		}
 		unsigned machine_range[2][2] = {{0, num_xy[0]-1}, {0, num_xy[1]-1}};
 

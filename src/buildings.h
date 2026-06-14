@@ -2856,6 +2856,7 @@ cube_t get_elevator_car_panel(room_object_t const &c, float fc_thick_scale);
 cube_t get_true_room_obj_bcube(room_object_t const &c);
 cube_t get_sink_cube(room_object_t const &c);
 cube_t get_mwave_panel_bcube(room_object_t const &c);
+cube_t get_exhaust_duct_for_generator(room_object_t const &generator, float duct_z2);
 float get_comm_fridge_cubes(room_object_t const &c, cube_t &bot, cube_t &top, cube_t &body, cube_t &interior);
 void get_comm_fridge_doors(room_object_t const &c, cube_t doors[2]);
 void get_vent_hood_cubes(room_object_t const &c, cube_t cubes[5]);
