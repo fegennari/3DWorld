@@ -587,8 +587,9 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 		if (closest_to_door) {
 			// add main duct for first AC unit
 			unsigned const skip_end_flag(bldg_side ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO); // end against the far wall
+			float const far_wall_inner(far_wall_pos - (bldg_side ? 1.0 : -1.0)*h_duct_height);
 			duct.d[!dim][!bldg_side] -= (bldg_side ? 1.0 : -1.0)*0.5*v_duct_radius; // extend out slightly
-			duct.d[!dim][ bldg_side]  = far_wall_pos;
+			duct.d[!dim][ bldg_side]  = far_wall_inner;
 			set_cube_zvals(duct, h_duct_z1, ceiling_zval);
 			set_wall_width(duct, ac.get_center_dim(dim), h_duct_width, dim);
 			objs.emplace_back(duct, TYPE_DUCT, room_id, !dim, 0, (RO_FLAG_ADJ_TOP | skip_end_flag), tot_light_amt, SHAPE_CUBE, WHITE); // horizontal; skip top and back
@@ -596,8 +597,10 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 			keepout.expand_in_dim(dim, 0.1*h_duct_width);
 			// add vertical duct connecting to the floor below
 			unsigned const v_duct_flags(RO_FLAG_ADJ_TOP | RO_FLAG_ADJ_BOT | skip_end_flag);
-			set_cube_zvals(duct, zval, h_duct_z1);
-			duct.d[!dim][!bldg_side] = far_wall_pos - (bldg_side ? 1.0 : -1.0)*h_duct_height;
+			duct.z1() = zval;
+			duct.d[!dim][!bldg_side] = far_wall_inner;
+			duct.d[!dim][ bldg_side] = far_wall_pos;
+			duct.expand_in_dim(dim, 0.2*h_duct_width); // expand width
 			objs.emplace_back(duct, TYPE_DUCT, room_id, !dim, 1, v_duct_flags, tot_light_amt, SHAPE_CUBE, WHITE); // vertical; skip top, bottom, and back
 
 			// first in row; check if we need to move an entire row of lights
