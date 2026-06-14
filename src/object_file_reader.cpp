@@ -88,7 +88,6 @@ protected:
 		if (ix == -1) {
 			if (!invalid_index_warned) {
 				cerr << "Error: Invalid zero index in object file" << endl;
-				//assert(0);
 				invalid_index_warned = 1;
 			}
 			++ix;
@@ -295,7 +294,6 @@ public:
 	bool load_mat_lib(string const &fn) { // Note: could cache filename, but seems to never be included more than once
 		ifstream mat_in;
 		if (open_include_file(fn, "material library", mat_in).empty()) return 0;
-		//cout << "Loading material library " << fn << endl;
 		int cur_mat_id(-1); // not set
 		material_t *cur_mat(0);
 		string s, tfn, material_name;
@@ -412,7 +410,7 @@ public:
 				check_and_bind(cur_mat->refl_tid, tfn, 0, verbose);
 			}
 			// unsupported
-			else if (s == "kt") {unhandled(s, mat_in);} // transmission color
+			else if (s == "kt"     ) {unhandled(s, mat_in);} // transmission color
 			else if (s == "map_aat") {unhandled(s, mat_in);} // toggle antialiasing
 			else if (s == "decal"  ) {unhandled(s, mat_in);} // modifies color
 			else if (s == "disp"   ) {unhandled(s, mat_in);} // displacement
@@ -442,7 +440,6 @@ public:
 			else {
 				cerr << "Error: Undefined entry '" << s << "' in material library. Skipping line." << endl;
 				read_to_newline(mat_in); // ignore
-				//return 0;
 			}
 		} // while
 		return 1;
@@ -699,7 +696,6 @@ public:
 			else {
 				cerr << "Error: Undefined entry '" << s << "' in object file " << filename << " near line " << approx_line << endl;
 				read_to_newline(fp); // ignore this line
-				//return 0;
 			}
 		} // while
 		remove_excess_cap(v);
