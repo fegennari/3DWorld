@@ -216,7 +216,7 @@ void building_t::add_datacenter_outdoor_objs(rand_gen_t &rgen) {
 	if ((real_num_parts - has_basement()) != 1) return; // only handles a single part
 	// add outdoor AC units
 	bool const dim(!bool(hallway_dim));
-	cube_t const &part(parts[0]);
+	cube_t const &part(get_first_part());
 	float const floor_spacing(get_window_vspace()), bldg_length(part.get_sz_dim(!dim)), edge_space(rgen.rand_uniform(0.2, 0.3)*bldg_length);
 	float const depth(0.40*floor_spacing), width(1.5*depth), height(0.35*floor_spacing);
 	unsigned const num(min(16.0, rgen.rand_uniform(0.4, 0.6)*(bldg_length - 2.0*edge_space)/width));

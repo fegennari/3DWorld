@@ -471,7 +471,7 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 			if (!is_interior && is_parking() && has_pg_ramp()) { // check parking garage ramp
 				cube_t ramp(interior->pg_ramp);
 				// handle ramp railings
-				bool const dim(interior->pg_ramp.ix >> 1), dir(interior->pg_ramp.ix & 1), side(ramp.get_center_dim(!dim) < parts.front().get_center_dim(!dim));
+				bool const dim(interior->pg_ramp.ix >> 1), dir(interior->pg_ramp.ix & 1), side(ramp.get_center_dim(!dim) < get_first_part().get_center_dim(!dim));
 				float const railing_height(0.5*get_window_vspace()), railing_hwidth(get_wall_thickness()); // conservative
 				cube_t end_railing(ramp);
 				set_cube_zvals(end_railing, ramp.z2(), (ramp.z2() + railing_height));

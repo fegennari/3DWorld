@@ -76,7 +76,7 @@ float building_t::get_parts_z2() const {
 float building_t::get_roof_peak_z2() const {
 	assert(!parts.empty());
 	float z2(get_parts_z2());
-	if (roof_type == ROOF_TYPE_CURVED) {return (z2 + CURVED_ROOF_HSCALE*0.5*min(parts[0].dx(), parts[0].dy()));} // should curve in the short dim by 25% of radius
+	if (roof_type == ROOF_TYPE_CURVED) {return (z2 + CURVED_ROOF_HSCALE*0.5*get_first_part().get_size_xy().get_min_val());} // should curve in the short dim by 25% of radius
 	for (tquad_t const &t : roof_tquads) {max_eq(z2, t.get_bcube().z2());}
 	return z2;
 }
@@ -2062,7 +2062,7 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office 
 		bool first_dir(rgen2.rand_bool());
 		// if this is a datacenter, make the front door the one closest to the stairs and elevator
 		if (is_datacenter() && interior && !interior->elevators.empty()) {first_dir = (bcube.get_center_dim(dim) < interior->elevators.front().get_center_dim(dim));}
-		cube_t const &door_part((is_datacenter() && has_pri_hall()) ? pri_hall : parts.front()); // center on datacenter primary hallway if present
+		cube_t const &door_part((is_datacenter() && has_pri_hall()) ? pri_hall : get_first_part()); // center on datacenter primary hallway if present
 
 		for (unsigned d = 0; d < 2; ++d) {
 			bool const dir(bool(d) ^ first_dir);
@@ -2074,7 +2074,7 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office 
 	if (is_restroom()) { // two doors on the ends or front side
 		assert(street_dir);
 		bool const dim(get_street_dim()), dir(get_street_side());
-		cube_t const &part(parts.front());
+		cube_t const &part(get_first_part());
 
 		for (unsigned d = 0; d < 2; ++d) {
 			if (street_side) { // doors at front

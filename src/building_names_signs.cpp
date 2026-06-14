@@ -667,14 +667,13 @@ bool building_t::add_sign_by_door(tquad_with_ix_t const &door, bool outside, std
 
 	if (outside) { // outside, place above the door; larger for restaurants
 		c.z2() = door_bcube.z2() + 0.1*height;
-		assert(!parts.empty());
-		min_eq(c.z2(), parts.front().z2()); // clamp to top of first part; needed for 1 floor buildings
+		min_eq(c.z2(), get_first_part().z2()); // clamp to top of first part; needed for 1 floor buildings
 	}
 	else { // inside, place hanging near the top of the door
 		c.z2() = c.z1() + get_floor_ceil_gap(); // right against the ceiling; applies to ground floor and walkway doors
 	}
 	c.z1() = c.z2() - 0.05*height;
-	if (outside && is_lg && parts.front().dz() > 1.5*get_window_vspace()) {c.z2() += 0.15*height;} // make it taller if large and has space
+	if (outside && is_lg && get_first_part().dz() > 1.5*get_window_vspace()) {c.z2() += 0.15*height;} // make it taller if large and has space
 	float const sign_width(0.6*(text.size() + 2)*c.dz()), shrink(0.5f*(width - sign_width));
 	c.expand_in_dim(!dim, -shrink);
 	if (!outside) {dir ^= 1; c.translate_dim(dim, (dir ? 1.0 : -1.0)*0.1*height);} // move inside the building

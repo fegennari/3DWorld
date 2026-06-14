@@ -2385,7 +2385,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 				if (is_rest && in_ext_basement) continue;
 				if (is_rest && w->z1() >= ground_floor_z1 && w->dz() < 1.5*floor_spacing) continue; // no upper trim on lower wall section of restaurant
 				// add ceiling trim
-				trim.z2() = ((single_floor && !in_ext_basement) ? ((is_rest ? parts[0].z2() : w->z2()) - fc_thick) : (z + floor_to_ceil_height)); // ceil height
+				trim.z2() = ((single_floor && !in_ext_basement) ? ((is_rest ? get_first_part().z2() : w->z2()) - fc_thick) : (z + floor_to_ceil_height)); // ceil height
 				trim.z1() = trim.z2() - trim_height;
 
 				for (unsigned dir = 0; dir < 2; ++dir) { // for each side of wall
@@ -3023,8 +3023,8 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 		objs.emplace_back(ramp, TYPE_EXT_STEP, 0, edim, !edir, flags, 1.0, SHAPE_ANGLED, step_color);
 	}
 	if (to_add_stairs.empty()) return; // no stairs - done
-	if (!is_house) return; // only houses have actual stairs; office buildings have walkways
-	cube_t const &part(parts[0]); // assumes door is on parts[0] (single part)
+	if (!is_house)             return; // only houses have actual stairs; office buildings have walkways
+	cube_t const &part(get_first_part()); // assumes door is on parts[0] (single part)
 	bool const add_step_gaps(objs.size() & 1); // something random-ish per building
 	float const base_step_height(floor_spacing/NUM_STAIRS_PER_FLOOR), head_clearance(0.8*get_floor_ceil_gap()), railing_thickness(0.5*get_wall_thickness());
 	cube_t stairs_bcube(part);

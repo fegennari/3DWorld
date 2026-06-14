@@ -1766,7 +1766,9 @@ struct building_t : public building_geom_t {
 	bool get_ext_door_hinge_side(tquad_with_ix_t const &door) const;
 	unsigned get_attic_part_ix   () const;
 	room_t const &get_retail_room() const {assert(interior && !interior->rooms.empty()); assert(has_retail()); return interior->rooms.front();} // always the first room
-	cube_t const &get_retail_part() const {assert(has_retail()); assert(!parts.empty()); return parts.front();} // always the first part
+	cube_t const &get_first_part () const {assert(!parts.empty()); return parts.front();}
+	cube_t const &get_retail_part() const {assert(has_retail()); return get_first_part();} // always the first part
+	cube_t const &get_industrial_area() const {assert(is_industrial()); return get_first_part();}
 	cube_t const &get_basement   () const {assert(has_basement()); return parts[basement_part_ix   ];}
 	cube_t const &get_attic_part () const;
 	bool get_retail_long_dim     () const;
@@ -1807,7 +1809,7 @@ struct building_t : public building_geom_t {
 	float get_parking_road_width      () const;
 	float get_parking_ramp_width      () const;
 	float get_industrial_window_z1    () const;
-	float get_attic_floor_z1          () const {return (has_attic() ? interior->attic_access.z2() : parts.front().z2());} // handle case of "attic" with no access door
+	float get_attic_floor_z1          () const {return (has_attic() ? interior->attic_access.z2() : get_first_part().z2());} // handle case of "attic" with no access door
 	bool is_ground_floor_excluding_retail(float zval) const;
 	float get_ground_floor_z_thresh(bool for_spider) const;
 	void gen_roof_and_side_color(rand_gen_t &rgen);
@@ -2225,7 +2227,6 @@ public:
 	cube_t get_ext_basement_entrance() const;
 	cube_t get_best_occluder(point const &camera_bs) const;
 	cube_t get_step_for_ext_door(tquad_with_ix_t const &door) const;
-	cube_t const &get_industrial_area() const {assert(is_industrial()); assert(!parts.empty()); return parts.front();}
 	bool interior_visible_from_other_building_ext_basement(vector3d const &xlate, bool expand_for_light=0) const;
 	bool top_of_mall_elevator_visible(point const &camera_bs, vector3d const &xlate) const;
 	bool can_have_basement() const;

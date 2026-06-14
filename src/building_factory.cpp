@@ -1079,8 +1079,7 @@ cube_t building_t::get_flat_roof_section_bcube() const {
 	return cube_t(); // not found
 }
 void building_t::add_smokestacks(rand_gen_t &rgen) { // factory or power plant
-	assert(!parts.empty());
-	cube_t const &base(parts[0]);
+	cube_t const &base(get_industrial_area());
 	bool const long_dim(base.dx() < base.dy());
 	float ss_radius(rgen.rand_uniform(0.01, 0.02)*(base.dx() + base.dy()));
 	float const ss_height(rgen.rand_uniform(0.75, 1.0)*base.dz()*((roof_type == ROOF_TYPE_CURVED) ? 1.5 : 1.0));

@@ -973,7 +973,7 @@ void building_t::add_shared_restroom_objs() { // in ceilings
 	// add edges of ceiling to block the gap between wall and roof (though it's now covered by a triangle wall); added for first room and spans both rooms
 	bool const gdim(get_street_dim()); // gap dim
 	float const wall_hthick(0.5*get_wall_thickness());
-	cube_t walls(parts.front()), top_wall(walls);
+	cube_t walls(get_first_part()), top_wall(walls);
 	top_wall.z1() = walls.z1() = walls.z2() - get_fc_thickness();
 	set_wall_width(top_wall, top_wall.get_center_dim(!gdim), 1.5*wall_hthick, !gdim); // top of wall dividing the two rooms
 	objs.emplace_back(top_wall, TYPE_METAL_BAR, 0, !gdim, 0, 0, 1.0, SHAPE_CUBE, WHITE, get_skip_mask_for_xy(gdim));

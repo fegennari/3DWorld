@@ -21,7 +21,7 @@ unsigned building_t::get_attic_part_ix() const { // Note: can be called before a
 	return ((get_num_main_parts() >= 2 && parts[1].z2() > parts[0].z2()) ? 1 : 0); // if there are at least two parts, use the taller one
 }
 cube_t const &building_t::get_attic_part() const {
-	if (is_restroom_with_high_ceil()) {assert(!parts.empty()); return parts.front();}
+	if (is_restroom_with_high_ceil()) {return get_first_part();}
 	assert(has_attic());
 	return parts[get_attic_part_ix()];
 }

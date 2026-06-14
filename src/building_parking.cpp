@@ -19,7 +19,7 @@ float building_t::get_parking_ramp_width() const {
 
 bool building_t::add_parking_structure_entrance(rand_gen_t rgen) {
 	assert(interior && !interior->rooms.empty());
-	cube_t const &part(parts.front()); // sets the exterior space
+	cube_t const &part(get_first_part()); // sets the exterior space
 	room_t const &room(interior->rooms.front()); // main above ground room is first; sets the interior space
 	float const entrance_width(get_parking_ramp_width()), extend_len(1.0*get_parked_car_size().x), door_width(get_doorway_width());
 	// choose a random wall + end to try first; if in the side, use the closest street side
@@ -136,7 +136,7 @@ void building_t::get_parking_struct_ext_walls(vect_cube_with_ix_t &walls, bool e
 	}
 	assert(is_parking());
 	assert(real_num_parts == (1 + has_basement()));
-	cube_t const &part(parts.front()); // above ground part
+	cube_t const &part(get_first_part()); // above ground part
 	float const floor_spacing(get_window_vspace()), wall_thick(get_park_struct_wall_thick());
 	float const lower_wall_height(0.35*floor_spacing), upper_wall_height(0.15*floor_spacing), int_ext_wall_fc_gap(0.0);
 	float const gap_z1(part.z1() + lower_wall_height), gap_z2(part.z1() + floor_spacing - upper_wall_height);
@@ -245,7 +245,7 @@ void building_t::get_parking_struct_ext_walls(vect_cube_with_ix_t &walls, bool e
 
 void building_t::get_parking_garage_wall_openings(vect_cube_with_ix_t &openings) const {
 	assert(is_parking());
-	cube_t const &part(parts.front()); // above ground part
+	cube_t const &part(get_first_part()); // above ground part
 	float const floor_spacing(get_window_vspace()), wall_thick(get_park_struct_wall_thick());
 	float const lower_wall_height(0.35*floor_spacing), upper_wall_height(0.15*floor_spacing);
 	unsigned num_floors(calc_num_floors(part, floor_spacing, get_floor_thickness()));
@@ -286,8 +286,7 @@ void building_t::get_parking_garage_wall_openings(vect_cube_with_ix_t &openings)
 }
 
 cube_t building_t::get_parking_structure_roof() const {
-	assert(!parts.empty());
-	cube_t roof(parts[0]); // roof is on the first part
+	cube_t roof(get_first_part()); // roof is on the first part
 	roof.expand_by_xy(-get_park_struct_wall_thick());
 	return roof;
 }
@@ -463,8 +462,8 @@ void building_t::add_parking_garage_ramp(rand_gen_t &rgen) {
 	assert(interior && !is_house && (has_parking_garage || is_parking_str));
 	cube_with_ix_t &ramp(interior->pg_ramp);
 	assert(ramp.is_all_zeros()); // must not have been set
-	cube_t room(has_basement() ? get_basement() : parts.front()); // basement parking garage or above ground parking structure
-	if (is_parking_str) {room.z2() = parts.front().z2();} // extend from basement to top of parking structure
+	cube_t room(has_basement() ? get_basement() : get_first_part()); // basement parking garage or above ground parking structure
+	if (is_parking_str) {room.z2() = get_first_part().z2();} // extend from basement to top of parking structure
 	bool const dim(room.dx() < room.dy()); // long/primary dim
 	// see building_t::add_parking_garage_objs(); make sure there's space for a ramp plus both exit dirs within the building width
 	float const room_width(room.get_sz_dim(!dim)), ramp_width(min(0.25f*room_width, get_parking_ramp_width())), wall_space((is_parking_str ? 1.2 : 1.0)*ramp_width);
