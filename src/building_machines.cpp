@@ -693,7 +693,7 @@ bool building_t::add_machines_to_room(rand_gen_t rgen, room_t const &room, float
 	cube_t const place_area(get_walkable_room_bounds(room)); // ignore trim?
 	if (is_house) {zval = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_CONCRETE);} // add concrete over the carpet for houses
 	cube_t avoid;
-	avoid.set_from_sphere(get_cube_center_zval(place_area, zval), min_clearance);
+	avoid.set_from_sphere(get_cube_center_zval(place_area, zval), min_clearance); // avoid the center of the room to allow space to walk
 	bool any_placed(0), no_opposite_sides(0), used_orients[4] = {};
 	vect_room_object_t &objs(interior->room_geom->objs);
 	vector2d max_sz(get_machine_max_sz(place_area, min_gap, max_place_sz, 0.5)); // start with a larger gap that allows two opposing machines
@@ -735,10 +735,21 @@ bool building_t::add_machines_to_room(rand_gen_t rgen, room_t const &room, float
 	
 	if (rgen.rand_bool()) { // maybe add a generator if it happens to fit, sideways
 		if (place_model_along_wall(OBJ_MODEL_GENERATOR, TYPE_GENERATOR, room, 0.56, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.0, 4, 0, WHITE, 0, 0, 0, 1)) {
-			float const ceiling_zval(zval + fc_gap);
-			// TODO: chance of right angle turn into wall
-			cube_t const duct(get_exhaust_duct_for_generator(objs.back(), ceiling_zval));
-			objs.emplace_back(duct, TYPE_DUCT, room_id, 0, 1, (RO_FLAG_ADJ_TOP | RO_FLAG_ADJ_BOT), tot_light_amt, SHAPE_CUBE, WHITE); // vertical
+			room_object_t const generator(objs.back()); // deep copy to avoid invalidating the reference
+			cube_t v_duct(get_exhaust_duct_for_generator(generator, (zval + fc_gap)));
+
+			if (rgen.rand_float() < 0.75) { // right angle turn into wall 75% of the time
+				bool const wall_dim(!generator.dim), wall_dir(room.get_center_dim(wall_dim) < generator.get_center_dim(wall_dim));
+				float const h_duct_height(max(v_duct.dx(), v_duct.dy())), min_z_ext(0.5*h_duct_height); // maintain the cross section
+				float const h_duct_z1(rgen.rand_uniform((generator.z2() + min_z_ext), (v_duct.z2() - min_z_ext - h_duct_height)));
+				unsigned const duct_flags(wall_dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO); // skip end against wall
+				cube_t h_duct(v_duct); // no placement test as there shouldn't be any blockers
+				v_duct.z2() = h_duct.z1() = h_duct_z1;
+				h_duct.z2() = h_duct_z1 + h_duct_height;
+				h_duct.d[wall_dim][wall_dir] = place_area.d[wall_dim][wall_dir]; // extend to the wall
+				objs.emplace_back(h_duct, TYPE_DUCT, room_id, wall_dim, wall_dir, duct_flags, tot_light_amt, SHAPE_CUBE, WHITE); // horizontal
+			}
+			objs.emplace_back(v_duct, TYPE_DUCT, room_id, 0, 1, (RO_FLAG_ADJ_TOP | RO_FLAG_ADJ_BOT), tot_light_amt, SHAPE_CUBE, WHITE); // vertical; skip top and bottom
 		}
 	}
 	// maybe add a ventilation and/or radiator fan on the wall
