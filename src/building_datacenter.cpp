@@ -503,12 +503,12 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 	return 1;
 }
 
-void move_lights_to_not_intersect(vect_room_object_t &objs, cube_t const &keepout, bool dim, unsigned objs_start, unsigned lights_start) {
+void move_lights_to_not_intersect(vect_room_object_t &objs, cube_t const &keepout, bool dim, unsigned objs_start, unsigned lights_start, unsigned pref_dir=2) {
 	for (unsigned j = lights_start; j < objs_start; ++j) {
 		room_object_t& light(objs[j]);
 		if (light.type != TYPE_LIGHT) continue;
 		if (light.d[dim][0] > keepout.d[dim][1] || light.d[dim][1] < keepout.d[dim][0]) continue; // not overlapping AC unit row
-		bool const move_dir(keepout.get_center_dim(dim) < light.get_center_dim(dim)); // move away from AC
+		bool const move_dir((pref_dir < 2) ? pref_dir : (keepout.get_center_dim(dim) < light.get_center_dim(dim))); // move away from AC
 		light.translate_dim(dim, (keepout.d[dim][move_dir] - light.d[dim][!move_dir]));
 	}
 }
@@ -639,7 +639,7 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 			cube_t keepout(duct);
 			keepout.expand_in_dim(dim, 0.1*h_duct_width);
 			move_lights_to_not_intersect(objs, keepout, dim, objs_start, lights_start);
-			// add vertical duct connecting to the floor below, aligned to the air intake; this should at least partially overlap and connect to the horizontal duct
+			// add vertical duct connecting to the air intake; this should at least partially overlap and connect to the horizontal duct
 			duct.z1() = zval;
 			duct.d[!dim][!bldg_side] = far_wall_inner;
 			duct.d[!dim][ bldg_side] = far_wall_pos;
@@ -679,13 +679,29 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 		unsigned const gen_end(objs.size());
 
 		for (unsigned i = gen_start; i < gen_end; ++i) {
-			cube_t const duct(get_exhaust_duct_for_generator(objs[i], ceiling_zval));
-			objs.emplace_back(duct, TYPE_DUCT, room_id, 0, 1, duct_flags, tot_light_amt, SHAPE_CUBE, WHITE); // vertical
+			cube_t const v_duct(get_exhaust_duct_for_generator(objs[i], ceiling_zval));
+			// add horizontal duct out to the back of the building
+			vector2d const duct_sz(v_duct.get_size_xy());
+			float const h_duct_z1(ceiling_zval - duct_sz.get_min_val());
+			unsigned h_duct_flags(RO_FLAG_ADJ_TOP | RO_FLAG_ADJ_HI | RO_FLAG_ADJ_LO); // skip top and both ends
+			cube_t h_duct(v_duct);
+			set_cube_zvals(h_duct, h_duct_z1, ceiling_zval);
+			h_duct.d[dim][ dir] = v_duct    .d[dim][!dir];
+			h_duct.d[dim][!dir] = place_area.d[dim][!dir]; // extend to the back wall
+			
+			if (duct_sz[!dim] < duct_sz[dim]) { // sideways generator placement
+				h_duct.expand_in_dim(!dim, 0.5*(duct_sz[dim] - duct_sz[!dim])); // expand to keep fixed cross section area
+				h_duct.d[dim][dir] = v_duct.d[dim][dir] + (dir ? 1.0 : -1.0)*0.1*duct_sz[dim]; // overlaps and covers v_duct with a bit of extension
+				h_duct_flags &= ~(dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO); // back face is visible
+			}
+			objs.emplace_back(h_duct, TYPE_DUCT, room_id, dim, dir, h_duct_flags, tot_light_amt, SHAPE_CUBE, WHITE); // horizontal
+			objs.emplace_back(v_duct, TYPE_DUCT, room_id, 0,   1,     duct_flags, tot_light_amt, SHAPE_CUBE, WHITE); // vertical
 
 			if (i == gen_start) { // first in row; check if we need to move an entire row of lights
-				cube_t keepout(duct);
+				cube_t keepout(v_duct);
+				keepout.union_with_cube(h_duct); // avoid this as well
 				keepout.expand_in_dim(dim, 0.1*h_duct_width);
-				move_lights_to_not_intersect(objs, keepout, dim, objs_start, lights_start);
+				move_lights_to_not_intersect(objs, keepout, dim, objs_start, lights_start, dir); // pref_dir=dir so that lights move toward the interior and aren't blocked by h_duct
 			}
 			// add fuel pipe
 			// TODO: pipe_radius
