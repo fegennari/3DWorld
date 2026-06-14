@@ -270,6 +270,12 @@ void building_t::add_datacenter_outdoor_objs(rand_gen_t &rgen) {
 	has_ac = 1;
 }
 
+void building_t::add_datacenter_rooftop_objs(rand_gen_t &rgen) {
+	if (!interior || !interior->dc_info) return; // error?
+	//cube_t const &part(get_first_part()); // main part
+	// TODO: add cooling towers
+}
+
 bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned lights_start) {
 	assert(has_room_geom());
 	bool const long_dim(room.dx() < room.dy()), mult_rows(is_datacenter());

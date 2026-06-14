@@ -2411,8 +2411,9 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 	if (is_rotated() && !is_cube()) {do_xy_rotate_inv(bcube.get_cube_center(), top_center);} // put top_center in building bcube coordinate space
 	float const helipad_radius(2.0*window_vspacing);
 	bool const can_have_hp_or_sl(flat_roof && num_sides >= 4 && flat_side_amt == 0.0 && !is_house && !is_parking() && !is_conv_store());
-	has_helipad = (can_have_hp_or_sl && min(tsz.x, tsz.y) > (is_cube() ? 3.2 : 4.0)*helipad_radius && bcube.dz() > 8.0*window_vspacing && (rgen.rand() % 12) == 0);
+	has_helipad = (can_have_hp_or_sl && !is_datacenter() && min(tsz.x, tsz.y) > (is_cube() ? 3.2 : 4.0)*helipad_radius && bcube.dz() > 8.0*window_vspacing && (rgen.rand() % 12) == 0);
 	cube_t avoid_bcube, door_blocker;
+	if (is_datacenter()) {add_datacenter_rooftop_objs(rgen);}
 
 	if (has_helipad) { // add helipad
 		tquad_t helipad(4); // quad
@@ -2432,7 +2433,7 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 	bool const add_rooftop_door(!is_cube() && has_complex_floorplan /*&& has_helipad*/); // add if there's no interior/stairs to the roof
 	unsigned num_blocks(0);
 	
-	if (flat_roof && !is_parking()) { // no roof blocks if there are roof quads (houses, etc.), or this is a parking garage
+	if (flat_roof && !is_parking() && !is_datacenter()) { // no roof blocks if there are roof quads (houses, etc.), or this is a parking garage or data center
 		num_blocks = (rgen.rand() % 9); // 0-8
 		if (add_rooftop_door) {max_eq(num_blocks, 1U);} // at least one for the door
 	}
