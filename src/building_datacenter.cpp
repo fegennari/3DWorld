@@ -503,6 +503,16 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 	return 1;
 }
 
+void move_lights_to_not_intersect(vect_room_object_t &objs, cube_t const &keepout, bool dim, unsigned objs_start, unsigned lights_start) {
+	for (unsigned j = lights_start; j < objs_start; ++j) {
+		room_object_t& light(objs[j]);
+		if (light.type != TYPE_LIGHT) continue;
+		if (light.d[dim][0] > keepout.d[dim][1] || light.d[dim][1] < keepout.d[dim][0]) continue; // not overlapping AC unit row
+		bool const move_dir(keepout.get_center_dim(dim) < light.get_center_dim(dim)); // move away from AC
+		light.translate_dim(dim, (keepout.d[dim][move_dir] - light.d[dim][!move_dir]));
+	}
+}
+
 void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned lights_start) {
 	assert(interior->dc_info);
 	zval       = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_CONCRETE); // add concrete and move the effective floor up
@@ -562,53 +572,26 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 	add_row_of_objects(ac_area, zval, room_id, tot_light_amt, ac_height, ac_width, ac_depth, 1.33, TYPE_METAL_BAR, dim, dir, dim, dir, item_flags, ac_color, cur_place_pos);
 	unsigned const ac_end(objs.size());
 
-	if (ac_start < ac_end) {
-		if (has_fan_model) {
-			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_RAD_FAN)); // D, W, H
-			float const scale(0.85*min(ac_depth/sz.y, min(0.5f*ac_width/sz.x, 0.5f*ac_height/sz.z)));
-			float const height(scale*sz.z), width(scale*sz.y), depth(scale*sz.x);
+	if (ac_start < ac_end && has_fan_model) { // add AC side fans
+		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_RAD_FAN)); // D, W, H
+		float const scale(0.85*min(ac_depth/sz.y, min(0.5f*ac_width/sz.x, 0.5f*ac_height/sz.z)));
+		float const height(scale*sz.z), width(scale*sz.y), depth(scale*sz.x);
 
-			for (unsigned i = ac_start; i < ac_end; ++i) {
-				cube_t const ac(objs[i]);
-				cube_t fan;
-				fan.z2() = ac .z2() - 0.1*height;
-				fan.z1() = fan.z2() -     height;
-				set_wall_width(fan, ac.get_center_dim(dim), 0.5*width, dim);
+		for (unsigned i = ac_start; i < ac_end; ++i) {
+			cube_t const ac(objs[i]);
+			cube_t fan;
+			fan.z2() = ac .z2() - 0.1*height;
+			fan.z1() = fan.z2() -     height;
+			set_wall_width(fan, ac.get_center_dim(dim), 0.5*width, dim);
 
-				for (unsigned d = 0; d < 2; ++d) { // each side
-					float const edge_pos(ac.d[!dim][d]);
-					fan.d[!dim][!d] = edge_pos;
-					fan.d[!dim][ d] = edge_pos + (d ? 1.0 : -1.0)*depth;
-					objs.emplace_back(fan, TYPE_RAD_FAN, room_id, !dim, d, 0, tot_light_amt, SHAPE_CUBE, WHITE);
-				}
-			} // for i
-		}
+			for (unsigned d = 0; d < 2; ++d) { // each side
+				float const edge_pos(ac.d[!dim][d]);
+				fan.d[!dim][!d] = edge_pos;
+				fan.d[!dim][ d] = edge_pos + (d ? 1.0 : -1.0)*depth;
+				objs.emplace_back(fan, TYPE_RAD_FAN, room_id, !dim, d, 0, tot_light_amt, SHAPE_CUBE, WHITE);
+			}
+		} // for i
 	}
-	cube_t xfmr_area(inner_area), gen_area(inner_area);
-
-	for (unsigned pass = 0; pass < 2; ++pass) {
-		float const pre_place_pos(cur_place_pos);
-		unsigned const xg_obj_size(objs.size());
-		// place transformers
-		add_row_of_models(xfmr_area, zval, room_id, tot_light_amt, 0.4*floor_spacing, 0.15, OBJ_MODEL_SUBSTATION, TYPE_XFORMER, dim, dir, dim, dir, 0, cur_place_pos);
-		// connect with wire conduits? but they already have conduits into the floor
-		if (pass == 1) {cur_place_pos = pre_place_pos;} // use the same row
-		// place generators near the back wall
-		float const gen_height(0.56*floor_spacing);
-		if (add_row_of_models(gen_area, zval, room_id, tot_light_amt, gen_height, 0.3, OBJ_MODEL_GENERATOR, TYPE_GENERATOR, dim, dir, dim, dir, 0, cur_place_pos)) break;
-		// can't place lengthwise; try sideways
-		bool const gdir(rgen.rand_bool()); // either facing toward or away from the door
-		if (add_row_of_models(gen_area, zval, room_id, tot_light_amt, gen_height, 0.15, OBJ_MODEL_GENERATOR, TYPE_GENERATOR, dim, dir, !dim, gdir, 0, cur_place_pos)) break;
-		if (pass == 1) break; // failed, done
-		// try again, but this time split the width in half and try to place each type
-		objs.resize(xg_obj_size); // remove any models added above
-		bool const xg_side(rgen.rand_bool());
-		xfmr_area.d[!dim][xg_side] = gen_area.d[!dim][!xg_side] = inner_area.get_center_dim(!dim);
-		cur_place_pos = pre_place_pos;
-	} // for pass
-	// add breaker panel
-	add_breaker_panel_by_door(rgen, room, zval, room_id, tot_light_amt);
-
 	// add AC ducts and pipes
 	float const h_duct_width(0.4*ac_width), h_duct_height(0.5*ac_width), v_duct_radius(0.25*ac_width), h_duct_z1(ceiling_zval - h_duct_height);
 	float const far_wall_pos(room.d[!dim][bldg_side]);
@@ -617,6 +600,7 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 	for (unsigned i = ac_start; i < ac_end; ++i) { // add ducts connecting AC units
 		bool const closest_to_door(i == (bldg_side ? ac_start : ac_end-1));
 		cube_t const ac(objs[i]);
+		// add vertical duct connecting to the top of each AC unit
 		cube_t duct;
 		set_cube_zvals(duct, ac.z2(), h_duct_z1);
 		for (unsigned d = 0; d < 2; ++d) {set_wall_width(duct, ac.get_center_dim(d), v_duct_radius, d);}
@@ -631,8 +615,10 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 			set_cube_zvals(duct, h_duct_z1, ceiling_zval);
 			set_wall_width(duct, ac.get_center_dim(dim), h_duct_width, dim);
 			objs.emplace_back(duct, TYPE_DUCT, room_id, !dim, 0, (RO_FLAG_ADJ_TOP | skip_end_flag), tot_light_amt, SHAPE_CUBE, WHITE); // horizontal; skip top and back
+			// first in row; check if we need to move an entire row of lights
 			cube_t keepout(duct);
 			keepout.expand_in_dim(dim, 0.1*h_duct_width);
+			move_lights_to_not_intersect(objs, keepout, dim, objs_start, lights_start);
 			// add vertical duct connecting to the floor below, aligned to the air intake; this should at least partially overlap and connect to the horizontal duct
 			duct.z1() = zval;
 			duct.d[!dim][!bldg_side] = far_wall_inner;
@@ -641,17 +627,58 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 			copy_dim(duct, air_intake, dim); // same width as exterior ducts
 			unsigned const v_duct_flags(RO_FLAG_ADJ_TOP | RO_FLAG_ADJ_BOT | skip_end_flag);
 			objs.emplace_back(duct, TYPE_DUCT, room_id, !dim, 1, v_duct_flags, tot_light_amt, SHAPE_CUBE, WHITE); // vertical; skip top, bottom, and back
-
-			// first in row; check if we need to move an entire row of lights
-			for (unsigned j = lights_start; j < objs_start; ++j) {
-				room_object_t& light(objs[j]);
-				if (light.type != TYPE_LIGHT) continue;
-				if (light.d[dim][0] > keepout.d[dim][1] || light.d[dim][1] < keepout.d[dim][0]) continue; // not overlapping AC unit row
-				bool const move_dir(keepout.get_center_dim(dim) < light.get_center_dim(dim)); // move away from AC
-				light.translate_dim(dim, (keepout.d[dim][move_dir] - light.d[dim][!move_dir]));
-			}
+			// add vertical pipe(s)
+			// TODO
 		}
 	} // for i
+	cube_t xfmr_area(inner_area), gen_area(inner_area);
+	unsigned gen_start(0);
+
+	for (unsigned pass = 0; pass < 2; ++pass) {
+		float const pre_place_pos(cur_place_pos);
+		unsigned const xg_obj_size(objs.size());
+		// place transformers
+		add_row_of_models(xfmr_area, zval, room_id, tot_light_amt, 0.4*floor_spacing, 0.15, OBJ_MODEL_SUBSTATION, TYPE_XFORMER, dim, dir, dim, dir, 0, cur_place_pos);
+		// connect with wire conduits? but they already have conduits into the floor
+		if (pass == 1) {cur_place_pos = pre_place_pos;} // use the same row
+		// place generators near the back wall
+		gen_start = objs.size();
+		float const gen_height(0.56*floor_spacing);
+		if (add_row_of_models(gen_area, zval, room_id, tot_light_amt, gen_height, 0.3, OBJ_MODEL_GENERATOR, TYPE_GENERATOR, dim, dir, dim, dir, 0, cur_place_pos)) break;
+		// can't place lengthwise; try sideways
+		bool const gdir(rgen.rand_bool()); // either facing toward or away from the door
+		if (add_row_of_models(gen_area, zval, room_id, tot_light_amt, gen_height, 0.15, OBJ_MODEL_GENERATOR, TYPE_GENERATOR, dim, dir, !dim, gdir, 0, cur_place_pos)) break;
+		if (pass == 1) break; // failed, done
+		// try again, but this time split the width in half and try to place each type
+		objs.resize(xg_obj_size); // remove any models added above
+		bool const xg_side(rgen.rand_bool());
+		xfmr_area.d[!dim][xg_side] = gen_area.d[!dim][!xg_side] = inner_area.get_center_dim(!dim);
+		cur_place_pos = pre_place_pos;
+	} // for pass
+	if (gen_start > 0) { // add ducts and fuel lines for generators
+		float const pipe_radius(0.015*floor_spacing);
+		unsigned const gen_end(objs.size());
+
+		for (unsigned i = gen_start; i < gen_end; ++i) {
+			room_object_t const &generator(objs[i]);
+			assert(generator.type == TYPE_GENERATOR);
+			bool const gdim(generator.dim), gdir(generator.dir);
+			float const gen_width(generator.get_width()), gen_length(generator.get_length());
+			cube_t duct;
+			set_cube_zvals(duct, generator.z2(), ceiling_zval);
+			set_wall_width(duct, generator.get_center_dim(!gdim), 0.2*gen_width, !gdim);
+			set_wall_width(duct, generator.d[gdim][gdir] - (gdir ? 1.0 : -1.0)*0.68*gen_length, 0.03*gen_length, gdim);
+			objs.emplace_back(duct, TYPE_DUCT, room_id, 0, 1, h_duct_flags, tot_light_amt, SHAPE_CUBE, WHITE); // vertical
+
+			if (i == gen_start) { // first in row; check if we need to move an entire row of lights
+				cube_t keepout(duct);
+				keepout.expand_in_dim(dim, 0.1*h_duct_width);
+				move_lights_to_not_intersect(objs, keepout, dim, objs_start, lights_start);
+			}
+		} // for i
+	}
+	// add breaker panel
+	add_breaker_panel_by_door(rgen, room, zval, room_id, tot_light_amt);
 	add_door_sign("Utility", room, zval, room_id);
 }
 
