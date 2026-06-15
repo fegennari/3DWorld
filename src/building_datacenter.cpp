@@ -138,11 +138,6 @@ cube_t building_t::create_datacenter_floorplan(unsigned part_id, float window_hs
 		cube_t utility(util_area);
 		utility.d[min_dim][!d] = hall_side;
 		add_assigned_room(utility, part_id, RTYPE_UTILITY);
-		// add air intake shaft for utility room, to be used for interior and exterior objects
-		cube_t &air_intake(interior->dc_info->air_intake_shaft[d]);
-		air_intake = part; // copy zvals and exterior wall
-		air_intake.d[min_dim][!d] = part.d[min_dim][d] - (d ? 1.0 : -1.0)*0.1*window_vspacing; // set depth
-		set_wall_width(air_intake, (util_pos - se_end_sign*1.06*window_vspacing), 0.125*window_vspacing, max_dim); // set width; center to approx match interior AC placement
 		// add walls and doors along hallway
 		cube_t walls[2] = {part, part}; // {lo, hi} sides
 		create_wall(walls[0], min_dim, hall_side, fc_thick, wall_hthick, wall_edge_spacing);
@@ -221,30 +216,6 @@ void building_t::add_datacenter_outdoor_objs(rand_gen_t &rgen) {
 	float const floor_spacing(get_window_vspace()), floor_thick(get_floor_thickness()), fc_thick(0.5*floor_thick);
 	bool const vent_dim(hallway_dim);
 
-	// add air intake vents on each side
-	for (unsigned d = 0; d < 2; ++d) {
-		cube_t const &air_intake(interior->dc_info->air_intake_shaft[d]);
-		float const wall_pos(air_intake.d[!vent_dim][d]), dsign(d ? 1.0 : -1.0);
-		float const vent_depth(0.05*floor_spacing), vent_height(0.2*floor_spacing);
-		// add rooftop vent
-		float const outer_edge(wall_pos - dsign*get_roof_wall_thick()); // shift away from the roof wall
-		roof_obj_t top_vent(air_intake, ROOF_OBJ_DUCT);
-		top_vent.d[!vent_dim][ d] = outer_edge;
-		top_vent.d[!vent_dim][!d] = outer_edge - dsign*0.2*floor_spacing; // set depth
-		set_cube_zvals(top_vent, air_intake.z2(), (air_intake.z2() + vent_height)); // set height
-		details.push_back(top_vent);
-		// add side vent on each floor
-		unsigned const num_floors(calc_num_floors(air_intake, floor_spacing, floor_thick));
-		roof_obj_t vent(air_intake, ROOF_OBJ_DUCT);
-		vent.d[!vent_dim][!d] = wall_pos;
-		vent.d[!vent_dim][ d] = wall_pos + dsign*vent_depth; // set depth/amount outside building
-
-		for (unsigned f = 0; f < num_floors; ++f) {
-			vent.z2() = air_intake.z1() + (f + 1)*floor_spacing - fc_thick;
-			vent.z1() = vent.z2() - vent_height;
-			details.push_back(vent);
-		}
-	} // for d
 	// add outdoor AC units
 	if ((real_num_parts - has_basement()) != 1) return; // only handles a single part
 	bool const dim(!bool(hallway_dim));
@@ -523,6 +494,15 @@ cube_t get_exhaust_duct_for_generator(room_object_t const &generator, float duct
 	set_wall_width(duct, generator.d[gdim][gdir] - (gdir ? 1.0 : -1.0)*0.68*gen_length, 0.03*gen_length, gdim);
 	return duct;
 }
+void add_exterior_duct(cube_t const &h_duct, bool dim, bool dir, unsigned room_id, vect_room_object_t &objs) {
+	float const wall_pos(h_duct.d[dim][dir]), duct_height(h_duct.dz());
+	cube_t vent(h_duct);
+	vent.d[dim][!dir] = wall_pos;
+	vent.d[dim][ dir] = wall_pos + (dir ? 1.0 : -1.0)*0.2*duct_height; // set depth/extension
+	vent.expand_in_dim(!dim, 0.2*duct_height);
+	vent.expand_in_z(0.1*duct_height);
+	objs.emplace_back(vent, TYPE_VENT, room_id, dim, !dir, (RO_FLAG_NOCOLL | RO_FLAG_EXTERIOR), 1.0); // fully lit
+}
 
 void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned lights_start) {
 	assert(interior->dc_info);
@@ -611,7 +591,7 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 	}
 	// add AC ducts and pipes
 	float const h_duct_width(0.4*ac_width), h_duct_height(0.5*ac_width), v_duct_radius(0.25*ac_width), h_duct_z1(ceiling_zval - h_duct_height);
-	float const far_wall_pos(room.d[!dim][bldg_side]), ac_pipe_radius(0.1*ac_width);
+	float const far_wall_pos(room.d[!dim][bldg_side]), ac_pipe_radius(0.1*ac_width), bs_sign(bldg_side ? 1.0 : -1.0);
 	unsigned const duct_flags(RO_FLAG_ADJ_TOP | RO_FLAG_ADJ_BOT); // skip top and bottom
 
 	for (unsigned i = ac_start; i < ac_end; ++i) { // add ducts connecting AC units
@@ -629,8 +609,8 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 		if (closest_to_door) {
 			// add main duct for first AC unit
 			unsigned const skip_end_flag(bldg_side ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO); // end against the far wall
-			float const far_wall_inner(far_wall_pos - (bldg_side ? 1.0 : -1.0)*h_duct_height);
-			duct.d[!dim][!bldg_side] -= (bldg_side ? 1.0 : -1.0)*0.5*v_duct_radius; // extend out slightly
+			float const far_wall_inner(far_wall_pos - bs_sign*h_duct_height);
+			duct.d[!dim][!bldg_side] -= bs_sign*0.5*v_duct_radius; // extend out slightly
 			duct.d[!dim][ bldg_side]  = far_wall_pos; // overlaps vertical duct so that it connects even if misaligned
 			set_cube_zvals(duct, h_duct_z1, ceiling_zval);
 			set_wall_width(duct, ac.get_center_dim(dim), h_duct_width, dim);
@@ -643,9 +623,20 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 			duct.z1() = zval;
 			duct.d[!dim][!bldg_side] = far_wall_inner;
 			duct.d[!dim][ bldg_side] = far_wall_pos;
-			cube_t const &air_intake(interior->dc_info->air_intake_shaft[bldg_side]);
-			copy_dim(duct, air_intake, dim); // same width as exterior ducts
+			duct.expand_in_dim(dim, 0.5*h_duct_width); // double the width
 			objs.emplace_back(duct, TYPE_DUCT, room_id, !dim, 1, (duct_flags | skip_end_flag), tot_light_amt, SHAPE_CUBE); // vertical; skip top, bottom, and back
+			duct.z1() = h_duct_z1; // restore original z1 for the vent
+			add_exterior_duct(duct, !dim, bldg_side, room_id, objs); // add exterior vent
+
+			if (zval + floor_spacing >= room.z2()) { // add vertical roof duct on top floor
+				float const outer_edge(far_wall_pos - bs_sign*get_roof_wall_thick()); // shift away from the roof wall
+				cube_t top_vent(duct);
+				top_vent.d[!dim][ bldg_side] = outer_edge;
+				top_vent.d[!dim][!bldg_side] = outer_edge - 1.5*bs_sign*h_duct_height; // set depth
+				top_vent.expand_in_dim(dim, 0.2*h_duct_height); // widen
+				set_cube_zvals(top_vent, room.z2(), (room.z2() + 1.0*h_duct_height)); // set height
+				objs.emplace_back(top_vent, TYPE_VENT, room_id, dim, 1, (RO_FLAG_NOCOLL | RO_FLAG_HANGING | RO_FLAG_EXTERIOR), 1.0); // dir=1; fully lit
+			}
 			// add horizontal pipe(s)
 			// TODO
 		}
@@ -696,13 +687,7 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 			}
 			objs.emplace_back(h_duct, TYPE_DUCT, room_id, dim, dir, h_duct_flags, tot_light_amt, SHAPE_CUBE); // horizontal
 			objs.emplace_back(v_duct, TYPE_DUCT, room_id, 0,   1,     duct_flags, tot_light_amt, SHAPE_CUBE); // vertical
-			// add exterior vent
-			cube_t vent(h_duct);
-			vent.d[dim][ dir] = back_wall_pos;
-			vent.d[dim][!dir] = back_wall_pos - (dir ? 1.0 : -1.0)*0.2*duct_height; // set depth/extension
-			vent.expand_in_dim(!dim, 0.2*duct_height);
-			vent.expand_in_z(0.1*duct_height);
-			objs.emplace_back(vent, TYPE_VENT, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_EXTERIOR), 1.0); // fully lit
+			add_exterior_duct(h_duct, dim, !dir, room_id, objs); // add exterior vent
 
 			if (i == gen_start) { // first in row; check if we need to move an entire row of lights
 				cube_t keepout(v_duct);

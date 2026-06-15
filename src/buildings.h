@@ -1510,7 +1510,6 @@ struct bldg_datacenter_info_t {
 	bool skip_sr_util_windows;
 	float office_pos, util_pos, bath_pos;
 	float ac_height=0.0, ac_width=0.0, ac_depth=0.0;
-	cube_t air_intake_shaft[2];
 
 	bldg_datacenter_info_t(bool sd, float op, float up, float bp, bool sw) : se_dir(sd), skip_sr_util_windows(sw), office_pos(op), util_pos(up), bath_pos(bp) {}
 };

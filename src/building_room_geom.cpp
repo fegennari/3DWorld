@@ -6430,7 +6430,7 @@ void building_room_geom_t::add_vent(room_object_t const &c, bool add_exterior) {
 		tid_nm_pair_t tex(tid, 0.0, 0); // unshadowed
 		tex.set_specular(spec, shine, metalness);
 		rgeom_mat_t &front_mat(get_material(tex, 0, (detail ? 2 : 0), 0, exterior));
-		front_mat.add_cube_to_verts(c, c.color, zero_vector, ~EF_Z1, !c.dim); // textured bottom face; always fully lit to match wall
+		front_mat.add_cube_to_verts(c, c.color, zero_vector, ~(c.dir ? EF_Z2 : EF_Z1), !c.dim); // textured top or bottom face; always fully lit to match wall
 		get_painted_metal_material(0, 0, (detail ? 2 : 0), exterior, 0, spec, shine, metalness).add_cube_to_verts_untextured(c, c.color, EF_Z12); // sides: unshadowed; skip top/bottom
 	}
 	else { // vent on a wall
