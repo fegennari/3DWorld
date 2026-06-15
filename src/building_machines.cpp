@@ -883,12 +883,21 @@ void building_t::add_industrial_machines(rand_gen_t rgen, room_t const &room, cu
 			unsigned const gen_start(objs.size());
 			add_row_of_models(center_area, zval, room_id, tot_light_amt, gen_height, gen_spacing, OBJ_MODEL_GENERATOR, TYPE_GENERATOR, gen_dim, gen_dir, gen_dim, !gen_dir, 0, place_pos);
 			unsigned const gen_end(objs.size());
-			float const duct_z2(zval + floor_spacing); // TODO: does this to up to the ceiling/roof, right angle to the exterior wall, or merge and out to the top and side?
+			float const duct_z2(zval + floor_spacing);
+			cube_t h_duct;
 
 			for (unsigned i = gen_start; i < gen_end; ++i) {
 				cube_t const duct(get_exhaust_duct_for_generator(objs[i], duct_z2));
-				objs.emplace_back(duct, TYPE_DUCT, room_id, 0, 1, (RO_FLAG_ADJ_TOP | RO_FLAG_ADJ_BOT), tot_light_amt, SHAPE_CUBE, WHITE); // vertical
+				objs.emplace_back(duct, TYPE_DUCT, room_id, 0, 1, (RO_FLAG_ADJ_TOP | RO_FLAG_ADJ_BOT), tot_light_amt, SHAPE_CUBE); // vertical
+				h_duct.assign_or_union_with_cube(duct);
 			}
+			// add horizontal duct connecting all generator exhausts
+			float const duct_width(h_duct.get_sz_dim(gen_dim)), duct_height(2.0*duct_width);
+			set_cube_zvals(h_duct, h_duct.z2(), (h_duct.z2() + duct_height));
+			h_duct.expand_in_dim(!gen_dim, 0.5*duct_width); // double the width
+			h_duct.expand_in_dim( gen_dim, 0.2*duct_width); // slight end extend
+			objs.emplace_back(h_duct, TYPE_DUCT, room_id, !gen_dim, 0, 0, tot_light_amt, SHAPE_CUBE); // horizontal; draw all sides
+			// TODO: does this to up to the ceiling/roof, right angle to the exterior wall, or merge and out to the top and side?
 		}
 		unsigned machine_range[2][2] = {{0, num_xy[0]-1}, {0, num_xy[1]-1}};
 
