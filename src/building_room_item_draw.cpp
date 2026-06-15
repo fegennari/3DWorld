@@ -639,6 +639,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		case TYPE_FPLACE:  add_fireplace(*i, tscale); break;
 		case TYPE_FCABINET: add_filing_cabinet(*i, 1, 0); break; // lg
 		case TYPE_SIGN:    add_sign    (*i, 1, 1, 1); break; // lg, exterior_only=1
+		case TYPE_VENT:    add_vent(*i, 1); break; // add_exterior=1
 		case TYPE_PIPE:    add_pipe(*i, 1); break; // add_exterior=1
 		case TYPE_WIND_SILL: add_window_sill  (*i); break;
 		case TYPE_EXT_STEP:  add_exterior_step(*i); break;

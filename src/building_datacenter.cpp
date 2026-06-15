@@ -621,7 +621,7 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 		cube_t duct;
 		set_cube_zvals(duct, ac.z2(), h_duct_z1);
 		for (unsigned d = 0; d < 2; ++d) {set_wall_width(duct, ac.get_center_dim(d), v_duct_radius, d);}
-		objs.emplace_back(duct, TYPE_DUCT, room_id, 0, 1, duct_flags, tot_light_amt, SHAPE_CYLIN, WHITE); // vertical
+		objs.emplace_back(duct, TYPE_DUCT, room_id, 0, 1, duct_flags, tot_light_amt, SHAPE_CYLIN); // vertical
 		// add vertical pipe(s)
 		cube_t pipe;
 		// TODO: ac_pipe_radius
@@ -634,7 +634,7 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 			duct.d[!dim][ bldg_side]  = far_wall_pos; // overlaps vertical duct so that it connects even if misaligned
 			set_cube_zvals(duct, h_duct_z1, ceiling_zval);
 			set_wall_width(duct, ac.get_center_dim(dim), h_duct_width, dim);
-			objs.emplace_back(duct, TYPE_DUCT, room_id, !dim, 0, (RO_FLAG_ADJ_TOP | skip_end_flag), tot_light_amt, SHAPE_CUBE, WHITE); // horizontal; skip top and back
+			objs.emplace_back(duct, TYPE_DUCT, room_id, !dim, 0, (RO_FLAG_ADJ_TOP | skip_end_flag), tot_light_amt, SHAPE_CUBE); // horizontal; skip top and back
 			// first in row; check if we need to move an entire row of lights
 			cube_t keepout(duct);
 			keepout.expand_in_dim(dim, 0.1*h_duct_width);
@@ -645,7 +645,7 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 			duct.d[!dim][ bldg_side] = far_wall_pos;
 			cube_t const &air_intake(interior->dc_info->air_intake_shaft[bldg_side]);
 			copy_dim(duct, air_intake, dim); // same width as exterior ducts
-			objs.emplace_back(duct, TYPE_DUCT, room_id, !dim, 1, (duct_flags | skip_end_flag), tot_light_amt, SHAPE_CUBE, WHITE); // vertical; skip top, bottom, and back
+			objs.emplace_back(duct, TYPE_DUCT, room_id, !dim, 1, (duct_flags | skip_end_flag), tot_light_amt, SHAPE_CUBE); // vertical; skip top, bottom, and back
 			// add horizontal pipe(s)
 			// TODO
 		}
@@ -682,20 +682,27 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 			cube_t const v_duct(get_exhaust_duct_for_generator(objs[i], ceiling_zval));
 			// add horizontal duct out to the back of the building
 			vector2d const duct_sz(v_duct.get_size_xy());
-			float const h_duct_z1(ceiling_zval - duct_sz.get_min_val());
+			float const duct_height(duct_sz.get_min_val()), h_duct_z1(ceiling_zval - duct_height), back_wall_pos(room.d[dim][!dir]);
 			unsigned h_duct_flags(RO_FLAG_ADJ_TOP | RO_FLAG_ADJ_HI | RO_FLAG_ADJ_LO); // skip top and both ends
 			cube_t h_duct(v_duct);
 			set_cube_zvals(h_duct, h_duct_z1, ceiling_zval);
-			h_duct.d[dim][ dir] = v_duct    .d[dim][!dir];
-			h_duct.d[dim][!dir] = place_area.d[dim][!dir]; // extend to the back wall
+			h_duct.d[dim][ dir] = v_duct.d[dim][!dir];
+			h_duct.d[dim][!dir] = back_wall_pos; // extend to the back wall
 			
 			if (duct_sz[!dim] < duct_sz[dim]) { // sideways generator placement
 				h_duct.expand_in_dim(!dim, 0.5*(duct_sz[dim] - duct_sz[!dim])); // expand to keep fixed cross section area
 				h_duct.d[dim][dir] = v_duct.d[dim][dir] + (dir ? 1.0 : -1.0)*0.1*duct_sz[dim]; // overlaps and covers v_duct with a bit of extension
 				h_duct_flags &= ~(dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO); // back face is visible
 			}
-			objs.emplace_back(h_duct, TYPE_DUCT, room_id, dim, dir, h_duct_flags, tot_light_amt, SHAPE_CUBE, WHITE); // horizontal
-			objs.emplace_back(v_duct, TYPE_DUCT, room_id, 0,   1,     duct_flags, tot_light_amt, SHAPE_CUBE, WHITE); // vertical
+			objs.emplace_back(h_duct, TYPE_DUCT, room_id, dim, dir, h_duct_flags, tot_light_amt, SHAPE_CUBE); // horizontal
+			objs.emplace_back(v_duct, TYPE_DUCT, room_id, 0,   1,     duct_flags, tot_light_amt, SHAPE_CUBE); // vertical
+			// add exterior vent
+			cube_t vent(h_duct);
+			vent.d[dim][ dir] = back_wall_pos;
+			vent.d[dim][!dir] = back_wall_pos - (dir ? 1.0 : -1.0)*0.2*duct_height; // set depth/extension
+			vent.expand_in_dim(!dim, 0.2*duct_height);
+			vent.expand_in_z(0.1*duct_height);
+			objs.emplace_back(vent, TYPE_VENT, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_EXTERIOR), 1.0); // fully lit
 
 			if (i == gen_start) { // first in row; check if we need to move an entire row of lights
 				cube_t keepout(v_duct);
