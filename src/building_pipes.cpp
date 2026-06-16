@@ -1417,7 +1417,7 @@ void building_t::get_pipe_basement_water_connections(vect_riser_pos_t &sewer, ve
 	float const floor_spacing(get_window_vspace()), floor_thickness(get_floor_thickness()), second_floor_zval(ground_floor_z1 + floor_spacing);
 	float const base_pipe_radius((is_apt_or_hotel() ? 0.008 : 0.01)*floor_spacing), base_pipe_area(base_pipe_radius*base_pipe_radius);
 	float const merge_dist_sq(merge_dist*merge_dist), max_radius(0.3*get_wall_thickness()), ceil_zval(basement.z2() - get_fc_thickness());
-	bool const inc_extb_conns(has_ext_basement() && !has_backrooms_or_mall());
+	bool const inc_extb_conns(has_ext_basement() && !has_backrooms_or_mall()), check_mall_objs(has_mall()), check_for_ac(is_datacenter());
 	bool const inc_basement_wheaters = 1;
 	float extb_pipe_radius(has_pool() ? base_pipe_radius : 0.0); // pools use cold water
 	bool extb_pipe_has_hot(0);
@@ -1426,7 +1426,13 @@ void building_t::get_pipe_basement_water_connections(vect_riser_pos_t &sewer, ve
 
 	// start with sewer pipes and water heaters
 	for (room_object_t const &i : interior->room_geom->objs) { // check all objects placed so far
-		if (i.in_mall()) continue; // skip appliance/plumbing store objects
+		if (check_for_ac && i.type == TYPE_METAL_BAR && (i.flags & RO_FLAG_IN_FACTORY)) {
+			// special case for data center AC air handlers, which consume cooling water and produce waste water (that could be recycled?)
+			if (i.z1() < ground_floor_z1 || i.z1() > ground_floor_z1 + floor_spacing) continue; // only add for the ground floor, since other floors are stacked exactly above
+			sewer.emplace_back(point(i.xc(), i.yc(), ceil_zval), 0.02*floor_spacing, 0, 0, 0); // has_hot=0, upper_floor=0 (no move inside wall)
+			continue;
+		}
+		if (check_mall_objs && i.in_mall()) continue; // skip appliance/plumbing store objects
 
 		if (i.type == TYPE_WHEATER) { // water heaters are special because they take cold water and return hot water
 			// maybe skip if in the basement, since this must connect directly to pipes rather than through a riser;
