@@ -1285,8 +1285,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 				cube_t vase;
 				vase.set_from_sphere(center, radius);
 				set_cube_zvals(vase, zval, zval+height);
-				if (has_bcube_int(vase, blockers)) continue;
-				if (!tree_avoid.is_all_zeros() && tree_avoid.intersects(vase)) continue;
+				if (has_bcube_int(vase, blockers) || cube_int_if_nonzero(vase, tree_avoid)) continue;
 				objs.emplace_back(vase, TYPE_VASE, room_id, 0, 0, RO_FLAG_IN_MALL, light_amt, SHAPE_CYLIN, vase_color);
 				objs.back().obj_id = rand_ix;
 				blockers.push_back(vase);
@@ -1811,7 +1810,7 @@ unsigned building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zv
 				c.d[ dim][!dir ] += (dir  ? -1.0 : 1.0)*depth;
 				c.d[!dim][!dir2] += (dir2 ? -1.0 : 1.0)*width;
 				c.z2() += height;
-				if (!blocked.is_all_zeros() && c.intersects_xy(blocked)) continue; // blocked; shouldn't happen?
+				if (cube_int_xy_if_nonzero(c, blocked)) continue; // blocked; shouldn't happen?
 				objs.emplace_back(c, TYPE_WINE_RACK, room_id, dim, !dir, 0, light_amt); // Note: dir faces into the room, not the wall
 				set_obj_id(objs);
 			} // for xc
@@ -1855,7 +1854,7 @@ unsigned building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zv
 					float const start(place_area.d[dim][0] + nom_aisle_width + r*rack_spacing);
 					rack.d[dim][0] = start;
 					rack.d[dim][1] = start + rack_length;
-					if (!blocked.is_all_zeros() && rack.intersects_xy(blocked)) continue; // blocked
+					if (cube_int_xy_if_nonzero(rack, blocked)) continue; // blocked
 					cube_t test_cube(rack);
 					test_cube.expand_in_dim( dim, 0.5*door_width); // add extra padding at ends
 					test_cube.expand_in_dim(!dim, 1.0*door_width); // add extra padding at sides

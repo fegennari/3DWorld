@@ -1504,7 +1504,7 @@ void building_t::maybe_add_fire_escape(rand_gen_t &rgen) { // or ladder
 				if (has_bcube_int_no_adj(fe_bc, parts))              continue; // check for intersection with other parts, in particular the chimney and fireplace
 				if (has_driveway() && fe_bc.intersects_xy(driveway)) continue; // skip if intersects driveway or garage
 				if (cube_int_ext_door(fe_bc_exp))                    continue; // check exterior doors
-				if (!deck_bounds.is_all_zeros() && fe_bc.intersects_xy(deck_bounds)) continue; // check deck
+				if (cube_int_xy_if_nonzero(fe_bc, deck_bounds))      continue; // check deck
 				interior->room_geom->objs.emplace_back(fe_bc, TYPE_FESCAPE, 0, dim, dir, RO_FLAG_EXTERIOR, 1.0, SHAPE_CUBE, BLACK); // room_id=0
 				details.emplace_back(fe_bc, DETAIL_OBJ_COLLIDER);
 				union_with_coll_bcube(fe_bc);
@@ -1549,7 +1549,7 @@ void building_t::maybe_add_fire_escape(rand_gen_t &rgen) { // or ladder
 				if (has_driveway() && bc.intersects_xy(driveway)) continue; // skip if intersects driveway or garage
 				if (cube_int_ext_door(bc_exp))                    continue; // check exterior doors
 				if (has_bcube_int(bc_exp, details))               continue; // check details; outdoor AC units can intersect
-				if (!deck_bounds.is_all_zeros() && bc.intersects_xy(deck_bounds)) continue; // check deck
+				if (cube_int_xy_if_nonzero(bc, deck_bounds))      continue; // check deck
 				interior->room_geom->objs.emplace_back(bc, TYPE_LADDER, 0, dim, dir, RO_FLAG_EXTERIOR, 1.0, SHAPE_CUBE, WHITE); // room_id=0
 				union_with_coll_bcube(bc);
 				ladder = bc;
@@ -1622,7 +1622,7 @@ void building_t::add_balconies(rand_gen_t &rgen, vect_cube_t &balconies) { // an
 					test_cube.expand_in_dim(!dim, 2.0*wall_thickness); // expand to include adjacencies
 					if (test_cube.intersects(other_part)) continue;
 				}
-				if (!exterior_flag.is_all_zeros() && exterior_flag.intersects(balcony)) continue; // flag placed in the way, no balcony
+				if (cube_int_if_nonzero(balcony, exterior_flag)) continue; // flag placed in the way, no balcony
 				cube_t balcony_ext_down(balcony), balcony_ext_out(balcony);
 				balcony_ext_down.z1() = ground_floor_z1; // extend down to the ground
 

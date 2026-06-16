@@ -623,7 +623,7 @@ bool building_t::add_trolley(rand_gen_t &rgen, cube_t const &place_area, cube_t 
 		trolley.expand_in_dim( trolley_dim, hlength);
 		trolley.expand_in_dim(!trolley_dim, hwidth );
 		trolley.z2() += height;
-		if ((!avoid.is_all_zeros() && trolley.intersects(avoid)) || overlaps_obj_or_placement_blocked(trolley, place_area, objs_start)) continue; // bad placement
+		if (cube_int_if_nonzero(trolley, avoid) || overlaps_obj_or_placement_blocked(trolley, place_area, objs_start)) continue; // bad placement
 		interior->room_geom->objs.emplace_back(trolley, TYPE_TROLLEY, room_id, trolley_dim, rgen.rand_bool(), 0, tot_light_amt);
 		return 1; // success/done
 	} // for n

@@ -2482,10 +2482,10 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 		for (unsigned n = 0; n < 100; ++n) { // limited to 100 attempts to prevent infinite loop
 			c.set_from_point(point(rgen.rand_uniform(bounds.x1(), bounds.x2()), rgen.rand_uniform(bounds.y1(), bounds.y2()), top.z2()));
 			c.expand_by_xy(vector3d(xy_sz*rgen.rand_uniform(0.01, 0.07), xy_sz*rgen.rand_uniform(0.01, 0.07), 0.0));
-			if (!bounds.contains_cube_xy(c)) continue; // not contained
-			if (!avoid_bcube .is_all_zeros() && c.intersects_xy(avoid_bcube ))      continue; // bad placement
-			if (!door_blocker.is_all_zeros() && c.intersects_xy(door_blocker))      continue; // bad placement
-			if (has_bcube_int_xy(c, skylights))                                     continue; // over skylight
+			if (!bounds.contains_cube_xy(c))             continue; // not contained
+			if (cube_int_xy_if_nonzero(c, avoid_bcube )) continue; // bad placement
+			if (cube_int_xy_if_nonzero(c, door_blocker)) continue; // bad placement
+			if (has_bcube_int_xy(c, skylights))          continue; // over skylight
 			if (!is_cube() && !check_part_contains_cube_xy(top, parts.size()-1, c)) continue; // not contained in roof
 			placed = 1;
 			break;

@@ -666,7 +666,7 @@ void pool_deck_t::calc_pillars(cube_t const &ladder) {
 
 	for (unsigned n = 0; n < num_pillars; ++n) {
 		set_wall_width(pillar, (roof.d[!dim][0] + pillar_hwidth + pillar_edge_gap + n*spacing), pillar_hwidth, !dim);
-		if (!avoid.is_all_zeros() && pillar.intersects(avoid)) continue; // skip if close to the ladder
+		if (cube_int_if_nonzero(pillar, avoid)) continue; // skip if close to the ladder
 		pillars.push_back(pillar);
 	}
 }

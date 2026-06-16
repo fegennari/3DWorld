@@ -401,7 +401,7 @@ void building_t::add_tunnel_objects(rand_gen_t rgen) {
 			set_wall_width(web, pos, hthick, dim);
 			web.d[!dim][ dir] = edge; // align with tunnel
 			web.d[!dim][!dir] = edge + (dir ? -1.0 : 1.0)*width;
-			if (!shaft.is_all_zeros() && web.intersects(shaft)) continue; // too close to the shaft
+			if (cube_int_if_nonzero(web, shaft)) continue; // too close to the shaft
 			objs.emplace_back(web, TYPE_SPIWEB, 0, dim, dir, RO_FLAG_NOCOLL, 1.0); // room_id=0
 		} // for n
 	} // for t

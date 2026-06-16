@@ -2084,8 +2084,8 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 						float const shift((cand.d[dim][dir] - room.d[dim][dir]) - (dir ? -1.0 : 1.0)*wall_thickness); // negative if dir==1
 						cand.translate_dim(dim, -shift); // close the gap - flush with the wall
 						if (is_cube_close_to_doorway(cand, room)) continue;
-						if (stairs_or_elevator_blocked_by_nested_room(cand, stairs_room))  continue;
-						if (!elevator_cut.is_all_zeros() && cand.intersects(elevator_cut)) continue; // too close to parking structure elevator
+						if (stairs_or_elevator_blocked_by_nested_room(cand, stairs_room)) continue;
+						if (cube_int_if_nonzero(cand, elevator_cut)) continue; // too close to parking structure elevator
 
 						if (!is_cube()) { // check for stairs outside or too close to building walls
 							cube_t stairs_ext(cand);

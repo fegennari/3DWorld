@@ -800,8 +800,6 @@ void building_t::add_wall_fans_to_room(rand_gen_t &rgen, room_t const &room, flo
 	} // for M
 }
 
-bool cube_int_if_nonzero(cube_t const &c, cube_t const &C) {return (!C.is_all_zeros() && c.intersects(C));}
-
 void building_t::add_industrial_machines(rand_gen_t rgen, room_t const &room, cube_t const &place_area, float zval,
 	unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned objs_start_inc_beams, cube_t const &ladder)
 {

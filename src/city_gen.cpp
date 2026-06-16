@@ -1526,7 +1526,7 @@ public:
 						cube_t const plot_exclude(get_cur_basement()); // clip out basement
 						dstate.plot_cuts = plot_cuts; // reset to static plot cuts
 						
-						if (!plot_exclude.is_all_zeros() && plot_exclude.intersects_xy(b->bcube)) {
+						if (cube_int_xy_if_nonzero(b->bcube, plot_exclude)) {
 							b->quads[TYPE_PLOT].clear(); // clear and rebuild plot cache
 							dstate.plot_cuts.push_back(plot_exclude);
 						}

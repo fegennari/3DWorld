@@ -742,7 +742,7 @@ void building_t::add_door_sign(string const &text, room_t const &room, float zva
 				if (overlaps_or_adj_int_window(sign)) continue; // can't place sign here
 			}
 		}
-		if (!avoid.is_all_zeros() && sign.intersects(avoid)) continue; // blocked - skip
+		if (cube_int_if_nonzero(sign, avoid)) continue; // blocked - skip
 		unsigned const num_chars(text.size());
 		float const sign_hwidth((0.05 + 0.03*min(num_chars, 6U))*(place_above_door ? 1.5 : 1.0)); // relative to door width
 		sign.expand_in_dim(!i->dim, -(0.5 - sign_hwidth)*door_width); // shrink a bit

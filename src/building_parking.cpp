@@ -80,7 +80,7 @@ bool building_t::add_parking_structure_bathroom(rand_gen_t rgen) {
 				cube_t br_with_door(bathroom);
 				br_with_door.d[door_dim][door_dir] += (door_dir ? 1.0 : -1.0)*door_width; // add space for door to open
 				if (interior->is_blocked_by_stairs_or_elevator(br_with_door, 0.0)) continue; // blocked by stairs, elevator, or ramp
-				if (!interior->parking_entrance.is_all_zeros() && br_with_door.intersects(interior->parking_entrance)) continue; // too close to entrance
+				if (cube_int_if_nonzero(br_with_door, interior->parking_entrance)) continue; // too close to entrance
 				room_t orig_room(room); // copy as room reference may be invalidated below
 				room.copy_from(bathroom); // first (contained) room must be the bathroom
 				room.expand_by_xy(-wall_thick); // subtract off the walls

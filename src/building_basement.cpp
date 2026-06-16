@@ -827,7 +827,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 // *** Electrical ***
 
 bool is_good_conduit_placement(cube_t const &c, cube_t const &avoid, vect_room_object_t const &objs, unsigned end_ix, unsigned skip_ix) {
-	if (!avoid.is_all_zeros() && c.intersects(avoid)) return 0;
+	if (cube_int_if_nonzero(c, avoid)) return 0;
 
 	for (unsigned i = 0; i < end_ix; ++i) {
 		if (i != skip_ix && objs[i].intersects(c)) return 0;

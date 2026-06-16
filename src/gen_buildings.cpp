@@ -2484,7 +2484,7 @@ void building_t::get_walkway_interior_verts(building_draw_t &bdraw, building_wal
 				ww_walls.clear();
 				ww_walls.push_back(wall);
 
-				if (!w.elevator_cut.is_all_zeros() && w.elevator_cut.intersects(wall)) {
+				if (cube_int_if_nonzero(wall, w.elevator_cut)) {
 					subtract_cube_from_cubes(w.elevator_cut, ww_walls);
 					// add frame around each floor of the elevator
 					float const frame_thickness(1.5*get_trim_thickness()), frame_width(1.5*get_trim_height()), frame_dz(fc_thick + frame_thickness);

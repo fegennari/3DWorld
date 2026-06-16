@@ -346,7 +346,7 @@ void building_t::add_trashcan_to_room(rand_gen_t rgen, room_t const &room, float
 			if (is_good) break; // done; may never get here if no points are good, but the code below will handle that
 		} // for m
 		cube_t const c(get_cube_height_radius(center, radius, height));
-		if (!avoid.is_all_zeros() && c.intersects_xy(avoid)) continue; // bad placement
+		if (cube_int_xy_if_nonzero(c, avoid)) continue; // bad placement
 		if (is_obj_placement_blocked(c, room, !room.is_hallway) || overlaps_other_room_obj(c, objs_start)) continue; // bad placement
 		objs.emplace_back(c, TYPE_TCAN, room_id, dim, dir, 0, tot_light_amt, shape, tcan_colors[rgen.rand() % NUM_TCAN_COLORS]);
 		// add trash to the trashcan; not on upper floors of office buildings
@@ -676,7 +676,7 @@ void building_t::add_papers_to_surface(cube_t const &c, bool dim, bool dir, unsi
 	for (unsigned n = 0; n < num_papers; ++n) { // okay if they overlap
 		set_wall_width(paper, rgen.rand_uniform(c.d[ dim][0]+espace, c.d[ dim][1]-espace), 0.5*plen,    dim);
 		set_wall_width(paper, rgen.rand_uniform(c.d[!dim][0]+pwidth, c.d[!dim][1]-pwidth), 0.5*pwidth, !dim);
-		if (!avoid.is_all_zeros() && paper.intersects_xy(avoid)) continue; // skip this paper
+		if (cube_int_xy_if_nonzero(paper, avoid)) continue; // skip this paper
 		objs.emplace_back(paper, TYPE_PAPER, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_RAND_ROT), tot_light_amt, SHAPE_CUBE, select_paper_color(rgen), btype);
 		set_obj_id(objs);
 		paper.z2() += thickness; // to avoid Z-fighting if different colors
@@ -697,7 +697,7 @@ void building_t::add_pens_pencils_to_surface(cube_t const &c, bool dim, bool dir
 		colorRGBA const color(is_pen ? pen_colors[rgen.rand()&3] : pencil_colors[rgen.rand()&1]);
 		set_wall_width(pp_bcube, rgen.rand_uniform(c.d[ dim][0]+edge_space, c.d[ dim][1]-edge_space), 0.5*pp_len,  dim);
 		set_wall_width(pp_bcube, rgen.rand_uniform(c.d[!dim][0]+edge_space, c.d[!dim][1]-edge_space), 0.5*pp_dia, !dim);
-		if (!avoid.is_all_zeros() && pp_bcube.intersects_xy(avoid)) continue; // skip this paper
+		if (cube_int_xy_if_nonzero(pp_bcube, avoid)) continue; // skip this paper
 		// Note: no check for overlap with books and potted plants, but that would be complex to add and this case is rare;
 		//       computer monitors/keyboards aren't added in this case, and pencils should float above papers, so we don't need to check those
 		if (!pp_bcube.is_strictly_normalized()) continue; // too small, likely due to FP error when far from the origin
@@ -1549,7 +1549,7 @@ bool building_t::replace_light_with_ceiling_fan(rand_gen_t &rgen, cube_t const &
 	cube_t fan(cube_top_center(light)); // center on the light, with z2 on the ceiling
 	fan.expand_by_xy(0.5*diameter);
 	fan.z1() -= height;
-	if (!avoid.is_all_zeros() && avoid.intersects(fan)) return 0; // check for closet intersection
+	if (cube_int_if_nonzero(fan, avoid)) return 0; // check for closet intersection
 
 	if (has_attic()) {
 		cube_t aa_blocked(interior->attic_access);
@@ -1773,7 +1773,7 @@ bool building_t::add_ball_to_room(rand_gen_t &rgen, room_t const &room, cube_t c
 		set_float_height(center, radius, ceil_zval, bt.density); // maybe floats on water (in backrooms)
 		cube_t c(center);
 		c.expand_by(radius);
-		if (!avoid_xy.is_all_zeros() && c.intersects_xy(avoid_xy)) continue;
+		if (cube_int_xy_if_nonzero(c, avoid_xy)) continue;
 		if (overlaps_other_room_obj(c, objs_start) || is_obj_placement_blocked(c, room, 1)) continue; // bad placement
 		objs.emplace_back(c, TYPE_LG_BALL, room_id, 0, 0, RO_FLAG_DSTATE, tot_light_amt, SHAPE_SPHERE, WHITE, btype);
 		objs.back().obj_id = (uint16_t)interior->room_geom->allocate_dynamic_state(); // allocate a new dynamic state object
@@ -3226,9 +3226,9 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 				float float_zval(center.z);
 				if (get_zval_for_pool_bottom(center, float_zval)) {pfloat.translate_dim(2, (float_zval - center.z));}
 			}
-			if (overlaps_other_room_obj(pfloat, objs_start))         continue; // if placement falls, leave it out; should only collide with another float
-			if (!ladder.is_all_zeros() && pfloat.intersects(ladder)) continue; // check the pool ladder
-			if (!pool_has_water && pfloat.intersects(drain))         continue;
+			if (overlaps_other_room_obj(pfloat, objs_start)) continue; // if placement falls, leave it out; should only collide with another float
+			if (cube_int_if_nonzero(pfloat, ladder))         continue; // check the pool ladder
+			if (!pool_has_water && pfloat.intersects(drain)) continue;
 			bool const deflated(!pool_has_water);
 			unsigned flags(0);
 			if (deflated) {flags |= RO_FLAG_BROKEN; pfloat.z2() -= 0.9*pfloat.dz();}
@@ -3691,7 +3691,7 @@ bool building_t::add_security_room_objs(rand_gen_t rgen, room_t const &room, flo
 
 			for (unsigned col = 0; col < num_cols && num_monitors < max_monitors; ++col) { // XY
 				set_wall_width(tv, (col_start + ((dim ^ dir) ? (num_cols-col-1) : col)*col_spacing), tv_hwidth, !dim); // ordered left to right
-				if (!breaker_panel.is_all_zeros() && breaker_panel.intersects_xy(tv)) continue; // ignore zvals so that we don't put a monitor above the breaker panel
+				if (cube_int_xy_if_nonzero(tv, breaker_panel)) continue; // ignore zvals so that we don't put a monitor above the breaker panel
 
 				for (unsigned row = 0; row < num_rows && num_monitors < max_monitors; ++row) { // Z
 					float const z1(start_zval + row*row_spacing);
@@ -4521,7 +4521,7 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 				for (unsigned N = 0; N < 4; ++N) { // 4 attempts to avoid previous outlet and windows
 					wall_pos = rgen.rand_uniform((room_bounds.d[!dim][0] + min_wall_spacing), (room_bounds.d[!dim][1] - min_wall_spacing));
 					set_wall_width(c, wall_pos, plate_hwidth, !dim);
-					if (!exclude_area.is_all_zeros() && c.intersects(exclude_area)) continue; // too close to previous outlet (maybe same wall); doesn't apply to kitchen counters
+					if (cube_int_if_nonzero(c, exclude_area)) continue; // too close to previous outlet (maybe same wall); doesn't apply to kitchen counters
 
 					if (might_have_windows) { // check for window intersection
 						cube_t const &part(get_part_for_room(room));
@@ -4906,7 +4906,7 @@ bool building_t::is_light_placement_valid(cube_t const &light, room_t const &roo
 	if (has_bcube_int(light, interior->elevators )) return 0;
 	if (has_bcube_int(light, interior->escalators)) return 0; // conservative; is this needed?
 	if (!check_cube_within_part_sides(light))       return 0; // handle non-cube buildings
-	if (!interior->elevator_equip_room.is_all_zeros() && interior->elevator_equip_room.intersects(light)) return 0;
+	if (cube_int_if_nonzero(light, interior->elevator_equip_room)) return 0;
 	// the fc_occluders test below will handle stairs cutouts, but we still need to handle the ceiling above stairs;
 	// check stairs with walled sides because these may clip through ceiling lights; lights completely contained in the stairs look okay and are allowed
 	float const stairs_z2_adj(0.5*get_window_vspace()); // clip off the top of the stairs to allow lights on the ceiling above stairs
@@ -4935,7 +4935,7 @@ bool building_t::is_light_placement_valid(cube_t const &light, room_t const &roo
 		} // for s
 	}
 	// handle parking structure bathroom; skip if this room is the bathroom
-	if (!interior->ps_bathroom.is_all_zeros() && light_ext.intersects(interior->ps_bathroom) && !interior->ps_bathroom.contains_cube(room)) return 0;
+	if (cube_int_if_nonzero(light_ext, interior->ps_bathroom) && !interior->ps_bathroom.contains_cube(room)) return 0;
 	light_ext.z1() = light_ext.z1() = light.z2() + get_fc_thickness(); // shift in between the ceiling and floor so that we can do a cube contains check
 	if (any_cube_contains(light_ext, interior->fc_occluders)) return 1; // Note: don't need to check skylights because fc_occluders excludes skylights
 	if (PLACE_LIGHTS_ON_SKYLIGHTS && any_cube_contains(light_ext, skylights)) return 1; // place on a skylight

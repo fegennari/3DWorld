@@ -667,7 +667,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 			stall.d[br_dim][ dir] = wall_pos; // + wall_thickness?
 			stall.d[br_dim][!dir] = wall_pos + dir_sign*stall_depth; // extend the front outward from the wall
 			if (interior->is_cube_close_to_doorway(stall, room, 0.0, 1)) continue; // skip if close to a door (for rooms with doors at both ends); inc_open=1
-			if (!avoid.is_all_zeros() && stall.intersects(avoid))        continue;
+			if (cube_int_if_nonzero(stall, avoid)) continue;
 
 			if (!is_cube()) {
 				cube_t stall_exp(stall);
@@ -743,7 +743,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 			sink.expand_in_dim(!br_dim, 0.5*(use_sink_model ? swidth : fabs(sink_step))); // tile exactly with the adjacent sink
 			if (interior->is_cube_close_to_doorway(sink, room, 0.0, 0)) continue; // skip if close to a door
 			if (!check_cube_within_part_sides(sink))                    continue; // outside the building
-			if (!avoid.is_all_zeros() && sink.intersects(avoid))        continue;
+			if (cube_int_if_nonzero(sink, avoid))                       continue;
 			if (use_sink_model) {objs.emplace_back(sink, TYPE_SINK,   room_id, br_dim, !dir, 0, tot_light_amt);} // sink 3D model
 			else                {objs.emplace_back(sink, TYPE_BRSINK, room_id, br_dim, !dir, 0, tot_light_amt);} // flat basin sink
 			if (use_sink_model) {add_bathroom_plumbing(objs.back());}
@@ -780,7 +780,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 				last_added_urinal = 0; // in case we continue below
 				if (interior->is_cube_close_to_doorway(urinal, room, 0.0, 1)) continue; // skip if close to a door
 				if (!check_cube_within_part_sides(urinal))                    continue; // outside the building
-				if (!avoid.is_all_zeros() && urinal.intersects(avoid))        continue;
+				if (cube_int_if_nonzero(urinal, avoid))                       continue;
 				if (is_park_restroom && is_cube_close_to_exterior_doorway(urinal, 0.0, 0)) continue; // inc_open=0
 				
 				if (no_end_urinal_divider && n == 0) {} // no starting divider if against a wall
@@ -798,7 +798,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 			} // for n
 			if (!two_rows && !is_tight && last_added_urinal) { // skip first wall if adjacent to a stall, or opposite a stall if space is tight
 				set_wall_width(sep_wall, (u_pos - 0.5*sink_step), 0.2*wall_thickness, !br_dim);
-				if (!avoid.is_all_zeros() && sep_wall.intersects(avoid)) {} // skip
+				if (cube_int_if_nonzero(sep_wall, avoid)) {} // skip
 				else if (is_park_restroom && is_cube_close_to_exterior_doorway(sep_wall, 0.0, 0)) {} // skip
 				else {objs.emplace_back(sep_wall, TYPE_STALL, room_id, br_dim, !dir, RO_FLAG_HANGING, tot_light_amt, SHAPE_SHORT, stall_color);}
 			}
