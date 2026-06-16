@@ -189,12 +189,14 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	vect_room_object_t &objs(interior->room_geom->objs);
 	assert(objs_start <= objs.size());
 	cube_t const &basement(get_basement());
-	float r_main(get_merged_risers_radius(risers, pipe_type));
+	float r_main(get_merged_risers_radius(risers, pipe_type)), max_riser_radius(0.0);
 	if (r_main == 0.0) return 0; // hot water heater but no hot water pipes?
+	for (riser_pos_t const &p : risers) {max_eq(max_riser_radius, p.radius);}
 	unsigned const pipes_start(objs.size());
 	float const insul_thickness(0.4), min_insum_len(4.0); // both relative to pipe radius
 	float const window_vspacing(get_window_vspace()), fc_thickness(get_fc_thickness()), wall_thickness(get_wall_thickness());
-	float const radius_factor(add_insul ? 1.0+insul_thickness : 1.0), max_pipe_radius(max_pipe_radius_mult[pipe_type]*wall_thickness);
+	float const radius_factor(add_insul ? 1.0+insul_thickness : 1.0);
+	float const max_pipe_radius(max(max_pipe_radius_mult[pipe_type]*wall_thickness, ((risers.size() == 1) ? 1.0f : 1.2f)*max_riser_radius)); // allow larger than max for large risers
 	min_eq(r_main, max_pipe_radius); // limit pipe radius; even with these limits, we can still have hot water and cold water clipping through each other with enough flow
 	float const pipe_zval(ceil_zval   - FITTING_RADIUS*r_main); // includes clearance for fittings vs. beams (and lights - mostly)
 	float const pipe_min_z1(pipe_zval - FITTING_RADIUS*r_main);
@@ -213,7 +215,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	// seed the pipe graph with valid vertical segments and build a graph of X/Y values
 	for (riser_pos_t const &p : risers) {
 		assert(p.radius > 0.0);
-		assert(p.pos.z > pipe_zval);
+		assert(p.pos.z  > pipe_zval);
 		point pos(p.pos);
 		bool is_wh(p.is_wh);
 		
@@ -374,7 +376,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	// connect drains/feeders to main pipe in !dim
 	for (auto const &v : xy_map) { // for each unique position along the main pipe
 		float radius(0.0), range_min(centerline), range_max(centerline), unconn_radius(0.0); // range of connector perpendicular to main pipe
-		float mp_pos(v.first);
+		float mp_pos(v.first), riser_rmax(0.0);
 		point const &ref_p1(pipes[v.second.front()].p1);
 		unsigned num_keep(0);
 
@@ -439,10 +441,11 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			if (is_closed_loop && pipe.flow_dir == 0) {add_exit_pipe = 0;}
 			if (unconn_radius > 0.0) {pipe.radius = get_merged_pipe_radius(pipe.radius, unconn_radius, conn_pipe_merge_exp); unconn_radius = 0.0;} // add extra capacity
 			radius = get_merged_pipe_radius(radius, pipe.radius, conn_pipe_merge_exp);
+			max_eq(riser_rmax, pipe.radius);
 			++num_keep;
 		} // for ix
 		if (num_keep == 0) continue; // no valid connections for this row
-		min_eq(radius, 0.8f*max_pipe_radius); // a bit smaller than r_main
+		min_eq(radius, min(max(riser_rmax, 0.8f*max_pipe_radius), r_main)); // a bit smaller than r_main, but no smaller than the max riser radius; hard limit to r_main
 
 		// we can skip adding a connector if short and under the main pipe
 		if (range_max - range_min > r_main) {
@@ -1567,8 +1570,8 @@ void building_t::get_pipe_basement_gas_connections(vect_riser_pos_t &pipes) cons
 		bool const is_gas_dryer(i.type == TYPE_DRYER && (i.obj_id & 3)); // gas dryer 75% of the time, since it makes the pipes more interesting
 		if (i.type != TYPE_WHEATER && i.type != TYPE_FURNACE && i.type != TYPE_STOVE && i.type != TYPE_FPLACE &&
 			i.type != TYPE_HVAC_UNIT && i.type != TYPE_GENERATOR && !is_gas_dryer) continue;
-		//float const rscale((i.type == TYPE_GENERATOR) ? 2.0 : 1.0); // generators are 2x radius?
-		pipes.emplace_back(get_cube_center_zval(i, ceil_zval), pipe_radius, 0, 1); // flows in
+		float const rscale((i.type == TYPE_GENERATOR) ? 2.0 : 1.0); // generators are 2x radius
+		pipes.emplace_back(get_cube_center_zval(i, ceil_zval), rscale*pipe_radius, 0, 1); // flows in
 	} // for i
 }
 
