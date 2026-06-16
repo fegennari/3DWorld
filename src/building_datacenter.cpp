@@ -653,11 +653,11 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 		if (pass == 1) {cur_place_pos = pre_place_pos;} // use the same row
 		// place generators near the back wall
 		gen_start = objs.size();
-		float const gen_height(0.56*floor_spacing);
-		if (add_row_of_models(gen_area, zval, room_id, tot_light_amt, gen_height, 0.3, OBJ_MODEL_GENERATOR, TYPE_GENERATOR, dim, dir, dim, dir, 0, cur_place_pos)) break;
+		float const gen_height(0.56*floor_spacing), gap((pass == 0) ? 1.0 : 0.25); // more gap/sparser on first pass
+		if (add_row_of_models(gen_area, zval, room_id, tot_light_amt, gen_height, gap, OBJ_MODEL_GENERATOR, TYPE_GENERATOR, dim, dir,  dim,  dir, 0, cur_place_pos)) break;
 		// can't place lengthwise; try sideways
 		bool const gdir(rgen.rand_bool()); // either facing toward or away from the door
-		if (add_row_of_models(gen_area, zval, room_id, tot_light_amt, gen_height, 0.15, OBJ_MODEL_GENERATOR, TYPE_GENERATOR, dim, dir, !dim, gdir, 0, cur_place_pos)) break;
+		if (add_row_of_models(gen_area, zval, room_id, tot_light_amt, gen_height, 0.1, OBJ_MODEL_GENERATOR, TYPE_GENERATOR, dim, dir, !dim, gdir, 0, cur_place_pos)) break;
 		if (pass == 1) break; // failed, done
 		// try again, but this time split the width in half and try to place each type
 		objs.resize(xg_obj_size); // remove any models added above
