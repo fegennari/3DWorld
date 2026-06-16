@@ -2071,17 +2071,15 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 		}
 		if (i->type == ROOF_OBJ_DUCT) {
 			int const duct_tid(building_texture_mgr.get_duct_tid()), vent_tid(building_texture_mgr.get_vent_tid());
-			bool const is_side_vent(is_datacenter() && !get_first_part().contains_cube_xy(*i));
-			bool const duct_dim((i->dx() < i->dy()) ^ is_side_vent), swap_st_z(!duct_dim);
-			bool const has_vent(is_side_vent || i->get_sz_dim(duct_dim) < 2.0*i->get_sz_dim(!duct_dim)); // add vent if short
-			bool const skip_bottom(!is_side_vent); // draw bottom of data center side ducts
+			bool const duct_dim(i->dx() < i->dy()), swap_st_z(!duct_dim);
+			bool const has_vent(i->get_sz_dim(duct_dim) < 2.0*i->get_sz_dim(!duct_dim)); // add vent if short
 			float ts[3] = {1.0, 1.0, 1.0};
 			if (!has_vent) {ts[duct_dim] = 0.5;} // half texture/single section for the end
 
 			for (unsigned dim = 0; dim < 3; ++dim) { // {x, y, z}
 				bool const swap_st((dim == 2) ? swap_st_z : 0);
 				int const tid((has_vent && dim == unsigned(duct_dim)) ? vent_tid : duct_tid);
-				bdraw.add_cube(*this, *i, tid_nm_pair_t(tid, -1, ts[dim], 1.0), GRAY, swap_st, (1 << dim), skip_bottom, 0, 0); // ws_texture=0
+				bdraw.add_cube(*this, *i, tid_nm_pair_t(tid, -1, ts[dim], 1.0), GRAY, swap_st, (1 << dim), 1, 0, 0); // skip_bottom=1, ws_texture=0
 			}
 			continue;
 		}
