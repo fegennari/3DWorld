@@ -880,22 +880,44 @@ void building_t::add_industrial_machines(rand_gen_t rgen, room_t const &room, cu
 			float place_pos(center_area.d[gen_dim][gen_dir] - (gen_dir ? 1.0 : -1.0)*0.5*(spacing[gen_dim] - gen_length));
 			unsigned const gen_start(objs.size());
 			add_row_of_models(center_area, zval, room_id, tot_light_amt, gen_height, gen_spacing, OBJ_MODEL_GENERATOR, TYPE_GENERATOR, gen_dim, gen_dir, gen_dim, !gen_dir, 0, place_pos);
-			unsigned const gen_end(objs.size());
+			unsigned const gen_end(objs.size()), v_duct_flags(RO_FLAG_ADJ_TOP | RO_FLAG_ADJ_BOT);
 			float const duct_z2(zval + floor_spacing);
 			cube_t h_duct;
 
 			for (unsigned i = gen_start; i < gen_end; ++i) {
 				cube_t const duct(get_exhaust_duct_for_generator(objs[i], duct_z2));
-				objs.emplace_back(duct, TYPE_DUCT, room_id, 0, 1, (RO_FLAG_ADJ_TOP | RO_FLAG_ADJ_BOT), tot_light_amt, SHAPE_CUBE); // vertical
+				objs.emplace_back(duct, TYPE_DUCT, room_id, 0, 1, v_duct_flags, tot_light_amt, SHAPE_CUBE); // vertical
 				h_duct.assign_or_union_with_cube(duct);
 			}
 			// add horizontal duct connecting all generator exhausts
 			float const duct_width(h_duct.get_sz_dim(gen_dim)), duct_height(2.0*duct_width);
 			set_cube_zvals(h_duct, h_duct.z2(), (h_duct.z2() + duct_height));
-			h_duct.expand_in_dim(!gen_dim, 0.5*duct_width); // double the width
-			h_duct.expand_in_dim( gen_dim, 0.2*duct_width); // slight end extend
+			h_duct.expand_in_dim( gen_dim, 0.5*duct_width); // double the width
+			h_duct.expand_in_dim(!gen_dim, 0.2*duct_width); // slight end extend
 			objs.emplace_back(h_duct, TYPE_DUCT, room_id, !gen_dim, 0, 0, tot_light_amt, SHAPE_CUBE); // horizontal; draw all sides
-			// TODO: does this to up to the ceiling/roof, right angle to the exterior wall, or merge and out to the top and side?
+			// add single large exit duct
+			bool has_exit(0);
+
+			for (unsigned n = 0; n < 10; ++n) { // first attempt to go up; 10 tries with random pos
+				float const pos((n == 0) ? h_duct.get_center_dim(!gen_dim) : rgen.rand_uniform((h_duct.d[!gen_dim][0] + duct_height), (h_duct.d[!gen_dim][1] - duct_height)));
+				cube_t exit_duct(h_duct);
+				set_cube_zvals(exit_duct, h_duct.z2(), ceil_zval);
+				set_wall_width(exit_duct, pos, 1.5*duct_width, !gen_dim);
+				if (overlaps_obj_or_placement_blocked(exit_duct, room, objs_start_inc_beams, 1)) continue; // check_all=1
+				objs.emplace_back(exit_duct, TYPE_DUCT, room_id, 0, 1, v_duct_flags, tot_light_amt, SHAPE_CUBE); // vertical
+				
+				if (roof_type == ROOF_TYPE_FLAT) { // add rooftop vent if visible
+					cube_t vent(exit_duct);
+					set_cube_zvals(vent, room.z2(), (room.z2() + 0.5*duct_width));
+					vent.expand_by_xy(0.25*duct_width);
+					objs.emplace_back(vent, TYPE_VENT, room_id, dim, 1, (RO_FLAG_NOCOLL | RO_FLAG_HANGING | RO_FLAG_EXTERIOR), 1.0); // dir=1; fully lit
+				}
+				has_exit = 1;
+				break;
+			} // for n
+			if (!has_exit) {
+				// right angle to the exterior wall, or merge and out to the top and side? I don't see any power plants that get here
+			}
 		}
 		unsigned machine_range[2][2] = {{0, num_xy[0]-1}, {0, num_xy[1]-1}};
 
