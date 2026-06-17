@@ -1445,7 +1445,9 @@ void building_t::get_pipe_basement_water_connections(vect_riser_pos_t &sewer, ve
 		if (check_for_ac && i.type == TYPE_METAL_BAR && (i.flags & RO_FLAG_IN_FACTORY)) {
 			// special case for data center AC air handlers, which consume cooling water and produce waste water (that could be recycled?)
 			if (i.z1() < ground_floor_z1 || i.z1() > ground_floor_z1 + floor_spacing) continue; // only add for the ground floor, since other floors are stacked exactly above
-			sewer.emplace_back(point(i.xc(), i.yc(), ceil_zval), 0.02*floor_spacing, 0, 0, 0); // has_hot=0, upper_floor=0 (no move inside wall)
+			point conn_pt(i.xc(), i.yc(), ceil_zval);
+			conn_pt[i.dim] = i.d[i.dim][i.dir]; // connect to the edge rather than the center, to move closer to the building and provide more space for generator pipes
+			sewer.emplace_back(conn_pt, 0.02*floor_spacing, 0, 0, 0); // has_hot=0, upper_floor=0 (no move inside wall)
 			continue;
 		}
 		if (check_mall_objs && i.in_mall()) continue; // skip appliance/plumbing store objects
