@@ -317,7 +317,7 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 				set_wall_width(conduit, (wall_pos + 0.75*dir_sign*server_hdepth), conduit_radius, !dim); // further toward the back wall
 				set_wall_width(conduit, center[dim], conduit_radius, dim);
 				set_cube_zvals(conduit, server.z2(), ceiling_zval);
-				objs.emplace_back(conduit, TYPE_PIPE, room_id, 0, 1, RO_FLAG_NOCOLL, 1.0, SHAPE_CYLIN, LT_GRAY); // vertical
+				objs.emplace_back(conduit, TYPE_PIPE, room_id, 0, 1, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, LT_GRAY); // vertical
 				++num_servers;
 			} // for dir
 		} // for n
@@ -590,21 +590,33 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 		} // for i
 	}
 	// add AC ducts and pipes
-	float const h_duct_width(0.4*ac_width), h_duct_height(0.5*ac_width), v_duct_radius(0.25*ac_width), h_duct_z1(ceiling_zval - h_duct_height);
-	float const far_wall_pos(room.d[!dim][bldg_side]), ac_pipe_radius(0.1*ac_width), bs_sign(bldg_side ? 1.0 : -1.0);
+	float const h_duct_hwidth(0.4*ac_width), h_duct_height(0.5*ac_width), v_duct_radius(0.25*ac_width), h_duct_z1(ceiling_zval - h_duct_height);
+	float const far_wall_pos(room.d[!dim][bldg_side]), ac_pipe_radius(0.07*ac_width), ac_hp_radius(1.33*ac_pipe_radius), bs_sign(bldg_side ? 1.0 : -1.0);
 	unsigned const duct_flags(RO_FLAG_ADJ_TOP | RO_FLAG_ADJ_BOT); // skip top and bottom
+	bool const ac_pd1(dir), ac_pd2(!bldg_side); // AC pipe dir in {dim, !dim}
 
 	for (unsigned i = ac_start; i < ac_end; ++i) { // add ducts connecting AC units
 		bool const closest_to_door(i == (bldg_side ? ac_start : ac_end-1));
 		cube_t const ac(objs[i]);
+		vector2d const ac_center(ac.xc(), ac.yc());
 		// add vertical duct connecting to the top of each AC unit
 		cube_t duct;
 		set_cube_zvals(duct, ac.z2(), h_duct_z1);
-		for (unsigned d = 0; d < 2; ++d) {set_wall_width(duct, ac.get_center_dim(d), v_duct_radius, d);}
+		for (unsigned d = 0; d < 2; ++d) {set_wall_width(duct, ac_center[d], v_duct_radius, d);}
 		objs.emplace_back(duct, TYPE_DUCT, room_id, 0, 1, duct_flags, tot_light_amt, SHAPE_CYLIN); // vertical
 		// add vertical pipe(s)
-		cube_t pipe;
-		// TODO: ac_pipe_radius
+		point pipe_center(0.0, 0.0, ac.z2());
+		pipe_center[ dim] = ac_center[dim]     + (ac_pd1 ? 1.0 : -1.0)*(h_duct_hwidth + ac_hp_radius); // side of the duct
+		pipe_center[!dim] = ac.d[!dim][ac_pd2] - (ac_pd2 ? 1.0 : -1.0)*2.0*ac_pipe_radius; // near the edge
+		cube_t v_pipe(pipe_center);
+		v_pipe.expand_by_xy(ac_pipe_radius);
+		v_pipe.z2() = 0.5*(h_duct_z1 + ceiling_zval); // Z midpoint of h duct
+		objs.emplace_back(v_pipe, TYPE_PIPE, room_id, 0, 1, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, COPPER_C); // vertical
+		// add brass fitting
+		cube_t fitting(v_pipe);
+		fitting.expand_by_xy(0.1*ac_pipe_radius);
+		fitting.z2() = v_pipe.z1() + 1.0*ac_pipe_radius;
+		objs.emplace_back(fitting, TYPE_PIPE, room_id, 0, 1, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_HI | RO_FLAG_HANGING), tot_light_amt, SHAPE_CYLIN, BRASS_C); // vertical, draw top end
 
 		if (closest_to_door) {
 			// add main duct for first AC unit
@@ -613,20 +625,22 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 			duct.d[!dim][!bldg_side] -= bs_sign*0.5*v_duct_radius; // extend out slightly
 			duct.d[!dim][ bldg_side]  = far_wall_pos; // overlaps vertical duct so that it connects even if misaligned
 			set_cube_zvals(duct, h_duct_z1, ceiling_zval);
-			set_wall_width(duct, ac.get_center_dim(dim), h_duct_width, dim);
+			set_wall_width(duct, ac_center[dim], h_duct_hwidth, dim);
 			objs.emplace_back(duct, TYPE_DUCT, room_id, !dim, 0, (RO_FLAG_ADJ_TOP | skip_end_flag), tot_light_amt, SHAPE_CUBE); // horizontal; skip top and back
 			// first in row; check if we need to move an entire row of lights
 			cube_t keepout(duct);
-			keepout.expand_in_dim(dim, 0.1*h_duct_width);
+			keepout.expand_in_dim(dim, 0.1*h_duct_hwidth);
 			move_lights_to_not_intersect(objs, keepout, dim, objs_start, lights_start);
 			// add vertical duct connecting to the air intake; this should at least partially overlap and connect to the horizontal duct
 			duct.z1() = zval;
 			duct.d[!dim][!bldg_side] = far_wall_inner;
 			duct.d[!dim][ bldg_side] = far_wall_pos;
-			duct.expand_in_dim(dim, 0.5*h_duct_width); // double the width
+			duct.expand_in_dim(dim, 0.5*h_duct_hwidth); // double the width
 			objs.emplace_back(duct, TYPE_DUCT, room_id, !dim, 1, (duct_flags | skip_end_flag), tot_light_amt, SHAPE_CUBE); // vertical; skip top, bottom, and back
 			duct.z1() = h_duct_z1; // restore original z1 for the vent
 			add_exterior_duct(duct, !dim, bldg_side, room_id, objs); // add exterior vent
+			// add fitting to h_pipe
+			// TODO
 
 			if (zval + floor_spacing >= room.z2()) { // add vertical roof duct on top floor
 				float const outer_edge(far_wall_pos - bs_sign*get_roof_wall_thick()); // shift away from the roof wall
@@ -638,7 +652,12 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 				objs.emplace_back(top_vent, TYPE_VENT, room_id, dim, 1, (RO_FLAG_NOCOLL | RO_FLAG_HANGING | RO_FLAG_EXTERIOR), 1.0); // dir=1; fully lit
 			}
 			// add horizontal pipe(s)
-			// TODO
+			cube_t h_pipe;
+			set_wall_width(h_pipe, v_pipe.z2(),      ac_hp_radius, 2); // set zvals
+			set_wall_width(h_pipe, pipe_center[dim], ac_hp_radius, dim);
+			h_pipe.d[!dim][!bldg_side] = v_pipe.d[!dim][!bldg_side];
+			h_pipe.d[!dim][ bldg_side] = far_wall_pos;
+			objs.emplace_back(h_pipe, TYPE_PIPE, room_id, !dim, 0, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), tot_light_amt, SHAPE_CYLIN, COPPER_C); // horizontal
 		}
 	} // for i
 	cube_t xfmr_area(inner_area), gen_area(inner_area);
@@ -692,7 +711,7 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 			if (i == gen_start) { // first in row; check if we need to move an entire row of lights
 				cube_t keepout(v_duct);
 				keepout.union_with_cube(h_duct); // avoid this as well
-				keepout.expand_in_dim(dim, 0.1*h_duct_width);
+				keepout.expand_in_dim(dim, 0.1*h_duct_hwidth);
 				move_lights_to_not_intersect(objs, keepout, dim, objs_start, lights_start, dir); // pref_dir=dir so that lights move toward the interior and aren't blocked by h_duct
 			}
 			// add fuel pipe
