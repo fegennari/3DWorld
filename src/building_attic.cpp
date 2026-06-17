@@ -990,6 +990,7 @@ bool try_route_duct_with_jog(room_object_t &duct, cube_t const &dest, bool first
 	vect_cube_t const &avoid_cubes, vect_cube_t &sub_cubes, float extend_len, bool &use_extend, bool is_cylin)
 {
 	bool const dirs[2] = {(duct.xc() < dest.xc()), (duct.yc() < dest.yc())};
+	assert(dest.is_strictly_normalized());
 
 	for (unsigned n = 0; n < 2; ++n) { // try both routing directions
 		bool const dim(first_dim ^ bool(n)), dir1(dirs[dim]), dir2(!dirs[!dim]);
@@ -1147,7 +1148,8 @@ void building_t::add_attic_ductwork(rand_gen_t rgen, room_object_t const &furnac
 		for (auto i = objs.begin()+horiz_ducts_start; i != objs.end(); ++i) {
 			// split into a number of candidate connection points along the length of this duct segment
 			float const length(i->get_length()), width(i->get_width());
-			unsigned const num_steps(round_fp(0.25f*length/width));
+			if (min(length, width) < 0.1*fc_thick) continue; // too small of a fragment, skip
+			unsigned const num_steps(min(20U, (unsigned)round_fp(0.25f*length/width))); // limit to 20 steps
 			if (num_steps == 0) continue; // too short, skip
 			float const step((length - width)/num_steps);
 
@@ -1155,6 +1157,7 @@ void building_t::add_attic_ductwork(rand_gen_t rgen, room_object_t const &furnac
 				room_object_t conn(*i);
 				conn.d[i->dim][0] += n*step; // left edge
 				conn.d[i->dim][1]  = conn.d[i->dim][0] + width; // right edge
+				assert(conn.is_strictly_normalized());
 				conns.push_back(conn);
 			}
 		} // for i
