@@ -177,8 +177,8 @@ void make_pipes_dirty(vect_room_object_t &objs, unsigned pipes_start) {
 	}
 }
 
-bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vect_riser_pos_t const &risers,
-	vect_cube_t &pipe_cubes, unsigned room_id, unsigned num_floors, unsigned objs_start, float ceil_zval, rand_gen_t &rgen, unsigned pipe_type, bool allow_place_fail)
+bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vect_riser_pos_t const &risers, vect_cube_t &pipe_cubes,
+	unsigned room_id, unsigned num_floors, unsigned objs_start, float ceil_zval, rand_gen_t &rgen, unsigned pipe_type, bool allow_place_fail, unsigned depth, bool swap_dim)
 {
 	//highres_timer_t timer("add_basement_pipes");
 	assert(pipe_type < NUM_PIPE_TYPES);
@@ -251,8 +251,15 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	} // for risers
 	if (pipes.empty()) return 0; // no valid pipes
 
+	// use a weighted combination of the aspect ratio and number of unique connector rows to determine main pipe dim
+	set<float> unique_pos[2]; // x,y
+
+	for (pipe_t const &p : pipes) {
+		for (unsigned d = 0; d < 2; ++d) {unique_pos[d].insert(p.p1[d]);}
+	}
+	bool const dim((pipe_end_bcube.dx()*unique_pos[1].size() < pipe_end_bcube.dy()*unique_pos[0].size()) ^ swap_dim);
+
 	// calculate unique positions of pipes along the main pipe
-	bool const dim(pipe_end_bcube.dx() < pipe_end_bcube.dy()); // main pipe dim
 	map<float, vector<unsigned>> xy_map;
 
 	for (auto p = pipes.begin(); p != pipes.end(); ++p) {
@@ -276,10 +283,13 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 
 	// create main pipe that runs in the longer dim (based on drain pipe XY bounds)
 	pipe_end_bcube.expand_in_dim(dim, r_main);
-	// use the center of the pipes bcube to minimize run length, but clamp to the interior of the basement;
+	// use the mean value of the riser connection points to minimize connector pipe run length, but clamp to the interior of the basement;
 	// in the case where all risers are outside of the basement perimeter, this will make pipes run against the exterior basement wall
-	float const pipes_bcube_center(max(basement.d[!dim][0]+r_main, min(basement.d[!dim][1]-r_main, pipe_end_bcube.get_center_dim(!dim))));
-	float centerline(pipes_bcube_center);
+	float mean_pos(0.0);
+	for (auto const &v : xy_map) {mean_pos += v.first;}
+	mean_pos /= xy_map.size();
+	float const pipes_pref_center(max(basement.d[!dim][0]+r_main, min(basement.d[!dim][1]-r_main, mean_pos/*pipe_end_bcube.get_center_dim(!dim)*/)));
+	float centerline(pipes_pref_center);
 	point mp[2]; // {lo, hi} ends
 	bool exit_dir(0);
 	point exit_pos;
@@ -293,11 +303,12 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	float step_dist(2.0*r_main);
 	float const step_area(basement.get_sz_dim(!dim)); // step by pipe radius
 	unsigned const max_steps(max(1U, min(unsigned(step_area/step_dist), 100U))); // limit to 100 steps
-	step_dist = step_area/max_steps;
 	bool success(0);
+	step_dist = step_area/max_steps;
 
 	for (unsigned n = 0; n < max_steps; ++n) {
 		cube_t const c(pipe_t(mp[0], mp[1], r_main_spacing, dim, PIPE_MAIN, 3).get_bcube());
+		
 		if (!has_int_obstacle_or_parallel_wall(c, obstacles, walls)) {
 			success = 1;
 
@@ -310,7 +321,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		}
 		float const xlate(((n>>1)+1)*((n&1) ? -1.0 : 1.0)*step_dist);
 		UNROLL_2X(mp[i_][!dim] += xlate;); // try the new position
-		
+
 		if (!basement.contains_cube_xy(pipe_t(mp[0], mp[1], r_main_spacing, dim, PIPE_MAIN, 3).get_bcube())) { // outside the basement
 			UNROLL_2X(mp[i_][!dim] -= 2.0*xlate;); // try shifting in the other direction
 			if (!basement.contains_cube_xy(pipe_t(mp[0], mp[1], r_main_spacing, dim, PIPE_MAIN, 3).get_bcube())) break; // outside the basement in both dirs, fail
@@ -318,6 +329,9 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	} // for n
 	if (success) {
 		centerline = mp[0][!dim]; // update centerline based on translate
+	}
+	else if (swap_dim || depth > 8) {
+		return 0; // failed in second dim, done
 	}
 	else if (allow_place_fail) { // fail case
 		// try stripping off some risers from the end and connecting the remaining ones
@@ -341,9 +355,11 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			}
 			if (risers_sub.empty()) continue;
 			assert(risers_sub.size() < risers.size());
-			if (add_basement_pipes(obstacles, walls, beams, risers_sub, pipe_cubes, room_id, num_floors, objs_start, ceil_zval, rgen, pipe_type, 1)) return 1;
+			if (add_basement_pipes(obstacles, walls, beams, risers_sub, pipe_cubes, room_id, num_floors, objs_start, ceil_zval, rgen, pipe_type, 1, depth+1)) return 1;
 		} // for dir
-		return 0;
+		// still no good? try swapping main pipe dim, but only for the root/unclipped case; this occasionally works
+		if (depth == 0 && add_basement_pipes(obstacles, walls, beams, risers, pipe_cubes, room_id, num_floors, objs_start, ceil_zval, rgen, pipe_type, 1, depth+1, 1)) return 1;
+		return 0; // failed
 	}
 	else { // somewhat rare failure case; can lead to intersections between hot water and cold water pipes
 		float cur_pos(centerline);
@@ -537,7 +553,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 				if (added_exit) break;
 				// no straight segment? how about a right angle?
 				bool first_side(0);
-				if (centerline == pipes_bcube_center) {first_side = rgen.rand_bool();} // centered, choose a random side
+				if (centerline == pipes_pref_center) {first_side = rgen.rand_bool();} // centered, choose a random side
 				else {first_side = ((basement.d[!dim][1] - mp[0][!dim]) < (mp[0][!dim] - basement.d[!dim][0]));} // off-center, choose closer basement exterior wall
 
 				for (unsigned d = 0; d < 2 && !added_exit; ++d) { // dir
