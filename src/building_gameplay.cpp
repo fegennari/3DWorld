@@ -156,7 +156,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_TEESHIRT  ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 10.0,  0.25,  "tee shirt");
 	bldg_obj_types[TYPE_PANTS     ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 16.0,  0.50,  "jeans");
 	bldg_obj_types[TYPE_BLANKET   ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 20.0,  2.0,   "blanket");
-	bldg_obj_types[TYPE_SERVER    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 0, 1, 10000, 400.00,"server"); // too heavy for inventory
+	bldg_obj_types[TYPE_SERVER    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 0, 2, 10000, 400.00,"server"); // too heavy for inventory
 	bldg_obj_types[TYPE_POOL_BALL ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,  2.0,  0.37,  "pool ball");
 	bldg_obj_types[TYPE_POOL_CUE  ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 20.0,  1.2,   "pool cue");
 	bldg_obj_types[TYPE_WALL_MOUNT] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 2,  0.0,  0.0,   "wall mounting bracket");

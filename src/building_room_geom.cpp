@@ -5380,11 +5380,11 @@ void building_room_geom_t::add_server(room_object_t const &c) {
 
 	if (c.flags & RO_FLAG_ON_FLOOR) { // not against wall; draw back with custom texture
 		unsigned const back_face_mask(get_face_mask(c.dim, !c.dir));
-		rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_texture_by_name("metals/225_industrial_aluminium_metal_plate.jpg"), 0.0, 1))); // shadowed
+		rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_texture_by_name("metals/225_industrial_aluminium_metal_plate.jpg"), 0.0, 1), 0, 1)); // shadowed, small
 		mat.add_cube_to_verts(c, apply_light_color(c, color*2.0), c.get_llc(), back_face_mask, c.dim, 1, 1); // maybe swap, and mirror
 		extra_skip_faces |= ~back_face_mask; // skip back face in draw call below
 	}
-	add_obj_with_front_texture(c, "interiors/server_rack.png", color, 0, 0.0, 0.0, 0.0, extra_skip_faces); // small=0; not metal
+	add_obj_with_front_texture(c, "interiors/server_rack.png", color, 1, 0.0, 0.0, 0.0, extra_skip_faces); // small=1; not metal
 }
 
 void get_pool_ball_rot_matrix(room_object_t const &c, xform_matrix &rot_matrix) {
