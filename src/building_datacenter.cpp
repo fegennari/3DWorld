@@ -593,10 +593,13 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 	}
 	// add AC ducts and pipes
 	float const h_duct_hwidth(0.4*ac_width), h_duct_height(0.5*ac_width), v_duct_radius(0.25*ac_width), h_duct_z1(ceiling_zval - h_duct_height);
-	float const far_wall_pos(room.d[!dim][bldg_side]), ac_pipe_radius(0.07*ac_width), ac_hp_radius(1.33*ac_pipe_radius), bs_sign(bldg_side ? 1.0 : -1.0);
+	float const far_wall_pos(room.d[!dim][bldg_side]), bs_sign(bldg_side ? 1.0 : -1.0);
+	float const ac_pipe_radius(0.07*ac_width), ac_hp_radius(1.33*ac_pipe_radius), ac_fit_thick(0.1*ac_hp_radius);
 	unsigned const duct_flags(RO_FLAG_ADJ_TOP | RO_FLAG_ADJ_BOT); // skip top and bottom
-	unsigned const pipe_flags(RO_FLAG_NOCOLL  | RO_FLAG_HANGING);
+	unsigned const pipe_flags(RO_FLAG_NOCOLL  | RO_FLAG_LIT    ); // shadow casting
+	unsigned const fitting_flags(pipe_flags   | RO_FLAG_HANGING);
 	bool const ac_pd1(dir), ac_pd2(!bldg_side); // AC pipe dir in {dim, !dim}
+	float const ac_pd1_sign(ac_pd1 ? 1.0 : -1.0), ac_pd2_sign(ac_pd2 ? 1.0 : -1.0);
 	cube_t h_pipe;
 
 	for (unsigned i = ac_start; i < ac_end; ++i) { // add ducts connecting AC units
@@ -610,19 +613,19 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 		objs.emplace_back(duct, TYPE_DUCT, room_id, 0, 1, duct_flags, tot_light_amt, SHAPE_CYLIN); // vertical
 		// add vertical pipe(s)
 		point pipe_center(0.0, 0.0, ac.z2());
-		pipe_center[ dim] = ac_center[dim]     + (ac_pd1 ? 1.0 : -1.0)*(h_duct_hwidth + 1.1*ac_hp_radius); // side of the duct including pipe and fitting radius
-		pipe_center[!dim] = ac.d[!dim][ac_pd2] - (ac_pd2 ? 1.0 : -1.0)*2.0*ac_pipe_radius; // near the edge
+		pipe_center[ dim] = ac_center[dim]     + ac_pd1_sign*(h_duct_hwidth + ac_hp_radius + ac_fit_thick); // side of the duct including pipe and fitting radius
+		pipe_center[!dim] = ac.d[!dim][ac_pd2] - ac_pd2_sign*2.0*ac_pipe_radius; // near the edge
 		cube_t v_pipe(pipe_center);
 		v_pipe.expand_by_xy(ac_pipe_radius);
 		v_pipe.z2() = 0.5*(h_duct_z1 + ceiling_zval); // Z midpoint of h duct
-		objs.emplace_back(v_pipe, TYPE_PIPE, room_id, 0, 1, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, COPPER_C); // vertical
+		objs.emplace_back(v_pipe, TYPE_PIPE, room_id, 0, 1, pipe_flags, tot_light_amt, SHAPE_CYLIN, COPPER_C); // vertical
 		// add brass fittings on bottom (AC) and top (h_pipe)
 		cube_t fitting(v_pipe);
-		fitting.expand_by_xy(0.1*ac_pipe_radius);
+		fitting.expand_by_xy(ac_fit_thick);
 		fitting.z2() = v_pipe.z1() + 1.0*ac_pipe_radius;
-		objs.emplace_back(fitting, TYPE_PIPE, room_id, 0, 1, (pipe_flags | RO_FLAG_ADJ_HI), tot_light_amt, SHAPE_CYLIN, BRASS_C); // vertical, draw top end
+		objs.emplace_back(fitting, TYPE_PIPE, room_id, 0, 1, (fitting_flags | RO_FLAG_ADJ_HI), tot_light_amt, SHAPE_CYLIN, BRASS_C); // vertical, draw top end
 		set_cube_zvals(fitting, (v_pipe.z2() - 2.0*ac_pipe_radius), v_pipe.z2());
-		objs.emplace_back(fitting, TYPE_PIPE, room_id, 0, 1, (pipe_flags | RO_FLAG_ADJ_LO), tot_light_amt, SHAPE_CYLIN, BRASS_C); // vertical, draw bot end
+		objs.emplace_back(fitting, TYPE_PIPE, room_id, 0, 1, (fitting_flags | RO_FLAG_ADJ_LO), tot_light_amt, SHAPE_CYLIN, BRASS_C); // vertical, draw bot end
 
 		if (closest_to_door) {
 			// add main duct for first AC unit
@@ -657,20 +660,36 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 				set_cube_zvals(top_vent, room.z2(), (room.z2() + 1.0*h_duct_height)); // set height
 				objs.emplace_back(top_vent, TYPE_VENT, room_id, dim, 1, (pipe_flags | RO_FLAG_EXTERIOR), 1.0); // dir=1; fully lit
 			}
-			// add horizontal pipe(s)
+			// add horizontal pipe(s), then bend and go up into the ceiling
+			float const bend_pos1(far_wall_inner - bs_sign*ac_hp_radius); // !dim
+			float const bend_pos2(duct.d[dim][ac_pd1] + ac_pd1_sign*(2.1*floor_ix + 1)*ac_hp_radius); // dim; unique per-floor, adjacent with a small gap
+			float const bend_pos3(far_wall_pos - bs_sign*ac_hp_radius); // !dim
 			set_wall_width(h_pipe, v_pipe.z2(),      ac_hp_radius, 2); // set zvals
 			set_wall_width(h_pipe, pipe_center[dim], ac_hp_radius, dim);
 			h_pipe.d[!dim][!bldg_side] = v_pipe.d[!dim][!bldg_side];
-			h_pipe.d[!dim][ bldg_side] = far_wall_pos;
-			objs.emplace_back(h_pipe, TYPE_PIPE, room_id, !dim, 0, pipe_flags, tot_light_amt, SHAPE_CYLIN, COPPER_C); // horizontal
-			// bend and go up into the ceiling
+			h_pipe.d[!dim][ bldg_side] = bend_pos1;
+			objs.emplace_back(h_pipe, TYPE_PIPE, room_id, !dim, 0, (pipe_flags | skip_end_flag), tot_light_amt, SHAPE_CYLIN, COPPER_C); // horizontal, bend at far wall
+			cube_t h_pipe2(h_pipe); // copy zvals
+			set_wall_width(h_pipe2, bend_pos1, ac_hp_radius, !dim);
+			h_pipe2.d[dim][!ac_pd1] = pipe_center[dim];
+			h_pipe2.d[dim][ ac_pd1] = bend_pos2;
+			objs.emplace_back(h_pipe2, TYPE_PIPE, room_id, dim, 0, pipe_flags, tot_light_amt, SHAPE_CYLIN, COPPER_C); // horizontal
+			cube_t h_pipe3(h_pipe2); // copy zvals
+			set_wall_width(h_pipe3, bend_pos2, ac_hp_radius, dim);
+			h_pipe3.d[!dim][!bldg_side] = bend_pos1;
+			h_pipe3.d[!dim][ bldg_side] = bend_pos3;
+			objs.emplace_back(h_pipe3, TYPE_PIPE, room_id, !dim, 0, (pipe_flags | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI), tot_light_amt, SHAPE_CYLIN, COPPER_C); // horizontal, both bends
+			cube_t v_pipe2(h_pipe3); // copy dim
+			set_cube_zvals(v_pipe2, v_pipe.z2(), room.z2()); // all the way to the top of the building
+			set_wall_width(v_pipe2, bend_pos3, ac_hp_radius, !dim);
+			objs.emplace_back(v_pipe2, TYPE_PIPE, room_id, 0, 1, pipe_flags, tot_light_amt, SHAPE_CYLIN, COPPER_C); // vertical
 		}
 		// add fittings to h_pipe
 		fitting = h_pipe;
-		fitting.expand_in_z(0.1*ac_hp_radius);
-		fitting.expand_in_dim(dim, 0.1*ac_hp_radius);
+		fitting.expand_in_z(ac_fit_thick);
+		fitting.expand_in_dim(dim, ac_fit_thick);
 		set_wall_width(fitting, pipe_center[!dim], 1.0*ac_hp_radius, !dim);
-		objs.emplace_back(fitting, TYPE_PIPE, room_id, !dim, 0, (pipe_flags | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI), tot_light_amt, SHAPE_CYLIN, BRASS_C); // horizontal, draw both ends
+		objs.emplace_back(fitting, TYPE_PIPE, room_id, !dim, 0, (fitting_flags | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI), tot_light_amt, SHAPE_CYLIN, BRASS_C); // horizontal, draw ends
 	} // for i
 	cube_t xfmr_area(inner_area), gen_area(inner_area);
 	unsigned gen_start(0);
