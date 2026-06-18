@@ -1506,6 +1506,12 @@ public:
 		add_vert_cylinder(center, wtc.z1(), base_z1, 0.1*radius, 1.0, 4.0, ndiv/2, WHITE, qverts); // tscale=1.0/4.0
 	}
 
+	void add_cooling_tower(building_t const &bg, cube_t const &ct) {
+		// TODO: improve
+		//bool const swap_st(ct.dx() > ct.dy());
+		add_cube(bg, ct, tid_nm_pair_t(-1, 1.0), WHITE, 0, 7, 1, 0, 0); // draw all sides except bottom
+	}
+
 	void add_sat_dish(building_t const &bg, cube_t const &sd) {
 		float const dish_radius(0.25*(sd.dx() + sd.dy())), pole_radius(0.04*dish_radius), cone_len(0.4*dish_radius);
 		vector3d center(sd.xc(), sd.yc(), (sd.z2() - dish_radius));
@@ -1536,6 +1542,7 @@ public:
 		add_cone_tri_verts(vpn_top, tverts, pole_ndiv, color, 0); // top circle; two_sided=0
 		invert_tri_verts(tverts, tverts_start);
 	}
+
 	void add_tv_antenna(building_t const &bg, cube_t const &ant) {
 		tid_nm_pair_t const tex(WHITE_TEX); // untextured
 		unsigned const num_div(8);
@@ -2085,6 +2092,10 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 		}
 		if (i->type == ROOF_OBJ_WTOWER) {
 			bdraw.add_water_tower(*this, *i);
+			continue;
+		}
+		if (i->type == ROOF_OBJ_COOLING) {
+			bdraw.add_cooling_tower(*this, *i);
 			continue;
 		}
 		if (i->type == ROOF_OBJ_SAT_DISH) {

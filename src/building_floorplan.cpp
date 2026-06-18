@@ -3244,7 +3244,7 @@ void building_t::remove_intersecting_roof_cubes(cube_t const &c) {
 		uint8_t const type(obj.type);
 		// only remove some object types; may cause ducts to become disconnected from AC units
 		if (type != ROOF_OBJ_BLOCK && type != ROOF_OBJ_AC && type != ROOF_OBJ_DUCT && type != ROOF_OBJ_ANT && type != ROOF_OBJ_WTOWER && type != ROOF_OBJ_SMOKESTACK &&
-			type != ROOF_OBJ_SAT_DISH && type != ROOF_OBJ_TV_ANT) continue;
+			type != ROOF_OBJ_SAT_DISH && type != ROOF_OBJ_TV_ANT) continue; // ROOF_OBJ_COOLING?
 		if (!obj.intersects(c)) continue;
 		if (type == ROOF_OBJ_AC) {ac_to_remove.push_back(obj);} // need to remove ducts connected to this AC unit
 

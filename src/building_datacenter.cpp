@@ -48,7 +48,7 @@ cube_t building_t::create_datacenter_floorplan(unsigned part_id, float window_hs
 	interior->dc_info.reset(new bldg_datacenter_info_t(se_end, office_pos, util_pos, bath_pos, skip_sr_util_windows)); // needed for window creation, etc.
 
 	if (num_short_wind >= 9 && num_long_wind >= 9) { // larger building, at least 4 windows per side; add secondary hallway and two rows of side rooms
-		// TODO
+		// is this needed?
 	}
 	// add hallway room
 	unsigned const num_lights(num_long_wind); // likely will be reduced
@@ -241,10 +241,28 @@ void building_t::add_datacenter_outdoor_objs(rand_gen_t &rgen) {
 	has_ac = 1;
 }
 
-void building_t::add_datacenter_rooftop_objs(rand_gen_t &rgen) {
-	if (!interior || !interior->dc_info) return; // error?
-	//cube_t const &part(get_first_part()); // main part
-	// TODO: add cooling towers
+void building_t::add_datacenter_rooftop_objs(rand_gen_t &rgen) { // Note: interior hasn't been setup yet
+	//if (!interior || !interior->dc_info) return; // error?
+	//bool const dim(hallway_dim), ct_side(!interior->dc_info->se_dir); // the side with the utility rooms
+	cube_t const &part(get_first_part()); // main part
+	bool const dim(part.dx() < part.dy()); // long dim
+	cube_t roof(part);
+	roof.expand_by_xy(-get_roof_wall_thick()); // shrink off the outer roof wall
+	float const roof_zval(roof.z2()), roof_width(roof.get_sz_dim(!dim)), roof_length(roof.get_sz_dim(dim));
+	float const ct_width(0.2*roof_width), ct_hlen(0.5*min(0.2*roof_length, 1.6*ct_width)), ct_height(0.8*ct_width);
+	cube_t ct_area(roof);
+	ct_area.expand_by_xy(-0.05*roof_width); // add a border
+	//ct_area.d[dim][!ct_side] = roof.get_center_dim(dim); // side with the utility room
+	cube_t ctower;
+	set_cube_zvals(ctower, roof_zval, roof_zval+ct_height);
+	set_wall_width(ctower, rgen.rand_uniform((ct_area.d[dim][0] + ct_hlen), (ct_area.d[dim][1] - ct_hlen)), ct_hlen, dim); // for both cooling towers
+
+	for (unsigned dir = 0; dir < 2; ++dir) {
+		float const outer_edge(ct_area.d[!dim][dir]);
+		ctower.d[!dim][ dir] = outer_edge;
+		ctower.d[!dim][!dir] = outer_edge - (dir ? 1.0 : -1.0)*ct_width;
+		details.emplace_back(ctower, ROOF_OBJ_COOLING);
+	} // for dir
 }
 
 bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned lights_start) {
