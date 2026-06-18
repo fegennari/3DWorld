@@ -504,14 +504,16 @@ void add_exterior_duct(cube_t const &h_duct, bool dim, bool dir, unsigned room_i
 	objs.emplace_back(vent, TYPE_VENT, room_id, dim, !dir, (RO_FLAG_NOCOLL | RO_FLAG_EXTERIOR), 1.0); // fully lit
 }
 
-void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned lights_start) {
+void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id,
+	unsigned floor_ix, float tot_light_amt, unsigned objs_start, unsigned lights_start)
+{
 	assert(interior->dc_info);
 	zval       = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_CONCRETE); // add concrete and move the effective floor up
 	objs_start = interior->room_geom->objs.size(); // exclude this from collision checks
 	auto &objs(interior->room_geom->objs);
 	cube_t const place_area(get_walkable_room_bounds(room));
 	bool const dim(hallway_dim), dir(interior->dc_info->se_dir); // server room is opposite the stairs and elevators
-	bool const bldg_side(pri_hall.get_center_dim(!dim) < room.get_center_dim(!dim));
+	bool const bldg_side(pri_hall.get_center_dim(!dim) < room.get_center_dim(!dim)), is_ground_floor(floor_ix == 0);
 	bool const has_fan_model(building_obj_model_loader.is_model_valid(OBJ_MODEL_RAD_FAN));
 	float const floor_spacing(get_window_vspace()), ceiling_zval(zval + get_floor_ceil_gap()), clearance(get_min_front_clearance_inc_people());
 	float cur_place_pos(place_area.d[dim][dir]); // start at front wall adjacent to server room
@@ -632,11 +634,13 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 			keepout.expand_in_dim(dim, 0.1*h_duct_hwidth);
 			move_lights_to_not_intersect(objs, keepout, dim, objs_start, lights_start);
 			// add vertical duct connecting to the air intake; this should at least partially overlap and connect to the horizontal duct
-			duct.z1() = zval;
+			if (is_ground_floor) {duct.z1() -= 0.25*h_duct_height;} // ground floor duct only extends upward
+			else {duct.z1() = zval;}
 			duct.d[!dim][!bldg_side] = far_wall_inner;
 			duct.d[!dim][ bldg_side] = far_wall_pos;
 			duct.expand_in_dim(dim, 0.5*h_duct_hwidth); // double the width
-			objs.emplace_back(duct, TYPE_DUCT, room_id, !dim, 1, (duct_flags | skip_end_flag), tot_light_amt, SHAPE_CUBE); // vertical; skip top, bottom, and back
+			unsigned const v_duct_flags((is_ground_floor ? RO_FLAG_ADJ_TOP : duct_flags) | skip_end_flag); // draw bottom for ground floor since it doesn't extend down to the floor
+			objs.emplace_back(duct, TYPE_DUCT, room_id, !dim, 1, v_duct_flags, tot_light_amt, SHAPE_CUBE); // vertical; skip top, bottom, and back
 			duct.z1() = h_duct_z1; // restore original z1 for the vent
 			add_exterior_duct(duct, !dim, bldg_side, room_id, objs); // add exterior vent
 			// add fitting to h_pipe
