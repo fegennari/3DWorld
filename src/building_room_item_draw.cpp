@@ -1745,13 +1745,13 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	if (frame_counter < 100 || frame_counter > last_frame) {num_geom_this_frame = 0; last_frame = frame_counter;} // unlimited for the first 100 frames
 	point const camera_bs(camera_pdu.pos - xlate);
 	float const floor_spacing(building.get_window_vspace()), ground_floor_z1(building.ground_floor_z1);
-	bool const draw_ext_only(inc_small == 4), check_occlusion(display_mode & 0x08), is_industrial(building.is_industrial());
+	bool const draw_ext_only(inc_small == 4), check_occlusion(display_mode & 0x08), is_industrial(building.is_industrial()), is_datacenter(building.is_datacenter());
 	if (draw_ext_only) {inc_small = 0;}
 	// don't draw ceiling lights when player is above the building unless there's a light placed on a skylight
 	bool const draw_lights(!draw_ext_only && (camera_bs.z < building.bcube.z2() + (building.has_skylight_light ? 20.0*floor_spacing : 0.0)));
-	// only industrial, parking garages, backrooms, extended basements (pipes), and attics have detail objects that cast shadows
+	// only industrial, parking garages, data centers, backrooms, extended basements (pipes), and attics have detail objects that cast shadows
 	bool const draw_detail_objs(inc_small >= 2 && (!shadow_only || (player_in_building &&
-		(is_industrial || (player_in_basement >= 3 && !building.has_mall()) || building.point_in_attic(camera_bs) || building.is_pos_in_pg_or_backrooms(camera_bs)))));
+		(is_industrial || is_datacenter || (player_in_basement >= 3 && !building.has_mall()) || building.point_in_attic(camera_bs) || building.is_pos_in_pg_or_backrooms(camera_bs)))));
 	bool const draw_int_detail_objs(inc_small >= 3 && !shadow_only);
 	bool player_in_bldg_normal_pass(player_in_building && !shadow_only && !reflection_pass);
 	// update clocks if moved to next second; only applies to the player's building

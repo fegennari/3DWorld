@@ -3523,7 +3523,7 @@ void building_room_geom_t::add_pipe(room_object_t const &c, bool add_exterior) {
 	// or otherwise don't look correct when an area light is treated as a point light
 	bool const is_duct(c.type == TYPE_DUCT), mall_duct(is_duct && c.in_mall()), factory_rod(!is_duct && dim == 2 && c.in_factory());
 	// Note: attic ducts have the attic flag set, which is aliased as the hanging flag, so we have to disable flat ends for ducts
-	bool const flat_ends(!is_duct && c.is_hanging()), shadowed(is_duct || (c.flags & RO_FLAG_LIT)); // RO_FLAG_LIT flag is interpreted as "casts shadows"
+	bool const flat_ends(!is_duct && c.is_hanging()), shadowed(is_duct || c.is_lit()); // RO_FLAG_LIT flag is interpreted as "casts shadows"
 	// adj flags indicate adjacencies where we draw joints connecting to other pipe sections
 	bool const draw_joints[2] = {((c.flags & RO_FLAG_ADJ_LO) != 0), ((c.flags & RO_FLAG_ADJ_HI) != 0)};
 	colorRGBA const color(apply_light_color(c));

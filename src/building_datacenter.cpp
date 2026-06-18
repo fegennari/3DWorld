@@ -317,7 +317,7 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 				set_wall_width(conduit, (wall_pos + 0.75*dir_sign*server_hdepth), conduit_radius, !dim); // further toward the back wall
 				set_wall_width(conduit, center[dim], conduit_radius, dim);
 				set_cube_zvals(conduit, server.z2(), ceiling_zval);
-				objs.emplace_back(conduit, TYPE_PIPE, room_id, 0, 1, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, LT_GRAY); // vertical
+				objs.emplace_back(conduit, TYPE_PIPE, room_id, 0, 1, (RO_FLAG_NOCOLL | RO_FLAG_LIT), tot_light_amt, SHAPE_CYLIN, LT_GRAY); // vertical with shadows for DC
 				++num_servers;
 			} // for dir
 		} // for n
@@ -536,7 +536,7 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 			assert(bat.type == TYPE_KITCH_APP);
 			set_wall_width(conduit, (wall_pos                  - 0.2*dsign*bat.get_depth()), conduit_radius,  dim); // further toward the back wall
 			set_wall_width(conduit, (bat.d[!dim][conduit_side] - 0.1*csign*bat.get_width()), conduit_radius, !dim); // off to one side
-			objs.emplace_back(conduit, TYPE_PIPE, room_id, 0, 1, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, LT_GRAY); // vertical
+			objs.emplace_back(conduit, TYPE_PIPE, room_id, 0, 1, (RO_FLAG_NOCOLL | RO_FLAG_LIT), tot_light_amt, SHAPE_CYLIN, LT_GRAY); // vertical, with shadows
 		}
 		if (has_fan_model) { // add fans to the top
 			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_RAD_FAN)); // D, W, H
