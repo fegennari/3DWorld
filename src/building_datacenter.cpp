@@ -408,6 +408,7 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 		bool const sdim(!long_dim);
 		bool const sdir(doorways.empty() ? rgen.rand_bool() : (room.get_center_dim(sdim) < doorways.front().get_center_dim(sdim)));
 		float const dsign(sdir ? 1.0 : -1.0);
+		vector<vector2d> floor_vent_pos; // added at isle intersections
 		assert(place_area.contains_cube(inner_area));
 
 		if (num_rows > 0 && num_blocks > 0) {
@@ -418,7 +419,8 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 			float const block_edge_gap(0.5*(inner_len   + block_gap - avail_width));
 			float const row_edge_gap  (0.5*(inner_width + aisle_gap - avail_depth));
 			float const block_start(inner_area.d[!sdim][0] + block_edge_gap); // include servers along the wall and their gap
-			float row_pos(inner_area.d[sdim][0] + row_edge_gap);
+			float const server_pos_step(server_width + side_gap), row_start(inner_area.d[sdim][0] + row_edge_gap);
+			float row_pos(row_start);
 
 			for (unsigned r = 0; r < num_rows; ++r) {
 				float block_pos(block_start);
@@ -441,11 +443,23 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 							// no conduits, since there will be too many and they may block ceiling lights
 							++num_servers;
 						}
-						server_pos += server_width + side_gap;
+						server_pos += server_pos_step;
 					} // for n
 					block_pos += block_spacing;
 				} // for b
 				row_pos += row_spacing;
+			} // for r
+			vector2d vent_pos;
+			vent_pos[sdim] = row_start + 0.5*(server_depth - row_spacing); // centered between rows
+
+			for (unsigned r = 0; r <= num_rows; r += 2) { // every other row
+				vent_pos[!sdim] = block_start + 0.5*(num_per_block*server_pos_step - block_spacing); // centered between blocks
+
+				for (unsigned b = 0; b <= num_blocks; ++b) {
+					floor_vent_pos.push_back(vent_pos);
+					vent_pos[!sdim] += block_spacing;
+				}
+				vent_pos[sdim] += 2.0*row_spacing;
 			} // for r
 		}
 		// add an array of ceiling vents between the lights
@@ -464,10 +478,11 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 			if (light_space.y == 0.0 && light.y1() != ref_light.y1()) {light_space.y = light.y1() - ref_light.y1();}
 		} // for i
 		assert(!ref_light.is_all_zeros());
+		unsigned const vent_flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING);
+		float const thickness(0.1*wall_thickness), hlen(2.0*wall_thickness), hwid(2.0*wall_thickness);
+		cube_t vent;
 
 		if (light_space.x > 0.0 && light_space.y > 0.0) {
-			float const thickness(0.1*wall_thickness), hlen(2.0*wall_thickness), hwid(2.0*wall_thickness);
-			cube_t vent;
 			set_cube_zvals(vent, ceiling_zval-thickness, ceiling_zval);
 
 			for (float x = place_area.x1()+0.5*light_edge.x; x < place_area.x2(); x += light_space.x) {
@@ -475,9 +490,17 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 					vector2d const vc(x, y);
 					set_wall_width(vent, vc[ long_dim], hlen,  long_dim);
 					set_wall_width(vent, vc[!long_dim], hwid, !long_dim);
-					objs.emplace_back(vent, TYPE_VENT, room_id, long_dim, 0, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), 1.0); // dir=0; fully lit
+					objs.emplace_back(vent, TYPE_VENT, room_id, long_dim, 0, vent_flags, 1.0); // dir=0; fully lit
 				}
 			} // for x
+		}
+		// add an array of floor vents
+		set_cube_zvals(vent, zval, zval+thickness);
+
+		for (vector2d const &vc : floor_vent_pos) {
+			set_wall_width(vent, vc[ long_dim], hlen,  long_dim);
+			set_wall_width(vent, vc[!long_dim], hwid, !long_dim);
+			if (!is_obj_placement_blocked(vent, room, 1)) {objs.emplace_back(vent, TYPE_VENT, room_id, long_dim, 1, vent_flags, 1.0);} // dir=1; fully lit
 		}
 	}
 	if (is_datacenter() && !check_windows && !interior->int_windows.empty()) {
