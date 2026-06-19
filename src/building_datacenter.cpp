@@ -727,7 +727,8 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 		float const pre_place_pos(cur_place_pos);
 		unsigned const xg_obj_size(objs.size());
 		// place transformers
-		add_row_of_models(xfmr_area, zval, room_id, tot_light_amt, 0.4*floor_spacing, 0.15, OBJ_MODEL_SUBSTATION, TYPE_XFORMER, dim, dir, dim, dir, 0, cur_place_pos);
+		float const xfmr_height(0.4*floor_spacing), xfmr_zval(zval - TRANSFORMER_Z_SHIFT*xfmr_height); // shift base to the floor
+		add_row_of_models(xfmr_area, xfmr_zval, room_id, tot_light_amt, xfmr_height, 0.15, OBJ_MODEL_SUBSTATION, TYPE_XFORMER, dim, dir, dim, dir, 0, cur_place_pos);
 		// connect with wire conduits? but they already have conduits into the floor
 		if (pass == 1) {cur_place_pos = pre_place_pos;} // use the same row
 		// place generators near the back wall

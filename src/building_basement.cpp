@@ -208,7 +208,7 @@ bool building_t::add_office_utility_objs(rand_gen_t rgen, room_t const &room, fl
 	for (unsigned n = 0; n < num_water_heaters; ++n) {add_furnace_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);}
 	unsigned const furnaces_end(objs.size());
 	cube_t const place_area(get_walkable_room_bounds(room));
-	float const floor_spacing(get_window_vspace()), tzval(zval - 0.02*floor_spacing); // transformer is slightly below floor level
+	float const floor_spacing(get_window_vspace()), tzval(zval - TRANSFORMER_Z_SHIFT*0.45f*floor_spacing); // transformer is slightly below floor level
 	place_model_along_wall(OBJ_MODEL_SINK,       TYPE_SINK,    room, 0.45, rgen, zval,  room_id, tot_light_amt, place_area, objs_start, 0.6); // place janitorial sink
 	place_model_along_wall(OBJ_MODEL_SUBSTATION, TYPE_XFORMER, room, 0.40, rgen, tzval, room_id, tot_light_amt, place_area, objs_start, 0.0, 4, 0, WHITE, 0, 0, 0, 1); // sideways
 	// add breaker panel

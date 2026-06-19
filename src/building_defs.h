@@ -59,6 +59,7 @@ float const LOCKER_BOT_SHELF_HEIGHT= 0.67; // relative to full height
 float const GLASS_IOR              = 1.6;
 float const RESTROOM_WIN_TSCALE_X  = 12.0; // use a consistent scale to avoid single long windows
 float const CURVED_ROOF_HSCALE     = 0.25; // ratio of height to halfwidth
+float const TRANSFORMER_Z_SHIFT    = 0.04; // relative to height
 
 unsigned const BOTTLE_EMPTY_MASK= 192; // empty if both bits 6 and 7 are set
 unsigned const NUM_CHAIR_COLORS = 13;

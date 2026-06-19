@@ -768,7 +768,7 @@ void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float 
 			beams_z1, support_width, supports, lights, ladders, beam_pos));
 		// add transformer(s)
 		unsigned const num_transformers(room_is_powergen ? (4 + (rgen.rand()%5)) : 1); // 1 for factory, 4-8 for powerplant (though they may not all be placed)
-		float const tzval(zval - 0.02*window_vspace); // transformer is slightly below floor level
+		float const tzval(zval - TRANSFORMER_Z_SHIFT*0.6*window_vspace); // transformer is slightly below floor level
 
 		for (unsigned N = 0; N < num_transformers; ++N) {
 			place_model_along_wall(OBJ_MODEL_SUBSTATION, TYPE_XFORMER, room, 0.6, rgen, tzval, room_id, light_amt, xfmr_fl_area, objs_start, 0.0, 4, 0, WHITE, 0, 0, 0, 1); // sideways

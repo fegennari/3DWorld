@@ -1426,7 +1426,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool());
 		float const ss_height(0.08*city_params.road_width), dist_from_corner(0.12); // distance from corner relative to plot size
 		vector3d ss_center((1.0 - dist_from_corner)*corner_pole_pos + dist_from_corner*plot.get_cube_center());
-		ss_center.z -= 0.03*ss_height; // shift down slightly because the wire extends a bit below the base
+		ss_center.z -= TRANSFORMER_Z_SHIFT*ss_height; // shift down slightly because the wire extends a bit below the base
 		substation_t const ss(ss_center, ss_height, dim, dir);
 
 		if (!has_bcube_int_xy(ss.bcube, blockers, max(0.2f*ss_height, min_obj_spacing))) { // skip if intersects a building or parking lot
