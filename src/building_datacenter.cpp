@@ -499,13 +499,16 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 	return 1;
 }
 
+void move_to_not_intersect(cube_t const &keepout, cube_t &obj, bool dim, unsigned pref_dir=2) { // Note: caller must check for intersection
+	bool const move_dir((pref_dir < 2) ? pref_dir : (keepout.get_center_dim(dim) < obj.get_center_dim(dim))); // move away from AC
+	obj.translate_dim(dim, (keepout.d[dim][move_dir] - obj.d[dim][!move_dir]));
+}
 void move_lights_to_not_intersect(vect_room_object_t &objs, cube_t const &keepout, bool dim, unsigned objs_start, unsigned lights_start, unsigned pref_dir=2) {
 	for (unsigned j = lights_start; j < objs_start; ++j) {
 		room_object_t& light(objs[j]);
 		if (light.type != TYPE_LIGHT) continue;
-		if (light.d[dim][0] > keepout.d[dim][1] || light.d[dim][1] < keepout.d[dim][0]) continue; // not overlapping AC unit row
-		bool const move_dir((pref_dir < 2) ? pref_dir : (keepout.get_center_dim(dim) < light.get_center_dim(dim))); // move away from AC
-		light.translate_dim(dim, (keepout.d[dim][move_dir] - light.d[dim][!move_dir]));
+		if (light.d[dim][0] > keepout.d[dim][1] || light.d[dim][1] < keepout.d[dim][0]) continue; // not overlapping
+		move_to_not_intersect(keepout, light, dim, pref_dir);
 	}
 }
 cube_t get_exhaust_duct_for_generator(room_object_t const &generator, float duct_z2) {
@@ -649,11 +652,18 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 			keepout.expand_in_dim(dim, 0.1*h_duct_hwidth);
 			move_lights_to_not_intersect(objs, keepout, dim, objs_start, lights_start);
 			// add vertical duct connecting to the air intake; this should at least partially overlap and connect to the horizontal duct
-			if (is_ground_floor) {duct.z1() -= 0.25*h_duct_height;} // ground floor duct only extends upward
-			else {duct.z1() = zval;}
 			duct.d[!dim][!bldg_side] = far_wall_inner;
 			duct.d[!dim][ bldg_side] = far_wall_pos;
 			duct.expand_in_dim(dim, 0.5*h_duct_hwidth); // double the width
+
+			if (is_ground_floor) { // ground floor duct only extends upward unless there's a parking garage below to extend into
+				if (has_parking_garage) {
+					duct.z1() = zval; // ground_floor_z1?
+					interior->dc_info->intake_ducts[bldg_side] = duct;
+				}
+				else {duct.z1() -= 0.25*h_duct_height;}
+			}
+			else {duct.z1() = zval;}
 			unsigned const v_duct_flags((is_ground_floor ? RO_FLAG_ADJ_TOP : duct_flags) | skip_end_flag); // draw bottom for ground floor since it doesn't extend down to the floor
 			objs.emplace_back(duct, TYPE_DUCT, room_id, !dim, 1, v_duct_flags, tot_light_amt, SHAPE_CUBE); // vertical; skip top, bottom, and back
 			duct.z1() = h_duct_z1; // restore original z1 for the vent

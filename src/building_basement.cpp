@@ -12,6 +12,7 @@ extern object_model_loader_t building_obj_model_loader; // for vent fans
 car_t car_from_parking_space(room_object_t const &o);
 colorRGBA get_light_color_temp_range(float tmin, float tmax, rand_gen_t &rgen);
 void set_light_xy(cube_t &light, point const &center, float light_size, bool light_dim, room_obj_shape light_shape, bool make_square);
+void move_to_not_intersect(cube_t const &keepout, cube_t &obj, bool dim, unsigned pref_dir=2);
 
 
 bool enable_parked_cars() {return (city_params.num_cars > 0 && !city_params.car_model_files.empty());}
@@ -654,7 +655,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		add_fire_ext(fe_height, fe_radius, zval, pillar.d[pdim][!pdir], pillar.get_center_dim(!pdim), room_id, tot_light_amt, pdim, pdir, 1); // center_mount=1
 	}
 	// add beams in !dim, at and between pillars
-	unsigned const beam_flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING);
+	unsigned const beam_flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING), beams_start(objs.size());
 
 	for (unsigned p = 0; p < (4*(num_pillars - 1) + 1); ++p) { // add beams, 4 per pillar
 		float const ppos(pillar_start + 0.25*p*pillar_spacing);
@@ -677,7 +678,21 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 			if (min(w.dx(), w.dy()) > beam_hwidth) {objs.emplace_back(w, TYPE_PG_BEAM, room_id, dim, 0, beam_flags, tot_light_amt, SHAPE_CUBE, wall_color);}
 		}
 	}
+	if (is_datacenter() && interior->dc_info) { // add intake ducts in ceiling for utility room AC air handlers above
+		for (unsigned d = 0; d < 2; ++d) {
+			cube_t const &duct(interior->dc_info->intake_ducts[d]);
+			if (duct.is_all_zeros()) continue;
+			cube_t vent(duct);
+			set_cube_zvals(vent, (ceiling_z - 0.05*floor_thickness), ceiling_z);
+			for (unsigned e = 0; e < 2; ++e) {vent.expand_in_dim(e, 0.2*duct.get_sz_dim(e));} // small expand
+			vent.intersect_with_cube_xy(room);
 
+			for (auto o = objs.begin()+beams_start; o != objs.end(); ++o) { // move to avoid ceiling beams
+				if (o->type == TYPE_PG_BEAM && o->intersects_xy(vent)) {move_to_not_intersect(*o, vent, dim);}
+			}
+			objs.emplace_back(vent, TYPE_VENT, room_id, dim, 0, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), 1.0); // dir=0; fully lit
+		} // for d
+	}
 	// add parking spaces on both sides of each row (one side if half row)
 	cube_t row(wall); // same length as the wall; includes the width of the pillars
 	row.z2() = row.z1() + get_rug_thickness(); // slightly above the floor
