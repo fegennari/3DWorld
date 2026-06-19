@@ -1322,11 +1322,17 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 	interior->mall_info->mall_cylin_ducts  = (rgen.rand_float() < 0.4);
 	interior->mall_info->store_cylin_ducts = (rgen.rand_float() < 0.6);
 	unsigned has_ducts_per_floor(0); // should be good for up to 32 floors
+	// avoid the entrance door, if it's up high and to one side of the mall concourse
+	door_t const &door(interior->get_ext_basement_door());
+	vect_cube_t duct_avoid;
+	duct_avoid.push_back(door);
+	duct_avoid.back().expand_by_xy(door.get_width());
+	duct_avoid.back().expand_in_dim(mall_dim, 1.0*floor_spacing);
 
 	for (unsigned f = 0; f < num_floors; ++f) {
 		if (rgen.rand_float() > ((f+1 == num_floors) ? 0.75 : 0.25)) continue; // 75% of the time on the top floor, 25% of the time on the bottom floor
 		float const ceil_zval(room.z1() + (f + 1)*floor_spacing);
-		add_ceiling_ducts(room, ceil_zval, room_id, mall_dim, 2, light_amt, interior->mall_info->mall_cylin_ducts, 1, 1, rgen); // skip_dir=2 (neither); skip ends and top
+		add_ceiling_ducts(room, ceil_zval, room_id, mall_dim, 2, light_amt, interior->mall_info->mall_cylin_ducts, 1, 1, rgen, 1.0, duct_avoid); // skip_dir=2 (neither); skip ends and top
 		has_ducts_per_floor |= (1 << f);
 	}
 	vect_cube_t wall_pillars;
