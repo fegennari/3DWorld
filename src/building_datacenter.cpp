@@ -31,7 +31,14 @@ cube_t building_t::create_datacenter_floorplan(unsigned part_id, float window_hs
 	float num_hall_windows, hall_width, room_width; // unused
 	cube_t const hall(get_hallway_for_part(part, num_hall_windows, hall_width, room_width));
 	auto &room_walls(interior->walls[max_dim]), &hall_walls(interior->walls[min_dim]); // room_walls: perpendicular to hallway; hall_walls: parallel to hallway
-	bool const se_end(rgen.rand_bool()); // also office end, opposite utility end, near front door
+	bool se_end(rgen.rand_bool()); // also office end, opposite utility end, near front door
+
+	// if there was a cooling tower placed on the roof, place stairs on the opposite end so that the utility room is closer to the cooling tower
+	for (roof_obj_t const &d : details) {
+		if (d.type != ROOF_OBJ_COOLING) continue;
+		se_end = (d.get_center_dim(max_dim) < part.get_center_dim(max_dim));
+		break; // only need one
+	}
 	// place stairs/elevator/offices on the side with more space (further from the part center), or random if centered
 	float const hall_center(hall.get_center_dim(min_dim));
 	bool const se_side(hall_center < part.get_center_dim(min_dim) + wall_thick*rgen.signed_rand_float());
