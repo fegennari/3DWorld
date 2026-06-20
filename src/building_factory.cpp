@@ -418,15 +418,27 @@ void building_t::add_industrial_ducts_and_hvac(rand_gen_t &rgen, room_t const &r
 							}
 							cube_t test_cube(vpipe);
 							test_cube.z2() -= pipe_radius; // shorten so that it doesn't intersect the HVAC unit
-							if (has_bcube_int(test_cube, objs, objs_start) || is_cube_close_to_doorway(vpipe, room, 0.0, 1)) continue;
+							if (has_bcube_int(test_cube, objs, objs_start) || is_cube_close_to_doorway(vpipe, room, 0.0, 1) || has_bcube_int(vpipe, supports[!edim])) continue;
 						}
 						else { // go up to the ceiling
 							set_cube_zvals(vpipe, hvac.z2(), ceil_zval);
 							if ((vduct_placed && vpipe.intersects(vduct)) || has_bcube_int(vpipe, objs, hvac_pipes_start) || has_bcube_int(vpipe, beams)) continue;
 							// Note: may still intersect sprinkler pipes, but this is relatively rare and difficult to avoid
 						}
-						objs.emplace_back(vpipe, TYPE_PIPE, room_id, 0, 1, (RO_FLAG_NOCOLL | RO_FLAG_LIT), light_amt, SHAPE_CYLIN, pipe_colors[N]); // vertical, shadowed
-						if (r_shrink[N] > 0.0) {objs.back().expand_by_xy(-r_shrink[N]*pipe_radius);} // reduce pipe radius
+						cube_t pipe(vpipe);
+						if (r_shrink[N] > 0.0) {pipe.expand_by_xy(-r_shrink[N]*pipe_radius);} // reduce pipe radius
+
+						if (!hvac.contains_cube_xy(vpipe)) { // if pipe is behind HVAC, add a bend and horizontal segment
+							float const radius(0.5*pipe.dx()); // actual radius
+							pipe.z2() += 4.0*radius; // extend upward
+							cube_t h_pipe(pipe);
+							set_wall_width(h_pipe, pipe.z2(), radius, 2); // Z
+							h_pipe.d[!edim][!hvac_dir] += (hvac_dir ? 1.0 : -1.0)*radius; // move to centerline
+							h_pipe.d[!edim][ hvac_dir]  = hvac.d[!edim][!hvac_dir]; // connect to back of HVAC
+							unsigned const flags(RO_FLAG_NOCOLL | (hvac_dir ? RO_FLAG_ADJ_LO : RO_FLAG_ADJ_HI));
+							objs.emplace_back(h_pipe, TYPE_PIPE, room_id, !edim, 0, flags, light_amt, SHAPE_CYLIN, pipe_colors[N]); // horizontal
+						}
+						objs.emplace_back(pipe, TYPE_PIPE, room_id, 0, 1, (RO_FLAG_NOCOLL | RO_FLAG_LIT), light_amt, SHAPE_CYLIN, pipe_colors[N]); // vertical, shadowed
 						break; // success/done
 					} // for m
 				} // for N
