@@ -73,6 +73,11 @@ public:
 	unsigned get_ix_for_light(cube_t const &c, bool walls_not_shared=0);
 };
 
+struct pipe_conn_t {
+	float xval, yval, radius;
+	unsigned type;
+	pipe_conn_t(float x, float y, float r, unsigned t) : xval(x), yval(y), radius(r), type(t) {}
+};
 struct riser_pos_t : public sphere_t {
 	bool has_hot=0, flow_dir=0, upper_floor=0, in_extb=0, is_wh=0; // flow_dir: 0=out/down, 1=in/up
 	riser_pos_t() {}
@@ -1511,6 +1516,7 @@ struct bldg_datacenter_info_t {
 	float office_pos, util_pos, bath_pos;
 	float ac_height=0.0, ac_width=0.0, ac_depth=0.0;
 	cube_t intake_ducts[2];
+	vector<pipe_conn_t> pipe_conn;
 
 	bldg_datacenter_info_t(bool sd, float op, float up, float bp, bool sw) : se_dir(sd), skip_sr_util_windows(sw), office_pos(op), util_pos(up), bath_pos(bp) {}
 };

@@ -1583,6 +1583,15 @@ void building_t::get_pipe_basement_water_connections(vect_riser_pos_t &sewer, ve
 			cold_water.emplace_back(point(i->xc(), i->yc(), ceil_zval), 2.0*base_pipe_radius, 0, 1); // 2x base radius, has_hot=0, flow_dir=1/in
 		}
 	}
+	if (interior->dc_info) { // pipes for data center
+		for (pipe_conn_t const &p : interior->dc_info->pipe_conn) {
+			switch (p.type) {
+			case PIPE_TYPE_SEWER: sewer     .emplace_back(point(p.xval, p.yval, ceil_zval), p.radius, 0, 0); break;
+			case PIPE_TYPE_CW   : cold_water.emplace_back(point(p.xval, p.yval, ceil_zval), p.radius, 0, 1); break;
+			case PIPE_TYPE_HW   : hot_water .emplace_back(point(p.xval, p.yval, ceil_zval), p.radius, 1, 0); break;
+			}
+		} // for p
+	}
 }
 
 void building_t::get_pipe_basement_gas_connections(vect_riser_pos_t &pipes) const {
@@ -1592,11 +1601,17 @@ void building_t::get_pipe_basement_gas_connections(vect_riser_pos_t &pipes) cons
 	for (room_object_t const &i : interior->room_geom->objs) { // check all objects placed so far
 		if (i.z1() < ground_floor_z1) continue; // object in the house basement; unclear how to handle it here
 		bool const is_gas_dryer(i.type == TYPE_DRYER && (i.obj_id & 3)); // gas dryer 75% of the time, since it makes the pipes more interesting
+		bool const is_generator(i.type == TYPE_GENERATOR && !interior->dc_info); // skip generators if there are custom data center connection pipes
 		if (i.type != TYPE_WHEATER && i.type != TYPE_FURNACE && i.type != TYPE_STOVE && i.type != TYPE_FPLACE &&
-			i.type != TYPE_HVAC_UNIT && i.type != TYPE_GENERATOR && !is_gas_dryer) continue;
-		float const rscale((i.type == TYPE_GENERATOR) ? 2.0 : 1.0); // generators are 2x radius
+			i.type != TYPE_HVAC_UNIT && !is_generator && !is_gas_dryer) continue;
+		float const rscale(is_generator ? 2.0 : 1.0); // generators are 2x radius
 		pipes.emplace_back(get_cube_center_zval(i, ceil_zval), rscale*pipe_radius, 0, 1); // flows in
 	} // for i
+	if (interior->dc_info) { // add gas pipes for data center
+		for (pipe_conn_t const &p : interior->dc_info->pipe_conn) {
+			if (p.type == PIPE_TYPE_GAS) {pipes.emplace_back(point(p.xval, p.yval, ceil_zval), p.radius, 0, 1);}
+		}
+	}
 }
 
 void get_water_heater_cubes(room_object_t const &wh, cube_t cubes[2], bool vent_only) { // {tank, pipes}
