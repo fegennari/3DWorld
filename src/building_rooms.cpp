@@ -809,7 +809,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				added_obj = no_whiteboard = no_plants = no_trashcan = add_server_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, objs_start_inc_lights);
 			}
 			else if (is_datacenter() && init_rtype_f0 == RTYPE_UTILITY) { // datacenter utility rooms are on each floor
-				add_dc_utility_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start, objs_start_inc_lights);
+				add_dc_utility_objs(rgen, *r, room_center.z, room_id, f, num_floors, tot_light_amt, objs_start, objs_start_inc_lights);
 				added_obj = no_whiteboard = no_plants = no_trashcan = is_utility = 1;
 			}
 			else if (is_datacenter() && r->get_room_type(f) == RTYPE_BATH) { // datacenter bathroom on this floor

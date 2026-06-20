@@ -564,7 +564,7 @@ void add_exterior_duct(cube_t const &h_duct, bool dim, bool dir, unsigned room_i
 }
 
 void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id,
-	unsigned floor_ix, float tot_light_amt, unsigned objs_start, unsigned lights_start)
+	unsigned floor_ix, unsigned num_floors, float tot_light_amt, unsigned objs_start, unsigned lights_start)
 {
 	assert(interior->dc_info);
 	zval       = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_CONCRETE); // add concrete and move the effective floor up
@@ -574,7 +574,7 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 	bool const dim(hallway_dim), dir(interior->dc_info->se_dir); // server room is opposite the stairs and elevators
 	bool const bldg_side(pri_hall.get_center_dim(!dim) < room.get_center_dim(!dim)), is_ground_floor(floor_ix == 0);
 	bool const has_fan_model(building_obj_model_loader.is_model_valid(OBJ_MODEL_RAD_FAN));
-	float const floor_spacing(get_window_vspace()), ceiling_zval(zval + get_floor_ceil_gap()), clearance(get_min_front_clearance_inc_people());
+	float const floor_spacing(get_window_vspace()), ceiling_zval(zval + get_floor_ceil_gap()), clearance(get_min_front_clearance_inc_people()), dsign(dir ? 1.0 : -1.0);
 	float cur_place_pos(place_area.d[dim][dir]); // start at front wall adjacent to server room
 	// place batteries, represented as kitchen fridges, against the wall shared with the server room
 	int const bat_model(select_dc_battery_model());
@@ -586,7 +586,7 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 		unsigned const bat_end(objs.size());
 		// add conduits to the top; maybe these should connect together?
 		bool const conduit_side(rgen.rand_bool());
-		float const conduit_radius(0.02*floor_spacing), dsign(dir ? 1.0 : -1.0), csign(conduit_side ? 1.0 : -1.0);
+		float const conduit_radius(0.02*floor_spacing), csign(conduit_side ? 1.0 : -1.0);
 		cube_t conduit;
 		set_cube_zvals(conduit, zval+bat_height, ceiling_zval);
 
@@ -788,11 +788,12 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 		cur_place_pos = pre_place_pos;
 	} // for pass
 	if (gen_start > 0) { // add ducts and fuel lines for generators
-		float const pipe_radius(0.015*floor_spacing);
+		float const v_pipe_radius(0.01*floor_spacing), h_pipe_radius(0.8*v_pipe_radius), fitting_exp(0.2*v_pipe_radius);
 		unsigned const gen_end(objs.size());
 
 		for (unsigned i = gen_start; i < gen_end; ++i) {
-			cube_t const v_duct(get_exhaust_duct_for_generator(objs[i], ceiling_zval));
+			room_object_t const generator(objs[i]); // deep copy to avoid invalidating the reference
+			cube_t const v_duct(get_exhaust_duct_for_generator(generator, ceiling_zval));
 			// add horizontal duct out to the back of the building
 			vector2d const duct_sz(v_duct.get_size_xy());
 			float const duct_height(duct_sz.get_min_val()), h_duct_z1(ceiling_zval - duct_height), back_wall_pos(room.d[dim][!dir]);
@@ -804,7 +805,7 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 			
 			if (duct_sz[!dim] < duct_sz[dim]) { // sideways generator placement
 				h_duct.expand_in_dim(!dim, 0.5*(duct_sz[dim] - duct_sz[!dim])); // expand to keep fixed cross section area
-				h_duct.d[dim][dir] = v_duct.d[dim][dir] + (dir ? 1.0 : -1.0)*0.1*duct_sz[dim]; // overlaps and covers v_duct with a bit of extension
+				h_duct.d[dim][dir] = v_duct.d[dim][dir] + dsign*0.1*duct_sz[dim]; // overlaps and covers v_duct with a bit of extension
 				h_duct_flags &= ~(dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO); // back face is visible
 			}
 			objs.emplace_back(h_duct, TYPE_DUCT, room_id, dim, dir, h_duct_flags, tot_light_amt, SHAPE_CUBE); // horizontal
@@ -818,7 +819,34 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 				move_lights_to_not_intersect(objs, keepout, dim, objs_start, lights_start, dir); // pref_dir=dir so that lights move toward the interior and aren't blocked by h_duct
 			}
 			// add fuel pipe
-			// TODO: pipe_radius
+			bool const pipe_side(bldg_side);
+			float const pipe_conn_z(generator.z1() + 0.36*generator.dz());
+			point pipe_pos(0.0, 0.0, zval);
+			pipe_pos[ dim] = generator.get_center_dim(dim) - dsign*0.3*generator.get_length(); // toward the front
+			pipe_pos[!dim] = generator.d[!dim][pipe_side]  + (pipe_side ? 1.0 : -1.0)*2.0*v_pipe_radius;
+			cube_t v_pipe(pipe_pos);
+			v_pipe.expand_by_xy(v_pipe_radius);
+
+			if (is_ground_floor) { // pipe extends through all floors; add only for ground floor room
+				v_pipe.z2() = pipe_conn_z + (num_floors-1)*floor_spacing; // extend to top floor
+				objs.emplace_back(v_pipe, TYPE_PIPE, room_id, 0, 1, pipe_flags, tot_light_amt, SHAPE_CYLIN, YELLOW); // vertical
+				interior->dc_info->pipe_conn.emplace_back(pipe_pos.x, pipe_pos.y, v_pipe_radius, PIPE_TYPE_GAS);
+			}
+			cube_t h_pipe(pipe_pos);
+			h_pipe.expand_in_dim(dim, h_pipe_radius);
+			set_wall_width(h_pipe, pipe_conn_z, h_pipe_radius, 2); // Z
+			h_pipe.d[!dim][!pipe_side] = generator.get_center_dim(!dim); // connects to generator
+			objs.emplace_back(h_pipe, TYPE_PIPE, room_id, !dim, 0, pipe_flags, tot_light_amt, SHAPE_CYLIN, YELLOW); // horizontal
+			// add fittings
+			cube_t v_fitting(v_pipe), h_fitting(h_pipe);
+			v_fitting.expand_by_xy(fitting_exp);
+			set_wall_width(v_fitting, pipe_conn_z, (h_pipe_radius + fitting_exp), 2); // Z
+			objs.emplace_back(v_fitting, TYPE_PIPE, room_id, 0, 1, (fitting_flags | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI), tot_light_amt, SHAPE_CYLIN, LT_GRAY); // vertical
+			h_fitting.expand_in_z(fitting_exp);
+			h_fitting.expand_in_dim(dim, fitting_exp);
+			h_fitting.d[!dim][ pipe_side] = pipe_pos[!dim]; // centerline of v_pipe
+			h_fitting.d[!dim][!pipe_side] = pipe_pos[!dim] - (pipe_side ? 1.0 : -1.0)*2.0*v_pipe_radius;
+			objs.emplace_back(h_fitting, TYPE_PIPE, room_id, !dim, 0, (fitting_flags | (pipe_side ? RO_FLAG_ADJ_LO : RO_FLAG_ADJ_HI)), tot_light_amt, SHAPE_CYLIN, LT_GRAY); // horizontal
 		} // for i
 	}
 	// add breaker panel
