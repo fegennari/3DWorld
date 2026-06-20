@@ -14,7 +14,7 @@ int get_nm_tid_for    (unsigned id);
 tid_nm_pair_t get_metal_plate_tex(float tscale, bool shadowed);
 colorRGBA apply_light_color(room_object_t const &o, colorRGBA const &c);
 float get_merged_pipe_radius(float r1, float r2, float exponent);
-void set_pipe_specular(colorRGBA const &spec_color, bool is_duct, bool is_dirty, tid_nm_pair_t &tex);
+void set_pipe_specular(colorRGBA const &color, bool is_duct, bool is_dirty, tid_nm_pair_t &tex);
 
 extern object_model_loader_t building_obj_model_loader; // for vent fans
 
@@ -84,7 +84,7 @@ void building_room_geom_t::add_machine_pipe_in_region(room_object_t const &c, cu
 		if (dist_less_than(p1, pe.pos, (radius + pe.radius))) return; // too close to a previously placed pipe
 	}
 	pipe_ends.emplace_back(p1, radius);
-	colorRGBA const color(choose_pipe_color(rgen)), spec_color(get_specular_color(color)); // special case metals
+	colorRGBA const color(choose_pipe_color(rgen)); // special case metals
 
 	if (add_coil) {
 		bool const sparse(c.in_factory()); // larger coil gap for factories
@@ -92,11 +92,11 @@ void building_room_geom_t::add_machine_pipe_in_region(room_object_t const &c, cu
 		float const coil_gap(rgen.rand_uniform((sparse ? 2.5 : 1.5), (sparse ? 5.0 : 4.0))*coil_radius);
 		p1[dim] -= coil_radius; p2[dim] += coil_radius; // must start and end inside the object
 		float const length(p2[dim] - p1[dim]);
-		add_spring(p1, radius, coil_radius, length, coil_gap, dim, color, spec_color, sparse);
+		add_spring(p1, radius, coil_radius, length, coil_gap, dim, color, get_specular_color(color), sparse);
 		return;
 	}
 	tid_nm_pair_t tex(-1, 1.0f, 1, 0, 1); // shadowed, no_reflect=1
-	set_pipe_specular(spec_color, 0, 0, tex); // is_duct=0, is_dirty=0
+	set_pipe_specular(color, 0, 0, tex); // is_duct=0, is_dirty=0
 	rgeom_mat_t &pipe_mat(get_material(tex, 0, 1)); // small
 	pipe_mat.add_cylin_to_verts(p1, p2, radius, radius, apply_light_color(c, color), 0, 0, 0, 0, 1.0, 1.0, 0, 16); // shadowed, small
 

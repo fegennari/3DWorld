@@ -149,11 +149,13 @@ rgeom_mat_t &building_room_geom_t::get_wood_material(float tscale, bool inc_shad
 	return get_material(tid_nm_pair_t(tid, nm_tid, 3.0*tscale, 3.0*tscale, 0.0, 0.0, inc_shadows), dynamic, small, 0, exterior);
 }
 
-void set_pipe_specular(colorRGBA const &spec_color, bool is_duct, bool is_dirty, tid_nm_pair_t &tex) {
+void set_pipe_specular(colorRGBA const &color, bool is_duct, bool is_dirty, tid_nm_pair_t &tex) {
+	colorRGBA const spec_color(get_specular_color(color));
 	tex.set_specular_color(spec_color, 0.7, 50.0);
 	// make specular; maybe should not make specular if rusty, but setting per-pipe specular doesn't work, and water effect adds specular anyway
 	if (spec_color != WHITE) {tex.metalness = (is_dirty ? 0.25 : 0.6) ;} // more metal if pipe has a metal specular color
-	else {tex.metalness = (is_dirty ? 0.1 :    (is_duct ? 0.25 : 0.4));} // partially reflective
+	else if (color.R != color.G || color.R != color.B) {tex.metalness = 0.0;} // non-grayscale: not metal
+	else {tex.metalness = (is_dirty ? 0.1 : (is_duct ? 0.25 : 0.4));} // partially reflective
 }
 
 template<typename T> void invert_triangles(T &verts, vector<unsigned> &indices, unsigned verts_start, unsigned ixs_start);
@@ -2854,7 +2856,7 @@ void building_room_geom_t::add_wall_gap(room_object_t const &c, tid_nm_pair_t co
 				color.assign(v, v, v);
 			}
 			tid_nm_pair_t tex(-1, 1.0f, 1, 0, 1); // custom specular color, shadowed, no_reflect=1
-			set_pipe_specular(get_specular_color(color), 0, 0, tex);
+			set_pipe_specular(color, 0, 0, tex);
 			get_material(tex, 0, 1).add_ortho_cylin_to_verts(pipe, color, !dim, 0, 0); // small=1, sides only
 		}
 	} // for n
@@ -3538,7 +3540,7 @@ void building_room_geom_t::add_pipe(room_object_t const &c, bool add_exterior) {
 	else if (is_dirty) {tid = get_texture_by_name((c.obj_id & 1) ? "metals/67_rusty_dirty_metal.jpg" : "metals/65_Painted_dirty_metal.jpg");}
 	tid_nm_pair_t tex(tid, 1.0f, shadowed, 0, 1); // custom specular color, no_reflect=1
 	if (c.color == WHITE) {tex.set_specular_color(WHITE, 0.4, 40.0);} // hot water insulation and PVC is less specular and not metal
-	else {set_pipe_specular(get_specular_color(c.color), is_duct, is_dirty, tex);} // special case metals
+	else {set_pipe_specular(c.color, is_duct, is_dirty, tex);} // special case metals
 	rgeom_mat_t &mat(get_material(tex, 0, (exterior ? 0 : (is_duct ? 1 : 2)), 0, exterior)); // detail, small, or exterior object
 	// swap texture XY for ducts
 	mat.add_ortho_cylin_to_verts(c, color, dim, (flat_ends && draw_joints[0]), (flat_ends && draw_joints[1]),
