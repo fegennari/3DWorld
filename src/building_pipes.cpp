@@ -286,8 +286,8 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	// use the mean value of the riser connection points to minimize connector pipe run length, but clamp to the interior of the basement;
 	// in the case where all risers are outside of the basement perimeter, this will make pipes run against the exterior basement wall
 	float mean_pos(0.0);
-	for (auto const &v : xy_map) {mean_pos += v.first;}
-	mean_pos /= xy_map.size();
+	for (pipe_t const &p : pipes) {mean_pos += p.p1[!dim];}
+	mean_pos /= pipes.size();
 	float const pipes_pref_center(max(basement.d[!dim][0]+r_main, min(basement.d[!dim][1]-r_main, mean_pos/*pipe_end_bcube.get_center_dim(!dim)*/)));
 	float centerline(pipes_pref_center);
 	point mp[2]; // {lo, hi} ends
