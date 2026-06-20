@@ -220,7 +220,7 @@ void rotate_verts_range(building_t const &b, vect_vnctcc_t &verts, unsigned vert
 class building_texture_mgr_t {
 	int window_tid=-1, hdoor_tid=-1, odoor_tid=-1, bdoor_tid=-1, bdoor2_tid=-1, gdoor_tid=-1, mdoor_tid=-1, ac_unit_tid1=-1, ac_unit_tid2=-1, bath_wind_tid=-1;
 	int helipad_tid=-1,	solarp_tid=-1, concrete_tid=-1, met_plate_tid=-1, mplate_nm_tid=-1, met_roof_tid=-1, tile_floor_tid=-1, tile_floor_nm_tid=-1, duct_tid=-1;
-	int vent_tid=-1, marble_floor_tid=-1, granite_floor_tid=-1, corr_metal_tid=-1, corr_metal_nm_tid=-1, br_wall_tid=-1, br_floor_tid=-1, fan_tid=-1;
+	int vent_tid=-1, marble_floor_tid=-1, granite_floor_tid=-1, corr_metal_tid=-1, corr_metal_nm_tid=-1, br_wall_tid=-1, br_floor_tid=-1, fan_tid=-1, metal_vent_tid=-1;
 
 	int ensure_tid(int &tid, const char *name, bool is_normal_map=0, bool invert_y=0) {
 		if (tid < 0) {tid = get_texture_by_name(name, is_normal_map, invert_y);}
@@ -239,7 +239,7 @@ public:
 	int get_ac_unit_tid2 () {return ensure_tid(ac_unit_tid2,  "buildings/AC_unit2.jpg");} // AC unit
 	int get_duct_tid     () {return ensure_tid(duct_tid,      "interiors/duct.jpg");} // duct
 	int get_vent_tid     () {return ensure_tid(vent_tid,      "interiors/vent.jpg");} // vent
-	int get_fan_tid      () {return ensure_tid(fan_tid,       "buildings/fan.jpg");} // fan
+	int get_fan_tid      () {return ensure_tid(fan_tid,       "buildings/fan.jpg" );} // fan
 	int get_bath_wind_tid() {return ensure_tid(bath_wind_tid, "buildings/window_blocks.jpg");} // bathroom window
 	int get_helipad_tid  () {return ensure_tid(helipad_tid,   "buildings/helipad.jpg");}
 	int get_solarp_tid   () {return ensure_tid(solarp_tid,    "buildings/solar_panel.jpg");}
@@ -253,8 +253,9 @@ public:
 	int get_granite_floor_tid() {return ensure_tid(granite_floor_tid, "interiors/granite_floor.jpg");}
 	int get_corr_metal_tid   () {return ensure_tid(corr_metal_tid,    "buildings/corrugated_metal.tif");}
 	int get_corr_metal_nm_tid() {return ensure_tid(corr_metal_nm_tid, "buildings/corrugated_metal_normal.tif", 1);} // is_normal_map=1
+	int get_metal_vent_tid   () {return ensure_tid(metal_vent_tid,    "metals/203_industrial_iron_metal_plate.jpg");}
 	// Note: backrooms_wall2.jpg and backrooms_wall3.jpg work as well, but they're lower resolution and lower contrast
-	int get_backrooms_wall_tid () {return ensure_tid(br_wall_tid,  "interiors/backrooms_wall.jpg");}
+	int get_backrooms_wall_tid () {return ensure_tid(br_wall_tid,  "interiors/backrooms_wall.jpg"  );}
 	int get_backrooms_floor_tid() {return ensure_tid(br_floor_tid, "interiors/backrooms_carpet.jpg");}
 
 	bool check_windows_texture() {
@@ -344,6 +345,7 @@ public:
 		register_tid(building_texture_mgr.get_corr_metal_nm_tid());
 		register_tid(building_texture_mgr.get_backrooms_wall_tid());
 		register_tid(building_texture_mgr.get_backrooms_floor_tid());
+		register_tid(building_texture_mgr.get_metal_vent_tid());
 		register_tid(get_plywood_tid()); // for attics
 		register_tid(FONT_TEXTURE_ID); // for roof signs
 		for (unsigned i = 0; i < num_special_tids; ++i) {register_tid(special_tids[i]);}
@@ -1047,7 +1049,7 @@ public:
 
 				for (unsigned S = 0; S < ndiv-2; ++S) { // generate vertex data triangles
 					for (unsigned n = 0; n < 3; ++n) {
-						if (S > 0 && n == 0) {tri_verts.push_back(tri_verts[start]); continue;} // reuse shared vertex
+						if (S > 0 && n == 0) {tri_verts.push_back(tri_verts[start             ]); continue;} // reuse shared vertex
 						if (S > 0 && n == 1) {tri_verts.push_back(tri_verts[tri_verts.size()-2]); continue;} // reuse prev vertex
 						vert.v    = verts[S + n];
 						vert.v.z  = zval;
@@ -1059,6 +1061,30 @@ public:
 				if (d == 1) {std::reverse(tri_verts.begin()+start, tri_verts.end());} // winding order is wrong, but it's easier to reverse it than change all of the indexing logic
 			} // for d
 		} // end draw end(s)
+	}
+
+	void add_circle(tid_nm_pair_t const &tex, colorRGBA const &color, float radius, unsigned ndiv, bool dir, point const &pos, float tscale_s=1.0, float tscale_t=1.0) {
+		assert(radius > 0.0);
+		color_wrapper const cw(color);
+		norm_comp const n(dir ? plus_z : -plus_z);
+		float const css((dir ? -1.0 : 1.0)*TWO_PI/(float)ndiv), sin_ds(sin(css)), cos_ds(cos(css));
+		float sin_s(0.0), cos_s(1.0);
+		auto &tri_verts(get_verts(tex, 1));
+		vert_norm_comp_tc_color const center(pos, n, 0.5*tscale_s, 0.5*tscale_t, cw);
+		static vect_vnctcc_t verts;
+		verts.clear();
+
+		for (unsigned S = 0; S < ndiv; ++S) {
+			float const s(sin_s), c(cos_s), ts((1.0 + s)*0.5*tscale_s), tt((1.0 + c)*0.5*tscale_t);
+			verts.emplace_back((pos + point(radius*s, radius*c, 0.0)), n, ts, tt, cw);
+			sin_s = s*cos_ds + c*sin_ds;
+			cos_s = c*cos_ds - s*sin_ds;
+		}
+		for (unsigned S = 0; S < ndiv; ++S) { // no indices; 3 points per triangle
+			tri_verts.push_back(center);
+			tri_verts.push_back(verts[S]);
+			tri_verts.push_back(verts[(S+1)%ndiv]);
+		}
 	}
 
 	void add_tquad(building_geom_t const &bg, tquad_with_ix_t const &tquad, cube_t const &bcube, tid_nm_pair_t const &tex, colorRGBA const &color,
@@ -1522,23 +1548,24 @@ public:
 		invert_tri_verts(qverts, qverts_start); // same invert for triangles and quads
 	}
 	void add_cooling_tower(building_t const &bg, cube_t const &ct) {
-		tid_nm_pair_t const side_tex(building_texture_mgr.get_met_plate_tid(), building_texture_mgr.get_mplate_nm_tid(), 2.0, 2.0);
+		tid_nm_pair_t const side_tex (building_texture_mgr.get_metal_vent_tid(), 1.0);
+		tid_nm_pair_t const fan_tex  (building_texture_mgr.get_fan_tid       (), 1.0);
+		tid_nm_pair_t const cylin_tex(building_texture_mgr.get_met_plate_tid (), building_texture_mgr.get_mplate_nm_tid(), 1.0, 1.0);
+		tid_nm_pair_t const top_tex  (cylin_tex.get_scaled_version(5.0));
 		bool const dim(ct.dx() < ct.dy()); // long dim
 		float const height(ct.dz()), length(ct.get_sz_dim(dim)), width(ct.get_sz_dim(!dim)), tower_radius(0.4f*min(0.5f*length, width));
 		cube_t base(ct), tower(ct);
-		base.z2() = tower.z1() = ct.z1() + 0.67*ct.dz();
-		add_cube(bg, base, side_tex, WHITE, 0, 7, 1, 0, 0); // draw all sides except bottom
+		base.z2() = tower.z1() = ct.z1() + 0.7*ct.dz();
+		add_cube(bg, base, side_tex, WHITE, 0, 3, 1, 1); // draw sides
+		add_cube(bg, base, top_tex,  WHITE, 0, 4, 1, 0); // draw top
 		set_wall_width(tower, ct.get_center_dim(!dim), tower_radius, !dim); // centered in short dim
-		//tid_nm_pair_t const tower_tex(-1, 1.0);
-		tid_nm_pair_t const fan_tex(building_texture_mgr.get_fan_tid(), 1.0);
 
 		for (unsigned e = 0; e < 2; ++e) { // 2 towers (fans)
 			set_wall_width(tower, (ct.d[dim][0] + (e ? 0.75 : 0.25)*length), tower_radius, dim);
-			add_two_sided_cylin(tower, /*tower_tex*/side_tex, WHITE, N_CYL_SIDES);
-			cube_t fan(tower);
-			fan.z2() = tower.z1() + 0.01*height;
-			// TODO: clip to a circle; alpha blending doesn't work
-			add_cube(bg, fan, fan_tex, WHITE, 0, 4, 1, 0); // top only
+			add_two_sided_cylin(tower, cylin_tex, WHITE, N_CYL_SIDES);
+			point pos(tower.xc(), tower.yc(), (tower.z1() + 0.01*height));
+			if (bg.is_rotated()) {bg.do_xy_rotate(bg.bcube.get_cube_center(), pos);}
+			add_circle(fan_tex, WHITE, tower_radius, N_CYL_SIDES, 1, pos); // points up
 		}
 	}
 
