@@ -246,27 +246,38 @@ void building_t::add_datacenter_outdoor_objs(rand_gen_t &rgen) {
 }
 
 void building_t::add_datacenter_rooftop_objs(rand_gen_t &rgen) { // Note: interior hasn't been setup yet
-	//if (!interior || !interior->dc_info) return; // error?
-	//bool const dim(hallway_dim), ct_side(!interior->dc_info->se_dir); // the side with the utility rooms
 	cube_t const &part(get_first_part()); // main part
 	bool const dim(part.dx() < part.dy()); // long dim
 	cube_t roof(part);
 	roof.expand_by_xy(-get_roof_wall_thick()); // shrink off the outer roof wall
-	float const roof_zval(roof.z2()), roof_width(roof.get_sz_dim(!dim)), roof_length(roof.get_sz_dim(dim));
-	float const ct_width(0.2*roof_width), ct_hlen(0.5*min(0.2*roof_length, 1.6*ct_width)), ct_height(0.8*ct_width);
 	cube_t ct_area(roof);
-	ct_area.expand_by_xy(-0.05*roof_width); // add a border
-	//ct_area.d[dim][!ct_side] = roof.get_center_dim(dim); // side with the utility room
-	cube_t ctower;
-	set_cube_zvals(ctower, roof_zval, roof_zval+ct_height);
-	set_wall_width(ctower, rgen.rand_uniform((ct_area.d[dim][0] + ct_hlen), (ct_area.d[dim][1] - ct_hlen)), ct_hlen, dim); // for both cooling towers
+	ct_area.expand_by_xy(-0.05*roof.get_sz_dim(!dim)); // add a border
+	float const roof_zval(roof.z2()), roof_width(ct_area.get_sz_dim(!dim)), roof_length(ct_area.get_sz_dim(dim));
+	float const ct_width(rgen.rand_uniform(0.16, 0.22)*roof_width), ct_height(rgen.rand_uniform(0.7, 1.0)*ct_width);
+	float const ct_len(min(0.3f*roof_length, rgen.rand_uniform(1.5, 1.75)*ct_width)), ct_hlen(0.5*ct_len), gap(0.25*ct_len);
+	bool const side(rgen.rand_bool()); // choose a random side; the utility room will be added to this side
+	bool const add_two(0.65*roof_length > 2.0*(ct_len + gap));
+	ct_area.d[dim][side] -= (side ? 1.0 : -1.0)*(add_two ? 0.35 : 0.5)*roof_length; // shrink to 65%/50% of the area
+	cube_t ct_areas[2] = {ct_area, ct_area};
+	
+	if (add_two) { // split in half in dim
+		float const split_pos(ct_area.get_center_dim(dim));
+		ct_areas[0].d[dim][1] = split_pos - gap;
+		ct_areas[1].d[dim][0] = split_pos + gap;
+	}
+	for (unsigned n = 0; n < (add_two ? 2 : 1); ++n) {
+		cube_t const &cta(ct_areas[bool(n) ^ side ^ 1]); // starts with furthest to the end
+		cube_t ctower;
+		set_cube_zvals(ctower, roof_zval, roof_zval+ct_height);
+		set_wall_width(ctower, rgen.rand_uniform((cta.d[dim][0] + ct_hlen), (cta.d[dim][1] - ct_hlen)), ct_hlen, dim); // for both cooling towers
 
-	for (unsigned dir = 0; dir < 2; ++dir) {
-		float const outer_edge(ct_area.d[!dim][dir]);
-		ctower.d[!dim][ dir] = outer_edge;
-		ctower.d[!dim][!dir] = outer_edge - (dir ? 1.0 : -1.0)*ct_width;
-		details.emplace_back(ctower, ROOF_OBJ_COOLING);
-	} // for dir
+		for (unsigned dir = 0; dir < 2; ++dir) {
+			float const outer_edge(cta.d[!dim][dir]);
+			ctower.d[!dim][ dir] = outer_edge;
+			ctower.d[!dim][!dir] = outer_edge - (dir ? 1.0 : -1.0)*ct_width;
+			details.emplace_back(ctower, ROOF_OBJ_COOLING);
+		}
+	} // for n
 }
 
 bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned lights_start) {

@@ -2439,7 +2439,7 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 	}
 	bool const add_antenna((flat_roof || roof_type == ROOF_TYPE_SLOPE) && !has_helipad && !is_parking() && rgen.rand_bool());
 	bool const can_add_special_obj(has_flat_top && !has_helipad && !add_antenna && !is_parking() && skylights.empty()); // open roof space with no blocker
-	bool const add_water_tower(can_add_special_obj && (tsz.x < 2.0*tsz.y && tsz.y < 2.0*tsz.x) && (tsz.x > 0.5*tpsz.x && tsz.y > 0.5*tpsz.y) && rgen.rand_bool());
+	bool const add_water_tower(can_add_special_obj && !is_datacenter() && (tsz.x < 2.0*tsz.y && tsz.y < 2.0*tsz.x) && (tsz.x > 0.5*tpsz.x && tsz.y > 0.5*tpsz.y) && rgen.rand_bool());
 	bool const add_sat_dish(can_add_special_obj && !add_water_tower && is_cube() && !is_industrial());
 	bool const add_smokestack(is_heavy_industrial() /*&& roof_type != ROOF_TYPE_CURVED*/); // for all roof types?
 	if (add_walls && min(tsz.x, tsz.y) < 4.0*wall_width) return; // too small
