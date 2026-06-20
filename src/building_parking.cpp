@@ -470,7 +470,8 @@ void building_t::add_parking_garage_ramp(rand_gen_t &rgen) {
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness);
 	float const z1(room.z1() + fc_thick), z2(room.z2() + fc_thick); // bottom level room floor to first floor floor
 	bool ramp_pref_xdir(rgen.rand_bool()), ramp_pref_ydir(rgen.rand_bool());
-	// prefer dir on the office side, not on the utility side, as this will block generator and AC pipes
+	// prefer dir on the office side, not on the utility side, as this will block generator and AC pipes;
+	// but sometimes it will be blocked by the stairs and forced onto this side anyway; swapping dim could help, but this causes problems with parking spaces and lights
 	if (is_datacenter() && interior->dc_info && hallway_dim < 2) {(hallway_dim ? ramp_pref_ydir : ramp_pref_xdir) = interior->dc_info->se_dir;}
 	//if (is_in_city && is_parking()) {} // don't face toward the walkway/skyway? but the skyway hasn't been placed yet
 	bool added_ramp(0), dir(0);
