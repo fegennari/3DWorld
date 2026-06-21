@@ -843,8 +843,8 @@ void newsrack_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_s
 
 // park water fountains
 
-park_water_fountain_t::park_water_fountain_t(point const &pos_, float height, float cradius_, bool dim_, bool dir_, colorRGBA const &color_)
-	: oriented_city_obj_t(pos_, max(1.25f*cradius_, 0.5f*height), dim_, dir_), color(color_), cradius(cradius_)
+park_water_fountain_t::park_water_fountain_t(point const &pos_, float height, float cradius_, bool dim_, bool dir_, unsigned var, colorRGBA const &color_)
+	: oriented_city_obj_t(pos_, max(1.25f*cradius_, 0.5f*height), dim_, dir_), color(color_), cradius(cradius_), variant(var)
 {
 	bcube.set_from_point(pos);
 	set_cube_zvals(bcube, pos.z, pos.z+height);
@@ -866,6 +866,7 @@ void park_water_fountain_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, f
 	float const dscale(dist_scale*dstate.draw_tile_dist), ndiv_scale(dscale/p2p_dist(dstate.camera_bs, pos));
 	unsigned const ndiv1(shadow_only ? 8 : max(4U, min(32U, unsigned(1.0f*ndiv_scale))));
 	unsigned const ndiv2(shadow_only ? 6 : max(4U, min(24U, unsigned(0.5f*ndiv_scale))));
+	bool const add_dog_water(!(variant & 1)); // is bcube too conservative?
 	vector3d const cdir(vector_from_dim_dir(dim, dir));
 	point pos_mid(pos), pos_lo(pos - 0.75*cradius*cdir), pos_hi(pos + 0.9*cradius*cdir);
 	pos_lo.z = pos_mid.z = z1;
@@ -875,6 +876,7 @@ void park_water_fountain_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, f
 
 	// vertical cylinders
 	for (unsigned n = 0; n < 3; ++n) { // middle, low (dog), high
+		if (n == 1 && !add_dog_water) continue; // no dog water on thi fountain
 		point const mid_pos(cylins[n] + cheights[n]*plus_z);
 		dstate.s.set_cur_color(color);
 		draw_fast_cylinder(cylins[n], mid_pos, f_radius, f_radius, ndiv1, 0, 0); // sides only
@@ -900,11 +902,12 @@ void park_water_fountain_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, f
 	cubes[1].d[dim][ dir] = pos_hi[dim];
 
 	for (unsigned n = 0; n < 2; ++n) {
+		if (n == 0 && !add_dog_water) continue; // no dog water on thi fountain
 		float const zval((n ? pos_hi : pos_lo).z);
 		set_cube_zvals(cubes[n], zval, zval+0.7*cheights[n+1]);
 		set_wall_width(cubes[n], pos[!dim], 0.7*f_radius, !dim);
 		dstate.draw_cube(qbds.qbd, cubes[n], color, 0, 1.0, (1 << unsigned(dim)));
-	}
+	} // for n
 }
 
 // parking gates
