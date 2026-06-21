@@ -1519,6 +1519,7 @@ struct bldg_datacenter_info_t {
 	vector<pipe_conn_t> pipe_conn;
 
 	bldg_datacenter_info_t(bool sd, float op, float up, float bp, bool sw) : se_dir(sd), skip_sr_util_windows(sw), office_pos(op), util_pos(up), bath_pos(bp) {}
+	void clear_room_details() {pipe_conn.clear(); ac_height = ac_width = ac_depth = 0.0;} // reset so that they're randomly generated again
 };
 
 struct wall_seg_t : public cube_t {
