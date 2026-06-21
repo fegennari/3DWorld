@@ -809,6 +809,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 		unsigned const num_paths(1 + (rgen.rand_float() < 0.67)); // 1-2
 		float const path_hwidth(0.08*city_params.road_width), path_height(0.01*path_hwidth);
 		float const plot_min_edge(min(plot.dx(), plot.dy())), edge_border(max(2.0f*path_hwidth, 0.2f*plot_min_edge));
+		float const pwf_height(0.25*car_length), pwf_radius(0.4*pwf_height), pwf_pad(0.5*pwf_radius); // park water fountains
 		bool const can_add_path(plot_min_edge > 3.0*edge_border); // park has enough space for a path; should always be true
 
 		if (can_add_path) {
@@ -1029,16 +1030,26 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 					} // for d
 				} // for D
 				if (doors_at_front && building_obj_model_loader.is_model_valid(OBJ_MODEL_WFOUNTAIN)) { // place a water fountain between the doors
-					float const wf_height(0.25*bheight);
-					point wf_pos(center);
-					wf_pos[dim] = front_edge;
-					wf_pos.z   += 0.75*wf_height;
-					wfountain_t wf(wf_pos, wf_height, dim, !dir);
-					float const xlate(front_edge - wf.bcube.d[dim][!dir] + (dir ? 1.0 : -1.0)*0.01*wf_height); // shift slightly away from wall to avoid clipping through building
-					wf.pos[dim] += xlate;
-					wf.bcube.translate_dim(dim, xlate);
-					wfount_groups.add_obj(wf, wfounts);
-					add_cube_to_colliders_and_blockers(wf.bcube, colliders, blockers);
+					if (rgen.rand_bool()) { // water fountain object
+						point wf_pos(center);
+						wf_pos.z   += 0.5*b.get_fc_thickness(); // translate up onto concrete
+						wf_pos[dim] = front_edge + (dir ? 1.0 : -1.0)*pwf_radius; // in front of front wall
+						park_water_fountain_t pwf(wf_pos, pwf_height, pwf_radius, !dim, rgen.rand_bool(), 0, colorRGBA(0.1, 0.3, 0.1)); // variant=0
+						park_wf_groups.add_obj(pwf, park_wfs);
+						add_cube_to_colliders_and_blockers(pwf.bcube, colliders, blockers);
+					}
+					else { // water fountain model
+						float const wf_height(0.25*bheight);
+						point wf_pos(center);
+						wf_pos[dim] = front_edge;
+						wf_pos.z   += 0.75*wf_height;
+						wfountain_t wf(wf_pos, wf_height, dim, !dir);
+						float const xlate(front_edge - wf.bcube.d[dim][!dir] + (dir ? 1.0 : -1.0)*0.01*wf_height); // shift slightly away from wall to avoid clipping through building
+						wf.pos[dim] += xlate;
+						wf.bcube.translate_dim(dim, xlate);
+						wfount_groups.add_obj(wf, wfounts);
+						add_cube_to_colliders_and_blockers(wf.bcube, colliders, blockers);
+					}
 				}
 				break; // done
 			} // for N
@@ -1090,7 +1101,6 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 			} // for n
 		}
 		// place a water fountain along each park path
-		float const pwf_height(0.25*car_length), pwf_radius(0.4*pwf_height), pwf_pad(0.5*pwf_radius);
 		unsigned const wfs_start(park_wfs.size());
 		unsigned pix(0);
 
