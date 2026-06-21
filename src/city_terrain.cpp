@@ -538,7 +538,10 @@ park_heightmap_t::park_heightmap_t(cube_t const &c, unsigned nx_, unsigned ny_, 
 
 		for (auto p = P->pts.begin(); p+1 != P->pts.end(); ++p) {
 			point const &p1(*p), &p2(*(p+1));
-			cube_t const sbc(p1, p2);
+			vector3d const ortho_dir(hwidth*cross_product((p2 - p1), plus_z).get_norm());
+			cube_t sbc(p1, p2);
+			sbc.expand_in_x(fabs(ortho_dir.x)); // expand by path width
+			sbc.expand_in_y(fabs(ortho_dir.y));
 			unsigned x1(0), y1(0), x2(0), y2(0);
 			xy_range_from_cube(sbc, x1, y1, x2, y2);
 			// skip edges of the terrain to leave a skirt by the sidewalk so that the empty space below isn't visible

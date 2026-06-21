@@ -873,8 +873,8 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 			} // for n
 		}
 		if (added_pond && can_add_path) { // add a creek connecting to the pond, if present
-			float const creek_hwidth(rgen.rand_uniform(0.055, 0.065)*city_params.road_width); // somewhat less than the path width
-			float const pipe_radius(0.75*creek_hwidth); // for path crossings; end pipe is smaller
+			float const creek_hwidth(rgen.rand_uniform(0.04, 0.07)*city_params.road_width); // somewhat less than the path width
+			float const pipe_radius(1.0*creek_hwidth); // for path crossings; end pipe is smaller
 			cube_t const &pond(ponds.back().bcube);
 			point start, end;
 			start.z = end.z = plot.z2();
