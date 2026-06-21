@@ -958,15 +958,15 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 		rr_test_range.expand_by(city_params.road_width); // include roads as well - full adjacent plots
 
 		if (!has_bcube_int(rr_test_range, park_restrooms)) {
-			float const bheight(0.2*city_params.road_width), bhlen(1.6*bheight), bhdepth(1.2*bheight);
+			float const bheight(0.2*city_params.road_width), bhlen(1.6*bheight), bhdepth(1.2*bheight), front_fence_ext(0.7*bhdepth), concrete_ext(0.6*bhdepth);
 			cube_t bc;
 			set_cube_zvals(bc, plot.z2(), plot.z2()+bheight);
 
 			for (unsigned N = 0; N < 500; ++N) { // 500 random tries
 				bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()), doors_at_front(rgen.rand_bool());
 				cube_t place_area(plot); // should we prefer to place by the path like water fountains?
-				place_area.expand_in_dim( dim, -bhdepth-sidewalk_width);
-				place_area.expand_in_dim(!dim, -bhlen  -sidewalk_width);
+				place_area.expand_in_dim( dim, -(bhdepth + sidewalk_width + (doors_at_front ? front_fence_ext : 0.0))); // front/back
+				place_area.expand_in_dim(!dim, -(bhlen   + sidewalk_width + (doors_at_front ? 0.0 : concrete_ext))); // side
 				if (place_area.dx() <= 0.0 || place_area.dy() <= 0.0) break; // no space for restroom; shouldn't fail
 				point center(0.0, 0.0, plot.z2());
 				for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform(place_area.d[d][0], place_area.d[d][1]);}
@@ -1008,12 +1008,12 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 
 						if (doors_at_front) {
 							float const front_sign(dir ? 1.0 : -1.0), inside_end(bc.d[!dim][d] - dsign*fence_thick);
-							divider.d[dim][dir] = front_edge + front_sign*0.6*bhdepth; // front exterior
+							divider.d[dim][dir] = front_edge + front_sign*concrete_ext; // front exterior
 
 							if (D) { // front fences
 								divider.d[ dim][!dir] = divider.d[dim][dir] - front_sign*fence_thick; // inside face
 								divider.d[!dim][ d  ] = inside_end; // abuts the side fence
-								divider.d[!dim][!d  ] = inside_end - dsign*0.7*bhdepth; // toward the front center
+								divider.d[!dim][!d  ] = inside_end - dsign*front_fence_ext; // toward the front center
 							}
 							else { // side fences
 								divider.d[ dim][!dir] = front_edge + front_sign*0.01*bhdepth; // slight gap to prevent Z-fighting
@@ -1021,7 +1021,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 							}
 						}
 						else { // doors at sides
-							set_wall_width(divider, (bc.d[!dim][d] + dsign*0.6*bhdepth), 0.5*fence_thick, !dim);
+							set_wall_width(divider, (bc.d[!dim][d] + dsign*concrete_ext), 0.5*fence_thick, !dim);
 						}
 						// street_dir=0, use_dir_for_birds=1 to keep birds from flying into the building
 						divider_groups.add_obj(divider_t(divider, DIV_FENCE, fdim, fdir, 0, skip_dims, dividers.size(), plot_ix, city_id, 0, 1), dividers);
