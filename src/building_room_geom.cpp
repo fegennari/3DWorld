@@ -5493,12 +5493,12 @@ unsigned get_stall_detail_cubes(room_object_t const &c, cube_t cubes[5]) { // {f
 	// limit door width to 0.5*depth to avoid door intersecting toilet
 	float const dwidth_max(0.5*c.get_depth()), frame_thick(max(6.0*wall_thick, 0.5*(c.get_width() - dwidth_max)));
 	cube_t sides(c), front(c);
-	sides.z2() -= 0.35*dz;
+	sides.z2() -= 0.25*dz;
 	sides.z1() += 0.15*dz;
 	sides.d[dim][!dir] += (dir ? 1.0 : -1.0)*wall_thick; // shorten for door
 	front.d[dim][ dir] = sides.d[dim][!dir]; // dir points toward the inside of the stall
 	cube_t side1(sides), side2(sides), front1(front), front2(front), door(front);
-	door.z2() -= 0.38*dz;
+	door.z2() -= 0.28*dz;
 	door.z1() += 0.18*dz;
 	side1.d[!dim][1] = side1.d[!dim][0] + wall_thick;
 	side2.d[!dim][0] = side2.d[!dim][1] - wall_thick;
