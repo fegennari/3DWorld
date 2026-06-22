@@ -2205,7 +2205,8 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, float &t,
 	if (occlusion_only) return BLDG_COLL_NONE;
 
 	for (roof_obj_t const &c : details) {
-		if (c.type == ROOF_OBJ_SAT_DISH || c.type == ROOF_OBJ_TV_ANT) continue; // no line coll for this type
+		if (c.type == ROOF_OBJ_SAT_DISH    || c.type == ROOF_OBJ_TV_ANT   ) continue; // no line coll for this type
+		if (c.type == DETAIL_OBJ_SHAD_ONLY || c.type == DETAIL_OBJ_KEEPOUT) continue; // not a collider
 		if (get_line_clip_update_t(p1r, p2r, c, t)) {coll = BLDG_COLL_DETAIL;} // details cube
 	}
 	if (!no_coll_pt || !vert) { // vert line already tested building cylins/cubes, and marked coll roof, no need to test again unless we need correct coll_pt t-val

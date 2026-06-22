@@ -276,11 +276,13 @@ void building_t::add_datacenter_rooftop_objs(rand_gen_t &rgen) { // Note: interi
 			ctower.d[!dim][ dir] = outer_edge;
 			ctower.d[!dim][!dir] = outer_edge - (dir ? 1.0 : -1.0)*ct_width;
 			details.emplace_back(ctower, ROOF_OBJ_COOLING);
-			if (add_two) {blockers[dir].assign_or_union_with_cube(ctower);}
+			blockers[dir].assign_or_union_with_cube(ctower);
 		}
 	} // for n
-	if (add_two) { // add colliders between pairs of cooling towers to avoid placing smaller AC units there so we can run pipes
-		for (unsigned dir = 0; dir < 2; ++dir) {details.emplace_back(blockers[dir], DETAIL_OBJ_KEEPOUT);}
+	// add colliders between pairs of cooling towers and to the ends to avoid placing smaller AC units there so we can run pipes
+	for (unsigned dir = 0; dir < 2; ++dir) {
+		blockers[dir].d[dim][!side] = roof.d[dim][!side]; // extend to the edge of the roof on this side to provide space for coolant pipe bends
+		details.emplace_back(blockers[dir], DETAIL_OBJ_KEEPOUT);
 	}
 }
 
@@ -776,9 +778,9 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 
 			if (closest_to_door) {
 				// add horizontal pipe(s), then bend and go up into the ceiling
-				float const pos_offset(2.1*(floor_ix + 1)*ac_hp_radius); // adjacent with a small gap, and an extra gap at the edge for the vent
+				float const pos_offset((side ? 1.0 : -1.0)*2.1*(floor_ix + 1)*ac_hp_radius); // adjacent with a small gap, and an extra gap at the edge for the vent
 				float const bend_pos1(far_wall_inner - bs_sign*ac_hp_radius); // !dim
-				float const bend_pos2(duct.d[dim][side] + (side ? 1.0 : -1.0)*pos_offset); // dim; unique per-floor
+				float const bend_pos2(duct.d[dim][side] + pos_offset); // dim; unique per-floor
 				float const bend_pos3(far_wall_pos - bs_sign*ac_hp_radius); // !dim
 				set_wall_width(h_pipe, v_pipe_z2, ac_hp_radius, 2); // set zvals
 				set_wall_width(h_pipe, pipe_center[dim], ac_hp_radius, dim);
@@ -810,8 +812,8 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 					towers_bcube.assign_or_union_with_cube(d);
 				}
 				unsigned const rp_flags(RO_FLAG_NOCOLL | RO_FLAG_EXTERIOR);
-				float const min_edge_space(2.0*ac_hp_radius);
-				float const rise_pos(bend_pos1); // TODO: along the roof wall
+				float const min_edge_space(ac_hp_radius), rise_pos(bend_pos3 - bs_sign*1.25*get_roof_wall_thick()); // along the roof wall
+				float const conn_pt(towers_bcube.d[!dim][bldg_side] - bs_sign*((dir ? -1.0 : 1.0)*pos_offset + ((side ^ dir) ? 0.4 : 0.25)*towers_bcube.get_sz_dim(!dim)));
 				cube_t rv_pipe(v_pipe2), rh_pipe(v_pipe2);
 				set_cube_zvals(rv_pipe, room.z2(), room.z2()+    ac_hp_radius);
 				set_cube_zvals(rh_pipe, room.z2(), room.z2()+2.0*ac_hp_radius); // on top of the roof
@@ -822,18 +824,17 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 				rh_pipe.d[!dim][bldg_side] = rise_pos;
 
 				for (cube_t const &t : towers) {
-					if (bend_pos2 > t.d[dim][0]-min_edge_space && bend_pos2 < t.d[dim][1]+min_edge_space) { // can connect straight across
+					if (bend_pos2 > t.d[dim][0]+min_edge_space && bend_pos2 < t.d[dim][1]-min_edge_space) { // can connect straight across
 						rh_pipe.d[!dim][!bldg_side] = t.d[!dim][bldg_side]; // connects to the side of the cooling tower
 						objs.emplace_back(rh_pipe, TYPE_PIPE, room_id, !dim, 0, rp_flags, 1.0, SHAPE_CYLIN, ac_pipe_color); // horizontal
 						was_connected = 1;
 						break;
 					}
 				} // for t
-				if (towers.size() > 1) { // add horizontal pipe connecting towers in this row
+				if (towers.size() > 1 && floor_ix <= num_floors/2) { // add horizontal pipe connecting towers in this row; only for half the floors, rounded up
 					cube_t conn_area(towers_bcube);
 					conn_area.expand_in_dim(dim, -towers.front().get_sz_dim(dim)); // space between towers; assume all lengths are the same
 					assert(conn_area.is_strictly_normalized());
-					float const conn_pt(conn_area.d[!dim][bldg_side] - bs_sign*(pos_offset + (side ? 0.3 : 0.1)*conn_area.get_sz_dim(!dim))); // different per-floor
 					copy_dim(rc_pipe, conn_area, dim);
 					set_wall_width(rc_pipe, conn_pt, ac_hp_radius, !dim);
 					objs.emplace_back(rc_pipe, TYPE_PIPE, room_id, dim, 0, rp_flags, 1.0, SHAPE_CYLIN, ac_pipe_color); // horizontal
@@ -845,7 +846,14 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 				}
 				if (!was_connected) { // need to add a bend
 					bool const bdir(bend_pos2 < towers_bcube.get_center_dim(dim)); // bend toward the group of towers
-					// TODO
+					rh_pipe.d[!dim][!bldg_side] = conn_pt; // bend point
+					objs.emplace_back(rh_pipe, TYPE_PIPE, room_id, !dim, 0, rp_flags, 1.0, SHAPE_CYLIN, ac_pipe_color); // horizontal
+					cube_t rh_pipe2(rh_pipe); // copy zvals
+					set_wall_width(rh_pipe2, conn_pt, ac_hp_radius, !dim);
+					rh_pipe2.d[dim][!dir] = bend_pos2;
+					rh_pipe2.d[dim][ dir] = towers_bcube.d[dim][!dir];
+					if (rh_pipe2.get_sz_dim(dim) <= 0.0) {rh_pipe2.d[dim][dir] += (dir ? 1.0 : -1.0)*min_edge_space;} // extend into cooling tower if too short
+					objs.emplace_back(rh_pipe2, TYPE_PIPE, room_id, dim, 0, (rp_flags | (dir ? RO_FLAG_ADJ_LO : RO_FLAG_ADJ_HI)), 1.0, SHAPE_CYLIN, ac_pipe_color); // horizontal
 				}
 			}
 			// add fittings to h_pipe
