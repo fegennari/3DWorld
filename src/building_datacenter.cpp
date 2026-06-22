@@ -935,7 +935,7 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 	}
 	// add breaker panel
 	for (unsigned n = 0; n < 4; ++n) { // 4 attempts to avoid battery
-		add_breaker_panel_by_door(rgen, room, zval, room_id, tot_light_amt);
+		if (!add_breaker_panel_by_door(rgen, room, zval, room_id, tot_light_amt)) break;
 		room_object_t breaker(objs.back());
 		assert(breaker.type == TYPE_BRK_PANEL);
 		float const bp_width(breaker.get_width());
@@ -988,8 +988,9 @@ bool building_t::add_breaker_panel_by_door(rand_gen_t &rgen, room_t const &room,
 	bool const side(!door.get_check_dirs()), dim(door.dim), dir(door.get_center_dim(dim) > room.get_center_dim(dim)); // the wall the door is on
 	cube_t const room_bounds(get_room_wall_bounds(room));
 	float const door_edge(door.d[!dim][side]), wall_edge(room_bounds.d[!dim][side]), ceil_zval(zval + get_floor_ceil_gap());
-	float const wall_len(fabs(door_edge - wall_edge)), wall_center(0.5*(door_edge + wall_edge)), wall_pos(room_bounds.d[dim][dir]);
-	float const floor_spacing(get_window_vspace()), width(min(0.5f*wall_len, rgen.rand_uniform(0.25, 0.35)*floor_spacing)), depth(0.04*floor_spacing);
+	float const wall_len(fabs(door_edge - wall_edge)), wall_center(0.5*(door_edge + wall_edge)), wall_pos(room_bounds.d[dim][dir]), floor_spacing(get_window_vspace());
+	if (wall_len < 0.5*floor_spacing) return 0; // too narrow
+	float const width(min(0.5f*wall_len, rgen.rand_uniform(0.25, 0.35)*floor_spacing)), depth(0.04*floor_spacing);
 	cube_t breaker_panel;
 	set_cube_zvals(breaker_panel, (ceil_zval - 0.75*floor_spacing), (ceil_zval - rgen.rand_uniform(0.25, 0.3)*floor_spacing));
 	set_wall_width(breaker_panel, wall_center, 0.5*width, !dim);
