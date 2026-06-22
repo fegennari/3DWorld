@@ -750,7 +750,7 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 				cube_t top_vent(duct);
 				top_vent.d[!dim][ bldg_side] = outer_edge;
 				top_vent.d[!dim][!bldg_side] = outer_edge - 1.5*bs_sign*h_duct_height; // set depth
-				top_vent.expand_in_dim(dim, 0.2*h_duct_height); // widen
+				top_vent.expand_in_dim(dim, 0.15*h_duct_height); // widen
 				set_cube_zvals(top_vent, room.z2(), (room.z2() + 1.0*h_duct_height)); // set height
 				objs.emplace_back(top_vent, TYPE_VENT, room_id, dim, 1, (RO_FLAG_NOCOLL | RO_FLAG_HANGING | RO_FLAG_EXTERIOR), 1.0); // dir=1; fully lit
 			}
@@ -776,8 +776,9 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 
 			if (closest_to_door) {
 				// add horizontal pipe(s), then bend and go up into the ceiling
+				float const pos_offset(2.1*(floor_ix + 1)*ac_hp_radius); // adjacent with a small gap, and an extra gap at the edge for the vent
 				float const bend_pos1(far_wall_inner - bs_sign*ac_hp_radius); // !dim
-				float const bend_pos2(duct.d[dim][side] + (side ? 1.0 : -1.0)*(2.1*floor_ix + 1)*ac_hp_radius); // dim; unique per-floor, adjacent with a small gap
+				float const bend_pos2(duct.d[dim][side] + (side ? 1.0 : -1.0)*pos_offset); // dim; unique per-floor
 				float const bend_pos3(far_wall_pos - bs_sign*ac_hp_radius); // !dim
 				set_wall_width(h_pipe, v_pipe_z2, ac_hp_radius, 2); // set zvals
 				set_wall_width(h_pipe, pipe_center[dim], ac_hp_radius, dim);
@@ -798,6 +799,54 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 				set_cube_zvals(v_pipe2, v_pipe.z2(), room.z2()); // all the way to the top of the building
 				set_wall_width(v_pipe2, bend_pos3, ac_hp_radius, !dim);
 				objs.emplace_back(v_pipe2, TYPE_PIPE, room_id, 0, 1, pipe_flags, tot_light_amt, SHAPE_CYLIN, ac_pipe_color); // vertical
+				// route coolant pipes to the nearest cooling tower(s) on the roof
+				vect_cube_t towers;
+				cube_t towers_bcube;
+
+				for (roof_obj_t const &d : details) {
+					if (d.type != ROOF_OBJ_COOLING) continue;
+					if ((bcube.get_center_dim(!dim) < d.get_center_dim(!dim)) != bldg_side) continue; // wrong side of building
+					towers.push_back(d);
+					towers_bcube.assign_or_union_with_cube(d);
+				}
+				unsigned const rp_flags(RO_FLAG_NOCOLL | RO_FLAG_EXTERIOR);
+				float const min_edge_space(2.0*ac_hp_radius);
+				float const rise_pos(bend_pos1); // TODO: along the roof wall
+				cube_t rv_pipe(v_pipe2), rh_pipe(v_pipe2);
+				set_cube_zvals(rv_pipe, room.z2(), room.z2()+    ac_hp_radius);
+				set_cube_zvals(rh_pipe, room.z2(), room.z2()+2.0*ac_hp_radius); // on top of the roof
+				set_wall_width(rv_pipe, rise_pos, ac_hp_radius, !dim);
+				objs.emplace_back(rv_pipe, TYPE_PIPE, room_id, 0, 1, (rp_flags | RO_FLAG_ADJ_HI), 1.0, SHAPE_CYLIN, ac_pipe_color); // vertical, draw top end
+				cube_t rc_pipe(rh_pipe); // connector pipe; copy zvals
+				bool was_connected(0);
+				rh_pipe.d[!dim][bldg_side] = rise_pos;
+
+				for (cube_t const &t : towers) {
+					if (bend_pos2 > t.d[dim][0]-min_edge_space && bend_pos2 < t.d[dim][1]+min_edge_space) { // can connect straight across
+						rh_pipe.d[!dim][!bldg_side] = t.d[!dim][bldg_side]; // connects to the side of the cooling tower
+						objs.emplace_back(rh_pipe, TYPE_PIPE, room_id, !dim, 0, rp_flags, 1.0, SHAPE_CYLIN, ac_pipe_color); // horizontal
+						was_connected = 1;
+						break;
+					}
+				} // for t
+				if (towers.size() > 1) { // add horizontal pipe connecting towers in this row
+					cube_t conn_area(towers_bcube);
+					conn_area.expand_in_dim(dim, -towers.front().get_sz_dim(dim)); // space between towers; assume all lengths are the same
+					assert(conn_area.is_strictly_normalized());
+					float const conn_pt(conn_area.d[!dim][bldg_side] - bs_sign*(pos_offset + (side ? 0.3 : 0.1)*conn_area.get_sz_dim(!dim))); // different per-floor
+					copy_dim(rc_pipe, conn_area, dim);
+					set_wall_width(rc_pipe, conn_pt, ac_hp_radius, !dim);
+					objs.emplace_back(rc_pipe, TYPE_PIPE, room_id, dim, 0, rp_flags, 1.0, SHAPE_CYLIN, ac_pipe_color); // horizontal
+
+					if (!was_connected && bend_pos2 > towers_bcube.d[dim][0] && bend_pos2 < towers_bcube.d[dim][1]) { // add a T-junction
+						// connect to rc_pipe; must route up and over; not implemented because this case may not be reachable
+						was_connected = 1;
+					}
+				}
+				if (!was_connected) { // need to add a bend
+					bool const bdir(bend_pos2 < towers_bcube.get_center_dim(dim)); // bend toward the group of towers
+					// TODO
+				}
 			}
 			// add fittings to h_pipe
 			fitting = h_pipe;
