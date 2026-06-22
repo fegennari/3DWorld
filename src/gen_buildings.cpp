@@ -1494,6 +1494,9 @@ public:
 			invert_tri_verts(tverts, tverts_end);
 		}
 	}
+	static void maybe_rotate_point(building_t const &bg, point &pos) {
+		if (bg.is_rotated()) {bg.do_xy_rotate(bg.bcube.get_cube_center(), pos);}
+	}
 
 	void add_water_tower(building_t const &bg, cube_t const &wtc) {
 		tid_nm_pair_t const side_tex(building_texture_mgr.get_met_plate_tid(), building_texture_mgr.get_mplate_nm_tid(), 1.0, 1.0);
@@ -1524,7 +1527,7 @@ public:
 		} // for y
 		// draw side quads
 		vector3d center(wtc.get_cube_center());
-		if (bg.is_rotated()) {bg.do_xy_rotate(bg.bcube.get_cube_center(), center);}
+		maybe_rotate_point(bg, center);
 		add_vert_cylinder(center, cylin_z1, cylin_z2, radius, 2.0, 2.0, ndiv, WHITE, qverts); // tscale=2.0/2.0
 		// draw top cone triangles
 		point const ce[2] = {point(center.x, center.y, cylin_z2), point(center.x, center.y, cone_z2)};
@@ -1535,12 +1538,13 @@ public:
 	}
 
 	// cylinder or truncated cone
-	void add_two_sided_cylin(cube_t const &c, tid_nm_pair_t const &tex, colorRGBA const &color, unsigned ndiv,
+	void add_two_sided_cylin(building_t const &bg, cube_t const &c, tid_nm_pair_t const &tex, colorRGBA const &color, unsigned ndiv,
 		float rscale1o=1.0, float rscale1i=1.0, float rscale2=1.0, float tscale_x=1.0, float tscale_y=1.0)
 	{
 		auto &qverts(get_verts(tex, 0));
 		float const radius(0.25*(c.dx() + c.dy()));
-		point const center(c.get_cube_center());
+		point center(c.get_cube_center());
+		maybe_rotate_point(bg, center);
 		add_vert_cylinder(center, c.z1(), c.z2(), radius, tscale_x, tscale_y, ndiv, color, qverts, rscale1o, rscale2);
 		// add inner surface as an inverted cylinder
 		unsigned const qverts_start(qverts.size());
@@ -1562,9 +1566,9 @@ public:
 
 		for (unsigned e = 0; e < 2; ++e) { // 2 towers (fans)
 			set_wall_width(tower, (ct.d[dim][0] + (e ? 0.75 : 0.25)*length), tower_radius, dim);
-			add_two_sided_cylin(tower, cylin_tex, WHITE, N_CYL_SIDES);
+			add_two_sided_cylin(bg, tower, cylin_tex, WHITE, N_CYL_SIDES);
 			point pos(tower.xc(), tower.yc(), (tower.z1() + 0.01*height));
-			if (bg.is_rotated()) {bg.do_xy_rotate(bg.bcube.get_cube_center(), pos);}
+			maybe_rotate_point(bg, pos);
 			add_circle(fan_tex, WHITE, tower_radius, N_CYL_SIDES, 1, pos); // points up
 		}
 	}
@@ -1572,7 +1576,7 @@ public:
 	void add_sat_dish(building_t const &bg, cube_t const &sd) {
 		float const dish_radius(0.25*(sd.dx() + sd.dy())), pole_radius(0.04*dish_radius), cone_len(0.4*dish_radius);
 		vector3d center(sd.xc(), sd.yc(), (sd.z2() - dish_radius));
-		if (bg.is_rotated()) {bg.do_xy_rotate(bg.bcube.get_cube_center(), center);}
+		maybe_rotate_point(bg, center);
 		vector3d dir((point(sd.xc(), sd.yc(), 0.0) - point(bg.bcube.xc(), bg.bcube.yc(), 0.0)).get_norm()); // XY vector away from building center
 		dir.z = 1.0; // angled upward
 		dir.normalize();
@@ -2164,7 +2168,7 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 			continue;
 		}
 		if (i->type == ROOF_OBJ_SMOKESTACK) { // truncated cone
-			bdraw.add_two_sided_cylin(*i, side_tex, side_color, N_CYL_SIDES, 1.0, 0.0, 0.7, 1.0, 4.0);
+			bdraw.add_two_sided_cylin(*this, *i, side_tex, side_color, N_CYL_SIDES, 1.0, 0.0, 0.7, 1.0, 4.0);
 			continue;
 		}
 		bool const skip_bot(i->type != ROOF_OBJ_SCAP && i->type != ROOF_OBJ_SIGN && i->type != ROOF_OBJ_SIGN_CONN);
