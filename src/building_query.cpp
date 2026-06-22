@@ -534,7 +534,7 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 
 	if (on_ext_stair) { // only need to check for blockers at the bottom of stairs
 		for (auto const &i : details) {
-			if (i.type == DETAIL_OBJ_SHAD_ONLY) continue; // not a collider
+			if (i.type == DETAIL_OBJ_SHAD_ONLY || i.type == DETAIL_OBJ_KEEPOUT) continue; // not a collider
 			had_coll |= sphere_cube_int_update_pos(pos2, radius, (i + xlate), p_last2, xy_only, cnorm_ptr); // treat as cubes
 		}
 	}
@@ -607,7 +607,7 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 		// Note: driveways are handled elsewhere in the control flow
 		if (!xy_only) { // don't need to check details and roof in xy_only mode because they're contained in the XY footprint of the parts (except balconies and stairs)
 			for (auto const &i : details) {
-				if (i.type == DETAIL_OBJ_SHAD_ONLY) continue; // not a collider
+				if (i.type == DETAIL_OBJ_SHAD_ONLY || i.type == DETAIL_OBJ_KEEPOUT) continue; // not a collider
 
 				if (i.type == ROOF_OBJ_WTOWER && pos2.z < i.z1() + 0.25*i.dz()) { // below custom water tower collision
 					if (!sphere_cube_intersect(pos2, radius, (i + xlate))) continue;

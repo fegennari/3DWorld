@@ -2127,7 +2127,8 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 		else {assert(0);} // unsupported type
 	} // for i (roof_tquads)
 	for (auto i = details.begin(); i != details.end(); ++i) { // draw roof details
-		if (i->type == DETAIL_OBJ_COLLIDER || i->type == DETAIL_OBJ_COLL_SHAD || i->type == DETAIL_OBJ_SHAD_ONLY) continue; // only drawn in the shadow pass
+		if (i->type == DETAIL_OBJ_COLLIDER  || i->type == DETAIL_OBJ_KEEPOUT  ) continue; // not drawn
+		if (i->type == DETAIL_OBJ_COLL_SHAD || i->type == DETAIL_OBJ_SHAD_ONLY) continue; // only drawn in the shadow pass
 
 		if (i->type == ROOF_OBJ_AC) {
 			bool const swap_st(i->dx() > i->dy());

@@ -258,7 +258,7 @@ void building_t::add_datacenter_rooftop_objs(rand_gen_t &rgen) { // Note: interi
 	bool const side(rgen.rand_bool()); // choose a random side; the utility room will be added to this side
 	bool const add_two(0.65*roof_length > 2.0*(ct_len + gap));
 	ct_area.d[dim][side] -= (side ? 1.0 : -1.0)*(add_two ? 0.35 : 0.5)*roof_length; // shrink to 65%/50% of the area
-	cube_t ct_areas[2] = {ct_area, ct_area};
+	cube_t ct_areas[2] = {ct_area, ct_area}, blockers[2];
 	
 	if (add_two) { // split in half in dim
 		float const split_pos(ct_area.get_center_dim(dim));
@@ -276,8 +276,12 @@ void building_t::add_datacenter_rooftop_objs(rand_gen_t &rgen) { // Note: interi
 			ctower.d[!dim][ dir] = outer_edge;
 			ctower.d[!dim][!dir] = outer_edge - (dir ? 1.0 : -1.0)*ct_width;
 			details.emplace_back(ctower, ROOF_OBJ_COOLING);
+			if (add_two) {blockers[dir].assign_or_union_with_cube(ctower);}
 		}
 	} // for n
+	if (add_two) { // add colliders between pairs of cooling towers to avoid placing smaller AC units there so we can run pipes
+		for (unsigned dir = 0; dir < 2; ++dir) {details.emplace_back(blockers[dir], DETAIL_OBJ_KEEPOUT);}
+	}
 }
 
 bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned lights_start) {
