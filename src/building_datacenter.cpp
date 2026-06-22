@@ -620,6 +620,7 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 	float cur_place_pos(place_area.d[dim][dir]); // start at front wall adjacent to server room
 	// place batteries, represented as kitchen fridges, against the wall shared with the server room
 	int const bat_model(select_dc_battery_model());
+	cube_t batteries_bcube;
 
 	if (bat_model >= 0) {
 		float const bat_height(0.55*floor_spacing), wall_pos(cur_place_pos);
@@ -638,6 +639,7 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 			set_wall_width(conduit, (wall_pos                  - 0.2*dsign*bat.get_depth()), conduit_radius,  dim); // further toward the back wall
 			set_wall_width(conduit, (bat.d[!dim][conduit_side] - 0.1*csign*bat.get_width()), conduit_radius, !dim); // off to one side
 			objs.emplace_back(conduit, TYPE_PIPE, room_id, 0, 1, (RO_FLAG_NOCOLL | RO_FLAG_LIT), tot_light_amt, SHAPE_CYLIN, GRAY_BLACK); // vertical, with shadows
+			batteries_bcube.assign_or_union_with_cube(bat);
 		}
 		if (has_fan_model) { // add fans to the top
 			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_RAD_FAN)); // D, W, H
@@ -931,7 +933,15 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 		} // for i
 	}
 	// add breaker panel
-	add_breaker_panel_by_door(rgen, room, zval, room_id, tot_light_amt);
+	for (unsigned n = 0; n < 4; ++n) { // 4 attempts to avoid battery
+		add_breaker_panel_by_door(rgen, room, zval, room_id, tot_light_amt);
+		room_object_t breaker(objs.back());
+		assert(breaker.type == TYPE_BRK_PANEL);
+		float const bp_width(breaker.get_width());
+		breaker.expand_in_dim( breaker.dim, 1.1*bp_width); // add clearance for the door to open
+		breaker.expand_in_dim(!breaker.dim, 0.1*bp_width);
+		if (cube_int_if_nonzero(batteries_bcube, breaker)) {objs.pop_back();} else {break;}
+	}
 	add_door_sign("Utility", room, zval, room_id);
 }
 
