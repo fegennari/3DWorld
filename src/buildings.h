@@ -1512,7 +1512,7 @@ struct bldg_industrial_info_t {
 
 struct bldg_datacenter_info_t {
 	bool se_dir; // dir for stairs/elevator/offices/bathrooms
-	bool skip_sr_util_windows, cw_pipe_side=0, drain_pipe_side=0, ac_pipe_end=0;
+	bool skip_sr_util_windows, cw_pipe_side=0, drain_pipe_side=0, ac_pipe_end=0, gen_pipe_side=0, gen_dir=0, xg_side=0;
 	float office_pos, util_pos, bath_pos;
 	float ac_height=0.0, ac_width=0.0, ac_depth=0.0;
 	cube_t intake_ducts[2];

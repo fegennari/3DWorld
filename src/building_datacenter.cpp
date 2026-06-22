@@ -662,6 +662,7 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 	// place AC units
 	float &ac_height(interior->dc_info->ac_height), &ac_width(interior->dc_info->ac_width), &ac_depth(interior->dc_info->ac_depth); // shared across all building utility rooms
 	bool &cw_pipe_side(interior->dc_info->cw_pipe_side), &drain_pipe_side(interior->dc_info->drain_pipe_side), &ac_pipe_end(interior->dc_info->ac_pipe_end);
+	bool &gen_pipe_side(interior->dc_info->gen_pipe_side), &gen_dir(interior->dc_info->gen_dir), &xg_side(interior->dc_info->xg_side);
 
 	if (ac_height == 0.0) { // assign these values on the first floor of the first utility room
 		ac_height       = rgen.rand_uniform(0.45, 0.54)*floor_spacing;
@@ -670,6 +671,9 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 		cw_pipe_side    = rgen.rand_bool();
 		drain_pipe_side = rgen.rand_bool();
 		ac_pipe_end     = rgen.rand_bool();
+		gen_pipe_side   = rgen.rand_bool();
+		gen_dir         = rgen.rand_bool(); // either facing toward or away from the door
+		xg_side         = rgen.rand_bool();
 	}
 	colorRGBA const ac_color(0.5, 0.55, 0.6, 1.0); // blue-gray
 	cube_t ac_area(inner_area);
@@ -887,18 +891,15 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 		float const gen_height(0.56*floor_spacing), gap((pass == 0) ? 1.0 : 0.25); // more gap/sparser on first pass
 		if (add_row_of_models(gen_area, zval, room_id, tot_light_amt, gen_height, gap, OBJ_MODEL_GENERATOR, TYPE_GENERATOR, dim, dir,  dim,  dir, 0, cur_place_pos)) break;
 		// can't place lengthwise; try sideways
-		bool const gdir(rgen.rand_bool()); // either facing toward or away from the door
-		if (add_row_of_models(gen_area, zval, room_id, tot_light_amt, gen_height, 0.1, OBJ_MODEL_GENERATOR, TYPE_GENERATOR, dim, dir, !dim, gdir, 0, cur_place_pos)) break;
+		if (add_row_of_models(gen_area, zval, room_id, tot_light_amt, gen_height, 0.1, OBJ_MODEL_GENERATOR, TYPE_GENERATOR, dim, dir, !dim, (gen_dir ^ bldg_side), 0, cur_place_pos)) break;
 		if (pass == 1) break; // failed, done
 		// try again, but this time split the width in half and try to place each type
 		objs.resize(xg_obj_size); // remove any models added above
-		bool const xg_side(rgen.rand_bool());
-		xfmr_area.d[!dim][xg_side] = gen_area.d[!dim][!xg_side] = inner_area.get_center_dim(!dim);
+		xfmr_area.d[!dim][xg_side ^ bldg_side] = gen_area.d[!dim][!xg_side ^ bldg_side] = inner_area.get_center_dim(!dim);
 		cur_place_pos = pre_place_pos;
 	} // for pass
 	if (gen_start > 0) { // add ducts and fuel lines for generators
 		unsigned const gen_end(objs.size());
-		bool const pipe_side(rgen.rand_bool());
 
 		for (unsigned i = gen_start; i < gen_end; ++i) {
 			room_object_t const generator(objs[i]); // deep copy to avoid invalidating the reference
@@ -928,8 +929,8 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 				move_lights_to_not_intersect(objs, keepout, dim, objs_start, lights_start, dir); // pref_dir=dir so that lights move toward the interior and aren't blocked by h_duct
 			}
 			// add fuel pipe
-			add_pipe_through_floors(0.008*floor_spacing, zval, 0.36, 0.28, 2.0, dim, pipe_side, is_ground_floor, num_floors, room_id, dsign,
-				tot_light_amt, floor_spacing, PIPE_TYPE_GAS, YELLOW, LT_GRAY, generator, objs, interior->dc_info->pipe_conn);
+			add_pipe_through_floors(0.008 * floor_spacing, zval, 0.36, 0.28, 2.0, generator.dim, gen_pipe_side, is_ground_floor, num_floors, room_id,
+				(generator.dir ? 1.0 : -1.0), tot_light_amt, floor_spacing, PIPE_TYPE_GAS, YELLOW, LT_GRAY, generator, objs, interior->dc_info->pipe_conn);
 		} // for i
 	}
 	// add breaker panel
