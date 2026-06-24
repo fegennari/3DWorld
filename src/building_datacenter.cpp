@@ -1057,6 +1057,10 @@ void building_t::add_op_center_objs(rand_gen_t rgen, room_t const &room, colorRG
 	for (unsigned n = 0; n < num_filing_cabinets; ++n) {
 		if (add_filing_cabinet_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start)) {blockers.push_back(objs.back());}
 	}
-	add_clock_to_room_wall(rgen, room, zval, room_id, tot_light_amt, objs_start, 1); // digital
+	// add trashcans
+	unsigned const num_tc(1 + (rgen.rand()%3)); // 1-3
+	for (unsigned n = 0; n < num_tc; ++n) {add_trashcan_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, 0);} // check_last_obj=0
+	// add a digital clock on the wall
+	add_clock_to_room_wall(rgen, room, zval, room_id, tot_light_amt, objs_start, 1);
 }
 
