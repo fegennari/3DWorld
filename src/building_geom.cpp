@@ -358,6 +358,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 				btype = BTYPE_DATACENTER;
 				change_roof_type_to_flat();
 				assign_name(rgen); // re-assign a name
+				water_damage = crack_damage = 0.0;
 			}
 			else if (is_cube() && num_floors >= 3 && !is_hospital() && rgen.rand_probability(global_building_params.retail_floorplan_prob)) { // 3+ floors, consider retail
 				retail_floor_levels = 1;
