@@ -1476,7 +1476,7 @@ public:
 		for (auto i = verts.begin()+verts_start; i != verts.end(); ++i) {i->invert_normal();}
 		reverse(verts.begin()+verts_start, verts.end());
 	}
-	void add_cone_tri_verts(vector_point_norm const &vpn, vect_vnctcc_t &tverts, unsigned ndiv, colorRGBA const &color, bool two_sided) {
+	void add_cone_tri_verts(vector_point_norm const &vpn, vect_vnctcc_t &tverts, unsigned ndiv, colorRGBA const &color, bool two_sided, float tsx=1.0, float tsy=1.0) {
 		float const ndiv_inv(1.0/ndiv);
 		color_wrapper const cw(color);
 		unsigned const tverts_start(tverts.size());
@@ -1484,9 +1484,9 @@ public:
 		for (unsigned i = 0; i < ndiv; ++i) { // similar to gen_cylinder_quads(), but with a color
 			unsigned const ip((i+ndiv-1)%ndiv), in((i+1)%ndiv);
 			float const ts(1.0 - i*ndiv_inv);
-			tverts.emplace_back(vpn.p[(i <<1)+1],  vpn.n[i],                         0.5,             1.0, cw); // center
-			tverts.emplace_back(vpn.p[(in<<1)+0], (vpn.n[i] + vpn.n[in]).get_norm(), (ts - ndiv_inv), 0.0, cw);
-			tverts.emplace_back(vpn.p[(i <<1)+0], (vpn.n[i] + vpn.n[ip]).get_norm(), ts,              0.0, cw);
+			tverts.emplace_back(vpn.p[(i <<1)+1],  vpn.n[i],                         tsx*(ts - 0.5*ndiv_inv), tsy, cw); // center
+			tverts.emplace_back(vpn.p[(in<<1)+0], (vpn.n[i] + vpn.n[in]).get_norm(), tsx*(ts -     ndiv_inv), 0.0, cw);
+			tverts.emplace_back(vpn.p[(i <<1)+0], (vpn.n[i] + vpn.n[ip]).get_norm(), tsx* ts,                 0.0, cw);
 		}
 		if (two_sided) { // add a second cone with reversed winding order and inverted normals so that the bottom is drawn
 			unsigned const tverts_end(tverts.size());
@@ -1500,9 +1500,9 @@ public:
 
 	void add_water_tower(building_t const &bg, cube_t const &wtc) {
 		tid_nm_pair_t const side_tex(building_texture_mgr.get_met_plate_tid(), building_texture_mgr.get_mplate_nm_tid(), 1.0, 1.0);
-		tid_nm_pair_t const base_tex(building_texture_mgr.get_met_roof_tid ()); // no normal map
-		tid_nm_pair_t const roof_tex(WHITE_TEX); // untextured
-		//tid_nm_pair_t const roof_tex(get_corr_metal_texture(2.0)); // looks distorted; need circular texture
+		tid_nm_pair_t const base_tex(get_corr_metal_texture(2.0));
+		tid_nm_pair_t const roof_tex(get_corr_metal_texture(2.0));
+		tid_nm_pair_t const legs_tex(get_corr_metal_texture(0.2));
 		auto &tverts(get_verts(roof_tex, 1)), &qverts(get_verts(side_tex, 0)); // triangle and quad verts
 		unsigned const ndiv(N_CYL_SIDES);
 		float const height(wtc.dz()), radius(0.25*(wtc.dx() + wtc.dy())); // should be equal size in X vs. Y
@@ -1522,7 +1522,7 @@ public:
 				cube_t leg(legs);
 				leg.d[0][!x] = leg.d[0][x] + (x ? -1.0 : 1.0)*leg_width;
 				leg.d[1][!y] = leg.d[1][y] + (y ? -1.0 : 1.0)*leg_width;
-				add_cube(bg, leg, roof_tex, DK_GRAY, 0, 3); // skip top and bottom; untextured like roof
+				add_cube(bg, leg, legs_tex, GRAY, 0, 3); // skip top and bottom
 			}
 		} // for y
 		// draw side quads
@@ -1532,7 +1532,7 @@ public:
 		// draw top cone triangles
 		point const ce[2] = {point(center.x, center.y, cylin_z2), point(center.x, center.y, cone_z2)};
 		vector_point_norm const &vpn(gen_cylinder_data(ce, 1.1*radius, 0.0, ndiv)); // slightly wider at the bottom
-		add_cone_tri_verts(vpn, tverts, ndiv, colorRGBA(0.15, 0.12, 0.10, 1.0), 1); // dark brown; two_sided=1
+		add_cone_tri_verts(vpn, tverts, ndiv, colorRGBA(0.2, 0.16, 0.15, 1.0), 1, 4.0); // brown; two_sided=1, tsx=4.0
 		// draw pipe through the center going down into the roof
 		add_vert_cylinder(center, wtc.z1(), base_z1, 0.1*radius, 1.0, 4.0, ndiv/2, WHITE, qverts); // tscale=1.0/4.0
 	}
