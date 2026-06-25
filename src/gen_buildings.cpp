@@ -1472,9 +1472,9 @@ public:
 			}
 		} // for i
 	}
-	void invert_tri_verts(vect_vnctcc_t &tverts, unsigned tverts_start) {
-		for (auto i = tverts.begin()+tverts_start; i != tverts.end(); ++i) {i->invert_normal();}
-		reverse(tverts.begin()+tverts_start, tverts.end());
+	void invert_verts(vect_vnctcc_t &verts, unsigned verts_start) {
+		for (auto i = verts.begin()+verts_start; i != verts.end(); ++i) {i->invert_normal();}
+		reverse(verts.begin()+verts_start, verts.end());
 	}
 	void add_cone_tri_verts(vector_point_norm const &vpn, vect_vnctcc_t &tverts, unsigned ndiv, colorRGBA const &color, bool two_sided) {
 		float const ndiv_inv(1.0/ndiv);
@@ -1491,7 +1491,7 @@ public:
 		if (two_sided) { // add a second cone with reversed winding order and inverted normals so that the bottom is drawn
 			unsigned const tverts_end(tverts.size());
 			for (unsigned i = tverts_start; i < tverts_end; ++i) {tverts.push_back(tverts[i]);}
-			invert_tri_verts(tverts, tverts_end);
+			invert_verts(tverts, tverts_end);
 		}
 	}
 	static void maybe_rotate_point(building_t const &bg, point &pos) {
@@ -1549,7 +1549,7 @@ public:
 		// add inner surface as an inverted cylinder
 		unsigned const qverts_start(qverts.size());
 		add_vert_cylinder(center, c.z1(), c.z2(), radius, tscale_x, tscale_y, ndiv, color, qverts, rscale1i, rscale2);
-		invert_tri_verts(qverts, qverts_start); // same invert for triangles and quads
+		invert_verts(qverts, qverts_start);
 	}
 	void add_cooling_tower(building_t const &bg, cube_t const &ct) {
 		tid_nm_pair_t const side_tex (building_texture_mgr.get_metal_vent_tid(), 1.0);
@@ -1566,7 +1566,7 @@ public:
 
 		for (unsigned e = 0; e < 2; ++e) { // 2 towers (fans)
 			set_wall_width(tower, (ct.d[dim][0] + (e ? 0.75 : 0.25)*length), tower_radius, dim);
-			add_two_sided_cylin(bg, tower, cylin_tex, WHITE, N_CYL_SIDES);
+			add_two_sided_cylin(bg, tower, cylin_tex, WHITE, N_CYL_SIDES, 1.1); // slightly sloped outward on the outside bottom to hide shadow map light leaks
 			point pos(tower.xc(), tower.yc(), (tower.z1() + 0.01*height));
 			maybe_rotate_point(bg, pos);
 			add_circle(fan_tex, WHITE, tower_radius, N_CYL_SIDES, 1, pos); // points up
@@ -1601,7 +1601,7 @@ public:
 		point const ce_top[2] = {center, center};
 		vector_point_norm const &vpn_top(gen_cylinder_data(ce_top, pole_radius, 0.0, pole_ndiv));
 		add_cone_tri_verts(vpn_top, tverts, pole_ndiv, color, 0); // top circle; two_sided=0
-		invert_tri_verts(tverts, tverts_start);
+		invert_verts(tverts, tverts_start);
 	}
 
 	void add_tv_antenna(building_t const &bg, cube_t const &ant) {
