@@ -113,6 +113,7 @@ void ivy_wall_t::gen(cube_t const &wall, float leaf_sz, unsigned face_mask, bool
 class ivy_builder_t {
 	typedef ivy_wall_t::vertex_t vertex_t;
 	bool dim, dir, first_side=0, has_horizontal=0;
+	unsigned main_cylins_end=0;
 	float leaf_sz;
 	cube_t const &wall;
 	rand_gen_t &rgen;
@@ -154,6 +155,7 @@ public:
 		cylins.clear();
 		leaves.clear();
 		first_side = rgen.rand_bool();
+		main_cylins_end = 0;
 	}
 	bool add_leaf(point const &pos, vector3d const &branch_dir, vector3d const &side_dir, bool side, float lsz, unsigned cur_branch_leaves_start, bool is_horizontal) {
 		float const radius(0.5*lsz), r_test(3.0*radius); // conservative for r_test
@@ -203,15 +205,20 @@ public:
 			radius  += r_step;
 		} // for n
 	}
-	bool add_branch_seg(point const &p1, point &p2, float r1, float r2, bool is_new_branch, bool &is_horizontal) {
+	bool add_branch_seg(point const &p1, point &p2, float r1, float r2, bool is_new_branch, bool &is_horizontal, bool not_on_wall=0) {
 		if (is_horizontal) {
-			if (!wall.contains_pt_xy(p2)) return 0; // p2 off the top of the wall; allow extending over but check the centerline; p1 is assumed to be valid
+			if (not_on_wall) { // check wall length only
+				if (p2[!dim] < wall.d[!dim][0] || p2[!dim] > wall.d[!dim][1]) return 0;
+			}
+			else if (!wall.contains_pt_xy(p2)) return 0; // p2 off the top or end of the wall; allow extending over but check the centerline; p1 is assumed to be valid
 		}
 		else { // vertical
 			cube_t pt_bc;
 			pt_bc.set_from_sphere(p2, r2);
 			if (!check_contained_on_wall_xy(pt_bc)) return 0; // p2 off the wall; p1 is assumed to be valid
 		}
+		assert(p1 != p2);
+		assert(r1 > 0.0 && r2 > 0.0);
 		cylinder_3dw cand(p1, p2, r1, r2);
 		cube_t const cand_bc(cylin_bcube_conservative(cand));
 
@@ -219,7 +226,7 @@ public:
 			if (p1 == c.p1 || p1 == c.p2)           continue; // skip the cylinder we're connected to
 			if (cylins_intersect(cand, c, cand_bc)) return 0; // intersects an existing cylinder
 		}
-		if (!is_horizontal && p2.z > wall.z2()) { // off the top of the wall; make horizontal
+		if (!not_on_wall && !is_horizontal && p2.z > wall.z2()) { // off the top of the wall; make horizontal
 			if (wall.get_sz_dim(dim) == 0.0) return 0; // zero width wall, can't place ivy on top of it
 			// add right angle bend and continue along the top of the wall
 			p2.z = cand.p2.z = wall.z2() + r2;
@@ -239,9 +246,24 @@ public:
 			if (tip.get_length() < 4.0*tip.r1) {tip.p2.z += 2.0*tip.r1;} // extend up slightly so that tip isn't too blunt
 		}
 	}
+	bool end_main_branches() {
+		main_cylins_end = cylins.size();
+		return !cylins.empty();
+	}
 	cylinder_3dw const &select_random_cylin() const {
-		assert(!cylins.empty());
-		return cylins[rgen.rand() % cylins.size()];
+		unsigned const cylins_end(main_cylins_end ? main_cylins_end : cylins.size());
+		assert(cylins_end > 0 && cylins_end <= cylins.size());
+		return cylins[rgen.rand() % cylins_end];
+	}
+	static void select_split_pos_radius(cylinder_3dw const &c, point &pos, float &radius) {
+		if (c.r2 == 0.0) { // if top is a point/branch end, split at the bottom of the cylinder
+			pos    = c.p1; // splits at bottom of cylinder
+			radius = c.r1;
+		}
+		else {
+			pos    = c.p2; // splits at top of cylinder
+			radius = c.r2; // same radius as cylinder
+		}
 	}
 	bool is_at_bend_pt(point const &p) const {
 		for (sphere_t const &s : branch_bends) {
@@ -366,15 +388,7 @@ void ivy_wall_t::place_on_wall_face(cube_t const &wall, bool dim, bool dir, floa
 			
 			if (B > 0) { // add secondary branch
 				cylinder_3dw const &c(builder.select_random_cylin());
-				
-				if (c.r2 == 0.0) { // if top is a point/branch end, split at the bottom of the cylinder
-					pos    = c.p1; // splits at bottom of cylinder
-					radius = c.r1;
-				}
-				else {
-					pos    = c.p2; // splits at top of cylinder
-					radius = c.r2; // same radius as cylinder
-				}
+				builder.select_split_pos_radius(c, pos, radius);
 				is_horizontal = (c.p1.z == c.p2.z || builder.is_at_bend_pt(c.p1)); // starting at bend point will be horizontal since it can't ascend any more
 				prev_dir = (c.p2 - c.p1).get_norm();
 				radius   = max(0.65f*branch_radius, rgen.rand_uniform(0.7, 0.9)*radius); // smaller radius
@@ -436,6 +450,43 @@ void ivy_wall_t::place_on_wall_face(cube_t const &wall, bool dim, bool dir, floa
 			} // for S
 			builder.end_branch();
 		} // for B
+		// add branches sticking out into the air on the sides and top
+		float const maintained = 0.0; // TODO: per-plot, randomly set in [0,1]
+
+		if (maintained < 1.0) { // maybe add upward curve
+			bool const has_branches(builder.end_main_branches());
+			unsigned const num_extra_branches(has_branches ? round_fp(8.0*(1.0 - maintained)*rgen.rand_float()) : 0); // 0-8
+
+			for (unsigned B = 0; B < num_extra_branches; ++B) {
+				unsigned num_segs(6 + (rgen.rand() % 5)); // 6-10
+				cylinder_3dw const &c(builder.select_random_cylin());
+				builder.select_split_pos_radius(c, pos, radius);
+				bool is_horizontal(c.p1.z == c.p2.z || builder.is_at_bend_pt(c.p1));
+				radius = max(0.65f*branch_radius, rgen.rand_uniform(0.7, 0.9)*radius); // smaller radius
+				vector3d cur_dir;
+				// Note: no need to move closer to wall if radius is reduced
+
+				for (unsigned S = 0; S < num_segs; ++S) {
+					bool placed(0);
+
+					for (unsigned N = 0; N < 10; ++N) { // 10 tries to place a branch segment
+						vector3d new_dir(cur_dir), adj_dir(rgen.signed_rand_vector_spherical_norm());
+						if (!is_horizontal && dot_product(adj_dir, wall_normal) < 0.0) {adj_dir.negate();} // face away from the wall
+						adj_dir.z = fabs(adj_dir.z); // must point upward
+						if (S == 0) {new_dir = adj_dir;} // new branch
+						else {new_dir = (0.9*new_dir + 0.1*adj_dir).get_norm();} // continuation
+						point pos2(pos + (rgen.rand_uniform(0.7, 1.0)*seg_len)*new_dir); // start in the new direction
+						if (!builder.add_branch_seg(pos, pos2, radius, radius, (S == 0), is_horizontal, 1)) continue; // not_on_wall=1
+						cur_dir = new_dir;
+						pos     = pos2;
+						placed  = 1;
+						break; // done
+					} // for N
+					if (!placed) break; // can't place any more segments on this branch
+				} // for S
+				builder.end_branch();
+			} // for B
+		}
 		builder.add_leaves();
 		builder.create_branch_verts(bverts, bixs);
 		builder.create_leaf_verts  (lverts);
