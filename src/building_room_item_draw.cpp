@@ -1691,7 +1691,7 @@ void draw_obj_model(obj_model_inst_t const &i, room_object_t const &obj, shader_
 void brg_batch_draw_t::draw_obj_models(shader_t &s, vector3d const &xlate, bool shadow_only) const {
 	for (obj_model_inst_with_obj_t const &i : models_to_draw) {
 		point const obj_center(i.obj.get_cube_center());
-		try_bind_tile_smap_at_point(obj_center, s);
+		try_bind_tile_smap_at_point((obj_center + xlate), s);
 		draw_obj_model(i, i.obj, s, xlate, obj_center, shadow_only);
 	}
 	if (!models_to_draw.empty()) {check_mvm_update();}

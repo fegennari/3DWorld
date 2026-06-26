@@ -3647,7 +3647,7 @@ bool sphere_int_tiled_terrain(point &pos, float radius) {return terrain_tile_dra
 bool cube_int_tiled_terrain_trees(cube_t const &c) {return terrain_tile_draw.check_cube_int_trees(c);}
 float get_tiled_terrain_water_level() {return (is_water_enabled() ? water_plane_z : terrain_tile_draw.get_actual_zmin());}
 
-bool try_bind_tile_smap_at_point(point const &pos, shader_t &s, bool check_only, unsigned *lod_level) {
+bool try_bind_tile_smap_at_point(point const &pos, shader_t &s, bool check_only, unsigned *lod_level) { // pos in camera space
 	return terrain_tile_draw.try_bind_tile_smap_at_point(pos, s, check_only, lod_level);
 }
 // defer update until tile draw (if called from non-drawing thread); region and pos are in camera space
