@@ -1019,7 +1019,7 @@ void building_t::add_lounge_objs(rand_gen_t rgen, room_t const &room, float zval
 			} // for i
 		}
 	}
-	if (teacher || rgen.rand_bool()) {add_vending_machine(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area);}
+	if (teacher || is_datacenter() || rgen.rand_bool()) {add_vending_machine(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area);}
 	// add a TV on the wall (not on a table)
 	add_wall_tv(rgen, room, zval, room_id, tot_light_amt, objs_start);
 

@@ -116,6 +116,7 @@ cube_t building_t::create_datacenter_floorplan(unsigned part_id, float window_hs
 			// only the bottom two floors are bathrooms (Men/Women); upper floors are offices
 			add_assigned_room(bathroom, part_id, RTYPE_OFFICE); // set the offices first
 			for (unsigned f = 0; f < 2; ++f) {rooms.back().assign_to(RTYPE_BATH, f, 1, 1);} // locked=1, force=1
+			rooms.back().assign_to(RTYPE_LOUNGE, 2, 1, 1); // third floor (if it exists) is a lounge/break room; locked=1, force=1
 			br_door_pos = bathroom.get_center_dim(max_dim); // centered
 			// small office next to bathroom is security room on the first floor
 			float const rlen(office.get_sz_dim(min_dim)), rwidth(office.get_sz_dim(max_dim));

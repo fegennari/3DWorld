@@ -202,7 +202,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	}
 	++interior->gen_room_details_pass;
 	objs.reserve(tot_num_rooms); // placeholder - there will be more than this many
-	bool const residential(is_residential());
+	bool const residential(is_residential()), data_center(is_datacenter());
 	bool const chair_color_per_floor(is_school());
 	bool const no_placed_bathroom(is_industrial() || is_parking() || is_prison());
 	float const extra_bathroom_prob((is_house ? 2.0 : 1.0)*0.02*min((int(tot_num_rooms) - 4), 20));
@@ -286,7 +286,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		bool const is_jail_cell     (init_rtype_f0 == RTYPE_JAIL_CELL || r->get_room_type(1) == RTYPE_JAIL_CELL); // check second floor as well in case of ground floor door
 		bool const is_prison_room   (init_rtype_f0 == RTYPE_NOTSET && is_prison() && !r->is_hallway);
 		bool const is_restaurant_room(init_rtype_f0 == RTYPE_RESTAURANT);
-		bool const is_dc_server_room(init_rtype_f0 == RTYPE_SERVER && is_datacenter());
+		bool const is_dc_server_room(init_rtype_f0 == RTYPE_SERVER && data_center);
 		bool const is_office(r->is_office && (!is_hospital() || r->interior)); // hospital offices are converted to patient rooms, etc. if they have windows
 		bool const is_ext_basement(r->is_ext_basement()), is_backrooms(r->is_backrooms()), is_apt_or_hotel_room(r->is_apt_or_hotel_room());
 		bool const residential_room(is_house || (residential && !r->is_hallway && !is_basement && !is_retail_room)), industrial_room(r->is_industrial());
@@ -307,7 +307,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			float const room_size(min(dx, dy)); // normalized to hallway width
 			light_size = max(0.06f*room_size, 0.67f*def_light_size);
 			if (is_mall_room) {light_density = 0.25;}
-			if (is_datacenter()) {light_size *= 1.5;} // lighter/brighter lights in datacenter hallway since it's narrow and windowless
+			if (data_center ) {light_size   *= 1.50;} // lighter/brighter lights in datacenter hallway since it's narrow and windowless
 			min_eq(light_size, 1.5f*def_light_size); // set a reasonable max
 		}
 		else if (is_mall_bathroom) {
@@ -389,7 +389,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		else if (is_apt_or_hotel_room) { // apartments and hotel rooms are generally smaller and can have smaller lights
 			light_size *= ((init_rtype_f0 == RTYPE_BATH) ? 0.6 : 0.8); // bathroom light is even smaller
 		}
-		else if (is_datacenter()) {
+		else if (data_center) {
 			if (init_rtype_f0 == RTYPE_UTILITY) { // more smaller lights that fit better between machines
 				light_density = 0.7;
 				light_size   *= 0.7;
@@ -813,17 +813,21 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			else if (is_dc_server_room) {
 				added_obj = no_whiteboard = no_plants = no_trashcan = add_server_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, objs_start_inc_lights);
 			}
-			else if (is_datacenter() && init_rtype_f0 == RTYPE_UTILITY) { // datacenter utility rooms are on each floor
+			else if (data_center && init_rtype_f0 == RTYPE_UTILITY) { // datacenter utility rooms are on each floor
 				add_dc_utility_objs(rgen, *r, room_center.z, room_id, f, num_floors, tot_light_amt, objs_start, objs_start_inc_lights);
 				added_obj = no_whiteboard = no_plants = no_trashcan = is_utility = 1;
 			}
-			else if (is_datacenter() && r->get_room_type(f) == RTYPE_BATH) { // datacenter bathroom on this floor
+			else if (data_center && r->get_room_type(f) == RTYPE_BATH) { // datacenter bathroom on this floor
 				added_obj = is_bathroom = added_bathroom = add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt,
 					objs_start_inc_lights, objs_start, f, is_basement, 0, added_bathroom_objs_mask); // add_shower_tub=0
 			}
-			else if (is_datacenter() && init_rtype_f0 == RTYPE_OP_CENTER) {
+			else if (data_center && init_rtype_f0 == RTYPE_OP_CENTER) {
 				add_op_center_objs(rgen, *r, chair_color, room_center.z, room_id, f, tot_light_amt, objs_start);
 				added_obj = is_op_center = 1;
+			}
+			else if (data_center && r->get_room_type(f) == RTYPE_LOUNGE) {
+				add_lounge_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, 0); // is_lobby=0
+				added_obj = 1;
 			}
 			else if (!residential && f == 0) { // commercial building special pre-assigned first floor rooms; can be in a stacked part
 				if (init_rtype_f0 == RTYPE_UTILITY) {
@@ -972,7 +976,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				added_bathroom |= is_bathroom;
 			}
 			// bedroom or bathroom case; need to check first floor even if must_be_bathroom;
-			if (!added_obj && allow_br && !is_tall_room && !has_walkway && !floor_will_alias && !is_datacenter() && can_be_bedroom_or_bathroom(*r, f)) {
+			if (!added_obj && allow_br && !is_tall_room && !has_walkway && !floor_will_alias && !data_center && can_be_bedroom_or_bathroom(*r, f)) {
 				// Note: num_bedrooms is summed across all floors, while num_bathrooms is per-floor
 				// Note: min_br is applied to bedrooms, but could be applied to bathrooms in the same way
 				bool const pref_sec_bath(is_house && num_bathroom_rooms == 1 && num_bedrooms > min_br && !(multi_family && !(bed_floor_mask & floor_mask)) &&
@@ -999,7 +1003,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					if (is_bathroom) {r->assign_to(RTYPE_BATH, f);}
 				}
 			}
-			if (!added_obj && is_office && (is_office_bldg() || is_datacenter() || is_police_stat())) { // add cubicles if this is a large office building office (or similar)
+			if (!added_obj && is_office && (is_office_bldg() || data_center || is_police_stat())) { // add cubicles if this is a large office building office (or similar)
 				added_obj = no_whiteboard = create_office_cubicles(rgen, *r, room_center.z, room_id, tot_light_amt);
 			}
 			if (!added_obj && is_ext_basement && rgen.rand_float() < 0.5) { // machine room
@@ -1147,7 +1151,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					if ((added_tc && !has_stairs) || (is_house && (r+1) == rooms.end())) {
 						if (add_kitchen_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, added_living, light_ix_assign)) {
 							r->assign_to(RTYPE_KITCHEN, f);
-							added_kitchen_mask |= (is_datacenter() ? 0xFF : floor_mask); // one kitchen servers all data center floors
+							added_kitchen_mask |= (data_center ? 0xFF : floor_mask); // one kitchen servers all data center floors
 							is_kitchen = added_obj = 1;
 						}
 					}
@@ -1247,7 +1251,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				}
 			}
 			// office building part with primary hallway, first floor of first non-retail part; not for data centers because they should be group offices
-			else if (has_pri_hall() && !is_datacenter() && r->part_id == (has_retail() ? 1 : 0) && f == 0 && added_desk) {
+			else if (has_pri_hall() && !data_center && r->part_id == (has_retail() ? 1 : 0) && f == 0 && added_desk) {
 				add_office_door_sign(rgen, *r, room_center.z, room_id);
 			}
 			// should mall bathrooms have stains? I suppose so
