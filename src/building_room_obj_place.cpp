@@ -3174,18 +3174,15 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 	}
 	// add benches along the walls
 	unsigned const num_benches(2 + (rgen.rand()%3)); // 2-4
+	float const bench_height(0.22*floor_spacing);
+	vector3d const bench_sz(rgen.rand_uniform(0.7, 0.9), rgen.rand_uniform(4.0, 6.0), 1.0); // D, W, H
+	bool pref_dir(rgen.rand_bool()); // random first dir
 
-	if (num_benches > 0) {
-		float const bench_height(0.22*floor_spacing);
-		vector3d const bench_sz(rgen.rand_uniform(0.7, 0.9), rgen.rand_uniform(4.0, 6.0), 1.0); // D, W, H
-		bool pref_dir(rgen.rand_bool()); // random first dir
-
-		for (unsigned n = 0; n < num_benches; ++n) {
-			unsigned const pref_orient(2*(!pool.dim) + pref_dir), bench_obj_id(objs.size());
-			if (!place_obj_along_wall(TYPE_BENCH, room, bench_height, bench_sz, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 1, pref_orient)) break;
-			maybe_place_obj_on_bench(objs[bench_obj_id], rgen, 0.3);
-			pref_dir ^= 1; // alternate sides
-		}
+	for (unsigned n = 0; n < num_benches; ++n) {
+		unsigned const pref_orient(2*(!pool.dim) + pref_dir), bench_obj_id(objs.size());
+		if (!place_obj_along_wall(TYPE_BENCH, room, bench_height, bench_sz, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 1, pref_orient)) break;
+		maybe_place_obj_on_bench(objs[bench_obj_id], rgen, 0.3);
+		pref_dir ^= 1; // alternate sides
 	}
 	if (1) { // add a clock on the wall by the door or opposite the door
 		bool const digital(rgen.rand_bool());

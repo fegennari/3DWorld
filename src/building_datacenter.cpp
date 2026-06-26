@@ -1064,6 +1064,14 @@ void building_t::add_op_center_objs(rand_gen_t rgen, room_t const &room, colorRG
 	// add potted plants
 	unsigned const num_plants(1 + (rgen.rand() & 3)); // 1-4
 	add_plants_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, num_plants);
+	// add computers on the floor
+	unsigned const num_computers(1 + (rgen.rand()%2)); // 1-2
+
+	for (unsigned n = 0; n < num_computers; ++n) {
+		float const cheight(rgen.rand_uniform(0.8, 1.2)*0.25*floor_spacing);
+		vector3d const comp_sz(0.9, 0.44, 1.0); // D, W, H // fixed AR=0.44 to match the texture
+		if (!place_obj_along_wall(TYPE_COMPUTER, room, cheight, comp_sz, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.0, 1)) break;
+	}
 	// add a digital clock on the wall
 	add_clock_to_room_wall(rgen, room, zval, room_id, tot_light_amt, objs_start, 1);
 }
