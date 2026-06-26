@@ -219,6 +219,7 @@ public:
 		}
 		assert(p1 != p2);
 		assert(r1 > 0.0 && r2 > 0.0);
+		if (is_horizontal && not_on_wall) {max_eq(p2.z, wall.z2());} // don't fall below the top of the wall
 		cylinder_3dw cand(p1, p2, r1, r2);
 		cube_t const cand_bc(cylin_bcube_conservative(cand));
 
@@ -477,6 +478,7 @@ void ivy_wall_t::place_on_wall_face(cube_t const &wall, bool dim, bool dir, floa
 						else {new_dir = (0.9*new_dir + 0.1*adj_dir).get_norm();} // continuation
 						point pos2(pos + (rgen.rand_uniform(0.7, 1.0)*seg_len)*new_dir); // start in the new direction
 						if (!builder.add_branch_seg(pos, pos2, radius, radius, (S == 0), is_horizontal, 1)) continue; // not_on_wall=1
+						new_dir.z -= 0.2; // sags with the weight of each new segment
 						cur_dir = new_dir;
 						pos     = pos2;
 						placed  = 1;
