@@ -958,6 +958,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 	case 'x': // toggle auto framerate updates
 		animate = !animate;
 		if (animate) {reset_timing = 1;}
+		else {print_text_onscreen("Paused", WHITE, 1.0, 0.1*TICKS_PER_SECOND);}
 		break;
 	case 't': // animation/physics timesteps - movement (freeze frame on objects), show star streams in universe mode
 		animate2 = !animate2;
