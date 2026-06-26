@@ -1942,7 +1942,7 @@ struct building_t : public building_geom_t {
 	void create_conv_store_floorplan(unsigned part_id, rand_gen_t &rgen);
 	void create_restroom_floorplan  (unsigned part_id, rand_gen_t &rgen);
 	cube_t create_datacenter_floorplan(unsigned part_id, float window_hspacing[2], int num_windows_per_side[2], rand_gen_t &rgen);
-	void add_datacenter_outdoor_objs(rand_gen_t &rgen);
+	void add_datacenter_outdoor_objs(rand_gen_t &rgen, bool is_room_geom_pass);
 	void add_datacenter_rooftop_objs(rand_gen_t &rgen);
 	bool maybe_assign_interior_garage(bool &gdim, bool &gdir);
 	void add_parking_garage_ramp(rand_gen_t &rgen);

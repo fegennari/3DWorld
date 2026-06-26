@@ -1412,6 +1412,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	add_balconies          (rgen, balconies);
 	add_gutter_downspouts  (rgen, balconies);
 	add_exterior_door_items(rgen);
+	if (data_center) {add_datacenter_outdoor_objs(rgen, 1);} // is_room_geom_pass=1
 	if (has_chimney) {add_chimney_cap(rgen);}
 	if (!is_rotated()) {add_ext_door_steps(ext_objs_start);} // must be after adding balconies and fire escape
 	add_extra_obj_slots(); // needed to handle balls taken from one building and brought to another

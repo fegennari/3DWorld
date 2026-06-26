@@ -220,30 +220,67 @@ cube_t building_t::create_datacenter_floorplan(unsigned part_id, float window_hs
 	return hall;
 }
 
-void building_t::add_datacenter_outdoor_objs(rand_gen_t &rgen) {
-	// add outdoor AC units
+void building_t::add_datacenter_outdoor_objs(rand_gen_t &rgen, bool is_room_geom_pass) {
 	if ((real_num_parts - has_basement()) != 1) return; // only handles a single part
 	bool const dim(!bool(hallway_dim));
 	cube_t const &part(get_first_part());
-	float const floor_spacing(get_window_vspace()), bldg_length(part.get_sz_dim(!dim)), edge_space(rgen.rand_uniform(0.2, 0.3)*bldg_length);
-	float const depth(0.40*floor_spacing), width(1.5*depth), height(0.35*floor_spacing);
-	unsigned const num(min(16.0, rgen.rand_uniform(0.4, 0.6)*(bldg_length - 2.0*edge_space)/width));
-	if (num < 2) return; // shouldn't happen
-	float const start(part.d[!dim][0] + edge_space), end(part.d[!dim][1] - edge_space), spacing((end - start)/num);
-	roof_obj_t ac(ROOF_OBJ_AC);
-	set_cube_zvals(ac, part.z1(), (part.z1() + height));
+	float const floor_spacing(get_window_vspace()), bldg_length(part.get_sz_dim(!dim));
+	float const ac_depth(0.40*floor_spacing), ac_width(1.5*ac_depth);
+	
+	if (!is_room_geom_pass) { // add outdoor AC units
+		float const edge_space(rgen.rand_uniform(0.2, 0.3)*bldg_length), start(part.d[!dim][0] + edge_space), end(part.d[!dim][1] - edge_space);
+		unsigned const num_ac(min(16.0f, rgen.rand_uniform(0.4, 0.6)*(end - start)/ac_width));
 
-	for (unsigned dir = 0; dir < 2; ++dir) {
-		ac.d[dim][!dir] = part.d[dim][ dir] + (dir ? 1.0 : -1.0)*0.07*floor_spacing; // place slightly away from the exterior wall to avoid window sills
-		ac.d[dim][ dir] = ac  .d[dim][!dir] + (dir ? 1.0 : -1.0)*depth;
+		if (num_ac >= 2) { // should get here
+			float const spacing((end - start)/num_ac), ac_height(0.35*floor_spacing);
+			roof_obj_t ac(ROOF_OBJ_AC);
+			set_cube_zvals(ac, part.z1(), (part.z1() + ac_height));
 
-		for (unsigned n = 0; n < num; ++n) {
-			set_wall_width(ac, (start + n*spacing), 0.5*width, !dim);
-			details.push_back(ac);
-			union_with_coll_bcube(ac);
+			for (unsigned dir = 0; dir < 2; ++dir) {
+				float const inner_edge(part.d[dim][dir] + (dir ? 1.0 : -1.0)*0.07*floor_spacing); // place slightly away from the exterior wall to avoid window sills
+				ac.d[dim][!dir] = inner_edge;
+				ac.d[dim][ dir] = inner_edge + (dir ? 1.0 : -1.0)*ac_depth;
+
+				for (unsigned n = 0; n < num_ac; ++n) {
+					set_wall_width(ac, (start + n*spacing), 0.5*ac_width, !dim);
+					details.push_back(ac);
+					union_with_coll_bcube(ac);
+				}
+			} // for dir
+			has_ac = 1;
 		}
-	} // for dir
-	has_ac = 1;
+	}
+	if (is_room_geom_pass && building_obj_model_loader.is_model_valid(OBJ_MODEL_SUBSTATION)) {
+		// add outdoor substations; not shadow casters
+		assert(has_room_geom());
+		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SUBSTATION)); // D, W, H
+		float const ss_height(0.5*floor_spacing), ss_width(ss_height*sz.y/sz.z), ss_depth(ss_height*sz.x/sz.z);
+		bool const edir(interior->dc_info ? !interior->dc_info->se_dir : rgen.rand_bool()); // utility room/back side
+		cube_t place_range(part);
+		place_range.d[!dim][!edir] += (edir ? 1.0 : -1.0)*(0.8*bldg_length + rgen.rand_uniform(0.5, 1.0)*(ac_width + ss_width)); // no overlap with AC units
+		place_range.d[!dim][ edir] -= (edir ? 1.0 : -1.0)*rgen.rand_uniform(0.5, 1.0)*ss_width;
+		float const start(place_range.d[!dim][0]), end(place_range.d[!dim][1]);
+		unsigned const num_ss(min(4.0f, rgen.rand_uniform(0.8, 1.0)*(end - start)/ss_width));
+
+		if (num_ss > 0) {
+			float const spacing((end - start)/num_ss);
+			cube_t ss;
+			set_cube_zvals(ss, part.z1(), (part.z1() + ss_height));
+
+			for (unsigned dir = 0; dir < 2; ++dir) {
+				float const inner_edge(part.d[dim][dir] + (dir ? 1.0 : -1.0)*0.05*floor_spacing); // place slightly away from the exterior wall to avoid window sills
+				ss.d[dim][!dir] = inner_edge;
+				ss.d[dim][ dir] = inner_edge + (dir ? 1.0 : -1.0)*ss_depth;
+
+				for (unsigned n = 0; n < num_ss; ++n) {
+					set_wall_width(ss, (start + n*spacing), 0.5*ss_width, !dim);
+					interior->room_geom->objs.emplace_back(ss, TYPE_XFORMER, 0, dim, !dir, RO_FLAG_EXTERIOR, 1.0, SHAPE_CUBE, WHITE); // room_id=0
+					details.emplace_back(ss, DETAIL_OBJ_COLLIDER);
+					union_with_coll_bcube(ss);
+				}
+			} // for dir
+		}
+	}
 }
 
 void building_t::add_datacenter_rooftop_objs(rand_gen_t &rgen) { // Note: interior hasn't been setup yet
@@ -266,7 +303,7 @@ void building_t::add_datacenter_rooftop_objs(rand_gen_t &rgen) { // Note: interi
 		ct_areas[0].d[dim][1] = split_pos - gap;
 		ct_areas[1].d[dim][0] = split_pos + gap;
 	}
-	for (unsigned n = 0; n < (add_two ? 2 : 1); ++n) {
+	for (unsigned n = 0; n < (add_two ? 2U : 1U); ++n) {
 		cube_t const &cta(ct_areas[bool(n) ^ side ^ 1]); // starts with furthest to the end
 		cube_t ctower;
 		set_cube_zvals(ctower, roof_zval, roof_zval+ct_height);
@@ -820,7 +857,7 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 				}
 				unsigned const rp_flags(RO_FLAG_NOCOLL | RO_FLAG_EXTERIOR);
 				float const min_edge_space(ac_hp_radius), rise_pos(bend_pos3 - bs_sign*1.25*get_roof_wall_thick()); // along the roof wall
-				float const conn_pt(towers_bcube.d[!dim][bldg_side] - bs_sign*((dir ? -1.0 : 1.0)*pos_offset + ((side ^ dir) ? 0.4 : 0.25)*towers_bcube.get_sz_dim(!dim)));
+				float const conn_pt(towers_bcube.d[!dim][bldg_side] - bs_sign*((dir ? -1.0 : 1.0)*pos_offset + ((bool(side) ^ dir) ? 0.4 : 0.25)*towers_bcube.get_sz_dim(!dim)));
 				cube_t rv_pipe(v_pipe2), rh_pipe(v_pipe2);
 				set_cube_zvals(rv_pipe, room.z2(), room.z2()+    ac_hp_radius);
 				set_cube_zvals(rh_pipe, room.z2(), room.z2()+2.0*ac_hp_radius); // on top of the roof
