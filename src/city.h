@@ -438,7 +438,9 @@ public:
 struct ivy_wall_t {
 	typedef vert_norm_comp_tc_comp vertex_t;
 	uint8_t ivy_faces=0; // bit mask for 2 dim faces
+	float maintained_amt=0.0;
 	drawable_t leaves, branches;
+
 	bool empty() const {return (leaves.num_verts == 0);} // assumes branches are empty iff leaves are empty
 	size_t get_gpu_mem() const {return (leaves.get_gpu_mem() + branches.get_gpu_mem());}
 	void clear() {leaves.clear_vbos(); branches.clear_vbos();}

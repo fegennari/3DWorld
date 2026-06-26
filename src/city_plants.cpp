@@ -91,7 +91,9 @@ void hedge_draw_t::draw_and_clear(shader_t &s) {
 
 void ivy_wall_t::gen(cube_t const &wall, float leaf_sz, unsigned face_mask, bool rand_select, rand_gen_t &rgen) {
 	//highres_timer_t timer("Gen Ivy"); // 127 147.263 3.2178 1.15955
-	leaves.bcube = branches.bcube = wall; // both the same
+	// maintained_amt really should be per-yard, not per-wall, but the mapping from yards to walls isn't tracked, and both faces of a wall and processed together
+	maintained_amt = CLIP_TO_01(rgen.rand_uniform(-1.0, 3.0)); // more often maintained
+	leaves.bcube   = branches.bcube = wall; // both the same
 	vector<vertex_t> leaf_verts, branch_verts;
 	vector<unsigned> branch_ixs;
 
@@ -451,12 +453,10 @@ void ivy_wall_t::place_on_wall_face(cube_t const &wall, bool dim, bool dir, floa
 			} // for S
 			builder.end_branch();
 		} // for B
-		// add branches sticking out into the air on the sides and top
-		float const maintained = 0.0; // TODO: per-plot, randomly set in [0,1]
-
-		if (maintained < 1.0) { // maybe add upward curve
+		// add branches sticking out into the air on the sides and top if not well maintained
+		if (maintained_amt < 1.0) { // maybe add upward curve
 			bool const has_branches(builder.end_main_branches());
-			unsigned const num_extra_branches(has_branches ? round_fp(8.0*(1.0 - maintained)*rgen.rand_float()) : 0); // 0-8
+			unsigned const num_extra_branches(has_branches ? round_fp(8.0*(1.0 - maintained_amt)*rgen.rand_float()) : 0); // 0-8
 
 			for (unsigned B = 0; B < num_extra_branches; ++B) {
 				unsigned num_segs(6 + (rgen.rand() % 5)); // 6-10
@@ -526,6 +526,7 @@ void ivy_manager_t::add_wall(cube_t const &wall, bool dim, unsigned skip_dirs, u
 		if (skip_dirs & 2) {face_mask &= 10;} // skip hi dirs
 		rand_gen_t rgen;
 		rgen.set_state(wall_ix+1, plot_ix+1);
+		rgen.rand_mix();
 		w.gen(wall, leaf_sz, face_mask, rand_select, rgen);
 	}
 	else { // existing wall
