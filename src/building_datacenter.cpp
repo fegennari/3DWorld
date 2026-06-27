@@ -889,7 +889,6 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 					}
 				}
 				if (!was_connected) { // need to add a bend
-					bool const bdir(bend_pos2 < towers_bcube.get_center_dim(dim)); // bend toward the group of towers
 					rh_pipe.d[!dim][!bldg_side] = conn_pt; // bend point
 					objs.emplace_back(rh_pipe, TYPE_PIPE, room_id, !dim, 0, rp_flags, 1.0, SHAPE_CYLIN, ac_pipe_color); // horizontal
 					cube_t rh_pipe2(rh_pipe); // copy zvals
