@@ -2760,9 +2760,14 @@ bool building_interior_t::is_cube_close_to_doorway(cube_t const &c, cube_t const
 }
 
 cube_t get_stairs_bcube_expanded(stairwell_t const &s, float ends_clearance, float sides_clearance, float doorway_width) {
-	cube_t tc(s);
-	tc.expand_in_dim(s.dim, ends_clearance); // add extra space at both ends of stairs; may only need to add on open ends, but this is difficult to check for
 	float const floor_spacing(doorway_width/DOOR_WIDTH_SCALE), wall_hw(s.get_wall_hwidth(floor_spacing));
+	cube_t tc(s);
+
+	if (s.is_u_shape()) { // U-shaped stairs
+		tc.d[s.dim][!s.dir] -= (s.dir ? 1.0 : -1.0)*ends_clearance; // expand fully on the open side
+		tc.d[s.dim][ s.dir] += (s.dir ? 1.0 : -1.0)*1.5*s.get_wall_hwidth(floor_spacing); // expand by wall thickness on the other side with some extra for trim thickness
+	}
+	else {tc.expand_in_dim(s.dim, ends_clearance);} // add extra space at both ends of stairs; may only need to add on open ends, but this is difficult to check for
 	tc.expand_in_dim(!s.dim, (sides_clearance + wall_hw)); // add extra space to account for walls and railings on stairs
 	return tc;
 }
