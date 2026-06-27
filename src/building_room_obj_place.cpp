@@ -1863,24 +1863,41 @@ bool building_t::place_obj_along_wall(room_object type, room_t const &room, floa
 		bool const dir(use_pref ? !(pref_orient & 1) : rgen.rand_bool()); // dir is inverted for the model, so we invert pref dir as well
 		if (skip_walls_mask & (1 << (2*dim + dir))) continue;
 		if (!use_pref && !is_residential() && room.has_open_wall(dim, dir)) continue; // don't place against an open wall such as prison bars
+		float const dsign(dir ? -1.0 : 1.0);
 		unsigned const orient(2*dim + dir);
 		float center(0.0);
 		if (pref_centered && !center_tried[orient]) {center = place_area.get_center_dim(!dim); center_tried[orient] = 1;} // try centered
 		else {center = rgen.rand_uniform(place_area.d[!dim][0]+hwidth, place_area.d[!dim][1]-hwidth);} // random position
 		c.d[dim][ dir] = place_area.d[dim][dir];
-		c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*depth;
+		c.d[dim][!dir] = c.d[dim][dir] + dsign*depth;
 		set_wall_width(c, center, hwidth, !dim);
 		if (!room.contains_cube(c)) continue; // larger than room width?
 		if (not_ext_wall  && classify_room_wall(room, c.zc(), dim, dir, 0) == ROOM_WALL_EXT) continue;
 		if (not_at_window && check_if_against_window(c, room, dim, dir)) continue;
 		if (not_at_window && overlaps_or_adj_int_window(c))              continue; // check interior windows as well, in case this is a conference room
-		cube_t c2(c), c3(c); // used for collision tests
-		c2.d[dim][!dir] += (dir ? -1.0 : 1.0)*clearance; // add front clearance
+		cube_t c2(c);
+		c2.d[dim][!dir] += dsign*clearance; // add front clearance
 		if (!room.contains_cube(c2)) continue; // not enough clearance
 		cube_t c2b(c2);
 		c2b.expand_in_dim(!dim, side_clearance); // side_clearance applies to other objects, stairs, and elevators; used with boxes, medicine cabinets, etc.
-		if (overlaps_other_room_obj(c2b, objs_start) || interior->is_blocked_by_stairs_or_elevator(c2b)) continue; // bad placement (Note: not using is_obj_placement_blocked())
-		c3.d[dim][!dir] += (dir ? -1.0 : 1.0)*obj_clearance; // smaller clearance value (without player diameter)
+
+		if (interior->is_blocked_by_stairs_or_elevator(c2b)) {
+			if (!is_datacenter()) continue; // move beyond stairs and elevators for data centers, but reject otherwise
+			float const step_dist(dsign*max(0.1f*depth, get_wall_thickness())); // signed
+			bool is_valid(0);
+
+			for (unsigned n = 0; n < 100; ++n) {
+				c  .translate_dim(dim, step_dist);
+				c2 .translate_dim(dim, step_dist);
+				c2b.translate_dim(dim, step_dist);
+				if (!room.contains_cube(c2)) break; // reached the end of the room
+				if (!interior->is_blocked_by_stairs_or_elevator(c2b)) {is_valid = 1; break;}
+			} // for n
+			if (!is_valid) continue; // failed to place
+		}
+		if (overlaps_other_room_obj(c2b, objs_start)) continue; // bad placement
+		cube_t c3(c);
+		c3.d[dim][!dir] += dsign*obj_clearance; // smaller clearance value (without player diameter)
 		c3.expand_in_dim(!dim, side_clearance);
 		if (!place_area.contains_cube_xy(c3)) continue; // not enough clearance in place area
 
