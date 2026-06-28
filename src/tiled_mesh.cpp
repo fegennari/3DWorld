@@ -96,7 +96,7 @@ void get_city_grass_coll_cubes(cube_t const &region, vect_cube_t &out, vect_cube
 void get_building_grass_coll_cubes(cube_t const &region, vect_cube_t &out);
 int check_city_contains_overlaps(cube_t const &query);
 bool check_inside_city(point const &pos, float radius);
-bool city_has_grass_at(point const &pos);
+bool city_has_grass_at(point const &pos, float radius);
 cube_t get_city_bcube_overlapping(cube_t const &c);
 void show_gpu_mem_info();
 uint64_t get_reflection_gpu_mem_usage();
@@ -1111,15 +1111,17 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 					point const query_pos(xv+0.5*DX_VAL, yv+0.5*DY_VAL, 0.0); // global space
 					
 					if ((check_mesh_mask && check_mesh_disable(query_pos, HALF_DXY)) || (inside_city == 1 && check_inside_city(query_pos, HALF_DXY))) {
-						bool const add_grass(ENABLE_CITY_GRASS && city_has_grass_at(point(xv, yv, 0.0)));
+						bool const add_grass(ENABLE_CITY_GRASS && city_has_grass_at(point(xv, yv, 0.0), 0.5*HALF_DXY)); // set radius to a grid square
 
 						if (add_grass) { // TODO: not high enough resolution to handle roads, sidewalks, buildings, park paths, creeks, ponds, etc.
 							mesh_weight_data[off+2] = 255; // full grass
 							float const mh(zvals[ix]); // should be flat, so just use LLC height sample
 							add_grass_block_at(x, y, mh, mh, grass_block_dim);
 						}
-						else {mesh_weight_data[off+2] = 0;} // no grass
-						mesh_weight_data[off+0] = 0; // no sand
+						else {
+							mesh_weight_data[off+2] = 0; // no grass
+						}
+						mesh_weight_data[off+0] = 120; // some sand, to color match the more yellowish color of city/park grass
 						mesh_weight_data[off+1] = mesh_weight_data[off+3] = 255; // set invalid dirt and rock values to flag as transparent (sand makes grass yellow)
 						has_city = 1; // Note: should be covered by the tile_contains_tunnel(), but we include this case for safety
 						continue;

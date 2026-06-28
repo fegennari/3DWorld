@@ -3065,7 +3065,7 @@ public:
 			cube_t const &bc(r->get_bcube());
 			if (!r->get_bcube().contains_pt_xy(pos_bs)) continue;
 			if (r->point_in_park_xy(pos_bs)) return !r->point_in_pond_xy(pos_bs); // check if in a park but not in a pond
-			if (r->get_is_residential())     return  r->point_in_plot_xy(pos_bs); // should residential plots count? maybe return 0 if inside a house?
+			if (r->get_is_residential())     return  r->point_in_plot_xy(pos_bs); // should residential plots count? should skip house, driveay, deck, and pool
 			return 0; // can only be in one city
 		}
 		return 0;
@@ -3652,7 +3652,14 @@ public:
 	bool check_inside_city (point const &pos, float radius, unsigned rcp_mask=3, cube_t *city_bcube=nullptr) const {
 		return road_gen.check_inside_city(pos, radius, rcp_mask, city_bcube);
 	}
-	bool has_grass_at      (point const &pos) const {return road_gen.has_grass_at(pos);}
+	bool has_grass_at      (point const &pos, float radius) const {
+		if (radius == 0.0) {return road_gen.has_grass_at(pos);} // point query
+
+		for (unsigned n = 0; n < 4; ++n) { // test 4 corners; any point not in grass returns 0
+			if (!road_gen.has_grass_at(pos + vector3d(((n&1) ? 1.0 : -1.0)*radius, ((n>>1) ? 1.0 : -1.0)*radius, 0.0))) return 0;
+		}
+		return 1; // all 4 corners in grass
+	}
 	bool choose_pt_in_park (point const &pos, point &park_pos, rand_gen_t &rgen) const {return road_gen.choose_pt_in_park(pos, park_pos, rgen);}
 	bool check_mesh_disable(point const &pos, float radius) const {return road_gen.check_mesh_disable(pos, radius);}
 	bool tile_contains_tunnel(cube_t const &bcube) const {return road_gen.tile_contains_tunnel(bcube);}
@@ -3889,7 +3896,7 @@ bool check_mesh_disable(point const &pos, float radius) { // Note: pos is in glo
 bool check_inside_city(point const &pos, float radius) { // Note: pos is in global space
 	return (have_cities() && city_gen.check_inside_city((pos + get_tt_xlate_val()), radius)); // apply xlate for all static objects
 }
-bool city_has_grass_at(point const &pos) {return (have_cities() && city_gen.has_grass_at(pos + get_tt_xlate_val()));}
+bool city_has_grass_at(point const &pos, float radius) {return (have_cities() && city_gen.has_grass_at((pos + get_tt_xlate_val()), radius));}
 bool camera_in_city_bounds(unsigned rcp_mask, cube_t *city_bcube) {return (have_cities() && city_gen.check_inside_city(camera_pos, CAMERA_RADIUS, rcp_mask, city_bcube));}
 bool cube_int_underground_obj(cube_t const &c) {return city_gen.cube_int_underground_obj(c);} // Note: cube is in global space
 bool is_invalid_city_placement_for_cube(cube_t const &c) {return city_gen.is_invalid_placement_for_cube(c);}
