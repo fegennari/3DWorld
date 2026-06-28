@@ -11,6 +11,8 @@ extern city_params_t city_params;
 
 // heightmap_query_t
 
+bool point_in_ellipse(point const &p, cube_t const &c);
+
 float smooth_interp(float a, float b, float mix) {
 	mix = mix * mix * (3.0 - 2.0 * mix); // cubic Hermite interoplation (smoothstep)
 	return mix*a + (1.0 - mix)*b;
@@ -513,12 +515,12 @@ park_heightmap_t::park_heightmap_t(cube_t const &c, unsigned nx_, unsigned ny_, 
 	heights.resize(nx*ny, z_ground);
 
 	if (pond != nullptr) { // lower height around pond
-		cube_t const &pbc(pond->bcube);
-		assert(bcube.contains_cube_xy(pbc));
-		float const dz(z_ground - pbc.z1()); // bottom of pond to terrain elevation
-		float const xc(pbc.xc()), yc(pbc.yc()), xscale(2.0/pbc.dx()), yscale(2.0/pbc.dy());
+		pond_bc = pond->bcube;
+		assert(bcube.contains_cube_xy(pond_bc));
+		float const dz(z_ground - pond_bc.z1()); // bottom of pond to terrain elevation
+		float const xc(pond_bc.xc()), yc(pond_bc.yc()), xscale(2.0/pond_bc.dx()), yscale(2.0/pond_bc.dy());
 		unsigned x1(0), y1(0), x2(0), y2(0);
-		xy_range_from_cube(pbc, x1, y1, x2, y2);
+		xy_range_from_cube(pond_bc, x1, y1, x2, y2);
 
 		for (unsigned y = y1; y <= y2; ++y) {
 			for (unsigned x = x1; x <= x2; ++x) {
@@ -529,7 +531,7 @@ park_heightmap_t::park_heightmap_t(cube_t const &c, unsigned nx_, unsigned ny_, 
 				lower_height(x, y, (z_ground - sin(dx*dy*PI_TWO)*dz));
 			} // for x
 		} // for y
-		z_water = pbc.z2(); // top of pond
+		z_water = pond_bc.z2(); // top of pond
 	}
 	for (auto P = ppaths.begin() + ppath_start; P != ppaths.end(); ++P) { // lower height under creek
 		if (!P->is_creek) continue;
@@ -722,6 +724,7 @@ void park_heightmap_t::draw(draw_state_t &dstate, bool draw_terrain, bool draw_w
 		}
 	}
 	if (draw_water && z_water != 0.0) { // draw water surface over whole park if there was a pond; not for distant terrain
+		if (dstate.camera_bs.z < z_water && (pond_bc.is_all_zeros() || !point_in_ellipse(dstate.camera_bs, pond_bc))) return; // skip if camera under the water unless in a pond
 		begin_water_surface_draw(dstate.s);
 		cube_t water(bcube);
 		water.z2() = z_water;

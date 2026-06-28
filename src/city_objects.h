@@ -718,7 +718,7 @@ struct park_rock_t {
 class park_heightmap_t {
 	unsigned nx=0, ny=0, nverts=0, nindices=0;
 	float z_ground, z_water;
-	cube_t bcube, hill_bc; // at the moment we can only have a single hill per park
+	cube_t bcube, hill_bc, pond_bc; // at the moment we can only have a single hill per park
 	vector<cylinder_3dw> creek_crossings; // used for drawing pipes
 	vector<park_rock_t> rocks;
 	vector<float> heights;
