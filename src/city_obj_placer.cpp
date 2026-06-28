@@ -3289,12 +3289,7 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, vect_cube_t const &plo
 		color = newsracks[obj_ix].color;
 		return 1;
 	}
-	if (!pond_groups.empty() && pond_groups.get_bcube().contains_pt_xy(pos)) {
-		for (pond_t const &pond : ponds) { // sparse enough to iterate over
-			float const xv((pos.x - pond.pos.x)/(0.5*pond.bcube.dx())), yv((pos.y - pond.pos.y)/(0.5*pond.bcube.dy()));
-			if ((xv*xv + yv*yv) < 1.0) {color = BLUE; return 1;} // ellipse collision
-		}
-	}
+	if (!pond_groups.empty() && pond_groups.get_bcube().contains_pt_xy(pos) && point_in_pond_xy(pos)) {color = BLUE; return 1;}
 	if (check_city_obj_pt_xy_contains(sstation_groups, sstations, pos, obj_ix, 0)) {color = colorRGBA(0.6, 0.8, 0.4, 1.0); return 1;} // light olive
 	if (check_city_obj_pt_xy_contains(trashcan_groups, trashcans, pos, obj_ix, 0)) {color = colorRGBA(0.8, 0.6, 0.3, 1.0); return 1;} // tan
 	if (check_city_obj_pt_xy_contains(ppath_groups,    ppaths,    pos, obj_ix, 0)) {color = (ppaths[obj_ix].is_creek ? BLUE : GRAY); return 1;} // only when inside a park?
@@ -3365,6 +3360,12 @@ void city_obj_placer_t::get_plot_cuts(cube_t const &plot, vect_cube_t &cuts) con
 bool city_obj_placer_t::cube_int_underground_obj(cube_t const &c) const { // Note: not useful for generating buildings (ext basements) because pools are added later
 	for (swimming_pool_t const &p : pools) {
 		if (!p.above_ground && c.intersects(p.bcube)) return 1; // zvals are checked
+	}
+	return 0;
+}
+bool city_obj_placer_t::point_in_pond_xy(point const &pos) const { // pos is in global space
+	for (pond_t const &pond : ponds) {
+		if (pond.point_contains_xy(pos)) return 1;
 	}
 	return 0;
 }

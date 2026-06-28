@@ -166,7 +166,7 @@ private:
 	unsigned size=0, stride=0, zvsize=0, base_tsize=0, gen_tsize=0, smap_lod_level=0;
 	float radius=0, mzmin=0, mzmax=0, mesh_dz=0, ptzmax=0, dtzmax=0, trmax=0, xstart=0, ystart=0, min_normal_z=0, deltax=0, deltay=0;
 	bool sun_shadows_invalid=1, moon_shadows_invalid=1, recalc_tree_grass_weights=1, mesh_height_invalid=0, in_queue=0, last_occluded=0, has_any_grass=0;
-	bool is_distant=0, no_trees=0, just_cleared=0, has_tunnel=0;
+	bool is_distant=0, no_trees=0, just_cleared=0, has_tunnel=0, has_city=0;
 	colorRGB avg_mesh_tex_color;
 	tile_offset_t mesh_off, ptree_off, dtree_off, scenery_off;
 	float sub_zmin[4][4] = {0}, sub_zmax[4][4] = {0};

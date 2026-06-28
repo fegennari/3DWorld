@@ -976,6 +976,7 @@ public:
 	void get_occluders(pos_dir_up const &pdu, vector3d const &xlate, vect_cube_t &occluders) const;
 	void get_plot_cuts(cube_t const &plot, vect_cube_t &cuts) const;
 	bool cube_int_underground_obj(cube_t const &c) const;
+	bool point_in_pond_xy(point const &pos) const;
 	void get_ponds_in_xy_range(cube_t const &range, vect_cube_t &pond_bcs) const;
 	// gas station and car wash logic
 	gs_reservation_t reserve_nearest_gas_station_lane(point const &pos, rand_gen_t &rgen, float max_dist=0.0) const;

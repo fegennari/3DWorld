@@ -16,6 +16,7 @@ bool const ENABLE_INST_PINE   = 1; // faster generation, lower GPU memory, slowe
 bool const ENABLE_ANIMALS     = 1;
 bool const USE_PARAMS_HSCALE  = 0;
 bool const FLATTEN_BUILDING_TILE = 1; // removes terrain from the inside of buildings, but is slightly slower/higher memory usage and requires space between building and tile edge to prevent seams
+bool const ENABLE_CITY_GRASS  = 0;
 int  const DITHER_NOISE_TEX   = NOISE_GEN_TEX;//PS_NOISE_TEX
 unsigned const NORM_TEXELS    = 512;
 unsigned const TILE_SMAP_START_TU_ID = 21;
@@ -95,6 +96,7 @@ void get_city_grass_coll_cubes(cube_t const &region, vect_cube_t &out, vect_cube
 void get_building_grass_coll_cubes(cube_t const &region, vect_cube_t &out);
 int check_city_contains_overlaps(cube_t const &query);
 bool check_inside_city(point const &pos, float radius);
+bool city_has_grass_at(point const &pos);
 cube_t get_city_bcube_overlapping(cube_t const &c);
 void show_gpu_mem_info();
 uint64_t get_reflection_gpu_mem_usage();
@@ -1064,9 +1066,9 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 	get_texture_ixs(sand_tex_ix, dirt_tex_ix, grass_tex_ix, rock_tex_ix, snow_tex_ix);
 
 	if (weight_tid == 0) { // create weights
-		has_any_grass = has_tunnel = 0;
+		has_any_grass = has_tunnel = has_city = 0;
 		grass_blocks.clear();
-		mesh_weight_data.resize(4*num_texels); // RGBA
+		mesh_weight_data.resize(4*num_texels); // RGBA = {sand, dirt, grass, rock}; snow is (1.0 - others)
 		unsigned const grass_block_dim(get_grass_block_dim());
 		float const xy_mult(1.0/float(size)), water_level(get_water_z_height());
 		float const MESH_NOISE_SCALE = 0.003;
@@ -1102,20 +1104,28 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 			row_ec_valid = 0;
 
 			for (unsigned x = 0; x < tsize-DEBUG_TILE_BOUNDS; ++x) {
-				unsigned const ix_val(y*tsize + x), off(4*ix_val);
+				unsigned const ix_val(y*tsize + x), off(4*ix_val), ix(y*zvsize + x);
 				
 				if (check_mesh_mask || inside_city == 1) { // have tunnels, or partially inside a city
-					point const query_pos(get_xval(x + llc_x)+0.5*DX_VAL, get_yval(y + llc_y)+0.5*DY_VAL, 0.0); // global space
+					float const xv(get_xval(x + llc_x)), yv(get_yval(y + llc_y));
+					point const query_pos(xv+0.5*DX_VAL, yv+0.5*DY_VAL, 0.0); // global space
 					
 					if ((check_mesh_mask && check_mesh_disable(query_pos, HALF_DXY)) || (inside_city == 1 && check_inside_city(query_pos, HALF_DXY))) {
-						mesh_weight_data[off+0] = mesh_weight_data[off+1] = 255; // set invalid values to flag as transparent
-						mesh_weight_data[off+2] = mesh_weight_data[off+3] = 0;   // make sure grass is disabled
-						has_tunnel = 1; // Note: should be covered by the tile_contains_tunnel(), but we include this case for safety
+						bool const add_grass(ENABLE_CITY_GRASS && city_has_grass_at(point(xv, yv, 0.0)));
+
+						if (add_grass) { // TODO: not high enough resolution to handle roads, sidewalks, buildings, park paths, creeks, ponds, etc.
+							mesh_weight_data[off+2] = 255; // full grass
+							float const mh(zvals[ix]); // should be flat, so just use LLC height sample
+							add_grass_block_at(x, y, mh, mh, grass_block_dim);
+						}
+						else {mesh_weight_data[off+2] = 0;} // no grass
+						mesh_weight_data[off+0] = 0; // no sand
+						mesh_weight_data[off+1] = mesh_weight_data[off+3] = 255; // set invalid dirt and rock values to flag as transparent (sand makes grass yellow)
+						has_city = 1; // Note: should be covered by the tile_contains_tunnel(), but we include this case for safety
 						continue;
 					}
 				}
 				float weights[NTEX_DIRT] = {0};
-				unsigned const ix(y*zvsize + x);
 				float const mh00(zvals[ix]), mh01(zvals[ix+1]), mh10(zvals[ix+zvsize]), mh11(zvals[ix+zvsize+1]);
 				float const mhmin(min(min(mh00, mh01), min(mh10, mh11))), mhmax(max(max(mh00, mh01), max(mh10, mh11)));
 				float const rand_offset(rand_vals[y*tsize + x]);
@@ -3301,7 +3311,7 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 			set_smap_enable_for_shader(s, (spass == 0), 0); // VS
 			s.set_prefix(make_shader_bool_prefix("enable_grass_wind", enable_wind), 0); // VS
 			if (enable_tess) {s.set_prefix("#define NO_FOG_FRAG_COORD", 1);} // FS - needed on some drivers because TC/TE don't have fg_FogFragCoord
-			if (!enable_tess) {s.set_prefix("#define NO_GRASS_TESS", 0);} // VS
+			else             {s.set_prefix("#define NO_GRASS_TESS",     0);} // VS
 			s.set_vert_shader("ads_lighting.part*+perlin_clouds.part*+shadow_map.part*+tiled_shadow_map.part*+wind.part*+grass_texture.part+grass_tiled");
 			s.set_frag_shader("linear_fog.part+grass_tiled");
 
@@ -3718,7 +3728,7 @@ bool tile_t::mesh_sphere_intersect(point const &pos, float rradius) const {
 }
 
 bool tile_t::use_as_occluder() const {
-	return (!has_tunnel && rel_dist_to_camera_xy_lt(OCCLUDER_DIST) && is_visible());
+	return (!has_tunnel && !has_city && rel_dist_to_camera_xy_lt(OCCLUDER_DIST) && is_visible());
 }
 
 template <typename T> bool tile_t::add_new_trees(T &trees, tile_offset_t const &toff, cube_t &update_bcube, float &tzmax, point const &tpos, float rradius, bool is_square) {
