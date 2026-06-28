@@ -2088,7 +2088,7 @@ bool city_obj_placer_t::place_swimming_pool(road_plot_t const &plot, city_zone_t
 	}
 	pool_area.expand_by_xy(-(0.05*dmin + 0.05*city_params.road_width)); // small shrink to keep away from walls, fences, and hedges
 	vector3d pool_sz;
-	pool_sz.z = (above_ground ? rgen.rand_uniform(0.08, 0.12)*city_params.road_width : 0.01f*dmin);
+	pool_sz.z = (above_ground ? rgen.rand_uniform(0.1, 0.12)*city_params.road_width : 0.01f*dmin);
 
 	for (unsigned d = 0; d < 2; ++d) {
 		pool_sz[d] = ((above_ground && d == 1) ? pool_sz[0] : rgen.rand_uniform(0.5, 0.7)*dmin); // above_ground_cylin pools have square bcubes
