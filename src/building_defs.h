@@ -769,6 +769,14 @@ template<typename T> static bool check_vect_cube_contains_pt(vector<T> const &cu
 	for (cube_t const &c : cubes) {if (c.contains_pt(pos)) return 1;}
 	return 0;
 }
+template<typename T> bool any_cube_contains(cube_t const &cube, T const &cubes) {
+	for (auto const &c : cubes) {if (c.contains_cube(cube)) return 1;}
+	return 0;
+}
+template<typename T> bool any_cube_contains_xy(cube_t const &cube, T const &cubes) {
+	for (auto const &c : cubes) {if (c.contains_cube_xy(cube)) return 1;}
+	return 0;
+}
 template<typename T> cube_t get_bcubes_union(vector<T> const &cubes) {
 	if (cubes.size() == 1) {return cubes.front();}
 	cube_t bcube;

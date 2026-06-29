@@ -4907,10 +4907,6 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 	} // for i
 }
 
-template<typename T> bool any_cube_contains(cube_t const &cube, T const &cubes) {
-	for (auto const &c : cubes) {if (c.contains_cube(cube)) return 1;}
-	return 0;
-}
 bool building_t::is_light_placement_valid(cube_t const &light, room_t const &room, float pad) const {
 	if (room.is_industrial())         return 1; // industrial lights hang from the ceiling; assume they are placed correctly
 	if (is_restroom_with_high_ceil()) return 1; // can hang from ceiling
