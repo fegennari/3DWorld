@@ -539,6 +539,17 @@ public:
 	bool point_in_plot_xy(point const &pos) const {return !check_vect_cube_contains_pt_xy(roads, pos);} // if it's not in a road it must be in a plot; faster than checking plots
 	bool point_in_pond_xy(point const &pos) const {return  city_obj_placer.point_in_pond_xy(pos);}
 
+	bool has_grass_at(point const &pos_bs, float radius) const {
+		cube_t pbb(pos_bs);
+		pbb.expand_by_xy(radius);
+
+		if (has_bcube_int_xy(pbb, parks)) {
+			if (!any_cube_contains_xy(pbb, parks)) return 0; // partially overlapping a park, not fully grass
+			return !city_obj_placer.grass_blocked_for_park(pos_bs, radius, pbb); // we're completely inside a park
+		}
+		if (!has_bcube_int_xy(pbb, roads)) {return !city_obj_placer.grass_blocked_for_plot(pos_bs, radius, pbb);} // no road overlap; we're inside a plot that's not a park
+		return 0; // not grass
+	}
 	cube_t get_bcube_inc_stoplights_and_streetlights() const {
 		cube_t c(bcube); // deep copy
 		c.z2() += max(stoplight_ns::stoplight_max_height(), streetlight_ns::get_streetlight_height());
@@ -3058,15 +3069,12 @@ public:
 		} // for r
 		return 0;
 	}
-	bool has_grass_at(point const &pos) const {
+	bool has_grass_at(point const &pos, float radius) const { // pos in camera space
 		point const pos_bs(pos - get_camera_coord_space_xlate());
 
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {
-			cube_t const &bc(r->get_bcube());
-			if (!r->get_bcube().contains_pt_xy(pos_bs)) continue;
-			if (r->point_in_park_xy(pos_bs)) return !r->point_in_pond_xy(pos_bs); // check if in a park but not in a pond
-			if (r->get_is_residential())     return  r->point_in_plot_xy(pos_bs); // should residential plots count? should skip house, driveay, deck, and pool
-			return 0; // can only be in one city
+			if (!r->get_bcube().contains_pt_xy(pos_bs)) continue; // wrong city
+			return r->has_grass_at(pos_bs, radius);
 		}
 		return 0;
 	}
@@ -3652,14 +3660,7 @@ public:
 	bool check_inside_city (point const &pos, float radius, unsigned rcp_mask=3, cube_t *city_bcube=nullptr) const {
 		return road_gen.check_inside_city(pos, radius, rcp_mask, city_bcube);
 	}
-	bool has_grass_at      (point const &pos, float radius) const {
-		if (radius == 0.0) {return road_gen.has_grass_at(pos);} // point query
-
-		for (unsigned n = 0; n < 4; ++n) { // test 4 corners; any point not in grass returns 0
-			if (!road_gen.has_grass_at(pos + vector3d(((n&1) ? 1.0 : -1.0)*radius, ((n>>1) ? 1.0 : -1.0)*radius, 0.0))) return 0;
-		}
-		return 1; // all 4 corners in grass
-	}
+	bool has_grass_at      (point const &pos, float radius) const {return road_gen.has_grass_at(pos, radius);}
 	bool choose_pt_in_park (point const &pos, point &park_pos, rand_gen_t &rgen) const {return road_gen.choose_pt_in_park(pos, park_pos, rgen);}
 	bool check_mesh_disable(point const &pos, float radius) const {return road_gen.check_mesh_disable(pos, radius);}
 	bool tile_contains_tunnel(cube_t const &bcube) const {return road_gen.tile_contains_tunnel(bcube);}

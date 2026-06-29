@@ -978,6 +978,8 @@ public:
 	bool cube_int_underground_obj(cube_t const &c) const;
 	bool point_in_pond_xy(point const &pos) const;
 	void get_ponds_in_xy_range(cube_t const &range, vect_cube_t &pond_bcs) const;
+	bool grass_blocked_for_park(point const &pos, float radius, cube_t const &pbb) const;
+	bool grass_blocked_for_plot(point const &pos, float radius, cube_t const &pbb) const;
 	// gas station and car wash logic
 	gs_reservation_t reserve_nearest_gas_station_lane(point const &pos, rand_gen_t &rgen, float max_dist=0.0) const;
 	driveway_t get_gas_station_driveway(car_t const &car) const;

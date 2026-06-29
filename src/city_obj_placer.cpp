@@ -3377,6 +3377,23 @@ void city_obj_placer_t::get_ponds_in_xy_range(cube_t const &range, vect_cube_t &
 	}
 }
 
+bool city_obj_placer_t::grass_blocked_for_park(point const &pos, float radius, cube_t const &pbb) const {
+	unsigned const npts((radius == 0.0) ? 1 : 4); // only need to check one point if zero radius
+
+	for (unsigned n = 0; n < npts; ++n) { // test 4 corners of ponds
+		vector3d const offset(((n&1) ? 1.0 : -1.0)*radius, ((n>>1) ? 1.0 : -1.0)*radius, 0.0);
+		if (point_in_pond_xy(pos + offset)) return 1;
+	}
+	for (park_path_t const &path : ppaths) { // park paths and creeks
+		if (path.check_cube_coll_xy(pbb)) return 1;
+	}
+	return 0;
+}
+bool city_obj_placer_t::grass_blocked_for_plot(point const &pos, float radius, cube_t const &pbb) const {
+	// TODO: check driveways, pools, and decks
+	return 0;
+}
+
 gs_reservation_t city_obj_placer_t::reserve_nearest_gas_station_lane(point const &pos, rand_gen_t &rgen, float max_dist) const {
 	gs_reservation_t ret;
 	float dmin_sq(max_dist*max_dist); // Note: max_dist=0.0 is unlimited
