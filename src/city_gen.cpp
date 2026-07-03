@@ -547,7 +547,9 @@ public:
 			if (!any_cube_contains_xy(pbb, parks)) return 0; // partially overlapping a park, not fully grass
 			return !city_obj_placer.grass_blocked_for_park(pos_bs, radius, pbb); // we're completely inside a park
 		}
-		if (!has_bcube_int_xy(pbb, roads)) {return !city_obj_placer.grass_blocked_for_plot(pos_bs, radius, pbb);} // no road overlap; we're inside a plot that's not a park
+		if (is_residential && !has_bcube_int_xy(pbb, roads)) { // residential city with no road overlap
+			return !city_obj_placer.grass_blocked_for_plot(pos_bs, radius, pbb); // we're inside a plot that's not a park
+		}
 		return 0; // not grass
 	}
 	cube_t get_bcube_inc_stoplights_and_streetlights() const {

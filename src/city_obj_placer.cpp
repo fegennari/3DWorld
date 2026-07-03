@@ -3387,6 +3387,7 @@ bool city_obj_placer_t::grass_blocked_for_park(point const &pos, float radius, c
 	for (park_path_t const &path : ppaths) { // park paths and creeks
 		if (path.check_cube_coll_xy(pbb)) return 1;
 	}
+	// TODO: check driveway (restroom concrete)
 	return 0;
 }
 bool city_obj_placer_t::grass_blocked_for_plot(point const &pos, float radius, cube_t const &pbb) const {

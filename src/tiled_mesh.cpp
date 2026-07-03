@@ -1082,6 +1082,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 		int const llc_x(x1 - xoff2), llc_y(y1 - yoff2);
 		point const query_pos(get_xval(tsize/2 + llc_x), get_yval(tsize/2 + llc_y), 0.0); // in local tile space, not camera space
 		bool const check_mesh_mask(check_mesh_disable(query_pos, radius)), check_buildings(no_grass_under_buildings());
+		bool const check_city(inside_city == 1 || (ENABLE_CITY_GRASS && inside_city == 2));
 		int k1, k2, k3, k4;
 		height_gen.build_arrays(MESH_NOISE_FREQ*get_xval(x1), MESH_NOISE_FREQ*get_yval(y1), MESH_NOISE_FREQ*deltax,
 			MESH_NOISE_FREQ*deltay, tsize, tsize, 0, 1); // force_sine_mode=1
@@ -1106,11 +1107,11 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 			for (unsigned x = 0; x < tsize-DEBUG_TILE_BOUNDS; ++x) {
 				unsigned const ix_val(y*tsize + x), off(4*ix_val), ix(y*zvsize + x);
 				
-				if (check_mesh_mask || inside_city == 1) { // have tunnels, or partially inside a city
+				if (check_mesh_mask || check_city) { // have tunnels, partially inside a city, or fully inside city with grass
 					float const xv(get_xval(x + llc_x)), yv(get_yval(y + llc_y));
 					point const query_pos(xv+0.5*DX_VAL, yv+0.5*DY_VAL, 0.0); // global space
 					
-					if ((check_mesh_mask && check_mesh_disable(query_pos, HALF_DXY)) || (inside_city == 1 && check_inside_city(query_pos, HALF_DXY))) {
+					if ((check_mesh_mask && check_mesh_disable(query_pos, HALF_DXY)) || (check_city && check_inside_city(query_pos, HALF_DXY))) {
 						bool const add_grass(ENABLE_CITY_GRASS && city_has_grass_at(point(xv, yv, 0.0), 0.5*HALF_DXY)); // set radius to a grid square
 
 						if (add_grass) { // TODO: not high enough resolution to handle roads, sidewalks, buildings, park paths, creeks, ponds, etc.
