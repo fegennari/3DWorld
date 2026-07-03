@@ -3459,7 +3459,10 @@ bool park_path_t::check_cube_coll_xy(cube_t const &c) const { // conservative
 }
 bool park_path_t::check_point_contains_xy(point const &p) const {
 	if (!bcube.contains_pt_xy(p)) return 0;
-	cube_t c; c.set_from_point(p); // zero area
-	return check_cube_coll_xy(c);
+
+	for (unsigned i = 0; i+1 < pts.size(); ++i) {
+		if (point_line_seg_dist_2d(p, pts[i], pts[i+1]) < hwidth) return 1;
+	}
+	return 0;
 }
 
