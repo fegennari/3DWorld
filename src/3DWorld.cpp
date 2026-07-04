@@ -2436,6 +2436,7 @@ int main(int argc, char** argv) {
 
 	if (0) { // reversed Z-buffer; OpenGL 4.5 only; appears to break shadows
 		// see https://www.wedesoft.de/software/2021/09/20/reversed-z-rendering/
+		// see https://www.shlom.dev/articles/reverse-z-perfect-hack/
 		glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
 	}
 	check_gl_error(7771);
