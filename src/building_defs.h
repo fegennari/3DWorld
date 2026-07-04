@@ -797,6 +797,7 @@ inline void set_wall_width(cube_t &wall, float pos, float half_thick, unsigned d
 template<typename T> void vector_random_shuffle(vector<T> &v, rand_gen_t &rgen) {std::shuffle(v.begin(), v.end(), rand_gen_wrap_t(rgen));}
 inline bool cube_int_if_nonzero   (cube_t const &c, cube_t const &C) {return (!C.is_all_zeros() && c.intersects   (C));}
 inline bool cube_int_xy_if_nonzero(cube_t const &c, cube_t const &C) {return (!C.is_all_zeros() && c.intersects_xy(C));}
+inline vector2d v2_from_v3_xy(vector3d const &v) {return vector2d(v.x, v.y);}
 
 struct cube_by_sz { // sort cube by size in dim descending
 	bool dim;

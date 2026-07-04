@@ -1611,7 +1611,6 @@ void snake_t::move_segments(float dist) {
 	pos.y = bcube.yc();
 	calc_xy_radius();
 }
-vector2d v2_from_v3_xy(vector3d const &v) {return vector2d(v.x, v.y);}
 
 // Note: ignores radius; seg_dir points toward the head
 bool snake_t::check_line_int_xy(point const &p1, point const &p2, bool skip_head, vector3d *seg_dir) const {

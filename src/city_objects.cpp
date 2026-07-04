@@ -3446,14 +3446,16 @@ void park_path_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_
 		prev_hi    = hi;
 	} // for i
 }
-bool park_path_t::check_cube_coll_xy(cube_t const &c) const { // conservative
+bool park_path_t::check_cube_coll_xy(cube_t const &c) const {
 	if (!bcube.intersects_xy(c)) return 0;
 	assert(pts.size() >= 2);
-	cube_t test_cube(c);
-	test_cube.expand_by_xy(hwidth);
 
 	for (unsigned i = 0; i+1 < pts.size(); ++i) {
-		if (check_line_clip_xy(pts[i], pts[i+1], test_cube.d)) return 1;
+		if (check_line_clip_xy(pts[i], pts[i+1], c.d)) return 1;
+
+		for (unsigned n = 0; n < 4; ++n) {
+			if (point_line_seg_dist_2d(point(c.d[0][n&1], c.d[1][n>>1], c.z1()), pts[i], pts[i+1]) < hwidth) return 1;
+		}
 	}
 	return 0;
 }
