@@ -15,8 +15,7 @@ bool const DEBUG_TILE_BOUNDS  = 0;
 bool const ENABLE_INST_PINE   = 1; // faster generation, lower GPU memory, slower rendering
 bool const ENABLE_ANIMALS     = 1;
 bool const USE_PARAMS_HSCALE  = 0;
-bool const FLATTEN_BUILDING_TILE = 1; // removes terrain from the inside of buildings, but is slightly slower/higher memory usage and requires space between building and tile edge to prevent seams
-bool const ENABLE_CITY_GRASS  = 0;
+bool const FLATTEN_BUILDING_TILE = 1; // removes terrain from inside buildings, but slightly slower/higher mem usage and requires space between building and tile edge to prevent seams
 int  const DITHER_NOISE_TEX   = NOISE_GEN_TEX;//PS_NOISE_TEX
 unsigned const NORM_TEXELS    = 512;
 unsigned const TILE_SMAP_START_TU_ID = 21;
@@ -65,7 +64,7 @@ extern unsigned grass_density, max_unique_trees, shadow_map_sz, erosion_iters_tt
 extern unsigned num_birds_per_tile, num_fish_per_tile, num_bflies_per_tile, room_geom_mem;
 extern int DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees, window_width, window_height, player_in_basement;
 extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog, mesh_gen_mode, mesh_gen_shape, cloud_model, precip_mode, auto_time_adv, draw_model;
-extern int player_in_elevator, player_in_attic;
+extern int player_in_elevator, player_in_attic, add_city_grass;
 extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width, fticks, cloud_height_offset, clouds_per_tile;
 extern float ocean_wave_height, sm_tree_density, tree_density_thresh, atmosphere, cloud_cover, temperature, flower_density, FAR_CLIP, biome_x_offset;
 extern float smap_thresh_scale, tt_grass_scale_factor, pond_max_depth, tt_fog_density;
@@ -1082,7 +1081,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 		int const llc_x(x1 - xoff2), llc_y(y1 - yoff2);
 		point const query_pos(get_xval(tsize/2 + llc_x), get_yval(tsize/2 + llc_y), 0.0); // in local tile space, not camera space
 		bool const check_mesh_mask(check_mesh_disable(query_pos, radius)), check_buildings(no_grass_under_buildings());
-		bool const check_city(inside_city == 1 || (ENABLE_CITY_GRASS && inside_city == 2));
+		bool const check_city(inside_city == 1 || (add_city_grass && inside_city == 2));
 		int k1, k2, k3, k4;
 		height_gen.build_arrays(MESH_NOISE_FREQ*get_xval(x1), MESH_NOISE_FREQ*get_yval(y1), MESH_NOISE_FREQ*deltax,
 			MESH_NOISE_FREQ*deltay, tsize, tsize, 0, 1); // force_sine_mode=1
@@ -1112,7 +1111,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 					point const query_pos(xv+0.5*DX_VAL, yv+0.5*DY_VAL, 0.0); // global space
 					
 					if ((check_mesh_mask && check_mesh_disable(query_pos, HALF_DXY)) || (check_city && check_inside_city(query_pos, HALF_DXY))) {
-						bool const add_grass(ENABLE_CITY_GRASS && city_has_grass_at(point(xv, yv, 0.0), 0.5*HALF_DXY)); // set radius to a grid square
+						bool const add_grass(add_city_grass && city_has_grass_at(point(xv, yv, 0.0), 0.5*HALF_DXY)); // set radius to a grid square
 
 						if (add_grass) { // TODO: not high enough resolution to handle roads, sidewalks, buildings, park paths, creeks, ponds, etc.
 							mesh_weight_data[off+2] = 255; // full grass

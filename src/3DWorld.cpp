@@ -100,7 +100,7 @@ int num_trees(0), num_smileys(1), srand_param(3), left_handed(0), mesh_scale_cha
 int pause_frame(0), show_fog(0), spectate(0), b2down(0), free_for_all(0), teams(2), show_scores(0), universe_only(0);
 int reset_timing(0), read_heightmap(0), default_ground_tex(-1), num_dodgeballs(1), INIT_DISABLE_WATER, ground_effects_level(2);
 int enable_fsource(0), run_forward(0), advanced(0), dynamic_mesh_scroll(0), default_anim_id(-1), stats_display_mode(0);
-int read_snow_file(0), write_snow_file(0), mesh_detail_tex(NOISE_TEX);
+int read_snow_file(0), write_snow_file(0), mesh_detail_tex(NOISE_TEX), add_city_grass(0);
 int read_light_files[NUM_LIGHTING_TYPES] = {0}, write_light_files[NUM_LIGHTING_TYPES] = {0};
 unsigned num_snowflakes(0), create_voxel_landscape(0), hmap_filter_width(0), num_dynam_parts(100), snow_coverage_resolution(2), show_map_view_fractal(0);
 unsigned num_birds_per_tile(2), num_fish_per_tile(15), num_bflies_per_tile(4);
@@ -1899,6 +1899,7 @@ int load_config(string const &config_file) {
 	kwmi.add("use_voxel_rocks", use_voxel_rocks); // 0=never, 1=always, 2=only when no vegetation
 	kwmi.add("default_anim_id", default_anim_id);
 	kwmi.add("rand_gen_index", rand_gen_index);
+	kwmi.add("add_city_grass", add_city_grass);
 
 	kw_to_val_map_t<unsigned> kwmu(error);
 	kwmu.add("grass_density", grass_density);

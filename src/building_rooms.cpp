@@ -5,7 +5,7 @@
 #include "buildings.h"
 #include "city.h" // for object_model_loader_t
 
-extern int world_mode;
+extern int world_mode, add_city_grass;
 extern object_model_loader_t building_obj_model_loader;
 
 void setup_bldg_obj_types();
@@ -3008,6 +3008,7 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 		if (d.type == tquad_with_ix_t::TYPE_RDOOR) continue; // skip roof access door
 		cube_t const c(d.get_bcube());
 		bool const above_ground(c.z1() > ground_floor_z1 + 2.0*fc_thickness);
+		if (add_city_grass >= 2 && is_in_city && is_house && !above_ground) continue; // skip for residential city houses at ground level that grass may clip through
 		bool const dim(c.dy() < c.dx()), dir(d.get_norm()[dim] > 0.0);
 		bool const is_garage(d.type == tquad_with_ix_t::TYPE_GDOOR);
 		if (above_ground &&  d.type != tquad_with_ix_t::TYPE_HDOOR) continue; // only house doors above ground have stairs; office buildings have walkways

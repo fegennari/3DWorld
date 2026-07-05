@@ -3401,7 +3401,6 @@ bool city_obj_placer_t::grass_blocked_for_plot(point const &pos, float radius, c
 	for (swimming_pool_t const &p : pools) {
 		if (!p.above_ground && p.bcube.intersects_xy(pbb)) return 1; // in-ground pools only
 	}
-	// TODO: exterior steps
 	return 0;
 }
 

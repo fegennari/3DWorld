@@ -67,6 +67,7 @@ sm_tree_density 0.5
 init_tree_mode 3 # both large and small trees
 tree_lod_scale 0.24 0.2 0.24 0.2
 tt_grass_scale_factor 0.25
+add_city_grass 0 # 0=none, 1=parks only, 2=parks + residential
 num_bflies_per_tile 2
 
 fast_water_reflect 1

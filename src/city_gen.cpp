@@ -23,7 +23,7 @@ point pre_smap_player_pos, actual_player_pos; // Note: pre_smap_player_pos can b
 
 extern bool enable_dlight_shadows, dl_smap_enabled, enable_dlight_bcubes, flashlight_on, camera_in_building, have_indir_smoke_tex, disable_city_shadow_maps;
 extern bool player_in_walkway, player_in_skyway, player_on_moving_ww, player_in_ww_elevator, player_in_tunnel, player_in_mall;
-extern int rand_gen_index, display_mode, animate2, map_mode, draw_model, player_in_basement;
+extern int rand_gen_index, display_mode, animate2, map_mode, draw_model, player_in_basement, add_city_grass;
 extern unsigned shadow_map_sz, cur_display_iter;
 extern float cobj_z_bias, rain_wetness, NEAR_CLIP;
 extern vector3d wind;
@@ -541,6 +541,7 @@ public:
 	bool point_in_pond_xy(point const &pos) const {return  city_obj_placer.point_in_pond_xy(pos);}
 
 	bool has_grass_at(point const &pos_bs, float radius) const {
+		if (add_city_grass == 0) return 0; // caller should handle this
 		cube_t pbb(pos_bs);
 		pbb.expand_by_xy(radius);
 
@@ -548,7 +549,7 @@ public:
 			if (!any_cube_contains_xy(pbb, parks)) return 0; // partially overlapping a park, not fully grass
 			return !city_obj_placer.grass_blocked_for_park(pos_bs, radius, pbb); // we're completely inside a park
 		}
-		if (is_residential && !has_bcube_int_xy(pbb, roads)) { // residential city with no road overlap
+		if (is_residential && add_city_grass >= 2 && !has_bcube_int_xy(pbb, roads)) { // residential city with no road overlap
 			if (has_city_road_seg(pbb)) return 0; // porch or driveway, not fully grass
 			return !city_obj_placer.grass_blocked_for_plot(pos_bs, radius, pbb); // we're inside a plot that's not a park
 		}
