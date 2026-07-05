@@ -508,11 +508,10 @@ void swimming_pool_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float d
 		if (dstate.pass_ix == 2) { // draw sides, bottom, and maybe ladder
 			dstate.s.set_cur_color(color);
 			draw_fast_cylinder(point(xc, yc, bcube.z1()), point(xc, yc, bcube.z2()), radius, radius, ndiv, 0, 0, 1); // untextured, no ends; two sided lighting
-
-			if (!shadow_only) { // draw bottom, shifted slightly up
-				dstate.s.set_cur_color(color*0.4); // darker due to light atten
-				draw_circle_normal(0.0, radius, ndiv, 0, point(xc, yc, inner_bottom));
-			}
+			// draw bottom, shifted up from the bottom; include in shadows as this closes the gap at the edge of the pool where the side meets the ground
+			dstate.s.set_cur_color(color*0.4); // darker due to light atten
+			draw_circle_normal(0.0, radius, ndiv, 0, point(xc, yc, inner_bottom));
+			
 			if (bcube.closest_dist_less_than(camera_bs, 0.5*dscale)) { // draw ladder
 				unsigned const num_steps = 5;
 				color_wrapper const step_color(LT_GRAY);
