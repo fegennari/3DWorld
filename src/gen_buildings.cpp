@@ -5150,7 +5150,7 @@ public:
 		for (unsigned y = ixr[0][1]; y <= ixr[1][1]; ++y) {
 			for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {
 				grid_elem_t const &ge(get_grid_elem(x, y));
-				if (ge.road_segs.empty() || !ge.bcube.intersects(region)) continue; // skip empty or non-intersecting grids
+				if (ge.road_segs.empty() || !ge.bcube.intersects_xy(region)) continue; // skip empty or non-intersecting grids
 
 				for (cube_t const &c : ge.road_segs) {
 					if (c.intersects_xy(region)) {out.push_back(c + xlate);}
@@ -6078,6 +6078,12 @@ bool check_buildings_cube_coll(cube_t const &c, bool xy_only, bool inc_basement,
 void get_road_segs_in_region(cube_t const &region, vect_cube_t &out) { // for tiled terrain mode; pos is in local space
 	building_creator.get_road_segs_in_region(region, out);
 	building_tiles  .get_road_segs_in_region(region, out);
+}
+bool has_city_road_seg(cube_t const &bcube) {
+	static vect_cube_t out;
+	out.clear();
+	building_creator_city.get_road_segs_in_region(bcube, out);
+	return !out.empty();
 }
 unsigned check_buildings_line_coll(point const &p1, point const &p2, float &t, unsigned &hit_bix, bool ret_any_pt) { // for line_intersect_city(); p1/p2 are in camera space
 	vector3d const xlate(get_camera_coord_space_xlate());

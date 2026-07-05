@@ -42,6 +42,7 @@ vector3d get_tt_xlate_val();
 float get_max_house_size();
 bool proc_buildings_sphere_coll(point &pos, point const &p_last, float radius, vector3d *cnorm=nullptr, bool check_interior=0, bool exclude_city=0);
 bool check_building_line_coll(point const &p1, point const &p2, bool city_bldgs);
+bool has_city_road_seg(cube_t const &bcube);
 void draw_player_building_transparent(int reflection_pass, vector3d const &xlate);
 void bind_player_building_cube_map(shader_t &s);
 bool enable_cube_map_city(cube_t *city_bcube);
@@ -548,6 +549,7 @@ public:
 			return !city_obj_placer.grass_blocked_for_park(pos_bs, radius, pbb); // we're completely inside a park
 		}
 		if (is_residential && !has_bcube_int_xy(pbb, roads)) { // residential city with no road overlap
+			if (has_city_road_seg(pbb)) return 0; // porch or driveway, not fully grass
 			return !city_obj_placer.grass_blocked_for_plot(pos_bs, radius, pbb); // we're inside a plot that's not a park
 		}
 		return 0; // not grass
