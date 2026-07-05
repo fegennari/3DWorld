@@ -993,6 +993,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 				if (!place_city_building_at(b, (plot_ix + plot_id_offset), rgen)) continue;
 				blockers.push_back(bc_pad);
 				park_restrooms.push_back(bc);
+				cube_t grass_blocker(bc);
 				// add divider walls outside the restroom
 				unsigned const num_fence_pairs((doors_at_front && !rgen.rand_bool()) ? 2 : 1);
 				float const front_edge(bc.d[dim][dir]), fence_thick(0.025*bhdepth);
@@ -1026,9 +1027,12 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 						// street_dir=0, use_dir_for_birds=1 to keep birds from flying into the building
 						divider_groups.add_obj(divider_t(divider, DIV_FENCE, fdim, fdir, 0, skip_dims, dividers.size(), plot_ix, city_id, 0, 1), dividers);
 						add_cube_to_colliders_and_blockers(divider, colliders, blockers);
+						grass_blocker.union_with_cube(divider); // union to include the concrete pad
 						// place restroom sign on divider side facing away from the building?
 					} // for d
 				} // for D
+				park_grass_blockers.push_back(grass_blocker);
+
 				if (doors_at_front && building_obj_model_loader.is_model_valid(OBJ_MODEL_WFOUNTAIN)) { // place a water fountain between the doors
 					if (rgen.rand_bool()) { // water fountain object
 						point wf_pos(center);
@@ -3387,11 +3391,18 @@ bool city_obj_placer_t::grass_blocked_for_park(point const &pos, float radius, c
 	for (park_path_t const &path : ppaths) { // park paths and creeks
 		if (path.check_cube_coll_xy(pbb)) return 1;
 	}
-	// TODO: check driveway (restroom concrete)
+	if (has_bcube_int_xy(pbb, park_grass_blockers)) return 1; // check restroom concrete pads
 	return 0;
 }
 bool city_obj_placer_t::grass_blocked_for_plot(point const &pos, float radius, cube_t const &pbb) const {
-	// TODO: check driveways, pools, and decks
+	if (has_bcube_int_xy      (pbb, driveways)) return 1;
+	if (intersects_city_obj_xy(pbb, pdecks   )) return 1;
+	//if (intersects_city_obj_xy(pbb, pools    )) return 1;
+	
+	for (swimming_pool_t const &p : pools) {
+		if (!p.above_ground && p.bcube.intersects_xy(pbb)) return 1; // in-ground pools only
+	}
+	// TODO: porches and exterior steps
 	return 0;
 }
 

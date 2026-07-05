@@ -907,7 +907,7 @@ private:
 	bird_poop_manager_t bird_poop_manager;
 	vector<city_zone_t> sub_plots; // reused across calls
 	cube_t all_objs_bcube;
-	vect_cube_t park_restrooms;
+	vect_cube_t park_restrooms, park_grass_blockers;
 	vect_bird_place_t bird_locs;
 	rand_gen_t bird_rgen;
 	unsigned num_spaces=0, filled_spaces=0, num_x_plots=0, num_y_plots=0;
