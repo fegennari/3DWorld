@@ -3397,7 +3397,6 @@ bool city_obj_placer_t::grass_blocked_for_park(point const &pos, float radius, c
 bool city_obj_placer_t::grass_blocked_for_plot(point const &pos, float radius, cube_t const &pbb) const {
 	if (has_bcube_int_xy      (pbb, driveways)) return 1;
 	if (intersects_city_obj_xy(pbb, pdecks   )) return 1;
-	//if (intersects_city_obj_xy(pbb, pools    )) return 1;
 	
 	for (swimming_pool_t const &p : pools) {
 		if (!p.above_ground && p.bcube.intersects_xy(pbb)) return 1; // in-ground pools only

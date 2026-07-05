@@ -589,9 +589,8 @@ park_heightmap_t::park_heightmap_t(cube_t const &c, unsigned nx_, unsigned ny_, 
 			for (unsigned x = x1; x <= x2; ++x) {
 				point const p(pt_from_xy(x, y));
 				if (!dist_less_than(p, center, hill_radius)) continue;
-				float const dx(CLIP_TO_01(1.0f - xy_scale*fabs(p.x - center.x)));
-				float const dy(CLIP_TO_01(1.0f - xy_scale*fabs(p.y - center.y)));
-				raise_height(x, y, (z_ground + sin(dx*dy*PI_TWO)*hill_height));
+				float const dx(fabs(p.x - center.x)), dy(fabs(p.y - center.y));
+				raise_height(x, y, (z_ground + sin((1.0 - CLIP_TO_01(xy_scale*sqrt(dx*dx + dy*dy)))*PI_TWO)*hill_height));
 			} // for x
 		} // for y
 		hill_bc = hill; // record so that we can handle collisions/avoid the hill
