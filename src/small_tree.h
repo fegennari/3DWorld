@@ -71,8 +71,9 @@ public:
 	bool is_pine_tree() const {return (type == T_PINE || type == T_SH_PINE);}
 	unsigned get_inst_id() const {assert(inst_id >= 0); return inst_id;}
 	float get_pine_tree_radius() const;
-	float get_radius() const {return (is_pine_tree() ? branch_xy_scale*get_pine_tree_radius() : width);} // approximate
-	float get_zmax() const;
+	float get_radius   () const {return (is_pine_tree() ? branch_xy_scale*get_pine_tree_radius() : width);} // approximate
+	float get_ao_radius() const {return (is_pine_tree() ? 1.8 : ((type == T_PALM) ? 0.4 : 0.5))*get_radius();}
+	float get_zmax     () const;
 	float get_xy_radius() const {return max(1.5*branch_xy_scale*width, 0.5*height);}
 	float get_trunk_bsphere_radius() const {return (trunk_cylin.r1 + 0.5*((r_angle == 0.0) ? fabs(trunk_cylin.p1.z - trunk_cylin.p2.z) : trunk_cylin.get_length()));}
 	float get_pine_tree_leaves_dz () const {return ((type == T_PINE) ? 0.35*height : 0.0);}

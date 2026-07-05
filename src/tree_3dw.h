@@ -310,6 +310,7 @@ public:
 	int delete_tree();
 	int get_type()            const {return type;}
 	float get_radius()        const {return tdata().sphere_radius;}
+	float get_ao_radius()     const {return 0.5*get_radius();}
 	point sphere_center()     const {return (tree_center + tdata().get_center());}
 	point const &get_center() const {return tree_center;}
 	unsigned get_gpu_mem()    const {return (td_is_private() ? tdata().get_gpu_mem() : 0);}

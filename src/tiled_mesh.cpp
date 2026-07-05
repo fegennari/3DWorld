@@ -771,14 +771,14 @@ void tile_t::add_tree_ao_shadow(point const &pos, float tradius, bool no_adj_tes
 	}
 }
 
-template<typename T> void tile_t::apply_ao_shadows_for_tree_group(T const &trees, tile_offset_t const &toff, bool no_adj_test, float rscale) {
+template<typename T> void tile_t::apply_ao_shadows_for_tree_group(T const &trees, tile_offset_t const &toff, bool no_adj_test) {
 
 	point const pt_off(toff.subtract_from(mesh_off));
 	cube_t const bcube(get_mesh_bcube());
 
 	for (typename T::const_iterator i = trees.begin(); i != trees.end(); ++i) {
 		point const pt(i->get_center() + pt_off);
-		float const tr(rscale*i->get_radius());
+		float const tr(i->get_ao_radius());
 		if (no_adj_test && (pt.x+tr < bcube.d[0][0] || pt.x-tr > bcube.d[0][1] || pt.y+tr < bcube.d[1][0] || pt.y-tr > bcube.d[1][1])) continue;
 		add_tree_ao_shadow(pt, tr, no_adj_test);
 	}
@@ -788,11 +788,11 @@ void tile_t::apply_ao_shadows_for_trees(tile_t const *const tile, bool no_adj_te
 
 	if (can_have_pine_palm_trees()) {
 		assert(pine_trees_generated());
-		apply_ao_shadows_for_tree_group(tile->pine_trees, tile->ptree_off, no_adj_test, 1.8);
+		apply_ao_shadows_for_tree_group(tile->pine_trees, tile->ptree_off, no_adj_test);
 	}
 	if (can_have_decid_trees()) {
 		assert(decid_trees.was_generated());
-		apply_ao_shadows_for_tree_group(tile->decid_trees, tile->dtree_off, no_adj_test, 0.5);
+		apply_ao_shadows_for_tree_group(tile->decid_trees, tile->dtree_off, no_adj_test);
 	}
 	if (!no_adj_test && !is_distant) { // pull mode
 		for (int dy = -1; dy <= 1; ++dy) {
