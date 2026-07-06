@@ -5140,11 +5140,11 @@ public:
 		return 0;
 	}
 	// Note: region is in building space, out is in camera space; no building rotation applied
-	void get_road_segs_in_region(cube_t const &region, vect_cube_t &out) const {
-		if (empty()) return;
-		if (!range.intersects_xy(region)) return; // outside buildings bcube
+	unsigned get_road_segs_in_region(cube_t const &region, vect_cube_t *const out) const {
+		if (empty()) return 0;
+		if (!range.intersects_xy(region)) return 0; // outside buildings bcube
 		vector3d const xlate(get_camera_coord_space_xlate());
-		unsigned ixr[2][2];
+		unsigned ixr[2][2], num(0);
 		get_grid_range(region, ixr);
 
 		for (unsigned y = ixr[0][1]; y <= ixr[1][1]; ++y) {
@@ -5153,10 +5153,13 @@ public:
 				if (ge.road_segs.empty() || !ge.bcube.intersects_xy(region)) continue; // skip empty or non-intersecting grids
 
 				for (cube_t const &c : ge.road_segs) {
-					if (c.intersects_xy(region)) {out.push_back(c + xlate);}
+					if (!c.intersects_xy(region)) continue;
+					if (out) {out->push_back(c + xlate);}
+					++num;
 				}
 			} // for x
 		} // for y
+		return num;
 	}
 
 	// Note: p1 and p2 are in building space; returns type of surface that was hit
@@ -5875,8 +5878,10 @@ public:
 	void get_grass_coll_cubes(cube_t const &region, vect_cube_t &out) const {
 		for (auto i = tiles.begin(); i != tiles.end(); ++i) {i->second.get_grass_coll_cubes(region, out);}
 	}
-	void get_road_segs_in_region(cube_t const &region, vect_cube_t &out) const {
-		for (auto i = tiles.begin(); i != tiles.end(); ++i) {i->second.get_road_segs_in_region(region, out);}
+	unsigned get_road_segs_in_region(cube_t const &region, vect_cube_t *const out) const {
+		unsigned num(0);
+		for (auto i = tiles.begin(); i != tiles.end(); ++i) {num += i->second.get_road_segs_in_region(region, out);}
+		return num;
 	}
 	bool get_building_hit_color(point const &p1, point const &p2, colorRGBA &color) const { // Note: p1/p2 are in building space
 		if (empty()) return 0;
@@ -6076,14 +6081,11 @@ bool check_buildings_cube_coll(cube_t const &c, bool xy_only, bool inc_basement,
 		building_tiles.check_cube_coll(c, xy_only, inc_basement, exclude1, exclude2));
 }
 void get_road_segs_in_region(cube_t const &region, vect_cube_t &out) { // for tiled terrain mode; pos is in local space
-	building_creator.get_road_segs_in_region(region, out);
-	building_tiles  .get_road_segs_in_region(region, out);
+	building_creator.get_road_segs_in_region(region, &out);
+	building_tiles  .get_road_segs_in_region(region, &out);
 }
 bool has_city_road_seg(cube_t const &bcube) {
-	static vect_cube_t out;
-	out.clear();
-	building_creator_city.get_road_segs_in_region(bcube, out);
-	return !out.empty();
+	return (building_creator_city.get_road_segs_in_region(bcube, nullptr) > 0);
 }
 unsigned check_buildings_line_coll(point const &p1, point const &p2, float &t, unsigned &hit_bix, bool ret_any_pt) { // for line_intersect_city(); p1/p2 are in camera space
 	vector3d const xlate(get_camera_coord_space_xlate());
