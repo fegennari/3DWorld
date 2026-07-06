@@ -711,7 +711,7 @@ void tile_t::proc_tile_queue(tile_t *init_tile, unsigned l) {
 
 void tile_t::calc_shadows(bool calc_sun, bool calc_moon, bool no_push) {
 
-	bool calc_light[NUM_LIGHT_SRC] = {0};
+	bool calc_light[NUM_LIGHT_SRC] = {};
 	calc_light[LIGHT_SUN ] = calc_sun;
 	calc_light[LIGHT_MOON] = calc_moon;
 
@@ -1127,7 +1127,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 						continue;
 					}
 				}
-				float weights[NTEX_DIRT] = {0};
+				float weights[NTEX_DIRT] = {};
 				float const mh00(zvals[ix]), mh01(zvals[ix+1]), mh10(zvals[ix+zvsize]), mh11(zvals[ix+zvsize+1]);
 				float const mhmin(min(min(mh00, mh01), min(mh10, mh11))), mhmax(max(max(mh00, mh01), max(mh10, mh11)));
 				float const rand_offset(rand_vals[y*tsize + x]);
@@ -1234,13 +1234,12 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 			unsigned const off(4*i);
 			if (tree_map[i].ao == 255 || weight_data[off+grass_tex_ix] == 0) continue; // no trees or no grass
 			float const v(tree_map[i].ao/255.0), w(weight_data[off+dirt_tex_ix] + (1.0 - v)*weight_data[off+grass_tex_ix]);
-			weight_data[off+dirt_tex_ix]   = (unsigned char)(max(0.0f, min(255.0f, w)));
+			weight_data[off+dirt_tex_ix ]  = (unsigned char)(max(0.0f, min(255.0f, w)));
 			weight_data[off+grass_tex_ix] *= v;
 		}
 	}
 	recalc_tree_grass_weights = 0;
-	create_or_update_weight_tex();
-	calc_avg_mesh_color();
+	create_or_update_weight_tex(stride);
 }
 
 
@@ -1265,9 +1264,9 @@ void tile_t::add_grass_block_at(unsigned x, unsigned y, float mhmin, float mhmax
 }
 
 
-void tile_t::create_or_update_weight_tex() {
+void tile_t::create_or_update_weight_tex(unsigned tsize) {
 
-	unsigned const tsize(stride), num_texels(tsize*tsize);
+	unsigned num_texels(tsize*tsize);
 	assert(weight_data.size() == 4*num_texels);
 
 	if (weight_tid == 0) { // create weight texture
@@ -1279,15 +1278,8 @@ void tile_t::create_or_update_weight_tex() {
 		bind_2d_texture(weight_tid);
 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, tsize, tsize, GL_RGBA, GL_UNSIGNED_BYTE, weight_data.data());
 	}
-}
-
-
-void tile_t::calc_avg_mesh_color() {
-
 	// determine average mesh color - doesn't work well due to discontinuities at the tile boundaries, would be better if adjacent tile was known
-	int tot_weights[NTEX_DIRT] = {0}; // use a signed value to avoid wrapping around to const max when there's an error
-	avg_mesh_tex_color = colorRGB(0,0,0); // black
-	unsigned const tsize(stride), num_texels(tsize*tsize);
+	int tot_weights[NTEX_DIRT] = {}; // use a signed value to avoid wrapping around to const max when there's an error
 
 	for (unsigned i = 0; i < num_texels; ++i) {
 		unsigned const off(4*i);
@@ -1295,6 +1287,7 @@ void tile_t::calc_avg_mesh_color() {
 		for (unsigned j = 0; j < 4; ++j) {tot_weights[j] += weight_data[off+j];}
 	}
 	tot_weights[4] += (255*num_texels - tot_weights[0] - tot_weights[1] - tot_weights[2] - tot_weights[3]);
+	avg_mesh_tex_color = colorRGB(0,0,0); // black
 	for (unsigned i = 0; i < NTEX_DIRT; ++i) {avg_mesh_tex_color += get_avg_color_for_landscape_tex(i) * (tot_weights[i] / (255.0*num_texels));}
 	//avg_mesh_tex_color *= (1.0/avg_mesh_tex_color.get_luminance());
 	avg_mesh_tex_color *= 5.0;
@@ -3873,8 +3866,7 @@ bool tile_t::add_or_remove_grass_at(point const &pos, float rradius, bool add_gr
 		}
 		if (!has_grass) {grass_blocks.clear();} // clear all grass blocks when there is no more grass
 	}
-	create_or_update_weight_tex();
-	calc_avg_mesh_color(); // optional
+	create_or_update_weight_tex(stride);
 	return 1;
 }
 

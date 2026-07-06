@@ -326,8 +326,7 @@ public:
 	unsigned get_grass_block_dim() const {return (1+(size-1)/GRASS_BLOCK_SZ);} // ceil
 	void create_texture(mesh_xy_grid_cache_t &height_gen);
 	void add_grass_block_at(unsigned x, unsigned y, float mhmin, float mhmax, unsigned grass_block_dim);
-	void create_or_update_weight_tex();
-	void calc_avg_mesh_color();
+	void create_or_update_weight_tex(unsigned tsize);
 
 	float get_rel_dist_to_camera(bool xy_dist=1) const {
 		return max(0.0f, (xy_dist ? p2p_dist_xy(get_camera_pos(), get_center()) : p2p_dist(get_camera_pos(), get_center())) - radius)/get_scaled_tile_radius();
