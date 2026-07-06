@@ -2066,25 +2066,6 @@ bool tile_t::check_cube_int_trees(cube_t const &c) const { // cube is in camera 
 }
 
 
-int tile_t::get_tid_under_point(point const &pos) const {
-
-	if (is_distant || !contains_point(pos)) return -1;
-	int const xpos(max(0, min((int)size, (get_xpos(pos.x) - x1 - xoff + xoff2)))); // min/max not needed?
-	int const ypos(max(0, min((int)size, (get_ypos(pos.y) - y1 - yoff + yoff2))));
-	unsigned const ix(4*(ypos*stride + xpos));
-	assert(ix < weight_data.size());
-	unsigned max_weight(0), max_weight_ix(0), weight_sum(0);
-
-	for (unsigned i = 0; i < 4; ++i) {
-		unsigned const w(weight_data[ix + i]); // mesh weight + tree dirt
-		weight_sum += w;
-		if (w > max_weight) {max_weight = w; max_weight_ix = i;}
-	}
-	if ((255 - weight_sum) > max_weight) {max_weight_ix = 4;} // 5th weight (255 - sum(w)) is max
-	return lttex_dirt[max_weight_ix].id;
-}
-
-
 bool tile_t::line_intersect_mesh(point const &v1, point const &v2, float &t, int &xpos, int &ypos, float inc_trees) const {
 
 	if (is_distant) return 0; // Note: this can be made to work, but won't work as-is
@@ -3490,11 +3471,6 @@ bool tile_draw_t::check_cube_int_trees(cube_t const &c) const {
 	return (tile ? tile->check_cube_int_trees(c) : 0);
 }
 
-int tile_draw_t::get_tid_under_point(point const &pos) const {
-	tile_t const *const tile(get_tile_containing_point(pos));
-	return (tile ? tile->get_tid_under_point(pos) : -1);
-}
-
 
 bool tile_draw_t::line_intersect_mesh(point const &v1, point const &v2, float &t, tile_t *&intersected_tile, int &xpos, int &ypos, float inc_trees) const {
 
@@ -3552,23 +3528,17 @@ uint64_t get_tiled_terrain_gpu_mem() {return terrain_tile_draw.show_debug_stats(
 
 
 colorRGBA get_inf_terrain_mod_color() {
-
 	colorRGBA const colors[NUM_FIRE_MODES] = {WHITE, GREEN, RED, BLUE, YELLOW, CYAN, BROWN, WHITE};
 	assert(inf_terrain_fire_mode < NUM_FIRE_MODES);
 	return colors[inf_terrain_fire_mode];
 }
 
 bool line_intersect_tiled_mesh_get_tile(point const &v1, point const &v2, point &p_int, tile_t *&tile, bool inc_trees) {
-
 	float t(0.0);
 	int xpos(0), ypos(0); // unused
 	if (!terrain_tile_draw.line_intersect_mesh(v1, v2, t, tile, xpos, ypos, inc_trees)) return 0;
 	p_int = v1 + t*(v2 - v1);
 	return 1;
-}
-
-int get_tiled_terrain_tid_under_point(point const &pos) {
-	return terrain_tile_draw.get_tid_under_point(pos);
 }
 
 void draw_brush_shape(float xval, float yval, float radius, float z1, float z2, bool is_square) {
@@ -3582,7 +3552,6 @@ void draw_brush_shape(float xval, float yval, float radius, float z1, float z2, 
 }
 
 void render_tt_models(int reflection_pass, bool transparent_pass) {
-
 	if (reflection_pass && !enable_tt_model_reflect) return;
 	vector3d const xlate(get_tiled_terrain_model_xlate());
 	render_models(0, reflection_pass, (transparent_pass ? 2 : 1), xlate);
