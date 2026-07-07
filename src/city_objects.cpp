@@ -1643,7 +1643,7 @@ manhole_t::manhole_t(point const &pos_, float radius_) : city_obj_t(pos_, radius
 	dstate.s.set_cur_color(colorRGBA(0.5, 0.35, 0.25, 1.0)); // gray-brown
 }
 void manhole_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
-	unsigned const ndiv(max(4U, min(32U, unsigned(1.0f*dist_scale*dstate.get_lod_factor(pos)))));
+	unsigned const ndiv(max(4U, min(32U, unsigned(4.0f*dist_scale*dstate.get_lod_factor(pos)))));
 	draw_circle_normal(0.0, radius, ndiv, 0, point(pos.x, pos.y, pos.z+get_height()), -1.0); // draw top surface, invert texture coords
 }
 
