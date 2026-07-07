@@ -1107,10 +1107,10 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 				
 				if (check_mesh_mask || check_city) { // have tunnels, partially inside a city, or fully inside city with grass
 					float const xv(get_xval(x + llc_x)), yv(get_yval(y + llc_y));
-					point const query_pos(xv+0.5*DX_VAL, yv+0.5*DY_VAL, 0.0); // global space
+					point const query_pos(xv+0.5*DX_VAL, yv+0.5*DY_VAL, 0.0); // global space, center of tile quad
 					
-					if ((check_mesh_mask && check_mesh_disable(query_pos, HALF_DXY)) || (check_city && check_inside_city(query_pos, HALF_DXY))) {
-						bool const add_grass(add_city_grass && city_has_grass_at(point(xv, yv, 0.0), 0.5*HALF_DXY)); // set radius to a grid square
+					if ((check_mesh_mask && check_mesh_disable(query_pos, HALF_DXY)) || (check_city && check_inside_city(point(xv, yv, 0.0), HALF_DXY))) {
+						bool const add_grass(add_city_grass && city_has_grass_at(point(xv, yv, 0.0), HALF_DXY)); // set radius to a grid square
 
 						if (add_grass) {
 							mesh_weight_data[off+2] = 255; // full grass
@@ -1223,7 +1223,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 			} // for x
 		} // for y
 		weights_tsize = tsize;
-		unsigned const sz_factor = 1; // should be a power of 2 that's >= 1
+		unsigned const sz_factor = 2; // should be a power of 2 that's >= 1
 
 		if (has_city_grass && sz_factor > 1) { // increase weights texture resolution to more accurately control grass placement within cities
 			float const hr_dx(DX_VAL/sz_factor), hr_dy(DY_VAL/sz_factor), hr_half_dxy(HALF_DXY/sz_factor);
@@ -1234,6 +1234,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 				for (unsigned x = 0; x < tsize; ++x) {
 					unsigned const off(4*(y*tsize + x));
 					bool const has_grass(mesh_weight_data[off+2] > 0);
+					bool add_grass(0);
 
 					for (unsigned yy = 0; yy < sz_factor; ++yy) {
 						for (unsigned xx = 0; xx < sz_factor; ++xx) {
@@ -1242,12 +1243,16 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 							for (unsigned n = 0; n < 4; ++n) {hr_data[off_hr+n] = mesh_weight_data[off+n];}
 							// add missing higher resolution grass
 							if (has_grass) continue; // already has grass
-							float const xv(get_xval(x + llc_x) + xx*hr_dx), yv(get_yval(y + llc_y) + yy*hr_dy);
-							if (!check_inside_city(point(xv, yv, 0.0), hr_half_dxy)) continue;
-							if (!city_has_grass_at(point(xv-0.5*hr_dx, yv-0.5*hr_dy, 0.0), 0.5*hr_half_dxy)) continue;
+							point const query_pos((get_xval(x + llc_x) + xx*hr_dx - 0.5*DX_VAL), (get_yval(y + llc_y) + yy*hr_dy - 0.5*DY_VAL), 0.0);
+							if (!check_inside_city(query_pos, hr_half_dxy) || !city_has_grass_at(query_pos, hr_half_dxy)) continue;
 							hr_data[off_hr+2] = 255; // add full grass
+							add_grass = 1;
 						} // for xx
 					} // for yy
+					if (add_grass) {
+						float const mh(zvals[y*zvsize + x]);
+						add_grass_block_at(x, y, mh, mh, grass_block_dim);
+					}
 				} // for x
 			} // for y
 			mesh_weight_data.swap(hr_data);
