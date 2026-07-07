@@ -163,7 +163,7 @@ public:
 private:
 	int x1=0, y1=0, x2=0, y2=0, wx1=0, wy1=0, wx2=0, wy2=0, last_occluded_frame=0, inside_city=0; // inside_city: 0=no, 1=partial, 2=fully
 	unsigned weight_tid=0, height_tid=0, normal_tid=0, shadow_tid=0;
-	unsigned size=0, stride=0, zvsize=0, base_tsize=0, gen_tsize=0, smap_lod_level=0;
+	unsigned size=0, stride=0, zvsize=0, base_tsize=0, gen_tsize=0, smap_lod_level=0, weights_tsize=0;
 	float radius=0, mzmin=0, mzmax=0, mesh_dz=0, ptzmax=0, dtzmax=0, trmax=0, xstart=0, ystart=0, min_normal_z=0, deltax=0, deltay=0;
 	bool sun_shadows_invalid=1, moon_shadows_invalid=1, recalc_tree_grass_weights=1, mesh_height_invalid=0, in_queue=0, last_occluded=0, has_any_grass=0;
 	bool is_distant=0, no_trees=0, just_cleared=0, has_tunnel=0, has_city=0;
@@ -326,7 +326,7 @@ public:
 	unsigned get_grass_block_dim() const {return (1+(size-1)/GRASS_BLOCK_SZ);} // ceil
 	void create_texture(mesh_xy_grid_cache_t &height_gen);
 	void add_grass_block_at(unsigned x, unsigned y, float mhmin, float mhmax, unsigned grass_block_dim);
-	void create_or_update_weight_tex(unsigned tsize);
+	void create_or_update_weight_tex();
 
 	float get_rel_dist_to_camera(bool xy_dist=1) const {
 		return max(0.0f, (xy_dist ? p2p_dist_xy(get_camera_pos(), get_center()) : p2p_dist(get_camera_pos(), get_center())) - radius)/get_scaled_tile_radius();

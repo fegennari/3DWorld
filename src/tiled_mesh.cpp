@@ -1086,7 +1086,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 		height_gen.build_arrays(MESH_NOISE_FREQ*get_xval(x1), MESH_NOISE_FREQ*get_yval(y1), MESH_NOISE_FREQ*deltax,
 			MESH_NOISE_FREQ*deltay, tsize, tsize, 0, 1); // force_sine_mode=1
 		vector<float> rand_vals(tsize*tsize);
-		bool row_ec_valid(0);
+		bool row_ec_valid(0), has_city_grass(0);
 		vect_cube_t exclude_cubes, row_exclude_cubes, allow_cubes; // in camera space
 		cube_t const mesh_bcube(get_mesh_bcube());
 		get_city_grass_coll_cubes(mesh_bcube, exclude_cubes, allow_cubes);
@@ -1113,10 +1113,11 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 					if ((check_mesh_mask && check_mesh_disable(query_pos, HALF_DXY)) || (check_city && check_inside_city(query_pos, HALF_DXY))) {
 						bool const add_grass(add_city_grass && city_has_grass_at(point(xv, yv, 0.0), 0.5*HALF_DXY)); // set radius to a grid square
 
-						if (add_grass) { // TODO: not high enough resolution to handle roads, sidewalks, buildings, park paths, creeks, ponds, etc.
+						if (add_grass) {
 							mesh_weight_data[off+2] = 255; // full grass
 							float const mh(zvals[ix]); // should be flat, so just use LLC height sample
 							add_grass_block_at(x, y, mh, mh, grass_block_dim);
+							has_city_grass = 1;
 						}
 						else {
 							mesh_weight_data[off+2] = 0; // no grass
@@ -1222,15 +1223,45 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 				}
 			} // for x
 		} // for y
+		weights_tsize = tsize;
+		unsigned const sz_factor = 1; // should be a power of 2 that's >= 1
+
+		if (has_city_grass && sz_factor > 1) { // increase weights texture resolution to more accurately control grass placement within cities
+			float const hr_dx(DX_VAL/sz_factor), hr_dy(DY_VAL/sz_factor), hr_half_dxy(HALF_DXY/sz_factor);
+			weights_tsize *= sz_factor;
+			vector<unsigned char> hr_data(4*weights_tsize*weights_tsize, 0);
+
+			for (unsigned y = 0; y < tsize; ++y) {
+				for (unsigned x = 0; x < tsize; ++x) {
+					unsigned const off(4*(y*tsize + x));
+					bool const has_grass(mesh_weight_data[off+2] > 0);
+
+					for (unsigned yy = 0; yy < sz_factor; ++yy) {
+						for (unsigned xx = 0; xx < sz_factor; ++xx) {
+							unsigned const off_hr(4*((sz_factor*y + yy)*weights_tsize + (sz_factor*x + xx)));
+							// start with upscale + copy to add grass that was determined to be valid
+							for (unsigned n = 0; n < 4; ++n) {hr_data[off_hr+n] = mesh_weight_data[off+n];}
+							// add missing higher resolution grass
+							if (has_grass) continue; // already has grass
+							float const xv(get_xval(x + llc_x) + xx*hr_dx), yv(get_yval(y + llc_y) + yy*hr_dy);
+							if (!check_inside_city(point(xv, yv, 0.0), hr_half_dxy)) continue;
+							if (!city_has_grass_at(point(xv-0.5*hr_dx, yv-0.5*hr_dy, 0.0), 0.5*hr_half_dxy)) continue;
+							hr_data[off_hr+2] = 255; // add full grass
+						} // for xx
+					} // for yy
+				} // for x
+			} // for y
+			mesh_weight_data.swap(hr_data);
+		} // end has_city_grass
 	}
 	else { // use existing weights
 		assert(recalc_tree_grass_weights); // can only get here in this case
-		assert(mesh_weight_data.size() == 4*num_texels);
+		assert(mesh_weight_data.size() == 4*weights_tsize*weights_tsize);
 	}
 	weight_data = mesh_weight_data; // deep copy so that tree_map doesn't alter original weights
 
-	if (!tree_map.empty()) {
-		for (unsigned i = 0; i < num_texels; ++i) { // replace grass under trees with dirt
+	if (tree_map.size() == weights_tsize*weights_tsize) { // replace grass under trees with dirt if vector sizes match
+		for (unsigned i = 0; i < num_texels; ++i) {
 			unsigned const off(4*i);
 			if (tree_map[i].ao == 255 || weight_data[off+grass_tex_ix] == 0) continue; // no trees or no grass
 			float const v(tree_map[i].ao/255.0), w(weight_data[off+dirt_tex_ix] + (1.0 - v)*weight_data[off+grass_tex_ix]);
@@ -1239,7 +1270,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 		}
 	}
 	recalc_tree_grass_weights = 0;
-	create_or_update_weight_tex(stride);
+	create_or_update_weight_tex();
 }
 
 
@@ -1264,19 +1295,19 @@ void tile_t::add_grass_block_at(unsigned x, unsigned y, float mhmin, float mhmax
 }
 
 
-void tile_t::create_or_update_weight_tex(unsigned tsize) {
+void tile_t::create_or_update_weight_tex() {
 
-	unsigned num_texels(tsize*tsize);
+	unsigned num_texels(weights_tsize*weights_tsize);
 	assert(weight_data.size() == 4*num_texels);
 
 	if (weight_tid == 0) { // create weight texture
 		setup_texture(weight_tid, 0, 0, 0, 0, 0);
 		assert(weight_tid > 0 && glIsTexture(weight_tid));
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tsize, tsize, 0, GL_RGBA, GL_UNSIGNED_BYTE, weight_data.data()); // internal_format = GL_COMPRESSED_RGBA - too slow
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, weights_tsize, weights_tsize, 0, GL_RGBA, GL_UNSIGNED_BYTE, weight_data.data()); // internal_format GL_COMPRESSED_RGBA is too slow
 	}
 	else { // update texture
 		bind_2d_texture(weight_tid);
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, tsize, tsize, GL_RGBA, GL_UNSIGNED_BYTE, weight_data.data());
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, weights_tsize, weights_tsize, GL_RGBA, GL_UNSIGNED_BYTE, weight_data.data());
 	}
 	// determine average mesh color - doesn't work well due to discontinuities at the tile boundaries, would be better if adjacent tile was known
 	int tot_weights[NTEX_DIRT] = {}; // use a signed value to avoid wrapping around to const max when there's an error
@@ -1558,7 +1589,8 @@ unsigned tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool 
 
 unsigned tile_t::draw_flowers(shader_t &s, bool use_cloud_shadows) {
 
-	if (!has_grass()) return 0; // no grass, no flowers
+	if (!has_grass())            return 0; // no grass, no flowers
+	if (weights_tsize != stride) return 0; // not yet handled
 	float const flower_thresh(FLOWER_REL_DIST*get_grass_thresh_pad());
 	if (get_min_dist_to_pt(get_camera_pos()) > flower_thresh) return 0; // too far away to draw
 	flowers.gen_flowers(weight_data, stride, x1-xoff2, y1-yoff2); // mesh weight + tree dirt
@@ -3737,8 +3769,9 @@ int tile_t::add_or_remove_trees_at(point const &pos, float rradius, bool add_tre
 
 bool tile_t::add_or_remove_grass_at(point const &pos, float rradius, bool add_grass, int brush_shape, float brush_weight) {
 
-	if (rradius == 0.0) return 0;
-	if (weight_data.empty()) return 0; // texture weights not yet generated, can this happen?
+	if (rradius == 0.0)          return 0;
+	if (weight_data.empty())     return 0; // texture weights not yet generated, can this happen?
+	if (weights_tsize != stride) return 0; // size mismatch, can't edit
 	if (!mesh_sphere_intersect(pos, rradius)) return 0; // not overlapping this tile
 	//if (!add_grass && gen_grass_map() && grass_blocks.empty()) return 0; // known to have no grass (is this safe? does it help?)
 	bool updated(0);
@@ -3835,7 +3868,7 @@ bool tile_t::add_or_remove_grass_at(point const &pos, float rradius, bool add_gr
 		}
 		if (!has_grass) {grass_blocks.clear();} // clear all grass blocks when there is no more grass
 	}
-	create_or_update_weight_tex(stride);
+	create_or_update_weight_tex();
 	return 1;
 }
 
