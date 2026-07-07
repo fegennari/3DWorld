@@ -156,8 +156,7 @@ public:
 class tile_t {
 public:
 	struct tree_map_val {
-		unsigned char ao, sh;
-		tree_map_val() : ao(255), sh(255) {}
+		unsigned char ao=255, sh=255;
 	};
 	mutable bool vis_ref_call=0; // cached visited flag for tile_draw_t::can_have_reflection_recur()
 private:
@@ -169,11 +168,10 @@ private:
 	bool is_distant=0, no_trees=0, just_cleared=0, has_tunnel=0, has_city=0;
 	colorRGB avg_mesh_tex_color;
 	tile_offset_t mesh_off, ptree_off, dtree_off, scenery_off;
-	float sub_zmin[4][4] = {0}, sub_zmax[4][4] = {0};
+	float sub_zmin[4][4] = {}, sub_zmax[4][4] = {};
 	vector<float> zvals, ao_zvals;
 	vector<tree_map_val> tree_map;
-	vector<unsigned char> mesh_weight_data, weight_data, ao_lighting;
-	vector<unsigned char> smask[NUM_LIGHT_SRC];
+	vector<unsigned char> mesh_weight_data, weight_data, ao_lighting, smask[NUM_LIGHT_SRC];
 	vector<float> sh_out[NUM_LIGHT_SRC][2];
 	vect_smap_t<tile_smap_data_t> smap_data;
 	small_tree_group pine_trees;
@@ -186,23 +184,18 @@ private:
 	vect_butterfly_t bflies;
 
 	struct grass_block_t {
-		unsigned ix; // 0 is unused
-		float zmin, zmax;
-		grass_block_t() : ix(0), zmin(0.0), zmax(0.0) {}
+		unsigned ix=0; // 0 is unused
+		float zmin=0.0, zmax=0.0;
 	};
-
 	vector<grass_block_t> grass_blocks;
 
 	struct terrain_params_t { // settings for different biomes
-		float hoff, hscale, veg, grass, dirt;
-		terrain_params_t() : hoff(0.0), hscale(1.0), veg(1.0), grass(1.0), dirt(0.0) {}
+		float hoff=0.0, hscale=1.0, veg=1.0, grass=1.0, dirt=0.0;
 	};
-
 	terrain_params_t params[2][2]; // {ylo,yhi} x {xlo,xhi}
 
 	void update_terrain_params();
 	unsigned get_lod_level(int reflection_pass) const;
-
 public:
 	tile_t();
 	tile_t(unsigned size_, int x, int y);
@@ -296,13 +289,9 @@ public:
 	void calc_shadows_for_light(unsigned l);
 	static void proc_tile_queue(tile_t *init_tile, unsigned l);
 	void calc_shadows(bool calc_sun, bool calc_moon, bool no_push=0);
+	tile_xy_pair get_tile_xy_pair(int dx=0, int dy=0) const {return tile_xy_pair((x1/(int)size)+dx, (y1/(int)size)+dy);}
+	tile_t *get_adj_tile(int dx, int dy) const {return get_tile_from_xy(get_tile_xy_pair(dx, dy));}
 
-	tile_xy_pair get_tile_xy_pair(int dx=0, int dy=0) const {
-		return tile_xy_pair((x1/(int)size)+dx, (y1/(int)size)+dy);
-	}
-	tile_t *get_adj_tile(int dx, int dy) const {
-		return get_tile_from_xy(get_tile_xy_pair(dx, dy));
-	}
 	tile_t *get_adj_tile_smap(int dx, int dy) const {
 		tile_t *adj_tile(get_adj_tile(dx, dy));
 		return ((adj_tile && !adj_tile->tree_map.empty()) ? adj_tile : NULL);
@@ -418,10 +407,9 @@ class tile_draw_t : public indexed_vbo_manager_t {
 
 	typedef unordered_map<tile_xy_pair, unique_ptr<tile_t>, hash_tile_xy_pair> tile_map;
 	typedef vector<pair<float, tile_t *> > draw_vect_t;
-
 	tile_map tiles;
 	bool buildings_valid=0;
-	unsigned ivbo_ixs[NUM_LODS+1] = {0};
+	unsigned ivbo_ixs[NUM_LODS+1] = {};
 	unsigned tiles_gen_prev_frame=0;
 	float terrain_zmin=0.0;
 	draw_vect_t to_draw, to_gen_zvals;

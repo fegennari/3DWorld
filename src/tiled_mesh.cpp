@@ -632,7 +632,6 @@ void tile_t::calc_mesh_ao_lighting() {
 						//step += step; // multiply by 2 for exponential step size
 						step += ao_dirs[d]; // linear increase (Note: must agree with max_ray_length)
 						int const xv(v.x + AO_RAY_LEN), yv(v.y + AO_RAY_LEN);
-						//assert(xv >= 0 && yv >= 0 && xv < (int)context_sz && yv < (int)context_sz);
 						
 						if (czv[yv*context_sz + xv] > z0) { // hit a higher point
 							atten += (NUM_AO_STEPS - s); // Note: ambient obscurance - uses actual distance to occluder
@@ -809,7 +808,7 @@ void tile_t::apply_tree_ao_shadows() { // should this generate a float or unsign
 
 	if (is_distant) return; // not needed/used
 	//timer_t timer("Tree AO Shadows");
-	tree_map.resize(0);
+	tree_map.clear();
 	tree_map.resize(stride*stride);
 	bool const no_adj_test(trmax < min(deltax, deltay));
 	apply_ao_shadows_for_trees(this, no_adj_test);
@@ -838,15 +837,15 @@ void tile_t::check_shadow_map_and_normal_texture(bool no_push) {
 
 
 // Note: all of these textures are really RGB, but we upload them as RGBA for proper 4-byte alignment (since they are a power of 2 + 1)
-void create_or_update_texture(unsigned &tid, bool tid_is_valid, unsigned stride, vector<unsigned char> const &data) {
+void create_or_update_texture(unsigned &tid, bool tid_is_valid, unsigned tsize, vector<unsigned char> const &data) {
 
 	bind_2d_texture(tid);
 
 	if (tid_is_valid) { // overwrite old data
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, stride, stride, GL_RGBA, GL_UNSIGNED_BYTE, data.data());
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, tsize, tsize, GL_RGBA, GL_UNSIGNED_BYTE, data.data());
 	}
 	else { // allocate and write
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, stride, stride, 0, GL_RGBA, GL_UNSIGNED_BYTE, data.data());
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tsize, tsize, 0, GL_RGBA, GL_UNSIGNED_BYTE, data.data());
 	}
 }
 
