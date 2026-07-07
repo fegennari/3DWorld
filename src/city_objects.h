@@ -840,6 +840,11 @@ public:
 	}
 };
 
+struct driveway_group_t : public cube_t {
+	unsigned plot_ix, first_dix, last_dix;
+	driveway_group_t(unsigned pix, unsigned dix, cube_t const &c) : cube_t(c), plot_ix(pix), first_dix(dix), last_dix(dix) {}
+};
+
 class city_obj_placer_t : private city_draw_qbds_t {
 public: // road network needs access to parking lots and driveways for drawing
 	vector<parking_lot_t> parking_lots;
@@ -906,6 +911,7 @@ private:
 	vector<park_heightmap_t> park_hmaps;
 	bird_poop_manager_t bird_poop_manager;
 	vector<city_zone_t> sub_plots; // reused across calls
+	mutable vector<driveway_group_t> driveways_by_plot;
 	cube_t all_objs_bcube;
 	vect_cube_t park_restrooms, park_grass_blockers;
 	vect_bird_place_t bird_locs;

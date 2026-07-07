@@ -3395,8 +3395,22 @@ bool city_obj_placer_t::grass_blocked_for_park(point const &pos, float radius, c
 	return 0;
 }
 bool city_obj_placer_t::grass_blocked_for_plot(point const &pos, float radius, cube_t const &pbb) const {
-	if (has_bcube_int_xy      (pbb, driveways)) return 1;
-	if (intersects_city_obj_xy(pbb, pdecks   )) return 1;
+	if (driveways_by_plot.empty()) { // build driveways_by_plot
+		for (unsigned dix = 0; dix < driveways.size(); ++dix) {
+			driveway_t const &dw(driveways[dix]);
+			unsigned const plot_ix(dw.plot_ix / num_x_plots); // dividing by plot row is faster than dividing by plot
+			if (driveways_by_plot.empty() || plot_ix != driveways_by_plot.back().plot_ix) {driveways_by_plot.emplace_back(plot_ix, dix, dw);}
+			else {driveways_by_plot.back().union_with_cube(dw); ++driveways_by_plot.back().last_dix;}
+		}
+	}
+	for (driveway_group_t const &dp : driveways_by_plot) {
+		if (!dp.intersects_xy(pbb)) continue;
+
+		for (unsigned dix = dp.first_dix; dix <= dp.last_dix; ++dix) {
+			if (driveways[dix].intersects_xy(pbb)) return 1;
+		}
+	} // for dp
+	if (intersects_city_obj_xy(pbb, pdecks)) return 1;
 	
 	for (swimming_pool_t const &p : pools) {
 		if (!p.above_ground && p.bcube.intersects_xy(pbb)) return 1; // in-ground pools only
