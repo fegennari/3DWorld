@@ -634,17 +634,20 @@ cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door
 	// ideally we want the front (first) door to connect to the stairs in a multi-family house, but the stairs may be in the back, so we allow the back door as well
 	bool const is_basement(base.zc() < ground_floor_z1), is_front_door(/*doors.empty() &&*/ !is_basement);
 	bool const pref_near_stairs(interior && is_front_door && multi_family);
-	unsigned const base_num_tries(10), num_tries((pref_near_stairs ? 2 : 1)*base_num_tries);
+	unsigned const base_num_tries(centered ? 1 : 10), num_tries((pref_near_stairs ? 2 : 1)*base_num_tries);
 	cube_t door;
 	door.z1() = base.z1() + floor_ix*floor_spacing + fc_thickness; // floor level relative to base part
 	door.z2() = min((door.z1() + door_height), (base.z2() - fc_thickness));
 
 	for (unsigned n = 0; n < num_tries; ++n) { // make up to 10 tries to place a valid door
 		if (calc_center) { // add door to first part of house/building
-			float const offset(centered ? 0.5 : (is_restroom() ? door_center_shift : rgen.rand_uniform(0.5-door_center_shift, 0.5+door_center_shift)));
-			door_center = offset*base_lo + (1.0 - offset)*base_hi;
-			max_eq(door_center, (base_lo + min_wall_spacing)); // door must be contained in base
-			min_eq(door_center, (base_hi - min_wall_spacing));
+			if (centered) {door_center = 0.5*(base_lo + base_hi);}
+			else {
+				float const offset(is_restroom() ? door_center_shift : rgen.rand_uniform(0.5-door_center_shift, 0.5+door_center_shift));
+				door_center = offset*base_lo + (1.0 - offset)*base_hi;
+				max_eq(door_center, (base_lo + min_wall_spacing)); // door must be contained in base
+				min_eq(door_center, (base_hi - min_wall_spacing));
+			}
 		}
 		if (calc_center || door_pos == 0.0) {door_pos = base.d[dim][dir];}
 		bool const pref_stairs_or_hallway(pref_near_stairs && n < 15); // check if room has stairs or is a hallway; basement stairs stairs don't count
