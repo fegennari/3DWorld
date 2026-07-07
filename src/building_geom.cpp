@@ -1875,9 +1875,11 @@ cube_t building_t::get_door_bounding_cube(door_t const &door) const {
 
 bool building_t::add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir, bool for_office_building, bool roof_access, bool courtyard, bool for_walkway) { // exterior door
 
-	if (c.is_all_zeros()) return 0;
 	vector3d const sz(c.get_size());
-	assert(sz[dim] == 0.0 && sz[!dim] > 0.0 && sz.z > 0.0);
+	if (sz.x == 0.0 && sz.y == 0.0) return 0; // failed to place door
+	assert(sz[ dim] == 0.0);
+	assert(sz[!dim] >  0.0);
+	assert(sz.z     >  0.0);
 	// if it's an office building with two doors already added, make this third door a back metal door
 	bool const is_back_door(doors.size() == 2 && !courtyard && !for_walkway);
 	unsigned type(0); // TYPE_ODOOR_IN
