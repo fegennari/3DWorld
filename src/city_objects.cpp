@@ -3448,15 +3448,19 @@ void park_path_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_
 bool park_path_t::check_cube_coll_xy(cube_t const &c) const {
 	if (!bcube.intersects_xy(c)) return 0;
 	assert(pts.size() >= 2);
+	cube_t c_exp(c);
+	c_exp.expand_by_xy(hwidth);
 
 	for (unsigned i = 0; i < pts.size(); ++i) { // do the fast distance test first
 		if (c.closest_dist_xy_less_than(pts[i], hwidth)) return 1;
 	}
 	for (unsigned i = 0; i+1 < pts.size(); ++i) { // do line segment tests second
-		if (check_line_clip_xy(pts[i], pts[i+1], c.d)) return 1;
+		point const &p1(pts[i]), &p2(pts[i+1]);
+		if (!cube_t(p1, p2).intersects_xy(c_exp)) continue;
+		if (check_line_clip_xy(p1, p2, c.d)) return 1;
 
 		for (unsigned n = 0; n < 4; ++n) {
-			if (point_line_seg_dist_2d(point(c.d[0][n&1], c.d[1][n>>1], c.z1()), pts[i], pts[i+1]) < hwidth) return 1;
+			if (point_line_seg_dist_2d(point(c.d[0][n&1], c.d[1][n>>1], c.z1()), p1, p2) < hwidth) return 1;
 		}
 	}
 	return 0;

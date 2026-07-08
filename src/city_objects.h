@@ -841,8 +841,8 @@ public:
 };
 
 struct driveway_group_t : public cube_t {
-	unsigned plot_ix, first_dix, last_dix;
-	driveway_group_t(unsigned pix, unsigned dix, cube_t const &c) : cube_t(c), plot_ix(pix), first_dix(dix), last_dix(dix) {}
+	unsigned first_dix, last_dix;
+	driveway_group_t(unsigned dix, cube_t const &c) : cube_t(c), first_dix(dix), last_dix(dix) {}
 };
 
 class city_obj_placer_t : private city_draw_qbds_t {

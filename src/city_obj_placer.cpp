@@ -3396,10 +3396,12 @@ bool city_obj_placer_t::grass_blocked_for_park(point const &pos, float radius, c
 }
 bool city_obj_placer_t::grass_blocked_for_plot(point const &pos, float radius, cube_t const &pbb) const {
 	if (driveways_by_plot.empty()) { // build driveways_by_plot
+		unsigned last_plot_ix(num_x_plots*num_y_plots); // start at an invalid value
+
 		for (unsigned dix = 0; dix < driveways.size(); ++dix) {
 			driveway_t const &dw(driveways[dix]);
 			unsigned const plot_ix(dw.plot_ix / num_x_plots); // dividing by plot row is faster than dividing by plot
-			if (driveways_by_plot.empty() || plot_ix != driveways_by_plot.back().plot_ix) {driveways_by_plot.emplace_back(plot_ix, dix, dw);}
+			if (plot_ix != last_plot_ix) {driveways_by_plot.emplace_back(dix, dw); last_plot_ix = plot_ix;}
 			else {driveways_by_plot.back().union_with_cube(dw); ++driveways_by_plot.back().last_dix;}
 		}
 	}
