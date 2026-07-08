@@ -551,7 +551,7 @@ public:
 		}
 		if (is_residential && add_city_grass >= 2 && !has_bcube_int_xy(pbb, roads)) { // residential city with no road overlap
 			if (has_city_road_seg(pbb)) return 0; // porch or driveway, not fully grass
-			return !city_obj_placer.grass_blocked_for_plot(pos_bs, radius, pbb); // we're inside a plot that's not a park
+			return !city_obj_placer.grass_blocked_for_plot(pbb); // we're inside a plot that's not a park
 		}
 		return 0; // not grass
 	}
@@ -1175,8 +1175,8 @@ public:
 		add_tile_blocks(city_obj_placer.driveways,    tile_to_block_map, TYPE_DRIVEWAY);
 		city_obj_placer.remap_parking_lot_ixs(); // required after sorting parking_lots
 		tile_to_block_map.clear(); // no longer needed
-		city_obj_placer.finalize_streetlights_and_power(*this, plot_colliders);
-		for (auto i = plot_colliders.begin(); i != plot_colliders.end(); ++i) {sort(i->begin(), i->end(), [](cube_t const &a, cube_t const &b) {return (a.x1() < b.x1());});}
+		city_obj_placer.finalize_streetlights_power_grass_blockers(*this, plot_colliders);
+		for (vect_cube_t &c : plot_colliders) {sort(c.begin(), c.end(), [](cube_t const &a, cube_t const &b) {return (a.x1() < b.x1());});}
 		have_plot_dividers |= !city_obj_placer.has_plot_dividers();
 	}
 	void clear_old_building_data() {

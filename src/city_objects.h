@@ -840,9 +840,16 @@ public:
 	}
 };
 
-struct driveway_group_t : public cube_t {
-	unsigned first_dix, last_dix;
-	driveway_group_t(unsigned dix, cube_t const &c) : cube_t(c), first_dix(dix), last_dix(dix) {}
+struct vect_cube_with_bbox_t : public vect_cube_t {
+	cube_t bcube;
+	void add(cube_t const &c);
+};
+class cubes_grid_t {
+	static constexpr unsigned NDIV=5; // in each dim
+	vect_cube_with_bbox_t cubes[NDIV][NDIV]; // {y, x}
+public:
+	void add(cube_t const &c, cube_t const &bcube);
+	bool has_overlap_xy(cube_t const &c) const;
 };
 
 class city_obj_placer_t : private city_draw_qbds_t {
@@ -911,7 +918,7 @@ private:
 	vector<park_heightmap_t> park_hmaps;
 	bird_poop_manager_t bird_poop_manager;
 	vector<city_zone_t> sub_plots; // reused across calls
-	mutable vector<driveway_group_t> driveways_by_plot;
+	cubes_grid_t grass_blockers;
 	cube_t all_objs_bcube;
 	vect_cube_t park_restrooms, park_grass_blockers;
 	vect_bird_place_t bird_locs;
@@ -964,7 +971,7 @@ public:
 	parking_lot_t const &get_parking_lot(unsigned ix) const {assert(ix < parking_lots.size()); return parking_lots[ix];}
 	bool add_skyway(cube_t const &city_bcube, vect_bldg_walkway_t const &walkway_cands, rand_gen_t rgen);
 	void bind_elevators_to_building_walkways(cube_t const &city_bcube) const;
-	void finalize_streetlights_and_power(streetlights_t &sl, vector<vect_cube_t> &plot_colliders);
+	void finalize_streetlights_power_grass_blockers(streetlights_t &sl, vector<vect_cube_t> &plot_colliders);
 	void add_manhole(point const &pos, float radius, bool is_over_road);
 	void add_city_ug_elevator_entrances(vect_ug_elev_info_t const &uges);
 	static bool subdivide_plot_for_residential(cube_t const &plot, vector<road_t> const &roads,
@@ -985,7 +992,7 @@ public:
 	bool point_in_pond_xy(point const &pos) const;
 	void get_ponds_in_xy_range(cube_t const &range, vect_cube_t &pond_bcs) const;
 	bool grass_blocked_for_park(point const &pos, float radius, cube_t const &pbb) const;
-	bool grass_blocked_for_plot(point const &pos, float radius, cube_t const &pbb) const;
+	bool grass_blocked_for_plot(cube_t const &pbb) const {return grass_blockers.has_overlap_xy(pbb);}
 	// gas station and car wash logic
 	gs_reservation_t reserve_nearest_gas_station_lane(point const &pos, rand_gen_t &rgen, float max_dist=0.0) const;
 	driveway_t get_gas_station_driveway(car_t const &car) const;

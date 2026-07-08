@@ -10,7 +10,7 @@
 float pond_max_depth(0.0);
 
 extern bool enable_model3d_custom_mipmaps, player_in_walkway, player_in_skyway;
-extern int display_mode, animate2, frame_counter, player_in_basement;
+extern int display_mode, animate2, frame_counter, player_in_basement, add_city_grass;
 extern unsigned max_unique_trees;
 extern float fticks;
 extern colorRGBA sun_color;
@@ -2816,7 +2816,7 @@ bool city_obj_placer_t::move_to_not_intersect_driveway(point &pos, float radius,
 	}
 	return 0;
 }
-void city_obj_placer_t::finalize_streetlights_and_power(streetlights_t &sl, vector<vect_cube_t> &plot_colliders) {
+void city_obj_placer_t::finalize_streetlights_power_grass_blockers(streetlights_t &sl, vector<vect_cube_t> &plot_colliders) {
 	bool was_moved(0);
 
 	for (auto &s : sl.streetlights) {
@@ -2838,6 +2838,15 @@ void city_obj_placer_t::finalize_streetlights_and_power(streetlights_t &sl, vect
 		plot_colliders[s.plot_ix].push_back(collider);
 	} // for s
 	if (was_moved) {sl.sort_streetlights_by_yx();} // must re-sort if a streetlight was moved
+
+	if (add_city_grass >= 2) {
+		for (driveway_t  const &dw : driveways) {grass_blockers.add(dw,       all_objs_bcube);}
+		for (pool_deck_t const &pd : pdecks   ) {grass_blockers.add(pd.bcube, all_objs_bcube);}
+
+		for (swimming_pool_t const &p : pools) {
+			if (!p.above_ground) {grass_blockers.add(p.bcube, all_objs_bcube);} // in-ground pools only
+		}
+	}
 }
 
 void city_obj_placer_t::add_manhole(point const &pos, float radius, bool is_over_road) {
@@ -3381,6 +3390,28 @@ void city_obj_placer_t::get_ponds_in_xy_range(cube_t const &range, vect_cube_t &
 	}
 }
 
+void vect_cube_with_bbox_t::add(cube_t const &c) {
+	if (empty()) {bcube = c;} else {bcube.union_with_cube(c);}
+	push_back(c);
+}
+
+void cubes_grid_t::add(cube_t const &c, cube_t const &bcube) { // for grass_blockers
+	point const center(c.get_cube_center());
+	assert(bcube.contains_pt_xy(center));
+	unsigned const x(NDIV*(center.x - bcube.x1())/bcube.dx()), y(NDIV*(center.y - bcube.y1())/bcube.dy());
+	assert(x < NDIV && y < NDIV);
+	cubes[y][x].add(c);
+}
+bool cubes_grid_t::has_overlap_xy(cube_t const &c) const {
+	for (unsigned y = 0; y < NDIV; ++y) {
+		for (unsigned x = 0; x < NDIV; ++x) {
+			vect_cube_with_bbox_t const &v(cubes[y][x]);
+			if (c.intersects_xy(v.bcube) && has_bcube_int_xy(c, v)) return 1;
+		}
+	} // for y
+	return 0;
+}
+
 bool city_obj_placer_t::grass_blocked_for_park(point const &pos, float radius, cube_t const &pbb) const {
 	unsigned const npts((radius == 0.0) ? 1 : 4); // only need to check one point if zero radius
 
@@ -3392,31 +3423,6 @@ bool city_obj_placer_t::grass_blocked_for_park(point const &pos, float radius, c
 		if (path.check_cube_coll_xy(pbb)) return 1;
 	}
 	if (has_bcube_int_xy(pbb, park_grass_blockers)) return 1; // check restroom concrete pads
-	return 0;
-}
-bool city_obj_placer_t::grass_blocked_for_plot(point const &pos, float radius, cube_t const &pbb) const {
-	if (driveways_by_plot.empty()) { // build driveways_by_plot
-		unsigned last_plot_ix(num_x_plots*num_y_plots); // start at an invalid value
-
-		for (unsigned dix = 0; dix < driveways.size(); ++dix) {
-			driveway_t const &dw(driveways[dix]);
-			unsigned const plot_ix(dw.plot_ix / num_x_plots); // dividing by plot row is faster than dividing by plot
-			if (plot_ix != last_plot_ix) {driveways_by_plot.emplace_back(dix, dw); last_plot_ix = plot_ix;}
-			else {driveways_by_plot.back().union_with_cube(dw); ++driveways_by_plot.back().last_dix;}
-		}
-	}
-	for (driveway_group_t const &dp : driveways_by_plot) {
-		if (!dp.intersects_xy(pbb)) continue;
-
-		for (unsigned dix = dp.first_dix; dix <= dp.last_dix; ++dix) {
-			if (driveways[dix].intersects_xy(pbb)) return 1;
-		}
-	} // for dp
-	if (intersects_city_obj_xy(pbb, pdecks)) return 1;
-	
-	for (swimming_pool_t const &p : pools) {
-		if (!p.above_ground && p.bcube.intersects_xy(pbb)) return 1; // in-ground pools only
-	}
 	return 0;
 }
 
