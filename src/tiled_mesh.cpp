@@ -1223,15 +1223,16 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 			} // for x
 		} // for y
 		weights_tsize = tsize;
-		unsigned const sz_factor = 2; // should be a power of 2 that's >= 1
+		unsigned const sz_factor = 4; // should be a power of 2 that's >= 1
 
 		if (has_city_grass && sz_factor > 1) { // increase weights texture resolution to more accurately control grass placement within cities
 			float const hr_dx(DX_VAL/sz_factor), hr_dy(DY_VAL/sz_factor), hr_half_dxy(HALF_DXY/sz_factor);
 			weights_tsize *= sz_factor;
 			vector<unsigned char> hr_data(4*weights_tsize*weights_tsize, 0);
 
-			for (unsigned y = 0; y < tsize; ++y) {
-				for (unsigned x = 0; x < tsize; ++x) {
+#pragma omp parallel for schedule(static,1) num_threads(2)
+			for (int y = 0; y < (int)tsize; ++y) {
+				for (int x = 0; x < (int)tsize; ++x) {
 					unsigned const off(4*(y*tsize + x));
 					bool const has_grass(mesh_weight_data[off+2] > 0);
 					bool add_grass(0);
