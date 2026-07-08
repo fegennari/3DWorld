@@ -1274,7 +1274,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 		}
 	}
 	recalc_tree_grass_weights = 0;
-	create_or_update_weight_tex();
+	create_or_update_weight_tex(); // create
 }
 
 
@@ -1287,8 +1287,7 @@ void tile_t::add_grass_block_at(unsigned x, unsigned y, float mhmin, float mhmax
 	grass_block_t &gb(grass_blocks[bix]);
 
 	if (gb.ix == 0) { // not yet set
-		gb.ix = (((x1 + x) + 1567*(y1 + y)) % num_rnd_grass_blocks) + 1; // select a random block
-		//gb.ix = (rand() % num_rnd_grass_blocks) + 1; // select a random block
+		gb.ix   = (((x1 + x) + 1567*(y1 + y)) % num_rnd_grass_blocks) + 1; // select a random block
 		gb.zmin = mhmin;
 		gb.zmax = mhmax;
 	}
@@ -1594,7 +1593,7 @@ unsigned tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool 
 unsigned tile_t::draw_flowers(shader_t &s, bool use_cloud_shadows) {
 
 	if (!has_grass())            return 0; // no grass, no flowers
-	if (weights_tsize != stride) return 0; // not yet handled
+	if (weights_tsize != stride) return 0; // not yet handled; no flowers in city tiles
 	float const flower_thresh(FLOWER_REL_DIST*get_grass_thresh_pad());
 	if (get_min_dist_to_pt(get_camera_pos()) > flower_thresh) return 0; // too far away to draw
 	flowers.gen_flowers(weight_data, stride, x1-xoff2, y1-yoff2); // mesh weight + tree dirt
@@ -3775,7 +3774,7 @@ bool tile_t::add_or_remove_grass_at(point const &pos, float rradius, bool add_gr
 
 	if (rradius == 0.0)          return 0;
 	if (weight_data.empty())     return 0; // texture weights not yet generated, can this happen?
-	if (weights_tsize != stride) return 0; // size mismatch, can't edit
+	if (weights_tsize != stride) return 0; // size mismatch, can't edit city tiles
 	if (!mesh_sphere_intersect(pos, rradius)) return 0; // not overlapping this tile
 	//if (!add_grass && gen_grass_map() && grass_blocks.empty()) return 0; // known to have no grass (is this safe? does it help?)
 	bool updated(0);
@@ -3872,7 +3871,7 @@ bool tile_t::add_or_remove_grass_at(point const &pos, float rradius, bool add_gr
 		}
 		if (!has_grass) {grass_blocks.clear();} // clear all grass blocks when there is no more grass
 	}
-	create_or_update_weight_tex();
+	create_or_update_weight_tex(); // update
 	return 1;
 }
 

@@ -8,7 +8,7 @@ float calc_light_scale(in vec3 vertex, in vec4 light_pos) {
 }
 #endif
 
-vec3 do_shadowed_lighting(in vec4 vertex, in vec4 epos, in vec3 eye_norm_in, in vec4 ad_color, in float ambient_scale, in float diffuse_scale) {
+vec3 do_shadowed_lighting(in vec4 vertex, in vec4 epos, in vec3 eye_norm_in, in vec4 ad_color, in float ambient_scale, in float diffuse_scale, bool apply_cloud_shadows=true) {
 
 	vec3 color = vec3(0.0);
 	float smap_scale = 0.0;
@@ -30,7 +30,7 @@ vec3 do_shadowed_lighting(in vec4 vertex, in vec4 epos, in vec3 eye_norm_in, in 
 			if (smap_scale > 0.0) {dscale = min(dscale, mix(1.0, get_shadow_map_weight_light0(epos, eye_norm), smap_scale));}
 #endif
 #ifdef APPLY_CLOUD_SHADOWS
-			dscale *= calc_light_scale(vertex.xyz, lpos);
+			if (apply_cloud_shadows) {dscale *= calc_light_scale(vertex.xyz, lpos);}
 #endif
 		}
 		color += add_light_comp_pos_scaled0(eye_norm, epos, dscale, ambient_scale, ad_color).rgb;
