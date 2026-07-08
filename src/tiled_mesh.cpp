@@ -1077,9 +1077,9 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 		float const steep_mult_snow (1.0f/(sthresh[1][1] - sthresh[1][0]));
 		float const steep_mult_rock (1.0f/(0.8f*sthresh[0][0] - 0.5f*sthresh[0][0]));
 		float const vnz_scale((mesh_gen_mode == MGEN_DWARP_GPU) ? SQRT2 : 1.0); // allow for steeper slopes when domain warping is used
-		int const llc_x(x1 - xoff2), llc_y(y1 - yoff2);
-		point const query_pos(get_xval(tsize/2 + llc_x), get_yval(tsize/2 + llc_y), 0.0); // in local tile space, not camera space
-		bool const check_mesh_mask(check_mesh_disable(query_pos, radius)), check_buildings(no_grass_under_buildings());
+		int const llc_x(x1 - xoff2), llc_y(y1 - yoff2), llc_x_cs(llc_x + xoff), llc_y_cs(llc_y + yoff); // {global, camera} space
+		point const center_query_pos(get_xval(tsize/2 + llc_x), get_yval(tsize/2 + llc_y), 0.0); // in local tile space, not camera space
+		bool const check_mesh_mask(check_mesh_disable(center_query_pos, radius)), check_buildings(no_grass_under_buildings());
 		bool const check_city(inside_city == 1 || (add_city_grass && inside_city == 2));
 		int k1, k2, k3, k4;
 		height_gen.build_arrays(MESH_NOISE_FREQ*get_xval(x1), MESH_NOISE_FREQ*get_yval(y1), MESH_NOISE_FREQ*deltax,
@@ -1099,15 +1099,15 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 			}
 		}
 		for (unsigned y = 0; y < tsize-DEBUG_TILE_BOUNDS; ++y) { // not threadsafe
-			float const yv(float(y)*xy_mult), ry(get_yval(y + llc_y + yoff)), radius_y(0.75*DY_VAL), ry1(ry - radius_y), ry2(ry + radius_y);
+			float const yv(float(y)*xy_mult), ry(get_yval(y + llc_y_cs)), radius_y(0.75*DY_VAL), ry1(ry - radius_y), ry2(ry + radius_y);
 			row_ec_valid = 0;
 
 			for (unsigned x = 0; x < tsize-DEBUG_TILE_BOUNDS; ++x) {
 				unsigned const ix_val(y*tsize + x), off(4*ix_val), ix(y*zvsize + x);
 				
 				if (check_mesh_mask || check_city) { // have tunnels, partially inside a city, or fully inside city with grass
-					float const xv(get_xval(x + llc_x)), yv(get_yval(y + llc_y));
-					point const query_pos(xv+0.5*DX_VAL, yv+0.5*DY_VAL, 0.0); // global space, center of tile quad
+					float const xv(get_xval(x + llc_x_cs)), yv(get_yval(y + llc_y_cs));
+					point const query_pos(xv+0.5*DX_VAL, yv+0.5*DY_VAL, 0.0); // camera space, center of tile quad
 					
 					if ((check_mesh_mask && check_mesh_disable(query_pos, HALF_DXY)) || (check_city && check_inside_city(point(xv, yv, 0.0), HALF_DXY))) {
 						bool const add_grass(add_city_grass && city_has_grass_at(point(xv, yv, 0.0), HALF_DXY)); // set radius to a grid square
@@ -1196,13 +1196,13 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 							row_ec_valid = 1;
 						}
 						if (!row_exclude_cubes.empty()) {
-							float const rx(get_xval(x + llc_x + xoff)), radius_x(0.75*DX_VAL), rx1(rx - radius_x), rx2(rx + radius_x);
+							float const rx(get_xval(x + llc_x_cs)), radius_x(0.75*DX_VAL), rx1(rx - radius_x), rx2(rx + radius_x);
 							cube_t const grass_region(rx1, rx2, ry1, ry2, 0.0, 0.0);
 							replace_grass_with_dirt = (check_region_int(grass_region, row_exclude_cubes) && !check_region_int(grass_region, allow_cubes));
 						}
 					}
 					if (!replace_grass_with_dirt && check_buildings && grass_scale > 0.0 && mh01 == mh00 && mh10 == mh00 && mh11 == mh00) { // look for area flattened under a building
-						point const test_pt(get_xval(x + llc_x + xoff), ry, mh00); // in camera space
+						point const test_pt(get_xval(x + llc_x_cs), ry, mh00); // in camera space
 						replace_grass_with_dirt = check_buildings_no_grass(test_pt); // xy_only 1.61 => 1.76
 					}
 					if (replace_grass_with_dirt) {
@@ -1243,7 +1243,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 							for (unsigned n = 0; n < 4; ++n) {hr_data[off_hr+n] = mesh_weight_data[off+n];}
 							// add missing higher resolution grass
 							if (has_grass) continue; // already has grass
-							point const query_pos((get_xval(x + llc_x) + xx*hr_dx - 0.5*DX_VAL), (get_yval(y + llc_y) + yy*hr_dy - 0.5*DY_VAL), 0.0);
+							point const query_pos((get_xval(x + llc_x_cs) + xx*hr_dx - 0.5*DX_VAL), (get_yval(y + llc_y_cs) + yy*hr_dy - 0.5*DY_VAL), 0.0);
 							if (!check_inside_city(query_pos, hr_half_dxy) || !city_has_grass_at(query_pos, hr_half_dxy)) continue;
 							hr_data[off_hr+2] = 255; // add full grass
 							add_grass = 1;

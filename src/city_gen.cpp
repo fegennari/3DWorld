@@ -3896,13 +3896,9 @@ bool check_valid_scenery_pos(point const &pos, float radius, bool is_tall) {
 	if (model_bcube_checker.check_sphere_coll((pos_cs - get_tiled_terrain_model_xlate()), radius, 1)) return 0; // xy_only=1
 	return 1;
 }
-bool check_mesh_disable(point const &pos, float radius) { // Note: pos is in global space
-	return (have_cities() && city_gen.check_mesh_disable((pos + get_tt_xlate_val()), radius)); // apply xlate for all static objects
-}
-bool check_inside_city(point const &pos, float radius) { // Note: pos is in global space
-	return (have_cities() && city_gen.check_inside_city((pos + get_tt_xlate_val()), radius)); // apply xlate for all static objects
-}
-bool city_has_grass_at(point const &pos, float radius) {return (have_cities() && city_gen.has_grass_at((pos + get_tt_xlate_val()), radius));}
+bool check_mesh_disable(point const &pos, float radius) {return (have_cities() && city_gen.check_mesh_disable(pos, radius));} // Note: pos is in camera space
+bool check_inside_city (point const &pos, float radius) {return (have_cities() && city_gen.check_inside_city (pos, radius));} // Note: pos is in camera space
+bool city_has_grass_at (point const &pos, float radius) {return (have_cities() && city_gen.has_grass_at      (pos, radius));} // Note: pos is in camera space
 bool camera_in_city_bounds(unsigned rcp_mask, cube_t *city_bcube) {return (have_cities() && city_gen.check_inside_city(camera_pos, CAMERA_RADIUS, rcp_mask, city_bcube));}
 bool cube_int_underground_obj(cube_t const &c) {return city_gen.cube_int_underground_obj(c);} // Note: cube is in global space
 bool is_invalid_city_placement_for_cube(cube_t const &c) {return city_gen.is_invalid_placement_for_cube(c);}
