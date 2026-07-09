@@ -499,7 +499,7 @@ void swimming_pool_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float d
 	if (above_ground) { // cylindrical; bcube should be square in XY
 		point const camera_bs(dstate.camera_bs);
 		float const radius(get_radius()), xc(bcube.xc()), yc(bcube.yc()), dscale(dist_scale*dstate.draw_tile_dist);
-		float const height(bcube.dz()), inner_bottom(bcube.z1() + ((add_city_grass >= 2) ? 0.28f : 0.1f)*height); // 10% of height nominal, 28% to get above grass
+		float const height(bcube.dz()), inner_bottom(bcube.z1() + ((add_city_grass >= 2) ? 0.25f : 0.1f)*height); // 10% of height nominal, 28% to get above grass
 		unsigned const ndiv(shadow_only ? 24 : max(4U, min(64U, unsigned(6.0f*dscale/p2p_dist(camera_bs, pos)))));
 		point const orig_cpos(camera_pos);
 		camera_pos = dstate.camera_bs; // required for proper two sided cylinder normals
