@@ -1065,14 +1065,14 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 	// Create Tile Weights Texture: 467 346.125 7.3851  0.741
 	//highres_timer_t timer("Create Tile Weights Texture"); // 1.38ms base, 1.5ms with buildings/roads/driveways/porches/doorsteps
 	assert(zvals.size() == zvsize*zvsize);
-	unsigned const tsize(stride), num_texels(tsize*tsize);
+	unsigned const tsize(stride);
 	int sand_tex_ix(-1), dirt_tex_ix(-1), grass_tex_ix(-1), rock_tex_ix(-1), snow_tex_ix(-1);
 	get_texture_ixs(sand_tex_ix, dirt_tex_ix, grass_tex_ix, rock_tex_ix, snow_tex_ix);
 
 	if (weight_tid == 0) { // create weights
 		has_any_grass = has_tunnel = has_city = 0;
 		grass_blocks.clear();
-		mesh_weight_data.resize(4*num_texels); // RGBA = {sand, dirt, grass, rock}; snow is (1.0 - others)
+		mesh_weight_data.resize(4*tsize*tsize); // RGBA = {sand, dirt, grass, rock}; snow is (1.0 - others)
 		unsigned const grass_block_dim(get_grass_block_dim());
 		float const xy_mult(1.0/float(size)), water_level(get_water_z_height());
 		float const MESH_NOISE_SCALE = 0.003;
@@ -1229,7 +1229,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 			} // for x
 		} // for y
 		weights_tsize = tsize;
-		unsigned const sz_factor = 4; // should be a power of 2 that's >= 1
+		unsigned const tsize_bs(2), sz_factor(1 << tsize_bs);
 
 		if (has_city_grass && sz_factor > 1) { // increase weights texture resolution to more accurately control grass placement within cities
 			// Create Tile Weights Grass  : 34 306.053 18.3137 9.00155
@@ -1240,6 +1240,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 			//highres_timer_t timer("Create Tile Weights Grass");
 			float const hr_dx(DX_VAL/sz_factor), hr_dy(DY_VAL/sz_factor), hr_half_dxy(HALF_DXY/sz_factor);
 			weights_tsize *= sz_factor;
+			tsize_bitshift = tsize_bs;
 			vector<unsigned char> hr_data(4*weights_tsize*weights_tsize, 0);
 
 #pragma omp parallel for schedule(static,1) num_threads(2)
@@ -1273,18 +1274,23 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 	}
 	else { // use existing weights
 		assert(recalc_tree_grass_weights); // can only get here in this case
-		assert(mesh_weight_data.size() == 4*weights_tsize*weights_tsize);
 	}
+	unsigned const num_texels(weights_tsize*weights_tsize);
+	assert(mesh_weight_data.size() == 4*num_texels);
 	weight_data = mesh_weight_data; // deep copy so that tree_map doesn't alter original weights
 
-	if (tree_map.size() == weights_tsize*weights_tsize) { // replace grass under trees with dirt if vector sizes match
-		for (unsigned i = 0; i < num_texels; ++i) {
-			unsigned const off(4*i);
-			if (tree_map[i].ao == 255 || weight_data[off+grass_tex_ix] == 0) continue; // no trees or no grass
-			float const v(tree_map[i].ao/255.0), w(weight_data[off+dirt_tex_ix] + (1.0 - v)*weight_data[off+grass_tex_ix]);
-			weight_data[off+dirt_tex_ix ]  = (unsigned char)(max(0.0f, min(255.0f, w)));
-			weight_data[off+grass_tex_ix] *= v;
-		}
+	// replace grass under trees with dirt if vector sizes match; this is legal to do even if they don't match, but it looks bad because the area is non-interpolated and square
+	if (!tree_map.empty() && tree_map.size() == num_texels) {
+		for (unsigned y = 0; y < weights_tsize; ++y) {
+			for (unsigned x = 0; x < weights_tsize; ++x) {
+				unsigned const off(4*(weights_tsize*y + x));
+				unsigned char const tree_ao(tree_map[tsize*(y >> tsize_bitshift) + (x >> tsize_bitshift)].ao); // Note: tree_map may be lower res than weight_data
+				if (tree_ao == 255 || weight_data[off+grass_tex_ix] == 0) continue; // no trees or no grass
+				float const v(tree_ao/255.0), w(weight_data[off+dirt_tex_ix] + (1.0 - v)*weight_data[off+grass_tex_ix]);
+				weight_data[off+dirt_tex_ix ]  = (unsigned char)(max(0.0f, min(255.0f, w)));
+				weight_data[off+grass_tex_ix] *= v;
+			} // for x
+		} // for y
 	}
 	recalc_tree_grass_weights = 0;
 	create_or_update_weight_tex(); // create
@@ -1605,11 +1611,10 @@ unsigned tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool 
 
 unsigned tile_t::draw_flowers(shader_t &s, bool use_cloud_shadows) {
 
-	if (!has_grass())            return 0; // no grass, no flowers
-	if (weights_tsize != stride) return 0; // not yet handled; no flowers in city tiles
+	if (!has_grass()) return 0; // no grass, no flowers
 	float const flower_thresh(FLOWER_REL_DIST*get_grass_thresh_pad());
 	if (get_min_dist_to_pt(get_camera_pos()) > flower_thresh) return 0; // too far away to draw
-	flowers.gen_flowers(weight_data, stride, x1-xoff2, y1-yoff2); // mesh weight + tree dirt
+	flowers.gen_flowers(weight_data, weights_tsize, x1-xoff2, y1-yoff2, tsize_bitshift); // mesh weight + tree dirt
 	if (flowers.empty()) return 0; // no flowers generated
 	pre_draw_grass_flowers(s, use_cloud_shadows);
 	flowers.check_vbo();

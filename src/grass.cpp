@@ -863,7 +863,7 @@ void flower_manager_t::scale_flowers(float lscale, float wscale) {
 }
 
 
-void flower_tile_manager_t::gen_flowers(vector<unsigned char> const &weight_data, unsigned wd_stride, int x1, int y1) {
+void flower_tile_manager_t::gen_flowers(vector<unsigned char> const &weight_data, unsigned wd_stride, int x1, int y1, unsigned tsize_bitshift) {
 
 	if (skip_generate()) return;
 	//RESET_TIME;
@@ -873,14 +873,23 @@ void flower_tile_manager_t::gen_flowers(vector<unsigned char> const &weight_data
 	gen_density_cache(density_gen, x1, y1);
 	assert(wd_stride >= (unsigned)MESH_X_SIZE && wd_stride >= (unsigned)MESH_Y_SIZE);
 	float const hthresh(get_median_height(FLOWER_DIST_THRESH));
+	unsigned const num_ws(1 << tsize_bitshift); // number of weight samples per mesh grid in each dim
 
 	for (unsigned y = 0; y < (unsigned)MESH_Y_SIZE; ++y) {
 		for (unsigned x = 0; x < (unsigned)MESH_X_SIZE; ++x) {
-			unsigned const wd_ix(4*(y*wd_stride + x) + 2);
+			unsigned const wx(x << tsize_bitshift), wy(y << tsize_bitshift), wd_ix(4*(wy*wd_stride + wx) + 2); // extract grass weight
 			assert(wd_ix < weight_data.size());
-			add_flowers(density_gen, weight_data[wd_ix]/255.0, hthresh, 0.0, 0.0, x, y, 0);
-		}
-	}
+			unsigned char weight(weight_data[wd_ix]);
+			if (weight == 0) continue; // no grass, no flowers
+
+			if (tsize_bitshift > 0) { // if weight_data is higher resolution than mesh data, calculate min weight across all texels
+				for (unsigned yy = 0; yy < num_ws && weight > 0; ++yy) {
+					for (unsigned xx = 0; xx < num_ws; ++xx) {min_eq(weight, weight_data[4*((wy + yy)*wd_stride + (wx + xx)) + 2]);}
+				}
+			}
+			add_flowers(density_gen, weight/255.0, hthresh, 0.0, 0.0, x, y, 0);
+		} // for x
+	} // for y
 	generated = 1;
 	//PRINT_TIME("Gen Flowers TT");
 }
