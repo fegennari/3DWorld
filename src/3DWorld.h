@@ -497,7 +497,7 @@ struct cube_t { // size = 24; Note: AABB, not actually a cube
 		if (is_all_zeros()) {set_from_point(pt);} else {union_with_pt(pt);} // Note: won't work if pt == (0,0,0)
 	}
 	void assign_or_union_with_sphere(point const &pt, float radius) {
-		if (is_zero_area()) {set_from_sphere(pt, radius);} else {union_with_sphere(pt, radius);} // Note: won't work if pt == (0,0,0)
+		if (is_all_zeros()) {set_from_sphere(pt, radius);} else {union_with_sphere(pt, radius);} // Note: won't work if pt == (0,0,0)
 	}
 	void union_with_sphere(point const &pt, float radius) {
 		UNROLL_3X(min_eq(d[i_][0], pt[i_]-radius); max_eq(d[i_][1], pt[i_]+radius);)
@@ -510,8 +510,8 @@ struct cube_t { // size = 24; Note: AABB, not actually a cube
 		UNROLL_2X(min_eq(d[i_][0], c.d[i_][0]); max_eq(d[i_][1], c.d[i_][1]);)
 	}
 	void assign_or_union_with_cube(cube_t const &c) {
-		if (c.is_zero_area()) return;
-		if (is_zero_area()) {copy_from(c);} else {union_with_cube(c);}
+		if (c.is_all_zeros()) return;
+		if (is_all_zeros()) {copy_from(c);} else {union_with_cube(c);}
 	}
 	void intersect_with_cube(cube_t const &c) { // Note: cube and *this must overlap
 		UNROLL_3X(max_eq(d[i_][0], c.d[i_][0]); min_eq(d[i_][1], c.d[i_][1]);)
