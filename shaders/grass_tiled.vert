@@ -52,7 +52,7 @@ void main() {
 	float noise_weight = texture(noise_tex, 11.3*vec2((fg_Color.r + local_translate.x), (fg_Color.g + local_translate.y))).r; // "hash" the color + local translate
 	
 	// calculate lighting
-	vec3 shadow  = texture(shadow_tex, tc2).rgb; // {mesh_shadow, tree_shadow, ambient_occlusion}
+	vec3 shadow  = mix(vec3(1.0), texture(shadow_tex, tc2).rgb, (is_city ? 0.25 : 1.0)); // {mesh_shadow, tree_shadow, ambient_occlusion}; low city shadows, since no mesh shadows
 	float ambient_scale = 1.5*shadow.b * (1.5 - 0.75*tc.s); // decreased ambient at base, increased ambient at tip
 	vec3 eye_norm = normalize(fg_NormalMatrix * (2.0*texture(normal_tex, tc2).xyz - vec3(1.0))); // eye space
 	vec4 ad_color = mix(gl_Color, vec4(1.0, 0.7, 0.4, 1.0), weights.r); // mix in yellow-brown grass color to match sand
