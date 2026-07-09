@@ -2846,6 +2846,7 @@ void city_obj_placer_t::finalize_streetlights_power_grass_blockers(streetlights_
 		for (swimming_pool_t const &p : pools) {
 			if (!p.above_ground) {grass_blockers.add(p.bcube, all_objs_bcube);} // in-ground pools only
 		}
+		grass_blockers.finalize();
 	}
 }
 
@@ -3401,8 +3402,14 @@ void cubes_grid_t::add(cube_t const &c, cube_t const &bcube) { // for grass_bloc
 	unsigned const x(NDIV*(center.x - bcube.x1())/bcube.dx()), y(NDIV*(center.y - bcube.y1())/bcube.dy());
 	cubes[y][x].add(c);
 }
+void cubes_grid_t::finalize() {
+	for (unsigned y = 0; y < NDIV; ++y) {
+		for (unsigned x = 0; x < NDIV; ++x) {row_bcubes[y].assign_or_union_with_cube(cubes[y][x].bcube);}
+	}
+}
 bool cubes_grid_t::has_overlap_xy(cube_t const &c) const {
 	for (unsigned y = 0; y < NDIV; ++y) {
+		if (!row_bcubes[y].intersects_xy(c)) continue;
 		for (unsigned x = 0; x < NDIV; ++x) {
 			vect_cube_with_bbox_t const &v(cubes[y][x]);
 			if (c.intersects_xy(v.bcube) && has_bcube_int_xy(c, v)) return 1;

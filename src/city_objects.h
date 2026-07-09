@@ -847,8 +847,10 @@ struct vect_cube_with_bbox_t : public vect_cube_t {
 class cubes_grid_t {
 	static constexpr unsigned NDIV=5; // in each dim
 	vect_cube_with_bbox_t cubes[NDIV][NDIV]; // {y, x}
+	cube_t row_bcubes[NDIV];
 public:
 	void add(cube_t const &c, cube_t const &bcube);
+	void finalize();
 	bool has_overlap_xy(cube_t const &c) const;
 };
 
