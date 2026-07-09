@@ -3399,7 +3399,6 @@ void cubes_grid_t::add(cube_t const &c, cube_t const &bcube) { // for grass_bloc
 	point const center(c.get_cube_center());
 	assert(bcube.contains_pt_xy(center));
 	unsigned const x(NDIV*(center.x - bcube.x1())/bcube.dx()), y(NDIV*(center.y - bcube.y1())/bcube.dy());
-	assert(x < NDIV && y < NDIV);
 	cubes[y][x].add(c);
 }
 bool cubes_grid_t::has_overlap_xy(cube_t const &c) const {
