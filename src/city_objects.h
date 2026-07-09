@@ -845,7 +845,7 @@ struct vect_cube_with_bbox_t : public vect_cube_t {
 	void add(cube_t const &c);
 };
 class cubes_grid_t {
-	static constexpr unsigned NDIV=5; // in each dim
+	static constexpr unsigned NDIV=6; // in each dim
 	vect_cube_with_bbox_t cubes[NDIV][NDIV]; // {y, x}
 	cube_t row_bcubes[NDIV];
 public:

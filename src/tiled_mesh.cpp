@@ -1057,13 +1057,7 @@ bool check_region_int(cube_t const &region, vect_cube_t const &cubes) { // has_b
 }
 void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 
-	// Create Tile Weights Texture: 487 736.831 36.6266 1.513
-	// Create Tile Weights Texture: 478 575.828 21.2208 1.204
-	// Create Tile Weights Texture: 469 527.158 19.1407 1.124
-	// Create Tile Weights Texture: 452 481.566 17.249  1.065
-	// Create Tile Weights Texture: 448 417.128 11.9829 0.931
-	// Create Tile Weights Texture: 467 346.125 7.3851  0.741
-	//highres_timer_t timer("Create Tile Weights Texture"); // 1.38ms base, 1.5ms with buildings/roads/driveways/porches/doorsteps
+	//highres_timer_t timer("Create Tile Weights Texture"); // 468 316.673 5.4929 0.676
 	assert(zvals.size() == zvsize*zvsize);
 	unsigned const tsize(stride);
 	int sand_tex_ix(-1), dirt_tex_ix(-1), grass_tex_ix(-1), rock_tex_ix(-1), snow_tex_ix(-1);
@@ -1232,18 +1226,13 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 		unsigned const tsize_bs(2), sz_factor(1 << tsize_bs);
 
 		if (has_city_grass && sz_factor > 1) { // increase weights texture resolution to more accurately control grass placement within cities
-			// Create Tile Weights Grass  : 34 306.053 18.3137 9.00155
-			// Create Tile Weights Grass  : 34 258.693 16.0622 7.60861
-			// Create Tile Weights Grass  : 36 231.436 14.4295 6.42878
-			// Create Tile Weights Grass  : 34 177.976 10      5.23459
-			// Create Tile Weights Grass  : 36 103.451 5.312   2.87365
-			//highres_timer_t timer("Create Tile Weights Grass");
+			//highres_timer_t timer("Create Tile Weights Grass"); // 34 70.1477 3.4876 2.06317
 			float const hr_dx(DX_VAL/sz_factor), hr_dy(DY_VAL/sz_factor), hr_half_dxy(HALF_DXY/sz_factor);
 			weights_tsize *= sz_factor;
 			tsize_bitshift = tsize_bs;
 			vector<unsigned char> hr_data(4*weights_tsize*weights_tsize, 0);
 
-#pragma omp parallel for schedule(static,1) num_threads(2)
+#pragma omp parallel for schedule(static,1) num_threads(3)
 			for (int y = 0; y < (int)tsize; ++y) {
 				for (int x = 0; x < (int)tsize; ++x) {
 					unsigned const off(4*(y*tsize + x));
@@ -1263,10 +1252,10 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 							add_grass = 1;
 						} // for xx
 					} // for yy
-					if (add_grass) {
-						float const mh(zvals[y*zvsize + x]);
-						add_grass_block_at(x, y, mh, mh, grass_block_dim);
-					}
+					if (!add_grass) continue;
+					float const mh(zvals[y*zvsize + x]);
+#pragma omp critical(add_grass_block)
+					add_grass_block_at(x, y, mh, mh, grass_block_dim);
 				} // for x
 			} // for y
 			mesh_weight_data.swap(hr_data);
