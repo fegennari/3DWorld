@@ -5,6 +5,7 @@
 #include "city_terrain.h"
 #include "city_objects.h" // for park_heightmap_t
 
+extern bool player_in_creek_pond;
 extern int add_city_grass;
 extern float water_plane_z;
 extern city_params_t city_params;
@@ -768,7 +769,8 @@ bool park_heightmap_t::set_pos_zval(point &pos, float radius, point const &xlate
 	}
 	float const new_zval(height + radius);
 	// new_zval may be lower (pond or creek) or higher (hill); move down if in a creek or pond and up if on a hill
-	if (height < z_ground) {min_eq(pos.z, new_zval); return 1;}
+	player_in_creek_pond = (z_water != 0.0 && height < z_water);
+	if (height < z_ground) {min_eq(pos.z, new_zval); return 1;} // will play water footstep sound
 	if (height > z_ground) {max_eq(pos.z, new_zval); return 1;}
 	return 0;
 }

@@ -18,7 +18,7 @@ float const CAMERA_MESH_DZ   = 0.1; // max dz on mesh
 
 
 // Global Variables
-bool camera_on_snow(0);
+bool camera_on_snow(0), player_in_creek_pond(0);
 int camera_coll_id(-1), last_fall_frame(0);
 float czmin(FAR_DISTANCE), czmax(-FAR_DISTANCE), coll_rmax(0.0);
 point camera_last_pos; // not sure about this, need to reset sometimes
@@ -1705,6 +1705,9 @@ void play_camera_footstep_sound() { // tiled terrain mode
 	if (dist_less_than(pos, prev_frame_pos, 0.001*CAMERA_RADIUS)) {fs_time = tfticks;} // reset timer if camera hasn't moved
 	prev_frame_pos = pos;
 	float const step_period(player_in_water ? 0.24 : 0.36); // in seconds
+	static bool play_water_sound(0);
+	play_water_sound = player_in_creek_pond;
+	player_in_creek_pond = 0; // reset for next call
 	if (tfticks - fs_time < step_period*TICKS_PER_SECOND)    return; // too soon
 	if (dist_xy_less_than(pos, last_pos, 0.5*CAMERA_RADIUS)) return;
 	last_pos = pos;
@@ -1713,9 +1716,9 @@ void play_camera_footstep_sound() { // tiled terrain mode
 	in_building |= (pos.z > get_max_mesh_height_within_radius(pos, CAMERA_RADIUS, 1) + 2.0*(CAMERA_RADIUS + camera_zh)); // on a building roof, bridge, etc.
 	// Note: not tracking player on road vs. concrete vs. grass plots, so assume player_in_city means not on grass
 	bool const on_terrain(!in_building && !player_on_road && !player_in_city);
-	if (player_in_water) {register_building_water_splash((pos - get_bldg_player_height()*plus_z), 1.0, 1);} // water splash at player feet; alert_zombies=1
+	if      (player_in_water       ) {register_building_water_splash((pos - get_bldg_player_height()*plus_z), 1.0, 1);} // water splash at player feet; alert_zombies=1
 	else if (player_in_tunnel      ) {gen_sound_random_var(get_sound_id_for_file("footsteps/footstep_splash.wav"), pos, 0.2);}
-	//else if (player_in_water       ) {gen_sound_random_var(get_sound_id_for_file("footsteps/footstep_splash.wav"), pos, 0.2);}
+	else if (play_water_sound      ) {gen_sound_random_var(get_sound_id_for_file("footsteps/footstep_splash.wav"), pos, 0.2);}
 	else if (on_terrain            ) {gen_sound_random_var(get_sound_id_for_file("footsteps/footstep_grass.wav" ), pos, 0.2);}
 	else if (player_in_basement > 1) {gen_sound_random_var(get_sound_id_for_file("footsteps/footstep_knock2.wav"), pos, 0.2);}
 	else if (player_on_house_stairs) {gen_sound_random_var(get_sound_id_for_file("footsteps/footstep_hollow.wav"), pos, 0.2);}
