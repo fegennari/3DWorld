@@ -880,13 +880,13 @@ void flower_tile_manager_t::gen_flowers(vector<unsigned char> const &weight_data
 			unsigned const wx(x << tsize_bitshift), wy(y << tsize_bitshift), wd_ix(4*(wy*wd_stride + wx) + 2); // extract grass weight
 			assert(wd_ix < weight_data.size());
 			unsigned char weight(weight_data[wd_ix]);
-			if (weight == 0) continue; // no grass, no flowers
 
 			if (tsize_bitshift > 0) { // if weight_data is higher resolution than mesh data, calculate min weight across all texels
 				for (unsigned yy = 0; yy < num_ws && weight > 0; ++yy) {
 					for (unsigned xx = 0; xx < num_ws; ++xx) {min_eq(weight, weight_data[4*((wy + yy)*wd_stride + (wx + xx)) + 2]);}
 				}
 			}
+			if (weight == 0) continue; // no grass, no flowers
 			add_flowers(density_gen, weight/255.0, hthresh, 0.0, 0.0, x, y, 0);
 		} // for x
 	} // for y
