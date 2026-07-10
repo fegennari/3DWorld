@@ -735,7 +735,7 @@ public:
 		unsigned ppath_start, vector<cylinder_3dw> const &ccs, rand_gen_t &rgen);
 	cube_t const &get_hill() const {return hill_bc;}
 	size_t get_gpu_mem() const {return vao_mgr.gpu_mem;}
-	void create();
+	void create_verts();
 	void draw(draw_state_t &dstate, bool draw_terrain, bool draw_water);
 	float get_zval_at_pos(point const &pos_bs) const;
 	bool set_pos_zval(point &pos, float radius, point const &xlate, vector<park_path_t> const &ppaths) const;

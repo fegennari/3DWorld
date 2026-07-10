@@ -31,12 +31,12 @@ struct flatten_op_t : public rect_t {
 
 class heightmap_query_t {
 protected:
-	float *heightmap;
-	unsigned xsize, ysize;
+	float *heightmap=nullptr;
+	unsigned xsize=0, ysize=0;
 public:
 	flatten_op_t last_flatten_op;
 
-	heightmap_query_t() : heightmap(nullptr), xsize(0), ysize(0) {}
+	heightmap_query_t() {}
 	heightmap_query_t(float *hmap, unsigned xsize_, unsigned ysize_) : heightmap(hmap), xsize(xsize_), ysize(ysize_) {assert(heightmap != nullptr);}
 	float get_x_value(int x) const {return get_xval(x - int(xsize)/2);} // convert from center to LLC
 	float get_y_value(int y) const {return get_yval(y - int(ysize)/2);}

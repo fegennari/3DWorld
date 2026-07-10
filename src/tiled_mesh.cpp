@@ -250,6 +250,12 @@ public:
 			for (elem.x = cx1; elem.x < cx2; ++elem.x) {modify_height(elem, 0);} // not wrapped
 		}
 	}
+	void set_zval(point const &pos) { // no tile invalidation
+		int x(get_xpos(pos.x - 0.5*DX_VAL)), y(get_ypos(pos.y - 0.5*DY_VAL));
+		if (!clamp_xy(x, y, 0.0, 0.0, 0)) return; // allow_wrap=0
+		assert(x >= 0 && y >= 0);
+		hmap.set_heightmap_value(x, y, unscale_mh_texture_val(pos.z));
+	}
 	virtual bool modify_height_value(int x, int y, hmap_val_t val, bool is_delta, float fract_x, float fract_y, bool allow_wrap=1) {
 		int clamped_x(x), clamped_y(y);
 		if (!clamp_xy(clamped_x, clamped_y, fract_x, fract_y, allow_wrap)) return 0;
@@ -3974,7 +3980,9 @@ void inf_terrain_undo_hmap_mod() {
 void flatten_hmap_region(cube_t const &cube) {
 	if (using_tiled_terrain_hmap_tex()) {terrain_hmap_manager.flatten_region(cube);}
 }
-
+void set_heightmap_zval(point const &pos) {
+	if (using_tiled_terrain_hmap_tex()) {terrain_hmap_manager.set_zval(pos);}
+}
 void write_heightmap_png(string const &fn) {terrain_hmap_manager.write_png(fn);}
 
 

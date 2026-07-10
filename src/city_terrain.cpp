@@ -5,6 +5,7 @@
 #include "city_terrain.h"
 #include "city_objects.h" // for park_heightmap_t
 
+extern int add_city_grass;
 extern float water_plane_z;
 extern city_params_t city_params;
 
@@ -12,6 +13,7 @@ extern city_params_t city_params;
 // heightmap_query_t
 
 bool point_in_ellipse(point const &p, cube_t const &c);
+void set_heightmap_zval(point const &pos);
 
 float smooth_interp(float a, float b, float mix) {
 	mix = mix * mix * (3.0 - 2.0 * mix); // cubic Hermite interoplation (smoothstep)
@@ -596,6 +598,18 @@ park_heightmap_t::park_heightmap_t(cube_t const &c, unsigned nx_, unsigned ny_, 
 		hill_bc = hill; // record so that we can handle collisions/avoid the hill
 		break; // only need one
 	} // for n
+	if (add_city_grass && using_tiled_terrain_hmap_tex()) { // apply to terrain heightmap so that grass is added to hills
+		// find mesh index range for this park heightmap; not the same grids, so must sample and interpolate
+		int const x1(get_xpos(bcube.x1())), y1(get_xpos(bcube.y1())), x2(get_xpos(bcube.x2())), y2(get_xpos(bcube.y2()));
+
+		for (int y = y1; y < y2; ++y) {
+			for (int x = x1; x < x2; ++x) {
+				point pos(get_xval(x), get_yval(y), z_ground);
+				pos.z = get_zval_at_pos(pos);
+				set_heightmap_zval(pos);
+			}
+		} // for y
+	}
 }
 
 void park_heightmap_t::add_creek_rocks(park_path_t const &creek, rand_gen_t &rgen) {
@@ -631,7 +645,7 @@ void park_heightmap_t::add_creek_rocks(park_path_t const &creek, rand_gen_t &rge
 	} // for rock
 }
 
-void park_heightmap_t::create() {
+void park_heightmap_t::create_verts() {
 	if (nverts > 0) return; // already created
 	//highres_timer_t timer("Park Heightmap VBO"); // ~3ms
 	nverts   = (nx+1)*(ny+1); // generally, nx == ny, but it's not required
@@ -686,7 +700,7 @@ void park_heightmap_t::draw(draw_state_t &dstate, bool draw_terrain, bool draw_w
 			dstate.qbd.draw_and_clear();
 			return;
 		}
-		create(); // create verts/VBO/VAO when first visible
+		create_verts(); // create verts/VBO/VAO when first visible
 		assert(vao_mgr.is_valid());
 		vao_mgr.pre_render(1, 1); // using_index=1, do_bind_vbo=1
 		vert_norm_comp_tc_color::set_vbo_arrays(); // Note: unclear why this is needed, but some parks randomly disappear on occasion without it

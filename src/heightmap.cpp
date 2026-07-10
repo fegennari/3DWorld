@@ -91,6 +91,10 @@ float heightmap_t::get_heightmap_value(unsigned x, unsigned y) const { // return
 	return v/tot;
 }
 
+void heightmap_t::set_heightmap_value(unsigned x, unsigned y, float val) {
+	modify_heightmap_value(x, y, round_fp((ncolors == 2) ? 256*val : val), 0); // val_is_delta=0
+}
+
 
 void heightmap_t::modify_heightmap_value(unsigned x, unsigned y, int val, bool val_is_delta) {
 

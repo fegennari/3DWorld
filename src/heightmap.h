@@ -29,6 +29,7 @@ public:
 	texture_t(t, f, w, h, 0, 1, 0, n, inv) {}
 	unsigned get_pixel_value (unsigned x, unsigned y) const;
 	float get_heightmap_value(unsigned x, unsigned y) const;
+	void set_heightmap_value (unsigned x, unsigned y, float val);
 	void modify_heightmap_value(unsigned x, unsigned y, int val, bool val_is_delta);
 	void postprocess_height();
 	void proc_gen();
@@ -108,7 +109,7 @@ public:
 
 
 class terrain_hmap_manager_t : public tex_mod_map_manager_t {
-
+protected:
 	heightmap_t hmap;
 
 public:
