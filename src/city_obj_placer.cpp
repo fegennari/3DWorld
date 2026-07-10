@@ -3127,7 +3127,8 @@ bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, vector
 		if (w.proc_sphere_coll(pos, p_last, radius, xlate, cnorm)) return 1;
 	}
 	if (skyway_coll) return 1;
-	for (park_heightmap_t const &h : park_hmaps) {h.set_pos_zval(pos, radius, xlate, ppaths);} // set zval for ponds, creeks, and hills
+	bool had_coll(0);
+	for (park_heightmap_t const &h : park_hmaps) {had_coll |= h.set_pos_zval(pos, radius, xlate, ppaths);} // set zval for ponds, creeks, and hills
 
 	if (park_hmaps.empty()) { // pond collisions are handled by park heightmaps, if present
 		if (proc_vector_sphere_coll(ponds, pond_groups, pos, p_last, radius, xlate, cnorm)) return 1;
@@ -3169,7 +3170,7 @@ bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, vector
 	if (proc_vector_sphere_coll(sculptures,sculpt_groups,   pos, p_last, radius, xlate, cnorm)) return 1;
 	// Note: no coll with tree_planters because the tree coll should take care of it;
 	// no coll with hcaps, manholes, sewers, tcones, flowers, pladders, bballs, pfloats, pigeons, ppaths, or birds
-	return 0;
+	return had_coll;
 }
 
 template<typename T> void check_vector_line_intersect(vector<T> const &objs, city_obj_groups_t const &groups, point const &p1, point const &p2, float &t, bool &ret) {

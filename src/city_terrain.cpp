@@ -766,7 +766,10 @@ bool park_heightmap_t::set_pos_zval(point &pos, float radius, point const &xlate
 	for (park_path_t const &P : ppaths) {
 		if (!P.is_creek && P.check_point_contains_xy(pos_bs)) return 0; // use city/path height
 	}
-	pos.z = (height + radius); // may be lower (pond or creek) or higher (hill)
-	return 1;
+	float const new_zval(height + radius);
+	// new_zval may be lower (pond or creek) or higher (hill); move down if in a creek or pond and up if on a hill
+	if (height < z_ground) {min_eq(pos.z, new_zval); return 1;}
+	if (height > z_ground) {max_eq(pos.z, new_zval); return 1;}
+	return 0;
 }
 
