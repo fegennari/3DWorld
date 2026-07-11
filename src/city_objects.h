@@ -704,7 +704,8 @@ struct park_path_t : public city_obj_t {
 	static void pre_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 	bool check_cube_coll_xy(cube_t const &c) const;
-	bool check_point_contains_xy(point const &p) const;
+	bool check_cylin_overlaps_xy(point const &p, float sphere_radius) const;
+	bool check_point_contains_xy(point const &p) const {return check_cylin_overlaps_xy(p, 0.0);}
 };
 
 struct park_rock_t {

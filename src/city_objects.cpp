@@ -3465,11 +3465,12 @@ bool park_path_t::check_cube_coll_xy(cube_t const &c) const {
 	}
 	return 0;
 }
-bool park_path_t::check_point_contains_xy(point const &p) const {
-	if (!bcube.contains_pt_xy(p)) return 0;
+bool park_path_t::check_cylin_overlaps_xy(point const &p, float sphere_radius) const {
+	if (!bcube.contains_pt_xy_exp(p, sphere_radius)) return 0;
+	float const dmin(hwidth + sphere_radius);
 
 	for (unsigned i = 0; i+1 < pts.size(); ++i) {
-		if (point_line_seg_dist_2d(p, pts[i], pts[i+1]) < hwidth) return 1;
+		if (point_line_seg_dist_2d(p, pts[i], pts[i+1]) < dmin) return 1;
 	}
 	return 0;
 }

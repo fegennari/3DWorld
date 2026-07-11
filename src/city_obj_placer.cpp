@@ -695,10 +695,9 @@ bool check_path_coll_xy(cube_t const &c, vector<park_path_t> const &paths, unsig
 	}
 	return 0;
 }
-bool check_path_tree_coll(park_path_t const &path, vector<point> const &tree_pos) {
+bool check_path_tree_coll(park_path_t const &path, vector<point> const &tree_pos, float rscale) {
 	for (point const &pos : tree_pos) { // check for collisions with tree trunks
-		cube_t bc; bc.set_from_sphere(pos, 0.1*path.hwidth); // small size
-		if (path.check_cube_coll_xy(bc)) return 1;
+		if (path.check_cylin_overlaps_xy(pos, rscale*path.hwidth)) return 1;
 	}
 	return 0;
 }
@@ -823,7 +822,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 					choose_edge_pos(plot, edge_border, dim, 0, start, rgen); // choose starting point
 					choose_edge_pos(plot, edge_border, dim, 1, end,   rgen); // choose ending point on the opposite edge
 					gen_park_path(path, start, end, path_hwidth, plot, plot, dim, 0, rgen); // dir=0
-					if (check_path_tree_coll(path, tree_pos)) continue;
+					if (check_path_tree_coll(path, tree_pos, 0.5)) continue; // add more spacing for trees; needed for low pine tree branches
 					ppath_groups.add_obj(path, ppaths);
 					break; // success
 				} // for N
@@ -897,7 +896,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 				path_area.d[dim][!dir] = end[dim]; // clip to side of pond
 				point const pipe_pos(start);
 				gen_park_path(creek, start, end, creek_hwidth, plot, path_area, dim, dir, rgen);
-				if (check_path_tree_coll(creek, tree_pos)) continue;
+				if (check_path_tree_coll(creek, tree_pos, 0.1)) continue; // allow nearby tree
 				// check that the creek doesn't intersect a park path at a shallow angle;
 				// these nested loops may seem quadratic and slow, but in practice they only take 1-3ms
 				bool is_bad(0);
