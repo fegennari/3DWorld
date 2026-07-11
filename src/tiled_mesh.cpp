@@ -1127,7 +1127,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 						else {
 							mesh_weight_data[off+2] = 0; // no grass
 						}
-						mesh_weight_data[off+0] = 120; // some sand, to color match the more yellowish color of city/park grass
+						mesh_weight_data[off+0] = 112; // some sand, to color match the more yellowish color of city/park grass
 						mesh_weight_data[off+1] = mesh_weight_data[off+3] = 255; // set invalid dirt and rock values to flag as transparent (sand makes grass yellow)
 						has_city = 1; // Note: should be covered by the tile_contains_tunnel(), but we include this case for safety
 						continue;
