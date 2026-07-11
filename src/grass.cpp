@@ -757,7 +757,8 @@ void flower_manager_t::check_vbo() {
 
 	if (vbo != 0 || empty()) return; // nothing to update
 	//RESET_TIME;
-	vector<vert_norm_comp_color> verts;
+	static vector<vert_norm_comp_color> verts;
+	verts.clear();
 	create_verts_range(verts, 0, size());
 	create_vbo_and_upload(vbo, verts);
 	//PRINT_TIME("Flowers VBO");
