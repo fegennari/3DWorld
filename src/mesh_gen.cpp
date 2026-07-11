@@ -829,6 +829,9 @@ float get_exact_zval(float xval_in, float yval_in, bool no_xyoff) {
 		yval += yoff2;
 	}
 	if (using_tiled_terrain_hmap_tex()) {
+		// if not calling this for buildings, subtract the 0.5 we added to xval/yval above because it's incorrect for TT heightmap mode;
+		// a better fix is to always subtract 0.5 and also remove it from tiled_terrain_hmap_manager_t::flatten_region(), but that changes building placement
+		if (!no_xyoff) {xval -= 0.5; yval -= 0.5;}
 		float zval(get_tiled_terrain_height_tex(xval, yval));
 		if (using_hmap_with_detail()) {zval += HMAP_DETAIL_MAG*eval_mesh_sin_terms_scaled(xval, yval, HMAP_DETAIL_SCALE);} // Note: agrees with tile_t::create_zvals()
 		return zval;
