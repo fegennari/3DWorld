@@ -2351,15 +2351,13 @@ void model3d::set_xform_zval_from_tt_height(bool flatten_mesh) { // set zval to 
 	if (xform_zvals_set) return; // already set
 	xform_zvals_set = 1;
 	timer_t timer("Calc Zvals");
-	vector3d const xlate(-xoff2*DX_VAL, -yoff2*DY_VAL, 0.0); // cancel out xoff2/yoff2 translate
 	if (transforms.empty()) {transforms.push_back(model3d_xform_t());} // no transforms case - insert identity transform
 
 #pragma omp parallel for schedule(static,1)
 	for (int i = 0; i < (int)transforms.size(); ++i) {
 		model3d_xform_t &xf(transforms[i]);
 		cube_t const &bcube_xf(xf.get_xformed_bcube(bcube));
-		point const center(bcube_xf.get_cube_center() + xlate);
-		xf.tv.z += get_exact_zval(center.x, center.y) - bcube_xf.d[2][0];
+		xf.tv.z += get_exact_zval(bcube_xf.xc(), bcube_xf.yc(), 1) - bcube_xf.d[2][0]; // no_xyoff=1
 		if (flatten_mesh) {flatten_hmap_region(bcube_xf);} // flatten the mesh under the bcube to a height of mesh_zval
 		xf.clear_bcube(); // invalidate and force recompute
 	}

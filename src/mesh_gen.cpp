@@ -796,7 +796,6 @@ float mesh_xy_grid_cache_t::eval_index(unsigned x, unsigned y, int min_start_sin
 // Note: called directly in tiled mesh and voxel code as a random number generator (not for mesh height);
 // we always use sine tables here because get_noise_zval() is too slow
 float eval_mesh_sin_terms(float xv, float yv) {
-
 	float zval(0.0);
 
 	for (int k = start_eval_sin; k < F_TABLE_SIZE; ++k) {
@@ -807,7 +806,6 @@ float eval_mesh_sin_terms(float xv, float yv) {
 }
 
 float eval_mesh_sin_terms_scaled(float xval, float yval, float xy_scale) {
-
 	float const xv(xy_scale*(xval - (MESH_X_SIZE >> 1))), yv(xy_scale*(yval - (MESH_Y_SIZE >> 1)));
 	if (mesh_gen_mode != MGEN_SINE) {return get_noise_zval(xv, yv, mesh_gen_mode, mesh_gen_shape);}
 	float val(eval_mesh_sin_terms(mesh_scale*xv, mesh_scale*yv)*mesh_scale_z_inv);
@@ -816,7 +814,7 @@ float eval_mesh_sin_terms_scaled(float xval, float yval, float xy_scale) {
 }
 
 
-float get_exact_zval(float xval_in, float yval_in) {
+float get_exact_zval(float xval_in, float yval_in, bool no_xyoff) {
 
 	float xval((xval_in + X_SCENE_SIZE)*DX_VAL_INV + 0.5); // convert from real to index space, as in get_xpos()/get_ypos() but as FP
 	float yval((yval_in + Y_SCENE_SIZE)*DY_VAL_INV + 0.5);
@@ -826,9 +824,10 @@ float get_exact_zval(float xval_in, float yval_in) {
 		clamp_to_mesh(xy);
 		return mesh_height[xy[1]][xy[0]]; // could interpolate?
 	}
-	xval += xoff2; // offset by current mesh transform
-	yval += yoff2;
-
+	if (!no_xyoff) { // offset by current mesh transform
+		xval += xoff2;
+		yval += yoff2;
+	}
 	if (using_tiled_terrain_hmap_tex()) {
 		float zval(get_tiled_terrain_height_tex(xval, yval));
 		if (using_hmap_with_detail()) {zval += HMAP_DETAIL_MAG*eval_mesh_sin_terms_scaled(xval, yval, HMAP_DETAIL_SCALE);} // Note: agrees with tile_t::create_zvals()

@@ -238,8 +238,7 @@ public:
 		}
 		else {assert(cx1 >= 0 && cy1 >= 0 && cx1 <= cx2 && cy1 <= cy2);}
 		if (cx1 == cx2 || cy1 == cy2) return; // empty range optimization
-		point const center(cube.get_cube_center());
-		float xc((center.x + X_SCENE_SIZE)*DX_VAL_INV + 0.5), yc((center.y + Y_SCENE_SIZE)*DY_VAL_INV + 0.5); // convert from real to index space
+		float xc((cube.xc() + X_SCENE_SIZE)*DX_VAL_INV + 0.5), yc((cube.yc() + Y_SCENE_SIZE)*DY_VAL_INV + 0.5); // convert from real to index space
 		int const xlo(floor(xc)), ylo(floor(yc)), xhi(ceil(xc)), yhi(ceil(yc));
 		float const xv(xc - xlo), yv(yc - ylo); // use cubic_interpolate()?
 		int const height_val(yv*(xv*get_clamped_pixel_value(xhi, yhi, 0) + (1.0f-xv)*get_clamped_pixel_value(xlo, yhi, 0)) +
@@ -1752,7 +1751,7 @@ void tile_cloud_manager_t::get_draw_list(cloud_draw_list_t &clouds_to_draw, floa
 		float alpha(1.0);
 
 		if (zbot < mesh_zmax+start_dist) { // may be below the mesh
-			float const dist(zbot - get_exact_zval(i->pos.x-xoff2*DX_VAL, i->pos.y-yoff2*DY_VAL));
+			float const dist(zbot - get_exact_zval(i->pos.x, i->pos.y, 1)); // no_xyoff=1
 			if (dist < 0.0) continue; // below the mesh
 			if (dist < start_dist) {alpha = dist/start_dist;}
 		}

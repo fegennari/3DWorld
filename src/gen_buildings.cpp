@@ -3526,9 +3526,7 @@ public:
 		if (params.materials.empty() || mat_ix_list.empty()) return; // no materials
 		timer_t timer("Gen Buildings", !is_tile);
 		float const def_water_level(get_water_z_height()), min_building_spacing(get_min_obj_spacing());
-		vector3d const offset(-xoff2*DX_VAL, -yoff2*DY_VAL, 0.0);
-		vector3d const xlate((world_mode == WMODE_INF_TERRAIN) ? offset : zero_vector); // cancel out xoff2/yoff2 translate
-		vector3d const delta_range((world_mode == WMODE_INF_TERRAIN) ? zero_vector : offset);
+		vector3d const delta_range((world_mode == WMODE_INF_TERRAIN) ? zero_vector : vector3d(-xoff2*DX_VAL, -yoff2*DY_VAL, 0.0));
 		range = params.materials[mat_ix_list.front()].pos_range; // range is union over all material ranges
 		for (auto i = mat_ix_list.begin()+1; i != mat_ix_list.end(); ++i) {range.union_with_cube(params.materials[*i].pos_range);}
 		range     += delta_range;
@@ -3644,7 +3642,7 @@ public:
 				if (!check_valid_building_placement(params, b, avoid_bcubes, avoid_bcubes_bcube, min_building_spacing,
 					city_block_ix, non_city_only, use_city_plots, check_plot_coll)) continue; // check overlap (use city plot_ix rather than sub-plot ix)
 				++num_gen;
-				if (!use_city_plots) {center.z = get_exact_zval(center.x+xlate.x, center.y+xlate.y);} // only calculate when needed
+				if (!use_city_plots) {center.z = get_exact_zval(center.x, center.y, 1);} // only calculate when needed; no_xyoff=1
 				float const z_sea_level(center.z - def_water_level);
 				if (z_sea_level < 0.0) break; // skip underwater buildings, failed placement
 				if (z_sea_level < mat.min_alt || z_sea_level > mat.max_alt) break; // skip bad altitude buildings, failed placement
@@ -3715,7 +3713,7 @@ public:
 					unsigned num_below(0);
 					
 					for (int d = 0; d < 4; ++d) {
-						float const zval(get_exact_zval(b.bcube.d[0][d&1]+xlate.x, b.bcube.d[1][d>>1]+xlate.y)); // approximate for rotated buildings
+						float const zval(get_exact_zval(b.bcube.d[0][d&1], b.bcube.d[1][d>>1], 1)); // approximate for rotated buildings; no_xyoff=1
 						min_eq(zmin, zval);
 						num_below += (zval < def_water_level);
 					}
