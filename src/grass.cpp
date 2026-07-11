@@ -96,11 +96,10 @@ void grass_manager_t::add_grass_blade_int(point const &pos, float cscale, bool o
 	}
 	float const length(grass_length*rgen_.rand_uniform(0.7, 1.3));
 	float const width( grass_width *rgen_.rand_uniform(0.7, 1.3));
-	grass_.push_back(grass_t(pos, dir*length, norm, color, width, on_mesh));
+	grass_.emplace_back(pos, dir*length, norm, color, width, on_mesh);
 }
 
 void grass_manager_t::create_new_vbo() {
-
 	delete_vbo(vbo); // unnecessary since vbo is always 0 here?
 	vbo        = create_vbo();
 	data_valid = 0;
@@ -119,7 +118,6 @@ void grass_manager_t::add_to_vbo_data(grass_t const &g, vector<grass_data_t> &da
 }
 
 void grass_manager_t::scale_grass(float lscale, float wscale) {
-
 	for (auto i = grass.begin(); i != grass.end(); ++i) {
 		i->dir *= lscale;
 		i->w   *= wscale;
@@ -198,7 +196,6 @@ void grass_tile_manager_t::gen_lod_block(unsigned bix, unsigned lod) {
 
 
 void grass_tile_manager_t::clear() {
-
 	grass_manager_t::clear();
 	for (unsigned lod = 0; lod < NUM_GRASS_LODS; ++lod) {vbo_offsets[lod].clear();}
 }
@@ -240,7 +237,6 @@ void grass_tile_manager_t::gen_grass() {
 
 
 void grass_tile_manager_t::update() { // to be called once per frame
-
 	if (!is_grass_enabled()) {clear(); return;}
 	if (empty()    ) {gen_grass();}
 	if (vbo == 0   ) {create_new_vbo();}
@@ -282,7 +278,6 @@ class grass_manager_dynamic_t : public grass_manager_t {
 		if (vbo > 0) {upload_data_to_vbo(min_up, max_up+1, 0);}
 		//data_valid = 0;
 	}
-
 public:
 	void clear() {
 		grass_manager_t::clear();
@@ -459,7 +454,7 @@ public:
 				offset += ix;
 				ix = 0; // reset to the beginning of the buffer
 			}
-		}
+		} // for i
 		assert(offset == 3*end);
 		bind_vbo(0);
 	}
@@ -832,16 +827,13 @@ void flower_manager_t::add_flowers(mesh_xy_grid_cache_t const density_gen[2],
 		vector3d const normal((plus_z + rgen.signed_rand_vector(0.2)).get_norm()); // facing mostly up (or face toward sun?)
 		float const radius(grass_width*rgen.rand_uniform(1.5, 2.5));
 		colorRGBA color;
-
-		if (flower_color.alpha > 0.0) {
-			color = flower_color;
-		}
+		if (flower_color.alpha > 0.0) {color = flower_color;}
 		else {
 			float const color_val(cval + 0.25*rgen.signed_rand_float());
 			color = colors[int(0.5*NUM_COLORS*color_val)%NUM_COLORS];
 		}
-		flowers.push_back(flower_t(pos, normal, radius, height, color));
-	}
+		flowers.emplace_back(pos, normal, radius, height, color);
+	} // for n
 }
 
 void flower_manager_t::gen_density_cache(mesh_xy_grid_cache_t density_gen[2], int x1, int y1) {
@@ -853,11 +845,11 @@ void flower_manager_t::gen_density_cache(mesh_xy_grid_cache_t density_gen[2], in
 
 void flower_manager_t::scale_flowers(float lscale, float wscale) {
 
-	for (auto i = flowers.begin(); i != flowers.end(); ++i) {
-		float const old_height(i->height);
-		i->height *= lscale;
-		i->radius *= wscale;
-		i->pos.z  += i->height - old_height;
+	for (flower_t &f : flowers) {
+		float const old_height(f.height);
+		f.height *= lscale;
+		f.radius *= wscale;
+		f.pos.z  += f.height - old_height;
 	}
 	clear_vbo();
 }
@@ -950,7 +942,7 @@ public:
 				density *= get_grass_density(point(get_xval(x), get_yval(y), 0.0));
 				add_flowers(density_gen, density, hthresh, -X_SCENE_SIZE, -Y_SCENE_SIZE, x, y, 1);
 			}
-		}
+		} // for y
 		generated = 1;
 	}
 
@@ -965,7 +957,7 @@ public:
 			pos.z     = interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1) + flowers[i].height;
 			mod_start = min(mod_start, i);
 			mod_end   = max(mod_end,   i+1); // one past the end
-		}
+		} // for i
 		if (mod_start < mod_end) {upload_range(mod_start, mod_end);}
 	}
 
@@ -1014,7 +1006,7 @@ public:
 				mod_start = min(mod_start, i);
 				mod_end   = max(mod_end,   i+1); // one past the end
 			}
-		}
+		} // for i
 		if (mod_start < mod_end) {upload_range(mod_start, mod_end);}
 	}
 
@@ -1052,7 +1044,6 @@ void setup_wind_for_shader(shader_t &s, unsigned tu_id) {
 bool no_grass() {
 	return (grass_density == 0 || !grass_enabled || snow_enabled() || vegetation == 0.0 || (world_mode == WMODE_GROUND && read_landscape));
 }
-
 
 void gen_grass() { // and flowers
 
