@@ -827,7 +827,7 @@ void flower_manager_t::add_flowers(mesh_xy_grid_cache_t const density_gen[2],
 	for (unsigned n = 0; n < num_per_bin; ++n) {
 		if ((dval + 0.2*zmax_est*rgen.signed_rand_float()) > hthresh) continue; // density function test
 		float const height(grass_length*rgen.rand_uniform(0.85, 1.0));
-		point pos((dx + DX_VAL*(xpos + rgen.rand_float())), (dy + DY_VAL*(ypos + rgen.rand_float())), height);
+		point pos((dx + DX_VAL*(xpos + rgen.rand_float() - 0.5)), (dy + DY_VAL*(ypos + rgen.rand_float() - 0.5)), height);
 		if (gen_zval) {pos.z += interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1);}
 		vector3d const normal((plus_z + rgen.signed_rand_vector(0.2)).get_norm()); // facing mostly up (or face toward sun?)
 		float const radius(grass_width*rgen.rand_uniform(1.5, 2.5));
