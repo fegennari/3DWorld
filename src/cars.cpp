@@ -335,9 +335,10 @@ void car_t::pull_into_driveway(driveway_t const &driveway, rand_gen_t &rgen) {
 		set_target_speed(0.4); // 40% of max speed - reset in case we stopped due to a pedestrian in the way
 	}
 	else { // not a parking lot
+		bool const is_gs_or_cw(driveway.is_gas_station());
 		car_pos = bcube.get_center_dim(dim); // pull into driveway to gas pump or car wash bay; may be reset below
 
-		if (driveway.is_gas_station()) { // gas station or car wash entrance
+		if (is_gs_or_cw) { // gas station or car wash entrance
 			if (dest_cwash >= 0 && need_wash) { // entering car wash
 				if (maybe_apply_turn(driveway.stop_loc, 1)) { // turning into car wash; for_driveway=1
 					set_target_speed(0.25); // 25% of max speed when turning
@@ -355,6 +356,9 @@ void car_t::pull_into_driveway(driveway_t const &driveway, rand_gen_t &rgen) {
 		}
 		else { // house driveway; stop in the center
 			stop_pos = driveway.get_center_dim(driveway.dim);
+		}
+		if (dim != driveway.dim || dir == driveway.dir) {
+			cout << TXT(dim) << TXT(dir) << TXT(is_gs_or_cw) << TXT(dest_cwash) << TXT(dest_gstation) << TXT(need_wash) << TXT(need_gas) << TXTS(driveway) << endl;
 		}
 		assert(dim == driveway.dim);
 		assert(dir != driveway.dir);
