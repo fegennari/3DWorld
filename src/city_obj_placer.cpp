@@ -830,10 +830,10 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 		}
 		bool added_pond(0), added_creek(0);
 		vector<cylinder_3dw> creek_crossings;
+		vect_cube_t active_pond_blockers;
 
 		if (1) { // try to place pond(s)
 			float const pond_border(max(sidewalk_width, path_hwidth));
-			vect_cube_t active_pond_blockers;
 
 			for (cube_t const &pb : pond_blockers) {
 				if (pb.intersects_xy(plot)) {active_pond_blockers.push_back(pb);}
@@ -922,7 +922,11 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 					} // for cp
 				} // for p
 				if (is_bad) continue;
-				//add_rocks_to_creek(creek); // future work: add custom scenery rocks, similar to tree_placer
+				
+				for (cube_t const &pb : active_pond_blockers) { // check building extended basements and malls
+					if (pb.intersects(creek.bcube) && creek.check_cube_coll_xy(pb)) {is_bad = 1; break;}
+				}
+				if (is_bad) continue;
 				ppath_groups.add_obj(creek, ppaths);
 				cylinder_3dw creek_end;
 				creek_end.r1 = creek_end.r2 = 0.5*creek_hwidth;
@@ -3374,6 +3378,12 @@ void city_obj_placer_t::get_plot_cuts(cube_t const &plot, vect_cube_t &cuts) con
 bool city_obj_placer_t::cube_int_underground_obj(cube_t const &c) const { // Note: not useful for generating buildings (ext basements) because pools are added later
 	for (swimming_pool_t const &p : pools) {
 		if (!p.above_ground && c.intersects(p.bcube)) return 1; // zvals are checked
+	}
+	for (pond_t const &p : ponds) {
+		if (c.intersects(p.bcube)) return 1;
+	}
+	for (park_path_t const &p : ppaths) { // check creeks
+		if (p.is_creek && c.intersects(p.bcube) && p.check_cube_coll_xy(c)) return 1;
 	}
 	return 0;
 }
