@@ -3375,6 +3375,11 @@ void city_obj_placer_t::get_plot_cuts(cube_t const &plot, vect_cube_t &cuts) con
 		if (!p.above_ground && plot.intersects_xy(p.bcube)) {cuts.push_back(p.bcube);} // zvals are ignored
 	}
 }
+void city_obj_placer_t::get_paths_and_creeks(cube_t const &region, vector<park_path_t const *> &paths) const {
+	for (park_path_t const &pp : ppaths) {
+		if (region.intersects_xy(pp.bcube)) {paths.push_back(&pp);}
+	}
+}
 bool city_obj_placer_t::cube_int_underground_obj(cube_t const &c) const { // Note: not useful for generating buildings (ext basements) because pools are added later
 	for (swimming_pool_t const &p : pools) {
 		if (!p.above_ground && c.intersects(p.bcube)) return 1; // zvals are checked

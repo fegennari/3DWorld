@@ -3,6 +3,7 @@
 // 12/6/18
 #include "city.h"
 #include "buildings.h" // for drawing building people
+#include "city_objects.h" // for park_path_t
 #include "shaders.h"
 #include "nav_grid.h"
 #include "profiler.h"
@@ -34,6 +35,7 @@ extern object_model_loader_t building_obj_model_loader; // for umbrella model
 bool ai_follow_player();
 void get_dead_players_in_building(vector<dead_person_t> &dead_players, building_t const &building); // from building_gameplay.cpp
 bool check_city_building_line_coll_bs_any(point const &p1, point const &p2);
+void get_city_paths_and_creeks(cube_t const &region, vector<park_path_t const *> &paths);
 int check_buildings_ped_coll(point const &pos, float bcube_radius, float detail_radius, unsigned plot_id, unsigned &building_id, cube_t *coll_cube);
 bool check_building_point_or_cylin_contained(point const &pos, float radius, bool inc_details, unsigned building_id);
 bool check_line_int_xy(vect_cube_t const &c, point const &p1, point const &p2);
@@ -224,6 +226,35 @@ public:
 				}
 			}
 		} // for b
+		if (0) { // avoid creeks and use park paths; doesn't work well because there may be no route, and the end of the creek is too close to the sidewalk
+			vector<park_path_t const *> paths;
+			get_city_paths_and_creeks(bcube, paths);
+
+			for (park_path_t const *const pp : paths) {
+				if (pp->is_creek) { // avoid the creek
+					unsigned x1, y1, x2, y2;
+					get_region_xy_bounds(pp->bcube, x1, x2, y1, y2);
+
+					for (unsigned y = y1; y <= y2; ++y) {
+						for (unsigned x = x1; x <= x2; ++x) {
+							uint8_t &val(nodes[get_node_ix(x, y)]);
+							if (val > 0) continue; // already blocked
+							point const pt(get_grid_pt(x, y));
+							if (!pp->check_point_contains_xy(pt)) continue;
+							bool has_path(0);
+
+							for (park_path_t const *const pp2 : paths) { // but make it unblocked if there's a park path over the creek
+								if (!pp2->is_creek && pp2->check_point_contains_xy(pt)) {has_path = 1; break;}
+							}
+							if (!has_path) {val = 1;} // blocked
+						} // for x
+					} // for y
+				}
+				else { // prefer staying on the park path
+					// unclear how to do this; need another reserved value for marking higher weight nodes?
+				}
+			} // for pp
+		}
 	}
 	bool find_path(point const &p1, point const &p2, ai_path_t &path, int dest_building_) {
 		//highres_timer_t timer("find_path"); // ~0.03ms

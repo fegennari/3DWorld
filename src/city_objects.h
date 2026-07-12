@@ -991,6 +991,7 @@ public:
 	bool get_color_at_xy_pre_road(point const &pos, colorRGBA &color) const;
 	void get_occluders(pos_dir_up const &pdu, vector3d const &xlate, vect_cube_t &occluders) const;
 	void get_plot_cuts(cube_t const &plot, vect_cube_t &cuts) const;
+	void get_paths_and_creeks(cube_t const &region, vector<park_path_t const *> &paths) const;
 	bool cube_int_underground_obj(cube_t const &c) const;
 	bool point_in_pond_xy(point const &pos) const;
 	void get_ponds_in_xy_range(cube_t const &range, vect_cube_t &pond_bcs) const;
