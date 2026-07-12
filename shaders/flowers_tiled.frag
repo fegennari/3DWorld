@@ -19,7 +19,7 @@ void main()
 
 	vec2 tc2     = vec2(vertex.x*dx_inv, vertex.y*dy_inv); // same as (x2 - x1 - 1.0*DX_VAL)
 	vec3 shadow  = texture(shadow_tex, tc2).rgb; // {mesh_shadow, tree_shadow, ambient_occlusion}
-	float diffuse_scale = min(shadow.r, shadow.g); // min of mesh and tree shadow
+	float diffuse_scale = min(shadow.r, shadow.g); // min of mesh and tree shadow; this should be disabled for city flowers, but we don't have the weights texture here
 	vec3 color   = do_shadowed_lighting(vertex, epos, eye_norm, gl_Color, shadow.b, diffuse_scale);
 	fg_FragColor = apply_fog_epos(texel*vec4(color, gl_Color.a*texel.a), epos);
 }
