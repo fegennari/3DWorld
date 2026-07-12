@@ -18,7 +18,7 @@ void water_color_atten(float *c, point const &pos, point const &p1, point const 
 
 
 int get_future_frame(float min_secs, float max_secs, rand_gen_t &rgen) {
-	float const secs((min_secs == max_secs) ? min_secs : rgen.rand_uniform(min_secs, max_secs));
+	float const secs(rgen.rand_uniform_or_center(min_secs, max_secs));
 	return (frame_counter + round_fp(secs*TICKS_PER_SECOND));
 }
 

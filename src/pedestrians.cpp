@@ -619,7 +619,7 @@ point rand_xy_pt_on_cube_edge(cube_t const &c, float radius, rand_gen_t &rgen) {
 	bool const dim(rgen.rand_bool()), dir(rgen.rand_bool());
 	point pt;
 	pt[ dim] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*radius;
-	pt[!dim] = rgen.rand_uniform(c.d[!dim][0]+radius, c.d[!dim][1]-radius);
+	pt[!dim] = rgen.rand_uniform_or_center(c.d[!dim][0]+radius, c.d[!dim][1]-radius);
 	pt.z     = c.z1();
 	return pt;
 }

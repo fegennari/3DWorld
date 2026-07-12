@@ -88,6 +88,7 @@ public:
 	bool rand_bool () {return ((rand()&1) != 0);}
 	float rand_sign() {return (rand_bool() ? 1.0 : -1.0);}
 	float rand_uniform(float val1, float val2) {assert(val1 <= val2); return val1 + (val2 - val1)*float(base::randd());}
+	float rand_uniform_or_center(float val1, float val2) {return ((val1 < val2) ? rand_uniform(val1, val2) : 0.5*(val1 + val2));}
 	unsigned rand_uniform_uint(unsigned min_val, unsigned max_val) {assert(min_val <= max_val); return (min_val + (rand() % (max_val - min_val + 1)));}
 	int rand_int(int start, int end) {return (rand()%(end - start + 1) + start);} // used for trees; start and end should be positive
 	float rgauss() {return gauss_rand_arr[rand()%N_RAND_DIST];} // mean = 0.0, std_dev = 1.0
