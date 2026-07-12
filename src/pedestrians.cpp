@@ -398,7 +398,9 @@ bool pedestrian_t::check_inside_plot(ped_manager_t &ped_mgr, point const &prev_p
 		// only use it as the preferred method in the difficult case where we need to walk through residential areas and avoid walls/fences/hedges,
 		// though we may switch to the nav grid if normal path finding fails (or is incomplete) and we get stuck;
 		// one advantage of the nav grid is that it allows peds to walk closer to non-cube buildings, but this also means they're more likely to clip though sharp corners
-		using_nav_grid = (!AVOID_RES_PRIV_PROP && ped_mgr.get_city_plot_for_peds(city, plot).is_residential_not_park());
+		road_plot_t const &plot(ped_mgr.get_city_plot_for_peds(city, plot));
+		using_nav_grid  = (!AVOID_RES_PRIV_PROP && plot.is_residential_not_park());
+		using_nav_grid |= (plot.is_park && plot.has_pond); // // park with ponds can get peds stuck, so use the nav grid in that case as well
 		return 1;
 	}
 	cube_t union_plot_bcube(plot_bcube);
@@ -627,7 +629,7 @@ bool pedestrian_t::try_place_in_plot(cube_t const &plot_cube, vect_cube_t const 
 	pos    = rand_xy_pt_on_cube_edge(plot_cube, radius, rgen);
 	pos.z += radius; // place on top of the plot
 	plot   = next_plot = dest_plot = plot_id; // set next_plot and dest_plot as well so that they're valid for the first frame
-	using_nav_grid = 0; // reset to default path finding for each new plot
+	using_nav_grid = 0; // reset to default path finding for each new plot; what about residential private property or parks with ponds?
 	bool temp_at_dest(0); // we don't want to set at_dest from this call
 	cube_t coll_cube; // unused
 	if (!is_valid_pos(colliders, temp_at_dest, coll_cube, nullptr)) return 0; // plot == next_plot; return if failed

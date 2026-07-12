@@ -868,7 +868,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 				pond_groups.add_obj(pond_obj, ponds);
 				add_cube_to_colliders_and_blockers(pond, colliders, blockers);
 				max_eq(pond_max_depth, depth);
-				added_pond = 1;
+				plot.has_pond = added_pond = 1;
 				break; // success
 			} // for n
 		}
