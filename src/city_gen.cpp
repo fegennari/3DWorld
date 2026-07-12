@@ -313,10 +313,6 @@ template<typename T> cube_t calc_cubes_bcube(vector<T> const &cubes) {
 	return bcube;
 }
 
-point rand_xy_pt_in_cube(cube_t const &c, float radius, rand_gen_t &rgen) {
-	return point(rgen.rand_uniform(c.x1()+radius, c.x2()-radius), rgen.rand_uniform(c.y1()+radius, c.y2()-radius), c.z1());
-}
-
 
 class city_plot_gen_t : public heightmap_query_t {
 protected:
@@ -1418,7 +1414,7 @@ public:
 	bool choose_pt_in_park(point &park_pos, rand_gen_t &rgen) const {
 		if (parks.empty()) return 0;
 		cube_t const &park(parks[rgen.rand() % parks.size()]); // select a random park
-		park_pos = rand_xy_pt_in_cube(park, get_sidewalk_width(), rgen);
+		park_pos = gen_xy_pos_in_area(park, get_sidewalk_width(), rgen, park.z1());
 		return 1;
 	}
 	void add_manhole(point const &pos, float radius) {

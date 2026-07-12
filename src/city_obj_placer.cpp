@@ -532,7 +532,7 @@ bool check_pt_and_place_blocker(point const &pos, vect_cube_t &blockers, float r
 }
 bool try_place_obj(cube_t const &plot, vect_cube_t &blockers, rand_gen_t &rgen, float radius, float blocker_spacing, unsigned num_tries, point &pos, bool add_blocker) {
 	for (unsigned t = 0; t < num_tries; ++t) {
-		pos = rand_xy_pt_in_cube(plot, radius, rgen);
+		pos = gen_xy_pos_in_area(plot, radius, rgen, plot.z1());
 		if (check_pt_and_place_blocker(pos, blockers, radius, blocker_spacing, add_blocker)) return 1; // success
 	}
 	return 0;
@@ -1595,7 +1595,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 		if (add_pigeons) {
 			// place some random pigeons; use place_radius because pigeon radius hasn't been calculated yet
 			unsigned const count_mod(is_park ? 9 : 5), num_pigeons(rgen.rand() % count_mod); // 0-4, 0-8 for parks
-			for (unsigned n = 0; n < num_pigeons; ++n) {pigeon_locs.emplace_back(rand_xy_pt_in_cube(plot, place_radius, rgen), rgen);}
+			for (unsigned n = 0; n < num_pigeons; ++n) {pigeon_locs.emplace_back(gen_xy_pos_in_area(plot, place_radius, rgen, plot.z1()), rgen);}
 
 			for (unsigned i = 0; i < pigeon_locs.size(); ++i) {
 				bird_place_t p(pigeon_locs[i]);
