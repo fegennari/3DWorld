@@ -197,7 +197,7 @@ public:
 		buildings.clear();
 		num_blockers = blockers.size(); // cache
 		
-		for (cube_t const &c : blockers) {
+		for (cube_t const &c : blockers) { // Note: park hills and ponds should be treated as circles/ellipsoids, but they're not tracked
 			if (!bcube_.intersects_xy(c)) continue; // outside the plot
 			int const building_id(get_building_bcube_contains_pos(c.get_cube_center()));
 			if (building_id < 0) {non_building_blockers.push_back(c);} // not a building
@@ -413,6 +413,12 @@ float get_sidewalk_width        () {return SIDEWALK_WIDTH*city_params.road_width
 float get_sidewalk_walkable_area() {return 0.65*get_sidewalk_width();} // walkable area of sidewalk on the street side; 65%, to avoid streetlights and traffic lights
 float get_inner_sidewalk_width  () {return 1.00*get_sidewalk_width();} // walkable area of sidewalk on the plot side (not a sidewalk texture in residential neighborhoods)
 
+bool use_nav_grid_for_plot(road_plot_t const &plot) {
+	if (!AVOID_RES_PRIV_PROP && plot.is_residential_not_park()) return 1;
+	if (plot.is_park && plot.has_pond) return 1; // // park with ponds can get peds stuck, so use the nav grid in that case as well
+	return 0;
+}
+
 // Note: may update plot_bcube and next_plot_bcube
 bool pedestrian_t::check_inside_plot(ped_manager_t &ped_mgr, point const &prev_pos, cube_t &plot_bcube, cube_t &next_plot_bcube) {
 	//if (ssn == 2516) {cout << "in_the_road: " << in_the_road << ", pos: " << pos.str() << ", plot_bcube: " << plot_bcube.str() << ", npbc: " << next_plot_bcube.str() << endl;}
@@ -429,9 +435,7 @@ bool pedestrian_t::check_inside_plot(ped_manager_t &ped_mgr, point const &prev_p
 		// only use it as the preferred method in the difficult case where we need to walk through residential areas and avoid walls/fences/hedges,
 		// though we may switch to the nav grid if normal path finding fails (or is incomplete) and we get stuck;
 		// one advantage of the nav grid is that it allows peds to walk closer to non-cube buildings, but this also means they're more likely to clip though sharp corners
-		road_plot_t const &plot(ped_mgr.get_city_plot_for_peds(city, plot));
-		using_nav_grid  = (!AVOID_RES_PRIV_PROP && plot.is_residential_not_park());
-		using_nav_grid |= (plot.is_park && plot.has_pond); // // park with ponds can get peds stuck, so use the nav grid in that case as well
+		using_nav_grid = use_nav_grid_for_plot(ped_mgr.get_city_plot_for_peds(city, plot));
 		return 1;
 	}
 	cube_t union_plot_bcube(plot_bcube);
@@ -656,11 +660,11 @@ point rand_xy_pt_on_cube_edge(cube_t const &c, float radius, rand_gen_t &rgen) {
 	pt.z     = c.z1();
 	return pt;
 }
-bool pedestrian_t::try_place_in_plot(cube_t const &plot_cube, vect_cube_t const &colliders, unsigned plot_id, rand_gen_t &rgen) {
-	pos    = rand_xy_pt_on_cube_edge(plot_cube, radius, rgen);
+bool pedestrian_t::try_place_in_plot(road_plot_t const &cand_plot, vect_cube_t const &colliders, unsigned plot_id, rand_gen_t &rgen) {
+	pos    = rand_xy_pt_on_cube_edge(cand_plot, radius, rgen);
 	pos.z += radius; // place on top of the plot
 	plot   = next_plot = dest_plot = plot_id; // set next_plot and dest_plot as well so that they're valid for the first frame
-	using_nav_grid = 0; // reset to default path finding for each new plot; what about residential private property or parks with ponds?
+	using_nav_grid = use_nav_grid_for_plot(cand_plot); // set the best path finding for each new plot
 	bool temp_at_dest(0); // we don't want to set at_dest from this call
 	cube_t coll_cube; // unused
 	if (!is_valid_pos(colliders, temp_at_dest, coll_cube, nullptr)) return 0; // plot == next_plot; return if failed
