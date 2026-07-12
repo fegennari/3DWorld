@@ -421,8 +421,8 @@ bool car_t::exit_driveway_to_road(vector<car_t> const &cars, driveway_t const &d
 	if (is_turning && turn_dir == TURN_NONE) { // turn has been completed
 		if (in_reverse) {decelerate_fast();} // pause before going forward
 		driveway.in_use = 0; // Note: in_use flag is mutable
-		in_reverse      = in_parking_lot =  0;
-		dest_driveway   = dest_gstation  = dest_cwash = -1;
+		in_reverse      = in_parking_lot = 0;
+		reset_dest();
 		return 1; // driveway exit complete, continue forward
 	}
 	set_target_speed(in_reverse ? 0.25 : 0.35); // 25-35% of max speed

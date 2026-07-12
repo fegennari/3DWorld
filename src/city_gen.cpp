@@ -2318,8 +2318,8 @@ private:
 	}
 public:
 	bool choose_new_car_dest(car_t &car, rand_gen_t &rgen) const {
-		car.dest_driveway = car.dest_gstation = car.dest_cwash = -1; // reset; if nonzero, that may mean this driveway is never used after this point
-		car.dest_gs_lane  = car.dest_cw_lane  = 0;
+		car.reset_dest(); // reset; if nonzero, that may mean this driveway is never used after this point
+		car.dest_gs_lane = car.dest_cw_lane = 0;
 
 		if (city_params.cars_use_driveways) {
 			// select a gas station if low on fuel and a slot is open; fuel to be added later

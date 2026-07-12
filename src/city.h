@@ -183,6 +183,7 @@ struct car_t : public car_base_t, public waiting_obj_t { // size = 136
 	void decelerate_fast();
 	void park() {cur_speed = max_speed = 0.0;}
 	void stop() {cur_speed = 0.0;} // immediate stop
+	void reset_dest() {dest_driveway = dest_gstation = dest_cwash = -1;}
 	void sleep(rand_gen_t &rgen, float min_time_secs);
 	bool maybe_wake(rand_gen_t &rgen);
 	void move_by(float val) {bcube.translate_dim(dim, val);}

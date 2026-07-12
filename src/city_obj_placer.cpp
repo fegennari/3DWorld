@@ -3495,6 +3495,8 @@ void city_obj_placer_t::leave_car_wash(unsigned bix) const {
 	bldgs[bix].leave_output_lane();
 }
 void city_obj_placer_t::register_car_state(car_t const &car) const {
+	if (car.cur_city != car.dest_city) return; // not in dest city - skip
+
 	if (car.dest_gstation >= 0) {
 		assert((unsigned)car.dest_gstation < gstations.size());
 		//gstations[car.dest_gstation]; // nothing to do yet
