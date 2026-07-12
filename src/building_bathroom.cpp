@@ -113,12 +113,14 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 			} // for n
 		} // for pass
 		if (!placed_toilet) { // if the toilet can't be placed in a corner, allow it to be placed anywhere; needed for small offices
+			unsigned const toilet_obj_id(objs.size());
 			placed_toilet = place_model_along_wall(OBJ_MODEL_TOILET, TYPE_TOILET, room, 0.35, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.8);
 			placed_obj   |= placed_toilet;
 			added_bathroom_objs_mask |= PLACED_TOILET;
 
 			if (placed_toilet) { // if toilet was placed, try to place a roll of toilet paper on the same wall as the toilet
-				room_object_t const &toilet(objs.back()); // okay if this is the blocker
+				room_object_t const &toilet(objs[toilet_obj_id]); // okay if this is the blocker
+				assert(toilet.type == TYPE_TOILET);
 				add_poi_dim_dir(toilet, room_id, toilet.dim, toilet.dir, 0.5); // dscale=0.5
 				
 				// Note: not calling is_val_inside_window() here because I don't have a test case for that and it may not even be possible to get here when the toilet is next to a window

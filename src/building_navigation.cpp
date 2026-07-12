@@ -3390,7 +3390,7 @@ unsigned point_of_interest_t::get_stand_areas(cube_t const &room_bounds, cube_t 
 			sa.d[dim][!dir] = avoid_edge;
 			// trim off the far edge if there's space to put the person closer to the object
 			if (radius > 0.0 && sa.get_sz_dim(dim) > radius) {sa.d[dim][dir] -= (dir ? 1.0 : -1.0)*radius;}
-			if (!sa.intersects(clip_area)) {cout << "invalid " << sa.str() << endl; continue;}
+			if (!sa.intersects(clip_area)) {cout << "invalid stand area: " << TXTS(sa) << TXTS(clip_area) << endl; continue;}
 			sa.intersect_with_cube(clip_area);
 			++num;
 		} // for dir
