@@ -1371,8 +1371,9 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 			vector3d const coll_dir((other.pos.x - pos.x), (other.pos.y - pos.y), 0.0);
 			if (pid < colliding_ped) {} // move the first ped only (the one who moves to avoid)?
 			// move peds apart so that they no longer collide; this will force them to push past each other
-			float const dist_xy(p2p_dist_xy(pos, other.pos)), r_sum(get_coll_radius() + other.get_coll_radius());
-			if (dist_xy < r_sum) {pos -= ((r_sum - dist_xy)/coll_dir.mag())*coll_dir;}
+			float const dist_xy(coll_dir.mag()), r_sum(get_coll_radius() + other.get_coll_radius());
+			if (dist_xy < TOLERANCE ) {pos += dir*r_sum;} // avoid divide-by-zero if both are at the same pos: move forward past the other ped
+			else if (dist_xy < r_sum) {pos -= ((r_sum - dist_xy)/dist_xy)*coll_dir;}
 		}
 		else if (outside_plot && !in_the_road && !plot_bcube.contains_pt_xy_inclusive(pos)) { // attempt to re-enter the plot at the nearest point
 			point plot_pt(pos);
@@ -2273,6 +2274,7 @@ void ped_manager_t::draw_people_in_building(vector<person_t> const &people, ped_
 bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up const &pdu, vector3d const &xlate, float def_draw_dist, float draw_dist_sq,
 	bool &in_sphere_draw, bool shadow_only, bool is_dlight_shadows, animation_state_t *anim_state, bool is_in_building)
 {
+	assert(!is_nan(ped.pos));
 	float const dist_sq(p2p_dist_sq(pdu.pos, ped.pos));
 	
 	if (dist_sq > draw_dist_sq) { // too far - skip
