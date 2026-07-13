@@ -3474,4 +3474,19 @@ bool park_path_t::check_cylin_overlaps_xy(point const &p, float sphere_radius) c
 	}
 	return 0;
 }
+bool park_path_t::line_intersect_center_xy(point const &lp1, point const &lp2, point &p_int) const {
+	cube_t line_bc(lp1, lp2);
+	if (!line_bc.intersects_xy(bcube) || !check_line_clip_xy(lp1, lp2, bcube.d)) return 0;
+
+	for (unsigned i = 0; i+1 < pts.size(); ++i) {
+		point const &p1(pts[i]), &p2(pts[i+1]);
+		if (!cube_t(p1, p2).intersects_xy(line_bc)) continue;
+		vector2d p_int_2d;
+		if (!line_segs_intersect_2d(vector2d(p1.x, p1.y), vector2d(p2.x, p2.y), vector2d(lp1.x, lp1.y), vector2d(lp2.x, lp2.y), &p_int_2d)) continue;
+		p_int.x = p_int_2d.x;
+		p_int.y = p_int_2d.y;
+		return 1;
+	} // for i
+	return 0;
+}
 

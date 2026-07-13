@@ -163,6 +163,7 @@ string gen_random_full_name (rand_gen_t &rgen) {return person_name_gen.gen_name(
 
 class city_cube_nav_grid : public cube_nav_grid {
 	vect_cube_with_ix_t buildings;
+	vector<park_path_t const *> ppaths, creeks;
 	int dest_building=-1;
 	unsigned num_blockers=0;
 	float bldg_radius=0.0; // larger radius used for buildings
@@ -170,7 +171,14 @@ class city_cube_nav_grid : public cube_nav_grid {
 
 	virtual bool check_line_intersect(point const &p1, point const &p2, float radius) const {
 		if (cube_nav_grid::check_line_intersect(p1, p2, radius)) return 1;
-		if (buildings.empty() || p1 == p2) return 0;
+		if (p1 == p2) return 0;
+
+		// check for creek crossings without a path
+		for (park_path_t const *const creek : creeks) {
+			point p_int;
+			if (creek->line_intersect_center_xy(p1, p2, p_int) && !point_in_park_path(p_int)) return 1;
+		}
+		if (buildings.empty()) return 0;
 		// since we don't have a building cylinder intersection funtion, offset the line by radius to both sides and test them both
 		vector3d const dir((p2 - p1).get_norm()), delta(bldg_radius*cross_product(dir, plus_z));
 		point const p1s[2] = {p1-delta, p1+delta}, p2s[2] = {p2-delta, p2+delta};
@@ -182,6 +190,12 @@ class city_cube_nav_grid : public cube_nav_grid {
 				if (b.line_intersects(p1s[d], p2s[d]) && check_line_coll_building(p1s[d], p2s[d], b.ix)) return 1;
 			}
 		} // for b
+		return 0;
+	}
+	bool point_in_park_path(point const &pos) const {
+		for (park_path_t const *const pp : ppaths) {
+			if (pp->check_point_contains_xy(pos)) return 1;
+		}
 		return 0;
 	}
 public:
@@ -226,34 +240,26 @@ public:
 				}
 			}
 		} // for b
-		if (0) { // avoid creeks and use park paths; doesn't work well because there may be no route, and the end of the creek is too close to the sidewalk
+		if (1) { // avoid creeks and use park paths; doesn't work well because there may be no route, and the end of the creek is too close to the sidewalk
+			ppaths.clear();
+			creeks.clear();
 			vector<park_path_t const *> paths;
 			get_city_paths_and_creeks(bcube, paths);
+			for (park_path_t const *const pp : paths) {(pp->is_creek ? creeks : ppaths).push_back(pp);}
 
-			for (park_path_t const *const pp : paths) {
-				if (pp->is_creek) { // avoid the creek
-					unsigned x1, y1, x2, y2;
-					get_region_xy_bounds(pp->bcube, x1, x2, y1, y2);
+			for (park_path_t const *const creek : creeks) { // avoid the creek
+				unsigned x1, y1, x2, y2;
+				get_region_xy_bounds(creek->bcube, x1, x2, y1, y2);
 
-					for (unsigned y = y1; y <= y2; ++y) {
-						for (unsigned x = x1; x <= x2; ++x) {
-							uint8_t &val(nodes[get_node_ix(x, y)]);
-							if (val > 0) continue; // already blocked
-							point const pt(get_grid_pt(x, y));
-							if (!pp->check_point_contains_xy(pt)) continue;
-							bool has_path(0);
-
-							for (park_path_t const *const pp2 : paths) { // but make it unblocked if there's a park path over the creek
-								if (!pp2->is_creek && pp2->check_point_contains_xy(pt)) {has_path = 1; break;}
-							}
-							if (!has_path) {val = 1;} // blocked
-						} // for x
-					} // for y
-				}
-				else { // prefer staying on the park path
-					// unclear how to do this; need another reserved value for marking higher weight nodes?
-				}
-			} // for pp
+				for (unsigned y = y1; y <= y2; ++y) {
+					for (unsigned x = x1; x <= x2; ++x) {
+						uint8_t &val(nodes[get_node_ix(x, y)]);
+						if (val > 0) continue; // already blocked
+						point const pt(get_grid_pt(x, y));
+						if (creek->check_point_contains_xy(pt) && !point_in_park_path(pt)) {val = 1;} // blocked if in creek and not over park path
+					} // for x
+				} // for y
+			} // for creek
 		}
 	}
 	bool find_path(point const &p1, point const &p2, ai_path_t &path, int dest_building_) {

@@ -707,6 +707,7 @@ struct park_path_t : public city_obj_t {
 	bool check_cube_coll_xy(cube_t const &c) const;
 	bool check_cylin_overlaps_xy(point const &p, float sphere_radius) const;
 	bool check_point_contains_xy(point const &p) const {return check_cylin_overlaps_xy(p, 0.0);}
+	bool line_intersect_center_xy(point const &lp1, point const &lp2, point &p_int) const;
 };
 
 struct park_rock_t {

@@ -1398,15 +1398,17 @@ vector3d rtp_to_xyz(float radius, double theta, double phi) {
 // ************ 2D Line Math ************
 
 
-bool line_segs_intersect_2d(vector2d const &L1a, vector2d const &L1b, vector2d const &L2a, vector2d const &L2b) {
+bool line_segs_intersect_2d(vector2d const &L1a, vector2d const &L1b, vector2d const &L2a, vector2d const &L2b, vector2d *p_int) {
 	vector2d const delta1(L1b - L1a), delta2(L2b - L2a);
 	float const cp(cross_product(delta2, delta1));
 	if (fabs(cp) < TOLERANCE) return 0; // parallel segments
 	float const dx(L2a.x - L1a.x), dy(L2a.y - L1a.y);
-	float const s( (delta1.x *  dy + delta1.y * -dx) / cp);
+	float const s( (delta1.x *  dy + delta1.y * -dx) / cp); // value along L1
 	if (s < 0.0 || s > 1.0) return 0;
-	float const t(-(delta2.x * -dy + delta2.y *  dx) / cp);
-	return (t >= 0.0 && t <= 1.0);
+	float const t(-(delta2.x * -dy + delta2.y *  dx) / cp); // value along L2
+	if (t < 0.0 || t > 1.0) return 0;
+	if (p_int) {*p_int = L2a + t*delta2;}
+	return 1;
 }
 
 float point_line_seg_dist_2d(vector2d const &pt, vector2d const &La, vector2d const &Lb) {
