@@ -262,6 +262,7 @@ public:
 			} // for creek
 		}
 	}
+	// p1 is start and p2 is end; both are already added to the path
 	bool find_path(point const &p1, point const &p2, ai_path_t &path, int dest_building_) {
 		//highres_timer_t timer("find_path"); // ~0.03ms
 		assert(p1.z == p2.z); // must be horizontal
@@ -293,6 +294,40 @@ public:
 					if (find_open_node_closest_to(cand, cand, nx, ny)) {p2b = cand; valid = 1; break;}
 				}
 			} // for dist
+		}
+		if (valid && !ppaths.empty()) { // first, see if there's a park path we can use
+			float const edge_dist(2.0*radius);
+			bool dim(0), use_path(0), start_on_edge(0);
+
+			for (unsigned pdim = 0; pdim < 2 && !use_path; ++pdim) {
+				if (fabs(p1 [!pdim] - bcube.d[!pdim][0]) < edge_dist || fabs(p1 [!pdim] - bcube.d[!pdim][1]) < edge_dist) continue; // too close to opposite edge
+				if (fabs(p2b[!pdim] - bcube.d[!pdim][0]) < edge_dist || fabs(p2b[!pdim] - bcube.d[!pdim][1]) < edge_dist) continue; // too close to opposite edge
+
+				for (unsigned pdir = 0; pdir < 2; ++pdir) {
+					if (fabs(p2b[pdim] - bcube.d[pdim][!pdir]) > edge_dist) continue; // end point not along the plot edge
+					start_on_edge = (fabs(p1[pdim] - bcube.d[pdim][pdir]) < edge_dist);
+					use_path = 1;
+					dim = pdim;
+					break;
+				}
+			} // for pdim
+			if (use_path) { // crossing through the park in this dim
+				cube_t pts_bc(p1, p2b);
+
+				for (park_path_t const *const pp : ppaths) {
+					if (pp->dim != dim || pp->pts.size() < 2) continue;
+					if (!start_on_edge && !pp->check_point_contains_xy(p1)) continue; // not on the edge and not on the path
+					bool const start_at_end(fabs(p1[dim] - pp->pts[0][dim]) > 0.5*bcube.get_sz_dim(dim));
+					unsigned const path_start(path.size());
+
+					for (point const &p : pp->pts) {
+						if (p[dim] < pts_bc.d[dim][0] + radius || p[dim] > pts_bc.d[dim][1] - radius) continue; // skip if outside walking range
+						if (path.size() == path_start || !dist_xy_less_than(p, path.back(), radius)) {path.add(p);} // skip short path points
+					}
+					if (start_at_end) {reverse(path.begin()+path_start, path.end());} // first point at path end: walk backwards
+					if (path.size() > path_start) {exclude_val = 255; return 1;} // success if a point was added
+				} // for pp
+			}
 		}
 		bool const ret(valid && cube_nav_grid::find_path(p1, p2b, path));
 		exclude_val = 255; // restore to unset

@@ -814,14 +814,13 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 		if (can_add_path) {
 			point start, end;
 			start.z = end.z = plot.z2() + path_height;
-			bool dim(rgen.rand_bool());
-			park_path_t path(path_hwidth, GRAY, plot, dim, 0); // is_creek=0
+			park_path_t path(path_hwidth, GRAY, plot, rgen.rand_bool(), 0); // random dim; is_creek=0
 
-			for (unsigned n = 0; n < num_paths; ++n, dim ^= 1) { // alternate dims for each path
+			for (unsigned n = 0; n < num_paths; ++n, path.dim ^= 1) { // alternate dims for each path
 				for (unsigned N = 0; N < 100; ++N) { // make 100 tries
-					choose_edge_pos(plot, edge_border, dim, 0, start, rgen); // choose starting point
-					choose_edge_pos(plot, edge_border, dim, 1, end,   rgen); // choose ending point on the opposite edge
-					gen_park_path(path, start, end, path_hwidth, plot, plot, dim, 0, 0, rgen); // dir=0, is_creek=0
+					choose_edge_pos(plot, edge_border, path.dim, 0, start, rgen); // choose starting point
+					choose_edge_pos(plot, edge_border, path.dim, 1, end,   rgen); // choose ending point on the opposite edge
+					gen_park_path(path, start, end, path_hwidth, plot, plot, path.dim, 0, 0, rgen); // dir=0, is_creek=0
 					if (check_path_tree_coll(path, tree_pos, 0.5)) continue; // add more spacing for trees; needed for low pine tree branches
 					ppath_groups.add_obj(path, ppaths);
 					break; // success
