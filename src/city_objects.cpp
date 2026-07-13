@@ -3374,7 +3374,7 @@ bool city_flag_t::proc_sphere_coll(point &pos_, point const &p_last, float radiu
 void park_path_t::calc_bcube_bsphere() {
 	assert(pts.size() >= 2);
 	bcube.set_from_points(pts);
-	bcube.expand_by_xy(hwidth); // conservative
+	bcube.expand_in_dim(!dim, hwidth); // expand width (not length); conservative
 	bcube.z2() += hwidth; // make sure it's nonzero height
 	set_bsphere_from_bcube();
 }

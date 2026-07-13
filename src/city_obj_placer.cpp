@@ -815,7 +815,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 			point start, end;
 			start.z = end.z = plot.z2() + path_height;
 			bool dim(rgen.rand_bool());
-			park_path_t path(path_hwidth, GRAY, plot);
+			park_path_t path(path_hwidth, GRAY, plot, dim, 0); // is_creek=0
 
 			for (unsigned n = 0; n < num_paths; ++n, dim ^= 1) { // alternate dims for each path
 				for (unsigned N = 0; N < 100; ++N) { // make 100 tries
@@ -886,7 +886,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 				float const dist(abs(plot.d[dim_][dir_] - pond.d[dim_][dir_]));
 				if (dist > dmax) {dim = dim_; dir = dir_; dmax = dist;}
 			}
-			park_path_t creek(creek_hwidth, WATER_C, plot, 1); // is_creek=1
+			park_path_t creek(creek_hwidth, WATER_C, plot, dim, 1); // is_creek=1
 
 			for (unsigned N = 0; N < 100; ++N) { // make 100 tries
 				choose_edge_pos(plot, edge_border, dim, dir, start, rgen); // choose starting point
