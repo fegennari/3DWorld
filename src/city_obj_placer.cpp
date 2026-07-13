@@ -727,7 +727,7 @@ bool check_close_to_door(point const &pos, float min_dist, unsigned building_ix)
 	return (get_building_door_pos_closest_to(building_ix, pos, door_pos, 1) && dist_xy_less_than(pos, door_pos, min_dist)); // close to door; inc_garage_door=1
 }
 
-void gen_park_path(park_path_t &path, point &start, point &end, float hwidth, cube_t const &plot, cube_t const &path_area, bool dim, bool dir, rand_gen_t &rgen) {
+void gen_park_path(park_path_t &path, point &start, point &end, float hwidth, cube_t const &plot, cube_t const &path_area, bool dim, bool dir, bool is_creek, rand_gen_t &rgen) {
 	float const len_ratio(min(1.0f, fabs(start[dim] - end[dim])/plot.get_sz_dim(dim))); // < 1.0 for a creek
 	unsigned const num_path_segs(round_fp(100*len_ratio)), max_cycles((len_ratio > 0.8) ? 3 : ((len_ratio > 0.4) ? 2 : 1)); // 1-3 cycles
 	float const path_curve(rgen.rand_uniform(0.1, 1.0)*20.0*len_ratio*hwidth);
@@ -737,8 +737,8 @@ void gen_park_path(park_path_t &path, point &start, point &end, float hwidth, cu
 	cube_t valid_region(path_area);
 	valid_region.expand_in_dim(!dim, -2.0f*hwidth); // shrink to keep path inside the park on the opposite edges
 	point cur(start);
-	start[dim] += extend; // extend outside the plot to avoid a gap; will be clipped during drawing
-	end  [dim] -= extend;
+	if (!is_creek) {start[dim] += extend;} // extend outside the plot to avoid a gap; will be clipped during drawing
+	end[dim] -= (is_creek ? 2.0 : 1.0)*extend;
 	path.pts.clear();
 	path.pts.push_back(start);
 
@@ -821,7 +821,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 				for (unsigned N = 0; N < 100; ++N) { // make 100 tries
 					choose_edge_pos(plot, edge_border, dim, 0, start, rgen); // choose starting point
 					choose_edge_pos(plot, edge_border, dim, 1, end,   rgen); // choose ending point on the opposite edge
-					gen_park_path(path, start, end, path_hwidth, plot, plot, dim, 0, rgen); // dir=0
+					gen_park_path(path, start, end, path_hwidth, plot, plot, dim, 0, 0, rgen); // dir=0, is_creek=0
 					if (check_path_tree_coll(path, tree_pos, 0.5)) continue; // add more spacing for trees; needed for low pine tree branches
 					ppath_groups.add_obj(path, ppaths);
 					break; // success
@@ -890,12 +890,13 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 
 			for (unsigned N = 0; N < 100; ++N) { // make 100 tries
 				choose_edge_pos(plot, edge_border, dim, dir, start, rgen); // choose starting point
-				end[ dim] = pond.d[dim][dir];
-				end[!dim] = pond.get_center_dim(!dim); // center of pond, to avoid dealing with ellipse logic
+				start[ dim] -= (dir ? 1.0 : -1.0)*sidewalk_width; // pull away from the sidewalk so that pedestrian paths aren't blocked
+				end  [ dim]  = pond.d[dim][dir];
+				end  [!dim]  = pond.get_center_dim(!dim); // center of pond, to avoid dealing with ellipse logic
 				cube_t path_area(plot);
 				path_area.d[dim][!dir] = end[dim]; // clip to side of pond
 				point const pipe_pos(start);
-				gen_park_path(creek, start, end, creek_hwidth, plot, path_area, dim, dir, rgen);
+				gen_park_path(creek, start, end, creek_hwidth, plot, path_area, dim, dir, 1, rgen); // is_creek=1
 				if (check_path_tree_coll(creek, tree_pos, 0.1)) continue; // allow nearby tree
 				// check that the creek doesn't intersect a park path at a shallow angle;
 				// these nested loops may seem quadratic and slow, but in practice they only take 1-3ms
@@ -928,12 +929,14 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 				}
 				if (is_bad) continue;
 				ppath_groups.add_obj(creek, ppaths);
+				// add a creek crossing/pipe at the end where the creek meets the sidewalk at the edge of the plot
 				cylinder_3dw creek_end;
 				creek_end.r1 = creek_end.r2 = 0.5*creek_hwidth;
 				creek_end.p1 = pipe_pos;
 				creek_end.p1.z -= creek_end.r1; // top touches top of park
 				creek_end.p2 = creek_end.p1;
-				creek_end.p2[dim] += (dir ? -1.0 : 1.0)*0.8*creek_hwidth; // set pipe length
+				creek_end.p2[dim] += (dir ? -1.0 : 1.0)*0.5*creek_hwidth; // set pipe length
+				creek_end.p1[dim] -= (dir ? -1.0 : 1.0)*0.8*creek_hwidth; // extend into ground
 				creek_crossings.push_back(creek_end);
 				added_creek  = 1;
 				break; // success

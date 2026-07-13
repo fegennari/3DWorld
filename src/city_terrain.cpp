@@ -558,6 +558,7 @@ park_heightmap_t::park_heightmap_t(cube_t const &c, unsigned nx_, unsigned ny_, 
 			for (unsigned y = y1; y <= y2; ++y) {
 				for (unsigned x = x1; x <= x2; ++x) {
 					point const pt(pt_from_xy(x, y));
+					if (!P->bcube.contains_pt(pt)) continue; // off the end
 					float const dist(pt_line_dist(pt, p1, p2));
 					if (dist > hwidth) continue;
 					lower_height(x, y, (z_ground - depth*(1.0f - dist/hwidth)));
