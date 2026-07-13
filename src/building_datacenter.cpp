@@ -654,7 +654,8 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 	bool const dim(hallway_dim), dir(interior->dc_info->se_dir); // server room is opposite the stairs and elevators
 	bool const bldg_side(pri_hall.get_center_dim(!dim) < room.get_center_dim(!dim)), is_ground_floor(floor_ix == 0);
 	bool const has_fan_model(building_obj_model_loader.is_model_valid(OBJ_MODEL_RAD_FAN));
-	float const floor_spacing(get_window_vspace()), ceiling_zval(zval + get_floor_ceil_gap()), clearance(get_min_front_clearance_inc_people()), dsign(dir ? 1.0 : -1.0);
+	float const floor_spacing(get_window_vspace()), ceiling_zval(zval + get_floor_ceil_gap());
+	float const doorway_width(get_doorway_width()), clearance(get_min_front_clearance_inc_people()), dsign(dir ? 1.0 : -1.0);
 	float cur_place_pos(place_area.d[dim][dir]); // start at front wall adjacent to server room
 	// place batteries, represented as kitchen fridges, against the wall shared with the server room
 	int const bat_model(select_dc_battery_model());
@@ -664,21 +665,33 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 		float const bat_height(0.55*floor_spacing), wall_pos(cur_place_pos);
 		unsigned const bat_start(objs.size());
 		add_row_of_models(place_area, zval, room_id, tot_light_amt, bat_height, 0.08, bat_model, TYPE_KITCH_APP, dim, dir, dim, !dir, get_sub_model_id(bat_model), cur_place_pos);
-		unsigned const bat_end(objs.size());
+		unsigned const bat_end(objs.size()), conduit_flags(RO_FLAG_NOCOLL | RO_FLAG_LIT);
 		// add conduits to the top; maybe these should connect together?
 		bool const conduit_side(rgen.rand_bool());
-		float const conduit_radius(0.02*floor_spacing), csign(conduit_side ? 1.0 : -1.0);
-		cube_t conduit;
-		set_cube_zvals(conduit, zval+bat_height, ceiling_zval);
+		float const v_conduit_radius(0.02*floor_spacing), h_conduit_radius(0.02*floor_spacing), csign(conduit_side ? 1.0 : -1.0);
+		cube_t v_conduit, h_conduit;
+		set_cube_zvals(v_conduit, zval+bat_height, ceiling_zval);
+		set_wall_width(h_conduit, zval+0.9*bat_height, h_conduit_radius, 2); // Z
+		float hc_start(0.0);
 
 		for (unsigned i = bat_start; i != bat_end; ++i) {
 			room_object_t const &bat(objs[i]);
 			assert(bat.type == TYPE_KITCH_APP);
-			set_wall_width(conduit, (wall_pos                  - 0.2*dsign*bat.get_depth()), conduit_radius,  dim); // further toward the back wall
-			set_wall_width(conduit, (bat.d[!dim][conduit_side] - 0.1*csign*bat.get_width()), conduit_radius, !dim); // off to one side
-			objs.emplace_back(conduit, TYPE_PIPE, room_id, 0, 1, (RO_FLAG_NOCOLL | RO_FLAG_LIT), tot_light_amt, SHAPE_CYLIN, GRAY_BLACK); // vertical, with shadows
+			float const bat_lo(bat.d[!dim][0]), bat_hi(bat.d[!dim][1]);
+			set_wall_width(v_conduit, (wall_pos                  - 0.2*dsign*bat.get_depth()), v_conduit_radius,  dim); // further toward the back wall
+			set_wall_width(v_conduit, (bat.d[!dim][conduit_side] - 0.1*csign*bat.get_width()), v_conduit_radius, !dim); // off to one side
+			objs.emplace_back(v_conduit, TYPE_PIPE, room_id, 0, 1, conduit_flags, tot_light_amt, SHAPE_CYLIN, GRAY_BLACK); // vertical, with shadows
 			batteries_bcube.assign_or_union_with_cube(bat);
-		}
+
+			// connect adjacent batteries with conduits if possible
+			if (hc_start != 0.0 && bat_lo - hc_start < doorway_width) { // not blocked by a door
+				set_wall_width(h_conduit, v_conduit.get_center_dim(dim), h_conduit_radius, dim);
+				h_conduit.d[!dim][0] = hc_start;
+				h_conduit.d[!dim][1] = bat_lo;
+				objs.emplace_back(h_conduit, TYPE_PIPE, room_id, !dim, 0, conduit_flags, tot_light_amt, SHAPE_CYLIN, GRAY_BLACK); // horizontal, with shadows
+			}
+			hc_start = bat_hi;
+		} // for i
 		if (has_fan_model) { // add fans to the top
 			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_RAD_FAN)); // D, W, H
 
