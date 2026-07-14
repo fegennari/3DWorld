@@ -317,12 +317,12 @@ public:
 				for (park_path_t const *const pp : ppaths) {
 					if (pp->dim != dim || pp->pts.size() < 2) continue;
 					if (!start_on_edge && !pp->check_point_contains_xy(p1)) continue; // not on the edge and not on the path
-					bool const start_at_end(fabs(p1[dim] - pp->pts[0][dim]) > 0.5*bcube.get_sz_dim(dim));
+					bool const start_at_end(fabs(p2b[dim] - pp->pts[0][dim]) < 0.5*bcube.get_sz_dim(dim)); // based on destination point
 					unsigned const path_start(path.size());
 
 					for (point const &p : pp->pts) {
 						if (p[dim] < pts_bc.d[dim][0] + radius || p[dim] > pts_bc.d[dim][1] - radius) continue; // skip if outside walking range
-						if (path.size() == path_start || !dist_xy_less_than(p, path.back(), radius)) {path.add(p);} // skip short path points
+						if (path.size() == path_start || !dist_xy_less_than(p, path.back(), radius)) {path.add(point(p.x, p.y, p1.z));} // skip short path points
 					}
 					if (start_at_end) {reverse(path.begin()+path_start, path.end());} // first point at path end: walk backwards
 					if (path.size() > path_start) {exclude_val = 255; return 1;} // success if a point was added
@@ -2082,6 +2082,14 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 	if (!complete) { // incomplete path - show dest pos
 		s.set_cur_color(BLACK);
 		draw_sphere_vbo(orig_dest_pos, sphere_radius, NDIV, 0);
+	}
+	if (target_valid()) {
+		s.set_cur_color(GREEN);
+		draw_sphere_vbo((target_pos + 0.1*radius*plus_z), sphere_radius, NDIV, 0); // shift slightly up
+	}
+	else {
+		s.set_cur_color(RED);
+		draw_sphere_vbo((pos + 0.5*radius*plus_z), 0.5*sphere_radius, NDIV, 0); // shift up and make smaller
 	}
 	end_sphere_draw(in_sphere_draw);
 
