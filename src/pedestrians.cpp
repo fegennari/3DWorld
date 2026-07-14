@@ -318,12 +318,17 @@ public:
 					if (pp->dim != dim || pp->pts.size() < 2) continue;
 					if (!start_on_edge && !pp->check_point_contains_xy(p1)) continue; // not on the edge and not on the path
 					bool const start_at_end(fabs(p2b[dim] - pp->pts[0][dim]) < 0.5*bcube.get_sz_dim(dim)); // based on destination point
+					float const right_side_offset((start_at_end ? -1.0 : 1.0)*0.5*min(pp->hwidth, radius));
 					unsigned const path_start(path.size());
 
-					for (point const &p : pp->pts) {
+					for (auto i = pp->pts.begin(); i+1 < pp->pts.end(); ++i) {
+						point const &p(*i);
 						if (p[dim] < pts_bc.d[dim][0] + radius || p[dim] > pts_bc.d[dim][1] - radius) continue; // skip if outside walking range
-						if (path.size() == path_start || !dist_xy_less_than(p, path.back(), radius)) {path.add(point(p.x, p.y, p1.z));} // skip short path points
-					}
+						if (path.size() != path_start && dist_xy_less_than(p, path.back(), radius))   continue; // skip short path points
+						point ppt(p.x, p.y, p1.z);
+						ppt += right_side_offset*cross_product((*(i+1) - p), plus_z).get_norm(); // walk to the right side of the path center to allow for passing
+						path.add(ppt);
+					} // for i
 					if (start_at_end) {reverse(path.begin()+path_start, path.end());} // first point at path end: walk backwards
 					if (path.size() > path_start) {exclude_val = 255; return 1;} // success if a point was added
 				} // for pp
