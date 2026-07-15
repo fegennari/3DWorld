@@ -652,11 +652,12 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 	auto &objs(interior->room_geom->objs);
 	cube_t const place_area(get_walkable_room_bounds(room));
 	bool const dim(hallway_dim), dir(interior->dc_info->se_dir); // server room is opposite the stairs and elevators
-	bool const bldg_side(pri_hall.get_center_dim(!dim) < room.get_center_dim(!dim)), is_ground_floor(floor_ix == 0);
+	bool const bldg_side(pri_hall.get_center_dim(!dim) < room.get_center_dim(!dim)), is_ground_floor(floor_ix == 0), is_top_floor(floor_ix+1 == num_floors);
 	bool const has_fan_model(building_obj_model_loader.is_model_valid(OBJ_MODEL_RAD_FAN));
 	float const floor_spacing(get_window_vspace()), ceiling_zval(zval + get_floor_ceil_gap());
 	float const doorway_width(get_doorway_width()), clearance(get_min_front_clearance_inc_people()), dsign(dir ? 1.0 : -1.0);
 	float cur_place_pos(place_area.d[dim][dir]); // start at front wall adjacent to server room
+	unsigned const conduit_flags(RO_FLAG_NOCOLL | RO_FLAG_LIT);
 	// place batteries, represented as kitchen fridges, against the wall shared with the server room
 	int const bat_model(select_dc_battery_model());
 	cube_t batteries_bcube;
@@ -665,7 +666,7 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 		float const bat_height(0.55*floor_spacing), wall_pos(cur_place_pos);
 		unsigned const bat_start(objs.size());
 		add_row_of_models(place_area, zval, room_id, tot_light_amt, bat_height, 0.08, bat_model, TYPE_KITCH_APP, dim, dir, dim, !dir, get_sub_model_id(bat_model), cur_place_pos);
-		unsigned const bat_end(objs.size()), conduit_flags(RO_FLAG_NOCOLL | RO_FLAG_LIT);
+		unsigned const bat_end(objs.size());
 		// add conduits to the top; maybe these should connect together?
 		bool const conduit_side(rgen.rand_bool());
 		float const v_conduit_radius(0.02*floor_spacing), h_conduit_radius(0.02*floor_spacing), csign(conduit_side ? 1.0 : -1.0);
@@ -933,8 +934,24 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 		unsigned const xg_obj_size(objs.size());
 		// place transformers
 		float const xfmr_height(0.4*floor_spacing), xfmr_zval(zval - TRANSFORMER_Z_SHIFT*xfmr_height); // shift base to the floor
+		unsigned const xfmr_start(objs.size());
 		add_row_of_models(xfmr_area, xfmr_zval, room_id, tot_light_amt, xfmr_height, 0.15, OBJ_MODEL_SUBSTATION, TYPE_XFORMER, dim, dir, dim, dir, 0, cur_place_pos);
-		// connect with wire conduits? but they already have conduits into the floor
+		unsigned const xfmr_end(objs.size());
+		
+		if (!is_top_floor || !is_ground_floor) { // connect with wire conduits between floors (though they already have two conduits into the floor)
+			bool const cside(dim ^ dir ^ 1);
+			float const conduit_radius(0.025*xfmr_height), z_center(zval + 0.5*xfmr_height);
+			cube_t v_conduit;
+			set_cube_zvals(v_conduit, (is_ground_floor ? z_center : zval), (is_top_floor ? z_center : ceiling_zval)); // floor to ceiling
+
+			for (unsigned i = xfmr_start; i != xfmr_end; ++i) {
+				room_object_t const &xfmr(objs[i]);
+				assert(xfmr.type == TYPE_XFORMER);
+				set_wall_width(v_conduit, (xfmr.d[!dim][cside] - (cside ? 1.0 : -1.0)*0.105*xfmr.get_width()), conduit_radius, !dim); // off to the side where the junction box is
+				set_wall_width(v_conduit, (xfmr.d[ dim][dir  ] - (dir   ? 1.0 : -1.0)*0.400*xfmr.get_depth()), conduit_radius,  dim);
+				objs.emplace_back(v_conduit, TYPE_PIPE, room_id, 0, 1, conduit_flags, tot_light_amt, SHAPE_CYLIN, GRAY_BLACK); // vertical, with shadows
+			} // for i
+		}
 		if (pass == 1) {cur_place_pos = pre_place_pos;} // use the same row
 		// place generators near the back wall
 		gen_start = objs.size();
@@ -944,7 +961,7 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 		if (add_row_of_models(gen_area, zval, room_id, tot_light_amt, gen_height, 0.1, OBJ_MODEL_GENERATOR, TYPE_GENERATOR, dim, dir, !dim, (gen_dir ^ bldg_side), 0, cur_place_pos)) break;
 		if (pass == 1) break; // failed, done
 		// try again, but this time split the width in half and try to place each type
-		objs.resize(xg_obj_size); // remove any models added above
+		objs.resize(xg_obj_size); // remove any objects added above
 		xfmr_area.d[!dim][xg_side ^ bldg_side] = gen_area.d[!dim][!xg_side ^ bldg_side] = inner_area.get_center_dim(!dim);
 		cur_place_pos = pre_place_pos;
 	} // for pass
