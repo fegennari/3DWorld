@@ -1442,7 +1442,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 		for (auto i = ppoles.begin()+ppoles_start; i != ppoles.end(); ++i) {colliders.push_back(i->get_ped_occluder());}
 	}
 	// place substations in commercial cities, near the corner pole that routes power into the ground, if the model has been loaded
-	if (!is_residential && corner_pole_pos != all_zeros && building_obj_model_loader.is_model_valid(OBJ_MODEL_SUBSTATION)) {
+	if (!is_residential && !is_park && corner_pole_pos != all_zeros && building_obj_model_loader.is_model_valid(OBJ_MODEL_SUBSTATION)) {
 		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool());
 		float const ss_height(0.08*city_params.road_width), dist_from_corner(0.12); // distance from corner relative to plot size
 		vector3d ss_center((1.0 - dist_from_corner)*corner_pole_pos + dist_from_corner*plot.get_cube_center());
