@@ -762,6 +762,7 @@ float park_heightmap_t::get_zval_at_pos(point const &pos_bs) const {
 bool park_heightmap_t::set_pos_zval(point &pos, float radius, point const &xlate, vector<park_path_t> const &ppaths) const {
 	point const pos_bs(pos - xlate);
 	if (!bcube.contains_pt_xy(pos_bs)) return 0; // not in this park
+	player_in_creek_pond = 0;
 	float const height(get_zval_at_pos(pos_bs));
 	if (height == z_ground) return 0; // default height value, same as city zval
 
