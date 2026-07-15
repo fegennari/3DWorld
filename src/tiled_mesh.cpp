@@ -1251,7 +1251,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 							for (unsigned n = 0; n < 4; ++n) {hr_data[off_hr+n] = mesh_weight_data[off+n];}
 							// add missing higher resolution grass
 							if (has_grass) continue; // already has grass
-							point const query_pos((get_xval(x + llc_x_cs) + xx*hr_dx - 0.5*DX_VAL), (get_yval(y + llc_y_cs) + yy*hr_dy - 0.5*DY_VAL), 0.0);
+							point const query_pos((get_xval(x + llc_x_cs) + xx*hr_dx - 0.5*(DX_VAL - hr_dx)), (get_yval(y + llc_y_cs) + yy*hr_dy - 0.5*(DY_VAL - hr_dy)), 0.0);
 							if (!check_inside_city(query_pos, hr_half_dxy) || !city_has_grass_at(query_pos, hr_half_dxy)) continue;
 							hr_data[off_hr+2] = 255; // add full grass
 							add_grass = 1;
