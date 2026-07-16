@@ -453,7 +453,34 @@ bool building_t::add_exam_room_objs(rand_gen_t rgen, room_t &room, float zval, u
 		place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, room, 0.45, rgen, zval, room_id, tot_light_amt, room_area, objs_start, 0.6);
 	}
 	else { // add a vanity
-		add_vanity_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);
+		unsigned const vanity_obj_id(objs.size());
+
+		if (add_vanity_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start)) {
+			room_object_t const vanity(objs[vanity_obj_id]); // deep copy
+			bool const dim(vanity.dim), dir(vanity.dir), td_side(rgen.rand_bool());
+			float const td_sd_z1(vanity.z2() + 0.35*vanity.dz()), dir_sign(dir ? 1.0 : -1.0), side_sign(td_side ? 1.0 : -1.0), wall_pos(room_area.d[dim][!dir]);
+
+			if (building_obj_model_loader.is_model_valid(OBJ_MODEL_TOWEL_DISP)) { // paper towel dispenser
+				vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TOWEL_DISP)); // D, W, H
+				float const height(0.21*floor_spacing), hwidth(0.5*height*sz.y/sz.z), depth(height*sz.x/sz.z);
+				cube_t td;
+				set_cube_zvals(td, td_sd_z1, td_sd_z1+height);
+				td.d[dim][!dir] = wall_pos;
+				td.d[dim][ dir] = wall_pos + dir_sign*depth;
+				set_wall_width(td, (vanity.d[!dim][td_side] - side_sign*1.5*hwidth), hwidth, !dim);
+				if (!overlaps_other_room_obj(td, objs_start)) {objs.emplace_back(td, TYPE_TOWEL_DISP, room_id, dim, dir, 0, tot_light_amt);} // inc_open=1, check_odir=1
+			}
+			if (building_obj_model_loader.is_model_valid(OBJ_MODEL_SOAP_DISP)) { // soap dispenser
+				vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SOAP_DISP)); // D, W, H
+				float const height(0.12*floor_spacing), hwidth(0.5*height*sz.y/sz.z), depth(height*sz.x/sz.z);
+				cube_t sd;
+				set_cube_zvals(sd, td_sd_z1, td_sd_z1+height);
+				sd.d[dim][!dir] = wall_pos;
+				sd.d[dim][ dir] = wall_pos + dir_sign*depth;
+				set_wall_width(sd, (vanity.d[!dim][!td_side] + side_sign*5.0*hwidth), hwidth, !dim);
+				if (!overlaps_other_room_obj(sd, objs_start)) {objs.emplace_back(sd, TYPE_SOAP_DISP, room_id, dim, dir, 0, tot_light_amt);} // inc_open=1, check_odir=1
+			}
+		}
 	}
 	add_hospital_medicine_cabinet(rgen, room, zval, room_id, tot_light_amt, objs_start);
 	place_chairs_along_walls(rgen, room, zval, room_id, tot_light_amt, objs_start, chair_color, 1, 1); // is_plastic=1, num_chairs=1
