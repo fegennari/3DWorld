@@ -549,12 +549,14 @@ bool pedestrian_t::is_valid_pos(vect_cube_t const &colliders, bool &ped_at_dest,
 		// collided with the wrong building
 		if (!using_nav_grid) return 0; // ignore collision if using nav grid because this may be a glancing collision; assume the nav grid logic is correct
 	}
-	float const xmin(pos.x - radius), xmax(pos.x + radius), height(get_height());
+	// use a slightly smaller radius if called from update() and we have a target, to avoid false collisions due to FP errors between path finding and collision detection
+	float const r_eff(((coll_bldg_ix && target_valid()) ? 0.99 : 1.0)*radius);
+	float const xmin(pos.x - r_eff), xmax(pos.x + r_eff), height(get_height());
 
 	for (auto i = colliders.begin(); i != colliders.end(); ++i) {
 		if (i->x2() < xmin) continue; // to the left
 		if (i->x1() > xmax) break; // to the right - sorted from left to right, so no more colliders can intersect - done
-		if (!check_collider_coll(*i, pos, radius, height)) continue;
+		if (!check_collider_coll(*i, pos, r_eff, height)) continue;
 		coll_cube = *i;
 		if (!has_dest_car || !ped_mgr || plot != dest_plot) return 0; // not looking for car intersection
 		
