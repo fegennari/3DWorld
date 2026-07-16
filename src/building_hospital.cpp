@@ -661,7 +661,7 @@ bool building_t::add_lab_room_objs(rand_gen_t rgen, room_t &room, float zval, un
 				table = place_area;
 				set_cube_zvals(table, zval, table_z2);
 				table.d[wdim][!wdir] = place_area.d[wdim][wdir] + (wdir ? -1.0 : 1.0)*table_width;
-				if (is_obj_placement_blocked(table, room, 1, 1)) continue;
+				if (is_obj_placement_blocked(table, room, 1, 0)) continue;
 				chair_sides[wdir] = 0; // chairs only on one side
 				table_dim   = wdim;
 				table_dir   = wdir;
@@ -674,10 +674,11 @@ bool building_t::add_lab_room_objs(rand_gen_t rgen, room_t &room, float zval, un
 		unsigned table_obj_ix(objs.size());
 		unsigned const item_flags(get_table_item_flags(rgen, 0, 1)); // is_plastic=0, is_metal=1
 		vect_cube_t blockers; // empty
-		objs.emplace_back(table, TYPE_TABLE, room_id, dim, table_dir, RO_FLAG_ADJ_TOP, tot_light_amt, SHAPE_CUBE, WHITE, item_flags); // metal; assumes table has something on it
+		objs.emplace_back(table, TYPE_TABLE, room_id, !table_dim, 0, RO_FLAG_ADJ_TOP, tot_light_amt, SHAPE_CUBE, WHITE, item_flags); // metal; assumes table has something on it
 		if (rgen.rand_bool()) {place_laptop_on_obj(rgen, objs.back(), room_id, tot_light_amt, blockers, 0);} // use_dim_dir=0
+		if (rgen.rand_bool()) {place_phone_on_obj (rgen, table,       room_id, tot_light_amt, table_dim, !table_dir);}
 		add_test_tubes_to_surface(rgen, room_id, tot_light_amt, table_obj_ix); // placeholder
-		// TODO: add more lab table items
+		// TODO: add more lab table items: TYPE_KITCH_APP?
 		// add chairs at the table between the legs
 		unsigned const num_chairs((get_metal_table_num_legs_per_side(objs[table_obj_ix])-1));
 		float const chair_spacing(table.get_sz_dim(!table_dim)/num_chairs); // average

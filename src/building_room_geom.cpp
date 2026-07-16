@@ -333,7 +333,7 @@ void building_room_geom_t::add_table(room_object_t const &c, float tscale, float
 		assert(c.shape == SHAPE_CUBE || c.shape == SHAPE_SHORT || c.shape == SHAPE_TALL);
 		bool const has_sides(c.shape == SHAPE_TALL); // podium, should be square; currently only supported for wood tables
 
-		if (c.type == TYPE_TABLE && c.item_flags == 1) { // metal (commercial kitchen) table
+		if (c.type == TYPE_TABLE && c.item_flags == 1) { // metal (commercial kitchen or hospital lab) table
 			unsigned const num_legs_per_side(get_metal_table_num_legs_per_side(c));
 			leg_width *= 0.7*c.get_width(); // narrower than wooden table
 			float const leg_hwidth(0.5*leg_width), leg_spacing((c.get_length() - 2.0*leg_width)/(num_legs_per_side - 1));
