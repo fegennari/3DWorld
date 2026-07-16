@@ -3923,6 +3923,18 @@ bool building_t::place_toy_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsi
 	return 1;
 }
 
+bool building_t::place_stapler_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid) {
+	float const length(rgen.rand_uniform(6.0, 8.0)*get_one_inch()), width(0.2*length), height(0.3*length);
+	if (min(place_on.dx(), place_on.dy()) < 2.5*length) return 0; // surface is too small to place this stapler
+	bool const dim(rgen.rand_bool());
+	cube_t stapler;
+	gen_xy_pos_for_cube_obj(stapler, place_on, vector3d(0.5*(dim ? width : length), 0.5*(dim ? length : width), place_on.z2()), height, rgen);
+	if (has_bcube_int(stapler, avoid)) return 0; // only make one attempt
+	colorRGBA const &color(stapler_colors[rgen.rand()%NUM_STAPLER_COLORS]);
+	interior->room_geom->objs.emplace_back(stapler, TYPE_STAPLER, room_id, dim, rgen.rand_bool(), RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, color);
+	return 1;
+}
+
 bool building_t::place_banana_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid) {
 	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_BANANA)) return 0;
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_BANANA));
