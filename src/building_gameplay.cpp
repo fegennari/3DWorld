@@ -533,6 +533,9 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 		type.value  = 1.0;
 		type.weight = 0.25;
 	}
+	else if (otype == TYPE_TAPE && obj.color == WHITE) {
+		type.name = "medical Tape"; // rather than duct tape
+	}
 	if (wv_factor != 1.0) { // scale weight and value by this factor, rounded to the nearest pound and dollar
 		type.weight = int(wv_factor*type.weight);
 		type.value  = int(wv_factor*type.value );
