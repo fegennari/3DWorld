@@ -9,6 +9,7 @@ extern object_model_loader_t building_obj_model_loader;
 
 
 unsigned get_metal_table_num_legs_per_side(room_object_t const &c);
+bool enable_kitchen_app_models();
 int select_lab_model(rand_gen_t &rgen, unsigned &types_used, float &hscale);
 cube_t get_trolley_place_area(room_object_t const &trolley);
 
@@ -711,12 +712,23 @@ bool building_t::add_lab_room_objs(rand_gen_t rgen, room_t &room, float zval, un
 	if (added_table) {
 		unsigned table_obj_ix(objs.size());
 		unsigned const item_flags(get_table_item_flags(rgen, 0, 1)); // is_plastic=0, is_metal=1
-		vect_cube_t blockers; // empty
+		vect_cube_t blockers;
 		objs.emplace_back(table, TYPE_TABLE, room_id, !table_dim, 0, RO_FLAG_ADJ_TOP, tot_light_amt, SHAPE_CUBE, WHITE, item_flags); // metal; assumes table has something on it
-		if (rgen.rand_bool()) {place_laptop_on_obj(rgen, objs.back(), room_id, tot_light_amt, blockers, 0);} // use_dim_dir=0
-		if (rgen.rand_bool()) {place_phone_on_obj (rgen, table,       room_id, tot_light_amt, table_dim, !table_dir);}
+		
+		if (rgen.rand_float() < 0.65) { // phone doesn't take blockers so must be first
+			if (place_phone_on_obj(rgen, table, room_id, tot_light_amt, table_dim, !table_dir)) {blockers.push_back(objs.back());}
+		}
+		if (rgen.rand_float() < 0.55) {place_laptop_on_obj(rgen, objs.back(), room_id, tot_light_amt, blockers, 0);} // use_dim_dir=0
+
+		if (enable_kitchen_app_models() && rgen.rand_float() < 0.75) {
+			// add a small deep fryer to table since it looks like it could be a piece of lab equipment; it can't be picked up though
+			unsigned const model_id(combine_model_submodel_id(OBJ_MODEL_CK_APP, 1/*KCA_DEEP_FRYER*/)), model_orient(2*table_dim + (!table_dir));
+			float const dp_height(0.55*0.5*building_obj_model_loader.get_model(model_id).scale); // smaller version
+			place_model_along_wall(model_id, TYPE_KITCH_APP, room, dp_height, rgen, table.z2(), room_id, tot_light_amt, table, table_obj_ix+1, 0.0, model_orient);
+		}
 		add_test_tubes_to_surface(rgen, room_id, tot_light_amt, table_obj_ix); // placeholder
-		// TODO: add more lab table items: TYPE_KITCH_APP?
+		// add more lab table items?
+		blockers.clear(); // not needed for chairs below
 		// add chairs at the table between the legs
 		unsigned const num_chairs((get_metal_table_num_legs_per_side(objs[table_obj_ix])-1));
 		float const chair_spacing(table.get_sz_dim(!table_dim)/num_chairs); // average
@@ -747,20 +759,21 @@ bool building_t::add_lab_room_objs(rand_gen_t rgen, room_t &room, float zval, un
 	if (add_desk_to_room(rgen, room, vect_cube_t(), chair_color, zval, room_id, tot_light_amt, objs_start, 0)) { // is_basement=0
 		add_test_tubes_to_surface(rgen, room_id, tot_light_amt, cur_obj_ix);
 	}
-	// add fridge/freezer/oven/sink models from commercial kitchens
-	unsigned const num_ka_models(2 + (rgen.rand() % 3)); // 2-4
-	unsigned cclass_counts[3]={0}; // unused
-	unsigned types_used(0);
-	cube_t hood; // unused
+	if (enable_kitchen_app_models()) { // add fridge/freezer/oven/sink models from commercial kitchens
+		unsigned const num_ka_models(2 + (rgen.rand() % 3)); // 2-4
+		unsigned cclass_counts[3]={0}; // unused
+		unsigned types_used(0);
+		cube_t hood; // unused
 
-	for (unsigned n = 0; n < num_ka_models; ++n) {
-		float hscale(0.0);
-		int const model_id(select_lab_model(rgen, types_used, hscale));
-		if (model_id < 0) break;
-		unsigned obj_ix(objs.size());
-		if (!place_model_along_wall(model_id, TYPE_KITCH_APP, room, hscale, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 4, 0, WHITE, 1)) continue;
-		add_commercial_kitchen_app_post(obj_ix, get_sub_model_id(model_id), hood, cclass_counts, rgen, 0); // is_kitchen=0
-	} // for n
+		for (unsigned n = 0; n < num_ka_models; ++n) {
+			float hscale(0.0);
+			int const model_id(select_lab_model(rgen, types_used, hscale));
+			if (model_id < 0) break;
+			unsigned obj_ix(objs.size());
+			if (!place_model_along_wall(model_id, TYPE_KITCH_APP, room, hscale, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 4, 0, WHITE, 1)) continue;
+			add_commercial_kitchen_app_post(obj_ix, get_sub_model_id(model_id), hood, cclass_counts, rgen, 0); // is_kitchen=0
+		} // for n
+	}
 	// TYPE_VENT_HOOD?
 	add_filing_cabinet_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);
 	if (room_width > 2.0*floor_spacing) {add_trolley(rgen, place_area, avoid, zval, room_id, tot_light_amt, objs_start);} // add hospital trolley
