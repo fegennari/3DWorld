@@ -563,13 +563,13 @@ float tile_t::get_zval_at(float x, float y, bool in_global_space) const {
 
 	assert(!zvals.empty());
 	cube_t bcube(in_global_space ? get_mesh_bcube_global() : get_mesh_bcube());
-	float const xx((x - bcube.d[0][0])/(bcube.d[0][1] - bcube.d[0][0])), yy((y - bcube.d[1][0])/(bcube.d[1][1] - bcube.d[1][0]));
+	float const xx((x - bcube.x1())/bcube.dx()), yy((y - bcube.y1())/bcube.dy());
 	float const xp((x2 - x1)*CLIP_TO_01(xx)), yp((y2 - y1)*CLIP_TO_01(yy));
 	int const x0((int)xp), y0((int)yp);
-	float const xpi(xp - (float)x0), ypi(yp - (float)y0); // always positive
+	float const xpi(xp - (float)x0), ypi(yp - (float)y0), om_ypi(1.0f - ypi); // always positive
 	assert(x0 >= 0 && y0 >= 0 && x0+1 < (int)zvsize && y0+1 < (int)zvsize); //return zvals[y*zvsize + x];
 	unsigned const ix(y0*zvsize + x0);
-	return (1.0f - xpi)*((1.0f - ypi)*zvals[ix] + ypi*zvals[ix + zvsize]) + xpi*((1.0f - ypi)*zvals[ix + 1] + ypi*zvals[ix + zvsize + 1]);
+	return (1.0f - xpi)*(om_ypi*zvals[ix] + ypi*zvals[ix + zvsize]) + xpi*(om_ypi*zvals[ix + 1] + ypi*zvals[ix + zvsize + 1]);
 }
 
 
@@ -782,7 +782,7 @@ template<typename T> void tile_t::apply_ao_shadows_for_tree_group(T const &trees
 	for (typename T::const_iterator i = trees.begin(); i != trees.end(); ++i) {
 		point const pt(i->get_center() + pt_off);
 		float const tr(i->get_ao_radius());
-		if (no_adj_test && (pt.x+tr < bcube.d[0][0] || pt.x-tr > bcube.d[0][1] || pt.y+tr < bcube.d[1][0] || pt.y-tr > bcube.d[1][1])) continue;
+		if (no_adj_test && (pt.x+tr < bcube.x1() || pt.x-tr > bcube.x2() || pt.y+tr < bcube.y1() || pt.y-tr > bcube.y2())) continue;
 		add_tree_ao_shadow(pt, tr, no_adj_test);
 	}
 }
@@ -1723,12 +1723,12 @@ void tile_cloud_manager_t::move_by_wind(tile_t const &tile) {
 	bcube.set_to_zeros();
 
 	for (auto i = begin(); i != end(); ++i) {
-		float const wscale(1.5f - ws_mult*(i->pos.z - range.d[2][0])); // lower clouds have higher wind speed
+		float const wscale(1.5f - ws_mult*(i->pos.z - range.z1())); // lower clouds have higher wind speed
 		i->pos      += wscale*move_amt;
 		i->pos_hash += 0.15*move_amt_mag;
 		int dx(0), dy(0);
-		if (i->pos.x < range.d[0][0]) {dx = -1;} else if (i->pos.x > range.d[0][1]) {dx = 1;}
-		if (i->pos.y < range.d[1][0]) {dy = -1;} else if (i->pos.y > range.d[1][1]) {dy = 1;}
+		if (i->pos.x < range.x1()) {dx = -1;} else if (i->pos.x > range.x2()) {dx = 1;}
+		if (i->pos.y < range.y1()) {dy = -1;} else if (i->pos.y > range.y2()) {dy = 1;}
 		if (dx == 0 && dy == 0) {update_bcube(*i); continue;} // still within the tile's bounds, keep it
 		tile_t *adj(tile.get_adj_tile(dx, dy));
 		if (adj != nullptr) {adj->add_cloud(*i);} // move to neighbor tile
@@ -1778,10 +1778,10 @@ template<typename A> void tile_t::propagate_animals_to_neighbor_tiles(animal_gro
 		if (!animals[i].is_enabled()) {animals.remove(i); --i; continue;} // remove disabled animals
 		point const &pos(animals[i].pos);
 		int dx(0), dy(0);
-		if      (pos.x < range.d[0][0]) {dx = -1;} // move -x
-		else if (pos.x > range.d[0][1]) {dx =  1;} // move +x
-		if      (pos.y < range.d[1][0]) {dy = -1;} // move -y
-		else if (pos.y > range.d[1][1]) {dy =  1;} // move +y
+		if      (pos.x < range.x1()) {dx = -1;} // move -x
+		else if (pos.x > range.x2()) {dx =  1;} // move +x
+		if      (pos.y < range.y1()) {dy = -1;} // move -y
+		else if (pos.y > range.y2()) {dy =  1;} // move +y
 		if (dx == 0 && dy == 0) continue; // position is within the current tile, keep this animal here
 		tile_t *adj(get_adj_tile(dx, dy));
 		if (adj != NULL) {adj->add_animal(animals[i]);} // move to adjacent tile, if one is present - pos should be valid within that tile
@@ -2571,8 +2571,8 @@ bool tile_draw_t::can_have_reflection_recur(tile_t const *const tile, point cons
 
 	point const camera(get_camera_pos());
 	cube_t bcube(tile->get_bcube());
-	bcube.d[2][0] = min(bcube.d[2][0], zmin); // make sure the line isn't clipped in z
-	bcube.d[2][1] = max(bcube.d[2][1], zmax);
+	min_eq(bcube.z1(), zmin); // make sure the line isn't clipped in z
+	max_eq(bcube.z2(), zmax);
 	if (dim_ix < 2 && !check_line_clip(camera, corners[dim_ix], bcube.d)) return 0; // not within the shadow of the original tile
 
 	if (!tile->was_last_occluded() && tile->has_water()) {
@@ -2615,7 +2615,7 @@ bool tile_draw_t::can_have_reflection(tile_t const *const tile) {
 	for (unsigned d = 0; d < 2; ++d) {
 		corners[ d][d] = bcube.d[d][center[d] < camera[d]]; // 0,0
 		corners[!d][d] = bcube.d[d][center[d] > camera[d]]; // 1,1
-		corners[ d][2] = bcube.d[2][0];
+		corners[ d][2] = bcube.z1();
 	}
 	corners[2]   = bcube.closest_pt(camera);
 	corners[2].z = tile->get_zmax();
