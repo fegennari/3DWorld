@@ -3446,13 +3446,14 @@ void building_t::get_poi_stand_areas_for_room(unsigned room_id, float radius, fl
 struct poi_cache_t {
 	vect_cube_t stand_areas;
 	vector<unsigned> rpool;
+	building_t const *last_bldg=nullptr;
 	float last_zval=0.0, last_radius=0.0;
 	int last_room_id=-1;
 
 	bool select_stand_area(building_t const &b, unsigned room_id, float radius, point &pos, rand_gen_t &rgen) {
 		float const split_len(20.0*radius);
 
-		if ((int)room_id != last_room_id || pos.z != last_zval || radius != last_radius) { // recompute POIs
+		if (&b != last_bldg || (int)room_id != last_room_id || pos.z != last_zval || radius != last_radius) { // recompute POIs
 			stand_areas.clear();
 			rpool.clear();
 			b.get_poi_stand_areas_for_room(room_id, radius, pos.z, stand_areas);
@@ -3463,7 +3464,7 @@ struct poi_cache_t {
 				unsigned const num_add(max(1U, min(4U, unsigned(stand_areas[i].get_size_xy().get_max_val()/split_len))));
 				for (unsigned n = 0; n < num_add; ++n) {rpool.push_back(i);}
 			}
-			last_room_id = room_id; last_zval = pos.z; last_radius = radius;
+			last_bldg = &b; last_room_id = room_id; last_zval = pos.z; last_radius = radius;
 		}
 		if (rpool.empty()) return 0; // shouldn't fail
 		unsigned const ix((rpool.size() == 1) ? 0 : (rgen.rand() % rpool.size()));
