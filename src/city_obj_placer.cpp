@@ -1043,7 +1043,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 						point wf_pos(center);
 						wf_pos.z   += 0.5*b.get_fc_thickness(); // translate up onto concrete
 						wf_pos[dim] = front_edge + (dir ? 1.0 : -1.0)*pwf_radius; // in front of front wall
-						park_water_fountain_t pwf(wf_pos, pwf_height, pwf_radius, !dim, rgen.rand_bool(), 0, colorRGBA(0.1, 0.3, 0.1)); // variant=0
+						park_water_fountain_t pwf(wf_pos, pwf_height, pwf_radius, !dim, rgen.rand_bool(), 0, colorRGBA(0.1, 0.3, 0.1), 0); // variant=0, add_base=0
 						park_wf_groups.add_obj(pwf, park_wfs);
 						add_cube_to_colliders_and_blockers(pwf.bcube, colliders, blockers);
 					}
@@ -1125,7 +1125,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 				vector3d const fdir((path_dist*rgen.rand_sign())*cross_product(pdir, plus_z).get_norm());
 				bool const dim(fabs(pdir.x) < fabs(pdir.y)); // in path dir
 				point const pos(p->pts[seg_ix] + fdir);
-				park_water_fountain_t pwf(pos, pwf_height, pwf_radius, dim, rgen.rand_bool(), pix, colorRGBA(0.1, 0.3, 0.1));
+				park_water_fountain_t pwf(pos, pwf_height, pwf_radius, dim, rgen.rand_bool(), pix, colorRGBA(0.1, 0.3, 0.1), 1); // add_base=1
 				if (has_bcube_int_xy  (pwf.bcube, blockers, pwf_pad  )) continue;
 				if (check_path_coll_xy(pwf.bcube, ppaths, paths_start)) continue; // check other paths
 				// check if too close to a previous path's water fountain

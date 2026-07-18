@@ -652,8 +652,9 @@ struct park_water_fountain_t : public oriented_city_obj_t {
 	colorRGBA color;
 	float cradius;
 	unsigned variant;
+	bool add_base;
 
-	park_water_fountain_t(point const &pos_, float height, float cradius_, bool dim_, bool dir_, unsigned var, colorRGBA const &color_);
+	park_water_fountain_t(point const &pos_, float height, float cradius_, bool dim_, bool dir_, unsigned var, colorRGBA const &color_, bool add_base_);
 	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	bool add_dog_water() const {return (variant & 1);}

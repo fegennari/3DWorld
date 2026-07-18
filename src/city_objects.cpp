@@ -843,8 +843,8 @@ void newsrack_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_s
 
 // park water fountains
 
-park_water_fountain_t::park_water_fountain_t(point const &pos_, float height, float cradius_, bool dim_, bool dir_, unsigned var, colorRGBA const &color_)
-	: oriented_city_obj_t(pos_, max(1.25f*cradius_, 0.5f*height), dim_, dir_), color(color_), cradius(cradius_), variant(var)
+park_water_fountain_t::park_water_fountain_t(point const &pos_, float height, float cradius_, bool dim_, bool dir_, unsigned var, colorRGBA const &color_, bool add_base_)
+	: oriented_city_obj_t(pos_, max(1.25f*cradius_, 0.5f*height), dim_, dir_), color(color_), cradius(cradius_), variant(var), add_base(add_base_)
 {
 	bcube.set_from_point(pos);
 	set_cube_zvals(bcube, pos.z, pos.z+height);
@@ -907,6 +907,12 @@ void park_water_fountain_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, f
 		set_wall_width(cubes[n], pos[!dim], 0.7*f_radius, !dim);
 		dstate.draw_cube(qbds.qbd, cubes[n], color, 0, 1.0, (1 << unsigned(dim)));
 	} // for n
+	if (add_base) { // metal base (better to use concrete?)
+		cube_t base(bcube);
+		base.expand_in_dim(!dim, 0.1*bcube.get_sz_dim(!dim)); // slightly wider
+		base.z2() = bcube.z1() + 0.02*bcube.dz();
+		dstate.draw_cube(qbds.qbd, base, GRAY, 1); // skip_bottom=1
+	}
 }
 
 // parking gates
