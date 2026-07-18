@@ -28,7 +28,7 @@ vec4 gen_ZzArt(vec2 pos, float seed) {
 	a.y=a.y*0.292;
 	b=clamp(abs(mod(a.x*6.+vec4(0,4,2,1),6.)-3.)-1.,0.,1.);
 	b=b*b*(3.-2.*b);
-	return clamp(a.z*mix(vec4(1),b,a.y), 0.0, 1.0);
+	return vec4(clamp(a.z*mix(vec3(1),b.xyz,a.y), 0.0, 1.0), 1.0); // alpha=1.0
 }
 
 // https://www.shadertoy.com/view/DlVczV
