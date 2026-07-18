@@ -1242,9 +1242,9 @@ void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, 
 		return;
 	}
 	else if (c.type == TYPE_PHONE) {
-		float const z_rot_angle(get_camera_z_rotate());
 		cube_t const screen(add_phone_frame_and_return_screen_if_on(c, mat, 1)); // in_hand=1
-		rotate_verts(mat.itri_verts, plus_z, z_rot_angle, obj_center, 0); // rotate all quad verts about Z axis
+		float const z_rot_angle(get_camera_z_rotate());
+		rotate_verts(mat.itri_verts, plus_z, z_rot_angle, obj_center, 0); // rotate all itri verts about Z axis
 		
 		if (!screen.is_all_zeros()) {
 			static rgeom_mat_t screen_mat;
@@ -1343,6 +1343,7 @@ void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, 
 		mat.tex.nm_tid = get_box_nm_tid();
 		reset_mat_tid  = reset_mat_nm_tid = 1;
 		add_box_to_material(c, mat);
+		rotate_verts(mat.quad_verts, plus_z, get_camera_z_rotate(), obj_center, 0); // rotate all quad verts about Z axis
 	}
 	else {assert(0);}
 	if (needs_blend) {enable_blend();}
