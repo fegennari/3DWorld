@@ -2783,6 +2783,14 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos, bool
 				next_fire_time = tfticks + 0.4*TICKS_PER_SECOND; // 2.5x per second
 			}
 		}
+		else if (obj.type == TYPE_BOX) { // can only drop it
+			float const radius(0.5*max(obj.dx(), obj.dy())); // conservative
+			point dest(player_pos + (1.2f*(player_radius + radius))*dir);
+			if (!get_zval_for_obj_placement(dest, radius, dest.z, 0))       return 0; // can't drop, so keep it in the inventory
+			if (!drop_room_object(obj, dest, player_pos, obj.dim, obj.dir)) return 0;
+			drop_inventory_item(*this, obj, player_pos);
+			return 1;
+		}
 		else if (obj.type == TYPE_CANDLE    ) {delay_use = 1;} // nothing else to do at the moment
 		else if (obj.type == TYPE_FLASHLIGHT) {delay_use = 1;} // handled by flashlight key as well; only use flashlight when selected in inventory?
 		else {assert(0);}
@@ -3347,6 +3355,7 @@ void building_t::remove_paint_in_cube(cube_t const &c, bool inc_bullet_holes) co
 bool room_object_t::can_use() const { // excludes dynamic objects
 	if (is_medicine()) return 1; // medicine can be carried in the inventory and used later
 	if (type == TYPE_TPROLL) {return (taken_level == 0);} // can only use the TP roll, not the holder
+	if (type == TYPE_BOX && !is_open() /*&& !was_expanded()*/) return 1; // unopened box; not from a shelf?
 	return (type == TYPE_SPRAYCAN || type == TYPE_MARKER || type == TYPE_BOOK || type == TYPE_PHONE || type == TYPE_TAPE || type == TYPE_RAT ||
 		type == TYPE_FIRE_EXT || type == TYPE_CANDLE || type == TYPE_ERASER || type == TYPE_FLASHLIGHT || type == TYPE_HANDGUN);
 }

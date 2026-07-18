@@ -164,9 +164,9 @@ bool try_add_lamp(cube_t const &place_area, float floor_spacing, unsigned room_i
 	return 0;
 }
 
-rand_gen_t room_object_t::create_rgen() const {
+rand_gen_t room_object_t::create_rgen() const { // Note: doesn't use room_id because that changes if the box is moved
 	rand_gen_t rgen;
-	rgen.set_state(obj_id+1, ((type == TYPE_POOL_BALL || type == TYPE_MACHINE) ? item_flags : room_id)+1);
+	rgen.set_state(obj_id+1, ((type == TYPE_POOL_BALL || type == TYPE_MACHINE) ? item_flags : (2*dim + dir + 123*obj_id))+1);
 	rgen.rand_mix(); // optional, but improves randomness
 	return rgen;
 }

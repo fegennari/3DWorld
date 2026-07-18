@@ -41,6 +41,8 @@ void draw_car_in_pspace(car_t &car, shader_t &s, vector3d const &xlate, bool sha
 void set_car_model_color(car_t &car, unsigned btype);
 bldg_obj_type_t get_taken_obj_type(room_object_t const &obj);
 int get_toilet_paper_nm_id();
+int get_box_tid();
+int get_box_nm_tid();
 void setup_monitor_screen_draw(room_object_t const &monitor, rgeom_mat_t &mat, std::string &onscreen_text);
 void add_tv_or_monitor_screen(room_object_t const &c, rgeom_mat_t &mat, std::string const &onscreen_text, rgeom_mat_t *text_mat);
 void get_shower_head_pos_dir(room_object_t const &c, point &head_pos, vector3d &head_dir);
@@ -1205,7 +1207,7 @@ float get_camera_z_rotate() {return -atan2(cview_dir.y, cview_dir.x);}
 void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, shader_t &s, vector3d const &xlate) { // held by the player
 	static rgeom_mat_t mat; // allocated memory is reused across frames; VBO is recreated every time; untextured
 	point const obj_center(c.get_cube_center());
-	bool needs_blend(0), reset_mat_nm_tid(0);
+	bool needs_blend(0), reset_mat_tid(0), reset_mat_nm_tid(0);
 
 	if (c.type == TYPE_SPRAYCAN || c.type == TYPE_MARKER) {
 		room_object_t c_rot(c);
@@ -1336,10 +1338,17 @@ void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, 
 		add_flashlight_to_material(c_rot, mat, N_CYL_SIDES);
 		rotate_verts(mat.itri_verts, plus_z, get_camera_z_rotate(), obj_center, 0); // rotate all itri verts about Z axis
 	}
+	else if (c.type == TYPE_BOX) {
+		mat.tex.tid    = get_box_tid();
+		mat.tex.nm_tid = get_box_nm_tid();
+		reset_mat_tid  = reset_mat_nm_tid = 1;
+		add_box_to_material(c, mat);
+	}
 	else {assert(0);}
 	if (needs_blend) {enable_blend();}
 	tid_nm_pair_dstate_t state(s);
 	mat.upload_draw_and_clear(state);
+	if (reset_mat_tid   ) {mat.tex.tid    = -1;}
 	if (reset_mat_nm_tid) {mat.tex.nm_tid = -1;}
 	if (needs_blend) {disable_blend();}
 	mat.tex.set_specular(0.0, 0.0); // clear specular

@@ -933,6 +933,7 @@ struct building_room_geom_t {
 	void add_spraycan(room_object_t const &c);
 	void add_button(room_object_t const &c, bool inc_geom, bool inc_text);
 	void add_crate(room_object_t const &c);
+	void add_box_to_material(room_object_t const &c, rgeom_mat_t &mat);
 	void add_box(room_object_t const &c);
 	void add_food_tub(room_object_t const &c);
 	void add_paint_can(room_object_t const &c);

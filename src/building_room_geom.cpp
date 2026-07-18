@@ -119,6 +119,7 @@ int get_crack_tid(room_object_t const &obj, int alpha=0) {
 		(alpha ? "interiors/cracked_glass_alpha.jpg"  : "interiors/cracked_glass.jpg"), 0, 0, 1, 0.0, 1, 1, (alpha ? 4 : 3));
 }
 int get_box_tid       () {return get_texture_by_name("interiors/box.jpg");}
+int get_box_nm_tid    () {return get_texture_by_name("interiors/box_normal.jpg", 1);}
 int get_plywood_tid   () {return get_texture_by_name("interiors/plywood.jpg");} // Note: misnamed, actually OSB
 int get_insulation_tid() {return get_texture_by_name("interiors/insulation.jpg");}
 int get_cube_duct_tid () {return get_texture_by_name("interiors/duct.jpg");}
@@ -1184,9 +1185,7 @@ void building_room_geom_t::add_crate(room_object_t const &c) { // is_small=1
 	}
 }
 
-void building_room_geom_t::add_box(room_object_t const &c) { // is_small=1
-	// Note: draw as "small", not because boxes are small, but because they're only added to windowless rooms and can't be easily seen from outside a building
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_box_tid(), get_texture_by_name("interiors/box_normal.jpg", 1), 0.0, 0.0, 0.0, 0.0, 1), 0, 1)); // shadowed, small
+void building_room_geom_t::add_box_to_material(room_object_t const &c, rgeom_mat_t &mat) {
 	float const sz(2048), x1(12/sz), x2(576/sz), x3(1458/sz), y1(1-1667/sz), y2(1-1263/sz), y3(1-535/sz); //, x4(2032/sz), y4(1-128/sz); // Note: don't use all parts of the texture
 	unsigned verts_start(mat.quad_verts.size());
 	colorRGBA const color(apply_light_color(c));
@@ -1248,7 +1247,7 @@ void building_room_geom_t::add_box(room_object_t const &c) { // is_small=1
 					unsigned const ix(mat.quad_verts.size());
 					add_quad_to_mat(mat, pts, ts, tt, cw);
 					for (unsigned n = 0; n < 2; ++n) {mat.quad_verts[ix + up_verts[n][side_ix]].v.z += dz;}
-					
+
 					// add bottom surface with inverted normal in reverse order
 					for (unsigned n = 0; n < 4; ++n) {
 						mat.quad_verts.push_back(mat.quad_verts[ix+3-n]);
@@ -1258,6 +1257,11 @@ void building_room_geom_t::add_box(room_object_t const &c) { // is_small=1
 			} // for d
 		}
 	}
+}
+void building_room_geom_t::add_box(room_object_t const &c) { // is_small=1
+	// Note: draw as "small", not because boxes are small, but because they're only added to windowless rooms and can't be easily seen from outside a building
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_box_tid(), get_box_nm_tid(), 0.0, 0.0, 0.0, 0.0, 1), 0, 1)); // shadowed, small
+	add_box_to_material(c, mat);
 }
 
 void building_room_geom_t::add_food_tub(room_object_t const &c) {
