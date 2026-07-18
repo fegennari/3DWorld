@@ -2551,13 +2551,16 @@ void subtract_cube_from_floor_ceil(cube_t const &c, vect_cube_t &fs) {
 }
 
 // for placement of stairs
-void get_room_cands(vector<room_t> const &rooms, unsigned part_ix, cube_t const &place_region, vector2d const &min_sz, bool check_private_rooms, vect_cube_with_ix_t &room_cands) {
+void get_room_cands(vector<room_t> const &rooms, unsigned part_ix, cube_t const &place_region, vector2d const &min_sz,
+	bool check_private_rooms, bool is_house, vect_cube_with_ix_t &room_cands)
+{
 	room_cands.clear();
 
 	for (unsigned room_id = 0; room_id < rooms.size(); ++room_id) {
 		room_t const &r(rooms[room_id]);
 		if (r.part_id != part_ix || !r.intersects(place_region) || r.is_bathroom_rtype() || r.is_jail_cell()) continue; // Note: r.is_nested() allowed for some room types
-		if (r.is_restaurant()) continue; // fixed interior placement, can't put stairs
+		if (r.is_restaurant())        continue; // fixed interior placement, can't put stairs
+		if (is_house && r.is_hallway) continue; // no house hallways
 		if (check_private_rooms && r.is_apt_or_hotel_room()) continue;
 		cube_t cand(r);
 		cand.intersect_with_cube_xy(place_region);
@@ -2715,13 +2718,13 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				bool too_small(0);
 
 				if (!allow_clip_walls) { // select rooms above and below to constrain the place region
-					get_room_cands(interior->rooms, upper_part_ix, place_region, min_sz, check_private_rooms, room_cands[0]);
+					get_room_cands(interior->rooms, upper_part_ix, place_region, min_sz, check_private_rooms, is_house, room_cands[0]);
 					if (room_cands[0].empty()) continue; // no valid upper room
 					if (room_cands[0].size() > 1) {vector_random_shuffle(room_cands[0], rgen);}
 					bool success(0);
 
 					for (cube_with_ix_t &rc1 : room_cands[0]) {
-						get_room_cands(interior->rooms, lower_part_ix, rc1, min_sz, check_private_rooms, room_cands[1]); // set place_region=rc for use_pref_shared?
+						get_room_cands(interior->rooms, lower_part_ix, rc1, min_sz, check_private_rooms, is_house, room_cands[1]); // set place_region=rc for use_pref_shared?
 						if (room_cands[1].empty()) continue; // not a valid lower room
 						cube_with_ix_t const &rc2(room_cands[1][rgen.rand()%room_cands[1].size()]);
 						sel_room[0]  = rc1.ix;
@@ -2875,12 +2878,12 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				else {cout << TXTS(stairwell) << TXTS(r) << TXTS(part) << TXTS(p) << endl; assert(0);} // something bad happened
 			} // for r
 			if (use_basement_stairs) { // add a basement door at the bottom of the stairs
-				float const pos_shift((stairs_dir ? 1.0 : -1.0)*0.8*wall_thickness);
 				door_t door(cand, dim, !stairs_dir, 0, 1); // open=0, on_stairs=1
 				door.z2() -= fc_thick; // bottom of basement ceiling, not the floor above
-				door.d[dim][stairs_dir] = door.d[dim][!stairs_dir] + pos_shift; // shift from the edge slightly into the stairwell, inserting the door as an end cap
-				if (!stairs_dir) {door.translate_dim(dim, -pos_shift);} // why the asymmetry?
-				door.translate_dim( dim, -0.2*pos_shift); // shift so that the door doesn't intersect the railing, covers the stairs overhang, and the top edge can't be seen
+				door.d[dim][stairs_dir] = door.d[dim][!stairs_dir];
+				door.d[dim][1] += 0.8*wall_thickness; // shift from the edge slightly into the stairwell, inserting the door as an end cap; why the asymmetry?
+				// shift so that door doesn't intersect railing, covers stairs overhang, and top edge can't be seen
+				door.translate_dim( dim, -0.2*(stairs_dir ? 1.0 : -1.0)*0.16*wall_thickness);
 				door.expand_in_dim(!dim, -STAIRS_WALL_WIDTH_MULT*cand.get_sz_dim(dim)/NUM_STAIRS_PER_FLOOR); // shrink by stairs wall half width
 				assert(door.is_strictly_normalized());
 				interior->stairwells.back().stairs_door_ix = (int16_t)interior->doors.size(); // record door index gating stairs for AI navigation
