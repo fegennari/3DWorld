@@ -3133,9 +3133,11 @@ bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, vector
 	}
 	if (skyway_coll) return 1;
 	bool had_coll(0);
-	for (park_heightmap_t const &h : park_hmaps) {had_coll |= h.set_pos_zval(pos, radius, xlate, ppaths);} // set zval for ponds, creeks, and hills
 
-	if (for_player && park_hmaps.empty()) { // pond collisions are handled by park heightmaps, if present; for player only, others (butterflies) use terrain height
+	if (for_player) { // for player only, others (butterflies) use terrain height
+		for (park_heightmap_t const &h : park_hmaps) {had_coll |= h.set_pos_zval(pos, radius, xlate, ppaths);} // set zval for ponds, creeks, and hills
+	}
+	if (park_hmaps.empty()) { // pond collisions are handled by park heightmaps, if present
 		if (proc_vector_sphere_coll(ponds, pond_groups, pos, p_last, radius, xlate, cnorm)) return 1;
 	}
 	if (proc_vector_sphere_coll(benches,   bench_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
