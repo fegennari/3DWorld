@@ -3046,9 +3046,24 @@ void building_interior_t::assign_door_conn_rooms(unsigned start_ds_ix) {
 		point test_pts[2] = {door_center, door_center};
 
 		for (unsigned s = 0; s < 2; ++s) { // for each side of the door
-			if (d->on_stairs) {test_pts[s].z += (s ? d->dz() : 0.0);} // stairs door, test below and above
+			if (d->on_stairs) { // stairs door, test below and above
+				if (s) { // above case; below case is already correct to use door_center
+					test_pts[s].z += d->dz();
+					// find the top entrance point of the stairs; needed for office buildings
+					point stairs_pt(door_center);
+					stairs_pt[d->dim] += (d->open_dir ? -1.0 : 1.0)*test_pt_shift; // door opens away from stairs, so shift in the other dir
+					bool found(0);
+
+					for (stairwell_t const &sw : stairwells) {
+						if (!sw.contains_pt(stairs_pt)) continue;
+						test_pts[s][d->dim] = sw.d[d->dim][!d->open_dir];
+						found = 1;
+						break;
+					}
+				}
+			}
 			else {test_pts[s][d->dim] += (s ? 1.0 : -1.0)*test_pt_shift;} // normal door, test front and back
-		}
+		} // for s
 		for (unsigned s = 0; s < 2; ++s) { // for each side of the door
 			point test_pt(test_pts[s]);
 			int ds_room_ix(-1);
@@ -3058,6 +3073,11 @@ void building_interior_t::assign_door_conn_rooms(unsigned start_ds_ix) {
 				ds_room_ix = r;
 				// only break if room does not contain the other side of the door; if it does, then this is likely a larger containing room and should be skipped
 				if (!rooms[r].contains_pt(test_pts[!s])) break;
+			}
+			if (ds_room_ix == -1 && d->on_stairs) { // maybe in the space between two rooms
+				for (unsigned r = rooms_start; r < rooms_end; ++r) {
+					if (rooms[r].contains_pt_exp(test_pt, 0.5*test_pt_shift)) {ds_room_ix = r; break;} // expand by at least wall thickness
+				}
 			}
 			if (ds_room_ix == -1) { // adj room not found
 				if (d->get_bldg_conn()) { // door connecting adjacent building with no room for this building on the other side
