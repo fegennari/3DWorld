@@ -2834,6 +2834,16 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 					cand_test[ stairs_dir].d[dim][1] += 0.5*stairs_pad; // increase padding
 					cand_test[!stairs_dir].d[dim][0] -= 0.5*stairs_pad; // increase padding
 
+					if (!is_house) { // don't allow clipping of bathroom walls; only applies to office building pre-assigned bathrooms
+						for (room_t const &room : interior->rooms) {
+							if (!room.is_bathroom_rtype()) continue;
+
+							for (unsigned e = 0; e < 2; ++e) { // require bathroom intersect and opposite wall clip
+								bad_place |= (room.intersects_no_adj(cand_test[e]) && has_bcube_int(cand_test[e], interior->walls[dim]));
+							}
+						}
+						if (bad_place) continue;
+					}
 					for (unsigned e = 0; e < 2; ++e) {
 						for (unsigned d = 0; d < 2; ++d) {wall_clipped |= subtract_cube_from_cubes(cand_test[e], interior->walls[d], nullptr, 1);} // clip_in_z=1
 					}
