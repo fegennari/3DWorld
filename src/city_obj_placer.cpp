@@ -2860,7 +2860,7 @@ void city_obj_placer_t::add_manhole(point const &pos, float radius, bool is_over
 		if (m.pos.x == pos.x && m.pos.y == pos.y) return; // duplicate
 	}
 	point pos2(pos);
-	if (!is_over_road && proc_sphere_coll(pos2, pos, zero_vector, radius, nullptr)) return; // check for blocker
+	if (!is_over_road && proc_sphere_coll(pos2, pos, zero_vector, radius, nullptr, 0)) return; // check for blocker
 	manhole_groups.add_obj(manhole_t(pos, radius), manholes);
 	manhole_groups.rebuild(manholes, all_objs_bcube); // re-sort by tile
 }
@@ -3121,8 +3121,8 @@ template<typename T> bool proc_vector_sphere_coll(vector<T> const &objs, city_ob
 	} // for g
 	return 0;
 }
-// this is intended to be called for the player, but will somewhat work for any query; will set player-specific flags such as player_in_skyway
-bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, vector3d *cnorm) const { // pos in in camera space
+// this is intended to be called for the player, but will somewhat work for any query such as butterflies; will set player-specific flags such as player_in_skyway
+bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, vector3d *cnorm, bool for_player) const { // pos in in camera space
 	if (!sphere_cube_intersect(pos, (radius + p2p_dist(pos, p_last)), (all_objs_bcube + xlate))) return 0;
 	bool const skyway_coll(skyway.proc_sphere_coll(pos, p_last, radius, xlate, cnorm)); // must be before walkways
 	player_in_skyway |= skyway_coll;
@@ -3135,7 +3135,7 @@ bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, vector
 	bool had_coll(0);
 	for (park_heightmap_t const &h : park_hmaps) {had_coll |= h.set_pos_zval(pos, radius, xlate, ppaths);} // set zval for ponds, creeks, and hills
 
-	if (park_hmaps.empty()) { // pond collisions are handled by park heightmaps, if present
+	if (for_player && park_hmaps.empty()) { // pond collisions are handled by park heightmaps, if present; for player only, others (butterflies) use terrain height
 		if (proc_vector_sphere_coll(ponds, pond_groups, pos, p_last, radius, xlate, cnorm)) return 1;
 	}
 	if (proc_vector_sphere_coll(benches,   bench_groups,    pos, p_last, radius, xlate, cnorm)) return 1;

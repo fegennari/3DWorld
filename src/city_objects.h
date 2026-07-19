@@ -985,7 +985,7 @@ public:
 	void draw_detail_objects(draw_state_t &dstate, bool shadow_only, bool reflection_pass);
 	void draw_transparent_objects(draw_state_t &dstate);
 	void add_lights(vector3d const &xlate, cube_t &lights_bcube) const;
-	bool proc_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, vector3d *cnorm) const;
+	bool proc_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, vector3d *cnorm, bool for_player) const;
 	bool line_intersect(point const &p1, point const &p2, float &t) const;
 	bool intersects_parking_lot  (cube_t const &c) const;
 	bool intersects_city_building(cube_t const &c) const;
