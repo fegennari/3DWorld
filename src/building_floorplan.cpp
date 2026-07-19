@@ -2839,7 +2839,8 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 							if (!room.is_bathroom_rtype()) continue;
 
 							for (unsigned e = 0; e < 2; ++e) { // require bathroom intersect and opposite wall clip
-								bad_place |= (room.intersects_no_adj(cand_test[e]) && has_bcube_int(cand_test[e], interior->walls[dim]));
+								if (!room.intersects_no_adj(cand_test[e])) continue;
+								bad_place |= (has_bcube_int(cand_test[e], interior->walls[0]) || has_bcube_int(cand_test[e], interior->walls[1]));
 							}
 						}
 						if (bad_place) continue;
