@@ -2570,6 +2570,21 @@ void get_room_cands(vector<room_t> const &rooms, unsigned part_ix, cube_t const 
 	} // for r
 }
 
+unsigned building_t::add_stairs_door(cube_t const &stairs_bc, bool dim, bool stairs_dir) {
+	float const wall_thickness(get_wall_thickness());
+	door_t door(stairs_bc, dim, !stairs_dir, 0, 1); // open=0, on_stairs=1
+	door.z2() -= get_fc_thickness(); // bottom of basement ceiling, not the floor above
+	door.d[dim][stairs_dir] = door.d[dim][!stairs_dir];
+	door.d[dim][1] += 0.8*wall_thickness; // shift from the edge slightly into the stairwell, inserting the door as an end cap; why the asymmetry?
+	// shift so that door doesn't intersect railing, covers stairs overhang, and top edge can't be seen
+	door.translate_dim( dim, -0.2*(stairs_dir ? 1.0 : -1.0)*0.16*wall_thickness);
+	door.expand_in_dim(!dim, -STAIRS_WALL_WIDTH_MULT*stairs_bc.get_sz_dim(dim)/NUM_STAIRS_PER_FLOOR); // shrink by stairs wall half width
+	assert(door.is_strictly_normalized());
+	unsigned const door_ix(interior->doors.size());
+	add_interior_door(door);
+	return door_ix;
+}
+
 void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t const &part, unsigned lower_part_ix) { // and extend elevators vertically; part is lower
 
 	//highres_timer_t timer("Connect Stairs", 1, 1, 1); // track_not_print=1; 256ms total
@@ -2877,17 +2892,9 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				}
 				else {cout << TXTS(stairwell) << TXTS(r) << TXTS(part) << TXTS(p) << endl; assert(0);} // something bad happened
 			} // for r
-			if (use_basement_stairs) { // add a basement door at the bottom of the stairs
-				door_t door(cand, dim, !stairs_dir, 0, 1); // open=0, on_stairs=1
-				door.z2() -= fc_thick; // bottom of basement ceiling, not the floor above
-				door.d[dim][stairs_dir] = door.d[dim][!stairs_dir];
-				door.d[dim][1] += 0.8*wall_thickness; // shift from the edge slightly into the stairwell, inserting the door as an end cap; why the asymmetry?
-				// shift so that door doesn't intersect railing, covers stairs overhang, and top edge can't be seen
-				door.translate_dim( dim, -0.2*(stairs_dir ? 1.0 : -1.0)*0.16*wall_thickness);
-				door.expand_in_dim(!dim, -STAIRS_WALL_WIDTH_MULT*cand.get_sz_dim(dim)/NUM_STAIRS_PER_FLOOR); // shrink by stairs wall half width
-				assert(door.is_strictly_normalized());
-				interior->stairwells.back().stairs_door_ix = (int16_t)interior->doors.size(); // record door index gating stairs for AI navigation
-				add_interior_door(door);
+			if (use_basement_stairs /*|| interior->stairwells.back().has_walled_sides()*/) {
+				// add a basement door at the bottom of the stairs; record door index gating stairs for AI navigation
+				interior->stairwells.back().stairs_door_ix = (int16_t)add_stairs_door(cand, dim, stairs_dir);
 			}
 			connected = 1;
 			if (use_basement_stairs) break; // only need to connect one part for the basement
