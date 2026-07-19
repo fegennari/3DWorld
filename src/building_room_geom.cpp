@@ -1187,19 +1187,21 @@ void building_room_geom_t::add_crate(room_object_t const &c) { // is_small=1
 
 void building_room_geom_t::add_box_to_material(room_object_t const &c, rgeom_mat_t &mat) {
 	float const sz(2048), x1(12/sz), x2(576/sz), x3(1458/sz), y1(1-1667/sz), y2(1-1263/sz), y3(1-535/sz); //, x4(2032/sz), y4(1-128/sz); // Note: don't use all parts of the texture
-	unsigned verts_start(mat.quad_verts.size());
+	auto &verts(mat.quad_verts);
+	unsigned verts_start(verts.size());
 	colorRGBA const color(apply_light_color(c));
 	unsigned skip_faces(0), num_z_faces(2);
 	if (!c.is_hanging()) {skip_faces |= EF_Z1; --num_z_faces;} // skip bottom face if not on a mesh shelf
 	if ( c.is_open   ()) {skip_faces |= EF_Z2; --num_z_faces;} // skip top face if open
 	mat.add_cube_to_verts(c, color, zero_vector, skip_faces);
-	assert(mat.quad_verts.size() == verts_start + 16 + 4*num_z_faces); // there should be 4-6 quads: {[-z,] [+z,] -x, +x, -y, +y}
+	assert(verts.size() == verts_start + 16 + 4*num_z_faces); // there should be 4-6 quads: {[-z,] [+z,] -x, +x, -y, +y}
 
 	for (unsigned n = 0; n < num_z_faces; ++n) { // z (top or bottom)
-		mat.quad_verts[verts_start+0].set_tc(x1, y2);
-		mat.quad_verts[verts_start+1].set_tc(x2, y2);
-		mat.quad_verts[verts_start+2].set_tc(x2, y3);
-		mat.quad_verts[verts_start+3].set_tc(x1, y3);
+		if (c.dy() < c.dx()) {rotate(verts.begin()+verts_start, verts.begin()+verts_start+1, verts.begin()+verts_start+4);} // swap TC x/y
+		verts[verts_start+0].set_tc(x1, y2);
+		verts[verts_start+1].set_tc(x2, y2);
+		verts[verts_start+2].set_tc(x2, y3);
+		verts[verts_start+3].set_tc(x1, y3);
 		verts_start += 4;
 	}
 	for (unsigned d = 0; d < 2; ++d) { // for each end
@@ -1208,26 +1210,26 @@ void building_room_geom_t::add_box_to_material(room_object_t const &c, rgeom_mat
 
 		for (unsigned e = 0; e < 2; ++e) { // x, y
 			bool const f(c.dim ^ bool(e));
-			mat.quad_verts[ix+((0+ix_shift)&3)].set_tc(x2, (f ? y1 : y2));
-			mat.quad_verts[ix+((1+ix_shift)&3)].set_tc(x3, (f ? y1 : y2));
-			mat.quad_verts[ix+((2+ix_shift)&3)].set_tc(x3, (f ? y2 : y3));
-			mat.quad_verts[ix+((3+ix_shift)&3)].set_tc(x2, (f ? y2 : y3));
+			verts[ix+((0+ix_shift)&3)].set_tc(x2, (f ? y1 : y2));
+			verts[ix+((1+ix_shift)&3)].set_tc(x3, (f ? y1 : y2));
+			verts[ix+((2+ix_shift)&3)].set_tc(x3, (f ? y2 : y3));
+			verts[ix+((3+ix_shift)&3)].set_tc(x2, (f ? y2 : y3));
 			ix += 8; // skip the other face
 		} // for e
 	} // for d
 	if (c.is_open()) {
 		// draw the inside of the box
-		verts_start = mat.quad_verts.size(); // update
+		verts_start = verts.size(); // update
 		cube_t box(c);
 		box.expand_by_xy(-0.001*c.get_size()); // slight shrink of inside of box to prevent z-fighting
 		box.z1() += 0.01*c.dz(); // shrink a bit more in Z
 		mat.add_cube_to_verts(box, color, zero_vector, EF_Z2, 0, 0, 0, 1); // skip top face; draw inverted
-		assert(mat.quad_verts.size() == verts_start + 20); // there should be 5 quads (+z -x +x -y +y) / 20 verts (no +z)
+		assert(verts.size() == verts_start + 20); // there should be 5 quads (+z -x +x -y +y) / 20 verts (no +z)
 		float const ts[4] = {x2, x3, x3, x2}, tt[4] = {y1, y1, y2, y2};
 
 		for (unsigned side = 0; side < 5; ++side) { // make all sides use a subset of the texture that has no markings
 			unsigned ix(verts_start + 4*side);
-			for (unsigned n = 0; n < 4; ++n) {mat.quad_verts[ix+n].set_tc(ts[n], tt[n]);}
+			for (unsigned n = 0; n < 4; ++n) {verts[ix+n].set_tc(ts[n], tt[n]);}
 		}
 		if (!c.was_expanded()) { // draw open box flaps, but not if box is in drawer/shelf/closet because there may not be space for flaps
 			vector3d const box_sz(c.get_size());
@@ -1244,14 +1246,14 @@ void building_room_geom_t::add_box_to_material(room_object_t const &c, rgeom_mat
 					C.d[d][ e] = C.d[d][e] + (e ? 1.0 : -1.0)*(against_obj ? 0.05 : 1.0)*flap_len;
 					float const zbot(C.z2()), dz(against_obj ? flap_len : 0.25*min(flap_len, box_sz.z)); // tilted somewhat upward; pointing up if against wall
 					point const pts[4] = {point(C.x1(), C.y1(), zbot), point(C.x2(), C.y1(), zbot), point(C.x2(), C.y2(), zbot), point(C.x1(), C.y2(), zbot)};
-					unsigned const ix(mat.quad_verts.size());
+					unsigned const ix(verts.size());
 					add_quad_to_mat(mat, pts, ts, tt, cw);
-					for (unsigned n = 0; n < 2; ++n) {mat.quad_verts[ix + up_verts[n][side_ix]].v.z += dz;}
+					for (unsigned n = 0; n < 2; ++n) {verts[ix + up_verts[n][side_ix]].v.z += dz;}
 
 					// add bottom surface with inverted normal in reverse order
 					for (unsigned n = 0; n < 4; ++n) {
-						mat.quad_verts.push_back(mat.quad_verts[ix+3-n]);
-						mat.quad_verts.back().invert_normal();
+						verts.push_back(verts[ix+3-n]);
+						verts.back().invert_normal();
 					}
 				} // for e
 			} // for d

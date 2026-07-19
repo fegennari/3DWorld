@@ -713,6 +713,18 @@ achievement_tracker_t achievement_tracker;
 
 bool register_achievement(string const &str, string const &suffix) {return achievement_tracker.register_achievement(str, suffix);}
 
+void swap_obj_xy_aspect_ratio(cube_t &c) {
+	float const dx(c.dx()), dy(c.dy());
+	c.x2() = c.x1() + dy;
+	c.y2() = c.y1() + dx;
+}
+void swap_obj_for_cview_dir(room_object_t &c) {
+	if (fabs(cview_dir.x) < fabs(cview_dir.y)) {
+		swap_obj_xy_aspect_ratio(c);
+		c.dim ^= 1;
+	}
+}
+
 class player_inventory_t { // manages player inventory, health, and other stats
 	vector<carried_item_t> carried; // interactive items the player is currently carrying
 	vector<dead_person_t > dead_players;
@@ -1026,20 +1038,13 @@ public:
 						co.x2() = co.x1() + max(dx, dy);
 						co.z2() = co.z1() + min(dx, dy);
 					}
-					else if (co.dim) { // swap aspect ratio to make dim=0
-						co.x2() = co.x1() + dy;
-						co.y2() = co.y1() + dx;
-					}
+					else if (co.dim) {swap_obj_xy_aspect_ratio(co);} // swap aspect ratio to make dim=0
 					co.dim       = co.dir = 0;
 					co.flags    &= ~(RO_FLAG_RAND_ROT | RO_FLAG_OPEN); // remove the rotate and open bits
 					co.light_amt = 1.0; // max light for books when carrying
 				}
 				else if (type == TYPE_PHONE) {
-					if (co.dim) { // swap aspect ratio to make dim=0
-						float const dx(co.dx()), dy(co.dy());
-						co.x2() = co.x1() + dy;
-						co.y2() = co.y1() + dx;
-					}
+					if (co.dim) {swap_obj_xy_aspect_ratio(co);} // swap aspect ratio to make dim=0
 					co.dim = co.dir = 0; // clear dim and dir
 					phone_manager.enable();
 				}
@@ -1052,6 +1057,11 @@ public:
 						co.z2() = co.z1() + max(dx, dy);
 					}
 					co.dim = co.dir = 0; // vertical
+				}
+				else if (type == TYPE_BOX) {
+					swap_obj_for_cview_dir(co); // swap AR if player is facing a dir resulting in zrot > 45 degrees when drawing
+					bool const cv_dim(fabs(cview_dir.x) < fabs(cview_dir.y));
+					co.dir = ((cview_dir[cv_dim] < 0) ^ (co.dx() < co.dy() && cv_dim) ^ cv_dim); // determined through trial-and-error
 				}
 				tape_manager.clear();
 			}
@@ -2633,13 +2643,14 @@ void drop_inventory_item(building_t const &b, room_object_t const &obj, point co
 	if (!b.check_for_water_splash(obj.get_cube_center(), 0.5)) {play_obj_fall_sound(obj, player_pos);} // splash or drop sound; should it be based on weight?
 }
 bool building_t::drop_room_object(room_object_t &obj, point const &dest, point const &player_pos, bool dim, bool dir) {
-	obj.dim    = dim;
-	obj.dir    = dir;
-	obj.flags |= RO_FLAG_WAS_EXP;
+	obj.dim = dim;
+	obj.dir = dir;
+	if (obj.type != TYPE_BOX) {obj.flags |= RO_FLAG_WAS_EXP;} // allow box to be picked up again
 	obj.taken_level = 1;
 	obj.translate(dest - cube_bot_center(obj));
 	assign_correct_room_to_object(obj); // set new room; required for opening books; room should be valid, but okay if not
 	if (point_in_attic(obj.get_cube_center())) {obj.flags |= RO_FLAG_IN_ATTIC;} else {obj.flags &= ~RO_FLAG_IN_ATTIC;} // set attic flag
+	if (obj.type == TYPE_BOX) {swap_obj_for_cview_dir(obj);} // swap box again if needed to match drawn aspect ratio
 	if (!interior->room_geom->add_room_object(obj, *this)) return 0;
 	maybe_squish_animals(obj, player_pos);
 	return 1;
@@ -3355,7 +3366,7 @@ void building_t::remove_paint_in_cube(cube_t const &c, bool inc_bullet_holes) co
 bool room_object_t::can_use() const { // excludes dynamic objects
 	if (is_medicine()) return 1; // medicine can be carried in the inventory and used later
 	if (type == TYPE_TPROLL) {return (taken_level == 0);} // can only use the TP roll, not the holder
-	if (type == TYPE_BOX && !is_open() /*&& !was_expanded()*/) return 1; // unopened box; not from a shelf?
+	if (type == TYPE_BOX && !is_open() && !was_expanded()) return 1; // unopened box; not from a shelf
 	return (type == TYPE_SPRAYCAN || type == TYPE_MARKER || type == TYPE_BOOK || type == TYPE_PHONE || type == TYPE_TAPE || type == TYPE_RAT ||
 		type == TYPE_FIRE_EXT || type == TYPE_CANDLE || type == TYPE_ERASER || type == TYPE_FLASHLIGHT || type == TYPE_HANDGUN);
 }
