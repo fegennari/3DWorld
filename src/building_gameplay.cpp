@@ -23,7 +23,7 @@ vector<sphere_t> cur_sounds; // radius = sound volume
 
 extern bool camera_in_building, player_is_hiding, player_in_unlit_room, player_in_tunnel, player_in_mall, disable_blood, flashlight_on;
 extern int window_width, window_height, display_framerate, display_mode, game_mode, building_action_key, frame_counter, player_in_basement, player_in_water;
-extern int animate2, camera_surf_collide, stats_display_mode;
+extern int animate2, camera_surf_collide, stats_display_mode, last_teleport_frame;
 extern float fticks, CAMERA_RADIUS;
 extern double tfticks, camera_zh;
 extern colorRGBA vignette_color;
@@ -1413,11 +1413,12 @@ public:
 		// handle player fall damage logic
 		point const camera_pos(get_camera_pos());
 		float const player_zval(camera_pos.z), delta_z(prev_player_zval - player_zval);
-		bool const in_respawn_period(frame_counter <= prev_respawn_frame + 120); // allow 120 frames (~2s) for falling to ground on respawn
-		if (in_respawn_period) {accum_fall_damage = 0.0;}
+		// allow 120 frames (~2s) for falling to ground on respawn or map mode teleport
+		bool const in_immune_period(frame_counter <= max(prev_respawn_frame, last_teleport_frame) + 120);
+		if (in_immune_period) {accum_fall_damage = 0.0;}
 		if (camera_in_building != prev_in_building) {prev_in_building = camera_in_building;}
-		// Note: fall damage may no longer trigger with slow player fall logic; allow a few extra frames after a raspawn for the player pos to stabilize
-		else if (!in_respawn_period && prev_player_zval != 0.0 && delta_z > 0.0) {apply_fall_damage(delta_z);}
+		// Note: fall damage may no longer trigger with slow player fall logic; allow a few extra frames after a respawn/teleport for the player pos to stabilize
+		else if (!in_immune_period && prev_player_zval != 0.0 && delta_z > 0.0) {apply_fall_damage(delta_z);}
 		if (delta_z <= 0.0 && subtract_fall_damage_from_health()) return; // apply fall damage when falling has stopped; return if dead
 		prev_player_zval = player_zval;
 		// handle death events

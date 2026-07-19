@@ -14,7 +14,7 @@
 bool const MAP_VIEW_LIGHTING = 1;
 bool const MAP_VIEW_SHADOWS  = 1;
 
-int map_drag_x(0), map_drag_y(0);
+int map_drag_x(0), map_drag_y(0), last_teleport_frame(0);
 float map_zoom(0.0);
 double map_x(0.0), map_y(0.0);
 
@@ -388,7 +388,7 @@ void place_player_at_xy(float xval, float yval) {
 void teleport_to_map_location() {
 	static int last_update_frame(0);
 	if ((frame_counter - last_update_frame) < 1.0f*TICKS_PER_SECOND) return; // teleport at most once per second if player holds down the key
-	last_update_frame = frame_counter;
+	last_update_frame = last_teleport_frame = frame_counter;
 	float const xval(surface_pos.x + map_x), yval(surface_pos.y + map_y);
 	place_player_at_xy(xval, yval);
 	camera_last_pos = surface_pos; // avoid slow falling and rising on map teleport
