@@ -89,8 +89,8 @@ bool building_t::can_be_bedroom_or_bathroom(room_t const &room, unsigned floor_i
 	return 1;
 }
 bool building_t::can_be_bathroom(room_t const &room) const { // Note: assumes caller has checked can_be_bedroom_or_bathroom()
-	float const vspace(get_window_vspace());
-	return (min(room.dx(), room.dy()) < 2.4*vspace && max(room.dx(), room.dy()) < 3.2*vspace && count_num_int_doors(room) == 1);
+	float const vspace(get_window_vspace()), min_dim(min(room.dx(), room.dy())), max_dim(max(room.dx(), room.dy()));
+	return (min_dim > 0.9*vspace && min_dim < 2.4*vspace && max_dim < 3.2*vspace && count_num_int_doors(room) == 1);
 }
 unsigned building_t::count_num_int_doors(room_t const &room) const {
 	cube_t room_exp(room);
