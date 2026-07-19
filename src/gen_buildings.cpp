@@ -4409,7 +4409,9 @@ public:
 						if (defer_people_draw_player_bldg && player_in_building_bcube && b.has_people() && b.check_point_or_cylin_contained(camera_bs, 0.0, points, 0, 0, 0)) {
 							defer_ped_draw_vars.assign(&b, *i, bi.ix);
 						}
-						else {gen_and_draw_people_in_building(ped_draw_vars_t(b, oc, s, xlate, bi.ix, 0, reflection_pass));} // draw people in this building
+						else if (!cant_see_inside) { // draw people in this building if they can be seen
+							gen_and_draw_people_in_building(ped_draw_vars_t(b, oc, s, xlate, bi.ix, 0, reflection_pass));
+						}
 						// there currently shouldn't be any parked cars visible in mirrors or security cameras, so skip them in the reflection pass
 						if (!reflection_pass && b.has_cars_to_draw(player_in_building_bcube)) {buildings_with_cars.emplace_back(&b, player_in_building_bcube);}
 
