@@ -1361,7 +1361,7 @@ void draw_candle_flames() {
 
 class water_draw_t {
 	rgeom_mat_t mat;
-	float tex_off;
+	float tex_off=0.0;
 	rand_gen_t rgen;
 
 	void apply_vert_texture(unsigned verts_start, float tscale, float speed) {
@@ -1369,7 +1369,7 @@ class water_draw_t {
 		for (auto i = mat.itri_verts.begin() + verts_start; i != mat.itri_verts.end(); ++i) {i->t[1] *= tscale; i->t[1] += speed;}
 	}
 public:
-	water_draw_t() : mat(rgeom_mat_t(tid_nm_pair_t(FOAM_TEX))), tex_off(0.0) {}
+	water_draw_t() : mat(rgeom_mat_t(tid_nm_pair_t(FOAM_TEX))) {}
 
 	void add_water_for_sink(room_object_t const &obj) {
 		if (!obj.is_active()) return;
@@ -1427,6 +1427,11 @@ public:
 			steam_pos += (spread_radius + head_dist*(spread_radius_bot - spread_radius))*(sin(theta)*d1 + cos(theta)*d2); // random shift to the side
 			particle_manager.add_particle(steam_pos, 0.0008*plus_z, colorRGBA(WHITE, 0.15), 0.2*width, PART_EFFECT_STEAM, obj_ix, 1.5); // coll_radius=1.5
 		}
+	}
+	void add_water_for_fountain(room_object_t const &obj) {
+		if ((obj.item_flags % 3) != 1) return; // sub-model ID 2 of 3 already has a water material and sub-model ID 0 has no lower water level
+		point center(obj.xc(), obj.yc(), (obj.z1() + 0.15*obj.dz()));
+		mat.add_disk_to_verts(center, 0.4*min(obj.dx(), obj.dy()), plus_z, WHITE);
 	}
 	void draw_and_clear(shader_t &s) {
 		if (mat.empty()) return;
@@ -2142,9 +2147,12 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 				}
 				s.set_color_e(BLACK);
 			}
-			if (type == TYPE_SINK) { // sink
+			else if (type == TYPE_SINK) { // sink
 				if (in_camera_room) {water_sound_manager.register_running_water(obj, building);}
 				water_draw.add_water_for_sink(obj);
+			}
+			else if (type == TYPE_BLDG_FOUNT) { // add fountain water
+				water_draw.add_water_for_fountain(obj);
 			}
 		}
 	} // for i
