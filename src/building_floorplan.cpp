@@ -2570,21 +2570,6 @@ void get_room_cands(vector<room_t> const &rooms, unsigned part_ix, cube_t const 
 	} // for r
 }
 
-unsigned building_t::add_stairs_door(cube_t const &stairs_bc, bool dim, bool stairs_dir) {
-	float const wall_thickness(get_wall_thickness());
-	door_t door(stairs_bc, dim, !stairs_dir, 0, 1); // open=0, on_stairs=1
-	door.z2() -= get_fc_thickness(); // bottom of basement ceiling, not the floor above
-	door.d[dim][stairs_dir] = door.d[dim][!stairs_dir];
-	door.d[dim][1] += 0.8*wall_thickness; // shift from the edge slightly into the stairwell, inserting the door as an end cap; why the asymmetry?
-	// shift so that door doesn't intersect railing, covers stairs overhang, and top edge can't be seen
-	door.translate_dim( dim, -0.2*(stairs_dir ? 1.0 : -1.0)*0.16*wall_thickness);
-	door.expand_in_dim(!dim, -STAIRS_WALL_WIDTH_MULT*stairs_bc.get_sz_dim(dim)/NUM_STAIRS_PER_FLOOR); // shrink by stairs wall half width
-	assert(door.is_strictly_normalized());
-	unsigned const door_ix(interior->doors.size());
-	add_interior_door(door);
-	return door_ix;
-}
-
 void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t const &part, unsigned lower_part_ix) { // and extend elevators vertically; part is lower
 
 	//highres_timer_t timer("Connect Stairs", 1, 1, 1); // track_not_print=1; 256ms total
@@ -2688,7 +2673,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 							cube_t clip_cube(cand);
 							if (ab) {clip_cube.z2() += window_vspacing;} else {clip_cube.z1() -= window_vspacing;}
 							copy_dim(clip_cube, ext_cube, s.dim); // include padding
-							for (unsigned d = 0; d < 2; ++d) {has_clipped_wall |= (uint8_t)subtract_cube_from_cubes(clip_cube, interior->walls[d], nullptr, 1);}
+							clip_interior_walls(clip_cube);
 						}
 						break; // done
 					} // for s
@@ -2845,10 +2830,9 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 						}
 						if (bad_place) continue;
 					}
-					for (unsigned e = 0; e < 2; ++e) {
-						for (unsigned d = 0; d < 2; ++d) {wall_clipped |= subtract_cube_from_cubes(cand_test[e], interior->walls[d], nullptr, 1);} // clip_in_z=1
-					}
-					has_clipped_wall |= (uint8_t)wall_clipped;
+					// Note: building AI people won't walk through these wall gaps,
+					// and may not be able to use the stairs if the entrance or exit are too close to the edge of the room/clipped wall
+					for (unsigned e = 0; e < 2; ++e) {wall_clipped |= clip_interior_walls(cand_test[e]);}
 				}
 				// add walls around stairs if room walls were clipped or this is the basement; otherwise, make stairs straight with railings;
 				// basement stairs only have walls on the bottom floor, so we set is_at_top=0; skip basement back stairs wall to prevent the player from getting stuck
@@ -2955,8 +2939,11 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 
 				for (unsigned d = 0; d < 2; ++d) {
 					holes.clear();
-					has_clipped_wall |= (subtract_cube_from_cubes(clip_cube, interior->walls[d], (((bool)d == e->dim) ? &holes : nullptr)) << 1);
 
+					if (subtract_cube_from_cubes(clip_cube, interior->walls[d], (((bool)d == e->dim) ? &holes : nullptr))) {
+						has_clipped_wall |= 2;
+						interior->wall_clip_cubes.push_back(clip_cube);
+					}
 					// see if we need to add any walls to close gaps created between the front of the elevator and a removed wall section
 					for (auto h = holes.begin(); h != holes.end(); ++h) {
 						float const elevator_front(e->d[e->dim][e->dir]), inner_face(h->d[e->dim][!e->dir]), outer_face(h->d[e->dim][e->dir]);
@@ -3003,6 +2990,34 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			}
 		} // for p
 	} // for e
+}
+
+bool building_t::clip_interior_walls(cube_t const &clip_cube, bool for_elevator) {
+	bool was_clipped(0);
+
+	for (unsigned d = 0; d < 2; ++d) {
+		if (subtract_cube_from_cubes(clip_cube, interior->walls[d], nullptr, 1)) { // clip_in_z=1
+			was_clipped       = 1;
+			has_clipped_wall |= (for_elevator ? 2 : 1); // 2 for elevator, 1 for stairs
+			interior->wall_clip_cubes.push_back(clip_cube);
+		}
+	} // for d
+	return was_clipped;
+}
+
+unsigned building_t::add_stairs_door(cube_t const &stairs_bc, bool dim, bool stairs_dir) {
+	float const wall_thickness(get_wall_thickness());
+	door_t door(stairs_bc, dim, !stairs_dir, 0, 1); // open=0, on_stairs=1
+	door.z2() -= get_fc_thickness(); // bottom of basement ceiling, not the floor above
+	door.d[dim][stairs_dir] = door.d[dim][!stairs_dir];
+	door.d[dim][1] += 0.8*wall_thickness; // shift from the edge slightly into the stairwell, inserting the door as an end cap; why the asymmetry?
+	// shift so that door doesn't intersect railing, covers stairs overhang, and top edge can't be seen
+	door.translate_dim( dim, -0.2*(stairs_dir ? 1.0 : -1.0)*0.16*wall_thickness);
+	door.expand_in_dim(!dim, -STAIRS_WALL_WIDTH_MULT*stairs_bc.get_sz_dim(dim)/NUM_STAIRS_PER_FLOOR); // shrink by stairs wall half width
+	assert(door.is_strictly_normalized());
+	unsigned const door_ix(interior->doors.size());
+	add_interior_door(door);
+	return door_ix;
 }
 
 bool building_t::are_parts_stacked(cube_t const &p1, cube_t const &p2) const {

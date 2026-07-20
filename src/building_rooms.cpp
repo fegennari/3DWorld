@@ -46,6 +46,12 @@ colorRGBA get_light_color_temp_range(float tmin, float tmax, rand_gen_t &rgen) {
 bool building_t::can_be_bedroom_or_bathroom(room_t const &room, unsigned floor_ix, bool skip_conn_check) const { // check room type and existence of exterior door
 	if (room.has_stairs_on_floor(floor_ix) || room.has_elevator || room.is_hallway || room.is_office || room.is_sec_bldg) return 0; // no bed/bath in these cases
 	
+	if (has_bcube_int_no_adj(room, interior->wall_clip_cubes)) { // room intersects; check this specific floor
+		cube_t floor_slice(room);
+		floor_slice.z1() += floor_ix*get_window_vspace() + get_fc_thickness(); // floor zval
+		floor_slice.z2()  = floor_slice.z1() + get_floor_ceil_gap(); // ceiling zval
+		if (has_bcube_int_no_adj(floor_slice, interior->wall_clip_cubes)) return 0; // can't be a private room if there are stairs, and elevator, or a clipped/missing wall
+	}
 	if (maybe_has_ext_door_this_floor(room.z1(), floor_ix)) {
 		// run special logic for bedrooms and bathrooms (private rooms) on the first floor (or office building walkway floor)
 		float const floor_spacing(get_window_vspace()), zval(room.z1() + floor_ix*floor_spacing);

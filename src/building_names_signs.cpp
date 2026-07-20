@@ -741,6 +741,7 @@ void building_t::add_door_sign(string const &text, room_t const &room, float zva
 				sign.translate_dim(!i->dim, -2.0*shift_amt); // try the other dir
 				if (overlaps_or_adj_int_window(sign)) continue; // can't place sign here
 			}
+			if (has_bcube_int_no_adj(sign, interior->wall_clip_cubes)) continue; // don't place over clipped wall
 		}
 		if (cube_int_if_nonzero(sign, avoid)) continue; // blocked - skip
 		unsigned const num_chars(text.size());

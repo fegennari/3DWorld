@@ -1533,7 +1533,7 @@ struct wall_seg_t : public cube_t {
 typedef vector<wall_seg_t> vect_wall_seg_t;
 
 struct building_interior_t {
-	vect_cube_t floors, ceilings, fc_occluders, exclusion, open_walls, split_window_walls, prison_halls;
+	vect_cube_t floors, ceilings, fc_occluders, exclusion, open_walls, split_window_walls, prison_halls, wall_clip_cubes;
 	vect_cube_t walls[2]; // walls are split by dim, which is the separating dimension of the wall
 	vect_cube_with_ix_t int_windows; // ix stores room index
 	vect_cube_with_ix_t parking_str_walls; // interior of exterior walls; ix stores draw flags
@@ -1954,8 +1954,9 @@ struct building_t : public building_geom_t {
 	void add_chem_tank_gauge(room_object_t const &tank, float radius, float height);
 	void add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part, cube_t const &hall, unsigned part_ix, unsigned num_floors,
 		unsigned rooms_start, bool use_hallway, bool first_part_this_stack, float window_hspacing[2], float window_border, bool is_single_floor);
-	unsigned add_stairs_door(cube_t const &stairs_bc, bool dim, bool stairs_dir);
 	void connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t const &part, unsigned lower_part_ix);
+	bool clip_interior_walls(cube_t const &clip_cube, bool for_elevator=0);
+	unsigned add_stairs_door(cube_t const &stairs_bc, bool dim, bool stairs_dir);
 	void create_two_story_tall_rooms(rand_gen_t &rgen);
 	void setup_courtyard();
 	void gen_room_details(rand_gen_t &rgen, unsigned building_ix);
