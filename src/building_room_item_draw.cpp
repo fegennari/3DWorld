@@ -2125,25 +2125,27 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			draw_obj_model(*i, obj, s, xlate, obj_center, shadow_only, mirror_dim, using_custom_tid);
 			obj_drawn = 1;
 		}
-		// check for security camera monitor if player is in this building; must be on and active
-		if (player_in_building && type == TYPE_MONITOR && obj.is_tv_monitor_on() && obj.is_active()) {
-			onscreen_text.clear();
-			setup_monitor_screen_draw(obj, monitor_screens_mat, onscreen_text);
-			add_tv_or_monitor_screen (obj, monitor_screens_mat, onscreen_text, &onscreen_text_mat);
-			s.set_color_e(WHITE); // emissive
-			tid_nm_pair_dstate_t screen_state(s, 1), text_state(s, 0); // no_set_texture=1/0
-			monitor_screens_mat.upload_draw_and_clear(screen_state);
+		if (player_in_building && !shadow_only) {
+			// check for security camera monitor if player is in this building; must be on and active
+			if (player_in_building && type == TYPE_MONITOR && obj.is_tv_monitor_on() && obj.is_active()) {
+				onscreen_text.clear();
+				setup_monitor_screen_draw(obj, monitor_screens_mat, onscreen_text);
+				add_tv_or_monitor_screen (obj, monitor_screens_mat, onscreen_text, &onscreen_text_mat);
+				s.set_color_e(WHITE); // emissive
+				tid_nm_pair_dstate_t screen_state(s, 1), text_state(s, 0); // no_set_texture=1/0
+				monitor_screens_mat.upload_draw_and_clear(screen_state);
 
-			if (!onscreen_text_mat.empty()) {
-				enable_blend();
-				onscreen_text_mat.upload_draw_and_clear(text_state);
-				disable_blend();
+				if (!onscreen_text_mat.empty()) {
+					enable_blend();
+					onscreen_text_mat.upload_draw_and_clear(text_state);
+					disable_blend();
+				}
+				s.set_color_e(BLACK);
 			}
-			s.set_color_e(BLACK);
-		}
-		if (player_in_building && !shadow_only && type == TYPE_SINK) { // sink
-			if (in_camera_room) {water_sound_manager.register_running_water(obj, building);}
-			water_draw.add_water_for_sink(obj);
+			if (type == TYPE_SINK) { // sink
+				if (in_camera_room) {water_sound_manager.register_running_water(obj, building);}
+				water_draw.add_water_for_sink(obj);
+			}
 		}
 	} // for i
 	if (!skip_interior_objs && !cube_map_ref && !door_handles.empty()) { // optimization: skip door handles for player outside building
