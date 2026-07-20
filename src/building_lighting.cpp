@@ -662,6 +662,16 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			cc.emplace_back(top, color);
 			cc.emplace_back(body_back, WHITE); // Note: ignoring body sides, which are small
 		}
+		else if (type == TYPE_BOX && c->is_open()) { // open boxes are represented as 4 sides and a bottom
+			cube_t center(*c);
+			center.expand_by_xy(-0.05*vector2d(c->dx(), c->dy()));
+			colored_cube_t box(*c, color);
+			unsigned const cc_sz(cc.size());
+			subtract_cube_from_cube(box, center, cc); // should all 4 cubes
+			cube_t bot(*c);
+			bot.z2() = c->z1() + 0.05*c->dz();
+			cc.emplace_back(bot, color);
+		}
 		else { // single cube
 			cube_t bc(*c); // handle 3D models that don't fill the entire cube
 
@@ -694,9 +704,10 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 				add_colored_cubes(temp, color, ext_bcube, cc); // add 4 sides around the sink
 				bc.z2() = sink.z1(); // remainder will be the bottom half
 			}
-			else if (type == TYPE_STOVE     ) {bc.z2() -= 0.22*bc.dz();}
+			//else if (type == TYPE_BOX       ) {bc.z2() -= 0.50*c->dz();} // reduce height in case they're opened?
+			else if (type == TYPE_STOVE     ) {bc.z2() -= 0.22*c->dz();}
 			else if (c->is_tv_or_monitor()  ) {bc.expand_in_dim(dim, -0.3*bc.get_sz_dim(dim));} // reduce thickness
-			else if (type == TYPE_BRSINK    ) {bc.z1() += 0.60*bc.dz();}
+			else if (type == TYPE_BRSINK    ) {bc.z1() += 0.60*c->dz();}
 			else if (type == TYPE_ATTIC_DOOR) {bc = get_attic_access_door_cube(*c, 0);} // inc_ladder=0: includes door but not ladder
 			else if (type == TYPE_TOWEL_DISP) {bc.expand_in_z(-0.1*c->dz());}
 			else if (type == TYPE_HAND_DRYER) {bc.d[dim][dir] -= (dir ? 1.0 : -1.0)*0.5*c->get_depth();} // shorten outer edge

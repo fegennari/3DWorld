@@ -812,7 +812,13 @@ template<typename T> void add_to_and_clear(T &src, T &dest) {
 template<typename T> void add_inverted_triangles(T &verts, vector<unsigned> &indices, unsigned verts_start, unsigned ixs_start, bool replace_mode=0);
 template<typename T> void reserve_extra(vector<T> &v, unsigned num) {v.reserve(v.size() + num);}
 
-template<typename T> void subtract_cube_from_cube(T const &c, cube_t const &s, vector<T> &out, bool clear_out=0);
+template<typename T> void subtract_cube_from_cube(T const &c, cube_t const &s, vector<T> &out, bool clear_out=0) { // XY only
+	if (clear_out) {out.clear();}
+	if (c.y1() < s.y1()) {T C(c); C.y2() = s.y1(); out.push_back(C);} // bottom
+	if (c.y2() > s.y2()) {T C(c); C.y1() = s.y2(); out.push_back(C);} // top
+	if (c.x1() < s.x1()) {T C(c); max_eq(C.y1(), s.y1()); min_eq(C.y2(), s.y2()); C.x2() = s.x1(); out.push_back(C);} // left center
+	if (c.x2() > s.x2()) {T C(c); max_eq(C.y1(), s.y1()); min_eq(C.y2(), s.y2()); C.x1() = s.x2(); out.push_back(C);} // right center
+}
 template<typename T> void subtract_cube_from_cube_inplace(cube_t const &s, vector<T> &cubes, unsigned &ix, unsigned &iter_end);
 template<typename T> void subtract_cubes_from_cube(cube_t const &c, vector<T> const &sub, vect_cube_t &out, vect_cube_t &out2, int zval_mode=0);
 template<typename T> bool subtract_cube_from_cubes(cube_t const &s, vector<T> &cubes, vect_cube_t *holes=nullptr, bool clip_in_z=0, bool include_adj=0, bool no_z_test=0);
