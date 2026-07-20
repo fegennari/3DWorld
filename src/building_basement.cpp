@@ -819,6 +819,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 			vect_riser_pos_t sewer, cold_water, hot_water, gas_pipes;
 			get_pipe_basement_water_connections(sewer, cold_water, hot_water, rgen);
 			// hang sewer pipes under the ceiling beams; hang water pipes from the ceiling, above sewer pipes and through the beams
+			//highres_timer_t timer("Add Pipes");
 			float const ceil_zval(beam.z1()), water_ceil_zval(beam.z2());
 			add_basement_pipes(obstacles, walls, beams, sewer,      pipe_cubes, room_id, num_floors, objs_start, ceil_zval,      rgen, PIPE_TYPE_SEWER, 0); // sewer
 			add_to_and_clear(pipe_cubes, obstacles); // add sewer pipes to obstacles

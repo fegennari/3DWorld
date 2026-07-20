@@ -236,7 +236,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 
 				// can't place outside building bcube, or over stairs/elevators/ramps/pillars/walls/beams;
 				// here beams are included because lights are attached to the underside of them, so avoiding beams should hopefully also avoid lights
-				if (!bcube.contains_cube_xy(c) || has_bcube_int(c, obstacles) || has_bcube_int(c, walls) || has_bcube_int(c, beams)) {
+				if (!bcube.contains_cube_xy(c) || has_bcube_int(c, beams) || has_bcube_int(c, walls) || has_bcube_int(c, obstacles)) {
 					pos   = p.pos + rshifts[n]; // apply shift
 					is_wh = 0; // if shifted, this riser no longer connects directly to the water heater
 					continue;
@@ -334,6 +334,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		return 0; // failed in second dim, done
 	}
 	else if (allow_place_fail) { // fail case
+		if (depth > 8) return 0; // reached max depth, fail
 		// try stripping off some risers from the end and connecting the remaining ones
 		vect_riser_pos_t risers_sub;
 		float riser_min(FLT_MAX), riser_max(-FLT_MAX);
@@ -342,8 +343,8 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			min_eq(riser_min, r.pos[dim]);
 			max_eq(riser_max, r.pos[dim]);
 		}
-		if (risers.size() >= 10) { // optimization for many risers case to avoid long quadratic runtime: clip off an additional 5% from each end
-			float const extra_clip(0.05*(riser_max - riser_min));
+		if (risers.size() >= 10) { // optimization for many risers case to avoid long quadratic runtime: clip off an additional 5-20% from each end
+			float const extra_clip(((risers.size() >= 100) ? 0.2 : ((risers.size() >= 40) ? 0.1 : 0.05))*(riser_max - riser_min));
 			riser_min += extra_clip;
 			riser_max -= extra_clip;
 		}
