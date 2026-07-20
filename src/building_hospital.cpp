@@ -552,7 +552,7 @@ bool building_t::add_operating_room_objs(rand_gen_t rgen, room_t &room, float zv
 	place_area.expand_by_xy(-get_trim_thickness());
 	
 	if (add_trolley(rgen, place_area, op_table, zval, room_id, tot_light_amt, objs_start)) { // add hospital trolley
-		room_object_t const &trolley(objs.back());
+		room_object_t const trolley(objs.back()); // deep copy to avoid reference invalidation
 		bool const dim(trolley.dim);
 		cube_t const trolley_area(get_trolley_place_area(trolley));
 
@@ -567,12 +567,12 @@ bool building_t::add_operating_room_objs(rand_gen_t rgen, room_t &room, float zv
 		}
 		if (rgen.rand_float() < 0.7) { // place a roll of white tape on the trolley
 			float const tape_radius(rgen.rand_uniform(0.08, 0.1)*trolley.get_width()), tape_height(rgen.rand_uniform(0.4, 0.6)*tape_radius);
-			float const place_pos(rgen.rand_uniform(trolley_area.d[!dim][0]+tape_radius, trolley_area.d[!dim][1]-tape_radius));
+			float const place_pos(rgen.rand_uniform(trolley_area.d[!dim][0]+1.1*tape_radius, trolley_area.d[!dim][1]-1.1*tape_radius));
 			bool const side(rgen.rand_bool());
 			cube_t tape;
 			set_cube_zvals(tape, trolley_area.z1(), trolley_area.z1()+tape_height);
 			set_wall_width(tape, place_pos, tape_radius, !dim);
-			set_wall_width(tape, (trolley_area.d[dim][side] - (side ? 1.0 : -1.0)*0.7*tape_radius), tape_radius, dim);
+			set_wall_width(tape, (trolley_area.d[dim][side] - (side ? 1.0 : -1.0)*0.68*tape_radius), tape_radius, dim);
 			objs.emplace_back(tape, TYPE_TAPE, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, WHITE); // vertical
 		}
 	}
