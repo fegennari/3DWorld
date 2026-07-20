@@ -81,7 +81,8 @@ bool cube_map_reflect_active() {return (display_mode & 0x100);} // key 9; on by 
 bool enable_cube_map_reflect() { // building interiors
 	return (cube_map_reflect_active() && camera_in_building && !player_in_uge && player_building != nullptr && !player_building->is_rotated());
 }
-bool enable_cube_map_city(cube_t *city_bcube) { // building exteriors
+bool enable_cube_map_city(cube_t *city_bcube) {
+	// for reflecting building exteriors and park pone/creek water; could enable in residential cities for pool water, but hurts framerate
 	return (cube_map_reflect_active() && !camera_in_building && camera_in_city_bounds(6, city_bcube)); // rcp_mask=2+4 (commercial or park)
 }
 

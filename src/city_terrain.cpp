@@ -682,8 +682,8 @@ void park_heightmap_t::create_verts() {
 	vao_mgr.post_render(); // unbind
 }
 
-void begin_water_surface_draw(shader_t &s);
-void end_water_surface_draw  (shader_t &s);
+void begin_water_surface_draw(shader_t &s, bool write_depth=0);
+void end_water_surface_draw  (shader_t &s, bool write_depth=0);
 
 // Note: there is no park_heightmap_t::pre_draw() because there is often at most one visible at any time
 // should this be drawn in the shadow pass if (bcube.z2() > z_ground)?

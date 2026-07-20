@@ -369,6 +369,38 @@ bool fire_hydrant_t::proc_sphere_coll(point &pos_, point const &p_last, float ra
 	return sphere_city_obj_cylin_coll(pos, cylin_radius, pos_, p_last, radius_, xlate, cnorm);
 }
 
+// fountain_t
+
+void begin_water_surface_draw(shader_t &s, bool write_depth=0) { // used for swimming pools and ponds
+	if (0) {
+		select_no_texture();
+		select_texture_nmap(get_texture_by_name("normal_maps/ocean_water_normal.png", 1));
+	}
+	else {select_texture(get_texture_by_name("snow2.jpg"));}
+	enable_blend(); // transparent water
+	if (!write_depth) {glDepthMask(GL_FALSE);}
+	s.set_refract_ix(1.33); // may or may not be used, depending on the active shader
+}
+void end_water_surface_draw(shader_t &s, bool write_depth=0) {
+	if (0) {bind_default_flat_normal_map();}
+	disable_blend();
+	if (!write_depth) {glDepthMask(GL_TRUE);}
+	s.set_refract_ix(1.0); // reset
+}
+
+void fountain_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only, animation_state_t *anim_state, bool set_smap_tile) const {
+	multi_model_city_obj_t::draw(dstate, qbds, dist_scale, shadow_only, anim_state, set_smap_tile);
+	if (shadow_only) return;
+	if ((get_sub_model_id(full_model_id) % 3) != 1) return; // sub-model ID 2 of 3 already has a water material and sub-model ID 0 has no lower water level
+	if (!bcube.closest_dist_less_than(dstate.camera_bs, 0.05*dstate.draw_tile_dist)) return;
+	// draw water, above the grass
+	begin_water_surface_draw(dstate.s, 1); // write_depth=1 to block park grass
+	bind_default_flat_normal_map();
+	dstate.s.set_cur_color(colorRGBA(0.1, 0.2, 0.5, 0.65));
+	draw_circle_normal(0.0, 0.4*min(bcube.dx(), bcube.dy()), 16, 0, point(pos.x, pos.y, (bcube.z1() + 0.175*bcube.dz()))); // ndiv=16
+	end_water_surface_draw(dstate.s, 1);
+}
+
 // plot dividers
 
 // Note: chainlink fence can't be taller than other fence types in case it intersects
@@ -457,29 +489,12 @@ bool divider_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_
 
 // swimming pools
 
-void begin_water_surface_draw(shader_t &s) { // used for swimming pools and ponds
-	if (0) {
-		select_no_texture();
-		select_texture_nmap(get_texture_by_name("normal_maps/ocean_water_normal.png", 1));
-	}
-	else {select_texture(get_texture_by_name("snow2.jpg"));}
-	enable_blend(); // transparent water
-	glDepthMask(GL_FALSE);
-	s.set_refract_ix(1.33);
-}
-void end_water_surface_draw(shader_t &s) {
-	if (0) {bind_default_flat_normal_map();}
-	disable_blend();
-	glDepthMask(GL_TRUE);
-	s.set_refract_ix(1.0); // reset
-}
-
 // passes: 0=in-ground walls, 1=in-ground water, 2=above ground sides, 3=above ground water
 /*static*/ void swimming_pool_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	if (shadow_only) {} // nothing
 	else if (dstate.pass_ix == 2) {select_no_texture();} // sides/untextured
 	else if (dstate.pass_ix == 0) {select_texture(get_texture_by_name("bathroom_tile.jpg"));} // walls and maybe ladder
-	else if (dstate.pass_ix == 1 || dstate.pass_ix == 3) {begin_water_surface_draw(dstate.s);} // water surface
+	else if (dstate.pass_ix == 1 || dstate.pass_ix == 3) {begin_water_surface_draw(dstate.s);} // water surface; may or may not have reflections enabled
 	else if (dstate.pass_ix == 4) {} // caustics pass - handled by the caller
 	else {assert(0);}
 }

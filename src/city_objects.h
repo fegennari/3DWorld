@@ -137,6 +137,7 @@ struct wfountain_t : public model_city_obj_t {
 struct fountain_t : public multi_model_city_obj_t {
 	fountain_t(point const &pos_, float height, unsigned model_select) :
 		multi_model_city_obj_t(pos_, height, 0, 0, OBJ_MODEL_FOUNTAIN, model_select, 1) {} // dim=0, dir=0, is_cylinder=1
+	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only, animation_state_t *anim_state=nullptr, bool set_smap_tile=0) const;
 };
 
 struct statue_t : public multi_model_city_obj_t {
