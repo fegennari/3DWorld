@@ -1585,8 +1585,7 @@ void model3d::add_triangle(polygon_t const &tri, vntc_map_t &vmap, int mat_id, u
 
 
 void model3d::update_bbox(polygon_t const &poly) {
-	cube_t const bb(get_polygon_bbox(poly));
-	if (bcube == all_zeros_cube) {bcube = bb;} else {bcube.union_with_cube(bb);}
+	bcube.assign_or_union_with_cube(get_polygon_bbox(poly));
 }
 
 void model3d::get_transformed_bcubes(vector<cube_t> &bcubes) const {
@@ -2465,20 +2464,14 @@ void model3d::setup_shadow_maps() {
 
 
 cube_t model3d::calc_bcube_including_transforms() { // non-const because bcube_xf is cached
-
 	if (transforms.empty()) return bcube; // no transforms case
-	if (bcube_all_xf != all_zeros_cube) return bcube_all_xf; // already calculated
-	
-	for (model3d_xform_t &xf : transforms) {
-		cube_t const &bc(xf.get_xformed_bcube(bcube));
-		if (bcube_all_xf == all_zeros_cube) {bcube_all_xf = bc;} else {bcube_all_xf.union_with_cube(bc);}
-	}
+	if (!bcube_all_xf.is_all_zeros()) return bcube_all_xf; // already calculated
+	for (model3d_xform_t &xf : transforms) {bcube_all_xf.assign_or_union_with_cube(xf.get_xformed_bcube(bcube));}
 	return bcube_all_xf;
 }
 
 
 void model3d::build_cobj_tree(bool verbose) {
-
 	if (!coll_tree.is_empty() || has_cobjs) return; // already built or not needed because cobjs will be used instead
 	RESET_TIME;
 	get_polygons(coll_tree.get_tquads_ref());
@@ -2944,13 +2937,12 @@ bool model3ds::has_any_animations() const {
 
 cube_t model3ds::calc_and_return_bcube(bool only_reflective) { // Note: calculates bcubes, so non-const
 
-	cube_t bcube(all_zeros_cube); // will return this if empty()
-	bool bcube_set(0);
+	cube_t bcube; // will return all zeros if empty()
 
 	for (iterator m = begin(); m != end(); ++m) {
 		cube_t const bb(m->calc_bcube_including_transforms());
 		if (only_reflective && !m->is_planar_reflective()) continue;
-		if (!bcube_set) {bcube = bb; bcube_set = 1;} else {bcube.union_with_cube(bb);}
+		bcube.assign_or_union_with_cube(bb);
 	}
 	return bcube;
 }
@@ -3040,12 +3032,8 @@ void get_cur_model_polygons(vector<coll_tquad> &ppts, model3d_xform_t const &xf,
 size_t get_loaded_models_gpu_mem() {return all_models.get_gpu_mem();}
 
 cube_t get_polygons_bcube(vector<coll_tquad> const &ppts) {
-
 	cube_t bcube;
-
-	for (auto i = ppts.begin(); i != ppts.end(); ++i) { // rasterize ppts to cubes in {x,y,z}
-		if (i == ppts.begin()) {bcube = i->get_bcube();} else {bcube.union_with_cube(i->get_bcube());}
-	}
+	for (auto const &p : ppts) {bcube.assign_or_union_with_cube(p.get_bcube());}
 	return bcube;
 }
 
@@ -3082,7 +3070,7 @@ void get_cur_model_edges_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &
 					if (gc == gc_max) continue; // already at max
 
 					if (gc_max.contains_cube(c)) { // optimization for contained case
-						if (gc == all_zeros_cube) {gc = c;} else {gc.union_with_cube(c);}
+						gc.assign_or_union_with_cube(c);
 						break;
 					}
 					clip_polygon_to_cube(gc_max, i->pts, i->npts, c, pts_out);
@@ -3091,7 +3079,7 @@ void get_cur_model_edges_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &
 					for (auto p = pts_out.begin(); p != pts_out.end(); ++p) {
 						point pt(*p);
 						gc_max.clamp_pt(pt); // not required, but needed for FP precision to avoid the assertion below
-						if (gc == all_zeros_cube) {gc.set_from_point(pt);} else {gc.union_with_pt(pt);}
+						gc.assign_or_union_with_pt(pt);
 					}
 					assert(gc_max.contains_cube(gc));
 				} // for z

@@ -748,7 +748,7 @@ public:
 	void calc_bcube_from_roads() { // Note: ignores isecs, plots, and bridges, which should be bounded by roads
 		if (roads.empty()) return; // no roads (assumes also no tracks)
 		bcube = calc_cubes_bcube(roads);
-		for (auto t = tracks.begin(); t != tracks.end(); ++t) {bcube.union_with_cube(*t);}
+		for (cube_t const &t : tracks) {bcube.union_with_cube(t);}
 	}
 private:
 	int find_conn_int_seg(cube_t const &c, bool dim, bool dir) const {
@@ -2574,7 +2574,7 @@ public:
 		//timer_t timer("Gen Roads"); // ~0.5ms
 		road_networks.push_back(road_network_t(region, road_networks.size(), is_residential));
 		if (!road_networks.back().gen_road_grid(road_width, road_spacing)) {road_networks.pop_back(); return;}
-		if (cities_bcube.is_all_zeros()) {cities_bcube = region;} else {cities_bcube.union_with_cube(region);} // Note: region is zero height
+		cities_bcube.assign_or_union_with_cube(region); // Note: region is zero height
 	}
 
 	void get_all_conn_road_endpoints(road_network_t const &rn, cube_t const &dest_bcube, vector<road_endpoint_t> &rpts) {
@@ -3575,7 +3575,7 @@ public:
 			params.city_border, params.slope_width, max(params.num_samples, 1U), x1, y1, x2, y2)) return 0;
 		float const elevation(flatten_region(x1, y1, x2, y2, params.slope_width));
 		cube_t const pos_range(add_plot(x1, y1, x2, y2, elevation));
-		if (cities_bcube.is_all_zeros()) {cities_bcube = pos_range;} else {cities_bcube.union_with_cube(pos_range);}
+		cities_bcube.assign_or_union_with_cube(pos_range);
 		
 		if (params.roads_enabled()) {
 			rand_gen_t rgen2; // don't use the built-in rgen to avoid affecting other state
