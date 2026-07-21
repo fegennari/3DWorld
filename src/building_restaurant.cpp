@@ -259,10 +259,7 @@ void building_t::add_mall_restaurant_objs(rand_gen_t &rgen, room_t const &room, 
 	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t front_area(room), windows_area;
 	set_wall_width(front_area, front_wall, wall_thickness, dim);
-
-	for (cube_t const &w : interior->mall_info->storefronts) {
-		if (w.intersects(front_area)) {windows_area.assign_or_union_with_cube(w);}
-	}
+	get_bcubes_union_if_intersects(interior->mall_info->storefronts, front_area, windows_area);
 	bool const has_windows(!windows_area.is_all_zeros());
 
 	if (!is_open && has_windows) { // windows_area should never be zero area

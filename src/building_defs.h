@@ -783,6 +783,16 @@ template<typename T> bool any_cube_contains_xy(cube_t const &cube, T const &cube
 	for (auto const &c : cubes) {if (c.contains_cube_xy(cube)) return 1;}
 	return 0;
 }
+template<typename T> void add_cubes_intersecting(vector<T> const &cubes, cube_t const &bcube, vect_cube_t &out) {
+	for (cube_t const &c : cubes) {
+		if (c.intersects(bcube)) {out.push_back(c);}
+	}
+}
+template<typename T> void get_bcubes_union_if_intersects(vector<T> const &cubes, cube_t const &bcube, cube_t &c_union) {
+	for (cube_t const &c : cubes) {
+		if (c.intersects(bcube)) {c_union.assign_or_union_with_cube(c);}
+	}
+}
 template<typename T> cube_t get_bcubes_union(vector<T> const &cubes) {
 	if (cubes.size() == 1) {return cubes.front();}
 	cube_t bcube;

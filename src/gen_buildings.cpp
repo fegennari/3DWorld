@@ -5537,9 +5537,7 @@ public:
 							assert(walkway.is_strictly_normalized());
 							// check for other parts or walkways blocking the walkway
 							if (b1.cube_int_parts_no_sec(walkway) || b2.cube_int_parts_no_sec(walkway)) continue;
-							bool ww_blocked(0);
-							for (cube_t const &w : blocked) {ww_blocked |= w.intersects(walkway);} // check other walkways
-							if (ww_blocked) continue;
+							if (has_bcube_int(walkway, blocked)) continue; // check other walkways
 							bool const mat1_valid(!b1.get_material().no_walkways), mat2_valid(!b2.get_material().no_walkways);
 							bool owner_is_b1(0);
 							int side_mat_ix(-1);

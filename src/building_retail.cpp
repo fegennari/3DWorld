@@ -282,16 +282,10 @@ bool building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 	if (!doors.empty()) { // add checkout counters
 		// find union of primary stairs and central elevators, which forms the other bounds of our checkout counter
 		cube_t blocked(room.get_cube_center()); // block off the center
+		get_bcubes_union_if_intersects(interior->elevators,  room, blocked);
+		get_bcubes_union_if_intersects(interior->escalators, room, blocked);
+		get_bcubes_union_if_intersects(interior->stairwells, room, blocked);
 
-		for (auto const &e : interior->elevators) {
-			if (e.intersects(room)) {blocked.union_with_cube(e);}
-		}
-		for (auto const &e : interior->escalators) {
-			if (e.intersects(room)) {blocked.union_with_cube(e);}
-		}
-		for (auto const &s : interior->stairwells) {
-			if (s.intersects(room)) {blocked.union_with_cube(s);}
-		}
 		for (unsigned dir = 0; dir < 2; ++dir) { // each end of room/each door
 			cube_t checkout(room);
 			checkout.d[dim][!dir] = blocked.d[dim][dir];

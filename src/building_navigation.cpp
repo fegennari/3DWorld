@@ -687,10 +687,7 @@ public:
 				set_cube_zvals(walk_area_this_floor, floor_zval, (floor_zval + building.get_floor_ceil_gap())); // limit to floor-ceil space for this floor
 				vect_cube_t blockers;
 				blockers.reserve(avoid.size());
-
-				for (cube_t const &c : avoid) {
-					if (c.intersects(walk_area_this_floor)) {blockers.push_back(c);}
-				}
+				add_cubes_intersecting(avoid, walk_area_this_floor, blockers);
 				// Note: doorway width is 2.38x coll radius
 				float const grid_radius(get_ped_coll_radius()); // use conservative person radius so that we can reuse across people
 				nav_grid.build_for_building(walk_area_this_floor, blockers, building.interior->door_stacks, building.interior->stairwells, stairs_extend, grid_radius);
@@ -1926,12 +1923,8 @@ void building_t::add_sub_rooms_to_avoid_if_needed(unsigned room_id, vect_cube_t 
 	if (room.is_industrial() && interior->ind_info) {vector_add_to(interior->ind_info->sub_rooms, avoid);}
 	else if (is_prison() && room.has_subroom()) { // add walls between cells and other sub-rooms
 		cube_t const select_area(get_walkable_room_bounds(room)); // shrink to exclude walls along the edges of the room
-
-		for (unsigned d = 0; d < 2; ++d) {
-			for (cube_t const &wall : interior->walls[d]) {
-				if (select_area.intersects(wall)) {avoid.push_back(wall);} // assumes walls extend the entire room height, so we don't need zval here
-			}
-		}
+		// assumes walls extend the entire room height, so we don't need zval here
+		for (unsigned d = 0; d < 2; ++d) {add_cubes_intersecting(interior->walls[d], select_area, avoid);}
 	}
 }
 

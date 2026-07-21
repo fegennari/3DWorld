@@ -1557,10 +1557,8 @@ void building_t::get_all_windows(vect_cube_with_ix_t &windows) const { // Note: 
 				bool is_blocked(window.dz() <= 0.0 || window.get_sz_dim(!dim) <= 0.0);
 				cube_t window_clipped(window);
 
-				if (is_attic_window(window)) { // attic windows are special
-					for (cube_t const &h : window_holes) {
-						if (window.intersects(h)) {window_clipped = h; break;}
-					}
+				if (is_attic_window(window)) {
+					has_bcube_int_ret_cube(window, window_holes, window_clipped); // attic windows are special
 				}
 				else if (!is_blocked && !walkways.empty()) {
 					// check for windows blocked by walkways and clip them, even though some light could come through if not blocked by a door
@@ -1710,11 +1708,7 @@ void building_t::refine_light_bcube(point const &lpos, float light_radius, room_
 		}
 	}
 	if (!is_parking_garage || interior->has_backrooms) { // still need to check for backrooms to handle wall adjacent to parking garage
-		for (unsigned d = 0; d < 2; ++d) {
-			for (cube_t const &c : interior->walls[d]) {
-				if (tight_bcube.intersects(c)) {walls[d].push_back(c);}
-			}
-		}
+		for (unsigned d = 0; d < 2; ++d) {add_cubes_intersecting(interior->walls[d], tight_bcube, walls[d]);}
 	}
 	point ray_origin(lpos);
 	// if this is a tall room, lower the ray origin to the ground floor to include light paths through ground floor doorways

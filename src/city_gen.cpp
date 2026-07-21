@@ -1493,9 +1493,7 @@ public:
 		return INT_NONE;
 	}
 	bool cube_overlaps_road_xy(cube_t const &c) const {
-		// can we use conn_roads here for global_rn?
-		for (auto i = roads.begin(); i != roads.end(); ++i) {if (i->intersects(c)) return 1;}
-		return 0;
+		return has_bcube_int_xy(c, roads); // can we use conn_roads here for global_rn?
 	}
 	void get_occluders(vect_cube_t &occluders, vector3d const &xlate) const {
 		if (bcube.contains_pt_xy(camera_pdu.pos - xlate)) {city_obj_placer.get_occluders(camera_pdu, xlate, occluders);} // only add if this city contains the camera

@@ -943,10 +943,8 @@ void building_t::gen_interior_int(rand_gen_t &rgen, unsigned gen_index, bool has
 			// see if we have a skylight to work with
 			vect_cube_t part_skylights; // should be at most size 1 with currently skylight addition code
 			bool added_whirl(0);
+			add_cubes_intersecting(skylights, *p, part_skylights);
 
-			for (cube_t const &skylight : skylights) {
-				if (skylight.intersects(*p)) {part_skylights.push_back(skylight);}
-			}
 			while (!to_split.empty()) { // recursively split rooms until all rooms are too small to split or there are no more valid splits
 				split_cube_t const c(to_split.back()); // Note: non-const because door_lo/door_hi is modified during T-junction insert
 				to_split.pop_back();

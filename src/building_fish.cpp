@@ -551,9 +551,8 @@ bool building_t::begin_fish_draw() const { // returns true of pool or basement w
 		water_bcube.expand_by_xy(-get_wall_thickness()); // subtract off exterior walls
 
 		if (!fish_manager_bldg.has_flooded_basement()) { // not yet setup
-			for (stairwell_t const &s : interior->stairwells) { // add stairs
-				if (water_bcube.intersects(s)) {obstacles.push_back(s);}
-			}
+			add_cubes_intersecting(interior->stairwells, water_bcube, obstacles); // add stairs
+
 			if (has_room_geom()) { // add room objects
 				vect_room_object_t const &objs(interior->room_geom->objs);
 				unsigned const objs_start(interior->room_geom->backrooms_start);
