@@ -227,6 +227,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		}
 		else {
 			bool valid(0);
+			cube_t c_int;
 
 			for (unsigned n = 0; n < NUM_SHIFTS; ++n) { // try zero + random shifts
 				cube_t c(pos);
@@ -236,7 +237,9 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 
 				// can't place outside building bcube, or over stairs/elevators/ramps/pillars/walls/beams;
 				// here beams are included because lights are attached to the underside of them, so avoiding beams should hopefully also avoid lights
-				if (!bcube.contains_cube_xy(c) || has_bcube_int(c, beams) || has_bcube_int(c, walls) || has_bcube_int(c, obstacles)) {
+				if (!bcube.contains_cube_xy(c) || (!c_int.is_all_zeros() && c_int.intersects(c)) ||
+					has_bcube_int_ret_cube(c, beams, c_int) || has_bcube_int_ret_cube(c, walls, c_int) || has_bcube_int_ret_cube(c, obstacles, c_int))
+				{
 					pos   = p.pos + rshifts[n]; // apply shift
 					is_wh = 0; // if shifted, this riser no longer connects directly to the water heater
 					continue;
