@@ -1360,16 +1360,16 @@ void draw_candle_flames() {
 }
 
 class water_draw_t {
-	rgeom_mat_t mat;
+	rgeom_mat_t foam_mat, water_mat;
 	float tex_off=0.0;
 	rand_gen_t rgen;
 
-	void apply_vert_texture(unsigned verts_start, float tscale, float speed) {
+	void apply_vert_texture(rgeom_mat_t &mat, unsigned verts_start, float tscale, float speed) {
 		speed *= tex_off;
-		for (auto i = mat.itri_verts.begin() + verts_start; i != mat.itri_verts.end(); ++i) {i->t[1] *= tscale; i->t[1] += speed;}
+		for (auto &v : mat.itri_verts) {v.t[1] *= tscale; v.t[1] += speed;}
 	}
 public:
-	water_draw_t() : mat(rgeom_mat_t(tid_nm_pair_t(FOAM_TEX))) {}
+	water_draw_t() : foam_mat(rgeom_mat_t(tid_nm_pair_t(FOAM_TEX))), water_mat(rgeom_mat_t(tid_nm_pair_t(SNOW_TEX))) {}
 
 	void add_water_for_sink(room_object_t const &obj) {
 		if (!obj.is_active()) return;
@@ -1380,9 +1380,9 @@ public:
 		pos[obj.dim] += (obj.dir ? -1.0 : 1.0)*(is_cube ? 0.25 : 0.095)*obj.get_length(); // move toward the back of the sink
 		c.set_from_sphere(pos, (is_cube ? 0.02 : 0.0055)*dz);
 		set_cube_zvals(c, (obj.z1() + (is_cube ? 0.7 : 0.6)*dz), (obj.z1() + (is_cube ? 1.3 : 0.925)*dz));
-		unsigned const verts_start(mat.itri_verts.size());
-		mat.add_vcylin_to_verts(c, colorRGBA(WHITE, 0.5), 0, 0, 0, 0, 1.0, 1.0, 0.2);
-		apply_vert_texture(verts_start, 1.2, 1.0);
+		unsigned const verts_start(foam_mat.itri_verts.size());
+		foam_mat.add_vcylin_to_verts(c, colorRGBA(WHITE, 0.5), 0, 0, 0, 0, 1.0, 1.0, 0.2);
+		apply_vert_texture(foam_mat, verts_start, 1.2, 1.0);
 	}
 	void add_water_for_shower(room_object_t const &obj, unsigned obj_ix, particle_manager_t &particle_manager) {
 		if (!obj.is_active()) return;
@@ -1390,7 +1390,7 @@ public:
 		vector3d head_dir;
 		get_shower_head_pos_dir(obj, head_pos, head_dir);
 		colorRGBA const color(WHITE, 0.4);
-		unsigned const verts_start(mat.itri_verts.size()), num_streams(12);
+		unsigned const verts_start(foam_mat.itri_verts.size()), num_streams(12);
 		float const delta_angle(TWO_PI/num_streams), height(obj.dz()), max_dist(2.0*height), water_height(0.005*height);
 		float const width(0.5*(obj.dx() + obj.dy())), head_radius(0.07*width), spread_radius(0.75*head_radius);
 		float const spray_radius_top(0.04*head_radius), spray_radius_bot(0.12*head_radius), spread_radius_bot(7.0*spread_radius);
@@ -1405,17 +1405,17 @@ public:
 			point water_start(head_pos + spread_radius*offset), water_end(head_pos + spread_radius_bot*offset + max_dist*head_dir);
 			do_line_clip(water_start, water_end, obj.d); // should only clip water_end
 			point const ray_end(water_end + 2.0*spray_radius_bot*head_dir); // extend a bit further into the floor
-			mat.add_cylin_to_verts(ray_end, water_start, spray_radius_bot, spray_radius_top, color, 0, 0); // no ends
+			foam_mat.add_cylin_to_verts(ray_end, water_start, spray_radius_bot, spray_radius_top, color, 0, 0); // no ends
 			if (!animate2 || n != splash_stream_ix) continue; // no splash for this stream
 			water_end.z += water_height; // place above the water plane
 			particle_manager.add_particle(water_end, zero_vector, WHITE, 2.5*spray_radius_bot, PART_EFFECT_SPLASH);
 		} // for n
-		apply_vert_texture(verts_start, 4.0, 3.0);
+		apply_vert_texture(foam_mat, verts_start, 4.0, 3.0);
 		// draw a puddle on the floor
 		point puddle_center(obj.xc(), obj.yc(), (obj.z1() + water_height));
 		puddle_center[obj.dim] += (obj.dir ? -1.0 : 1.0)*0.15*width; // move further from the wall, closer to where the water hits
 		float const puddle_radius((0.4 + 0.01*sin(TWO_PI*tex_off + 100.0*(puddle_center.x + puddle_center.y)))*width); // slightly changes over time, different for each shower
-		mat.add_disk_to_verts(puddle_center, puddle_radius, plus_z, color);
+		foam_mat.add_disk_to_verts(puddle_center, puddle_radius, plus_z, color);
 		// add steam
 		float const steam_prob(0.05/fticks);
 
@@ -1431,14 +1431,15 @@ public:
 	void add_water_for_fountain(room_object_t const &obj) {
 		if ((obj.item_flags % 3) != 1) return; // sub-model ID 2 of 3 already has a water material and sub-model ID 0 has no lower water level
 		point center(obj.xc(), obj.yc(), (obj.z1() + 0.15*obj.dz()));
-		mat.add_disk_to_verts(center, 0.4*min(obj.dx(), obj.dy()), plus_z, WHITE);
+		water_mat.add_disk_to_verts(center, 0.4*min(obj.dx(), obj.dy()), plus_z, colorRGBA(0.1, 0.3, 0.7, 0.7)); // slightly lighter than outdoor fountains
 	}
 	void draw_and_clear(shader_t &s) {
-		if (mat.empty()) return;
+		if (foam_mat.empty() && water_mat.empty()) return;
 		glDepthMask(GL_FALSE); // disable depth writing - fixes sky visible through exterior wall, but then not drawn in front of exterior wall
 		enable_blend();
 		tid_nm_pair_dstate_t state(s);
-		mat.upload_draw_and_clear(state);
+		foam_mat .upload_draw_and_clear(state);
+		water_mat.upload_draw_and_clear(state);
 		disable_blend();
 		glDepthMask(GL_TRUE); // re-enable depth writing
 		if (animate2) {tex_off += 0.02*fticks;} // animate the texture

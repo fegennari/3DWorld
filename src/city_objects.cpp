@@ -376,7 +376,7 @@ void begin_water_surface_draw(shader_t &s, bool write_depth=0) { // used for swi
 		select_no_texture();
 		select_texture_nmap(get_texture_by_name("normal_maps/ocean_water_normal.png", 1));
 	}
-	else {select_texture(get_texture_by_name("snow2.jpg"));}
+	else {select_texture(SNOW_TEX);}
 	enable_blend(); // transparent water
 	if (!write_depth) {glDepthMask(GL_FALSE);}
 	s.set_refract_ix(1.33); // may or may not be used, depending on the active shader
