@@ -660,7 +660,6 @@ struct cube_t { // size = 24; Note: AABB, not actually a cube
 };
 
 typedef vector<cube_t> vect_cube_t;
-cube_t const all_zeros_cube(0,0,0,0,0,0);
 
 struct cube_with_ix_t : public cube_t {
 	unsigned ix;

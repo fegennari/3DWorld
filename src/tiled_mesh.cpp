@@ -1003,7 +1003,7 @@ void tile_t::setup_shadow_maps(tile_shadow_map_manager &smap_manager, bool clean
 	// extend bcube upwards to include any models above the mesh that cast shadows on this tile
 	// FIXME: still not correct for low sun pos - need a more accurate way to determine which models can shadow this tile
 	cube_t const models_bcube(calc_and_return_all_models_bcube());
-	if (models_bcube != all_zeros_cube) {max_eq(bcube.z2(), models_bcube.z2());}
+	if (!models_bcube.is_all_zeros()) {max_eq(bcube.z2(), models_bcube.z2());}
 	smap_data.create_if_needed(bcube);
 }
 

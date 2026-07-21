@@ -1062,7 +1062,7 @@ template<typename T> void vntc_vect_block_t<T>::free_vbos() {
 }
 
 template<typename T> cube_t vntc_vect_block_t<T>::get_bcube() const {
-	if (this->empty()) return all_zeros_cube;
+	if (this->empty()) return cube_t();
 	cube_t bcube(this->front().get_bcube());
 	for (auto i = begin()+1; i != end(); ++i) {bcube.union_with_cube(i->get_bcube());}
 	return bcube;
@@ -2492,7 +2492,7 @@ bool model3d::check_coll_line(point const &p1, point const &p2, point &cpos, vec
 	if (!build_bvh_if_needed && coll_tree.is_empty()) return 0;
 	//timer_t timer("Check Coll Line");
 	if (transforms.empty()) {return check_coll_line_cur_xf(p1, p2, cpos, cnorm, color, exact);}
-	if (bcube_all_xf != all_zeros_cube && !check_line_clip(p1, p2, bcube_all_xf.d)) return 0; // use bcube of transformed bcubes
+	if (!bcube_all_xf.is_all_zeros() && !check_line_clip(p1, p2, bcube_all_xf.d)) return 0; // use bcube of transformed bcubes
 	bool coll(0);
 	point cur(p2);
 
@@ -3053,7 +3053,7 @@ void get_cur_model_edges_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &
 	if (tot_grid > (1ULL<<20)) {cerr << "Error: Too many model3d grid voxels: " << tot_grid << endl; assert(0);}
 	RESET_TIME;
 	voxel_grid<cube_t> grid;
-	grid.init(ndiv[0], ndiv[1], ndiv[2], bcube, all_zeros_cube);
+	grid.init(ndiv[0], ndiv[1], ndiv[2], bcube, cube_t());
 	vector<point> pts_out;
 
 	for (auto i = ppts.begin(); i != ppts.end(); ++i) { // rasterize ppts to cubes in {x,y,z}

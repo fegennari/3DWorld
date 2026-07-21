@@ -195,8 +195,8 @@ struct get_polygon_args_t {
 
 
 template<typename T> cube_t get_polygon_bbox(vector<T> const &p) {
-	if (p.empty()) return all_zeros_cube;
-	cube_t bbox(p.front().v, p.front().v);
+	if (p.empty()) return cube_t();
+	cube_t bbox(p.front().v);
 	for (unsigned i = 1; i < p.size(); ++i) {bbox.union_with_pt(p[i].v);}
 	return bbox;
 }

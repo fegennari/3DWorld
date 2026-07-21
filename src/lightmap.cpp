@@ -23,7 +23,7 @@ bool dl_smap_enabled(0), flashlight_on(0), enable_dlight_bcubes(0);
 unsigned dl_tid(0), elem_tid(0), gb_tid(0), dl_bc_tid(0), DL_GRID_BS(0), flashlight_color_id(0);
 float DZ_VAL2(0.0), DZ_VAL_INV2(0.0);
 float czmin0(0.0), lm_dz_adj(0.0);
-cube_t dlight_bcube(all_zeros_cube);
+cube_t dlight_bcube;
 vector<dls_cell> ldynamic;
 vector<unsigned char> ldynamic_enabled;
 vector<light_source> light_sources_a, dl_sources, dl_sources2; // static ambient, static diffuse, dynamic {cur frame, next frame}
