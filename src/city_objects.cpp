@@ -570,7 +570,7 @@ void swimming_pool_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float d
 			int const bias_loc(dstate.s.get_uniform_loc("shad_bias_scale"));
 			assert(bias_loc >= 0);
 			dstate.s.set_uniform_float(bias_loc, 0.0); // disable - not needed, and looks slighlty better without this
-			draw_circle_normal(0.0, 0.999*radius, ndiv, 0, point(xc, yc, inner_bottom), tscale, tscale); // draw bottom, shifted slightly up, and slightly smaller to avoid clipping
+			draw_circle_normal(0.0, 0.995*radius, ndiv, 0, point(xc, yc, inner_bottom), tscale, tscale); // draw bottom, shifted slightly up, and slightly smaller to avoid clipping
 			dstate.s.set_uniform_float(bias_loc, CITY_BIAS_SCALE); // restore the default
 			glEnable(GL_CULL_FACE); // inner surface only
 			glCullFace(GL_FRONT);
