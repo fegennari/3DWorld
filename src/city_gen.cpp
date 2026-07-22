@@ -1530,6 +1530,7 @@ public:
 			// however, they would need to apply to all tiles, including city plots and curved road segments, which makes it difficult;
 			// also, we would have to adjust the height of pedestrians, fire hydrants, etc.
 			bool const use_road_normal_maps(rain_wetness > 0.0); // use dirt normal map texture for rain effects
+			cube_t const plot_exclude(plots.empty() ? cube_t() : get_cur_basement()); // clip out basement
 
 			for (auto b = tile_blocks.begin(); b != tile_blocks.end(); ++b) {
 				if (!dstate.check_cube_visible(b->bcube)) continue; // VFC/too far
@@ -1538,7 +1539,6 @@ public:
 				// if the player is in the basement, don't draw the plot over the basement stairs; the player can't see any of this anyway
 				if (!player_in_basement || is_connector_road) {
 					if (!plots.empty()) { // draw plots if not global connector road network
-						cube_t const plot_exclude(get_cur_basement()); // clip out basement
 						dstate.plot_cuts = plot_cuts; // reset to static plot cuts
 						
 						if (cube_int_xy_if_nonzero(b->bcube, plot_exclude)) {

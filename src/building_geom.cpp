@@ -2652,10 +2652,10 @@ void building_t::expand_ground_floor_cube(cube_t &cube, cube_t const &skip) cons
 		if (skip.contains_cube_xy(*p))  continue; // already contained, skip
 		cube_t cand_ge(cube);
 		cand_ge.union_with_cube(*p);
-		if (cand_ge.get_area_xy() < 1.05f*(cube.get_area_xy() + p->get_area_xy())) {cube = cand_ge;} // union mostly includes the two parts
+		if (cand_ge.get_area_xy() < 1.001f*(cube.get_area_xy() + p->get_area_xy())) {cube = cand_ge;} // union includes the two parts, within tolerance
 		else if (real_num_parts && is_cube_contained_in_parts(cand_ge)) {cube = cand_ge;} // useful for cross-shaped building
 		else {try_expand_into_xy(cube, *p);}
-	}
+	} // for p
 }
 
 void building_t::get_exclude_cube(point const &pos, cube_t const &skip, cube_t &exclude, bool camera_in_building) const {
