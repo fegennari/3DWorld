@@ -1426,17 +1426,32 @@ cube_t building_t::get_water_users_bcube() const { // for water heater dim
 	return bc;
 }
 
+void add_or_merge_into_nearby_riser(riser_pos_t const &riser, vect_riser_pos_t &risers, float merge_dist) {
+	float const merge_dist_sq(merge_dist*merge_dist), pipe_area(riser.radius*riser.radius);
+
+	for (auto &r : risers) {
+		float const p_area(r.radius*r.radius), sum_area(p_area + pipe_area);
+		if (p2p_dist_xy_sq(r.pos, riser.pos) > merge_dist_sq*sum_area) continue;
+		r.pos      = (p_area*r.pos + pipe_area*riser.pos)/sum_area; // merged position is weighted average area
+		r.radius   = get_merged_pipe_radius(r.radius, riser.radius, 3.0); // cubic
+		r.has_hot |= riser.has_hot;
+		r.upper_floor |= riser.upper_floor;
+		return;
+	} // for p
+	risers.push_back(riser);
+}
+
 // here each sphere represents the entry point of a pipe with this radius into the basement ceiling
 // find all plumbing fixtures such as toilets, urinals, sinks, and showers; these should have all been placed in rooms by now
 void building_t::get_pipe_basement_water_connections(vect_riser_pos_t &sewer, vect_riser_pos_t &cold_water, vect_riser_pos_t &hot_water, rand_gen_t &rgen) const {
 	assert(has_room_geom());
 	if (!has_basement()) {assert(is_parking()); return;} // no water connections in parking garages
 	cube_t const &basement(get_basement());
-	float const merge_dist = 4.0; // merge two pipes if their combined radius is within this distance
+	float merge_dist = 4.0; // merge two pipes if their combined radius is within this distance
 	// use reduced pipe radius for apartments and hotels since they have so many plumbing fixtures
 	float const floor_spacing(get_window_vspace()), floor_thickness(get_floor_thickness()), second_floor_zval(ground_floor_z1 + floor_spacing);
-	float const base_pipe_radius((is_apt_or_hotel() ? 0.008 : 0.01)*floor_spacing), base_pipe_area(base_pipe_radius*base_pipe_radius);
-	float const merge_dist_sq(merge_dist*merge_dist), max_radius(0.3*get_wall_thickness()), ceil_zval(basement.z2() - get_fc_thickness());
+	float const base_pipe_radius((is_apt_or_hotel() ? 0.008 : 0.01)*floor_spacing);
+	float const max_radius(0.3*get_wall_thickness()), ceil_zval(basement.z2() - get_fc_thickness());
 	bool const inc_extb_conns(has_ext_basement() && !has_backrooms_or_mall()), check_mall_objs(has_mall());
 	bool const inc_basement_wheaters = 1;
 	float extb_pipe_radius(has_pool() ? base_pipe_radius : 0.0); // pools use cold water
@@ -1470,21 +1485,20 @@ void building_t::get_pipe_basement_water_connections(vect_riser_pos_t &sewer, ve
 		bool const upper_floor(i.z1() > second_floor_zval);
 		point pos(i.xc(), i.yc(), ceil_zval);
 		//if (!basement.contains_pt_xy(pos)) continue; // riser/pipe doesn't pass through the basement, but this is now allowed
-		bool merged(0);
-
-		// see if we can merge this sewer riser into an existing nearby riser
-		for (auto &r : sewer) {
-			float const p_area(r.radius*r.radius), sum_area(p_area + base_pipe_area);
-			if (p2p_dist_xy_sq(r.pos, pos) > merge_dist_sq*sum_area) continue;
-			r.pos      = (p_area*r.pos + base_pipe_area*pos)/sum_area; // merged position is weighted average area
-			r.radius   = get_merged_pipe_radius(r.radius, base_pipe_radius, 3.0); // cubic
-			r.has_hot |= hot_cold_obj;
-			r.upper_floor |= upper_floor;
-			merged     = 1;
-			break;
-		} // for p
-		if (!merged) {sewer.emplace_back(pos, base_pipe_radius, hot_cold_obj, 0, upper_floor);} // create a new riser; flow_dir=0/out
+		riser_pos_t const riser(pos, base_pipe_radius, hot_cold_obj, 0, upper_floor); // flow_dir=0/out
+		add_or_merge_into_nearby_riser(riser, sewer, merge_dist); // create a new riser if needed
 	} // for i
+	if (sewer.size() > 100) { // if there are too many sewer risers, merge them together
+		vect_riser_pos_t sewer2;
+		sewer2.reserve(sewer.size());
+
+		for (unsigned n = 0; n < 4 && sewer.size() > 100; ++n) { // iteratively merge until the target is met
+			merge_dist *= 2.0; // double with each iteration
+			sewer2.clear();
+			for (riser_pos_t const &r : sewer) {add_or_merge_into_nearby_riser(r, sewer2, merge_dist);}
+			sewer.swap(sewer2);
+		} // for n
+	}
 	if (inc_extb_conns /*&& extb_pipe_radius > 0.0*/) { // we have extended basement water consumers (or maybe enable even if not), add a connection through the hallway
 		extb_pipe_radius = max(min(0.5f*extb_pipe_radius, 2.0f*base_pipe_radius), base_pipe_radius); // not too large and not too small
 		room_t const &hallway(interior->get_extb_start_room());
