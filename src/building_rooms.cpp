@@ -5,6 +5,8 @@
 #include "buildings.h"
 #include "city.h" // for object_model_loader_t
 
+float const MIN_BATHROOM_SZ = 0.9; // relative to floor spacing
+
 extern int world_mode, add_city_grass;
 extern object_model_loader_t building_obj_model_loader;
 
@@ -96,7 +98,7 @@ bool building_t::can_be_bedroom_or_bathroom(room_t const &room, unsigned floor_i
 }
 bool building_t::can_be_bathroom(room_t const &room) const { // Note: assumes caller has checked can_be_bedroom_or_bathroom()
 	float const vspace(get_window_vspace()), min_dim(min(room.dx(), room.dy())), max_dim(max(room.dx(), room.dy()));
-	return (min_dim > 0.9*vspace && min_dim < 2.4*vspace && max_dim < 3.2*vspace && count_num_int_doors(room) == 1);
+	return (min_dim > MIN_BATHROOM_SZ*vspace && min_dim < 2.4*vspace && max_dim < 3.2*vspace && count_num_int_doors(room) == 1);
 }
 unsigned building_t::count_num_int_doors(room_t const &room) const {
 	cube_t room_exp(room);
@@ -230,7 +232,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		// Note: not guaranteed to work for all floors of multi-family house if an upper floor has a door
 		for (auto r = rooms.begin(); r != rooms.end(); ++r) {
 			if (r->is_sec_bldg) continue; // garage/shed excluded - not a normal room
-			if (has_basement() && r->part_id == (int)basement_part_ix) continue; // skip the basement
+			if (has_basement() && r->part_id == (int)basement_part_ix)   continue; // skip the basement
+			if (min(r->dx(), r->dy()) < MIN_BATHROOM_SZ*window_vspacing) continue; // too small
 			if (r->has_tall_ceil(window_vspacing)) continue; // no tall ceiling rooms
 			unsigned const num_floors(calc_num_floors_room(*r, window_vspacing, floor_thickness));
 
