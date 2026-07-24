@@ -5358,9 +5358,10 @@ public:
 						building_t const &B(get_building(b.ix));
 						// B.city_driveway will be the added driveway; if a valid driveway already connects the garage to the road, it will remain all zeros
 						if (B.maybe_add_city_driveway(query_cube, b.ix) && !B.city_driveway.is_all_zeros()) {cubes.push_back(B.city_driveway);} // ix not set
+						if (!B.city_walkway.is_all_zeros()) {cubes.push_back(B.city_walkway);} // ix not set
 					}
 					else {assert(0);} // invalid mode/not implemented
-				}
+				} // for b
 			} // for x
 		} // for y
 	}

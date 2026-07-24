@@ -1459,7 +1459,7 @@ bool building_t::maybe_add_city_driveway(cube_t const &plot, unsigned building_i
 	// handle parking structure entrance driveways as a special case
 	if (is_parking() && has_driveway() && extend_existing_driveway(driveway, plot, bcube, vect_cube_t(), city_driveway)) return 1;
 	// below is for houses only; excludes park restroom concrete pads
-	if (!is_house) return 0;
+	if (!is_house || is_rotated()) return 0;
 	assert(plot.contains_cube_xy(bcube));
 	cube_t sub_plot(plot);
 
@@ -1468,6 +1468,25 @@ bool building_t::maybe_add_city_driveway(cube_t const &plot, unsigned building_i
 		assert(assigned_plot.contains_cube_xy(bcube));
 		sub_plot = assigned_plot;
 	}
+	bool dim(0), dir(0);
+	get_closest_dim_dir_xy(bcube, plot, dim, dir); // must use larger plot, not sub_plot
+
+	// first look for exterior doors facing the road to add walkways
+	for (tquad_with_ix_t const &d : doors) {
+		cube_t const c(d.get_bcube());
+		if ((c.dy() < c.dx()) != dim) continue; // wrong door dim
+		if ((bcube.get_center_dim(dim) < c.d[dim][0]) != dir) continue; // wrong door dir
+		point p_test(c.get_cube_center());
+		p_test[dim] += (dir ? 1.0 : -1.0)*c.get_sz_dim(!dim); // move out one doorway width
+		if (check_point_xy_in_part(p_test)) continue;
+		city_walkway = c;
+		copy_dim(city_walkway, plot, 2); // copy zvals
+		city_walkway.d[dim][dir] = sub_plot.d[dim][dir]; // extend to edge of plot
+		// skip if there's a fence or garage/shed in the way;
+		// what about the driveway? can that intersect the walkway? probably not; it's not yet placed anyway
+		if (has_bcube_int_xy(city_walkway, fences) || (has_sec_bldg() && city_walkway.intersects_xy(get_sec_bldg()))) {city_walkway.set_to_zeros();}
+		break; // only one door needed
+	} // for d
 	static vect_cube_t bcubes, avoid; // reused across calls
 	bcubes.clear();
 	get_building_bcubes(plot, bcubes); // Note: could be passed in by the caller, but requires many changes
@@ -1488,9 +1507,6 @@ bool building_t::maybe_add_city_driveway(cube_t const &plot, unsigned building_i
 		ac_unit = details.back();
 		avoid.push_back(ac_unit);
 	}
-	bool dim(0), dir(0);
-	get_closest_dim_dir_xy(bcube, plot, dim, dir); // must use larger plot, not sub_plot
-
 	for (unsigned n = 0; n < 2; ++n) { // check the closest dim, then the second closest dim
 		cube_t dw(plot); // copy zvals and dim/dir from plot
 

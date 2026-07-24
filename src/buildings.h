@@ -1693,7 +1693,7 @@ struct building_t : public building_geom_t {
 	mutable bool player_visited=0; // for stats tracking
 	colorRGBA side_color=WHITE, roof_color=WHITE, detail_color=BLACK, door_color=WHITE, wall_color=WHITE;
 	cube_t bcube, coll_bcube, pri_hall, driveway, porch, assigned_plot, exterior_flag, ladder, deck_bounds;
-	mutable cube_t city_driveway; // set by city gen, which only has a const ref to the building; technically this is cached city state, and not directly used by the building
+	mutable cube_t city_driveway, city_walkway; // set by city gen, which only has a const ref to the building; cached city state, and not directly used by the building
 	vect_cube_t parts, fences;
 	vect_cube_with_ix_t skylights, gutters, roof_lights;
 	vect_roof_obj_t details; // cubes on the roof - antennas, AC units, etc.

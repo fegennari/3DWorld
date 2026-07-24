@@ -2268,7 +2268,7 @@ private:
 			driveway_t const &driveway(get_driveway(dix));
 			if (driveway.in_use) continue;
 			if (driveway.get_length() < 1.5*car_len  ) continue; // driveway is too short
-			if (driveway.get_width () < 1.1*car_width) continue; // driveway is too narrow (mostly applies to trucks)
+			if (driveway.get_width () < 1.1*car_width) continue; // driveway is too narrow (mostly applies to trucks or walkways)
 
 			if (!is_residential) { // not a residential city
 				bool const allow_hcap(rgen.rand_float() < 0.25);

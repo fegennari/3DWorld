@@ -458,7 +458,7 @@ void city_obj_placer_t::add_cars_to_driveways(vector<car_t> &cars, vector<road_p
 		car.cur_seg  = (unsigned short)(i - driveways.begin()); // store driveway index in cur_seg
 		cube_t const &plot(plots[i->plot_ix]);
 		car.dim = (i->y1() == plot.y1() || i->y2() == plot.y2()); // check which edge of the plot the driveway is connected to, which is more accurate than the aspect ratio
-		if (i->get_sz_dim(car.dim) < 1.6*nom_car_size.x || i->get_sz_dim(!car.dim) < 1.25*nom_car_size.y) continue; // driveway is too small to fit this car
+		if (i->get_sz_dim(car.dim) < 1.6*nom_car_size.x || i->get_sz_dim(!car.dim) < 1.25*nom_car_size.y) continue; // driveway is too small to fit this car (or may be a walkway)
 		car.dir = rgen.rand_bool(); // randomly pulled in vs. backed in, since we don't know the direction to the house anyway
 		float const pad_l(0.75*nom_car_size.x), pad_w(0.6*nom_car_size.y); // needs to be a bit larger to fit trucks
 		point cpos(0.0, 0.0, i->z2());
@@ -1994,10 +1994,12 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 		float const mbox_height(1.1*sz_scale), bbh_height(4.2*sz_scale), sidewalk_width(get_inner_sidewalk_width());
 
 		for (auto dw = driveways.begin()+driveways_start; dw != driveways.end(); ++dw) {
+			bool const dim(dw->dim), dir(dw->dir);
+			// if a house has both a driveway and a walkway, add the mailbox to the walkway and the BB hoop to the driveway; but for now can't tell, so skip narrow walkways
+			if (dw->get_sz_dim(!dim) < 0.1*city_params.road_width) continue; // 0.076 vs. 0.28
 			bool const add_mailbox(has_mailbox && rgen.rand_bool()); // only 50% of houses have mailboxes along the road
 			bool const add_bb_hoop(has_bb_hoop && rgen.rand_float() < 0.1); // 10% of the time
 			if (!add_mailbox && !add_bb_hoop) continue;
-			bool const dim(dw->dim), dir(dw->dir);
 			float const dsign(dir ? 1.0 : -1.0), dw_end(dw->d[dim][dir]);
 			cube_t dw_blocker(*dw);
 			dw_blocker.d[dim][dir] += dsign*sidewalk_width; // extend out to road to match the code in the caller
