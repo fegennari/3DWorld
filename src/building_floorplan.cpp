@@ -3058,12 +3058,10 @@ void building_interior_t::assign_door_conn_rooms(unsigned start_ds_ix) {
 					// find the top entrance point of the stairs; needed for office buildings
 					point stairs_pt(door_center);
 					stairs_pt[d->dim] += (d->open_dir ? -1.0 : 1.0)*test_pt_shift; // door opens away from stairs, so shift in the other dir
-					bool found(0);
 
 					for (stairwell_t const &sw : stairwells) {
 						if (!sw.contains_pt(stairs_pt)) continue;
 						test_pts[s][d->dim] = sw.d[d->dim][!d->open_dir];
-						found = 1;
 						break;
 					}
 				}

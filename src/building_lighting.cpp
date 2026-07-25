@@ -666,7 +666,6 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			cube_t center(*c);
 			center.expand_by_xy(-0.05*vector2d(c->dx(), c->dy()));
 			colored_cube_t box(*c, color);
-			unsigned const cc_sz(cc.size());
 			subtract_cube_from_cube(box, center, cc); // should all 4 cubes
 			cube_t bot(*c);
 			bot.z2() = c->z1() + 0.05*c->dz();
