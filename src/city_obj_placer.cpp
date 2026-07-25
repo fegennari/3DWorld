@@ -1991,14 +1991,15 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 	if (has_mailbox || has_bb_hoop) {
 		// place mailboxes and basketball hoops on residential streets
 		assert(driveways_start <= driveways.size());
-		float const mbox_height(1.1*sz_scale), bbh_height(4.2*sz_scale), sidewalk_width(get_inner_sidewalk_width());
+		float const mbox_height(1.1*sz_scale), bbh_height(4.2*sz_scale), sidewalk_width(get_inner_sidewalk_width()), walkway_width_max(0.1*city_params.road_width);
 
 		for (auto dw = driveways.begin()+driveways_start; dw != driveways.end(); ++dw) {
 			bool const dim(dw->dim), dir(dw->dir);
-			// if a house has both a driveway and a walkway, add the mailbox to the walkway and the BB hoop to the driveway; but for now can't tell, so skip narrow walkways
-			if (dw->get_sz_dim(!dim) < 0.1*city_params.road_width) continue; // 0.076 vs. 0.28
-			bool const add_mailbox(has_mailbox && rgen.rand_bool()); // only 50% of houses have mailboxes along the road
-			bool const add_bb_hoop(has_bb_hoop && rgen.rand_float() < 0.1); // 10% of the time
+			// if a house has both a driveway and a walkway, add the mailbox to the walkway and the BB hoop to the driveway;
+			// but no one is tracking which building each driveway belongs to, and both the driveway and walkway are optional, so we need to group them by sub-plot
+			bool const is_walkway(dw->get_sz_dim(!dim) < walkway_width_max); // 0.07 vs. 0.28
+			bool const add_mailbox(has_mailbox && (is_walkway || rgen.rand_bool())); // only 50% of houses have mailboxes along the driveway, and all have mailboxes along the walkway
+			bool const add_bb_hoop(has_bb_hoop && !is_walkway && rgen.rand_float() < 0.1); // 10% of the time, only for driveways
 			if (!add_mailbox && !add_bb_hoop) continue;
 			float const dsign(dir ? 1.0 : -1.0), dw_end(dw->d[dim][dir]);
 			cube_t dw_blocker(*dw);
@@ -2008,12 +2009,21 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 			if (add_mailbox) {
 				unsigned pref_side(2); // starts invalid
 				
-				for (auto i = sub_plots.begin(); i != sub_plots.end(); ++i) { // find subplot for this driveway
-					if (!i->contains_pt_xy(pos)) continue; // wrong subplot
-					pref_side = (pos[!dim] < i->get_center_dim(!dim)); // place mailbox on the side of the driveway closer to the center of the plot
+				for (cube_t const &sp : sub_plots) { // find subplot for this driveway
+					if (!sp.contains_pt_xy(pos)) continue; // wrong subplot
+					pref_side = (pos[!dim] < sp.get_center_dim(!dim)); // place mailbox on the side of the driveway/walkway closer to the center of the plot
+
+					if (!is_walkway) { // if this is a driveway, check if there's also a walkway; if so, place the mailbox there instead
+						for (auto dw2 = driveways.begin()+driveways_start; dw2 != driveways.end(); ++dw2) {
+							if (dw2 != dw && dw2->get_sz_dim(!dw2->dim) < walkway_width_max && sp.contains_pt_xy(dw2->get_cube_center())) {
+								pref_side = 2; // reset so that mailbox isn't added below
+								break;
+							}
+						}
+					}
 					break; // done
-				}
-				if (pref_side < 2) { // else no subplot found? should this be an error?
+				} // for sp
+				if (pref_side < 2) { // else no subplot found (error?), or skipped due to walkway
 					// place at end of driveway at the road, but far enough back to leave space for peds
 					pos[dim] = dw_end - dsign*(sidewalk_width + 0.5*mbox_height);
 
