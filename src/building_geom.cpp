@@ -1389,7 +1389,7 @@ bool is_valid_driveway_pos(cube_t const &driveway, cube_t const &bcube, vect_cub
 	return 1;
 }
 bool add_driveway_if_legal(cube_t &dw, cube_t const &target, cube_t const &bcube, cube_t const &sub_plot, vect_cube_t const &avoid,
-	vect_cube_t const &blockers, vect_cube_t const &bcubes, cube_t &ret, rand_gen_t &rgen, float hwidth, bool dim, bool dir)
+	vect_cube_t const &blockers, vect_cube_t const &bcubes, cube_t &ret, cube_t &walkway, rand_gen_t &rgen, float hwidth, bool dim, bool dir)
 {
 	if (target.get_sz_dim(!dim) < 3.0*hwidth) return 0; // not wide enough for driveway
 	dw.d[dim][!dir] = target.d[dim][dir];
@@ -1403,9 +1403,14 @@ bool add_driveway_if_legal(cube_t &dw, cube_t const &target, cube_t const &bcube
 		if (!is_valid_driveway_pos(dw, bcube, bcubes)) continue; // blocked
 		if (!sub_plot.contains_cube_xy(dw))            continue; // extends outside the plot
 		assert(dw.dx() > 0 && dw.dy() > 0); // strictly normalized in XY
+
+		if (!walkway.is_all_zeros() && walkway.intersects_xy(dw)) {
+			if ((walkway.dx() < walkway.dy()) == dim) {dw.union_with_cube_xy(walkway);} // expand driveway width to include walkway if in same dim
+			walkway.set_to_zeros(); // remove the walkway
+		}
 		ret = dw;
 		return 1;
-	}
+	} // for n
 	return 0; // failed
 }
 bool extend_existing_driveway_in_dim(cube_t const &driveway, cube_t const &plot, cube_t const &bcube, vect_cube_t const &bcubes, cube_t &ret, bool dim, bool dir) {
@@ -1486,10 +1491,9 @@ bool building_t::maybe_add_city_driveway(cube_t const &plot, unsigned building_i
 		city_walkway = c;
 		city_walkway.expand_in_dim(!dim, -0.01*door_width); // shrink slightly so that the edges are not visible in the exterior step
 		copy_dim(city_walkway, plot, 2); // copy zvals
-		// shift up slightly to prevent Z-fighting when driveway and walkway overlap; we can't exclude the walkway in this case because the driveway may not have been placed yet
-		city_walkway.translate_dim(2, 0.5*get_trim_thickness());
 		city_walkway.d[dim][dir] = sub_plot.d[dim][dir]; // extend to edge of plot
-		// skip if there's a fence or garage/shed in the way;
+		if (has_driveway() && driveway.intersects(city_walkway)) continue; // skip if intersects garage driveway
+		// skip if there's a fence or garage/shed in the way
 		if (has_bcube_int_xy(city_walkway, fences) || (has_sec_bldg() && city_walkway.intersects_xy(get_sec_bldg()))) {city_walkway.set_to_zeros();}
 		break; // only one door needed
 	} // for d
@@ -1517,9 +1521,9 @@ bool building_t::maybe_add_city_driveway(cube_t const &plot, unsigned building_i
 		cube_t dw(plot); // copy zvals and dim/dir from plot
 
 		for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
-			if (add_driveway_if_legal(dw, *i, bcube, sub_plot, avoid, parts, bcubes, city_driveway, rgen, hwidth, dim, dir)) return 1;
+			if (add_driveway_if_legal(dw, *i, bcube, sub_plot, avoid, parts, bcubes, city_driveway, city_walkway, rgen, hwidth, dim, dir)) return 1;
 		}
-		if (add_driveway_if_legal(dw, bcube, bcube, sub_plot, avoid, vect_cube_t(), bcubes, city_driveway, rgen, hwidth, dim, dir)) return 1;
+		if (add_driveway_if_legal(dw, bcube, bcube, sub_plot, avoid, vect_cube_t(), bcubes, city_driveway, city_walkway, rgen, hwidth, dim, dir)) return 1;
 		// maybe it was too short? try to place to one side of the house or the other
 		dw.d[dim][!dir] = bcube.d[dim][!dir]; // extend up to far side of house
 		float const length(dw.get_sz_dim(dim)), min_length(3.0*hwidth);
