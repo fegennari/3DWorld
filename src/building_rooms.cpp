@@ -3017,7 +3017,10 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 		if (d.type == tquad_with_ix_t::TYPE_RDOOR) continue; // skip roof access door
 		cube_t const c(d.get_bcube());
 		bool const above_ground(c.z1() > ground_floor_z1 + 2.0*fc_thickness);
-		if (add_city_grass >= 2 && is_in_city && is_house && !above_ground) continue; // skip for residential city houses at ground level that grass may clip through
+
+		if (add_city_grass >= 2 && is_in_city && is_house && !above_ground) { // skip for residential city houses at ground level that grass may clip through
+			if (city_walkway.is_all_zeros() || !city_walkway.intersects_xy(c)) continue; // but allow if it's there's a walkway that blocks the grass
+		}
 		bool const dim(c.dy() < c.dx()), dir(d.get_norm()[dim] > 0.0);
 		bool const is_garage(d.type == tquad_with_ix_t::TYPE_GDOOR);
 		if (above_ground &&  d.type != tquad_with_ix_t::TYPE_HDOOR) continue; // only house doors above ground have stairs; office buildings have walkways

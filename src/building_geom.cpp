@@ -1470,20 +1470,26 @@ bool building_t::maybe_add_city_driveway(cube_t const &plot, unsigned building_i
 	}
 	bool dim(0), dir(0);
 	get_closest_dim_dir_xy(bcube, plot, dim, dir); // must use larger plot, not sub_plot
+	float const floor_spacing(get_window_vspace()), min_door_z1(ground_floor_z1 + 0.5*floor_spacing);
 
 	// first look for exterior doors facing the road to add walkways
 	for (tquad_with_ix_t const &d : doors) {
+		if (d.type != tquad_with_ix_t::TYPE_HDOOR) continue; // skip garage doors
 		cube_t const c(d.get_bcube());
+		if (c.z1() > min_door_z1)     continue; // skip upper level doors
 		if ((c.dy() < c.dx()) != dim) continue; // wrong door dim
 		if ((bcube.get_center_dim(dim) < c.d[dim][0]) != dir) continue; // wrong door dir
+		float const door_width(c.get_sz_dim(!dim));
 		point p_test(c.get_cube_center());
-		p_test[dim] += (dir ? 1.0 : -1.0)*c.get_sz_dim(!dim); // move out one doorway width
+		p_test[dim] += (dir ? 1.0 : -1.0)*door_width; // move out one doorway width
 		if (check_point_xy_in_part(p_test)) continue;
 		city_walkway = c;
+		city_walkway.expand_in_dim(!dim, -0.01*door_width); // shrink slightly so that the edges are not visible in the exterior step
 		copy_dim(city_walkway, plot, 2); // copy zvals
+		// shift up slightly to prevent Z-fighting when driveway and walkway overlap; we can't exclude the walkway in this case because the driveway may not have been placed yet
+		city_walkway.translate_dim(2, 0.5*get_trim_thickness());
 		city_walkway.d[dim][dir] = sub_plot.d[dim][dir]; // extend to edge of plot
 		// skip if there's a fence or garage/shed in the way;
-		// what about the driveway? can that intersect the walkway? probably not; it's not yet placed anyway
 		if (has_bcube_int_xy(city_walkway, fences) || (has_sec_bldg() && city_walkway.intersects_xy(get_sec_bldg()))) {city_walkway.set_to_zeros();}
 		break; // only one door needed
 	} // for d
@@ -1495,7 +1501,7 @@ bool building_t::maybe_add_city_driveway(cube_t const &plot, unsigned building_i
 	rand_gen_t rgen;
 	rgen.set_state(building_ix+1, building_ix+111);
 	rgen.rand_mix();
-	float const hwidth(0.8*get_window_vspace()*rgen.rand_uniform(0.9, 1.1));
+	float const hwidth(0.8*floor_spacing*rgen.rand_uniform(0.9, 1.1));
 	avoid = fences;
 	if (has_porch()) {avoid.push_back(porch);}
 	if (has_chimney == 2) {avoid.push_back(get_fireplace());} // avoid placing the driveway across from the chimney/fireplace
