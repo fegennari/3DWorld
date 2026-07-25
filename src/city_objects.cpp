@@ -515,7 +515,7 @@ void swimming_pool_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float d
 		point const camera_bs(dstate.camera_bs);
 		float const radius(get_radius()), xc(bcube.xc()), yc(bcube.yc()), dscale(dist_scale*dstate.draw_tile_dist);
 		float const height(bcube.dz()), inner_bottom(bcube.z1() + ((add_city_grass >= 2) ? 0.25f : 0.1f)*height); // 10% of height nominal, 28% to get above grass
-		unsigned const ndiv(shadow_only ? 24 : max(4U, min(64U, unsigned(6.0f*dscale/p2p_dist(camera_bs, pos)))));
+		unsigned const ndiv(shadow_only ? 24 : max(4U, min(64U, unsigned(2.0f*dstate.draw_tile_dist/p2p_dist(camera_bs, pos))))); // fixed ndiv independent of dscale/pass
 		point const orig_cpos(camera_pos);
 		camera_pos = dstate.camera_bs; // required for proper two sided cylinder normals
 		//if (fabs(bcube.dx() - bcube.dy()) > 0.05*radius) {} // draw as round rectangle? may not work with caustics texture, need to return verts, need different coll
@@ -560,6 +560,9 @@ void swimming_pool_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float d
 				}
 			}
 		}
+		else if (dstate.camera_bs.z < bcube.z2()) {
+			// player above the top edge and can't see inside the pool
+		}
 		else if (!shadow_only && dstate.pass_ix == 3) { // draw water surface; not for the shadow pass
 			dstate.s.set_cur_color(wcolor);
 			draw_circle_normal(0.0, radius, ndiv, 0, point(xc, yc, water_zval)); // shift slightly below the top
@@ -569,12 +572,13 @@ void swimming_pool_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float d
 			float const tscale = 2.0;
 			int const bias_loc(dstate.s.get_uniform_loc("shad_bias_scale"));
 			assert(bias_loc >= 0);
+			point const p1(xc, yc, inner_bottom), p2(xc, yc, water_zval);
 			dstate.s.set_uniform_float(bias_loc, 0.0); // disable - not needed, and looks slighlty better without this
-			draw_circle_normal(0.0, 0.995*radius, ndiv, 0, point(xc, yc, inner_bottom), tscale, tscale); // draw bottom, shifted slightly up, and slightly smaller to avoid clipping
+			draw_circle_normal(0.0, 0.99*radius, ndiv, 0, p1, tscale, tscale); // draw bottom, shifted slightly up, and slightly smaller to avoid clipping
 			dstate.s.set_uniform_float(bias_loc, CITY_BIAS_SCALE); // restore the default
 			glEnable(GL_CULL_FACE); // inner surface only
 			glCullFace(GL_FRONT);
-			draw_fast_cylinder(point(xc, yc, inner_bottom), point(xc, yc, water_zval), radius, radius, ndiv, 1, 0, 1, nullptr, 0.3, 0.0, nullptr, 0, 6.0); // textured, sides
+			draw_fast_cylinder(p1, p2, radius, radius, ndiv, 1, 0, 1, nullptr, 0.3, 0.0, nullptr, 0, 6.0); // textured, sides
 			glCullFace(GL_BACK);
 			glDisable(GL_CULL_FACE);
 		}
