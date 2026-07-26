@@ -1062,7 +1062,7 @@ bool check_region_int(cube_t const &region, vect_cube_t const &cubes) { // has_b
 }
 void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 
-	//highres_timer_t timer("Create Tile Weights Texture"); // 471 339.966 5.857 0.721796
+	//highres_timer_t timer("Create Tile Weights Texture"); // 507 331.062 5.7429 0.652982
 	assert(zvals.size() == zvsize*zvsize);
 	unsigned const tsize(stride);
 	int sand_tex_ix(-1), dirt_tex_ix(-1), grass_tex_ix(-1), rock_tex_ix(-1), snow_tex_ix(-1);
@@ -1231,7 +1231,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 		unsigned const tsize_bs(2), sz_factor(1 << tsize_bs);
 
 		if (has_city_grass && sz_factor > 1) { // increase weights texture resolution to more accurately control grass placement within cities
-			//highres_timer_t timer("Create Tile Weights Grass"); // 34 70.1477 3.4876 2.06317
+			//highres_timer_t timer("Create Tile Weights Grass"); // 30 56.2241 3.6497 1.87414
 			float const hr_dx(DX_VAL/sz_factor), hr_dy(DY_VAL/sz_factor), hr_half_dxy(HALF_DXY/sz_factor);
 			weights_tsize *= sz_factor;
 			tsize_bitshift = tsize_bs;
@@ -1240,8 +1240,9 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 #pragma omp parallel for schedule(static,1) num_threads(3)
 			for (int y = 0; y < (int)tsize; ++y) {
 				for (int x = 0; x < (int)tsize; ++x) {
+					float const xv0(get_xval(x + llc_x_cs)), yv0(get_yval(y + llc_y_cs));
 					unsigned const off(4*(y*tsize + x));
-					bool const has_grass(mesh_weight_data[off+2] > 0);
+					bool const check_grass(mesh_weight_data[off+2] == 0 && check_inside_city(point(xv0, yv0, 0.0), HALF_DXY)); // check if inside city but no grass placed
 					bool add_grass(0);
 
 					for (unsigned yy = 0; yy < sz_factor; ++yy) {
@@ -1250,9 +1251,9 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 							// start with upscale + copy to add grass that was determined to be valid
 							for (unsigned n = 0; n < 4; ++n) {hr_data[off_hr+n] = mesh_weight_data[off+n];}
 							// add missing higher resolution grass
-							if (has_grass) continue; // already has grass
-							point const query_pos((get_xval(x + llc_x_cs) + xx*hr_dx - 0.5*(DX_VAL - hr_dx)), (get_yval(y + llc_y_cs) + yy*hr_dy - 0.5*(DY_VAL - hr_dy)), 0.0);
-							if (!check_inside_city(query_pos, hr_half_dxy) || !city_has_grass_at(query_pos, hr_half_dxy)) continue;
+							if (!check_grass) continue; // already has grass
+							point const query_pos((xv0 + xx*hr_dx - 0.5*(DX_VAL - hr_dx)), (yv0 + yy*hr_dy - 0.5*(DY_VAL - hr_dy)), 0.0);
+							if (!city_has_grass_at(query_pos, hr_half_dxy)) continue;
 							hr_data[off_hr+2] = 255; // add full grass
 							add_grass = 1;
 						} // for xx

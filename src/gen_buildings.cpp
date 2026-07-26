@@ -5141,7 +5141,7 @@ public:
 	unsigned get_road_segs_in_region(cube_t const &region, vect_cube_t *const out) const {
 		if (empty()) return 0;
 		if (!range.intersects_xy(region)) return 0; // outside buildings bcube
-		vector3d const xlate(get_camera_coord_space_xlate());
+		vector3d const xlate(out ? get_camera_coord_space_xlate() : all_zeros);
 		unsigned ixr[2][2], num(0);
 		get_grid_range(region, ixr);
 
