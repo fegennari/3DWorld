@@ -3040,7 +3040,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 			s.begin_shader();
 			select_texture(WATER_CAUSTIC_TEX);
 			s.add_uniform_int  ("caustic_tex", 0);
-			s.add_uniform_float("time", tfticks);
+			s.add_uniform_float("time", (animate2 ? 1.5*tfticks : 0.0));
 			s.add_uniform_float("shad_bias_scale", CITY_BIAS_SCALE);
 			s.add_uniform_color("color_scale", sun_color);
 			s.set_cur_color(WHITE); // not needed?

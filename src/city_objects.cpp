@@ -560,7 +560,7 @@ void swimming_pool_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float d
 				}
 			}
 		}
-		else if (dstate.camera_bs.z < bcube.z2()) {
+		else if (dstate.camera_bs.z < bcube.z2() && !bcube.contains_pt(dstate.camera_bs)) {
 			// player above the top edge and can't see inside the pool
 		}
 		else if (!shadow_only && dstate.pass_ix == 3) { // draw water surface; not for the shadow pass
