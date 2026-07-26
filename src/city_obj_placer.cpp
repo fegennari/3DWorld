@@ -2863,6 +2863,9 @@ void city_obj_placer_t::finalize_streetlights_power_grass_blockers(streetlights_
 		for (swimming_pool_t const &p : pools) {
 			if (!p.above_ground) {grass_blockers.add(p.bcube, all_objs_bcube);} // in-ground pools only
 		}
+		vect_cube_t road_segs; // porches and driveways
+		get_city_road_segs_in_region(all_objs_bcube, road_segs); // all_objs_bcube should contain everything inside a plot, since it includes power poles on the roads
+		for (cube_t const &c : road_segs) {grass_blockers.add(c, all_objs_bcube);}
 		grass_blockers.finalize();
 	}
 }

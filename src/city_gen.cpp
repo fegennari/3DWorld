@@ -546,7 +546,6 @@ public:
 			return !city_obj_placer.grass_blocked_for_park(pos_bs, radius, pbb); // we're completely inside a park
 		}
 		if (is_residential && add_city_grass >= 2 && !has_bcube_int_xy(pbb, roads)) { // residential city with no road overlap
-			if (has_city_road_seg(pbb)) return 0; // porch or driveway, not fully grass
 			return !city_obj_placer.grass_blocked_for_plot(pbb); // we're inside a plot that's not a park
 		}
 		return 0; // not grass

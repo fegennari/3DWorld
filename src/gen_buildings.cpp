@@ -6081,6 +6081,9 @@ void get_road_segs_in_region(cube_t const &region, vect_cube_t &out) { // for ti
 	building_creator.get_road_segs_in_region(region, &out);
 	building_tiles  .get_road_segs_in_region(region, &out);
 }
+void get_city_road_segs_in_region(cube_t const &region, vect_cube_t &out) { // pos is in local space
+	building_creator_city.get_road_segs_in_region(region, &out);
+}
 bool has_city_road_seg(cube_t const &bcube) {
 	return (building_creator_city.get_road_segs_in_region(bcube, nullptr) > 0);
 }
