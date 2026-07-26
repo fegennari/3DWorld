@@ -525,7 +525,9 @@ void swimming_pool_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float d
 			draw_fast_cylinder(point(xc, yc, bcube.z1()), point(xc, yc, bcube.z2()), radius, radius, ndiv, 0, 0, 1); // untextured, no ends; two sided lighting
 			// draw bottom, shifted up from the bottom; include in shadows as this closes the gap at the edge of the pool where the side meets the ground
 			dstate.s.set_cur_color(color*0.4); // darker due to light atten
+			enable_polygon_offset(1.0); // draw under the caustics layer
 			draw_circle_normal(0.0, radius, ndiv, 0, point(xc, yc, inner_bottom));
+			disable_polygon_offset();
 			
 			if (bcube.closest_dist_less_than(camera_bs, 0.5*dscale)) { // draw ladder
 				unsigned const num_steps = 5;
@@ -574,7 +576,9 @@ void swimming_pool_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float d
 			assert(bias_loc >= 0);
 			point const p1(xc, yc, inner_bottom), p2(xc, yc, water_zval);
 			dstate.s.set_uniform_float(bias_loc, 0.0); // disable - not needed, and looks slighlty better without this
-			draw_circle_normal(0.0, 0.99*radius, ndiv, 0, p1, tscale, tscale); // draw bottom, shifted slightly up, and slightly smaller to avoid clipping
+			enable_polygon_offset(0.0); // no polygon offset for the bottom because it will be drawn over the sides and cause artifacts; the bottom has a positive offset above
+			draw_circle_normal(0.0, radius, ndiv, 0, p1, tscale, tscale); // draw bottom, shifted slightly up, and slightly smaller to avoid clipping
+			enable_polygon_offset(-1.0); // back to the default for caustics
 			dstate.s.set_uniform_float(bias_loc, CITY_BIAS_SCALE); // restore the default
 			glEnable(GL_CULL_FACE); // inner surface only
 			glCullFace(GL_FRONT);
