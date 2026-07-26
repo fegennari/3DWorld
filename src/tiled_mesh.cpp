@@ -1062,7 +1062,7 @@ bool check_region_int(cube_t const &region, vect_cube_t const &cubes) { // has_b
 }
 void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 
-	//highres_timer_t timer("Create Tile Weights Texture"); // 509 288.738 4.367 0.567265 | 521 447.42 12.5631 0.858773
+	//highres_timer_t timer("Create Tile Weights Texture"); // 493 279.369 4.6895 0.566671 | 501 402.077 10.8481 0.802549
 	assert(zvals.size() == zvsize*zvsize);
 	unsigned const tsize(stride);
 	int sand_tex_ix(-1), dirt_tex_ix(-1), grass_tex_ix(-1), rock_tex_ix(-1), snow_tex_ix(-1);
@@ -1233,7 +1233,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 		unsigned const tsize_bs(2), sz_factor(1 << tsize_bs);
 
 		if (has_city_grass && sz_factor > 1) { // increase weights texture resolution to more accurately control grass placement within cities
-			//highres_timer_t timer("Create Tile Weights Grass"); // 26 35.309 2.5545 1.35804 | 27 114.814 8.9916 4.25236
+			//highres_timer_t timer("Create Tile Weights Grass"); // 25 30.9813 2.135 1.23925 | 24 94.6035 7.5228 3.94181
 			float const hr_dx(DX_VAL/sz_factor), hr_dy(DY_VAL/sz_factor), hr_half_dxy(HALF_DXY/sz_factor);
 			weights_tsize *= sz_factor;
 			tsize_bitshift = tsize_bs;
