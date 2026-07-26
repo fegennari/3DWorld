@@ -7,7 +7,7 @@
 
 float const MIN_BATHROOM_SZ = 0.9; // relative to floor spacing
 
-extern int world_mode, add_city_grass;
+extern int world_mode;
 extern object_model_loader_t building_obj_model_loader;
 
 void setup_bldg_obj_types();
@@ -2972,12 +2972,12 @@ void building_t::add_pool_trim() { // add ledge around the pool as wall trim
 	} // for dim
 }
 
-cube_t building_t::get_step_for_ext_door(tquad_with_ix_t const &door) const {
+cube_t building_t::get_step_for_ext_door(tquad_with_ix_t const &door, bool short_step) const {
 	cube_t const c(door.get_bcube());
 	bool const dim(c.dy() < c.dx()), dir(door.get_norm()[dim] > 0.0);
 	float length(((door.type == tquad_with_ix_t::TYPE_GDOOR) ? 0.6 : 0.5)*c.dz());
 	max_eq(length, 2.4f*get_scaled_player_radius()); // make sure step is wide enough for the player to walk on
-	if (is_conv_store()) {length *= 0.15;} // very short step to avoid blocking driveway
+	if (short_step || is_conv_store()) {length *= 0.15;} // very short step to avoid blocking driveway or avoid having grass intersections
 	cube_t step(c);
 	set_cube_zvals(step, (c.z1() - get_fc_thickness()), c.z1());
 	step.d[dim][ dir] += (dir ? 1.0 : -1.0)*length; // extend outward
@@ -3017,14 +3017,14 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 		if (d.type == tquad_with_ix_t::TYPE_RDOOR) continue; // skip roof access door
 		cube_t const c(d.get_bcube());
 		bool const above_ground(c.z1() > ground_floor_z1 + 2.0*fc_thickness);
-
-		if (add_city_grass >= 2 && is_in_city && is_house && !above_ground) { // skip for residential city houses at ground level that grass may clip through
-			if (city_walkway.is_all_zeros() || !city_walkway.intersects_xy(c)) continue; // but allow if it's there's a walkway that blocks the grass
-		}
 		bool const dim(c.dy() < c.dx()), dir(d.get_norm()[dim] > 0.0);
 		bool const is_garage(d.type == tquad_with_ix_t::TYPE_GDOOR);
 		if (above_ground &&  d.type != tquad_with_ix_t::TYPE_HDOOR) continue; // only house doors above ground have stairs; office buildings have walkways
 		cube_t step(get_step_for_ext_door(d));
+		// skip if over a pool deck? but we don't have that info here
+		point const step_center(step.get_cube_center());
+		// force a short step if the center is inside a driveway
+		if (!above_ground && (driveway.contains_pt_xy(step_center) || city_driveway.contains_pt_xy(step_center))) {step = get_step_for_ext_door(d, 1);} // short_step=1
 		step.d[dim][!dir] -= (dir ? 1.0 : -1.0)*door_shift_dist; // shift slightly away from the building to prevent Z-fighting with the exterior wall
 		assert(step.is_strictly_normalized());
 		unsigned const obj_ix(objs.size());

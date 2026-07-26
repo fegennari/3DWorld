@@ -2241,7 +2241,7 @@ public:
 	cube_t get_full_basement_bcube  () const;
 	cube_t get_ext_basement_entrance() const;
 	cube_t get_best_occluder(point const &camera_bs) const;
-	cube_t get_step_for_ext_door(tquad_with_ix_t const &door) const;
+	cube_t get_step_for_ext_door(tquad_with_ix_t const &door, bool short_step=0) const;
 	bool interior_visible_from_other_building_ext_basement(vector3d const &xlate, bool expand_for_light=0) const;
 	bool top_of_mall_elevator_visible(point const &camera_bs, vector3d const &xlate) const;
 	bool can_have_basement() const;
