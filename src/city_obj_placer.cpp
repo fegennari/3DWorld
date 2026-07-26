@@ -3045,8 +3045,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 			s.add_uniform_color("color_scale", sun_color);
 			s.set_cur_color(WHITE); // not needed?
 			setup_tile_shader_shadow_map(s);
-			glPolygonOffset(-1.0, -1.0); // useful for avoiding z-fighting
-			glEnable(GL_POLYGON_OFFSET_FILL);
+			enable_polygon_offset(-1.0); // useful for avoiding z-fighting
 			enable_blend();
 			set_additive_blend_mode();
 			set_std_depth_func_with_eq(); // <=
@@ -3056,7 +3055,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 			set_std_depth_func(); // <
 			set_std_blend_mode();
 			disable_blend();
-			glDisable(GL_POLYGON_OFFSET_FILL);
+			disable_polygon_offset();
 			if (dstate.s.is_setup()) {dstate.s.enable();} // enable(), not make_current(), because we may need to update the MVM for some reason
 		}
 	}

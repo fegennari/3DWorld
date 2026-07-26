@@ -3192,8 +3192,7 @@ void building_t::write_basement_entrance_depth_pass(shader_t &s) const {
 	if (!is_house && !is_industrial() && !is_parking() && camera_z > ground_floor_z1 + 2.0*get_window_vspace()) return;
 	float const dz(BASEMENT_ENTRANCE_SCALE*get_floor_thickness()); // offset is required to clip grass
 	bool const depth_clamp_enabled(glIsEnabled(GL_DEPTH_CLAMP));
-	glPolygonOffset(-1.0, -1.0); // useful for avoiding z-fighting
-	glEnable(GL_POLYGON_OFFSET_FILL);
+	enable_polygon_offset(-1.0); // useful for avoiding z-fighting
 	s.set_cur_color(ALPHA0); // fully transparent
 	select_no_texture();
 	enable_blend();
@@ -3209,7 +3208,7 @@ void building_t::write_basement_entrance_depth_pass(shader_t &s) const {
 	}
 	if (!depth_clamp_enabled) {glDisable(GL_DEPTH_CLAMP);}
 	glDisable(GL_CULL_FACE);
-	glDisable(GL_POLYGON_OFFSET_FILL);
+	disable_polygon_offset();
 	disable_blend();
 }
 
@@ -4203,8 +4202,7 @@ public:
 			// everything disabled, but same shader so that vertex transforms are identical; could also use "invariant" GLSL keyword on position variable
 			if (!ref_pass_cube_map) { // not in cube map reflection pass, since that uses a lower res texture
 				setup_smoke_shaders(s, 0.0, 0, 0, 0, 0, 0, 0);
-				glPolygonOffset(1.0, 1.0);
-				if (swap_front_back) {glEnable(GL_POLYGON_OFFSET_FILL);} // not sure why, but a polygon offset is required for the mirror reflection pass
+				if (swap_front_back) {enable_polygon_offset(1.0);} // not sure why, but a polygon offset is required for the mirror reflection pass
 				glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color rendering, we only want to write to the Z-Buffer
 				if (player_building) {player_building->draw_z_prepass(camera_bs);}
 				glEnable(GL_CULL_FACE); // back face culling optimization, helps with expensive lighting shaders; after draw_z_prepass()
@@ -4222,7 +4220,7 @@ public:
 						}
 					}
 				} // for bc
-				if (swap_front_back) {glDisable(GL_POLYGON_OFFSET_FILL);}
+				if (swap_front_back) {disable_polygon_offset();}
 				glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 				s.end_shader();
 			}
@@ -4697,12 +4695,11 @@ public:
 			}
 		}
 		set_std_depth_func_with_eq();
-		glPolygonOffset(-1.0, -1.0); // useful for avoiding z-fighting on building windows
 
 		if (have_windows) { // draw windows, front facing only (not viewed from interior)
 			enable_blend();
 			glDepthMask(GL_FALSE); // disable depth writing
-			glEnable(GL_POLYGON_OFFSET_FILL);
+			enable_polygon_offset(-1.0); // useful for avoiding z-fighting on building windows
 
 			for (building_creator_t *const bc : bcs) { // draw windows on top of other buildings
 				// need to swap opaque window texture with transparent texture for this draw pass
@@ -4712,7 +4709,7 @@ public:
 				if (transparent_windows) {bc->building_draw_windows.toggle_transparent_windows_mode();}
 			}
 			//interior_wind_draw.draw(s, 0, 1); // draw opaque front facing windows of building the player is in; direct_draw_no_vbo=1
-			glDisable(GL_POLYGON_OFFSET_FILL);
+			disable_polygon_offset();
 			glDepthMask(GL_TRUE); // re-enable depth writing
 			disable_blend();
 		}
@@ -4753,13 +4750,13 @@ public:
 
 					if (!bc->building_draw_windows.empty()) {
 						enable_blend();
-						glEnable(GL_POLYGON_OFFSET_FILL);
+						enable_polygon_offset(-1.0);
 						if (!no_depth_write) {glDepthMask(GL_FALSE);} // always disable depth writing
 						if (transparent_windows) {bc->building_draw_windows.toggle_transparent_windows_mode();}
 						bc->building_draw_windows.draw_tile(city_shader, tile_id); // draw windows on top of other buildings
 						if (transparent_windows) {bc->building_draw_windows.toggle_transparent_windows_mode();}
 						if (!no_depth_write) {glDepthMask(GL_TRUE);} // always re-enable depth writing
-						glDisable(GL_POLYGON_OFFSET_FILL);
+						disable_polygon_offset();
 						disable_blend();
 					}
 				} // for g

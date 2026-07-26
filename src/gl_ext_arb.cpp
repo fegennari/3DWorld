@@ -455,6 +455,14 @@ void disable_instancing_for_shader_loc(int loc) {
 	glDisableVertexAttribArray(loc);
 }
 
+void enable_polygon_offset(float val) {
+	glPolygonOffset(val, val); // Note: currently, all callers set factor and units to the same value
+	glEnable(GL_POLYGON_OFFSET_FILL);
+}
+void disable_polygon_offset() {
+	glDisable(GL_POLYGON_OFFSET_FILL);
+}
+
 bool check_for_tess_shader() {
 	if (glPatchParameteri != nullptr) return 1; // found
 	std::cerr << "*** Warning: Tessellation shader support not found; disabling tessellation" << endl;

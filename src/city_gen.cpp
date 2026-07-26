@@ -1563,11 +1563,10 @@ public:
 						dstate.draw_city_region(isecs[0], b->ranges[TYPE_ISEC2], b->quads[TYPE_TURN_SKIRT], TYPE_TURN_SKIRT);
 					}
 					if (!city_obj_placer.driveways.empty() || !city_obj_placer.parking_lots.empty()) {
-						glPolygonOffset(-1.0, -1.0); // useful for avoiding z-fighting with grassy ground under driveways and concrete under parking lots
-						glEnable(GL_POLYGON_OFFSET_FILL);
+						enable_polygon_offset(-1.0); // useful for avoiding z-fighting with grassy ground under driveways and concrete under parking lots
 						dstate.draw_city_region(city_obj_placer.parking_lots, b->ranges[TYPE_PARK_LOT], b->quads[TYPE_PARK_LOT], TYPE_PARK_LOT); // parking lots
 						dstate.draw_city_region(city_obj_placer.driveways,    b->ranges[TYPE_DRIVEWAY], b->quads[TYPE_DRIVEWAY], TYPE_DRIVEWAY); // driveways
-						glDisable(GL_POLYGON_OFFSET_FILL);
+						disable_polygon_offset();
 					}
 					if (use_road_normal_maps) {reset_road_normal_map();}
 					dstate.draw_city_region(track_segs, b->ranges[TYPE_TRACKS], b->quads[TYPE_TRACKS], TYPE_TRACKS); // railroad tracks

@@ -1632,11 +1632,10 @@ hcap_space_t::hcap_space_t(point const &pos_, float radius_, bool dim_, bool dir
 /*static*/ void hcap_space_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	assert(!shadow_only); // not drawn in the shadow pass
 	select_texture(get_texture_by_name("roads/handicap_parking.jpg"));
-	glPolygonOffset(-2.0, -2.0); // double the offset to put on top of parking lots
-	glEnable(GL_POLYGON_OFFSET_FILL);
+	enable_polygon_offset(-2.0); // double the offset to put on top of parking lots
 }
 /*static*/ void hcap_space_t::post_draw(draw_state_t &dstate, bool shadow_only) {
-	glDisable(GL_POLYGON_OFFSET_FILL);
+	disable_polygon_offset();
 }
 void draw_textured_quad_plus_z(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, cube_t const &bcube, bool dim, bool dir) {
 	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
