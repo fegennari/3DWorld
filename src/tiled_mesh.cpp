@@ -1062,7 +1062,7 @@ bool check_region_int(cube_t const &region, vect_cube_t const &cubes) { // has_b
 }
 void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 
-	//highres_timer_t timer("Create Tile Weights Texture"); // 507 331.062 5.7429 0.652982
+	//highres_timer_t timer("Create Tile Weights Texture"); // 498 283.87 5.1731 0.570021 | 504 433.363 14.952 0.859847
 	assert(zvals.size() == zvsize*zvsize);
 	unsigned const tsize(stride);
 	int sand_tex_ix(-1), dirt_tex_ix(-1), grass_tex_ix(-1), rock_tex_ix(-1), snow_tex_ix(-1);
@@ -1084,7 +1084,8 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 		float const vnz_scale((mesh_gen_mode == MGEN_DWARP_GPU) ? SQRT2 : 1.0); // allow for steeper slopes when domain warping is used
 		int const llc_x(x1 - xoff2), llc_y(y1 - yoff2), llc_x_cs(llc_x + xoff), llc_y_cs(llc_y + yoff); // {global, camera} space
 		point const center_query_pos(get_xval(tsize/2 + llc_x_cs), get_yval(tsize/2 + llc_y_cs), 0.0); // in camera space
-		bool const check_mesh_mask(check_mesh_disable(center_query_pos, radius)), check_buildings(no_grass_under_buildings());
+		point const city_xlate(get_tiled_terrain_model_xlate()); // used for city and grass queries
+		bool const check_mesh_mask(check_mesh_disable((center_query_pos - city_xlate), radius)), check_buildings(no_grass_under_buildings());
 		bool const check_city(inside_city == 1 || (add_city_grass && inside_city == 2));
 		int k1, k2, k3, k4;
 		height_gen.build_arrays(MESH_NOISE_FREQ*get_xval(x1), MESH_NOISE_FREQ*get_yval(y1), MESH_NOISE_FREQ*deltax,
@@ -1112,10 +1113,11 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 				
 				if (check_mesh_mask || check_city) { // have tunnels, partially inside a city, or fully inside city with grass
 					float const xv(get_xval(x + llc_x_cs)), yv(get_yval(y + llc_y_cs));
-					point const query_pos(xv+0.5*DX_VAL, yv+0.5*DY_VAL, 0.0); // camera space, center of tile quad
+					point const city_query_pos(point(xv, yv, 0.0) - city_xlate);
+					point const mesh_query_pos(city_query_pos + vector3d(0.5*DX_VAL, 0.5*DY_VAL, 0.0)); // camera space, center of tile quad
 					
-					if ((check_mesh_mask && check_mesh_disable(query_pos, HALF_DXY)) || (check_city && check_inside_city(point(xv, yv, 0.0), HALF_DXY))) {
-						bool const add_grass(add_city_grass && city_has_grass_at(point(xv, yv, 0.0), HALF_DXY)); // set radius to a grid square
+					if ((check_mesh_mask && check_mesh_disable(mesh_query_pos, HALF_DXY)) || (check_city && check_inside_city(city_query_pos, HALF_DXY))) {
+						bool const add_grass(add_city_grass && city_has_grass_at(city_query_pos, HALF_DXY)); // set radius to a grid square
 
 						if (add_grass) {
 							mesh_weight_data[off+2] = 255; // full grass
@@ -1231,7 +1233,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 		unsigned const tsize_bs(2), sz_factor(1 << tsize_bs);
 
 		if (has_city_grass && sz_factor > 1) { // increase weights texture resolution to more accurately control grass placement within cities
-			//highres_timer_t timer("Create Tile Weights Grass"); // 30 56.2241 3.6497 1.87414
+			//highres_timer_t timer("Create Tile Weights Grass"); // 24 34.9944 2.9629 1.4581 | 24 118.214 10.897 4.92556
 			float const hr_dx(DX_VAL/sz_factor), hr_dy(DY_VAL/sz_factor), hr_half_dxy(HALF_DXY/sz_factor);
 			weights_tsize *= sz_factor;
 			tsize_bitshift = tsize_bs;
@@ -1242,7 +1244,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 				for (int x = 0; x < (int)tsize; ++x) {
 					float const xv0(get_xval(x + llc_x_cs)), yv0(get_yval(y + llc_y_cs));
 					unsigned const off(4*(y*tsize + x));
-					bool const check_grass(mesh_weight_data[off+2] == 0 && check_inside_city(point(xv0, yv0, 0.0), HALF_DXY)); // check if inside city but no grass placed
+					bool const check_grass(mesh_weight_data[off+2] == 0 && check_inside_city((point(xv0, yv0, 0.0) - city_xlate), HALF_DXY)); // inside city but no grass placed
 					bool add_grass(0);
 
 					for (unsigned yy = 0; yy < sz_factor; ++yy) {
@@ -1253,7 +1255,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 							// add missing higher resolution grass
 							if (!check_grass) continue; // already has grass
 							point const query_pos((xv0 + xx*hr_dx - 0.5*(DX_VAL - hr_dx)), (yv0 + yy*hr_dy - 0.5*(DY_VAL - hr_dy)), 0.0);
-							if (!city_has_grass_at(query_pos, hr_half_dxy)) continue;
+							if (!city_has_grass_at((query_pos - city_xlate), hr_half_dxy)) continue;
 							hr_data[off_hr+2] = 255; // add full grass
 							add_grass = 1;
 						} // for xx

@@ -1373,10 +1373,9 @@ public:
 			if (plots[plot_ix].contains_cube_xy(c)) break; // should always be true
 		}
 	}
-	bool check_mesh_disable(point const &pos, float radius) const { // Note: pos is in camera space
+	bool check_mesh_disable(point const &pos, float radius) const { // Note: pos is in building space
 		if (tunnels.empty()) return 0;
-		point const query_pos(pos - get_camera_coord_space_xlate());
-		cube_t query_region; query_region.set_from_sphere(query_pos, radius); // actually a cube, not a sphere
+		cube_t query_region; query_region.set_from_sphere(pos, radius); // actually a cube, not a sphere
 		if (!bcube.intersects_xy(query_region)) return 0;
 
 		for (tunnel_t const &t : tunnels) {
@@ -3054,28 +3053,25 @@ public:
 		return 0;
 	}
 	// rcp_mask: 1 bit=residential, 2 bit=commercial, 4 bit=park
-	bool check_inside_city(point const &pos, float radius, unsigned rcp_mask, cube_t *city_bcube) const { // Note: pos is in camera space
+	bool check_inside_city(point const &pos, float radius, unsigned rcp_mask, cube_t *city_bcube) const { // Note: pos is in building space
 		bool const inc_park(rcp_mask & 4);
-		point const pos_bs(pos - get_camera_coord_space_xlate());
-		cube_t query; query.set_from_sphere(pos_bs, radius);
+		cube_t query; query.set_from_sphere(pos, radius);
 
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {
 			bool const wrong_type(!(rcp_mask & (1 << unsigned(!r->get_is_residential()))));
 			if (wrong_type && !inc_park)     continue;
 			cube_t const &bc(r->get_bcube());
 			if (!bc.contains_cube_xy(query)) continue;
-			if (wrong_type && !r->point_in_park_xy(pos_bs)) continue; // check if in a park
+			if (wrong_type && !r->point_in_park_xy(pos)) continue; // check if in a park
 			if (city_bcube) {*city_bcube = bc;}
 			return 1;
 		} // for r
 		return 0;
 	}
-	bool has_grass_at(point const &pos, float radius) const { // pos in camera space
-		point const pos_bs(pos - get_camera_coord_space_xlate());
-
+	bool has_grass_at(point const &pos, float radius) const { // pos in building space
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {
-			if (!r->get_bcube().contains_pt_xy(pos_bs)) continue; // wrong city
-			return r->has_grass_at(pos_bs, radius);
+			if (!r->get_bcube().contains_pt_xy(pos)) continue; // wrong city
+			return r->has_grass_at(pos, radius);
 		}
 		return 0;
 	}
@@ -3134,7 +3130,7 @@ public:
 		return 0;
 	}
 	bool check_mesh_disable(point const &pos, float radius) const {return global_rn.check_mesh_disable(pos, radius);}
-	bool tile_contains_tunnel(cube_t const &bcube) const {return global_rn.tile_contains_tunnel(bcube);}
+	bool tile_contains_tunnel(cube_t const &bcube)          const {return global_rn.tile_contains_tunnel(bcube);}
 
 	int get_color_at_xy(point const &pos, colorRGBA &color) const {
 		for (road_network_t const &r : road_networks) {
@@ -3887,20 +3883,24 @@ bool check_valid_scenery_pos(point const &pos, float radius, bool is_tall) {
 		if (proc_buildings_sphere_coll(center, pos_cs, radius, nullptr, 0, 1)) return 0; // check_interior=0, exclude_city=1 (since we're checking plots below)
 	}
 	if (world_mode != WMODE_INF_TERRAIN) return 1; // the checks below are for tiled terrain mode only
+	point const pos_bs(pos_cs - get_tiled_terrain_model_xlate());
 
 	if (have_cities()) {
 		// allow short objects such as grass over tunnels and under bridges; doesn't really work for bridges over water
 		bool const exclude_bridges_and_tunnels(!is_tall);
 		if (city_gen.check_city_sphere_coll(pos_cs, radius, 1, exclude_bridges_and_tunnels, 1, 3)) return 0; // check_mask=3 to include both plots and roads
-		if (city_gen.check_mesh_disable(pos_cs, radius)) return 0;
+		if (city_gen.check_mesh_disable(pos_bs, radius)) return 0;
 	}
-	if (model_bcube_checker.check_sphere_coll((pos_cs - get_tiled_terrain_model_xlate()), radius, 1)) return 0; // xy_only=1
+	if (model_bcube_checker.check_sphere_coll(pos_bs, radius, 1)) return 0; // xy_only=1
 	return 1;
 }
 bool check_mesh_disable(point const &pos, float radius) {return (have_cities() && city_gen.check_mesh_disable(pos, radius));} // Note: pos is in camera space
 bool check_inside_city (point const &pos, float radius) {return (have_cities() && city_gen.check_inside_city (pos, radius));} // Note: pos is in camera space
 bool city_has_grass_at (point const &pos, float radius) {return (have_cities() && city_gen.has_grass_at      (pos, radius));} // Note: pos is in camera space
-bool camera_in_city_bounds(unsigned rcp_mask, cube_t *city_bcube) {return (have_cities() && city_gen.check_inside_city(camera_pos, CAMERA_RADIUS, rcp_mask, city_bcube));}
+
+bool camera_in_city_bounds(unsigned rcp_mask, cube_t *city_bcube) {
+	return (have_cities() && city_gen.check_inside_city((camera_pos - get_tiled_terrain_model_xlate()), CAMERA_RADIUS, rcp_mask, city_bcube)); // convert to building space
+}
 bool cube_int_underground_obj(cube_t const &c) {return city_gen.cube_int_underground_obj(c);} // Note: cube is in global space
 bool is_invalid_city_placement_for_cube(cube_t const &c) {return city_gen.is_invalid_placement_for_cube(c);}
 void add_city_plot_cut(cube_t const &cut) {city_gen.add_plot_cut(cut);}
