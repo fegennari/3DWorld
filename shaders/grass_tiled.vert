@@ -1,6 +1,7 @@
 uniform float dist_const = 10.0;
 uniform float dist_slope = 0.5;
 uniform float x1, y1, dx_inv, dy_inv;
+//uniform float mesh_sz;
 uniform vec4 clip_box1, clip_box2; // {x1 y1 x2 y2} => {x y z w}
 uniform sampler2D height_tex, normal_tex, shadow_tex, weight_tex, noise_tex;
 uniform vec2 xlate = vec2(0.0);
@@ -45,6 +46,7 @@ void main() {
 	gl_Position     = fg_ProjectionMatrix * epos;
 	gl_FogFragCoord = length(epos.xyz);
 	vec4 weights    = texture(weight_tex, tc2);
+	//vec4 weights    = texture(weight_tex, (tc2*((mesh_sz+1.0)/mesh_sz) - vec2(0.5/mesh_sz))); // more accurately aligns with mesh texture, but misaligns with city geom
 	float grass_weight = weights.b; // grass weight in weights {sand, dirt, grass, rock, [snow]}
 	//grass_weight = ((grass_weight < 0.2) ? 0.0 : grass_weight);
 	bool is_city = (weights.g > 0.5 && weights.a > 0.5);

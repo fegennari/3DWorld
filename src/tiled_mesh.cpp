@@ -2505,6 +2505,7 @@ void set_tile_xy_vals(shader_t &s) {
 	s.add_uniform_float("y1", -0.5*DY_VAL);
 	s.add_uniform_float("dx_inv", inv_scale*DX_VAL_INV);
 	s.add_uniform_float("dy_inv", inv_scale*DY_VAL_INV);
+	//s.add_uniform_float("mesh_sz", 0.5*(MESH_X_SIZE + MESH_Y_SIZE)); // assumes square mesh size
 }
 
 void setup_tile_shader_shadow_map(shader_t &s) {
