@@ -1062,7 +1062,7 @@ bool check_region_int(cube_t const &region, vect_cube_t const &cubes) { // has_b
 }
 void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 
-	//highres_timer_t timer("Create Tile Weights Texture"); // 493 279.369 4.6895 0.566671 | 501 402.077 10.8481 0.802549
+	//highres_timer_t timer("Create Tile Weights Texture"); // 493 279.369 4.6895 0.566671 |507 389.116 10.285 0.767487
 	assert(zvals.size() == zvsize*zvsize);
 	unsigned const tsize(stride);
 	int sand_tex_ix(-1), dirt_tex_ix(-1), grass_tex_ix(-1), rock_tex_ix(-1), snow_tex_ix(-1);
@@ -1277,15 +1277,22 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 	weight_data = mesh_weight_data; // deep copy so that tree_map doesn't alter original weights
 
 	if (!tree_map.empty()) { // replace grass under trees with dirt, but not in cities as it looks bad because the area is non-interpolated and square
-		for (unsigned y = 0; y < weights_tsize; ++y) {
-			for (unsigned x = 0; x < weights_tsize; ++x) {
-				unsigned const off(4*(weights_tsize*y + x));
-				unsigned char const tree_ao(tree_map[tsize*(y >> tsize_bitshift) + (x >> tsize_bitshift)].ao); // Note: tree_map may be lower res than weight_data
-				if (tree_ao == 255 || weight_data[off+grass_tex_ix] == 0) continue; // no trees or no grass
-				if (mesh_weight_data[off+dirt_tex_ix] == 255 && mesh_weight_data[off+rock_tex_ix] == 255) continue; // skip city texels with both rock and dirt textures set
-				float const v(tree_ao/255.0), w(weight_data[off+dirt_tex_ix] + (1.0 - v)*weight_data[off+grass_tex_ix]);
-				weight_data[off+dirt_tex_ix ]  = (unsigned char)(max(0.0f, min(255.0f, w)));
-				weight_data[off+grass_tex_ix] *= v;
+		unsigned const sz_factor(weights_tsize/tsize);
+
+		for (unsigned y = 0; y < tsize; ++y) {
+			for (unsigned x = 0; x < tsize; ++x) {
+				unsigned char const tree_ao(tree_map[tsize*y + x].ao);
+				if (tree_ao == 255) continue; // no trees
+
+				for (unsigned yy = 0; yy < sz_factor; ++yy) {
+					for (unsigned xx = 0; xx < sz_factor; ++xx) {
+						unsigned const off(4*((sz_factor*y + yy)*weights_tsize + (sz_factor*x + xx)));
+						if (mesh_weight_data[off+rock_tex_ix] == 255) continue; // skip city texels with both rock and dirt textures set
+						float const v(tree_ao/255.0), w(weight_data[off+dirt_tex_ix] + (1.0 - v)*weight_data[off+grass_tex_ix]);
+						weight_data[off+dirt_tex_ix ]  = (unsigned char)(max(0.0f, min(255.0f, w)));
+						weight_data[off+grass_tex_ix] *= v;
+					} // for xx
+				} // for yy
 			} // for x
 		} // for y
 	}
