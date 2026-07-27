@@ -452,7 +452,7 @@ class road_network_t : public streetlights_t { // AKA city center
 	vect_ug_elev_info_t uges;
 	//vector<road_isec_t> track_turns; // for railroad tracks
 	city_obj_placer_t city_obj_placer;
-	cube_t bcube;
+	cube_t bcube, parks_bcube;
 	set<unsigned> connected_to; // vector?
 	map<uint64_t, unsigned> tile_to_block_map;
 	map<unsigned, road_isec_t const *> cix_to_isec; // maps city_ix to intersection
@@ -532,7 +532,7 @@ public:
 	bool is_connected_to(unsigned id) const {return (connected_to.find(id) != connected_to.end());}
 	float get_traffic_density() const {return ((tot_road_len == 0.0) ? 0.0 : num_cars/tot_road_len);} // cars per unit road
 	void register_car() const {++num_cars;} // Note: must be const; num_cars is mutable
-	bool point_in_park_xy(point const &pos) const {return  check_vect_cube_contains_pt_xy(parks, pos);}
+	bool point_in_park_xy(point const &pos) const {return  parks_bcube.contains_pt_xy(pos) && check_vect_cube_contains_pt_xy(parks, pos);}
 	bool point_in_plot_xy(point const &pos) const {return !check_vect_cube_contains_pt_xy(roads, pos);} // if it's not in a road it must be in a plot; faster than checking plots
 	bool point_in_pond_xy(point const &pos) const {return  city_obj_placer.point_in_pond_xy(pos);}
 
@@ -541,7 +541,7 @@ public:
 		cube_t pbb(pos_bs);
 		pbb.expand_by_xy(radius);
 
-		if (has_bcube_int_xy(pbb, parks)) {
+		if (pbb.intersects_xy(parks_bcube) && has_bcube_int_xy(pbb, parks)) {
 			if (!any_cube_contains_xy(pbb, parks)) return 0; // partially overlapping a park, not fully grass
 			return !city_obj_placer.grass_blocked_for_park(pos_bs, radius, pbb); // we're completely inside a park
 		}
@@ -628,8 +628,12 @@ public:
 			rgen.set_state(plots.size(), city_id+1);
 			
 			for (auto p = plots.begin(); p != plots.end(); ++p) {
-				if ((rgen.rand() % city_params.park_rate) == 0) {p->is_park = 1; parks.push_back(*p);}
-			}
+				if ((rgen.rand() % city_params.park_rate) == 0) {
+					p->is_park = 1;
+					parks.push_back(*p);
+					parks_bcube.assign_or_union_with_cube(*p);
+				}
+			} // for p
 		}
 		return 1;
 	}
@@ -1482,9 +1486,7 @@ public:
 		if (city_obj_placer.get_color_at_xy(pos, plot_cuts, color, 1)) {return INT_PLOT;} // hit a detail object, but still in a plot; skip objects in roads such as fire hydrants
 			
 		if (!plots.empty()) { // inside a city and not over a road - must be over a plot or park
-			for (auto i = parks.begin(); i != parks.end(); ++i) {
-				if (i->contains_pt_xy(pos)) {color = GREEN; return INT_PARK;}
-			}
+			if (point_in_park_xy(pos)) {color = GREEN; return INT_PARK;}
 			color = (is_residential ? DK_GREEN : colorRGBA(0.65, 0.65, 0.65, 1.0)); // grass or concrete
 			return INT_PLOT;
 		}
