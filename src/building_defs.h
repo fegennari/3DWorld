@@ -126,9 +126,11 @@ colorRGBA const SEWER_FIT_COLOR(0.7, 0.6, 0.5, 1.0);
 colorRGBA const mall_tc_legs_color(BKGRAY);
 
 unsigned const NUM_LOCK_COLORS = 8;
-unsigned const MAX_LOCK_INDEX  = NUM_LOCK_COLORS + 2;
-colorRGBA   const lock_colors     [NUM_LOCK_COLORS] = {WHITE, BLACK, RED, GREEN, BLUE, YELLOW, ORANGE, BROWN};
-std::string const lock_color_names[NUM_LOCK_COLORS] = {"silver", "black", "red", "green", "blue", "yellow", "orange", "brown"};
+unsigned const NUM_KEY_COLORS  = 9; // + locker key
+unsigned const LOCKER_KEY_IX   = NUM_LOCK_COLORS;
+unsigned const MAX_LOCK_INDEX  = NUM_LOCK_COLORS + 2; // locker, unlockable
+colorRGBA   const key_colors     [NUM_KEY_COLORS] = {WHITE, BLACK, RED, GREEN, BLUE, YELLOW, ORANGE, BROWN, BRASS_C};
+std::string const key_color_names[NUM_KEY_COLORS] = {"silver", "black", "red", "green", "blue", "yellow", "orange", "brown", "locker"};
 
 
 // building types/functions; these are for primary buildings, not basements/rooms (such as malls or parking garages)

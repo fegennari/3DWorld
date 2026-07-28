@@ -1188,7 +1188,7 @@ bool building_t::add_basement_jail_objs(rand_gen_t rgen, room_t const &room, flo
 			cube_t key(key_pos);
 			key.expand_by(key_sz*vector3d(0.7, 0.7, 2.0)); // make it square in XY since it's small, to avoid all of the orient logic, but make it larger in Z
 			key.translate_dim(dim, xlate); // move inside the wall
-			objs.emplace_back(key, TYPE_KEY, room_id, dim, d, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), tot_light_amt, SHAPE_CUBE, lock_colors[lock_color_ix]);
+			objs.emplace_back(key, TYPE_KEY, room_id, dim, d, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), tot_light_amt, SHAPE_CUBE, key_colors[lock_color_ix]);
 			objs.back().obj_id = lock_color_ix;
 			// add nail to place the key on
 			float const nail_radius(0.14*key_sz);

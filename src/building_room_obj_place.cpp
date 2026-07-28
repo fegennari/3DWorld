@@ -5118,7 +5118,7 @@ bool building_t::add_padlock_to_door(unsigned door_ix, unsigned lock_color_mask,
 	lock.z1() = door.z1() + (is_bars ? 0.365 : 0.41)*door_height;
 	lock.z2() = lock.z1() + height;
 	set_wall_width(lock, (door_bc.d[!door.dim][0] + (side ? edge_dist : (1.0 - edge_dist))*door_width), hwidth, !door.dim);
-	colorRGBA const color(lock_colors[color_ix]);
+	colorRGBA const &color(key_colors[color_ix]);
 
 	// since we don't know which side of the door the player will be on, add the padlock to both sides
 	for (unsigned d = 0; d < 2; ++d) {

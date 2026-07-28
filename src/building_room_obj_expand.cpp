@@ -1824,7 +1824,11 @@ void building_room_geom_t::add_wine_rack_bottles(room_object_t const &c, vect_ro
 
 		if (c.type != TYPE_DESK || c.is_house()) { // only houses have colored keys
 			obj.obj_id = rgen.rand() % NUM_LOCK_COLORS; // lock/key color index
-			obj.color  = lock_colors[obj.obj_id];
+			obj.color  = key_colors[obj.obj_id];
+		}
+		else if (0 && rgen.rand_bool()) { // school desk; 50% chance of locker key
+			obj.obj_id = LOCKER_KEY_IX;
+			obj.color  = key_colors[obj.obj_id];
 		}
 		break;
 	}

@@ -469,8 +469,8 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 		if (!food_name.empty()) {type.name = food_name;}
 	}
 	else if (otype == TYPE_KEY) {
-		assert(obj.obj_id < NUM_LOCK_COLORS);
-		type.name = lock_color_names[obj.obj_id] + " " + type.name;
+		assert(obj.obj_id < NUM_KEY_COLORS);
+		type.name = key_color_names[obj.obj_id] + " " + type.name;
 	}
 	else if (otype == TYPE_TCAN) {
 		if (obj.color == BLUE) {type.name = "recycling bin";}
@@ -857,7 +857,7 @@ public:
 		if (!door.check_key_mask_unlocks(has_key)) {
 			string str("Door is locked");
 			if      (door.is_locked_unlockable()) {str += " and unlockable";}
-			else if (door.is_padlocked        ()) {str += " with " + lock_color_names[door.get_padlock_color_ix()] + " padlock";}
+			else if (door.is_padlocked        ()) {str += " with " + key_color_names[door.get_padlock_color_ix()] + " padlock";}
 			print_text_onscreen(str, RED, 1.0, 2.0*TICKS_PER_SECOND, 0);
 			gen_sound_thread_safe_at_player(SOUND_CLICK, 1.0, 0.6);
 			return 0;
@@ -1325,8 +1325,8 @@ public:
 			draw_health_bar(100.0*player_health, 100.0*drunkenness, bladder, YELLOW, is_poisoned, extra_bars);
 		}
 		if (has_key) {
-			vector<colorRGBA> key_colors(NUM_LOCK_COLORS);
-			for (unsigned n = 0; n < NUM_LOCK_COLORS; ++n) {key_colors[n] = ((has_key & (1 << n)) ? lock_colors[n] : ALPHA0);}
+			vector<colorRGBA> key_colors(NUM_KEY_COLORS);
+			for (unsigned n = 0; n < NUM_KEY_COLORS; ++n) {key_colors[n] = ((has_key & (1 << n)) ? key_colors[n] : ALPHA0);}
 			show_key_icon(key_colors);
 		}
 		if (has_flashlight) {show_flashlight_icon(flashlight_battery);}

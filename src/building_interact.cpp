@@ -787,7 +787,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 	else if (type == TYPE_LOCKER) {
 		if (!obj.is_open() && (obj.flags & RO_FLAG_NONEMPTY)) { // RO_FLAG_NONEMPTY indicates locked
 			
-			if (player_has_room_key()) { // unlock with a key; TODO: special locker key, or colored key?
+			if (player_has_room_key() & (1 << LOCKER_KEY_IX)) { // unlock with a locker key
 				print_text_onscreen("Unlocked", GREEN, 1.0, 1.5*TICKS_PER_SECOND, 0);
 				assert(obj_ix > 0);
 				auto& padlock(interior->room_geom->get_room_object_by_index(obj_ix - 1)); // padlock should be the previous object
