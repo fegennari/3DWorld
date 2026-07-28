@@ -452,7 +452,7 @@ class road_network_t : public streetlights_t { // AKA city center
 	vect_ug_elev_info_t uges;
 	//vector<road_isec_t> track_turns; // for railroad tracks
 	city_obj_placer_t city_obj_placer;
-	cube_t bcube, parks_bcube;
+	cube_t bcube, plots_bcube, parks_bcube;
 	set<unsigned> connected_to; // vector?
 	map<uint64_t, unsigned> tile_to_block_map;
 	map<unsigned, road_isec_t const *> cix_to_isec; // maps city_ix to intersection
@@ -550,6 +550,11 @@ public:
 		}
 		return 0; // not grass
 	}
+	cube_t get_city_grass_bcube_at(cube_t const &test_cube) const {
+		if (add_city_grass == 0) return cube_t(); // caller should handle this
+		cube_t const &grass_bc((is_residential && add_city_grass >= 2) ? plots_bcube : parks_bcube);
+		return (grass_bc.intersects_xy(test_cube) ? grass_bc : cube_t());
+	}
 	cube_t get_bcube_inc_stoplights_and_streetlights() const {
 		cube_t c(bcube); // deep copy
 		c.z2() += max(stoplight_ns::stoplight_max_height(), streetlight_ns::get_streetlight_height());
@@ -617,6 +622,7 @@ public:
 					if (!LX) { // skip last y segment
 						cube_t const &rxn(roads[x+1]);
 						plots.emplace_back(cube_t(rx.x2(), rxn.x1(), ry.y2(), ryn.y1(), zval, zval), uint8_t(x), uint8_t(y - num_x), is_residential); // plots between roads
+						plots_bcube.assign_or_union_with_cube(plots.back());
 					}
 				}
 			} // for y
@@ -3076,6 +3082,14 @@ public:
 		}
 		return 0;
 	}
+	cube_t get_city_grass_bcube_at(cube_t const &test_cube) const {
+		cube_t ret;
+
+		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {
+			if (r->get_bcube().intersects_xy(test_cube)) {ret.assign_or_union_with_cube(r->get_city_grass_bcube_at(test_cube));}
+		}
+		return ret;
+	}
 	bool update_depth_if_underwater(point const &pos, float &depth) const { // Note: pos is in camera space
 		point const pos_bs(pos - get_camera_coord_space_xlate());
 
@@ -3662,6 +3676,7 @@ public:
 	bool check_inside_city (point const &pos, float radius, unsigned rcp_mask=3, cube_t *city_bcube=nullptr) const {
 		return road_gen.check_inside_city(pos, radius, rcp_mask, city_bcube);
 	}
+	cube_t get_city_grass_bcube_at(cube_t const &test_cube) const {return road_gen.get_city_grass_bcube_at(test_cube);}
 	bool has_grass_at      (point const &pos, float radius) const {return road_gen.has_grass_at(pos, radius);}
 	bool choose_pt_in_park (point const &pos, point &park_pos, rand_gen_t &rgen) const {return road_gen.choose_pt_in_park(pos, park_pos, rgen);}
 	bool check_mesh_disable(point const &pos, float radius) const {return road_gen.check_mesh_disable(pos, radius);}
@@ -3898,6 +3913,7 @@ bool check_valid_scenery_pos(point const &pos, float radius, bool is_tall) {
 bool check_mesh_disable(point const &pos, float radius) {return (have_cities() && city_gen.check_mesh_disable(pos, radius));} // Note: pos is in camera space
 bool check_inside_city (point const &pos, float radius) {return (have_cities() && city_gen.check_inside_city (pos, radius));} // Note: pos is in camera space
 bool city_has_grass_at (point const &pos, float radius) {return (have_cities() && city_gen.has_grass_at      (pos, radius));} // Note: pos is in camera space
+cube_t get_city_grass_bcube_at(cube_t const &test_cube) {return (have_cities() ? city_gen.get_city_grass_bcube_at(test_cube) : cube_t());}
 
 bool camera_in_city_bounds(unsigned rcp_mask, cube_t *city_bcube) {
 	return (have_cities() && city_gen.check_inside_city((camera_pos - get_tiled_terrain_model_xlate()), CAMERA_RADIUS, rcp_mask, city_bcube)); // convert to building space

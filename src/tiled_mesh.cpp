@@ -96,6 +96,7 @@ void get_building_grass_coll_cubes(cube_t const &region, vect_cube_t &out);
 int check_city_contains_overlaps(cube_t const &query);
 bool check_inside_city(point const &pos, float radius);
 bool city_has_grass_at(point const &pos, float radius);
+cube_t get_city_grass_bcube_at(cube_t const &test_cube);
 cube_t get_city_bcube_overlapping(cube_t const &c);
 void show_gpu_mem_info();
 uint64_t get_reflection_gpu_mem_usage();
@@ -1091,9 +1092,11 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 		height_gen.build_arrays(MESH_NOISE_FREQ*get_xval(x1), MESH_NOISE_FREQ*get_yval(y1), MESH_NOISE_FREQ*deltax,
 			MESH_NOISE_FREQ*deltay, tsize, tsize, 0, 1); // force_sine_mode=1
 		vector<float> rand_vals(tsize*tsize);
-		bool row_ec_valid(0), has_city_grass(0);
+		bool row_ec_valid(0);
 		vect_cube_t exclude_cubes, row_exclude_cubes, allow_cubes; // in camera space
 		cube_t const mesh_bcube(get_mesh_bcube());
+		cube_t const city_grass_bcube(add_city_grass ? get_city_grass_bcube_at(mesh_bcube - city_xlate) : cube_t());
+		bool const has_city_grass(!city_grass_bcube.is_all_zeros());
 		get_city_grass_coll_cubes(mesh_bcube, exclude_cubes, allow_cubes);
 		get_building_grass_coll_cubes(mesh_bcube, exclude_cubes);
 		has_tunnel |= tile_contains_tunnel(mesh_bcube);
@@ -1117,13 +1120,12 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 					point const mesh_query_pos(city_query_pos + vector3d(0.5*DX_VAL, 0.5*DY_VAL, 0.0)); // camera space, center of tile quad
 					
 					if ((check_mesh_mask && check_mesh_disable(mesh_query_pos, HALF_DXY)) || (check_city && check_inside_city(city_query_pos, HALF_DXY))) {
-						bool const add_grass(add_city_grass && city_has_grass_at(city_query_pos, HALF_DXY)); // set radius to a grid square
+						bool const add_grass(has_city_grass && city_has_grass_at(city_query_pos, HALF_DXY)); // radius = grid square
 
 						if (add_grass) {
 							mesh_weight_data[off+2] = 255; // full grass
 							float const mh(zvals[ix]); // should be flat, so just use LLC height sample
 							add_grass_block_at(x, y, mh, mh, grass_block_dim);
-							has_city_grass = 1;
 						}
 						else {
 							mesh_weight_data[off+2] = 0; // no grass
@@ -1244,7 +1246,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 				for (int x = 0; x < (int)tsize; ++x) {
 					float const xv0(get_xval(x + llc_x_cs)), yv0(get_yval(y + llc_y_cs));
 					unsigned const off(4*(y*tsize + x));
-					bool const check_grass(mesh_weight_data[off+2] == 0 && check_inside_city((point(xv0, yv0, 0.0) - city_xlate), HALF_DXY)); // inside city but no grass placed
+					bool const check_grass(mesh_weight_data[off+2] == 0 && city_grass_bcube.contains_pt_xy(point(xv0, yv0, 0.0) - city_xlate)); // inside city but no grass placed
 					bool add_grass(0);
 
 					for (unsigned yy = 0; yy < sz_factor; ++yy) {
