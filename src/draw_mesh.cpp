@@ -178,7 +178,6 @@ void gen_uw_lighting() {
 
 // texture units used: 0: terrain texture, 1/10: detail texture
 void set_landscape_texgen(float tex_scale, int xoffset, int yoffset, int xsize, int ysize, shader_t &shader, unsigned detail_tu_id) {
-
 	float const tx(tex_scale*(((float)xoffset)/((float)xsize) + 0.5));
 	float const ty(tex_scale*(((float)yoffset)/((float)ysize) + 0.5));
 	setup_texgen(tex_scale/TWO_XSS, tex_scale/TWO_YSS, tx, ty, 0.0, shader, 0);
@@ -186,7 +185,6 @@ void set_landscape_texgen(float tex_scale, int xoffset, int yoffset, int xsize, 
 }
 
 void set_landscape_texture_texgen(shader_t &shader) {
-
 	if (!DISABLE_TEXTURES) {
 		select_texture(LANDSCAPE_TEX);
 		set_landscape_texgen(1.0, xoff, yoff, MESH_X_SIZE, MESH_Y_SIZE, shader, 10);
