@@ -1702,7 +1702,7 @@ void building_room_geom_t::add_wine_rack_bottles(room_object_t const &c, vect_ro
 	} // for i
 }
 
-/*static*/ room_object_t building_room_geom_t::get_item_in_drawer(room_object_t const &c, cube_t const &drawer_in, unsigned drawer_ix, unsigned item_ix, float &stack_z1) {
+room_object_t building_room_geom_t::get_item_in_drawer(room_object_t const &c, cube_t const &drawer_in, unsigned drawer_ix, unsigned item_ix, float &stack_z1) {
 	room_object_t obj; // starts as no item
 	if (stack_z1 == drawer_in.z2()) return obj; // already full
 	unsigned const per_drawer_ix(123*c.room_id + 17*c.obj_id + 31*drawer_ix); // per-drawer but not per item
@@ -1826,7 +1826,7 @@ void building_room_geom_t::add_wine_rack_bottles(room_object_t const &c, vect_ro
 			obj.obj_id = rgen.rand() % NUM_LOCK_COLORS; // lock/key color index
 			obj.color  = key_colors[obj.obj_id];
 		}
-		else if (0 && rgen.rand_bool()) { // school desk; 50% chance of locker key
+		else if (has_locker && rgen.rand_bool()) { // school desk; 50% chance of locker key
 			obj.obj_id = LOCKER_KEY_IX;
 			obj.color  = key_colors[obj.obj_id];
 		}
@@ -1971,7 +1971,7 @@ void building_room_geom_t::add_wine_rack_bottles(room_object_t const &c, vect_ro
 	obj.light_amt = c.light_amt;
 	return obj;
 }
-/*static*/ void building_room_geom_t::add_draw_items(room_object_t const &c, cube_t const &drawer, unsigned drawer_ix, vect_room_object_t &objects) {
+void building_room_geom_t::add_draw_items(room_object_t const &c, cube_t const &drawer, unsigned drawer_ix, vect_room_object_t &objects) {
 	float stack_z1(0.0);
 
 	for (unsigned item_ix = 0; item_ix < 16; ++item_ix) { // will likely break before we hit 16 items, though 16 is the max

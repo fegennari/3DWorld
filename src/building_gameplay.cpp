@@ -1325,9 +1325,9 @@ public:
 			draw_health_bar(100.0*player_health, 100.0*drunkenness, bladder, YELLOW, is_poisoned, extra_bars);
 		}
 		if (has_key) {
-			vector<colorRGBA> key_colors(NUM_KEY_COLORS);
-			for (unsigned n = 0; n < NUM_KEY_COLORS; ++n) {key_colors[n] = ((has_key & (1 << n)) ? key_colors[n] : ALPHA0);}
-			show_key_icon(key_colors);
+			vector<colorRGBA> have_key_colors(NUM_KEY_COLORS);
+			for (unsigned n = 0; n < NUM_KEY_COLORS; ++n) {have_key_colors[n] = ((has_key & (1 << n)) ? key_colors[n] : ALPHA0);}
+			show_key_icon(have_key_colors);
 		}
 		if (has_flashlight) {show_flashlight_icon(flashlight_battery);}
 		if (has_pool_cue  ) {show_pool_cue_icon();}
