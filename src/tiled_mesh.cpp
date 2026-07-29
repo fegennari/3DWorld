@@ -1063,7 +1063,7 @@ bool check_region_int(cube_t const &region, vect_cube_t const &cubes) { // has_b
 }
 void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 
-	//highres_timer_t timer("Create Tile Weights Texture"); // 509 278.607 3.8506 0.547362 | 505 387.37 10.1138 0.76707
+	//highres_timer_t timer("Create Tile Weights Texture"); // 518 296.614 4.3718 0.572615 | 505 427.735 10.4045 0.847
 	assert(zvals.size() == zvsize*zvsize);
 	unsigned const tsize(stride);
 	int sand_tex_ix(-1), dirt_tex_ix(-1), grass_tex_ix(-1), rock_tex_ix(-1), snow_tex_ix(-1);
@@ -1235,7 +1235,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 		unsigned const tsize_bs(2), sz_factor(1 << tsize_bs);
 
 		if (has_city_grass && sz_factor > 1) { // increase weights texture resolution to more accurately control grass placement within cities
-			//highres_timer_t timer("Create Tile Weights Grass"); // 25 30.9813 2.135 1.23925 | 25 99.8449 7.3972 3.9938
+			//highres_timer_t timer("Create Tile Weights Grass"); // 29 40.4764 2.2871 1.39574 | 27 124.876 7.5815 4.62503
 			float const hr_dx(DX_VAL/sz_factor), hr_dy(DY_VAL/sz_factor), hr_half_dxy(HALF_DXY/sz_factor);
 			weights_tsize *= sz_factor;
 			tsize_bitshift = tsize_bs;
@@ -1246,22 +1246,61 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 				for (int x = 0; x < (int)tsize; ++x) {
 					float const xv0(get_xval(x + llc_x_cs)), yv0(get_yval(y + llc_y_cs));
 					unsigned const off(4*(y*tsize + x));
-					bool const check_grass(mesh_weight_data[off+2] == 0 && city_grass_bcube.contains_pt_xy(point(xv0, yv0, 0.0) - city_xlate)); // inside city but no grass placed
+					point const city_query_pos(point(xv0, yv0, 0.0) - city_xlate);
 					bool add_grass(0);
 
-					for (unsigned yy = 0; yy < sz_factor; ++yy) {
-						for (unsigned xx = 0; xx < sz_factor; ++xx) {
-							unsigned const off_hr(4*((sz_factor*y + yy)*weights_tsize + (sz_factor*x + xx)));
-							// start with upscale + copy to add grass that was determined to be valid
-							for (unsigned n = 0; n < 4; ++n) {hr_data[off_hr+n] = mesh_weight_data[off+n];}
-							// add missing higher resolution grass
-							if (!check_grass) continue; // already has grass
-							point const query_pos((xv0 + xx*hr_dx - 0.5*(DX_VAL - hr_dx)), (yv0 + yy*hr_dy - 0.5*(DY_VAL - hr_dy)), 0.0);
-							if (!city_has_grass_at((query_pos - city_xlate), hr_half_dxy)) continue;
-							hr_data[off_hr+2] = 255; // add full grass
-							add_grass = 1;
-						} // for xx
-					} // for yy
+					if (check_inside_city(city_query_pos, HALF_DXY)) {
+						bool const check_grass(mesh_weight_data[off+2] == 0 && city_grass_bcube.contains_pt_xy(city_query_pos)); // inside city but no grass placed
+
+						for (unsigned yy = 0; yy < sz_factor; ++yy) {
+							for (unsigned xx = 0; xx < sz_factor; ++xx) {
+								unsigned const off_hr(4*((sz_factor*y + yy)*weights_tsize + (sz_factor*x + xx)));
+								// start with nearest neighbor upscale + copy to add grass that was determined to be valid
+								for (unsigned n = 0; n < 4; ++n) {hr_data[off_hr+n] = mesh_weight_data[off+n];}
+								if (!check_grass) continue;
+								// add missing higher resolution grass
+								point const query_pos((xv0 + xx*hr_dx - 0.5*(DX_VAL - hr_dx)), (yv0 + yy*hr_dy - 0.5*(DY_VAL - hr_dy)), 0.0);
+								if (!city_has_grass_at((query_pos - city_xlate), hr_half_dxy)) continue;
+								hr_data[off_hr+2] = 255; // add full grass
+								add_grass = 1;
+							} // for xx
+						} // for yy
+					}
+					else { // linear interpolation upscale (from Google Gemini)
+						for (unsigned yy = 0; yy < sz_factor; ++yy) {
+							unsigned const high_y(y * sz_factor + yy);
+							// calculate center-aligned Y coordinate and neighbor rows in low-res space; equivalent to: float low_y = (high_y + 0.5f)/sz_factor - 0.5f
+							int const low_y_fixed((((int)high_y * 256 + 128) >> tsize_bs) - 128);
+							// floor to get the top neighbor index
+							int const ly0_raw(low_y_fixed >> 8);
+							// clamp to valid low-res image bounds (0 to tsize - 1)
+							unsigned const ly0(static_cast<unsigned>((ly0_raw < 0) ? 0 : (ly0_raw >= (int)tsize ? (int)tsize - 1 : ly0_raw)));
+							unsigned const ly1((ly0 + 1 >= tsize) ? ly0 : ly0 + 1);
+							// calculate fixed-point vertical weights (0 to 256)
+							unsigned const wy1(static_cast<unsigned>(low_y_fixed < 0 ? 0 : (low_y_fixed & 255))), wy0(256 - wy1);
+
+							for (int xx = 0; xx < sz_factor; ++xx) {
+								unsigned const high_x(x * sz_factor + xx), high_ix(4 * (high_y * weights_tsize + high_x));
+								// calculate center-aligned X coordinate and neighbor columns in low-res space; equivalent to: float low_x = (high_x + 0.5f)/sz_factor - 0.5f
+								int const low_x_fixed((((int)high_x * 256 + 128) >> tsize_bs) - 128);
+								// floor to get the left neighbor index
+								int const lx0_raw(low_x_fixed >> 8);
+								// clamp to valid low-res image bounds (0 to tsize - 1)
+								unsigned const lx0(static_cast<unsigned>((lx0_raw < 0) ? 0 : (lx0_raw >= (int)tsize ? (int)tsize - 1 : lx0_raw)));
+								unsigned const lx1((lx0 + 1 >= tsize) ? lx0 : lx0 + 1);
+								// calculate fixed-point horizontal weights (0 to 256)
+								unsigned const wx1(static_cast<unsigned>(low_x_fixed < 0 ? 0 : (low_x_fixed & 255))), wx0(256 - wx1);
+								// dynamic center-aligned offsets
+								unsigned const off00(4 * (ly0 * tsize + lx0)), off01(4 * (ly1 * tsize + lx0)), off10(4 * (ly0 * tsize + lx1)), off11(4 * (ly1 * tsize + lx1));
+
+								for (unsigned n = 0; n < 4; ++n) {
+									unsigned const top((mesh_weight_data[off00 + n] * wx0 + mesh_weight_data[off10 + n] * wx1) >> 8);
+									unsigned const bot((mesh_weight_data[off01 + n] * wx0 + mesh_weight_data[off11 + n] * wx1) >> 8);
+									hr_data[high_ix + n] = static_cast<unsigned char>((top * wy0 + bot * wy1) >> 8);
+								}
+							} // for xx
+						} // for yy
+					}
 					if (!add_grass) continue;
 					float const mh(zvals[y*zvsize + x]);
 #pragma omp critical(add_grass_block)
