@@ -652,12 +652,10 @@ class water_renderer {
 	void draw_x_sides(bool neg_edge);
 	void draw_y_sides(bool neg_edge);
 	void draw_sides(unsigned ix);
-
 public:
 	water_renderer(int cz, shader_t &shader_) : check_zvals(cz), tex_scale(W_TEX_SCALE0/Z_SCENE_SIZE), shader(shader_) {}
 	void draw();
 };
-
 
 void water_renderer::draw_vert(float x, float y, float z, bool in_y, bool neg_edge) { // in_y is slice orient
 
@@ -674,7 +672,6 @@ void water_renderer::draw_vert(float x, float y, float z, bool in_y, bool neg_ed
 	normal[in_y] = (neg_edge ? -1.0 : 1.0);
 	qbd.verts.emplace_back(point(x, y, z), normal, tex_scale*(in_y ? z : x), tex_scale*(in_y ? y : z), c);
 }
-
 
 void water_renderer::draw_x_sides(bool neg_edge) {
 
@@ -698,7 +695,6 @@ void water_renderer::draw_x_sides(bool neg_edge) {
 	qbd.draw_and_clear_quads();
 }
 
-
 void water_renderer::draw_y_sides(bool neg_edge) {
 
 	int const end_val(neg_edge ? 0 : MESH_Y_SIZE-1);
@@ -721,9 +717,7 @@ void water_renderer::draw_y_sides(bool neg_edge) {
 	qbd.draw_and_clear_quads();
 }
 
-
 void water_renderer::draw_sides(unsigned ix) {
-
 	switch (ix) { // xn xp yn yp
 		case 0: draw_x_sides(1); break;
 		case 1: draw_x_sides(0); break;
@@ -732,7 +726,6 @@ void water_renderer::draw_sides(unsigned ix) {
 		default: assert(0);
 	}
 }
-
 
 void water_renderer::draw() { // modifies color
 
@@ -750,24 +743,21 @@ void water_renderer::draw() { // modifies color
 	shader.clear_specular();
 }
 
-
 void draw_water_sides(shader_t &shader, int check_zvals) {
-
 	water_renderer wr(check_zvals, shader);
 	wr.draw();
 }
 
 
 void setup_water_plane_texgen(float s_scale, float t_scale, shader_t &shader, int mode) {
-
 	vector3d const wdir(vector3d(wind.x, wind.y, 0.0).get_norm());// wind.z is probably 0.0 anyway (nominal 1,0,0)
 	float const tscale(W_TEX_SCALE0/Z_SCENE_SIZE), xscale(tscale*wdir.x), yscale(tscale*wdir.y);
-	float const tdx(tscale*(xoff2 - xoff)*DX_VAL + water_xoff), tdy(tscale*(yoff2 - yoff)*DY_VAL + water_yoff);
+	// reset xoff2/yoff2 every 64K units to avoid FP error due to large numbers going into wave animation
+	float const tdx(tscale*((xoff2 & 0xFFFF) - xoff)*DX_VAL + water_xoff), tdy(tscale*((yoff2 & 0xFFFF) - yoff)*DY_VAL + water_yoff);
 	setup_texgen_full(s_scale*xscale, s_scale*yscale, 0.0, s_scale*(tdx*wdir.x + tdy*wdir.y), -t_scale*yscale, t_scale*xscale, 0.0, t_scale*(-tdx*wdir.y + tdy*wdir.x), shader, mode);
 }
 
 void set_water_plane_uniforms(shader_t &s) {
-
 	s.add_uniform_float("wave_time",      wave_time);
 	s.add_uniform_float("wave_amplitude", water_params.wave_amp*min(1.0, 1.5*wind.mag())); // No waves if (temperature < W_FREEZE_POINT)?
 	s.add_uniform_float("water_plane_z",  water_plane_z);
