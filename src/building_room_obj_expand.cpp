@@ -1702,7 +1702,7 @@ void building_room_geom_t::add_wine_rack_bottles(room_object_t const &c, vect_ro
 	} // for i
 }
 
-room_object_t building_room_geom_t::get_item_in_drawer(room_object_t const &c, cube_t const &drawer_in, unsigned drawer_ix, unsigned item_ix, float &stack_z1) {
+room_object_t building_room_geom_t::get_item_in_drawer(room_object_t const &c, cube_t const &drawer_in, unsigned drawer_ix, unsigned item_ix, float &stack_z1) const {
 	room_object_t obj; // starts as no item
 	if (stack_z1 == drawer_in.z2()) return obj; // already full
 	unsigned const per_drawer_ix(123*c.room_id + 17*c.obj_id + 31*drawer_ix); // per-drawer but not per item
@@ -1971,7 +1971,7 @@ room_object_t building_room_geom_t::get_item_in_drawer(room_object_t const &c, c
 	obj.light_amt = c.light_amt;
 	return obj;
 }
-void building_room_geom_t::add_draw_items(room_object_t const &c, cube_t const &drawer, unsigned drawer_ix, vect_room_object_t &objects) {
+void building_room_geom_t::add_draw_items(room_object_t const &c, cube_t const &drawer, unsigned drawer_ix, vect_room_object_t &objects) const {
 	float stack_z1(0.0);
 
 	for (unsigned item_ix = 0; item_ix < 16; ++item_ix) { // will likely break before we hit 16 items, though 16 is the max
