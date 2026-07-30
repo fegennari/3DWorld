@@ -910,7 +910,10 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 					rh_pipe2.d[dim][!dir] = bend_pos2;
 					rh_pipe2.d[dim][ dir] = towers_bcube.d[dim][!dir];
 					if (rh_pipe2.get_sz_dim(dim) <= 0.0) {rh_pipe2.d[dim][dir] += (dir ? 1.0 : -1.0)*min_edge_space;} // extend into cooling tower if too short
-					objs.emplace_back(rh_pipe2, TYPE_PIPE, room_id, dim, 0, (rp_flags | (dir ? RO_FLAG_ADJ_LO : RO_FLAG_ADJ_HI)), 1.0, SHAPE_CYLIN, ac_pipe_color); // horizontal
+
+					if (rh_pipe2.is_strictly_normalized()) { // can be denormalized if pipe end is halfway inside cooling tower
+						objs.emplace_back(rh_pipe2, TYPE_PIPE, room_id, dim, 0, (rp_flags | (dir ? RO_FLAG_ADJ_LO : RO_FLAG_ADJ_HI)), 1.0, SHAPE_CYLIN, ac_pipe_color); // horizontal
+					}
 				}
 			}
 			// add fittings to h_pipe
