@@ -603,25 +603,27 @@ bool mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy,
 		cache_gpu_simplex_vals();
 		return 1; // results are available
 	}
-	yterms_start = nx*F_TABLE_SIZE;
-	xyterms.resize((nx + ny)*F_TABLE_SIZE, 0.0);
-	float const msx(mesh_scale*DX_VAL_INV), msy(mesh_scale*DY_VAL_INV), ms2(0.5*mesh_scale);
+	if (gen_mode == MGEN_SINE) {
+		yterms_start = nx*F_TABLE_SIZE;
+		xyterms.resize((nx + ny)*F_TABLE_SIZE, 0.0);
+		float const msx(mesh_scale*DX_VAL_INV), msy(mesh_scale*DY_VAL_INV), ms2(0.5*mesh_scale);
 
-	for (int k = start_eval_sin; k < F_TABLE_SIZE; ++k) {
-		float const x_mult(msx*sinTable[k][4]), y_mult(msy*sinTable[k][3]), y_scale(mesh_scale_z_inv*sinTable[k][0]);
-		float const x_const(ms2*sinTable[k][4] + sinTable[k][2] + x_mult*x0), y_const(ms2*sinTable[k][3] + sinTable[k][1] + y_mult*y0);
-		float const xmdx(x_mult*dx), ymdy(y_mult*dy);
-		float *x_ptr(xyterms.data() + k), *y_ptr(x_ptr + yterms_start);
+		for (int k = start_eval_sin; k < F_TABLE_SIZE; ++k) {
+			float const x_mult(msx*sinTable[k][4]), y_mult(msy*sinTable[k][3]), y_scale(mesh_scale_z_inv*sinTable[k][0]);
+			float const x_const(ms2*sinTable[k][4] + sinTable[k][2] + x_mult*x0), y_const(ms2*sinTable[k][3] + sinTable[k][1] + y_mult*y0);
+			float const xmdx(x_mult*dx), ymdy(y_mult*dy);
+			float *x_ptr(xyterms.data() + k), *y_ptr(x_ptr + yterms_start);
 
-		for (unsigned i = 0; i < nx; ++i) {
-			float sin_val(SINF(xmdx*i + x_const));
-			//apply_noise_shape_per_term(sin_val, gen_shape);
-			x_ptr[i*F_TABLE_SIZE] = sin_val;
-		}
-		for (unsigned i = 0; i < ny; ++i) {
-			float sin_val(SINF(ymdy*i + y_const));
-			//apply_noise_shape_per_term(sin_val, gen_shape);
-			y_ptr[i*F_TABLE_SIZE] = y_scale*sin_val;
+			for (unsigned i = 0; i < nx; ++i) {
+				float sin_val(SINF(xmdx*i + x_const));
+				//apply_noise_shape_per_term(sin_val, gen_shape);
+				x_ptr[i*F_TABLE_SIZE] = sin_val;
+			}
+			for (unsigned i = 0; i < ny; ++i) {
+				float sin_val(SINF(ymdy*i + y_const));
+				//apply_noise_shape_per_term(sin_val, gen_shape);
+				y_ptr[i*F_TABLE_SIZE] = y_scale*sin_val;
+			}
 		}
 	}
 	if (cache_values) {

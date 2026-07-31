@@ -2362,7 +2362,7 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 			tile_t tile(get_tile_size(), x, y);
 			if (!tile.rel_dist_to_camera_xy_lt(CREATE_DIST_TILES)) continue; // too far away to create
 			tile_t *new_tile(new tile_t(tile));
-			to_gen_zvals.push_back(make_pair(new_tile->get_draw_priority(), new_tile));
+			to_gen_zvals.emplace_back(new_tile->get_draw_priority(), new_tile);
 			// in this mode, we need to place buildings and flatten the heightmap before calculating tile heights
 			if (create_buildings_first) {create_buildings_tile(x, y, 1);}
 		} // for x
@@ -3030,7 +3030,7 @@ void tile_draw_t::draw_shadow_pass(point const &lpos, tile_t *tile, bool decid_t
 		if (!i->second->is_visible()) continue;
 		if (!decid_trees_only) {i->second->update_pine_tree_state(1, 1);} // force high detail trees
 		//i->second->update_decid_trees(); // not legal
-		to_draw.push_back(make_pair(0.0, i->second.get())); // distance is unused so set to 0.0
+		to_draw.emplace_back(0.0, i->second.get()); // distance is unused so set to 0.0
 	}
 	if (!enable_depth_clamp) {glEnable(GL_DEPTH_CLAMP);} // enable depth clamping so that shadow casters aren't clipped by the shadow frustum
 
