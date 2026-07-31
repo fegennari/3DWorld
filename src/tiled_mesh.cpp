@@ -444,12 +444,21 @@ void tile_t::clear_vbo_tid(tile_shadow_map_manager *smap_manager) {
 }
 
 
-bool setup_height_gen(mesh_xy_grid_cache_t &height_gen, float x0, float y0, float dx, float dy, unsigned nx, unsigned ny, bool cache_values, bool no_wait=0) {
-
+float get_xy_scale() {
 	bool const add_detail(using_hmap_with_detail());
-	if (!add_detail && using_tiled_terrain_hmap_tex()) return 1; // nothing to do
-	float const xy_scale(add_detail ? HMAP_DETAIL_SCALE : 1.0);
-	bool const results_avail(height_gen.build_arrays(xy_scale*x0, xy_scale*y0, xy_scale*dx, xy_scale*dy, nx, ny, cache_values, 0, no_wait));
+	if (!add_detail && using_tiled_terrain_hmap_tex()) return 0.0; // nothing to do
+	return (add_detail ? HMAP_DETAIL_SCALE : 1.0);
+}
+void setup_height_gen_cached(mesh_xy_grid_cache_t &height_gen, float x0, float y0, float dx, float dy, unsigned nx, unsigned ny) {
+	float const xy_scale(get_xy_scale());
+	if (xy_scale == 0.0) return; // nothing to do
+	height_gen.build_arrays(xy_scale*x0, xy_scale*y0, xy_scale*dx, xy_scale*dy, nx, ny, 1); // cache_values=1
+	height_gen.enable_glaciate();
+}
+bool setup_height_gen_async(mesh_xy_grid_cache_t &height_gen, int x0, int y0, unsigned nx, unsigned ny, bool no_wait=0) {
+	float const xy_scale(get_xy_scale());
+	if (xy_scale == 0.0) return 1; // nothing to do
+	bool const results_avail(height_gen.build_arrays(xy_scale*get_xval(x0), xy_scale*get_yval(y0), xy_scale*DX_VAL, xy_scale*DY_VAL, nx, ny, 0, 0, no_wait));
 	height_gen.enable_glaciate();
 	return results_avail;
 }
@@ -468,7 +477,7 @@ bool tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen, bool no_wait) {
 
 	// When using AO + GPU noise generation, it's faster to compute the AO + context and clip the zvals from this rather than making two separate compute calls (one without blocking)
 	if (enable_tiled_mesh_ao && !using_hmap && mesh_gen_mode >= MGEN_SIMPLEX_GPU) {
-		bool results_ready(setup_height_gen(height_gen, get_xval(x1 - AO_RAY_LEN), get_yval(y1 - AO_RAY_LEN), DX_VAL, DY_VAL, context_sz, context_sz, 0, no_wait)); // cache_values=0
+		bool results_ready(setup_height_gen_async(height_gen, (x1 - AO_RAY_LEN), (y1 - AO_RAY_LEN), context_sz, context_sz, no_wait));
 		if (!results_ready) {assert(no_wait); return 0;} // cached heights are not yet ready
 		ao_zvals.resize(context_sz*context_sz);
 
@@ -478,7 +487,7 @@ bool tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen, bool no_wait) {
 		}
 	}
 	else {
-		bool results_ready(setup_height_gen(height_gen, get_xval(x1), get_yval(y1), DX_VAL, DY_VAL, zvsize, zvsize, 0, no_wait)); // cache_values=0
+		bool results_ready(setup_height_gen_async(height_gen, x1, y1, zvsize, zvsize, no_wait));
 		if (!results_ready) {assert(no_wait); return 0;} // cached heights are not yet ready
 	}
 	float const xy_mult(1.0/float(size)), wpz_max(get_max_sea_level());
@@ -597,7 +606,7 @@ void tile_t::calc_mesh_ao_lighting() {
 	if (use_ao_zvals) {czv.swap(ao_zvals);} // use precomputed values, will clear ao_zvals at the end
 	else {
 		czv.resize(context_sz*context_sz);
-		setup_height_gen(height_gen, get_xval(x1 - AO_RAY_LEN), get_yval(y1 - AO_RAY_LEN), DX_VAL, DY_VAL, context_sz, context_sz, 0); // cache_values=0
+		setup_height_gen_async(height_gen, (x1 - AO_RAY_LEN), (y1 - AO_RAY_LEN), context_sz, context_sz);
 	}
 	float const dz(0.5*HALF_DXY);
 	ao_lighting.resize(stride*stride);

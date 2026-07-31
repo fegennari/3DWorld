@@ -202,7 +202,7 @@ void gen_mesh_sine_table(float **matrix, int x_offset, int y_offset, int xsize, 
 
 	assert(matrix);
 	mesh_xy_grid_cache_t height_gen;
-	height_gen.build_arrays(float(x_offset - xsize/2)*DX_VAL, float(y_offset - ysize/2)*DY_VAL, DX_VAL, DY_VAL, xsize, ysize);
+	height_gen.build_arrays((x_offset - xsize/2)*DX_VAL, (y_offset - ysize/2)*DY_VAL, DX_VAL, DY_VAL, xsize, ysize);
 
 	for (int i = 0; i < ysize; ++i) {
 		for (int j = 0; j < xsize; ++j) {matrix[i][j] = height_gen.eval_index(j, i);}

@@ -29,7 +29,7 @@ extern obj_group obj_groups[];
 extern coll_obj_group coll_objects;
 
 
-bool setup_height_gen(mesh_xy_grid_cache_t &height_gen, float x0, float y0, float dx, float dy, unsigned nx, unsigned ny, bool cache_values, bool no_wait=0);
+void setup_height_gen_cached(mesh_xy_grid_cache_t &height_gen, float x0, float y0, float dx, float dy, unsigned nx, unsigned ny);
 bool using_hmap_with_detail();
 void set_temp_clear_color(colorRGBA const &clear_color, bool clear_depth=0, bool clear_stencil=0);
 float get_heightmap_scale();
@@ -215,7 +215,7 @@ void draw_overhead_map() {
 
 		bool const uses_hmap(world_mode == WMODE_GROUND && (read_landscape || read_heightmap || do_read_mesh));
 		mesh_xy_grid_cache_t height_gen;
-		if (!uses_hmap && !show_map_view_fractal) {setup_height_gen(height_gen, xstart, ystart, xscale, yscale, nx, ny, 1);} // cache_values=1
+		if (!uses_hmap && !show_map_view_fractal) {setup_height_gen_cached(height_gen, xstart, ystart, xscale, yscale, nx, ny);}
 		point const lpos(get_light_pos());
 		vector3d const light_dir(lpos.get_norm()); // assume directional lighting to origin
 		float const texels_per_pixel(mesh_scale*0.5f*(xscale*DX_VAL_INV + yscale*DY_VAL_INV));
@@ -423,7 +423,7 @@ void write_map_mode_heightmap_image() {
 		timer_t timer("Heightmap Gen");
 		vector<float> heights(texture.num_pixels());
 		mesh_xy_grid_cache_t height_gen;
-		setup_height_gen(height_gen, xstart, ystart, DX_VAL, DY_VAL, width, height, 1); // cache_values=1
+		setup_height_gen_cached(height_gen, xstart, ystart, DX_VAL, DY_VAL, width, height); // is cached needed?
 
 	#pragma omp parallel for schedule(static,1)
 		for (int i = 0; i < height; ++i) {
