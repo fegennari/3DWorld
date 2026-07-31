@@ -299,9 +299,7 @@ bool write_default_hmap_modmap() {
 
 tile_t::tile_t() : decid_trees(tree_data_manager) {}
 
-tile_t::tile_t(unsigned size_, int x, int y) : size(size_), stride(size+1), zvsize(stride+1),
-	deltax(DX_VAL), deltay(DY_VAL), mesh_off(xoff-xoff2, yoff-yoff2), decid_trees(tree_data_manager)
-{
+tile_t::tile_t(unsigned size_, int x, int y) : size(size_), stride(size+1), zvsize(stride+1), mesh_off(xoff-xoff2, yoff-yoff2), decid_trees(tree_data_manager) {
 	assert(size > 0);
 	x1 = x*size;
 	y1 = y*size;
@@ -323,7 +321,7 @@ float tile_t::get_draw_priority() const {
 void tile_t::update_terrain_params() { // setup biomes
 
 	float const dirt_mult(1.0), veg_mult(5.0);
-	float const xv1(get_xval(x1)), xv2(xv1 + (x2-x1)*deltax), yv1(get_yval(y1)), yv2(yv1 + (y2-y1)*deltay);
+	float const xv1(get_xval(x1)), xv2(xv1 + (x2-x1)*DX_VAL), yv1(get_yval(y1)), yv2(yv1 + (y2-y1)*DY_VAL);
 
 	for (unsigned yp = 0; yp < 2; ++yp) { // sample at 4 tile corners and interpolate across the tile
 		for (unsigned xp = 0; xp < 2; ++xp) {
@@ -470,7 +468,7 @@ bool tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen, bool no_wait) {
 
 	// When using AO + GPU noise generation, it's faster to compute the AO + context and clip the zvals from this rather than making two separate compute calls (one without blocking)
 	if (enable_tiled_mesh_ao && !using_hmap && mesh_gen_mode >= MGEN_SIMPLEX_GPU) {
-		bool results_ready(setup_height_gen(height_gen, get_xval(x1 - AO_RAY_LEN), get_yval(y1 - AO_RAY_LEN), deltax, deltay, context_sz, context_sz, 0, no_wait)); // cache_values=0
+		bool results_ready(setup_height_gen(height_gen, get_xval(x1 - AO_RAY_LEN), get_yval(y1 - AO_RAY_LEN), DX_VAL, DY_VAL, context_sz, context_sz, 0, no_wait)); // cache_values=0
 		if (!results_ready) {assert(no_wait); return 0;} // cached heights are not yet ready
 		ao_zvals.resize(context_sz*context_sz);
 
@@ -480,7 +478,7 @@ bool tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen, bool no_wait) {
 		}
 	}
 	else {
-		bool results_ready(setup_height_gen(height_gen, get_xval(x1), get_yval(y1), deltax, deltay, zvsize, zvsize, 0, no_wait)); // cache_values=0
+		bool results_ready(setup_height_gen(height_gen, get_xval(x1), get_yval(y1), DX_VAL, DY_VAL, zvsize, zvsize, 0, no_wait)); // cache_values=0
 		if (!results_ready) {assert(no_wait); return 0;} // cached heights are not yet ready
 	}
 	float const xy_mult(1.0/float(size)), wpz_max(get_max_sea_level());
@@ -531,7 +529,7 @@ bool tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen, bool no_wait) {
 		} // for xx
 	} // for yy
 	assert(mzmin <= mzmax);
-	radius = 0.5*sqrt((deltax*deltax + deltay*deltay)*size*size + (mzmax - mzmin)*(mzmax - mzmin));
+	radius = 0.5*sqrt((DX_VAL*DX_VAL + DY_VAL*DY_VAL)*size*size + (mzmax - mzmin)*(mzmax - mzmin));
 	ptzmax = dtzmax = mzmin; // no trees yet
 	if (!can_have_trees()) {no_trees = 1;} // mark as no_trees so that trees don't pop when water is disabled later
 	if (DEBUG_TILES) {cout << "new tile coords: " << x1 << " " << y1 << " " << x2 << " " << y2 << endl;}
@@ -599,7 +597,7 @@ void tile_t::calc_mesh_ao_lighting() {
 	if (use_ao_zvals) {czv.swap(ao_zvals);} // use precomputed values, will clear ao_zvals at the end
 	else {
 		czv.resize(context_sz*context_sz);
-		setup_height_gen(height_gen, get_xval(x1 - AO_RAY_LEN), get_yval(y1 - AO_RAY_LEN), deltax, deltay, context_sz, context_sz, 0); // cache_values=0
+		setup_height_gen(height_gen, get_xval(x1 - AO_RAY_LEN), get_yval(y1 - AO_RAY_LEN), DX_VAL, DY_VAL, context_sz, context_sz, 0); // cache_values=0
 	}
 	float const dz(0.5*HALF_DXY);
 	ao_lighting.resize(stride*stride);
@@ -741,8 +739,8 @@ void tile_t::push_tree_ao_shadow(int dx, int dy, point const &pos, float tradius
 
 void tile_t::add_tree_ao_shadow(point const &pos, float tradius, bool no_adj_test) {
 
-	int const xc(round_fp((pos.x - xstart)/deltax)), yc(round_fp((pos.y - ystart)/deltay));
-	int const rval(max(int(tradius/deltax), int(tradius/deltay)) + 1), rval_sq(rval*rval);
+	int const xc(round_fp((pos.x - xstart)/DX_VAL)), yc(round_fp((pos.y - ystart)/DY_VAL));
+	int const rval(max(int(tradius/DX_VAL), int(tradius/DY_VAL)) + 1), rval_sq(rval*rval);
 	int const x1(max(0, xc-rval)), y1(max(0, yc-rval)), x2(min((int)size, xc+rval)), y2(min((int)size, yc+rval));
 	float const scale(0.6/rval);
 	bool updated(0);
@@ -816,7 +814,7 @@ void tile_t::apply_tree_ao_shadows() { // should this generate a float or unsign
 	//timer_t timer("Tree AO Shadows");
 	tree_map.clear();
 	tree_map.resize(stride*stride);
-	bool const no_adj_test(trmax < min(deltax, deltay));
+	bool const no_adj_test(trmax < min(DX_VAL, DY_VAL));
 	apply_ao_shadows_for_trees(this, no_adj_test);
 }
 
@@ -954,7 +952,7 @@ cube_t tile_t::get_shadow_bcube() const {
 	vector2d const road_len(get_road_max_len());
 	float const xv1(get_xval(x1 + xoff - xoff2)), yv1(get_yval(y1 + yoff - yoff2));
 	float const x_ext(max(max(0.5f*road_len.x, b_ext.x), trmax)), y_ext(max(max(0.5f*road_len.y, b_ext.y), trmax));
-	return cube_t(xv1-x_ext, xv1+(x2-x1)*deltax+x_ext, yv1-y_ext, yv1+(y2-y1)*deltay+y_ext, mzmin-BCUBE_ZTOLER, max(get_tile_zmax()+BCUBE_ZTOLER, mzmax+b_ext.z));
+	return cube_t(xv1-x_ext, xv1+(x2-x1)*DX_VAL+x_ext, yv1-y_ext, yv1+(y2-y1)*DY_VAL+y_ext, mzmin-BCUBE_ZTOLER, max(get_tile_zmax()+BCUBE_ZTOLER, mzmax+b_ext.z));
 }
 
 void tile_t::draw_smap_debug_vis(shader_t &s) const {
@@ -1089,8 +1087,8 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 		bool const check_mesh_mask(check_mesh_disable((center_query_pos - city_xlate), radius)), check_buildings(no_grass_under_buildings());
 		bool const check_city(inside_city == 1 || (add_city_grass && inside_city == 2));
 		int k1, k2, k3, k4;
-		height_gen.build_arrays(MESH_NOISE_FREQ*get_xval(x1), MESH_NOISE_FREQ*get_yval(y1), MESH_NOISE_FREQ*deltax,
-			MESH_NOISE_FREQ*deltay, tsize, tsize, 0, 1); // force_sine_mode=1
+		height_gen.build_arrays(MESH_NOISE_FREQ*get_xval(x1), MESH_NOISE_FREQ*get_yval(y1), MESH_NOISE_FREQ*DX_VAL,
+			MESH_NOISE_FREQ*DY_VAL, tsize, tsize, 0, 1); // force_sine_mode=1
 		vector<float> rand_vals(tsize*tsize);
 		bool row_ec_valid(0);
 		vect_cube_t exclude_cubes, row_exclude_cubes, allow_cubes; // in camera space
@@ -1607,7 +1605,7 @@ unsigned tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool 
 	unsigned const grass_block_dim(get_grass_block_dim());
 	assert(grass_blocks.size() == grass_block_dim*grass_block_dim);
 	float const llcx(get_xval(x1 + xoff - xoff2)), llcy(get_yval(y1 + yoff - yoff2));
-	float const dx_step(GRASS_BLOCK_SZ*deltax), dy_step(GRASS_BLOCK_SZ*deltay);
+	float const dx_step(GRASS_BLOCK_SZ*DX_VAL), dy_step(GRASS_BLOCK_SZ*DY_VAL);
 	float const lod_scale(GRASS_LOD_SCALE/(tt_grass_scale_factor*get_scaled_tile_radius()));
 	float const block_grass_thresh(grass_thresh + (SQRT2*radius)/grass_block_dim), bg_thresh_sq(block_grass_thresh*block_grass_thresh);
 	point const adj_camera(camera + point(0.0, 0.0, 2.0*grass_length));
@@ -1629,7 +1627,7 @@ unsigned tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool 
 				for (unsigned yy = y*GRASS_BLOCK_SZ; yy <= (y+1)*GRASS_BLOCK_SZ && back_facing; ++yy) { // Note: could precompute avg normal per block, but it probably isn't necessary
 					for (unsigned xx = x*GRASS_BLOCK_SZ; xx <= (x+1)*GRASS_BLOCK_SZ && back_facing; ++xx) {
 						unsigned const ix(yy*zvsize + xx);
-						back_facing &= (dot_product(get_norm_not_normalized(ix), (adj_camera - point(llcx+xx*deltax, llcy+yy*deltay, zvals[ix]))) < 0.0);
+						back_facing &= (dot_product(get_norm_not_normalized(ix), (adj_camera - point(llcx+xx*DX_VAL, llcy+yy*DY_VAL, zvals[ix]))) < 0.0);
 					}
 				}
 				if (back_facing) continue;
@@ -2125,7 +2123,7 @@ bool tile_t::is_water_visible() const {
 void tile_t::draw_water(shader_t &s, float z) const {
 
 	if (!is_water_visible()) return;
-	float const xv1(get_xval(x1 + xoff - xoff2)), yv1(get_yval(y1 + yoff - yoff2)), xv2(xv1+(x2-x1)*deltax), yv2(yv1+(y2-y1)*deltay);
+	float const xv1(get_xval(x1 + xoff - xoff2)), yv1(get_yval(y1 + yoff - yoff2)), xv2(xv1+(x2-x1)*DX_VAL), yv2(yv1+(y2-y1)*DY_VAL);
 	assert(height_tid > 0);
 	bind_texture_tu(height_tid, 2);
 	//bind_texture_tu(shadow_tid, 6); // Note: only needed if ENABLE_WATER_SHADOWS is enabled in the water plane shader
