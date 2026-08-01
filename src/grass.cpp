@@ -839,8 +839,8 @@ void flower_manager_t::add_flowers(mesh_xy_grid_cache_t const density_gen[2],
 
 void flower_manager_t::gen_density_cache(mesh_xy_grid_cache_t density_gen[2], int x1, int y1) {
 	for (unsigned i = 0; i < 2; ++i) {
-		float const fds(500.0*(1.0 + 0.3*i)), xscale(fds*DX_VAL*DX_VAL), yscale(fds*DY_VAL*DY_VAL);
-		density_gen[i].build_arrays(xscale*(x1 + xoff2), yscale*(y1 + yoff2), xscale, yscale, MESH_X_SIZE, MESH_Y_SIZE, 0, 1); // force_sine_mode=1
+		float const fds(500.0*(1.0 + 0.3*i));
+		density_gen[i].build_arrays((x1 + xoff2), (y1 + yoff2), fds*DX_VAL*DX_VAL, fds*DY_VAL*DY_VAL, MESH_X_SIZE, MESH_Y_SIZE, 0, 1); // force_sine_mode=1
 	}
 }
 

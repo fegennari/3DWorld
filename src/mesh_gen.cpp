@@ -202,7 +202,7 @@ void gen_mesh_sine_table(float **matrix, int x_offset, int y_offset, int xsize, 
 
 	assert(matrix);
 	mesh_xy_grid_cache_t height_gen;
-	height_gen.build_arrays((x_offset - xsize/2)*DX_VAL, (y_offset - ysize/2)*DY_VAL, DX_VAL, DY_VAL, xsize, ysize);
+	height_gen.build_arrays((x_offset - xsize/2), (y_offset - ysize/2), DX_VAL, DY_VAL, xsize, ysize);
 
 	for (int i = 0; i < ysize; ++i) {
 		for (int j = 0; j < xsize; ++j) {matrix[i][j] = height_gen.eval_index(j, i);}
@@ -585,12 +585,10 @@ void gen_rx_ry(float &rx, float &ry) {
 	ry = rgen.rand_float() + 1.0;
 }
 
-bool mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy,
-	unsigned nx, unsigned ny, bool cache_values, bool force_sine_mode, bool no_wait)
-{
+bool mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy, unsigned nx, unsigned ny, bool cache_values, bool force_sine_mode, bool no_wait) {
 	assert(nx > 0 && ny > 0);
 	assert(start_eval_sin <= F_TABLE_SIZE);
-	cur_nx = nx; cur_ny = ny; mx0 = x0; my0 = y0; mdx = dx; mdy = dy;
+	cur_nx = nx; cur_ny = ny; mx0 = dx*x0; my0 = dy*y0; mdx = dx; mdy = dy;
 	gen_mode  = (force_sine_mode ? MGEN_SINE : mesh_gen_mode);
 	gen_shape = (force_sine_mode ? 0 : mesh_gen_shape);
 	do_glaciate = 0; // must set enable_glaciate() after this call if needed
@@ -610,7 +608,7 @@ bool mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy,
 
 		for (int k = start_eval_sin; k < F_TABLE_SIZE; ++k) {
 			float const x_mult(msx*sinTable[k][4]), y_mult(msy*sinTable[k][3]), y_scale(mesh_scale_z_inv*sinTable[k][0]);
-			float const x_const(ms2*sinTable[k][4] + sinTable[k][2] + x_mult*x0), y_const(ms2*sinTable[k][3] + sinTable[k][1] + y_mult*y0);
+			float const x_const(ms2*sinTable[k][4] + sinTable[k][2] + x_mult*mx0), y_const(ms2*sinTable[k][3] + sinTable[k][1] + y_mult*my0);
 			float const xmdx(x_mult*dx), ymdy(y_mult*dy);
 			float *x_ptr(xyterms.data() + k), *y_ptr(x_ptr + yterms_start);
 
@@ -654,10 +652,6 @@ void mesh_xy_grid_cache_t::enable_glaciate() {
 void mesh_xy_grid_cache_t::run_gpu_simplex() {
 
 	//timer_t("GPU Mesh Gen");
-	float const xy_scale(MESH_SCALE_FACTOR*mesh_scale), xscale(xy_scale*DX_VAL_INV), yscale(xy_scale*DY_VAL_INV);
-	float rx, ry;
-	gen_rx_ry(rx, ry);
-
 	if (cshader == nullptr) {
 		cshader = new grid_gen_shader_t("noise_2d_3d.part*+procedural_height_gen", cur_nx, cur_ny);
 		if (gen_shape == 1) {cshader->set_comp_prefix("#define BILLOWY");}
@@ -669,6 +663,9 @@ void mesh_xy_grid_cache_t::run_gpu_simplex() {
 		assert(cshader->get_xsize_req() == cur_nx && cshader->get_ysize_req() == cur_ny); // can't reuse with different sizes
 		cshader->enable();
 	}
+	float const xy_scale(MESH_SCALE_FACTOR*mesh_scale), xscale(xy_scale*DX_VAL_INV), yscale(xy_scale*DY_VAL_INV);
+	float rx, ry;
+	gen_rx_ry(rx, ry);
 	// returns heights in approximately [-1,1] range
 	cshader->add_uniform_float("x0", (mx0 - 0.5*mdx)*xscale);
 	cshader->add_uniform_float("y0", (my0 - 0.5*mdy)*yscale);

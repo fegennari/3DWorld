@@ -446,10 +446,10 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float const den
 	bool const approx_zval(world_mode == WMODE_INF_TERRAIN && !use_hmap_tex && (mesh_gen_mode == MGEN_SINE || ntrees_mult > 0.025));
 	float const tds(TREE_DIST_SCALE*(XY_MULT_SIZE/16384.0)), xscale(tds*DX_VAL*DX_VAL), yscale(tds*DY_VAL*DY_VAL);
 	mesh_xy_grid_cache_t density_gen, height_gen; // random tree generation based on transformed mesh height function
-	density_gen.build_arrays(xscale*(x1 + xoff2), yscale*(y1 + yoff2), xscale, yscale, (x2-x1), (y2-y1), 0, 1); // force_sine_mode=1
+	density_gen.build_arrays((x1 + xoff2), (y1 + yoff2), xscale, yscale, (x2-x1), (y2-y1), 0, 1); // force_sine_mode=1
 	
 	if (approx_zval) {
-		height_gen.build_arrays(DX_VAL*(x1 + xoff2 - (MESH_X_SIZE >> 1) + 0.5f), DY_VAL*(y1 + yoff2 - (MESH_Y_SIZE >> 1) + 0.5f), DX_VAL, DY_VAL, (x2-x1), (y2-y1));
+		height_gen.build_arrays((x1 + xoff2 - (MESH_X_SIZE >> 1) + 0.5f), (y1 + yoff2 - (MESH_Y_SIZE >> 1) + 0.5f), DX_VAL, DY_VAL, (x2-x1), (y2-y1));
 		height_gen.enable_glaciate();
 	}
 	float const dxv(skip_val/(x2 - x1 - 1.0f)), dyv(skip_val/(y2 - y1 - 1.0f));

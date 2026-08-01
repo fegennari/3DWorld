@@ -452,13 +452,13 @@ float get_xy_scale() {
 void setup_height_gen_cached(mesh_xy_grid_cache_t &height_gen, float x0, float y0, float dx, float dy, unsigned nx, unsigned ny) {
 	float const xy_scale(get_xy_scale());
 	if (xy_scale == 0.0) return; // nothing to do
-	height_gen.build_arrays(xy_scale*x0, xy_scale*y0, xy_scale*dx, xy_scale*dy, nx, ny, 1); // cache_values=1
+	height_gen.build_arrays(x0/dx, y0/dy, xy_scale*dx, xy_scale*dy, nx, ny, 1); // cache_values=1
 	height_gen.enable_glaciate();
 }
 bool setup_height_gen_async(mesh_xy_grid_cache_t &height_gen, int x0, int y0, unsigned nx, unsigned ny, bool no_wait=0) {
 	float const xy_scale(get_xy_scale());
 	if (xy_scale == 0.0) return 1; // nothing to do
-	bool const results_avail(height_gen.build_arrays(xy_scale*get_xval(x0), xy_scale*get_yval(y0), xy_scale*DX_VAL, xy_scale*DY_VAL, nx, ny, 0, 0, no_wait));
+	bool const results_avail(height_gen.build_arrays((x0 - MESH_X_SIZE/2), (y0 - MESH_Y_SIZE/2), xy_scale*DX_VAL, xy_scale*DY_VAL, nx, ny, 0, 0, no_wait));
 	height_gen.enable_glaciate();
 	return results_avail;
 }
@@ -1096,8 +1096,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 		bool const check_mesh_mask(check_mesh_disable((center_query_pos - city_xlate), radius)), check_buildings(no_grass_under_buildings());
 		bool const check_city(inside_city == 1 || (add_city_grass && inside_city == 2));
 		int k1, k2, k3, k4;
-		height_gen.build_arrays(MESH_NOISE_FREQ*get_xval(x1), MESH_NOISE_FREQ*get_yval(y1), MESH_NOISE_FREQ*DX_VAL,
-			MESH_NOISE_FREQ*DY_VAL, tsize, tsize, 0, 1); // force_sine_mode=1
+		height_gen.build_arrays((x1 - MESH_X_SIZE/2), (y1 - MESH_Y_SIZE/2), MESH_NOISE_FREQ*DX_VAL, MESH_NOISE_FREQ*DY_VAL, tsize, tsize, 0, 1); // force_sine_mode=1
 		vector<float> rand_vals(tsize*tsize);
 		bool row_ec_valid(0);
 		vect_cube_t exclude_cubes, row_exclude_cubes, allow_cubes; // in camera space
@@ -1286,7 +1285,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 							// calculate fixed-point vertical weights (0 to 256)
 							unsigned const wy1(static_cast<unsigned>(low_y_fixed < 0 ? 0 : (low_y_fixed & 255))), wy0(256 - wy1);
 
-							for (int xx = 0; xx < sz_factor; ++xx) {
+							for (unsigned xx = 0; xx < sz_factor; ++xx) {
 								unsigned const high_x(x * sz_factor + xx), high_ix(4 * (high_y * weights_tsize + high_x));
 								// calculate center-aligned X coordinate and neighbor columns in low-res space; equivalent to: float low_x = (high_x + 0.5f)/sz_factor - 0.5f
 								int const low_x_fixed((((int)high_x * 256 + 128) >> tsize_bs) - 128);
