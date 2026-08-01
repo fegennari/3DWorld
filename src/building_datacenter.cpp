@@ -914,6 +914,9 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 					if (rh_pipe2.is_strictly_normalized()) { // can be denormalized if pipe end is halfway inside cooling tower
 						objs.emplace_back(rh_pipe2, TYPE_PIPE, room_id, dim, 0, (rp_flags | (dir ? RO_FLAG_ADJ_LO : RO_FLAG_ADJ_HI)), 1.0, SHAPE_CYLIN, ac_pipe_color); // horizontal
 					}
+					else { // at least make the end of the pipe at the cooling tower rounded to cover the opening
+						objs.back().flags |= (ac_pipe_side ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO);
+					}
 				}
 			}
 			// add fittings to h_pipe
