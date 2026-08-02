@@ -27,7 +27,7 @@ struct person_base_t : public waiting_obj_t {
 	float radius=0.0, speed=0.0, anim_time=0.0, idle_time=0.0; // Note: idle_time is currently only used for building people
 	unsigned short model_id=0, ssn=0;
 	int model_rand_seed=0;
-	bool in_building=0, is_stopped=0, is_zombie=0, is_prisoner=0, is_on_stairs=0, path_is_fixed=0, lying_down=0, is_stationary=0; // Note: is_on_stairs includes escalators
+	bool in_building=0, is_stopped=0, is_idle=0, is_zombie=0, is_prisoner=0, is_on_stairs=0, path_is_fixed=0, lying_down=0, is_stationary=0; // Note: is_on_stairs includes escalators
 	uint8_t is_female=2; // 0=male, 1=female, 2=unspecified
 	// temp state used for animations/drawing
 	mutable bool prev_was_idle=0;
@@ -44,7 +44,7 @@ struct person_base_t : public waiting_obj_t {
 	cube_t get_bcube () const;
 	point get_eye_pos() const {return (pos + vector3d(0.0, 0.0, (EYE_HEIGHT_RATIO*get_height() - radius)));}
 	bool target_valid() const {return (target_pos != all_zeros);}
-	bool is_waiting_or_stopped() const {return (speed == 0.0 || is_stopped || is_stationary || (in_building && waiting_start > 0));} // city peds normally have waiting_start > 0
+	bool is_waiting_or_stopped() const {return (speed == 0.0 || is_stopped || is_stationary || is_idle || (in_building && waiting_start > 0));} // city peds normally have waiting_start > 0
 	void set_velocity(vector3d const &v);
 	void stop();
 	void go();

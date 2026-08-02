@@ -2393,6 +2393,7 @@ bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up c
 		if (!ped.in_building && dstate.is_occluded(bcube))                 return 0; // only check occlusion for expensive ped models, and for peds outside buildings
 		end_sphere_draw(in_sphere_draw);
 		bool const low_detail(!shadow_only && !is_in_building && dist_sq > 0.25*draw_dist_sq); // low detail for non-shadow pass at half draw dist, if not in building
+		city_model_t const &ped_model(ped_model_loader.get_model(ped.model_id));
 
 		// note that animations apply even when ped.lying_down=1 because we don't want people lying in a T-pose
 		if (!is_in_building && is_dlight_shadows && !dist_less_than(pre_smap_player_pos, ped.pos, 0.3*def_draw_dist)) {
@@ -2403,14 +2404,14 @@ bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up c
 			// only consider the person as idle if there's an idle animation;
 			// otherwise will always use walk animation, which is assumed to exist, but anim_time won't be updated while idle
 			unsigned non_idle_anim(MODEL_ANIM_WALK);
-			bool const is_idle(ped.is_waiting_or_stopped() && ped_model_loader.get_model(ped.model_id).has_animation(animation_names[MODEL_ANIM_IDLE])); // inc lying down
+			bool const is_idle(ped.is_waiting_or_stopped() && ped_model.has_animation(animation_names[MODEL_ANIM_IDLE])); // inc lying down
 
 			if (ped.is_on_stairs) {
 				if      (ped.target_pos.z < ped.pos.z) {
-					if (ped_model_loader.get_model(ped.model_id).has_animation(animation_names[MODEL_ANIM_STAIRS_DOWN])) {non_idle_anim = MODEL_ANIM_STAIRS_DOWN;}
+					if (ped_model.has_animation(animation_names[MODEL_ANIM_STAIRS_DOWN])) {non_idle_anim = MODEL_ANIM_STAIRS_DOWN;}
 				}
 				else if (ped.target_pos.z > ped.pos.z) {
-					if (ped_model_loader.get_model(ped.model_id).has_animation(animation_names[MODEL_ANIM_STAIRS_UP  ])) {non_idle_anim = MODEL_ANIM_STAIRS_UP  ;}
+					if (ped_model.has_animation(animation_names[MODEL_ANIM_STAIRS_UP  ])) {non_idle_anim = MODEL_ANIM_STAIRS_UP  ;}
 				}
 				// else on a landing - use walk animation?
 			}
@@ -2464,7 +2465,7 @@ bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up c
 			building_obj_model_loader.is_model_valid(OBJ_MODEL_UMBRELLA))
 		{
 			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_UMBRELLA));
-			float const ped_sz_scale(ped_model_loader.get_model(ped.model_id).scale), radius(0.5*bcube.dz()/ped_sz_scale);
+			float const ped_sz_scale(ped_model.scale), radius(0.5*bcube.dz()/ped_sz_scale);
 			cube_t u_bcube(bcube.get_cube_center() + (0.25*radius)*draw_dir);
 			u_bcube.expand_by_xy(radius);
 			u_bcube.z1() -= 0.35*radius;

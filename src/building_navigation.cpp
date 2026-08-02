@@ -1484,7 +1484,7 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 	person.target_pos   = person.pos; // set but not yet used
 	person.is_on_stairs = person.path_is_fixed = person.missed_player_room_change = 0;
 	if (interior->rooms.size() == 1) return 0; // no other room to move to
-	bool const last_used_escalator(person.last_used_escalator);
+	bool const last_used_escalator(person.last_used_escalator); // Note: maybe can remove, since last_used_escalator is never set to 1?
 	person.last_used_escalator = 0;
 	
 	// maybe use retail area escalator
@@ -2849,6 +2849,16 @@ void clamp_person_to_building_bcube(point &pos, cube_t bcube, float radius, floa
 	bcube.z1() += fc_thick + radius; // make sure feet are above the floor
 	bcube.clamp_pt(pos);
 }
+int person_on_escalator(person_t const &person, vector<escalator_t> const &escalators) { // 0=no, 1=yes, moving, 2=yes, stopped
+	if (!person.on_stairs()) return 0; // escalators use the same flag
+	
+	if (!person.on_escalator()) { // not on a retail escalator, but may still be on a mall escalator
+		if (person.cur_escalator >= escalators.size()) return 0; // not a valid mall escalator
+		if (!escalators[person.cur_escalator].contains_pt(person.pos)) return 0; // not inside this escalator
+	}
+	else {assert(person.cur_escalator < escalators.size());}
+	return (escalators[person.cur_escalator].is_powered ? 1 : 2);
+}
 
 // Note: non-const because this updates room light and door state
 int building_t::ai_room_update(person_t &person, float delta_dir, unsigned person_ix, rand_gen_t &rgen) {
@@ -2862,7 +2872,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	float &wait_time(person.waiting_start); // reuse this field
 	float const base_speed_mult(is_house ? 1.0 : 1.2); // 20% faster in office buildings, if targeting the player, player last pos, or sound
 	float speed_mult((person.goal_type >= GOAL_TYPE_PLAYER) ? base_speed_mult : 1.0);
-	person.following_player = person.is_stopped = 0; // reset for this frame
+	person.following_player = person.is_stopped = person.is_idle = 0; // reset for this frame
 	// skip the same building check for coll if both this person and the player may be in different but connected buildings
 	bool allow_diff_building(interior->conn_info && person.pos.z < ground_floor_z1 && cur_player_building_loc.pos.z < ground_floor_z1 &&
 		dist_xy_less_than(person.pos, cur_player_building_loc.pos, 2.0*floor_spacing));
@@ -3051,7 +3061,8 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		return AI_BEGIN_PATH;
 	}
 	if (person.on_stairs()) {
-		if (person.on_escalator()) {speed_mult *= (get_escalator(person.cur_escalator).is_powered ? 0.8 : 0.65);} // slower if escalator is unpowered
+		int const on_escalator(person_on_escalator(person, interior->escalators));
+		if (on_escalator) {speed_mult *= ((on_escalator == 1) ? 0.8 : 0.65);} // slower if escalator is unpowered
 		else {speed_mult *= 0.9;} // stairs
 	}
 	float const max_dist(get_person_max_move_dist(person, speed_mult));
@@ -3329,9 +3340,17 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	min_eq(new_pos.z, max_valid_zval); // don't let the person go above the room ceiling
 	// update state
 	float const old_anim_time(person.anim_time);
-	person.pos        = new_pos; // Note: new_pos.z should equal person.poz.z unless on stairs, which is difficult to accurately check for in this function
-	person.anim_time += max_dist; // * (person.on_escalator() ? 0.75 : 1.0); // slower walking on escalator; TODO: should we reduce speed and use the idle animation?
-	person.idle_time  = 0.0; // reset idle time if we actually move
+	person.pos = new_pos; // Note: new_pos.z should equal person.poz.z unless on stairs, which is difficult to accurately check for in this function
+
+	// idle animation looks wrong because people don't stand exactly on steps and don't move at exactly the right speed and has been disabled; but could still slow animation?
+	if (0 && person_on_escalator(person, interior->escalators) == 1) { // person on powered escalator; use idle animation
+		person.idle_time += fticks;
+		person.is_idle    = 1;
+	}
+	else {
+		person.anim_time += max_dist;
+		person.idle_time  = 0.0; // reset idle time if we actually move
+	}
 	float const pz1(person.get_z1()), pz2(person.get_z2());
 	bool enable_bl_update(display_mode & 0x20); // disabled by default, enable with key '6'
 	if (in_building_gameplay_mode()) {enable_bl_update = 0;} // zombies don't turn on and off lights
