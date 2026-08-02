@@ -751,6 +751,12 @@ template<typename T> bool has_bcube_int_ret_cube(cube_t const &bcube, vector<T> 
 	}
 	return 0;
 }
+template<typename T> bool has_bcube_int_xy_ret_cube(cube_t const &bcube, vector<T> const &cubes, cube_t &c_int) { // T must derive from cube_t
+	for (cube_t const &c : cubes) {
+		if (c.intersects_xy(bcube)) {c_int = c; return 1;}
+	}
+	return 0;
+}
 template<typename T> bool has_bcube_int_no_adj(cube_t const &bcube, vector<T> const &cubes) { // T must derive from cube_t
 	for (cube_t const &c : cubes) {if (c.intersects_no_adj(bcube)) return 1;}
 	return 0;
