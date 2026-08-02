@@ -95,7 +95,7 @@ void get_city_grass_coll_cubes(cube_t const &region, vect_cube_t &out, vect_cube
 void get_building_grass_coll_cubes(cube_t const &region, vect_cube_t &out);
 int check_city_contains_overlaps(cube_t const &query);
 bool check_inside_city(point const &pos, float radius);
-bool city_has_grass_at(point const &pos, float radius);
+bool city_has_grass_at(point const &pos, float radius, cube_t &blocker);
 cube_t get_city_grass_bcube_at(cube_t const &test_cube);
 cube_t get_city_bcube_overlapping(cube_t const &c);
 void show_gpu_mem_info();
@@ -1070,7 +1070,7 @@ bool check_region_int(cube_t const &region, vect_cube_t const &cubes) { // has_b
 }
 void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 
-	//highres_timer_t timer("Create Tile Weights Texture"); // 518 296.614 4.3718 0.572615 | 505 427.735 10.4045 0.847
+	highres_timer_t timer("Create Tile Weights Texture"); // 517 288.677 3.972 0.55837 | 491 400.883 9.6455 0.816462
 	assert(zvals.size() == zvsize*zvsize);
 	unsigned const tsize(stride);
 	int sand_tex_ix(-1), dirt_tex_ix(-1), grass_tex_ix(-1), rock_tex_ix(-1), snow_tex_ix(-1);
@@ -1102,6 +1102,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 		vect_cube_t exclude_cubes, row_exclude_cubes, allow_cubes; // in camera space
 		cube_t const mesh_bcube(get_mesh_bcube());
 		cube_t const city_grass_bcube(add_city_grass ? get_city_grass_bcube_at(mesh_bcube - city_xlate) : cube_t());
+		cube_t grass_blocker;
 		bool const has_city_grass(!city_grass_bcube.is_all_zeros());
 		get_city_grass_coll_cubes(mesh_bcube, exclude_cubes, allow_cubes);
 		get_building_grass_coll_cubes(mesh_bcube, exclude_cubes);
@@ -1126,7 +1127,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 					point const mesh_query_pos(city_query_pos + vector3d(0.5*DX_VAL, 0.5*DY_VAL, 0.0)); // camera space, center of tile quad
 					
 					if ((check_mesh_mask && check_mesh_disable(mesh_query_pos, HALF_DXY)) || (check_city && check_inside_city(city_query_pos, HALF_DXY))) {
-						bool const add_grass(has_city_grass && city_has_grass_at(city_query_pos, HALF_DXY)); // radius = grid square
+						bool const add_grass(has_city_grass && city_has_grass_at(city_query_pos, HALF_DXY, grass_blocker)); // radius = grid square
 
 						if (add_grass) {
 							mesh_weight_data[off+2] = 255; // full grass
@@ -1241,7 +1242,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 		unsigned const tsize_bs(2), sz_factor(1 << tsize_bs);
 
 		if (has_city_grass && sz_factor > 1) { // increase weights texture resolution to more accurately control grass placement within cities
-			//highres_timer_t timer("Create Tile Weights Grass"); // 29 40.4764 2.2871 1.39574 | 27 124.876 7.5815 4.62503
+			highres_timer_t timer("Create Tile Weights Grass"); // 29 37.0877 1.9205 1.27889 | 27 113.725 6.8159 4.21202
 			float const hr_dx(DX_VAL/sz_factor), hr_dy(DY_VAL/sz_factor), hr_half_dxy(HALF_DXY/sz_factor);
 			weights_tsize *= sz_factor;
 			tsize_bitshift = tsize_bs;
@@ -1249,6 +1250,8 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 
 #pragma omp parallel for schedule(static,1) num_threads(3)
 			for (int y = 0; y < (int)tsize; ++y) {
+				cube_t thread_grass_blocker;
+
 				for (int x = 0; x < (int)tsize; ++x) {
 					float const xv0(get_xval(x + llc_x_cs)), yv0(get_yval(y + llc_y_cs));
 					unsigned const off(4*(y*tsize + x));
@@ -1266,7 +1269,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 								if (!check_grass) continue;
 								// add missing higher resolution grass
 								point const query_pos((xv0 + xx*hr_dx - 0.5*(DX_VAL - hr_dx)), (yv0 + yy*hr_dy - 0.5*(DY_VAL - hr_dy)), 0.0);
-								if (!city_has_grass_at((query_pos - city_xlate), hr_half_dxy)) continue;
+								if (!city_has_grass_at((query_pos - city_xlate), hr_half_dxy, thread_grass_blocker)) continue;
 								hr_data[off_hr+2] = 255; // add full grass
 								add_grass = 1;
 							} // for xx

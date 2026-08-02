@@ -3440,18 +3440,18 @@ void cubes_grid_t::finalize() {
 		for (unsigned x = 0; x < NDIV; ++x) {row_bcubes[y].assign_or_union_with_cube(cubes[y][x].bcube);}
 	}
 }
-bool cubes_grid_t::has_overlap_xy(cube_t const &c) const {
+bool cubes_grid_t::has_overlap_xy(cube_t const &c, cube_t &blocker) const {
 	for (unsigned y = 0; y < NDIV; ++y) {
 		if (!row_bcubes[y].intersects_xy(c)) continue;
 		for (unsigned x = 0; x < NDIV; ++x) {
 			vect_cube_with_bbox_t const &v(cubes[y][x]);
-			if (c.intersects_xy(v.bcube) && has_bcube_int_xy(c, v)) return 1;
+			if (c.intersects_xy(v.bcube) && has_bcube_int_xy_ret_cube(c, v, blocker)) return 1;
 		}
 	} // for y
 	return 0;
 }
 
-bool city_obj_placer_t::grass_blocked_for_park(point const &pos, float radius, cube_t const &pbb) const {
+bool city_obj_placer_t::grass_blocked_for_park(point const &pos, float radius, cube_t const &pbb, cube_t &blocker) const {
 	unsigned const npts((radius == 0.0) ? 1 : 4); // only need to check one point if zero radius
 
 	for (unsigned n = 0; n < npts; ++n) { // test 4 corners of ponds
@@ -3461,7 +3461,7 @@ bool city_obj_placer_t::grass_blocked_for_park(point const &pos, float radius, c
 	for (park_path_t const &path : ppaths) { // park paths and creeks
 		if (path.check_cube_coll_xy(pbb)) return 1;
 	}
-	if (has_bcube_int_xy(pbb, park_grass_blockers)) return 1; // check restroom concrete pads
+	if (has_bcube_int_xy_ret_cube(pbb, park_grass_blockers, blocker)) return 1; // check restroom concrete pads
 	return 0;
 }
 

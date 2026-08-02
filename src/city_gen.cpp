@@ -536,17 +536,18 @@ public:
 	bool point_in_plot_xy(point const &pos) const {return !check_vect_cube_contains_pt_xy(roads, pos);} // if it's not in a road it must be in a plot; faster than checking plots
 	bool point_in_pond_xy(point const &pos) const {return  city_obj_placer.point_in_pond_xy(pos);}
 
-	bool has_grass_at(point const &pos_bs, float radius) const {
+	bool has_grass_at(point const &pos_bs, float radius, cube_t &blocker) const {
 		if (add_city_grass == 0) return 0; // caller should handle this
 		cube_t pbb(pos_bs);
 		pbb.expand_by_xy(radius);
+		if (!blocker.is_all_zeros() && pbb.intersects_xy(blocker)) return 0; // optimization: check the previous call's blocker
 
 		if (pbb.intersects_xy(parks_bcube) && has_bcube_int_xy(pbb, parks)) {
 			if (!any_cube_contains_xy(pbb, parks)) return 0; // partially overlapping a park, not fully grass
-			return !city_obj_placer.grass_blocked_for_park(pos_bs, radius, pbb); // we're completely inside a park
+			return !city_obj_placer.grass_blocked_for_park(pos_bs, radius, pbb, blocker); // we're completely inside a park
 		}
-		if (is_residential && add_city_grass >= 2 && !has_bcube_int_xy(pbb, roads)) { // residential city with no road overlap
-			return !city_obj_placer.grass_blocked_for_plot(pbb); // we're inside a plot that's not a park
+		if (is_residential && add_city_grass >= 2 && !has_bcube_int_xy_ret_cube(pbb, roads, blocker)) { // residential city with no road overlap
+			return !city_obj_placer.grass_blocked_for_plot(pbb, blocker); // we're inside a plot that's not a park
 		}
 		return 0; // not grass
 	}
@@ -3075,10 +3076,10 @@ public:
 		} // for r
 		return 0;
 	}
-	bool has_grass_at(point const &pos, float radius) const { // pos in building space
+	bool has_grass_at(point const &pos, float radius, cube_t &blocker) const { // pos in building space
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {
 			if (!r->get_bcube().contains_pt_xy(pos)) continue; // wrong city
-			return r->has_grass_at(pos, radius);
+			return r->has_grass_at(pos, radius, blocker);
 		}
 		return 0;
 	}
@@ -3677,7 +3678,7 @@ public:
 		return road_gen.check_inside_city(pos, radius, rcp_mask, city_bcube);
 	}
 	cube_t get_city_grass_bcube_at(cube_t const &test_cube) const {return road_gen.get_city_grass_bcube_at(test_cube);}
-	bool has_grass_at      (point const &pos, float radius) const {return road_gen.has_grass_at(pos, radius);}
+	bool has_grass_at      (point const &pos, float radius, cube_t &blocker) const {return road_gen.has_grass_at(pos, radius, blocker);}
 	bool choose_pt_in_park (point const &pos, point &park_pos, rand_gen_t &rgen) const {return road_gen.choose_pt_in_park(pos, park_pos, rgen);}
 	bool check_mesh_disable(point const &pos, float radius) const {return road_gen.check_mesh_disable(pos, radius);}
 	bool tile_contains_tunnel(cube_t const &bcube) const {return road_gen.tile_contains_tunnel(bcube);}
@@ -3912,7 +3913,7 @@ bool check_valid_scenery_pos(point const &pos, float radius, bool is_tall) {
 }
 bool check_mesh_disable(point const &pos, float radius) {return (have_cities() && city_gen.check_mesh_disable(pos, radius));} // Note: pos is in camera space
 bool check_inside_city (point const &pos, float radius) {return (have_cities() && city_gen.check_inside_city (pos, radius));} // Note: pos is in camera space
-bool city_has_grass_at (point const &pos, float radius) {return (have_cities() && city_gen.has_grass_at      (pos, radius));} // Note: pos is in camera space
+bool city_has_grass_at (point const &pos, float radius, cube_t &blocker) {return (have_cities() && city_gen.has_grass_at(pos, radius, blocker));} // Note: pos is in camera space
 cube_t get_city_grass_bcube_at(cube_t const &test_cube) {return (have_cities() ? city_gen.get_city_grass_bcube_at(test_cube) : cube_t());}
 
 bool camera_in_city_bounds(unsigned rcp_mask, cube_t *city_bcube) {
