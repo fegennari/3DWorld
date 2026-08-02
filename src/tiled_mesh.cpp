@@ -1390,7 +1390,7 @@ void tile_t::create_or_update_weight_tex() {
 
 	for (unsigned i = 0; i < num_texels; ++i) {
 		unsigned const off(4*i);
-		if (weight_data[off+1] == 255 && weight_data[off+1] == 255) continue; // skip disabled mesh sections
+		if (weight_data[off+1] == 255 && weight_data[off+3] == 255) continue; // skip disabled mesh sections (dirt and rock)
 		for (unsigned j = 0; j < 4; ++j) {tot_weights[j] += weight_data[off+j];}
 	}
 	tot_weights[4] += (255*num_texels - tot_weights[0] - tot_weights[1] - tot_weights[2] - tot_weights[3]);
