@@ -477,7 +477,7 @@ public:
 		if (has_poi && building.select_person_poi(room_id, radius, pos, rgen)) return; // done; no need to check place_area
 		gen_xy_pos_in_cube(pos, place_area, rgen);
 	}
-	static bool find_valid_pt_in_room(vect_cube_t const &avoid, building_t const &building, float radius, float zval,
+	static bool find_valid_pt_in_room(vect_cube_t const &avoid, building_t const &building, float radius,
 		cube_t const &room, unsigned room_id, rand_gen_t &rgen, point &pos, bool no_use_init=0, bool no_poi=0)
 	{
 		bool const has_poi(!no_poi && building.room_has_poi(room_id));
@@ -501,7 +501,7 @@ public:
 		return 0;
 	}
 	point get_room_center(building_t const &building, cube_t const &room, float zval) const {
-		point pos(get_cube_center_zval(room, zval));
+		point const pos(get_cube_center_zval(room, zval));
 		if (building.is_cube()) return pos;
 		int const part_ix(building.get_part_ix_containing_pt(pos));
 		if (part_ix < 0) return pos; // shouldn't get here
@@ -529,7 +529,7 @@ public:
 			//zval += (up_or_down ? -1.0 : 1.0)*floor_spacing; // one floor above or below so that we skip the blocked floor; but this asserts
 			return point(landing_pos.x, landing_pos.y, zval);
 		}
-		if (find_valid_pt_in_room(avoid, building, radius, zval, node.bcube, node_ix, rgen, pos, no_use_init, has_custom_dest)) {not_room_center = 1;} // no_poi=has_custom_dest
+		if (find_valid_pt_in_room(avoid, building, radius, node.bcube, node_ix, rgen, pos, no_use_init, has_custom_dest)) {not_room_center = 1;} // no_poi=has_custom_dest
 		return pos;
 	}
 	// used by connect_room_endpoints() to select intermediate path points
@@ -1344,12 +1344,12 @@ bool building_t::select_person_dest_in_room(person_t &person, rand_gen_t &rgen, 
 			if (!valid_area.is_strictly_normalized()) return 0; // shouldn't happen
 		}
 	}
-	point dest_pos(valid_area.get_cube_center());
+	point dest_pos(get_cube_center_zval(valid_area, person.target_pos.z));
 	vect_cube_t &avoid(reused_avoid_cubes[0]);
 	get_avoid_cubes(person.target_pos.z, height, radius, avoid, 0); // following_player=0
 	add_sub_rooms_to_avoid_if_needed(room_id, avoid); // must avoid sub-rooms
 	bool const no_use_init(room.is_single_large_room_or_store()); // don't use the room center for a parking garage, backrooms, retail area, mall, store, or restaurant
-	if (!interior->nav_graph->find_valid_pt_in_room(avoid, *this, radius, person.target_pos.z, valid_area, room_id, rgen, dest_pos, no_use_init)) return 0;
+	if (!interior->nav_graph->find_valid_pt_in_room(avoid, *this, radius, valid_area, room_id, rgen, dest_pos, no_use_init)) return 0;
 	
 	if (!is_cube()) { // non-cube building
 		cube_t const person_bcube(person.get_bcube() + (dest_pos - person.pos)); // bcube, but translated to dest_pos
@@ -1461,7 +1461,7 @@ int building_t::maybe_use_escalator(person_t &person, building_loc_t const &loc,
 				person.target_pos.assign(dest_floor.xc(), dest_floor.yc(), zval); // init dest is center
 				vect_cube_t &avoid(reused_avoid_cubes[0]);
 				get_avoid_cubes(person.target_pos.z, height, radius, avoid, 0); // following_player=0
-				if (!interior->nav_graph->find_valid_pt_in_room(avoid, *this, radius, zval, dest_floor, loc.room_ix, rgen, person.target_pos, 1)) continue; // no_use_init=1
+				if (!interior->nav_graph->find_valid_pt_in_room(avoid, *this, radius, dest_floor, loc.room_ix, rgen, person.target_pos, 1)) continue; // no_use_init=1
 			}
 			//assert(person.target_pos.z > person.pos.z);
 			if (person.target_pos.z <= person.pos.z) {register_debug_event(person.target_pos, "invalid target_pos");}
