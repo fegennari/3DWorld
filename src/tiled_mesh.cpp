@@ -1070,7 +1070,7 @@ bool check_region_int(cube_t const &region, vect_cube_t const &cubes) { // has_b
 }
 void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 
-	highres_timer_t timer("Create Tile Weights Texture"); // 517 288.677 3.972 0.55837 | 491 400.883 9.6455 0.816462
+	//highres_timer_t timer("Create Tile Weights Texture"); // 503 295.364 4.1036 0.587205 | 525 407.762 7.9875 0.776689
 	assert(zvals.size() == zvsize*zvsize);
 	unsigned const tsize(stride);
 	int sand_tex_ix(-1), dirt_tex_ix(-1), grass_tex_ix(-1), rock_tex_ix(-1), snow_tex_ix(-1);
@@ -1242,13 +1242,13 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 		unsigned const tsize_bs(2), sz_factor(1 << tsize_bs);
 
 		if (has_city_grass && sz_factor > 1) { // increase weights texture resolution to more accurately control grass placement within cities
-			highres_timer_t timer("Create Tile Weights Grass"); // 29 37.0877 1.9205 1.27889 | 27 113.725 6.8159 4.21202
+			//highres_timer_t timer("Create Tile Weights Grass"); // 33 40.5606 1.7726 1.22911 | 29 99.6234 5.4276 3.43529
 			float const hr_dx(DX_VAL/sz_factor), hr_dy(DY_VAL/sz_factor), hr_half_dxy(HALF_DXY/sz_factor);
 			weights_tsize *= sz_factor;
 			tsize_bitshift = tsize_bs;
 			vector<unsigned char> hr_data(4*weights_tsize*weights_tsize, 0);
 
-#pragma omp parallel for schedule(static,1) num_threads(3)
+#pragma omp parallel for schedule(static,1) num_threads(4)
 			for (int y = 0; y < (int)tsize; ++y) {
 				cube_t thread_grass_blocker;
 
