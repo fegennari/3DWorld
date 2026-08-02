@@ -1070,7 +1070,7 @@ bool check_region_int(cube_t const &region, vect_cube_t const &cubes) { // has_b
 }
 void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 
-	//highres_timer_t timer("Create Tile Weights Texture"); // 503 295.364 4.1036 0.587205 | 525 407.762 7.9875 0.776689
+	//highres_timer_t timer("Create Tile Weights Texture"); // 503 295.364 4.1036 0.587205 | 512 401.578 7.877 0.784333
 	assert(zvals.size() == zvsize*zvsize);
 	unsigned const tsize(stride);
 	int sand_tex_ix(-1), dirt_tex_ix(-1), grass_tex_ix(-1), rock_tex_ix(-1), snow_tex_ix(-1);
@@ -1239,10 +1239,10 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 			} // for x
 		} // for y
 		weights_tsize = tsize;
-		unsigned const tsize_bs(2), sz_factor(1 << tsize_bs);
+		unsigned const tsize_bs(3), sz_factor(1 << tsize_bs);
 
 		if (has_city_grass && sz_factor > 1) { // increase weights texture resolution to more accurately control grass placement within cities
-			//highres_timer_t timer("Create Tile Weights Grass"); // 33 40.5606 1.7726 1.22911 | 29 99.6234 5.4276 3.43529
+			//highres_timer_t timer("Create Tile Weights Grass"); // 33 40.5606 1.7726 1.22911 | 27 96.1558 5.1489 3.56133
 			float const hr_dx(DX_VAL/sz_factor), hr_dy(DY_VAL/sz_factor), hr_half_dxy(HALF_DXY/sz_factor);
 			weights_tsize *= sz_factor;
 			tsize_bitshift = tsize_bs;
@@ -1259,7 +1259,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 					bool add_grass(0);
 
 					if (check_inside_city(city_query_pos, HALF_DXY)) {
-						bool const check_grass(mesh_weight_data[off+2] == 0 && city_grass_bcube.contains_pt_xy(city_query_pos)); // inside city but no grass placed
+						bool const check_grass(mesh_weight_data[off+2] == 0 && city_grass_bcube.contains_pt_xy_exp(city_query_pos, HALF_DXY)); // inside city but no grass placed
 
 						for (unsigned yy = 0; yy < sz_factor; ++yy) {
 							for (unsigned xx = 0; xx < sz_factor; ++xx) {
@@ -1365,8 +1365,8 @@ void tile_t::add_grass_block_at(unsigned x, unsigned y, float mhmin, float mhmax
 		gb.zmax = mhmax;
 	}
 	else {
-		gb.zmin = min(gb.zmin, mhmin);
-		gb.zmax = max(gb.zmax, mhmax);
+		min_eq(gb.zmin, mhmin);
+		max_eq(gb.zmax, mhmax);
 	}
 }
 
