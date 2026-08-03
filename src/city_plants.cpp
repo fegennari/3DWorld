@@ -89,7 +89,7 @@ void hedge_draw_t::draw_and_clear(shader_t &s) {
 
 // ivy_manager_t
 
-void ivy_wall_t::gen(cube_t const &wall, float leaf_sz, unsigned face_mask, bool rand_select, rand_gen_t &rgen) {
+void ivy_wall_t::gen(cube_t const &wall, vect_cube_t const &avoid, float leaf_sz, unsigned face_mask, bool rand_select, rand_gen_t &rgen) {
 	//highres_timer_t timer("Gen Ivy"); // 127 147.263 3.2178 1.15955
 	// maintained_amt really should be per-yard, not per-wall, but the mapping from yards to walls isn't tracked, and both faces of a wall and processed together
 	maintained_amt = CLIP_TO_01(rgen.rand_uniform(-1.0, 3.0)); // more often maintained
@@ -100,7 +100,7 @@ void ivy_wall_t::gen(cube_t const &wall, float leaf_sz, unsigned face_mask, bool
 	for (unsigned n = 0; n < 4; ++n) { // {-X, +X, -Y, +Y} sides
 		if (!(face_mask & (1<<n))) continue; // face not enabled
 		if (rand_select && rgen.rand_float() < 0.3) continue; // no ivy on this face
-		place_on_wall_face(wall, (n>>1), (n&1), leaf_sz, leaf_verts, branch_verts, branch_ixs, rgen);
+		place_on_wall_face(wall, avoid, (n>>1), (n&1), leaf_sz, leaf_verts, branch_verts, branch_ixs, rgen);
 	}
 	assert(leaf_verts.empty() == branch_verts.empty());
 	if (leaf_verts.empty()) return; // empty
@@ -340,7 +340,7 @@ public:
 	}
 }; // end ivy_builder_t
 
-void ivy_wall_t::place_on_wall_face(cube_t const &wall, bool dim, bool dir, float leaf_sz,
+void ivy_wall_t::place_on_wall_face(cube_t const &wall, vect_cube_t const &avoid, bool dim, bool dir, float leaf_sz,
 	vector<vertex_t> &lverts, vector<vertex_t> &bverts, vector<unsigned> &bixs, rand_gen_t &rgen)
 {
 	// generation steps:
@@ -360,12 +360,16 @@ void ivy_wall_t::place_on_wall_face(cube_t const &wall, bool dim, bool dir, floa
 	vector<float> root_vals;
 
 	for (unsigned n = 0; n < num_roots; ++n) {
+		float const branch_radius(rgen.rand_uniform(0.08, 0.12)*leaf_sz), seg_len(12.0*branch_radius);
 		// find root pos at base of wall that's not too close to a previous root
 		bool root_valid(0);
 		point root;
+		root.z    = wall.z1(); // assume this is the ground
+		root[dim] = wall_face + branch_radius*dsign; // move slightly away from the surface
 
 		for (unsigned N = 0; N < 100 && !root_valid; ++N) {
 			root[!dim] = rgen.rand_uniform(pos_lo, pos_hi);
+			if (check_vect_cube_contains_pt(avoid, root)) continue; // blocked
 			root_valid = 1;
 
 			for (float const &v : root_vals) {
@@ -374,10 +378,6 @@ void ivy_wall_t::place_on_wall_face(cube_t const &wall, bool dim, bool dir, floa
 			root_vals.push_back(root[!dim]);
 		} // for N
 		if (!root_valid) break; // no more roots can be placed
-		// determine branch size
-		float const branch_radius(rgen.rand_uniform(0.08, 0.12)*leaf_sz), seg_len(12.0*branch_radius);
-		root.z    = wall.z1(); // assume this is the ground
-		root[dim] = wall_face + branch_radius*dsign; // move slightly away from the surface
 		// add branches; main branch in cylinder segments, then connect secondary branches
 		unsigned const num_branches(6 + (rgen.rand() % 3)); // 6-8
 		point pos(root);
@@ -434,6 +434,7 @@ void ivy_wall_t::place_on_wall_face(cube_t const &wall, bool dim, bool dir, floa
 						}
 						pos2 += (rgen.rand_uniform(0.8, 1.2)*seg_len)*new_dir;
 					}
+					if (check_vect_cube_contains_pt(avoid, pos2)) continue; // blocked
 					bool const was_horizontal(is_horizontal);
 					if (!builder.add_branch_seg(pos, pos2, radius, radius, (S == 0), is_horizontal)) continue; // constant radius; reject if branch can't be placed
 					if (was_horizontal) {ivy_faces |= 3;} // mark both faces as having ivy since the top of the wall will be visible from both sides
@@ -477,6 +478,7 @@ void ivy_wall_t::place_on_wall_face(cube_t const &wall, bool dim, bool dir, floa
 						if (S == 0) {new_dir = adj_dir;} // new branch
 						else {new_dir = (0.9*new_dir + 0.1*adj_dir).get_norm();} // continuation
 						point pos2(pos + (rgen.rand_uniform(0.7, 1.0)*seg_len)*new_dir); // start in the new direction
+						if (check_vect_cube_contains_pt(avoid, pos2)) continue; // blocked
 						if (!builder.add_branch_seg(pos, pos2, radius, radius, (S == 0), is_horizontal, 1)) continue; // not_on_wall=1
 						new_dir.z -= 0.2; // sags with the weight of each new segment
 						cur_dir = new_dir;
@@ -507,7 +509,9 @@ void ivy_manager_t::clear() {
 	for (auto &kv : ivy_walls) {kv.second.clear();}
 	ivy_walls.clear();
 }
-void ivy_manager_t::add_wall(cube_t const &wall, bool dim, unsigned skip_dirs, unsigned wall_ix, unsigned plot_ix, unsigned city_ix, float leaf_sz, point const &camera_bs) {
+void ivy_manager_t::add_wall(cube_t const &wall, vect_cube_t const &avoid, bool dim, unsigned skip_dirs,
+	unsigned wall_ix, unsigned plot_ix, unsigned city_ix, float leaf_sz, point const &camera_bs)
+{
 	if (city_ix != cur_city_ix) { // city change
 		cur_city_ix = city_ix;
 		clear();
@@ -527,7 +531,7 @@ void ivy_manager_t::add_wall(cube_t const &wall, bool dim, unsigned skip_dirs, u
 		rand_gen_t rgen;
 		rgen.set_state(wall_ix+1, plot_ix+1);
 		rgen.rand_mix();
-		w.gen(wall, leaf_sz, face_mask, rand_select, rgen);
+		w.gen(wall, avoid, leaf_sz, face_mask, rand_select, rgen);
 	}
 	else { // existing wall
 		assert(w.leaves.bcube == wall && w.branches.bcube == wall);

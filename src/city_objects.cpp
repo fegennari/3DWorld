@@ -477,7 +477,7 @@ void divider_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_sc
 		}
 		unsigned const skip_dirs((type == DIV_HOUSE_WALL) ? (1<<unsigned(!dir)) : 0); // house walls skip the interior dir
 		float const leaf_sz(0.0075*city_params.road_width);
-		dstate.ivy_manager.add_wall(wall_clipped, dim, skip_dirs, divider_ix, plot_ix, city_ix, leaf_sz, dstate.camera_bs);
+		dstate.ivy_manager.add_wall(wall_clipped, ivy_avoid, dim, skip_dirs, divider_ix, plot_ix, city_ix, leaf_sz, dstate.camera_bs);
 	}
 }
 bool divider_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
