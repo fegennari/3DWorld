@@ -5378,7 +5378,7 @@ public:
 		}
 	}
 
-	void get_ivy_house_walls_for_plot(cube_t const &plot, vect_cube_with_ix_t &walls, rand_gen_t &rgen) const { // can't use query_for_cube() because we need rgen
+	void get_ivy_house_walls_for_plot(cube_t const &plot, vect_wall_with_windows_t &walls, rand_gen_t &rgen) const { // can't use query_for_cube() because we need rgen
 		if (empty()) return; // nothing to do
 		unsigned ixr[2][2];
 		get_grid_range(plot, ixr);
@@ -6132,7 +6132,7 @@ void get_building_ext_basement_bcubes(cube_t const &city_bcube, vect_cube_t &bcu
 void get_walkways_for_city(cube_t const &city_bcube, vect_bldg_walkway_t &walkways ) {building_creator_city.get_walkways_for_city(city_bcube, walkways);}
 void get_building_power_points(cube_t const &xy_range, vector<point> &ppts         ) {building_creator_city.get_power_points(xy_range, ppts);}
 void add_building_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways    ) {building_creator_city.add_driveways_for_plot(plot, driveways);}
-void get_ivy_house_walls_for_plot(cube_t const &plot, vect_cube_with_ix_t &walls, rand_gen_t &rgen) {building_creator_city.get_ivy_house_walls_for_plot(plot, walls, rgen);}
+void get_ivy_house_walls_for_plot(cube_t const &plot, vect_wall_with_windows_t &walls, rand_gen_t &rgen) {building_creator_city.get_ivy_house_walls_for_plot(plot, walls, rgen);}
 unsigned get_type_of_closest_city_building(point const &pos_bs, cube_t const &plot ) {return building_creator_city.get_type_of_closest_building(pos_bs, plot);}
 
 void add_buildings_exterior_lights(vector3d const &xlate, cube_t &lights_bcube) {

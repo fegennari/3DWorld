@@ -3427,7 +3427,7 @@ bool building_t::is_cube_visible_through_extb_door(point const &viewer, cube_t c
 	return (door_bc.contains_pt(viewer) || is_cube_visible_through_door(viewer, c, extb_door));
 }
 
-void building_t::get_ivy_walls(vect_cube_with_ix_t &walls, rand_gen_t &rgen) const {
+void building_t::get_ivy_walls(vect_wall_with_windows_t &walls, rand_gen_t &rgen) const {
 	for (unsigned p = 0; p < min(4U, (unsigned)real_num_parts); ++p) {
 		for (unsigned dim = 0; dim < 2; ++dim) {
 			for (unsigned dir = 0; dir < 2; ++dir) {
@@ -3446,10 +3446,36 @@ void building_t::get_ivy_walls(vect_cube_with_ix_t &walls, rand_gen_t &rgen) con
 					wall_exp.expand_by_xy(wall_thick);
 					if (driveway.intersects_xy(wall_exp)) continue; // no ivy over driveway; only handles houses with garages
 				}
-				// clip to avoid windows?
 				wall.z2() -= get_fc_thickness(); // avoid clipping through the bottom of the roof/gutter
 				min_eq(wall.z2(), (ground_floor_z1 + 2.0f*get_window_vspace())); // limit to 2 floors
 				walls.emplace_back(wall, (2*dim + (!dir)));
+				// add windows; similar to building_t::get_all_windows()
+				float const window_h_border(WINDOW_BORDER_MULT*get_window_h_border()), window_v_border(WINDOW_BORDER_MULT*get_window_v_border()); // (0, 1) range
+				vect_vnctcc_t const &wall_quad_verts(get_all_drawn_window_verts_as_quads());
+
+				for (unsigned i = 0; i < wall_quad_verts.size(); i += 4) { // iterate over each quad
+					if (fabs(wall_quad_verts[i].v[dim] - wall_pos) > wall_thick) continue; // window not on this wall
+					cube_t c;
+					float tx1, tx2, tz1, tz2;
+					if (!get_wall_quad_window_area(wall_quad_verts, i, c, tx1, tx2, tz1, tz2)) continue;
+					if ((c.dy() < c.dx()) != dim) continue;
+					float const window_width(c.get_sz_dim(!dim)/(tx2 - tx1)), window_height(c.dz()/(tz2 - tz1)); // window_height should be equal to window_vspacing
+					float const border_xy(window_width*window_h_border), border_z(window_height*window_v_border);
+					cube_t window(c); // copy dim <dim>
+					window.expand_in_dim(dim, wall_thick); // expand to nonzero area
+
+					for (float z = tz1; z < tz2; z += 1.0) { // each floor
+						float const bot_edge(c.z1() + (z - tz1)*window_height);
+						set_cube_zvals(window, bot_edge+border_z, bot_edge+window_height-border_z); // subtract off border to get interior/open part of window
+
+						for (float xy = tx1; xy < tx2; xy += 1.0) { // windows along each wall
+							float const low_edge(c.d[!dim][0] + (xy - tx1)*window_width);
+							window.d[!dim][0] = low_edge + border_xy; // subtract off border to get interior/open part of window
+							window.d[!dim][1] = low_edge + window_width - border_xy;
+							if (window.intersects(wall)) {walls.back().windows.push_back(window);}
+						} // for xy
+					} // for z
+				} // for i
 			} // for dim
 		} // for dim
 	} // for p

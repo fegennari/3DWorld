@@ -64,6 +64,12 @@ drink_can_params_t const drink_can_params[NUM_DRINK_CAN_TYPES] = {
 unsigned const NUM_SALE_SIGN_TEXTS = 5;
 std::string const sale_sign_text[NUM_SALE_SIGN_TEXTS] = {"SALE", "SALE", "CLEARANCE", " STORE\nCLOSING\n SALE", "50% OFF"};
 
+struct wall_with_windows_t : public cube_with_ix_t {
+	wall_with_windows_t(cube_t const &c, unsigned ix_) : cube_with_ix_t(c, ix_) {}
+	vect_cube_t windows;
+};
+typedef vector<wall_with_windows_t> vect_wall_with_windows_t;
+
 class light_ix_assign_t {
 	vector<pair<point2d<float>, unsigned>> cur;
 	unsigned next_ix=0;
@@ -1998,7 +2004,7 @@ struct building_t : public building_geom_t {
 	bool get_nearby_ext_door_verts(building_draw_t *bdraw, shader_t &s, point const &pos, vector3d const &view_dir, float dist, bool only_open);
 	void get_ext_door_verts(building_draw_t &bdraw, point const &viewer, vector3d const &view_dir, int skip_door_ix) const;
 	bool get_all_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, vector<point> const &pts, float dist);
-	void get_ivy_walls(vect_cube_with_ix_t &walls, rand_gen_t &rgen) const;
+	void get_ivy_walls(vect_wall_with_windows_t &walls, rand_gen_t &rgen) const;
 	bool add_parking_structure_entrance(rand_gen_t rgen);
 	bool add_parking_structure_bathroom(rand_gen_t rgen);
 	void get_parking_struct_ext_walls(vect_cube_with_ix_t &walls, bool exterior_surfaces) const;
