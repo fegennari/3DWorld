@@ -1592,9 +1592,10 @@ void building_t::add_balconies(rand_gen_t &rgen, vect_cube_t &balconies) { // an
 	unsigned const init_objs_sz(objs.size());
 	vect_cube_t avoid;
 	if (!objs.empty() && (objs.back().type == TYPE_FESCAPE || objs.back().type == TYPE_LADDER)) {avoid.push_back(objs.back());} // avoid fire escape or ladder
-	if (has_driveway()) {avoid.push_back(driveway);}
+	if (!driveway     .is_all_zeros()) {avoid.push_back(driveway     ); avoid.back().z2() += floor_spacing;} // extend up a floor to make space for a truck
+	if (!city_driveway.is_all_zeros()) {avoid.push_back(city_driveway); avoid.back().z2() += floor_spacing;}
+	if (!city_walkway .is_all_zeros()) {avoid.push_back(city_walkway );}
 	if (!deck_bounds  .is_all_zeros()) {avoid.push_back(deck_bounds  );}
-	if (!city_driveway.is_all_zeros()) {avoid.push_back(city_driveway);}
 
 	// find suitable rooms for balconies; since room walls will never intersect windows, we can make the balcony the same width to avoid intersecting windows
 	for (auto room = interior->rooms.begin(); room != interior->rooms.end(); ++room) {
