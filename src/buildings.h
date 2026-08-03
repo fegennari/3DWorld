@@ -1998,6 +1998,7 @@ struct building_t : public building_geom_t {
 	bool get_nearby_ext_door_verts(building_draw_t *bdraw, shader_t &s, point const &pos, vector3d const &view_dir, float dist, bool only_open);
 	void get_ext_door_verts(building_draw_t &bdraw, point const &viewer, vector3d const &view_dir, int skip_door_ix) const;
 	bool get_all_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, vector<point> const &pts, float dist);
+	void get_ivy_walls(vect_cube_with_ix_t &walls, rand_gen_t &rgen) const;
 	bool add_parking_structure_entrance(rand_gen_t rgen);
 	bool add_parking_structure_bathroom(rand_gen_t rgen);
 	void get_parking_struct_ext_walls(vect_cube_with_ix_t &walls, bool exterior_surfaces) const;

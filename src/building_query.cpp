@@ -3427,6 +3427,34 @@ bool building_t::is_cube_visible_through_extb_door(point const &viewer, cube_t c
 	return (door_bc.contains_pt(viewer) || is_cube_visible_through_door(viewer, c, extb_door));
 }
 
+void building_t::get_ivy_walls(vect_cube_with_ix_t &walls, rand_gen_t &rgen) const {
+	for (unsigned p = 0; p < min(4U, (unsigned)real_num_parts); ++p) {
+		for (unsigned dim = 0; dim < 2; ++dim) {
+			for (unsigned dir = 0; dir < 2; ++dir) {
+				if (door_sides[p] & (1U << (2*dim + dir))) continue; // skip walls with doors
+				cube_t const &part(parts[p]);
+				if (part.z1() != ground_floor_z1) continue; // skip upper parts and basements
+				float const wall_pos(bcube.d[dim][dir]), wall_thick(get_wall_thickness());
+				if (part.d[dim][dir] != wall_pos) continue; // edge of part not along building bcube perimeter; may be interior wall, skip
+				if (rgen.rand_float() > 0.1)      continue; // no ivy on this wall
+				cube_t wall(part);
+				// shrink to zero area extended slightly away from wall, in front of the window
+				wall.d[dim][dir] = wall.d[dim][!dir] = wall_pos + (dir ? 1.0 : -1.0)*0.15*wall_thick;
+
+				if (has_driveway()) {
+					cube_t wall_exp(wall);
+					wall_exp.expand_by_xy(wall_thick);
+					if (driveway.intersects_xy(wall_exp)) continue; // no ivy over driveway; only handles houses with garages
+				}
+				// clip to avoid windows?
+				wall.z2() -= get_fc_thickness(); // avoid clipping through the bottom of the roof/gutter
+				min_eq(wall.z2(), (ground_floor_z1 + 2.0f*get_window_vspace())); // limit to 2 floors
+				walls.emplace_back(wall, (2*dim + (!dir)));
+			} // for dim
+		} // for dim
+	} // for p
+}
+
 void building_t::print_building_manifest() const { // Note: skips expanded_objs
 	cout << TXT(parts.size()) << TXT(doors.size()) << TXT(details.size());
 
