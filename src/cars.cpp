@@ -12,6 +12,7 @@
 bool const DYNAMIC_HELICOPTERS = 1;
 bool const POLICE_LIGHT_SHADOW = 1;
 float const MIN_CAR_STOP_SEP   = 0.25; // in units of car lengths
+float const CAR_DW_SPEED_MULT  = 0.40;
 
 extern bool tt_fire_button_down, enable_hcopter_shadows, city_action_key, camera_in_building, player_in_walkway, drew_car_wash_water;
 extern int display_mode, game_mode, map_mode, animate2, player_in_basement, player_in_closet, player_in_attic, camera_surf_collide;
@@ -300,7 +301,7 @@ bool car_t::run_enter_driveway_logic(vector<car_t> const &cars, driveway_t const
 		turn_dir = (dw_turn_dir ? (uint8_t)TURN_RIGHT : (uint8_t)TURN_LEFT);
 		begin_turn(); // capture car centerline before the turn
 	}
-	set_target_speed(0.4); // 40% of max speed
+	set_target_speed(CAR_DW_SPEED_MULT); // 40% of max speed
 	maybe_apply_turn(driveway.get_centerline(), 0); // for_driveway=0, since it's still in the road
 
 	if (turn_dir == TURN_NONE) { // turn has been completed
@@ -332,7 +333,7 @@ void car_t::pull_into_driveway(driveway_t const &driveway, rand_gen_t &rgen) {
 			car_pos = bcube.get_center_dim(dim);
 		}
 		stop_pos = park_space_cent[dim];
-		set_target_speed(0.4); // 40% of max speed - reset in case we stopped due to a pedestrian in the way
+		set_target_speed(CAR_DW_SPEED_MULT); // 40% of max speed - reset in case we stopped due to a pedestrian in the way
 	}
 	else { // not a parking lot
 		bool const is_gs_or_cw(driveway.is_gas_station());
@@ -350,11 +351,12 @@ void car_t::pull_into_driveway(driveway_t const &driveway, rand_gen_t &rgen) {
 				}
 			}
 			// reset speed in case we stopped due to a pedestrian in the way; this may run someone over, but that's better than getting stuck
-			set_target_speed(0.4);
+			set_target_speed(CAR_DW_SPEED_MULT);
 			if (!need_gas && !need_wash) return; // continue moving until it's time to turn
 			stop_pos = driveway.stop_loc; // not yet stopped, continue to gas pump or wash bay
 		}
 		else { // house driveway; stop in the center
+			set_target_speed(CAR_DW_SPEED_MULT); // reset speed in case we stopped due to a pedestrian in the way; car will slowly inch forward
 			stop_pos = driveway.get_center_dim(driveway.dim);
 		}
 		if (dim != driveway.dim || dir == driveway.dir) {
@@ -406,7 +408,7 @@ void car_t::back_or_pull_out_of_driveway(driveway_t const &driveway) {
 		in_reverse = (dir != driveway.dir); // back up if pointing away from the road
 		turn_dir   = (in_reverse ? (int)TURN_LEFT : (int)TURN_RIGHT); // always turn right when exiting the driveway/entering the road (left when backing out)
 	}
-	set_target_speed(in_reverse ? 0.2 : (driveway.is_parking_lot() ? 0.4 : 0.3)); // 20-40% of max speed
+	set_target_speed(in_reverse ? 0.2 : (driveway.is_parking_lot() ? CAR_DW_SPEED_MULT : 0.3)); // 20-40% of max speed
 	begin_turn(); // capture car centerline before the turn
 }
 // returns 1 when the exit + turn are complete
