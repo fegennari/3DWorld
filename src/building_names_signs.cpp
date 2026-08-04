@@ -666,8 +666,10 @@ bool building_t::add_sign_by_door(tquad_with_ix_t const &door, bool outside, std
 	cube_t c(door_bcube);
 
 	if (outside) { // outside, place above the door; larger for restaurants
+		bool const maybe_stacked(real_num_parts > 1);
 		c.z2() = door_bcube.z2() + 0.1*height;
-		min_eq(c.z2(), get_first_part().z2()); // clamp to top of first part; needed for 1 floor buildings
+		// clamp to top of first part; needed for 1 floor buildings; reduce by another 5% for ground floor of stacked part to handle roof overhang/gutter
+		min_eq(c.z2(), (get_first_part().z2() - (maybe_stacked ? 0.05f : 0.0f)*height));
 	}
 	else { // inside, place hanging near the top of the door
 		c.z2() = c.z1() + get_floor_ceil_gap(); // right against the ceiling; applies to ground floor and walkway doors
