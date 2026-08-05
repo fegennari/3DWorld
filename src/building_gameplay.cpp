@@ -235,6 +235,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_VENT_HOOD ] = bldg_obj_type_t(0, 0, 1, 0, 1, 0, 1, 500,  200.00, "ventilation hood"); // rat_coll set since it's spider collidable
 	bldg_obj_types[TYPE_COM_FRIDGE] = bldg_obj_type_t(1, 1, 1, 1, 1, 0, 3, 400.0, 200.0, "commercial fridge"); // pickup=1 because it can be picked from (doors occlude objects)
 	bldg_obj_types[TYPE_BOILER    ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 2,  0.0,  0.0,   "boiler");
+	bldg_obj_types[TYPE_ROCK_WALL ] = bldg_obj_type_t(1, 0, 0, 0, 1, 0, 2,  0.0,  0.0,   "rock wall");
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");
@@ -3139,7 +3140,7 @@ bool building_t::apply_paint(point const &pos_, vector3d const &dir_, colorRGBA 
 
  		if ((is_wall  && (type == TYPE_PICTURE || type == TYPE_WBOARD || type == TYPE_MIRROR || type == TYPE_DRESS_MIR)) ||
 			(is_floor && (type == TYPE_RUG || type == TYPE_FLOORING)) ||
-			(type == TYPE_POOL_TILE && i->shape == SHAPE_CUBE))
+			(type == TYPE_POOL_TILE && i->shape == SHAPE_CUBE) || type == TYPE_ROCK_WALL)
 		{
 			if (!line_int_cube_get_t(pos, pos2, *i, tmin)) continue;
 			target = *i; // Note: we only need to update tmin and target; normal should be unchanged
@@ -3148,7 +3149,7 @@ bool building_t::apply_paint(point const &pos_, vector3d const &dir_, colorRGBA 
 				target_obj      = &*i;
 				target_obj_tmin = tmin;
 			}
-			if (type == TYPE_WBOARD || type == TYPE_MIRROR || type == TYPE_DRESS_MIR || type == TYPE_FLOORING || type == TYPE_POOL_TILE) {hit_color = i->get_color();}
+			else {hit_color = i->get_color();}
 		}
 		else if (type == TYPE_CLOSET) {
 			if (!line_int_cube_get_t(pos, pos2, *i, tmin)) continue;

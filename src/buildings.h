@@ -989,6 +989,7 @@ struct building_room_geom_t {
 	void add_test_tube(room_object_t const &c);
 	void add_flooring (room_object_t const &c, float tscale);
 	void add_pool_tile(room_object_t const &c, float tscale);
+	void add_rock_wall(room_object_t const &c, float tscale);
 	void add_wall_trim(room_object_t const &c, bool for_closet=0);
 	void add_romex_wire(cube_t const &wire, bool dim, bool flat_dim, rand_gen_t &rgen);
 	void add_wall_gap (room_object_t const &c, tid_nm_pair_t const &wall_tex);
@@ -2574,7 +2575,7 @@ private:
 	bool get_door_path_and_place_area(tquad_with_ix_t const &door, room_t const &room, cube_t &door_path, cube_t &place_area);
 	void add_couches_to_room (rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned const counts[4]);
 	bool add_pool_room_objs  (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
-	void add_room_wall_tile(cube_t const &room, unsigned room_id, float tot_light_amt);
+	void add_room_wall_tile(cube_t const &room, unsigned room_id, float tot_light_amt, unsigned tile_type);
 	void add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
 	bool add_retail_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, light_ix_assign_t &light_ix_assign);
 	void add_shopping_carts_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float light_amt, unsigned objs_start, unsigned max_carts);

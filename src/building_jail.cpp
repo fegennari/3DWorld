@@ -874,7 +874,7 @@ bool building_t::add_shower_room_objs(rand_gen_t rgen, room_t const &room, float
 	room_ext.expand_by_xy(0.5*wall_thick); // expand to include part sep walls, which don't actually overlap the room
 	set_cube_zvals(room_ext, zval, ceil.z1());
 	unsigned const wall_tile_start(objs.size());
-	add_room_wall_tile(room_ext, room_id, tot_light_amt);
+	add_room_wall_tile(room_ext, room_id, tot_light_amt, TYPE_POOL_TILE);
 	unsigned const ext_wall_tile_end(objs.size());
 	float const floor_spacing(get_window_vspace()), clearance(get_min_front_clearance_inc_people());
 	// add central wall if large enough

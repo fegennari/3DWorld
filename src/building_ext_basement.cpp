@@ -1197,10 +1197,8 @@ void building_t::add_secret_underground_rooms(ext_basement_room_params_t &P, ran
 }
 
 bool building_t::add_cave_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id) {
-	float light_amt(1.0);
-	// add random vertical walls + blockers, and ceiling floor texture?
-	return 0; // not yet enabled
 	if (rgen.rand_bool()) return 0; // 50% of rooms are caves
+	float light_amt(1.0);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const flooring_obj_ix(objs.size()); // should be exactly one, since there are no stairs or elevator cuts
 	zval = add_flooring(room, zval, room_id, light_amt, FLOORING_ROCK);
@@ -1209,6 +1207,8 @@ bool building_t::add_cave_objs(rand_gen_t rgen, room_t const &room, float zval, 
 	set_cube_zvals(flooring_top, (ceiling_zval - flooring_top.dz()), ceiling_zval);
 	flooring_top.flags |= RO_FLAG_ADJ_TOP; // top ceiling - draw bottom surface
 	objs.push_back(flooring_top);
+	add_room_wall_tile(room, room_id, light_amt, TYPE_ROCK_WALL);
+	// add random vertical walls + blockers inside the room?
 	return 1;
 }
 

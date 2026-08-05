@@ -2648,6 +2648,11 @@ void building_room_geom_t::add_pool_tile(room_object_t const &c, float tscale) {
 	}
 }
 
+void building_room_geom_t::add_rock_wall(room_object_t const &c, float tscale) {
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(ROCK_TEX, tscale), 0, 1)); // unshadowed, small
+	mat.add_cube_to_verts(c, c.color, tex_origin, get_face_mask(c.dim, !c.dir)); // draw only outside face
+}
+
 void building_room_geom_t::add_wall_trim(room_object_t const &c, bool for_closet) { // uses mats_detail
 	rgeom_mat_t &mat(get_untextured_material(0, 0, (for_closet ? 1 : 2))); // inc_shadows=0, dynamic=0, small=2 (1 for closet)
 
@@ -7576,6 +7581,7 @@ void building_room_geom_t::add_boiler(room_object_t const &c) {
 	colorRGBA const color(apply_light_color(c));
 	rgeom_mat_t &mat(get_metal_material(1)); // shadowed
 	mat.add_ortho_cylin_to_verts(c, color, c.dim, 1, 1); // draw ends
+	// TODO: something more than a simple cylinder
 }
 
 void add_grid_of_bars(rgeom_mat_t &mat, colorRGBA const &color, cube_t const &c, unsigned num_vbars, unsigned num_hbars, float vbar_hthick,
