@@ -908,7 +908,27 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 	room.set_has_br_stalls();
 	
 	if (is_restroom()) { // park restrooms are special
-		add_room_wall_tile(room, room_id, tot_light_amt);
+		float const tile_thickness(get_flooring_thick()), door_expand(wall_thickness), tile_z2(ground_floor_z1 + 0.57*floor_spacing); // below windows in park restrooms
+		cube_t const tile_bounds(get_room_wall_bounds(get_room(room_id))); // Note: not using the room passed in
+
+		for (unsigned dim = 0; dim < 2; ++dim) {
+			for (unsigned dir = 0; dir < 2; ++dir) {
+				float const wall_pos(tile_bounds.d[dim][dir]);
+				cube_t tile(tile_bounds);
+				tile.d[dim][ dir] = wall_pos;
+				tile.d[dim][!dir] = wall_pos + (dir ? -1.0 : 1.0)*tile_thickness;
+				tile.z2() = tile_z2;
+				expand_to_nonzero_area(tile, tile_thickness, dim);
+				vect_cube_t tiles{tile};
+
+				for (tquad_with_ix_t const &d : doors) { // subtract exterior doors
+					cube_t sub(d.get_bcube());
+					sub.expand_in_dim(dim, door_expand); // make nonzero thickness
+					if (sub.intersects(tile)) {subtract_cube_from_cubes(sub, tiles);}
+				}
+				for (cube_t const &t : tiles) {objs.emplace_back(t, TYPE_POOL_TILE, room_id, dim, dir, RO_FLAG_NOCOLL);}
+			} // for dir
+		} // for dim
 	}
 	else {
 		// make sure doors start closed and unlocked, and flag them as auto_close;
