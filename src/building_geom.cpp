@@ -1858,7 +1858,9 @@ tquad_with_ix_t building_t::set_door_from_cube(cube_t const &c, bool dim, bool d
 						door_stack_t const &ds(interior->door_stacks[dsix]);
 						if (ds.z1() >= c.z2() || ds.z2() <= c.z1()) continue; // wrong floor
 						if (ds.get_true_bcube().intersects(c))      continue; // skip self
-						if (ds.get_open_door_path_bcube().intersects(test_bcube)) {int_other_door = 1; break;}
+						// closet doors that block this door are likely on the other side of the wall, or are placed later and should avoid this door when opening
+						cube_t const &test_bc2(ds.get_for_closet() ? ds.get_clearance_bcube() : ds.get_open_door_path_bcube());
+						if (test_bc2.intersects(test_bcube)) {int_other_door = 1; break;}
 					}
 					if (int_other_door) continue;
 
