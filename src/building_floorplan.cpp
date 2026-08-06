@@ -40,7 +40,7 @@ void building_t::remove_section_from_cube_and_add_door(cube_t &c, cube_t &c2, fl
 	// remove a section from this cube; c is input+output cube, c2 is other output cube
 	assert(v1 < v2);
 	assert(v1 > c.d[xy][0] && v2 < c.d[xy][1]); // v1/v2 must be interior values for cube
-	bool const hinge_side(xy ^ open_dir ^ (v1-c.d[xy][0] < c.d[xy][1]-v1) ^ 1); // put the hinge on the side closer to the end of the wall
+	bool const hinge_side(xy ^ open_dir ^ (v1-c.d[xy][0] < c.d[xy][1]-v2) ^ 1); // put the hinge on the side closer to the end of the wall
 	c2 = c; // clone first cube
 	c.d[xy][1] = v1; c2.d[xy][0] = v2; // c=low side, c2=high side
 	// add a door stack and doors
@@ -3034,8 +3034,9 @@ bool building_t::clip_part_ceiling_for_stairs(cube_t const &c, vect_cube_t &out,
 
 void building_interior_t::assign_door_conn_rooms(unsigned start_ds_ix) {
 	assert(start_ds_ix <= door_stacks.size());
+	auto const ds_start(door_stacks.begin()+start_ds_ix);
 
-	for (auto d = door_stacks.begin()+start_ds_ix; d != door_stacks.end(); ++d) {
+	for (auto d = ds_start; d != door_stacks.end(); ++d) {
 		if (d->get_for_closet() || d->get_backrooms()) continue; // excluded
 		if (d->is_bars()) continue; // jail cell door should have already been assigned
 		unsigned const dsix(d - door_stacks.begin());
@@ -3101,11 +3102,32 @@ void building_interior_t::assign_door_conn_rooms(unsigned start_ds_ix) {
 			d->conn_room[s] = ds_room_ix;
 		} // for s
 		assert(d->conn_room[0] != d->conn_room[1]); // can't be connected to the same room on both sides
+		// check for optimal hinge side
+		room_t const &room(rooms[d->conn_room[d->open_dir]]);
+		float const center(d->get_center_dim(!d->dim));
+		d->hinge_side = (d->dim ^ d->open_dir ^ (center-room.d[!d->dim][0] < room.d[!d->dim][1]-center)); // update based on room the door opens into
+		// check if door intersects a previous door if it opens this way and reverse the hinge; reverse back if both directions intersect
+		unsigned const lookback_amt (min((d - ds_start),          (ptrdiff_t)32)); // look back  at most 32 doors (optimization)
+		unsigned const lookahead_amt(min((door_stacks.end() - d), (ptrdiff_t)32)); // look ahead at most 32 doors (optimization)
+		float int_amt[2] = {}; // intersecting area of other door for each hing_side
+
+		for (unsigned e = 0; e < 2; ++e) {
+			cube_t const open_bcube(d->get_open_door_path_bcube());
+
+			for (auto D = d-lookback_amt; D < d+lookahead_amt; ++D) {
+				if (D == d || D->z1() >= d->z2() || d->z1() >= D->z2()) continue; // self or wrong zval
+				accumulate_shared_xy_area(open_bcube, D->get_clearance_bcube(), int_amt[e]);
+				if (D < d) {accumulate_shared_xy_area(open_bcube, D->get_open_door_path_bcube(), int_amt[e]);} // if other door hinge side has been set, include it's path
+			}
+			d->hinge_side ^= 1;
+		} // for e
+		if (int_amt[1] < int_amt[0]) {d->hinge_side ^= 1;} // swap hinge side to minimize intersecting area
 
 		for (unsigned dix = d->first_door_ix; dix < doors.size(); ++dix) {
 			door_t &door(doors[dix]);
 			if (!d->is_same_stack(door)) break; // moved to a different stack, done
 			for (unsigned n = 0; n < 2; ++n) {door.conn_room[n] = d->conn_room[n];} // copy rooms to doors
+			door.hinge_side = d->hinge_side;
 		}
 	} // for i
 }
