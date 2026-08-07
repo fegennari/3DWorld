@@ -2296,7 +2296,7 @@ public:
 				add_obj(cube_with_color_t(ret.first, ret.second, 0)); // is_round=0
 			}
 			else if (type == TYPE_WALL_GAP) {add_obj(cube_with_color_t(obj, BROWN, 0));}
-			else {add_obj(cube_with_color_t(obj, obj.get_color(), (obj.is_round() && obj.type != TYPE_PIPE)));}
+			else {add_obj(cube_with_color_t(obj, obj.get_color(), (obj.is_round() && !obj.is_horizontal_cylin())));}
 		} // for obj
 		cur_frame = frame_counter;
 	}
