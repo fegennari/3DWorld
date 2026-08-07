@@ -1163,9 +1163,20 @@ void building_t::gen_interior_int(rand_gen_t &rgen, unsigned gen_index, bool has
 				cube_t &wall(walls[w]); // take a reference here because a prev iteration push_back() may have invalidated it
 				// don't split warehouse/factory/restaurant/datacenter walls as they already have doors
 				if ((is_industrial() || is_restaurant() || is_conv_store() || is_datacenter()) && wall.z1() >= ground_floor_z1) break;
-				float const len(wall.get_sz_dim(!d)), min_split_len((pref_split ? 0.5 : 1.5)*min_wall_len); // = 2.0/6.0 * doorway_width
+				bool stairs_room(0);
+
+				if (!pref_split) { // 166734/1035663 => 167860/1048736 doors
+					// prefer split if the room to one side of the wall has stairs, so that we can connect more rooms to central stairs
+					cube_t wall_exp(wall);
+					wall_exp.expand_in_z(-fc_thick);
+					wall_exp.expand_in_dim( d, (min_wall_len - doorway_width)); // should cover the min room size
+					wall_exp.expand_in_dim(!d, -wall_thick);
+					if (has_bcube_int(wall_exp, interior->stairwells)) {stairs_room = 1;}
+				}
+				float const split_factor(pref_split ? 0.5 : (stairs_room ? 1.0 : 1.5));
+				float const len(wall.get_sz_dim(!d)), min_split_len(split_factor*min_wall_len); // = 2.0/6.0 * doorway_width
 				if (len < min_split_len) break; // not long enough to split - done
-				float min_dist_abs(min(1.5f*doorway_width, max(0.5f*doorway_width, 0.5f*min_split_len)));
+				float min_dist_abs(min(1.5f*doorway_width, max(0.5f*doorway_width, (stairs_room ? 0.25f : 0.5f)*min_split_len)));
 
 				if (jail_door) {
 					max_eq(min_dist_abs, 1.0f*doorway_width); // must have space for jail door to open most of the way (1.5x would be fully)

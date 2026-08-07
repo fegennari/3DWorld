@@ -1336,7 +1336,8 @@ struct door_base_t : public cube_t {
 	cube_t get_open_door_path_bcube() const;
 	cube_t get_open_door_bcube_for_room(cube_t const &room) const;
 	bool not_a_room_separator() const {return (on_stairs || get_for_closet() || get_backrooms() || get_bldg_conn() || get_small_room());}
-	bool is_same_stack(door_base_t const &d) const {return (d.x1() == x1() && d.y1() == y1());}
+	bool is_same_stack   (door_base_t const &d) const {return (d.x1() == x1() && d.y1() == y1());}
+	bool shares_room_with(door_base_t const &d) const {return (!d.no_room_conn() && (is_connected_to_room(d.conn_room[0]) || is_connected_to_room(d.conn_room[1])));}
 	bool is_connected_to_room(unsigned room_id) const {return (!no_room_conn() && (room_id == conn_room[0] || room_id == conn_room[1]) && !get_bldg_conn());}
 	bool no_room_conn() const {return (conn_room[0] == 0 && conn_room[1] == 0);}
 	bool use_min_open_amt() const {return (get_bldg_conn() || get_small_room());} // building connector doors don't have adj building info to determine open amount

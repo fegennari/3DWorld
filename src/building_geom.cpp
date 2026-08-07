@@ -2835,6 +2835,7 @@ bool has_stairs_bcube_int(cube_t const &bcube, vect_stairwell_t const &stairs, f
 		
 		if (tc.intersects(bcube)) { // intersects core stairs
 			if (!s.is_l_shape()) return 1; // L-shaped stairs are special
+			// below is for L-shaped stairs only
 			if (bcube.z2() >= s.z1() + approx_floor_spacing) return 1; // not on the bottom floor - counts as intersection
 			float const landing_width(doorway_width);
 			bool const dirs[2] = {s.dir, s.bend_dir};
