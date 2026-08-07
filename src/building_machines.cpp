@@ -752,6 +752,8 @@ bool building_t::add_machines_to_room(rand_gen_t rgen, room_t const &room, float
 			objs.emplace_back(v_duct, TYPE_DUCT, room_id, 0, 1, (RO_FLAG_ADJ_TOP | RO_FLAG_ADJ_BOT), tot_light_amt, SHAPE_CUBE, WHITE); // vertical; skip top and bottom
 		}
 	}
+	// maybe add a boiler
+	add_boiler_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);
 	// maybe add a ventilation and/or radiator fan on the wall
 	add_wall_fans_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);
 	return 1;

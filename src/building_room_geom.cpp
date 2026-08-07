@@ -7579,7 +7579,7 @@ void building_room_geom_t::add_commercial_fridge(room_object_t const &c, bool in
 
 void building_room_geom_t::add_boiler(room_object_t const &c) {
 	colorRGBA const color(apply_light_color(c));
-	rgeom_mat_t &mat(get_metal_material(1)); // shadowed
+	rgeom_mat_t &mat(get_metal_material(1, 0, 1)); // shadowed, small (not exterior visible)
 	mat.add_ortho_cylin_to_verts(c, color, c.dim, 1, 1); // draw ends
 	// TODO: something more than a simple cylinder
 }

@@ -203,10 +203,13 @@ bool building_t::add_office_utility_objs(rand_gen_t rgen, room_t const &room, fl
 	objs_start = interior->room_geom->objs.size(); // exclude this from collision checks
 	unsigned const num_water_heaters(add_water_heaters(rgen, room, zval, room_id, tot_light_amt, objs_start));
 	if (num_water_heaters == 0 && !is_apt_or_hotel()) return 0; // apartments and hotels have utility rooms even if there's no water heater
+	// add boiler(s)
+	unsigned const num_boilers(1);
+	for (unsigned n = 0; n < num_boilers; ++n) {add_boiler_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);}
 	// add one furnace per water heater
 	auto &objs(interior->room_geom->objs);
-	unsigned const furnaces_start(objs.size());
-	for (unsigned n = 0; n < num_water_heaters; ++n) {add_furnace_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);}
+	unsigned const num_furnaces(num_water_heaters), furnaces_start(objs.size());
+	for (unsigned n = 0; n < num_furnaces; ++n) {add_furnace_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);}
 	unsigned const furnaces_end(objs.size());
 	cube_t const place_area(get_walkable_room_bounds(room));
 	float const floor_spacing(get_window_vspace()), tzval(zval - TRANSFORMER_Z_SHIFT*0.45f*floor_spacing); // transformer is slightly below floor level
@@ -241,7 +244,7 @@ bool building_t::add_office_utility_objs(rand_gen_t rgen, room_t const &room, fl
 				if (objs[f].type == TYPE_BLOCKER) continue; // skip blockers
 				cube_t conn;
 				if (!connect_furnace_to_breaker_panel(objs[f], c, dim, dir, conn_height, conn)) continue;
-				if (is_obj_placement_blocked(conn, room, 1) || overlaps_other_room_obj(conn, objs_start, 0, &furnaces_start)) continue; // check water heaters only
+				if (is_obj_placement_blocked(conn, room, 1) || overlaps_other_room_obj(conn, objs_start, 0, &furnaces_start)) continue; // check water heaters and boilers only
 				objs.emplace_back(conn, TYPE_PIPE, room_id, !dim, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, LT_GRAY); // horizontal
 			}
 			break; // done
@@ -279,6 +282,17 @@ bool building_t::add_furnace_to_room(rand_gen_t &rgen, room_t const &room, float
 		return 1; // success/done
 	} // for n
 	return 0; // failed
+}
+
+bool building_t::add_boiler_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	float const floor_spacing(get_window_vspace());
+	float const boiler_height(rgen.rand_uniform(0.4, 0.6)*floor_spacing), boiler_len(rgen.rand_uniform(1.2, 1.5)*boiler_height), boiler_width(boiler_height);
+	if (boiler_len > 0.6*min(room.dx(), room.dy())) return 0; // room too narrow for boiler
+	vector3d const boiler_sz(boiler_len, boiler_width, boiler_height);
+	cube_t place_area(get_walkable_room_bounds(room));
+	place_area.expand_by(-get_trim_thickness());
+	return place_obj_along_wall(TYPE_BOILER, room, boiler_height, boiler_sz, rgen, zval, room_id, tot_light_amt, place_area,
+		objs_start, 0.5, 1, 4, 0, GRAY, 1, SHAPE_CYLIN, get_min_front_clearance_inc_people());
 }
 
 // *** Parking Garages ***
