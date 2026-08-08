@@ -286,13 +286,32 @@ bool building_t::add_furnace_to_room(rand_gen_t &rgen, room_t const &room, float
 
 bool building_t::add_boiler_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	float const floor_spacing(get_window_vspace());
-	float const boiler_height(rgen.rand_uniform(0.4, 0.6)*floor_spacing), boiler_len(rgen.rand_uniform(1.2, 1.5)*boiler_height), boiler_width(boiler_height);
+	float const boiler_height(rgen.rand_uniform(0.5, 0.65)*floor_spacing), boiler_len(rgen.rand_uniform(1.5, 1.8)*boiler_height), boiler_width(boiler_height);
 	if (boiler_len > 0.6*min(room.dx(), room.dy())) return 0; // room too narrow for boiler
 	vector3d const boiler_sz(boiler_len, boiler_width, boiler_height);
 	cube_t place_area(get_walkable_room_bounds(room));
 	place_area.expand_by(-get_trim_thickness());
-	return place_obj_along_wall(TYPE_BOILER, room, boiler_height, boiler_sz, rgen, zval, room_id, tot_light_amt, place_area,
-		objs_start, 0.5, 1, 4, 0, GRAY, 1, SHAPE_CYLIN, get_min_front_clearance_inc_people());
+	auto &objs(interior->room_geom->objs);
+	unsigned const boiler_obj_ix(objs.size());
+	if (!place_obj_along_wall(TYPE_BOILER, room, boiler_height, boiler_sz, rgen, zval, room_id, tot_light_amt, place_area,
+		objs_start, 0.5, 1, 4, 0, LT_GRAY, 1, SHAPE_CYLIN, get_min_front_clearance_inc_people())) return 0;
+	float const ceil_zval(zval + get_floor_ceil_gap()); // assumes normal height room
+	room_object_t const boiler(objs[boiler_obj_ix]); // deep copy to avoid invalidating the reference
+	bool const dim(boiler.dim), dir(boiler.dir);
+	// add exhaust vent at the top front
+	float const dsign(dir ? 1.0 : -1.0), centerline(boiler.get_center_dim(!dim)), vent_radius(0.1*boiler_width);
+	cube_t pipe;
+	set_cube_zvals(pipe, boiler.z2()-0.1*boiler_height, ceil_zval);
+	set_wall_width(pipe, centerline, vent_radius, !dim);
+	set_wall_width(pipe, (boiler.d[dim][dir] - 0.3*dsign*boiler_len), vent_radius, dim);
+	objs.emplace_back(pipe, TYPE_DUCT, room_id, 0, 1, (RO_FLAG_ADJ_TOP | RO_FLAG_ADJ_BOT | RO_FLAG_IN_FACTORY), tot_light_amt, SHAPE_CYLIN, WHITE); // vertical; skip top and bottom
+	// add steam pipe into the ceiling
+	float const steam_radius(0.065*boiler_width), water_radius(0.03*boiler_width);
+	set_wall_width(pipe, centerline, steam_radius, !dim);
+	set_wall_width(pipe, (boiler.d[dim][!dir] + 0.15*dsign*boiler_len), steam_radius, dim);
+	objs.emplace_back(pipe, TYPE_PIPE, room_id, 0, 1, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, WHITE); // vertical
+	// add water pipe into the floor?
+	return 1;
 }
 
 // *** Parking Garages ***
