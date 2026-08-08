@@ -251,7 +251,7 @@ struct room_object_t : public oriented_cube_t { // size=68
 	bool is_a_drink() const {return (type == TYPE_BOTTLE || type == TYPE_DRINK_CAN);} // what about TYPE_MILK?
 	bool is_pet_container() const {return (type == TYPE_FISHTANK || type == TYPE_PET_CAGE);}
 	bool is_metal_model  () const;
-	bool is_horizontal_cylin   () const {return (shape == SHAPE_CYLIN && (type == TYPE_DUCT || type == TYPE_PIPE || type == TYPE_VALVE || type == TYPE_METAL_BAR || type == TYPE_BOILER));}
+	bool is_horizontal_cylin   () const {return (shape == SHAPE_CYLIN && !is_vert_cylinder());}
 	bool has_text              () const {return (type == TYPE_BOOK || type == TYPE_BCASE || type == TYPE_SIGN || type == TYPE_BUTTON || type == TYPE_SHELFRACK);}
 	unsigned get_bottle_type   () const {return ((obj_id&63) % NUM_BOTTLE_TYPES   );} // first 6 bits are bottle type
 	unsigned get_drink_can_type() const {return ((obj_id&63) % NUM_DRINK_CAN_TYPES);} // first 6 bits are drink can type

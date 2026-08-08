@@ -2677,8 +2677,8 @@ bool room_object_t::is_vert_cylinder() const {
 	if (type == TYPE_LIGHT  && (flags & RO_FLAG_ADJ_HI)) return 0; // horizontal cylinder wall light
 	if (type == TYPE_PLATE  && get_length() < dz())      return 0; // vertical plate in dishwasher
 	if (type == TYPE_TPROLL && !was_expanded())          return 0; // horizontal TP roll on holder
-	if (type == TYPE_BUTTON || type == TYPE_HANGER_ROD || type == TYPE_CLOCK) return 0; // horizontal cylinders
-	if (type != TYPE_DUCT   && type != TYPE_PIPE)        return 1; // only ducts and pipes can be horizontal cylinders
+	if (type == TYPE_BUTTON || type == TYPE_HANGER_ROD || type == TYPE_CLOCK || type == TYPE_VALVE || type == TYPE_METAL_BAR || type == TYPE_BOILER) return 0; // horizontal cylinders
+	if (type != TYPE_DUCT   && type != TYPE_PIPE)        return 1; // only ducts and pipes can be either horizontal or vertical cylinders
 	return dir; // duct/pipe encoding for vertical is dim=x, dir=1
 }
 bool room_object_t::is_metal_model() const {
