@@ -7580,7 +7580,7 @@ void building_room_geom_t::add_commercial_fridge(room_object_t const &c, bool in
 void building_room_geom_t::add_boiler(room_object_t const &c) { // small, not exterior visible
 	bool const dim(c.dim), dir(c.dir);
 	float const dsign(dir ? 1.0 : -1.0), height(c.dz()), radius(0.5*c.get_width()), length(c.get_length());
-	float const centerline(c.get_center_dim(!dim)), front_face(c.d[dim][dir] - 0.2*length), tscale(1.0/radius);
+	float const centerline(c.get_center_dim(!dim)), front_face(c.d[dim][dir] - 0.2*dsign*length), tscale(1.0/radius);
 	room_object_t body(c); // need a room_object_t to pass into add_furnace_pipe_with_bend
 	cube_t front(c);
 	body.d[dim][dir] = front.d[dim][!dir] = front_face;
@@ -7590,18 +7590,18 @@ void building_room_geom_t::add_boiler(room_object_t const &c) { // small, not ex
 	metal_mat.add_ortho_cylin_to_verts(body, body_color, c.dim, 1, 1); // draw ends
 	
 	// add skids
-	colorRGBA const skids_color(apply_light_color(c, colorRGBA(1.0, 0.8, 0.6))); // tan
+	colorRGBA const skids_color(apply_light_color(c, WHITE));
 	//"metals/60_scratch_metal.jpg", "metals/65_Painted_dirty_metal.jpg", "metals/67_rusty_dirty_metal.jpg"
 	rgeom_mat_t &skids_mat(get_material(tid_nm_pair_t(get_texture_by_name("metals/65_Painted_dirty_metal.jpg"), tscale, 1), 0, 1)); // shadowed, small=1
 	cube_t skid(body);
-	skid.z2() = c.z1() + 0.03*height;
+	skid.z2() = c.z1() + 0.04*height;
 
 	for (unsigned d = 0; d < 2; ++d) { // each side
 		set_wall_width(skid, (centerline + (d ? 1.0 : -1.0)*0.85*radius), 0.08*radius, !dim);
 		skids_mat.add_cube_to_verts(skid, skids_color, all_zeros, EF_Z1); // skip bottom
 	}
 	// connect skids to tank
-	unsigned const num_conn(3);
+	unsigned const num_conn(2); // 2-3
 	cube_t conn(c);
 	conn.z1()  = skid.z2();
 	conn.z2() -= 0.6*height;
@@ -7611,21 +7611,47 @@ void building_room_geom_t::add_boiler(room_object_t const &c) { // small, not ex
 		set_wall_width(conn, (body.d[dim][0] + (n + 0.5)*body_len/num_conn), 0.04*radius, dim);
 		skids_mat.add_cube_to_verts(conn, skids_color, all_zeros, EF_Z2); // skip top
 	}
-	
+	// add front face
+	float const front_face_shrink(-0.05*radius);
+	cube_t face(front);
+	face.d[dim][dir] = front_face + 0.015*dsign*length; // extend out a bit
+	face.expand_in_dim(!dim, front_face_shrink);
+	face.expand_in_z(front_face_shrink);
+	rgeom_mat_t &painted_metal_mat(get_painted_metal_material(1, 0, 1)); // shadowed, small
+	painted_metal_mat.add_ortho_cylin_to_verts(face, apply_light_color(c, DK_GRAY), c.dim, !dir, dir);
+
 	// add fan/air handler for burner
+	bool const motor_side(c.dim ^ c.dir ^ 1);
 	colorRGBA const fan_color(apply_light_color(c, RED));
-	float const intake_radius(0.12*radius);
+	float const intake_radius(0.1*radius), housing_radius(2.0*intake_radius), intake_center(c.d[dim][dir] - dsign*housing_radius);
+	float const ms_sign(motor_side ? 1.0 : -1.0), motor_len(3.6*intake_radius), fcap_hwidth(0.1*intake_radius);
+	float const motor_front(centerline + ms_sign*0.25*intake_radius), fcap_center(centerline - ms_sign*intake_radius);
+	float const motor_radius(0.67*housing_radius), fcap_radius(0.8*housing_radius), intake_z(c.z1() + 0.4*height); // closer to the bottom in Z
 	cube_t intake_pipe(front);
+	intake_pipe.d[dim][dir] = intake_center;
 	set_wall_width(intake_pipe, centerline, intake_radius, !dim);
-	set_wall_width(intake_pipe, (c.z1() + 0.4*height), intake_radius, 2); // closer to the bottom in Z
-	metal_mat.add_ortho_cylin_to_verts(intake_pipe, fan_color, dim, 0, 0); // sides only
-	cube_t housing, motor, face;
-	// TODO
+	set_wall_width(intake_pipe, intake_z,   intake_radius, 2   );
+	painted_metal_mat.add_ortho_cylin_to_verts(intake_pipe, fan_color, dim, 0, 0); // sides only
+	point fan_center;
+	fan_center[ dim] = intake_center;
+	fan_center[!dim] = centerline;
+	fan_center.z     = intake_pipe.zc() - housing_radius;
+	painted_metal_mat.add_ortho_torus_to_verts(fan_center, intake_radius, housing_radius, !c.dim, fan_color);
+	cube_t motor, fcap;
+	set_wall_width(motor, intake_center, motor_radius, dim);
+	set_wall_width(motor, fan_center.z,  motor_radius, 2  );
+	set_wall_width(fcap , intake_center, fcap_radius,  dim);
+	set_wall_width(fcap , fan_center.z,  fcap_radius,  2  );
+	set_wall_width(fcap , fcap_center,   fcap_hwidth, !dim);
+	motor.d[!dim][!motor_side] = motor_front; // front
+	motor.d[!dim][ motor_side] = motor_front + ms_sign*motor_len; // back
+	painted_metal_mat.add_ortho_cylin_to_verts(motor, apply_light_color(c, BKGRAY), !c.dim, !motor_side,  motor_side);
+	painted_metal_mat.add_ortho_cylin_to_verts(fcap,  apply_light_color(c, BLACK ), !c.dim,  motor_side, !motor_side);
 
 	// add copper water pipe into the floor
 	unsigned const pipe_ndiv(N_CYL_SIDES);
 	rgeom_mat_t &copper_mat(get_metal_material(1, 0, 1, 0, 1, COPPER_C, 0.7, 60.0, 0.7)); // shadows=1, small=1, no_reflect=1
-	add_furnace_pipe_with_bend(body, copper_mat, apply_light_color(c, COPPER_C), pipe_ndiv, 0.02, 0.75, 0.35, 5.0);
+	add_furnace_pipe_with_bend(body, copper_mat, apply_light_color(c, COPPER_C), pipe_ndiv, 0.02, 0.75, 0.4, 5.0);
 }
 
 void add_grid_of_bars(rgeom_mat_t &mat, colorRGBA const &color, cube_t const &c, unsigned num_vbars, unsigned num_hbars, float vbar_hthick,
