@@ -196,7 +196,7 @@ public:
 
 		for (unsigned n = 0; n < nleaves; ++n) {
 			float const lsz_scale(max(0.1f, radius/rmax)); // smaller leaves near ends of branches
-			float const lsz(rgen.rand_uniform(0.8, 1.2)*lsz_scale*leaf_sz); // leaf size +/- 20%
+			float const lsz(rgen.rand_uniform(0.8, 1.4)*lsz_scale*leaf_sz); // leaf size -20% to +40%
 			bool const side((leaves.size() & 1) ^ first_side);
 			vector3d const side_dir_leaf((side ? 1.0 : -1.0)*side_dir); // in correct direction
 			point leaf_pt(cur_pt);
