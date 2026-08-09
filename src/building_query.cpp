@@ -3476,6 +3476,10 @@ void building_t::get_ivy_walls(vect_wall_with_windows_t &walls, rand_gen_t &rgen
 						} // for xy
 					} // for z
 				} // for i
+				if (has_chimney == 2) { // add chimney fireplace as a blocker
+					cube_t const blocker(get_fireplace());
+					if (blocker.intersects(wall)) {walls.back().blockers.push_back(blocker);}
+				}
 			} // for dim
 		} // for dim
 	} // for p

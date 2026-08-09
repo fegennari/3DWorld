@@ -66,7 +66,7 @@ std::string const sale_sign_text[NUM_SALE_SIGN_TEXTS] = {"SALE", "SALE", "CLEARA
 
 struct wall_with_windows_t : public cube_with_ix_t {
 	wall_with_windows_t(cube_t const &c, unsigned ix_) : cube_with_ix_t(c, ix_) {}
-	vect_cube_t windows;
+	vect_cube_t windows, blockers;
 };
 typedef vector<wall_with_windows_t> vect_wall_with_windows_t;
 

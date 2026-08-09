@@ -2082,6 +2082,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 		if (skip) continue;
 		divider_t divider(w, DIV_HOUSE_WALL, dim, dir, 0, 0, dividers.size(), plot_ix, city_ix, 0);
 		divider.ivy_avoid = std::move(w.windows);
+		vector_add_to(w.blockers, divider.ivy_avoid);
 		divider_groups.add_obj(divider, dividers); // ends_clipped=0, skip_dims=0, street_dir=0
 	} // for w
 }
