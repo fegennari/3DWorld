@@ -1021,7 +1021,7 @@ void building_t::add_bathroom_window(cube_t const &window, bool dim, bool dir, u
 	room_t const &room(get_room(room_id));
 	// exterior looks odd to have window block walls at the corner of a building,
 	// so only enable this for single exterior walls, when there are no exterior windows, when there are stalls, or for industrial/rest/conv bathrooms (which look odd without it)
-	if (!is_industrial() && !is_restaurant() && !is_conv_store() && !is_restroom() && has_windows() && !room.has_br_stalls() && count_ext_walls_for_room(room, window.z1()) != 1) return;
+	//if (!is_industrial() && !is_restaurant() && !is_conv_store() && !is_restroom() && has_windows() && !room.has_br_stalls() && count_ext_walls_for_room(room, window.z1()) != 1) return;
 	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t c(window);
 	c.translate_dim(dim, (dir ? 1.0 : -1.0)*0.5*get_trim_thickness()); // half the previous translate to prevent Z-fighting in mirror reflections
