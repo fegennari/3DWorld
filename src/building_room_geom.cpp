@@ -5323,7 +5323,7 @@ void building_room_geom_t::add_water_heater(room_object_t const &c) {
 
 colorRGBA get_furnace_color() {return texture_color(get_texture_by_name("interiors/furnace.jpg"));}
 
-void add_furnace_pipe_with_bend(room_object_t const &c, rgeom_mat_t &mat, colorRGBA const &color,
+point add_furnace_pipe_with_bend(room_object_t const &c, rgeom_mat_t &mat, colorRGBA const &color,
 	unsigned ndiv, float rscale, float lr_offset, float z_offset, float extend)
 {
 	bool const mirror_x(c.dim ^ c.dir ^ 1);
@@ -5337,6 +5337,7 @@ void add_furnace_pipe_with_bend(room_object_t const &c, rgeom_mat_t &mat, colorR
 	point bot_pos(bend);
 	bot_pos.z = c.z1();
 	add_pipe_with_bend(mat, color, bot_pos, entry_pos, bend, ndiv, pipe_radius, 0); // draw_ends=0
+	return bend;
 }
 void narrow_furnace_intake(cube_t &duct, room_object_t const &c) {
 	duct.d[c.dim][c.dir] -= (c.dir ? 1.0 : -1.0)*0.35*c.get_length(); // shift inward toward back
@@ -7651,8 +7652,24 @@ void building_room_geom_t::add_boiler(room_object_t const &c) { // small, not ex
 
 	// add copper water pipe into the floor
 	unsigned const pipe_ndiv(N_CYL_SIDES);
+	float const wp_rscale(0.022);
 	rgeom_mat_t &copper_mat(get_metal_material(1, 0, 1, 0, 1, COPPER_C, 0.7, 60.0, 0.7)); // shadows=1, small=1, no_reflect=1
-	add_furnace_pipe_with_bend(body, copper_mat, apply_light_color(c, COPPER_C), pipe_ndiv, 0.022, 0.75, 0.42, 5.0);
+	point const bend_pos(add_furnace_pipe_with_bend(body, copper_mat, apply_light_color(c, COPPER_C), pipe_ndiv, wp_rscale, 0.75, 0.42, 5.0));
+	// add fitting and valve for this pipe
+	float const fitting_radius(1.2*wp_rscale*height), valve_radius(2.5*fitting_radius);
+	point valve_pos(bend_pos);
+	valve_pos.z = 0.5*(bend_pos.z + c.z1()); // halfway between the bend and the floor
+	cube_t fitting(valve_pos);
+	fitting.expand_by_xy(fitting_radius);
+	fitting.expand_in_z(1.6*fitting_radius);
+	unsigned const fitting_flags(RO_FLAG_NOCOLL | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI | RO_FLAG_HANGING);
+	add_pipe(room_object_t(fitting, TYPE_PIPE, c.room_id, 0, 1, fitting_flags, c.light_amt, SHAPE_CYLIN, BRASS_C), 0); // vertical, exterior=0
+	valve_pos[dim] += dsign*0.2*valve_radius; // move toward the front
+	cube_t valve(valve_pos);
+	valve.d[dim][dir] += dsign*0.75*valve_radius; // extend front out more
+	valve.expand_in_dim(!dim, valve_radius);
+	valve.expand_in_z(valve_radius);
+	add_valve(room_object_t(valve, TYPE_VALVE, c.room_id, dim, 0, RO_FLAG_NOCOLL, c.light_amt, SHAPE_CYLIN, RED)); // horizontal
 	// add fuel pipe
 	room_object_t burner(c);
 	burner.copy_from(intake_pipe);
@@ -7667,13 +7684,13 @@ void building_room_geom_t::add_boiler(room_object_t const &c) { // small, not ex
 	jbox.translate_dim(!dim, ms_sign*0.1*motor_len); // move toward the back
 	jbox.expand_in_z(-0.6*motor_radius);
 	jbox.d[dim][!dir]  = intake_center;
-	jbox.d[dim][ dir] += dsign*0.25*motor_radius; // extend outward
+	jbox.d[dim][ dir] += dsign*0.35*motor_radius; // extend outward
 	painted_metal_mat.add_cube_to_verts_untextured(jbox, apply_light_color(c, BKGRAY), ~get_face_mask(dim, !dir)); // skip back face
 	// add conduit from junction box into the floor
 	float const conduit_radius(0.15*motor_radius);
 	cube_t conduit;
 	set_cube_zvals(conduit, c.z1(), jbox.z1()); // below junction box
-	set_wall_width(conduit, (motor.d[dim][dir] + dsign*0.08*motor_radius), conduit_radius, dim);
+	set_wall_width(conduit, (motor.d[dim][dir] + dsign*0.12*motor_radius), conduit_radius, dim);
 	set_wall_width(conduit, jbox.get_center_dim(!dim), conduit_radius, !dim);
 	painted_metal_mat.add_vcylin_to_verts(conduit, apply_light_color(c, GRAY), 0, 0); // sides only
 	// add pressure gauge; should add a temperature gauge, but I don't have a face texture for that yet
