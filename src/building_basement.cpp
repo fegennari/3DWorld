@@ -299,17 +299,29 @@ bool building_t::add_boiler_to_room(rand_gen_t &rgen, room_t const &room, float 
 	room_object_t const boiler(objs[boiler_obj_ix]); // deep copy to avoid invalidating the reference
 	bool const dim(boiler.dim), dir(boiler.dir);
 	// add exhaust vent at the top front
-	float const dsign(dir ? 1.0 : -1.0), centerline(boiler.get_center_dim(!dim)), vent_radius(0.1*boiler_width);
+	float const dsign(dir ? 1.0 : -1.0), centerline(boiler.get_center_dim(!dim)), vent_radius(0.075*boiler_width);
 	cube_t pipe;
 	set_cube_zvals(pipe, boiler.z2()-0.1*boiler_height, ceil_zval);
 	set_wall_width(pipe, centerline, vent_radius, !dim);
 	set_wall_width(pipe, (boiler.d[dim][dir] - 0.3*dsign*boiler_len), vent_radius, dim);
 	objs.emplace_back(pipe, TYPE_DUCT, room_id, 0, 1, (RO_FLAG_ADJ_TOP | RO_FLAG_ADJ_BOT | RO_FLAG_IN_FACTORY), tot_light_amt, SHAPE_CYLIN, WHITE); // vertical; skip top and bottom
-	// add steam pipe into the ceiling
-	float const steam_radius(0.065*boiler_width), water_radius(0.03*boiler_width);
+	// add steam pipe into the ceiling or back wall
+	float const steam_radius(0.055*boiler_width);
+	colorRGBA const steam_pipe_color(WHITE);
 	set_wall_width(pipe, centerline, steam_radius, !dim);
 	set_wall_width(pipe, (boiler.d[dim][!dir] + 0.15*dsign*boiler_len), steam_radius, dim);
-	objs.emplace_back(pipe, TYPE_PIPE, room_id, 0, 1, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, WHITE); // vertical
+	unsigned v_pipe_flags(RO_FLAG_NOCOLL);
+
+	if (zval < ground_floor_z1) { // basement - exit through back wall rather than ceiling
+		pipe.z2() = pipe.zc(); // turn point
+		cube_t h_pipe(pipe);
+		h_pipe.d[dim][dir] = pipe.get_center_dim(dim);
+		set_wall_width(h_pipe, pipe.z2(), steam_radius, 2); // Z
+		h_pipe.d[dim][!dir] = get_room_wall_bounds(room).d[dim][!dir]; // back wall
+		objs.emplace_back(h_pipe, TYPE_PIPE, room_id, dim, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, steam_pipe_color); // horizontal
+		v_pipe_flags |= RO_FLAG_ADJ_HI; // rounded at bend
+	}
+	objs.emplace_back(pipe, TYPE_PIPE, room_id, 0, 1, v_pipe_flags, tot_light_amt, SHAPE_CYLIN, steam_pipe_color); // vertical
 	// add water pipe into the floor?
 	return 1;
 }

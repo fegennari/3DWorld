@@ -7579,6 +7579,7 @@ void building_room_geom_t::add_commercial_fridge(room_object_t const &c, bool in
 
 void building_room_geom_t::add_boiler(room_object_t const &c) { // small, not exterior visible
 	bool const dim(c.dim), dir(c.dir);
+	unsigned const body_ndiv(2*N_CYL_SIDES);
 	float const dsign(dir ? 1.0 : -1.0), height(c.dz()), radius(0.5*c.get_width()), length(c.get_length());
 	float const centerline(c.get_center_dim(!dim)), front_face(c.d[dim][dir] - 0.2*dsign*length), tscale(1.0/radius);
 	room_object_t body(c); // need a room_object_t to pass into add_furnace_pipe_with_bend
@@ -7587,11 +7588,11 @@ void building_room_geom_t::add_boiler(room_object_t const &c) { // small, not ex
 	float const body_len(body.get_sz_dim(dim));
 	colorRGBA const body_color(apply_light_color(c));
 	rgeom_mat_t &metal_mat(get_metal_material(1, 0, 1)); // shadowed, small
-	metal_mat.add_ortho_cylin_to_verts(body, body_color, c.dim, 1, 1); // draw ends
+	metal_mat.add_ortho_cylin_to_verts(body, body_color, c.dim, 1, 1, 0, 0, 1, 1.0, 1.0, 1.0, 0, body_ndiv); // draw ends
 	
 	// add skids
 	colorRGBA const skids_color(apply_light_color(c, WHITE));
-	//"metals/60_scratch_metal.jpg", "metals/65_Painted_dirty_metal.jpg", "metals/67_rusty_dirty_metal.jpg"
+	// or "metals/60_scratch_metal.jpg" or "metals/67_rusty_dirty_metal.jpg"
 	rgeom_mat_t &skids_mat(get_material(tid_nm_pair_t(get_texture_by_name("metals/65_Painted_dirty_metal.jpg"), tscale, 1), 0, 1)); // shadowed, small=1
 	cube_t skid(body);
 	skid.z2() = c.z1() + 0.04*height;
@@ -7618,7 +7619,7 @@ void building_room_geom_t::add_boiler(room_object_t const &c) { // small, not ex
 	face.expand_in_dim(!dim, front_face_shrink);
 	face.expand_in_z(front_face_shrink);
 	rgeom_mat_t &painted_metal_mat(get_painted_metal_material(1, 0, 1)); // shadowed, small
-	painted_metal_mat.add_ortho_cylin_to_verts(face, apply_light_color(c, DK_GRAY), c.dim, !dir, dir);
+	painted_metal_mat.add_ortho_cylin_to_verts(face, apply_light_color(c, DK_GRAY), c.dim, !dir, dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, body_ndiv);
 
 	// add fan/air handler for burner
 	bool const motor_side(c.dim ^ c.dir ^ 1);
@@ -7626,7 +7627,7 @@ void building_room_geom_t::add_boiler(room_object_t const &c) { // small, not ex
 	float const intake_radius(0.1*radius), housing_radius(2.0*intake_radius), intake_center(c.d[dim][dir] - dsign*housing_radius);
 	float const ms_sign(motor_side ? 1.0 : -1.0), motor_len(3.6*intake_radius), fcap_hwidth(0.1*intake_radius);
 	float const motor_front(centerline + ms_sign*0.25*intake_radius), fcap_center(centerline - ms_sign*intake_radius);
-	float const motor_radius(0.67*housing_radius), fcap_radius(0.8*housing_radius), intake_z(c.z1() + 0.4*height); // closer to the bottom in Z
+	float const motor_radius(0.67*housing_radius), fcap_radius(0.8*housing_radius), intake_z(c.z1() + 0.42*height); // closer to the bottom in Z
 	cube_t intake_pipe(front);
 	intake_pipe.d[dim][dir] = intake_center;
 	set_wall_width(intake_pipe, centerline, intake_radius, !dim);
@@ -7651,7 +7652,38 @@ void building_room_geom_t::add_boiler(room_object_t const &c) { // small, not ex
 	// add copper water pipe into the floor
 	unsigned const pipe_ndiv(N_CYL_SIDES);
 	rgeom_mat_t &copper_mat(get_metal_material(1, 0, 1, 0, 1, COPPER_C, 0.7, 60.0, 0.7)); // shadows=1, small=1, no_reflect=1
-	add_furnace_pipe_with_bend(body, copper_mat, apply_light_color(c, COPPER_C), pipe_ndiv, 0.02, 0.75, 0.4, 5.0);
+	add_furnace_pipe_with_bend(body, copper_mat, apply_light_color(c, COPPER_C), pipe_ndiv, 0.022, 0.75, 0.42, 5.0);
+	// add fuel pipe
+	room_object_t burner(c);
+	burner.copy_from(intake_pipe);
+	burner.expand_in_dim(!dim, -0.2*intake_radius); // shrink so that pipe ends are not visible on curved side of burner
+	burner.z1() = c.z1(); // make sure pipe extends to the floor
+	burner.dim ^= 1;
+	burner.dir  = motor_side;
+	add_furnace_pipe_with_bend(burner, painted_metal_mat, apply_light_color(c, YELLOW), pipe_ndiv, 0.03, 0.5, 0.9, 4.0);
+	// add motor junction box
+	cube_t jbox(motor);
+	jbox.expand_in_dim(!dim, -0.25*motor_len); // shorten
+	jbox.translate_dim(!dim, ms_sign*0.1*motor_len); // move toward the back
+	jbox.expand_in_z(-0.6*motor_radius);
+	jbox.d[dim][!dir]  = intake_center;
+	jbox.d[dim][ dir] += dsign*0.25*motor_radius; // extend outward
+	painted_metal_mat.add_cube_to_verts_untextured(jbox, apply_light_color(c, BKGRAY), ~get_face_mask(dim, !dir)); // skip back face
+	// add conduit from junction box into the floor
+	float const conduit_radius(0.15*motor_radius);
+	cube_t conduit;
+	set_cube_zvals(conduit, c.z1(), jbox.z1()); // below junction box
+	set_wall_width(conduit, (motor.d[dim][dir] + dsign*0.08*motor_radius), conduit_radius, dim);
+	set_wall_width(conduit, jbox.get_center_dim(!dim), conduit_radius, !dim);
+	painted_metal_mat.add_vcylin_to_verts(conduit, apply_light_color(c, GRAY), 0, 0); // sides only
+	// add pressure gauge; should add a temperature gauge, but I don't have a face texture for that yet
+	float const gauge_radius(0.08*radius), gauge_thickness(0.8*gauge_radius);
+	cube_t gauge;
+	gauge.d[dim][ dir] = front_face; // front
+	gauge.d[dim][!dir] = front_face - dsign*gauge_thickness; // back
+	set_wall_width(gauge, centerline, gauge_radius, !dim);
+	set_wall_width(gauge, (c.z2() + 1.25*gauge_radius), gauge_radius, 2); // Z
+	add_gauge(room_object_t(gauge, TYPE_GAUGE, c.room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_BOT), c.light_amt, SHAPE_CYLIN, BRASS_C));
 }
 
 void add_grid_of_bars(rgeom_mat_t &mat, colorRGBA const &color, cube_t const &c, unsigned num_vbars, unsigned num_hbars, float vbar_hthick,
