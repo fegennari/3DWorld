@@ -89,7 +89,7 @@ void hedge_draw_t::draw_and_clear(shader_t &s) {
 
 // ivy_manager_t
 
-void ivy_wall_t::gen(cube_t const &wall, vect_cube_t const &avoid, float leaf_sz, unsigned face_mask, bool rand_select, rand_gen_t &rgen) {
+void ivy_wall_t::gen(cube_t const &wall, vect_cube_t const &avoid, float leaf_sz, unsigned face_mask, bool rand_select, bool is_house, rand_gen_t &rgen) {
 	//highres_timer_t timer("Gen Ivy"); // 127 147.263 3.2178 1.15955
 	// maintained_amt really should be per-yard, not per-wall, but the mapping from yards to walls isn't tracked, and both faces of a wall and processed together
 	maintained_amt = CLIP_TO_01(rgen.rand_uniform(-1.0, 3.0)); // more often maintained
@@ -100,7 +100,7 @@ void ivy_wall_t::gen(cube_t const &wall, vect_cube_t const &avoid, float leaf_sz
 	for (unsigned n = 0; n < 4; ++n) { // {-X, +X, -Y, +Y} sides
 		if (!(face_mask & (1<<n))) continue; // face not enabled
 		if (rand_select && rgen.rand_float() < 0.3) continue; // no ivy on this face
-		place_on_wall_face(wall, avoid, (n>>1), (n&1), leaf_sz, leaf_verts, branch_verts, branch_ixs, rgen);
+		place_on_wall_face(wall, avoid, (n>>1), (n&1), is_house, leaf_sz, leaf_verts, branch_verts, branch_ixs, rgen);
 	}
 	assert(leaf_verts.empty() == branch_verts.empty());
 	if (leaf_verts.empty()) return; // empty
@@ -114,7 +114,7 @@ void ivy_wall_t::gen(cube_t const &wall, vect_cube_t const &avoid, float leaf_sz
 
 class ivy_builder_t {
 	typedef ivy_wall_t::vertex_t vertex_t;
-	bool dim, dir, first_side=0, has_horizontal=0;
+	bool dim, dir, first_side=0, has_horizontal=0, is_house=0;
 	unsigned main_cylins_end=0;
 	float leaf_sz;
 	cube_t const &wall;
@@ -130,8 +130,8 @@ class ivy_builder_t {
 		return (c.d[!dim][0] > wall.d[!dim][0] && c.d[!dim][1] < wall.d[!dim][1]); // check if off the wall horizontally
 	}
 	bool check_contained_on_wall(cube_t const &c) const {
-		if (!check_contained_on_wall_xy(c))        return 0; // off the wall horizontally
-		if (!has_horizontal && c.z2() > wall.z2()) return 0; // above the wall; allow if we already have a horizontal branch on the wall
+		if (!check_contained_on_wall_xy(c)) return 0; // off the wall horizontally
+		if (!is_house && !has_horizontal && c.z2() > wall.z2()) return 0; // above the wall; allow if we already have a horizontal branch on the wall
 		if (c.z1() < wall.z1()) return 0; // below the wall; unlikely
 		return 1;
 	}
@@ -150,8 +150,8 @@ class ivy_builder_t {
 		return (line_seg_line_seg_dist_2d(swap_not_dim_z_to_xy(c1.p1), swap_not_dim_z_to_xy(c1.p2), swap_not_dim_z_to_xy(c2.p1), swap_not_dim_z_to_xy(c2.p2)) < r_sum);
 	}
 public:
-	ivy_builder_t(float leaf_sz_, cube_t const &wall_, bool dim_, bool dir_, rand_gen_t &rgen_) :
-		dim(dim_), dir(dir_), leaf_sz(leaf_sz_), wall(wall_), rgen(rgen_) {}
+	ivy_builder_t(float leaf_sz_, cube_t const &wall_, bool dim_, bool dir_, bool is_house_, rand_gen_t &rgen_) :
+		dim(dim_), dir(dir_), is_house(is_house_), leaf_sz(leaf_sz_), wall(wall_), rgen(rgen_) {}
 
 	void next_plant() { // aka clear()
 		cylins.clear();
@@ -340,7 +340,7 @@ public:
 	}
 }; // end ivy_builder_t
 
-void ivy_wall_t::place_on_wall_face(cube_t const &wall, vect_cube_t const &avoid, bool dim, bool dir, float leaf_sz,
+void ivy_wall_t::place_on_wall_face(cube_t const &wall, vect_cube_t const &avoid, bool dim, bool dir, bool is_house, float leaf_sz,
 	vector<vertex_t> &lverts, vector<vertex_t> &bverts, vector<unsigned> &bixs, rand_gen_t &rgen)
 {
 	// generation steps:
@@ -356,7 +356,7 @@ void ivy_wall_t::place_on_wall_face(cube_t const &wall, vect_cube_t const &avoid
 	float const wall_thick(wall.get_sz_dim(dim)), wall_face(wall.d[dim][dir]), dsign(dir ? 1.0 : -1.0);
 	vector3d const wall_normal(vector_from_dim_dir(dim, dir));
 	unsigned const num_roots(4 + (rgen.rand() % 9)); // 4-12
-	ivy_builder_t builder(leaf_sz, wall, dim, dir, rgen);
+	ivy_builder_t builder(leaf_sz, wall, dim, dir, is_house, rgen);
 	vector<float> root_vals;
 
 	for (unsigned n = 0; n < num_roots; ++n) {
@@ -509,7 +509,7 @@ void ivy_manager_t::clear() {
 	for (auto &kv : ivy_walls) {kv.second.clear();}
 	ivy_walls.clear();
 }
-void ivy_manager_t::add_wall(cube_t const &wall, vect_cube_t const &avoid, bool dim, unsigned skip_dirs,
+void ivy_manager_t::add_wall(cube_t const &wall, vect_cube_t const &avoid, bool dim, bool is_house, unsigned skip_dirs,
 	unsigned wall_ix, unsigned plot_ix, unsigned city_ix, float leaf_sz, point const &camera_bs)
 {
 	if (city_ix != cur_city_ix) { // city change
@@ -531,7 +531,7 @@ void ivy_manager_t::add_wall(cube_t const &wall, vect_cube_t const &avoid, bool 
 		rand_gen_t rgen;
 		rgen.set_state(wall_ix+1, plot_ix+1);
 		rgen.rand_mix();
-		w.gen(wall, avoid, leaf_sz, face_mask, rand_select, rgen);
+		w.gen(wall, avoid, leaf_sz, face_mask, rand_select, is_house, rgen);
 	}
 	else { // existing wall
 		assert(w.leaves.bcube == wall && w.branches.bcube == wall);
