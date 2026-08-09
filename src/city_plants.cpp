@@ -160,6 +160,7 @@ public:
 		main_cylins_end = 0;
 	}
 	bool add_leaf(point const &pos, vector3d const &branch_dir, vector3d const &side_dir, bool side, float lsz, unsigned cur_branch_leaves_start, bool is_horizontal) {
+		//bool const is_hanging(!is_horizontal && fabs(pos[dim] - wall.d[dim][dir]) > leaf_sz);
 		float const radius(0.5*lsz), r_test(3.0*radius); // conservative for r_test
 		tquad_t leaf(4);
 
@@ -188,7 +189,7 @@ public:
 		unsigned const cur_branch_leaves_start(leaves.size());
 		vector3d const branch_delta(c.p2 - c.p1), branch_dir(branch_delta.get_norm());
 		vector3d const wall_normal(is_horizontal ? plus_z : vector_from_dim_dir(dim, dir));
-		vector3d const side_dir(cross_product(wall_normal, branch_dir)); // should be normalized
+		vector3d const side_dir(cross_product(wall_normal, branch_dir).get_norm()); // must normalize for hanging vines
 		vector3d const pos_step(branch_delta/(nleaves + !at_branch_end)); // skip last slot if not at branch end because it may be the tip or leaf loc of next segment
 		float const r_step((c.r2 - c.r1)/nleaves), rmax(max(c.r1, c.r2));
 		point cur_pt(c.p1); // first leaf is at starting point
