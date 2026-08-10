@@ -1487,13 +1487,21 @@ void building_room_geom_t::add_chimney_cap(room_object_t const &c) {
 	for (unsigned n = 0; n < 4; ++n) { // skip Y edges of short sides
 		top_mat.add_cube_to_verts_untextured(sides[n], colorRGBA(0.7, 0.24, 0.04), ((n > 1) ? EF_Y12 : 0)); // orange-brown
 	}
-	if (0 && (c.obj_id & 4)) { // cage/cover - not working because alpha test is disabled and drawn order is wrong for blending
+	if ((c.obj_id & 6) == 6) { // cage/cover, 25% of the time
 		cube_t cage(c), roof(c);
 		set_cube_zvals(cage, crown.z2(), (c   .z2() + 0.4*dz));
 		set_cube_zvals(roof, cage .z2(), (cage.z2() + 0.1*dz));
-		rgeom_mat_t &cage_mat(get_material(tid_nm_pair_t(get_texture_by_name("roads/chainlink_fence.png"), 400.0), 0, 0, 0, 1)); // no shadows, exterior
-		for (unsigned inv = 0; inv < 2; ++inv) {cage_mat.add_cube_to_verts(cage, WHITE, tex_origin, EF_Z12, 0, 0, 0, inv);} // skip top and bottom surfaces
-		get_metal_material(0, 0, 0, 1).add_cube_to_verts_untextured(roof, GRAY, 0); // no shadows, exterior, all sides
+		rgeom_mat_t &metal_mat(get_metal_material(0, 0, 0, 1));
+		float const bar_thick(0.025*min_sz);
+		
+		for (unsigned dim = 0; dim < 2; ++dim) {
+			for (unsigned dir = 0; dir < 2; ++dir) {
+				cube_t side(cage);
+				side.d[dim][!dir] = side.d[dim][dir] - (dir ? 1.0 : -1.0)*bar_thick;
+				add_grid_of_bars(metal_mat, GRAY, side, 5, 5, 0.5*bar_thick, 0.5*bar_thick, !dim, 2);
+			}
+		}
+		metal_mat.add_cube_to_verts_untextured(roof, GRAY, 0); // no shadows, exterior, all sides
 	}
 }
 
