@@ -1289,11 +1289,11 @@ public:
 	bool proc_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float dist, float radius, float prev_frame_zval, vector3d *cnorm, bool for_player) const {
 		if (!moving_sphere_cube_intersect_xy(pos, p_last, (bcube + xlate), dist, radius)) return 0;
 		bool const is_global_connector(plots.empty());
-		bool plot_coll(0), road_coll(0);
+		bool road_coll(0);
 			
 		if (!is_global_connector) { // normal city
 			float const max_obj_z(bcube.z1() + radius);
-			if (pos.z < max_obj_z) {pos.z = max_obj_z; plot_coll = 1;} // make sure the sphere is above the city road/plot surface
+			if (pos.z < max_obj_z) {pos.z = max_obj_z;} // make sure the sphere is above the city road/plot surface; doesn't count as a collision
 			if (for_player) {player_in_city = 1;}
 		}
 		else if (for_player) { // global connector road network: place player on top of sloped roads
@@ -1332,10 +1332,6 @@ public:
 
 		if ((pos.z - xlate.z - radius) < (bcube.z2() + streetlight_ns::get_streetlight_height())) { // below the level of the streetlights
 			if (proc_streetlight_sphere_coll(pos, radius, xlate, cnorm)) return 1;
-		}
-		if (0 && plot_coll) { // no other collisions - return collision with plot or road - doesn't work correctly for bouncing balls
-			if (cnorm) {*cnorm = plus_z;}
-			return 1;
 		}
 		return road_coll;
 	}

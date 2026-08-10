@@ -927,21 +927,7 @@ void building_t::add_hallway_steam_pipes(rand_gen_t &rgen, unsigned room_id, uns
 			if (!room_bounds2.contains_cube(pipe_ext)) continue; // pipe partially outside of room (in !dim or Z)
 			bool no_end_bracket(0);
 			
-			if (is_machine_room) {
-				float const near_wall(room_bounds2.d[dim][!e]);
-
-				if (0) { // place a boiler; this rarely succeeds due to machines in the way so is currently disabled
-					float const boiler_radius(rgen.rand_uniform(0.2, 0.24)*window_vspace), boiler_len(rgen.rand_uniform(2.4, 2.8)*boiler_radius);
-					cube_t boiler;
-					set_cube_zvals(boiler, zval, (zval + 2.0*boiler_radius));
-					boiler.d[dim][!e] = near_wall;
-					boiler.d[dim][ e] = near_wall + (e ? 1.0 : -1.0)*boiler_len;
-					set_wall_width(boiler, pipe_centerline, boiler_radius, !dim);
-					if (is_obj_placement_blocked(boiler, room2, 1, 0) || overlaps_other_room_obj(boiler, objs_start, 1, &objs_end)) continue;
-					//objs.emplace_back(boiler, TYPE_PIPE, next_room_id, dim, 0, bracket_flags, light_amt, SHAPE_CYLIN, RED);
-					continue;
-				}
-				// find a nearby machine or boiler to connect to
+			if (is_machine_room) { // find a nearby machine or boiler to connect to
 				moids.clear();
 
 				for (unsigned i = objs_start; i < objs_end; ++i) {

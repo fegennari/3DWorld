@@ -372,17 +372,15 @@ bool fire_hydrant_t::proc_sphere_coll(point &pos_, point const &p_last, float ra
 // fountain_t
 
 void begin_water_surface_draw(shader_t &s, bool write_depth=0) { // used for swimming pools and ponds
-	if (0) {
-		select_no_texture();
-		select_texture_nmap(get_texture_by_name("normal_maps/ocean_water_normal.png", 1));
-	}
-	else {select_texture(SNOW_TEX);}
+	//select_no_texture();
+	//select_texture_nmap(get_texture_by_name("normal_maps/ocean_water_normal.png", 1));
+	select_texture(SNOW_TEX);
 	enable_blend(); // transparent water
 	if (!write_depth) {glDepthMask(GL_FALSE);}
 	s.set_refract_ix(1.33); // may or may not be used, depending on the active shader
 }
 void end_water_surface_draw(shader_t &s, bool write_depth=0) {
-	if (0) {bind_default_flat_normal_map();}
+	//bind_default_flat_normal_map();
 	disable_blend();
 	if (!write_depth) {glDepthMask(GL_TRUE);}
 	s.set_refract_ix(1.0); // reset
