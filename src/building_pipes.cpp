@@ -874,19 +874,20 @@ void building_t::add_extb_steam_pipes(rand_gen_t rgen) {
 	unsigned const objs_end(objs.size());
 	unsigned objs_start(0);
 	while (objs_start < objs.size() && objs[objs_start].room_id < first_room_ix) {++objs_start;}
-	vect_cube_t steam_pipes;
+	vect_cube_with_ix_t steam_pipes;
 	unsigned const pipe_mat_ix(rgen.rand_bool()); // must be consistent for building so that connected pipes look correct
 	for (unsigned r = first_room_ix; r < interior->rooms.size(); ++r) {add_hallway_steam_pipes(rgen, r, objs_start, objs_end, pipe_mat_ix, steam_pipes);}
 }
 
-void building_t::add_hallway_steam_pipes(rand_gen_t &rgen, unsigned room_id, unsigned objs_start, unsigned objs_end, unsigned pipe_mat_ix, vect_cube_t &steam_pipes) {
+void building_t::add_hallway_steam_pipes(rand_gen_t &rgen, unsigned room_id, unsigned objs_start, unsigned objs_end, unsigned pipe_mat_ix, vect_cube_with_ix_t &steam_pipes) {
 	room_t const &room(get_room(room_id));
 	if (!room.is_hallway) return; // hallways only
 	bool const dim(room.dx() < room.dy()); // long dim
 	float const window_vspace(get_window_vspace()), fc_gap(get_floor_ceil_gap()), fc_thick(get_fc_thickness()), wall_thick(get_wall_thickness());
 	float const zval(room.z1() + fc_thick), pipe_radius(0.05*window_vspace), pipe_zval(zval + fc_gap - pipe_radius);
-	float const fitting_hlen(1.5*pipe_radius), fitting_expand(0.06*pipe_radius), bracket_hlen(0.5*pipe_radius), bracket_expand(0.75*fitting_expand);
+	float const fitting_hlen(1.4*pipe_radius), fitting_expand(0.06*pipe_radius), bracket_hlen(0.5*pipe_radius), bracket_expand(0.75*fitting_expand);
 	float const light_amt(1.0);
+	colorRGBA const color(WHITE);
 	cube_t const room_bounds(get_room_wall_bounds(room));
 	unsigned const flags(RO_FLAG_HANGING | RO_FLAG_LIT | RO_FLAG_BROKEN); // shadow casting, no ends, dirty
 	unsigned const bracket_flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING | RO_FLAG_BROKEN | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI);
@@ -963,9 +964,9 @@ void building_t::add_hallway_steam_pipes(rand_gen_t &rgen, unsigned room_id, uns
 					// Note: don't need to check for valid placement of v_pipe because it should intersect the machine
 					assert(h_pipe.is_strictly_normalized());
 					assert(v_pipe.is_strictly_normalized());
-					objs.emplace_back(h_pipe, TYPE_PIPE, next_room_id, !dim, 0, (flags | RO_FLAG_ADJ_BOT | RO_FLAG_ADJ_TOP), light_amt, SHAPE_CYLIN, WHITE); // round at both ends
+					objs.emplace_back(h_pipe, TYPE_PIPE, next_room_id, !dim, 0, (flags | RO_FLAG_ADJ_BOT | RO_FLAG_ADJ_TOP), light_amt, SHAPE_CYLIN, color); // round at both ends
 					objs.back().obj_id = pipe_mat_ix;
-					objs.emplace_back(v_pipe, TYPE_PIPE, next_room_id, 0, 1, flags, light_amt, SHAPE_CYLIN, WHITE); // vertical
+					objs.emplace_back(v_pipe, TYPE_PIPE, next_room_id, 0, 1, flags, light_amt, SHAPE_CYLIN, color); // vertical
 					objs.back().obj_id = pipe_mat_ix;
 					end_mask[e] = 1;
 					added_ext   = no_end_bracket = 1;
@@ -978,7 +979,7 @@ void building_t::add_hallway_steam_pipes(rand_gen_t &rgen, unsigned room_id, uns
 				bool skip(0);
 			
 				// it should be okay to intersect other steam pipes because they're the same height and radius and will make a cross shape, but we need to add the fittings
-				for (cube_t const &p : steam_pipes) {
+				for (cube_with_ix_t const &p : steam_pipes) {
 					if (!p.intersects(pipe_ext)) continue;
 					bool const dim2(p.dx() < p.dy());
 					// must intersect at right angles and be contained in the pipe's length
@@ -997,9 +998,9 @@ void building_t::add_hallway_steam_pipes(rand_gen_t &rgen, unsigned room_id, uns
 					intersect_dim(fitting2, room_bounds2, !dim);
 					intersect_dim(fitting1, pipe_ext,      dim); // clip to pipe bounds
 					intersect_dim(fitting2, p,            !dim);
-					objs.emplace_back(fitting1, TYPE_PIPE, next_room_id,  dim, 0, bracket_flags, light_amt, SHAPE_CYLIN, WHITE);
+					objs.emplace_back(fitting1, TYPE_PIPE, next_room_id,  dim, 0, bracket_flags, light_amt, SHAPE_CYLIN, color);
 					objs.back().obj_id = bracket_mat_ix;
-					objs.emplace_back(fitting2, TYPE_PIPE, next_room_id, !dim, 0, bracket_flags, light_amt, SHAPE_CYLIN, WHITE);
+					objs.emplace_back(fitting2, TYPE_PIPE, next_room_id, !dim, 0, bracket_flags, light_amt, SHAPE_CYLIN, color);
 					objs.back().obj_id = bracket_mat_ix;
 				} // for p
 				// now check for valid placement, in case the extension was clipped above
@@ -1009,6 +1010,51 @@ void building_t::add_hallway_steam_pipes(rand_gen_t &rgen, unsigned room_id, uns
 				if (skip) {
 					objs.resize(fittings_start); // remove any fittings we added for pipe_ext
 					continue;
+				}
+				if (!no_end_bracket) { // see if we can connect to a previous steam pipe crossing this room in the same dim
+					for (cube_with_ix_t &p : steam_pipes) {
+						bool const dim2(p.dx() < p.dy());
+						if (dim2 != dim || p.z1() != pipe_ext.z1()) continue; // wrong dim or height
+						if (pipe_ext.d[dim][0] < p.d[dim][0] || pipe_ext.d[dim][1] > p.d[dim][1]) continue; // not shared run length
+						if (!p.intersects(room2))   continue; // not crossing this room
+						if (p.intersects(pipe_ext)) continue; // already connected
+						bool const first_dir(rgen.rand_bool());
+						float const cent1(pipe_ext.get_center_dim(!dim)), cent2(p.get_center_dim(!dim));
+						cube_t conn_pipe(pipe_ext); // copy zvals
+						conn_pipe.d[!dim][0] = min(cent1, cent2);
+						conn_pipe.d[!dim][1] = max(cent1, cent2);
+						bool connected(0);
+
+						for (unsigned DD = 0; DD < 2; ++DD) { // each side of pipe/wall of room
+							bool const D(DD ^ first_dir);
+							float const conn_pt(pipe_ext.d[dim][D] - (D ? 1.0 : -1.0)*pipe_radius);
+							set_wall_width(conn_pipe, conn_pt, pipe_radius, dim);
+							if (is_obj_placement_blocked(pipe_ext, room2, 1, 0)) continue;
+							cube_t test_cube(conn_pipe);
+							test_cube.expand_in_dim(!dim, -1.1*pipe_radius); // clip off the ends because we know they intersect pipe_ext and p
+							if (overlaps_other_room_obj(test_cube, objs_start, 1, &objs_end)) continue;
+							pipe_ext.d[dim][e] = conn_pt; // pipe extension ends here
+							// shorten both pipes to remove the shared overlap; must modify both the original object and the steam_pipes entry for p
+							unsigned const pipe_obj_ix(p.ix);
+							cube_t const orig_p(p);
+							room_object_t &po(objs[pipe_obj_ix]);
+							bool const other_dir(p.get_center_dim(dim) < pipe_ext.get_center_dim(dim));
+							po.d[dim][other_dir] = p.d[dim][other_dir] = conn_pt; // other pipe ends here
+							steam_pipes.emplace_back(conn_pipe, objs.size()); // required for connecting later pipes that pass perpendicular through this segment
+							objs.emplace_back(conn_pipe, TYPE_PIPE, room_id, !dim, 0, (flags | RO_FLAG_ADJ_BOT | RO_FLAG_ADJ_TOP), light_amt, SHAPE_CYLIN, color); // round at both ends
+							objs.back().obj_id = pipe_mat_ix;
+							
+							if (pipe_obj_ix >= 2) { // remove the end bracket for p/po; condition should always be true
+								for (unsigned i = pipe_obj_ix-2; i < pipe_obj_ix; ++i) { // fittings should be the two previous objects
+									room_object_t &obj(objs[i]);
+									if (obj.type == TYPE_PIPE && orig_p.intersects(obj) && !p.intersects(obj)) {obj.remove();}
+								}
+							}
+							connected = no_end_bracket = 1;
+							break; // success/done
+						} // for d
+						if (connected) break; // only need to connect one; should we connect the closest?
+					} // for p
 				}
 				ext_mask[e] = 1;
 			} // end hallway
@@ -1022,7 +1068,7 @@ void building_t::add_hallway_steam_pipes(rand_gen_t &rgen, unsigned room_id, uns
 				bracket.expand_by(bracket_expand);
 				bracket.d[dim][ f] = wall_edge;
 				bracket.d[dim][!f] = wall_edge + (f ? -1.0 : 1.0)*bracket_hlen;
-				objs.emplace_back(bracket, TYPE_PIPE, room_id, dim, 0, bracket_flags, light_amt, SHAPE_CYLIN, WHITE);
+				objs.emplace_back(bracket, TYPE_PIPE, room_id, dim, 0, bracket_flags, light_amt, SHAPE_CYLIN, color);
 				objs.back().obj_id = bracket_mat_ix;
 			} // for f
 		} // for e
@@ -1041,21 +1087,21 @@ void building_t::add_hallway_steam_pipes(rand_gen_t &rgen, unsigned room_id, uns
 			}
 			unsigned const end_flags(zdir ? RO_FLAG_ADJ_BOT : RO_FLAG_ADJ_TOP); // rounded bend at one end
 			pipe.d[dim][e] = pipe_end;
-			objs.emplace_back(v_pipe, TYPE_PIPE, room_id, 0, 1, (flags | end_flags), light_amt, SHAPE_CYLIN, WHITE); // vertical
+			objs.emplace_back(v_pipe, TYPE_PIPE, room_id, 0, 1, (flags | end_flags), light_amt, SHAPE_CYLIN, color); // vertical
 			objs.back().obj_id = pipe_mat_ix;
 
 			if (zdir == 0) { // add fitting to bottom (not enough space at top)
 				cube_t bracket(v_pipe);
 				bracket.expand_by(bracket_expand);
 				set_cube_zvals(bracket, v_pipe.z1(), v_pipe.z1()+bracket_hlen);
-				objs.emplace_back(bracket, TYPE_PIPE, room_id, 0, 1, (bracket_flags & ~RO_FLAG_ADJ_LO), light_amt, SHAPE_CYLIN, WHITE); // vertical; skip bottom edges
+				objs.emplace_back(bracket, TYPE_PIPE, room_id, 0, 1, (bracket_flags & ~RO_FLAG_ADJ_LO), light_amt, SHAPE_CYLIN, color); // vertical; skip bottom edges
 				objs.back().obj_id = bracket_mat_ix;
 			}
 		} // for e
-		unsigned const obj_id(objs.size()); // main pipe obj_id for steam emitter
-		objs.emplace_back(pipe, TYPE_PIPE, room_id, dim, 0, flags, light_amt, SHAPE_CYLIN, WHITE);
+		unsigned const obj_id(objs.size()); // main pipe obj_id for steam emitter and connecting pipes
+		objs.emplace_back(pipe, TYPE_PIPE, room_id, dim, 0, flags, light_amt, SHAPE_CYLIN, color);
 		objs.back().obj_id = pipe_mat_ix;
-		steam_pipes.push_back(pipe);
+		steam_pipes.emplace_back(pipe, obj_id);
 		added_pipe = 1;
 		// add brackets/fittings
 		float const pipe_len(pipe_base.get_sz_dim(dim)); // only the segment of pipe in this room
@@ -1070,7 +1116,7 @@ void building_t::add_hallway_steam_pipes(rand_gen_t &rgen, unsigned room_id, uns
 			for (unsigned n = (add_lo ? 0 : 1); n <= (num_brackets + (add_hi ? 1 : 0)); ++n) {
 				set_wall_width(bracket, (pipe_base.d[dim][0] + n*bracket_spacing), bracket_hlen, dim);
 				intersect_dim(bracket, room_bounds, dim); // clip end bracket to wall
-				objs.emplace_back(bracket, TYPE_PIPE, room_id, dim, 0, bracket_flags, light_amt, SHAPE_CYLIN, WHITE);
+				objs.emplace_back(bracket, TYPE_PIPE, room_id, dim, 0, bracket_flags, light_amt, SHAPE_CYLIN, color);
 				objs.back().obj_id = bracket_mat_ix;
 			}
 		}
