@@ -1019,7 +1019,8 @@ void building_t::add_hallway_steam_pipes(rand_gen_t &rgen, unsigned room_id, uns
 						if (pipe_ext.d[dim][0] < p.d[dim][0] || pipe_ext.d[dim][1] > p.d[dim][1]) continue; // not shared run length
 						if (!p.intersects(room2))   continue; // not crossing this room
 						if (p.intersects(pipe_ext)) continue; // already connected
-						bool const first_dir(rgen.rand_bool());
+						bool const other_dir(p.get_center_dim(dim) < pipe_ext.get_center_dim(dim));
+						bool const first_dir((other_dir == e) ? !e : rgen.rand_bool()); // avoid crossing the hallway if pipes come from the same side
 						float const cent1(pipe_ext.get_center_dim(!dim)), cent2(p.get_center_dim(!dim));
 						cube_t conn_pipe(pipe_ext); // copy zvals
 						conn_pipe.d[!dim][0] = min(cent1, cent2);
@@ -1034,21 +1035,19 @@ void building_t::add_hallway_steam_pipes(rand_gen_t &rgen, unsigned room_id, uns
 							cube_t test_cube(conn_pipe);
 							test_cube.expand_in_dim(!dim, -1.1*pipe_radius); // clip off the ends because we know they intersect pipe_ext and p
 							if (overlaps_other_room_obj(test_cube, objs_start, 1, &objs_end)) continue;
-							pipe_ext.d[dim][e] = conn_pt; // pipe extension ends here
 							// shorten both pipes to remove the shared overlap; must modify both the original object and the steam_pipes entry for p
 							unsigned const pipe_obj_ix(p.ix);
 							cube_t const orig_p(p);
 							room_object_t &po(objs[pipe_obj_ix]);
-							bool const other_dir(p.get_center_dim(dim) < pipe_ext.get_center_dim(dim));
-							po.d[dim][other_dir] = p.d[dim][other_dir] = conn_pt; // other pipe ends here
+							pipe_ext.d[dim][e] = po.d[dim][other_dir] = p.d[dim][other_dir] = conn_pt; // pipe extensions end here
 							steam_pipes.emplace_back(conn_pipe, objs.size()); // required for connecting later pipes that pass perpendicular through this segment
 							objs.emplace_back(conn_pipe, TYPE_PIPE, room_id, !dim, 0, (flags | RO_FLAG_ADJ_BOT | RO_FLAG_ADJ_TOP), light_amt, SHAPE_CYLIN, color); // round at both ends
 							objs.back().obj_id = pipe_mat_ix;
 							
-							if (pipe_obj_ix >= 2) { // remove the end bracket for p/po; condition should always be true
-								for (unsigned i = pipe_obj_ix-2; i < pipe_obj_ix; ++i) { // fittings should be the two previous objects
+							if (pipe_obj_ix >= 6) { // remove the end bracket for p/po; condition should always be true
+								for (unsigned i = pipe_obj_ix-6; i < pipe_obj_ix; ++i) { // fittings should be previous objects, possibly after up/down segments
 									room_object_t &obj(objs[i]);
-									if (obj.type == TYPE_PIPE && orig_p.intersects(obj) && !p.intersects(obj)) {obj.remove();}
+									if (obj.type == TYPE_PIPE && obj.obj_id == bracket_mat_ix && orig_p.intersects(obj) && !p.intersects(obj)) {obj.remove();}
 								}
 							}
 							connected = no_end_bracket = 1;
