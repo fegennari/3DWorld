@@ -9,6 +9,7 @@
 bool line_int_cubes_exp(point const &p1, point const &p2, vect_cube_t const &cubes, vector3d const &expand);
 void add_pg_obstacles(vect_room_object_t const &objs, unsigned objs_start, unsigned objs_end, cube_t const &room, vect_cube_t &walls, vect_cube_t &beams, vect_cube_t &obstacles);
 void subtract_cubes_from_cube_split_in_dim(cube_t const &c, vect_cube_t const &sub, vect_cube_t &out, vect_cube_t &out2, unsigned dim);
+point get_machine_steam_conn_pt(room_object_t const &c);
 
 
 // find the closest wall (including room wall) to this location, avoiding obstacles, and shift outward by radius; routes in X or Y only, for now
@@ -939,7 +940,7 @@ void building_t::add_hallway_steam_pipes(rand_gen_t &rgen, unsigned room_id, uns
 						float score(0.0);
 						if (pipe.d[!dim][0] < c.d[!dim][1] && pipe.d[!dim][1] > c.d[!dim][0]) {score += 10.0*window_vspace;} // high score if pipe crosses over this machine
 						if (c.dim == dim) {score += 1.0*window_vspace;} // higher score if on same or opposite wall as pipe
-						moids.emplace_back((p2p_dist_xy(test_pt, c.get_cube_center()) - score), i); // add distance and negate score so that highest score is first
+						moids.emplace_back((p2p_dist_xy(test_pt, get_machine_steam_conn_pt(c)) - score), i); // add distance and negate score so that highest score is first
 					}
 					else if (!moids.empty()) break; // moved past this room
 				} // for i
@@ -948,8 +949,8 @@ void building_t::add_hallway_steam_pipes(rand_gen_t &rgen, unsigned room_id, uns
 
 				for (auto const &m : moids) {
 					// run along the wall/ceiling above the machine and drop down to its center
-					room_object_t const &c(objs[m.second]);
-					float const turn_val(c.get_center_dim(dim)), end_val(c.get_center_dim(!dim));
+					point const conn_pt(get_machine_steam_conn_pt(objs[m.second]));
+					float const turn_val(conn_pt[dim]), end_val(conn_pt[!dim]);
 					bool const turn_dir(pipe_centerline < end_val);
 					pipe_ext.d[dim][e] = turn_val;
 					if (is_obj_placement_blocked(pipe_ext, room2, 1, 0) || overlaps_other_room_obj(pipe_ext, objs_start, 1, &objs_end)) continue;
@@ -959,7 +960,7 @@ void building_t::add_hallway_steam_pipes(rand_gen_t &rgen, unsigned room_id, uns
 					set_wall_width(h_pipe, turn_val, pipe_radius, dim);
 					if (is_obj_placement_blocked(h_pipe, room2, 1, 0) || overlaps_other_room_obj(h_pipe, objs_start, 1, &objs_end)) continue;
 					cube_t v_pipe(h_pipe);
-					set_cube_zvals(v_pipe, c.zc(), h_pipe.zc());
+					set_cube_zvals(v_pipe, conn_pt.z, h_pipe.zc());
 					set_wall_width(v_pipe, end_val, pipe_radius, !dim);
 					// Note: don't need to check for valid placement of v_pipe because it should intersect the machine
 					assert(h_pipe.is_strictly_normalized());
