@@ -893,6 +893,7 @@ void building_t::add_hallway_steam_pipes(rand_gen_t &rgen, unsigned room_id, uns
 	unsigned const flags(RO_FLAG_HANGING | RO_FLAG_LIT | RO_FLAG_BROKEN); // shadow casting, no ends, dirty
 	unsigned const bracket_flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING | RO_FLAG_BROKEN | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI);
 	unsigned const bracket_mat_ix(pipe_mat_ix + 1); // opposite dirty metal material of pipe
+	unsigned end_room_id[2] = {room_id, room_id}; // intially ends in the current room
 	bool const first_side(rgen.rand_bool());
 	bool added_pipe(0);
 	vect_room_object_t &objs(interior->room_geom->objs);
@@ -1056,7 +1057,8 @@ void building_t::add_hallway_steam_pipes(rand_gen_t &rgen, unsigned room_id, uns
 						if (connected) break; // only need to connect one; should we connect the closest?
 					} // for p
 				}
-				ext_mask[e] = 1;
+				ext_mask   [e] = 1;
+				end_room_id[e] = next_room_id;
 			} // end hallway
 			pipe.union_with_cube(pipe_ext);
 
@@ -1077,9 +1079,16 @@ void building_t::add_hallway_steam_pipes(rand_gen_t &rgen, unsigned room_id, uns
 			if (cont_mask[e] || ext_mask[e] || end_mask[e]) continue; // extends/connects/doesn't end in this dim
 			float const pipe_end(room_bounds.d[dim][e] - (e ? 1.0 : -1.0)*pipe_radius); // against the end wall
 			bool const zdir(rgen.rand_bool()); // 0=down, 1=up
+			float pipe_end_zval(zdir ? pipe.z2() : zval); // ceiling or floor
+
+			if (zdir) { // extend upward into ceiling space in case the end is visible through an open tile
+				for (ceiling_space_t const &cs : interior->ceiling_spaces) {
+					if (cs.room_ix == end_room_id[e]) {max_eq(pipe_end_zval, cs.z2());}
+				}
+			}
 			cube_t v_pipe(pipe);
 			v_pipe.d[2][!zdir] = pipe_zval; // connects to horizontal pipe
-			v_pipe.d[2][ zdir] = (zdir ? pipe.z2() : zval); // ceiling or floor
+			v_pipe.d[2][ zdir] = pipe_end_zval; // ceiling or floor
 			set_wall_width(v_pipe, pipe_end, pipe_radius, dim);
 
 			if (zdir == 0) { // only need to check for placement of downward pipe because upward pipe is short
