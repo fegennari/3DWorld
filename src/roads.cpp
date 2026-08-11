@@ -230,21 +230,28 @@ namespace stoplight_ns {
 	void stoplight_t::find_state_with_waiting_car() {
 		uint8_t const prev_state(cur_state);
 
-		while (1) {
-			// cycle through all directions and find one where a car is waiting to go; this allows the traffic light to skip some green lights that aren't needed;
-			// TODO: however, it can lead to a light transitioning from green => yellow => green without going through red; this is difficult to fix with the current architecture
+		while (1) { // cycle through all directions and find one where a car is waiting to go; this allows the traffic light to skip some green lights that aren't needed
 			advance_state();
 			if (any_blocked()) break; // if some car is blocking the intersection in some dir, force all states (no skipped lights) to guarantee we can make progress
-			if (is_any_car_waiting_at_this_state()) break; // car is waiting at this state
+			
+			if (is_any_car_waiting_at_this_state()) { // car is waiting at this state
+				if (cur_state == prev_state) { // repeat the same as previous state; the light will have been yellow up to this point
+					// this lead to a light transitioning from green => yellow => green without going through red, so we must move to the next state
+					advance_state();
+					// but we can shorten the green light time for that state, since no cars are waiting; this should cycle back to prev_state on the next state change
+					float const state_cycle_time(get_cur_state_time_ticks());
+					cur_state_ticks = min(0.5f*state_cycle_time, (state_cycle_time - TICKS_PER_SECOND*(yellow_light_time + 1.0f))); // 50% time, at lest 1s of green light
+				}
+				break;
+			}
 			if (cur_state == prev_state) {advance_state(); break;} // wrapped around, leave at the next valid state after the prev state
-		}
+		} // end while
 		car_waiting_sr = car_waiting_left = 0; // waiting bits have been used, clear for next state change
 	}
 
 	void stoplight_t::run_update_logic() {
 		assert(cur_state < NUM_STATE);
-		//if (cur_state_ticks > get_cur_state_time_secs()) {advance_state();} // time to update to next state
-		if (cur_state_ticks > get_cur_state_time_secs()) {find_state_with_waiting_car();} // time to update to next state
+		if (cur_state_ticks > get_cur_state_time_ticks()) {find_state_with_waiting_car();} // time to update to next state
 	}
 
 	void stoplight_t::ffwd_to_future(float time_secs) {
@@ -257,7 +264,7 @@ namespace stoplight_ns {
 		if (num_conn == 2) return; // nothing else to do
 		cur_state = stoplight_rgen.rand() % NUM_STATE; // start at a random state
 		advance_state(); // make sure cur_state is valid
-		cur_state_ticks = get_cur_state_time_secs()*stoplight_rgen.rand_float(); // start at a random time within this state
+		cur_state_ticks = get_cur_state_time_ticks()*stoplight_rgen.rand_float(); // start at a random time within this state
 	}
 
 	void stoplight_t::next_frame() {
@@ -286,7 +293,7 @@ namespace stoplight_ns {
 		if (red_light(dim, dir, turn)) return RED_LIGHT;
 		if (num_conn == 2) return GREEN_LIGHT;
 		stoplight_t future_self(*this);
-		future_self.ffwd_to_future(2.0); // yellow light time = 2.0s
+		future_self.ffwd_to_future(yellow_light_time);
 		return (future_self.red_light(dim, dir, turn) ? (unsigned)YELLOW_LIGHT : (unsigned)GREEN_LIGHT);
 	}
 	unsigned stoplight_t::get_future_light_state(bool dim, bool dir, unsigned turn, float future_seconds) const {

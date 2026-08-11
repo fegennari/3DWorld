@@ -366,6 +366,7 @@ namespace stoplight_ns {
 	enum {EGL=0, EGWG, WGL, NGL, NGSG, SGL, NUM_STATE}; // E=car moving east, W=west, N=sorth, S=south, G=straight|right, L=left turn
 	enum {CW_WALK=0, CW_WARN, CW_STOP}; // crosswalk state
 	float const state_times[NUM_STATE] = {5.0, 6.0, 5.0, 5.0, 6.0, 5.0}; // in seconds
+	float const yellow_light_time = 2.0; // in seconds
 	unsigned const st_r_orient_masks[NUM_STATE] = {2, 3, 1, 8, 12, 4}; // {W=1, E=2, S=4, N=8}, for straight and right turns
 	unsigned const left_orient_masks[NUM_STATE] = {2, 0, 1, 8, 0,  4}; // {W=1, E=2, S=4, N=8}, for left turns only
 	unsigned const to_right  [4] = {3, 2, 0, 1}; // {N, S, W, E}
@@ -394,7 +395,7 @@ namespace stoplight_ns {
 		bool is_any_car_waiting_at_this_state() const;
 		void find_state_with_waiting_car();
 		void run_update_logic();
-		float get_cur_state_time_secs() const {return (at_conn_road ? 2.0 : 1.0)*TICKS_PER_SECOND*state_times[cur_state];}
+		float get_cur_state_time_ticks() const {return (at_conn_road ? 2.0 : 1.0)*TICKS_PER_SECOND*state_times[cur_state];}
 		void ffwd_to_future(float time_secs);
 	public:
 		stoplight_t(bool at_conn_road_) : at_conn_road(at_conn_road_) {reset_blocked();}
