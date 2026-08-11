@@ -1040,7 +1040,6 @@ void building_t::add_hallway_steam_pipes(rand_gen_t &rgen, unsigned room_id, uns
 							cube_t const orig_p(p);
 							room_object_t &po(objs[pipe_obj_ix]);
 							pipe_ext.d[dim][e] = po.d[dim][other_dir] = p.d[dim][other_dir] = conn_pt; // pipe extensions end here
-							steam_pipes.emplace_back(conn_pipe, objs.size()); // required for connecting later pipes that pass perpendicular through this segment
 							objs.emplace_back(conn_pipe, TYPE_PIPE, room_id, !dim, 0, (flags | RO_FLAG_ADJ_BOT | RO_FLAG_ADJ_TOP), light_amt, SHAPE_CYLIN, color); // round at both ends
 							objs.back().obj_id = pipe_mat_ix;
 							
@@ -1050,8 +1049,9 @@ void building_t::add_hallway_steam_pipes(rand_gen_t &rgen, unsigned room_id, uns
 									if (obj.type == TYPE_PIPE && obj.obj_id == bracket_mat_ix && orig_p.intersects(obj) && !p.intersects(obj)) {obj.remove();}
 								}
 							}
+							steam_pipes.emplace_back(conn_pipe, objs.size()); // required for connecting later pipes that pass perpendicular through this segment
 							connected = no_end_bracket = 1;
-							break; // success/done
+							break; // success/done; p iteration is invalid anyway
 						} // for d
 						if (connected) break; // only need to connect one; should we connect the closest?
 					} // for p
