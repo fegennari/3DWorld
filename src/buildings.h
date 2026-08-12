@@ -2677,6 +2677,8 @@ private:
 		pipe_t const &parent, vector<pipe_t> &pipes, vector<pipe_t> &fittings, rand_gen_t &rgen) const;
 	void add_extb_steam_pipes(rand_gen_t rgen);
 	void add_hallway_steam_pipes(rand_gen_t &rgen, unsigned room_id, unsigned objs_start, unsigned objs_end, unsigned pipe_mat_ix, vect_cube_with_ix_t &steam_pipes);
+	bool connect_steam_pipe_to_machine(rand_gen_t &rgen, cube_t &pipe, colorRGBA const &color, float light_amt,
+		bool dim, bool dir, unsigned room_id, unsigned objs_start, unsigned objs_end, unsigned flags, unsigned mat_ix);
 	bool add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vect_cube_t const &pipe_cubes,
 		unsigned room_id, unsigned num_floors, unsigned objs_start, rand_gen_t &rgen,
 		float custom_floor_spacing=0.0, float wall_pad=0.0, unsigned pref_dim=2, vect_cube_t const &vpipe_avoid=vect_cube_t());

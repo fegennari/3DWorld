@@ -897,7 +897,6 @@ void building_t::add_hallway_steam_pipes(rand_gen_t &rgen, unsigned room_id, uns
 	bool const first_side(rgen.rand_bool());
 	bool added_pipe(0);
 	vect_room_object_t &objs(interior->room_geom->objs);
-	vector<pair<float, unsigned>> moids; // {score, machine obj ID}
 
 	// maybe add a steam pipe near the ceiling on either wall along the hallway
 	for (unsigned d = 0; d < 2 && !added_pipe; ++d) { // side of hallway; only need to add to one side
@@ -931,52 +930,10 @@ void building_t::add_hallway_steam_pipes(rand_gen_t &rgen, unsigned room_id, uns
 			bool no_end_bracket(0);
 			
 			if (is_machine_room) { // find a nearby machine or boiler to connect to
-				moids.clear();
-
-				for (unsigned i = objs_start; i < objs_end; ++i) {
-					room_object_t const &c(objs[i]);
-							
-					if (c.room_id == next_room_id) {
-						if (c.type != TYPE_MACHINE && c.type != TYPE_BOILER) continue;
-						float score(0.0);
-						if (pipe.d[!dim][0] < c.d[!dim][1] && pipe.d[!dim][1] > c.d[!dim][0]) {score += 10.0*window_vspace;} // high score if pipe crosses over this machine
-						if (c.dim == dim) {score += 1.0*window_vspace;} // higher score if on same or opposite wall as pipe
-						if (c.type == TYPE_BOILER) {score += 1.0*window_vspace;} // higher score if this is a boiler, which should have steam connected to it
-						moids.emplace_back((p2p_dist_xy(test_pt, get_machine_steam_conn_pt(c)) - score), i); // add distance and negate score so that highest score is first
-					}
-					else if (!moids.empty()) break; // moved past this room
-				} // for i
-				sort(moids.begin(), moids.end());
-				bool added_ext(0);
-
-				for (auto const &m : moids) {
-					// run along the wall/ceiling above the machine and drop down to its center
-					point const conn_pt(get_machine_steam_conn_pt(objs[m.second]));
-					float const turn_val(conn_pt[dim]), end_val(conn_pt[!dim]);
-					bool const turn_dir(pipe_centerline < end_val);
-					pipe_ext.d[dim][e] = turn_val;
-					if (is_obj_placement_blocked(pipe_ext, room2, 1, 0) || overlaps_other_room_obj(pipe_ext, objs_start, 1, &objs_end)) continue;
-					cube_t h_pipe(pipe);
-					h_pipe.d[!dim][!turn_dir] = pipe_centerline;
-					h_pipe.d[!dim][ turn_dir] = end_val;
-					set_wall_width(h_pipe, turn_val, pipe_radius, dim);
-					if (is_obj_placement_blocked(h_pipe, room2, 1, 0) || overlaps_other_room_obj(h_pipe, objs_start, 1, &objs_end)) continue;
-					cube_t v_pipe(h_pipe);
-					set_cube_zvals(v_pipe, conn_pt.z, h_pipe.zc());
-					set_wall_width(v_pipe, end_val, pipe_radius, !dim);
-					// Note: don't need to check for valid placement of v_pipe because it should intersect the machine
-					assert(h_pipe.is_strictly_normalized());
-					assert(v_pipe.is_strictly_normalized());
-					objs.emplace_back(h_pipe, TYPE_PIPE, next_room_id, !dim, 0, (flags | RO_FLAG_ADJ_BOT | RO_FLAG_ADJ_TOP), light_amt, SHAPE_CYLIN, color); // round at both ends
-					objs.back().obj_id = pipe_mat_ix;
-					objs.emplace_back(v_pipe, TYPE_PIPE, next_room_id, 0, 1, flags, light_amt, SHAPE_CYLIN, color); // vertical
-					objs.back().obj_id = pipe_mat_ix;
-					end_mask[e] = 1;
-					added_ext   = no_end_bracket = 1;
-					break; // only connect to one machine
-				} // for m
-				if (!added_ext) continue; // failed to connect to a machine
-			} // end is_machine_room
+				if (!connect_steam_pipe_to_machine(rgen, pipe_ext, color, light_amt, dim, e, next_room_id, objs_start, objs_end, flags, pipe_mat_ix)) continue;
+				end_mask[e]    = 1;
+				no_end_bracket = 1;
+			}
 			else { // hallway
 				unsigned const fittings_start(objs.size());
 				bool skip(0);
@@ -1063,6 +1020,39 @@ void building_t::add_hallway_steam_pipes(rand_gen_t &rgen, unsigned room_id, uns
 			} // end hallway
 			pipe.union_with_cube(pipe_ext);
 
+			// add connecting pipes for machine rooms to the side
+			cube_t test_cube(room_bounds);
+			test_cube.expand_in_dim(!dim, 2.0*wall_thick); // to pick up adjacent rooms
+			test_cube.expand_in_dim( dim, -(wall_thick + pipe_radius)); // to avoid corners and narrow spaces
+			auto rooms_start(interior->ext_basement_rooms_start());
+
+			for (auto r = interior->ext_basement_rooms_start(); r != interior->rooms.end(); ++r) {
+				if (r->get_room_type(0) != RTYPE_MACHINE || *r == room || !r->intersects_no_adj(test_cube)) continue;
+				bool const dir(pipe_centerline < r->get_center_dim(!dim));
+				unsigned const adj_room_id(r - interior->rooms.begin());
+				cube_t const rbounds(get_room_wall_bounds(*r));
+				cube_t pipe_ext(pipe); // copy zvals
+				pipe_ext.d[!dim][!dir] = pipe_centerline; // ends at main pipe
+				pipe_ext.d[!dim][ dir] = rbounds.d[!dim][dir]; // full length of room
+				bool added_pipe(0);
+
+				for (unsigned side = 0; side < 2; ++side) {
+					set_wall_width(pipe_ext, (rbounds.d[dim][side] - (side ? 1.0 : -1.0)*pipe_radius), pipe_radius, dim); // along one room wall
+					if (pipe_ext.d[dim][0] < pipe.d[dim][0] || pipe_ext.d[dim][1] > pipe.d[dim][1]) continue; // not contained in the parent pipe
+					
+					if (connect_steam_pipe_to_machine(rgen, pipe_ext, color, light_amt, !dim, dir, adj_room_id, objs_start, objs_end, flags, pipe_mat_ix)) {
+						objs.emplace_back(pipe_ext, TYPE_PIPE, room_id, !dim, 0, flags, light_amt, SHAPE_CYLIN, color);
+						objs.back().obj_id = pipe_mat_ix;
+						added_pipe = 1;
+						// TODO: add fitting
+						//cube_t dbg(pipe_ext); dbg.z1() += 4.0*pipe_radius; dbg.z2() += window_vspace; // TESTING
+						//objs.emplace_back(dbg, TYPE_DBG_SHAPE, room_id, 0, 0, 0, light_amt, SHAPE_CUBE, RED); // TESTING
+						break;
+					}
+				} // for side
+				if (added_pipe) break; // at most one
+			} // for r
+
 			// add brackets at the wall(s) for the extension
 			for (unsigned f = 0; f < 2; ++f) {
 				if (no_end_bracket && f == e) continue; // skip bracket on far end
@@ -1140,6 +1130,62 @@ void building_t::add_hallway_steam_pipes(rand_gen_t &rgen, unsigned room_id, uns
 		vector3d const velocity(0.001*(vector_from_dim_dir(!dim, !dir) - plus_z)); // aimed down at 45 degrees
 		interior->room_geom->steam_emitters.emplace_back(pos, velocity, steam_radius, obj_id); // store pipe obj id
 	} // for d
+}
+
+bool building_t::connect_steam_pipe_to_machine(rand_gen_t &rgen, cube_t &pipe, colorRGBA const &color, float light_amt,
+	bool dim, bool dir, unsigned room_id, unsigned objs_start, unsigned objs_end, unsigned flags, unsigned mat_ix)
+{
+	float const window_vspace(get_window_vspace()), pipe_centerline(pipe.get_center_dim(!dim)), pipe_radius(0.5*pipe.dz());
+	room_t const &room(get_room(room_id));
+	vect_room_object_t &objs(interior->room_geom->objs);
+	vector<pair<float, unsigned>> moids; // {score, machine obj ID}
+	point start_pt(pipe.get_cube_center());
+	start_pt[dim] = pipe.d[dim][!dir]; // room entrance point
+	assert(pipe.is_strictly_normalized());
+
+	for (unsigned i = objs_start; i < objs_end; ++i) {
+		room_object_t const &c(objs[i]);
+
+		if (c.room_id == room_id) {
+			if (c.type != TYPE_MACHINE && c.type != TYPE_BOILER) continue;
+			float score(0.0);
+			if (pipe.d[!dim][0] < c.d[!dim][1] && pipe.d[!dim][1] > c.d[!dim][0]) {score += 10.0*window_vspace;} // high score if pipe crosses over this machine
+			if (c.dim == dim) {score += 1.0*window_vspace;} // higher score if on same or opposite wall as pipe
+			if (c.type == TYPE_BOILER) {score += 1.0*window_vspace;} // higher score if this is a boiler, which should have steam connected to it
+			moids.emplace_back((p2p_dist_xy(start_pt, get_machine_steam_conn_pt(c)) - score), i); // add distance and negate score so that highest score is first
+		}
+		else if (!moids.empty()) break; // moved past this room
+	} // for i
+	sort(moids.begin(), moids.end());
+
+	for (auto const &m : moids) {
+		// run along the wall/ceiling above the machine and drop down to its center
+		point const conn_pt(get_machine_steam_conn_pt(objs[m.second]));
+		float const turn_val(conn_pt[dim]), end_val(conn_pt[!dim]);
+		bool const turn_dir(pipe_centerline < end_val);
+		cube_t pipe_cand(pipe);
+		pipe_cand.d[dim][dir] = turn_val;
+		if (is_obj_placement_blocked(pipe_cand, room, 1, 0) || overlaps_other_room_obj(pipe_cand, objs_start, 1, &objs_end)) continue;
+		cube_t h_pipe(pipe);
+		h_pipe.d[!dim][!turn_dir] = pipe_centerline;
+		h_pipe.d[!dim][ turn_dir] = end_val;
+		set_wall_width(h_pipe, turn_val, pipe_radius, dim);
+		if (is_obj_placement_blocked(h_pipe, room, 1, 0) || overlaps_other_room_obj(h_pipe, objs_start, 1, &objs_end)) continue;
+		pipe = pipe_cand;
+		cube_t v_pipe(h_pipe);
+		assert(conn_pt.z < h_pipe.zc());
+		set_cube_zvals(v_pipe, conn_pt.z, h_pipe.zc());
+		set_wall_width(v_pipe, end_val, pipe_radius, !dim);
+		// Note: don't need to check for valid placement of v_pipe because it should intersect the machine
+		assert(h_pipe.is_strictly_normalized());
+		assert(v_pipe.is_strictly_normalized());
+		objs.emplace_back(h_pipe, TYPE_PIPE, room_id, !dim, 0, (flags | RO_FLAG_ADJ_BOT | RO_FLAG_ADJ_TOP), light_amt, SHAPE_CYLIN, color); // round at both ends
+		objs.back().obj_id = mat_ix;
+		objs.emplace_back(v_pipe, TYPE_PIPE, room_id, 0, 1, flags, light_amt, SHAPE_CYLIN, color); // vertical
+		objs.back().obj_id = mat_ix;
+		return 1; // only connect to one machine
+	} // for m
+	return 0;
 }
 
 // return value: 0=failed to place, 1=placed full length, 2=placed partial length
