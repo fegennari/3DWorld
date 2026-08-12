@@ -1831,10 +1831,10 @@ pond_t::pond_t(point const &pos_, float x_radius, float y_radius, float depth, f
 	// add lily pads
 	rand_gen_t rgen;
 	rgen.set_state(rseed, 3*rseed+1);
-	unsigned const num(10 + (rgen.rand() % 31)); // 10-40
-	lily_pads.reserve(num);
+	unsigned const num_lp(10 + (rgen.rand() % 31)); // 10-40
+	lily_pads.reserve(num_lp);
 
-	for (unsigned n = 0; n < num; ++n) {
+	for (unsigned n = 0; n < num_lp; ++n) {
 		sphere_t lpad;
 		lpad.pos.z  = (rgen.rand() % 8); // stores orient
 		lpad.radius = rgen.rand_uniform(0.5, 1.0)*0.03*radius;
@@ -1850,6 +1850,15 @@ pond_t::pond_t(point const &pos_, float x_radius, float y_radius, float depth, f
 		if (!success) break; // shouldn't happen
 		lily_pads.push_back(lpad);
 	} // for n
+	// add cattails
+	unsigned const num_ct(15 + (rgen.rand() % 16)); // 15-30
+	cat_tails.reserve(num_ct);
+
+	for (unsigned n = 0; n < num_ct; ++n) {
+		cube_t ctail;
+		// TODO: place around perimeter in shallow water, clustered into groups
+		cat_tails.push_back(ctail);
+	} // for n
 }
 /*static*/ void pond_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	assert(!shadow_only);
@@ -1864,7 +1873,7 @@ void pond_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale
 	float const dist(p2p_dist(dstate.camera_bs, pos)), dz_off(max(0.0001f*bcube.dz(), 0.00025f*dist));
 	float const z1(bcube.z2() + 2.0*dz_off), z2(z1 + dz_off);
 	color_wrapper const cw(WHITE);
-		
+	
 	for (sphere_t const &cr : lily_pads) { // draw lily pads
 		unsigned const orient(round_fp(cr.pos.z));
 		bool const mx(orient & 1), my(orient & 2), swap_xy(orient & 4);
@@ -1873,6 +1882,9 @@ void pond_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale
 		set_cube_zvals(lpad, z1, z2);
 		dstate.draw_cube(qbds.qbd, lpad, cw, 1, 0.0, 3, mx, my, swap_xy); // top only
 	} // for cr
+	for (cube_t const &ct : cat_tails) { // draw cat tails
+		// TODO: cone stem + brown capsule + curved leaves
+	} // for ct
 	if (dist < 0.02*dstate.draw_tile_dist) {
 		// use rseed as pond_id; we don't have an ID that's unique across cities that we can use; it's used as a map key, so doesn't need to be sequential, as long as it's unique
 		register_fish_pond_visible(bcube, rseed);

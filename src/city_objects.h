@@ -382,6 +382,7 @@ struct sculpture_t : public city_obj_t {
 struct pond_t : public city_obj_t {
 	unsigned rseed;
 	vector<sphere_t> lily_pads;
+	vect_cube_t cat_tails;
 
 	pond_t(point const &pos_, float x_radius, float y_radius, float depth, float water_z, unsigned rseed);
 	static void pre_draw(draw_state_t &dstate, bool shadow_only);
