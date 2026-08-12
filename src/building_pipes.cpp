@@ -941,6 +941,7 @@ void building_t::add_hallway_steam_pipes(rand_gen_t &rgen, unsigned room_id, uns
 						float score(0.0);
 						if (pipe.d[!dim][0] < c.d[!dim][1] && pipe.d[!dim][1] > c.d[!dim][0]) {score += 10.0*window_vspace;} // high score if pipe crosses over this machine
 						if (c.dim == dim) {score += 1.0*window_vspace;} // higher score if on same or opposite wall as pipe
+						if (c.type == TYPE_BOILER) {score += 1.0*window_vspace;} // higher score if this is a boiler, which should have steam connected to it
 						moids.emplace_back((p2p_dist_xy(test_pt, get_machine_steam_conn_pt(c)) - score), i); // add distance and negate score so that highest score is first
 					}
 					else if (!moids.empty()) break; // moved past this room

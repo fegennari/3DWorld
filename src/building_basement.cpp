@@ -304,7 +304,7 @@ bool building_t::add_boiler_to_room(rand_gen_t &rgen, room_t const &room, float 
 	set_cube_zvals(pipe, boiler.z2()-0.1*boiler_height, ceil_zval);
 	set_wall_width(pipe, centerline, vent_radius, !dim);
 	set_wall_width(pipe, (boiler.d[dim][dir] - 0.3*dsign*boiler_len), vent_radius, dim);
-	objs.emplace_back(pipe, TYPE_DUCT, room_id, 0, 1, (RO_FLAG_ADJ_TOP | RO_FLAG_ADJ_BOT | RO_FLAG_IN_FACTORY), tot_light_amt, SHAPE_CYLIN, WHITE); // vertical; skip top and bottom
+	objs.emplace_back(pipe, TYPE_DUCT, room_id, 0, 1, (RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI | RO_FLAG_IN_FACTORY), tot_light_amt, SHAPE_CYLIN, WHITE); // vertical; skip top and bottom
 	// add steam pipe into the ceiling or back wall
 	float const steam_radius(0.055*boiler_width);
 	colorRGBA const steam_pipe_color(WHITE);
