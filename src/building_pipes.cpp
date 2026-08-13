@@ -1039,14 +1039,24 @@ void building_t::add_hallway_steam_pipes(rand_gen_t &rgen, unsigned room_id, uns
 				for (unsigned side = 0; side < 2; ++side) {
 					set_wall_width(pipe_ext, (rbounds.d[dim][side] - (side ? 1.0 : -1.0)*pipe_radius), pipe_radius, dim); // along one room wall
 					if (pipe_ext.d[dim][0] < pipe.d[dim][0] || pipe_ext.d[dim][1] > pipe.d[dim][1]) continue; // not contained in the parent pipe
+					if (is_obj_placement_blocked(pipe_ext, room, 1, 1) || overlaps_other_room_obj(pipe_ext, objs_start, 1, &objs_end)) continue; // conservative
 					
 					if (connect_steam_pipe_to_machine(rgen, pipe_ext, color, light_amt, !dim, dir, adj_room_id, objs_start, objs_end, flags, pipe_mat_ix)) {
-						objs.emplace_back(pipe_ext, TYPE_PIPE, room_id, !dim, 0, flags, light_amt, SHAPE_CYLIN, color);
+						objs.emplace_back(pipe_ext, TYPE_PIPE, adj_room_id, !dim, 0, flags, light_amt, SHAPE_CYLIN, color);
 						objs.back().obj_id = pipe_mat_ix;
 						added_pipe = 1;
-						// TODO: add fitting
+						// add fittings to form a T-junction
+						cube_t fitting1(pipe), fitting2(pipe_ext);
+						fitting1.expand_by(fitting_expand);
+						fitting2.expand_by(fitting_expand);
+						set_wall_width(fitting1, pipe_ext.get_center_dim(dim), fitting_hlen, dim);
+						fitting2.d[!dim][dir] = pipe_centerline + (dir ? 1.0 : -1.0)*1.75*fitting_hlen;
+						objs.emplace_back(fitting1, TYPE_PIPE, next_room_id,  dim, 0, bracket_flags, light_amt, SHAPE_CYLIN, color);
+						objs.back().obj_id = bracket_mat_ix;
+						objs.emplace_back(fitting2, TYPE_PIPE, next_room_id, !dim, 0, bracket_flags, light_amt, SHAPE_CYLIN, color);
+						objs.back().obj_id = bracket_mat_ix;
 						//cube_t dbg(pipe_ext); dbg.z1() += 4.0*pipe_radius; dbg.z2() += window_vspace; // TESTING
-						//objs.emplace_back(dbg, TYPE_DBG_SHAPE, room_id, 0, 0, 0, light_amt, SHAPE_CUBE, RED); // TESTING
+						//objs.emplace_back(dbg, TYPE_DBG_SHAPE, adj_room_id, 0, 0, 0, light_amt, SHAPE_CUBE, RED); // TESTING
 						break;
 					}
 				} // for side
