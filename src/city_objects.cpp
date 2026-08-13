@@ -1851,13 +1851,25 @@ pond_t::pond_t(point const &pos_, float x_radius, float y_radius, float depth, f
 		lily_pads.push_back(lpad);
 	} // for n
 	// add cattails
-	unsigned const num_ct(15 + (rgen.rand() % 16)); // 15-30
+	float const ct_max_height(1.0*depth), ct_max_radius(0.03*ct_max_height);
+	unsigned const num_ct(0/*15 + (rgen.rand() % 16)*/); // 15-30
 	cat_tails.reserve(num_ct);
+	cube_t pond_center(bcube);
+	for (unsigned d = 0; d < 2; ++d) {pond_center.expand_in_dim(d, -0.1*bcube.get_sz_dim(d));} // shrink
 
 	for (unsigned n = 0; n < num_ct; ++n) {
-		cube_t ctail;
-		// TODO: place around perimeter in shallow water, clustered into groups
-		cat_tails.push_back(ctail);
+		// place around perimeter in shallow water, clustered into groups
+		for (unsigned N = 0; N < 100; ++N) { // 100 random tries
+			point ct_pos;
+			gen_xy_pos_in_cube(ct_pos, bcube, rgen);
+			if (!point_in_ellipse(ct_pos, bcube) || point_in_ellipse(ct_pos, pond_center)) continue; // not inside pond, or too far from the edge
+			ct_pos.z = get_exact_zval(ct_pos.x, ct_pos.y); // FIXME: not calculated yet, must defer until later
+			cube_t ctail(ct_pos);
+			ctail.z2() = bcube.z2() + rgen.rand_uniform(0.75, 1.0)*ct_max_height;
+			ctail.expand_by_xy(rgen.rand_uniform(0.75, 1.0)*ct_max_radius);
+			cat_tails.push_back(ctail);
+			break;
+		} // for N
 	} // for n
 }
 /*static*/ void pond_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
@@ -1870,21 +1882,32 @@ pond_t::pond_t(point const &pos_, float x_radius, float y_radius, float depth, f
 }
 void pond_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	assert(!shadow_only);
-	float const dist(p2p_dist(dstate.camera_bs, pos)), dz_off(max(0.0001f*bcube.dz(), 0.00025f*dist));
-	float const z1(bcube.z2() + 2.0*dz_off), z2(z1 + dz_off);
-	color_wrapper const cw(WHITE);
+	float const dist(p2p_dist(dstate.camera_bs, pos));
+
+	if (!lily_pads.empty()) {
+		float const dz_off(max(0.0001f*bcube.dz(), 0.00025f*dist)), z1(bcube.z2() + 2.0*dz_off), z2(z1 + dz_off);
+		color_wrapper const cw(WHITE);
 	
-	for (sphere_t const &cr : lily_pads) { // draw lily pads
-		unsigned const orient(round_fp(cr.pos.z));
-		bool const mx(orient & 1), my(orient & 2), swap_xy(orient & 4);
-		cube_t lpad;
-		lpad.set_from_sphere(cr);
-		set_cube_zvals(lpad, z1, z2);
-		dstate.draw_cube(qbds.qbd, lpad, cw, 1, 0.0, 3, mx, my, swap_xy); // top only
-	} // for cr
-	for (cube_t const &ct : cat_tails) { // draw cat tails
-		// TODO: cone stem + brown capsule + curved leaves
-	} // for ct
+		for (sphere_t const &cr : lily_pads) { // draw lily pads
+			unsigned const orient(round_fp(cr.pos.z));
+			bool const mx(orient & 1), my(orient & 2), swap_xy(orient & 4);
+			cube_t lpad;
+			lpad.set_from_sphere(cr);
+			set_cube_zvals(lpad, z1, z2);
+			dstate.draw_cube(qbds.qbd, lpad, cw, 1, 0.0, 3, mx, my, swap_xy); // top only
+		} // for cr
+	}
+	if (!cat_tails.empty()) {
+		select_no_texture();
+		dstate.s.set_cur_color(DK_GREEN);
+
+		for (cube_t const &ct : cat_tails) { // draw cat tails
+			// TODO: cone stem + brown capsule + curved leaves, or 3d model
+			float const ct_radius(0.5*ct.dx());
+			draw_fast_cylinder(cube_bot_center(ct), cube_top_center(ct), ct_radius, ct_radius, 16, 0, 4); // sides + top
+		} // for ct
+		select_texture(get_texture_by_name("lilypad.png")); // TODO: needs two pass draw
+	}
 	if (dist < 0.02*dstate.draw_tile_dist) {
 		// use rseed as pond_id; we don't have an ID that's unique across cities that we can use; it's used as a map key, so doesn't need to be sequential, as long as it's unique
 		register_fish_pond_visible(bcube, rseed);
