@@ -742,15 +742,15 @@ void s_plant::create_no_verts(point const &pos_, float height_, float radius_, i
 	if (calc_z) {pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 1, 1);}
 }
 
-void s_plant::place_in_pond(cube_t const &pond) {
+void s_plant::place_in_pond(cube_t const &pond) { // tiled terrain
 	cube_t pond_center(pond);
 	for (unsigned d = 0; d < 2; ++d) {pond_center.expand_in_dim(d, -0.1*pond.get_sz_dim(d));} // shrink
-	type  = NUM_LAND_PLANT_TYPES + (rand2() % NUM_WATER_PLANT_TYPES); // water plant
-	pos.z = pond.z1() + 0.7*pond.dz(); // between bottom and surface; should somewhat match the pond slope
 
 	do {
 		for (unsigned d = 0; d < 2; ++d) {pos[d] = rand_uniform2(pond.d[d][0], pond.d[d][1]);}
 	} while (!point_in_ellipse(pos, pond) || point_in_ellipse(pos, pond_center));
+	type   = NUM_LAND_PLANT_TYPES + (rand2() % NUM_WATER_PLANT_TYPES); // water plant
+	pos.z  = get_exact_zval(pos.x, pos.y);
 	height = rand_uniform2(0.7, 1.0)*min(0.25f*min(pond.dx(), pond.dy()), pond.dz()); // sticking out of the water
 	radius = rand_uniform2(0.012, 0.015)*height;
 }
