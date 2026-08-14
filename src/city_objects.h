@@ -739,7 +739,7 @@ class park_heightmap_t {
 	void raise_height(unsigned x, unsigned y, float zval);
 	void add_creek_rocks(park_path_t const &creek, rand_gen_t &rgen);
 public:
-	park_heightmap_t(cube_t const &c, unsigned nx_, unsigned ny_, pond_t const *const pond, vector<park_path_t> const &ppaths,
+	park_heightmap_t(cube_t const &c, unsigned nx_, unsigned ny_, pond_t *pond, vector<park_path_t> const &ppaths,
 		unsigned ppath_start, vector<cylinder_3dw> const &ccs, rand_gen_t &rgen);
 	cube_t const &get_hill() const {return hill_bc;}
 	size_t get_gpu_mem() const {return vao_mgr.gpu_mem;}

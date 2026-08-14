@@ -1863,7 +1863,7 @@ pond_t::pond_t(point const &pos_, float x_radius, float y_radius, float depth, f
 			point ct_pos;
 			gen_xy_pos_in_cube(ct_pos, bcube, rgen);
 			if (!point_in_ellipse(ct_pos, bcube) || point_in_ellipse(ct_pos, pond_center)) continue; // not inside pond, or too far from the edge
-			ct_pos.z = get_exact_zval(ct_pos.x, ct_pos.y); // FIXME: not calculated yet, must defer until later
+			ct_pos.z = bcube.z1() - 0.3*depth; // will be updated later when depth is known
 			cube_t ctail(ct_pos);
 			ctail.z2() = bcube.z2() + rgen.rand_uniform(0.75, 1.0)*ct_max_height;
 			ctail.expand_by_xy(rgen.rand_uniform(0.75, 1.0)*ct_max_radius);
