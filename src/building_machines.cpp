@@ -244,12 +244,18 @@ void building_room_geom_t::add_spring(point pos, float radius, float r_wire, flo
 bool is_two_part_machine(room_object_t const &c, rand_gen_t &rgen) {
 	return (c.get_width() > rgen.rand_uniform(1.2, 1.6)*c.get_depth());
 }
-point get_machine_steam_conn_pt(room_object_t const &c) {
+point get_machine_steam_conn_pt(room_object_t const &c, cube_t const &pipe) {
 	point conn_pt(c.get_cube_center()); // z-center, not top, in case there are greebles on top or it's a horizontal cylinder
-	if (c.type != TYPE_MACHINE) return conn_pt; // boiler, etc.
+
+	if (c.type == TYPE_BOILER) {
+		bool const pipe_dir(conn_pt[c.dim] < pipe.get_center_dim(c.dim)), front_dir(pipe_dir == c.dir); // direction of pipe centerline relative to boiler front/back
+		conn_pt[c.dim] -= 0.18*((c.dir ^ front_dir) ? 1.0 : -1.0)*c.get_length(); // shift toward the front or back to avoid the exhaust pipe
+		return conn_pt;
+	}
+	if (c.type != TYPE_MACHINE) return conn_pt; // not a machine
 	rand_gen_t rgen(c.create_rgen());
 	bool const two_part(is_two_part_machine(c, rgen)); // must agree with get_machine_info()
-	if (two_part) {conn_pt[!c.dim] += (rgen.rand_bool() ? 1.0 : -1.0)*0.25*c.get_width();} // center over one of the two parts
+	if (two_part) {conn_pt[!c.dim] += (rgen.rand_bool() ? 1.0 : -1.0)*0.28*c.get_width();} // center over one of the two parts (assuming gap in between)
 	return conn_pt;
 }
 rand_gen_t get_machine_info(room_object_t const &c, float floor_ceil_gap, cube_t &base, cube_t parts[2], cube_t &support,
@@ -752,7 +758,7 @@ bool building_t::add_machines_to_room(rand_gen_t rgen, room_t const &room, float
 			if (rgen.rand_float() < 0.75) { // right angle turn into wall 75% of the time
 				bool const wall_dim(!generator.dim), wall_dir(room.get_center_dim(wall_dim) < generator.get_center_dim(wall_dim));
 				float const h_duct_height(max(v_duct.dx(), v_duct.dy())), min_z_ext(0.5*h_duct_height); // maintain the cross section
-				float const h_duct_z1(rgen.rand_uniform((generator.z2() + min_z_ext), (v_duct.z2() - min_z_ext - h_duct_height)));
+				float const h_duct_z1(rgen.rand_uniform((generator.z2() + min_z_ext), (v_duct.z2() - 1.5*min_z_ext - h_duct_height))); // more gap at top to make room for steam pipes
 				unsigned const duct_flags(wall_dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO); // skip end against wall
 				cube_t h_duct(v_duct); // no placement test as there shouldn't be any blockers
 				v_duct.z2() = h_duct.z1() = h_duct_z1;

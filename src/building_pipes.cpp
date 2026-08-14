@@ -9,7 +9,7 @@
 bool line_int_cubes_exp(point const &p1, point const &p2, vect_cube_t const &cubes, vector3d const &expand);
 void add_pg_obstacles(vect_room_object_t const &objs, unsigned objs_start, unsigned objs_end, cube_t const &room, vect_cube_t &walls, vect_cube_t &beams, vect_cube_t &obstacles);
 void subtract_cubes_from_cube_split_in_dim(cube_t const &c, vect_cube_t const &sub, vect_cube_t &out, vect_cube_t &out2, unsigned dim);
-point get_machine_steam_conn_pt(room_object_t const &c);
+point get_machine_steam_conn_pt(room_object_t const &c, cube_t const &pipe);
 
 
 // find the closest wall (including room wall) to this location, avoiding obstacles, and shift outward by radius; routes in X or Y only, for now
@@ -885,7 +885,7 @@ void building_t::add_hallway_steam_pipes(rand_gen_t &rgen, unsigned room_id, uns
 	if (!room.is_hallway) return; // hallways only
 	bool const dim(room.dx() < room.dy()); // long dim
 	float const window_vspace(get_window_vspace()), fc_gap(get_floor_ceil_gap()), fc_thick(get_fc_thickness()), wall_thick(get_wall_thickness());
-	float const zval(room.z1() + fc_thick), pipe_radius(0.05*window_vspace), pipe_zval(zval + fc_gap - pipe_radius);
+	float const zval(room.z1() + fc_thick), pipe_radius(0.05*window_vspace), pipe_zval(zval + fc_gap - pipe_radius), pipe_cont_toler(0.1*wall_thick);
 	float const fitting_hlen(1.4*pipe_radius), fitting_expand(0.06*pipe_radius), bracket_hlen(0.5*pipe_radius), bracket_expand(0.75*fitting_expand);
 	float const light_amt(1.0);
 	colorRGBA const color(WHITE);
@@ -979,7 +979,7 @@ void building_t::add_hallway_steam_pipes(rand_gen_t &rgen, unsigned room_id, uns
 						if (!p.intersects(room2))   continue; // not crossing this room
 						if (p.intersects(pipe_ext)) continue; // already connected
 						bool const other_dir(p.get_center_dim(dim) < pipe_ext.get_center_dim(dim));
-						bool const first_dir((other_dir == e) ? !e : rgen.rand_bool()); // avoid crossing the hallway if pipes come from the same side
+						bool const first_dir((other_dir == bool(e)) ? !e : rgen.rand_bool()); // avoid crossing the hallway if pipes come from the same side
 						float const cent1(pipe_ext.get_center_dim(!dim)), cent2(p.get_center_dim(!dim));
 						cube_t conn_pipe(pipe_ext); // copy zvals
 						conn_pipe.d[!dim][0] = min(cent1, cent2);
@@ -987,7 +987,7 @@ void building_t::add_hallway_steam_pipes(rand_gen_t &rgen, unsigned room_id, uns
 						bool connected(0);
 
 						for (unsigned DD = 0; DD < 2; ++DD) { // each side of pipe/wall of room
-							bool const D(DD ^ first_dir);
+							bool const D(bool(DD) ^ first_dir);
 							float const conn_pt(pipe_ext.d[dim][D] - (D ? 1.0 : -1.0)*pipe_radius);
 							set_wall_width(conn_pipe, conn_pt, pipe_radius, dim);
 							if (is_obj_placement_blocked(pipe_ext, room2, 1, 0)) continue;
@@ -1034,11 +1034,19 @@ void building_t::add_hallway_steam_pipes(rand_gen_t &rgen, unsigned room_id, uns
 				cube_t pipe_ext(pipe); // copy zvals
 				pipe_ext.d[!dim][!dir] = pipe_centerline; // ends at main pipe
 				pipe_ext.d[!dim][ dir] = rbounds.d[!dim][dir]; // full length of room
-				bool added_pipe(0);
+				bool first_side(rgen.rand_bool()), added_pipe(0);
 
-				for (unsigned side = 0; side < 2; ++side) {
+				// see if there's a boiler in this room and prefer the side it's on
+				for (unsigned i = objs_start; i < objs_end; ++i) {
+					room_object_t const &obj(objs[i]);
+					if (obj.type != TYPE_BOILER || obj.room_id != adj_room_id) continue; // wrong type or room
+					first_side = (r->get_center_dim(dim) < obj.get_center_dim(dim));
+					break; // should only be one boiler
+				}
+				for (unsigned S = 0; S < 2; ++S) {
+					bool const side(bool(S) ^ first_side);
 					set_wall_width(pipe_ext, (rbounds.d[dim][side] - (side ? 1.0 : -1.0)*pipe_radius), pipe_radius, dim); // along one room wall
-					if (pipe_ext.d[dim][0] < pipe.d[dim][0] || pipe_ext.d[dim][1] > pipe.d[dim][1]) continue; // not contained in the parent pipe
+					if (pipe_ext.d[dim][0] < pipe.d[dim][0]-pipe_cont_toler || pipe_ext.d[dim][1] > pipe.d[dim][1]+pipe_cont_toler)    continue; // not contained in the parent pipe
 					if (is_obj_placement_blocked(pipe_ext, room, 1, 1) || overlaps_other_room_obj(pipe_ext, objs_start, 1, &objs_end)) continue; // conservative
 					
 					if (connect_steam_pipe_to_machine(rgen, pipe_ext, color, light_amt, !dim, dir, adj_room_id, objs_start, objs_end, flags, pipe_mat_ix)) {
@@ -1059,7 +1067,7 @@ void building_t::add_hallway_steam_pipes(rand_gen_t &rgen, unsigned room_id, uns
 						//objs.emplace_back(dbg, TYPE_DBG_SHAPE, adj_room_id, 0, 0, 0, light_amt, SHAPE_CUBE, RED); // TESTING
 						break;
 					}
-				} // for side
+				} // for S
 				if (added_pipe) break; // at most one
 			} // for r
 
@@ -1161,8 +1169,8 @@ bool building_t::connect_steam_pipe_to_machine(rand_gen_t &rgen, cube_t &pipe, c
 			float score(0.0);
 			if (pipe.d[!dim][0] < c.d[!dim][1] && pipe.d[!dim][1] > c.d[!dim][0]) {score += 10.0*window_vspace;} // high score if pipe crosses over this machine
 			if (c.dim == dim) {score += 1.0*window_vspace;} // higher score if on same or opposite wall as pipe
-			if (c.type == TYPE_BOILER) {score += 1.0*window_vspace;} // higher score if this is a boiler, which should have steam connected to it
-			moids.emplace_back((p2p_dist_xy(start_pt, get_machine_steam_conn_pt(c)) - score), i); // add distance and negate score so that highest score is first
+			if (c.type == TYPE_BOILER) {score += 2.0*window_vspace;} // higher score if this is a boiler, which should have steam connected to it
+			moids.emplace_back((p2p_dist_xy(start_pt, get_machine_steam_conn_pt(c, pipe)) - score), i); // add distance and negate score so that highest score is first
 		}
 		else if (!moids.empty()) break; // moved past this room
 	} // for i
@@ -1170,7 +1178,7 @@ bool building_t::connect_steam_pipe_to_machine(rand_gen_t &rgen, cube_t &pipe, c
 
 	for (auto const &m : moids) {
 		// run along the wall/ceiling above the machine and drop down to its center
-		point const conn_pt(get_machine_steam_conn_pt(objs[m.second]));
+		point const conn_pt(get_machine_steam_conn_pt(objs[m.second], pipe));
 		float const turn_val(conn_pt[dim]), end_val(conn_pt[!dim]);
 		bool const turn_dir(pipe_centerline < end_val);
 		cube_t pipe_cand(pipe);

@@ -297,13 +297,13 @@ bool building_t::add_boiler_to_room(rand_gen_t &rgen, room_t const &room, float 
 		objs_start, 0.5, 1, 4, 0, LT_GRAY, 1, SHAPE_CYLIN, get_min_front_clearance_inc_people())) return 0;
 	float const ceil_zval(zval + get_floor_ceil_gap()); // assumes normal height room
 	room_object_t const boiler(objs[boiler_obj_ix]); // deep copy to avoid invalidating the reference
-	bool const dim(boiler.dim), dir(boiler.dir);
-	// add exhaust vent at the top front
+	bool const dim(boiler.dim), dir(boiler.dir), in_basement(zval < ground_floor_z1);
+	// add exhaust vent at the top front; more toward the center for basement so so that steam pipes can connect to the front
 	float const dsign(dir ? 1.0 : -1.0), centerline(boiler.get_center_dim(!dim)), vent_radius(0.075*boiler_width);
 	cube_t pipe;
 	set_cube_zvals(pipe, boiler.z2()-0.1*boiler_height, ceil_zval);
 	set_wall_width(pipe, centerline, vent_radius, !dim);
-	set_wall_width(pipe, (boiler.d[dim][dir] - 0.3*dsign*boiler_len), vent_radius, dim);
+	set_wall_width(pipe, (boiler.d[dim][dir] - (in_basement ? 0.5 : 0.3)*dsign*boiler_len), vent_radius, dim);
 	objs.emplace_back(pipe, TYPE_DUCT, room_id, 0, 1, (RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI | RO_FLAG_IN_FACTORY), tot_light_amt, SHAPE_CYLIN, WHITE); // vertical; skip top and bottom
 	// add steam pipe into the ceiling or back wall
 	float const steam_radius(0.055*boiler_width);
@@ -312,7 +312,7 @@ bool building_t::add_boiler_to_room(rand_gen_t &rgen, room_t const &room, float 
 	set_wall_width(pipe, (boiler.d[dim][!dir] + 0.15*dsign*boiler_len), steam_radius, dim);
 	unsigned v_pipe_flags(RO_FLAG_NOCOLL);
 
-	if (zval < ground_floor_z1) { // basement - exit through back wall rather than ceiling
+	if (in_basement) { // basement - exit through back wall rather than ceiling
 		pipe.z2() = pipe.zc(); // turn point
 		cube_t h_pipe(pipe);
 		h_pipe.d[dim][dir] = pipe.get_center_dim(dim);
@@ -322,7 +322,6 @@ bool building_t::add_boiler_to_room(rand_gen_t &rgen, room_t const &room, float 
 		v_pipe_flags |= RO_FLAG_ADJ_HI; // rounded at bend
 	}
 	objs.emplace_back(pipe, TYPE_PIPE, room_id, 0, 1, v_pipe_flags, tot_light_amt, SHAPE_CYLIN, steam_pipe_color); // vertical
-	// add water pipe into the floor?
 	return 1;
 }
 
