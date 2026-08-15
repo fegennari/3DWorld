@@ -684,6 +684,11 @@ inline vector_point_norm const &gen_cylinder_data(point const ce[2], float radiu
 	vector3d v12;
 	return gen_cylinder_data(ce, radius1, radius2, ndiv, v12);
 }
+inline vector_point_norm const &gen_cylinder_data(point const &p1, point const &p2, float radius1, float radius2, unsigned ndiv) {
+	point const ce[2] = {p1, p2};
+	vector3d v12;
+	return gen_cylinder_data(ce, radius1, radius2, ndiv, v12);
+}
 
 
 // ****************** matrix allocation/deletion/clearing ************************

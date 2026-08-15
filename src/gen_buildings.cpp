@@ -1460,8 +1460,7 @@ public:
 	{
 		float const ndiv_inv(1.0/ndiv);
 		color_wrapper const cw(color);
-		point const ce[2] = {point(center.x, center.y, z1), point(center.x, center.y, z2)};
-		vector_point_norm const &vpn(gen_cylinder_data(ce, rscale1*radius, rscale2*radius, ndiv));
+		vector_point_norm const &vpn(gen_cylinder_data(point(center.x, center.y, z1), point(center.x, center.y, z2), rscale1*radius, rscale2*radius, ndiv));
 
 		for (unsigned i = 0; i < ndiv; ++i) { // similar to gen_cylinder_quads(), but with a color
 			for (unsigned j = 0; j < 2; ++j) {
@@ -1531,8 +1530,7 @@ public:
 		maybe_rotate_point(bg, center);
 		add_vert_cylinder(center, cylin_z1, cylin_z2, radius, 2.0, 2.0, ndiv, WHITE, qverts); // tscale=2.0/2.0
 		// draw top cone triangles
-		point const ce[2] = {point(center.x, center.y, cylin_z2), point(center.x, center.y, cone_z2)};
-		vector_point_norm const &vpn(gen_cylinder_data(ce, 1.1*radius, 0.0, ndiv)); // slightly wider at the bottom
+		vector_point_norm const &vpn(gen_cylinder_data(point(center.x, center.y, cylin_z2), point(center.x, center.y, cone_z2), 1.1*radius, 0.0, ndiv)); // slightly wider at the bottom
 		add_cone_tri_verts(vpn, tverts, ndiv, colorRGBA(0.2, 0.16, 0.15, 1.0), 1, 4.0); // brown; two_sided=1, tsx=4.0
 		// draw pipe through the center going down into the roof
 		add_vert_cylinder(center, wtc.z1(), base_z1, 0.1*radius, 1.0, 4.0, ndiv/2, WHITE, qverts); // tscale=1.0/4.0
@@ -1599,8 +1597,7 @@ public:
 		add_vert_cylinder(center, sd.z1(), center.z, pole_radius, 1.0, 1.0, pole_ndiv, color, qverts);
 		// draw pole top circle as a flattened cone
 		unsigned const tverts_start(tverts.size());
-		point const ce_top[2] = {center, center};
-		vector_point_norm const &vpn_top(gen_cylinder_data(ce_top, pole_radius, 0.0, pole_ndiv));
+		vector_point_norm const &vpn_top(gen_cylinder_data(center, center, pole_radius, 0.0, pole_ndiv));
 		add_cone_tri_verts(vpn_top, tverts, pole_ndiv, color, 0); // top circle; two_sided=0
 		invert_verts(tverts, tverts_start);
 	}

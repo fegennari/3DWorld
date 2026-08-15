@@ -283,8 +283,7 @@ template<unsigned NUM> void cobj_draw_buffer::add_polygon(vert_norm_texp const &
 
 void cobj_draw_buffer::draw_cylin_cdb(point const &p1, point const &p2, texgen_params_t const &tp, float radius1, float radius2, int ndiv, bool two_sided_lighting) {
 	assert(radius1 > 0.0 || radius2 > 0.0);
-	point const ce[2] = {p1, p2};
-	vector_point_norm const &vpn(gen_cylinder_data(ce, radius1, radius2, ndiv));
+	vector_point_norm const &vpn(gen_cylinder_data(p1, p2, radius1, radius2, ndiv));
 	if (radius2 == 0.0) {gen_cone_triangles_tp(tri_verts, vpn, two_sided_lighting, tp);}
 	else {gen_cylinder_quads(quad_verts, vpn, tp, two_sided_lighting);}
 }

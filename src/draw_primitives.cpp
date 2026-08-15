@@ -722,6 +722,7 @@ void draw_cube_mapped_sphere(point const &center, float radius, unsigned ndiv, b
 void sd_sphere_d::get_quad_points(vector<vert_norm_tc> &quad_pts, vector<unsigned> *indices, bool use_tri_strip, float s_beg, float s_end, float t_beg, float t_end) const {
 
 	assert(ndiv > 0);
+	assert(points && norms);
 	float const ndiv_inv(1.0/float(ndiv));
 	bool const is_full(s_beg == 0.0 && s_end == 1.0 && t_beg == 0.0 && t_end == 1.0);
 	if (is_full && !use_tri_strip && indices == nullptr && quad_pts.empty()) {quad_pts.reserve(4*ndiv*ndiv);}

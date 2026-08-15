@@ -646,8 +646,7 @@ void get_cylinder_triangles(vector<vert_wrap_t> &verts, point const &p1, point c
 
 	assert(ndiv > 0);
 	assert(radius1 > 0.0 || radius2 > 0.0);
-	point const ce[2] = {p1, p2};
-	vector_point_norm const &vpn(gen_cylinder_data(ce, radius1, radius2, ndiv));
+	vector_point_norm const &vpn(gen_cylinder_data(p1, p2, radius1, radius2, ndiv));
 
 	if (radius2 == 0.0) { // cone (triangles)
 		for (unsigned s = 0; s < (unsigned)ndiv; ++s) {
@@ -670,7 +669,7 @@ void get_cylinder_triangles(vector<vert_wrap_t> &verts, point const &p1, point c
 		for (unsigned i = 0; i < 2; ++i) { // triangle fan
 			if (r[i] == 0.0) continue;
 			unsigned const center_ix(verts.size());
-			verts.push_back(ce[i]);
+			verts.push_back(i ? p2 : p1);
 
 			for (unsigned S = 0; S <= (unsigned)ndiv; ++S) {
 				if (S > 1) { // tri_fan_push
