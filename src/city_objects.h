@@ -388,10 +388,11 @@ struct pond_t : public city_obj_t {
 
 	pond_t(point const &pos_, float x_radius, float y_radius, float depth, float water_z, unsigned rseed);
 	float get_water_zval() const {return bcube.z2();}
-	static void pre_draw(draw_state_t &dstate, bool shadow_only);
+	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void gen_vegetation(park_heightmap_t const &hmap);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
+	void draw_lily_pads(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_only, float dist) const;
 	void draw_cat_tails(draw_state_t &dstate, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 	bool point_contains_xy(point const &p) const;

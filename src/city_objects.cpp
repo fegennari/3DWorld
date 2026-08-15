@@ -1816,20 +1816,6 @@ bool point_in_ellipse(point const &p, cube_t const &c) {
 	float const xv((p.x - c.xc())/(0.5*c.dx())), yv((p.y - c.yc())/(0.5*c.dy()));
 	return (xv*xv + yv*yv < 1.0);
 }
-// untextured; can be used with quad_batch_draw
-void add_vert_circle_verts(point const &pos, float radius, unsigned ndiv, color_wrapper const &cw, vector<vert_norm_tc_color> &verts) {
-	vector_point_norm const &vpn(gen_cylinder_data(pos, pos, radius, radius, ndiv));
-	unsigned const center_ix(verts.size());
-	verts.emplace_back(pos, plus_z, 0.0, 0.0, cw); // center
-
-	for (unsigned S = 0; S <= ndiv; ++S) {
-		if (S > 1) { // tri_fan_push
-			verts.push_back(verts[center_ix]);
-			verts.push_back(verts[verts.size()-2]);
-		}
-		verts.emplace_back(vpn.p[(S%ndiv)<<1], plus_z, 0.0, 0.0, cw);
-	}
-}
 
 pond_t::pond_t(point const &pos_, float x_radius, float y_radius, float depth, float water_z, unsigned rseed_) : city_obj_t(pos_, max(x_radius, y_radius)), rseed(rseed_) {
 	bcube.set_from_point(pos);
@@ -1847,27 +1833,8 @@ pond_t::pond_t(point const &pos_, float x_radius, float y_radius, float depth, f
 void pond_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	float const dist(shadow_only ? 0.0 : p2p_dist(dstate.camera_bs, pos));
 	if (!cat_tails.empty()) {draw_cat_tails(dstate, shadow_only);}
-
-	if (!lily_pads.empty()) { // shadows are not clipped to a circle and look wrong on the ground, but are okay under the water
-		bool const draw_bot(dstate.camera_bs.z < get_water_zval());
-		float const dz_off((draw_bot ? -1.0 : 1.0)*max(0.0001f*bcube.dz(), 0.00025f*dist)), z1(get_water_zval() + 2.0*dz_off), z2(z1 + dz_off);
-		color_wrapper const cw(WHITE);
-		if (!shadow_only) {select_texture(get_texture_by_name("lilypad.png"));} // set in case we drew cat tails previously
+	if (!lily_pads.empty()) {draw_lily_pads(dstate, qbds, shadow_only, dist);}
 	
-		for (sphere_t const &cr : lily_pads) { // draw lily pads
-			if (shadow_only) { // circular
-				add_vert_circle_verts(point(cr.pos.x, cr.pos.y, z1), cr.radius, 16, cw, qbds.qbd.verts); // ndiv=16
-			}
-			else { // textured quad
-				unsigned const orient(round_fp(cr.pos.z));
-				bool const mx(orient & 1), my(orient & 2), swap_xy(orient & 4);
-				cube_t lpad;
-				lpad.set_from_sphere(cr);
-				set_cube_zvals(lpad, z1, z2);
-				dstate.draw_cube(qbds.qbd, lpad, cw, !draw_bot, 0.0, 3, mx, my, swap_xy, 1.0, 1.0, 1.0, draw_bot);
-			}
-		} // for cr
-	}
 	if (!shadow_only && dist < 0.02*dstate.draw_tile_dist) {
 		// use rseed as pond_id; we don't have an ID that's unique across cities that we can use; it's used as a map key, so doesn't need to be sequential, as long as it's unique
 		register_fish_pond_visible(bcube, rseed);

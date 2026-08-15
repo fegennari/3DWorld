@@ -584,6 +584,21 @@ bool has_circle_overlap(sphere_t const &circle, vector<sphere_t> const &circles)
 }
 bool point_in_ellipse(point const &p, cube_t const &c);
 
+// untextured; can be used with quad_batch_draw
+void add_vert_circle_verts(point const &pos, float radius, unsigned ndiv, color_wrapper const &cw, vector<vert_norm_tc_color> &verts) {
+	vector_point_norm const &vpn(gen_cylinder_data(pos, pos, radius, radius, ndiv));
+	unsigned const center_ix(verts.size());
+	verts.emplace_back(pos, plus_z, 0.0, 0.0, cw); // center
+
+	for (unsigned S = 0; S <= ndiv; ++S) {
+		if (S > 1) { // tri_fan_push
+			verts.push_back(verts[center_ix]);
+			verts.push_back(verts[verts.size()-2]);
+		}
+		verts.emplace_back(vpn.p[(S%ndiv)<<1], plus_z, 0.0, 0.0, cw);
+	}
+}
+
 void pond_t::gen_vegetation(park_heightmap_t const &hmap) {
 	// add lily pads
 	rand_gen_t rgen;
@@ -633,6 +648,27 @@ void pond_t::gen_vegetation(park_heightmap_t const &hmap) {
 			break;
 		} // for N
 	} // for n
+}
+
+void pond_t::draw_lily_pads(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_only, float dist) const {
+	bool const draw_bot(dstate.camera_bs.z < get_water_zval());
+	float const dz_off((draw_bot ? -1.0 : 1.0)*max(0.0001f*bcube.dz(), 0.00025f*dist)), z1(get_water_zval() + 2.0*dz_off), z2(z1 + dz_off);
+	color_wrapper const cw(WHITE);
+	if (!shadow_only) {select_texture(get_texture_by_name("lilypad.png"));} // set in case we drew cat tails previously
+
+	for (sphere_t const &lp : lily_pads) { // draw lily pads
+		if (shadow_only) { // circular
+			add_vert_circle_verts(point(lp.pos.x, lp.pos.y, z1), lp.radius, 16, cw, qbds.qbd.verts); // ndiv=16
+		}
+		else { // textured quad
+			unsigned const orient(round_fp(lp.pos.z));
+			bool const mx(orient & 1), my(orient & 2), swap_xy(orient & 4);
+			cube_t lpad;
+			lpad.set_from_sphere(lp);
+			set_cube_zvals(lpad, z1, z2);
+			dstate.draw_cube(qbds.qbd, lpad, cw, !draw_bot, 0.0, 3, mx, my, swap_xy, 1.0, 1.0, 1.0, draw_bot);
+		}
+	} // for lp
 }
 
 void pond_t::draw_cat_tails(draw_state_t &dstate, bool shadow_only) const {
