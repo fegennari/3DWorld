@@ -635,7 +635,7 @@ void pond_t::draw_cat_tails(draw_state_t &dstate, bool shadow_only) const {
 	// bend the stem
 	// clumpy distribution
 	// textures
-	unsigned const ndiv = 16;
+	unsigned const ndiv(16), nstacks(8);
 	rand_gen_t rgen;
 	rgen.set_state(rseed, 3*rseed+1);
 	static vector<vert_norm_tc> leaf_verts, cap_verts;
@@ -649,9 +649,20 @@ void pond_t::draw_cat_tails(draw_state_t &dstate, bool shadow_only) const {
 		// stems
 		float const ct_height(ct.dz()), ct_radius(0.5*ct.dx()), stem_radius(0.1*ct_radius);
 		point const bot(cube_bot_center(ct)), top(cube_top_center(ct));
+		// TODO: split into nstacks cylinder + cone segments and bend them
 		gen_cone_triangles(leaf_verts, gen_cylinder_data(bot, top, 0.1*ct_radius, 0.0, ndiv));
 		// leaves
-		// TODO
+		unsigned const nleaves(5 + (rgen.rand() % 4)); // 5-8
+
+		for (unsigned n = 0; n < nleaves; ++n) {
+			float const leaf_len(rgen.rand_uniform(0.4, 0.8)*ct_height), leaf_base_hwidth(rgen.rand_uniform(0.75, 1.0)*0.03*leaf_len), bend_amt(rgen.rand_uniform(0.5, 1.0));
+			vector3d const dir(rgen.signed_rand_vector_spherical_xy_norm()), side_delta(leaf_base_hwidth*cross_product(dir, plus_z));
+			point const base(bot + dir*ct_radius*rgen.rand_uniform(0.1, 0.2)), tip(base + dir*ct_radius*bend_amt + leaf_len*plus_z);
+			point const lpts[3] = {(base - side_delta), (base + side_delta), tip};
+			// TODO: split into nstacks quads + triangles
+			float const ts[3] = {0.0, 1.0, 0.5}, tt[3] = {0.0, 0.0, 1.0};
+			for (unsigned i = 0; i < 3; ++i) {leaf_verts.emplace_back(lpts[i], dir, ts[i], tt[i]);}
+		} // for n
 		// capsules
 		float const cap_z1(ct.z1() + rgen.rand_uniform(0.75, 0.8)*ct_height), cap_z2(cap_z1 + rgen.rand_uniform(0.08, 0.12)*ct_height), cap_radius(0.2*ct_radius);
 		point const cap_bot(bot.x, bot.y, cap_z1), cap_top(bot.x, bot.y, cap_z2);
