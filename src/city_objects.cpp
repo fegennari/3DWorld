@@ -1816,61 +1816,12 @@ bool point_in_ellipse(point const &p, cube_t const &c) {
 	float const xv((p.x - c.xc())/(0.5*c.dx())), yv((p.y - c.yc())/(0.5*c.dy()));
 	return (xv*xv + yv*yv < 1.0);
 }
-bool has_circle_overlap(sphere_t const &circle, vector<sphere_t> const &circles) {
-	for (sphere_t const &c : circles) {
-		if (dist_xy_less_than(circle.pos, c.pos, (circle.radius + c.radius))) return 1;
-	}
-	return 0;
-}
 pond_t::pond_t(point const &pos_, float x_radius, float y_radius, float depth, float water_z, unsigned rseed_) : city_obj_t(pos_, max(x_radius, y_radius)), rseed(rseed_) {
 	bcube.set_from_point(pos);
 	bcube.expand_in_x(x_radius);
 	bcube.expand_in_y(y_radius);
-	bcube.z2() = water_z;
+	bcube.z2()  = water_z;
 	bcube.z1() -= depth;
-	// add lily pads
-	rand_gen_t rgen;
-	rgen.set_state(rseed, 3*rseed+1);
-	unsigned const num_lp(10 + (rgen.rand() % 31)); // 10-40
-	lily_pads.reserve(num_lp);
-
-	for (unsigned n = 0; n < num_lp; ++n) {
-		sphere_t lpad;
-		lpad.pos.z  = (rgen.rand() % 8); // stores orient
-		lpad.radius = rgen.rand_uniform(0.5, 1.0)*0.03*radius;
-		cube_t lp_area(bcube), lp_avoid(bcube);
-		lp_area.expand_by_xy(-2.0*lpad.radius); // don't place too close to the pond edge
-		lp_avoid.expand_by(-vector3d(0.4*bcube.dx(), 0.4*bcube.dy(), 0.0)); // avoid the center
-		bool success(0);
-
-		for (unsigned N = 0; N < 100; ++N) {
-			for (unsigned d = 0; d < 2; ++d) {lpad.pos[d] = rgen.rand_uniform(bcube.d[d][0], bcube.d[d][1]);}
-			if (point_in_ellipse(lpad.pos, lp_area) && !point_in_ellipse(lpad.pos, lp_avoid) && !has_circle_overlap(lpad, lily_pads)) {success = 1; break;}
-		}
-		if (!success) break; // shouldn't happen
-		lily_pads.push_back(lpad);
-	} // for n
-	// add cattails
-	float const ct_max_height(1.0*depth), ct_max_radius(0.03*ct_max_height);
-	unsigned const num_ct(0/*15 + (rgen.rand() % 16)*/); // 15-30
-	cat_tails.reserve(num_ct);
-	cube_t pond_center(bcube);
-	for (unsigned d = 0; d < 2; ++d) {pond_center.expand_in_dim(d, -0.1*bcube.get_sz_dim(d));} // shrink
-
-	for (unsigned n = 0; n < num_ct; ++n) {
-		// place around perimeter in shallow water, clustered into groups
-		for (unsigned N = 0; N < 100; ++N) { // 100 random tries
-			point ct_pos;
-			gen_xy_pos_in_cube(ct_pos, bcube, rgen);
-			if (!point_in_ellipse(ct_pos, bcube) || point_in_ellipse(ct_pos, pond_center)) continue; // not inside pond, or too far from the edge
-			ct_pos.z = bcube.z1() - 0.3*depth; // will be updated later when depth is known
-			cube_t ctail(ct_pos);
-			ctail.z2() = bcube.z2() + rgen.rand_uniform(0.75, 1.0)*ct_max_height;
-			ctail.expand_by_xy(rgen.rand_uniform(0.75, 1.0)*ct_max_radius);
-			cat_tails.push_back(ctail);
-			break;
-		} // for N
-	} // for n
 }
 /*static*/ void pond_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	assert(!shadow_only);
@@ -1885,7 +1836,7 @@ void pond_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale
 	float const dist(p2p_dist(dstate.camera_bs, pos));
 
 	if (!lily_pads.empty()) {
-		float const dz_off(max(0.0001f*bcube.dz(), 0.00025f*dist)), z1(bcube.z2() + 2.0*dz_off), z2(z1 + dz_off);
+		float const dz_off(max(0.0001f*bcube.dz(), 0.00025f*dist)), z1(get_water_zval() + 2.0*dz_off), z2(z1 + dz_off);
 		color_wrapper const cw(WHITE);
 	
 		for (sphere_t const &cr : lily_pads) { // draw lily pads
@@ -1898,14 +1849,10 @@ void pond_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale
 		} // for cr
 	}
 	if (!cat_tails.empty()) {
+		rand_gen_t rgen;
+		rgen.set_state(rseed, 3*rseed+1);
 		select_no_texture();
-		dstate.s.set_cur_color(DK_GREEN);
-
-		for (cube_t const &ct : cat_tails) { // draw cat tails
-			// TODO: cone stem + brown capsule + curved leaves, or 3d model
-			float const ct_radius(0.5*ct.dx());
-			draw_fast_cylinder(cube_bot_center(ct), cube_top_center(ct), ct_radius, ct_radius, 16, 0, 4); // sides + top
-		} // for ct
+		for (cube_t const &ct : cat_tails) {draw_cat_tail(ct, dstate, shadow_only, rgen);}
 		select_texture(get_texture_by_name("lilypad.png")); // TODO: needs two pass draw
 	}
 	if (dist < 0.02*dstate.draw_tile_dist) {
@@ -1927,8 +1874,8 @@ bool pond_t::point_contains_xy(point const &p) const { // p is in global space
 	return point_in_ellipse(p, bcube);
 }
 bool pond_t::update_depth_if_underwater(point const &p, float &depth) const {
-	if (p.z <= bcube.z1() || p.z > bcube.z2() || !point_contains_xy(p)) return 0;
-	depth = (bcube.z2() - p.z);
+	if (p.z <= bcube.z1() || p.z > get_water_zval() || !point_contains_xy(p)) return 0;
+	depth = (get_water_zval() - p.z);
 	return 1;
 }
 

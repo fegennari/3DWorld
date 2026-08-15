@@ -574,4 +574,104 @@ void ivy_manager_t::draw_and_clear(shader_t &s) {
 	to_draw.clear();
 }
 
+// ponds with lily pads and cat tails
+
+bool has_circle_overlap(sphere_t const &circle, vector<sphere_t> const &circles) {
+	for (sphere_t const &c : circles) {
+		if (dist_xy_less_than(circle.pos, c.pos, (circle.radius + c.radius))) return 1;
+	}
+	return 0;
+}
+bool point_in_ellipse(point const &p, cube_t const &c);
+
+void pond_t::gen_vegetation(park_heightmap_t const &hmap) {
+	// add lily pads
+	rand_gen_t rgen;
+	rgen.set_state(rseed, 3*rseed+1);
+	unsigned const num_lp(10 + (rgen.rand() % 31)); // 10-40
+	lily_pads.reserve(num_lp);
+
+	for (unsigned n = 0; n < num_lp; ++n) {
+		sphere_t lpad;
+		lpad.pos.z  = (rgen.rand() % 8); // stores orient
+		lpad.radius = rgen.rand_uniform(0.5, 1.0)*0.03*radius;
+		cube_t lp_area(bcube), lp_avoid(bcube);
+		lp_area.expand_by_xy(-2.0*lpad.radius); // don't place too close to the pond edge
+		lp_avoid.expand_by(-vector3d(0.4*bcube.dx(), 0.4*bcube.dy(), 0.0)); // avoid the center
+		bool success(0);
+
+		for (unsigned N = 0; N < 100; ++N) {
+			for (unsigned d = 0; d < 2; ++d) {lpad.pos[d] = rgen.rand_uniform(bcube.d[d][0], bcube.d[d][1]);}
+			if (point_in_ellipse(lpad.pos, lp_area) && !point_in_ellipse(lpad.pos, lp_avoid) && !has_circle_overlap(lpad, lily_pads)) {success = 1; break;}
+		}
+		if (!success) break; // shouldn't happen
+		lily_pads.push_back(lpad);
+	} // for n
+	// add cattails
+	float const depth(bcube.dz()), ct_max_height(1.0*depth), ct_max_radius(0.1*ct_max_height); // depth is slightly larger than actual pond depth
+	float const ct_min_z1(get_water_zval() - 0.25*depth), ct_max_z1(get_water_zval() - 0.05*depth);
+	unsigned const num_ct(15 + (rgen.rand() % 16)); // 15-30
+	cat_tails.reserve(num_ct);
+	cube_t pond_center(bcube);
+	for (unsigned d = 0; d < 2; ++d) {pond_center.expand_in_dim(d, -0.1*bcube.get_sz_dim(d));} // shrink
+
+	for (unsigned n = 0; n < num_ct; ++n) {
+		// place around perimeter in shallow water, clustered into groups
+		for (unsigned N = 0; N < 100; ++N) { // 100 random tries
+			point ct_pos;
+			gen_xy_pos_in_cube(ct_pos, bcube, rgen);
+			//if (!point_in_ellipse(ct_pos, bcube) || point_in_ellipse(ct_pos, pond_center)) continue; // not inside pond, or too far from the edge
+			ct_pos.z = hmap.get_zval_at_pos(cube_bot_center(ct_pos)); // use zval from the bottom of the pond
+			if (ct_pos.z < ct_min_z1 || ct_pos.z > ct_max_z1) continue; // too deep or too shallow
+			cube_t ctail(ct_pos);
+			ctail.z2() = ct_pos.z + rgen.rand_uniform(0.75, 1.0)*ct_max_height;
+			ctail.expand_by_xy(rgen.rand_uniform(0.75, 1.0)*ct_max_radius);
+			cat_tails.push_back(ctail);
+			break;
+		} // for N
+	} // for n
+}
+
+void pond_t::draw_cat_tail(cube_t const &ct, draw_state_t &dstate, bool shadow_only, rand_gen_t &rgen) const {
+	// TODO:
+	// shadows
+	// odd reflection
+	// darker green
+	// leaves
+	// bend the stem
+	// textures
+	// optimize
+	if (shadow_only) return; // no shadows for now
+	unsigned const ndiv = 16;
+	unsigned const num_leaves(4 + (rgen.rand() % 5)); // 4-8
+	float const ct_height(ct.dz()), ct_radius(0.5*ct.dx()), stem_radius(0.1*ct_radius);
+	point const bot(cube_bot_center(ct)), top(cube_top_center(ct));
+	colorRGBA const leaves_color(DK_GREEN), capsule_color(BROWN);
+	static vector<vert_norm_tc> verts;
+	verts.clear();
+	// stem
+	dstate.s.set_cur_color(leaves_color);
+	gen_cone_triangles(verts, gen_cylinder_data(bot, top, stem_radius, 0.0, ndiv));
+	// leaves
+	// TODO
+	draw_and_clear_verts(verts, GL_TRIANGLES);
+	// capsule
+	float const cap_z1(ct.z1() + rgen.rand_uniform(0.75, 0.8)*ct_height), cap_z2(cap_z1 + rgen.rand_uniform(0.08, 0.12)*ct_height), cap_radius(0.2*ct_radius);
+	point const cap_bot(bot.x, bot.y, cap_z1), cap_top(bot.x, bot.y, cap_z2);
+	gen_cylinder_quads(verts, gen_cylinder_data(cap_bot, cap_top, cap_radius, cap_radius, ndiv));
+	dstate.s.set_cur_color(capsule_color);
+	begin_sphere_draw(0); // textured=0
+
+	for (unsigned d = 0; d < 2; ++d) {
+		fgPushMatrix();
+		translate_to((d ? cap_top : cap_bot));
+		uniform_scale(cap_radius);
+		if (!d) {scale_by(vector3d(1.0, 1.0, -1.0));} // draw bottom half of bottom sphere and top half of top sphere
+		draw_sphere_vbo_raw(ndiv, 0, 1); // textured=0, half=1
+		fgPopMatrix();
+	}
+	end_sphere_draw();
+	draw_quad_verts_as_tris(verts);
+}
+
 

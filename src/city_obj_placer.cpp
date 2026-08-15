@@ -944,6 +944,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 		if (added_pond || added_creek) { // use a heightmap if we added a creek, since it doesn't look good with a flat park quad
 			unsigned const park_nxy = 256;
 			park_hmaps.emplace_back(plot, park_nxy, park_nxy, (added_pond ? &ponds.back() : nullptr), ppaths, paths_start, creek_crossings, rgen);
+			if (added_pond) {ponds.back().gen_vegetation(park_hmaps.back());}
 			cube_t const &hill(park_hmaps.back().get_hill());
 			
 			if (!hill.is_all_zeros()) { // park hill is present

@@ -379,15 +379,20 @@ struct sculpture_t : public city_obj_t {
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 };
 
+class park_heightmap_t;
+
 struct pond_t : public city_obj_t {
 	unsigned rseed;
 	vector<sphere_t> lily_pads;
 	vect_cube_t cat_tails;
 
 	pond_t(point const &pos_, float x_radius, float y_radius, float depth, float water_z, unsigned rseed);
+	float get_water_zval() const {return bcube.z2();}
 	static void pre_draw(draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
+	void gen_vegetation(park_heightmap_t const &hmap);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
+	void draw_cat_tail(cube_t const &ct, draw_state_t &dstate, bool shadow_only, rand_gen_t &rgen) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 	bool point_contains_xy(point const &p) const;
 	bool update_depth_if_underwater(point const &p, float &depth) const;
@@ -739,7 +744,7 @@ class park_heightmap_t {
 	void raise_height(unsigned x, unsigned y, float zval);
 	void add_creek_rocks(park_path_t const &creek, rand_gen_t &rgen);
 public:
-	park_heightmap_t(cube_t const &c, unsigned nx_, unsigned ny_, pond_t *pond, vector<park_path_t> const &ppaths,
+	park_heightmap_t(cube_t const &c, unsigned nx_, unsigned ny_, pond_t const *const pond, vector<park_path_t> const &ppaths,
 		unsigned ppath_start, vector<cylinder_3dw> const &ccs, rand_gen_t &rgen);
 	cube_t const &get_hill() const {return hill_bc;}
 	size_t get_gpu_mem() const {return vao_mgr.gpu_mem;}

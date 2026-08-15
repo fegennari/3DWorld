@@ -508,7 +508,7 @@ void park_heightmap_t::raise_height(unsigned x, unsigned y, float zval) {
 	max_eq(bcube.z2(),        zval);
 }
 
-park_heightmap_t::park_heightmap_t(cube_t const &c, unsigned nx_, unsigned ny_, pond_t *pond,
+park_heightmap_t::park_heightmap_t(cube_t const &c, unsigned nx_, unsigned ny_, pond_t const *const pond,
 	vector<park_path_t> const &ppaths, unsigned ppath_start, vector<cylinder_3dw> const &ccs, rand_gen_t &rgen)
 	: nx(nx_), ny(ny_), z_ground(c.z2()), z_water(0.0), bcube(c), creek_crossings(ccs)
 {
@@ -535,8 +535,6 @@ park_heightmap_t::park_heightmap_t(cube_t const &c, unsigned nx_, unsigned ny_, 
 			} // for x
 		} // for y
 		z_water = pond_bc.z2(); // top of pond
-		// translate cat tails to bottom of pond now that it's known
-		for (cube_t &ct : pond->cat_tails) {ct.translate_dim(2, (get_zval_at_pos(cube_bot_center(ct)) - ct.z1()));}
 	}
 	for (auto P = ppaths.begin() + ppath_start; P != ppaths.end(); ++P) { // lower height under creek
 		if (!P->is_creek) continue;
