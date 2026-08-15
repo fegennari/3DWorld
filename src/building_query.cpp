@@ -3448,6 +3448,7 @@ void building_t::get_ivy_walls(vect_wall_with_windows_t &walls, rand_gen_t &rgen
 				}
 				wall.z2() -= get_fc_thickness(); // avoid clipping through the bottom of the roof/gutter
 				min_eq(wall.z2(), (ground_floor_z1 + 2.0f*get_window_vspace())); // limit to 2 floors
+				wall.expand_in_dim(!dim, -2.5*wall_thick); // clip off the ends in case there's a gutter
 				walls.emplace_back(wall, (2*dim + (!dir)));
 				// add windows; similar to building_t::get_all_windows()
 				float const window_h_border(WINDOW_BORDER_MULT*get_window_h_border()), window_v_border(WINDOW_BORDER_MULT*get_window_v_border()); // (0, 1) range
@@ -3461,12 +3462,14 @@ void building_t::get_ivy_walls(vect_wall_with_windows_t &walls, rand_gen_t &rgen
 					if ((c.dy() < c.dx()) != dim) continue;
 					float const window_width(c.get_sz_dim(!dim)/(tx2 - tx1)), window_height(c.dz()/(tz2 - tz1)); // window_height should be equal to window_vspacing
 					float const border_xy(window_width*window_h_border), border_z(window_height*window_v_border);
+					float const window_sill_dz(0.04*window_height); // we don't know if there are window sills added at this point, so assume they may be present
 					cube_t window(c); // copy dim <dim>
 					window.expand_in_dim(dim, wall_thick); // expand to nonzero area
 
 					for (float z = tz1; z < tz2; z += 1.0) { // each floor
 						float const bot_edge(c.z1() + (z - tz1)*window_height);
-						set_cube_zvals(window, bot_edge+border_z, bot_edge+window_height-border_z); // subtract off border to get interior/open part of window
+						// subtract off border to get interior/open part of window
+						set_cube_zvals(window, (bot_edge + border_z - window_sill_dz), (bot_edge + window_height - border_z));
 
 						for (float xy = tx1; xy < tx2; xy += 1.0) { // windows along each wall
 							float const low_edge(c.d[!dim][0] + (xy - tx1)*window_width);
@@ -3479,15 +3482,6 @@ void building_t::get_ivy_walls(vect_wall_with_windows_t &walls, rand_gen_t &rgen
 				if (has_chimney == 2) { // add chimney fireplace as a blocker
 					cube_t const blocker(get_fireplace());
 					if (blocker.intersects(wall)) {walls.back().blockers.push_back(blocker);}
-				}
-				if (has_room_geom()) { // check downspouts if room_geom has been generated; but usually it has not
-					cube_t wall_exp(wall);
-					wall.expand_in_dim(dim, wall_thick);
-					auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
-
-					for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
-						if (i->type == TYPE_DOWNSPOUT && i->intersects(wall_exp)) {walls.back().blockers.push_back(*i);}
-					}
 				}
 			} // for dim
 		} // for dim

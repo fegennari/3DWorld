@@ -1419,7 +1419,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	ext_steps.clear(); // clear prev value in case this building's interior is recreated
 	maybe_add_fire_escape  (rgen); // or ladder
 	add_balconies          (rgen, balconies);
-	add_gutter_downspouts  (rgen, balconies);
+	add_gutter_downspouts  (balconies);
 	add_exterior_door_items(rgen);
 	if (data_center) {add_datacenter_outdoor_objs(rgen, 1);} // is_room_geom_pass=1
 	if (has_chimney) {add_chimney_cap(rgen);}
@@ -1772,7 +1772,7 @@ void building_t::add_balconies(rand_gen_t &rgen, vect_cube_t &balconies) { // an
 	if (num_balconies > 0) {invalidate_tile_smap_in_region(bcube + get_camera_coord_space_xlate());}
 }
 
-void building_t::add_gutter_downspouts(rand_gen_t &rgen, vect_cube_t const &balconies) {
+void building_t::add_gutter_downspouts(vect_cube_t const &balconies) {
 	for (cube_with_ix_t const &g : gutters) {
 		bool const dim(g.ix >> 1), dir(g.ix & 1);
 		float const len(g.get_sz_dim(!dim)), width(g.get_sz_dim(dim)), ds_width(0.5f*width), edge_spacing(1.65*ds_width); // just enough to clear the fence post

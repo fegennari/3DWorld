@@ -2738,7 +2738,7 @@ private:
 	void add_chimney_cap(rand_gen_t &rgen);
 	void maybe_add_fire_escape(rand_gen_t &rgen);
 	void add_balconies(rand_gen_t &rgen, vect_cube_t &balconies);
-	void add_gutter_downspouts(rand_gen_t &rgen, vect_cube_t const &balconies);
+	void add_gutter_downspouts(vect_cube_t const &balconies);
 	void add_extra_obj_slots();
 	void add_wall_and_door_trim_if_needed();
 	void add_trim_for_door_or_int_window(cube_t const &c, colorRGBA const &color, bool dim, bool draw_top_edge, bool draw_bot_trim,
