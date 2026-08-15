@@ -634,7 +634,6 @@ void pond_t::gen_vegetation(park_heightmap_t const &hmap) {
 
 void pond_t::draw_cat_tail(cube_t const &ct, draw_state_t &dstate, bool shadow_only, rand_gen_t &rgen) const {
 	// TODO:
-	// odd reflection
 	// leaves
 	// bend the stem
 	// textures

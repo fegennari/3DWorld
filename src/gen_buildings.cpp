@@ -4186,6 +4186,7 @@ public:
 		//assert(!bbd.has_ext_geom()); // assert is valid, but is disabled because the debugger stops here rather than at an earlier assert
 		bool const defer_people_draw_player_bldg(global_building_params.people_min_alpha > 0.0);
 		vis_conn_bldg = nullptr;
+		bbd.clear_obj_models();
 
 		// draw building interiors with standard shader and no shadow maps; must be drawn first before windows depth pass
 		if (have_interior) {
@@ -4250,7 +4251,6 @@ public:
 			bool const enable_int_reflect(!reflection_pass && enable_cube_map_reflect());
 			setup_building_draw_shader(s, min_alpha, 1, 0, 0, water_damage, crack_damage, enable_int_reflect); // enable_indir=1, force_tsl=0, use_texgen=0
 			vector<point> points; // reused temporary
-			bbd.clear_obj_models();
 			int indir_bcs_ix(-1), indir_bix(-1);
 
 			if (draw_interior) {
