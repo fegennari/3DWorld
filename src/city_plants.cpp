@@ -609,15 +609,21 @@ void pond_t::gen_vegetation(park_heightmap_t const &hmap) {
 	} // for n
 	// add cattails
 	float const depth(bcube.dz()), ct_max_height(1.0*depth), ct_max_radius(0.1*ct_max_height); // depth is slightly larger than actual pond depth
-	float const ct_min_z1(get_water_zval() - 0.25*depth), ct_max_z1(get_water_zval() - 0.05*depth);
-	unsigned const num_ct(25 + (rgen.rand() % 16)); // 25-40
+	float const ct_min_z1(get_water_zval() - 0.25*depth), ct_max_z1(get_water_zval() - 0.02*depth), clump_radius(0.02*(bcube.dx() + bcube.dy()));
+	unsigned const num_ct(30 + (rgen.rand() % 21)); // 30-50
 	cat_tails.reserve(num_ct);
+	point ct_pos;
 
 	for (unsigned n = 0; n < num_ct; ++n) {
 		// place around perimeter in shallow water, clustered into groups
 		for (unsigned N = 0; N < 100; ++N) { // 100 random tries
-			point ct_pos;
-			gen_xy_pos_in_cube(ct_pos, bcube, rgen);
+			if (N == 0 && ct_pos != all_zeros) { // first iteration: place close to prev cat tail to produce clumps
+				ct_pos += clump_radius*rgen.signed_rand_vector_spherical_xy_norm();
+				if (!bcube.contains_pt_xy(ct_pos)) continue;
+			}
+			else {
+				gen_xy_pos_in_cube(ct_pos, bcube, rgen);
+			}
 			ct_pos.z = hmap.get_zval_at_pos(cube_bot_center(ct_pos)); // use zval from the bottom of the pond
 			if (ct_pos.z < ct_min_z1 || ct_pos.z > ct_max_z1) continue; // too deep or too shallow
 			cube_t ctail(ct_pos);
@@ -633,7 +639,6 @@ void pond_t::draw_cat_tails(draw_state_t &dstate, bool shadow_only) const {
 	// TODO:
 	// leaves
 	// bend the stem
-	// clumpy distribution
 	// textures
 	unsigned const ndiv(16), nstacks(8);
 	rand_gen_t rgen;
@@ -647,8 +652,10 @@ void pond_t::draw_cat_tails(draw_state_t &dstate, bool shadow_only) const {
 
 	for (cube_t const &ct : cat_tails) {
 		// stems
-		float const ct_height(ct.dz()), ct_radius(0.5*ct.dx()), stem_radius(0.1*ct_radius);
-		point const bot(cube_bot_center(ct)), top(cube_top_center(ct));
+		float const ct_height(ct.dz()), ct_radius(0.5*ct.dx()), stem_radius(0.1*ct_radius), lean_amt(rgen.rand_uniform(0.0, 2.0));
+		point const bot(cube_bot_center(ct));
+		point const top(cube_top_center(ct) + lean_amt*ct_radius*rgen.signed_rand_vector_spherical_xy_norm()); // random lean
+		vector3d const stem_delta(top - bot);
 		// TODO: split into nstacks cylinder + cone segments and bend them
 		gen_cone_triangles(leaf_verts, gen_cylinder_data(bot, top, 0.1*ct_radius, 0.0, ndiv));
 		// leaves
@@ -664,15 +671,16 @@ void pond_t::draw_cat_tails(draw_state_t &dstate, bool shadow_only) const {
 			for (unsigned i = 0; i < 3; ++i) {leaf_verts.emplace_back(lpts[i], dir, ts[i], tt[i]);}
 		} // for n
 		// capsules
-		float const cap_z1(ct.z1() + rgen.rand_uniform(0.75, 0.8)*ct_height), cap_z2(cap_z1 + rgen.rand_uniform(0.08, 0.12)*ct_height), cap_radius(0.2*ct_radius);
-		point const cap_bot(bot.x, bot.y, cap_z1), cap_top(bot.x, bot.y, cap_z2);
+		bool const draw_sphere_half(lean_amt == 0.0); // must draw whole sphere if leaning; likely false
+		float const cap_t1(rgen.rand_uniform(0.75, 0.8)), cap_t2(cap_t1 + rgen.rand_uniform(0.08, 0.12)), cap_radius(0.2*ct_radius); // parametric position along bot=>top
+		point const cap_bot(bot + cap_t1*stem_delta), cap_top(bot + cap_t2*stem_delta);
 		gen_cylinder_quads(cap_verts, gen_cylinder_data(cap_bot, cap_top, cap_radius, cap_radius, ndiv));
 
 		for (unsigned d = 0; d < 2; ++d) {
 			fgPushMatrix();
 			translate_to((d ? cap_top : cap_bot));
 			scale_by(cap_radius*vector3d(1.0, 1.0, (d ? 1.0 : -1.0))); // draw bottom half of bottom sphere and top half of top sphere
-			draw_sphere_vbo_raw(ndiv, 0, 1); // textured=0, half=1
+			draw_sphere_vbo_raw(ndiv, 0, draw_sphere_half); // textured=0
 			fgPopMatrix();
 		}
 	} // for ct
