@@ -634,19 +634,16 @@ void pond_t::gen_vegetation(park_heightmap_t const &hmap) {
 
 void pond_t::draw_cat_tail(cube_t const &ct, draw_state_t &dstate, bool shadow_only, rand_gen_t &rgen) const {
 	// TODO:
-	// shadows
 	// odd reflection
-	// darker green
 	// leaves
 	// bend the stem
 	// textures
 	// optimize
-	if (shadow_only) return; // no shadows for now
 	unsigned const ndiv = 16;
 	unsigned const num_leaves(4 + (rgen.rand() % 5)); // 4-8
 	float const ct_height(ct.dz()), ct_radius(0.5*ct.dx()), stem_radius(0.1*ct_radius);
 	point const bot(cube_bot_center(ct)), top(cube_top_center(ct));
-	colorRGBA const leaves_color(DK_GREEN), capsule_color(BROWN);
+	colorRGBA const leaves_color(0.1, 0.3, 0.0), capsule_color(BROWN); // dark green leaves
 	static vector<vert_norm_tc> verts;
 	verts.clear();
 	// stem

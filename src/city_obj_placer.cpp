@@ -2991,6 +2991,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(bldgs,     bldg_groups,     dstate, 0.25, shadow_only, 1);
 	draw_objects(park_wfs,  park_wf_groups,  dstate, 0.08, shadow_only, 1);
 	draw_objects(ppaths,    ppath_groups,    dstate, 0.25, shadow_only, 0, 1); // draw_qbd_as_quads=1; paths only, not creeks; not always drawn in the shadow pass
+	draw_objects(ponds,     pond_groups,     dstate, 0.08, shadow_only, 1); // draw lily pads and cat tails; dist_scale=0.08, has_immediate_draw=1
 	
 	if (!shadow_only) { // non shadow casting objects
 		for (park_heightmap_t &h : park_hmaps) {h.draw(dstate, 1, 0);} // terrain only
@@ -3000,7 +3001,6 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 		draw_objects(pigeons,  pigeon_groups,  dstate, 0.03, shadow_only, 1);
 		draw_objects(birds,    bird_groups,    dstate, 0.03, shadow_only, 1);
 		draw_objects(pladders, plad_groups,    dstate, 0.06, shadow_only, 1);
-		draw_objects(ponds,    pond_groups,    dstate, 0.08, shadow_only, 1); // draw lily pads only; dist_scale=0.08, has_immediate_draw=1
 	}
 	for (dstate.pass_ix = (shadow_only ? 1 : 0); dstate.pass_ix < 2; ++dstate.pass_ix) { // {solar panel, metal frame}; panel does not cast shadows
 		draw_objects(p_solars, p_solar_groups, dstate, (dstate.pass_ix ? 0.25 : 0.45), shadow_only, 0);

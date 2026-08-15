@@ -1824,19 +1824,18 @@ pond_t::pond_t(point const &pos_, float x_radius, float y_radius, float depth, f
 	bcube.z1() -= depth;
 }
 /*static*/ void pond_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
-	assert(!shadow_only);
-	select_texture(get_texture_by_name("lilypad.png")); // lily pads
-	enable_blend();
+	if (!shadow_only) {select_texture(get_texture_by_name("lilypad.png"));} // lily pads
+	if (!shadow_only) {enable_blend();}
 }
 /*static*/ void pond_t::post_draw(draw_state_t &dstate, bool shadow_only) {
-	disable_blend(); // lily pads
+	if (!shadow_only) {disable_blend();} // lily pads
 }
 void pond_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
-	assert(!shadow_only);
-	float const dist(p2p_dist(dstate.camera_bs, pos));
+	float const dist(shadow_only ? 0.0 : p2p_dist(dstate.camera_bs, pos));
 
-	if (!lily_pads.empty()) {
-		float const dz_off(max(0.0001f*bcube.dz(), 0.00025f*dist)), z1(get_water_zval() + 2.0*dz_off), z2(z1 + dz_off);
+	if (!lily_pads.empty()) { // shadows are not clipped to a circle and look wrong on the ground, but are okay under the water
+		bool const draw_bot(dstate.camera_bs.z < get_water_zval());
+		float const dz_off((draw_bot ? -1.0 : 1.0)*max(0.0001f*bcube.dz(), 0.00025f*dist)), z1(get_water_zval() + 2.0*dz_off), z2(z1 + dz_off);
 		color_wrapper const cw(WHITE);
 	
 		for (sphere_t const &cr : lily_pads) { // draw lily pads
@@ -1845,7 +1844,7 @@ void pond_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale
 			cube_t lpad;
 			lpad.set_from_sphere(cr);
 			set_cube_zvals(lpad, z1, z2);
-			dstate.draw_cube(qbds.qbd, lpad, cw, 1, 0.0, 3, mx, my, swap_xy); // top only
+			dstate.draw_cube(qbds.qbd, lpad, cw, !draw_bot, 0.0, 3, mx, my, swap_xy, 1.0, 1.0, 1.0, draw_bot);
 		} // for cr
 	}
 	if (!cat_tails.empty()) {
@@ -1855,7 +1854,7 @@ void pond_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale
 		for (cube_t const &ct : cat_tails) {draw_cat_tail(ct, dstate, shadow_only, rgen);}
 		select_texture(get_texture_by_name("lilypad.png")); // TODO: needs two pass draw
 	}
-	if (dist < 0.02*dstate.draw_tile_dist) {
+	if (!shadow_only && dist < 0.02*dstate.draw_tile_dist) {
 		// use rseed as pond_id; we don't have an ID that's unique across cities that we can use; it's used as a map key, so doesn't need to be sequential, as long as it's unique
 		register_fish_pond_visible(bcube, rseed);
 	}
