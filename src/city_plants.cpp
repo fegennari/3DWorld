@@ -610,17 +610,14 @@ void pond_t::gen_vegetation(park_heightmap_t const &hmap) {
 	// add cattails
 	float const depth(bcube.dz()), ct_max_height(1.0*depth), ct_max_radius(0.1*ct_max_height); // depth is slightly larger than actual pond depth
 	float const ct_min_z1(get_water_zval() - 0.25*depth), ct_max_z1(get_water_zval() - 0.05*depth);
-	unsigned const num_ct(15 + (rgen.rand() % 16)); // 15-30
+	unsigned const num_ct(25 + (rgen.rand() % 16)); // 25-40
 	cat_tails.reserve(num_ct);
-	cube_t pond_center(bcube);
-	for (unsigned d = 0; d < 2; ++d) {pond_center.expand_in_dim(d, -0.1*bcube.get_sz_dim(d));} // shrink
 
 	for (unsigned n = 0; n < num_ct; ++n) {
 		// place around perimeter in shallow water, clustered into groups
 		for (unsigned N = 0; N < 100; ++N) { // 100 random tries
 			point ct_pos;
 			gen_xy_pos_in_cube(ct_pos, bcube, rgen);
-			//if (!point_in_ellipse(ct_pos, bcube) || point_in_ellipse(ct_pos, pond_center)) continue; // not inside pond, or too far from the edge
 			ct_pos.z = hmap.get_zval_at_pos(cube_bot_center(ct_pos)); // use zval from the bottom of the pond
 			if (ct_pos.z < ct_min_z1 || ct_pos.z > ct_max_z1) continue; // too deep or too shallow
 			cube_t ctail(ct_pos);
@@ -632,42 +629,46 @@ void pond_t::gen_vegetation(park_heightmap_t const &hmap) {
 	} // for n
 }
 
-void pond_t::draw_cat_tail(cube_t const &ct, draw_state_t &dstate, bool shadow_only, rand_gen_t &rgen) const {
+void pond_t::draw_cat_tails(draw_state_t &dstate, bool shadow_only) const {
 	// TODO:
 	// leaves
 	// bend the stem
+	// clumpy distribution
 	// textures
-	// optimize
 	unsigned const ndiv = 16;
-	unsigned const num_leaves(4 + (rgen.rand() % 5)); // 4-8
-	float const ct_height(ct.dz()), ct_radius(0.5*ct.dx()), stem_radius(0.1*ct_radius);
-	point const bot(cube_bot_center(ct)), top(cube_top_center(ct));
-	colorRGBA const leaves_color(0.1, 0.3, 0.0), capsule_color(BROWN); // dark green leaves
-	static vector<vert_norm_tc> verts;
-	verts.clear();
-	// stem
-	dstate.s.set_cur_color(leaves_color);
-	gen_cone_triangles(verts, gen_cylinder_data(bot, top, stem_radius, 0.0, ndiv));
-	// leaves
-	// TODO
-	draw_and_clear_verts(verts, GL_TRIANGLES);
-	// capsule
-	float const cap_z1(ct.z1() + rgen.rand_uniform(0.75, 0.8)*ct_height), cap_z2(cap_z1 + rgen.rand_uniform(0.08, 0.12)*ct_height), cap_radius(0.2*ct_radius);
-	point const cap_bot(bot.x, bot.y, cap_z1), cap_top(bot.x, bot.y, cap_z2);
-	gen_cylinder_quads(verts, gen_cylinder_data(cap_bot, cap_top, cap_radius, cap_radius, ndiv));
-	dstate.s.set_cur_color(capsule_color);
+	rand_gen_t rgen;
+	rgen.set_state(rseed, 3*rseed+1);
+	static vector<vert_norm_tc> leaf_verts, cap_verts;
+	leaf_verts.clear();
+	cap_verts .clear();
+	select_no_texture();
 	begin_sphere_draw(0); // textured=0
+	dstate.s.set_cur_color(BROWN);
 
-	for (unsigned d = 0; d < 2; ++d) {
-		fgPushMatrix();
-		translate_to((d ? cap_top : cap_bot));
-		uniform_scale(cap_radius);
-		if (!d) {scale_by(vector3d(1.0, 1.0, -1.0));} // draw bottom half of bottom sphere and top half of top sphere
-		draw_sphere_vbo_raw(ndiv, 0, 1); // textured=0, half=1
-		fgPopMatrix();
-	}
+	for (cube_t const &ct : cat_tails) {
+		// stems
+		float const ct_height(ct.dz()), ct_radius(0.5*ct.dx()), stem_radius(0.1*ct_radius);
+		point const bot(cube_bot_center(ct)), top(cube_top_center(ct));
+		gen_cone_triangles(leaf_verts, gen_cylinder_data(bot, top, 0.1*ct_radius, 0.0, ndiv));
+		// leaves
+		// TODO
+		// capsules
+		float const cap_z1(ct.z1() + rgen.rand_uniform(0.75, 0.8)*ct_height), cap_z2(cap_z1 + rgen.rand_uniform(0.08, 0.12)*ct_height), cap_radius(0.2*ct_radius);
+		point const cap_bot(bot.x, bot.y, cap_z1), cap_top(bot.x, bot.y, cap_z2);
+		gen_cylinder_quads(cap_verts, gen_cylinder_data(cap_bot, cap_top, cap_radius, cap_radius, ndiv));
+
+		for (unsigned d = 0; d < 2; ++d) {
+			fgPushMatrix();
+			translate_to((d ? cap_top : cap_bot));
+			scale_by(cap_radius*vector3d(1.0, 1.0, (d ? 1.0 : -1.0))); // draw bottom half of bottom sphere and top half of top sphere
+			draw_sphere_vbo_raw(ndiv, 0, 1); // textured=0, half=1
+			fgPopMatrix();
+		}
+	} // for ct
 	end_sphere_draw();
-	draw_quad_verts_as_tris(verts);
+	draw_quad_verts_as_tris(cap_verts);
+	dstate.s.set_cur_color(colorRGBA(0.1, 0.3, 0.0)); // dark green leaves
+	draw_and_clear_verts(leaf_verts, GL_TRIANGLES);
 }
 
 

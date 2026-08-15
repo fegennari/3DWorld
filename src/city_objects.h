@@ -392,7 +392,7 @@ struct pond_t : public city_obj_t {
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void gen_vegetation(park_heightmap_t const &hmap);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
-	void draw_cat_tail(cube_t const &ct, draw_state_t &dstate, bool shadow_only, rand_gen_t &rgen) const;
+	void draw_cat_tails(draw_state_t &dstate, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 	bool point_contains_xy(point const &p) const;
 	bool update_depth_if_underwater(point const &p, float &depth) const;
