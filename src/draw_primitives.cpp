@@ -284,7 +284,7 @@ void draw_circle_normal(float r_inner, float r_outer, int ndiv, int invert_norma
 	float const inner_tscale(r_inner/r_outer), half_tss(0.5*tscale_s), half_tst(0.5*tscale_t);
 	float sin_s(0.0), cos_s(1.0);
 	static vector<vert_norm_tc> verts;
-	if (!disk) {verts.emplace_back(pos, n, 0.5*tscale_s, 0.5*tscale_t);} // center
+	if (!disk) {verts.emplace_back(pos, n, half_tss, half_tst);} // center
 
 	for (unsigned S = 0; S <= (unsigned)ndiv; ++S) {
 		float const s(sin_s), c(cos_s), ts((1.0 + s)*half_tss), tt((1.0 + c)*half_tst);
