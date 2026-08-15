@@ -3480,6 +3480,15 @@ void building_t::get_ivy_walls(vect_wall_with_windows_t &walls, rand_gen_t &rgen
 					cube_t const blocker(get_fireplace());
 					if (blocker.intersects(wall)) {walls.back().blockers.push_back(blocker);}
 				}
+				if (has_room_geom()) { // check downspouts if room_geom has been generated; but usually it has not
+					cube_t wall_exp(wall);
+					wall.expand_in_dim(dim, wall_thick);
+					auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
+
+					for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
+						if (i->type == TYPE_DOWNSPOUT && i->intersects(wall_exp)) {walls.back().blockers.push_back(*i);}
+					}
+				}
 			} // for dim
 		} // for dim
 	} // for p
