@@ -2132,10 +2132,9 @@ bool tile_t::is_water_visible() const {
 	return (!is_distant && has_water() && rel_dist_to_camera_xy_lt(DRAW_DIST_TILES) && is_visible());
 }
 void tile_t::draw_water(shader_t &s, float z) const {
-
 	if (!is_water_visible()) return;
+	if (height_tid == 0)     return; // skip in the rare case when the heightmap is invalid
 	float const xv1(get_xval(x1 + xoff - xoff2)), yv1(get_yval(y1 + yoff - yoff2)), xv2(xv1+(x2-x1)*DX_VAL), yv2(yv1+(y2-y1)*DY_VAL);
-	assert(height_tid > 0);
 	bind_texture_tu(height_tid, 2);
 	//bind_texture_tu(shadow_tid, 6); // Note: only needed if ENABLE_WATER_SHADOWS is enabled in the water plane shader
 	bind_and_setup_shadow_map(s); // okay if shadow maps haven't been created yet
