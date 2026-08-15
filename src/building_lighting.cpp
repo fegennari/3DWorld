@@ -399,6 +399,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			type == TYPE_LAPTOP || type == TYPE_VASE || type == TYPE_URN || type == TYPE_LAVALAMP || type == TYPE_TOY || type == TYPE_EASEL || type == TYPE_GENERATOR) continue;
 		if (type == TYPE_FISHTANK && c->z1() < ground_floor_z1)      continue; // skip  mall fishtanks
 		if (type == TYPE_TCAN && !(c->in_mall() || c->in_hallway())) continue; // skip small trashcans
+		if (type == TYPE_DBG_SHAPE && !c->is_lit()) continue; // skip debug shapes without the lit flag set
 		if (type >= TYPE_RAT) continue; // skip animals (for example, roaches in sinks)
 		bool const is_stairs(type == TYPE_STAIR || type == TYPE_STAIR_WALL);
 		if (c->z1() > (is_stairs ? stairs_z2 : z2) || c->z2() < (is_stairs ? stairs_z1 : z1)) continue;
