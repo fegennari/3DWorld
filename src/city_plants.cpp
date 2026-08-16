@@ -671,25 +671,65 @@ void pond_t::draw_lily_pads(draw_state_t &dstate, city_draw_qbds_t &qbds, bool s
 	} // for lp
 }
 
+struct plant_bender_t {
+	float bend_amt;
+	point bot;
+
+	plant_bender_t(point const &bot_, point const &top, float flex_val) : bot(bot_) {
+		assert(bot.z < top.z);
+		vector3d const delta(top - bot);
+		bend_amt = flex_val*min(2.0f, delta.xy_mag()/delta.z)/delta.mag();
+	}
+	void bend(point &pos) {
+		float const length(p2p_dist(pos, bot));
+		pos.z = max(bot.z, (pos.z - bend_amt*length*length)); // quadratic bend function; can't go below the base
+		vector3d const new_delta(pos - bot);
+		pos = bot + new_delta*(length/new_delta.mag()); // adjust to preserve original segment length but keep the new direction
+	}
+};
+
 void pond_t::draw_cat_tails(draw_state_t &dstate, bool shadow_only) const {
 	unsigned const ndiv(16), nstacks(8);
+	float const nstacks_inv(1.0/nstacks);
 	rand_gen_t rgen;
 	rgen.set_state(rseed, 3*rseed+1);
-	static vector<vert_norm_tc> leaf_verts, cap_verts;
-	leaf_verts.clear();
-	cap_verts .clear();
+	static vector<vert_norm_tc> leaf_tverts, leaf_qverts, cap_verts; // norm_comp?
+	leaf_tverts.clear();
+	leaf_qverts.clear();
+	cap_verts  .clear();
 	select_no_texture();
 	begin_sphere_draw(0); // textured=0
 	dstate.s.set_cur_color(BROWN);
 
 	for (cube_t const &ct : cat_tails) {
-		// stems
-		float const ct_height(ct.dz()), ct_radius(0.5*ct.dx()), stem_radius(0.1*ct_radius), lean_amt(rgen.rand_uniform(0.0, 2.0));
+		// stem
+		float const ct_height(ct.dz()), ct_radius(0.5*ct.dx()), lean_amt(rgen.rand_uniform(0.0, 2.0));
+		float const stem_radius(0.1*ct_radius), stem_radius_step(nstacks_inv*stem_radius);
 		point const bot(cube_bot_center(ct));
 		point const top(cube_top_center(ct) + lean_amt*ct_radius*rgen.signed_rand_vector_spherical_xy_norm()); // random lean
-		vector3d const stem_delta(top - bot);
-		// TODO: split into nstacks cylinder + cone segments and bend them
-		gen_cone_triangles(leaf_verts, gen_cylinder_data(bot, top, 0.1*ct_radius, 0.0, ndiv));
+		vector3d const stem_delta(top - bot), stack_step(nstacks_inv*stem_delta);
+		float cur_radius(stem_radius), cur_ts(0.0);
+		point cur_stem(bot), prev_stem_draw(cur_stem);
+		plant_bender_t stem_bender(bot, top, 2.8);
+
+		for (unsigned s = 0; s < nstacks; ++s) { // split into nstacks cylinder + cone segments and bend them
+			point const next_stem(cur_stem + stack_step);
+			point next_stem_draw(next_stem);
+			stem_bender.bend(next_stem_draw); // apply bend; cylinder ends won't line up exactly right, but it's not too noticeable
+
+			if (s+1 < nstacks) { // truncated cone (quads)
+				float const next_radius(cur_radius - stem_radius_step);
+				assert(next_radius > 0.0);
+				gen_cylinder_quads(leaf_qverts, gen_cylinder_data(prev_stem_draw, next_stem_draw, cur_radius, next_radius, ndiv), 0, nstacks_inv, cur_ts);
+				cur_radius = next_radius;
+				cur_ts    += nstacks_inv;
+				cur_stem   = next_stem;
+				prev_stem_draw = next_stem_draw;
+			}
+			else { // cone for last stack (triangles)
+				gen_cone_triangles(leaf_tverts, gen_cylinder_data(prev_stem_draw, next_stem_draw, cur_radius, 0.0, ndiv), 0, cur_ts, 1.0);
+			}
+		} // for s
 		// leaves
 		unsigned const nleaves(5 + (rgen.rand() % 4)); // 5-8
 
@@ -701,17 +741,22 @@ void pond_t::draw_cat_tails(draw_state_t &dstate, bool shadow_only) const {
 			point const lpts[3] = {(base - side_delta), (base + side_delta), tip};
 			// TODO: split into nstacks quads + triangles
 			float const ts[3] = {0.0, 1.0, 0.5}, tt[3] = {0.0, 0.0, 1.0};
-			for (unsigned i = 0; i < 3; ++i) {leaf_verts.emplace_back(lpts[i], normal, ts[i], tt[i]);}
+			for (unsigned i = 0; i < 3; ++i) {leaf_tverts.emplace_back(lpts[i], normal, ts[i], tt[i]);}
 		} // for n
-		// capsules
+		// capsule
 		bool const draw_sphere_half(lean_amt == 0.0); // must draw whole sphere if leaning; likely false
-		float const cap_t1(rgen.rand_uniform(0.74, 0.78)), cap_t2(cap_t1 + rgen.rand_uniform(0.08, 0.12)), cap_radius(0.2*ct_radius); // parametric position along bot=>top
-		point const cap_bot(bot + cap_t1*stem_delta), cap_top(bot + cap_t2*stem_delta);
-		gen_cylinder_quads(cap_verts, gen_cylinder_data(cap_bot, cap_top, cap_radius, cap_radius, ndiv));
+		float const cap_t1(rgen.rand_uniform(0.75, 0.8)), cap_t2(cap_t1 + rgen.rand_uniform(0.08, 0.12)), cap_radius(0.2*ct_radius); // parametric position along bot=>top
+		point cap_pos[2];
+
+		for (unsigned d = 0; d < 2; ++d) {
+			cap_pos[d] = bot + (d ? cap_t2 : cap_t1)*stem_delta;
+			stem_bender.bend(cap_pos[d]);
+		}
+		gen_cylinder_quads(cap_verts, gen_cylinder_data(cap_pos[0], cap_pos[1], cap_radius, cap_radius, ndiv));
 
 		for (unsigned d = 0; d < 2; ++d) {
 			fgPushMatrix();
-			translate_to((d ? cap_top : cap_bot));
+			translate_to(cap_pos[d]);
 			scale_by(cap_radius*vector3d(1.0, 1.0, (d ? 1.0 : -1.0))); // draw bottom half of bottom sphere and top half of top sphere
 			draw_sphere_vbo_raw(ndiv, 0, draw_sphere_half); // textured=0
 			fgPopMatrix();
@@ -721,7 +766,8 @@ void pond_t::draw_cat_tails(draw_state_t &dstate, bool shadow_only) const {
 	draw_quad_verts_as_tris(cap_verts);
 	dstate.s.set_cur_color(colorRGBA(0.4, 0.6, 0.2)); // make the green even darker
 	select_texture(GRASS_BLADE_TEX);
-	draw_and_clear_verts(leaf_verts, GL_TRIANGLES);
+	draw_and_clear_verts(leaf_tverts, GL_TRIANGLES);
+	draw_quad_verts_as_tris(leaf_qverts);
 }
 
 
