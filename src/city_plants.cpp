@@ -675,7 +675,6 @@ void pond_t::draw_cat_tails(draw_state_t &dstate, bool shadow_only) const {
 	// TODO:
 	// leaves
 	// bend the stem
-	// textures
 	unsigned const ndiv(16), nstacks(8);
 	rand_gen_t rgen;
 	rgen.set_state(rseed, 3*rseed+1);
@@ -722,7 +721,8 @@ void pond_t::draw_cat_tails(draw_state_t &dstate, bool shadow_only) const {
 	} // for ct
 	end_sphere_draw();
 	draw_quad_verts_as_tris(cap_verts);
-	dstate.s.set_cur_color(colorRGBA(0.1, 0.3, 0.0)); // dark green leaves
+	dstate.s.set_cur_color(colorRGBA(0.4, 0.6, 0.2)); // make the green even darker
+	select_texture(GRASS_BLADE_TEX);
 	draw_and_clear_verts(leaf_verts, GL_TRIANGLES);
 }
 
