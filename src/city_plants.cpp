@@ -672,9 +672,6 @@ void pond_t::draw_lily_pads(draw_state_t &dstate, city_draw_qbds_t &qbds, bool s
 }
 
 void pond_t::draw_cat_tails(draw_state_t &dstate, bool shadow_only) const {
-	// TODO:
-	// leaves
-	// bend the stem
 	unsigned const ndiv(16), nstacks(8);
 	rand_gen_t rgen;
 	rgen.set_state(rseed, 3*rseed+1);
@@ -700,14 +697,15 @@ void pond_t::draw_cat_tails(draw_state_t &dstate, bool shadow_only) const {
 			float const leaf_len(rgen.rand_uniform(0.4, 0.8)*ct_height), leaf_base_hwidth(rgen.rand_uniform(0.75, 1.0)*0.03*leaf_len), bend_amt(rgen.rand_uniform(0.5, 1.0));
 			vector3d const dir(rgen.signed_rand_vector_spherical_xy_norm()), side_delta(leaf_base_hwidth*cross_product(dir, plus_z));
 			point const base(bot + dir*ct_radius*rgen.rand_uniform(0.1, 0.2)), tip(base + dir*ct_radius*bend_amt + leaf_len*plus_z);
+			vector3d const normal(((dot_product(dir, (dstate.camera_bs - base)) < 0.0) ? -1.0 : 1.0)*dir); // two sided; faces the camera
 			point const lpts[3] = {(base - side_delta), (base + side_delta), tip};
 			// TODO: split into nstacks quads + triangles
 			float const ts[3] = {0.0, 1.0, 0.5}, tt[3] = {0.0, 0.0, 1.0};
-			for (unsigned i = 0; i < 3; ++i) {leaf_verts.emplace_back(lpts[i], dir, ts[i], tt[i]);}
+			for (unsigned i = 0; i < 3; ++i) {leaf_verts.emplace_back(lpts[i], normal, ts[i], tt[i]);}
 		} // for n
 		// capsules
 		bool const draw_sphere_half(lean_amt == 0.0); // must draw whole sphere if leaning; likely false
-		float const cap_t1(rgen.rand_uniform(0.75, 0.8)), cap_t2(cap_t1 + rgen.rand_uniform(0.08, 0.12)), cap_radius(0.2*ct_radius); // parametric position along bot=>top
+		float const cap_t1(rgen.rand_uniform(0.74, 0.78)), cap_t2(cap_t1 + rgen.rand_uniform(0.08, 0.12)), cap_radius(0.2*ct_radius); // parametric position along bot=>top
 		point const cap_bot(bot + cap_t1*stem_delta), cap_top(bot + cap_t2*stem_delta);
 		gen_cylinder_quads(cap_verts, gen_cylinder_data(cap_bot, cap_top, cap_radius, cap_radius, ndiv));
 
