@@ -699,6 +699,7 @@ void pond_t::draw_cat_tails(draw_state_t &dstate, bool shadow_only) const {
 	//if (shadow_only) return; // stem and leaves are too thin and shadows cause artifacts
 	unsigned const ndiv(16), nstacks(8);
 	float const nstacks_inv(1.0/nstacks);
+	bool const do_vfc(!camera_pdu.sphere_completely_visible_test((pos + dstate.xlate), radius));
 	rand_gen_t rgen;
 	rgen.set_state(rseed, 3*rseed+1);
 	static vector<vert_norm_tc> leaf_tverts, leaf_qverts, cap_verts; // norm_comp?
@@ -710,6 +711,8 @@ void pond_t::draw_cat_tails(draw_state_t &dstate, bool shadow_only) const {
 	dstate.s.set_cur_color(BROWN);
 
 	for (cube_t const &ct : cat_tails) {
+		// Note: cat tail does not fit into its bounding cube when leaves are bend, but it should fit inside the bounding sphere of ct
+		bool const can_skip(do_zoom && camera_pdu.sphere_visible_test((ct.get_cube_center() + dstate.xlate), ct.get_bsphere_radius())); // can't continue due to rgen state
 		// stem
 		float const ct_height(ct.dz()), ct_radius(0.5*ct.dx()), lean_amt(rgen.rand_uniform(0.0, 2.0));
 		float const stem_radius(0.07*ct_radius), stem_radius_step(nstacks_inv*stem_radius);
@@ -720,7 +723,7 @@ void pond_t::draw_cat_tails(draw_state_t &dstate, bool shadow_only) const {
 		point cur_stem(bot), prev_stem_draw(cur_stem);
 		plant_bender_t stem_bender(bot, top, 2.8);
 
-		for (unsigned s = 0; s < nstacks; ++s) { // split into nstacks cylinder + cone segments and bend them
+		for (unsigned s = 0; !can_skip && s < nstacks; ++s) { // split into nstacks cylinder + cone segments and bend them
 			point const next_stem(cur_stem + stack_step);
 			point next_stem_draw(next_stem);
 			stem_bender.bend(next_stem_draw); // apply bend; cylinder ends won't line up exactly right, but it's not too noticeable
@@ -751,7 +754,7 @@ void pond_t::draw_cat_tails(draw_state_t &dstate, bool shadow_only) const {
 			point pa(bot), p1a(pa - side_delta), p2a(pa + side_delta);
 			vector3d normal1(get_camera_facing_normal(dir, bot, dstate.camera_bs));
 
-			for (unsigned s = 0; s < nstacks; ++s) {
+			for (unsigned s = 0; !can_skip && s < nstacks; ++s) {
 				float const t1(s*nstacks_inv), t2(t1 + nstacks_inv);
 				point pb(base + t2*delta);
 				leaf_bender.bend(pb);
@@ -774,8 +777,9 @@ void pond_t::draw_cat_tails(draw_state_t &dstate, bool shadow_only) const {
 			} // for s
 		} // for n
 		// capsule
-		bool const draw_sphere_half(lean_amt == 0.0); // must draw whole sphere if leaning; likely false
 		float const cap_t1(rgen.rand_uniform(0.75, 0.8)), cap_t2(cap_t1 + rgen.rand_uniform(0.08, 0.12)), cap_radius(0.2*ct_radius); // parametric position along bot=>top
+		if (can_skip) continue; // no rgen calls after this point
+		bool const draw_sphere_half(lean_amt == 0.0); // must draw whole sphere if leaning; likely false
 		point cap_pos[2];
 
 		for (unsigned d = 0; d < 2; ++d) {
