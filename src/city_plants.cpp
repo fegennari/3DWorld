@@ -737,33 +737,29 @@ void pond_t::draw_cat_tails(draw_state_t &dstate, bool shadow_only) const {
 			float const leaf_len(rgen.rand_uniform(0.4, 0.8)*ct_height), leaf_base_hwidth(rgen.rand_uniform(0.75, 1.0)*0.03*leaf_len), bend_amt(rgen.rand_uniform(0.6, 0.9));
 			vector3d const dir(rgen.signed_rand_vector_spherical_xy_norm()), side_delta(leaf_base_hwidth*cross_product(dir, plus_z));
 			point const base(bot + dir*ct_radius*rgen.rand_uniform(0.1, 0.2)), tip(base + dir*ct_radius*bend_amt + leaf_len*plus_z);
-			point const bp1(base - side_delta), bp2(base + side_delta); // base points
-			vector3d const normal(((dot_product(dir, (dstate.camera_bs - base)) < 0.0) ? -1.0 : 1.0)*dir); // two sided; faces the camera
-			vector3d const delta1(tip - bp1), delta2(tip - bp2);
+			vector3d const delta(tip - base), normal(((dot_product(dir, (dstate.camera_bs - base)) < 0.0) ? -1.0 : 1.0)*dir); // two sided; faces the camera
 			plant_bender_t leaf_bender(base, tip, 4.0);
+			point p1a(bot - side_delta), p2a(bot + side_delta);
 
 			for (unsigned s = 0; s < nstacks; ++s) {
 				float const t1(s*nstacks_inv), t2(t1 + nstacks_inv);
-				point p1a(bp1 + t1*delta1), p2a(bp2 + t1*delta2);
-				leaf_bender.bend(p1a);
-				leaf_bender.bend(p2a);
+				point pb(base + t2*delta);
+				leaf_bender.bend(pb);
 
 				if (s+1 < nstacks) { // quad
-					point p1b(bp1 + t2*delta1), p2b(bp2 + t2*delta2);
-					leaf_bender.bend(p1b);
-					leaf_bender.bend(p2b);
+					vector3d const side_vb((1.0 - t2)*side_delta);
+					point const p1b(pb - side_vb), p2b(pb + side_vb);
 					// TODO: need to recompute bent normals
 					leaf_qverts.emplace_back(p1a, normal, 0.0, t1);
 					leaf_qverts.emplace_back(p2a, normal, 1.0, t1);
 					leaf_qverts.emplace_back(p2b, normal, 1.0, t2);
 					leaf_qverts.emplace_back(p1b, normal, 0.0, t2);
+					p1a = p1b; p2a = p2b;
 				}
 				else { // triangle tip
-					point tip2(tip);
-					leaf_bender.bend(tip2);
-					leaf_tverts.emplace_back(p1a,  normal, 0.0, t1 );
-					leaf_tverts.emplace_back(p2a,  normal, 1.0, t1 );
-					leaf_tverts.emplace_back(tip2, normal, 0.5, 1.0);
+					leaf_tverts.emplace_back(p1a, normal, 0.0, t1 );
+					leaf_tverts.emplace_back(p2a, normal, 1.0, t1 );
+					leaf_tverts.emplace_back(pb,  normal, 0.5, 1.0);
 				}
 			} // for s
 		} // for n
