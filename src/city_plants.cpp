@@ -700,7 +700,6 @@ void pond_t::draw_cat_tails(draw_state_t &dstate, bool shadow_only) const {
 	unsigned const ndiv(16), nstacks(8);
 	float const nstacks_inv(1.0/nstacks);
 	bool const do_vfc(!camera_pdu.sphere_completely_visible_test((pos + dstate.xlate), radius));
-	bool const use_spheres(0);
 	rand_gen_t rgen;
 	rgen.set_state(rseed, 3*rseed+1);
 	static vector<vert_norm_tc> leaf_tverts, leaf_qverts, cap_verts; // norm_comp?
@@ -708,7 +707,7 @@ void pond_t::draw_cat_tails(draw_state_t &dstate, bool shadow_only) const {
 	leaf_qverts.clear();
 	cap_verts  .clear();
 	select_no_texture();
-	if (use_spheres) {begin_sphere_draw(0);} // textured=0
+	begin_sphere_draw(0); // textured=0
 	dstate.s.set_cur_color(BROWN);
 
 	for (cube_t const &ct : cat_tails) {
@@ -781,40 +780,23 @@ void pond_t::draw_cat_tails(draw_state_t &dstate, bool shadow_only) const {
 		float const cap_t1(rgen.rand_uniform(0.75, 0.8)), cap_t2(cap_t1 + rgen.rand_uniform(0.08, 0.12)), cap_radius(0.2*ct_radius); // parametric position along bot=>top
 		if (can_skip) continue; // no rgen calls after this point
 		bool const draw_sphere_half(lean_amt == 0.0); // must draw whole sphere if leaning; likely false
-		point cap_pos_orig[2], cap_pos[2];
+		point cap_pos[2];
 
 		for (unsigned d = 0; d < 2; ++d) {
-			cap_pos_orig[d] = cap_pos[d] = bot + (d ? cap_t2 : cap_t1)*stem_delta;
+			cap_pos[d] = bot + (d ? cap_t2 : cap_t1)*stem_delta;
 			stem_bender.bend(cap_pos[d]);
 		}
-		gen_cylinder_quads(cap_verts, gen_cylinder_data(cap_pos, cap_radius, cap_radius, ndiv));
+		gen_cylinder_quads(cap_verts, gen_cylinder_data(cap_pos[0], cap_pos[1], cap_radius, cap_radius, ndiv));
 
-		for (unsigned d = 0; d < 2; ++d) { // bottom, top
-			if (use_spheres) {
-				fgPushMatrix();
-				translate_to(cap_pos[d]);
-				scale_by(cap_radius*vector3d(1.0, 1.0, (d ? 1.0 : -1.0))); // draw bottom half of bottom sphere and top half of top sphere
-				draw_sphere_vbo_raw(ndiv, 0, draw_sphere_half); // textured=0
-				fgPopMatrix();
-			}
-			else { // cones (drawn as cylinders) with custom normals
-				point pts[2];
-				pts[!d] = cap_pos[d]; // end of cylinder
-				pts[ d] = cap_pos_orig[d] + (d ? 1.0 : -1.0)*cap_radius*stem_delta.get_norm(); // extend away from capsule
-				stem_bender.bend(pts[d]);
-				unsigned const verts_start(cap_verts.size());
-				gen_cylinder_quads(cap_verts, gen_cylinder_data(pts, (d ? 1.0 : 0.01)*cap_radius, (d ? 0.01 : 1.0)*cap_radius, ndiv));
-
-				for (auto v = cap_verts.begin()+verts_start; v != cap_verts.end(); ++v) {
-					if ((v->t[1] > 0.5) ^ bool(d)) {
-						v->n.z = 0.0; // TODO: project into stem_delta plane
-						v->n.normalize();
-					}
-				}
-			}
-		} // for d
+		for (unsigned d = 0; d < 2; ++d) {
+			fgPushMatrix();
+			translate_to(cap_pos[d]);
+			scale_by(cap_radius*vector3d(1.0, 1.0, (d ? 1.0 : -1.0))); // draw bottom half of bottom sphere and top half of top sphere
+			draw_sphere_vbo_raw(ndiv, 0, draw_sphere_half); // textured=0
+			fgPopMatrix();
+		}
 	} // for ct
-	if (use_spheres) {end_sphere_draw();}
+	end_sphere_draw();
 	draw_quad_verts_as_tris(cap_verts);
 	dstate.s.set_cur_color(colorRGBA(0.4, 0.6, 0.2)); // make the green even darker
 	select_texture(GRASS_BLADE_TEX);
