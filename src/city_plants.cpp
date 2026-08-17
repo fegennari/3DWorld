@@ -691,117 +691,126 @@ struct plant_bender_t {
 	}
 };
 
-vector3d get_camera_facing_normal(vector3d const &n, point const &v, point const &camera) {
-	return ((dot_product(n, (camera - v)) < 0.0) ? -1.0 : 1.0)*n; // two sided; faces the camera
+void add_back_side_verts(vector<vert_norm_tc> &verts, unsigned start_ix) {
+	unsigned const end_ix(verts.size());
+	assert(start_ix <= end_ix);
+
+	for (unsigned i = start_ix; i < end_ix; ++i) {
+		verts.push_back(verts[i]);
+		verts.back().invert_normal();
+	}
+	reverse(verts.begin()+end_ix, verts.end()); // reverse winding order
 }
 
 void pond_t::draw_cat_tails(draw_state_t &dstate, bool shadow_only) const {
 	//if (shadow_only) return; // stem and leaves are too thin and shadows cause artifacts
-	unsigned const ndiv(16), nstacks(8);
-	float const nstacks_inv(1.0/nstacks);
-	bool const do_vfc(!camera_pdu.sphere_completely_visible_test((pos + dstate.xlate), radius));
-	rand_gen_t rgen;
-	rgen.set_state(rseed, 3*rseed+1);
-	static vector<vert_norm_tc> leaf_tverts, leaf_qverts, cap_verts; // norm_comp?
-	leaf_tverts.clear();
-	leaf_qverts.clear();
-	cap_verts  .clear();
+	//highres_timer_t timer("draw_cat_tails"); // 6.2ms => 3.4ms with 1000 cat tails
+
+	if (leaf_qverts.empty()) { // generate verts
+		unsigned const ndiv(16), nstacks(8);
+		float const nstacks_inv(1.0/nstacks);
+		rand_gen_t rgen;
+		rgen.set_state(rseed, 3*rseed+1);
+
+		for (cube_t const &ct : cat_tails) {
+			// stem
+			float const ct_height(ct.dz()), ct_radius(0.5*ct.dx()), lean_amt(rgen.rand_uniform(0.0, 2.0));
+			float const stem_radius(0.07*ct_radius), stem_radius_step(nstacks_inv*stem_radius);
+			point const bot(cube_bot_center(ct));
+			point const top(cube_top_center(ct) + lean_amt*ct_radius*rgen.signed_rand_vector_spherical_xy_norm()); // random lean
+			vector3d const stem_delta(top - bot), stack_step(nstacks_inv*stem_delta);
+			float cur_radius(stem_radius), cur_ts(0.0);
+			point cur_stem(bot), prev_stem_draw(cur_stem);
+			plant_bender_t stem_bender(bot, top, 2.8);
+
+			for (unsigned s = 0; s < nstacks; ++s) { // split into nstacks cylinder + cone segments and bend them
+				point const next_stem(cur_stem + stack_step);
+				point next_stem_draw(next_stem);
+				stem_bender.bend(next_stem_draw); // apply bend; cylinder ends won't line up exactly right, but it's not too noticeable
+
+				if (s+1 < nstacks) { // truncated cone (quads)
+					float const t((s+1)*nstacks_inv), next_radius((1.0 - t*t)*stem_radius); // slow sqrt taper
+					assert(next_radius > 0.0);
+					gen_cylinder_quads(leaf_qverts, gen_cylinder_data(prev_stem_draw, next_stem_draw, cur_radius, next_radius, ndiv), 0, nstacks_inv, cur_ts);
+					// can we join the verts and normals between this cylinder and the previous one?
+					cur_radius = next_radius;
+					cur_ts    += nstacks_inv;
+					cur_stem   = next_stem;
+					prev_stem_draw = next_stem_draw;
+				}
+				else { // cone for last stack (triangles)
+					gen_cone_triangles(leaf_tverts, gen_cylinder_data(prev_stem_draw, next_stem_draw, cur_radius, 0.0, ndiv), 0, cur_ts, 1.0);
+				}
+			} // for s
+			// leaves
+			unsigned const nleaves(5 + (rgen.rand() % 4)); // 5-8
+
+			for (unsigned n = 0; n < nleaves; ++n) {
+				unsigned const qv_start(leaf_qverts.size()), tv_start(leaf_tverts.size());
+				float const leaf_len(rgen.rand_uniform(0.42, 0.75)*ct_height), leaf_base_hwidth(rgen.rand_uniform(0.75, 1.0)*0.02*leaf_len), bend_amt(rgen.rand_uniform(0.6, 0.9));
+				vector3d const dir(rgen.signed_rand_vector_spherical_xy_norm()), side_dir(cross_product(dir, plus_z)), side_delta(leaf_base_hwidth*side_dir);
+				point const base(bot + dir*ct_radius*rgen.rand_uniform(0.1, 0.2)), tip(base + dir*ct_radius*bend_amt + leaf_len*plus_z);
+				vector3d const delta(tip - base);
+				plant_bender_t leaf_bender(base, tip, 4.0);
+				point pa(bot), p1a(pa - side_delta), p2a(pa + side_delta);
+				vector3d normal1(-dir);
+
+				for (unsigned s = 0; s < nstacks; ++s) {
+					float const t1(s*nstacks_inv), t2(t1 + nstacks_inv);
+					point pb(base + t2*delta);
+					leaf_bender.bend(pb);
+					vector3d const normal2(-cross_product((pb - pa), side_dir).get_norm()); // normal of segment
+
+					if (s+1 < nstacks) { // quad
+						vector3d const side_vb((1.0 - t2*t2*t2*t2)*side_delta); // slow taper
+						point const p1b(pb - side_vb), p2b(pb + side_vb);
+						leaf_qverts.emplace_back(p1a, normal1, 0.0, t1);
+						leaf_qverts.emplace_back(p2a, normal1, 1.0, t1);
+						leaf_qverts.emplace_back(p2b, normal2, 1.0, t2);
+						leaf_qverts.emplace_back(p1b, normal2, 0.0, t2);
+						pa = pb; p1a = p1b; p2a = p2b; normal1 = normal2;
+					}
+					else { // triangle tip
+						leaf_tverts.emplace_back(p1a, normal1, 0.0, t1 );
+						leaf_tverts.emplace_back(p2a, normal1, 1.0, t1 );
+						leaf_tverts.emplace_back(pb,  normal2, 0.5, 1.0);
+					}
+				} // for s
+				add_back_side_verts(leaf_qverts, qv_start);
+				add_back_side_verts(leaf_tverts, tv_start);
+			} // for n
+			// capsule
+			float const cap_t1(rgen.rand_uniform(0.75, 0.8)), cap_t2(cap_t1 + rgen.rand_uniform(0.08, 0.12)), cap_radius(0.2*ct_radius); // parametric position along bot=>top
+			point cap_pos[2];
+
+			for (unsigned d = 0; d < 2; ++d) {
+				cap_pos[d] = bot + (d ? cap_t2 : cap_t1)*stem_delta;
+				stem_bender.bend(cap_pos[d]);
+			}
+			gen_cylinder_quads(cap_verts, gen_cylinder_data(cap_pos[0], cap_pos[1], cap_radius, cap_radius, ndiv));
+			for (unsigned d = 0; d < 2; ++d) {ct_spheres.emplace_back(cap_pos[d], cap_radius);}
+		} // for ct
+	}
+	glEnable(GL_CULL_FACE); // so that correct face of leaves is drawn
 	select_no_texture();
 	begin_sphere_draw(0); // textured=0
 	dstate.s.set_cur_color(BROWN);
-
-	for (cube_t const &ct : cat_tails) {
-		// Note: cat tail does not fit into its bounding cube when leaves are bend, but it should fit inside the bounding sphere of ct
-		bool const can_skip(do_vfc && !camera_pdu.sphere_visible_test((ct.get_cube_center() + dstate.xlate), ct.get_bsphere_radius())); // can't continue due to rgen state
-		// stem
-		float const ct_height(ct.dz()), ct_radius(0.5*ct.dx()), lean_amt(rgen.rand_uniform(0.0, 2.0));
-		float const stem_radius(0.07*ct_radius), stem_radius_step(nstacks_inv*stem_radius);
-		point const bot(cube_bot_center(ct));
-		point const top(cube_top_center(ct) + lean_amt*ct_radius*rgen.signed_rand_vector_spherical_xy_norm()); // random lean
-		vector3d const stem_delta(top - bot), stack_step(nstacks_inv*stem_delta);
-		float cur_radius(stem_radius), cur_ts(0.0);
-		point cur_stem(bot), prev_stem_draw(cur_stem);
-		plant_bender_t stem_bender(bot, top, 2.8);
-
-		for (unsigned s = 0; !can_skip && s < nstacks; ++s) { // split into nstacks cylinder + cone segments and bend them
-			point const next_stem(cur_stem + stack_step);
-			point next_stem_draw(next_stem);
-			stem_bender.bend(next_stem_draw); // apply bend; cylinder ends won't line up exactly right, but it's not too noticeable
-
-			if (s+1 < nstacks) { // truncated cone (quads)
-				float const t((s+1)*nstacks_inv), next_radius((1.0 - t*t)*stem_radius); // slow sqrt taper
-				assert(next_radius > 0.0);
-				gen_cylinder_quads(leaf_qverts, gen_cylinder_data(prev_stem_draw, next_stem_draw, cur_radius, next_radius, ndiv), 0, nstacks_inv, cur_ts);
-				// can we join the verts and normals between this cylinder and the previous one?
-				cur_radius = next_radius;
-				cur_ts    += nstacks_inv;
-				cur_stem   = next_stem;
-				prev_stem_draw = next_stem_draw;
-			}
-			else { // cone for last stack (triangles)
-				gen_cone_triangles(leaf_tverts, gen_cylinder_data(prev_stem_draw, next_stem_draw, cur_radius, 0.0, ndiv), 0, cur_ts, 1.0);
-			}
-		} // for s
-		// leaves
-		unsigned const nleaves(5 + (rgen.rand() % 4)); // 5-8
-
-		for (unsigned n = 0; n < nleaves; ++n) {
-			float const leaf_len(rgen.rand_uniform(0.42, 0.75)*ct_height), leaf_base_hwidth(rgen.rand_uniform(0.75, 1.0)*0.02*leaf_len), bend_amt(rgen.rand_uniform(0.6, 0.9));
-			vector3d const dir(rgen.signed_rand_vector_spherical_xy_norm()), side_dir(cross_product(dir, plus_z)), side_delta(leaf_base_hwidth*side_dir);
-			point const base(bot + dir*ct_radius*rgen.rand_uniform(0.1, 0.2)), tip(base + dir*ct_radius*bend_amt + leaf_len*plus_z);
-			vector3d const delta(tip - base);
-			plant_bender_t leaf_bender(base, tip, 4.0);
-			point pa(bot), p1a(pa - side_delta), p2a(pa + side_delta);
-			vector3d normal1(get_camera_facing_normal(dir, bot, dstate.camera_bs));
-
-			for (unsigned s = 0; !can_skip && s < nstacks; ++s) {
-				float const t1(s*nstacks_inv), t2(t1 + nstacks_inv);
-				point pb(base + t2*delta);
-				leaf_bender.bend(pb);
-				vector3d const normal2(get_camera_facing_normal(cross_product((pb - pa), side_dir).get_norm(), pb, dstate.camera_bs)); // normal of segment
-
-				if (s+1 < nstacks) { // quad
-					vector3d const side_vb((1.0 - t2*t2*t2*t2)*side_delta); // slow taper
-					point const p1b(pb - side_vb), p2b(pb + side_vb);
-					leaf_qverts.emplace_back(p1a, normal1, 0.0, t1);
-					leaf_qverts.emplace_back(p2a, normal1, 1.0, t1);
-					leaf_qverts.emplace_back(p2b, normal2, 1.0, t2);
-					leaf_qverts.emplace_back(p1b, normal2, 0.0, t2);
-					pa = pb; p1a = p1b; p2a = p2b; normal1 = normal2;
-				}
-				else { // triangle tip
-					leaf_tverts.emplace_back(p1a, normal1, 0.0, t1 );
-					leaf_tverts.emplace_back(p2a, normal1, 1.0, t1 );
-					leaf_tverts.emplace_back(pb,  normal2, 0.5, 1.0);
-				}
-			} // for s
-		} // for n
-		// capsule
-		float const cap_t1(rgen.rand_uniform(0.75, 0.8)), cap_t2(cap_t1 + rgen.rand_uniform(0.08, 0.12)), cap_radius(0.2*ct_radius); // parametric position along bot=>top
-		if (can_skip) continue; // no rgen calls after this point
-		bool const draw_sphere_half(lean_amt == 0.0); // must draw whole sphere if leaning; likely false
-		point cap_pos[2];
-
-		for (unsigned d = 0; d < 2; ++d) {
-			cap_pos[d] = bot + (d ? cap_t2 : cap_t1)*stem_delta;
-			stem_bender.bend(cap_pos[d]);
-		}
-		gen_cylinder_quads(cap_verts, gen_cylinder_data(cap_pos[0], cap_pos[1], cap_radius, cap_radius, ndiv));
-
-		for (unsigned d = 0; d < 2; ++d) {
-			fgPushMatrix();
-			translate_to(cap_pos[d]);
-			scale_by(cap_radius*vector3d(1.0, 1.0, (d ? 1.0 : -1.0))); // draw bottom half of bottom sphere and top half of top sphere
-			draw_sphere_vbo_raw(ndiv, 0, draw_sphere_half); // textured=0
-			fgPopMatrix();
-		}
-	} // for ct
+	unsigned const ndiv(16);
+	
+	for (sphere_t const &s : ct_spheres) {
+		fgPushMatrix();
+		translate_to(s.pos);
+		uniform_scale(s.radius);
+		draw_sphere_vbo_raw(ndiv, 0); // textured=0
+		fgPopMatrix();
+	}
 	end_sphere_draw();
 	draw_quad_verts_as_tris(cap_verts);
 	dstate.s.set_cur_color(colorRGBA(0.4, 0.6, 0.2)); // make the green even darker
 	select_texture(GRASS_BLADE_TEX);
-	draw_and_clear_verts(leaf_tverts, GL_TRIANGLES);
+	draw_verts(leaf_tverts, GL_TRIANGLES);
 	draw_quad_verts_as_tris(leaf_qverts);
+	glDisable(GL_CULL_FACE);
 }
 
 

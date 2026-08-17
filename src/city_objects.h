@@ -381,12 +381,15 @@ struct sculpture_t : public city_obj_t {
 
 class park_heightmap_t;
 
-struct pond_t : public city_obj_t {
+class pond_t : public city_obj_t {
 	unsigned rseed;
+	mutable vector<vert_norm_tc> leaf_tverts, leaf_qverts, cap_verts; // cached verts for drawing; must be mutable because draw() is const
+	mutable vector<sphere_t> ct_spheres;
 	vector<sphere_t> lily_pads;
 	vect_cube_t cat_tails;
-
+public:
 	pond_t(point const &pos_, float x_radius, float y_radius, float depth, float water_z, unsigned rseed);
+	bool  has_cat_tails () const {return !cat_tails.empty();}
 	float get_water_zval() const {return bcube.z2();}
 	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
