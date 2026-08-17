@@ -632,7 +632,7 @@ void pond_t::gen_vegetation(park_heightmap_t const &hmap) {
 	for (unsigned n = 0; n < num_ct; ++n) {
 		// place around perimeter in shallow water, clustered into groups
 		for (unsigned N = 0; N < 100; ++N) { // 100 random tries
-			if (N == 0 && ct_pos != all_zeros) { // first iteration: place close to prev cat tail to produce clumps
+			if (N < 2 && ct_pos != all_zeros) { // first 2 iterations: place close to prev cat tail to produce clumps
 				ct_pos += clump_radius*rgen.signed_rand_vector_spherical_xy_norm();
 				if (!bcube.contains_pt_xy(ct_pos)) continue;
 			}
@@ -643,7 +643,10 @@ void pond_t::gen_vegetation(park_heightmap_t const &hmap) {
 			if (ct_pos.z < ct_min_z1 || ct_pos.z > ct_max_z1) continue; // too deep or too shallow
 			cube_t ctail(ct_pos);
 			ctail.z2() = ct_pos.z + rgen.rand_uniform(0.75, 1.0)*ct_max_height;
-			ctail.expand_by_xy(rgen.rand_uniform(0.75, 1.0)*ct_max_radius);
+			float const ct_radius(rgen.rand_uniform(0.75, 1.0)*ct_max_radius);
+			ctail.expand_by_xy(ct_radius);
+			if (has_bcube_int_xy(ctail, cat_tails)) continue; // too close to another cat tail
+			if (has_circle_overlap(sphere_t(ct_pos, ct_radius), lily_pads)) continue; // too close to a lily pad
 			cat_tails.push_back(ctail);
 			break;
 		} // for N
