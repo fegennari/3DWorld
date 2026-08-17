@@ -709,7 +709,7 @@ void pond_t::draw_cat_tails(draw_state_t &dstate, bool shadow_only) const {
 	for (cube_t const &ct : cat_tails) {
 		// stem
 		float const ct_height(ct.dz()), ct_radius(0.5*ct.dx()), lean_amt(rgen.rand_uniform(0.0, 2.0));
-		float const stem_radius(0.1*ct_radius), stem_radius_step(nstacks_inv*stem_radius);
+		float const stem_radius(0.07*ct_radius), stem_radius_step(nstacks_inv*stem_radius);
 		point const bot(cube_bot_center(ct));
 		point const top(cube_top_center(ct) + lean_amt*ct_radius*rgen.signed_rand_vector_spherical_xy_norm()); // random lean
 		vector3d const stem_delta(top - bot), stack_step(nstacks_inv*stem_delta);
@@ -723,9 +723,10 @@ void pond_t::draw_cat_tails(draw_state_t &dstate, bool shadow_only) const {
 			stem_bender.bend(next_stem_draw); // apply bend; cylinder ends won't line up exactly right, but it's not too noticeable
 
 			if (s+1 < nstacks) { // truncated cone (quads)
-				float const next_radius(cur_radius - stem_radius_step);
+				float const t((s+1)*nstacks_inv), next_radius((1.0 - t*t)*stem_radius); // slow sqrt taper
 				assert(next_radius > 0.0);
 				gen_cylinder_quads(leaf_qverts, gen_cylinder_data(prev_stem_draw, next_stem_draw, cur_radius, next_radius, ndiv), 0, nstacks_inv, cur_ts);
+				// can we join the verts and normals between this cylinder and the previous one?
 				cur_radius = next_radius;
 				cur_ts    += nstacks_inv;
 				cur_stem   = next_stem;
@@ -739,7 +740,7 @@ void pond_t::draw_cat_tails(draw_state_t &dstate, bool shadow_only) const {
 		unsigned const nleaves(5 + (rgen.rand() % 4)); // 5-8
 
 		for (unsigned n = 0; n < nleaves; ++n) {
-			float const leaf_len(rgen.rand_uniform(0.4, 0.8)*ct_height), leaf_base_hwidth(rgen.rand_uniform(0.75, 1.0)*0.03*leaf_len), bend_amt(rgen.rand_uniform(0.6, 0.9));
+			float const leaf_len(rgen.rand_uniform(0.42, 0.75)*ct_height), leaf_base_hwidth(rgen.rand_uniform(0.75, 1.0)*0.02*leaf_len), bend_amt(rgen.rand_uniform(0.6, 0.9));
 			vector3d const dir(rgen.signed_rand_vector_spherical_xy_norm()), side_dir(cross_product(dir, plus_z)), side_delta(leaf_base_hwidth*side_dir);
 			point const base(bot + dir*ct_radius*rgen.rand_uniform(0.1, 0.2)), tip(base + dir*ct_radius*bend_amt + leaf_len*plus_z);
 			vector3d const delta(tip - base);
@@ -754,7 +755,7 @@ void pond_t::draw_cat_tails(draw_state_t &dstate, bool shadow_only) const {
 				vector3d const normal2(get_camera_facing_normal(cross_product((pb - pa), side_dir).get_norm(), pb, dstate.camera_bs)); // normal of segment
 
 				if (s+1 < nstacks) { // quad
-					vector3d const side_vb((1.0 - t2)*side_delta);
+					vector3d const side_vb((1.0 - t2*t2*t2*t2)*side_delta); // slow taper
 					point const p1b(pb - side_vb), p2b(pb + side_vb);
 					leaf_qverts.emplace_back(p1a, normal1, 0.0, t1);
 					leaf_qverts.emplace_back(p2a, normal1, 1.0, t1);
