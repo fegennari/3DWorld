@@ -1007,7 +1007,7 @@ public:
 	void get_paths_and_creeks(cube_t const &region, vector<park_path_t const *> &paths) const;
 	bool cube_int_underground_obj(cube_t const &c) const;
 	bool point_in_pond_xy(point const &pos) const;
-	void get_ponds_in_xy_range(cube_t const &range, vect_cube_t &pond_bcs) const;
+	void get_ponds_in_xy_range(cube_t const &range, vect_cube_t &pond_bcs, bool for_plants) const;
 	bool grass_blocked_for_park(point const &pos, float radius, cube_t const &pbb, cube_t &blocker) const;
 	bool grass_blocked_for_plot(cube_t const &pbb, cube_t &blocker) const {return grass_blockers.has_overlap_xy(pbb, blocker);}
 	// gas station and car wash logic

@@ -1416,8 +1416,8 @@ public:
 	bool cube_int_underground_obj(cube_t const &c) const {
 		return (c.intersects_xy(bcube)) && city_obj_placer.cube_int_underground_obj(c);
 	}
-	void get_ponds_in_xy_range(cube_t const &range, vect_cube_t &ponds) const {
-		if (range.intersects_xy(bcube)) {city_obj_placer.get_ponds_in_xy_range(range, ponds);}
+	void get_ponds_in_xy_range(cube_t const &range, vect_cube_t &ponds, bool for_plants) const {
+		if (range.intersects_xy(bcube)) {city_obj_placer.get_ponds_in_xy_range(range, ponds, for_plants);}
 	}
 	bool choose_pt_in_park(point &park_pos, rand_gen_t &rgen) const {
 		if (parks.empty()) return 0;
@@ -2544,8 +2544,8 @@ public:
 	void add_city_ug_elevator_entrance(ug_elev_info_t const &uge) {
 		for (road_network_t &rn : road_networks) {rn.add_city_ug_elevator_entrance(uge);}
 	}
-	void get_ponds_in_xy_range(cube_t const &range, vect_cube_t &ponds) const {
-		for (road_network_t const &rn : road_networks) {rn.get_ponds_in_xy_range(range, ponds);}
+	void get_ponds_in_xy_range(cube_t const &range, vect_cube_t &ponds, bool for_plants) const {
+		for (road_network_t const &rn : road_networks) {rn.get_ponds_in_xy_range(range, ponds, for_plants);}
 	}
 	cube_t get_city_bcube_for_cars(unsigned city_ix) const {
 		cube_t bcube(get_city_bcube(city_ix));
@@ -3682,7 +3682,7 @@ public:
 	bool is_invalid_placement_for_cube(cube_t const &c) const {return road_gen.is_invalid_placement_for_cube(c);}
 	void add_plot_cut(cube_t const &cut) {road_gen.add_plot_cut(cut);}
 	void add_city_ug_elevator_entrance(ug_elev_info_t const &uge) {road_gen.add_city_ug_elevator_entrance(uge);}
-	void get_ponds_in_xy_range(cube_t const &range, vect_cube_t &ponds) const {road_gen.get_ponds_in_xy_range(range, ponds);}
+	void get_ponds_in_xy_range(cube_t const &range, vect_cube_t &ponds, bool for_plants) const {road_gen.get_ponds_in_xy_range(range, ponds, for_plants);}
 	void add_manhole(point const &pos, float radius) {road_gen.add_manhole(pos, radius);}
 
 	void destroy_in_radius(point const &pos, float radius) {
@@ -3919,7 +3919,7 @@ bool cube_int_underground_obj(cube_t const &c) {return city_gen.cube_int_undergr
 bool is_invalid_city_placement_for_cube(cube_t const &c) {return city_gen.is_invalid_placement_for_cube(c);}
 void add_city_plot_cut(cube_t const &cut) {city_gen.add_plot_cut(cut);}
 void add_city_ug_elevator_entrance(ug_elev_info_t const &uge) {city_gen.add_city_ug_elevator_entrance(uge);}
-void get_ponds_in_xy_range(cube_t const &range, vect_cube_t &ponds) {city_gen.get_ponds_in_xy_range(range, ponds);} // Note: range is in global space
+void get_ponds_in_xy_range(cube_t const &range, vect_cube_t &ponds, bool for_plants) {city_gen.get_ponds_in_xy_range(range, ponds, for_plants);} // Note: range is in global space
 bool choose_pt_in_city_park(point const &pos, point &park_pos, rand_gen_t &rgen) {return city_gen.choose_pt_in_park(pos, park_pos, rgen);}
 bool tile_contains_tunnel(cube_t const &bcube) {return city_gen.tile_contains_tunnel(bcube);}
 void destroy_city_in_radius(point const &pos, float radius) {city_gen.destroy_in_radius(pos, radius);}

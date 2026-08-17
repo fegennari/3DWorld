@@ -52,7 +52,7 @@ extern tree_type tree_types[];
 
 int get_bark_tex_for_tree_type(int type); // for small trees
 bool is_pine_tree_type(int type);
-void get_ponds_in_xy_range(cube_t const &range, vect_cube_t &ponds);
+void get_ponds_in_xy_range(cube_t const &range, vect_cube_t &ponds, bool for_plants);
 bool point_in_ellipse(point const &p, cube_t const &c);
 vector3d get_tt_xlate_val();
 unsigned get_active_smap_size();
@@ -1356,7 +1356,7 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool 
 		vector3d const xlate(get_tt_xlate_val() - get_camera_coord_space_xlate()); // convert from tile space to global space
 		vect_cube_t ponds;
 		cube_t const tile_range(get_xval(x1), get_xval(x2), get_yval(y1), get_yval(y2), 0.0, 0.0);
-		get_ponds_in_xy_range((tile_range + xlate), ponds);
+		get_ponds_in_xy_range((tile_range + xlate), ponds, 1); // for_plants=1
 		global_rand_gen.rseed1 = 786433* (y1 + yoff2) + 196613 *rand_gen_index;
 		global_rand_gen.rseed2 = 6291469*(x1 + xoff2) + 1572869*rand_gen_index;
 
