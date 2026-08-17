@@ -712,7 +712,7 @@ void pond_t::draw_cat_tails(draw_state_t &dstate, bool shadow_only) const {
 
 	for (cube_t const &ct : cat_tails) {
 		// Note: cat tail does not fit into its bounding cube when leaves are bend, but it should fit inside the bounding sphere of ct
-		bool const can_skip(do_zoom && camera_pdu.sphere_visible_test((ct.get_cube_center() + dstate.xlate), ct.get_bsphere_radius())); // can't continue due to rgen state
+		bool const can_skip(do_vfc && !camera_pdu.sphere_visible_test((ct.get_cube_center() + dstate.xlate), ct.get_bsphere_radius())); // can't continue due to rgen state
 		// stem
 		float const ct_height(ct.dz()), ct_radius(0.5*ct.dx()), lean_amt(rgen.rand_uniform(0.0, 2.0));
 		float const stem_radius(0.07*ct_radius), stem_radius_step(nstacks_inv*stem_radius);
