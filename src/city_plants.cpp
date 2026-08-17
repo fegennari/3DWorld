@@ -688,7 +688,12 @@ struct plant_bender_t {
 	}
 };
 
+vector3d get_camera_facing_normal(vector3d const &n, point const &v, point const &camera) {
+	return ((dot_product(n, (camera - v)) < 0.0) ? -1.0 : 1.0)*n; // two sided; faces the camera
+}
+
 void pond_t::draw_cat_tails(draw_state_t &dstate, bool shadow_only) const {
+	//if (shadow_only) return; // stem and leaves are too thin and shadows cause artifacts
 	unsigned const ndiv(16), nstacks(8);
 	float const nstacks_inv(1.0/nstacks);
 	rand_gen_t rgen;
@@ -735,31 +740,32 @@ void pond_t::draw_cat_tails(draw_state_t &dstate, bool shadow_only) const {
 
 		for (unsigned n = 0; n < nleaves; ++n) {
 			float const leaf_len(rgen.rand_uniform(0.4, 0.8)*ct_height), leaf_base_hwidth(rgen.rand_uniform(0.75, 1.0)*0.03*leaf_len), bend_amt(rgen.rand_uniform(0.6, 0.9));
-			vector3d const dir(rgen.signed_rand_vector_spherical_xy_norm()), side_delta(leaf_base_hwidth*cross_product(dir, plus_z));
+			vector3d const dir(rgen.signed_rand_vector_spherical_xy_norm()), side_dir(cross_product(dir, plus_z)), side_delta(leaf_base_hwidth*side_dir);
 			point const base(bot + dir*ct_radius*rgen.rand_uniform(0.1, 0.2)), tip(base + dir*ct_radius*bend_amt + leaf_len*plus_z);
-			vector3d const delta(tip - base), normal(((dot_product(dir, (dstate.camera_bs - base)) < 0.0) ? -1.0 : 1.0)*dir); // two sided; faces the camera
+			vector3d const delta(tip - base);
 			plant_bender_t leaf_bender(base, tip, 4.0);
-			point p1a(bot - side_delta), p2a(bot + side_delta);
+			point pa(bot), p1a(pa - side_delta), p2a(pa + side_delta);
+			vector3d normal1(get_camera_facing_normal(dir, bot, dstate.camera_bs));
 
 			for (unsigned s = 0; s < nstacks; ++s) {
 				float const t1(s*nstacks_inv), t2(t1 + nstacks_inv);
 				point pb(base + t2*delta);
 				leaf_bender.bend(pb);
+				vector3d const normal2(get_camera_facing_normal(cross_product((pb - pa), side_dir).get_norm(), pb, dstate.camera_bs)); // normal of segment
 
 				if (s+1 < nstacks) { // quad
 					vector3d const side_vb((1.0 - t2)*side_delta);
 					point const p1b(pb - side_vb), p2b(pb + side_vb);
-					// TODO: need to recompute bent normals
-					leaf_qverts.emplace_back(p1a, normal, 0.0, t1);
-					leaf_qverts.emplace_back(p2a, normal, 1.0, t1);
-					leaf_qverts.emplace_back(p2b, normal, 1.0, t2);
-					leaf_qverts.emplace_back(p1b, normal, 0.0, t2);
-					p1a = p1b; p2a = p2b;
+					leaf_qverts.emplace_back(p1a, normal1, 0.0, t1);
+					leaf_qverts.emplace_back(p2a, normal1, 1.0, t1);
+					leaf_qverts.emplace_back(p2b, normal2, 1.0, t2);
+					leaf_qverts.emplace_back(p1b, normal2, 0.0, t2);
+					pa = pb; p1a = p1b; p2a = p2b; normal1 = normal2;
 				}
 				else { // triangle tip
-					leaf_tverts.emplace_back(p1a, normal, 0.0, t1 );
-					leaf_tverts.emplace_back(p2a, normal, 1.0, t1 );
-					leaf_tverts.emplace_back(pb,  normal, 0.5, 1.0);
+					leaf_tverts.emplace_back(p1a, normal1, 0.0, t1 );
+					leaf_tverts.emplace_back(p2a, normal1, 1.0, t1 );
+					leaf_tverts.emplace_back(pb,  normal2, 0.5, 1.0);
 				}
 			} // for s
 		} // for n
