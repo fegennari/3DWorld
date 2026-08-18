@@ -384,7 +384,6 @@ class park_heightmap_t;
 class pond_t : public city_obj_t {
 	unsigned rseed;
 	mutable vector<vert_norm_tc> leaf_tverts, leaf_qverts, cap_verts; // cached verts for drawing; must be mutable because draw() is const
-	mutable vector<sphere_t> ct_spheres;
 	vector<sphere_t> lily_pads;
 	vect_cube_t cat_tails;
 public:

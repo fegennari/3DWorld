@@ -712,6 +712,14 @@ void pond_t::draw_cat_tails(draw_state_t &dstate, bool shadow_only) const {
 		rand_gen_t rgen;
 		rgen.set_state(rseed, 3*rseed+1);
 
+		// generate sphere verts once and reuse with correct pos and radius
+		vector<vert_norm_tc> sphere_verts;
+		{ // open a scope for sd/spn
+			sd_sphere_d sd(all_zeros, 1.0, ndiv);
+			sphere_point_norm spn;
+			sd.gen_points_norms(spn);
+			sd.get_quad_points(sphere_verts);
+		}
 		for (cube_t const &ct : cat_tails) {
 			// stem
 			float const ct_height(ct.dz()), ct_radius(0.5*ct.dx()), lean_amt(rgen.rand_uniform(0.0, 2.0));
@@ -788,23 +796,15 @@ void pond_t::draw_cat_tails(draw_state_t &dstate, bool shadow_only) const {
 				stem_bender.bend(cap_pos[d]);
 			}
 			gen_cylinder_quads(cap_verts, gen_cylinder_data(cap_pos[0], cap_pos[1], cap_radius, cap_radius, ndiv));
-			for (unsigned d = 0; d < 2; ++d) {ct_spheres.emplace_back(cap_pos[d], cap_radius);}
+			
+			for (unsigned d = 0; d < 2; ++d) {
+				for (auto const &v : sphere_verts) {cap_verts.emplace_back((cap_radius*v.v + cap_pos[d]), v.n, v.t);}
+			}
 		} // for ct
 	}
 	glEnable(GL_CULL_FACE); // so that correct face of leaves is drawn
 	select_no_texture();
-	begin_sphere_draw(0); // textured=0
 	dstate.s.set_cur_color(BROWN);
-	unsigned const ndiv(16);
-	
-	for (sphere_t const &s : ct_spheres) {
-		fgPushMatrix();
-		translate_to(s.pos);
-		uniform_scale(s.radius);
-		draw_sphere_vbo_raw(ndiv, 0); // textured=0
-		fgPopMatrix();
-	}
-	end_sphere_draw();
 	draw_quad_verts_as_tris(cap_verts);
 	dstate.s.set_cur_color(colorRGBA(0.4, 0.6, 0.2)); // make the green even darker
 	select_texture(GRASS_BLADE_TEX);

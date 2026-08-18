@@ -132,7 +132,6 @@ void sd_sphere_d::gen_points_norms_static(float s_beg, float s_end, float t_beg,
 	gen_points_norms(temp_spn, s_beg, s_end, t_beg, t_end);
 }
 
-
 void sd_sphere_d::gen_points_norms(sphere_point_norm &cur_spn, float s_beg, float s_end, float t_beg, float t_end) {
 
 	assert(ndiv >= 3 && ndiv <= 512); // sanity check
@@ -220,23 +219,17 @@ void sd_sphere_d::gen_points_norms(sphere_point_norm &cur_spn, float s_beg, floa
 	norms  = cur_spn.norms;
 }
 
-
 float sd_sphere_d::get_rmax() const { // could calculate this during gen_points_norms
-
 	assert(points);
 	float rmax_sq(0.0);
 
 	for (unsigned y = 0; y < ndiv; ++y) {
-		for (unsigned x = 0; x <= ndiv; ++x) {
-			rmax_sq = max(rmax_sq, p2p_dist_sq(pos, points[y][x]));
-		}
+		for (unsigned x = 0; x <= ndiv; ++x) {max_eq(rmax_sq, p2p_dist_sq(pos, points[y][x]));}
 	}
 	return sqrt(rmax_sq);
 }
 
-
 void sd_sphere_d::set_data(point const &p, float r, int n, float const *pm, float dp, upsurface const *const s) {
-
 	pos         = p;
 	radius      = r;
 	def_pert    = dp;
