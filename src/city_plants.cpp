@@ -704,7 +704,7 @@ void add_back_side_verts(vector<vert_norm_tc> &verts, unsigned start_ix) {
 
 void pond_t::draw_cat_tails(draw_state_t &dstate, bool shadow_only) const {
 	//if (shadow_only) return; // stem and leaves are too thin and shadows cause artifacts
-	//highres_timer_t timer("draw_cat_tails"); // 6.2ms => 3.4ms with 1000 cat tails
+	//highres_timer_t timer("draw_cat_tails"); // 6.2ms => 3.4ms => 2.4ms with 1000 cat tails
 
 	if (leaf_qverts.empty()) { // generate verts
 		unsigned const ndiv(16), nstacks(8);
@@ -795,11 +795,25 @@ void pond_t::draw_cat_tails(draw_state_t &dstate, bool shadow_only) const {
 				cap_pos[d] = bot + (d ? cap_t2 : cap_t1)*stem_delta;
 				stem_bender.bend(cap_pos[d]);
 			}
-			gen_cylinder_quads(cap_verts, gen_cylinder_data(cap_pos[0], cap_pos[1], cap_radius, cap_radius, ndiv));
-			
-			for (unsigned d = 0; d < 2; ++d) {
-				for (auto const &v : sphere_verts) {cap_verts.emplace_back((cap_radius*v.v + cap_pos[d]), v.n, v.t);}
-			}
+			// stretch a sphere into a capsule shape
+			unsigned const num_sv(sphere_verts.size());
+			vector3d const cap_delta(cap_pos[1] - cap_pos[0]);//, cap_dir(cap_delta.get_norm());
+			point const cap_center(0.5*(cap_pos[1] + cap_pos[0]));
+			float const cap_dz(0.5*cap_delta.mag()/cap_radius);
+			vector<point> verts(num_sv), norms(num_sv);
+
+			for (unsigned i = 0; i < num_sv; ++i) {
+				point &v(verts[i]);
+				v = sphere_verts[i].v;
+				float const t(sqrt(fabs(v.z))); // 0 at center, 1 at ends
+				v.z += SIGN(v.z)*t*cap_dz; // stretch out ends
+				norms[i] = sphere_verts[i].n; // not quite correct for points along the sphere center/capsule sides
+				norms[i].z *= t; // FIXME: not quite correct
+				norms[i].normalize();
+			} // for i
+			rotate_vector3d_by_vr_multi(plus_z, cap_delta, verts.data(), num_sv);
+			rotate_vector3d_by_vr_multi(plus_z, cap_delta, norms.data(), num_sv);
+			for (unsigned i = 0; i < num_sv; ++i) {cap_verts.emplace_back((cap_radius*verts[i] + cap_center), norms[i], sphere_verts[i].t);}
 		} // for ct
 	}
 	glEnable(GL_CULL_FACE); // so that correct face of leaves is drawn
