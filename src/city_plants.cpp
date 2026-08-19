@@ -700,18 +700,22 @@ void add_back_side_verts(vector<vert_norm_tc> &verts, unsigned start_ix) {
 }
 
 void pond_t::draw_cat_tails(draw_state_t &dstate, bool shadow_only) const {
-	//if (shadow_only) return; // stem and leaves are too thin and shadows cause artifacts
-	//highres_timer_t timer("draw_cat_tails"); // 6.2ms => 3.4ms => 2.4ms => 1.9ms with 1000 cat tails
+	// Note: stem and leaves are thin and shadows cause artifacts
+	if (shadow_only && !ctdd.is_setup()) return; // only enable if we already created the vertex data, since we're not using a indexed_vao_manager_with_shadow_t
+	//highres_timer_t timer("draw_cat_tails"); // 6.2ms => 3.4ms => 2.4ms => 1.9ms => 1.0ms with 1000 cat tails
 	ctdd.create_verts(cat_tails, rseed);
 	ctdd.draw(dstate, shadow_only);
 }
 
 void pond_t::cat_tail_draw_data_t::create_verts(vect_cube_t const &cat_tails, unsigned rseed) {
-	if (!leaf_qverts.empty()) return; // already setup
+	if (is_setup()) return; // already setup
+	//highres_timer_t timer("Create Cat Tail Verts"); // 1.2ms
 	unsigned const ndiv(16), nstacks(8);
 	float const nstacks_inv(1.0/nstacks);
 	rand_gen_t rgen;
 	rgen.set_state(rseed, 3*rseed+1);
+	vector<vert_norm_tc> cap_verts;
+	vector<unsigned> cap_ixs;
 
 	// generate sphere verts once and reuse with correct pos and radius
 	vector<vert_norm_tc> sphere_verts;
@@ -818,16 +822,21 @@ void pond_t::cat_tail_draw_data_t::create_verts(vect_cube_t const &cat_tails, un
 		for (unsigned ix : sphere_ixs) {cap_ixs.push_back(ix + ix_off);}
 		for (unsigned i = 0; i < num_sv; ++i) {cap_verts.emplace_back((cap_radius*verts[i] + cap_center), norms[i], sphere_verts[i].t);}
 	} // for ct
+	cap_vao.create_and_upload(cap_verts, cap_ixs, 0, 1); // setup_pointers=1
+	indexed_vao_manager_t::post_render();
+	num_cap_verts = cap_verts.size();
+	num_cap_ixs   = cap_ixs  .size();
 }
 
 void pond_t::cat_tail_draw_data_t::draw(draw_state_t &dstate, bool shadow_only) const {
 	glEnable(GL_CULL_FACE); // so that correct face of leaves is drawn
+	// draw cap/flower head
 	select_no_texture();
 	dstate.s.set_cur_color(BROWN);
-	set_ptr_state(cap_verts.data(), cap_verts.size(), 0, 1);
-	draw_indexed_tri_verts(cap_verts.size(), cap_ixs.size(), GL_TRIANGLES, (void *)cap_ixs.data());
-	++num_frame_draw_calls;
-	unset_ptr_state(cap_verts.data());
+	cap_vao.pre_render(1, 1); // using_index=1, do_bind_vbo=1
+	draw_indexed_tri_verts(num_cap_verts, num_cap_ixs, GL_TRIANGLES);
+	cap_vao.post_render();
+	// draw stem and leaves
 	dstate.s.set_cur_color(colorRGBA(0.4, 0.6, 0.2)); // make the green even darker
 	if (!shadow_only) {select_texture(GRASS_BLADE_TEX);}
 	draw_verts(leaf_tverts, GL_TRIANGLES);

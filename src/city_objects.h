@@ -383,9 +383,12 @@ class park_heightmap_t;
 
 class pond_t : public city_obj_t {
 	class cat_tail_draw_data_t {
-		vector<vert_norm_tc> leaf_tverts, leaf_qverts, cap_verts; // cached verts for drawing; must be mutable because draw() is const
-		vector<unsigned> cap_ixs;
+		unsigned num_cap_verts=0, num_cap_ixs=0;
+		vector<vert_norm_tc> leaf_tverts, leaf_qverts; // cached verts for drawing
+		indexed_vao_manager_t cap_vao; // indexed_vao_manager_with_shadow_t?
 	public:
+		bool is_setup() const {return cap_vao.is_valid();}
+		size_t get_gpu_mem() const {return cap_vao.gpu_mem;}
 		void create_verts(vect_cube_t const &cat_tails, unsigned rseed);
 		void draw(draw_state_t &dstate, bool shadow_only) const;
 	};
@@ -397,6 +400,7 @@ public:
 	pond_t(point const &pos_, float x_radius, float y_radius, float depth, float water_z, unsigned rseed);
 	bool  has_cat_tails () const {return !cat_tails.empty();}
 	float get_water_zval() const {return bcube.z2();}
+	size_t get_gpu_mem  () const {return ctdd.get_gpu_mem();}
 	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void gen_vegetation(park_heightmap_t const &hmap);

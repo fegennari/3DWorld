@@ -53,6 +53,7 @@ void setup_parked_car(car_t &car, unsigned city_id, unsigned plot_ix) {
 size_t city_obj_placer_t::get_gpu_mem() const {
 	unsigned mem(0);
 	for (park_heightmap_t const &h : park_hmaps) {mem += h.get_gpu_mem();}
+	for (pond_t const &p : ponds) {mem += p.get_gpu_mem();}
 	return mem;
 }
 
