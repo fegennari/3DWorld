@@ -832,10 +832,12 @@ void pond_t::cat_tail_draw_data_t::draw(draw_state_t &dstate, bool shadow_only) 
 	glEnable(GL_CULL_FACE); // so that correct face of leaves is drawn
 	// draw cap/flower head
 	select_no_texture();
+	if (!shadow_only) {select_texture_nmap(DIRT_NORMAL_TEX);}
 	dstate.s.set_cur_color(BROWN);
 	cap_vao.pre_render(1, 1); // using_index=1, do_bind_vbo=1
 	draw_indexed_tri_verts(num_cap_verts, num_cap_ixs, GL_TRIANGLES);
 	cap_vao.post_render();
+	if (!shadow_only) {bind_default_flat_normal_map();}
 	// draw stem and leaves
 	dstate.s.set_cur_color(colorRGBA(0.4, 0.6, 0.2)); // make the green even darker
 	if (!shadow_only) {select_texture(GRASS_BLADE_TEX);}
