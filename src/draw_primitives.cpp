@@ -758,11 +758,8 @@ void sd_sphere_d::get_itri_points(vector<vert_norm_tc> &itri_pts, vector<unsigne
 			unsigned const ix(itri_pts.size()), S(s%ndiv);
 			itri_pts.emplace_back(points[S][t], norms[S][t], (1.0f - s*ndiv_inv), (1.0f - t*ndiv_inv));
 			if (t == t1 || s == s1) continue; // no indices added for last s or t values
-			indices.push_back(ix);
-			indices.push_back(ix+stride); // +s
-			indices.push_back(ix+stride+1); // +s +t
-			indices.push_back(ix+1); // +t
-			// TODO: 2 triangles
+			unsigned const ixs[4] = {ix, ix+stride, ix+stride+1, ix+1}; // {0, +s, +s +t, +t}
+			for (unsigned i = 0; i < 6; ++i) {indices.push_back(ixs[quad_to_tris_ixs[i]]);} // 1 quad = 2 triangles = 6 verts
 		} // for t
 	} // for s
 }

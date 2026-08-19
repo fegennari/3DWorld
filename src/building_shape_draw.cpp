@@ -314,7 +314,7 @@ void rgeom_mat_t::add_sphere_to_verts(point const &center, vector3d const &size,
 		sphere_point_norm spn;
 		sd.gen_points_norms(spn);
 		sd.get_itri_points(verts, ixs);
-		assert((ixs.size()&3) == 0); // must be a multiple of 4
+		assert((ixs.size() % 6) == 0); // must be a multiple of 6 (triangle pairs)
 		vncs.resize(verts.size());
 		for (unsigned i = 0; i < verts.size(); ++i) {vncs[i] = vert_norm_comp_tc(verts[i].v, verts[i].n, verts[i].t[0], verts[i].t[1]);} // vntc => vnctc
 	}
@@ -359,14 +359,9 @@ void rgeom_mat_t::add_sphere_to_verts(point const &center, vector3d const &size,
 		return;
 	}
 	else { // can use vncs (norm_comps)
-		for (auto i = vncs.begin(); i != vncs.end(); ++i) {
-			itri_verts.emplace_back((i->v*size + center), *i, (tr.x1 + i->t[0]*tscale[0] + ts_add), (tr.y1 + i->t[1]*tscale[1] + tt_add), cw);
-		}
+		for (auto const &v : vncs) {itri_verts.emplace_back((v.v*size + center), v, (tr.x1 + v.t[0]*tscale[0] + ts_add), (tr.y1 + v.t[1]*tscale[1] + tt_add), cw);}
 	}
-	for (auto i = ixs.begin(); i != ixs.end(); i += 4) { // indices are for quads, but we want triangles, so expand them
-		indices.push_back(*(i+0) + ioff); indices.push_back(*(i+1) + ioff); indices.push_back(*(i+2) + ioff);
-		indices.push_back(*(i+3) + ioff); indices.push_back(*(i+0) + ioff); indices.push_back(*(i+2) + ioff);
-	}
+	for (unsigned ix : ixs) {indices.push_back(ix + ioff);}
 	assert(indices.back() < itri_verts.size());
 }
 

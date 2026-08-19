@@ -318,13 +318,10 @@ public:
 				sd_sphere_d sd(all_zeros, 1.0, ndiv);
 				sd.gen_points_norms(spn);	
 				sd.get_itri_points(sphere_verts, sphere_ixs);
-				assert(!(sphere_ixs.size() & 3)); // quads
+				assert(!(sphere_ixs.size() % 6)); // must be a multiple of 6 (triangle pairs)
 			}
 			unsigned const verts_start(verts.size());
-
-			for (unsigned i = 0; i < sphere_ixs.size(); i += 4) { // convert quad ixs to triangle ixs
-				for (unsigned j = 0; j < 6; ++j) {ixs.push_back(verts_start + sphere_ixs[i + quad_to_tris_ixs[j]]);}
-			}
+			for (unsigned   ix : sphere_ixs  ) {ixs.push_back(verts_start + ix);}
 			for (auto const &v : sphere_verts) {verts.emplace_back((s.radius*v.v + s.pos), v.n, v.t[0], v.t[1]);}
 		} // for s
 	}
