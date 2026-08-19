@@ -701,7 +701,7 @@ void add_back_side_verts(vector<vert_norm_tc> &verts, unsigned start_ix) {
 
 void pond_t::draw_cat_tails(draw_state_t &dstate, bool shadow_only) const {
 	//if (shadow_only) return; // stem and leaves are too thin and shadows cause artifacts
-	//highres_timer_t timer("draw_cat_tails"); // 6.2ms => 3.4ms => 2.4ms with 1000 cat tails
+	//highres_timer_t timer("draw_cat_tails"); // 6.2ms => 3.4ms => 2.4ms => 1.9ms with 1000 cat tails
 
 	if (leaf_qverts.empty()) { // generate verts
 		unsigned const ndiv(16), nstacks(8);
@@ -711,11 +711,12 @@ void pond_t::draw_cat_tails(draw_state_t &dstate, bool shadow_only) const {
 
 		// generate sphere verts once and reuse with correct pos and radius
 		vector<vert_norm_tc> sphere_verts;
+		vector<unsigned> sphere_ixs;
 		{ // open a scope for sd/spn
 			sd_sphere_d sd(all_zeros, 1.0, ndiv);
 			sphere_point_norm spn;
 			sd.gen_points_norms(spn);
-			sd.get_quad_points(sphere_verts); // TODO: make indexed
+			sd.get_itri_points(sphere_verts, sphere_ixs);
 		}
 		for (cube_t const &ct : cat_tails) {
 			// stem
@@ -784,7 +785,7 @@ void pond_t::draw_cat_tails(draw_state_t &dstate, bool shadow_only) const {
 				add_back_side_verts(leaf_qverts, qv_start);
 				add_back_side_verts(leaf_tverts, tv_start);
 			} // for n
-			// capsule
+			// capsule (flower head)
 			float const cap_t1(rgen.rand_uniform(0.75, 0.8)), cap_t2(cap_t1 + rgen.rand_uniform(0.08, 0.12)), cap_radius(0.2*ct_radius); // parametric position along bot=>top
 			point cap_pos[2];
 
@@ -793,8 +794,8 @@ void pond_t::draw_cat_tails(draw_state_t &dstate, bool shadow_only) const {
 				stem_bender.bend(cap_pos[d]);
 			}
 			// stretch a sphere into a capsule shape
-			unsigned const num_sv(sphere_verts.size());
-			vector3d const cap_delta(cap_pos[1] - cap_pos[0]);//, cap_dir(cap_delta.get_norm());
+			unsigned const num_sv(sphere_verts.size()), ix_off(cap_verts.size());
+			vector3d const cap_delta(cap_pos[1] - cap_pos[0]);
 			point const cap_center(0.5*(cap_pos[1] + cap_pos[0]));
 			float const cap_dz(0.5*cap_delta.mag()/cap_radius);
 			vector<point> verts(num_sv), norms(num_sv);
@@ -810,13 +811,17 @@ void pond_t::draw_cat_tails(draw_state_t &dstate, bool shadow_only) const {
 			} // for i
 			rotate_vector3d_by_vr_multi(plus_z, cap_delta, verts.data(), num_sv);
 			rotate_vector3d_by_vr_multi(plus_z, cap_delta, norms.data(), num_sv);
+			for (unsigned ix : sphere_ixs) {cap_ixs.push_back(ix + ix_off);}
 			for (unsigned i = 0; i < num_sv; ++i) {cap_verts.emplace_back((cap_radius*verts[i] + cap_center), norms[i], sphere_verts[i].t);}
 		} // for ct
 	}
 	glEnable(GL_CULL_FACE); // so that correct face of leaves is drawn
 	select_no_texture();
 	dstate.s.set_cur_color(BROWN);
-	draw_quad_verts_as_tris(cap_verts);
+	set_ptr_state(cap_verts.data(), cap_verts.size(), 0, 1);
+	draw_indexed_tri_verts(cap_verts.size(), cap_ixs.size(), GL_TRIANGLES, cap_ixs.data());
+	++num_frame_draw_calls;
+	unset_ptr_state(cap_verts.data());
 	dstate.s.set_cur_color(colorRGBA(0.4, 0.6, 0.2)); // make the green even darker
 	select_texture(GRASS_BLADE_TEX);
 	draw_verts(leaf_tverts, GL_TRIANGLES);
