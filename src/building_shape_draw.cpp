@@ -313,7 +313,7 @@ void rgeom_mat_t::add_sphere_to_verts(point const &center, vector3d const &size,
 		sd_sphere_d sd(all_zeros, 1.0, ndiv);
 		sphere_point_norm spn;
 		sd.gen_points_norms(spn);
-		sd.get_quad_points(verts, &ixs);
+		sd.get_itri_points(verts, ixs);
 		assert((ixs.size()&3) == 0); // must be a multiple of 4
 		vncs.resize(verts.size());
 		for (unsigned i = 0; i < verts.size(); ++i) {vncs[i] = vert_norm_comp_tc(verts[i].v, verts[i].n, verts[i].t[0], verts[i].t[1]);} // vntc => vnctc

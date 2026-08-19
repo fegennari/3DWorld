@@ -1382,7 +1382,7 @@ public:
 		sphere_verts.clear();
 		sd_sphere_d sd(all_zeros, ravg, ndiv);
 		sd.gen_points_norms_static(0.0, 1.0, 0.0, t_end); // top half hemisphere dome
-		sd.get_quad_points(sphere_verts, nullptr, 0, 0.0, 1.0, 0.0, t_end); // quads
+		sd.get_quad_points(sphere_verts, 0, 0.0, 1.0, 0.0, t_end); // quads
 			
 		for (auto i = sphere_verts.begin(); i != sphere_verts.end(); ++i) {
 			i->v.y *= ary;

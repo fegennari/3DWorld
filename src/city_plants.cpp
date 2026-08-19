@@ -317,8 +317,8 @@ public:
 			if (sphere_verts.empty()) { // generate unit sphere data for branch bends if we haven't already
 				sd_sphere_d sd(all_zeros, 1.0, ndiv);
 				sd.gen_points_norms(spn);	
-				sd.get_quad_points(sphere_verts, &sphere_ixs);
-				assert(!(sphere_ixs.size() & 1)); // quads
+				sd.get_itri_points(sphere_verts, sphere_ixs);
+				assert(!(sphere_ixs.size() & 3)); // quads
 			}
 			unsigned const verts_start(verts.size());
 
@@ -718,7 +718,7 @@ void pond_t::draw_cat_tails(draw_state_t &dstate, bool shadow_only) const {
 			sd_sphere_d sd(all_zeros, 1.0, ndiv);
 			sphere_point_norm spn;
 			sd.gen_points_norms(spn);
-			sd.get_quad_points(sphere_verts);
+			sd.get_quad_points(sphere_verts); // TODO: make indexed
 		}
 		for (cube_t const &ct : cat_tails) {
 			// stem

@@ -1383,7 +1383,7 @@ void scenery_group::post_gen_setup(tree_cont_t const &trees) {
 		bool const use_tri_strip = 1;
 		vector<vert_norm_tc> sphere_verts;
 		leafy_vbo_manager.clear();
-		add_sphere_quads(sphere_verts, nullptr, all_zeros, 1.0, 16, use_tri_strip,  0.5, 1.0, 0.125, 1.0); // only emit the textured top part of the sphere + the 'stem'
+		add_sphere_quads(sphere_verts, all_zeros, 1.0, 16, use_tri_strip, 0.5, 1.0, 0.125, 1.0); // only emit the textured top part of the sphere + the 'stem'
 		if (use_tri_strip) {leafy_vbo_manager.set_prim_type(GL_TRIANGLE_STRIP);}
 		sort(plants.begin(), plants.end()); // sort by type, before creating VBO data
 		unsigned num_lp_leaves(0);
