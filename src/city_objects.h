@@ -382,11 +382,17 @@ struct sculpture_t : public city_obj_t {
 class park_heightmap_t;
 
 class pond_t : public city_obj_t {
+	class cat_tail_draw_data_t {
+		vector<vert_norm_tc> leaf_tverts, leaf_qverts, cap_verts; // cached verts for drawing; must be mutable because draw() is const
+		vector<unsigned> cap_ixs;
+	public:
+		void create_verts(vect_cube_t const &cat_tails, unsigned rseed);
+		void draw(draw_state_t &dstate, bool shadow_only) const;
+	};
 	unsigned rseed;
-	mutable vector<vert_norm_tc> leaf_tverts, leaf_qverts, cap_verts; // cached verts for drawing; must be mutable because draw() is const
-	mutable vector<unsigned> cap_ixs;
 	vector<sphere_t> lily_pads;
 	vect_cube_t cat_tails;
+	mutable cat_tail_draw_data_t ctdd; // must be resettable from draw(), which is const
 public:
 	pond_t(point const &pos_, float x_radius, float y_radius, float depth, float water_z, unsigned rseed);
 	bool  has_cat_tails () const {return !cat_tails.empty();}
