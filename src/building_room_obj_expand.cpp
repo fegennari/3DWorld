@@ -1354,7 +1354,7 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 					// will fall through to grouped items case below
 				}
 				else { // bottles or cans; not consumable
-					add_rows_of_bottles_or_cans(rgen2, c, shelf, height_val, depth, no_alcohol, objects);
+					add_rows_of_bottles_or_cans(rgen2, c, shelf, height_val, depth, no_alcohol, objects, RO_FLAG_ON_SRACK);
 					continue;
 				}
 			} // end food
