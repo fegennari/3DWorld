@@ -622,14 +622,14 @@ void pond_t::gen_vegetation(park_heightmap_t const &hmap) {
 	// add cattails
 	float const depth(bcube.dz()), ct_max_height(1.0*depth), ct_max_radius(0.1*ct_max_height); // depth is slightly larger than actual pond depth
 	float const ct_min_z1(get_water_zval() - 0.25*depth), ct_max_z1(get_water_zval() - 0.02*depth), clump_radius(0.02*(bcube.dx() + bcube.dy()));
-	unsigned const num_ct(30 + (rgen.rand() % 21)); // 30-50
+	unsigned const num_ct(50 + (rgen.rand() % 51)); // 50-100
 	cat_tails.reserve(num_ct);
 	point ct_pos;
 
 	for (unsigned n = 0; n < num_ct; ++n) {
 		// place around perimeter in shallow water, clustered into groups
 		for (unsigned N = 0; N < 100; ++N) { // 100 random tries
-			if (N < 2 && ct_pos != all_zeros) { // first 2 iterations: place close to prev cat tail to produce clumps
+			if (N < 10 && ct_pos != all_zeros) { // first few iterations: place close to prev cat tail to produce clumps
 				ct_pos += clump_radius*rgen.signed_rand_vector_spherical_xy_norm();
 				if (!bcube.contains_pt_xy(ct_pos)) continue;
 			}
@@ -699,7 +699,7 @@ void pond_t::draw_cat_tails(draw_state_t &dstate, bool shadow_only) const {
 
 void pond_t::cat_tail_draw_data_t::create_verts(vect_cube_t const &cat_tails, unsigned rseed) { // 1.2ms
 	if (is_setup()) return; // already setup
-	unsigned const ndiv(16), nstacks(8);
+	unsigned const ndiv(16), nstacks(10);
 	float const nstacks_inv(1.0/nstacks), ndiv_inv(1.0/ndiv);
 	rand_gen_t rgen;
 	rgen.set_state(rseed, 3*rseed+1);
@@ -731,7 +731,7 @@ void pond_t::cat_tail_draw_data_t::create_verts(vect_cube_t const &cat_tails, un
 			point next_stem_draw(next_stem);
 			stem_bender.bend(next_stem_draw); // apply bend; cylinder ends won't line up exactly right, but it's not too noticeable
 			bool const is_first(s == 0);
-			float const t((s+1)*nstacks_inv), next_radius((1.0 - t*t)*stem_radius); // slow sqrt taper
+			float const t((s+1)*nstacks_inv), next_radius((s+1 == nstacks) ? 0.0 : (1.0 - t*t)*stem_radius); // slow sqrt taper
 			assert(next_radius >= 0.0);
 			vector_point_norm const &vpn(gen_cylinder_data(prev_stem_draw, next_stem_draw, cur_radius, next_radius, ndiv));
 
@@ -750,7 +750,7 @@ void pond_t::cat_tail_draw_data_t::create_verts(vect_cube_t const &cat_tails, un
 			prev_stem_draw = next_stem_draw;
 		} // for s
 		// leaves
-		unsigned const nleaves(5 + (rgen.rand() % 4)); // 5-8
+		unsigned const nleaves(6 + (rgen.rand() % 4)); // 6-9
 
 		for (unsigned n = 0; n < nleaves; ++n) {
 			unsigned const verts_start(leaf_verts.size()), ixs_start(leaf_ixs.size());
