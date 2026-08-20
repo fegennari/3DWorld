@@ -688,38 +688,25 @@ struct plant_bender_t {
 	}
 };
 
-void add_back_side_verts(vector<vert_norm_tc> &verts, unsigned start_ix) {
-	unsigned const end_ix(verts.size());
-	assert(start_ix <= end_ix);
-
-	for (unsigned i = start_ix; i < end_ix; ++i) {
-		verts.push_back(verts[i]);
-		verts.back().invert_normal();
-	}
-	reverse(verts.begin()+end_ix, verts.end()); // reverse winding order
-}
+void add_cylin_indices_tris(vector<unsigned> &idata, unsigned ndiv, unsigned ix_start); // from building_animal_draw.cpp
 
 void pond_t::draw_cat_tails(draw_state_t &dstate, bool shadow_only) const {
 	// Note: stem and leaves are thin and shadows cause artifacts
 	if (shadow_only && !ctdd.is_setup()) return; // only enable if we already created the vertex data, since we're not using a indexed_vao_manager_with_shadow_t
-	//highres_timer_t timer("draw_cat_tails"); // 6.2ms => 3.4ms => 2.4ms => 1.9ms => 1.0ms with 1000 cat tails
 	ctdd.create_verts(cat_tails, rseed);
 	ctdd.draw(dstate, shadow_only);
 }
 
-void pond_t::cat_tail_draw_data_t::create_verts(vect_cube_t const &cat_tails, unsigned rseed) {
+void pond_t::cat_tail_draw_data_t::create_verts(vect_cube_t const &cat_tails, unsigned rseed) { // 1.2ms
 	if (is_setup()) return; // already setup
-	//highres_timer_t timer("Create Cat Tail Verts"); // 1.2ms
 	unsigned const ndiv(16), nstacks(8);
-	float const nstacks_inv(1.0/nstacks);
+	float const nstacks_inv(1.0/nstacks), ndiv_inv(1.0/ndiv);
 	rand_gen_t rgen;
 	rgen.set_state(rseed, 3*rseed+1);
-	vector<vert_norm_tc> cap_verts;
-	vector<unsigned> cap_ixs;
+	vector<vert_norm_tc> sphere_verts, cap_verts, leaf_verts;
+	vector<unsigned> sphere_ixs, cap_ixs, leaf_ixs;
 
 	// generate sphere verts once and reuse with correct pos and radius
-	vector<vert_norm_tc> sphere_verts;
-	vector<unsigned> sphere_ixs;
 	{ // open a scope for sd/spn
 		sd_sphere_d sd(all_zeros, 1.0, ndiv);
 		sphere_point_norm spn;
@@ -736,62 +723,78 @@ void pond_t::cat_tail_draw_data_t::create_verts(vect_cube_t const &cat_tails, un
 		float cur_radius(stem_radius), cur_ts(0.0);
 		point cur_stem(bot), prev_stem_draw(cur_stem);
 		plant_bender_t stem_bender(bot, top, 2.8);
+		unsigned data_pos(leaf_verts.size());
+		vector3d prev_v12;
 
 		for (unsigned s = 0; s < nstacks; ++s) { // split into nstacks cylinder + cone segments and bend them
 			point const next_stem(cur_stem + stack_step);
 			point next_stem_draw(next_stem);
 			stem_bender.bend(next_stem_draw); // apply bend; cylinder ends won't line up exactly right, but it's not too noticeable
+			bool const is_first(s == 0);
+			float const t((s+1)*nstacks_inv), next_radius((1.0 - t*t)*stem_radius); // slow sqrt taper
+			assert(next_radius >= 0.0);
+			vector_point_norm const &vpn(gen_cylinder_data(prev_stem_draw, next_stem_draw, cur_radius, next_radius, ndiv));
 
-			if (s+1 < nstacks) { // truncated cone (quads)
-				float const t((s+1)*nstacks_inv), next_radius((1.0 - t*t)*stem_radius); // slow sqrt taper
-				assert(next_radius > 0.0);
-				gen_cylinder_quads(leaf_qverts, gen_cylinder_data(prev_stem_draw, next_stem_draw, cur_radius, next_radius, ndiv), 0, nstacks_inv, cur_ts);
-				// can we join the verts and normals between this cylinder and the previous one?
-				cur_radius = next_radius;
-				cur_ts    += nstacks_inv;
-				cur_stem   = next_stem;
-				prev_stem_draw = next_stem_draw;
-			}
-			else { // cone for last stack (triangles)
-				gen_cone_triangles(leaf_tverts, gen_cylinder_data(prev_stem_draw, next_stem_draw, cur_radius, 0.0, ndiv), 0, cur_ts, 1.0);
-			}
+			for (unsigned j = !is_first; j < 2; ++j) { // similar to snake draw_segment()
+				for (unsigned S = 0; S < ndiv; ++S) {
+					float const tx(fabs(S*ndiv_inv - 0.5f));
+					vector3d const n(0.5f*(vpn.n[S] + vpn.n[(S+ndiv-1)%ndiv])); // average face normals to get vert normals, don't need to normalize
+					leaf_verts.emplace_back(vpn.p[(S<<1)+j], n, tx, (s + j));
+				}
+			} // for j
+			add_cylin_indices_tris(leaf_ixs, ndiv, data_pos); // create index data
+			data_pos  += ndiv;
+			cur_radius = next_radius;
+			cur_ts    += nstacks_inv;
+			cur_stem   = next_stem;
+			prev_stem_draw = next_stem_draw;
 		} // for s
 		// leaves
 		unsigned const nleaves(5 + (rgen.rand() % 4)); // 5-8
 
 		for (unsigned n = 0; n < nleaves; ++n) {
-			unsigned const qv_start(leaf_qverts.size()), tv_start(leaf_tverts.size());
+			unsigned const verts_start(leaf_verts.size()), ixs_start(leaf_ixs.size());
 			float const leaf_len(rgen.rand_uniform(0.42, 0.75)*ct_height), leaf_base_hwidth(rgen.rand_uniform(0.75, 1.0)*0.02*leaf_len), bend_amt(rgen.rand_uniform(0.6, 0.9));
 			vector3d const dir(rgen.signed_rand_vector_spherical_xy_norm()), side_dir(cross_product(dir, plus_z)), side_delta(leaf_base_hwidth*side_dir);
 			point const base(bot + dir*ct_radius*rgen.rand_uniform(0.1, 0.2)), tip(base + dir*ct_radius*bend_amt + leaf_len*plus_z);
 			vector3d const delta(tip - base);
 			plant_bender_t leaf_bender(base, tip, 4.0);
-			point pa(bot), p1a(pa - side_delta), p2a(pa + side_delta);
-			vector3d normal1(-dir);
+			point pa(bot);
+			// base points
+			leaf_verts.emplace_back((pa - side_delta), -dir, 0.0, 0.0);
+			leaf_verts.emplace_back((pa + side_delta), -dir, 1.0, 0.0);
 
 			for (unsigned s = 0; s < nstacks; ++s) {
-				float const t1(s*nstacks_inv), t2(t1 + nstacks_inv);
+				float const t2((s+1)*nstacks_inv);
 				point pb(base + t2*delta);
 				leaf_bender.bend(pb);
-				vector3d const normal2(-cross_product((pb - pa), side_dir).get_norm()); // normal of segment
+				vector3d const normal(-cross_product((pb - pa), side_dir).get_norm()); // normal of segment
+				unsigned const vix(leaf_verts.size());
 
 				if (s+1 < nstacks) { // quad
+					unsigned const ixs[4] = {vix-2, vix-1, vix+1, vix};
+					for (unsigned i = 0; i < 6; ++i) {leaf_ixs.push_back(ixs[quad_to_tris_ixs[i]]);} // 1 quad = 2 triangles = 6 verts
 					vector3d const side_vb((1.0 - t2*t2*t2*t2)*side_delta); // slow taper
-					point const p1b(pb - side_vb), p2b(pb + side_vb);
-					leaf_qverts.emplace_back(p1a, normal1, 0.0, t1);
-					leaf_qverts.emplace_back(p2a, normal1, 1.0, t1);
-					leaf_qverts.emplace_back(p2b, normal2, 1.0, t2);
-					leaf_qverts.emplace_back(p1b, normal2, 0.0, t2);
-					pa = pb; p1a = p1b; p2a = p2b; normal1 = normal2;
+					leaf_verts.emplace_back((pb - side_vb), normal, 1.0, t2);
+					leaf_verts.emplace_back((pb + side_vb), normal, 0.0, t2);
+					pa = pb;
 				}
 				else { // triangle tip
-					leaf_tverts.emplace_back(p1a, normal1, 0.0, t1 );
-					leaf_tverts.emplace_back(p2a, normal1, 1.0, t1 );
-					leaf_tverts.emplace_back(pb,  normal2, 0.5, 1.0);
+					unsigned const ixs[3] = {vix-2, vix-1, vix};
+					for (unsigned i = 0; i < 3; ++i) {leaf_ixs.push_back(ixs[i]);}
+					leaf_verts.emplace_back(pb, normal, 0.5, 1.0);
 				}
 			} // for s
-			add_back_side_verts(leaf_qverts, qv_start);
-			add_back_side_verts(leaf_tverts, tv_start);
+			// add reverse faces with opposite normal and winding order for two sided leaves
+			unsigned const verts_end(leaf_verts.size()), ixs_end(leaf_ixs.size()), ixs_off(verts_end - verts_start);
+			assert(verts_start <= verts_end);
+
+			for (unsigned i = verts_start; i < verts_end; ++i) {
+				leaf_verts.push_back(leaf_verts[i]);
+				leaf_verts.back().invert_normal();
+			}
+			for (unsigned i = ixs_start; i < ixs_end; ++i) {leaf_ixs.push_back(leaf_ixs[i] + ixs_off);}
+			reverse(leaf_ixs.begin()+ixs_end, leaf_ixs.end()); // reverse winding order
 		} // for n
 		// capsule (flower head)
 		float const cap_t1(rgen.rand_uniform(0.75, 0.8)), cap_t2(cap_t1 + rgen.rand_uniform(0.08, 0.12)), cap_radius(0.2*ct_radius); // parametric position along bot=>top
@@ -824,10 +827,13 @@ void pond_t::cat_tail_draw_data_t::create_verts(vect_cube_t const &cat_tails, un
 		// use zvals for texture coords in y to account for the stretch
 		for (unsigned i = 0; i < num_sv; ++i) {cap_verts.emplace_back((cap_radius*verts[i] + cap_center), norms[i], sphere_verts[i].t[0], 0.5*verts[i].z);}
 	} // for ct
-	cap_vao.create_and_upload(cap_verts, cap_ixs, 0, 1); // setup_pointers=1
+	cap_vao .create_and_upload(cap_verts,  cap_ixs,  0, 1); // setup_pointers=1
+	leaf_vao.create_and_upload(leaf_verts, leaf_ixs, 0, 1); // setup_pointers=1
 	indexed_vao_manager_t::post_render();
-	num_cap_verts = cap_verts.size();
-	num_cap_ixs   = cap_ixs  .size();
+	num_cap_verts  = cap_verts .size();
+	num_cap_ixs    = cap_ixs   .size();
+	num_leaf_verts = leaf_verts.size();
+	num_leaf_ixs   = leaf_ixs  .size();
 }
 
 void pond_t::cat_tail_draw_data_t::draw(draw_state_t &dstate, bool shadow_only) const {
@@ -842,8 +848,9 @@ void pond_t::cat_tail_draw_data_t::draw(draw_state_t &dstate, bool shadow_only) 
 	// draw stem and leaves
 	dstate.s.set_cur_color(colorRGBA(0.4, 0.6, 0.2)); // make the green even darker
 	if (!shadow_only) {select_texture(GRASS_BLADE_TEX);}
-	draw_verts(leaf_tverts, GL_TRIANGLES);
-	draw_quad_verts_as_tris(leaf_qverts);
+	leaf_vao.pre_render(1, 1); // using_index=1, do_bind_vbo=1
+	draw_indexed_tri_verts(num_leaf_verts, num_leaf_ixs, GL_TRIANGLES);
+	leaf_vao.post_render();
 	dstate.enable_normal_maps();
 	glDisable(GL_CULL_FACE);
 }

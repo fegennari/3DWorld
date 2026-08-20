@@ -383,12 +383,11 @@ class park_heightmap_t;
 
 class pond_t : public city_obj_t {
 	class cat_tail_draw_data_t {
-		unsigned num_cap_verts=0, num_cap_ixs=0;
-		vector<vert_norm_tc> leaf_tverts, leaf_qverts; // cached verts for drawing
-		indexed_vao_manager_t cap_vao;
+		unsigned num_cap_verts=0, num_cap_ixs=0, num_leaf_verts=0, num_leaf_ixs=0;
+		indexed_vao_manager_t cap_vao, leaf_vao;
 	public:
 		bool is_setup() const {return cap_vao.is_valid();}
-		size_t get_gpu_mem() const {return cap_vao.gpu_mem;}
+		size_t get_gpu_mem() const {return (cap_vao.gpu_mem + leaf_vao.gpu_mem);}
 		void create_verts(vect_cube_t const &cat_tails, unsigned rseed);
 		void draw(draw_state_t &dstate, bool shadow_only) const;
 	};
