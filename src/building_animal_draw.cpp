@@ -363,13 +363,12 @@ void add_cylin_indices_tris(vector<unsigned> &idata, unsigned ndiv, unsigned ix_
 	}
 }
 // used for snakes and vases
-void draw_segment(rgeom_mat_t &mat, point const &p1, point const &p2, float radius1, float radius2,
-	float seg_ix, float tscale_x, float tscale_y, color_wrapper const &cw, unsigned ndiv, unsigned &data_pos)
+void draw_segment(rgeom_mat_t &mat, point const &p1, point const &p2, float radius1, float radius2, float seg_ix,
+	float tscale_x, float tscale_y, float ndiv_inv, color_wrapper const &cw, unsigned ndiv, unsigned &data_pos)
 {
 	point const ce[2] = {p1, p2};
 	vector3d v12;
 	vector_point_norm const &vpn(gen_cylinder_data(ce, radius1, radius2, ndiv, v12, NULL, 0.0, 1.0, 2)); // force_dim=2
-	float const ndiv_inv(1.0/ndiv);
 	bool const is_first(seg_ix == 0.0);
 
 	for (unsigned j = !is_first; j < 2; ++j) {
@@ -395,7 +394,7 @@ class snake_draw_t {
 		colorRGBA color(S.color);
 		//if (S.stuck_counter > 0.0) {color = blend_color(RED, S.color, min(1.0, 0.0025*S.stuck_counter), 0);} // debugging: turn red over time when stuck
 		// draw head
-		float const head_hheight(0.6*S.radius), head_hlen(1.6*S.radius), head_hwidth(S.radius);
+		float const head_hheight(0.6*S.radius), head_hlen(1.6*S.radius), head_hwidth(S.radius), ndiv_inv(1.0/ndiv);
 		vector3d const &dir(S.last_valid_dir);
 		vector3d const head_size(head_hlen, head_hwidth, head_hheight); // length in X, max radius in Y, flattened in Z
 		point const head_pos(S.get_head_pos()), head_center(head_pos + vector3d(0,0,head_hheight));
@@ -441,11 +440,11 @@ class snake_draw_t {
 					vector3d const v12_avg(0.5f*(v12 + prev_v12)); // use the average vector for a more gradual transition
 					float const r_mid(0.5*(radius1 + radius2));
 					point const seg_center(ce[0] + v12_avg*(0.5*delta.mag()));
-					draw_segment(skin_mat, ce[0], seg_center, radius1, r_mid, seg_ix+0.0, 2.0, tscale, cw, ndiv, data_pos);
-					draw_segment(skin_mat, seg_center, ce[1], r_mid, radius2, seg_ix+0.5, 2.0, tscale, cw, ndiv, data_pos);
+					draw_segment(skin_mat, ce[0], seg_center, radius1, r_mid, seg_ix+0.0, 2.0, tscale, ndiv_inv, cw, ndiv, data_pos);
+					draw_segment(skin_mat, seg_center, ce[1], r_mid, radius2, seg_ix+0.5, 2.0, tscale, ndiv_inv, cw, ndiv, data_pos);
 				}
 				else {
-					draw_segment(skin_mat, ce[0], ce[1], radius1, radius2, seg_ix, 2.0, tscale, cw, ndiv, data_pos);
+					draw_segment(skin_mat, ce[0], ce[1], radius1, radius2, seg_ix, 2.0, tscale, ndiv_inv, cw, ndiv, data_pos);
 				}
 				prev_v12 = v12;
 			}

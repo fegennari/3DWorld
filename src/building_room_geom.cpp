@@ -2438,8 +2438,8 @@ void building_room_geom_t::add_jar(room_object_t const &c) {
 }
 
 // functions reused from snake drawing
-void draw_segment(rgeom_mat_t &mat, point const &p1, point const &p2, float radius1, float radius2,
-	float seg_ix, float tscale_x, float tscale_y, color_wrapper const &cw, unsigned ndiv, unsigned &data_pos);
+void draw_segment(rgeom_mat_t &mat, point const &p1, point const &p2, float radius1, float radius2, float seg_ix,
+	float tscale_x, float tscale_y, float ndiv_inv, color_wrapper const &cw, unsigned ndiv, unsigned &data_pos);
 
 void building_room_geom_t::add_vase(room_object_t const &c) { // or urn
 	colorRGBA color(apply_light_color(c));
@@ -2472,7 +2472,7 @@ void building_room_geom_t::add_vase(room_object_t const &c) { // or urn
 	if (taper > 0.0 && rmin < 0.5*rbase) {taper = -taper;} // don't make the bottom too narrow
 	float const taper_scale(1.0/num_stacks), taper_bot(1.0 - max(taper, 0.0f)), taper_top(1.0 - min(taper, 0.0f));
 	float const sin_term(0.5*(1.0 + sin(freq_start)));
-	float start_radius(taper_bot*(rmin + (rmax - rmin)*sin_term));
+	float start_radius(taper_bot*(rmin + (rmax - rmin)*sin_term)), ndiv_inv(1.0/ndiv);
 	if (start_radius < 0.45*rbase) {rmin = min(2.0*rmin, 0.75*rmax); start_radius = taper_bot*(rmin + (rmax - rmin)*sin_term);} // base is too narrow, widen it
 	float radius(start_radius);
 	unsigned data_pos(itris_start);
@@ -2482,7 +2482,7 @@ void building_room_geom_t::add_vase(room_object_t const &c) { // or urn
 	for (unsigned n = 0; n < num_stacks; ++n) {
 		float const taper_pos(taper_scale*(n+1));
 		float const rnext((taper_pos*taper_top + (1.0 - taper_pos)*taper_bot)*(rmin + (rmax - rmin)*0.5*(1.0 + sin(freq_start + freq_mult*(n+1)))));
-		draw_segment(side_mat, p1, p2, radius, rnext, n, tex_scale_h, tscale, cw, ndiv, data_pos);
+		draw_segment(side_mat, p1, p2, radius, rnext, n, tex_scale_h, tscale, ndiv_inv, cw, ndiv, data_pos);
 		p1.z   = p2.z;
 		p2.z  += zstep;
 		radius = rnext;
