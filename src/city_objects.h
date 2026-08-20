@@ -385,7 +385,7 @@ class pond_t : public city_obj_t {
 	class cat_tail_draw_data_t {
 		unsigned num_cap_verts=0, num_cap_ixs=0;
 		vector<vert_norm_tc> leaf_tverts, leaf_qverts; // cached verts for drawing
-		indexed_vao_manager_t cap_vao; // indexed_vao_manager_with_shadow_t?
+		indexed_vao_manager_t cap_vao;
 	public:
 		bool is_setup() const {return cap_vao.is_valid();}
 		size_t get_gpu_mem() const {return cap_vao.gpu_mem;}

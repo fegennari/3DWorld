@@ -811,16 +811,18 @@ void pond_t::cat_tail_draw_data_t::create_verts(vect_cube_t const &cat_tails, un
 		for (unsigned i = 0; i < num_sv; ++i) {
 			point &v(verts[i]);
 			v = sphere_verts[i].v;
-			float const t(sqrt(fabs(v.z))); // 0 at center, 1 at ends
-			v.z += SIGN(v.z)*t*cap_dz; // stretch out ends
-			norms[i] = sphere_verts[i].n; // not quite correct for points along the sphere center/capsule sides
-			norms[i].z *= t; // FIXME: not quite correct
+			float const sqrt_z(sqrt(fabs(v.z))), z_scale_factor(SIGN(v.z)*cap_dz*sqrt_z), normal_scale(1.0 + 0.5*cap_dz/sqrt_z);
+			v.z += z_scale_factor; // stretch out ends
+			norms[i]    = sphere_verts[i].n; // not quite correct for points along the sphere center/capsule sides
+			norms[i].x *= normal_scale;
+			norms[i].y *= normal_scale;
 			norms[i].normalize();
 		} // for i
 		rotate_vector3d_by_vr_multi(plus_z, cap_delta, verts.data(), num_sv);
 		rotate_vector3d_by_vr_multi(plus_z, cap_delta, norms.data(), num_sv);
 		for (unsigned ix : sphere_ixs) {cap_ixs.push_back(ix + ix_off);}
-		for (unsigned i = 0; i < num_sv; ++i) {cap_verts.emplace_back((cap_radius*verts[i] + cap_center), norms[i], sphere_verts[i].t);}
+		// use zvals for texture coords in y to account for the stretch
+		for (unsigned i = 0; i < num_sv; ++i) {cap_verts.emplace_back((cap_radius*verts[i] + cap_center), norms[i], sphere_verts[i].t[0], 0.5*verts[i].z);}
 	} // for ct
 	cap_vao.create_and_upload(cap_verts, cap_ixs, 0, 1); // setup_pointers=1
 	indexed_vao_manager_t::post_render();
@@ -830,19 +832,19 @@ void pond_t::cat_tail_draw_data_t::create_verts(vect_cube_t const &cat_tails, un
 
 void pond_t::cat_tail_draw_data_t::draw(draw_state_t &dstate, bool shadow_only) const {
 	glEnable(GL_CULL_FACE); // so that correct face of leaves is drawn
+	dstate.disable_normal_maps();
 	// draw cap/flower head
-	select_no_texture();
-	if (!shadow_only) {select_texture_nmap(DIRT_NORMAL_TEX);}
-	dstate.s.set_cur_color(BROWN);
+	select_texture(NOISE_TEX);
+	dstate.s.set_cur_color(colorRGBA(0.7, 0.26, 0.15)); // light brown
 	cap_vao.pre_render(1, 1); // using_index=1, do_bind_vbo=1
 	draw_indexed_tri_verts(num_cap_verts, num_cap_ixs, GL_TRIANGLES);
 	cap_vao.post_render();
-	if (!shadow_only) {bind_default_flat_normal_map();}
 	// draw stem and leaves
 	dstate.s.set_cur_color(colorRGBA(0.4, 0.6, 0.2)); // make the green even darker
 	if (!shadow_only) {select_texture(GRASS_BLADE_TEX);}
 	draw_verts(leaf_tverts, GL_TRIANGLES);
 	draw_quad_verts_as_tris(leaf_qverts);
+	dstate.enable_normal_maps();
 	glDisable(GL_CULL_FACE);
 }
 

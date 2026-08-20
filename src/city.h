@@ -497,8 +497,10 @@ public:
 		bool enable_animations=0, bool enable_occlusion=1, bool enable_reflect=0);
 	void end_draw();
 	virtual void post_draw();
+	void disable_normal_maps();
+	void enable_normal_maps();
 	void set_untextured_material();
-	void unset_untextured_material();
+	void unset_untextured_material() {enable_normal_maps();}
 	void ensure_shader_active();
 	void draw_and_clear_light_flares();
 	bool check_sphere_visible(point const &pos, float radius) const {return camera_pdu.sphere_visible_test((pos + xlate), radius);}

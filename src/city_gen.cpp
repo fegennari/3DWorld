@@ -154,13 +154,15 @@ void draw_state_t::end_draw() {
 	draw_unshadowed();
 	s.end_shader();
 }
-void draw_state_t::set_untextured_material() {
-	if (shadow_only) return;
-	select_no_texture();
-	if (normal_maps_enabled()) {s.add_uniform_float("bump_map_mag", 0.0);} // disable bump map
+void draw_state_t::disable_normal_maps() {
+	if (!shadow_only && normal_maps_enabled()) {s.add_uniform_float("bump_map_mag", 0.0);} // disable bump map
 }
-void draw_state_t::unset_untextured_material() {
+void draw_state_t::enable_normal_maps() {
 	if (!shadow_only && normal_maps_enabled()) {s.add_uniform_float("bump_map_mag", 1.0);} // re-enable bump map
+}
+void draw_state_t::set_untextured_material() {
+	if (!shadow_only) {select_no_texture();}
+	disable_normal_maps();
 }
 void draw_state_t::ensure_shader_active() {
 	if (s.is_setup()) return; // already active
