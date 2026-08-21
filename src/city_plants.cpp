@@ -691,7 +691,7 @@ struct plant_bender_t {
 void add_cylin_indices_tris(vector<unsigned> &idata, unsigned ndiv, unsigned ix_start); // from building_animal_draw.cpp
 
 void pond_t::draw_cat_tails(draw_state_t &dstate, bool shadow_only) const {
-	// Note: stem and leaves are thin and shadows cause artifacts
+	// Note: stem and leaves are thin and shadows cause artifacts, but they still cast shadows
 	if (shadow_only && !ctdd.is_setup()) return; // only enable if we already created the vertex data, since we're not using a indexed_vao_manager_with_shadow_t
 	ctdd.create_verts(cat_tails, rseed);
 	ctdd.draw(dstate, shadow_only);
@@ -715,27 +715,23 @@ void pond_t::cat_tail_draw_data_t::create_verts(vect_cube_t const &cat_tails, un
 	}
 	for (cube_t const &ct : cat_tails) {
 		// stem
-		float const ct_height(ct.dz()), ct_radius(0.5*ct.dx()), lean_amt(rgen.rand_uniform(0.0, 2.0));
-		float const stem_radius(0.07*ct_radius), stem_radius_step(nstacks_inv*stem_radius);
-		point const bot(cube_bot_center(ct));
-		point const top(cube_top_center(ct) + lean_amt*ct_radius*rgen.signed_rand_vector_spherical_xy_norm()); // random lean
+		float const ct_height(ct.dz()), ct_radius(0.5*ct.dx()), lean_amt(rgen.rand_uniform(0.0, 2.0)), stem_radius(0.07*ct_radius);
+		point const bot(cube_bot_center(ct)), top(cube_top_center(ct) + lean_amt*ct_radius*rgen.signed_rand_vector_spherical_xy_norm()); // random lean
 		vector3d const stem_delta(top - bot), stack_step(nstacks_inv*stem_delta);
-		float cur_radius(stem_radius), cur_ts(0.0);
+		float cur_radius(stem_radius);
 		point cur_stem(bot), prev_stem_draw(cur_stem);
 		plant_bender_t stem_bender(bot, top, 2.8);
 		unsigned data_pos(leaf_verts.size());
-		vector3d prev_v12;
 
 		for (unsigned s = 0; s < nstacks; ++s) { // split into nstacks cylinder + cone segments and bend them
 			point const next_stem(cur_stem + stack_step);
 			point next_stem_draw(next_stem);
 			stem_bender.bend(next_stem_draw); // apply bend; cylinder ends won't line up exactly right, but it's not too noticeable
-			bool const is_first(s == 0);
 			float const t((s+1)*nstacks_inv), next_radius((s+1 == nstacks) ? 0.0 : (1.0 - t*t)*stem_radius); // slow sqrt taper
 			assert(next_radius >= 0.0);
 			vector_point_norm const &vpn(gen_cylinder_data(prev_stem_draw, next_stem_draw, cur_radius, next_radius, ndiv));
 
-			for (unsigned j = !is_first; j < 2; ++j) { // similar to snake draw_segment()
+			for (unsigned j = (s > 0); j < 2; ++j) { // similar to snake draw_segment()
 				for (unsigned S = 0; S < ndiv; ++S) {
 					float const tx(fabs(S*ndiv_inv - 0.5f));
 					vector3d const n(0.5f*(vpn.n[S] + vpn.n[(S+ndiv-1)%ndiv])); // average face normals to get vert normals, don't need to normalize
@@ -745,7 +741,6 @@ void pond_t::cat_tail_draw_data_t::create_verts(vect_cube_t const &cat_tails, un
 			add_cylin_indices_tris(leaf_ixs, ndiv, data_pos); // create index data
 			data_pos  += ndiv;
 			cur_radius = next_radius;
-			cur_ts    += nstacks_inv;
 			cur_stem   = next_stem;
 			prev_stem_draw = next_stem_draw;
 		} // for s
@@ -765,8 +760,8 @@ void pond_t::cat_tail_draw_data_t::create_verts(vect_cube_t const &cat_tails, un
 			leaf_verts.emplace_back((pa + side_delta), -dir, 1.0, 0.0);
 
 			for (unsigned s = 0; s < nstacks; ++s) {
-				float const t2((s+1)*nstacks_inv);
-				point pb(base + t2*delta);
+				float const t((s+1)*nstacks_inv);
+				point pb(base + t*delta);
 				leaf_bender.bend(pb);
 				vector3d const normal(-cross_product((pb - pa), side_dir).get_norm()); // normal of segment
 				unsigned const vix(leaf_verts.size());
@@ -774,9 +769,9 @@ void pond_t::cat_tail_draw_data_t::create_verts(vect_cube_t const &cat_tails, un
 				if (s+1 < nstacks) { // quad
 					unsigned const ixs[4] = {vix-2, vix-1, vix+1, vix};
 					for (unsigned i = 0; i < 6; ++i) {leaf_ixs.push_back(ixs[quad_to_tris_ixs[i]]);} // 1 quad = 2 triangles = 6 verts
-					vector3d const side_vb((1.0 - t2*t2*t2*t2)*side_delta); // slow taper
-					leaf_verts.emplace_back((pb - side_vb), normal, 1.0, t2);
-					leaf_verts.emplace_back((pb + side_vb), normal, 0.0, t2);
+					vector3d const side_vb((1.0 - t*t*t*t)*side_delta); // slow taper
+					leaf_verts.emplace_back((pb - side_vb), normal, 1.0, t);
+					leaf_verts.emplace_back((pb + side_vb), normal, 0.0, t);
 					pa = pb;
 				}
 				else { // triangle tip
@@ -814,8 +809,8 @@ void pond_t::cat_tail_draw_data_t::create_verts(vect_cube_t const &cat_tails, un
 		for (unsigned i = 0; i < num_sv; ++i) {
 			point &v(verts[i]);
 			v = sphere_verts[i].v;
-			float const sqrt_z(sqrt(fabs(v.z))), z_scale_factor(SIGN(v.z)*cap_dz*sqrt_z), normal_scale(1.0 + 0.5*cap_dz/sqrt_z);
-			v.z += z_scale_factor; // stretch out ends
+			float const sqrt_z(sqrt(fabs(v.z))), normal_scale(1.0 + 0.5*cap_dz/sqrt_z);
+			v.z += SIGN(v.z)*cap_dz*sqrt_z; // stretch out ends
 			norms[i]    = sphere_verts[i].n; // not quite correct for points along the sphere center/capsule sides
 			norms[i].x *= normal_scale;
 			norms[i].y *= normal_scale;
@@ -837,6 +832,7 @@ void pond_t::cat_tail_draw_data_t::create_verts(vect_cube_t const &cat_tails, un
 }
 
 void pond_t::cat_tail_draw_data_t::draw(draw_state_t &dstate, bool shadow_only) const {
+	// if only we were setting ENABLE_WIND in the shader, we could add leaf weights and proper wind animation to the leaves and stem
 	glEnable(GL_CULL_FACE); // so that correct face of leaves is drawn
 	dstate.disable_normal_maps();
 	// draw cap/flower head
