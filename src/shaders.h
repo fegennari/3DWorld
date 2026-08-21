@@ -18,7 +18,6 @@ bool check_for_tess_shader();
 
 
 struct gl_light_params_t {
-
 	point pos, eye_space_pos;
 	colorRGBA ambient=ALPHA0, diffuse=ALPHA0, specular=ALPHA0;
 	float pos_w=-1.0;
@@ -239,7 +238,6 @@ public:
 
 // "fake" compute shader implemented as a fragment shader
 class compute_shader_t : public compute_shader_base_t {
-
 	unsigned fbo_id=0, pbo=0;
 	string frag_shader_str;
 
@@ -262,7 +260,6 @@ public:
 
 // "real" compute shader
 class compute_shader_comp_t : public compute_shader_base_t {
-
 	unsigned zsize, zsize_req, block_sz_x, block_sz_y, block_sz_z;
 	string comp_shader_str;
 public:

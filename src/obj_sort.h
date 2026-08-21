@@ -9,11 +9,10 @@ unsigned const LEFT_EDGE_BIT = 0x80000000U;
 
 
 struct cached_obj : public sphere_t {
+	free_obj *obj=nullptr;
+	unsigned flags=0;
 
-	free_obj *obj;
-	unsigned flags;
-
-	cached_obj() : obj(NULL), flags(0) {}
+	cached_obj() {}
 	cached_obj(free_obj *ptr) {set_obj(ptr);}
 
 	void set_obj(free_obj *ptr) {
@@ -30,11 +29,10 @@ struct cached_obj : public sphere_t {
 };
 
 struct interval {
+	float val=0.0;
+	unsigned ix=0;
 
-	float val;
-	unsigned ix;
-
-	interval() : val(0.0f), ix(0) {}
+	interval() {}
 	interval(float v, unsigned i, bool l) : val(v), ix(i) {if (l) ix |= LEFT_EDGE_BIT;}
 	bool operator<(interval const &iv) const {return (val < iv.val);}
 };

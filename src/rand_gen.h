@@ -48,18 +48,14 @@ inline uint32_t pcg32_random_r(pcg32_random_t* rng) {
 }
 
 class rgen_pregen_t : public rgen_core_t {
-
 	std::shared_ptr<std::vector<double>> pregen_rand_reals;
 	unsigned cur_pos=0;
-
 public:
 	void pregen_floats(unsigned num);
 	double randd();
 };
 
-template<typename base> class rand_gen_template_t : public base {
-
-public:
+template<typename base> struct rand_gen_template_t : public base {
 	using rgen_core_t::rseed1;
 	using rgen_core_t::rseed2;
 
@@ -110,8 +106,7 @@ public:
 typedef rand_gen_template_t<rgen_core_t> rand_gen_t;
 typedef rand_gen_template_t<rgen_pregen_t> rand_gen_pregen_t;
 
-class rand_gen_wrap_t {
-public:
+struct rand_gen_wrap_t {
 	rand_gen_t &rgen;
 	rand_gen_wrap_t(rand_gen_t &rgen_) : rgen(rgen_) {}
 	typedef unsigned result_type;

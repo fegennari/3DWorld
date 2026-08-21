@@ -12,7 +12,6 @@ enum {VB_SHAPE_CUBE=0, VB_SHAPE_CONSTANT, VB_SHAPE_LINEAR, VB_SHAPE_QUADRATIC, N
 
 
 struct voxel_params_t {
-
 	// generation parameters
 	unsigned xsize=0, ysize=0, zsize=0, num_blocks=12; // num_blocks is in x and y
 	float isolevel=0, elasticity=0.5, mag=1.0, freq=1.0, atten_thresh=1.0, tex_scale=1.0, noise_scale=0.1, noise_freq=1.0;
@@ -25,20 +24,17 @@ struct voxel_params_t {
 	unsigned atten_top_mode=0; // 0=constant, 1=current mesh, 2=2d surface mesh
 	unsigned enable_falling=1; // 0=never, 1=edit mode only, 2=game mode only, 3=always
 	int geom_rseed=123;
-	
 	// rendering parameters
 	int texture_rseed=321;
 	unsigned tids[3]={};
-	colorRGBA colors[2];
+	colorRGBA colors[2]={WHITE, WHITE};
 	colorRGBA base_color=WHITE;
 
-	voxel_params_t() {colors[0] = colors[1] = WHITE;}
 	bool atten_sphere_mode() const {return (atten_at_edges >= 3 && atten_at_edges <= 4);}
 };
 
 
 struct voxel_brush_params_t {
-
 	int shape=VB_SHAPE_LINEAR, weight_exp=0;
 	unsigned delay=0, radius=1;
 	float weight_scale=1.0;
@@ -86,7 +82,6 @@ class voxel_query_tree {
 	};
 	coll_obj_group const *cobjs;
 	bvh_tree_matrix tree_matrix;
-
 public:
 	voxel_query_tree(coll_obj_group const *cobjs_) : cobjs(cobjs_) {}
 	void clear() {tree_matrix.clear();}
@@ -138,10 +133,7 @@ public:
 		ix = i[2] + (i[0] + i[1]*nx)*nz;
 		return 1;
 	}
-	unsigned get_ix(unsigned x, unsigned y, unsigned z) const {
-		//assert(x < nx && y < ny && z < nz);
-		return (z + (x + y*nx)*nz);
-	}
+	unsigned get_ix(unsigned x, unsigned y, unsigned z) const {return (z + (x + y*nx)*nz);} // no bounds checking
 	void get_bcube_ix_bounds(cube_t const &bcube, int llc[3], int urc[3]) const;
 	point get_pt_at(unsigned x, unsigned y, unsigned z) const  {return (point(x, y, z)*vsz + lo_pos);}
 	V const &get   (unsigned x, unsigned y, unsigned z) const  {return operator[](get_ix(x, y, z));}
@@ -156,7 +148,6 @@ typedef voxel_grid<float> float_voxel_grid;
 
 
 class voxel_manager : public float_voxel_grid {
-
 protected:
 	bool use_mesh=0;
 	voxel_params_t params;
@@ -167,8 +158,7 @@ protected:
 	typedef vertex_map_t<vertex_type_t> vertex_map_type_t;
 
 	struct vert_ix_cache_entry {
-		int ix[3]; // x, y, z
-		vert_ix_cache_entry() {ix[0] = ix[1] = ix[2] = -1;}
+		int ix[3]={-1, -1, -1}; // x, y, z
 	};
 	typedef voxel_grid<vert_ix_cache_entry> voxel_ix_cache;
 
@@ -212,7 +202,6 @@ public:
 
 
 class noise_texture_manager_t {
-
 	unsigned noise_tid=0, tsize=0;
 	voxel_manager voxels;
 public:
@@ -226,7 +215,6 @@ public:
 
 
 class voxel_model : public voxel_manager {
-
 protected:
 	bool volume_added=0;
 	vector<tri_data_t> tri_data; // one per LOD level
@@ -322,7 +310,6 @@ class voxel_model_ground : public voxel_model {
 	virtual void create_block_hook(unsigned block_ix);
 	virtual void update_blocks_hook(vector<unsigned> const &blocks_to_update, unsigned num_added);
 	virtual void pre_build_hook();
-
 public:
 	voxel_model_ground(unsigned num_lod_levels=1);
 	void clear();
@@ -338,7 +325,6 @@ public:
 
 
 class voxel_model_rock : public voxel_model {
-
 	virtual void calc_ao_lighting_for_block(unsigned block_ix, bool increase_only) {} // do nothing
 public:
 	voxel_model_rock(noise_texture_manager_t *ntg, unsigned num_lod_levels) : voxel_model(ntg, 0, num_lod_levels) {}
@@ -347,7 +333,6 @@ public:
 
 
 class voxel_model_space : public voxel_model {
-
 	unsigned ao_tid=0, shadow_tid=0;
 	vector<triangle> shadow_edge_tris;
 
@@ -355,7 +340,6 @@ class voxel_model_space : public voxel_model {
 	virtual void calc_ao_lighting_for_block(unsigned block_ix, bool increase_only);
 	void calc_shadows(voxel_grid<unsigned char> &shadow_data) const;
 	void extract_shadow_edges(voxel_grid<unsigned char> const &shadow_data);
-
 public:
 	voxel_model_space(noise_texture_manager_t *ntg, unsigned num_lod_levels) : voxel_model(ntg, 0, num_lod_levels) {}
 	void clear() {voxel_model::clear(); shadow_edge_tris.clear();}

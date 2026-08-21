@@ -74,7 +74,7 @@ extern shader_t emissive_shader;
 
 
 u_ship::u_ship(unsigned sclass_, point const &pos0, unsigned align, unsigned ai_type_, unsigned target_mode_, bool rand_orient)
-			   : free_obj(pos0), u_ship_base(sclass_), ai_type(ai_type_), curr_weapon(0), target_mode(target_mode_)
+			   : free_obj(pos0), u_ship_base(sclass_), ai_type(ai_type_), target_mode(target_mode_)
 {
 	if (specs().kamikaze) ai_type |= AI_KAMIKAZE;
 	flags       = (OBJ_FLAGS_SHIP | OBJ_FLAGS_TARG);

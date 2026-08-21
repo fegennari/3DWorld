@@ -10,7 +10,7 @@
 class tile_t;
 
 struct adj_tiles_t {
-	tile_t *adj[9] = {0};
+	tile_t *adj[9] = {};
 	bool valid = 0;
 	void ensure_valid(tile_t const *const tile);
 };

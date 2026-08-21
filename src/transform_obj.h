@@ -20,7 +20,6 @@ glm::mat4 get_rotation_matrix(vector3d const &vrot, float angle);
 
 
 struct xform_matrix : public glm::mat4 { // Note: maybe better to use glm::gtx::simd_mat4?
-
 	xform_matrix() : glm::mat4(1.0) {} // identity
 	xform_matrix(glm::mat4 const &m) : glm::mat4(m) {}
 	xform_matrix inverse() const; // defined in shaders.cpp
@@ -36,7 +35,6 @@ struct xform_matrix : public glm::mat4 { // Note: maybe better to use glm::gtx::
 
 
 struct transform_data {
-
 	vector<xform_matrix> matrices;
 	vector<mesh2d> perturb_maps;
 
@@ -59,7 +57,6 @@ struct transform_data {
 
 
 class matrix_stack_t {
-
 	vector<xform_matrix> m;
 public:
 	matrix_stack_t() {m.emplace_back();} // will be identity
@@ -80,7 +77,6 @@ void apply_obj_mesh_roll(xform_matrix &matrix, point const &pos, point const &lp
 
 
 class instance_render_t {
-
 	vector<xform_matrix> inst_xforms;
 	int loc;
 public:

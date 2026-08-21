@@ -12,7 +12,6 @@ unsigned const MAX_DLIGHT_SMAPS       = 120; // must agree with the value used i
 
 
 class smap_texture_array_t {
-
 	unsigned num_layers=0, num_layers_used=0;
 public:
 	unsigned tid=0, gen_id=1, gpu_mem=0; // gen_id starts at 1
@@ -26,7 +25,6 @@ public:
 };
 
 class smap_data_state_t {
-
 protected:
 	smap_texture_array_t *tex_arr=nullptr;
 	unsigned fbo_id=0, local_tid=0, gen_id=0, layer_id=0;
@@ -43,7 +41,6 @@ public:
 };
 
 struct smap_data_t : public smap_data_state_t { // used for all types of lights: ground mode, tiled terrain, and model3d
-
 	unsigned tu_id, smap_sz;
 	pos_dir_up pdu;
 	point last_lpos;
@@ -64,18 +61,16 @@ struct smap_data_t : public smap_data_state_t { // used for all types of lights:
 };
 
 struct cached_dynamic_smap_data_t : public smap_data_t { // used for all types of lights (ground mode directional sun/moon, point, spotlight)
-
 	bool last_has_dynamic;
 	cached_dynamic_smap_data_t(unsigned tu_id_, unsigned smap_sz_) : smap_data_t(tu_id_, smap_sz_), last_has_dynamic(0) {}
 };
 
 struct local_smap_data_t : public cached_dynamic_smap_data_t { // for point/spot lights that may be dynamic; CSMs not supported
-
-	bool used, outdoor_shadows;
-	unsigned user_smap_id;
+	bool used=0, outdoor_shadows=0;
+	unsigned user_smap_id=0;
 
 	local_smap_data_t(unsigned tu_id_, unsigned smap_sz_=DEF_LOCAL_SMAP_SZ, bool outdoor_shadows_=0)
-		: cached_dynamic_smap_data_t(tu_id_, smap_sz_), used(0), outdoor_shadows(outdoor_shadows_), user_smap_id(0) {}
+		: cached_dynamic_smap_data_t(tu_id_, smap_sz_), outdoor_shadows(outdoor_shadows_) {}
 	bool set_smap_shader_for_light(shader_t &s, bool &arr_tex_set) const;
 	virtual void render_scene_shadow_pass(point const &lpos);
 	virtual bool needs_update(point const &lpos);

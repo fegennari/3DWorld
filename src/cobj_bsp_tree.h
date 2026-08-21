@@ -13,8 +13,7 @@ protected:
 		unsigned start, end; // index into cixs for leaves
 		unsigned next_node_id=0;
 
-		tree_node(unsigned s=0, unsigned e=0) : start(s), end(e) {}
-		tree_node(unsigned s, unsigned e, cube_t const &cube) : cube_t(cube), start(s), end(e) {}
+		tree_node(unsigned s=0, unsigned e=0, cube_t const &cube=cube_t()) : cube_t(cube), start(s), end(e) {}
 		unsigned size() const {return (end - start);}
 	};
 	vector<tree_node> nodes;

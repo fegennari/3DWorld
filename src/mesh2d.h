@@ -9,9 +9,8 @@
 
 struct mesh2d {
 
-	vector<float> pmap; // perturbation map
+	vector<float> pmap, emap; // perturbation and expand maps
 	vector<unsigned char> rmap; // render map (actually a bool)
-	vector<float> emap; // expand map
 	vector<point> ptsh; // point shift map
 	unsigned size=0;
 

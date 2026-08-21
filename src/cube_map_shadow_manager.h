@@ -13,7 +13,6 @@ struct cube_map_lix_t {
 };
 
 class cube_map_shadow_manager {
-
 	typedef map<unsigned, cube_map_lix_t> obj_to_light_map_t;
 	obj_to_light_map_t obj_to_light_map;
 	vector<unsigned> light_free_list;

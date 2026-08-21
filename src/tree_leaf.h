@@ -11,7 +11,6 @@ point const leaf_points[4] = {point(-1,0,0), point(-1,0,2), point(1,0,2), point(
 
 // should have this for small trees as well
 struct tree_type {
-
 	int bark_tex, leaf_tex;
 	float branch_size, branch_radius, leaf_size, leaf_x_ar, height_scale, branch_break_off, branch_tscale, branch_color_var, bush_prob;
 	colorRGBA barkc, leafc;

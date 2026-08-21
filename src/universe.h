@@ -15,7 +15,7 @@ using std::ostringstream;
 using std::ostream;
 using std::istream;
 
-class s_object;
+struct s_object;
 class uasteroid;
 class uasteroid_field;
 class uasteroid_belt;
@@ -109,7 +109,7 @@ colorRGBA const P_ICE_C(  0.5, 0.7, 0.9, 1.0);
 class umoon;
 class uplanet;
 class ustar;
-class ussystem;
+struct ussystem;
 class ugalaxy;
 class ucell;
 class ushader_group;
@@ -130,7 +130,6 @@ struct shadow_vars_t {
 
 class named_obj { // size = 24
 	string name;
-
 public:
 	named_obj() : name("Unnamed") {}
 	named_obj(string const &name_) : name(name_) {}
@@ -191,10 +190,8 @@ struct rotated_obj { // size = 48
 class urev_body : public uobj_solid, public color_gen_class, public rotated_obj { // size = 360
 	// for textures/colors
 	unsigned char a[3]={}, b[3]={};
-	
 protected:
 	void calc_snow_thresh();
-
 public:
 	bool gas_giant=0; // planets only?
 	int owner=NO_OWNER;
@@ -272,7 +269,6 @@ public:
 	ussystem *system=nullptr;
 	std::shared_ptr<uasteroid_belt_planet> asteroid_belt;
 	unsigned ring_tid=0;
-	// trade items?
 
 	uplanet() : urev_body(UTYPE_PLANET), rscale(all_ones) {}
 	void create(bool phase);
@@ -354,8 +350,7 @@ public:
 };
 
 
-class ussystem : public uobj_rgen { // size = 312
-public:
+struct ussystem : public uobj_rgen { // size = 312
 	unsigned cluster_id=0;
 	ustar sun;
 	vector<uplanet> planets;
@@ -448,8 +443,7 @@ public:
 };
 
 
-class s_object { // size = 60
-public:
+struct s_object { // size = 60
 	int cellxyz[3], galaxy, cluster, system, planet, moon, asteroid_field, asteroid, type, val, id;
 	float dist;
 	uobj_solid *object;
@@ -529,7 +523,6 @@ struct line_query_state {
 class universe_t : protected cell_block {
 	icosphere_manager_t planet_manager;
 	cell_block temp; // used for shift_cells
-
 public:
 	void init();
 	void shift_cells(int dx, int dy, int dz);

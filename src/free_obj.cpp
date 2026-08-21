@@ -973,8 +973,7 @@ void uparticle_cloud::draw_obj(uobj_draw_data &ddata) const { // Note: assumes G
 // ************ US_PROJECTILE ************
 
 
-us_projectile::us_projectile(unsigned type) : tup_time(0), alloc_block(NULL) {
-
+us_projectile::us_projectile(unsigned type) {
 	flags = (OBJ_FLAGS_TARG | OBJ_FLAGS_PROJ);
 	set_type(type);
 }

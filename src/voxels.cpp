@@ -969,7 +969,6 @@ sphere_t voxel_model::get_bsphere() const {
 
 
 bool voxel_model::has_triangles() const {
-
 	for (tri_data_t::const_iterator i = tri_data[0].begin(); i != tri_data[0].end(); ++i) {
 		if (!i->empty()) return 1;
 	}
@@ -997,7 +996,6 @@ bool voxel_model::has_filled_at_edges() const {
 
 
 unsigned voxel_model::get_block_ix(unsigned voxel_ix) const {
-
 	assert(voxel_ix < size());
 	unsigned const y(voxel_ix/(nz*nx)), vxz(voxel_ix - y*nz*nx), x(vxz/nz), bx(x/xblocks), by(y/yblocks);
 	return by*params.num_blocks + bx;
@@ -1005,7 +1003,6 @@ unsigned voxel_model::get_block_ix(unsigned voxel_ix) const {
 
 
 voxel_model::voxel_model(noise_texture_manager_t *ntg, bool use_mesh_, unsigned num_lod_levels) : voxel_manager(use_mesh_), noise_tex_gen(ntg) {
-
 	assert(num_lod_levels > 0);
 	tri_data.resize(num_lod_levels);
 	pt_to_ix.resize(num_lod_levels);
@@ -1035,7 +1032,6 @@ void voxel_model::clear() {
 
 
 void voxel_model_ground::clear() {
-	
 	voxel_model::clear();
 	for (unsigned i = 0; i < data_blocks.size(); ++i) {clear_block(i);} // unnecessary?
 	data_blocks.clear();

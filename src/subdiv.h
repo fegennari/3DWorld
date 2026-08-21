@@ -38,7 +38,6 @@ protected:
 	float radius=0.0, def_pert=0.0;
 	float const *perturb_map=nullptr;
 	upsurface const *surf=nullptr;
-
 public:
 	typedef vert_norm_tc vertex_type_t;
 	//typedef vert_norm_comp_tc vertex_type_t; // lower resolution but less memory used, seems to make no real difference

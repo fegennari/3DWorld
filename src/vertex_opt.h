@@ -7,7 +7,6 @@
 
 
 class vert_optimizer {
-
 	vector<unsigned> &indices;
 	unsigned num_verts, npts_per_prim;
 

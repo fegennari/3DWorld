@@ -29,7 +29,6 @@ protected:
 unsigned const lmcell_ltype_off[NUM_LIGHTING_TYPES] = {0, 4, 8, 0, 0}; // sky, global, local, sky cobj accum, dynamic (unused)
 
 struct lmcell { // size = 52
-
 	float sc[3]={}, sv=0.0, gc[3]={}, gv=0.0, lc[3]={}, smoke=0.0; // *c[3]: RGB sky, global, local colors
 	unsigned char pflow[3]={255, 255, 255}; // flow: x, y, z
 	
@@ -227,7 +226,6 @@ protected:
 	bool bound=0, valid=1, disabled=0, dynamic_cobj=0;
 	int bind_cobj=-1;
 	point bind_pos;
-
 public:
 	bind_point_t() {}
 	bind_point_t(point const &pos, bool dynamic_=0) : bound(1), dynamic_cobj(dynamic_), bind_pos(pos) {}
@@ -250,7 +248,6 @@ class light_source_trig : public light_source, public bind_point_t {
 	sensor_t sensor;
 	float rot_rate=0.0;
 	vector3d rot_axis;
-
 public:
 	light_source_trig() {}
 	light_source_trig(light_source const &ls, bool smap=0, short platform_id_=-1, unsigned lix=0, sensor_t const &cur_sensor=sensor_t(), bool outdoor_shadows_=0, unsigned sm_size_=0)

@@ -22,15 +22,12 @@ enum {SOUND_LOOP_FIRE, SOUND_LOOP_RAIN, SOUND_LOOP_WIND, SOUND_LOOP_UNDERWATER, 
 
 
 struct openal_orient {
-
 	vector3d at, up;
 	openal_orient() {}
 	openal_orient(vector3d const &at_, vector3d const &up_) : at(at_), up(up_) {}
 };
 
-
 struct sound_params_t {
-
 	point pos;
 	float gain=1.0, pitch=1.0;
 	int sound_id=-1;
@@ -43,17 +40,13 @@ struct sound_params_t {
 	void write_to_cobj_file(std::ostream &out) const;
 };
 
-
 struct delayed_sound_t : public sound_params_t {
-
 	int id=-1, time=0;
 	delayed_sound_t() {}
 	delayed_sound_t(sound_params_t const &p, int i, int t) : sound_params_t(p), id(i), time(t) {}
 };
 
-
 class openal_buffer {
-
 	unsigned buffer;
 	float time=0.0;
 public:
@@ -72,7 +65,6 @@ public:
 
 
 class buffer_manager_t {
-
 	vector<openal_buffer> buffers;
 public:
 	openal_buffer &get_buffer(unsigned id) {assert(id < buffers.size()); return buffers[id];}
@@ -148,7 +140,6 @@ public:
 
 
 struct placed_sound_t {
-
 	int sound_id=-1;
 	sound_params_t params;
 	sensor_t sensor;

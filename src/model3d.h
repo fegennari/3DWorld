@@ -28,11 +28,10 @@ struct geom_xform_t { // should be packed, can read/write as POD
 
 	vector3d tv;
 	float scale;
-	bool mirror[3], swap_dim[3][3];
+	bool mirror[3]={}, swap_dim[3][3]={};
 
-	geom_xform_t(vector3d const &tv_=zero_vector, float scale_=1.0) : tv(tv_), scale(scale_) {
-		restore_mirror_and_swap();
-	}
+	geom_xform_t(vector3d const &tv_=zero_vector, float scale_=1.0) : tv(tv_), scale(scale_) {}
+
 	void restore_mirror_and_swap() {
 		for (unsigned i = 0; i < 3; ++i) {
 			UNROLL_3X(swap_dim[i][i_] = 0;)
@@ -128,7 +127,6 @@ struct poly_header_t {
 	unsigned npts, obj_id;
 	int mat_id;
 	vector3d n;
-
 	poly_header_t(int mat_id_=-1, unsigned obj_id_=0) : npts(0), obj_id(obj_id_), mat_id(mat_id_) {}
 };
 
@@ -277,7 +275,6 @@ public:
 
 
 template<typename T> class vntc_vect_t : public vector<T>, public indexed_vao_manager_with_shadow_t {
-
 protected:
 	bool has_tangents=0, finalized=0;
 	sphere_t bsphere;
@@ -381,7 +378,6 @@ public:
 
 
 template<typename T> struct vntc_vect_block_t : public deque<indexed_vntc_vect_t<T> > {
-
 	using deque<indexed_vntc_vect_t<T> >::begin;
 	using deque<indexed_vntc_vect_t<T> >::end;
 	
@@ -407,7 +403,6 @@ template<typename T> struct vntc_vect_block_t : public deque<indexed_vntc_vect_t
 
 
 template<typename T> struct geometry_t {
-
 	vntc_vect_block_t<T> triangles, quads;
 
 	void calc_tangents_blocks(vntc_vect_block_t<T> &blocks, unsigned npts) {assert(0);}
@@ -481,7 +476,6 @@ public:
 
 
 struct material_params_t { // Warning: changing this struct will invalidate the model3d file format
-
 	colorRGB ka=WHITE, kd=WHITE, ks=BLACK, ke=BLACK, tf=WHITE;
 	float ns=1.0, ni=1.0, alpha=1.0, tr=0.0;
 	unsigned illum=2;
@@ -496,7 +490,6 @@ struct material_t : public material_params_t {
 	float draw_order_score=0.0, avg_area_per_tri=0.0, tot_tri_area=0.0;
 	float metalness=-1.0; // < 0 disables; should go into material_params_t, but that would invalidate the model3d file format
 	string name, filename;
-
 	geometry_t<vert_norm_tc> geom;
 	geometry_t<vert_norm_tc_tan> geom_tan;
 
@@ -540,7 +533,6 @@ class model3d {
 	// read/write options
 	string filename;
 	int recalc_normals=0, group_cobjs_level=0;
-
 	// geometry
 	geometry_t<vert_norm_tc> unbound_geom;
 	base_mat_t unbound_mat;
@@ -552,7 +544,6 @@ class model3d {
 	bool from_model3d_file=0, has_cobjs=0, needs_alpha_test=0, needs_bump_maps=0, has_spec_maps=0, has_gloss_maps=0, xform_zvals_set=0, needs_trans_pass=0, has_alpha_mask=0;
 	float metalness=0.0; // should be per-material, but not part of the material file and specified per-object instead
 	float lod_scale=1.0;
-
 	// materials
 	deque<material_t> materials;
 	string_map_t mat_map; // maps material names to materials indexes
@@ -560,7 +551,6 @@ class model3d {
 	cobj_tree_tquads_t coll_tree;
 	colorRGBA cached_avg_color=ALPHA0; // used by get_and_cache_avg_color()
 	bool textures_loaded=0;
-
 	// transforms
 	vector<model3d_xform_t> transforms;
 
@@ -574,7 +564,6 @@ class model3d {
 	};
 	typedef vect_smap_t<model_smap_data_t> per_model_smap_data;
 	map<rotation_t, per_model_smap_data> smap_data;
-
 	// lighting
 	string sky_lighting_fn;
 	unsigned sky_lighting_sz[3];
@@ -722,7 +711,6 @@ class model_from_file_t {
 	string rel_path;
 protected:
 	model3d &model;
-
 public:
 	model_from_file_t(string const &fn, model3d &model_) : model(model_) {rel_path = get_path(fn);}
 	string open_include_file(string const &fn, string const &type, ifstream &in_inc) const;

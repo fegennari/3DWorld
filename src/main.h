@@ -16,7 +16,6 @@ extern float zcenter, leaf_color_coherence, tree_color_coherence, sun_radius, mo
 extern vector3d wind;
 extern colorRGBA leaf_base_color;
 extern obj_group obj_groups[];
-
 // camera variables
 extern double c_radius, c_theta, c_phi, up_theta, camera_y;
 extern float sun_rot, moon_rot;

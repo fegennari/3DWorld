@@ -17,18 +17,14 @@ unsigned const SINE_DATA_SIZE  = NUM_SINE_PARAMS*TOT_NUM_SINES;
 unsigned const SUBDIV_SECTS    = 8;
 
 
-class color_gen_class {
-
-public:
+struct color_gen_class {
 	virtual ~color_gen_class() {}
 	virtual void get_surface_color(unsigned char *data, float val, float phi) const = 0;
 };
 
 
 class ref_counted_obj {
-
 	unsigned ref_count=0; // starts at 0, not 1
-
 public:
 	void inc_ref() {++ref_count;}
 	void dec_ref() {assert(ref_count > 0); --ref_count;}
@@ -36,10 +32,9 @@ public:
 };
 
 
-class noise_gen_3d {
-public:
+struct noise_gen_3d {
 	unsigned num_sines=0;
-	float rdata[SINE_DATA_SIZE] = {0};
+	float rdata[SINE_DATA_SIZE] = {};
 	rand_gen_t rgen;
 
 	void set_rand_seeds(int rs1, int rs2) {rgen.set_state(rs1, rs2);}
@@ -52,7 +47,6 @@ public:
 
 class upsurface : public ref_counted_obj, public noise_gen_3d { // size = 104 + 4*336 = 1784 (+cache)
 
-private:
 	struct cache_entry {
 		point p;
 		float val=0.0;
@@ -60,9 +54,7 @@ private:
 		cache_entry(point const &pt=all_zeros) : p(pt) {}
 		size_t hash() const {return (10831*(*(int const*)(&p[0])) + 15601*(*(int const*)(&p[1])) + 21401*(*(int const*)(&p[2])));}
 	};
-
 	mutable vector<cache_entry> val_cache;
-
 public:
 	int type;
 	unsigned ssize=0;

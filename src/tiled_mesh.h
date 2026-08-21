@@ -14,7 +14,6 @@
 #include "shadow_map.h"
 #include "animals.h"
 #include <unordered_map>
-#include <unordered_set>
 
 
 bool const ENABLE_TREE_LOD    = 1; // faster but has popping artifacts
@@ -37,7 +36,6 @@ extern float grass_length, water_plane_z, tree_scale, far_clip_ratio;
 
 
 class lightning_strike_t {
-
 	int time=0;
 	line3d path;
 public:
@@ -49,7 +47,6 @@ public:
 	void draw() const;
 	void end_draw() const;
 };
-
 
 struct ix_sz_pair {
 	unsigned short ix=0, sz=0;
@@ -67,7 +64,6 @@ public:
 class tile_t;
 
 struct tile_smap_data_t : public smap_data_t {
-
 	int dxoff=0, dyoff=0;
 	unsigned lod_level;
 	tile_t *tile;
@@ -80,7 +76,6 @@ struct tile_smap_data_t : public smap_data_t {
 
 
 class tile_shadow_map_manager {
-
 	vector<smap_data_state_t> free_list[NUM_LIGHT_SRC][NUM_SMAP_LODS];
 public:
 	tile_smap_data_t new_smap_data(unsigned tu_id, tile_t *tile, unsigned light, unsigned lod_level);
@@ -96,7 +91,6 @@ inline float get_tree_scale_denom  () {return max(1.0f, TREE_LOD_THRESH*calc_tre
 
 
 struct tile_xy_pair {
-
 	int x, y;
 	tile_xy_pair(int x_=0, int y_=0) : x(x_), y(y_) {}
 	bool operator==(tile_xy_pair const &tp) const {return (x == tp.x && y == tp.y);}
@@ -114,7 +108,6 @@ tile_t *get_tile_from_xy(tile_xy_pair const &tp);
 
 
 struct tile_cloud_t : public volume_part_cloud {
-
 	float pos_hash=0.0;
 	point pos;
 	vector3d size; // {x, y, z}
@@ -134,7 +127,6 @@ struct cloud_inst_t {
 typedef vector<cloud_inst_t> cloud_draw_list_t;
 
 class tile_cloud_manager_t : public vector<tile_cloud_t> {
-
 	bool generated=0;
 	unsigned num_clouds=0;
 	float cur_move_dist=0.0;

@@ -43,7 +43,6 @@ struct blood_spot { // size = 20
 	point pos;
 };
 
-
 struct weapon_t { // size = 64
 
 	bool use_underwater, need_weapon, need_ammo;
@@ -141,7 +140,7 @@ int  get_range_to_mesh(point const &pos, vector3d const &vcf, point &coll_pos);
 point projectile_test(point const &pos, vector3d const &vcf_, float firing_error, float damage, int shooter,
 	float &range, float intensity=1.0, int ignore_cobj=-1, float max_range=0.0, vector3d *vcf_used=nullptr);
 float get_projectile_range(point const &pos, vector3d vcf, float dist, float range, point &coll_pos, vector3d &cnorm,
-						   int &coll, int &cindex, int source, int check_splash, int ignore_cobj=-1);
+int &coll, int &cindex, int source, int check_splash, int ignore_cobj=-1);
 void init_smiley(int smiley_id);
 int  get_damage_source(int type, int index, int questioner);
 void gen_rubble(int type, int num, point const &pos, int shooter, float const p[7]);

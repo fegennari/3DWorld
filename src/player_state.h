@@ -47,7 +47,6 @@ typedef vector<wpt_ix_t> waypt_adj_vect;
 
 
 struct waypoint_t {
-
 	bool user_placed, placed_item, goal, temp, visited=0, disabled=0, next_valid=0;
 	int came_from=-1, item_group=-1, item_ix=-1, coll_id=-1, connected_to=-1;
 	float g_score=0.0, f_score=0.0;
@@ -62,9 +61,7 @@ struct waypoint_t {
 	bool unreachable() const {return prev_wpts.empty();}
 };
 
-
 class waypoint_vector : public vector<waypoint_t> {
-
 	vector<wpt_ix_t> free_list;
 public:
 	wpt_ix_t add(waypoint_t const &w);
@@ -72,9 +69,7 @@ public:
 	void clear() {vector<waypoint_t>::clear(); free_list.clear();}
 };
 
-
 struct wpt_goal {
-
 	int mode; // 0: none, 1: user wpt, 2: placed item wpt, 3: goal wpt, 4: wpt index, 5: closest wpt, 6: closest visible wpt, 7: goal pos (new wpt)
 	unsigned wpt;
 	point pos;
@@ -83,9 +78,7 @@ struct wpt_goal {
 	bool is_reachable() const;
 };
 
-
 class waypt_used_set {
-
 	unsigned last_wp=0;
 	int last_frame=0;
 	map<unsigned, int> used;
@@ -97,7 +90,6 @@ public:
 
 
 class unreachable_pts {
-
 	int try_counts=0;
 	float try_dist_sq=0.0;
 	vector<point> cant_get;
@@ -118,7 +110,6 @@ public:
 
 
 struct destination_marker {
-
 	int xpos=0, ypos=0, dmin_sq=0;
 	float min_depth=0.0;
 	bool valid=0;
@@ -135,7 +126,6 @@ struct type_wt_t {
 	float weight;
 	type_wt_t(unsigned t=0, float w=1.0) : type(t), weight(w) {}
 };
-
 
 struct user_waypt_t {
 	int type;
@@ -239,7 +229,6 @@ struct player_state { // size = big
 
 
 struct teleporter : public sphere_t, public volume_part_cloud {
-
 	point dest;
 	double last_used_tfticks=0.0;
 	float draw_radius_scale=1.5;
@@ -259,9 +248,7 @@ struct teleporter : public sphere_t, public volume_part_cloud {
 	void free_context() {free_texture(tid);}
 };
 
-
 struct jump_pad : public sphere_t {
-	
 	vector3d velocity; // should be up
 	double last_used_tfticks=0.0;
 

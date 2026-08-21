@@ -26,7 +26,6 @@ class mesh_xy_grid_cache_t {
 	float mx0=0, my0=0, mdx=0, mdy=0, sine_offset=0;
 	int gen_mode=MGEN_SINE, gen_shape=0;
 	bool do_glaciate=0;
-
 	// compute_shader_t or compute_shader_comp_t, but only compute_shader_t works for tiled terrain (size not a multiple of block_size=16)
 	typedef compute_shader_t grid_gen_shader_t;
 	//typedef compute_shader_comp_t grid_gen_shader_t;
@@ -34,7 +33,6 @@ class mesh_xy_grid_cache_t {
 
 	void run_gpu_simplex();
 	void cache_gpu_simplex_vals();
-
 public:
 	~mesh_xy_grid_cache_t() {clear_context();}
 	bool build_arrays(float x0, float y0, float dx, float dy, unsigned nx, unsigned ny, bool cache_values=0, bool force_sine_mode=0, bool no_wait=0);
@@ -48,14 +46,12 @@ public:
 struct valley { // size = 70
 
 	struct spill_func { // size = 16
+		short index=-1, i=0, j=0, si=0, sj=0, spill=0;
+		float z_over=0.0;
 
-		short index, i, j, si, sj, spill;
-		float z_over;
-
-		spill_func() : index(-1), i(0), j(0), si(0), sj(0), spill(0), z_over(0.0) {}
+		spill_func() {}
 		spill_func(short ix, short i_, short j_, short si_, short sj_, short s, float z) : index(ix), i(i_), j(j_), si(si_), sj(sj_), spill(s), z_over(z) {}
 	};
-
 	short x, y, spill_index=-1;
 	bool has_spilled=0;
 	float w_volume=0, spill_vol=0, lwv=0, zval=0, min_zval=0, dz=0, area=0, fvol=0, depth=0, blood_mix=0, mud_mix=0, spill_integral=0;
@@ -66,7 +62,6 @@ struct valley { // size = 70
 	void create(int wsi);
 	float get_volume() const;
 };
-
 
 struct valley_w { // size = 8
 	short wsi=0, x=0, y=0, inside8=0;

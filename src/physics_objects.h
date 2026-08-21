@@ -18,7 +18,7 @@ struct spark_t {
 	float s=0.0;
 	point pos;
 	colorRGBA c=BLACK;
-	static int  const status = 1;
+	static int  const status=1;
 	static float const radius;
 	point const &get_pos() const {return pos;}
 
@@ -26,13 +26,11 @@ struct spark_t {
 	void draw(quad_batch_draw &qbd) const;
 };
 
-
 struct star { // size = 32
 	float intensity=1.0;
 	colorRGBA color;
 	point pos;
 };
-
 
 struct obj_type { // size = 88
 	int lifetime=0, tid=-1;
@@ -344,7 +342,6 @@ public:
 		for (unsigned i = 0; i < num_rem; ++i) {ixs.push_back(time_ixs[i].u);}
 		enabled = 1;
 	}
-
 	bool any_active() {
 		if (!enabled) return 0; // fast cached case
 
@@ -395,7 +392,6 @@ class obj_group { // size = 36
 	obj_vector_t<dwobject> objects;
 	vector<predef_obj> predef_objs;
 	p_transform_data td;
-
 public:
 	unsigned init_objects=0, max_objs=0, app_rate=0, end_id=0, new_id=0;
 	bool enabled=0, reorderable=0, predef_use_once=0;

@@ -32,11 +32,8 @@ struct base_mat_t { // size = 36
 	colorRGBA color;
 	colorRGB spec_color;
 
-	base_mat_t(int tid_=-1, colorRGBA const &color_=ALPHA0, colorRGBA const &sc=BLACK, float shine_=0.0)
-		: tid(tid_), shine(shine_), color(color_), spec_color(sc) {}
-	bool operator==(base_mat_t const &m) const {
-		return (tid == m.tid && shine == m.shine && color == m.color && spec_color == m.spec_color);
-	}
+	base_mat_t(int tid_=-1, colorRGBA const &color_=ALPHA0, colorRGBA const &sc=BLACK, float shine_=0.0) : tid(tid_), shine(shine_), color(color_), spec_color(sc) {}
+	bool operator==(base_mat_t const &m) const {return (tid == m.tid && shine == m.shine && color == m.color && spec_color == m.spec_color);}
 };
 
 
@@ -82,7 +79,6 @@ struct cobj_params : public obj_layer { // size = 88
 
 	int cf_index=-1;
 	unsigned char surfs=0, flags=0, destroy_prob=0;
-	//obj_layer *layer;
 
 	cobj_params() {}
 	cobj_params(float e, colorRGBA const &c, bool d, bool id, const collision_func cf=NULL, int ci=0, int ti=-1, float ts=1.0, int s=0,
@@ -101,7 +97,6 @@ class cobj_draw_buffer {
 	obj_layer last_layer;
 	vector<vert_norm_texp> tri_verts, quad_verts;
 	vector<vert_norm_tc> tc_verts, tc_tri_verts;
-
 public:
 	int is_wet=2; // 0=no, 1=yes, 2=unknown
 	cube_t light_atten_cube;
@@ -264,7 +259,6 @@ public:
 
 
 struct cobj_id_set_t : public set<unsigned, std::less<unsigned>, single_free_list_allocator<unsigned>> {
-
 	void must_insert(unsigned index) {
 		bool const did_ins(insert(index).second);
 		assert(did_ins);
@@ -282,7 +276,6 @@ struct cgroup_props_t {
 };
 
 struct cobj_group_t : public cobj_id_set_t, public cgroup_props_t {
-	
 	// Note inserting and erasing invalidate the props, forcing recalculation any time someone calls get_props()
 	void must_insert(unsigned index) {cobj_id_set_t::must_insert(index); valid = 0;}
 	void must_erase (unsigned index) {cobj_id_set_t::must_erase (index); valid = 0;}
@@ -291,7 +284,6 @@ struct cobj_group_t : public cobj_id_set_t, public cgroup_props_t {
 };
 
 struct cobj_groups_t : public deque<cobj_group_t> { // use deque rather than vector to avoid deep copying the cobj groups
-
 	unsigned new_group() {unsigned const id(size()); push_back(cobj_group_t()); return id;}
 	void invalidate_group(unsigned gid)               {assert(gid < size()); operator[](gid).valid = 0;}
 	void add_cobj   (unsigned gid, unsigned cid)      {assert(gid < size()); operator[](gid).must_insert(cid);}
@@ -438,7 +430,6 @@ struct coll_cell { // size = 52
 
 
 struct color_tid_vol : public cube_t {
-
 	int cid, tid, destroy;
 	bool draw, unanchored, is_2d;
 	float volume, thickness, tscale, max_frag_sz;
@@ -542,11 +533,11 @@ struct platform_cont : public deque<platform> {
 
 struct shadow_sphere : public sphere_t {
 
-	bool is_player;
-	char ctype;
-	int cid;
+	bool is_player=0;
+	char ctype=COLL_NULL;
+	int cid=-1;
 
-	shadow_sphere() : is_player(0), ctype(COLL_NULL), cid(-1) {}
+	shadow_sphere() {}
 	shadow_sphere(point const &pos0, float radius0, int cid0, bool is_player_=0);
 	
 	inline bool line_intersect(point const &p1, point const &p2) const {

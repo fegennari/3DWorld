@@ -15,28 +15,21 @@ extern unsigned alloced_fobjs[]; // testing
 inline upos_point_type const &get_player_pos2() { // faster inlined version
 	return player_ship().get_pos();
 }
-
 inline bool is_distant(point const &pos, float radius) {
 	return (!dist_less_than(pos, player_ship().get_pos(), NDIV_SCALE_U*radius));
 }
-
 inline bool univ_sphere_vis_dist(point const &pos, float radius) {
 	return (!is_distant(pos, radius) && univ_sphere_vis(pos, radius));
 }
 
 
 class usw_ray : public line_3dw {
-
-	float w1, w2;
+	float w1=0.0, w2=0.0;
 	colorRGBA color1, color2;
-
 public:
-	usw_ray() : w1(0.0f), w2(0.0f) {}
+	usw_ray() {}
 	usw_ray(float w1_, float w2_, point const &p1_, point const &p2_, colorRGBA const &c1, colorRGBA const &c2)
-		: line_3dw(p1_, p2_), w1(w1_), w2(w2_), color1(c1), color2(c2)
-	{
-		assert(w1 > 0.0 && w2 > 0.0);
-	}
+		: line_3dw(p1_, p2_), w1(w1_), w2(w2_), color1(c1), color2(c2) {assert(w1 > 0.0 && w2 > 0.0);}
 	void extend_to(usw_ray const &r) {p2 = r.p2; w2 = r.w2; color2 = r.color2;}
 	point const &get_pos() const {return p1;}
 	void draw(line_tquad_draw_t &drawer, point const *prev=nullptr, point const *next=nullptr, bool noise_mode=0) const;
@@ -44,7 +37,6 @@ public:
 
 
 struct usw_ray_group : public vector<usw_ray> {
-
 	line_tquad_draw_t drawer;
 
 	void add(usw_ray const &ray) {push_back(ray);}
@@ -52,17 +44,15 @@ struct usw_ray_group : public vector<usw_ray> {
 };
 
 
-class us_fleet {
-
-public:
+struct us_fleet {
 	string name;
-	unsigned align, ai, targ;
-	float spread;
+	unsigned align=0, ai=0, targ=0;
+	float spread=0.0;
 	point pos;
-	u_ship *flagship;
+	u_ship *flagship=nullptr;
 	vector<pair<unsigned, unsigned> > ships; // sclass, count
 
-	us_fleet() : align(0), ai(0), targ(0), spread(0.0f), flagship(nullptr) {}
+	us_fleet() {}
 	us_fleet(string const &name_, unsigned align_, unsigned ai_, unsigned targ_, float spread_, point const &pos_, unsigned counts[], unsigned multiplier=0);
 	void set_flagship(unsigned sclass, float child_stray_dist);
 	void spawn();
@@ -70,7 +60,6 @@ public:
 
 
 struct query_data {
-	
 	vector<cached_obj> const *objs;
 	point const pos;
 	float const urm;
@@ -88,7 +77,6 @@ struct query_data {
 
 
 struct base_query_data {
-
 	vector<cached_obj> const *objs;
 	point const pos; // compiler bug if const& ???
 	free_obj const *const questioner;
@@ -100,7 +88,6 @@ struct base_query_data {
 
 
 struct closeness_data : public base_query_data {
-
 	vector3d q_dir;
 	float dmin, min_dist_sq, init_dmin, dscale=1.0;
 	free_obj *closest=nullptr;
@@ -113,7 +100,6 @@ struct closeness_data : public base_query_data {
 
 
 struct all_query_data : public base_query_data {
-
 	float dmax_rscale, max_search_dist;
 	vector<free_obj const*> &results;
 
@@ -124,7 +110,6 @@ struct all_query_data : public base_query_data {
 
 
 struct line_int_data {
-
 	bool first_only=0, even_ncoll=0, visible_only=0, use_lpos=0;
 	int check_parent;
 	float length, line_radius, dist=0.0;
@@ -140,7 +125,6 @@ struct line_int_data {
 
 
 template<typename T> class free_obj_block {
-
 	T objs[BLOCK_SIZE];
 	unsigned used=0, freed=0;
 	bool in_use=0, valid=1;
@@ -177,7 +161,6 @@ public:
 
 
 template<typename T> class free_obj_allocator {
-
 	free_obj_block<T> *last;
 	free_obj_allocator(free_obj_allocator const &) = delete; // forbidden
 	void operator=(free_obj_allocator const &) = delete; // forbidden

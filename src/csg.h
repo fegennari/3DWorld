@@ -11,13 +11,10 @@
 float const TOLER = 1.0E-6;
 
 
-class rect {
+struct rect {
+	float d[2][2]={};
 
-public:
-	float d[2][2];
-
-	rect() {d[0][0] = d[0][1] = d[1][0] = d[1][1] = 0.0f;}
-
+	rect() {}
 	rect(float const r[2][2]) {
 		d[0][0] = r[0][0]; d[0][1] = r[0][1]; d[1][0] = r[1][0]; d[1][1] = r[1][1];
 		assert(nonzero());
@@ -57,7 +54,6 @@ class csg_cube : public cube_t {
 
 	csg_cube(unsigned char eflags0) : eflags(eflags0) {} // eflags constructor (internal)
 	bool subtract_from_internal(const csg_cube &cube, vector<csg_cube> &output, bool do_merge=1) const;
-
 public:
 	csg_cube() {}
 	csg_cube(float x1, float x2, float y1, float y2, float z1, float z2) : cube_t(x1, x2, y1, y2, z1, z2) {} // float constructor
@@ -85,7 +81,6 @@ class r_profile {
 	deque<rect> pend;
 
 	void add_rect_int(rect const &r);
-
 public:
 	r_profile() {}
 	r_profile(float const bb_[2][2]) : bb(bb_), tot_area(bb.area()) {assert(tot_area > 0.0);}

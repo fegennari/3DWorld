@@ -8,9 +8,9 @@
 
 
 template<class vert_type_t> struct sized_vert_t : public vert_type_t { // size = 20-32
-	float size;
+	float size=0.0;
 
-	sized_vert_t() : size(0.0f) {}
+	sized_vert_t() {}
 	sized_vert_t(vert_type_t const &v, float size_) : vert_type_t(v), size(size_) {}
 	static void set_vbo_arrays(bool set_state=1, void const *vbo_ptr_offset=NULL);
 	static void set_size_attr(unsigned stride, void const *vbo_ptr_offset);
@@ -20,7 +20,6 @@ template<class vert_type_t> struct sized_vert_t : public vert_type_t { // size =
 
 class pt_line_drawer {
 	vector<vert_norm_color> points, lines;
-
 public:
 	void clear() {
 		points.clear();
@@ -48,7 +47,6 @@ public:
 class pt_line_drawer_no_lighting_t { // uses vbo for static points/lines; used for universe mode stars
 	vector<vert_color> points, lines;
 	unsigned vbo[2]={};
-
 public:
 	void clear() {points.clear(); lines.clear(); free_vbo();}
 	void add_pt  (point const &v,  colorRGBA const &c) {points.emplace_back(v, c);}
@@ -67,7 +65,6 @@ public:
 // Note: we may want versions with and without normals
 template<class vert_type_t> class point_sprite_drawer_t {
 	vector<vert_type_t> points;
-
 public:
 	void clear() {points.clear();}
 	void reserve_pts(unsigned sz) {points.reserve(sz);}
@@ -112,7 +109,6 @@ struct quad_batch_draw { // Note: might want an indexed version of this
 
 class line_tquad_draw_t {
 	vector<vert_tc_color> verts;
-
 public:
 	bool empty() const {return verts.empty();}
 	size_t size() {return verts.size();}
@@ -130,7 +126,6 @@ template<typename T> class indexed_mesh_draw { // quads
 protected:
 	unsigned ivbo=0, ivbo_size=0, nx=0, ny=0; // in quads
 	vector<T> verts;
-
 public:
 	void clear();
 	void init(unsigned nx_, unsigned ny_);
@@ -209,7 +204,6 @@ class lt_atten_manager_t {
 	shader_t &shader;
 	int ulocs[5];
 	float last_light_atten=-2.0, last_refract_ix=0.0; // set to invalid values to start
-
 public:
 	lt_atten_manager_t(shader_t &shader_) : shader(shader_) {ulocs[0] = ulocs[1] = ulocs[2] = ulocs[3] = ulocs[4] = -1;}
 	void enable();
@@ -222,7 +216,6 @@ public:
 class reflect_plane_selector {
 	vector<cube_t> bcubes;
 	int sel_cube=-1;
-
 public:
 	bool empty() const {return bcubes.empty();}
 	bool enabled() const {return (!empty() && sel_cube >= 0);}

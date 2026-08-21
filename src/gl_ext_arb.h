@@ -118,7 +118,6 @@ template<typename T> void update_indices(unsigned ivbo, vector<T> const &indices
 
 
 struct vbo_wrap_t { // Note: not for use with index vbo
-
 	unsigned vbo=0;
 
 	bool vbo_valid() const {return (vbo > 0);}
@@ -133,7 +132,6 @@ struct vbo_wrap_t { // Note: not for use with index vbo
 };
 
 struct ubo_wrap_t { // uniform buffer object
-
 	unsigned ubo=0;
 
 	bool ubo_valid() const {return (ubo > 0);}
@@ -149,7 +147,6 @@ struct ubo_wrap_t { // uniform buffer object
 };
 
 struct vao_wrap_t {
-
 	unsigned vao=0;
 
 	bool is_valid() const {return (vao != 0);}
@@ -171,7 +168,6 @@ struct vao_wrap_t {
 };
 
 struct indexed_vbo_manager_t : public vbo_wrap_t {
-
 	unsigned ivbo=0, gpu_mem=0; // aka EBO
 
 	bool ivbo_valid() const {return (ivbo > 0);}
@@ -207,7 +203,6 @@ struct indexed_vbo_manager_t : public vbo_wrap_t {
 };
 
 struct vao_manager_t : public vbo_wrap_t, public vao_wrap_t {
-
 	template<typename vert_type_t> void create_and_upload(vector<vert_type_t> const &data, int dynamic_level=0, bool setup_pointers=0) {
 		if (vao) {assert(vbo); return;} // already set
 		ensure_vao_bound();
@@ -220,7 +215,6 @@ struct vao_manager_t : public vbo_wrap_t, public vao_wrap_t {
 };
 
 struct indexed_vao_manager_t : public indexed_vbo_manager_t, public vao_wrap_t {
-
 	void reset_vbos_to_zero() {indexed_vbo_manager_t::reset_vbos_to_zero(); vao = 0;} // virtual?
 	void clear_vbos() {indexed_vbo_manager_t::clear_vbos(); vao_wrap_t::clear();} // and VAO
 

@@ -31,7 +31,6 @@ typedef std::shared_ptr<ship_coll_obj const> p_const_ship_coll_obj;
 
 
 class cobj_vector_t : public vector<p_const_ship_coll_obj> {
-
 	void resize(size_t sz); // prohibited unless called from within this class
 public:
 	void clear();
@@ -40,9 +39,7 @@ public:
 };
 
 
-class uobject_base { // size = 32
-
-public:
+struct uobject_base { // size = 32
 	float radius=0.0;
 	upos_point_type pos; // required for high precision universe coordinates (can't use a sphere_t)
 
@@ -53,10 +50,7 @@ public:
 	void set_pos(point const &pos_) {pos = pos_;}
 };
 
-
-class uobject : public uobject_base { // size = 48
-
-public:
+struct uobject : public uobject_base { // size = 48
 	char status=0;
 
 	virtual ~uobject() {}
@@ -89,7 +83,6 @@ public:
 
 
 struct ellipsoid_t {
-
 	float xy_angle=0.0;
 	vector3d scale, axis;
 };

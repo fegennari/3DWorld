@@ -6,7 +6,6 @@
 #include "3DWorld.h"
 
 struct trigger_t {
-
 	point act_pos;
 	float act_dist, auto_off_time, auto_on_time;
 	int req_keycard_id=-1, obj_type_id=-1;

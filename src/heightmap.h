@@ -16,9 +16,7 @@ void adjust_brush_weight(float &delta, float dval, int shape);
 
 
 class heightmap_t : public texture_t {
-
 	unsigned get_pixel_ix(unsigned x, unsigned y) const;
-
 	void run_erosion (vector<float> &vals);
 	void run_city_gen(vector<float> &vals);
 	void to_floats   (vector<float> &vals) const;
@@ -37,7 +35,6 @@ public:
 
 
 class tex_mod_map_manager_t {
-
 public:
 	typedef unsigned short tex_ix_t;
 	typedef int hmap_val_t; // really needs to be from -2^16 to 2^16, so we need 17 bits
@@ -82,11 +79,9 @@ public:
 
 	typedef vector<mod_elem_t> tex_mod_vect_t;
 	typedef vector<hmap_brush_t> brush_vect_t;
-
 protected:
 	tex_mod_map_t mod_map;
 	brush_vect_t brush_vect;
-
 public:
 	void add_mod(mod_elem_t const &elem) {mod_map.add(elem);}
 	void add_mod(tex_mod_vect_t const &mod);
@@ -111,7 +106,6 @@ public:
 class terrain_hmap_manager_t : public tex_mod_map_manager_t {
 protected:
 	heightmap_t hmap;
-
 public:
 	void load(char const *const fn, bool invert_y=0);
 	void proc_gen_heightmap(unsigned size);
@@ -143,7 +137,6 @@ public:
 
 
 struct hmap_brush_param_t {
-
 	unsigned delay=1; // placement delay in ticks
 	int shape=BSHAPE_COSINE;
 	int radius_exp=5;

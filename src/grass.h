@@ -32,7 +32,6 @@ protected:
 			: p(p_), dir(dir_), n(n_), on_mesh(on_mesh_), w(w_) {c[0] = c_[0]; c[1] = c_[1]; c[2] = c_[2];}
 		void merge(grass_t const &g);
 	};
-
 	vector<grass_t> grass;
 	bool data_valid=0;
 	rand_gen_pregen_t rgen;
@@ -86,7 +85,6 @@ protected:
 		flower_t() : radius(0.0f), height(0.0f) {}
 		flower_t(point const &p, vector3d const &n, float r, float h, colorRGBA const &c) : pos(p), normal(n), radius(r), height(h), color(c) {}
 	};
-
 	vector<flower_t> flowers;
 	rand_gen_t rgen;
 	bool generated=0;

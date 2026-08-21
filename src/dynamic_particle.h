@@ -20,7 +20,6 @@ class dynamic_particle : public sphere_t { // size = 68
 	float intensity=0.0, bwidth=1.0;
 	vector3d velocity;
 	colorRGBA color;
-
 public:
 	dynamic_particle();
 	~dynamic_particle() {remove_cobj();}
@@ -33,13 +32,11 @@ public:
 	void remove_cobj();
 };
 
-
 class dynamic_particle_system : public cube_map_shadow_manager { // size = 16
 
 	vector<dynamic_particle>  particles;
 	vector<vector<unsigned> > bins;
 	int valid_frame=-1;
-
 public:
 	void add_particle(dynamic_particle const &p) {particles.push_back(p);}
 	size_t size() const {return particles.size();}
@@ -52,7 +49,6 @@ public:
 	void add_cobj_shadows() const;
 	void build_lookup_matrix();
 };
-
 
 extern dynamic_particle_system d_part_sys;
 

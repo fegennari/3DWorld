@@ -23,11 +23,10 @@ enum {ETYPE_NONE=0, ETYPE_FIRE, ETYPE_NUCLEAR, ETYPE_ENERGY, ETYPE_ATOMIC, ETYPE
 enum {CLOUD_EXP_NONE=0, CLOUD_EXP_FIRE, CLOUD_EXP_ICE};
 
 class free_obj; // forward references
-class uobject;
+struct uobject;
 
 
 struct exp_type_params {
-
 	float duration;
 	colorRGBA c1, c2;
 
@@ -36,7 +35,6 @@ struct exp_type_params {
 
 
 struct cloud_explosion : public volume_part_cloud {
-
 	void setup(float radius) {gen_pts(radius);}
 	static void draw_setup(vpc_shader_t &s);
 	void draw(vpc_shader_t &s, point const &pos, float radius, int cloud_exp_type=CLOUD_EXP_FIRE) const;
@@ -44,7 +42,6 @@ struct cloud_explosion : public volume_part_cloud {
 
 
 struct blastr { // size = 118 (120)
-
 	int time=0, st_time=0, type=0, src=-1;
 	float size=0, cur_size=0, damage=0, exp_sphere_scale=0;
 	point pos;
@@ -70,7 +67,6 @@ struct blastr { // size = 118 (120)
 
 
 struct explosion {
-
 	unsigned flags=0;
 	int time=0, wclass=-1;
 	float radius=0.0, intensity=0.0;

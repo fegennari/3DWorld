@@ -46,9 +46,9 @@ struct vert_wrap_t { // size = 12; so we can put the vertex first
 
 
 struct vert_tc_t : public vert_wrap_t { // size = 20
-	float t[2];
+	float t[2]={};
 	typedef vert_tc_t non_color_class;
-	vert_tc_t() {t[0] = t[1] = 0.0f;}
+	vert_tc_t() {}
 	vert_tc_t(point const &v_, float ts, float tt) : vert_wrap_t(v_) {t[0] = ts; t[1] = tt;}
 	vert_tc_t(float x, float y, float z, float ts, float tt) : vert_wrap_t(point(x, y, z)) {t[0] = ts; t[1] = tt;}
 	void assign(point const &v_, float ts, float tt) {v = v_; t[0] = ts; t[1] = tt;}
@@ -70,9 +70,9 @@ struct vert_norm_comp : public vert_wrap_t, public norm_comp { // size = 16
 
 
 struct vert_norm_comp_tc : public vert_norm_comp { // size = 24
-	float t[2];
+	float t[2]={};
 	typedef vert_norm_comp_tc non_color_class;
-	vert_norm_comp_tc() {t[0] = t[1] = 0.0f;}
+	vert_norm_comp_tc() {}
 	vert_norm_comp_tc(vert_norm_comp const &vn, float ts, float tt) : vert_norm_comp(vn) {t[0] = ts; t[1] = tt;}
 	vert_norm_comp_tc(point const &v_, norm_comp const &n_, float ts, float tt) : vert_norm_comp(v_, n_) {t[0] = ts; t[1] = tt;}
 	vert_norm_comp_tc(point const &v_, vector3d  const &n_, float ts, float tt) : vert_norm_comp(v_, n_) {t[0] = ts; t[1] = tt;}
@@ -83,8 +83,8 @@ struct vert_norm_comp_tc : public vert_norm_comp { // size = 24
 
 
 struct vert_norm_comp_tc_comp : public vert_norm_comp { // size = 20
-	short t[2]; // could even use char
-	vert_norm_comp_tc_comp() {t[0] = t[1] = 0;}
+	short t[2]={}; // could even use char
+	vert_norm_comp_tc_comp() {}
 	vert_norm_comp_tc_comp(point const &v_, vector3d const &n_, float ts, float tt) : vert_norm_comp(v_, n_) {set_tcs(ts, tt);}
 	void set_tcs(float ts, float tt) {t[0] = 32767*ts; t[1] = 32767*tt;}
 	static void set_vbo_arrays(bool set_state=1, void const *vbo_ptr_offset=NULL);
@@ -92,9 +92,9 @@ struct vert_norm_comp_tc_comp : public vert_norm_comp { // size = 20
 
 
 struct vert_norm_tc : public vert_norm { // size = 32
-	float t[2];
+	float t[2]={};
 	typedef vert_norm_tc non_color_class;
-	vert_norm_tc() {t[0] = t[1] = 0.0f;}
+	vert_norm_tc() {}
 	vert_norm_tc(point const &v_, vector3d const &n_, float ts, float tt) : vert_norm(v_, n_) {t[0] = ts;    t[1] = tt;   }
 	vert_norm_tc(point const &v_, vector3d const &n_, float const t_[2])  : vert_norm(v_, n_) {t[0] = t_[0]; t[1] = t_[1];}
 	vert_norm_tc(vert_norm const &vn, float ts=0.0, float tt=1.0) : vert_norm(vn) {t[0] = ts; t[1] = tt;}
@@ -138,9 +138,9 @@ struct vert_norm_tc_tan : public vert_norm_tc { // size = 48
 
 
 struct color_wrapper { // size = 4, can be used in a union
-	unsigned char c[4]; // Note: c[3] (alpha component) is not used in all cases
+	unsigned char c[4]={}; // Note: c[3] (alpha component) is not used in all cases
 
-	color_wrapper() {c[0] = c[1] = c[2] = c[3] = 0;}
+	color_wrapper() {}
 	color_wrapper(colorRGBA const &c_) {set_c4(c_);}
 	color_wrapper(colorRGB  const &c_) {set_c3(c_);}
 	bool operator==(color_wrapper const &w) const {return (c[0] == w.c[0] && c[1] == w.c[1] && c[2] == w.c[2] && c[3] == w.c[3]);}
@@ -222,12 +222,9 @@ struct vert_norm_comp_color : public vert_norm_comp, public color_wrapper { // s
 struct vert_norm_tc_color : public vert_norm_tc, public color_wrapper { // size = 36
 	typedef vert_norm_tc non_color_class;
 	vert_norm_tc_color() {}
-	vert_norm_tc_color(point const &v_, vector3d const &n_, float ts, float tt, colorRGB const &c_)
-		: vert_norm_tc(v_, n_, ts, tt) {set_c3(c_);}
-	vert_norm_tc_color(point const &v_, vector3d const &n_, float ts, float tt, colorRGBA const &c_)
-		: vert_norm_tc(v_, n_, ts, tt) {set_c4(c_);}
-	vert_norm_tc_color(point const &v_, vector3d const &n_, float ts, float tt, color_wrapper const &cw)
-		: vert_norm_tc(v_, n_, ts, tt), color_wrapper(cw) {}
+	vert_norm_tc_color(point const &v_, vector3d const &n_, float ts, float tt, colorRGB      const &c_) : vert_norm_tc(v_, n_, ts, tt) {set_c3(c_);}
+	vert_norm_tc_color(point const &v_, vector3d const &n_, float ts, float tt, colorRGBA     const &c_) : vert_norm_tc(v_, n_, ts, tt) {set_c4(c_);}
+	vert_norm_tc_color(point const &v_, vector3d const &n_, float ts, float tt, color_wrapper const &cw) : vert_norm_tc(v_, n_, ts, tt), color_wrapper(cw) {}
 	vert_norm_tc_color(point const &v_, vector3d const &n_, float ts, float tt, unsigned char const *const c_, bool has_alpha=0)
 		: vert_norm_tc(v_, n_, ts, tt) {c[0] = c_[0]; c[1] = c_[1]; c[2] = c_[2]; c[3] = (has_alpha ? c_[3] : 255);}
 	vert_norm_tc_color(vert_norm const &vn, float ts, float tt, color_wrapper const &cw) : vert_norm_tc(vn, ts, tt), color_wrapper(cw) {}
@@ -242,8 +239,8 @@ struct vert_norm_tc_color : public vert_norm_tc, public color_wrapper { // size 
 struct vert_tc_color : public vert_tc_t, public color_wrapper { // size = 24
 	typedef vert_tc_t non_color_class;
 	vert_tc_color() {}
-	vert_tc_color(point const &v_, float ts, float tt, colorRGBA const &c_) : vert_tc_t(v_, ts, tt) {set_c4(c_);}
-	vert_tc_color(point const &v_, float ts, float tt, unsigned char const c_[4]) : vert_tc_t(v_, ts, tt) {UNROLL_4X(c[i_] = c_[i_];)}
+	vert_tc_color(point const &v_, float ts, float tt, colorRGBA     const &c_   ) : vert_tc_t(v_, ts, tt) {set_c4(c_);}
+	vert_tc_color(point const &v_, float ts, float tt, unsigned char const  c_[4]) : vert_tc_t(v_, ts, tt) {UNROLL_4X(c[i_] = c_[i_];)}
 	static void set_vbo_arrays(bool set_state=1, void const *vbo_ptr_offset=NULL);
 };
 

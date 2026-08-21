@@ -140,10 +140,10 @@ struct texture_binder_t {
 
 struct plant_base : public burnable_scenery_obj { // size = 56
 	struct shader_state_t {
-		int color_scale_loc, normal_scale_loc, wind_scale_loc, wind_add_loc;
-		float wind_scale;
+		int color_scale_loc=-1, normal_scale_loc=-1, wind_scale_loc=-1, wind_add_loc=-1;
+		float wind_scale=1.0;
 		texture_binder_t texture_binder;
-		shader_state_t() : color_scale_loc(-1), normal_scale_loc(-1), wind_scale_loc(-1), wind_add_loc(-1), wind_scale(1.0) {}
+
 		void set_color_scale(shader_t &s, colorRGBA const &color);
 		void set_normal_scale(shader_t &s, float normal_scale);
 		void set_wind_scale(shader_t &s, float wscale);

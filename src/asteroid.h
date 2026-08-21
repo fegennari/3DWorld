@@ -9,7 +9,6 @@ unsigned const AF_GRID_SZ = 12;
 
 
 struct asteroid_belt_cloud : public volume_part_cloud {
-
 	point pos;
 	float radius=0.0;
 	unsigned vbo_pos=0;
@@ -22,7 +21,6 @@ struct asteroid_belt_cloud : public volume_part_cloud {
 
 
 class uasteroid : public uobject, public rotated_obj {
-
 	unsigned inst_id=0;
 	vector3d scale, velocity;
 	float orbital_dist=0.0; // for asteroid_belt asteroids
@@ -65,7 +63,6 @@ public:
 
 
 class uasteroid_cont : public uobject_base, public shadowed_uobject, public vector<uasteroid> {
-
 	int rseed=0;
 protected:
 	pt_line_drawer pld; // for drawing
@@ -83,14 +80,12 @@ public:
 	void free_uobj() {clear();}
 	void begin_render(shader_t &shader, bool custom_lighting) {begin_render(shader, shadow_casters.size(), custom_lighting);}
 	float calc_shadow_atten(point const &cpos) const;
-
 	static void begin_render(shader_t &shader, unsigned num_shadow_casters, bool custom_lighting);
 	static void end_render(shader_t &shader);
 };
 
 
 class uasteroid_field : public uasteroid_cont {
-
 	vector<unsigned short> grid[AF_GRID_SZ][AF_GRID_SZ][AF_GRID_SZ];
 public:
 	void apply_physics(point_d const &pos_, point const &camera);
@@ -99,7 +94,6 @@ public:
 
 
 class uasteroid_belt : public uasteroid_cont {
-
 protected:
 	struct cloud_inst {
 		unsigned asteroid_id, cloud_id;
@@ -115,7 +109,6 @@ protected:
 
 	void xform_to_local_torus_coord_space(point &pt) const;
 	void gen_belt_placements(unsigned max_num, float belt_width, float belt_thickness, float max_ast_radius);
-
 public:
 	uasteroid_belt(vector3d const &opn, vector3d const &scale_) : orbital_plane_normal(opn), orbit_scale(scale_) {}
 	virtual bool is_planet_ab() const {return 0;}
@@ -132,7 +125,6 @@ public:
 
 
 class uasteroid_belt_system : public uasteroid_belt {
-
 	ussystem *system;
 	vector<sphere_t> colliders;
 
@@ -149,7 +141,6 @@ public:
 
 
 class uasteroid_belt_planet : public uasteroid_belt {
-
 	float bwidth=0.0;
 	uplanet *planet;
 

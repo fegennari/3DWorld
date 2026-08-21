@@ -351,7 +351,6 @@ class tree_cont_t : public vector<tree> {
 	vector<tree *> to_update_leaves;
 	cube_t all_bcube;
 	bool generated=0;
-
 public:
 	tree_cont_t(tree_data_manager_t &tds) : shared_tree_data(tds) {}
 	bool was_generated() const {return generated;}

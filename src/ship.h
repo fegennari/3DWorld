@@ -131,7 +131,7 @@ string    const align_names[NUM_ALIGNMENT] = {"Neutral", "Player", "Government",
 template<typename T> class free_obj_block;
 template<typename T> class free_obj_allocator;
 
-class s_object;
+struct s_object;
 class urev_body;
 class free_obj;
 class u_ship_base;
@@ -157,8 +157,7 @@ bool have_excess_credits(unsigned align);
 float get_wealthy_value (unsigned align);
 
 
-class ushadow_volume {
-public:
+struct ushadow_volume {
 	bool invalid=0;
 	virtual ~ushadow_volume() {}
 	virtual void draw(upos_point_type const &pos) const = 0;
@@ -167,10 +166,9 @@ public:
 
 class ushadow_sphere : public ushadow_volume { // currently only supports spheres/cylinder shadow projections
 	int nsides;
-	double rad[2];
+	double rad[2]={};
 	upos_point_type spos[2];
 	float const *pmap=nullptr;
-
 public:
 	ushadow_sphere(upos_point_type const &sobj_pos, float sobj_r, upos_point_type const &cur_pos, float cur_radius,
 		point const &sun_pos, int ndiv, bool player, free_obj const *const obj=NULL, float rmin=0.0);
@@ -213,7 +211,7 @@ public:
 	float t_exp, dist, radius, crs, cloakval=0.0;
 	upos_point_type pos;
 	vector3d vel, dir, upv, tdir;
-	colorRGBA color_a, color_b, engine_color;
+	colorRGBA color_a=WHITE, color_b=WHITE, engine_color=BLACK;
 	free_obj const *obj;
 	shader_t *shader;
 	vpc_shader_t *upc_shader;
@@ -224,7 +222,7 @@ public:
 		float radius_, float crs_, bool dlights_, bool first, bool final, bool p1, bool p2)
 		: ndiv(ndiv_), time(t), on_time(t), powered(power), specular_en(spec_en), dlights(dlights_), first_pass(first), final_pass(final),
 		phase1(p1), phase2(p2), t_exp(texp), dist(dist_), radius(radius_), crs(crs_), pos(pos_), vel(vel_), dir(dir_), upv(upv_), tdir(dir),
-		color_a(WHITE), color_b(WHITE), engine_color(BLACK), obj(obj_), shader(shader_), upc_shader(upc_shader_) {}
+		obj(obj_), shader(shader_), upc_shader(upc_shader_) {}
 
 	inline bool is_moving() const {return (powered && (vel.mag_sq() > TOLERANCE));}
 	bool can_have_engine_lights() const;
@@ -348,7 +346,6 @@ struct hyper_inhibit_t : public uobject_base {
 
 class ship_coll_obj {
 	float dscale;
-
 public:
 	ship_coll_obj(float dscale_=1.0) : dscale(dscale_) {}
 	virtual ~ship_coll_obj() {}
@@ -370,7 +367,6 @@ public:
 
 class ship_cylinder : public cylinder_3dw, public ship_coll_obj { // more accurately a truncated cone
 	bool check_ends=0;
-
 public:
 	ship_cylinder() {}
 	ship_cylinder(cylinder_3dw const &c, bool check_ends_) : cylinder_3dw(c), check_ends(check_ends_) {}
@@ -424,7 +420,6 @@ public:
 class ship_torus : public ship_coll_obj {
 	point center;
 	float ri, ro;
-
 public:
 	ship_torus(point const &c=all_zeros, float ri_=0.0, float ro_=0.0, float ds=1.0) : ship_coll_obj(ds), center(c), ri(ri_), ro(ro_) {}
 	ship_torus* clone() const {return new ship_torus(*this);}
@@ -442,11 +437,9 @@ public:
 
 class ship_bounded_cylinder : public ship_cylinder { // cylinder AND cube (can almost inherit from ship_cube as well)
 	ship_cube bcube;
-
 public:
 	ship_bounded_cylinder() {}
-	ship_bounded_cylinder(ship_cylinder const &cylin, ship_cube const &cube)
-		: ship_cylinder(cylin), bcube(cube) {}
+	ship_bounded_cylinder(ship_cylinder const &cylin, ship_cube const &cube) : ship_cylinder(cylin), bcube(cube) {}
 	ship_bounded_cylinder* clone() const {return new ship_bounded_cylinder(*this);}
 	void translate(point const &p) {ship_cylinder::translate(p); bcube.translate(p);}
 	void draw(unsigned ndiv) const;
@@ -464,8 +457,7 @@ public:
 class ship_capsule : public cylinder_3dw, public ship_coll_obj { // cylinder with hemispheres at either end
 public:
 	ship_capsule() {}
-	ship_capsule(point const &p1_, point const &p2_, float radius_, float ds=1.0)
-		: cylinder_3dw(p1_, p2_, radius_, radius_), ship_coll_obj(ds) {}
+	ship_capsule(point const &p1_, point const &p2_, float radius_, float ds=1.0) : cylinder_3dw(p1_, p2_, radius_, radius_), ship_coll_obj(ds) {}
 	ship_capsule* clone() const {return new ship_capsule(*this);}
 	void translate(point const &p) {cylinder_3dw::translate(p);}
 	void draw(unsigned ndiv) const;
@@ -482,7 +474,6 @@ public:
 class ship_triangle_list : public ship_sphere {
 	vector<triangle> triangles;
 	vector<vert_norm> verts; // for drawing
-
 public:
 	ship_triangle_list(ship_sphere const &ss) : ship_sphere(ss) {}
 	ship_triangle_list* clone() const {return new ship_triangle_list(*this);}
@@ -500,8 +491,7 @@ public:
 };
 
 
-class us_class {
-public:
+struct us_class {
 	bool inited=0, has_pt_def=0;
 	float radius=0, cr_scale=0, mass=0, cargo=0, exp_scale=0, accel=0, decel=0, roll_rate=0, max_speed=0, max_turn=0, stability=0;
 	float max_shields=0, max_armor=0, shield_re=0, armor_re=0, max_t=0, hull_str=0, damage_abs=0;
@@ -561,7 +551,6 @@ struct beam_weap_params {
 
 class us_weapon {
 	beam_weap_params bwp; // not used in all cases
-
 public:
 	bool inited=0;
 	int btime=0;
@@ -587,19 +576,16 @@ public:
 
 
 struct intersect_params {
-	bool calc_int, calc_dscale;
+	bool calc_int=0, calc_dscale=0;
 	point const p_last;
 	point p_int;
-	vector3d norm;
+	vector3d norm=plus_z;
 	float dscale=1.0;
 
-	intersect_params() : calc_int(0), calc_dscale(0), norm(plus_z) {}
+	intersect_params() {}
 	intersect_params(point const &p_last_, point const &p_int_=all_zeros, vector3d const &norm_=plus_z)
 		: calc_int(1), calc_dscale(1), p_last(p_last_), p_int(p_int_), norm(norm_) {}
-		
-	void update_int_pn(point const &p_int_, vector3d const &norm_, float dscale_) {
-		p_int = p_int_; norm = norm_; dscale = dscale_;
-	}
+	void update_int_pn(point const &p_int_, vector3d const &norm_, float dscale_) {p_int = p_int_; norm = norm_; dscale = dscale_;}
 };
 
 extern intersect_params def_int_params; // default value for option function arguments
@@ -618,7 +604,6 @@ protected:
 	unsigned exp_lights[NUM_EXP_LIGHTS], num_exp_lights;
 	unsigned alignment;
 	float c_radius=0.0;
-
 	static unsigned next_obj_id;
 
 	// no virtual function call for efficiency
@@ -821,7 +806,6 @@ public:
 
 class stationary_obj : public free_obj { // a free_obj that doesn't actually move?
 	unsigned type, lifetime;
-
 public:
 	stationary_obj(unsigned type_, point const &pos_, float radius_, unsigned lt=0);
 	virtual ~stationary_obj() {status = 1;}
@@ -840,7 +824,6 @@ public:
 class uobj_asteroid : public stationary_obj {
 protected:
 	int tex_id;
-
 public:
 	static uobj_asteroid *create(point const &pos, float radius, unsigned model, int tid, unsigned rseed_ix=0, unsigned lt=0);
 	uobj_asteroid(point const &pos_, float radius_, int tid, unsigned lt) : stationary_obj(SO_ASTEROID, pos_, radius_, lt), tex_id(tid) {}
@@ -862,7 +845,6 @@ protected:
 	float obj_radius;
 	bool first_pos=1, pos_valid=0;
 	float max_cdist; // max distance to camera
-
 public:
 	rand_spawn_mixin(upos_point_type &pos_, float obj_radius_, float dmax) :
 	  obj_pos(pos_), obj_radius(obj_radius_), max_cdist(dmax) {assert(max_cdist > 0.0);}
@@ -876,7 +858,6 @@ class uobject_rand_spawn_t : public free_obj, public rand_spawn_mixin {
 protected:
 	void mark_pos_invalid();
 	virtual void gen_pos();
-
 public:
 	static uobject_rand_spawn_t *create(unsigned type, float radius_, float dmax, float vmag);
 	uobject_rand_spawn_t(float radius_, float dmax, float vmag);
@@ -895,7 +876,6 @@ class ucomet : public uobject_rand_spawn_t {
 	void gen_inst_ids();
 public:
 	ucomet(float radius_, float dmax, float vmag);
-
 	// virtuals
 	float get_max_t() const {return 1000.0;} // a big number
 	void set_temp(float temp, point const &tcenter, free_obj const *source);
@@ -913,7 +893,6 @@ class uparticle : public free_obj {
 	vector3d axis;
 	colorRGBA color1, color2;
 	free_obj_block<uparticle> *alloc_block=nullptr;
-
 public:
 	friend class free_obj_allocator<uparticle>;
 	static unsigned const max_type = NUM_PTYPES;
@@ -947,7 +926,6 @@ class uparticle_cloud : public free_obj, public volume_part_cloud {
 	unsigned lifetime=0;
 	float rmin=0, rmax=0, damage_v=0, expand_exp=0, noise_scale=0, hashval=0; // or damage_v temperature? unused
 	colorRGBA colors[2][2]; // {inner, outer} x {start, end}
-
 public:
 	uparticle_cloud() {}
 	uparticle_cloud(point const &pos_, float rmin_, float rmax_, colorRGBA const &ci1, colorRGBA const &co1, colorRGBA const &ci2,
@@ -975,12 +953,9 @@ public:
 
 
 class us_projectile : public free_obj { // for a weapon
-private:
-	unsigned wclass;
-	unsigned tup_time;
+	unsigned wclass=0, tup_time=0;
 	float armor;
-	free_obj_block<us_projectile> *alloc_block;
-
+	free_obj_block<us_projectile> *alloc_block=nullptr;
 public:
 	friend class free_obj_allocator<us_projectile>;
 	static unsigned const max_type = NUM_UWEAP;
@@ -1021,9 +996,9 @@ public:
 // used for regen (docked fighters and ships themselves)
 class u_ship_base { // Note: Can be created on the stack and copied
 public:
-	unsigned sclass, ncrew, ncredits, kills, tot_kills, deaths;
-	bool docked, regened, o_docked;
-	float shields, armor, energy, fuel, used_cargo, size_scale;
+	unsigned sclass=0, ncrew=0, ncredits=0, kills=0, tot_kills=0, deaths=0;
+	bool docked=0, regened=1, o_docked=0;
+	float shields=0.0, armor=0.0, energy=0.0, fuel=1.0, used_cargo=0.0, size_scale=1.0;
 	point wpt_center;
 	set<u_ship *> fighters;
 	vector<ship_weapon> weapons;
@@ -1066,7 +1041,6 @@ public:
 	bool need_ammo_for(unsigned wix) const;
 	bool weap_turret(unsigned weapon_id) const;
 	void print_ammo() const;
-
 protected:
 	bool out_of_ammo_for(unsigned wix, bool current_only) const;
 	bool check_fire_delay(unsigned wix) const;
@@ -1076,8 +1050,8 @@ protected:
 
 class ship_weapon {
 public:
-	unsigned wclass, init_ammo, ammo, wcount, rtime, nregen, ndamaged, cur_wpt;
-	int last_fframe;
+	unsigned wclass=0, init_ammo=0, ammo=0, wcount=0, rtime=0, nregen=0, ndamaged=0, cur_wpt=0;
+	int last_fframe=0;
 	std::shared_ptr<deque<u_ship_base> > docked;
 	vector<point> weap_pts;
 
@@ -1097,7 +1071,6 @@ public:
 class sobj_manager : public sphere_t {
 	int uobj_id, old_uobj_id, otype, owner;
 	string name;
-
 public:
 	sobj_manager() {clear();}
 	void clear() {uobj_id = old_uobj_id = otype = -1; owner = NO_OWNER; radius = 0.0; pos = all_zeros;}
@@ -1119,7 +1092,7 @@ class u_ship : public free_obj, public u_ship_base {
 	unsigned ai_type; // us_class of this ship
 	bool lhyper, damaged, target_set, fire_primary, has_obstacle, captured, dest_override, is_flagship;
 	float tow_mass, exp_val, cloaked, roll_val, pitch_r, yaw_r, roll_r, cached_rsv, child_stray_dist;
-	unsigned curr_weapon, last_hit, target_mode, eflags, init_align;
+	unsigned curr_weapon=0, last_hit, target_mode, eflags, init_align;
 	unsigned retarg_time, exp_time, tup_time, last_targ_t, disable_t, elapsed_on_t; // times
 	point tcent;
 	vector3d hit_dir, obs_orient, target_dir;
@@ -1128,7 +1101,6 @@ class u_ship : public free_obj, public u_ship_base {
 
 	u_ship(u_ship const &) = delete; // forbidden
 	void operator=(u_ship const &) = delete; // forbidden
-
 protected:
 	sobj_manager dest_mgr, homeworld;
 
@@ -1140,7 +1112,6 @@ protected:
 	void partial_uncloak(float val) {cloaked = min(val, cloaked);}
 	bool can_colonize() const;
 	vector3d const &get_last_hit_dir() const {return ((last_hit > 0) ? hit_dir : zero_vector);}
-
 public:
 	static unsigned const max_type = NUM_US_CLASS;
 	u_ship(unsigned sclass_, point const &pos0, unsigned align, unsigned ai_type_, unsigned target_mode_, bool rand_orient);
@@ -1299,8 +1270,7 @@ public:
 	bool ship_int_obj(u_ship const *const ship,  intersect_params &ip=def_int_params) const;
 	bool obj_int_obj (free_obj const *const obj, intersect_params &ip=def_int_params) const;
 	bool cobjs_int_obj(cobj_vector_t const &cobjs2, free_obj const *const obj, intersect_params &ip=def_int_params) const;
-	bool do_sphere_int(point const &sc, float sr, intersect_params &ip, bool &intersects, point const &p_last,
-		cobj_vector_t const &cobjs) const;
+	bool do_sphere_int(point const &sc, float sr, intersect_params &ip, bool &intersects, point const &p_last, cobj_vector_t const &cobjs) const;
 
 	virtual bool regen_enabled() const;
 
@@ -1313,14 +1283,12 @@ private:
 
 
 class orbiting_ship : public u_ship { // planetary defense, defense sat, antimiss drone
-private:
-	bool GSO, fixed_pos, has_sobj, sobj_liveable, has_decremented_owner;
+	bool GSO=0, fixed_pos=0, has_sobj=0, sobj_liveable=0, has_decremented_owner=0;
 	unsigned orbiting_type, last_build_time;
 	int system_ix, planet_ix, moon_ix;
 	float orbit_r, rot_rate, start_angle, angle, sobj_radius, sun_energy;
 	vector3d axis;
 	point rel_pos, sobj_pos, sun_pos;
-
 public:
 	orbiting_ship(unsigned sclass_, unsigned align, bool guardian, s_object const &world_path,
 		vector3d const &axis_, point const &start_pos, float rad, float start_ang, float rate);
@@ -1341,7 +1309,6 @@ class multipart_ship : public u_ship {
 	cobj_vector_t cobjs;
 	vector<ship_sphere> coll_spheres;
 	vector<ship_cylinder> coll_cylinders;
-
 public:
 	multipart_ship(unsigned sclass_, point const &pos0, unsigned align, unsigned ai_type_, unsigned target_mode_, bool rand_orient);
 	cobj_vector_t const &get_cobjs() const {return cobjs;}
@@ -1359,7 +1326,6 @@ class rand_spawn_ship : public u_ship, public rand_spawn_mixin {
 
 	void gen_valid_pos();
 	void destroy_or_respawn();
-
 public:
 	rand_spawn_ship(unsigned sclass_, point const &pos0, unsigned align, unsigned ai_type_, unsigned target_mode_, bool rand_orient, bool will_respawn_);
 	void apply_physics();
