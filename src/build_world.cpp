@@ -215,7 +215,6 @@ int obj_group::get_ptype() const {return ((flags & PRECIPITATION) ? get_precip_t
 
 
 void dwobject::update_precip_type() {
-
 	int const ptype(get_precip_type());
 	if (type == ptype) return;
 	if (status == 4) {status = 1; flags  = 0;}
@@ -266,14 +265,13 @@ void process_platforms_falling_moving_and_light_triggers() {
 struct proximity_ret_t {
 	point pos;
 	float radius;
-	bool ret;
+	bool ret=0;
 
-	proximity_ret_t(point const &pos_, float radius_=0.0) : pos(pos_), radius(radius_), ret(0) {}
+	proximity_ret_t(point const &pos_, float radius_=0.0) : pos(pos_), radius(radius_) {}
 	void check_activate(point const &p, float r, int ix) {ret |= dist_less_than(pos, p, (radius + r));}
 };
 
 bool check_player_proximity(point const &pos, float radius, bool use_bottom) {
-	
 	int const start_i((camera_mode == 1) ? CAMERA_ID : 0), end_i(get_num_enabled_smileys());
 	proximity_ret_t pr(pos, radius);
 	check_all_activate(pr, start_i, end_i, use_bottom);
@@ -300,7 +298,6 @@ void object_line_coll(dwobject &obj, point const &old_pos, float radius, unsigne
 
 
 void set_global_state() {
-
 	camera_view = 0;
 	used_objs   = 0;
 	is_cloudy   = (precip_mode > 0);
@@ -677,11 +674,9 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 void shift_point_vector(vector<point> &pts, vector3d const &vd) {
 	for (unsigned i = 0; i < pts.size(); ++i) pts[i] += vd;
 }
-
 void shift_all_cobjs(vector3d const &vd) {
 	for (unsigned i = 0; i < coll_objects.size(); ++i) {coll_objects[i].shift_by(vd);}
 }
-
 
 void shift_all_objs(vector3d const &vd) {
 
@@ -710,7 +705,6 @@ void coll_obj::translate_pts_and_bcube(vector3d const &vd) {
 }
 
 void coll_obj::shift_by(vector3d const &vd, bool force, bool no_texture_offset) {
-
 	if (!fixed && !force) return;
 	translate_pts_and_bcube(vd);
 	if (!no_texture_offset && cp.tscale != 0.0 && !was_a_cube()) {texture_offset -= vd;}
@@ -719,7 +713,6 @@ void coll_obj::shift_by(vector3d const &vd, bool force, bool no_texture_offset) 
 }
 
 void coll_obj::move_cobj(vector3d const &vd, bool update_colls) {
-
 	if (update_colls) {remove_coll_object(id, 0);}
 	shift_by(vd); // move object
 	if (update_colls) {re_add_coll_cobj(id, 0);}
@@ -997,22 +990,18 @@ void add_polygons_to_cobj_vector(vector<coll_tquad> const &ppts, coll_obj const 
 
 
 void create_xyz_groups(int *group_ids, bool use_vbo) {
-
 	for (unsigned i = 0; i < 3; ++i) {
 		group_ids[i] = (int)obj_draw_groups.size();
 		obj_draw_groups.push_back(obj_draw_group(use_vbo));
 	}
 }
 
-
 void read_or_calc_zval(FILE *fp, point &pos, float interp_rad, float radius, geom_xform_t const &xf) {
-
 	pos.z = 0.0;
 	bool const interpolate(!read_float(fp, pos.z));
 	xf.xform_pos(pos); // better not try to rotate z when interpolating
 	if (interpolate) {pos.z = interpolate_mesh_zval(pos.x, pos.y, interp_rad, 0, 0) + radius;}
 }
-
 
 string read_quoted_string(FILE *fp, unsigned &line_num) {
 
@@ -1117,7 +1106,6 @@ string add_loaded_model(vector<coll_tquad> const &ppts, coll_obj cobj, float sca
 }
 
 int add_model_transform(FILE *fp, model3d_xform_t const &model_xf, vector<coll_tquad> &ppts, coll_obj const &cobj, float scale, bool has_layer) {
-
 	if (!add_transform_for_cur_model(model_xf)) {return read_error(fp, "model transform", coll_obj_file);}
 	bool const no_cobjs(model_xf.group_cobjs_level >= 4);
 	if (!no_cobjs) {get_cur_model_polygons(ppts, model_xf);} // add cobjs for collision detection
@@ -2325,7 +2313,6 @@ void free_models() {
 
 
 void gen_star_points() {
-
 	for (unsigned i = 0; i < 2*N_STAR_POINTS; ++i) { // alternate outside and inside points
 		float const angle(TWO_PI*((float)i/(float)N_STAR_POINTS)), scale((i&1) ? STAR_INNER_RAD : 1.0);
 		star_pts[i].x = scale*cosf(angle);

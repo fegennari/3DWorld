@@ -32,7 +32,6 @@ void build_hmv_shape() {
 	hmv_shape.move_to(hmv_pos);
 }
 
-
 void delete_hmv_shape() {hmv_shape.destroy();}
 
 // well, not actually a draw function...
@@ -40,14 +39,11 @@ void add_shape_coll_objs() {
 	if (load_hmv) add_hmv_coll_objs(hmv_pos, hmv_scale);
 }
 
-
 void add_hmv_coll_objs(point &pos, float scale) {
 
 	float x(pos.x), y(pos.y), z(pos.z);
 
-	if (hmv_coll_obj.empty()) {
-		hmv_coll_obj.reserve(hmv_shape.get_num_faces() + 4);
-	}
+	if (hmv_coll_obj.empty()) {hmv_coll_obj.reserve(hmv_shape.get_num_faces() + 4);}
 	else {
 		for (unsigned i = 0; i < hmv_coll_obj.size(); ++i) {remove_reset_coll_obj(hmv_coll_obj[i]);}
 		purge_coll_freed(1);
@@ -59,7 +55,6 @@ void add_hmv_coll_objs(point &pos, float scale) {
 	// body
 	hmv_shape.add_cobjs(hmv_coll_obj, 1); // drawn
 }
-
 
 void shift_hmv(vector3d const &vd) {
 	hmv_pos += vd;

@@ -273,7 +273,6 @@ bool bird_t::update(rand_gen_t &rgen, tile_t const *const tile) { // Note: tile 
 }
 
 void bird_t::apply_force_xy_const_vel(vector3d const &force) {
-
 	float const vmag(velocity.mag());
 	velocity.x += force.x; velocity.y += force.y;
 	velocity *= vmag/velocity.mag(); // re-normalize

@@ -19,7 +19,6 @@ template <typename T> class timing_profiler {
 		void add(T t) {++count; time += t; tmax = max(tmax, t);}
 	};
 	map<string, entry_t> entries;
-
 public:
 	bool enabled=0;
 

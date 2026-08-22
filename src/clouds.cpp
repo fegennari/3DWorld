@@ -59,9 +59,7 @@ void cloud_manager_t::create_clouds() { // 3D cloud puffs
 
 
 class cloud_bvh_t : public cobj_tree_sphere_t {
-
 	cloud_manager_t &mgr;
-
 public:
 	cloud_bvh_t(cloud_manager_t &mgr_) : mgr(mgr_) {}
 
@@ -133,7 +131,6 @@ void cloud_manager_t::update_lighting() {
 	PRINT_TIME("Cloud Lighting");
 }
 
-
 cube_t cloud_manager_t::get_bcube() const {
 
 	if (empty()) {return get_scene_bounds();}
@@ -148,13 +145,10 @@ cube_t cloud_manager_t::get_bcube() const {
 	return bcube;
 }
 
-
 float cloud_manager_t::get_max_xy_extent() const {
-
 	cube_t const bcube(get_bcube());
 	return(max(max(-bcube.d[0][0], bcube.d[0][1]), max(-bcube.d[1][0], bcube.d[1][1])));
 }
-
 
 bool cloud_manager_t::create_texture(bool force_recreate) {
 
@@ -218,13 +212,9 @@ bool cloud_manager_t::create_texture(bool force_recreate) {
 }
 
 
-void free_cloud_textures() {
-	cloud_manager.free_textures();
-}
-
+void free_cloud_textures() {cloud_manager.free_textures();}
 
 void cloud_manager_t::free_textures() {
-
 	free_texture(cloud_tid);
 	free_fbo(fbo_id);
 }
@@ -238,7 +228,7 @@ void cloud_manager_t::draw(bool no_update) {
 	if (empty()) return;
 	//RESET_TIME;
 
-	// WRITE: wind moves clouds
+	// wind moves clouds?
 
 	// light source code
 	static bool had_sun(0);
@@ -261,16 +251,13 @@ void cloud_manager_t::draw(bool no_update) {
 		float const cloud_bot(bcube.d[2][0]), cloud_top(bcube.d[2][1]), cloud_xy(get_max_xy_extent());
 		float const xy_exp((cloud_top - frustum_z)/(cloud_bot - frustum_z));
 		//if (!camera_pdu.cube_visible(bcube)) return; // incorrect, and rarely returns
-
 		enable_flares(tid); // texture will be overriden
 		assert(cloud_tid);
 		bind_2d_texture(cloud_tid);
-
 		s.set_vert_shader("no_lighting_tex_coord");
 		s.set_frag_shader("cloud_billboard");
 		s.begin_shader();
 		s.add_uniform_int("tex0", 0);
-
 		quad_batch_draw qbd;
 		qbd.add_quad_dirs(point(camera.x, camera.y, cloud_top), vector3d(-xy_exp*cloud_xy, 0.0, 0.0), vector3d(0.0, xy_exp*cloud_xy, 0.0), get_cloud_color(), -plus_z);
 		qbd.draw();
@@ -288,18 +275,14 @@ void cloud_manager_t::draw(bool no_update) {
 
 
 void draw_puffy_clouds(int order, bool no_update) {
-
 	if ((get_camera_pos().z > cloud_manager.get_z_plane()) != order) return;
 	if (atmosphere < 0.01) {cloud_manager.clear();}
 	else if (((display_mode & 0x40) != 0) ^ is_cloudy) {cloud_manager.draw(no_update);} // key 7
 }
 
-
 float get_cloud_zmax() {return max(max(czmax, ztop), get_camera_pos().z) + max(zmax, CLOUD_CEILING);}
 
-
 void set_cloud_uniforms(shader_t &s, unsigned tu_id) {
-
 	select_texture(NOISE_GEN_TEX, tu_id);
 	s.add_uniform_int("cloud_noise_tex", tu_id);
 	s.add_uniform_vector2d("dxy", cloud_wind_pos);
@@ -335,7 +318,6 @@ void free_cloud_context() {cloud_imd.free_context();}
 
 
 vector3d get_cloud_offset(float rel_vel_scale) {
-
 	float const cloud_rel_vel = 1.0; // relative cloud velocity compared to camera velocity (0: clouds follow the camera, 1: clouds are stationary)
 	point const camera(get_camera_pos()), world_pos(camera + vector3d((xoff2-xoff)*DX_VAL, (yoff2-yoff)*DY_VAL, 0.0));
 	return -camera + rel_vel_scale*cloud_rel_vel*world_pos;
@@ -470,7 +452,6 @@ void move_in_front_of_far_clip(point_d &pos, point const &camera, float &size, f
 // Note: the nebula shader generally requires the part cloud origin to be at (0,0,0), so we wouldn't want to add a pos here;
 // however, we allow it (but default it to (0,0,0)), since the part cloud could be drawn using a different shader
 void volume_part_cloud::gen_pts(vector3d const &size, point const &pos, bool simplified) {
-
 	if (unscaled_points[simplified].empty()) {calc_unscaled_points(simplified);}
 	points = unscaled_points[simplified]; // deep copy
 	for (unsigned i = 0; i < points.size(); ++i) {points[i].v *= size; points[i].v += pos;}
@@ -528,9 +509,7 @@ void vpc_shader_t::set_all_colors(colorRGBA const &c1i, colorRGBA const &c1o, co
 	s.add_uniform_float("dist_bias",  dist_bias);
 }
 
-
 void volume_part_cloud::draw_quads(bool depth_map_already_disabled) const {
-
 	assert(enabled());
 	if (!depth_map_already_disabled) {glDepthMask(GL_FALSE);} // no depth writing
 	draw_quad_verts_as_tris(points);
@@ -539,7 +518,6 @@ void volume_part_cloud::draw_quads(bool depth_map_already_disabled) const {
 
 
 void unebula::gen(float range, ellipsoid_t const &bounds) {
-
 	// Note: bounds is not currently used, but it can be used to scale the nebula to the galaxy's ellipsoid (but requires some transforms in the shader)
 	rand_gen_t rgen;
 	rgen.set_state(rand2(), rand2());
@@ -548,7 +526,6 @@ void unebula::gen(float range, ellipsoid_t const &bounds) {
 	noise_exp = 2.0 + rgen.rand_float() + rgen.rand_float(); // 2.0 - 4.0
 	gen_pts(radius);
 }
-
 
 void unebula::draw(point_d pos_, point const &camera, float max_dist, vpc_shader_t &s) const { // Note: new VFC here
 

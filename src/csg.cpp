@@ -25,22 +25,17 @@ bool sphere_t::contains_point(point const &p) const {return dist_less_than(pos, 
 
 
 rect::rect(float const r[3][2], unsigned d0, unsigned d1) { // projection from 3D => 2D
-
 	assert(d0 <= 3 && d1 <= 3 && d0 != d1);
 	d[0][0] = r[d0][0]; d[0][1] = r[d0][1]; d[1][0] = r[d1][0]; d[1][1] = r[d1][1];
-	//assert(nonzero());
 }
 
-
 void rect::clip_to(float const c[2][2]) {
-
 	for (unsigned i = 0; i < 2; ++i) {
 		assert(c[i][0] < c[i][1]);
 		d[i][0] = max(c[i][0], min(c[i][1], d[i][0]));
 		d[i][1] = max(c[i][0], min(c[i][1], d[i][1]));
 	}
 }
-
 
 // rr will be removed
 void rect::subtract_from(rect const &rr, deque<rect> &new_rects) const { // subtract ourself from rr
@@ -104,7 +99,6 @@ void rect::subtract_from(rect const &rr, deque<rect> &new_rects) const { // subt
 	}
 }
 
-
 bool rect::merge_with(rect const &r) {
 
 	for (unsigned j = 0; j < 2; ++j) {
@@ -119,7 +113,6 @@ bool rect::merge_with(rect const &r) {
 	}
 	return 0;
 }
-
 
 void rect::print() const {
 
@@ -168,7 +161,6 @@ bool cube_t::is_near_zero_area() const {
 	return 0;
 }
 
-
 unsigned cube_t::get_split_dim(float &max_sz, float &sval, unsigned skip_dims) const {
 
 	unsigned dim(0);
@@ -194,9 +186,7 @@ unsigned cube_t::get_split_dim(float &max_sz, float &sval, unsigned skip_dims) c
 	return dim;
 }
 
-
 bool cube_t::cube_intersection(const cube_t &cube, cube_t &res) const { // flags are not set
-	
 	for (unsigned i = 0; i < 3; ++i) {
 		res.d[i][0] = max(d[i][0], cube.d[i][0]);
 		res.d[i][1] = min(d[i][1], cube.d[i][1]);
@@ -204,7 +194,6 @@ bool cube_t::cube_intersection(const cube_t &cube, cube_t &res) const { // flags
 	}
 	return 1;
 }
-
 
 float cube_t::get_overlap_volume(const cube_t &cube) const {
 
@@ -447,19 +436,16 @@ csg_cube::csg_cube(const coll_obj &cobj, bool use_bounding_cube) : eflags(cobj.c
 	normalize();
 }
 
-
 inline void csg_cube::write_to_cobj(coll_obj &cobj) const {
 	assert(cobj.type == COLL_CUBE);
 	cobj.copy_from(*this);
 	cobj.cp.surfs = eflags;
 }
 
-
 bool csg_cube::cube_intersection(const csg_cube &cube, csg_cube &res) const { // flags are not set
 	res.eflags = 0; // fix later
 	return cube_t::cube_intersection(cube, res);
 }
-
 
 // returns 1 if some work is done
 bool csg_cube::subtract_from_cube(coll_obj_group &new_cobjs, coll_obj const &cobj) const { // subtract ourself from cobjs[index]
@@ -659,7 +645,6 @@ void clip_polygon_to_cube_inner(cube_t const &cube, cube_t const &pts_bcube, vec
 }
 // same as above code, but ignores the outside part of the polygon
 void clip_polygon_to_cube(cube_t const &cube, point const *const pts_in, unsigned npts_in, cube_t const &pts_bcube, vector<point> &pts_out) {
-
 	if (!cube.intersects(pts_bcube)) {pts_out.clear(); return;}
 	static vector<point> next; // reused across calls, not thread safe
 	pts_out.resize(npts_in);
@@ -696,7 +681,6 @@ bool csg_cube::subtract_from_thick_polygon(coll_obj_group &new_cobjs, coll_obj c
 
 
 float get_cube_dmax() {
-
 	return REL_DMAX*(X_SCENE_SIZE + Y_SCENE_SIZE);
 }
 
@@ -813,7 +797,6 @@ void csg_cube::unset_intersecting_edge_flags(coll_obj &cobj) const {
 
 
 void coll_obj_group::remove_invalid_cobjs() {
-
 	coll_obj_group cobjs2;
 
 	for (size_t i = 0; i < size(); ++i) { // create new shapes vector with bad shapes removed
@@ -1015,7 +998,6 @@ void coll_obj_group::process_negative_shapes() { // negtive shapes should be non
 
 
 unsigned get_closest_val_index(float val, vector<double> const &sval) {
-
 	for (unsigned i = 0; i < sval.size(); ++i) { // inefficient, assumes sval is small
 		if (fabs(val - sval[i]) < TOLER) return i;
 	}

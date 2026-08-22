@@ -221,7 +221,6 @@ platform::platform(float fs, float rs, float sd, float rd, float dst, float ad, 
 }
 
 void platform::reset() {
-
 	state      = ST_NOACT;
 	is_stopped = 0;
 	is_paused  = 0;
@@ -231,7 +230,6 @@ void platform::reset() {
 }
 
 void platform::activate() {
-
 	assert(state == ST_NOACT);
 	assert(pos == origin && cur_angle == 0.0);
 	assert(ns_time == 0.0);
@@ -242,7 +240,6 @@ void platform::activate() {
 }
 
 void platform::pause() {
-
 	assert(!is_paused);
 	state      = ST_NOACT;
 	is_stopped = 0;
@@ -250,7 +247,6 @@ void platform::pause() {
 }
 
 void platform::unpause() {
-
 	assert(is_paused);
 	state      = ST_FWD; // Note: currently can only pause while moving forward
 	is_stopped = 0;
@@ -406,7 +402,6 @@ void platform::add_cobj(unsigned cobj) {
 }
 
 void platform::shift_by(vector3d const &val) {
-	
 	origin += val;
 	pos    += val;
 	triggers.shift_by(val);

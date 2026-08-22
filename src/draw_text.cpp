@@ -27,7 +27,6 @@ class font_texture_manager_t {
 
 	texture_t texture;
 	per_char_data_t pcd[256]; // one per ASCII value
-
 public:
 	font_texture_manager_t() : texture(0, 7, 0, 0, 0, 4, 1, "", 0, 0, 8.0) {} // use mipmaps, uncompressed
 
@@ -185,7 +184,6 @@ void text_drawer::add_text(string const &text, point const &pos, float tsize, ve
 
 
 void draw_bitmap_text(colorRGBA const &color, point const &pos, string const &text, float tsize) {
-
 	if (text.empty()) return; // error?
 	static text_drawer td;
 	td.begin_draw(&color);
@@ -199,7 +197,6 @@ void draw_text(colorRGBA const &color, float x, float y, float z, char const *te
 
 
 void text_drawer_t::draw() const {
-
 	if (strs.empty()) return;
 	vector3d const tdir(cross_product(get_vdir_all(), get_upv_all())); // screen space x
 	text_drawer td;

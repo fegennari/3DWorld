@@ -357,7 +357,6 @@ void set_gl_params() {
 
 
 void reset_camera_pos() {
-
 	if (world_mode == WMODE_UNIVERSE) return;
 	camera_origin = mesh_origin;
 	up_theta      = DEF_UPTHETA;
@@ -369,9 +368,7 @@ void reset_camera_pos() {
 	if (enable_mouse_look) {m_button = GLUT_LEFT_BUTTON;}
 }
 
-
 void set_perspective_near_far(float near_clip, float far_clip, float aspect_ratio) {
-
 	if (window_width == 0) return; // window not setup yet, skip (maybe got here during mouse/keyboard even before display() was called or config was read)
 	assert(window_width > 0 && window_height > 0);
 	perspective_nclip = near_clip;
@@ -386,18 +383,14 @@ void set_perspective(float fovy, float nc_scale) {
 	set_perspective_near_far(nc_scale*NEAR_CLIP, FAR_CLIP);
 }
 
-
 void check_zoom() {
-
 	float fovy(PERSP_ANGLE);
 	if      (do_zoom == 1) {do_zoom = 2; fovy /= ZOOM_FACTOR;}
 	else if (do_zoom == 2) {do_zoom = 1;}
 	set_perspective(fovy, 1.0);
 }
 
-
 void check_xy_offsets() {
-
 	if (camera_view) return;
 	int const mrd(((world_mode == WMODE_INF_TERRAIN) ? 4 : 1)*MAX_RUN_DIST); // increase distance in TT mode to reduce shadow map updates
 	vector3d delta;
@@ -525,7 +518,6 @@ void change_terrain_zoom(float val) {
 	}
 	scene_smap_vbo_invalid = 2; // full rebuild of shadowers
 }
-
 
 void change_world_mode() { // switch terrain mode: 0 = normal/ground, 1 = universe, 2 = tiled terrain
 

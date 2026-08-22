@@ -14,7 +14,6 @@ extern vector3d up_norm;
 
 // ************** SHAPE3D *************
 
-
 bool shape3d::alloc_shape(unsigned npoints, unsigned nfaces, unsigned ncolors) {
 
 	if (npoints < 3 || nfaces < 1) return 0;
@@ -23,7 +22,6 @@ bool shape3d::alloc_shape(unsigned npoints, unsigned nfaces, unsigned ncolors) {
 	colors.resize(ncolors);
 	return 1;
 }
-
 
 // similar to the object file reader
 bool shape3d::read_from_file(const char *filename) {
@@ -134,24 +132,17 @@ bool shape3d::read_from_file(const char *filename) {
 	return 1;
 }
 
-
 void shape3d::gen_face_normals() {
-
-	for (unsigned i = 0; i < faces.size(); ++i) {
-		get_face_normal(i);
-	}
+	for (unsigned i = 0; i < faces.size(); ++i) {get_face_normal(i);}
 }
 
-
 void shape3d::get_face_normal(unsigned face_id) {
-
 	assert(face_id < faces.size());
 	unsigned const *const verts(faces[face_id].v);
 	assert(verts != NULL);
 	assert(verts[0] < points.size() && verts[1] < points.size() && verts[2] < points.size());
 	get_normal(points[verts[0]], points[verts[1]], points[verts[2]], faces[face_id].norm, 1);
 }
-
 
 void shape3d::get_triangle_center(point &center, unsigned face_id) {
 
@@ -176,7 +167,6 @@ void shape3d::get_triangle_center(point &center, unsigned face_id) {
 	}
 }
 
-
 void shape3d::add_vertex(unsigned vertex, unsigned face_id, unsigned &face_counter) {
 
 	assert(face_id < faces.size());
@@ -194,7 +184,6 @@ void shape3d::add_vertex(unsigned vertex, unsigned face_id, unsigned &face_count
 	verts[1] = p2;
 	verts[2] = vertex;
 }
-
 
 void shape3d::get_triangle_verts(vector<vert_norm_tc> &verts) const {
 
@@ -215,20 +204,16 @@ void shape3d::get_triangle_verts(vector<vert_norm_tc> &verts) const {
 	}
 }
 
-
 void shape3d::add_cobjs(vector<int> &cids, bool draw) {
 
 	point points2[3];
 
 	for (unsigned i = 0; i < faces.size(); ++i) {
-		for (unsigned j = 0; j < 3; ++j) {
-			points2[j] = points[faces[i].v[j]]*scale + pos;
-		}
+		for (unsigned j = 0; j < 3; ++j) {points2[j] = points[faces[i].v[j]]*scale + pos;}
 		scolor const &sc(colors[faces[i].color_id]);
 		cids.push_back(add_coll_polygon(points2, 3, cobj_params(0.7, sc.c, draw, 0, NULL, 0, sc.tid), 0.0));
 	}
 }
-
 
 void shape3d::destroy() {
 
@@ -242,7 +227,6 @@ void shape3d::destroy() {
 
 
 // ************** LINE3D *************
-
 
 void line3d::draw_lines(bool fade_ends, bool no_end_draw) const {
 

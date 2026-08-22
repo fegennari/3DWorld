@@ -450,16 +450,13 @@ void quad_batch_draw::add_xlated_billboard(point const &pos, point const &xlate,
 }
 
 void quad_batch_draw::add_animated_billboard(point const &pos, point const &viewer, vector3d const &up_dir, colorRGBA const &c, float xsize, float ysize, float timescale) {
-
 	// fixed 4x4 animation
 	int const frame_id(max(0, min(15, int(16*timescale)))), tx(frame_id&3), ty(frame_id>>2);
 	point const gpos(make_pt_global(pos));
 	add_billboard(gpos, (viewer + gpos - pos), up_dir, c, xsize, ysize, tex_range_t::from_atlas(tx, ty, 4, 4)); // upside down
 }
 
-
 void quad_batch_draw::draw_as_flares_and_clear(int flare_tex) { // Note: used in flows where texturing is always enabled
-
 	glDepthMask(GL_FALSE);
 	select_texture(flare_tex);
 	draw_and_clear();
@@ -496,7 +493,6 @@ template<typename T> void indexed_mesh_draw<T>::init(unsigned nx_, unsigned ny_)
 }
 
 template<typename T> void indexed_mesh_draw<T>::render() const {
-
 	if (verts.empty()) return;
 	assert(ivbo && ivbo_size > 0);
 	bind_vbo(ivbo, 1);
@@ -692,7 +688,6 @@ template< typename vert_type_t > void vbo_block_manager_t<vert_type_t>::render_r
 }
 
 template< typename vert_type_t > bool vbo_block_manager_t<vert_type_t>::upload() {
-
 	if (vbo || !has_data()) return 0; // already uploaded or empty
 	assert(!pts.empty());
 	if (offsets.empty()) {offsets.push_back(0);} // start at 0

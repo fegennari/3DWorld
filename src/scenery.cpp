@@ -189,11 +189,9 @@ void rock_shape3d::gen_rock(unsigned nverts, float size, int rand_seed, int type
 	if (type == 0) { // this doesn't really look like a rock
 		alloc_shape(nverts, (2*nverts - 4), 0);
 		unsigned face_counter(4);
-
 		// create default 4x4 prism shape
 		// vertices
 		for (unsigned i = 0; i < 4; ++i) {points[i] = signed_rand_vector2(size);}
-
 		// face vertices
 		unsigned const fv[4][3] = {{2,1,0}, {2,0,3}, {1,2,3}, {0,1,3}};
 
@@ -276,9 +274,7 @@ void rock_shape3d::gen_rock(unsigned nverts, float size, int rand_seed, int type
 		} // for cv
 		faces.resize(face);
 	}
-	else {
-		assert(0);
-	}
+	else {assert(0);}
 	for (unsigned i = 0; i < faces.size(); ++i) {faces[i].color_id = 0;}
 	gen_face_normals();
 }
@@ -461,7 +457,6 @@ void s_rock::draw(float sscale, bool shadow_only, bool reflection_pass, vector3d
 }
 
 
-
 unsigned voxel_rock_manager_t::gen_model_ix(int rseed) {
 	models.resize(NUM_VROCK_MODELS);
 	unsigned const ix(rseed % models.size());
@@ -475,7 +470,6 @@ void voxel_rock_manager_t::build_models(unsigned num_lod_levels) {
 	//timer_t timer("Gen Voxel Rocks");
 	vector<unsigned> const gen_queue(to_gen.begin(), to_gen.end());
 
-//#pragma omp parallel for schedule(dynamic,1) // not needed, gen_voxel_rock() already uses openmp
 	for (int i = 0; i < (int)gen_queue.size(); ++i) { // build scheduled models
 		unsigned const ix(gen_queue[i]);
 		assert(!models[ix]);
@@ -812,10 +806,7 @@ void s_plant::gen_points(vbo_vnc_block_manager_t &vbo_manager, vector<vert_norm_
 			float const t0(rgen.rand_uniform(0.1, 0.2)), dt((rgen.rand_uniform(0.8, 0.9) - t0)/(num-1));
 			float const err(0.1*dt*p2p_dist(start, end));
 			float t(t0);
-
-			for (unsigned n = 0; n < num; ++n, t += dt) {
-				berries.push_back(start + t*(end - start) + rgen.signed_rand_vector(err));
-			}
+			for (unsigned n = 0; n < num; ++n, t += dt) {berries.push_back(start + t*(end - start) + rgen.signed_rand_vector(err));}
 		} // for i
 	}
 }
@@ -1631,8 +1622,6 @@ bool leafy_plant_collision(int index, int obj_index, vector3d const &velocity, p
 
 void s_plant::write_to_cobj_file(std::ostream &out) const {
 	// 'G': // place plant: xpos ypos height radius type [zpos], type: PLANT_MJ = 0, PLANT1, PLANT2, PLANT3, PLANT4
-	//fscanf(fp, "%f%f%f%f%i%f", &pos.x, &pos.y, &fvals[0], &fvals[1], &ivals[0], &pos.z)
-	//add_plant(pos, xf.scale*fvals[0], xf.scale*fvals[1], ivals[0], !use_z);
 	out << "G " << pos.x << " " << pos.y << " " << height << " " << radius << " " << type << " " << pos.z << endl;
 }
 void scenery_group::write_plants_to_cobj_file(ostream &out) const { // Note: only plants are written because only plants can be placed in the cobj file

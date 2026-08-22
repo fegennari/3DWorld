@@ -127,7 +127,7 @@ class cobj_manager_t {
 
 	vector<int> index_stack;
 	coll_obj_group &cobjs;
-	unsigned index_top;
+	unsigned index_top=0;
 
 	void extend_index_stack(unsigned start, unsigned end) {
 		index_stack.resize(end);
@@ -136,13 +136,10 @@ class cobj_manager_t {
 			index_stack[i] = (int)i; // put on the free list
 		}
 	}
-
 public:
-	unsigned cobjs_removed;
+	unsigned cobjs_removed=0;
 
-	cobj_manager_t(coll_obj_group &cobjs_) : cobjs(cobjs_), index_top(0), cobjs_removed(0) {
-		extend_index_stack(0, cobjs.size());
-	}
+	cobj_manager_t(coll_obj_group &cobjs_) : cobjs(cobjs_) {extend_index_stack(0, cobjs.size());}
 
 	void reserve_cobjs(size_t size) {
 		size_t const old_size(cobjs.size());
@@ -207,7 +204,6 @@ void add_reflective_cobj(unsigned index) {
 }
 
 inline void get_params(int &x1, int &y1, int &x2, int &y2, const float d[3][2]) {
-
 	x1 = max(0, get_xpos(d[0][0]));
 	y1 = max(0, get_ypos(d[1][0]));
 	x2 = min((MESH_X_SIZE-1), get_xpos(d[0][1]));
@@ -229,7 +225,6 @@ void add_coll_cube_to_matrix(int index, int dhcm) {
 }
 
 int add_coll_cube(cube_t &cube, cobj_params const &cparams, int platform_id, int dhcm) {
-
 	int const index(cobj_manager.get_next_avail_index());
 	coll_obj &cobj(coll_objects[index]);
 	cube.normalize();
