@@ -267,7 +267,7 @@ public:
 			camera.last_update_frame = frame_counter;
 		}
 	}
-	void setup_monitor_screen_draw(room_object_t const &monitor, rgeom_mat_t &mat, std::string &onscreen_text) {
+	void setup_monitor_screen_draw(room_object_t &monitor, rgeom_mat_t &mat, std::string &onscreen_text) {
 		assert(monitor.type == TYPE_MONITOR);
 
 		if (!monitor.is_active() || cur_building == nullptr || !cur_building->bcube.contains_cube(monitor)) { // inactive monitor or wrong building
@@ -284,8 +284,10 @@ public:
 			mat.tex.txoff    = rgen.rand_float(); // animate it
 			mat.tex.tyoff    = rgen.rand_float();
 			select_texture(PS_NOISE_TEX);
+			monitor.flags |= RO_FLAG_BROKEN2; // set static flag for this frame
 			return;
 		}
+		monitor.flags &= ~RO_FLAG_BROKEN2; // clear static flag for this frame
 		mat.tex.tscale_x = mat.tex.tscale_y = 0.0; // map texture to quad
 		bind_2d_texture(camera.tid);
 	}
@@ -309,7 +311,7 @@ void building_t::update_security_cameras(point const &camera_bs) {
 }
 void update_security_camera_image() {video_camera_manager.update_cameras();}
 
-void setup_monitor_screen_draw(room_object_t const &monitor, rgeom_mat_t &mat, std::string &onscreen_text) {
+void setup_monitor_screen_draw(room_object_t &monitor, rgeom_mat_t &mat, std::string &onscreen_text) {
 	video_camera_manager.setup_monitor_screen_draw(monitor, mat, onscreen_text);
 }
 size_t get_building_textures_gpu_mem() {return video_camera_manager.get_gpu_mem();}

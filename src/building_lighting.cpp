@@ -2172,7 +2172,15 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				}
 				else if (is_tv_or_monitor_thats_on) {
 					vector3d const dir(vector_from_dim_dir(i->dim, i->dir));
-					colorRGBA const color(i->is_active() ? WHITE : texture_color(get_tv_or_monitor_tid(*i))); // white for security monitor
+					colorRGBA color;
+
+					if (i->is_active()) { // security monitor
+						color = WHITE;
+						if (i->is_broken2()) {color *= (0.5 + 0.5*fract(1.23*tfticks));} // showing static - use random intensity
+					}
+					else { // normal TV/monitor
+						color = texture_color(get_tv_or_monitor_tid(*i));
+					}
 					cube_t const screen(get_tv_screen(*i));
 					point lpos(screen.get_cube_center());
 					lpos[i->dim] = screen.d[i->dim][i->dir]; // front of screen
