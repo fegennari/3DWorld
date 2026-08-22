@@ -718,7 +718,7 @@ void sd_sphere_d::get_quad_points(vector<vert_norm_tc> &quad_pts, bool use_tri_s
 	float const ndiv_inv(1.0/float(ndiv));
 	bool const is_full(s_beg == 0.0 && s_end == 1.0 && t_beg == 0.0 && t_end == 1.0);
 	if (is_full && !use_tri_strip && quad_pts.empty()) {quad_pts.reserve(4*ndiv*ndiv);}
-	unsigned const s0(NDIV_SCALE(s_beg)), s1(NDIV_SCALE(s_end)), t0(NDIV_SCALE(t_beg)), t1(NDIV_SCALE(t_end)), stride(t1 - t0 + 1);
+	unsigned const s0(NDIV_SCALE(s_beg)), s1(NDIV_SCALE(s_end)), t0(NDIV_SCALE(t_beg)), t1(NDIV_SCALE(t_end));
 
 	for (unsigned s = s0; s < s1; ++s) {
 		unsigned const sn((s+1)%ndiv), snt(min((s+1), ndiv));
@@ -752,8 +752,6 @@ void sd_sphere_d::get_itri_points(vector<vert_norm_tc> &itri_pts, vector<unsigne
 	unsigned const s0(NDIV_SCALE(s_beg)), s1(NDIV_SCALE(s_end)), t0(NDIV_SCALE(t_beg)), t1(NDIV_SCALE(t_end)), stride(t1 - t0 + 1);
 
 	for (unsigned s = s0; s < s1+1; ++s) { // one extra s iteration for indexed quads to get the final texture coord
-		unsigned const sn((s+1)%ndiv), snt(min((s+1), ndiv));
-
 		for (unsigned t = t0; t <= t1; ++t) {
 			unsigned const ix(itri_pts.size()), S(s%ndiv);
 			itri_pts.emplace_back(points[S][t], norms[S][t], (1.0f - s*ndiv_inv), (1.0f - t*ndiv_inv));
