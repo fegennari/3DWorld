@@ -1298,7 +1298,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					is_storage = 1; // mark it as a storage room whether or not we've added anything to it
 				}
 				else if (is_basement) { // basement card room
-					if (added_tc) {place_cards_on_table(rgen, room_id, tot_light_amt, objs_start);} // place actual cards on the table
+					if (added_tc) {place_obj_on_table(rgen, room_id, tot_light_amt, objs_start, TYPE_CARD_DECK);} // place actual cards on the table
 					r->assign_to(RTYPE_CARD, f);
 				}
 				else { // unassigned room of house on upper floor with added object/table

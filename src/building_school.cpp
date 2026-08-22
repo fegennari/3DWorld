@@ -463,8 +463,9 @@ cube_t get_table_inner_bcube(room_object_t const &table) {
 	if (table.is_round()) {surface.expand_by_xy(-0.2*table.get_radius());} // shrink to avoid placing over the edge
 	return surface;
 }
-void building_t::place_cards_on_surface(rand_gen_t &rgen, cube_t const &surface, unsigned room_id, float tot_light_amt, unsigned objs_start) {
-	float const one_inch(get_one_inch()), height(1.0*one_inch), length(1.3*3.5*one_inch), width(1.3*2.5*one_inch); // 1x3.5x2.5; width/height scaled by 1.3
+void building_t::place_obj_on_surface(rand_gen_t &rgen, cube_t const &surface, unsigned room_id, float tot_light_amt, unsigned objs_start,
+	room_object obj_type, float length, float width, float height)
+{
 	bool const dim(rgen.rand_bool());
 	vector2d const place_sz(surface.get_size_xy());
 	if (place_sz[dim] < 2.0*length || place_sz[!dim] < 2.0*width) return; // doesn't fit
@@ -475,11 +476,15 @@ void building_t::place_cards_on_surface(rand_gen_t &rgen, cube_t const &surface,
 		gen_xy_pos_for_cube_obj(cards, surface, scale, height, rgen);
 		if (overlaps_other_room_obj(cards, objs_start, 1)) continue; // check_all=1
 		bool const dir(surface.get_center_dim(dim) < cards.get_center_dim(dim)); // facing the closer edge
-		interior->room_geom->objs.emplace_back(cards, TYPE_CARD_DECK, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt);
+		interior->room_geom->objs.emplace_back(cards, obj_type, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt);
 		break; // success/done
-	}
+	} // for N
 }
-void building_t::place_cards_on_table(rand_gen_t rgen, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+void building_t::place_cards_on_surface(rand_gen_t &rgen, cube_t const &surface, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	float const one_inch(get_one_inch()), height(1.0*one_inch), length(1.3*3.5*one_inch), width(1.3*2.5*one_inch); // 1x3.5x2.5; width/height scaled by 1.3
+	place_obj_on_surface(rgen, surface, room_id, tot_light_amt, objs_start, TYPE_CARD_DECK, length, width, height);
+}
+void building_t::place_obj_on_table(rand_gen_t rgen, unsigned room_id, float tot_light_amt, unsigned objs_start, room_object obj_type) {
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const objs_end(objs.size());
 
@@ -487,8 +492,10 @@ void building_t::place_cards_on_table(rand_gen_t rgen, unsigned room_id, float t
 		room_object_t const &obj(objs[i]);
 		if (obj.type != TYPE_TABLE) continue;
 		cube_t const surface(get_table_inner_bcube(obj));
-		place_cards_on_surface(rgen, surface, room_id, tot_light_amt, i+1); // check for intersections with objects placed after the table
-	}
+		// use i+1 to check for intersections with objects placed after the table
+		if      (obj_type == TYPE_CARD_DECK) {place_cards_on_surface    (rgen, surface, room_id, tot_light_amt, i+1);}
+		else if (obj_type == TYPE_TV_REMOTE) {place_tv_remote_on_surface(rgen, surface, room_id, tot_light_amt, i+1);}
+	} // for i
 }
 
 // for libraries, prison lounges, restaurants, etc.

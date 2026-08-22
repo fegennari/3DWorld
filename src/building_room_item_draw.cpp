@@ -768,6 +768,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_ELEC_WIRE: add_electrical_wire_or_pair(c); break;
 		case TYPE_MONEY:     add_money   (c); break;
 		case TYPE_PHONE:     add_phone   (c); break;
+		case TYPE_TV_REMOTE: add_tv_remote(c); break;
 		case TYPE_TPROLL:    add_tproll  (c); break;
 		case TYPE_TAPE:      add_tape    (c); break;
 		case TYPE_SPRAYCAN:  add_spraycan(c); break;

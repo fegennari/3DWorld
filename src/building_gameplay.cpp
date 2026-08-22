@@ -236,6 +236,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_COM_FRIDGE] = bldg_obj_type_t(1, 1, 1, 1, 1, 0, 3, 400.0, 200.0, "commercial fridge"); // pickup=1 because it can be picked from (doors occlude objects)
 	bldg_obj_types[TYPE_BOILER    ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 2,  0.0,  0.0,   "boiler");
 	bldg_obj_types[TYPE_ROCK_WALL ] = bldg_obj_type_t(1, 0, 0, 0, 1, 0, 2,  0.0,  0.0,   "rock wall");
+	bldg_obj_types[TYPE_TV_REMOTE ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,  16.0, 0.1,   "TV remote");
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");
@@ -2747,6 +2748,9 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos, bool
 		else if (obj.type == TYPE_PHONE) {
 			phone_manager.player_action();
 		}
+		else if (obj.type == TYPE_TV_REMOTE) {
+			// future work: change TV channel or turn on/off if in same room as TV
+		}
 		else if (obj.is_medicine()) {
 			if (!player_at_full_health()) { // don't use if not needed
 				if (player_inventory.maybe_use_medicine()) {player_inventory.mark_last_item_used();} // will remove it
@@ -3370,7 +3374,7 @@ bool room_object_t::can_use() const { // excludes dynamic objects
 	if (type == TYPE_TPROLL) {return (taken_level == 0);} // can only use the TP roll, not the holder
 	if (type == TYPE_BOX && !is_open() && !was_expanded()) return 1; // unopened box; not from a shelf
 	return (type == TYPE_SPRAYCAN || type == TYPE_MARKER || type == TYPE_BOOK || type == TYPE_PHONE || type == TYPE_TAPE || type == TYPE_RAT ||
-		type == TYPE_FIRE_EXT || type == TYPE_CANDLE || type == TYPE_ERASER || type == TYPE_FLASHLIGHT || type == TYPE_HANDGUN);
+		type == TYPE_FIRE_EXT || type == TYPE_CANDLE || type == TYPE_ERASER || type == TYPE_FLASHLIGHT || type == TYPE_HANDGUN /*|| type == TYPE_TV_REMOTE*/);
 }
 bool room_object_t::can_place_onto() const { // Note: excludes flat objects such as TYPE_RUG and TYPE_BLANKET
 	return (type == TYPE_TABLE || type == TYPE_DESK || type == TYPE_DRESSER || type == TYPE_NIGHTSTAND || type == TYPE_COUNTER || type == TYPE_KSINK ||
