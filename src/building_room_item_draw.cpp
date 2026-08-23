@@ -1208,6 +1208,7 @@ float get_camera_z_rotate() {return -atan2(cview_dir.y, cview_dir.x);}
 
 void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, shader_t &s, vector3d const &xlate) { // held by the player
 	static rgeom_mat_t mat; // allocated memory is reused across frames; VBO is recreated every time; untextured
+	static building_room_geom_t tmp_rgeom;
 	point const obj_center(c.get_cube_center());
 	bool needs_blend(0), reset_mat_tid(0), reset_mat_nm_tid(0);
 
@@ -1234,7 +1235,6 @@ void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, 
 		needs_blend = 1;
 	}
 	else if (c.type == TYPE_BOOK) {
-		static building_room_geom_t tmp_rgeom;
 		float const z_rot_angle(get_camera_z_rotate() - PI_TWO);
 		tmp_rgeom.add_book(c, 1, 1, 1, 0.0, 0, 0, z_rot_angle); // draw lg/sm/text
 		enable_blend(); // needed for book text
@@ -1257,6 +1257,13 @@ void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, 
 			screen_mat.upload_draw_and_clear(state);
 		}
 	}
+	else if (c.type == TYPE_TV_REMOTE) {
+		float const z_rot_angle(get_camera_z_rotate());
+		tmp_rgeom.add_tv_remote(c);
+		for (rgeom_mat_t &mat : tmp_rgeom.mats_small) {rotate_verts(mat.quad_verts, plus_z, z_rot_angle, obj_center, 0);}
+		tmp_rgeom.mats_small.upload_draw_and_clear(s);
+		return;
+	}
 	else if (c.type == TYPE_RAT) { // draw the rat facing away from the player
 		bool const is_dead(c.is_broken()); // upside down if dead; shadow_pass=0; not animated
 		building_obj_model_loader.draw_model(s, obj_center, c, cview_dir, rat_color, xlate, OBJ_MODEL_RAT, 0, 0, nullptr, 0, 0, 0, is_dead);
@@ -1264,7 +1271,6 @@ void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, 
 		return; // don't need to run the code below
 	}
 	else if (c.is_medicine()) {
-		static building_room_geom_t tmp_rgeom;
 		room_object_t bottle(c);
 		vector3d const sz(bottle.get_size());
 
@@ -1293,7 +1299,6 @@ void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, 
 		return; // don't need to run the code below
 	}
 	else if (c.type == TYPE_CANDLE) {
-		static building_room_geom_t tmp_rgeom;
 		room_object_t obj(c);
 		obj.z2() -= (1.0 - c.get_remaining_capacity_ratio())*0.9*c.dz(); // slowly burn down shorter over time
 		tmp_rgeom.add_candle(obj);

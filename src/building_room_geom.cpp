@@ -8250,6 +8250,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_HANGER_ROD:return LT_GRAY.modulate_with(in_mall() ? WHITE : get_textured_wood_color());
 	case TYPE_MONEY:    return texture_color(get_money_tid());
 	case TYPE_PHONE:    return color*0.5; // 50% case color, 50% black
+	case TYPE_TV_REMOTE:return BKGRAY;
 	case TYPE_LAPTOP:   return BKGRAY; // black-gray case, ignore logo colors
 	case TYPE_PIZZA_BOX:return texture_color(get_texture_by_name("interiors/pizzatop.jpg"));
 	case TYPE_TPROLL:   return (WHITE*0.75  + GRAY*0.25);

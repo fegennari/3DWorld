@@ -862,7 +862,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		}
 	}
 	else if (type == TYPE_TV_REMOTE) { // remote interacts with the associated TV
-		room_object_t &tv(interior->room_geom->get_room_object_by_index(obj.item_flags));
+		room_object_t const &tv(interior->room_geom->get_room_object_by_index(obj.item_flags));
 		if (tv.type == TYPE_TV) {return interact_with_object(obj.item_flags, int_pos, query_ray_end, int_dir);}
 	}
 	else if (type == TYPE_BUTTON) { // Note: currently, buttons are only used for elevators and mall store gates

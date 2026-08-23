@@ -1050,6 +1050,10 @@ public:
 					co.dim = co.dir = 0; // clear dim and dir
 					phone_manager.enable();
 				}
+				else if (type == TYPE_TV_REMOTE) {
+					if (co.dim) {swap_obj_xy_aspect_ratio(co);} // swap aspect ratio to make dim=0
+					co.dim = co.dir = 0; // clear dim and dir
+				}
 				else if (type == TYPE_BOTTLE) { // medicine bottle
 					float const dx(co.dx()), dy(co.dy()), dz(co.dz());
 
@@ -2748,8 +2752,22 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos, bool
 		else if (obj.type == TYPE_PHONE) {
 			phone_manager.player_action();
 		}
-		else if (obj.type == TYPE_TV_REMOTE) {
-			// future work: change TV channel or turn on/off if in same room as TV
+		else if (obj.type == TYPE_TV_REMOTE) { // change TV channel or turn on/off if in same room as TV
+			int const room_id(get_room_containing_camera(player_pos));
+			if (room_id < 0) return 0; // player not inside a room
+			auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
+			vector<pair<float, unsigned>> tvs_by_dist;
+
+			for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) { // find nearest TV in the current room
+				if (i->type != TYPE_TV || i->room_id != room_id) continue;
+				tvs_by_dist.emplace_back(p2p_dist_sq(i->get_cube_center(), player_pos), (i - interior->room_geom->objs.begin()));
+			}
+			sort(tvs_by_dist.begin(), tvs_by_dist.end());
+
+			for (auto const &v : tvs_by_dist) { // use the closest working TV
+				if (interact_with_object(v.second, player_pos, player_pos, plus_z)) break; // pos/dir are unused
+			}
+			delay_use = 1;
 		}
 		else if (obj.is_medicine()) {
 			if (!player_at_full_health()) { // don't use if not needed
@@ -3374,7 +3392,7 @@ bool room_object_t::can_use() const { // excludes dynamic objects
 	if (type == TYPE_TPROLL) {return (taken_level == 0);} // can only use the TP roll, not the holder
 	if (type == TYPE_BOX && !is_open() && !was_expanded()) return 1; // unopened box; not from a shelf
 	return (type == TYPE_SPRAYCAN || type == TYPE_MARKER || type == TYPE_BOOK || type == TYPE_PHONE || type == TYPE_TAPE || type == TYPE_RAT ||
-		type == TYPE_FIRE_EXT || type == TYPE_CANDLE || type == TYPE_ERASER || type == TYPE_FLASHLIGHT || type == TYPE_HANDGUN /*|| type == TYPE_TV_REMOTE*/);
+		type == TYPE_FIRE_EXT || type == TYPE_CANDLE || type == TYPE_ERASER || type == TYPE_FLASHLIGHT || type == TYPE_HANDGUN || type == TYPE_TV_REMOTE);
 }
 bool room_object_t::can_place_onto() const { // Note: excludes flat objects such as TYPE_RUG and TYPE_BLANKET
 	return (type == TYPE_TABLE || type == TYPE_DESK || type == TYPE_DRESSER || type == TYPE_NIGHTSTAND || type == TYPE_COUNTER || type == TYPE_KSINK ||
