@@ -21,10 +21,12 @@ void rotate_obj_cube(cube_t &c, cube_t const &bc, bool in_dim, bool dir);
 void add_button(point const &pos, float button_radius, bool dim, bool dir, unsigned function_id, unsigned flags, vect_room_object_t &objs);
 bool try_add_lamp(cube_t const &place_area, float floor_spacing, unsigned room_id, unsigned flags, float light_amt,
 	vect_cube_t &cubes, vect_room_object_t &objects, rand_gen_t &rgen);
+void place_phone(room_object_t &obj, cube_t const &parent, float length, float width, unsigned room_id, bool dim, bool dir, rand_gen_t &rgen);
 int select_app_store_model(rand_gen_t &rgen, float &hscale, bool plumbing);
 void count_sign_rows_cols(string const &text, unsigned &nrows, unsigned &ncols);
 
 extern object_model_loader_t building_obj_model_loader;
+extern building_params_t global_building_params;
 
 
 void building_t::select_mall_wall_color() {
@@ -1581,6 +1583,40 @@ bool building_t::add_mall_table_with_chairs(rand_gen_t &rgen, cube_t const &tabl
 				if (has_bcube_int(tray, objs, objs_start)) continue;
 				add_cafeteria_tray(tray, !dim, room_id, tot_light_amt, no_alcohol, rgen);
 			}
+		}
+	}
+	if (rgen.rand_float() < 0.25) { // add trash
+		float const radius(table_width*rgen.rand_uniform(0.03, 0.05));
+		cube_t const trash(place_cylin_object(rgen, table_obj, radius, 2.0*radius, 1.5*radius));
+		
+		if (!has_bcube_int(trash, objs, objs_start)) {
+			colorRGBA const color(trash_colors[rgen.rand() % NUM_TRASH_COLORS]);
+			objs.emplace_back(trash, TYPE_TRASH, room_id, rgen.rand_bool(), rgen.rand_bool(), RO_FLAG_NOCOLL, tot_light_amt, SHAPE_SPHERE, color);
+		}
+	}
+	if (!global_building_params.food_box_tids.empty() && rgen.rand_float() < 0.1) { // add food box
+		float const height(0.125*window_vspacing*rgen.rand_uniform(0.8, 1.2)), depth(height*rgen.rand_uniform(0.15, 0.25)), width(height*rgen.rand_uniform(0.6, 0.9));
+
+		if (width < 0.5*table_width) { // should be true
+			bool const dim(rgen.rand_bool());
+			cube_t fbox;
+			gen_xy_pos_for_cube_obj(fbox, table_obj, vector3d(0.5*(dim ? width : depth), 0.5*(dim ? depth: width), 0.0), height, rgen);
+
+			if (!has_bcube_int(fbox, objs, objs_start)) {
+				objs.emplace_back(fbox, TYPE_FOOD_BOX, room_id, dim, rgen.rand_bool(), RO_FLAG_NOCOLL, tot_light_amt);
+				objs.back().obj_id = rgen.rand(); // set type of box
+			}
+		}
+	}
+	if (!is_prison() && rgen.rand_float() < 0.04) { // add phone - rare
+		float const one_inch(get_one_inch()), phone_length(6.3*one_inch), phone_width(3.3*one_inch), height(0.4*one_inch); // with a case
+
+		if (phone_length < 0.5*table_width) { // should be true
+			room_object_t phone;
+			place_phone(phone, table_obj, phone_length, phone_width, room_id, rgen.rand_bool(), rgen.rand_bool(), rgen);
+			phone.translate_dim(2, table_obj.dz()); // place on top of table
+			phone.light_amt = tot_light_amt;
+			if (!has_bcube_int(phone, objs, objs_start)) {objs.push_back(phone);}
 		}
 	}
 	return 1;
