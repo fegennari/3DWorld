@@ -92,7 +92,6 @@ bool decal_obj::is_on_cobj(int cobj, vector3d *delta) const {
 	return (draw_radius < min_dist_from_pt_to_polygon_edge(center, c.points, c.npoints));
 }
 
-
 void decal_obj::check_cobj() {
 
 	if (!status || cid < 0) return; // already disabled, or no bound cobj
@@ -115,26 +114,20 @@ void decal_obj::check_cobj() {
 	if (cid < 0) {status = 0; return;} // not found, no longer on a cobj so remove it
 }
 
-
 vector3d decal_obj::get_platform_delta() const {
-
 	if (cid >= 0 && coll_objects.get_cobj(cid).platform_id >= 0) {return platforms.get_cobj_platform(coll_objects.get_cobj(cid)).get_delta();}
 	return all_zeros;
 }
 
 
 class cobj_manager_t {
-
 	vector<int> index_stack;
 	coll_obj_group &cobjs;
 	unsigned index_top=0;
 
 	void extend_index_stack(unsigned start, unsigned end) {
 		index_stack.resize(end);
-
-		for (size_t i = start; i < end; ++i) { // initialize
-			index_stack[i] = (int)i; // put on the free list
-		}
+		for (size_t i = start; i < end; ++i) {index_stack[i] = (int)i;} // initialize: put on the free list
 	}
 public:
 	unsigned cobjs_removed=0;
@@ -212,7 +205,6 @@ inline void get_params(int &x1, int &y1, int &x2, int &y2, const float d[3][2]) 
 
 
 void add_coll_cube_to_matrix(int index, int dhcm) {
-
 	int x1, x2, y1, y2;
 	coll_obj const &cobj(coll_objects[index]);
 	bool const is_dynamic(cobj.status == COLL_DYNAMIC);
@@ -340,7 +332,6 @@ int add_coll_cylinder(point const &p1, point const &p2, float radius, float radi
 
 
 void add_coll_torus_to_matrix(int index, int dhcm) {
-
 	coll_obj &cobj(coll_objects[index]);
 	coll_obj const orig_cobj(cobj); // make a copy of the cobj so that we can modify it then restore it
 	cylinder_3dw const cylin(cobj.get_bounding_cylinder());
@@ -355,7 +346,6 @@ void add_coll_torus_to_matrix(int index, int dhcm) {
 }
 
 int add_coll_torus(point const &p1, vector3d const &dir, float ro, float ri, cobj_params const &cparams, int platform_id, int dhcm) {
-
 	assert(ro > 0.0 && ri > 0.0);
 	assert(dir != zero_vector);
 	int const index(cobj_manager.get_next_avail_index());
@@ -392,7 +382,6 @@ void add_coll_capsule_to_matrix(int index, int dhcm) {
 }
 
 int add_coll_capsule(point const &p1, point const &p2, float radius, float radius2, cobj_params const &cparams, int platform_id, int dhcm) {
-
 	assert(radius > 0.0 && radius2 > 0.0);
 	assert(p1 != p2);
 	int const index(cobj_manager.get_next_avail_index());
@@ -432,7 +421,6 @@ void add_coll_sphere_to_matrix(int index, int dhcm) {
 
 // doesn't work for ellipses when X != Y
 int add_coll_sphere(point const &pt, float radius, cobj_params const &cparams, int platform_id, int dhcm, bool reflective) {
-
 	radius = fabs(radius);
 	int const index(cobj_manager.get_next_avail_index());
 	coll_objects[index].points[0] = pt;
@@ -505,7 +493,6 @@ void add_coll_polygon_to_matrix(int index, int dhcm) { // coll_obj member functi
 }
 
 void set_coll_polygon(coll_obj &cobj, const point *points, int npoints, vector3d const &normal, float thickness) {
-
 	assert(npoints >= 3 && points != NULL); // too strict?
 	assert(npoints <= N_COLL_POLY_PTS);
 	assert(normal  != zero_vector);
@@ -548,7 +535,6 @@ int add_coll_polygon(const point *points, int npoints, cobj_params const &cparam
 
 // must be planar, convex polygon with unique consecutive points
 int add_simple_coll_polygon(const point *points, int npoints, cobj_params const &cparams, vector3d const &normal, int dhcm) {
-
 	int const index(cobj_manager.get_next_avail_index());
 	set_coll_polygon(coll_objects[index], points, npoints, normal, 0.0);
 	float brad;
@@ -561,12 +547,10 @@ int add_simple_coll_polygon(const point *points, int npoints, cobj_params const 
 
 
 void coll_obj::add_as_fixed_cobj() {
-
 	calc_volume();
 	fixed = 1;
 	id    = add_coll_cobj();
 }
-
 
 int coll_obj::add_coll_cobj() {
 
@@ -610,7 +594,6 @@ int coll_obj::add_coll_cobj() {
 	return cid;
 }
 
-
 void coll_obj::re_add_coll_cobj(int index, int remove_old) {
 
 	if (!fixed) return;
@@ -635,7 +618,6 @@ void coll_obj::re_add_coll_cobj(int index, int remove_old) {
 }
 
 void coll_cell::clear(bool clear_vectors) {
-
 	if (clear_vectors) {cvals.clear();}
 	zmin =  FAR_DISTANCE;
 	zmax = -FAR_DISTANCE;
@@ -752,7 +734,6 @@ int remove_coll_object(int index, bool reset_draw) {
 
 
 int remove_reset_coll_obj(int &index) {
-
 	int const retval(remove_coll_object(index));
 	index = -1;
 	return retval;
@@ -762,7 +743,6 @@ int remove_reset_coll_obj(int &index) {
 void purge_coll_freed(bool force) {
 
 	if (!force && cobj_manager.cobjs_removed < PURGE_THRESH) return;
-	//RESET_TIME;
 
 	for (int i = 0; i < MESH_Y_SIZE; ++i) {
 		for (int j = 0; j < MESH_X_SIZE; ++j) {
@@ -795,10 +775,9 @@ void purge_coll_freed(bool force) {
 	unsigned const ncobjs((unsigned)coll_objects.size());
 
 	for (unsigned i = 0; i < ncobjs; ++i) {
-		if (coll_objects[i].status == COLL_FREED) cobj_manager.free_index(i);
+		if (coll_objects[i].status == COLL_FREED) {cobj_manager.free_index(i);}
 	}
 	cobj_manager.cobjs_removed = 0;
-	//PRINT_TIME("Purge");
 }
 
 
@@ -903,7 +882,6 @@ int collision_detect_large_sphere(point &pos, float radius, unsigned flags) {
 			coll = 1; // return 1; ?
 		}
 	}
-	//assert(!is_nan(pos));
 	return coll;
 }
 
@@ -1005,25 +983,19 @@ bool is_point_interior(point const &pos, float radius) { // is query point inter
 					else if (cobj.type == COLL_POLYGON && cobj.thickness <= MIN_POLY_THICK) { // planar/thin polygon
 						inside_count += ((dot_product(cnorm, cobj.norm) > 0.0) ? 1 : -1); // inside if hit the polygon back face
 					}
-					else {
-						--inside_count; // sphere, cylinder, cone, or extruded polygon: assume outside
-					}
+					else {--inside_count;} // sphere, cylinder, cone, or extruded polygon: assume outside
 				}
-				else {
-					--inside_count; // no collision, assume outside
-				}
-			}
-		}
-	}
+				else {--inside_count;} // no collision, assume outside
+			} // for x
+		} // for y
+	} // for z
 	return (inside_count > 0);
 }
 
 
 // ************ begin vert_coll_detector ************
 
-
 bool dwobject::proc_stuck(bool static_top_coll) {
-
 	float const friction(object_types[type].friction_factor);
 	if (friction < 2.0*STICK_THRESHOLD || friction < rand_uniform(2.0, 3.0)*STICK_THRESHOLD) return 0;
 	flags |= (static_top_coll ? ALL_COLL_STOPPED : XYZ_STOPPED); // stuck in coll object
@@ -1031,9 +1003,7 @@ bool dwobject::proc_stuck(bool static_top_coll) {
 	return 1;
 }
 
-
 bool vert_coll_detector::safe_norm_div(float rad, float radius, vector3d &norm) {
-
 	if (fabs(rad) < 10.0*TOLERANCE) {
 		obj.pos.x += radius; // arbitrary
 		norm.assign(1.0, 0.0, 0.0);
@@ -1041,7 +1011,6 @@ bool vert_coll_detector::safe_norm_div(float rad, float radius, vector3d &norm) 
 	}
 	return 1;
 }
-
 
 void vert_coll_detector::check_cobj(int index) {
 
@@ -1090,7 +1059,6 @@ void vert_coll_detector::check_cobj(int index) {
 		//if (game_mode && sstates != NULL) {} // collision detection for player weapon?
 	}
 }
-
 
 float decal_dist_to_cube_edge(cube_t const &cube, point const &pos, int dim) {
 	int const ds((dim+1)%3), dt((dim+2)%3);
@@ -1177,9 +1145,7 @@ bool get_sphere_poly_int_val(point const &sc, float sr, point const *const point
 	return (intersects || inside); // intersects some face or is completely inside
 }
 
-
 bool sphere_sphere_int(point const &sc1, point const &sc2, float sr1, float sr2, vector3d &cnorm, point &new_sc) {
-	
 	float dist_sq(p2p_dist_sq(sc1, sc2)), radius(sr1 + sr2);
 	if (dist_sq > radius*radius) return 0;
 	cnorm  = ((dist_sq == 0.0) ? plus_z : (sc1 - sc2)/sqrt(dist_sq)); // arbitrarily choose +z to avoid divide-by-zero
@@ -1560,16 +1526,13 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 	if (friction >= STICK_THRESHOLD && (obj.flags & Z_STOPPED)) {obj.pos.z = pos.z = z_old;}
 }
 
-
 void vert_coll_detector::init_reset_pos() {
-
 	temp = obj; // backup copy
 	pos  = obj.pos; // reset local state
 	z1   = pos.z - o_radius;
 	z2   = pos.z + o_radius;
 	if (type == CAMERA) {z2 += get_player_height();}
 }
-
 
 int vert_coll_detector::check_coll() {
 
@@ -1589,7 +1552,6 @@ int vert_coll_detector::check_coll() {
 	}
 	return coll;
 }
-
 
 // ************ end vert_coll_detector ************
 
@@ -1646,9 +1608,7 @@ int dwobject::multistep_coll(point const &last_pos, int obj_index, unsigned nste
 	vector3d cmove(pos, last_pos);
 	float const dist(cmove.mag()); // 0.018
 
-	if (dist < 1.0E-6 || nsteps == 1) {
-		any_coll |= check_vert_collision(obj_index, 1, 0); // collision detection
-	}
+	if (dist < 1.0E-6 || nsteps == 1) {any_coll |= check_vert_collision(obj_index, 1, 0);} // collision detection
 	else {
 		float const step(dist/(float)nsteps);
 		vector3d const dpos(cmove);
@@ -1858,7 +1818,6 @@ void force_onto_surface_mesh(point &pos) { // for camera
 
 
 bool calc_sphere_z_bounds(point const &sc, float sr, point &pos, float &zt, float &zb) {
-
 	vector3d const vtemp(pos, sc);
 	if (vtemp.mag_sq() > sr*sr) return 0;
 	float const arg(sr*sr - vtemp.x*vtemp.x - vtemp.y*vtemp.y);
@@ -2084,9 +2043,7 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 	} // for k
 	bool falling(0);
 
-	if (flight) {
-		// do nothing
-	}
+	if (flight) {} // do nothing
 	else if (jumping) {
 		falling = 1; // if we're jumping, assume we're in free fall
 	}
@@ -2121,9 +2078,7 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 		if (falling)        {camera_in_air     = 1;}
 		if (!camera_in_air) {camera_invincible = 0;}
 	}
-	if (type == WAYPOINT) {
-		// do nothing
-	}
+	if (type == WAYPOINT) {} // do nothing
 	else if (flight) {
 		zvel = 0.0;
 		if (is_player) {sstate->fall_counter = 0;}

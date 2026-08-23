@@ -22,9 +22,7 @@ struct per_char_data_t {
 	per_char_data_t(float u1_=0, float u2_=0, float v1_=0, float v2_=0, float width_=1) : u1(u1_), u2(u2_), v1(v1_), v2(v2_), width(width_) {}
 };
 
-
 class font_texture_manager_t {
-
 	texture_t texture;
 	per_char_data_t pcd[256]; // one per ASCII value
 public:
@@ -37,7 +35,6 @@ public:
 		}
 		return 0;
 	}
-
 	// Note: expects to find a square texture with 16x16 tiles, one per ASCII value, starting from the ULC, in RGBA format
 	void load(string const &fn) {
 		texture.free_data();
@@ -190,11 +187,9 @@ void draw_bitmap_text(colorRGBA const &color, point const &pos, string const &te
 	td.add_text(text, pos, tsize);
 	td.end_draw();
 }
-
 void draw_text(colorRGBA const &color, float x, float y, float z, char const *text, float tsize) {
 	draw_bitmap_text(color, point(x, y, z), text, 0.8*tsize);
 }
-
 
 void text_drawer_t::draw() const {
 	if (strs.empty()) return;

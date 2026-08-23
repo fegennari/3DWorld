@@ -388,7 +388,6 @@ void calc_bkg_color() {
 	//if (atmosphere < 1.0) {blend_color(bkg_color, bkg_color, BACKGROUND_NIGHT, atmosphere, 0);}
 }
 
-
 void add_sun_effect(colorRGBA &color) {
 
 	color = color.modulate_with(sun_color);
@@ -401,26 +400,22 @@ void add_sun_effect(colorRGBA &color) {
 	color *= (0.8*cmult + 0.2);
 }
 
-
 void setup_linear_fog(colorRGBA const &color, float fog_end) {
 	cur_fog_color = color;
 	cur_fog_end   = fog_end;
 	add_sun_effect(cur_fog_color);
 }
 
-
 void auto_advance_camera() {
 	if (run_forward && !advanced) advance_camera(MOVE_FRONT);
 	advanced = 0;
 }
-
 
 void config_bkg_color_and_clear(bool no_fog) {
 	calc_bkg_color();
 	glClearColor_rgba((!no_fog && show_fog) ? GRAY : bkg_color);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT); // Clear the background
 }
-
 
 void reset_planet_defaults() {
 	have_sun   = 1;
@@ -429,7 +424,6 @@ void reset_planet_defaults() {
 	base_cloud_color = WHITE;
 	base_sky_color   = BACKGROUND_DAY;
 }
-
 
 float get_light_pos_scale() {
 	return ((world_mode == WMODE_INF_TERRAIN) ? 10.0 : 1.0); // hack: make the sun and moon far away in inf terrain mode 
@@ -509,7 +503,6 @@ void draw_sun_moon_stars(bool no_update) {
 	if (light_factor >= 0.4) {draw_sun();} // sun
 }
 
-
 void draw_universe_bkg() {
 
 	RESET_TIME;
@@ -566,7 +559,6 @@ void draw_universe_bkg() {
 	if (TIMETEST) PRINT_TIME("0.3");
 }
 
-
 void draw_game_elements(int timer1, int reflection_pass=0) {
 
 	if (TIMETEST) PRINT_TIME("U");
@@ -583,14 +575,11 @@ void setup_basic_fog() {
 	if (show_fog) {reset_fog();	fog_enabled = 1;}
 }
 
-
 void add_uw_light_color_comp(point const &lpos, float weight, colorRGBA &color) {
-
 	// check for in shadow? what about tiled terrain?
 	weight *= 0.5 + 0.5*max(0.0f, lpos.z/lpos.mag()); // vertical component (which penetrates water)
 	UNROLL_3X(color[i_] += weight;)
 }
-
 
 void atten_uw_fog_color(colorRGBA &color, float depth) {
 
@@ -606,7 +595,6 @@ void atten_uw_fog_color(colorRGBA &color, float depth) {
 	filt_color.A = 0.25;
 	add_camera_filter(filt_color, 1, -1, CAM_FILT_UWATER);
 }
-
 
 void set_inf_terrain_fog(bool underwater, float zmin2) {
 
@@ -660,7 +648,6 @@ void scroll_scene() {
 
 
 float get_ocean_wave_height() {
-
 	if (water_is_lava || !(display_mode & 0x0100)) return 0.0;
 	static float time(0.0);
 	if (animate2 && temperature > W_FREEZE_POINT) {time += fticks;}
@@ -966,7 +953,6 @@ void display() {
 			check_gl_error(6);
 			proc_voxel_updates(); // with the update here, we avoid making the voxels and shadows out of sync
 			if (TIMETEST) PRINT_TIME("F");
-
 			//proc_voxel_updates(); // with the update here, we avoid uploading the modified voxel VBOs during shadow map rendering
 
 			// send data to GPU
@@ -998,7 +984,6 @@ void display() {
 				float const fog_dist(0.2f + (0.25f + 0.75f*fog_color.B)*(1.5f*Z_SCENE_SIZE)*(camera.z - zmin)/((camera.z + depth) - zmin));
 				setup_linear_fog(fog_color, (water_is_lava ? 0.5 : 1.0)*fog_dist);
 			}
-
 			// draw the scene
 			draw_camera_weapon(0);
 			if (TIMETEST) PRINT_TIME("H");
@@ -1189,7 +1174,6 @@ void draw_scene_from_custom_frustum(pos_dir_up const &pdu, int cobj_id, int refl
 
 
 void run_tt_gameplay() {
-
 	process_groups();
 	setup_dynamic_teleporters();
 	draw_select_groups(1);
@@ -1220,7 +1204,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 
 	static int init_xx(1);
 	RESET_TIME;
-	//timer_t timer("Display Inf Terrain"); // 6.9 no update / 10.6 1-thread / 8.0 2-threads / 7.6 3-threads
+	//timer_t timer("Display Inf Terrain");
 
 	if (init_x || init_xx) {
 		init_xx  = 0;

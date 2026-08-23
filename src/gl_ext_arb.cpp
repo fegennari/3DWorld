@@ -45,7 +45,6 @@ GLenum get_internal_texture_format(int ncolors, bool compressed, bool linear_spa
 	return (linear_space ? (compressed ? scformats : sformats) : (compressed ? cformats : formats))[ncolors-1];
 }
 
-
 void bind_texture_tu(unsigned tid, unsigned tu_id) {
 	assert(tid);
 	assert(tu_id < 32); // max is GL_TEXTURE31; too strict?
@@ -55,14 +54,11 @@ void bind_texture_tu(unsigned tid, unsigned tu_id) {
 
 // ***************** 3D TEXTURES *****************
 
-
 void bind_3d_texture(unsigned tid) {
 	glBindTexture(GL_TEXTURE_3D, tid);
 	assert(glIsTexture(tid));
 }
-
 void setup_3d_texture(unsigned &tid, int filter, int wrap) {
-
 	glGenTextures(1, &tid);
 	bind_3d_texture(tid);
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, filter); // GL_LINEAR_MIPMAP_LINEAR?
@@ -101,7 +97,6 @@ void update_3d_texture(unsigned tid, unsigned xoff, unsigned yoff, unsigned zoff
 
 
 // ***************** VBOs / VAOs *****************
-
 
 unsigned create_vbo() {
 	unsigned vbo;
@@ -250,18 +245,16 @@ void bind_fbo_texture(unsigned fbo_id, unsigned tid, bool is_depth_fbo, bool mul
 }
 
 void create_fbo(unsigned &fbo_id, unsigned tid, bool is_depth_fbo, bool multisample, bool is_array, unsigned *layer) {
-	// Create a framebuffer object
 	check_gl_error(550);
 	glGenFramebuffers(1, &fbo_id);
 	bind_fbo(fbo_id);
 	
-	if (is_depth_fbo) { // Instruct openGL that we won't bind a color texture with the currently binded FBO
+	if (is_depth_fbo) { // instruct openGL that we won't bind a color texture with the currently bound FBO
 		glDrawBuffer(GL_NONE);
 		glReadBuffer(GL_NONE);
 	}
-	// Attach the texture to FBO depth or color attachment point
+	// attach the texture to FBO depth or color attachment point
 	bind_fbo_texture(fbo_id, tid, is_depth_fbo, multisample, is_array, layer);
-	// Check FBO status
 	GLenum const status(glCheckFramebufferStatus(GL_FRAMEBUFFER));
 	assert(status != GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE);
 	assert(status == GL_FRAMEBUFFER_COMPLETE);
@@ -296,7 +289,6 @@ unsigned create_depth_render_buffer(unsigned xsize, unsigned ysize, bool multisa
 	return depthrenderbuffer;
 }
 void disable_and_free_render_buffer(unsigned &render_buffer) {
-
 	glBindRenderbuffer(GL_RENDERBUFFER, 0);
 	if (render_buffer > 0) {glDeleteRenderbuffers(1, &render_buffer);}
 	render_buffer = 0;
@@ -304,7 +296,6 @@ void disable_and_free_render_buffer(unsigned &render_buffer) {
 
 
 void render_to_texture_t::pre_render(float xsize, float ysize, unsigned nx, unsigned ny, point const &center, vector3d const &view_dir) const {
-
 	assert(xsize > 0.0 && ysize > 0);
 	assert(tsize > 0 && nx > 0 && ny > 0);
 	// setup matrices
@@ -318,15 +309,12 @@ void render_to_texture_t::pre_render(float xsize, float ysize, unsigned nx, unsi
 	translate_to(-center);
 }
 
-
 void render_to_texture_t::post_render() {
-
 	restore_prev_mvm_pjm_state();
 	//glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 	disable_fbo();
 	set_standard_viewport();
 }
-
 
 colorRGBA get_clear_color() {
 	colorRGBA clear_color;
@@ -339,7 +327,6 @@ void set_temp_clear_color(colorRGBA const &clear_color, bool clear_depth, bool c
 	glClear(GL_COLOR_BUFFER_BIT | (clear_depth ? GL_DEPTH_BUFFER_BIT : 0) | (clear_stencil ? GL_STENCIL_BUFFER_BIT : 0));
 	glClearColor_rgba(orig_clear_color);
 }
-
 
 void render_to_texture_t::render(texture_pair_t &tpair, float xsize, float ysize, point const &center, vector3d const &view_dir,
 	colorRGBA const &bkg_color, bool use_depth_buffer, bool mipmap)
@@ -436,9 +423,7 @@ GLint64 get_timestamp() {
 
 // ***************** Other *****************
 
-
 bool gen_mipmaps(unsigned dim) { // cube maps = 6
-
 	assert((dim >= 1 && dim <= 3) || dim == 6);
 	if (!glGenerateMipmap) return 0;
 	int const tex_dims[6] = {GL_TEXTURE_1D, GL_TEXTURE_2D, GL_TEXTURE_3D, 0, 0, GL_TEXTURE_CUBE_MAP};

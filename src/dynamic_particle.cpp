@@ -29,7 +29,6 @@ extern vector<light_source_trig> light_sources_d;
 
 // ************ dynamic_particle ************
 
-
 dynamic_particle::dynamic_particle() : sphere_t(all_zeros, rand_uniform(dp_params.rmin, dp_params.rmax)),
 	intensity(rand_uniform(dp_params.imin, dp_params.imax)*XY_SCENE_SIZE), velocity(signed_rand_vector(rand_uniform(dp_params.vmin, dp_params.vmax)))
 {
@@ -38,15 +37,12 @@ dynamic_particle::dynamic_particle() : sphere_t(all_zeros, rand_uniform(dp_param
 	gen_pos();
 }
 
-
 void dynamic_particle::gen_pos() {
-	
 	do {
 		rand_xy_point(rand_uniform(zbottom, (MAX_D_HEIGHT + max(ztop, czmax))), pos, 0);
 		UNROLL_3X(pos[i_] *= dp_params.sdist[pos[i_] >= 0.0][i_];)
 	} while (point_inside_voxel_terrain(pos));
 }
-
 
 void dynamic_particle::draw() const { // lights, color, texture, shadowed
 
@@ -58,8 +54,6 @@ void dynamic_particle::draw() const { // lights, color, texture, shadowed
 	draw_sphere_vbo(pos, radius, ndiv, (tid >= 0)); // point if far away?
 }
 
-
-// multiple steps?
 void dynamic_particle::apply_physics(float stepsize, int index) { // begin_motion, move, random dir change, collision (mesh and cobjs), forces applied to?
 
 	if (!begin_motion || !animate2) return;
@@ -111,7 +105,6 @@ void dynamic_particle::apply_physics(float stepsize, int index) { // begin_motio
 	}
 }
 
-
 void dynamic_particle::add_light(cube_map_shadow_manager &smgr, int index) { // dynamic lights, non-const due to caching of light_id
 
 	if (!lighted) return;
@@ -130,11 +123,9 @@ void dynamic_particle::add_light(cube_map_shadow_manager &smgr, int index) { // 
 void dynamic_particle::add_cobj_shadows() const { // cobjs, dynamic objects
 	add_shadow_obj(pos, radius, -1);
 }
-
 void dynamic_particle::add_cobj() {
 	if (ADD_DP_COBJS) {cid = add_coll_sphere(pos, radius, cobj_params(0.7, color, 0, 1));}
 }
-
 void dynamic_particle::remove_cobj() {
 	if (ADD_DP_COBJS) {remove_coll_object(cid);}
 	cid = -1;
@@ -143,18 +134,14 @@ void dynamic_particle::remove_cobj() {
 
 // ************ dynamic_particle_system ************
 
-
 void dynamic_particle_system::create_particles(unsigned num, bool only_if_empty) {
-
 	if (only_if_empty && size() > 0) return;
 	clear();
 	particles.reserve(num);
 	for (unsigned i = 0; i < num; ++i) {add_particle(dynamic_particle());}
 }
 
-
 void dynamic_particle_system::draw() const {
-
 	shader_t s;
 	s.begin_color_only_shader();
 	begin_sphere_draw(0);
@@ -163,9 +150,7 @@ void dynamic_particle_system::draw() const {
 	s.end_shader();
 }
 
-
 void dynamic_particle_system::apply_physics(float stepsize) {
-	
 	for (unsigned i = 0; i < size(); ++i) {
 		particles[i].remove_cobj();
 		for (unsigned s = 0; s < NUM_COLL_STEPS; ++s) {particles[i].apply_physics(stepsize/NUM_COLL_STEPS, i);}
@@ -173,22 +158,17 @@ void dynamic_particle_system::apply_physics(float stepsize) {
 	}
 }
 
-
 void dynamic_particle_system::add_lights() { // non-const due to caching of light_id
 	for (unsigned i = 0; i < size(); ++i) {particles[i].add_light(*this, i);}
 }
-
 void dynamic_particle_system::remove_lights() {
 	for (unsigned i = 0; i < size(); ++i) {remove_obj_light(i);}
 }
-
 void dynamic_particle_system::add_cobj_shadows() const {
 	for (unsigned i = 0; i < size(); ++i) {particles[i].add_cobj_shadows();}
 }
 
-
 void dynamic_particle_system::build_lookup_matrix() {
-
 	bins.clear();
 	bins.resize(XY_MULT_SIZE);
 

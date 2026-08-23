@@ -70,7 +70,6 @@ void gen_and_draw_stars(float alpha, bool half_sphere, bool no_update) {
 	draw_stars(alpha, no_update);
 }
 
-
 void gen_star(star &star1, int half_sphere) {
 	float const radius(0.7f*(FAR_CLIP+X_SCENE_SIZE)), theta(rand_uniform(0.0, TWO_PI));
 	float phi(gen_rand_phi<rand_uniform>());
@@ -200,7 +199,6 @@ void gen_bubble(point const &pos, float r, colorRGBA const &c) {
 }
 
 void gen_line_of_bubbles(point const &p1, point const &p2, float r, colorRGBA const &c) {
-	//RESET_TIME;
 	if (!animate2) return;
 	point cur(p1);
 	vector3d const dir(p2 - p1);
@@ -218,7 +216,6 @@ void gen_line_of_bubbles(point const &p1, point const &p2, float r, colorRGBA co
 		if (point_outside_mesh(xpos, ypos) || cur.z < mesh_height[ypos][xpos]) break;
 		if (is_underwater(cur)) bubbles[ixs[cur_ix++]].gen(cur, r, c);
 	}
-	//PRINT_TIME("Bubble Gen");
 }
 
 
@@ -354,7 +351,6 @@ void physics_particle_manager::gen_particles(point const &pos, vector3d const &v
 void add_water_particles(point const &pos, vector3d const &vadd, float vmag, float gen_radius, float mud_mix, float blood_mix, unsigned num) {
 	water_part_man.gen_particles(pos, vadd, vmag, gen_radius, water_part_man.calc_color(mud_mix, blood_mix), num);
 }
-
 void add_explosion_particles(point const &pos, vector3d const &vadd, float vmag, float gen_radius, colorRGBA const &color, unsigned num, bool emissive) {
 	explosion_part_man[emissive].gen_particles(pos, vadd, vmag, gen_radius, color, num);
 }
@@ -475,6 +471,6 @@ template<typename base> point rand_gen_template_t<base>::gen_rand_cube_point_xy(
 
 
 // explicit template instantiations
-template class rand_gen_template_t<rgen_core_t>;
-template class rand_gen_template_t<rgen_pregen_t>;
+template struct rand_gen_template_t<rgen_core_t>;
+template struct rand_gen_template_t<rgen_pregen_t>;
 

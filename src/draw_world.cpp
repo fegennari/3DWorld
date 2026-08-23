@@ -273,11 +273,9 @@ void common_shader_block_post(shader_t &s, bool dlights, bool use_shadow_map, bo
 	if (world_mode == WMODE_INF_TERRAIN) {setup_tt_fog_post(s);}
 }
 
-
 float const SMOKE_NOISE_MAG = 0.8;
 bool use_smoke_noise() {return (use_smoke_for_fog == 2 && SMOKE_NOISE_MAG);}
 bool is_smoke_in_use() {return (smoke_exists || use_smoke_for_fog);}
-
 
 void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, bool direct_lighting, bool smoke_enabled,
 	bool has_lt_atten, bool use_smap, int use_bmap, bool use_spec_map, bool use_mvm, bool use_gloss_map)
@@ -329,7 +327,6 @@ float setup_underwater_fog(shader_t &s, int shader_type) {
 }
 
 unsigned get_sky_zval_texture() {
-
 	if (sky_zval_tid == 0) {create_sky_vis_zval_texture(sky_zval_tid);}
 	assert(sky_zval_tid != 0);
 	return sky_zval_tid;
@@ -550,7 +547,6 @@ void setup_object_render_data() {
 
 
 void end_group(int &last_group_id) {
-
 	if (last_group_id < 0) return;
 	assert((unsigned)last_group_id < obj_draw_groups.size());
 	obj_draw_groups[last_group_id].end_render();
@@ -687,7 +683,6 @@ void draw_cobjs_group(vector<unsigned> const &cobjs, cobj_draw_buffer &cdb, int 
 typedef vector<pair<float, int> > vect_sorted_ix;
 
 bool check_big_occluder(coll_obj const &c, unsigned cix, vect_sorted_ix &out) { // Note: increases CPU time but decreases GPU time
-
 	if (!c.is_big_occluder() || c.group_id >= 0) return 0;
 	float const dist_sq(distance_to_camera_sq(c.get_center_pt()));
 	// use higher thresh for core context mode because buffer updates are slower and batch size is more important than early z-culling from z-prepass
@@ -736,7 +731,6 @@ bool add_cobj_to_draw_list(unsigned cix, int reflection_pass, bool use_ref_plane
 }
 
 void cobj_draw_buffer::draw() const {
-	
 	draw_verts(tri_verts, GL_TRIANGLES);
 	draw_verts(tc_tri_verts, GL_TRIANGLES);
 	draw_quad_verts_as_tris(quad_verts);
@@ -758,7 +752,6 @@ bool check_cobj_vis_occlude(coll_obj const &c, pos_dir_up const &pdu, int reflec
 // should always have draw_solid enabled on the first call for each frame
 void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 
-	//RESET_TIME;
 	static vect_sorted_ix draw_last;
 	if (coll_objects.empty() || coll_objects.drawn_ids.empty() || world_mode != WMODE_GROUND) return;
 	if (draw_trans && draw_last.empty() && (!is_smoke_in_use() || portals.empty())) return; // nothing transparent to draw
@@ -790,7 +783,6 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 	float const clip_plane_z_bias = -0.005; // 10.0*cobj_z_bias? 0.2/window_height?
 	clip_plane_z += clip_plane_z_bias;
 	//if (enable_clip_plane_z) {glEnable(GL_CLIP_DISTANCE0);}
-	//timer_t timer(draw_trans ? "Draw Trans" : "Draw Solid"); // 1.83 / 2.85 => 1.73 / 2.16 => 1.65 / 1.97
 	
 	if (!draw_trans) { // draw solid
 		draw_last.clear();
@@ -924,8 +916,6 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 	clip_plane_z -= clip_plane_z_bias;
 	check_gl_error(570);
 	//if (enable_clip_plane_z) {glDisable(GL_CLIP_DISTANCE0);}
-	//if (!draw_trans) {PRINT_TIME("Final Draw");}
-	//PRINT_TIME_ONSCREEN("Final Draw");
 }
 
 
@@ -982,9 +972,7 @@ void draw_stars(float alpha, bool no_update) {
 	disable_blend();
 }
 
-
 void draw_sun() {
-
 	point const pos(get_sun_pos());
 	if (!have_sun || !sphere_in_camera_view(pos, sun_radius, 2)) return;
 	colorRGBA color(attenuate_sun_color(SUN_C));
@@ -993,7 +981,6 @@ void draw_sun() {
 	draw_single_colored_sphere(pos, sun_radius, N_SPHERE_DIV, color);
 	glDepthMask(GL_TRUE);
 }
-
 
 void draw_moon() {
 
@@ -1028,7 +1015,6 @@ void draw_moon() {
 		disable_blend();
 	}
 }
-
 
 // for some reason the texture is backwards, so we mirrored the image of the earth
 void draw_earth() {
@@ -1090,7 +1076,6 @@ void maybe_draw_rainbow() {
 
 
 void apply_red_sky(colorRGBA &color) {
-
 	if (light_factor > 0.45 && light_factor < 0.55) { // red sky at night/morning
 		float const redness(1.0 - 20.0*fabs(light_factor - 0.5));
 		color.R = min(1.0f, (1.0f + 0.8f*redness)*color.R);
@@ -1099,9 +1084,7 @@ void apply_red_sky(colorRGBA &color) {
 	}
 }
 
-
 colorRGBA get_cloud_color() {
-
 	colorRGBA color(brightness, brightness, min(1.0, 1.2*brightness), atmosphere); // more blue when cloudy/rainy
 	apply_red_sky(color);
 	color = color.modulate_with(base_cloud_color);
@@ -1109,15 +1092,12 @@ colorRGBA get_cloud_color() {
 	return color;
 }
 
-
 void get_avg_sky_color(colorRGBA &avg_color) {
 	blend_color(avg_color, colorRGBA(get_cloud_color(), 1.0), bkg_color, 0.5, 1);
 	avg_color.normalize_to_max_comp();
 }
 
-
 void set_cloud_intersection_shader(shader_t &s) {
-
 	s.add_uniform_vector3d("sun_pos",  sun_pos);
 	s.add_uniform_vector3d("moon_pos", moon_pos);
 	s.add_uniform_vector3d("sphere_center", cur_spo.center);
@@ -1129,9 +1109,7 @@ void set_cloud_intersection_shader(shader_t &s) {
 	select_texture(CLOUD_TEX, 8);
 }
 
-
 float get_cloud_density(point const &pt, vector3d const &dir) { // optimize?
-
 	if (atmosphere == 0.0) return 0.0;
 	point lsint;
 	if (!line_sphere_int(-dir, pt, cur_spo.center, cur_spo.radius, lsint, 0)) return 0.0; // shouldn't get here?
@@ -1279,7 +1257,6 @@ void draw_sky(bool camera_side, bool no_update) {
 
 
 void compute_brightness() {
-
 	brightness = 0.8 + 0.2*light_factor;
 	if (!have_sun) {brightness *= 0.25;}
 	if (is_cloudy) {brightness *= 0.5;}
@@ -1293,7 +1270,6 @@ void compute_brightness() {
 
 
 template<typename S, typename T> void get_draw_order(vector<T> const &objs, vector<S> &order) {
-
 	point const camera(get_camera_pos());
 	
 	for (unsigned i = 0; i < objs.size(); ++i) {
@@ -1355,7 +1331,6 @@ void particle_cloud::draw(quad_batch_draw &qbd) const {
 		}
 	}
 }
-
 
 void particle_cloud::draw_part(point const &p, float r, colorRGBA c, quad_batch_draw &qbd) const {
 
@@ -1453,7 +1428,6 @@ void decal_obj::maybe_draw_blood_trail(line_tquad_draw_t &blood_tqd) const {
 
 
 template<typename T, typename ARG> void draw_objects(vector<T> const &objs, ARG &arg) {
-
 	order_vect_t order;
 	get_draw_order(objs, order);
 
@@ -1465,7 +1439,6 @@ template<typename T, typename ARG> void draw_objects(vector<T> const &objs, ARG 
 
 
 void draw_bubbles() {
-
 	if (!bubbles.any_active()) return;
 	shader_t s;
 	s.begin_untextured_lit_glcolor_shader();
@@ -1481,9 +1454,7 @@ void draw_bubbles() {
 	s.end_shader();
 }
 
-
 void draw_part_clouds(vector<particle_cloud> const &pc, int tid) {
-
 	enable_flares(tid);
 	//select_texture(CLOUD_TEX, 1);
 	static quad_batch_draw qbd;
@@ -1516,7 +1487,6 @@ void water_particle_manager::draw() const {
 
 
 struct crack_point {
-
 	point pos, orig_pos;
 	int cid=0, face=0, time=0;
 	float alpha=0.0;
@@ -1533,9 +1503,7 @@ struct crack_point {
 	}
 };
 
-
 struct ray2d {
-
 	point2d<float> pts[2];
 
 	ray2d() {}
@@ -1717,7 +1685,6 @@ void draw_cracks_and_decals() {
 
 
 void setup_depth_trans_texture(shader_t &s, unsigned &depth_tid) {
-
 	unsigned const depth_tu_id = 13;
 	setup_depth_tex(s, depth_tu_id);
 	depth_buffer_to_texture(depth_tid);
@@ -1763,16 +1730,13 @@ void draw_smoke_and_fires() {
 
 
 void add_camera_filter(colorRGBA const &color, unsigned time, int tid, unsigned ix, bool fades) {
-	
 	assert(ix < MAX_CFILTERS);
 	if (color.alpha == 0.0) return;
 	if (cfilters.size() <= ix) cfilters.resize(ix+1);
 	cfilters[ix] = camera_filter(color, time, tid, fades);
 }
 
-
 void camera_filter::draw(bool apply_texture) {
-
 	if (apply_texture) {select_texture(tid);} // use WHITE_TEX if tid < 0
 	float const zval(-1.1*perspective_nclip), tan_val(tan(perspective_fovy/TO_DEG));
 	float const y(-0.5*zval*tan_val), x((y*window_width)/window_height);
@@ -1781,7 +1745,6 @@ void camera_filter::draw(bool apply_texture) {
 	cur_color.set_for_cur_shader();
 	draw_tquad(x, y, zval);
 }
-
 
 void draw_camera_filters(vector<camera_filter> &cfs) {
 
@@ -1803,7 +1766,6 @@ void draw_camera_filters(vector<camera_filter> &cfs) {
 
 
 point world_space_to_screen_space(point const &pos) { // returns screen space normalized to [0.0, 1.0]
-
 	double mats[2][16] = {};
 	fgGetMVM().get_as_doubles(mats[0]); // Model = MVM
 	fgGetPJM().get_as_doubles(mats[1]); // Proj
@@ -1813,18 +1775,14 @@ point world_space_to_screen_space(point const &pos) { // returns screen space no
 	return point(pss);
 }
 
-
 void restore_prev_mvm_pjm_state() {
-
 	fgMatrixMode(FG_PROJECTION);
 	fgPopMatrix();
 	fgMatrixMode(FG_MODELVIEW);
 	fgPopMatrix();
 }
 
-
 bool is_sun_flare_visible() {
-
 	if (!have_sun || light_factor < 0.4) return 0; // sun below the horizon, or doesn't exist
 	point const cur_sun_pos(get_sun_pos());
 	if (dot_product(cview_dir, (cur_sun_pos - get_camera_pos())) < 0.0) return 0; // sun behind the camera
@@ -1859,9 +1817,7 @@ void draw_sparks(bool clear_at_end) { // projectile hit locations
 	if (clear_at_end) {sparks.clear();}
 }
 
-
 void draw_projectile_effects(int reflection_pass) {
-
 	draw_beams(reflection_pass == 0);
 	draw_sparks(reflection_pass == 0);
 	explosion_part_man[0].draw(0.001, -1, 0); // lit
@@ -1871,7 +1827,6 @@ void draw_projectile_effects(int reflection_pass) {
 
 
 struct splash_ring_t {
-
 	point pos;
 	float size;
 	colorRGBA color;
@@ -1892,12 +1847,10 @@ struct splash_ring_t {
 	}
 };
 
-
 vector<splash_ring_t> splashes;
 
 
 void draw_splash(float x, float y, float z, float size, colorRGBA color) { // queue it up for drawing
-
 	assert(size >= 0.0);
 	if (DISABLE_WATER || !(display_mode & 0x04)) return;
 	if (size == 0.0 || temperature <= W_FREEZE_POINT) return;
@@ -1906,9 +1859,7 @@ void draw_splash(float x, float y, float z, float size, colorRGBA color) { // qu
 	splashes.push_back(splash_ring_t(point(x, y, z+0.001), size, color));
 }
 
-
 void draw_splashes() {
-
 	if (splashes.empty()) return;
 	shader_t s;
 	s.begin_untextured_lit_glcolor_shader();

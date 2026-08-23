@@ -112,7 +112,6 @@ float get_mesh_zmax(point const *const pts, unsigned npts) {
 
 
 bool cobj_draw_buffer::on_new_obj_layer(obj_layer const &l) {
-
 	bool const is_new_layer(l.color != last_layer.color || l.tid != last_layer.tid || l.spec_color != last_layer.spec_color || l.shine != last_layer.shine ||
 		l.is_emissive != last_layer.is_emissive || l.light_atten != last_layer.light_atten || l.refract_ix != last_layer.refract_ix || l.metalness != last_layer.metalness);
 	if (is_new_layer) {flush();}
@@ -242,10 +241,7 @@ void coll_obj::draw_coll_cube(int tid, cobj_draw_buffer &cdb, bool force_draw_al
 bool camera_back_facing(point const *const points, int npoints, vector3d const &normal) {
 	return (dot_product_ptv(normal, get_camera_pos(), get_center(points, npoints)) >= 0.0);
 }
-
-
 bool camera_behind_polygon(point const *const points, int npoints) {
-
 	point const center(get_center(points, npoints)), camera(get_camera_pos());
 	vector3d const dirs[2] = {vector3d(points[1], points[0]), vector3d(points[npoints-1], points[0])};
 	vector3d const normal(cross_product(dirs[0], dirs[1]));
@@ -254,7 +250,6 @@ bool camera_behind_polygon(point const *const points, int npoints) {
 
 
 void coll_obj::set_poly_texgen(int tid, vector3d const &normal, shader_t &shader) const {
-
 	if (tid < 0) return; // texturing disabled
 	float const tscale[2] = {cp.tscale, get_tex_ar(tid)*cp.tscale}, xlate[2] = {cp.tdx, cp.tdy};
 	setup_polygon_texgen(normal, tscale, xlate, texture_offset, cp.swap_txy(), shader, 1);
@@ -275,7 +270,6 @@ void coll_obj::get_polygon_tparams(int tid, vector3d const &normal, texgen_param
 
 
 template<unsigned NUM> void cobj_draw_buffer::add_polygon(vert_norm_texp const &vnt, point const *const pts) {
-
 	unsigned const six(tri_verts.size());
 	tri_verts.resize(six+NUM, vnt); // push NUM more verts
 	for (unsigned i = 0; i < NUM; ++i) {tri_verts[six+i].v = pts[quad_to_tris_ixs[i]];}
@@ -290,7 +284,6 @@ void cobj_draw_buffer::draw_cylin_cdb(point const &p1, point const &p2, texgen_p
 
 
 void coll_obj::draw_polygon(int tid, point const *pts, int npts, vector3d const &normal, cobj_draw_buffer &cdb) const {
-
 	assert(npts == 3 || npts == 4);
 	vert_norm_texp vnt;
 	vnt.n = get_norm_camera_orient(normal, get_center(pts, npts));
@@ -438,12 +431,9 @@ void coll_obj::draw_cylin_ends(int tid, int ndiv, cobj_draw_buffer &cdb) const {
 
 void add_shadow_obj(point const &pos, float radius, int coll_id) {
 	//if (enable_vfc && !camera_pdu.sphere_visible_test(pos, radius)) return;
-	shadow_objs.push_back(shadow_sphere(pos, radius, coll_id));
+	shadow_objs.emplace_back(pos, radius, coll_id);
 }
-
-
 void add_shadow_cobj(int cid) {
-
 	if (cid < 0 || coll_objects.get_cobj(cid).disabled() || coll_objects.get_cobj(cid).cp.color.alpha < MIN_SHADOW_ALPHA) return;
 	point center;
 	float radius;
@@ -451,10 +441,8 @@ void add_shadow_cobj(int cid) {
 	add_shadow_obj(center, radius, cid);
 }
 
-
 void add_coll_shadow_objs() {
 	
-	//RESET_TIME;
 	shadow_objs.resize(0);
 	if (!shadow_map_enabled()) return;
 	point const camera(get_camera_pos());
@@ -490,7 +478,6 @@ void add_coll_shadow_objs() {
 			shadow_objs.push_back(shadow_sphere(camera_pos-point(0.0, 0.0, r), CAMERA_RADIUS, camera_coll_id, 1));
 		}
 	}
-	//PRINT_TIME(" Shadow Object Creation");
 }
 
 

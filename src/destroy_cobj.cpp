@@ -141,20 +141,15 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, int damage_t
 void coll_obj::create_portal() const {
 
 	switch (type) {
-	case COLL_POLYGON:
-		{
+	case COLL_POLYGON: {
 			assert(npoints == 3 || npoints == 4);
 			portal p;
-
-			for (int i = 0; i < npoints; ++i) {
-				p.pts[i] = points[i]; // ignore thickness - use base polygon only
-			}
+			for (int i = 0; i < npoints; ++i) {p.pts[i] = points[i];} // ignore thickness - use base polygon only
 			if (npoints == 3) p.pts[3] = p.pts[2]; // duplicate the last point
 			portals.push_back(p); // Note: p.normal is not set
 			break;
 		}
-	case COLL_CUBE:
-		{
+	case COLL_CUBE: {
 			portal p;
 			float max_area(0.0);
 		
@@ -246,7 +241,6 @@ void check_cobjs_anchored(vector<unsigned> to_check, set<unsigned> anchored[2]) 
 
 
 void add_to_falling_cobjs(set<unsigned> const &ids) {
-
 	for (set<unsigned>::const_iterator i = ids.begin(); i != ids.end(); ++i) {
 		coll_obj &cobj(coll_objects.get_cobj(*i));
 		if (cobj.is_movable()) {register_moving_cobj(*i); continue;} // move instead of fall
@@ -443,7 +437,6 @@ void check_falling_cobjs() {
 
 
 bool is_pt_under_mesh(point const &p) {
-
 	//return is_under_mesh(p); // too slow?
 	int const xpos(get_xpos(p.x)), ypos(get_ypos(p.y));
 	if (point_outside_mesh(xpos, ypos)) return 0;

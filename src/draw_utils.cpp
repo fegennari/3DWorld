@@ -32,7 +32,6 @@ void set_array_client_state(bool va, bool tca, bool na, bool ca, bool actually_s
 	else {check_mvm_update();}
 }
 
-
 void const *ptr_add(void const *p, unsigned off) {return (unsigned char const *)(size_t(p) + off);}
 
 void set_vn_ptrs(unsigned stride, bool comp, void const *vbo_ptr_offset) {
@@ -232,7 +231,6 @@ void pt_line_drawer::draw() const {
 	if (!points.empty()) {draw_verts(points, GL_POINTS);}
 	if (!lines.empty ()) {draw_verts(lines,  GL_LINES );}
 }
-
 
 void pt_line_drawer_no_lighting_t::draw() const {
 	assert(!(lines.size() & 1));
@@ -586,9 +584,7 @@ public:
 			faces.swap(faces2);
 		}
 		// done, now add triangles to mesh
-		for (auto f = faces.begin(); f != faces.end(); ++f) {
-			UNROLL_3X(indices.push_back(f->v[i_]);)
-		}  
+		for (auto f = faces.begin(); f != faces.end(); ++f) {UNROLL_3X(indices.push_back(f->v[i_]);)}  
 	}
 };
 

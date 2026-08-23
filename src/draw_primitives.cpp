@@ -28,7 +28,6 @@ void setup_shield_shader(shader_t &shader, int noise_tu_id); // ship.cpp
 
 // ******************** CURVE GENERATORS ********************
 
-
 void get_ortho_vectors(vector3d const &v12, vector3d *vab, int force_dim) {
 
 	assert(vab != NULL);
@@ -125,7 +124,6 @@ vector_point_norm const &gen_cylinder_data(point const ce[2], float radius1, flo
 
 
 // *** sd_sphere_d ***
-
 
 void sd_sphere_d::gen_points_norms_static(float s_beg, float s_end, float t_beg, float t_end) {
 	static sphere_point_norm temp_spn;
@@ -242,7 +240,6 @@ void sd_sphere_d::set_data(point const &p, float r, int n, float const *pm, floa
 
 // *** sphere_point_norm ***
 
-
 void sphere_point_norm::alloc(unsigned ndiv_) {
 	ndiv = ndiv_;
 	matrix_base_alloc_2d(points, (ndiv+1), 2*ndiv);
@@ -266,7 +263,6 @@ void sphere_point_norm::free_data() {
 
 
 // ******************** CYLINDER/CIRCLE ********************
-
 
 void draw_circle_normal(float r_inner, float r_outer, int ndiv, int invert_normals, point const &pos, float tscale_s, float tscale_t) {
 
@@ -310,7 +306,6 @@ void draw_xy_oval(float rx, float ry, int ndiv, point const &pos, float tscale_s
 	}
 	draw_and_clear_verts(verts, GL_TRIANGLE_FAN);
 }
-
 
 // length can be negative
 void draw_cylinder_at(point const &p1, float length, float radius1, float radius2, int ndiv, bool draw_ends, bool first_end_only, bool last_end_only, float tscale_len) {
@@ -434,7 +429,6 @@ void gen_cylinder_quads(vector<vert_norm_texp> &verts, vector_point_norm const &
 
 
 class cylin_vertex_buffer_t {
-
 	bool buffering_enabled=0;
 public:
 	vector<vert_norm_tc> tverts, sverts, cverts; // public so they can be accessed from within draw_fast_cylinder()
@@ -576,7 +570,6 @@ void draw_cylindrical_section(float length, float r_inner, float r_outer, int nd
 
 
 // ******************** SPHERE ********************
-
 
 struct sphere_verts_t {
 	vector<vert_norm> vn;
@@ -762,7 +755,6 @@ void sd_sphere_d::get_itri_points(vector<vert_norm_tc> &itri_pts, vector<unsigne
 	} // for s
 }
 
-
 void sd_sphere_d::get_triangles(vector<vert_wrap_t> &verts) const {
 
 	assert(ndiv > 0);
@@ -780,7 +772,6 @@ void sd_sphere_d::get_triangles(vector<vert_wrap_t> &verts) const {
 		}
 	}
 }
-
 
 void sd_sphere_d::get_triangle_strip_pow2(vector<vertex_type_t> &verts, unsigned skip, float s_beg, float s_end, float t_beg, float t_end) const {
 
@@ -803,7 +794,6 @@ void sd_sphere_d::get_triangle_strip_pow2(vector<vertex_type_t> &verts, unsigned
 	} // for s
 }
 
-
 void sd_sphere_d::get_triangle_vertex_list(vector<vertex_type_t> &verts) const {
 
 	float const ndiv_inv(1.0/float(ndiv));
@@ -814,7 +804,6 @@ void sd_sphere_d::get_triangle_vertex_list(vector<vertex_type_t> &verts) const {
 	}
 	//assert(verts.size() < (1ULL << 8*sizeof(index_type_t)));
 }
-
 
 void sd_sphere_d::get_triangle_index_list_pow2(vector<index_type_t> &indices, unsigned skip) const {
 
@@ -831,7 +820,6 @@ void sd_sphere_d::get_triangle_index_list_pow2(vector<index_type_t> &indices, un
 		}
 	}
 }
-
 
 void sd_sphere_d::get_faceted_triangles(vector<vertex_type_t> &verts) const {
 
@@ -852,7 +840,6 @@ void sd_sphere_d::get_faceted_triangles(vector<vertex_type_t> &verts) const {
 		}
 	}
 }
-
 
 void sd_sphere_vbo_d::ensure_vbos() {
 
@@ -943,12 +930,10 @@ void draw_subdiv_sphere_section(point const &pos, float radius, int ndiv, int te
 	draw_subdiv_sphere(pos, radius, ndiv, all_zeros, NULL, texture, 1, NULL, NULL, NULL, 0.0, s_beg, s_end, t_beg, t_end);
 }
 
-
 void rotate_sphere_tex_to_dir(vector3d const &dir) { // dir must be normalized
 	fgRotate(atan2(-dir.y, -dir.x)*TO_DEG-90.0, 0.0, 0.0, 1.0); // negate because dir was backwards
 	fgRotate(asinf(-dir.z)*TO_DEG, 1.0, 0.0, 0.0);
 }
-
 
 void draw_single_colored_sphere(point const &pos, float radius, int ndiv, colorRGBA const &color) {
 	shader_t s;
@@ -959,7 +944,6 @@ void draw_single_colored_sphere(point const &pos, float radius, int ndiv, colorR
 
 
 // ******************** TORUS ********************
-
 
 vector<float> const &gen_torus_sin_cos_vals(unsigned ndivi) {
 
@@ -1014,28 +998,22 @@ void draw_torus(point const &center, float ri, float ro, unsigned ndivi, unsigne
 
 // ******************** QUAD/CUBE/POLYGON ********************
 
-
 void rotate_towards_camera(point const &pos) {
 	rotate_into_plus_z((get_camera_pos() - pos));
 }
 
-
 void enable_flares(int tid) { // used for clouds and smoke
-
 	glDepthMask(GL_FALSE); // not quite right - prevents flares from interfering with each other but causes later shapes to be drawn on top of the flares
 	enable_blend();
 	if (draw_model == 0) {select_texture((tid < 0) ? BLUR_TEX : tid);}
 }
 
 void disable_flares() {
-
 	disable_blend();
 	glDepthMask(GL_TRUE);
 }
 
-
 void draw_one_tquad(float x1, float y1, float x2, float y2, float z, int prim_type) { // Note: normal is +z
-
 	vert_norm_tc verts[4];
 	verts[0] = vert_norm_tc(point(x1, y1, z), plus_z, 0, 0); // clockwise
 	verts[1] = vert_norm_tc(point(x1, y2, z), plus_z, 0, 1);
@@ -1221,9 +1199,7 @@ void draw_cube_verts_only(cube_t const &c) { // simplified version of draw_cube(
 	draw_quad_verts_as_tris(verts, 24);
 }
 
-
 void gen_quad_tex_coords(float *tdata, unsigned num, unsigned stride) { // stride is in floats
-
 	for (unsigned i = 0, off = 0; i < num; i++) { // 00 10 11 01 for every quad
 		tdata[off] = 0.0; tdata[off+1] = 0.0; off += stride;
 		tdata[off] = 1.0; tdata[off+1] = 0.0; off += stride;
@@ -1231,10 +1207,7 @@ void gen_quad_tex_coords(float *tdata, unsigned num, unsigned stride) { // strid
 		tdata[off] = 0.0; tdata[off+1] = 1.0; off += stride;
 	}
 }
-
-
 void gen_quad_tri_tex_coords(float *tdata, unsigned num, unsigned stride) { // stride is in floats
-
 	for (unsigned i = 0, off = 0; i < num; i++) { // for every tri
 		tdata[off] = -0.5; tdata[off+1] =  1.0; off += stride;
 		tdata[off] =  0.5; tdata[off+1] = -1.0; off += stride;
@@ -1245,11 +1218,9 @@ void gen_quad_tri_tex_coords(float *tdata, unsigned num, unsigned stride) { // s
 
 // ******************** Sphere VBOs ********************
 
-
 void free_sphere_vbos() {
 	delete_and_zero_vbo(predef_sphere_vbo);
 }
-
 
 void setup_sphere_vbos() {
 
@@ -1272,18 +1243,14 @@ void setup_sphere_vbos() {
 	create_vbo_and_upload(predef_sphere_vbo, verts, 0, 1); // ~8MB
 }
 
-
 void bind_draw_sphere_vbo(bool textured, bool normals) {
-
 	assert(predef_sphere_vbo > 0);
 	bind_vbo(predef_sphere_vbo);
 	set_array_client_state(1, textured, normals, 0);
 	sd_sphere_d::vertex_type_t::set_vbo_arrays(0);
 }
 
-
 void draw_sphere_vbo_pre_bound(int ndiv, bool textured, bool half, unsigned num_instances) {
-
 	assert(ndiv >= 3);
 	assert(ndiv <= (int)MAX_SPHERE_VBO_NDIV);
 	unsigned const ix(((ndiv-1) << 2) + (half << 1) + textured), off1(sphere_vbo_offsets[ix-1]), off2(sphere_vbo_offsets[ix]);
@@ -1292,7 +1259,6 @@ void draw_sphere_vbo_pre_bound(int ndiv, bool textured, bool half, unsigned num_
 	glDrawArraysInstanced(GL_TRIANGLE_STRIP, off1, (off2 - off1), num_instances); // uses triangle strips separated by degenerate triangles
 	++num_frame_draw_calls;
 }
-
 
 bool sphere_vbo_bound(0);
 
@@ -1309,7 +1275,6 @@ void draw_sphere_vbo_raw(int ndiv, bool textured, bool half, unsigned num_instan
 	draw_sphere_vbo_pre_bound(ndiv, textured, half, num_instances);
 	if (!sphere_vbo_bound) {bind_vbo(0);}
 }
-
 
 void draw_sphere_vbo(point const &pos, float radius, int ndiv, bool textured, bool half, bool bfc) {
 
@@ -1329,7 +1294,6 @@ void draw_sphere_vbo(point const &pos, float radius, int ndiv, bool textured, bo
 	else if (half) {draw_subdiv_sphere_section(pos, radius, ndiv, textured, 0.0, 1.0, 0.0, 0.5);}
 	else {draw_subdiv_sphere(pos, radius, ndiv, textured, !bfc);}
 }
-
 
 void draw_sphere_vbo_back_to_front(point const &pos, float radius, int ndiv, bool textured, bool enable_front, bool enable_back) {
 

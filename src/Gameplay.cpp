@@ -25,7 +25,6 @@ string const all_smiley_names[] =
 
 
 struct text_message_params {
-
 	bool fade;
 	int itime, mtime, priority;
 	float size, yval;
@@ -108,7 +107,6 @@ int gen_game_obj(int type) {
 
 
 int get_ammo_or_obj(int wid) {
-
 	switch (wid) {
 	case W_M16:     return SHELLC;
 	case W_SHOTGUN: return PROJECTILE;
@@ -118,7 +116,6 @@ int get_ammo_or_obj(int wid) {
 	return weapons[wid].obj_id; // could be -1 for invalid
 }
 
-
 int wid_need_weapon(int wid) { // used in draw_world.cpp
 	return weapons[wid].need_weapon;
 }
@@ -127,9 +124,7 @@ bool is_area_damage(int type) {
 	return (type == DROWNED || type == FROZEN || type == SUFFOCATED || type == GASSED);
 }
 
-
 int same_team(int source, int target) {
-
 	if (teams <= 1) return (!((source == CAMERA_ID) ^ (target == CAMERA_ID)));
 	int source_team((source + teams)%teams);
 	int target_team((target + teams)%teams);
@@ -335,7 +330,6 @@ unsigned create_blood(int index, int amt_denom, point const &pos, float obj_radi
 
 
 inline float get_shrapnel_damage(float energy, int index) {
-
 	return 0.5*energy + object_types[SHRAPNEL].damage*(1.0 -
 		((float)obj_groups[coll_id[SHRAPNEL]].get_obj(index).time)/((float)object_types[SHRAPNEL].lifetime));
 }
@@ -358,25 +352,17 @@ bool player_state::pickup_ball(int index) {
 
 
 bool is_burned(int type, int br_source) {
-
 	return (type == PLASMA || type == FIRE || type == BURNED || type == LASER || type == BEAM ||
 		(type == BLAST_RADIUS && br_source == PLASMA));
 }
 
-
 void player_coll(int type, int obj_index) {
-
-	if (type == STAR5) {
-		obj_groups[coll_id[type]].get_obj(obj_index).time += int(200.0*fticks);
-	}
-	else if (type == SHRAPNEL) {
-		obj_groups[coll_id[type]].get_obj(obj_index).time += int(10.0*fticks);
-	}
+	if      (type == STAR5   ) {obj_groups[coll_id[type]].get_obj(obj_index).time += int(200.0*fticks);}
+	else if (type == SHRAPNEL) {obj_groups[coll_id[type]].get_obj(obj_index).time += int( 10.0*fticks);}
 }
 
-
 void update_kill_health(float &health) {
-	health = max(health, min(100.0f, (health + KILL_HEALTH)));
+	max_eq(health, min(100.0f, (health + KILL_HEALTH)));
 }
 
 
@@ -425,7 +411,7 @@ bool camera_collision(int index, int obj_index, vector3d const &velocity, point 
 	if (type == CAMERA || type == SMILEY || !camera_mode || spectate) return 1; // no collisions in these cases
 	if (!game_mode && type != KEYCARD) return 1; // only keycards can be interacted with in non-gameplay mode
 	if (!damage_done(type, obj_index)) return 1;
-	if (camera_health < 0.0) return 1; // already dead
+	if (camera_health < 0.0)           return 1; // already dead
 	int const source(get_damage_source(type, obj_index, CAMERA_ID));
 	assert(source >= CAMERA_ID && source < num_smileys);
 	if (source == CAMERA_ID && self_coll_invalid(type, obj_index)) return 0; // hit yourself
@@ -469,8 +455,7 @@ bool camera_collision(int index, int obj_index, vector3d const &velocity, point 
 		camera_weapon_ammo_pickup(position, cam_filter_color);
 		break;
 
-	case WA_PACK:
-		{
+	case WA_PACK: {
 			int const pickup_ammo((int)obj_groups[coll_id[type]].get_obj(obj_index).angle);
 			sstate.p_weapons[wa_id] = 1;
 			sstate.p_ammo[wa_id]    = min((int)weapons[wa_id].max_ammo, (sstate.p_ammo[wa_id] + pickup_ammo));
@@ -811,13 +796,11 @@ bool smiley_collision(int index, int obj_index, vector3d const &velocity, point 
 
 
 int get_smiley_hit(vector3d &hdir, int index) {
-
 	assert(index < num_smileys);
 	if (sstates[index].was_hit == 0) return 0;
 	hdir = sstates[index].hit_dir;
 	return sstates[index].was_hit;
 }
-
 
 string get_weapon_qualifier(int type, int index, int source) {
 
@@ -857,7 +840,6 @@ int damage_done(int type, int index) {
 	return damage_done_obj[type];
 }
 
-
 void gen_blood_velocity(vector3d &vout, vector3d const &velocity, vector3d const &coll_dir, float blood_v, float md, float mv, int type, float health) {
 
 	assert(!is_nan(coll_dir));
@@ -871,7 +853,6 @@ void gen_blood_velocity(vector3d &vout, vector3d const &velocity, vector3d const
 		assert(isfinite(vout[i]));
 	}
 }
-
 
 void gen_rocket_smoke(point const &pos, vector3d const &orient, float radius, bool freeze) { // rocket, seekd, and raptor
 
@@ -892,7 +873,6 @@ void gen_rocket_smoke(point const &pos, vector3d const &orient, float radius, bo
 	//else {add_blastr(pos, orient, 2.0*radius, 0.0, 4, NO_SOURCE, YELLOW, RED, ETYPE_ANIM_FIRE);}
 }
 
-
 void gen_landmine_scorch(point const &pos) {
 
 	float const o_radius(object_types[LANDMINE].radius);
@@ -904,7 +884,6 @@ void gen_landmine_scorch(point const &pos) {
 		gen_explosion_decal(point(pos.x, pos.y, coll_objects.get_cobj(cindex).d[2][1]), o_radius, coll_norm, coll_objects[cindex], 2); // top of cube
 	}
 }
-
 
 bool default_obj_coll(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type, int cobj_type) {
 
@@ -942,7 +921,6 @@ bool landmine_collision(int index, int obj_index, vector3d const &velocity, poin
 	obj.status = 0;
 	return 1;
 }
-
 
 bool pushable_collision(int index, point const &position, float force, int type, int obj_type) { // Note: return value is *not* valid_coll
 
@@ -1015,31 +993,24 @@ bool keycard_collision(int index, int obj_index, vector3d const &velocity, point
 	if (type == CAMERA) {return camera_collision(KEYCARD, index, velocity, position, energy, KEYCARD);} // only the player can pick up a keycard
 	return default_obj_coll(index, obj_index, velocity, position, energy, type, KEYCARD);
 }
-
 bool health_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
 	return default_obj_coll(index, obj_index, velocity, position, energy, type, HEALTH);
 }
-
 bool shield_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
 	return default_obj_coll(index, obj_index, velocity, position, energy, type, SHIELD);
 }
-
 bool powerup_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
 	return default_obj_coll(index, obj_index, velocity, position, energy, type, POWERUP);
 }
-
 bool weapon_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
 	return default_obj_coll(index, obj_index, velocity, position, energy, type, WEAPON);
 }
-
 bool ammo_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
 	return default_obj_coll(index, obj_index, velocity, position, energy, type, AMMO);
 }
-
 bool pack_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
 	return default_obj_coll(index, obj_index, velocity, position, energy, type, WA_PACK);
 }
-
 bool sball_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
 	if (!default_obj_coll(index, obj_index, velocity, position, energy, type, S_BALL)) return 0;
 	pushable_collision(index, position, 20.0, type, S_BALL);
@@ -1119,10 +1090,8 @@ void create_ground_rubble(point pos, int shooter, float hv, float close, int cal
 
 
 void dwobject::update_vel_from_damage(vector3d const &dv) {
-
 	velocity += dv*min(1.0, 2.0*object_types[type].terminal_vel/dv.mag()); // 2x terminal velocity
 }
-
 
 void dwobject::damage_object(float damage, point const &dpos, point const &shoot_pos, int weapon) {
 
@@ -1176,7 +1145,6 @@ void blast_radius(point const &pos, int type, int obj_index, int shooter, int ch
 
 // returns true if there are no objects blocking the explosion
 bool check_explosion_damage(point const &p1, point const &p2, int cobj) {
-
 	int cindex;
 	if (line_intersect_mesh(p1, p2)) return 0;
 	if (!check_coll_line(p1, p2, cindex, cobj, 1, 0)) return 1;
@@ -1268,7 +1236,6 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 	assert(damage >= 0.0 && size >= 0.0);
 	assert(type != SMILEY);
 	if (!game_mode || damage < TOLERANCE || size < TOLERANCE) return;
-	//RESET_TIME;
 	int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
 	float bradius(0.0), depth(0.0);
 	bool const underwater(is_underwater((pos + vector3d(0.0, 0.0, -0.5*size)), 0, &depth));
@@ -1404,7 +1371,6 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 		unsigned const num_fragments((big ? 2 : 1)*(10 + rand()%10)); // 20-40
 		update_voxel_sphere_region(pos, radius, 0.5, shooter, num_fragments);
 	}
-	//PRINT_TIME("Blast Radius");
 }
 
 
@@ -1512,7 +1478,6 @@ void player_teleported(point const &pos, int player_id) { // check for telefrags
 }
 
 bool remove_player_translocator(int player_id) {
-
 	obj_group &objg(obj_groups[coll_id[XLOCATOR]]);
 	if (!objg.enabled) return 0; // disabled, do nothing
 
@@ -1524,7 +1489,6 @@ bool remove_player_translocator(int player_id) {
 }
 
 bool pickup_player_translator(int player_id) {
-
 	assert(sstates != NULL); // shouldn't get here in this case
 	assert(player_id >= CAMERA_ID && player_id < num_smileys);
 	if (!remove_player_translocator(player_id)) return 0;
@@ -1583,7 +1547,6 @@ void switch_player_weapon(int val, bool mouse_wheel) {
 	else if (spheres_mode   ) {change_sphere_material (val, 0);}
 	else if (flashlight_on  ) {flashlight_color_id ^= 1; play_switch_weapon_sound();}
 }
-
 
 void player_state::switch_weapon(int val, int verbose) {
 
@@ -1700,12 +1663,10 @@ void player_state::gamemode_fire_weapon() { // camera/player fire
 
 
 void add_laser_beam(beam3d const &beam) {
-
 	beams.push_back(beam);
 	add_line_light(beam.pts[0], beam.pts[1], beam.color, 0.35, min(1.0f, sqrt(beam.intensity)));
 	//if (smoke_visible) {} // check for smoke along laser beam path and add glow halo? or just enable smoke dynamic lighting?
 }
-
 
 void create_shell_casing(point const &fpos, vector3d const &dir, int shooter, float radius, unsigned char type) {
 
@@ -2071,7 +2032,6 @@ int get_range_to_mesh(point const &pos, vector3d const &vcf, point &coll_pos) { 
 colorRGBA get_laser_beam_color(int shooter) {return get_smiley_team_color(shooter);}
 
 void add_laser_beam_segment(point const &start_pos, point coll_pos, vector3d const &vref, colorRGBA const &color, int coll, bool distant, float intensity) {
-
 	if (!coll || distant) {coll_pos = start_pos + vref*FAR_CLIP;}
 	else if (start_pos == coll_pos) return;
 	add_laser_beam(beam3d(distant, NO_SOURCE, start_pos, coll_pos, color, intensity));
@@ -2503,8 +2463,7 @@ void do_cblade_damage_and_update_pos(point &pos, int shooter) {
 
 
 struct team_stats_t {
-	int kills, deaths, score;
-	team_stats_t() : kills(0), deaths(0), score(0) {}
+	int kills=0, deaths=0, score=0;
 	void add(player_state const &s) {kills += s.tot_kills; deaths += s.deaths; score += s.get_score();}
 };
 
@@ -2560,7 +2519,6 @@ void show_user_stats() {
 
 
 void show_other_messages() {
-
 	if (msg_params.mtime <= 0) return;
 	colorRGBA color(msg_params.color);
 	if (msg_params.fade) {color.A *= min(1.0, msg_params.mtime/(0.4*msg_params.itime));}
@@ -2577,11 +2535,9 @@ void print_text_onscreen(string const &text, colorRGBA const &color, float size,
 void print_text_onscreen_default(string const &text) {
 	print_text_onscreen(text, WHITE, 1.0, MESSAGE_TIME);
 }
-
 void print_weapon(int weapon_id) {
 	print_text_onscreen(weapons[weapon_id].name, WHITE, 1.0, MESSAGE_TIME/4, 1);
 }
-
 void print_debug_text(string const &text, int priority) {
 	print_text_onscreen(text, YELLOW, 1.0, MESSAGE_TIME, priority);
 }
@@ -2693,7 +2649,6 @@ bool check_underwater(int who, float &depth) { // check if player is drowning
 	return underwater;
 }
 
-
 void player_fall(int id) { // smileys and the player (camera)
 
 	if (!game_mode) return;
@@ -2707,7 +2662,6 @@ void player_fall(int id) { // smileys and the player (camera)
 	if (sstates[id].last_teleporter != NO_SOURCE) {source = sstates[id].last_teleporter;} // give credit for the kill
 	smiley_collision(id, source, vector3d(0.0, 0.0, -zvel), get_sstate_pos(id), 5.0*vel*vel, FELL);
 }
-
 
 void update_camera_velocity(vector3d const &v) {
 	if (sstates == NULL) return; // assert(0)?
@@ -2737,7 +2691,6 @@ void init_game_mode() {
 	if (play_gameplay_alert && frame_counter > 0) {gen_sound(SOUND_ALERT, get_camera_pos(), 0.5);} // not on first frame
 }
 
-
 void update_game_frame() {
 
 	assert(sstates != NULL);
@@ -2752,14 +2705,12 @@ void update_game_frame() {
 
 
 void player_state::update_camera_frame() {
-
 	if (powerup_time < 0.0)   {print_text_onscreen("Powerup Expired", WHITE, 1.0, MESSAGE_TIME/2, 1);}
 	if (powerup == PU_REGEN ) {camera_health = min(MAX_REGEN_HEALTH, camera_health + 0.1f*fticks);}
 	if (powerup == PU_FLIGHT) {camera_flight = 1;}
 	kill_time += max(1, iticks);
 	next_frame();
 }
-
 
 void player_state::update_sstate_game_frame(int i) {
 
@@ -2810,7 +2761,6 @@ void player_state::update_sstate_game_frame(int i) {
 	}
 }
 
-
 void player_state::free_balls() {
 
 	if (balls.empty()) return;
@@ -2831,21 +2781,17 @@ void player_state::free_balls() {
 
 
 void free_dodgeballs(bool camera, bool smileys) {
-
 	if (sstates == NULL) return;
 	for (int i = (camera ? CAMERA_ID : 0); i < (smileys ? num_smileys : 0); ++i) {sstates[i].free_balls();}
 }
 
-
 void gamemode_rand_appear() {
-
 	if (!game_mode) return;
 	gen_smiley_or_player_pos(surface_pos, CAMERA_ID);
 	camera_last_pos = surface_pos;
 	free_dodgeballs(1, 0);
 	init_sstate(CAMERA_ID, (game_mode == GAME_MODE_FPS), 1); // show_appear_effect=1
 }
-
 
 void change_game_mode() {
 
@@ -2872,7 +2818,6 @@ void change_game_mode() {
 	if (game_mode) {init_game_mode();}
 	else {free_dodgeballs(1, 1);}
 }
-
 
 bool has_keycard_id(int source, unsigned keycard_id) {
 	if (source < CAMERA_ID || source >= num_smileys) return 0; // can be NO_SOURCE, etc.

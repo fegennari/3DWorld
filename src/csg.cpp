@@ -100,7 +100,6 @@ void rect::subtract_from(rect const &rr, deque<rect> &new_rects) const { // subt
 }
 
 bool rect::merge_with(rect const &r) {
-
 	for (unsigned j = 0; j < 2; ++j) {
 		if (r.d[j][0] == d[j][0] && r.d[j][1] == d[j][1]) {
 			for (unsigned k = 0; k < 2; ++k) {
@@ -115,7 +114,6 @@ bool rect::merge_with(rect const &r) {
 }
 
 void rect::print() const {
-
 	for (unsigned i = 0; i < 2; ++i) {
 		for (unsigned j = 0; j < 2; ++j) {
 			cout << d[i][j];

@@ -23,7 +23,6 @@ bool coll_obj::cobj_plane_side_test(point const *pts, unsigned npts, point const
 		point const spts[3] = {pts[i], pts[(i+1)%npts], lpos};
 		point const center(get_center(spts, 3));
 		vector3d const pts_norm(get_poly_norm(spts));
-		point pt;
 
 		if (type == COLL_POLYGON) {
 			if (thickness > MIN_POLY_THICK) { // thick polygon
@@ -43,12 +42,9 @@ bool coll_obj::cobj_plane_side_test(point const *pts, unsigned npts, point const
 		}
 		else { // use bounding cube (bad for pine tree cones)
 			for (unsigned x = 0; x < 2; ++x) {
-				pt[0] = d[0][x];
 				for (unsigned y = 0; y < 2; ++y) {
-					pt[1] = d[1][y];
 					for (unsigned z = 0; z < 2; ++z) {
-						pt[2] = d[2][z];
-						if (dot_product_ptv(pts_norm, center, pt) > 0.0) return 0;
+						if (dot_product_ptv(pts_norm, center, point(d[0][x], d[1][y], d[2][z])) > 0.0) return 0;
 					}
 				}
 			}
@@ -213,13 +209,10 @@ bool coll_obj::line_int_exact(point const &p1, point const &p2, float &t, vector
 
 
 class water_splash_search { // for projectiles, etc.
-
 	point const &pos1, &pos2;
 	float splash_val;
-
 public:
-	water_splash_search(point const &pos1_, point const &pos2_, float splash_val_) :
-	   pos1(pos1_), pos2(pos2_), splash_val(splash_val_) {}
+	water_splash_search(point const &pos1_, point const &pos2_, float splash_val_) : pos1(pos1_), pos2(pos2_), splash_val(splash_val_) {}
 
 	bool do_iter() const {
 		if (splash_val == 0.0) return 0;
@@ -252,7 +245,6 @@ public:
 
 
 bool check_coll_line(point const &pos1, point const &pos2, int &cindex, int cobj, int skip_dynamic, int test_alpha, bool include_voxels, bool skip_init_colls, bool skip_movable) {
-
 	if (world_mode != WMODE_GROUND) return 0;
 	if (check_coll_line_tree(pos1, pos2, cindex, cobj, 0, test_alpha, (skip_dynamic >= 2), include_voxels, skip_init_colls, skip_movable))   return 1; // static cobjs + voxels
 	if (!skip_dynamic && begin_motion && check_coll_line_tree(pos1, pos2, cindex, cobj, 1, test_alpha, 0, 0, skip_init_colls, skip_movable)) return 1; // find dynamic cobj intersection
@@ -274,8 +266,7 @@ bool check_coll_line_exact(point pos1, point pos2, point &cpos, vector3d &cnorm,
 		if (cindex >= 0) {pos2 = cpos;}
 		
 		if (do_line_clip_scene(pos1, pos2, zbottom, max(ztop, water_plane_z))) { // max of dynamic and static water
-			water_splash_search wss(pos1, pos2, splash_val);
-			wss.do_iter();
+			water_splash_search(pos1, pos2, splash_val).do_iter();
 		}
 	}
 	return (cindex >= 0);
@@ -283,7 +274,6 @@ bool check_coll_line_exact(point pos1, point pos2, point &cpos, vector3d &cnorm,
 
 
 bool cobj_contained_ref(point const &pos1, const point *pts, unsigned npts, int cobj, int &last_cobj) {
-
 	if (!have_occluders()) return 0;
 	assert(npts > 0);
 
@@ -360,10 +350,7 @@ colorRGBA coll_obj::get_color_at_point(point const &pos, vector3d const &normal,
 
 		if (!(cp.surfs & 1) && fabs(dot_product(dir, normal)/dir.mag()) > 0.5) { // assume we hit the cylinder end
 			get_poly_texgen_dirs(dir.get_norm(), v);
-
-			for (unsigned i = 0; i < 2; ++i) {
-				tc[(i != 0) ^ cp.swap_txy()] = tscale[i]*dot_product(v[i], poff) + xlate[i];
-			}
+			for (unsigned i = 0; i < 2; ++i) {tc[(i != 0) ^ cp.swap_txy()] = tscale[i]*dot_product(v[i], poff) + xlate[i];}
 			break;
 		}
 		// else assume we hit the cylinder sides, and fall through
@@ -386,10 +373,7 @@ colorRGBA coll_obj::get_color_at_point(point const &pos, vector3d const &normal,
 	case COLL_POLYGON: // we assume normal == norm
 		if (fabs(thickness) > MIN_POLY_THICK) {return get_avg_color();} // thick polygon, use average color
 		get_poly_texgen_dirs(norm, v);
-
-		for (unsigned i = 0; i < 2; ++i) {
-			tc[(i != 0) ^ cp.swap_txy()] = tscale[i]*dot_product(v[i], poff) + xlate[i];
-		}
+		for (unsigned i = 0; i < 2; ++i) {tc[(i != 0) ^ cp.swap_txy()] = tscale[i]*dot_product(v[i], poff) + xlate[i];}
 		break;
 	default: assert(0);
 	}
@@ -402,7 +386,6 @@ colorRGBA get_cobj_color_at_point(int cindex, point const &pos, vector3d const &
 
 
 bool coll_obj::is_occluder() const {
-	
 	if (status != COLL_STATIC || (!cp.draw && cp.cobj_type != COBJ_TYPE_MODEL3D) || is_semi_trans() || dgroup_id >= 0) return 0; // cp.might_be_drawn()?
 	if (is_reflective()) return 0; // prevent self occlusion during reflection rendering
 	if (type == COLL_CUBE && cp.cobj_type != COBJ_TYPE_MODEL3D) return 1;
@@ -414,10 +397,7 @@ bool coll_obj::is_occluder() const {
 
 
 bool is_occluded(vector<int> const &occluders, point const *const pts, int npts, point const &camera) {
-
-	unsigned const nocc((unsigned)occluders.size());
-
-	for (unsigned i = 0; i < nocc; ++i) { // cache last occluder?, promote to the front if occluded?
+	for (unsigned i = 0; i < occluders.size(); ++i) { // cache last occluder?, promote to the front if occluded?
 		coll_obj const &cobj(coll_objects[occluders[i]]);
 		if (cobj.status == COLL_STATIC && cobj.intersects_all_pts(camera, pts, npts)) return 1;
 	}

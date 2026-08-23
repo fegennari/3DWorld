@@ -71,18 +71,11 @@ void setup_shield_shader(shader_t &shader, int noise_tu_id); // ship.cpp
 
 
 void set_obj_specular(unsigned flags, float specular_brightness, shader_t &shader) {
-
-	if (flags & SPECULAR) {
-		shader.set_specular(specular_brightness, 50.0);
-	}
-	else if (flags & LOW_SPECULAR) {
-		shader.set_specular(0.4*specular_brightness, 10.0);
-	}
+	if      (flags & SPECULAR    ) {shader.set_specular(    specular_brightness, 50.0);}
+	else if (flags & LOW_SPECULAR) {shader.set_specular(0.4*specular_brightness, 10.0);}
 }
 
-
 void check_drawing_flags(unsigned flags, int init_draw, shader_t &shader) {
-
 	if (init_draw) {
 		set_obj_specular(flags, 0.5*brightness, shader);
 		if (flags & BLEND) enable_blend();
@@ -93,14 +86,11 @@ void check_drawing_flags(unsigned flags, int init_draw, shader_t &shader) {
 	}
 }
 
-
 void set_color_by_status(int status, shader_t &shader) {
-
 	colorRGBA const colors[6] = {BLACK, RED, WHITE, YELLOW, BLUE, GRAY};
 	assert(status >= 0 && status < 6);
 	shader.set_cur_color(colors[status]);
 }
-
 
 void set_color_v2(const colorRGBA &color, int status, shader_t &shader) {
 	if (DEBUG_COLORCODE) {set_color_by_status(status, shader);} else {shader.set_cur_color(color);}
@@ -139,7 +129,6 @@ vector3d get_rotation_dirs_and_normal(vector3d const &o, float angle, vector3d &
 }
 
 void add_rotated_triangle(point const &pos, vector3d const &o, float radius, float angle, colorRGBA const &color, vector<vert_norm_color> &verts) {
-
 	point p1, p2;
 	vector3d const normal(get_rotation_dirs_and_normal(o, angle, p1, p2));
 	verts.emplace_back((pos + 1.5*radius*p1), normal, color);
@@ -148,7 +137,6 @@ void add_rotated_triangle(point const &pos, vector3d const &o, float radius, flo
 }
 
 void add_rotated_textured_triangle(point const &pos, vector3d const &o, float radius, float angle, float tscale, colorRGBA const &color, vector<vert_norm_tc_color> &verts) {
-
 	point p1, p2;
 	vector3d const normal(get_rotation_dirs_and_normal(o, angle, p1, p2));
 	float const ts(123.456*radius), tt(654.321*radius); // pseudo-random
@@ -159,14 +147,12 @@ void add_rotated_textured_triangle(point const &pos, vector3d const &o, float ra
 
 
 template<typename T> void draw_polygon_side(point const *points, int npoints, vector3d const &normal, vector<T> &verts, colorRGBA const &color, float tscale) {
-
 	vert_norm_color vnc(all_zeros, normal, color);
 	unsigned const start(verts.size()), num((npoints == 3) ? 3 : 6);
 	verts.resize(start+num, vnc);
 	for (unsigned i = 0; i < num; ++i) {verts[start+i].v = points[quad_to_tris_ixs[i]];} // 1-2 triangles
 }
 template<> void draw_polygon_side(point const *points, int npoints, vector3d const &normal, vector<vert_norm_tc_color> &verts, colorRGBA const &color, float tscale) {
-
 	float const ts(123.456*tscale), tt(654.321*tscale); // pseudo-random
 	vert_norm_tc_color vnc(all_zeros, normal, ts, tt, color);
 	unsigned const start(verts.size()), num((npoints == 3) ? 3 : 6);
@@ -215,7 +201,6 @@ template<typename T> void add_thick_triangle(point const &pos, vector3d const &o
 
 
 void draw_solid_object_groups(int reflection_pass) {
-
 	draw_waypoints();
 	draw_select_groups(1, reflection_pass);
 	if ((display_mode & 0x0200) && (display_mode & 0x0100)) {d_part_sys.draw();}
@@ -225,9 +210,7 @@ void draw_transparent_object_groups(int reflection_pass) {
 	draw_select_groups(0, reflection_pass);
 }
 
-
 void setup_draw_groups_shader(shader_t &s, int solid, int reflection_pass=0) {
-
 	s.set_prefix("#define USE_WINDING_RULE_FOR_NORMAL", 1); // FS
 	bool const force_tsl = (reflection_pass != 1); // two-sided lighting is required for some cobjs, but wrong for all cobjs when the reflection plane is enabled
 	bool const lt_atten(solid ? 0 : 1); // sphere light atten
@@ -239,12 +222,10 @@ void setup_draw_groups_shader(shader_t &s, int solid, int reflection_pass=0) {
 }
 
 void draw_player_model(point const &pos, vector3d const &dir, int time) {
-
 	shader_t s;
 	setup_draw_groups_shader(s, 1);
 	draw_smiley(pos, dir, CAMERA_RADIUS, N_SPHERE_DIV, time, camera_health, CAMERA_ID, nullptr, s);
 }
-
 
 bool is_group_enabled_this_pass(obj_group const &objg, bool solid) {
 	return (objg.enabled && objg.temperature_ok() && objg.end_id > 0 && (!(object_types[objg.type].flags & SEMI_TRANSPARENT)) == solid);
@@ -310,11 +291,9 @@ void draw_select_groups(int solid, int reflection_pass) {
 
 
 struct wap_obj {
-
 	int id, ndiv;
 	wap_obj(int id_, int ndiv_) : id(id_), ndiv(ndiv_) {}
 };
-
 
 void draw_obj(obj_group &objg, vector<wap_obj> *wap_vis_objs, int type, float radius,
 	const colorRGBA &color, int ndiv, int j, bool in_ammo, shader_t &shader, lt_atten_manager_t &lt_atten_manager)
@@ -436,16 +415,12 @@ struct tid_color_to_ix_t {
 	}
 };
 
-
 colorRGBA get_textured_color(int tid, colorRGBA const &color) {
-
 	if (tid < 0) {return color;}
 	return colorRGBA(texture_color(tid), 1.0).modulate_with(color); // don't use texture alpha
 }
 
-
 void draw_and_clear_tris(vector<vert_norm_color> &vn, vector<vert_norm_tc_color> &vntc) {
-
 	draw_and_clear_verts(vn,   GL_TRIANGLES);
 	draw_and_clear_verts(vntc, GL_TRIANGLES);
 }
@@ -653,8 +628,7 @@ void draw_group(obj_group &objg, shader_t &s, lt_atten_manager_t &lt_atten_manag
 				break;
 			case SAND:
 			case DIRT:
-			case ROCK:
-				{
+			case ROCK: {
 					colorRGBA tcolor(get_textured_color(tid, color2));
 					color2 *= obj.orientation.y;
 					if (do_texture) {tcolor *= obj.orientation.y;}
@@ -785,8 +759,7 @@ void draw_sized_point(dwobject &obj, float radius, float cd_scale, const colorRG
 	float point_dia(cd_scale/p2p_dist(camera, pos));
 	if (do_zoom) point_dia *= ZOOM_FACTOR;
 	int const type(obj.type);
-	bool const draw_large(point_dia >= 2.5);
-	bool const draw_snowflake(draw_large && type == SNOW);
+	bool const draw_large(point_dia >= 2.5), draw_snowflake(draw_large && type == SNOW);
 	bool const tail_type((object_types[type].flags & TAIL_WHEN_FALL) != 0);
 	bool const tail(tail_type && obj.status == 1 && obj.velocity.z < RAIN_TAIL_MIN_V && !(obj.flags & OBJ_COLLIDED));
 
@@ -830,7 +803,6 @@ void draw_sized_point(dwobject &obj, float radius, float cd_scale, const colorRG
 		glCullFace(GL_BACK);
 		glEnable(GL_CULL_FACE);
 	}
-
 	// draw as a sphere
 	if (is_chunky) {
 		assert(!tail);
@@ -919,7 +891,6 @@ void draw_ammo(obj_group &objg, float radius, const colorRGBA &color, int ndiv, 
 
 
 colorRGBA get_powerup_color(int powerup) {
-
 	switch (powerup) {
 	case PU_NONE:         return BLACK;
 	case PU_DAMAGE:       return CYAN;
@@ -934,11 +905,9 @@ colorRGBA get_powerup_color(int powerup) {
 
 
 inline void rotate_to_dir(vector3d const &dir) { // normalized to +y (for smileys)
-
 	fgRotate(atan2(dir.y, dir.x)*TO_DEG-90.0, 0.0, 0.0, 1.0);
 	fgRotate(safe_acosf(-dir.z)*TO_DEG-90.0, 1.0, 0.0, 0.0);
 }
-
 
 void draw_smiley_part(point const &pos, vector3d const &orient, int type, int smiley_id, int use_orient, int ndiv, shader_t &shader, float scale, float alpha) {
 
@@ -1143,7 +1112,6 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 
 
 void draw_powerup(point const &pos, float radius, int ndiv, int type, const colorRGBA &color, shader_t &shader, lt_atten_manager_t &lt_atten_manager) {
-
 	ndiv = 3*ndiv/2; // increase ndiv for better transparency effect
 	colorRGBA const ecolor(((type == -1) ? color : get_powerup_color(type)), 0.02); // low alpha
 	shader.set_black_diffuse_emissive_color(ecolor);
@@ -1155,9 +1123,7 @@ void draw_powerup(point const &pos, float radius, int ndiv, int type, const colo
 	draw_sphere_vbo(pos, radius, ndiv, 0);
 }
 
-
 void draw_rolling_obj(point const &pos, point &lpos, float radius, int status, bool just_thrown, int ndiv, bool on_platform, int tid, xform_matrix *matrix) {
-
 	select_texture(tid);
 	fgPushMatrix();
 	translate_to(pos);
@@ -1172,9 +1138,7 @@ void draw_rolling_obj(point const &pos, point &lpos, float radius, int status, b
 	lpos = pos;
 }
 
-
 void draw_skull(point const &pos, vector3d const &orient, float radius, int status, int ndiv, int time, shader_t &shader, bool burned) {
-
 	float const burn_val(burned ? 0.5*(2.0*(float)time/((float)object_types[SKULL].lifetime) - 1.0) : -1.0);
 	if (burn_val > -1.0) {shader.add_uniform_float("burn_offset", burn_val);}
 	shader.add_uniform_float("min_alpha", 0.9);
@@ -1188,9 +1152,7 @@ void draw_skull(point const &pos, vector3d const &orient, float radius, int stat
 	if (burn_val > -1.0) {shader.add_uniform_float("burn_offset", -2.0);} // reset
 }
 
-
 void draw_rocket(point const &pos, vector3d const &orient, float radius, int type, int ndiv, int time, shader_t &shader) {
-
 	fgPushMatrix();
 	translate_to(pos);
 	rotate_by_vector(orient);
@@ -1207,7 +1169,6 @@ void draw_rocket(point const &pos, vector3d const &orient, float radius, int typ
 }
 
 void draw_seekd(point const &pos, vector3d const &orient, float radius, int type, int ndiv, int time, shader_t &shader) {
-
 	fgPushMatrix();
 	translate_to(pos);
 	rotate_by_vector(orient);
@@ -1227,7 +1188,6 @@ void draw_seekd(point const &pos, vector3d const &orient, float radius, int type
 }
 
 void draw_rapt_proj(point const &pos, vector3d const &orient, float radius, int type, int ndiv, int time, shader_t &shader) {
-
 	fgPushMatrix();
 	translate_to(pos);
 	rotate_by_vector(orient);
@@ -1242,16 +1202,12 @@ void draw_rapt_proj(point const &pos, vector3d const &orient, float radius, int 
 
 
 colorRGBA const &get_landmine_light_color(int time) {
-
 	return ((time < 40) ? GREEN : (((time/6)&1) ? RED : BLUE));
 }
 
-
 float get_landmine_sensor_height(float radius, int time) {
-
 	return ((time <= 6) ? 0 : ((time > 16) ? 1.5f*radius : (radius + 0.05f*radius*(time - 6))));
 }
-
 
 void draw_landmine(point pos, float radius, int ndiv, int time, int source, bool in_ammo, shader_t &shader) {
 
@@ -1310,7 +1266,6 @@ colorRGBA get_plasma_color(float size) {
 	return colorRGBA(1.0, size/5.0, max(0.0f, 0.5f*(size-3.0f)), 0.9);
 }
 
-
 void draw_plasma(point const &pos, point const &part_pos, float radius, float size, int ndiv, bool gen_parts, bool add_halo, int time, shader_t &shader) {
 
 	if (animate2) {radius *= rand_uniform(0.99, 1.01) + 0.1*(0.5 + 0.1*(abs((time % 20) - 10)));}
@@ -1330,7 +1285,6 @@ void draw_plasma(point const &pos, point const &part_pos, float radius, float si
 	if (gen_parts && animate2 && !is_underwater(part_pos, 1) && (rand()&15) == 0) {gen_particles(part_pos, 1);}
 }
 
-
 void draw_chunk(point const &pos, float radius, vector3d const &v, vector3d const &vdeform, int charred, int frozen, int ndiv, int time, shader_t &shader) {
 
 	fgPushMatrix();
@@ -1345,7 +1299,6 @@ void draw_chunk(point const &pos, float radius, vector3d const &v, vector3d cons
 	draw_low_res_sphere_pair(pos, radius*(0.5 + fabs(v.x)), v, vdeform, &c1, &c2, ndiv, 0, shader);
 	fgPopMatrix();
 }
-
 
 void draw_grenade(point const &pos, vector3d const &orient, float radius, int ndiv, int time, bool in_ammo, bool is_cgrenade, shader_t &shader) {
 
@@ -1380,7 +1333,6 @@ void draw_grenade(point const &pos, vector3d const &orient, float radius, int nd
 	if (!in_ammo && (rand()&15) == 0) {gen_particles(spos, 1, 0.5, 1);}
 }
 
-
 void draw_translocator(point const &pos, float radius, int ndiv, int source, shader_t &shader) {
 
 	set_silver_material(shader);
@@ -1404,7 +1356,6 @@ void draw_translocator(point const &pos, float radius, int ndiv, int source, sha
 	shader.clear_color_e();
 }
 
-
 void draw_star(point const &pos, vector3d const &orient, vector3d const &init_dir, float radius, float angle, int rotate) {
 	
 	fgPushMatrix();
@@ -1425,7 +1376,6 @@ void draw_star(point const &pos, vector3d const &orient, vector3d const &init_di
 	fgPopMatrix();
 }
 
-
 void draw_sawblade(point const &pos, vector3d const &orient, vector3d const &init_dir, float radius, float angle, int rotate, int ndiv, bool bloody) {
 	
 	fgPushMatrix();
@@ -1439,7 +1389,6 @@ void draw_sawblade(point const &pos, vector3d const &orient, vector3d const &ini
 	draw_circle_normal(0.0, radius, ndiv, 0);
 	fgPopMatrix();
 }
-
 
 void draw_shell_casing(point const &pos, vector3d const &orient, vector3d const &init_dir, float radius,
 					   float angle, float cd_scale, unsigned char type, shader_t &shader)
@@ -1506,7 +1455,6 @@ colorRGBA get_glow_color(dwobject const &obj, bool shrapnel_cscale) {
 	if (shrapnel_cscale) {color *= CLIP_TO_01(1.0f - stime);}
 	return color;
 }
-
 
 void update_precip_rate(float val) {
 	obj_groups[coll_id[PRECIP]].update_app_rate(val, 2, 1000);

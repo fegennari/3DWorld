@@ -21,7 +21,7 @@ int   const DISABLE_TEXTURES = 0;
 
 
 struct fp_ratio {
-	float n, d;
+	float n=1.0, d=1.0;
 	inline float get_val() const {return ((d == 0.0) ? 1.0 : n/d);}
 };
 
@@ -107,10 +107,8 @@ void gen_uw_lighting() {
 	for (unsigned i = 0; i < 2; ++i) rows[i].resize(MESH_X_SIZE, all_zeros);
 	float const dxy_val_inv[2] = {DX_VAL_INV, DY_VAL_INV};
 	float const refract_ix((temperature <= W_FREEZE_POINT) ? ICE_INDEX_REFRACT : WATER_INDEX_REFRACT);
-
-	for (vector<fp_ratio>::iterator i = uw_mesh_lighting.begin(); i != uw_mesh_lighting.end(); ++i) {
-		i->n = i->d = 0.0; // initialize
-	}
+	for (vector<fp_ratio>::iterator i = uw_mesh_lighting.begin(); i != uw_mesh_lighting.end(); ++i) {i->n = i->d = 0.0;} // initialize
+	
 	for (int y = 0; y < MESH_Y_SIZE; ++y) {
 		for (int x = 0; x < MESH_X_SIZE; ++x) {
 			if (!mesh_is_underwater(x, y)) continue;
@@ -183,7 +181,6 @@ void set_landscape_texgen(float tex_scale, int xoffset, int yoffset, int xsize, 
 	setup_texgen(tex_scale/TWO_XSS, tex_scale/TWO_YSS, tx, ty, 0.0, shader, 0);
 	select_texture(mesh_detail_tex, detail_tu_id); // detail texture
 }
-
 void set_landscape_texture_texgen(shader_t &shader) {
 	if (!DISABLE_TEXTURES) {
 		select_texture(LANDSCAPE_TEX);
@@ -239,7 +236,6 @@ void draw_mesh_vbo(bool shadow_pass) {
 
 
 void setup_detail_normal_map_prefix(shader_t &s, bool enable) {
-
 	if (enable) {
 		s.set_prefix("#define USE_BUMP_MAP",    1); // FS
 		s.set_prefix("#define USE_BUMP_MAP_DL", 1); // FS
@@ -247,13 +243,11 @@ void setup_detail_normal_map_prefix(shader_t &s, bool enable) {
 		s.set_prefix(make_shader_bool_prefix("use_fg_ViewMatrix", 0), 1); // FS - disabled
 	}
 }
-
 void setup_detail_normal_map(shader_t &s, float tscale) { // also used for tiled terrain mesh
 	select_texture(ROCK_NORMAL_TEX, 11);
 	s.add_uniform_int("detail_normal_tex", 11);
 	s.add_uniform_vector2d("detail_normal_tex_scale", vector2d(tscale*X_SCENE_SIZE, tscale*Y_SCENE_SIZE));
 }
-
 void setup_shader_underwater_atten(shader_t &s, float atten_scale, float mud_amt, float algae_amt) {
 	s.add_uniform_float("water_atten",    atten_scale);
 	s.add_uniform_color("uw_atten_max",   uw_atten_max);
@@ -296,11 +290,9 @@ protected:
 	struct norm_color_ix {
 		vector3d n;
 		color_wrapper c;
-		int ix;
-		norm_color_ix() : ix(-1) {}
+		int ix=-1;
 		void assign(vert_norm_color const &vnc, int ix_) {n = vnc.n; c = (color_wrapper)vnc; ix = ix_;}
 	};
-
 	vector<vert_norm_color> data;
 	vector<norm_color_ix> last_rows;
 
@@ -331,12 +323,11 @@ protected:
 		}
 		data[c].set_c3(color);
 	}
-
 public:
-	unsigned c;
-	bool reflection_pass;
+	unsigned c=0;
+	bool reflection_pass=0;
 
-	mesh_data_store() : c(0), reflection_pass(0) {last_rows.resize(MESH_X_SIZE+1);}
+	mesh_data_store() {last_rows.resize(MESH_X_SIZE+1);}
 
 	bool add_mesh_vertex_pair(int i, int j, float x, float y) {
 		if (is_mesh_disabled(j, i) || is_mesh_disabled(j, i+1)) return 0;
@@ -344,9 +335,7 @@ public:
 		
 		for (unsigned p = 0; p < 2; ++p, ++c, y += DY_VAL) {
 			int const iinc(min((MESH_Y_SIZE-1), int(i+p)));
-			//assert(c < data.size());
 			data[c].v.assign(x, y, mesh_height[iinc][j]);
-			//assert(unsigned(j) < last_rows.size());
 		
 			if (last_rows[j].ix == iinc) { // gets here nearly half the time
 				data[c].n = last_rows[j].n;
@@ -362,8 +351,7 @@ public:
 };
 
 
-class mesh_vertex_draw : public mesh_data_store {
-public:
+struct mesh_vertex_draw : public mesh_data_store {
 	mesh_vertex_draw() {
 		data.resize(2*(MESH_X_SIZE+1));
 		vert_norm_color::set_vbo_arrays(1, data.data());
@@ -376,9 +364,7 @@ public:
 
 
 class mesh_vertex_draw_vbo : public vao_manager_t, public mesh_data_store {
-
 	vector<unsigned> strip_ixs;
-
 public:
 	mesh_vertex_draw_vbo() {
 		data.resize(2*(MESH_X_SIZE+1)*MESH_Y_SIZE);
@@ -505,9 +491,7 @@ void display_mesh(bool shadow_pass, bool reflection_pass) { // fast array versio
 
 			for (int i = 0; i < MESH_Y_SIZE-1; ++i) {			
 				for (int j = 0; j < MESH_X_SIZE; ++j) {
-					for (unsigned d = 0; d < 2; ++d) {
-						verts.push_back(point(get_xval(j), get_yval(i+d), max(czmin, v_collision_matrix[i+d][j].zmax)));
-					}
+					for (unsigned d = 0; d < 2; ++d) {verts.emplace_back(point(get_xval(j), get_yval(i+d), max(czmin, v_collision_matrix[i+d][j].zmax)));}
 				}
 				draw_and_clear_verts(verts, GL_TRIANGLE_STRIP);
 			}
@@ -641,7 +625,6 @@ void draw_sides_and_bottom(bool shadow_pass) {
 
 
 class water_renderer {
-
 	int check_zvals;
 	float tex_scale;
 	colorRGBA color;
@@ -742,7 +725,6 @@ void water_renderer::draw() { // modifies color
 	disable_blend();
 	shader.clear_specular();
 }
-
 void draw_water_sides(shader_t &shader, int check_zvals) {
 	water_renderer wr(check_zvals, shader);
 	wr.draw();
@@ -841,7 +823,6 @@ void setup_water_plane_shader(shader_t &s, bool no_specular, bool reflections, b
 
 
 void draw_plane_to_far_clip(float zval) {
-
 	indexed_mesh_draw<vert_wrap_t> imd;
 	float const size(camera_pdu.far_*SQRT2);
 	imd.render_z_plane(-size, -size, size, size, zval, 8, 8); // 8x8 grid
@@ -856,10 +837,9 @@ void draw_distant_mesh_bottom(float terrain_zmin) {
 
 class lava_bubble_manager_t {
 	struct bubble : public sphere_t {
-		float time; // 0.0=start, 1.0=end
-		bool valid;
+		float time=0.0; // 0.0=start, 1.0=end
+		bool valid=0;
 
-		bubble() : time(0.0), valid(0) {}
 		void age(float dtime) {time += dtime;}
 		float     get_radius() const {return radius*(1.0 + time);}
 		colorRGBA get_color () const {return colorRGBA(1.0, 0.4*(1.0 - time), 0.0, min(1.0, 5.0*(1.0 - time)));} // orange => transparent red
@@ -1006,7 +986,6 @@ void draw_water_plane(float zval, float terrain_zmin, unsigned reflection_tid) {
 		s.end_shader();
 	}
 	else {lava_bubble_manager.clear();}
-
 	disable_blend();
 }
 

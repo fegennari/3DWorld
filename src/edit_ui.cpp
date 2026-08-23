@@ -18,7 +18,6 @@ extern bool camera_in_building;
 bool is_shift_key_pressed();
 
 class keyboard_menu_t {
-
 protected:
 	string title;
 	unsigned num_controls, cur_control;
@@ -53,7 +52,6 @@ protected:
 		}
 	}
 	virtual void draw_one_control(unsigned control_ix) const = 0;
-
 public:
 	// Note: the max number of controls we can fit on the screen is around 13
 	keyboard_menu_t(unsigned num_controls_, string const &title_) : title(title_), num_controls(num_controls_), cur_control(0) {assert(num_controls > 0);}
@@ -86,9 +84,8 @@ unsigned get_tile_size();
 
 
 class hmap_kbd_menu_t : public keyboard_menu_t {
-
 	hmap_brush_param_t &brush_param;
-	unsigned max_radius_exp;
+	unsigned max_radius_exp=0;
 
 	virtual void draw_one_control(unsigned control_ix) const {
 		assert(control_ix < HMAP_NUM_CTR);
@@ -119,7 +116,7 @@ class hmap_kbd_menu_t : public keyboard_menu_t {
 	}
 
 public:
-	hmap_kbd_menu_t(hmap_brush_param_t &bp) : keyboard_menu_t(HMAP_NUM_CTR, "Heightmap Edit"), brush_param(bp), max_radius_exp(0) {
+	hmap_kbd_menu_t(hmap_brush_param_t &bp) : keyboard_menu_t(HMAP_NUM_CTR, "Heightmap Edit"), brush_param(bp) {
 		for (unsigned sz = 1; sz < get_tile_size(); sz <<= 1) {++max_radius_exp;}
 	}
 	virtual bool is_enabled() const {return (show_scores && !game_mode && inf_terrain_fire_mode && world_mode == WMODE_INF_TERRAIN);}
@@ -159,7 +156,6 @@ extern voxel_brush_params_t voxel_brush_params;
 float get_voxel_brush_step();
 
 class voxel_edit_kbd_menu_t : public keyboard_menu_t {
-
 	voxel_brush_params_t &brush;
 
 	virtual void draw_one_control(unsigned control_ix) const {
@@ -191,7 +187,6 @@ class voxel_edit_kbd_menu_t : public keyboard_menu_t {
 		}
 		draw_one_control_text(control_ix, voxel_ctr_names[control_ix], value.str(), spos);
 	}
-
 public:
 	voxel_edit_kbd_menu_t(voxel_brush_params_t &brush_) : keyboard_menu_t(NUM_VOXEL_CONT, "Voxel Edit"), brush(brush_) {}
 	virtual bool is_enabled() const {return (show_scores && !game_mode && voxel_editing && world_mode == WMODE_GROUND);}
@@ -233,7 +228,6 @@ void update_tiled_grass_colors();
 void register_leaf_color_change();
 
 class leaf_color_kbd_menu_t : public keyboard_menu_t {
-
 	virtual void draw_one_control(unsigned control_ix) const {
 		assert(control_ix < NUM_LEAF_CONT);
 		ostringstream value;
@@ -280,7 +274,6 @@ class leaf_color_kbd_menu_t : public keyboard_menu_t {
 		}
 		draw_one_control_text(control_ix, leaf_ctr_names[control_ix], value.str(), spos, 0, 1.0, color);
 	}
-
 public:
 	leaf_color_kbd_menu_t() : keyboard_menu_t(NUM_LEAF_CONT, "Tree Leaves and Grass") {}
 	virtual bool is_enabled() const {return (show_scores && !game_mode && (world_mode == WMODE_GROUND || world_mode == WMODE_INF_TERRAIN));}
@@ -342,7 +335,6 @@ enum {WATERP_ALPHA=0, WATERP_MUD, WATERP_BRIGHT, WATERP_REFLECT, WATERP_GREEN, W
 string const water_ctr_names[NUM_WATER_CONT] = {"Alpha Scale", "Mud Content", "Brightness", "Reflectivity", "Green Hue", "Wave Amplitude"};
 
 class water_color_kbd_menu_t : public keyboard_menu_t {
-
 	virtual void draw_one_control(unsigned control_ix) const {
 		assert(control_ix < NUM_WATER_CONT);
 		ostringstream value;
@@ -380,7 +372,6 @@ class water_color_kbd_menu_t : public keyboard_menu_t {
 		}
 		draw_one_control_text(control_ix, water_ctr_names[control_ix], value.str(), spos);
 	}
-
 public:
 	water_color_kbd_menu_t() : keyboard_menu_t(NUM_WATER_CONT, "Water Colors") {}
 	virtual bool is_enabled() const {return (show_scores && !game_mode && world_mode == WMODE_INF_TERRAIN);}
@@ -424,7 +415,6 @@ string const phys_weather_names[NUM_PW_CONT] = {"Player Speed", "Gravity", "Temp
 												"Wind X", "Wind Y", "Sun Angle", "Moon Angle", "Ambient Light Scale", "Physics Timestep", "Weapon Velocity", "Cube Map Mipmap Bias"};
 
 class phys_weather_kbd_menu_t : public keyboard_menu_t {
-
 	virtual void draw_one_control(unsigned control_ix) const {
 		assert(control_ix < NUM_PW_CONT);
 		ostringstream value;
@@ -502,7 +492,6 @@ class phys_weather_kbd_menu_t : public keyboard_menu_t {
 		}
 		draw_one_control_text(control_ix, phys_weather_names[control_ix], value.str(), spos, 0, 0.9);
 	}
-
 public:
 	phys_weather_kbd_menu_t() : keyboard_menu_t(NUM_PW_CONT, "Physics and Weather") {}
 	virtual bool is_enabled() const {return (show_scores && !game_mode && world_mode != WMODE_UNIVERSE);}
@@ -595,7 +584,6 @@ string const sphere_mode_names[NUM_SM_CONT] =
 string const destroy_tags[3] = {"Indestructible", "Shatters", "Explodes"};
 
 class sphere_mat_kbd_menu_t : public keyboard_menu_t {
-
 	virtual void draw_one_control(unsigned control_ix) const {
 		assert(control_ix < NUM_SM_CONT);
 		ostringstream value;
@@ -643,7 +631,6 @@ class sphere_mat_kbd_menu_t : public keyboard_menu_t {
 		} while (textures[tid].normal_map || textures[tid].type > 0); // skip normal maps and generated textures
 		nm_tid = ((tid < 0) ? -1 : textures[tid].bump_tid); // usually unset/-1
 	}
-
 public:
 	sphere_mat_kbd_menu_t() : keyboard_menu_t(NUM_SM_CONT, "Sphere Materials") {cur_control = num_controls-1;} // start at material name
 	virtual bool is_enabled() const {return (show_scores && spheres_mode != 0 && !game_mode);}
@@ -702,13 +689,11 @@ unsigned const NUM_KBD_MENUS = sizeof(kbd_menus)/sizeof(kbd_menus[0]);
 
 
 void next_selected_menu_ix() {
-
 	unsigned num_enabled(0);
 	for (unsigned i = 0; i < NUM_KBD_MENUS; ++i) {if (kbd_menus[i]->is_enabled()) {++num_enabled;}}
 	if (num_enabled > 1) {++selected_menu_ix;} else {selected_menu_ix = 0;} // increment if there are multiple choices
 	if (selected_menu_ix >= num_enabled) {selected_menu_ix = 0;} // wraparound
 }
-
 
 keyboard_menu_t *get_enabled_menu() {
 
@@ -728,7 +713,6 @@ keyboard_menu_t *get_enabled_menu() {
 	selected_menu_ix = num_enabled - 1; // set to the last one (which was used)
 	return kbd_menu;
 }
-
 
 bool ui_intercept_keyboard(unsigned char key, bool is_special) {
 
@@ -752,7 +736,6 @@ bool ui_intercept_mouse(int button, int state, int x, int y, bool is_up_down) {
 	return 0; // do nothing (for now)
 }
 
-
 void show_onscreen_building_help() { // non-interactive menu
 	ostringstream oss;
 	oss << "wasd: Move" << endl << "e: Take Item" << endl << "q: Interact/Push Object" << endl << "r: Pull Object" << endl << "E or <Space>: Use Inventory Item" << endl
@@ -768,5 +751,4 @@ void draw_enabled_ui_menus() {
 	keyboard_menu_t const *const kbd_menu(get_enabled_menu());
 	if (kbd_menu) {kbd_menu->draw_controls();}
 }
-
 
