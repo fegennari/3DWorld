@@ -2086,8 +2086,11 @@ bool building_t::add_livingroom_objs(rand_gen_t rgen, room_t const &room, float 
 		}
 	}
 	if (!placed_couch && !placed_tv) return 0; // not a living room
-	if (placed_tv) {place_obj_on_table(rgen, room_id, tot_light_amt, objs_start, TYPE_TV_REMOTE);}
 
+	if (placed_tv) {
+		unsigned const remote_ix(objs.size());
+		if (place_obj_on_table(rgen, room_id, tot_light_amt, objs_start, TYPE_TV_REMOTE)) {objs[remote_ix].item_flags = tv_ix;} // assign TV to this remote
+	}
 	if (rgen.rand_bool()) { // add rocking chair
 		unsigned const chair_ix(objs.size());
 		cube_t chair_place_area(place_area);
@@ -2115,9 +2118,9 @@ bool building_t::add_livingroom_objs(rand_gen_t rgen, room_t const &room, float 
 	return 1;
 }
 
-void building_t::place_tv_remote_on_surface(rand_gen_t &rgen, cube_t const &surface, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+bool building_t::place_tv_remote_on_surface(rand_gen_t &rgen, cube_t const &surface, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	float const one_inch(get_one_inch()), height(0.8*one_inch), length(8.0*one_inch), width(2.0*one_inch); // 8x2x0.8
-	place_obj_on_surface(rgen, surface, room_id, tot_light_amt, objs_start, TYPE_TV_REMOTE, length, width, height);
+	return place_obj_on_surface(rgen, surface, room_id, tot_light_amt, objs_start, TYPE_TV_REMOTE, length, width, height);
 }
 
 // Note: this room is decided by the caller and the failure to add objects doesn't make it not a dining room

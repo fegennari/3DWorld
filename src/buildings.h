@@ -2728,13 +2728,13 @@ private:
 	bool check_if_near_missing_wall(cube_t const &c, room_t const &room) const;
 	bool check_if_placed_on_wall(cube_t const &c, room_t const &room, bool dim, bool dir) const;
 	bool place_eating_items_on_table(rand_gen_t &rgen, unsigned table_obj_id);
-	void place_obj_on_surface(rand_gen_t &rgen, cube_t const &surface, unsigned room_id, float tot_light_amt, unsigned objs_start,
+	bool place_obj_on_surface(rand_gen_t &rgen, cube_t const &surface, unsigned room_id, float tot_light_amt, unsigned objs_start,
 		room_object obj_type, float length, float width, float height);
-	void place_tv_remote_on_surface(rand_gen_t &rgen, cube_t const &surface, unsigned room_id, float tot_light_amt, unsigned objs_start);
-	void place_cards_on_surface(rand_gen_t &rgen, cube_t const &surface, unsigned room_id, float tot_light_amt, unsigned objs_start);
+	bool place_tv_remote_on_surface(rand_gen_t &rgen, cube_t const &surface, unsigned room_id, float tot_light_amt, unsigned objs_start);
+	bool place_cards_on_surface(rand_gen_t &rgen, cube_t const &surface, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	void place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room, unsigned room_id, float tot_light_amt,
 		unsigned objs_start, unsigned floor, bool is_basement, bool not_private);
-	void place_obj_on_table(rand_gen_t rgen, unsigned room_id, float tot_light_amt, unsigned objs_start, room_object obj_type);
+	bool place_obj_on_table(rand_gen_t rgen, unsigned room_id, float tot_light_amt, unsigned objs_start, room_object obj_type);
 	bool can_be_bedroom_or_bathroom(room_t const &room, unsigned floor_ix, bool skip_conn_check=0) const;
 	bool can_be_bathroom(room_t const &room) const;
 	bool find_mirror_in_room(unsigned room_id, vector3d const &xlate, float &dmin_sq, bool same_room) const;

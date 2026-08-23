@@ -573,7 +573,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 					else if (type == TYPE_PICTURE || type == TYPE_TPROLL || type == TYPE_MWAVE || type == TYPE_TV || type == TYPE_MONITOR || type == TYPE_BLINDS ||
 						type == TYPE_SWITCH || type == TYPE_BOOK || type == TYPE_BRK_PANEL || type == TYPE_BREAKER || type == TYPE_ATTIC_DOOR || type == TYPE_OFF_CHAIR ||
 						type == TYPE_WFOUNTAIN || type == TYPE_VENDING || type == TYPE_MED_CAB || type == TYPE_LOCKER || type == TYPE_TCAN || type == TYPE_CASHREG ||
-						type == TYPE_COM_FRIDGE || type == TYPE_HAND_DRYER) {keep = 1;}
+						type == TYPE_COM_FRIDGE || type == TYPE_HAND_DRYER || type == TYPE_TV_REMOTE) {keep = 1;}
 					else if ((type == TYPE_STOVE || type == TYPE_SHOWER || type == TYPE_SHOWERTUB /*|| type == TYPE_FRIDGE*/) && !i->in_mall()) {keep = 1;} // not in plumbing store
 					else if (type == TYPE_O_SHOWER && i->contains_pt(closest_to)) {keep = 1;} // only if standing inside
 					else if (type == TYPE_LG_BALL && i->has_dstate()) {keep = 1;}
@@ -860,6 +860,10 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 			}
 			gen_sound_thread_safe(SOUND_CLICK, local_center, 0.5);
 		}
+	}
+	else if (type == TYPE_TV_REMOTE) { // remote interacts with the associated TV
+		room_object_t &tv(interior->room_geom->get_room_object_by_index(obj.item_flags));
+		if (tv.type == TYPE_TV) {return interact_with_object(obj.item_flags, int_pos, query_ray_end, int_dir);}
 	}
 	else if (type == TYPE_BUTTON) { // Note: currently, buttons are only used for elevators and mall store gates
 		sound_scale = 0.05; // very quiet, unless set in gate opening/closing case below
