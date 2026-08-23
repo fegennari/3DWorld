@@ -105,7 +105,6 @@ float get_mesh_height(mesh_xy_grid_cache_t const &height_gen, float xstart, floa
 }
 
 bool is_shadowed(point const &cpos, vector3d const &cnorm, point const &lpos, int &cindex) {
-
 	if (!MAP_VIEW_SHADOWS)   return 0;
 	if (display_mode & 0x20) return 0;
 	point const cpos2(cpos + 0.001*cnorm);
@@ -113,9 +112,7 @@ bool is_shadowed(point const &cpos, vector3d const &cnorm, point const &lpos, in
 	return check_coll_line(cpos2, lpos, cindex, -1, 1, 3); // static cobj shadows only for performance
 }
 
-
 void colorize(float val, unsigned char *rgb) {
-
 	//rgb[0] = rgb[1] = rgb[2] = (unsigned char)(255.0*val); return;
 	float const a(5*val), b(7*val), c(11*val);
 	rgb[0] = (unsigned char)(255.0f*(a - int(a)));
@@ -156,7 +153,6 @@ void draw_overhead_map() {
 		double const y_scale(10.0*map_zoom), x_scale(window_ar*y_scale);
 		double const i_scale(2.0*y_scale/ny), j_scale(2.0*x_scale/nx);
 		double const x_off(-x_scale + 0.05*map_x), y_off(-y_scale + 0.05*map_y);
-		//cout << "pos: (" << 0.05*map_x << ", " << 0.05*map_y << "), scale: " << y_scale << endl; // TESTING
 		//timer_t timer("Mandelbrot");
 
 #pragma omp parallel for schedule(dynamic,1)

@@ -50,7 +50,7 @@ size_t get_last_slash_pos(string const &filename) {
 	size_t smax(0);
 
 	for (unsigned i = 0; i < 2; ++i) {
-		if (spos[i] != string::npos) {smax = max(smax, spos[i]);}
+		if (spos[i] != string::npos) {max_eq(smax, spos[i]);}
 	}
 	return smax;
 }
@@ -226,7 +226,6 @@ struct bmp_header { // 14 bytes (may be padded to 16, but we only read 14)
    unsigned short int reserved1, reserved2;
    unsigned int offset;                     /* Offset to image data, bytes */
 };
-
 struct bmp_infoheader { // 40 bytes
    unsigned int size;               /* Header size in bytes      */
    int width,height;                /* Width and height of image */
@@ -238,7 +237,6 @@ struct bmp_infoheader { // 40 bytes
    unsigned int ncolours;           /* Number of colours         */
    unsigned int importantcolours;   /* Important colours         */
 };
-
 
 bool read_bmp_header(FILE *&fp, string const &fn, int &width, int &height, int &ncolors, bool allow_diff_width_height, bool allow_two_byte_grayscale, bool &is_16_bit_gray) {
 
@@ -331,8 +329,6 @@ void maybe_swap_rb(unsigned char *ptr, unsigned num_pixels, unsigned ncolors) {
 	if (ncolors != 3 && ncolors != 4) return;
 	for(unsigned i = 0; i < num_pixels; ++i) {swap(ptr[ncolors*i+0], ptr[ncolors*i+2]);} // BGR[A] => RGB[A]
 }
-
-
 void texture_t::maybe_swap_rb(unsigned char *ptr) const { // ptr is assumed to be of size num_bytes()
 	::maybe_swap_rb(ptr, num_pixels(), ncolors);
 }
@@ -392,8 +388,6 @@ bool write_rgb_bmp_image(string const &fn, unsigned char *data, unsigned width, 
 	checked_fclose(fp);
 	return 1;
 }
-
-
 int texture_t::write_to_bmp(string const &fn) const {
 	vector<unsigned char> data_swap_rb(data, data+num_bytes());
 	return write_rgb_bmp_image(fn, data_swap_rb.data(), width, height, ncolors);
@@ -565,14 +559,12 @@ int texture_t::write_to_png(string const &fn) const {
 		cerr << format_red("Error opening png file " + fn + " for write.") << endl;
 		return 0;
 	}
-	// Initialize write structure
 	png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
 	assert(png_ptr != NULL);
-	// Initialize info structure
 	png_infop info_ptr = png_create_info_struct(png_ptr);
 	assert(info_ptr != NULL);
 	png_init_io(png_ptr, fp);
-	// Write header
+	// write header
 	int color_type(0), bit_depth;
 
 	if (is_16_bit_gray) {
@@ -592,9 +584,8 @@ int texture_t::write_to_png(string const &fn) const {
 	png_set_IHDR(png_ptr, info_ptr, width, height, bit_depth, color_type, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
 	png_write_info(png_ptr, info_ptr);
 	if (is_16_bit_gray) {png_set_swap(png_ptr);} // change big endian to little endian
-	// Write image data
+	// write image data
 	for (int y = 0; y < height; y++) {png_write_row(png_ptr, (data + y*width*ncolors));}
-	// End write
 	png_write_end(png_ptr, NULL);
 	png_free_data(png_ptr, info_ptr, PNG_FREE_ALL, -1);
 	png_destroy_write_struct(&png_ptr, (png_infopp)NULL);
@@ -645,10 +636,8 @@ void texture_t::load_tiff(int index, bool allow_diff_width_height, bool allow_tw
 
 		for (int row = 0; row < height; row++) {
 			TIFFReadScanline(tif, buf, row);
-
-			for (int i = 0; i < sl_size; ++i) { // x-values
-				data[sl_size*(height - row - 1) + i] = ((unsigned char const *)buf)[i]; // assumes little endian byte ordering, no swap required, may need to check this?
-			}
+			// update x-values; assumes little endian byte ordering, no swap required, may need to check this?
+			for (int i = 0; i < sl_size; ++i) {data[sl_size*(height - row - 1) + i] = ((unsigned char const *)buf)[i];}
 		}
         _TIFFfree(buf);
 	}

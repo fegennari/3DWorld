@@ -64,13 +64,11 @@ unsigned heightmap_t::get_pixel_ix(unsigned x, unsigned y) const {
 	assert(x < (unsigned)width && y < (unsigned)height);
 	return (width*y + x);
 }
-
 unsigned heightmap_t::get_pixel_value(unsigned x, unsigned y) const {
 	unsigned const ix(get_pixel_ix(x, y));
 	if (ncolors == 1) {return data[ix];}
 	return *((unsigned short *)(data + (ix<<1)));
 }
-
 
 float heightmap_t::get_heightmap_value(unsigned x, unsigned y) const { // returns values from 0 to 256
 
@@ -94,7 +92,6 @@ float heightmap_t::get_heightmap_value(unsigned x, unsigned y) const { // return
 void heightmap_t::set_heightmap_value(unsigned x, unsigned y, float val) {
 	modify_heightmap_value(x, y, round_fp((ncolors == 2) ? 256*val : val), 0); // val_is_delta=0
 }
-
 
 void heightmap_t::modify_heightmap_value(unsigned x, unsigned y, int val, bool val_is_delta) {
 
@@ -218,13 +215,11 @@ void heightmap_t::from_floats(vector<float> const &vals) {
 void tex_mod_map_manager_t::add_mod(tex_mod_vect_t const &mod) { // vector (could use a template function)
 	for (tex_mod_vect_t::const_iterator i = mod.begin(); i != mod.end(); ++i) {add_mod(*i);}
 }
-
 void tex_mod_map_manager_t::add_mod(tex_mod_map_t const &mod) { // map (could use a template function)
 	for (tex_mod_map_t::const_iterator i = mod.begin(); i != mod.end(); ++i) {add_mod(mod_elem_t(*i));}
 }
 
 bool tex_mod_map_manager_t::pop_last_brush(hmap_brush_t &last_brush) {
-
 	if (brush_vect.empty()) return 0;
 	last_brush = brush_vect.back();
 	brush_vect.pop_back();
@@ -232,7 +227,6 @@ bool tex_mod_map_manager_t::pop_last_brush(hmap_brush_t &last_brush) {
 }
 
 bool tex_mod_map_manager_t::undo_last_brush() {
-
 	hmap_brush_t brush;
 	if (!pop_last_brush(brush)) return 0; // nothing to undo
 	brush.delta = -brush.delta; // invert the delta to undo
@@ -365,7 +359,6 @@ void terrain_hmap_manager_t::proc_gen_heightmap(unsigned size) {
 void terrain_hmap_manager_t::post_load() {
 	if (!hmap_out_fn.empty()) {write_png(hmap_out_fn);}
 }
-
 bool terrain_hmap_manager_t::maybe_load(char const *const fn, bool invert_y) {
 	if (fn == NULL || enabled()) return 0;
 	load(fn, invert_y);
@@ -383,7 +376,6 @@ tex_mod_map_manager_t::hmap_val_t terrain_hmap_manager_t::get_clamped_pixel_valu
 }
 
 float terrain_hmap_manager_t::get_clamped_height(int x, int y) const { // translate so that (0,0) is in the center of the heightmap texture
-
 	assert(enabled());
 	if (mesh_scale < 1.0) {return interpolate_height(float(x), float(y));}
 	//if (mesh_scale > 1.0) {} // sample multiple pixels as a mipmap?
@@ -392,7 +384,6 @@ float terrain_hmap_manager_t::get_clamped_height(int x, int y) const { // transl
 }
 
 float terrain_hmap_manager_t::interpolate_height(float x, float y) const { // bilinear interpolation
-
 	float const sx(mesh_scale*x), sy(mesh_scale*y);
 	int xlo(floor(sx)), ylo(floor(sy)), xhi(ceil(sx)), yhi(ceil(sy));
 	float const xv(sx - xlo), yv(sy - ylo); // use cubic_interpolate()?

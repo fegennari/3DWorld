@@ -130,7 +130,6 @@ void grass_manager_t::begin_draw() const {
 	grass_data_t::set_vbo_arrays();
 	select_texture(GRASS_BLADE_TEX);
 }
-
 void grass_manager_t::end_draw() const {
 	post_render();
 	check_gl_error(40);
@@ -200,7 +199,6 @@ void grass_tile_manager_t::clear() {
 	for (unsigned lod = 0; lod < NUM_GRASS_LODS; ++lod) {vbo_offsets[lod].clear();}
 }
 
-
 void grass_tile_manager_t::upload_data() {
 
 	if (empty()) return;
@@ -216,7 +214,6 @@ void grass_tile_manager_t::upload_data() {
 	data_valid = 1;
 	PRINT_TIME("Grass Tile Upload");
 }
-
 
 void grass_tile_manager_t::gen_grass() {
 
@@ -235,14 +232,12 @@ void grass_tile_manager_t::gen_grass() {
 	PRINT_TIME("Grass Tile Gen");
 }
 
-
 void grass_tile_manager_t::update() { // to be called once per frame
 	if (!is_grass_enabled()) {clear(); return;}
 	if (empty()    ) {gen_grass();}
 	if (vbo == 0   ) {create_new_vbo();}
 	if (!data_valid) {upload_data();}
 }
-
 
 // Note: density won't work if grass is spatially sorted, which is currently the case for tiled terrain grass
 unsigned grass_tile_manager_t::render_block(unsigned block_ix, unsigned lod, float density, unsigned num_instances, bool use_tess) {
@@ -262,7 +257,6 @@ unsigned grass_tile_manager_t::render_block(unsigned block_ix, unsigned lod, flo
 
 
 class grass_manager_dynamic_t : public grass_manager_t {
-	
 	vector<unsigned> mesh_to_grass_map; // maps mesh x,y index to starting index in grass vector
 	vector<int> last_occluder;
 	mutable vector<grass_data_t> vertex_data_buffer;
@@ -754,14 +748,11 @@ bool flower_manager_t::skip_generate() const {
 }
 
 void flower_manager_t::check_vbo() {
-
 	if (vbo != 0 || empty()) return; // nothing to update
-	//RESET_TIME;
 	static vector<vert_norm_comp_color> verts;
 	verts.clear();
 	create_verts_range(verts, 0, size());
 	create_vbo_and_upload(vbo, verts);
-	//PRINT_TIME("Flowers VBO");
 }
 
 void flower_manager_t::create_verts_range(vector<vert_norm_comp_color> &verts, unsigned start, unsigned end) const {
@@ -784,7 +775,6 @@ void flower_manager_t::create_verts_range(vector<vert_norm_comp_color> &verts, u
 }
 
 void flower_manager_t::upload_range(unsigned start, unsigned end) const {
-
 	if (!vbo) return; // can we ever get here? assert vbo?
 	vector<vert_norm_comp_color> verts;
 	create_verts_range(verts, start, end);
@@ -795,14 +785,12 @@ void flower_manager_t::upload_range(unsigned start, unsigned end) const {
 }
 
 void flower_manager_t::setup_flower_shader_post(shader_t &shader) {
-
 	shader.add_uniform_float("height", grass_length);
 	shader.add_uniform_float("min_alpha", 0.9);
 	shader.clear_specular();
 }
 
 void flower_manager_t::draw_triangles(shader_t &shader) const {
-
 	pre_render();
 	select_texture((draw_model == 1) ? (int)WHITE_TEX : (int)DAISY_TEX);
 	vert_norm_comp_color::set_vbo_arrays();
@@ -926,8 +914,7 @@ void flower_tile_manager_t::clear_within(point const &pos, float radius, bool is
 }
 
 
-class flower_manager_dynamic_t : public flower_manager_t {
-public:
+struct flower_manager_dynamic_t : public flower_manager_t {
 	void gen_flowers() {
 		if (skip_generate()) return;
 		assert(empty()); // or call clear()?
@@ -1031,7 +1018,6 @@ flower_manager_dynamic_t flower_manager;
 // *** global functions ***
 
 void setup_wind_for_shader(shader_t &s, unsigned tu_id) {
-
 	static double wind_time(0.0);
 	if (animate2) {wind_time = tfticks;}
 	s.add_uniform_float("time", 0.5*wind_time/TICKS_PER_SECOND);
@@ -1047,7 +1033,6 @@ bool no_grass() {
 }
 
 void gen_grass() { // and flowers
-
 	grass_manager.clear();
 	flower_manager.clear();
 	if (no_grass() || world_mode != WMODE_GROUND) return;

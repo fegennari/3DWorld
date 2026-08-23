@@ -197,7 +197,6 @@ bool light_source::is_visible() const {
 	static map<pair<point, point>, point> ray_map;
 	//shader_t shader;
 	//shader.begin_color_only_shader(RED);
-	//RESET_TIME;
 	point const camera(get_camera_pos());
 	int prev_cindex(-1);
 	if (!check_coll_line_tree(pos, camera, prev_cindex, camera_coll_id, 0, 1, 1, 0, 1)) return 1; // light center is visible
@@ -259,7 +258,6 @@ bool light_source::is_visible() const {
 		prev_cindex = cindex;
 	}
 	//shader.end_shader();
-	//PRINT_TIME("Light Source Vis");
 	return 0; // not visible
 }
 
@@ -342,14 +340,12 @@ void light_source_trig::advance_timestep() {
 }
 
 void light_source_trig::shift_by(vector3d const &vd) {
-	
 	light_source::shift_by(vd);
 	bind_point_t::shift_by(vd);
 	triggers.shift_by(vd);
 }
 
 bool light_source_trig::need_update_indir() {
-
 	if (!dynamic_indir) return 0;
 	if (pos == last_pos && dir == last_dir) return 0;
 	last_pos = pos;
@@ -358,7 +354,6 @@ bool light_source_trig::need_update_indir() {
 }
 
 void light_source_trig::set_rotate(vector3d const &axis, float rotate) {
-	
 	assert(axis != zero_vector);
 	assert(dir != zero_vector);
 	rot_rate = rotate;
@@ -366,7 +361,6 @@ void light_source_trig::set_rotate(vector3d const &axis, float rotate) {
 }
 
 bool light_source_trig::check_activate(point const &p, float radius, int activator) {
-
 	//if (active_time > 0.0) return 1; // already activated, don't reset timing
 	float const auto_on_time(triggers.get_auto_on_time());
 	unsigned trigger_mode(0); // 0 = not triggered, 1 bit = proximity, 2 bit = action, 4 bit = auto on
@@ -378,7 +372,6 @@ bool light_source_trig::check_activate(point const &p, float radius, int activat
 }
 
 void light_source_trig::register_activate(bool player_triggered) {
-
 	float const auto_off_time(triggers.get_auto_off_time());
 	bool const is_off(active_time == 0.0);
 	//if (auto_off_time == 0.0 || trigger.requires_action) {active_time = (is_off ? ((auto_off_time == 0.0) ? 1.0 : auto_off_time) : 0.0);} // toggle mode
@@ -398,7 +391,6 @@ void light_source_trig::register_activate(bool player_triggered) {
 // however, this doesn't work because the shader wants to index texture layer and shadow matrix by the same index,
 // and we may not have enough uniforms for caching
 class local_smap_manager_t {
-
 	bool use_tex_array;
 	vector<local_smap_data_t> smap_data;
 	vector<unsigned> free_list;

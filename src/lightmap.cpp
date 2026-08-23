@@ -50,32 +50,25 @@ colorRGBA const &get_flashlight_color() {return flashlight_colors[flashlight_col
 
 // *** R_PROFILE IMPLEMENTATION ***
 
-
 void r_profile::reset_bbox(float const bb_[2][2]) {
-	
 	clear();
 	bb       = rect(bb_);
 	tot_area = bb.area();
 	assert(tot_area > 0.0);
 }
 
-
 void r_profile::clear() {
-	
 	rects.resize(0);
 	filled    = 0;
 	avg_alpha = 1.0;
 }
 
-
 void r_profile::add_rect_int(rect const &r) {
-
 	for (unsigned i = 0; i < rects.size(); ++i) { // try rect merge
 		if (rects[i].merge_with(r)) return;
 	}
 	rects.push_back(r);
 }
-
 
 bool r_profile::add_rect(float const d[3][2], unsigned d0, unsigned d1, float alpha=1.0) {
 	
@@ -86,9 +79,7 @@ bool r_profile::add_rect(float const d[3][2], unsigned d0, unsigned d1, float al
 	//if (r.is_near_zero_area())  return 0;
 	
 	if (r.equal(bb.d)) { // full containment
-		if (alpha < 1.0) {
-			// *** WRITE ***
-		}
+		if (alpha < 1.0) {} // not implemented
 		else {avg_alpha = 1.0;}
 		rects.resize(0);
 		add_rect_int(r);
@@ -125,7 +116,6 @@ bool r_profile::add_rect(float const d[3][2], unsigned d0, unsigned d1, float al
 	return 1;
 }
 
-
 float r_profile::clipped_den_inv(float const c[2]) const { // clip by first dimension
 	
 	if (filled)        return (1.0 - avg_alpha);
@@ -147,7 +137,6 @@ float r_profile::clipped_den_inv(float const c[2]) const { // clip by first dime
 	assert(a <= area + TOLER);
 	return (area - a)/area;
 }
-
 
 void r_profile::clear_within(float const c[2]) {
 
@@ -171,7 +160,6 @@ void r_profile::clear_within(float const c[2]) {
 
 
 // *** MAIN LIGHTING CODE ***
-
 
 void reset_cobj_counters() {
 	for (unsigned i = 0; i < (unsigned)coll_objects.size(); ++i) {coll_objects[i].counter = -1;}
@@ -254,15 +242,12 @@ template<typename T> void lmap_manager_t::alloc(unsigned nbins, unsigned xsize, 
 
 template void lmap_manager_t::alloc(unsigned nbins, unsigned xsize, unsigned ysize, unsigned zsize, unsigned char **nonempty_bins, lmcell const &init_lmcell); // explicit instantiation
 
-
 void lmap_manager_t::init_from(lmap_manager_t const &src) {
-
 	//assert(!is_allocated());
 	//clear_cells(); // probably unnecessary
 	alloc(src.vldata_alloc.size(), src.lm_xsize, src.lm_ysize, src.lm_zsize, src.vlmap, lmcell());
 	copy_data(src);
 }
-
 
 // *this = blend_weight*dest + (1.0 - blend_weight)*(*this)
 void lmap_manager_t::copy_data(lmap_manager_t const &src, float blend_weight) {
@@ -317,7 +302,6 @@ void light_volume_local::allocate() {
 }
 
 void light_volume_local::add_color(point const &p, colorRGBA const &color) { // inlined in the header?
-
 	assert(!compressed); // compressed is read only
 	int const ix(check_lmap_get_grid_index(p));
 	if (ix < 0) return; // if the global lightmap doesn't have this cell, the local lmap shouldn't need it
@@ -327,7 +311,6 @@ void light_volume_local::add_color(point const &p, colorRGBA const &color) { // 
 }
 
 void light_volume_local::add_lighting(colorRGB &color, int x, int y, int z) const {
-
 	//if (!is_active()) return; // not yet allocated - caller should check this
 	if (!check_xy_bounds(x, y) || z < bounds[2][0] || z >= bounds[2][1]) return;
 	unsigned const ix(((y - bounds[1][0])*(bounds[0][1] - bounds[0][0]) + (x - bounds[0][0]))*(bounds[2][1] - bounds[2][0]) + (z - bounds[2][0]));
@@ -412,9 +395,7 @@ void light_volume_local::compress(bool verbose) {
 	
 	for (int y = bounds[1][0]; y < bounds[1][1]; ++y) {
 		for (int x = bounds[0][0]; x < bounds[0][1]; ++x) {
-			for (int z = bounds[2][0]; z < bounds[2][1]; ++z) {
-				comp_data[data_pos++] = data[get_ix(x, y, z)];
-			}
+			for (int z = bounds[2][0]; z < bounds[2][1]; ++z) {comp_data[data_pos++] = data[get_ix(x, y, z)];}
 		}
 	}
 	assert(data_pos == comp_data.size());
@@ -428,7 +409,6 @@ void light_volume_local::compress(bool verbose) {
 }
 
 void light_volume_local::init(unsigned lvol_ix, float scale_, string const &filename) {
-
 	RESET_TIME;
 	set_scale(scale_);
 	if (!filename.empty() && read(filename)) return; // see if there is an existing file to read
@@ -438,19 +418,13 @@ void light_volume_local::init(unsigned lvol_ix, float scale_, string const &file
 }
 
 void light_volume_local::gen_data(unsigned lvol_ix, bool verbose) {
-	
-	//RESET_TIME;
 	allocate();
-	//PRINT_TIME("Alloc");
 	compute_ray_trace_lighting((LIGHTING_DYNAMIC + lvol_ix), verbose);
-	//PRINT_TIME("Alloc + Trace");
 	compress(verbose);
-	//PRINT_TIME("Alloc + Trace + Compress");
 }
 
 
 unsigned tag_ix_map::get_ix_for_name(string const &name) {
-
 	if (name == "none" || name == "null" || name.empty()) return 0;
 	auto ret(name_to_ix.insert(make_pair(name, next_ix)));
 	if (ret.second) {++next_ix;} // increment next_ix if a new value was inserted
@@ -458,7 +432,6 @@ unsigned tag_ix_map::get_ix_for_name(string const &name) {
 }
 
 unsigned indir_dlight_group_manager_t::get_ix_for_name(std::string const &name, float scale) {
-
 	unsigned const tag_ix(tag_ix_map::get_ix_for_name(name));
 	if (tag_ix >= groups.size()) {groups.resize(tag_ix+1);}
 	else if (groups[tag_ix].scale != scale) {cout << "Warning: dlight name '" << name << "' was set to two different scales of " << groups[tag_ix].scale << " and " << scale << endl;}
@@ -468,7 +441,6 @@ unsigned indir_dlight_group_manager_t::get_ix_for_name(std::string const &name, 
 }
 
 void indir_dlight_group_manager_t::add_dlight_ix_for_tag_ix(unsigned tag_ix, unsigned dlight_ix) {
-
 	if (tag_ix == 0) return; // first group is empty
 	assert(tag_ix < groups.size());
 	groups[tag_ix].dlight_ixs.push_back(dlight_ix); // check valid dlight_ix?
@@ -508,7 +480,6 @@ void indir_dlight_group_manager_t::create_needed_llvols() {
 
 
 void create_dlight_volumes() {indir_dlight_group_manager.create_needed_llvols();}
-
 
 bool has_fixed_cobjs(int x, int y) {
 
@@ -612,8 +583,7 @@ void calc_flow_profile(r_profile flow_prof[3], int i, int j, bool proc_cobjs, fl
 cube_t get_scene_bounds_bcube() { // for use with indir lighting
 	return cube_t(-X_SCENE_SIZE, X_SCENE_SIZE, -Y_SCENE_SIZE, Y_SCENE_SIZE, get_zval_min(), get_zval_max());
 }
-float calc_czspan() {return max(0.0f, ((czmax + lm_dz_adj) - czmin0 + TOLER));}
-
+float    calc_czspan   () {return max(0.0f, ((czmax + lm_dz_adj) - czmin0 + TOLER));}
 unsigned get_grid_xsize() {return max((MESH_X_SIZE >> DL_GRID_BS), 1);}
 unsigned get_grid_ysize() {return max((MESH_Y_SIZE >> DL_GRID_BS), 1);}
 unsigned get_ldynamic_ix(unsigned x, unsigned y) {return (y >> DL_GRID_BS)*get_grid_xsize() + (x >> DL_GRID_BS);}
@@ -634,7 +604,6 @@ void build_lightmap(bool verbose) {
 		czmin = min(czmin, zbottom);
 		czmax = max(czmax, ztop);
 	}
-
 	// calculate and allocate some data we need even if the lmap is not used
 	assert(DZ_VAL > 0.0);
 	DZ_VAL2     = DZ_VAL/DZ_VAL_SCALE;
@@ -786,7 +755,6 @@ int get_clamped_ypos(float yval) {return max(0, min(MESH_Y_SIZE-1, get_ypos(yval
 
 void update_flow_for_voxels(vector<cube_t> const &cubes) {
 
-	//RESET_TIME;
 	if (!lm_alloc || !lmap_manager.is_allocated() || cubes.empty()) return;
 	cube_t bcube(cubes.front());
 	for (auto i = cubes.begin()+1; i != cubes.end(); ++i) {bcube.union_with_cube(*i);}
@@ -815,7 +783,6 @@ void update_flow_for_voxels(vector<cube_t> const &cubes) {
 			} // for x
 		} //for y
 	}
-	//PRINT_TIME("Update Flow");
 }
 
 void indir_light_tex_from_lmap(unsigned &tid, lmap_manager_t const &lmap, unsigned xsize, unsigned ysize, unsigned zsize) {
@@ -846,11 +813,7 @@ void indir_light_tex_from_lmap(unsigned &tid, lmap_manager_t const &lmap, unsign
 
 // *** Dynamic Lights Code ***
 
-
-void setup_2d_texture(unsigned &tid) {
-	setup_texture(tid, 0, 0, 0, 0, 0, 1);
-}
-
+void setup_2d_texture(unsigned &tid) {setup_texture(tid, 0, 0, 0, 0, 0, 1);}
 
 // Note: This technique is commonly referred to as Clustered Shading
 // texture units used:
@@ -1009,7 +972,6 @@ void setup_dlight_shadow_maps(shader_t &s) {
 	ubo_wrap_t::post_render(); // unbind the UBO
 }
 
-
 void setup_dlight_textures(shader_t &s, bool enable_dlights_smap) {
 
 	if (disable_dlights) return;
@@ -1104,13 +1066,11 @@ void sync_flashlight() {
 
 
 void add_dynamic_light(float sz, point const &p, colorRGBA const &c, vector3d const &d, float bw, point *line_end_pos, bool is_static_pos) {
-
 	if (!animate2 || c == BLACK) return;
 	if (XY_MULT_SIZE >= 512*512) return; // mesh is too large for dynamic lighting
 	float const sz_scale((world_mode == WMODE_UNIVERSE) ? 1.0 : sqrt(0.1*XY_SCENE_SIZE));
 	dl_sources2.push_back(light_source(sz_scale*sz, p, (line_end_pos ? *line_end_pos : p), c, !is_static_pos, d, bw));
 }
-
 
 void add_line_light(point const &p1, point const &p2, colorRGBA const &color, float size, float intensity) {
 
@@ -1154,7 +1114,6 @@ void dls_cell::add_light_range(unsigned six, unsigned eix, unsigned char &enable
 
 
 void clear_dynamic_lights() {
-
 	//if (!animate2) return;
 	if (dl_sources.empty()) return; // only clear if light pos/size has changed?
 	for (auto i = ldynamic_enabled.begin(); i != ldynamic_enabled.end(); ++i) {*i = 0;} // 0.015ms
@@ -1323,7 +1282,6 @@ bool is_visible_to_any_dir_light(point const &pos, float radius, int cobj, int s
 }
 
 bool is_in_darkness(point const &pos, float radius, int cobj) { // used for AI
-
 	colorRGBA c(WHITE);
 	get_indir_light(c, pos); // this is faster so do it first
 	if ((c.R + c.G + c.B) > DARKNESS_THRESH) return 0;

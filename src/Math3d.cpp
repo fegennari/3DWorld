@@ -15,24 +15,18 @@ bool line_intersect_torus(double ax, double ay, double az, double bx, double by,
 
 // ************ BASIC VECTOR MATH, ETC. ************
 
-
 float fix_angle(float angle) { // not sure if this is really necessary since sin/cos functions should be able to handle large angles
-
 	if      (angle > TWO_PI) {angle -= TWO_PI;}
 	else if (angle < 0.0)    {angle += TWO_PI;}
 	if (angle == -0.0)       {angle = 0.0;} // stupid -0
 	return angle;
 }
 
-
 void calc_reflection_angle(vector3d const &v_inc, vector3d &v_ref, vector3d const &norm) { // Note: okay if v_inc and v_ref are the same vector
 	float const cos_t1(-dot_product(norm, v_inc));
 	v_ref = v_inc + norm*(2.0*cos_t1);
 }
-
-
 bool calc_refraction_angle(vector3d const &v_inc, vector3d &v_ref, vector3d const &norm, float n1, float n2) {
-
 	assert(n2 != 0.0);
 	float const cos_t1(-dot_product(norm, v_inc)), n_ratio(n1/n2);
 	float const arg(1.0f - n_ratio*n_ratio*(1.0f - cos_t1*cos_t1));
@@ -41,7 +35,6 @@ bool calc_refraction_angle(vector3d const &v_inc, vector3d &v_ref, vector3d cons
 	v_ref = v_inc*n_ratio + norm*(n_ratio*cos_t1 - fabs(cos_t2));
 	return 1;
 }
-
 
 float get_fresnel_reflection(vector3d const &v_inc, vector3d const &norm, float n1, float n2) { // vectors must be normalized
 
@@ -54,12 +47,11 @@ float get_fresnel_reflection(vector3d const &v_inc, vector3d const &norm, float 
 	return r;
 }
 
-
 float get_reflected_weight(float fresnel_ref, float alpha) {
 	return (alpha + (1.0 - alpha)*CLIP_TO_01(fresnel_ref));
 }
-float get_coll_energy(vector3d const &v1, vector3d const &v2, float mass) {
 
+float get_coll_energy(vector3d const &v1, vector3d const &v2, float mass) {
 	if (v1 == v2) return 0.0;
 	float const t(orig_timestep/DEF_TIMESTEP), vsq(fabs(v1.mag_sq() - v2.mag_sq()));
 	return ((vsq < TOLERANCE) ? 0.0 : 0.5*mass*vsq*t*t); // 0.5*M*V^2 (should t be squared?)
@@ -90,13 +82,9 @@ point get_closest_pt_on_line(point const &pos, point const &l1, point const &l2)
 
 // ************ SHAPE INTERSECTION ************
 
-
 float const UV_TOLER(1.0E-6);
 
-inline bool test_0_1(float v) {
-
-	return (v >= (0.0 + UV_TOLER) && v <= (1.0 - UV_TOLER));
-}
+inline bool test_0_1(float v) {return (v >= (0.0 + UV_TOLER) && v <= (1.0 - UV_TOLER));}
 
 
 // from Graphics Gems V - actually could use quadrangle version but it seems to have problems
@@ -158,7 +146,6 @@ bool point_in_polygon_2d(float sval, float tval, const point *points, int npts, 
 }
 
 bool point_in_convex_planar_polygon(vector<point> const &pts, point const &normal, point const &pt) {
-
 	if (pts.size() < 3) return 0; // not a polygon
 	// Note: use the 2D projection method; could also use the normal and cross products
 	int const proj_dim(get_min_dim(normal)), d1((proj_dim+1)%3), d2((proj_dim+2)%3);
@@ -253,7 +240,6 @@ void thick_poly_to_sides(point const *const points, unsigned npoints, vector3d c
 
 
 bool line_int_plane(point const &p1, point const &p2, point const &pp0, vector3d const &norm, point &p_int, float &t, bool ignore_t) {
-
 	vector3d const v1(p2, p1);
 	float const denom(dot_product(norm, v1)); // doesn't require norm to be normalized
 	if (fabs(denom) < TOLERANCE) return 0;
@@ -262,7 +248,6 @@ bool line_int_plane(point const &p1, point const &p2, point const &pp0, vector3d
 	p_int = p1 + v1*t;
 	return 1;
 }
-
 
 // Note: this test considers the extruded polygon to be a collection of N planar polygons, not a volume,
 // which means that lines completely inside the polygon volume (p1 and p2 contained) are not intersecting;
@@ -320,23 +305,19 @@ float min_dist_from_pt_to_polygon_edge(point const &pt, point const *const pts, 
 	return dmin;
 }
 
-
 bool sphere_poly_intersect(const point *points, unsigned npoints, point const &pos, vector3d const &norm, float rdist, float radius) {
 
 	// test the points (point to point distance)
 	for (unsigned i = 0; i < npoints; ++i) {
 		if (dist_less_than(points[i], pos, radius)) return 1;
 	}
-
 	// test the edges (point to line distance)
 	for (unsigned i = 0; i < npoints; ++i) {
 		if (pt_line_seg_dist_less_than(pos, points[i], points[(i+1 == npoints) ? 0 : i+1], radius)) return 1;
 	}
-
 	// test for sphere center projected onto the polygon's plane
 	return planar_contour_intersect(points, npoints, (pos - norm*rdist), norm);
 }
-
 
 // so many parameters for such a short function, but I want to make sure this isn't repeated and can be changed in only one place
 bool sphere_ext_poly_int_base(point const &pt, vector3d const &norm, point const &pos, float radius,
@@ -346,8 +327,6 @@ bool sphere_ext_poly_int_base(point const &pt, vector3d const &norm, point const
 	rdist = dot_product_ptv(norm, pos, pt); // not quite right, maybe should test each polygon face?
 	return (fabs(rdist) <= thick);
 }
-
-
 bool sphere_ext_poly_intersect(point const * const points, unsigned npoints, vector3d const &norm,
 							   point const &pos, float radius, float thickness, float t_adj)
 {
@@ -362,7 +341,6 @@ bool sphere_ext_poly_intersect(point const * const points, unsigned npoints, vec
 	}
 	return 1;
 }
-
 
 // similar to sphere_test_comp(), but needs some intermediate values and assumes the line extends infinitely
 // assumes infinite line - v12 should be normalized
@@ -400,7 +378,6 @@ template bool sphere_test_comp(point_d const &pl, point_d const &sc, point_d con
 // v1 is the line dir, p1 is the line start point, {center, radius} define the sphere, and lsint is the intersect point
 // similar to sphere_test_comp(), but assumes infinite line, so t test is invalid, and also needs the intersection point
 bool line_sphere_int(vector3d const &v1, point const &p1, point const &center, float radius, point &lsint, bool test_neg_t) {
-
 	lsint = center;
 	vector3d v2(p1, center); // dir from target sphere to object
 	float const t(-dot_product(v1, v2)); // v1 should be normalized
@@ -414,7 +391,6 @@ bool line_sphere_int(vector3d const &v1, point const &p1, point const &center, f
 
 // this version returns the value of t rather than the intersection point; t is the closest point on the line to the sphere center, not the intersection point
 bool line_sphere_int_closest_pt_t(point const &p1, point const &p2, point const &center, float radius, float &t) {
-
 	vector3d v1(p2 - p1), v2(p1, center); // dir from target sphere to object
 	v1.normalize();
 	t = -dot_product(v1, v2); // same as get_closest_pt_on_line_t()
@@ -423,9 +399,7 @@ bool line_sphere_int_closest_pt_t(point const &p1, point const &p2, point const 
 	return (v2.mag_sq() < radius*radius); // check length of perpendicular to sphere center vs. radius
 }
 
-
 bool sphere_vert_cylin_intersect(point &center, float radius, cylinder_3dw const &c, vector3d *cnorm) { // Note: checks sides but not ends
-
 	float const rsum(radius + max(c.r1, c.r2));
 	assert(rsum > radius); // cylin not degenerate
 	if (center.z < min(c.p1.z, c.p2.z) || center.z > max(c.p1.z, c.p2.z)) return 0; // not enough z overlap (could bias by up to radius)
@@ -474,7 +448,6 @@ void get_sphere_border_pts(point *qp, point const &pos, point const &viewed_from
 	}
 }
 
-
 void get_sphere_points(point const &pos, float radius, point *pts, unsigned npts, vector3d const &dir) {
 
 	vector3d const v1(cross_product(plus_z, dir).get_norm());
@@ -489,7 +462,6 @@ void get_sphere_points(point const &pos, float radius, point *pts, unsigned npts
 
 // dir must be normalized
 void dir_to_sphere_s_t(vector3d const &dir, vector3d const &sdir, double &s, double &t) {
-
 	double const stheta(atan2(sdir.y, sdir.x)), sphi(safe_acosf(-sdir.z));
 	double const angle(-stheta + PI_TWO), sinv(sin(angle)), cosv(cos(angle));
 	double const xval (-dir.x*cosv + dir.y*sinv), yval0(-dir.x*sinv - dir.y*cosv);
@@ -500,11 +472,8 @@ void dir_to_sphere_s_t(vector3d const &dir, vector3d const &sdir, double &s, dou
 	t = phi/PI + 1.0;
 }
 
-
 // assumes infinite line - untransformed sdir = (1.0, 0.0, 0.0) ?
-bool line_sphere_intersect_s_t(point const &p1, point const &p2, point const &sc, float radius,
-							   vector3d const &sdir, double &s, double &t)
-{
+bool line_sphere_intersect_s_t(point const &p1, point const &p2, point const &sc, float radius, vector3d const &sdir, double &s, double &t) {
 	point p_int;
 	vector3d const v1(vector3d(p2, p1).get_norm());
 	if (!line_sphere_int(v1, p1, sc, radius, p_int, 0)) return 0;
@@ -512,7 +481,6 @@ bool line_sphere_intersect_s_t(point const &p1, point const &p2, point const &sc
 	dir_to_sphere_s_t(dir, sdir, s, t);
 	return 1;
 }
-
 
 // shortest distance between (p1b - p1a) and (p2b - p2a)
 float line_line_dist(point const &p1a, point const &p1b, point const &p2a, point const &p2b) {
@@ -537,7 +505,6 @@ float get_cylinder_params(point const &cp1, point const &cp2, point const &pos, 
 	assert(c_len > 0.0/*TOLERANCE*/);
 	return dot_product(v1, v2)/c_len; // position of pos along cylinder center line often in [0,1]
 }
-
 
 // radius == 0.0 at cp1
 int line_intersect_trunc_cone(point const &p1, point const &p2, point const &cp1, point const &cp2,
@@ -764,7 +731,6 @@ bool sphere_int_cylinder_pretest(point const &sc, float sr, point const &cp1, po
 	return line_sphere_intersect(l1, l2, sc, sr); // r1 != r2 - do a line/sphere intersection
 }
 
-
 bool sphere_intersect_cylinder_ipt(point const &sc, float sr, point const &cp1, point const &cp2, float r1, float r2,
 								   bool check_ends, point &p_int, vector3d &norm, bool calc_int)
 {
@@ -864,7 +830,6 @@ void local_rotate(point &p, vector3d const &from, vector3d const &to, point cons
 }
 
 bool line_torus_intersect(point const &p1, point const &p2, point const &tc, point const &dir, float ri, float ro, float &t) {
-	
 	point pts[2] = {p1, p2};
 	if (dir.x != 0.0 || dir.y != 0.0) {local_rotate_multi(pts, 2, plus_z, dir, tc);} // transform line into torus space
 	return line_torus_intersect(pts[0], pts[1], tc, ri, ro, t);
@@ -1086,7 +1051,6 @@ bool do_line_clip(point &v1, point &v2, float const d[3][2]) {
 }
 
 bool do_line_clip_xy(point &v1, point &v2, float const d[3][2]) {
-
 	float tmin(0.0), tmax(1.0);
 	if (!get_line_clip_xy(v1, v2, d, tmin, tmax)) return 0;
 	vector3d const dv(v2, v1);
@@ -1148,12 +1112,10 @@ void clip_polygon_xy(vector<point> const &pts, cube_t const &c, vector<point> &p
 
 // ************ PROJECTIONS, CENTER, BOUNDING VOLUME, AND TRANSFORMS ************
 
-
 void gen_cylin_pts(point *pts, int &npts, point const &p, vector3d const &v) {
 	pts[npts++] = p + v;
 	pts[npts++] = p - v;
 }
-
 void cylinder_quad_projection(point *pts, point const &cp1, point const &cp2, float const cr1, float const cr2, vector3d const &v1, int &npts) {
 
 	assert(pts != NULL);
@@ -1167,7 +1129,6 @@ void cylinder_quad_projection(point *pts, point const &cp1, point const &cp2, fl
 
 
 template<typename T> pointT<T> get_center_arb(pointT<T> const *const pts, int npts) {
-
 	assert(pts != NULL && npts > 0);
 	point pos(pts[0]);
 	for (int i = 1; i < npts; ++i) {pos += pts[i];} // average to get the center
@@ -1227,7 +1188,6 @@ void cylinder_bounding_sphere(point const *const p, float r1, float r2, point &c
 	center = get_center_n2(p);
 	radius = sqrt(p2p_dist_sq(center, p[0]) + 2.0*max(r1, r2)*max(r1, r2));
 }
-
 void polygon_bounding_sphere(const point *pts, int npts, float thick, point &center, float &radius) {
 	center = get_center(pts, npts);
 	radius = 0.0;
@@ -1237,7 +1197,6 @@ void polygon_bounding_sphere(const point *pts, int npts, float thick, point &cen
 
 
 void add_rotated_quad_pts(vert_norm_comp *points, unsigned &ix, float theta, float z, point const &pos, float xscale1, float xscale2, float yscale, float zscale) {
-
 	point pts[4];
 	vector3d const v1(SINF(theta), COSF(theta), 0.0), v2(cross_product(v1, plus_z)); // should be normalized
 	pts[0] = 2.0*yscale*v1 + xscale2*v2; pts[0].z += z - zscale;
@@ -1251,7 +1210,6 @@ void add_rotated_quad_pts(vert_norm_comp *points, unsigned &ix, float theta, flo
 
 // n is already normalized (unused)
 void vproj_plane(vector3d const &vin, vector3d const &n, vector3d &vout) { // project vector v onto plane with normal n
-
 	double const m[3][3] = {
 		{ (double)n.y*n.y+(double)n.z*n.z, -(double)n.x*n.y,                 -(double)n.x*n.z},
 		{-(double)n.y*n.x,                  (double)n.x*n.x+(double)n.z*n.z, -(double)n.y*n.z},
@@ -1277,15 +1235,12 @@ void vproj_plane(vector3d const &vin, vector3d const &n, vector3d &vout) { // pr
 
 // Note: making vin by const reference is bad (fails ship weapon intersection assertion)
 template<typename T> void rotate_vector3d(pointT<T> vin, pointT<T> const &vrot, double angle, pointT<T> &vout) { // rotate vin by angle about vrot to get vout
-
 	if (angle == 0.0) return;
 	CREATE_ROT_MATRIX(vrot, angle);
 	matrix_mult(vin, vout, m);
 }
 
-
 template<typename T> void rotate_vector3d_multi(pointT<T> const &vrot, double angle, pointT<T> *vout, unsigned nv) {
-
 	assert(vout != NULL);
 	if (angle == 0.0) return;
 	CREATE_ROT_MATRIX(vrot, angle);
@@ -1329,7 +1284,6 @@ template void rotate_verts(vector<vert_norm_tc_color     > &verts, vector3d cons
 
 // vrot must be normalized
 void rotate_vector3d_x2(point const &vrot, double angle, point &vout1, point &vout2) { // rotate by angle about vrot
-
 	CREATE_ROT_MATRIX(vrot, angle);
 	vector3d const vin1(vout1), vin2(vout2); // have to cache these
 	matrix_mult(vin1, vout1, m);
@@ -1382,7 +1336,6 @@ void rotate_norm_vector3d_into_plus_z_multi(vector3d const &v1, vector3d *vout, 
 }
 
 cube_t rotate_cube(cube_t const &cube, vector3d const &axis, float angle_in_radians) {
-
 	point corners[8];
 	get_cube_corners(cube.d, corners);
 	rotate_vector3d_multi(axis, angle_in_radians, corners, 8); // Note: need to rotate at least 5 points, but 8 is simplest
@@ -1396,7 +1349,6 @@ vector3d rtp_to_xyz(float radius, double theta, double phi) {
 
 
 // ************ 2D Line Math ************
-
 
 bool line_segs_intersect_2d(vector2d const &L1a, vector2d const &L1b, vector2d const &L2a, vector2d const &L2b, vector2d *p_int) {
 	vector2d const delta1(L1b - L1a), delta2(L2b - L2a);
@@ -1433,7 +1385,6 @@ float line_seg_line_seg_dist_2d(vector2d const &L1a, vector2d const &L1b, vector
 
 // ************ MISC ************
 
-
 template <rand_func rfunc> vector3d gen_rand_vector_template(float mag, float zscale, float phi_term) {
 
 	float phi;
@@ -1453,11 +1404,9 @@ template <rand_func rfunc> vector3d gen_rand_vector_template(float mag, float zs
 vector3d gen_rand_vector_uniform(float mag) {
 	return rtp_to_xyz(mag*rand_float(), rand_uniform(0.0, TWO_PI), gen_rand_phi<rand_uniform>());
 }
-
 vector3d gen_rand_vector(float mag, float zscale, float phi_term) {
 	return gen_rand_vector_template<rand_uniform>(mag, zscale, phi_term);
 }
-
 vector3d gen_rand_vector2(float mag, float zscale, float phi_term) {
 	return gen_rand_vector_template<rand_uniform2>(mag, zscale, phi_term);
 }
