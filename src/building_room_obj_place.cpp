@@ -348,7 +348,9 @@ void building_t::add_trashcan_to_room(rand_gen_t rgen, room_t const &room, float
 		cube_t const c(get_cube_height_radius(center, radius, height));
 		if (cube_int_xy_if_nonzero(c, avoid)) continue; // bad placement
 		if (is_obj_placement_blocked(c, room, !room.is_hallway) || overlaps_other_room_obj(c, objs_start)) continue; // bad placement
-		objs.emplace_back(c, TYPE_TCAN, room_id, dim, dir, 0, tot_light_amt, shape, tcan_colors[rgen.rand() % NUM_TCAN_COLORS]);
+		colorRGBA color(tcan_colors[rgen.rand() % NUM_TCAN_COLORS]);
+		if (is_bathroom(room.get_room_type(floor_ix)) && color == BLUE) {color = WHITE;} // no recycling bins in bathrooms
+		objs.emplace_back(c, TYPE_TCAN, room_id, dim, dir, 0, tot_light_amt, shape, color);
 		// add trash to the trashcan; not on upper floors of office buildings
 		if (is_house || zval < ground_floor_z1 + 2.0*floor_spacing) {add_trash_to_trashcan(rgen, c, room_id, tot_light_amt);}
 		return; // done
