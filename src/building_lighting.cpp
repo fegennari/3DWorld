@@ -2033,8 +2033,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				unsigned cut_mask(3); // both dirs enabled by default
 
 				if (!s.contains_pt(camera_rot)) { // disable these optimizations if the player is on the stairs
-					float const center_val(s.get_center_dim(s.dim));
-					bool const dir_val((camera_rot[s.dim] < center_val) ^ s.dir);
+					float const center_val(s.get_center_dim(s.dim)), cpos_dim(camera_rot[s.dim]);
+					bool const dir_val((cpos_dim < center_val) ^ s.dir);
 					
 					if (s.is_u_shape()) { // light may be visible on the back wall of the stairs from the light above or on the edges of the stairs from the light below
 						if (dir_val) continue; // back facing - light not visible
@@ -2045,7 +2045,12 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 						floor_below_region.assign_or_union_with_cube(vis_region);
 					}
 					else if (s.has_walled_sides()) {
-						if (!dir_val) { // facing updards stairs
+						bool can_only_see_up(!dir_val);
+
+						if (s.stack_conn) { // player can see down stacked/basement stairs from above if not behind the bottom opening
+							if (cpos_dim > s.d[s.dim][0] && cpos_dim < s.d[s.dim][1]) {can_only_see_up = 0;}
+						}
+						if (can_only_see_up) { // facing upwards stairs
 							cut_mask = 2; // floor below not visible
 							cube_t vis_region(bcube); // start with full building bcube
 							vis_region.d[s.dim][!s.dir] = center_val;
