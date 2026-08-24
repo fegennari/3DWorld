@@ -238,6 +238,8 @@ struct room_object_t : public oriented_cube_t { // size=68
 	bool is_shower       () const {return (type == TYPE_SHOWER || type == TYPE_O_SHOWER);}
 	bool is_pantry       () const {return (item_flags == RTYPE_KITCHEN &&  is_house());}
 	bool is_freezer      () const {return (item_flags == RTYPE_KITCHEN && !is_house());}
+	bool is_recycle_bin  () const {return (type == TYPE_TCAN && color.B > color.R + color.G);} // blue trash can
+	bool is_recyclable   () const;
 	bool is_player_collidable() const;
 	bool can_use        () const;
 	bool is_interactive () const {return ((has_dstate() && is_ball_type(type)) || can_use());}

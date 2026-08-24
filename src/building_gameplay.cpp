@@ -692,12 +692,12 @@ vending_info_t const &get_vending_type(unsigned vtype) {
 	return vend_types[vtype % vend_types.size()]; // wrap if overflows
 }
 
-unsigned const NUM_ACHIEVEMENTS = 20;
+unsigned const NUM_ACHIEVEMENTS = 21;
 
 class achievement_tracker_t {
 	// Rat Food, Fish Food, Top Secret Document, Mr. Yuck, Zombie Hunter, Royal Flush, Zombie Bashing, One More Drink, Bathroom Reader, TP Artist,
 	// Master Lockpick, Squeaky Clean, Sleep with the Fishes, Splat the Spider, 7 years of bad luck, Tastes Like Chicken, Spam Risk, Ball in Pocket,
-	// Soft Locked, Tampering with Evidence
+	// Soft Locked, Tampering with Evidence, Reduce Reuse Recycle
 	set<string> achievements;
 	// some way to make this persistent, print these out somewhere, or add small screen icons?
 public:
@@ -949,7 +949,7 @@ public:
 		}
 		if (type == TYPE_PAPER && value >= 500.0) {register_achievement("Top Secret Document");}
 		
-		if ((type == TYPE_TCAN && !obj.was_expanded() && obj.color != BLUE) || // skip trashcans on shelves and recycling bins
+		if ((type == TYPE_TCAN && !obj.was_expanded() && !obj.is_recycle_bin()) || // skip trashcans on shelves and recycling bins
 			type == TYPE_TOILET || type == TYPE_URINAL || (type == TYPE_RAT && obj.is_broken()))
 		{
 			register_fly_attract(0); // trashcans, toilets, urinals, and dead rats attract flies
@@ -1214,7 +1214,14 @@ public:
 			print_text_onscreen((name + " Doesn't Fit"), RED, 1.0, 1.5*TICKS_PER_SECOND, 0);
 			return 0;
 		}
-		print_text_onscreen((name + " Discarded"), YELLOW, 0.8, 2.0*TICKS_PER_SECOND, 0);
+		string str(name + " Discarded");
+		
+		if (trashcan.is_recycle_bin() && obj.is_recyclable()) {
+			register_achievement("Reduce, Reuse, Recycle");
+			str += "\nThank you for recycling";
+			if (obj.is_a_drink()) {str = "\n+ 10c CRV"; cur_value += 0.1;} // not sure if this is reachable, since the player can't hold an empty can or bottle
+		}
+		print_text_onscreen(str, YELLOW, 0.8, 2.0*TICKS_PER_SECOND, 0);
 		remove_last_item();
 		point const tc_pos(trashcan.get_cube_center());
 		gen_sound_thread_safe(SOUND_OBJ_FALL, (tc_pos + get_tiled_terrain_model_xlate()));

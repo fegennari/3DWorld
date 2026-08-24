@@ -1080,6 +1080,14 @@ cube_t get_true_room_obj_bcube(room_object_t const &c) { // for collisions, etc.
 	return c; // default cube case
 }
 
+bool room_object_t::is_recyclable() const {
+	if (is_a_drink() && is_bottle_empty()) return 1; // empty bottle or can
+	if (type == TYPE_BOOK || type == TYPE_TRASH || type == TYPE_PAPER || type == TYPE_STICK_NOTE || type == TYPE_CARD_DECK) return 1; // paper
+	//if (type == TYPE_BOX && is_open() && is_empty()) return 1; // open + empty cardboard box; unfortunately, we don't have an is_empty() flag for boxes
+	// empty tape, TP, or PT roll? empty TYPE_PIZZA_BOX or TYPE_FOOD_BOX? various metal items such as pipes?
+	return 0;
+}
+
 bool room_object_t::is_player_collidable() const {
 	// chairs are player collidable only when in attics or backrooms; trashcans are only player collidable in malls
 	return (!no_coll() && (bldg_obj_types[type].player_coll || (type == TYPE_CHAIR && (flags & RO_FLAG_PLCOLL)) ||
