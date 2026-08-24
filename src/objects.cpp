@@ -30,7 +30,6 @@ extern vector<obj_draw_group> obj_draw_groups;
 
 // ******************* COLL_OBJ MEMBERS ******************
 
-
 void coll_obj::init() {
 
 	cp.coll_func = NULL;
@@ -51,42 +50,33 @@ void coll_obj::init() {
 	dgroup_id    = -1;
 }
 
-
 void coll_obj::clear_internal_data() {
-
 	fixed    = 0; // unfix it so that it's actually removed
 	cp.surfs = 0;
 	occluders.clear();
 }
 
-
 void coll_obj::print_bounds() const {
-
 	for (unsigned i = 0; i < 3; ++i) {
 		for (unsigned j = 0; j < 2; ++j) {cout << d[i][j] << ",";}
 		cout << " ";
 	}
 }
 
-
 void coll_obj::bb_union(float bb[3][2], int init) {
-
 	for (unsigned i = 0; i < 3; ++i) {
 		bb[i][0] = (init ? d[i][0] : min(bb[i][0], d[i][0]));
 		bb[i][1] = (init ? d[i][1] : max(bb[i][1], d[i][1]));
 	}
 }
 
-
 void coll_obj::setup_internal_state() {
-
 	if (type == COLL_CUBE) {points[0] = get_cube_center();} // set center point
 	status = ((cp.flags & COBJ_DYNAMIC) ? (int)COLL_DYNAMIC : (int)COLL_STATIC);
 	calc_volume();
 	set_npoints();
 	calc_bcube();
 }
-
 
 void coll_obj::calc_volume() {
 
@@ -115,7 +105,6 @@ void coll_obj::calc_volume() {
 	default: assert(0);
 	}
 }
-
 
 void coll_obj::calc_bcube() {
 
@@ -154,14 +143,11 @@ void coll_obj::calc_bcube() {
 	}
 }
 
-
 float coll_obj::calc_min_dim() const {
-
 	float min_dim(min_len());
 	if (type == COLL_POLYGON) min_dim = min(min_dim, thickness);
 	return min_dim;
 }
-
 
 float coll_obj::get_min_dist_to_pt(point const &pt) const {
 
@@ -190,7 +176,6 @@ float coll_obj::get_min_dist_to_pt(point const &pt) const {
 	}
 	return 0.0; // never gets here
 }
-
 
 // Note: these functions are intended to be called on coll cubes that are part of platforms,
 // but are okay to call on other shapes to get their bounding cube extents; they return the original bounding cube for non-platforms;
@@ -316,7 +301,6 @@ bool coll_obj::clip_in_2d(float const bb[2][2], float &val, int d1, int d2, int 
 	return 0;
 }
 
-
 void coll_obj::set_npoints() {
 
 	switch (type) {
@@ -331,18 +315,14 @@ void coll_obj::set_npoints() {
 	}
 }
 
-
 void coll_obj::set_from_pts(point const *const pts, unsigned npts) {
-
 	//assert(type == COLL_POLYGON); // check the type?
 	//type = COLL_POLYGON; // set the type?
 	npoints = npts;
 	for (unsigned i = 0; i < npts; ++i) {points[i] = pts[i];}
 }
 
-
 bool coll_obj::is_occluded_from_viewer(point const &viewer) const {
-
 	if (!(display_mode & 0x08) || occluders.empty()) return 0;
 	if (is_thin_poly()) {return is_occluded(occluders, points, npoints, viewer);}
 	point pts[8];
@@ -355,7 +335,6 @@ bool coll_obj::is_cobj_visible() const {
 	return (check_pdu_visible(camera_pdu) && !is_occluded_from_camera());
 }
 bool coll_obj::check_pdu_visible(pos_dir_up const &pdu) const {
-
 	if (!pdu.valid) return 1;
 	point center;
 	float brad;
@@ -472,7 +451,6 @@ void coll_obj::get_sphere_cylin_tparams(vector3d const &dir, texgen_params_t &tp
 }
 
 void draw_subdiv_sphere_back_to_front(point const &pos, float radius, int ndiv, int texture) {
-
 	glEnable(GL_CULL_FACE);
 	sd_sphere_d sd(pos, radius, ndiv);
 	sd.gen_points_norms_static();
@@ -641,7 +619,6 @@ void get_shadow_cube_triangle_verts(vector<vert_wrap_t> &verts, cube_t const &c,
 	}
 }
 
-
 void get_cylinder_triangles(vector<vert_wrap_t> &verts, point const &p1, point const &p2, float radius1, float radius2, int ndiv, int draw_ends) {
 
 	assert(ndiv > 0);
@@ -682,7 +659,6 @@ void get_cylinder_triangles(vector<vert_wrap_t> &verts, point const &p1, point c
 	}
 }
 
-
 void get_torus_triangles(vector<vert_wrap_t> &verts, point const &center, vector3d const &dir, float ro, float ri, int ndiv) {
 
 	assert(ro > 0.0 || ri > 0.0);
@@ -708,13 +684,10 @@ void get_torus_triangles(vector<vert_wrap_t> &verts, point const &center, vector
 	} // for s
 }
 
-
 void get_polygon_triangles(vector<vert_wrap_t> &verts, point const *const points, int npoints) {
-
 	assert(npoints == 3 || npoints == 4);
 	for (int i = 0; i < ((npoints == 3) ? 3 : 6); ++i) {verts.push_back(points[quad_to_tris_ixs[i]]);} // 1-2 triangles
 }
-
 
 void get_extruded_polygon_triangles(vector<vert_wrap_t> &verts, float thick, point const *const points, int npoints) {
 
@@ -736,7 +709,6 @@ void get_extruded_polygon_triangles(vector<vert_wrap_t> &verts, float thick, poi
 		}
 	}
 }
-
 
 void coll_obj::get_shadow_triangle_verts(vector<vert_wrap_t> &verts, int ndiv, bool skip_spheres, unsigned char eflags) const {
 
@@ -780,14 +752,12 @@ bool coll_obj::is_player() const { // sort of a hack
 }
 
 bool coll_obj::is_invis_player() const { // sort of a hack
-	
 	if (cp.coll_func == smiley_collision && has_invisibility(cp.cf_index)) return 1;
 	if (cp.coll_func == camera_collision && has_invisibility(-1))          return 1;
 	return 0;
 }
 
 bool coll_obj::truly_static() const {
-
 	if (may_be_dynamic())                      return 0;
 	if (cp.flags & COBJ_DESTROYABLE)           return 0;
 	if (cp.cobj_type == COBJ_TYPE_MODEL3D)     return 1;
@@ -861,7 +831,6 @@ point coll_obj::get_center_pt() const {
 }
 
 float coll_obj::get_light_transmit(point v1, point v2) const {
-
 	if (type != COLL_CUBE)        return 1.0; // only cubes are supported due to clipping issues
 	if (cp.light_atten == 0.0)    return 1.0;
 	if (!do_line_clip(v1, v2, d)) return 1.0;
@@ -913,7 +882,6 @@ bool coll_obj::sphere_intersects(point const &sc, float sr) const {
 
 // ******************* OBJ_GROUP MEMBERS ******************
 
-
 void obj_group::create(int obj_type_, unsigned max_objects_, unsigned init_objects_, unsigned app_rate_,
 	bool init_enabled_, bool reorderable_, bool auto_max, bool predef_use_once_)
 {
@@ -937,15 +905,12 @@ void obj_group::create(int obj_type_, unsigned max_objects_, unsigned init_objec
 	init_group();
 }
 
-
 unsigned obj_group::get_updated_max_objs() const {
-
 	if (!(flags & APP_FROM_LT)) return max(max_objs, init_objects);
 	int const lifetime((flags & PRECIPITATION) ? max(object_types[RAIN].lifetime,
 		max(object_types[HAIL].lifetime, object_types[SNOW].lifetime)) : object_types[type].lifetime);
 	return unsigned(lifetime*app_rate + init_objects);
 }
-
 
 void obj_group::update_app_rate(float const val, unsigned min_app, unsigned max_app) {
 
@@ -965,9 +930,7 @@ void obj_group::update_app_rate(float const val, unsigned min_app, unsigned max_
 	max_objs = new_max_objs;
 }
 
-
 void obj_group::init_group() {
-
 	for (unsigned j = 0; j < max_objects(); ++j) {
 		objects[j] = def_objects[type];
 		if (j < init_objects) {gen_object_pos(objects[j].pos, object_types[type].flags);}
@@ -976,15 +939,12 @@ void obj_group::init_group() {
 	flags &= (PRECIPITATION | APP_FROM_LT); // keep only this flag
 }
 
-
 // normally called before using objects, but can be called dynamically later
-void obj_group::add_predef_obj(point const &pos, int type, int rtime) {
-	
+void obj_group::add_predef_obj(point const &pos, int type, int rtime) {	
 	predef_objs.emplace_back(pos, type, rtime);
 	max_eq(max_objs, (unsigned)predef_objs.size());
 	reorderable = 0; // need to unset reorderable so that predef_objs indexes remain correct
 }
-
 
 void obj_group::preproc_this_frame() {
 
@@ -1018,7 +978,6 @@ void obj_group::reap_predef_objs(set<unsigned> const *const only_of_type) {
 	}
 }
 
-
 void obj_group::remove_reset_cobjs() {
 
 	if (!large_radius()) return;
@@ -1030,9 +989,7 @@ void obj_group::remove_reset_cobjs() {
 	}
 }
 
-
 void obj_group::create_object_at(unsigned i, point const &pos) {
-
 	enable();
 	assert(max_objects() == max_objs && i < max_objects());
 	assert(type >= 0 && type < NUM_TOT_OBJS);
@@ -1042,9 +999,7 @@ void obj_group::create_object_at(unsigned i, point const &pos) {
 	objects[i].pos = pos;
 }
 
-
 int obj_group::choose_object(bool peek)  { // could return unsigned?
-	
 	enable();
 	assert(max_objects() > 0); // enabled == 1 should be true after before the object is used
 	if (!reorderable) return objects.choose_element(peek);
@@ -1055,7 +1010,6 @@ int obj_group::choose_object(bool peek)  { // could return unsigned?
 	if (new_id == max_objects()) new_id = 0; // wraparound (circular queue)
 	return new_id++; // used, old object (increment so that the first object isn't reused in the same frame)
 }
-
 
 // return value: 0 = skip object, 1 = use predef object, 2 = gen new object
 int obj_group::get_next_predef_obj(dwobject &obj, unsigned ix) {
@@ -1079,13 +1033,10 @@ int obj_group::get_next_predef_obj(dwobject &obj, unsigned ix) {
 	return 1;
 }
 
-
 bool obj_group::large_radius() const {
-
 	assert(type >= 0 && type < NUM_TOT_OBJS);
 	return (object_types[type].radius >= LARGE_OBJ_RAD);
 }
-
 
 void obj_group::enable() {
 
@@ -1102,9 +1053,7 @@ void obj_group::enable() {
 	enabled = 1;
 }
 
-
 void obj_group::disable() {
-
 	if (enabled == 0) return;
 	remove_reset_cobjs();
 	objects.clear();
@@ -1115,14 +1064,11 @@ void obj_group::disable() {
 	enabled = 0;
 }
 
-
 void obj_group::free_objects() {
-
 	remove_reset_cobjs();
 	if (!objects.empty()) {reset_status(objects);}
 	td.reset();
 }
-
 
 void obj_group::shift(vector3d const &vd) {
 
@@ -1137,7 +1083,6 @@ void obj_group::shift(vector3d const &vd) {
 	for (unsigned i = 0; i < predef_objs.size(); ++i) {predef_objs[i].pos += vd;}
 }
 
-
 bool obj_group::obj_within_dist(unsigned i, point const &pos, float dist) const { // cache miss dominated
 
 	assert(enabled && i < objects.size());
@@ -1151,7 +1096,6 @@ bool obj_group::temperature_ok() const {
 }
 
 bool obj_group::obj_has_shadow(unsigned obj_id) const {
-
 	if (type != SMILEY) return 1;
 	assert(obj_id < objects.size());
 	return (!has_invisibility(obj_id));
@@ -1227,7 +1171,6 @@ vector<unsigned> const &cobj_draw_groups::get_draw_group(int group_id, coll_obj 
 // ******************* OBJ_DRAW_GROUP MEMBERS ******************
 
 void obj_draw_group::free_vbo() {
-
 	assert(!inside_beg_end);
 	if (!use_vbo) return;
 	if (vbo) {delete_and_zero_vbo(vbo);}
@@ -1235,9 +1178,7 @@ void obj_draw_group::free_vbo() {
 	start_cix = end_cix = num_verts = 0;
 }
 
-
 void obj_draw_group::draw_vbo() const {
-
 	if (num_verts == 0) return;
 	check_bind_vbo(vbo);
 	draw_verts<vert_norm>(NULL, num_verts, GL_TRIANGLES);
@@ -1264,7 +1205,6 @@ bool obj_draw_group::begin_render(unsigned &cix) { // returns true if rendering 
 	return 1;
 }
 
-
 void obj_draw_group::end_render() {
 
 	assert(inside_beg_end); // can't call end_render() without begin_render()
@@ -1283,7 +1223,6 @@ void obj_draw_group::end_render() {
 	verts.resize(0);
 }
 
-
 void obj_draw_group::add_draw_polygon(point const *const points, vector3d const &normal, unsigned npoints, unsigned cix) {
 
 	assert(inside_beg_end);
@@ -1295,7 +1234,6 @@ void obj_draw_group::add_draw_polygon(point const *const points, vector3d const 
 	}
 	if (use_vbo) {end_cix = cix+1;}
 }
-
 
 void free_cobj_draw_group_vbos() {
 	for (vector<obj_draw_group>::iterator i = obj_draw_groups.begin(); i != obj_draw_groups.end(); ++i) {i->free_vbo();}

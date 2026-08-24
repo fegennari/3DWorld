@@ -58,7 +58,6 @@ extern physics_particle_manager explosion_part_man[];
 int get_obj_zval(point &pt, float &dz, float z_offset);
 int snow_height(point pos);
 
-
 float get_max_t(int obj_type) {return object_types[obj_type].max_t;}
 
 
@@ -622,7 +621,6 @@ void change_timestep(float mult_factor) {
 	orig_timestep = TIMESTEP;
 }
 
-
 vector3d get_flow_velocity(point pos) { // has same effect as wind
 
 	int const do_tornado(0), do_swirl(0); // disabled for now
@@ -644,7 +642,6 @@ vector3d get_flow_velocity(point pos) { // has same effect as wind
 	}
 	return v;
 }
-
 
 vector3d get_local_wind(int xpos, int ypos, float zval, bool no_use_mesh) {
 
@@ -679,12 +676,10 @@ vector3d get_local_wind(point const &pt, bool no_use_mesh) {
 
 
 void dwobject::do_coll_damage() {
-
 	if (object_types[type].flags & NO_COLL_DAMAGE) return;
 	assert(type != SMILEY);
 	if (health <= COLL_DAMAGE) {disable();} else {health -= COLL_DAMAGE;}
 }
-
 
 float dwobject::get_true_radius() const {
 
@@ -710,7 +705,6 @@ float dwobject::get_true_mass() const {
 	if (type != MAT_SPHERE) return mass;
 	return mass*get_mat_sphere_density(*this)/object_types[type].density; // recalculate mass based on density ratio
 }
-
 
 // 0 = out of range/expired, 1 = airborne, 2 = collision, 3 = moving on ground, 4 = motionless
 void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj_index) { // returns collision status
@@ -939,7 +933,6 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 	}
 }
 
-
 int get_obj_zval(point &pt, float &dz, float z_offset) { // 0 = out of bounds/error, 1 = airborne, 2 = on ground
 
 	if (world_mode == WMODE_GROUND) { // this stuff doesn't apply to tiled terrain mode
@@ -955,7 +948,6 @@ int get_obj_zval(point &pt, float &dz, float z_offset) { // 0 = out of bounds/er
 	pt.z = zval + z_offset;
 	return 2;
 }
-
 
 int dwobject::object_still_stopped(int obj_index) {
 
@@ -974,7 +966,6 @@ int dwobject::object_still_stopped(int obj_index) {
 	if (!disabled() && !coll) status = 1;
 	return coll;
 }
-
 
 // 0 = error (bad position), 1 = stopped, 2 = moved
 int dwobject::surface_advance() {
@@ -1041,15 +1032,13 @@ vector3d get_terrain_normal(point const &pos) {
 
 	int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
 
-	if (point_interior_to_mesh(xpos, ypos)
-		&& (h_collision_matrix[ypos][xpos] < mesh_height[ypos][xpos] + SMALL_NUMBER)
+	if (point_interior_to_mesh(xpos, ypos) && (h_collision_matrix[ypos][xpos] < mesh_height[ypos][xpos] + SMALL_NUMBER)
 		&& !is_mesh_disabled(xpos, ypos) && !mesh_is_underwater(xpos, ypos))
 	{
 		return surface_normals[ypos][xpos];
 	}
 	return plus_z;
 }
-
 // NOTE: norm must be normalized
 float get_terrain_rotation(vector3d &axis, point const &pos, vector3d const &norm, vector3d const *const forced_norm) {
 
@@ -1064,7 +1053,6 @@ float get_terrain_rotation(vector3d &axis, point const &pos, vector3d const &nor
 	return TO_DEG*get_angle(norm, snorm);
 }
 
-
 void dwobject::set_orient_for_coll(vector3d const *const forced_norm) {
 
 	if (type == FRAGMENT) { // orientation = rotation axis, angle = rotation angle
@@ -1077,7 +1065,6 @@ void dwobject::set_orient_for_coll(vector3d const *const forced_norm) {
 	vector3d const norm(-sinf(r_angle), cosf(r_angle), 0.0);
 	angle = get_terrain_rotation(orientation, pos, norm, forced_norm);
 }
-
 
 int dwobject::check_water_collision(float vz_old) {
 
@@ -1220,7 +1207,6 @@ int dwobject::check_water_collision(float vz_old) {
 	return 1;
 }
 
-
 void dwobject::surf_collide_obj() const {
 
 	switch (type) {
@@ -1234,9 +1220,7 @@ void dwobject::surf_collide_obj() const {
 	}
 }
 
-
 void dwobject::elastic_collision(point const &obj_pos, float energy, int obj_type) {
-
 	if (disabled() || (object_types[type].flags & COLL_DESTROYS)) return; // self-propelled
 	if (temperature <= W_FREEZE_POINT && (flags & IN_WATER))      return; // stuck in ice
 	assert(energy < 1.0E12);
@@ -1276,7 +1260,6 @@ void reanimate_group(unsigned gix, bool remove_if_coll) {
 		if (obj.status == 2 || obj.status == 4) {obj.status = 1;} // stationary => moving in air
 	}
 }
-
 void reanimate_objects() {
 	for (int i = 0; i < num_groups; ++i) {reanimate_group(i, 1);}
 }
@@ -1317,7 +1300,6 @@ void seed_water_on_mesh(float amount) {
 		}
 	}
 }
-
 
 void accumulate_object(point const &pos, int type, float amount) {
 
@@ -1635,7 +1617,6 @@ void water_particle_manager::apply_physics() {
 
 
 template<typename T> void shift_objs(vector<T> &objs, vector3d const &vd) {
-
 	for (unsigned i = 0; i < objs.size(); ++i) {
 		if (objs[i].status) {objs[i].pos += vd;}
 	}
@@ -1645,15 +1626,12 @@ template<typename T> void apply_obj_physics(vector<T> &objs) {
 	for (unsigned i = 0; i < objs.size(); ++i) {objs[i].apply_physics(i);}
 }
 
-
 void shift_other_objs(vector3d const &vd) {
-
 	shift_objs(bubbles,     vd);
 	shift_objs(part_clouds, vd);
 	shift_objs(fires,       vd);
 	shift_objs(decals,      vd);
 }
-
 
 void advance_physics_objects() {
 
@@ -1672,9 +1650,7 @@ void advance_physics_objects() {
 	}
 }
 
-
 void reset_other_objects_status() {
-
 	reset_status(bubbles);
 	reset_status(part_clouds);
 	reset_status(fires);

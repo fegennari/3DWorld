@@ -64,9 +64,7 @@ void estimate_zminmax(bool using_eq);
 void set_zvals();
 void update_temperature(bool verbose);
 void compute_scale();
-
 bool using_hmap_with_detail();
-
 
 
 void create_sin_table() {
@@ -80,7 +78,6 @@ void create_sin_table() {
 	}
 }
 
-
 void matrix_min_max(float **matrix, float &minval, float &maxval) {
 
 	assert(matrix);
@@ -88,8 +85,8 @@ void matrix_min_max(float **matrix, float &minval, float &maxval) {
 
 	for (int i = 0; i < MESH_Y_SIZE; ++i) {
 		for (int j = 0; j < MESH_X_SIZE; ++j) {
-			minval = min(minval, matrix[i][j]);
-			maxval = max(maxval, matrix[i][j]);
+			min_eq(minval, matrix[i][j]);
+			max_eq(maxval, matrix[i][j]);
 		}
 	}
 }
@@ -160,15 +157,12 @@ bool read_mesh_height_image(char const *fn, bool allow_resize=1) {
 
 
 void set_zmax_est(float zval) {
-
 	zmax_est      = zval;
 	zmax_est2     = 2.0*zmax_est;
 	zmax_est2_inv = 1.0/zmax_est2;
 }
 
-
 void update_disabled_mesh_height() {
-
 	if (disabled_mesh_z == FAR_DISTANCE || mesh_draw == NULL) return;
 
 	for (int i = 0; i < MESH_Y_SIZE; ++i) {
@@ -178,14 +172,11 @@ void update_disabled_mesh_height() {
 	}
 }
 
-
 void clamp_to_mesh(int xy[2]) {
 	for (unsigned i = 0; i < 2; ++i) {xy[i] = max(0, min(MESH_SIZE[i]-1, xy[i]));}
 }
 
-
 void gen_mesh_random(float height) {
-
 	for (int i = 0; i < MESH_Y_SIZE; ++i) {
 		for (int j = 0; j < MESH_X_SIZE; ++j) {
 			float val(signed_rand_float2()*height);
@@ -196,7 +187,6 @@ void gen_mesh_random(float height) {
 		}
 	}
 }
-
 
 void gen_mesh_sine_table(float **matrix, int x_offset, int y_offset, int xsize, int ysize) {
 
@@ -214,7 +204,6 @@ void apply_mesh_rand_seed(rand_gen_t &rgen) {
 	if (mesh_seed != 0) {rgen.set_state(mesh_seed, 12345);}
 	else if (mesh_gen_mode != MGEN_SINE) {rgen.set_state(mesh_rgen_index+1, 12345);}
 }
-
 
 void gen_rand_sine_table_entries(float scaled_height) {
 
@@ -341,9 +330,7 @@ void gen_mesh(int surface_type, int keep_sin_table, int update_zvals) {
 			if (AUTOSCALE_HEIGHT && world_mode == WMODE_GROUND) {mesh_origin.z = camera_origin.z = surface_pos.z = 0.5f*(zmin + zmax);}
 			estimate_zminmax(surface_type < 3);
 		}
-		else {
-			set_zvals();
-		}
+		else {set_zvals();}
 	}
 	update_temperature(1);
 	gen_terrain_map();
@@ -395,10 +382,10 @@ void glaciate() {
 	for (int i = 0; i < MESH_Y_SIZE; ++i) {
 		for (int j = 0; j < MESH_X_SIZE; ++j) {
 			float &zval(mesh_height[i][j]);
-			apply_glaciate(zval);
+			apply_glaciate (zval);
 			apply_mesh_sine(zval, float(j + xoff2 - MESH_X_SIZE/2), float(i + yoff2 - MESH_Y_SIZE/2));
-			zbottom = min(zbottom, zval);
-			ztop    = max(ztop, zval);
+			min_eq(zbottom, zval);
+			max_eq(ztop,    zval);
 		}
 	}
 }
@@ -433,9 +420,7 @@ void init_terrain_mesh() {
 
 void gen_terrain_map() {
 
-	if (GLACIATE) {
-		glaciate();
-	}
+	if (GLACIATE) {glaciate();}
 	else {
 		glaciate_exp     = 1.0;
 		glaciate_exp_inv = 1.0;
@@ -485,14 +470,12 @@ void estimate_zminmax(bool using_eq) {
 }
 
 float get_median_height(float distribution_pos) {
-
 	if (height_histogram.empty()) {return distribution_pos;} // ???
 	return height_histogram[max(0, min((int)height_histogram.size()-1, int(height_histogram.size()*distribution_pos)))];
 }
 
 
 void set_zvals() {
-
 	zcenter       = 0.5f*(zmax + zmin);
 	zbottom       = zmin;
 	ztop          = zmax;
@@ -503,17 +486,13 @@ void set_zvals() {
 	LARGE_ZVAL    = max(LARGE_ZVAL, 100.0f*(CLOUD_CEILING + ztop));
 }
 
-
 float get_water_z_height() {
-
 	float wpz(get_rel_wpz());
 	if (GLACIATE) {wpz = do_glaciate_exp(wpz);}
 	return wpz*zmax_est2 - zmax_est + water_h_off;
 }
 
-
 float get_cur_temperature() {return (combined_gu ? univ_temp : init_temperature);}
-
 
 void update_temperature(bool verbose) {
 
@@ -542,7 +521,6 @@ void update_temperature(bool verbose) {
 
 
 void compute_scale() {
-
 	int const iscale(int(log2(mesh_scale)));
 	start_eval_sin = N_RAND_SIN2*max(0, min(NUM_FREQ_COMP-MIN_FREQS, (iscale+mesh_freq_filter)));
 }
@@ -553,7 +531,6 @@ float get_hmap_scale(int mode) {
 }
 
 void postproc_noise_zval(float &zval) {
-
 	// Note: this applies to tree distributions as well, which is odd...
 	hmap_params_t const &h(hmap_params);
 	if (zval > h.plat_bot) {zval = h.plat_bot + h.plat_h*(zval - h.plat_bot) + min(h.plat_max, h.plat_s*(zval - h.plat_bot));} // plateau
@@ -569,7 +546,6 @@ void apply_noise_shape_final(float &noise, int shape) {
 	}
 	postproc_noise_zval(noise);
 }
-
 void apply_noise_shape_per_term(float &noise, int shape) { // inputs and outputs [-1, 1]
 	switch (shape) {
 	case 0: break; // linear - do nothing
@@ -638,7 +614,6 @@ bool mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy, 
 }
 
 void mesh_xy_grid_cache_t::enable_glaciate() {
-
 	do_glaciate = 1;
 	if (hmap_params.sine_mag == 0.0) return;
 	assert(cur_nx > 0 && cur_ny > 0); // build_arrays() must have been called first
@@ -854,9 +829,7 @@ void reset_offsets() {
 		xoff2 += int((get_xpos(camera.x) - MESH_X_SIZE/2));
 		yoff2 += int((get_ypos(camera.y) - MESH_Y_SIZE/2));
 	}
-	else { // normal
-		surface_pos = all_zeros;
-	}
+	else {surface_pos = all_zeros;} // normal
 	xoff = yoff = 0;
 }
 
@@ -886,11 +859,9 @@ void update_mesh(float dms, bool do_regen_trees) { // called when mesh_scale cha
 	}
 }
 
-
 bool is_under_mesh(point const &p) {
 	return ((world_mode == WMODE_GROUND && p.z < zbottom) || p.z < int_mesh_zval_pt_off(p, 0, 1, 1));
 }
-
 
 bool read_mesh(const char *filename, float zmm) {
 
@@ -932,7 +903,6 @@ bool read_mesh(const char *filename, float zmm) {
 	return 1;
 }
 
-
 bool write_mesh(const char *filename) {
 
 	if (mesh_height == NULL) return 0;
@@ -963,7 +933,6 @@ bool write_mesh(const char *filename) {
 	cout << "Wrote mesh file '" << filename << "'." << endl;
 	return 1;
 }
-
 
 bool load_state(const char *filename) {
 
@@ -1005,7 +974,6 @@ bool load_state(const char *filename) {
 	cout << "State file '" << filename << "' has been loaded." << endl;
 	return 1;
 }
-
 
 bool save_state(const char *filename) {
 

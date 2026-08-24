@@ -30,7 +30,6 @@ void mark_movable_cobj_smap_update() {
 	scene_smap_vbo_invalid |= 1; // mark for rebuild, but don't force full update
 }
 
-
 int cube_polygon_intersect(coll_obj const &c, coll_obj const &p) {
 
 	for (int i = 0; i < p.npoints; ++i) { // check points (fast)
@@ -161,7 +160,6 @@ bool sphere_def_coll_vert_cylin(point const &sc, float sr, point const &cp1, poi
 }
 
 void copy_torus_bounding_cylin(coll_obj const &torus, coll_obj &cylin) { // Note: only copies data needed for intersection tests
-
 	cylin.copy_from(torus); // copy bcube
 	cylinder_3dw const c(torus.get_bounding_cylinder());
 	cylin.points[0] = c.p1;
@@ -481,7 +479,6 @@ vector3d coll_obj::get_cobj_resting_normal() const {
 }
 
 vector3d get_mesh_normal_at(point const &pt) {
-
 	int xpos(max(0, min(MESH_X_SIZE-1, get_xpos(pt.x)))), ypos(max(0, min(MESH_Y_SIZE-1, get_ypos(pt.y))));
 	assert(!point_outside_mesh(xpos, ypos));
 	if (is_in_ice(xpos, ypos) && pt.z > water_matrix[ypos][xpos]) return wat_vert_normals[ypos][xpos]; // on ice (no interpolation)
@@ -736,7 +733,6 @@ bool binary_step_moving_cobj_delta(coll_obj const &cobj, vector<unsigned> const 
 }
 
 bool intersects_any_cobj(coll_obj const &cobj, vector<unsigned> const &cobjs, float tolerance=0.0) {
-
 	for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
 		if (cobj.intersects_cobj(coll_objects.get_cobj(*i), tolerance)) return 1;
 	}
@@ -762,7 +758,6 @@ void check_moving_cobj_int_with_dynamic_objs(unsigned index, vector3d const &del
 	for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
 		if (coll_objects.get_cobj(*i).is_movable()) {register_moving_cobj(*i);} // wake this cobj up - may already be there
 	}
-
 	// check for collisions with dynamic objects from groups
 	cobjs.clear();
 	get_intersecting_cobjs_tree(cobj, cobjs, -1, 0.0, 1, 0, -1); // duplicates are okay
@@ -891,9 +886,7 @@ void check_cobj_alignment(unsigned index) {
 	}
 }
 
-
 void remove_cobjs_with_same_cgroup(coll_obj const &cobj, vector<unsigned> &cobjs) {
-
 	if (cobj.cgroup_id < 0) return; // not in a group
 
 	for (unsigned i = 0; i < cobjs.size(); ++i) {
@@ -1254,7 +1247,6 @@ int check_push_cobj(unsigned index, vector3d &delta, set<unsigned> &seen, point 
 }
 
 void move_cobj_and_update_state(unsigned index, vector3d const &cobj_delta) {
-	
 	coll_obj &cobj(coll_objects.get_cobj(index));
 	cobj.move_cobj(cobj_delta, 1); // move the cobj instead of the player and re-add to coll structure
 	cobj.cp.surfs = 0; // clear any invisible edge flags as moving may make these edges visible

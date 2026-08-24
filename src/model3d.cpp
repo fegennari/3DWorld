@@ -217,15 +217,12 @@ size_t texture_manager::get_gpu_mem() const {
 // explicit template instantiations of vert_norm case, used for voxel_model, where tc=0.0
 template class indexed_vntc_vect_t<vert_norm>;
 
-
 template<typename T> void vntc_vect_t<T>::clear() {
-	
 	clear_vbos();
 	vector<T>::clear();
 	finalized = has_tangents = 0;
 	bsphere.radius = 0.0;
 }
-
 
 template<typename T> void vntc_vect_t<T>::calc_bounding_volumes() {
 
@@ -282,7 +279,6 @@ template<typename T> void indexed_vntc_vect_t<T>::subdiv_recur(vector<unsigned> 
 	copy(ixs.begin(), ixs.end(), back_inserter(indices)); // make leaf
 }
 
-
 template<typename T> void indexed_vntc_vect_t<T>::optimize(unsigned npts) {
 
 	if (optimized) return;
@@ -294,7 +290,6 @@ template<typename T> void indexed_vntc_vect_t<T>::optimize(unsigned npts) {
 		optimizer.run(vert_opt_flags[1], vert_opt_flags[2]);
 	}
 }
-
 
 unsigned get_area_pow2(float area, float amin) {return unsigned(log2(max(area/amin, 1.0f)));} // truncate
 
@@ -404,7 +399,6 @@ struct merge_entry_t {
 };
 
 struct vertex_remap_t {
-
 	vector<unsigned> remap;
 
 	vertex_remap_t(unsigned num_verts) {
@@ -829,14 +823,11 @@ template<typename T> void indexed_vntc_vect_t<T>::reserve_for_num_verts(unsigned
 template<typename T> void indexed_vntc_vect_t<T>::add_poly(polygon_t const &poly, vertex_map_t<T> &vmap) {
 	for (unsigned i = 0; i < poly.size(); ++i) {add_vertex(poly[i], vmap);}
 }
-
 template<typename T> void indexed_vntc_vect_t<T>::add_triangle(triangle const &t, vertex_map_t<T> &vmap) {
-
 	vector3d const normal(t.get_normal());
 	//vector3d const normal(t.get_normal(!vmap.get_average_normals())); // weight by triangle area
 	UNROLL_3X(add_vertex(T(t.pts[i_], normal), vmap);)
 }
-
 
 template<typename T> unsigned indexed_vntc_vect_t<T>::add_vertex(T const &v, vertex_map_t<T> &vmap) {
 
@@ -863,9 +854,7 @@ template<typename T> unsigned indexed_vntc_vect_t<T>::add_vertex(T const &v, ver
 	return ix;
 }
 
-
 template<typename T> float indexed_vntc_vect_t<T>::get_prim_area(unsigned i, unsigned npts) const {
-
 	assert(i+npts <= num_verts());
 	float area(triangle_area(get_vert(i).v, get_vert(i+1).v, get_vert(i+2).v)); // first triangle
 	if (npts == 4) {area += triangle_area(get_vert(i).v, get_vert(i+2).v, get_vert(i+3).v);} // second triangle (for quads)
@@ -873,7 +862,6 @@ template<typename T> float indexed_vntc_vect_t<T>::get_prim_area(unsigned i, uns
 }
 
 template<typename T> float indexed_vntc_vect_t<T>::calc_area(unsigned npts) {
-	
 	assert(npts > 0);
 	unsigned const nv(num_verts());
 	if (nv == 0) return 0.0;
@@ -1079,7 +1067,6 @@ template<typename T> unsigned vntc_vect_block_t<T>::num_verts() const {
 	for (auto i = begin(); i != end(); ++i) {s += i->num_verts();}
 	return s;
 }
-
 template<typename T> unsigned vntc_vect_block_t<T>::num_unique_verts() const {
 	unsigned s(0);
 	for (auto i = begin(); i != end(); ++i) {s += (unsigned)i->size();}
@@ -1164,11 +1151,9 @@ template<typename T> bool vntc_vect_block_t<T>::write_to_obj_file(ostream &out, 
 
 // ************ geometry_t ************
 
-
 template<> void geometry_t<vert_norm_tc_tan>::calc_tangents_blocks(vntc_vect_block_t<vert_norm_tc_tan> &blocks, unsigned npts) {
 	for (auto i = blocks.begin(); i != blocks.end(); ++i) {i->calc_tangents(npts);}
 }
-
 template<typename T> void geometry_t<T>::calc_tangents() {
 	calc_tangents_blocks(triangles, 3);
 	calc_tangents_blocks(quads,     4);
@@ -1177,14 +1162,12 @@ template<typename T> void geometry_t<T>::calc_tangents() {
 template<typename T> void geometry_t<T>::render_blocks(shader_t &shader, bool is_shadow_pass, point const *const xlate, vntc_vect_block_t<T> &blocks, unsigned npts) {
 	for (auto i = blocks.begin(); i != blocks.end(); ++i) {i->render(shader, is_shadow_pass, xlate, npts);}
 }
-
 template<typename T> void geometry_t<T>::render(shader_t &shader, bool is_shadow_pass, point const *const xlate) {
 	render_blocks(shader, is_shadow_pass, xlate, triangles, 3);
 	render_blocks(shader, is_shadow_pass, xlate, quads,     4);
 }
 
 template<typename T> void geometry_t<T>::add_poly_to_polys(polygon_t const &poly, vntc_vect_block_t<T> &v, vertex_map_t<T> &vmap, unsigned obj_id) const {
-
 	if (v.empty() || v.back().size() > MAX_VMAP_SIZE || (!merge_model_objects && obj_id > v.back().obj_id)) {
 		vmap.clear();
 		if (!merge_model_objects || v.empty()) {v.push_back(indexed_vntc_vect_t<T>(obj_id));}
@@ -1225,14 +1208,12 @@ template<typename T> cube_t geometry_t<T>::get_bcube() const {
 }
 
 template<typename T> void geometry_t<T>::clear() {
-
 	free_vbos();
 	triangles.clear();
 	quads    .clear();
 }
 
 template<typename T> void geometry_t<T>::get_stats(model3d_stats_t &stats) const {
-	
 	stats.tris  += triangles.num_verts()/3;
 	stats.quads += quads    .num_verts()/4;
 	triangles.get_stats(stats);
@@ -1256,13 +1237,11 @@ template<typename T> void geometry_t<T>::reverse_winding_order() {
 
 // ************ material_t ************
 
-
 template<typename T> void update_score(vntc_vect_block_t<T> const &v, float &score, unsigned &num_nonempty) {
 	if (v.empty()) return;
 	score += v.calc_draw_order_score();
 	++num_nonempty;
 }
-
 
 void material_t::compute_area_per_tri() {
 
@@ -1314,7 +1293,6 @@ void material_t::init_textures(texture_manager &tmgr) {
 }
 
 void material_t::queue_textures_to_load(texture_manager &tmgr) {
-
 	if (!mat_is_used()) return;
 	int const tid(get_render_texture());
 	tmgr.bind_alpha_channel_to_texture(tid, alpha_tid);
@@ -1429,7 +1407,6 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 	}
 }
 
-
 bool material_t::use_bump_map() const {return (enable_bump_map() && bump_tid >= 0);}
 bool material_t::use_spec_map() const {return (enable_spec_map() && (s_tid >= 0 || ns_tid >= 0));}
 
@@ -1487,7 +1464,6 @@ bool material_t::add_poly(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t
 	return 1;
 }
 
-
 bool material_t::write(ostream &out, bool inc_animations) const {
 	out.write((char const *)this, sizeof(material_params_t));
 	write_vector(out, name);
@@ -1533,7 +1509,6 @@ void material_t::write_mtllib_entry(ostream &out, texture_manager const &tmgr) c
 
 
 // ************ model3d ************
-
 
 material_t &model3d::get_material(int mat_id, bool alloc_if_needed) {
 	if (alloc_if_needed && mat_id >= (int)materials.size()) {materials.resize(mat_id+1);} // allocate additional material(s) if needed
@@ -1583,7 +1558,6 @@ void model3d::add_triangle(polygon_t const &tri, vntc_map_t &vmap, int mat_id, u
 	if (mat_id < 0 || !materials[mat_id].skip) {update_bbox(tri);} // don't include skipped materials in the bbox
 }
 
-
 void model3d::update_bbox(polygon_t const &poly) {
 	bcube.assign_or_union_with_cube(get_polygon_bbox(poly));
 }
@@ -1592,7 +1566,6 @@ void model3d::get_transformed_bcubes(vector<cube_t> &bcubes) const {
 	if (transforms.empty()) {bcubes.push_back(bcube); return;} // no transforms
 	for (model3d_xform_t const &xf : transforms) {bcubes.push_back(xf.get_xformed_cube(bcube));} // Note: const, non-cached call
 }
-
 
 void model3d::get_polygons(vector<coll_tquad> &polygons, bool quads_only, bool apply_transforms, unsigned lod_level) const {
 
@@ -1634,11 +1607,8 @@ void model3d::get_polygons(vector<coll_tquad> &polygons, bool quads_only, bool a
 
 
 void calc_bounds(cube_t const &c, int bounds[2][2], float spacing) {
-
 	for (unsigned d = 0; d < 2; ++d) {
-		for (unsigned e = 0; e < 2; ++e) {
-			bounds[d][e] = round_fp(c.d[d][e]/spacing);
-		}
+		for (unsigned e = 0; e < 2; ++e) {bounds[d][e] = round_fp(c.d[d][e]/spacing);}
 	}
 }
 
@@ -1773,7 +1743,6 @@ void model3d::get_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf) const 
 	cout << "polygons: " << num_polys << ", hquads: " << num_horiz_quads << ", pre_merged_cubes: " << num_pre_merged_cubes << ", cubes: " << cubes.size() << endl;
 }
 
-
 colorRGBA model3d::get_avg_color() const {
 	colorRGBA avg_color(BLACK);
 	for (auto m = materials.begin(); m != materials.end(); ++m) {avg_color += m->get_avg_color(tmgr, unbound_mat.tid);}
@@ -1810,7 +1779,6 @@ size_t model3d::get_gpu_mem() const {
 	return mem;
 }
 
-
 int model3d::get_material_ix(string const &material_name, string const &fn, bool okay_if_exists) {
 
 	unsigned mat_id(0);
@@ -1829,7 +1797,6 @@ int model3d::get_material_ix(string const &material_name, string const &fn, bool
 	return mat_id;
 }
 
-
 int model3d::find_material(string const &material_name) {
 
 	string_map_t::const_iterator it(mat_map.find(material_name));
@@ -1847,25 +1814,19 @@ int model3d::find_material(string const &material_name) {
 	return it->second;
 }
 
-
 void model3d::mark_mat_as_used(int mat_id) {
-
 	if (mat_id < 0) return;
 	assert((unsigned)mat_id < materials.size());
 	materials[mat_id].mark_as_used();
 }
 
-
 void model3d::finalize() {
-
 #pragma omp parallel for schedule(dynamic)
 	for (int i = 0; i < (int)materials.size(); ++i) {materials[i].finalize();}
 	unbound_geom.finalize();
 }
 
-
 void model3d::clear() {
-
 	free_context();
 	unbound_geom.clear();
 	materials.clear();
@@ -1889,7 +1850,6 @@ void model3d::free_context() {
 }
 
 void model3d::clear_smaps() { // frees GL state
-	
 	for (auto i = smap_data.begin(); i != smap_data.end(); ++i) {
 		for (auto j = i->second.begin(); j != i->second.end(); ++j) {j->free_gl_state();}
 	}
@@ -1913,7 +1873,6 @@ void model3d::load_all_used_tids() {
 	textures_loaded = 1;
 	if (no_store_model_textures_in_memory) {tmgr.free_client_mem();}
 }
-
 
 void model3d::bind_all_used_tids() {
 
@@ -1948,7 +1907,6 @@ void model3d::bind_all_used_tids() {
 }
 
 void model3d::calc_tangent_vectors() {
-
 	for (material_t &m : materials) {
 		if (!m.mat_is_used() || !m.use_bump_map()) continue;
 		m.geom_tan.calc_tangents();
@@ -2170,7 +2128,6 @@ void model3d_xform_t::apply_gl() const {
 }
 
 struct camera_pdu_transform_wrapper {
-
 	pos_dir_up prev_pdu, prev_orig_pdu;
 	bool active;
 
@@ -2230,7 +2187,6 @@ void model3d::render_with_xform(shader_t &shader, model3d_xform_t &xf, xform_mat
 	camera_pdu_transform_wrapper cptw2(xf);
 	base_mat_t ub_mat(unbound_mat);
 	xf.apply_material_override(ub_mat);
-	//point xlate2(xlate); // complex transforms, occlusion culling disabled
 	render_materials(shader, is_shadow_pass, reflection_pass, is_z_prepass, enable_alpha_mask, bmap_pass_mask, trans_op_mask, ub_mat, xf, nullptr, &mvm);
 	// cptw2 dtor called here
 }
@@ -2462,14 +2418,12 @@ void model3d::setup_shadow_maps() {
 	}
 }
 
-
 cube_t model3d::calc_bcube_including_transforms() { // non-const because bcube_xf is cached
 	if (transforms.empty()) return bcube; // no transforms case
 	if (!bcube_all_xf.is_all_zeros()) return bcube_all_xf; // already calculated
 	for (model3d_xform_t &xf : transforms) {bcube_all_xf.assign_or_union_with_cube(xf.get_xformed_bcube(bcube));}
 	return bcube_all_xf;
 }
-
 
 void model3d::build_cobj_tree(bool verbose) {
 	if (!coll_tree.is_empty() || has_cobjs) return; // already built or not needed because cobjs will be used instead
@@ -2511,7 +2465,6 @@ bool model3d::check_coll_line(point const &p1, point const &p2, point &cpos, vec
 	} // for xf
 	return coll;
 }
-
 
 void model3d::get_all_mat_lib_fns(set<string> &mat_lib_fns) const {
 	for (material_t const &m : materials) {mat_lib_fns.insert(m.filename);}
@@ -2754,7 +2707,6 @@ bool model3d::write_as_obj_file(string const &fn) {
 	return out.good();
 }
 
-
 void model3d::proc_model_normals(vector<counted_normal> &cn, int recalc_normals, float nmag_thresh) {
 	for (counted_normal &i : cn) {
 		if (!i.is_valid()) continue; // invalid, remains invalid
@@ -2773,7 +2725,6 @@ void model3d::proc_model_normals(vector<weighted_normal> &wn, int recalc_normals
 		i /= mag; // normalize
 	}
 }
-
 
 void model3d::write_to_cobj_file(ostream &out) const {
 
@@ -2805,7 +2756,6 @@ void model3ds::free_context() {
 	for (iterator m = begin(); m != end(); ++m) {m->free_context();}
 	tmgr.free_tids();
 }
-
 
 void model3ds::render(bool is_shadow_pass, int reflection_pass, int trans_op_mask, vector3d const &xlate) { // Note: xlate is only used in tiled terrain mode
 	
@@ -2934,7 +2884,6 @@ bool model3ds::has_any_animations() const {
 	return 0;
 }
 
-
 cube_t model3ds::calc_and_return_bcube(bool only_reflective) { // Note: calculates bcubes, so non-const
 
 	cube_t bcube; // will return all zeros if empty()
@@ -2961,7 +2910,6 @@ void model3ds::build_cobj_trees(bool verbose) {
 	for (iterator m = begin(); m != end(); ++m) {m->build_cobj_tree(verbose);}
 }
 
-
 bool model3ds::check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &color, bool exact, bool build_bvh_if_needed) {
 
 	bool ret(0);
@@ -2976,14 +2924,12 @@ bool model3ds::check_coll_line(point const &p1, point const &p2, point &cpos, ve
 	return ret;
 }
 
-
 void model3ds::write_to_cobj_file(ostream &out) const {
 	for (const_iterator m = begin(); m != end(); ++m) {m->write_to_cobj_file(out);}
 }
 
 
 void model3d_stats_t::print() const {
-	
 	cout << "verts: " << verts << ", quads: " << quads << ", tris: " << tris << ", blocks: " << blocks << ", mats: " << mats;
 	if (transforms) {cout << ", transforms: " << transforms;}
 	cout << endl;
@@ -2991,7 +2937,6 @@ void model3d_stats_t::print() const {
 
 
 // ************ Free Functions ************
-
 
 void free_model_context() {all_models.free_context();}
 
@@ -3117,10 +3062,8 @@ geom_xform_t fit_cur_model_to_scene() {
 	return get_cur_model("fit_to_scene").fit_to_scene();
 }
 bool have_cur_model() {return (!all_models.empty());}
-
 cube_t calc_and_return_all_models_bcube(bool only_reflective) {return all_models.calc_and_return_bcube(only_reflective);}
 void get_all_model_bcubes(vector<cube_t> &bcubes) {all_models.get_all_model_bcubes(bcubes);}
-
 void write_models_to_cobj_file(ostream &out) {all_models.write_to_cobj_file(out);}
 
 void adjust_zval_for_model_coll(point &pos, float radius, float mesh_zval, float step_height) { // used for player

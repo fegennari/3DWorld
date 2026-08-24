@@ -80,9 +80,7 @@ bool base_file_reader::read_string(char *s, unsigned max_len) {
 
 
 class object_file_reader : public base_file_reader {
-
-	bool invalid_index_warned;
-
+	bool invalid_index_warned=0;
 protected:
 	void handle_invalid_zero_ref_index(int &ix) {
 		if (ix == -1) {
@@ -139,7 +137,7 @@ protected:
 	}
 
 public:
-	object_file_reader(string const &fn) : base_file_reader(fn), invalid_index_warned(0) {}
+	object_file_reader(string const &fn) : base_file_reader(fn) {}
 
 	bool read(vector<coll_tquad> *ppts, geom_xform_t const &xf, bool verbose) {
 		RESET_TIME;
@@ -194,7 +192,6 @@ public:
 
 
 // ************************************************
-
 
 string model_from_file_t::open_include_file(string const &fn, string const &type, ifstream &in_inc) const {
 	assert(!fn.empty());
@@ -251,8 +248,7 @@ bool endswith(string const &str, string const &suffix) {
 }
 
 class object_file_reader_model : public object_file_reader, public model_from_file_t {
-
-	bool had_empty_mat_error;
+	bool had_empty_mat_error=0;
 
 	bool read_map_name(ifstream &in, string &name, float *scale=nullptr) {
 		if (!(in >> name)) {return 0;} // no name read (EOF?)
@@ -289,7 +285,7 @@ class object_file_reader_model : public object_file_reader, public model_from_fi
 	}
 
 public:
-	object_file_reader_model(string const &fn, model3d &model_) : object_file_reader(fn), model_from_file_t(fn, model_), had_empty_mat_error(0) {}
+	object_file_reader_model(string const &fn, model3d &model_) : object_file_reader(fn), model_from_file_t(fn, model_) {}
 
 	bool load_mat_lib(string const &fn) { // Note: could cache filename, but seems to never be included more than once
 		ifstream mat_in;
@@ -472,7 +468,6 @@ public:
 		if (verbose) {model.show_stats();}
 		return 1;
 	}
-
 
 	bool try_load_mat_lib(string const &mat_lib, set<string> &loaded_mat_libs, unsigned approx_line) {
 		if (loaded_mat_libs.find(mat_lib) == loaded_mat_libs.end()) { // mtllib not yet loaded
@@ -762,13 +757,12 @@ public:
 		}
 		return 1;
 	}
-};
+}; // end object_file_reader_model
 
 
 void check_obj_file_ext(string const &filename, string const &ext) {
 	if (ext != "obj") {cout << "Warning: Attempting to read file '" << filename << "' with extension '" << ext << "' as an object file." << endl;}
 }
-
 
 bool write_model3d_file(string const &base_fn, model3d &cur_model) {
 

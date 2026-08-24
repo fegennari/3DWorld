@@ -154,9 +154,7 @@ void compute_matrices() {
 	gen_mesh_bsp_tree();
 }
 
-
 void update_matrix_element(int xpos, int ypos) {
-
 	water_matrix    [ypos][xpos] = ((world_mode == WMODE_INF_TERRAIN) ? water_plane_z : def_water_level);
 	wat_vert_normals[ypos][xpos] = plus_z;
 	charge_dist     [ypos][xpos] = 0.4 + 0.6*rand_float();
@@ -167,7 +165,6 @@ void update_matrix_element(int xpos, int ypos) {
 struct mesh_update_t {
 	int x, y;
 	float old_mh;
-
 	mesh_update_t(int x_, int y_, float mh) : x(x_), y(y_), old_mh(mh) {}
 };
 
@@ -175,7 +172,6 @@ struct mesh_update_t {
 // mode is currently: 0=crater, 1=erosion
 void update_mesh_height(int xpos, int ypos, int rad, float scale, float offset, int mode, bool is_large_change) {
 
-	//RESET_TIME;
 	assert(rad >= 0);
 	int const x1(max(0, xpos-rad)), y1(max(0, ypos-rad));
 	int const x2(min(MESH_X_SIZE-1, xpos+rad)), y2(min(MESH_Y_SIZE-1, ypos+rad));
@@ -206,13 +202,11 @@ void update_mesh_height(int xpos, int ypos, int rad, float scale, float offset, 
 			for (int d = 0; d < 4; ++d) {grass_update.insert(make_pair(max(0, j-(d&1)), max(0, i-((d>>1)&1))));}
 		}
 	}
-
 	// second pass to update adjacency data
 	for (vector<mesh_update_t>::const_iterator i = to_update.begin(); i != to_update.end(); ++i) {
 		update_matrix_element(i->x, i->y); // requires mesh_height
 		update_motion_zmin_matrices(i->x, i->y); // requires mesh_height
 	}
-
 	// third pass to update water, which depends on w_motion_matrix
 	for (vector<mesh_update_t>::const_iterator i = to_update.begin(); i != to_update.end(); ++i) {
 		update_water_zval(i->x, i->y, i->old_mh);
@@ -224,7 +218,6 @@ void update_mesh_height(int xpos, int ypos, int rad, float scale, float offset, 
 		cobjs_updated |= update_small_tree_zvals(x1, y1, x2, y2);
 		if (cobjs_updated) {build_cobj_tree(0, 0);} // slow, but probably necessary
 	}
-
 	// fourth pass to update grass, after cobjs/shadows have been updated
 	for (auto i = grass_update.begin(); i != grass_update.end(); ++i) {
 		grass_mesh_height_change(i->first, i->second);
@@ -233,7 +226,6 @@ void update_mesh_height(int xpos, int ypos, int rad, float scale, float offset, 
 	if (mode == 0) {update_smoke_indir_tex_range(x1, x2+1, y1, y2+1);} // update lmap lighting for crater
 	// update waypoints?
 	mesh_invalidated = 1;
-	//PRINT_TIME("Mesh Height Update");
 }
 
 
@@ -266,15 +258,12 @@ vector3d get_matrix_surf_norm(float **matrix, unsigned char **enabled, int xsize
 
 
 void calc_matrix_normal_at(float **matrix, vector3d **vn, vector3d **sn, unsigned char **enabled, int xsize, int ysize, int xpos, int ypos) {
-
 	vector3d const norm(get_matrix_surf_norm(matrix, enabled, xsize, ysize, xpos, ypos));
 	sn[ypos][xpos] = norm;
 	vn[ypos][xpos] = (norm + sn[max(ypos-1, 0)][xpos] + sn[max(ypos-1, 0)][max(xpos-1, 0)] + sn[ypos][max(xpos-1, 0)]).get_norm();
 }
 
-
 void calc_matrix_normals(float **matrix, vector3d **vn, vector3d **sn, unsigned char **enabled, int xsize, int ysize) {
-
 	assert(matrix && vn && sn);
 
 	for (int y = 0; y < ysize; ++y) {
@@ -282,11 +271,9 @@ void calc_matrix_normals(float **matrix, vector3d **vn, vector3d **sn, unsigned 
 	}
 }
 
-
 void get_matrix_point(int xpos, int ypos, point &pt) {
 	if (mesh_height != NULL && !point_outside_mesh(xpos, ypos)) {pt.assign(get_xval(xpos), get_yval(ypos), mesh_height[ypos][xpos]);}
 }
-
 
 int is_in_ice(int xpos, int ypos) {
 	if (DISABLE_WATER || temperature > W_FREEZE_POINT || point_outside_mesh(xpos, ypos)) return 0;
@@ -331,7 +318,6 @@ float int_mesh_zval_pt_off(point const &pos, int use_real_equation, int ignore_i
 }
 
 vector3d get_interpolated_terrain_normal(point const &pos, float *mh_val) {
-
 	point const px(pos.x+DX_VAL, pos.y, pos.z), py(pos.x, pos.y+DY_VAL, pos.z);
 	float const mh(int_mesh_zval_pt_off(pos, 0, 0)), mhx(int_mesh_zval_pt_off(px, 0, 0)), mhy(int_mesh_zval_pt_off(py, 0, 0));
 	point const p1(pos.x, pos.y, mh), p2(px.x, px.y, mhx), p3(py.x, py.y, mhy);
@@ -383,13 +369,9 @@ void update_motion_zmin_matrices(int xpos, int ypos) {
 	z_min_matrix[ypos][xpos] = z_min;
 }
 
-
 void calc_motion_direction() {
-
 	for (int ypos = 0; ypos < MESH_Y_SIZE; ++ypos) {
-		for (int xpos = 0; xpos < MESH_X_SIZE; ++xpos) {
-			update_motion_zmin_matrices(xpos, ypos);
-		}
+		for (int xpos = 0; xpos < MESH_X_SIZE; ++xpos) {update_motion_zmin_matrices(xpos, ypos);}
 	}
 }
 
@@ -397,7 +379,6 @@ void calc_motion_direction() {
 typedef float (*comp_func)(float, float);
 inline float comp_min(float A, float B) {return min(A, B);}
 inline float comp_max(float A, float B) {return max(A, B);}
-
 
 float proc_mesh_point(point const &pt, float radius, comp_func cf) {
 
@@ -419,18 +400,10 @@ float proc_mesh_point(point const &pt, float radius, comp_func cf) {
 	return zval;
 }
 
-
 float lowest_mesh_point(point const &pt, float radius) {
 	return proc_mesh_point(pt, radius, comp_min);
 }
-
 float highest_mesh_point(point const &pt, float radius) {
 	return proc_mesh_point(pt, radius, comp_max);
 }
-
-
-
-
-
-
 

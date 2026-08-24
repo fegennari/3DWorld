@@ -20,7 +20,6 @@ extern float zmin, zmax, ztop, zbottom;
 
 // ************ mesh_intersector ************
 
-
 bool mesh_intersector::line_int_surface_cached() {
 
 	static int x_last(-1), y_last(-1);
@@ -58,7 +57,6 @@ bool mesh_intersector::line_int_surface_cached() {
 	last_int = 0;
 	return 0;
 }
-
 
 bool mesh_intersector::line_intersect_surface() {
 
@@ -109,7 +107,6 @@ bool mesh_intersector::line_intersect_surface() {
 	return line_intersect_plane(xpos-1, x2, ypos-1, y2); // last segment
 }
 
-
 bool mesh_intersector::line_intersect_surface_fast() { // DDA
 
 	if (!check_iter_clip(0)) return 0;
@@ -132,7 +129,6 @@ bool mesh_intersector::line_intersect_surface_fast() { // DDA
 	return 0;
 }
 
-
 bool mesh_intersector::check_iter_clip(int fast2) {
 
 	float minz(max(zmin, zbottom)), maxz(min(zmax, ztop));
@@ -154,7 +150,6 @@ bool mesh_intersector::check_iter_clip(int fast2) {
 	maxz = min(maxz, zmax0);
 	return do_line_clip_scene(v1, v2, minz, maxz);
 }
-
 
 bool mesh_intersector::line_intersect_plane(int x1, int x2, int y1, int y2) {
 
@@ -196,9 +191,7 @@ bool mesh_intersector::intersect_mesh_quad(int x, int y) {
 	return 0;
 }
 
-
 bool mesh_intersector::get_intersection(int &xpos_, int &ypos_, float &zval_, bool cached) {
-	
 	bool const retval(cached ? line_int_surface_cached() : line_intersect_surface());
 	xpos_ = ret.xpos;
 	ypos_ = ret.ypos;
@@ -206,9 +199,7 @@ bool mesh_intersector::get_intersection(int &xpos_, int &ypos_, float &zval_, bo
 	return retval;
 }
 
-
 bool mesh_intersector::get_intersection() {
-
 	float const v1z(v1.z), v2z(v2.z); // cache the starting z values (before clipping)
 	ret.zval = zmin;
 
@@ -219,9 +210,7 @@ bool mesh_intersector::get_intersection() {
 	return 0;
 }
 
-
 bool mesh_intersector::get_any_non_intersection(point const *const pts, unsigned npts) {
-
 	assert(pts);
 
 	for (unsigned i = 0; i < npts; ++i) {
@@ -234,7 +223,6 @@ bool mesh_intersector::get_any_non_intersection(point const *const pts, unsigned
 
 // ************ mesh intersection drivers ************
 
-
 bool sphere_visible_to_pt(point const &pt, point const &center, float radius) {
 	if (radius == 0.0) return line_intersect_mesh(center, pt, 1);
 	point qp[4];
@@ -243,7 +231,6 @@ bool sphere_visible_to_pt(point const &pt, point const &center, float radius) {
 	mesh_intersector mint(pt, pt, 1);
 	return mint.get_any_non_intersection(qp, num_pts); 
 }
-
 
 bool line_intersect_mesh(point const &v1, point const &v2, int fast) {
 	mesh_intersector mint(v1, v2, fast);
@@ -262,7 +249,6 @@ bool line_intersect_mesh(point const &v1, point const &v2, point &cpos, int fast
 	return 1;
 }
 
-
 bool is_visible_from_light(point const &pos, point const &lpos, int fast) {
 	if (lpos.x == 0.0 && lpos.y == 0.0 && lpos.z == 0.0) return 0;
 	if (lpos.z > ztop && pos.z > ztop) return 1; // above the mesh
@@ -272,16 +258,13 @@ bool is_visible_from_light(point const &pos, point const &lpos, int fast) {
 
 // ************ mesh_bsp_search ************
 
-
 bool is_pow_2(int val) { // slow
 	unsigned num_ones(0);
 	for (; val != 0; val >>= 1) {if (val & 1) ++num_ones;}
 	return (num_ones == 1);
 }
 
-
 bool mesh_size_ok_for_bsp_tree() {
-
 	if (!is_pow_2(MESH_X_SIZE) || !is_pow_2(MESH_Y_SIZE))           return 0; // relax this later?
 	if (MESH_X_SIZE > 2*MESH_Y_SIZE || MESH_Y_SIZE > 2*MESH_X_SIZE) return 0; // aspect ratio must be in the range [0.5,2.0]
 	return 1;
@@ -350,7 +333,6 @@ mesh_bsp_tree::mesh_bsp_tree() {
 	}
 }
 
-
 bool mesh_bsp_tree::search_recur(point v1, point v2, unsigned x, unsigned y, unsigned level, mesh_query_ret &ret) const { // recursive
 
 	assert(level <= nlevels);
@@ -381,14 +363,8 @@ bool mesh_bsp_tree::search_recur(point v1, point v2, unsigned x, unsigned y, uns
 
 // ************ BSP tree drivers ************
 
-
 void gen_mesh_bsp_tree() {
-
 	if (!mesh_size_ok_for_bsp_tree()) return;
-	//RESET_TIME;
 	bspt.reset(new mesh_bsp_tree()); // must be created after mesh size is read from config file
-	//PRINT_TIME("BSP Tree");
 }
-
-
 

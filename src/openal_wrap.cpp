@@ -41,7 +41,6 @@ float const loop_sound_pitches[NUM_LOOP_SOUNDS] = {1.0, 1.0, 1.0, 1.0};
 
 
 void placed_sound_t::write_to_cobj_file(ostream &out, string const &name) const {
-
 	sensor.write_to_cobj_file(out);
 	out << "place_sound " << name << " ";
 	params.write_to_cobj_file(out); // includes endl
@@ -57,10 +56,8 @@ class sound_manager_t {
 	vector<placed_sound_t> placed_sounds;
 	map<string, unsigned> name_to_id_map;
 	vector<string> sound_names;
-	int last_frame;
-
+	int last_frame=0;
 public:
-	sound_manager_t() : last_frame(0) {}
 	openal_source &get_least_loud_source() {return sources.get_least_loud_source();}
 	openal_buffer &get_buffer(unsigned id) {return sounds.get_buffer(id);}
 	void add_delayed_sound(sound_params_t const &params, unsigned id, int delay_time) {delayed_sounds.push_back(delayed_sound_t(params, id, delay_time));}
@@ -200,7 +197,6 @@ public:
 	}
 
 	void set_loop_state(unsigned id, bool play, float volume) { // volume=0.0 => use previous value
-
 		if (disable_sound) return;
 		assert(id < NUM_LOOP_SOUNDS);
 		bool const playing(looping_sources.is_playing(id));
@@ -210,7 +206,6 @@ public:
 	}
 
 	bool check_for_duplicate(int id) {
-
 		if (frame_counter != last_frame) { // start new frame
 			sources.used_this_frame.clear();
 			last_frame = frame_counter;
@@ -221,7 +216,6 @@ public:
 	}
 
 	void proc_delayed() {
-
 		for (unsigned i = 0; i < delayed_sounds.size(); ++i) {
 			delayed_sound_t &ds(delayed_sounds[i]);
 			ds.time -= iticks;
@@ -254,7 +248,6 @@ bool had_al_error  () {return (alGetError  () != AL_NO_ERROR);}
 bool had_alut_error() {return (alutGetError() != AL_NO_ERROR);}
 
 bool check_and_print_alut_error(const char *msg) { // returns 1 on error
-
 	ALenum const error_id(alutGetError());
 
 	if (error_id != AL_NO_ERROR) {
@@ -264,7 +257,6 @@ bool check_and_print_alut_error(const char *msg) { // returns 1 on error
 	return 0;
 }
 bool check_and_print_al_error(const char *msg) { // returns 1 on error
-
 	ALenum error_id(alGetError());
 
 	if (error_id != AL_NO_ERROR) {
