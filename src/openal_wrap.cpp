@@ -68,7 +68,19 @@ public:
 	bool is_playing_sound(unsigned sid) const {return (sources.is_playing_sound(sid) || looping_sources.is_playing_sound(sid));}
 
 	unsigned add_new_sound(string const &fn) {
-		unsigned const ix(sounds.add_file_buffer(fn));
+		unsigned ix;
+		
+		if (fn == "white_noise") { // built-in
+			rand_gen_t rgen;
+			unsigned const sample_rate(22050), samples(1*sample_rate); // 1s
+			std::vector<ALshort> data(samples);
+			for (ALshort &v : data) {v = rgen.rand();}
+			ix = sounds.add_buffer(1); // alloc=1
+			alBufferData(get_buffer(ix).get_buffer_ix(), AL_FORMAT_MONO16, data.data(), samples*sizeof(ALshort), sample_rate);
+		}
+		else { // from a file
+			ix = sounds.add_file_buffer(fn);
+		}
 		bool const did_ins(name_to_id_map.insert(make_pair(fn, ix)).second);
 		assert(did_ins); // all sound filenames must be unique
 		assert(ix == sound_names.size());
@@ -174,6 +186,7 @@ public:
 		add_new_sound("scratch.wav"    ); // SOUND_SCRATCH
 		add_new_sound("gunshot2.wav"   ); // SOUND_HANDGUN
 		add_new_sound("hand_dryer.wav" ); // SOUND_HAND_DRYER
+		add_new_sound("white_noise"    ); // SOUND_WHITE_NOISE; no file extension
 		cout << endl;
 
 		// create sources
@@ -316,9 +329,8 @@ bool openal_buffer::load_from_waveform(int waveshape, float frequency, float pha
 
 unsigned buffer_manager_t::add_file_buffer(std::string const &fn) {
 
-	unsigned const ix((unsigned)buffers.size());
-	buffers.push_back(openal_buffer());
-	openal_buffer &buf(buffers.back());
+	unsigned const ix(add_buffer(0)); // alloc=0
+	openal_buffer &buf(get_buffer(ix));
 	// check here because an existing OpenAL error will cause loading to fail
 	check_and_print_al_error("pre_load");
 
