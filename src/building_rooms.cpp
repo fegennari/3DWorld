@@ -2541,10 +2541,10 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		for (door_stack_t const &ds : interior->door_stacks) {
 			if (ds.on_stairs || ds.get_for_closet()) continue; // skip basement and closet doors
 			cube_t door_bc(ds.get_true_bcube());
-			if (!i->intersects(door_bc)) continue;
+			if (!i->intersects_no_adj(door_bc)) continue;
 			door_bc.expand_in_dim(ds.dim, -0.05*door_bc.get_sz_dim(ds.dim)); // shrink slightly to prevent Z-fighting
-			assert(i->intersects(door_bc));
 			cube_t trim(flooring_exp);
+			assert(trim.intersects_no_adj(door_bc));
 			trim.intersect_with_cube(door_bc);
 			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, ds.dim, 0, flags, 1.0, SHAPE_CUBE, trim_color);
 		} // for ds
