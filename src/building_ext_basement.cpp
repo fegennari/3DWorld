@@ -1363,6 +1363,7 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 				populate_params_from_building(*b.interior, Pb);
 				if (!  is_basement_room_placement_valid(test_cube, P,  d,  dir, nullptr, &b  )) continue; // add_end_door=nullptr
 				if (!b.is_basement_room_placement_valid(test_cube, Pb, d, !dir, nullptr, this)) continue; // add_end_door=nullptr
+				if (has_bcube_int(cand_join, interior->missing_wall_segs) || has_bcube_int(cand_join, b.interior->missing_wall_segs)) continue;
 				Padd.rooms.emplace_back(cand_join, 1, 0, d, dir); // is_hallway=1, has_stairs=0
 				Padd.rooms.back().conn_bcube = *r2; // store room in the other building that we're connecting to in conn_bcube
 				if (r2 == r2_begin) {b.interior->conn_room_in_extb_hallway = 1;} // flag if connected to ext basement starting room
