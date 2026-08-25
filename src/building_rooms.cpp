@@ -1232,6 +1232,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			}
 			if (r->has_subroom()) {no_whiteboard = 1;} // whiteboard placer ingores sub-rooms
 			if (is_prison     ()) {no_whiteboard = 1;} // not even in prison office
+			bool has_door_sign(0);
 
 			if ((is_office || is_op_center) && !no_whiteboard && !(library_floor_mask & floor_mask) && !floor_will_alias) {
 				// office, no cubicles or bathroom, no library on this floor - maybe make it a library; applies to schools as well
@@ -1241,7 +1242,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 
 				if (make_library && add_library_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement)) {
 					r->assign_to(RTYPE_LIBRARY, f);
-					added_library = is_library = 1;
+					has_door_sign = added_library = is_library = 1;
 					library_floor_mask |= floor_mask; // mark this floor as having a library
 				}
 			}
@@ -1260,7 +1261,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				}
 			}
 			// office building part with primary hallway, first floor of first non-retail part; not for data centers because they should be group offices
-			else if (has_pri_hall() && !data_center && r->part_id == (has_retail() ? 1 : 0) && f == 0 && added_desk) {
+			else if (has_pri_hall() && !data_center && r->part_id == (has_retail() ? 1 : 0) && f == 0 && added_desk && !has_door_sign) {
 				add_office_door_sign(rgen, *r, room_center.z, room_id);
 			}
 			// should mall bathrooms have stains? I suppose so
