@@ -163,14 +163,11 @@ extern reflective_cobjs_t reflective_cobjs;
 void init_keyset();
 int load_config(string const &config_file);
 void init_lights();
-
 bool export_modmap(string const &filename);
 void reset_planet_defaults();
 void invalidate_cached_stars();
 void clear_default_vao();
-
 void create_sin_table();
-
 void clear_sm_tree_vbos();
 void clear_scenery_vbos();
 void clear_asteroid_contexts();
@@ -179,7 +176,6 @@ void clear_vbo_ring_buffer();
 void free_cloud_context();
 void free_universe_context();
 void free_animal_context();
-
 void setup_linear_fog(colorRGBA const &color, float fog_end);
 void write_map_mode_heightmap_image();
 void apply_grass_scale();
@@ -188,9 +184,9 @@ void teleport_to_map_location();
 void building_gameplay_action_key(int mode, bool mouse_wheel);
 float get_player_building_speed_mult();
 void toggle_city_spectate_mode();
-
 float get_tt_building_sound_gain();
 void regen_buildings();
+void openal_next_frame();
 
 
 // all OpenGL error handling goes through these functions
@@ -576,6 +572,7 @@ void update_sound_loops() {
 	set_sound_loop_state(SOUND_LOOP_UNDERWATER, (sound_enable && (underwater || player_in_water == 2) && frame_counter > change_wmode_frame+1));
 	dist_to_fire_sq = 0.0;
 	proc_delayed_and_placed_sounds();
+	openal_next_frame();
 }
 
 

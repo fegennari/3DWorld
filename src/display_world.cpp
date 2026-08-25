@@ -81,7 +81,6 @@ void print_texture_memory_usage();
 void show_debug_event_pos(point const &pos);
 void log_location(point const &pos);
 point get_world_space_camera_pos();
-
 vector3d calc_camera_direction();
 void draw_player_model(point const &pos, vector3d const &dir, int time);
 void building_gameplay_next_frame(); // from building_interact.cc

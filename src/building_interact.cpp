@@ -1937,7 +1937,12 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 			//else if (room_type == RTYPE_LAUNDRY ) {}
 		}
 	} // end player_in_this_building
-	if (hum_amt > 0.0) {play_hum_sound(player_pos, hum_amt, 0.01*hum_freq);}
+	if (hum_amt > 0.0) {
+		point hum_pos(player_pos);
+		hum_pos.z += CAMERA_RADIUS; // above the player's head
+		hum_pos   += CAMERA_RADIUS*cview_dir; // a bit in front
+		play_hum_sound(hum_pos, hum_amt, 0.01*hum_freq);
+	}
 	doors_next_frame(player_pos); // run for current and connected buildings
 	interior->room_geom->next_frame(*this, player_pos);
 	if (is_heavy_industrial()) {interior->ind_info->next_frame(interior->room_geom->particle_manager);} // update factory/powerplant smoke

@@ -101,6 +101,7 @@ public:
 	void free_source();
 	void setup(openal_buffer const &buffer, point const &pos, unsigned sound_id, float gain=1.0, float pitch=1.0,
 		bool looping=0, bool rel_to_listener=0, vector3d const &vel=zero_vector);
+	void update(unsigned sid, point const &pos, float gain, float pitch);
 	void set_pos(point const &pos);
 	void set_gain(float gain);
 	void set_buffer(openal_buffer const &buffer) {set_buffer_ix(buffer.get_buffer_ix());}
@@ -135,6 +136,7 @@ public:
 	void pause_source (unsigned id) const {get_source(id).pause ();}
 	void rewind_source(unsigned id) const {get_source(id).rewind();}
 	bool is_playing_sound(unsigned sid) const;
+	void update_sound(unsigned sid, point const &pos, float gain, float pitch);
 	bool check_for_active_sound(point const &pos, float radius, float min_gain=0.0) const;
 };
 
@@ -159,7 +161,6 @@ void set_sound_loop_state(unsigned id, bool play, float volume=0.0);
 bool check_for_active_sound(point const &pos, float radius, float min_gain=0.0);
 void add_placed_sound(std::string const &fn, sound_params_t const &params, sensor_t const &sensor=sensor_t());
 void write_placed_sounds_to_cobj_file(std::ostream &out);
-void setup_openal_listener(point const &pos, vector3d const &vel, openal_orient const &orient);
 void set_openal_listener_as_player();
 void gen_sound(unsigned id, point const &pos, float gain=1.0, float pitch=1.0, bool rel_to_listener=0, vector3d const &vel=zero_vector, bool skip_if_already_playing=0);
 void gen_sound_random_var(unsigned id, point const &pos, float gain=1.0, float pitch=1.0);
