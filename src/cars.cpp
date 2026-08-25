@@ -691,7 +691,7 @@ bool is_active_emergency_vehicle(car_model_loader_t const &car_model_loader, car
 	assert(lights || siren); // at least one
 	if (!car.is_police && !car.is_ambulance) return 0;
 	if (car.is_parked()) return 0;
-	unsigned const active_mod(lights ? 5 : 12); // lights 20% of the time, sirens 8.3% of the time
+	unsigned const active_mod(lights ? 5 : 15); // lights 20% of the time, sirens 6.7% of the time; siren mod must be a multiple of lights mod
 	return !(car.get_unique_id() % active_mod);
 }
 float get_flash_cycle(car_t const &car) {
