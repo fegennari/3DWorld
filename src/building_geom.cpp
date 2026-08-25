@@ -1732,7 +1732,7 @@ void building_t::add_rooftop_sat_dish(cube_t const &top, float radius, rand_gen_
 		bool const ddir(rgen.rand_bool());
 		dish_center[d] = top.d[d][ddir] + (ddir ? -1.0 : 1.0)*1.0*radius;
 	}
-	cube_t const sd_bc(get_cube_height_radius(dish_center, radius, 2.5*radius));
+	cube_t const sd_bc(get_cube_height_radius(dish_center, radius, 3.2*radius));
 	if (!is_house && has_bcube_int(sd_bc, details)) return; // can fail for data centers
 	details.emplace_back(sd_bc, ROOF_OBJ_SAT_DISH);
 }
