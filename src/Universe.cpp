@@ -502,7 +502,6 @@ void invalidate_cached_stars() {++star_cache_ix;}
 // no_distant: 0: draw everything, 1: draw current cell only, 2: draw current system only
 void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool no_move, int no_distant, bool gen_only, bool no_asteroid_dust) {
 
-	//RESET_TIME;
 	if (animate2) {cloud_time += fticks;}
 	unpack_color(water_c, P_WATER_C); // recalculate every time
 	unpack_color(ice_c,   P_ICE_C  );
@@ -543,8 +542,6 @@ void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool n
 			if (cell.is_visible()) {cell.draw_systems(usg, clobj, pass, no_move, skip_closest, 1, gen_only, no_asteroid_dust);} // and asteroids
 		}
 	}
-	//PRINT_TIME("Draw Cells");
-	//exit(0);
 }
 
 
@@ -1285,7 +1282,6 @@ void ugalaxy::calc_bounding_sphere() {
 void ugalaxy::process(ucell const &cell) {
 
 	if (gen) return;
-	//RESET_TIME;
 	current.type = UTYPE_GALAXY;
 	set_rseeds();
 
@@ -1348,13 +1344,11 @@ void ugalaxy::process(ucell const &cell) {
 	calc_bounding_sphere();
 	calc_color();
 	lrq_rad = 0.0;
-	//PRINT_TIME("Gen Galaxy");
 
 	if (num_systems > MAX_SYSTEMS_PER_GALAXY/4 && rand_float2() < NEBULA_PROB) { // gen nebula
 		nebula.pos = gen_valid_system_pos();
 		nebula.gen(radius, *this);
 	}
-	//PRINT_TIME("Gen Nebula");
 
 	// gen asteroid fields
 	unsigned const num_af(rand_uniform_uint2(MIN_AST_FIELD_PER_GALAXY, MAX_AST_FIELD_PER_GALAXY));
@@ -1363,7 +1357,6 @@ void ugalaxy::process(ucell const &cell) {
 	for (vector<uasteroid_field>::iterator i = asteroid_fields.begin(); i != asteroid_fields.end(); ++i) {
 		i->init(gen_valid_system_pos(), radius*rand_uniform2(0.005, 0.01));
 	}
-	//PRINT_TIME("Gen Asteroid Fields");
 	gen = 1;
 }
 

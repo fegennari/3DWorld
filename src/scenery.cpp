@@ -1250,7 +1250,6 @@ bool check_valid_scenery_pos(burnable_scenery_obj const &obj) {return check_vali
 
 void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool fixed_sz_rock_cache, tree_cont_t const &trees) { // called in tiled terrain mode
 
-	//RESET_TIME;
 	unsigned const smod(max(200U, unsigned(3.321f*XY_MULT_SIZE/(tree_scale+1))));
 	float const min_stump_z(water_plane_z + 0.010*zmax_est);
 	float const min_plant_z(water_plane_z + 0.016*zmax_est);
@@ -1395,7 +1394,6 @@ void scenery_group::post_gen_setup(tree_cont_t const &trees) {
 	}
 	for (auto &log   : logs  ) {log  .cache_closest_tree_type(trees);}
 	for (auto &stump : stumps) {stump.cache_closest_tree_type(trees);}
-	//PRINT_TIME("Gen Scenery");
 }
 
 void scenery_group::draw_plant_leaves(shader_t &s, bool shadow_only, vector3d const &xlate, bool reflection_pass) {

@@ -670,12 +670,10 @@ void reset_snow_vbos() {
 	snow_tbt_data.clear_context();
 }
 
-
 void draw_snow(bool shadow_only) {
 
 	has_snow = snow_enabled();
 	if (!has_snow) return;
-	//RESET_TIME;
 	shader_t s;
 	bool const use_smap(!shadow_only && shadow_map_enabled());
 	bool const detail_normal_map(!shadow_only); //  && camera_mode == 1?
@@ -713,7 +711,6 @@ void draw_snow(bool shadow_only) {
 	glDisable(GL_PRIMITIVE_RESTART);
 	s.clear_specular();
 	s.end_shader();
-	//PRINT_TIME("Snow Draw");
 }
 
 

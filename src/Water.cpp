@@ -901,7 +901,6 @@ void add_splash(point const &pos, int xpos, int ypos, float energy, float radius
 
 void add_waves() { // add waves due to wind
 
-	//RESET_TIME;
 	if (DISABLE_WATER || !(display_mode & 0x04) || !(display_mode & 0x0100) || water_is_lava) return;
 	if (temperature <= W_FREEZE_POINT || !animate2) return;
 	float const wave_amplitude(0.006/mesh_scale), wave_freq(0.06), depth_scale(20.0);
@@ -935,7 +934,6 @@ void add_waves() { // add waves due to wind
 			start_ripple = 1;
 		}
 	}
-	//PRINT_TIME("Add Waves");
 }
 
 

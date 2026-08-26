@@ -197,7 +197,6 @@ bool blastr::next_frame(unsigned i) {
 
 void update_blasts() {
 
-	//RESET_TIME;
 	if (animate2) {
 		cur_explosion_sphere = sphere_t(); // reset for next iteration
 		cur_explosion_weight = 0.0;
@@ -205,7 +204,6 @@ void update_blasts() {
 	unsigned const nbr((unsigned)blastrs.size());
 	if (world_mode == WMODE_UNIVERSE) {calc_lit_uobjects();}
 	for (unsigned i = 0; i < nbr; ++i) {blastrs[i].next_frame(i);}
-	//PRINT_TIME("Update Blasts");
 }
 
 
@@ -270,7 +268,6 @@ void draw_billboard_explosion(blastr const &br, quad_batch_draw &qbd, point cons
 void draw_blasts(shader_t &s) {
 
 	if (blastrs.empty()) return;
-	//RESET_TIME;
 	bool const universe(world_mode == WMODE_UNIVERSE);
 	int const min_alpha_loc(s.get_uniform_loc("min_alpha"));
 	//s.set_uniform_float(min_alpha_loc, 0.05);
@@ -416,11 +413,9 @@ void draw_blasts(shader_t &s) {
 		if (end_type) {set_std_blend_mode();}
 	} // for i
 	disable_blend();
-	//PRINT_TIME("Draw Blasts");
 }
 
 void draw_universe_blasts() {
-
 	if (blastrs.empty()) return;
 	shader_t s;
 	s.begin_simple_textured_shader();

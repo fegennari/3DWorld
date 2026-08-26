@@ -730,13 +730,11 @@ void create_waypoints(vector<user_waypt_t> const &user_waypoints) {
 int find_optimal_next_waypoint(unsigned cur, wpt_goal const &goal, set<unsigned> const &wps_penalty) {
 
 	if (!goal.is_reachable()) return -1; // nothing to do
-	//RESET_TIME;
 	vector<unsigned> path;
 	waypoint_search ws(goal, global_wpt_cache);
 	vector<pair<unsigned, float> > start;
 	start.push_back(make_pair(cur, 0.0));
 	ws.run_a_star(start, path, wps_penalty);
-	//PRINT_TIME("A Star");
 	if (path.empty())     return -1; // no path to goal
 	assert(path[0] == cur);
 	if (path.size() == 1) return cur; // already at goal
@@ -748,7 +746,6 @@ int find_optimal_next_waypoint(unsigned cur, wpt_goal const &goal, set<unsigned>
 void find_optimal_waypoint(point const &pos, vector<od_data> &oddatav, wpt_goal const &goal) {
 
 	if (oddatav.empty() || !goal.is_reachable()) return; // nothing to do
-	//RESET_TIME;
 	vector<pair<float, unsigned> > cands(oddatav.size());
 	vector<pair<unsigned, float> > start;
 	waypoint_builder wb;
@@ -776,7 +773,6 @@ void find_optimal_waypoint(point const &pos, vector<od_data> &oddatav, wpt_goal 
 	waypoint_search ws(goal, global_wpt_cache);
 	vector<unsigned> path;
 	ws.run_a_star(start, path, set<unsigned>());
-	//PRINT_TIME("Find Optimal Waypoint");
 	if (path.empty()) return; // no path found, nothing to do
 	unsigned const best(path[0]);
 

@@ -175,7 +175,6 @@ public:
 	}
 	void render() const { // partially transparent
 		if (empty()) return;
-		//RESET_TIME;
 		assert(!(size() & 1));
 		enable_blend(); // split into point smooth and blend?
 		shader_t s;
@@ -185,7 +184,6 @@ public:
 		drawer.draw(); // draw nearby raindrops as triangles (0.02ms for default rain intensity)
 		s.end_shader();
 		disable_blend();
-		//PRINT_TIME("Rain Draw"); // similar to update time
 
 		if (!splashes.empty()) { // 0.08ms for default rain intensity
 			ensure_filled_polygons();
@@ -197,7 +195,6 @@ public:
 			s.end_shader();
 			disable_blend();
 			reset_fill_mode();
-			//PRINT_TIME("Rain Draw + Splashes"); // 25-50% longer
 		}
 		glDepthMask(GL_TRUE);
 	}

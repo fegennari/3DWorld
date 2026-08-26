@@ -656,7 +656,6 @@ float get_ocean_wave_height() {
 
 void draw_sun_flare(int ignore_cobj=-1, float intensity=1.0) {
 
-	//RESET_TIME;
 	if (!is_sun_flare_visible()) return;
 	point const sun_pos(get_sun_pos()), viewer(get_camera_pos());
 	//if (is_cloudy) {intensity *= 0.7;}
@@ -689,7 +688,6 @@ void draw_sun_flare(int ignore_cobj=-1, float intensity=1.0) {
 		if (viewer.z < water_plane_z) {intensity *= CLIP_TO_01(1.0f - 1.0f*(water_plane_z - viewer.z));} // attenuate sun flare when underwater
 	}
 	DoFlares(viewer, camera_origin, sun_pos, 1.0, (combined_gu ? 15.0*univ_sun_rad : 1.0), intensity);
-	//PRINT_TIME("Query + Flare");
 }
 
 

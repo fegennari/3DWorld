@@ -384,7 +384,6 @@ void apply_explosion(point const &pos, float radius, float damage, unsigned efla
 
 void calc_lit_uobjects() {
 
-	//RESET_TIME;
 	c_uobjs_lit.resize(0);
 	uobjs_lit_rmax = 0.0;
 
@@ -394,7 +393,6 @@ void calc_lit_uobjects() {
 			uobjs_lit_rmax = max(uobjs_lit_rmax, i->radius);
 		}
 	}
-	//PRINT_TIME("Calc Lit Uobjects");
 }
 
 

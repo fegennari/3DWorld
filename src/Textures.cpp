@@ -1524,7 +1524,6 @@ void texture_t::update_texture_data(int x1, int y1, int x2, int y2) {
 
 void regrow_landscape_texture_amt0() {
 
-	//RESET_TIME;
 	static int counter(0);
 	if (using_custom_landscape_texture() || iticks == 0) return; // is it too strong to use both iticks and fticks?
 	if (ls0_invalid) create_landscape_texture();
@@ -1547,7 +1546,6 @@ void regrow_landscape_texture_amt0() {
 	++counter;
 	skip_regrow = 0;
 	tex.update_texture_data(0, y1, tex.width, y2);
-	//PRINT_TIME("Regrow");
 }
 
 
@@ -1706,7 +1704,6 @@ void add_snow_to_landscape_texture(point const &pos, float acc) {
 
 void update_landscape_texture() {
 
-	//RESET_TIME;
 	ls_color_texels.clear();
 	if (landscape_changed)  lchanged0 = 1; // this is set if landscape ever changed
 	if (lchanged0)          regrow_landscape_texture_amt0();
@@ -1731,17 +1728,12 @@ void update_landscape_texture() {
 		landscape_changed = 0;
 	}
 	update_lt_section(ltx1, lty1, ltx2, y2);
-	//PRINT_TIME("Update");
 }
 
-
 void update_lt_section(int x1, int y1, int x2, int y2) {
-
-	//RESET_TIME;
 	if (x1 == x2 || y1 == y2) return;
 	assert(!using_custom_landscape_texture());
 	textures[LANDSCAPE_TEX].update_texture_data(x1, y1, x2, y2);
-	//PRINT_TIME("LT Update");
 }
 
 

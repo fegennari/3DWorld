@@ -2797,12 +2797,10 @@ void tile_draw_t::pre_draw() { // view-dependent updates/GPU uploads
 		}
 	} // for i
 	if (enable_instanced_pine_trees() && !to_gen_trees.empty()) {create_pine_tree_instances();}
-	//RESET_TIME;
 	// don't use parallel tree gen for a single tile or when using GPU noise
 	bool const use_mt(to_gen_trees.size() > 1 && mesh_gen_mode != MGEN_SIMPLEX_GPU && mesh_gen_mode != MGEN_DWARP_GPU);
 #pragma omp parallel for schedule(dynamic,1) if (use_mt)
 	for (int i = 0; i < (int)to_gen_trees.size(); ++i) {to_gen_trees[i]->init_pine_tree_draw();}
-	//if (!to_gen_trees.empty()) {PRINT_TIME("Gen Trees2");}
 	assert(!height_gens.empty());
 	
 	for (tile_t *t : to_update) {
@@ -3985,7 +3983,6 @@ void inf_terrain_fire_weapon() {
 		tt_fire_button_down = 1;
 		return; // ignore
 	}
-	//RESET_TIME;
 	static double last_tfticks(0.0);
 	if ((tfticks - last_tfticks) <= cur_brush_param.delay) return; // limit firing rate
 	last_tfticks = tfticks;
@@ -4019,7 +4016,6 @@ void inf_terrain_fire_weapon() {
 	tex_mod_map_manager_t::hmap_val_t const base_delta(terrain_hmap_manager.scale_delta(delta_mag));
 	tex_mod_map_manager_t::hmap_brush_t const brush(xpos, ypos, base_delta, bradius, shape);
 	terrain_hmap_manager.apply_brush(brush, tile, 1); // cache
-	//PRINT_TIME("Hmap Brush");
 }
 
 void inf_terrain_undo_hmap_mod() {

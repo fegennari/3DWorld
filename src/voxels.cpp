@@ -1364,7 +1364,6 @@ unsigned voxel_model::get_texture_at(point const &pos) const {
 void voxel_model::proc_pending_updates(bool postproc_brushes_mode) {
 
 	if (modified_blocks.empty()) return;
-	//RESET_TIME;
 
 	if (params.remove_unconnected >= 2) {
 		if (postproc_brushes_mode) { // iterate until all blocks stop falling
@@ -1376,7 +1375,6 @@ void voxel_model::proc_pending_updates(bool postproc_brushes_mode) {
 				next_frame_modified_blocks.clear();
 			}
 			modified_blocks.swap(orig_modified_blocks); // restore so we can update all the original blocks that were modified
-			//PRINT_TIME("  Process Brush Updates");
 		}
 		else { // only call once (fall one step)
 			remove_unconnected_outside_modified_blocks(0);
@@ -1409,7 +1407,6 @@ void voxel_model::proc_pending_updates(bool postproc_brushes_mode) {
 			calc_ao_lighting_for_block(blocks_to_update[i], !volume_added); // update can only remove, so lighting can only increase
 		}
 		update_blocks_hook(blocks_to_update, tot_num_added);
-		//PRINT_TIME(postproc_brushes_mode ? "  Process Voxel Updates" : "Process Voxel Updates");
 	}
 	modified_blocks = next_frame_modified_blocks;
 	next_frame_modified_blocks.clear();

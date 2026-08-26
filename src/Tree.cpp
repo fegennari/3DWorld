@@ -226,7 +226,6 @@ bool tree::is_over_mesh() const {
 
 void tree::add_tree_collision_objects() {
 
-	//RESET_TIME;
 	if (!tree_coll_level || !physics_enabled()) return;
 	remove_collision_objects();
 	if (!is_over_mesh()) return; // optimization
@@ -261,7 +260,6 @@ void tree::add_tree_collision_objects() {
 			coll_objects[leaf_cobjs[i]].is_billboard = 1;
 		}
 	}
-	//PRINT_TIME("Tree Cobjs");
 }
 
 
@@ -1550,7 +1548,6 @@ void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_
 void tree_data_t::gen_tree_data(int tree_type_, int size, float tree_depth, float height_scale, float br_scale_mult,
 	float nl_scale, float bbo_scale, bool has_4th_branches_, cube_t const *clip_cube, bool create_bush, rand_gen_t &rgen)
 {
-	//RESET_TIME;
 	tree_type = tree_type_;
 	has_4th_branches = has_4th_branches_;
 	assert(tree_type < NUM_TREE_TYPES);
@@ -1600,7 +1597,6 @@ void tree_data_t::gen_tree_data(int tree_type_, int size, float tree_depth, floa
 	lr_z_cent     = 0.5f*(lr_z1 + lr_z2);
 	lr_z          = 0.5f*(lr_z2 - lr_z1);
 	reverse(leaves.begin(), leaves.end()); // order leaves so that LOD removes from the center first, which is less noticeable
-	//PRINT_TIME("Gen Tree");
 }
 
 

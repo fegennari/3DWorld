@@ -226,8 +226,6 @@ void cloud_manager_t::draw(bool no_update) {
 	if (atmosphere < 0.01) return; // no atmosphere
 	create_clouds();
 	if (empty()) return;
-	//RESET_TIME;
-
 	// wind moves clouds?
 
 	// light source code
@@ -270,7 +268,6 @@ void cloud_manager_t::draw(bool no_update) {
 	s.end_shader();
 	glEnable(GL_DEPTH_TEST);
 	set_multisample(1);
-	//PRINT_TIME("Clouds");
 }
 
 

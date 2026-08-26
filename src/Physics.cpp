@@ -1586,7 +1586,6 @@ bool physics_particle_manager::is_pos_valid(point const &pos) const {
 void physics_particle_manager::apply_physics(float gravity, float terminal_velocity, bool emissive) {
 
 	if (parts.empty()) return;
-	//RESET_TIME;
 	unsigned o(0);
 	float const g_acc(base_gravity*GRAVITY*tstep*gravity), xy_damp(pow(0.98f, fticks));
 
@@ -1608,7 +1607,6 @@ void physics_particle_manager::apply_physics(float gravity, float terminal_veloc
 		if (is_pos_valid(part.p)) {parts[o++] = part;} // above water and mesh - copy/compact
 	}
 	parts.resize(o);
-	//PRINT_TIME("Particle Physics"); // 0.07ms average / 0.24ms with collisions
 }
 
 void water_particle_manager::apply_physics() {

@@ -101,16 +101,12 @@ public:
 	}
 	void update() {
 		if (!animate2) return;
-		//RESET_TIME;
 		for (auto i = trail_map.begin(); i != trail_map.end(); ) { // Note: no increment
 			if (!i->second.update()) {trail_map.erase(i++);} else {++i;} // update and remove if empty
 		}
-		//PRINT_TIME("Trail Update");
 	}
 	void draw(line_tquad_draw_t &drawer) const {
-		//RESET_TIME;
 		for (auto i = trail_map.begin(); i != trail_map.end(); ++i) {i->second.draw(drawer);}
-		//PRINT_TIME("Trail Draw");
 	}
 };
 
@@ -133,7 +129,6 @@ void usw_ray::draw(line_tquad_draw_t &drawer, point const *prev, point const *ne
 void usw_ray_group::draw(float noise_scale) {
 
 	if (empty() && drawer.empty()) return;
-	//RESET_TIME;
 	drawer.reserve_verts(drawer.size() + 9*size()); // 3 triangles per ray
 	glDepthMask(GL_FALSE);
 
@@ -144,7 +139,6 @@ void usw_ray_group::draw(float noise_scale) {
 	}
 	drawer.draw_and_clear(noise_scale);
 	glDepthMask(GL_TRUE);
-	//PRINT_TIME("Ray Draw");
 }
 
 

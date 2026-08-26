@@ -968,13 +968,10 @@ void uasteroid_belt::gen_belt_placements(unsigned max_num, float belt_width, flo
 
 
 void uasteroid_belt_system::gen_asteroid_placements() { // radius is the asteroid belt distance from the sun
-
-	//RESET_TIME;
 	float const belt_width(AB_WIDTH_TO_RADIUS*rand_uniform2(0.9, 1.1)*radius);
 	float const belt_thickness(AB_THICK_TO_WIDTH*rand_uniform2(0.9, 1.1)*belt_width);
 	temperature = system->sun.get_temperature_at_dist(radius);
 	gen_belt_placements(AST_BELT_MAX_NS, belt_width, belt_thickness, 0.002*radius); // circular orbit, animated
-	//PRINT_TIME("Asteroid Belt"); // 4ms
 }
 
 
@@ -1112,14 +1109,11 @@ void uasteroid_field::apply_physics(point_d const &pos_, point const &camera) { 
 
 
 void uasteroid_belt_system::apply_physics(upos_point_type const &pos_, point const &camera) { // only needs to be called when visible
-
 	if (!animate2 || empty()) return;
-	//RESET_TIME;
 	calc_colliders();
 	upos_point_type const opn(orbital_plane_normal);
 	for (iterator i = begin(); i != end(); ++i) {i->apply_belt_physics(pos, opn, orbit_scale, colliders);}
 	calc_shadowers();
-	//PRINT_TIME("Physics"); // < 1ms
 	// no collision detection between asteroids as it's rare and too slow
 }
 

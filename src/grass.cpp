@@ -312,7 +312,6 @@ public:
 					}
 				}
 			}
-			//PRINT_TIME("Grass Occlusion");
 		}
 		vector<vector<unsigned>> mesh_to_grass_local(MESH_Y_SIZE); // one per Y row
 		vector<vector<grass_t>> grass_local(MESH_Y_SIZE); // one per Y row
@@ -670,7 +669,6 @@ public:
 	void draw() {
 		if (empty()) return;
 		if (use_grass_tess && !check_for_tess_shader()) {use_grass_tess = 0;} // disable tess - not supported
-		//RESET_TIME;
 		check_for_updates();
 		shader_t s;
 		setup_shaders(s, 1); // enables lighting and shadows as well
@@ -732,7 +730,6 @@ public:
 			end_draw();
 			s.end_shader();
 		}
-		//PRINT_TIME("Draw Grass");
 	}
 };
 
@@ -847,7 +844,6 @@ void flower_manager_t::scale_flowers(float lscale, float wscale) {
 void flower_tile_manager_t::gen_flowers(vector<unsigned char> const &weight_data, unsigned wd_stride, int x1, int y1, unsigned tsize_bitshift) {
 
 	if (skip_generate()) return;
-	//RESET_TIME;
 	assert(empty()); // or call clear()?
 	rgen.set_state(x1+xoff2+123, y1+yoff2+456); // deterministic for each tile
 	mesh_xy_grid_cache_t density_gen[2]; // density thresh, color selection
@@ -872,7 +868,6 @@ void flower_tile_manager_t::gen_flowers(vector<unsigned char> const &weight_data
 		} // for x
 	} // for y
 	generated = 1;
-	//PRINT_TIME("Gen Flowers TT");
 }
 
 void flower_tile_manager_t::update_subrange(vector<unsigned char> const &weight_data, unsigned wd_stride, int x1, int y1, int xl, int yl, int xh, int yh) {

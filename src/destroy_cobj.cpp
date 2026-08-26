@@ -33,7 +33,6 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 
 void destroy_coll_objs(point const &pos, float damage, int shooter, int damage_type, float force_radius, cube_t const &custom_cube) {
 
-	//RESET_TIME;
 	assert(damage >= 0.0);
 	if (damage < 100.0) return;
 	float const radius((force_radius > 0.0) ? force_radius : ((damage_type == BLAST_RADIUS) ? 4.0 : 1.0)*sqrt(damage)/650.0);
@@ -134,7 +133,6 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, int damage_t
 		if (shattered && tri_fragments && cts[i].maybe_is_glass()) {maybe_is_glass = 1;}
 	} // for i
 	gen_delayed_from_player_sound((maybe_is_glass ? (unsigned)SOUND_GLASS : (unsigned)SOUND_WOOD_CRACK), pos);
-	//PRINT_TIME("Destroy Cobjs");
 }
 
 
@@ -258,7 +256,6 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 
 	if (destroy_thresh >= EXPLODEABLE) return 0;
 	if (cube_in.is_zero_area())        return 0;
-	//RESET_TIME;
 	csg_cube cube(cube_in); // allow cube to be modified
 	coll_obj_group &cobjs(coll_objects); // so we don't have to rename everything and can keep the shorter code
 	point center(cube.get_cube_center());
@@ -358,7 +355,6 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 
 	// process unanchored cobjs
 	if (LET_COBJS_FALL || REMOVE_UNANCHORED) {
-		//RESET_TIME;
 		set<unsigned> anchored[2]; // {unanchored, anchored}
 
 		for (unsigned i = 0; i < to_remove.size(); ++i) { // cobjs in to_remove are freed but still valid
@@ -385,10 +381,8 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 		else if (LET_COBJS_FALL) {
 			add_to_falling_cobjs(anchored[0]);
 		}
-		//PRINT_TIME("Check Anchored");
 	}
 	if (!to_remove.empty()) {cdir.normalize();}
-	//PRINT_TIME("Subtract Cube");
 	return (unsigned)to_remove.size();
 }
 
@@ -396,7 +390,6 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 void check_falling_cobjs() {
 
 	if (falling_cobjs.empty()) return; // nothing to do
-	//RESET_TIME;
 	float const accel(-0.5*base_gravity*GRAVITY*tstep); // half gravity
 	set<unsigned> anchored[2]; // {unanchored, anchored}
 
@@ -429,7 +422,6 @@ void check_falling_cobjs() {
 		invalidate_static_cobjs();
 		scene_smap_vbo_invalid = 2; // full rebuild of shadowers
 	}
-	//PRINT_TIME("Check Falling Cobjs");
 }
 
 

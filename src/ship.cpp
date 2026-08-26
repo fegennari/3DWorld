@@ -630,7 +630,6 @@ bool proc_coll(free_obj *o1, free_obj *o2) {
 
 void collision_detect_objects(vector<cached_obj> &objs, unsigned t) {
 
-	//RESET_TIME;
 	unsigned const size((unsigned)objs.size());
 	static vector<interval> intervals;
 	intervals.clear();
@@ -697,7 +696,6 @@ void collision_detect_objects(vector<cached_obj> &objs, unsigned t) {
 		}
 	}
 	assert(work.empty());
-	//PRINT_TIME("Collision");
 }
 
 
@@ -1018,7 +1016,6 @@ void setup_shield_shader(shader_t &shader, int noise_tu_id) {
 
 void draw_univ_objects() {
 
-	//RESET_TIME;
 	unsigned const nobjs((unsigned)c_uobjs.size());
 	static vector<pair<float, free_obj *> > sorted;
 	static vector<free_obj *> unsorted;
@@ -1065,7 +1062,6 @@ void draw_univ_objects() {
 		}
 	} // for i
 	sort(sorted.begin(), sorted.end()); // sort uobjs by distance to camera
-	//PRINT_TIME("Sort");
 	select_no_texture(); // always textured (see end_texture())
 	enable_blend(); // doesn't hurt
 
@@ -1116,7 +1112,6 @@ void draw_univ_objects() {
 		draw_all_crosshairs(ch_pld);
 		chs.end_shader();
 	}
-	//PRINT_TIME("Draw");
 }
 
 

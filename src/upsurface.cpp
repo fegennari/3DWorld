@@ -190,7 +190,6 @@ void urev_body::gen_surface() {
 // the rest of the 3DWorld sphere generation and drawing code; it also produces more uniform regions near the poles
 void urev_body::gen_texture_data_and_heightmap(unsigned char *data, unsigned size) {
 
-	//RESET_TIME;
 	get_colors(a, b);
 	unsigned size_p2(0);
 	for (unsigned sz = size; sz > 1; sz >>= 1, ++size_p2);
@@ -253,7 +252,6 @@ void urev_body::gen_texture_data_and_heightmap(unsigned char *data, unsigned siz
 			cos_s = c*cos_ds - s*sin_ds;
 		} // for j
 	} // for i
-	//if (size >= MAX_TEXTURE_SIZE) PRINT_TIME("Gen");
 }
 
 
