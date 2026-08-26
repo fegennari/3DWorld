@@ -14,12 +14,10 @@ using namespace std;
 
 int write_jpeg_data(string const &fn, unsigned char const *const data, unsigned width, unsigned height, bool invert_y);
 bool write_rgb_bmp_image(string const &fn, unsigned char *data, unsigned width, unsigned height, unsigned ncolors);
-
 void print_text_onscreen_default(string const &text);
 
 
 void read_depth_buffer(unsigned window_width, unsigned window_height, vector<float> &depth, bool normalize) {
-
 	depth.resize(window_width*window_height, 0.0);
 	glReadBuffer(GL_FRONT);
 	glReadPixels(0, 0, window_width, window_height, GL_DEPTH_COMPONENT, GL_FLOAT, depth.data());
@@ -32,7 +30,6 @@ void read_depth_buffer(unsigned window_width, unsigned window_height, vector<flo
 }
 
 void read_pixels(unsigned window_width, unsigned window_height, vector<unsigned char> &buf) {
-
 	unsigned const num_bytes(window_width*window_height*3);
 	if (buf.size() < num_bytes) {buf.resize(num_bytes);}
 #if 0 // for debugging depth buffer
@@ -47,7 +44,6 @@ void read_pixels(unsigned window_width, unsigned window_height, vector<unsigned 
 }
 
 int screenshot(unsigned window_width, unsigned window_height, char const *const file_path, bool write_bmp) {
-
 	static unsigned ss_id(0);
 	ostringstream oss;
 	if (file_path != nullptr) {oss << file_path;}

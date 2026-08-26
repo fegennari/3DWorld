@@ -139,7 +139,6 @@ public:
 
 
 class rain_manager_t : public precip_manager_t<2> {
-
 	deque<sphere_t> splashes;
 	quad_batch_draw splash_qbd;
 	line_tquad_draw_t drawer;
@@ -294,7 +293,6 @@ void draw_local_precipitation(bool no_update) {
 		rain_manager.render();
 	}
 }
-
 
 void draw_underwater_particles(float terrain_zmin, colorRGBA const &base_color) {
 	if (temperature <= W_FREEZE_POINT) {uw_part_manager.clear(); return;} // frozen, no particles

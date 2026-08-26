@@ -43,7 +43,6 @@ extern llv_vect local_light_volumes;
 
 
 bool check_smoke_bounds(point const &pt) {
-
 	for (vector<cube_t>::const_iterator i = smoke_bounds.begin(); i != smoke_bounds.end(); ++i) {
 		if (i->contains_pt(pt)) return 1;
 	}
@@ -183,7 +182,6 @@ void diffuse_smoke_z(int x, int y, int z, lmcell &adj, lmcell *vldata, float pos
 
 void distribute_smoke() { // called at most once per frame
 
-	//RESET_TIME;
 	if (!DYNAMIC_SMOKE || !smoke_exists || !animate2) return;
 	assert(SMOKE_SKIPVAL > 0);
 	static int cur_skip(0);
@@ -238,12 +236,10 @@ void distribute_smoke() { // called at most once per frame
 		} // for x
 	} // for y
 	cur_skip = (cur_skip+1) % SMOKE_SKIPVAL;
-	//PRINT_TIME("Distribute Smoke");
 }
 
 
 float get_smoke_at_pos(point const &pos) {
-
 	if (!DYNAMIC_SMOKE  || !smoke_exists)  return 0.0;
 	if (pos.z <= czmin0 || pos.z >= czmax) return 0.0;
 	int const x(get_xpos(pos.x)), y(get_ypos(pos.y)), z(get_zpos(pos.z));
@@ -251,7 +247,6 @@ float get_smoke_at_pos(point const &pos) {
 	lmcell const *const vldata(lmap_manager.get_column(x, y));
 	return ((vldata == NULL) ? 0.0 : vldata[z].smoke);
 }
-
 
 void reset_smoke_tex_data() {smoke_tex_data.clear();}
 
@@ -360,7 +355,6 @@ void update_smoke_indir_tex_range(unsigned x_start, unsigned x_end, unsigned y_s
 
 bool upload_smoke_indir_texture() {
 
-	//RESET_TIME;
 	if (!lmap_manager.is_allocated()) {
 		have_indir_smoke_tex = 0;
 		return 0;
@@ -393,21 +387,18 @@ bool upload_smoke_indir_texture() {
 	if (full_update ) {last_cur_ambient  = cur_ambient; last_cur_diffuse = cur_diffuse;}
 	if (smoke_exists) {last_smoke_update = SMOKE_SEND_SKIP;} else if (last_smoke_update > 0) {--last_smoke_update;}
 	static int cur_block(0);
-	unsigned const skipval(could_have_smoke ? SMOKE_SEND_SKIP : INDIR_LT_SEND_SKIP);
-	unsigned const block_size(MESH_Y_SIZE/skipval);
+	unsigned const skipval(could_have_smoke ? SMOKE_SEND_SKIP : INDIR_LT_SEND_SKIP), block_size(MESH_Y_SIZE/skipval);
 	unsigned const y_start(full_update ? 0           :  cur_block*block_size);
 	unsigned const y_end  (full_update ? MESH_Y_SIZE : (y_start + block_size));
 	update_smoke_indir_tex_range(0, MESH_X_SIZE, y_start, y_end, 0, MESH_SIZE[2], full_update);
 	cur_block = (full_update ? 0 : (cur_block+1) % skipval);
 	if (cur_block == 0) {lmap_manager.was_updated = 0;} // only stop updating after we wrap around to the beginning again
 	have_indir_smoke_tex = 1;
-	//PRINT_TIME("Smoke + Indir Upload");
 	return 1;
 }
 
 
 // fire spreading
-
 
 bool fire_elem_t::burn(float val) {
 	if (fuel == 0.0) return 0; // no fuel, no burning
@@ -458,10 +449,9 @@ void update_dist_to_fire(point const &pos, float dist_mult) {
 }
 
 class ground_fire_manager_t {
-	
 	vector<fire_elem_t> grid;
 	fire_drawer_t fire_drawer;
-	bool has_fire;
+	bool has_fire=0;
 
 	bool burn_elem(int x, int y, float val) {
 		assert(val >= 0.0); // not negative
@@ -470,7 +460,6 @@ class ground_fire_manager_t {
 	}
 	bool empty() const {return grid.empty();}
 public:
-	ground_fire_manager_t() : has_fire(0) {}
 	bool is_active() const {return (!empty() && has_fire);}
 
 	void init() {

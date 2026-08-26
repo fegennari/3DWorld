@@ -329,8 +329,8 @@ float rand_tree_height(rand_gen_t &rgen) {return rgen.rand_uniform(0.4, 1.0);}
 float rand_tree_width (rand_gen_t &rgen) {return rgen.rand_uniform(0.25, 0.35);}
 
 struct tree_inst_range_t {
-	unsigned start, end;
-	tree_inst_range_t() : start(0), end(0) {}
+	unsigned start=0, end=0;
+
 	unsigned select_inst(rand_gen_t &rgen) const {
 		assert(start < end);
 		return (start + rgen.rand()%(end - start));
@@ -601,7 +601,6 @@ colorRGBA colorgen(float r1, float r2, float g1, float g2, float b1, float b2, r
 
 void gen_small_trees() { // called in ground mode
 	if (num_trees == 0) return;
-	//RESET_TIME;
 	
 	if (SMALL_TREE_COLL && !small_trees.empty()) {
 		remove_small_tree_cobjs();
@@ -612,9 +611,7 @@ void gen_small_trees() { // called in ground mode
 	small_trees = small_tree_group(); // really force a clear
 	small_trees.gen_trees(1, 1, MESH_X_SIZE-1, MESH_Y_SIZE-1, density);
 	small_trees.finalize(0);
-	//PRINT_TIME("Gen");
 	small_trees.add_cobjs();
-	//PRINT_TIME("Cobj");
 	cout << "small trees: " << small_trees.size() << endl;
 }
 
@@ -639,7 +636,6 @@ void draw_small_trees(bool shadow_only, int reflection_pass) {small_trees.draw(s
 
 void small_tree_group::draw(bool shadow_only, int reflection_pass) {
 
-	//RESET_TIME;
 	if (empty() || !small_trees_enabled()) return;
 	if (!all_bcube.is_zero_area() && !camera_pdu.cube_visible(all_bcube)) return;
 	if (!shadow_only && !reflection_pass && size() < 100) {sort_by_dist_to_camera();} // not in shadow pass, since trees usually don't overlap in z
@@ -697,7 +693,6 @@ void small_tree_group::draw(bool shadow_only, int reflection_pass) {
 		tree_scenery_pld.draw_and_clear();
 		s.end_shader();
 	}
-	//PRINT_TIME("small tree draw");
 }
 
 

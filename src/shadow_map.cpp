@@ -86,8 +86,7 @@ void ensure_smap_data() { // sun/moon
 
 
 class smap_vertex_cache_t : public vbo_wrap_t { // used for sun and moon shadows of dynamic objects in ground mode
-
-	unsigned num_verts1, num_verts2;
+	unsigned num_verts1=0, num_verts2=0;
 	vector<vert_wrap_t> dverts;
 	vector<unsigned> movable_cids;
 
@@ -128,7 +127,6 @@ public:
 	void render_dynamic() {
 		draw_and_clear_verts(dverts, GL_TRIANGLES);
 	}
-	smap_vertex_cache_t() : num_verts1(0), num_verts2(0) {}
 
 	void free() {
 		clear_vbo();
@@ -411,7 +409,6 @@ void pre_bind_smap_tus(shader_t &s) {
 
 // should this be a pos_dir_up member function?
 void set_smap_mvm_pjm(point const &eye, point const &center, vector3d const &up_dir, float angle, float aspect, float near_clip, float far_clip) {
-
 	fgMatrixMode(FG_PROJECTION);
 	fgLoadIdentity();
 	fgPerspective(2.0*angle/TO_RADIANS, aspect, near_clip, far_clip);
@@ -513,7 +510,6 @@ void set_shadow_tex_params(unsigned &tid, bool is_array, bool is_csm, bool use_w
 
 
 bool no_sparse_smap_update() {
-
 	if (world_mode != WMODE_GROUND) return 0;
 	bool const leaf_wind(num_trees > 0 && (display_mode & 0x0100) != 0 && (tree_mode & 1) != 0 && tree_deadness < 1.0 && vegetation > 0.0);
 	if (leaf_wind || !shadow_objs.empty() || platforms.any_active()) return 1;
@@ -524,23 +520,19 @@ bool no_sparse_smap_update() {
 
 
 bool smap_data_t::needs_update(point const &lpos) {
-
 	bool const ret(lpos != last_lpos);
 	last_lpos = lpos;
 	return (ret || !is_allocated());
 }
 
 bool ground_mode_smap_data_t::needs_update(point const &lpos) {
-
 	bool const has_dynamic(!is_allocated() || scene_smap_vbo_invalid || no_sparse_smap_update()); // Note: force two frames of updates the first time the smap is created by setting has_dynamic
 	bool const ret(smap_data_t::needs_update(lpos) || has_dynamic || last_has_dynamic || voxel_shadows_updated); // Note: see view clipping in indexed_vntc_vect_t<T>::render()
 	last_has_dynamic = has_dynamic;
 	return ret;
 }
 
-
 void smap_texture_array_t::ensure_tid(unsigned xsize, unsigned ysize) {
-
 	assert(xsize > 0 && ysize > 0 && num_layers > 0);
 	if (tid) return; // already allocated
 	++gen_id;
@@ -690,7 +682,6 @@ size_t smap_data_t::get_gpu_mem() const {
 }
 
 void draw_mesh_shadow_pass(point const &lpos, unsigned smap_sz) {
-
 	if (!(display_mode & 0x01) || ground_effects_level == 0) return;
 	fgPushMatrix();
 	float const val(1.0/dot_product(lpos.get_norm(), plus_z));
@@ -698,9 +689,7 @@ void draw_mesh_shadow_pass(point const &lpos, unsigned smap_sz) {
 	display_mesh(1);
 	fgPopMatrix();
 }
-
 void draw_outdoor_shadow_pass(point const &lpos, unsigned smap_sz) {
-
 	render_voxel_data(1);
 	if (snow_shadows) {draw_snow(1);} // slow
 	draw_trees(1); // shadow_only=1
@@ -709,7 +698,6 @@ void draw_outdoor_shadow_pass(point const &lpos, unsigned smap_sz) {
 }
 
 void ground_mode_smap_data_t::render_scene_shadow_pass(point const &lpos) {
-
 	point const camera_pos_(camera_pos);
 	camera_pos = lpos;
 	vector3d const light_dir(-pdu.pos.get_norm()); // approximate as directional light; should be close enough for culling cube faces
@@ -722,7 +710,6 @@ void ground_mode_smap_data_t::render_scene_shadow_pass(point const &lpos) {
 	voxel_shadows_updated = 0;
 	camera_pos = camera_pos_;
 }
-
 
 // Note: not meant to shadow voxel terrain, snow, trees, scenery, mesh, etc. - basically designed to shadow cobjs and dynamic objects
 void local_smap_data_t::render_scene_shadow_pass(point const &lpos) {
@@ -789,7 +776,6 @@ bool local_smap_data_t::needs_update(point const &lpos) {
 
 
 void create_shadow_map_inner(bool no_update) { // directional scene lights (sun, moon, etc.)
-
 	cube_t const bounds(get_scene_bounds());
 	
 	for (unsigned l = 0; l < smap_data.size(); ++l) { // {sun, moon}
@@ -801,33 +787,26 @@ void create_shadow_map_inner(bool no_update) { // directional scene lights (sun,
 void create_shadow_map() {
 
 	if (!shadow_map_enabled()) return; // disabled
-	//RESET_TIME;
-
 	// save state
 	int const do_zoom_(do_zoom), animate2_(animate2), display_mode_(display_mode);
 	orig_camera_pdu = camera_pdu;
-
 	// set to shadow map state
 	do_zoom  = 0;
 	animate2 = 0; // disable any animations or generated effects
 	display_mode &= ~0x08; // disable occlusion culling
-
 	// check VBO
 	if (scene_smap_vbo_invalid == 2) {free_smap_vbo();} // force rebuild of VBO
-
 	// render shadow maps to textures
 	check_gl_error(198);
 	ensure_smap_data();
 	check_gl_error(199);
 	create_shadow_map_inner(0); // no_update=0
 	scene_smap_vbo_invalid = 0; // needs to be after dlights update
-
 	// restore old state
 	check_gl_error(200);
 	do_zoom      = do_zoom_;
 	animate2     = animate2_;
 	display_mode = display_mode_;
-	//PRINT_TIME("Shadow Map Creation");
 }
 
 void update_shadow_matrices() {
@@ -836,13 +815,10 @@ void update_shadow_matrices() {
 	create_shadow_map_inner(1); // no_update=1
 }
 
-
 void free_shadow_map_textures() {
 	for (unsigned l = 0; l < smap_data.size(); ++l) {smap_data[l].free_gl_state();}
 	free_smap_vbo();
 	free_light_source_gl_state(); // free any shadow maps within light sources
 }
-
-
 
 

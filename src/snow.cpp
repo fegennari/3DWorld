@@ -31,7 +31,6 @@ typedef unsigned short count_type;
 unsigned const MAX_COUNT((1 << (sizeof(count_type) << 3)) - 1);
 
 void increment_printed_number(unsigned num);
-
 void setup_detail_normal_map(shader_t &s, float tscale);
 void setup_detail_normal_map_prefix(shader_t &s, bool enable);
 
@@ -42,14 +41,12 @@ struct zval_avg {
 	count_type c;
 	float z;
 	zval_avg(count_type c_=0, float z_=0.0) : c(c_), z(z_) {}
-	// Note: With a 1024x1024 voxel grid we should get an average of 1 count per 1M snow
-	//       so we can have at max 64M snowflakes.
+	// Note: With a 1024x1024 voxel grid we should get an average of 1 count per 1M snow so we can have at max 64M snowflakes.
 	//       However, we can get snow to stack up at a vertical edge so we need to clamp the count
 	void update(float zval) {if (c < MAX_COUNT) {++c; z += zval;}}
 	bool valid() const {return (c > 0);}
 	float getz() const {return z/c;}
 };
-
 
 struct voxel_t {
 	coord_type p[3] = {};
@@ -75,14 +72,12 @@ struct voxel_t {
 	bool operator==(voxel_t const &v) const {return (p[0] == v.p[0] && p[1] == v.p[1] && p[2] == v.p[2]);}
 };
 
-
 struct voxel_z_pair {
 	voxel_t v;
 	zval_avg z;
 	voxel_z_pair() {}
 	voxel_z_pair(voxel_t const &v_, zval_avg const &z_=zval_avg()) : v(v_), z(z_) {}
 };
-
 
 struct strip_entry {
 	point p;
@@ -127,10 +122,8 @@ public:
 unsigned const BLOCK_SZ = 65536; // 1.5MB blocks
 
 class strip_block_alloc {
-
 	vector<strip_entry *> blocks;
 	unsigned pos=0;
-
 public:
 	unsigned get_pos() const {return pos;}
 
@@ -139,7 +132,6 @@ public:
 			delete [] *i;
 		}
 	}
-
 	strip_entry *alloc(unsigned sz) {
 		assert(sz <= 2*BLOCK_SZ); // could use larger block size or singles vector
 
@@ -151,12 +143,9 @@ public:
 		pos += sz;
 		return cur;
 	}
-
 	void status() const {
-		cout << "blocks: " << blocks.size() << ", pos: " << pos
-			 << ", mem: "  << blocks.size()*BLOCK_SZ*sizeof(strip_entry) << endl;
+		cout << "blocks: " << blocks.size() << ", pos: " << pos << ", mem: "  << blocks.size()*BLOCK_SZ*sizeof(strip_entry) << endl;
 	}
-
 	unsigned get_cur_block_id() const {
 		assert(!blocks.empty());
 		return ((unsigned)blocks.size() - 1);
@@ -171,7 +160,6 @@ strip_block_alloc sb_alloc;
 class snow_renderer; // forward declaration
 
 class strip_t {
-
 	strip_entry *strips=nullptr; // block allocated
 	unsigned size=0, block_id=0, block_pos=0;
 public:
@@ -226,10 +214,9 @@ public:
 };
 
 
-class voxel_map : public map<voxel_t, zval_avg> { // must be a sorted map
-public:
+struct voxel_map : public map<voxel_t, zval_avg> { // must be a sorted map
 	zval_avg find_adj_z(voxel_t &v, zval_avg const &zv_old, float depth, voxel_map *cur_x_map=NULL);
-	bool read(char const *const fn);
+	bool read (char const *const fn);
 	bool write(char const *const fn) const;
 };
 
@@ -280,7 +267,6 @@ zval_avg voxel_map::find_adj_z(voxel_t &v, zval_avg const &zv_old, float depth, 
 	return res;
 }
 
-
 bool voxel_map::read(char const *const fn) {
 
 	FILE *fp;
@@ -302,7 +288,6 @@ bool voxel_map::read(char const *const fn) {
 	checked_fclose(fp);
 	return 1;
 }
-
 
 bool voxel_map::write(char const *const fn) const {
 
@@ -329,16 +314,13 @@ bool voxel_map::write(char const *const fn) const {
 
 // **************** VBO/ELEMENT INDEX CODE ****************
 
-
 class snow_renderer {
-
 	indexed_vbo_manager_t vbo_mgr;
 	float last_x=0.0;
 	unsigned nquads=0;
 	vector<vert_norm> data;
 	vector<unsigned> indices, strip_offsets;
 	map<point, unsigned> vmap[2]; // {prev, next} rows
-
 public:
 	// can't free in the destructor because the gl context may be destroyed before this point
 	//~snow_renderer() {free_vbos();}
@@ -377,7 +359,6 @@ public:
 		for (unsigned i = 0; i < size; ++i) {add(strips[i+0].p, strips[i+0].n, (i&1));}
 		indices.push_back(PRIMITIVE_RESTART_IX); // restart the strip
 	}
-
 private:
 	unsigned add(point const &v, vector3d const &n, unsigned map_ix) { // can't be called after finalize()
 		assert(vbo_mgr.vbo == 0 && vbo_mgr.ivbo == 0);
@@ -397,7 +378,6 @@ private:
 		indices.push_back(ix);
 		return ix;
 	}
-
 public:
 	void free_vbos() {vbo_mgr.clear_vbos();}
 
@@ -454,9 +434,7 @@ snow_renderer snow_draw;
 
 vector<strip_t> snow_strips;
 
-
 bool get_mesh_ice_pt(point const &p1, point &p2) {
-
 	int const xpos(get_xpos(p1.x)), ypos(get_ypos(p1.y));
 	if (point_outside_mesh(xpos, ypos)) return 0; // shouldn't get here (much)
 	float const mh(interpolate_mesh_zval(p1.x, p1.y, 0.0, 0, 1));
@@ -465,14 +443,11 @@ bool get_mesh_ice_pt(point const &p1, point &p2) {
 	return 1;
 }
 
-
 vector3d get_rand_snow_vect(rand_gen_t &rgen, float amount=1.0) {
 	return (snow_random == 0.0 ? zero_vector : vector3d(amount*snow_random*rgen.rgauss(), amount*snow_random*rgen.rgauss(), 0.0));
 }
 
-
 bool check_snow_line_coll(point const &pos1, point const &pos2, point &cpos, vector3d &cnorm) {
-
 	int cindex(-1);
 	colorRGBA model_color; // unused
 	bool const cobj_coll(check_coll_line_exact(pos1, pos2, cpos, cnorm, cindex, 0.0, -1, 0, 0, 1));
@@ -544,12 +519,10 @@ void create_snow_map(voxel_map &vmap) {
 
 
 void add_strip(strip_vect_t const &strip, bool is_edge, int xval, int y_start) {
-
 	assert(!strip.empty());
 	snow_strips.push_back(strip_t(is_edge));
 	snow_strips.back().finalize(strip, xval, y_start);
 }
-
 
 void create_snow_strips(voxel_map &vmap) {
 
@@ -657,7 +630,6 @@ void create_snow_strips(voxel_map &vmap) {
 bool snow_enabled() {
 	return (temperature < W_FREEZE_POINT && !snow_draw.empty() && (display_mode & 0x02));
 }
-
 
 void gen_snow_coverage() {
 
@@ -784,6 +756,5 @@ bool crush_snow_at_pt(point const &p, float radius) {
 	vector3d norm; // unused
 	return get_snow_height(p, radius, zval, norm, 1);
 }
-
 
 

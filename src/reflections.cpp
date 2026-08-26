@@ -131,7 +131,6 @@ void restore_matrices_and_clear() {
 
 
 struct face_draw_params_t { // used for reflection cube maps
-
 	pos_dir_up pdu;
 	unsigned face_id;
 	vector<unsigned> &to_draw;
@@ -207,7 +206,6 @@ void restore_scene_state() {
 
 void create_camera_view_texture(unsigned tid, unsigned tex_size, pos_dir_up const &pdu, bool is_indoors) {
 
-	//RESET_TIME;
 	assert(tid);
 	pre_ref_cview_dir  = cview_dir;
 	pre_ref_camera_pos = camera_pdu.pos;
@@ -223,13 +221,11 @@ void create_camera_view_texture(unsigned tid, unsigned tex_size, pos_dir_up cons
 	up_vector  = prev_up_vector;
 	cview_dir  = pre_ref_cview_dir;
 	restore_scene_state();
-	//PRINT_TIME("Create Reflection Cube Map");
 }
 
 unsigned create_reflection_cube_map(unsigned tid, unsigned tex_size, int cobj_id, point const &center,
 	float near_plane, float far_plane, bool only_front_facing, bool is_indoors, unsigned skip_mask)
 {
-	//RESET_TIME;
 	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 	check_gl_error(530);
 	assert(tid);
@@ -262,7 +258,6 @@ unsigned create_reflection_cube_map(unsigned tid, unsigned tex_size, int cobj_id
 	cview_dir  = pre_ref_cview_dir;
 	restore_scene_state();
 	check_gl_error(531);
-	//PRINT_TIME("Create Reflection Cube Map");
 	return faces_drawn;
 }
 
@@ -273,7 +268,6 @@ unsigned create_reflection_cube_map(unsigned tid, unsigned tex_size, int cobj_id
 // render scene reflection to texture (ground mode and tiled terrain mode)
 void create_gm_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, float zval, cube_t const &bcube, float min_camera_dist) {
 
-	//RESET_TIME;
 	// Note: we need to transform the camera frustum here, even though it's also done when drawing, because we need to get the correct projection matrix
 	enable_clip_plane_z = 1;
 	clip_plane_z        = zval + 1.0E-6; // hack to tell the shader setup code to use this z clip plane
@@ -294,12 +288,10 @@ void create_gm_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, 
 	update_shadow_matrices(); // restore
 	setup_sun_moon_light_pos();
 	enable_clip_plane_z = 0;
-	//PRINT_TIME("Create Reflection Texture");
 }
 
 void create_tt_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, float terrain_zmin) {
 
-	//RESET_TIME;
 	pos_dir_up const old_camera_pdu(camera_pdu); // reflect camera frustum used for VFC
 	camera_pdu.apply_z_mirror(water_plane_z); // setup reflected camera frustum
 	pos_dir_up const refl_camera_pdu(camera_pdu);
@@ -326,7 +318,6 @@ void create_tt_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, 
 	render_to_texture(tid, xsize, ysize); // render reflection to texture
 	camera_pdu = old_camera_pdu; // restore camera_pdu
 	restore_matrices_and_clear(); // reset state
-	//PRINT_TIME("Create Reflection Texture");
 }
 
 

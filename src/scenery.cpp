@@ -76,7 +76,6 @@ bool skip_uw_draw(point const &pos, float radius) {
 
 // ************ SCENERY OBJECT CLASSES ************
 
-
 bool scenery_obj::check_sphere_coll(point &center, float sphere_radius) const { // sphere-sphere intersection
 	float const rsum(radius + sphere_radius);
 	if (!dist_less_than(center, pos, rsum)) return 0;
@@ -1074,7 +1073,6 @@ void mushroom::draw(float sscale, bool shadow_only, bool reflection_pass, vector
 
 // ************ SCENERY OBJECT INTERFACE/WRAPPERS/DRIVERS ************
 
-
 template<typename T> void draw_scenery_vector(vector<T> &v, float sscale, bool shadow_only, bool reflection_pass, vector3d const &xlate, float scale_val) {
 	for (unsigned i = 0; i < v.size(); ++i) {v[i].draw(sscale, shadow_only, reflection_pass, xlate, scale_val);}
 }
@@ -1173,7 +1171,6 @@ void scenery_group::add_cobjs() {
 	add_scenery_vector_cobjs(leafy_plants);
 	calc_bcube(); // okay to put here, since add_cobjs() is always called
 }
-
 
 bool scenery_group::check_sphere_coll(point &center, float radius) const {
 	bool coll(0);
@@ -1435,7 +1432,6 @@ void scenery_group::draw_plant_leaves(shader_t &s, bool shadow_only, vector3d co
 	s.clear_specular();
 }
 
-
 void scenery_group::draw_opaque_objects(shader_t &s, shader_t &vrs, bool shadow_only, vector3d const &xlate, bool draw_pld, float scale_val, bool reflection_pass) {
 
 	if (!shadow_only && !reflection_pass && world_mode == WMODE_GROUND) { // apply burn
@@ -1501,7 +1497,6 @@ bool scenery_group::setup_voxel_rocks_shader(shader_t &vrs, bool shadow_only) co
 	return 1;
 }
 
-
 void scenery_group::draw(bool shadow_only, vector3d const &xlate) {
 
 	if (all_bcube.is_zero_area() || !camera_pdu.cube_visible(all_bcube)) return; // empty, or no scenery is visible
@@ -1559,7 +1554,6 @@ bool scenery_group::choose_butterfly_dest(point &dest, sphere_t &plant_bsphere, 
 	return 1;
 }
 
-
 scenery_group all_scenery;
 
 
@@ -1573,7 +1567,6 @@ void gen_scenery(tree_cont_t const &trees) { // called in ground mode
 	all_scenery.gen(1, 1, MESH_X_SIZE-1, MESH_Y_SIZE-1, vegetation, 0, trees);
 	all_scenery.add_cobjs();
 }
-
 
 void add_plant(point const &pos, float height, float radius, int type, int calc_z) {
 	all_scenery.add_plant(pos, height, radius, type, calc_z);

@@ -59,7 +59,6 @@ unsigned multi_trigger_t::register_activator_pos(point const &p, float act_radiu
 	for (iterator i = begin(); i != end(); ++i) {ret |= i->register_activator_pos(p, act_radius, activator, clicks);}
 	return ret;
 }
-
 unsigned multi_trigger_t::check_for_activate_this_frame() {
 	unsigned ret(0);
 	for (iterator i = begin(); i != end(); ++i) {ret |= i->check_for_activate_this_frame();}
@@ -77,7 +76,6 @@ float multi_trigger_t::get_auto_on_time() const { // the first trigger to activa
 	}
 	return min_aot;
 }
-
 float multi_trigger_t::get_auto_off_time() const { // the last trigger to deactivate deactivates the group
 	float max_aot(0.0);
 	for (const_iterator i = begin(); i != end(); ++i) {max_aot = max(max_aot, i->auto_off_time);}
@@ -276,7 +274,6 @@ void platform::register_activate() {
 }
 
 void platform::move_platform(float dist_traveled) { // linear distance or rotation angle
-	
 	if (is_rot) {cur_angle += dist_traveled;} // rotate
 	else        {pos       += dir*dist_traveled; return;} // translate
 
@@ -390,7 +387,6 @@ void platform::advance_timestep() {
 }
 
 vector3d platform::get_velocity() const { // Note: linear velocity, or angular velocity if is_rot==1
-
 	if      (state == ST_FWD) {return dir* fspeed;}
 	else if (state == ST_REV) {return dir*-rspeed;}
 	return zero_vector;

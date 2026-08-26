@@ -13,7 +13,6 @@ extern bool reverse_3ds_vert_winding_order;
 
 
 class file_reader_3ds : public base_file_reader {
-
 protected:
 	geom_xform_t cur_xf;
 	float master_scale=1.0;
@@ -204,9 +203,7 @@ public:
 
 // ************************************************
 
-
 class file_reader_3ds_triangles : public file_reader_3ds {
-
 	colorRGBA def_color;
 	vector<coll_tquad> *ppts=nullptr;
 
@@ -270,7 +267,6 @@ class file_reader_3ds_triangles : public file_reader_3ds {
 		}
 		return 1;
 	}
-
 public:
 	file_reader_3ds_triangles(string const &fn) : file_reader_3ds(fn) {}
 
@@ -285,9 +281,7 @@ public:
 
 // ************************************************
 
-
 class file_reader_3ds_model : public file_reader_3ds, public model_from_file_t {
-
 	int use_vertex_normals;
 	unsigned obj_id=0;
 
@@ -541,7 +535,6 @@ class file_reader_3ds_model : public file_reader_3ds, public model_from_file_t {
 		assert(ftell(fp) == end_pos);
 		return 1;
 	}
-
 public:
 	file_reader_3ds_model(string const &fn, int use_vertex_normals_, model3d &model_) :
 	  file_reader_3ds(fn), model_from_file_t(fn, model_), use_vertex_normals(use_vertex_normals_) {}
@@ -561,7 +554,6 @@ bool read_3ds_file_model(string const &filename, model3d &model, geom_xform_t co
 	file_reader_3ds_model reader(filename, use_vertex_normals, model);
 	return reader.read(xf, (ALLOW_VERBOSE && verbose));
 }
-
 bool read_3ds_file_pts(string const &filename, vector<coll_tquad> *ppts, geom_xform_t const &xf, colorRGBA const &def_c, bool verbose) {
 	file_reader_3ds_triangles reader(filename);
 	return reader.read(ppts, xf, def_c, (ALLOW_VERBOSE && verbose));

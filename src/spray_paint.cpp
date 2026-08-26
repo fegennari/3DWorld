@@ -32,7 +32,6 @@ colorRGBA get_cur_paint_color() {
 	return ((paint_color_ix < NUM_PAINT_COLORS) ? paint_colors[paint_color_ix] : custom_color);
 }
 
-
 colorRGBA sample_cobj_color(point const &p1, point const &p2, colorRGBA const &def_color) {
 	point cpos;
 	vector3d cnorm;
@@ -44,7 +43,6 @@ colorRGBA sample_cobj_color(point const &p1, point const &p2, colorRGBA const &d
 colorRGBA sample_cview_cobj_color() {
 	return sample_cobj_color(get_camera_pos(), (get_camera_pos() + FAR_CLIP*cview_dir), get_cur_paint_color());
 }
-
 
 void show_cur_spraypaint_mode() {
 	if (!spraypaint_mode) {print_text_onscreen("Flashlight", YELLOW, 1.0, TICKS_PER_SECOND, 1); return;}

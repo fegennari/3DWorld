@@ -12,7 +12,6 @@ int omp_get_thread_num_3dw();
 
 
 template <typename T> class timing_profiler {
-
 	struct entry_t {
 		unsigned count=0;
 		T time=0, tmax=0;

@@ -47,7 +47,6 @@ string property_map_t::empty_str;
 
 // *** uniform variables setup ***
 
-
 char const *append_ix(string &s, unsigned i, bool as_array) {
 	assert(i <= 9);
 	if (as_array) {s.push_back('[');}
@@ -142,9 +141,7 @@ bool shader_t::add_uniform_matrix_4x4(char const *const name, float const *m, bo
 
 // *** subroutines ***
 
-
 int shader_t::subroutine_val_t::get_ix_for_name(char const *const name) const {
-
 	for (auto i = name_to_ix.begin(); i != name_to_ix.end(); ++i) {
 		if (i->first == name) return i->second;
 	}
@@ -152,7 +149,6 @@ int shader_t::subroutine_val_t::get_ix_for_name(char const *const name) const {
 }
 
 unsigned shader_t::get_subroutine_index(int shader_type, char const *const name) const {
-
 	assert(program && name);
 	assert(shader_type < (int)NUM_SHADER_TYPES);
 	assert(glGetSubroutineIndex != nullptr);
@@ -162,7 +158,6 @@ unsigned shader_t::get_subroutine_index(int shader_type, char const *const name)
 }
 
 unsigned shader_t::get_subroutine_uniform_loc(int shader_type, char const *const name) const {
-
 	assert(program && name);
 	assert(shader_type < (int)NUM_SHADER_TYPES);
 	assert(glGetSubroutineUniformLocation != nullptr);
@@ -190,7 +185,6 @@ void shader_t::set_all_subroutines(int shader_type, unsigned count, char const *
 }
 
 void shader_t::set_subroutines(int shader_type, unsigned count, unsigned const *const indices) {
-
 	assert(program);
 	assert(shader_type < (int)NUM_SHADER_TYPES && count > 0 && indices != nullptr);
 	if (glGetSubroutineIndex == nullptr) return;
@@ -202,7 +196,6 @@ void shader_t::set_subroutines(int shader_type, unsigned count, unsigned const *
 }
 
 void shader_t::set_subroutine(int shader_type, unsigned index) { // single subroutine version
-
 	subroutine_val_t &val(subroutines[shader_type]);
 	val.resize(1); // must be empty or already size 1
 	val.ixs[0] = index; // what about val.name_to_ix?
@@ -210,7 +203,6 @@ void shader_t::set_subroutine(int shader_type, unsigned index) { // single subro
 }
 
 void shader_t::reset_subroutine(int shader_type, char const *const uniform, char const *const binding) {
-
 	assert(uniform != nullptr && binding != nullptr);
 	if (glGetSubroutineIndex == nullptr) return;
 	subroutine_val_t &val(subroutines[shader_type]);
@@ -228,9 +220,7 @@ void shader_t::restore_subroutines() {
 
 // *** attrib variables setup ***
 
-
 int shader_t::get_attrib_loc(char const *const name, bool allow_fail) const {
-
 	assert(program && name);
 	int const loc(glGetAttribLocation(program, name));
 	if (!(allow_fail || loc >= 0)) {cerr << "Error: Failed to get shader attribute location '" << name << "'." << endl;}
@@ -238,23 +228,18 @@ int shader_t::get_attrib_loc(char const *const name, bool allow_fail) const {
 	return loc;
 }
 
-
 void shader_t::register_attrib_name(char const *const name, unsigned bind_ix) {
-
 	assert(bind_ix < 100); // sanity check
 	int const loc(get_attrib_loc(name)); // okay if -1
 	if (bind_ix >= attrib_locs.size()) {attrib_locs.resize(bind_ix+1);}
 	attrib_locs[bind_ix] = loc;
 }
 
-
 int shader_t::attrib_loc_by_ix(unsigned ix, bool allow_fail) const {
-
 	if (allow_fail && ix >= attrib_locs.size()) return -1; // not set
 	assert(ix < attrib_locs.size());
 	return attrib_locs[ix]; // is it legal for this to return -1?
 }
-
 
 bool shader_t::set_attrib_float_array(int loc, float const *const val, unsigned num) const {
 
@@ -311,7 +296,6 @@ bool shader_t::add_attrib_int(unsigned ix, int val) const {
 
 
 // *** other variables setup ***
-
 
 void shader_t::setup_enabled_lights(unsigned num, unsigned shaders_enabled) {
 
@@ -373,7 +357,6 @@ void shader_t::upload_light_source(unsigned light_id, unsigned field_filt) {
 }
 
 void shader_t::upload_light_sources_range(unsigned start, unsigned end) {
-
 	for (unsigned i = start; i < end; ++i) {
 		if (is_light_enabled(i)) {upload_light_source(i);}
 	}
@@ -401,7 +384,6 @@ void shader_t::check_for_fog_disabled() {
 
 
 void shader_t::set_prefix(char const *const prefix, unsigned shader_type) {
-
 	assert(shader_type < NUM_SHADER_TYPES);
 	if (prog_name_prefix.empty()) {prog_name_prefix.reserve(strlen(prefix) + 4);} // optimization
 	prog_name_prefix.push_back(',');
@@ -413,14 +395,12 @@ void shader_t::set_prefix(char const *const prefix, unsigned shader_type) {
 }
 
 void shader_t::set_prefixes(char const *const prefix, unsigned shaders_enabled) {
-
 	for (unsigned s = 0; s < NUM_SHADER_TYPES; ++s) { // put into correct shader(s): V, F, G, TC, TE, C
 		if (shaders_enabled & (1<<s)) {set_prefix(prefix, s);}
 	}
 }
 
 void shader_t::set_int_prefix(char const *const name, int val, unsigned shader_type) {
-	
 	if (val >= 0 && val <= 9) { // faster single character optimization
 		set_prefix_str((string("const int ") + name + '=' + char('0' + val) + ';'), shader_type);
 	}
@@ -474,9 +454,8 @@ void shader_t::set_material(base_mat_t const &mat) {
 
 // *** shader and program setup ***
 
-
 struct program_t {
-	unsigned p=0, sixs[NUM_SHADER_TYPES] = {0};
+	unsigned p=0, sixs[NUM_SHADER_TYPES] = {};
 	bool valid=0;
 
 	program_t() {}
@@ -484,8 +463,7 @@ struct program_t {
 };
 
 
-class string_prog_map : public map<string, program_t> {
-public:
+struct string_prog_map : public map<string, program_t> {
 	void clear() {
 		free_data();
 		map<string, program_t>::clear();
@@ -497,7 +475,6 @@ public:
 	//~string_prog_map() {free_data();}
 };
 
-
 struct ix_valid_t {
 	unsigned ix=0;
 	bool valid=0;
@@ -505,9 +482,7 @@ struct ix_valid_t {
 	ix_valid_t(unsigned const ix_) : ix(ix_), valid(1) {}
 };
 
-
-class string_shad_map : public map<string, ix_valid_t> {
-public:
+struct string_shad_map : public map<string, ix_valid_t> {
 	void clear() {
 		free_data();
 		map<string, ix_valid_t>::clear();
@@ -521,18 +496,15 @@ public:
 
 
 class shader_manager_t {
-
 	string_prog_map loaded_programs;
 	string_shad_map loaded_shaders[NUM_SHADER_TYPES]; // vertex=0, fragment=1, geometry=2, tess_control=3, tess_eval=4, compute=5
 	map<string, string> loaded_files;
 	string shader_id_str; // here to avoid constant reallocation
-
 public:
 	void clear() {
 		loaded_programs.clear();
 		for (unsigned d = 0; d < NUM_SHADER_TYPES; ++d) {loaded_shaders[d].clear();}
 	}
-
 	void clear_and_reload() {
 		clear();
 		loaded_files.clear();
@@ -657,7 +629,6 @@ bool setup_shaders() {
 	return 0;
 }
 
-
 void clear_shaders() {
 	clear_cached_shaders();
 	shader_manager.clear();
@@ -781,7 +752,6 @@ unsigned shader_t::get_shader(string const &name, unsigned type) const {
 // See http://www.lighthouse3d.com/tutorials/glsl-core-tutorial/glsl-core-tutorial-create-a-program/
 bool shader_t::begin_shader(bool do_enable) {
 
-	//RESET_TIME;
 	// get the program
 	program_t &prog(shader_manager.get_program_by_shader_names(shader_names, prog_name_prefix));
 
@@ -835,7 +805,6 @@ bool shader_t::begin_shader(bool do_enable) {
 			if (shader_ixs[i]) {glDetachShader(program, shader_ixs[i]);}
 		}
 		prog = program_t(program, shader_ixs); // cache the program
-		//PRINT_TIME("Create Program");
 	}
 	cache_vnct_locs();
 	cache_matrix_locs();
@@ -862,7 +831,6 @@ void shader_t::set_program_binary(vector<unsigned char> const &binary_data, GLen
 	glProgramBinary(program, binary_format, binary_data.data(), binary_data.size());
 }
 
-
 void shader_t::print_shader_info_log(unsigned shader) {
 
 	int len(0), len2(0);
@@ -875,7 +843,6 @@ void shader_t::print_shader_info_log(unsigned shader) {
 		cout << "Info log: " << string(info_log_msg.begin(), info_log_msg.end());
 	}
 }
-
 void shader_t::print_program_info_log() const {
 
 	int len(0), len2(0);
@@ -916,7 +883,6 @@ void shader_t::clear() {
 	last_metalness = 0.0;
 	user_flags     = 0; // clear user flags
 }
-
 
 void shader_t::make_current() {
 	assert(program);
@@ -1098,7 +1064,6 @@ void shader_t::begin_untextured_lit_glcolor_shader() {
 
 
 // compute shader
-
 
 bool compute_shader_base_t::setup_target_texture(unsigned &tid, bool is_R32F) const {
 	if (tid > 0) return 0; // already setup
@@ -1318,11 +1283,9 @@ void compute_shader_comp_t::gen_matrix_R32F(vector<float> &vals, unsigned &tid, 
 
 // **************** INSTANCING + TRANSFORMS ****************
 
-
 void upload_mvm_to_shader(shader_t &s, char const *const var_name) {
 	s.add_uniform_matrix_4x4(var_name, fgGetMVM().get_ptr(), 0);
 }
-
 
 // Note: assumes cur_vbo is currently bound by the caller, and will leave it bound after the call; indices can be NULL
 void instance_render_t::draw_and_clear(int prim_type, unsigned count, unsigned cur_vbo, int index_type, void const *const indices, unsigned first, unsigned cur_vao) {

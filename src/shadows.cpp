@@ -12,9 +12,7 @@ extern point sun_pos, moon_pos, mesh_origin;
 extern vector3d up_norm;
 
 
-void update_sun_shadows() {
-
-	// seems like this has to be first, but questionable
+void update_sun_shadows() { // seems like this has to be first, but questionable
 	if (!combined_gu && fabs(sun_rot/PI - 1.0) < 0.6 && fabs(sun_rot/PI - 1.0) > 0.4) {calc_visibility(MOON_SHADOW);}
 	calc_visibility(SUN_SHADOW);
 }
@@ -22,7 +20,6 @@ void update_sun_shadows() {
 void fix_sun_moon_rot(float &angle) {angle = fix_angle(angle);}
 
 void update_sun_and_moon() {
-
 	float const radius(0.6f*(FAR_CLIP+X_SCENE_SIZE));
 	fix_sun_moon_rot(sun_rot);
 	fix_sun_moon_rot(moon_rot);
@@ -33,9 +30,7 @@ void update_sun_and_moon() {
 	up_norm      = light_pos.get_norm();
 }
 
-
 bool light_valid(unsigned light_sources, int l, point &lpos) {
-
 	if (!(light_sources & (1 << l))) return 0;
 	if ((l == LIGHT_SUN && light_factor < 0.4) || (l == LIGHT_MOON && light_factor > 0.6)) return 0;
 	if (!get_light_pos(lpos, l) || lpos.z < zmin) return 0;

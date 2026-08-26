@@ -46,12 +46,9 @@ extern model3ds all_models;
 
 
 struct face_ray_accum_t {
-
-	colorRGBA color; // +weight
+	colorRGBA color=RGBA0; // +weight
 	cube_t bcube;
 	unsigned num_rays=0;
-
-	face_ray_accum_t() : color(0,0,0,0) {}
 
 	void add_ray(point const &pos, colorRGBA const &c, float weight) {
 		if (num_rays == 0) {bcube.set_from_point(pos);} else {bcube.union_with_pt(pos);}
@@ -70,9 +67,9 @@ struct rt_ray_t { // size = 24 (40 if uncompressed)
 	point pos;
 	norm_comp dir;
 	color_wrapper color;
-	float weight;
+	float weight=0.0;
 
-	rt_ray_t() : weight(0.0) {}
+	rt_ray_t() {}
 	rt_ray_t(point const &p1, point const &p2, colorRGB color_, float weight_) : pos(p1), weight(weight_) {
 		dir.set_norm((p2 - p1).get_norm());
 		float const max_comp(color_.get_max_component());
@@ -85,7 +82,6 @@ struct rt_ray_t { // size = 24 (40 if uncompressed)
 };
 
 struct cobj_ray_accum_t {
-
 	face_ray_accum_t vals[6]; // one per cube face
 	vector<rt_ray_t> rays;
 
@@ -119,7 +115,6 @@ struct cobj_ray_accum_t {
 unsigned const magic_val = 0xbeefdead;
 
 struct cobj_ray_accum_map_t : public map<unsigned, cobj_ray_accum_t> {
-
 	void add_ray(unsigned id, point const &p1, point const &p2, colorRGB const &color, float weight, unsigned face) {
 		operator[](id).add_ray(p1, p2, color, weight, face);
 	}
@@ -198,7 +193,6 @@ float get_scene_radius() {return sqrt(2.0f*(X_SCENE_SIZE*X_SCENE_SIZE + Y_SCENE_
 float get_step_size()    {return 0.3f*ray_step_size_mult*(DX_VAL + DY_VAL + DZ_VAL);}
 
 void increment_printed_number(unsigned num) {
-
 	for (unsigned n = max(num, 1U); n > 0; n /= 10) {cout << "\b";}
 	cout << (num+1);
 	cout.flush();
@@ -209,7 +203,6 @@ int clamp_ltype_range(int ltype) {return (is_ltype_dynamic(ltype) ? LIGHTING_DYN
 bool enable_platform_lights(int ltype) {return (ltype == LIGHTING_SKY);} // sky lighting only for now
 
 light_volume_local &get_local_light_volume(int ltype) {
-
 	assert(is_ltype_dynamic(ltype)); // it's a local lighting volume
 	unsigned const llvol_ix(ltype - LIGHTING_DYNAMIC);
 	assert(llvol_ix < local_light_volumes.size());
@@ -514,7 +507,6 @@ struct rt_data {
 
 
 template<typename T> class thread_manager_t {
-
 	vector<std::thread> threads;
 public:
 	vector<T> data; // to be filled in by the caller
@@ -618,7 +610,6 @@ void launch_threaded_job(unsigned num_threads, void (*start_func)(rt_data *), bo
 
 
 bool cube_light_src_vect::ray_intersects_any(point const &start_pt, point const &end_pt) const {
-
 	// skip any lines that cross a cube light because otherwise we would doubly add the contribution from that pos/dir
 	for (const_iterator i = begin(); i != end(); ++i) {
 		if (i->intensity != 0.0 && check_line_clip(start_pt, end_pt, i->bounds.d)) return 1;
@@ -634,7 +625,6 @@ void trace_one_global_ray(lmap_manager_t *lmgr, point const &pos, point const &p
 	if (is_scene_cube && global_cube_lights.ray_intersects_any(pt, end_pt)) return; // don't double count
 	cast_light_ray(lmgr, pos, end_pt, ray_wt, ray_wt, color, line_length, -1, ltype, 0, rgen, accum_map);
 }
-
 
 void trace_ray_block_global_cube(lmap_manager_t *lmgr, cube_t const &bnds, point const &pos, colorRGBA const &color, float ray_wt,
 	unsigned nrays, int ltype, unsigned disabled_edges, bool is_scene_cube, bool verbose, bool randomized, rand_gen_t &rgen, cobj_ray_accum_map_t *accum_map)
@@ -692,7 +682,6 @@ void trace_ray_block_global_cube(lmap_manager_t *lmgr, cube_t const &bnds, point
 	} // for i
 }
 
-
 void trace_ray_block_global_light(rt_data *data, point const &pos, colorRGBA const &color, float weight) {
 
 	if (pos.z < 0.0 || weight == 0.0 || color.alpha == 0.0) return; // below the horizon or zero weight, skip it
@@ -723,9 +712,7 @@ void trace_ray_block_global_light(rt_data *data, point const &pos, colorRGBA con
 	data->post_run();
 }
 
-
 void trace_ray_block_global(rt_data *data) {
-
 	if (GLOBAL_RAYS == 0 && global_cube_lights.empty()) return; // nothing to do
 	// Note: The light color here is white because it will be multiplied by the ambient color later,
 	//       and the moon color is generally similar to the sun color so they can be approximated as equal
@@ -1028,7 +1015,6 @@ void trace_ray_block_dynamic(rt_data *data) {
 typedef void (*ray_trace_func)(rt_data *);
 ray_trace_func const rt_funcs[NUM_LIGHTING_TYPES] = {trace_ray_block_sky, trace_ray_block_global, trace_ray_block_local, trace_ray_block_cobj_accum, trace_ray_block_dynamic};
 
-
 void compute_ray_trace_lighting(unsigned ltype, bool verbose) {
 
 	bool const dynamic(is_ltype_dynamic(ltype));
@@ -1116,7 +1102,6 @@ void check_all_platform_cobj_lighting_update() {
 
 // lmap_manager_t
 
-
 bool lmap_manager_t::read_data_from_file(char const *const fn, int ltype) {
 
 	assert(fn != nullptr);
@@ -1147,7 +1132,6 @@ bool lmap_manager_t::read_data_from_file(char const *const fn, int ltype) {
 	return 1;
 }
 
-
 bool lmap_manager_t::write_data_to_file(char const *const fn, int ltype) const {
 
 	if (fn == nullptr || strcmp(fn, "''") == 0 || strcmp(fn, "\"\"") == 0) return 0; // don't write
@@ -1166,7 +1150,6 @@ bool lmap_manager_t::write_data_to_file(char const *const fn, int ltype) const {
 	}
 	return 1;
 }
-
 
 void lmap_manager_t::clear_lighting_values(int ltype) {
 

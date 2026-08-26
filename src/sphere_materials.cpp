@@ -105,11 +105,8 @@ bool read_texture(char const *const str, unsigned line_num, int &tid, bool is_no
 
 
 class sphere_mat_vect : public vector<sphere_mat_t>, public cube_map_shadow_manager {
-
-	unsigned mat_ix;
-
+	unsigned mat_ix=0;
 public:
-	sphere_mat_vect() : mat_ix(0) {}
 	unsigned get_ix() const {assert(mat_ix < size()); return mat_ix;}
 	sphere_mat_t       &get_cur_mat()       {assert(mat_ix < size()); return operator[](mat_ix);}
 	sphere_mat_t const &get_cur_mat() const {assert(mat_ix < size()); return operator[](mat_ix);}
@@ -156,7 +153,6 @@ public:
 sphere_mat_vect sphere_materials;
 
 class material_file_parser_t {
-
 	string const &fn;
 	ifstream in;
 
@@ -245,14 +241,12 @@ bool write_sphere_materials_file(string const &fn) {
 sphere_mat_t &get_cur_sphere_mat() {return sphere_materials.get_cur_mat();}
 
 void show_cur_sphere_mode() {
-
 	if (spheres_mode == 0) {print_text_onscreen("Flashlight", YELLOW, 1.0, TICKS_PER_SECOND, 1); return;}
 	string const &str(get_cur_sphere_mat().get_name());
 	print_text_onscreen(str, YELLOW, 1.0, TICKS_PER_SECOND, 1); // 1 second
 }
 
 void toggle_sphere_mode() {
-
 	if (world_mode != WMODE_GROUND) return;
 	if (sphere_materials.empty()) {spheres_mode = 0;} else {spheres_mode = (spheres_mode+1)%5;}
 	if (spheres_mode) {spraypaint_mode = 0;}
@@ -260,7 +254,6 @@ void toggle_sphere_mode() {
 }
 
 void change_sphere_material(int val, bool quiet) {
-
 	if (world_mode != WMODE_GROUND) return;
 	sphere_materials.update_ix(val);
 	if (quiet) return;
@@ -272,7 +265,6 @@ void change_sphere_material(int val, bool quiet) {
 string const mode_strs[5] = {"None", "Dynamic Sphere", "Dynamic Cube", "Static Sphere", "Static Cube"};
 
 string sphere_mat_t::get_name() const {return name + " (" + mode_strs[spheres_mode] + ")";}
-
 
 void set_cobj_params_from_material(cobj_params &cp, sphere_mat_t const &mat) {
 
@@ -427,13 +419,10 @@ void remove_mat_sphere(unsigned id) {sphere_materials.remove_obj_light(id);}
 
 
 struct gen_sphere_params_t {
+	bool enable_reflect=1, enable_transparent=1, enable_light_atten=1, enable_shadows=1;
+	float metal_prob=0.2, emissive_prob=0.25, metal_white_prob=0.5, emiss_white_prob=0.5, max_light_atten=20.0, max_light_radius=10.0;
+	int rand_seed=0;
 
-	bool enable_reflect, enable_transparent, enable_light_atten, enable_shadows;
-	float metal_prob, emissive_prob, metal_white_prob, emiss_white_prob, max_light_atten, max_light_radius;
-	int rand_seed;
-
-	gen_sphere_params_t() : enable_reflect(1), enable_transparent(1), enable_light_atten(1), enable_shadows(1),
-		metal_prob(0.2), emissive_prob(0.25), metal_white_prob(0.5), emiss_white_prob(0.5), max_light_atten(20.0), max_light_radius(10.0), rand_seed(0) {}
 	static bool read_error(string const &str) {cout << "Error reading sphere_gen config option " << str << "." << endl; return 0;}
 
 	bool read_option(FILE *fp) {

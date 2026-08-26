@@ -18,20 +18,17 @@ void spillover::insert(unsigned index1, unsigned index2) { // insert index2 into
 	assert(index1 != index2);
 	data[index1].insert(index2);
 }
-
 void spillover::remove(unsigned index1, unsigned index2) { // remove index2 from index1
 	assert(index1 < data.size() && index2 < data.size());
 	assert(index1 != index2);
 	data[index1].erase(index2);
 }
-
 void spillover::remove_all_i(unsigned index1) { // remove outgoing edges
 	assert(index1 < data.size());
 	data[index1].clear();
 }
 
 void spillover::remove_connected(unsigned index1) { // remove incoming edges
-
 	assert(index1 < data.size());
 	set<unsigned> const sdata(data[index1]); // have to copy the set so that we can modify the original
 
@@ -45,7 +42,6 @@ bool spillover::member(unsigned index1, unsigned index2) const { // index2 is a 
 	assert(index1 != index2);
 	return (data[index1].find(index2) != data[index1].end());
 }
-
 bool spillover::member_deep(unsigned index1, unsigned index2) {
 	assert(index2 < data.size());
 	++cur_seen_ix; // invalidate seen values
@@ -78,7 +74,6 @@ bool spillover::member2way(unsigned index1, unsigned index2) {
 }
 
 void spillover::get_fanout(unsigned index1, vector<unsigned> &fanout, vector<unsigned char> *used) {
-	
 	for (auto i = data[index1].begin(); i != data[index1].end(); ++i) {
 		assert(*i < data.size());
 		if (used != nullptr && (*used)[*i]) continue; // already used
@@ -108,7 +103,5 @@ void spillover::get_connected_components(unsigned index1, vector<unsigned> &cc, 
 		if (ret) {cc.push_back(*i);}
 	}
 }
-
-
 
 

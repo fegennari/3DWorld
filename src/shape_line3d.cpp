@@ -15,7 +15,6 @@ extern vector3d up_norm;
 // ************** SHAPE3D *************
 
 bool shape3d::alloc_shape(unsigned npoints, unsigned nfaces, unsigned ncolors) {
-
 	if (npoints < 3 || nfaces < 1) return 0;
 	points.resize(npoints);
 	faces.resize(nfaces);
@@ -216,7 +215,6 @@ void shape3d::add_cobjs(vector<int> &cids, bool draw) {
 }
 
 void shape3d::destroy() {
-
 	points.clear();
 	faces.clear();
 	colors.clear();
