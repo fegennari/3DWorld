@@ -1950,7 +1950,7 @@ void voxel_file_err(string const &str, int &error) {
 bool parse_voxel_option(FILE *fp) {
 
 	int error(0);
-	char strc[MAX_CHARS] = {0};
+	char strc[MAX_CHARS]={};
 
 	if (!read_str(fp, strc)) return 0;
 	string const str(strc);

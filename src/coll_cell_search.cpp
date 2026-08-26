@@ -320,7 +320,7 @@ colorRGBA coll_obj::get_color_at_point(point const &pos, vector3d const &normal,
 		vector2d const uv(get_billboard_texture_uv(points, pos));
 		return get_texture_color(cp.tid, uv.x, uv.y);
 	}
-	float tc[2] = {0}; // texture uv
+	float tc[2]={}; // texture uv
 	float const tscale[2] = {cp.tscale, get_tex_ar(cp.tid)*cp.tscale};
 	float const xlate [2] = {cp.tdx, cp.tdy};
 	vector3d v[2], dir(plus_z); // default for sphere case

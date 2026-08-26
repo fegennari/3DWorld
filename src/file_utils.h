@@ -53,7 +53,7 @@ inline bool read_bool (FILE *fp, bool     &val) {
 }
 
 inline bool read_string(FILE *fp, std::string &str) {
-	char s[MAX_CHARS] = {0};
+	char s[MAX_CHARS]={};
 	if (!read_str(fp, s)) return 0;
 	str = s;
 	return 1;

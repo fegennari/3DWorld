@@ -14,7 +14,7 @@
 unsigned const MAX_SPHERE_VBO_NDIV = 3*N_SPHERE_DIV/2;
 unsigned const NUM_PREDEF_SPHERES  = 4*MAX_SPHERE_VBO_NDIV;
 
-unsigned sphere_vbo_offsets[NUM_PREDEF_SPHERES+1] = {0};
+unsigned sphere_vbo_offsets[NUM_PREDEF_SPHERES+1]={};
 unsigned predef_sphere_vbo(0);
 vector_point_norm cylinder_vpn;
 

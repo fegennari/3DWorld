@@ -35,7 +35,7 @@ unsigned next_cobj_group_id(0), num_keycards(0);
 float model_czmin(czmin), model_czmax(czmax);
 obj_group obj_groups[NUM_TOT_OBJS];
 dwobject def_objects[NUM_TOT_OBJS];
-int coll_id[NUM_TOT_OBJS] = {0};
+int coll_id[NUM_TOT_OBJS] = {};
 point star_pts[2*N_STAR_POINTS];
 vector<user_waypt_t> user_waypoints;
 coll_obj_group fixed_cobjs;
@@ -1176,7 +1176,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 	assert(coll_obj_file != NULL);
 	FILE *fp;
 	if (!open_file(fp, coll_obj_file, "collision object")) return 0;
-	char str[MAX_CHARS] = {0};
+	char str[MAX_CHARS]={};
 	unsigned line_num(1), npoints(0), indir_dlight_ix(0), prev_light_ix_start(0);
 	int end(0), use_z(0), use_vel(0), ivals[3];
 	float fvals[3] = {}, light_rotate(0.0), model_lod_scale(1.0);
@@ -1313,7 +1313,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 					} // for n
 				}
 				else if (keyword == "lighting_file_sky_model") {
-					unsigned sz[3] = {0};
+					unsigned sz[3]={};
 					float weight(0.0);
 					if (fscanf(fp, "%255s%u%u%u%f", str, &sz[0], &sz[1], &sz[2], &weight) != 5) {return read_error(fp, keyword, coll_obj_file);}
 					set_sky_lighting_file_for_cur_model(str, weight, sz);

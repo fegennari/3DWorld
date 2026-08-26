@@ -20,7 +20,7 @@ unsigned const NUM_EXTRA_DAM = 4;
 bool player_autopilot(0), player_auto_stop(0), hold_fighters(0), dock_fighters(0), ship_cube_map_reflection(0);
 int onscreen_display(0);
 unsigned univ_reflection_tid(0);
-unsigned alloced_fobjs[3] = {0}; // testing
+unsigned alloced_fobjs[3]={}; // testing
 float uobj_rmax(0.0), urm_ship(0.0), urm_static(0.0), urm_proj(0.0);
 point player_death_pos, universe_origin;
 vector<free_obj *> uobjs; // ships, projectiles, etc.
@@ -40,21 +40,21 @@ pt_line_drawer particle_pld;
 point_sprite_drawer_sized glow_psd, smoke_psd;
 shader_t emissive_shader;
 
-float weap_damage[NUM_UWEAP+NUM_EXTRA_DAM] = {0};
-float ship_damage_done[NUM_US_CLASS]  = {0};
-float ship_damage_taken[NUM_US_CLASS] = {0};
-float align_s_damage[NUM_ALIGNMENT]   = {0};
-float align_t_damage[NUM_ALIGNMENT]   = {0};
-float friendly_fire[NUM_ALIGNMENT]    = {0};
-unsigned weap_kills[NUM_UWEAP+NUM_EXTRA_DAM] = {0};
-unsigned ship_kills[NUM_US_CLASS]     = {0};
-unsigned ship_deaths[NUM_US_CLASS]    = {0};
-unsigned team_credits[NUM_ALIGNMENT]  = {0};
-unsigned init_credits[NUM_ALIGNMENT]  = {0};
-unsigned ind_ships_used[NUM_ALIGNMENT]= {0};
-unsigned align_s_kills[NUM_ALIGNMENT] = {0};
-unsigned align_t_kills[NUM_ALIGNMENT] = {0};
-unsigned friendly_kills[NUM_ALIGNMENT]= {0};
+float weap_damage[NUM_UWEAP+NUM_EXTRA_DAM] = {};
+float ship_damage_done[NUM_US_CLASS]  = {};
+float ship_damage_taken[NUM_US_CLASS] = {};
+float align_s_damage[NUM_ALIGNMENT]   = {};
+float align_t_damage[NUM_ALIGNMENT]   = {};
+float friendly_fire[NUM_ALIGNMENT]    = {};
+unsigned weap_kills[NUM_UWEAP+NUM_EXTRA_DAM] = {};
+unsigned ship_kills[NUM_US_CLASS]     = {};
+unsigned ship_deaths[NUM_US_CLASS]    = {};
+unsigned team_credits[NUM_ALIGNMENT]  = {};
+unsigned init_credits[NUM_ALIGNMENT]  = {};
+unsigned ind_ships_used[NUM_ALIGNMENT]= {};
+unsigned align_s_kills[NUM_ALIGNMENT] = {};
+unsigned align_t_kills[NUM_ALIGNMENT] = {};
+unsigned friendly_kills[NUM_ALIGNMENT]= {};
 
 
 extern bool allow_shader_invariants;
@@ -166,9 +166,9 @@ void show_stats() {
 		print_n_spaces(cwidth - (int)damage_names[i].size());
 		cout << ": " << (int)weap_damage[NUM_UWEAP+i] << "\t" << weap_kills[NUM_UWEAP+i] << endl;
 	}
-	unsigned num_ships[NUM_US_CLASS] = {0}, num_ships_align[NUM_ALIGNMENT][NUM_US_CLASS] = {};
-	float of[NUM_ALIGNMENT] = {0}, de[NUM_ALIGNMENT] = {0}, val[NUM_ALIGNMENT] = {0};
-	unsigned cost[NUM_ALIGNMENT] = {0};
+	unsigned num_ships[NUM_US_CLASS]={}, num_ships_align[NUM_ALIGNMENT][NUM_US_CLASS]={};
+	float of[NUM_ALIGNMENT]={}, de[NUM_ALIGNMENT]={}, val[NUM_ALIGNMENT]={};
+	unsigned cost[NUM_ALIGNMENT]={};
 
 	for (unsigned i = 0; i < all_ships.size(); ++i) {
 		if (all_ships[i].flags & OBJ_FLAGS_DECY) continue; // decoy flare?
@@ -292,8 +292,8 @@ public:
 		//timer_t timer("Team Stats");
 		if (!inited) {init();}
 		// Note: we can determine ownership status either by looking at planets+moons or orbiting ships; orbiting ships should be simpler and easier
-		unsigned ntships[NUM_ALIGNMENT] = {0}; // total ships
-		unsigned noships[NUM_ALIGNMENT] = {0}; // orbiting ships
+		unsigned ntships[NUM_ALIGNMENT]={}; // total ships
+		unsigned noships[NUM_ALIGNMENT]={}; // orbiting ships
 		unsigned num_left(0), team_left(0), team_with_most_owned(0);
 
 		for (unsigned i = 0; i < all_ships.size(); ++i) {

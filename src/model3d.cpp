@@ -382,7 +382,7 @@ template<typename T> void indexed_vntc_vect_t<T>::finalize_lod_blocks(unsigned n
 
 
 template<unsigned N> struct vert_to_tri_t {
-	unsigned t[N] = {0}, n=0; // if this vertex is used in more than N triangles we give up and never remove it
+	unsigned t[N]={}, n=0; // if this vertex is used in more than N triangles we give up and never remove it
 
 	void add(unsigned ix) {if (n < N) {t[n] = ix;} ++n;} // only add if it fits, but always increment n
 	void remove(unsigned tix) {assert(tix < min(n, N)); t[tix] = t[n-1]; --n;} // move last element to position tix
@@ -1002,7 +1002,7 @@ bool polygon_t::is_convex() const {
 	unsigned const npts((unsigned)size());
 	assert(npts >= 3);
 	if (npts == 3) return 1;
-	unsigned counts[2] = {0};
+	unsigned counts[2]={};
 	vector3d const norm(get_planar_normal());
 
 	for (unsigned i = 0; i < npts; ++i) {

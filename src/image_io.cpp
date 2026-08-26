@@ -343,9 +343,9 @@ bool write_rgb_bmp_image(string const &fn, unsigned char *data, unsigned width, 
 		return 0;
 	}
 	maybe_swap_rb(data, width*height, ncolors); // Note: data not const because of this line
-	unsigned char pad[4] = {0};
+	unsigned char pad[4]={};
 	unsigned const row_sz(width*ncolors), row_sz_mod(row_sz&3), row_pad(row_sz_mod ? 4-row_sz_mod : 0);
-	bmp_header header = {};
+	bmp_header header={};
 	header.type = 19778; // bitmap
 	//header.size = 54 + (row_sz + row_pad)*height + ((ncolors == 1) ? 1024 : 0); // optional
 	//header.offset = 54; // optional
@@ -363,7 +363,7 @@ bool write_rgb_bmp_image(string const &fn, unsigned char *data, unsigned width, 
 		return 0;
 	}
 	if (ncolors == 1) { // add color index table
-		char color_table[1024] = {0};
+		char color_table[1024]={};
 		for (unsigned i = 0; i < 256; ++i) {UNROLL_3X(color_table[(i<<2)+i_] = i;)}
 
 		if (fwrite(color_table, 1024, 1, fp) != 1) {

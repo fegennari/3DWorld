@@ -56,8 +56,8 @@ unsigned const noise_tu_id = 11; // so as not to conflict with other ground mode
 
 bool have_sun(1);
 unsigned star_cache_ix(0);
-int uxyz[3] = {0, 0, 0};
-unsigned char water_c[3] = {0}, ice_c[3] = {0};
+int uxyz[3]={};
+unsigned char water_c[3]={}, ice_c[3]={};
 unsigned char const *const wic[2] = {water_c, ice_c};
 float univ_sun_rad(AVG_STAR_SIZE), univ_temp(0.0), cloud_time(0.0), universe_ambient_scale(1.0), planet_update_rate(1.0);
 point univ_sun_pos;

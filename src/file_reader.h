@@ -16,7 +16,7 @@ protected:
 	FILE *fp=nullptr; // Note: we use a FILE* here instead of an ifstream because it's ~2.2x faster in MSVS
 	static unsigned const MAX_CHARS = 1024;
 	bool verbose=0;
-	char buffer[MAX_CHARS] = {0};
+	char buffer[MAX_CHARS]={};
 	char *file_buf; // size FILE_BUF_SZ, allocated on the heap to avoid a large stack size
 	unsigned file_buf_pos=0, file_buf_end=0;
 

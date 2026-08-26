@@ -174,7 +174,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 				hdim = (shower_dx < shower_dy); // larger dim, must match handle/door drawing code
 			}
 			unsigned const first_corner(rgen.rand() & 3);
-			bool placed_shower(0), is_ext_wall[2][2] = {0};
+			bool placed_shower(0), is_ext_wall[2][2] = {};
 		
 			if (!is_basement && has_int_windows()) { // precompute which walls are exterior, {dim}x{dir}; basement walls are not considered exterior because there are no windows
 				for (unsigned d = 0; d < 4; ++d) {is_ext_wall[d>>1][d&1] = (classify_room_wall(room, zval, (d>>1), (d&1), 0) == ROOM_WALL_EXT);}

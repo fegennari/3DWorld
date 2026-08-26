@@ -631,7 +631,7 @@ void trace_ray_block_global_cube(lmap_manager_t *lmgr, cube_t const &bnds, point
 {
 	float const line_length(2.0*get_scene_radius());
 	vector3d const ldir((bnds.get_cube_center() - pos).get_norm());
-	float proj_area[3] = {0}, tot_area(0.0);
+	float proj_area[3]={}, tot_area(0.0);
 
 	for (unsigned i = 0; i < 3; ++i) { // adjust the number or weight of rays based on sun/moon position, or simply modify color scale?
 		if (disabled_edges & EFLAGS[i][(ldir[i] < 0.0)]) continue; // should this be here, or should we just skip them later?

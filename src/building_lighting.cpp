@@ -2395,7 +2395,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 
 						if (!is_rotated()) { // check exterior wall visibility; this part doesn't work for rotated buildings
 							// is it better to check if light half sphere is occluded by the floor above/below?
-							bool visible[2] = {0};
+							bool visible[2] = {};
 
 							for (unsigned d = 0; d < 2; ++d) { // for each dim
 								bool const dir(camera_bs[d] > lpos_rot[d]);

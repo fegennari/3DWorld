@@ -426,7 +426,7 @@ struct gen_sphere_params_t {
 	static bool read_error(string const &str) {cout << "Error reading sphere_gen config option " << str << "." << endl; return 0;}
 
 	bool read_option(FILE *fp) {
-		char strc[MAX_CHARS] = {0};
+		char strc[MAX_CHARS]={};
 		if (!read_str(fp, strc)) return 0;
 		string const str(strc);
 

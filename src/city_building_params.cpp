@@ -81,7 +81,7 @@ void city_params_t::init_kw_maps() {
 }
 bool city_params_t::read_option(FILE *fp) {
 
-	char strc[MAX_CHARS] = {0};
+	char strc[MAX_CHARS]={};
 	if (!read_str(fp, strc)) return 0;
 	string const str(strc);
 	if (kwmb.maybe_set_from_fp(str, fp)) return !read_error_flag;
@@ -154,7 +154,7 @@ void buildings_file_err(string const &str, int &error) {
 }
 
 int building_params_t::read_building_texture(FILE *fp, string const &str, bool is_normal_map, int &error, bool check_filename, bool *no_cracks) {
-	char strc[MAX_CHARS] = {0};
+	char strc[MAX_CHARS]={};
 	if (!read_str(fp, strc)) {buildings_file_err(str, error);}
 
 	if (check_filename && !check_texture_file_exists(strc)) {
@@ -345,7 +345,7 @@ void building_params_t::init_kw_maps() {
 
 bool building_params_t::parse_buildings_option(FILE *fp) {
 
-	char strc[MAX_CHARS] = {0};
+	char strc[MAX_CHARS]={};
 	if (!read_str(fp, strc)) return 0;
 	string const str(strc);
 	if (kwmb.maybe_set_from_fp(str, fp)) return !read_error;

@@ -665,7 +665,7 @@ void build_lightmap(bool verbose) {
 	float const zstep(czspan/zsize);
 	if (verbose) {cout << "Lightmap zsize= " << zsize << ", nonempty= " << nonempty << ", bins= " << nbins << ", czmin= " << czmin0 << ", czmax= " << czmax << endl;}
 	assert(zstep > 0.0);
-	bool raytrace_lights[NUM_LIGHTING_TYPES] = {0};
+	bool raytrace_lights[NUM_LIGHTING_TYPES]={};
 	for (unsigned i = 0; i < NUM_LIGHTING_TYPES; ++i) {raytrace_lights[i] = (read_light_files[i] || write_light_files[i]);}
 	has_indir_lighting = (raytrace_lights[LIGHTING_SKY] || raytrace_lights[LIGHTING_GLOBAL] || create_voxel_landscape);
 	lmcell init_lmcell;

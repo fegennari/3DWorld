@@ -2677,8 +2677,8 @@ void u_ship::fragment(vector3d const &edir, float num, bool outside_cr) const { 
 void u_ship::draw_obj(uobj_draw_data &ddata) const { // front is in -z
 
 #ifdef TIME_SHIP_DRAW
-	static int times[NUM_US_CLASS] = {0};
-	static unsigned count(0), counts[NUM_US_CLASS];
+	static int times[NUM_US_CLASS]={};
+	static unsigned count(0), counts[NUM_US_CLASS]={};
 	RESET_TIME;
 #endif
 	us_class const &sc(specs());

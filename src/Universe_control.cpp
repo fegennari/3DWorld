@@ -25,8 +25,8 @@ string player_killer;
 s_object clobj0; // closest object to player
 pos_dir_up player_pdu;
 cobj_vector_t const empty_cobjs; // always empty
-unsigned owner_counts[NUM_ALIGNMENT] = {0};
-float resource_counts[NUM_ALIGNMENT] = {0.0};
+unsigned owner_counts[NUM_ALIGNMENT]={};
+float resource_counts[NUM_ALIGNMENT]={};
 
 
 extern bool claim_planet, water_is_lava, no_shift_universe;

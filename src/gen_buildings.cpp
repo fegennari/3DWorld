@@ -725,7 +725,7 @@ class building_draw_t {
 		indexed_vao_manager_with_shadow_t vao_mgr; // Note: not using the indexed part
 		vector<vert_ix_pair> pos_by_tile; // {quads, tris}
 		unsigned tri_vbo_off=0, vert_vbo_sz=0;
-		unsigned start_num_verts[2] = {0}; // for quads and triangles
+		unsigned start_num_verts[2]={}; // for quads and triangles
 	public:
 		bool no_shadows=0;
 		tid_nm_pair_t tex;

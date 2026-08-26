@@ -759,7 +759,7 @@ bool shader_t::begin_shader(bool do_enable) {
 		program = prog.p;
 	}
 	else { // create a new program
-		unsigned shader_ixs[NUM_SHADER_TYPES] = {0};
+		unsigned shader_ixs[NUM_SHADER_TYPES]={};
 		
 		while (1) { // retry loop
 			check_gl_error(299);

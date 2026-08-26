@@ -366,7 +366,7 @@ bool local_smap_data_t::set_smap_shader_for_light(shader_t &s, bool &arr_tex_set
 unsigned get_empty_smap_tid(bool is_csm) {
 	if (empty_smap_tid == 0) {
 		set_shadow_tex_params(empty_smap_tid, 0, is_csm); // is_array=0
-		char const zero_data[16] = {0}; // large enough for any type
+		char const zero_data[16]={}; // large enough for any type
 		if (is_csm) {glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, SMAP_INTERNAL_FORMAT, 1, 1, NUM_CSM_CASCADES, 0, GL_DEPTH_COMPONENT, SHADOW_MAP_DATATYPE, zero_data);} // 1x1 texel
 		else        {glTexImage2D(GL_TEXTURE_2D,       0, SMAP_INTERNAL_FORMAT, 1, 1,                   0, GL_DEPTH_COMPONENT, SHADOW_MAP_DATATYPE, zero_data);} // 1x1 texel
 		assert(empty_smap_tid > 0);

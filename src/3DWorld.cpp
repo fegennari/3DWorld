@@ -63,7 +63,7 @@ char const *const dcoll_obj_file = "coll_objs/coll_objs.txt";
 char const *const dship_def_file = "universe/ship_defs.txt";
 char *state_file(nullptr), *mesh_file(nullptr), *coll_obj_file(nullptr);
 char *mh_filename(nullptr), *mh_filename_tt(nullptr), *mesh_diffuse_tex_fn(nullptr), *ship_def_file(nullptr), *snow_file(nullptr);
-char *lighting_file[NUM_LIGHTING_TYPES] = {0};
+char *lighting_file[NUM_LIGHTING_TYPES] = {};
 
 
 // Global Variables - most of these are set by the config file reader and used in other files.
@@ -101,7 +101,7 @@ int pause_frame(0), show_fog(0), spectate(0), b2down(0), free_for_all(0), teams(
 int reset_timing(0), read_heightmap(0), default_ground_tex(-1), num_dodgeballs(1), INIT_DISABLE_WATER, ground_effects_level(2);
 int enable_fsource(0), run_forward(0), advanced(0), dynamic_mesh_scroll(0), default_anim_id(-1), stats_display_mode(0);
 int read_snow_file(0), write_snow_file(0), mesh_detail_tex(NOISE_TEX), add_city_grass(0);
-int read_light_files[NUM_LIGHTING_TYPES] = {0}, write_light_files[NUM_LIGHTING_TYPES] = {0};
+int read_light_files[NUM_LIGHTING_TYPES] = {}, write_light_files[NUM_LIGHTING_TYPES] = {};
 unsigned num_snowflakes(0), create_voxel_landscape(0), hmap_filter_width(0), num_dynam_parts(100), snow_coverage_resolution(2), show_map_view_fractal(0);
 unsigned num_birds_per_tile(2), num_fish_per_tile(15), num_bflies_per_tile(4);
 unsigned erosion_iters(0), erosion_iters_tt(0), skybox_tid(0), tiled_terrain_gen_heightmap_sz(0), game_mode_disable_mask(0), num_frame_draw_calls(0);
@@ -132,7 +132,7 @@ float sun_rot(0.2), moon_rot(-0.2), sun_theta(1.2), moon_theta(0.3), light_facto
 vector3d up_vector(plus_y), cview_dir;
 point camera_origin, surface_pos, cpos2;
 char player_name[MAX_CHARS] = "Player";
-bool vert_opt_flags[3] = {0}; // {enable, full_opt, verbose}
+bool vert_opt_flags[3] = {}; // {enable, full_opt, verbose}
 
 
 extern bool clear_landscape_vbo, use_dense_voxels, tree_4th_branches, model_calc_tan_vect, water_is_lava, use_grass_tess, def_tex_compress, ship_cube_map_reflection;
@@ -1754,7 +1754,7 @@ int load_config(string const &config_file) {
 	FILE *fp(open_config_file(config_file));
 	if (fp == nullptr) return 0;
 	int error(0);
-	char strc[MAX_CHARS] = {0}, md_fname[MAX_CHARS] = {0}, we_fname[MAX_CHARS] = {0}, fw_fname[MAX_CHARS] = {0}, include_fname[MAX_CHARS] = {0};
+	char strc[MAX_CHARS]={}, md_fname[MAX_CHARS]={}, we_fname[MAX_CHARS]={}, fw_fname[MAX_CHARS]={}, include_fname[MAX_CHARS]={};
 
 	// Note: all of these maps bind variable addresses into the config file system by name
 	kw_to_val_map_t<bool> kwmb(error);

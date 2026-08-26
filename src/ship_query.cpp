@@ -450,7 +450,7 @@ free_obj *free_obj::get_closest_ship(point const &pos, float min_dist, float max
 	else {
 		unsigned const alignment(get_align());
 		assert(alignment < NUM_ALIGNMENT);
-		bool testset[NUM_ALIGNMENT] = {0};
+		bool testset[NUM_ALIGNMENT]={};
 
 		switch (alignment) {
 		case ALIGN_NEUTRAL:

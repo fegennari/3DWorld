@@ -761,7 +761,7 @@ bool building_t::add_lab_room_objs(rand_gen_t rgen, room_t &room, float zval, un
 	}
 	if (enable_kitchen_app_models()) { // add fridge/freezer/oven/sink models from commercial kitchens
 		unsigned const num_ka_models(2 + (rgen.rand() % 3)); // 2-4
-		unsigned cclass_counts[3]={0}; // unused
+		unsigned cclass_counts[3]={}; // unused
 		unsigned types_used(0);
 		cube_t hood; // unused
 

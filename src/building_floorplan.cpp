@@ -365,8 +365,8 @@ void building_t::gen_interior_int(rand_gen_t &rgen, unsigned gen_index, bool has
 		cube_t hall, place_area(*p);
 		place_area.expand_by_xy(-wall_edge_spacing); // shrink slightly to avoid z-fighting with walls
 		bool no_split_walls_this_part(0);
-		float window_hspacing   [2] = {0.0};
-		int num_windows_per_side[2] = {0};
+		float window_hspacing   [2] = {};
+		int num_windows_per_side[2] = {};
 		vector<unsigned> utility_room_cands, special_room_cands; // used for parts with a hallway + assign_special_room_types()
 
 		for (unsigned d = 0; d < 2; ++d) {
