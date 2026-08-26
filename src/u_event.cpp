@@ -55,7 +55,6 @@ int read_ueventlist(char *arg) {
 	return 1;
 }
 
-
 int save_ueventlist() {
 
 	if (make_eventlist == 0) return 0;
@@ -80,7 +79,6 @@ int save_ueventlist() {
 	cout << "Ueventlist saved as '" << UEL_SAVE_NAME << "'." << endl;
 	return 1;
 }
-
 
 void uevent_advance_frame() {
 
@@ -160,7 +158,6 @@ void uevent_advance_frame() {
 
 
 void add_uevent_srand(int rseed) {
-
 	if (read_eventlist == 1) return;
 	srand(rseed);
 	if (!check_event_ok())   return;
@@ -169,9 +166,7 @@ void add_uevent_srand(int rseed) {
 	eventlist.push_back(event);
 }
 
-
 void add_uevent_resize(int x, int y) {
-
 	if (!check_event_ok()) return;
 	uevent event(UE_RESIZE, frame_counter);
 	event.params[0] = x;
@@ -179,9 +174,7 @@ void add_uevent_resize(int x, int y) {
 	eventlist.push_back(event);
 }
 
-
 void add_uevent_mbutton(int button, int state, int x, int y) {
-
 	if (!check_event_ok()) return;
 	uevent event(UE_MBUTTON, frame_counter);
 	event.params[0] = button;
@@ -191,9 +184,7 @@ void add_uevent_mbutton(int button, int state, int x, int y) {
 	eventlist.push_back(event);
 }
 
-
 void add_uevent_mmotion(int x, int y) {
-
 	if (!check_event_ok()) return;
 	uevent event(UE_MMOTION, frame_counter);
 	event.params[0] = x;
@@ -201,9 +192,7 @@ void add_uevent_mmotion(int x, int y) {
 	eventlist.push_back(event);
 }
 
-
 void add_uevent_keyboard_def(unsigned char key, int x, int y, int type) {
-
 	if (!check_event_ok()) return;
 	uevent event(type, frame_counter);
 	event.params[0] = (int)key;
@@ -212,15 +201,12 @@ void add_uevent_keyboard_def(unsigned char key, int x, int y, int type) {
 	eventlist.push_back(event);
 }
 
-
 void add_uevent_keyboard(unsigned char key, int x, int y) {
 	add_uevent_keyboard_def(key, x, y, UE_KEYBOARD);
 }
-
 void add_uevent_keyboard_up(unsigned char key, int x, int y) {
 	add_uevent_keyboard_def(key, x, y, UE_KEYBOARD_UP);
 }
-
 void add_uevent_keyboard_special(int key, int x, int y) {
 	add_uevent_keyboard_def(key, x, y, UE_KEYBOARD_SPECIAL);
 }
@@ -228,8 +214,5 @@ void add_uevent_keyboard_special(int key, int x, int y) {
 int check_event_ok() {
 	return (make_eventlist && frame_counter <= (int)MAX_EVENT_FRAMES && eventlist.size() <= (size_t)MAX_U_EVENTS);
 }
-
-
-
 
 

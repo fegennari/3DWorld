@@ -35,7 +35,6 @@ void draw_translocator(point const &pos, float radius, int ndiv, int source, sha
 
 
 void beam3d::draw(line_tquad_draw_t &drawer) const {
-
 	if (shooter == CAMERA_ID)  return; // camera (skip for now)
 	if (intensity < TOLERANCE) return; // error?
 	if (!camera_pdu.line_visible_test(pts[0], pts[1])) return;
@@ -162,8 +161,7 @@ void add_weapon_cobj(point const &pos, vector3d const &dir, float cradius, float
 
 	case W_ROCKET:
 	case W_SEEK_D:
-	case W_RAPTOR:
-		{
+	case W_RAPTOR: {
 			radius = 0.95*object_types[weapons[wid].obj_id].radius;
 			float const rscale((wid == W_SEEK_D) ? 4.8 : ((wid == W_RAPTOR) ? 8.8 : 5.8)), cylin_radius(((wid == W_RAPTOR) ? 0.9 : 0.8)*radius);
 			point const pos1(pos0 + dir*radius), pos2(pos0 - dir*(rscale*radius));
@@ -238,16 +236,13 @@ void add_weapon_cobj(point const &pos, vector3d const &dir, float cradius, float
 
 
 void clear_weap_cobjs() { // when should this be called?
-
 	for (unsigned i = 0; i < weap_cobjs.size(); ++i) {
 		remove_coll_object(weap_cobjs[i]);
 	}
 	weap_cobjs.clear();
 }
 
-
 point get_sstate_draw_pos(int shooter) {
-
 	point pos(get_sstate_pos(shooter));
 	
 	if (shooter != CAMERA_ID && !(obj_groups[coll_id[SMILEY]].get_obj(shooter).flags & CAMERA_VIEW)) {
@@ -286,7 +281,6 @@ void update_weapon_cobjs() { // and update cblade and lighting
 		sstates[i].update_weapon_cobjs(i);
 	}
 }
-
 
 int select_dodgeball_texture(int shooter) {
 
@@ -426,8 +420,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			break;
 
 		case W_BLADE:
-		case W_SAWBLADE:
-			{
+		case W_SAWBLADE: {
 				static int lfc(0);
 				static float angle(0.0);
 				
@@ -590,8 +583,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			shader.clear_specular();
 			break;
 
-		case W_SHOTGUN:
-			{
+		case W_SHOTGUN: {
 				radius = 0.0045;
 				float const rdx(radius*dir.x/rxy), rdy(radius*dir.y/rxy);
 				set_gold_material(shader, alpha);
@@ -708,7 +700,6 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 	//glEnable(GL_DEPTH_TEST);
 }
 
-
 void draw_weapon_simple(point const &pos, vector3d const &dir, float radius, int cid, int wid, float scale, shader_t &shader, int shooter, bool fixed_lod, float apha) {
 	draw_weapon(pos, dir, radius, cid, wid, 0, 0, 0, 1, 0, 2, shooter, 0, apha, 0.0, 0.0, scale, 0, shader, fixed_lod);
 }
@@ -731,7 +722,6 @@ bool weap_has_transparent(int shooter) {
 	}
 	return 0;
 }
-
 
 int get_shooter_coll_id(int shooter) {
 	return ((shooter == CAMERA_ID) ? camera_coll_id : obj_groups[coll_id[SMILEY]].get_obj(shooter).coll_id);
@@ -788,9 +778,7 @@ void draw_weapon_in_hand_real(int shooter, bool draw_pass, shader_t &shader, int
 	if (cull_face) {glDisable(GL_CULL_FACE);}
 }
 
-
 void draw_weapon_in_hand(int shooter, shader_t &shader, int reflection_pass) {
-
 	if (!game_mode) return;
 	draw_weapon_in_hand_real(shooter, 0, shader, reflection_pass);
 	if (reflection_pass) {draw_weapon_in_hand_real(shooter, 1, shader, reflection_pass);} // draw the other pass now
@@ -817,7 +805,6 @@ void draw_camera_weapon(bool want_has_trans, int reflection_pass) {
 		s.end_shader();
 	}
 }
-
 
 void draw_scheduled_weapons(bool clear_after_draw) {
 	
@@ -1015,7 +1002,6 @@ void draw_inventory() {
 }
 
 void draw_qbd_with_textured_shader(quad_batch_draw const &qbd, int tid, float min_alpha=0.0) {
-
 	select_texture(tid);
 	shader_t s;
 	s.begin_simple_textured_shader(min_alpha); // no lighting

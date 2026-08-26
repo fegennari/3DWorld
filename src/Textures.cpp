@@ -225,7 +225,6 @@ bool is_tex_disabled(int i) {
 	return (i == GEN_TEX || (universe_only && (i == CLOUD_RAW_TEX || i == WIND_TEX || i == LANDSCAPE_TEX || i == TREE_END_TEX || i == TREE_HEMI_TEX)));
 }
 
-
 void load_texture_names() {
 
 	if (!texture_name_map.empty()) return; // already loaded
@@ -239,12 +238,9 @@ void load_texture_names() {
 	}
 }
 
-
 bool using_custom_landscape_texture() {return (read_landscape && mesh_diffuse_tex_fn != NULL);}
 
-
 void set_landscape_texture_from_file() {
-
 	assert(mesh_diffuse_tex_fn != NULL);
 	texture_t &tex(textures[LANDSCAPE_TEX]);
 	tex.name  = mesh_diffuse_tex_fn;
@@ -466,17 +462,13 @@ void reset_textures() {
 	noise_tex_3ds.clear();
 }
 
-
 void setup_landscape_tex_colors(colorRGBA const &c1, colorRGBA const &c2) { // c1 = high, c2 = low
-
 	textures[ROCK_TEX].set_to_color(c1);
 	textures[SAND_TEX].set_to_color(c2);
 	textures[DIRT_TEX].set_to_color(c2);
 }
 
-
 void free_texture(unsigned &tid) {
-
 	if (tid == 0) return; // avoid GL calls
 	if (glIsTexture(tid)) {glDeleteTextures(1, &tid);}
 	tid = 0;
@@ -527,7 +519,6 @@ GLenum texture_t::calc_internal_format() const {
 GLenum texture_t::calc_format() const {
 	return (is_16_bit_gray ? GL_RED : get_texture_format(ncolors));
 }
-
 
 void texture_t::do_gl_init(bool free_after_upload) {
 	//timer_t timer(("Load and Upload Texture " + name), 1, 1);
@@ -606,9 +597,7 @@ void texture_t::copy_alpha_from_texture(texture_t const &at, bool alpha_in_red_c
 	for (unsigned i = 0; i < npixels; ++i) {data[4*i+3] = at.data[at.ncolors*i+alpha_offset];} // copy alpha values
 }
 
-
 void texture_t::merge_in_alpha_channel(texture_t const &at) {
-
 	assert(ncolors == 3 && at.ncolors == 1);
 	assert(width == at.width && height == at.height);
 	add_alpha_channel();
@@ -657,7 +646,6 @@ void get_lum_alpha(colorRGBA const &color, int tid, float &luminance, float &alp
 		alpha     *= tc.alpha;
 	}
 }
-
 
 void texture_t::auto_insert_alpha_channel(int index) {
 
@@ -731,7 +719,6 @@ void texture_t::fill_to_grayscale_color(unsigned char color_val) {
 	for(unsigned i = 0; i < size; ++i) {UNROLL_3X(data[(i<<2)+i_] = color_val;);}
 }
 
-
 void texture_t::fill_transparent_with_avg_color() { // unused, but may be useful
 
 	assert(ncolors == 4);
@@ -753,7 +740,6 @@ void texture_t::fill_transparent_with_avg_color() { // unused, but may be useful
 	}
 }
 
-
 void texture_t::do_invert_y() {
 
 	assert(is_allocated());
@@ -764,7 +750,6 @@ void texture_t::do_invert_y() {
 		for(unsigned j = 0; j < wc; ++j) {swap(data[off1+j], data[off2+j]);} // invert y
 	}
 }
-
 
 void texture_t::fix_word_alignment() {
 
@@ -902,7 +887,6 @@ void texture_t::load_from_gl() { // also set tid?
 	glGetTexImage(GL_TEXTURE_2D, 0, calc_format(), get_data_format(), data);
 }
 
-
 void bind_1d_texture(unsigned tid, bool is_array) {
 	glBindTexture((is_array ? GL_TEXTURE_1D_ARRAY : GL_TEXTURE_1D), tid);
 }
@@ -949,7 +933,6 @@ void setup_texture(unsigned &tid, bool mipmap, bool wrap_s, bool wrap_t, bool mi
 	glTexParameteri(target, GL_TEXTURE_WRAP_T, mode_t);
 }
 
-
 void setup_1d_texture(unsigned &tid, bool mipmap, bool wrap, bool mirror, bool nearest) {
 
 	assert(tid == 0);
@@ -960,7 +943,6 @@ void setup_1d_texture(unsigned &tid, bool mipmap, bool wrap, bool mirror, bool n
 	glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, (nearest ? GL_NEAREST : GL_LINEAR));
 	glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, (wrap ? (mirror ? GL_MIRRORED_REPEAT : GL_REPEAT) : GL_CLAMP_TO_EDGE));
 }
-
 
 void setup_cube_map_texture(unsigned &tid, unsigned tex_size, bool allocate, bool use_mipmaps, float aniso) { // Note: no mipmaps
 
@@ -1017,11 +999,9 @@ void gen_smoke_texture() {
 	unsigned char const smoke_color(255);
 	textures[SMOKE_TEX].gen_rand_texture(smoke_color, 0, 256); // same as PLASMA_TEX but larger
 }
-
 void gen_plasma_texture() {
 	textures[PLASMA_TEX].gen_rand_texture(255, 0, 256);
 }
-
 void gen_disintegrate_texture() {
 	textures[DISINT_TEX].gen_rand_texture(255, 1, 255);
 }
@@ -1097,7 +1077,6 @@ void gen_blur_inv_texture() {
 	}
 }
 
-
 void gen_stripe_texture(int tid, bool horiz) {
 
 	texture_t &tex(textures[tid]);
@@ -1111,7 +1090,6 @@ void gen_stripe_texture(int tid, bool horiz) {
 		}
 	}
 }
-
 
 void gen_tree_end_texture() {
 
@@ -1129,7 +1107,6 @@ void gen_tree_end_texture() {
 		}
 	}
 }
-
 
 void gen_blur_cent_texture() {
 
@@ -1149,7 +1126,6 @@ void gen_blur_cent_texture() {
 	}
 }
 
-
 void gen_gradient_texture() { // for horizon
 
 	texture_t &tex(textures[GRADIENT_TEX]); // 1D
@@ -1163,9 +1139,7 @@ void gen_gradient_texture() { // for horizon
 	}
 }
 
-
 void gen_wind_texture() {
-
 	texture_t &tex(textures[WIND_TEX]);
 	unsigned char const *tex_data2(textures[CLOUD_RAW_TEX].get_data());
 	assert(tex.ncolors == 1 && textures[CLOUD_RAW_TEX].ncolors == 4); // RGBA => grayscale luminance
@@ -1174,7 +1148,6 @@ void gen_wind_texture() {
 	unsigned const size(tex.num_pixels());
 	for (unsigned i = 0; i < size; ++i) {tex_data[i] = tex_data2[(i<<2)+3];} // put alpha in luminance
 }
-
 
 void gen_building_window_texture(float width_frac, float height_frac) { // Note: generated when needed, not during load
 
@@ -1207,12 +1180,10 @@ void noise_fill(unsigned char *data, unsigned size) {
 	rand_gen_t rgen;
 	for (unsigned i = 0; i < size; ++i) {data[i] = (rgen.rand() & 255);}
 }
-
 void noise_fill_01(vector<float> &data) {
 	rand_gen_t rgen;
 	for (auto i = data.begin(); i != data.end(); ++i) {*i = rgen.rand_float();}
 }
-
 
 void gen_noise_texture() {
 
@@ -1230,7 +1201,6 @@ void gen_noise_texture() {
 	}
 }
 
-
 unsigned create_3d_noise_texture(unsigned size, unsigned ncomp, unsigned bytes_per_pixel) {
 
 	if (bytes_per_pixel == 4) { // special case - use floating-point texture
@@ -1247,9 +1217,7 @@ unsigned create_3d_noise_texture(unsigned size, unsigned ncomp, unsigned bytes_p
 	return create_3d_texture(size, size, size, ncomp, data, GL_LINEAR, GL_REPEAT, 0, bytes_per_pixel); // compressed?
 }
 
-
 unsigned get_noise_tex_3d(unsigned tsize, unsigned ncomp, unsigned bytes_per_pixel) {
-
 	pair<texture_map_t::iterator, bool> ret(noise_tex_3ds.insert(make_pair(make_pair(tsize, (ncomp + 4*bytes_per_pixel)), 0)));
 	if (ret.second) {ret.first->second = create_3d_noise_texture(tsize, ncomp, bytes_per_pixel);}
 	return ret.first->second;
@@ -1279,7 +1247,6 @@ colorRGBA get_landscape_texture_color(int xpos, int ypos) {
 	cached_ls_colors[ix] = color;
 	return color;
 }
-
 
 int get_bare_ls_tid(float zval) {
 	float const relh(relh_adj_tex + (zval - zmin)/(zmax - zmin));
@@ -1316,7 +1283,6 @@ void get_tids(float relh, int &k1, int &k2, float *t) {
 void clear_cached_ls_colors() {
 	for (auto i = cached_ls_colors.begin(); i != cached_ls_colors.end(); ++i) {*i = ALPHA0;}
 }
-
 
 void create_landscape_texture() {
 
@@ -1548,7 +1514,6 @@ void regrow_landscape_texture_amt0() {
 	tex.update_texture_data(0, y1, tex.width, y2);
 }
 
-
 float add_crater_to_landscape_texture(float xval, float yval, float radius) {
 
 	if (using_custom_landscape_texture()) return 0.0;
@@ -1581,7 +1546,6 @@ float add_crater_to_landscape_texture(float xval, float yval, float radius) {
 	update_lt_section(x1, y1, x2+1, y2+1);
 	return get_rel_height(mesh_height[ypos][xpos], zmin, zmax);
 }
-
 
 void add_hole_in_landscape_texture(int xpos, int ypos, float blend) { // for water damage
 
@@ -1616,7 +1580,6 @@ void add_hole_in_landscape_texture(int xpos, int ypos, float blend) { // for wat
 		landscape_changed = 1;
 	}
 }
-
 
 void add_color_to_landscape_texture(colorRGBA const &color, float xval, float yval, float radius) {
 
@@ -1660,7 +1623,6 @@ void add_color_to_landscape_texture(colorRGBA const &color, float xval, float yv
 	update_lt_section(x1, y1, x2+1, y2+1); // can be slow
 }
 
-
 void add_snow_to_landscape_texture(point const &pos, float acc) {
 
 	if (acc <= 0.0 || using_custom_landscape_texture()) return;
@@ -1701,7 +1663,6 @@ void add_snow_to_landscape_texture(point const &pos, float acc) {
 	lchanged0 = 1;
 }
 
-
 void update_landscape_texture() {
 
 	ls_color_texels.clear();
@@ -1738,23 +1699,19 @@ void update_lt_section(int x1, int y1, int x2, int y2) {
 
 
 int snow_height(point pos) {
-
 	int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
 	if (point_outside_mesh(xpos, ypos)) return 0;
 	float const relh(relh_adj_tex + (mesh_height[ypos][xpos] - zmin)/(zmax - zmin));
 	return (relh > h_dirt[3]);
 }
 
-
 void gen_tex_height_tables() {
-
 	for (unsigned i = 0; i < NTEX_DIRT; ++i) {h_dirt[i] = pow(lttex_dirt[i].zval, glaciate_exp);}
 	clip_hd1 = (0.90*h_dirt[1] + 0.10*h_dirt[0]);
 }
 
 
 void set_texgen_vec4(vector4d const &v, bool s_or_t, shader_t &shader, int mode) {
-
 	switch (mode) { // mode: 0 = shader uniform, 1 = shader attrib, 2 = shader uniform #2
 	case 0: shader.add_uniform_vector4d((s_or_t ? "texgen_t"  : "texgen_s" ), v); break;
 	case 2: shader.add_uniform_vector4d((s_or_t ? "texgen2_t" : "texgen2_s"), v); break;
@@ -1793,7 +1750,6 @@ void setup_polygon_texgen(vector3d const &norm, float const scale[2], float cons
 	}
 }
 
-
 void get_tex_coord(vector3d const &dir, vector3d const &sdir, unsigned txsize, unsigned tysize, int &tx, int &ty, bool invert) {
 
 	double s, t;
@@ -1819,7 +1775,6 @@ unsigned texture_t::get_texel_ix(float u, float v) const {
 	return (width*ty + tx);
 }
 
-
 colorRGBA texture_t::get_texel(unsigned ix) const {
 
 	assert(ix < num_pixels());
@@ -1838,7 +1793,6 @@ colorRGBA texture_t::get_texel(unsigned ix) const {
 	}
 	return BLACK; // never gets here
 }
-
 
 float texture_t::get_component(float u, float v, int comp) const {
 	assert(comp < ncolors);
@@ -1902,7 +1856,6 @@ vector2d get_billboard_texture_uv(point const *const points, point const &pos) {
 	//assert(uv.x >= 0.0 && uv.x <= 1.0 && uv.y >= 0.0 && uv.y <= 1.0); // more restrictive case
 	return uv;
 }
-
 
 bool is_billboard_texture_transparent(point const *const points, point const &pos, int tid) {
 	vector2d const uv(get_billboard_texture_uv(points, pos));

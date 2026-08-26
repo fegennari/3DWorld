@@ -26,7 +26,6 @@ void fgCALLBACK tess_error(GLenum errno) {
 	has_tess_error = 1;
 }
 
-
 void fgCALLBACK do_combine(GLdouble c[3], vert_norm_tc *vertex_data[4], GLfloat weight[4], vert_norm_tc **out) { // self-intersecting polygon
 
 	self_int = 1;
@@ -45,7 +44,6 @@ void fgCALLBACK do_combine(GLdouble c[3], vert_norm_tc *vertex_data[4], GLfloat 
 	added_pts.emplace_back(point(c[0], c[1], c[2]), norm, tc);
 	*out = &added_pts.back();
 }
-
 
 void fgCALLBACK do_coord(vert_norm_tc *coord) {
 
@@ -72,15 +70,12 @@ void fgCALLBACK do_coord(vert_norm_tc *coord) {
 	if (!emit_tri) {++vertex;}
 }
 
-
 void fgCALLBACK do_begin(int type) {
-
 	assert(!mode_valid);
 	mode       = type;
 	mode_valid = 1;
 	vertex     = 0;
 }
-
 
 void fgCALLBACK do_end() {
 
@@ -103,7 +98,6 @@ void fgCALLBACK do_end() {
 
 
 GLUtesselator *init_tess() {
-
 	GLUtesselator *tobj(gluNewTess());
 	assert(tobj != NULL);
 	gluTessCallback(tobj, GLU_TESS_VERTEX,  (void (fgCALLBACK *)(void))do_coord);
@@ -113,7 +107,6 @@ GLUtesselator *init_tess() {
 	gluTessCallback(tobj, GLU_TESS_COMBINE, (void (fgCALLBACK *)(void))do_combine);
 	return tobj;
 }
-
 
 void tessellate_polygon(polygon_t const &poly) {
 
@@ -192,7 +185,6 @@ template<typename T> bool split_polygon(polygon_t const &poly, vector<T> &ppts, 
 
 template bool split_polygon<polygon_t >(polygon_t const &poly, vector<polygon_t > &ppts, float coplanar_thresh, bool allow_quads);
 template bool split_polygon<coll_tquad>(polygon_t const &poly, vector<coll_tquad> &ppts, float coplanar_thresh, bool allow_quads);
-
 
 void split_polygon_to_cobjs(coll_obj const &cobj, coll_obj_group &split_polygons, vector<point> const &poly_pts) {
 

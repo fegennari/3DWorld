@@ -36,16 +36,13 @@ extern vector<jump_pad> jump_pads;
 
 // ********** waypt_used_set **********
 
-
 void waypt_used_set::clear() {
-
 	used.clear();
 	last_wp    = 0;
 	last_frame = 0;
 }
 
 void waypt_used_set::insert(unsigned wp) { // called when a waypoint has been reached
-
 	last_wp    = wp;
 	last_frame = frame_counter;
 	used[wp]   = frame_counter;
@@ -69,7 +66,6 @@ bool waypt_used_set::is_valid(unsigned wp) { // called to determine whether or n
 
 
 // ********** waypoint_t **********
-
 
 waypoint_t::waypoint_t(point const &p, int cid, bool up, bool i, bool g, bool t) : user_placed(up), placed_item(i), goal(g), temp(t), coll_id(cid), pos(p) {
 	clear();
@@ -121,7 +117,6 @@ wpt_ix_t waypoint_vector::add(waypoint_t const &w) {
 	return ix;
 }
 
-
 void waypoint_vector::remove(wpt_ix_t ix) {
 
 	assert(ix < size());
@@ -137,7 +132,6 @@ void waypoint_vector::remove(wpt_ix_t ix) {
 
 
 wpt_goal::wpt_goal(int m, unsigned w, point const &p) : mode(m), wpt(w), pos(p) {
-
 	switch (mode) {
 	case 0: case 1: case 2: case 3: case 5: case 6: break; // nothing
 	case 4: assert(wpt < waypoints.size()); break;
@@ -146,9 +140,7 @@ wpt_goal::wpt_goal(int m, unsigned w, point const &p) : mode(m), wpt(w), pos(p) 
 	}
 }
 
-
 bool wpt_goal::is_reachable() const {
-
 	if (mode == 0 || waypoints.empty()) return 0;
 	if (mode == 1 && !has_user_placed)  return 0;
 	if (mode == 2 && !has_item_placed)  return 0;
@@ -159,9 +151,7 @@ bool wpt_goal::is_reachable() const {
 
 // ********** waypoint_builder **********
 
-
 bool check_step_dz(point &cur, point const &lpos, float radius) {
-
 	float zvel(0.0);
 	int const ret(set_true_obj_height(cur, lpos, C_STEP_HEIGHT, zvel, WAYPOINT, 0, 0, 0, 1, 1, 1)); // skip dynamic/movable
 	if (ret == 3)                                      return 0; // stuck
@@ -172,7 +162,6 @@ bool check_step_dz(point &cur, point const &lpos, float radius) {
 
 
 class waypoint_builder {
-
 	float const radius, size_thresh;
 
 	bool is_waypoint_valid(point pos, int coll_id, bool is_mesh_wpt) const {
@@ -422,7 +411,7 @@ public:
 		for (int i = from_start; i < (int)from_end; ++i) {waypoints[i].next_valid = 0;}
 		vector<pair<float, unsigned> > cands;
 
-		#pragma omp parallel for schedule(dynamic,1) private(cands) // is this fully thread safe? it's not determinstic across threads
+#pragma omp parallel for schedule(dynamic,1) private(cands) // is this fully thread safe? it's not determinstic across threads
 		for (int i = from_start; i < (int)from_end; ++i) {
 			assert(i < (int)waypoints.size());
 			if (waypoints[i].disabled) continue;
@@ -536,7 +525,7 @@ public:
 	}
 
 	// is check_visible==1, only consider visible and reachable (at least one incoming edge) waypoints
-bool find_closest_waypoint(point const &pos, unsigned &closest, bool check_visible) const {
+	bool find_closest_waypoint(point const &pos, unsigned &closest, bool check_visible) const {
 		int cindex(-1);
 		float closest_dsq(0.0);
 		bool found(0);
@@ -560,19 +549,14 @@ bool find_closest_waypoint(point const &pos, unsigned &closest, bool check_visib
 
 // ********** waypoint_search **********
 
-
 struct waypoint_cache {
-
 	vector<unsigned> open, closed; // tentative/already evaluated nodes
-	unsigned call_ix; // incremented each run_a_star() call
-	waypoint_cache() : call_ix(0) {}
+	unsigned call_ix=0; // incremented each run_a_star() call
 };
-
 waypoint_cache global_wpt_cache;
 
 
 class waypoint_search {
-
 	wpt_goal goal;
 	waypoint_builder wb;
 	waypoint_cache &wc;
@@ -610,7 +594,6 @@ class waypoint_search {
 			has_wpt_goal = orig_has_wpt_goal;
 		}
 	}
-
 public:
 	waypoint_search(wpt_goal const &goal_, waypoint_cache &wc_) : goal(goal_), wc(wc_) {}
 
@@ -699,7 +682,6 @@ public:
 
 // ********** waypoint top level code **********
 
-
 void create_waypoints(vector<user_waypt_t> const &user_waypoints) {
 
 	RESET_TIME;
@@ -725,7 +707,6 @@ void create_waypoints(vector<user_waypt_t> const &user_waypoints) {
 	PRINT_TIME("  Waypoint Connectivity");
 }
 
-
 // find the optimal next waypoint when already on a waypoint path
 int find_optimal_next_waypoint(unsigned cur, wpt_goal const &goal, set<unsigned> const &wps_penalty) {
 
@@ -740,7 +721,6 @@ int find_optimal_next_waypoint(unsigned cur, wpt_goal const &goal, set<unsigned>
 	if (path.size() == 1) return cur; // already at goal
 	return path[1];
 }
-
 
 // find the optimal next waypoint when not on a waypoint path (using visible waypoints as candidates)
 void find_optimal_waypoint(point const &pos, vector<od_data> &oddatav, wpt_goal const &goal) {
@@ -781,20 +761,16 @@ void find_optimal_waypoint(point const &pos, vector<od_data> &oddatav, wpt_goal 
 	}
 }
 
-
 // return true if coll_detect(pos) is closer to pos than opos
 bool can_make_progress(point const &pos, point const &opos, bool check_uw) {
-
 	waypoint_builder wb;
 	point test_pos(pos);
 	wb.check_cobj_placement(test_pos, -1, check_uw);
 	return (p2p_dist_xy_sq(test_pos, pos) < p2p_dist_xy_sq(test_pos, opos)); // ignore z
 }
 
-
 // return true if the path from start to end is traversable by a smiley/player
 bool is_valid_path(point const &start, point const &end, bool check_uw) {
-
 	waypoint_builder wb;
 	unsigned tot_steps(0); // unused
 	return wb.is_point_reachable(start, end, tot_steps, STEP_SIZE_MULT2, check_uw);
@@ -802,15 +778,12 @@ bool is_valid_path(point const &start, point const &end, bool check_uw) {
 
 
 void coll_obj::add_connect_waypoint() {
-
 	if (!use_waypoints) return;
 	waypoint_builder wb;
 	wb.add_one_cobj_wpt(*this, 1);
 }
 
-
 void coll_obj::remove_waypoint() {
-
 	if (waypt_id >= 0) {
 		waypoint_builder wb;
 		wb.remove_cobj_waypoint(*this);
@@ -819,12 +792,10 @@ void coll_obj::remove_waypoint() {
 
 
 void shift_waypoints(vector3d const &vd) {
-
 	for (unsigned i = 0; i < waypoints.size(); ++i) {
 		waypoints[i].pos += vd; // shifting disabled waypoints should be ok
 	}
 }
-
 
 void draw_waypoints() {
 
@@ -871,8 +842,5 @@ void draw_waypoints() {
 	draw_verts(verts, GL_LINES);
 	s.end_shader();
 }
-
-
-
 
 

@@ -51,7 +51,6 @@ enum {SPILL_NONE, SPILL_OUTSIDE, SPILL_INSIDE};
 
 
 struct water_spring { // size = 40;
-
 	int enabled;
 	float dpf, diff, acc;
 	point pos;
@@ -63,14 +62,11 @@ struct water_spring { // size = 40;
 		: enabled(en), dpf(dpf_), diff(diff_), acc(acc_), pos(pos_), vel(vel_) {}
 };
 
-
 struct water_section {
+	float zval=0.0, wvol=0.0;
+	int x1=0, y1=0, x2=0, y2=0;
 
-	float zval, wvol;
-	int x1, y1, x2, y2;
-
-	water_section() : zval(0.0f), wvol(0.0f), x1(0), y1(0), x2(0), y2(0) {}
-
+	water_section() {}
 	water_section(float x1_, float y1_, float x2_, float y2_, float zval_, float wvol_) : zval(zval_), wvol(wvol_),
 		x1(get_xpos_clamp(x1_)), y1(get_ypos_clamp(y1_)), x2(get_xpos_clamp(x2_)), y2(get_ypos_clamp(y2_))
 	{
@@ -79,7 +75,6 @@ struct water_section {
 	}
 	bool is_nonzero() const {return (x1 < x2 && y1 < y2);}
 };
-
 
 
 // Global Variables

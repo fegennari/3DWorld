@@ -85,7 +85,6 @@ pos_dir_up::pos_dir_up(point const &p, vector3d const &d, vector3d const &u, flo
 }
 
 void pos_dir_up::orthogonalize_up_dir() {
-
 	assert(dir != zero_vector);
 	orthogonalize_dir(upv, dir, upv_, 1);
 	cross_product(dir, upv_, cp);
@@ -103,7 +102,6 @@ bool pos_dir_up::point_visible_test(point const &pos_) const { // simplified/opt
 }
 
 bool pos_dir_up::line_visible_test(point const &p1, point const &p2) const {
-
 	if (!valid) return 1; // invalid
 	vector3d const pv1(p1, pos), pv2(p2, pos);
 	if (dot_product(dir, pv1) < 0.0 && dot_product(dir, pv2) < 0.0) return 0; // both points behind - optimization
@@ -117,7 +115,6 @@ bool pos_dir_up::line_visible_test(point const &p1, point const &p2) const {
 
 // view frustum check: dir and upv must be normalized - checks view frustum
 bool pos_dir_up::sphere_visible_test(point const &pos_, float radius) const {
-
 	if (!valid) return (radius >= 0.0); // invalid - the only reasonable thing to do is return true for safety
 	vector3d const pv(pos_, pos);
 	if (dot_product(dir, pv) < 0.0) return (radius > 0.0 && pv.mag_sq() < radius*radius*behind_sphere_mult); // sphere behind - optimization (approximate/conservative)
@@ -128,7 +125,6 @@ bool pos_dir_up::sphere_visible_test(point const &pos_, float radius) const {
 }
 
 bool pos_dir_up::sphere_visible_test_no_inside_test(point const &pos_, float radius) const {
-
 	if (!valid) return (radius >= 0.0); // invalid - the only reasonable thing to do is return true for safety
 	vector3d const pv(pos_, pos);
 	if (dot_product(dir, pv) < 0.0) return 0; // sphere behind - optimization
@@ -163,7 +159,6 @@ template<unsigned N> bool pos_dir_up::pt_set_visible(point const *const pts) con
 }
 
 bool pos_dir_up::cube_visible(cube_t const &c) const {
-
 	if (!valid) return 1; // invalid - the only reasonable thing to do is return true for safety
 	point const cube_pts[8] = {
 		point(c.x1(), c.y1(), c.z1()), point(c.x1(), c.y1(), c.z2()), point(c.x1(), c.y2(), c.z1()), point(c.x1(), c.y2(), c.z2()),
@@ -174,7 +169,6 @@ bool pos_dir_up::cube_visible(cube_t const &c) const {
 }
 
 bool pos_dir_up::cube_visible_for_light_cone(cube_t const &c) const { // test only horizontal and far planes; ignores zval
-
 	if (!valid) return 1; // invalid - the only reasonable thing to do is return true for safety
 	point const cube_pts[4] = {point(c.x1(), c.y1(), c.z1()), point(c.x1(), c.y2(), c.z1()), point(c.x2(), c.y1(), c.z1()), point(c.x2(), c.y2(), c.z1())};
 	// Note: below is pt_set_visible<4>() but without the vertical and near/far clip tests
@@ -270,16 +264,14 @@ bool sphere_cobj_occluded(point const &viewer, point const &sc, float radius) {
 }
 
 class cube_occlusion_query : public cobj_query_callback {
-
-	bool is_occluded;
+	bool is_occluded=0;
 	point const &viewer;
 	cube_t const &cube;
 	unsigned npts;
 	point pts[8];
 	vector<int> cobjs;
-
 public:
-	cube_occlusion_query(point const &viewer_, cube_t const &cube_) : is_occluded(0), viewer(viewer_), cube(cube_) {
+	cube_occlusion_query(point const &viewer_, cube_t const &cube_) : viewer(viewer_), cube(cube_) {
 		npts = get_cube_corners(cube.d, pts, viewer, 0); // 8 corners allocated, but only 6 used
 	}
 	virtual bool register_cobj(coll_obj const &cobj) {
@@ -313,7 +305,6 @@ public:
 };
 
 bool cube_cobj_occluded(point const &viewer, cube_t const &cube) {
-
 	if (!have_occluders() || cube.contains_pt(viewer)) return 0; // no occluders, or viewer is inside the cube
 	//return cube_occlusion_query(viewer, cube).get_is_occluded(); // Note: slower, and makes very little difference
 	point pts[8];
@@ -409,7 +400,6 @@ bool light_visible_from_vertex(int xpos, int ypos, point const &lpos, int fast) 
 
 
 class mesh_shadow_gen {
-
 	unsigned char *smask;
 	float const *mh, *sh_in_x, *sh_in_y;
 	float *sh_out_x, *sh_out_y;

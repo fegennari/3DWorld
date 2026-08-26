@@ -17,7 +17,6 @@ extern obj_type object_types[];
 
 // *** xform_matrix ***
 
-
 float       *xform_matrix::get_ptr()       {glm::mat4       &m(*this); return glm::value_ptr(m);}
 float const *xform_matrix::get_ptr() const {glm::mat4 const &m(*this); return glm::value_ptr(m);}
 
@@ -127,27 +126,21 @@ xform_matrix const &fgGetPJM() {return pjm_stack.top();}
 
 // *** mesh2d ***
 
-
 void mesh2d::clear() {
-	
 	pmap.clear();
 	rmap.clear();
 	ptsh.clear();
 	size = 0;
 }
 
-
 void mesh2d::set_size(unsigned sz) {
-
 	assert(sz > 0);
 	assert(size == 0 || sz == size);
 	clear();
 	size = sz;
 }
 
-
 void mesh2d::add_random(float mag, float min_mag, float max_mag, unsigned skipval) {
-
 	if (pmap.empty()) {alloc_pmap();}
 	unsigned const num(get_num());
 
@@ -156,36 +149,27 @@ void mesh2d::add_random(float mag, float min_mag, float max_mag, unsigned skipva
 	}
 }
 
-
 void mesh2d::mult_by(float val) {
-
 	if (pmap.empty()) return;
 	unsigned const num(get_num());
 	for (unsigned i = 0; i < num; ++i) {pmap[i] *= val;}
 }
 
-
 void mesh2d::unset_rand_rmap(unsigned num_remove) {
-
 	if (rmap.empty()) {rmap.resize(get_num(), 1);}
 	for (unsigned i = 0; i < num_remove; ++i) {rmap[choose_rand()] = 0;} // doesn't check for already removed elements
 }
 
-
 void mesh2d::set_rand_expand(float mag, unsigned num_exp) {
-
 	if (emap.empty()) {emap.resize(get_num(), 0.0);}
 	for (unsigned i = 0; i < num_exp; ++i) {emap[choose_rand()] += mag;} // doesn't check for already removed elements
 }
 
-
 void mesh2d::set_rand_translate(point const &tp, unsigned num_trans) {
-
 	if (tp == all_zeros) return;
 	if (ptsh.empty()) {ptsh.resize(get_num(), all_zeros);}
 	for (unsigned i = 0; i < num_trans; ++i) {ptsh[choose_rand()] += tp;} // doesn't check for already translated elements
 }
-
 
 void mesh2d::draw_perturbed_sphere(point const &pos, float radius, int ndiv, bool tex_coord) const {
 
@@ -203,7 +187,6 @@ void mesh2d::draw_perturbed_sphere(point const &pos, float radius, int ndiv, boo
 
 // *** transform_data ***
 
-
 void transform_data::set_perturb_size(unsigned i, unsigned sz) {
 
 	assert(i < perturb_maps.size());
@@ -217,16 +200,12 @@ void transform_data::set_perturb_size(unsigned i, unsigned sz) {
 	}
 }
 
-
 void transform_data::add_perturb_at(unsigned s, unsigned t, unsigned i, float val, float min_mag, float max_mag) {
-
 	assert(i < perturb_maps.size());
 	perturb_maps[i].set_val(s, t, max(min_mag, min(max_mag, (perturb_maps[i].get_val(s, t) + val))));
 }
 
-
 void transform_data::reset_perturb_if_set(unsigned i) {
-	
 	assert(i < perturb_maps.size());
 
 	if (!perturb_maps[i].pmap.empty()) { // reset pmap
@@ -237,7 +216,6 @@ void transform_data::reset_perturb_if_set(unsigned i) {
 
 
 // *** deformation code ***
-
 
 glm::mat4 get_rotation_matrix(vector3d const &vrot, float angle) {
 	return glm::rotate(glm::mat4(1.0), angle, vec3_from_vector3d(vrot));
@@ -271,7 +249,6 @@ void apply_obj_mesh_roll(xform_matrix &matrix, point const &pos, point const &lp
 	fgMultMatrix(matrix);
 }
 
-
 void deform_obj(dwobject &obj, vector3d const &norm, vector3d const &v0) { // apply collision deformations
 
 	float const deform(object_types[obj.type].deform);
@@ -294,9 +271,7 @@ void deform_obj(dwobject &obj, vector3d const &norm, vector3d const &v0) { // ap
 	}
 }
 
-
 void update_deformation(dwobject &obj) {
-
 	if (obj.vdeform != all_ones && object_types[obj.type].def_recover > 0.0) {
 		obj.vdeform += all_ones*(fticks*object_types[obj.type].def_recover);
 		obj.vdeform *= SQRT3/obj.vdeform.mag(); // normalize the volume
@@ -314,7 +289,6 @@ void mirror_about_plane(vector3d const &norm, point const &pt) { // applies to G
 	fgMultMatrix(glm::make_mat4(m));
 }
 
-
 void print_matrix(float const *const m, std::string const &prefix, std::ostream &out) {
 
 	if (!prefix.empty()) {out << prefix << endl;}
@@ -326,5 +300,4 @@ void print_matrix(float const *const m, std::string const &prefix, std::ostream 
 }
 
 // Note: instance_render_t::draw_and_clear() is defined in shaders.cpp
-
 

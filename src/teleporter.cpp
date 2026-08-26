@@ -56,7 +56,6 @@ bool maybe_teleport_object(point &opos, float oradius, int player_id, int type, 
 }
 
 void setup_dynamic_teleporters() {
-
 	if (coll_id[TELEPORTER] < 0) return;
 	obj_group const &objg(obj_groups[coll_id[TELEPORTER]]);
 	if (!objg.is_enabled()) {teleporters[1].clear(); return;} // Note: no texture, free_context() doesn't need to be called
@@ -65,7 +64,6 @@ void setup_dynamic_teleporters() {
 }
 
 void teleport_object(point &opos, point const &src_pos, point const &dest_pos, float oradius, int player_id) {
-
 	bool const is_player(player_id != NO_SOURCE);
 	float const gain(is_player ? 1.0 : 0.1), pitch(is_player ? 0.6 : 2.0);
 	gen_sound(SOUND_POWERUP, opos, gain, pitch); // different sound?
@@ -213,7 +211,6 @@ void teleporter::draw(vpc_shader_t &s, bool is_dynamic) { // Note: not const or 
 	}
 }
 
-
 void teleporter::write_to_cobj_file(std::ostream &out) const {
 	out << "teleporter " << pos.raw_str() << " " << dest.raw_str() << " " << radius << " " << is_portal << " " << is_indoors << endl;
 }
@@ -222,7 +219,6 @@ void teleporter::write_to_cobj_file(std::ostream &out) const {
 // jump pads
 
 bool maybe_use_jump_pad(point &opos, vector3d &velocity, float oradius, int player_id) {
-
 	for (auto i = jump_pads.begin(); i != jump_pads.end(); ++i) {
 		if (i->maybe_jump(opos, velocity, oradius, player_id)) return 1;
 	}
@@ -247,9 +243,7 @@ bool jump_pad::maybe_jump(point &opos, vector3d &obj_velocity, float oradius, in
 	return 1;
 }
 
-
 void draw_jump_pads() {
-
 	if (jump_pads.empty()) return;
 	shader_t s;
 	s.begin_simple_textured_shader(); // no lighting
