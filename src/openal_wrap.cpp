@@ -58,6 +58,8 @@ class sound_manager_t {
 	vector<string> sound_names;
 	int last_frame=0;
 public:
+	bool in_use=0;
+
 	openal_source &get_least_loud_source() {return sources.get_least_loud_source();}
 	openal_buffer &get_buffer(unsigned id) {return sounds.get_buffer(id);}
 	void add_delayed_sound(sound_params_t const &params, unsigned id, int delay_time) {delayed_sounds.push_back(delayed_sound_t(params, id, delay_time));}
@@ -517,7 +519,6 @@ void setup_openal_listener(point const &pos, vector3d const &vel, openal_orient 
 // non-blocking
 void gen_sound(unsigned id, point const &pos, float gain, float pitch, bool rel_to_listener, vector3d const &vel, bool skip_if_already_playing) {
 
-	//RESET_TIME;
 	if (disable_sound) return;
 	point const listener(get_camera_pos());
 	float const dist(distance_to_camera(pos));
@@ -543,7 +544,7 @@ void gen_sound(unsigned id, point const &pos, float gain, float pitch, bool rel_
 	if (source.is_active()) {source.stop();} // stop if already playing
 	source.setup(sound_manager.get_buffer(id), pos, id, gain, pitch, 0, rel_to_listener, vel); // not looping
 	source.play();
-	//PRINT_TIME("Play Sound");
+	sound_manager.in_use = 1;
 }
 void gen_sound_random_var(unsigned id, point const &pos, float gain, float pitch) { // with minor random variationin gain and pitch
 	static rand_gen_t rgen;
@@ -566,7 +567,7 @@ void proc_delayed_and_placed_sounds() {
 }
 
 void openal_next_frame() {
-	set_openal_listener_as_player();
+	if (sound_manager.in_use) {set_openal_listener_as_player();}
 }
 
 
