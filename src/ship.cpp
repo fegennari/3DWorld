@@ -502,18 +502,18 @@ void apply_univ_physics() {
 	if (TIMETEST) PRINT_TIME("  Get Cached");
 	unsigned const nobjs((unsigned)c_uobjs.size());
 	assert(uobjs.size() == nobjs);
-	all_ships.resize(0);
-	stat_objs.resize(0);
-	coll_proj.resize(0);
-	coll_objs.resize(0);
-	decoys.resize(0);
-	exploding.resize(0);
-	temp_sources.resize(0);
-	hyper_inhibits.resize(0);
+	all_ships.clear();
+	stat_objs.clear();
+	coll_proj.clear();
+	coll_objs.clear();
+	decoys.clear();
+	exploding.clear();
+	temp_sources.clear();
+	hyper_inhibits.clear();
 	uobj_rmax = urm_ship = urm_static = urm_proj = 0.0;
 	
 	for (unsigned i = 0; i < NUM_ALIGNMENT; ++i) {
-		ships[i].resize(0);
+		ships[i].clear();
 		ind_ships_used[i] = 0;
 		if ((unsigned(tfticks)&7) == 0) {team_credits[i] += unsigned(fticks*resource_counts[i]);} // every 8 frames
 	}
