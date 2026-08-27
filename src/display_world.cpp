@@ -329,7 +329,6 @@ void show_gpu_mem_info() {
 
 
 void final_draw(float framerate) {
-
 	fog_enabled = 0;
 	run_postproc_effects();
 	check_zoom(); // also resets MVM to identity
@@ -340,7 +339,6 @@ void final_draw(float framerate) {
 	user_action_key = 0;
 	//show_gpu_mem_info(); // TESTING
 }
-
 
 void swap_buffers_and_redraw() {
 	glutSwapBuffers();
@@ -365,7 +363,6 @@ float get_star_alpha(bool obscured_by_clouds) {
 }
 
 colorRGBA attenuate_sun_color(colorRGBA const &c) {
-
 	colorRGBA sc;
 	sc.A = 1.0;
 	UNROLL_3X(sc[i_] = c[i_]*sunlight_color[i_]/SUN_LT_C[i_];) // scale based on ratio of sunlight color to default value
@@ -495,7 +492,6 @@ void setup_lighting() {
 
 
 void draw_sun_moon_stars(bool no_update) {
-
 	float star_alpha(get_star_alpha(is_cloudy != 0));
 	if (star_alpha > 0.0) {gen_and_draw_stars(star_alpha, 0, no_update);}
 	if (light_factor <= 0.6 || atmosphere <= 0.5) {draw_moon();} // moon
@@ -559,7 +555,6 @@ void draw_universe_bkg() {
 }
 
 void draw_game_elements(int timer1, int reflection_pass=0) {
-
 	if (TIMETEST) PRINT_TIME("U");
 	draw_camera_weapon(1, reflection_pass);
 	draw_projectile_effects(reflection_pass);

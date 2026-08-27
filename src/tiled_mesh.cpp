@@ -951,7 +951,6 @@ void tile_t::draw_smap_debug_vis(shader_t &s) const {
 	colorRGBA const lod_colors[6] = {RED, ORANGE, YELLOW, GREEN, BLUE, PURPLE}; // rainbow
 	s.set_cur_color(lod_colors[min(smap_lod_level, 5U)]);
 	draw_simple_cube(get_shadow_bcube(), 0);
-	cout << (shadow_map_sz >> smap_lod_level) << " ";
 }
 
 unsigned calc_max_smap_lod() {

@@ -1424,7 +1424,6 @@ public:
 		bvh.clear();
 		b.gather_interior_cubes(bvh.get_objs(), valid_area);
 		if (b.point_in_attic(target)) {b.get_attic_roof_tquads(bvh.roof_tquads);}
-		//cout << TXT(bvh.get_objs().size()) << endl; // TESTING
 		//highres_timer_t timer("Build BVH");
 		bvh.build_tree_top(0); // verbose=0
 		need_bvh_rebuild = 0;

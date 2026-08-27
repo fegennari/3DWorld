@@ -986,10 +986,10 @@ void urev_body::unset_owner() {
 
 	if (is_owned()) {
 		assert(unsigned(owner) < NUM_ALIGNMENT);
-		assert(owner_counts[owner] > 0); // testing
+		assert(owner_counts[owner] > 0);
 		--owner_counts[owner]; // shouldn't go negative even if read from a modmap
 		assert(resources > 0.0);
-		assert(resource_counts[owner] >= resources-1.0); // testing (account for fp error)
+		assert(resource_counts[owner] >= resources-1.0); // account for fp error
 		resource_counts[owner] -= resources;
 		resources = max(0.0f, resources); // in case it's slightly negative due to fp error
 		owner = NO_OWNER;

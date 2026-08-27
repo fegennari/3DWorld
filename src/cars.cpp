@@ -1444,7 +1444,6 @@ void car_manager_t::next_frame(ped_manager_t const &ped_manager, float car_speed
 	// self-balance dirty car ratio by toggling dirt accumulation on and off until it's between 5% and 10%
 	float const dirty_car_ratio(float(dirty_cars)/tot_cars);
 	if (dirty_car_ratio > 0.1) {increase_dirt_amt = 0;} else if (dirty_car_ratio < 0.05) {increase_dirt_amt = 1;}
-	//cout << TXT(tot_cars) << TXT(dirty_cars) << TXT(increase_dirt_amt) << endl; // TESTING
 	if (!saw_parked && !car_blocks.empty()) {car_blocks.back().first_parked = cars.size();} // no parked cars in final city
 	car_blocks.emplace_back(cars.size(), 0, cube_t()); // add terminator
 
